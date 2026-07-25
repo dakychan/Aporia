@@ -6,8 +6,8 @@ import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.WindCharge;
 
 public abstract class AbstractDragonSittingPhase extends AbstractDragonPhaseInstance {
-    public AbstractDragonSittingPhase(EnderDragon p_31196_) {
-        super(p_31196_);
+    public AbstractDragonSittingPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
@@ -16,12 +16,12 @@ public abstract class AbstractDragonSittingPhase extends AbstractDragonPhaseInst
     }
 
     @Override
-    public float onHurt(DamageSource p_31199_, float p_31200_) {
-        if (!(p_31199_.getDirectEntity() instanceof AbstractArrow) && !(p_31199_.getDirectEntity() instanceof WindCharge)) {
-            return super.onHurt(p_31199_, p_31200_);
-        } else {
-            p_31199_.getDirectEntity().igniteForSeconds(1.0F);
-            return 0.0F;
+    public float onHurt(final DamageSource source, final float damage) {
+        if (!(source.getDirectEntity() instanceof AbstractArrow) && !(source.getDirectEntity() instanceof WindCharge)) {
+            return super.onHurt(source, damage);
         }
+
+        source.getDirectEntity().igniteForSeconds(1.0F);
+        return 0.0F;
     }
 }

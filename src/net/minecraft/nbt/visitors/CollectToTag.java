@@ -35,8 +35,8 @@ public class CollectToTag implements StreamTagVisitor {
         return this.containerStack.size() - 1;
     }
 
-    private void appendEntry(Tag p_197683_) {
-        this.containerStack.getLast().acceptValue(p_197683_);
+    private void appendEntry(final Tag instance) {
+        this.containerStack.getLast().acceptValue(instance);
     }
 
     @Override
@@ -46,100 +46,100 @@ public class CollectToTag implements StreamTagVisitor {
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(String p_197678_) {
-        this.appendEntry(StringTag.valueOf(p_197678_));
+    public StreamTagVisitor.ValueResult visit(final String value) {
+        this.appendEntry(StringTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(byte p_197668_) {
-        this.appendEntry(ByteTag.valueOf(p_197668_));
+    public StreamTagVisitor.ValueResult visit(final byte value) {
+        this.appendEntry(ByteTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(short p_197693_) {
-        this.appendEntry(ShortTag.valueOf(p_197693_));
+    public StreamTagVisitor.ValueResult visit(final short value) {
+        this.appendEntry(ShortTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(int p_197674_) {
-        this.appendEntry(IntTag.valueOf(p_197674_));
+    public StreamTagVisitor.ValueResult visit(final int value) {
+        this.appendEntry(IntTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(long p_197676_) {
-        this.appendEntry(LongTag.valueOf(p_197676_));
+    public StreamTagVisitor.ValueResult visit(final long value) {
+        this.appendEntry(LongTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(float p_197672_) {
-        this.appendEntry(FloatTag.valueOf(p_197672_));
+    public StreamTagVisitor.ValueResult visit(final float value) {
+        this.appendEntry(FloatTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(double p_197670_) {
-        this.appendEntry(DoubleTag.valueOf(p_197670_));
+    public StreamTagVisitor.ValueResult visit(final double value) {
+        this.appendEntry(DoubleTag.valueOf(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(byte[] p_197695_) {
-        this.appendEntry(new ByteArrayTag(p_197695_));
+    public StreamTagVisitor.ValueResult visit(final byte[] value) {
+        this.appendEntry(new ByteArrayTag(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(int[] p_197697_) {
-        this.appendEntry(new IntArrayTag(p_197697_));
+    public StreamTagVisitor.ValueResult visit(final int[] value) {
+        this.appendEntry(new IntArrayTag(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visit(long[] p_197699_) {
-        this.appendEntry(new LongArrayTag(p_197699_));
+    public StreamTagVisitor.ValueResult visit(final long[] value) {
+        this.appendEntry(new LongArrayTag(value));
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visitList(TagType<?> p_197687_, int p_197688_) {
+    public StreamTagVisitor.ValueResult visitList(final TagType<?> elementType, final int size) {
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
     @Override
-    public StreamTagVisitor.EntryResult visitElement(TagType<?> p_197709_, int p_197710_) {
-        this.enterContainerIfNeeded(p_197709_);
+    public StreamTagVisitor.EntryResult visitElement(final TagType<?> type, final int index) {
+        this.enterContainerIfNeeded(type);
         return StreamTagVisitor.EntryResult.ENTER;
     }
 
     @Override
-    public StreamTagVisitor.EntryResult visitEntry(TagType<?> p_197685_) {
+    public StreamTagVisitor.EntryResult visitEntry(final TagType<?> type) {
         return StreamTagVisitor.EntryResult.ENTER;
     }
 
     @Override
-    public StreamTagVisitor.EntryResult visitEntry(TagType<?> p_197690_, String p_197691_) {
-        this.containerStack.getLast().acceptKey(p_197691_);
-        this.enterContainerIfNeeded(p_197690_);
+    public StreamTagVisitor.EntryResult visitEntry(final TagType<?> type, final String id) {
+        this.containerStack.getLast().acceptKey(id);
+        this.enterContainerIfNeeded(type);
         return StreamTagVisitor.EntryResult.ENTER;
     }
 
-    private void enterContainerIfNeeded(TagType<?> p_197712_) {
-        if (p_197712_ == ListTag.TYPE) {
+    private void enterContainerIfNeeded(final TagType<?> type) {
+        if (type == ListTag.TYPE) {
             this.containerStack.addLast(new CollectToTag.ListBuilder());
-        } else if (p_197712_ == CompoundTag.TYPE) {
+        } else if (type == CompoundTag.TYPE) {
             this.containerStack.addLast(new CollectToTag.CompoundBuilder());
         }
     }
 
     @Override
     public StreamTagVisitor.ValueResult visitContainerEnd() {
-        CollectToTag.ContainerBuilder collecttotag$containerbuilder = this.containerStack.removeLast();
-        Tag tag = collecttotag$containerbuilder.build();
+        CollectToTag.ContainerBuilder container = this.containerStack.removeLast();
+        Tag tag = container.build();
         if (tag != null) {
             this.containerStack.getLast().acceptValue(tag);
         }
@@ -148,23 +148,23 @@ public class CollectToTag implements StreamTagVisitor {
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visitRootEntry(TagType<?> p_197707_) {
-        this.enterContainerIfNeeded(p_197707_);
+    public StreamTagVisitor.ValueResult visitRootEntry(final TagType<?> type) {
+        this.enterContainerIfNeeded(type);
         return StreamTagVisitor.ValueResult.CONTINUE;
     }
 
-    static class CompoundBuilder implements CollectToTag.ContainerBuilder {
+    private static class CompoundBuilder implements CollectToTag.ContainerBuilder {
         private final CompoundTag compound = new CompoundTag();
         private String lastId = "";
 
         @Override
-        public void acceptKey(String p_392161_) {
-            this.lastId = p_392161_;
+        public void acceptKey(final String id) {
+            this.lastId = id;
         }
 
         @Override
-        public void acceptValue(Tag p_393993_) {
-            this.compound.put(this.lastId, p_393993_);
+        public void acceptValue(final Tag tag) {
+            this.compound.put(this.lastId, tag);
         }
 
         @Override
@@ -173,21 +173,21 @@ public class CollectToTag implements StreamTagVisitor {
         }
     }
 
-    interface ContainerBuilder {
-        default void acceptKey(String p_396233_) {
+    private interface ContainerBuilder {
+        default void acceptKey(final String id) {
         }
 
-        void acceptValue(Tag p_393469_);
+        void acceptValue(Tag tag);
 
         @Nullable Tag build();
     }
 
-    static class ListBuilder implements CollectToTag.ContainerBuilder {
+    private static class ListBuilder implements CollectToTag.ContainerBuilder {
         private final ListTag list = new ListTag();
 
         @Override
-        public void acceptValue(Tag p_397294_) {
-            this.list.addAndUnwrap(p_397294_);
+        public void acceptValue(final Tag tag) {
+            this.list.addAndUnwrap(tag);
         }
 
         @Override
@@ -196,12 +196,12 @@ public class CollectToTag implements StreamTagVisitor {
         }
     }
 
-    static class RootBuilder implements CollectToTag.ContainerBuilder {
+    private static class RootBuilder implements CollectToTag.ContainerBuilder {
         private @Nullable Tag result;
 
         @Override
-        public void acceptValue(Tag p_392906_) {
-            this.result = p_392906_;
+        public void acceptValue(final Tag tag) {
+            this.result = tag;
         }
 
         @Override

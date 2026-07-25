@@ -18,64 +18,64 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class FossilFeature extends Feature<FossilFeatureConfiguration> {
-    public FossilFeature(Codec<FossilFeatureConfiguration> p_65851_) {
-        super(p_65851_);
+    public FossilFeature(final Codec<FossilFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<FossilFeatureConfiguration> p_159789_) {
-        RandomSource randomsource = p_159789_.random();
-        WorldGenLevel worldgenlevel = p_159789_.level();
-        BlockPos blockpos = p_159789_.origin();
-        Rotation rotation = Rotation.getRandom(randomsource);
-        FossilFeatureConfiguration fossilfeatureconfiguration = p_159789_.config();
-        int i = randomsource.nextInt(fossilfeatureconfiguration.fossilStructures.size());
-        StructureTemplateManager structuretemplatemanager = worldgenlevel.getLevel().getServer().getStructureManager();
-        StructureTemplate structuretemplate = structuretemplatemanager.getOrCreate(fossilfeatureconfiguration.fossilStructures.get(i));
-        StructureTemplate structuretemplate1 = structuretemplatemanager.getOrCreate(fossilfeatureconfiguration.overlayStructures.get(i));
-        ChunkPos chunkpos = new ChunkPos(blockpos);
-        BoundingBox boundingbox = new BoundingBox(
-            chunkpos.getMinBlockX() - 16,
-            worldgenlevel.getMinY(),
-            chunkpos.getMinBlockZ() - 16,
-            chunkpos.getMaxBlockX() + 16,
-            worldgenlevel.getMaxY(),
-            chunkpos.getMaxBlockZ() + 16
+    public boolean place(final FeaturePlaceContext<FossilFeatureConfiguration> context) {
+        RandomSource random = context.random();
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        Rotation rotation = Rotation.getRandom(random);
+        FossilFeatureConfiguration config = context.config();
+        int fossilIndex = random.nextInt(config.fossilStructures.size());
+        StructureTemplateManager structureTemplateManager = level.getLevel().getServer().getStructureManager();
+        StructureTemplate fossilBase = structureTemplateManager.getOrCreate(config.fossilStructures.get(fossilIndex));
+        StructureTemplate fossilOverlay = structureTemplateManager.getOrCreate(config.overlayStructures.get(fossilIndex));
+        ChunkPos chunkPos = ChunkPos.containing(origin);
+        BoundingBox boundingBox = new BoundingBox(
+            chunkPos.getMinBlockX() - 16,
+            level.getMinY(),
+            chunkPos.getMinBlockZ() - 16,
+            chunkPos.getMaxBlockX() + 16,
+            level.getMaxY(),
+            chunkPos.getMaxBlockZ() + 16
         );
-        StructurePlaceSettings structureplacesettings = new StructurePlaceSettings().setRotation(rotation).setBoundingBox(boundingbox).setRandom(randomsource);
-        Vec3i vec3i = structuretemplate.getSize(rotation);
-        BlockPos blockpos1 = blockpos.offset(-vec3i.getX() / 2, 0, -vec3i.getZ() / 2);
-        int j = blockpos.getY();
+        StructurePlaceSettings settings = new StructurePlaceSettings().setRotation(rotation).setBoundingBox(boundingBox).setRandom(random);
+        Vec3i size = fossilBase.getSize(rotation);
+        BlockPos lowCorner = origin.offset(-size.getX() / 2, 0, -size.getZ() / 2);
+        int lowestSurfaceY = origin.getY();
 
-        for (int k = 0; k < vec3i.getX(); k++) {
-            for (int l = 0; l < vec3i.getZ(); l++) {
-                j = Math.min(j, worldgenlevel.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, blockpos1.getX() + k, blockpos1.getZ() + l));
+        for (int xscan = 0; xscan < size.getX(); xscan++) {
+            for (int zscan = 0; zscan < size.getZ(); zscan++) {
+                lowestSurfaceY = Math.min(lowestSurfaceY, level.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, lowCorner.getX() + xscan, lowCorner.getZ() + zscan));
             }
         }
 
-        int i1 = Math.max(j - 15 - randomsource.nextInt(10), worldgenlevel.getMinY() + 10);
-        BlockPos blockpos2 = structuretemplate.getZeroPositionWithTransform(blockpos1.atY(i1), Mirror.NONE, rotation);
-        if (countEmptyCorners(worldgenlevel, structuretemplate.getBoundingBox(structureplacesettings, blockpos2)) > fossilfeatureconfiguration.maxEmptyCornersAllowed) {
+        int targetY = Math.max(lowestSurfaceY - 15 - random.nextInt(10), level.getMinY() + 10);
+        BlockPos targetPos = fossilBase.getZeroPositionWithTransform(lowCorner.atY(targetY), Mirror.NONE, rotation);
+        if (countEmptyCorners(level, fossilBase.getBoundingBox(settings, targetPos)) > config.maxEmptyCornersAllowed) {
             return false;
-        } else {
-            structureplacesettings.clearProcessors();
-            fossilfeatureconfiguration.fossilProcessors.value().list().forEach(structureplacesettings::addProcessor);
-            structuretemplate.placeInWorld(worldgenlevel, blockpos2, blockpos2, structureplacesettings, randomsource, 260);
-            structureplacesettings.clearProcessors();
-            fossilfeatureconfiguration.overlayProcessors.value().list().forEach(structureplacesettings::addProcessor);
-            structuretemplate1.placeInWorld(worldgenlevel, blockpos2, blockpos2, structureplacesettings, randomsource, 260);
-            return true;
         }
+
+        settings.clearProcessors();
+        config.fossilProcessors.value().list().forEach(settings::addProcessor);
+        fossilBase.placeInWorld(level, targetPos, targetPos, settings, random, 260);
+        settings.clearProcessors();
+        config.overlayProcessors.value().list().forEach(settings::addProcessor);
+        fossilOverlay.placeInWorld(level, targetPos, targetPos, settings, random, 260);
+        return true;
     }
 
-    private static int countEmptyCorners(WorldGenLevel p_159782_, BoundingBox p_159783_) {
-        MutableInt mutableint = new MutableInt(0);
-        p_159783_.forAllCorners(p_360607_ -> {
-            BlockState blockstate = p_159782_.getBlockState(p_360607_);
-            if (blockstate.isAir() || blockstate.is(Blocks.LAVA) || blockstate.is(Blocks.WATER)) {
-                mutableint.add(1);
+    private static int countEmptyCorners(final WorldGenLevel level, final BoundingBox structureBounds) {
+        MutableInt count = new MutableInt(0);
+        structureBounds.forAllCorners(pos -> {
+            BlockState state = level.getBlockState(pos);
+            if (state.isAir() || state.is(Blocks.LAVA) || state.is(Blocks.WATER)) {
+                count.add(1);
             }
         });
-        return mutableint.intValue();
+        return count.intValue();
     }
 }

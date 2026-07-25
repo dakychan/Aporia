@@ -4,8 +4,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
@@ -27,22 +25,22 @@ public interface DataComponentPredicate {
             ByteBufCodecs.list(64)
         )
         .map(
-            p_392899_ -> p_392899_.stream().collect(Collectors.toMap(DataComponentPredicate.Single::type, DataComponentPredicate.Single::predicate)),
-            p_393256_ -> p_393256_.entrySet().stream().<DataComponentPredicate.Single<?>>map(DataComponentPredicate.Single::fromEntry).toList()
+            singles -> singles.stream().collect(Collectors.toMap(DataComponentPredicate.Single::type, DataComponentPredicate.Single::predicate)),
+            map -> map.entrySet().stream().<DataComponentPredicate.Single<?>>map(DataComponentPredicate.Single::fromEntry).toList()
         );
 
-    static MapCodec<DataComponentPredicate.Single<?>> singleCodec(String p_392018_) {
-        return DataComponentPredicate.Type.CODEC.dispatchMap(p_392018_, DataComponentPredicate.Single::type, DataComponentPredicate.Type::wrappedCodec);
+    static MapCodec<DataComponentPredicate.Single<?>> singleCodec(final String name) {
+        return DataComponentPredicate.Type.CODEC.dispatchMap(name, DataComponentPredicate.Single::type, DataComponentPredicate.Type::wrappedCodec);
     }
 
-    boolean matches(DataComponentGetter p_393347_);
+    boolean matches(DataComponentGetter components);
 
-    public static final class AnyValueType extends DataComponentPredicate.TypeBase<AnyValue> {
+    final class AnyValueType extends DataComponentPredicate.TypeBase<AnyValue> {
         private final AnyValue predicate;
 
-        public AnyValueType(AnyValue p_450984_) {
-            super(MapCodec.unitCodec(p_450984_));
-            this.predicate = p_450984_;
+        public AnyValueType(final AnyValue predicate) {
+            super(MapCodec.unitCodec(predicate));
+            this.predicate = predicate;
         }
 
         public AnyValue predicate() {
@@ -53,48 +51,50 @@ public interface DataComponentPredicate {
             return this.predicate.type();
         }
 
-        public static DataComponentPredicate.AnyValueType create(DataComponentType<?> p_452132_) {
-            return new DataComponentPredicate.AnyValueType(new AnyValue(p_452132_));
+        public static DataComponentPredicate.AnyValueType create(final DataComponentType<?> componentType) {
+            return new DataComponentPredicate.AnyValueType(new AnyValue(componentType));
         }
     }
 
-    public static final class ConcreteType<T extends DataComponentPredicate> extends DataComponentPredicate.TypeBase<T> {
-        public ConcreteType(Codec<T> p_454461_) {
-            super(p_454461_);
+    final class ConcreteType<T extends DataComponentPredicate> extends DataComponentPredicate.TypeBase<T> {
+        public ConcreteType(final Codec<T> codec) {
+            super(codec);
         }
     }
 
-    public record Single<T extends DataComponentPredicate>(DataComponentPredicate.Type<T> type, T predicate) {
-        static <T extends DataComponentPredicate> MapCodec<DataComponentPredicate.Single<T>> wrapCodec(
-            DataComponentPredicate.Type<T> p_450567_, Codec<T> p_451791_
+    record Single<T extends DataComponentPredicate>(DataComponentPredicate.Type<T> type, T predicate) {
+        private static <T extends DataComponentPredicate> MapCodec<DataComponentPredicate.Single<T>> wrapCodec(
+            final DataComponentPredicate.Type<T> type, final Codec<T> codec
         ) {
             return RecordCodecBuilder.mapCodec(
-                p_457431_ -> p_457431_.group(p_451791_.fieldOf("value").forGetter(DataComponentPredicate.Single::predicate))
-                    .apply(p_457431_, p_459775_ -> new DataComponentPredicate.Single<>(p_450567_, p_459775_))
+                i -> i.group(codec.fieldOf("value").forGetter(DataComponentPredicate.Single::predicate))
+                    .apply(i, predicate -> new DataComponentPredicate.Single<>(type, predicate))
             );
         }
 
-        private static <T extends DataComponentPredicate> DataComponentPredicate.Single<T> fromEntry(Entry<DataComponentPredicate.Type<?>, T> p_394497_) {
-            return new DataComponentPredicate.Single<>((DataComponentPredicate.Type<T>)p_394497_.getKey(), p_394497_.getValue());
+        private static <T extends DataComponentPredicate> DataComponentPredicate.Single<T> fromEntry(final Entry<DataComponentPredicate.Type<?>, T> e) {
+            return new DataComponentPredicate.Single<>((DataComponentPredicate.Type<T>)e.getKey(), e.getValue());
         }
     }
 
-    public interface Type<T extends DataComponentPredicate> {
-        Codec<DataComponentPredicate.Type<?>> CODEC = Codec.either(BuiltInRegistries.DATA_COMPONENT_PREDICATE_TYPE.byNameCodec(), BuiltInRegistries.DATA_COMPONENT_TYPE.byNameCodec())
+    interface Type<T extends DataComponentPredicate> {
+        Codec<DataComponentPredicate.Type<?>> CODEC = Codec.either(
+                BuiltInRegistries.DATA_COMPONENT_PREDICATE_TYPE.byNameCodec(), BuiltInRegistries.DATA_COMPONENT_TYPE.byNameCodec()
+            )
             .xmap(DataComponentPredicate.Type::copyOrCreateType, DataComponentPredicate.Type::unpackType);
         StreamCodec<RegistryFriendlyByteBuf, DataComponentPredicate.Type<?>> STREAM_CODEC = ByteBufCodecs.either(
                 ByteBufCodecs.registry(Registries.DATA_COMPONENT_PREDICATE_TYPE), ByteBufCodecs.registry(Registries.DATA_COMPONENT_TYPE)
             )
             .map(DataComponentPredicate.Type::copyOrCreateType, DataComponentPredicate.Type::unpackType);
 
-        private static <T extends DataComponentPredicate.Type<?>> Either<T, DataComponentType<?>> unpackType(T p_455554_) {
-            return p_455554_ instanceof DataComponentPredicate.AnyValueType datacomponentpredicate$anyvaluetype
-                ? Either.right(datacomponentpredicate$anyvaluetype.componentType())
-                : Either.left(p_455554_);
+        private static <T extends DataComponentPredicate.Type<?>> Either<T, DataComponentType<?>> unpackType(final T type) {
+            return type instanceof DataComponentPredicate.AnyValueType anyCheck ? Either.right(anyCheck.componentType()) : Either.left(type);
         }
 
-        private static DataComponentPredicate.Type<?> copyOrCreateType(Either<DataComponentPredicate.Type<?>, DataComponentType<?>> p_450160_) {
-            return p_450160_.map(p_448615_ -> p_448615_, DataComponentPredicate.AnyValueType::create);
+        private static DataComponentPredicate.Type<?> copyOrCreateType(
+            final Either<DataComponentPredicate.Type<?>, DataComponentType<?>> concreteTypeOrComponent
+        ) {
+            return concreteTypeOrComponent.map(concrete -> concrete, DataComponentPredicate.AnyValueType::create);
         }
 
         Codec<T> codec();
@@ -104,16 +104,16 @@ public interface DataComponentPredicate {
         StreamCodec<RegistryFriendlyByteBuf, DataComponentPredicate.Single<T>> singleStreamCodec();
     }
 
-    public abstract static class TypeBase<T extends DataComponentPredicate> implements DataComponentPredicate.Type<T> {
+    abstract class TypeBase<T extends DataComponentPredicate> implements DataComponentPredicate.Type<T> {
         private final Codec<T> codec;
         private final MapCodec<DataComponentPredicate.Single<T>> wrappedCodec;
         private final StreamCodec<RegistryFriendlyByteBuf, DataComponentPredicate.Single<T>> singleStreamCodec;
 
-        public TypeBase(Codec<T> p_451417_) {
-            this.codec = p_451417_;
-            this.wrappedCodec = DataComponentPredicate.Single.wrapCodec(this, p_451417_);
-            this.singleStreamCodec = ByteBufCodecs.fromCodecWithRegistries(p_451417_)
-                .map(p_452487_ -> new DataComponentPredicate.Single<>(this, (T)p_452487_), DataComponentPredicate.Single::predicate);
+        public TypeBase(final Codec<T> codec) {
+            this.codec = codec;
+            this.wrappedCodec = DataComponentPredicate.Single.wrapCodec(this, codec);
+            this.singleStreamCodec = ByteBufCodecs.fromCodecWithRegistries(codec)
+                .map(v -> new DataComponentPredicate.Single<>(this, (T)v), DataComponentPredicate.Single::predicate);
         }
 
         @Override

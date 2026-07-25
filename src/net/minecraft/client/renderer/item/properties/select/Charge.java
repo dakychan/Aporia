@@ -10,11 +10,8 @@ import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.ChargedProjectiles;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public record Charge() implements SelectItemModelProperty<CrossbowItem.ChargeType> {
     public static final Codec<CrossbowItem.ChargeType> VALUE_CODEC = CrossbowItem.ChargeType.CODEC;
     public static final SelectItemModelProperty.Type<Charge, CrossbowItem.ChargeType> TYPE = SelectItemModelProperty.Type.create(
@@ -22,13 +19,17 @@ public record Charge() implements SelectItemModelProperty<CrossbowItem.ChargeTyp
     );
 
     public CrossbowItem.ChargeType get(
-        ItemStack p_378361_, @Nullable ClientLevel p_377031_, @Nullable LivingEntity p_376163_, int p_376891_, ItemDisplayContext p_378760_
+        final ItemStack itemStack,
+        final @Nullable ClientLevel level,
+        final @Nullable LivingEntity owner,
+        final int seed,
+        final ItemDisplayContext displayContext
     ) {
-        ChargedProjectiles chargedprojectiles = p_378361_.get(DataComponents.CHARGED_PROJECTILES);
-        if (chargedprojectiles == null || chargedprojectiles.isEmpty()) {
+        ChargedProjectiles projectiles = itemStack.get(DataComponents.CHARGED_PROJECTILES);
+        if (projectiles == null || projectiles.isEmpty()) {
             return CrossbowItem.ChargeType.NONE;
         } else {
-            return chargedprojectiles.contains(Items.FIREWORK_ROCKET) ? CrossbowItem.ChargeType.ROCKET : CrossbowItem.ChargeType.ARROW;
+            return projectiles.contains(Items.FIREWORK_ROCKET) ? CrossbowItem.ChargeType.ROCKET : CrossbowItem.ChargeType.ARROW;
         }
     }
 

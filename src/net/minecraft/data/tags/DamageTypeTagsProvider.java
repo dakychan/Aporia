@@ -8,13 +8,13 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 
-public class DamageTypeTagsProvider extends KeyTagProvider<DamageType> {
-    public DamageTypeTagsProvider(PackOutput p_270719_, CompletableFuture<HolderLookup.Provider> p_270256_) {
-        super(p_270719_, Registries.DAMAGE_TYPE, p_270256_);
+public class DamageTypeTagsProvider extends TagsProvider<DamageType> {
+    public DamageTypeTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.DAMAGE_TYPE, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_270108_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(DamageTypeTags.DAMAGES_HELMET).add(DamageTypes.FALLING_ANVIL, DamageTypes.FALLING_BLOCK, DamageTypes.FALLING_STALACTITE);
         this.tag(DamageTypeTags.BYPASSES_ARMOR)
             .add(
@@ -47,6 +47,7 @@ public class DamageTypeTagsProvider extends KeyTagProvider<DamageType> {
                 DamageTypes.FALLING_ANVIL,
                 DamageTypes.FALLING_STALACTITE,
                 DamageTypes.HOT_FLOOR,
+                DamageTypes.SULFUR_CUBE_HOT,
                 DamageTypes.IN_FIRE,
                 DamageTypes.LAVA,
                 DamageTypes.LIGHTNING_BOLT,
@@ -63,6 +64,7 @@ public class DamageTypeTagsProvider extends KeyTagProvider<DamageType> {
                 DamageTypes.ON_FIRE,
                 DamageTypes.LAVA,
                 DamageTypes.HOT_FLOOR,
+                DamageTypes.SULFUR_CUBE_HOT,
                 DamageTypes.UNATTRIBUTED_FIREBALL,
                 DamageTypes.FIREBALL
             );
@@ -87,6 +89,33 @@ public class DamageTypeTagsProvider extends KeyTagProvider<DamageType> {
         this.tag(DamageTypeTags.NO_IMPACT).add(DamageTypes.DROWN);
         this.tag(DamageTypeTags.ALWAYS_MOST_SIGNIFICANT_FALL).add(DamageTypes.FELL_OUT_OF_WORLD);
         this.tag(DamageTypeTags.WITHER_IMMUNE_TO).add(DamageTypes.DROWN);
+        this.tag(DamageTypeTags.SULFUR_CUBE_WITH_BLOCK_IMMUNE_TO)
+            .add(
+                DamageTypes.ARROW,
+                DamageTypes.CACTUS,
+                DamageTypes.DRY_OUT,
+                DamageTypes.FALL,
+                DamageTypes.FALLING_ANVIL,
+                DamageTypes.FALLING_BLOCK,
+                DamageTypes.FALLING_STALACTITE,
+                DamageTypes.FREEZE,
+                DamageTypes.MACE_SMASH,
+                DamageTypes.HOT_FLOOR,
+                DamageTypes.MOB_ATTACK,
+                DamageTypes.MOB_ATTACK_NO_AGGRO,
+                DamageTypes.MOB_PROJECTILE,
+                DamageTypes.PLAYER_ATTACK,
+                DamageTypes.SPEAR,
+                DamageTypes.SPIT,
+                DamageTypes.STALAGMITE,
+                DamageTypes.STING,
+                DamageTypes.SULFUR_CUBE_HOT,
+                DamageTypes.SWEET_BERRY_BUSH,
+                DamageTypes.THROWN,
+                DamageTypes.TRIDENT,
+                DamageTypes.WIND_CHARGE
+            )
+            .addTag(DamageTypeTags.IS_EXPLOSION);
         this.tag(DamageTypeTags.IGNITES_ARMOR_STANDS).add(DamageTypes.IN_FIRE, DamageTypes.CAMPFIRE);
         this.tag(DamageTypeTags.BURNS_ARMOR_STANDS).add(DamageTypes.ON_FIRE);
         this.tag(DamageTypeTags.AVOIDS_GUARDIAN_THORNS).add(DamageTypes.MAGIC, DamageTypes.THORNS).addTag(DamageTypeTags.IS_EXPLOSION);
@@ -102,6 +131,7 @@ public class DamageTypeTagsProvider extends KeyTagProvider<DamageType> {
                 DamageTypes.ON_FIRE,
                 DamageTypes.LAVA,
                 DamageTypes.HOT_FLOOR,
+                DamageTypes.SULFUR_CUBE_HOT,
                 DamageTypes.IN_WALL,
                 DamageTypes.CRAMMING,
                 DamageTypes.DROWN,
@@ -143,12 +173,13 @@ public class DamageTypeTagsProvider extends KeyTagProvider<DamageType> {
                 DamageTypes.WITHER
             );
         this.tag(DamageTypeTags.IS_PLAYER_ATTACK).add(DamageTypes.PLAYER_ATTACK, DamageTypes.SPEAR, DamageTypes.MACE_SMASH);
-        this.tag(DamageTypeTags.BURN_FROM_STEPPING).add(DamageTypes.CAMPFIRE, DamageTypes.HOT_FLOOR);
+        this.tag(DamageTypeTags.BURN_FROM_STEPPING).add(DamageTypes.CAMPFIRE, DamageTypes.HOT_FLOOR, DamageTypes.SULFUR_CUBE_HOT);
         this.tag(DamageTypeTags.PANIC_ENVIRONMENTAL_CAUSES)
             .add(
                 DamageTypes.CACTUS,
                 DamageTypes.FREEZE,
                 DamageTypes.HOT_FLOOR,
+                DamageTypes.SULFUR_CUBE_HOT,
                 DamageTypes.IN_FIRE,
                 DamageTypes.LAVA,
                 DamageTypes.LIGHTNING_BOLT,

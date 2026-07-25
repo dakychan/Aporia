@@ -16,8 +16,8 @@ public class ServerTickRateManager extends TickRateManager {
     private boolean previousIsFrozen = false;
     private final MinecraftServer server;
 
-    public ServerTickRateManager(MinecraftServer p_311395_) {
-        this.server = p_311395_;
+    public ServerTickRateManager(final MinecraftServer server) {
+        this.server = server;
     }
 
     public boolean isSprinting() {
@@ -25,8 +25,8 @@ public class ServerTickRateManager extends TickRateManager {
     }
 
     @Override
-    public void setFrozen(boolean p_313235_) {
-        super.setFrozen(p_313235_);
+    public void setFrozen(final boolean frozen) {
+        super.setFrozen(frozen);
         this.updateStateToClients();
     }
 
@@ -38,14 +38,14 @@ public class ServerTickRateManager extends TickRateManager {
         this.server.getPlayerList().broadcastAll(ClientboundTickingStepPacket.from(this));
     }
 
-    public boolean stepGameIfPaused(int p_312205_) {
+    public boolean stepGameIfPaused(final int ticks) {
         if (!this.isFrozen()) {
             return false;
-        } else {
-            this.frozenTicksToRun = p_312205_;
-            this.updateStepTicks();
-            return true;
         }
+
+        this.frozenTicksToRun = ticks;
+        this.updateStepTicks();
+        return true;
     }
 
     public boolean stopStepping() {
@@ -67,24 +67,28 @@ public class ServerTickRateManager extends TickRateManager {
         }
     }
 
-    public boolean requestGameToSprint(int p_311983_) {
-        boolean flag = this.remainingSprintTicks > 0L;
+    public boolean requestGameToSprint(final int time) {
+        boolean interrupted = this.remainingSprintTicks > 0L;
         this.sprintTimeSpend = 0L;
-        this.scheduledCurrentSprintTicks = p_311983_;
-        this.remainingSprintTicks = p_311983_;
+        this.scheduledCurrentSprintTicks = time;
+        this.remainingSprintTicks = time;
         this.previousIsFrozen = this.isFrozen();
         this.setFrozen(false);
-        return flag;
+        return interrupted;
     }
 
     private void finishTickSprint() {
-        long i = this.scheduledCurrentSprintTicks - this.remainingSprintTicks;
-        double d0 = Math.max(1.0, (double)this.sprintTimeSpend) / TimeUtil.NANOSECONDS_PER_MILLISECOND;
-        int j = (int)(TimeUtil.MILLISECONDS_PER_SECOND * i / d0);
-        String s = String.format(Locale.ROOT, "%.2f", i == 0L ? this.millisecondsPerTick() : d0 / i);
+        long completedTicks = this.scheduledCurrentSprintTicks - this.remainingSprintTicks;
+        double millisecondsToComplete = Math.max(1.0, this.sprintTimeSpend) / TimeUtil.NANOSECONDS_PER_MILLISECOND;
+        int ticksPerSecond = (int)(TimeUtil.MILLISECONDS_PER_SECOND * completedTicks / millisecondsToComplete);
+        String millisecondsPerTick = String.format(
+            Locale.ROOT, "%.2f", completedTicks == 0L ? this.millisecondsPerTick() : millisecondsToComplete / completedTicks
+        );
         this.scheduledCurrentSprintTicks = 0L;
         this.sprintTimeSpend = 0L;
-        this.server.createCommandSourceStack().sendSuccess(() -> Component.translatable("commands.tick.sprint.report", j, s), true);
+        this.server
+            .createCommandSourceStack()
+            .sendSuccess(() -> Component.translatable("commands.tick.sprint.report", ticksPerSecond, millisecondsPerTick), true);
         this.remainingSprintTicks = 0L;
         this.setFrozen(this.previousIsFrozen);
         this.server.onTickRateChanged();
@@ -108,14 +112,14 @@ public class ServerTickRateManager extends TickRateManager {
     }
 
     @Override
-    public void setTickRate(float p_312065_) {
-        super.setTickRate(p_312065_);
+    public void setTickRate(final float rate) {
+        super.setTickRate(rate);
         this.server.onTickRateChanged();
         this.updateStateToClients();
     }
 
-    public void updateJoiningPlayer(ServerPlayer p_310808_) {
-        p_310808_.connection.send(ClientboundTickingStatePacket.from(this));
-        p_310808_.connection.send(ClientboundTickingStepPacket.from(this));
+    public void updateJoiningPlayer(final ServerPlayer player) {
+        player.connection.send(ClientboundTickingStatePacket.from(this));
+        player.connection.send(ClientboundTickingStepPacket.from(this));
     }
 }

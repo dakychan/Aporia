@@ -12,100 +12,95 @@ import net.minecraft.client.multiplayer.chat.ChatLog;
 import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.chat.PlayerChatMessage;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ChatReportContextBuilder {
-    final int leadingCount;
+    private final int leadingCount;
     private final List<ChatReportContextBuilder.Collector> activeCollectors = new ArrayList<>();
 
-    public ChatReportContextBuilder(int p_252198_) {
-        this.leadingCount = p_252198_;
+    public ChatReportContextBuilder(final int leadingCount) {
+        this.leadingCount = leadingCount;
     }
 
-    public void collectAllContext(ChatLog p_249467_, IntCollection p_250295_, ChatReportContextBuilder.Handler p_251946_) {
-        IntSortedSet intsortedset = new IntRBTreeSet(p_250295_);
+    public void collectAllContext(final ChatLog chatLog, final IntCollection roots, final ChatReportContextBuilder.Handler handler) {
+        IntSortedSet uncollectedRoots = new IntRBTreeSet(roots);
 
-        for (int i = intsortedset.lastInt(); i >= p_249467_.start() && (this.isActive() || !intsortedset.isEmpty()); i--) {
-            if (p_249467_.lookup(i) instanceof LoggedChatMessage.Player loggedchatmessage$player) {
-                boolean flag = this.acceptContext(loggedchatmessage$player.message());
-                if (intsortedset.remove(i)) {
-                    this.trackContext(loggedchatmessage$player.message());
-                    p_251946_.accept(i, loggedchatmessage$player);
-                } else if (flag) {
-                    p_251946_.accept(i, loggedchatmessage$player);
+        for (int id = uncollectedRoots.lastInt(); id >= chatLog.start() && (this.isActive() || !uncollectedRoots.isEmpty()); id--) {
+            if (chatLog.lookup(id) instanceof LoggedChatMessage.Player event) {
+                boolean context = this.acceptContext(event.message());
+                if (uncollectedRoots.remove(id)) {
+                    this.trackContext(event.message());
+                    handler.accept(id, event);
+                } else if (context) {
+                    handler.accept(id, event);
                 }
             }
         }
     }
 
-    public void trackContext(PlayerChatMessage p_252057_) {
-        this.activeCollectors.add(new ChatReportContextBuilder.Collector(p_252057_));
+    public void trackContext(final PlayerChatMessage message) {
+        this.activeCollectors.add(new ChatReportContextBuilder.Collector(message));
     }
 
-    public boolean acceptContext(PlayerChatMessage p_250059_) {
-        boolean flag = false;
+    public boolean acceptContext(final PlayerChatMessage message) {
+        boolean collected = false;
         Iterator<ChatReportContextBuilder.Collector> iterator = this.activeCollectors.iterator();
 
         while (iterator.hasNext()) {
-            ChatReportContextBuilder.Collector chatreportcontextbuilder$collector = iterator.next();
-            if (chatreportcontextbuilder$collector.accept(p_250059_)) {
-                flag = true;
-                if (chatreportcontextbuilder$collector.isComplete()) {
+            ChatReportContextBuilder.Collector collector = iterator.next();
+            if (collector.accept(message)) {
+                collected = true;
+                if (collector.isComplete()) {
                     iterator.remove();
                 }
             }
         }
 
-        return flag;
+        return collected;
     }
 
     public boolean isActive() {
         return !this.activeCollectors.isEmpty();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class Collector {
+        private class Collector {
         private final Set<MessageSignature> lastSeenSignatures;
         private PlayerChatMessage lastChainMessage;
         private boolean collectingChain = true;
         private int count;
 
-        Collector(final PlayerChatMessage p_249708_) {
-            this.lastSeenSignatures = new ObjectOpenHashSet<>(p_249708_.signedBody().lastSeen().entries());
-            this.lastChainMessage = p_249708_;
+        private Collector(final PlayerChatMessage fromMessage) {
+            this.lastSeenSignatures = new ObjectOpenHashSet<>(fromMessage.signedBody().lastSeen().entries());
+            this.lastChainMessage = fromMessage;
         }
 
-        boolean accept(PlayerChatMessage p_252313_) {
-            if (p_252313_.equals(this.lastChainMessage)) {
+        private boolean accept(final PlayerChatMessage message) {
+            if (message.equals(this.lastChainMessage)) {
                 return false;
-            } else {
-                boolean flag = this.lastSeenSignatures.remove(p_252313_.signature());
-                if (this.collectingChain && this.lastChainMessage.sender().equals(p_252313_.sender())) {
-                    if (this.lastChainMessage.link().isDescendantOf(p_252313_.link())) {
-                        flag = true;
-                        this.lastChainMessage = p_252313_;
-                    } else {
-                        this.collectingChain = false;
-                    }
-                }
-
-                if (flag) {
-                    this.count++;
-                }
-
-                return flag;
             }
+
+            boolean selected = this.lastSeenSignatures.remove(message.signature());
+            if (this.collectingChain && this.lastChainMessage.sender().equals(message.sender())) {
+                if (this.lastChainMessage.link().isDescendantOf(message.link())) {
+                    selected = true;
+                    this.lastChainMessage = message;
+                } else {
+                    this.collectingChain = false;
+                }
+            }
+
+            if (selected) {
+                this.count++;
+            }
+
+            return selected;
         }
 
-        boolean isComplete() {
+        private boolean isComplete() {
             return this.count >= ChatReportContextBuilder.this.leadingCount || !this.collectingChain && this.lastSeenSignatures.isEmpty();
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Handler {
-        void accept(int p_248905_, LoggedChatMessage.Player p_249564_);
+        public interface Handler {
+        void accept(int id, LoggedChatMessage.Player event);
     }
 }

@@ -14,26 +14,26 @@ public class ServerboundPlayerCommandPacket implements Packet<ServerGamePacketLi
     private final ServerboundPlayerCommandPacket.Action action;
     private final int data;
 
-    public ServerboundPlayerCommandPacket(Entity p_134306_, ServerboundPlayerCommandPacket.Action p_134307_) {
-        this(p_134306_, p_134307_, 0);
+    public ServerboundPlayerCommandPacket(final Entity entity, final ServerboundPlayerCommandPacket.Action action) {
+        this(entity, action, 0);
     }
 
-    public ServerboundPlayerCommandPacket(Entity p_134309_, ServerboundPlayerCommandPacket.Action p_134310_, int p_134311_) {
-        this.id = p_134309_.getId();
-        this.action = p_134310_;
-        this.data = p_134311_;
+    public ServerboundPlayerCommandPacket(final Entity entity, final ServerboundPlayerCommandPacket.Action action, final int data) {
+        this.id = entity.getId();
+        this.action = action;
+        this.data = data;
     }
 
-    private ServerboundPlayerCommandPacket(FriendlyByteBuf p_179714_) {
-        this.id = p_179714_.readVarInt();
-        this.action = p_179714_.readEnum(ServerboundPlayerCommandPacket.Action.class);
-        this.data = p_179714_.readVarInt();
+    private ServerboundPlayerCommandPacket(final FriendlyByteBuf input) {
+        this.id = input.readVarInt();
+        this.action = input.readEnum(ServerboundPlayerCommandPacket.Action.class);
+        this.data = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_134319_) {
-        p_134319_.writeVarInt(this.id);
-        p_134319_.writeEnum(this.action);
-        p_134319_.writeVarInt(this.data);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.id);
+        output.writeEnum(this.action);
+        output.writeVarInt(this.data);
     }
 
     @Override
@@ -41,8 +41,8 @@ public class ServerboundPlayerCommandPacket implements Packet<ServerGamePacketLi
         return GamePacketTypes.SERVERBOUND_PLAYER_COMMAND;
     }
 
-    public void handle(ServerGamePacketListener p_134317_) {
-        p_134317_.handlePlayerCommand(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePlayerCommand(this);
     }
 
     public int getId() {
@@ -57,7 +57,7 @@ public class ServerboundPlayerCommandPacket implements Packet<ServerGamePacketLi
         return this.data;
     }
 
-    public static enum Action {
+    public enum Action {
         STOP_SLEEPING,
         START_SPRINTING,
         STOP_SPRINTING,

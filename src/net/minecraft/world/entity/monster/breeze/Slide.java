@@ -29,36 +29,38 @@ public class Slide extends Behavior<Breeze> {
         );
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_312721_, Breeze p_311782_) {
-        return p_311782_.onGround() && !p_311782_.isInWater() && p_311782_.getPose() == Pose.STANDING;
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Breeze breeze) {
+        return breeze.onGround() && !breeze.isInWater() && breeze.getPose() == Pose.STANDING;
     }
 
-    protected void start(ServerLevel p_312079_, Breeze p_310251_, long p_310596_) {
-        LivingEntity livingentity = p_310251_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
-        if (livingentity != null) {
-            boolean flag = p_310251_.withinInnerCircleRange(livingentity.position());
-            Vec3 vec3 = null;
-            if (flag) {
-                Vec3 vec31 = DefaultRandomPos.getPosAway(p_310251_, 5, 5, livingentity.position());
-                if (vec31 != null
-                    && BreezeUtil.hasLineOfSight(p_310251_, vec31)
-                    && livingentity.distanceToSqr(vec31.x, vec31.y, vec31.z) > livingentity.distanceToSqr(p_310251_)) {
-                    vec3 = vec31;
+    protected void start(final ServerLevel level, final Breeze breeze, final long timestamp) {
+        LivingEntity enemy = breeze.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+        if (enemy != null) {
+            boolean isWithinInnerRing = breeze.withinInnerCircleRange(enemy.position());
+            Vec3 position = null;
+            if (isWithinInnerRing) {
+                Vec3 position0 = DefaultRandomPos.getPosAway(breeze, 5, 5, enemy.position());
+                if (position0 != null
+                    && BreezeUtil.hasLineOfSight(breeze, position0)
+                    && enemy.distanceToSqr(position0.x, position0.y, position0.z) > enemy.distanceToSqr(breeze)) {
+                    position = position0;
                 }
             }
 
-            if (vec3 == null) {
-                vec3 = p_310251_.getRandom().nextBoolean() ? BreezeUtil.randomPointBehindTarget(livingentity, p_310251_.getRandom()) : randomPointInMiddleCircle(p_310251_, livingentity);
+            if (position == null) {
+                position = breeze.getRandom().nextBoolean()
+                    ? BreezeUtil.randomPointBehindTarget(enemy, breeze.getRandom())
+                    : randomPointInMiddleCircle(breeze, enemy);
             }
 
-            p_310251_.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(BlockPos.containing(vec3), 0.6F, 1));
+            breeze.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(BlockPos.containing(position), 0.6F, 1));
         }
     }
 
-    private static Vec3 randomPointInMiddleCircle(Breeze p_310635_, LivingEntity p_312574_) {
-        Vec3 vec3 = p_312574_.position().subtract(p_310635_.position());
-        double d0 = vec3.length() - Mth.lerp(p_310635_.getRandom().nextDouble(), 8.0, 4.0);
-        Vec3 vec31 = vec3.normalize().multiply(d0, d0, d0);
-        return p_310635_.position().add(vec31);
+    private static Vec3 randomPointInMiddleCircle(final Breeze breeze, final LivingEntity enemy) {
+        Vec3 direction = enemy.position().subtract(breeze.position());
+        double distance = direction.length() - Mth.lerp(breeze.getRandom().nextDouble(), 8.0, 4.0);
+        Vec3 target = direction.normalize().multiply(distance, distance, distance);
+        return breeze.position().add(target);
     }
 }

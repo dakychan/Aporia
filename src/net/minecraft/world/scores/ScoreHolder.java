@@ -3,7 +3,6 @@ package net.minecraft.world.scores;
 import com.mojang.authlib.GameProfile;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import org.jspecify.annotations.Nullable;
 
 public interface ScoreHolder {
@@ -22,37 +21,37 @@ public interface ScoreHolder {
     }
 
     default Component getFeedbackDisplayName() {
-        Component component = this.getDisplayName();
-        return component != null
-            ? component.copy().withStyle(p_391145_ -> p_391145_.withHoverEvent(new HoverEvent.ShowText(Component.literal(this.getScoreboardName()))))
+        Component displayName = this.getDisplayName();
+        return displayName != null
+            ? displayName.copy().withStyle(style -> style.withHoverEvent(new HoverEvent.ShowText(Component.literal(this.getScoreboardName()))))
             : Component.literal(this.getScoreboardName());
     }
 
-    static ScoreHolder forNameOnly(final String p_312707_) {
-        if (p_312707_.equals("*")) {
+    static ScoreHolder forNameOnly(final String name) {
+        if (name.equals("*")) {
             return WILDCARD;
-        } else {
-            final Component component = Component.literal(p_312707_);
-            return new ScoreHolder() {
-                @Override
-                public String getScoreboardName() {
-                    return p_312707_;
-                }
-
-                @Override
-                public Component getFeedbackDisplayName() {
-                    return component;
-                }
-            };
         }
-    }
 
-    static ScoreHolder fromGameProfile(GameProfile p_311927_) {
-        final String s = p_311927_.name();
+        final Component feedbackName = Component.literal(name);
         return new ScoreHolder() {
             @Override
             public String getScoreboardName() {
-                return s;
+                return name;
+            }
+
+            @Override
+            public Component getFeedbackDisplayName() {
+                return feedbackName;
+            }
+        };
+    }
+
+    static ScoreHolder fromGameProfile(final GameProfile profile) {
+        final String name = profile.name();
+        return new ScoreHolder() {
+            @Override
+            public String getScoreboardName() {
+                return name;
             }
         };
     }

@@ -17,19 +17,19 @@ public class Stat<T> extends ObjectiveCriteria {
     private final T value;
     private final StatType<T> type;
 
-    protected Stat(StatType<T> p_12856_, T p_12857_, StatFormatter p_12858_) {
-        super(buildName(p_12856_, p_12857_));
-        this.type = p_12856_;
-        this.formatter = p_12858_;
-        this.value = p_12857_;
+    protected Stat(final StatType<T> type, final T value, final StatFormatter formatter) {
+        super(buildName(type, value));
+        this.type = type;
+        this.formatter = formatter;
+        this.value = value;
     }
 
-    public static <T> String buildName(StatType<T> p_12863_, T p_12864_) {
-        return locationToKey(BuiltInRegistries.STAT_TYPE.getKey(p_12863_)) + ":" + locationToKey(p_12863_.getRegistry().getKey(p_12864_));
+    public static <T> String buildName(final StatType<T> type, final T value) {
+        return locationToKey(BuiltInRegistries.STAT_TYPE.getKey(type)) + ":" + locationToKey(type.getRegistry().getKey(value));
     }
 
-    private static String locationToKey(@Nullable Identifier p_452457_) {
-        return p_452457_.toString().replace(':', '.');
+    private static String locationToKey(final @Nullable Identifier location) {
+        return location.toString().replace(':', '.');
     }
 
     public StatType<T> getType() {
@@ -40,13 +40,13 @@ public class Stat<T> extends ObjectiveCriteria {
         return this.value;
     }
 
-    public String format(int p_12861_) {
-        return this.formatter.format(p_12861_);
+    public String format(final int value) {
+        return this.formatter.format(value);
     }
 
     @Override
-    public boolean equals(Object p_12869_) {
-        return this == p_12869_ || p_12869_ instanceof Stat && Objects.equals(this.getName(), ((Stat)p_12869_).getName());
+    public boolean equals(final Object o) {
+        return this == o || o instanceof Stat && Objects.equals(this.getName(), ((Stat)o).getName());
     }
 
     @Override

@@ -1,42 +1,40 @@
 package net.minecraft.world.entity.monster.piglin;
 
 import java.util.Optional;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 public class StopAdmiringIfTiredOfTryingToReachItem {
-    public static BehaviorControl<LivingEntity> create(int p_259110_, int p_259200_) {
+    public static BehaviorControl<LivingEntity> create(final int maxTimeToReachItem, final int disableTime) {
         return BehaviorBuilder.create(
-            p_260320_ -> p_260320_.group(
-                    p_260320_.present(MemoryModuleType.ADMIRING_ITEM),
-                    p_260320_.present(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM),
-                    p_260320_.registered(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM),
-                    p_260320_.registered(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM)
+            i -> i.group(
+                    i.present(MemoryModuleType.ADMIRING_ITEM),
+                    i.present(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM),
+                    i.registered(MemoryModuleType.TIME_TRYING_TO_REACH_ADMIRE_ITEM),
+                    i.registered(MemoryModuleType.DISABLE_WALK_TO_ADMIRE_ITEM)
                 )
-                .apply(p_260320_, (p_260184_, p_259407_, p_259388_, p_259580_) -> (p_259044_, p_259229_, p_259125_) -> {
-                    if (!p_259229_.getOffhandItem().isEmpty()) {
+                .apply(i, (admiring, nearestVisible, time, disableWalk) -> (level, body, timestamp) -> {
+                    if (!body.getOffhandItem().isEmpty()) {
                         return false;
-                    } else {
-                        Optional<Integer> optional = p_260320_.tryGet(p_259388_);
-                        if (optional.isEmpty()) {
-                            p_259388_.set(0);
-                        } else {
-                            int i = optional.get();
-                            if (i > p_259110_) {
-                                p_260184_.erase();
-                                p_259388_.erase();
-                                p_259580_.setWithExpiry(true, p_259200_);
-                            } else {
-                                p_259388_.set(i + 1);
-                            }
-                        }
-
-                        return true;
                     }
+
+                    Optional<Integer> tryReachItemTimeOptional = i.tryGet(time);
+                    if (tryReachItemTimeOptional.isEmpty()) {
+                        time.set(0);
+                    } else {
+                        int timeTryingToReach = tryReachItemTimeOptional.get();
+                        if (timeTryingToReach > maxTimeToReachItem) {
+                            admiring.erase();
+                            time.erase();
+                            disableWalk.setWithExpiry(true, disableTime);
+                        } else {
+                            time.set(timeTryingToReach + 1);
+                        }
+                    }
+
+                    return true;
                 })
         );
     }

@@ -8,8 +8,8 @@ public enum Half implements StringRepresentable {
 
     private final String name;
 
-    private Half(final String p_61615_) {
-        this.name = p_61615_;
+    Half(final String name) {
+        this.name = name;
     }
 
     @Override

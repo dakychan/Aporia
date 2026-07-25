@@ -4,13 +4,13 @@ import com.mojang.brigadier.StringReader;
 import net.minecraft.CharPredicate;
 
 public class ParserUtils {
-    public static String readWhile(StringReader p_333885_, CharPredicate p_328669_) {
-        int i = p_333885_.getCursor();
+    public static String readWhile(final StringReader reader, final CharPredicate predicate) {
+        int start = reader.getCursor();
 
-        while (p_333885_.canRead() && p_328669_.test(p_333885_.peek())) {
-            p_333885_.skip();
+        while (reader.canRead() && predicate.test(reader.peek())) {
+            reader.skip();
         }
 
-        return p_333885_.getString().substring(i, p_333885_.getCursor());
+        return reader.getString().substring(start, reader.getCursor());
     }
 }

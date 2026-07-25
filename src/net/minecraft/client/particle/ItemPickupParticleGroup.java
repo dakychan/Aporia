@@ -8,58 +8,47 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.client.renderer.state.ParticleGroupRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.ParticleGroupRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ItemPickupParticleGroup extends ParticleGroup<ItemPickupParticle> {
-    public ItemPickupParticleGroup(ParticleEngine p_426758_) {
-        super(p_426758_);
+    public ItemPickupParticleGroup(final ParticleEngine engine) {
+        super(engine);
     }
 
     @Override
-    public ParticleGroupRenderState extractRenderState(Frustum p_425972_, Camera p_425384_, float p_431552_) {
+    public ParticleGroupRenderState extractRenderState(final Frustum frustum, final Camera camera, final float partialTickTime) {
         return new ItemPickupParticleGroup.State(
-            this.particles.stream().map(p_429820_ -> ItemPickupParticleGroup.ParticleInstance.fromParticle(p_429820_, p_425384_, p_431552_)).toList()
+            this.particles.stream().map(particle -> ItemPickupParticleGroup.ParticleInstance.fromParticle(particle, camera, partialTickTime)).toList()
         );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record ParticleInstance(EntityRenderState itemRenderState, double xOffset, double yOffset, double zOffset) {
-        public static ItemPickupParticleGroup.ParticleInstance fromParticle(ItemPickupParticle p_428662_, Camera p_423054_, float p_430102_) {
-            float f = (p_428662_.life + p_430102_) / 3.0F;
-            f *= f;
-            double d0 = Mth.lerp(p_430102_, p_428662_.targetXOld, p_428662_.targetX);
-            double d1 = Mth.lerp(p_430102_, p_428662_.targetYOld, p_428662_.targetY);
-            double d2 = Mth.lerp(p_430102_, p_428662_.targetZOld, p_428662_.targetZ);
-            double d3 = Mth.lerp(f, p_428662_.itemRenderState.x, d0);
-            double d4 = Mth.lerp(f, p_428662_.itemRenderState.y, d1);
-            double d5 = Mth.lerp(f, p_428662_.itemRenderState.z, d2);
-            Vec3 vec3 = p_423054_.position();
-            return new ItemPickupParticleGroup.ParticleInstance(p_428662_.itemRenderState, d3 - vec3.x(), d4 - vec3.y(), d5 - vec3.z());
+        private record ParticleInstance(EntityRenderState itemRenderState, double xOffset, double yOffset, double zOffset) {
+        public static ItemPickupParticleGroup.ParticleInstance fromParticle(final ItemPickupParticle particle, final Camera camera, final float partialTickTime) {
+            float time = (particle.life + partialTickTime) / 3.0F;
+            time *= time;
+            double xt = Mth.lerp(partialTickTime, particle.targetXOld, particle.targetX);
+            double yt = Mth.lerp(partialTickTime, particle.targetYOld, particle.targetY);
+            double zt = Mth.lerp(partialTickTime, particle.targetZOld, particle.targetZ);
+            double xx = Mth.lerp(time, particle.itemRenderState.x, xt);
+            double yy = Mth.lerp(time, particle.itemRenderState.y, yt);
+            double zz = Mth.lerp(time, particle.itemRenderState.z, zt);
+            Vec3 pos = camera.position();
+            return new ItemPickupParticleGroup.ParticleInstance(particle.itemRenderState, xx - pos.x(), yy - pos.y(), zz - pos.z());
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record State(List<ItemPickupParticleGroup.ParticleInstance> instances) implements ParticleGroupRenderState {
+        private record State(List<ItemPickupParticleGroup.ParticleInstance> instances) implements ParticleGroupRenderState {
         @Override
-        public void submit(SubmitNodeCollector p_427784_, CameraRenderState p_431324_) {
-            PoseStack posestack = new PoseStack();
-            EntityRenderDispatcher entityrenderdispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        public void submit(final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+            PoseStack poseStack = new PoseStack();
+            EntityRenderDispatcher entityRenderDispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
 
-            for (ItemPickupParticleGroup.ParticleInstance itempickupparticlegroup$particleinstance : this.instances) {
-                entityrenderdispatcher.submit(
-                    itempickupparticlegroup$particleinstance.itemRenderState,
-                    p_431324_,
-                    itempickupparticlegroup$particleinstance.xOffset,
-                    itempickupparticlegroup$particleinstance.yOffset,
-                    itempickupparticlegroup$particleinstance.zOffset,
-                    posestack,
-                    p_427784_
+            for (ItemPickupParticleGroup.ParticleInstance instance : this.instances) {
+                entityRenderDispatcher.submit(
+                    instance.itemRenderState, camera, instance.xOffset, instance.yOffset, instance.zOffset, poseStack, submitNodeCollector
                 );
             }
         }

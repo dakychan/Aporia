@@ -3,7 +3,7 @@ package net.minecraft.client.gui.screens.options.controls;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,11 +13,8 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class KeyBindsScreen extends OptionsSubScreen {
     private static final Component TITLE = Component.translatable("controls.keybinds.title");
     public @Nullable KeyMapping selectedKey;
@@ -25,8 +22,8 @@ public class KeyBindsScreen extends OptionsSubScreen {
     private KeyBindsList keyBindsList;
     private Button resetButton;
 
-    public KeyBindsScreen(Screen p_344695_, Options p_342647_) {
-        super(p_344695_, p_342647_, TITLE);
+    public KeyBindsScreen(final Screen lastScreen, final Options options) {
+        super(lastScreen, options, TITLE);
     }
 
     @Override
@@ -40,16 +37,16 @@ public class KeyBindsScreen extends OptionsSubScreen {
 
     @Override
     protected void addFooter() {
-        this.resetButton = Button.builder(Component.translatable("controls.resetAll"), p_343640_ -> {
-            for (KeyMapping keymapping : this.options.keyMappings) {
-                keymapping.setKey(keymapping.getDefaultKey());
+        this.resetButton = Button.builder(Component.translatable("controls.resetAll"), button -> {
+            for (KeyMapping key : this.options.keyMappings) {
+                key.setKey(key.getDefaultKey());
             }
 
             this.keyBindsList.resetMappingAndUpdateButtons();
         }).build();
-        LinearLayout linearlayout = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
-        linearlayout.addChild(this.resetButton);
-        linearlayout.addChild(Button.builder(CommonComponents.GUI_DONE, p_420770_ -> this.onClose()).build());
+        LinearLayout bottomButtons = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
+        bottomButtons.addChild(this.resetButton);
+        bottomButtons.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).build());
     }
 
     @Override
@@ -59,24 +56,24 @@ public class KeyBindsScreen extends OptionsSubScreen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_424325_, boolean p_423581_) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
         if (this.selectedKey != null) {
-            this.selectedKey.setKey(InputConstants.Type.MOUSE.getOrCreate(p_424325_.button()));
+            this.selectedKey.setKey(InputConstants.Type.MOUSE.getOrCreate(event.button()));
             this.selectedKey = null;
             this.keyBindsList.resetMappingAndUpdateButtons();
             return true;
         } else {
-            return super.mouseClicked(p_424325_, p_423581_);
+            return super.mouseClicked(event, doubleClick);
         }
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_424487_) {
+    public boolean keyPressed(final KeyEvent event) {
         if (this.selectedKey != null) {
-            if (p_424487_.isEscape()) {
+            if (event.isEscape()) {
                 this.selectedKey.setKey(InputConstants.UNKNOWN);
             } else {
-                this.selectedKey.setKey(InputConstants.getKey(p_424487_));
+                this.selectedKey.setKey(InputConstants.getKey(event));
             }
 
             this.selectedKey = null;
@@ -84,22 +81,22 @@ public class KeyBindsScreen extends OptionsSubScreen {
             this.keyBindsList.resetMappingAndUpdateButtons();
             return true;
         } else {
-            return super.keyPressed(p_424487_);
+            return super.keyPressed(event);
         }
     }
 
     @Override
-    public void render(GuiGraphics p_344555_, int p_344302_, int p_344298_, float p_344857_) {
-        super.render(p_344555_, p_344302_, p_344298_, p_344857_);
-        boolean flag = false;
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        boolean canReset = false;
 
-        for (KeyMapping keymapping : this.options.keyMappings) {
-            if (!keymapping.isDefault()) {
-                flag = true;
+        for (KeyMapping key : this.options.keyMappings) {
+            if (!key.isDefault()) {
+                canReset = true;
                 break;
             }
         }
 
-        this.resetButton.active = flag;
+        this.resetButton.active = canReset;
     }
 }

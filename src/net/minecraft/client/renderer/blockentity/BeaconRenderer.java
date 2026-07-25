@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.state.BeaconRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
@@ -17,13 +17,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.entity.BeaconBeamOwner;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class BeaconRenderer<T extends BlockEntity & BeaconBeamOwner> implements BlockEntityRenderer<T, BeaconRenderState> {
-    public static final Identifier BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/beacon_beam.png");
+    public static final Identifier BEAM_LOCATION = Identifier.withDefaultNamespace("textures/entity/beacon/beacon_beam.png");
     public static final int MAX_RENDER_Y = 2048;
     private static final float BEAM_SCALE_THRESHOLD = 96.0F;
     public static final float SOLID_BEAM_RADIUS = 0.2F;
@@ -33,160 +30,156 @@ public class BeaconRenderer<T extends BlockEntity & BeaconBeamOwner> implements 
         return new BeaconRenderState();
     }
 
-    public void extractRenderState(T p_431678_, BeaconRenderState p_429388_, float p_429147_, Vec3 p_430767_, ModelFeatureRenderer.@Nullable CrumblingOverlay p_425159_) {
-        BlockEntityRenderer.super.extractRenderState(p_431678_, p_429388_, p_429147_, p_430767_, p_425159_);
-        extract(p_431678_, p_429388_, p_429147_, p_430767_);
+    public void extractRenderState(
+        final T blockEntity,
+        final BeaconRenderState state,
+        final float partialTicks,
+        final Vec3 cameraPosition,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
+    ) {
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
+        extract(blockEntity, state, partialTicks, cameraPosition);
     }
 
-    public static <T extends BlockEntity & BeaconBeamOwner> void extract(T p_423160_, BeaconRenderState p_427134_, float p_431151_, Vec3 p_422459_) {
-        p_427134_.animationTime = p_423160_.getLevel() != null ? Math.floorMod(p_423160_.getLevel().getGameTime(), 40) + p_431151_ : 0.0F;
-        p_427134_.sections = p_423160_.getBeamSections()
-            .stream()
-            .map(p_430850_ -> new BeaconRenderState.Section(p_430850_.getColor(), p_430850_.getHeight()))
-            .toList();
-        float f = (float)p_422459_.subtract(p_427134_.blockPos.getCenter()).horizontalDistance();
-        LocalPlayer localplayer = Minecraft.getInstance().player;
-        p_427134_.beamRadiusScale = localplayer != null && localplayer.isScoping() ? 1.0F : Math.max(1.0F, f / 96.0F);
+    public static <T extends BlockEntity & BeaconBeamOwner> void extract(
+        final T blockEntity, final BeaconRenderState state, final float partialTicks, final Vec3 cameraPosition
+    ) {
+        state.animationTime = blockEntity.getLevel() != null ? Math.floorMod(blockEntity.getLevel().getGameTime(), 40) + partialTicks : 0.0F;
+        state.sections = blockEntity.getBeamSections().stream().map(section -> new BeaconRenderState.Section(section.getColor(), section.getHeight())).toList();
+        float distanceToBeacon = (float)cameraPosition.subtract(Vec3.atCenterOf(state.blockPos)).horizontalDistance();
+        LocalPlayer player = Minecraft.getInstance().player;
+        state.beamRadiusScale = player != null && player.isScoping() ? 1.0F : Math.max(1.0F, distanceToBeacon / 96.0F);
     }
 
-    public void submit(BeaconRenderState p_423237_, PoseStack p_430655_, SubmitNodeCollector p_426267_, CameraRenderState p_426445_) {
-        int i = 0;
+    public void submit(final BeaconRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+        int beamStart = 0;
 
-        for (int j = 0; j < p_423237_.sections.size(); j++) {
-            BeaconRenderState.Section beaconrenderstate$section = p_423237_.sections.get(j);
+        for (int i = 0; i < state.sections.size(); i++) {
+            BeaconRenderState.Section beamSection = state.sections.get(i);
             submitBeaconBeam(
-                p_430655_,
-                p_426267_,
-                p_423237_.beamRadiusScale,
-                p_423237_.animationTime,
-                i,
-                j == p_423237_.sections.size() - 1 ? 2048 : beaconrenderstate$section.height(),
-                beaconrenderstate$section.color()
+                poseStack,
+                submitNodeCollector,
+                state.beamRadiusScale,
+                state.animationTime,
+                beamStart,
+                i == state.sections.size() - 1 ? 2048 : beamSection.height(),
+                beamSection.color()
             );
-            i += beaconrenderstate$section.height();
+            beamStart += beamSection.height();
         }
     }
 
     private static void submitBeaconBeam(
-        PoseStack p_430806_, SubmitNodeCollector p_424720_, float p_424646_, float p_425289_, int p_424919_, int p_426256_, int p_429752_
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final float beamRadiusScale,
+        final float animationTime,
+        final int beamStart,
+        final int height,
+        final int color
     ) {
-        submitBeaconBeam(p_430806_, p_424720_, BEAM_LOCATION, 1.0F, p_425289_, p_424919_, p_426256_, p_429752_, 0.2F * p_424646_, 0.25F * p_424646_);
+        submitBeaconBeam(
+            poseStack, submitNodeCollector, BEAM_LOCATION, 1.0F, animationTime, beamStart, height, color, 0.2F * beamRadiusScale, 0.25F * beamRadiusScale
+        );
     }
 
     public static void submitBeaconBeam(
-        PoseStack p_430215_,
-        SubmitNodeCollector p_423842_,
-        Identifier p_456864_,
-        float p_430510_,
-        float p_423924_,
-        int p_427512_,
-        int p_426161_,
-        int p_427198_,
-        float p_428444_,
-        float p_424527_
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final Identifier beamLocation,
+        final float scale,
+        final float animationTime,
+        final int beamStart,
+        final int height,
+        final int color,
+        final float solidBeamRadius,
+        final float beamGlowRadius
     ) {
-        int i = p_427512_ + p_426161_;
-        p_430215_.pushPose();
-        p_430215_.translate(0.5, 0.0, 0.5);
-        float f = p_426161_ < 0 ? p_423924_ : -p_423924_;
-        float f1 = Mth.frac(f * 0.2F - Mth.floor(f * 0.1F));
-        p_430215_.pushPose();
-        p_430215_.mulPose(Axis.YP.rotationDegrees(p_423924_ * 2.25F - 45.0F));
-        float f5 = -p_428444_;
-        float f8 = -p_428444_;
-        float f11 = -1.0F + f1;
-        float f12 = p_426161_ * p_430510_ * (0.5F / p_428444_) + f11;
-        p_423842_.submitCustomGeometry(
-            p_430215_,
-            RenderTypes.beaconBeam(p_456864_, false),
-            (p_425436_, p_430525_) -> renderPart(
-                p_425436_, p_430525_, p_427198_, p_427512_, i, 0.0F, p_428444_, p_428444_, 0.0F, f5, 0.0F, 0.0F, f8, 0.0F, 1.0F, f12, f11
-            )
+        int beamEnd = beamStart + height;
+        poseStack.pushPose();
+        poseStack.translate(0.5, 0.0, 0.5);
+        float scroll = height < 0 ? animationTime : -animationTime;
+        float texVOff = Mth.frac(scroll * 0.2F - Mth.floor(scroll * 0.1F));
+        poseStack.pushPose();
+        poseStack.mulPose(Axis.YP.rotationDegrees(animationTime * 2.25F - 45.0F));
+        float wnx = 0.0F;
+        float wnz = solidBeamRadius;
+        float enx = solidBeamRadius;
+        float enz = 0.0F;
+        float wsx = -solidBeamRadius;
+        float wsz = 0.0F;
+        float esx = 0.0F;
+        float esz = -solidBeamRadius;
+        float uu1 = 0.0F;
+        float uu2 = 1.0F;
+        float vv2 = -1.0F + texVOff;
+        float vv1 = height * scale * (0.5F / solidBeamRadius) + vv2;
+        submitNodeCollector.submitCustomGeometry(
+            poseStack,
+            RenderTypes.beaconBeam(beamLocation, false),
+            (pose, buffer) -> renderPart(pose, buffer, color, beamStart, beamEnd, 0.0F, wnz, enx, 0.0F, wsx, 0.0F, 0.0F, esz, 0.0F, 1.0F, vv1, vv2)
         );
-        p_430215_.popPose();
-        float f11_f = -1.0F + f1;
-        float f12_f = p_426161_ * p_430510_ + f11_f;
-        p_423842_.submitCustomGeometry(
-            p_430215_,
-            RenderTypes.beaconBeam(p_456864_, true),
-            (p_427615_, p_428983_) -> renderPart(
-                p_427615_,
-                p_428983_,
-                ARGB.color(32, p_427198_),
-                p_427512_,
-                i,
-                -p_424527_,
-                -p_424527_,
-                p_424527_,
-                -p_424527_,
-                -p_424527_,
-                p_424527_,
-                p_424527_,
-                p_424527_,
-                0.0F,
-                1.0F,
-                f12_f,
-                f11_f
-            )
+        poseStack.popPose();
+        float vv2_f = -1.0F + texVOff;
+        float vv1_f = height * scale + vv2_f;
+        submitNodeCollector.submitCustomGeometry(
+            poseStack,
+            RenderTypes.beaconBeam(beamLocation, true),
+            (pose, buffer) -> renderPart(pose, buffer, ARGB.color(32, color), beamStart, beamEnd, -beamGlowRadius, -beamGlowRadius, beamGlowRadius, -beamGlowRadius, -beamGlowRadius, beamGlowRadius, beamGlowRadius, beamGlowRadius, 0.0F, 1.0F, vv1_f, vv2_f)
         );
-        p_430215_.popPose();
+        poseStack.popPose();
     }
 
     private static void renderPart(
-        PoseStack.Pose p_428829_,
-        VertexConsumer p_112157_,
-        int p_112162_,
-        int p_112163_,
-        int p_345221_,
-        float p_112158_,
-        float p_112159_,
-        float p_112160_,
-        float p_112161_,
-        float p_112164_,
-        float p_112165_,
-        float p_112166_,
-        float p_112167_,
-        float p_112168_,
-        float p_112169_,
-        float p_112170_,
-        float p_112171_
+        final PoseStack.Pose pose,
+        final VertexConsumer builder,
+        final int color,
+        final int beamStart,
+        final int beamEnd,
+        final float wnx,
+        final float wnz,
+        final float enx,
+        final float enz,
+        final float wsx,
+        final float wsz,
+        final float esx,
+        final float esz,
+        final float uu1,
+        final float uu2,
+        final float vv1,
+        final float vv2
     ) {
-        renderQuad(p_428829_, p_112157_, p_112162_, p_112163_, p_345221_, p_112158_, p_112159_, p_112160_, p_112161_, p_112168_, p_112169_, p_112170_, p_112171_);
-        renderQuad(p_428829_, p_112157_, p_112162_, p_112163_, p_345221_, p_112166_, p_112167_, p_112164_, p_112165_, p_112168_, p_112169_, p_112170_, p_112171_);
-        renderQuad(p_428829_, p_112157_, p_112162_, p_112163_, p_345221_, p_112160_, p_112161_, p_112166_, p_112167_, p_112168_, p_112169_, p_112170_, p_112171_);
-        renderQuad(p_428829_, p_112157_, p_112162_, p_112163_, p_345221_, p_112164_, p_112165_, p_112158_, p_112159_, p_112168_, p_112169_, p_112170_, p_112171_);
+        renderQuad(pose, builder, color, beamStart, beamEnd, wnx, wnz, enx, enz, uu1, uu2, vv1, vv2);
+        renderQuad(pose, builder, color, beamStart, beamEnd, esx, esz, wsx, wsz, uu1, uu2, vv1, vv2);
+        renderQuad(pose, builder, color, beamStart, beamEnd, enx, enz, esx, esz, uu1, uu2, vv1, vv2);
+        renderQuad(pose, builder, color, beamStart, beamEnd, wsx, wsz, wnx, wnz, uu1, uu2, vv1, vv2);
     }
 
     private static void renderQuad(
-        PoseStack.Pose p_332343_,
-        VertexConsumer p_112122_,
-        int p_112127_,
-        int p_112128_,
-        int p_345385_,
-        float p_112123_,
-        float p_112124_,
-        float p_112125_,
-        float p_112126_,
-        float p_112129_,
-        float p_112130_,
-        float p_112131_,
-        float p_112132_
+        final PoseStack.Pose pose,
+        final VertexConsumer builder,
+        final int color,
+        final int beamStart,
+        final int beamEnd,
+        final float wnx,
+        final float wnz,
+        final float enx,
+        final float enz,
+        final float uu1,
+        final float uu2,
+        final float vv1,
+        final float vv2
     ) {
-        addVertex(p_332343_, p_112122_, p_112127_, p_345385_, p_112123_, p_112124_, p_112130_, p_112131_);
-        addVertex(p_332343_, p_112122_, p_112127_, p_112128_, p_112123_, p_112124_, p_112130_, p_112132_);
-        addVertex(p_332343_, p_112122_, p_112127_, p_112128_, p_112125_, p_112126_, p_112129_, p_112132_);
-        addVertex(p_332343_, p_112122_, p_112127_, p_345385_, p_112125_, p_112126_, p_112129_, p_112131_);
+        addVertex(pose, builder, color, beamEnd, wnx, wnz, uu2, vv1);
+        addVertex(pose, builder, color, beamStart, wnx, wnz, uu2, vv2);
+        addVertex(pose, builder, color, beamStart, enx, enz, uu1, vv2);
+        addVertex(pose, builder, color, beamEnd, enx, enz, uu1, vv1);
     }
 
     private static void addVertex(
-        PoseStack.Pose p_334631_, VertexConsumer p_253894_, int p_254357_, int p_343267_, float p_253871_, float p_253841_, float p_254568_, float p_254361_
+        final PoseStack.Pose pose, final VertexConsumer builder, final int color, final int y, final float x, final float z, final float u, final float v
     ) {
-        p_253894_.addVertex(p_334631_, p_253871_, p_343267_, p_253841_)
-            .setColor(p_254357_)
-            .setUv(p_254568_, p_254361_)
-            .setOverlay(OverlayTexture.NO_OVERLAY)
-            .setLight(15728880)
-            .setNormal(p_334631_, 0.0F, 1.0F, 0.0F);
+        builder.addVertex(pose, x, y, z).setColor(color).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(15728880).setNormal(pose, 0.0F, 1.0F, 0.0F);
     }
 
     @Override
@@ -200,7 +193,7 @@ public class BeaconRenderer<T extends BlockEntity & BeaconBeamOwner> implements 
     }
 
     @Override
-    public boolean shouldRender(T p_173534_, Vec3 p_173535_) {
-        return Vec3.atCenterOf(p_173534_.getBlockPos()).multiply(1.0, 0.0, 1.0).closerThan(p_173535_.multiply(1.0, 0.0, 1.0), this.getViewDistance());
+    public boolean shouldRender(final T blockEntity, final Vec3 cameraPosition) {
+        return Vec3.atCenterOf(blockEntity.getBlockPos()).multiply(1.0, 0.0, 1.0).closerThan(cameraPosition.multiply(1.0, 0.0, 1.0), this.getViewDistance());
     }
 }

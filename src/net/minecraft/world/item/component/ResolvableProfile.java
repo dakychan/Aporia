@@ -6,7 +6,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,11 +26,11 @@ import net.minecraft.world.item.TooltipFlag;
 
 public abstract sealed class ResolvableProfile implements TooltipProvider permits ResolvableProfile.Static, ResolvableProfile.Dynamic {
     private static final Codec<ResolvableProfile> FULL_CODEC = RecordCodecBuilder.create(
-        p_422001_ -> p_422001_.group(
+        i -> i.group(
                 Codec.mapEither(ExtraCodecs.STORED_GAME_PROFILE, ResolvableProfile.Partial.MAP_CODEC).forGetter(ResolvableProfile::unpack),
                 PlayerSkin.Patch.MAP_CODEC.forGetter(ResolvableProfile::skinPatch)
             )
-            .apply(p_422001_, ResolvableProfile::create)
+            .apply(i, ResolvableProfile::create)
     );
     public static final Codec<ResolvableProfile> CODEC = Codec.withAlternative(FULL_CODEC, ExtraCodecs.PLAYER_NAME, ResolvableProfile::createUnresolved);
     public static final StreamCodec<ByteBuf, ResolvableProfile> STREAM_CODEC = StreamCodec.composite(
@@ -44,37 +43,37 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
     protected final GameProfile partialProfile;
     protected final PlayerSkin.Patch skinPatch;
 
-    private static ResolvableProfile create(Either<GameProfile, ResolvableProfile.Partial> p_430787_, PlayerSkin.Patch p_431421_) {
-        return p_430787_.map(
-            p_422003_ -> new ResolvableProfile.Static(Either.left(p_422003_), p_431421_),
-            p_421995_ -> (ResolvableProfile)(p_421995_.properties.isEmpty() && p_421995_.id.isPresent() != p_421995_.name.isPresent()
-                ? p_421995_.name
-                    .<ResolvableProfile>map(p_421999_ -> new ResolvableProfile.Dynamic(Either.left(p_421999_), p_431421_))
-                    .orElseGet(() -> new ResolvableProfile.Dynamic(Either.right(p_421995_.id.get()), p_431421_))
-                : new ResolvableProfile.Static(Either.right(p_421995_), p_431421_))
+    private static ResolvableProfile create(final Either<GameProfile, ResolvableProfile.Partial> value, final PlayerSkin.Patch patch) {
+        return value.map(
+            full -> new ResolvableProfile.Static(Either.left(full), patch),
+            partial -> partial.properties.isEmpty() && partial.id.isPresent() != partial.name.isPresent()
+                ? partial.name
+                    .<ResolvableProfile>map(s -> new ResolvableProfile.Dynamic(Either.left(s), patch))
+                    .orElseGet(() -> new ResolvableProfile.Dynamic(Either.right(partial.id.get()), patch))
+                : new ResolvableProfile.Static(Either.right(partial), patch)
         );
     }
 
-    public static ResolvableProfile createResolved(GameProfile p_426884_) {
-        return new ResolvableProfile.Static(Either.left(p_426884_), PlayerSkin.Patch.EMPTY);
+    public static ResolvableProfile createResolved(final GameProfile gameProfile) {
+        return new ResolvableProfile.Static(Either.left(gameProfile), PlayerSkin.Patch.EMPTY);
     }
 
-    public static ResolvableProfile createUnresolved(String p_426244_) {
-        return new ResolvableProfile.Dynamic(Either.left(p_426244_), PlayerSkin.Patch.EMPTY);
+    public static ResolvableProfile createUnresolved(final String name) {
+        return new ResolvableProfile.Dynamic(Either.left(name), PlayerSkin.Patch.EMPTY);
     }
 
-    public static ResolvableProfile createUnresolved(UUID p_423353_) {
-        return new ResolvableProfile.Dynamic(Either.right(p_423353_), PlayerSkin.Patch.EMPTY);
+    public static ResolvableProfile createUnresolved(final UUID id) {
+        return new ResolvableProfile.Dynamic(Either.right(id), PlayerSkin.Patch.EMPTY);
     }
 
     protected abstract Either<GameProfile, ResolvableProfile.Partial> unpack();
 
-    protected ResolvableProfile(GameProfile p_429325_, PlayerSkin.Patch p_428666_) {
-        this.partialProfile = p_429325_;
-        this.skinPatch = p_428666_;
+    protected ResolvableProfile(final GameProfile partialProfile, final PlayerSkin.Patch skinPatch) {
+        this.partialProfile = partialProfile;
+        this.skinPatch = skinPatch;
     }
 
-    public abstract CompletableFuture<GameProfile> resolveProfile(ProfileResolver p_428305_);
+    public abstract CompletableFuture<GameProfile> resolveProfile(ProfileResolver profileResolver);
 
     public GameProfile partialProfile() {
         return this.partialProfile;
@@ -84,10 +83,10 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
         return this.skinPatch;
     }
 
-    static GameProfile createPartialProfile(Optional<String> p_429587_, Optional<UUID> p_429212_, PropertyMap p_429243_) {
-        String s = p_429587_.orElse("");
-        UUID uuid = p_429212_.orElseGet(() -> p_429587_.map(UUIDUtil::createOfflinePlayerUUID).orElse(Util.NIL_UUID));
-        return new GameProfile(uuid, s, p_429243_);
+    private static GameProfile createPartialProfile(final Optional<String> maybeName, final Optional<UUID> maybeId, final PropertyMap properties) {
+        String name = maybeName.orElse("");
+        UUID id = maybeId.orElseGet(() -> maybeName.map(UUIDUtil::createOfflinePlayerUUID).orElse(Util.NIL_UUID));
+        return new GameProfile(id, name, properties);
     }
 
     public abstract Optional<String> name();
@@ -96,9 +95,9 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
         private static final Component DYNAMIC_TOOLTIP = Component.translatable("component.profile.dynamic").withStyle(ChatFormatting.GRAY);
         private final Either<String, UUID> nameOrId;
 
-        Dynamic(Either<String, UUID> p_425272_, PlayerSkin.Patch p_430189_) {
-            super(ResolvableProfile.createPartialProfile(p_425272_.left(), p_425272_.right(), PropertyMap.EMPTY), p_430189_);
-            this.nameOrId = p_425272_;
+        private Dynamic(final Either<String, UUID> nameOrId, final PlayerSkin.Patch skinPatch) {
+            super(ResolvableProfile.createPartialProfile(nameOrId.left(), nameOrId.right(), PropertyMap.EMPTY), skinPatch);
+            this.nameOrId = nameOrId;
         }
 
         @Override
@@ -107,17 +106,14 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
         }
 
         @Override
-        public boolean equals(Object p_427792_) {
-            return this == p_427792_
-                || p_427792_ instanceof ResolvableProfile.Dynamic resolvableprofile$dynamic
-                    && this.nameOrId.equals(resolvableprofile$dynamic.nameOrId)
-                    && this.skinPatch.equals(resolvableprofile$dynamic.skinPatch);
+        public boolean equals(final Object o) {
+            return this == o || o instanceof ResolvableProfile.Dynamic that && this.nameOrId.equals(that.nameOrId) && this.skinPatch.equals(that.skinPatch);
         }
 
         @Override
         public int hashCode() {
-            int i = 31 + this.nameOrId.hashCode();
-            return 31 * i + this.skinPatch.hashCode();
+            int result = 31 + this.nameOrId.hashCode();
+            return 31 * result + this.skinPatch.hashCode();
         }
 
         @Override
@@ -126,25 +122,27 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
         }
 
         @Override
-        public CompletableFuture<GameProfile> resolveProfile(ProfileResolver p_423044_) {
-            return CompletableFuture.supplyAsync(() -> p_423044_.fetchByNameOrId(this.nameOrId).orElse(this.partialProfile), Util.nonCriticalIoPool());
+        public CompletableFuture<GameProfile> resolveProfile(final ProfileResolver profileResolver) {
+            return CompletableFuture.supplyAsync(() -> profileResolver.fetchByNameOrId(this.nameOrId).orElse(this.partialProfile), Util.nonCriticalIoPool());
         }
 
         @Override
-        public void addToTooltip(Item.TooltipContext p_427273_, Consumer<Component> p_427701_, TooltipFlag p_425571_, DataComponentGetter p_429007_) {
-            p_427701_.accept(DYNAMIC_TOOLTIP);
+        public void addToTooltip(
+            final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+        ) {
+            consumer.accept(DYNAMIC_TOOLTIP);
         }
     }
 
     protected record Partial(Optional<String> name, Optional<UUID> id, PropertyMap properties) {
         public static final ResolvableProfile.Partial EMPTY = new ResolvableProfile.Partial(Optional.empty(), Optional.empty(), PropertyMap.EMPTY);
-        static final MapCodec<ResolvableProfile.Partial> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_429269_ -> p_429269_.group(
+        private static final MapCodec<ResolvableProfile.Partial> MAP_CODEC = RecordCodecBuilder.mapCodec(
+            i -> i.group(
                     ExtraCodecs.PLAYER_NAME.optionalFieldOf("name").forGetter(ResolvableProfile.Partial::name),
                     UUIDUtil.CODEC.optionalFieldOf("id").forGetter(ResolvableProfile.Partial::id),
                     ExtraCodecs.PROPERTY_MAP.optionalFieldOf("properties", PropertyMap.EMPTY).forGetter(ResolvableProfile.Partial::properties)
                 )
-                .apply(p_429269_, ResolvableProfile.Partial::new)
+                .apply(i, ResolvableProfile.Partial::new)
         );
         public static final StreamCodec<ByteBuf, ResolvableProfile.Partial> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.PLAYER_NAME.apply(ByteBufCodecs::optional),
@@ -162,18 +160,16 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
     }
 
     public static final class Static extends ResolvableProfile {
-        public static final ResolvableProfile.Static EMPTY = new ResolvableProfile.Static(
-            Either.right(ResolvableProfile.Partial.EMPTY), PlayerSkin.Patch.EMPTY
-        );
+        public static final ResolvableProfile.Static EMPTY = new ResolvableProfile.Static(Either.right(ResolvableProfile.Partial.EMPTY), PlayerSkin.Patch.EMPTY);
         private final Either<GameProfile, ResolvableProfile.Partial> contents;
 
-        Static(Either<GameProfile, ResolvableProfile.Partial> p_428859_, PlayerSkin.Patch p_428890_) {
-            super(p_428859_.map(p_431247_ -> (GameProfile)p_431247_, ResolvableProfile.Partial::createProfile), p_428890_);
-            this.contents = p_428859_;
+        private Static(final Either<GameProfile, ResolvableProfile.Partial> contents, final PlayerSkin.Patch skinPatch) {
+            super(contents.map(gameProfile -> (GameProfile)gameProfile, ResolvableProfile.Partial::createProfile), skinPatch);
+            this.contents = contents;
         }
 
         @Override
-        public CompletableFuture<GameProfile> resolveProfile(ProfileResolver p_427730_) {
+        public CompletableFuture<GameProfile> resolveProfile(final ProfileResolver profileResolver) {
             return CompletableFuture.completedFuture(this.partialProfile);
         }
 
@@ -184,25 +180,24 @@ public abstract sealed class ResolvableProfile implements TooltipProvider permit
 
         @Override
         public Optional<String> name() {
-            return this.contents.map(p_428364_ -> Optional.of(p_428364_.name()), p_423458_ -> p_423458_.name);
+            return this.contents.map(gameProfile -> Optional.of(gameProfile.name()), partial -> partial.name);
         }
 
         @Override
-        public boolean equals(Object p_427217_) {
-            return this == p_427217_
-                || p_427217_ instanceof ResolvableProfile.Static resolvableprofile$static
-                    && this.contents.equals(resolvableprofile$static.contents)
-                    && this.skinPatch.equals(resolvableprofile$static.skinPatch);
+        public boolean equals(final Object o) {
+            return this == o || o instanceof ResolvableProfile.Static that && this.contents.equals(that.contents) && this.skinPatch.equals(that.skinPatch);
         }
 
         @Override
         public int hashCode() {
-            int i = 31 + this.contents.hashCode();
-            return 31 * i + this.skinPatch.hashCode();
+            int result = 31 + this.contents.hashCode();
+            return 31 * result + this.skinPatch.hashCode();
         }
 
         @Override
-        public void addToTooltip(Item.TooltipContext p_426944_, Consumer<Component> p_428668_, TooltipFlag p_429017_, DataComponentGetter p_425405_) {
+        public void addToTooltip(
+            final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+        ) {
         }
     }
 }

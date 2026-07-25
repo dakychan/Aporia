@@ -19,25 +19,25 @@ public sealed interface InteractionResult
         return false;
     }
 
-    public record Fail() implements InteractionResult {
+    record Fail() implements InteractionResult {
     }
 
-    public record ItemContext(boolean wasItemInteraction, @Nullable ItemStack heldItemTransformedTo) {
-        static InteractionResult.ItemContext NONE = new InteractionResult.ItemContext(false, null);
-        static InteractionResult.ItemContext DEFAULT = new InteractionResult.ItemContext(true, null);
+    record ItemContext(boolean wasItemInteraction, @Nullable ItemStack heldItemTransformedTo) {
+        public static final InteractionResult.ItemContext NONE = new InteractionResult.ItemContext(false, null);
+        public static final InteractionResult.ItemContext DEFAULT = new InteractionResult.ItemContext(true, null);
     }
 
-    public record Pass() implements InteractionResult {
+    record Pass() implements InteractionResult {
     }
 
-    public record Success(InteractionResult.SwingSource swingSource, InteractionResult.ItemContext itemContext) implements InteractionResult {
+    record Success(InteractionResult.SwingSource swingSource, InteractionResult.ItemContext itemContext) implements InteractionResult {
         @Override
         public boolean consumesAction() {
             return true;
         }
 
-        public InteractionResult.Success heldItemTransformedTo(ItemStack p_362659_) {
-            return new InteractionResult.Success(this.swingSource, new InteractionResult.ItemContext(true, p_362659_));
+        public InteractionResult.Success heldItemTransformedTo(final ItemStack itemStack) {
+            return new InteractionResult.Success(this.swingSource, new InteractionResult.ItemContext(true, itemStack));
         }
 
         public InteractionResult.Success withoutItem() {
@@ -53,12 +53,12 @@ public sealed interface InteractionResult
         }
     }
 
-    public static enum SwingSource {
+    enum SwingSource {
         NONE,
         CLIENT,
         SERVER;
     }
 
-    public record TryEmptyHandInteraction() implements InteractionResult {
+    record TryEmptyHandInteraction() implements InteractionResult {
     }
 }

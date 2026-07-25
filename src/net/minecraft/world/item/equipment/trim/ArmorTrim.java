@@ -2,7 +2,6 @@ package net.minecraft.world.item.equipment.trim;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Holder;
@@ -21,27 +20,28 @@ import net.minecraft.world.item.equipment.EquipmentAsset;
 
 public record ArmorTrim(Holder<TrimMaterial> material, Holder<TrimPattern> pattern) implements TooltipProvider {
     public static final Codec<ArmorTrim> CODEC = RecordCodecBuilder.create(
-        p_390858_ -> p_390858_.group(
-                TrimMaterial.CODEC.fieldOf("material").forGetter(ArmorTrim::material),
-                TrimPattern.CODEC.fieldOf("pattern").forGetter(ArmorTrim::pattern)
-            )
-            .apply(p_390858_, ArmorTrim::new)
+        i -> i.group(TrimMaterial.CODEC.fieldOf("material").forGetter(ArmorTrim::material), TrimPattern.CODEC.fieldOf("pattern").forGetter(ArmorTrim::pattern))
+            .apply(i, ArmorTrim::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, ArmorTrim> STREAM_CODEC = StreamCodec.composite(
         TrimMaterial.STREAM_CODEC, ArmorTrim::material, TrimPattern.STREAM_CODEC, ArmorTrim::pattern, ArmorTrim::new
     );
-    private static final Component UPGRADE_TITLE = Component.translatable(Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.upgrade")))
+    private static final Component UPGRADE_TITLE = Component.translatable(
+            Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.upgrade"))
+        )
         .withStyle(ChatFormatting.GRAY);
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_360931_, Consumer<Component> p_367392_, TooltipFlag p_368625_, DataComponentGetter p_392266_) {
-        p_367392_.accept(UPGRADE_TITLE);
-        p_367392_.accept(CommonComponents.space().append(this.pattern.value().copyWithStyle(this.material)));
-        p_367392_.accept(CommonComponents.space().append(this.material.value().description()));
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        consumer.accept(UPGRADE_TITLE);
+        consumer.accept(CommonComponents.space().append(this.pattern.value().copyWithStyle(this.material)));
+        consumer.accept(CommonComponents.space().append(this.material.value().description()));
     }
 
-    public Identifier layerAssetId(String p_391784_, ResourceKey<EquipmentAsset> p_397619_) {
-        MaterialAssetGroup.AssetInfo materialassetgroup$assetinfo = this.material().value().assets().assetId(p_397619_);
-        return this.pattern().value().assetId().withPath(p_390861_ -> p_391784_ + "/" + p_390861_ + "_" + materialassetgroup$assetinfo.suffix());
+    public Identifier layerAssetId(final String layerAssetPrefix, final ResourceKey<EquipmentAsset> equipmentAsset) {
+        MaterialAssetGroup.AssetInfo materialAsset = this.material().value().assets().assetId(equipmentAsset);
+        return this.pattern().value().assetId().withPath(patternPath -> layerAssetPrefix + "/" + patternPath + "_" + materialAsset.suffix());
     }
 }

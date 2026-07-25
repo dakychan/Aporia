@@ -12,41 +12,41 @@ public class HashMapPalette<T> implements Palette<T> {
     private final CrudeIncrementalIntIdentityHashBiMap<T> values;
     private final int bits;
 
-    public HashMapPalette(int p_187905_, List<T> p_428768_) {
-        this(p_187905_);
-        p_428768_.forEach(this.values::add);
+    public HashMapPalette(final int bits, final List<T> values) {
+        this(bits);
+        values.forEach(this.values::add);
     }
 
-    public HashMapPalette(int p_199916_) {
-        this(p_199916_, CrudeIncrementalIntIdentityHashBiMap.create(1 << p_199916_));
+    public HashMapPalette(final int bits) {
+        this(bits, CrudeIncrementalIntIdentityHashBiMap.create(1 << bits));
     }
 
-    private HashMapPalette(int p_187909_, CrudeIncrementalIntIdentityHashBiMap<T> p_425599_) {
-        this.bits = p_187909_;
-        this.values = p_425599_;
+    private HashMapPalette(final int bits, final CrudeIncrementalIntIdentityHashBiMap<T> values) {
+        this.bits = bits;
+        this.values = values;
     }
 
-    public static <A> Palette<A> create(int p_187913_, List<A> p_187916_) {
-        return new HashMapPalette<>(p_187913_, p_187916_);
+    public static <A> Palette<A> create(final int bits, final List<A> paletteEntries) {
+        return new HashMapPalette<>(bits, paletteEntries);
     }
 
     @Override
-    public int idFor(T p_62673_, PaletteResize<T> p_430263_) {
-        int i = this.values.getId(p_62673_);
-        if (i == -1) {
-            i = this.values.add(p_62673_);
-            if (i >= 1 << this.bits) {
-                i = p_430263_.onResize(this.bits + 1, p_62673_);
+    public int idFor(final T value, final PaletteResize<T> resizeHandler) {
+        int id = this.values.getId(value);
+        if (id == -1) {
+            id = this.values.add(value);
+            if (id >= 1 << this.bits) {
+                id = resizeHandler.onResize(this.bits + 1, value);
             }
         }
 
-        return i;
+        return id;
     }
 
     @Override
-    public boolean maybeHas(Predicate<T> p_62675_) {
+    public boolean maybeHas(final Predicate<T> predicate) {
         for (int i = 0; i < this.getSize(); i++) {
-            if (p_62675_.test(this.values.byId(i))) {
+            if (predicate.test(this.values.byId(i))) {
                 return true;
             }
         }
@@ -55,50 +55,50 @@ public class HashMapPalette<T> implements Palette<T> {
     }
 
     @Override
-    public T valueFor(int p_62671_) {
-        T t = this.values.byId(p_62671_);
-        if (t == null) {
-            throw new MissingPaletteEntryException(p_62671_);
+    public T valueFor(final int index) {
+        T value = this.values.byId(index);
+        if (value == null) {
+            throw new MissingPaletteEntryException(index);
         } else {
-            return t;
+            return value;
         }
     }
 
     @Override
-    public void read(FriendlyByteBuf p_62679_, IdMap<T> p_428164_) {
+    public void read(final FriendlyByteBuf buffer, final IdMap<T> globalMap) {
         this.values.clear();
-        int i = p_62679_.readVarInt();
+        int size = buffer.readVarInt();
 
-        for (int j = 0; j < i; j++) {
-            this.values.add(p_428164_.byIdOrThrow(p_62679_.readVarInt()));
+        for (int i = 0; i < size; i++) {
+            this.values.add(globalMap.byIdOrThrow(buffer.readVarInt()));
         }
     }
 
     @Override
-    public void write(FriendlyByteBuf p_62684_, IdMap<T> p_423871_) {
-        int i = this.getSize();
-        p_62684_.writeVarInt(i);
+    public void write(final FriendlyByteBuf buffer, final IdMap<T> globalMap) {
+        int size = this.getSize();
+        buffer.writeVarInt(size);
 
-        for (int j = 0; j < i; j++) {
-            p_62684_.writeVarInt(p_423871_.getId(this.values.byId(j)));
+        for (int i = 0; i < size; i++) {
+            buffer.writeVarInt(globalMap.getId(this.values.byId(i)));
         }
     }
 
     @Override
-    public int getSerializedSize(IdMap<T> p_424534_) {
-        int i = VarInt.getByteSize(this.getSize());
+    public int getSerializedSize(final IdMap<T> globalMap) {
+        int size = VarInt.getByteSize(this.getSize());
 
-        for (int j = 0; j < this.getSize(); j++) {
-            i += VarInt.getByteSize(p_424534_.getId(this.values.byId(j)));
+        for (int i = 0; i < this.getSize(); i++) {
+            size += VarInt.getByteSize(globalMap.getId(this.values.byId(i)));
         }
 
-        return i;
+        return size;
     }
 
     public List<T> getEntries() {
-        ArrayList<T> arraylist = new ArrayList<>();
-        this.values.iterator().forEachRemaining(arraylist::add);
-        return arraylist;
+        ArrayList<T> list = new ArrayList<>();
+        this.values.iterator().forEachRemaining(list::add);
+        return list;
     }
 
     @Override

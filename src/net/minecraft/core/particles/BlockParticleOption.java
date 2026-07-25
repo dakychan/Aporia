@@ -10,21 +10,23 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class BlockParticleOption implements ParticleOptions {
-    private static final Codec<BlockState> BLOCK_STATE_CODEC = Codec.withAlternative(BlockState.CODEC, BuiltInRegistries.BLOCK.byNameCodec(), Block::defaultBlockState);
+    private static final Codec<BlockState> BLOCK_STATE_CODEC = Codec.withAlternative(
+        BlockState.CODEC, BuiltInRegistries.BLOCK.byNameCodec(), Block::defaultBlockState
+    );
     private final ParticleType<BlockParticleOption> type;
     private final BlockState state;
 
-    public static MapCodec<BlockParticleOption> codec(ParticleType<BlockParticleOption> p_123635_) {
-        return BLOCK_STATE_CODEC.xmap(p_123638_ -> new BlockParticleOption(p_123635_, p_123638_), p_123633_ -> p_123633_.state).fieldOf("block_state");
+    public static MapCodec<BlockParticleOption> codec(final ParticleType<BlockParticleOption> type) {
+        return BLOCK_STATE_CODEC.xmap(state -> new BlockParticleOption(type, state), o -> o.state).fieldOf("block_state");
     }
 
-    public static StreamCodec<? super RegistryFriendlyByteBuf, BlockParticleOption> streamCodec(ParticleType<BlockParticleOption> p_328414_) {
-        return ByteBufCodecs.idMapper(Block.BLOCK_STATE_REGISTRY).map(p_325792_ -> new BlockParticleOption(p_328414_, p_325792_), p_325793_ -> p_325793_.state);
+    public static StreamCodec<? super RegistryFriendlyByteBuf, BlockParticleOption> streamCodec(final ParticleType<BlockParticleOption> type) {
+        return ByteBufCodecs.idMapper(Block.BLOCK_STATE_REGISTRY).map(state -> new BlockParticleOption(type, state), o -> o.state);
     }
 
-    public BlockParticleOption(ParticleType<BlockParticleOption> p_123629_, BlockState p_123630_) {
-        this.type = p_123629_;
-        this.state = p_123630_;
+    public BlockParticleOption(final ParticleType<BlockParticleOption> type, final BlockState state) {
+        this.type = type;
+        this.state = state;
     }
 
     @Override

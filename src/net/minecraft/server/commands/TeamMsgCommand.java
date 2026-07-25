@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import java.util.List;
@@ -26,58 +25,56 @@ public class TeamMsgCommand {
         .withClickEvent(new ClickEvent.SuggestCommand("/teammsg "));
     private static final SimpleCommandExceptionType ERROR_NOT_ON_TEAM = new SimpleCommandExceptionType(Component.translatable("commands.teammsg.failed.noteam"));
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_139000_) {
-        LiteralCommandNode<CommandSourceStack> literalcommandnode = p_139000_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        LiteralCommandNode<CommandSourceStack> msg = dispatcher.register(
             Commands.literal("teammsg")
                 .then(
                     Commands.argument("message", MessageArgument.message())
                         .executes(
-                            p_248184_ -> {
-                                CommandSourceStack commandsourcestack = p_248184_.getSource();
-                                Entity entity = commandsourcestack.getEntityOrException();
-                                PlayerTeam playerteam = entity.getTeam();
-                                if (playerteam == null) {
+                            c -> {
+                                CommandSourceStack source = c.getSource();
+                                Entity entity = source.getEntityOrException();
+                                PlayerTeam team = entity.getTeam();
+                                if (team == null) {
                                     throw ERROR_NOT_ON_TEAM.create();
-                                } else {
-                                    List<ServerPlayer> list = commandsourcestack.getServer()
-                                        .getPlayerList()
-                                        .getPlayers()
-                                        .stream()
-                                        .filter(p_449043_ -> p_449043_ == entity || p_449043_.getTeam() == playerteam)
-                                        .toList();
-                                    if (!list.isEmpty()) {
-                                        MessageArgument.resolveChatMessage(
-                                            p_248184_, "message", p_248180_ -> sendMessage(commandsourcestack, entity, playerteam, list, p_248180_)
-                                        );
-                                    }
-
-                                    return list.size();
                                 }
+
+                                List<ServerPlayer> receivers = source.getServer()
+                                    .getPlayerList()
+                                    .getPlayers()
+                                    .stream()
+                                    .filter(receiver -> receiver == entity || receiver.getTeam() == team)
+                                    .toList();
+                                if (!receivers.isEmpty()) {
+                                    MessageArgument.resolveChatMessage(c, "message", message -> sendMessage(source, entity, team, receivers, message));
+                                }
+
+                                return receivers.size();
                             }
                         )
                 )
         );
-        p_139000_.register(Commands.literal("tm").redirect(literalcommandnode));
+        dispatcher.register(Commands.literal("tm").redirect(msg));
     }
 
     private static void sendMessage(
-        CommandSourceStack p_248778_, Entity p_248891_, PlayerTeam p_250504_, List<ServerPlayer> p_249706_, PlayerChatMessage p_249707_
+        final CommandSourceStack source, final Entity entity, final PlayerTeam team, final List<ServerPlayer> receivers, final PlayerChatMessage message
     ) {
-        Component component = p_250504_.getFormattedDisplayName().withStyle(SUGGEST_STYLE);
-        ChatType.Bound chattype$bound = ChatType.bind(ChatType.TEAM_MSG_COMMAND_INCOMING, p_248778_).withTargetName(component);
-        ChatType.Bound chattype$bound1 = ChatType.bind(ChatType.TEAM_MSG_COMMAND_OUTGOING, p_248778_).withTargetName(component);
-        OutgoingChatMessage outgoingchatmessage = OutgoingChatMessage.create(p_249707_);
-        boolean flag = false;
+        Component teamName = team.getFormattedDisplayName().withStyle(SUGGEST_STYLE);
+        ChatType.Bound incomingChatType = ChatType.bind(ChatType.TEAM_MSG_COMMAND_INCOMING, source).withTargetName(teamName);
+        ChatType.Bound outgoingChatType = ChatType.bind(ChatType.TEAM_MSG_COMMAND_OUTGOING, source).withTargetName(teamName);
+        OutgoingChatMessage tracked = OutgoingChatMessage.create(message);
+        boolean wasFullyFiltered = false;
 
-        for (ServerPlayer serverplayer : p_249706_) {
-            ChatType.Bound chattype$bound2 = serverplayer == p_248891_ ? chattype$bound1 : chattype$bound;
-            boolean flag1 = p_248778_.shouldFilterMessageTo(serverplayer);
-            serverplayer.sendChatMessage(outgoingchatmessage, flag1, chattype$bound2);
-            flag |= flag1 && p_249707_.isFullyFiltered();
+        for (ServerPlayer teamPlayer : receivers) {
+            ChatType.Bound chatType = teamPlayer == entity ? outgoingChatType : incomingChatType;
+            boolean filtered = source.shouldFilterMessageTo(teamPlayer);
+            teamPlayer.sendChatMessage(tracked, filtered, chatType);
+            wasFullyFiltered |= filtered && message.isFullyFiltered();
         }
 
-        if (flag) {
-            p_248778_.sendSystemMessage(PlayerList.CHAT_FILTERED_FULL);
+        if (wasFullyFiltered) {
+            source.sendSystemMessage(PlayerList.CHAT_FILTERED_FULL);
         }
     }
 }

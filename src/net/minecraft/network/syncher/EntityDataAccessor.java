@@ -2,12 +2,12 @@ package net.minecraft.network.syncher;
 
 public record EntityDataAccessor<T>(int id, EntityDataSerializer<T> serializer) {
     @Override
-    public boolean equals(Object p_135018_) {
-        if (this == p_135018_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
-        } else if (p_135018_ != null && this.getClass() == p_135018_.getClass()) {
-            EntityDataAccessor<?> entitydataaccessor = (EntityDataAccessor<?>)p_135018_;
-            return this.id == entitydataaccessor.id;
+        } else if (o != null && this.getClass() == o.getClass()) {
+            EntityDataAccessor<?> that = (EntityDataAccessor<?>)o;
+            return this.id == that.id;
         } else {
             return false;
         }

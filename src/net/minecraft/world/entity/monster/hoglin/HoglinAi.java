@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.monster.hoglin;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
 import java.util.Optional;
@@ -12,9 +11,10 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.TimeUtil;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.BabyFollowAdult;
@@ -55,28 +55,21 @@ public class HoglinAi {
     private static final float SPEED_MULTIPLIER_WHEN_IDLING = 0.4F;
     private static final float SPEED_MULTIPLIER_WHEN_FOLLOWING_ADULT = 0.6F;
 
-    protected static Brain<?> makeBrain(Brain<Hoglin> p_34576_) {
-        initCoreActivity(p_34576_);
-        initIdleActivity(p_34576_);
-        initFightActivity(p_34576_);
-        initRetreatActivity(p_34576_);
-        p_34576_.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        p_34576_.setDefaultActivity(Activity.IDLE);
-        p_34576_.useDefaultActivity();
-        return p_34576_;
+    protected static List<ActivityData<Hoglin>> getActivities() {
+        return List.of(initCoreActivity(), initIdleActivity(), initFightActivity(), initRetreatActivity());
     }
 
-    private static void initCoreActivity(Brain<Hoglin> p_34592_) {
-        p_34592_.addActivity(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
+    private static ActivityData<Hoglin> initCoreActivity() {
+        return ActivityData.create(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
     }
 
-    private static void initIdleActivity(Brain<Hoglin> p_34602_) {
-        p_34602_.addActivity(
+    private static ActivityData<Hoglin> initIdleActivity() {
+        return ActivityData.<Hoglin>create(
             Activity.IDLE,
             10,
             ImmutableList.of(
                 BecomePassiveIfMemoryPresent.create(MemoryModuleType.NEAREST_REPELLENT, 200),
-                new AnimalMakeLove(EntityType.HOGLIN, 0.6F, 2),
+                new AnimalMakeLove(EntityTypes.HOGLIN, 0.6F, 2),
                 SetWalkTargetAwayFrom.pos(MemoryModuleType.NEAREST_REPELLENT, 1.0F, 8, true),
                 StartAttacking.create(HoglinAi::findNearestValidAttackTarget),
                 BehaviorBuilder.triggerIf(Hoglin::isAdult, SetWalkTargetAwayFrom.entity(MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLIN, 0.4F, 8, false)),
@@ -87,13 +80,13 @@ public class HoglinAi {
         );
     }
 
-    private static void initFightActivity(Brain<Hoglin> p_34609_) {
-        p_34609_.addActivityAndRemoveMemoryWhenStopped(
+    private static ActivityData<Hoglin> initFightActivity() {
+        return ActivityData.<Hoglin>create(
             Activity.FIGHT,
             10,
             ImmutableList.of(
                 BecomePassiveIfMemoryPresent.create(MemoryModuleType.NEAREST_REPELLENT, 200),
-                new AnimalMakeLove(EntityType.HOGLIN, 0.6F, 2),
+                new AnimalMakeLove(EntityTypes.HOGLIN, 0.6F, 2),
                 SetWalkTargetFromAttackTargetIfTargetOutOfReach.create(1.0F),
                 BehaviorBuilder.triggerIf(Hoglin::isAdult, MeleeAttack.create(40)),
                 BehaviorBuilder.triggerIf(AgeableMob::isBaby, MeleeAttack.create(15)),
@@ -104,8 +97,8 @@ public class HoglinAi {
         );
     }
 
-    private static void initRetreatActivity(Brain<Hoglin> p_34616_) {
-        p_34616_.addActivityAndRemoveMemoryWhenStopped(
+    private static ActivityData<Hoglin> initRetreatActivity() {
+        return ActivityData.<Hoglin>create(
             Activity.AVOID,
             10,
             ImmutableList.of(
@@ -120,145 +113,144 @@ public class HoglinAi {
 
     private static RunOne<Hoglin> createIdleMovementBehaviors() {
         return new RunOne<>(
-            ImmutableList.of(
-                Pair.of(RandomStroll.stroll(0.4F), 2), Pair.of(SetWalkTargetFromLookTarget.create(0.4F, 3), 2), Pair.of(new DoNothing(30, 60), 1)
-            )
+            ImmutableList.of(Pair.of(RandomStroll.stroll(0.4F), 2), Pair.of(SetWalkTargetFromLookTarget.create(0.4F, 3), 2), Pair.of(new DoNothing(30, 60), 1))
         );
     }
 
-    protected static void updateActivity(Hoglin p_34578_) {
-        Brain<Hoglin> brain = p_34578_.getBrain();
-        Activity activity = brain.getActiveNonCoreActivity().orElse(null);
+    protected static void updateActivity(final Hoglin body) {
+        Brain<Hoglin> brain = body.getBrain();
+        Activity oldActivity = brain.getActiveNonCoreActivity().orElse(null);
         brain.setActiveActivityToFirstValid(ImmutableList.of(Activity.FIGHT, Activity.AVOID, Activity.IDLE));
-        Activity activity1 = brain.getActiveNonCoreActivity().orElse(null);
-        if (activity != activity1) {
-            getSoundForCurrentActivity(p_34578_).ifPresent(p_34578_::makeSound);
+        Activity newActivity = brain.getActiveNonCoreActivity().orElse(null);
+        if (oldActivity != newActivity) {
+            getSoundForCurrentActivity(body).ifPresent(body::makeSound);
         }
 
-        p_34578_.setAggressive(brain.hasMemoryValue(MemoryModuleType.ATTACK_TARGET));
+        body.setAggressive(brain.hasMemoryValue(MemoryModuleType.ATTACK_TARGET));
     }
 
-    protected static void onHitTarget(Hoglin p_34580_, LivingEntity p_34581_) {
-        if (!p_34580_.isBaby()) {
-            if (p_34581_.getType() == EntityType.PIGLIN && piglinsOutnumberHoglins(p_34580_)) {
-                setAvoidTarget(p_34580_, p_34581_);
-                broadcastRetreat(p_34580_, p_34581_);
+    protected static void onHitTarget(final Hoglin attackerBody, final LivingEntity target) {
+        if (!attackerBody.isBaby()) {
+            if (target.is(EntityTypes.PIGLIN) && piglinsOutnumberHoglins(attackerBody)) {
+                setAvoidTarget(attackerBody, target);
+                broadcastRetreat(attackerBody, target);
             } else {
-                broadcastAttackTarget(p_34580_, p_34581_);
+                broadcastAttackTarget(attackerBody, target);
             }
         }
     }
 
-    private static void broadcastRetreat(Hoglin p_34606_, LivingEntity p_34607_) {
-        getVisibleAdultHoglins(p_34606_).forEach(p_34590_ -> retreatFromNearestTarget(p_34590_, p_34607_));
+    private static void broadcastRetreat(final Hoglin body, final LivingEntity target) {
+        getVisibleAdultHoglins(body).forEach(hoglin -> retreatFromNearestTarget(hoglin, target));
     }
 
-    private static void retreatFromNearestTarget(Hoglin p_34613_, LivingEntity p_34614_) {
-        Brain<Hoglin> brain = p_34613_.getBrain();
-        LivingEntity $$2 = BehaviorUtils.getNearestTarget(p_34613_, brain.getMemory(MemoryModuleType.AVOID_TARGET), p_34614_);
-        $$2 = BehaviorUtils.getNearestTarget(p_34613_, brain.getMemory(MemoryModuleType.ATTACK_TARGET), $$2);
-        setAvoidTarget(p_34613_, $$2);
+    private static void retreatFromNearestTarget(final Hoglin body, final LivingEntity newAvoidTarget) {
+        LivingEntity nearest = newAvoidTarget;
+        Brain<Hoglin> brain = body.getBrain();
+        nearest = BehaviorUtils.getNearestTarget(body, brain.getMemory(MemoryModuleType.AVOID_TARGET), nearest);
+        nearest = BehaviorUtils.getNearestTarget(body, brain.getMemory(MemoryModuleType.ATTACK_TARGET), nearest);
+        setAvoidTarget(body, nearest);
     }
 
-    private static void setAvoidTarget(Hoglin p_34620_, LivingEntity p_34621_) {
-        p_34620_.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-        p_34620_.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-        p_34620_.getBrain().setMemoryWithExpiry(MemoryModuleType.AVOID_TARGET, p_34621_, RETREAT_DURATION.sample(p_34620_.level().random));
+    private static void setAvoidTarget(final Hoglin body, final LivingEntity avoidTarget) {
+        body.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        body.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        body.getBrain().setMemoryWithExpiry(MemoryModuleType.AVOID_TARGET, avoidTarget, RETREAT_DURATION.sample(body.level().getRandom()));
     }
 
-    private static Optional<? extends LivingEntity> findNearestValidAttackTarget(ServerLevel p_362473_, Hoglin p_34611_) {
-        return !isPacified(p_34611_) && !isBreeding(p_34611_) ? p_34611_.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER) : Optional.empty();
+    private static Optional<? extends LivingEntity> findNearestValidAttackTarget(final ServerLevel level, final Hoglin body) {
+        return !isPacified(body) && !isBreeding(body) ? body.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER) : Optional.empty();
     }
 
-    static boolean isPosNearNearestRepellent(Hoglin p_34586_, BlockPos p_34587_) {
-        Optional<BlockPos> optional = p_34586_.getBrain().getMemory(MemoryModuleType.NEAREST_REPELLENT);
-        return optional.isPresent() && optional.get().closerThan(p_34587_, 8.0);
+    static boolean isPosNearNearestRepellent(final Hoglin body, final BlockPos pos) {
+        Optional<BlockPos> repellentPos = body.getBrain().getMemory(MemoryModuleType.NEAREST_REPELLENT);
+        return repellentPos.isPresent() && repellentPos.get().closerThan(pos, 8.0);
     }
 
-    private static boolean wantsToStopFleeing(Hoglin p_34618_) {
-        return p_34618_.isAdult() && !piglinsOutnumberHoglins(p_34618_);
+    private static boolean wantsToStopFleeing(final Hoglin body) {
+        return body.isAdult() && !piglinsOutnumberHoglins(body);
     }
 
-    private static boolean piglinsOutnumberHoglins(Hoglin p_34623_) {
-        if (p_34623_.isBaby()) {
+    private static boolean piglinsOutnumberHoglins(final Hoglin body) {
+        if (body.isBaby()) {
             return false;
-        } else {
-            int i = p_34623_.getBrain().getMemory(MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT).orElse(0);
-            int j = p_34623_.getBrain().getMemory(MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT).orElse(0) + 1;
-            return i > j;
         }
+
+        int piglinCount = body.getBrain().getMemory(MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT).orElse(0);
+        int hoglinCount = body.getBrain().getMemory(MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT).orElse(0) + 1;
+        return piglinCount > hoglinCount;
     }
 
-    protected static void wasHurtBy(ServerLevel p_362834_, Hoglin p_34596_, LivingEntity p_34597_) {
-        Brain<Hoglin> brain = p_34596_.getBrain();
+    protected static void wasHurtBy(final ServerLevel level, final Hoglin body, final LivingEntity attacker) {
+        Brain<Hoglin> brain = body.getBrain();
         brain.eraseMemory(MemoryModuleType.PACIFIED);
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
-        if (p_34596_.isBaby()) {
-            retreatFromNearestTarget(p_34596_, p_34597_);
+        if (body.isBaby()) {
+            retreatFromNearestTarget(body, attacker);
         } else {
-            maybeRetaliate(p_362834_, p_34596_, p_34597_);
+            maybeRetaliate(level, body, attacker);
         }
     }
 
-    private static void maybeRetaliate(ServerLevel p_362858_, Hoglin p_34625_, LivingEntity p_34626_) {
-        if (!p_34625_.getBrain().isActive(Activity.AVOID) || p_34626_.getType() != EntityType.PIGLIN) {
-            if (p_34626_.getType() != EntityType.HOGLIN) {
-                if (!BehaviorUtils.isOtherTargetMuchFurtherAwayThanCurrentAttackTarget(p_34625_, p_34626_, 4.0)) {
-                    if (Sensor.isEntityAttackable(p_362858_, p_34625_, p_34626_)) {
-                        setAttackTarget(p_34625_, p_34626_);
-                        broadcastAttackTarget(p_34625_, p_34626_);
+    private static void maybeRetaliate(final ServerLevel level, final Hoglin body, final LivingEntity attacker) {
+        if (!body.getBrain().isActive(Activity.AVOID) || !attacker.is(EntityTypes.PIGLIN)) {
+            if (!attacker.is(EntityTypes.HOGLIN)) {
+                if (!BehaviorUtils.isOtherTargetMuchFurtherAwayThanCurrentAttackTarget(body, attacker, 4.0)) {
+                    if (Sensor.isEntityAttackable(level, body, attacker)) {
+                        setAttackTarget(body, attacker);
+                        broadcastAttackTarget(body, attacker);
                     }
                 }
             }
         }
     }
 
-    private static void setAttackTarget(Hoglin p_34630_, LivingEntity p_34631_) {
-        Brain<Hoglin> brain = p_34630_.getBrain();
+    private static void setAttackTarget(final Hoglin body, final LivingEntity target) {
+        Brain<Hoglin> brain = body.getBrain();
         brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
-        brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, p_34631_, 200L);
+        brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, 200L);
     }
 
-    private static void broadcastAttackTarget(Hoglin p_34635_, LivingEntity p_34636_) {
-        getVisibleAdultHoglins(p_34635_).forEach(p_34574_ -> setAttackTargetIfCloserThanCurrent(p_34574_, p_34636_));
+    private static void broadcastAttackTarget(final Hoglin body, final LivingEntity target) {
+        getVisibleAdultHoglins(body).forEach(hoglin -> setAttackTargetIfCloserThanCurrent(hoglin, target));
     }
 
-    private static void setAttackTargetIfCloserThanCurrent(Hoglin p_34640_, LivingEntity p_34641_) {
-        if (!isPacified(p_34640_)) {
-            Optional<LivingEntity> optional = p_34640_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET);
-            LivingEntity livingentity = BehaviorUtils.getNearestTarget(p_34640_, optional, p_34641_);
-            setAttackTarget(p_34640_, livingentity);
+    private static void setAttackTargetIfCloserThanCurrent(final Hoglin body, final LivingEntity newTarget) {
+        if (!isPacified(body)) {
+            Optional<LivingEntity> currentTarget = body.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET);
+            LivingEntity nearest = BehaviorUtils.getNearestTarget(body, currentTarget, newTarget);
+            setAttackTarget(body, nearest);
         }
     }
 
-    public static Optional<SoundEvent> getSoundForCurrentActivity(Hoglin p_34594_) {
-        return p_34594_.getBrain().getActiveNonCoreActivity().map(p_34600_ -> getSoundForActivity(p_34594_, p_34600_));
+    public static Optional<SoundEvent> getSoundForCurrentActivity(final Hoglin body) {
+        return body.getBrain().getActiveNonCoreActivity().map(activity -> getSoundForActivity(body, activity));
     }
 
-    private static SoundEvent getSoundForActivity(Hoglin p_34583_, Activity p_34584_) {
-        if (p_34584_ == Activity.AVOID || p_34583_.isConverting()) {
+    private static SoundEvent getSoundForActivity(final Hoglin body, final Activity activity) {
+        if (activity == Activity.AVOID || body.isConverting()) {
             return SoundEvents.HOGLIN_RETREAT;
-        } else if (p_34584_ == Activity.FIGHT) {
+        } else if (activity == Activity.FIGHT) {
             return SoundEvents.HOGLIN_ANGRY;
         } else {
-            return isNearRepellent(p_34583_) ? SoundEvents.HOGLIN_RETREAT : SoundEvents.HOGLIN_AMBIENT;
+            return isNearRepellent(body) ? SoundEvents.HOGLIN_RETREAT : SoundEvents.HOGLIN_AMBIENT;
         }
     }
 
-    private static List<Hoglin> getVisibleAdultHoglins(Hoglin p_34628_) {
-        return p_34628_.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS).orElse(ImmutableList.of());
+    private static List<Hoglin> getVisibleAdultHoglins(final Hoglin body) {
+        return body.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS).orElse(ImmutableList.of());
     }
 
-    private static boolean isNearRepellent(Hoglin p_34633_) {
-        return p_34633_.getBrain().hasMemoryValue(MemoryModuleType.NEAREST_REPELLENT);
+    private static boolean isNearRepellent(final Hoglin body) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.NEAREST_REPELLENT);
     }
 
-    private static boolean isBreeding(Hoglin p_34638_) {
-        return p_34638_.getBrain().hasMemoryValue(MemoryModuleType.BREED_TARGET);
+    private static boolean isBreeding(final Hoglin body) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.BREED_TARGET);
     }
 
-    protected static boolean isPacified(Hoglin p_34604_) {
-        return p_34604_.getBrain().hasMemoryValue(MemoryModuleType.PACIFIED);
+    protected static boolean isPacified(final Hoglin body) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.PACIFIED);
     }
 }

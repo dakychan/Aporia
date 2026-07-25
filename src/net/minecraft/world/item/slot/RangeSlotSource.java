@@ -2,7 +2,6 @@ package net.minecraft.world.item.slot;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Set;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.SlotProvider;
@@ -13,18 +12,15 @@ import net.minecraft.world.level.storage.loot.LootContextArg;
 
 public class RangeSlotSource implements SlotSource {
     public static final MapCodec<RangeSlotSource> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_450408_ -> p_450408_.group(
-                LootContextArg.ENTITY_OR_BLOCK.fieldOf("source").forGetter(p_453446_ -> p_453446_.source),
-                SlotRanges.CODEC.fieldOf("slots").forGetter(p_453789_ -> p_453789_.slotRange)
-            )
-            .apply(p_450408_, RangeSlotSource::new)
+        i -> i.group(LootContextArg.ENTITY_OR_BLOCK.fieldOf("source").forGetter(t -> t.source), SlotRanges.CODEC.fieldOf("slots").forGetter(t -> t.slotRange))
+            .apply(i, RangeSlotSource::new)
     );
     private final LootContextArg<Object> source;
     private final SlotRange slotRange;
 
-    private RangeSlotSource(LootContextArg<Object> p_451543_, SlotRange p_452399_) {
-        this.source = p_451543_;
-        this.slotRange = p_452399_;
+    private RangeSlotSource(final LootContextArg<Object> source, final SlotRange slotRange) {
+        this.source = source;
+        this.slotRange = slotRange;
     }
 
     @Override
@@ -38,9 +34,7 @@ public class RangeSlotSource implements SlotSource {
     }
 
     @Override
-    public final SlotCollection provide(LootContext p_453630_) {
-        return this.source.get(p_453630_) instanceof SlotProvider slotprovider
-            ? slotprovider.getSlotsFromRange(this.slotRange.slots())
-            : SlotCollection.EMPTY;
+    public final SlotCollection provide(final LootContext context) {
+        return this.source.get(context) instanceof SlotProvider slotProvider ? slotProvider.getSlotsFromRange(this.slotRange.slots()) : SlotCollection.EMPTY;
     }
 }

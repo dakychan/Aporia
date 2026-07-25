@@ -4,37 +4,34 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ModelLocationUtils {
     @Deprecated
-    public static Identifier decorateBlockModelLocation(String p_376541_) {
-        return Identifier.withDefaultNamespace("block/" + p_376541_);
+    public static Identifier decorateBlockModelLocation(final String id) {
+        return Identifier.withDefaultNamespace("block/" + id);
     }
 
-    public static Identifier decorateItemModelLocation(String p_376094_) {
-        return Identifier.withDefaultNamespace("item/" + p_376094_);
+    public static Identifier decorateItemModelLocation(final String id) {
+        return Identifier.withDefaultNamespace("item/" + id);
     }
 
-    public static Identifier getModelLocation(Block p_450796_, String p_375834_) {
-        Identifier identifier = BuiltInRegistries.BLOCK.getKey(p_450796_);
-        return identifier.withPath(p_375700_ -> "block/" + p_375700_ + p_375834_);
+    public static Identifier getModelLocation(final Block block, final String suffix) {
+        Identifier key = BuiltInRegistries.BLOCK.getKey(block);
+        return key.withPath(path -> "block/" + path + suffix);
     }
 
-    public static Identifier getModelLocation(Block p_378693_) {
-        Identifier identifier = BuiltInRegistries.BLOCK.getKey(p_378693_);
-        return identifier.withPrefix("block/");
+    public static Identifier getModelLocation(final Block block) {
+        Identifier key = BuiltInRegistries.BLOCK.getKey(block);
+        return key.withPrefix("block/");
     }
 
-    public static Identifier getModelLocation(Item p_452444_) {
-        Identifier identifier = BuiltInRegistries.ITEM.getKey(p_452444_);
-        return identifier.withPrefix("item/");
+    public static Identifier getModelLocation(final Item item) {
+        Identifier key = BuiltInRegistries.ITEM.getKey(item);
+        return key.withPrefix("item/");
     }
 
-    public static Identifier getModelLocation(Item p_378416_, String p_459374_) {
-        Identifier identifier = BuiltInRegistries.ITEM.getKey(p_378416_);
-        return identifier.withPath(p_376725_ -> "item/" + p_376725_ + p_459374_);
+    public static Identifier getModelLocation(final Item item, final String suffix) {
+        Identifier key = BuiltInRegistries.ITEM.getKey(item);
+        return key.withPath(path -> "item/" + path + suffix);
     }
 }

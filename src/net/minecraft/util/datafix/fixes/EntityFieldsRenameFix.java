@@ -10,21 +10,21 @@ import java.util.Map.Entry;
 public class EntityFieldsRenameFix extends NamedEntityFix {
     private final Map<String, String> renames;
 
-    public EntityFieldsRenameFix(Schema p_378547_, String p_378612_, String p_377255_, Map<String, String> p_377805_) {
-        super(p_378547_, false, p_378612_, References.ENTITY, p_377255_);
-        this.renames = p_377805_;
+    public EntityFieldsRenameFix(final Schema outputSchema, final String name, final String entityType, final Map<String, String> renames) {
+        super(outputSchema, false, name, References.ENTITY, entityType);
+        this.renames = renames;
     }
 
-    public Dynamic<?> fixTag(Dynamic<?> p_378263_) {
+    public Dynamic<?> fixTag(Dynamic<?> data) {
         for (Entry<String, String> entry : this.renames.entrySet()) {
-            p_378263_ = p_378263_.renameField(entry.getKey(), entry.getValue());
+            data = data.renameField(entry.getKey(), entry.getValue());
         }
 
-        return p_378263_;
+        return data;
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_378322_) {
-        return p_378322_.update(DSL.remainderFinder(), this::fixTag);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), this::fixTag);
     }
 }

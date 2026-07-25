@@ -7,17 +7,17 @@ public enum PathType {
     WALKABLE_DOOR(0.0F),
     TRAPDOOR(0.0F),
     POWDER_SNOW(-1.0F),
-    DANGER_POWDER_SNOW(0.0F),
+    ON_TOP_OF_POWDER_SNOW(0.0F),
     FENCE(-1.0F),
     LAVA(-1.0F),
     WATER(8.0F),
     WATER_BORDER(8.0F),
     RAIL(0.0F),
     UNPASSABLE_RAIL(-1.0F),
-    DANGER_FIRE(8.0F),
-    DAMAGE_FIRE(16.0F),
-    DANGER_OTHER(8.0F),
-    DAMAGE_OTHER(-1.0F),
+    FIRE_IN_NEIGHBOR(8.0F),
+    FIRE(16.0F),
+    DAMAGING_IN_NEIGHBOR(8.0F),
+    DAMAGING(-1.0F),
     DOOR_OPEN(0.0F),
     DOOR_WOOD_CLOSED(-1.0F),
     DOOR_IRON_CLOSED(-1.0F),
@@ -26,12 +26,13 @@ public enum PathType {
     STICKY_HONEY(8.0F),
     COCOA(0.0F),
     DAMAGE_CAUTIOUS(0.0F),
-    DANGER_TRAPDOOR(0.0F);
+    ON_TOP_OF_TRAPDOOR(0.0F),
+    BIG_MOBS_CLOSE_TO_DANGER(4.0F);
 
     private final float malus;
 
-    private PathType(final float p_332471_) {
-        this.malus = p_332471_;
+    PathType(final float defaultCost) {
+        this.malus = defaultCost;
     }
 
     public float getMalus() {

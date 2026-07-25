@@ -19,23 +19,23 @@ public abstract class Fireball extends AbstractHurtingProjectile implements Item
     private static final float MIN_CAMERA_DISTANCE_SQUARED = 12.25F;
     private static final EntityDataAccessor<ItemStack> DATA_ITEM_STACK = SynchedEntityData.defineId(Fireball.class, EntityDataSerializers.ITEM_STACK);
 
-    public Fireball(EntityType<? extends Fireball> p_459926_, Level p_458264_) {
-        super(p_459926_, p_458264_);
+    public Fireball(final EntityType<? extends Fireball> type, final Level level) {
+        super(type, level);
     }
 
-    public Fireball(EntityType<? extends Fireball> p_457068_, double p_451606_, double p_454465_, double p_454830_, Vec3 p_459467_, Level p_450716_) {
-        super(p_457068_, p_451606_, p_454465_, p_454830_, p_459467_, p_450716_);
+    public Fireball(final EntityType<? extends Fireball> type, final double x, final double y, final double z, final Vec3 direction, final Level level) {
+        super(type, x, y, z, direction, level);
     }
 
-    public Fireball(EntityType<? extends Fireball> p_455647_, LivingEntity p_458182_, Vec3 p_450754_, Level p_459300_) {
-        super(p_455647_, p_458182_, p_450754_, p_459300_);
+    public Fireball(final EntityType<? extends Fireball> type, final LivingEntity mob, final Vec3 direction, final Level level) {
+        super(type, mob, direction, level);
     }
 
-    public void setItem(ItemStack p_452715_) {
-        if (p_452715_.isEmpty()) {
+    public void setItem(final ItemStack source) {
+        if (source.isEmpty()) {
             this.getEntityData().set(DATA_ITEM_STACK, this.getDefaultItem());
         } else {
-            this.getEntityData().set(DATA_ITEM_STACK, p_452715_.copyWithCount(1));
+            this.getEntityData().set(DATA_ITEM_STACK, source.copyWithCount(1));
         }
     }
 
@@ -49,20 +49,20 @@ public abstract class Fireball extends AbstractHurtingProjectile implements Item
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_454998_) {
-        p_454998_.define(DATA_ITEM_STACK, this.getDefaultItem());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_ITEM_STACK, this.getDefaultItem());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_453648_) {
-        super.addAdditionalSaveData(p_453648_);
-        p_453648_.store("Item", ItemStack.CODEC, this.getItem());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Item", ItemStack.CODEC, this.getItem());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_453558_) {
-        super.readAdditionalSaveData(p_453558_);
-        this.setItem(p_453558_.read("Item", ItemStack.CODEC).orElse(this.getDefaultItem()));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setItem(input.read("Item", ItemStack.CODEC).orElse(this.getDefaultItem()));
     }
 
     private ItemStack getDefaultItem() {
@@ -70,12 +70,12 @@ public abstract class Fireball extends AbstractHurtingProjectile implements Item
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_453667_) {
-        return p_453667_ == 0 ? SlotAccess.of(this::getItem, this::setItem) : super.getSlot(p_453667_);
+    public @Nullable SlotAccess getSlot(final int slot) {
+        return slot == 0 ? SlotAccess.of(this::getItem, this::setItem) : super.getSlot(slot);
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_450963_) {
-        return this.tickCount < 2 && p_450963_ < 12.25 ? false : super.shouldRenderAtSqrDistance(p_450963_);
+    public boolean shouldRenderAtSqrDistance(final double distance) {
+        return this.tickCount < 2 && distance < 12.25 ? false : super.shouldRenderAtSqrDistance(distance);
     }
 }

@@ -3,11 +3,10 @@ package net.minecraft.client.gui.screens.options.controls;
 import com.google.common.collect.ImmutableList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.FocusableTextWidget;
@@ -16,37 +15,34 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.ArrayUtils;
 
-@OnlyIn(Dist.CLIENT)
 public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entry> {
     private static final int ITEM_HEIGHT = 20;
-    final KeyBindsScreen keyBindsScreen;
+    private final KeyBindsScreen keyBindsScreen;
     private int maxNameWidth;
 
-    public KeyBindsList(KeyBindsScreen p_344272_, Minecraft p_345192_) {
-        super(p_345192_, p_344272_.width, p_344272_.layout.getContentHeight(), p_344272_.layout.getHeaderHeight(), 20);
-        this.keyBindsScreen = p_344272_;
-        KeyMapping[] akeymapping = ArrayUtils.clone((KeyMapping[])p_345192_.options.keyMappings);
-        Arrays.sort((Object[])akeymapping);
-        KeyMapping.Category keymapping$category = null;
+    public KeyBindsList(final KeyBindsScreen keyBindsScreen, final Minecraft minecraft) {
+        super(minecraft, keyBindsScreen.width, keyBindsScreen.layout.getContentHeight(), keyBindsScreen.layout.getHeaderHeight(), 20);
+        this.keyBindsScreen = keyBindsScreen;
+        KeyMapping[] keyMappings = ArrayUtils.clone(minecraft.options.keyMappings);
+        Arrays.sort(keyMappings);
+        KeyMapping.Category previousCategory = null;
 
-        for (KeyMapping keymapping : akeymapping) {
-            KeyMapping.Category keymapping$category1 = keymapping.getCategory();
-            if (keymapping$category1 != keymapping$category) {
-                keymapping$category = keymapping$category1;
-                this.addEntry(new KeyBindsList.CategoryEntry(keymapping$category1));
+        for (KeyMapping key : keyMappings) {
+            KeyMapping.Category category = key.getCategory();
+            if (category != previousCategory) {
+                previousCategory = category;
+                this.addEntry(new KeyBindsList.CategoryEntry(category));
             }
 
-            Component component = Component.translatable(keymapping.getName());
-            int i = p_345192_.font.width(component);
-            if (i > this.maxNameWidth) {
-                this.maxNameWidth = i;
+            Component name = Component.translatable(key.getName());
+            int width = minecraft.font.width(name);
+            if (width > this.maxNameWidth) {
+                this.maxNameWidth = width;
             }
 
-            this.addEntry(new KeyBindsList.KeyEntry(keymapping, component));
+            this.addEntry(new KeyBindsList.KeyEntry(key, name));
         }
     }
 
@@ -64,21 +60,21 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
         return 340;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public class CategoryEntry extends KeyBindsList.Entry {
+        public class CategoryEntry extends KeyBindsList.Entry {
         private final FocusableTextWidget categoryName;
 
-        public CategoryEntry(final KeyMapping.Category p_423416_) {
-            this.categoryName = FocusableTextWidget.builder(p_423416_.label(), KeyBindsList.this.minecraft.font)
+        public CategoryEntry(final KeyMapping.Category category) {
+            this.categoryName = FocusableTextWidget.builder(category.label(), KeyBindsList.this.minecraft.font)
                 .alwaysShowBorder(false)
                 .backgroundFill(FocusableTextWidget.BackgroundFill.ON_FOCUS)
                 .build();
         }
 
         @Override
-        public void renderContent(GuiGraphics p_427814_, int p_427133_, int p_423159_, boolean p_423989_, float p_427776_) {
-            this.categoryName.setPosition(KeyBindsList.this.width / 2 - this.categoryName.getWidth() / 2, this.getContentBottom() - this.categoryName.getHeight());
-            this.categoryName.render(p_427814_, p_427133_, p_423159_, p_427776_);
+        public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+            this.categoryName
+                .setPosition(KeyBindsList.this.width / 2 - this.categoryName.getWidth() / 2, this.getContentBottom() - this.categoryName.getHeight());
+            this.categoryName.extractRenderState(graphics, mouseX, mouseY, a);
         }
 
         @Override
@@ -92,17 +88,15 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
         }
 
         @Override
-        protected void refreshEntry() {
+        public void refreshEntry() {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public abstract static class Entry extends ContainerObjectSelectionList.Entry<KeyBindsList.Entry> {
-        abstract void refreshEntry();
+        public abstract static class Entry extends ContainerObjectSelectionList.Entry<KeyBindsList.Entry> {
+        public abstract void refreshEntry();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public class KeyEntry extends KeyBindsList.Entry {
+        public class KeyEntry extends KeyBindsList.Entry {
         private static final Component RESET_BUTTON_TITLE = Component.translatable("controls.reset");
         private static final int PADDING = 10;
         private final KeyMapping key;
@@ -111,41 +105,41 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
         private final Button resetButton;
         private boolean hasCollision = false;
 
-        KeyEntry(final KeyMapping p_343088_, final Component p_343976_) {
-            this.key = p_343088_;
-            this.name = p_343976_;
-            this.changeButton = Button.builder(p_343976_, p_342196_ -> {
-                    KeyBindsList.this.keyBindsScreen.selectedKey = p_343088_;
+        private KeyEntry(final KeyMapping key, final Component name) {
+            this.key = key;
+            this.name = name;
+            this.changeButton = Button.builder(name, button -> {
+                    KeyBindsList.this.keyBindsScreen.selectedKey = key;
                     KeyBindsList.this.resetMappingAndUpdateButtons();
                 })
                 .bounds(0, 0, 75, 20)
                 .createNarration(
-                    p_342179_ -> p_343088_.isUnbound()
-                        ? Component.translatable("narrator.controls.unbound", p_343976_)
-                        : Component.translatable("narrator.controls.bound", p_343976_, p_342179_.get())
+                    defaultNarrationSupplier -> key.isUnbound()
+                        ? Component.translatable("narrator.controls.unbound", name)
+                        : Component.translatable("narrator.controls.bound", name, defaultNarrationSupplier.get())
                 )
                 .build();
-            this.resetButton = Button.builder(RESET_BUTTON_TITLE, p_357685_ -> {
-                p_343088_.setKey(p_343088_.getDefaultKey());
+            this.resetButton = Button.builder(RESET_BUTTON_TITLE, button -> {
+                key.setKey(key.getDefaultKey());
                 KeyBindsList.this.resetMappingAndUpdateButtons();
-            }).bounds(0, 0, 50, 20).createNarration(p_344192_ -> Component.translatable("narrator.controls.reset", p_343976_)).build();
+            }).bounds(0, 0, 50, 20).createNarration(defaultNarrationSupplier -> Component.translatable("narrator.controls.reset", name)).build();
             this.refreshEntry();
         }
 
         @Override
-        public void renderContent(GuiGraphics p_425264_, int p_426918_, int p_427649_, boolean p_422824_, float p_425662_) {
-            int i = KeyBindsList.this.scrollBarX() - this.resetButton.getWidth() - 10;
-            int j = this.getContentY() - 2;
-            this.resetButton.setPosition(i, j);
-            this.resetButton.render(p_425264_, p_426918_, p_427649_, p_425662_);
-            int k = i - 5 - this.changeButton.getWidth();
-            this.changeButton.setPosition(k, j);
-            this.changeButton.render(p_425264_, p_426918_, p_427649_, p_425662_);
-            p_425264_.drawString(KeyBindsList.this.minecraft.font, this.name, this.getContentX(), this.getContentYMiddle() - 9 / 2, -1);
+        public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+            int resetButtonX = KeyBindsList.this.scrollBarX() - this.resetButton.getWidth() - 10;
+            int buttonY = this.getContentY() - 2;
+            this.resetButton.setPosition(resetButtonX, buttonY);
+            this.resetButton.extractRenderState(graphics, mouseX, mouseY, a);
+            int changeButtonX = resetButtonX - 5 - this.changeButton.getWidth();
+            this.changeButton.setPosition(changeButtonX, buttonY);
+            this.changeButton.extractRenderState(graphics, mouseX, mouseY, a);
+            graphics.text(KeyBindsList.this.minecraft.font, this.name, this.getContentX(), this.getContentYMiddle() - 9 / 2, -1);
             if (this.hasCollision) {
-                int l = 3;
-                int i1 = this.changeButton.getX() - 6;
-                p_425264_.fill(i1, this.getContentY() - 1, i1 + 3, this.getContentBottom(), -256);
+                int stripeWidth = 3;
+                int stripeLeft = this.changeButton.getX() - 6;
+                graphics.fill(stripeLeft, this.getContentY() - 1, stripeLeft + 3, this.getContentBottom(), -256);
             }
         }
 
@@ -160,20 +154,20 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
         }
 
         @Override
-        protected void refreshEntry() {
+        public void refreshEntry() {
             this.changeButton.setMessage(this.key.getTranslatedKeyMessage());
             this.resetButton.active = !this.key.isDefault();
             this.hasCollision = false;
-            MutableComponent mutablecomponent = Component.empty();
+            MutableComponent tooltip = Component.empty();
             if (!this.key.isUnbound()) {
-                for (KeyMapping keymapping : KeyBindsList.this.minecraft.options.keyMappings) {
-                    if (keymapping != this.key && this.key.same(keymapping) && (!keymapping.isDefault() || !this.key.isDefault())) {
+                for (KeyMapping otherKey : KeyBindsList.this.minecraft.options.keyMappings) {
+                    if (otherKey != this.key && this.key.same(otherKey) && (!otherKey.isDefault() || !this.key.isDefault())) {
                         if (this.hasCollision) {
-                            mutablecomponent.append(", ");
+                            tooltip.append(", ");
                         }
 
                         this.hasCollision = true;
-                        mutablecomponent.append(Component.translatable(keymapping.getName()));
+                        tooltip.append(Component.translatable(otherKey.getName()));
                     }
                 }
             }
@@ -186,7 +180,7 @@ public class KeyBindsList extends ContainerObjectSelectionList<KeyBindsList.Entr
                             .append(" ]")
                             .withStyle(ChatFormatting.YELLOW)
                     );
-                this.changeButton.setTooltip(Tooltip.create(Component.translatable("controls.keybinds.duplicateKeybinds", mutablecomponent)));
+                this.changeButton.setTooltip(Tooltip.create(Component.translatable("controls.keybinds.duplicateKeybinds", tooltip)));
             } else {
                 this.changeButton.setTooltip(null);
             }

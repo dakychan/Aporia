@@ -8,12 +8,12 @@ import org.jspecify.annotations.Nullable;
 public class DragonHoverPhase extends AbstractDragonPhaseInstance {
     private @Nullable Vec3 targetLocation;
 
-    public DragonHoverPhase(EnderDragon p_31246_) {
-        super(p_31246_);
+    public DragonHoverPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
-    public void doServerTick(ServerLevel p_364623_) {
+    public void doServerTick(final ServerLevel level) {
         if (this.targetLocation == null) {
             this.targetLocation = this.dragon.position();
         }

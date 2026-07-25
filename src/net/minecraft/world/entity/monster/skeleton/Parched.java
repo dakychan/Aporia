@@ -15,18 +15,18 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class Parched extends AbstractSkeleton {
-    public Parched(EntityType<? extends AbstractSkeleton> p_453218_, Level p_451753_) {
-        super(p_453218_, p_451753_);
+    public Parched(final EntityType<? extends AbstractSkeleton> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    protected AbstractArrow getArrow(ItemStack p_452150_, float p_452862_, @Nullable ItemStack p_455038_) {
-        AbstractArrow abstractarrow = super.getArrow(p_452150_, p_452862_, p_455038_);
-        if (abstractarrow instanceof Arrow) {
-            ((Arrow)abstractarrow).addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 600));
+    protected AbstractArrow getArrow(final ItemStack projectile, final float power, final @Nullable ItemStack firingWeapon) {
+        AbstractArrow arrow = super.getArrow(projectile, power, firingWeapon);
+        if (arrow instanceof Arrow arrow2) {
+            arrow2.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 600));
         }
 
-        return abstractarrow;
+        return arrow;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -39,7 +39,7 @@ public class Parched extends AbstractSkeleton {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_452602_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.PARCHED_HURT;
     }
 
@@ -49,7 +49,7 @@ public class Parched extends AbstractSkeleton {
     }
 
     @Override
-    SoundEvent getStepSound() {
+    protected SoundEvent getStepSound() {
         return SoundEvents.PARCHED_STEP;
     }
 
@@ -64,7 +64,7 @@ public class Parched extends AbstractSkeleton {
     }
 
     @Override
-    public boolean canBeAffected(MobEffectInstance p_459393_) {
-        return p_459393_.getEffect() == MobEffects.WEAKNESS ? false : super.canBeAffected(p_459393_);
+    public boolean canBeAffected(final MobEffectInstance newEffect) {
+        return newEffect.getEffect() == MobEffects.WEAKNESS ? false : super.canBeAffected(newEffect);
     }
 }

@@ -7,10 +7,7 @@ import java.util.stream.Collectors;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ColorLerper {
     public static final DyeColor[] MUSIC_NOTE_COLORS = new DyeColor[]{
         DyeColor.WHITE,
@@ -27,48 +24,50 @@ public class ColorLerper {
         DyeColor.MAGENTA
     };
 
-    public static int getLerpedColor(ColorLerper.Type p_406037_, float p_410004_) {
-        int i = Mth.floor(p_410004_);
-        int j = i / p_406037_.colorDuration;
-        int k = p_406037_.colors.length;
-        int l = j % k;
-        int i1 = (j + 1) % k;
-        float f = (i % p_406037_.colorDuration + Mth.frac(p_410004_)) / p_406037_.colorDuration;
-        int j1 = p_406037_.getColor(p_406037_.colors[l]);
-        int k1 = p_406037_.getColor(p_406037_.colors[i1]);
-        return ARGB.srgbLerp(f, j1, k1);
+    public static int getLerpedColor(final ColorLerper.Type type, final float tick) {
+        int tickCount = Mth.floor(tick);
+        int value = tickCount / type.colorDuration;
+        int colorCount = type.colors.length;
+        int c1 = value % colorCount;
+        int c2 = (value + 1) % colorCount;
+        float subStep = (tickCount % type.colorDuration + Mth.frac(tick)) / type.colorDuration;
+        int color1 = type.getColor(type.colors[c1]);
+        int color2 = type.getColor(type.colors[c2]);
+        return ARGB.srgbLerp(subStep, color1, color2);
     }
 
-    static int getModifiedColor(DyeColor p_409905_, float p_407337_) {
-        if (p_409905_ == DyeColor.WHITE) {
+    private static int getModifiedColor(final DyeColor color, final float brightness) {
+        if (color == DyeColor.WHITE) {
             return -1644826;
-        } else {
-            int i = p_409905_.getTextureDiffuseColor();
-            return ARGB.color(
-                255, Mth.floor(ARGB.red(i) * p_407337_), Mth.floor(ARGB.green(i) * p_407337_), Mth.floor(ARGB.blue(i) * p_407337_)
-            );
         }
+
+        int src = color.getTextureDiffuseColor();
+        return ARGB.color(
+            255,
+            Mth.clamp(Mth.floor(ARGB.red(src) * brightness), 0, 255),
+            Mth.clamp(Mth.floor(ARGB.green(src) * brightness), 0, 255),
+            Mth.clamp(Mth.floor(ARGB.blue(src) * brightness), 0, 255)
+        );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Type {
+        public enum Type {
         SHEEP(25, DyeColor.values(), 0.75F),
         MUSIC_NOTE(30, ColorLerper.MUSIC_NOTE_COLORS, 1.25F);
 
-        final int colorDuration;
+        private final int colorDuration;
         private final Map<DyeColor, Integer> colorByDye;
-        final DyeColor[] colors;
+        private final DyeColor[] colors;
 
-        private Type(final int p_408068_, final DyeColor[] p_408212_, final float p_408392_) {
-            this.colorDuration = p_408068_;
+        Type(final int colorDuration, final DyeColor[] colors, final float brightness) {
+            this.colorDuration = colorDuration;
             this.colorByDye = Maps.newHashMap(
-                Arrays.stream(p_408212_).collect(Collectors.toMap(p_407631_ -> (DyeColor)p_407631_, p_407270_ -> ColorLerper.getModifiedColor(p_407270_, p_408392_)))
+                Arrays.stream(colors).collect(Collectors.toMap(d -> (DyeColor)d, color -> ColorLerper.getModifiedColor(color, brightness)))
             );
-            this.colors = p_408212_;
+            this.colors = colors;
         }
 
-        public final int getColor(DyeColor p_408467_) {
-            return this.colorByDye.get(p_408467_);
+        public final int getColor(final DyeColor dyeColor) {
+            return this.colorByDye.get(dyeColor);
         }
     }
 }

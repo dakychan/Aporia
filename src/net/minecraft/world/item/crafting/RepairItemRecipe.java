@@ -1,91 +1,91 @@
 package net.minecraft.world.item.crafting;
 
+import com.google.common.collect.Sets;
 import com.mojang.datafixers.util.Pair;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class RepairItemRecipe extends CustomRecipe {
-    public RepairItemRecipe(CraftingBookCategory p_248679_) {
-        super(p_248679_);
+    public static final RepairItemRecipe INSTANCE = new RepairItemRecipe();
+    public static final MapCodec<RepairItemRecipe> MAP_CODEC = MapCodec.unit(INSTANCE);
+    public static final StreamCodec<RegistryFriendlyByteBuf, RepairItemRecipe> STREAM_CODEC = StreamCodec.unit(INSTANCE);
+    public static final RecipeSerializer<RepairItemRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+
+    private static @Nullable Pair<ItemStack, ItemStack> getItemsToCombine(final CraftingInput input) {
+        if (input.ingredientCount() != 2) {
+            return null;
+        }
+
+        ItemStack first = null;
+
+        for (int i = 0; i < input.size(); i++) {
+            ItemStack itemStack = input.getItem(i);
+            if (!itemStack.isEmpty()) {
+                if (first != null) {
+                    return canCombine(first, itemStack) ? Pair.of(first, itemStack) : null;
+                }
+
+                first = itemStack;
+            }
+        }
+
+        return null;
     }
 
-    private static @Nullable Pair<ItemStack, ItemStack> getItemsToCombine(CraftingInput p_344890_) {
-        if (p_344890_.ingredientCount() != 2) {
-            return null;
-        } else {
-            ItemStack itemstack = null;
+    private static boolean canCombine(final ItemStack first, final ItemStack second) {
+        return second.is(first.getItem())
+            && first.getCount() == 1
+            && second.getCount() == 1
+            && first.has(DataComponents.MAX_DAMAGE)
+            && second.has(DataComponents.MAX_DAMAGE)
+            && first.has(DataComponents.DAMAGE)
+            && second.has(DataComponents.DAMAGE);
+    }
 
-            for (int i = 0; i < p_344890_.size(); i++) {
-                ItemStack itemstack1 = p_344890_.getItem(i);
-                if (!itemstack1.isEmpty()) {
-                    if (itemstack != null) {
-                        return canCombine(itemstack, itemstack1) ? Pair.of(itemstack, itemstack1) : null;
-                    }
+    public boolean matches(final CraftingInput input, final Level level) {
+        return getItemsToCombine(input) != null;
+    }
 
-                    itemstack = itemstack1;
+    public ItemStack assemble(final CraftingInput input) {
+        Pair<ItemStack, ItemStack> itemsToCombine = getItemsToCombine(input);
+        if (itemsToCombine == null) {
+            return ItemStack.EMPTY;
+        }
+
+        ItemStack first = itemsToCombine.getFirst();
+        ItemStack second = itemsToCombine.getSecond();
+        int durability = Math.max(first.getMaxDamage(), second.getMaxDamage());
+        int remaining1 = first.getMaxDamage() - first.getDamageValue();
+        int remaining2 = second.getMaxDamage() - second.getDamageValue();
+        int remaining = remaining1 + remaining2 + durability * 5 / 100;
+        ItemStack itemStack = new ItemStack(first.getItem());
+        itemStack.set(DataComponents.MAX_DAMAGE, durability);
+        itemStack.setDamageValue(Math.max(durability - remaining, 0));
+        ItemEnchantments firstEnchants = EnchantmentHelper.getEnchantmentsForCrafting(first);
+        ItemEnchantments secondEnchants = EnchantmentHelper.getEnchantmentsForCrafting(second);
+        EnchantmentHelper.updateEnchantments(itemStack, newEnchantments -> {
+            for (Holder<Enchantment> enchantment : Sets.union(firstEnchants.keySet(), secondEnchants.keySet())) {
+                if (enchantment.is(EnchantmentTags.CURSE)) {
+                    int enchantLevel = Math.max(firstEnchants.getLevel(enchantment), secondEnchants.getLevel(enchantment));
+                    newEnchantments.set(enchantment, enchantLevel);
                 }
             }
-
-            return null;
-        }
-    }
-
-    private static boolean canCombine(ItemStack p_335534_, ItemStack p_329259_) {
-        return p_329259_.is(p_335534_.getItem())
-            && p_335534_.getCount() == 1
-            && p_329259_.getCount() == 1
-            && p_335534_.has(DataComponents.MAX_DAMAGE)
-            && p_329259_.has(DataComponents.MAX_DAMAGE)
-            && p_335534_.has(DataComponents.DAMAGE)
-            && p_329259_.has(DataComponents.DAMAGE);
-    }
-
-    public boolean matches(CraftingInput p_344438_, Level p_44139_) {
-        return getItemsToCombine(p_344438_) != null;
-    }
-
-    public ItemStack assemble(CraftingInput p_342804_, HolderLookup.Provider p_331714_) {
-        Pair<ItemStack, ItemStack> pair = getItemsToCombine(p_342804_);
-        if (pair == null) {
-            return ItemStack.EMPTY;
-        } else {
-            ItemStack itemstack = pair.getFirst();
-            ItemStack itemstack1 = pair.getSecond();
-            int i = Math.max(itemstack.getMaxDamage(), itemstack1.getMaxDamage());
-            int j = itemstack.getMaxDamage() - itemstack.getDamageValue();
-            int k = itemstack1.getMaxDamage() - itemstack1.getDamageValue();
-            int l = j + k + i * 5 / 100;
-            ItemStack itemstack2 = new ItemStack(itemstack.getItem());
-            itemstack2.set(DataComponents.MAX_DAMAGE, i);
-            itemstack2.setDamageValue(Math.max(i - l, 0));
-            ItemEnchantments itemenchantments = EnchantmentHelper.getEnchantmentsForCrafting(itemstack);
-            ItemEnchantments itemenchantments1 = EnchantmentHelper.getEnchantmentsForCrafting(itemstack1);
-            EnchantmentHelper.updateEnchantments(
-                itemstack2,
-                p_359850_ -> p_331714_.lookupOrThrow(Registries.ENCHANTMENT)
-                    .listElements()
-                    .filter(p_341586_ -> p_341586_.is(EnchantmentTags.CURSE))
-                    .forEach(p_341590_ -> {
-                        int i1 = Math.max(itemenchantments.getLevel(p_341590_), itemenchantments1.getLevel(p_341590_));
-                        if (i1 > 0) {
-                            p_359850_.upgrade(p_341590_, i1);
-                        }
-                    })
-            );
-            return itemstack2;
-        }
+        });
+        return itemStack;
     }
 
     @Override
     public RecipeSerializer<RepairItemRecipe> getSerializer() {
-        return RecipeSerializer.REPAIR_ITEM;
+        return SERIALIZER;
     }
 }

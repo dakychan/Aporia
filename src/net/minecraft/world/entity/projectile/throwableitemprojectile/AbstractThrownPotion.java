@@ -25,20 +25,20 @@ import net.minecraft.world.phys.HitResult;
 public abstract class AbstractThrownPotion extends ThrowableItemProjectile {
     public static final double SPLASH_RANGE = 4.0;
     protected static final double SPLASH_RANGE_SQ = 16.0;
-    public static final Predicate<LivingEntity> WATER_SENSITIVE_OR_ON_FIRE = p_459971_ -> p_459971_.isSensitiveToWater() || p_459971_.isOnFire();
+    public static final Predicate<LivingEntity> WATER_SENSITIVE_OR_ON_FIRE = livingEntity -> livingEntity.isSensitiveToWater() || livingEntity.isOnFire();
 
-    public AbstractThrownPotion(EntityType<? extends AbstractThrownPotion> p_458779_, Level p_458628_) {
-        super(p_458779_, p_458628_);
+    public AbstractThrownPotion(final EntityType<? extends AbstractThrownPotion> type, final Level level) {
+        super(type, level);
     }
 
-    public AbstractThrownPotion(EntityType<? extends AbstractThrownPotion> p_455811_, Level p_454900_, LivingEntity p_455184_, ItemStack p_450143_) {
-        super(p_455811_, p_455184_, p_454900_, p_450143_);
+    public AbstractThrownPotion(final EntityType<? extends AbstractThrownPotion> type, final Level level, final LivingEntity owner, final ItemStack itemStack) {
+        super(type, owner, level, itemStack);
     }
 
     public AbstractThrownPotion(
-        EntityType<? extends AbstractThrownPotion> p_451968_, Level p_456304_, double p_460675_, double p_458239_, double p_451651_, ItemStack p_450979_
+        final EntityType<? extends AbstractThrownPotion> type, final Level level, final double x, final double y, final double z, final ItemStack itemStack
     ) {
-        super(p_451968_, p_460675_, p_458239_, p_451651_, p_456304_, p_450979_);
+        super(type, x, y, z, level, itemStack);
     }
 
     @Override
@@ -47,55 +47,55 @@ public abstract class AbstractThrownPotion extends ThrowableItemProjectile {
     }
 
     @Override
-    protected void onHitBlock(BlockHitResult p_455381_) {
-        super.onHitBlock(p_455381_);
+    protected void onHitBlock(final BlockHitResult hitResult) {
+        super.onHitBlock(hitResult);
         if (!this.level().isClientSide()) {
-            ItemStack itemstack = this.getItem();
-            Direction direction = p_455381_.getDirection();
-            BlockPos blockpos = p_455381_.getBlockPos();
-            BlockPos blockpos1 = blockpos.relative(direction);
-            PotionContents potioncontents = itemstack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
-            if (potioncontents.is(Potions.WATER)) {
-                this.dowseFire(blockpos1);
-                this.dowseFire(blockpos1.relative(direction.getOpposite()));
+            ItemStack potionItemStack = this.getItem();
+            Direction hitDirection = hitResult.getDirection();
+            BlockPos blockHitPos = hitResult.getBlockPos();
+            BlockPos blockEffectPos = blockHitPos.relative(hitDirection);
+            PotionContents potion = potionItemStack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+            if (potion.is(Potions.WATER)) {
+                this.dowseFire(blockEffectPos);
+                this.dowseFire(blockEffectPos.relative(hitDirection.getOpposite()));
 
-                for (Direction direction1 : Direction.Plane.HORIZONTAL) {
-                    this.dowseFire(blockpos1.relative(direction1));
+                for (Direction direction : Direction.Plane.HORIZONTAL) {
+                    this.dowseFire(blockEffectPos.relative(direction));
                 }
             }
         }
     }
 
     @Override
-    protected void onHit(HitResult p_454720_) {
-        super.onHit(p_454720_);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            ItemStack itemstack = this.getItem();
-            PotionContents potioncontents = itemstack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
-            if (potioncontents.is(Potions.WATER)) {
-                this.onHitAsWater(serverlevel);
-            } else if (potioncontents.hasEffects()) {
-                this.onHitAsPotion(serverlevel, itemstack, p_454720_);
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
+        if (this.level() instanceof ServerLevel level) {
+            ItemStack potionItemStack = this.getItem();
+            PotionContents potion = potionItemStack.getOrDefault(DataComponents.POTION_CONTENTS, PotionContents.EMPTY);
+            if (potion.is(Potions.WATER)) {
+                this.onHitAsWater(level);
+            } else if (potion.hasEffects()) {
+                this.onHitAsPotion(level, potionItemStack, hitResult);
             }
 
-            int i = potioncontents.potion().isPresent() && potioncontents.potion().get().value().hasInstantEffects() ? 2007 : 2002;
-            serverlevel.levelEvent(i, this.blockPosition(), potioncontents.getColor());
+            int type = potion.potion().isPresent() && potion.potion().get().value().hasInstantEffects() ? 2007 : 2002;
+            level.levelEvent(type, this.blockPosition(), potion.getColor());
             this.discard();
         }
     }
 
-    private void onHitAsWater(ServerLevel p_459102_) {
+    private void onHitAsWater(final ServerLevel level) {
         AABB aabb = this.getBoundingBox().inflate(4.0, 2.0, 4.0);
 
-        for (LivingEntity livingentity : this.level().getEntitiesOfClass(LivingEntity.class, aabb, WATER_SENSITIVE_OR_ON_FIRE)) {
-            double d0 = this.distanceToSqr(livingentity);
-            if (d0 < 16.0) {
-                if (livingentity.isSensitiveToWater()) {
-                    livingentity.hurtServer(p_459102_, this.damageSources().indirectMagic(this, this.getOwner()), 1.0F);
+        for (LivingEntity entity : this.level().getEntitiesOfClass(LivingEntity.class, aabb, WATER_SENSITIVE_OR_ON_FIRE)) {
+            double dist = this.distanceToSqr(entity);
+            if (dist < 16.0) {
+                if (entity.isSensitiveToWater()) {
+                    entity.hurtServer(level, this.damageSources().indirectMagic(this, this.getOwner()), 1.0F);
                 }
 
-                if (livingentity.isOnFire() && livingentity.isAlive()) {
-                    livingentity.extinguishFire();
+                if (entity.isOnFire() && entity.isAlive()) {
+                    entity.extinguishFire();
                 }
             }
         }
@@ -105,25 +105,25 @@ public abstract class AbstractThrownPotion extends ThrowableItemProjectile {
         }
     }
 
-    protected abstract void onHitAsPotion(ServerLevel p_455895_, ItemStack p_453269_, HitResult p_459430_);
+    protected abstract void onHitAsPotion(ServerLevel level, ItemStack potionItem, HitResult hitResult);
 
-    private void dowseFire(BlockPos p_457390_) {
-        BlockState blockstate = this.level().getBlockState(p_457390_);
-        if (blockstate.is(BlockTags.FIRE)) {
-            this.level().destroyBlock(p_457390_, false, this);
-        } else if (AbstractCandleBlock.isLit(blockstate)) {
-            AbstractCandleBlock.extinguish(null, blockstate, this.level(), p_457390_);
-        } else if (CampfireBlock.isLitCampfire(blockstate)) {
-            this.level().levelEvent(null, 1009, p_457390_, 0);
-            CampfireBlock.dowse(this.getOwner(), this.level(), p_457390_, blockstate);
-            this.level().setBlockAndUpdate(p_457390_, blockstate.setValue(CampfireBlock.LIT, false));
+    private void dowseFire(final BlockPos pos) {
+        BlockState blockState = this.level().getBlockState(pos);
+        if (blockState.is(BlockTags.FIRE)) {
+            this.level().destroyBlock(pos, false, this);
+        } else if (AbstractCandleBlock.isLit(blockState)) {
+            AbstractCandleBlock.extinguish(null, blockState, this.level(), pos);
+        } else if (CampfireBlock.isLitCampfire(blockState)) {
+            this.level().levelEvent(null, 1009, pos, 0);
+            CampfireBlock.dowse(this.getOwner(), this.level(), pos, blockState);
+            this.level().setBlockAndUpdate(pos, blockState.setValue(CampfireBlock.LIT, false));
         }
     }
 
     @Override
-    public DoubleDoubleImmutablePair calculateHorizontalHurtKnockbackDirection(LivingEntity p_452648_, DamageSource p_454552_) {
-        double d0 = p_452648_.position().x - this.position().x;
-        double d1 = p_452648_.position().z - this.position().z;
-        return DoubleDoubleImmutablePair.of(d0, d1);
+    public DoubleDoubleImmutablePair calculateHorizontalHurtKnockbackDirection(final LivingEntity hurtEntity, final DamageSource damageSource) {
+        double dx = hurtEntity.position().x - this.position().x;
+        double dz = hurtEntity.position().z - this.position().z;
+        return DoubleDoubleImmutablePair.of(dx, dz);
     }
 }

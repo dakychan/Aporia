@@ -11,94 +11,99 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.HugeMushroomFeatureConfiguration;
 
 public abstract class AbstractHugeMushroomFeature extends Feature<HugeMushroomFeatureConfiguration> {
-    public AbstractHugeMushroomFeature(Codec<HugeMushroomFeatureConfiguration> p_65093_) {
-        super(p_65093_);
+    public static final int MIN_MUSHROOM_HEIGHT = 4;
+
+    public AbstractHugeMushroomFeature(final Codec<HugeMushroomFeatureConfiguration> codec) {
+        super(codec);
     }
 
     protected void placeTrunk(
-        LevelAccessor p_224930_,
-        RandomSource p_224931_,
-        BlockPos p_224932_,
-        HugeMushroomFeatureConfiguration p_224933_,
-        int p_224934_,
-        BlockPos.MutableBlockPos p_224935_
+        final WorldGenLevel level,
+        final RandomSource random,
+        final BlockPos origin,
+        final HugeMushroomFeatureConfiguration config,
+        final int treeHeight,
+        final BlockPos.MutableBlockPos blockPos
     ) {
-        for (int i = 0; i < p_224934_; i++) {
-            p_224935_.set(p_224932_).move(Direction.UP, i);
-            this.placeMushroomBlock(p_224930_, p_224935_, p_224933_.stemProvider.getState(p_224931_, p_224932_));
+        for (int dy = 0; dy < treeHeight; dy++) {
+            blockPos.set(origin).move(Direction.UP, dy);
+            this.placeMushroomBlock(level, blockPos, config.stemProvider().getState(level, random, origin));
         }
     }
 
-    protected void placeMushroomBlock(LevelAccessor p_397470_, BlockPos.MutableBlockPos p_394453_, BlockState p_392580_) {
-        BlockState blockstate = p_397470_.getBlockState(p_394453_);
-        if (blockstate.isAir() || blockstate.is(BlockTags.REPLACEABLE_BY_MUSHROOMS)) {
-            this.setBlock(p_397470_, p_394453_, p_392580_);
+    protected void placeMushroomBlock(final LevelAccessor level, final BlockPos.MutableBlockPos blockPos, final BlockState newState) {
+        BlockState currentState = level.getBlockState(blockPos);
+        if (currentState.isAir() || currentState.is(BlockTags.REPLACEABLE_BY_MUSHROOMS)) {
+            this.setBlock(level, blockPos, newState);
         }
     }
 
-    protected int getTreeHeight(RandomSource p_224922_) {
-        int i = p_224922_.nextInt(3) + 4;
-        if (p_224922_.nextInt(12) == 0) {
-            i *= 2;
+    protected int getTreeHeight(final RandomSource random) {
+        int treeHeight = random.nextInt(3) + 4;
+        if (random.nextInt(12) == 0) {
+            treeHeight *= 2;
         }
 
-        return i;
+        return treeHeight;
     }
 
     protected boolean isValidPosition(
-        LevelAccessor p_65099_, BlockPos p_65100_, int p_65101_, BlockPos.MutableBlockPos p_65102_, HugeMushroomFeatureConfiguration p_65103_
+        final WorldGenLevel level,
+        final BlockPos origin,
+        final int treeHeight,
+        final BlockPos.MutableBlockPos blockPos,
+        final HugeMushroomFeatureConfiguration config
     ) {
-        int i = p_65100_.getY();
-        if (i >= p_65099_.getMinY() + 1 && i + p_65101_ + 1 <= p_65099_.getMaxY()) {
-            BlockState blockstate = p_65099_.getBlockState(p_65100_.below());
-            if (!isDirt(blockstate) && !blockstate.is(BlockTags.MUSHROOM_GROW_BLOCK)) {
+        int y = origin.getY();
+        if (y >= level.getMinY() + 1 && y + treeHeight + 1 <= level.getMaxY()) {
+            if (!config.canPlaceOn().test(level, origin.below())) {
                 return false;
-            } else {
-                for (int j = 0; j <= p_65101_; j++) {
-                    int k = this.getTreeRadiusForHeight(-1, -1, p_65103_.foliageRadius, j);
+            }
 
-                    for (int l = -k; l <= k; l++) {
-                        for (int i1 = -k; i1 <= k; i1++) {
-                            BlockState blockstate1 = p_65099_.getBlockState(p_65102_.setWithOffset(p_65100_, l, j, i1));
-                            if (!blockstate1.isAir() && !blockstate1.is(BlockTags.LEAVES)) {
-                                return false;
-                            }
+            for (int dy = 0; dy <= treeHeight; dy++) {
+                int radius = this.getTreeRadiusForHeight(-1, -1, config.foliageRadius(), dy);
+
+                for (int dx = -radius; dx <= radius; dx++) {
+                    for (int dz = -radius; dz <= radius; dz++) {
+                        BlockState state = level.getBlockState(blockPos.setWithOffset(origin, dx, dy, dz));
+                        if (!state.isAir() && !state.is(BlockTags.LEAVES)) {
+                            return false;
                         }
                     }
                 }
-
-                return true;
             }
+
+            return true;
         } else {
             return false;
         }
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<HugeMushroomFeatureConfiguration> p_159436_) {
-        WorldGenLevel worldgenlevel = p_159436_.level();
-        BlockPos blockpos = p_159436_.origin();
-        RandomSource randomsource = p_159436_.random();
-        HugeMushroomFeatureConfiguration hugemushroomfeatureconfiguration = p_159436_.config();
-        int i = this.getTreeHeight(randomsource);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        if (!this.isValidPosition(worldgenlevel, blockpos, i, blockpos$mutableblockpos, hugemushroomfeatureconfiguration)) {
+    public boolean place(final FeaturePlaceContext<HugeMushroomFeatureConfiguration> context) {
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        RandomSource random = context.random();
+        HugeMushroomFeatureConfiguration config = context.config();
+        int treeHeight = this.getTreeHeight(random);
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
+        if (!this.isValidPosition(level, origin, treeHeight, blockPos, config)) {
             return false;
-        } else {
-            this.makeCap(worldgenlevel, randomsource, blockpos, i, blockpos$mutableblockpos, hugemushroomfeatureconfiguration);
-            this.placeTrunk(worldgenlevel, randomsource, blockpos, hugemushroomfeatureconfiguration, i, blockpos$mutableblockpos);
-            return true;
         }
+
+        this.makeCap(level, random, origin, treeHeight, blockPos, config);
+        this.placeTrunk(level, random, origin, config, treeHeight, blockPos);
+        return true;
     }
 
-    protected abstract int getTreeRadiusForHeight(int p_65094_, int p_65095_, int p_65096_, int p_65097_);
+    protected abstract int getTreeRadiusForHeight(final int trunkHeight, final int treeHeight, final int leafRadius, final int yo);
 
     protected abstract void makeCap(
-        LevelAccessor p_224923_,
-        RandomSource p_224924_,
-        BlockPos p_224925_,
-        int p_224926_,
-        BlockPos.MutableBlockPos p_224927_,
-        HugeMushroomFeatureConfiguration p_224928_
+        final WorldGenLevel level,
+        final RandomSource random,
+        final BlockPos origin,
+        final int treeHeight,
+        final BlockPos.MutableBlockPos blockPos,
+        final HugeMushroomFeatureConfiguration config
     );
 }

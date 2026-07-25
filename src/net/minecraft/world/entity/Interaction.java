@@ -2,9 +2,8 @@ package net.minecraft.world.entity;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.UUID;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -38,41 +37,41 @@ public class Interaction extends Entity implements Attackable, Targeting {
     private Interaction.@Nullable PlayerAction attack;
     private Interaction.@Nullable PlayerAction interaction;
 
-    public Interaction(EntityType<?> p_273319_, Level p_272713_) {
-        super(p_273319_, p_272713_);
+    public Interaction(final EntityType<?> type, final Level level) {
+        super(type, level);
         this.noPhysics = true;
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_333595_) {
-        p_333595_.define(DATA_WIDTH_ID, 1.0F);
-        p_333595_.define(DATA_HEIGHT_ID, 1.0F);
-        p_333595_.define(DATA_RESPONSE_ID, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_WIDTH_ID, 1.0F);
+        entityData.define(DATA_HEIGHT_ID, 1.0F);
+        entityData.define(DATA_RESPONSE_ID, false);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_406949_) {
-        this.setWidth(p_406949_.getFloatOr("width", 1.0F));
-        this.setHeight(p_406949_.getFloatOr("height", 1.0F));
-        this.attack = p_406949_.read("attack", Interaction.PlayerAction.CODEC).orElse(null);
-        this.interaction = p_406949_.read("interaction", Interaction.PlayerAction.CODEC).orElse(null);
-        this.setResponse(p_406949_.getBooleanOr("response", false));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.setWidth(input.getFloatOr("width", 1.0F));
+        this.setHeight(input.getFloatOr("height", 1.0F));
+        this.attack = input.read("attack", Interaction.PlayerAction.CODEC).orElse(null);
+        this.interaction = input.read("interaction", Interaction.PlayerAction.CODEC).orElse(null);
+        this.setResponse(input.getBooleanOr("response", false));
         this.setBoundingBox(this.makeBoundingBox());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_410045_) {
-        p_410045_.putFloat("width", this.getWidth());
-        p_410045_.putFloat("height", this.getHeight());
-        p_410045_.storeNullable("attack", Interaction.PlayerAction.CODEC, this.attack);
-        p_410045_.storeNullable("interaction", Interaction.PlayerAction.CODEC, this.interaction);
-        p_410045_.putBoolean("response", this.getResponse());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.putFloat("width", this.getWidth());
+        output.putFloat("height", this.getHeight());
+        output.storeNullable("attack", Interaction.PlayerAction.CODEC, this.attack);
+        output.storeNullable("interaction", Interaction.PlayerAction.CODEC, this.interaction);
+        output.putBoolean("response", this.getResponse());
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_272722_) {
-        super.onSyncedDataUpdated(p_272722_);
-        if (DATA_HEIGHT_ID.equals(p_272722_) || DATA_WIDTH_ID.equals(p_272722_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (DATA_HEIGHT_ID.equals(accessor) || DATA_WIDTH_ID.equals(accessor)) {
             this.refreshDimensions();
         }
     }
@@ -98,11 +97,11 @@ public class Interaction extends Entity implements Attackable, Targeting {
     }
 
     @Override
-    public boolean skipAttackInteraction(Entity p_273553_) {
-        if (p_273553_ instanceof Player player) {
+    public boolean skipAttackInteraction(final Entity source) {
+        if (source instanceof Player player) {
             this.attack = new Interaction.PlayerAction(player.getUUID(), this.level().getGameTime());
-            if (player instanceof ServerPlayer serverplayer) {
-                CriteriaTriggers.PLAYER_HURT_ENTITY.trigger(serverplayer, this, player.damageSources().generic(), 1.0F, 1.0F, false);
+            if (player instanceof ServerPlayer serverPlayer) {
+                CriteriaTriggers.PLAYER_HURT_ENTITY.trigger(serverPlayer, this, player.damageSources().generic(), 1.0F, 1.0F, false);
             }
 
             return !this.getResponse();
@@ -112,18 +111,18 @@ public class Interaction extends Entity implements Attackable, Targeting {
     }
 
     @Override
-    public final boolean hurtServer(ServerLevel p_367768_, DamageSource p_367095_, float p_369043_) {
+    public final boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         return false;
     }
 
     @Override
-    public InteractionResult interact(Player p_273507_, InteractionHand p_273048_) {
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
         if (this.level().isClientSide()) {
             return this.getResponse() ? InteractionResult.SUCCESS : InteractionResult.CONSUME;
-        } else {
-            this.interaction = new Interaction.PlayerAction(p_273507_.getUUID(), this.level().getGameTime());
-            return InteractionResult.CONSUME;
         }
+
+        this.interaction = new Interaction.PlayerAction(player.getUUID(), this.level().getGameTime());
+        return InteractionResult.CONSUME;
     }
 
     @Override
@@ -140,24 +139,24 @@ public class Interaction extends Entity implements Attackable, Targeting {
         return this.interaction != null ? this.level().getPlayerByUUID(this.interaction.player()) : null;
     }
 
-    private void setWidth(float p_273385_) {
-        this.entityData.set(DATA_WIDTH_ID, p_273385_);
+    private void setWidth(final float width) {
+        this.entityData.set(DATA_WIDTH_ID, width);
     }
 
     private float getWidth() {
         return this.entityData.get(DATA_WIDTH_ID);
     }
 
-    private void setHeight(float p_273733_) {
-        this.entityData.set(DATA_HEIGHT_ID, p_273733_);
+    private void setHeight(final float width) {
+        this.entityData.set(DATA_HEIGHT_ID, width);
     }
 
     private float getHeight() {
         return this.entityData.get(DATA_HEIGHT_ID);
     }
 
-    private void setResponse(boolean p_273657_) {
-        this.entityData.set(DATA_RESPONSE_ID, p_273657_);
+    private void setResponse(final boolean response) {
+        this.entityData.set(DATA_RESPONSE_ID, response);
     }
 
     private boolean getResponse() {
@@ -169,22 +168,22 @@ public class Interaction extends Entity implements Attackable, Targeting {
     }
 
     @Override
-    public EntityDimensions getDimensions(Pose p_273111_) {
+    public EntityDimensions getDimensions(final Pose pose) {
         return this.getDimensions();
     }
 
     @Override
-    protected AABB makeBoundingBox(Vec3 p_377271_) {
-        return this.getDimensions().makeBoundingBox(p_377271_);
+    protected AABB makeBoundingBox(final Vec3 position) {
+        return this.getDimensions().makeBoundingBox(position);
     }
 
-    record PlayerAction(UUID player, long timestamp) {
+    private record PlayerAction(UUID player, long timestamp) {
         public static final Codec<Interaction.PlayerAction> CODEC = RecordCodecBuilder.create(
-            p_273237_ -> p_273237_.group(
+            i -> i.group(
                     UUIDUtil.CODEC.fieldOf("player").forGetter(Interaction.PlayerAction::player),
                     Codec.LONG.fieldOf("timestamp").forGetter(Interaction.PlayerAction::timestamp)
                 )
-                .apply(p_273237_, Interaction.PlayerAction::new)
+                .apply(i, Interaction.PlayerAction::new)
         );
     }
 }

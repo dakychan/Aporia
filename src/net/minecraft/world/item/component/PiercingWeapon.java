@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -19,19 +18,19 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 
 public record PiercingWeapon(boolean dealsKnockback, boolean dismounts, Optional<Holder<SoundEvent>> sound, Optional<Holder<SoundEvent>> hitSound) {
     public static final Codec<PiercingWeapon> CODEC = RecordCodecBuilder.create(
-        p_460493_ -> p_460493_.group(
+        i -> i.group(
                 Codec.BOOL.optionalFieldOf("deals_knockback", true).forGetter(PiercingWeapon::dealsKnockback),
                 Codec.BOOL.optionalFieldOf("dismounts", false).forGetter(PiercingWeapon::dismounts),
                 SoundEvent.CODEC.optionalFieldOf("sound").forGetter(PiercingWeapon::sound),
                 SoundEvent.CODEC.optionalFieldOf("hit_sound").forGetter(PiercingWeapon::hitSound)
             )
-            .apply(p_460493_, PiercingWeapon::new)
+            .apply(i, PiercingWeapon::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, PiercingWeapon> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.BOOL,
@@ -45,66 +44,52 @@ public record PiercingWeapon(boolean dealsKnockback, boolean dismounts, Optional
         PiercingWeapon::new
     );
 
-    public void makeSound(Entity p_453062_) {
+    public void makeSound(final Entity causer) {
         this.sound
             .ifPresent(
-                p_461004_ -> p_453062_.level()
-                    .playSound(
-                        p_453062_,
-                        p_453062_.getX(),
-                        p_453062_.getY(),
-                        p_453062_.getZ(),
-                        (Holder<SoundEvent>)p_461004_,
-                        p_453062_.getSoundSource(),
-                        1.0F,
-                        1.0F
-                    )
+                s -> causer.level().playSound(causer, causer.getX(), causer.getY(), causer.getZ(), (Holder<SoundEvent>)s, causer.getSoundSource(), 1.0F, 1.0F)
             );
     }
 
-    public void makeHitSound(Entity p_460834_) {
+    public void makeHitSound(final Entity causer) {
         this.hitSound
             .ifPresent(
-                p_455394_ -> p_460834_.level()
-                    .playSound(
-                        null, p_460834_.getX(), p_460834_.getY(), p_460834_.getZ(), (Holder<SoundEvent>)p_455394_, p_460834_.getSoundSource(), 1.0F, 1.0F
-                    )
+                s -> causer.level().playSound(null, causer.getX(), causer.getY(), causer.getZ(), (Holder<SoundEvent>)s, causer.getSoundSource(), 1.0F, 1.0F)
             );
     }
 
-    public static boolean canHitEntity(Entity p_452642_, Entity p_454622_) {
-        if (p_454622_.isInvulnerable() || !p_454622_.isAlive()) {
+    public static boolean canHitEntity(final Entity jabber, final Entity target) {
+        if (target.isInvulnerableToPiercingWeapon() || !target.isAlive()) {
             return false;
-        } else if (p_454622_ instanceof Interaction) {
+        } else if (target instanceof Interaction) {
             return true;
-        } else if (!p_454622_.canBeHitByProjectile()) {
+        } else if (!target.canBeHitByProjectile()) {
             return false;
         } else {
-            return p_454622_ instanceof Player player && p_452642_ instanceof Player player1 && !player1.canHarmPlayer(player)
+            return target instanceof Player targetPlayer && jabber instanceof Player jabbingPlayer && !jabbingPlayer.canHarmPlayer(targetPlayer)
                 ? false
-                : !p_452642_.isPassengerOfSameVehicle(p_454622_);
+                : !jabber.isPassengerOfSameVehicle(target);
         }
     }
 
-    public void attack(LivingEntity p_459872_, EquipmentSlot p_457940_) {
-        float f = (float)p_459872_.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        AttackRange attackrange = p_459872_.entityAttackRange();
-        boolean flag = false;
+    public void attack(final LivingEntity attacker, final EquipmentSlot hand) {
+        float damage = (float)attacker.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        ItemStack weaponItem = attacker.getItemBySlot(hand);
+        AttackRange attackRange = attacker.getAttackRangeWith(weaponItem);
+        boolean hitSomething = false;
 
-        for (EntityHitResult entityhitresult : ProjectileUtil.getHitEntitiesAlong(
-                p_459872_, attackrange, p_453749_ -> canHitEntity(p_459872_, p_453749_), ClipContext.Block.COLLIDER
-            )
-            .map(p_452187_ -> List.<EntityHitResult>of(), p_450514_ -> (Collection<EntityHitResult>)p_450514_)) {
-            flag |= p_459872_.stabAttack(p_457940_, entityhitresult.getEntity(), f, true, this.dealsKnockback, this.dismounts);
+        for (EntityHitResult hitResult : ProjectileUtil.getHitEntitiesAlong(attacker, attackRange, e1 -> canHitEntity(attacker, e1), ClipContext.Block.COLLIDER)
+            .map(a -> List.<EntityHitResult>of(), e -> (Collection<EntityHitResult>)e)) {
+            hitSomething |= attacker.stabAttack(hand, hitResult.getEntity(), damage, true, this.dealsKnockback, this.dismounts);
         }
 
-        p_459872_.onAttack();
-        p_459872_.lungeForwardMaybe();
-        if (flag) {
-            this.makeHitSound(p_459872_);
+        attacker.onAttack();
+        attacker.postPiercingAttack();
+        if (hitSomething) {
+            this.makeHitSound(attacker);
         }
 
-        this.makeSound(p_459872_);
-        p_459872_.swing(InteractionHand.MAIN_HAND, false);
+        this.makeSound(attacker);
+        attacker.swing(InteractionHand.MAIN_HAND, false);
     }
 }

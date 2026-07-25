@@ -49,79 +49,86 @@ public class PowderSnowBlock extends Block implements BucketPickup {
         return CODEC;
     }
 
-    public PowderSnowBlock(BlockBehaviour.Properties p_154253_) {
-        super(p_154253_);
+    public PowderSnowBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected boolean skipRendering(BlockState p_154268_, BlockState p_154269_, Direction p_154270_) {
-        return p_154269_.is(this) ? true : super.skipRendering(p_154268_, p_154269_, p_154270_);
+    protected boolean skipRendering(final BlockState state, final BlockState neighborState, final Direction direction) {
+        return neighborState.is(this) ? true : super.skipRendering(state, neighborState, direction);
     }
 
     @Override
-    protected void entityInside(BlockState p_154263_, Level p_154264_, BlockPos p_154265_, Entity p_154266_, InsideBlockEffectApplier p_397760_, boolean p_432055_) {
-        if (!(p_154266_ instanceof LivingEntity) || p_154266_.getInBlockState().is(this)) {
-            p_154266_.makeStuckInBlock(p_154263_, new Vec3(0.9F, 1.5, 0.9F));
-            if (p_154264_.isClientSide()) {
-                RandomSource randomsource = p_154264_.getRandom();
-                boolean flag = p_154266_.xOld != p_154266_.getX() || p_154266_.zOld != p_154266_.getZ();
-                if (flag && randomsource.nextBoolean()) {
-                    p_154264_.addParticle(
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (!(entity instanceof LivingEntity) || entity.getInBlockState().is(this)) {
+            entity.makeStuckInBlock(state, new Vec3(0.9F, 1.5, 0.9F));
+            if (level.isClientSide()) {
+                RandomSource random = level.getRandom();
+                boolean isMoving = entity.xOld != entity.getX() || entity.zOld != entity.getZ();
+                if (isMoving && random.nextBoolean()) {
+                    level.addParticle(
                         ParticleTypes.SNOWFLAKE,
-                        p_154266_.getX(),
-                        p_154265_.getY() + 1,
-                        p_154266_.getZ(),
-                        Mth.randomBetween(randomsource, -1.0F, 1.0F) * 0.083333336F,
+                        entity.getX(),
+                        pos.getY() + 1,
+                        entity.getZ(),
+                        Mth.randomBetween(random, -1.0F, 1.0F) * 0.083333336F,
                         0.05F,
-                        Mth.randomBetween(randomsource, -1.0F, 1.0F) * 0.083333336F
+                        Mth.randomBetween(random, -1.0F, 1.0F) * 0.083333336F
                     );
                 }
             }
         }
 
-        BlockPos blockpos = p_154265_.immutable();
-        p_397760_.runBefore(
+        BlockPos position = pos.immutable();
+        effectApplier.runBefore(
             InsideBlockEffectType.EXTINGUISH,
-            p_449906_ -> {
-                if (p_154264_ instanceof ServerLevel serverlevel
-                    && p_449906_.isOnFire()
-                    && (serverlevel.getGameRules().get(GameRules.MOB_GRIEFING) || p_449906_ instanceof Player)
-                    && p_449906_.mayInteract(serverlevel, blockpos)) {
-                    p_154264_.destroyBlock(blockpos, false);
+            e -> {
+                if (level instanceof ServerLevel serverLevel
+                    && e.isOnFire()
+                    && (serverLevel.getGameRules().get(GameRules.MOB_GRIEFING) || e instanceof Player)
+                    && e.mayInteract(serverLevel, position)) {
+                    level.destroyBlock(position, false);
                 }
             }
         );
-        p_397760_.apply(InsideBlockEffectType.FREEZE);
-        p_397760_.apply(InsideBlockEffectType.EXTINGUISH);
+        effectApplier.apply(InsideBlockEffectType.FREEZE);
+        effectApplier.apply(InsideBlockEffectType.EXTINGUISH);
     }
 
     @Override
-    public void fallOn(Level p_196695_, BlockState p_196696_, BlockPos p_196697_, Entity p_196698_, double p_397482_) {
-        if (!(p_397482_ < 4.0) && p_196698_ instanceof LivingEntity livingentity) {
-            LivingEntity.Fallsounds $$7 = livingentity.getFallSounds();
-            SoundEvent soundevent = p_397482_ < 7.0 ? $$7.small() : $$7.big();
-            p_196698_.playSound(soundevent, 1.0F, 1.0F);
+    public void fallOn(final Level level, final BlockState state, final BlockPos pos, final Entity entity, final double fallDistance) {
+        if (!(fallDistance < 4.0) && entity instanceof LivingEntity livingEntity) {
+            LivingEntity.Fallsounds entityFallsounds = livingEntity.getFallSounds();
+            SoundEvent fallSound = fallDistance < 7.0 ? entityFallsounds.small() : entityFallsounds.big();
+            entity.playSound(fallSound, 1.0F, 1.0F);
         }
     }
 
     @Override
-    protected VoxelShape getEntityInsideCollisionShape(BlockState p_395473_, BlockGetter p_393747_, BlockPos p_392572_, Entity p_396104_) {
-        VoxelShape voxelshape = this.getCollisionShape(p_395473_, p_393747_, p_392572_, CollisionContext.of(p_396104_));
-        return voxelshape.isEmpty() ? Shapes.block() : voxelshape;
+    protected VoxelShape getEntityInsideCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final Entity entity) {
+        VoxelShape collisionShape = this.getCollisionShape(state, level, pos, CollisionContext.of(entity));
+        return collisionShape.isEmpty() ? Shapes.block() : collisionShape;
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_154285_, BlockGetter p_154286_, BlockPos p_154287_, CollisionContext p_154288_) {
-        if (!p_154288_.isPlacement() && p_154288_ instanceof EntityCollisionContext entitycollisioncontext) {
-            Entity entity = entitycollisioncontext.getEntity();
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        if (!context.isPlacement() && context instanceof EntityCollisionContext entityCollisionContext) {
+            Entity entity = entityCollisionContext.getEntity();
             if (entity != null) {
                 if (entity.fallDistance > 2.5) {
                     return FALLING_COLLISION_SHAPE;
                 }
 
-                boolean flag = entity instanceof FallingBlockEntity;
-                if (flag || canEntityWalkOnPowderSnow(entity) && p_154288_.isAbove(Shapes.block(), p_154287_, false) && !p_154288_.isDescending()) {
-                    return super.getCollisionShape(p_154285_, p_154286_, p_154287_, p_154288_);
+                boolean isFallingBlock = entity instanceof FallingBlockEntity;
+                if (isFallingBlock || canEntityWalkOnPowderSnow(entity) && context.isAbove(Shapes.block(), pos, false) && !context.isDescending()) {
+                    return super.getCollisionShape(state, level, pos, context);
                 }
             }
         }
@@ -130,23 +137,23 @@ public class PowderSnowBlock extends Block implements BucketPickup {
     }
 
     @Override
-    protected VoxelShape getVisualShape(BlockState p_154276_, BlockGetter p_154277_, BlockPos p_154278_, CollisionContext p_154279_) {
+    protected VoxelShape getVisualShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return Shapes.empty();
     }
 
-    public static boolean canEntityWalkOnPowderSnow(Entity p_154256_) {
-        if (p_154256_.getType().is(EntityTypeTags.POWDER_SNOW_WALKABLE_MOBS)) {
+    public static boolean canEntityWalkOnPowderSnow(final Entity entity) {
+        if (entity.is(EntityTypeTags.POWDER_SNOW_WALKABLE_MOBS)) {
             return true;
         } else {
-            return p_154256_ instanceof LivingEntity ? ((LivingEntity)p_154256_).getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS) : false;
+            return entity instanceof LivingEntity livingEntity ? livingEntity.getItemBySlot(EquipmentSlot.FEET).is(Items.LEATHER_BOOTS) : false;
         }
     }
 
     @Override
-    public ItemStack pickupBlock(@Nullable LivingEntity p_397782_, LevelAccessor p_154281_, BlockPos p_154282_, BlockState p_154283_) {
-        p_154281_.setBlock(p_154282_, Blocks.AIR.defaultBlockState(), 11);
-        if (!p_154281_.isClientSide()) {
-            p_154281_.levelEvent(2001, p_154282_, Block.getId(p_154283_));
+    public ItemStack pickupBlock(final @Nullable LivingEntity user, final LevelAccessor level, final BlockPos pos, final BlockState state) {
+        level.setBlock(pos, Blocks.AIR.defaultBlockState(), 11);
+        if (!level.isClientSide()) {
+            level.levelEvent(2001, pos, Block.getId(state));
         }
 
         return new ItemStack(Items.POWDER_SNOW_BUCKET);
@@ -158,7 +165,7 @@ public class PowderSnowBlock extends Block implements BucketPickup {
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_154258_, PathComputationType p_154261_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return true;
     }
 }

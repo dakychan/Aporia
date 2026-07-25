@@ -29,55 +29,58 @@ import net.minecraft.world.level.storage.ValueOutput;
 
 public class Pufferfish extends AbstractFish {
     private static final EntityDataAccessor<Integer> PUFF_STATE = SynchedEntityData.defineId(Pufferfish.class, EntityDataSerializers.INT);
-    int inflateCounter;
-    int deflateTimer;
-    private static final TargetingConditions.Selector SCARY_MOB = (p_450517_, p_451541_) -> p_450517_ instanceof Player player && player.isCreative()
+    private int inflateCounter;
+    private int deflateTimer;
+    private static final TargetingConditions.Selector SCARY_MOB = (target, level) -> target instanceof Player player && player.isCreative()
         ? false
-        : !p_450517_.getType().is(EntityTypeTags.NOT_SCARY_FOR_PUFFERFISH);
-    static final TargetingConditions TARGETING_CONDITIONS = TargetingConditions.forNonCombat().ignoreInvisibilityTesting().ignoreLineOfSight().selector(SCARY_MOB);
+        : !target.is(EntityTypeTags.NOT_SCARY_FOR_PUFFERFISH);
+    private static final TargetingConditions TARGETING_CONDITIONS = TargetingConditions.forNonCombat()
+        .ignoreInvisibilityTesting()
+        .ignoreLineOfSight()
+        .selector(SCARY_MOB);
     public static final int STATE_SMALL = 0;
     public static final int STATE_MID = 1;
     public static final int STATE_FULL = 2;
     private static final int DEFAULT_PUFF_STATE = 0;
 
-    public Pufferfish(EntityType<? extends Pufferfish> p_457444_, Level p_454316_) {
-        super(p_457444_, p_454316_);
+    public Pufferfish(final EntityType<? extends Pufferfish> type, final Level level) {
+        super(type, level);
         this.refreshDimensions();
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_452970_) {
-        super.defineSynchedData(p_452970_);
-        p_452970_.define(PUFF_STATE, 0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(PUFF_STATE, 0);
     }
 
     public int getPuffState() {
         return this.entityData.get(PUFF_STATE);
     }
 
-    public void setPuffState(int p_458026_) {
-        this.entityData.set(PUFF_STATE, p_458026_);
+    public void setPuffState(final int state) {
+        this.entityData.set(PUFF_STATE, state);
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_455083_) {
-        if (PUFF_STATE.equals(p_455083_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        if (PUFF_STATE.equals(accessor)) {
             this.refreshDimensions();
         }
 
-        super.onSyncedDataUpdated(p_455083_);
+        super.onSyncedDataUpdated(accessor);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_454934_) {
-        super.addAdditionalSaveData(p_454934_);
-        p_454934_.putInt("PuffState", this.getPuffState());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("PuffState", this.getPuffState());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_460855_) {
-        super.readAdditionalSaveData(p_460855_);
-        this.setPuffState(Math.min(p_460855_.getIntOr("PuffState", 0), 2));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setPuffState(Math.min(input.getIntOr("PuffState", 0), 2));
     }
 
     @Override
@@ -123,32 +126,35 @@ public class Pufferfish extends AbstractFish {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (this.level() instanceof ServerLevel serverlevel && this.isAlive() && this.getPuffState() > 0) {
-            for (Mob mob : this.level().getEntitiesOfClass(Mob.class, this.getBoundingBox().inflate(0.3), p_455482_ -> TARGETING_CONDITIONS.test(serverlevel, this, p_455482_))) {
+        if (this.level() instanceof ServerLevel level && this.isAlive() && this.getPuffState() > 0) {
+            for (Mob mob : this.level()
+                .getEntitiesOfClass(Mob.class, this.getBoundingBox().inflate(0.3), target -> TARGETING_CONDITIONS.test(level, this, target))) {
                 if (mob.isAlive()) {
-                    this.touch(serverlevel, mob);
+                    this.touch(level, mob);
                 }
             }
         }
     }
 
-    private void touch(ServerLevel p_457051_, Mob p_450709_) {
-        int i = this.getPuffState();
-        if (p_450709_.hurtServer(p_457051_, this.damageSources().mobAttack(this), 1 + i)) {
-            p_450709_.addEffect(new MobEffectInstance(MobEffects.POISON, 60 * i, 0), this);
+    private void touch(final ServerLevel level, final Mob mob) {
+        int puffState = this.getPuffState();
+        if (mob.hurtServer(level, this.damageSources().mobAttack(this), 1 + puffState)) {
+            mob.addEffect(new MobEffectInstance(MobEffects.POISON, 60 * puffState, 0), this);
             this.playSound(SoundEvents.PUFFER_FISH_STING, 1.0F, 1.0F);
         }
     }
 
     @Override
-    public void playerTouch(Player p_452331_) {
-        int i = this.getPuffState();
-        if (p_452331_ instanceof ServerPlayer serverplayer && i > 0 && p_452331_.hurtServer(serverplayer.level(), this.damageSources().mobAttack(this), 1 + i)) {
+    public void playerTouch(final Player player) {
+        int puffState = this.getPuffState();
+        if (player instanceof ServerPlayer serverPlayer
+            && puffState > 0
+            && player.hurtServer(serverPlayer.level(), this.damageSources().mobAttack(this), 1 + puffState)) {
             if (!this.isSilent()) {
-                serverplayer.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.PUFFER_FISH_STING, 0.0F));
+                serverPlayer.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.PUFFER_FISH_STING, 0.0F));
             }
 
-            p_452331_.addEffect(new MobEffectInstance(MobEffects.POISON, 60 * i, 0), this);
+            player.addEffect(new MobEffectInstance(MobEffects.POISON, 60 * puffState, 0), this);
         }
     }
 
@@ -158,7 +164,7 @@ public class Pufferfish extends AbstractFish {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_457722_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.PUFFER_FISH_HURT;
     }
 
@@ -168,38 +174,35 @@ public class Pufferfish extends AbstractFish {
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_451909_) {
-        return super.getDefaultDimensions(p_451909_).scale(getScale(this.getPuffState()));
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return super.getDefaultDimensions(pose).scale(getScale(this.getPuffState()));
     }
 
-    private static float getScale(int p_457350_) {
-        switch (p_457350_) {
-            case 0:
-                return 0.5F;
-            case 1:
-                return 0.7F;
-            default:
-                return 1.0F;
-        }
+    private static float getScale(final int state) {
+        return switch (state) {
+            case 0 -> 0.5F;
+            case 1 -> 0.7F;
+            default -> 1.0F;
+        };
     }
 
-    static class PufferfishPuffGoal extends Goal {
+    private static class PufferfishPuffGoal extends Goal {
         private final Pufferfish fish;
 
-        public PufferfishPuffGoal(Pufferfish p_450670_) {
-            this.fish = p_450670_;
+        public PufferfishPuffGoal(final Pufferfish fish) {
+            this.fish = fish;
         }
 
         @Override
         public boolean canUse() {
-            List<LivingEntity> list = this.fish
+            List<LivingEntity> entities = this.fish
                 .level()
                 .getEntitiesOfClass(
                     LivingEntity.class,
                     this.fish.getBoundingBox().inflate(2.0),
-                    p_450323_ -> Pufferfish.TARGETING_CONDITIONS.test(getServerLevel(this.fish), this.fish, p_450323_)
+                    target -> Pufferfish.TARGETING_CONDITIONS.test(getServerLevel(this.fish), this.fish, target)
                 );
-            return !list.isEmpty();
+            return !entities.isEmpty();
         }
 
         @Override

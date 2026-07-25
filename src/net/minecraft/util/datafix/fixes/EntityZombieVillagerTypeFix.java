@@ -9,33 +9,33 @@ import net.minecraft.util.RandomSource;
 public class EntityZombieVillagerTypeFix extends NamedEntityFix {
     private static final int PROFESSION_MAX = 6;
 
-    public EntityZombieVillagerTypeFix(Schema p_15806_, boolean p_15807_) {
-        super(p_15806_, p_15807_, "EntityZombieVillagerTypeFix", References.ENTITY, "Zombie");
+    public EntityZombieVillagerTypeFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType, "EntityZombieVillagerTypeFix", References.ENTITY, "Zombie");
     }
 
-    public Dynamic<?> fixTag(Dynamic<?> p_15813_) {
-        if (p_15813_.get("IsVillager").asBoolean(false)) {
-            if (p_15813_.get("ZombieType").result().isEmpty()) {
-                int i = this.getVillagerProfession(p_15813_.get("VillagerProfession").asInt(-1));
-                if (i == -1) {
-                    i = this.getVillagerProfession(RandomSource.create().nextInt(6));
+    public Dynamic<?> fixTag(Dynamic<?> input) {
+        if (input.get("IsVillager").asBoolean(false)) {
+            if (input.get("ZombieType").result().isEmpty()) {
+                int type = this.getVillagerProfession(input.get("VillagerProfession").asInt(-1));
+                if (type == -1) {
+                    type = this.getVillagerProfession(RandomSource.createThreadLocalInstance().nextInt(6));
                 }
 
-                p_15813_ = p_15813_.set("ZombieType", p_15813_.createInt(i));
+                input = input.set("ZombieType", input.createInt(type));
             }
 
-            p_15813_ = p_15813_.remove("IsVillager");
+            input = input.remove("IsVillager");
         }
 
-        return p_15813_;
+        return input;
     }
 
-    private int getVillagerProfession(int p_15809_) {
-        return p_15809_ >= 0 && p_15809_ < 6 ? p_15809_ : -1;
+    private int getVillagerProfession(final int profession) {
+        return profession >= 0 && profession < 6 ? profession : -1;
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_15811_) {
-        return p_15811_.update(DSL.remainderFinder(), this::fixTag);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), this::fixTag);
     }
 }

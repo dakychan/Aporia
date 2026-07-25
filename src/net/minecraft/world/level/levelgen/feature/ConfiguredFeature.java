@@ -17,16 +17,16 @@ import net.minecraft.world.level.levelgen.feature.configurations.FeatureConfigur
 public record ConfiguredFeature<FC extends FeatureConfiguration, F extends Feature<FC>>(F feature, FC config) {
     public static final Codec<ConfiguredFeature<?, ?>> DIRECT_CODEC = BuiltInRegistries.FEATURE
         .byNameCodec()
-        .dispatch(p_65391_ -> p_65391_.feature, Feature::configuredCodec);
+        .dispatch(f -> f.feature, Feature::configuredCodec);
     public static final Codec<Holder<ConfiguredFeature<?, ?>>> CODEC = RegistryFileCodec.create(Registries.CONFIGURED_FEATURE, DIRECT_CODEC);
     public static final Codec<HolderSet<ConfiguredFeature<?, ?>>> LIST_CODEC = RegistryCodecs.homogeneousList(Registries.CONFIGURED_FEATURE, DIRECT_CODEC);
 
-    public boolean place(WorldGenLevel p_224954_, ChunkGenerator p_224955_, RandomSource p_224956_, BlockPos p_224957_) {
-        return this.feature.place(this.config, p_224954_, p_224955_, p_224956_, p_224957_);
+    public boolean place(final WorldGenLevel level, final ChunkGenerator chunkGenerator, final RandomSource random, final BlockPos origin) {
+        return this.feature.place(this.config, level, chunkGenerator, random, origin);
     }
 
-    public Stream<ConfiguredFeature<?, ?>> getFeatures() {
-        return Stream.concat(Stream.of(this), this.config.getFeatures());
+    public Stream<Holder<ConfiguredFeature<?, ?>>> getSubFeatures() {
+        return this.config.getSubFeatures();
     }
 
     @Override

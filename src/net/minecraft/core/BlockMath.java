@@ -13,7 +13,7 @@ public class BlockMath {
     private static final Map<Direction, Transformation> VANILLA_UV_TRANSFORM_LOCAL_TO_GLOBAL = Maps.newEnumMap(
         Map.of(
             Direction.SOUTH,
-            Transformation.identity(),
+            Transformation.IDENTITY,
             Direction.EAST,
             new Transformation(null, new Quaternionf().rotateY((float) (Math.PI / 2)), null, null),
             Direction.WEST,
@@ -26,31 +26,33 @@ public class BlockMath {
             new Transformation(null, new Quaternionf().rotateX((float) (Math.PI / 2)), null, null)
         )
     );
-    private static final Map<Direction, Transformation> VANILLA_UV_TRANSFORM_GLOBAL_TO_LOCAL = Maps.newEnumMap(Util.mapValues(VANILLA_UV_TRANSFORM_LOCAL_TO_GLOBAL, Transformation::inverse));
+    private static final Map<Direction, Transformation> VANILLA_UV_TRANSFORM_GLOBAL_TO_LOCAL = Maps.newEnumMap(
+        Util.mapValues(VANILLA_UV_TRANSFORM_LOCAL_TO_GLOBAL, Transformation::inverse)
+    );
 
-    public static Transformation blockCenterToCorner(Transformation p_121843_) {
-        Matrix4f matrix4f = new Matrix4f().translation(0.5F, 0.5F, 0.5F);
-        matrix4f.mul(p_121843_.getMatrix());
-        matrix4f.translate(-0.5F, -0.5F, -0.5F);
-        return new Transformation(matrix4f);
+    public static Transformation blockCenterToCorner(final Transformation transform) {
+        Matrix4f ret = new Matrix4f().translation(0.5F, 0.5F, 0.5F);
+        ret.mul(transform.getMatrix());
+        ret.translate(-0.5F, -0.5F, -0.5F);
+        return new Transformation(ret);
     }
 
-    public static Transformation blockCornerToCenter(Transformation p_175260_) {
-        Matrix4f matrix4f = new Matrix4f().translation(-0.5F, -0.5F, -0.5F);
-        matrix4f.mul(p_175260_.getMatrix());
-        matrix4f.translate(0.5F, 0.5F, 0.5F);
-        return new Transformation(matrix4f);
+    public static Transformation blockCornerToCenter(final Transformation transform) {
+        Matrix4f ret = new Matrix4f().translation(-0.5F, -0.5F, -0.5F);
+        ret.mul(transform.getMatrix());
+        ret.translate(0.5F, 0.5F, 0.5F);
+        return new Transformation(ret);
     }
 
-    public static Transformation getFaceTransformation(Transformation p_392937_, Direction p_392969_) {
-        if (MatrixUtil.isIdentity(p_392937_.getMatrix())) {
-            return p_392937_;
-        } else {
-            Transformation transformation = VANILLA_UV_TRANSFORM_LOCAL_TO_GLOBAL.get(p_392969_);
-            transformation = p_392937_.compose(transformation);
-            Vector3f vector3f = transformation.getMatrix().transformDirection(new Vector3f(0.0F, 0.0F, 1.0F));
-            Direction direction = Direction.getApproximateNearest(vector3f.x, vector3f.y, vector3f.z);
-            return VANILLA_UV_TRANSFORM_GLOBAL_TO_LOCAL.get(direction).compose(transformation);
+    public static Transformation getFaceTransformation(final Transformation transformation, final Direction originalSide) {
+        if (MatrixUtil.isIdentity(transformation.getMatrix())) {
+            return transformation;
         }
+
+        Transformation faceAction = VANILLA_UV_TRANSFORM_LOCAL_TO_GLOBAL.get(originalSide);
+        faceAction = transformation.compose(faceAction);
+        Vector3f transformedNormal = faceAction.getMatrix().transformDirection(new Vector3f(0.0F, 0.0F, 1.0F));
+        Direction newSide = Direction.getApproximateNearest(transformedNormal.x, transformedNormal.y, transformedNormal.z);
+        return VANILLA_UV_TRANSFORM_GLOBAL_TO_LOCAL.get(newSide).compose(faceAction);
     }
 }

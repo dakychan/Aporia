@@ -26,7 +26,7 @@ public record FixedFormat(Component value) implements NumberFormat {
     };
 
     @Override
-    public MutableComponent format(int p_311204_) {
+    public MutableComponent format(final int value) {
         return this.value.copy();
     }
 

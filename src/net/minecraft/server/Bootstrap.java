@@ -13,13 +13,13 @@ import net.minecraft.SharedConstants;
 import net.minecraft.SuppressForbidden;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.selector.options.EntitySelectorOptions;
-import net.minecraft.core.cauldron.CauldronInteraction;
+import net.minecraft.core.cauldron.CauldronInteractions;
 import net.minecraft.core.dispenser.DispenseItemBehavior;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
 import net.minecraft.world.flag.FeatureFlags;
@@ -43,83 +43,83 @@ public class Bootstrap {
     public static void bootStrap() {
         if (!isBootstrapped) {
             isBootstrapped = true;
-            Instant instant = Instant.now();
+            Instant start = Instant.now();
             if (BuiltInRegistries.REGISTRY.keySet().isEmpty()) {
                 throw new IllegalStateException("Unable to load registries");
-            } else {
-                FireBlock.bootStrap();
-                ComposterBlock.bootStrap();
-                if (EntityType.getKey(EntityType.PLAYER) == null) {
-                    throw new IllegalStateException("Failed loading EntityTypes");
-                } else {
-                    EntitySelectorOptions.bootStrap();
-                    DispenseItemBehavior.bootStrap();
-                    CauldronInteraction.bootStrap();
-                    BuiltInRegistries.bootStrap();
-                    CreativeModeTabs.validate();
-                    wrapStreams();
-                    bootstrapDuration.set(Duration.between(instant, Instant.now()).toMillis());
-                }
             }
+
+            FireBlock.bootStrap();
+            ComposterBlock.bootStrap();
+            if (EntityType.getKey(EntityTypes.PLAYER) == null) {
+                throw new IllegalStateException("Failed loading EntityTypes");
+            }
+
+            EntitySelectorOptions.bootStrap();
+            DispenseItemBehavior.bootStrap();
+            CauldronInteractions.bootStrap();
+            BuiltInRegistries.bootStrap();
+            CreativeModeTabs.validate();
+            wrapStreams();
+            bootstrapDuration.set(Duration.between(start, Instant.now()).toMillis());
         }
     }
 
-    private static <T> void checkTranslations(Iterable<T> p_135872_, Function<T, String> p_135873_, Set<String> p_135874_) {
-        Language language = Language.getInstance();
-        p_135872_.forEach(p_135883_ -> {
-            String s = p_135873_.apply((T)p_135883_);
-            if (!language.has(s)) {
-                p_135874_.add(s);
+    private static <T> void checkTranslations(
+        final Language language, final Iterable<T> registry, final Function<T, String> descriptionGetter, final Set<String> output
+    ) {
+        registry.forEach(t -> {
+            String id = descriptionGetter.apply((T)t);
+            if (!language.has(id)) {
+                output.add(id);
             }
         });
     }
 
-    private static void checkGameruleTranslations(final Set<String> p_135878_) {
-        final Language language = Language.getInstance();
-        GameRules gamerules = new GameRules(FeatureFlags.REGISTRY.allFlags());
-        gamerules.visitGameRuleTypes(new GameRuleTypeVisitor() {
+    private static void checkGameruleTranslations(final Language language, final Set<String> missing) {
+        GameRules rules = new GameRules(FeatureFlags.REGISTRY.allFlags());
+        rules.visitGameRuleTypes(new GameRuleTypeVisitor() {
             @Override
-            public <T> void visit(GameRule<T> p_453084_) {
-                if (!language.has(p_453084_.getDescriptionId())) {
-                    p_135878_.add(p_453084_.id());
+            public <T> void visit(final GameRule<T> gameRule) {
+                if (!language.has(gameRule.getDescriptionId())) {
+                    missing.add(gameRule.id());
                 }
             }
         });
     }
 
-    public static Set<String> getMissingTranslations() {
-        Set<String> set = new TreeSet<>();
-        checkTranslations(BuiltInRegistries.ATTRIBUTE, Attribute::getDescriptionId, set);
-        checkTranslations(BuiltInRegistries.ENTITY_TYPE, EntityType::getDescriptionId, set);
-        checkTranslations(BuiltInRegistries.MOB_EFFECT, MobEffect::getDescriptionId, set);
-        checkTranslations(BuiltInRegistries.ITEM, Item::getDescriptionId, set);
-        checkTranslations(BuiltInRegistries.BLOCK, BlockBehaviour::getDescriptionId, set);
-        checkTranslations(BuiltInRegistries.CUSTOM_STAT, p_448807_ -> "stat." + p_448807_.toString().replace(':', '.'), set);
-        checkGameruleTranslations(set);
-        return set;
+    public static Set<String> getMissingTranslations(final Language language) {
+        Set<String> missing = new TreeSet<>();
+        checkTranslations(language, BuiltInRegistries.ATTRIBUTE, Attribute::getDescriptionId, missing);
+        checkTranslations(language, BuiltInRegistries.ENTITY_TYPE, EntityType::getDescriptionId, missing);
+        checkTranslations(language, BuiltInRegistries.MOB_EFFECT, MobEffect::getDescriptionId, missing);
+        checkTranslations(language, BuiltInRegistries.ITEM, Item::getDescriptionId, missing);
+        checkTranslations(language, BuiltInRegistries.BLOCK, BlockBehaviour::getDescriptionId, missing);
+        checkTranslations(language, BuiltInRegistries.CUSTOM_STAT, id -> "stat." + id.toString().replace(':', '.'), missing);
+        checkGameruleTranslations(language, missing);
+        return missing;
     }
 
-    public static void checkBootstrapCalled(Supplier<String> p_179913_) {
+    public static void checkBootstrapCalled(final Supplier<String> location) {
         if (!isBootstrapped) {
-            throw createBootstrapException(p_179913_);
+            throw createBootstrapException(location);
         }
     }
 
-    private static RuntimeException createBootstrapException(Supplier<String> p_179917_) {
+    private static RuntimeException createBootstrapException(final Supplier<String> location) {
         try {
-            String s = p_179917_.get();
-            return new IllegalArgumentException("Not bootstrapped (called from " + s + ")");
-        } catch (Exception exception) {
-            RuntimeException runtimeexception = new IllegalArgumentException("Not bootstrapped (failed to resolve location)");
-            runtimeexception.addSuppressed(exception);
-            return runtimeexception;
+            String resolvedLocation = location.get();
+            return new IllegalArgumentException("Not bootstrapped (called from " + resolvedLocation + ")");
+        } catch (Exception e) {
+            RuntimeException result = new IllegalArgumentException("Not bootstrapped (failed to resolve location)");
+            result.addSuppressed(e);
+            return result;
         }
     }
 
     public static void validate() {
         checkBootstrapCalled(() -> "validate");
         if (SharedConstants.IS_RUNNING_IN_IDE) {
-            getMissingTranslations().forEach(p_179915_ -> LOGGER.error("Missing translations: {}", p_179915_));
+            getMissingTranslations(Language.DEFAULT_INSTANCE).forEach(key -> LOGGER.error("Missing translations: {}", key));
             Commands.validate();
         }
 
@@ -136,7 +136,11 @@ public class Bootstrap {
         }
     }
 
-    public static void realStdoutPrintln(String p_135876_) {
-        STDOUT.println(p_135876_);
+    public static void realStdoutPrintln(final String string) {
+        STDOUT.println(string);
+    }
+
+    public static void shutdownStdout() {
+        STDOUT.close();
     }
 }

@@ -8,8 +8,8 @@ public class SimpleParticleType extends ParticleType<SimpleParticleType> impleme
     private final MapCodec<SimpleParticleType> codec = MapCodec.unit(this::getType);
     private final StreamCodec<RegistryFriendlyByteBuf, SimpleParticleType> streamCodec = StreamCodec.unit(this);
 
-    protected SimpleParticleType(boolean p_123837_) {
-        super(p_123837_);
+    protected SimpleParticleType(final boolean overrideLimiter) {
+        super(overrideLimiter);
     }
 
     public SimpleParticleType getType() {

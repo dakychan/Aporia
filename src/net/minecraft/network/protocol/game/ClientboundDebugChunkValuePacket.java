@@ -21,7 +21,7 @@ public record ClientboundDebugChunkValuePacket(ChunkPos chunkPos, DebugSubscript
         return GamePacketTypes.CLIENTBOUND_DEBUG_CHUNK_VALUE;
     }
 
-    public void handle(ClientGamePacketListener p_427327_) {
-        p_427327_.handleDebugChunkValue(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDebugChunkValue(this);
     }
 }

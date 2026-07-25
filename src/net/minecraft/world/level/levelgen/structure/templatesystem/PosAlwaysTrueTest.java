@@ -12,7 +12,7 @@ public class PosAlwaysTrueTest extends PosRuleTest {
     }
 
     @Override
-    public boolean test(BlockPos p_230301_, BlockPos p_230302_, BlockPos p_230303_, RandomSource p_230304_) {
+    public boolean test(final BlockPos inTemplatePos, final BlockPos worldPos, final BlockPos worldReference, final RandomSource random) {
         return true;
     }
 

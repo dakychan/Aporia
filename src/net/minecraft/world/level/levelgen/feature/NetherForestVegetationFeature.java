@@ -9,43 +9,41 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.NetherForestVegetationConfig;
 
 public class NetherForestVegetationFeature extends Feature<NetherForestVegetationConfig> {
-    public NetherForestVegetationFeature(Codec<NetherForestVegetationConfig> p_66361_) {
-        super(p_66361_);
+    public NetherForestVegetationFeature(final Codec<NetherForestVegetationConfig> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NetherForestVegetationConfig> p_160068_) {
-        WorldGenLevel worldgenlevel = p_160068_.level();
-        BlockPos blockpos = p_160068_.origin();
-        BlockState blockstate = worldgenlevel.getBlockState(blockpos.below());
-        NetherForestVegetationConfig netherforestvegetationconfig = p_160068_.config();
-        RandomSource randomsource = p_160068_.random();
-        if (!blockstate.is(BlockTags.NYLIUM)) {
+    public boolean place(final FeaturePlaceContext<NetherForestVegetationConfig> context) {
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        BlockState belowState = level.getBlockState(origin.below());
+        NetherForestVegetationConfig config = context.config();
+        RandomSource random = context.random();
+        if (!belowState.is(BlockTags.NYLIUM)) {
             return false;
-        } else {
-            int i = blockpos.getY();
-            if (i >= worldgenlevel.getMinY() + 1 && i + 1 <= worldgenlevel.getMaxY()) {
-                int j = 0;
+        }
 
-                for (int k = 0; k < netherforestvegetationconfig.spreadWidth * netherforestvegetationconfig.spreadWidth; k++) {
-                    BlockPos blockpos1 = blockpos.offset(
-                        randomsource.nextInt(netherforestvegetationconfig.spreadWidth) - randomsource.nextInt(netherforestvegetationconfig.spreadWidth),
-                        randomsource.nextInt(netherforestvegetationconfig.spreadHeight) - randomsource.nextInt(netherforestvegetationconfig.spreadHeight),
-                        randomsource.nextInt(netherforestvegetationconfig.spreadWidth) - randomsource.nextInt(netherforestvegetationconfig.spreadWidth)
-                    );
-                    BlockState blockstate1 = netherforestvegetationconfig.stateProvider.getState(randomsource, blockpos1);
-                    if (worldgenlevel.isEmptyBlock(blockpos1)
-                        && blockpos1.getY() > worldgenlevel.getMinY()
-                        && blockstate1.canSurvive(worldgenlevel, blockpos1)) {
-                        worldgenlevel.setBlock(blockpos1, blockstate1, 2);
-                        j++;
-                    }
+        int y = origin.getY();
+        if (y >= level.getMinY() + 1 && y + 1 <= level.getMaxY()) {
+            int placed = 0;
+
+            for (int i = 0; i < config.spreadWidth * config.spreadWidth; i++) {
+                BlockPos finalPos = origin.offset(
+                    random.nextInt(config.spreadWidth) - random.nextInt(config.spreadWidth),
+                    random.nextInt(config.spreadHeight) - random.nextInt(config.spreadHeight),
+                    random.nextInt(config.spreadWidth) - random.nextInt(config.spreadWidth)
+                );
+                BlockState state = config.stateProvider.getState(level, random, finalPos);
+                if (level.isEmptyBlock(finalPos) && finalPos.getY() > level.getMinY() && state.canSurvive(level, finalPos)) {
+                    level.setBlock(finalPos, state, 2);
+                    placed++;
                 }
-
-                return j > 0;
-            } else {
-                return false;
             }
+
+            return placed > 0;
+        } else {
+            return false;
         }
     }
 }

@@ -20,67 +20,67 @@ public class ServerWaypointManager implements WaypointManager<WaypointTransmitte
     private final Set<ServerPlayer> players = new HashSet<>();
     private final Table<ServerPlayer, WaypointTransmitter, WaypointTransmitter.Connection> connections = HashBasedTable.create();
 
-    public void trackWaypoint(WaypointTransmitter p_408241_) {
-        this.waypoints.add(p_408241_);
+    public void trackWaypoint(final WaypointTransmitter waypoint) {
+        this.waypoints.add(waypoint);
 
-        for (ServerPlayer serverplayer : this.players) {
-            this.createConnection(serverplayer, p_408241_);
+        for (ServerPlayer player : this.players) {
+            this.createConnection(player, waypoint);
         }
     }
 
-    public void updateWaypoint(WaypointTransmitter p_409897_) {
-        if (this.waypoints.contains(p_409897_)) {
-            Map<ServerPlayer, WaypointTransmitter.Connection> map = Tables.transpose(this.connections).row(p_409897_);
-            SetView<ServerPlayer> setview = Sets.difference(this.players, map.keySet());
+    public void updateWaypoint(final WaypointTransmitter waypoint) {
+        if (this.waypoints.contains(waypoint)) {
+            Map<ServerPlayer, WaypointTransmitter.Connection> playerConnection = Tables.transpose(this.connections).row(waypoint);
+            SetView<ServerPlayer> potentialPlayers = Sets.difference(this.players, playerConnection.keySet());
 
-            for (Entry<ServerPlayer, WaypointTransmitter.Connection> entry : ImmutableSet.copyOf(map.entrySet())) {
-                this.updateConnection(entry.getKey(), p_409897_, entry.getValue());
+            for (Entry<ServerPlayer, WaypointTransmitter.Connection> waypointConnection : ImmutableSet.copyOf(playerConnection.entrySet())) {
+                this.updateConnection(waypointConnection.getKey(), waypoint, waypointConnection.getValue());
             }
 
-            for (ServerPlayer serverplayer : setview) {
-                this.createConnection(serverplayer, p_409897_);
+            for (ServerPlayer player : potentialPlayers) {
+                this.createConnection(player, waypoint);
             }
         }
     }
 
-    public void untrackWaypoint(WaypointTransmitter p_406555_) {
-        this.connections.column(p_406555_).forEach((p_408654_, p_407919_) -> p_407919_.disconnect());
-        Tables.transpose(this.connections).row(p_406555_).clear();
-        this.waypoints.remove(p_406555_);
+    public void untrackWaypoint(final WaypointTransmitter waypoint) {
+        this.connections.column(waypoint).forEach((player, connection) -> connection.disconnect());
+        Tables.transpose(this.connections).row(waypoint).clear();
+        this.waypoints.remove(waypoint);
     }
 
-    public void addPlayer(ServerPlayer p_407322_) {
-        this.players.add(p_407322_);
+    public void addPlayer(final ServerPlayer player) {
+        this.players.add(player);
 
-        for (WaypointTransmitter waypointtransmitter : this.waypoints) {
-            this.createConnection(p_407322_, waypointtransmitter);
+        for (WaypointTransmitter waypoint : this.waypoints) {
+            this.createConnection(player, waypoint);
         }
 
-        if (p_407322_.isTransmittingWaypoint()) {
-            this.trackWaypoint((WaypointTransmitter)p_407322_);
-        }
-    }
-
-    public void updatePlayer(ServerPlayer p_406327_) {
-        Map<WaypointTransmitter, WaypointTransmitter.Connection> map = this.connections.row(p_406327_);
-        SetView<WaypointTransmitter> setview = Sets.difference(this.waypoints, map.keySet());
-
-        for (Entry<WaypointTransmitter, WaypointTransmitter.Connection> entry : ImmutableSet.copyOf(map.entrySet())) {
-            this.updateConnection(p_406327_, entry.getKey(), entry.getValue());
-        }
-
-        for (WaypointTransmitter waypointtransmitter : setview) {
-            this.createConnection(p_406327_, waypointtransmitter);
+        if (player.isTransmittingWaypoint()) {
+            this.trackWaypoint(player);
         }
     }
 
-    public void removePlayer(ServerPlayer p_409853_) {
-        this.connections.row(p_409853_).values().removeIf(p_409511_ -> {
-            p_409511_.disconnect();
+    public void updatePlayer(final ServerPlayer player) {
+        Map<WaypointTransmitter, WaypointTransmitter.Connection> waypointConnections = this.connections.row(player);
+        SetView<WaypointTransmitter> potentialWaypoints = Sets.difference(this.waypoints, waypointConnections.keySet());
+
+        for (Entry<WaypointTransmitter, WaypointTransmitter.Connection> waypointConnection : ImmutableSet.copyOf(waypointConnections.entrySet())) {
+            this.updateConnection(player, waypointConnection.getKey(), waypointConnection.getValue());
+        }
+
+        for (WaypointTransmitter waypoint : potentialWaypoints) {
+            this.createConnection(player, waypoint);
+        }
+    }
+
+    public void removePlayer(final ServerPlayer player) {
+        this.connections.row(player).values().removeIf(connection -> {
+            connection.disconnect();
             return true;
         });
-        this.untrackWaypoint((WaypointTransmitter)p_409853_);
-        this.players.remove(p_409853_);
+        this.untrackWaypoint(player);
+        this.players.remove(player);
     }
 
     public void breakAllConnections() {
@@ -88,9 +88,9 @@ public class ServerWaypointManager implements WaypointManager<WaypointTransmitte
         this.connections.clear();
     }
 
-    public void remakeConnections(WaypointTransmitter p_407306_) {
-        for (ServerPlayer serverplayer : this.players) {
-            this.createConnection(serverplayer, p_407306_);
+    public void remakeConnections(final WaypointTransmitter waypoint) {
+        for (ServerPlayer player : this.players) {
+            this.createConnection(player, waypoint);
         }
     }
 
@@ -98,38 +98,38 @@ public class ServerWaypointManager implements WaypointManager<WaypointTransmitte
         return this.waypoints;
     }
 
-    private static boolean isLocatorBarEnabledFor(ServerPlayer p_405810_) {
-        return p_405810_.level().getGameRules().get(GameRules.LOCATOR_BAR);
+    private static boolean isLocatorBarEnabledFor(final ServerPlayer player) {
+        return player.level().getGameRules().get(GameRules.LOCATOR_BAR);
     }
 
-    private void createConnection(ServerPlayer p_406768_, WaypointTransmitter p_406530_) {
-        if (p_406768_ != p_406530_) {
-            if (isLocatorBarEnabledFor(p_406768_)) {
-                p_406530_.makeWaypointConnectionWith(p_406768_).ifPresentOrElse(p_407837_ -> {
-                    this.connections.put(p_406768_, p_406530_, p_407837_);
-                    p_407837_.connect();
+    private void createConnection(final ServerPlayer player, final WaypointTransmitter waypoint) {
+        if (player != waypoint) {
+            if (isLocatorBarEnabledFor(player)) {
+                waypoint.makeWaypointConnectionWith(player).ifPresentOrElse(connection -> {
+                    this.connections.put(player, waypoint, connection);
+                    connection.connect();
                 }, () -> {
-                    WaypointTransmitter.Connection waypointtransmitter$connection = this.connections.remove(p_406768_, p_406530_);
-                    if (waypointtransmitter$connection != null) {
-                        waypointtransmitter$connection.disconnect();
+                    WaypointTransmitter.Connection connection = this.connections.remove(player, waypoint);
+                    if (connection != null) {
+                        connection.disconnect();
                     }
                 });
             }
         }
     }
 
-    private void updateConnection(ServerPlayer p_409540_, WaypointTransmitter p_410271_, WaypointTransmitter.Connection p_409943_) {
-        if (p_409540_ != p_410271_) {
-            if (isLocatorBarEnabledFor(p_409540_)) {
-                if (!p_409943_.isBroken()) {
-                    p_409943_.update();
+    private void updateConnection(final ServerPlayer player, final WaypointTransmitter waypoint, final WaypointTransmitter.Connection connection) {
+        if (player != waypoint) {
+            if (isLocatorBarEnabledFor(player)) {
+                if (!connection.isBroken()) {
+                    connection.update();
                 } else {
-                    p_410271_.makeWaypointConnectionWith(p_409540_).ifPresentOrElse(p_408633_ -> {
-                        p_408633_.connect();
-                        this.connections.put(p_409540_, p_410271_, p_408633_);
+                    waypoint.makeWaypointConnectionWith(player).ifPresentOrElse(newConnection -> {
+                        newConnection.connect();
+                        this.connections.put(player, waypoint, newConnection);
                     }, () -> {
-                        p_409943_.disconnect();
-                        this.connections.remove(p_409540_, p_410271_);
+                        connection.disconnect();
+                        this.connections.remove(player, waypoint);
                     });
                 }
             }

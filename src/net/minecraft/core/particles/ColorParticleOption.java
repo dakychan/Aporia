@@ -11,17 +11,17 @@ public class ColorParticleOption implements ParticleOptions {
     private final ParticleType<ColorParticleOption> type;
     private final int color;
 
-    public static MapCodec<ColorParticleOption> codec(ParticleType<ColorParticleOption> p_329922_) {
-        return ExtraCodecs.ARGB_COLOR_CODEC.xmap(p_335886_ -> new ColorParticleOption(p_329922_, p_335886_), p_328917_ -> p_328917_.color).fieldOf("color");
+    public static MapCodec<ColorParticleOption> codec(final ParticleType<ColorParticleOption> type) {
+        return ExtraCodecs.ARGB_COLOR_CODEC.xmap(color -> new ColorParticleOption(type, color), o -> o.color).fieldOf("color");
     }
 
-    public static StreamCodec<? super ByteBuf, ColorParticleOption> streamCodec(ParticleType<ColorParticleOption> p_328683_) {
-        return ByteBufCodecs.INT.map(p_330079_ -> new ColorParticleOption(p_328683_, p_330079_), p_329364_ -> p_329364_.color);
+    public static StreamCodec<? super ByteBuf, ColorParticleOption> streamCodec(final ParticleType<ColorParticleOption> type) {
+        return ByteBufCodecs.INT.map(color -> new ColorParticleOption(type, color), o -> o.color);
     }
 
-    private ColorParticleOption(ParticleType<ColorParticleOption> p_330442_, int p_329966_) {
-        this.type = p_330442_;
-        this.color = p_329966_;
+    private ColorParticleOption(final ParticleType<ColorParticleOption> type, final int color) {
+        this.type = type;
+        this.color = color;
     }
 
     @Override
@@ -45,11 +45,11 @@ public class ColorParticleOption implements ParticleOptions {
         return ARGB.alpha(this.color) / 255.0F;
     }
 
-    public static ColorParticleOption create(ParticleType<ColorParticleOption> p_329254_, int p_327671_) {
-        return new ColorParticleOption(p_329254_, p_327671_);
+    public static ColorParticleOption create(final ParticleType<ColorParticleOption> type, final int color) {
+        return new ColorParticleOption(type, color);
     }
 
-    public static ColorParticleOption create(ParticleType<ColorParticleOption> p_328973_, float p_334118_, float p_330068_, float p_330217_) {
-        return create(p_328973_, ARGB.colorFromFloat(1.0F, p_334118_, p_330068_, p_330217_));
+    public static ColorParticleOption create(final ParticleType<ColorParticleOption> type, final float red, final float green, final float blue) {
+        return create(type, ARGB.colorFromFloat(1.0F, red, green, blue));
     }
 }

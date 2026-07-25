@@ -29,69 +29,69 @@ public class BaseCoralWallFanBlock extends BaseCoralFanBlock {
         return CODEC;
     }
 
-    protected BaseCoralWallFanBlock(BlockBehaviour.Properties p_49196_) {
-        super(p_49196_);
+    protected BaseCoralWallFanBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(WATERLOGGED, true));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_49219_, BlockGetter p_49220_, BlockPos p_49221_, CollisionContext p_49222_) {
-        return SHAPES.get(p_49219_.getValue(FACING));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES.get(state.getValue(FACING));
     }
 
     @Override
-    protected BlockState rotate(BlockState p_49207_, Rotation p_49208_) {
-        return p_49207_.setValue(FACING, p_49208_.rotate(p_49207_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_49204_, Mirror p_49205_) {
-        return p_49204_.rotate(p_49205_.getRotation(p_49204_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_49217_) {
-        p_49217_.add(FACING, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, WATERLOGGED);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_49210_,
-        LevelReader p_362875_,
-        ScheduledTickAccess p_370057_,
-        BlockPos p_49214_,
-        Direction p_49211_,
-        BlockPos p_49215_,
-        BlockState p_49212_,
-        RandomSource p_365418_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_49210_.getValue(WATERLOGGED)) {
-            p_370057_.scheduleTick(p_49214_, Fluids.WATER, Fluids.WATER.getTickDelay(p_362875_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return p_49211_.getOpposite() == p_49210_.getValue(FACING) && !p_49210_.canSurvive(p_362875_, p_49214_) ? Blocks.AIR.defaultBlockState() : p_49210_;
+        return directionToNeighbour.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos) ? Blocks.AIR.defaultBlockState() : state;
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_49200_, LevelReader p_49201_, BlockPos p_49202_) {
-        Direction direction = p_49200_.getValue(FACING);
-        BlockPos blockpos = p_49202_.relative(direction.getOpposite());
-        BlockState blockstate = p_49201_.getBlockState(blockpos);
-        return blockstate.isFaceSturdy(p_49201_, blockpos, direction);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        Direction facing = state.getValue(FACING);
+        BlockPos relativePos = pos.relative(facing.getOpposite());
+        BlockState relativeState = level.getBlockState(relativePos);
+        return relativeState.isFaceSturdy(level, relativePos, facing);
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_49198_) {
-        BlockState blockstate = super.getStateForPlacement(p_49198_);
-        LevelReader levelreader = p_49198_.getLevel();
-        BlockPos blockpos = p_49198_.getClickedPos();
-        Direction[] adirection = p_49198_.getNearestLookingDirections();
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = super.getStateForPlacement(context);
+        LevelReader level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        Direction[] directions = context.getNearestLookingDirections();
 
-        for (Direction direction : adirection) {
+        for (Direction direction : directions) {
             if (direction.getAxis().isHorizontal()) {
-                blockstate = blockstate.setValue(FACING, direction.getOpposite());
-                if (blockstate.canSurvive(levelreader, blockpos)) {
-                    return blockstate;
+                state = state.setValue(FACING, direction.getOpposite());
+                if (state.canSurvive(level, pos)) {
+                    return state;
                 }
             }
         }

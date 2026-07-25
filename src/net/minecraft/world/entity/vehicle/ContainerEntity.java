@@ -1,6 +1,6 @@
 package net.minecraft.world.entity.vehicle;
 
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.NonNullList;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -13,7 +13,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.monster.piglin.PiglinAi;
 import net.minecraft.world.entity.player.Player;
@@ -37,11 +36,11 @@ public interface ContainerEntity extends Container, MenuProvider {
 
     @Nullable ResourceKey<LootTable> getContainerLootTable();
 
-    void setContainerLootTable(@Nullable ResourceKey<LootTable> p_363380_);
+    void setContainerLootTable(final @Nullable ResourceKey<LootTable> lootTable);
 
     long getContainerLootTableSeed();
 
-    void setContainerLootTableSeed(long p_368553_);
+    void setContainerLootTableSeed(final long lootTableSeed);
 
     NonNullList<ItemStack> getItemStacks();
 
@@ -56,57 +55,56 @@ public interface ContainerEntity extends Container, MenuProvider {
         return this.isChestVehicleEmpty();
     }
 
-    default void addChestVehicleSaveData(ValueOutput p_406568_) {
+    default void addChestVehicleSaveData(final ValueOutput output) {
         if (this.getContainerLootTable() != null) {
-            p_406568_.putString("LootTable", this.getContainerLootTable().identifier().toString());
+            output.putString("LootTable", this.getContainerLootTable().identifier().toString());
             if (this.getContainerLootTableSeed() != 0L) {
-                p_406568_.putLong("LootTableSeed", this.getContainerLootTableSeed());
+                output.putLong("LootTableSeed", this.getContainerLootTableSeed());
             }
         } else {
-            ContainerHelper.saveAllItems(p_406568_, this.getItemStacks());
+            ContainerHelper.saveAllItems(output, this.getItemStacks());
         }
     }
 
-    default void readChestVehicleSaveData(ValueInput p_407289_) {
+    default void readChestVehicleSaveData(final ValueInput input) {
         this.clearItemStacks();
-        ResourceKey<LootTable> resourcekey = p_407289_.read("LootTable", LootTable.KEY_CODEC).orElse(null);
-        this.setContainerLootTable(resourcekey);
-        this.setContainerLootTableSeed(p_407289_.getLongOr("LootTableSeed", 0L));
-        if (resourcekey == null) {
-            ContainerHelper.loadAllItems(p_407289_, this.getItemStacks());
+        ResourceKey<LootTable> lootTable = input.read("LootTable", LootTable.KEY_CODEC).orElse(null);
+        this.setContainerLootTable(lootTable);
+        this.setContainerLootTableSeed(input.getLongOr("LootTableSeed", 0L));
+        if (lootTable == null) {
+            ContainerHelper.loadAllItems(input, this.getItemStacks());
         }
     }
 
-    default void chestVehicleDestroyed(DamageSource p_219928_, ServerLevel p_369535_, Entity p_219930_) {
-        if (p_369535_.getGameRules().get(GameRules.ENTITY_DROPS)) {
-            Containers.dropContents(p_369535_, p_219930_, this);
-            Entity entity = p_219928_.getDirectEntity();
-            if (entity != null && entity.getType() == EntityType.PLAYER) {
-                PiglinAi.angerNearbyPiglins(p_369535_, (Player)entity, true);
+    default void chestVehicleDestroyed(final DamageSource source, final ServerLevel level, final Entity entity) {
+        if (level.getGameRules().get(GameRules.ENTITY_DROPS)) {
+            Containers.dropContents(level, entity, this);
+            if (source.getDirectEntity() instanceof Player player) {
+                PiglinAi.angerNearbyPiglins(level, player, true);
             }
         }
     }
 
-    default InteractionResult interactWithContainerVehicle(Player p_270068_) {
-        p_270068_.openMenu(this);
+    default InteractionResult interactWithContainerVehicle(final Player player) {
+        player.openMenu(this);
         return InteractionResult.SUCCESS;
     }
 
-    default void unpackChestVehicleLootTable(@Nullable Player p_219950_) {
-        MinecraftServer minecraftserver = this.level().getServer();
-        if (this.getContainerLootTable() != null && minecraftserver != null) {
-            LootTable loottable = minecraftserver.reloadableRegistries().getLootTable(this.getContainerLootTable());
-            if (p_219950_ != null) {
-                CriteriaTriggers.GENERATE_LOOT.trigger((ServerPlayer)p_219950_, this.getContainerLootTable());
+    default void unpackChestVehicleLootTable(final @Nullable Player player) {
+        MinecraftServer server = this.level().getServer();
+        if (this.getContainerLootTable() != null && server != null) {
+            LootTable lootTable = server.reloadableRegistries().getLootTable(this.getContainerLootTable());
+            if (player != null) {
+                CriteriaTriggers.GENERATE_LOOT.trigger((ServerPlayer)player, this.getContainerLootTable());
             }
 
             this.setContainerLootTable(null);
-            LootParams.Builder lootparams$builder = new LootParams.Builder((ServerLevel)this.level()).withParameter(LootContextParams.ORIGIN, this.position());
-            if (p_219950_ != null) {
-                lootparams$builder.withLuck(p_219950_.getLuck()).withParameter(LootContextParams.THIS_ENTITY, p_219950_);
+            LootParams.Builder builder = new LootParams.Builder((ServerLevel)this.level()).withParameter(LootContextParams.ORIGIN, this.position());
+            if (player != null) {
+                builder.withLuck(player.getLuck()).withParameter(LootContextParams.THIS_ENTITY, player);
             }
 
-            loottable.fill(this, lootparams$builder.create(LootContextParamSets.CHEST), this.getContainerLootTableSeed());
+            lootTable.fill(this, builder.create(LootContextParamSets.CHEST), this.getContainerLootTableSeed());
         }
     }
 
@@ -116,8 +114,8 @@ public interface ContainerEntity extends Container, MenuProvider {
     }
 
     default boolean isChestVehicleEmpty() {
-        for (ItemStack itemstack : this.getItemStacks()) {
-            if (!itemstack.isEmpty()) {
+        for (ItemStack itemStack : this.getItemStacks()) {
+            if (!itemStack.isEmpty()) {
                 return false;
             }
         }
@@ -125,49 +123,49 @@ public interface ContainerEntity extends Container, MenuProvider {
         return true;
     }
 
-    default ItemStack removeChestVehicleItemNoUpdate(int p_219946_) {
+    default ItemStack removeChestVehicleItemNoUpdate(final int slot) {
         this.unpackChestVehicleLootTable(null);
-        ItemStack itemstack = this.getItemStacks().get(p_219946_);
-        if (itemstack.isEmpty()) {
+        ItemStack itemStack = this.getItemStacks().get(slot);
+        if (itemStack.isEmpty()) {
             return ItemStack.EMPTY;
-        } else {
-            this.getItemStacks().set(p_219946_, ItemStack.EMPTY);
-            return itemstack;
         }
+
+        this.getItemStacks().set(slot, ItemStack.EMPTY);
+        return itemStack;
     }
 
-    default ItemStack getChestVehicleItem(int p_219948_) {
+    default ItemStack getChestVehicleItem(final int slot) {
         this.unpackChestVehicleLootTable(null);
-        return this.getItemStacks().get(p_219948_);
+        return this.getItemStacks().get(slot);
     }
 
-    default ItemStack removeChestVehicleItem(int p_219937_, int p_219938_) {
+    default ItemStack removeChestVehicleItem(final int slot, final int count) {
         this.unpackChestVehicleLootTable(null);
-        return ContainerHelper.removeItem(this.getItemStacks(), p_219937_, p_219938_);
+        return ContainerHelper.removeItem(this.getItemStacks(), slot, count);
     }
 
-    default void setChestVehicleItem(int p_219941_, ItemStack p_219942_) {
+    default void setChestVehicleItem(final int slot, final ItemStack itemStack) {
         this.unpackChestVehicleLootTable(null);
-        this.getItemStacks().set(p_219941_, p_219942_);
-        p_219942_.limitSize(this.getMaxStackSize(p_219942_));
+        this.getItemStacks().set(slot, itemStack);
+        itemStack.limitSize(this.getMaxStackSize(itemStack));
     }
 
-    default @Nullable SlotAccess getChestVehicleSlot(final int p_219952_) {
-        return p_219952_ >= 0 && p_219952_ < this.getContainerSize() ? new SlotAccess() {
+    default @Nullable SlotAccess getChestVehicleSlot(final int slot) {
+        return slot >= 0 && slot < this.getContainerSize() ? new SlotAccess() {
             @Override
             public ItemStack get() {
-                return ContainerEntity.this.getChestVehicleItem(p_219952_);
+                return ContainerEntity.this.getChestVehicleItem(slot);
             }
 
             @Override
-            public boolean set(ItemStack p_219964_) {
-                ContainerEntity.this.setChestVehicleItem(p_219952_, p_219964_);
+            public boolean set(final ItemStack itemStack) {
+                ContainerEntity.this.setChestVehicleItem(slot, itemStack);
                 return true;
             }
         } : null;
     }
 
-    default boolean isChestVehicleStillValid(Player p_219955_) {
-        return !this.isRemoved() && p_219955_.isWithinEntityInteractionRange(this.getBoundingBox(), 4.0);
+    default boolean isChestVehicleStillValid(final Player player) {
+        return !this.isRemoved() && player.isWithinEntityInteractionRange(this.getBoundingBox(), 4.0);
     }
 }

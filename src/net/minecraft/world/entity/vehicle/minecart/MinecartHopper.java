@@ -25,8 +25,8 @@ public class MinecartHopper extends AbstractMinecartContainer implements Hopper 
     private boolean enabled = true;
     private boolean consumedItemThisFrame = false;
 
-    public MinecartHopper(EntityType<? extends MinecartHopper> p_454757_, Level p_454039_) {
-        super(p_454757_, p_454039_);
+    public MinecartHopper(final EntityType<? extends MinecartHopper> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -45,10 +45,10 @@ public class MinecartHopper extends AbstractMinecartContainer implements Hopper 
     }
 
     @Override
-    public void activateMinecart(ServerLevel p_459702_, int p_456027_, int p_455616_, int p_459310_, boolean p_454781_) {
-        boolean flag = !p_454781_;
-        if (flag != this.isEnabled()) {
-            this.setEnabled(flag);
+    public void activateMinecart(final ServerLevel level, final int xt, final int yt, final int zt, final boolean state) {
+        boolean newEnabled = !state;
+        if (newEnabled != this.isEnabled()) {
+            this.setEnabled(newEnabled);
         }
     }
 
@@ -56,8 +56,8 @@ public class MinecartHopper extends AbstractMinecartContainer implements Hopper 
         return this.enabled;
     }
 
-    public void setEnabled(boolean p_454855_) {
-        this.enabled = p_454855_;
+    public void setEnabled(final boolean enabled) {
+        this.enabled = enabled;
     }
 
     @Override
@@ -88,10 +88,10 @@ public class MinecartHopper extends AbstractMinecartContainer implements Hopper 
     }
 
     @Override
-    protected double makeStepAlongTrack(BlockPos p_452157_, RailShape p_459548_, double p_460043_) {
-        double d0 = super.makeStepAlongTrack(p_452157_, p_459548_, p_460043_);
+    protected double makeStepAlongTrack(final BlockPos pos, final RailShape shape, final double movementLeft) {
+        double left = super.makeStepAlongTrack(pos, shape, movementLeft);
         this.tryConsumeItems();
-        return d0;
+        return left;
     }
 
     private void tryConsumeItems() {
@@ -104,15 +104,16 @@ public class MinecartHopper extends AbstractMinecartContainer implements Hopper 
     public boolean suckInItems() {
         if (HopperBlockEntity.suckInItems(this.level(), this)) {
             return true;
-        } else {
-            for (ItemEntity itementity : this.level().getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(0.25, 0.0, 0.25), EntitySelector.ENTITY_STILL_ALIVE)) {
-                if (HopperBlockEntity.addItem(this, itementity)) {
-                    return true;
-                }
-            }
-
-            return false;
         }
+
+        for (ItemEntity entity : this.level()
+            .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(0.25, 0.0, 0.25), EntitySelector.ENTITY_STILL_ALIVE)) {
+            if (HopperBlockEntity.addItem(this, entity)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -126,19 +127,19 @@ public class MinecartHopper extends AbstractMinecartContainer implements Hopper 
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_452719_) {
-        super.addAdditionalSaveData(p_452719_);
-        p_452719_.putBoolean("Enabled", this.enabled);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("Enabled", this.enabled);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458421_) {
-        super.readAdditionalSaveData(p_458421_);
-        this.enabled = p_458421_.getBooleanOr("Enabled", true);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.enabled = input.getBooleanOr("Enabled", true);
     }
 
     @Override
-    public AbstractContainerMenu createMenu(int p_453362_, Inventory p_456209_) {
-        return new HopperMenu(p_453362_, p_456209_, this);
+    public AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return new HopperMenu(containerId, inventory, this);
     }
 }

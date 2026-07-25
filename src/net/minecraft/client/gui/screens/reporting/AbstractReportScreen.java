@@ -7,12 +7,11 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Optionull;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.MultiLineEditBox;
 import net.minecraft.client.gui.components.StringWidget;
-import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.Layout;
 import net.minecraft.client.gui.layouts.LinearLayout;
@@ -24,11 +23,8 @@ import net.minecraft.client.multiplayer.chat.report.ReportingContext;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ThrowingComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends Screen {
     private static final Component REPORT_SENT_MESSAGE = Component.translatable("gui.abuseReport.report_sent_msg");
     private static final Component REPORT_SENDING_TITLE = Component.translatable("gui.abuseReport.sending.title").withStyle(ChatFormatting.BOLD);
@@ -54,20 +50,20 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
     private Checkbox attestation;
     protected Button sendButton;
 
-    protected AbstractReportScreen(Component p_297559_, Screen p_299592_, ReportingContext p_300174_, B p_300351_) {
-        super(p_297559_);
-        this.lastScreen = p_299592_;
-        this.reportingContext = p_300174_;
-        this.reportBuilder = p_300351_;
+    protected AbstractReportScreen(final Component title, final Screen lastScreen, final ReportingContext reportingContext, final B reportBuilder) {
+        super(title);
+        this.lastScreen = lastScreen;
+        this.reportingContext = reportingContext;
+        this.reportBuilder = reportBuilder;
     }
 
-    protected MultiLineEditBox createCommentBox(int p_297252_, int p_301025_, Consumer<String> p_298469_) {
-        AbuseReportLimits abusereportlimits = this.reportingContext.sender().reportLimits();
-        MultiLineEditBox multilineeditbox = MultiLineEditBox.builder().setPlaceholder(DESCRIBE_PLACEHOLDER).build(this.font, p_297252_, p_301025_, MORE_COMMENTS_NARRATION);
-        multilineeditbox.setValue(this.reportBuilder.comments());
-        multilineeditbox.setCharacterLimit(abusereportlimits.maxOpinionCommentsLength());
-        multilineeditbox.setValueListener(p_298469_);
-        return multilineeditbox;
+    protected MultiLineEditBox createCommentBox(final int width, final int height, final Consumer<String> valueListener) {
+        AbuseReportLimits reportLimits = this.reportingContext.sender().reportLimits();
+        MultiLineEditBox commentBox = MultiLineEditBox.builder().setPlaceholder(DESCRIBE_PLACEHOLDER).build(this.font, width, height, MORE_COMMENTS_NARRATION);
+        commentBox.setValue(this.reportBuilder.comments());
+        commentBox.setCharacterLimit(reportLimits.maxOpinionCommentsLength());
+        commentBox.setValueListener(valueListener);
+        return commentBox;
     }
 
     @Override
@@ -77,9 +73,7 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
         this.addContent();
         this.createFooter();
         this.onReportChanged();
-        this.layout.visitWidgets(p_340819_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_340819_);
-        });
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
     }
 
@@ -91,19 +85,26 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
 
     protected void createFooter() {
         this.attestation = this.layout
-            .addChild(Checkbox.builder(ATTESTATION_CHECKBOX, this.font).selected(this.reportBuilder.attested()).maxWidth(280).onValueChange((p_340816_, p_340817_) -> {
-                this.reportBuilder.setAttested(p_340817_);
-                this.onReportChanged();
-            }).build());
-        LinearLayout linearlayout = this.layout.addChild(LinearLayout.horizontal().spacing(8));
-        linearlayout.addChild(Button.builder(CommonComponents.GUI_BACK, p_340815_ -> this.onClose()).width(120).build());
-        this.sendButton = linearlayout.addChild(Button.builder(SEND_REPORT, p_340820_ -> this.sendReport()).width(120).build());
+            .addChild(
+                Checkbox.builder(ATTESTATION_CHECKBOX, this.font)
+                    .selected(this.reportBuilder.attested())
+                    .maxWidth(280)
+                    .tooltip(Tooltip.create(ATTESTATION_CHECKBOX))
+                    .onValueChange((checkbox, value) -> {
+                        this.reportBuilder.setAttested(value);
+                        this.onReportChanged();
+                    })
+                    .build()
+            );
+        LinearLayout buttonsLayout = this.layout.addChild(LinearLayout.horizontal().spacing(8));
+        buttonsLayout.addChild(Button.builder(CommonComponents.GUI_BACK, b -> this.onClose()).width(120).build());
+        this.sendButton = buttonsLayout.addChild(Button.builder(SEND_REPORT, b -> this.sendReport()).width(120).build());
     }
 
     protected void onReportChanged() {
-        Report.CannotBuildReason report$cannotbuildreason = this.reportBuilder.checkBuildable();
-        this.sendButton.active = report$cannotbuildreason == null && this.attestation.selected();
-        this.sendButton.setTooltip(Optionull.map(report$cannotbuildreason, Report.CannotBuildReason::tooltip));
+        Report.CannotBuildReason cannotBuildReason = this.reportBuilder.checkBuildable();
+        this.sendButton.active = cannotBuildReason == null && this.attestation.selected();
+        this.sendButton.setTooltip(Optionull.map(cannotBuildReason, Report.CannotBuildReason::tooltip));
     }
 
     @Override
@@ -113,66 +114,76 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
     }
 
     protected void sendReport() {
-        this.reportBuilder.build(this.reportingContext).ifLeft(p_301124_ -> {
-            CompletableFuture<?> completablefuture = this.reportingContext.sender().send(p_301124_.id(), p_301124_.reportType(), p_301124_.report());
-            this.minecraft.setScreen(GenericWaitingScreen.createWaiting(REPORT_SENDING_TITLE, CommonComponents.GUI_CANCEL, () -> {
-                this.minecraft.setScreen(this);
-                completablefuture.cancel(true);
+        this.reportBuilder.build(this.reportingContext).ifLeft(result -> {
+            CompletableFuture<?> sendFuture = this.reportingContext.sender().send(result.id(), result.reportType(), result.report());
+            this.minecraft.gui.setScreen(GenericWaitingScreen.createWaiting(REPORT_SENDING_TITLE, CommonComponents.GUI_CANCEL, () -> {
+                this.minecraft.gui.setScreen(this);
+                sendFuture.cancel(true);
             }));
-            completablefuture.handleAsync((p_301251_, p_299485_) -> {
-                if (p_299485_ == null) {
+            sendFuture.handleAsync((ok, throwable) -> {
+                if (throwable == null) {
                     this.onReportSendSuccess();
                 } else {
-                    if (p_299485_ instanceof CancellationException) {
+                    if (throwable instanceof CancellationException) {
                         return null;
                     }
 
-                    this.onReportSendError(p_299485_);
+                    this.onReportSendError(throwable);
                 }
 
                 return null;
             }, this.minecraft);
-        }).ifRight(p_298848_ -> this.displayReportSendError(p_298848_.message()));
+        }).ifRight(reason -> this.displayReportSendError(reason.message()));
     }
 
     private void onReportSendSuccess() {
         this.clearDraft();
-        this.minecraft.setScreen(GenericWaitingScreen.createCompleted(REPORT_SENT_TITLE, REPORT_SENT_MESSAGE, CommonComponents.GUI_DONE, () -> this.minecraft.setScreen(null)));
+        this.minecraft
+            .gui
+            .setScreen(
+                GenericWaitingScreen.createCompleted(
+                    REPORT_SENT_TITLE, REPORT_SENT_MESSAGE, CommonComponents.GUI_DONE, () -> this.minecraft.gui.setScreen(null)
+                )
+            );
     }
 
-    private void onReportSendError(Throwable p_297880_) {
-        LOGGER.error("Encountered error while sending abuse report", p_297880_);
-        Component component;
-        if (p_297880_.getCause() instanceof ThrowingComponent throwingcomponent) {
-            component = throwingcomponent.getComponent();
+    private void onReportSendError(final Throwable throwable) {
+        LOGGER.error("Encountered error while sending abuse report", throwable);
+        Component message;
+        if (throwable.getCause() instanceof ThrowingComponent error) {
+            message = error.getComponent();
         } else {
-            component = REPORT_SEND_GENERIC_ERROR;
+            message = REPORT_SEND_GENERIC_ERROR;
         }
 
-        this.displayReportSendError(component);
+        this.displayReportSendError(message);
     }
 
-    private void displayReportSendError(Component p_301245_) {
-        Component component = p_301245_.copy().withStyle(ChatFormatting.RED);
-        this.minecraft.setScreen(GenericWaitingScreen.createCompleted(REPORT_ERROR_TITLE, component, CommonComponents.GUI_BACK, () -> this.minecraft.setScreen(this)));
+    private void displayReportSendError(final Component message) {
+        Component styledMessage = message.copy().withStyle(ChatFormatting.RED);
+        this.minecraft
+            .gui
+            .setScreen(
+                GenericWaitingScreen.createCompleted(REPORT_ERROR_TITLE, styledMessage, CommonComponents.GUI_BACK, () -> this.minecraft.gui.setScreen(this))
+            );
     }
 
-    void saveDraft() {
+    private void saveDraft() {
         if (this.reportBuilder.hasContent()) {
             this.reportingContext.setReportDraft(this.reportBuilder.report().copy());
         }
     }
 
-    void clearDraft() {
+    private void clearDraft() {
         this.reportingContext.setReportDraft(null);
     }
 
     @Override
     public void onClose() {
         if (this.reportBuilder.hasContent()) {
-            this.minecraft.setScreen(new AbstractReportScreen.DiscardReportWarningScreen());
+            this.minecraft.gui.setScreen(new AbstractReportScreen.DiscardReportWarningScreen());
         } else {
-            this.minecraft.setScreen(this.lastScreen);
+            this.minecraft.gui.setScreen(this.lastScreen);
         }
     }
 
@@ -182,8 +193,7 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
         super.removed();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class DiscardReportWarningScreen extends WarningScreen {
+        private class DiscardReportWarningScreen extends WarningScreen {
         private static final Component TITLE = Component.translatable("gui.abuseReport.discard.title").withStyle(ChatFormatting.BOLD);
         private static final Component MESSAGE = Component.translatable("gui.abuseReport.discard.content");
         private static final Component RETURN = Component.translatable("gui.abuseReport.discard.return");
@@ -196,24 +206,24 @@ public abstract class AbstractReportScreen<B extends Report.Builder<?>> extends 
 
         @Override
         protected Layout addFooterButtons() {
-            LinearLayout linearlayout = LinearLayout.vertical().spacing(8);
-            linearlayout.defaultCellSetting().alignHorizontallyCenter();
-            LinearLayout linearlayout1 = linearlayout.addChild(LinearLayout.horizontal().spacing(8));
-            linearlayout1.addChild(Button.builder(RETURN, p_299113_ -> this.onClose()).build());
-            linearlayout1.addChild(Button.builder(DRAFT, p_301082_ -> {
+            LinearLayout footer = LinearLayout.vertical().spacing(8);
+            footer.defaultCellSetting().alignHorizontallyCenter();
+            LinearLayout firstFooterRow = footer.addChild(LinearLayout.horizontal().spacing(8));
+            firstFooterRow.addChild(Button.builder(RETURN, button -> this.onClose()).build());
+            firstFooterRow.addChild(Button.builder(DRAFT, button -> {
                 AbstractReportScreen.this.saveDraft();
-                this.minecraft.setScreen(AbstractReportScreen.this.lastScreen);
+                this.minecraft.gui.setScreen(AbstractReportScreen.this.lastScreen);
             }).build());
-            linearlayout.addChild(Button.builder(DISCARD, p_299406_ -> {
+            footer.addChild(Button.builder(DISCARD, button -> {
                 AbstractReportScreen.this.clearDraft();
-                this.minecraft.setScreen(AbstractReportScreen.this.lastScreen);
+                this.minecraft.gui.setScreen(AbstractReportScreen.this.lastScreen);
             }).build());
-            return linearlayout;
+            return footer;
         }
 
         @Override
         public void onClose() {
-            this.minecraft.setScreen(AbstractReportScreen.this);
+            this.minecraft.gui.setScreen(AbstractReportScreen.this);
         }
 
         @Override

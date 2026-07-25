@@ -6,12 +6,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -36,9 +36,11 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.EnchantmentInstance;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ColorCollection;
 import net.minecraft.world.level.block.LightBlock;
 import net.minecraft.world.level.block.SuspiciousEffectHolder;
 import net.minecraft.world.level.block.TestBlock;
+import net.minecraft.world.level.block.WeatheringCopperCollection;
 import net.minecraft.world.level.block.state.properties.TestBlockMode;
 import org.jspecify.annotations.Nullable;
 
@@ -64,1242 +66,933 @@ public class CreativeModeTabs {
     );
     private static CreativeModeTab.@Nullable ItemDisplayParameters CACHED_PARAMETERS;
 
-    private static ResourceKey<CreativeModeTab> createKey(String p_281544_) {
-        return ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.withDefaultNamespace(p_281544_));
+    private static ResourceKey<CreativeModeTab> createKey(final String id) {
+        return ResourceKey.create(Registries.CREATIVE_MODE_TAB, Identifier.withDefaultNamespace(id));
     }
 
-    public static CreativeModeTab bootstrap(Registry<CreativeModeTab> p_283144_) {
+    public static CreativeModeTab bootstrap(final Registry<CreativeModeTab> registry) {
         Registry.register(
-            p_283144_,
+            registry,
             BUILDING_BLOCKS,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0)
                 .title(Component.translatable("itemGroup.buildingBlocks"))
                 .icon(() -> new ItemStack(Blocks.BRICKS))
-                .displayItems((p_341535_, p_341536_) -> {
-                    p_341536_.accept(Items.OAK_LOG);
-                    p_341536_.accept(Items.OAK_WOOD);
-                    p_341536_.accept(Items.STRIPPED_OAK_LOG);
-                    p_341536_.accept(Items.STRIPPED_OAK_WOOD);
-                    p_341536_.accept(Items.OAK_PLANKS);
-                    p_341536_.accept(Items.OAK_STAIRS);
-                    p_341536_.accept(Items.OAK_SLAB);
-                    p_341536_.accept(Items.OAK_FENCE);
-                    p_341536_.accept(Items.OAK_FENCE_GATE);
-                    p_341536_.accept(Items.OAK_DOOR);
-                    p_341536_.accept(Items.OAK_TRAPDOOR);
-                    p_341536_.accept(Items.OAK_PRESSURE_PLATE);
-                    p_341536_.accept(Items.OAK_BUTTON);
-                    p_341536_.accept(Items.SPRUCE_LOG);
-                    p_341536_.accept(Items.SPRUCE_WOOD);
-                    p_341536_.accept(Items.STRIPPED_SPRUCE_LOG);
-                    p_341536_.accept(Items.STRIPPED_SPRUCE_WOOD);
-                    p_341536_.accept(Items.SPRUCE_PLANKS);
-                    p_341536_.accept(Items.SPRUCE_STAIRS);
-                    p_341536_.accept(Items.SPRUCE_SLAB);
-                    p_341536_.accept(Items.SPRUCE_FENCE);
-                    p_341536_.accept(Items.SPRUCE_FENCE_GATE);
-                    p_341536_.accept(Items.SPRUCE_DOOR);
-                    p_341536_.accept(Items.SPRUCE_TRAPDOOR);
-                    p_341536_.accept(Items.SPRUCE_PRESSURE_PLATE);
-                    p_341536_.accept(Items.SPRUCE_BUTTON);
-                    p_341536_.accept(Items.BIRCH_LOG);
-                    p_341536_.accept(Items.BIRCH_WOOD);
-                    p_341536_.accept(Items.STRIPPED_BIRCH_LOG);
-                    p_341536_.accept(Items.STRIPPED_BIRCH_WOOD);
-                    p_341536_.accept(Items.BIRCH_PLANKS);
-                    p_341536_.accept(Items.BIRCH_STAIRS);
-                    p_341536_.accept(Items.BIRCH_SLAB);
-                    p_341536_.accept(Items.BIRCH_FENCE);
-                    p_341536_.accept(Items.BIRCH_FENCE_GATE);
-                    p_341536_.accept(Items.BIRCH_DOOR);
-                    p_341536_.accept(Items.BIRCH_TRAPDOOR);
-                    p_341536_.accept(Items.BIRCH_PRESSURE_PLATE);
-                    p_341536_.accept(Items.BIRCH_BUTTON);
-                    p_341536_.accept(Items.JUNGLE_LOG);
-                    p_341536_.accept(Items.JUNGLE_WOOD);
-                    p_341536_.accept(Items.STRIPPED_JUNGLE_LOG);
-                    p_341536_.accept(Items.STRIPPED_JUNGLE_WOOD);
-                    p_341536_.accept(Items.JUNGLE_PLANKS);
-                    p_341536_.accept(Items.JUNGLE_STAIRS);
-                    p_341536_.accept(Items.JUNGLE_SLAB);
-                    p_341536_.accept(Items.JUNGLE_FENCE);
-                    p_341536_.accept(Items.JUNGLE_FENCE_GATE);
-                    p_341536_.accept(Items.JUNGLE_DOOR);
-                    p_341536_.accept(Items.JUNGLE_TRAPDOOR);
-                    p_341536_.accept(Items.JUNGLE_PRESSURE_PLATE);
-                    p_341536_.accept(Items.JUNGLE_BUTTON);
-                    p_341536_.accept(Items.ACACIA_LOG);
-                    p_341536_.accept(Items.ACACIA_WOOD);
-                    p_341536_.accept(Items.STRIPPED_ACACIA_LOG);
-                    p_341536_.accept(Items.STRIPPED_ACACIA_WOOD);
-                    p_341536_.accept(Items.ACACIA_PLANKS);
-                    p_341536_.accept(Items.ACACIA_STAIRS);
-                    p_341536_.accept(Items.ACACIA_SLAB);
-                    p_341536_.accept(Items.ACACIA_FENCE);
-                    p_341536_.accept(Items.ACACIA_FENCE_GATE);
-                    p_341536_.accept(Items.ACACIA_DOOR);
-                    p_341536_.accept(Items.ACACIA_TRAPDOOR);
-                    p_341536_.accept(Items.ACACIA_PRESSURE_PLATE);
-                    p_341536_.accept(Items.ACACIA_BUTTON);
-                    p_341536_.accept(Items.DARK_OAK_LOG);
-                    p_341536_.accept(Items.DARK_OAK_WOOD);
-                    p_341536_.accept(Items.STRIPPED_DARK_OAK_LOG);
-                    p_341536_.accept(Items.STRIPPED_DARK_OAK_WOOD);
-                    p_341536_.accept(Items.DARK_OAK_PLANKS);
-                    p_341536_.accept(Items.DARK_OAK_STAIRS);
-                    p_341536_.accept(Items.DARK_OAK_SLAB);
-                    p_341536_.accept(Items.DARK_OAK_FENCE);
-                    p_341536_.accept(Items.DARK_OAK_FENCE_GATE);
-                    p_341536_.accept(Items.DARK_OAK_DOOR);
-                    p_341536_.accept(Items.DARK_OAK_TRAPDOOR);
-                    p_341536_.accept(Items.DARK_OAK_PRESSURE_PLATE);
-                    p_341536_.accept(Items.DARK_OAK_BUTTON);
-                    p_341536_.accept(Items.MANGROVE_LOG);
-                    p_341536_.accept(Items.MANGROVE_WOOD);
-                    p_341536_.accept(Items.STRIPPED_MANGROVE_LOG);
-                    p_341536_.accept(Items.STRIPPED_MANGROVE_WOOD);
-                    p_341536_.accept(Items.MANGROVE_PLANKS);
-                    p_341536_.accept(Items.MANGROVE_STAIRS);
-                    p_341536_.accept(Items.MANGROVE_SLAB);
-                    p_341536_.accept(Items.MANGROVE_FENCE);
-                    p_341536_.accept(Items.MANGROVE_FENCE_GATE);
-                    p_341536_.accept(Items.MANGROVE_DOOR);
-                    p_341536_.accept(Items.MANGROVE_TRAPDOOR);
-                    p_341536_.accept(Items.MANGROVE_PRESSURE_PLATE);
-                    p_341536_.accept(Items.MANGROVE_BUTTON);
-                    p_341536_.accept(Items.CHERRY_LOG);
-                    p_341536_.accept(Items.CHERRY_WOOD);
-                    p_341536_.accept(Items.STRIPPED_CHERRY_LOG);
-                    p_341536_.accept(Items.STRIPPED_CHERRY_WOOD);
-                    p_341536_.accept(Items.CHERRY_PLANKS);
-                    p_341536_.accept(Items.CHERRY_STAIRS);
-                    p_341536_.accept(Items.CHERRY_SLAB);
-                    p_341536_.accept(Items.CHERRY_FENCE);
-                    p_341536_.accept(Items.CHERRY_FENCE_GATE);
-                    p_341536_.accept(Items.CHERRY_DOOR);
-                    p_341536_.accept(Items.CHERRY_TRAPDOOR);
-                    p_341536_.accept(Items.CHERRY_PRESSURE_PLATE);
-                    p_341536_.accept(Items.CHERRY_BUTTON);
-                    p_341536_.accept(Items.PALE_OAK_LOG);
-                    p_341536_.accept(Items.PALE_OAK_WOOD);
-                    p_341536_.accept(Items.STRIPPED_PALE_OAK_LOG);
-                    p_341536_.accept(Items.STRIPPED_PALE_OAK_WOOD);
-                    p_341536_.accept(Items.PALE_OAK_PLANKS);
-                    p_341536_.accept(Items.PALE_OAK_STAIRS);
-                    p_341536_.accept(Items.PALE_OAK_SLAB);
-                    p_341536_.accept(Items.PALE_OAK_FENCE);
-                    p_341536_.accept(Items.PALE_OAK_FENCE_GATE);
-                    p_341536_.accept(Items.PALE_OAK_DOOR);
-                    p_341536_.accept(Items.PALE_OAK_TRAPDOOR);
-                    p_341536_.accept(Items.PALE_OAK_PRESSURE_PLATE);
-                    p_341536_.accept(Items.PALE_OAK_BUTTON);
-                    p_341536_.accept(Items.BAMBOO_BLOCK);
-                    p_341536_.accept(Items.STRIPPED_BAMBOO_BLOCK);
-                    p_341536_.accept(Items.BAMBOO_PLANKS);
-                    p_341536_.accept(Items.BAMBOO_MOSAIC);
-                    p_341536_.accept(Items.BAMBOO_STAIRS);
-                    p_341536_.accept(Items.BAMBOO_MOSAIC_STAIRS);
-                    p_341536_.accept(Items.BAMBOO_SLAB);
-                    p_341536_.accept(Items.BAMBOO_MOSAIC_SLAB);
-                    p_341536_.accept(Items.BAMBOO_FENCE);
-                    p_341536_.accept(Items.BAMBOO_FENCE_GATE);
-                    p_341536_.accept(Items.BAMBOO_DOOR);
-                    p_341536_.accept(Items.BAMBOO_TRAPDOOR);
-                    p_341536_.accept(Items.BAMBOO_PRESSURE_PLATE);
-                    p_341536_.accept(Items.BAMBOO_BUTTON);
-                    p_341536_.accept(Items.CRIMSON_STEM);
-                    p_341536_.accept(Items.CRIMSON_HYPHAE);
-                    p_341536_.accept(Items.STRIPPED_CRIMSON_STEM);
-                    p_341536_.accept(Items.STRIPPED_CRIMSON_HYPHAE);
-                    p_341536_.accept(Items.CRIMSON_PLANKS);
-                    p_341536_.accept(Items.CRIMSON_STAIRS);
-                    p_341536_.accept(Items.CRIMSON_SLAB);
-                    p_341536_.accept(Items.CRIMSON_FENCE);
-                    p_341536_.accept(Items.CRIMSON_FENCE_GATE);
-                    p_341536_.accept(Items.CRIMSON_DOOR);
-                    p_341536_.accept(Items.CRIMSON_TRAPDOOR);
-                    p_341536_.accept(Items.CRIMSON_PRESSURE_PLATE);
-                    p_341536_.accept(Items.CRIMSON_BUTTON);
-                    p_341536_.accept(Items.WARPED_STEM);
-                    p_341536_.accept(Items.WARPED_HYPHAE);
-                    p_341536_.accept(Items.STRIPPED_WARPED_STEM);
-                    p_341536_.accept(Items.STRIPPED_WARPED_HYPHAE);
-                    p_341536_.accept(Items.WARPED_PLANKS);
-                    p_341536_.accept(Items.WARPED_STAIRS);
-                    p_341536_.accept(Items.WARPED_SLAB);
-                    p_341536_.accept(Items.WARPED_FENCE);
-                    p_341536_.accept(Items.WARPED_FENCE_GATE);
-                    p_341536_.accept(Items.WARPED_DOOR);
-                    p_341536_.accept(Items.WARPED_TRAPDOOR);
-                    p_341536_.accept(Items.WARPED_PRESSURE_PLATE);
-                    p_341536_.accept(Items.WARPED_BUTTON);
-                    p_341536_.accept(Items.STONE);
-                    p_341536_.accept(Items.STONE_STAIRS);
-                    p_341536_.accept(Items.STONE_SLAB);
-                    p_341536_.accept(Items.STONE_PRESSURE_PLATE);
-                    p_341536_.accept(Items.STONE_BUTTON);
-                    p_341536_.accept(Items.COBBLESTONE);
-                    p_341536_.accept(Items.COBBLESTONE_STAIRS);
-                    p_341536_.accept(Items.COBBLESTONE_SLAB);
-                    p_341536_.accept(Items.COBBLESTONE_WALL);
-                    p_341536_.accept(Items.MOSSY_COBBLESTONE);
-                    p_341536_.accept(Items.MOSSY_COBBLESTONE_STAIRS);
-                    p_341536_.accept(Items.MOSSY_COBBLESTONE_SLAB);
-                    p_341536_.accept(Items.MOSSY_COBBLESTONE_WALL);
-                    p_341536_.accept(Items.SMOOTH_STONE);
-                    p_341536_.accept(Items.SMOOTH_STONE_SLAB);
-                    p_341536_.accept(Items.STONE_BRICKS);
-                    p_341536_.accept(Items.CRACKED_STONE_BRICKS);
-                    p_341536_.accept(Items.STONE_BRICK_STAIRS);
-                    p_341536_.accept(Items.STONE_BRICK_SLAB);
-                    p_341536_.accept(Items.STONE_BRICK_WALL);
-                    p_341536_.accept(Items.CHISELED_STONE_BRICKS);
-                    p_341536_.accept(Items.MOSSY_STONE_BRICKS);
-                    p_341536_.accept(Items.MOSSY_STONE_BRICK_STAIRS);
-                    p_341536_.accept(Items.MOSSY_STONE_BRICK_SLAB);
-                    p_341536_.accept(Items.MOSSY_STONE_BRICK_WALL);
-                    p_341536_.accept(Items.GRANITE);
-                    p_341536_.accept(Items.GRANITE_STAIRS);
-                    p_341536_.accept(Items.GRANITE_SLAB);
-                    p_341536_.accept(Items.GRANITE_WALL);
-                    p_341536_.accept(Items.POLISHED_GRANITE);
-                    p_341536_.accept(Items.POLISHED_GRANITE_STAIRS);
-                    p_341536_.accept(Items.POLISHED_GRANITE_SLAB);
-                    p_341536_.accept(Items.DIORITE);
-                    p_341536_.accept(Items.DIORITE_STAIRS);
-                    p_341536_.accept(Items.DIORITE_SLAB);
-                    p_341536_.accept(Items.DIORITE_WALL);
-                    p_341536_.accept(Items.POLISHED_DIORITE);
-                    p_341536_.accept(Items.POLISHED_DIORITE_STAIRS);
-                    p_341536_.accept(Items.POLISHED_DIORITE_SLAB);
-                    p_341536_.accept(Items.ANDESITE);
-                    p_341536_.accept(Items.ANDESITE_STAIRS);
-                    p_341536_.accept(Items.ANDESITE_SLAB);
-                    p_341536_.accept(Items.ANDESITE_WALL);
-                    p_341536_.accept(Items.POLISHED_ANDESITE);
-                    p_341536_.accept(Items.POLISHED_ANDESITE_STAIRS);
-                    p_341536_.accept(Items.POLISHED_ANDESITE_SLAB);
-                    p_341536_.accept(Items.DEEPSLATE);
-                    p_341536_.accept(Items.COBBLED_DEEPSLATE);
-                    p_341536_.accept(Items.COBBLED_DEEPSLATE_STAIRS);
-                    p_341536_.accept(Items.COBBLED_DEEPSLATE_SLAB);
-                    p_341536_.accept(Items.COBBLED_DEEPSLATE_WALL);
-                    p_341536_.accept(Items.CHISELED_DEEPSLATE);
-                    p_341536_.accept(Items.POLISHED_DEEPSLATE);
-                    p_341536_.accept(Items.POLISHED_DEEPSLATE_STAIRS);
-                    p_341536_.accept(Items.POLISHED_DEEPSLATE_SLAB);
-                    p_341536_.accept(Items.POLISHED_DEEPSLATE_WALL);
-                    p_341536_.accept(Items.DEEPSLATE_BRICKS);
-                    p_341536_.accept(Items.CRACKED_DEEPSLATE_BRICKS);
-                    p_341536_.accept(Items.DEEPSLATE_BRICK_STAIRS);
-                    p_341536_.accept(Items.DEEPSLATE_BRICK_SLAB);
-                    p_341536_.accept(Items.DEEPSLATE_BRICK_WALL);
-                    p_341536_.accept(Items.DEEPSLATE_TILES);
-                    p_341536_.accept(Items.CRACKED_DEEPSLATE_TILES);
-                    p_341536_.accept(Items.DEEPSLATE_TILE_STAIRS);
-                    p_341536_.accept(Items.DEEPSLATE_TILE_SLAB);
-                    p_341536_.accept(Items.DEEPSLATE_TILE_WALL);
-                    p_341536_.accept(Items.REINFORCED_DEEPSLATE);
-                    p_341536_.accept(Items.TUFF);
-                    p_341536_.accept(Items.TUFF_STAIRS);
-                    p_341536_.accept(Items.TUFF_SLAB);
-                    p_341536_.accept(Items.TUFF_WALL);
-                    p_341536_.accept(Items.CHISELED_TUFF);
-                    p_341536_.accept(Items.POLISHED_TUFF);
-                    p_341536_.accept(Items.POLISHED_TUFF_STAIRS);
-                    p_341536_.accept(Items.POLISHED_TUFF_SLAB);
-                    p_341536_.accept(Items.POLISHED_TUFF_WALL);
-                    p_341536_.accept(Items.TUFF_BRICKS);
-                    p_341536_.accept(Items.TUFF_BRICK_STAIRS);
-                    p_341536_.accept(Items.TUFF_BRICK_SLAB);
-                    p_341536_.accept(Items.TUFF_BRICK_WALL);
-                    p_341536_.accept(Items.CHISELED_TUFF_BRICKS);
-                    p_341536_.accept(Items.BRICKS);
-                    p_341536_.accept(Items.BRICK_STAIRS);
-                    p_341536_.accept(Items.BRICK_SLAB);
-                    p_341536_.accept(Items.BRICK_WALL);
-                    p_341536_.accept(Items.PACKED_MUD);
-                    p_341536_.accept(Items.MUD_BRICKS);
-                    p_341536_.accept(Items.MUD_BRICK_STAIRS);
-                    p_341536_.accept(Items.MUD_BRICK_SLAB);
-                    p_341536_.accept(Items.MUD_BRICK_WALL);
-                    p_341536_.accept(Items.RESIN_BRICKS);
-                    p_341536_.accept(Items.RESIN_BRICK_STAIRS);
-                    p_341536_.accept(Items.RESIN_BRICK_SLAB);
-                    p_341536_.accept(Items.RESIN_BRICK_WALL);
-                    p_341536_.accept(Items.CHISELED_RESIN_BRICKS);
-                    p_341536_.accept(Items.SANDSTONE);
-                    p_341536_.accept(Items.SANDSTONE_STAIRS);
-                    p_341536_.accept(Items.SANDSTONE_SLAB);
-                    p_341536_.accept(Items.SANDSTONE_WALL);
-                    p_341536_.accept(Items.CHISELED_SANDSTONE);
-                    p_341536_.accept(Items.SMOOTH_SANDSTONE);
-                    p_341536_.accept(Items.SMOOTH_SANDSTONE_STAIRS);
-                    p_341536_.accept(Items.SMOOTH_SANDSTONE_SLAB);
-                    p_341536_.accept(Items.CUT_SANDSTONE);
-                    p_341536_.accept(Items.CUT_STANDSTONE_SLAB);
-                    p_341536_.accept(Items.RED_SANDSTONE);
-                    p_341536_.accept(Items.RED_SANDSTONE_STAIRS);
-                    p_341536_.accept(Items.RED_SANDSTONE_SLAB);
-                    p_341536_.accept(Items.RED_SANDSTONE_WALL);
-                    p_341536_.accept(Items.CHISELED_RED_SANDSTONE);
-                    p_341536_.accept(Items.SMOOTH_RED_SANDSTONE);
-                    p_341536_.accept(Items.SMOOTH_RED_SANDSTONE_STAIRS);
-                    p_341536_.accept(Items.SMOOTH_RED_SANDSTONE_SLAB);
-                    p_341536_.accept(Items.CUT_RED_SANDSTONE);
-                    p_341536_.accept(Items.CUT_RED_SANDSTONE_SLAB);
-                    p_341536_.accept(Items.SEA_LANTERN);
-                    p_341536_.accept(Items.PRISMARINE);
-                    p_341536_.accept(Items.PRISMARINE_STAIRS);
-                    p_341536_.accept(Items.PRISMARINE_SLAB);
-                    p_341536_.accept(Items.PRISMARINE_WALL);
-                    p_341536_.accept(Items.PRISMARINE_BRICKS);
-                    p_341536_.accept(Items.PRISMARINE_BRICK_STAIRS);
-                    p_341536_.accept(Items.PRISMARINE_BRICK_SLAB);
-                    p_341536_.accept(Items.DARK_PRISMARINE);
-                    p_341536_.accept(Items.DARK_PRISMARINE_STAIRS);
-                    p_341536_.accept(Items.DARK_PRISMARINE_SLAB);
-                    p_341536_.accept(Items.NETHERRACK);
-                    p_341536_.accept(Items.NETHER_BRICKS);
-                    p_341536_.accept(Items.CRACKED_NETHER_BRICKS);
-                    p_341536_.accept(Items.NETHER_BRICK_STAIRS);
-                    p_341536_.accept(Items.NETHER_BRICK_SLAB);
-                    p_341536_.accept(Items.NETHER_BRICK_WALL);
-                    p_341536_.accept(Items.NETHER_BRICK_FENCE);
-                    p_341536_.accept(Items.CHISELED_NETHER_BRICKS);
-                    p_341536_.accept(Items.RED_NETHER_BRICKS);
-                    p_341536_.accept(Items.RED_NETHER_BRICK_STAIRS);
-                    p_341536_.accept(Items.RED_NETHER_BRICK_SLAB);
-                    p_341536_.accept(Items.RED_NETHER_BRICK_WALL);
-                    p_341536_.accept(Items.BASALT);
-                    p_341536_.accept(Items.SMOOTH_BASALT);
-                    p_341536_.accept(Items.POLISHED_BASALT);
-                    p_341536_.accept(Items.BLACKSTONE);
-                    p_341536_.accept(Items.GILDED_BLACKSTONE);
-                    p_341536_.accept(Items.BLACKSTONE_STAIRS);
-                    p_341536_.accept(Items.BLACKSTONE_SLAB);
-                    p_341536_.accept(Items.BLACKSTONE_WALL);
-                    p_341536_.accept(Items.CHISELED_POLISHED_BLACKSTONE);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_STAIRS);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_SLAB);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_WALL);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_PRESSURE_PLATE);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_BUTTON);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_BRICKS);
-                    p_341536_.accept(Items.CRACKED_POLISHED_BLACKSTONE_BRICKS);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_BRICK_STAIRS);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_BRICK_SLAB);
-                    p_341536_.accept(Items.POLISHED_BLACKSTONE_BRICK_WALL);
-                    p_341536_.accept(Items.END_STONE);
-                    p_341536_.accept(Items.END_STONE_BRICKS);
-                    p_341536_.accept(Items.END_STONE_BRICK_STAIRS);
-                    p_341536_.accept(Items.END_STONE_BRICK_SLAB);
-                    p_341536_.accept(Items.END_STONE_BRICK_WALL);
-                    p_341536_.accept(Items.PURPUR_BLOCK);
-                    p_341536_.accept(Items.PURPUR_PILLAR);
-                    p_341536_.accept(Items.PURPUR_STAIRS);
-                    p_341536_.accept(Items.PURPUR_SLAB);
-                    p_341536_.accept(Items.COAL_BLOCK);
-                    p_341536_.accept(Items.IRON_BLOCK);
-                    p_341536_.accept(Items.IRON_BARS);
-                    p_341536_.accept(Items.IRON_DOOR);
-                    p_341536_.accept(Items.IRON_TRAPDOOR);
-                    p_341536_.accept(Items.HEAVY_WEIGHTED_PRESSURE_PLATE);
-                    p_341536_.accept(Items.IRON_CHAIN);
-                    p_341536_.accept(Items.GOLD_BLOCK);
-                    p_341536_.accept(Items.LIGHT_WEIGHTED_PRESSURE_PLATE);
-                    p_341536_.accept(Items.REDSTONE_BLOCK);
-                    p_341536_.accept(Items.EMERALD_BLOCK);
-                    p_341536_.accept(Items.LAPIS_BLOCK);
-                    p_341536_.accept(Items.DIAMOND_BLOCK);
-                    p_341536_.accept(Items.NETHERITE_BLOCK);
-                    p_341536_.accept(Items.QUARTZ_BLOCK);
-                    p_341536_.accept(Items.QUARTZ_STAIRS);
-                    p_341536_.accept(Items.QUARTZ_SLAB);
-                    p_341536_.accept(Items.CHISELED_QUARTZ_BLOCK);
-                    p_341536_.accept(Items.QUARTZ_BRICKS);
-                    p_341536_.accept(Items.QUARTZ_PILLAR);
-                    p_341536_.accept(Items.SMOOTH_QUARTZ);
-                    p_341536_.accept(Items.SMOOTH_QUARTZ_STAIRS);
-                    p_341536_.accept(Items.SMOOTH_QUARTZ_SLAB);
-                    p_341536_.accept(Items.AMETHYST_BLOCK);
-                    p_341536_.accept(Items.COPPER_BLOCK);
-                    p_341536_.accept(Items.CHISELED_COPPER);
-                    p_341536_.accept(Items.COPPER_GRATE);
-                    p_341536_.accept(Items.CUT_COPPER);
-                    p_341536_.accept(Items.CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.unaffected());
-                    p_341536_.accept(Items.COPPER_DOOR);
-                    p_341536_.accept(Items.COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.unaffected());
-                    p_341536_.accept(Items.EXPOSED_COPPER);
-                    p_341536_.accept(Items.EXPOSED_CHISELED_COPPER);
-                    p_341536_.accept(Items.EXPOSED_COPPER_GRATE);
-                    p_341536_.accept(Items.EXPOSED_CUT_COPPER);
-                    p_341536_.accept(Items.EXPOSED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.EXPOSED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.exposed());
-                    p_341536_.accept(Items.EXPOSED_COPPER_DOOR);
-                    p_341536_.accept(Items.EXPOSED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.EXPOSED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.exposed());
-                    p_341536_.accept(Items.WEATHERED_COPPER);
-                    p_341536_.accept(Items.WEATHERED_CHISELED_COPPER);
-                    p_341536_.accept(Items.WEATHERED_COPPER_GRATE);
-                    p_341536_.accept(Items.WEATHERED_CUT_COPPER);
-                    p_341536_.accept(Items.WEATHERED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.WEATHERED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.weathered());
-                    p_341536_.accept(Items.WEATHERED_COPPER_DOOR);
-                    p_341536_.accept(Items.WEATHERED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.WEATHERED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.weathered());
-                    p_341536_.accept(Items.OXIDIZED_COPPER);
-                    p_341536_.accept(Items.OXIDIZED_CHISELED_COPPER);
-                    p_341536_.accept(Items.OXIDIZED_COPPER_GRATE);
-                    p_341536_.accept(Items.OXIDIZED_CUT_COPPER);
-                    p_341536_.accept(Items.OXIDIZED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.OXIDIZED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.oxidized());
-                    p_341536_.accept(Items.OXIDIZED_COPPER_DOOR);
-                    p_341536_.accept(Items.OXIDIZED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.OXIDIZED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.oxidized());
-                    p_341536_.accept(Items.WAXED_COPPER_BLOCK);
-                    p_341536_.accept(Items.WAXED_CHISELED_COPPER);
-                    p_341536_.accept(Items.WAXED_COPPER_GRATE);
-                    p_341536_.accept(Items.WAXED_CUT_COPPER);
-                    p_341536_.accept(Items.WAXED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.WAXED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.waxed());
-                    p_341536_.accept(Items.WAXED_COPPER_DOOR);
-                    p_341536_.accept(Items.WAXED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.WAXED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.waxed());
-                    p_341536_.accept(Items.WAXED_EXPOSED_COPPER);
-                    p_341536_.accept(Items.WAXED_EXPOSED_CHISELED_COPPER);
-                    p_341536_.accept(Items.WAXED_EXPOSED_COPPER_GRATE);
-                    p_341536_.accept(Items.WAXED_EXPOSED_CUT_COPPER);
-                    p_341536_.accept(Items.WAXED_EXPOSED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.WAXED_EXPOSED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.waxedExposed());
-                    p_341536_.accept(Items.WAXED_EXPOSED_COPPER_DOOR);
-                    p_341536_.accept(Items.WAXED_EXPOSED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.WAXED_EXPOSED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.waxedExposed());
-                    p_341536_.accept(Items.WAXED_WEATHERED_COPPER);
-                    p_341536_.accept(Items.WAXED_WEATHERED_CHISELED_COPPER);
-                    p_341536_.accept(Items.WAXED_WEATHERED_COPPER_GRATE);
-                    p_341536_.accept(Items.WAXED_WEATHERED_CUT_COPPER);
-                    p_341536_.accept(Items.WAXED_WEATHERED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.WAXED_WEATHERED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.waxedWeathered());
-                    p_341536_.accept(Items.WAXED_WEATHERED_COPPER_DOOR);
-                    p_341536_.accept(Items.WAXED_WEATHERED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.WAXED_WEATHERED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.waxedWeathered());
-                    p_341536_.accept(Items.WAXED_OXIDIZED_COPPER);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_CHISELED_COPPER);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_COPPER_GRATE);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_CUT_COPPER);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_CUT_COPPER_STAIRS);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_CUT_COPPER_SLAB);
-                    p_341536_.accept(Items.COPPER_BARS.waxedOxidized());
-                    p_341536_.accept(Items.WAXED_OXIDIZED_COPPER_DOOR);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_COPPER_TRAPDOOR);
-                    p_341536_.accept(Items.WAXED_OXIDIZED_COPPER_BULB);
-                    p_341536_.accept(Items.COPPER_CHAIN.waxedOxidized());
+                .displayItems((parameters, buildingBlocks) -> {
+                    buildingBlocks.accept(Items.OAK_LOG);
+                    buildingBlocks.accept(Items.OAK_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_OAK_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_OAK_WOOD);
+                    buildingBlocks.accept(Items.OAK_PLANKS);
+                    buildingBlocks.accept(Items.OAK_STAIRS);
+                    buildingBlocks.accept(Items.OAK_SLAB);
+                    buildingBlocks.accept(Items.OAK_FENCE);
+                    buildingBlocks.accept(Items.OAK_FENCE_GATE);
+                    buildingBlocks.accept(Items.OAK_DOOR);
+                    buildingBlocks.accept(Items.OAK_TRAPDOOR);
+                    buildingBlocks.accept(Items.OAK_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.OAK_BUTTON);
+                    buildingBlocks.accept(Items.SPRUCE_LOG);
+                    buildingBlocks.accept(Items.SPRUCE_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_SPRUCE_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_SPRUCE_WOOD);
+                    buildingBlocks.accept(Items.SPRUCE_PLANKS);
+                    buildingBlocks.accept(Items.SPRUCE_STAIRS);
+                    buildingBlocks.accept(Items.SPRUCE_SLAB);
+                    buildingBlocks.accept(Items.SPRUCE_FENCE);
+                    buildingBlocks.accept(Items.SPRUCE_FENCE_GATE);
+                    buildingBlocks.accept(Items.SPRUCE_DOOR);
+                    buildingBlocks.accept(Items.SPRUCE_TRAPDOOR);
+                    buildingBlocks.accept(Items.SPRUCE_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.SPRUCE_BUTTON);
+                    buildingBlocks.accept(Items.BIRCH_LOG);
+                    buildingBlocks.accept(Items.BIRCH_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_BIRCH_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_BIRCH_WOOD);
+                    buildingBlocks.accept(Items.BIRCH_PLANKS);
+                    buildingBlocks.accept(Items.BIRCH_STAIRS);
+                    buildingBlocks.accept(Items.BIRCH_SLAB);
+                    buildingBlocks.accept(Items.BIRCH_FENCE);
+                    buildingBlocks.accept(Items.BIRCH_FENCE_GATE);
+                    buildingBlocks.accept(Items.BIRCH_DOOR);
+                    buildingBlocks.accept(Items.BIRCH_TRAPDOOR);
+                    buildingBlocks.accept(Items.BIRCH_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.BIRCH_BUTTON);
+                    buildingBlocks.accept(Items.JUNGLE_LOG);
+                    buildingBlocks.accept(Items.JUNGLE_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_JUNGLE_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_JUNGLE_WOOD);
+                    buildingBlocks.accept(Items.JUNGLE_PLANKS);
+                    buildingBlocks.accept(Items.JUNGLE_STAIRS);
+                    buildingBlocks.accept(Items.JUNGLE_SLAB);
+                    buildingBlocks.accept(Items.JUNGLE_FENCE);
+                    buildingBlocks.accept(Items.JUNGLE_FENCE_GATE);
+                    buildingBlocks.accept(Items.JUNGLE_DOOR);
+                    buildingBlocks.accept(Items.JUNGLE_TRAPDOOR);
+                    buildingBlocks.accept(Items.JUNGLE_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.JUNGLE_BUTTON);
+                    buildingBlocks.accept(Items.ACACIA_LOG);
+                    buildingBlocks.accept(Items.ACACIA_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_ACACIA_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_ACACIA_WOOD);
+                    buildingBlocks.accept(Items.ACACIA_PLANKS);
+                    buildingBlocks.accept(Items.ACACIA_STAIRS);
+                    buildingBlocks.accept(Items.ACACIA_SLAB);
+                    buildingBlocks.accept(Items.ACACIA_FENCE);
+                    buildingBlocks.accept(Items.ACACIA_FENCE_GATE);
+                    buildingBlocks.accept(Items.ACACIA_DOOR);
+                    buildingBlocks.accept(Items.ACACIA_TRAPDOOR);
+                    buildingBlocks.accept(Items.ACACIA_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.ACACIA_BUTTON);
+                    buildingBlocks.accept(Items.DARK_OAK_LOG);
+                    buildingBlocks.accept(Items.DARK_OAK_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_DARK_OAK_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_DARK_OAK_WOOD);
+                    buildingBlocks.accept(Items.DARK_OAK_PLANKS);
+                    buildingBlocks.accept(Items.DARK_OAK_STAIRS);
+                    buildingBlocks.accept(Items.DARK_OAK_SLAB);
+                    buildingBlocks.accept(Items.DARK_OAK_FENCE);
+                    buildingBlocks.accept(Items.DARK_OAK_FENCE_GATE);
+                    buildingBlocks.accept(Items.DARK_OAK_DOOR);
+                    buildingBlocks.accept(Items.DARK_OAK_TRAPDOOR);
+                    buildingBlocks.accept(Items.DARK_OAK_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.DARK_OAK_BUTTON);
+                    buildingBlocks.accept(Items.MANGROVE_LOG);
+                    buildingBlocks.accept(Items.MANGROVE_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_MANGROVE_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_MANGROVE_WOOD);
+                    buildingBlocks.accept(Items.MANGROVE_PLANKS);
+                    buildingBlocks.accept(Items.MANGROVE_STAIRS);
+                    buildingBlocks.accept(Items.MANGROVE_SLAB);
+                    buildingBlocks.accept(Items.MANGROVE_FENCE);
+                    buildingBlocks.accept(Items.MANGROVE_FENCE_GATE);
+                    buildingBlocks.accept(Items.MANGROVE_DOOR);
+                    buildingBlocks.accept(Items.MANGROVE_TRAPDOOR);
+                    buildingBlocks.accept(Items.MANGROVE_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.MANGROVE_BUTTON);
+                    buildingBlocks.accept(Items.CHERRY_LOG);
+                    buildingBlocks.accept(Items.CHERRY_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_CHERRY_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_CHERRY_WOOD);
+                    buildingBlocks.accept(Items.CHERRY_PLANKS);
+                    buildingBlocks.accept(Items.CHERRY_STAIRS);
+                    buildingBlocks.accept(Items.CHERRY_SLAB);
+                    buildingBlocks.accept(Items.CHERRY_FENCE);
+                    buildingBlocks.accept(Items.CHERRY_FENCE_GATE);
+                    buildingBlocks.accept(Items.CHERRY_DOOR);
+                    buildingBlocks.accept(Items.CHERRY_TRAPDOOR);
+                    buildingBlocks.accept(Items.CHERRY_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.CHERRY_BUTTON);
+                    buildingBlocks.accept(Items.PALE_OAK_LOG);
+                    buildingBlocks.accept(Items.PALE_OAK_WOOD);
+                    buildingBlocks.accept(Items.STRIPPED_PALE_OAK_LOG);
+                    buildingBlocks.accept(Items.STRIPPED_PALE_OAK_WOOD);
+                    buildingBlocks.accept(Items.PALE_OAK_PLANKS);
+                    buildingBlocks.accept(Items.PALE_OAK_STAIRS);
+                    buildingBlocks.accept(Items.PALE_OAK_SLAB);
+                    buildingBlocks.accept(Items.PALE_OAK_FENCE);
+                    buildingBlocks.accept(Items.PALE_OAK_FENCE_GATE);
+                    buildingBlocks.accept(Items.PALE_OAK_DOOR);
+                    buildingBlocks.accept(Items.PALE_OAK_TRAPDOOR);
+                    buildingBlocks.accept(Items.PALE_OAK_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.PALE_OAK_BUTTON);
+                    buildingBlocks.accept(Items.BAMBOO_BLOCK);
+                    buildingBlocks.accept(Items.STRIPPED_BAMBOO_BLOCK);
+                    buildingBlocks.accept(Items.BAMBOO_PLANKS);
+                    buildingBlocks.accept(Items.BAMBOO_MOSAIC);
+                    buildingBlocks.accept(Items.BAMBOO_STAIRS);
+                    buildingBlocks.accept(Items.BAMBOO_MOSAIC_STAIRS);
+                    buildingBlocks.accept(Items.BAMBOO_SLAB);
+                    buildingBlocks.accept(Items.BAMBOO_MOSAIC_SLAB);
+                    buildingBlocks.accept(Items.BAMBOO_FENCE);
+                    buildingBlocks.accept(Items.BAMBOO_FENCE_GATE);
+                    buildingBlocks.accept(Items.BAMBOO_DOOR);
+                    buildingBlocks.accept(Items.BAMBOO_TRAPDOOR);
+                    buildingBlocks.accept(Items.BAMBOO_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.BAMBOO_BUTTON);
+                    buildingBlocks.accept(Items.CRIMSON_STEM);
+                    buildingBlocks.accept(Items.CRIMSON_HYPHAE);
+                    buildingBlocks.accept(Items.STRIPPED_CRIMSON_STEM);
+                    buildingBlocks.accept(Items.STRIPPED_CRIMSON_HYPHAE);
+                    buildingBlocks.accept(Items.CRIMSON_PLANKS);
+                    buildingBlocks.accept(Items.CRIMSON_STAIRS);
+                    buildingBlocks.accept(Items.CRIMSON_SLAB);
+                    buildingBlocks.accept(Items.CRIMSON_FENCE);
+                    buildingBlocks.accept(Items.CRIMSON_FENCE_GATE);
+                    buildingBlocks.accept(Items.CRIMSON_DOOR);
+                    buildingBlocks.accept(Items.CRIMSON_TRAPDOOR);
+                    buildingBlocks.accept(Items.CRIMSON_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.CRIMSON_BUTTON);
+                    buildingBlocks.accept(Items.WARPED_STEM);
+                    buildingBlocks.accept(Items.WARPED_HYPHAE);
+                    buildingBlocks.accept(Items.STRIPPED_WARPED_STEM);
+                    buildingBlocks.accept(Items.STRIPPED_WARPED_HYPHAE);
+                    buildingBlocks.accept(Items.WARPED_PLANKS);
+                    buildingBlocks.accept(Items.WARPED_STAIRS);
+                    buildingBlocks.accept(Items.WARPED_SLAB);
+                    buildingBlocks.accept(Items.WARPED_FENCE);
+                    buildingBlocks.accept(Items.WARPED_FENCE_GATE);
+                    buildingBlocks.accept(Items.WARPED_DOOR);
+                    buildingBlocks.accept(Items.WARPED_TRAPDOOR);
+                    buildingBlocks.accept(Items.WARPED_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.WARPED_BUTTON);
+                    buildingBlocks.accept(Items.STONE);
+                    buildingBlocks.accept(Items.STONE_STAIRS);
+                    buildingBlocks.accept(Items.STONE_SLAB);
+                    buildingBlocks.accept(Items.STONE_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.STONE_BUTTON);
+                    buildingBlocks.accept(Items.COBBLESTONE);
+                    buildingBlocks.accept(Items.COBBLESTONE_STAIRS);
+                    buildingBlocks.accept(Items.COBBLESTONE_SLAB);
+                    buildingBlocks.accept(Items.COBBLESTONE_WALL);
+                    buildingBlocks.accept(Items.MOSSY_COBBLESTONE);
+                    buildingBlocks.accept(Items.MOSSY_COBBLESTONE_STAIRS);
+                    buildingBlocks.accept(Items.MOSSY_COBBLESTONE_SLAB);
+                    buildingBlocks.accept(Items.MOSSY_COBBLESTONE_WALL);
+                    buildingBlocks.accept(Items.SMOOTH_STONE);
+                    buildingBlocks.accept(Items.SMOOTH_STONE_SLAB);
+                    buildingBlocks.accept(Items.STONE_BRICKS);
+                    buildingBlocks.accept(Items.CRACKED_STONE_BRICKS);
+                    buildingBlocks.accept(Items.STONE_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.STONE_BRICK_SLAB);
+                    buildingBlocks.accept(Items.STONE_BRICK_WALL);
+                    buildingBlocks.accept(Items.CHISELED_STONE_BRICKS);
+                    buildingBlocks.accept(Items.MOSSY_STONE_BRICKS);
+                    buildingBlocks.accept(Items.MOSSY_STONE_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.MOSSY_STONE_BRICK_SLAB);
+                    buildingBlocks.accept(Items.MOSSY_STONE_BRICK_WALL);
+                    buildingBlocks.accept(Items.GRANITE);
+                    buildingBlocks.accept(Items.GRANITE_STAIRS);
+                    buildingBlocks.accept(Items.GRANITE_SLAB);
+                    buildingBlocks.accept(Items.GRANITE_WALL);
+                    buildingBlocks.accept(Items.POLISHED_GRANITE);
+                    buildingBlocks.accept(Items.POLISHED_GRANITE_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_GRANITE_SLAB);
+                    buildingBlocks.accept(Items.DIORITE);
+                    buildingBlocks.accept(Items.DIORITE_STAIRS);
+                    buildingBlocks.accept(Items.DIORITE_SLAB);
+                    buildingBlocks.accept(Items.DIORITE_WALL);
+                    buildingBlocks.accept(Items.POLISHED_DIORITE);
+                    buildingBlocks.accept(Items.POLISHED_DIORITE_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_DIORITE_SLAB);
+                    buildingBlocks.accept(Items.ANDESITE);
+                    buildingBlocks.accept(Items.ANDESITE_STAIRS);
+                    buildingBlocks.accept(Items.ANDESITE_SLAB);
+                    buildingBlocks.accept(Items.ANDESITE_WALL);
+                    buildingBlocks.accept(Items.POLISHED_ANDESITE);
+                    buildingBlocks.accept(Items.POLISHED_ANDESITE_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_ANDESITE_SLAB);
+                    buildingBlocks.accept(Items.DEEPSLATE);
+                    buildingBlocks.accept(Items.COBBLED_DEEPSLATE);
+                    buildingBlocks.accept(Items.COBBLED_DEEPSLATE_STAIRS);
+                    buildingBlocks.accept(Items.COBBLED_DEEPSLATE_SLAB);
+                    buildingBlocks.accept(Items.COBBLED_DEEPSLATE_WALL);
+                    buildingBlocks.accept(Items.CHISELED_DEEPSLATE);
+                    buildingBlocks.accept(Items.POLISHED_DEEPSLATE);
+                    buildingBlocks.accept(Items.POLISHED_DEEPSLATE_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_DEEPSLATE_SLAB);
+                    buildingBlocks.accept(Items.POLISHED_DEEPSLATE_WALL);
+                    buildingBlocks.accept(Items.DEEPSLATE_BRICKS);
+                    buildingBlocks.accept(Items.CRACKED_DEEPSLATE_BRICKS);
+                    buildingBlocks.accept(Items.DEEPSLATE_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.DEEPSLATE_BRICK_SLAB);
+                    buildingBlocks.accept(Items.DEEPSLATE_BRICK_WALL);
+                    buildingBlocks.accept(Items.DEEPSLATE_TILES);
+                    buildingBlocks.accept(Items.CRACKED_DEEPSLATE_TILES);
+                    buildingBlocks.accept(Items.DEEPSLATE_TILE_STAIRS);
+                    buildingBlocks.accept(Items.DEEPSLATE_TILE_SLAB);
+                    buildingBlocks.accept(Items.DEEPSLATE_TILE_WALL);
+                    buildingBlocks.accept(Items.REINFORCED_DEEPSLATE);
+                    buildingBlocks.accept(Items.TUFF);
+                    buildingBlocks.accept(Items.TUFF_STAIRS);
+                    buildingBlocks.accept(Items.TUFF_SLAB);
+                    buildingBlocks.accept(Items.TUFF_WALL);
+                    buildingBlocks.accept(Items.CHISELED_TUFF);
+                    buildingBlocks.accept(Items.POLISHED_TUFF);
+                    buildingBlocks.accept(Items.POLISHED_TUFF_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_TUFF_SLAB);
+                    buildingBlocks.accept(Items.POLISHED_TUFF_WALL);
+                    buildingBlocks.accept(Items.TUFF_BRICKS);
+                    buildingBlocks.accept(Items.TUFF_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.TUFF_BRICK_SLAB);
+                    buildingBlocks.accept(Items.TUFF_BRICK_WALL);
+                    buildingBlocks.accept(Items.CHISELED_TUFF_BRICKS);
+                    buildingBlocks.accept(Items.BRICKS);
+                    buildingBlocks.accept(Items.BRICK_STAIRS);
+                    buildingBlocks.accept(Items.BRICK_SLAB);
+                    buildingBlocks.accept(Items.BRICK_WALL);
+                    buildingBlocks.accept(Items.PACKED_MUD);
+                    buildingBlocks.accept(Items.MUD_BRICKS);
+                    buildingBlocks.accept(Items.MUD_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.MUD_BRICK_SLAB);
+                    buildingBlocks.accept(Items.MUD_BRICK_WALL);
+                    buildingBlocks.accept(Items.RESIN_BRICKS);
+                    buildingBlocks.accept(Items.RESIN_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.RESIN_BRICK_SLAB);
+                    buildingBlocks.accept(Items.RESIN_BRICK_WALL);
+                    buildingBlocks.accept(Items.CHISELED_RESIN_BRICKS);
+                    buildingBlocks.accept(Items.SANDSTONE);
+                    buildingBlocks.accept(Items.SANDSTONE_STAIRS);
+                    buildingBlocks.accept(Items.SANDSTONE_SLAB);
+                    buildingBlocks.accept(Items.SANDSTONE_WALL);
+                    buildingBlocks.accept(Items.CHISELED_SANDSTONE);
+                    buildingBlocks.accept(Items.SMOOTH_SANDSTONE);
+                    buildingBlocks.accept(Items.SMOOTH_SANDSTONE_STAIRS);
+                    buildingBlocks.accept(Items.SMOOTH_SANDSTONE_SLAB);
+                    buildingBlocks.accept(Items.CUT_SANDSTONE);
+                    buildingBlocks.accept(Items.CUT_STANDSTONE_SLAB);
+                    buildingBlocks.accept(Items.RED_SANDSTONE);
+                    buildingBlocks.accept(Items.RED_SANDSTONE_STAIRS);
+                    buildingBlocks.accept(Items.RED_SANDSTONE_SLAB);
+                    buildingBlocks.accept(Items.RED_SANDSTONE_WALL);
+                    buildingBlocks.accept(Items.CHISELED_RED_SANDSTONE);
+                    buildingBlocks.accept(Items.SMOOTH_RED_SANDSTONE);
+                    buildingBlocks.accept(Items.SMOOTH_RED_SANDSTONE_STAIRS);
+                    buildingBlocks.accept(Items.SMOOTH_RED_SANDSTONE_SLAB);
+                    buildingBlocks.accept(Items.CUT_RED_SANDSTONE);
+                    buildingBlocks.accept(Items.CUT_RED_SANDSTONE_SLAB);
+                    buildingBlocks.accept(Items.CINNABAR);
+                    buildingBlocks.accept(Items.CINNABAR_STAIRS);
+                    buildingBlocks.accept(Items.CINNABAR_SLAB);
+                    buildingBlocks.accept(Items.CINNABAR_WALL);
+                    buildingBlocks.accept(Items.CHISELED_CINNABAR);
+                    buildingBlocks.accept(Items.POLISHED_CINNABAR);
+                    buildingBlocks.accept(Items.POLISHED_CINNABAR_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_CINNABAR_SLAB);
+                    buildingBlocks.accept(Items.POLISHED_CINNABAR_WALL);
+                    buildingBlocks.accept(Items.CINNABAR_BRICKS);
+                    buildingBlocks.accept(Items.CINNABAR_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.CINNABAR_BRICK_SLAB);
+                    buildingBlocks.accept(Items.CINNABAR_BRICK_WALL);
+                    buildingBlocks.accept(Items.SULFUR);
+                    buildingBlocks.accept(Items.SULFUR_STAIRS);
+                    buildingBlocks.accept(Items.SULFUR_SLAB);
+                    buildingBlocks.accept(Items.SULFUR_WALL);
+                    buildingBlocks.accept(Items.CHISELED_SULFUR);
+                    buildingBlocks.accept(Items.POLISHED_SULFUR);
+                    buildingBlocks.accept(Items.POLISHED_SULFUR_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_SULFUR_SLAB);
+                    buildingBlocks.accept(Items.POLISHED_SULFUR_WALL);
+                    buildingBlocks.accept(Items.SULFUR_BRICKS);
+                    buildingBlocks.accept(Items.SULFUR_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.SULFUR_BRICK_SLAB);
+                    buildingBlocks.accept(Items.SULFUR_BRICK_WALL);
+                    buildingBlocks.accept(Items.SEA_LANTERN);
+                    buildingBlocks.accept(Items.PRISMARINE);
+                    buildingBlocks.accept(Items.PRISMARINE_STAIRS);
+                    buildingBlocks.accept(Items.PRISMARINE_SLAB);
+                    buildingBlocks.accept(Items.PRISMARINE_WALL);
+                    buildingBlocks.accept(Items.PRISMARINE_BRICKS);
+                    buildingBlocks.accept(Items.PRISMARINE_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.PRISMARINE_BRICK_SLAB);
+                    buildingBlocks.accept(Items.DARK_PRISMARINE);
+                    buildingBlocks.accept(Items.DARK_PRISMARINE_STAIRS);
+                    buildingBlocks.accept(Items.DARK_PRISMARINE_SLAB);
+                    buildingBlocks.accept(Items.NETHERRACK);
+                    buildingBlocks.accept(Items.NETHER_BRICKS);
+                    buildingBlocks.accept(Items.CRACKED_NETHER_BRICKS);
+                    buildingBlocks.accept(Items.NETHER_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.NETHER_BRICK_SLAB);
+                    buildingBlocks.accept(Items.NETHER_BRICK_WALL);
+                    buildingBlocks.accept(Items.NETHER_BRICK_FENCE);
+                    buildingBlocks.accept(Items.CHISELED_NETHER_BRICKS);
+                    buildingBlocks.accept(Items.RED_NETHER_BRICKS);
+                    buildingBlocks.accept(Items.RED_NETHER_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.RED_NETHER_BRICK_SLAB);
+                    buildingBlocks.accept(Items.RED_NETHER_BRICK_WALL);
+                    buildingBlocks.accept(Items.BASALT);
+                    buildingBlocks.accept(Items.SMOOTH_BASALT);
+                    buildingBlocks.accept(Items.POLISHED_BASALT);
+                    buildingBlocks.accept(Items.BLACKSTONE);
+                    buildingBlocks.accept(Items.GILDED_BLACKSTONE);
+                    buildingBlocks.accept(Items.BLACKSTONE_STAIRS);
+                    buildingBlocks.accept(Items.BLACKSTONE_SLAB);
+                    buildingBlocks.accept(Items.BLACKSTONE_WALL);
+                    buildingBlocks.accept(Items.CHISELED_POLISHED_BLACKSTONE);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_SLAB);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_WALL);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_BUTTON);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_BRICKS);
+                    buildingBlocks.accept(Items.CRACKED_POLISHED_BLACKSTONE_BRICKS);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_BRICK_SLAB);
+                    buildingBlocks.accept(Items.POLISHED_BLACKSTONE_BRICK_WALL);
+                    buildingBlocks.accept(Items.END_STONE);
+                    buildingBlocks.accept(Items.END_STONE_BRICKS);
+                    buildingBlocks.accept(Items.END_STONE_BRICK_STAIRS);
+                    buildingBlocks.accept(Items.END_STONE_BRICK_SLAB);
+                    buildingBlocks.accept(Items.END_STONE_BRICK_WALL);
+                    buildingBlocks.accept(Items.PURPUR_BLOCK);
+                    buildingBlocks.accept(Items.PURPUR_PILLAR);
+                    buildingBlocks.accept(Items.PURPUR_STAIRS);
+                    buildingBlocks.accept(Items.PURPUR_SLAB);
+                    buildingBlocks.accept(Items.COAL_BLOCK);
+                    buildingBlocks.accept(Items.IRON_BLOCK);
+                    buildingBlocks.accept(Items.IRON_BARS);
+                    buildingBlocks.accept(Items.IRON_DOOR);
+                    buildingBlocks.accept(Items.IRON_TRAPDOOR);
+                    buildingBlocks.accept(Items.HEAVY_WEIGHTED_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.IRON_CHAIN);
+                    buildingBlocks.accept(Items.GOLD_BLOCK);
+                    buildingBlocks.accept(Items.LIGHT_WEIGHTED_PRESSURE_PLATE);
+                    buildingBlocks.accept(Items.REDSTONE_BLOCK);
+                    buildingBlocks.accept(Items.EMERALD_BLOCK);
+                    buildingBlocks.accept(Items.LAPIS_BLOCK);
+                    buildingBlocks.accept(Items.DIAMOND_BLOCK);
+                    buildingBlocks.accept(Items.NETHERITE_BLOCK);
+                    buildingBlocks.accept(Items.QUARTZ_BLOCK);
+                    buildingBlocks.accept(Items.QUARTZ_STAIRS);
+                    buildingBlocks.accept(Items.QUARTZ_SLAB);
+                    buildingBlocks.accept(Items.CHISELED_QUARTZ_BLOCK);
+                    buildingBlocks.accept(Items.QUARTZ_BRICKS);
+                    buildingBlocks.accept(Items.QUARTZ_PILLAR);
+                    buildingBlocks.accept(Items.SMOOTH_QUARTZ);
+                    buildingBlocks.accept(Items.SMOOTH_QUARTZ_STAIRS);
+                    buildingBlocks.accept(Items.SMOOTH_QUARTZ_SLAB);
+                    buildingBlocks.accept(Items.AMETHYST_BLOCK);
+                    copperBlockFamilies(family -> family.weathering().forEach(buildingBlocks::accept));
+                    copperBlockFamilies(family -> family.waxed().forEach(buildingBlocks::accept));
                 })
                 .build()
         );
+        List<DyeColor> gameplayColorOrder = List.of(
+            DyeColor.WHITE,
+            DyeColor.LIGHT_GRAY,
+            DyeColor.GRAY,
+            DyeColor.BLACK,
+            DyeColor.BROWN,
+            DyeColor.RED,
+            DyeColor.ORANGE,
+            DyeColor.YELLOW,
+            DyeColor.LIME,
+            DyeColor.GREEN,
+            DyeColor.CYAN,
+            DyeColor.LIGHT_BLUE,
+            DyeColor.BLUE,
+            DyeColor.PURPLE,
+            DyeColor.MAGENTA,
+            DyeColor.PINK
+        );
         Registry.register(
-            p_283144_,
+            registry,
             COLORED_BLOCKS,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 1)
                 .title(Component.translatable("itemGroup.coloredBlocks"))
-                .icon(() -> new ItemStack(Blocks.CYAN_WOOL))
-                .displayItems((p_271005_, p_259465_) -> {
-                    p_259465_.accept(Items.WHITE_WOOL);
-                    p_259465_.accept(Items.LIGHT_GRAY_WOOL);
-                    p_259465_.accept(Items.GRAY_WOOL);
-                    p_259465_.accept(Items.BLACK_WOOL);
-                    p_259465_.accept(Items.BROWN_WOOL);
-                    p_259465_.accept(Items.RED_WOOL);
-                    p_259465_.accept(Items.ORANGE_WOOL);
-                    p_259465_.accept(Items.YELLOW_WOOL);
-                    p_259465_.accept(Items.LIME_WOOL);
-                    p_259465_.accept(Items.GREEN_WOOL);
-                    p_259465_.accept(Items.CYAN_WOOL);
-                    p_259465_.accept(Items.LIGHT_BLUE_WOOL);
-                    p_259465_.accept(Items.BLUE_WOOL);
-                    p_259465_.accept(Items.PURPLE_WOOL);
-                    p_259465_.accept(Items.MAGENTA_WOOL);
-                    p_259465_.accept(Items.PINK_WOOL);
-                    p_259465_.accept(Items.WHITE_CARPET);
-                    p_259465_.accept(Items.LIGHT_GRAY_CARPET);
-                    p_259465_.accept(Items.GRAY_CARPET);
-                    p_259465_.accept(Items.BLACK_CARPET);
-                    p_259465_.accept(Items.BROWN_CARPET);
-                    p_259465_.accept(Items.RED_CARPET);
-                    p_259465_.accept(Items.ORANGE_CARPET);
-                    p_259465_.accept(Items.YELLOW_CARPET);
-                    p_259465_.accept(Items.LIME_CARPET);
-                    p_259465_.accept(Items.GREEN_CARPET);
-                    p_259465_.accept(Items.CYAN_CARPET);
-                    p_259465_.accept(Items.LIGHT_BLUE_CARPET);
-                    p_259465_.accept(Items.BLUE_CARPET);
-                    p_259465_.accept(Items.PURPLE_CARPET);
-                    p_259465_.accept(Items.MAGENTA_CARPET);
-                    p_259465_.accept(Items.PINK_CARPET);
-                    p_259465_.accept(Items.TERRACOTTA);
-                    p_259465_.accept(Items.WHITE_TERRACOTTA);
-                    p_259465_.accept(Items.LIGHT_GRAY_TERRACOTTA);
-                    p_259465_.accept(Items.GRAY_TERRACOTTA);
-                    p_259465_.accept(Items.BLACK_TERRACOTTA);
-                    p_259465_.accept(Items.BROWN_TERRACOTTA);
-                    p_259465_.accept(Items.RED_TERRACOTTA);
-                    p_259465_.accept(Items.ORANGE_TERRACOTTA);
-                    p_259465_.accept(Items.YELLOW_TERRACOTTA);
-                    p_259465_.accept(Items.LIME_TERRACOTTA);
-                    p_259465_.accept(Items.GREEN_TERRACOTTA);
-                    p_259465_.accept(Items.CYAN_TERRACOTTA);
-                    p_259465_.accept(Items.LIGHT_BLUE_TERRACOTTA);
-                    p_259465_.accept(Items.BLUE_TERRACOTTA);
-                    p_259465_.accept(Items.PURPLE_TERRACOTTA);
-                    p_259465_.accept(Items.MAGENTA_TERRACOTTA);
-                    p_259465_.accept(Items.PINK_TERRACOTTA);
-                    p_259465_.accept(Items.WHITE_CONCRETE);
-                    p_259465_.accept(Items.LIGHT_GRAY_CONCRETE);
-                    p_259465_.accept(Items.GRAY_CONCRETE);
-                    p_259465_.accept(Items.BLACK_CONCRETE);
-                    p_259465_.accept(Items.BROWN_CONCRETE);
-                    p_259465_.accept(Items.RED_CONCRETE);
-                    p_259465_.accept(Items.ORANGE_CONCRETE);
-                    p_259465_.accept(Items.YELLOW_CONCRETE);
-                    p_259465_.accept(Items.LIME_CONCRETE);
-                    p_259465_.accept(Items.GREEN_CONCRETE);
-                    p_259465_.accept(Items.CYAN_CONCRETE);
-                    p_259465_.accept(Items.LIGHT_BLUE_CONCRETE);
-                    p_259465_.accept(Items.BLUE_CONCRETE);
-                    p_259465_.accept(Items.PURPLE_CONCRETE);
-                    p_259465_.accept(Items.MAGENTA_CONCRETE);
-                    p_259465_.accept(Items.PINK_CONCRETE);
-                    p_259465_.accept(Items.WHITE_CONCRETE_POWDER);
-                    p_259465_.accept(Items.LIGHT_GRAY_CONCRETE_POWDER);
-                    p_259465_.accept(Items.GRAY_CONCRETE_POWDER);
-                    p_259465_.accept(Items.BLACK_CONCRETE_POWDER);
-                    p_259465_.accept(Items.BROWN_CONCRETE_POWDER);
-                    p_259465_.accept(Items.RED_CONCRETE_POWDER);
-                    p_259465_.accept(Items.ORANGE_CONCRETE_POWDER);
-                    p_259465_.accept(Items.YELLOW_CONCRETE_POWDER);
-                    p_259465_.accept(Items.LIME_CONCRETE_POWDER);
-                    p_259465_.accept(Items.GREEN_CONCRETE_POWDER);
-                    p_259465_.accept(Items.CYAN_CONCRETE_POWDER);
-                    p_259465_.accept(Items.LIGHT_BLUE_CONCRETE_POWDER);
-                    p_259465_.accept(Items.BLUE_CONCRETE_POWDER);
-                    p_259465_.accept(Items.PURPLE_CONCRETE_POWDER);
-                    p_259465_.accept(Items.MAGENTA_CONCRETE_POWDER);
-                    p_259465_.accept(Items.PINK_CONCRETE_POWDER);
-                    p_259465_.accept(Items.WHITE_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.LIGHT_GRAY_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.GRAY_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.BLACK_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.BROWN_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.RED_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.ORANGE_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.YELLOW_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.LIME_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.GREEN_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.CYAN_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.LIGHT_BLUE_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.BLUE_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.PURPLE_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.MAGENTA_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.PINK_GLAZED_TERRACOTTA);
-                    p_259465_.accept(Items.GLASS);
-                    p_259465_.accept(Items.TINTED_GLASS);
-                    p_259465_.accept(Items.WHITE_STAINED_GLASS);
-                    p_259465_.accept(Items.LIGHT_GRAY_STAINED_GLASS);
-                    p_259465_.accept(Items.GRAY_STAINED_GLASS);
-                    p_259465_.accept(Items.BLACK_STAINED_GLASS);
-                    p_259465_.accept(Items.BROWN_STAINED_GLASS);
-                    p_259465_.accept(Items.RED_STAINED_GLASS);
-                    p_259465_.accept(Items.ORANGE_STAINED_GLASS);
-                    p_259465_.accept(Items.YELLOW_STAINED_GLASS);
-                    p_259465_.accept(Items.LIME_STAINED_GLASS);
-                    p_259465_.accept(Items.GREEN_STAINED_GLASS);
-                    p_259465_.accept(Items.CYAN_STAINED_GLASS);
-                    p_259465_.accept(Items.LIGHT_BLUE_STAINED_GLASS);
-                    p_259465_.accept(Items.BLUE_STAINED_GLASS);
-                    p_259465_.accept(Items.PURPLE_STAINED_GLASS);
-                    p_259465_.accept(Items.MAGENTA_STAINED_GLASS);
-                    p_259465_.accept(Items.PINK_STAINED_GLASS);
-                    p_259465_.accept(Items.GLASS_PANE);
-                    p_259465_.accept(Items.WHITE_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.LIGHT_GRAY_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.GRAY_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.BLACK_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.BROWN_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.RED_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.ORANGE_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.YELLOW_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.LIME_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.GREEN_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.CYAN_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.LIGHT_BLUE_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.BLUE_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.PURPLE_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.MAGENTA_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.PINK_STAINED_GLASS_PANE);
-                    p_259465_.accept(Items.SHULKER_BOX);
-                    p_259465_.accept(Items.WHITE_SHULKER_BOX);
-                    p_259465_.accept(Items.LIGHT_GRAY_SHULKER_BOX);
-                    p_259465_.accept(Items.GRAY_SHULKER_BOX);
-                    p_259465_.accept(Items.BLACK_SHULKER_BOX);
-                    p_259465_.accept(Items.BROWN_SHULKER_BOX);
-                    p_259465_.accept(Items.RED_SHULKER_BOX);
-                    p_259465_.accept(Items.ORANGE_SHULKER_BOX);
-                    p_259465_.accept(Items.YELLOW_SHULKER_BOX);
-                    p_259465_.accept(Items.LIME_SHULKER_BOX);
-                    p_259465_.accept(Items.GREEN_SHULKER_BOX);
-                    p_259465_.accept(Items.CYAN_SHULKER_BOX);
-                    p_259465_.accept(Items.LIGHT_BLUE_SHULKER_BOX);
-                    p_259465_.accept(Items.BLUE_SHULKER_BOX);
-                    p_259465_.accept(Items.PURPLE_SHULKER_BOX);
-                    p_259465_.accept(Items.MAGENTA_SHULKER_BOX);
-                    p_259465_.accept(Items.PINK_SHULKER_BOX);
-                    p_259465_.accept(Items.WHITE_BED);
-                    p_259465_.accept(Items.LIGHT_GRAY_BED);
-                    p_259465_.accept(Items.GRAY_BED);
-                    p_259465_.accept(Items.BLACK_BED);
-                    p_259465_.accept(Items.BROWN_BED);
-                    p_259465_.accept(Items.RED_BED);
-                    p_259465_.accept(Items.ORANGE_BED);
-                    p_259465_.accept(Items.YELLOW_BED);
-                    p_259465_.accept(Items.LIME_BED);
-                    p_259465_.accept(Items.GREEN_BED);
-                    p_259465_.accept(Items.CYAN_BED);
-                    p_259465_.accept(Items.LIGHT_BLUE_BED);
-                    p_259465_.accept(Items.BLUE_BED);
-                    p_259465_.accept(Items.PURPLE_BED);
-                    p_259465_.accept(Items.MAGENTA_BED);
-                    p_259465_.accept(Items.PINK_BED);
-                    p_259465_.accept(Items.CANDLE);
-                    p_259465_.accept(Items.WHITE_CANDLE);
-                    p_259465_.accept(Items.LIGHT_GRAY_CANDLE);
-                    p_259465_.accept(Items.GRAY_CANDLE);
-                    p_259465_.accept(Items.BLACK_CANDLE);
-                    p_259465_.accept(Items.BROWN_CANDLE);
-                    p_259465_.accept(Items.RED_CANDLE);
-                    p_259465_.accept(Items.ORANGE_CANDLE);
-                    p_259465_.accept(Items.YELLOW_CANDLE);
-                    p_259465_.accept(Items.LIME_CANDLE);
-                    p_259465_.accept(Items.GREEN_CANDLE);
-                    p_259465_.accept(Items.CYAN_CANDLE);
-                    p_259465_.accept(Items.LIGHT_BLUE_CANDLE);
-                    p_259465_.accept(Items.BLUE_CANDLE);
-                    p_259465_.accept(Items.PURPLE_CANDLE);
-                    p_259465_.accept(Items.MAGENTA_CANDLE);
-                    p_259465_.accept(Items.PINK_CANDLE);
-                    p_259465_.accept(Items.WHITE_BANNER);
-                    p_259465_.accept(Items.LIGHT_GRAY_BANNER);
-                    p_259465_.accept(Items.GRAY_BANNER);
-                    p_259465_.accept(Items.BLACK_BANNER);
-                    p_259465_.accept(Items.BROWN_BANNER);
-                    p_259465_.accept(Items.RED_BANNER);
-                    p_259465_.accept(Items.ORANGE_BANNER);
-                    p_259465_.accept(Items.YELLOW_BANNER);
-                    p_259465_.accept(Items.LIME_BANNER);
-                    p_259465_.accept(Items.GREEN_BANNER);
-                    p_259465_.accept(Items.CYAN_BANNER);
-                    p_259465_.accept(Items.LIGHT_BLUE_BANNER);
-                    p_259465_.accept(Items.BLUE_BANNER);
-                    p_259465_.accept(Items.PURPLE_BANNER);
-                    p_259465_.accept(Items.MAGENTA_BANNER);
-                    p_259465_.accept(Items.PINK_BANNER);
+                .icon(() -> new ItemStack(Blocks.WOOL.cyan()))
+                .displayItems((parameters, coloredBlocks) -> {
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.WOOL);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.CARPET);
+                    coloredBlocks.accept(Items.TERRACOTTA);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.DYED_TERRACOTTA);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.CONCRETE);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.CONCRETE_POWDER);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.GLAZED_TERRACOTTA);
+                    coloredBlocks.accept(Items.GLASS);
+                    coloredBlocks.accept(Items.TINTED_GLASS);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.STAINED_GLASS);
+                    coloredBlocks.accept(Items.GLASS_PANE);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.STAINED_GLASS_PANE);
+                    coloredBlocks.accept(Items.SHULKER_BOX);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.DYED_SHULKER_BOX);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.BED);
+                    coloredBlocks.accept(Items.CANDLE);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.DYED_CANDLE);
+                    registerColoredItems(coloredBlocks, gameplayColorOrder, Items.BANNER);
                 })
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             NATURAL_BLOCKS,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 2)
                 .title(Component.translatable("itemGroup.natural"))
                 .icon(() -> new ItemStack(Blocks.GRASS_BLOCK))
-                .displayItems((p_405588_, p_405589_) -> {
-                    p_405589_.accept(Items.GRASS_BLOCK);
-                    p_405589_.accept(Items.PODZOL);
-                    p_405589_.accept(Items.MYCELIUM);
-                    p_405589_.accept(Items.DIRT_PATH);
-                    p_405589_.accept(Items.DIRT);
-                    p_405589_.accept(Items.COARSE_DIRT);
-                    p_405589_.accept(Items.ROOTED_DIRT);
-                    p_405589_.accept(Items.FARMLAND);
-                    p_405589_.accept(Items.MUD);
-                    p_405589_.accept(Items.CLAY);
-                    p_405589_.accept(Items.GRAVEL);
-                    p_405589_.accept(Items.SAND);
-                    p_405589_.accept(Items.SANDSTONE);
-                    p_405589_.accept(Items.RED_SAND);
-                    p_405589_.accept(Items.RED_SANDSTONE);
-                    p_405589_.accept(Items.ICE);
-                    p_405589_.accept(Items.PACKED_ICE);
-                    p_405589_.accept(Items.BLUE_ICE);
-                    p_405589_.accept(Items.SNOW_BLOCK);
-                    p_405589_.accept(Items.SNOW);
-                    p_405589_.accept(Items.MOSS_BLOCK);
-                    p_405589_.accept(Items.MOSS_CARPET);
-                    p_405589_.accept(Items.PALE_MOSS_BLOCK);
-                    p_405589_.accept(Items.PALE_MOSS_CARPET);
-                    p_405589_.accept(Items.PALE_HANGING_MOSS);
-                    p_405589_.accept(Items.STONE);
-                    p_405589_.accept(Items.DEEPSLATE);
-                    p_405589_.accept(Items.GRANITE);
-                    p_405589_.accept(Items.DIORITE);
-                    p_405589_.accept(Items.ANDESITE);
-                    p_405589_.accept(Items.CALCITE);
-                    p_405589_.accept(Items.TUFF);
-                    p_405589_.accept(Items.DRIPSTONE_BLOCK);
-                    p_405589_.accept(Items.POINTED_DRIPSTONE);
-                    p_405589_.accept(Items.PRISMARINE);
-                    p_405589_.accept(Items.MAGMA_BLOCK);
-                    p_405589_.accept(Items.OBSIDIAN);
-                    p_405589_.accept(Items.CRYING_OBSIDIAN);
-                    p_405589_.accept(Items.NETHERRACK);
-                    p_405589_.accept(Items.CRIMSON_NYLIUM);
-                    p_405589_.accept(Items.WARPED_NYLIUM);
-                    p_405589_.accept(Items.SOUL_SAND);
-                    p_405589_.accept(Items.SOUL_SOIL);
-                    p_405589_.accept(Items.BONE_BLOCK);
-                    p_405589_.accept(Items.BLACKSTONE);
-                    p_405589_.accept(Items.BASALT);
-                    p_405589_.accept(Items.SMOOTH_BASALT);
-                    p_405589_.accept(Items.END_STONE);
-                    p_405589_.accept(Items.COAL_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_COAL_ORE);
-                    p_405589_.accept(Items.IRON_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_IRON_ORE);
-                    p_405589_.accept(Items.COPPER_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_COPPER_ORE);
-                    p_405589_.accept(Items.GOLD_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_GOLD_ORE);
-                    p_405589_.accept(Items.REDSTONE_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_REDSTONE_ORE);
-                    p_405589_.accept(Items.EMERALD_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_EMERALD_ORE);
-                    p_405589_.accept(Items.LAPIS_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_LAPIS_ORE);
-                    p_405589_.accept(Items.DIAMOND_ORE);
-                    p_405589_.accept(Items.DEEPSLATE_DIAMOND_ORE);
-                    p_405589_.accept(Items.NETHER_GOLD_ORE);
-                    p_405589_.accept(Items.NETHER_QUARTZ_ORE);
-                    p_405589_.accept(Items.ANCIENT_DEBRIS);
-                    p_405589_.accept(Items.RAW_IRON_BLOCK);
-                    p_405589_.accept(Items.RAW_COPPER_BLOCK);
-                    p_405589_.accept(Items.RAW_GOLD_BLOCK);
-                    p_405589_.accept(Items.GLOWSTONE);
-                    p_405589_.accept(Items.AMETHYST_BLOCK);
-                    p_405589_.accept(Items.BUDDING_AMETHYST);
-                    p_405589_.accept(Items.SMALL_AMETHYST_BUD);
-                    p_405589_.accept(Items.MEDIUM_AMETHYST_BUD);
-                    p_405589_.accept(Items.LARGE_AMETHYST_BUD);
-                    p_405589_.accept(Items.AMETHYST_CLUSTER);
-                    p_405589_.accept(Items.OAK_LOG);
-                    p_405589_.accept(Items.SPRUCE_LOG);
-                    p_405589_.accept(Items.BIRCH_LOG);
-                    p_405589_.accept(Items.JUNGLE_LOG);
-                    p_405589_.accept(Items.ACACIA_LOG);
-                    p_405589_.accept(Items.DARK_OAK_LOG);
-                    p_405589_.accept(Items.MANGROVE_LOG);
-                    p_405589_.accept(Items.MANGROVE_ROOTS);
-                    p_405589_.accept(Items.MUDDY_MANGROVE_ROOTS);
-                    p_405589_.accept(Items.CHERRY_LOG);
-                    p_405589_.accept(Items.PALE_OAK_LOG);
-                    p_405589_.accept(Items.MUSHROOM_STEM);
-                    p_405589_.accept(Items.CRIMSON_STEM);
-                    p_405589_.accept(Items.WARPED_STEM);
-                    p_405589_.accept(Items.OAK_LEAVES);
-                    p_405589_.accept(Items.SPRUCE_LEAVES);
-                    p_405589_.accept(Items.BIRCH_LEAVES);
-                    p_405589_.accept(Items.JUNGLE_LEAVES);
-                    p_405589_.accept(Items.ACACIA_LEAVES);
-                    p_405589_.accept(Items.DARK_OAK_LEAVES);
-                    p_405589_.accept(Items.MANGROVE_LEAVES);
-                    p_405589_.accept(Items.CHERRY_LEAVES);
-                    p_405589_.accept(Items.PALE_OAK_LEAVES);
-                    p_405589_.accept(Items.AZALEA_LEAVES);
-                    p_405589_.accept(Items.FLOWERING_AZALEA_LEAVES);
-                    p_405589_.accept(Items.BROWN_MUSHROOM_BLOCK);
-                    p_405589_.accept(Items.RED_MUSHROOM_BLOCK);
-                    p_405589_.accept(Items.NETHER_WART_BLOCK);
-                    p_405589_.accept(Items.WARPED_WART_BLOCK);
-                    p_405589_.accept(Items.SHROOMLIGHT);
-                    p_405589_.accept(Items.OAK_SAPLING);
-                    p_405589_.accept(Items.SPRUCE_SAPLING);
-                    p_405589_.accept(Items.BIRCH_SAPLING);
-                    p_405589_.accept(Items.JUNGLE_SAPLING);
-                    p_405589_.accept(Items.ACACIA_SAPLING);
-                    p_405589_.accept(Items.DARK_OAK_SAPLING);
-                    p_405589_.accept(Items.MANGROVE_PROPAGULE);
-                    p_405589_.accept(Items.CHERRY_SAPLING);
-                    p_405589_.accept(Items.PALE_OAK_SAPLING);
-                    p_405589_.accept(Items.AZALEA);
-                    p_405589_.accept(Items.FLOWERING_AZALEA);
-                    p_405589_.accept(Items.BROWN_MUSHROOM);
-                    p_405589_.accept(Items.RED_MUSHROOM);
-                    p_405589_.accept(Items.CRIMSON_FUNGUS);
-                    p_405589_.accept(Items.WARPED_FUNGUS);
-                    p_405589_.accept(Items.SHORT_GRASS);
-                    p_405589_.accept(Items.FERN);
-                    p_405589_.accept(Items.DRY_SHORT_GRASS);
-                    p_405589_.accept(Items.BUSH);
-                    p_405589_.accept(Items.DEAD_BUSH);
-                    p_405589_.accept(Items.DANDELION);
-                    p_405589_.accept(Items.POPPY);
-                    p_405589_.accept(Items.BLUE_ORCHID);
-                    p_405589_.accept(Items.ALLIUM);
-                    p_405589_.accept(Items.AZURE_BLUET);
-                    p_405589_.accept(Items.RED_TULIP);
-                    p_405589_.accept(Items.ORANGE_TULIP);
-                    p_405589_.accept(Items.WHITE_TULIP);
-                    p_405589_.accept(Items.PINK_TULIP);
-                    p_405589_.accept(Items.OXEYE_DAISY);
-                    p_405589_.accept(Items.CORNFLOWER);
-                    p_405589_.accept(Items.LILY_OF_THE_VALLEY);
-                    p_405589_.accept(Items.TORCHFLOWER);
-                    p_405589_.accept(Items.CACTUS_FLOWER);
-                    p_405589_.accept(Items.CLOSED_EYEBLOSSOM);
-                    p_405589_.accept(Items.OPEN_EYEBLOSSOM);
-                    p_405589_.accept(Items.WITHER_ROSE);
-                    p_405589_.accept(Items.PINK_PETALS);
-                    p_405589_.accept(Items.WILDFLOWERS);
-                    p_405589_.accept(Items.LEAF_LITTER);
-                    p_405589_.accept(Items.SPORE_BLOSSOM);
-                    p_405589_.accept(Items.FIREFLY_BUSH);
-                    p_405589_.accept(Items.BAMBOO);
-                    p_405589_.accept(Items.SUGAR_CANE);
-                    p_405589_.accept(Items.CACTUS);
-                    p_405589_.accept(Items.CRIMSON_ROOTS);
-                    p_405589_.accept(Items.WARPED_ROOTS);
-                    p_405589_.accept(Items.NETHER_SPROUTS);
-                    p_405589_.accept(Items.WEEPING_VINES);
-                    p_405589_.accept(Items.TWISTING_VINES);
-                    p_405589_.accept(Items.VINE);
-                    p_405589_.accept(Items.TALL_GRASS);
-                    p_405589_.accept(Items.LARGE_FERN);
-                    p_405589_.accept(Items.DRY_TALL_GRASS);
-                    p_405589_.accept(Items.SUNFLOWER);
-                    p_405589_.accept(Items.LILAC);
-                    p_405589_.accept(Items.ROSE_BUSH);
-                    p_405589_.accept(Items.PEONY);
-                    p_405589_.accept(Items.PITCHER_PLANT);
-                    p_405589_.accept(Items.BIG_DRIPLEAF);
-                    p_405589_.accept(Items.SMALL_DRIPLEAF);
-                    p_405589_.accept(Items.CHORUS_PLANT);
-                    p_405589_.accept(Items.CHORUS_FLOWER);
-                    p_405589_.accept(Items.GLOW_LICHEN);
-                    p_405589_.accept(Items.HANGING_ROOTS);
-                    p_405589_.accept(Items.FROGSPAWN);
-                    p_405589_.accept(Items.TURTLE_EGG);
-                    p_405589_.accept(Items.SNIFFER_EGG);
-                    p_405589_.accept(Items.DRIED_GHAST);
-                    p_405589_.accept(Items.WHEAT_SEEDS);
-                    p_405589_.accept(Items.COCOA_BEANS);
-                    p_405589_.accept(Items.PUMPKIN_SEEDS);
-                    p_405589_.accept(Items.MELON_SEEDS);
-                    p_405589_.accept(Items.BEETROOT_SEEDS);
-                    p_405589_.accept(Items.TORCHFLOWER_SEEDS);
-                    p_405589_.accept(Items.PITCHER_POD);
-                    p_405589_.accept(Items.GLOW_BERRIES);
-                    p_405589_.accept(Items.SWEET_BERRIES);
-                    p_405589_.accept(Items.NETHER_WART);
-                    p_405589_.accept(Items.LILY_PAD);
-                    p_405589_.accept(Items.SEAGRASS);
-                    p_405589_.accept(Items.SEA_PICKLE);
-                    p_405589_.accept(Items.KELP);
-                    p_405589_.accept(Items.DRIED_KELP_BLOCK);
-                    p_405589_.accept(Items.TUBE_CORAL_BLOCK);
-                    p_405589_.accept(Items.BRAIN_CORAL_BLOCK);
-                    p_405589_.accept(Items.BUBBLE_CORAL_BLOCK);
-                    p_405589_.accept(Items.FIRE_CORAL_BLOCK);
-                    p_405589_.accept(Items.HORN_CORAL_BLOCK);
-                    p_405589_.accept(Items.DEAD_TUBE_CORAL_BLOCK);
-                    p_405589_.accept(Items.DEAD_BRAIN_CORAL_BLOCK);
-                    p_405589_.accept(Items.DEAD_BUBBLE_CORAL_BLOCK);
-                    p_405589_.accept(Items.DEAD_FIRE_CORAL_BLOCK);
-                    p_405589_.accept(Items.DEAD_HORN_CORAL_BLOCK);
-                    p_405589_.accept(Items.TUBE_CORAL);
-                    p_405589_.accept(Items.BRAIN_CORAL);
-                    p_405589_.accept(Items.BUBBLE_CORAL);
-                    p_405589_.accept(Items.FIRE_CORAL);
-                    p_405589_.accept(Items.HORN_CORAL);
-                    p_405589_.accept(Items.DEAD_TUBE_CORAL);
-                    p_405589_.accept(Items.DEAD_BRAIN_CORAL);
-                    p_405589_.accept(Items.DEAD_BUBBLE_CORAL);
-                    p_405589_.accept(Items.DEAD_FIRE_CORAL);
-                    p_405589_.accept(Items.DEAD_HORN_CORAL);
-                    p_405589_.accept(Items.TUBE_CORAL_FAN);
-                    p_405589_.accept(Items.BRAIN_CORAL_FAN);
-                    p_405589_.accept(Items.BUBBLE_CORAL_FAN);
-                    p_405589_.accept(Items.FIRE_CORAL_FAN);
-                    p_405589_.accept(Items.HORN_CORAL_FAN);
-                    p_405589_.accept(Items.DEAD_TUBE_CORAL_FAN);
-                    p_405589_.accept(Items.DEAD_BRAIN_CORAL_FAN);
-                    p_405589_.accept(Items.DEAD_BUBBLE_CORAL_FAN);
-                    p_405589_.accept(Items.DEAD_FIRE_CORAL_FAN);
-                    p_405589_.accept(Items.DEAD_HORN_CORAL_FAN);
-                    p_405589_.accept(Items.SPONGE);
-                    p_405589_.accept(Items.WET_SPONGE);
-                    p_405589_.accept(Items.MELON);
-                    p_405589_.accept(Items.PUMPKIN);
-                    p_405589_.accept(Items.CARVED_PUMPKIN);
-                    p_405589_.accept(Items.JACK_O_LANTERN);
-                    p_405589_.accept(Items.HAY_BLOCK);
-                    p_405589_.accept(Items.BEE_NEST);
-                    p_405589_.accept(Items.HONEYCOMB_BLOCK);
-                    p_405589_.accept(Items.SLIME_BLOCK);
-                    p_405589_.accept(Items.HONEY_BLOCK);
-                    p_405589_.accept(Items.RESIN_BLOCK);
-                    p_405589_.accept(Items.OCHRE_FROGLIGHT);
-                    p_405589_.accept(Items.VERDANT_FROGLIGHT);
-                    p_405589_.accept(Items.PEARLESCENT_FROGLIGHT);
-                    p_405589_.accept(Items.SCULK);
-                    p_405589_.accept(Items.SCULK_VEIN);
-                    p_405589_.accept(Items.SCULK_CATALYST);
-                    p_405589_.accept(Items.SCULK_SHRIEKER);
-                    p_405589_.accept(Items.SCULK_SENSOR);
-                    p_405589_.accept(Items.COBWEB);
-                    p_405589_.accept(Items.BEDROCK);
+                .displayItems((parameters, naturalBlocks) -> {
+                    naturalBlocks.accept(Items.GRASS_BLOCK);
+                    naturalBlocks.accept(Items.PODZOL);
+                    naturalBlocks.accept(Items.MYCELIUM);
+                    naturalBlocks.accept(Items.DIRT_PATH);
+                    naturalBlocks.accept(Items.DIRT);
+                    naturalBlocks.accept(Items.COARSE_DIRT);
+                    naturalBlocks.accept(Items.ROOTED_DIRT);
+                    naturalBlocks.accept(Items.FARMLAND);
+                    naturalBlocks.accept(Items.MUD);
+                    naturalBlocks.accept(Items.CLAY);
+                    naturalBlocks.accept(Items.GRAVEL);
+                    naturalBlocks.accept(Items.SAND);
+                    naturalBlocks.accept(Items.SANDSTONE);
+                    naturalBlocks.accept(Items.RED_SAND);
+                    naturalBlocks.accept(Items.RED_SANDSTONE);
+                    naturalBlocks.accept(Items.ICE);
+                    naturalBlocks.accept(Items.PACKED_ICE);
+                    naturalBlocks.accept(Items.BLUE_ICE);
+                    naturalBlocks.accept(Items.SNOW_BLOCK);
+                    naturalBlocks.accept(Items.SNOW);
+                    naturalBlocks.accept(Items.MOSS_BLOCK);
+                    naturalBlocks.accept(Items.MOSS_CARPET);
+                    naturalBlocks.accept(Items.PALE_MOSS_BLOCK);
+                    naturalBlocks.accept(Items.PALE_MOSS_CARPET);
+                    naturalBlocks.accept(Items.PALE_HANGING_MOSS);
+                    naturalBlocks.accept(Items.STONE);
+                    naturalBlocks.accept(Items.DEEPSLATE);
+                    naturalBlocks.accept(Items.GRANITE);
+                    naturalBlocks.accept(Items.DIORITE);
+                    naturalBlocks.accept(Items.ANDESITE);
+                    naturalBlocks.accept(Items.CALCITE);
+                    naturalBlocks.accept(Items.TUFF);
+                    naturalBlocks.accept(Items.DRIPSTONE_BLOCK);
+                    naturalBlocks.accept(Items.POINTED_DRIPSTONE);
+                    naturalBlocks.accept(Items.PRISMARINE);
+                    naturalBlocks.accept(Items.CINNABAR);
+                    naturalBlocks.accept(Items.SULFUR);
+                    naturalBlocks.accept(Items.SULFUR_SPIKE);
+                    naturalBlocks.accept(Items.POTENT_SULFUR);
+                    naturalBlocks.accept(Items.MAGMA_BLOCK);
+                    naturalBlocks.accept(Items.OBSIDIAN);
+                    naturalBlocks.accept(Items.CRYING_OBSIDIAN);
+                    naturalBlocks.accept(Items.NETHERRACK);
+                    naturalBlocks.accept(Items.CRIMSON_NYLIUM);
+                    naturalBlocks.accept(Items.WARPED_NYLIUM);
+                    naturalBlocks.accept(Items.SOUL_SAND);
+                    naturalBlocks.accept(Items.SOUL_SOIL);
+                    naturalBlocks.accept(Items.BONE_BLOCK);
+                    naturalBlocks.accept(Items.BLACKSTONE);
+                    naturalBlocks.accept(Items.BASALT);
+                    naturalBlocks.accept(Items.SMOOTH_BASALT);
+                    naturalBlocks.accept(Items.END_STONE);
+                    naturalBlocks.accept(Items.COAL_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_COAL_ORE);
+                    naturalBlocks.accept(Items.IRON_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_IRON_ORE);
+                    naturalBlocks.accept(Items.COPPER_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_COPPER_ORE);
+                    naturalBlocks.accept(Items.GOLD_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_GOLD_ORE);
+                    naturalBlocks.accept(Items.REDSTONE_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_REDSTONE_ORE);
+                    naturalBlocks.accept(Items.EMERALD_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_EMERALD_ORE);
+                    naturalBlocks.accept(Items.LAPIS_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_LAPIS_ORE);
+                    naturalBlocks.accept(Items.DIAMOND_ORE);
+                    naturalBlocks.accept(Items.DEEPSLATE_DIAMOND_ORE);
+                    naturalBlocks.accept(Items.NETHER_GOLD_ORE);
+                    naturalBlocks.accept(Items.NETHER_QUARTZ_ORE);
+                    naturalBlocks.accept(Items.ANCIENT_DEBRIS);
+                    naturalBlocks.accept(Items.RAW_IRON_BLOCK);
+                    naturalBlocks.accept(Items.RAW_COPPER_BLOCK);
+                    naturalBlocks.accept(Items.RAW_GOLD_BLOCK);
+                    naturalBlocks.accept(Items.GLOWSTONE);
+                    naturalBlocks.accept(Items.AMETHYST_BLOCK);
+                    naturalBlocks.accept(Items.BUDDING_AMETHYST);
+                    naturalBlocks.accept(Items.SMALL_AMETHYST_BUD);
+                    naturalBlocks.accept(Items.MEDIUM_AMETHYST_BUD);
+                    naturalBlocks.accept(Items.LARGE_AMETHYST_BUD);
+                    naturalBlocks.accept(Items.AMETHYST_CLUSTER);
+                    naturalBlocks.accept(Items.OAK_LOG);
+                    naturalBlocks.accept(Items.SPRUCE_LOG);
+                    naturalBlocks.accept(Items.BIRCH_LOG);
+                    naturalBlocks.accept(Items.JUNGLE_LOG);
+                    naturalBlocks.accept(Items.ACACIA_LOG);
+                    naturalBlocks.accept(Items.DARK_OAK_LOG);
+                    naturalBlocks.accept(Items.MANGROVE_LOG);
+                    naturalBlocks.accept(Items.MANGROVE_ROOTS);
+                    naturalBlocks.accept(Items.MUDDY_MANGROVE_ROOTS);
+                    naturalBlocks.accept(Items.CHERRY_LOG);
+                    naturalBlocks.accept(Items.PALE_OAK_LOG);
+                    naturalBlocks.accept(Items.MUSHROOM_STEM);
+                    naturalBlocks.accept(Items.CRIMSON_STEM);
+                    naturalBlocks.accept(Items.WARPED_STEM);
+                    naturalBlocks.accept(Items.OAK_LEAVES);
+                    naturalBlocks.accept(Items.SPRUCE_LEAVES);
+                    naturalBlocks.accept(Items.BIRCH_LEAVES);
+                    naturalBlocks.accept(Items.JUNGLE_LEAVES);
+                    naturalBlocks.accept(Items.ACACIA_LEAVES);
+                    naturalBlocks.accept(Items.DARK_OAK_LEAVES);
+                    naturalBlocks.accept(Items.MANGROVE_LEAVES);
+                    naturalBlocks.accept(Items.CHERRY_LEAVES);
+                    naturalBlocks.accept(Items.PALE_OAK_LEAVES);
+                    naturalBlocks.accept(Items.AZALEA_LEAVES);
+                    naturalBlocks.accept(Items.FLOWERING_AZALEA_LEAVES);
+                    naturalBlocks.accept(Items.BROWN_MUSHROOM_BLOCK);
+                    naturalBlocks.accept(Items.RED_MUSHROOM_BLOCK);
+                    naturalBlocks.accept(Items.NETHER_WART_BLOCK);
+                    naturalBlocks.accept(Items.WARPED_WART_BLOCK);
+                    naturalBlocks.accept(Items.SHROOMLIGHT);
+                    naturalBlocks.accept(Items.OAK_SAPLING);
+                    naturalBlocks.accept(Items.SPRUCE_SAPLING);
+                    naturalBlocks.accept(Items.BIRCH_SAPLING);
+                    naturalBlocks.accept(Items.JUNGLE_SAPLING);
+                    naturalBlocks.accept(Items.ACACIA_SAPLING);
+                    naturalBlocks.accept(Items.DARK_OAK_SAPLING);
+                    naturalBlocks.accept(Items.MANGROVE_PROPAGULE);
+                    naturalBlocks.accept(Items.CHERRY_SAPLING);
+                    naturalBlocks.accept(Items.PALE_OAK_SAPLING);
+                    naturalBlocks.accept(Items.AZALEA);
+                    naturalBlocks.accept(Items.FLOWERING_AZALEA);
+                    naturalBlocks.accept(Items.BROWN_MUSHROOM);
+                    naturalBlocks.accept(Items.RED_MUSHROOM);
+                    naturalBlocks.accept(Items.CRIMSON_FUNGUS);
+                    naturalBlocks.accept(Items.WARPED_FUNGUS);
+                    naturalBlocks.accept(Items.SHORT_GRASS);
+                    naturalBlocks.accept(Items.FERN);
+                    naturalBlocks.accept(Items.DRY_SHORT_GRASS);
+                    naturalBlocks.accept(Items.BUSH);
+                    naturalBlocks.accept(Items.DEAD_BUSH);
+                    naturalBlocks.accept(Items.DANDELION);
+                    naturalBlocks.accept(Items.POPPY);
+                    naturalBlocks.accept(Items.BLUE_ORCHID);
+                    naturalBlocks.accept(Items.ALLIUM);
+                    naturalBlocks.accept(Items.AZURE_BLUET);
+                    naturalBlocks.accept(Items.RED_TULIP);
+                    naturalBlocks.accept(Items.ORANGE_TULIP);
+                    naturalBlocks.accept(Items.WHITE_TULIP);
+                    naturalBlocks.accept(Items.PINK_TULIP);
+                    naturalBlocks.accept(Items.OXEYE_DAISY);
+                    naturalBlocks.accept(Items.CORNFLOWER);
+                    naturalBlocks.accept(Items.LILY_OF_THE_VALLEY);
+                    naturalBlocks.accept(Items.TORCHFLOWER);
+                    naturalBlocks.accept(Items.CACTUS_FLOWER);
+                    naturalBlocks.accept(Items.CLOSED_EYEBLOSSOM);
+                    naturalBlocks.accept(Items.OPEN_EYEBLOSSOM);
+                    naturalBlocks.accept(Items.WITHER_ROSE);
+                    naturalBlocks.accept(Items.PINK_PETALS);
+                    naturalBlocks.accept(Items.WILDFLOWERS);
+                    naturalBlocks.accept(Items.LEAF_LITTER);
+                    naturalBlocks.accept(Items.SPORE_BLOSSOM);
+                    naturalBlocks.accept(Items.FIREFLY_BUSH);
+                    naturalBlocks.accept(Items.BAMBOO);
+                    naturalBlocks.accept(Items.SUGAR_CANE);
+                    naturalBlocks.accept(Items.CACTUS);
+                    naturalBlocks.accept(Items.CRIMSON_ROOTS);
+                    naturalBlocks.accept(Items.WARPED_ROOTS);
+                    naturalBlocks.accept(Items.NETHER_SPROUTS);
+                    naturalBlocks.accept(Items.WEEPING_VINES);
+                    naturalBlocks.accept(Items.TWISTING_VINES);
+                    naturalBlocks.accept(Items.VINE);
+                    naturalBlocks.accept(Items.TALL_GRASS);
+                    naturalBlocks.accept(Items.LARGE_FERN);
+                    naturalBlocks.accept(Items.DRY_TALL_GRASS);
+                    naturalBlocks.accept(Items.SUNFLOWER);
+                    naturalBlocks.accept(Items.LILAC);
+                    naturalBlocks.accept(Items.ROSE_BUSH);
+                    naturalBlocks.accept(Items.PEONY);
+                    naturalBlocks.accept(Items.PITCHER_PLANT);
+                    naturalBlocks.accept(Items.BIG_DRIPLEAF);
+                    naturalBlocks.accept(Items.SMALL_DRIPLEAF);
+                    naturalBlocks.accept(Items.CHORUS_PLANT);
+                    naturalBlocks.accept(Items.CHORUS_FLOWER);
+                    naturalBlocks.accept(Items.GLOW_LICHEN);
+                    naturalBlocks.accept(Items.HANGING_ROOTS);
+                    naturalBlocks.accept(Items.FROGSPAWN);
+                    naturalBlocks.accept(Items.TURTLE_EGG);
+                    naturalBlocks.accept(Items.SNIFFER_EGG);
+                    naturalBlocks.accept(Items.DRIED_GHAST);
+                    naturalBlocks.accept(Items.WHEAT_SEEDS);
+                    naturalBlocks.accept(Items.COCOA_BEANS);
+                    naturalBlocks.accept(Items.PUMPKIN_SEEDS);
+                    naturalBlocks.accept(Items.MELON_SEEDS);
+                    naturalBlocks.accept(Items.BEETROOT_SEEDS);
+                    naturalBlocks.accept(Items.TORCHFLOWER_SEEDS);
+                    naturalBlocks.accept(Items.PITCHER_POD);
+                    naturalBlocks.accept(Items.GLOW_BERRIES);
+                    naturalBlocks.accept(Items.SWEET_BERRIES);
+                    naturalBlocks.accept(Items.NETHER_WART);
+                    naturalBlocks.accept(Items.LILY_PAD);
+                    naturalBlocks.accept(Items.SEAGRASS);
+                    naturalBlocks.accept(Items.SEA_PICKLE);
+                    naturalBlocks.accept(Items.KELP);
+                    naturalBlocks.accept(Items.DRIED_KELP_BLOCK);
+                    naturalBlocks.accept(Items.TUBE_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.BRAIN_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.BUBBLE_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.FIRE_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.HORN_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.DEAD_TUBE_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.DEAD_BRAIN_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.DEAD_BUBBLE_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.DEAD_FIRE_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.DEAD_HORN_CORAL_BLOCK);
+                    naturalBlocks.accept(Items.TUBE_CORAL);
+                    naturalBlocks.accept(Items.BRAIN_CORAL);
+                    naturalBlocks.accept(Items.BUBBLE_CORAL);
+                    naturalBlocks.accept(Items.FIRE_CORAL);
+                    naturalBlocks.accept(Items.HORN_CORAL);
+                    naturalBlocks.accept(Items.DEAD_TUBE_CORAL);
+                    naturalBlocks.accept(Items.DEAD_BRAIN_CORAL);
+                    naturalBlocks.accept(Items.DEAD_BUBBLE_CORAL);
+                    naturalBlocks.accept(Items.DEAD_FIRE_CORAL);
+                    naturalBlocks.accept(Items.DEAD_HORN_CORAL);
+                    naturalBlocks.accept(Items.TUBE_CORAL_FAN);
+                    naturalBlocks.accept(Items.BRAIN_CORAL_FAN);
+                    naturalBlocks.accept(Items.BUBBLE_CORAL_FAN);
+                    naturalBlocks.accept(Items.FIRE_CORAL_FAN);
+                    naturalBlocks.accept(Items.HORN_CORAL_FAN);
+                    naturalBlocks.accept(Items.DEAD_TUBE_CORAL_FAN);
+                    naturalBlocks.accept(Items.DEAD_BRAIN_CORAL_FAN);
+                    naturalBlocks.accept(Items.DEAD_BUBBLE_CORAL_FAN);
+                    naturalBlocks.accept(Items.DEAD_FIRE_CORAL_FAN);
+                    naturalBlocks.accept(Items.DEAD_HORN_CORAL_FAN);
+                    naturalBlocks.accept(Items.SPONGE);
+                    naturalBlocks.accept(Items.WET_SPONGE);
+                    naturalBlocks.accept(Items.MELON);
+                    naturalBlocks.accept(Items.PUMPKIN);
+                    naturalBlocks.accept(Items.CARVED_PUMPKIN);
+                    naturalBlocks.accept(Items.JACK_O_LANTERN);
+                    naturalBlocks.accept(Items.HAY_BLOCK);
+                    naturalBlocks.accept(Items.BEE_NEST);
+                    naturalBlocks.accept(Items.HONEYCOMB_BLOCK);
+                    naturalBlocks.accept(Items.SLIME_BLOCK);
+                    naturalBlocks.accept(Items.HONEY_BLOCK);
+                    naturalBlocks.accept(Items.RESIN_BLOCK);
+                    naturalBlocks.accept(Items.OCHRE_FROGLIGHT);
+                    naturalBlocks.accept(Items.VERDANT_FROGLIGHT);
+                    naturalBlocks.accept(Items.PEARLESCENT_FROGLIGHT);
+                    naturalBlocks.accept(Items.SCULK);
+                    naturalBlocks.accept(Items.SCULK_VEIN);
+                    naturalBlocks.accept(Items.SCULK_CATALYST);
+                    naturalBlocks.accept(Items.SCULK_SHRIEKER);
+                    naturalBlocks.accept(Items.SCULK_SENSOR);
+                    naturalBlocks.accept(Items.COBWEB);
+                    naturalBlocks.accept(Items.BEDROCK);
                 })
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             FUNCTIONAL_BLOCKS,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 3)
                 .title(Component.translatable("itemGroup.functional"))
                 .icon(() -> new ItemStack(Items.OAK_SIGN))
                 .displayItems(
-                    (p_421941_, p_421942_) -> {
-                        p_421942_.accept(Items.TORCH);
-                        p_421942_.accept(Items.SOUL_TORCH);
-                        p_421942_.accept(Items.COPPER_TORCH);
-                        p_421942_.accept(Items.REDSTONE_TORCH);
-                        p_421942_.accept(Items.LANTERN);
-                        p_421942_.accept(Items.SOUL_LANTERN);
-                        Items.COPPER_LANTERN.forEach(p_421942_::accept);
-                        p_421942_.accept(Items.IRON_CHAIN);
-                        Items.COPPER_CHAIN.forEach(p_421942_::accept);
-                        p_421942_.accept(Items.END_ROD);
-                        p_421942_.accept(Items.SEA_LANTERN);
-                        p_421942_.accept(Items.REDSTONE_LAMP);
-                        p_421942_.accept(Items.COPPER_BULB);
-                        p_421942_.accept(Items.EXPOSED_COPPER_BULB);
-                        p_421942_.accept(Items.WEATHERED_COPPER_BULB);
-                        p_421942_.accept(Items.OXIDIZED_COPPER_BULB);
-                        p_421942_.accept(Items.WAXED_COPPER_BULB);
-                        p_421942_.accept(Items.WAXED_EXPOSED_COPPER_BULB);
-                        p_421942_.accept(Items.WAXED_WEATHERED_COPPER_BULB);
-                        p_421942_.accept(Items.WAXED_OXIDIZED_COPPER_BULB);
-                        p_421942_.accept(Items.GLOWSTONE);
-                        p_421942_.accept(Items.SHROOMLIGHT);
-                        p_421942_.accept(Items.OCHRE_FROGLIGHT);
-                        p_421942_.accept(Items.VERDANT_FROGLIGHT);
-                        p_421942_.accept(Items.PEARLESCENT_FROGLIGHT);
-                        p_421942_.accept(Items.CRYING_OBSIDIAN);
-                        p_421942_.accept(Items.GLOW_LICHEN);
-                        p_421942_.accept(Items.MAGMA_BLOCK);
-                        p_421942_.accept(Items.CRAFTING_TABLE);
-                        p_421942_.accept(Items.STONECUTTER);
-                        p_421942_.accept(Items.CARTOGRAPHY_TABLE);
-                        p_421942_.accept(Items.FLETCHING_TABLE);
-                        p_421942_.accept(Items.SMITHING_TABLE);
-                        p_421942_.accept(Items.GRINDSTONE);
-                        p_421942_.accept(Items.LOOM);
-                        p_421942_.accept(Items.FURNACE);
-                        p_421942_.accept(Items.SMOKER);
-                        p_421942_.accept(Items.BLAST_FURNACE);
-                        p_421942_.accept(Items.CAMPFIRE);
-                        p_421942_.accept(Items.SOUL_CAMPFIRE);
-                        p_421942_.accept(Items.ANVIL);
-                        p_421942_.accept(Items.CHIPPED_ANVIL);
-                        p_421942_.accept(Items.DAMAGED_ANVIL);
-                        p_421942_.accept(Items.COMPOSTER);
-                        p_421942_.accept(Items.NOTE_BLOCK);
-                        p_421942_.accept(Items.JUKEBOX);
-                        p_421942_.accept(Items.ENCHANTING_TABLE);
-                        p_421942_.accept(Items.END_CRYSTAL);
-                        p_421942_.accept(Items.BREWING_STAND);
-                        p_421942_.accept(Items.CAULDRON);
-                        p_421942_.accept(Items.BELL);
-                        p_421942_.accept(Items.BEACON);
-                        p_421942_.accept(Items.CONDUIT);
-                        p_421942_.accept(Items.LODESTONE);
-                        p_421942_.accept(Items.LADDER);
-                        p_421942_.accept(Items.SCAFFOLDING);
-                        p_421942_.accept(Items.BEE_NEST);
-                        p_421942_.accept(Items.BEEHIVE);
-                        p_421942_.accept(Items.SUSPICIOUS_SAND);
-                        p_421942_.accept(Items.SUSPICIOUS_GRAVEL);
-                        p_421942_.accept(Items.LIGHTNING_ROD);
-                        p_421942_.accept(Items.EXPOSED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.WEATHERED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.OXIDIZED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.WAXED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.WAXED_EXPOSED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.WAXED_WEATHERED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.WAXED_OXIDIZED_LIGHTNING_ROD);
-                        p_421942_.accept(Items.FLOWER_POT);
-                        p_421942_.accept(Items.DECORATED_POT);
-                        p_421942_.accept(Items.ARMOR_STAND);
-                        p_421942_.accept(Items.ITEM_FRAME);
-                        p_421942_.accept(Items.GLOW_ITEM_FRAME);
-                        p_421942_.accept(Items.PAINTING);
-                        p_421941_.holders()
+                    (parameters, functionalBlocks) -> {
+                        functionalBlocks.accept(Items.TORCH);
+                        functionalBlocks.accept(Items.SOUL_TORCH);
+                        functionalBlocks.accept(Items.COPPER_TORCH);
+                        functionalBlocks.accept(Items.REDSTONE_TORCH);
+                        functionalBlocks.accept(Items.LANTERN);
+                        functionalBlocks.accept(Items.SOUL_LANTERN);
+                        Items.COPPER_LANTERN.forEach(functionalBlocks::accept);
+                        functionalBlocks.accept(Items.IRON_CHAIN);
+                        Items.COPPER_CHAIN.forEach(functionalBlocks::accept);
+                        functionalBlocks.accept(Items.END_ROD);
+                        functionalBlocks.accept(Items.SEA_LANTERN);
+                        functionalBlocks.accept(Items.REDSTONE_LAMP);
+                        Items.COPPER_BULB.forEach(functionalBlocks::accept);
+                        functionalBlocks.accept(Items.GLOWSTONE);
+                        functionalBlocks.accept(Items.SHROOMLIGHT);
+                        functionalBlocks.accept(Items.OCHRE_FROGLIGHT);
+                        functionalBlocks.accept(Items.VERDANT_FROGLIGHT);
+                        functionalBlocks.accept(Items.PEARLESCENT_FROGLIGHT);
+                        functionalBlocks.accept(Items.CRYING_OBSIDIAN);
+                        functionalBlocks.accept(Items.GLOW_LICHEN);
+                        functionalBlocks.accept(Items.MAGMA_BLOCK);
+                        functionalBlocks.accept(Items.CRAFTING_TABLE);
+                        functionalBlocks.accept(Items.STONECUTTER);
+                        functionalBlocks.accept(Items.CARTOGRAPHY_TABLE);
+                        functionalBlocks.accept(Items.FLETCHING_TABLE);
+                        functionalBlocks.accept(Items.SMITHING_TABLE);
+                        functionalBlocks.accept(Items.GRINDSTONE);
+                        functionalBlocks.accept(Items.LOOM);
+                        functionalBlocks.accept(Items.FURNACE);
+                        functionalBlocks.accept(Items.SMOKER);
+                        functionalBlocks.accept(Items.BLAST_FURNACE);
+                        functionalBlocks.accept(Items.CAMPFIRE);
+                        functionalBlocks.accept(Items.SOUL_CAMPFIRE);
+                        functionalBlocks.accept(Items.ANVIL);
+                        functionalBlocks.accept(Items.CHIPPED_ANVIL);
+                        functionalBlocks.accept(Items.DAMAGED_ANVIL);
+                        functionalBlocks.accept(Items.COMPOSTER);
+                        functionalBlocks.accept(Items.NOTE_BLOCK);
+                        functionalBlocks.accept(Items.JUKEBOX);
+                        functionalBlocks.accept(Items.ENCHANTING_TABLE);
+                        functionalBlocks.accept(Items.END_CRYSTAL);
+                        functionalBlocks.accept(Items.BREWING_STAND);
+                        functionalBlocks.accept(Items.CAULDRON);
+                        functionalBlocks.accept(Items.BELL);
+                        functionalBlocks.accept(Items.BEACON);
+                        functionalBlocks.accept(Items.CONDUIT);
+                        functionalBlocks.accept(Items.LODESTONE);
+                        functionalBlocks.accept(Items.LADDER);
+                        functionalBlocks.accept(Items.SCAFFOLDING);
+                        functionalBlocks.accept(Items.BEE_NEST);
+                        functionalBlocks.accept(Items.BEEHIVE);
+                        functionalBlocks.accept(Items.SUSPICIOUS_SAND);
+                        functionalBlocks.accept(Items.SUSPICIOUS_GRAVEL);
+                        Items.LIGHTNING_ROD.forEach(functionalBlocks::accept);
+                        functionalBlocks.accept(Items.FLOWER_POT);
+                        functionalBlocks.accept(Items.DECORATED_POT);
+                        functionalBlocks.accept(Items.ARMOR_STAND);
+                        functionalBlocks.accept(Items.ITEM_FRAME);
+                        functionalBlocks.accept(Items.GLOW_ITEM_FRAME);
+                        functionalBlocks.accept(Items.PAINTING);
+                        parameters.holders()
                             .lookup(Registries.PAINTING_VARIANT)
                             .ifPresent(
-                                p_341542_ -> generatePresetPaintings(
-                                    p_421942_,
-                                    p_421941_.holders(),
-                                    (HolderLookup.RegistryLookup<PaintingVariant>)p_341542_,
-                                    p_270037_ -> p_270037_.is(PaintingVariantTags.PLACEABLE),
+                                paintings -> generatePresetPaintings(
+                                    functionalBlocks,
+                                    parameters.holders(),
+                                    (HolderLookup.RegistryLookup<PaintingVariant>)paintings,
+                                    variant -> variant.is(PaintingVariantTags.PLACEABLE),
                                     CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS
                                 )
                             );
-                        p_421942_.accept(Items.BOOKSHELF);
-                        p_421942_.accept(Items.CHISELED_BOOKSHELF);
-                        p_421942_.accept(Items.OAK_SHELF);
-                        p_421942_.accept(Items.SPRUCE_SHELF);
-                        p_421942_.accept(Items.BIRCH_SHELF);
-                        p_421942_.accept(Items.JUNGLE_SHELF);
-                        p_421942_.accept(Items.ACACIA_SHELF);
-                        p_421942_.accept(Items.DARK_OAK_SHELF);
-                        p_421942_.accept(Items.MANGROVE_SHELF);
-                        p_421942_.accept(Items.CHERRY_SHELF);
-                        p_421942_.accept(Items.PALE_OAK_SHELF);
-                        p_421942_.accept(Items.BAMBOO_SHELF);
-                        p_421942_.accept(Items.CRIMSON_SHELF);
-                        p_421942_.accept(Items.WARPED_SHELF);
-                        p_421942_.accept(Items.LECTERN);
-                        p_421942_.accept(Items.TINTED_GLASS);
-                        p_421942_.accept(Items.OAK_SIGN);
-                        p_421942_.accept(Items.OAK_HANGING_SIGN);
-                        p_421942_.accept(Items.SPRUCE_SIGN);
-                        p_421942_.accept(Items.SPRUCE_HANGING_SIGN);
-                        p_421942_.accept(Items.BIRCH_SIGN);
-                        p_421942_.accept(Items.BIRCH_HANGING_SIGN);
-                        p_421942_.accept(Items.JUNGLE_SIGN);
-                        p_421942_.accept(Items.JUNGLE_HANGING_SIGN);
-                        p_421942_.accept(Items.ACACIA_SIGN);
-                        p_421942_.accept(Items.ACACIA_HANGING_SIGN);
-                        p_421942_.accept(Items.DARK_OAK_SIGN);
-                        p_421942_.accept(Items.DARK_OAK_HANGING_SIGN);
-                        p_421942_.accept(Items.MANGROVE_SIGN);
-                        p_421942_.accept(Items.MANGROVE_HANGING_SIGN);
-                        p_421942_.accept(Items.CHERRY_SIGN);
-                        p_421942_.accept(Items.CHERRY_HANGING_SIGN);
-                        p_421942_.accept(Items.PALE_OAK_SIGN);
-                        p_421942_.accept(Items.PALE_OAK_HANGING_SIGN);
-                        p_421942_.accept(Items.BAMBOO_SIGN);
-                        p_421942_.accept(Items.BAMBOO_HANGING_SIGN);
-                        p_421942_.accept(Items.CRIMSON_SIGN);
-                        p_421942_.accept(Items.CRIMSON_HANGING_SIGN);
-                        p_421942_.accept(Items.WARPED_SIGN);
-                        p_421942_.accept(Items.WARPED_HANGING_SIGN);
-                        p_421942_.accept(Items.CHEST);
-                        p_421942_.accept(Items.COPPER_CHEST);
-                        p_421942_.accept(Items.EXPOSED_COPPER_CHEST);
-                        p_421942_.accept(Items.WEATHERED_COPPER_CHEST);
-                        p_421942_.accept(Items.OXIDIZED_COPPER_CHEST);
-                        p_421942_.accept(Items.WAXED_COPPER_CHEST);
-                        p_421942_.accept(Items.WAXED_EXPOSED_COPPER_CHEST);
-                        p_421942_.accept(Items.WAXED_WEATHERED_COPPER_CHEST);
-                        p_421942_.accept(Items.WAXED_OXIDIZED_COPPER_CHEST);
-                        p_421942_.accept(Items.BARREL);
-                        p_421942_.accept(Items.ENDER_CHEST);
-                        p_421942_.accept(Items.SHULKER_BOX);
-                        p_421942_.accept(Items.WHITE_SHULKER_BOX);
-                        p_421942_.accept(Items.LIGHT_GRAY_SHULKER_BOX);
-                        p_421942_.accept(Items.GRAY_SHULKER_BOX);
-                        p_421942_.accept(Items.BLACK_SHULKER_BOX);
-                        p_421942_.accept(Items.BROWN_SHULKER_BOX);
-                        p_421942_.accept(Items.RED_SHULKER_BOX);
-                        p_421942_.accept(Items.ORANGE_SHULKER_BOX);
-                        p_421942_.accept(Items.YELLOW_SHULKER_BOX);
-                        p_421942_.accept(Items.LIME_SHULKER_BOX);
-                        p_421942_.accept(Items.GREEN_SHULKER_BOX);
-                        p_421942_.accept(Items.CYAN_SHULKER_BOX);
-                        p_421942_.accept(Items.LIGHT_BLUE_SHULKER_BOX);
-                        p_421942_.accept(Items.BLUE_SHULKER_BOX);
-                        p_421942_.accept(Items.PURPLE_SHULKER_BOX);
-                        p_421942_.accept(Items.MAGENTA_SHULKER_BOX);
-                        p_421942_.accept(Items.PINK_SHULKER_BOX);
-                        p_421942_.accept(Items.RESPAWN_ANCHOR);
-                        p_421942_.accept(Items.WHITE_BED);
-                        p_421942_.accept(Items.LIGHT_GRAY_BED);
-                        p_421942_.accept(Items.GRAY_BED);
-                        p_421942_.accept(Items.BLACK_BED);
-                        p_421942_.accept(Items.BROWN_BED);
-                        p_421942_.accept(Items.RED_BED);
-                        p_421942_.accept(Items.ORANGE_BED);
-                        p_421942_.accept(Items.YELLOW_BED);
-                        p_421942_.accept(Items.LIME_BED);
-                        p_421942_.accept(Items.GREEN_BED);
-                        p_421942_.accept(Items.CYAN_BED);
-                        p_421942_.accept(Items.LIGHT_BLUE_BED);
-                        p_421942_.accept(Items.BLUE_BED);
-                        p_421942_.accept(Items.PURPLE_BED);
-                        p_421942_.accept(Items.MAGENTA_BED);
-                        p_421942_.accept(Items.PINK_BED);
-                        p_421942_.accept(Items.CANDLE);
-                        p_421942_.accept(Items.WHITE_CANDLE);
-                        p_421942_.accept(Items.LIGHT_GRAY_CANDLE);
-                        p_421942_.accept(Items.GRAY_CANDLE);
-                        p_421942_.accept(Items.BLACK_CANDLE);
-                        p_421942_.accept(Items.BROWN_CANDLE);
-                        p_421942_.accept(Items.RED_CANDLE);
-                        p_421942_.accept(Items.ORANGE_CANDLE);
-                        p_421942_.accept(Items.YELLOW_CANDLE);
-                        p_421942_.accept(Items.LIME_CANDLE);
-                        p_421942_.accept(Items.GREEN_CANDLE);
-                        p_421942_.accept(Items.CYAN_CANDLE);
-                        p_421942_.accept(Items.LIGHT_BLUE_CANDLE);
-                        p_421942_.accept(Items.BLUE_CANDLE);
-                        p_421942_.accept(Items.PURPLE_CANDLE);
-                        p_421942_.accept(Items.MAGENTA_CANDLE);
-                        p_421942_.accept(Items.PINK_CANDLE);
-                        p_421942_.accept(Items.WHITE_BANNER);
-                        p_421942_.accept(Items.LIGHT_GRAY_BANNER);
-                        p_421942_.accept(Items.GRAY_BANNER);
-                        p_421942_.accept(Items.BLACK_BANNER);
-                        p_421942_.accept(Items.BROWN_BANNER);
-                        p_421942_.accept(Items.RED_BANNER);
-                        p_421942_.accept(Items.ORANGE_BANNER);
-                        p_421942_.accept(Items.YELLOW_BANNER);
-                        p_421942_.accept(Items.LIME_BANNER);
-                        p_421942_.accept(Items.GREEN_BANNER);
-                        p_421942_.accept(Items.CYAN_BANNER);
-                        p_421942_.accept(Items.LIGHT_BLUE_BANNER);
-                        p_421942_.accept(Items.BLUE_BANNER);
-                        p_421942_.accept(Items.PURPLE_BANNER);
-                        p_421942_.accept(Items.MAGENTA_BANNER);
-                        p_421942_.accept(Items.PINK_BANNER);
-                        p_421942_.accept(Raid.getOminousBannerInstance(p_421941_.holders().lookupOrThrow(Registries.BANNER_PATTERN)));
-                        p_421942_.accept(Items.SKELETON_SKULL);
-                        p_421942_.accept(Items.WITHER_SKELETON_SKULL);
-                        p_421942_.accept(Items.PLAYER_HEAD);
-                        p_421942_.accept(Items.ZOMBIE_HEAD);
-                        p_421942_.accept(Items.CREEPER_HEAD);
-                        p_421942_.accept(Items.PIGLIN_HEAD);
-                        p_421942_.accept(Items.DRAGON_HEAD);
-                        p_421942_.accept(Items.DRAGON_EGG);
-                        p_421942_.accept(Items.END_PORTAL_FRAME);
-                        p_421942_.accept(Items.VAULT);
-                        p_421942_.accept(Items.ENDER_EYE);
-                        p_421942_.accept(Items.COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.EXPOSED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.WEATHERED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.OXIDIZED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.WAXED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.WAXED_EXPOSED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.WAXED_WEATHERED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.WAXED_OXIDIZED_COPPER_GOLEM_STATUE);
-                        p_421942_.accept(Items.INFESTED_STONE);
-                        p_421942_.accept(Items.INFESTED_COBBLESTONE);
-                        p_421942_.accept(Items.INFESTED_STONE_BRICKS);
-                        p_421942_.accept(Items.INFESTED_MOSSY_STONE_BRICKS);
-                        p_421942_.accept(Items.INFESTED_CRACKED_STONE_BRICKS);
-                        p_421942_.accept(Items.INFESTED_CHISELED_STONE_BRICKS);
-                        p_421942_.accept(Items.INFESTED_DEEPSLATE);
+                        functionalBlocks.accept(Items.BOOKSHELF);
+                        functionalBlocks.accept(Items.CHISELED_BOOKSHELF);
+                        functionalBlocks.accept(Items.OAK_SHELF);
+                        functionalBlocks.accept(Items.SPRUCE_SHELF);
+                        functionalBlocks.accept(Items.BIRCH_SHELF);
+                        functionalBlocks.accept(Items.JUNGLE_SHELF);
+                        functionalBlocks.accept(Items.ACACIA_SHELF);
+                        functionalBlocks.accept(Items.DARK_OAK_SHELF);
+                        functionalBlocks.accept(Items.MANGROVE_SHELF);
+                        functionalBlocks.accept(Items.CHERRY_SHELF);
+                        functionalBlocks.accept(Items.PALE_OAK_SHELF);
+                        functionalBlocks.accept(Items.BAMBOO_SHELF);
+                        functionalBlocks.accept(Items.CRIMSON_SHELF);
+                        functionalBlocks.accept(Items.WARPED_SHELF);
+                        functionalBlocks.accept(Items.LECTERN);
+                        functionalBlocks.accept(Items.TINTED_GLASS);
+                        functionalBlocks.accept(Items.OAK_SIGN);
+                        functionalBlocks.accept(Items.OAK_HANGING_SIGN);
+                        functionalBlocks.accept(Items.SPRUCE_SIGN);
+                        functionalBlocks.accept(Items.SPRUCE_HANGING_SIGN);
+                        functionalBlocks.accept(Items.BIRCH_SIGN);
+                        functionalBlocks.accept(Items.BIRCH_HANGING_SIGN);
+                        functionalBlocks.accept(Items.JUNGLE_SIGN);
+                        functionalBlocks.accept(Items.JUNGLE_HANGING_SIGN);
+                        functionalBlocks.accept(Items.ACACIA_SIGN);
+                        functionalBlocks.accept(Items.ACACIA_HANGING_SIGN);
+                        functionalBlocks.accept(Items.DARK_OAK_SIGN);
+                        functionalBlocks.accept(Items.DARK_OAK_HANGING_SIGN);
+                        functionalBlocks.accept(Items.MANGROVE_SIGN);
+                        functionalBlocks.accept(Items.MANGROVE_HANGING_SIGN);
+                        functionalBlocks.accept(Items.CHERRY_SIGN);
+                        functionalBlocks.accept(Items.CHERRY_HANGING_SIGN);
+                        functionalBlocks.accept(Items.PALE_OAK_SIGN);
+                        functionalBlocks.accept(Items.PALE_OAK_HANGING_SIGN);
+                        functionalBlocks.accept(Items.BAMBOO_SIGN);
+                        functionalBlocks.accept(Items.BAMBOO_HANGING_SIGN);
+                        functionalBlocks.accept(Items.CRIMSON_SIGN);
+                        functionalBlocks.accept(Items.CRIMSON_HANGING_SIGN);
+                        functionalBlocks.accept(Items.WARPED_SIGN);
+                        functionalBlocks.accept(Items.WARPED_HANGING_SIGN);
+                        functionalBlocks.accept(Items.CHEST);
+                        Items.COPPER_CHEST.forEach(functionalBlocks::accept);
+                        functionalBlocks.accept(Items.BARREL);
+                        functionalBlocks.accept(Items.ENDER_CHEST);
+                        functionalBlocks.accept(Items.SHULKER_BOX);
+                        registerColoredItems(functionalBlocks, gameplayColorOrder, Items.DYED_SHULKER_BOX);
+                        functionalBlocks.accept(Items.RESPAWN_ANCHOR);
+                        registerColoredItems(functionalBlocks, gameplayColorOrder, Items.BED);
+                        functionalBlocks.accept(Items.CANDLE);
+                        registerColoredItems(functionalBlocks, gameplayColorOrder, Items.DYED_CANDLE);
+                        registerColoredItems(functionalBlocks, gameplayColorOrder, Items.BANNER);
+                        functionalBlocks.accept(Raid.getOminousBannerInstance(parameters.holders().lookupOrThrow(Registries.BANNER_PATTERN)));
+                        functionalBlocks.accept(Items.SKELETON_SKULL);
+                        functionalBlocks.accept(Items.WITHER_SKELETON_SKULL);
+                        functionalBlocks.accept(Items.PLAYER_HEAD);
+                        functionalBlocks.accept(Items.ZOMBIE_HEAD);
+                        functionalBlocks.accept(Items.CREEPER_HEAD);
+                        functionalBlocks.accept(Items.PIGLIN_HEAD);
+                        functionalBlocks.accept(Items.DRAGON_HEAD);
+                        functionalBlocks.accept(Items.DRAGON_EGG);
+                        functionalBlocks.accept(Items.END_PORTAL_FRAME);
+                        functionalBlocks.accept(Items.VAULT);
+                        functionalBlocks.accept(Items.ENDER_EYE);
+                        Items.COPPER_GOLEM_STATUE.forEach(functionalBlocks::accept);
+                        functionalBlocks.accept(Items.INFESTED_STONE);
+                        functionalBlocks.accept(Items.INFESTED_COBBLESTONE);
+                        functionalBlocks.accept(Items.INFESTED_STONE_BRICKS);
+                        functionalBlocks.accept(Items.INFESTED_MOSSY_STONE_BRICKS);
+                        functionalBlocks.accept(Items.INFESTED_CRACKED_STONE_BRICKS);
+                        functionalBlocks.accept(Items.INFESTED_CHISELED_STONE_BRICKS);
+                        functionalBlocks.accept(Items.INFESTED_DEEPSLATE);
                     }
                 )
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             REDSTONE_BLOCKS,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 4)
                 .title(Component.translatable("itemGroup.redstone"))
                 .icon(() -> new ItemStack(Items.REDSTONE))
-                .displayItems((p_421943_, p_421944_) -> {
-                    p_421944_.accept(Items.REDSTONE);
-                    p_421944_.accept(Items.REDSTONE_TORCH);
-                    p_421944_.accept(Items.REDSTONE_BLOCK);
-                    p_421944_.accept(Items.REPEATER);
-                    p_421944_.accept(Items.COMPARATOR);
-                    p_421944_.accept(Items.TARGET);
-                    p_421944_.accept(Items.WAXED_COPPER_BULB);
-                    p_421944_.accept(Items.WAXED_EXPOSED_COPPER_BULB);
-                    p_421944_.accept(Items.WAXED_WEATHERED_COPPER_BULB);
-                    p_421944_.accept(Items.WAXED_OXIDIZED_COPPER_BULB);
-                    p_421944_.accept(Items.LEVER);
-                    p_421944_.accept(Items.OAK_BUTTON);
-                    p_421944_.accept(Items.STONE_BUTTON);
-                    p_421944_.accept(Items.OAK_PRESSURE_PLATE);
-                    p_421944_.accept(Items.STONE_PRESSURE_PLATE);
-                    p_421944_.accept(Items.LIGHT_WEIGHTED_PRESSURE_PLATE);
-                    p_421944_.accept(Items.HEAVY_WEIGHTED_PRESSURE_PLATE);
-                    p_421944_.accept(Items.SCULK_SENSOR);
-                    p_421944_.accept(Items.CALIBRATED_SCULK_SENSOR);
-                    p_421944_.accept(Items.SCULK_SHRIEKER);
-                    p_421944_.accept(Items.AMETHYST_BLOCK);
-                    p_421944_.accept(Items.WHITE_WOOL);
-                    p_421944_.accept(Items.TRIPWIRE_HOOK);
-                    p_421944_.accept(Items.STRING);
-                    p_421944_.accept(Items.LECTERN);
-                    p_421944_.accept(Items.DAYLIGHT_DETECTOR);
-                    p_421944_.accept(Items.WAXED_LIGHTNING_ROD);
-                    p_421944_.accept(Items.PISTON);
-                    p_421944_.accept(Items.STICKY_PISTON);
-                    p_421944_.accept(Items.SLIME_BLOCK);
-                    p_421944_.accept(Items.HONEY_BLOCK);
-                    p_421944_.accept(Items.DISPENSER);
-                    p_421944_.accept(Items.DROPPER);
-                    p_421944_.accept(Items.CRAFTER);
-                    p_421944_.accept(Items.HOPPER);
-                    p_421944_.accept(Items.CHEST);
-                    p_421944_.accept(Items.WAXED_COPPER_CHEST);
-                    p_421944_.accept(Items.BARREL);
-                    p_421944_.accept(Items.CHISELED_BOOKSHELF);
-                    p_421944_.accept(Items.OAK_SHELF);
-                    p_421944_.accept(Items.FURNACE);
-                    p_421944_.accept(Items.TRAPPED_CHEST);
-                    p_421944_.accept(Items.JUKEBOX);
-                    p_421944_.accept(Items.DECORATED_POT);
-                    p_421944_.accept(Items.OBSERVER);
-                    p_421944_.accept(Items.NOTE_BLOCK);
-                    p_421944_.accept(Items.COMPOSTER);
-                    p_421944_.accept(Items.CAULDRON);
-                    p_421944_.accept(Items.RAIL);
-                    p_421944_.accept(Items.POWERED_RAIL);
-                    p_421944_.accept(Items.DETECTOR_RAIL);
-                    p_421944_.accept(Items.ACTIVATOR_RAIL);
-                    p_421944_.accept(Items.MINECART);
-                    p_421944_.accept(Items.HOPPER_MINECART);
-                    p_421944_.accept(Items.CHEST_MINECART);
-                    p_421944_.accept(Items.FURNACE_MINECART);
-                    p_421944_.accept(Items.TNT_MINECART);
-                    p_421944_.accept(Items.OAK_CHEST_BOAT);
-                    p_421944_.accept(Items.BAMBOO_CHEST_RAFT);
-                    p_421944_.accept(Items.OAK_DOOR);
-                    p_421944_.accept(Items.IRON_DOOR);
-                    p_421944_.accept(Items.OAK_FENCE_GATE);
-                    p_421944_.accept(Items.OAK_TRAPDOOR);
-                    p_421944_.accept(Items.IRON_TRAPDOOR);
-                    p_421944_.accept(Items.TNT);
-                    p_421944_.accept(Items.REDSTONE_LAMP);
-                    p_421944_.accept(Items.BELL);
-                    p_421944_.accept(Items.BIG_DRIPLEAF);
-                    p_421944_.accept(Items.ARMOR_STAND);
-                    p_421944_.accept(Items.REDSTONE_ORE);
+                .displayItems((parameters, redstoneBlocks) -> {
+                    redstoneBlocks.accept(Items.REDSTONE);
+                    redstoneBlocks.accept(Items.REDSTONE_TORCH);
+                    redstoneBlocks.accept(Items.REDSTONE_BLOCK);
+                    redstoneBlocks.accept(Items.REPEATER);
+                    redstoneBlocks.accept(Items.COMPARATOR);
+                    redstoneBlocks.accept(Items.TARGET);
+                    Items.COPPER_BULB.waxed().forEach(redstoneBlocks::accept);
+                    redstoneBlocks.accept(Items.LEVER);
+                    redstoneBlocks.accept(Items.OAK_BUTTON);
+                    redstoneBlocks.accept(Items.STONE_BUTTON);
+                    redstoneBlocks.accept(Items.OAK_PRESSURE_PLATE);
+                    redstoneBlocks.accept(Items.STONE_PRESSURE_PLATE);
+                    redstoneBlocks.accept(Items.LIGHT_WEIGHTED_PRESSURE_PLATE);
+                    redstoneBlocks.accept(Items.HEAVY_WEIGHTED_PRESSURE_PLATE);
+                    redstoneBlocks.accept(Items.SCULK_SENSOR);
+                    redstoneBlocks.accept(Items.CALIBRATED_SCULK_SENSOR);
+                    redstoneBlocks.accept(Items.SCULK_SHRIEKER);
+                    redstoneBlocks.accept(Items.AMETHYST_BLOCK);
+                    redstoneBlocks.accept(Items.WOOL.white());
+                    redstoneBlocks.accept(Items.TRIPWIRE_HOOK);
+                    redstoneBlocks.accept(Items.STRING);
+                    redstoneBlocks.accept(Items.LECTERN);
+                    redstoneBlocks.accept(Items.DAYLIGHT_DETECTOR);
+                    redstoneBlocks.accept(Items.LIGHTNING_ROD.waxed().unaffected());
+                    redstoneBlocks.accept(Items.PISTON);
+                    redstoneBlocks.accept(Items.STICKY_PISTON);
+                    redstoneBlocks.accept(Items.SLIME_BLOCK);
+                    redstoneBlocks.accept(Items.HONEY_BLOCK);
+                    redstoneBlocks.accept(Items.DISPENSER);
+                    redstoneBlocks.accept(Items.DROPPER);
+                    redstoneBlocks.accept(Items.CRAFTER);
+                    redstoneBlocks.accept(Items.HOPPER);
+                    redstoneBlocks.accept(Items.CHEST);
+                    redstoneBlocks.accept(Items.COPPER_CHEST.waxed().unaffected());
+                    redstoneBlocks.accept(Items.BARREL);
+                    redstoneBlocks.accept(Items.CHISELED_BOOKSHELF);
+                    redstoneBlocks.accept(Items.OAK_SHELF);
+                    redstoneBlocks.accept(Items.FURNACE);
+                    redstoneBlocks.accept(Items.TRAPPED_CHEST);
+                    redstoneBlocks.accept(Items.JUKEBOX);
+                    redstoneBlocks.accept(Items.DECORATED_POT);
+                    redstoneBlocks.accept(Items.OBSERVER);
+                    redstoneBlocks.accept(Items.NOTE_BLOCK);
+                    redstoneBlocks.accept(Items.COMPOSTER);
+                    redstoneBlocks.accept(Items.CAULDRON);
+                    redstoneBlocks.accept(Items.RAIL);
+                    redstoneBlocks.accept(Items.POWERED_RAIL);
+                    redstoneBlocks.accept(Items.DETECTOR_RAIL);
+                    redstoneBlocks.accept(Items.ACTIVATOR_RAIL);
+                    redstoneBlocks.accept(Items.MINECART);
+                    redstoneBlocks.accept(Items.HOPPER_MINECART);
+                    redstoneBlocks.accept(Items.CHEST_MINECART);
+                    redstoneBlocks.accept(Items.FURNACE_MINECART);
+                    redstoneBlocks.accept(Items.TNT_MINECART);
+                    redstoneBlocks.accept(Items.OAK_CHEST_BOAT);
+                    redstoneBlocks.accept(Items.BAMBOO_CHEST_RAFT);
+                    redstoneBlocks.accept(Items.OAK_DOOR);
+                    redstoneBlocks.accept(Items.IRON_DOOR);
+                    redstoneBlocks.accept(Items.OAK_FENCE_GATE);
+                    redstoneBlocks.accept(Items.OAK_TRAPDOOR);
+                    redstoneBlocks.accept(Items.IRON_TRAPDOOR);
+                    redstoneBlocks.accept(Items.TNT);
+                    redstoneBlocks.accept(Items.REDSTONE_LAMP);
+                    redstoneBlocks.accept(Items.BELL);
+                    redstoneBlocks.accept(Items.BIG_DRIPLEAF);
+                    redstoneBlocks.accept(Items.ARMOR_STAND);
+                    redstoneBlocks.accept(Items.REDSTONE_ORE);
                 })
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             HOTBAR,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 5)
                 .title(Component.translatable("itemGroup.hotbar"))
@@ -1309,21 +1002,21 @@ public class CreativeModeTabs {
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             SEARCH,
             CreativeModeTab.builder(CreativeModeTab.Row.TOP, 6)
                 .title(Component.translatable("itemGroup.search"))
                 .icon(() -> new ItemStack(Items.COMPASS))
-                .displayItems((p_327118_, p_327119_) -> {
-                    Set<ItemStack> set = ItemStackLinkedSet.createTypeAndComponentsSet();
+                .displayItems((parameters, search) -> {
+                    Set<ItemStack> tempItems = ItemStackLinkedSet.createTypeAndComponentsSet();
 
-                    for (CreativeModeTab creativemodetab : p_283144_) {
-                        if (creativemodetab.getType() != CreativeModeTab.Type.SEARCH) {
-                            set.addAll(creativemodetab.getSearchTabDisplayItems());
+                    for (CreativeModeTab tab : registry) {
+                        if (tab.getType() != CreativeModeTab.Type.SEARCH) {
+                            tempItems.addAll(tab.getSearchTabDisplayItems());
                         }
                     }
 
-                    p_327119_.acceptAll(set);
+                    search.acceptAll(tempItems);
                 })
                 .backgroundTexture(SEARCH_BACKGROUND)
                 .alignedRight()
@@ -1331,259 +1024,235 @@ public class CreativeModeTabs {
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             TOOLS_AND_UTILITIES,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 0)
                 .title(Component.translatable("itemGroup.tools"))
                 .icon(() -> new ItemStack(Items.DIAMOND_PICKAXE))
                 .displayItems(
-                    (p_421945_, p_421946_) -> {
-                        p_421946_.accept(Items.WOODEN_SHOVEL);
-                        p_421946_.accept(Items.WOODEN_PICKAXE);
-                        p_421946_.accept(Items.WOODEN_AXE);
-                        p_421946_.accept(Items.WOODEN_HOE);
-                        p_421946_.accept(Items.STONE_SHOVEL);
-                        p_421946_.accept(Items.STONE_PICKAXE);
-                        p_421946_.accept(Items.STONE_AXE);
-                        p_421946_.accept(Items.STONE_HOE);
-                        p_421946_.accept(Items.COPPER_SHOVEL);
-                        p_421946_.accept(Items.COPPER_PICKAXE);
-                        p_421946_.accept(Items.COPPER_AXE);
-                        p_421946_.accept(Items.COPPER_HOE);
-                        p_421946_.accept(Items.IRON_SHOVEL);
-                        p_421946_.accept(Items.IRON_PICKAXE);
-                        p_421946_.accept(Items.IRON_AXE);
-                        p_421946_.accept(Items.IRON_HOE);
-                        p_421946_.accept(Items.GOLDEN_SHOVEL);
-                        p_421946_.accept(Items.GOLDEN_PICKAXE);
-                        p_421946_.accept(Items.GOLDEN_AXE);
-                        p_421946_.accept(Items.GOLDEN_HOE);
-                        p_421946_.accept(Items.DIAMOND_SHOVEL);
-                        p_421946_.accept(Items.DIAMOND_PICKAXE);
-                        p_421946_.accept(Items.DIAMOND_AXE);
-                        p_421946_.accept(Items.DIAMOND_HOE);
-                        p_421946_.accept(Items.NETHERITE_SHOVEL);
-                        p_421946_.accept(Items.NETHERITE_PICKAXE);
-                        p_421946_.accept(Items.NETHERITE_AXE);
-                        p_421946_.accept(Items.NETHERITE_HOE);
-                        p_421946_.accept(Items.BUCKET);
-                        p_421946_.accept(Items.WATER_BUCKET);
-                        p_421946_.accept(Items.COD_BUCKET);
-                        p_421946_.accept(Items.SALMON_BUCKET);
-                        p_421946_.accept(Items.TROPICAL_FISH_BUCKET);
-                        p_421946_.accept(Items.PUFFERFISH_BUCKET);
-                        p_421946_.accept(Items.AXOLOTL_BUCKET);
-                        p_421946_.accept(Items.TADPOLE_BUCKET);
-                        p_421946_.accept(Items.LAVA_BUCKET);
-                        p_421946_.accept(Items.POWDER_SNOW_BUCKET);
-                        p_421946_.accept(Items.MILK_BUCKET);
-                        p_421946_.accept(Items.FISHING_ROD);
-                        p_421946_.accept(Items.FLINT_AND_STEEL);
-                        p_421946_.accept(Items.FIRE_CHARGE);
-                        p_421946_.accept(Items.BONE_MEAL);
-                        p_421946_.accept(Items.SHEARS);
-                        p_421946_.accept(Items.BRUSH);
-                        p_421946_.accept(Items.NAME_TAG);
-                        p_421946_.accept(Items.LEAD);
-                        p_421946_.accept(Items.BUNDLE);
-                        p_421946_.accept(Items.WHITE_BUNDLE);
-                        p_421946_.accept(Items.LIGHT_GRAY_BUNDLE);
-                        p_421946_.accept(Items.GRAY_BUNDLE);
-                        p_421946_.accept(Items.BLACK_BUNDLE);
-                        p_421946_.accept(Items.BROWN_BUNDLE);
-                        p_421946_.accept(Items.RED_BUNDLE);
-                        p_421946_.accept(Items.ORANGE_BUNDLE);
-                        p_421946_.accept(Items.YELLOW_BUNDLE);
-                        p_421946_.accept(Items.LIME_BUNDLE);
-                        p_421946_.accept(Items.GREEN_BUNDLE);
-                        p_421946_.accept(Items.CYAN_BUNDLE);
-                        p_421946_.accept(Items.LIGHT_BLUE_BUNDLE);
-                        p_421946_.accept(Items.BLUE_BUNDLE);
-                        p_421946_.accept(Items.PURPLE_BUNDLE);
-                        p_421946_.accept(Items.MAGENTA_BUNDLE);
-                        p_421946_.accept(Items.PINK_BUNDLE);
-                        p_421946_.accept(Items.COMPASS);
-                        p_421946_.accept(Items.RECOVERY_COMPASS);
-                        p_421946_.accept(Items.CLOCK);
-                        p_421946_.accept(Items.SPYGLASS);
-                        p_421946_.accept(Items.MAP);
-                        p_421946_.accept(Items.WRITABLE_BOOK);
-                        p_421946_.accept(Items.WIND_CHARGE);
-                        p_421946_.accept(Items.ENDER_PEARL);
-                        p_421946_.accept(Items.ENDER_EYE);
-                        p_421946_.accept(Items.ELYTRA);
-                        generateFireworksAllDurations(p_421946_, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
-                        p_421946_.accept(Items.SADDLE);
-                        p_421946_.accept(Items.WHITE_HARNESS);
-                        p_421946_.accept(Items.LIGHT_GRAY_HARNESS);
-                        p_421946_.accept(Items.GRAY_HARNESS);
-                        p_421946_.accept(Items.BLACK_HARNESS);
-                        p_421946_.accept(Items.BROWN_HARNESS);
-                        p_421946_.accept(Items.RED_HARNESS);
-                        p_421946_.accept(Items.ORANGE_HARNESS);
-                        p_421946_.accept(Items.YELLOW_HARNESS);
-                        p_421946_.accept(Items.LIME_HARNESS);
-                        p_421946_.accept(Items.GREEN_HARNESS);
-                        p_421946_.accept(Items.CYAN_HARNESS);
-                        p_421946_.accept(Items.LIGHT_BLUE_HARNESS);
-                        p_421946_.accept(Items.BLUE_HARNESS);
-                        p_421946_.accept(Items.PURPLE_HARNESS);
-                        p_421946_.accept(Items.MAGENTA_HARNESS);
-                        p_421946_.accept(Items.PINK_HARNESS);
-                        p_421946_.accept(Items.CARROT_ON_A_STICK);
-                        p_421946_.accept(Items.WARPED_FUNGUS_ON_A_STICK);
-                        p_421946_.accept(Items.OAK_BOAT);
-                        p_421946_.accept(Items.OAK_CHEST_BOAT);
-                        p_421946_.accept(Items.SPRUCE_BOAT);
-                        p_421946_.accept(Items.SPRUCE_CHEST_BOAT);
-                        p_421946_.accept(Items.BIRCH_BOAT);
-                        p_421946_.accept(Items.BIRCH_CHEST_BOAT);
-                        p_421946_.accept(Items.JUNGLE_BOAT);
-                        p_421946_.accept(Items.JUNGLE_CHEST_BOAT);
-                        p_421946_.accept(Items.ACACIA_BOAT);
-                        p_421946_.accept(Items.ACACIA_CHEST_BOAT);
-                        p_421946_.accept(Items.DARK_OAK_BOAT);
-                        p_421946_.accept(Items.DARK_OAK_CHEST_BOAT);
-                        p_421946_.accept(Items.MANGROVE_BOAT);
-                        p_421946_.accept(Items.MANGROVE_CHEST_BOAT);
-                        p_421946_.accept(Items.CHERRY_BOAT);
-                        p_421946_.accept(Items.CHERRY_CHEST_BOAT);
-                        p_421946_.accept(Items.PALE_OAK_BOAT);
-                        p_421946_.accept(Items.PALE_OAK_CHEST_BOAT);
-                        p_421946_.accept(Items.BAMBOO_RAFT);
-                        p_421946_.accept(Items.BAMBOO_CHEST_RAFT);
-                        p_421946_.accept(Items.RAIL);
-                        p_421946_.accept(Items.POWERED_RAIL);
-                        p_421946_.accept(Items.DETECTOR_RAIL);
-                        p_421946_.accept(Items.ACTIVATOR_RAIL);
-                        p_421946_.accept(Items.MINECART);
-                        p_421946_.accept(Items.HOPPER_MINECART);
-                        p_421946_.accept(Items.CHEST_MINECART);
-                        p_421946_.accept(Items.FURNACE_MINECART);
-                        p_421946_.accept(Items.TNT_MINECART);
-                        p_421945_.holders()
+                    (parameters, toolsAndUtilities) -> {
+                        toolsAndUtilities.accept(Items.WOODEN_SHOVEL);
+                        toolsAndUtilities.accept(Items.WOODEN_PICKAXE);
+                        toolsAndUtilities.accept(Items.WOODEN_AXE);
+                        toolsAndUtilities.accept(Items.WOODEN_HOE);
+                        toolsAndUtilities.accept(Items.STONE_SHOVEL);
+                        toolsAndUtilities.accept(Items.STONE_PICKAXE);
+                        toolsAndUtilities.accept(Items.STONE_AXE);
+                        toolsAndUtilities.accept(Items.STONE_HOE);
+                        toolsAndUtilities.accept(Items.COPPER_SHOVEL);
+                        toolsAndUtilities.accept(Items.COPPER_PICKAXE);
+                        toolsAndUtilities.accept(Items.COPPER_AXE);
+                        toolsAndUtilities.accept(Items.COPPER_HOE);
+                        toolsAndUtilities.accept(Items.IRON_SHOVEL);
+                        toolsAndUtilities.accept(Items.IRON_PICKAXE);
+                        toolsAndUtilities.accept(Items.IRON_AXE);
+                        toolsAndUtilities.accept(Items.IRON_HOE);
+                        toolsAndUtilities.accept(Items.GOLDEN_SHOVEL);
+                        toolsAndUtilities.accept(Items.GOLDEN_PICKAXE);
+                        toolsAndUtilities.accept(Items.GOLDEN_AXE);
+                        toolsAndUtilities.accept(Items.GOLDEN_HOE);
+                        toolsAndUtilities.accept(Items.DIAMOND_SHOVEL);
+                        toolsAndUtilities.accept(Items.DIAMOND_PICKAXE);
+                        toolsAndUtilities.accept(Items.DIAMOND_AXE);
+                        toolsAndUtilities.accept(Items.DIAMOND_HOE);
+                        toolsAndUtilities.accept(Items.NETHERITE_SHOVEL);
+                        toolsAndUtilities.accept(Items.NETHERITE_PICKAXE);
+                        toolsAndUtilities.accept(Items.NETHERITE_AXE);
+                        toolsAndUtilities.accept(Items.NETHERITE_HOE);
+                        toolsAndUtilities.accept(Items.BUCKET);
+                        toolsAndUtilities.accept(Items.WATER_BUCKET);
+                        toolsAndUtilities.accept(Items.COD_BUCKET);
+                        toolsAndUtilities.accept(Items.SALMON_BUCKET);
+                        toolsAndUtilities.accept(Items.TROPICAL_FISH_BUCKET);
+                        toolsAndUtilities.accept(Items.PUFFERFISH_BUCKET);
+                        toolsAndUtilities.accept(Items.AXOLOTL_BUCKET);
+                        toolsAndUtilities.accept(Items.TADPOLE_BUCKET);
+                        toolsAndUtilities.accept(Items.SULFUR_CUBE_BUCKET);
+                        toolsAndUtilities.accept(Items.LAVA_BUCKET);
+                        toolsAndUtilities.accept(Items.POWDER_SNOW_BUCKET);
+                        toolsAndUtilities.accept(Items.MILK_BUCKET);
+                        toolsAndUtilities.accept(Items.FISHING_ROD);
+                        toolsAndUtilities.accept(Items.FLINT_AND_STEEL);
+                        toolsAndUtilities.accept(Items.FIRE_CHARGE);
+                        toolsAndUtilities.accept(Items.BONE_MEAL);
+                        toolsAndUtilities.accept(Items.SHEARS);
+                        toolsAndUtilities.accept(Items.BRUSH);
+                        toolsAndUtilities.accept(Items.NAME_TAG);
+                        toolsAndUtilities.accept(Items.LEAD);
+                        toolsAndUtilities.accept(Items.BUNDLE);
+                        Items.DYED_BUNDLE.forEach(toolsAndUtilities::accept);
+                        toolsAndUtilities.accept(Items.COMPASS);
+                        toolsAndUtilities.accept(Items.RECOVERY_COMPASS);
+                        toolsAndUtilities.accept(Items.CLOCK);
+                        toolsAndUtilities.accept(Items.SPYGLASS);
+                        toolsAndUtilities.accept(Items.MAP);
+                        toolsAndUtilities.accept(Items.WRITABLE_BOOK);
+                        toolsAndUtilities.accept(Items.WIND_CHARGE);
+                        toolsAndUtilities.accept(Items.ENDER_PEARL);
+                        toolsAndUtilities.accept(Items.ENDER_EYE);
+                        toolsAndUtilities.accept(Items.ELYTRA);
+                        generateFireworksAllDurations(toolsAndUtilities, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                        toolsAndUtilities.accept(Items.SADDLE);
+                        Items.HARNESS.forEach(toolsAndUtilities::accept);
+                        toolsAndUtilities.accept(Items.CARROT_ON_A_STICK);
+                        toolsAndUtilities.accept(Items.WARPED_FUNGUS_ON_A_STICK);
+                        toolsAndUtilities.accept(Items.OAK_BOAT);
+                        toolsAndUtilities.accept(Items.OAK_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.SPRUCE_BOAT);
+                        toolsAndUtilities.accept(Items.SPRUCE_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.BIRCH_BOAT);
+                        toolsAndUtilities.accept(Items.BIRCH_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.JUNGLE_BOAT);
+                        toolsAndUtilities.accept(Items.JUNGLE_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.ACACIA_BOAT);
+                        toolsAndUtilities.accept(Items.ACACIA_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.DARK_OAK_BOAT);
+                        toolsAndUtilities.accept(Items.DARK_OAK_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.MANGROVE_BOAT);
+                        toolsAndUtilities.accept(Items.MANGROVE_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.CHERRY_BOAT);
+                        toolsAndUtilities.accept(Items.CHERRY_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.PALE_OAK_BOAT);
+                        toolsAndUtilities.accept(Items.PALE_OAK_CHEST_BOAT);
+                        toolsAndUtilities.accept(Items.BAMBOO_RAFT);
+                        toolsAndUtilities.accept(Items.BAMBOO_CHEST_RAFT);
+                        toolsAndUtilities.accept(Items.RAIL);
+                        toolsAndUtilities.accept(Items.POWERED_RAIL);
+                        toolsAndUtilities.accept(Items.DETECTOR_RAIL);
+                        toolsAndUtilities.accept(Items.ACTIVATOR_RAIL);
+                        toolsAndUtilities.accept(Items.MINECART);
+                        toolsAndUtilities.accept(Items.HOPPER_MINECART);
+                        toolsAndUtilities.accept(Items.CHEST_MINECART);
+                        toolsAndUtilities.accept(Items.FURNACE_MINECART);
+                        toolsAndUtilities.accept(Items.TNT_MINECART);
+                        parameters.holders()
                             .lookup(Registries.INSTRUMENT)
                             .ifPresent(
-                                p_270036_ -> generateInstrumentTypes(
-                                    p_421946_, p_270036_, Items.GOAT_HORN, InstrumentTags.GOAT_HORNS, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS
+                                instruments -> generateInstrumentTypes(
+                                    toolsAndUtilities,
+                                    instruments,
+                                    Items.GOAT_HORN,
+                                    InstrumentTags.GOAT_HORNS,
+                                    CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS
                                 )
                             );
-                        p_421946_.accept(Items.MUSIC_DISC_13);
-                        p_421946_.accept(Items.MUSIC_DISC_CAT);
-                        p_421946_.accept(Items.MUSIC_DISC_BLOCKS);
-                        p_421946_.accept(Items.MUSIC_DISC_CHIRP);
-                        p_421946_.accept(Items.MUSIC_DISC_FAR);
-                        p_421946_.accept(Items.MUSIC_DISC_MALL);
-                        p_421946_.accept(Items.MUSIC_DISC_MELLOHI);
-                        p_421946_.accept(Items.MUSIC_DISC_STAL);
-                        p_421946_.accept(Items.MUSIC_DISC_STRAD);
-                        p_421946_.accept(Items.MUSIC_DISC_WARD);
-                        p_421946_.accept(Items.MUSIC_DISC_11);
-                        p_421946_.accept(Items.MUSIC_DISC_CREATOR_MUSIC_BOX);
-                        p_421946_.accept(Items.MUSIC_DISC_WAIT);
-                        p_421946_.accept(Items.MUSIC_DISC_CREATOR);
-                        p_421946_.accept(Items.MUSIC_DISC_PRECIPICE);
-                        p_421946_.accept(Items.MUSIC_DISC_OTHERSIDE);
-                        p_421946_.accept(Items.MUSIC_DISC_RELIC);
-                        p_421946_.accept(Items.MUSIC_DISC_5);
-                        p_421946_.accept(Items.MUSIC_DISC_PIGSTEP);
-                        p_421946_.accept(Items.MUSIC_DISC_TEARS);
-                        p_421946_.accept(Items.MUSIC_DISC_LAVA_CHICKEN);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_13);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_CAT);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_BLOCKS);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_CHIRP);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_FAR);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_MALL);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_MELLOHI);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_STAL);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_STRAD);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_WARD);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_11);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_CREATOR_MUSIC_BOX);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_WAIT);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_CREATOR);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_PRECIPICE);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_OTHERSIDE);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_RELIC);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_5);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_PIGSTEP);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_TEARS);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_LAVA_CHICKEN);
+                        toolsAndUtilities.accept(Items.MUSIC_DISC_BOUNCE);
                     }
                 )
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             COMBAT,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 1)
                 .title(Component.translatable("itemGroup.combat"))
                 .icon(() -> new ItemStack(Items.NETHERITE_SWORD))
                 .displayItems(
-                    (p_449776_, p_449777_) -> {
-                        p_449777_.accept(Items.WOODEN_SWORD);
-                        p_449777_.accept(Items.STONE_SWORD);
-                        p_449777_.accept(Items.COPPER_SWORD);
-                        p_449777_.accept(Items.IRON_SWORD);
-                        p_449777_.accept(Items.GOLDEN_SWORD);
-                        p_449777_.accept(Items.DIAMOND_SWORD);
-                        p_449777_.accept(Items.NETHERITE_SWORD);
-                        p_449777_.accept(Items.WOODEN_SPEAR);
-                        p_449777_.accept(Items.STONE_SPEAR);
-                        p_449777_.accept(Items.COPPER_SPEAR);
-                        p_449777_.accept(Items.IRON_SPEAR);
-                        p_449777_.accept(Items.GOLDEN_SPEAR);
-                        p_449777_.accept(Items.DIAMOND_SPEAR);
-                        p_449777_.accept(Items.NETHERITE_SPEAR);
-                        p_449777_.accept(Items.WOODEN_AXE);
-                        p_449777_.accept(Items.STONE_AXE);
-                        p_449777_.accept(Items.COPPER_AXE);
-                        p_449777_.accept(Items.IRON_AXE);
-                        p_449777_.accept(Items.GOLDEN_AXE);
-                        p_449777_.accept(Items.DIAMOND_AXE);
-                        p_449777_.accept(Items.NETHERITE_AXE);
-                        p_449777_.accept(Items.TRIDENT);
-                        p_449777_.accept(Items.MACE);
-                        p_449777_.accept(Items.SHIELD);
-                        p_449777_.accept(Items.LEATHER_HELMET);
-                        p_449777_.accept(Items.LEATHER_CHESTPLATE);
-                        p_449777_.accept(Items.LEATHER_LEGGINGS);
-                        p_449777_.accept(Items.LEATHER_BOOTS);
-                        p_449777_.accept(Items.COPPER_HELMET);
-                        p_449777_.accept(Items.COPPER_CHESTPLATE);
-                        p_449777_.accept(Items.COPPER_LEGGINGS);
-                        p_449777_.accept(Items.COPPER_BOOTS);
-                        p_449777_.accept(Items.CHAINMAIL_HELMET);
-                        p_449777_.accept(Items.CHAINMAIL_CHESTPLATE);
-                        p_449777_.accept(Items.CHAINMAIL_LEGGINGS);
-                        p_449777_.accept(Items.CHAINMAIL_BOOTS);
-                        p_449777_.accept(Items.IRON_HELMET);
-                        p_449777_.accept(Items.IRON_CHESTPLATE);
-                        p_449777_.accept(Items.IRON_LEGGINGS);
-                        p_449777_.accept(Items.IRON_BOOTS);
-                        p_449777_.accept(Items.GOLDEN_HELMET);
-                        p_449777_.accept(Items.GOLDEN_CHESTPLATE);
-                        p_449777_.accept(Items.GOLDEN_LEGGINGS);
-                        p_449777_.accept(Items.GOLDEN_BOOTS);
-                        p_449777_.accept(Items.DIAMOND_HELMET);
-                        p_449777_.accept(Items.DIAMOND_CHESTPLATE);
-                        p_449777_.accept(Items.DIAMOND_LEGGINGS);
-                        p_449777_.accept(Items.DIAMOND_BOOTS);
-                        p_449777_.accept(Items.NETHERITE_HELMET);
-                        p_449777_.accept(Items.NETHERITE_CHESTPLATE);
-                        p_449777_.accept(Items.NETHERITE_LEGGINGS);
-                        p_449777_.accept(Items.NETHERITE_BOOTS);
-                        p_449777_.accept(Items.TURTLE_HELMET);
-                        p_449777_.accept(Items.LEATHER_HORSE_ARMOR);
-                        p_449777_.accept(Items.COPPER_HORSE_ARMOR);
-                        p_449777_.accept(Items.IRON_HORSE_ARMOR);
-                        p_449777_.accept(Items.GOLDEN_HORSE_ARMOR);
-                        p_449777_.accept(Items.DIAMOND_HORSE_ARMOR);
-                        p_449777_.accept(Items.NETHERITE_HORSE_ARMOR);
-                        p_449777_.accept(Items.WOLF_ARMOR);
-                        p_449777_.accept(Items.COPPER_NAUTILUS_ARMOR);
-                        p_449777_.accept(Items.IRON_NAUTILUS_ARMOR);
-                        p_449777_.accept(Items.GOLDEN_NAUTILUS_ARMOR);
-                        p_449777_.accept(Items.DIAMOND_NAUTILUS_ARMOR);
-                        p_449777_.accept(Items.NETHERITE_NAUTILUS_ARMOR);
-                        p_449777_.accept(Items.TOTEM_OF_UNDYING);
-                        p_449777_.accept(Items.TNT);
-                        p_449777_.accept(Items.END_CRYSTAL);
-                        p_449777_.accept(Items.SNOWBALL);
-                        p_449777_.accept(Items.EGG);
-                        p_449777_.accept(Items.BROWN_EGG);
-                        p_449777_.accept(Items.BLUE_EGG);
-                        p_449777_.accept(Items.WIND_CHARGE);
-                        p_449777_.accept(Items.BOW);
-                        p_449777_.accept(Items.CROSSBOW);
-                        generateFireworksAllDurations(p_449777_, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
-                        p_449777_.accept(Items.ARROW);
-                        p_449777_.accept(Items.SPECTRAL_ARROW);
-                        p_449776_.holders()
+                    (parameters, combat) -> {
+                        combat.accept(Items.WOODEN_SWORD);
+                        combat.accept(Items.STONE_SWORD);
+                        combat.accept(Items.COPPER_SWORD);
+                        combat.accept(Items.IRON_SWORD);
+                        combat.accept(Items.GOLDEN_SWORD);
+                        combat.accept(Items.DIAMOND_SWORD);
+                        combat.accept(Items.NETHERITE_SWORD);
+                        combat.accept(Items.WOODEN_SPEAR);
+                        combat.accept(Items.STONE_SPEAR);
+                        combat.accept(Items.COPPER_SPEAR);
+                        combat.accept(Items.IRON_SPEAR);
+                        combat.accept(Items.GOLDEN_SPEAR);
+                        combat.accept(Items.DIAMOND_SPEAR);
+                        combat.accept(Items.NETHERITE_SPEAR);
+                        combat.accept(Items.WOODEN_AXE);
+                        combat.accept(Items.STONE_AXE);
+                        combat.accept(Items.COPPER_AXE);
+                        combat.accept(Items.IRON_AXE);
+                        combat.accept(Items.GOLDEN_AXE);
+                        combat.accept(Items.DIAMOND_AXE);
+                        combat.accept(Items.NETHERITE_AXE);
+                        combat.accept(Items.TRIDENT);
+                        combat.accept(Items.MACE);
+                        combat.accept(Items.SHIELD);
+                        combat.accept(Items.LEATHER_HELMET);
+                        combat.accept(Items.LEATHER_CHESTPLATE);
+                        combat.accept(Items.LEATHER_LEGGINGS);
+                        combat.accept(Items.LEATHER_BOOTS);
+                        combat.accept(Items.COPPER_HELMET);
+                        combat.accept(Items.COPPER_CHESTPLATE);
+                        combat.accept(Items.COPPER_LEGGINGS);
+                        combat.accept(Items.COPPER_BOOTS);
+                        combat.accept(Items.CHAINMAIL_HELMET);
+                        combat.accept(Items.CHAINMAIL_CHESTPLATE);
+                        combat.accept(Items.CHAINMAIL_LEGGINGS);
+                        combat.accept(Items.CHAINMAIL_BOOTS);
+                        combat.accept(Items.IRON_HELMET);
+                        combat.accept(Items.IRON_CHESTPLATE);
+                        combat.accept(Items.IRON_LEGGINGS);
+                        combat.accept(Items.IRON_BOOTS);
+                        combat.accept(Items.GOLDEN_HELMET);
+                        combat.accept(Items.GOLDEN_CHESTPLATE);
+                        combat.accept(Items.GOLDEN_LEGGINGS);
+                        combat.accept(Items.GOLDEN_BOOTS);
+                        combat.accept(Items.DIAMOND_HELMET);
+                        combat.accept(Items.DIAMOND_CHESTPLATE);
+                        combat.accept(Items.DIAMOND_LEGGINGS);
+                        combat.accept(Items.DIAMOND_BOOTS);
+                        combat.accept(Items.NETHERITE_HELMET);
+                        combat.accept(Items.NETHERITE_CHESTPLATE);
+                        combat.accept(Items.NETHERITE_LEGGINGS);
+                        combat.accept(Items.NETHERITE_BOOTS);
+                        combat.accept(Items.TURTLE_HELMET);
+                        combat.accept(Items.LEATHER_HORSE_ARMOR);
+                        combat.accept(Items.COPPER_HORSE_ARMOR);
+                        combat.accept(Items.IRON_HORSE_ARMOR);
+                        combat.accept(Items.GOLDEN_HORSE_ARMOR);
+                        combat.accept(Items.DIAMOND_HORSE_ARMOR);
+                        combat.accept(Items.NETHERITE_HORSE_ARMOR);
+                        combat.accept(Items.WOLF_ARMOR);
+                        combat.accept(Items.COPPER_NAUTILUS_ARMOR);
+                        combat.accept(Items.IRON_NAUTILUS_ARMOR);
+                        combat.accept(Items.GOLDEN_NAUTILUS_ARMOR);
+                        combat.accept(Items.DIAMOND_NAUTILUS_ARMOR);
+                        combat.accept(Items.NETHERITE_NAUTILUS_ARMOR);
+                        combat.accept(Items.TOTEM_OF_UNDYING);
+                        combat.accept(Items.TNT);
+                        combat.accept(Items.END_CRYSTAL);
+                        combat.accept(Items.SNOWBALL);
+                        combat.accept(Items.EGG);
+                        combat.accept(Items.BROWN_EGG);
+                        combat.accept(Items.BLUE_EGG);
+                        combat.accept(Items.WIND_CHARGE);
+                        combat.accept(Items.BOW);
+                        combat.accept(Items.CROSSBOW);
+                        generateFireworksAllDurations(combat, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                        combat.accept(Items.ARROW);
+                        combat.accept(Items.SPECTRAL_ARROW);
+                        parameters.holders()
                             .lookup(Registries.POTION)
                             .ifPresent(
-                                p_327133_ -> generatePotionEffectTypes(
-                                    p_449777_, p_327133_, Items.TIPPED_ARROW, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS, p_449776_.enabledFeatures()
+                                potions -> generatePotionEffectTypes(
+                                    combat, potions, Items.TIPPED_ARROW, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS, parameters.enabledFeatures()
                                 )
                             );
                     }
@@ -1591,363 +1260,370 @@ public class CreativeModeTabs {
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             FOOD_AND_DRINKS,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 2)
                 .title(Component.translatable("itemGroup.foodAndDrink"))
                 .icon(() -> new ItemStack(Items.GOLDEN_APPLE))
-                .displayItems((p_327134_, p_327135_) -> {
-                    p_327135_.accept(Items.APPLE);
-                    p_327135_.accept(Items.GOLDEN_APPLE);
-                    p_327135_.accept(Items.ENCHANTED_GOLDEN_APPLE);
-                    p_327135_.accept(Items.MELON_SLICE);
-                    p_327135_.accept(Items.SWEET_BERRIES);
-                    p_327135_.accept(Items.GLOW_BERRIES);
-                    p_327135_.accept(Items.CHORUS_FRUIT);
-                    p_327135_.accept(Items.CARROT);
-                    p_327135_.accept(Items.GOLDEN_CARROT);
-                    p_327135_.accept(Items.POTATO);
-                    p_327135_.accept(Items.BAKED_POTATO);
-                    p_327135_.accept(Items.POISONOUS_POTATO);
-                    p_327135_.accept(Items.BEETROOT);
-                    p_327135_.accept(Items.DRIED_KELP);
-                    p_327135_.accept(Items.BEEF);
-                    p_327135_.accept(Items.COOKED_BEEF);
-                    p_327135_.accept(Items.PORKCHOP);
-                    p_327135_.accept(Items.COOKED_PORKCHOP);
-                    p_327135_.accept(Items.MUTTON);
-                    p_327135_.accept(Items.COOKED_MUTTON);
-                    p_327135_.accept(Items.CHICKEN);
-                    p_327135_.accept(Items.COOKED_CHICKEN);
-                    p_327135_.accept(Items.RABBIT);
-                    p_327135_.accept(Items.COOKED_RABBIT);
-                    p_327135_.accept(Items.COD);
-                    p_327135_.accept(Items.COOKED_COD);
-                    p_327135_.accept(Items.SALMON);
-                    p_327135_.accept(Items.COOKED_SALMON);
-                    p_327135_.accept(Items.TROPICAL_FISH);
-                    p_327135_.accept(Items.PUFFERFISH);
-                    p_327135_.accept(Items.BREAD);
-                    p_327135_.accept(Items.COOKIE);
-                    p_327135_.accept(Items.CAKE);
-                    p_327135_.accept(Items.PUMPKIN_PIE);
-                    p_327135_.accept(Items.ROTTEN_FLESH);
-                    p_327135_.accept(Items.SPIDER_EYE);
-                    p_327135_.accept(Items.MUSHROOM_STEW);
-                    p_327135_.accept(Items.BEETROOT_SOUP);
-                    p_327135_.accept(Items.RABBIT_STEW);
-                    generateSuspiciousStews(p_327135_, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
-                    p_327135_.accept(Items.MILK_BUCKET);
-                    p_327135_.accept(Items.HONEY_BOTTLE);
-                    generateOminousBottles(p_327135_, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
-                    p_327134_.holders().lookup(Registries.POTION).ifPresent(p_327138_ -> {
-                        generatePotionEffectTypes(p_327135_, p_327138_, Items.POTION, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS, p_327134_.enabledFeatures());
-                        generatePotionEffectTypes(p_327135_, p_327138_, Items.SPLASH_POTION, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS, p_327134_.enabledFeatures());
-                        generatePotionEffectTypes(p_327135_, p_327138_, Items.LINGERING_POTION, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS, p_327134_.enabledFeatures());
-                    });
-                })
+                .displayItems(
+                    (parameters, consumables) -> {
+                        consumables.accept(Items.APPLE);
+                        consumables.accept(Items.GOLDEN_APPLE);
+                        consumables.accept(Items.ENCHANTED_GOLDEN_APPLE);
+                        consumables.accept(Items.MELON_SLICE);
+                        consumables.accept(Items.SWEET_BERRIES);
+                        consumables.accept(Items.GLOW_BERRIES);
+                        consumables.accept(Items.CHORUS_FRUIT);
+                        consumables.accept(Items.CARROT);
+                        consumables.accept(Items.GOLDEN_CARROT);
+                        consumables.accept(Items.POTATO);
+                        consumables.accept(Items.BAKED_POTATO);
+                        consumables.accept(Items.POISONOUS_POTATO);
+                        consumables.accept(Items.BEETROOT);
+                        consumables.accept(Items.GOLDEN_DANDELION);
+                        consumables.accept(Items.DRIED_KELP);
+                        consumables.accept(Items.BEEF);
+                        consumables.accept(Items.COOKED_BEEF);
+                        consumables.accept(Items.PORKCHOP);
+                        consumables.accept(Items.COOKED_PORKCHOP);
+                        consumables.accept(Items.MUTTON);
+                        consumables.accept(Items.COOKED_MUTTON);
+                        consumables.accept(Items.CHICKEN);
+                        consumables.accept(Items.COOKED_CHICKEN);
+                        consumables.accept(Items.RABBIT);
+                        consumables.accept(Items.COOKED_RABBIT);
+                        consumables.accept(Items.COD);
+                        consumables.accept(Items.COOKED_COD);
+                        consumables.accept(Items.SALMON);
+                        consumables.accept(Items.COOKED_SALMON);
+                        consumables.accept(Items.TROPICAL_FISH);
+                        consumables.accept(Items.PUFFERFISH);
+                        consumables.accept(Items.BREAD);
+                        consumables.accept(Items.COOKIE);
+                        consumables.accept(Items.CAKE);
+                        consumables.accept(Items.PUMPKIN_PIE);
+                        consumables.accept(Items.ROTTEN_FLESH);
+                        consumables.accept(Items.SPIDER_EYE);
+                        consumables.accept(Items.MUSHROOM_STEW);
+                        consumables.accept(Items.BEETROOT_SOUP);
+                        consumables.accept(Items.RABBIT_STEW);
+                        generateSuspiciousStews(consumables, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                        consumables.accept(Items.MILK_BUCKET);
+                        consumables.accept(Items.HONEY_BOTTLE);
+                        generateOminousBottles(consumables, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS);
+                        parameters.holders()
+                            .lookup(Registries.POTION)
+                            .ifPresent(
+                                potions -> {
+                                    generatePotionEffectTypes(
+                                        consumables, potions, Items.POTION, CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS, parameters.enabledFeatures()
+                                    );
+                                    generatePotionEffectTypes(
+                                        consumables,
+                                        potions,
+                                        Items.SPLASH_POTION,
+                                        CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS,
+                                        parameters.enabledFeatures()
+                                    );
+                                    generatePotionEffectTypes(
+                                        consumables,
+                                        potions,
+                                        Items.LINGERING_POTION,
+                                        CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS,
+                                        parameters.enabledFeatures()
+                                    );
+                                }
+                            );
+                    }
+                )
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             INGREDIENTS,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 3)
                 .title(Component.translatable("itemGroup.ingredients"))
                 .icon(() -> new ItemStack(Items.IRON_INGOT))
-                .displayItems((p_270617_, p_259444_) -> {
-                    p_259444_.accept(Items.COAL);
-                    p_259444_.accept(Items.CHARCOAL);
-                    p_259444_.accept(Items.RAW_COPPER);
-                    p_259444_.accept(Items.RAW_IRON);
-                    p_259444_.accept(Items.RAW_GOLD);
-                    p_259444_.accept(Items.EMERALD);
-                    p_259444_.accept(Items.LAPIS_LAZULI);
-                    p_259444_.accept(Items.DIAMOND);
-                    p_259444_.accept(Items.ANCIENT_DEBRIS);
-                    p_259444_.accept(Items.QUARTZ);
-                    p_259444_.accept(Items.AMETHYST_SHARD);
-                    p_259444_.accept(Items.COPPER_NUGGET);
-                    p_259444_.accept(Items.IRON_NUGGET);
-                    p_259444_.accept(Items.GOLD_NUGGET);
-                    p_259444_.accept(Items.COPPER_INGOT);
-                    p_259444_.accept(Items.IRON_INGOT);
-                    p_259444_.accept(Items.GOLD_INGOT);
-                    p_259444_.accept(Items.NETHERITE_SCRAP);
-                    p_259444_.accept(Items.NETHERITE_INGOT);
-                    p_259444_.accept(Items.STICK);
-                    p_259444_.accept(Items.FLINT);
-                    p_259444_.accept(Items.WHEAT);
-                    p_259444_.accept(Items.BONE);
-                    p_259444_.accept(Items.BONE_MEAL);
-                    p_259444_.accept(Items.STRING);
-                    p_259444_.accept(Items.FEATHER);
-                    p_259444_.accept(Items.SNOWBALL);
-                    p_259444_.accept(Items.EGG);
-                    p_259444_.accept(Items.BROWN_EGG);
-                    p_259444_.accept(Items.BLUE_EGG);
-                    p_259444_.accept(Items.LEATHER);
-                    p_259444_.accept(Items.RABBIT_HIDE);
-                    p_259444_.accept(Items.HONEYCOMB);
-                    p_259444_.accept(Items.RESIN_CLUMP);
-                    p_259444_.accept(Items.INK_SAC);
-                    p_259444_.accept(Items.GLOW_INK_SAC);
-                    p_259444_.accept(Items.TURTLE_SCUTE);
-                    p_259444_.accept(Items.ARMADILLO_SCUTE);
-                    p_259444_.accept(Items.SLIME_BALL);
-                    p_259444_.accept(Items.CLAY_BALL);
-                    p_259444_.accept(Items.PRISMARINE_SHARD);
-                    p_259444_.accept(Items.PRISMARINE_CRYSTALS);
-                    p_259444_.accept(Items.NAUTILUS_SHELL);
-                    p_259444_.accept(Items.HEART_OF_THE_SEA);
-                    p_259444_.accept(Items.FIRE_CHARGE);
-                    p_259444_.accept(Items.BLAZE_ROD);
-                    p_259444_.accept(Items.BREEZE_ROD);
-                    p_259444_.accept(Items.HEAVY_CORE);
-                    p_259444_.accept(Items.NETHER_STAR);
-                    p_259444_.accept(Items.ENDER_PEARL);
-                    p_259444_.accept(Items.ENDER_EYE);
-                    p_259444_.accept(Items.SHULKER_SHELL);
-                    p_259444_.accept(Items.POPPED_CHORUS_FRUIT);
-                    p_259444_.accept(Items.ECHO_SHARD);
-                    p_259444_.accept(Items.DISC_FRAGMENT_5);
-                    p_259444_.accept(Items.WHITE_DYE);
-                    p_259444_.accept(Items.LIGHT_GRAY_DYE);
-                    p_259444_.accept(Items.GRAY_DYE);
-                    p_259444_.accept(Items.BLACK_DYE);
-                    p_259444_.accept(Items.BROWN_DYE);
-                    p_259444_.accept(Items.RED_DYE);
-                    p_259444_.accept(Items.ORANGE_DYE);
-                    p_259444_.accept(Items.YELLOW_DYE);
-                    p_259444_.accept(Items.LIME_DYE);
-                    p_259444_.accept(Items.GREEN_DYE);
-                    p_259444_.accept(Items.CYAN_DYE);
-                    p_259444_.accept(Items.LIGHT_BLUE_DYE);
-                    p_259444_.accept(Items.BLUE_DYE);
-                    p_259444_.accept(Items.PURPLE_DYE);
-                    p_259444_.accept(Items.MAGENTA_DYE);
-                    p_259444_.accept(Items.PINK_DYE);
-                    p_259444_.accept(Items.BOWL);
-                    p_259444_.accept(Items.BRICK);
-                    p_259444_.accept(Items.NETHER_BRICK);
-                    p_259444_.accept(Items.RESIN_BRICK);
-                    p_259444_.accept(Items.PAPER);
-                    p_259444_.accept(Items.BOOK);
-                    p_259444_.accept(Items.FIREWORK_STAR);
-                    p_259444_.accept(Items.GLASS_BOTTLE);
-                    p_259444_.accept(Items.NETHER_WART);
-                    p_259444_.accept(Items.REDSTONE);
-                    p_259444_.accept(Items.GLOWSTONE_DUST);
-                    p_259444_.accept(Items.GUNPOWDER);
-                    p_259444_.accept(Items.DRAGON_BREATH);
-                    p_259444_.accept(Items.FERMENTED_SPIDER_EYE);
-                    p_259444_.accept(Items.BLAZE_POWDER);
-                    p_259444_.accept(Items.SUGAR);
-                    p_259444_.accept(Items.RABBIT_FOOT);
-                    p_259444_.accept(Items.GLISTERING_MELON_SLICE);
-                    p_259444_.accept(Items.SPIDER_EYE);
-                    p_259444_.accept(Items.PUFFERFISH);
-                    p_259444_.accept(Items.MAGMA_CREAM);
-                    p_259444_.accept(Items.GOLDEN_CARROT);
-                    p_259444_.accept(Items.GHAST_TEAR);
-                    p_259444_.accept(Items.TURTLE_HELMET);
-                    p_259444_.accept(Items.PHANTOM_MEMBRANE);
-                    p_259444_.accept(Items.FIELD_MASONED_BANNER_PATTERN);
-                    p_259444_.accept(Items.BORDURE_INDENTED_BANNER_PATTERN);
-                    p_259444_.accept(Items.FLOWER_BANNER_PATTERN);
-                    p_259444_.accept(Items.CREEPER_BANNER_PATTERN);
-                    p_259444_.accept(Items.SKULL_BANNER_PATTERN);
-                    p_259444_.accept(Items.MOJANG_BANNER_PATTERN);
-                    p_259444_.accept(Items.GLOBE_BANNER_PATTERN);
-                    p_259444_.accept(Items.PIGLIN_BANNER_PATTERN);
-                    p_259444_.accept(Items.FLOW_BANNER_PATTERN);
-                    p_259444_.accept(Items.GUSTER_BANNER_PATTERN);
-                    p_259444_.accept(Items.ANGLER_POTTERY_SHERD);
-                    p_259444_.accept(Items.ARCHER_POTTERY_SHERD);
-                    p_259444_.accept(Items.ARMS_UP_POTTERY_SHERD);
-                    p_259444_.accept(Items.BLADE_POTTERY_SHERD);
-                    p_259444_.accept(Items.BREWER_POTTERY_SHERD);
-                    p_259444_.accept(Items.BURN_POTTERY_SHERD);
-                    p_259444_.accept(Items.DANGER_POTTERY_SHERD);
-                    p_259444_.accept(Items.EXPLORER_POTTERY_SHERD);
-                    p_259444_.accept(Items.FLOW_POTTERY_SHERD);
-                    p_259444_.accept(Items.FRIEND_POTTERY_SHERD);
-                    p_259444_.accept(Items.GUSTER_POTTERY_SHERD);
-                    p_259444_.accept(Items.HEART_POTTERY_SHERD);
-                    p_259444_.accept(Items.HEARTBREAK_POTTERY_SHERD);
-                    p_259444_.accept(Items.HOWL_POTTERY_SHERD);
-                    p_259444_.accept(Items.MINER_POTTERY_SHERD);
-                    p_259444_.accept(Items.MOURNER_POTTERY_SHERD);
-                    p_259444_.accept(Items.PLENTY_POTTERY_SHERD);
-                    p_259444_.accept(Items.PRIZE_POTTERY_SHERD);
-                    p_259444_.accept(Items.SCRAPE_POTTERY_SHERD);
-                    p_259444_.accept(Items.SHEAF_POTTERY_SHERD);
-                    p_259444_.accept(Items.SHELTER_POTTERY_SHERD);
-                    p_259444_.accept(Items.SKULL_POTTERY_SHERD);
-                    p_259444_.accept(Items.SNORT_POTTERY_SHERD);
-                    p_259444_.accept(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.VEX_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE);
-                    p_259444_.accept(Items.EXPERIENCE_BOTTLE);
-                    p_259444_.accept(Items.TRIAL_KEY);
-                    p_259444_.accept(Items.OMINOUS_TRIAL_KEY);
-                    p_270617_.holders().lookup(Registries.ENCHANTMENT).ifPresent(p_341546_ -> {
-                        generateEnchantmentBookTypesOnlyMaxLevel(p_259444_, p_341546_, CreativeModeTab.TabVisibility.PARENT_TAB_ONLY);
-                        generateEnchantmentBookTypesAllLevels(p_259444_, p_341546_, CreativeModeTab.TabVisibility.SEARCH_TAB_ONLY);
+                .displayItems((parameters, ingredients) -> {
+                    ingredients.accept(Items.COAL);
+                    ingredients.accept(Items.CHARCOAL);
+                    ingredients.accept(Items.RAW_COPPER);
+                    ingredients.accept(Items.RAW_IRON);
+                    ingredients.accept(Items.RAW_GOLD);
+                    ingredients.accept(Items.EMERALD);
+                    ingredients.accept(Items.LAPIS_LAZULI);
+                    ingredients.accept(Items.DIAMOND);
+                    ingredients.accept(Items.ANCIENT_DEBRIS);
+                    ingredients.accept(Items.QUARTZ);
+                    ingredients.accept(Items.AMETHYST_SHARD);
+                    ingredients.accept(Items.COPPER_NUGGET);
+                    ingredients.accept(Items.IRON_NUGGET);
+                    ingredients.accept(Items.GOLD_NUGGET);
+                    ingredients.accept(Items.COPPER_INGOT);
+                    ingredients.accept(Items.IRON_INGOT);
+                    ingredients.accept(Items.GOLD_INGOT);
+                    ingredients.accept(Items.NETHERITE_SCRAP);
+                    ingredients.accept(Items.NETHERITE_INGOT);
+                    ingredients.accept(Items.STICK);
+                    ingredients.accept(Items.FLINT);
+                    ingredients.accept(Items.WHEAT);
+                    ingredients.accept(Items.BONE);
+                    ingredients.accept(Items.BONE_MEAL);
+                    ingredients.accept(Items.STRING);
+                    ingredients.accept(Items.FEATHER);
+                    ingredients.accept(Items.SNOWBALL);
+                    ingredients.accept(Items.EGG);
+                    ingredients.accept(Items.BROWN_EGG);
+                    ingredients.accept(Items.BLUE_EGG);
+                    ingredients.accept(Items.LEATHER);
+                    ingredients.accept(Items.RABBIT_HIDE);
+                    ingredients.accept(Items.HONEYCOMB);
+                    ingredients.accept(Items.RESIN_CLUMP);
+                    ingredients.accept(Items.INK_SAC);
+                    ingredients.accept(Items.GLOW_INK_SAC);
+                    ingredients.accept(Items.TURTLE_SCUTE);
+                    ingredients.accept(Items.ARMADILLO_SCUTE);
+                    ingredients.accept(Items.SLIME_BALL);
+                    ingredients.accept(Items.CLAY_BALL);
+                    ingredients.accept(Items.PRISMARINE_SHARD);
+                    ingredients.accept(Items.PRISMARINE_CRYSTALS);
+                    ingredients.accept(Items.NAUTILUS_SHELL);
+                    ingredients.accept(Items.HEART_OF_THE_SEA);
+                    ingredients.accept(Items.FIRE_CHARGE);
+                    ingredients.accept(Items.BLAZE_ROD);
+                    ingredients.accept(Items.BREEZE_ROD);
+                    ingredients.accept(Items.HEAVY_CORE);
+                    ingredients.accept(Items.NETHER_STAR);
+                    ingredients.accept(Items.ENDER_PEARL);
+                    ingredients.accept(Items.ENDER_EYE);
+                    ingredients.accept(Items.SHULKER_SHELL);
+                    ingredients.accept(Items.POPPED_CHORUS_FRUIT);
+                    ingredients.accept(Items.ECHO_SHARD);
+                    ingredients.accept(Items.DISC_FRAGMENT_5);
+                    Items.DYE.forEach(dye -> ingredients.accept(dye));
+                    ingredients.accept(Items.BOWL);
+                    ingredients.accept(Items.BRICK);
+                    ingredients.accept(Items.NETHER_BRICK);
+                    ingredients.accept(Items.RESIN_BRICK);
+                    ingredients.accept(Items.PAPER);
+                    ingredients.accept(Items.BOOK);
+                    ingredients.accept(Items.FIREWORK_STAR);
+                    ingredients.accept(Items.GLASS_BOTTLE);
+                    ingredients.accept(Items.NETHER_WART);
+                    ingredients.accept(Items.REDSTONE);
+                    ingredients.accept(Items.GLOWSTONE_DUST);
+                    ingredients.accept(Items.GUNPOWDER);
+                    ingredients.accept(Items.DRAGON_BREATH);
+                    ingredients.accept(Items.FERMENTED_SPIDER_EYE);
+                    ingredients.accept(Items.BLAZE_POWDER);
+                    ingredients.accept(Items.SUGAR);
+                    ingredients.accept(Items.RABBIT_FOOT);
+                    ingredients.accept(Items.GLISTERING_MELON_SLICE);
+                    ingredients.accept(Items.SPIDER_EYE);
+                    ingredients.accept(Items.PUFFERFISH);
+                    ingredients.accept(Items.MAGMA_CREAM);
+                    ingredients.accept(Items.GOLDEN_CARROT);
+                    ingredients.accept(Items.GHAST_TEAR);
+                    ingredients.accept(Items.TURTLE_HELMET);
+                    ingredients.accept(Items.PHANTOM_MEMBRANE);
+                    ingredients.accept(Items.FIELD_MASONED_BANNER_PATTERN);
+                    ingredients.accept(Items.BORDURE_INDENTED_BANNER_PATTERN);
+                    ingredients.accept(Items.FLOWER_BANNER_PATTERN);
+                    ingredients.accept(Items.CREEPER_BANNER_PATTERN);
+                    ingredients.accept(Items.SKULL_BANNER_PATTERN);
+                    ingredients.accept(Items.MOJANG_BANNER_PATTERN);
+                    ingredients.accept(Items.GLOBE_BANNER_PATTERN);
+                    ingredients.accept(Items.PIGLIN_BANNER_PATTERN);
+                    ingredients.accept(Items.FLOW_BANNER_PATTERN);
+                    ingredients.accept(Items.GUSTER_BANNER_PATTERN);
+                    ingredients.accept(Items.ANGLER_POTTERY_SHERD);
+                    ingredients.accept(Items.ARCHER_POTTERY_SHERD);
+                    ingredients.accept(Items.ARMS_UP_POTTERY_SHERD);
+                    ingredients.accept(Items.BLADE_POTTERY_SHERD);
+                    ingredients.accept(Items.BREWER_POTTERY_SHERD);
+                    ingredients.accept(Items.BURN_POTTERY_SHERD);
+                    ingredients.accept(Items.DANGER_POTTERY_SHERD);
+                    ingredients.accept(Items.EXPLORER_POTTERY_SHERD);
+                    ingredients.accept(Items.FLOW_POTTERY_SHERD);
+                    ingredients.accept(Items.FRIEND_POTTERY_SHERD);
+                    ingredients.accept(Items.GUSTER_POTTERY_SHERD);
+                    ingredients.accept(Items.HEART_POTTERY_SHERD);
+                    ingredients.accept(Items.HEARTBREAK_POTTERY_SHERD);
+                    ingredients.accept(Items.HOWL_POTTERY_SHERD);
+                    ingredients.accept(Items.MINER_POTTERY_SHERD);
+                    ingredients.accept(Items.MOURNER_POTTERY_SHERD);
+                    ingredients.accept(Items.PLENTY_POTTERY_SHERD);
+                    ingredients.accept(Items.PRIZE_POTTERY_SHERD);
+                    ingredients.accept(Items.SCRAPE_POTTERY_SHERD);
+                    ingredients.accept(Items.SHEAF_POTTERY_SHERD);
+                    ingredients.accept(Items.SHELTER_POTTERY_SHERD);
+                    ingredients.accept(Items.SKULL_POTTERY_SHERD);
+                    ingredients.accept(Items.SNORT_POTTERY_SHERD);
+                    ingredients.accept(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.VEX_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.SHAPER_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.TIDE_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.RIB_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.SPIRE_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE);
+                    ingredients.accept(Items.EXPERIENCE_BOTTLE);
+                    ingredients.accept(Items.TRIAL_KEY);
+                    ingredients.accept(Items.OMINOUS_TRIAL_KEY);
+                    parameters.holders().lookup(Registries.ENCHANTMENT).ifPresent(enchantments -> {
+                        generateEnchantmentBookTypesOnlyMaxLevel(ingredients, enchantments, CreativeModeTab.TabVisibility.PARENT_TAB_ONLY);
+                        generateEnchantmentBookTypesAllLevels(ingredients, enchantments, CreativeModeTab.TabVisibility.SEARCH_TAB_ONLY);
                     });
                 })
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             SPAWN_EGGS,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 4)
                 .title(Component.translatable("itemGroup.spawnEggs"))
                 .icon(() -> new ItemStack(Items.CREEPER_SPAWN_EGG))
-                .displayItems((p_449778_, p_449779_) -> {
-                    p_449779_.accept(Items.SPAWNER);
-                    p_449779_.accept(Items.TRIAL_SPAWNER);
-                    p_449779_.accept(Items.CREAKING_HEART);
-                    p_449779_.accept(Items.CHICKEN_SPAWN_EGG);
-                    p_449779_.accept(Items.COW_SPAWN_EGG);
-                    p_449779_.accept(Items.PIG_SPAWN_EGG);
-                    p_449779_.accept(Items.SHEEP_SPAWN_EGG);
-                    p_449779_.accept(Items.CAMEL_SPAWN_EGG);
-                    p_449779_.accept(Items.DONKEY_SPAWN_EGG);
-                    p_449779_.accept(Items.HORSE_SPAWN_EGG);
-                    p_449779_.accept(Items.MULE_SPAWN_EGG);
-                    p_449779_.accept(Items.CAT_SPAWN_EGG);
-                    p_449779_.accept(Items.PARROT_SPAWN_EGG);
-                    p_449779_.accept(Items.WOLF_SPAWN_EGG);
-                    p_449779_.accept(Items.ARMADILLO_SPAWN_EGG);
-                    p_449779_.accept(Items.BAT_SPAWN_EGG);
-                    p_449779_.accept(Items.BEE_SPAWN_EGG);
-                    p_449779_.accept(Items.FOX_SPAWN_EGG);
-                    p_449779_.accept(Items.GOAT_SPAWN_EGG);
-                    p_449779_.accept(Items.LLAMA_SPAWN_EGG);
-                    p_449779_.accept(Items.OCELOT_SPAWN_EGG);
-                    p_449779_.accept(Items.PANDA_SPAWN_EGG);
-                    p_449779_.accept(Items.POLAR_BEAR_SPAWN_EGG);
-                    p_449779_.accept(Items.RABBIT_SPAWN_EGG);
-                    p_449779_.accept(Items.AXOLOTL_SPAWN_EGG);
-                    p_449779_.accept(Items.COD_SPAWN_EGG);
-                    p_449779_.accept(Items.DOLPHIN_SPAWN_EGG);
-                    p_449779_.accept(Items.FROG_SPAWN_EGG);
-                    p_449779_.accept(Items.GLOW_SQUID_SPAWN_EGG);
-                    p_449779_.accept(Items.NAUTILUS_SPAWN_EGG);
-                    p_449779_.accept(Items.PUFFERFISH_SPAWN_EGG);
-                    p_449779_.accept(Items.SALMON_SPAWN_EGG);
-                    p_449779_.accept(Items.SQUID_SPAWN_EGG);
-                    p_449779_.accept(Items.TADPOLE_SPAWN_EGG);
-                    p_449779_.accept(Items.TROPICAL_FISH_SPAWN_EGG);
-                    p_449779_.accept(Items.TURTLE_SPAWN_EGG);
-                    p_449779_.accept(Items.ALLAY_SPAWN_EGG);
-                    p_449779_.accept(Items.MOOSHROOM_SPAWN_EGG);
-                    p_449779_.accept(Items.SNIFFER_SPAWN_EGG);
-                    p_449779_.accept(Items.COPPER_GOLEM_SPAWN_EGG);
-                    p_449779_.accept(Items.IRON_GOLEM_SPAWN_EGG);
-                    p_449779_.accept(Items.SNOW_GOLEM_SPAWN_EGG);
-                    p_449779_.accept(Items.TRADER_LLAMA_SPAWN_EGG);
-                    p_449779_.accept(Items.VILLAGER_SPAWN_EGG);
-                    p_449779_.accept(Items.WANDERING_TRADER_SPAWN_EGG);
-                    p_449779_.accept(Items.BOGGED_SPAWN_EGG);
-                    p_449779_.accept(Items.CAMEL_HUSK_SPAWN_EGG);
-                    p_449779_.accept(Items.DROWNED_SPAWN_EGG);
-                    p_449779_.accept(Items.HUSK_SPAWN_EGG);
-                    p_449779_.accept(Items.PARCHED_SPAWN_EGG);
-                    p_449779_.accept(Items.SKELETON_SPAWN_EGG);
-                    p_449779_.accept(Items.SKELETON_HORSE_SPAWN_EGG);
-                    p_449779_.accept(Items.STRAY_SPAWN_EGG);
-                    p_449779_.accept(Items.ZOMBIE_SPAWN_EGG);
-                    p_449779_.accept(Items.ZOMBIE_HORSE_SPAWN_EGG);
-                    p_449779_.accept(Items.ZOMBIE_NAUTILUS_SPAWN_EGG);
-                    p_449779_.accept(Items.ZOMBIE_VILLAGER_SPAWN_EGG);
-                    p_449779_.accept(Items.CAVE_SPIDER_SPAWN_EGG);
-                    p_449779_.accept(Items.SPIDER_SPAWN_EGG);
-                    p_449779_.accept(Items.BREEZE_SPAWN_EGG);
-                    p_449779_.accept(Items.CREAKING_SPAWN_EGG);
-                    p_449779_.accept(Items.CREEPER_SPAWN_EGG);
-                    p_449779_.accept(Items.ELDER_GUARDIAN_SPAWN_EGG);
-                    p_449779_.accept(Items.GUARDIAN_SPAWN_EGG);
-                    p_449779_.accept(Items.PHANTOM_SPAWN_EGG);
-                    p_449779_.accept(Items.SILVERFISH_SPAWN_EGG);
-                    p_449779_.accept(Items.SLIME_SPAWN_EGG);
-                    p_449779_.accept(Items.WARDEN_SPAWN_EGG);
-                    p_449779_.accept(Items.WITCH_SPAWN_EGG);
-                    p_449779_.accept(Items.EVOKER_SPAWN_EGG);
-                    p_449779_.accept(Items.PILLAGER_SPAWN_EGG);
-                    p_449779_.accept(Items.RAVAGER_SPAWN_EGG);
-                    p_449779_.accept(Items.VEX_SPAWN_EGG);
-                    p_449779_.accept(Items.VINDICATOR_SPAWN_EGG);
-                    p_449779_.accept(Items.BLAZE_SPAWN_EGG);
-                    p_449779_.accept(Items.GHAST_SPAWN_EGG);
-                    p_449779_.accept(Items.HAPPY_GHAST_SPAWN_EGG);
-                    p_449779_.accept(Items.HOGLIN_SPAWN_EGG);
-                    p_449779_.accept(Items.MAGMA_CUBE_SPAWN_EGG);
-                    p_449779_.accept(Items.PIGLIN_SPAWN_EGG);
-                    p_449779_.accept(Items.PIGLIN_BRUTE_SPAWN_EGG);
-                    p_449779_.accept(Items.STRIDER_SPAWN_EGG);
-                    p_449779_.accept(Items.WITHER_SKELETON_SPAWN_EGG);
-                    p_449779_.accept(Items.ZOGLIN_SPAWN_EGG);
-                    p_449779_.accept(Items.ZOMBIFIED_PIGLIN_SPAWN_EGG);
-                    p_449779_.accept(Items.ENDERMAN_SPAWN_EGG);
-                    p_449779_.accept(Items.ENDERMITE_SPAWN_EGG);
-                    p_449779_.accept(Items.SHULKER_SPAWN_EGG);
+                .displayItems((parameters, spawnEggs) -> {
+                    spawnEggs.accept(Items.SPAWNER);
+                    spawnEggs.accept(Items.TRIAL_SPAWNER);
+                    spawnEggs.accept(Items.CREAKING_HEART);
+                    spawnEggs.accept(Items.CHICKEN_SPAWN_EGG);
+                    spawnEggs.accept(Items.COW_SPAWN_EGG);
+                    spawnEggs.accept(Items.PIG_SPAWN_EGG);
+                    spawnEggs.accept(Items.SHEEP_SPAWN_EGG);
+                    spawnEggs.accept(Items.CAMEL_SPAWN_EGG);
+                    spawnEggs.accept(Items.DONKEY_SPAWN_EGG);
+                    spawnEggs.accept(Items.HORSE_SPAWN_EGG);
+                    spawnEggs.accept(Items.MULE_SPAWN_EGG);
+                    spawnEggs.accept(Items.CAT_SPAWN_EGG);
+                    spawnEggs.accept(Items.PARROT_SPAWN_EGG);
+                    spawnEggs.accept(Items.WOLF_SPAWN_EGG);
+                    spawnEggs.accept(Items.ARMADILLO_SPAWN_EGG);
+                    spawnEggs.accept(Items.BAT_SPAWN_EGG);
+                    spawnEggs.accept(Items.BEE_SPAWN_EGG);
+                    spawnEggs.accept(Items.FOX_SPAWN_EGG);
+                    spawnEggs.accept(Items.GOAT_SPAWN_EGG);
+                    spawnEggs.accept(Items.LLAMA_SPAWN_EGG);
+                    spawnEggs.accept(Items.OCELOT_SPAWN_EGG);
+                    spawnEggs.accept(Items.PANDA_SPAWN_EGG);
+                    spawnEggs.accept(Items.POLAR_BEAR_SPAWN_EGG);
+                    spawnEggs.accept(Items.RABBIT_SPAWN_EGG);
+                    spawnEggs.accept(Items.AXOLOTL_SPAWN_EGG);
+                    spawnEggs.accept(Items.COD_SPAWN_EGG);
+                    spawnEggs.accept(Items.DOLPHIN_SPAWN_EGG);
+                    spawnEggs.accept(Items.FROG_SPAWN_EGG);
+                    spawnEggs.accept(Items.GLOW_SQUID_SPAWN_EGG);
+                    spawnEggs.accept(Items.NAUTILUS_SPAWN_EGG);
+                    spawnEggs.accept(Items.PUFFERFISH_SPAWN_EGG);
+                    spawnEggs.accept(Items.SALMON_SPAWN_EGG);
+                    spawnEggs.accept(Items.SQUID_SPAWN_EGG);
+                    spawnEggs.accept(Items.TADPOLE_SPAWN_EGG);
+                    spawnEggs.accept(Items.TROPICAL_FISH_SPAWN_EGG);
+                    spawnEggs.accept(Items.TURTLE_SPAWN_EGG);
+                    spawnEggs.accept(Items.ALLAY_SPAWN_EGG);
+                    spawnEggs.accept(Items.MOOSHROOM_SPAWN_EGG);
+                    spawnEggs.accept(Items.SNIFFER_SPAWN_EGG);
+                    spawnEggs.accept(Items.SULFUR_CUBE_SPAWN_EGG);
+                    spawnEggs.accept(Items.COPPER_GOLEM_SPAWN_EGG);
+                    spawnEggs.accept(Items.IRON_GOLEM_SPAWN_EGG);
+                    spawnEggs.accept(Items.SNOW_GOLEM_SPAWN_EGG);
+                    spawnEggs.accept(Items.TRADER_LLAMA_SPAWN_EGG);
+                    spawnEggs.accept(Items.VILLAGER_SPAWN_EGG);
+                    spawnEggs.accept(Items.WANDERING_TRADER_SPAWN_EGG);
+                    spawnEggs.accept(Items.BOGGED_SPAWN_EGG);
+                    spawnEggs.accept(Items.CAMEL_HUSK_SPAWN_EGG);
+                    spawnEggs.accept(Items.DROWNED_SPAWN_EGG);
+                    spawnEggs.accept(Items.HUSK_SPAWN_EGG);
+                    spawnEggs.accept(Items.PARCHED_SPAWN_EGG);
+                    spawnEggs.accept(Items.SKELETON_SPAWN_EGG);
+                    spawnEggs.accept(Items.SKELETON_HORSE_SPAWN_EGG);
+                    spawnEggs.accept(Items.STRAY_SPAWN_EGG);
+                    spawnEggs.accept(Items.ZOMBIE_SPAWN_EGG);
+                    spawnEggs.accept(Items.ZOMBIE_HORSE_SPAWN_EGG);
+                    spawnEggs.accept(Items.ZOMBIE_NAUTILUS_SPAWN_EGG);
+                    spawnEggs.accept(Items.ZOMBIE_VILLAGER_SPAWN_EGG);
+                    spawnEggs.accept(Items.CAVE_SPIDER_SPAWN_EGG);
+                    spawnEggs.accept(Items.SPIDER_SPAWN_EGG);
+                    spawnEggs.accept(Items.BREEZE_SPAWN_EGG);
+                    spawnEggs.accept(Items.CREAKING_SPAWN_EGG);
+                    spawnEggs.accept(Items.CREEPER_SPAWN_EGG);
+                    spawnEggs.accept(Items.ELDER_GUARDIAN_SPAWN_EGG);
+                    spawnEggs.accept(Items.GUARDIAN_SPAWN_EGG);
+                    spawnEggs.accept(Items.PHANTOM_SPAWN_EGG);
+                    spawnEggs.accept(Items.SILVERFISH_SPAWN_EGG);
+                    spawnEggs.accept(Items.SLIME_SPAWN_EGG);
+                    spawnEggs.accept(Items.WARDEN_SPAWN_EGG);
+                    spawnEggs.accept(Items.WITCH_SPAWN_EGG);
+                    spawnEggs.accept(Items.EVOKER_SPAWN_EGG);
+                    spawnEggs.accept(Items.PILLAGER_SPAWN_EGG);
+                    spawnEggs.accept(Items.RAVAGER_SPAWN_EGG);
+                    spawnEggs.accept(Items.VEX_SPAWN_EGG);
+                    spawnEggs.accept(Items.VINDICATOR_SPAWN_EGG);
+                    spawnEggs.accept(Items.BLAZE_SPAWN_EGG);
+                    spawnEggs.accept(Items.GHAST_SPAWN_EGG);
+                    spawnEggs.accept(Items.HAPPY_GHAST_SPAWN_EGG);
+                    spawnEggs.accept(Items.HOGLIN_SPAWN_EGG);
+                    spawnEggs.accept(Items.MAGMA_CUBE_SPAWN_EGG);
+                    spawnEggs.accept(Items.PIGLIN_SPAWN_EGG);
+                    spawnEggs.accept(Items.PIGLIN_BRUTE_SPAWN_EGG);
+                    spawnEggs.accept(Items.STRIDER_SPAWN_EGG);
+                    spawnEggs.accept(Items.WITHER_SKELETON_SPAWN_EGG);
+                    spawnEggs.accept(Items.ZOGLIN_SPAWN_EGG);
+                    spawnEggs.accept(Items.ZOMBIFIED_PIGLIN_SPAWN_EGG);
+                    spawnEggs.accept(Items.ENDERMAN_SPAWN_EGG);
+                    spawnEggs.accept(Items.ENDERMITE_SPAWN_EGG);
+                    spawnEggs.accept(Items.SHULKER_SPAWN_EGG);
                 })
                 .build()
         );
         Registry.register(
-            p_283144_,
+            registry,
             OP_BLOCKS,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 5)
                 .title(Component.translatable("itemGroup.op"))
                 .icon(() -> new ItemStack(Items.COMMAND_BLOCK))
                 .alignedRight()
                 .displayItems(
-                    (p_390788_, p_390789_) -> {
-                        if (p_390788_.hasPermissions()) {
-                            p_390789_.accept(Items.COMMAND_BLOCK);
-                            p_390789_.accept(Items.CHAIN_COMMAND_BLOCK);
-                            p_390789_.accept(Items.REPEATING_COMMAND_BLOCK);
-                            p_390789_.accept(Items.COMMAND_BLOCK_MINECART);
-                            p_390789_.accept(Items.JIGSAW);
-                            p_390789_.accept(Items.STRUCTURE_BLOCK);
-                            p_390789_.accept(Items.STRUCTURE_VOID);
-                            p_390789_.accept(Items.BARRIER);
-                            p_390789_.accept(Items.DEBUG_STICK);
-                            p_390789_.accept(Items.TEST_INSTANCE_BLOCK);
+                    (parameters, opBlocks) -> {
+                        if (parameters.hasPermissions()) {
+                            opBlocks.accept(Items.COMMAND_BLOCK);
+                            opBlocks.accept(Items.CHAIN_COMMAND_BLOCK);
+                            opBlocks.accept(Items.REPEATING_COMMAND_BLOCK);
+                            opBlocks.accept(Items.COMMAND_BLOCK_MINECART);
+                            opBlocks.accept(Items.JIGSAW);
+                            opBlocks.accept(Items.STRUCTURE_BLOCK);
+                            opBlocks.accept(Items.STRUCTURE_VOID);
+                            opBlocks.accept(Items.BARRIER);
+                            opBlocks.accept(Items.DEBUG_STICK);
+                            opBlocks.accept(Items.TEST_INSTANCE_BLOCK);
 
-                            for (TestBlockMode testblockmode : TestBlockMode.values()) {
-                                p_390789_.accept(TestBlock.setModeOnStack(new ItemStack(Items.TEST_BLOCK), testblockmode));
+                            for (TestBlockMode mode : TestBlockMode.values()) {
+                                opBlocks.accept(TestBlock.setModeOnStack(new ItemStack(Items.TEST_BLOCK), mode));
                             }
 
-                            for (int i = 15; i >= 0; i--) {
-                                p_390789_.accept(LightBlock.setLightOnStack(new ItemStack(Items.LIGHT), i));
+                            for (int lightLevel = 15; lightLevel >= 0; lightLevel--) {
+                                opBlocks.accept(LightBlock.setLightOnStack(new ItemStack(Items.LIGHT), lightLevel));
                             }
 
-                            p_390788_.holders()
+                            parameters.holders()
                                 .lookup(Registries.PAINTING_VARIANT)
                                 .ifPresent(
-                                    p_341539_ -> generatePresetPaintings(
-                                        p_390789_,
-                                        p_390788_.holders(),
-                                        (HolderLookup.RegistryLookup<PaintingVariant>)p_341539_,
-                                        p_270003_ -> !p_270003_.is(PaintingVariantTags.PLACEABLE),
+                                    paintings -> generatePresetPaintings(
+                                        opBlocks,
+                                        parameters.holders(),
+                                        (HolderLookup.RegistryLookup<PaintingVariant>)paintings,
+                                        variant -> !variant.is(PaintingVariantTags.PLACEABLE),
                                         CreativeModeTab.TabVisibility.PARENT_AND_SEARCH_TABS
                                     )
                                 );
@@ -1957,7 +1633,7 @@ public class CreativeModeTabs {
                 .build()
         );
         return Registry.register(
-            p_283144_,
+            registry,
             INVENTORY,
             CreativeModeTab.builder(CreativeModeTab.Row.BOTTOM, 6)
                 .title(Component.translatable("itemGroup.inventory"))
@@ -1971,15 +1647,21 @@ public class CreativeModeTabs {
         );
     }
 
-    public static void validate() {
-        Map<Pair<CreativeModeTab.Row, Integer>, String> map = new HashMap<>();
+    private static void registerColoredItems(
+        final CreativeModeTab.Output coloredBlocks, final List<DyeColor> gameplayColorOrder, final ColorCollection<Item> items
+    ) {
+        gameplayColorOrder.forEach(color -> coloredBlocks.accept(items.pick(color)));
+    }
 
-        for (ResourceKey<CreativeModeTab> resourcekey : BuiltInRegistries.CREATIVE_MODE_TAB.registryKeySet()) {
-            CreativeModeTab creativemodetab = BuiltInRegistries.CREATIVE_MODE_TAB.getValueOrThrow(resourcekey);
-            String s = creativemodetab.getDisplayName().getString();
-            String s1 = map.put(Pair.of(creativemodetab.row(), creativemodetab.column()), s);
-            if (s1 != null) {
-                throw new IllegalArgumentException("Duplicate position: " + s + " vs. " + s1);
+    public static void validate() {
+        Map<Pair<CreativeModeTab.Row, Integer>, String> positions = new HashMap<>();
+
+        for (ResourceKey<CreativeModeTab> tabKey : BuiltInRegistries.CREATIVE_MODE_TAB.registryKeySet()) {
+            CreativeModeTab tab = BuiltInRegistries.CREATIVE_MODE_TAB.getValueOrThrow(tabKey);
+            String current = tab.getDisplayName().getString();
+            String previous = positions.put(Pair.of(tab.row(), tab.column()), current);
+            if (previous != null) {
+                throw new IllegalArgumentException("Duplicate position: " + current + " vs. " + previous);
             }
         }
     }
@@ -1989,86 +1671,108 @@ public class CreativeModeTabs {
     }
 
     private static void generatePotionEffectTypes(
-        CreativeModeTab.Output p_270129_, HolderLookup<Potion> p_270334_, Item p_270968_, CreativeModeTab.TabVisibility p_270778_, FeatureFlagSet p_331502_
+        final CreativeModeTab.Output output,
+        final HolderLookup<Potion> potions,
+        final Item item,
+        final CreativeModeTab.TabVisibility tabVisibility,
+        final FeatureFlagSet enabledFeatures
     ) {
-        p_270334_.listElements()
-            .filter(p_327145_ -> p_327145_.value().isEnabled(p_331502_))
-            .map(p_327116_ -> PotionContents.createItemStack(p_270968_, p_327116_))
-            .forEach(p_270000_ -> p_270129_.accept(p_270000_, p_270778_));
+        potions.listElements()
+            .filter(potion -> potion.value().isEnabled(enabledFeatures))
+            .map(potion -> PotionContents.createItemStack(item, potion))
+            .forEach(stack -> output.accept(stack, tabVisibility));
     }
 
-    private static void generateEnchantmentBookTypesOnlyMaxLevel(CreativeModeTab.Output p_270868_, HolderLookup<Enchantment> p_270903_, CreativeModeTab.TabVisibility p_270407_) {
-        p_270903_.listElements()
-            .map(p_359390_ -> EnchantmentHelper.createBook(new EnchantmentInstance(p_359390_, p_359390_.value().getMaxLevel())))
-            .forEach(p_269989_ -> p_270868_.accept(p_269989_, p_270407_));
+    private static void generateEnchantmentBookTypesOnlyMaxLevel(
+        final CreativeModeTab.Output output, final HolderLookup<Enchantment> enchantments, final CreativeModeTab.TabVisibility tabVisibility
+    ) {
+        enchantments.listElements()
+            .map(enchantment -> EnchantmentHelper.createBook(new EnchantmentInstance(enchantment, enchantment.value().getMaxLevel())))
+            .forEach(stack -> output.accept(stack, tabVisibility));
     }
 
-    private static void generateEnchantmentBookTypesAllLevels(CreativeModeTab.Output p_270961_, HolderLookup<Enchantment> p_270628_, CreativeModeTab.TabVisibility p_270805_) {
-        p_270628_.listElements()
+    private static void generateEnchantmentBookTypesAllLevels(
+        final CreativeModeTab.Output output, final HolderLookup<Enchantment> enchantments, final CreativeModeTab.TabVisibility tabVisibility
+    ) {
+        enchantments.listElements()
             .flatMap(
-                p_341523_ -> IntStream.rangeClosed(p_341523_.value().getMinLevel(), p_341523_.value().getMaxLevel())
-                    .mapToObj(p_359385_ -> EnchantmentHelper.createBook(new EnchantmentInstance(p_341523_, p_359385_)))
+                enchantment -> IntStream.rangeClosed(enchantment.value().getMinLevel(), enchantment.value().getMaxLevel())
+                    .mapToObj(level -> EnchantmentHelper.createBook(new EnchantmentInstance(enchantment, level)))
             )
-            .forEach(p_270017_ -> p_270961_.accept(p_270017_, p_270805_));
+            .forEach(stack -> output.accept(stack, tabVisibility));
     }
 
     private static void generateInstrumentTypes(
-        CreativeModeTab.Output p_270699_,
-        HolderLookup<Instrument> p_270948_,
-        Item p_270421_,
-        TagKey<Instrument> p_270798_,
-        CreativeModeTab.TabVisibility p_270817_
+        final CreativeModeTab.Output output,
+        final HolderLookup<Instrument> instruments,
+        final Item instrumentItem,
+        final TagKey<Instrument> instrumentTagKey,
+        final CreativeModeTab.TabVisibility tabVisibility
     ) {
-        p_270948_.get(p_270798_)
+        instruments.get(instrumentTagKey)
             .ifPresent(
-                p_270021_ -> p_270021_.stream()
-                    .map(p_269995_ -> InstrumentItem.create(p_270421_, (Holder<Instrument>)p_269995_))
-                    .forEach(p_270011_ -> p_270699_.accept(p_270011_, p_270817_))
+                tag -> tag.stream()
+                    .map(instrument -> InstrumentItem.create(instrumentItem, (Holder<Instrument>)instrument))
+                    .forEach(stack -> output.accept(stack, tabVisibility))
             );
     }
 
-    private static void generateSuspiciousStews(CreativeModeTab.Output p_259484_, CreativeModeTab.TabVisibility p_260051_) {
-        List<SuspiciousEffectHolder> list = SuspiciousEffectHolder.getAllEffectHolders();
-        Set<ItemStack> set = ItemStackLinkedSet.createTypeAndComponentsSet();
+    private static void generateSuspiciousStews(final CreativeModeTab.Output output, final CreativeModeTab.TabVisibility tabVisibility) {
+        List<SuspiciousEffectHolder> effectHolders = SuspiciousEffectHolder.getAllEffectHolders();
+        Set<ItemStack> stewItems = ItemStackLinkedSet.createTypeAndComponentsSet();
 
-        for (SuspiciousEffectHolder suspiciouseffectholder : list) {
-            ItemStack itemstack = new ItemStack(Items.SUSPICIOUS_STEW);
-            itemstack.set(DataComponents.SUSPICIOUS_STEW_EFFECTS, suspiciouseffectholder.getSuspiciousEffects());
-            set.add(itemstack);
+        for (SuspiciousEffectHolder effectHolder : effectHolders) {
+            ItemStack stack = new ItemStack(Items.SUSPICIOUS_STEW);
+            stack.set(DataComponents.SUSPICIOUS_STEW_EFFECTS, effectHolder.getSuspiciousEffects());
+            stewItems.add(stack);
         }
 
-        p_259484_.acceptAll(set, p_260051_);
+        output.acceptAll(stewItems, tabVisibility);
     }
 
-    private static void generateOminousBottles(CreativeModeTab.Output p_361386_, CreativeModeTab.TabVisibility p_366838_) {
+    private static void generateOminousBottles(final CreativeModeTab.Output output, final CreativeModeTab.TabVisibility tabVisibility) {
         for (int i = 0; i <= 4; i++) {
-            ItemStack itemstack = new ItemStack(Items.OMINOUS_BOTTLE);
-            itemstack.set(DataComponents.OMINOUS_BOTTLE_AMPLIFIER, new OminousBottleAmplifier(i));
-            p_361386_.accept(itemstack, p_366838_);
+            ItemStack stack = new ItemStack(Items.OMINOUS_BOTTLE);
+            stack.set(DataComponents.OMINOUS_BOTTLE_AMPLIFIER, new OminousBottleAmplifier(i));
+            output.accept(stack, tabVisibility);
         }
     }
 
-    private static void generateFireworksAllDurations(CreativeModeTab.Output p_259586_, CreativeModeTab.TabVisibility p_259372_) {
-        for (byte b0 : FireworkRocketItem.CRAFTABLE_DURATIONS) {
-            ItemStack itemstack = new ItemStack(Items.FIREWORK_ROCKET);
-            itemstack.set(DataComponents.FIREWORKS, new Fireworks(b0, List.of()));
-            p_259586_.accept(itemstack, p_259372_);
+    private static void generateFireworksAllDurations(final CreativeModeTab.Output output, final CreativeModeTab.TabVisibility tabVisibility) {
+        for (byte duration : FireworkRocketItem.CRAFTABLE_DURATIONS) {
+            ItemStack firework = new ItemStack(Items.FIREWORK_ROCKET);
+            firework.set(DataComponents.FIREWORKS, new Fireworks(duration, List.of()));
+            output.accept(firework, tabVisibility);
         }
     }
 
     private static void generatePresetPaintings(
-        CreativeModeTab.Output p_271007_,
-        HolderLookup.Provider p_342142_,
-        HolderLookup.RegistryLookup<PaintingVariant> p_270618_,
-        Predicate<Holder<PaintingVariant>> p_270878_,
-        CreativeModeTab.TabVisibility p_270261_
+        final CreativeModeTab.Output output,
+        final HolderLookup.Provider context,
+        final HolderLookup.RegistryLookup<PaintingVariant> paintings,
+        final Predicate<Holder<PaintingVariant>> filter,
+        final CreativeModeTab.TabVisibility tabVisibility
     ) {
-        RegistryOps<Tag> registryops = p_342142_.createSerializationContext(NbtOps.INSTANCE);
-        p_270618_.listElements().filter(p_270878_).sorted(PAINTING_COMPARATOR).forEach(p_390787_ -> {
-            ItemStack itemstack = new ItemStack(Items.PAINTING);
-            itemstack.set(DataComponents.PAINTING_VARIANT, p_390787_);
-            p_271007_.accept(itemstack, p_270261_);
+        RegistryOps<Tag> ops = context.createSerializationContext(NbtOps.INSTANCE);
+        paintings.listElements().filter(filter).sorted(PAINTING_COMPARATOR).forEach(painting -> {
+            ItemStack stack = new ItemStack(Items.PAINTING);
+            stack.set(DataComponents.PAINTING_VARIANT, painting);
+            output.accept(stack, tabVisibility);
         });
+    }
+
+    private static void copperBlockFamilies(final Consumer<WeatheringCopperCollection<Item>> output) {
+        output.accept(Items.COPPER_BLOCK);
+        output.accept(Items.CHISELED_COPPER);
+        output.accept(Items.COPPER_GRATE);
+        output.accept(Items.CUT_COPPER);
+        output.accept(Items.CUT_COPPER_STAIRS);
+        output.accept(Items.CUT_COPPER_SLAB);
+        output.accept(Items.COPPER_BARS);
+        output.accept(Items.COPPER_DOOR);
+        output.accept(Items.COPPER_TRAPDOOR);
+        output.accept(Items.COPPER_BULB);
+        output.accept(Items.COPPER_CHAIN);
     }
 
     public static List<CreativeModeTab> tabs() {
@@ -2087,18 +1791,18 @@ public class CreativeModeTabs {
         return BuiltInRegistries.CREATIVE_MODE_TAB.getValueOrThrow(SEARCH);
     }
 
-    private static void buildAllTabContents(CreativeModeTab.ItemDisplayParameters p_270447_) {
-        streamAllTabs().filter(p_259647_ -> p_259647_.getType() == CreativeModeTab.Type.CATEGORY).forEach(p_269997_ -> p_269997_.buildContents(p_270447_));
-        streamAllTabs().filter(p_260124_ -> p_260124_.getType() != CreativeModeTab.Type.CATEGORY).forEach(p_270002_ -> p_270002_.buildContents(p_270447_));
+    private static void buildAllTabContents(final CreativeModeTab.ItemDisplayParameters parameters) {
+        streamAllTabs().filter(tab -> tab.getType() == CreativeModeTab.Type.CATEGORY).forEach(tab -> tab.buildContents(parameters));
+        streamAllTabs().filter(tab -> tab.getType() != CreativeModeTab.Type.CATEGORY).forEach(tab -> tab.buildContents(parameters));
     }
 
-    public static boolean tryRebuildTabContents(FeatureFlagSet p_270988_, boolean p_270090_, HolderLookup.Provider p_270799_) {
-        if (CACHED_PARAMETERS != null && !CACHED_PARAMETERS.needsUpdate(p_270988_, p_270090_, p_270799_)) {
+    public static boolean tryRebuildTabContents(final FeatureFlagSet enabledFeatures, final boolean hasPermissions, final HolderLookup.Provider lookup) {
+        if (CACHED_PARAMETERS != null && !CACHED_PARAMETERS.needsUpdate(enabledFeatures, hasPermissions, lookup)) {
             return false;
-        } else {
-            CACHED_PARAMETERS = new CreativeModeTab.ItemDisplayParameters(p_270988_, p_270090_, p_270799_);
-            buildAllTabContents(CACHED_PARAMETERS);
-            return true;
         }
+
+        CACHED_PARAMETERS = new CreativeModeTab.ItemDisplayParameters(enabledFeatures, hasPermissions, lookup);
+        buildAllTabContents(CACHED_PARAMETERS);
+        return true;
     }
 }

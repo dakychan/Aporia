@@ -16,69 +16,68 @@ public class EndPodiumFeature extends Feature<NoneFeatureConfiguration> {
     private static final BlockPos END_PODIUM_LOCATION = BlockPos.ZERO;
     private final boolean active;
 
-    public static BlockPos getLocation(BlockPos p_287614_) {
-        return END_PODIUM_LOCATION.offset(p_287614_);
+    public static BlockPos getLocation(final BlockPos offset) {
+        return END_PODIUM_LOCATION.offset(offset);
     }
 
-    public EndPodiumFeature(boolean p_65718_) {
+    public EndPodiumFeature(final boolean active) {
         super(NoneFeatureConfiguration.CODEC);
-        this.active = p_65718_;
+        this.active = active;
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_159723_) {
-        BlockPos blockpos = p_159723_.origin();
-        WorldGenLevel worldgenlevel = p_159723_.level();
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        BlockPos origin = context.origin();
+        WorldGenLevel level = context.level();
 
-        for (BlockPos blockpos1 : BlockPos.betweenClosed(
-            new BlockPos(blockpos.getX() - 4, blockpos.getY() - 1, blockpos.getZ() - 4),
-            new BlockPos(blockpos.getX() + 4, blockpos.getY() + 32, blockpos.getZ() + 4)
+        for (BlockPos pos : BlockPos.betweenClosed(
+            new BlockPos(origin.getX() - 4, origin.getY() - 1, origin.getZ() - 4), new BlockPos(origin.getX() + 4, origin.getY() + 32, origin.getZ() + 4)
         )) {
-            boolean flag = blockpos1.closerThan(blockpos, 2.5);
-            if (flag || blockpos1.closerThan(blockpos, 3.5)) {
-                if (blockpos1.getY() < blockpos.getY()) {
-                    if (flag) {
-                        this.setBlock(worldgenlevel, blockpos1, Blocks.BEDROCK.defaultBlockState());
-                    } else if (blockpos1.getY() < blockpos.getY()) {
+            boolean insideRim = pos.closerThan(origin, 2.5);
+            if (insideRim || pos.closerThan(origin, 3.5)) {
+                if (pos.getY() < origin.getY()) {
+                    if (insideRim) {
+                        this.setBlock(level, pos, Blocks.BEDROCK.defaultBlockState());
+                    } else if (pos.getY() < origin.getY()) {
                         if (this.active) {
-                            this.dropPreviousAndSetBlock(worldgenlevel, blockpos1, Blocks.END_STONE);
+                            this.dropPreviousAndSetBlock(level, pos, Blocks.END_STONE);
                         } else {
-                            this.setBlock(worldgenlevel, blockpos1, Blocks.END_STONE.defaultBlockState());
+                            this.setBlock(level, pos, Blocks.END_STONE.defaultBlockState());
                         }
                     }
-                } else if (blockpos1.getY() > blockpos.getY()) {
+                } else if (pos.getY() > origin.getY()) {
                     if (this.active) {
-                        this.dropPreviousAndSetBlock(worldgenlevel, blockpos1, Blocks.AIR);
+                        this.dropPreviousAndSetBlock(level, pos, Blocks.AIR);
                     } else {
-                        this.setBlock(worldgenlevel, blockpos1, Blocks.AIR.defaultBlockState());
+                        this.setBlock(level, pos, Blocks.AIR.defaultBlockState());
                     }
-                } else if (!flag) {
-                    this.setBlock(worldgenlevel, blockpos1, Blocks.BEDROCK.defaultBlockState());
+                } else if (!insideRim) {
+                    this.setBlock(level, pos, Blocks.BEDROCK.defaultBlockState());
                 } else if (this.active) {
-                    this.dropPreviousAndSetBlock(worldgenlevel, new BlockPos(blockpos1), Blocks.END_PORTAL);
+                    this.dropPreviousAndSetBlock(level, new BlockPos(pos), Blocks.END_PORTAL);
                 } else {
-                    this.setBlock(worldgenlevel, new BlockPos(blockpos1), Blocks.AIR.defaultBlockState());
+                    this.setBlock(level, new BlockPos(pos), Blocks.AIR.defaultBlockState());
                 }
             }
         }
 
-        for (int i = 0; i < 4; i++) {
-            this.setBlock(worldgenlevel, blockpos.above(i), Blocks.BEDROCK.defaultBlockState());
+        for (int y = 0; y < 4; y++) {
+            this.setBlock(level, origin.above(y), Blocks.BEDROCK.defaultBlockState());
         }
 
-        BlockPos blockpos2 = blockpos.above(2);
+        BlockPos centerOfPillar = origin.above(2);
 
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            this.setBlock(worldgenlevel, blockpos2.relative(direction), Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, direction));
+        for (Direction face : Direction.Plane.HORIZONTAL) {
+            this.setBlock(level, centerOfPillar.relative(face), Blocks.WALL_TORCH.defaultBlockState().setValue(WallTorchBlock.FACING, face));
         }
 
         return true;
     }
 
-    private void dropPreviousAndSetBlock(WorldGenLevel p_392481_, BlockPos p_392475_, Block p_396279_) {
-        if (!p_392481_.getBlockState(p_392475_).is(p_396279_)) {
-            p_392481_.destroyBlock(p_392475_, true, null);
-            this.setBlock(p_392481_, p_392475_, p_396279_.defaultBlockState());
+    private void dropPreviousAndSetBlock(final WorldGenLevel level, final BlockPos pos, final Block block) {
+        if (!level.getBlockState(pos).is(block)) {
+            level.destroyBlock(pos, true, null);
+            this.setBlock(level, pos, block.defaultBlockState());
         }
     }
 }

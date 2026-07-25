@@ -21,24 +21,23 @@ public class MultiNoiseBiomeSource extends BiomeSource {
     private static final MapCodec<Holder<MultiNoiseBiomeSourceParameterList>> PRESET_CODEC = MultiNoiseBiomeSourceParameterList.CODEC
         .fieldOf("preset")
         .withLifecycle(Lifecycle.stable());
-    public static final MapCodec<MultiNoiseBiomeSource> CODEC = Codec.mapEither(DIRECT_CODEC, PRESET_CODEC)
-        .xmap(MultiNoiseBiomeSource::new, p_275170_ -> p_275170_.parameters);
+    public static final MapCodec<MultiNoiseBiomeSource> CODEC = Codec.mapEither(DIRECT_CODEC, PRESET_CODEC).xmap(MultiNoiseBiomeSource::new, o -> o.parameters);
     private final Either<Climate.ParameterList<Holder<Biome>>, Holder<MultiNoiseBiomeSourceParameterList>> parameters;
 
-    private MultiNoiseBiomeSource(Either<Climate.ParameterList<Holder<Biome>>, Holder<MultiNoiseBiomeSourceParameterList>> p_275370_) {
-        this.parameters = p_275370_;
+    private MultiNoiseBiomeSource(final Either<Climate.ParameterList<Holder<Biome>>, Holder<MultiNoiseBiomeSourceParameterList>> parameters) {
+        this.parameters = parameters;
     }
 
-    public static MultiNoiseBiomeSource createFromList(Climate.ParameterList<Holder<Biome>> p_275223_) {
-        return new MultiNoiseBiomeSource(Either.left(p_275223_));
+    public static MultiNoiseBiomeSource createFromList(final Climate.ParameterList<Holder<Biome>> parameters) {
+        return new MultiNoiseBiomeSource(Either.left(parameters));
     }
 
-    public static MultiNoiseBiomeSource createFromPreset(Holder<MultiNoiseBiomeSourceParameterList> p_275250_) {
-        return new MultiNoiseBiomeSource(Either.right(p_275250_));
+    public static MultiNoiseBiomeSource createFromPreset(final Holder<MultiNoiseBiomeSourceParameterList> preset) {
+        return new MultiNoiseBiomeSource(Either.right(preset));
     }
 
     private Climate.ParameterList<Holder<Biome>> parameters() {
-        return this.parameters.map(p_275171_ -> p_275171_, p_275172_ -> p_275172_.value().parameters());
+        return this.parameters.map(direct -> direct, preset -> preset.value().parameters());
     }
 
     @Override
@@ -51,45 +50,45 @@ public class MultiNoiseBiomeSource extends BiomeSource {
         return CODEC;
     }
 
-    public boolean stable(ResourceKey<MultiNoiseBiomeSourceParameterList> p_275637_) {
-        Optional<Holder<MultiNoiseBiomeSourceParameterList>> optional = this.parameters.right();
-        return optional.isPresent() && optional.get().is(p_275637_);
+    public boolean stable(final ResourceKey<MultiNoiseBiomeSourceParameterList> expected) {
+        Optional<Holder<MultiNoiseBiomeSourceParameterList>> preset = this.parameters.right();
+        return preset.isPresent() && preset.get().is(expected);
     }
 
     @Override
-    public Holder<Biome> getNoiseBiome(int p_204272_, int p_204273_, int p_204274_, Climate.Sampler p_204275_) {
-        return this.getNoiseBiome(p_204275_.sample(p_204272_, p_204273_, p_204274_));
+    public Holder<Biome> getNoiseBiome(final int quartX, final int quartY, final int quartZ, final Climate.Sampler sampler) {
+        return this.getNoiseBiome(sampler.sample(quartX, quartY, quartZ));
     }
 
     @VisibleForDebug
-    public Holder<Biome> getNoiseBiome(Climate.TargetPoint p_204270_) {
-        return this.parameters().findValue(p_204270_);
+    public Holder<Biome> getNoiseBiome(final Climate.TargetPoint target) {
+        return this.parameters().findValue(target);
     }
 
     @Override
-    public void addDebugInfo(List<String> p_207895_, BlockPos p_207896_, Climate.Sampler p_207897_) {
-        int i = QuartPos.fromBlock(p_207896_.getX());
-        int j = QuartPos.fromBlock(p_207896_.getY());
-        int k = QuartPos.fromBlock(p_207896_.getZ());
-        Climate.TargetPoint climate$targetpoint = p_207897_.sample(i, j, k);
-        float f = Climate.unquantizeCoord(climate$targetpoint.continentalness());
-        float f1 = Climate.unquantizeCoord(climate$targetpoint.erosion());
-        float f2 = Climate.unquantizeCoord(climate$targetpoint.temperature());
-        float f3 = Climate.unquantizeCoord(climate$targetpoint.humidity());
-        float f4 = Climate.unquantizeCoord(climate$targetpoint.weirdness());
-        double d0 = NoiseRouterData.peaksAndValleys(f4);
-        OverworldBiomeBuilder overworldbiomebuilder = new OverworldBiomeBuilder();
-        p_207895_.add(
+    public void addDebugInfo(final List<String> result, final BlockPos feetPos, final Climate.Sampler sampler) {
+        int quartX = QuartPos.fromBlock(feetPos.getX());
+        int quartY = QuartPos.fromBlock(feetPos.getY());
+        int quartZ = QuartPos.fromBlock(feetPos.getZ());
+        Climate.TargetPoint sampleQuantized = sampler.sample(quartX, quartY, quartZ);
+        float continentalness = Climate.unquantizeCoord(sampleQuantized.continentalness());
+        float erosion = Climate.unquantizeCoord(sampleQuantized.erosion());
+        float temperature = Climate.unquantizeCoord(sampleQuantized.temperature());
+        float humidity = Climate.unquantizeCoord(sampleQuantized.humidity());
+        float weirdness = Climate.unquantizeCoord(sampleQuantized.weirdness());
+        double peaksAndValleys = NoiseRouterData.peaksAndValleys(weirdness);
+        OverworldBiomeBuilder biomeBuilder = new OverworldBiomeBuilder();
+        result.add(
             "Biome builder PV: "
-                + OverworldBiomeBuilder.getDebugStringForPeaksAndValleys(d0)
+                + OverworldBiomeBuilder.getDebugStringForPeaksAndValleys(peaksAndValleys)
                 + " C: "
-                + overworldbiomebuilder.getDebugStringForContinentalness(f)
+                + biomeBuilder.getDebugStringForContinentalness(continentalness)
                 + " E: "
-                + overworldbiomebuilder.getDebugStringForErosion(f1)
+                + biomeBuilder.getDebugStringForErosion(erosion)
                 + " T: "
-                + overworldbiomebuilder.getDebugStringForTemperature(f2)
+                + biomeBuilder.getDebugStringForTemperature(temperature)
                 + " H: "
-                + overworldbiomebuilder.getDebugStringForHumidity(f3)
+                + biomeBuilder.getDebugStringForHumidity(humidity)
         );
     }
 }

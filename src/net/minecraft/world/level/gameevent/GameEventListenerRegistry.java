@@ -11,29 +11,31 @@ public interface GameEventListenerRegistry {
         }
 
         @Override
-        public void register(GameEventListener p_251092_) {
+        public void register(final GameEventListener listener) {
         }
 
         @Override
-        public void unregister(GameEventListener p_251937_) {
+        public void unregister(final GameEventListener listener) {
         }
 
         @Override
-        public boolean visitInRangeListeners(Holder<GameEvent> p_332426_, Vec3 p_249086_, GameEvent.Context p_249012_, GameEventListenerRegistry.ListenerVisitor p_252106_) {
+        public boolean visitInRangeListeners(
+            final Holder<GameEvent> event, final Vec3 sourcePosition, final GameEvent.Context context, final GameEventListenerRegistry.ListenerVisitor action
+        ) {
             return false;
         }
     };
 
     boolean isEmpty();
 
-    void register(GameEventListener p_249257_);
+    void register(GameEventListener listener);
 
-    void unregister(GameEventListener p_248758_);
+    void unregister(GameEventListener listener);
 
-    boolean visitInRangeListeners(Holder<GameEvent> p_328591_, Vec3 p_249144_, GameEvent.Context p_249328_, GameEventListenerRegistry.ListenerVisitor p_250123_);
+    boolean visitInRangeListeners(Holder<GameEvent> event, Vec3 sourcePosition, GameEvent.Context context, GameEventListenerRegistry.ListenerVisitor action);
 
     @FunctionalInterface
-    public interface ListenerVisitor {
-        void visit(GameEventListener p_250787_, Vec3 p_251603_);
+    interface ListenerVisitor {
+        void visit(GameEventListener listener, Vec3 position);
     }
 }

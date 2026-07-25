@@ -28,28 +28,28 @@ public record ClientboundPlayerChatPacket(
         ClientboundPlayerChatPacket::write, ClientboundPlayerChatPacket::new
     );
 
-    private ClientboundPlayerChatPacket(RegistryFriendlyByteBuf p_329037_) {
+    private ClientboundPlayerChatPacket(final RegistryFriendlyByteBuf input) {
         this(
-            p_329037_.readVarInt(),
-            p_329037_.readUUID(),
-            p_329037_.readVarInt(),
-            p_329037_.readNullable(MessageSignature::read),
-            new SignedMessageBody.Packed(p_329037_),
-            FriendlyByteBuf.readNullable(p_329037_, ComponentSerialization.TRUSTED_STREAM_CODEC),
-            FilterMask.read(p_329037_),
-            ChatType.Bound.STREAM_CODEC.decode(p_329037_)
+            input.readVarInt(),
+            input.readUUID(),
+            input.readVarInt(),
+            input.readNullable(MessageSignature::read),
+            new SignedMessageBody.Packed(input),
+            FriendlyByteBuf.readNullable(input, ComponentSerialization.TRUSTED_STREAM_CODEC),
+            FilterMask.read(input),
+            ChatType.Bound.STREAM_CODEC.decode(input)
         );
     }
 
-    private void write(RegistryFriendlyByteBuf p_329687_) {
-        p_329687_.writeVarInt(this.globalIndex);
-        p_329687_.writeUUID(this.sender);
-        p_329687_.writeVarInt(this.index);
-        p_329687_.writeNullable(this.signature, MessageSignature::write);
-        this.body.write(p_329687_);
-        FriendlyByteBuf.writeNullable(p_329687_, this.unsignedContent, ComponentSerialization.TRUSTED_STREAM_CODEC);
-        FilterMask.write(p_329687_, this.filterMask);
-        ChatType.Bound.STREAM_CODEC.encode(p_329687_, this.chatType);
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeVarInt(this.globalIndex);
+        output.writeUUID(this.sender);
+        output.writeVarInt(this.index);
+        output.writeNullable(this.signature, MessageSignature::write);
+        this.body.write(output);
+        FriendlyByteBuf.writeNullable(output, this.unsignedContent, ComponentSerialization.TRUSTED_STREAM_CODEC);
+        FilterMask.write(output, this.filterMask);
+        ChatType.Bound.STREAM_CODEC.encode(output, this.chatType);
     }
 
     @Override
@@ -57,8 +57,8 @@ public record ClientboundPlayerChatPacket(
         return GamePacketTypes.CLIENTBOUND_PLAYER_CHAT;
     }
 
-    public void handle(ClientGamePacketListener p_237759_) {
-        p_237759_.handlePlayerChat(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handlePlayerChat(this);
     }
 
     @Override

@@ -16,7 +16,7 @@ public record ClientboundRecipeBookSettingsPacket(RecipeBookSettings bookSetting
         return GamePacketTypes.CLIENTBOUND_RECIPE_BOOK_SETTINGS;
     }
 
-    public void handle(ClientGamePacketListener p_362130_) {
-        p_362130_.handleRecipeBookSettings(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleRecipeBookSettings(this);
     }
 }

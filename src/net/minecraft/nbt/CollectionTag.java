@@ -5,16 +5,16 @@ import java.util.NoSuchElementException;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public sealed interface CollectionTag extends Iterable<Tag>, Tag permits ListTag, ByteArrayTag, IntArrayTag, LongArrayTag {
+public sealed interface CollectionTag extends Tag, Iterable<Tag> permits ListTag, ByteArrayTag, IntArrayTag, LongArrayTag {
     void clear();
 
-    boolean setTag(int p_128305_, Tag p_128306_);
+    boolean setTag(int index, Tag tag);
 
-    boolean addTag(int p_128310_, Tag p_128311_);
+    boolean addTag(int index, Tag tag);
 
-    Tag remove(int p_128313_);
+    Tag remove(int index);
 
-    Tag get(int p_392245_);
+    Tag get(int index);
 
     int size();
 

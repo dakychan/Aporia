@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.core.Holder;
@@ -15,20 +14,20 @@ import net.minecraft.world.level.block.Rotation;
 
 public class GameTestBatchFactory {
     private static final int MAX_TESTS_PER_BATCH = 50;
-    public static final GameTestBatchFactory.TestDecorator DIRECT = (p_389747_, p_389748_) -> Stream.of(
-        new GameTestInfo(p_389747_, Rotation.NONE, p_389748_, RetryOptions.noRetries())
+    public static final GameTestBatchFactory.TestDecorator DIRECT = (test, level) -> Stream.of(
+        new GameTestInfo(test, Rotation.NONE, level, RetryOptions.noRetries())
     );
 
     public static List<GameTestBatch> divideIntoBatches(
-        Collection<Holder.Reference<GameTestInstance>> p_393682_, GameTestBatchFactory.TestDecorator p_393344_, ServerLevel p_397934_
+        final Collection<Holder.Reference<GameTestInstance>> allTests, final GameTestBatchFactory.TestDecorator decorator, final ServerLevel level
     ) {
-        Map<Holder<TestEnvironmentDefinition>, List<GameTestInfo>> map = p_393682_.stream()
-            .flatMap(p_389738_ -> p_393344_.decorate((Holder.Reference<GameTestInstance>)p_389738_, p_397934_))
-            .collect(Collectors.groupingBy(p_389739_ -> p_389739_.getTest().batch()));
-        return map.entrySet().stream().flatMap(p_389740_ -> {
-            Holder<TestEnvironmentDefinition> holder = p_389740_.getKey();
-            List<GameTestInfo> list = p_389740_.getValue();
-            return Streams.mapWithIndex(Lists.partition(list, 50).stream(), (p_389734_, p_389735_) -> toGameTestBatch(p_389734_, holder, (int)p_389735_));
+        Map<Holder<TestEnvironmentDefinition<?>>, List<GameTestInfo>> testsPerBatch = allTests.stream()
+            .flatMap(test -> decorator.decorate((Holder.Reference<GameTestInstance>)test, level))
+            .collect(Collectors.groupingBy(info -> info.getTest().batch()));
+        return testsPerBatch.entrySet().stream().flatMap(e -> {
+            Holder<TestEnvironmentDefinition<?>> batchKey = e.getKey();
+            List<GameTestInfo> testsInBatch = e.getValue();
+            return Streams.mapWithIndex(Lists.partition(testsInBatch, 50).stream(), (tests, index) -> toGameTestBatch(tests, batchKey, (int)index));
         }).toList();
     }
 
@@ -36,19 +35,20 @@ public class GameTestBatchFactory {
         return fromGameTestInfo(50);
     }
 
-    public static GameTestRunner.GameTestBatcher fromGameTestInfo(int p_344529_) {
-        return p_341088_ -> {
-            Map<Holder<TestEnvironmentDefinition>, List<GameTestInfo>> map = p_341088_.stream()
+    public static GameTestRunner.GameTestBatcher fromGameTestInfo(final int maxTestsPerBatch) {
+        return gameTestInfos -> {
+            Map<Holder<TestEnvironmentDefinition<?>>, List<GameTestInfo>> testFunctionsPerBatch = gameTestInfos.stream()
                 .filter(Objects::nonNull)
-                .collect(Collectors.groupingBy(p_389744_ -> p_389744_.getTest().batch()));
-            return map.entrySet()
+                .collect(Collectors.groupingBy(gameTestInfo -> gameTestInfo.getTest().batch()));
+            return testFunctionsPerBatch.entrySet()
                 .stream()
                 .flatMap(
-                    p_389746_ -> {
-                        Holder<TestEnvironmentDefinition> holder = p_389746_.getKey();
-                        List<GameTestInfo> list = p_389746_.getValue();
+                    e -> {
+                        Holder<TestEnvironmentDefinition<?>> batchKey = e.getKey();
+                        List<GameTestInfo> testsInBatch = e.getValue();
                         return Streams.mapWithIndex(
-                            Lists.partition(list, p_344529_).stream(), (p_389742_, p_389743_) -> toGameTestBatch(List.copyOf(p_389742_), holder, (int)p_389743_)
+                            Lists.partition(testsInBatch, maxTestsPerBatch).stream(),
+                            (tests, index) -> toGameTestBatch(List.copyOf((Collection<? extends GameTestInfo>)tests), batchKey, (int)index)
                         );
                     }
                 )
@@ -56,12 +56,12 @@ public class GameTestBatchFactory {
         };
     }
 
-    public static GameTestBatch toGameTestBatch(Collection<GameTestInfo> p_342407_, Holder<TestEnvironmentDefinition> p_397533_, int p_396485_) {
-        return new GameTestBatch(p_396485_, p_342407_, p_397533_);
+    public static GameTestBatch toGameTestBatch(final Collection<GameTestInfo> tests, final Holder<TestEnvironmentDefinition<?>> batch, final int counter) {
+        return new GameTestBatch(counter, tests, batch);
     }
 
     @FunctionalInterface
     public interface TestDecorator {
-        Stream<GameTestInfo> decorate(Holder.Reference<GameTestInstance> p_392013_, ServerLevel p_392627_);
+        Stream<GameTestInfo> decorate(Holder.Reference<GameTestInstance> test, ServerLevel level);
     }
 }

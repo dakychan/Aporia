@@ -10,12 +10,12 @@ public record ClientboundChunkBatchFinishedPacket(int batchSize) implements Pack
         ClientboundChunkBatchFinishedPacket::write, ClientboundChunkBatchFinishedPacket::new
     );
 
-    private ClientboundChunkBatchFinishedPacket(FriendlyByteBuf p_298630_) {
-        this(p_298630_.readVarInt());
+    private ClientboundChunkBatchFinishedPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt());
     }
 
-    private void write(FriendlyByteBuf p_299639_) {
-        p_299639_.writeVarInt(this.batchSize);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.batchSize);
     }
 
     @Override
@@ -23,7 +23,7 @@ public record ClientboundChunkBatchFinishedPacket(int batchSize) implements Pack
         return GamePacketTypes.CLIENTBOUND_CHUNK_BATCH_FINISHED;
     }
 
-    public void handle(ClientGamePacketListener p_297805_) {
-        p_297805_.handleChunkBatchFinished(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleChunkBatchFinished(this);
     }
 }

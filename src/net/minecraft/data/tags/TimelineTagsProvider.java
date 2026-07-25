@@ -8,15 +8,15 @@ import net.minecraft.tags.TimelineTags;
 import net.minecraft.world.timeline.Timeline;
 import net.minecraft.world.timeline.Timelines;
 
-public class TimelineTagsProvider extends KeyTagProvider<Timeline> {
-    public TimelineTagsProvider(PackOutput p_450824_, CompletableFuture<HolderLookup.Provider> p_450149_) {
-        super(p_450824_, Registries.TIMELINE, p_450149_);
+public class TimelineTagsProvider extends TagsProvider<Timeline> {
+    public TimelineTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.TIMELINE, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_455008_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(TimelineTags.UNIVERSAL).add(Timelines.VILLAGER_SCHEDULE);
-        this.tag(TimelineTags.IN_OVERWORLD).addTag(TimelineTags.UNIVERSAL).add(Timelines.DAY, Timelines.MOON, Timelines.EARLY_GAME);
+        this.tag(TimelineTags.IN_OVERWORLD).addTag(TimelineTags.UNIVERSAL).add(Timelines.OVERWORLD_DAY, Timelines.MOON, Timelines.EARLY_GAME);
         this.tag(TimelineTags.IN_NETHER).addTag(TimelineTags.UNIVERSAL);
         this.tag(TimelineTags.IN_END).addTag(TimelineTags.UNIVERSAL);
     }

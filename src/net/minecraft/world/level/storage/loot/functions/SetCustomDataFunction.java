@@ -2,7 +2,6 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -13,31 +12,29 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetCustomDataFunction extends LootItemConditionalFunction {
-    public static final MapCodec<SetCustomDataFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_336302_ -> commonFields(p_336302_)
-            .and(TagParser.LENIENT_CODEC.fieldOf("tag").forGetter(p_328670_ -> p_328670_.tag))
-            .apply(p_336302_, SetCustomDataFunction::new)
+    public static final MapCodec<SetCustomDataFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i).and(TagParser.LENIENT_CODEC.fieldOf("tag").forGetter(f -> f.tag)).apply(i, SetCustomDataFunction::new)
     );
     private final CompoundTag tag;
 
-    private SetCustomDataFunction(List<LootItemCondition> p_334383_, CompoundTag p_334528_) {
-        super(p_334383_);
-        this.tag = p_334528_;
+    private SetCustomDataFunction(final List<LootItemCondition> predicates, final CompoundTag tag) {
+        super(predicates);
+        this.tag = tag;
     }
 
     @Override
-    public LootItemFunctionType<SetCustomDataFunction> getType() {
-        return LootItemFunctions.SET_CUSTOM_DATA;
+    public MapCodec<SetCustomDataFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ItemStack run(ItemStack p_328195_, LootContext p_331034_) {
-        CustomData.update(DataComponents.CUSTOM_DATA, p_328195_, p_335000_ -> p_335000_.merge(this.tag));
-        return p_328195_;
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        CustomData.update(DataComponents.CUSTOM_DATA, itemStack, tag -> tag.merge(this.tag));
+        return itemStack;
     }
 
     @Deprecated
-    public static LootItemConditionalFunction.Builder<?> setCustomData(CompoundTag p_328660_) {
-        return simpleBuilder(p_332883_ -> new SetCustomDataFunction(p_332883_, p_328660_));
+    public static LootItemConditionalFunction.Builder<?> setCustomData(final CompoundTag value) {
+        return simpleBuilder(conditions -> new SetCustomDataFunction(conditions, value));
     }
 }

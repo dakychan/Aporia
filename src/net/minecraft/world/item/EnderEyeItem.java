@@ -1,6 +1,6 @@
 package net.minecraft.world.item;
 
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,80 +28,82 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class EnderEyeItem extends Item {
-    public EnderEyeItem(Item.Properties p_41180_) {
-        super(p_41180_);
+    public EnderEyeItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_41182_) {
-        Level level = p_41182_.getLevel();
-        BlockPos blockpos = p_41182_.getClickedPos();
-        BlockState blockstate = level.getBlockState(blockpos);
-        if (!blockstate.is(Blocks.END_PORTAL_FRAME) || blockstate.getValue(EndPortalFrameBlock.HAS_EYE)) {
+    public InteractionResult useOn(final UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState targetState = level.getBlockState(pos);
+        if (!targetState.is(Blocks.END_PORTAL_FRAME) || targetState.getValue(EndPortalFrameBlock.HAS_EYE)) {
             return InteractionResult.PASS;
-        } else if (level.isClientSide()) {
-            return InteractionResult.SUCCESS;
-        } else {
-            BlockState blockstate1 = blockstate.setValue(EndPortalFrameBlock.HAS_EYE, true);
-            Block.pushEntitiesUp(blockstate, blockstate1, level, blockpos);
-            level.setBlock(blockpos, blockstate1, 2);
-            level.updateNeighbourForOutputSignal(blockpos, Blocks.END_PORTAL_FRAME);
-            p_41182_.getItemInHand().shrink(1);
-            level.levelEvent(1503, blockpos, 0);
-            BlockPattern.BlockPatternMatch blockpattern$blockpatternmatch = EndPortalFrameBlock.getOrCreatePortalShape().find(level, blockpos);
-            if (blockpattern$blockpatternmatch != null) {
-                BlockPos blockpos1 = blockpattern$blockpatternmatch.getFrontTopLeft().offset(-3, 0, -3);
+        }
 
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++) {
-                        BlockPos blockpos2 = blockpos1.offset(i, 0, j);
-                        level.destroyBlock(blockpos2, true, null);
-                        level.setBlock(blockpos2, Blocks.END_PORTAL.defaultBlockState(), 2);
-                    }
-                }
-
-                level.globalLevelEvent(1038, blockpos1.offset(1, 0, 1), 0);
-            }
-
+        if (level.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
+
+        BlockState newState = targetState.setValue(EndPortalFrameBlock.HAS_EYE, true);
+        Block.pushEntitiesUp(targetState, newState, level, pos);
+        level.setBlock(pos, newState, 2);
+        level.updateNeighbourForOutputSignal(pos, Blocks.END_PORTAL_FRAME);
+        context.getItemInHand().shrink(1);
+        level.levelEvent(1503, pos, 0);
+        BlockPattern.BlockPatternMatch match = EndPortalFrameBlock.getOrCreatePortalShape().find(level, pos);
+        if (match != null) {
+            BlockPos blockPos = match.getFrontTopLeft().offset(-3, 0, -3);
+
+            for (int x = 0; x < 3; x++) {
+                for (int z = 0; z < 3; z++) {
+                    BlockPos portalBlockPos = blockPos.offset(x, 0, z);
+                    level.destroyBlock(portalBlockPos, true, null);
+                    level.setBlock(portalBlockPos, Blocks.END_PORTAL.defaultBlockState(), 2);
+                }
+            }
+
+            level.globalLevelEvent(1038, blockPos.offset(1, 0, 1), 0);
+        }
+
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public int getUseDuration(ItemStack p_331297_, LivingEntity p_343235_) {
+    public int getUseDuration(final ItemStack itemStack, final LivingEntity user) {
         return 0;
     }
 
     @Override
-    public InteractionResult use(Level p_41184_, Player p_41185_, InteractionHand p_41186_) {
-        ItemStack itemstack = p_41185_.getItemInHand(p_41186_);
-        BlockHitResult blockhitresult = getPlayerPOVHitResult(p_41184_, p_41185_, ClipContext.Fluid.NONE);
-        if (blockhitresult.getType() == HitResult.Type.BLOCK && p_41184_.getBlockState(blockhitresult.getBlockPos()).is(Blocks.END_PORTAL_FRAME)) {
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        BlockHitResult hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.NONE);
+        if (hitResult.getType() == HitResult.Type.BLOCK && level.getBlockState(hitResult.getBlockPos()).is(Blocks.END_PORTAL_FRAME)) {
             return InteractionResult.PASS;
-        } else {
-            p_41185_.startUsingItem(p_41186_);
-            if (p_41184_ instanceof ServerLevel serverlevel) {
-                BlockPos blockpos = serverlevel.findNearestMapStructure(StructureTags.EYE_OF_ENDER_LOCATED, p_41185_.blockPosition(), 100, false);
-                if (blockpos == null) {
-                    return InteractionResult.CONSUME;
-                }
+        }
 
-                EyeOfEnder eyeofender = new EyeOfEnder(p_41184_, p_41185_.getX(), p_41185_.getY(0.5), p_41185_.getZ());
-                eyeofender.setItem(itemstack);
-                eyeofender.signalTo(Vec3.atLowerCornerOf(blockpos));
-                p_41184_.gameEvent(GameEvent.PROJECTILE_SHOOT, eyeofender.position(), GameEvent.Context.of(p_41185_));
-                p_41184_.addFreshEntity(eyeofender);
-                if (p_41185_ instanceof ServerPlayer serverplayer) {
-                    CriteriaTriggers.USED_ENDER_EYE.trigger(serverplayer, blockpos);
-                }
-
-                float f = Mth.lerp(p_41184_.random.nextFloat(), 0.33F, 0.5F);
-                p_41184_.playSound(null, p_41185_.getX(), p_41185_.getY(), p_41185_.getZ(), SoundEvents.ENDER_EYE_LAUNCH, SoundSource.NEUTRAL, 1.0F, f);
-                itemstack.consume(1, p_41185_);
-                p_41185_.awardStat(Stats.ITEM_USED.get(this));
+        player.startUsingItem(hand);
+        if (level instanceof ServerLevel serverLevel) {
+            BlockPos nearestMapFeature = serverLevel.findNearestMapStructure(StructureTags.EYE_OF_ENDER_LOCATED, player.blockPosition(), 100, false);
+            if (nearestMapFeature == null) {
+                return InteractionResult.CONSUME;
             }
 
-            return InteractionResult.SUCCESS_SERVER;
+            EyeOfEnder eyeOfEnder = new EyeOfEnder(level, player.getX(), player.getY(0.5), player.getZ());
+            eyeOfEnder.setItem(itemStack);
+            eyeOfEnder.signalTo(Vec3.atLowerCornerOf(nearestMapFeature));
+            level.gameEvent(GameEvent.PROJECTILE_SHOOT, eyeOfEnder.position(), GameEvent.Context.of(player));
+            level.addFreshEntity(eyeOfEnder);
+            if (player instanceof ServerPlayer serverPlayer) {
+                CriteriaTriggers.USED_ENDER_EYE.trigger(serverPlayer, nearestMapFeature);
+            }
+
+            float pitch = Mth.lerp(level.getRandom().nextFloat(), 0.33F, 0.5F);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDER_EYE_LAUNCH, SoundSource.NEUTRAL, 1.0F, pitch);
+            itemStack.consume(1, player);
+            player.awardStat(Stats.ITEM_USED.get(this));
         }
+
+        return InteractionResult.SUCCESS_SERVER;
     }
 }

@@ -6,7 +6,6 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import net.minecraft.util.profiling.jfr.serialize.JfrResultJsonSerializer;
 import net.minecraft.util.profiling.jfr.stats.ChunkGenStat;
@@ -44,15 +43,13 @@ public record JfrStatsResult(
     List<StructureGenStat> structureGenStats
 ) {
     public List<Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>>> chunkGenSummary() {
-        Map<ChunkStatus, List<ChunkGenStat>> map = this.chunkGenStats.stream().collect(Collectors.groupingBy(ChunkGenStat::status));
-        return map.entrySet()
+        Map<ChunkStatus, List<ChunkGenStat>> byStatus = this.chunkGenStats.stream().collect(Collectors.groupingBy(ChunkGenStat::status));
+        return byStatus.entrySet()
             .stream()
-            .map(p_449357_ -> Pair.of(p_449357_.getKey(), TimedStatSummary.summary(p_449357_.getValue())))
-            .filter(p_449358_ -> p_449358_.getSecond().isPresent())
-            .map(p_449359_ -> Pair.of(p_449359_.getFirst(), p_449359_.getSecond().get()))
-            .sorted(
-                Comparator.<Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>>, Duration>comparing(p_185507_ -> p_185507_.getSecond().totalDuration()).reversed()
-            )
+            .map(e -> Pair.of(e.getKey(), TimedStatSummary.summary(e.getValue())))
+            .filter(pair -> pair.getSecond().isPresent())
+            .map(e -> Pair.of(e.getFirst(), e.getSecond().get()))
+            .sorted(Comparator.<Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>>, Duration>comparing(pair -> pair.getSecond().totalDuration()).reversed())
             .toList();
     }
 

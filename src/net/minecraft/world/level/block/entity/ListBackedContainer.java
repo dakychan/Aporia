@@ -29,42 +29,42 @@ public interface ListBackedContainer extends Container {
     }
 
     @Override
-    default ItemStack getItem(int p_429344_) {
-        return this.getItems().get(p_429344_);
+    default ItemStack getItem(final int slot) {
+        return this.getItems().get(slot);
     }
 
     @Override
-    default ItemStack removeItem(int p_427176_, int p_430870_) {
-        ItemStack itemstack = ContainerHelper.removeItem(this.getItems(), p_427176_, p_430870_);
-        if (!itemstack.isEmpty()) {
+    default ItemStack removeItem(final int slot, final int count) {
+        ItemStack result = ContainerHelper.removeItem(this.getItems(), slot, count);
+        if (!result.isEmpty()) {
             this.setChanged();
         }
 
-        return itemstack;
+        return result;
     }
 
     @Override
-    default ItemStack removeItemNoUpdate(int p_423060_) {
-        return ContainerHelper.removeItem(this.getItems(), p_423060_, this.getMaxStackSize());
+    default ItemStack removeItemNoUpdate(final int slot) {
+        return ContainerHelper.removeItem(this.getItems(), slot, this.getMaxStackSize());
     }
 
     @Override
-    default boolean canPlaceItem(int p_427311_, ItemStack p_425253_) {
-        return this.acceptsItemType(p_425253_) && (this.getItem(p_427311_).isEmpty() || this.getItem(p_427311_).getCount() < this.getMaxStackSize(p_425253_));
+    default boolean canPlaceItem(final int slot, final ItemStack itemStack) {
+        return this.acceptsItemType(itemStack) && (this.getItem(slot).isEmpty() || this.getItem(slot).getCount() < this.getMaxStackSize(itemStack));
     }
 
-    default boolean acceptsItemType(ItemStack p_424253_) {
+    default boolean acceptsItemType(final ItemStack itemStack) {
         return true;
     }
 
     @Override
-    default void setItem(int p_425609_, ItemStack p_424516_) {
-        this.setItemNoUpdate(p_425609_, p_424516_);
+    default void setItem(final int slot, final ItemStack itemStack) {
+        this.setItemNoUpdate(slot, itemStack);
         this.setChanged();
     }
 
-    default void setItemNoUpdate(int p_427306_, ItemStack p_428005_) {
-        this.getItems().set(p_427306_, p_428005_);
-        p_428005_.limitSize(this.getMaxStackSize(p_428005_));
+    default void setItemNoUpdate(final int slot, final ItemStack itemStack) {
+        this.getItems().set(slot, itemStack);
+        itemStack.limitSize(this.getMaxStackSize(itemStack));
     }
 }

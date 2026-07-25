@@ -14,32 +14,32 @@ public record ClientboundSetEntityDataPacket(int id, List<SynchedEntityData.Data
     );
     public static final int EOF_MARKER = 255;
 
-    private ClientboundSetEntityDataPacket(RegistryFriendlyByteBuf p_335656_) {
-        this(p_335656_.readVarInt(), unpack(p_335656_));
+    private ClientboundSetEntityDataPacket(final RegistryFriendlyByteBuf input) {
+        this(input.readVarInt(), unpack(input));
     }
 
-    private static void pack(List<SynchedEntityData.DataValue<?>> p_253940_, RegistryFriendlyByteBuf p_331850_) {
-        for (SynchedEntityData.DataValue<?> datavalue : p_253940_) {
-            datavalue.write(p_331850_);
+    private static void pack(final List<SynchedEntityData.DataValue<?>> items, final RegistryFriendlyByteBuf output) {
+        for (SynchedEntityData.DataValue<?> item : items) {
+            item.write(output);
         }
 
-        p_331850_.writeByte(255);
+        output.writeByte(255);
     }
 
-    private static List<SynchedEntityData.DataValue<?>> unpack(RegistryFriendlyByteBuf p_330932_) {
-        List<SynchedEntityData.DataValue<?>> list = new ArrayList<>();
+    private static List<SynchedEntityData.DataValue<?>> unpack(final RegistryFriendlyByteBuf input) {
+        List<SynchedEntityData.DataValue<?>> result = new ArrayList<>();
 
-        int i;
-        while ((i = p_330932_.readUnsignedByte()) != 255) {
-            list.add(SynchedEntityData.DataValue.read(p_330932_, i));
+        int id;
+        while ((id = input.readUnsignedByte()) != 255) {
+            result.add(SynchedEntityData.DataValue.read(input, id));
         }
 
-        return list;
+        return result;
     }
 
-    private void write(RegistryFriendlyByteBuf p_333245_) {
-        p_333245_.writeVarInt(this.id);
-        pack(this.packedItems, p_333245_);
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeVarInt(this.id);
+        pack(this.packedItems, output);
     }
 
     @Override
@@ -47,7 +47,7 @@ public record ClientboundSetEntityDataPacket(int id, List<SynchedEntityData.Data
         return GamePacketTypes.CLIENTBOUND_SET_ENTITY_DATA;
     }
 
-    public void handle(ClientGamePacketListener p_133155_) {
-        p_133155_.handleSetEntityData(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetEntityData(this);
     }
 }

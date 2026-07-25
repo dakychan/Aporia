@@ -9,20 +9,20 @@ public class WaterAvoidingRandomStrollGoal extends RandomStrollGoal {
     public static final float PROBABILITY = 0.001F;
     protected final float probability;
 
-    public WaterAvoidingRandomStrollGoal(PathfinderMob p_25987_, double p_25988_) {
-        this(p_25987_, p_25988_, 0.001F);
+    public WaterAvoidingRandomStrollGoal(final PathfinderMob mob, final double speedModifier) {
+        this(mob, speedModifier, 0.001F);
     }
 
-    public WaterAvoidingRandomStrollGoal(PathfinderMob p_25990_, double p_25991_, float p_25992_) {
-        super(p_25990_, p_25991_);
-        this.probability = p_25992_;
+    public WaterAvoidingRandomStrollGoal(final PathfinderMob mob, final double speedModifier, final float probability) {
+        super(mob, speedModifier);
+        this.probability = probability;
     }
 
     @Override
     protected @Nullable Vec3 getPosition() {
         if (this.mob.isInWater()) {
-            Vec3 vec3 = LandRandomPos.getPos(this.mob, 15, 7);
-            return vec3 == null ? super.getPosition() : vec3;
+            Vec3 pos = LandRandomPos.getPos(this.mob, 15, 7);
+            return pos == null ? super.getPosition() : pos;
         } else {
             return this.mob.getRandom().nextFloat() >= this.probability ? LandRandomPos.getPos(this.mob, 10, 7) : super.getPosition();
         }

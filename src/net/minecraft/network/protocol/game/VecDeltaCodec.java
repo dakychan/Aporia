@@ -8,44 +8,44 @@ public class VecDeltaCodec {
     private Vec3 base = Vec3.ZERO;
 
     @VisibleForTesting
-    static long encode(double p_238018_) {
-        return Math.round(p_238018_ * 4096.0);
+    static long encode(final double input) {
+        return Math.round(input * 4096.0);
     }
 
     @VisibleForTesting
-    static double decode(long p_238020_) {
-        return p_238020_ / 4096.0;
+    static double decode(final long v) {
+        return v / 4096.0;
     }
 
-    public Vec3 decode(long p_238022_, long p_238023_, long p_238024_) {
-        if (p_238022_ == 0L && p_238023_ == 0L && p_238024_ == 0L) {
+    public Vec3 decode(final long xa, final long ya, final long za) {
+        if (xa == 0L && ya == 0L && za == 0L) {
             return this.base;
-        } else {
-            double d0 = p_238022_ == 0L ? this.base.x : decode(encode(this.base.x) + p_238022_);
-            double d1 = p_238023_ == 0L ? this.base.y : decode(encode(this.base.y) + p_238023_);
-            double d2 = p_238024_ == 0L ? this.base.z : decode(encode(this.base.z) + p_238024_);
-            return new Vec3(d0, d1, d2);
         }
+
+        double x = xa == 0L ? this.base.x : decode(encode(this.base.x) + xa);
+        double y = ya == 0L ? this.base.y : decode(encode(this.base.y) + ya);
+        double z = za == 0L ? this.base.z : decode(encode(this.base.z) + za);
+        return new Vec3(x, y, z);
     }
 
-    public long encodeX(Vec3 p_238026_) {
-        return encode(p_238026_.x) - encode(this.base.x);
+    public long encodeX(final Vec3 pos) {
+        return encode(pos.x) - encode(this.base.x);
     }
 
-    public long encodeY(Vec3 p_238028_) {
-        return encode(p_238028_.y) - encode(this.base.y);
+    public long encodeY(final Vec3 pos) {
+        return encode(pos.y) - encode(this.base.y);
     }
 
-    public long encodeZ(Vec3 p_238030_) {
-        return encode(p_238030_.z) - encode(this.base.z);
+    public long encodeZ(final Vec3 pos) {
+        return encode(pos.z) - encode(this.base.z);
     }
 
-    public Vec3 delta(Vec3 p_238032_) {
-        return p_238032_.subtract(this.base);
+    public Vec3 delta(final Vec3 pos) {
+        return pos.subtract(this.base);
     }
 
-    public void setBase(Vec3 p_238034_) {
-        this.base = p_238034_;
+    public void setBase(final Vec3 base) {
+        this.base = base;
     }
 
     public Vec3 getBase() {

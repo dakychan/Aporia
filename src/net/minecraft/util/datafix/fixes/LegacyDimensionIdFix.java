@@ -5,48 +5,43 @@ import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
 
 public class LegacyDimensionIdFix extends DataFix {
-    public LegacyDimensionIdFix(Schema p_408929_) {
-        super(p_408929_, false);
+    public LegacyDimensionIdFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        TypeRewriteRule typerewriterule = this.fixTypeEverywhereTyped(
-            "PlayerLegacyDimensionFix",
-            this.getInputSchema().getType(References.PLAYER),
-            p_408950_ -> p_408950_.update(DSL.remainderFinder(), this::fixPlayer)
+        TypeRewriteRule playerRule = this.fixTypeEverywhereTyped(
+            "PlayerLegacyDimensionFix", this.getInputSchema().getType(References.PLAYER), input -> input.update(DSL.remainderFinder(), this::fixPlayer)
         );
-        Type<?> type = this.getInputSchema().getType(References.SAVED_DATA_MAP_DATA);
-        OpticFinder<?> opticfinder = type.findField("data");
-        TypeRewriteRule typerewriterule1 = this.fixTypeEverywhereTyped(
-            "MapLegacyDimensionFix",
-            type,
-            p_406831_ -> p_406831_.updateTyped(opticfinder, p_406575_ -> p_406575_.update(DSL.remainderFinder(), this::fixMap))
+        Type<?> dataType = this.getInputSchema().getType(References.SAVED_DATA_MAP_DATA);
+        OpticFinder<?> mapDataF = dataType.findField("data");
+        TypeRewriteRule mapRule = this.fixTypeEverywhereTyped(
+            "MapLegacyDimensionFix", dataType, input -> input.updateTyped(mapDataF, data -> data.update(DSL.remainderFinder(), this::fixMap))
         );
-        return TypeRewriteRule.seq(typerewriterule, typerewriterule1);
+        return TypeRewriteRule.seq(playerRule, mapRule);
     }
 
-    private <T> Dynamic<T> fixMap(Dynamic<T> p_407634_) {
-        return p_407634_.update("dimension", this::fixDimensionId);
+    private <T> Dynamic<T> fixMap(final Dynamic<T> remainder) {
+        return remainder.update("dimension", this::fixDimensionId);
     }
 
-    private <T> Dynamic<T> fixPlayer(Dynamic<T> p_410408_) {
-        return p_410408_.update("Dimension", this::fixDimensionId);
+    private <T> Dynamic<T> fixPlayer(final Dynamic<T> remainder) {
+        return remainder.update("Dimension", this::fixDimensionId);
     }
 
-    private <T> Dynamic<T> fixDimensionId(Dynamic<T> p_410744_) {
-        return DataFixUtils.orElse(p_410744_.asNumber().result().map(p_408638_ -> {
-            return switch (p_408638_.intValue()) {
-                case -1 -> p_410744_.createString("minecraft:the_nether");
-                case 1 -> p_410744_.createString("minecraft:the_end");
-                default -> p_410744_.createString("minecraft:overworld");
+    private <T> Dynamic<T> fixDimensionId(final Dynamic<T> id) {
+        return DataFixUtils.orElse(id.asNumber().result().map(legacyId -> {
+            return switch (legacyId.intValue()) {
+                case -1 -> id.createString("minecraft:the_nether");
+                case 1 -> id.createString("minecraft:the_end");
+                default -> id.createString("minecraft:overworld");
             };
-        }), p_410744_);
+        }), id);
     }
 }

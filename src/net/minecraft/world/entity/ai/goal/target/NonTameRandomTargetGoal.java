@@ -8,9 +8,11 @@ import org.jspecify.annotations.Nullable;
 public class NonTameRandomTargetGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
     private final TamableAnimal tamableMob;
 
-    public NonTameRandomTargetGoal(TamableAnimal p_26097_, Class<T> p_26098_, boolean p_26099_, TargetingConditions.@Nullable Selector p_361608_) {
-        super(p_26097_, p_26098_, 10, p_26099_, false, p_361608_);
-        this.tamableMob = p_26097_;
+    public NonTameRandomTargetGoal(
+        final TamableAnimal mob, final Class<T> targetType, final boolean mustSee, final TargetingConditions.@Nullable Selector subselector
+    ) {
+        super(mob, targetType, 10, mustSee, false, subselector);
+        this.tamableMob = mob;
     }
 
     @Override

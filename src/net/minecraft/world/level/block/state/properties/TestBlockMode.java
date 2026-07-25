@@ -15,19 +15,19 @@ public enum TestBlockMode implements StringRepresentable {
     FAIL(2, "fail"),
     ACCEPT(3, "accept");
 
-    private static final IntFunction<TestBlockMode> BY_ID = ByIdMap.continuous(p_392592_ -> p_392592_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+    private static final IntFunction<TestBlockMode> BY_ID = ByIdMap.continuous(mode -> mode.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
     public static final Codec<TestBlockMode> CODEC = StringRepresentable.fromEnum(TestBlockMode::values);
-    public static final StreamCodec<ByteBuf, TestBlockMode> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_393818_ -> p_393818_.id);
+    public static final StreamCodec<ByteBuf, TestBlockMode> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, mode -> mode.id);
     private final int id;
     private final String name;
     private final Component displayName;
     private final Component detailedMessage;
 
-    private TestBlockMode(final int p_396429_, final String p_397750_) {
-        this.id = p_396429_;
-        this.name = p_397750_;
-        this.displayName = Component.translatable("test_block.mode." + p_397750_);
-        this.detailedMessage = Component.translatable("test_block.mode_info." + p_397750_);
+    TestBlockMode(final int id, final String name) {
+        this.id = id;
+        this.name = name;
+        this.displayName = Component.translatable("test_block.mode." + name);
+        this.detailedMessage = Component.translatable("test_block.mode_info." + name);
     }
 
     @Override

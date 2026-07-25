@@ -2,7 +2,6 @@ package net.minecraft.world.entity.ai.village.poi;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Objects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -16,15 +15,15 @@ public class PoiRecord {
     private int freeTickets;
     private final Runnable setDirty;
 
-    PoiRecord(BlockPos p_218008_, Holder<PoiType> p_218009_, int p_218010_, Runnable p_218011_) {
-        this.pos = p_218008_.immutable();
-        this.poiType = p_218009_;
-        this.freeTickets = p_218010_;
-        this.setDirty = p_218011_;
+    private PoiRecord(final BlockPos pos, final Holder<PoiType> poiType, final int freeTickets, final Runnable setDirty) {
+        this.pos = pos.immutable();
+        this.poiType = poiType;
+        this.freeTickets = freeTickets;
+        this.setDirty = setDirty;
     }
 
-    public PoiRecord(BlockPos p_218013_, Holder<PoiType> p_218014_, Runnable p_218015_) {
-        this(p_218013_, p_218014_, p_218014_.value().maxTickets(), p_218015_);
+    public PoiRecord(final BlockPos pos, final Holder<PoiType> poiType, final Runnable setDirty) {
+        this(pos, poiType, poiType.value().maxTickets(), setDirty);
     }
 
     public PoiRecord.Packed pack() {
@@ -40,21 +39,21 @@ public class PoiRecord {
     protected boolean acquireTicket() {
         if (this.freeTickets <= 0) {
             return false;
-        } else {
-            this.freeTickets--;
-            this.setDirty.run();
-            return true;
         }
+
+        this.freeTickets--;
+        this.setDirty.run();
+        return true;
     }
 
     protected boolean releaseTicket() {
         if (this.freeTickets >= this.poiType.value().maxTickets()) {
             return false;
-        } else {
-            this.freeTickets++;
-            this.setDirty.run();
-            return true;
         }
+
+        this.freeTickets++;
+        this.setDirty.run();
+        return true;
     }
 
     public boolean hasSpace() {
@@ -74,11 +73,11 @@ public class PoiRecord {
     }
 
     @Override
-    public boolean equals(Object p_27256_) {
-        if (this == p_27256_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return p_27256_ != null && this.getClass() == p_27256_.getClass() ? Objects.equals(this.pos, ((PoiRecord)p_27256_).pos) : false;
+            return o != null && this.getClass() == o.getClass() ? Objects.equals(this.pos, ((PoiRecord)o).pos) : false;
         }
     }
 
@@ -89,16 +88,16 @@ public class PoiRecord {
 
     public record Packed(BlockPos pos, Holder<PoiType> poiType, int freeTickets) {
         public static final Codec<PoiRecord.Packed> CODEC = RecordCodecBuilder.create(
-            p_362341_ -> p_362341_.group(
+            i -> i.group(
                     BlockPos.CODEC.fieldOf("pos").forGetter(PoiRecord.Packed::pos),
                     RegistryFixedCodec.create(Registries.POINT_OF_INTEREST_TYPE).fieldOf("type").forGetter(PoiRecord.Packed::poiType),
-                    Codec.INT.fieldOf("free_tickets").orElse(0).forGetter(PoiRecord.Packed::freeTickets)
+                    Codec.INT.optionalFieldOf("free_tickets", 0).forGetter(PoiRecord.Packed::freeTickets)
                 )
-                .apply(p_362341_, PoiRecord.Packed::new)
+                .apply(i, PoiRecord.Packed::new)
         );
 
-        public PoiRecord unpack(Runnable p_362041_) {
-            return new PoiRecord(this.pos, this.poiType, this.freeTickets, p_362041_);
+        public PoiRecord unpack(final Runnable setDirty) {
+            return new PoiRecord(this.pos, this.poiType, this.freeTickets, setDirty);
         }
     }
 }

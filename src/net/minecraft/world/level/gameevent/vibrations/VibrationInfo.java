@@ -2,7 +2,6 @@ package net.minecraft.world.level.gameevent.vibrations;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.core.Holder;
@@ -18,42 +17,42 @@ public record VibrationInfo(
     Holder<GameEvent> gameEvent, float distance, Vec3 pos, @Nullable UUID uuid, @Nullable UUID projectileOwnerUuid, @Nullable Entity entity
 ) {
     public static final Codec<VibrationInfo> CODEC = RecordCodecBuilder.create(
-        p_341894_ -> p_341894_.group(
+        i -> i.group(
                 GameEvent.CODEC.fieldOf("game_event").forGetter(VibrationInfo::gameEvent),
                 Codec.floatRange(0.0F, Float.MAX_VALUE).fieldOf("distance").forGetter(VibrationInfo::distance),
                 Vec3.CODEC.fieldOf("pos").forGetter(VibrationInfo::pos),
-                UUIDUtil.CODEC.lenientOptionalFieldOf("source").forGetter(p_250608_ -> Optional.ofNullable(p_250608_.uuid())),
-                UUIDUtil.CODEC.lenientOptionalFieldOf("projectile_owner").forGetter(p_250607_ -> Optional.ofNullable(p_250607_.projectileOwnerUuid()))
+                UUIDUtil.CODEC.lenientOptionalFieldOf("source").forGetter(o -> Optional.ofNullable(o.uuid())),
+                UUIDUtil.CODEC.lenientOptionalFieldOf("projectile_owner").forGetter(o -> Optional.ofNullable(o.projectileOwnerUuid()))
             )
             .apply(
-                p_341894_,
-                (p_327438_, p_327439_, p_327440_, p_327441_, p_327442_) -> new VibrationInfo(
-                    p_327438_, p_327439_, p_327440_, p_327441_.orElse(null), p_327442_.orElse(null)
-                )
+                i,
+                (event, distance, pos, source, projectileOwner) -> new VibrationInfo(event, distance, pos, source.orElse(null), projectileOwner.orElse(null))
             )
     );
 
-    public VibrationInfo(Holder<GameEvent> p_332399_, float p_250190_, Vec3 p_251692_, @Nullable UUID p_249849_, @Nullable UUID p_249731_) {
-        this(p_332399_, p_250190_, p_251692_, p_249849_, p_249731_, null);
+    public VibrationInfo(
+        final Holder<GameEvent> gameEvent, final float distance, final Vec3 pos, final @Nullable UUID uuid, final @Nullable UUID projectileOwnerUuid
+    ) {
+        this(gameEvent, distance, pos, uuid, projectileOwnerUuid, null);
     }
 
-    public VibrationInfo(Holder<GameEvent> p_333558_, float p_251086_, Vec3 p_250935_, @Nullable Entity p_249432_) {
-        this(p_333558_, p_251086_, p_250935_, p_249432_ == null ? null : p_249432_.getUUID(), getProjectileOwner(p_249432_), p_249432_);
+    public VibrationInfo(final Holder<GameEvent> gameEvent, final float distance, final Vec3 pos, final @Nullable Entity entity) {
+        this(gameEvent, distance, pos, entity == null ? null : entity.getUUID(), getProjectileOwner(entity), entity);
     }
 
-    private static @Nullable UUID getProjectileOwner(@Nullable Entity p_251531_) {
-        return p_251531_ instanceof Projectile projectile && projectile.getOwner() != null ? projectile.getOwner().getUUID() : null;
+    private static @Nullable UUID getProjectileOwner(final @Nullable Entity entity) {
+        return entity instanceof Projectile projectile && projectile.getOwner() != null ? projectile.getOwner().getUUID() : null;
     }
 
-    public Optional<Entity> getEntity(ServerLevel p_249184_) {
-        return Optional.ofNullable(this.entity).or(() -> Optional.ofNullable(this.uuid).map(p_249184_::getEntity));
+    public Optional<Entity> getEntity(final ServerLevel level) {
+        return Optional.ofNullable(this.entity).or(() -> Optional.ofNullable(this.uuid).map(level::getEntity));
     }
 
-    public Optional<Entity> getProjectileOwner(ServerLevel p_249217_) {
-        return this.getEntity(p_249217_)
-            .filter(p_249829_ -> p_249829_ instanceof Projectile)
-            .map(p_249388_ -> (Projectile)p_249388_)
+    public Optional<Entity> getProjectileOwner(final ServerLevel level) {
+        return this.getEntity(level)
+            .filter(e -> e instanceof Projectile)
+            .map(e -> (Projectile)e)
             .map(Projectile::getOwner)
-            .or(() -> Optional.ofNullable(this.projectileOwnerUuid).map(p_249217_::getEntity));
+            .or(() -> Optional.ofNullable(this.projectileOwnerUuid).map(level::getEntity));
     }
 }

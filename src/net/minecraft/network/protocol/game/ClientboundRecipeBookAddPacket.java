@@ -8,8 +8,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 
-public record ClientboundRecipeBookAddPacket(List<ClientboundRecipeBookAddPacket.Entry> entries, boolean replace)
-    implements Packet<ClientGamePacketListener> {
+public record ClientboundRecipeBookAddPacket(List<ClientboundRecipeBookAddPacket.Entry> entries, boolean replace) implements Packet<ClientGamePacketListener> {
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundRecipeBookAddPacket> STREAM_CODEC = StreamCodec.composite(
         ClientboundRecipeBookAddPacket.Entry.STREAM_CODEC.apply(ByteBufCodecs.list()),
         ClientboundRecipeBookAddPacket::entries,
@@ -23,8 +22,8 @@ public record ClientboundRecipeBookAddPacket(List<ClientboundRecipeBookAddPacket
         return GamePacketTypes.CLIENTBOUND_RECIPE_BOOK_ADD;
     }
 
-    public void handle(ClientGamePacketListener p_369082_) {
-        p_369082_.handleRecipeBookAdd(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleRecipeBookAdd(this);
     }
 
     public record Entry(RecipeDisplayEntry contents, byte flags) {
@@ -38,8 +37,8 @@ public record ClientboundRecipeBookAddPacket(List<ClientboundRecipeBookAddPacket
             ClientboundRecipeBookAddPacket.Entry::new
         );
 
-        public Entry(RecipeDisplayEntry p_369640_, boolean p_365244_, boolean p_364233_) {
-            this(p_369640_, (byte)((p_365244_ ? 1 : 0) | (p_364233_ ? 2 : 0)));
+        public Entry(final RecipeDisplayEntry contents, final boolean notification, final boolean highlight) {
+            this(contents, (byte)((notification ? 1 : 0) | (highlight ? 2 : 0)));
         }
 
         public boolean notification() {

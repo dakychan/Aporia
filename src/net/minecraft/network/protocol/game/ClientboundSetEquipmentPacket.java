@@ -18,35 +18,35 @@ public class ClientboundSetEquipmentPacket implements Packet<ClientGamePacketLis
     private final int entity;
     private final List<Pair<EquipmentSlot, ItemStack>> slots;
 
-    public ClientboundSetEquipmentPacket(int p_133202_, List<Pair<EquipmentSlot, ItemStack>> p_133203_) {
-        this.entity = p_133202_;
-        this.slots = p_133203_;
+    public ClientboundSetEquipmentPacket(final int entity, final List<Pair<EquipmentSlot, ItemStack>> slots) {
+        this.entity = entity;
+        this.slots = slots;
     }
 
-    private ClientboundSetEquipmentPacket(RegistryFriendlyByteBuf p_329444_) {
-        this.entity = p_329444_.readVarInt();
+    private ClientboundSetEquipmentPacket(final RegistryFriendlyByteBuf input) {
+        this.entity = input.readVarInt();
         this.slots = Lists.newArrayList();
 
-        int i;
+        int slotId;
         do {
-            i = p_329444_.readByte();
-            EquipmentSlot equipmentslot = EquipmentSlot.VALUES.get(i & 127);
-            ItemStack itemstack = ItemStack.OPTIONAL_STREAM_CODEC.decode(p_329444_);
-            this.slots.add(Pair.of(equipmentslot, itemstack));
-        } while ((i & -128) != 0);
+            slotId = input.readByte();
+            EquipmentSlot slot = EquipmentSlot.VALUES.get(slotId & 127);
+            ItemStack itemStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(input);
+            this.slots.add(Pair.of(slot, itemStack));
+        } while ((slotId & -128) != 0);
     }
 
-    private void write(RegistryFriendlyByteBuf p_328455_) {
-        p_328455_.writeVarInt(this.entity);
-        int i = this.slots.size();
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeVarInt(this.entity);
+        int size = this.slots.size();
 
-        for (int j = 0; j < i; j++) {
-            Pair<EquipmentSlot, ItemStack> pair = this.slots.get(j);
-            EquipmentSlot equipmentslot = pair.getFirst();
-            boolean flag = j != i - 1;
-            int k = equipmentslot.ordinal();
-            p_328455_.writeByte(flag ? k | -128 : k);
-            ItemStack.OPTIONAL_STREAM_CODEC.encode(p_328455_, pair.getSecond());
+        for (int i = 0; i < size; i++) {
+            Pair<EquipmentSlot, ItemStack> e = this.slots.get(i);
+            EquipmentSlot slotType = e.getFirst();
+            boolean shouldContinue = i != size - 1;
+            int slotId = slotType.ordinal();
+            output.writeByte(shouldContinue ? slotId | -128 : slotId);
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(output, e.getSecond());
         }
     }
 
@@ -55,8 +55,8 @@ public class ClientboundSetEquipmentPacket implements Packet<ClientGamePacketLis
         return GamePacketTypes.CLIENTBOUND_SET_EQUIPMENT;
     }
 
-    public void handle(ClientGamePacketListener p_133209_) {
-        p_133209_.handleSetEquipment(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetEquipment(this);
     }
 
     public int getEntity() {

@@ -3,17 +3,16 @@ package net.minecraft.server.permissions;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.registries.BuiltInRegistries;
 
 public interface PermissionCheck {
-    Codec<PermissionCheck> CODEC = BuiltInRegistries.PERMISSION_CHECK_TYPE.byNameCodec().dispatch(PermissionCheck::codec, p_456900_ -> p_456900_);
+    Codec<PermissionCheck> CODEC = BuiltInRegistries.PERMISSION_CHECK_TYPE.byNameCodec().dispatch(PermissionCheck::codec, c -> c);
 
-    boolean check(PermissionSet p_452557_);
+    boolean check(PermissionSet source);
 
     MapCodec<? extends PermissionCheck> codec();
 
-    public static class AlwaysPass implements PermissionCheck {
+    class AlwaysPass implements PermissionCheck {
         public static final PermissionCheck.AlwaysPass INSTANCE = new PermissionCheck.AlwaysPass();
         public static final MapCodec<PermissionCheck.AlwaysPass> MAP_CODEC = MapCodec.unit(INSTANCE);
 
@@ -21,7 +20,7 @@ public interface PermissionCheck {
         }
 
         @Override
-        public boolean check(PermissionSet p_455988_) {
+        public boolean check(final PermissionSet source) {
             return true;
         }
 
@@ -31,10 +30,9 @@ public interface PermissionCheck {
         }
     }
 
-    public record Require(Permission permission) implements PermissionCheck {
+    record Require(Permission permission) implements PermissionCheck {
         public static final MapCodec<PermissionCheck.Require> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_457074_ -> p_457074_.group(Permission.CODEC.fieldOf("permission").forGetter(PermissionCheck.Require::permission))
-                .apply(p_457074_, PermissionCheck.Require::new)
+            i -> i.group(Permission.CODEC.fieldOf("permission").forGetter(PermissionCheck.Require::permission)).apply(i, PermissionCheck.Require::new)
         );
 
         @Override
@@ -43,8 +41,8 @@ public interface PermissionCheck {
         }
 
         @Override
-        public boolean check(PermissionSet p_457403_) {
-            return p_457403_.hasPermission(this.permission);
+        public boolean check(final PermissionSet source) {
+            return source.hasPermission(this.permission);
         }
     }
 }

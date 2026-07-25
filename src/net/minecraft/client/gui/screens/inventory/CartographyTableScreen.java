@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.state.MapRenderState;
 import net.minecraft.core.component.DataComponents;
@@ -13,11 +13,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.MapItem;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CartographyTableScreen extends AbstractContainerScreen<CartographyTableMenu> {
     private static final Identifier ERROR_SPRITE = Identifier.withDefaultNamespace("container/cartography_table/error");
     private static final Identifier SCALED_MAP_SPRITE = Identifier.withDefaultNamespace("container/cartography_table/scaled_map");
@@ -27,92 +24,87 @@ public class CartographyTableScreen extends AbstractContainerScreen<CartographyT
     private static final Identifier BG_LOCATION = Identifier.withDefaultNamespace("textures/gui/container/cartography_table.png");
     private final MapRenderState mapRenderState = new MapRenderState();
 
-    public CartographyTableScreen(CartographyTableMenu p_98349_, Inventory p_98350_, Component p_98351_) {
-        super(p_98349_, p_98350_, p_98351_);
+    public CartographyTableScreen(final CartographyTableMenu menu, final Inventory inventory, final Component title) {
+        super(menu, inventory, title);
         this.titleLabelY -= 2;
     }
 
     @Override
-    public void render(GuiGraphics p_281331_, int p_281706_, int p_282996_, float p_283037_) {
-        super.render(p_281331_, p_281706_, p_282996_, p_283037_);
-        this.renderTooltip(p_281331_, p_281706_, p_282996_);
-    }
-
-    @Override
-    protected void renderBg(GuiGraphics p_282101_, float p_282697_, int p_282380_, int p_282327_) {
-        int i = this.leftPos;
-        int j = this.topPos;
-        p_282101_.blit(RenderPipelines.GUI_TEXTURED, BG_LOCATION, i, j, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
-        ItemStack itemstack = this.menu.getSlot(1).getItem();
-        boolean flag = itemstack.is(Items.MAP);
-        boolean flag1 = itemstack.is(Items.PAPER);
-        boolean flag2 = itemstack.is(Items.GLASS_PANE);
-        ItemStack itemstack1 = this.menu.getSlot(0).getItem();
-        MapId mapid = itemstack1.get(DataComponents.MAP_ID);
-        boolean flag3 = false;
-        MapItemSavedData mapitemsaveddata;
-        if (mapid != null) {
-            mapitemsaveddata = MapItem.getSavedData(mapid, this.minecraft.level);
-            if (mapitemsaveddata != null) {
-                if (mapitemsaveddata.locked) {
-                    flag3 = true;
-                    if (flag1 || flag2) {
-                        p_282101_.blitSprite(RenderPipelines.GUI_TEXTURED, ERROR_SPRITE, i + 35, j + 31, 28, 21);
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractBackground(graphics, mouseX, mouseY, a);
+        int xo = this.leftPos;
+        int yo = this.topPos;
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BG_LOCATION, xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
+        ItemStack additionalItem = this.menu.getSlot(1).getItem();
+        boolean isDuplication = additionalItem.is(Items.MAP);
+        boolean isScaling = additionalItem.is(Items.PAPER);
+        boolean isLocking = additionalItem.is(Items.GLASS_PANE);
+        ItemStack map = this.menu.getSlot(0).getItem();
+        MapId mapId = map.get(DataComponents.MAP_ID);
+        boolean locked = false;
+        MapItemSavedData mapData;
+        if (mapId != null) {
+            mapData = MapItem.getSavedData(mapId, this.minecraft.level);
+            if (mapData != null) {
+                if (mapData.locked) {
+                    locked = true;
+                    if (isScaling || isLocking) {
+                        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ERROR_SPRITE, xo + 35, yo + 31, 28, 21);
                     }
                 }
 
-                if (flag1 && mapitemsaveddata.scale >= 4) {
-                    flag3 = true;
-                    p_282101_.blitSprite(RenderPipelines.GUI_TEXTURED, ERROR_SPRITE, i + 35, j + 31, 28, 21);
+                if (isScaling && mapData.scale >= 4) {
+                    locked = true;
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ERROR_SPRITE, xo + 35, yo + 31, 28, 21);
                 }
             }
         } else {
-            mapitemsaveddata = null;
+            mapData = null;
         }
 
-        this.renderResultingMap(p_282101_, mapid, mapitemsaveddata, flag, flag1, flag2, flag3);
+        this.extractResultingMap(graphics, mapId, mapData, isDuplication, isScaling, isLocking, locked);
     }
 
-    private void renderResultingMap(
-        GuiGraphics p_282167_,
-        @Nullable MapId p_335682_,
-        @Nullable MapItemSavedData p_282045_,
-        boolean p_282086_,
-        boolean p_283531_,
-        boolean p_282645_,
-        boolean p_281646_
+    private void extractResultingMap(
+        final GuiGraphicsExtractor graphics,
+        final @Nullable MapId id,
+        final @Nullable MapItemSavedData data,
+        final boolean isDuplication,
+        final boolean isScaling,
+        final boolean isLocking,
+        final boolean locked
     ) {
-        int i = this.leftPos;
-        int j = this.topPos;
-        if (p_283531_ && !p_281646_) {
-            p_282167_.blitSprite(RenderPipelines.GUI_TEXTURED, SCALED_MAP_SPRITE, i + 67, j + 13, 66, 66);
-            this.renderMap(p_282167_, p_335682_, p_282045_, i + 85, j + 31, 0.226F);
-        } else if (p_282086_) {
-            p_282167_.blitSprite(RenderPipelines.GUI_TEXTURED, DUPLICATED_MAP_SPRITE, i + 67 + 16, j + 13, 50, 66);
-            this.renderMap(p_282167_, p_335682_, p_282045_, i + 86, j + 16, 0.34F);
-            p_282167_.nextStratum();
-            p_282167_.blitSprite(RenderPipelines.GUI_TEXTURED, DUPLICATED_MAP_SPRITE, i + 67, j + 13 + 16, 50, 66);
-            this.renderMap(p_282167_, p_335682_, p_282045_, i + 70, j + 32, 0.34F);
-        } else if (p_282645_) {
-            p_282167_.blitSprite(RenderPipelines.GUI_TEXTURED, MAP_SPRITE, i + 67, j + 13, 66, 66);
-            this.renderMap(p_282167_, p_335682_, p_282045_, i + 71, j + 17, 0.45F);
-            p_282167_.blitSprite(RenderPipelines.GUI_TEXTURED, LOCKED_SPRITE, i + 118, j + 60, 10, 14);
+        int xo = this.leftPos;
+        int yo = this.topPos;
+        if (isScaling && !locked) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCALED_MAP_SPRITE, xo + 67, yo + 13, 66, 66);
+            this.extractMap(graphics, id, data, xo + 85, yo + 31, 0.226F);
+        } else if (isDuplication) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, DUPLICATED_MAP_SPRITE, xo + 67 + 16, yo + 13, 50, 66);
+            this.extractMap(graphics, id, data, xo + 86, yo + 16, 0.34F);
+            graphics.nextStratum();
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, DUPLICATED_MAP_SPRITE, xo + 67, yo + 13 + 16, 50, 66);
+            this.extractMap(graphics, id, data, xo + 70, yo + 32, 0.34F);
+        } else if (isLocking) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, MAP_SPRITE, xo + 67, yo + 13, 66, 66);
+            this.extractMap(graphics, id, data, xo + 71, yo + 17, 0.45F);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, LOCKED_SPRITE, xo + 118, yo + 60, 10, 14);
         } else {
-            p_282167_.blitSprite(RenderPipelines.GUI_TEXTURED, MAP_SPRITE, i + 67, j + 13, 66, 66);
-            this.renderMap(p_282167_, p_335682_, p_282045_, i + 71, j + 17, 0.45F);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, MAP_SPRITE, xo + 67, yo + 13, 66, 66);
+            this.extractMap(graphics, id, data, xo + 71, yo + 17, 0.45F);
         }
     }
 
-    private void renderMap(
-        GuiGraphics p_282298_, @Nullable MapId p_334395_, @Nullable MapItemSavedData p_282897_, int p_281632_, int p_282115_, float p_283388_
+    private void extractMap(
+        final GuiGraphicsExtractor graphics, final @Nullable MapId id, final @Nullable MapItemSavedData data, final int x, final int y, final float scale
     ) {
-        if (p_334395_ != null && p_282897_ != null) {
-            p_282298_.pose().pushMatrix();
-            p_282298_.pose().translate(p_281632_, p_282115_);
-            p_282298_.pose().scale(p_283388_, p_283388_);
-            this.minecraft.getMapRenderer().extractRenderState(p_334395_, p_282897_, this.mapRenderState);
-            p_282298_.submitMapRenderState(this.mapRenderState);
-            p_282298_.pose().popMatrix();
+        if (id != null && data != null) {
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(x, y);
+            graphics.pose().scale(scale, scale);
+            this.minecraft.getMapRenderer().extractRenderState(id, data, this.mapRenderState);
+            graphics.map(this.mapRenderState);
+            graphics.pose().popMatrix();
         }
     }
 }

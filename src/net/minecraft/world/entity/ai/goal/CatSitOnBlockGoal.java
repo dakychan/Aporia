@@ -8,16 +8,15 @@ import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.FurnaceBlock;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BedPart;
 
 public class CatSitOnBlockGoal extends MoveToBlockGoal {
     private final Cat cat;
 
-    public CatSitOnBlockGoal(Cat p_451594_, double p_25150_) {
-        super(p_451594_, p_25150_, 8);
-        this.cat = p_451594_;
+    public CatSitOnBlockGoal(final Cat cat, final double speedModifier) {
+        super(cat, speedModifier, 8);
+        this.cat = cat;
     }
 
     @Override
@@ -44,19 +43,17 @@ public class CatSitOnBlockGoal extends MoveToBlockGoal {
     }
 
     @Override
-    protected boolean isValidTarget(LevelReader p_25153_, BlockPos p_25154_) {
-        if (!p_25153_.isEmptyBlock(p_25154_.above())) {
+    protected boolean isValidTarget(final LevelReader level, final BlockPos pos) {
+        if (!level.isEmptyBlock(pos.above())) {
             return false;
         } else {
-            BlockState blockstate = p_25153_.getBlockState(p_25154_);
-            if (blockstate.is(Blocks.CHEST)) {
-                return ChestBlockEntity.getOpenCount(p_25153_, p_25154_) < 1;
+            BlockState blockState = level.getBlockState(pos);
+            if (blockState.is(Blocks.CHEST)) {
+                return ChestBlockEntity.getOpenCount(level, pos) < 1;
             } else {
-                return blockstate.is(Blocks.FURNACE) && blockstate.getValue(FurnaceBlock.LIT)
+                return blockState.is(Blocks.FURNACE) && blockState.getValue(FurnaceBlock.LIT)
                     ? true
-                    : blockstate.is(
-                        BlockTags.BEDS, p_25156_ -> p_25156_.getOptionalValue(BedBlock.PART).map(p_148084_ -> p_148084_ != BedPart.HEAD).orElse(true)
-                    );
+                    : blockState.is(BlockTags.BEDS, s -> s.getOptionalValue(BedBlock.PART).map(v -> v != BedPart.HEAD).orElse(true));
             }
         }
     }

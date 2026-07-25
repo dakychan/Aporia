@@ -13,12 +13,13 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.GameEventTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.util.SpawnUtil;
 import net.minecraft.util.Util;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.monster.warden.WardenSpawnTracker;
@@ -44,11 +45,11 @@ public class SculkShriekerBlockEntity extends BlockEntity implements GameEventLi
     private static final int WARDEN_SPAWN_RANGE_Y = 6;
     private static final int DARKNESS_RADIUS = 40;
     private static final int SHRIEKING_TICKS = 90;
-    private static final Int2ObjectMap<SoundEvent> SOUND_BY_LEVEL = Util.make(new Int2ObjectOpenHashMap<>(), p_222866_ -> {
-        p_222866_.put(1, SoundEvents.WARDEN_NEARBY_CLOSE);
-        p_222866_.put(2, SoundEvents.WARDEN_NEARBY_CLOSER);
-        p_222866_.put(3, SoundEvents.WARDEN_NEARBY_CLOSEST);
-        p_222866_.put(4, SoundEvents.WARDEN_LISTENING_ANGRY);
+    private static final Int2ObjectMap<SoundEvent> SOUND_BY_LEVEL = Util.make(new Int2ObjectOpenHashMap<>(), map -> {
+        map.put(1, SoundEvents.WARDEN_NEARBY_CLOSE);
+        map.put(2, SoundEvents.WARDEN_NEARBY_CLOSER);
+        map.put(3, SoundEvents.WARDEN_NEARBY_CLOSEST);
+        map.put(4, SoundEvents.WARDEN_LISTENING_ANGRY);
     });
     private static final int DEFAULT_WARNING_LEVEL = 0;
     private int warningLevel = 0;
@@ -56,8 +57,8 @@ public class SculkShriekerBlockEntity extends BlockEntity implements GameEventLi
     private VibrationSystem.Data vibrationData = new VibrationSystem.Data();
     private final VibrationSystem.Listener vibrationListener = new VibrationSystem.Listener(this);
 
-    public SculkShriekerBlockEntity(BlockPos p_222835_, BlockState p_222836_) {
-        super(BlockEntityType.SCULK_SHRIEKER, p_222835_, p_222836_);
+    public SculkShriekerBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.SCULK_SHRIEKER, worldPosition, blockState);
     }
 
     @Override
@@ -71,96 +72,99 @@ public class SculkShriekerBlockEntity extends BlockEntity implements GameEventLi
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_407524_) {
-        super.loadAdditional(p_407524_);
-        this.warningLevel = p_407524_.getIntOr("warning_level", 0);
-        this.vibrationData = p_407524_.read("listener", VibrationSystem.Data.CODEC).orElseGet(VibrationSystem.Data::new);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.warningLevel = input.getIntOr("warning_level", 0);
+        this.vibrationData = input.read("listener", VibrationSystem.Data.CODEC).orElseGet(VibrationSystem.Data::new);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_407333_) {
-        super.saveAdditional(p_407333_);
-        p_407333_.putInt("warning_level", this.warningLevel);
-        p_407333_.store("listener", VibrationSystem.Data.CODEC, this.vibrationData);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        output.putInt("warning_level", this.warningLevel);
+        output.store("listener", VibrationSystem.Data.CODEC, this.vibrationData);
     }
 
-    public static @Nullable ServerPlayer tryGetPlayer(@Nullable Entity p_222862_) {
-        if (p_222862_ instanceof ServerPlayer serverplayer1) {
-            return serverplayer1;
-        } else if (p_222862_ != null && p_222862_.getControllingPassenger() instanceof ServerPlayer serverplayer) {
-            return serverplayer;
-        } else if (p_222862_ instanceof Projectile projectile && projectile.getOwner() instanceof ServerPlayer serverplayer3) {
-            return serverplayer3;
+    public static @Nullable ServerPlayer tryGetPlayer(final @Nullable Entity sourceEntity) {
+        if (sourceEntity instanceof ServerPlayer player) {
+            return player;
+        } else if (sourceEntity != null && sourceEntity.getControllingPassenger() instanceof ServerPlayer player) {
+            return player;
+        } else if (sourceEntity instanceof Projectile projectile && projectile.getOwner() instanceof ServerPlayer player) {
+            return player;
         } else {
-            return p_222862_ instanceof ItemEntity itementity && itementity.getOwner() instanceof ServerPlayer serverplayer2 ? serverplayer2 : null;
+            return sourceEntity instanceof ItemEntity item && item.getOwner() instanceof ServerPlayer player ? player : null;
         }
     }
 
-    public void tryShriek(ServerLevel p_222842_, @Nullable ServerPlayer p_222843_) {
-        if (p_222843_ != null) {
-            BlockState blockstate = this.getBlockState();
-            if (!blockstate.getValue(SculkShriekerBlock.SHRIEKING)) {
+    public void tryShriek(final ServerLevel level, final @Nullable ServerPlayer player) {
+        if (player != null) {
+            BlockState state = this.getBlockState();
+            if (!state.getValue(SculkShriekerBlock.SHRIEKING)) {
                 this.warningLevel = 0;
-                if (!this.canRespond(p_222842_) || this.tryToWarn(p_222842_, p_222843_)) {
-                    this.shriek(p_222842_, p_222843_);
+                if (!this.canRespond(level) || this.tryToWarn(level, player)) {
+                    this.shriek(level, player);
                 }
             }
         }
     }
 
-    private boolean tryToWarn(ServerLevel p_222875_, ServerPlayer p_222876_) {
-        OptionalInt optionalint = WardenSpawnTracker.tryWarn(p_222875_, this.getBlockPos(), p_222876_);
-        optionalint.ifPresent(p_222838_ -> this.warningLevel = p_222838_);
-        return optionalint.isPresent();
+    private boolean tryToWarn(final ServerLevel level, final ServerPlayer player) {
+        OptionalInt maybeWarningLevel = WardenSpawnTracker.tryWarn(level, this.getBlockPos(), player);
+        maybeWarningLevel.ifPresent(warningLevel -> this.warningLevel = warningLevel);
+        return maybeWarningLevel.isPresent();
     }
 
-    private void shriek(ServerLevel p_222845_, @Nullable Entity p_222846_) {
-        BlockPos blockpos = this.getBlockPos();
-        BlockState blockstate = this.getBlockState();
-        p_222845_.setBlock(blockpos, blockstate.setValue(SculkShriekerBlock.SHRIEKING, true), 2);
-        p_222845_.scheduleTick(blockpos, blockstate.getBlock(), 90);
-        p_222845_.levelEvent(3007, blockpos, 0);
-        p_222845_.gameEvent(GameEvent.SHRIEK, blockpos, GameEvent.Context.of(p_222846_));
+    private void shriek(final ServerLevel level, final @Nullable Entity sourceEntity) {
+        BlockPos pos = this.getBlockPos();
+        BlockState state = this.getBlockState();
+        level.setBlock(pos, state.setValue(SculkShriekerBlock.SHRIEKING, true), 2);
+        level.scheduleTick(pos, state.getBlock(), 90);
+        level.levelEvent(3007, pos, 0);
+        level.gameEvent(GameEvent.SHRIEK, pos, GameEvent.Context.of(sourceEntity));
     }
 
-    private boolean canRespond(ServerLevel p_222873_) {
+    private boolean canRespond(final ServerLevel level) {
         return this.getBlockState().getValue(SculkShriekerBlock.CAN_SUMMON)
-            && p_222873_.getDifficulty() != Difficulty.PEACEFUL
-            && p_222873_.getGameRules().get(GameRules.SPAWN_WARDENS);
+            && level.getDifficulty() != Difficulty.PEACEFUL
+            && level.getGameRules().get(GameRules.SPAWN_WARDENS);
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos p_392349_, BlockState p_398015_) {
-        if (p_398015_.getValue(SculkShriekerBlock.SHRIEKING) && this.level instanceof ServerLevel serverlevel) {
-            this.tryRespond(serverlevel);
+    public void preRemoveSideEffects(final BlockPos pos, final BlockState state) {
+        if (state.getValue(SculkShriekerBlock.SHRIEKING) && this.level instanceof ServerLevel serverLevel) {
+            this.tryRespond(serverLevel);
         }
     }
 
-    public void tryRespond(ServerLevel p_222840_) {
-        if (this.canRespond(p_222840_) && this.warningLevel > 0) {
-            if (!this.trySummonWarden(p_222840_)) {
-                this.playWardenReplySound(p_222840_);
+    public void tryRespond(final ServerLevel level) {
+        if (this.canRespond(level) && this.warningLevel > 0) {
+            if (!this.trySummonWarden(level)) {
+                this.playWardenReplySound(level);
             }
 
-            Warden.applyDarknessAround(p_222840_, Vec3.atCenterOf(this.getBlockPos()), null, 40);
+            Warden.applyDarknessAround(level, Vec3.atCenterOf(this.getBlockPos()), null, 40);
         }
     }
 
-    private void playWardenReplySound(Level p_281300_) {
-        SoundEvent soundevent = SOUND_BY_LEVEL.get(this.warningLevel);
-        if (soundevent != null) {
-            BlockPos blockpos = this.getBlockPos();
-            int i = blockpos.getX() + Mth.randomBetweenInclusive(p_281300_.random, -10, 10);
-            int j = blockpos.getY() + Mth.randomBetweenInclusive(p_281300_.random, -10, 10);
-            int k = blockpos.getZ() + Mth.randomBetweenInclusive(p_281300_.random, -10, 10);
-            p_281300_.playSound(null, i, j, k, soundevent, SoundSource.HOSTILE, 5.0F, 1.0F);
+    private void playWardenReplySound(final Level level) {
+        SoundEvent sound = SOUND_BY_LEVEL.get(this.warningLevel);
+        if (sound != null) {
+            BlockPos pos = this.getBlockPos();
+            RandomSource random = level.getRandom();
+            int x = pos.getX() + Mth.randomBetweenInclusive(random, -10, 10);
+            int y = pos.getY() + Mth.randomBetweenInclusive(random, -10, 10);
+            int z = pos.getZ() + Mth.randomBetweenInclusive(random, -10, 10);
+            level.playSound(null, x, y, z, sound, SoundSource.HOSTILE, 5.0F, 1.0F);
         }
     }
 
-    private boolean trySummonWarden(ServerLevel p_222881_) {
+    private boolean trySummonWarden(final ServerLevel level) {
         return this.warningLevel < 4
             ? false
-            : SpawnUtil.trySpawnMob(EntityType.WARDEN, EntitySpawnReason.TRIGGERED, p_222881_, this.getBlockPos(), 20, 5, 6, SpawnUtil.Strategy.ON_TOP_OF_COLLIDER, false)
+            : SpawnUtil.trySpawnMob(
+                    EntityTypes.WARDEN, EntitySpawnReason.TRIGGERED, level, this.getBlockPos(), 20, 5, 6, SpawnUtil.Strategy.ON_TOP_OF_COLLIDER, false
+                )
                 .isPresent();
     }
 
@@ -168,7 +172,7 @@ public class SculkShriekerBlockEntity extends BlockEntity implements GameEventLi
         return this.vibrationListener;
     }
 
-    class VibrationUser implements VibrationSystem.User {
+    private class VibrationUser implements VibrationSystem.User {
         private static final int LISTENER_RADIUS = 8;
         private final PositionSource positionSource = new BlockPositionSource(SculkShriekerBlockEntity.this.worldPosition);
 
@@ -191,16 +195,21 @@ public class SculkShriekerBlockEntity extends BlockEntity implements GameEventLi
         }
 
         @Override
-        public boolean canReceiveVibration(ServerLevel p_281256_, BlockPos p_281528_, Holder<GameEvent> p_335342_, GameEvent.Context p_282914_) {
+        public boolean canReceiveVibration(final ServerLevel level, final BlockPos pos, final Holder<GameEvent> event, final GameEvent.Context context) {
             return !SculkShriekerBlockEntity.this.getBlockState().getValue(SculkShriekerBlock.SHRIEKING)
-                && SculkShriekerBlockEntity.tryGetPlayer(p_282914_.sourceEntity()) != null;
+                && SculkShriekerBlockEntity.tryGetPlayer(context.sourceEntity()) != null;
         }
 
         @Override
         public void onReceiveVibration(
-            ServerLevel p_283372_, BlockPos p_281679_, Holder<GameEvent> p_330622_, @Nullable Entity p_282286_, @Nullable Entity p_281384_, float p_283119_
+            final ServerLevel level,
+            final BlockPos pos,
+            final Holder<GameEvent> event,
+            final @Nullable Entity sourceEntity,
+            final @Nullable Entity projectileOwner,
+            final float receivingDistance
         ) {
-            SculkShriekerBlockEntity.this.tryShriek(p_283372_, SculkShriekerBlockEntity.tryGetPlayer(p_281384_ != null ? p_281384_ : p_282286_));
+            SculkShriekerBlockEntity.this.tryShriek(level, SculkShriekerBlockEntity.tryGetPlayer(projectileOwner != null ? projectileOwner : sourceEntity));
         }
 
         @Override

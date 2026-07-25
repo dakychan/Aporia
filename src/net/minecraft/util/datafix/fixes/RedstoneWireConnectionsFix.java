@@ -3,49 +3,50 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 
 public class RedstoneWireConnectionsFix extends DataFix {
-    public RedstoneWireConnectionsFix(Schema p_16749_) {
-        super(p_16749_, false);
+    public RedstoneWireConnectionsFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Schema schema = this.getInputSchema();
+        Schema inputSchema = this.getInputSchema();
         return this.fixTypeEverywhereTyped(
-            "RedstoneConnectionsFix", schema.getType(References.BLOCK_STATE), p_16751_ -> p_16751_.update(DSL.remainderFinder(), this::updateRedstoneConnections)
+            "RedstoneConnectionsFix",
+            inputSchema.getType(References.BLOCK_STATE),
+            input -> input.update(DSL.remainderFinder(), this::updateRedstoneConnections)
         );
     }
 
-    private <T> Dynamic<T> updateRedstoneConnections(Dynamic<T> p_16753_) {
-        boolean flag = p_16753_.get("Name").asString().result().filter("minecraft:redstone_wire"::equals).isPresent();
-        return !flag
-            ? p_16753_
-            : p_16753_.update(
+    private <T> Dynamic<T> updateRedstoneConnections(final Dynamic<T> state) {
+        boolean isRedstone = state.get("Name").asString().result().filter("minecraft:redstone_wire"::equals).isPresent();
+        return !isRedstone
+            ? state
+            : state.update(
                 "Properties",
-                p_16760_ -> {
-                    String s = p_16760_.get("east").asString("none");
-                    String s1 = p_16760_.get("west").asString("none");
-                    String s2 = p_16760_.get("north").asString("none");
-                    String s3 = p_16760_.get("south").asString("none");
-                    boolean flag1 = isConnected(s) || isConnected(s1);
-                    boolean flag2 = isConnected(s2) || isConnected(s3);
-                    String s4 = !isConnected(s) && !flag2 ? "side" : s;
-                    String s5 = !isConnected(s1) && !flag2 ? "side" : s1;
-                    String s6 = !isConnected(s2) && !flag1 ? "side" : s2;
-                    String s7 = !isConnected(s3) && !flag1 ? "side" : s3;
-                    return p_16760_.update("east", p_145627_ -> p_145627_.createString(s4))
-                        .update("west", p_145624_ -> p_145624_.createString(s5))
-                        .update("north", p_145621_ -> p_145621_.createString(s6))
-                        .update("south", p_145618_ -> p_145618_.createString(s7));
+                props -> {
+                    String east = props.get("east").asString("none");
+                    String west = props.get("west").asString("none");
+                    String north = props.get("north").asString("none");
+                    String south = props.get("south").asString("none");
+                    boolean eastwest = isConnected(east) || isConnected(west);
+                    boolean northsouth = isConnected(north) || isConnected(south);
+                    String newEast = !isConnected(east) && !northsouth ? "side" : east;
+                    String newWest = !isConnected(west) && !northsouth ? "side" : west;
+                    String newNorth = !isConnected(north) && !eastwest ? "side" : north;
+                    String newSouth = !isConnected(south) && !eastwest ? "side" : south;
+                    return props.update("east", value -> value.createString(newEast))
+                        .update("west", value -> value.createString(newWest))
+                        .update("north", value -> value.createString(newNorth))
+                        .update("south", value -> value.createString(newSouth));
                 }
             );
     }
 
-    private static boolean isConnected(String p_16755_) {
-        return !"none".equals(p_16755_);
+    private static boolean isConnected(final String connectionType) {
+        return !"none".equals(connectionType);
     }
 }

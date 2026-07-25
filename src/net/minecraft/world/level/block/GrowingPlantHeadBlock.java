@@ -21,9 +21,15 @@ public abstract class GrowingPlantHeadBlock extends GrowingPlantBlock implements
     public static final int MAX_AGE = 25;
     private final double growPerTickProbability;
 
-    protected GrowingPlantHeadBlock(BlockBehaviour.Properties p_53928_, Direction p_53929_, VoxelShape p_53930_, boolean p_53931_, double p_53932_) {
-        super(p_53928_, p_53929_, p_53930_, p_53931_);
-        this.growPerTickProbability = p_53932_;
+    protected GrowingPlantHeadBlock(
+        final BlockBehaviour.Properties properties,
+        final Direction growthDirection,
+        final VoxelShape shape,
+        final boolean scheduleFluidTicks,
+        final double growPerTickProbability
+    ) {
+        super(properties, growthDirection, shape, scheduleFluidTicks);
+        this.growPerTickProbability = growPerTickProbability;
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0));
     }
 
@@ -31,105 +37,106 @@ public abstract class GrowingPlantHeadBlock extends GrowingPlantBlock implements
     protected abstract MapCodec<? extends GrowingPlantHeadBlock> codec();
 
     @Override
-    public BlockState getStateForPlacement(RandomSource p_364827_) {
-        return this.defaultBlockState().setValue(AGE, p_364827_.nextInt(25));
+    public BlockState getStateForPlacement(final RandomSource random) {
+        return this.defaultBlockState().setValue(AGE, random.nextInt(25));
     }
 
     @Override
-    protected boolean isRandomlyTicking(BlockState p_53961_) {
-        return p_53961_.getValue(AGE) < 25;
+    protected boolean isRandomlyTicking(final BlockState state) {
+        return state.getValue(AGE) < 25;
     }
 
     @Override
-    protected void randomTick(BlockState p_221350_, ServerLevel p_221351_, BlockPos p_221352_, RandomSource p_221353_) {
-        if (p_221350_.getValue(AGE) < 25 && p_221353_.nextDouble() < this.growPerTickProbability) {
-            BlockPos blockpos = p_221352_.relative(this.growthDirection);
-            if (this.canGrowInto(p_221351_.getBlockState(blockpos))) {
-                p_221351_.setBlockAndUpdate(blockpos, this.getGrowIntoState(p_221350_, p_221351_.random));
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(AGE) < 25 && random.nextDouble() < this.growPerTickProbability) {
+            BlockPos growthPos = pos.relative(this.growthDirection);
+            if (this.canGrowInto(level.getBlockState(growthPos))) {
+                level.setBlockAndUpdate(growthPos, this.getGrowIntoState(state, level.getRandom()));
             }
         }
     }
 
-    protected BlockState getGrowIntoState(BlockState p_221347_, RandomSource p_221348_) {
-        return p_221347_.cycle(AGE);
+    protected BlockState getGrowIntoState(final BlockState growFromState, final RandomSource random) {
+        return growFromState.cycle(AGE);
     }
 
-    public BlockState getMaxAgeState(BlockState p_187439_) {
-        return p_187439_.setValue(AGE, 25);
+    public BlockState getMaxAgeState(final BlockState fromState) {
+        return fromState.setValue(AGE, 25);
     }
 
-    public boolean isMaxAge(BlockState p_187441_) {
-        return p_187441_.getValue(AGE) == 25;
+    public boolean isMaxAge(final BlockState state) {
+        return state.getValue(AGE) == 25;
     }
 
-    protected BlockState updateBodyAfterConvertedFromHead(BlockState p_153329_, BlockState p_153330_) {
-        return p_153330_;
+    protected BlockState updateBodyAfterConvertedFromHead(final BlockState headState, final BlockState bodyState) {
+        return bodyState;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_53951_,
-        LevelReader p_366005_,
-        ScheduledTickAccess p_361719_,
-        BlockPos p_53955_,
-        Direction p_53952_,
-        BlockPos p_53956_,
-        BlockState p_53953_,
-        RandomSource p_364682_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_53952_ == this.growthDirection.getOpposite()) {
-            if (!p_53951_.canSurvive(p_366005_, p_53955_)) {
-                p_361719_.scheduleTick(p_53955_, this, 1);
+        if (directionToNeighbour == this.growthDirection.getOpposite()) {
+            if (!state.canSurvive(level, pos)) {
+                ticks.scheduleTick(pos, this, 1);
             } else {
-                BlockState blockstate = p_366005_.getBlockState(p_53955_.relative(this.growthDirection));
-                if (blockstate.is(this) || blockstate.is(this.getBodyBlock())) {
-                    return this.updateBodyAfterConvertedFromHead(p_53951_, this.getBodyBlock().defaultBlockState());
+                BlockState neighborInGrowthDirection = level.getBlockState(pos.relative(this.growthDirection));
+                if (neighborInGrowthDirection.is(this) || neighborInGrowthDirection.is(this.getBodyBlock())) {
+                    return this.updateBodyAfterConvertedFromHead(state, this.getBodyBlock().defaultBlockState());
                 }
             }
         }
 
-        if (p_53952_ != this.growthDirection || !p_53953_.is(this) && !p_53953_.is(this.getBodyBlock())) {
+        if (directionToNeighbour != this.growthDirection || !neighbourState.is(this) && !neighbourState.is(this.getBodyBlock())) {
             if (this.scheduleFluidTicks) {
-                p_361719_.scheduleTick(p_53955_, Fluids.WATER, Fluids.WATER.getTickDelay(p_366005_));
+                ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
             }
 
-            return super.updateShape(p_53951_, p_366005_, p_361719_, p_53955_, p_53952_, p_53956_, p_53953_, p_364682_);
+            return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
         } else {
-            return this.updateBodyAfterConvertedFromHead(p_53951_, this.getBodyBlock().defaultBlockState());
+            return this.updateBodyAfterConvertedFromHead(state, this.getBodyBlock().defaultBlockState());
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_53958_) {
-        p_53958_.add(AGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(AGE);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_255931_, BlockPos p_256046_, BlockState p_256550_) {
-        return this.canGrowInto(p_255931_.getBlockState(p_256046_.relative(this.growthDirection)));
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        BlockPos growthPos = pos.relative(this.growthDirection);
+        return this.canGrowInto(level.getBlockState(growthPos)) && level.isInsideBuildHeight(growthPos);
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_221343_, RandomSource p_221344_, BlockPos p_221345_, BlockState p_221346_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_221337_, RandomSource p_221338_, BlockPos p_221339_, BlockState p_221340_) {
-        BlockPos blockpos = p_221339_.relative(this.growthDirection);
-        int i = Math.min(p_221340_.getValue(AGE) + 1, 25);
-        int j = this.getBlocksToGrowWhenBonemealed(p_221338_);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        BlockPos forwardPos = pos.relative(this.growthDirection);
+        int nextAge = Math.min(state.getValue(AGE) + 1, 25);
+        int blocksToGrow = this.getBlocksToGrowWhenBonemealed(random);
 
-        for (int k = 0; k < j && this.canGrowInto(p_221337_.getBlockState(blockpos)); k++) {
-            p_221337_.setBlockAndUpdate(blockpos, p_221340_.setValue(AGE, i));
-            blockpos = blockpos.relative(this.growthDirection);
-            i = Math.min(i + 1, 25);
+        for (int i = 0; i < blocksToGrow && this.canGrowInto(level.getBlockState(forwardPos)) && !level.isOutsideBuildHeight(forwardPos); i++) {
+            level.setBlockAndUpdate(forwardPos, state.setValue(AGE, nextAge));
+            forwardPos = forwardPos.relative(this.growthDirection);
+            nextAge = Math.min(nextAge + 1, 25);
         }
     }
 
-    protected abstract int getBlocksToGrowWhenBonemealed(RandomSource p_221341_);
+    protected abstract int getBlocksToGrowWhenBonemealed(final RandomSource random);
 
-    protected abstract boolean canGrowInto(BlockState p_53968_);
+    protected abstract boolean canGrowInto(final BlockState state);
 
     @Override
     protected GrowingPlantHeadBlock getHeadBlock() {

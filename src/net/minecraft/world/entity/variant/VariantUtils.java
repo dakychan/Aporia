@@ -14,30 +14,28 @@ import net.minecraft.world.level.storage.ValueOutput;
 public class VariantUtils {
     public static final String TAG_VARIANT = "variant";
 
-    public static <T> Holder<T> getDefaultOrAny(RegistryAccess p_392079_, ResourceKey<T> p_391441_) {
-        Registry<T> registry = p_392079_.lookupOrThrow(p_391441_.registryKey());
-        return registry.get(p_391441_).or(registry::getAny).orElseThrow();
+    public static <T> Holder<T> getDefaultOrAny(final RegistryAccess registryAccess, final ResourceKey<T> id) {
+        Registry<T> registry = registryAccess.lookupOrThrow(id.registryKey());
+        return registry.get(id).or(registry::getAny).orElseThrow();
     }
 
-    public static <T> Holder<T> getAny(RegistryAccess p_392091_, ResourceKey<? extends Registry<T>> p_396932_) {
-        return p_392091_.lookupOrThrow(p_396932_).getAny().orElseThrow();
+    public static <T> Holder<T> getAny(final RegistryAccess registryAccess, final ResourceKey<? extends Registry<T>> registryId) {
+        return registryAccess.lookupOrThrow(registryId).getAny().orElseThrow();
     }
 
-    public static <T> void writeVariant(ValueOutput p_407774_, Holder<T> p_397545_) {
-        p_397545_.unwrapKey().ifPresent(p_449752_ -> p_407774_.store("variant", Identifier.CODEC, p_449752_.identifier()));
+    public static <T> void writeVariant(final ValueOutput output, final Holder<T> holder) {
+        holder.unwrapKey().ifPresent(k -> output.store("variant", Identifier.CODEC, k.identifier()));
     }
 
-    public static <T> Optional<Holder<T>> readVariant(ValueInput p_409121_, ResourceKey<? extends Registry<T>> p_394094_) {
-        return p_409121_.read("variant", Identifier.CODEC)
-            .map(p_449754_ -> ResourceKey.create(p_394094_, p_449754_))
-            .flatMap(p_409121_.lookup()::get);
+    public static <T> Optional<Holder<T>> readVariant(final ValueInput input, final ResourceKey<? extends Registry<T>> registryId) {
+        return input.read("variant", Identifier.CODEC).map(id -> ResourceKey.create(registryId, id)).flatMap(input.lookup()::get);
     }
 
     public static <T extends PriorityProvider<SpawnContext, ?>> Optional<Holder.Reference<T>> selectVariantToSpawn(
-        SpawnContext p_409151_, ResourceKey<Registry<T>> p_409896_
+        final SpawnContext context, final ResourceKey<Registry<T>> variantRegistry
     ) {
-        ServerLevelAccessor serverlevelaccessor = p_409151_.level();
-        Stream<Holder.Reference<T>> stream = serverlevelaccessor.registryAccess().lookupOrThrow(p_409896_).listElements();
-        return PriorityProvider.pick(stream, Holder::value, serverlevelaccessor.getRandom(), p_409151_);
+        ServerLevelAccessor level = context.level();
+        Stream<Holder.Reference<T>> entries = level.registryAccess().lookupOrThrow(variantRegistry).listElements();
+        return PriorityProvider.pick(entries, Holder::value, level.getRandom(), context);
     }
 }

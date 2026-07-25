@@ -11,12 +11,12 @@ public record ServerboundChatSessionUpdatePacket(RemoteChatSession.Data chatSess
         ServerboundChatSessionUpdatePacket::write, ServerboundChatSessionUpdatePacket::new
     );
 
-    private ServerboundChatSessionUpdatePacket(FriendlyByteBuf p_254010_) {
-        this(RemoteChatSession.Data.read(p_254010_));
+    private ServerboundChatSessionUpdatePacket(final FriendlyByteBuf input) {
+        this(RemoteChatSession.Data.read(input));
     }
 
-    private void write(FriendlyByteBuf p_253690_) {
-        RemoteChatSession.Data.write(p_253690_, this.chatSession);
+    private void write(final FriendlyByteBuf output) {
+        RemoteChatSession.Data.write(output, this.chatSession);
     }
 
     @Override
@@ -24,7 +24,7 @@ public record ServerboundChatSessionUpdatePacket(RemoteChatSession.Data chatSess
         return GamePacketTypes.SERVERBOUND_CHAT_SESSION_UPDATE;
     }
 
-    public void handle(ServerGamePacketListener p_253620_) {
-        p_253620_.handleChatSessionUpdate(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleChatSessionUpdate(this);
     }
 }

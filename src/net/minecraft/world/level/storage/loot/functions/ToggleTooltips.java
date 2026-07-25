@@ -3,7 +3,6 @@ package net.minecraft.world.level.storage.loot.functions;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -15,33 +14,33 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class ToggleTooltips extends LootItemConditionalFunction {
-    public static final MapCodec<ToggleTooltips> CODEC = RecordCodecBuilder.mapCodec(
-        p_391137_ -> commonFields(p_391137_)
-            .and(Codec.unboundedMap(DataComponentType.CODEC, Codec.BOOL).fieldOf("toggles").forGetter(p_331447_ -> p_331447_.values))
-            .apply(p_391137_, ToggleTooltips::new)
+    public static final MapCodec<ToggleTooltips> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
+            .and(Codec.unboundedMap(DataComponentType.CODEC, Codec.BOOL).fieldOf("toggles").forGetter(e -> e.values))
+            .apply(i, ToggleTooltips::new)
     );
     private final Map<DataComponentType<?>, Boolean> values;
 
-    private ToggleTooltips(List<LootItemCondition> p_330048_, Map<DataComponentType<?>, Boolean> p_332012_) {
-        super(p_330048_);
-        this.values = p_332012_;
+    private ToggleTooltips(final List<LootItemCondition> predicates, final Map<DataComponentType<?>, Boolean> values) {
+        super(predicates);
+        this.values = values;
     }
 
     @Override
-    protected ItemStack run(ItemStack p_334443_, LootContext p_331872_) {
-        p_334443_.update(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT, p_391136_ -> {
+    protected ItemStack run(final ItemStack itemStack, final LootContext context) {
+        itemStack.update(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT, display -> {
             for (Entry<DataComponentType<?>, Boolean> entry : this.values.entrySet()) {
-                boolean flag = entry.getValue();
-                p_391136_ = p_391136_.withHidden(entry.getKey(), !flag);
+                boolean shown = entry.getValue();
+                display = display.withHidden(entry.getKey(), !shown);
             }
 
-            return p_391136_;
+            return display;
         });
-        return p_334443_;
+        return itemStack;
     }
 
     @Override
-    public LootItemFunctionType<ToggleTooltips> getType() {
-        return LootItemFunctions.TOGGLE_TOOLTIPS;
+    public MapCodec<ToggleTooltips> codec() {
+        return MAP_CODEC;
     }
 }

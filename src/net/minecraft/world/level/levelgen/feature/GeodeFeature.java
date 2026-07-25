@@ -7,10 +7,12 @@ import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.HolderSet;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.BuddingAmethystBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,138 +29,141 @@ import net.minecraft.world.level.material.FluidState;
 public class GeodeFeature extends Feature<GeodeConfiguration> {
     private static final Direction[] DIRECTIONS = Direction.values();
 
-    public GeodeFeature(Codec<GeodeConfiguration> p_159834_) {
-        super(p_159834_);
+    public GeodeFeature(final Codec<GeodeConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<GeodeConfiguration> p_159836_) {
-        GeodeConfiguration geodeconfiguration = p_159836_.config();
-        RandomSource randomsource = p_159836_.random();
-        BlockPos blockpos = p_159836_.origin();
-        WorldGenLevel worldgenlevel = p_159836_.level();
-        int i = geodeconfiguration.minGenOffset;
-        int j = geodeconfiguration.maxGenOffset;
-        List<Pair<BlockPos, Integer>> list = Lists.newLinkedList();
-        int k = geodeconfiguration.distributionPoints.sample(randomsource);
-        WorldgenRandom worldgenrandom = new WorldgenRandom(new LegacyRandomSource(worldgenlevel.getSeed()));
-        NormalNoise normalnoise = NormalNoise.create(worldgenrandom, -4, 1.0);
-        List<BlockPos> list1 = Lists.newLinkedList();
-        double d0 = (double)k / geodeconfiguration.outerWallDistance.getMaxValue();
-        GeodeLayerSettings geodelayersettings = geodeconfiguration.geodeLayerSettings;
-        GeodeBlockSettings geodeblocksettings = geodeconfiguration.geodeBlockSettings;
-        GeodeCrackSettings geodecracksettings = geodeconfiguration.geodeCrackSettings;
-        double d1 = 1.0 / Math.sqrt(geodelayersettings.filling);
-        double d2 = 1.0 / Math.sqrt(geodelayersettings.innerLayer + d0);
-        double d3 = 1.0 / Math.sqrt(geodelayersettings.middleLayer + d0);
-        double d4 = 1.0 / Math.sqrt(geodelayersettings.outerLayer + d0);
-        double d5 = 1.0 / Math.sqrt(geodecracksettings.baseCrackSize + randomsource.nextDouble() / 2.0 + (k > 3 ? d0 : 0.0));
-        boolean flag = randomsource.nextFloat() < geodecracksettings.generateCrackChance;
-        int l = 0;
+    public boolean place(final FeaturePlaceContext<GeodeConfiguration> context) {
+        GeodeConfiguration config = context.config();
+        RandomSource random = context.random();
+        BlockPos origin = context.origin();
+        WorldGenLevel level = context.level();
+        int minGenOffset = config.minGenOffset();
+        int maxGenOffset = config.maxGenOffset();
+        List<Pair<BlockPos, Integer>> points = Lists.newLinkedList();
+        int numPoints = config.distributionPoints().sample(random);
+        WorldgenRandom random1 = new WorldgenRandom(new LegacyRandomSource(level.getSeed()));
+        NormalNoise noise = NormalNoise.create(random1, -4, 1.0);
+        List<BlockPos> crackPoints = Lists.newLinkedList();
+        double crackSizeAdjustment = (double)numPoints / config.outerWallDistance().maxInclusive();
+        GeodeLayerSettings layerSettings = config.geodeLayerSettings();
+        GeodeBlockSettings blockSettings = config.geodeBlockSettings();
+        GeodeCrackSettings crackSettings = config.geodeCrackSettings();
+        double innerAir = 1.0 / Math.sqrt(layerSettings.filling);
+        double innermostBlockLayer = 1.0 / Math.sqrt(layerSettings.innerLayer + crackSizeAdjustment);
+        double innerCrust = 1.0 / Math.sqrt(layerSettings.middleLayer + crackSizeAdjustment);
+        double outerCrust = 1.0 / Math.sqrt(layerSettings.outerLayer + crackSizeAdjustment);
+        double crackSize = 1.0 / Math.sqrt(crackSettings.baseCrackSize + random.nextDouble() / 2.0 + (numPoints > 3 ? crackSizeAdjustment : 0.0));
+        boolean shouldGenerateCrack = random.nextFloat() < crackSettings.generateCrackChance;
+        int numInvalidPoints = 0;
 
-        for (int i1 = 0; i1 < k; i1++) {
-            int j1 = geodeconfiguration.outerWallDistance.sample(randomsource);
-            int k1 = geodeconfiguration.outerWallDistance.sample(randomsource);
-            int l1 = geodeconfiguration.outerWallDistance.sample(randomsource);
-            BlockPos blockpos1 = blockpos.offset(j1, k1, l1);
-            BlockState blockstate = worldgenlevel.getBlockState(blockpos1);
-            if (blockstate.isAir() || blockstate.is(geodeblocksettings.invalidBlocks)) {
-                if (++l > geodeconfiguration.invalidBlocksThreshold) {
+        for (int i = 0; i < numPoints; i++) {
+            int x = config.outerWallDistance().sample(random);
+            int y = config.outerWallDistance().sample(random);
+            int z = config.outerWallDistance().sample(random);
+            BlockPos pos = origin.offset(x, y, z);
+            BlockState state = level.getBlockState(pos);
+            if (state.isAir() || state.is(blockSettings.invalidBlocks())) {
+                if (++numInvalidPoints > config.invalidBlocksThreshold()) {
                     return false;
                 }
             }
 
-            list.add(Pair.of(blockpos1, geodeconfiguration.pointOffset.sample(randomsource)));
+            points.add(Pair.of(pos, config.pointOffset().sample(random)));
         }
 
-        if (flag) {
-            int i2 = randomsource.nextInt(4);
-            int j2 = k * 2 + 1;
-            if (i2 == 0) {
-                list1.add(blockpos.offset(j2, 7, 0));
-                list1.add(blockpos.offset(j2, 5, 0));
-                list1.add(blockpos.offset(j2, 1, 0));
-            } else if (i2 == 1) {
-                list1.add(blockpos.offset(0, 7, j2));
-                list1.add(blockpos.offset(0, 5, j2));
-                list1.add(blockpos.offset(0, 1, j2));
-            } else if (i2 == 2) {
-                list1.add(blockpos.offset(j2, 7, j2));
-                list1.add(blockpos.offset(j2, 5, j2));
-                list1.add(blockpos.offset(j2, 1, j2));
+        if (shouldGenerateCrack) {
+            int offsetIndex = random.nextInt(4);
+            int crackOffset = numPoints * 2 + 1;
+            if (offsetIndex == 0) {
+                crackPoints.add(origin.offset(crackOffset, 7, 0));
+                crackPoints.add(origin.offset(crackOffset, 5, 0));
+                crackPoints.add(origin.offset(crackOffset, 1, 0));
+            } else if (offsetIndex == 1) {
+                crackPoints.add(origin.offset(0, 7, crackOffset));
+                crackPoints.add(origin.offset(0, 5, crackOffset));
+                crackPoints.add(origin.offset(0, 1, crackOffset));
+            } else if (offsetIndex == 2) {
+                crackPoints.add(origin.offset(crackOffset, 7, crackOffset));
+                crackPoints.add(origin.offset(crackOffset, 5, crackOffset));
+                crackPoints.add(origin.offset(crackOffset, 1, crackOffset));
             } else {
-                list1.add(blockpos.offset(0, 7, 0));
-                list1.add(blockpos.offset(0, 5, 0));
-                list1.add(blockpos.offset(0, 1, 0));
+                crackPoints.add(origin.offset(0, 7, 0));
+                crackPoints.add(origin.offset(0, 5, 0));
+                crackPoints.add(origin.offset(0, 1, 0));
             }
         }
 
-        List<BlockPos> list2 = Lists.newArrayList();
-        Predicate<BlockState> predicate = isReplaceable(geodeconfiguration.geodeBlockSettings.cannotReplace);
+        List<BlockPos> potentialCrystalPlacements = Lists.newArrayList();
+        HolderSet<Block> cantReplace = config.geodeBlockSettings().cannotReplace();
+        Predicate<BlockState> canReplace = s -> !s.is(cantReplace);
 
-        for (BlockPos blockpos3 : BlockPos.betweenClosed(blockpos.offset(i, i, i), blockpos.offset(j, j, j))) {
-            double d8 = normalnoise.getValue(blockpos3.getX(), blockpos3.getY(), blockpos3.getZ()) * geodeconfiguration.noiseMultiplier;
-            double d6 = 0.0;
-            double d7 = 0.0;
+        for (BlockPos pointInside : BlockPos.betweenClosed(
+            origin.offset(minGenOffset, minGenOffset, minGenOffset), origin.offset(maxGenOffset, maxGenOffset, maxGenOffset)
+        )) {
+            double noiseOffset = noise.getValue(pointInside.getX(), pointInside.getY(), pointInside.getZ()) * config.noiseMultiplier();
+            double distSumShell = 0.0;
+            double distSumCrack = 0.0;
 
-            for (Pair<BlockPos, Integer> pair : list) {
-                d6 += Mth.invSqrt(blockpos3.distSqr(pair.getFirst()) + pair.getSecond().intValue()) + d8;
+            for (Pair<BlockPos, Integer> point : points) {
+                distSumShell += Mth.invSqrt(pointInside.distSqr(point.getFirst()) + point.getSecond().intValue()) + noiseOffset;
             }
 
-            for (BlockPos blockpos6 : list1) {
-                d7 += Mth.invSqrt(blockpos3.distSqr(blockpos6) + geodecracksettings.crackPointOffset) + d8;
+            for (BlockPos point : crackPoints) {
+                distSumCrack += Mth.invSqrt(pointInside.distSqr(point) + crackSettings.crackPointOffset) + noiseOffset;
             }
 
-            if (!(d6 < d4)) {
-                if (flag && d7 >= d5 && d6 < d1) {
-                    this.safeSetBlock(worldgenlevel, blockpos3, Blocks.AIR.defaultBlockState(), predicate);
+            if (!(distSumShell < outerCrust)) {
+                if (shouldGenerateCrack && distSumCrack >= crackSize && distSumShell < innerAir) {
+                    this.safeSetBlock(level, pointInside, Blocks.AIR.defaultBlockState(), canReplace);
 
-                    for (Direction direction1 : DIRECTIONS) {
-                        BlockPos blockpos2 = blockpos3.relative(direction1);
-                        FluidState fluidstate = worldgenlevel.getFluidState(blockpos2);
-                        if (!fluidstate.isEmpty()) {
-                            worldgenlevel.scheduleTick(blockpos2, fluidstate.getType(), 0);
+                    for (Direction direction : DIRECTIONS) {
+                        BlockPos adjacentPos = pointInside.relative(direction);
+                        FluidState adjacentFluidState = level.getFluidState(adjacentPos);
+                        if (!adjacentFluidState.isEmpty()) {
+                            level.scheduleTick(adjacentPos, adjacentFluidState.getType(), 0);
                         }
                     }
-                } else if (d6 >= d1) {
-                    this.safeSetBlock(worldgenlevel, blockpos3, geodeblocksettings.fillingProvider.getState(randomsource, blockpos3), predicate);
-                } else if (d6 >= d2) {
-                    boolean flag1 = randomsource.nextFloat() < geodeconfiguration.useAlternateLayer0Chance;
-                    if (flag1) {
-                        this.safeSetBlock(worldgenlevel, blockpos3, geodeblocksettings.alternateInnerLayerProvider.getState(randomsource, blockpos3), predicate);
+                } else if (distSumShell >= innerAir) {
+                    this.safeSetBlock(level, pointInside, blockSettings.fillingProvider().getState(level, random, pointInside), canReplace);
+                } else if (distSumShell >= innermostBlockLayer) {
+                    boolean useAlternateLayer = random.nextFloat() < config.useAlternateLayer0Chance();
+                    if (useAlternateLayer) {
+                        this.safeSetBlock(level, pointInside, blockSettings.alternateInnerLayerProvider().getState(level, random, pointInside), canReplace);
                     } else {
-                        this.safeSetBlock(worldgenlevel, blockpos3, geodeblocksettings.innerLayerProvider.getState(randomsource, blockpos3), predicate);
+                        this.safeSetBlock(level, pointInside, blockSettings.innerLayerProvider().getState(level, random, pointInside), canReplace);
                     }
 
-                    if ((!geodeconfiguration.placementsRequireLayer0Alternate || flag1) && randomsource.nextFloat() < geodeconfiguration.usePotentialPlacementsChance) {
-                        list2.add(blockpos3.immutable());
+                    if ((!config.placementsRequireLayer0Alternate() || useAlternateLayer) && random.nextFloat() < config.usePotentialPlacementsChance()) {
+                        potentialCrystalPlacements.add(pointInside.immutable());
                     }
-                } else if (d6 >= d3) {
-                    this.safeSetBlock(worldgenlevel, blockpos3, geodeblocksettings.middleLayerProvider.getState(randomsource, blockpos3), predicate);
-                } else if (d6 >= d4) {
-                    this.safeSetBlock(worldgenlevel, blockpos3, geodeblocksettings.outerLayerProvider.getState(randomsource, blockpos3), predicate);
+                } else if (distSumShell >= innerCrust) {
+                    this.safeSetBlock(level, pointInside, blockSettings.middleLayerProvider().getState(level, random, pointInside), canReplace);
+                } else if (distSumShell >= outerCrust) {
+                    this.safeSetBlock(level, pointInside, blockSettings.outerLayerProvider().getState(level, random, pointInside), canReplace);
                 }
             }
         }
 
-        List<BlockState> list3 = geodeblocksettings.innerPlacements;
+        List<BlockState> innerPlacements = blockSettings.innerPlacements();
 
-        for (BlockPos blockpos4 : list2) {
-            BlockState blockstate1 = Util.getRandom(list3, randomsource);
+        for (BlockPos crystalPos : potentialCrystalPlacements) {
+            BlockState blockState = Util.getRandom(innerPlacements, random);
 
             for (Direction direction : DIRECTIONS) {
-                if (blockstate1.hasProperty(BlockStateProperties.FACING)) {
-                    blockstate1 = blockstate1.setValue(BlockStateProperties.FACING, direction);
+                if (blockState.hasProperty(BlockStateProperties.FACING)) {
+                    blockState = blockState.setValue(BlockStateProperties.FACING, direction);
                 }
 
-                BlockPos blockpos5 = blockpos4.relative(direction);
-                BlockState blockstate2 = worldgenlevel.getBlockState(blockpos5);
-                if (blockstate1.hasProperty(BlockStateProperties.WATERLOGGED)) {
-                    blockstate1 = blockstate1.setValue(BlockStateProperties.WATERLOGGED, blockstate2.getFluidState().isSource());
+                BlockPos placePos = crystalPos.relative(direction);
+                BlockState placeState = level.getBlockState(placePos);
+                if (blockState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                    blockState = blockState.setValue(BlockStateProperties.WATERLOGGED, placeState.getFluidState().isSource());
                 }
 
-                if (BuddingAmethystBlock.canClusterGrowAtState(blockstate2)) {
-                    this.safeSetBlock(worldgenlevel, blockpos5, blockstate1, predicate);
+                if (BuddingAmethystBlock.canClusterGrowAtState(placeState)) {
+                    this.safeSetBlock(level, placePos, blockState, canReplace);
                     break;
                 }
             }

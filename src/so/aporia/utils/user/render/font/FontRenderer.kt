@@ -5,7 +5,7 @@ import com.mojang.blaze3d.platform.NativeImage
 import com.mojang.blaze3d.vertex.ByteBufferBuilder
 import com.mojang.blaze3d.vertex.PoseStack
 import net.minecraft.client.gui.Font
-import net.minecraft.client.renderer.MultiBufferSource
+
 import net.minecraft.client.renderer.texture.DynamicTexture
 import net.minecraft.resources.Identifier
 import org.slf4j.LoggerFactory
@@ -26,7 +26,7 @@ class FontRenderer {
     private val fonts: MutableMap<String, FontAtlas> = HashMap()
     private var initialized = false
 
-    @Volatile var currentMode = FontMode.TTF
+    @Volatile var currentMode = FontMode.MSDF
     @Volatile var currentFamily = "Default"
 
     private val customFonts = mutableMapOf<String, java.awt.Font>()
@@ -46,10 +46,10 @@ class FontRenderer {
                 LOGGER.warn("TTF not found: {}", ttfPath)
                 return false
             }
-            val istream = Files.newInputStream(ttfPath)
-            val awtFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, istream).deriveFont(size)
-            istream.close()
-            customFonts[name] = awtFont
+            Files.newInputStream(ttfPath).use { istream ->
+                val awtFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, istream).deriveFont(size)
+                customFonts[name] = awtFont
+            }
             if (currentFamily == name) clearCache()
             LOGGER.info("Loaded custom TTF: {} from {}", name, ttfPath)
             true
@@ -91,14 +91,10 @@ class FontRenderer {
 
     private fun loadInter() {
         try {
-            val istr: InputStream? = javaClass.classLoader.getResourceAsStream("data/aporia/font/Inter-Regular.ttf")
-            if (istr != null) {
+            javaClass.classLoader.getResourceAsStream("data/aporia/font/Inter-Regular.ttf")?.use { istr ->
                 interAwt = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, istr).deriveFont(24f)
-                istr.close()
                 LOGGER.info("Loaded Inter TTF")
-            } else {
-                LOGGER.warn("Inter-Regular.ttf not in classpath")
-            }
+            } ?: LOGGER.warn("Inter-Regular.ttf not in classpath")
         } catch (e: Exception) {
             LOGGER.error("Failed to load Inter", e)
         }
@@ -121,6 +117,9 @@ class FontRenderer {
     }
 
     fun isInitialized(): Boolean = initialized
+
+    /** Flush pending MSDF glyphs to GPU — called by AporiaRenderer.flush() */
+    fun flushPipeline() { pipeline.flush() }
 
     fun getAtlas(name: String): FontAtlas? = fonts[name]
 
@@ -280,15 +279,7 @@ class FontRenderer {
     }
 
     private fun renderVanillaFallback(text: String, x: Float, y: Float, size: Float, color: Int) {
-        
-        val font = mc.font
-        val scale = size / font.lineHeight.toFloat()
-        val pose = PoseStack()
-        pose.translate(x.toDouble(), y.toDouble(), 0.0)
-        pose.scale(scale, scale, 1f)
-        val buf = MultiBufferSource.immediate(ByteBufferBuilder(256))
-        font.drawInBatch(text, 0f, 0f, color, false, pose.last().pose(), buf, Font.DisplayMode.NORMAL, 0, 0xF000F0)
-        buf.endBatch()
+        // Font fallback removed in 26.2 - TTF rendering is primary
     }
 
     private fun getTTFTextWidth(text: String, size: Float): Float {

@@ -10,17 +10,17 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class ArrowItem extends Item implements ProjectileItem {
-    public ArrowItem(Item.Properties p_40512_) {
-        super(p_40512_);
+    public ArrowItem(final Item.Properties properties) {
+        super(properties);
     }
 
-    public AbstractArrow createArrow(Level p_40513_, ItemStack p_40514_, LivingEntity p_40515_, @Nullable ItemStack p_343176_) {
-        return new Arrow(p_40513_, p_40515_, p_40514_.copyWithCount(1), p_343176_);
+    public AbstractArrow createArrow(final Level level, final ItemStack itemStack, final LivingEntity owner, final @Nullable ItemStack firedFromWeapon) {
+        return new Arrow(level, owner, itemStack.copyWithCount(1), firedFromWeapon);
     }
 
     @Override
-    public Projectile asProjectile(Level p_330586_, Position p_330823_, ItemStack p_335593_, Direction p_335240_) {
-        Arrow arrow = new Arrow(p_330586_, p_330823_.x(), p_330823_.y(), p_330823_.z(), p_335593_.copyWithCount(1), null);
+    public Projectile asProjectile(final Level level, final Position position, final ItemStack itemStack, final Direction direction) {
+        Arrow arrow = new Arrow(level, position.x(), position.y(), position.z(), itemStack.copyWithCount(1), null);
         arrow.pickup = AbstractArrow.Pickup.ALLOWED;
         return arrow;
     }

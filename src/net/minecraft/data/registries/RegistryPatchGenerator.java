@@ -15,27 +15,25 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
 public class RegistryPatchGenerator {
     public static CompletableFuture<RegistrySetBuilder.PatchedRegistries> createLookup(
-        CompletableFuture<HolderLookup.Provider> p_310881_, RegistrySetBuilder p_310262_
+        final CompletableFuture<HolderLookup.Provider> vanilla, final RegistrySetBuilder packBuilder
     ) {
-        return p_310881_.thenApply(
-            p_309945_ -> {
-                RegistryAccess.Frozen registryaccess$frozen = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
-                Cloner.Factory cloner$factory = new Cloner.Factory();
-                RegistryDataLoader.WORLDGEN_REGISTRIES.forEach(p_313050_ -> p_313050_.runWithArguments(cloner$factory::addCodec));
-                RegistrySetBuilder.PatchedRegistries registrysetbuilder$patchedregistries = p_310262_.buildPatch(
-                    registryaccess$frozen, p_309945_, cloner$factory
-                );
-                HolderLookup.Provider holderlookup$provider = registrysetbuilder$patchedregistries.full();
-                Optional<? extends HolderLookup.RegistryLookup<Biome>> optional = holderlookup$provider.lookup(Registries.BIOME);
-                Optional<? extends HolderLookup.RegistryLookup<PlacedFeature>> optional1 = holderlookup$provider.lookup(Registries.PLACED_FEATURE);
-                if (optional.isPresent() || optional1.isPresent()) {
+        return vanilla.thenApply(
+            parent -> {
+                RegistryAccess.Frozen staticRegistries = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+                Cloner.Factory cloner = new Cloner.Factory();
+                RegistryDataLoader.WORLDGEN_REGISTRIES.forEach(registryData -> registryData.runWithArguments(cloner::addCodec));
+                RegistrySetBuilder.PatchedRegistries newRegistries = packBuilder.buildPatch(staticRegistries, parent, cloner);
+                HolderLookup.Provider fullPatchedRegistry = newRegistries.full();
+                Optional<? extends HolderLookup.RegistryLookup<Biome>> biomes = fullPatchedRegistry.lookup(Registries.BIOME);
+                Optional<? extends HolderLookup.RegistryLookup<PlacedFeature>> features = fullPatchedRegistry.lookup(Registries.PLACED_FEATURE);
+                if (biomes.isPresent() || features.isPresent()) {
                     VanillaRegistries.validateThatAllBiomeFeaturesHaveBiomeFilter(
-                        DataFixUtils.orElseGet(optional1, () -> p_309945_.lookupOrThrow(Registries.PLACED_FEATURE)),
-                        DataFixUtils.orElseGet(optional, () -> p_309945_.lookupOrThrow(Registries.BIOME))
+                        DataFixUtils.orElseGet(features, () -> parent.lookupOrThrow(Registries.PLACED_FEATURE)),
+                        DataFixUtils.orElseGet(biomes, () -> parent.lookupOrThrow(Registries.BIOME))
                     );
                 }
 
-                return registrysetbuilder$patchedregistries;
+                return newRegistries;
             }
         );
     }

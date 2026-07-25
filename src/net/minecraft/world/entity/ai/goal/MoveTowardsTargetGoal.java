@@ -16,10 +16,10 @@ public class MoveTowardsTargetGoal extends Goal {
     private final double speedModifier;
     private final float within;
 
-    public MoveTowardsTargetGoal(PathfinderMob p_25646_, double p_25647_, float p_25648_) {
-        this.mob = p_25646_;
-        this.speedModifier = p_25647_;
-        this.within = p_25648_;
+    public MoveTowardsTargetGoal(final PathfinderMob mob, final double speedModifier, final float within) {
+        this.mob = mob;
+        this.speedModifier = speedModifier;
+        this.within = within;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
@@ -28,19 +28,21 @@ public class MoveTowardsTargetGoal extends Goal {
         this.target = this.mob.getTarget();
         if (this.target == null) {
             return false;
-        } else if (this.target.distanceToSqr(this.mob) > this.within * this.within) {
-            return false;
-        } else {
-            Vec3 vec3 = DefaultRandomPos.getPosTowards(this.mob, 16, 7, this.target.position(), (float) (Math.PI / 2));
-            if (vec3 == null) {
-                return false;
-            } else {
-                this.wantedX = vec3.x;
-                this.wantedY = vec3.y;
-                this.wantedZ = vec3.z;
-                return true;
-            }
         }
+
+        if (this.target.distanceToSqr(this.mob) > this.within * this.within) {
+            return false;
+        }
+
+        Vec3 pos = DefaultRandomPos.getPosTowards(this.mob, 16, 7, this.target.position(), (float) (Math.PI / 2));
+        if (pos == null) {
+            return false;
+        }
+
+        this.wantedX = pos.x;
+        this.wantedY = pos.y;
+        this.wantedZ = pos.z;
+        return true;
     }
 
     @Override

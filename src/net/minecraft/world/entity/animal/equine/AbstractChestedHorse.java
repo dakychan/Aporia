@@ -33,23 +33,23 @@ public abstract class AbstractChestedHorse extends AbstractHorse {
     private static final boolean DEFAULT_HAS_CHEST = false;
     private final EntityDimensions babyDimensions;
 
-    protected AbstractChestedHorse(EntityType<? extends AbstractChestedHorse> p_456887_, Level p_455389_) {
-        super(p_456887_, p_455389_);
+    protected AbstractChestedHorse(final EntityType<? extends AbstractChestedHorse> type, final Level level) {
+        super(type, level);
         this.canGallop = false;
-        this.babyDimensions = p_456887_.getDimensions()
-            .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, p_456887_.getHeight() - 0.15625F, 0.0F))
+        this.babyDimensions = type.getDimensions()
+            .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, type.getHeight() + 0.03125F, -0.3125F))
             .scale(0.5F);
     }
 
     @Override
-    protected void randomizeAttributes(RandomSource p_450867_) {
-        this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(generateMaxHealth(p_450867_::nextInt));
+    protected void randomizeAttributes(final RandomSource random) {
+        this.getAttribute(Attributes.MAX_HEALTH).setBaseValue(generateMaxHealth(random::nextInt));
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_459886_) {
-        super.defineSynchedData(p_459886_);
-        p_459886_.define(DATA_ID_CHEST, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_ID_CHEST, false);
     }
 
     public static AttributeSupplier.Builder createBaseChestedHorseAttributes() {
@@ -60,72 +60,72 @@ public abstract class AbstractChestedHorse extends AbstractHorse {
         return this.entityData.get(DATA_ID_CHEST);
     }
 
-    public void setChest(boolean p_451035_) {
-        this.entityData.set(DATA_ID_CHEST, p_451035_);
+    public void setChest(final boolean flag) {
+        this.entityData.set(DATA_ID_CHEST, flag);
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_454170_) {
-        return this.isBaby() ? this.babyDimensions : super.getDefaultDimensions(p_454170_);
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? this.babyDimensions : super.getDefaultDimensions(pose);
     }
 
     @Override
-    protected void dropEquipment(ServerLevel p_455975_) {
-        super.dropEquipment(p_455975_);
+    protected void dropEquipment(final ServerLevel level) {
+        super.dropEquipment(level);
         if (this.hasChest()) {
-            this.spawnAtLocation(p_455975_, Blocks.CHEST);
+            this.spawnAtLocation(level, Blocks.CHEST);
             this.setChest(false);
         }
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_458170_) {
-        super.addAdditionalSaveData(p_458170_);
-        p_458170_.putBoolean("ChestedHorse", this.hasChest());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("ChestedHorse", this.hasChest());
         if (this.hasChest()) {
-            ValueOutput.TypedOutputList<ItemStackWithSlot> typedoutputlist = p_458170_.list("Items", ItemStackWithSlot.CODEC);
+            ValueOutput.TypedOutputList<ItemStackWithSlot> items = output.list("Items", ItemStackWithSlot.CODEC);
 
             for (int i = 0; i < this.inventory.getContainerSize(); i++) {
-                ItemStack itemstack = this.inventory.getItem(i);
-                if (!itemstack.isEmpty()) {
-                    typedoutputlist.add(new ItemStackWithSlot(i, itemstack));
+                ItemStack stack = this.inventory.getItem(i);
+                if (!stack.isEmpty()) {
+                    items.add(new ItemStackWithSlot(i, stack));
                 }
             }
         }
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_455423_) {
-        super.readAdditionalSaveData(p_455423_);
-        this.setChest(p_455423_.getBooleanOr("ChestedHorse", false));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setChest(input.getBooleanOr("ChestedHorse", false));
         this.createInventory();
         if (this.hasChest()) {
-            for (ItemStackWithSlot itemstackwithslot : p_455423_.listOrEmpty("Items", ItemStackWithSlot.CODEC)) {
-                if (itemstackwithslot.isValidInContainer(this.inventory.getContainerSize())) {
-                    this.inventory.setItem(itemstackwithslot.slot(), itemstackwithslot.stack());
+            for (ItemStackWithSlot item : input.listOrEmpty("Items", ItemStackWithSlot.CODEC)) {
+                if (item.isValidInContainer(this.inventory.getContainerSize())) {
+                    this.inventory.setItem(item.slot(), item.stack());
                 }
             }
         }
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_453018_) {
-        return p_453018_ == 499 ? new SlotAccess() {
+    public @Nullable SlotAccess getSlot(final int slot) {
+        return slot == 499 ? new SlotAccess() {
             @Override
             public ItemStack get() {
                 return AbstractChestedHorse.this.hasChest() ? new ItemStack(Items.CHEST) : ItemStack.EMPTY;
             }
 
             @Override
-            public boolean set(ItemStack p_452644_) {
-                if (p_452644_.isEmpty()) {
+            public boolean set(final ItemStack itemStack) {
+                if (itemStack.isEmpty()) {
                     if (AbstractChestedHorse.this.hasChest()) {
                         AbstractChestedHorse.this.setChest(false);
                         AbstractChestedHorse.this.createInventory();
                     }
 
                     return true;
-                } else if (p_452644_.is(Items.CHEST)) {
+                } else if (itemStack.is(Items.CHEST)) {
                     if (!AbstractChestedHorse.this.hasChest()) {
                         AbstractChestedHorse.this.setChest(true);
                         AbstractChestedHorse.this.createInventory();
@@ -136,17 +136,17 @@ public abstract class AbstractChestedHorse extends AbstractHorse {
                     return false;
                 }
             }
-        } : super.getSlot(p_453018_);
+        } : super.getSlot(slot);
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_451846_, InteractionHand p_453651_) {
-        boolean flag = !this.isBaby() && this.isTamed() && p_451846_.isSecondaryUseActive();
-        if (!this.isVehicle() && !flag) {
-            ItemStack itemstack = p_451846_.getItemInHand(p_453651_);
-            if (!itemstack.isEmpty()) {
-                if (this.isFood(itemstack)) {
-                    return this.fedFood(p_451846_, itemstack);
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        boolean shouldOpenInventory = !this.isBaby() && this.isTamed() && player.isSecondaryUseActive();
+        if (!this.isVehicle() && !shouldOpenInventory && (!this.isBaby() || !player.isHolding(Items.GOLDEN_DANDELION))) {
+            ItemStack itemStack = player.getItemInHand(hand);
+            if (!itemStack.isEmpty()) {
+                if (this.isFood(itemStack)) {
+                    return this.fedFood(player, itemStack);
                 }
 
                 if (!this.isTamed()) {
@@ -154,22 +154,22 @@ public abstract class AbstractChestedHorse extends AbstractHorse {
                     return InteractionResult.SUCCESS;
                 }
 
-                if (!this.hasChest() && itemstack.is(Items.CHEST)) {
-                    this.equipChest(p_451846_, itemstack);
+                if (!this.hasChest() && itemStack.is(Items.CHEST)) {
+                    this.equipChest(player, itemStack);
                     return InteractionResult.SUCCESS;
                 }
             }
 
-            return super.mobInteract(p_451846_, p_453651_);
+            return super.mobInteract(player, hand);
         } else {
-            return super.mobInteract(p_451846_, p_453651_);
+            return super.mobInteract(player, hand);
         }
     }
 
-    private void equipChest(Player p_458982_, ItemStack p_450952_) {
+    private void equipChest(final Player player, final ItemStack itemStack) {
         this.setChest(true);
         this.playChestEquipsSound();
-        p_450952_.consume(1, p_458982_);
+        itemStack.consume(1, player);
         this.createInventory();
     }
 

@@ -45,78 +45,86 @@ public class GameTestMainUtil {
         .withRequiredArg()
         .ofType(Boolean.class)
         .defaultsTo(false);
+    private static final OptionSpec<Integer> repeatCount = parser.accepts("repeatCount", "Runs each of the specified tests this many times")
+        .withRequiredArg()
+        .ofType(Integer.class)
+        .defaultsTo(1);
     private static final OptionSpec<String> packs = parser.accepts("packs", "A folder of datapacks to include in the world").withRequiredArg();
     private static final OptionSpec<Void> help = parser.accepts("help").forHelp();
 
     @SuppressForbidden(reason = "Using System.err due to no bootstrap")
-    public static void runGameTestServer(String[] p_393077_, Consumer<String> p_393652_) throws Exception {
+    public static void runGameTestServer(final String[] args, final Consumer<String> onUniverseCreated) throws Exception {
         parser.allowsUnrecognizedOptions();
-        OptionSet optionset = parser.parse(p_393077_);
-        if (optionset.has(help)) {
+        OptionSet options = parser.parse(args);
+        if (options.has(help)) {
             parser.printHelpOn(System.err);
         } else {
-            if (optionset.valueOf(verify) && !optionset.has(tests)) {
+            if (options.valueOf(verify) && !options.has(tests)) {
                 LOGGER.error("Please specify a test selection to run the verify option. For example: --verify --tests example:test_something_*");
                 System.exit(-1);
             }
 
-            LOGGER.info("Running GameTestMain with cwd '{}', universe path '{}'", System.getProperty("user.dir"), optionset.valueOf(universe));
-            if (optionset.has(report)) {
-                GlobalTestReporter.replaceWith(new JUnitLikeTestReporter(report.value(optionset)));
+            if (options.valueOf(verify) && options.has(repeatCount)) {
+                LOGGER.info("Flag --verify is true, the --repeatCount value will be ignored");
+            }
+
+            LOGGER.info("Running GameTestMain with cwd '{}', universe path '{}'", System.getProperty("user.dir"), options.valueOf(universe));
+            if (options.has(report)) {
+                GlobalTestReporter.replaceWith(new JUnitLikeTestReporter(report.value(options)));
             }
 
             Bootstrap.bootStrap();
             Util.startTimerHackThread();
-            String s = optionset.valueOf(universe);
-            createOrResetDir(s);
-            p_393652_.accept(s);
-            if (optionset.has(packs)) {
-                String s1 = optionset.valueOf(packs);
-                copyPacks(s, s1);
+            String universePath = options.valueOf(universe);
+            createOrResetDir(universePath);
+            onUniverseCreated.accept(universePath);
+            if (options.has(packs)) {
+                String packFolder = options.valueOf(packs);
+                copyPacks(universePath, packFolder);
             }
 
-            LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = LevelStorageSource.createDefault(Paths.get(s)).createAccess("gametestworld");
-            PackRepository packrepository = ServerPacksSource.createPackRepository(levelstoragesource$levelstorageaccess);
+            LevelStorageSource.LevelStorageAccess levelStorageSource = LevelStorageSource.createDefault(Paths.get(universePath)).createAccess("gametestworld");
+            PackRepository packRepository = ServerPacksSource.createPackRepository(levelStorageSource);
             MinecraftServer.spin(
-                p_421245_ -> GameTestServer.create(
-                    p_421245_, levelstoragesource$levelstorageaccess, packrepository, optionalFromOption(optionset, tests), optionset.has(verify)
+                thread -> GameTestServer.create(
+                    thread, levelStorageSource, packRepository, optionalFromOption(options, tests), options.valueOf(verify), options.valueOf(repeatCount)
                 )
             );
         }
     }
 
-    private static Optional<String> optionalFromOption(OptionSet p_396003_, OptionSpec<String> p_394563_) {
-        return p_396003_.has(p_394563_) ? Optional.of(p_396003_.valueOf(p_394563_)) : Optional.empty();
+    private static Optional<String> optionalFromOption(final OptionSet options, final OptionSpec<String> option) {
+        return options.has(option) ? Optional.of(options.valueOf(option)) : Optional.empty();
     }
 
-    private static void createOrResetDir(String p_392184_) throws IOException {
-        Path path = Paths.get(p_392184_);
-        if (Files.exists(path)) {
-            FileUtils.deleteDirectory(path.toFile());
+    private static void createOrResetDir(final String universePath) throws IOException {
+        Path universeDir = Paths.get(universePath);
+        if (Files.exists(universeDir)) {
+            FileUtils.deleteDirectory(universeDir.toFile());
         }
 
-        Files.createDirectories(path);
+        Files.createDirectories(universeDir);
     }
 
-    private static void copyPacks(String p_397956_, String p_396386_) throws IOException {
-        Path path = Paths.get(p_397956_).resolve("gametestworld").resolve("datapacks");
-        if (!Files.exists(path)) {
-            Files.createDirectories(path);
+    private static void copyPacks(final String serverPath, final String packSourcePath) throws IOException {
+        Path worldPackFolder = Paths.get(serverPath).resolve("gametestworld").resolve("datapacks");
+        if (!Files.exists(worldPackFolder)) {
+            Files.createDirectories(worldPackFolder);
         }
 
-        Path path1 = Paths.get(p_396386_);
-        if (Files.exists(path1)) {
-            try (Stream<Path> stream = Files.list(path1)) {
-                for (Path path2 : stream.toList()) {
-                    Path path3 = path.resolve(path2.getFileName());
-                    if (Files.isDirectory(path2)) {
-                        if (Files.isRegularFile(path2.resolve("pack.mcmeta"))) {
-                            FileUtils.copyDirectory(path2.toFile(), path3.toFile());
-                            LOGGER.info("Included folder pack {}", path2.getFileName());
+        Path sourceFolder = Paths.get(packSourcePath);
+        if (Files.exists(sourceFolder)) {
+            try (Stream<Path> list = Files.list(sourceFolder)) {
+                for (Path path : list.toList()) {
+                    Path destination = worldPackFolder.resolve(path.getFileName());
+                    if (Files.isDirectory(path)) {
+                        if (Files.isRegularFile(path.resolve("pack.mcmeta"))) {
+                            FileUtils.copyDirectory(path.toFile(), destination.toFile());
+                            LOGGER.info("Included folder pack {}", path.getFileName());
                         }
-                    } else if (path2.toString().endsWith(".zip")) {
-                        Files.copy(path2, path3);
-                        LOGGER.info("Included zip pack {}", path2.getFileName());
+                    } else if (path.toString().endsWith(".zip")) {
+                        Files.copy(path, destination);
+                        LOGGER.info("Included zip pack {}", path.getFileName());
                     }
                 }
             }

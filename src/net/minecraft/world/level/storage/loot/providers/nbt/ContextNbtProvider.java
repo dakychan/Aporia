@@ -3,9 +3,8 @@ package net.minecraft.world.level.storage.loot.providers.nbt;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Set;
-import net.minecraft.advancements.criterion.NbtPredicate;
+import net.minecraft.advancements.predicates.NbtPredicate;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
@@ -16,26 +15,26 @@ import org.jspecify.annotations.Nullable;
 
 public class ContextNbtProvider implements NbtProvider {
     private static final Codec<LootContextArg<Tag>> GETTER_CODEC = LootContextArg.createArgCodec(
-        p_450118_ -> p_450118_.anyBlockEntity(ContextNbtProvider.BlockEntitySource::new).anyEntity(ContextNbtProvider.EntitySource::new)
+        builder -> builder.anyBlockEntity(ContextNbtProvider.BlockEntitySource::new).anyEntity(ContextNbtProvider.EntitySource::new)
     );
     public static final MapCodec<ContextNbtProvider> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_300408_ -> p_300408_.group(GETTER_CODEC.fieldOf("target").forGetter(p_450117_ -> p_450117_.source)).apply(p_300408_, ContextNbtProvider::new)
+        i -> i.group(GETTER_CODEC.fieldOf("target").forGetter(p -> p.source)).apply(i, ContextNbtProvider::new)
     );
-    public static final Codec<ContextNbtProvider> INLINE_CODEC = GETTER_CODEC.xmap(ContextNbtProvider::new, p_450119_ -> p_450119_.source);
+    public static final Codec<ContextNbtProvider> INLINE_CODEC = GETTER_CODEC.xmap(ContextNbtProvider::new, p -> p.source);
     private final LootContextArg<Tag> source;
 
-    private ContextNbtProvider(LootContextArg<Tag> p_459589_) {
-        this.source = p_459589_;
+    private ContextNbtProvider(final LootContextArg<Tag> source) {
+        this.source = source;
     }
 
     @Override
-    public LootNbtProviderType getType() {
-        return NbtProviders.CONTEXT;
+    public MapCodec<ContextNbtProvider> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public @Nullable Tag get(LootContext p_165573_) {
-        return this.source.get(p_165573_);
+    public @Nullable Tag get(final LootContext context) {
+        return this.source.get(context);
     }
 
     @Override
@@ -43,29 +42,19 @@ public class ContextNbtProvider implements NbtProvider {
         return Set.of(this.source.contextParam());
     }
 
-    public static NbtProvider forContextEntity(LootContext.EntityTarget p_165571_) {
-        return new ContextNbtProvider(new ContextNbtProvider.EntitySource(p_165571_.contextParam()));
+    public static NbtProvider forContextEntity(final LootContext.EntityTarget source) {
+        return new ContextNbtProvider(new ContextNbtProvider.EntitySource(source.contextParam()));
     }
 
-    record BlockEntitySource(ContextKey<? extends BlockEntity> contextParam) implements LootContextArg.Getter<BlockEntity, Tag> {
-        public Tag get(BlockEntity p_428056_) {
-            return p_428056_.saveWithFullMetadata(p_428056_.getLevel().registryAccess());
-        }
-
-        @Override
-        public ContextKey<? extends BlockEntity> contextParam() {
-            return this.contextParam;
+    private record BlockEntitySource(ContextKey<? extends BlockEntity> contextParam) implements LootContextArg.Getter<BlockEntity, Tag> {
+        public Tag get(final BlockEntity blockEntity) {
+            return blockEntity.saveWithFullMetadata(blockEntity.getLevel().registryAccess());
         }
     }
 
-    record EntitySource(ContextKey<? extends Entity> contextParam) implements LootContextArg.Getter<Entity, Tag> {
-        public Tag get(Entity p_426254_) {
-            return NbtPredicate.getEntityTagToCompare(p_426254_);
-        }
-
-        @Override
-        public ContextKey<? extends Entity> contextParam() {
-            return this.contextParam;
+    private record EntitySource(ContextKey<? extends Entity> contextParam) implements LootContextArg.Getter<Entity, Tag> {
+        public Tag get(final Entity entity) {
+            return NbtPredicate.getEntityTagToCompare(entity);
         }
     }
 }

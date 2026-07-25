@@ -1,21 +1,21 @@
 package net.minecraft.client.gui.screens.inventory.tooltip;
 
+import com.mojang.serialization.DataResult;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.BundleContents;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.math.Fraction;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ClientBundleTooltip implements ClientTooltipComponent {
     private static final Identifier PROGRESSBAR_BORDER_SPRITE = Identifier.withDefaultNamespace("container/bundle/bundle_progressbar_border");
     private static final Identifier PROGRESSBAR_FILL_SPRITE = Identifier.withDefaultNamespace("container/bundle/bundle_progressbar_fill");
@@ -36,17 +36,17 @@ public class ClientBundleTooltip implements ClientTooltipComponent {
     private static final Component BUNDLE_EMPTY_DESCRIPTION = Component.translatable("item.minecraft.bundle.empty.description");
     private final BundleContents contents;
 
-    public ClientBundleTooltip(BundleContents p_335644_) {
-        this.contents = p_335644_;
+    public ClientBundleTooltip(final BundleContents contents) {
+        this.contents = contents;
     }
 
     @Override
-    public int getHeight(Font p_362861_) {
-        return this.contents.isEmpty() ? getEmptyBundleBackgroundHeight(p_362861_) : this.backgroundHeight();
+    public int getHeight(final Font font) {
+        return this.contents.isEmpty() ? getEmptyBundleBackgroundHeight(font) : this.backgroundHeight();
     }
 
     @Override
-    public int getWidth(Font p_169901_) {
+    public int getWidth(final Font font) {
         return 96;
     }
 
@@ -55,8 +55,8 @@ public class ClientBundleTooltip implements ClientTooltipComponent {
         return true;
     }
 
-    private static int getEmptyBundleBackgroundHeight(Font p_361809_) {
-        return getEmptyBundleDescriptionTextHeight(p_361809_) + 13 + 8;
+    private static int getEmptyBundleBackgroundHeight(final Font font) {
+        return getEmptyBundleDescriptionTextHeight(font) + 13 + 8;
     }
 
     private int backgroundHeight() {
@@ -67,8 +67,8 @@ public class ClientBundleTooltip implements ClientTooltipComponent {
         return this.gridSizeY() * 24;
     }
 
-    private int getContentXOffset(int p_364093_) {
-        return (p_364093_ - 96) / 2;
+    private static int getContentXOffset(final int tooltipWidth) {
+        return (tooltipWidth - 96) / 2;
     }
 
     private int gridSizeY() {
@@ -80,129 +80,144 @@ public class ClientBundleTooltip implements ClientTooltipComponent {
     }
 
     @Override
-    public void renderImage(Font p_194042_, int p_194043_, int p_194044_, int p_369638_, int p_364312_, GuiGraphics p_282522_) {
-        if (this.contents.isEmpty()) {
-            this.renderEmptyBundleTooltip(p_194042_, p_194043_, p_194044_, p_369638_, p_364312_, p_282522_);
-        } else {
-            this.renderBundleWithItemsTooltip(p_194042_, p_194043_, p_194044_, p_369638_, p_364312_, p_282522_);
+    public void extractImage(final Font font, final int x, final int y, final int w, final int h, final GuiGraphicsExtractor graphics) {
+        DataResult<Fraction> weight = this.contents.weight();
+        if (!weight.isError()) {
+            if (this.contents.isEmpty()) {
+                extractEmptyBundleTooltip(font, x, y, w, h, graphics);
+            } else {
+                this.extractBundleWithItemsTooltip(font, x, y, w, h, graphics, weight.getOrThrow());
+            }
         }
     }
 
-    private void renderEmptyBundleTooltip(Font p_364480_, int p_360881_, int p_369772_, int p_361857_, int p_364153_, GuiGraphics p_365898_) {
-        drawEmptyBundleDescriptionText(p_360881_ + this.getContentXOffset(p_361857_), p_369772_, p_364480_, p_365898_);
-        this.drawProgressbar(p_360881_ + this.getContentXOffset(p_361857_), p_369772_ + getEmptyBundleDescriptionTextHeight(p_364480_) + 4, p_364480_, p_365898_);
+    private static void extractEmptyBundleTooltip(final Font font, final int x, final int y, final int w, final int h, final GuiGraphicsExtractor graphics) {
+        int left = x + getContentXOffset(w);
+        extractEmptyBundleDescriptionText(left, y, font, graphics);
+        extractProgressbar(left, y + getEmptyBundleDescriptionTextHeight(font) + 4, font, graphics, Fraction.ZERO);
     }
 
-    private void renderBundleWithItemsTooltip(Font p_368943_, int p_367976_, int p_363502_, int p_368727_, int p_363888_, GuiGraphics p_368494_) {
-        boolean flag = this.contents.size() > 12;
-        List<ItemStack> list = this.getShownItems(this.contents.getNumberOfItemsToShow());
-        int i = p_367976_ + this.getContentXOffset(p_368727_) + 96;
-        int j = p_363502_ + this.gridSizeY() * 24;
-        int k = 1;
+    private void extractBundleWithItemsTooltip(
+        final Font font, final int x, final int y, final int w, final int h, final GuiGraphicsExtractor graphics, final Fraction weight
+    ) {
+        boolean isOverflowing = this.contents.size() > 12;
+        List<ItemStackTemplate> shownItems = this.getShownItems(this.contents.getNumberOfItemsToShow());
+        int xStartPos = x + getContentXOffset(w) + 96;
+        int yStartPos = y + this.gridSizeY() * 24;
+        int slotNumber = 1;
 
-        for (int l = 1; l <= this.gridSizeY(); l++) {
-            for (int i1 = 1; i1 <= 4; i1++) {
-                int j1 = i - i1 * 24;
-                int k1 = j - l * 24;
-                if (shouldRenderSurplusText(flag, i1, l)) {
-                    renderCount(j1, k1, this.getAmountOfHiddenItems(list), p_368943_, p_368494_);
-                } else if (shouldRenderItemSlot(list, k)) {
-                    this.renderSlot(k, j1, k1, list, k, p_368943_, p_368494_);
-                    k++;
+        for (int rowNumber = 1; rowNumber <= this.gridSizeY(); rowNumber++) {
+            for (int columnNumber = 1; columnNumber <= 4; columnNumber++) {
+                int drawX = xStartPos - columnNumber * 24;
+                int drawY = yStartPos - rowNumber * 24;
+                if (shouldRenderSurplusText(isOverflowing, columnNumber, rowNumber)) {
+                    extractCount(drawX, drawY, this.getAmountOfHiddenItems(shownItems), font, graphics);
+                } else if (shouldRenderItemSlot(shownItems, slotNumber)) {
+                    this.extractSlot(slotNumber, drawX, drawY, shownItems, slotNumber, font, graphics);
+                    slotNumber++;
                 }
             }
         }
 
-        this.drawSelectedItemTooltip(p_368943_, p_368494_, p_367976_, p_363502_, p_368727_);
-        this.drawProgressbar(p_367976_ + this.getContentXOffset(p_368727_), p_363502_ + this.itemGridHeight() + 4, p_368943_, p_368494_);
+        this.extractSelectedItemTooltip(font, graphics, x, y, w);
+        extractProgressbar(x + getContentXOffset(w), y + this.itemGridHeight() + 4, font, graphics, weight);
     }
 
-    private List<ItemStack> getShownItems(int p_369856_) {
-        int i = Math.min(this.contents.size(), p_369856_);
-        return this.contents.itemCopyStream().toList().subList(0, i);
+    private List<ItemStackTemplate> getShownItems(final int amountOfItemsToShow) {
+        int lastToDisplay = Math.min(this.contents.size(), amountOfItemsToShow);
+        return this.contents.items().subList(0, lastToDisplay);
     }
 
-    private static boolean shouldRenderSurplusText(boolean p_362669_, int p_365579_, int p_364239_) {
-        return p_362669_ && p_365579_ * p_364239_ == 1;
+    private static boolean shouldRenderSurplusText(final boolean isOverflowing, final int column, final int row) {
+        return isOverflowing && column * row == 1;
     }
 
-    private static boolean shouldRenderItemSlot(List<ItemStack> p_361001_, int p_368142_) {
-        return p_361001_.size() >= p_368142_;
+    private static boolean shouldRenderItemSlot(final List<? extends ItemInstance> shownItems, final int slotNumber) {
+        return shownItems.size() >= slotNumber;
     }
 
-    private int getAmountOfHiddenItems(List<ItemStack> p_361494_) {
-        return this.contents.itemCopyStream().skip(p_361494_.size()).mapToInt(ItemStack::getCount).sum();
+    private int getAmountOfHiddenItems(final List<ItemStackTemplate> shownItems) {
+        return this.contents.items().stream().skip(shownItems.size()).mapToInt(ItemInstance::count).sum();
     }
 
-    private void renderSlot(int p_283180_, int p_282972_, int p_282547_, List<ItemStack> p_363643_, int p_368225_, Font p_281863_, GuiGraphics p_283625_) {
-        int i = p_363643_.size() - p_283180_;
-        boolean flag = i == this.contents.getSelectedItem();
-        ItemStack itemstack = p_363643_.get(i);
-        if (flag) {
-            p_283625_.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_BACK_SPRITE, p_282972_, p_282547_, 24, 24);
+    private void extractSlot(
+        final int slotNumber,
+        final int drawX,
+        final int drawY,
+        final List<ItemStackTemplate> shownItems,
+        final int slotIndex,
+        final Font font,
+        final GuiGraphicsExtractor graphics
+    ) {
+        int itemVisualOrderIndex = shownItems.size() - slotNumber;
+        boolean hasHighlight = itemVisualOrderIndex == this.contents.getSelectedItemIndex();
+        ItemStack item = shownItems.get(itemVisualOrderIndex).create();
+        if (hasHighlight) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_BACK_SPRITE, drawX, drawY, 24, 24);
         } else {
-            p_283625_.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_BACKGROUND_SPRITE, p_282972_, p_282547_, 24, 24);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_BACKGROUND_SPRITE, drawX, drawY, 24, 24);
         }
 
-        p_283625_.renderItem(itemstack, p_282972_ + 4, p_282547_ + 4, p_368225_);
-        p_283625_.renderItemDecorations(p_281863_, itemstack, p_282972_ + 4, p_282547_ + 4);
-        if (flag) {
-            p_283625_.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_FRONT_SPRITE, p_282972_, p_282547_, 24, 24);
+        graphics.item(item, drawX + 4, drawY + 4, slotIndex);
+        graphics.itemDecorations(font, item, drawX + 4, drawY + 4);
+        if (hasHighlight) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SLOT_HIGHLIGHT_FRONT_SPRITE, drawX, drawY, 24, 24);
         }
     }
 
-    private static void renderCount(int p_367494_, int p_360787_, int p_366039_, Font p_369606_, GuiGraphics p_369155_) {
-        p_369155_.drawCenteredString(p_369606_, "+" + p_366039_, p_367494_ + 12, p_360787_ + 10, -1);
+    private static void extractCount(final int drawX, final int drawY, final int hiddenItemCount, final Font font, final GuiGraphicsExtractor graphics) {
+        graphics.centeredText(font, "+" + hiddenItemCount, drawX + 12, drawY + 10, -1);
     }
 
-    private void drawSelectedItemTooltip(Font p_362719_, GuiGraphics p_366113_, int p_365302_, int p_368361_, int p_367077_) {
-        if (this.contents.hasSelectedItem()) {
-            ItemStack itemstack = this.contents.getItemUnsafe(this.contents.getSelectedItem());
-            Component component = itemstack.getStyledHoverName();
-            int i = p_362719_.width(component.getVisualOrderText());
-            int j = p_365302_ + p_367077_ / 2 - 12;
-            ClientTooltipComponent clienttooltipcomponent = ClientTooltipComponent.create(component.getVisualOrderText());
-            p_366113_.renderTooltip(
-                p_362719_,
-                List.of(clienttooltipcomponent),
-                j - i / 2,
-                p_368361_ - 15,
+    private void extractSelectedItemTooltip(final Font font, final GuiGraphicsExtractor graphics, final int x, final int y, final int w) {
+        ItemStackTemplate selectedItem = this.contents.getSelectedItem();
+        if (selectedItem != null) {
+            ItemStack itemStack = selectedItem.create();
+            Component selectedItemName = itemStack.getStyledHoverName();
+            int textWidth = font.width(selectedItemName.getVisualOrderText());
+            int centerTooltip = x + w / 2 - 12;
+            ClientTooltipComponent selectedItemNameTooltip = ClientTooltipComponent.create(selectedItemName.getVisualOrderText());
+            graphics.tooltip(
+                font,
+                List.of(selectedItemNameTooltip),
+                centerTooltip - textWidth / 2,
+                y - 15,
                 DefaultTooltipPositioner.INSTANCE,
-                itemstack.get(DataComponents.TOOLTIP_STYLE)
+                itemStack.get(DataComponents.TOOLTIP_STYLE)
             );
         }
     }
 
-    private void drawProgressbar(int p_362560_, int p_367617_, Font p_361416_, GuiGraphics p_363358_) {
-        p_363358_.blitSprite(RenderPipelines.GUI_TEXTURED, this.getProgressBarTexture(), p_362560_ + 1, p_367617_, this.getProgressBarFill(), 13);
-        p_363358_.blitSprite(RenderPipelines.GUI_TEXTURED, PROGRESSBAR_BORDER_SPRITE, p_362560_, p_367617_, 96, 13);
-        Component component = this.getProgressBarFillText();
-        if (component != null) {
-            p_363358_.drawCenteredString(p_361416_, component, p_362560_ + 48, p_367617_ + 3, -1);
+    private static void extractProgressbar(final int x, final int y, final Font font, final GuiGraphicsExtractor graphics, final Fraction weight) {
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, getProgressBarTexture(weight), x + 1, y, getProgressBarFill(weight), 13);
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, PROGRESSBAR_BORDER_SPRITE, x, y, 96, 13);
+        Component progressBarFillText = getProgressBarFillText(weight);
+        if (progressBarFillText != null) {
+            graphics.centeredText(font, progressBarFillText, x + 48, y + 3, -1);
         }
     }
 
-    private static void drawEmptyBundleDescriptionText(int p_361101_, int p_362507_, Font p_361285_, GuiGraphics p_364539_) {
-        p_364539_.drawWordWrap(p_361285_, BUNDLE_EMPTY_DESCRIPTION, p_361101_, p_362507_, 96, -5592406);
+    private static void extractEmptyBundleDescriptionText(final int x, final int y, final Font font, final GuiGraphicsExtractor graphics) {
+        graphics.textWithWordWrap(font, BUNDLE_EMPTY_DESCRIPTION, x, y, 96, -5592406);
     }
 
-    private static int getEmptyBundleDescriptionTextHeight(Font p_361354_) {
-        return p_361354_.split(BUNDLE_EMPTY_DESCRIPTION, 96).size() * 9;
+    private static int getEmptyBundleDescriptionTextHeight(final Font font) {
+        return font.split(BUNDLE_EMPTY_DESCRIPTION, 96).size() * 9;
     }
 
-    private int getProgressBarFill() {
-        return Mth.clamp(Mth.mulAndTruncate(this.contents.weight(), 94), 0, 94);
+    private static int getProgressBarFill(final Fraction weight) {
+        return Mth.clamp(Mth.mulAndTruncate(weight, 94), 0, 94);
     }
 
-    private Identifier getProgressBarTexture() {
-        return this.contents.weight().compareTo(Fraction.ONE) >= 0 ? PROGRESSBAR_FULL_SPRITE : PROGRESSBAR_FILL_SPRITE;
+    private static Identifier getProgressBarTexture(final Fraction weight) {
+        return weight.compareTo(Fraction.ONE) >= 0 ? PROGRESSBAR_FULL_SPRITE : PROGRESSBAR_FILL_SPRITE;
     }
 
-    private @Nullable Component getProgressBarFillText() {
-        if (this.contents.isEmpty()) {
+    private static @Nullable Component getProgressBarFillText(final Fraction weight) {
+        if (weight.compareTo(Fraction.ZERO) == 0) {
             return BUNDLE_EMPTY_TEXT;
         } else {
-            return this.contents.weight().compareTo(Fraction.ONE) >= 0 ? BUNDLE_FULL_TEXT : null;
+            return weight.compareTo(Fraction.ONE) >= 0 ? BUNDLE_FULL_TEXT : null;
         }
     }
 }

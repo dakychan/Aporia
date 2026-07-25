@@ -18,6 +18,8 @@ public class Noises {
     public static final ResourceKey<NormalNoise.NoiseParameters> EROSION_LARGE = createKey("erosion_large");
     public static final ResourceKey<NormalNoise.NoiseParameters> RIDGE = createKey("ridge");
     public static final ResourceKey<NormalNoise.NoiseParameters> SHIFT = createKey("offset");
+    public static final ResourceKey<NormalNoise.NoiseParameters> TEMPERATURE_NETHER = createKey("nether/temperature");
+    public static final ResourceKey<NormalNoise.NoiseParameters> VEGETATION_NETHER = createKey("nether/vegetation");
     public static final ResourceKey<NormalNoise.NoiseParameters> AQUIFER_BARRIER = createKey("aquifer_barrier");
     public static final ResourceKey<NormalNoise.NoiseParameters> AQUIFER_FLUID_LEVEL_FLOODEDNESS = createKey("aquifer_fluid_level_floodedness");
     public static final ResourceKey<NormalNoise.NoiseParameters> AQUIFER_LAVA = createKey("aquifer_lava");
@@ -56,6 +58,7 @@ public class Noises {
     public static final ResourceKey<NormalNoise.NoiseParameters> ICEBERG_PILLAR = createKey("iceberg_pillar");
     public static final ResourceKey<NormalNoise.NoiseParameters> ICEBERG_PILLAR_ROOF = createKey("iceberg_pillar_roof");
     public static final ResourceKey<NormalNoise.NoiseParameters> ICEBERG_SURFACE = createKey("iceberg_surface");
+    public static final ResourceKey<NormalNoise.NoiseParameters> SULFUR_CAVE_GRADIENT = createKey("sulfur_cave_gradient");
     public static final ResourceKey<NormalNoise.NoiseParameters> SWAMP = createKey("surface_swamp");
     public static final ResourceKey<NormalNoise.NoiseParameters> CALCITE = createKey("calcite");
     public static final ResourceKey<NormalNoise.NoiseParameters> GRAVEL = createKey("gravel");
@@ -69,14 +72,14 @@ public class Noises {
     public static final ResourceKey<NormalNoise.NoiseParameters> NETHER_WART = createKey("nether_wart");
     public static final ResourceKey<NormalNoise.NoiseParameters> NETHER_STATE_SELECTOR = createKey("nether_state_selector");
 
-    private static ResourceKey<NormalNoise.NoiseParameters> createKey(String p_189310_) {
-        return ResourceKey.create(Registries.NOISE, Identifier.withDefaultNamespace(p_189310_));
+    private static ResourceKey<NormalNoise.NoiseParameters> createKey(final String name) {
+        return ResourceKey.create(Registries.NOISE, Identifier.withDefaultNamespace(name));
     }
 
     public static NormalNoise instantiate(
-        HolderGetter<NormalNoise.NoiseParameters> p_256362_, PositionalRandomFactory p_256306_, ResourceKey<NormalNoise.NoiseParameters> p_256639_
+        final HolderGetter<NormalNoise.NoiseParameters> noises, final PositionalRandomFactory context, final ResourceKey<NormalNoise.NoiseParameters> name
     ) {
-        Holder<NormalNoise.NoiseParameters> holder = p_256362_.getOrThrow(p_256639_);
-        return NormalNoise.create(p_256306_.fromHashOf(holder.unwrapKey().orElseThrow().identifier()), holder.value());
+        Holder<NormalNoise.NoiseParameters> holder = noises.getOrThrow(name);
+        return NormalNoise.create(context.fromHashOf(name.identifier()), holder.value());
     }
 }

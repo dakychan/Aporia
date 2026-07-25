@@ -2,47 +2,52 @@ package net.minecraft.world.level.levelgen.placement;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.stream.Stream;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.util.valueproviders.TrapezoidInt;
 
 public class RandomOffsetPlacement extends PlacementModifier {
     public static final MapCodec<RandomOffsetPlacement> CODEC = RecordCodecBuilder.mapCodec(
-        p_191883_ -> p_191883_.group(
-                IntProvider.codec(-16, 16).fieldOf("xz_spread").forGetter(p_191894_ -> p_191894_.xzSpread),
-                IntProvider.codec(-16, 16).fieldOf("y_spread").forGetter(p_191885_ -> p_191885_.ySpread)
+        i -> i.group(
+                IntProviders.codec(-16, 16).fieldOf("xz_spread").forGetter(c -> c.xzSpread),
+                IntProviders.codec(-16, 16).fieldOf("y_spread").forGetter(c -> c.ySpread)
             )
-            .apply(p_191883_, RandomOffsetPlacement::new)
+            .apply(i, RandomOffsetPlacement::new)
     );
     private final IntProvider xzSpread;
     private final IntProvider ySpread;
 
-    public static RandomOffsetPlacement of(IntProvider p_191880_, IntProvider p_191881_) {
-        return new RandomOffsetPlacement(p_191880_, p_191881_);
+    public static RandomOffsetPlacement of(final IntProvider xzSpread, final IntProvider ySpread) {
+        return new RandomOffsetPlacement(xzSpread, ySpread);
     }
 
-    public static RandomOffsetPlacement vertical(IntProvider p_191878_) {
-        return new RandomOffsetPlacement(ConstantInt.of(0), p_191878_);
+    public static RandomOffsetPlacement ofTriangle(final int xzRange, final int yRange) {
+        return new RandomOffsetPlacement(TrapezoidInt.triangle(xzRange), TrapezoidInt.triangle(yRange));
     }
 
-    public static RandomOffsetPlacement horizontal(IntProvider p_191892_) {
-        return new RandomOffsetPlacement(p_191892_, ConstantInt.of(0));
+    public static RandomOffsetPlacement vertical(final IntProvider ySpread) {
+        return new RandomOffsetPlacement(ConstantInt.of(0), ySpread);
     }
 
-    private RandomOffsetPlacement(IntProvider p_191875_, IntProvider p_191876_) {
-        this.xzSpread = p_191875_;
-        this.ySpread = p_191876_;
+    public static RandomOffsetPlacement horizontal(final IntProvider xzSpread) {
+        return new RandomOffsetPlacement(xzSpread, ConstantInt.of(0));
+    }
+
+    private RandomOffsetPlacement(final IntProvider xzSpread, final IntProvider ySpread) {
+        this.xzSpread = xzSpread;
+        this.ySpread = ySpread;
     }
 
     @Override
-    public Stream<BlockPos> getPositions(PlacementContext p_226393_, RandomSource p_226394_, BlockPos p_226395_) {
-        int i = p_226395_.getX() + this.xzSpread.sample(p_226394_);
-        int j = p_226395_.getY() + this.ySpread.sample(p_226394_);
-        int k = p_226395_.getZ() + this.xzSpread.sample(p_226394_);
-        return Stream.of(new BlockPos(i, j, k));
+    public Stream<BlockPos> getPositions(final PlacementContext context, final RandomSource random, final BlockPos origin) {
+        int scatterX = origin.getX() + this.xzSpread.sample(random);
+        int scatterY = origin.getY() + this.ySpread.sample(random);
+        int scatterZ = origin.getZ() + this.xzSpread.sample(random);
+        return Stream.of(new BlockPos(scatterX, scatterY, scatterZ));
     }
 
     @Override

@@ -1,16 +1,20 @@
 package net.minecraft.world.entity.ai.behavior;
 
+import java.util.Set;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 public interface BehaviorControl<E extends LivingEntity> {
     Behavior.Status getStatus();
 
-    boolean tryStart(ServerLevel p_259494_, E p_259608_, long p_260186_);
+    Set<MemoryModuleType<?>> getRequiredMemories();
 
-    void tickOrStop(ServerLevel p_259926_, E p_260016_, long p_259089_);
+    boolean tryStart(ServerLevel level, E body, long timestamp);
 
-    void doStop(ServerLevel p_259056_, E p_259620_, long p_260105_);
+    void tickOrStop(ServerLevel level, E body, long timestamp);
+
+    void doStop(ServerLevel level, E body, long timestamp);
 
     String debugString();
 }

@@ -15,40 +15,40 @@ import net.minecraft.server.packs.repository.Pack;
 import net.minecraft.server.packs.repository.PackCompatibility;
 import net.minecraft.server.packs.repository.PackRepository;
 import net.minecraft.server.packs.repository.PackSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class PackSelectionModel {
     private final PackRepository repository;
-    final List<Pack> selected;
-    final List<Pack> unselected;
-    final Function<Pack, Identifier> iconGetter;
-    final Consumer<PackSelectionModel.EntryBase> onListChanged;
+    private final List<Pack> selected;
+    private final List<Pack> unselected;
+    private final Function<Pack, Identifier> iconGetter;
+    private final Consumer<PackSelectionModel.EntryBase> onListChanged;
     private final Consumer<PackRepository> output;
 
     public PackSelectionModel(
-        Consumer<PackSelectionModel.EntryBase> p_99912_, Function<Pack, Identifier> p_99910_, PackRepository p_99911_, Consumer<PackRepository> p_431496_
+        final Consumer<PackSelectionModel.EntryBase> onListChanged,
+        final Function<Pack, Identifier> iconGetter,
+        final PackRepository repository,
+        final Consumer<PackRepository> output
     ) {
-        this.onListChanged = p_99912_;
-        this.iconGetter = p_99910_;
-        this.repository = p_99911_;
-        this.selected = Lists.newArrayList(p_99911_.getSelectedPacks());
+        this.onListChanged = onListChanged;
+        this.iconGetter = iconGetter;
+        this.repository = repository;
+        this.selected = Lists.newArrayList(repository.getSelectedPacks());
         Collections.reverse(this.selected);
-        this.unselected = Lists.newArrayList(p_99911_.getAvailablePacks());
+        this.unselected = Lists.newArrayList(repository.getAvailablePacks());
         this.unselected.removeAll(this.selected);
-        this.output = p_431496_;
+        this.output = output;
     }
 
     public Stream<PackSelectionModel.Entry> getUnselected() {
-        return this.unselected.stream().map(p_99920_ -> new PackSelectionModel.UnselectedPackEntry(p_99920_));
+        return this.unselected.stream().map(x$0 -> new PackSelectionModel.UnselectedPackEntry(x$0));
     }
 
     public Stream<PackSelectionModel.Entry> getSelected() {
-        return this.selected.stream().map(p_99915_ -> new PackSelectionModel.SelectedPackEntry(p_99915_));
+        return this.selected.stream().map(x$0 -> new PackSelectionModel.SelectedPackEntry(x$0));
     }
 
-    void updateRepoSelectedList() {
+    private void updateRepoSelectedList() {
         this.repository.setSelected(Lists.reverse(this.selected).stream().map(Pack::getId).collect(ImmutableList.toImmutableList()));
     }
 
@@ -65,8 +65,7 @@ public class PackSelectionModel {
         this.unselected.removeAll(this.selected);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Entry {
+        public interface Entry {
         Identifier getIconTexture();
 
         PackCompatibility getCompatibility();
@@ -110,12 +109,11 @@ public class PackSelectionModel {
         boolean canMoveDown();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public abstract class EntryBase implements PackSelectionModel.Entry {
+        public abstract class EntryBase implements PackSelectionModel.Entry {
         private final Pack pack;
 
-        public EntryBase(final Pack p_99936_) {
-            this.pack = p_99936_;
+        public EntryBase(final Pack pack) {
+            this.pack = pack;
         }
 
         protected abstract List<Pack> getSelfList();
@@ -172,24 +170,24 @@ public class PackSelectionModel {
 
         private void updateHighContrastOptionInstance() {
             if (this.pack.getId().equals("high_contrast")) {
-                OptionInstance<Boolean> optioninstance = Minecraft.getInstance().options.highContrast();
-                optioninstance.set(!optioninstance.get());
+                OptionInstance<Boolean> highContrastMode = Minecraft.getInstance().options.highContrast();
+                highContrastMode.set(!highContrastMode.get());
             }
         }
 
-        protected void move(int p_99939_) {
+        protected void move(final int direction) {
             List<Pack> list = this.getSelfList();
-            int i = list.indexOf(this.pack);
-            list.remove(i);
-            list.add(i + p_99939_, this.pack);
+            int currentPos = list.indexOf(this.pack);
+            list.remove(currentPos);
+            list.add(currentPos + direction, this.pack);
             PackSelectionModel.this.onListChanged.accept(this);
         }
 
         @Override
         public boolean canMoveUp() {
             List<Pack> list = this.getSelfList();
-            int i = list.indexOf(this.pack);
-            return i > 0 && !list.get(i - 1).isFixedPosition();
+            int index = list.indexOf(this.pack);
+            return index > 0 && !list.get(index - 1).isFixedPosition();
         }
 
         @Override
@@ -200,8 +198,8 @@ public class PackSelectionModel {
         @Override
         public boolean canMoveDown() {
             List<Pack> list = this.getSelfList();
-            int i = list.indexOf(this.pack);
-            return i >= 0 && i < list.size() - 1 && !list.get(i + 1).isFixedPosition();
+            int index = list.indexOf(this.pack);
+            return index >= 0 && index < list.size() - 1 && !list.get(index + 1).isFixedPosition();
         }
 
         @Override
@@ -210,10 +208,9 @@ public class PackSelectionModel {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class SelectedPackEntry extends PackSelectionModel.EntryBase {
-        public SelectedPackEntry(final Pack p_99954_) {
-            super(p_99954_);
+        private class SelectedPackEntry extends PackSelectionModel.EntryBase {
+        public SelectedPackEntry(final Pack pack) {
+            super(pack);
         }
 
         @Override
@@ -241,10 +238,9 @@ public class PackSelectionModel {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class UnselectedPackEntry extends PackSelectionModel.EntryBase {
-        public UnselectedPackEntry(final Pack p_99963_) {
-            super(p_99963_);
+        private class UnselectedPackEntry extends PackSelectionModel.EntryBase {
+        public UnselectedPackEntry(final Pack pack) {
+            super(pack);
         }
 
         @Override

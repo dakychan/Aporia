@@ -12,10 +12,10 @@ import org.slf4j.Logger;
 public class DedicatedPlayerList extends PlayerList {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public DedicatedPlayerList(DedicatedServer p_203709_, LayeredRegistryAccess<RegistryLayer> p_251851_, PlayerDataStorage p_203711_) {
-        super(p_203709_, p_251851_, p_203711_, p_203709_.notificationManager());
-        this.setViewDistance(p_203709_.viewDistance());
-        this.setSimulationDistance(p_203709_.simulationDistance());
+    public DedicatedPlayerList(final DedicatedServer server, final LayeredRegistryAccess<RegistryLayer> registries, final PlayerDataStorage playerDataStorage) {
+        super(server, registries, playerDataStorage, server.notificationManager());
+        this.setViewDistance(server.viewDistance());
+        this.setSimulationDistance(server.simulationDistance());
         this.loadUserBanList();
         this.saveUserBanList();
         this.loadIpBanList();
@@ -36,70 +36,70 @@ public class DedicatedPlayerList extends PlayerList {
     private void saveIpBanList() {
         try {
             this.getIpBans().save();
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to save ip banlist: ", (Throwable)ioexception);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to save ip banlist: ", e);
         }
     }
 
     private void saveUserBanList() {
         try {
             this.getBans().save();
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to save user banlist: ", (Throwable)ioexception);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to save user banlist: ", e);
         }
     }
 
     private void loadIpBanList() {
         try {
             this.getIpBans().load();
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to load ip banlist: ", (Throwable)ioexception);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to load ip banlist: ", e);
         }
     }
 
     private void loadUserBanList() {
         try {
             this.getBans().load();
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to load user banlist: ", (Throwable)ioexception);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to load user banlist: ", e);
         }
     }
 
     private void loadOps() {
         try {
             this.getOps().load();
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to load operators list: ", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to load operators list: ", e);
         }
     }
 
     private void saveOps() {
         try {
             this.getOps().save();
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to save operators list: ", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to save operators list: ", e);
         }
     }
 
     private void loadWhiteList() {
         try {
             this.getWhiteList().load();
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to load white-list: ", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to load white-list: ", e);
         }
     }
 
     private void saveWhiteList() {
         try {
             this.getWhiteList().save();
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to save white-list: ", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to save white-list: ", e);
         }
     }
 
     @Override
-    public boolean isWhiteListed(NameAndId p_425587_) {
-        return !this.isUsingWhitelist() || this.isOp(p_425587_) || this.getWhiteList().isWhiteListed(p_425587_);
+    public boolean isWhiteListed(final NameAndId nameAndId) {
+        return !this.isUsingWhitelist() || this.isOp(nameAndId) || this.getWhiteList().isWhiteListed(nameAndId);
     }
 
     public DedicatedServer getServer() {
@@ -107,7 +107,7 @@ public class DedicatedPlayerList extends PlayerList {
     }
 
     @Override
-    public boolean canBypassPlayerLimit(NameAndId p_423426_) {
-        return this.getOps().canBypassPlayerLimit(p_423426_);
+    public boolean canBypassPlayerLimit(final NameAndId nameAndId) {
+        return this.getOps().canBypassPlayerLimit(nameAndId);
     }
 }

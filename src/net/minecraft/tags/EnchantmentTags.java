@@ -34,15 +34,8 @@ public interface EnchantmentTags {
     TagKey<Enchantment> TRADES_SNOW_COMMON = create("trades/snow_common");
     TagKey<Enchantment> TRADES_SWAMP_COMMON = create("trades/swamp_common");
     TagKey<Enchantment> TRADES_TAIGA_COMMON = create("trades/taiga_common");
-    TagKey<Enchantment> TRADES_DESERT_SPECIAL = create("trades/desert_special");
-    TagKey<Enchantment> TRADES_JUNGLE_SPECIAL = create("trades/jungle_special");
-    TagKey<Enchantment> TRADES_PLAINS_SPECIAL = create("trades/plains_special");
-    TagKey<Enchantment> TRADES_SAVANNA_SPECIAL = create("trades/savanna_special");
-    TagKey<Enchantment> TRADES_SNOW_SPECIAL = create("trades/snow_special");
-    TagKey<Enchantment> TRADES_SWAMP_SPECIAL = create("trades/swamp_special");
-    TagKey<Enchantment> TRADES_TAIGA_SPECIAL = create("trades/taiga_special");
 
-    private static TagKey<Enchantment> create(String p_334094_) {
-        return TagKey.create(Registries.ENCHANTMENT, Identifier.withDefaultNamespace(p_334094_));
+    private static TagKey<Enchantment> create(final String name) {
+        return TagKey.create(Registries.ENCHANTMENT, Identifier.withDefaultNamespace(name));
     }
 }

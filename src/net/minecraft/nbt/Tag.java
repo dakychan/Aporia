@@ -24,7 +24,7 @@ public sealed interface Tag permits CompoundTag, CollectionTag, PrimitiveTag, En
     byte TAG_LONG_ARRAY = 12;
     int MAX_DEPTH = 512;
 
-    void write(DataOutput p_129329_) throws IOException;
+    void write(DataOutput output) throws IOException;
 
     @Override
     String toString();
@@ -37,14 +37,14 @@ public sealed interface Tag permits CompoundTag, CollectionTag, PrimitiveTag, En
 
     int sizeInBytes();
 
-    void accept(TagVisitor p_178208_);
+    void accept(TagVisitor visitor);
 
-    StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197572_);
+    StreamTagVisitor.ValueResult accept(StreamTagVisitor visitor);
 
-    default void acceptAsRoot(StreamTagVisitor p_197574_) {
-        StreamTagVisitor.ValueResult streamtagvisitor$valueresult = p_197574_.visitRootEntry(this.getType());
-        if (streamtagvisitor$valueresult == StreamTagVisitor.ValueResult.CONTINUE) {
-            this.accept(p_197574_);
+    default void acceptAsRoot(final StreamTagVisitor output) {
+        StreamTagVisitor.ValueResult entryResult = output.visitRootEntry(this.getType());
+        if (entryResult == StreamTagVisitor.ValueResult.CONTINUE) {
+            this.accept(output);
         }
     }
 
@@ -81,7 +81,7 @@ public sealed interface Tag permits CompoundTag, CollectionTag, PrimitiveTag, En
     }
 
     default Optional<Boolean> asBoolean() {
-        return this.asByte().map(p_395480_ -> p_395480_ != 0);
+        return this.asByte().map(b -> b != 0);
     }
 
     default Optional<byte[]> asByteArray() {

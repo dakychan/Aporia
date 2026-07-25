@@ -17,6 +17,7 @@ import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
 import net.minecraft.network.protocol.game.ServerboundInteractPacket
 import net.minecraft.world.InteractionHand
+import net.minecraft.world.phys.Vec3
 import so.aporia.utils.imports.*
 import so.aporia.utils.math.Angle
 import so.aporia.utils.math.Prediction
@@ -75,7 +76,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
             .value("Smooth", "Snap", "HVH", "Matrix", "Vulcan", "Grim", "NCP", "Intave").selected("Smooth")
         rotationSpeed = SliderSetting(lm.get("module.aura.rotation_speed"), lm.get("module.aura.rotation_speed.desc"), 90.0, 5.0, 180.0, 1.0)
         range = SliderSetting(lm.get("module.aura.range"), lm.get("module.aura.range.desc"), 3.5, 1.0, 6.0, 0.1)
-        fov = SliderSetting(lm.get("module.aura.fov"), lm.get("module.aura.fov.desc"), 180.0, 30.0, 180.0, 5.0)
+        fov = SliderSetting(lm.get("module.aura.fov"), lm.get("module.aura.fov.desc"), 180.0, 30.0, 360.0, 5.0)
         minCps = SliderSetting(lm.get("module.aura.min_cps"), lm.get("module.aura.min_cps.desc"), 8.0, 1.0, 20.0, 1.0)
         maxCps = SliderSetting(lm.get("module.aura.max_cps"), lm.get("module.aura.max_cps.desc"), 12.0, 1.0, 20.0, 1.0)
         manualCooldown = SliderSetting("Manual Cooldown", "cooldown for 1.9+ in seconds", 0.85, 0.1, 1.0, 0.01)
@@ -164,7 +165,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
         lockedTarget = target
         val speed = if (isHvhMode()) 180f else rotationSpeed.getFloat()
         RotationUtil.update(target, speed)
-        if (canAttack() && (isHvhMode() || RotationUtil.isOnTarget(6f))) {
+        if (canAttack() && (isHvhMode() || RotationUtil.isOnTarget(15f))) {
             if (isHvhMode() || Math.random() * 100 < hitChance.getFloat()) {
                 attackTarget(target)
             }
@@ -198,7 +199,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
 
     private fun doAttack(target: Entity) {
         val player = mc.player!!
-        player.connection.send(ServerboundInteractPacket.createAttackPacket(target, player.isShiftKeyDown()))
+        player.connection.send(ServerboundInteractPacket(target.id, InteractionHand.MAIN_HAND, Vec3(target.x, target.y, target.z), false))
         player.attack(target)
         player.swing(InteractionHand.MAIN_HAND)
         player.resetAttackStrengthTicker()
@@ -219,7 +220,6 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
     }
 
     private fun canAttack(): Boolean {
-        if (mc.player!!.swingTime > 0) return false
         if (combatMode.isSelected("1.8")) {
             val now = System.currentTimeMillis()
             if (now - lastAttackTime < nextAttackDelay) return false
@@ -228,20 +228,19 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
         val weaponCooldown = mc.player!!.getAttackStrengthScale(0.5f)
         if (shouldCrit()) {
             if (!mc.player!!.onGround()) {
-                return weaponCooldown >= 0.95f && mc.player!!.fallDistance > 0.08f
+                return weaponCooldown >= 0.90f && mc.player!!.fallDistance > 0.08f
             }
-            return weaponCooldown >= 0.92f
+            return weaponCooldown >= 0.85f
         }
         if (onlyCriticals.isEnabled) {
             val p = mc.player!!
             if (p.onGround() || p.fallDistance <= 0.0f) return false
             if (p.isSprinting() || p.onClimbable() || p.isInWater() || p.isMobilityRestricted() || p.isPassenger()) return false
             if (lockedTarget !is LivingEntity) return false
-            return weaponCooldown >= 0.92f
+            return weaponCooldown >= 0.85f
         }
 
-        val minMs = (manualCooldown.getFloat() * 1000.0).toLong()
-        return System.currentTimeMillis() - lastAttackTime >= minMs && weaponCooldown >= 0.85f
+        return weaponCooldown >= 0.80f
     }
 
     private fun getRandomDelay(): Long {
@@ -265,7 +264,7 @@ class Aura : Module("Aura", Category.COMBAT, -1) {
     }
 
     private fun isInFov(target: Entity): Boolean {
-        if (fov.getFloat() >= 180.0f) return true
+        if (fov.getFloat() >= 360.0f) return true
         val diff = target.getEyePosition(1.0f).subtract(mc.player!!.getEyePosition(1.0f))
         val targetYaw = Angle.calculateFromDiff(diff)[0]
         val playerYaw = if (RotationUtil.isActive()) RotationUtil.getServerYaw() else mc.player!!.yRot

@@ -5,7 +5,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
@@ -26,21 +25,21 @@ public class ChunkStatusFix2 extends DataFix {
         .put("fullchunk", "full")
         .build();
 
-    public ChunkStatusFix2(Schema p_15258_, boolean p_15259_) {
-        super(p_15258_, p_15259_);
+    public ChunkStatusFix2(final Schema schema, final boolean changesType) {
+        super(schema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        Type<?> type1 = type.findFieldType("Level");
-        OpticFinder<?> opticfinder = DSL.fieldFinder("Level", type1);
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        Type<?> levelType = chunkType.findFieldType("Level");
+        OpticFinder<?> levelF = DSL.fieldFinder("Level", levelType);
         return this.fixTypeEverywhereTyped(
-            "ChunkStatusFix2", type, this.getOutputSchema().getType(References.CHUNK), p_15262_ -> p_15262_.updateTyped(opticfinder, p_145232_ -> {
-                Dynamic<?> dynamic = p_145232_.get(DSL.remainderFinder());
-                String s = dynamic.get("Status").asString("empty");
-                String s1 = RENAMES_AND_DOWNGRADES.getOrDefault(s, "empty");
-                return Objects.equals(s, s1) ? p_145232_ : p_145232_.set(DSL.remainderFinder(), dynamic.set("Status", dynamic.createString(s1)));
+            "ChunkStatusFix2", chunkType, this.getOutputSchema().getType(References.CHUNK), input -> input.updateTyped(levelF, level -> {
+                Dynamic<?> tag = level.get(DSL.remainderFinder());
+                String status = tag.get("Status").asString("empty");
+                String newStatus = RENAMES_AND_DOWNGRADES.getOrDefault(status, "empty");
+                return Objects.equals(status, newStatus) ? level : level.set(DSL.remainderFinder(), tag.set("Status", tag.createString(newStatus)));
             })
         );
     }

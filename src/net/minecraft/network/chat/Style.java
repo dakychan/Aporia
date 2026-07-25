@@ -3,7 +3,6 @@ package net.minecraft.network.chat;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.ChatFormatting;
@@ -16,71 +15,71 @@ import org.jspecify.annotations.Nullable;
 public final class Style {
     public static final Style EMPTY = new Style(null, null, null, null, null, null, null, null, null, null, null);
     public static final int NO_SHADOW = 0;
-    final @Nullable TextColor color;
-    final @Nullable Integer shadowColor;
-    final @Nullable Boolean bold;
-    final @Nullable Boolean italic;
-    final @Nullable Boolean underlined;
-    final @Nullable Boolean strikethrough;
-    final @Nullable Boolean obfuscated;
-    final @Nullable ClickEvent clickEvent;
-    final @Nullable HoverEvent hoverEvent;
-    final @Nullable String insertion;
-    final @Nullable FontDescription font;
+    private final @Nullable TextColor color;
+    private final @Nullable Integer shadowColor;
+    private final @Nullable Boolean bold;
+    private final @Nullable Boolean italic;
+    private final @Nullable Boolean underlined;
+    private final @Nullable Boolean strikethrough;
+    private final @Nullable Boolean obfuscated;
+    private final @Nullable ClickEvent clickEvent;
+    private final @Nullable HoverEvent hoverEvent;
+    private final @Nullable String insertion;
+    private final @Nullable FontDescription font;
 
     private static Style create(
-        Optional<TextColor> p_237258_,
-        Optional<Integer> p_237259_,
-        Optional<Boolean> p_237260_,
-        Optional<Boolean> p_237261_,
-        Optional<Boolean> p_237262_,
-        Optional<Boolean> p_237263_,
-        Optional<Boolean> p_237264_,
-        Optional<ClickEvent> p_237265_,
-        Optional<HoverEvent> p_311416_,
-        Optional<String> p_312643_,
-        Optional<FontDescription> p_377285_
+        final Optional<TextColor> color,
+        final Optional<Integer> shadowColor,
+        final Optional<Boolean> bold,
+        final Optional<Boolean> italic,
+        final Optional<Boolean> underlined,
+        final Optional<Boolean> strikethrough,
+        final Optional<Boolean> obfuscated,
+        final Optional<ClickEvent> clickEvent,
+        final Optional<HoverEvent> hoverEvent,
+        final Optional<String> insertion,
+        final Optional<FontDescription> font
     ) {
-        Style style = new Style(
-            p_237258_.orElse(null),
-            p_237259_.orElse(null),
-            p_237260_.orElse(null),
-            p_237261_.orElse(null),
-            p_237262_.orElse(null),
-            p_237263_.orElse(null),
-            p_237264_.orElse(null),
-            p_237265_.orElse(null),
-            p_311416_.orElse(null),
-            p_312643_.orElse(null),
-            p_377285_.orElse(null)
+        Style result = new Style(
+            color.orElse(null),
+            shadowColor.orElse(null),
+            bold.orElse(null),
+            italic.orElse(null),
+            underlined.orElse(null),
+            strikethrough.orElse(null),
+            obfuscated.orElse(null),
+            clickEvent.orElse(null),
+            hoverEvent.orElse(null),
+            insertion.orElse(null),
+            font.orElse(null)
         );
-        return style.equals(EMPTY) ? EMPTY : style;
+        return result.equals(EMPTY) ? EMPTY : result;
     }
 
     private Style(
-        @Nullable TextColor p_131113_,
-        @Nullable Integer p_377243_,
-        @Nullable Boolean p_131114_,
-        @Nullable Boolean p_131115_,
-        @Nullable Boolean p_131116_,
-        @Nullable Boolean p_131117_,
-        @Nullable Boolean p_131118_,
-        @Nullable ClickEvent p_131119_,
-        @Nullable HoverEvent p_131120_,
-        @Nullable String p_131121_,
-        @Nullable FontDescription p_425653_
+        final @Nullable TextColor color,
+        final @Nullable Integer shadowColor,
+        final @Nullable Boolean bold,
+        final @Nullable Boolean italic,
+        final @Nullable Boolean underlined,
+        final @Nullable Boolean strikethrough,
+        final @Nullable Boolean obfuscated,
+        final @Nullable ClickEvent clickEvent,
+        final @Nullable HoverEvent hoverEvent,
+        final @Nullable String insertion,
+        final @Nullable FontDescription font
     ) {
-        this.color = p_131113_;
-        this.shadowColor = p_377243_;
-        this.bold = p_131114_;
-        this.italic = p_131115_;
-        this.underlined = p_131116_;
-        this.strikethrough = p_131117_;
-        this.obfuscated = p_131118_;
-        this.clickEvent = p_131119_;
-        this.hoverEvent = p_131120_;
-        this.insertion = p_131121_;
-        this.font = p_425653_;
+        this.color = color;
+        this.shadowColor = shadowColor;
+        this.bold = bold;
+        this.italic = italic;
+        this.underlined = underlined;
+        this.strikethrough = strikethrough;
+        this.obfuscated = obfuscated;
+        this.clickEvent = clickEvent;
+        this.hoverEvent = hoverEvent;
+        this.insertion = insertion;
+        this.font = font;
     }
 
     public @Nullable TextColor getColor() {
@@ -128,19 +127,19 @@ public final class Style {
     }
 
     public FontDescription getFont() {
-        return (FontDescription)(this.font != null ? this.font : FontDescription.DEFAULT);
+        return this.font != null ? this.font : FontDescription.DEFAULT;
     }
 
-    private static <T> Style checkEmptyAfterChange(Style p_310345_, @Nullable T p_309931_, @Nullable T p_310845_) {
-        return p_309931_ != null && p_310845_ == null && p_310345_.equals(EMPTY) ? EMPTY : p_310345_;
+    private static <T> Style checkEmptyAfterChange(final Style newStyle, final @Nullable T previous, final @Nullable T next) {
+        return previous != null && next == null && newStyle.equals(EMPTY) ? EMPTY : newStyle;
     }
 
-    public Style withColor(@Nullable TextColor p_131149_) {
-        return Objects.equals(this.color, p_131149_)
+    public Style withColor(final @Nullable TextColor color) {
+        return Objects.equals(this.color, color)
             ? this
             : checkEmptyAfterChange(
                 new Style(
-                    p_131149_,
+                    color,
                     this.shadowColor,
                     this.bold,
                     this.italic,
@@ -153,25 +152,25 @@ public final class Style {
                     this.font
                 ),
                 this.color,
-                p_131149_
+                color
             );
     }
 
-    public Style withColor(@Nullable ChatFormatting p_131141_) {
-        return this.withColor(p_131141_ != null ? TextColor.fromLegacyFormat(p_131141_) : null);
+    public Style withColor(final @Nullable ChatFormatting color) {
+        return this.withColor(color != null ? TextColor.fromLegacyFormat(color) : null);
     }
 
-    public Style withColor(int p_178521_) {
-        return this.withColor(TextColor.fromRgb(p_178521_));
+    public Style withColor(final int color) {
+        return this.withColor(TextColor.fromRgb(color));
     }
 
-    public Style withShadowColor(int p_378316_) {
-        return Objects.equals(this.shadowColor, p_378316_)
+    public Style withShadowColor(final int shadowColor) {
+        return Objects.equals(this.shadowColor, shadowColor)
             ? this
             : checkEmptyAfterChange(
                 new Style(
                     this.color,
-                    p_378316_,
+                    shadowColor,
                     this.bold,
                     this.italic,
                     this.underlined,
@@ -183,7 +182,7 @@ public final class Style {
                     this.font
                 ),
                 this.shadowColor,
-                p_378316_
+                shadowColor
             );
     }
 
@@ -191,14 +190,14 @@ public final class Style {
         return this.withShadowColor(0);
     }
 
-    public Style withBold(@Nullable Boolean p_131137_) {
-        return Objects.equals(this.bold, p_131137_)
+    public Style withBold(final @Nullable Boolean bold) {
+        return Objects.equals(this.bold, bold)
             ? this
             : checkEmptyAfterChange(
                 new Style(
                     this.color,
                     this.shadowColor,
-                    p_131137_,
+                    bold,
                     this.italic,
                     this.underlined,
                     this.strikethrough,
@@ -209,19 +208,19 @@ public final class Style {
                     this.font
                 ),
                 this.bold,
-                p_131137_
+                bold
             );
     }
 
-    public Style withItalic(@Nullable Boolean p_131156_) {
-        return Objects.equals(this.italic, p_131156_)
+    public Style withItalic(final @Nullable Boolean italic) {
+        return Objects.equals(this.italic, italic)
             ? this
             : checkEmptyAfterChange(
                 new Style(
                     this.color,
                     this.shadowColor,
                     this.bold,
-                    p_131156_,
+                    italic,
                     this.underlined,
                     this.strikethrough,
                     this.obfuscated,
@@ -231,12 +230,12 @@ public final class Style {
                     this.font
                 ),
                 this.italic,
-                p_131156_
+                italic
             );
     }
 
-    public Style withUnderlined(@Nullable Boolean p_131163_) {
-        return Objects.equals(this.underlined, p_131163_)
+    public Style withUnderlined(final @Nullable Boolean underlined) {
+        return Objects.equals(this.underlined, underlined)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -244,7 +243,7 @@ public final class Style {
                     this.shadowColor,
                     this.bold,
                     this.italic,
-                    p_131163_,
+                    underlined,
                     this.strikethrough,
                     this.obfuscated,
                     this.clickEvent,
@@ -253,12 +252,12 @@ public final class Style {
                     this.font
                 ),
                 this.underlined,
-                p_131163_
+                underlined
             );
     }
 
-    public Style withStrikethrough(@Nullable Boolean p_178523_) {
-        return Objects.equals(this.strikethrough, p_178523_)
+    public Style withStrikethrough(final @Nullable Boolean strikethrough) {
+        return Objects.equals(this.strikethrough, strikethrough)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -267,7 +266,7 @@ public final class Style {
                     this.bold,
                     this.italic,
                     this.underlined,
-                    p_178523_,
+                    strikethrough,
                     this.obfuscated,
                     this.clickEvent,
                     this.hoverEvent,
@@ -275,12 +274,12 @@ public final class Style {
                     this.font
                 ),
                 this.strikethrough,
-                p_178523_
+                strikethrough
             );
     }
 
-    public Style withObfuscated(@Nullable Boolean p_178525_) {
-        return Objects.equals(this.obfuscated, p_178525_)
+    public Style withObfuscated(final @Nullable Boolean obfuscated) {
+        return Objects.equals(this.obfuscated, obfuscated)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -290,19 +289,19 @@ public final class Style {
                     this.italic,
                     this.underlined,
                     this.strikethrough,
-                    p_178525_,
+                    obfuscated,
                     this.clickEvent,
                     this.hoverEvent,
                     this.insertion,
                     this.font
                 ),
                 this.obfuscated,
-                p_178525_
+                obfuscated
             );
     }
 
-    public Style withClickEvent(@Nullable ClickEvent p_131143_) {
-        return Objects.equals(this.clickEvent, p_131143_)
+    public Style withClickEvent(final @Nullable ClickEvent clickEvent) {
+        return Objects.equals(this.clickEvent, clickEvent)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -313,18 +312,18 @@ public final class Style {
                     this.underlined,
                     this.strikethrough,
                     this.obfuscated,
-                    p_131143_,
+                    clickEvent,
                     this.hoverEvent,
                     this.insertion,
                     this.font
                 ),
                 this.clickEvent,
-                p_131143_
+                clickEvent
             );
     }
 
-    public Style withHoverEvent(@Nullable HoverEvent p_131145_) {
-        return Objects.equals(this.hoverEvent, p_131145_)
+    public Style withHoverEvent(final @Nullable HoverEvent hoverEvent) {
+        return Objects.equals(this.hoverEvent, hoverEvent)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -336,17 +335,17 @@ public final class Style {
                     this.strikethrough,
                     this.obfuscated,
                     this.clickEvent,
-                    p_131145_,
+                    hoverEvent,
                     this.insertion,
                     this.font
                 ),
                 this.hoverEvent,
-                p_131145_
+                hoverEvent
             );
     }
 
-    public Style withInsertion(@Nullable String p_131139_) {
-        return Objects.equals(this.insertion, p_131139_)
+    public Style withInsertion(final @Nullable String insertion) {
+        return Objects.equals(this.insertion, insertion)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -359,16 +358,16 @@ public final class Style {
                     this.obfuscated,
                     this.clickEvent,
                     this.hoverEvent,
-                    p_131139_,
+                    insertion,
                     this.font
                 ),
                 this.insertion,
-                p_131139_
+                insertion
             );
     }
 
-    public Style withFont(@Nullable FontDescription p_428403_) {
-        return Objects.equals(this.font, p_428403_)
+    public Style withFont(final @Nullable FontDescription font) {
+        return Objects.equals(this.font, font)
             ? this
             : checkEmptyAfterChange(
                 new Style(
@@ -382,197 +381,203 @@ public final class Style {
                     this.clickEvent,
                     this.hoverEvent,
                     this.insertion,
-                    p_428403_
+                    font
                 ),
                 this.font,
-                p_428403_
+                font
             );
     }
 
-    public Style applyFormat(ChatFormatting p_131158_) {
-        TextColor textcolor = this.color;
-        Boolean obool = this.bold;
-        Boolean obool1 = this.italic;
-        Boolean obool2 = this.strikethrough;
-        Boolean obool3 = this.underlined;
-        Boolean obool4 = this.obfuscated;
-        switch (p_131158_) {
+    public Style applyFormat(final ChatFormatting format) {
+        TextColor color = this.color;
+        Boolean bold = this.bold;
+        Boolean italic = this.italic;
+        Boolean strikethrough = this.strikethrough;
+        Boolean underlined = this.underlined;
+        Boolean obfuscated = this.obfuscated;
+        switch (format) {
             case OBFUSCATED:
-                obool4 = true;
+                obfuscated = true;
                 break;
             case BOLD:
-                obool = true;
+                bold = true;
                 break;
             case STRIKETHROUGH:
-                obool2 = true;
+                strikethrough = true;
                 break;
             case UNDERLINE:
-                obool3 = true;
+                underlined = true;
                 break;
             case ITALIC:
-                obool1 = true;
+                italic = true;
                 break;
             case RESET:
                 return EMPTY;
             default:
-                textcolor = TextColor.fromLegacyFormat(p_131158_);
+                color = TextColor.fromLegacyFormat(format);
         }
 
-        return new Style(textcolor, this.shadowColor, obool, obool1, obool3, obool2, obool4, this.clickEvent, this.hoverEvent, this.insertion, this.font);
+        return new Style(
+            color, this.shadowColor, bold, italic, underlined, strikethrough, obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font
+        );
     }
 
-    public Style applyLegacyFormat(ChatFormatting p_131165_) {
-        TextColor textcolor = this.color;
-        Boolean obool = this.bold;
-        Boolean obool1 = this.italic;
-        Boolean obool2 = this.strikethrough;
-        Boolean obool3 = this.underlined;
-        Boolean obool4 = this.obfuscated;
-        switch (p_131165_) {
+    public Style applyLegacyFormat(final ChatFormatting format) {
+        TextColor color = this.color;
+        Boolean bold = this.bold;
+        Boolean italic = this.italic;
+        Boolean strikethrough = this.strikethrough;
+        Boolean underlined = this.underlined;
+        Boolean obfuscated = this.obfuscated;
+        switch (format) {
             case OBFUSCATED:
-                obool4 = true;
+                obfuscated = true;
                 break;
             case BOLD:
-                obool = true;
+                bold = true;
                 break;
             case STRIKETHROUGH:
-                obool2 = true;
+                strikethrough = true;
                 break;
             case UNDERLINE:
-                obool3 = true;
+                underlined = true;
                 break;
             case ITALIC:
-                obool1 = true;
+                italic = true;
                 break;
             case RESET:
                 return EMPTY;
             default:
-                obool4 = false;
-                obool = false;
-                obool2 = false;
-                obool3 = false;
-                obool1 = false;
-                textcolor = TextColor.fromLegacyFormat(p_131165_);
+                obfuscated = false;
+                bold = false;
+                strikethrough = false;
+                underlined = false;
+                italic = false;
+                color = TextColor.fromLegacyFormat(format);
         }
 
-        return new Style(textcolor, this.shadowColor, obool, obool1, obool3, obool2, obool4, this.clickEvent, this.hoverEvent, this.insertion, this.font);
+        return new Style(
+            color, this.shadowColor, bold, italic, underlined, strikethrough, obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font
+        );
     }
 
-    public Style applyFormats(ChatFormatting... p_131153_) {
-        TextColor textcolor = this.color;
-        Boolean obool = this.bold;
-        Boolean obool1 = this.italic;
-        Boolean obool2 = this.strikethrough;
-        Boolean obool3 = this.underlined;
-        Boolean obool4 = this.obfuscated;
+    public Style applyFormats(final ChatFormatting... formats) {
+        TextColor color = this.color;
+        Boolean bold = this.bold;
+        Boolean italic = this.italic;
+        Boolean strikethrough = this.strikethrough;
+        Boolean underlined = this.underlined;
+        Boolean obfuscated = this.obfuscated;
 
-        for (ChatFormatting chatformatting : p_131153_) {
-            switch (chatformatting) {
+        for (ChatFormatting format : formats) {
+            switch (format) {
                 case OBFUSCATED:
-                    obool4 = true;
+                    obfuscated = true;
                     break;
                 case BOLD:
-                    obool = true;
+                    bold = true;
                     break;
                 case STRIKETHROUGH:
-                    obool2 = true;
+                    strikethrough = true;
                     break;
                 case UNDERLINE:
-                    obool3 = true;
+                    underlined = true;
                     break;
                 case ITALIC:
-                    obool1 = true;
+                    italic = true;
                     break;
                 case RESET:
                     return EMPTY;
                 default:
-                    textcolor = TextColor.fromLegacyFormat(chatformatting);
+                    color = TextColor.fromLegacyFormat(format);
             }
         }
 
-        return new Style(textcolor, this.shadowColor, obool, obool1, obool3, obool2, obool4, this.clickEvent, this.hoverEvent, this.insertion, this.font);
+        return new Style(
+            color, this.shadowColor, bold, italic, underlined, strikethrough, obfuscated, this.clickEvent, this.hoverEvent, this.insertion, this.font
+        );
     }
 
-    public Style applyTo(Style p_131147_) {
+    public Style applyTo(final Style other) {
         if (this == EMPTY) {
-            return p_131147_;
+            return other;
         } else {
-            return p_131147_ == EMPTY
+            return other == EMPTY
                 ? this
                 : new Style(
-                    this.color != null ? this.color : p_131147_.color,
-                    this.shadowColor != null ? this.shadowColor : p_131147_.shadowColor,
-                    this.bold != null ? this.bold : p_131147_.bold,
-                    this.italic != null ? this.italic : p_131147_.italic,
-                    this.underlined != null ? this.underlined : p_131147_.underlined,
-                    this.strikethrough != null ? this.strikethrough : p_131147_.strikethrough,
-                    this.obfuscated != null ? this.obfuscated : p_131147_.obfuscated,
-                    this.clickEvent != null ? this.clickEvent : p_131147_.clickEvent,
-                    this.hoverEvent != null ? this.hoverEvent : p_131147_.hoverEvent,
-                    this.insertion != null ? this.insertion : p_131147_.insertion,
-                    this.font != null ? this.font : p_131147_.font
+                    this.color != null ? this.color : other.color,
+                    this.shadowColor != null ? this.shadowColor : other.shadowColor,
+                    this.bold != null ? this.bold : other.bold,
+                    this.italic != null ? this.italic : other.italic,
+                    this.underlined != null ? this.underlined : other.underlined,
+                    this.strikethrough != null ? this.strikethrough : other.strikethrough,
+                    this.obfuscated != null ? this.obfuscated : other.obfuscated,
+                    this.clickEvent != null ? this.clickEvent : other.clickEvent,
+                    this.hoverEvent != null ? this.hoverEvent : other.hoverEvent,
+                    this.insertion != null ? this.insertion : other.insertion,
+                    this.font != null ? this.font : other.font
                 );
         }
     }
 
     @Override
     public String toString() {
-        final StringBuilder stringbuilder = new StringBuilder("{");
+        final StringBuilder result = new StringBuilder("{");
 
         class Collector {
             private boolean isNotFirst;
 
             private void prependSeparator() {
                 if (this.isNotFirst) {
-                    stringbuilder.append(',');
+                    result.append(',');
                 }
 
                 this.isNotFirst = true;
             }
 
-            void addFlagString(String p_237290_, @Nullable Boolean p_237291_) {
-                if (p_237291_ != null) {
+            private void addFlagString(final String name, final @Nullable Boolean value) {
+                if (value != null) {
                     this.prependSeparator();
-                    if (!p_237291_) {
-                        stringbuilder.append('!');
+                    if (!value) {
+                        result.append('!');
                     }
 
-                    stringbuilder.append(p_237290_);
+                    result.append(name);
                 }
             }
 
-            void addValueString(String p_237293_, @Nullable Object p_237294_) {
-                if (p_237294_ != null) {
+            private void addValueString(final String name, final @Nullable Object value) {
+                if (value != null) {
                     this.prependSeparator();
-                    stringbuilder.append(p_237293_);
-                    stringbuilder.append('=');
-                    stringbuilder.append(p_237294_);
+                    result.append(name);
+                    result.append('=');
+                    result.append(value);
                 }
             }
         }
 
-        Collector style$1collector = new Collector();
-        style$1collector.addValueString("color", this.color);
-        style$1collector.addValueString("shadowColor", this.shadowColor);
-        style$1collector.addFlagString("bold", this.bold);
-        style$1collector.addFlagString("italic", this.italic);
-        style$1collector.addFlagString("underlined", this.underlined);
-        style$1collector.addFlagString("strikethrough", this.strikethrough);
-        style$1collector.addFlagString("obfuscated", this.obfuscated);
-        style$1collector.addValueString("clickEvent", this.clickEvent);
-        style$1collector.addValueString("hoverEvent", this.hoverEvent);
-        style$1collector.addValueString("insertion", this.insertion);
-        style$1collector.addValueString("font", this.font);
-        stringbuilder.append("}");
-        return stringbuilder.toString();
+        Collector collector = new Collector();
+        collector.addValueString("color", this.color);
+        collector.addValueString("shadowColor", this.shadowColor);
+        collector.addFlagString("bold", this.bold);
+        collector.addFlagString("italic", this.italic);
+        collector.addFlagString("underlined", this.underlined);
+        collector.addFlagString("strikethrough", this.strikethrough);
+        collector.addFlagString("obfuscated", this.obfuscated);
+        collector.addValueString("clickEvent", this.clickEvent);
+        collector.addValueString("hoverEvent", this.hoverEvent);
+        collector.addValueString("insertion", this.insertion);
+        collector.addValueString("font", this.font);
+        result.append("}");
+        return result.toString();
     }
 
     @Override
-    public boolean equals(Object p_131175_) {
-        if (this == p_131175_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return !(p_131175_ instanceof Style style)
+            return !(o instanceof Style style)
                 ? false
                 : this.bold == style.bold
                     && Objects.equals(this.getColor(), style.getColor())
@@ -606,20 +611,20 @@ public final class Style {
 
     public static class Serializer {
         public static final MapCodec<Style> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_374846_ -> p_374846_.group(
-                    TextColor.CODEC.optionalFieldOf("color").forGetter(p_311313_ -> Optional.ofNullable(p_311313_.color)),
-                    ExtraCodecs.ARGB_COLOR_CODEC.optionalFieldOf("shadow_color").forGetter(p_374845_ -> Optional.ofNullable(p_374845_.shadowColor)),
-                    Codec.BOOL.optionalFieldOf("bold").forGetter(p_310279_ -> Optional.ofNullable(p_310279_.bold)),
-                    Codec.BOOL.optionalFieldOf("italic").forGetter(p_310016_ -> Optional.ofNullable(p_310016_.italic)),
-                    Codec.BOOL.optionalFieldOf("underlined").forGetter(p_312012_ -> Optional.ofNullable(p_312012_.underlined)),
-                    Codec.BOOL.optionalFieldOf("strikethrough").forGetter(p_310101_ -> Optional.ofNullable(p_310101_.strikethrough)),
-                    Codec.BOOL.optionalFieldOf("obfuscated").forGetter(p_310873_ -> Optional.ofNullable(p_310873_.obfuscated)),
-                    ClickEvent.CODEC.optionalFieldOf("click_event").forGetter(p_312594_ -> Optional.ofNullable(p_312594_.clickEvent)),
-                    HoverEvent.CODEC.optionalFieldOf("hover_event").forGetter(p_311111_ -> Optional.ofNullable(p_311111_.hoverEvent)),
-                    Codec.STRING.optionalFieldOf("insertion").forGetter(p_310639_ -> Optional.ofNullable(p_310639_.insertion)),
-                    FontDescription.CODEC.optionalFieldOf("font").forGetter(p_421247_ -> Optional.ofNullable(p_421247_.font))
+            i -> i.group(
+                    TextColor.CODEC.optionalFieldOf("color").forGetter(o -> Optional.ofNullable(o.color)),
+                    ExtraCodecs.ARGB_COLOR_CODEC.optionalFieldOf("shadow_color").forGetter(o -> Optional.ofNullable(o.shadowColor)),
+                    Codec.BOOL.optionalFieldOf("bold").forGetter(o -> Optional.ofNullable(o.bold)),
+                    Codec.BOOL.optionalFieldOf("italic").forGetter(o -> Optional.ofNullable(o.italic)),
+                    Codec.BOOL.optionalFieldOf("underlined").forGetter(o -> Optional.ofNullable(o.underlined)),
+                    Codec.BOOL.optionalFieldOf("strikethrough").forGetter(o -> Optional.ofNullable(o.strikethrough)),
+                    Codec.BOOL.optionalFieldOf("obfuscated").forGetter(o -> Optional.ofNullable(o.obfuscated)),
+                    ClickEvent.CODEC.optionalFieldOf("click_event").forGetter(o -> Optional.ofNullable(o.clickEvent)),
+                    HoverEvent.CODEC.optionalFieldOf("hover_event").forGetter(o -> Optional.ofNullable(o.hoverEvent)),
+                    Codec.STRING.optionalFieldOf("insertion").forGetter(o -> Optional.ofNullable(o.insertion)),
+                    FontDescription.CODEC.optionalFieldOf("font").forGetter(o -> Optional.ofNullable(o.font))
                 )
-                .apply(p_374846_, Style::create)
+                .apply(i, Style::create)
         );
         public static final Codec<Style> CODEC = MAP_CODEC.codec();
         public static final StreamCodec<RegistryFriendlyByteBuf, Style> TRUSTED_STREAM_CODEC = ByteBufCodecs.fromCodecWithRegistriesTrusted(CODEC);

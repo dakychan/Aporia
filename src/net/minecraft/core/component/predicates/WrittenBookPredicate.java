@@ -2,12 +2,11 @@ package net.minecraft.core.component.predicates;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import java.util.function.Predicate;
-import net.minecraft.advancements.criterion.CollectionPredicate;
-import net.minecraft.advancements.criterion.MinMaxBounds;
-import net.minecraft.advancements.criterion.SingleComponentItemPredicate;
+import net.minecraft.advancements.predicates.CollectionPredicate;
+import net.minecraft.advancements.predicates.MinMaxBounds;
+import net.minecraft.advancements.predicates.SingleComponentItemPredicate;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
@@ -23,7 +22,7 @@ public record WrittenBookPredicate(
     Optional<Boolean> resolved
 ) implements SingleComponentItemPredicate<WrittenBookContent> {
     public static final Codec<WrittenBookPredicate> CODEC = RecordCodecBuilder.create(
-        p_448618_ -> p_448618_.group(
+        i -> i.group(
                 CollectionPredicate.<Filterable<Component>, WrittenBookPredicate.PagePredicate>codec(WrittenBookPredicate.PagePredicate.CODEC)
                     .optionalFieldOf("pages")
                     .forGetter(WrittenBookPredicate::pages),
@@ -32,7 +31,7 @@ public record WrittenBookPredicate(
                 MinMaxBounds.Ints.CODEC.optionalFieldOf("generation", MinMaxBounds.Ints.ANY).forGetter(WrittenBookPredicate::generation),
                 Codec.BOOL.optionalFieldOf("resolved").forGetter(WrittenBookPredicate::resolved)
             )
-            .apply(p_448618_, WrittenBookPredicate::new)
+            .apply(i, WrittenBookPredicate::new)
     );
 
     @Override
@@ -40,17 +39,17 @@ public record WrittenBookPredicate(
         return DataComponents.WRITTEN_BOOK_CONTENT;
     }
 
-    public boolean matches(WrittenBookContent p_396394_) {
-        if (this.author.isPresent() && !this.author.get().equals(p_396394_.author())) {
+    public boolean matches(final WrittenBookContent value) {
+        if (this.author.isPresent() && !this.author.get().equals(value.author())) {
             return false;
-        } else if (this.title.isPresent() && !this.title.get().equals(p_396394_.title().raw())) {
+        } else if (this.title.isPresent() && !this.title.get().equals(value.title().raw())) {
             return false;
-        } else if (!this.generation.matches(p_396394_.generation())) {
+        } else if (!this.generation.matches(value.generation())) {
             return false;
         } else {
-            return this.resolved.isPresent() && this.resolved.get() != p_396394_.resolved()
+            return this.resolved.isPresent() && this.resolved.get() != value.resolved()
                 ? false
-                : !this.pages.isPresent() || this.pages.get().test(p_396394_.pages());
+                : !this.pages.isPresent() || this.pages.get().test(value.pages());
         }
     }
 
@@ -58,8 +57,8 @@ public record WrittenBookPredicate(
         public static final Codec<WrittenBookPredicate.PagePredicate> CODEC = ComponentSerialization.CODEC
             .xmap(WrittenBookPredicate.PagePredicate::new, WrittenBookPredicate.PagePredicate::contents);
 
-        public boolean test(Filterable<Component> p_396207_) {
-            return p_396207_.raw().equals(this.contents);
+        public boolean test(final Filterable<Component> value) {
+            return value.raw().equals(this.contents);
         }
     }
 }

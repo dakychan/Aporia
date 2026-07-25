@@ -1,7 +1,7 @@
 package net.minecraft.world.entity.animal.camel;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
@@ -28,6 +28,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
@@ -40,10 +41,12 @@ import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.control.LookControl;
 import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.equipment.Equippable;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
@@ -57,7 +60,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Camel extends AbstractHorse {
-    public static final float BABY_SCALE = 0.45F;
+    public static final float BABY_SCALE = 0.6F;
     public static final int DASH_COOLDOWN_TICKS = 55;
     public static final int MAX_HEAD_Y_ROT = 30;
     private static final float RUNNING_SPEED_BONUS = 0.1F;
@@ -69,6 +72,9 @@ public class Camel extends AbstractHorse {
     private static final int IDLE_MINIMAL_DURATION_TICKS = 80;
     private static final float SITTING_HEIGHT_DIFFERENCE = 1.43F;
     private static final long DEFAULT_LAST_POSE_CHANGE_TICK = 0L;
+    private static final Brain.Provider<Camel> BRAIN_PROVIDER = Brain.<Camel>provider(
+        List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT), var0 -> CamelAi.getActivities()
+    );
     public static final EntityDataAccessor<Boolean> DASH = SynchedEntityData.defineId(Camel.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Long> LAST_POSE_CHANGE_TICK = SynchedEntityData.defineId(Camel.class, EntityDataSerializers.LONG);
     public final AnimationState sitAnimationState = new AnimationState();
@@ -76,35 +82,39 @@ public class Camel extends AbstractHorse {
     public final AnimationState sitUpAnimationState = new AnimationState();
     public final AnimationState idleAnimationState = new AnimationState();
     public final AnimationState dashAnimationState = new AnimationState();
-    private static final EntityDimensions SITTING_DIMENSIONS = EntityDimensions.scalable(EntityType.CAMEL.getWidth(), EntityType.CAMEL.getHeight() - 1.43F)
+    private static final EntityDimensions BABY_STANDING_DIMENSIONS = EntityDimensions.scalable(0.95F, 1.4F).withEyeHeight(1.38F);
+    private static final EntityDimensions BABY_SITTING_DIMENSIONS = EntityDimensions.scalable(0.95F, 0.425F).withEyeHeight(0.41F);
+    private static final EntityDimensions ADULT_SITTING_DIMENSIONS = EntityDimensions.scalable(
+            EntityTypes.CAMEL.getWidth(), EntityTypes.CAMEL.getHeight() - 1.43F
+        )
         .withEyeHeight(0.845F);
     private int dashCooldown = 0;
     private int idleAnimationTimeout = 0;
 
-    public Camel(EntityType<? extends Camel> p_248516_, Level p_249295_) {
-        super(p_248516_, p_249295_);
-        this.moveControl = new Camel.CamelMoveControl();
+    public Camel(final EntityType<? extends Camel> type, final Level level) {
+        super(type, level);
+        this.moveControl = new Camel.CamelMoveControl<>(this);
         this.lookControl = new Camel.CamelLookControl();
-        GroundPathNavigation groundpathnavigation = (GroundPathNavigation)this.getNavigation();
-        groundpathnavigation.setCanFloat(true);
-        groundpathnavigation.setCanWalkOverFences(true);
+        GroundPathNavigation navigation = (GroundPathNavigation)this.getNavigation();
+        navigation.setCanFloat(true);
+        navigation.setCanWalkOverFences(true);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408947_) {
-        super.addAdditionalSaveData(p_408947_);
-        p_408947_.putLong("LastPoseTick", this.entityData.get(LAST_POSE_CHANGE_TICK));
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putLong("LastPoseTick", this.entityData.get(LAST_POSE_CHANGE_TICK));
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_405933_) {
-        super.readAdditionalSaveData(p_405933_);
-        long i = p_405933_.getLongOr("LastPoseTick", 0L);
-        if (i < 0L) {
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        long poseTick = input.getLongOr("LastPoseTick", 0L);
+        if (poseTick < 0L) {
             this.setPose(Pose.SITTING);
         }
 
-        this.resetLastPoseChangeTick(i);
+        this.resetLastPoseChangeTick(poseTick);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -116,28 +126,35 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_333728_) {
-        super.defineSynchedData(p_333728_);
-        p_333728_.define(DASH, false);
-        p_333728_.define(LAST_POSE_CHANGE_TICK, 0L);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DASH, false);
+        entityData.define(LAST_POSE_CHANGE_TICK, 0L);
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_249190_, DifficultyInstance p_251264_, EntitySpawnReason p_363561_, @Nullable SpawnGroupData p_249259_) {
-        CamelAi.initMemories(this, p_249190_.getRandom());
-        this.resetLastPoseChangeTickToFullStand(p_249190_.getLevel().getGameTime());
-        return super.finalizeSpawn(p_249190_, p_251264_, p_363561_, p_249259_);
+    public SpawnGroupData finalizeSpawn(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
+    ) {
+        CamelAi.initMemories(this, level.getRandom());
+        this.resetLastPoseChangeTickToFullStand(level.getLevel().getGameTime());
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     public static boolean checkCamelSpawnRules(
-        EntityType<Camel> p_396073_, LevelAccessor p_393881_, EntitySpawnReason p_397323_, BlockPos p_392089_, RandomSource p_393103_
+        final EntityType<Camel> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_393881_.getBlockState(p_392089_.below()).is(BlockTags.CAMELS_SPAWNABLE_ON) && isBrightEnoughToSpawn(p_393881_, p_392089_);
+        return level.getBlockState(pos.below()).is(BlockTags.CAMELS_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 
     @Override
-    protected Brain.Provider<Camel> brainProvider() {
-        return CamelAi.brainProvider();
+    protected Brain<Camel> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
+    }
+
+    @Override
+    public Brain<Camel> getBrain() {
+        return (Brain<Camel>)super.getBrain();
     }
 
     @Override
@@ -145,26 +162,23 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_251586_) {
-        return CamelAi.makeBrain(this.brainProvider().makeBrain(p_251586_));
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return pose == Pose.SITTING
+            ? (this.isBaby() ? BABY_SITTING_DIMENSIONS : ADULT_SITTING_DIMENSIONS)
+            : (this.isBaby() ? BABY_STANDING_DIMENSIONS : super.getDefaultDimensions(pose));
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_329548_) {
-        return p_329548_ == Pose.SITTING ? SITTING_DIMENSIONS.scale(this.getAgeScale()) : super.getDefaultDimensions(p_329548_);
-    }
-
-    @Override
-    protected void customServerAiStep(ServerLevel p_366084_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("camelBrain");
-        Brain<?> brain = this.getBrain();
-        ((Brain<Camel>)brain).tick(p_366084_, this);
-        profilerfiller.pop();
-        profilerfiller.push("camelActivityUpdate");
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("camelBrain");
+        Brain<Camel> brain = this.getBrain();
+        brain.tick(level, this);
+        profiler.pop();
+        profiler.push("camelActivityUpdate");
         CamelAi.updateActivity(this);
-        profilerfiller.pop();
-        super.customServerAiStep(p_366084_);
+        profiler.pop();
+        super.customServerAiStep(level);
     }
 
     @Override
@@ -221,31 +235,31 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected void updateWalkAnimation(float p_268362_) {
-        float f;
+    protected void updateWalkAnimation(final float distance) {
+        float targetSpeed;
         if (this.getPose() == Pose.STANDING && !this.dashAnimationState.isStarted()) {
-            f = Math.min(p_268362_ * 6.0F, 1.0F);
+            targetSpeed = Math.min(distance * 6.0F, 1.0F);
         } else {
-            f = 0.0F;
+            targetSpeed = 0.0F;
         }
 
-        this.walkAnimation.update(f, 0.2F, this.isBaby() ? 3.0F : 1.0F);
+        this.walkAnimation.update(targetSpeed, 0.2F, this.isBaby() ? 3.0F : 1.0F);
     }
 
     @Override
-    public void travel(Vec3 p_250068_) {
+    public void travel(Vec3 input) {
         if (this.refuseToMove() && this.onGround()) {
             this.setDeltaMovement(this.getDeltaMovement().multiply(0.0, 1.0, 0.0));
-            p_250068_ = p_250068_.multiply(0.0, 1.0, 0.0);
+            input = input.multiply(0.0, 1.0, 0.0);
         }
 
-        super.travel(p_250068_);
+        super.travel(input);
     }
 
     @Override
-    protected void tickRidden(Player p_278319_, Vec3 p_278301_) {
-        super.tickRidden(p_278319_, p_278301_);
-        if (p_278319_.zza > 0.0F && this.isCamelSitting() && !this.isInPoseTransition()) {
+    protected void tickRidden(final Player controller, final Vec3 riddenInput) {
+        super.tickRidden(controller, riddenInput);
+        if (controller.zza > 0.0F && this.isCamelSitting() && !this.isInPoseTransition()) {
             this.standUp();
         }
     }
@@ -255,19 +269,19 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected float getRiddenSpeed(Player p_278241_) {
-        float f = p_278241_.isSprinting() && this.getJumpCooldown() == 0 ? 0.1F : 0.0F;
-        return (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED) + f;
+    protected float getRiddenSpeed(final Player controller) {
+        float movementBonus = controller.isSprinting() && this.getJumpCooldown() == 0 ? 0.1F : 0.0F;
+        return (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED) + movementBonus;
     }
 
     @Override
-    protected Vec2 getRiddenRotation(LivingEntity p_275271_) {
-        return this.refuseToMove() ? new Vec2(this.getXRot(), this.getYRot()) : super.getRiddenRotation(p_275271_);
+    protected Vec2 getRiddenRotation(final LivingEntity controller) {
+        return this.refuseToMove() ? new Vec2(this.getXRot(), this.getYRot()) : super.getRiddenRotation(controller);
     }
 
     @Override
-    protected Vec3 getRiddenInput(Player p_278264_, Vec3 p_278298_) {
-        return this.refuseToMove() ? Vec3.ZERO : super.getRiddenInput(p_278264_, p_278298_);
+    protected Vec3 getRiddenInput(final Player controller, final Vec3 selfInput) {
+        return this.refuseToMove() ? Vec3.ZERO : super.getRiddenInput(controller, selfInput);
     }
 
     @Override
@@ -276,9 +290,9 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    public void onPlayerJump(int p_249138_) {
+    public void onPlayerJump(final int jumpAmount) {
         if (this.isSaddled() && this.dashCooldown <= 0 && this.onGround()) {
-            super.onPlayerJump(p_249138_);
+            super.onPlayerJump(jumpAmount);
         }
     }
 
@@ -288,14 +302,14 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected void executeRidersJump(float p_251967_, Vec3 p_275627_) {
-        double d0 = this.getJumpPower();
+    protected void executeRidersJump(final float amount, final Vec3 input) {
+        double jumpMomentum = this.getJumpPower();
         this.addDeltaMovement(
             this.getLookAngle()
                 .multiply(1.0, 0.0, 1.0)
                 .normalize()
-                .scale(22.2222F * p_251967_ * this.getAttributeValue(Attributes.MOVEMENT_SPEED) * this.getBlockSpeedFactor())
-                .add(0.0, 1.4285F * p_251967_ * d0, 0.0)
+                .scale(22.2222F * amount * this.getAttributeValue(Attributes.MOVEMENT_SPEED) * this.getBlockSpeedFactor())
+                .add(0.0, 1.4285F * amount * jumpMomentum, 0.0)
         );
         this.dashCooldown = 55;
         this.setDashing(true);
@@ -306,12 +320,12 @@ public class Camel extends AbstractHorse {
         return this.entityData.get(DASH);
     }
 
-    public void setDashing(boolean p_251380_) {
-        this.entityData.set(DASH, p_251380_);
+    public void setDashing(final boolean isDashing) {
+        this.entityData.set(DASH, isDashing);
     }
 
     @Override
-    public void handleStartJump(int p_249968_) {
+    public void handleStartJump(final int jumpScale) {
         this.makeSound(this.getDashingSound());
         this.gameEvent(GameEvent.ENTITY_ACTION);
         this.setDashing(true);
@@ -345,13 +359,13 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_250052_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.CAMEL_HURT;
     }
 
     @Override
-    protected void playStepSound(BlockPos p_252056_, BlockState p_251457_) {
-        if (p_251457_.is(BlockTags.CAMEL_SAND_STEP_SOUND_BLOCKS)) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
+        if (blockState.is(BlockTags.CAMEL_SAND_STEP_SOUND_BLOCKS)) {
             this.playSound(SoundEvents.CAMEL_STEP_SAND, 1.0F, 1.0F);
         } else {
             this.playSound(SoundEvents.CAMEL_STEP, 1.0F, 1.0F);
@@ -359,30 +373,32 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    public boolean isFood(ItemStack p_248671_) {
-        return p_248671_.is(ItemTags.CAMEL_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.CAMEL_FOOD);
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_249032_, InteractionHand p_251004_) {
-        ItemStack itemstack = p_249032_.getItemInHand(p_251004_);
-        if (p_249032_.isSecondaryUseActive() && !this.isBaby()) {
-            this.openCustomInventoryScreen(p_249032_);
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (player.isSecondaryUseActive() && !this.isBaby()) {
+            this.openCustomInventoryScreen(player);
             return InteractionResult.SUCCESS;
-        } else {
-            InteractionResult interactionresult = itemstack.interactLivingEntity(p_249032_, this, p_251004_);
-            if (interactionresult.consumesAction()) {
-                return interactionresult;
-            } else if (this.isFood(itemstack)) {
-                return this.fedFood(p_249032_, itemstack);
-            } else {
-                if (this.getPassengers().size() < 2 && !this.isBaby()) {
-                    this.doPlayerRide(p_249032_);
-                }
-
-                return InteractionResult.CONSUME;
-            }
         }
+
+        InteractionResult interactionResult = itemStack.interactLivingEntity(player, this, hand);
+        if (interactionResult.consumesAction()) {
+            return interactionResult;
+        }
+
+        if (this.isFood(itemStack)) {
+            return this.fedFood(player, itemStack);
+        }
+
+        if (this.getPassengers().size() < 2 && !this.isBaby()) {
+            this.doPlayerRide(player);
+        }
+
+        return this.isBaby() && player.isHolding(Items.GOLDEN_DANDELION) ? super.mobInteract(player, hand) : InteractionResult.CONSUME;
     }
 
     @Override
@@ -403,52 +419,52 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected boolean handleEating(Player p_249923_, ItemStack p_248995_) {
-        if (!this.isFood(p_248995_)) {
+    protected boolean handleEating(final Player player, final ItemStack itemStack) {
+        if (!this.isFood(itemStack)) {
             return false;
-        } else {
-            boolean flag = this.getHealth() < this.getMaxHealth();
-            if (flag) {
-                this.heal(2.0F);
-            }
+        }
 
-            boolean flag1 = this.isTamed() && this.getAge() == 0 && this.canFallInLove();
-            if (flag1) {
-                this.setInLove(p_249923_);
-            }
+        boolean couldHeal = this.getHealth() < this.getMaxHealth();
+        if (couldHeal) {
+            this.heal(2.0F);
+        }
 
-            boolean flag2 = this.isBaby();
-            if (flag2) {
-                this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
-                if (!this.level().isClientSide()) {
-                    this.ageUp(10);
-                }
-            }
+        boolean couldSetInLove = this.isTamed() && this.getAge() == 0 && this.canFallInLove();
+        if (couldSetInLove) {
+            this.setInLove(player);
+        }
 
-            if (!flag && !flag1 && !flag2) {
-                return false;
-            } else {
-                if (!this.isSilent()) {
-                    SoundEvent soundevent = this.getEatingSound();
-                    if (soundevent != null) {
-                        this.level()
-                            .playSound(
-                                null,
-                                this.getX(),
-                                this.getY(),
-                                this.getZ(),
-                                soundevent,
-                                this.getSoundSource(),
-                                1.0F,
-                                1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F
-                            );
-                    }
-                }
-
-                this.gameEvent(GameEvent.EAT);
-                return true;
+        boolean couldAgeUp = this.canAgeUp();
+        if (couldAgeUp) {
+            this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
+            if (!this.level().isClientSide()) {
+                this.ageUp(10);
             }
         }
+
+        if (!couldHeal && !couldSetInLove && !couldAgeUp) {
+            return false;
+        }
+
+        if (!this.isSilent()) {
+            SoundEvent eatingSound = this.getEatingSound();
+            if (eatingSound != null) {
+                this.level()
+                    .playSound(
+                        null,
+                        this.getX(),
+                        this.getY(),
+                        this.getZ(),
+                        eatingSound,
+                        this.getSoundSource(),
+                        1.0F,
+                        1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F
+                    );
+            }
+        }
+
+        this.gameEvent(GameEvent.EAT);
+        return true;
     }
 
     @Override
@@ -457,12 +473,12 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    public boolean canMate(Animal p_251650_) {
-        return p_251650_ != this && p_251650_ instanceof Camel camel && this.canParent() && camel.canParent();
+    public boolean canMate(final Animal partner) {
+        return partner != this && partner instanceof Camel camel && this.canParent() && camel.canParent();
     }
 
-    public @Nullable Camel getBreedOffspring(ServerLevel p_251227_, AgeableMob p_251047_) {
-        return EntityType.CAMEL.create(p_251227_, EntitySpawnReason.BREEDING);
+    public @Nullable Camel getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.CAMEL.create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -471,73 +487,76 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected void actuallyHurt(ServerLevel p_369966_, DamageSource p_250410_, float p_251451_) {
+    protected void actuallyHurt(final ServerLevel level, final DamageSource source, final float dmg) {
         this.standUpInstantly();
-        super.actuallyHurt(p_369966_, p_250410_, p_251451_);
+        super.actuallyHurt(level, source, dmg);
     }
 
     @Override
-    protected Vec3 getPassengerAttachmentPoint(Entity p_298535_, EntityDimensions p_298993_, float p_301011_) {
-        int i = Math.max(this.getPassengers().indexOf(p_298535_), 0);
-        boolean flag = i == 0;
-        float f = 0.5F;
-        float f1 = (float)(this.isRemoved() ? 0.01F : this.getBodyAnchorAnimationYOffset(flag, 0.0F, p_298993_, p_301011_));
+    protected Vec3 getPassengerAttachmentPoint(final Entity passenger, final EntityDimensions dimensions, final float scale) {
+        int index = Math.max(this.getPassengers().indexOf(passenger), 0);
+        boolean driver = index == 0;
+        float offset = 0.5F;
+        float height = (float)(this.isRemoved() ? 0.01F : this.getBodyAnchorAnimationYOffset(driver, 0.0F, dimensions, scale));
         if (this.getPassengers().size() > 1) {
-            if (!flag) {
-                f = -0.7F;
+            if (!driver) {
+                offset = -0.7F;
             }
 
-            if (p_298535_ instanceof Animal) {
-                f += 0.2F;
+            if (passenger instanceof Animal) {
+                offset += 0.2F;
             }
         }
 
-        return new Vec3(0.0, f1, f * p_301011_).yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+        return new Vec3(0.0, height, offset * scale).yRot(-this.getYRot() * (float) (Math.PI / 180.0));
     }
 
     @Override
     public float getAgeScale() {
-        return this.isBaby() ? 0.45F : 1.0F;
+        return this.isBaby() ? 0.6F : 1.0F;
     }
 
-    public double getBodyAnchorAnimationYOffset(boolean p_249228_, float p_251763_, EntityDimensions p_301064_, float p_299749_) {
-        double d0 = p_301064_.height() - 0.375F * p_299749_;
-        float f = p_299749_ * 1.43F;
-        float f1 = f - p_299749_ * 0.2F;
-        float f2 = f - f1;
-        boolean flag = this.isInPoseTransition();
-        boolean flag1 = this.isCamelSitting();
-        if (flag) {
-            int i = flag1 ? 40 : 52;
-            int j;
-            float f3;
-            if (flag1) {
-                j = 28;
-                f3 = p_249228_ ? 0.5F : 0.1F;
+    private double getBodyAnchorAnimationYOffset(final boolean isFront, final float partialTicks, final EntityDimensions dimensions, final float scale) {
+        double ageSitYOffset = this.isBaby() ? 0.09375 : 0.375;
+        double baseSitOffset = dimensions.height() - ageSitYOffset;
+        float sittingHeightDifference = scale * 1.43F;
+        float verticalDrop = sittingHeightDifference - scale * 0.2F;
+        float bottomPoint = sittingHeightDifference - verticalDrop;
+        boolean isInTransition = this.isInPoseTransition();
+        boolean isSitting = this.isCamelSitting();
+        if (isInTransition) {
+            int animationDuration = isSitting ? 40 : 52;
+            int halfPoint;
+            float flexPointOffset;
+            if (isSitting) {
+                halfPoint = 28;
+                flexPointOffset = isFront ? 0.5F : 0.1F;
             } else {
-                j = p_249228_ ? 24 : 32;
-                f3 = p_249228_ ? 0.6F : 0.35F;
+                halfPoint = isFront ? 24 : 32;
+                flexPointOffset = isFront ? 0.6F : 0.35F;
             }
 
-            float f4 = Mth.clamp((float)this.getPoseTime() + p_251763_, 0.0F, i);
-            boolean flag2 = f4 < j;
-            float f5 = flag2 ? f4 / j : (f4 - j) / (i - j);
-            float f6 = f - f3 * f1;
-            d0 += flag1 ? Mth.lerp(f5, flag2 ? f : f6, flag2 ? f6 : f2) : Mth.lerp(f5, flag2 ? f2 - f : f2 - f6, flag2 ? f2 - f6 : 0.0F);
+            float poseTime = Mth.clamp((float)this.getPoseTime() + partialTicks, 0.0F, animationDuration);
+            boolean isFirstPart = poseTime < halfPoint;
+            float part = isFirstPart ? poseTime / halfPoint : (poseTime - halfPoint) / (animationDuration - halfPoint);
+            float flexPoint = sittingHeightDifference - flexPointOffset * verticalDrop;
+            baseSitOffset += isSitting
+                ? Mth.lerp(part, isFirstPart ? sittingHeightDifference : flexPoint, isFirstPart ? flexPoint : bottomPoint)
+                : Mth.lerp(part, isFirstPart ? bottomPoint - sittingHeightDifference : bottomPoint - flexPoint, isFirstPart ? bottomPoint - flexPoint : 0.0F);
         }
 
-        if (flag1 && !flag) {
-            d0 += f2;
+        if (isSitting && !isInTransition) {
+            baseSitOffset += bottomPoint;
         }
 
-        return d0;
+        return baseSitOffset;
     }
 
     @Override
-    public Vec3 getLeashOffset(float p_251477_) {
-        EntityDimensions entitydimensions = this.getDimensions(this.getPose());
-        float f = this.getAgeScale();
-        return new Vec3(0.0, this.getBodyAnchorAnimationYOffset(true, p_251477_, entitydimensions, f) - 0.2F * f, entitydimensions.width() * 0.56F);
+    public Vec3 getLeashOffset(final float partialTicks) {
+        EntityDimensions dimensions = this.getDimensions(this.getPose());
+        float scale = this.getAgeScale();
+        return new Vec3(0.0, this.getBodyAnchorAnimationYOffset(true, partialTicks, dimensions, scale) - 0.2F * scale, dimensions.width() * 0.56F);
     }
 
     @Override
@@ -546,7 +565,7 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected boolean canAddPassenger(Entity p_248594_) {
+    protected boolean canAddPassenger(final Entity passenger) {
         return this.getPassengers().size() <= 2;
     }
 
@@ -559,8 +578,8 @@ public class Camel extends AbstractHorse {
     }
 
     public boolean isInPoseTransition() {
-        long i = this.getPoseTime();
-        return i < (this.isCamelSitting() ? 40 : 52);
+        long poseTime = this.getPoseTime();
+        return poseTime < (this.isCamelSitting() ? 40 : 52);
     }
 
     private boolean isVisuallySittingDown() {
@@ -600,12 +619,12 @@ public class Camel extends AbstractHorse {
     }
 
     @VisibleForTesting
-    public void resetLastPoseChangeTick(long p_248642_) {
-        this.entityData.set(LAST_POSE_CHANGE_TICK, p_248642_);
+    public void resetLastPoseChangeTick(final long syncedPoseTickTime) {
+        this.entityData.set(LAST_POSE_CHANGE_TICK, syncedPoseTickTime);
     }
 
-    private void resetLastPoseChangeTickToFullStand(long p_265447_) {
-        this.resetLastPoseChangeTick(Math.max(0L, p_265447_ - 52L - 1L));
+    private void resetLastPoseChangeTickToFullStand(final long currentTime) {
+        this.resetLastPoseChangeTick(Math.max(0L, currentTime - 52L - 1L));
     }
 
     public long getPoseTime() {
@@ -613,8 +632,8 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    protected Holder<SoundEvent> getEquipSound(EquipmentSlot p_393986_, ItemStack p_395637_, Equippable p_397313_) {
-        return (Holder<SoundEvent>)(p_393986_ == EquipmentSlot.SADDLE ? this.getSaddleSound() : super.getEquipSound(p_393986_, p_395637_, p_397313_));
+    protected Holder<SoundEvent> getEquipSound(final EquipmentSlot slot, final ItemStack stack, final Equippable equippable) {
+        return slot == EquipmentSlot.SADDLE ? this.getSaddleSound() : super.getEquipSound(slot, stack, equippable);
     }
 
     protected Holder.Reference<SoundEvent> getSaddleSound() {
@@ -622,12 +641,12 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_252215_) {
-        if (!this.firstTick && DASH.equals(p_252215_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        if (!this.firstTick && DASH.equals(accessor)) {
             this.dashCooldown = this.dashCooldown == 0 ? 55 : this.dashCooldown;
         }
 
-        super.onSyncedDataUpdated(p_252215_);
+        super.onSyncedDataUpdated(accessor);
     }
 
     @Override
@@ -636,9 +655,9 @@ public class Camel extends AbstractHorse {
     }
 
     @Override
-    public void openCustomInventoryScreen(Player p_248613_) {
+    public void openCustomInventoryScreen(final Player player) {
         if (!this.level().isClientSide()) {
-            p_248613_.openHorseInventory(this, this.inventory);
+            player.openHorseInventory(this, this.inventory);
         }
     }
 
@@ -647,9 +666,9 @@ public class Camel extends AbstractHorse {
         return new Camel.CamelBodyRotationControl(this);
     }
 
-    class CamelBodyRotationControl extends BodyRotationControl {
-        public CamelBodyRotationControl(final Camel p_248635_) {
-            super(p_248635_);
+    private class CamelBodyRotationControl extends BodyRotationControl {
+        public CamelBodyRotationControl(final Camel camel) {
+            super(camel);
         }
 
         @Override
@@ -660,8 +679,8 @@ public class Camel extends AbstractHorse {
         }
     }
 
-    class CamelLookControl extends LookControl {
-        CamelLookControl() {
+    private class CamelLookControl extends LookControl {
+        private CamelLookControl() {
             super(Camel.this);
         }
 
@@ -673,19 +692,19 @@ public class Camel extends AbstractHorse {
         }
     }
 
-    class CamelMoveControl extends MoveControl {
-        public CamelMoveControl() {
-            super(Camel.this);
+    private static class CamelMoveControl<T extends Camel> extends MoveControl<T> {
+        public CamelMoveControl(final T camel) {
+            super(camel);
         }
 
         @Override
         public void tick() {
             if (this.operation == MoveControl.Operation.MOVE_TO
-                && !Camel.this.isLeashed()
-                && Camel.this.isCamelSitting()
-                && !Camel.this.isInPoseTransition()
-                && Camel.this.canCamelChangePose()) {
-                Camel.this.standUp();
+                && !this.mob.isLeashed()
+                && this.mob.isCamelSitting()
+                && !this.mob.isInPoseTransition()
+                && this.mob.canCamelChangePose()) {
+                this.mob.standUp();
             }
 
             super.tick();

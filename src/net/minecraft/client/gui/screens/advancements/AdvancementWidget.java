@@ -8,7 +8,7 @@ import net.minecraft.advancements.DisplayInfo;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.StringSplitter;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
@@ -18,11 +18,9 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class AdvancementWidget {
     private static final Identifier TITLE_BOX_SPRITE = Identifier.withDefaultNamespace("advancements/title_box");
     private static final int HEIGHT = 26;
@@ -43,6 +41,7 @@ public class AdvancementWidget {
     private final AdvancementTab tab;
     private final AdvancementNode advancementNode;
     private final DisplayInfo display;
+    private final ItemStack icon;
     private final List<FormattedCharSequence> titleLines;
     private final int width;
     private final List<FormattedCharSequence> description;
@@ -53,123 +52,121 @@ public class AdvancementWidget {
     private final int x;
     private final int y;
 
-    public AdvancementWidget(AdvancementTab p_97255_, Minecraft p_97256_, AdvancementNode p_298278_, DisplayInfo p_97258_) {
-        this.tab = p_97255_;
-        this.advancementNode = p_298278_;
-        this.display = p_97258_;
-        this.minecraft = p_97256_;
-        this.titleLines = p_97256_.font.split(p_97258_.getTitle(), 163);
-        this.x = Mth.floor(p_97258_.getX() * 28.0F);
-        this.y = Mth.floor(p_97258_.getY() * 27.0F);
-        int i = Math.max(this.titleLines.stream().mapToInt(p_97256_.font::width).max().orElse(0), 80);
-        int j = this.getMaxProgressWidth();
-        int k = 29 + i + j;
+    public AdvancementWidget(final AdvancementTab tab, final Minecraft minecraft, final AdvancementNode advancementNode, final DisplayInfo display) {
+        this.tab = tab;
+        this.advancementNode = advancementNode;
+        this.display = display;
+        this.minecraft = minecraft;
+        this.titleLines = minecraft.font.split(display.getTitle(), 163);
+        this.x = Mth.floor(display.getX() * 28.0F);
+        this.y = Mth.floor(display.getY() * 27.0F);
+        int titleWidth = Math.max(this.titleLines.stream().mapToInt(minecraft.font::width).max().orElse(0), 80);
+        int maxProgressWidth = this.getMaxProgressWidth();
+        int longestDescLine = 29 + titleWidth + maxProgressWidth;
         this.description = Language.getInstance()
-            .getVisualOrder(this.findOptimalLines(ComponentUtils.mergeStyles(p_97258_.getDescription(), Style.EMPTY.withColor(p_97258_.getType().getChatColor())), k));
+            .getVisualOrder(
+                this.findOptimalLines(
+                    ComponentUtils.mergeStyles(display.getDescription(), Style.EMPTY.withColor(display.getType().getChatColor())), longestDescLine
+                )
+            );
 
-        for (FormattedCharSequence formattedcharsequence : this.description) {
-            k = Math.max(k, p_97256_.font.width(formattedcharsequence));
+        for (FormattedCharSequence line : this.description) {
+            longestDescLine = Math.max(longestDescLine, minecraft.font.width(line));
         }
 
-        this.width = k + 3 + 5;
+        this.width = longestDescLine + 3 + 5;
+        this.icon = display.getIcon().create();
     }
 
     private int getMaxProgressWidth() {
-        int i = this.advancementNode.advancement().requirements().size();
-        if (i <= 1) {
+        int maxCriteraRequired = this.advancementNode.advancement().requirements().size();
+        if (maxCriteraRequired <= 1) {
             return 0;
-        } else {
-            int j = 8;
-            Component component = Component.translatable("advancements.progress", i, i);
-            return this.minecraft.font.width(component) + 8;
-        }
-    }
-
-    private static float getMaxWidth(StringSplitter p_97304_, List<FormattedText> p_97305_) {
-        return (float)p_97305_.stream().mapToDouble(p_97304_::stringWidth).max().orElse(0.0);
-    }
-
-    private List<FormattedText> findOptimalLines(Component p_97309_, int p_97310_) {
-        StringSplitter stringsplitter = this.minecraft.font.getSplitter();
-        List<FormattedText> list = null;
-        float f = Float.MAX_VALUE;
-
-        for (int i : TEST_SPLIT_OFFSETS) {
-            List<FormattedText> list1 = stringsplitter.splitLines(p_97309_, p_97310_ - i, Style.EMPTY);
-            float f1 = Math.abs(getMaxWidth(stringsplitter, list1) - p_97310_);
-            if (f1 <= 10.0F) {
-                return list1;
-            }
-
-            if (f1 < f) {
-                f = f1;
-                list = list1;
-            }
         }
 
-        return list;
+        int spacing = 8;
+        Component fakeMaxProgress = Component.translatable("advancements.progress", maxCriteraRequired, maxCriteraRequired);
+        return this.minecraft.font.width(fakeMaxProgress) + 8;
     }
 
-    private @Nullable AdvancementWidget getFirstVisibleParent(AdvancementNode p_297515_) {
+    private static float getMaxWidth(final StringSplitter splitter, final List<FormattedText> input) {
+        return (float)input.stream().mapToDouble(splitter::stringWidth).max().orElse(0.0);
+    }
+
+    private List<FormattedText> findOptimalLines(final Component input, final int preferredWidth) {
+        StringSplitter splitter = this.minecraft.font.getSplitter();
+        List<FormattedText> bestSplit = null;
+        float bestDistance = Float.MAX_VALUE;
+
+        for (int testMargin : TEST_SPLIT_OFFSETS) {
+            List<FormattedText> testSplit = splitter.splitLines(input, preferredWidth - testMargin, Style.EMPTY);
+            float distance = Math.abs(getMaxWidth(splitter, testSplit) - preferredWidth);
+            if (distance <= 10.0F) {
+                return testSplit;
+            }
+
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestSplit = testSplit;
+            }
+        }
+
+        return bestSplit;
+    }
+
+    private @Nullable AdvancementWidget getFirstVisibleParent(AdvancementNode node) {
         do {
-            p_297515_ = p_297515_.parent();
-        } while (p_297515_ != null && p_297515_.advancement().display().isEmpty());
+            node = node.parent();
+        } while (node != null && node.advancement().display().isEmpty());
 
-        return p_297515_ != null && !p_297515_.advancement().display().isEmpty() ? this.tab.getWidget(p_297515_.holder()) : null;
+        return node != null && !node.advancement().display().isEmpty() ? this.tab.getWidget(node.holder()) : null;
     }
 
-    public void drawConnectivity(GuiGraphics p_281947_, int p_97300_, int p_97301_, boolean p_97302_) {
+    public void extractConnectivity(final GuiGraphicsExtractor graphics, final int xo, final int yo, final boolean background) {
         if (this.parent != null) {
-            int i = p_97300_ + this.parent.x + 13;
-            int j = p_97300_ + this.parent.x + 26 + 4;
-            int k = p_97301_ + this.parent.y + 13;
-            int l = p_97300_ + this.x + 13;
-            int i1 = p_97301_ + this.y + 13;
-            int j1 = p_97302_ ? -16777216 : -1;
-            if (p_97302_) {
-                p_281947_.hLine(j, i, k - 1, j1);
-                p_281947_.hLine(j + 1, i, k, j1);
-                p_281947_.hLine(j, i, k + 1, j1);
-                p_281947_.hLine(l, j - 1, i1 - 1, j1);
-                p_281947_.hLine(l, j - 1, i1, j1);
-                p_281947_.hLine(l, j - 1, i1 + 1, j1);
-                p_281947_.vLine(j - 1, i1, k, j1);
-                p_281947_.vLine(j + 1, i1, k, j1);
+            int depX = xo + this.parent.x + 13;
+            int splitX = xo + this.parent.x + 26 + 4;
+            int depY = yo + this.parent.y + 13;
+            int myX = xo + this.x + 13;
+            int myY = yo + this.y + 13;
+            int col = background ? -16777216 : -1;
+            if (background) {
+                graphics.horizontalLine(splitX, depX, depY - 1, col);
+                graphics.horizontalLine(splitX + 1, depX, depY, col);
+                graphics.horizontalLine(splitX, depX, depY + 1, col);
+                graphics.horizontalLine(myX, splitX - 1, myY - 1, col);
+                graphics.horizontalLine(myX, splitX - 1, myY, col);
+                graphics.horizontalLine(myX, splitX - 1, myY + 1, col);
+                graphics.verticalLine(splitX - 1, myY, depY, col);
+                graphics.verticalLine(splitX + 1, myY, depY, col);
             } else {
-                p_281947_.hLine(j, i, k, j1);
-                p_281947_.hLine(l, j, i1, j1);
-                p_281947_.vLine(j, i1, k, j1);
+                graphics.horizontalLine(splitX, depX, depY, col);
+                graphics.horizontalLine(myX, splitX, myY, col);
+                graphics.verticalLine(splitX, myY, depY, col);
             }
         }
 
-        for (AdvancementWidget advancementwidget : this.children) {
-            advancementwidget.drawConnectivity(p_281947_, p_97300_, p_97301_, p_97302_);
+        for (AdvancementWidget child : this.children) {
+            child.extractConnectivity(graphics, xo, yo, background);
         }
     }
 
-    public void draw(GuiGraphics p_281958_, int p_281323_, int p_283679_) {
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int xo, final int yo) {
         if (!this.display.isHidden() || this.progress != null && this.progress.isDone()) {
-            float f = this.progress == null ? 0.0F : this.progress.getPercent();
-            AdvancementWidgetType advancementwidgettype;
-            if (f >= 1.0F) {
-                advancementwidgettype = AdvancementWidgetType.OBTAINED;
+            float amount = this.progress == null ? 0.0F : this.progress.getPercent();
+            AdvancementWidgetType iconFrame;
+            if (amount >= 1.0F) {
+                iconFrame = AdvancementWidgetType.OBTAINED;
             } else {
-                advancementwidgettype = AdvancementWidgetType.UNOBTAINED;
+                iconFrame = AdvancementWidgetType.UNOBTAINED;
             }
 
-            p_281958_.blitSprite(
-                RenderPipelines.GUI_TEXTURED,
-                advancementwidgettype.frameSprite(this.display.getType()),
-                p_281323_ + this.x + 3,
-                p_283679_ + this.y,
-                26,
-                26
-            );
-            p_281958_.renderFakeItem(this.display.getIcon(), p_281323_ + this.x + 8, p_283679_ + this.y + 5);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, iconFrame.frameSprite(this.display.getType()), xo + this.x + 3, yo + this.y, 26, 26);
+            graphics.fakeItem(this.icon, xo + this.x + 8, yo + this.y + 5);
         }
 
-        for (AdvancementWidget advancementwidget : this.children) {
-            advancementwidget.draw(p_281958_, p_281323_, p_283679_);
+        for (AdvancementWidget child : this.children) {
+            child.extractRenderState(graphics, xo, yo);
         }
     }
 
@@ -177,120 +174,126 @@ public class AdvancementWidget {
         return this.width;
     }
 
-    public void setProgress(AdvancementProgress p_97265_) {
-        this.progress = p_97265_;
+    public void setProgress(final AdvancementProgress progress) {
+        this.progress = progress;
     }
 
-    public void addChild(AdvancementWidget p_97307_) {
-        this.children.add(p_97307_);
+    public void addChild(final AdvancementWidget widget) {
+        this.children.add(widget);
     }
 
-    public void drawHover(GuiGraphics p_283068_, int p_281304_, int p_281253_, float p_281848_, int p_282097_, int p_281537_) {
+    public void extractHover(final GuiGraphicsExtractor graphics, final int xo, final int yo, final float fade, final int screenxo, final int screenyo) {
         Font font = this.minecraft.font;
-        int i = 9 * this.titleLines.size() + 9 + 8;
-        int j = p_281253_ + this.y + (26 - i) / 2;
-        int k = j + i;
-        int l = this.description.size() * 9;
-        int i1 = 6 + l;
-        boolean flag = p_282097_ + p_281304_ + this.x + this.width + 26 >= this.tab.getScreen().width;
-        Component component = this.progress == null ? null : this.progress.getProgressText();
-        int j1 = component == null ? 0 : font.width(component);
-        boolean flag1 = k + i1 >= 113;
-        float f = this.progress == null ? 0.0F : this.progress.getPercent();
-        int k1 = Mth.floor(f * this.width);
-        AdvancementWidgetType advancementwidgettype;
-        AdvancementWidgetType advancementwidgettype1;
-        AdvancementWidgetType advancementwidgettype2;
-        if (f >= 1.0F) {
-            k1 = this.width / 2;
-            advancementwidgettype = AdvancementWidgetType.OBTAINED;
-            advancementwidgettype1 = AdvancementWidgetType.OBTAINED;
-            advancementwidgettype2 = AdvancementWidgetType.OBTAINED;
-        } else if (k1 < 2) {
-            k1 = this.width / 2;
-            advancementwidgettype = AdvancementWidgetType.UNOBTAINED;
-            advancementwidgettype1 = AdvancementWidgetType.UNOBTAINED;
-            advancementwidgettype2 = AdvancementWidgetType.UNOBTAINED;
-        } else if (k1 > this.width - 2) {
-            k1 = this.width / 2;
-            advancementwidgettype = AdvancementWidgetType.OBTAINED;
-            advancementwidgettype1 = AdvancementWidgetType.OBTAINED;
-            advancementwidgettype2 = AdvancementWidgetType.UNOBTAINED;
+        int titleBarHeight = 9 * this.titleLines.size() + 9 + 8;
+        int titleTop = yo + this.y + (26 - titleBarHeight) / 2;
+        int titleBarBottom = titleTop + titleBarHeight;
+        int descriptionTextHeight = this.description.size() * 9;
+        int descriptionHeight = 6 + descriptionTextHeight;
+        boolean leftSide = screenxo + xo + this.x + this.width + 26 >= this.tab.getScreen().width;
+        Component progressText = this.progress == null ? null : this.progress.getProgressText();
+        int progressWidth = progressText == null ? 0 : font.width(progressText);
+        boolean topSide = titleBarBottom + descriptionHeight >= 113;
+        float amount = this.progress == null ? 0.0F : this.progress.getPercent();
+        int firstHalfWidth = Mth.floor(amount * this.width);
+        AdvancementWidgetType firstHalf;
+        AdvancementWidgetType secondHalf;
+        AdvancementWidgetType iconFrame;
+        if (amount >= 1.0F) {
+            firstHalfWidth = this.width / 2;
+            firstHalf = AdvancementWidgetType.OBTAINED;
+            secondHalf = AdvancementWidgetType.OBTAINED;
+            iconFrame = AdvancementWidgetType.OBTAINED;
+        } else if (firstHalfWidth < 2) {
+            firstHalfWidth = this.width / 2;
+            firstHalf = AdvancementWidgetType.UNOBTAINED;
+            secondHalf = AdvancementWidgetType.UNOBTAINED;
+            iconFrame = AdvancementWidgetType.UNOBTAINED;
+        } else if (firstHalfWidth > this.width - 2) {
+            firstHalfWidth = this.width / 2;
+            firstHalf = AdvancementWidgetType.OBTAINED;
+            secondHalf = AdvancementWidgetType.OBTAINED;
+            iconFrame = AdvancementWidgetType.UNOBTAINED;
         } else {
-            advancementwidgettype = AdvancementWidgetType.OBTAINED;
-            advancementwidgettype1 = AdvancementWidgetType.UNOBTAINED;
-            advancementwidgettype2 = AdvancementWidgetType.UNOBTAINED;
+            firstHalf = AdvancementWidgetType.OBTAINED;
+            secondHalf = AdvancementWidgetType.UNOBTAINED;
+            iconFrame = AdvancementWidgetType.UNOBTAINED;
         }
 
-        int l1 = this.width - k1;
-        int i2;
-        if (flag) {
-            i2 = p_281304_ + this.x - this.width + 26 + 6;
+        int secondBarWidth = this.width - firstHalfWidth;
+        int titleLeft;
+        if (leftSide) {
+            titleLeft = xo + this.x - this.width + 26 + 6;
         } else {
-            i2 = p_281304_ + this.x;
+            titleLeft = xo + this.x;
         }
 
-        int j2 = i + i1;
+        int backgroundHeight = titleBarHeight + descriptionHeight;
         if (!this.description.isEmpty()) {
-            if (flag1) {
-                p_283068_.blitSprite(RenderPipelines.GUI_TEXTURED, TITLE_BOX_SPRITE, i2, k - j2, this.width, j2);
+            if (topSide) {
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TITLE_BOX_SPRITE, titleLeft, titleBarBottom - backgroundHeight, this.width, backgroundHeight);
             } else {
-                p_283068_.blitSprite(RenderPipelines.GUI_TEXTURED, TITLE_BOX_SPRITE, i2, j, this.width, j2);
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TITLE_BOX_SPRITE, titleLeft, titleTop, this.width, backgroundHeight);
             }
         }
 
-        if (advancementwidgettype != advancementwidgettype1) {
-            p_283068_.blitSprite(RenderPipelines.GUI_TEXTURED, advancementwidgettype.boxSprite(), 200, i, 0, 0, i2, j, k1, i);
-            p_283068_.blitSprite(RenderPipelines.GUI_TEXTURED, advancementwidgettype1.boxSprite(), 200, i, 200 - l1, 0, i2 + k1, j, l1, i);
+        if (firstHalf != secondHalf) {
+            graphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED, firstHalf.boxSprite(), 200, titleBarHeight, 0, 0, titleLeft, titleTop, firstHalfWidth, titleBarHeight
+            );
+            graphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED,
+                secondHalf.boxSprite(),
+                200,
+                titleBarHeight,
+                200 - secondBarWidth,
+                0,
+                titleLeft + firstHalfWidth,
+                titleTop,
+                secondBarWidth,
+                titleBarHeight
+            );
         } else {
-            p_283068_.blitSprite(RenderPipelines.GUI_TEXTURED, advancementwidgettype.boxSprite(), i2, j, this.width, i);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, firstHalf.boxSprite(), titleLeft, titleTop, this.width, titleBarHeight);
         }
 
-        p_283068_.blitSprite(
-            RenderPipelines.GUI_TEXTURED,
-            advancementwidgettype2.frameSprite(this.display.getType()),
-            p_281304_ + this.x + 3,
-            p_281253_ + this.y,
-            26,
-            26
-        );
-        int k2 = i2 + 5;
-        if (flag) {
-            this.drawMultilineText(p_283068_, this.titleLines, k2, j + 9, -1);
-            if (component != null) {
-                p_283068_.drawString(font, component, p_281304_ + this.x - j1, j + 9, -1);
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, iconFrame.frameSprite(this.display.getType()), xo + this.x + 3, yo + this.y, 26, 26);
+        int descriptionLeft = titleLeft + 5;
+        if (leftSide) {
+            this.extractMultilineText(graphics, this.titleLines, descriptionLeft, titleTop + 9, -1);
+            if (progressText != null) {
+                graphics.text(font, progressText, xo + this.x - progressWidth, titleTop + 9, -1);
             }
         } else {
-            this.drawMultilineText(p_283068_, this.titleLines, p_281304_ + this.x + 32, j + 9, -1);
-            if (component != null) {
-                p_283068_.drawString(font, component, p_281304_ + this.x + this.width - j1 - 5, j + 9, -1);
+            this.extractMultilineText(graphics, this.titleLines, xo + this.x + 32, titleTop + 9, -1);
+            if (progressText != null) {
+                graphics.text(font, progressText, xo + this.x + this.width - progressWidth - 5, titleTop + 9, -1);
             }
         }
 
-        if (flag1) {
-            this.drawMultilineText(p_283068_, this.description, k2, j - l + 1, -16711936);
+        if (topSide) {
+            this.extractMultilineText(graphics, this.description, descriptionLeft, titleTop - descriptionTextHeight + 1, -16711936);
         } else {
-            this.drawMultilineText(p_283068_, this.description, k2, k, -16711936);
+            this.extractMultilineText(graphics, this.description, descriptionLeft, titleBarBottom, -16711936);
         }
 
-        p_283068_.renderFakeItem(this.display.getIcon(), p_281304_ + this.x + 8, p_281253_ + this.y + 5);
+        graphics.fakeItem(this.icon, xo + this.x + 8, yo + this.y + 5);
     }
 
-    private void drawMultilineText(GuiGraphics p_377348_, List<FormattedCharSequence> p_376770_, int p_375430_, int p_378762_, int p_377335_) {
+    private void extractMultilineText(final GuiGraphicsExtractor graphics, final List<FormattedCharSequence> lines, final int x, final int y, final int color) {
         Font font = this.minecraft.font;
 
-        for (int i = 0; i < p_376770_.size(); i++) {
-            p_377348_.drawString(font, p_376770_.get(i), p_375430_, p_378762_ + i * 9, p_377335_);
+        for (int i = 0; i < lines.size(); i++) {
+            graphics.text(font, lines.get(i), x, y + i * 9, color);
         }
     }
 
-    public boolean isMouseOver(int p_97260_, int p_97261_, int p_97262_, int p_97263_) {
+    public boolean isMouseOver(final int xo, final int yo, final int mouseX, final int mouseY) {
         if (!this.display.isHidden() || this.progress != null && this.progress.isDone()) {
-            int i = p_97260_ + this.x;
-            int j = i + 26;
-            int k = p_97261_ + this.y;
-            int l = k + 26;
-            return p_97262_ >= i && p_97262_ <= j && p_97263_ >= k && p_97263_ <= l;
+            int x0 = xo + this.x;
+            int x1 = x0 + 26;
+            int y0 = yo + this.y;
+            int y1 = y0 + 26;
+            return mouseX >= x0 && mouseX <= x1 && mouseY >= y0 && mouseY <= y1;
         } else {
             return false;
         }

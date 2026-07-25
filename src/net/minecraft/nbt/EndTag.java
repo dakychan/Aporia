@@ -7,23 +7,23 @@ import java.io.IOException;
 public final class EndTag implements Tag {
     private static final int SELF_SIZE_IN_BYTES = 8;
     public static final TagType<EndTag> TYPE = new TagType<EndTag>() {
-        public EndTag load(DataInput p_128550_, NbtAccounter p_128552_) {
-            p_128552_.accountBytes(8L);
+        public EndTag load(final DataInput input, final NbtAccounter accounter) {
+            accounter.accountBytes(8L);
             return EndTag.INSTANCE;
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197465_, StreamTagVisitor p_197466_, NbtAccounter p_301715_) {
-            p_301715_.accountBytes(8L);
-            return p_197466_.visitEnd();
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) {
+            accounter.accountBytes(8L);
+            return output.visitEnd();
         }
 
         @Override
-        public void skip(DataInput p_197460_, int p_301764_, NbtAccounter p_301761_) {
+        public void skip(final DataInput input, final int count, final NbtAccounter accounter) {
         }
 
         @Override
-        public void skip(DataInput p_197462_, NbtAccounter p_301747_) {
+        public void skip(final DataInput input, final NbtAccounter accounter) {
         }
 
         @Override
@@ -42,7 +42,7 @@ public final class EndTag implements Tag {
     }
 
     @Override
-    public void write(DataOutput p_128539_) throws IOException {
+    public void write(final DataOutput output) throws IOException {
     }
 
     @Override
@@ -62,9 +62,9 @@ public final class EndTag implements Tag {
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitEnd(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitEnd(this);
+        return visitor.build();
     }
 
     public EndTag copy() {
@@ -72,12 +72,12 @@ public final class EndTag implements Tag {
     }
 
     @Override
-    public void accept(TagVisitor p_177863_) {
-        p_177863_.visitEnd(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitEnd(this);
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197458_) {
-        return p_197458_.visitEnd();
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
+        return visitor.visitEnd();
     }
 }

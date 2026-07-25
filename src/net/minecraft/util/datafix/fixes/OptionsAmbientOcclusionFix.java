@@ -4,13 +4,11 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class OptionsAmbientOcclusionFix extends DataFix {
-    public OptionsAmbientOcclusionFix(Schema p_263497_) {
-        super(p_263497_, false);
+    public OptionsAmbientOcclusionFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
@@ -18,20 +16,18 @@ public class OptionsAmbientOcclusionFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "OptionsAmbientOcclusionFix",
             this.getInputSchema().getType(References.OPTIONS),
-            p_263493_ -> p_263493_.update(
+            input -> input.update(
                 DSL.remainderFinder(),
-                p_326634_ -> DataFixUtils.orElse(
-                    p_326634_.get("ao").asString().map(p_263546_ -> p_326634_.set("ao", p_326634_.createString(updateValue(p_263546_)))).result(), p_326634_
-                )
+                tag -> DataFixUtils.orElse(tag.get("ao").asString().map(value -> tag.set("ao", tag.createString(updateValue(value)))).result(), tag)
             )
         );
     }
 
-    private static String updateValue(String p_263541_) {
-        return switch (p_263541_) {
+    private static String updateValue(final String value) {
+        return switch (value) {
             case "0" -> "false";
             case "1", "2" -> "true";
-            default -> p_263541_;
+            default -> value;
         };
     }
 }

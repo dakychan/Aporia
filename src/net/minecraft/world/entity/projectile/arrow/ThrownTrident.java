@@ -13,10 +13,10 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -36,27 +36,27 @@ public class ThrownTrident extends AbstractArrow {
     private boolean dealtDamage = false;
     public int clientSideReturnTridentTickCount;
 
-    public ThrownTrident(EntityType<? extends ThrownTrident> p_455793_, Level p_457632_) {
-        super(p_455793_, p_457632_);
+    public ThrownTrident(final EntityType<? extends ThrownTrident> type, final Level level) {
+        super(type, level);
     }
 
-    public ThrownTrident(Level p_456878_, LivingEntity p_453655_, ItemStack p_459649_) {
-        super(EntityType.TRIDENT, p_453655_, p_456878_, p_459649_, null);
-        this.entityData.set(ID_LOYALTY, this.getLoyaltyFromItem(p_459649_));
-        this.entityData.set(ID_FOIL, p_459649_.hasFoil());
+    public ThrownTrident(final Level level, final LivingEntity owner, final ItemStack tridentItem) {
+        super(EntityTypes.TRIDENT, owner, level, tridentItem, null);
+        this.entityData.set(ID_LOYALTY, this.getLoyaltyFromItem(tridentItem));
+        this.entityData.set(ID_FOIL, tridentItem.hasFoil());
     }
 
-    public ThrownTrident(Level p_460291_, double p_456333_, double p_452272_, double p_451613_, ItemStack p_459880_) {
-        super(EntityType.TRIDENT, p_456333_, p_452272_, p_451613_, p_460291_, p_459880_, p_459880_);
-        this.entityData.set(ID_LOYALTY, this.getLoyaltyFromItem(p_459880_));
-        this.entityData.set(ID_FOIL, p_459880_.hasFoil());
+    public ThrownTrident(final Level level, final double x, final double y, final double z, final ItemStack tridentItem) {
+        super(EntityTypes.TRIDENT, x, y, z, level, tridentItem, tridentItem);
+        this.entityData.set(ID_LOYALTY, this.getLoyaltyFromItem(tridentItem));
+        this.entityData.set(ID_FOIL, tridentItem.hasFoil());
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_453380_) {
-        super.defineSynchedData(p_453380_);
-        p_453380_.define(ID_LOYALTY, (byte)0);
-        p_453380_.define(ID_FOIL, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(ID_LOYALTY, (byte)0);
+        entityData.define(ID_FOIL, false);
     }
 
     @Override
@@ -65,26 +65,26 @@ public class ThrownTrident extends AbstractArrow {
             this.dealtDamage = true;
         }
 
-        Entity entity = this.getOwner();
-        int i = this.entityData.get(ID_LOYALTY);
-        if (i > 0 && (this.dealtDamage || this.isNoPhysics()) && entity != null) {
+        Entity currentOwner = this.getOwner();
+        int loyalty = this.entityData.get(ID_LOYALTY);
+        if (loyalty > 0 && (this.dealtDamage || this.isNoPhysics()) && currentOwner != null) {
             if (!this.isAcceptibleReturnOwner()) {
-                if (this.level() instanceof ServerLevel serverlevel && this.pickup == AbstractArrow.Pickup.ALLOWED) {
-                    this.spawnAtLocation(serverlevel, this.getPickupItem(), 0.1F);
+                if (this.level() instanceof ServerLevel level && this.pickup == AbstractArrow.Pickup.ALLOWED) {
+                    this.spawnAtLocation(level, this.getPickupItem(), 0.1F);
                 }
 
                 this.discard();
             } else {
-                if (!(entity instanceof Player) && this.position().distanceTo(entity.getEyePosition()) < entity.getBbWidth() + 1.0) {
+                if (!(currentOwner instanceof Player) && this.position().distanceTo(currentOwner.getEyePosition()) < currentOwner.getBbWidth() + 1.0) {
                     this.discard();
                     return;
                 }
 
                 this.setNoPhysics(true);
-                Vec3 vec3 = entity.getEyePosition().subtract(this.position());
-                this.setPosRaw(this.getX(), this.getY() + vec3.y * 0.015 * i, this.getZ());
-                double d0 = 0.05 * i;
-                this.setDeltaMovement(this.getDeltaMovement().scale(0.95).add(vec3.normalize().scale(d0)));
+                Vec3 vec = currentOwner.getEyePosition().subtract(this.position());
+                this.setPosRaw(this.getX(), this.getY() + vec.y * 0.015 * loyalty, this.getZ());
+                double accel = 0.05 * loyalty;
+                this.setDeltaMovement(this.getDeltaMovement().scale(0.95).add(vec.normalize().scale(accel)));
                 if (this.clientSideReturnTridentTickCount == 0) {
                     this.playSound(SoundEvents.TRIDENT_RETURN, 10.0F, 1.0F);
                 }
@@ -97,8 +97,8 @@ public class ThrownTrident extends AbstractArrow {
     }
 
     private boolean isAcceptibleReturnOwner() {
-        Entity entity = this.getOwner();
-        return entity == null || !entity.isAlive() ? false : !(entity instanceof ServerPlayer) || !entity.isSpectator();
+        Entity currentOwner = this.getOwner();
+        return currentOwner == null || !currentOwner.isAlive() ? false : !(currentOwner instanceof ServerPlayer) || !currentOwner.isSpectator();
     }
 
     public boolean isFoil() {
@@ -106,39 +106,41 @@ public class ThrownTrident extends AbstractArrow {
     }
 
     @Override
-    protected @Nullable EntityHitResult findHitEntity(Vec3 p_452505_, Vec3 p_453602_) {
-        return this.dealtDamage ? null : super.findHitEntity(p_452505_, p_453602_);
+    protected @Nullable EntityHitResult findHitEntity(final Vec3 from, final Vec3 to) {
+        return this.dealtDamage ? null : super.findHitEntity(from, to);
     }
 
     @Override
-    protected Collection<EntityHitResult> findHitEntities(Vec3 p_454424_, Vec3 p_460659_) {
-        EntityHitResult entityhitresult = this.findHitEntity(p_454424_, p_460659_);
-        return entityhitresult != null ? List.of(entityhitresult) : List.of();
+    protected Collection<EntityHitResult> findHitEntities(final Vec3 from, final Vec3 to) {
+        EntityHitResult e = this.findHitEntity(from, to);
+        return e != null ? List.of(e) : List.of();
     }
 
     @Override
-    protected void onHitEntity(EntityHitResult p_458307_) {
-        Entity entity = p_458307_.getEntity();
-        float f = 8.0F;
-        Entity entity1 = this.getOwner();
-        DamageSource damagesource = this.damageSources().trident(this, (Entity)(entity1 == null ? this : entity1));
-        if (this.level() instanceof ServerLevel serverlevel) {
-            f = EnchantmentHelper.modifyDamage(serverlevel, this.getWeaponItem(), entity, damagesource, f);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        Entity entity = hitResult.getEntity();
+        float dmg = 8.0F;
+        Entity currentOwner = this.getOwner();
+        DamageSource damageSource = this.damageSources().trident(this, currentOwner == null ? this : currentOwner);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            dmg = EnchantmentHelper.modifyDamage(serverLevel, this.getWeaponItem(), entity, damageSource, dmg);
         }
 
         this.dealtDamage = true;
-        if (entity.hurtOrSimulate(damagesource, f)) {
-            if (entity.getType() == EntityType.ENDERMAN) {
+        if (entity.hurtOrSimulate(damageSource, dmg)) {
+            if (entity.is(EntityTypes.ENDERMAN)) {
                 return;
             }
 
-            if (this.level() instanceof ServerLevel serverlevel1) {
-                EnchantmentHelper.doPostAttackEffectsWithItemSourceOnBreak(serverlevel1, entity, damagesource, this.getWeaponItem(), p_459928_ -> this.kill(serverlevel1));
+            if (this.level() instanceof ServerLevel serverLevel) {
+                EnchantmentHelper.doPostAttackEffectsWithItemSourceOnBreak(
+                    serverLevel, entity, damageSource, this.getWeaponItem(), weapon -> this.kill(serverLevel)
+                );
             }
 
-            if (entity instanceof LivingEntity livingentity) {
-                this.doKnockback(livingentity, damagesource);
-                this.doPostHurtEffects(livingentity);
+            if (entity instanceof LivingEntity mob) {
+                this.doKnockback(mob, damageSource);
+                this.doPostHurtEffects(mob);
             }
         }
 
@@ -148,17 +150,17 @@ public class ThrownTrident extends AbstractArrow {
     }
 
     @Override
-    protected void hitBlockEnchantmentEffects(ServerLevel p_452220_, BlockHitResult p_451086_, ItemStack p_457307_) {
-        Vec3 vec3 = p_451086_.getBlockPos().clampLocationWithin(p_451086_.getLocation());
+    protected void hitBlockEnchantmentEffects(final ServerLevel level, final BlockHitResult hitResult, final ItemStack weapon) {
+        Vec3 compensatedHitPosition = hitResult.getBlockPos().clampLocationWithin(hitResult.getLocation());
         EnchantmentHelper.onHitBlock(
-            p_452220_,
-            p_457307_,
-            this.getOwner() instanceof LivingEntity livingentity ? livingentity : null,
+            level,
+            weapon,
+            this.getOwner() instanceof LivingEntity livingOwner ? livingOwner : null,
             this,
             null,
-            vec3,
-            p_452220_.getBlockState(p_451086_.getBlockPos()),
-            p_456946_ -> this.kill(p_452220_)
+            compensatedHitPosition,
+            level.getBlockState(hitResult.getBlockPos()),
+            item -> this.kill(level)
         );
     }
 
@@ -168,8 +170,8 @@ public class ThrownTrident extends AbstractArrow {
     }
 
     @Override
-    protected boolean tryPickup(Player p_458354_) {
-        return super.tryPickup(p_458354_) || this.isNoPhysics() && this.ownedBy(p_458354_) && p_458354_.getInventory().add(this.getPickupItem());
+    protected boolean tryPickup(final Player player) {
+        return super.tryPickup(player) || this.isNoPhysics() && this.ownedBy(player) && player.getInventory().add(this.getPickupItem());
     }
 
     @Override
@@ -183,33 +185,35 @@ public class ThrownTrident extends AbstractArrow {
     }
 
     @Override
-    public void playerTouch(Player p_459436_) {
-        if (this.ownedBy(p_459436_) || this.getOwner() == null) {
-            super.playerTouch(p_459436_);
+    public void playerTouch(final Player player) {
+        if (this.ownedBy(player) || this.getOwner() == null) {
+            super.playerTouch(player);
         }
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_455365_) {
-        super.readAdditionalSaveData(p_455365_);
-        this.dealtDamage = p_455365_.getBooleanOr("DealtDamage", false);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.dealtDamage = input.getBooleanOr("DealtDamage", false);
         this.entityData.set(ID_LOYALTY, this.getLoyaltyFromItem(this.getPickupItemStackOrigin()));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_458339_) {
-        super.addAdditionalSaveData(p_458339_);
-        p_458339_.putBoolean("DealtDamage", this.dealtDamage);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("DealtDamage", this.dealtDamage);
     }
 
-    private byte getLoyaltyFromItem(ItemStack p_458522_) {
-        return this.level() instanceof ServerLevel serverlevel ? (byte)Mth.clamp(EnchantmentHelper.getTridentReturnToOwnerAcceleration(serverlevel, p_458522_, this), 0, 127) : 0;
+    private byte getLoyaltyFromItem(final ItemStack tridentItem) {
+        return this.level() instanceof ServerLevel serverLevel
+            ? (byte)Mth.clamp(EnchantmentHelper.getTridentReturnToOwnerAcceleration(serverLevel, tridentItem, this), 0, 127)
+            : 0;
     }
 
     @Override
     public void tickDespawn() {
-        int i = this.entityData.get(ID_LOYALTY);
-        if (this.pickup != AbstractArrow.Pickup.ALLOWED || i <= 0) {
+        int loyalty = this.entityData.get(ID_LOYALTY);
+        if (this.pickup != AbstractArrow.Pickup.ALLOWED || loyalty <= 0) {
             super.tickDespawn();
         }
     }
@@ -220,7 +224,7 @@ public class ThrownTrident extends AbstractArrow {
     }
 
     @Override
-    public boolean shouldRender(double p_452378_, double p_454560_, double p_452379_) {
+    public boolean shouldRender(final double camX, final double camY, final double camZ) {
         return true;
     }
 }

@@ -4,22 +4,22 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
 class RegenerationMobEffect extends MobEffect {
-    protected RegenerationMobEffect(MobEffectCategory p_298562_, int p_299015_) {
-        super(p_298562_, p_299015_);
+    protected RegenerationMobEffect(final MobEffectCategory category, final int color) {
+        super(category, color);
     }
 
     @Override
-    public boolean applyEffectTick(ServerLevel p_365546_, LivingEntity p_301282_, int p_300945_) {
-        if (p_301282_.getHealth() < p_301282_.getMaxHealth()) {
-            p_301282_.heal(1.0F);
+    public boolean applyEffectTick(final ServerLevel level, final LivingEntity mob, final int amplification) {
+        if (mob.getHealth() < mob.getMaxHealth()) {
+            mob.heal(1.0F);
         }
 
         return true;
     }
 
     @Override
-    public boolean shouldApplyEffectTickThisTick(int p_300189_, int p_298417_) {
-        int i = 50 >> p_298417_;
-        return i > 0 ? p_300189_ % i == 0 : true;
+    public boolean shouldApplyEffectTickThisTick(final int tickCount, final int amplification) {
+        int interval = 50 >> amplification;
+        return interval > 0 ? tickCount % interval == 0 : true;
     }
 }

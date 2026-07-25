@@ -5,32 +5,32 @@ import net.minecraft.world.inventory.RecipeBookType;
 public class RecipeBook {
     protected final RecipeBookSettings bookSettings = new RecipeBookSettings();
 
-    public boolean isOpen(RecipeBookType p_12692_) {
-        return this.bookSettings.isOpen(p_12692_);
+    public boolean isOpen(final RecipeBookType recipeBookType) {
+        return this.bookSettings.isOpen(recipeBookType);
     }
 
-    public void setOpen(RecipeBookType p_12694_, boolean p_12695_) {
-        this.bookSettings.setOpen(p_12694_, p_12695_);
+    public void setOpen(final RecipeBookType recipeBookType, final boolean open) {
+        this.bookSettings.setOpen(recipeBookType, open);
     }
 
-    public boolean isFiltering(RecipeBookType p_12705_) {
-        return this.bookSettings.isFiltering(p_12705_);
+    public boolean isFiltering(final RecipeBookType type) {
+        return this.bookSettings.isFiltering(type);
     }
 
-    public void setFiltering(RecipeBookType p_12707_, boolean p_12708_) {
-        this.bookSettings.setFiltering(p_12707_, p_12708_);
+    public void setFiltering(final RecipeBookType type, final boolean filtering) {
+        this.bookSettings.setFiltering(type, filtering);
     }
 
-    public void setBookSettings(RecipeBookSettings p_12688_) {
-        this.bookSettings.replaceFrom(p_12688_);
+    public void setBookSettings(final RecipeBookSettings settings) {
+        this.bookSettings.replaceFrom(settings);
     }
 
     public RecipeBookSettings getBookSettings() {
         return this.bookSettings;
     }
 
-    public void setBookSetting(RecipeBookType p_12697_, boolean p_12698_, boolean p_12699_) {
-        this.bookSettings.setOpen(p_12697_, p_12698_);
-        this.bookSettings.setFiltering(p_12697_, p_12699_);
+    public void setBookSetting(final RecipeBookType bookType, final boolean open, final boolean filtering) {
+        this.bookSettings.setOpen(bookType, open);
+        this.bookSettings.setFiltering(bookType, filtering);
     }
 }

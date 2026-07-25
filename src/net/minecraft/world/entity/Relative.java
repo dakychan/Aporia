@@ -25,94 +25,94 @@ public enum Relative {
     private final int bit;
 
     @SafeVarargs
-    public static Set<Relative> union(Set<Relative>... p_360861_) {
-        HashSet<Relative> hashset = new HashSet<>();
+    public static Set<Relative> union(final Set<Relative>... sets) {
+        HashSet<Relative> set = new HashSet<>();
 
-        for (Set<Relative> set : p_360861_) {
-            hashset.addAll(set);
-        }
-
-        return hashset;
-    }
-
-    public static Set<Relative> rotation(boolean p_423486_, boolean p_428813_) {
-        Set<Relative> set = EnumSet.noneOf(Relative.class);
-        if (p_423486_) {
-            set.add(Y_ROT);
-        }
-
-        if (p_428813_) {
-            set.add(X_ROT);
+        for (Set<Relative> s : sets) {
+            set.addAll(s);
         }
 
         return set;
     }
 
-    public static Set<Relative> position(boolean p_429389_, boolean p_426820_, boolean p_431699_) {
-        Set<Relative> set = EnumSet.noneOf(Relative.class);
-        if (p_429389_) {
-            set.add(X);
+    public static Set<Relative> rotation(final boolean relativeYRot, final boolean relativeXRot) {
+        Set<Relative> relatives = EnumSet.noneOf(Relative.class);
+        if (relativeYRot) {
+            relatives.add(Y_ROT);
         }
 
-        if (p_426820_) {
-            set.add(Y);
+        if (relativeXRot) {
+            relatives.add(X_ROT);
         }
 
-        if (p_431699_) {
-            set.add(Z);
-        }
-
-        return set;
+        return relatives;
     }
 
-    public static Set<Relative> direction(boolean p_428176_, boolean p_425808_, boolean p_429880_) {
-        Set<Relative> set = EnumSet.noneOf(Relative.class);
-        if (p_428176_) {
-            set.add(DELTA_X);
+    public static Set<Relative> position(final boolean relativeX, final boolean relativeY, final boolean relativeZ) {
+        Set<Relative> relatives = EnumSet.noneOf(Relative.class);
+        if (relativeX) {
+            relatives.add(X);
         }
 
-        if (p_425808_) {
-            set.add(DELTA_Y);
+        if (relativeY) {
+            relatives.add(Y);
         }
 
-        if (p_429880_) {
-            set.add(DELTA_Z);
+        if (relativeZ) {
+            relatives.add(Z);
         }
 
-        return set;
+        return relatives;
     }
 
-    private Relative(final int p_367418_) {
-        this.bit = p_367418_;
+    public static Set<Relative> direction(final boolean relativeX, final boolean relativeY, final boolean relativeZ) {
+        Set<Relative> relatives = EnumSet.noneOf(Relative.class);
+        if (relativeX) {
+            relatives.add(DELTA_X);
+        }
+
+        if (relativeY) {
+            relatives.add(DELTA_Y);
+        }
+
+        if (relativeZ) {
+            relatives.add(DELTA_Z);
+        }
+
+        return relatives;
+    }
+
+    Relative(final int bit) {
+        this.bit = bit;
     }
 
     private int getMask() {
         return 1 << this.bit;
     }
 
-    private boolean isSet(int p_364108_) {
-        return (p_364108_ & this.getMask()) == this.getMask();
+    private boolean isSet(final int value) {
+        return (value & this.getMask()) == this.getMask();
     }
 
-    public static Set<Relative> unpack(int p_366469_) {
-        Set<Relative> set = EnumSet.noneOf(Relative.class);
+    public static Set<Relative> unpack(final int value) {
+        Set<Relative> result = EnumSet.noneOf(Relative.class);
 
-        for (Relative relative : values()) {
-            if (relative.isSet(p_366469_)) {
-                set.add(relative);
+        for (Relative argument : values()) {
+            if (argument.isSet(value)) {
+                result.add(argument);
             }
         }
 
-        return set;
+        return result;
     }
 
-    public static int pack(Set<Relative> p_370231_) {
-        int i = 0;
+    public static int pack(final Set<Relative> set) {
+        int result = 0;
 
-        for (Relative relative : p_370231_) {
-            i |= relative.getMask();
+        for (Relative argument : set) {
+            result |= argument.getMask();
         }
 
-        return i;
+        return result;
     }
 }

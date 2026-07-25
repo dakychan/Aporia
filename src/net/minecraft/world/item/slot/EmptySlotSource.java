@@ -12,7 +12,7 @@ public record EmptySlotSource() implements SlotSource {
     }
 
     @Override
-    public SlotCollection provide(LootContext p_453405_) {
+    public SlotCollection provide(final LootContext context) {
         return SlotCollection.EMPTY;
     }
 }

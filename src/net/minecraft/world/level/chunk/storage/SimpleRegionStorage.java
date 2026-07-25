@@ -1,6 +1,5 @@
 package net.minecraft.world.level.chunk.storage;
 
-import com.google.common.base.Suppliers;
 import com.mojang.datafixers.DataFixer;
 import com.mojang.serialization.Dynamic;
 import java.io.IOException;
@@ -23,83 +22,75 @@ public class SimpleRegionStorage implements AutoCloseable {
     private final IOWorker worker;
     private final DataFixer fixerUpper;
     private final DataFixTypes dataFixType;
-    private final Supplier<LegacyTagFixer> legacyFixer;
-
-    public SimpleRegionStorage(RegionStorageInfo p_327836_, Path p_328804_, DataFixer p_332309_, boolean p_335456_, DataFixTypes p_331426_) {
-        this(p_327836_, p_328804_, p_332309_, p_335456_, p_331426_, LegacyTagFixer.EMPTY);
-    }
 
     public SimpleRegionStorage(
-        RegionStorageInfo p_452254_, Path p_459771_, DataFixer p_452991_, boolean p_455220_, DataFixTypes p_453017_, Supplier<LegacyTagFixer> p_452228_
+        final RegionStorageInfo info, final Path folder, final DataFixer fixerUpper, final boolean syncWrites, final DataFixTypes dataFixType
     ) {
-        this.fixerUpper = p_452991_;
-        this.dataFixType = p_453017_;
-        this.worker = new IOWorker(p_452254_, p_459771_, p_455220_);
-        this.legacyFixer = Suppliers.memoize(p_452228_::get);
+        this.fixerUpper = fixerUpper;
+        this.dataFixType = dataFixType;
+        this.worker = new IOWorker(info, folder, syncWrites);
     }
 
-    public boolean isOldChunkAround(ChunkPos p_460112_, int p_457756_) {
-        return this.worker.isOldChunkAround(p_460112_, p_457756_);
+    public boolean isOldChunkAround(final ChunkPos pos, final int range) {
+        return this.worker.isOldChunkAround(pos, range);
     }
 
-    public CompletableFuture<Optional<CompoundTag>> read(ChunkPos p_328805_) {
-        return this.worker.loadAsync(p_328805_);
+    public CompletableFuture<Optional<CompoundTag>> read(final ChunkPos pos) {
+        return this.worker.loadAsync(pos);
     }
 
-    public CompletableFuture<Void> write(ChunkPos p_328507_, CompoundTag p_328699_) {
-        return this.write(p_328507_, () -> p_328699_);
+    public CompletableFuture<Void> write(final ChunkPos pos, final CompoundTag value) {
+        return this.write(pos, () -> value);
     }
 
-    public CompletableFuture<Void> write(ChunkPos p_460578_, Supplier<CompoundTag> p_451294_) {
-        this.markChunkDone(p_460578_);
-        return this.worker.store(p_460578_, p_451294_);
+    public CompletableFuture<Void> write(final ChunkPos pos, final Supplier<CompoundTag> supplier) {
+        return this.worker.store(pos, supplier);
     }
 
-    public CompoundTag upgradeChunkTag(CompoundTag p_457269_, int p_452563_, @Nullable CompoundTag p_454370_) {
-        int i = NbtUtils.getDataVersion(p_457269_, p_452563_);
-        if (i == SharedConstants.getCurrentVersion().dataVersion().version()) {
-            return p_457269_;
-        } else {
-            try {
-                p_457269_ = this.legacyFixer.get().applyFix(p_457269_);
-                injectDatafixingContext(p_457269_, p_454370_);
-                p_457269_ = this.dataFixType.updateToCurrentVersion(this.fixerUpper, p_457269_, Math.max(this.legacyFixer.get().targetDataVersion(), i));
-                removeDatafixingContext(p_457269_);
-                NbtUtils.addCurrentDataVersion(p_457269_);
-                return p_457269_;
-            } catch (Exception exception) {
-                CrashReport crashreport = CrashReport.forThrowable(exception, "Updated chunk");
-                CrashReportCategory crashreportcategory = crashreport.addCategory("Updated chunk details");
-                crashreportcategory.setDetail("Data version", i);
-                throw new ReportedException(crashreport);
-            }
+    public CompoundTag upgradeChunkTag(CompoundTag chunkTag, final int defaultVersion, final @Nullable CompoundTag dataFixContextTag, final int targetVersion) {
+        int version = NbtUtils.getDataVersion(chunkTag, defaultVersion);
+        if (version >= targetVersion) {
+            return chunkTag;
+        }
+
+        try {
+            injectDatafixingContext(chunkTag, dataFixContextTag);
+            chunkTag = this.dataFixType.update(this.fixerUpper, chunkTag, version, targetVersion);
+            removeDatafixingContext(chunkTag);
+            NbtUtils.addDataVersion(chunkTag, targetVersion);
+            return chunkTag;
+        } catch (Exception e) {
+            CrashReport report = CrashReport.forThrowable(e, "Updated chunk");
+            CrashReportCategory details = report.addCategory("Updated chunk details");
+            details.setDetail("Data version", version);
+            details.setDetail("Target version", targetVersion);
+            throw new ReportedException(report);
         }
     }
 
-    public CompoundTag upgradeChunkTag(CompoundTag p_330988_, int p_328203_) {
-        return this.upgradeChunkTag(p_330988_, p_328203_, null);
+    public CompoundTag upgradeChunkTag(final CompoundTag chunkTag, final int defaultVersion) {
+        return this.upgradeChunkTag(chunkTag, defaultVersion, null, SharedConstants.getCurrentVersion().dataVersion().version());
     }
 
-    public Dynamic<Tag> upgradeChunkTag(Dynamic<Tag> p_329521_, int p_334930_) {
-        return new Dynamic<>(p_329521_.getOps(), this.upgradeChunkTag((CompoundTag)p_329521_.getValue(), p_334930_, null));
+    public Dynamic<Tag> upgradeChunkTag(final Dynamic<Tag> chunkTag, final int defaultVersion) {
+        return new Dynamic<>(
+            chunkTag.getOps(),
+            this.upgradeChunkTag((CompoundTag)chunkTag.getValue(), defaultVersion, null, SharedConstants.getCurrentVersion().dataVersion().version())
+        );
     }
 
-    public static void injectDatafixingContext(CompoundTag p_460950_, @Nullable CompoundTag p_456449_) {
-        if (p_456449_ != null) {
-            p_460950_.put("__context", p_456449_);
+    public static void injectDatafixingContext(final CompoundTag chunkTag, final @Nullable CompoundTag contextTag) {
+        if (contextTag != null) {
+            chunkTag.put("__context", contextTag);
         }
     }
 
-    private static void removeDatafixingContext(CompoundTag p_460251_) {
-        p_460251_.remove("__context");
+    private static void removeDatafixingContext(final CompoundTag chunkTag) {
+        chunkTag.remove("__context");
     }
 
-    protected void markChunkDone(ChunkPos p_455625_) {
-        this.legacyFixer.get().markChunkDone(p_455625_);
-    }
-
-    public CompletableFuture<Void> synchronize(boolean p_334675_) {
-        return this.worker.synchronize(p_334675_);
+    public CompletableFuture<Void> synchronize(final boolean flush) {
+        return this.worker.synchronize(flush);
     }
 
     @Override

@@ -24,29 +24,29 @@ public record ServerLinks(List<ServerLinks.Entry> entries) {
         return this.entries.isEmpty();
     }
 
-    public Optional<ServerLinks.Entry> findKnownType(ServerLinks.KnownLinkType p_345340_) {
-        return this.entries.stream().filter(p_344406_ -> p_344406_.type.map(p_344429_ -> p_344429_ == p_345340_, p_343563_ -> false)).findFirst();
+    public Optional<ServerLinks.Entry> findKnownType(final ServerLinks.KnownLinkType type) {
+        return this.entries.stream().filter(e -> e.type.map(l -> l == type, r -> false)).findFirst();
     }
 
     public List<ServerLinks.UntrustedEntry> untrust() {
-        return this.entries.stream().map(p_343119_ -> new ServerLinks.UntrustedEntry(p_343119_.type, p_343119_.link.toString())).toList();
+        return this.entries.stream().map(e -> new ServerLinks.UntrustedEntry(e.type, e.link.toString())).toList();
     }
 
     public record Entry(Either<ServerLinks.KnownLinkType, Component> type, URI link) {
-        public static ServerLinks.Entry knownType(ServerLinks.KnownLinkType p_344933_, URI p_343801_) {
-            return new ServerLinks.Entry(Either.left(p_344933_), p_343801_);
+        public static ServerLinks.Entry knownType(final ServerLinks.KnownLinkType type, final URI link) {
+            return new ServerLinks.Entry(Either.left(type), link);
         }
 
-        public static ServerLinks.Entry custom(Component p_343423_, URI p_343780_) {
-            return new ServerLinks.Entry(Either.right(p_343423_), p_343780_);
+        public static ServerLinks.Entry custom(final Component displayName, final URI link) {
+            return new ServerLinks.Entry(Either.right(displayName), link);
         }
 
         public Component displayName() {
-            return this.type.map(ServerLinks.KnownLinkType::displayName, p_342867_ -> (Component)p_342867_);
+            return this.type.map(ServerLinks.KnownLinkType::displayName, r -> (Component)r);
         }
     }
 
-    public static enum KnownLinkType {
+    public enum KnownLinkType {
         BUG_REPORT(0, "report_bug"),
         COMMUNITY_GUIDELINES(1, "community_guidelines"),
         SUPPORT(2, "support"),
@@ -58,24 +58,22 @@ public record ServerLinks(List<ServerLinks.Entry> entries) {
         NEWS(8, "news"),
         ANNOUNCEMENTS(9, "announcements");
 
-        private static final IntFunction<ServerLinks.KnownLinkType> BY_ID = ByIdMap.continuous(
-            p_344812_ -> p_344812_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-        );
-        public static final StreamCodec<ByteBuf, ServerLinks.KnownLinkType> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_345122_ -> p_345122_.id);
+        private static final IntFunction<ServerLinks.KnownLinkType> BY_ID = ByIdMap.continuous(e -> e.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+        public static final StreamCodec<ByteBuf, ServerLinks.KnownLinkType> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, e -> e.id);
         private final int id;
         private final String name;
 
-        private KnownLinkType(final int p_342655_, final String p_343354_) {
-            this.id = p_342655_;
-            this.name = p_343354_;
+        KnownLinkType(final int id, final String name) {
+            this.id = id;
+            this.name = name;
         }
 
         private Component displayName() {
             return Component.translatable("known_server_link." + this.name);
         }
 
-        public ServerLinks.Entry create(URI p_344425_) {
-            return ServerLinks.Entry.knownType(this, p_344425_);
+        public ServerLinks.Entry create(final URI link) {
+            return ServerLinks.Entry.knownType(this, link);
         }
     }
 

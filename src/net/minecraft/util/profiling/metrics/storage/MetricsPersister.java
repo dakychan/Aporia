@@ -33,93 +33,95 @@ public class MetricsPersister {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final String rootFolderName;
 
-    public MetricsPersister(String p_146217_) {
-        this.rootFolderName = p_146217_;
+    public MetricsPersister(final String rootFolderName) {
+        this.rootFolderName = rootFolderName;
     }
 
-    public Path saveReports(Set<MetricSampler> p_146251_, Map<MetricSampler, List<RecordedDeviation>> p_146252_, ProfileResults p_146253_) {
+    public Path saveReports(
+        final Set<MetricSampler> samplers, final Map<MetricSampler, List<RecordedDeviation>> deviationsBySampler, final ProfileResults profilerResults
+    ) {
         try {
             Files.createDirectories(PROFILING_RESULTS_DIR);
-        } catch (IOException ioexception1) {
-            throw new UncheckedIOException(ioexception1);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
 
         try {
-            Path path = Files.createTempDirectory("minecraft-profiling");
-            path.toFile().deleteOnExit();
+            Path tempDir = Files.createTempDirectory("minecraft-profiling");
+            tempDir.toFile().deleteOnExit();
             Files.createDirectories(PROFILING_RESULTS_DIR);
-            Path path1 = path.resolve(this.rootFolderName);
-            Path path2 = path1.resolve("metrics");
-            this.saveMetrics(p_146251_, path2);
-            if (!p_146252_.isEmpty()) {
-                this.saveDeviations(p_146252_, path1.resolve("deviations"));
+            Path workingDir = tempDir.resolve(this.rootFolderName);
+            Path metricsDir = workingDir.resolve("metrics");
+            this.saveMetrics(samplers, metricsDir);
+            if (!deviationsBySampler.isEmpty()) {
+                this.saveDeviations(deviationsBySampler, workingDir.resolve("deviations"));
             }
 
-            this.saveProfilingTaskExecutionResult(p_146253_, path1);
-            return path;
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+            this.saveProfilingTaskExecutionResult(profilerResults, workingDir);
+            return tempDir;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
-    private void saveMetrics(Set<MetricSampler> p_146248_, Path p_146249_) {
-        if (p_146248_.isEmpty()) {
+    private void saveMetrics(final Set<MetricSampler> samplers, final Path dir) {
+        if (samplers.isEmpty()) {
             throw new IllegalArgumentException("Expected at least one sampler to persist");
-        } else {
-            Map<MetricCategory, List<MetricSampler>> map = p_146248_.stream().collect(Collectors.groupingBy(MetricSampler::getCategory));
-            map.forEach((p_146232_, p_146233_) -> this.saveCategory(p_146232_, (List<MetricSampler>)p_146233_, p_146249_));
         }
+
+        Map<MetricCategory, List<MetricSampler>> samplersByCategory = samplers.stream().collect(Collectors.groupingBy(MetricSampler::getCategory));
+        samplersByCategory.forEach((category, samplersInCategory) -> this.saveCategory(category, (List<MetricSampler>)samplersInCategory, dir));
     }
 
-    private void saveCategory(MetricCategory p_146227_, List<MetricSampler> p_146228_, Path p_146229_) {
-        Path path = p_146229_.resolve(Util.sanitizeName(p_146227_.getDescription(), Identifier::validPathChar) + ".csv");
+    private void saveCategory(final MetricCategory category, final List<MetricSampler> samplers, final Path dir) {
+        Path file = dir.resolve(Util.sanitizeName(category.getDescription(), Identifier::validPathChar) + ".csv");
         Writer writer = null;
 
         try {
-            Files.createDirectories(path.getParent());
-            writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8);
-            CsvOutput.Builder csvoutput$builder = CsvOutput.builder();
-            csvoutput$builder.addColumn("@tick");
+            Files.createDirectories(file.getParent());
+            writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8);
+            CsvOutput.Builder csvBuilder = CsvOutput.builder();
+            csvBuilder.addColumn("@tick");
 
-            for (MetricSampler metricsampler : p_146228_) {
-                csvoutput$builder.addColumn(metricsampler.getName());
+            for (MetricSampler sampler : samplers) {
+                csvBuilder.addColumn(sampler.getName());
             }
 
-            CsvOutput csvoutput = csvoutput$builder.build(writer);
-            List<MetricSampler.SamplerResult> list = p_146228_.stream().map(MetricSampler::result).collect(Collectors.toList());
-            int i = list.stream().mapToInt(MetricSampler.SamplerResult::getFirstTick).summaryStatistics().getMin();
-            int j = list.stream().mapToInt(MetricSampler.SamplerResult::getLastTick).summaryStatistics().getMax();
+            CsvOutput csvOutput = csvBuilder.build(writer);
+            List<MetricSampler.SamplerResult> results = samplers.stream().map(MetricSampler::result).collect(Collectors.toList());
+            int firstTick = results.stream().mapToInt(MetricSampler.SamplerResult::getFirstTick).summaryStatistics().getMin();
+            int lastTick = results.stream().mapToInt(MetricSampler.SamplerResult::getLastTick).summaryStatistics().getMax();
 
-            for (int k = i; k <= j; k++) {
-                int l = k;
-                Stream<String> stream = list.stream().map(p_146222_ -> String.valueOf(p_146222_.valueAtTick(l)));
-                Object[] aobject = Stream.concat(Stream.of(String.valueOf(k)), stream).toArray(String[]::new);
-                csvoutput.writeRow(aobject);
+            for (int tick = firstTick; tick <= lastTick; tick++) {
+                int finalTick = tick;
+                Stream<String> valuesStream = results.stream().map(it -> String.valueOf(it.valueAtTick(finalTick)));
+                Object[] row = Stream.concat(Stream.of(String.valueOf(tick)), valuesStream).toArray(String[]::new);
+                csvOutput.writeRow(row);
             }
 
-            LOGGER.info("Flushed metrics to {}", path);
-        } catch (Exception exception) {
-            LOGGER.error("Could not save profiler results to {}", path, exception);
+            LOGGER.info("Flushed metrics to {}", file);
+        } catch (Exception e) {
+            LOGGER.error("Could not save profiler results to {}", file, e);
         } finally {
             IOUtils.closeQuietly(writer);
         }
     }
 
-    private void saveDeviations(Map<MetricSampler, List<RecordedDeviation>> p_146245_, Path p_146246_) {
-        DateTimeFormatter datetimeformatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss.SSS", Locale.UK).withZone(ZoneId.systemDefault());
-        p_146245_.forEach(
-            (p_146242_, p_146243_) -> p_146243_.forEach(
-                p_449374_ -> {
-                    String s = datetimeformatter.format(p_449374_.timestamp);
-                    Path path = p_146246_.resolve(Util.sanitizeName(p_146242_.getName(), Identifier::validPathChar))
-                        .resolve(String.format(Locale.ROOT, "%d@%s.txt", p_449374_.tick, s));
-                    p_449374_.profilerResultAtTick.saveResults(path);
+    private void saveDeviations(final Map<MetricSampler, List<RecordedDeviation>> deviationsBySampler, final Path directory) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss.SSS", Locale.UK).withZone(ZoneId.systemDefault());
+        deviationsBySampler.forEach(
+            (sampler, deviations) -> deviations.forEach(
+                deviation -> {
+                    String timestamp = formatter.format(deviation.timestamp);
+                    Path deviationLogFile = directory.resolve(Util.sanitizeName(sampler.getName(), Identifier::validPathChar))
+                        .resolve(String.format(Locale.ROOT, "%d@%s.txt", deviation.tick, timestamp));
+                    deviation.profilerResultAtTick.saveResults(deviationLogFile);
                 }
             )
         );
     }
 
-    private void saveProfilingTaskExecutionResult(ProfileResults p_146224_, Path p_146225_) {
-        p_146224_.saveResults(p_146225_.resolve("profiling.txt"));
+    private void saveProfilingTaskExecutionResult(final ProfileResults results, final Path directory) {
+        results.saveResults(directory.resolve("profiling.txt"));
     }
 }

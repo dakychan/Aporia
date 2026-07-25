@@ -18,20 +18,18 @@ class PanicSystem private constructor() {
 
         restoreKey = mc.user.name
 
-        mc.gui.chat.clearMessages(false)
+        mc.gui.hud.getChat().clearMessages(false)
 
-        mc.player?.displayClientMessage(
-            Component.literal("§7Bye bye! To restore the client, type \"§f$restoreKey§7\""),
-            false
+        mc.player?.sendSystemMessage(
+            Component.literal("§7Bye bye! To restore the client, type \"§f$restoreKey§7\"")
         )
     }
 
     fun restore() {
         isPanicked = false
         restoreKey = null
-        mc.player?.displayClientMessage(
-            Component.literal("§aAporia restored."),
-            false
+        mc.player?.sendSystemMessage(
+            Component.literal("§aAporia restored.")
         )
     }
 

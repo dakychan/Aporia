@@ -33,26 +33,25 @@ public final class MinecraftServerStatistics implements DynamicMBean {
             new MinecraftServerStatistics.AttributeDescription("tickTimes", this::getTickTimes, "Historical tick times (ms)", long[].class),
             new MinecraftServerStatistics.AttributeDescription("averageTickTime", this::getAverageTickTime, "Current average tick time (ms)", long.class)
         )
-        .collect(Collectors.toMap(p_18332_ -> p_18332_.name, Function.identity()));
+        .collect(Collectors.toMap(attributeDescription -> attributeDescription.name, Function.identity()));
 
-    private MinecraftServerStatistics(MinecraftServer p_18320_) {
-        this.server = p_18320_;
-        MBeanAttributeInfo[] ambeanattributeinfo = this.attributeDescriptionByName
+    private MinecraftServerStatistics(final MinecraftServer server) {
+        this.server = server;
+        MBeanAttributeInfo[] mBeanAttributeInfos = this.attributeDescriptionByName
             .values()
             .stream()
             .map(MinecraftServerStatistics.AttributeDescription::asMBeanAttributeInfo)
             .toArray(MBeanAttributeInfo[]::new);
         this.mBeanInfo = new MBeanInfo(
-            MinecraftServerStatistics.class.getSimpleName(), "metrics for dedicated server", ambeanattributeinfo, null, null, new MBeanNotificationInfo[0]
+            MinecraftServerStatistics.class.getSimpleName(), "metrics for dedicated server", mBeanAttributeInfos, null, null, new MBeanNotificationInfo[0]
         );
     }
 
-    public static void registerJmxMonitoring(MinecraftServer p_18329_) {
+    public static void registerJmxMonitoring(final MinecraftServer server) {
         try {
-            ManagementFactory.getPlatformMBeanServer()
-                .registerMBean(new MinecraftServerStatistics(p_18329_), new ObjectName("net.minecraft.server:type=Server"));
-        } catch (InstanceAlreadyExistsException | MBeanRegistrationException | NotCompliantMBeanException | MalformedObjectNameException malformedobjectnameexception) {
-            LOGGER.warn("Failed to initialise server as JMX bean", (Throwable)malformedobjectnameexception);
+            ManagementFactory.getPlatformMBeanServer().registerMBean(new MinecraftServerStatistics(server), new ObjectName("net.minecraft.server:type=Server"));
+        } catch (MalformedObjectNameException | InstanceAlreadyExistsException | MBeanRegistrationException | NotCompliantMBeanException e) {
+            LOGGER.warn("Failed to initialise server as JMX bean", e);
         }
     }
 
@@ -65,32 +64,32 @@ public final class MinecraftServerStatistics implements DynamicMBean {
     }
 
     @Override
-    public @Nullable Object getAttribute(String p_18334_) {
-        MinecraftServerStatistics.AttributeDescription minecraftserverstatistics$attributedescription = this.attributeDescriptionByName.get(p_18334_);
-        return minecraftserverstatistics$attributedescription == null ? null : minecraftserverstatistics$attributedescription.getter.get();
+    public @Nullable Object getAttribute(final String attribute) {
+        MinecraftServerStatistics.AttributeDescription attributeDescription = this.attributeDescriptionByName.get(attribute);
+        return attributeDescription == null ? null : attributeDescription.getter.get();
     }
 
     @Override
-    public void setAttribute(Attribute p_18343_) {
+    public void setAttribute(final Attribute attribute) {
     }
 
     @Override
-    public AttributeList getAttributes(String[] p_18336_) {
-        List<Attribute> list = Arrays.stream(p_18336_)
+    public AttributeList getAttributes(final String[] attributes) {
+        List<Attribute> attributeList = Arrays.stream(attributes)
             .map(this.attributeDescriptionByName::get)
             .filter(Objects::nonNull)
-            .map(p_145925_ -> new Attribute(p_145925_.name, p_145925_.getter.get()))
+            .map(attributeDescription -> new Attribute(attributeDescription.name, attributeDescription.getter.get()))
             .collect(Collectors.toList());
-        return new AttributeList(list);
+        return new AttributeList(attributeList);
     }
 
     @Override
-    public AttributeList setAttributes(AttributeList p_18345_) {
+    public AttributeList setAttributes(final AttributeList attributes) {
         return new AttributeList();
     }
 
     @Override
-    public @Nullable Object invoke(String p_18339_, Object[] p_18340_, String[] p_18341_) {
+    public @Nullable Object invoke(final String actionName, final Object[] params, final String[] signature) {
         return null;
     }
 
@@ -99,17 +98,17 @@ public final class MinecraftServerStatistics implements DynamicMBean {
         return this.mBeanInfo;
     }
 
-    static final class AttributeDescription {
-        final String name;
-        final Supplier<Object> getter;
+    private static final class AttributeDescription {
+        private final String name;
+        private final Supplier<Object> getter;
         private final String description;
         private final Class<?> type;
 
-        AttributeDescription(String p_18351_, Supplier<Object> p_18352_, String p_18353_, Class<?> p_18354_) {
-            this.name = p_18351_;
-            this.getter = p_18352_;
-            this.description = p_18353_;
-            this.type = p_18354_;
+        private AttributeDescription(final String name, final Supplier<Object> getter, final String description, final Class<?> type) {
+            this.name = name;
+            this.getter = getter;
+            this.description = description;
+            this.type = type;
         }
 
         private MBeanAttributeInfo asMBeanAttributeInfo() {

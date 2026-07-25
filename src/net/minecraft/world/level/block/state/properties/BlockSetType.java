@@ -197,9 +197,9 @@ public record BlockSetType(
         )
     );
 
-    public BlockSetType(String p_272860_) {
+    public BlockSetType(final String name) {
         this(
-            p_272860_,
+            name,
             true,
             true,
             true,
@@ -216,16 +216,16 @@ public record BlockSetType(
         );
     }
 
-    private static BlockSetType register(BlockSetType p_273033_) {
-        TYPES.put(p_273033_.name, p_273033_);
-        return p_273033_;
+    private static BlockSetType register(final BlockSetType type) {
+        TYPES.put(type.name, type);
+        return type;
     }
 
     public static Stream<BlockSetType> values() {
         return TYPES.values().stream();
     }
 
-    public static enum PressurePlateSensitivity {
+    public enum PressurePlateSensitivity {
         EVERYTHING,
         MOBS;
     }

@@ -10,6 +10,7 @@ public class CommonComponents {
     public static final Component GUI_DONE = Component.translatable("gui.done");
     public static final Component GUI_CANCEL = Component.translatable("gui.cancel");
     public static final Component GUI_YES = Component.translatable("gui.yes");
+    public static final Component GUI_REMOVE = Component.translatable("gui.remove");
     public static final Component GUI_NO = Component.translatable("gui.no");
     public static final Component GUI_OK = Component.translatable("gui.ok");
     public static final Component GUI_PROCEED = Component.translatable("gui.proceed");
@@ -33,52 +34,52 @@ public class CommonComponents {
         return Component.literal(" ");
     }
 
-    public static MutableComponent days(long p_239423_) {
-        return Component.translatable("gui.days", p_239423_);
+    public static MutableComponent days(final long value) {
+        return Component.translatable("gui.days", value);
     }
 
-    public static MutableComponent hours(long p_240042_) {
-        return Component.translatable("gui.hours", p_240042_);
+    public static MutableComponent hours(final long value) {
+        return Component.translatable("gui.hours", value);
     }
 
-    public static MutableComponent minutes(long p_239878_) {
-        return Component.translatable("gui.minutes", p_239878_);
+    public static MutableComponent minutes(final long value) {
+        return Component.translatable("gui.minutes", value);
     }
 
-    public static Component optionStatus(boolean p_130667_) {
-        return p_130667_ ? OPTION_ON : OPTION_OFF;
+    public static Component optionStatus(final boolean value) {
+        return value ? OPTION_ON : OPTION_OFF;
     }
 
-    public static Component disconnectButtonLabel(boolean p_406543_) {
-        return p_406543_ ? GUI_RETURN_TO_MENU : GUI_DISCONNECT;
+    public static Component disconnectButtonLabel(final boolean isLocalServer) {
+        return isLocalServer ? GUI_RETURN_TO_MENU : GUI_DISCONNECT;
     }
 
-    public static MutableComponent optionStatus(Component p_130664_, boolean p_130665_) {
-        return Component.translatable(p_130665_ ? "options.on.composed" : "options.off.composed", p_130664_);
+    public static MutableComponent optionStatus(final Component name, final boolean value) {
+        return Component.translatable(value ? "options.on.composed" : "options.off.composed", name);
     }
 
-    public static MutableComponent optionNameValue(Component p_178394_, Component p_178395_) {
-        return Component.translatable("options.generic_value", p_178394_, p_178395_);
+    public static MutableComponent optionNameValue(final Component name, final Component value) {
+        return Component.translatable("options.generic_value", name, value);
     }
 
-    public static MutableComponent joinForNarration(Component... p_267948_) {
-        MutableComponent mutablecomponent = Component.empty();
+    public static MutableComponent joinForNarration(final Component... components) {
+        MutableComponent result = Component.empty();
 
-        for (int i = 0; i < p_267948_.length; i++) {
-            mutablecomponent.append(p_267948_[i]);
-            if (i != p_267948_.length - 1) {
-                mutablecomponent.append(NARRATION_SEPARATOR);
+        for (int i = 0; i < components.length; i++) {
+            result.append(components[i]);
+            if (i != components.length - 1) {
+                result.append(NARRATION_SEPARATOR);
             }
         }
 
-        return mutablecomponent;
+        return result;
     }
 
-    public static Component joinLines(Component... p_178397_) {
-        return joinLines(Arrays.asList(p_178397_));
+    public static Component joinLines(final Component... lines) {
+        return joinLines(Arrays.asList(lines));
     }
 
-    public static Component joinLines(Collection<? extends Component> p_178392_) {
-        return ComponentUtils.formatList(p_178392_, NEW_LINE);
+    public static Component joinLines(final Collection<? extends Component> lines) {
+        return ComponentUtils.formatList(lines, NEW_LINE);
     }
 }

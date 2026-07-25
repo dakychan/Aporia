@@ -15,15 +15,15 @@ public interface PackResources extends AutoCloseable {
     String METADATA_EXTENSION = ".mcmeta";
     String PACK_META = "pack.mcmeta";
 
-    @Nullable IoSupplier<InputStream> getRootResource(String... p_252049_);
+    @Nullable IoSupplier<InputStream> getRootResource(String... path);
 
-    @Nullable IoSupplier<InputStream> getResource(PackType p_215339_, Identifier p_453340_);
+    @Nullable IoSupplier<InputStream> getResource(PackType type, Identifier location);
 
-    void listResources(PackType p_10289_, String p_251379_, String p_251932_, PackResources.ResourceOutput p_249347_);
+    void listResources(PackType type, String namespace, String directory, PackResources.ResourceOutput output);
 
-    Set<String> getNamespaces(PackType p_10283_);
+    Set<String> getNamespaces(PackType type);
 
-    <T> @Nullable T getMetadataSection(MetadataSectionType<T> p_375641_) throws IOException;
+    <T> @Nullable T getMetadataSection(MetadataSectionType<T> metadataSerializer) throws IOException;
 
     PackLocationInfo location();
 
@@ -39,6 +39,6 @@ public interface PackResources extends AutoCloseable {
     void close();
 
     @FunctionalInterface
-    public interface ResourceOutput extends BiConsumer<Identifier, IoSupplier<InputStream>> {
+    interface ResourceOutput extends BiConsumer<Identifier, IoSupplier<InputStream>> {
     }
 }

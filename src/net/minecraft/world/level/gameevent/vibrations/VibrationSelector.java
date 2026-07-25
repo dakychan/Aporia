@@ -2,64 +2,66 @@ package net.minecraft.world.level.gameevent.vibrations;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
-import org.apache.commons.lang3.tuple.Pair;
 
 public class VibrationSelector {
     public static final Codec<VibrationSelector> CODEC = RecordCodecBuilder.create(
-        p_327443_ -> p_327443_.group(
-                VibrationInfo.CODEC.lenientOptionalFieldOf("event").forGetter(p_251862_ -> p_251862_.currentVibrationData.map(Pair::getLeft)),
-                Codec.LONG.fieldOf("tick").forGetter(p_251458_ -> p_251458_.currentVibrationData.map(Pair::getRight).orElse(-1L))
+        i -> i.group(
+                VibrationInfo.CODEC.lenientOptionalFieldOf("event").forGetter(o -> o.currentVibrationData.map(VibrationSelector.VibrationEvent::event)),
+                Codec.LONG.fieldOf("tick").forGetter(o -> o.currentVibrationData.map(VibrationSelector.VibrationEvent::tick).orElse(-1L))
             )
-            .apply(p_327443_, VibrationSelector::new)
+            .apply(i, VibrationSelector::new)
     );
-    private Optional<Pair<VibrationInfo, Long>> currentVibrationData;
+    private Optional<VibrationSelector.VibrationEvent> currentVibrationData;
 
-    public VibrationSelector(Optional<VibrationInfo> p_251736_, long p_251649_) {
-        this.currentVibrationData = p_251736_.map(p_251571_ -> Pair.of(p_251571_, p_251649_));
+    public VibrationSelector(final Optional<VibrationInfo> currentVibration, final long tick) {
+        this.currentVibrationData = currentVibration.map(vibrationInfo -> new VibrationSelector.VibrationEvent(vibrationInfo, tick));
     }
 
     public VibrationSelector() {
         this.currentVibrationData = Optional.empty();
     }
 
-    public void addCandidate(VibrationInfo p_250149_, long p_249749_) {
-        if (this.shouldReplaceVibration(p_250149_, p_249749_)) {
-            this.currentVibrationData = Optional.of(Pair.of(p_250149_, p_249749_));
+    public void addCandidate(final VibrationInfo newVibration, final long tickTime) {
+        if (this.shouldReplaceVibration(newVibration, tickTime)) {
+            this.currentVibrationData = Optional.of(new VibrationSelector.VibrationEvent(newVibration, tickTime));
         }
     }
 
-    private boolean shouldReplaceVibration(VibrationInfo p_248697_, long p_249040_) {
+    private boolean shouldReplaceVibration(final VibrationInfo newVibration, final long tickTime) {
         if (this.currentVibrationData.isEmpty()) {
             return true;
         } else {
-            Pair<VibrationInfo, Long> pair = this.currentVibrationData.get();
-            long i = pair.getRight();
-            if (p_249040_ != i) {
+            VibrationSelector.VibrationEvent previousData = this.currentVibrationData.get();
+            long previousTick = previousData.tick();
+            if (tickTime != previousTick) {
                 return false;
             } else {
-                VibrationInfo vibrationinfo = pair.getLeft();
-                if (p_248697_.distance() < vibrationinfo.distance()) {
+                VibrationInfo previousVibration = previousData.event();
+                if (newVibration.distance() < previousVibration.distance()) {
                     return true;
                 } else {
-                    return p_248697_.distance() > vibrationinfo.distance()
+                    return newVibration.distance() > previousVibration.distance()
                         ? false
-                        : VibrationSystem.getGameEventFrequency(p_248697_.gameEvent()) > VibrationSystem.getGameEventFrequency(vibrationinfo.gameEvent());
+                        : VibrationSystem.getGameEventFrequency(newVibration.gameEvent())
+                            > VibrationSystem.getGameEventFrequency(previousVibration.gameEvent());
                 }
             }
         }
     }
 
-    public Optional<VibrationInfo> chosenCandidate(long p_250251_) {
+    public Optional<VibrationInfo> chosenCandidate(final long time) {
         if (this.currentVibrationData.isEmpty()) {
             return Optional.empty();
         } else {
-            return this.currentVibrationData.get().getRight() < p_250251_ ? Optional.of(this.currentVibrationData.get().getLeft()) : Optional.empty();
+            return this.currentVibrationData.get().tick() < time ? Optional.of(this.currentVibrationData.get().event()) : Optional.empty();
         }
     }
 
     public void startOver() {
         this.currentVibrationData = Optional.empty();
+    }
+
+    private record VibrationEvent(VibrationInfo event, long tick) {
     }
 }

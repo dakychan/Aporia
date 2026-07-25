@@ -10,58 +10,66 @@ public class KeyframeTrackSampler<T> {
     private final LerpFunction<T> lerp;
     private final List<KeyframeTrackSampler.Segment<T>> segments;
 
-    KeyframeTrackSampler(KeyframeTrack<T> p_458766_, Optional<Integer> p_451703_, LerpFunction<T> p_459156_) {
-        this.periodTicks = p_451703_;
-        this.lerp = p_459156_;
-        this.segments = bakeSegments(p_458766_, p_451703_);
+    KeyframeTrackSampler(final KeyframeTrack<T> track, final Optional<Integer> periodTicks, final LerpFunction<T> lerp) {
+        this.periodTicks = periodTicks;
+        this.lerp = lerp;
+        this.segments = bakeSegments(track, periodTicks);
     }
 
-    private static <T> List<KeyframeTrackSampler.Segment<T>> bakeSegments(KeyframeTrack<T> p_454303_, Optional<Integer> p_453183_) {
-        List<Keyframe<T>> list = p_454303_.keyframes();
-        if (list.size() == 1) {
-            T t = list.getFirst().value();
-            return List.of(new KeyframeTrackSampler.Segment<>(EasingType.CONSTANT, t, 0, t, 0));
+    private static <T> List<KeyframeTrackSampler.Segment<T>> bakeSegments(final KeyframeTrack<T> track, final Optional<Integer> periodTicks) {
+        List<Keyframe<T>> keyframes = track.keyframes();
+        if (keyframes.size() == 1) {
+            T value = keyframes.getFirst().value();
+            return List.of(new KeyframeTrackSampler.Segment<>(EasingType.CONSTANT, value, 0, value, 0));
+        }
+
+        List<KeyframeTrackSampler.Segment<T>> segments = new ArrayList<>();
+        if (periodTicks.isPresent()) {
+            Keyframe<T> firstKeyframe = keyframes.getFirst();
+            Keyframe<T> lastKeyframe = keyframes.getLast();
+            segments.add(
+                new KeyframeTrackSampler.Segment<>(track, lastKeyframe, lastKeyframe.ticks() - periodTicks.get(), firstKeyframe, firstKeyframe.ticks())
+            );
+            addSegmentsFromKeyframes(track, keyframes, segments);
+            segments.add(
+                new KeyframeTrackSampler.Segment<>(track, lastKeyframe, lastKeyframe.ticks(), firstKeyframe, firstKeyframe.ticks() + periodTicks.get())
+            );
         } else {
-            List<KeyframeTrackSampler.Segment<T>> list1 = new ArrayList<>();
-            if (p_453183_.isPresent()) {
-                Keyframe<T> keyframe = list.getFirst();
-                Keyframe<T> keyframe1 = list.getLast();
-                list1.add(new KeyframeTrackSampler.Segment<>(p_454303_, keyframe1, keyframe1.ticks() - p_453183_.get(), keyframe, keyframe.ticks()));
-                addSegmentsFromKeyframes(p_454303_, list, list1);
-                list1.add(new KeyframeTrackSampler.Segment<>(p_454303_, keyframe1, keyframe1.ticks(), keyframe, keyframe.ticks() + p_453183_.get()));
-            } else {
-                addSegmentsFromKeyframes(p_454303_, list, list1);
-            }
+            addSegmentsFromKeyframes(track, keyframes, segments);
+        }
 
-            return List.copyOf(list1);
+        return List.copyOf(segments);
+    }
+
+    private static <T> void addSegmentsFromKeyframes(
+        final KeyframeTrack<T> track, final List<Keyframe<T>> keyframes, final List<KeyframeTrackSampler.Segment<T>> output
+    ) {
+        for (int i = 0; i < keyframes.size() - 1; i++) {
+            Keyframe<T> keyframe = keyframes.get(i);
+            Keyframe<T> nextKeyframe = keyframes.get(i + 1);
+            output.add(new KeyframeTrackSampler.Segment<>(track, keyframe, keyframe.ticks(), nextKeyframe, nextKeyframe.ticks()));
         }
     }
 
-    private static <T> void addSegmentsFromKeyframes(KeyframeTrack<T> p_452523_, List<Keyframe<T>> p_451961_, List<KeyframeTrackSampler.Segment<T>> p_460278_) {
-        for (int i = 0; i < p_451961_.size() - 1; i++) {
-            Keyframe<T> keyframe = p_451961_.get(i);
-            Keyframe<T> keyframe1 = p_451961_.get(i + 1);
-            p_460278_.add(new KeyframeTrackSampler.Segment<>(p_452523_, keyframe, keyframe.ticks(), keyframe1, keyframe1.ticks()));
-        }
-    }
-
-    public T sample(long p_453573_) {
-        long i = this.loopTicks(p_453573_);
-        KeyframeTrackSampler.Segment<T> segment = this.getSegmentAt(i);
-        if (i <= segment.fromTicks) {
+    public T sample(final long ticks) {
+        long sampleTicks = this.loopTicks(ticks);
+        KeyframeTrackSampler.Segment<T> segment = this.getSegmentAt(sampleTicks);
+        if (sampleTicks <= segment.fromTicks) {
             return segment.fromValue;
-        } else if (i >= segment.toTicks) {
-            return segment.toValue;
-        } else {
-            float f = (float)(i - segment.fromTicks) / (segment.toTicks - segment.fromTicks);
-            float f1 = segment.easing.apply(f);
-            return this.lerp.apply(f1, segment.fromValue, segment.toValue);
         }
+
+        if (sampleTicks >= segment.toTicks) {
+            return segment.toValue;
+        }
+
+        float alpha = (float)(sampleTicks - segment.fromTicks) / (segment.toTicks - segment.fromTicks);
+        float easedAlpha = segment.easing.apply(alpha);
+        return this.lerp.apply(easedAlpha, segment.fromValue, segment.toValue);
     }
 
-    private KeyframeTrackSampler.Segment<T> getSegmentAt(long p_456058_) {
+    private KeyframeTrackSampler.Segment<T> getSegmentAt(final long currentTicks) {
         for (KeyframeTrackSampler.Segment<T> segment : this.segments) {
-            if (p_456058_ < segment.toTicks) {
+            if (currentTicks < segment.toTicks) {
                 return segment;
             }
         }
@@ -69,13 +77,13 @@ public class KeyframeTrackSampler<T> {
         return this.segments.getLast();
     }
 
-    private long loopTicks(long p_457899_) {
-        return this.periodTicks.isPresent() ? Math.floorMod(p_457899_, this.periodTicks.get()) : p_457899_;
+    private long loopTicks(final long ticks) {
+        return this.periodTicks.isPresent() ? Math.floorMod(ticks, this.periodTicks.get()) : ticks;
     }
 
-    record Segment<T>(EasingType easing, T fromValue, int fromTicks, T toValue, int toTicks) {
-        public Segment(KeyframeTrack<T> p_451749_, Keyframe<T> p_453699_, int p_451057_, Keyframe<T> p_455106_, int p_453773_) {
-            this(p_451749_.easingType(), p_453699_.value(), p_451057_, p_455106_.value(), p_453773_);
+    private record Segment<T>(EasingType easing, T fromValue, int fromTicks, T toValue, int toTicks) {
+        public Segment(final KeyframeTrack<T> track, final Keyframe<T> from, final int fromTicks, final Keyframe<T> to, final int toTicks) {
+            this(track.easingType(), from.value(), fromTicks, to.value(), toTicks);
         }
     }
 }

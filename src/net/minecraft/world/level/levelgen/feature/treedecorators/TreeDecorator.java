@@ -10,21 +10,23 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
 
 public abstract class TreeDecorator {
-    public static final Codec<TreeDecorator> CODEC = BuiltInRegistries.TREE_DECORATOR_TYPE.byNameCodec().dispatch(TreeDecorator::type, TreeDecoratorType::codec);
+    public static final Codec<TreeDecorator> CODEC = BuiltInRegistries.TREE_DECORATOR_TYPE
+        .byNameCodec()
+        .dispatch(TreeDecorator::type, TreeDecoratorType::codec);
 
     protected abstract TreeDecoratorType<?> type();
 
-    public abstract void place(TreeDecorator.Context p_226044_);
+    public abstract void place(final TreeDecorator.Context context);
 
     public static final class Context {
-        private final LevelSimulatedReader level;
+        private final WorldGenLevel level;
         private final BiConsumer<BlockPos, BlockState> decorationSetter;
         private final RandomSource random;
         private final ObjectArrayList<BlockPos> logs;
@@ -32,41 +34,41 @@ public abstract class TreeDecorator {
         private final ObjectArrayList<BlockPos> roots;
 
         public Context(
-            LevelSimulatedReader p_226052_,
-            BiConsumer<BlockPos, BlockState> p_226053_,
-            RandomSource p_226054_,
-            Set<BlockPos> p_226055_,
-            Set<BlockPos> p_226056_,
-            Set<BlockPos> p_226057_
+            final WorldGenLevel level,
+            final BiConsumer<BlockPos, BlockState> decorationSetter,
+            final RandomSource random,
+            final Set<BlockPos> trunkSet,
+            final Set<BlockPos> foliageSet,
+            final Set<BlockPos> rootSet
         ) {
-            this.level = p_226052_;
-            this.decorationSetter = p_226053_;
-            this.random = p_226054_;
-            this.roots = new ObjectArrayList<>(p_226057_);
-            this.logs = new ObjectArrayList<>(p_226055_);
-            this.leaves = new ObjectArrayList<>(p_226056_);
+            this.level = level;
+            this.decorationSetter = decorationSetter;
+            this.random = random;
+            this.roots = new ObjectArrayList<>(rootSet);
+            this.logs = new ObjectArrayList<>(trunkSet);
+            this.leaves = new ObjectArrayList<>(foliageSet);
             this.logs.sort(Comparator.comparingInt(Vec3i::getY));
             this.leaves.sort(Comparator.comparingInt(Vec3i::getY));
             this.roots.sort(Comparator.comparingInt(Vec3i::getY));
         }
 
-        public void placeVine(BlockPos p_226065_, BooleanProperty p_226066_) {
-            this.setBlock(p_226065_, Blocks.VINE.defaultBlockState().setValue(p_226066_, true));
+        public void placeVine(final BlockPos pos, final BooleanProperty direction) {
+            this.setBlock(pos, Blocks.VINE.defaultBlockState().setValue(direction, true));
         }
 
-        public void setBlock(BlockPos p_226062_, BlockState p_226063_) {
-            this.decorationSetter.accept(p_226062_, p_226063_);
+        public void setBlock(final BlockPos pos, final BlockState state) {
+            this.decorationSetter.accept(pos, state);
         }
 
-        public boolean isAir(BlockPos p_226060_) {
-            return this.level.isStateAtPosition(p_226060_, BlockBehaviour.BlockStateBase::isAir);
+        public boolean isAir(final BlockPos pos) {
+            return this.level.isStateAtPosition(pos, BlockBehaviour.BlockStateBase::isAir);
         }
 
-        public boolean checkBlock(BlockPos p_368437_, Predicate<BlockState> p_366855_) {
-            return this.level.isStateAtPosition(p_368437_, p_366855_);
+        public boolean checkBlock(final BlockPos pos, final Predicate<BlockState> predicate) {
+            return this.level.isStateAtPosition(pos, predicate);
         }
 
-        public LevelSimulatedReader level() {
+        public WorldGenLevel level() {
             return this.level;
         }
 

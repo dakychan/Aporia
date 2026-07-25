@@ -8,81 +8,81 @@ import net.minecraft.world.level.GameType;
 public interface MinecraftServerSettingsService {
     boolean isAutoSave();
 
-    boolean setAutoSave(boolean p_426283_, ClientInfo p_429580_);
+    boolean setAutoSave(boolean enabled, ClientInfo clientInfo);
 
     Difficulty getDifficulty();
 
-    Difficulty setDifficulty(Difficulty p_428640_, ClientInfo p_425521_);
+    Difficulty setDifficulty(Difficulty difficulty, ClientInfo clientInfo);
 
     boolean isEnforceWhitelist();
 
-    boolean setEnforceWhitelist(boolean p_431569_, ClientInfo p_423099_);
+    boolean setEnforceWhitelist(boolean enforce, ClientInfo clientInfo);
 
     boolean isUsingWhitelist();
 
-    boolean setUsingWhitelist(boolean p_429455_, ClientInfo p_430513_);
+    boolean setUsingWhitelist(boolean use, ClientInfo clientInfo);
 
     int getMaxPlayers();
 
-    int setMaxPlayers(int p_425772_, ClientInfo p_423069_);
+    int setMaxPlayers(int maxPlayers, ClientInfo clientInfo);
 
     int getPauseWhenEmptySeconds();
 
-    int setPauseWhenEmptySeconds(int p_431138_, ClientInfo p_426340_);
+    int setPauseWhenEmptySeconds(int emptySeconds, ClientInfo clientInfo);
 
     int getPlayerIdleTimeout();
 
-    int setPlayerIdleTimeout(int p_425105_, ClientInfo p_429993_);
+    int setPlayerIdleTimeout(int idleTime, ClientInfo clientInfo);
 
     boolean allowFlight();
 
-    boolean setAllowFlight(boolean p_431088_, ClientInfo p_426536_);
+    boolean setAllowFlight(boolean allow, ClientInfo clientInfo);
 
     int getSpawnProtectionRadius();
 
-    int setSpawnProtectionRadius(int p_423180_, ClientInfo p_431652_);
+    int setSpawnProtectionRadius(int spawnProtection, ClientInfo clientInfo);
 
     String getMotd();
 
-    String setMotd(String p_426488_, ClientInfo p_428645_);
+    String setMotd(String motd, ClientInfo clientInfo);
 
     boolean forceGameMode();
 
-    boolean setForceGameMode(boolean p_431346_, ClientInfo p_431394_);
+    boolean setForceGameMode(boolean force, ClientInfo clientInfo);
 
     GameType getGameMode();
 
-    GameType setGameMode(GameType p_429803_, ClientInfo p_424644_);
+    GameType setGameMode(GameType gameMode, ClientInfo clientInfo);
 
     int getViewDistance();
 
-    int setViewDistance(int p_428779_, ClientInfo p_430831_);
+    int setViewDistance(int viewDistance, ClientInfo clientInfo);
 
     int getSimulationDistance();
 
-    int setSimulationDistance(int p_422820_, ClientInfo p_423690_);
+    int setSimulationDistance(int simulationDistance, ClientInfo clientInfo);
 
     boolean acceptsTransfers();
 
-    boolean setAcceptsTransfers(boolean p_426746_, ClientInfo p_428416_);
+    boolean setAcceptsTransfers(boolean accept, ClientInfo clientInfo);
 
     int getStatusHeartbeatInterval();
 
-    int setStatusHeartbeatInterval(int p_422980_, ClientInfo p_427171_);
+    int setStatusHeartbeatInterval(int statusHeartbeatInterval, ClientInfo clientInfo);
 
     LevelBasedPermissionSet getOperatorUserPermissions();
 
-    LevelBasedPermissionSet setOperatorUserPermissions(LevelBasedPermissionSet p_459214_, ClientInfo p_457989_);
+    LevelBasedPermissionSet setOperatorUserPermissions(LevelBasedPermissionSet level, ClientInfo clientInfo);
 
     boolean hidesOnlinePlayers();
 
-    boolean setHidesOnlinePlayers(boolean p_426787_, ClientInfo p_430469_);
+    boolean setHidesOnlinePlayers(boolean hide, ClientInfo clientInfo);
 
     boolean repliesToStatus();
 
-    boolean setRepliesToStatus(boolean p_424117_, ClientInfo p_429901_);
+    boolean setRepliesToStatus(boolean enable, ClientInfo clientInfo);
 
     int getEntityBroadcastRangePercentage();
 
-    int setEntityBroadcastRangePercentage(int p_427504_, ClientInfo p_429330_);
+    int setEntityBroadcastRangePercentage(int percentage, ClientInfo clientInfo);
 }

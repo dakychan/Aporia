@@ -16,8 +16,8 @@ import java.util.List;
 import java.util.Optional;
 
 public class FurnaceRecipeFix extends DataFix {
-    public FurnaceRecipeFix(Schema p_15837_, boolean p_15838_) {
-        super(p_15837_, p_15838_);
+    public FurnaceRecipeFix(final Schema schema, final boolean changesType) {
+        super(schema, changesType);
     }
 
     @Override
@@ -25,51 +25,55 @@ public class FurnaceRecipeFix extends DataFix {
         return this.cap(this.getOutputSchema().getTypeRaw(References.RECIPE));
     }
 
-    private <R> TypeRewriteRule cap(Type<R> p_15850_) {
-        Type<Pair<Either<Pair<List<Pair<R, Integer>>, Dynamic<?>>, Unit>, Dynamic<?>>> type = DSL.and(
-            DSL.optional(DSL.field("RecipesUsed", DSL.and(DSL.compoundList(p_15850_, DSL.intType()), DSL.remainderType()))), DSL.remainderType()
+    private <R> TypeRewriteRule cap(final Type<R> recipeType) {
+        Type<Pair<Either<Pair<List<Pair<R, Integer>>, Dynamic<?>>, Unit>, Dynamic<?>>> replacedType = DSL.and(
+            DSL.optional(DSL.field("RecipesUsed", DSL.and(DSL.compoundList(recipeType, DSL.intType()), DSL.remainderType()))), DSL.remainderType()
         );
-        OpticFinder<?> opticfinder = DSL.namedChoice("minecraft:furnace", this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:furnace"));
-        OpticFinder<?> opticfinder1 = DSL.namedChoice(
+        OpticFinder<?> oldFurnaceFinder = DSL.namedChoice(
+            "minecraft:furnace", this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:furnace")
+        );
+        OpticFinder<?> oldBlastFurnaceFinder = DSL.namedChoice(
             "minecraft:blast_furnace", this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:blast_furnace")
         );
-        OpticFinder<?> opticfinder2 = DSL.namedChoice("minecraft:smoker", this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:smoker"));
-        Type<?> type1 = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:furnace");
-        Type<?> type2 = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:blast_furnace");
-        Type<?> type3 = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:smoker");
-        Type<?> type4 = this.getInputSchema().getType(References.BLOCK_ENTITY);
-        Type<?> type5 = this.getOutputSchema().getType(References.BLOCK_ENTITY);
+        OpticFinder<?> oldSmokerFinder = DSL.namedChoice("minecraft:smoker", this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:smoker"));
+        Type<?> newFurnaceType = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:furnace");
+        Type<?> newBlastFurnaceFinder = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:blast_furnace");
+        Type<?> newSmokerFinder = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:smoker");
+        Type<?> oldEntityType = this.getInputSchema().getType(References.BLOCK_ENTITY);
+        Type<?> newEntityType = this.getOutputSchema().getType(References.BLOCK_ENTITY);
         return this.fixTypeEverywhereTyped(
             "FurnaceRecipesFix",
-            type4,
-            type5,
-            p_15848_ -> p_15848_.updateTyped(opticfinder, type1, p_145372_ -> this.updateFurnaceContents(p_15850_, type, p_145372_))
-                .updateTyped(opticfinder1, type2, p_145368_ -> this.updateFurnaceContents(p_15850_, type, p_145368_))
-                .updateTyped(opticfinder2, type3, p_145364_ -> this.updateFurnaceContents(p_15850_, type, p_145364_))
+            oldEntityType,
+            newEntityType,
+            input -> input.updateTyped(oldFurnaceFinder, newFurnaceType, furnace -> this.updateFurnaceContents(recipeType, replacedType, furnace))
+                .updateTyped(oldBlastFurnaceFinder, newBlastFurnaceFinder, blastFurnace -> this.updateFurnaceContents(recipeType, replacedType, blastFurnace))
+                .updateTyped(oldSmokerFinder, newSmokerFinder, smoker -> this.updateFurnaceContents(recipeType, replacedType, smoker))
         );
     }
 
-    private <R> Typed<?> updateFurnaceContents(Type<R> p_15852_, Type<Pair<Either<Pair<List<Pair<R, Integer>>, Dynamic<?>>, Unit>, Dynamic<?>>> p_15853_, Typed<?> p_15854_) {
-        Dynamic<?> dynamic = p_15854_.getOrCreate(DSL.remainderFinder());
-        int i = dynamic.get("RecipesUsedSize").asInt(0);
-        dynamic = dynamic.remove("RecipesUsedSize");
-        List<Pair<R, Integer>> list = Lists.newArrayList();
+    private <R> Typed<?> updateFurnaceContents(
+        final Type<R> recipeType, final Type<Pair<Either<Pair<List<Pair<R, Integer>>, Dynamic<?>>, Unit>, Dynamic<?>>> replacedType, final Typed<?> input
+    ) {
+        Dynamic<?> tag = input.getOrCreate(DSL.remainderFinder());
+        int recipesUsedSize = tag.get("RecipesUsedSize").asInt(0);
+        tag = tag.remove("RecipesUsedSize");
+        List<Pair<R, Integer>> results = Lists.newArrayList();
 
-        for (int j = 0; j < i; j++) {
-            String s = "RecipeLocation" + j;
-            String s1 = "RecipeAmount" + j;
-            Optional<? extends Dynamic<?>> optional = dynamic.get(s).result();
-            int k = dynamic.get(s1).asInt(0);
-            if (k > 0) {
-                optional.ifPresent(p_326593_ -> {
-                    Optional<? extends Pair<R, ? extends Dynamic<?>>> optional1 = p_15852_.read((Dynamic<?>)p_326593_).result();
-                    optional1.ifPresent(p_145360_ -> list.add(Pair.of(p_145360_.getFirst(), k)));
+        for (int i = 0; i < recipesUsedSize; i++) {
+            String locationKey = "RecipeLocation" + i;
+            String amountKey = "RecipeAmount" + i;
+            Optional<? extends Dynamic<?>> maybeLocation = tag.get(locationKey).result();
+            int amount = tag.get(amountKey).asInt(0);
+            if (amount > 0) {
+                maybeLocation.ifPresent(location -> {
+                    Optional<? extends Pair<R, ? extends Dynamic<?>>> parseResult = recipeType.read((Dynamic<?>)location).result();
+                    parseResult.ifPresent(r -> results.add(Pair.of(r.getFirst(), amount)));
                 });
             }
 
-            dynamic = dynamic.remove(s).remove(s1);
+            tag = tag.remove(locationKey).remove(amountKey);
         }
 
-        return p_15854_.set(DSL.remainderFinder(), p_15853_, Pair.of(Either.left(Pair.of(list, dynamic.emptyMap())), dynamic));
+        return input.set(DSL.remainderFinder(), replacedType, Pair.of(Either.left(Pair.of(results, tag.emptyMap())), tag));
     }
 }

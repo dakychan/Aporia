@@ -14,19 +14,19 @@ public class ClientboundSetEntityLinkPacket implements Packet<ClientGamePacketLi
     private final int sourceId;
     private final int destId;
 
-    public ClientboundSetEntityLinkPacket(Entity p_133164_, @Nullable Entity p_133165_) {
-        this.sourceId = p_133164_.getId();
-        this.destId = p_133165_ != null ? p_133165_.getId() : 0;
+    public ClientboundSetEntityLinkPacket(final Entity sourceEntity, final @Nullable Entity destEntity) {
+        this.sourceId = sourceEntity.getId();
+        this.destId = destEntity != null ? destEntity.getId() : 0;
     }
 
-    private ClientboundSetEntityLinkPacket(FriendlyByteBuf p_179292_) {
-        this.sourceId = p_179292_.readInt();
-        this.destId = p_179292_.readInt();
+    private ClientboundSetEntityLinkPacket(final FriendlyByteBuf input) {
+        this.sourceId = input.readInt();
+        this.destId = input.readInt();
     }
 
-    private void write(FriendlyByteBuf p_133174_) {
-        p_133174_.writeInt(this.sourceId);
-        p_133174_.writeInt(this.destId);
+    private void write(final FriendlyByteBuf output) {
+        output.writeInt(this.sourceId);
+        output.writeInt(this.destId);
     }
 
     @Override
@@ -34,8 +34,8 @@ public class ClientboundSetEntityLinkPacket implements Packet<ClientGamePacketLi
         return GamePacketTypes.CLIENTBOUND_SET_ENTITY_LINK;
     }
 
-    public void handle(ClientGamePacketListener p_133171_) {
-        p_133171_.handleEntityLinkPacket(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleEntityLinkPacket(this);
     }
 
     public int getSourceId() {

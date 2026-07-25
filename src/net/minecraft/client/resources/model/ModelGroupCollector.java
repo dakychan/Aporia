@@ -9,67 +9,70 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import net.minecraft.client.color.block.BlockColors;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ModelGroupCollector {
     static final int SINGLETON_MODEL_GROUP = -1;
     private static final int INVISIBLE_MODEL_GROUP = 0;
 
-    public static Object2IntMap<BlockState> build(BlockColors p_367669_, BlockStateModelLoader.LoadedModels p_368285_) {
-        Map<Block, List<Property<?>>> map = new HashMap<>();
-        Map<ModelGroupCollector.GroupKey, Set<BlockState>> map1 = new HashMap<>();
-        p_368285_.models().forEach((p_389610_, p_389611_) -> {
-            List<Property<?>> list = map.computeIfAbsent(p_389610_.getBlock(), p_361060_ -> List.copyOf(p_367669_.getColoringProperties(p_361060_)));
-            ModelGroupCollector.GroupKey modelgroupcollector$groupkey = ModelGroupCollector.GroupKey.create(p_389610_, p_389611_, list);
-            map1.computeIfAbsent(modelgroupcollector$groupkey, p_367245_ -> Sets.newIdentityHashSet()).add(p_389610_);
-        });
-        int i = 1;
-        Object2IntMap<BlockState> object2intmap = new Object2IntOpenHashMap<>();
-        object2intmap.defaultReturnValue(-1);
+    public static Object2IntMap<BlockState> build(final BlockColors blockColors, final BlockStateModelLoader.LoadedModels input) {
+        Map<Block, List<Property<?>>> coloringPropertiesCache = new HashMap<>();
+        Map<ModelGroupCollector.GroupKey, Set<BlockState>> modelGroups = new HashMap<>();
+        input.models()
+            .forEach(
+                (state, loadedModel) -> {
+                    List<Property<?>> coloringProperties = coloringPropertiesCache.computeIfAbsent(
+                        state.getBlock(), block -> List.copyOf(blockColors.getColoringProperties(block))
+                    );
+                    ModelGroupCollector.GroupKey key = ModelGroupCollector.GroupKey.create(state, loadedModel, coloringProperties);
+                    modelGroups.computeIfAbsent(key, k -> Sets.newIdentityHashSet()).add(state);
+                }
+            );
+        int nextModelGroup = 1;
+        Object2IntMap<BlockState> result = new Object2IntOpenHashMap<>();
+        result.defaultReturnValue(-1);
 
-        for (Set<BlockState> set : map1.values()) {
-            Iterator<BlockState> iterator = set.iterator();
+        for (Set<BlockState> states : modelGroups.values()) {
+            Iterator<BlockState> it = states.iterator();
 
-            while (iterator.hasNext()) {
-                BlockState blockstate = iterator.next();
-                if (blockstate.getRenderShape() != RenderShape.MODEL) {
-                    iterator.remove();
-                    object2intmap.put(blockstate, 0);
+            while (it.hasNext()) {
+                BlockState state = it.next();
+                if (state.getRenderShape() != RenderShape.MODEL) {
+                    it.remove();
+                    result.put(state, 0);
                 }
             }
 
-            if (set.size() > 1) {
-                int j = i++;
-                set.forEach(p_362909_ -> object2intmap.put(p_362909_, j));
+            if (states.size() > 1) {
+                int modelGroup = nextModelGroup++;
+                states.forEach(blockState -> result.put(blockState, modelGroup));
             }
         }
 
-        return object2intmap;
+        return result;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record GroupKey(Object equalityGroup, List<Object> coloringValues) {
-        public static ModelGroupCollector.GroupKey create(BlockState p_367993_, BlockStateModel.UnbakedRoot p_396888_, List<Property<?>> p_363265_) {
-            List<Object> list = getColoringValues(p_367993_, p_363265_);
-            Object object = p_396888_.visualEqualityGroup(p_367993_);
-            return new ModelGroupCollector.GroupKey(object, list);
+        private record GroupKey(Object equalityGroup, List<Object> coloringValues) {
+        public static ModelGroupCollector.GroupKey create(
+            final BlockState state, final BlockStateModel.UnbakedRoot model, final List<Property<?>> coloringProperties
+        ) {
+            List<Object> coloringValues = getColoringValues(state, coloringProperties);
+            Object equalityGroup = model.visualEqualityGroup(state);
+            return new ModelGroupCollector.GroupKey(equalityGroup, coloringValues);
         }
 
-        private static List<Object> getColoringValues(BlockState p_367197_, List<Property<?>> p_360879_) {
-            Object[] aobject = new Object[p_360879_.size()];
+        private static List<Object> getColoringValues(final BlockState state, final List<Property<?>> coloringProperties) {
+            Object[] coloringValues = new Object[coloringProperties.size()];
 
-            for (int i = 0; i < p_360879_.size(); i++) {
-                aobject[i] = p_367197_.getValue(p_360879_.get(i));
+            for (int i = 0; i < coloringProperties.size(); i++) {
+                coloringValues[i] = state.getValue(coloringProperties.get(i));
             }
 
-            return List.of(aobject);
+            return List.of(coloringValues);
         }
     }
 }

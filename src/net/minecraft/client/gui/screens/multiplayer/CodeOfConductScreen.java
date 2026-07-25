@@ -11,11 +11,8 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CodeOfConductScreen extends WarningScreen {
     private static final Component TITLE = Component.translatable("multiplayer.codeOfConduct.title").withStyle(ChatFormatting.BOLD);
     private static final Component CHECK = Component.translatable("multiplayer.codeOfConduct.check");
@@ -24,30 +21,36 @@ public class CodeOfConductScreen extends WarningScreen {
     private final BooleanConsumer resultConsumer;
     private final Screen parent;
 
-    private CodeOfConductScreen(@Nullable ServerData p_428059_, Screen p_423797_, Component p_430883_, String p_431387_, BooleanConsumer p_426320_) {
-        super(TITLE, p_430883_, CHECK, TITLE.copy().append("\n").append(p_430883_));
-        this.serverData = p_428059_;
-        this.parent = p_423797_;
-        this.codeOfConductText = p_431387_;
-        this.resultConsumer = p_426320_;
+    private CodeOfConductScreen(
+        final @Nullable ServerData serverData,
+        final Screen parent,
+        final Component contents,
+        final String codeOfConductText,
+        final BooleanConsumer resultConsumer
+    ) {
+        super(TITLE, contents, CHECK, TITLE.copy().append("\n").append(contents));
+        this.serverData = serverData;
+        this.parent = parent;
+        this.codeOfConductText = codeOfConductText;
+        this.resultConsumer = resultConsumer;
     }
 
-    public CodeOfConductScreen(@Nullable ServerData p_429980_, Screen p_424964_, String p_427379_, BooleanConsumer p_428635_) {
-        this(p_429980_, p_424964_, Component.literal(p_427379_), p_427379_, p_428635_);
+    public CodeOfConductScreen(final @Nullable ServerData serverData, final Screen parent, final String codeOfConductText, final BooleanConsumer resultConsumer) {
+        this(serverData, parent, Component.literal(codeOfConductText), codeOfConductText, resultConsumer);
     }
 
     @Override
     protected Layout addFooterButtons() {
-        LinearLayout linearlayout = LinearLayout.horizontal().spacing(8);
-        linearlayout.addChild(Button.builder(CommonComponents.GUI_ACKNOWLEDGE, p_427194_ -> this.onResult(true)).build());
-        linearlayout.addChild(Button.builder(CommonComponents.GUI_DISCONNECT, p_427513_ -> this.onResult(false)).build());
-        return linearlayout;
+        LinearLayout footer = LinearLayout.horizontal().spacing(8);
+        footer.addChild(Button.builder(CommonComponents.GUI_ACKNOWLEDGE, button -> this.onResult(true)).build());
+        footer.addChild(Button.builder(CommonComponents.GUI_DISCONNECT, button -> this.onResult(false)).build());
+        return footer;
     }
 
-    private void onResult(boolean p_424550_) {
-        this.resultConsumer.accept(p_424550_);
+    private void onResult(final boolean accepted) {
+        this.resultConsumer.accept(accepted);
         if (this.serverData != null) {
-            if (p_424550_ && this.stopShowing.selected()) {
+            if (accepted && this.stopShowing.selected()) {
                 this.serverData.acceptCodeOfConduct(this.codeOfConductText);
             } else {
                 this.serverData.clearCodeOfConduct();

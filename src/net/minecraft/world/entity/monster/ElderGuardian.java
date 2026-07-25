@@ -11,20 +11,21 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffectUtil;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.Level;
 
 public class ElderGuardian extends Guardian {
-    public static final float ELDER_SIZE_SCALE = EntityType.ELDER_GUARDIAN.getWidth() / EntityType.GUARDIAN.getWidth();
+    public static final float ELDER_SIZE_SCALE = EntityTypes.ELDER_GUARDIAN.getWidth() / EntityTypes.GUARDIAN.getWidth();
     private static final int EFFECT_INTERVAL = 1200;
     private static final int EFFECT_RADIUS = 50;
     private static final int EFFECT_DURATION = 6000;
     private static final int EFFECT_AMPLIFIER = 2;
     private static final int EFFECT_DISPLAY_LIMIT = 1200;
 
-    public ElderGuardian(EntityType<? extends ElderGuardian> p_32460_, Level p_32461_) {
-        super(p_32460_, p_32461_);
+    public ElderGuardian(final EntityType<? extends ElderGuardian> type, final Level level) {
+        super(type, level);
         this.setPersistenceRequired();
         if (this.randomStrollGoal != null) {
             this.randomStrollGoal.setInterval(400);
@@ -46,7 +47,7 @@ public class ElderGuardian extends Guardian {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_32468_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return this.isInWater() ? SoundEvents.ELDER_GUARDIAN_HURT : SoundEvents.ELDER_GUARDIAN_HURT_LAND;
     }
 
@@ -61,13 +62,14 @@ public class ElderGuardian extends Guardian {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_367939_) {
-        super.customServerAiStep(p_367939_);
+    protected void customServerAiStep(final ServerLevel level) {
+        super.customServerAiStep(level);
         if ((this.tickCount + this.getId()) % 1200 == 0) {
-            MobEffectInstance mobeffectinstance = new MobEffectInstance(MobEffects.MINING_FATIGUE, 6000, 2);
-            List<ServerPlayer> list = MobEffectUtil.addEffectToPlayersAround(p_367939_, this, this.position(), 50.0, mobeffectinstance, 1200);
-            list.forEach(
-                p_449680_ -> p_449680_.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT, this.isSilent() ? 0.0F : 1.0F))
+            MobEffectInstance miningFatigue = new MobEffectInstance(MobEffects.MINING_FATIGUE, 6000, 2);
+            List<ServerPlayer> affectedPlayers = MobEffectUtil.addEffectToPlayersAround(level, this, this.position(), 50.0, miningFatigue, 1200);
+            affectedPlayers.forEach(
+                player -> player.connection
+                    .send(new ClientboundGameEventPacket(ClientboundGameEventPacket.GUARDIAN_ELDER_EFFECT, this.isSilent() ? 0.0F : 1.0F))
             );
         }
 

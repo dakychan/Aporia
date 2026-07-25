@@ -4,7 +4,6 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
@@ -34,8 +33,7 @@ import org.slf4j.Logger;
 
 public class CommandBlock extends BaseEntityBlock implements GameMasterBlock {
     public static final MapCodec<CommandBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422098_ -> p_422098_.group(Codec.BOOL.fieldOf("automatic").forGetter(p_311238_ -> p_311238_.automatic), propertiesCodec())
-            .apply(p_422098_, CommandBlock::new)
+        i -> i.group(Codec.BOOL.fieldOf("automatic").forGetter(b -> b.automatic), propertiesCodec()).apply(i, CommandBlock::new)
     );
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final EnumProperty<Direction> FACING = DirectionalBlock.FACING;
@@ -47,88 +45,91 @@ public class CommandBlock extends BaseEntityBlock implements GameMasterBlock {
         return CODEC;
     }
 
-    public CommandBlock(boolean p_153081_, BlockBehaviour.Properties p_153080_) {
-        super(p_153080_);
+    public CommandBlock(final boolean automatic, final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(CONDITIONAL, false));
-        this.automatic = p_153081_;
+        this.automatic = automatic;
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153083_, BlockState p_153084_) {
-        CommandBlockEntity commandblockentity = new CommandBlockEntity(p_153083_, p_153084_);
-        commandblockentity.setAutomatic(this.automatic);
-        return commandblockentity;
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        CommandBlockEntity blockEntity = new CommandBlockEntity(worldPosition, blockState);
+        blockEntity.setAutomatic(this.automatic);
+        return blockEntity;
     }
 
     @Override
-    protected void neighborChanged(BlockState p_51838_, Level p_51839_, BlockPos p_51840_, Block p_51841_, @Nullable Orientation p_361911_, boolean p_51843_) {
-        if (!p_51839_.isClientSide()) {
-            if (p_51839_.getBlockEntity(p_51840_) instanceof CommandBlockEntity commandblockentity) {
-                this.setPoweredAndUpdate(p_51839_, p_51840_, commandblockentity, p_51839_.hasNeighborSignal(p_51840_));
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        if (!level.isClientSide()) {
+            if (level.getBlockEntity(pos) instanceof CommandBlockEntity commandBlock) {
+                this.setPoweredAndUpdate(level, pos, commandBlock, level.hasNeighborSignal(pos));
             }
         }
     }
 
-    private void setPoweredAndUpdate(Level p_365801_, BlockPos p_368914_, CommandBlockEntity p_368404_, boolean p_362448_) {
-        boolean flag = p_368404_.isPowered();
-        if (p_362448_ != flag) {
-            p_368404_.setPowered(p_362448_);
-            if (p_362448_) {
-                if (p_368404_.isAutomatic() || p_368404_.getMode() == CommandBlockEntity.Mode.SEQUENCE) {
+    private void setPoweredAndUpdate(final Level level, final BlockPos pos, final CommandBlockEntity commandBlock, final boolean isPowered) {
+        boolean wasPowered = commandBlock.isPowered();
+        if (isPowered != wasPowered) {
+            commandBlock.setPowered(isPowered);
+            if (isPowered) {
+                if (commandBlock.isAutomatic() || commandBlock.getMode() == CommandBlockEntity.Mode.SEQUENCE) {
                     return;
                 }
 
-                p_368404_.markConditionMet();
-                p_365801_.scheduleTick(p_368914_, this, 1);
+                commandBlock.markConditionMet();
+                level.scheduleTick(pos, this, 1);
             }
         }
     }
 
     @Override
-    protected void tick(BlockState p_221005_, ServerLevel p_221006_, BlockPos p_221007_, RandomSource p_221008_) {
-        if (p_221006_.getBlockEntity(p_221007_) instanceof CommandBlockEntity commandblockentity) {
-            BaseCommandBlock basecommandblock = commandblockentity.getCommandBlock();
-            boolean flag = !StringUtil.isNullOrEmpty(basecommandblock.getCommand());
-            CommandBlockEntity.Mode commandblockentity$mode = commandblockentity.getMode();
-            boolean flag1 = commandblockentity.wasConditionMet();
-            if (commandblockentity$mode == CommandBlockEntity.Mode.AUTO) {
-                commandblockentity.markConditionMet();
-                if (flag1) {
-                    this.execute(p_221005_, p_221006_, p_221007_, basecommandblock, flag);
-                } else if (commandblockentity.isConditional()) {
-                    basecommandblock.setSuccessCount(0);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (level.getBlockEntity(pos) instanceof CommandBlockEntity commandBlock) {
+            BaseCommandBlock baseCommandBlock = commandBlock.getCommandBlock();
+            boolean commandSet = !StringUtil.isNullOrEmpty(baseCommandBlock.getCommand());
+            CommandBlockEntity.Mode mode = commandBlock.getMode();
+            boolean wasConditionMet = commandBlock.wasConditionMet();
+            if (mode == CommandBlockEntity.Mode.AUTO) {
+                commandBlock.markConditionMet();
+                if (wasConditionMet) {
+                    this.execute(state, level, pos, baseCommandBlock, commandSet);
+                } else if (commandBlock.isConditional()) {
+                    baseCommandBlock.setSuccessCount(0);
                 }
 
-                if (commandblockentity.isPowered() || commandblockentity.isAutomatic()) {
-                    p_221006_.scheduleTick(p_221007_, this, 1);
+                if (commandBlock.isPowered() || commandBlock.isAutomatic()) {
+                    level.scheduleTick(pos, this, 1);
                 }
-            } else if (commandblockentity$mode == CommandBlockEntity.Mode.REDSTONE) {
-                if (flag1) {
-                    this.execute(p_221005_, p_221006_, p_221007_, basecommandblock, flag);
-                } else if (commandblockentity.isConditional()) {
-                    basecommandblock.setSuccessCount(0);
+            } else if (mode == CommandBlockEntity.Mode.REDSTONE) {
+                if (wasConditionMet) {
+                    this.execute(state, level, pos, baseCommandBlock, commandSet);
+                } else if (commandBlock.isConditional()) {
+                    baseCommandBlock.setSuccessCount(0);
                 }
             }
 
-            p_221006_.updateNeighbourForOutputSignal(p_221007_, this);
+            level.updateNeighbourForOutputSignal(pos, this);
         }
     }
 
-    private void execute(BlockState p_51832_, ServerLevel p_369285_, BlockPos p_51834_, BaseCommandBlock p_51835_, boolean p_51836_) {
-        if (p_51836_) {
-            p_51835_.performCommand(p_369285_);
+    private void execute(final BlockState state, final ServerLevel level, final BlockPos pos, final BaseCommandBlock baseCommandBlock, final boolean commandSet) {
+        if (commandSet) {
+            baseCommandBlock.performCommand(level);
         } else {
-            p_51835_.setSuccessCount(0);
+            baseCommandBlock.setSuccessCount(0);
         }
 
-        executeChain(p_369285_, p_51834_, p_51832_.getValue(FACING));
+        executeChain(level, pos, state.getValue(FACING));
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_51825_, Level p_51826_, BlockPos p_51827_, Player p_51828_, BlockHitResult p_51830_) {
-        BlockEntity blockentity = p_51826_.getBlockEntity(p_51827_);
-        if (blockentity instanceof CommandBlockEntity && p_51828_.canUseGameMasterBlocks()) {
-            p_51828_.openCommandBlock((CommandBlockEntity)blockentity);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (level.getBlockEntity(pos) instanceof CommandBlockEntity commandBlockEntity && player.canUseGameMasterBlocks()) {
+            player.openCommandBlock(commandBlockEntity);
             return InteractionResult.SUCCESS;
         } else {
             return InteractionResult.PASS;
@@ -136,86 +137,85 @@ public class CommandBlock extends BaseEntityBlock implements GameMasterBlock {
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_51814_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_51821_, Level p_51822_, BlockPos p_51823_, Direction p_426756_) {
-        BlockEntity blockentity = p_51822_.getBlockEntity(p_51823_);
-        return blockentity instanceof CommandBlockEntity ? ((CommandBlockEntity)blockentity).getCommandBlock().getSuccessCount() : 0;
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return level.getBlockEntity(pos) instanceof CommandBlockEntity commandBlockEntity ? commandBlockEntity.getCommandBlock().getSuccessCount() : 0;
     }
 
     @Override
-    public void setPlacedBy(Level p_51804_, BlockPos p_51805_, BlockState p_51806_, @Nullable LivingEntity p_51807_, ItemStack p_51808_) {
-        if (p_51804_.getBlockEntity(p_51805_) instanceof CommandBlockEntity commandblockentity) {
-            BaseCommandBlock $$8 = commandblockentity.getCommandBlock();
-            if (p_51804_ instanceof ServerLevel serverlevel) {
-                if (!p_51808_.has(DataComponents.BLOCK_ENTITY_DATA)) {
-                    $$8.setTrackOutput(serverlevel.getGameRules().get(GameRules.SEND_COMMAND_FEEDBACK));
-                    commandblockentity.setAutomatic(this.automatic);
+    public void setPlacedBy(final Level level, final BlockPos pos, final BlockState state, final @Nullable LivingEntity by, final ItemStack itemStack) {
+        if (level.getBlockEntity(pos) instanceof CommandBlockEntity commandBlockEntity) {
+            BaseCommandBlock commandBlock = commandBlockEntity.getCommandBlock();
+            if (level instanceof ServerLevel serverLevel) {
+                if (!itemStack.has(DataComponents.BLOCK_ENTITY_DATA)) {
+                    commandBlock.setTrackOutput(serverLevel.getGameRules().get(GameRules.SEND_COMMAND_FEEDBACK));
+                    commandBlockEntity.setAutomatic(this.automatic);
                 }
 
-                boolean flag = p_51804_.hasNeighborSignal(p_51805_);
-                this.setPoweredAndUpdate(p_51804_, p_51805_, commandblockentity, flag);
+                boolean hasNeighborSignal = level.hasNeighborSignal(pos);
+                this.setPoweredAndUpdate(level, pos, commandBlockEntity, hasNeighborSignal);
             }
         }
     }
 
     @Override
-    protected BlockState rotate(BlockState p_51848_, Rotation p_51849_) {
-        return p_51848_.setValue(FACING, p_51849_.rotate(p_51848_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_51845_, Mirror p_51846_) {
-        return p_51845_.rotate(p_51846_.getRotation(p_51845_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51851_) {
-        p_51851_.add(FACING, CONDITIONAL);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, CONDITIONAL);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_51800_) {
-        return this.defaultBlockState().setValue(FACING, p_51800_.getNearestLookingDirection().getOpposite());
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return this.defaultBlockState().setValue(FACING, context.getNearestLookingDirection().getOpposite());
     }
 
-    private static void executeChain(ServerLevel p_365531_, BlockPos p_51811_, Direction p_51812_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_51811_.mutable();
-        GameRules gamerules = p_365531_.getGameRules();
-        int i = gamerules.get(GameRules.MAX_COMMAND_SEQUENCE_LENGTH);
+    private static void executeChain(final ServerLevel level, final BlockPos blockPos, Direction direction) {
+        BlockPos.MutableBlockPos pos = blockPos.mutable();
+        GameRules gameRules = level.getGameRules();
+        int maxIterations = gameRules.get(GameRules.MAX_COMMAND_SEQUENCE_LENGTH);
 
-        while (i-- > 0) {
-            blockpos$mutableblockpos.move(p_51812_);
-            BlockState blockstate = p_365531_.getBlockState(blockpos$mutableblockpos);
-            Block block = blockstate.getBlock();
-            if (!blockstate.is(Blocks.CHAIN_COMMAND_BLOCK)
-                || !(p_365531_.getBlockEntity(blockpos$mutableblockpos) instanceof CommandBlockEntity commandblockentity)
-                || commandblockentity.getMode() != CommandBlockEntity.Mode.SEQUENCE) {
+        while (maxIterations-- > 0) {
+            pos.move(direction);
+            BlockState state = level.getBlockState(pos);
+            Block block = state.getBlock();
+            if (!state.is(Blocks.CHAIN_COMMAND_BLOCK)
+                || !(level.getBlockEntity(pos) instanceof CommandBlockEntity commandBlock)
+                || commandBlock.getMode() != CommandBlockEntity.Mode.SEQUENCE) {
                 break;
             }
 
-            if (commandblockentity.isPowered() || commandblockentity.isAutomatic()) {
-                BaseCommandBlock basecommandblock = commandblockentity.getCommandBlock();
-                if (commandblockentity.markConditionMet()) {
-                    if (!basecommandblock.performCommand(p_365531_)) {
+            if (commandBlock.isPowered() || commandBlock.isAutomatic()) {
+                BaseCommandBlock baseCommandBlock = commandBlock.getCommandBlock();
+                if (commandBlock.markConditionMet()) {
+                    if (!baseCommandBlock.performCommand(level)) {
                         break;
                     }
 
-                    p_365531_.updateNeighbourForOutputSignal(blockpos$mutableblockpos, block);
-                } else if (commandblockentity.isConditional()) {
-                    basecommandblock.setSuccessCount(0);
+                    level.updateNeighbourForOutputSignal(pos, block);
+                } else if (commandBlock.isConditional()) {
+                    baseCommandBlock.setSuccessCount(0);
                 }
             }
 
-            p_51812_ = blockstate.getValue(FACING);
+            direction = state.getValue(FACING);
         }
 
-        if (i <= 0) {
-            int j = Math.max(gamerules.get(GameRules.MAX_COMMAND_SEQUENCE_LENGTH), 0);
-            LOGGER.warn("Command Block chain tried to execute more than {} steps!", j);
+        if (maxIterations <= 0) {
+            int limit = Math.max(gameRules.get(GameRules.MAX_COMMAND_SEQUENCE_LENGTH), 0);
+            LOGGER.warn("Command Block chain tried to execute more than {} steps!", limit);
         }
     }
 }

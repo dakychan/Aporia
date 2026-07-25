@@ -9,12 +9,12 @@ public record HiddenByteBuf(ByteBuf contents) implements ReferenceCounted {
         this.contents = ByteBufUtil.ensureAccessible(contents);
     }
 
-    public static Object pack(Object p_376336_) {
-        return p_376336_ instanceof ByteBuf bytebuf ? new HiddenByteBuf(bytebuf) : p_376336_;
+    public static Object pack(final Object msg) {
+        return msg instanceof ByteBuf buf ? new HiddenByteBuf(buf) : msg;
     }
 
-    public static Object unpack(Object p_376438_) {
-        return p_376438_ instanceof HiddenByteBuf hiddenbytebuf ? ByteBufUtil.ensureAccessible(hiddenbytebuf.contents) : p_376438_;
+    public static Object unpack(final Object msg) {
+        return msg instanceof HiddenByteBuf buf ? ByteBufUtil.ensureAccessible(buf.contents) : msg;
     }
 
     @Override
@@ -27,8 +27,8 @@ public record HiddenByteBuf(ByteBuf contents) implements ReferenceCounted {
         return this;
     }
 
-    public HiddenByteBuf retain(int p_377803_) {
-        this.contents.retain(p_377803_);
+    public HiddenByteBuf retain(final int increment) {
+        this.contents.retain(increment);
         return this;
     }
 
@@ -37,8 +37,8 @@ public record HiddenByteBuf(ByteBuf contents) implements ReferenceCounted {
         return this;
     }
 
-    public HiddenByteBuf touch(Object p_376790_) {
-        this.contents.touch(p_376790_);
+    public HiddenByteBuf touch(final Object hint) {
+        this.contents.touch(hint);
         return this;
     }
 
@@ -48,7 +48,7 @@ public record HiddenByteBuf(ByteBuf contents) implements ReferenceCounted {
     }
 
     @Override
-    public boolean release(int p_377565_) {
-        return this.contents.release(p_377565_);
+    public boolean release(final int decrement) {
+        return this.contents.release(decrement);
     }
 }

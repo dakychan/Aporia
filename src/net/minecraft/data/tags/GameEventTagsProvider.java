@@ -11,7 +11,7 @@ import net.minecraft.tags.GameEventTags;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.gameevent.vibrations.VibrationSystem;
 
-public class GameEventTagsProvider extends KeyTagProvider<GameEvent> {
+public class GameEventTagsProvider extends TagsProvider<GameEvent> {
     @VisibleForTesting
     static final List<ResourceKey<GameEvent>> VIBRATIONS_EXCEPT_FLAP = List.of(
         GameEvent.BLOCK_ATTACH.key(),
@@ -23,6 +23,7 @@ public class GameEventTagsProvider extends KeyTagProvider<GameEvent> {
         GameEvent.BLOCK_PLACE.key(),
         GameEvent.BLOCK_ACTIVATE.key(),
         GameEvent.BLOCK_DEACTIVATE.key(),
+        GameEvent.BOUNCE.key(),
         GameEvent.CONTAINER_CLOSE.key(),
         GameEvent.CONTAINER_OPEN.key(),
         GameEvent.DRINK.key(),
@@ -55,12 +56,12 @@ public class GameEventTagsProvider extends KeyTagProvider<GameEvent> {
         GameEvent.UNEQUIP.key()
     );
 
-    public GameEventTagsProvider(PackOutput p_256060_, CompletableFuture<HolderLookup.Provider> p_255621_) {
-        super(p_256060_, Registries.GAME_EVENT, p_255621_);
+    public GameEventTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.GAME_EVENT, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_255981_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(GameEventTags.VIBRATIONS).addAll(VIBRATIONS_EXCEPT_FLAP).addAll(VibrationSystem.RESONANCE_EVENTS).add(GameEvent.FLAP.key());
         this.tag(GameEventTags.SHRIEKER_CAN_LISTEN).add(GameEvent.SCULK_SENSOR_TENDRILS_CLICKING.key());
         this.tag(GameEventTags.WARDEN_CAN_LISTEN)

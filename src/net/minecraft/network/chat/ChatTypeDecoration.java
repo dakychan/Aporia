@@ -2,7 +2,6 @@ package net.minecraft.network.chat;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
 import java.util.function.IntFunction;
@@ -15,12 +14,12 @@ import net.minecraft.util.StringRepresentable;
 
 public record ChatTypeDecoration(String translationKey, List<ChatTypeDecoration.Parameter> parameters, Style style) {
     public static final Codec<ChatTypeDecoration> CODEC = RecordCodecBuilder.create(
-        p_308561_ -> p_308561_.group(
+        i -> i.group(
                 Codec.STRING.fieldOf("translation_key").forGetter(ChatTypeDecoration::translationKey),
                 ChatTypeDecoration.Parameter.CODEC.listOf().fieldOf("parameters").forGetter(ChatTypeDecoration::parameters),
                 Style.Serializer.CODEC.optionalFieldOf("style", Style.EMPTY).forGetter(ChatTypeDecoration::style)
             )
-            .apply(p_308561_, ChatTypeDecoration::new)
+            .apply(i, ChatTypeDecoration::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, ChatTypeDecoration> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.STRING_UTF8,
@@ -32,64 +31,64 @@ public record ChatTypeDecoration(String translationKey, List<ChatTypeDecoration.
         ChatTypeDecoration::new
     );
 
-    public static ChatTypeDecoration withSender(String p_239223_) {
-        return new ChatTypeDecoration(p_239223_, List.of(ChatTypeDecoration.Parameter.SENDER, ChatTypeDecoration.Parameter.CONTENT), Style.EMPTY);
+    public static ChatTypeDecoration withSender(final String translationKey) {
+        return new ChatTypeDecoration(translationKey, List.of(ChatTypeDecoration.Parameter.SENDER, ChatTypeDecoration.Parameter.CONTENT), Style.EMPTY);
     }
 
-    public static ChatTypeDecoration incomingDirectMessage(String p_239425_) {
+    public static ChatTypeDecoration incomingDirectMessage(final String translationKey) {
         Style style = Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(true);
-        return new ChatTypeDecoration(p_239425_, List.of(ChatTypeDecoration.Parameter.SENDER, ChatTypeDecoration.Parameter.CONTENT), style);
+        return new ChatTypeDecoration(translationKey, List.of(ChatTypeDecoration.Parameter.SENDER, ChatTypeDecoration.Parameter.CONTENT), style);
     }
 
-    public static ChatTypeDecoration outgoingDirectMessage(String p_240772_) {
+    public static ChatTypeDecoration outgoingDirectMessage(final String translationKey) {
         Style style = Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(true);
-        return new ChatTypeDecoration(p_240772_, List.of(ChatTypeDecoration.Parameter.TARGET, ChatTypeDecoration.Parameter.CONTENT), style);
+        return new ChatTypeDecoration(translationKey, List.of(ChatTypeDecoration.Parameter.TARGET, ChatTypeDecoration.Parameter.CONTENT), style);
     }
 
-    public static ChatTypeDecoration teamMessage(String p_239095_) {
+    public static ChatTypeDecoration teamMessage(final String translationKey) {
         return new ChatTypeDecoration(
-            p_239095_, List.of(ChatTypeDecoration.Parameter.TARGET, ChatTypeDecoration.Parameter.SENDER, ChatTypeDecoration.Parameter.CONTENT), Style.EMPTY
+            translationKey,
+            List.of(ChatTypeDecoration.Parameter.TARGET, ChatTypeDecoration.Parameter.SENDER, ChatTypeDecoration.Parameter.CONTENT),
+            Style.EMPTY
         );
     }
 
-    public Component decorate(Component p_241301_, ChatType.Bound p_241391_) {
-        Object[] aobject = this.resolveParameters(p_241301_, p_241391_);
-        return Component.translatable(this.translationKey, aobject).withStyle(this.style);
+    public Component decorate(final Component content, final ChatType.Bound chatType) {
+        Object[] parameters = this.resolveParameters(content, chatType);
+        return Component.translatable(this.translationKey, parameters).withStyle(this.style);
     }
 
-    private Component[] resolveParameters(Component p_241365_, ChatType.Bound p_241559_) {
-        Component[] acomponent = new Component[this.parameters.size()];
+    private Component[] resolveParameters(final Component content, final ChatType.Bound chatType) {
+        Component[] resolved = new Component[this.parameters.size()];
 
-        for (int i = 0; i < acomponent.length; i++) {
-            ChatTypeDecoration.Parameter chattypedecoration$parameter = this.parameters.get(i);
-            acomponent[i] = chattypedecoration$parameter.select(p_241365_, p_241559_);
+        for (int i = 0; i < resolved.length; i++) {
+            ChatTypeDecoration.Parameter parameter = this.parameters.get(i);
+            resolved[i] = parameter.select(content, chatType);
         }
 
-        return acomponent;
+        return resolved;
     }
 
-    public static enum Parameter implements StringRepresentable {
-        SENDER(0, "sender", (p_241238_, p_241239_) -> p_241239_.name()),
-        TARGET(1, "target", (p_326059_, p_326060_) -> p_326060_.targetName().orElse(CommonComponents.EMPTY)),
-        CONTENT(2, "content", (p_239974_, p_241427_) -> p_239974_);
+    public enum Parameter implements StringRepresentable {
+        SENDER(0, "sender", (content, chatType) -> chatType.name()),
+        TARGET(1, "target", (content, chatType) -> chatType.targetName().orElse(CommonComponents.EMPTY)),
+        CONTENT(2, "content", (content, chatType) -> content);
 
-        private static final IntFunction<ChatTypeDecoration.Parameter> BY_ID = ByIdMap.continuous(
-            p_341100_ -> p_341100_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-        );
+        private static final IntFunction<ChatTypeDecoration.Parameter> BY_ID = ByIdMap.continuous(p -> p.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
         public static final Codec<ChatTypeDecoration.Parameter> CODEC = StringRepresentable.fromEnum(ChatTypeDecoration.Parameter::values);
-        public static final StreamCodec<ByteBuf, ChatTypeDecoration.Parameter> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_341101_ -> p_341101_.id);
+        public static final StreamCodec<ByteBuf, ChatTypeDecoration.Parameter> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p -> p.id);
         private final int id;
         private final String name;
         private final ChatTypeDecoration.Parameter.Selector selector;
 
-        private Parameter(final int p_342713_, final String p_239588_, final ChatTypeDecoration.Parameter.Selector p_239589_) {
-            this.id = p_342713_;
-            this.name = p_239588_;
-            this.selector = p_239589_;
+        Parameter(final int id, final String name, final ChatTypeDecoration.Parameter.Selector selector) {
+            this.id = id;
+            this.name = name;
+            this.selector = selector;
         }
 
-        public Component select(Component p_241369_, ChatType.Bound p_241509_) {
-            return this.selector.select(p_241369_, p_241509_);
+        public Component select(final Component content, final ChatType.Bound chatType) {
+            return this.selector.select(content, chatType);
         }
 
         @Override
@@ -98,7 +97,7 @@ public record ChatTypeDecoration(String translationKey, List<ChatTypeDecoration.
         }
 
         public interface Selector {
-            Component select(Component p_239620_, ChatType.Bound p_241499_);
+            Component select(Component content, ChatType.Bound chatType);
         }
     }
 }

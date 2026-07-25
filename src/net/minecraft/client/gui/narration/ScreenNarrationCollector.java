@@ -4,81 +4,74 @@ import com.google.common.collect.Maps;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.function.Consumer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ScreenNarrationCollector {
-    int generation;
-    final Map<ScreenNarrationCollector.EntryKey, ScreenNarrationCollector.NarrationEntry> entries = Maps.newTreeMap(
-        Comparator.<ScreenNarrationCollector.EntryKey, NarratedElementType>comparing(p_169196_ -> p_169196_.type)
-            .thenComparing(p_169185_ -> p_169185_.depth)
+    private int generation;
+    private final Map<ScreenNarrationCollector.EntryKey, ScreenNarrationCollector.NarrationEntry> entries = Maps.newTreeMap(
+        Comparator.<ScreenNarrationCollector.EntryKey, NarratedElementType>comparing(e -> e.type).thenComparing(e -> e.depth)
     );
 
-    public void update(Consumer<NarrationElementOutput> p_169187_) {
+    public void update(final Consumer<NarrationElementOutput> updater) {
         this.generation++;
-        p_169187_.accept(new ScreenNarrationCollector.Output(0));
+        updater.accept(new ScreenNarrationCollector.Output(0));
     }
 
-    public String collectNarrationText(boolean p_169189_) {
-        final StringBuilder stringbuilder = new StringBuilder();
-        Consumer<String> consumer = new Consumer<String>() {
+    public String collectNarrationText(final boolean force) {
+        final StringBuilder result = new StringBuilder();
+        Consumer<String> appender = new Consumer<String>() {
             private boolean firstEntry = true;
 
-            public void accept(String p_169204_) {
+            public void accept(final String s) {
                 if (!this.firstEntry) {
-                    stringbuilder.append(". ");
+                    result.append(". ");
                 }
 
                 this.firstEntry = false;
-                stringbuilder.append(p_169204_);
+                result.append(s);
             }
         };
-        this.entries.forEach((p_169193_, p_169194_) -> {
-            if (p_169194_.generation == this.generation && (p_169189_ || !p_169194_.alreadyNarrated)) {
-                p_169194_.contents.getText(consumer);
-                p_169194_.alreadyNarrated = true;
+        this.entries.forEach((k, v) -> {
+            if (v.generation == this.generation && (force || !v.alreadyNarrated)) {
+                v.contents.getText(appender);
+                v.alreadyNarrated = true;
             }
         });
-        return stringbuilder.toString();
+        return result.toString();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record EntryKey(NarratedElementType type, int depth) {
+        private record EntryKey(NarratedElementType type, int depth) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class NarrationEntry {
-        NarrationThunk<?> contents = NarrationThunk.EMPTY;
-        int generation = -1;
-        boolean alreadyNarrated;
+        private static class NarrationEntry {
+        private NarrationThunk<?> contents = NarrationThunk.EMPTY;
+        private int generation = -1;
+        private boolean alreadyNarrated;
 
-        public ScreenNarrationCollector.NarrationEntry update(int p_169217_, NarrationThunk<?> p_169218_) {
-            if (!this.contents.equals(p_169218_)) {
-                this.contents = p_169218_;
+        public ScreenNarrationCollector.NarrationEntry update(final int generation, final NarrationThunk<?> contents) {
+            if (!this.contents.equals(contents)) {
+                this.contents = contents;
                 this.alreadyNarrated = false;
-            } else if (this.generation + 1 != p_169217_) {
+            } else if (this.generation + 1 != generation) {
                 this.alreadyNarrated = false;
             }
 
-            this.generation = p_169217_;
+            this.generation = generation;
             return this;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class Output implements NarrationElementOutput {
+        private class Output implements NarrationElementOutput {
         private final int depth;
 
-        Output(final int p_169223_) {
-            this.depth = p_169223_;
+        private Output(final int depth) {
+            this.depth = depth;
         }
 
         @Override
-        public void add(NarratedElementType p_169226_, NarrationThunk<?> p_169227_) {
+        public void add(final NarratedElementType type, final NarrationThunk<?> contents) {
             ScreenNarrationCollector.this.entries
-                .computeIfAbsent(new ScreenNarrationCollector.EntryKey(p_169226_, this.depth), p_169229_ -> new ScreenNarrationCollector.NarrationEntry())
-                .update(ScreenNarrationCollector.this.generation, p_169227_);
+                .computeIfAbsent(new ScreenNarrationCollector.EntryKey(type, this.depth), k -> new ScreenNarrationCollector.NarrationEntry())
+                .update(ScreenNarrationCollector.this.generation, contents);
         }
 
         @Override

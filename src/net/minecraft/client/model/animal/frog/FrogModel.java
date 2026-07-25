@@ -11,10 +11,7 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.FrogRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class FrogModel extends EntityModel<FrogRenderState> {
     private static final float MAX_WALK_ANIMATION_SPEED = 1.5F;
     private static final float MAX_SWIM_ANIMATION_SPEED = 1.0F;
@@ -35,92 +32,84 @@ public class FrogModel extends EntityModel<FrogRenderState> {
     private final KeyframeAnimation walkAnimation;
     private final KeyframeAnimation idleWaterAnimation;
 
-    public FrogModel(ModelPart p_452598_) {
-        super(p_452598_.getChild("root"));
-        this.jumpAnimation = FrogAnimation.FROG_JUMP.bake(p_452598_);
-        this.croakAnimation = FrogAnimation.FROG_CROAK.bake(p_452598_);
-        this.tongueAnimation = FrogAnimation.FROG_TONGUE.bake(p_452598_);
-        this.swimAnimation = FrogAnimation.FROG_SWIM.bake(p_452598_);
-        this.walkAnimation = FrogAnimation.FROG_WALK.bake(p_452598_);
-        this.idleWaterAnimation = FrogAnimation.FROG_IDLE_WATER.bake(p_452598_);
+    public FrogModel(final ModelPart root) {
+        super(root.getChild("root"));
+        this.jumpAnimation = FrogAnimation.FROG_JUMP.bake(root);
+        this.croakAnimation = FrogAnimation.FROG_CROAK.bake(root);
+        this.tongueAnimation = FrogAnimation.FROG_TONGUE.bake(root);
+        this.swimAnimation = FrogAnimation.FROG_SWIM.bake(root);
+        this.walkAnimation = FrogAnimation.FROG_WALK.bake(root);
+        this.idleWaterAnimation = FrogAnimation.FROG_IDLE_WATER.bake(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        PartDefinition partdefinition1 = partdefinition.addOrReplaceChild("root", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
-        PartDefinition partdefinition2 = partdefinition1.addOrReplaceChild(
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        PartDefinition modelRoot = root.addOrReplaceChild("root", CubeListBuilder.create(), PartPose.offset(0.0F, 24.0F, 0.0F));
+        PartDefinition body = modelRoot.addOrReplaceChild(
             "body",
-            CubeListBuilder.create()
-                .texOffs(3, 1)
-                .addBox(-3.5F, -2.0F, -8.0F, 7.0F, 3.0F, 9.0F)
-                .texOffs(23, 22)
-                .addBox(-3.5F, -1.0F, -8.0F, 7.0F, 0.0F, 9.0F),
+            CubeListBuilder.create().texOffs(3, 1).addBox(-3.5F, -2.0F, -8.0F, 7.0F, 3.0F, 9.0F).texOffs(23, 22).addBox(-3.5F, -1.0F, -8.0F, 7.0F, 0.0F, 9.0F),
             PartPose.offset(0.0F, -2.0F, 4.0F)
         );
-        PartDefinition partdefinition3 = partdefinition2.addOrReplaceChild(
+        PartDefinition head = body.addOrReplaceChild(
             "head",
-            CubeListBuilder.create()
-                .texOffs(23, 13)
-                .addBox(-3.5F, -1.0F, -7.0F, 7.0F, 0.0F, 9.0F)
-                .texOffs(0, 13)
-                .addBox(-3.5F, -2.0F, -7.0F, 7.0F, 3.0F, 9.0F),
+            CubeListBuilder.create().texOffs(23, 13).addBox(-3.5F, -1.0F, -7.0F, 7.0F, 0.0F, 9.0F).texOffs(0, 13).addBox(-3.5F, -2.0F, -7.0F, 7.0F, 3.0F, 9.0F),
             PartPose.offset(0.0F, -2.0F, -1.0F)
         );
-        PartDefinition partdefinition4 = partdefinition3.addOrReplaceChild("eyes", CubeListBuilder.create(), PartPose.offset(-0.5F, 0.0F, 2.0F));
-        partdefinition4.addOrReplaceChild(
+        PartDefinition eyes = head.addOrReplaceChild("eyes", CubeListBuilder.create(), PartPose.offset(-0.5F, 0.0F, 2.0F));
+        eyes.addOrReplaceChild(
             "right_eye", CubeListBuilder.create().texOffs(0, 0).addBox(-1.5F, -1.0F, -1.5F, 3.0F, 2.0F, 3.0F), PartPose.offset(-1.5F, -3.0F, -6.5F)
         );
-        partdefinition4.addOrReplaceChild(
+        eyes.addOrReplaceChild(
             "left_eye", CubeListBuilder.create().texOffs(0, 5).addBox(-1.5F, -1.0F, -1.5F, 3.0F, 2.0F, 3.0F), PartPose.offset(2.5F, -3.0F, -6.5F)
         );
-        partdefinition2.addOrReplaceChild(
+        body.addOrReplaceChild(
             "croaking_body",
             CubeListBuilder.create().texOffs(26, 5).addBox(-3.5F, -0.1F, -2.9F, 7.0F, 2.0F, 3.0F, new CubeDeformation(-0.1F)),
             PartPose.offset(0.0F, -1.0F, -5.0F)
         );
-        PartDefinition partdefinition5 = partdefinition2.addOrReplaceChild(
+        PartDefinition tongue = body.addOrReplaceChild(
             "tongue", CubeListBuilder.create().texOffs(17, 13).addBox(-2.0F, 0.0F, -7.1F, 4.0F, 0.0F, 7.0F), PartPose.offset(0.0F, -1.01F, 1.0F)
         );
-        PartDefinition partdefinition6 = partdefinition2.addOrReplaceChild(
+        PartDefinition leftArm = body.addOrReplaceChild(
             "left_arm", CubeListBuilder.create().texOffs(0, 32).addBox(-1.0F, 0.0F, -1.0F, 2.0F, 3.0F, 3.0F), PartPose.offset(4.0F, -1.0F, -6.5F)
         );
-        partdefinition6.addOrReplaceChild(
+        leftArm.addOrReplaceChild(
             "left_hand", CubeListBuilder.create().texOffs(18, 40).addBox(-4.0F, 0.01F, -4.0F, 8.0F, 0.0F, 8.0F), PartPose.offset(0.0F, 3.0F, -1.0F)
         );
-        PartDefinition partdefinition7 = partdefinition2.addOrReplaceChild(
+        PartDefinition rightArm = body.addOrReplaceChild(
             "right_arm", CubeListBuilder.create().texOffs(0, 38).addBox(-1.0F, 0.0F, -1.0F, 2.0F, 3.0F, 3.0F), PartPose.offset(-4.0F, -1.0F, -6.5F)
         );
-        partdefinition7.addOrReplaceChild(
+        rightArm.addOrReplaceChild(
             "right_hand", CubeListBuilder.create().texOffs(2, 40).addBox(-4.0F, 0.01F, -5.0F, 8.0F, 0.0F, 8.0F), PartPose.offset(0.0F, 3.0F, 0.0F)
         );
-        PartDefinition partdefinition8 = partdefinition1.addOrReplaceChild(
+        PartDefinition leftLeg = modelRoot.addOrReplaceChild(
             "left_leg", CubeListBuilder.create().texOffs(14, 25).addBox(-1.0F, 0.0F, -2.0F, 3.0F, 3.0F, 4.0F), PartPose.offset(3.5F, -3.0F, 4.0F)
         );
-        partdefinition8.addOrReplaceChild(
+        leftLeg.addOrReplaceChild(
             "left_foot", CubeListBuilder.create().texOffs(2, 32).addBox(-4.0F, 0.01F, -4.0F, 8.0F, 0.0F, 8.0F), PartPose.offset(2.0F, 3.0F, 0.0F)
         );
-        PartDefinition partdefinition9 = partdefinition1.addOrReplaceChild(
+        PartDefinition rightLeg = modelRoot.addOrReplaceChild(
             "right_leg", CubeListBuilder.create().texOffs(0, 25).addBox(-2.0F, 0.0F, -2.0F, 3.0F, 3.0F, 4.0F), PartPose.offset(-3.5F, -3.0F, 4.0F)
         );
-        partdefinition9.addOrReplaceChild(
+        rightLeg.addOrReplaceChild(
             "right_foot", CubeListBuilder.create().texOffs(18, 32).addBox(-4.0F, 0.01F, -4.0F, 8.0F, 0.0F, 8.0F), PartPose.offset(-2.0F, 3.0F, 0.0F)
         );
-        return LayerDefinition.create(meshdefinition, 48, 48);
+        return LayerDefinition.create(mesh, 48, 48);
     }
 
-    public void setupAnim(FrogRenderState p_452022_) {
-        super.setupAnim(p_452022_);
-        this.jumpAnimation.apply(p_452022_.jumpAnimationState, p_452022_.ageInTicks);
-        this.croakAnimation.apply(p_452022_.croakAnimationState, p_452022_.ageInTicks);
-        this.tongueAnimation.apply(p_452022_.tongueAnimationState, p_452022_.ageInTicks);
-        if (p_452022_.isSwimming) {
-            this.swimAnimation.applyWalk(p_452022_.walkAnimationPos, p_452022_.walkAnimationSpeed, 1.0F, 2.5F);
+    public void setupAnim(final FrogRenderState state) {
+        super.setupAnim(state);
+        this.jumpAnimation.apply(state.jumpAnimationState, state.ageInTicks);
+        this.croakAnimation.apply(state.croakAnimationState, state.ageInTicks);
+        this.tongueAnimation.apply(state.tongueAnimationState, state.ageInTicks);
+        if (state.isSwimming) {
+            this.swimAnimation.applyWalk(state.walkAnimationPos, state.walkAnimationSpeed, 1.0F, 2.5F);
         } else {
-            this.walkAnimation.applyWalk(p_452022_.walkAnimationPos, p_452022_.walkAnimationSpeed, 1.5F, 2.5F);
+            this.walkAnimation.applyWalk(state.walkAnimationPos, state.walkAnimationSpeed, 1.5F, 2.5F);
         }
 
-        this.idleWaterAnimation.apply(p_452022_.swimIdleAnimationState, p_452022_.ageInTicks);
-        this.croakingBody.visible = p_452022_.croakAnimationState.isStarted();
+        this.idleWaterAnimation.apply(state.swimIdleAnimationState, state.ageInTicks);
+        this.croakingBody.visible = state.croakAnimationState.isStarted();
     }
 }

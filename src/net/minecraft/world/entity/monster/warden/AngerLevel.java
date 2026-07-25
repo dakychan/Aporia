@@ -11,16 +11,16 @@ public enum AngerLevel {
     ANGRY(80, SoundEvents.WARDEN_ANGRY, SoundEvents.WARDEN_LISTENING_ANGRY);
 
     private static final AngerLevel[] SORTED_LEVELS = Util.make(
-        values(), p_219233_ -> Arrays.sort(p_219233_, (p_219230_, p_219231_) -> Integer.compare(p_219231_.minimumAnger, p_219230_.minimumAnger))
+        values(), values -> Arrays.sort(values, (a, b) -> Integer.compare(b.minimumAnger, a.minimumAnger))
     );
     private final int minimumAnger;
     private final SoundEvent ambientSound;
     private final SoundEvent listeningSound;
 
-    private AngerLevel(final int p_219223_, final SoundEvent p_219224_, final SoundEvent p_219225_) {
-        this.minimumAnger = p_219223_;
-        this.ambientSound = p_219224_;
-        this.listeningSound = p_219225_;
+    AngerLevel(final int minimumAnger, final SoundEvent ambientSound, final SoundEvent listeningSound) {
+        this.minimumAnger = minimumAnger;
+        this.ambientSound = ambientSound;
+        this.listeningSound = listeningSound;
     }
 
     public int getMinimumAnger() {
@@ -35,10 +35,10 @@ public enum AngerLevel {
         return this.listeningSound;
     }
 
-    public static AngerLevel byAnger(int p_219228_) {
-        for (AngerLevel angerlevel : SORTED_LEVELS) {
-            if (p_219228_ >= angerlevel.minimumAnger) {
-                return angerlevel;
+    public static AngerLevel byAnger(final int anger) {
+        for (AngerLevel level : SORTED_LEVELS) {
+            if (anger >= level.minimumAnger) {
+                return level;
             }
         }
 

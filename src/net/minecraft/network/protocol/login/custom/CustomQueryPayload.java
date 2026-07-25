@@ -6,5 +6,5 @@ import net.minecraft.resources.Identifier;
 public interface CustomQueryPayload {
     Identifier id();
 
-    void write(FriendlyByteBuf p_297527_);
+    void write(FriendlyByteBuf output);
 }

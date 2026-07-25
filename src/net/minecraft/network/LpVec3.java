@@ -17,60 +17,60 @@ public class LpVec3 {
     public static final double ABS_MAX_VALUE = 1.7179869183E10;
     public static final double ABS_MIN_VALUE = 3.051944088384301E-5;
 
-    public static boolean hasContinuationBit(int p_423725_) {
-        return (p_423725_ & 4) == 4;
+    public static boolean hasContinuationBit(final int in) {
+        return (in & 4) == 4;
     }
 
-    public static Vec3 read(ByteBuf p_427966_) {
-        int i = p_427966_.readUnsignedByte();
-        if (i == 0) {
+    public static Vec3 read(final ByteBuf input) {
+        int lowest = input.readUnsignedByte();
+        if (lowest == 0) {
             return Vec3.ZERO;
-        } else {
-            int j = p_427966_.readUnsignedByte();
-            long k = p_427966_.readUnsignedInt();
-            long l = k << 16 | j << 8 | i;
-            long i1 = i & 3;
-            if (hasContinuationBit(i)) {
-                i1 |= (VarInt.read(p_427966_) & 4294967295L) << 2;
-            }
+        }
 
-            return new Vec3(unpack(l >> 3) * i1, unpack(l >> 18) * i1, unpack(l >> 33) * i1);
+        int middle = input.readUnsignedByte();
+        long highest = input.readUnsignedInt();
+        long buffer = highest << 16 | middle << 8 | lowest;
+        long scale = lowest & 3;
+        if (hasContinuationBit(lowest)) {
+            scale |= (VarInt.read(input) & 4294967295L) << 2;
+        }
+
+        return new Vec3(unpack(buffer >> 3) * scale, unpack(buffer >> 18) * scale, unpack(buffer >> 33) * scale);
+    }
+
+    public static void write(final ByteBuf output, final Vec3 value) {
+        double x = sanitize(value.x);
+        double y = sanitize(value.y);
+        double z = sanitize(value.z);
+        double chessboardLength = Mth.absMax(x, Mth.absMax(y, z));
+        if (chessboardLength < 3.051944088384301E-5) {
+            output.writeByte(0);
+        } else {
+            long scale = Mth.ceilLong(chessboardLength);
+            boolean isPartial = (scale & 3L) != scale;
+            long markers = isPartial ? scale & 3L | 4L : scale;
+            long xn = pack(x / scale) << 3;
+            long yn = pack(y / scale) << 18;
+            long zn = pack(z / scale) << 33;
+            long buffer = markers | xn | yn | zn;
+            output.writeByte((byte)buffer);
+            output.writeByte((byte)(buffer >> 8));
+            output.writeInt((int)(buffer >> 16));
+            if (isPartial) {
+                VarInt.write(output, (int)(scale >> 2));
+            }
         }
     }
 
-    public static void write(ByteBuf p_429046_, Vec3 p_423898_) {
-        double d0 = sanitize(p_423898_.x);
-        double d1 = sanitize(p_423898_.y);
-        double d2 = sanitize(p_423898_.z);
-        double d3 = Mth.absMax(d0, Mth.absMax(d1, d2));
-        if (d3 < 3.051944088384301E-5) {
-            p_429046_.writeByte(0);
-        } else {
-            long i = Mth.ceilLong(d3);
-            boolean flag = (i & 3L) != i;
-            long j = flag ? i & 3L | 4L : i;
-            long k = pack(d0 / i) << 3;
-            long l = pack(d1 / i) << 18;
-            long i1 = pack(d2 / i) << 33;
-            long j1 = j | k | l | i1;
-            p_429046_.writeByte((byte)j1);
-            p_429046_.writeByte((byte)(j1 >> 8));
-            p_429046_.writeInt((int)(j1 >> 16));
-            if (flag) {
-                VarInt.write(p_429046_, (int)(i >> 2));
-            }
-        }
+    private static double sanitize(final double value) {
+        return Double.isNaN(value) ? 0.0 : Math.clamp(value, -1.7179869183E10, 1.7179869183E10);
     }
 
-    private static double sanitize(double p_424101_) {
-        return Double.isNaN(p_424101_) ? 0.0 : Math.clamp(p_424101_, -1.7179869183E10, 1.7179869183E10);
+    private static long pack(final double value) {
+        return Math.round((value * 0.5 + 0.5) * 32766.0);
     }
 
-    private static long pack(double p_428292_) {
-        return Math.round((p_428292_ * 0.5 + 0.5) * 32766.0);
-    }
-
-    private static double unpack(long p_429828_) {
-        return Math.min((double)(p_429828_ & 32767L), 32766.0) * 2.0 / 32766.0 - 1.0;
+    private static double unpack(final long value) {
+        return Math.min(value & 32767L, 32766.0) * 2.0 / 32766.0 - 1.0;
     }
 }

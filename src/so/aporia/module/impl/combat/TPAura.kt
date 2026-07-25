@@ -15,11 +15,9 @@ import so.aporia.module.settings.SliderSetting
 import so.aporia.module.settings.SelectSetting
 import so.aporia.utils.events.EventBus
 import so.aporia.utils.events.EventHandler
-import so.aporia.utils.events.StateMachine
-import so.aporia.utils.events.StateMachineEngine
-import so.aporia.utils.events.StateMachineRegister
 import so.aporia.utils.events.impl.PacketEvent
 import so.aporia.utils.events.impl.TickEvent
+import so.aporia.utils.events.impl.WorldRenderEvent
 import so.aporia.utils.imports.*
 import so.aporia.utils.math.Angle
 import so.aporia.utils.math.Prediction
@@ -28,19 +26,12 @@ import java.util.ArrayDeque
 import java.util.UUID
 import kotlin.math.ceil
 import com.chaos.annotation.ChaosNative
-@StateMachine
 @ChaosNative
 class TPAura : Module("TPAura", Category.COMBAT) {
 
-    // ─── Events for state machine ────────────────────────
-    object StepFinished
-    object BlinkFinished
-    object AttackDone
-    object BackDone
-
-    // Настройки
+    // ─── Settings ─────────────────────────────────────────
     val mode = SelectSetting("Mode", "TP Aura mode")
-        .value("Vanilla", "Step", "Blink")
+        .value("Vanilla", "Step", "Blink", "LiquidBounce")
         .selected("Vanilla")
 
     val bypass = SelectSetting("Bypass", "Anticheat bypass mode")
@@ -62,20 +53,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     val rotationSpeed = SliderSetting("Rotation Speed", "Aim rotation speed (deg/s)", 360.0, 10.0, 360.0, 5.0)
     val tpBack = BooleanSetting("TP Back", "Teleport back after attack", true)
 
-    val maceExploit = BooleanSetting("Mace Exploit", "Use Mace packet exploit", true)
-    val maceMode = SelectSetting("Mace Mode", "Mace exploit mode")
-        .value("Default", "New")
-        .selected("Default")
-    val maceHeight = SliderSetting("Mace Height", "Fall height for exploit", 10.0, 5.0, 50.0, 1.0)
-    { maceExploit.isEnabled }
-    val maceDelay = SliderSetting("Mace Delay", "Delay before attack (ms)", 50.0, 0.0, 200.0, 10.0)
-    { maceExploit.isEnabled }
-
-    // ─── State machine engine ────────────────────────────
-    private enum class State { IDLE, TP_TO, ATTACK, TP_BACK, STEP_TO, STEP_BACK, MACE_EXPLOIT }
-    private val sm = StateMachineEngine(this, State::class, State.IDLE)
-
-    // Состояние
+    // ─── State ────────────────────────────────────────────
     private var lockedTarget: Entity? = null
     private var lastAttackTime = 0L
     private var nextAttackDelay = 0L
@@ -87,10 +65,23 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     private var backtrackYaw = 0f
     private var backtrackPitch = 0f
 
+    // Step mode state
     private val steps = ArrayDeque<Vec3>()
+    private var stepPhase = 0 // 0=idle, 1=walking to target, 2=walking back
+
+    // Blink mode state
     private var blinkActive = false
     private var blinkTimer = 0
     private var blinkDuration = 0
+    private val cachedMovePackets = ArrayList<ServerboundMovePlayerPacket>()
+
+    // LiquidBounce mode state — fake player near target
+    var fakePlayerPos: Vec3? = null
+        private set
+    var fakePlayerYaw = 0f
+        private set
+    var fakePlayerPitch = 0f
+        private set
 
     override fun onEnable() {
         bus.register(this)
@@ -109,11 +100,11 @@ class TPAura : Module("TPAura", Category.COMBAT) {
     }
 
     private fun applyBypassMode() {
-        val mode = bypass.get()
-        if (mode == currentBypass) return
-        currentBypass = mode
+        val m = bypass.get()
+        if (m == currentBypass) return
+        currentBypass = m
         RotationUtil.sync()
-        when (mode) {
+        when (m) {
             "Grim" -> { RotationUtil.setMode(RotationUtil.RotationMode.GRIM); rotationSpeed.setValue(180.0) }
             "Matrix" -> { RotationUtil.setMode(RotationUtil.RotationMode.MATRIX); rotationSpeed.setValue(220.0) }
             "Vulcan" -> { RotationUtil.setMode(RotationUtil.RotationMode.VULCAN); rotationSpeed.setValue(200.0) }
@@ -125,49 +116,15 @@ class TPAura : Module("TPAura", Category.COMBAT) {
 
     private fun resetState() {
         lockedTarget = null
-        while (sm.state() != State.IDLE) sm.transition(BackDone)
-        steps.clear()
-        blinkActive = false
-        blinkTimer = 0
-        blinkDuration = 0
-        originalPos = null
-        targetPos = null
+        steps.clear(); stepPhase = 0
+        blinkActive = false; blinkTimer = 0; blinkDuration = 0
+        cachedMovePackets.clear()
+        originalPos = null; targetPos = null
         targetPosHistory.clear()
+        fakePlayerPos = null
     }
 
-    // ─── State → event mapping ───────────────────────────
-    @StateMachineRegister(from = "STEP_TO", to = "STEP_BACK", on = StepFinished::class)
-    fun onStepToFinished() {
-        val t = lockedTarget ?: return
-        doPacketAttack(t)
-        lastAttackTime = System.currentTimeMillis()
-        nextAttackDelay = getRandomDelay()
-    }
-
-    @StateMachineRegister(from = "STEP_TO", to = "IDLE", on = BackDone::class)
-    fun onStepToAborted() {}
-
-    @StateMachineRegister(from = "STEP_BACK", to = "IDLE", on = BackDone::class)
-    fun onStepBackFinished() {}
-
-    @StateMachineRegister(from = "TP_TO", to = "TP_BACK", on = StepFinished::class)
-    fun onTpToFinished() {
-        val t = lockedTarget ?: return
-        doPacketAttack(t)
-        lastAttackTime = System.currentTimeMillis()
-        nextAttackDelay = getRandomDelay()
-    }
-
-    @StateMachineRegister(from = "TP_TO", to = "IDLE", on = BackDone::class)
-    fun onTpToNoBack() {}
-
-    @StateMachineRegister(from = "TP_BACK", to = "IDLE", on = BackDone::class)
-    fun onTpBackFinished() {}
-
-    @StateMachineRegister(from = "MACE_EXPLOIT", to = "IDLE", on = AttackDone::class)
-    fun onMaceDone() {}
-
-    // ─── onTick ───────────────────────────────────────────
+    // ─── Tick ─────────────────────────────────────────────
     @EventHandler
     fun onTick(event: TickEvent) {
         if (mc.player == null || mc.level == null) return
@@ -187,253 +144,172 @@ class TPAura : Module("TPAura", Category.COMBAT) {
             RotationUtil.update(target, rotationSpeed.getFloat())
         } else {
             lockedTarget = null
-        }
-
-        if (sm.state() != State.IDLE) {
-            tickStateMachine()
+            resetState()
+            RotationUtil.deactivate()
             return
         }
-        if (target == null) return
 
-        val hand = InteractionHand.MAIN_HAND
-        val item = mc.player!!.getItemInHand(hand)
-        if (item.isEmpty) return
+        when (mode.get()) {
+            "Vanilla" -> tickVanilla(target)
+            "Step" -> tickStep(target)
+            "Blink" -> tickBlink(target)
+            "LiquidBounce" -> tickLiquidBounce(target)
+        }
+    }
+
+    // ─── Vanilla: instant TP + attack + TP back ───────────
+    private fun tickVanilla(target: Entity) {
         if (!canAttack()) return
-
         originalPos = mc.player!!.position()
         targetPos = findTpPosition(target) ?: return
 
-        when {
-            item.item == net.minecraft.world.item.Items.MACE && maceExploit.isEnabled -> {
-                performMaceExploit()
-            }
-            else -> performNormalAttack(target)
-        }
-    }
-
-    // ============ ПАКЕТНАЯ АТАКА ДЛЯ 1.21.4 ============
-
-    private fun performNormalAttack(target: Entity) {
-        when (mode.get()) {
-            "Vanilla" -> {
-                val steps = buildSteps(originalPos!!, targetPos!!, 0.5)
-                for (i in steps.indices) {
-                    val step = steps[i]
-                    if (i == steps.size - 1) {
-                        sendPosRot(step, backtrackYaw, backtrackPitch, false)
-                    } else {
-                        sendPosRot(step, mc.player!!.yRot, mc.player!!.xRot, false)
-                    }
-                }
-                doPacketAttack(target)
-                if (tpBack.isEnabled) {
-                    val backSteps = buildSteps(targetPos!!, originalPos!!, 0.5)
-                    for (step in backSteps) {
-                        sendPosRot(step, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
-                    }
-                }
-                lastAttackTime = System.currentTimeMillis()
-                nextAttackDelay = getRandomDelay()
-            }
-            "Step" -> {
-                buildSteps(originalPos!!, targetPos!!, 0.5).let { steps.clear(); steps.addAll(it) }
-            }
-            "Blink" -> {
-                blinkActive = true
-                blinkTimer = 0
-                blinkDuration = blinkTicks.getFloat().toInt()
-            }
-        }
-    }
-
-    private fun performMaceExploit() {
-        val player = mc.player!!
-        val height = maceHeight.getFloat()
-        val mode = maceMode.get()
-        val tpPos = targetPos ?: run { sm.transition(AttackDone); return }
-        val target = lockedTarget ?: run { sm.transition(AttackDone); return }
-
-        val exploitBase = player.position()
-
-        // Шаг 1: Фейк высоты
-        val base = if (tpPos.distanceToSqr(exploitBase) > 0.01) tpPos else exploitBase
-        when (mode) {
-            "New" -> {
-                val stepsCount = ceil(height / 10.0).toInt()
-                for (i in 0..stepsCount) {
-                    val t = i.toDouble() / stepsCount
-                    sendPosRot(Vec3(base.x, base.y + height * t, base.z), player.yRot, player.xRot, false)
-                }
-                for (i in stepsCount downTo 0) {
-                    val t = i.toDouble() / stepsCount
-                    sendPosRot(Vec3(base.x, base.y + height * t, base.z), player.yRot, player.xRot, false)
-                }
-            }
-            else -> {
-                sendPosRot(Vec3(base.x, base.y + height, base.z), player.yRot, player.xRot, false)
-                sendPosRot(base, player.yRot, player.xRot, false)
-            }
-        }
-
-        player.playSound(SoundEvents.MACE_SMASH_AIR, 1.0f, 1.0f)
-
-        val delay = maceDelay.getFloat().toLong()
-        if (delay > 0) {
-            try { Thread.sleep(delay) } catch (_: InterruptedException) {}
-        }
-
-        // Шаг 2: TP + атака
-        sendPosRot(tpPos, backtrackYaw, backtrackPitch, false)
+        // TP to target
+        sendPosRot(targetPos!!, backtrackYaw, backtrackPitch, false)
         doPacketAttack(target)
+
+        // TP back
+        if (tpBack.isEnabled && originalPos != null) {
+            sendPosRot(originalPos!!, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
+        }
+
         lastAttackTime = System.currentTimeMillis()
         nextAttackDelay = getRandomDelay()
-
-        if (tpBack.isEnabled && originalPos != null) {
-            sendPosRot(originalPos!!, player.yRot, player.xRot, true)
-        }
-
-        sm.transition(AttackDone)
     }
 
-    private fun tickStateMachine() {
-        when (sm.state()) {
-            State.STEP_TO -> {
-                if (steps.isEmpty()) {
-                    val hasBack = tpBack.isEnabled && originalPos != null
-                    if (hasBack) {
+    // ─── Step: walk to target over ticks, attack, walk back
+    private fun tickStep(target: Entity) {
+        when (stepPhase) {
+            0 -> {
+                // Start: build steps to target
+                if (!canAttack()) return
+                originalPos = mc.player!!.position()
+                targetPos = findTpPosition(target) ?: return
+                buildSteps(originalPos!!, targetPos!!, 0.5).let { steps.clear(); steps.addAll(it) }
+                stepPhase = 1
+            }
+            1 -> {
+                // Walking to target
+                if (steps.isNotEmpty()) {
+                    val step = steps.poll()!!
+                    sendPosRot(step, mc.player!!.yRot, mc.player!!.xRot, false)
+                } else {
+                    // Arrived — attack
+                    doPacketAttack(target)
+                    // Build steps back
+                    if (tpBack.isEnabled && originalPos != null) {
                         buildSteps(targetPos!!, originalPos!!, 0.5).let { steps.clear(); steps.addAll(it) }
-                        sm.transition(StepFinished)
+                        stepPhase = 2
                     } else {
-                        sm.transition(BackDone)
+                        stepPhase = 0
+                        lastAttackTime = System.currentTimeMillis()
+                        nextAttackDelay = getRandomDelay()
                     }
-                    return
-                }
-                steps.poll()?.let {
-                    sendPosRot(it, mc.player!!.yRot, mc.player!!.xRot, false)
                 }
             }
-            State.STEP_BACK -> {
-                if (steps.isEmpty()) { sm.transition(BackDone); return }
-                steps.poll()?.let {
-                    sendPosRot(it, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
+            2 -> {
+                // Walking back
+                if (steps.isNotEmpty()) {
+                    val step = steps.poll()!!
+                    sendPosRot(step, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
+                } else {
+                    stepPhase = 0
+                    lastAttackTime = System.currentTimeMillis()
+                    nextAttackDelay = getRandomDelay()
                 }
             }
-            State.TP_TO -> {
-                if (blinkTimer >= blinkDuration) {
-                    blinkActive = false
-                    targetPos?.let {
-                        sendPosRot(it, backtrackYaw, backtrackPitch, false)
-                    }
-                    val hasBack = tpBack.isEnabled && originalPos != null
-                    sm.transition(if (hasBack) StepFinished else BackDone)
-                    blinkTimer = 0
-                    return
-                }
-                blinkTimer++
-            }
-            State.TP_BACK -> {
-                sendPosRot(originalPos!!, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
-                sm.transition(BackDone)
-            }
-            else -> {}
         }
     }
 
-    // ============ ПАКЕТНАЯ АТАКА (ГЛАВНОЕ) ============
+    // ─── Blink: cache packets, send as teleport for Grim bypass
+    private fun tickBlink(target: Entity) {
+        if (!blinkActive) {
+            if (!canAttack()) return
+            originalPos = mc.player!!.position()
+            targetPos = findTpPosition(target) ?: return
+            blinkActive = true
+            blinkTimer = 0
+            blinkDuration = blinkTicks.getFloat().toInt()
+            cachedMovePackets.clear()
+            return
+        }
 
+        blinkTimer++
+
+        if (blinkTimer >= blinkDuration) {
+            blinkActive = false
+
+            // Grim bypass: send cached packets as a burst (server sees teleport)
+            for (pkt in cachedMovePackets) {
+                mc.player!!.connection.send(pkt)
+            }
+            cachedMovePackets.clear()
+
+            // TP to target position
+            sendPosRot(targetPos!!, backtrackYaw, backtrackPitch, false)
+            doPacketAttack(target)
+
+            // TP back immediately
+            if (tpBack.isEnabled && originalPos != null) {
+                sendPosRot(originalPos!!, mc.player!!.yRot, mc.player!!.xRot, mc.player!!.onGround())
+            }
+
+            lastAttackTime = System.currentTimeMillis()
+            nextAttackDelay = getRandomDelay()
+            blinkTimer = 0
+        }
+    }
+
+    // ─── LiquidBounce: fake player near target, stay in place, rotate + attack
+    private fun tickLiquidBounce(target: Entity) {
+        if (!canAttack()) return
+
+        val targetCenter = target.boundingBox.center
+        // Calculate fake player position: slightly offset from target
+        val offsetDir = mc.player!!.position().subtract(targetCenter).normalize()
+        fakePlayerPos = targetCenter.add(offsetDir.scale(tpRange.getFloat().toDouble()))
+
+        // Look at target from fake position
+        val lookAngles = Angle.calculateFromDiff(targetCenter.subtract(fakePlayerPos!!))
+        fakePlayerYaw = lookAngles[0]
+        fakePlayerPitch = lookAngles[1].coerceIn(-90f, 90f)
+
+        // Send rotation to server (server sees us looking at target)
+        RotationUtil.update(target, rotationSpeed.getFloat())
+
+        // Attack from real position (server-side we're in range if close enough)
+        val dist = mc.player!!.distanceTo(target)
+        if (dist <= 6.0) {
+            doPacketAttack(target)
+        }
+
+        lastAttackTime = System.currentTimeMillis()
+        nextAttackDelay = getRandomDelay()
+    }
+
+    // ─── Packet Attack ────────────────────────────────────
     private fun doPacketAttack(target: Entity) {
         if (mc.player == null || mc.connection == null) return
-
         val player = mc.player!!
         val connection = player.connection
 
-        // 1. Анимация руки (пакет)
-        connection.send(
-            ServerboundSwingPacket(InteractionHand.MAIN_HAND)
-        )
+        // Swing animation
+        connection.send(ServerboundSwingPacket(InteractionHand.MAIN_HAND))
 
-        // 2. АТАКА (пакет) - правильный способ для 1.21.4
-        connection.send(
-            ServerboundInteractPacket.createAttackPacket(
-                target,
-                false  // usingSecondaryAction
-            )
-        )
+        // Attack interact packet
+        connection.send(ServerboundInteractPacket(target.id, InteractionHand.MAIN_HAND, Vec3(target.x, target.y, target.z), false))
 
-        // 3. Для булавы - использование предмета
-        val item = player.getItemInHand(InteractionHand.MAIN_HAND)
-        if (item.item == net.minecraft.world.item.Items.MACE) {
-            // Звуки клиентские
-            player.playSound(SoundEvents.MACE_SMASH_AIR, 1.0f, 1.0f)
-
-            // Пакет использования предмета
-            connection.send(
-                ServerboundUseItemPacket(
-                    InteractionHand.MAIN_HAND,
-                    0,  // sequence
-                    player.yRot,
-                    player.xRot
-                )
-            )
-
-            if (target.onGround()) {
-                player.playSound(SoundEvents.MACE_SMASH_GROUND, 1.0f, 1.0f)
-            }
-
-            if (player.fallDistance > 1.5) {
-                player.playSound(SoundEvents.MACE_SMASH_GROUND_HEAVY, 1.0f, 1.0f)
-            }
-        }
+        player.resetAttackStrengthTicker()
     }
 
-    // ============ МЕТОДЫ ОТПРАВКИ ПАКЕТОВ ДВИЖЕНИЯ ============
-
-    private fun sendPos(pos: Vec3, onGround: Boolean = false, horizontalCollision: Boolean = false) {
-        if (mc.player == null) return
-        mc.player!!.connection.send(
-            ServerboundMovePlayerPacket.Pos(
-                pos.x, pos.y, pos.z,
-                onGround,
-                horizontalCollision
-            )
-        )
-    }
-
+    // ─── Packet sending ───────────────────────────────────
     private fun sendPosRot(pos: Vec3, yaw: Float, pitch: Float, onGround: Boolean = false, horizontalCollision: Boolean = false) {
         if (mc.player == null) return
         mc.player!!.connection.send(
-            ServerboundMovePlayerPacket.PosRot(
-                pos.x, pos.y, pos.z,
-                yaw, pitch,
-                onGround,
-                horizontalCollision
-            )
+            ServerboundMovePlayerPacket.PosRot(pos.x, pos.y, pos.z, yaw, pitch, onGround, horizontalCollision)
         )
     }
 
-    private fun sendRot(yaw: Float, pitch: Float, onGround: Boolean = false, horizontalCollision: Boolean = false) {
-        if (mc.player == null) return
-        mc.player!!.connection.send(
-            ServerboundMovePlayerPacket.Rot(
-                yaw, pitch,
-                onGround,
-                horizontalCollision
-            )
-        )
-    }
-
-    private fun sendStatus(onGround: Boolean, horizontalCollision: Boolean = false) {
-        if (mc.player == null) return
-        mc.player!!.connection.send(
-            ServerboundMovePlayerPacket.StatusOnly(
-                onGround,
-                horizontalCollision
-            )
-        )
-    }
-
-    // ============ ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ============
-
+    // ─── Step building ────────────────────────────────────
     private fun buildSteps(from: Vec3, to: Vec3, maxStep: Double = 0.5): List<Vec3> {
         val dist = from.distanceTo(to)
         val count = maxOf(1, ceil(dist / maxStep).toInt())
@@ -449,6 +325,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
 
     private fun findTpPosition(target: Entity): Vec3? = target.boundingBox.center
 
+    // ─── Target finding ───────────────────────────────────
     private fun findTarget(): Entity? {
         val currentRange = range.getFloat()
         if (lockedTarget != null && isValidTarget(lockedTarget!!) &&
@@ -467,17 +344,11 @@ class TPAura : Module("TPAura", Category.COMBAT) {
                 best = player
             }
         }
-
-        if (targets.isSelected("Mobs") || targets.isSelected("Animals")) {
-            // Здесь можно добавить мобов и животных
-        }
-
         return best
     }
 
     private fun isValidTarget(entity: Entity?): Boolean {
         if (entity == mc.player || entity?.isAlive != true) return false
-
         if (entity is Player) {
             if (!targets.isSelected("Players")) return false
             if (fm.isFriend(entity.name.string) && !targets.isSelected("Friends")) return false
@@ -488,6 +359,7 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         return false
     }
 
+    // ─── Backtrack ────────────────────────────────────────
     private fun recordTargetPosition(target: Entity) {
         val queue = targetPosHistory.getOrPut(target.uuid) { ArrayDeque(20) }
         queue.addLast(target.position())
@@ -502,11 +374,10 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         return queue.elementAtOrNull(idx)
     }
 
+    // ─── Cooldown ─────────────────────────────────────────
     private fun canAttack(): Boolean {
         val now = System.currentTimeMillis()
-        val elapsed = now - lastAttackTime
-        if (elapsed < 50L) return false
-        return elapsed >= nextAttackDelay
+        return now - lastAttackTime >= nextAttackDelay
     }
 
     private fun getRandomDelay(): Long {
@@ -516,14 +387,21 @@ class TPAura : Module("TPAura", Category.COMBAT) {
         return (1000.0 / cps).toLong()
     }
 
+    // ─── Ghost player: PlayerESP checks fakePlayerPos ────
+
+    // ─── Blink packet interception — cache and cancel ────
     @EventHandler
     fun onPacketSend(event: PacketEvent) {
         if (event.direction() != PacketEvent.Direction.OUTBOUND) return
         if (mc.player == null) return
-        if (blinkActive && event.packet() is ServerboundMovePlayerPacket) {
-            event.cancel()
+        if (blinkActive) {
+            val pkt = event.packet()
+            if (pkt is ServerboundMovePlayerPacket) {
+                cachedMovePackets.add(pkt)
+                event.cancel()
+            }
         }
     }
 
-    override val settings = listOf(mode, bypass, range, tpRange, blinkTicks, minCps, maxCps, targets, rotationSpeed, tpBack, maceExploit, maceMode, maceHeight, maceDelay)
+    override val settings = listOf(mode, bypass, range, tpRange, blinkTicks, minCps, maxCps, targets, rotationSpeed, tpBack)
 }

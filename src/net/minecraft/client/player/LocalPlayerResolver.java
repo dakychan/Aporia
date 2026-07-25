@@ -7,42 +7,39 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.server.players.ProfileResolver;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LocalPlayerResolver implements ProfileResolver {
     private final Minecraft minecraft;
     private final ProfileResolver parentResolver;
 
-    public LocalPlayerResolver(Minecraft p_424184_, ProfileResolver p_425106_) {
-        this.minecraft = p_424184_;
-        this.parentResolver = p_425106_;
+    public LocalPlayerResolver(final Minecraft minecraft, final ProfileResolver parentResolver) {
+        this.minecraft = minecraft;
+        this.parentResolver = parentResolver;
     }
 
     @Override
-    public Optional<GameProfile> fetchByName(String p_427515_) {
-        ClientPacketListener clientpacketlistener = this.minecraft.getConnection();
-        if (clientpacketlistener != null) {
-            PlayerInfo playerinfo = clientpacketlistener.getPlayerInfoIgnoreCase(p_427515_);
-            if (playerinfo != null) {
-                return Optional.of(playerinfo.getProfile());
+    public Optional<GameProfile> fetchByName(final String name) {
+        ClientPacketListener connection = this.minecraft.getConnection();
+        if (connection != null) {
+            PlayerInfo playerInfo = connection.getPlayerInfoIgnoreCase(name);
+            if (playerInfo != null) {
+                return Optional.of(playerInfo.getProfile());
             }
         }
 
-        return this.parentResolver.fetchByName(p_427515_);
+        return this.parentResolver.fetchByName(name);
     }
 
     @Override
-    public Optional<GameProfile> fetchById(UUID p_422672_) {
-        ClientPacketListener clientpacketlistener = this.minecraft.getConnection();
-        if (clientpacketlistener != null) {
-            PlayerInfo playerinfo = clientpacketlistener.getPlayerInfo(p_422672_);
-            if (playerinfo != null) {
-                return Optional.of(playerinfo.getProfile());
+    public Optional<GameProfile> fetchById(final UUID id) {
+        ClientPacketListener connection = this.minecraft.getConnection();
+        if (connection != null) {
+            PlayerInfo playerInfo = connection.getPlayerInfo(id);
+            if (playerInfo != null) {
+                return Optional.of(playerInfo.getProfile());
             }
         }
 
-        return this.parentResolver.fetchById(p_422672_);
+        return this.parentResolver.fetchById(id);
     }
 }

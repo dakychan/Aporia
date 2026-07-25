@@ -12,22 +12,22 @@ public class WalkTarget {
     private final float speedModifier;
     private final int closeEnoughDist;
 
-    public WalkTarget(BlockPos p_26417_, float p_26418_, int p_26419_) {
-        this(new BlockPosTracker(p_26417_), p_26418_, p_26419_);
+    public WalkTarget(final BlockPos target, final float speedModifier, final int closeEnoughDist) {
+        this(new BlockPosTracker(target), speedModifier, closeEnoughDist);
     }
 
-    public WalkTarget(Vec3 p_26413_, float p_26414_, int p_26415_) {
-        this(new BlockPosTracker(BlockPos.containing(p_26413_)), p_26414_, p_26415_);
+    public WalkTarget(final Vec3 target, final float speedModifier, final int closeEnoughDist) {
+        this(new BlockPosTracker(BlockPos.containing(target)), speedModifier, closeEnoughDist);
     }
 
-    public WalkTarget(Entity p_148209_, float p_148210_, int p_148211_) {
-        this(new EntityTracker(p_148209_, false), p_148210_, p_148211_);
+    public WalkTarget(final Entity target, final float speedModifier, final int closeEnoughDist) {
+        this(new EntityTracker(target, false), speedModifier, closeEnoughDist);
     }
 
-    public WalkTarget(PositionTracker p_26409_, float p_26410_, int p_26411_) {
-        this.target = p_26409_;
-        this.speedModifier = p_26410_;
-        this.closeEnoughDist = p_26411_;
+    public WalkTarget(final PositionTracker target, final float speedModifier, final int closeEnoughDist) {
+        this.target = target;
+        this.speedModifier = speedModifier;
+        this.closeEnoughDist = closeEnoughDist;
     }
 
     public PositionTracker getTarget() {

@@ -19,28 +19,28 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 
 public class PlaceholderLookupProvider implements HolderGetter.Provider {
-    final HolderLookup.Provider context;
-    final PlaceholderLookupProvider.UniversalLookup lookup = new PlaceholderLookupProvider.UniversalLookup();
-    final Map<ResourceKey<Object>, Holder.Reference<Object>> holders = new HashMap<>();
-    final Map<TagKey<Object>, HolderSet.Named<Object>> holderSets = new HashMap<>();
+    private final HolderLookup.Provider context;
+    private final PlaceholderLookupProvider.UniversalLookup lookup = new PlaceholderLookupProvider.UniversalLookup();
+    private final Map<ResourceKey<Object>, Holder.Reference<Object>> holders = new HashMap<>();
+    private final Map<TagKey<Object>, HolderSet.Named<Object>> holderSets = new HashMap<>();
 
-    public PlaceholderLookupProvider(HolderLookup.Provider p_396424_) {
-        this.context = p_396424_;
+    public PlaceholderLookupProvider(final HolderLookup.Provider context) {
+        this.context = context;
     }
 
     @Override
-    public <T> Optional<? extends HolderGetter<T>> lookup(ResourceKey<? extends Registry<? extends T>> p_392313_) {
+    public <T> Optional<? extends HolderGetter<T>> lookup(final ResourceKey<? extends Registry<? extends T>> key) {
         return Optional.of(this.lookup.castAsLookup());
     }
 
-    public <V> RegistryOps<V> createSerializationContext(DynamicOps<V> p_396800_) {
+    public <V> RegistryOps<V> createSerializationContext(final DynamicOps<V> parent) {
         return RegistryOps.create(
-            p_396800_,
+            parent,
             new RegistryOps.RegistryInfoLookup() {
                 @Override
-                public <T> Optional<RegistryOps.RegistryInfo<T>> lookup(ResourceKey<? extends Registry<? extends T>> p_391738_) {
+                public <T> Optional<RegistryOps.RegistryInfo<T>> lookup(final ResourceKey<? extends Registry<? extends T>> registryKey) {
                     return PlaceholderLookupProvider.this.context
-                        .lookup(p_391738_)
+                        .lookup(registryKey)
                         .map(RegistryOps.RegistryInfo::fromRegistryLookup)
                         .or(
                             () -> Optional.of(
@@ -59,9 +59,9 @@ public class PlaceholderLookupProvider implements HolderGetter.Provider {
     public RegistryContextSwapper createSwapper() {
         return new RegistryContextSwapper() {
             @Override
-            public <T> DataResult<T> swapTo(Codec<T> p_394376_, T p_394056_, HolderLookup.Provider p_397457_) {
-                return p_394376_.encodeStart(PlaceholderLookupProvider.this.createSerializationContext(JavaOps.INSTANCE), p_394056_)
-                    .flatMap(p_395467_ -> p_394376_.parse(p_397457_.createSerializationContext(JavaOps.INSTANCE), p_395467_));
+            public <T> DataResult<T> swapTo(final Codec<T> codec, final T value, final HolderLookup.Provider newContext) {
+                return codec.encodeStart(PlaceholderLookupProvider.this.createSerializationContext(JavaOps.INSTANCE), value)
+                    .flatMap(v -> codec.parse(newContext.createSerializationContext(JavaOps.INSTANCE), v));
             }
         };
     }
@@ -70,34 +70,33 @@ public class PlaceholderLookupProvider implements HolderGetter.Provider {
         return !this.holders.isEmpty() || !this.holderSets.isEmpty();
     }
 
-    class UniversalLookup implements HolderGetter<Object>, HolderOwner<Object> {
+    private class UniversalLookup implements HolderGetter<Object>, HolderOwner<Object> {
         @Override
-        public Optional<Holder.Reference<Object>> get(ResourceKey<Object> p_394615_) {
-            return Optional.of(this.getOrCreate(p_394615_));
-        }
-
-        @Override
-        public Holder.Reference<Object> getOrThrow(ResourceKey<Object> p_392521_) {
-            return this.getOrCreate(p_392521_);
-        }
-
-        private Holder.Reference<Object> getOrCreate(ResourceKey<Object> p_392885_) {
-            return PlaceholderLookupProvider.this.holders
-                .computeIfAbsent(p_392885_, p_393201_ -> Holder.Reference.createStandAlone(this, (ResourceKey<Object>)p_393201_));
+        public Optional<Holder.Reference<Object>> get(final ResourceKey<Object> id) {
+            return Optional.of(this.getOrCreate(id));
         }
 
         @Override
-        public Optional<HolderSet.Named<Object>> get(TagKey<Object> p_395754_) {
-            return Optional.of(this.getOrCreate(p_395754_));
+        public Holder.Reference<Object> getOrThrow(final ResourceKey<Object> id) {
+            return this.getOrCreate(id);
+        }
+
+        private Holder.Reference<Object> getOrCreate(final ResourceKey<Object> id) {
+            return PlaceholderLookupProvider.this.holders.computeIfAbsent(id, k -> Holder.Reference.createStandAlone(this, (ResourceKey<Object>)k));
         }
 
         @Override
-        public HolderSet.Named<Object> getOrThrow(TagKey<Object> p_396896_) {
-            return this.getOrCreate(p_396896_);
+        public Optional<HolderSet.Named<Object>> get(final TagKey<Object> id) {
+            return Optional.of(this.getOrCreate(id));
         }
 
-        private HolderSet.Named<Object> getOrCreate(TagKey<Object> p_397236_) {
-            return PlaceholderLookupProvider.this.holderSets.computeIfAbsent(p_397236_, p_391551_ -> HolderSet.emptyNamed(this, (TagKey<Object>)p_391551_));
+        @Override
+        public HolderSet.Named<Object> getOrThrow(final TagKey<Object> id) {
+            return this.getOrCreate(id);
+        }
+
+        private HolderSet.Named<Object> getOrCreate(final TagKey<Object> id) {
+            return PlaceholderLookupProvider.this.holderSets.computeIfAbsent(id, k -> HolderSet.emptyNamed(this, (TagKey<Object>)k));
         }
 
         public <T> HolderGetter<T> castAsLookup() {

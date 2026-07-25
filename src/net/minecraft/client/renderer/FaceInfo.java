@@ -4,12 +4,9 @@ import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
 public enum FaceInfo {
     DOWN(
         new FaceInfo.VertexInfo(FaceInfo.Extent.MIN_X, FaceInfo.Extent.MIN_Y, FaceInfo.Extent.MAX_Z),
@@ -48,30 +45,29 @@ public enum FaceInfo {
         new FaceInfo.VertexInfo(FaceInfo.Extent.MAX_X, FaceInfo.Extent.MAX_Y, FaceInfo.Extent.MIN_Z)
     );
 
-    private static final Map<Direction, FaceInfo> BY_FACING = Util.make(new EnumMap<>(Direction.class), p_448148_ -> {
-        p_448148_.put(Direction.DOWN, DOWN);
-        p_448148_.put(Direction.UP, UP);
-        p_448148_.put(Direction.NORTH, NORTH);
-        p_448148_.put(Direction.SOUTH, SOUTH);
-        p_448148_.put(Direction.WEST, WEST);
-        p_448148_.put(Direction.EAST, EAST);
+    private static final Map<Direction, FaceInfo> BY_FACING = Util.make(new EnumMap<>(Direction.class), map -> {
+        map.put(Direction.DOWN, DOWN);
+        map.put(Direction.UP, UP);
+        map.put(Direction.NORTH, NORTH);
+        map.put(Direction.SOUTH, SOUTH);
+        map.put(Direction.WEST, WEST);
+        map.put(Direction.EAST, EAST);
     });
     private final FaceInfo.VertexInfo[] infos;
 
-    public static FaceInfo fromFacing(Direction p_108985_) {
-        return BY_FACING.get(p_108985_);
+    public static FaceInfo fromFacing(final Direction direction) {
+        return BY_FACING.get(direction);
     }
 
-    private FaceInfo(final FaceInfo.VertexInfo... p_108981_) {
-        this.infos = p_108981_;
+    FaceInfo(final FaceInfo.VertexInfo... infos) {
+        this.infos = infos;
     }
 
-    public FaceInfo.VertexInfo getVertexInfo(int p_108983_) {
-        return this.infos[p_108983_];
+    public FaceInfo.VertexInfo getVertexInfo(final int index) {
+        return this.infos[index];
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Extent {
+        public enum Extent {
         MIN_X,
         MIN_Y,
         MIN_Z,
@@ -79,35 +75,32 @@ public enum FaceInfo {
         MAX_Y,
         MAX_Z;
 
-        public float select(Vector3fc p_455488_, Vector3fc p_454448_) {
+        public float select(final Vector3fc min, final Vector3fc max) {
             return switch (this) {
-                case MIN_X -> p_455488_.x();
-                case MIN_Y -> p_455488_.y();
-                case MIN_Z -> p_455488_.z();
-                case MAX_X -> p_454448_.x();
-                case MAX_Y -> p_454448_.y();
-                case MAX_Z -> p_454448_.z();
+                case MIN_X -> min.x();
+                case MIN_Y -> min.y();
+                case MIN_Z -> min.z();
+                case MAX_X -> max.x();
+                case MAX_Y -> max.y();
+                case MAX_Z -> max.z();
             };
         }
 
-        public float select(float p_456230_, float p_460437_, float p_458288_, float p_451081_, float p_451867_, float p_452341_) {
+        public float select(final float minX, final float minY, final float minZ, final float maxX, final float maxY, final float maxZ) {
             return switch (this) {
-                case MIN_X -> p_456230_;
-                case MIN_Y -> p_460437_;
-                case MIN_Z -> p_458288_;
-                case MAX_X -> p_451081_;
-                case MAX_Y -> p_451867_;
-                case MAX_Z -> p_452341_;
+                case MIN_X -> minX;
+                case MIN_Y -> minY;
+                case MIN_Z -> minZ;
+                case MAX_X -> maxX;
+                case MAX_Y -> maxY;
+                case MAX_Z -> maxZ;
             };
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record VertexInfo(FaceInfo.Extent xFace, FaceInfo.Extent yFace, FaceInfo.Extent zFace) {
-        public Vector3f select(Vector3fc p_454828_, Vector3fc p_451997_) {
-            return new Vector3f(
-                this.xFace.select(p_454828_, p_451997_), this.yFace.select(p_454828_, p_451997_), this.zFace.select(p_454828_, p_451997_)
-            );
+        public record VertexInfo(FaceInfo.Extent xFace, FaceInfo.Extent yFace, FaceInfo.Extent zFace) {
+        public Vector3f select(final Vector3fc min, final Vector3fc max) {
+            return new Vector3f(this.xFace.select(min, max), this.yFace.select(min, max), this.zFace.select(min, max));
         }
     }
 }

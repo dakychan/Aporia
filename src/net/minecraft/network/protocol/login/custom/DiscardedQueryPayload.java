@@ -5,11 +5,6 @@ import net.minecraft.resources.Identifier;
 
 public record DiscardedQueryPayload(Identifier id) implements CustomQueryPayload {
     @Override
-    public void write(FriendlyByteBuf p_299949_) {
-    }
-
-    @Override
-    public Identifier id() {
-        return this.id;
+    public void write(final FriendlyByteBuf output) {
     }
 }

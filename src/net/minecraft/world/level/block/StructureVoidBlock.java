@@ -17,22 +17,22 @@ public class StructureVoidBlock extends Block {
         return CODEC;
     }
 
-    protected StructureVoidBlock(BlockBehaviour.Properties p_57150_) {
-        super(p_57150_);
+    protected StructureVoidBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState p_57156_) {
+    protected RenderShape getRenderShape(final BlockState state) {
         return RenderShape.INVISIBLE;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57158_, BlockGetter p_57159_, BlockPos p_57160_, CollisionContext p_57161_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected float getShadeBrightness(BlockState p_57152_, BlockGetter p_57153_, BlockPos p_57154_) {
+    protected float getShadeBrightness(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return 1.0F;
     }
 }

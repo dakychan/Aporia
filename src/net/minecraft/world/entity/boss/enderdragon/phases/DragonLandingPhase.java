@@ -13,43 +13,45 @@ import org.jspecify.annotations.Nullable;
 public class DragonLandingPhase extends AbstractDragonPhaseInstance {
     private @Nullable Vec3 targetLocation;
 
-    public DragonLandingPhase(EnderDragon p_31305_) {
-        super(p_31305_);
+    public DragonLandingPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
     public void doClientTick() {
-        Vec3 vec3 = this.dragon.getHeadLookVector(1.0F).normalize();
-        vec3.yRot((float) (-Math.PI / 4));
-        double d0 = this.dragon.head.getX();
-        double d1 = this.dragon.head.getY(0.5);
-        double d2 = this.dragon.head.getZ();
+        Vec3 look = this.dragon.getHeadLookVector(1.0F).normalize();
+        look.yRot((float) (-Math.PI / 4));
+        double particleX = this.dragon.head.getX();
+        double particleY = this.dragon.head.getY(0.5);
+        double particleZ = this.dragon.head.getZ();
 
         for (int i = 0; i < 8; i++) {
-            RandomSource randomsource = this.dragon.getRandom();
-            double d3 = d0 + randomsource.nextGaussian() / 2.0;
-            double d4 = d1 + randomsource.nextGaussian() / 2.0;
-            double d5 = d2 + randomsource.nextGaussian() / 2.0;
-            Vec3 vec31 = this.dragon.getDeltaMovement();
+            RandomSource random = this.dragon.getRandom();
+            double px = particleX + random.nextGaussian() / 2.0;
+            double py = particleY + random.nextGaussian() / 2.0;
+            double pz = particleZ + random.nextGaussian() / 2.0;
+            Vec3 movement = this.dragon.getDeltaMovement();
             this.dragon
                 .level()
                 .addParticle(
                     PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F),
-                    d3,
-                    d4,
-                    d5,
-                    -vec3.x * 0.08F + vec31.x,
-                    -vec3.y * 0.3F + vec31.y,
-                    -vec3.z * 0.08F + vec31.z
+                    px,
+                    py,
+                    pz,
+                    -look.x * 0.08F + movement.x,
+                    -look.y * 0.3F + movement.y,
+                    -look.z * 0.08F + movement.z
                 );
-            vec3.yRot((float) (Math.PI / 16));
+            look.yRot((float) (Math.PI / 16));
         }
     }
 
     @Override
-    public void doServerTick(ServerLevel p_361920_) {
+    public void doServerTick(final ServerLevel level) {
         if (this.targetLocation == null) {
-            this.targetLocation = Vec3.atBottomCenterOf(p_361920_.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, EndPodiumFeature.getLocation(this.dragon.getFightOrigin())));
+            this.targetLocation = Vec3.atBottomCenterOf(
+                level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, EndPodiumFeature.getLocation(this.dragon.getFightOrigin()))
+            );
         }
 
         if (this.targetLocation.distanceToSqr(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ()) < 1.0) {
@@ -65,9 +67,9 @@ public class DragonLandingPhase extends AbstractDragonPhaseInstance {
 
     @Override
     public float getTurnSpeed() {
-        float f = (float)this.dragon.getDeltaMovement().horizontalDistance() + 1.0F;
-        float f1 = Math.min(f, 40.0F);
-        return f1 / f;
+        float rotSpeed = (float)this.dragon.getDeltaMovement().horizontalDistance() + 1.0F;
+        float dist = Math.min(rotSpeed, 40.0F);
+        return dist / rotSpeed;
     }
 
     @Override

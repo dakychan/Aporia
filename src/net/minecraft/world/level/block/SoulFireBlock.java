@@ -18,35 +18,35 @@ public class SoulFireBlock extends BaseFireBlock {
         return CODEC;
     }
 
-    public SoulFireBlock(BlockBehaviour.Properties p_56653_) {
-        super(p_56653_, 2.0F);
+    public SoulFireBlock(final BlockBehaviour.Properties properties) {
+        super(properties, 2.0F);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_56659_,
-        LevelReader p_362397_,
-        ScheduledTickAccess p_363438_,
-        BlockPos p_56663_,
-        Direction p_56660_,
-        BlockPos p_56664_,
-        BlockState p_56661_,
-        RandomSource p_366228_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return this.canSurvive(p_56659_, p_362397_, p_56663_) ? this.defaultBlockState() : Blocks.AIR.defaultBlockState();
+        return this.canSurvive(state, level, pos) ? this.defaultBlockState() : Blocks.AIR.defaultBlockState();
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_56655_, LevelReader p_56656_, BlockPos p_56657_) {
-        return canSurviveOnBlock(p_56656_.getBlockState(p_56657_.below()));
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return canSurviveOnBlock(level.getBlockState(pos.below()));
     }
 
-    public static boolean canSurviveOnBlock(BlockState p_154651_) {
-        return p_154651_.is(BlockTags.SOUL_FIRE_BASE_BLOCKS);
+    public static boolean canSurviveOnBlock(final BlockState state) {
+        return state.is(BlockTags.SOUL_FIRE_BASE_BLOCKS);
     }
 
     @Override
-    protected boolean canBurn(BlockState p_56668_) {
+    protected boolean canBurn(final BlockState state) {
         return true;
     }
 }

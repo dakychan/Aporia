@@ -4,12 +4,12 @@ import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistrySetBuilder;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.item.enchantment.providers.TradeRebalanceEnchantmentProviders;
+import net.minecraft.world.item.trading.TradeRebalanceVillagerTrades;
 
 public class TradeRebalanceRegistries {
-    private static final RegistrySetBuilder BUILDER = new RegistrySetBuilder().add(Registries.ENCHANTMENT_PROVIDER, TradeRebalanceEnchantmentProviders::bootstrap);
+    private static final RegistrySetBuilder BUILDER = new RegistrySetBuilder().add(Registries.VILLAGER_TRADE, TradeRebalanceVillagerTrades::bootstrap);
 
-    public static CompletableFuture<RegistrySetBuilder.PatchedRegistries> createLookup(CompletableFuture<HolderLookup.Provider> p_342727_) {
-        return RegistryPatchGenerator.createLookup(p_342727_, BUILDER);
+    public static CompletableFuture<RegistrySetBuilder.PatchedRegistries> createLookup(final CompletableFuture<HolderLookup.Provider> vanilla) {
+        return RegistryPatchGenerator.createLookup(vanilla, BUILDER);
     }
 }

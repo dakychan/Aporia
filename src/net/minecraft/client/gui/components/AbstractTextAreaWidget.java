@@ -1,16 +1,13 @@
 package net.minecraft.client.gui.components;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
     private static final WidgetSprites BACKGROUND_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("widget/text_field"), Identifier.withDefaultNamespace("widget/text_field_highlighted")
@@ -20,58 +17,69 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
     private boolean showBackground = true;
     private boolean showDecorations = true;
 
-    public AbstractTextAreaWidget(int p_378028_, int p_375960_, int p_376988_, int p_376757_, Component p_378529_) {
-        super(p_378028_, p_375960_, p_376988_, p_376757_, p_378529_);
+    public AbstractTextAreaWidget(
+        final int x, final int y, final int width, final int height, final Component narration, final AbstractScrollArea.ScrollbarSettings scrollbarSettings
+    ) {
+        super(x, y, width, height, narration, scrollbarSettings);
     }
 
-    public AbstractTextAreaWidget(int p_409240_, int p_407697_, int p_407917_, int p_410081_, Component p_409161_, boolean p_406968_, boolean p_409537_) {
-        this(p_409240_, p_407697_, p_407917_, p_410081_, p_409161_);
-        this.showBackground = p_406968_;
-        this.showDecorations = p_409537_;
+    public AbstractTextAreaWidget(
+        final int x,
+        final int y,
+        final int width,
+        final int height,
+        final Component narration,
+        final AbstractScrollArea.ScrollbarSettings scrollbarSettings,
+        final boolean showBackground,
+        final boolean showDecorations
+    ) {
+        this(x, y, width, height, narration, scrollbarSettings);
+        this.showBackground = showBackground;
+        this.showDecorations = showDecorations;
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_423231_, boolean p_430313_) {
-        boolean flag = this.updateScrolling(p_423231_);
-        return super.mouseClicked(p_423231_, p_430313_) || flag;
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        boolean scrolling = this.updateScrolling(event);
+        return super.mouseClicked(event, doubleClick) || scrolling;
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_425030_) {
-        boolean flag = p_425030_.isUp();
-        boolean flag1 = p_425030_.isDown();
-        if (flag || flag1) {
-            double d0 = this.scrollAmount();
-            this.setScrollAmount(this.scrollAmount() + (flag ? -1 : 1) * this.scrollRate());
-            if (d0 != this.scrollAmount()) {
+    public boolean keyPressed(final KeyEvent event) {
+        boolean isUp = event.isUp();
+        boolean isDown = event.isDown();
+        if (isUp || isDown) {
+            double previousScrollAmount = this.scrollAmount();
+            this.setScrollAmount(this.scrollAmount() + (isUp ? -1 : 1) * this.scrollRate());
+            if (previousScrollAmount != this.scrollAmount()) {
                 return true;
             }
         }
 
-        return super.keyPressed(p_425030_);
+        return super.keyPressed(event);
     }
 
     @Override
-    public void renderWidget(GuiGraphics p_376330_, int p_376585_, int p_376181_, float p_376214_) {
+    public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
         if (this.visible) {
             if (this.showBackground) {
-                this.renderBackground(p_376330_);
+                this.extractBackground(graphics);
             }
 
-            p_376330_.enableScissor(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1);
-            p_376330_.pose().pushMatrix();
-            p_376330_.pose().translate(0.0F, (float)(-this.scrollAmount()));
-            this.renderContents(p_376330_, p_376585_, p_376181_, p_376214_);
-            p_376330_.pose().popMatrix();
-            p_376330_.disableScissor();
-            this.renderScrollbar(p_376330_, p_376585_, p_376181_);
+            graphics.enableScissor(this.getX() + 1, this.getY() + 1, this.getX() + this.width - 1, this.getY() + this.height - 1);
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(0.0F, (float)(-this.scrollAmount()));
+            this.extractContents(graphics, mouseX, mouseY, a);
+            graphics.pose().popMatrix();
+            graphics.disableScissor();
+            this.extractScrollbar(graphics, mouseX, mouseY);
             if (this.showDecorations) {
-                this.renderDecorations(p_376330_);
+                this.extractDecorations(graphics);
             }
         }
     }
 
-    protected void renderDecorations(GuiGraphics p_376435_) {
+    protected void extractDecorations(final GuiGraphicsExtractor graphics) {
     }
 
     protected int innerPadding() {
@@ -83,13 +91,13 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
     }
 
     @Override
-    public boolean isMouseOver(double p_376364_, double p_377350_) {
+    public boolean isMouseOver(final double mouseX, final double mouseY) {
         return this.active
             && this.visible
-            && p_376364_ >= this.getX()
-            && p_377350_ >= this.getY()
-            && p_376364_ < this.getRight() + 6
-            && p_377350_ < this.getBottom();
+            && mouseX >= this.getX()
+            && mouseY >= this.getY()
+            && mouseX < this.getRight() + this.scrollbarWidth()
+            && mouseY < this.getBottom();
     }
 
     @Override
@@ -102,22 +110,22 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
         return this.getInnerHeight() + this.totalInnerPadding();
     }
 
-    protected void renderBackground(GuiGraphics p_378043_) {
-        this.renderBorder(p_378043_, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+    protected void extractBackground(final GuiGraphicsExtractor graphics) {
+        this.extractBorder(graphics, this.getX(), this.getY(), this.getWidth(), this.getHeight());
     }
 
-    protected void renderBorder(GuiGraphics p_376239_, int p_378450_, int p_375463_, int p_377865_, int p_375612_) {
-        Identifier identifier = BACKGROUND_SPRITES.get(this.isActive(), this.isFocused());
-        p_376239_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, p_378450_, p_375463_, p_377865_, p_375612_);
+    protected void extractBorder(final GuiGraphicsExtractor graphics, final int x, final int y, final int width, final int height) {
+        Identifier sprite = BACKGROUND_SPRITES.get(this.isActive(), this.isFocused());
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, x, y, width, height);
     }
 
-    protected boolean withinContentAreaTopBottom(int p_376309_, int p_378518_) {
-        return p_378518_ - this.scrollAmount() >= this.getY() && p_376309_ - this.scrollAmount() <= this.getY() + this.height;
+    protected boolean withinContentAreaTopBottom(final int top, final int bottom) {
+        return bottom - this.scrollAmount() >= this.getY() && top - this.scrollAmount() <= this.getY() + this.height;
     }
 
     protected abstract int getInnerHeight();
 
-    protected abstract void renderContents(GuiGraphics p_375874_, int p_377970_, int p_376165_, float p_376358_);
+    protected abstract void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a);
 
     protected int getInnerLeft() {
         return this.getX() + this.innerPadding();
@@ -128,6 +136,6 @@ public abstract class AbstractTextAreaWidget extends AbstractScrollArea {
     }
 
     @Override
-    public void playDownSound(SoundManager p_378011_) {
+    public void playDownSound(final SoundManager soundManager) {
     }
 }

@@ -19,11 +19,11 @@ public record ClientboundEntityPositionSyncPacket(int id, PositionMoveRotation v
         ClientboundEntityPositionSyncPacket::new
     );
 
-    public static ClientboundEntityPositionSyncPacket of(Entity p_365521_) {
+    public static ClientboundEntityPositionSyncPacket of(final Entity entity) {
         return new ClientboundEntityPositionSyncPacket(
-            p_365521_.getId(),
-            new PositionMoveRotation(p_365521_.trackingPosition(), p_365521_.getDeltaMovement(), p_365521_.getYRot(), p_365521_.getXRot()),
-            p_365521_.onGround()
+            entity.getId(),
+            new PositionMoveRotation(entity.trackingPosition(), entity.getDeltaMovement(), entity.getYRot(), entity.getXRot()),
+            entity.onGround()
         );
     }
 
@@ -32,7 +32,7 @@ public record ClientboundEntityPositionSyncPacket(int id, PositionMoveRotation v
         return GamePacketTypes.CLIENTBOUND_ENTITY_POSITION_SYNC;
     }
 
-    public void handle(ClientGamePacketListener p_363663_) {
-        p_363663_.handleEntityPositionSync(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleEntityPositionSync(this);
     }
 }

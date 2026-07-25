@@ -47,51 +47,51 @@ public class CachedUserNameToIdResolver implements UserNameToIdResolver {
     private final File file;
     private final AtomicLong operationCount = new AtomicLong();
 
-    public CachedUserNameToIdResolver(GameProfileRepository p_429966_, File p_428956_) {
-        this.profileRepository = p_429966_;
-        this.file = p_428956_;
+    public CachedUserNameToIdResolver(final GameProfileRepository profileRepository, final File file) {
+        this.profileRepository = profileRepository;
+        this.file = file;
         Lists.reverse(this.load()).forEach(this::safeAdd);
     }
 
-    private void safeAdd(CachedUserNameToIdResolver.GameProfileInfo p_427969_) {
-        NameAndId nameandid = p_427969_.nameAndId();
-        p_427969_.setLastAccess(this.getNextOperation());
-        this.profilesByName.put(nameandid.name().toLowerCase(Locale.ROOT), p_427969_);
-        this.profilesByUUID.put(nameandid.id(), p_427969_);
+    private void safeAdd(final CachedUserNameToIdResolver.GameProfileInfo profileInfo) {
+        NameAndId nameAndId = profileInfo.nameAndId();
+        profileInfo.setLastAccess(this.getNextOperation());
+        this.profilesByName.put(nameAndId.name().toLowerCase(Locale.ROOT), profileInfo);
+        this.profilesByUUID.put(nameAndId.id(), profileInfo);
     }
 
-    private Optional<NameAndId> lookupGameProfile(GameProfileRepository p_427429_, String p_428400_) {
-        if (!StringUtil.isValidPlayerName(p_428400_)) {
-            return this.createUnknownProfile(p_428400_);
-        } else {
-            Optional<NameAndId> optional = p_427429_.findProfileByName(p_428400_).map(NameAndId::new);
-            return optional.isEmpty() ? this.createUnknownProfile(p_428400_) : optional;
+    private Optional<NameAndId> lookupGameProfile(final GameProfileRepository profileRepository, final String name) {
+        if (!StringUtil.isValidPlayerName(name)) {
+            return this.createUnknownProfile(name);
         }
+
+        Optional<NameAndId> profile = profileRepository.findProfileByName(name).map(NameAndId::new);
+        return profile.isEmpty() ? this.createUnknownProfile(name) : profile;
     }
 
-    private Optional<NameAndId> createUnknownProfile(String p_430725_) {
-        return this.resolveOfflineUsers ? Optional.of(NameAndId.createOffline(p_430725_)) : Optional.empty();
+    private Optional<NameAndId> createUnknownProfile(final String name) {
+        return this.resolveOfflineUsers ? Optional.of(NameAndId.createOffline(name)) : Optional.empty();
     }
 
     @Override
-    public void resolveOfflineUsers(boolean p_428568_) {
-        this.resolveOfflineUsers = p_428568_;
+    public void resolveOfflineUsers(final boolean value) {
+        this.resolveOfflineUsers = value;
     }
 
     @Override
-    public void add(NameAndId p_429952_) {
-        this.addInternal(p_429952_);
+    public void add(final NameAndId nameAndId) {
+        this.addInternal(nameAndId);
     }
 
-    private CachedUserNameToIdResolver.GameProfileInfo addInternal(NameAndId p_428081_) {
-        Calendar calendar = Calendar.getInstance(TimeZone.getDefault(), Locale.ROOT);
-        calendar.setTime(new Date());
-        calendar.add(2, 1);
-        Date date = calendar.getTime();
-        CachedUserNameToIdResolver.GameProfileInfo cachedusernametoidresolver$gameprofileinfo = new CachedUserNameToIdResolver.GameProfileInfo(p_428081_, date);
-        this.safeAdd(cachedusernametoidresolver$gameprofileinfo);
+    private CachedUserNameToIdResolver.GameProfileInfo addInternal(final NameAndId profile) {
+        Calendar c = Calendar.getInstance(TimeZone.getDefault(), Locale.ROOT);
+        c.setTime(new Date());
+        c.add(2, 1);
+        Date expirationDate = c.getTime();
+        CachedUserNameToIdResolver.GameProfileInfo profileInfo = new CachedUserNameToIdResolver.GameProfileInfo(profile, expirationDate);
+        this.safeAdd(profileInfo);
         this.save();
-        return cachedusernametoidresolver$gameprofileinfo;
+        return profileInfo;
     }
 
     private long getNextOperation() {
@@ -99,47 +99,47 @@ public class CachedUserNameToIdResolver implements UserNameToIdResolver {
     }
 
     @Override
-    public Optional<NameAndId> get(String p_426041_) {
-        String s = p_426041_.toLowerCase(Locale.ROOT);
-        CachedUserNameToIdResolver.GameProfileInfo cachedusernametoidresolver$gameprofileinfo = this.profilesByName.get(s);
-        boolean flag = false;
-        if (cachedusernametoidresolver$gameprofileinfo != null && new Date().getTime() >= cachedusernametoidresolver$gameprofileinfo.expirationDate.getTime()) {
-            this.profilesByUUID.remove(cachedusernametoidresolver$gameprofileinfo.nameAndId().id());
-            this.profilesByName.remove(cachedusernametoidresolver$gameprofileinfo.nameAndId().name().toLowerCase(Locale.ROOT));
-            flag = true;
-            cachedusernametoidresolver$gameprofileinfo = null;
+    public Optional<NameAndId> get(final String name) {
+        String userName = name.toLowerCase(Locale.ROOT);
+        CachedUserNameToIdResolver.GameProfileInfo profileInfo = this.profilesByName.get(userName);
+        boolean needsSave = false;
+        if (profileInfo != null && new Date().getTime() >= profileInfo.expirationDate.getTime()) {
+            this.profilesByUUID.remove(profileInfo.nameAndId().id());
+            this.profilesByName.remove(profileInfo.nameAndId().name().toLowerCase(Locale.ROOT));
+            needsSave = true;
+            profileInfo = null;
         }
 
-        Optional<NameAndId> optional;
-        if (cachedusernametoidresolver$gameprofileinfo != null) {
-            cachedusernametoidresolver$gameprofileinfo.setLastAccess(this.getNextOperation());
-            optional = Optional.of(cachedusernametoidresolver$gameprofileinfo.nameAndId());
+        Optional<NameAndId> result;
+        if (profileInfo != null) {
+            profileInfo.setLastAccess(this.getNextOperation());
+            result = Optional.of(profileInfo.nameAndId());
         } else {
-            Optional<NameAndId> optional1 = this.lookupGameProfile(this.profileRepository, s);
-            if (optional1.isPresent()) {
-                optional = Optional.of(this.addInternal(optional1.get()).nameAndId());
-                flag = false;
+            Optional<NameAndId> profile = this.lookupGameProfile(this.profileRepository, userName);
+            if (profile.isPresent()) {
+                result = Optional.of(this.addInternal(profile.get()).nameAndId());
+                needsSave = false;
             } else {
-                optional = Optional.empty();
+                result = Optional.empty();
             }
         }
 
-        if (flag) {
+        if (needsSave) {
             this.save();
         }
 
-        return optional;
+        return result;
     }
 
     @Override
-    public Optional<NameAndId> get(UUID p_423049_) {
-        CachedUserNameToIdResolver.GameProfileInfo cachedusernametoidresolver$gameprofileinfo = this.profilesByUUID.get(p_423049_);
-        if (cachedusernametoidresolver$gameprofileinfo == null) {
+    public Optional<NameAndId> get(final UUID id) {
+        CachedUserNameToIdResolver.GameProfileInfo profileInfo = this.profilesByUUID.get(id);
+        if (profileInfo == null) {
             return Optional.empty();
-        } else {
-            cachedusernametoidresolver$gameprofileinfo.setLastAccess(this.getNextOperation());
-            return Optional.of(cachedusernametoidresolver$gameprofileinfo.nameAndId());
         }
+
+        profileInfo.setLastAccess(this.getNextOperation());
+        return Optional.of(profileInfo.nameAndId());
     }
 
     private static DateFormat createDateFormat() {
@@ -147,71 +147,65 @@ public class CachedUserNameToIdResolver implements UserNameToIdResolver {
     }
 
     private List<CachedUserNameToIdResolver.GameProfileInfo> load() {
-        List<CachedUserNameToIdResolver.GameProfileInfo> list = Lists.newArrayList();
+        List<CachedUserNameToIdResolver.GameProfileInfo> result = Lists.newArrayList();
 
-        try {
-            Object object;
-            try (Reader reader = Files.newReader(this.file, StandardCharsets.UTF_8)) {
-                JsonArray jsonarray = this.gson.fromJson(reader, JsonArray.class);
-                if (jsonarray != null) {
-                    DateFormat dateformat = createDateFormat();
-                    jsonarray.forEach(p_424444_ -> readGameProfile(p_424444_, dateformat).ifPresent(list::add));
-                    return list;
-                }
-
-                object = list;
+        try (Reader reader = Files.newReader(this.file, StandardCharsets.UTF_8)) {
+            JsonArray entryList = this.gson.fromJson(reader, JsonArray.class);
+            if (entryList == null) {
+                return result;
             }
 
-            return (List<CachedUserNameToIdResolver.GameProfileInfo>)object;
-        } catch (FileNotFoundException filenotfoundexception) {
-        } catch (JsonParseException | IOException ioexception) {
-            LOGGER.warn("Failed to load profile cache {}", this.file, ioexception);
+            DateFormat dateFormat = createDateFormat();
+            entryList.forEach(element -> readGameProfile(element, dateFormat).ifPresent(result::add));
+        } catch (FileNotFoundException var7) {
+        } catch (IOException | JsonParseException e) {
+            LOGGER.warn("Failed to load profile cache {}", this.file, e);
         }
 
-        return list;
+        return result;
     }
 
     @Override
     public void save() {
-        JsonArray jsonarray = new JsonArray();
-        DateFormat dateformat = createDateFormat();
-        this.getTopMRUProfiles(1000).forEach(p_422828_ -> jsonarray.add(writeGameProfile(p_422828_, dateformat)));
-        String s = this.gson.toJson((JsonElement)jsonarray);
+        JsonArray entryList = new JsonArray();
+        DateFormat dateFormat = createDateFormat();
+        this.getTopMRUProfiles(1000).forEach(entry -> entryList.add(writeGameProfile(entry, dateFormat)));
+        String toSave = this.gson.toJson(entryList);
 
         try (Writer writer = Files.newWriter(this.file, StandardCharsets.UTF_8)) {
-            writer.write(s);
-        } catch (IOException ioexception) {
+            writer.write(toSave);
+        } catch (IOException var9) {
         }
     }
 
-    private Stream<CachedUserNameToIdResolver.GameProfileInfo> getTopMRUProfiles(int p_431126_) {
+    private Stream<CachedUserNameToIdResolver.GameProfileInfo> getTopMRUProfiles(final int limit) {
         return ImmutableList.copyOf(this.profilesByUUID.values())
             .stream()
             .sorted(Comparator.comparing(CachedUserNameToIdResolver.GameProfileInfo::lastAccess).reversed())
-            .limit(p_431126_);
+            .limit(limit);
     }
 
-    private static JsonElement writeGameProfile(CachedUserNameToIdResolver.GameProfileInfo p_426654_, DateFormat p_431612_) {
-        JsonObject jsonobject = new JsonObject();
-        p_426654_.nameAndId().appendTo(jsonobject);
-        jsonobject.addProperty("expiresOn", p_431612_.format(p_426654_.expirationDate()));
-        return jsonobject;
+    private static JsonElement writeGameProfile(final CachedUserNameToIdResolver.GameProfileInfo src, final DateFormat dateFormat) {
+        JsonObject object = new JsonObject();
+        src.nameAndId().appendTo(object);
+        object.addProperty("expiresOn", dateFormat.format(src.expirationDate()));
+        return object;
     }
 
-    private static Optional<CachedUserNameToIdResolver.GameProfileInfo> readGameProfile(JsonElement p_427116_, DateFormat p_423404_) {
-        if (p_427116_.isJsonObject()) {
-            JsonObject jsonobject = p_427116_.getAsJsonObject();
-            NameAndId nameandid = NameAndId.fromJson(jsonobject);
-            if (nameandid != null) {
-                JsonElement jsonelement = jsonobject.get("expiresOn");
-                if (jsonelement != null) {
-                    String s = jsonelement.getAsString();
+    private static Optional<CachedUserNameToIdResolver.GameProfileInfo> readGameProfile(final JsonElement json, final DateFormat dateFormat) {
+        if (json.isJsonObject()) {
+            JsonObject object = json.getAsJsonObject();
+            NameAndId nameAndId = NameAndId.fromJson(object);
+            if (nameAndId != null) {
+                JsonElement expirationElement = object.get("expiresOn");
+                if (expirationElement != null) {
+                    String dateAsString = expirationElement.getAsString();
 
                     try {
-                        Date date = p_423404_.parse(s);
-                        return Optional.of(new CachedUserNameToIdResolver.GameProfileInfo(nameandid, date));
-                    } catch (ParseException parseexception) {
-                        LOGGER.warn("Failed to parse date {}", s, parseexception);
+                        Date expirationDate = dateFormat.parse(dateAsString);
+                        return Optional.of(new CachedUserNameToIdResolver.GameProfileInfo(nameAndId, expirationDate));
+                    } catch (ParseException e) {
+                        LOGGER.warn("Failed to parse date {}", dateAsString, e);
                     }
                 }
             }
@@ -220,14 +214,14 @@ public class CachedUserNameToIdResolver implements UserNameToIdResolver {
         return Optional.empty();
     }
 
-    static class GameProfileInfo {
+    private static class GameProfileInfo {
         private final NameAndId nameAndId;
-        final Date expirationDate;
+        private final Date expirationDate;
         private volatile long lastAccess;
 
-        GameProfileInfo(NameAndId p_428052_, Date p_422633_) {
-            this.nameAndId = p_428052_;
-            this.expirationDate = p_422633_;
+        private GameProfileInfo(final NameAndId nameAndId, final Date expirationDate) {
+            this.nameAndId = nameAndId;
+            this.expirationDate = expirationDate;
         }
 
         public NameAndId nameAndId() {
@@ -238,8 +232,8 @@ public class CachedUserNameToIdResolver implements UserNameToIdResolver {
             return this.expirationDate;
         }
 
-        public void setLastAccess(long p_422592_) {
-            this.lastAccess = p_422592_;
+        public void setLastAccess(final long currentOperation) {
+            this.lastAccess = currentOperation;
         }
 
         public long lastAccess() {

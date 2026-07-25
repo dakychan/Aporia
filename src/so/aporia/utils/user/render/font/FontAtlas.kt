@@ -17,16 +17,17 @@ import java.util.HashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import com.chaos.annotation.ChaosNative
 @ChaosNative
-class FontAtlas(private val jsonId: Identifier, private val textureId: Identifier) {
+class FontAtlas(private val jsonId: Identifier, internal val textureId: Identifier) {
 
     private val glyphs: MutableMap<Int, Glyph> = HashMap()
+    val glyphCount: Int get() = glyphs.size
     private val loaded = AtomicBoolean(false)
 
-    private var atlasWidth: Float = 512f
-    private var atlasHeight: Float = 512f
-    private var fontSize: Float = 32f
-    private var lineHeight: Float = 40f
-    private var distanceRange: Float = 4f
+    internal var atlasWidth: Float = 512f
+    internal var atlasHeight: Float = 512f
+    internal var fontSize: Float = 32f
+    internal var lineHeight: Float = 40f
+    internal var distanceRange: Float = 4f
     private var ascender: Float = 0.95f
     private var yOriginBottom: Boolean = false
 
@@ -156,8 +157,6 @@ class FontAtlas(private val jsonId: Identifier, private val textureId: Identifie
     fun getDistanceRange(): Float = distanceRange
 
     fun isLoaded(): Boolean = loaded.get()
-
-    fun getGlyphCount(): Int = glyphs.size
 
     fun getAscender(): Float = ascender
 

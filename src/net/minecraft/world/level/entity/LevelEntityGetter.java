@@ -7,15 +7,15 @@ import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.Nullable;
 
 public interface LevelEntityGetter<T extends EntityAccess> {
-    @Nullable T get(int p_156931_);
+    @Nullable T get(final int id);
 
-    @Nullable T get(UUID p_156939_);
+    @Nullable T get(final UUID id);
 
     Iterable<T> getAll();
 
-    <U extends T> void get(EntityTypeTest<T, U> p_156935_, AbortableIterationConsumer<U> p_261602_);
+    <U extends T> void get(final EntityTypeTest<T, U> type, final AbortableIterationConsumer<U> consumer);
 
-    void get(AABB p_156937_, Consumer<T> p_156938_);
+    void get(final AABB bb, final Consumer<T> output);
 
-    <U extends T> void get(EntityTypeTest<T, U> p_156932_, AABB p_156933_, AbortableIterationConsumer<U> p_261542_);
+    <U extends T> void get(final EntityTypeTest<T, U> type, final AABB bb, final AbortableIterationConsumer<U> consumer);
 }

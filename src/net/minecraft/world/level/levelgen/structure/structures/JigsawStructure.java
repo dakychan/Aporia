@@ -6,7 +6,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
@@ -35,20 +34,20 @@ public final class JigsawStructure extends Structure {
     public static final int MIN_DEPTH = 0;
     public static final int MAX_DEPTH = 20;
     public static final MapCodec<JigsawStructure> CODEC = RecordCodecBuilder.<JigsawStructure>mapCodec(
-            p_227640_ -> p_227640_.group(
-                    settingsCodec(p_227640_),
-                    StructureTemplatePool.CODEC.fieldOf("start_pool").forGetter(p_227656_ -> p_227656_.startPool),
-                    Identifier.CODEC.optionalFieldOf("start_jigsaw_name").forGetter(p_227654_ -> p_227654_.startJigsawName),
-                    Codec.intRange(0, 20).fieldOf("size").forGetter(p_227652_ -> p_227652_.maxDepth),
-                    HeightProvider.CODEC.fieldOf("start_height").forGetter(p_227649_ -> p_227649_.startHeight),
-                    Codec.BOOL.fieldOf("use_expansion_hack").forGetter(p_227646_ -> p_227646_.useExpansionHack),
-                    Heightmap.Types.CODEC.optionalFieldOf("project_start_to_heightmap").forGetter(p_227644_ -> p_227644_.projectStartToHeightmap),
-                    JigsawStructure.MaxDistance.CODEC.fieldOf("max_distance_from_center").forGetter(p_422242_ -> p_422242_.maxDistanceFromCenter),
-                    Codec.list(PoolAliasBinding.CODEC).optionalFieldOf("pool_aliases", List.of()).forGetter(p_309350_ -> p_309350_.poolAliases),
-                    DimensionPadding.CODEC.optionalFieldOf("dimension_padding", DEFAULT_DIMENSION_PADDING).forGetter(p_341952_ -> p_341952_.dimensionPadding),
-                    LiquidSettings.CODEC.optionalFieldOf("liquid_settings", DEFAULT_LIQUID_SETTINGS).forGetter(p_341953_ -> p_341953_.liquidSettings)
+            i -> i.group(
+                    settingsCodec(i),
+                    StructureTemplatePool.CODEC.fieldOf("start_pool").forGetter(j -> j.startPool),
+                    Identifier.CODEC.optionalFieldOf("start_jigsaw_name").forGetter(j -> j.startJigsawName),
+                    Codec.intRange(0, 20).fieldOf("size").forGetter(j -> j.maxDepth),
+                    HeightProvider.CODEC.fieldOf("start_height").forGetter(j -> j.startHeight),
+                    Codec.BOOL.fieldOf("use_expansion_hack").forGetter(j -> j.useExpansionHack),
+                    Heightmap.Types.CODEC.optionalFieldOf("project_start_to_heightmap").forGetter(j -> j.projectStartToHeightmap),
+                    JigsawStructure.MaxDistance.CODEC.fieldOf("max_distance_from_center").forGetter(j -> j.maxDistanceFromCenter),
+                    Codec.list(PoolAliasBinding.CODEC).optionalFieldOf("pool_aliases", List.of()).forGetter(j -> j.poolAliases),
+                    DimensionPadding.CODEC.optionalFieldOf("dimension_padding", DEFAULT_DIMENSION_PADDING).forGetter(j -> j.dimensionPadding),
+                    LiquidSettings.CODEC.optionalFieldOf("liquid_settings", DEFAULT_LIQUID_SETTINGS).forGetter(j -> j.liquidSettings)
                 )
-                .apply(p_227640_, JigsawStructure::new)
+                .apply(i, JigsawStructure::new)
         )
         .validate(JigsawStructure::verifyRange);
     private final Holder<StructureTemplatePool> startPool;
@@ -62,58 +61,58 @@ public final class JigsawStructure extends Structure {
     private final DimensionPadding dimensionPadding;
     private final LiquidSettings liquidSettings;
 
-    private static DataResult<JigsawStructure> verifyRange(JigsawStructure p_286886_) {
-        int i = switch (p_286886_.terrainAdaptation()) {
+    private static DataResult<JigsawStructure> verifyRange(final JigsawStructure structure) {
+        int edgeNeeded = switch (structure.terrainAdaptation()) {
             case NONE -> 0;
             case BURY, BEARD_THIN, BEARD_BOX, ENCAPSULATE -> 12;
         };
-        return p_286886_.maxDistanceFromCenter.horizontal() + i > 128
+        return structure.maxDistanceFromCenter.horizontal() + edgeNeeded > 128
             ? DataResult.error(() -> "Horizontal structure size including terrain adaptation must not exceed 128")
-            : DataResult.success(p_286886_);
+            : DataResult.success(structure);
     }
 
     public JigsawStructure(
-        Structure.StructureSettings p_227627_,
-        Holder<StructureTemplatePool> p_227628_,
-        Optional<Identifier> p_227629_,
-        int p_227630_,
-        HeightProvider p_227631_,
-        boolean p_227632_,
-        Optional<Heightmap.Types> p_227633_,
-        JigsawStructure.MaxDistance p_422707_,
-        List<PoolAliasBinding> p_312703_,
-        DimensionPadding p_344382_,
-        LiquidSettings p_344801_
+        final Structure.StructureSettings settings,
+        final Holder<StructureTemplatePool> startPool,
+        final Optional<Identifier> startJigsawName,
+        final int maxDepth,
+        final HeightProvider startHeight,
+        final boolean useExpansionHack,
+        final Optional<Heightmap.Types> projectStartToHeightmap,
+        final JigsawStructure.MaxDistance maxDistanceFromCenter,
+        final List<PoolAliasBinding> poolAliases,
+        final DimensionPadding dimensionPadding,
+        final LiquidSettings liquidSettings
     ) {
-        super(p_227627_);
-        this.startPool = p_227628_;
-        this.startJigsawName = p_227629_;
-        this.maxDepth = p_227630_;
-        this.startHeight = p_227631_;
-        this.useExpansionHack = p_227632_;
-        this.projectStartToHeightmap = p_227633_;
-        this.maxDistanceFromCenter = p_422707_;
-        this.poolAliases = p_312703_;
-        this.dimensionPadding = p_344382_;
-        this.liquidSettings = p_344801_;
+        super(settings);
+        this.startPool = startPool;
+        this.startJigsawName = startJigsawName;
+        this.maxDepth = maxDepth;
+        this.startHeight = startHeight;
+        this.useExpansionHack = useExpansionHack;
+        this.projectStartToHeightmap = projectStartToHeightmap;
+        this.maxDistanceFromCenter = maxDistanceFromCenter;
+        this.poolAliases = poolAliases;
+        this.dimensionPadding = dimensionPadding;
+        this.liquidSettings = liquidSettings;
     }
 
     public JigsawStructure(
-        Structure.StructureSettings p_227620_,
-        Holder<StructureTemplatePool> p_227621_,
-        int p_227622_,
-        HeightProvider p_227623_,
-        boolean p_227624_,
-        Heightmap.Types p_227625_
+        final Structure.StructureSettings settings,
+        final Holder<StructureTemplatePool> startPool,
+        final int maxDepth,
+        final HeightProvider startHeight,
+        final boolean useExpansionHack,
+        final Heightmap.Types projectStartToHeightmap
     ) {
         this(
-            p_227620_,
-            p_227621_,
+            settings,
+            startPool,
             Optional.empty(),
-            p_227622_,
-            p_227623_,
-            p_227624_,
-            Optional.of(p_227625_),
+            maxDepth,
+            startHeight,
+            useExpansionHack,
+            Optional.of(projectStartToHeightmap),
             new JigsawStructure.MaxDistance(80),
             List.of(),
             DEFAULT_DIMENSION_PADDING,
@@ -122,15 +121,19 @@ public final class JigsawStructure extends Structure {
     }
 
     public JigsawStructure(
-        Structure.StructureSettings p_227614_, Holder<StructureTemplatePool> p_227615_, int p_227616_, HeightProvider p_227617_, boolean p_227618_
+        final Structure.StructureSettings settings,
+        final Holder<StructureTemplatePool> startPool,
+        final int maxDepth,
+        final HeightProvider startHeight,
+        final boolean useExpansionHack
     ) {
         this(
-            p_227614_,
-            p_227615_,
+            settings,
+            startPool,
             Optional.empty(),
-            p_227616_,
-            p_227617_,
-            p_227618_,
+            maxDepth,
+            startHeight,
+            useExpansionHack,
             Optional.empty(),
             new JigsawStructure.MaxDistance(80),
             List.of(),
@@ -140,20 +143,20 @@ public final class JigsawStructure extends Structure {
     }
 
     @Override
-    public Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext p_227636_) {
-        ChunkPos chunkpos = p_227636_.chunkPos();
-        int i = this.startHeight.sample(p_227636_.random(), new WorldGenerationContext(p_227636_.chunkGenerator(), p_227636_.heightAccessor()));
-        BlockPos blockpos = new BlockPos(chunkpos.getMinBlockX(), i, chunkpos.getMinBlockZ());
+    public Optional<Structure.GenerationStub> findGenerationPoint(final Structure.GenerationContext context) {
+        ChunkPos chunkPos = context.chunkPos();
+        int height = this.startHeight.sample(context.random(), new WorldGenerationContext(context.chunkGenerator(), context.heightAccessor()));
+        BlockPos startPos = new BlockPos(chunkPos.getMinBlockX(), height, chunkPos.getMinBlockZ());
         return JigsawPlacement.addPieces(
-            p_227636_,
+            context,
             this.startPool,
             this.startJigsawName,
             this.maxDepth,
-            blockpos,
+            startPos,
             this.useExpansionHack,
             this.projectStartToHeightmap,
             this.maxDistanceFromCenter,
-            PoolAliasLookup.create(this.poolAliases, blockpos, p_227636_.seed()),
+            PoolAliasLookup.create(this.poolAliases, startPos, context.seed()),
             this.dimensionPadding,
             this.liquidSettings
         );
@@ -177,22 +180,22 @@ public final class JigsawStructure extends Structure {
     public record MaxDistance(int horizontal, int vertical) {
         private static final Codec<Integer> HORIZONTAL_VALUE_CODEC = Codec.intRange(1, 128);
         private static final Codec<JigsawStructure.MaxDistance> FULL_CODEC = RecordCodecBuilder.create(
-            p_430858_ -> p_430858_.group(
+            i -> i.group(
                     HORIZONTAL_VALUE_CODEC.fieldOf("horizontal").forGetter(JigsawStructure.MaxDistance::horizontal),
                     ExtraCodecs.intRange(1, DimensionType.Y_SIZE)
                         .optionalFieldOf("vertical", DimensionType.Y_SIZE)
                         .forGetter(JigsawStructure.MaxDistance::vertical)
                 )
-                .apply(p_430858_, JigsawStructure.MaxDistance::new)
+                .apply(i, JigsawStructure.MaxDistance::new)
         );
         public static final Codec<JigsawStructure.MaxDistance> CODEC = Codec.either(FULL_CODEC, HORIZONTAL_VALUE_CODEC)
             .xmap(
-                p_424297_ -> p_424297_.map(Function.identity(), JigsawStructure.MaxDistance::new),
-                p_424780_ -> p_424780_.horizontal == p_424780_.vertical ? Either.right(p_424780_.horizontal) : Either.left(p_424780_)
+                either -> either.map(Function.identity(), JigsawStructure.MaxDistance::new),
+                distance -> distance.horizontal == distance.vertical ? Either.right(distance.horizontal) : Either.left(distance)
             );
 
-        public MaxDistance(int p_425444_) {
-            this(p_425444_, p_425444_);
+        public MaxDistance(final int value) {
+            this(value, value);
         }
     }
 }

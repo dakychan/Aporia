@@ -18,23 +18,23 @@ public class RotationArgument implements ArgumentType<Coordinates> {
         return new RotationArgument();
     }
 
-    public static Coordinates getRotation(CommandContext<CommandSourceStack> p_120483_, String p_120484_) {
-        return p_120483_.getArgument(p_120484_, Coordinates.class);
+    public static Coordinates getRotation(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Coordinates.class);
     }
 
-    public Coordinates parse(StringReader p_120481_) throws CommandSyntaxException {
-        int i = p_120481_.getCursor();
-        if (!p_120481_.canRead()) {
-            throw ERROR_NOT_COMPLETE.createWithContext(p_120481_);
+    public Coordinates parse(final StringReader reader) throws CommandSyntaxException {
+        int start = reader.getCursor();
+        if (!reader.canRead()) {
+            throw ERROR_NOT_COMPLETE.createWithContext(reader);
         } else {
-            WorldCoordinate worldcoordinate = WorldCoordinate.parseDouble(p_120481_, false);
-            if (p_120481_.canRead() && p_120481_.peek() == ' ') {
-                p_120481_.skip();
-                WorldCoordinate worldcoordinate1 = WorldCoordinate.parseDouble(p_120481_, false);
-                return new WorldCoordinates(worldcoordinate1, worldcoordinate, new WorldCoordinate(true, 0.0));
+            WorldCoordinate y = WorldCoordinate.parseDouble(reader, false);
+            if (reader.canRead() && reader.peek() == ' ') {
+                reader.skip();
+                WorldCoordinate x = WorldCoordinate.parseDouble(reader, false);
+                return new WorldCoordinates(x, y, new WorldCoordinate(true, 0.0));
             } else {
-                p_120481_.setCursor(i);
-                throw ERROR_NOT_COMPLETE.createWithContext(p_120481_);
+                reader.setCursor(start);
+                throw ERROR_NOT_COMPLETE.createWithContext(reader);
             }
         }
     }

@@ -2,14 +2,14 @@ package net.minecraft.world.phys.shapes;
 
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 
-interface IndexMerger {
+public interface IndexMerger {
     DoubleList getList();
 
-    boolean forMergedIndexes(IndexMerger.IndexConsumer p_82907_);
+    boolean forMergedIndexes(IndexMerger.IndexConsumer consumer);
 
     int size();
 
-    public interface IndexConsumer {
-        boolean merge(int p_82909_, int p_82910_, int p_82911_);
+    interface IndexConsumer {
+        boolean merge(int firstIndex, int secondIndex, int resultIndex);
     }
 }

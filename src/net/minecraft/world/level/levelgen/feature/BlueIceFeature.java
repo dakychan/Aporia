@@ -10,63 +10,60 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 public class BlueIceFeature extends Feature<NoneFeatureConfiguration> {
-    public BlueIceFeature(Codec<NoneFeatureConfiguration> p_65285_) {
-        super(p_65285_);
+    public BlueIceFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_159475_) {
-        BlockPos blockpos = p_159475_.origin();
-        WorldGenLevel worldgenlevel = p_159475_.level();
-        RandomSource randomsource = p_159475_.random();
-        if (blockpos.getY() > worldgenlevel.getSeaLevel() - 1) {
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        BlockPos origin = context.origin();
+        WorldGenLevel level = context.level();
+        RandomSource random = context.random();
+        if (origin.getY() > level.getSeaLevel() - 1) {
             return false;
-        } else if (!worldgenlevel.getBlockState(blockpos).is(Blocks.WATER) && !worldgenlevel.getBlockState(blockpos.below()).is(Blocks.WATER)) {
-            return false;
-        } else {
-            boolean flag = false;
+        }
 
-            for (Direction direction : Direction.values()) {
-                if (direction != Direction.DOWN && worldgenlevel.getBlockState(blockpos.relative(direction)).is(Blocks.PACKED_ICE)) {
-                    flag = true;
-                    break;
-                }
+        if (!level.getBlockState(origin).is(Blocks.WATER) && !level.getBlockState(origin.below()).is(Blocks.WATER)) {
+            return false;
+        }
+
+        boolean foundPackedIce = false;
+
+        for (Direction direction : Direction.values()) {
+            if (direction != Direction.DOWN && level.getBlockState(origin.relative(direction)).is(Blocks.PACKED_ICE)) {
+                foundPackedIce = true;
+                break;
+            }
+        }
+
+        if (!foundPackedIce) {
+            return false;
+        }
+
+        level.setBlock(origin, Blocks.BLUE_ICE.defaultBlockState(), 2);
+
+        for (int i = 0; i < 200; i++) {
+            int yOff = random.nextInt(5) - random.nextInt(6);
+            int xzDiff = 3;
+            if (yOff < 2) {
+                xzDiff += yOff / 2;
             }
 
-            if (!flag) {
-                return false;
-            } else {
-                worldgenlevel.setBlock(blockpos, Blocks.BLUE_ICE.defaultBlockState(), 2);
-
-                for (int i = 0; i < 200; i++) {
-                    int j = randomsource.nextInt(5) - randomsource.nextInt(6);
-                    int k = 3;
-                    if (j < 2) {
-                        k += j / 2;
-                    }
-
-                    if (k >= 1) {
-                        BlockPos blockpos1 = blockpos.offset(
-                            randomsource.nextInt(k) - randomsource.nextInt(k), j, randomsource.nextInt(k) - randomsource.nextInt(k)
-                        );
-                        BlockState blockstate = worldgenlevel.getBlockState(blockpos1);
-                        if (blockstate.isAir()
-                            || blockstate.is(Blocks.WATER)
-                            || blockstate.is(Blocks.PACKED_ICE)
-                            || blockstate.is(Blocks.ICE)) {
-                            for (Direction direction1 : Direction.values()) {
-                                BlockState blockstate1 = worldgenlevel.getBlockState(blockpos1.relative(direction1));
-                                if (blockstate1.is(Blocks.BLUE_ICE)) {
-                                    worldgenlevel.setBlock(blockpos1, Blocks.BLUE_ICE.defaultBlockState(), 2);
-                                    break;
-                                }
-                            }
+            if (xzDiff >= 1) {
+                BlockPos placePos = origin.offset(random.nextInt(xzDiff) - random.nextInt(xzDiff), yOff, random.nextInt(xzDiff) - random.nextInt(xzDiff));
+                BlockState placeState = level.getBlockState(placePos);
+                if (placeState.isAir() || placeState.is(Blocks.WATER) || placeState.is(Blocks.PACKED_ICE) || placeState.is(Blocks.ICE)) {
+                    for (Direction direction : Direction.values()) {
+                        BlockState relativeBlockState = level.getBlockState(placePos.relative(direction));
+                        if (relativeBlockState.is(Blocks.BLUE_ICE)) {
+                            level.setBlock(placePos, Blocks.BLUE_ICE.defaultBlockState(), 2);
+                            break;
                         }
                     }
                 }
-
-                return true;
             }
         }
+
+        return true;
     }
 }

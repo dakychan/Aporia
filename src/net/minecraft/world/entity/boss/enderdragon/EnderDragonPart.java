@@ -19,24 +19,24 @@ public class EnderDragonPart extends Entity {
     public final String name;
     private final EntityDimensions size;
 
-    public EnderDragonPart(EnderDragon p_450227_, String p_453842_, float p_460816_, float p_454700_) {
-        super(p_450227_.getType(), p_450227_.level());
-        this.size = EntityDimensions.scalable(p_460816_, p_454700_);
+    public EnderDragonPart(final EnderDragon parentMob, final String name, final float w, final float h) {
+        super(parentMob.getType(), parentMob.level());
+        this.size = EntityDimensions.scalable(w, h);
         this.refreshDimensions();
-        this.parentMob = p_450227_;
-        this.name = p_453842_;
+        this.parentMob = parentMob;
+        this.name = name;
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_457219_) {
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458531_) {
+    protected void readAdditionalSaveData(final ValueInput input) {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_457885_) {
+    protected void addAdditionalSaveData(final ValueOutput output) {
     }
 
     @Override
@@ -50,22 +50,22 @@ public class EnderDragonPart extends Entity {
     }
 
     @Override
-    public final boolean hurtServer(ServerLevel p_456432_, DamageSource p_459379_, float p_457650_) {
-        return this.isInvulnerableToBase(p_459379_) ? false : this.parentMob.hurt(p_456432_, this, p_459379_, p_457650_);
+    public final boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        return this.isInvulnerableToBase(source) ? false : this.parentMob.hurt(level, this, source, damage);
     }
 
     @Override
-    public boolean is(Entity p_459764_) {
-        return this == p_459764_ || this.parentMob == p_459764_;
+    public boolean is(final Entity other) {
+        return this == other || this.parentMob == other;
     }
 
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket(ServerEntity p_455905_) {
+    public Packet<ClientGamePacketListener> getAddEntityPacket(final ServerEntity serverEntity) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public EntityDimensions getDimensions(Pose p_452890_) {
+    public EntityDimensions getDimensions(final Pose pose) {
         return this.size;
     }
 

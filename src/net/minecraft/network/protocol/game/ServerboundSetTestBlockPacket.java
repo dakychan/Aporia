@@ -24,7 +24,7 @@ public record ServerboundSetTestBlockPacket(BlockPos position, TestBlockMode mod
         return GamePacketTypes.SERVERBOUND_SET_TEST_BLOCK;
     }
 
-    public void handle(ServerGamePacketListener p_394720_) {
-        p_394720_.handleSetTestBlock(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetTestBlock(this);
     }
 }

@@ -11,16 +11,16 @@ public class ClientboundPingPacket implements Packet<ClientCommonPacketListener>
     );
     private final int id;
 
-    public ClientboundPingPacket(int p_298858_) {
-        this.id = p_298858_;
+    public ClientboundPingPacket(final int id) {
+        this.id = id;
     }
 
-    private ClientboundPingPacket(FriendlyByteBuf p_301364_) {
-        this.id = p_301364_.readInt();
+    private ClientboundPingPacket(final FriendlyByteBuf input) {
+        this.id = input.readInt();
     }
 
-    private void write(FriendlyByteBuf p_298056_) {
-        p_298056_.writeInt(this.id);
+    private void write(final FriendlyByteBuf output) {
+        output.writeInt(this.id);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ClientboundPingPacket implements Packet<ClientCommonPacketListener>
         return CommonPacketTypes.CLIENTBOUND_PING;
     }
 
-    public void handle(ClientCommonPacketListener p_299413_) {
-        p_299413_.handlePing(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handlePing(this);
     }
 
     public int getId() {

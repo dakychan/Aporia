@@ -9,11 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import net.minecraft.util.ArrayListDeque;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class CommandHistory {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int MAX_PERSISTED_COMMAND_HISTORY = 50;
@@ -21,36 +18,36 @@ public class CommandHistory {
     private final Path commandsPath;
     private final ArrayListDeque<String> lastCommands = new ArrayListDeque<>(50);
 
-    public CommandHistory(Path p_298502_) {
-        this.commandsPath = p_298502_.resolve("command_history.txt");
+    public CommandHistory(final Path gameFolder) {
+        this.commandsPath = gameFolder.resolve("command_history.txt");
         if (Files.exists(this.commandsPath)) {
-            try (BufferedReader bufferedreader = Files.newBufferedReader(this.commandsPath, StandardCharsets.UTF_8)) {
-                this.lastCommands.addAll(bufferedreader.lines().toList());
+            try (BufferedReader reader = Files.newBufferedReader(this.commandsPath, StandardCharsets.UTF_8)) {
+                this.lastCommands.addAll(reader.lines().toList());
             } catch (Exception exception) {
                 LOGGER.error("Failed to read {}, command history will be missing", "command_history.txt", exception);
             }
         }
     }
 
-    public void addCommand(String p_298813_) {
-        if (!p_298813_.equals(this.lastCommands.peekLast())) {
+    public void addCommand(final String command) {
+        if (!command.equals(this.lastCommands.peekLast())) {
             if (this.lastCommands.size() >= 50) {
                 this.lastCommands.removeFirst();
             }
 
-            this.lastCommands.addLast(p_298813_);
+            this.lastCommands.addLast(command);
             this.save();
         }
     }
 
     private void save() {
-        try (BufferedWriter bufferedwriter = Files.newBufferedWriter(this.commandsPath, StandardCharsets.UTF_8)) {
-            for (String s : this.lastCommands) {
-                bufferedwriter.write(s);
-                bufferedwriter.newLine();
+        try (BufferedWriter writer = Files.newBufferedWriter(this.commandsPath, StandardCharsets.UTF_8)) {
+            for (String command : this.lastCommands) {
+                writer.write(command);
+                writer.newLine();
             }
-        } catch (IOException ioexception) {
-            LOGGER.error("Failed to write {}, command history will be missing", "command_history.txt", ioexception);
+        } catch (IOException exception) {
+            LOGGER.error("Failed to write {}, command history will be missing", "command_history.txt", exception);
         }
     }
 

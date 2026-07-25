@@ -27,92 +27,86 @@ public final class CompoundTag implements Tag {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final Codec<CompoundTag> CODEC = Codec.PASSTHROUGH
         .comapFlatMap(
-            p_308555_ -> {
-                Tag tag = p_308555_.convert(NbtOps.INSTANCE).getValue();
-                return tag instanceof CompoundTag compoundtag
-                    ? DataResult.success(compoundtag == p_308555_.getValue() ? compoundtag.copy() : compoundtag)
+            t -> {
+                Tag tag = t.convert(NbtOps.INSTANCE).getValue();
+                return tag instanceof CompoundTag compoundTag
+                    ? DataResult.success(compoundTag == t.getValue() ? compoundTag.copy() : compoundTag)
                     : DataResult.error(() -> "Not a compound tag: " + tag);
             },
-            p_308554_ -> new Dynamic<>(NbtOps.INSTANCE, p_308554_.copy())
+            t -> new Dynamic<>(NbtOps.INSTANCE, t.copy())
         );
     private static final int SELF_SIZE_IN_BYTES = 48;
     private static final int MAP_ENTRY_SIZE_IN_BYTES = 32;
     public static final TagType<CompoundTag> TYPE = new TagType.VariableSize<CompoundTag>() {
-        public CompoundTag load(DataInput p_128485_, NbtAccounter p_128487_) throws IOException {
-            p_128487_.pushDepth();
+        public CompoundTag load(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.pushDepth();
 
-            CompoundTag compoundtag;
             try {
-                compoundtag = loadCompound(p_128485_, p_128487_);
+                return loadCompound(input, accounter);
             } finally {
-                p_128487_.popDepth();
+                accounter.popDepth();
             }
-
-            return compoundtag;
         }
 
-        private static CompoundTag loadCompound(DataInput p_301703_, NbtAccounter p_301763_) throws IOException {
-            p_301763_.accountBytes(48L);
-            Map<String, Tag> map = Maps.newHashMap();
+        private static CompoundTag loadCompound(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(48L);
+            Map<String, Tag> values = Maps.newHashMap();
 
-            byte b0;
-            while ((b0 = p_301703_.readByte()) != 0) {
-                String s = readString(p_301703_, p_301763_);
-                Tag tag = CompoundTag.readNamedTagData(TagTypes.getType(b0), s, p_301703_, p_301763_);
-                if (map.put(s, tag) == null) {
-                    p_301763_.accountBytes(36L);
+            byte tagType;
+            while ((tagType = input.readByte()) != 0) {
+                String key = readString(input, accounter);
+                Tag tag = CompoundTag.readNamedTagData(TagTypes.getType(tagType), key, input, accounter);
+                if (values.put(key, tag) == null) {
+                    accounter.accountBytes(36L);
                 }
             }
 
-            return new CompoundTag(map);
+            return new CompoundTag(values);
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197446_, StreamTagVisitor p_197447_, NbtAccounter p_301769_) throws IOException {
-            p_301769_.pushDepth();
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            accounter.pushDepth();
 
-            StreamTagVisitor.ValueResult streamtagvisitor$valueresult;
             try {
-                streamtagvisitor$valueresult = parseCompound(p_197446_, p_197447_, p_301769_);
+                return parseCompound(input, output, accounter);
             } finally {
-                p_301769_.popDepth();
+                accounter.popDepth();
             }
-
-            return streamtagvisitor$valueresult;
         }
 
-        private static StreamTagVisitor.ValueResult parseCompound(DataInput p_301721_, StreamTagVisitor p_301777_, NbtAccounter p_301778_) throws IOException {
-            p_301778_.accountBytes(48L);
+        private static StreamTagVisitor.ValueResult parseCompound(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(48L);
 
-            byte b0;
+            byte tagTypeId;
             label35:
-            while ((b0 = p_301721_.readByte()) != 0) {
-                TagType<?> tagtype = TagTypes.getType(b0);
-                switch (p_301777_.visitEntry(tagtype)) {
+            while ((tagTypeId = input.readByte()) != 0) {
+                TagType<?> tagType = TagTypes.getType(tagTypeId);
+                switch (output.visitEntry(tagType)) {
                     case HALT:
                         return StreamTagVisitor.ValueResult.HALT;
                     case BREAK:
-                        StringTag.skipString(p_301721_);
-                        tagtype.skip(p_301721_, p_301778_);
+                        StringTag.skipString(input);
+                        tagType.skip(input, accounter);
                         break label35;
                     case SKIP:
-                        StringTag.skipString(p_301721_);
-                        tagtype.skip(p_301721_, p_301778_);
+                        StringTag.skipString(input);
+                        tagType.skip(input, accounter);
                         break;
                     default:
-                        String s = readString(p_301721_, p_301778_);
-                        switch (p_301777_.visitEntry(tagtype, s)) {
+                        String key = readString(input, accounter);
+                        switch (output.visitEntry(tagType, key)) {
                             case HALT:
                                 return StreamTagVisitor.ValueResult.HALT;
                             case BREAK:
-                                tagtype.skip(p_301721_, p_301778_);
+                                tagType.skip(input, accounter);
                                 break label35;
                             case SKIP:
-                                tagtype.skip(p_301721_, p_301778_);
+                                tagType.skip(input, accounter);
                                 break;
                             default:
-                                p_301778_.accountBytes(36L);
-                                switch (tagtype.parse(p_301721_, p_301777_, p_301778_)) {
+                                accounter.accountBytes(36L);
+                                switch (tagType.parse(input, output, accounter)) {
                                     case HALT:
                                         return StreamTagVisitor.ValueResult.HALT;
                                     case BREAK:
@@ -121,35 +115,35 @@ public final class CompoundTag implements Tag {
                 }
             }
 
-            if (b0 != 0) {
-                while ((b0 = p_301721_.readByte()) != 0) {
-                    StringTag.skipString(p_301721_);
-                    TagTypes.getType(b0).skip(p_301721_, p_301778_);
+            if (tagTypeId != 0) {
+                while ((tagTypeId = input.readByte()) != 0) {
+                    StringTag.skipString(input);
+                    TagTypes.getType(tagTypeId).skip(input, accounter);
                 }
             }
 
-            return p_301777_.visitContainerEnd();
+            return output.visitContainerEnd();
         }
 
-        private static String readString(DataInput p_301867_, NbtAccounter p_301863_) throws IOException {
-            String s = p_301867_.readUTF();
-            p_301863_.accountBytes(28L);
-            p_301863_.accountBytes(2L, s.length());
-            return s;
+        private static String readString(final DataInput input, final NbtAccounter accounter) throws IOException {
+            String key = input.readUTF();
+            accounter.accountBytes(28L);
+            accounter.accountBytes(2L, key.length());
+            return key;
         }
 
         @Override
-        public void skip(DataInput p_197444_, NbtAccounter p_301720_) throws IOException {
-            p_301720_.pushDepth();
+        public void skip(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.pushDepth();
 
-            byte b0;
+            byte tagTypeId;
             try {
-                while ((b0 = p_197444_.readByte()) != 0) {
-                    StringTag.skipString(p_197444_);
-                    TagTypes.getType(b0).skip(p_197444_, p_301720_);
+                while ((tagTypeId = input.readByte()) != 0) {
+                    StringTag.skipString(input);
+                    TagTypes.getType(tagTypeId).skip(input, accounter);
                 }
             } finally {
-                p_301720_.popDepth();
+                accounter.popDepth();
             }
         }
 
@@ -165,8 +159,8 @@ public final class CompoundTag implements Tag {
     };
     private final Map<String, Tag> tags;
 
-    CompoundTag(Map<String, Tag> p_128333_) {
-        this.tags = p_128333_;
+    CompoundTag(final Map<String, Tag> tags) {
+        this.tags = tags;
     }
 
     public CompoundTag() {
@@ -174,26 +168,26 @@ public final class CompoundTag implements Tag {
     }
 
     @Override
-    public void write(DataOutput p_128341_) throws IOException {
-        for (String s : this.tags.keySet()) {
-            Tag tag = this.tags.get(s);
-            writeNamedTag(s, tag, p_128341_);
+    public void write(final DataOutput output) throws IOException {
+        for (String key : this.tags.keySet()) {
+            Tag tag = this.tags.get(key);
+            writeNamedTag(key, tag, output);
         }
 
-        p_128341_.writeByte(0);
+        output.writeByte(0);
     }
 
     @Override
     public int sizeInBytes() {
-        int i = 48;
+        int size = 48;
 
         for (Entry<String, Tag> entry : this.tags.entrySet()) {
-            i += 28 + 2 * entry.getKey().length();
-            i += 36;
-            i += entry.getValue().sizeInBytes();
+            size += 28 + 2 * entry.getKey().length();
+            size += 36;
+            size += entry.getValue().sizeInBytes();
         }
 
-        return i;
+        return size;
     }
 
     public Set<String> keySet() {
@@ -208,8 +202,8 @@ public final class CompoundTag implements Tag {
         return this.tags.values();
     }
 
-    public void forEach(BiConsumer<String, Tag> p_393594_) {
-        this.tags.forEach(p_393594_);
+    public void forEach(final BiConsumer<String, Tag> consumer) {
+        this.tags.forEach(consumer);
     }
 
     @Override
@@ -226,181 +220,181 @@ public final class CompoundTag implements Tag {
         return this.tags.size();
     }
 
-    public @Nullable Tag put(String p_128366_, Tag p_128367_) {
-        return this.tags.put(p_128366_, p_128367_);
+    public @Nullable Tag put(final String name, final Tag tag) {
+        return this.tags.put(name, tag);
     }
 
-    public void putByte(String p_128345_, byte p_128346_) {
-        this.tags.put(p_128345_, ByteTag.valueOf(p_128346_));
+    public void putByte(final String name, final byte value) {
+        this.tags.put(name, ByteTag.valueOf(value));
     }
 
-    public void putShort(String p_128377_, short p_128378_) {
-        this.tags.put(p_128377_, ShortTag.valueOf(p_128378_));
+    public void putShort(final String name, final short value) {
+        this.tags.put(name, ShortTag.valueOf(value));
     }
 
-    public void putInt(String p_128406_, int p_128407_) {
-        this.tags.put(p_128406_, IntTag.valueOf(p_128407_));
+    public void putInt(final String name, final int value) {
+        this.tags.put(name, IntTag.valueOf(value));
     }
 
-    public void putLong(String p_128357_, long p_128358_) {
-        this.tags.put(p_128357_, LongTag.valueOf(p_128358_));
+    public void putLong(final String name, final long value) {
+        this.tags.put(name, LongTag.valueOf(value));
     }
 
-    public void putFloat(String p_128351_, float p_128352_) {
-        this.tags.put(p_128351_, FloatTag.valueOf(p_128352_));
+    public void putFloat(final String name, final float value) {
+        this.tags.put(name, FloatTag.valueOf(value));
     }
 
-    public void putDouble(String p_128348_, double p_128349_) {
-        this.tags.put(p_128348_, DoubleTag.valueOf(p_128349_));
+    public void putDouble(final String name, final double value) {
+        this.tags.put(name, DoubleTag.valueOf(value));
     }
 
-    public void putString(String p_128360_, String p_128361_) {
-        this.tags.put(p_128360_, StringTag.valueOf(p_128361_));
+    public void putString(final String name, final String value) {
+        this.tags.put(name, StringTag.valueOf(value));
     }
 
-    public void putByteArray(String p_128383_, byte[] p_128384_) {
-        this.tags.put(p_128383_, new ByteArrayTag(p_128384_));
+    public void putByteArray(final String name, final byte[] value) {
+        this.tags.put(name, new ByteArrayTag(value));
     }
 
-    public void putIntArray(String p_128386_, int[] p_128387_) {
-        this.tags.put(p_128386_, new IntArrayTag(p_128387_));
+    public void putIntArray(final String name, final int[] value) {
+        this.tags.put(name, new IntArrayTag(value));
     }
 
-    public void putLongArray(String p_128389_, long[] p_128390_) {
-        this.tags.put(p_128389_, new LongArrayTag(p_128390_));
+    public void putLongArray(final String name, final long[] value) {
+        this.tags.put(name, new LongArrayTag(value));
     }
 
-    public void putBoolean(String p_128380_, boolean p_128381_) {
-        this.tags.put(p_128380_, ByteTag.valueOf(p_128381_));
+    public void putBoolean(final String name, final boolean value) {
+        this.tags.put(name, ByteTag.valueOf(value));
     }
 
-    public @Nullable Tag get(String p_128424_) {
-        return this.tags.get(p_128424_);
+    public @Nullable Tag get(final String name) {
+        return this.tags.get(name);
     }
 
-    public boolean contains(String p_128442_) {
-        return this.tags.containsKey(p_128442_);
+    public boolean contains(final String name) {
+        return this.tags.containsKey(name);
     }
 
-    private Optional<Tag> getOptional(String p_392464_) {
-        return Optional.ofNullable(this.tags.get(p_392464_));
+    private Optional<Tag> getOptional(final String name) {
+        return Optional.ofNullable(this.tags.get(name));
     }
 
-    public Optional<Byte> getByte(String p_128446_) {
-        return this.getOptional(p_128446_).flatMap(Tag::asByte);
+    public Optional<Byte> getByte(final String name) {
+        return this.getOptional(name).flatMap(Tag::asByte);
     }
 
-    public byte getByteOr(String p_394532_, byte p_393625_) {
-        return this.tags.get(p_394532_) instanceof NumericTag numerictag ? numerictag.byteValue() : p_393625_;
+    public byte getByteOr(final String name, final byte defaultValue) {
+        return this.tags.get(name) instanceof NumericTag tag ? tag.byteValue() : defaultValue;
     }
 
-    public Optional<Short> getShort(String p_128449_) {
-        return this.getOptional(p_128449_).flatMap(Tag::asShort);
+    public Optional<Short> getShort(final String name) {
+        return this.getOptional(name).flatMap(Tag::asShort);
     }
 
-    public short getShortOr(String p_392496_, short p_393242_) {
-        return this.tags.get(p_392496_) instanceof NumericTag numerictag ? numerictag.shortValue() : p_393242_;
+    public short getShortOr(final String name, final short defaultValue) {
+        return this.tags.get(name) instanceof NumericTag tag ? tag.shortValue() : defaultValue;
     }
 
-    public Optional<Integer> getInt(String p_128452_) {
-        return this.getOptional(p_128452_).flatMap(Tag::asInt);
+    public Optional<Integer> getInt(final String name) {
+        return this.getOptional(name).flatMap(Tag::asInt);
     }
 
-    public int getIntOr(String p_393175_, int p_392894_) {
-        return this.tags.get(p_393175_) instanceof NumericTag numerictag ? numerictag.intValue() : p_392894_;
+    public int getIntOr(final String name, final int defaultValue) {
+        return this.tags.get(name) instanceof NumericTag tag ? tag.intValue() : defaultValue;
     }
 
-    public Optional<Long> getLong(String p_128455_) {
-        return this.getOptional(p_128455_).flatMap(Tag::asLong);
+    public Optional<Long> getLong(final String name) {
+        return this.getOptional(name).flatMap(Tag::asLong);
     }
 
-    public long getLongOr(String p_392953_, long p_394069_) {
-        return this.tags.get(p_392953_) instanceof NumericTag numerictag ? numerictag.longValue() : p_394069_;
+    public long getLongOr(final String name, final long defaultValue) {
+        return this.tags.get(name) instanceof NumericTag tag ? tag.longValue() : defaultValue;
     }
 
-    public Optional<Float> getFloat(String p_128458_) {
-        return this.getOptional(p_128458_).flatMap(Tag::asFloat);
+    public Optional<Float> getFloat(final String name) {
+        return this.getOptional(name).flatMap(Tag::asFloat);
     }
 
-    public float getFloatOr(String p_395832_, float p_391811_) {
-        return this.tags.get(p_395832_) instanceof NumericTag numerictag ? numerictag.floatValue() : p_391811_;
+    public float getFloatOr(final String name, final float defaultValue) {
+        return this.tags.get(name) instanceof NumericTag tag ? tag.floatValue() : defaultValue;
     }
 
-    public Optional<Double> getDouble(String p_128460_) {
-        return this.getOptional(p_128460_).flatMap(Tag::asDouble);
+    public Optional<Double> getDouble(final String name) {
+        return this.getOptional(name).flatMap(Tag::asDouble);
     }
 
-    public double getDoubleOr(String p_392581_, double p_395699_) {
-        return this.tags.get(p_392581_) instanceof NumericTag numerictag ? numerictag.doubleValue() : p_395699_;
+    public double getDoubleOr(final String name, final double defaultValue) {
+        return this.tags.get(name) instanceof NumericTag tag ? tag.doubleValue() : defaultValue;
     }
 
-    public Optional<String> getString(String p_128462_) {
-        return this.getOptional(p_128462_).flatMap(Tag::asString);
+    public Optional<String> getString(final String name) {
+        return this.getOptional(name).flatMap(Tag::asString);
     }
 
-    public String getStringOr(String p_392515_, String p_391983_) {
-        return this.tags.get(p_392515_) instanceof StringTag(String s) ? s : p_391983_;
+    public String getStringOr(final String name, final String defaultValue) {
+        return this.tags.get(name) instanceof StringTag(String var8) ? var8 : defaultValue;
     }
 
-    public Optional<byte[]> getByteArray(String p_128464_) {
-        return this.tags.get(p_128464_) instanceof ByteArrayTag bytearraytag ? Optional.of(bytearraytag.getAsByteArray()) : Optional.empty();
+    public Optional<byte[]> getByteArray(final String name) {
+        return this.tags.get(name) instanceof ByteArrayTag tag ? Optional.of(tag.getAsByteArray()) : Optional.empty();
     }
 
-    public Optional<int[]> getIntArray(String p_128466_) {
-        return this.tags.get(p_128466_) instanceof IntArrayTag intarraytag ? Optional.of(intarraytag.getAsIntArray()) : Optional.empty();
+    public Optional<int[]> getIntArray(final String name) {
+        return this.tags.get(name) instanceof IntArrayTag tag ? Optional.of(tag.getAsIntArray()) : Optional.empty();
     }
 
-    public Optional<long[]> getLongArray(String p_128468_) {
-        return this.tags.get(p_128468_) instanceof LongArrayTag longarraytag ? Optional.of(longarraytag.getAsLongArray()) : Optional.empty();
+    public Optional<long[]> getLongArray(final String name) {
+        return this.tags.get(name) instanceof LongArrayTag tag ? Optional.of(tag.getAsLongArray()) : Optional.empty();
     }
 
-    public Optional<CompoundTag> getCompound(String p_128470_) {
-        return this.tags.get(p_128470_) instanceof CompoundTag compoundtag ? Optional.of(compoundtag) : Optional.empty();
+    public Optional<CompoundTag> getCompound(final String name) {
+        return this.tags.get(name) instanceof CompoundTag tag ? Optional.of(tag) : Optional.empty();
     }
 
-    public CompoundTag getCompoundOrEmpty(String p_394014_) {
-        return this.getCompound(p_394014_).orElseGet(CompoundTag::new);
+    public CompoundTag getCompoundOrEmpty(final String name) {
+        return this.getCompound(name).orElseGet(CompoundTag::new);
     }
 
-    public Optional<ListTag> getList(String p_128438_) {
-        return this.tags.get(p_128438_) instanceof ListTag listtag ? Optional.of(listtag) : Optional.empty();
+    public Optional<ListTag> getList(final String name) {
+        return this.tags.get(name) instanceof ListTag tag ? Optional.of(tag) : Optional.empty();
     }
 
-    public ListTag getListOrEmpty(String p_393038_) {
-        return this.getList(p_393038_).orElseGet(ListTag::new);
+    public ListTag getListOrEmpty(final String name) {
+        return this.getList(name).orElseGet(ListTag::new);
     }
 
-    public Optional<Boolean> getBoolean(String p_128472_) {
-        return this.getOptional(p_128472_).flatMap(Tag::asBoolean);
+    public Optional<Boolean> getBoolean(final String name) {
+        return this.getOptional(name).flatMap(Tag::asBoolean);
     }
 
-    public boolean getBooleanOr(String p_392625_, boolean p_394254_) {
-        return this.getByteOr(p_392625_, (byte)(p_394254_ ? 1 : 0)) != 0;
+    public boolean getBooleanOr(final String string, final boolean defaultValue) {
+        return this.getByteOr(string, (byte)(defaultValue ? 1 : 0)) != 0;
     }
 
-    public @Nullable Tag remove(String p_128474_) {
-        return this.tags.remove(p_128474_);
+    public @Nullable Tag remove(final String name) {
+        return this.tags.remove(name);
     }
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitCompound(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitCompound(this);
+        return visitor.build();
     }
 
     public boolean isEmpty() {
         return this.tags.isEmpty();
     }
 
-    protected CompoundTag shallowCopy() {
+    CompoundTag shallowCopy() {
         return new CompoundTag(new HashMap<>(this.tags));
     }
 
     public CompoundTag copy() {
-        HashMap<String, Tag> hashmap = new HashMap<>();
-        this.tags.forEach((p_389877_, p_389878_) -> hashmap.put(p_389877_, p_389878_.copy()));
-        return new CompoundTag(hashmap);
+        HashMap<String, Tag> newTags = new HashMap<>();
+        this.tags.forEach((key, tag) -> newTags.put(key, tag.copy()));
+        return new CompoundTag(newTags);
     }
 
     @Override
@@ -409,8 +403,8 @@ public final class CompoundTag implements Tag {
     }
 
     @Override
-    public boolean equals(Object p_128444_) {
-        return this == p_128444_ ? true : p_128444_ instanceof CompoundTag && Objects.equals(this.tags, ((CompoundTag)p_128444_).tags);
+    public boolean equals(final Object obj) {
+        return this == obj ? true : obj instanceof CompoundTag compoundTag && Objects.equals(this.tags, compoundTag.tags);
     }
 
     @Override
@@ -418,33 +412,33 @@ public final class CompoundTag implements Tag {
         return this.tags.hashCode();
     }
 
-    private static void writeNamedTag(String p_128369_, Tag p_128370_, DataOutput p_128371_) throws IOException {
-        p_128371_.writeByte(p_128370_.getId());
-        if (p_128370_.getId() != 0) {
-            p_128371_.writeUTF(p_128369_);
-            p_128370_.write(p_128371_);
+    private static void writeNamedTag(final String name, final Tag tag, final DataOutput output) throws IOException {
+        output.writeByte(tag.getId());
+        if (tag.getId() != 0) {
+            output.writeUTF(name);
+            tag.write(output);
         }
     }
 
-    static Tag readNamedTagData(TagType<?> p_128414_, String p_128415_, DataInput p_128416_, NbtAccounter p_128418_) {
+    private static Tag readNamedTagData(final TagType<?> type, final String name, final DataInput input, final NbtAccounter accounter) {
         try {
-            return p_128414_.load(p_128416_, p_128418_);
-        } catch (IOException ioexception) {
-            CrashReport crashreport = CrashReport.forThrowable(ioexception, "Loading NBT data");
-            CrashReportCategory crashreportcategory = crashreport.addCategory("NBT Tag");
-            crashreportcategory.setDetail("Tag name", p_128415_);
-            crashreportcategory.setDetail("Tag type", p_128414_.getName());
-            throw new ReportedNbtException(crashreport);
+            return type.load(input, accounter);
+        } catch (IOException e) {
+            CrashReport report = CrashReport.forThrowable(e, "Loading NBT data");
+            CrashReportCategory category = report.addCategory("NBT Tag");
+            category.setDetail("Tag name", name);
+            category.setDetail("Tag type", type.getName());
+            throw new ReportedNbtException(report);
         }
     }
 
-    public CompoundTag merge(CompoundTag p_128392_) {
-        for (String s : p_128392_.tags.keySet()) {
-            Tag tag = p_128392_.tags.get(s);
-            if (tag instanceof CompoundTag compoundtag && this.tags.get(s) instanceof CompoundTag compoundtag1) {
-                compoundtag1.merge(compoundtag);
+    public CompoundTag merge(final CompoundTag other) {
+        for (String tagName : other.tags.keySet()) {
+            Tag otherTag = other.tags.get(tagName);
+            if (otherTag instanceof CompoundTag otherCompound && this.tags.get(tagName) instanceof CompoundTag selfCompound) {
+                selfCompound.merge(otherCompound);
             } else {
-                this.put(s, tag.copy());
+                this.put(tagName, otherTag.copy());
             }
         }
 
@@ -452,92 +446,91 @@ public final class CompoundTag implements Tag {
     }
 
     @Override
-    public void accept(TagVisitor p_177857_) {
-        p_177857_.visitCompound(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitCompound(this);
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197442_) {
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
         for (Entry<String, Tag> entry : this.tags.entrySet()) {
-            Tag tag = entry.getValue();
-            TagType<?> tagtype = tag.getType();
-            StreamTagVisitor.EntryResult streamtagvisitor$entryresult = p_197442_.visitEntry(tagtype);
-            switch (streamtagvisitor$entryresult) {
+            Tag value = entry.getValue();
+            TagType<?> type = value.getType();
+            StreamTagVisitor.EntryResult entryParseResult = visitor.visitEntry(type);
+            switch (entryParseResult) {
                 case HALT:
                     return StreamTagVisitor.ValueResult.HALT;
                 case BREAK:
-                    return p_197442_.visitContainerEnd();
+                    return visitor.visitContainerEnd();
                 case SKIP:
                     break;
                 default:
-                    streamtagvisitor$entryresult = p_197442_.visitEntry(tagtype, entry.getKey());
-                    switch (streamtagvisitor$entryresult) {
+                    entryParseResult = visitor.visitEntry(type, entry.getKey());
+                    switch (entryParseResult) {
                         case HALT:
                             return StreamTagVisitor.ValueResult.HALT;
                         case BREAK:
-                            return p_197442_.visitContainerEnd();
+                            return visitor.visitContainerEnd();
                         case SKIP:
                             break;
                         default:
-                            StreamTagVisitor.ValueResult streamtagvisitor$valueresult = tag.accept(p_197442_);
-                            switch (streamtagvisitor$valueresult) {
+                            StreamTagVisitor.ValueResult valueResult = value.accept(visitor);
+                            switch (valueResult) {
                                 case HALT:
                                     return StreamTagVisitor.ValueResult.HALT;
                                 case BREAK:
-                                    return p_197442_.visitContainerEnd();
+                                    return visitor.visitContainerEnd();
                             }
                     }
             }
         }
 
-        return p_197442_.visitContainerEnd();
+        return visitor.visitContainerEnd();
     }
 
-    public <T> void store(String p_396702_, Codec<T> p_393338_, T p_397135_) {
-        this.store(p_396702_, p_393338_, NbtOps.INSTANCE, p_397135_);
+    public <T> void store(final String name, final Codec<T> codec, final T value) {
+        this.store(name, codec, NbtOps.INSTANCE, value);
     }
 
-    public <T> void storeNullable(String p_395458_, Codec<T> p_397353_, @Nullable T p_391376_) {
-        if (p_391376_ != null) {
-            this.store(p_395458_, p_397353_, p_391376_);
+    public <T> void storeNullable(final String name, final Codec<T> codec, final @Nullable T value) {
+        if (value != null) {
+            this.store(name, codec, value);
         }
     }
 
-    public <T> void store(String p_395188_, Codec<T> p_394724_, DynamicOps<Tag> p_391366_, T p_396055_) {
-        this.put(p_395188_, p_394724_.encodeStart(p_391366_, p_396055_).getOrThrow());
+    public <T> void store(final String name, final Codec<T> codec, final DynamicOps<Tag> ops, final T value) {
+        this.put(name, codec.encodeStart(ops, value).getOrThrow());
     }
 
-    public <T> void storeNullable(String p_391195_, Codec<T> p_397981_, DynamicOps<Tag> p_392476_, @Nullable T p_397098_) {
-        if (p_397098_ != null) {
-            this.store(p_391195_, p_397981_, p_392476_, p_397098_);
+    public <T> void storeNullable(final String name, final Codec<T> codec, final DynamicOps<Tag> ops, final @Nullable T value) {
+        if (value != null) {
+            this.store(name, codec, ops, value);
         }
     }
 
-    public <T> void store(MapCodec<T> p_394864_, T p_392157_) {
-        this.store(p_394864_, NbtOps.INSTANCE, p_392157_);
+    public <T> void store(final MapCodec<T> codec, final T value) {
+        this.store(codec, NbtOps.INSTANCE, value);
     }
 
-    public <T> void store(MapCodec<T> p_396427_, DynamicOps<Tag> p_394678_, T p_397219_) {
-        this.merge((CompoundTag)p_396427_.encoder().encodeStart(p_394678_, p_397219_).getOrThrow());
+    public <T> void store(final MapCodec<T> codec, final DynamicOps<Tag> ops, final T value) {
+        this.merge((CompoundTag)codec.encoder().encodeStart(ops, value).getOrThrow());
     }
 
-    public <T> Optional<T> read(String p_396657_, Codec<T> p_394504_) {
-        return this.read(p_396657_, p_394504_, NbtOps.INSTANCE);
+    public <T> Optional<T> read(final String name, final Codec<T> codec) {
+        return this.read(name, codec, NbtOps.INSTANCE);
     }
 
-    public <T> Optional<T> read(String p_392287_, Codec<T> p_397476_, DynamicOps<Tag> p_395097_) {
-        Tag tag = this.get(p_392287_);
+    public <T> Optional<T> read(final String name, final Codec<T> codec, final DynamicOps<Tag> ops) {
+        Tag tag = this.get(name);
         return tag == null
             ? Optional.empty()
-            : p_397476_.parse(p_395097_, tag).resultOrPartial(p_389874_ -> LOGGER.error("Failed to read field ({}={}): {}", p_392287_, tag, p_389874_));
+            : codec.parse(ops, tag).resultOrPartial(error -> LOGGER.error("Failed to read field ({}={}): {}", name, tag, error));
     }
 
-    public <T> Optional<T> read(MapCodec<T> p_393650_) {
-        return this.read(p_393650_, NbtOps.INSTANCE);
+    public <T> Optional<T> read(final MapCodec<T> codec) {
+        return this.read(codec, NbtOps.INSTANCE);
     }
 
-    public <T> Optional<T> read(MapCodec<T> p_396302_, DynamicOps<Tag> p_396015_) {
-        return p_396302_.decode(p_396015_, p_396015_.getMap(this).getOrThrow())
-            .resultOrPartial(p_389875_ -> LOGGER.error("Failed to read value ({}): {}", this, p_389875_));
+    public <T> Optional<T> read(final MapCodec<T> codec, final DynamicOps<Tag> ops) {
+        return codec.decode(ops, ops.getMap(this).getOrThrow()).resultOrPartial(error -> LOGGER.error("Failed to read value ({}): {}", this, error));
     }
 }

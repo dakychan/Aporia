@@ -24,31 +24,31 @@ public class TestBlockEntity extends BlockEntity {
     private boolean powered = false;
     private boolean triggered;
 
-    public TestBlockEntity(BlockPos p_394476_, BlockState p_394354_) {
-        super(BlockEntityType.TEST_BLOCK, p_394476_, p_394354_);
-        this.mode = p_394354_.getValue(TestBlock.MODE);
+    public TestBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.TEST_BLOCK, worldPosition, blockState);
+        this.mode = blockState.getValue(TestBlock.MODE);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_407256_) {
-        p_407256_.store("mode", TestBlockMode.CODEC, this.mode);
-        p_407256_.putString("message", this.message);
-        p_407256_.putBoolean("powered", this.powered);
+    protected void saveAdditional(final ValueOutput output) {
+        output.store("mode", TestBlockMode.CODEC, this.mode);
+        output.putString("message", this.message);
+        output.putBoolean("powered", this.powered);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_410586_) {
-        this.mode = p_410586_.read("mode", TestBlockMode.CODEC).orElse(TestBlockMode.FAIL);
-        this.message = p_410586_.getStringOr("message", "");
-        this.powered = p_410586_.getBooleanOr("powered", false);
+    protected void loadAdditional(final ValueInput input) {
+        this.mode = input.read("mode", TestBlockMode.CODEC).orElse(TestBlockMode.FAIL);
+        this.message = input.getStringOr("message", "");
+        this.powered = input.getBooleanOr("powered", false);
     }
 
     private void updateBlockState() {
         if (this.level != null) {
-            BlockPos blockpos = this.getBlockPos();
-            BlockState blockstate = this.level.getBlockState(blockpos);
-            if (blockstate.is(Blocks.TEST_BLOCK)) {
-                this.level.setBlock(blockpos, blockstate.setValue(TestBlock.MODE, this.mode), 2);
+            BlockPos pos = this.getBlockPos();
+            BlockState blockState = this.level.getBlockState(pos);
+            if (blockState.is(Blocks.TEST_BLOCK)) {
+                this.level.setBlock(pos, blockState.setValue(TestBlock.MODE, this.mode), 2);
             }
         }
     }
@@ -58,24 +58,24 @@ public class TestBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_395613_) {
-        return this.saveCustomOnly(p_395613_);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
     public boolean isPowered() {
         return this.powered;
     }
 
-    public void setPowered(boolean p_392131_) {
-        this.powered = p_392131_;
+    public void setPowered(final boolean powered) {
+        this.powered = powered;
     }
 
     public TestBlockMode getMode() {
         return this.mode;
     }
 
-    public void setMode(TestBlockMode p_394469_) {
-        this.mode = p_394469_;
+    public void setMode(final TestBlockMode mode) {
+        this.mode = mode;
         this.updateBlockState();
     }
 
@@ -94,9 +94,9 @@ public class TestBlockEntity extends BlockEntity {
     public void trigger() {
         if (this.mode == TestBlockMode.START && this.level != null) {
             this.setPowered(true);
-            BlockPos blockpos = this.getBlockPos();
-            this.level.updateNeighborsAt(blockpos, this.getBlockType());
-            this.level.getBlockTicks().willTickThisTick(blockpos, this.getBlockType());
+            BlockPos pos = this.getBlockPos();
+            this.level.updateNeighborsAt(pos, this.getBlockType());
+            this.level.getBlockTicks().willTickThisTick(pos, this.getBlockType());
             this.log();
         } else {
             if (this.mode == TestBlockMode.LOG) {
@@ -121,7 +121,7 @@ public class TestBlockEntity extends BlockEntity {
         return this.message;
     }
 
-    public void setMessage(String p_394794_) {
-        this.message = p_394794_;
+    public void setMessage(final String message) {
+        this.message = message;
     }
 }

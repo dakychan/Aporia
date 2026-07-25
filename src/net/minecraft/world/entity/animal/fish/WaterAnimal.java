@@ -16,14 +16,14 @@ import net.minecraft.world.level.pathfinder.PathType;
 public abstract class WaterAnimal extends PathfinderMob {
     public static final int AMBIENT_SOUND_INTERVAL = 120;
 
-    protected WaterAnimal(EntityType<? extends WaterAnimal> p_458277_, Level p_455938_) {
-        super(p_458277_, p_455938_);
+    protected WaterAnimal(final EntityType<? extends WaterAnimal> type, final Level level) {
+        super(type, level);
         this.setPathfindingMalus(PathType.WATER, 0.0F);
     }
 
     @Override
-    public boolean checkSpawnObstruction(LevelReader p_455089_) {
-        return p_455089_.isUnobstructed(this);
+    public boolean checkSpawnObstruction(final LevelReader level) {
+        return level.isUnobstructed(this);
     }
 
     @Override
@@ -32,16 +32,16 @@ public abstract class WaterAnimal extends PathfinderMob {
     }
 
     @Override
-    protected int getBaseExperienceReward(ServerLevel p_458194_) {
+    protected int getBaseExperienceReward(final ServerLevel level) {
         return 1 + this.random.nextInt(3);
     }
 
-    protected void handleAirSupply(ServerLevel p_456767_, int p_455644_) {
+    protected void handleAirSupply(final ServerLevel level, final int preTickAirSupply) {
         if (this.isAlive() && !this.isInWater()) {
-            this.setAirSupply(p_455644_ - 1);
+            this.setAirSupply(preTickAirSupply - 1);
             if (this.shouldTakeDrowningDamage()) {
                 this.setAirSupply(0);
-                this.hurtServer(p_456767_, this.damageSources().drown(), 2.0F);
+                this.hurtServer(level, this.damageSources().drown(), 2.0F);
             }
         } else {
             this.setAirSupply(300);
@@ -50,10 +50,10 @@ public abstract class WaterAnimal extends PathfinderMob {
 
     @Override
     public void baseTick() {
-        int i = this.getAirSupply();
+        int airSupply = this.getAirSupply();
         super.baseTick();
-        if (this.level() instanceof ServerLevel serverlevel) {
-            this.handleAirSupply(serverlevel, i);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.handleAirSupply(serverLevel, airSupply);
         }
     }
 
@@ -68,13 +68,17 @@ public abstract class WaterAnimal extends PathfinderMob {
     }
 
     public static boolean checkSurfaceWaterAnimalSpawnRules(
-        EntityType<? extends WaterAnimal> p_458230_, LevelAccessor p_455660_, EntitySpawnReason p_450245_, BlockPos p_455224_, RandomSource p_457959_
+        final EntityType<? extends WaterAnimal> type,
+        final LevelAccessor level,
+        final EntitySpawnReason spawnReason,
+        final BlockPos pos,
+        final RandomSource random
     ) {
-        int i = p_455660_.getSeaLevel();
-        int j = i - 13;
-        return p_455224_.getY() >= j
-            && p_455224_.getY() <= i
-            && p_455660_.getFluidState(p_455224_.below()).is(FluidTags.WATER)
-            && p_455660_.getBlockState(p_455224_.above()).is(Blocks.WATER);
+        int seaLevel = level.getSeaLevel();
+        int minSpawnLevel = seaLevel - 13;
+        return pos.getY() >= minSpawnLevel
+            && pos.getY() <= seaLevel
+            && level.getFluidState(pos.below()).is(FluidTags.WATER)
+            && level.getBlockState(pos.above()).is(Blocks.WATER);
     }
 }

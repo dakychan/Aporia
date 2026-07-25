@@ -2,20 +2,14 @@ package net.minecraft.data.recipes;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementRequirements;
-import net.minecraft.advancements.AdvancementRewards;
-import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.criterion.RecipeUnlockedTrigger;
+import net.minecraft.advancements.triggers.Criterion;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipe;
@@ -26,102 +20,90 @@ import org.jspecify.annotations.Nullable;
 public class ShapedRecipeBuilder implements RecipeBuilder {
     private final HolderGetter<Item> items;
     private final RecipeCategory category;
-    private final Item result;
-    private final int count;
+    private final ItemStackTemplate result;
     private final List<String> rows = Lists.newArrayList();
     private final Map<Character, Ingredient> key = Maps.newLinkedHashMap();
-    private final Map<String, Criterion<?>> criteria = new LinkedHashMap<>();
+    private final RecipeUnlockAdvancementBuilder advancementBuilder = new RecipeUnlockAdvancementBuilder();
     private @Nullable String group;
     private boolean showNotification = true;
 
-    private ShapedRecipeBuilder(HolderGetter<Item> p_364858_, RecipeCategory p_249996_, ItemLike p_251475_, int p_248948_) {
-        this.items = p_364858_;
-        this.category = p_249996_;
-        this.result = p_251475_.asItem();
-        this.count = p_248948_;
+    private ShapedRecipeBuilder(final HolderGetter<Item> items, final RecipeCategory category, final ItemStackTemplate result) {
+        this.items = items;
+        this.category = category;
+        this.result = result;
     }
 
-    public static ShapedRecipeBuilder shaped(HolderGetter<Item> p_364206_, RecipeCategory p_251325_, ItemLike p_250636_) {
-        return shaped(p_364206_, p_251325_, p_250636_, 1);
+    private ShapedRecipeBuilder(final HolderGetter<Item> items, final RecipeCategory category, final ItemLike result, final int count) {
+        this(items, category, new ItemStackTemplate(result.asItem(), count));
     }
 
-    public static ShapedRecipeBuilder shaped(HolderGetter<Item> p_364196_, RecipeCategory p_250853_, ItemLike p_249747_, int p_366751_) {
-        return new ShapedRecipeBuilder(p_364196_, p_250853_, p_249747_, p_366751_);
+    public static ShapedRecipeBuilder shaped(final HolderGetter<Item> items, final RecipeCategory category, final ItemLike item) {
+        return shaped(items, category, item, 1);
     }
 
-    public ShapedRecipeBuilder define(Character p_206417_, TagKey<Item> p_206418_) {
-        return this.define(p_206417_, Ingredient.of(this.items.getOrThrow(p_206418_)));
+    public static ShapedRecipeBuilder shaped(final HolderGetter<Item> items, final RecipeCategory category, final ItemLike item, final int count) {
+        return new ShapedRecipeBuilder(items, category, item, count);
     }
 
-    public ShapedRecipeBuilder define(Character p_126128_, ItemLike p_126129_) {
-        return this.define(p_126128_, Ingredient.of(p_126129_));
+    public ShapedRecipeBuilder define(final Character symbol, final TagKey<Item> tag) {
+        return this.define(symbol, Ingredient.of(this.items.getOrThrow(tag)));
     }
 
-    public ShapedRecipeBuilder define(Character p_126125_, Ingredient p_126126_) {
-        if (this.key.containsKey(p_126125_)) {
-            throw new IllegalArgumentException("Symbol '" + p_126125_ + "' is already defined!");
-        } else if (p_126125_ == ' ') {
+    public ShapedRecipeBuilder define(final Character symbol, final ItemLike item) {
+        return this.define(symbol, Ingredient.of(item));
+    }
+
+    public ShapedRecipeBuilder define(final Character symbol, final Ingredient ingredient) {
+        if (this.key.containsKey(symbol)) {
+            throw new IllegalArgumentException("Symbol '" + symbol + "' is already defined!");
+        }
+
+        if (symbol == ' ') {
             throw new IllegalArgumentException("Symbol ' ' (whitespace) is reserved and cannot be defined");
-        } else {
-            this.key.put(p_126125_, p_126126_);
-            return this;
         }
+
+        this.key.put(symbol, ingredient);
+        return this;
     }
 
-    public ShapedRecipeBuilder pattern(String p_126131_) {
-        if (!this.rows.isEmpty() && p_126131_.length() != this.rows.get(0).length()) {
+    public ShapedRecipeBuilder pattern(final String row) {
+        if (!this.rows.isEmpty() && row.length() != this.rows.get(0).length()) {
             throw new IllegalArgumentException("Pattern must be the same width on every line!");
-        } else {
-            this.rows.add(p_126131_);
-            return this;
         }
-    }
 
-    public ShapedRecipeBuilder unlockedBy(String p_176751_, Criterion<?> p_300780_) {
-        this.criteria.put(p_176751_, p_300780_);
+        this.rows.add(row);
         return this;
     }
 
-    public ShapedRecipeBuilder group(@Nullable String p_126146_) {
-        this.group = p_126146_;
+    public ShapedRecipeBuilder unlockedBy(final String name, final Criterion<?> criterion) {
+        this.advancementBuilder.unlockedBy(name, criterion);
         return this;
     }
 
-    public ShapedRecipeBuilder showNotification(boolean p_273326_) {
-        this.showNotification = p_273326_;
+    public ShapedRecipeBuilder group(final @Nullable String group) {
+        this.group = group;
+        return this;
+    }
+
+    public ShapedRecipeBuilder showNotification(final boolean showNotification) {
+        this.showNotification = showNotification;
         return this;
     }
 
     @Override
-    public Item getResult() {
-        return this.result;
+    public ResourceKey<Recipe<?>> defaultId() {
+        return RecipeBuilder.getDefaultRecipeId(this.result);
     }
 
     @Override
-    public void save(RecipeOutput p_298334_, ResourceKey<Recipe<?>> p_366310_) {
-        ShapedRecipePattern shapedrecipepattern = this.ensureValid(p_366310_);
-        Advancement.Builder advancement$builder = p_298334_.advancement()
-            .addCriterion("has_the_recipe", RecipeUnlockedTrigger.unlocked(p_366310_))
-            .rewards(AdvancementRewards.Builder.recipe(p_366310_))
-            .requirements(AdvancementRequirements.Strategy.OR);
-        this.criteria.forEach(advancement$builder::addCriterion);
-        ShapedRecipe shapedrecipe = new ShapedRecipe(
-            Objects.requireNonNullElse(this.group, ""),
-            RecipeBuilder.determineBookCategory(this.category),
-            shapedrecipepattern,
-            new ItemStack(this.result, this.count),
-            this.showNotification
+    public void save(final RecipeOutput output, final ResourceKey<Recipe<?>> id) {
+        ShapedRecipePattern pattern = ShapedRecipePattern.of(this.key, this.rows);
+        ShapedRecipe recipe = new ShapedRecipe(
+            RecipeBuilder.createCraftingCommonInfo(this.showNotification),
+            RecipeBuilder.createCraftingBookInfo(this.category, this.group),
+            pattern,
+            this.result
         );
-        p_298334_.accept(
-            p_366310_, shapedrecipe, advancement$builder.build(p_366310_.identifier().withPrefix("recipes/" + this.category.getFolderName() + "/"))
-        );
-    }
-
-    private ShapedRecipePattern ensureValid(ResourceKey<Recipe<?>> p_362567_) {
-        if (this.criteria.isEmpty()) {
-            throw new IllegalStateException("No way of obtaining recipe " + p_362567_.identifier());
-        } else {
-            return ShapedRecipePattern.of(this.key, this.rows);
-        }
+        output.accept(id, recipe, this.advancementBuilder.build(output, id, this.category));
     }
 }

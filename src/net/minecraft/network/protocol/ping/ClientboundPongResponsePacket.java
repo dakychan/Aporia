@@ -10,12 +10,12 @@ public record ClientboundPongResponsePacket(long time) implements Packet<ClientP
         ClientboundPongResponsePacket::write, ClientboundPongResponsePacket::new
     );
 
-    private ClientboundPongResponsePacket(FriendlyByteBuf p_334575_) {
-        this(p_334575_.readLong());
+    private ClientboundPongResponsePacket(final FriendlyByteBuf input) {
+        this(input.readLong());
     }
 
-    private void write(FriendlyByteBuf p_335126_) {
-        p_335126_.writeLong(this.time);
+    private void write(final FriendlyByteBuf output) {
+        output.writeLong(this.time);
     }
 
     @Override
@@ -23,7 +23,7 @@ public record ClientboundPongResponsePacket(long time) implements Packet<ClientP
         return PingPacketTypes.CLIENTBOUND_PONG_RESPONSE;
     }
 
-    public void handle(ClientPongPacketListener p_332635_) {
-        p_332635_.handlePongResponse(this);
+    public void handle(final ClientPongPacketListener listener) {
+        listener.handlePongResponse(this);
     }
 }

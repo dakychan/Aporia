@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -14,18 +13,18 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class TintedParticleLeavesBlock extends LeavesBlock {
     public static final MapCodec<TintedParticleLeavesBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422130_ -> p_422130_.group(ExtraCodecs.floatRange(0.0F, 1.0F).fieldOf("leaf_particle_chance").forGetter(p_393870_ -> p_393870_.leafParticleChance), propertiesCodec())
-            .apply(p_422130_, TintedParticleLeavesBlock::new)
+        i -> i.group(ExtraCodecs.floatRange(0.0F, 1.0F).fieldOf("leaf_particle_chance").forGetter(e -> e.leafParticleChance), propertiesCodec())
+            .apply(i, TintedParticleLeavesBlock::new)
     );
 
-    public TintedParticleLeavesBlock(float p_392052_, BlockBehaviour.Properties p_391381_) {
-        super(p_392052_, p_391381_);
+    public TintedParticleLeavesBlock(final float leafParticleChance, final BlockBehaviour.Properties properties) {
+        super(leafParticleChance, properties);
     }
 
     @Override
-    protected void spawnFallingLeavesParticle(Level p_391521_, BlockPos p_397831_, RandomSource p_393219_) {
-        ColorParticleOption colorparticleoption = ColorParticleOption.create(ParticleTypes.TINTED_LEAVES, p_391521_.getClientLeafTintColor(p_397831_));
-        ParticleUtils.spawnParticleBelow(p_391521_, p_397831_, p_393219_, colorparticleoption);
+    protected void spawnFallingLeavesParticle(final Level level, final BlockPos pos, final RandomSource random) {
+        ColorParticleOption particle = ColorParticleOption.create(ParticleTypes.TINTED_LEAVES, level.getClientLeafTintColor(pos));
+        ParticleUtils.spawnParticleBelow(level, pos, random, particle);
     }
 
     @Override

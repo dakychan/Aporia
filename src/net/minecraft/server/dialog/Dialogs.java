@@ -18,13 +18,13 @@ public class Dialogs {
     public static final int BIG_BUTTON_WIDTH = 310;
     private static final ActionButton DEFAULT_BACK_BUTTON = new ActionButton(new CommonButtonData(CommonComponents.GUI_BACK, 200), Optional.empty());
 
-    private static ResourceKey<Dialog> create(String p_409330_) {
-        return ResourceKey.create(Registries.DIALOG, Identifier.withDefaultNamespace(p_409330_));
+    private static ResourceKey<Dialog> create(final String id) {
+        return ResourceKey.create(Registries.DIALOG, Identifier.withDefaultNamespace(id));
     }
 
-    public static void bootstrap(BootstrapContext<Dialog> p_409921_) {
-        HolderGetter<Dialog> holdergetter = p_409921_.lookup(Registries.DIALOG);
-        p_409921_.register(
+    public static void bootstrap(final BootstrapContext<Dialog> context) {
+        HolderGetter<Dialog> dialogs = context.lookup(Registries.DIALOG);
+        context.register(
             SERVER_LINKS,
             new ServerLinksDialog(
                 new CommonDialogData(
@@ -41,7 +41,7 @@ public class Dialogs {
                 310
             )
         );
-        p_409921_.register(
+        context.register(
             CUSTOM_OPTIONS,
             new DialogListDialog(
                 new CommonDialogData(
@@ -53,13 +53,13 @@ public class Dialogs {
                     List.of(),
                     List.of()
                 ),
-                holdergetter.getOrThrow(DialogTags.PAUSE_SCREEN_ADDITIONS),
+                dialogs.getOrThrow(DialogTags.PAUSE_SCREEN_ADDITIONS),
                 Optional.of(DEFAULT_BACK_BUTTON),
                 1,
                 310
             )
         );
-        p_409921_.register(
+        context.register(
             QUICK_ACTIONS,
             new DialogListDialog(
                 new CommonDialogData(
@@ -71,7 +71,7 @@ public class Dialogs {
                     List.of(),
                     List.of()
                 ),
-                holdergetter.getOrThrow(DialogTags.QUICK_ACTIONS),
+                dialogs.getOrThrow(DialogTags.QUICK_ACTIONS),
                 Optional.of(DEFAULT_BACK_BUTTON),
                 1,
                 310

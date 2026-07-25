@@ -3,88 +3,82 @@ package net.minecraft.world.level.storage.loot.functions;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.stream.Stream;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.ContainerComponentManipulator;
 import net.minecraft.world.level.storage.loot.ContainerComponentManipulators;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntries;
-import net.minecraft.world.level.storage.loot.entries.LootPoolEntry;
 import net.minecraft.world.level.storage.loot.entries.LootPoolEntryContainer;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetContainerContents extends LootItemConditionalFunction {
-    public static final MapCodec<SetContainerContents> CODEC = RecordCodecBuilder.mapCodec(
-        p_327591_ -> commonFields(p_327591_)
+    public static final MapCodec<SetContainerContents> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
             .and(
-                p_327591_.group(
-                    ContainerComponentManipulators.CODEC.fieldOf("component").forGetter(p_327590_ -> p_327590_.component),
-                    LootPoolEntries.CODEC.listOf().fieldOf("entries").forGetter(p_297115_ -> p_297115_.entries)
+                i.group(
+                    ContainerComponentManipulators.CODEC.fieldOf("component").forGetter(f -> f.component),
+                    LootPoolEntries.CODEC.listOf().fieldOf("entries").forGetter(f -> f.entries)
                 )
             )
-            .apply(p_327591_, SetContainerContents::new)
+            .apply(i, SetContainerContents::new)
     );
     private final ContainerComponentManipulator<?> component;
     private final List<LootPoolEntryContainer> entries;
 
-    SetContainerContents(List<LootItemCondition> p_193035_, ContainerComponentManipulator<?> p_329803_, List<LootPoolEntryContainer> p_298786_) {
-        super(p_193035_);
-        this.component = p_329803_;
-        this.entries = List.copyOf(p_298786_);
+    private SetContainerContents(
+        final List<LootItemCondition> predicates, final ContainerComponentManipulator<?> component, final List<LootPoolEntryContainer> entries
+    ) {
+        super(predicates);
+        this.component = component;
+        this.entries = List.copyOf(entries);
     }
 
     @Override
-    public LootItemFunctionType<SetContainerContents> getType() {
-        return LootItemFunctions.SET_CONTENTS;
+    public MapCodec<SetContainerContents> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ItemStack run(ItemStack p_80911_, LootContext p_80912_) {
-        if (p_80911_.isEmpty()) {
-            return p_80911_;
-        } else {
-            Stream.Builder<ItemStack> builder = Stream.builder();
-            this.entries
-                .forEach(
-                    p_80916_ -> p_80916_.expand(p_80912_, p_287573_ -> p_287573_.createItemStack(LootTable.createStackSplitter(p_80912_.getLevel(), builder::add), p_80912_))
-                );
-            this.component.setContents(p_80911_, builder.build());
-            return p_80911_;
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        if (itemStack.isEmpty()) {
+            return itemStack;
         }
+
+        Stream.Builder<ItemStack> contents = Stream.builder();
+        this.entries.forEach(e -> e.expand(context, entry -> entry.createItemStack(LootTable.createStackSplitter(context.getLevel(), contents::add), context)));
+        this.component.setContents(itemStack, contents.build());
+        return itemStack;
     }
 
     @Override
-    public void validate(ValidationContext p_80918_) {
-        super.validate(p_80918_);
-
-        for (int i = 0; i < this.entries.size(); i++) {
-            this.entries.get(i).validate(p_80918_.forChild(new ProblemReporter.IndexedFieldPathElement("entries", i)));
-        }
+    public void validate(final ValidationContext context) {
+        super.validate(context);
+        Validatable.validate(context, "entries", this.entries);
     }
 
-    public static SetContainerContents.Builder setContents(ContainerComponentManipulator<?> p_328808_) {
-        return new SetContainerContents.Builder(p_328808_);
+    public static SetContainerContents.Builder setContents(final ContainerComponentManipulator<?> component) {
+        return new SetContainerContents.Builder(component);
     }
 
     public static class Builder extends LootItemConditionalFunction.Builder<SetContainerContents.Builder> {
         private final ImmutableList.Builder<LootPoolEntryContainer> entries = ImmutableList.builder();
         private final ContainerComponentManipulator<?> component;
 
-        public Builder(ContainerComponentManipulator<?> p_332521_) {
-            this.component = p_332521_;
+        public Builder(final ContainerComponentManipulator<?> component) {
+            this.component = component;
         }
 
         protected SetContainerContents.Builder getThis() {
             return this;
         }
 
-        public SetContainerContents.Builder withEntry(LootPoolEntryContainer.Builder<?> p_80931_) {
-            this.entries.add(p_80931_.build());
+        public SetContainerContents.Builder withEntry(final LootPoolEntryContainer.Builder<?> entry) {
+            this.entries.add(entry.build());
             return this;
         }
 

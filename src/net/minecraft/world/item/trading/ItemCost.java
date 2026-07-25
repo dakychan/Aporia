@@ -2,12 +2,10 @@ package net.minecraft.world.item.trading;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentExactPredicate;
-import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -18,12 +16,12 @@ import net.minecraft.world.level.ItemLike;
 
 public record ItemCost(Holder<Item> item, int count, DataComponentExactPredicate components, ItemStack itemStack) {
     public static final Codec<ItemCost> CODEC = RecordCodecBuilder.create(
-        p_390864_ -> p_390864_.group(
+        i -> i.group(
                 Item.CODEC.fieldOf("id").forGetter(ItemCost::item),
-                ExtraCodecs.POSITIVE_INT.fieldOf("count").orElse(1).forGetter(ItemCost::count),
+                ExtraCodecs.optionalAlwaysPresentFieldOf(ExtraCodecs.POSITIVE_INT, "count", 1).forGetter(ItemCost::count),
                 DataComponentExactPredicate.CODEC.optionalFieldOf("components", DataComponentExactPredicate.EMPTY).forGetter(ItemCost::components)
             )
-            .apply(p_390864_, ItemCost::new)
+            .apply(i, ItemCost::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, ItemCost> STREAM_CODEC = StreamCodec.composite(
         Item.STREAM_CODEC,
@@ -36,27 +34,27 @@ public record ItemCost(Holder<Item> item, int count, DataComponentExactPredicate
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, Optional<ItemCost>> OPTIONAL_STREAM_CODEC = STREAM_CODEC.apply(ByteBufCodecs::optional);
 
-    public ItemCost(ItemLike p_333321_) {
-        this(p_333321_, 1);
+    public ItemCost(final ItemLike item) {
+        this(item, 1);
     }
 
-    public ItemCost(ItemLike p_332783_, int p_331715_) {
-        this(p_332783_.asItem().builtInRegistryHolder(), p_331715_, DataComponentExactPredicate.EMPTY);
+    public ItemCost(final ItemLike item, final int count) {
+        this(item.asItem().builtInRegistryHolder(), count, DataComponentExactPredicate.EMPTY);
     }
 
-    public ItemCost(Holder<Item> p_334519_, int p_331202_, DataComponentExactPredicate p_397399_) {
-        this(p_334519_, p_331202_, p_397399_, createStack(p_334519_, p_331202_, p_397399_));
+    public ItemCost(final Holder<Item> item, final int count, final DataComponentExactPredicate components) {
+        this(item, count, components, createStack(item, count, components));
     }
 
-    public ItemCost withComponents(UnaryOperator<DataComponentExactPredicate.Builder> p_328625_) {
-        return new ItemCost(this.item, this.count, p_328625_.apply(DataComponentExactPredicate.builder()).build());
+    public ItemCost withComponents(final UnaryOperator<DataComponentExactPredicate.Builder> components) {
+        return new ItemCost(this.item, this.count, components.apply(DataComponentExactPredicate.builder()).build());
     }
 
-    private static ItemStack createStack(Holder<Item> p_329043_, int p_329370_, DataComponentExactPredicate p_393981_) {
-        return new ItemStack(p_329043_, p_329370_, p_393981_.asPatch());
+    private static ItemStack createStack(final Holder<Item> item, final int count, final DataComponentExactPredicate components) {
+        return new ItemStack(item, count, components.asPatch());
     }
 
-    public boolean test(ItemStack p_331178_) {
-        return p_331178_.is(this.item) && this.components.test((DataComponentGetter)p_331178_);
+    public boolean test(final ItemStack itemStack) {
+        return itemStack.is(this.item) && this.components.test(itemStack);
     }
 }

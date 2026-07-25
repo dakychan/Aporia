@@ -3,7 +3,6 @@ package net.minecraft.tags;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -13,107 +12,104 @@ import org.jspecify.annotations.Nullable;
 
 public class TagEntry {
     private static final Codec<TagEntry> FULL_CODEC = RecordCodecBuilder.create(
-        p_215937_ -> p_215937_.group(
+        i -> i.group(
                 ExtraCodecs.TAG_OR_ELEMENT_ID.fieldOf("id").forGetter(TagEntry::elementOrTag),
-                Codec.BOOL.optionalFieldOf("required", true).forGetter(p_215952_ -> p_215952_.required)
+                Codec.BOOL.optionalFieldOf("required", true).forGetter(e -> e.required)
             )
-            .apply(p_215937_, TagEntry::new)
+            .apply(i, TagEntry::new)
     );
     public static final Codec<TagEntry> CODEC = Codec.either(ExtraCodecs.TAG_OR_ELEMENT_ID, FULL_CODEC)
-        .xmap(
-            p_215935_ -> p_215935_.map(p_215933_ -> new TagEntry(p_215933_, true), p_215946_ -> (TagEntry)p_215946_),
-            p_215931_ -> p_215931_.required ? Either.left(p_215931_.elementOrTag()) : Either.right(p_215931_)
-        );
+        .xmap(e -> e.map(l -> new TagEntry(l, true), r -> (TagEntry)r), entry -> entry.required ? Either.left(entry.elementOrTag()) : Either.right(entry));
     private final Identifier id;
     private final boolean tag;
     private final boolean required;
 
-    private TagEntry(Identifier p_452085_, boolean p_215919_, boolean p_215920_) {
-        this.id = p_452085_;
-        this.tag = p_215919_;
-        this.required = p_215920_;
+    private TagEntry(final Identifier id, final boolean tag, final boolean required) {
+        this.id = id;
+        this.tag = tag;
+        this.required = required;
     }
 
-    private TagEntry(ExtraCodecs.TagOrElementLocation p_215922_, boolean p_215923_) {
-        this.id = p_215922_.id();
-        this.tag = p_215922_.tag();
-        this.required = p_215923_;
+    private TagEntry(final ExtraCodecs.TagOrElementLocation elementOrTag, final boolean required) {
+        this.id = elementOrTag.id();
+        this.tag = elementOrTag.tag();
+        this.required = required;
     }
 
     private ExtraCodecs.TagOrElementLocation elementOrTag() {
         return new ExtraCodecs.TagOrElementLocation(this.id, this.tag);
     }
 
-    public static TagEntry element(Identifier p_451361_) {
-        return new TagEntry(p_451361_, false, true);
+    public static TagEntry element(final Identifier id) {
+        return new TagEntry(id, false, true);
     }
 
-    public static TagEntry optionalElement(Identifier p_456623_) {
-        return new TagEntry(p_456623_, false, false);
+    public static TagEntry optionalElement(final Identifier id) {
+        return new TagEntry(id, false, false);
     }
 
-    public static TagEntry tag(Identifier p_454941_) {
-        return new TagEntry(p_454941_, true, true);
+    public static TagEntry tag(final Identifier id) {
+        return new TagEntry(id, true, true);
     }
 
-    public static TagEntry optionalTag(Identifier p_451022_) {
-        return new TagEntry(p_451022_, true, false);
+    public static TagEntry optionalTag(final Identifier id) {
+        return new TagEntry(id, true, false);
     }
 
-    public <T> boolean build(TagEntry.Lookup<T> p_215928_, Consumer<T> p_215929_) {
+    public <T> boolean build(final TagEntry.Lookup<T> lookup, final Consumer<T> output) {
         if (this.tag) {
-            Collection<T> collection = p_215928_.tag(this.id);
-            if (collection == null) {
+            Collection<T> result = lookup.tag(this.id);
+            if (result == null) {
                 return !this.required;
             }
 
-            collection.forEach(p_215929_);
+            result.forEach(output);
         } else {
-            T t = p_215928_.element(this.id, this.required);
-            if (t == null) {
+            T result = lookup.element(this.id, this.required);
+            if (result == null) {
                 return !this.required;
             }
 
-            p_215929_.accept(t);
+            output.accept(result);
         }
 
         return true;
     }
 
-    public void visitRequiredDependencies(Consumer<Identifier> p_215939_) {
+    public void visitRequiredDependencies(final Consumer<Identifier> output) {
         if (this.tag && this.required) {
-            p_215939_.accept(this.id);
+            output.accept(this.id);
         }
     }
 
-    public void visitOptionalDependencies(Consumer<Identifier> p_215948_) {
+    public void visitOptionalDependencies(final Consumer<Identifier> output) {
         if (this.tag && !this.required) {
-            p_215948_.accept(this.id);
+            output.accept(this.id);
         }
     }
 
-    public boolean verifyIfPresent(Predicate<Identifier> p_215941_, Predicate<Identifier> p_215942_) {
-        return !this.required || (this.tag ? p_215942_ : p_215941_).test(this.id);
+    public boolean verifyIfPresent(final Predicate<Identifier> elementCheck, final Predicate<Identifier> tagCheck) {
+        return !this.required || (this.tag ? tagCheck : elementCheck).test(this.id);
     }
 
     @Override
     public String toString() {
-        StringBuilder stringbuilder = new StringBuilder();
+        StringBuilder result = new StringBuilder();
         if (this.tag) {
-            stringbuilder.append('#');
+            result.append('#');
         }
 
-        stringbuilder.append(this.id);
+        result.append(this.id);
         if (!this.required) {
-            stringbuilder.append('?');
+            result.append('?');
         }
 
-        return stringbuilder.toString();
+        return result.toString();
     }
 
     public interface Lookup<T> {
-        @Nullable T element(Identifier p_459727_, boolean p_362986_);
+        @Nullable T element(Identifier key, boolean required);
 
-        @Nullable Collection<T> tag(Identifier p_453397_);
+        @Nullable Collection<T> tag(Identifier key);
     }
 }

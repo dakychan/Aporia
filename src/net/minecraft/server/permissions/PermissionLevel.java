@@ -13,24 +13,22 @@ public enum PermissionLevel implements StringRepresentable {
     OWNERS("owners", 4);
 
     public static final Codec<PermissionLevel> CODEC = StringRepresentable.fromEnum(PermissionLevel::values);
-    private static final IntFunction<PermissionLevel> BY_ID = ByIdMap.continuous(
-        p_452528_ -> p_452528_.id, values(), ByIdMap.OutOfBoundsStrategy.CLAMP
-    );
-    public static final Codec<PermissionLevel> INT_CODEC = Codec.INT.xmap(BY_ID::apply, p_450760_ -> p_450760_.id);
+    private static final IntFunction<PermissionLevel> BY_ID = ByIdMap.continuous(level -> level.id, values(), ByIdMap.OutOfBoundsStrategy.CLAMP);
+    public static final Codec<PermissionLevel> INT_CODEC = Codec.INT.xmap(BY_ID::apply, level -> level.id);
     private final String name;
     private final int id;
 
-    private PermissionLevel(final String p_453949_, final int p_458428_) {
-        this.name = p_453949_;
-        this.id = p_458428_;
+    PermissionLevel(final String name, final int id) {
+        this.name = name;
+        this.id = id;
     }
 
-    public boolean isEqualOrHigherThan(PermissionLevel p_450593_) {
-        return this.id >= p_450593_.id;
+    public boolean isEqualOrHigherThan(final PermissionLevel other) {
+        return this.id >= other.id;
     }
 
-    public static PermissionLevel byId(int p_451931_) {
-        return BY_ID.apply(p_451931_);
+    public static PermissionLevel byId(final int level) {
+        return BY_ID.apply(level);
     }
 
     public int id() {

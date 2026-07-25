@@ -6,20 +6,20 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 
 public class RarityFilter extends PlacementFilter {
-    public static final MapCodec<RarityFilter> CODEC = ExtraCodecs.POSITIVE_INT.fieldOf("chance").xmap(RarityFilter::new, p_191907_ -> p_191907_.chance);
+    public static final MapCodec<RarityFilter> CODEC = ExtraCodecs.POSITIVE_INT.fieldOf("chance").xmap(RarityFilter::new, c -> c.chance);
     private final int chance;
 
-    private RarityFilter(int p_191899_) {
-        this.chance = p_191899_;
+    private RarityFilter(final int chance) {
+        this.chance = chance;
     }
 
-    public static RarityFilter onAverageOnceEvery(int p_191901_) {
-        return new RarityFilter(p_191901_);
+    public static RarityFilter onAverageOnceEvery(final int chance) {
+        return new RarityFilter(chance);
     }
 
     @Override
-    protected boolean shouldPlace(PlacementContext p_226397_, RandomSource p_226398_, BlockPos p_226399_) {
-        return p_226398_.nextFloat() < 1.0F / this.chance;
+    protected boolean shouldPlace(final PlacementContext context, final RandomSource random, final BlockPos origin) {
+        return random.nextFloat() < 1.0F / this.chance;
     }
 
     @Override

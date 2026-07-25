@@ -5,9 +5,9 @@ public class TickThrottler {
     private final int threshold;
     private int count;
 
-    public TickThrottler(int p_365995_, int p_367862_) {
-        this.incrementStep = p_365995_;
-        this.threshold = p_367862_;
+    public TickThrottler(final int incrementStep, final int threshold) {
+        this.incrementStep = incrementStep;
+        this.threshold = threshold;
     }
 
     public void increment() {
@@ -21,6 +21,6 @@ public class TickThrottler {
     }
 
     public boolean isUnderThreshold() {
-        return this.count < this.threshold;
+        return this.threshold <= 0 || this.count < this.threshold;
     }
 }

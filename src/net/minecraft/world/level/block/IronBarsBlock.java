@@ -26,87 +26,84 @@ public class IronBarsBlock extends CrossCollisionBlock {
         return CODEC;
     }
 
-    protected IronBarsBlock(BlockBehaviour.Properties p_54198_) {
-        super(2.0F, 16.0F, 2.0F, 16.0F, 16.0F, p_54198_);
+    protected IronBarsBlock(final BlockBehaviour.Properties properties) {
+        super(2.0F, 16.0F, 2.0F, 16.0F, 16.0F, properties);
         this.registerDefaultState(
-            this.stateDefinition
-                .any()
-                .setValue(NORTH, false)
-                .setValue(EAST, false)
-                .setValue(SOUTH, false)
-                .setValue(WEST, false)
-                .setValue(WATERLOGGED, false)
+            this.stateDefinition.any().setValue(NORTH, false).setValue(EAST, false).setValue(SOUTH, false).setValue(WEST, false).setValue(WATERLOGGED, false)
         );
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_54200_) {
-        BlockGetter blockgetter = p_54200_.getLevel();
-        BlockPos blockpos = p_54200_.getClickedPos();
-        FluidState fluidstate = p_54200_.getLevel().getFluidState(p_54200_.getClickedPos());
-        BlockPos blockpos1 = blockpos.north();
-        BlockPos blockpos2 = blockpos.south();
-        BlockPos blockpos3 = blockpos.west();
-        BlockPos blockpos4 = blockpos.east();
-        BlockState blockstate = blockgetter.getBlockState(blockpos1);
-        BlockState blockstate1 = blockgetter.getBlockState(blockpos2);
-        BlockState blockstate2 = blockgetter.getBlockState(blockpos3);
-        BlockState blockstate3 = blockgetter.getBlockState(blockpos4);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        BlockPos north = pos.north();
+        BlockPos south = pos.south();
+        BlockPos west = pos.west();
+        BlockPos east = pos.east();
+        BlockState northState = level.getBlockState(north);
+        BlockState southState = level.getBlockState(south);
+        BlockState westState = level.getBlockState(west);
+        BlockState eastState = level.getBlockState(east);
         return this.defaultBlockState()
-            .setValue(NORTH, this.attachsTo(blockstate, blockstate.isFaceSturdy(blockgetter, blockpos1, Direction.SOUTH)))
-            .setValue(SOUTH, this.attachsTo(blockstate1, blockstate1.isFaceSturdy(blockgetter, blockpos2, Direction.NORTH)))
-            .setValue(WEST, this.attachsTo(blockstate2, blockstate2.isFaceSturdy(blockgetter, blockpos3, Direction.EAST)))
-            .setValue(EAST, this.attachsTo(blockstate3, blockstate3.isFaceSturdy(blockgetter, blockpos4, Direction.WEST)))
-            .setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
+            .setValue(NORTH, this.attachsTo(northState, northState.isFaceSturdy(level, north, Direction.SOUTH)))
+            .setValue(SOUTH, this.attachsTo(southState, southState.isFaceSturdy(level, south, Direction.NORTH)))
+            .setValue(WEST, this.attachsTo(westState, westState.isFaceSturdy(level, west, Direction.EAST)))
+            .setValue(EAST, this.attachsTo(eastState, eastState.isFaceSturdy(level, east, Direction.WEST)))
+            .setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_54211_,
-        LevelReader p_367146_,
-        ScheduledTickAccess p_367530_,
-        BlockPos p_54215_,
-        Direction p_54212_,
-        BlockPos p_54216_,
-        BlockState p_54213_,
-        RandomSource p_369110_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_54211_.getValue(WATERLOGGED)) {
-            p_367530_.scheduleTick(p_54215_, Fluids.WATER, Fluids.WATER.getTickDelay(p_367146_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return p_54212_.getAxis().isHorizontal()
-            ? p_54211_.setValue(PROPERTY_BY_DIRECTION.get(p_54212_), this.attachsTo(p_54213_, p_54213_.isFaceSturdy(p_367146_, p_54216_, p_54212_.getOpposite())))
-            : super.updateShape(p_54211_, p_367146_, p_367530_, p_54215_, p_54212_, p_54216_, p_54213_, p_369110_);
+        return directionToNeighbour.getAxis().isHorizontal()
+            ? state.setValue(
+                PROPERTY_BY_DIRECTION.get(directionToNeighbour),
+                this.attachsTo(neighbourState, neighbourState.isFaceSturdy(level, neighbourPos, directionToNeighbour.getOpposite()))
+            )
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected VoxelShape getVisualShape(BlockState p_54202_, BlockGetter p_54203_, BlockPos p_54204_, CollisionContext p_54205_) {
+    protected VoxelShape getVisualShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return Shapes.empty();
     }
 
     @Override
-    protected boolean skipRendering(BlockState p_54207_, BlockState p_54208_, Direction p_54209_) {
-        if (p_54208_.is(this)
-            || p_54208_.is(BlockTags.BARS) && p_54207_.is(BlockTags.BARS) && p_54208_.hasProperty(PROPERTY_BY_DIRECTION.get(p_54209_.getOpposite()))) {
-            if (!p_54209_.getAxis().isHorizontal()) {
+    protected boolean skipRendering(final BlockState state, final BlockState neighborState, final Direction direction) {
+        if (neighborState.is(this)
+            || neighborState.is(BlockTags.BARS) && state.is(BlockTags.BARS) && neighborState.hasProperty(PROPERTY_BY_DIRECTION.get(direction.getOpposite()))) {
+            if (!direction.getAxis().isHorizontal()) {
                 return true;
             }
 
-            if (p_54207_.getValue(PROPERTY_BY_DIRECTION.get(p_54209_)) && p_54208_.getValue(PROPERTY_BY_DIRECTION.get(p_54209_.getOpposite()))) {
+            if (state.getValue(PROPERTY_BY_DIRECTION.get(direction)) && neighborState.getValue(PROPERTY_BY_DIRECTION.get(direction.getOpposite()))) {
                 return true;
             }
         }
 
-        return super.skipRendering(p_54207_, p_54208_, p_54209_);
+        return super.skipRendering(state, neighborState, direction);
     }
 
-    public final boolean attachsTo(BlockState p_54218_, boolean p_54219_) {
-        return !isExceptionForConnection(p_54218_) && p_54219_ || p_54218_.getBlock() instanceof IronBarsBlock || p_54218_.is(BlockTags.WALLS);
+    public final boolean attachsTo(final BlockState state, final boolean faceSolid) {
+        return !isExceptionForConnection(state) && faceSolid || state.getBlock() instanceof IronBarsBlock || state.is(BlockTags.WALLS);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_54221_) {
-        p_54221_.add(NORTH, EAST, WEST, SOUTH, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(NORTH, EAST, WEST, SOUTH, WATERLOGGED);
     }
 }

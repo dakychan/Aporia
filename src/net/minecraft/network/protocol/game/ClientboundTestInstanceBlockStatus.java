@@ -24,7 +24,7 @@ public record ClientboundTestInstanceBlockStatus(Component status, Optional<Vec3
         return GamePacketTypes.CLIENTBOUND_TEST_INSTANCE_BLOCK_STATUS;
     }
 
-    public void handle(ClientGamePacketListener p_391243_) {
-        p_391243_.handleTestInstanceBlockStatus(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleTestInstanceBlockStatus(this);
     }
 }

@@ -8,13 +8,13 @@ import net.minecraft.tags.PaintingVariantTags;
 import net.minecraft.world.entity.decoration.painting.PaintingVariant;
 import net.minecraft.world.entity.decoration.painting.PaintingVariants;
 
-public class PaintingVariantTagsProvider extends KeyTagProvider<PaintingVariant> {
-    public PaintingVariantTagsProvider(PackOutput p_255750_, CompletableFuture<HolderLookup.Provider> p_256184_) {
-        super(p_255750_, Registries.PAINTING_VARIANT, p_256184_);
+public class PaintingVariantTagsProvider extends TagsProvider<PaintingVariant> {
+    public PaintingVariantTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.PAINTING_VARIANT, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_256017_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(PaintingVariantTags.PLACEABLE)
             .add(
                 PaintingVariants.KEBAB,

@@ -9,14 +9,16 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V2551 extends NamespacedSchema {
-    public V2551(int p_17944_, Schema p_17945_) {
-        super(p_17944_, p_17945_);
+    public V2551(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public void registerTypes(Schema p_17959_, Map<String, Supplier<TypeTemplate>> p_17960_, Map<String, Supplier<TypeTemplate>> p_17961_) {
-        super.registerTypes(p_17959_, p_17960_, p_17961_);
-        p_17959_.registerType(
+    public void registerTypes(
+        final Schema schema, final Map<String, Supplier<TypeTemplate>> entityTypes, final Map<String, Supplier<TypeTemplate>> blockEntityTypes
+    ) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        schema.registerType(
             false,
             References.WORLD_GEN_SETTINGS,
             () -> DSL.fields(
@@ -35,10 +37,7 @@ public class V2551 extends NamespacedSchema {
                                 () -> DSL.optionalFields(
                                     "settings",
                                     DSL.optionalFields(
-                                        "biome",
-                                        References.BIOME.in(p_17959_),
-                                        "layers",
-                                        DSL.list(DSL.optionalFields("block", References.BLOCK_NAME.in(p_17959_)))
+                                        "biome", References.BIOME.in(schema), "layers", DSL.list(DSL.optionalFields("block", References.BLOCK_NAME.in(schema)))
                                     )
                                 ),
                                 "minecraft:noise",
@@ -49,11 +48,11 @@ public class V2551 extends NamespacedSchema {
                                         DSL.string(),
                                         ImmutableMap.of(
                                             "minecraft:fixed",
-                                            () -> DSL.fields("biome", References.BIOME.in(p_17959_)),
+                                            () -> DSL.fields("biome", References.BIOME.in(schema)),
                                             "minecraft:multi_noise",
-                                            () -> DSL.list(DSL.fields("biome", References.BIOME.in(p_17959_))),
+                                            () -> DSL.list(DSL.fields("biome", References.BIOME.in(schema))),
                                             "minecraft:checkerboard",
-                                            () -> DSL.fields("biomes", DSL.list(References.BIOME.in(p_17959_))),
+                                            () -> DSL.fields("biomes", DSL.list(References.BIOME.in(schema))),
                                             "minecraft:vanilla_layered",
                                             DSL::remainder,
                                             "minecraft:the_end",
@@ -63,7 +62,7 @@ public class V2551 extends NamespacedSchema {
                                     "settings",
                                     DSL.or(
                                         DSL.constType(DSL.string()),
-                                        DSL.optionalFields("default_block", References.BLOCK_NAME.in(p_17959_), "default_fluid", References.BLOCK_NAME.in(p_17959_))
+                                        DSL.optionalFields("default_block", References.BLOCK_NAME.in(schema), "default_fluid", References.BLOCK_NAME.in(schema))
                                     )
                                 )
                             )

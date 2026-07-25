@@ -51,19 +51,19 @@ public class MobEffect implements FeatureElement {
     private Optional<SoundEvent> soundOnAdded = Optional.empty();
     private FeatureFlagSet requiredFeatures = FeatureFlags.VANILLA_SET;
 
-    protected MobEffect(MobEffectCategory p_19451_, int p_19452_) {
-        this.category = p_19451_;
-        this.color = p_19452_;
-        this.particleFactory = p_358853_ -> {
-            int i = p_358853_.isAmbient() ? AMBIENT_ALPHA : 255;
-            return ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, ARGB.color(i, p_19452_));
+    protected MobEffect(final MobEffectCategory category, final int color) {
+        this.category = category;
+        this.color = color;
+        this.particleFactory = effectInstance -> {
+            int alpha = effectInstance.isAmbient() ? AMBIENT_ALPHA : 255;
+            return ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, ARGB.color(alpha, color));
         };
     }
 
-    protected MobEffect(MobEffectCategory p_335432_, int p_334901_, ParticleOptions p_331136_) {
-        this.category = p_335432_;
-        this.color = p_334901_;
-        this.particleFactory = p_326745_ -> p_331136_;
+    protected MobEffect(final MobEffectCategory category, final int color, final ParticleOptions particleOptions) {
+        this.category = category;
+        this.color = color;
+        this.particleFactory = ignored -> particleOptions;
     }
 
     public int getBlendInDurationTicks() {
@@ -78,36 +78,40 @@ public class MobEffect implements FeatureElement {
         return this.blendOutAdvanceTicks;
     }
 
-    public boolean applyEffectTick(ServerLevel p_361900_, LivingEntity p_333541_, int p_333570_) {
+    public boolean applyEffectTick(final ServerLevel serverLevel, final LivingEntity mob, final int amplification) {
         return true;
     }
 
-    public void applyInstantenousEffect(ServerLevel p_369379_, @Nullable Entity p_19462_, @Nullable Entity p_19463_, LivingEntity p_19464_, int p_19465_, double p_19466_) {
-        this.applyEffectTick(p_369379_, p_19464_, p_19465_);
+    public void applyInstantaneousEffect(
+        final ServerLevel level,
+        final @Nullable Entity source,
+        final @Nullable Entity owner,
+        final LivingEntity mob,
+        final int amplification,
+        final double scale
+    ) {
+        this.applyEffectTick(level, mob, amplification);
     }
 
-    public boolean shouldApplyEffectTickThisTick(int p_297908_, int p_301085_) {
+    public boolean shouldApplyEffectTickThisTick(final int tickCount, final int amplification) {
         return false;
     }
 
-    public void onEffectStarted(LivingEntity p_299085_, int p_297449_) {
+    public void onEffectStarted(final LivingEntity mob, final int amplifier) {
     }
 
-    public void onEffectAdded(LivingEntity p_335100_, int p_336309_) {
+    public void onEffectAdded(final LivingEntity mob, final int amplifier) {
         this.soundOnAdded
-            .ifPresent(
-                p_449379_ -> p_335100_.level()
-                    .playSound(null, p_335100_.getX(), p_335100_.getY(), p_335100_.getZ(), p_449379_, p_335100_.getSoundSource(), 1.0F, 1.0F)
-            );
+            .ifPresent(soundEvent -> mob.level().playSound(null, mob.getX(), mob.getY(), mob.getZ(), soundEvent, mob.getSoundSource(), 1.0F, 1.0F));
     }
 
-    public void onMobRemoved(ServerLevel p_368376_, LivingEntity p_335815_, int p_328980_, Entity.RemovalReason p_328413_) {
+    public void onMobRemoved(final ServerLevel level, final LivingEntity mob, final int amplifier, final Entity.RemovalReason reason) {
     }
 
-    public void onMobHurt(ServerLevel p_367917_, LivingEntity p_19467_, int p_19468_, DamageSource p_334111_, float p_330556_) {
+    public void onMobHurt(final ServerLevel level, final LivingEntity mob, final int amplifier, final DamageSource source, final float damage) {
     }
 
-    public boolean isInstantenous() {
+    public boolean isInstantaneous() {
         return false;
     }
 
@@ -135,41 +139,43 @@ public class MobEffect implements FeatureElement {
         return this.color;
     }
 
-    public MobEffect addAttributeModifier(Holder<Attribute> p_332101_, Identifier p_457796_, double p_19475_, AttributeModifier.Operation p_19476_) {
-        this.attributeModifiers.put(p_332101_, new MobEffect.AttributeTemplate(p_457796_, p_19475_, p_19476_));
+    public MobEffect addAttributeModifier(
+        final Holder<Attribute> attribute, final Identifier id, final double amount, final AttributeModifier.Operation operation
+    ) {
+        this.attributeModifiers.put(attribute, new MobEffect.AttributeTemplate(id, amount, operation));
         return this;
     }
 
-    public MobEffect setBlendDuration(int p_328727_) {
-        return this.setBlendDuration(p_328727_, p_328727_, p_328727_);
+    public MobEffect setBlendDuration(final int ticks) {
+        return this.setBlendDuration(ticks, ticks, ticks);
     }
 
-    public MobEffect setBlendDuration(int p_392325_, int p_393853_, int p_392943_) {
-        this.blendInDurationTicks = p_392325_;
-        this.blendOutDurationTicks = p_393853_;
-        this.blendOutAdvanceTicks = p_392943_;
+    public MobEffect setBlendDuration(final int inTicks, final int outTicks, final int outAdvanceTicks) {
+        this.blendInDurationTicks = inTicks;
+        this.blendOutDurationTicks = outTicks;
+        this.blendOutAdvanceTicks = outAdvanceTicks;
         return this;
     }
 
-    public void createModifiers(int p_334564_, BiConsumer<Holder<Attribute>, AttributeModifier> p_333602_) {
-        this.attributeModifiers.forEach((p_341255_, p_341256_) -> p_333602_.accept((Holder<Attribute>)p_341255_, p_341256_.create(p_334564_)));
+    public void createModifiers(final int amplifier, final BiConsumer<Holder<Attribute>, AttributeModifier> consumer) {
+        this.attributeModifiers.forEach((attribute, template) -> consumer.accept((Holder<Attribute>)attribute, template.create(amplifier)));
     }
 
-    public void removeAttributeModifiers(AttributeMap p_19470_) {
+    public void removeAttributeModifiers(final AttributeMap attributes) {
         for (Entry<Holder<Attribute>, MobEffect.AttributeTemplate> entry : this.attributeModifiers.entrySet()) {
-            AttributeInstance attributeinstance = p_19470_.getInstance(entry.getKey());
-            if (attributeinstance != null) {
-                attributeinstance.removeModifier(entry.getValue().id());
+            AttributeInstance attribute = attributes.getInstance(entry.getKey());
+            if (attribute != null) {
+                attribute.removeModifier(entry.getValue().id());
             }
         }
     }
 
-    public void addAttributeModifiers(AttributeMap p_19479_, int p_19480_) {
+    public void addAttributeModifiers(final AttributeMap attributes, final int amplifier) {
         for (Entry<Holder<Attribute>, MobEffect.AttributeTemplate> entry : this.attributeModifiers.entrySet()) {
-            AttributeInstance attributeinstance = p_19479_.getInstance(entry.getKey());
-            if (attributeinstance != null) {
-                attributeinstance.removeModifier(entry.getValue().id());
-                attributeinstance.addPermanentModifier(entry.getValue().create(p_19480_));
+            AttributeInstance attribute = attributes.getInstance(entry.getKey());
+            if (attribute != null) {
+                attribute.removeModifier(entry.getValue().id());
+                attribute.addPermanentModifier(entry.getValue().create(amplifier));
             }
         }
     }
@@ -178,17 +184,17 @@ public class MobEffect implements FeatureElement {
         return this.category == MobEffectCategory.BENEFICIAL;
     }
 
-    public ParticleOptions createParticleOptions(MobEffectInstance p_332465_) {
-        return this.particleFactory.apply(p_332465_);
+    public ParticleOptions createParticleOptions(final MobEffectInstance mobEffectInstance) {
+        return this.particleFactory.apply(mobEffectInstance);
     }
 
-    public MobEffect withSoundOnAdded(SoundEvent p_329951_) {
-        this.soundOnAdded = Optional.of(p_329951_);
+    public MobEffect withSoundOnAdded(final SoundEvent soundEvent) {
+        this.soundOnAdded = Optional.of(soundEvent);
         return this;
     }
 
-    public MobEffect requiredFeatures(FeatureFlag... p_329270_) {
-        this.requiredFeatures = FeatureFlags.REGISTRY.subset(p_329270_);
+    public MobEffect requiredFeatures(final FeatureFlag... flags) {
+        this.requiredFeatures = FeatureFlags.REGISTRY.subset(flags);
         return this;
     }
 
@@ -197,9 +203,9 @@ public class MobEffect implements FeatureElement {
         return this.requiredFeatures;
     }
 
-    record AttributeTemplate(Identifier id, double amount, AttributeModifier.Operation operation) {
-        public AttributeModifier create(int p_332230_) {
-            return new AttributeModifier(this.id, this.amount * (p_332230_ + 1), this.operation);
+    private record AttributeTemplate(Identifier id, double amount, AttributeModifier.Operation operation) {
+        public AttributeModifier create(final int amplifier) {
+            return new AttributeModifier(this.id, this.amount * (amplifier + 1), this.operation);
         }
     }
 }

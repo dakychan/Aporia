@@ -1,20 +1,17 @@
 package net.minecraft.client.animation;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
 
-@OnlyIn(Dist.CLIENT)
 public class KeyframeAnimations {
-    public static Vector3f posVec(float p_253691_, float p_254046_, float p_254461_) {
-        return new Vector3f(p_253691_, -p_254046_, p_254461_);
+    public static Vector3f posVec(final float x, final float y, final float z) {
+        return new Vector3f(x, -y, z);
     }
 
-    public static Vector3f degreeVec(float p_254402_, float p_253917_, float p_254397_) {
-        return new Vector3f(p_254402_ * (float) (Math.PI / 180.0), p_253917_ * (float) (Math.PI / 180.0), p_254397_ * (float) (Math.PI / 180.0));
+    public static Vector3f degreeVec(final float x, final float y, final float z) {
+        return new Vector3f(x * (float) (Math.PI / 180.0), y * (float) (Math.PI / 180.0), z * (float) (Math.PI / 180.0));
     }
 
-    public static Vector3f scaleVec(double p_253806_, double p_253647_, double p_254396_) {
-        return new Vector3f((float)(p_253806_ - 1.0), (float)(p_253647_ - 1.0), (float)(p_254396_ - 1.0));
+    public static Vector3f scaleVec(final double x, final double y, final double z) {
+        return new Vector3f((float)(x - 1.0), (float)(y - 1.0), (float)(z - 1.0));
     }
 }

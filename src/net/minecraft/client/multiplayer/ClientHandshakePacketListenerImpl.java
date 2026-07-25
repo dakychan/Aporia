@@ -50,12 +50,9 @@ import net.minecraft.server.ServerLinks;
 import net.minecraft.util.Crypt;
 import net.minecraft.util.Util;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Minecraft minecraft;
@@ -74,106 +71,106 @@ public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListe
     private final AtomicReference<ClientHandshakePacketListenerImpl.State> state = new AtomicReference<>(ClientHandshakePacketListenerImpl.State.CONNECTING);
 
     public ClientHandshakePacketListenerImpl(
-        Connection p_261697_,
-        Minecraft p_261835_,
-        @Nullable ServerData p_261938_,
-        @Nullable Screen p_261783_,
-        boolean p_261562_,
-        @Nullable Duration p_261673_,
-        Consumer<Component> p_261945_,
-        LevelLoadTracker p_425358_,
-        @Nullable TransferState p_332707_
+        final Connection connection,
+        final Minecraft minecraft,
+        final @Nullable ServerData serverData,
+        final @Nullable Screen parent,
+        final boolean newWorld,
+        final @Nullable Duration worldLoadDuration,
+        final Consumer<Component> updateStatus,
+        final LevelLoadTracker levelLoadTracker,
+        final @Nullable TransferState transferState
     ) {
-        this.connection = p_261697_;
-        this.minecraft = p_261835_;
-        this.serverData = p_261938_;
-        this.parent = p_261783_;
-        this.updateStatus = p_261945_;
-        this.newWorld = p_261562_;
-        this.worldLoadDuration = p_261673_;
-        this.levelLoadTracker = p_425358_;
-        this.cookies = p_332707_ != null ? new HashMap<>(p_332707_.cookies()) : new HashMap<>();
-        this.seenPlayers = p_332707_ != null ? p_332707_.seenPlayers() : Map.of();
-        this.seenInsecureChatWarning = p_332707_ != null ? p_332707_.seenInsecureChatWarning() : false;
-        this.wasTransferredTo = p_332707_ != null;
+        this.connection = connection;
+        this.minecraft = minecraft;
+        this.serverData = serverData;
+        this.parent = parent;
+        this.updateStatus = updateStatus;
+        this.newWorld = newWorld;
+        this.worldLoadDuration = worldLoadDuration;
+        this.levelLoadTracker = levelLoadTracker;
+        this.cookies = transferState != null ? new HashMap<>(transferState.cookies()) : new HashMap<>();
+        this.seenPlayers = transferState != null ? transferState.seenPlayers() : Map.of();
+        this.seenInsecureChatWarning = transferState != null ? transferState.seenInsecureChatWarning() : false;
+        this.wasTransferredTo = transferState != null;
     }
 
-    private void switchState(ClientHandshakePacketListenerImpl.State p_301608_) {
-        ClientHandshakePacketListenerImpl.State clienthandshakepacketlistenerimpl$state = this.state.updateAndGet(p_325472_ -> {
-            if (!p_301608_.fromStates.contains(p_325472_)) {
-                throw new IllegalStateException("Tried to switch to " + p_301608_ + " from " + p_325472_ + ", but expected one of " + p_301608_.fromStates);
+    private void switchState(final ClientHandshakePacketListenerImpl.State toState) {
+        ClientHandshakePacketListenerImpl.State newState = this.state.updateAndGet(lastState -> {
+            if (!toState.fromStates.contains(lastState)) {
+                throw new IllegalStateException("Tried to switch to " + toState + " from " + lastState + ", but expected one of " + toState.fromStates);
             } else {
-                return p_301608_;
+                return toState;
             }
         });
-        this.updateStatus.accept(clienthandshakepacketlistenerimpl$state.message);
+        this.updateStatus.accept(newState.message);
     }
 
     @Override
-    public void handleHello(ClientboundHelloPacket p_104549_) {
+    public void handleHello(final ClientboundHelloPacket packet) {
         this.switchState(ClientHandshakePacketListenerImpl.State.AUTHORIZING);
 
-        Cipher cipher;
-        Cipher cipher1;
-        String s;
-        ServerboundKeyPacket serverboundkeypacket;
+        Cipher decryptCipher;
+        Cipher encryptCipher;
+        String digest;
+        ServerboundKeyPacket setKeyPacket;
         try {
-            SecretKey secretkey = Crypt.generateSecretKey();
-            PublicKey publickey = p_104549_.getPublicKey();
-            s = new BigInteger(Crypt.digestData(p_104549_.getServerId(), publickey, secretkey)).toString(16);
-            cipher = Crypt.getCipher(2, secretkey);
-            cipher1 = Crypt.getCipher(1, secretkey);
-            byte[] abyte = p_104549_.getChallenge();
-            serverboundkeypacket = new ServerboundKeyPacket(secretkey, publickey, abyte);
-        } catch (Exception exception) {
-            throw new IllegalStateException("Protocol error", exception);
+            SecretKey secretKey = Crypt.generateSecretKey();
+            PublicKey publicKey = packet.getPublicKey();
+            digest = new BigInteger(Crypt.digestData(packet.getServerId(), publicKey, secretKey)).toString(16);
+            decryptCipher = Crypt.getCipher(2, secretKey);
+            encryptCipher = Crypt.getCipher(1, secretKey);
+            byte[] challenge = packet.getChallenge();
+            setKeyPacket = new ServerboundKeyPacket(secretKey, publicKey, challenge);
+        } catch (Exception e) {
+            throw new IllegalStateException("Protocol error", e);
         }
 
-        if (p_104549_.shouldAuthenticate()) {
+        if (packet.shouldAuthenticate()) {
             Util.ioPool().execute(() -> {
-                Component component = this.authenticateServer(s);
-                if (component != null) {
+                Component error = this.authenticateServer(digest);
+                if (error != null) {
                     if (this.serverData == null || !this.serverData.isLan()) {
-                        this.connection.disconnect(component);
+                        this.connection.disconnect(error);
                         return;
                     }
 
-                    LOGGER.warn(component.getString());
+                    LOGGER.warn(error.getString());
                 }
 
-                this.setEncryption(serverboundkeypacket, cipher, cipher1);
+                this.setEncryption(setKeyPacket, decryptCipher, encryptCipher);
             });
         } else {
-            this.setEncryption(serverboundkeypacket, cipher, cipher1);
+            this.setEncryption(setKeyPacket, decryptCipher, encryptCipher);
         }
     }
 
-    private void setEncryption(ServerboundKeyPacket p_333847_, Cipher p_327699_, Cipher p_330168_) {
+    private void setEncryption(final ServerboundKeyPacket setKeyPacket, final Cipher decryptCipher, final Cipher encryptCipher) {
         this.switchState(ClientHandshakePacketListenerImpl.State.ENCRYPTING);
-        this.connection.send(p_333847_, PacketSendListener.thenRun(() -> this.connection.setEncryptionKey(p_327699_, p_330168_)));
+        this.connection.send(setKeyPacket, PacketSendListener.thenRun(() -> this.connection.setEncryptionKey(decryptCipher, encryptCipher)));
     }
 
-    private @Nullable Component authenticateServer(String p_104532_) {
+    private @Nullable Component authenticateServer(final String digest) {
         try {
-            this.minecraft.services().sessionService().joinServer(this.minecraft.getUser().getProfileId(), this.minecraft.getUser().getAccessToken(), p_104532_);
+            this.minecraft.services().sessionService().joinServer(this.minecraft.getUser().getProfileId(), this.minecraft.getUser().getAccessToken(), digest);
             return null;
-        } catch (AuthenticationUnavailableException authenticationunavailableexception) {
+        } catch (AuthenticationUnavailableException ignored) {
             return Component.translatable("disconnect.loginFailedInfo", Component.translatable("disconnect.loginFailedInfo.serversUnavailable"));
-        } catch (InvalidCredentialsException invalidcredentialsexception) {
+        } catch (InvalidCredentialsException ignored) {
             return Component.translatable("disconnect.loginFailedInfo", Component.translatable("disconnect.loginFailedInfo.invalidSession"));
-        } catch (InsufficientPrivilegesException insufficientprivilegesexception) {
+        } catch (InsufficientPrivilegesException ignored) {
             return Component.translatable("disconnect.loginFailedInfo", Component.translatable("disconnect.loginFailedInfo.insufficientPrivileges"));
-        } catch (ForcedUsernameChangeException | UserBannedException userbannedexception) {
+        } catch (UserBannedException | ForcedUsernameChangeException ignored) {
             return Component.translatable("disconnect.loginFailedInfo", Component.translatable("disconnect.loginFailedInfo.userBanned"));
-        } catch (AuthenticationException authenticationexception) {
-            return Component.translatable("disconnect.loginFailedInfo", authenticationexception.getMessage());
+        } catch (AuthenticationException e) {
+            return Component.translatable("disconnect.loginFailedInfo", e.getMessage());
         }
     }
 
     @Override
-    public void handleLoginFinished(ClientboundLoginFinishedPacket p_368567_) {
+    public void handleLoginFinished(final ClientboundLoginFinishedPacket packet) {
         this.switchState(ClientHandshakePacketListenerImpl.State.JOINING);
-        GameProfile gameprofile = p_368567_.gameProfile();
+        GameProfile localGameProfile = packet.gameProfile();
         this.connection
             .setupInboundProtocol(
                 ConfigurationProtocols.CLIENTBOUND,
@@ -182,8 +179,10 @@ public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListe
                     this.connection,
                     new CommonListenerCookie(
                         this.levelLoadTracker,
-                        gameprofile,
-                        this.minecraft.getTelemetryManager().createWorldSessionManager(this.newWorld, this.worldLoadDuration, this.minigameName),
+                        localGameProfile,
+                        this.minecraft
+                            .getTelemetryManager()
+                            .createWorldSessionManager(this.newWorld, this.worldLoadDuration, this.minigameName, packet.sessionId()),
                         ClientRegistryLayer.createRegistryAccess().compositeAccess(),
                         FeatureFlags.DEFAULT_FLAGS,
                         null,
@@ -205,12 +204,12 @@ public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListe
     }
 
     @Override
-    public void onDisconnect(DisconnectionDetails p_342266_) {
-        Component component = this.wasTransferredTo ? CommonComponents.TRANSFER_CONNECT_FAILED : CommonComponents.CONNECT_FAILED;
+    public void onDisconnect(final DisconnectionDetails details) {
+        Component title = this.wasTransferredTo ? CommonComponents.TRANSFER_CONNECT_FAILED : CommonComponents.CONNECT_FAILED;
         if (this.serverData != null && this.serverData.isRealm()) {
-            this.minecraft.setScreen(new DisconnectedScreen(this.parent, component, p_342266_.reason(), CommonComponents.GUI_BACK));
+            this.minecraft.gui.setScreen(new DisconnectedScreen(this.parent, title, details.reason(), CommonComponents.GUI_BACK));
         } else {
-            this.minecraft.setScreen(new DisconnectedScreen(this.parent, component, p_342266_));
+            this.minecraft.gui.setScreen(new DisconnectedScreen(this.parent, title, details));
         }
     }
 
@@ -220,52 +219,51 @@ public class ClientHandshakePacketListenerImpl implements ClientLoginPacketListe
     }
 
     @Override
-    public void handleDisconnect(ClientboundLoginDisconnectPacket p_104553_) {
-        this.connection.disconnect(p_104553_.reason());
+    public void handleDisconnect(final ClientboundLoginDisconnectPacket packet) {
+        this.connection.disconnect(packet.reason());
     }
 
     @Override
-    public void handleCompression(ClientboundLoginCompressionPacket p_104551_) {
+    public void handleCompression(final ClientboundLoginCompressionPacket packet) {
         if (!this.connection.isMemoryConnection()) {
-            this.connection.setupCompression(p_104551_.getCompressionThreshold(), false);
+            this.connection.setupCompression(packet.getCompressionThreshold(), false);
         }
     }
 
     @Override
-    public void handleCustomQuery(ClientboundCustomQueryPacket p_104545_) {
+    public void handleCustomQuery(final ClientboundCustomQueryPacket packet) {
         this.updateStatus.accept(Component.translatable("connect.negotiating"));
-        this.connection.send(new ServerboundCustomQueryAnswerPacket(p_104545_.transactionId(), null));
+        this.connection.send(new ServerboundCustomQueryAnswerPacket(packet.transactionId(), null));
     }
 
-    public void setMinigameName(@Nullable String p_286653_) {
-        this.minigameName = p_286653_;
-    }
-
-    @Override
-    public void handleRequestCookie(ClientboundCookieRequestPacket p_328065_) {
-        this.connection.send(new ServerboundCookieResponsePacket(p_328065_.key(), this.cookies.get(p_328065_.key())));
+    public void setMinigameName(final @Nullable String minigameName) {
+        this.minigameName = minigameName;
     }
 
     @Override
-    public void fillListenerSpecificCrashDetails(CrashReport p_342297_, CrashReportCategory p_311844_) {
-        p_311844_.setDetail("Server type", () -> this.serverData != null ? this.serverData.type().toString() : "<unknown>");
-        p_311844_.setDetail("Login phase", () -> this.state.get().toString());
-        p_311844_.setDetail("Is Local", () -> String.valueOf(this.connection.isMemoryConnection()));
+    public void handleRequestCookie(final ClientboundCookieRequestPacket packet) {
+        this.connection.send(new ServerboundCookieResponsePacket(packet.key(), this.cookies.get(packet.key())));
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static enum State {
+    @Override
+    public void fillListenerSpecificCrashDetails(final CrashReport report, final CrashReportCategory connectionDetails) {
+        connectionDetails.setDetail("Server type", () -> this.serverData != null ? this.serverData.type().toString() : "<unknown>");
+        connectionDetails.setDetail("Login phase", () -> this.state.get().toString());
+        connectionDetails.setDetail("Is Local", () -> String.valueOf(this.connection.isMemoryConnection()));
+    }
+
+        private enum State {
         CONNECTING(Component.translatable("connect.connecting"), Set.of()),
         AUTHORIZING(Component.translatable("connect.authorizing"), Set.of(CONNECTING)),
         ENCRYPTING(Component.translatable("connect.encrypting"), Set.of(AUTHORIZING)),
         JOINING(Component.translatable("connect.joining"), Set.of(ENCRYPTING, CONNECTING));
 
-        final Component message;
-        final Set<ClientHandshakePacketListenerImpl.State> fromStates;
+        private final Component message;
+        private final Set<ClientHandshakePacketListenerImpl.State> fromStates;
 
-        private State(final Component p_301605_, final Set<ClientHandshakePacketListenerImpl.State> p_301615_) {
-            this.message = p_301605_;
-            this.fromStates = p_301615_;
+        State(final Component message, final Set<ClientHandshakePacketListenerImpl.State> fromStates) {
+            this.message = message;
+            this.fromStates = fromStates;
         }
     }
 }

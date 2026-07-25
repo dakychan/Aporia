@@ -1,85 +1,80 @@
 package net.minecraft.world.level.storage.loot.functions;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Mth;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
-import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 
 public class SetEnchantmentsFunction extends LootItemConditionalFunction {
-    public static final MapCodec<SetEnchantmentsFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_342011_ -> commonFields(p_342011_)
+    public static final MapCodec<SetEnchantmentsFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
             .and(
-                p_342011_.group(
-                    Codec.unboundedMap(Enchantment.CODEC, NumberProviders.CODEC)
-                        .optionalFieldOf("enchantments", Map.of())
-                        .forGetter(p_297131_ -> p_297131_.enchantments),
-                    Codec.BOOL.fieldOf("add").orElse(false).forGetter(p_297132_ -> p_297132_.add)
+                i.group(
+                    Codec.unboundedMap(Enchantment.CODEC, NumberProviders.CODEC).optionalFieldOf("enchantments", Map.of()).forGetter(f -> f.enchantments),
+                    Codec.BOOL.optionalFieldOf("add", false).forGetter(f -> f.add)
                 )
             )
-            .apply(p_342011_, SetEnchantmentsFunction::new)
+            .apply(i, SetEnchantmentsFunction::new)
     );
     private final Map<Holder<Enchantment>, NumberProvider> enchantments;
     private final boolean add;
 
-    SetEnchantmentsFunction(List<LootItemCondition> p_300544_, Map<Holder<Enchantment>, NumberProvider> p_165338_, boolean p_165339_) {
-        super(p_300544_);
-        this.enchantments = Map.copyOf(p_165338_);
-        this.add = p_165339_;
+    private SetEnchantmentsFunction(final List<LootItemCondition> predicates, final Map<Holder<Enchantment>, NumberProvider> enchantments, final boolean add) {
+        super(predicates);
+        this.enchantments = Map.copyOf(enchantments);
+        this.add = add;
     }
 
     @Override
-    public LootItemFunctionType<SetEnchantmentsFunction> getType() {
-        return LootItemFunctions.SET_ENCHANTMENTS;
+    public MapCodec<SetEnchantmentsFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public Set<ContextKey<?>> getReferencedContextParams() {
-        return this.enchantments.values().stream().flatMap(p_450099_ -> p_450099_.getReferencedContextParams().stream()).collect(ImmutableSet.toImmutableSet());
+    public void validate(final ValidationContext context) {
+        super.validate(context);
+        this.enchantments.forEach((enchantment, value) -> value.validate(context.forMapField("enchantments", enchantment.getRegisteredName())));
     }
 
     @Override
-    public ItemStack run(ItemStack p_165346_, LootContext p_165347_) {
-        if (p_165346_.is(Items.BOOK)) {
-            p_165346_ = p_165346_.transmuteCopy(Items.ENCHANTED_BOOK);
+    public ItemStack run(ItemStack itemStack, final LootContext context) {
+        if (itemStack.is(Items.BOOK)) {
+            itemStack = itemStack.transmuteCopy(Items.ENCHANTED_BOOK);
         }
 
         EnchantmentHelper.updateEnchantments(
-            p_165346_,
-            p_342002_ -> {
+            itemStack,
+            enchantments -> {
                 if (this.add) {
                     this.enchantments
                         .forEach(
-                            (p_342009_, p_342010_) -> p_342002_.set(
-                                (Holder<Enchantment>)p_342009_,
-                                Mth.clamp(p_342002_.getLevel((Holder<Enchantment>)p_342009_) + p_342010_.getInt(p_165347_), 0, 255)
+                            (enchantment, levelProvider) -> enchantments.set(
+                                (Holder<Enchantment>)enchantment,
+                                Mth.clamp(enchantments.getLevel((Holder<Enchantment>)enchantment) + levelProvider.getInt(context), 0, 255)
                             )
                         );
                 } else {
                     this.enchantments
                         .forEach(
-                            (p_342005_, p_342006_) -> p_342002_.set((Holder<Enchantment>)p_342005_, Mth.clamp(p_342006_.getInt(p_165347_), 0, 255))
+                            (enchantment, levelProvider) -> enchantments.set((Holder<Enchantment>)enchantment, Mth.clamp(levelProvider.getInt(context), 0, 255))
                         );
                 }
             }
         );
-        return p_165346_;
+        return itemStack;
     }
 
     public static class Builder extends LootItemConditionalFunction.Builder<SetEnchantmentsFunction.Builder> {
@@ -90,16 +85,16 @@ public class SetEnchantmentsFunction extends LootItemConditionalFunction {
             this(false);
         }
 
-        public Builder(boolean p_165372_) {
-            this.add = p_165372_;
+        public Builder(final boolean add) {
+            this.add = add;
         }
 
         protected SetEnchantmentsFunction.Builder getThis() {
             return this;
         }
 
-        public SetEnchantmentsFunction.Builder withEnchantment(Holder<Enchantment> p_342127_, NumberProvider p_165376_) {
-            this.enchantments.put(p_342127_, p_165376_);
+        public SetEnchantmentsFunction.Builder withEnchantment(final Holder<Enchantment> enchantment, final NumberProvider levelProvider) {
+            this.enchantments.put(enchantment, levelProvider);
             return this;
         }
 

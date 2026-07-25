@@ -2,7 +2,6 @@ package net.minecraft.world.item.enchantment.providers;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.Registries;
@@ -19,21 +18,21 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
 public record EnchantmentsByCostWithDifficulty(HolderSet<Enchantment> enchantments, int minCost, int maxCostSpan) implements EnchantmentProvider {
     public static final int MAX_ALLOWED_VALUE_PART = 10000;
     public static final MapCodec<EnchantmentsByCostWithDifficulty> CODEC = RecordCodecBuilder.mapCodec(
-        p_342284_ -> p_342284_.group(
+        i -> i.group(
                 RegistryCodecs.homogeneousList(Registries.ENCHANTMENT).fieldOf("enchantments").forGetter(EnchantmentsByCostWithDifficulty::enchantments),
                 ExtraCodecs.intRange(1, 10000).fieldOf("min_cost").forGetter(EnchantmentsByCostWithDifficulty::minCost),
                 ExtraCodecs.intRange(0, 10000).fieldOf("max_cost_span").forGetter(EnchantmentsByCostWithDifficulty::maxCostSpan)
             )
-            .apply(p_342284_, EnchantmentsByCostWithDifficulty::new)
+            .apply(i, EnchantmentsByCostWithDifficulty::new)
     );
 
     @Override
-    public void enchant(ItemStack p_344973_, ItemEnchantments.Mutable p_344834_, RandomSource p_343505_, DifficultyInstance p_342467_) {
-        float f = p_342467_.getSpecialMultiplier();
-        int i = Mth.randomBetweenInclusive(p_343505_, this.minCost, this.minCost + (int)(f * this.maxCostSpan));
+    public void enchant(final ItemStack item, final ItemEnchantments.Mutable itemEnchantments, final RandomSource random, final DifficultyInstance difficulty) {
+        float difficultyModifier = difficulty.getSpecialMultiplier();
+        int cost = Mth.randomBetweenInclusive(random, this.minCost, this.minCost + (int)(difficultyModifier * this.maxCostSpan));
 
-        for (EnchantmentInstance enchantmentinstance : EnchantmentHelper.selectEnchantment(p_343505_, p_344973_, i, this.enchantments.stream())) {
-            p_344834_.upgrade(enchantmentinstance.enchantment(), enchantmentinstance.level());
+        for (EnchantmentInstance instance : EnchantmentHelper.selectEnchantment(random, item, cost, this.enchantments.stream())) {
+            itemEnchantments.upgrade(instance.enchantment(), instance.level());
         }
     }
 

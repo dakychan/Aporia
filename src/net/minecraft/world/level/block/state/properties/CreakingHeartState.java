@@ -9,8 +9,8 @@ public enum CreakingHeartState implements StringRepresentable {
 
     private final String name;
 
-    private CreakingHeartState(final String p_391939_) {
-        this.name = p_391939_;
+    CreakingHeartState(final String name) {
+        this.name = name;
     }
 
     @Override

@@ -16,11 +16,8 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.BitSetDiscreteVoxelShape;
 import net.minecraft.world.phys.shapes.DiscreteVoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class LightSectionDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
     private static final Duration REFRESH_INTERVAL = Duration.ofMillis(500L);
     private static final int RADIUS = 10;
@@ -31,16 +28,18 @@ public class LightSectionDebugRenderer implements DebugRenderer.SimpleDebugRende
     private Instant lastUpdateTime = Instant.now();
     private LightSectionDebugRenderer.@Nullable SectionData data;
 
-    public LightSectionDebugRenderer(Minecraft p_283340_, LightLayer p_283096_) {
-        this.minecraft = p_283340_;
-        this.lightLayer = p_283096_;
+    public LightSectionDebugRenderer(final Minecraft minecraft, final LightLayer lightLayer) {
+        this.minecraft = minecraft;
+        this.lightLayer = lightLayer;
     }
 
     @Override
-    public void emitGizmos(double p_459292_, double p_457733_, double p_451851_, DebugValueAccess p_455876_, Frustum p_457704_, float p_451260_) {
-        Instant instant = Instant.now();
-        if (this.data == null || Duration.between(this.lastUpdateTime, instant).compareTo(REFRESH_INTERVAL) > 0) {
-            this.lastUpdateTime = instant;
+    public void emitGizmos(
+        final double camX, final double camY, final double camZ, final DebugValueAccess debugValues, final Frustum frustum, final float partialTicks
+    ) {
+        Instant time = Instant.now();
+        if (this.data == null || Duration.between(this.lastUpdateTime, time).compareTo(REFRESH_INTERVAL) > 0) {
+            this.lastUpdateTime = time;
             this.data = new LightSectionDebugRenderer.SectionData(
                 this.minecraft.level.getLightEngine(), SectionPos.of(this.minecraft.player.blockPosition()), 10, this.lightLayer
             );
@@ -52,73 +51,74 @@ public class LightSectionDebugRenderer implements DebugRenderer.SimpleDebugRende
         renderFaces(this.data.lightShape, this.data.minPos, LIGHT_ONLY_COLOR);
     }
 
-    private static void renderFaces(DiscreteVoxelShape p_281747_, SectionPos p_282941_, int p_459341_) {
-        p_281747_.forAllFaces((p_448272_, p_448273_, p_448274_, p_448275_) -> {
-            int i = p_448273_ + p_282941_.getX();
-            int j = p_448274_ + p_282941_.getY();
-            int k = p_448275_ + p_282941_.getZ();
-            renderFace(p_448272_, i, j, k, p_459341_);
+    private static void renderFaces(final DiscreteVoxelShape shape, final SectionPos minSection, final int color) {
+        shape.forAllFaces((direction, x, y, z) -> {
+            int sectionX = x + minSection.getX();
+            int sectionY = y + minSection.getY();
+            int sectionZ = z + minSection.getZ();
+            renderFace(direction, sectionX, sectionY, sectionZ, color);
         });
     }
 
-    private static void renderEdges(DiscreteVoxelShape p_282950_, SectionPos p_281925_, int p_451683_) {
-        p_282950_.forAllEdges((p_448264_, p_448265_, p_448266_, p_448267_, p_448268_, p_448269_) -> {
-            int i = p_448264_ + p_281925_.getX();
-            int j = p_448265_ + p_281925_.getY();
-            int k = p_448266_ + p_281925_.getZ();
-            int l = p_448267_ + p_281925_.getX();
-            int i1 = p_448268_ + p_281925_.getY();
-            int j1 = p_448269_ + p_281925_.getZ();
-            renderEdge(i, j, k, l, i1, j1, p_451683_);
+    private static void renderEdges(final DiscreteVoxelShape shape, final SectionPos minSection, final int color) {
+        shape.forAllEdges((x0, y0, z0, x1, y1, z1) -> {
+            int sectionX0 = x0 + minSection.getX();
+            int sectionY0 = y0 + minSection.getY();
+            int sectionZ0 = z0 + minSection.getZ();
+            int sectionX1 = x1 + minSection.getX();
+            int sectionY1 = y1 + minSection.getY();
+            int sectionZ1 = z1 + minSection.getZ();
+            renderEdge(sectionX0, sectionY0, sectionZ0, sectionX1, sectionY1, sectionZ1, color);
         }, true);
     }
 
-    private static void renderFace(Direction p_282340_, int p_282751_, int p_282270_, int p_282159_, int p_455595_) {
-        Vec3 vec3 = new Vec3(SectionPos.sectionToBlockCoord(p_282751_), SectionPos.sectionToBlockCoord(p_282270_), SectionPos.sectionToBlockCoord(p_282159_));
-        Vec3 vec31 = vec3.add(16.0, 16.0, 16.0);
-        Gizmos.rect(vec3, vec31, p_282340_, GizmoStyle.fill(p_455595_));
+    private static void renderFace(final Direction direction, final int sectionX, final int sectionY, final int sectionZ, final int color) {
+        Vec3 cuboidCornerA = new Vec3(
+            SectionPos.sectionToBlockCoord(sectionX), SectionPos.sectionToBlockCoord(sectionY), SectionPos.sectionToBlockCoord(sectionZ)
+        );
+        Vec3 cuboidCornerB = cuboidCornerA.add(16.0, 16.0, 16.0);
+        Gizmos.rect(cuboidCornerA, cuboidCornerB, direction, GizmoStyle.fill(color));
     }
 
-    private static void renderEdge(int p_281439_, int p_282106_, int p_282462_, int p_282216_, int p_281474_, int p_281542_, int p_455620_) {
-        double d0 = SectionPos.sectionToBlockCoord(p_281439_);
-        double d1 = SectionPos.sectionToBlockCoord(p_282106_);
-        double d2 = SectionPos.sectionToBlockCoord(p_282462_);
-        double d3 = SectionPos.sectionToBlockCoord(p_282216_);
-        double d4 = SectionPos.sectionToBlockCoord(p_281474_);
-        double d5 = SectionPos.sectionToBlockCoord(p_281542_);
-        int i = ARGB.opaque(p_455620_);
-        Gizmos.line(new Vec3(d0, d1, d2), new Vec3(d3, d4, d5), i);
+    private static void renderEdge(
+        final int sectionX0, final int sectionY0, final int sectionZ0, final int sectionX1, final int sectionY1, final int sectionZ1, final int color
+    ) {
+        double x0 = SectionPos.sectionToBlockCoord(sectionX0);
+        double y0 = SectionPos.sectionToBlockCoord(sectionY0);
+        double z0 = SectionPos.sectionToBlockCoord(sectionZ0);
+        double x1 = SectionPos.sectionToBlockCoord(sectionX1);
+        double y1 = SectionPos.sectionToBlockCoord(sectionY1);
+        double z1 = SectionPos.sectionToBlockCoord(sectionZ1);
+        int opaqueColor = ARGB.opaque(color);
+        Gizmos.line(new Vec3(x0, y0, z0), new Vec3(x1, y1, z1), opaqueColor);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static final class SectionData {
-        final DiscreteVoxelShape lightAndBlocksShape;
-        final DiscreteVoxelShape lightShape;
-        final SectionPos minPos;
+        private static final class SectionData {
+        private final DiscreteVoxelShape lightAndBlocksShape;
+        private final DiscreteVoxelShape lightShape;
+        private final SectionPos minPos;
 
-        SectionData(LevelLightEngine p_283220_, SectionPos p_282370_, int p_282804_, LightLayer p_283151_) {
-            int i = p_282804_ * 2 + 1;
-            this.lightAndBlocksShape = new BitSetDiscreteVoxelShape(i, i, i);
-            this.lightShape = new BitSetDiscreteVoxelShape(i, i, i);
+        private SectionData(final LevelLightEngine engine, final SectionPos centerPos, final int radius, final LightLayer lightLayer) {
+            int size = radius * 2 + 1;
+            this.lightAndBlocksShape = new BitSetDiscreteVoxelShape(size, size, size);
+            this.lightShape = new BitSetDiscreteVoxelShape(size, size, size);
 
-            for (int j = 0; j < i; j++) {
-                for (int k = 0; k < i; k++) {
-                    for (int l = 0; l < i; l++) {
-                        SectionPos sectionpos = SectionPos.of(
-                            p_282370_.x() + l - p_282804_, p_282370_.y() + k - p_282804_, p_282370_.z() + j - p_282804_
-                        );
-                        LayerLightSectionStorage.SectionType layerlightsectionstorage$sectiontype = p_283220_.getDebugSectionType(p_283151_, sectionpos);
-                        if (layerlightsectionstorage$sectiontype == LayerLightSectionStorage.SectionType.LIGHT_AND_DATA) {
-                            this.lightAndBlocksShape.fill(l, k, j);
-                            this.lightShape.fill(l, k, j);
-                        } else if (layerlightsectionstorage$sectiontype == LayerLightSectionStorage.SectionType.LIGHT_ONLY) {
-                            this.lightShape.fill(l, k, j);
+            for (int z = 0; z < size; z++) {
+                for (int y = 0; y < size; y++) {
+                    for (int x = 0; x < size; x++) {
+                        SectionPos pos = SectionPos.of(centerPos.x() + x - radius, centerPos.y() + y - radius, centerPos.z() + z - radius);
+                        LayerLightSectionStorage.SectionType type = engine.getDebugSectionType(lightLayer, pos);
+                        if (type == LayerLightSectionStorage.SectionType.LIGHT_AND_DATA) {
+                            this.lightAndBlocksShape.fill(x, y, z);
+                            this.lightShape.fill(x, y, z);
+                        } else if (type == LayerLightSectionStorage.SectionType.LIGHT_ONLY) {
+                            this.lightShape.fill(x, y, z);
                         }
                     }
                 }
             }
 
-            this.minPos = SectionPos.of(p_282370_.x() - p_282804_, p_282370_.y() - p_282804_, p_282370_.z() - p_282804_);
+            this.minPos = SectionPos.of(centerPos.x() - radius, centerPos.y() - radius, centerPos.z() - radius);
         }
     }
 }

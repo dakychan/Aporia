@@ -31,42 +31,42 @@ public class TagValueInput implements ValueInput {
     private final ValueInputContextHelper context;
     private final CompoundTag input;
 
-    private TagValueInput(ProblemReporter p_409961_, ValueInputContextHelper p_409646_, CompoundTag p_408647_) {
-        this.problemReporter = p_409961_;
-        this.context = p_409646_;
-        this.input = p_408647_;
+    private TagValueInput(final ProblemReporter problemReporter, final ValueInputContextHelper context, final CompoundTag input) {
+        this.problemReporter = problemReporter;
+        this.context = context;
+        this.input = input;
     }
 
-    public static ValueInput create(ProblemReporter p_406598_, HolderLookup.Provider p_410213_, CompoundTag p_407154_) {
-        return new TagValueInput(p_406598_, new ValueInputContextHelper(p_410213_, NbtOps.INSTANCE), p_407154_);
+    public static ValueInput create(final ProblemReporter problemReporter, final HolderLookup.Provider holders, final CompoundTag tag) {
+        return new TagValueInput(problemReporter, new ValueInputContextHelper(holders, NbtOps.INSTANCE), tag);
     }
 
-    public static ValueInput.ValueInputList create(ProblemReporter p_408508_, HolderLookup.Provider p_410412_, List<CompoundTag> p_408281_) {
-        return new TagValueInput.CompoundListWrapper(p_408508_, new ValueInputContextHelper(p_410412_, NbtOps.INSTANCE), p_408281_);
+    public static ValueInput.ValueInputList create(final ProblemReporter problemReporter, final HolderLookup.Provider holders, final List<CompoundTag> tags) {
+        return new TagValueInput.CompoundListWrapper(problemReporter, new ValueInputContextHelper(holders, NbtOps.INSTANCE), tags);
     }
 
     @Override
-    public <T> Optional<T> read(String p_410337_, Codec<T> p_409146_) {
-        Tag tag = this.input.get(p_410337_);
+    public <T> Optional<T> read(final String name, final Codec<T> codec) {
+        Tag tag = this.input.get(name);
         if (tag == null) {
             return Optional.empty();
-        } else {
-            return switch (p_409146_.parse(this.context.ops(), tag)) {
-                case Success<T> success -> Optional.of(success.value());
-                case Error<T> error -> {
-                    this.problemReporter.report(new TagValueInput.DecodeFromFieldFailedProblem(p_410337_, tag, error));
-                    yield error.partialValue();
-                }
-                default -> throw new MatchException(null, null);
-            };
         }
+
+        return switch (codec.parse(this.context.ops(), tag)) {
+            case Success<T> success -> Optional.of(success.value());
+            case Error<T> error -> {
+                this.problemReporter.report(new TagValueInput.DecodeFromFieldFailedProblem(name, tag, error));
+                yield error.partialValue();
+            }
+            default -> throw new MatchException(null, null);
+        };
     }
 
     @Override
-    public <T> Optional<T> read(MapCodec<T> p_409230_) {
-        DynamicOps<Tag> dynamicops = this.context.ops();
+    public <T> Optional<T> read(final MapCodec<T> codec) {
+        DynamicOps<Tag> ops = this.context.ops();
 
-        return switch (dynamicops.getMap(this.input).flatMap(p_407099_ -> p_409230_.decode(dynamicops, (MapLike<Tag>)p_407099_))) {
+        return switch (ops.getMap(this.input).flatMap(map -> codec.decode(ops, (MapLike<Tag>)map))) {
             case Success<T> success -> Optional.of(success.value());
             case Error<T> error -> {
                 this.problemReporter.report(new TagValueInput.DecodeFromMapFailedProblem(error));
@@ -76,14 +76,14 @@ public class TagValueInput implements ValueInput {
         };
     }
 
-    private <T extends Tag> @Nullable T getOptionalTypedTag(String p_405855_, TagType<T> p_408862_) {
-        Tag tag = this.input.get(p_405855_);
+    private <T extends Tag> @Nullable T getOptionalTypedTag(final String name, final TagType<T> expectedType) {
+        Tag tag = this.input.get(name);
         if (tag == null) {
             return null;
         } else {
-            TagType<?> tagtype = tag.getType();
-            if (tagtype != p_408862_) {
-                this.problemReporter.report(new TagValueInput.UnexpectedTypeProblem(p_405855_, p_408862_, tagtype));
+            TagType<?> actualType = tag.getType();
+            if (actualType != expectedType) {
+                this.problemReporter.report(new TagValueInput.UnexpectedTypeProblem(name, expectedType, actualType));
                 return null;
             } else {
                 return (T)tag;
@@ -91,124 +91,124 @@ public class TagValueInput implements ValueInput {
         }
     }
 
-    private @Nullable NumericTag getNumericTag(String p_409525_) {
-        Tag tag = this.input.get(p_409525_);
+    private @Nullable NumericTag getNumericTag(final String name) {
+        Tag tag = this.input.get(name);
         if (tag == null) {
             return null;
-        } else if (tag instanceof NumericTag numerictag) {
-            return numerictag;
+        } else if (tag instanceof NumericTag numericTag) {
+            return numericTag;
         } else {
-            this.problemReporter.report(new TagValueInput.UnexpectedNonNumberProblem(p_409525_, tag.getType()));
+            this.problemReporter.report(new TagValueInput.UnexpectedNonNumberProblem(name, tag.getType()));
             return null;
         }
     }
 
     @Override
-    public Optional<ValueInput> child(String p_407813_) {
-        CompoundTag compoundtag = this.getOptionalTypedTag(p_407813_, CompoundTag.TYPE);
-        return compoundtag != null ? Optional.of(this.wrapChild(p_407813_, compoundtag)) : Optional.empty();
+    public Optional<ValueInput> child(final String name) {
+        CompoundTag compound = this.getOptionalTypedTag(name, CompoundTag.TYPE);
+        return compound != null ? Optional.of(this.wrapChild(name, compound)) : Optional.empty();
     }
 
     @Override
-    public ValueInput childOrEmpty(String p_409207_) {
-        CompoundTag compoundtag = this.getOptionalTypedTag(p_409207_, CompoundTag.TYPE);
-        return compoundtag != null ? this.wrapChild(p_409207_, compoundtag) : this.context.empty();
+    public ValueInput childOrEmpty(final String name) {
+        CompoundTag compound = this.getOptionalTypedTag(name, CompoundTag.TYPE);
+        return compound != null ? this.wrapChild(name, compound) : this.context.empty();
     }
 
     @Override
-    public Optional<ValueInput.ValueInputList> childrenList(String p_408394_) {
-        ListTag listtag = this.getOptionalTypedTag(p_408394_, ListTag.TYPE);
-        return listtag != null ? Optional.of(this.wrapList(p_408394_, this.context, listtag)) : Optional.empty();
+    public Optional<ValueInput.ValueInputList> childrenList(final String name) {
+        ListTag list = this.getOptionalTypedTag(name, ListTag.TYPE);
+        return list != null ? Optional.of(this.wrapList(name, this.context, list)) : Optional.empty();
     }
 
     @Override
-    public ValueInput.ValueInputList childrenListOrEmpty(String p_409200_) {
-        ListTag listtag = this.getOptionalTypedTag(p_409200_, ListTag.TYPE);
-        return listtag != null ? this.wrapList(p_409200_, this.context, listtag) : this.context.emptyList();
+    public ValueInput.ValueInputList childrenListOrEmpty(final String name) {
+        ListTag list = this.getOptionalTypedTag(name, ListTag.TYPE);
+        return list != null ? this.wrapList(name, this.context, list) : this.context.emptyList();
     }
 
     @Override
-    public <T> Optional<ValueInput.TypedInputList<T>> list(String p_409428_, Codec<T> p_406552_) {
-        ListTag listtag = this.getOptionalTypedTag(p_409428_, ListTag.TYPE);
-        return listtag != null ? Optional.of(this.wrapTypedList(p_409428_, listtag, p_406552_)) : Optional.empty();
+    public <T> Optional<ValueInput.TypedInputList<T>> list(final String name, final Codec<T> codec) {
+        ListTag list = this.getOptionalTypedTag(name, ListTag.TYPE);
+        return list != null ? Optional.of(this.wrapTypedList(name, list, codec)) : Optional.empty();
     }
 
     @Override
-    public <T> ValueInput.TypedInputList<T> listOrEmpty(String p_408566_, Codec<T> p_408822_) {
-        ListTag listtag = this.getOptionalTypedTag(p_408566_, ListTag.TYPE);
-        return listtag != null ? this.wrapTypedList(p_408566_, listtag, p_408822_) : this.context.emptyTypedList();
+    public <T> ValueInput.TypedInputList<T> listOrEmpty(final String name, final Codec<T> codec) {
+        ListTag list = this.getOptionalTypedTag(name, ListTag.TYPE);
+        return list != null ? this.wrapTypedList(name, list, codec) : this.context.emptyTypedList();
     }
 
     @Override
-    public boolean getBooleanOr(String p_409227_, boolean p_408143_) {
-        NumericTag numerictag = this.getNumericTag(p_409227_);
-        return numerictag != null ? numerictag.byteValue() != 0 : p_408143_;
+    public boolean getBooleanOr(final String name, final boolean defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.byteValue() != 0 : defaultValue;
     }
 
     @Override
-    public byte getByteOr(String p_409575_, byte p_407762_) {
-        NumericTag numerictag = this.getNumericTag(p_409575_);
-        return numerictag != null ? numerictag.byteValue() : p_407762_;
+    public byte getByteOr(final String name, final byte defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.byteValue() : defaultValue;
     }
 
     @Override
-    public int getShortOr(String p_407575_, short p_410301_) {
-        NumericTag numerictag = this.getNumericTag(p_407575_);
-        return numerictag != null ? numerictag.shortValue() : p_410301_;
+    public int getShortOr(final String name, final short defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.shortValue() : defaultValue;
     }
 
     @Override
-    public Optional<Integer> getInt(String p_410418_) {
-        NumericTag numerictag = this.getNumericTag(p_410418_);
-        return numerictag != null ? Optional.of(numerictag.intValue()) : Optional.empty();
+    public Optional<Integer> getInt(final String name) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? Optional.of(numericTag.intValue()) : Optional.empty();
     }
 
     @Override
-    public int getIntOr(String p_410149_, int p_406744_) {
-        NumericTag numerictag = this.getNumericTag(p_410149_);
-        return numerictag != null ? numerictag.intValue() : p_406744_;
+    public int getIntOr(final String name, final int defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.intValue() : defaultValue;
     }
 
     @Override
-    public long getLongOr(String p_409726_, long p_409661_) {
-        NumericTag numerictag = this.getNumericTag(p_409726_);
-        return numerictag != null ? numerictag.longValue() : p_409661_;
+    public long getLongOr(final String name, final long defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.longValue() : defaultValue;
     }
 
     @Override
-    public Optional<Long> getLong(String p_408151_) {
-        NumericTag numerictag = this.getNumericTag(p_408151_);
-        return numerictag != null ? Optional.of(numerictag.longValue()) : Optional.empty();
+    public Optional<Long> getLong(final String name) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? Optional.of(numericTag.longValue()) : Optional.empty();
     }
 
     @Override
-    public float getFloatOr(String p_407890_, float p_408107_) {
-        NumericTag numerictag = this.getNumericTag(p_407890_);
-        return numerictag != null ? numerictag.floatValue() : p_408107_;
+    public float getFloatOr(final String name, final float defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.floatValue() : defaultValue;
     }
 
     @Override
-    public double getDoubleOr(String p_405977_, double p_410529_) {
-        NumericTag numerictag = this.getNumericTag(p_405977_);
-        return numerictag != null ? numerictag.doubleValue() : p_410529_;
+    public double getDoubleOr(final String name, final double defaultValue) {
+        NumericTag numericTag = this.getNumericTag(name);
+        return numericTag != null ? numericTag.doubleValue() : defaultValue;
     }
 
     @Override
-    public Optional<String> getString(String p_410016_) {
-        StringTag stringtag = this.getOptionalTypedTag(p_410016_, StringTag.TYPE);
-        return stringtag != null ? Optional.of(stringtag.value()) : Optional.empty();
+    public Optional<String> getString(final String name) {
+        StringTag tag = this.getOptionalTypedTag(name, StringTag.TYPE);
+        return tag != null ? Optional.of(tag.value()) : Optional.empty();
     }
 
     @Override
-    public String getStringOr(String p_407564_, String p_408786_) {
-        StringTag stringtag = this.getOptionalTypedTag(p_407564_, StringTag.TYPE);
-        return stringtag != null ? stringtag.value() : p_408786_;
+    public String getStringOr(final String name, final String defaultValue) {
+        StringTag tag = this.getOptionalTypedTag(name, StringTag.TYPE);
+        return tag != null ? tag.value() : defaultValue;
     }
 
     @Override
-    public Optional<int[]> getIntArray(String p_406433_) {
-        IntArrayTag intarraytag = this.getOptionalTypedTag(p_406433_, IntArrayTag.TYPE);
-        return intarraytag != null ? Optional.of(intarraytag.getAsIntArray()) : Optional.empty();
+    public Optional<int[]> getIntArray(final String name) {
+        IntArrayTag tag = this.getOptionalTypedTag(name, IntArrayTag.TYPE);
+        return tag != null ? Optional.of(tag.getAsIntArray()) : Optional.empty();
     }
 
     @Override
@@ -216,41 +216,37 @@ public class TagValueInput implements ValueInput {
         return this.context.lookup();
     }
 
-    private ValueInput wrapChild(String p_407379_, CompoundTag p_405935_) {
-        return (ValueInput)(p_405935_.isEmpty()
+    private ValueInput wrapChild(final String name, final CompoundTag compoundTag) {
+        return compoundTag.isEmpty()
             ? this.context.empty()
-            : new TagValueInput(this.problemReporter.forChild(new ProblemReporter.FieldPathElement(p_407379_)), this.context, p_405935_));
+            : new TagValueInput(this.problemReporter.forChild(new ProblemReporter.FieldPathElement(name)), this.context, compoundTag);
     }
 
-    static ValueInput wrapChild(ProblemReporter p_407156_, ValueInputContextHelper p_409884_, CompoundTag p_410663_) {
-        return (ValueInput)(p_410663_.isEmpty() ? p_409884_.empty() : new TagValueInput(p_407156_, p_409884_, p_410663_));
+    private static ValueInput wrapChild(final ProblemReporter problemReporter, final ValueInputContextHelper context, final CompoundTag compoundTag) {
+        return compoundTag.isEmpty() ? context.empty() : new TagValueInput(problemReporter, context, compoundTag);
     }
 
-    private ValueInput.ValueInputList wrapList(String p_409009_, ValueInputContextHelper p_410121_, ListTag p_410439_) {
-        return (ValueInput.ValueInputList)(p_410439_.isEmpty()
-            ? p_410121_.emptyList()
-            : new TagValueInput.ListWrapper(this.problemReporter, p_409009_, p_410121_, p_410439_));
+    private ValueInput.ValueInputList wrapList(final String name, final ValueInputContextHelper context, final ListTag list) {
+        return list.isEmpty() ? context.emptyList() : new TagValueInput.ListWrapper(this.problemReporter, name, context, list);
     }
 
-    private <T> ValueInput.TypedInputList<T> wrapTypedList(String p_408655_, ListTag p_406221_, Codec<T> p_406441_) {
-        return (ValueInput.TypedInputList<T>)(p_406221_.isEmpty()
-            ? this.context.emptyTypedList()
-            : new TagValueInput.TypedListWrapper<>(this.problemReporter, p_408655_, this.context, p_406441_, p_406221_));
+    private <T> ValueInput.TypedInputList<T> wrapTypedList(final String name, final ListTag list, final Codec<T> codec) {
+        return list.isEmpty() ? this.context.emptyTypedList() : new TagValueInput.TypedListWrapper<>(this.problemReporter, name, this.context, codec, list);
     }
 
-    static class CompoundListWrapper implements ValueInput.ValueInputList {
+    private static class CompoundListWrapper implements ValueInput.ValueInputList {
         private final ProblemReporter problemReporter;
         private final ValueInputContextHelper context;
         private final List<CompoundTag> list;
 
-        public CompoundListWrapper(ProblemReporter p_408823_, ValueInputContextHelper p_408026_, List<CompoundTag> p_409328_) {
-            this.problemReporter = p_408823_;
-            this.context = p_408026_;
-            this.list = p_409328_;
+        public CompoundListWrapper(final ProblemReporter problemReporter, final ValueInputContextHelper context, final List<CompoundTag> list) {
+            this.problemReporter = problemReporter;
+            this.context = context;
+            this.list = list;
         }
 
-        ValueInput wrapChild(int p_410413_, CompoundTag p_407137_) {
-            return TagValueInput.wrapChild(this.problemReporter.forChild(new ProblemReporter.IndexedPathElement(p_410413_)), this.context, p_407137_);
+        private ValueInput wrapChild(final int index, final CompoundTag compoundTag) {
+            return TagValueInput.wrapChild(this.problemReporter.forChild(new ProblemReporter.IndexedPathElement(index)), this.context, compoundTag);
         }
 
         @Override
@@ -260,18 +256,18 @@ public class TagValueInput implements ValueInput {
 
         @Override
         public Stream<ValueInput> stream() {
-            return Streams.mapWithIndex(this.list.stream(), (p_409052_, p_409963_) -> this.wrapChild((int)p_409963_, p_409052_));
+            return Streams.mapWithIndex(this.list.stream(), (value, index) -> this.wrapChild((int)index, value));
         }
 
         @Override
         public Iterator<ValueInput> iterator() {
-            final ListIterator<CompoundTag> listiterator = this.list.listIterator();
+            final ListIterator<CompoundTag> iterator = this.list.listIterator();
             return new AbstractIterator<ValueInput>() {
                 protected @Nullable ValueInput computeNext() {
-                    if (listiterator.hasNext()) {
-                        int i = listiterator.nextIndex();
-                        CompoundTag compoundtag = listiterator.next();
-                        return CompoundListWrapper.this.wrapChild(i, compoundtag);
+                    if (iterator.hasNext()) {
+                        int index = iterator.nextIndex();
+                        CompoundTag value = iterator.next();
+                        return CompoundListWrapper.this.wrapChild(index, value);
                     } else {
                         return this.endOfData();
                     }
@@ -290,14 +286,7 @@ public class TagValueInput implements ValueInput {
     public record DecodeFromListFailedProblem(String name, int index, Tag tag, Error<?> error) implements ProblemReporter.Problem {
         @Override
         public String description() {
-            return "Failed to decode value '"
-                + this.tag
-                + "' from field '"
-                + this.name
-                + "' at index "
-                + this.index
-                + "': "
-                + this.error.message();
+            return "Failed to decode value '" + this.tag + "' from field '" + this.name + "' at index " + this.index + "': " + this.error.message();
         }
     }
 
@@ -308,17 +297,17 @@ public class TagValueInput implements ValueInput {
         }
     }
 
-    static class ListWrapper implements ValueInput.ValueInputList {
+    private static class ListWrapper implements ValueInput.ValueInputList {
         private final ProblemReporter problemReporter;
         private final String name;
-        final ValueInputContextHelper context;
+        private final ValueInputContextHelper context;
         private final ListTag list;
 
-        ListWrapper(ProblemReporter p_406969_, String p_409725_, ValueInputContextHelper p_410414_, ListTag p_408579_) {
-            this.problemReporter = p_406969_;
-            this.name = p_409725_;
-            this.context = p_410414_;
-            this.list = p_408579_;
+        private ListWrapper(final ProblemReporter problemReporter, final String name, final ValueInputContextHelper context, final ListTag list) {
+            this.problemReporter = problemReporter;
+            this.name = name;
+            this.context = context;
+            this.list = list;
         }
 
         @Override
@@ -326,21 +315,21 @@ public class TagValueInput implements ValueInput {
             return this.list.isEmpty();
         }
 
-        ProblemReporter reporterForChild(int p_410172_) {
-            return this.problemReporter.forChild(new ProblemReporter.IndexedFieldPathElement(this.name, p_410172_));
+        private ProblemReporter reporterForChild(final int index) {
+            return this.problemReporter.forChild(new ProblemReporter.IndexedFieldPathElement(this.name, index));
         }
 
-        void reportIndexUnwrapProblem(int p_408782_, Tag p_409675_) {
-            this.problemReporter.report(new TagValueInput.UnexpectedListElementTypeProblem(this.name, p_408782_, CompoundTag.TYPE, p_409675_.getType()));
+        private void reportIndexUnwrapProblem(final int index, final Tag value) {
+            this.problemReporter.report(new TagValueInput.UnexpectedListElementTypeProblem(this.name, index, CompoundTag.TYPE, value.getType()));
         }
 
         @Override
         public Stream<ValueInput> stream() {
-            return Streams.<Tag, ValueInput>mapWithIndex(this.list.stream(), (p_409123_, p_409836_) -> {
-                if (p_409123_ instanceof CompoundTag compoundtag) {
-                    return TagValueInput.wrapChild(this.reporterForChild((int)p_409836_), this.context, compoundtag);
+            return Streams.<Tag, ValueInput>mapWithIndex(this.list.stream(), (value, index) -> {
+                if (value instanceof CompoundTag compoundTag) {
+                    return TagValueInput.wrapChild(this.reporterForChild((int)index), this.context, compoundTag);
                 } else {
-                    this.reportIndexUnwrapProblem((int)p_409836_, p_409123_);
+                    this.reportIndexUnwrapProblem((int)index, value);
                     return null;
                 }
             }).filter(Objects::nonNull);
@@ -354,13 +343,13 @@ public class TagValueInput implements ValueInput {
 
                 protected @Nullable ValueInput computeNext() {
                     while (iterator.hasNext()) {
-                        Tag tag = iterator.next();
-                        int i = this.index++;
-                        if (tag instanceof CompoundTag compoundtag) {
-                            return TagValueInput.wrapChild(ListWrapper.this.reporterForChild(i), ListWrapper.this.context, compoundtag);
+                        Tag value = iterator.next();
+                        int currentIndex = this.index++;
+                        if (value instanceof CompoundTag compoundTag) {
+                            return TagValueInput.wrapChild(ListWrapper.this.reporterForChild(currentIndex), ListWrapper.this.context, compoundTag);
                         }
 
-                        ListWrapper.this.reportIndexUnwrapProblem(i, tag);
+                        ListWrapper.this.reportIndexUnwrapProblem(currentIndex, value);
                     }
 
                     return this.endOfData();
@@ -369,19 +358,21 @@ public class TagValueInput implements ValueInput {
         }
     }
 
-    static class TypedListWrapper<T> implements ValueInput.TypedInputList<T> {
+    private static class TypedListWrapper<T> implements ValueInput.TypedInputList<T> {
         private final ProblemReporter problemReporter;
         private final String name;
-        final ValueInputContextHelper context;
-        final Codec<T> codec;
+        private final ValueInputContextHelper context;
+        private final Codec<T> codec;
         private final ListTag list;
 
-        TypedListWrapper(ProblemReporter p_410524_, String p_406137_, ValueInputContextHelper p_409566_, Codec<T> p_406982_, ListTag p_407107_) {
-            this.problemReporter = p_410524_;
-            this.name = p_406137_;
-            this.context = p_409566_;
-            this.codec = p_406982_;
-            this.list = p_407107_;
+        private TypedListWrapper(
+            final ProblemReporter problemReporter, final String name, final ValueInputContextHelper context, final Codec<T> codec, final ListTag list
+        ) {
+            this.problemReporter = problemReporter;
+            this.name = name;
+            this.context = context;
+            this.codec = codec;
+            this.list = list;
         }
 
         @Override
@@ -389,17 +380,17 @@ public class TagValueInput implements ValueInput {
             return this.list.isEmpty();
         }
 
-        void reportIndexUnwrapProblem(int p_407653_, Tag p_408606_, Error<?> p_408266_) {
-            this.problemReporter.report(new TagValueInput.DecodeFromListFailedProblem(this.name, p_407653_, p_408606_, p_408266_));
+        private void reportIndexUnwrapProblem(final int index, final Tag value, final Error<?> error) {
+            this.problemReporter.report(new TagValueInput.DecodeFromListFailedProblem(this.name, index, value, error));
         }
 
         @Override
         public Stream<T> stream() {
-            return Streams.<Tag, T>mapWithIndex(this.list.stream(), (p_408439_, p_410583_) -> {
-                return (T)(switch (this.codec.parse(this.context.ops(), p_408439_)) {
-                    case Success<T> success -> (Object)success.value();
+            return Streams.<Tag, T>mapWithIndex(this.list.stream(), (value, index) -> {
+                return (T)(switch (this.codec.parse(this.context.ops(), value)) {
+                    case Success<T> success -> success.value();
                     case Error<T> error -> {
-                        this.reportIndexUnwrapProblem((int)p_410583_, p_408439_, error);
+                        this.reportIndexUnwrapProblem((int)index, value, error);
                         yield error.partialValue().orElse(null);
                     }
                     default -> throw new MatchException(null, null);
@@ -409,18 +400,18 @@ public class TagValueInput implements ValueInput {
 
         @Override
         public Iterator<T> iterator() {
-            final ListIterator<Tag> listiterator = this.list.listIterator();
+            final ListIterator<Tag> iterator = this.list.listIterator();
             return new AbstractIterator<T>() {
                 @Override
                 protected @Nullable T computeNext() {
-                    while (listiterator.hasNext()) {
-                        int i = listiterator.nextIndex();
-                        Tag tag = listiterator.next();
-                        switch (TypedListWrapper.this.codec.parse((DynamicOps<T>)TypedListWrapper.this.context.ops(), (T)tag)) {
+                    while (iterator.hasNext()) {
+                        int index = iterator.nextIndex();
+                        Tag value = iterator.next();
+                        switch (TypedListWrapper.this.codec.parse((DynamicOps<T>)TypedListWrapper.this.context.ops(), (T)value)) {
                             case Success<T> success:
                                 return success.value();
                             case Error<T> error:
-                                TypedListWrapper.this.reportIndexUnwrapProblem(i, tag, error);
+                                TypedListWrapper.this.reportIndexUnwrapProblem(index, value, error);
                                 if (!error.partialValue().isPresent()) {
                                     break;
                                 }
@@ -437,8 +428,7 @@ public class TagValueInput implements ValueInput {
         }
     }
 
-    public record UnexpectedListElementTypeProblem(String name, int index, TagType<?> expected, TagType<?> actual)
-        implements ProblemReporter.Problem {
+    public record UnexpectedListElementTypeProblem(String name, int index, TagType<?> expected, TagType<?> actual) implements ProblemReporter.Problem {
         @Override
         public String description() {
             return "Expected list '"

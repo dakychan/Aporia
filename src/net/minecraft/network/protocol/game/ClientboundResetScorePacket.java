@@ -11,13 +11,13 @@ public record ClientboundResetScorePacket(String owner, @Nullable String objecti
         ClientboundResetScorePacket::write, ClientboundResetScorePacket::new
     );
 
-    private ClientboundResetScorePacket(FriendlyByteBuf p_312061_) {
-        this(p_312061_.readUtf(), p_312061_.readNullable(FriendlyByteBuf::readUtf));
+    private ClientboundResetScorePacket(final FriendlyByteBuf input) {
+        this(input.readUtf(), input.readNullable(FriendlyByteBuf::readUtf));
     }
 
-    private void write(FriendlyByteBuf p_310951_) {
-        p_310951_.writeUtf(this.owner);
-        p_310951_.writeNullable(this.objectiveName, FriendlyByteBuf::writeUtf);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUtf(this.owner);
+        output.writeNullable(this.objectiveName, FriendlyByteBuf::writeUtf);
     }
 
     @Override
@@ -25,7 +25,7 @@ public record ClientboundResetScorePacket(String owner, @Nullable String objecti
         return GamePacketTypes.CLIENTBOUND_RESET_SCORE;
     }
 
-    public void handle(ClientGamePacketListener p_310650_) {
-        p_310650_.handleResetScore(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleResetScore(this);
     }
 }

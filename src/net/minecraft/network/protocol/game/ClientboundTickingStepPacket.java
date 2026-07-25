@@ -11,16 +11,16 @@ public record ClientboundTickingStepPacket(int tickSteps) implements Packet<Clie
         ClientboundTickingStepPacket::write, ClientboundTickingStepPacket::new
     );
 
-    private ClientboundTickingStepPacket(FriendlyByteBuf p_311037_) {
-        this(p_311037_.readVarInt());
+    private ClientboundTickingStepPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt());
     }
 
-    public static ClientboundTickingStepPacket from(TickRateManager p_312211_) {
-        return new ClientboundTickingStepPacket(p_312211_.frozenTicksToRun());
+    public static ClientboundTickingStepPacket from(final TickRateManager manager) {
+        return new ClientboundTickingStepPacket(manager.frozenTicksToRun());
     }
 
-    private void write(FriendlyByteBuf p_311017_) {
-        p_311017_.writeVarInt(this.tickSteps);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.tickSteps);
     }
 
     @Override
@@ -28,7 +28,7 @@ public record ClientboundTickingStepPacket(int tickSteps) implements Packet<Clie
         return GamePacketTypes.CLIENTBOUND_TICKING_STEP;
     }
 
-    public void handle(ClientGamePacketListener p_309817_) {
-        p_309817_.handleTickingStep(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleTickingStep(this);
     }
 }

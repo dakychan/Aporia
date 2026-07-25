@@ -2,25 +2,23 @@ package net.minecraft.world.level.levelgen.feature.foliageplacers;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class MegaPineFoliagePlacer extends FoliagePlacer {
     public static final MapCodec<MegaPineFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
-        p_68664_ -> foliagePlacerParts(p_68664_)
-            .and(IntProvider.codec(0, 24).fieldOf("crown_height").forGetter(p_161484_ -> p_161484_.crownHeight))
-            .apply(p_68664_, MegaPineFoliagePlacer::new)
+        i -> foliagePlacerParts(i).and(IntProviders.codec(0, 24).fieldOf("crown_height").forGetter(p -> p.crownHeight)).apply(i, MegaPineFoliagePlacer::new)
     );
     private final IntProvider crownHeight;
 
-    public MegaPineFoliagePlacer(IntProvider p_161470_, IntProvider p_161471_, IntProvider p_161472_) {
-        super(p_161470_, p_161471_);
-        this.crownHeight = p_161472_;
+    public MegaPineFoliagePlacer(final IntProvider radius, final IntProvider offset, final IntProvider crownHeight) {
+        super(radius, offset);
+        this.crownHeight = crownHeight;
     }
 
     @Override
@@ -30,41 +28,43 @@ public class MegaPineFoliagePlacer extends FoliagePlacer {
 
     @Override
     protected void createFoliage(
-        LevelSimulatedReader p_225678_,
-        FoliagePlacer.FoliageSetter p_273345_,
-        RandomSource p_225680_,
-        TreeConfiguration p_225681_,
-        int p_225682_,
-        FoliagePlacer.FoliageAttachment p_225683_,
-        int p_225684_,
-        int p_225685_,
-        int p_225686_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius,
+        final int offset
     ) {
-        BlockPos blockpos = p_225683_.pos();
-        int i = 0;
+        BlockPos foliagePos = foliageAttachment.pos();
+        int prevRadius = 0;
 
-        for (int j = blockpos.getY() - p_225684_ + p_225686_; j <= blockpos.getY() + p_225686_; j++) {
-            int k = blockpos.getY() - j;
-            int l = p_225685_ + p_225683_.radiusOffset() + Mth.floor((float)k / p_225684_ * 3.5F);
-            int i1;
-            if (k > 0 && l == i && (j & 1) == 0) {
-                i1 = l + 1;
+        for (int yy = foliagePos.getY() - foliageHeight + offset; yy <= foliagePos.getY() + offset; yy++) {
+            int yo = foliagePos.getY() - yy;
+            int smoothRadius = leafRadius + foliageAttachment.radiusOffset() + Mth.floor((float)yo / foliageHeight * 3.5F);
+            int jaggedRadius;
+            if (yo > 0 && smoothRadius == prevRadius && (yy & 1) == 0) {
+                jaggedRadius = smoothRadius + 1;
             } else {
-                i1 = l;
+                jaggedRadius = smoothRadius;
             }
 
-            this.placeLeavesRow(p_225678_, p_273345_, p_225680_, p_225681_, new BlockPos(blockpos.getX(), j, blockpos.getZ()), i1, 0, p_225683_.doubleTrunk());
-            i = l;
+            this.placeLeavesRow(
+                level, foliageSetter, random, config, new BlockPos(foliagePos.getX(), yy, foliagePos.getZ()), jaggedRadius, 0, foliageAttachment.doubleTrunk()
+            );
+            prevRadius = smoothRadius;
         }
     }
 
     @Override
-    public int foliageHeight(RandomSource p_225674_, int p_225675_, TreeConfiguration p_225676_) {
-        return this.crownHeight.sample(p_225674_);
+    public int foliageHeight(final RandomSource random, final int treeHeight, final TreeConfiguration config) {
+        return this.crownHeight.sample(random);
     }
 
     @Override
-    protected boolean shouldSkipLocation(RandomSource p_225667_, int p_225668_, int p_225669_, int p_225670_, int p_225671_, boolean p_225672_) {
-        return p_225668_ + p_225670_ >= 7 ? true : p_225668_ * p_225668_ + p_225670_ * p_225670_ > p_225671_ * p_225671_;
+    protected boolean shouldSkipLocation(final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk) {
+        return dx + dz >= 7 ? true : dx * dx + dz * dz > currentRadius * currentRadius;
     }
 }

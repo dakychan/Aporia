@@ -6,10 +6,7 @@ import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class OutOfMemoryScreen extends Screen {
     private static final Component TITLE = Component.translatable("outOfMemory.title");
     private static final Component MESSAGE = Component.translatable("outOfMemory.message");
@@ -24,9 +21,9 @@ public class OutOfMemoryScreen extends Screen {
     protected void init() {
         this.layout.addTitleHeader(TITLE, this.font);
         this.layout.addToContents(FocusableTextWidget.builder(MESSAGE, this.font).maxWidth(300).build());
-        LinearLayout linearlayout = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
-        linearlayout.addChild(Button.builder(CommonComponents.GUI_TO_TITLE, p_280810_ -> this.minecraft.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())).build());
-        linearlayout.addChild(Button.builder(Component.translatable("menu.quit"), p_280811_ -> this.minecraft.stop()).build());
+        LinearLayout footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(8));
+        footer.addChild(Button.builder(CommonComponents.GUI_TO_TITLE, var1x -> this.minecraft.gui.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())).build());
+        footer.addChild(Button.builder(Component.translatable("menu.quit"), button -> this.minecraft.stop()).build());
         this.layout.visitWidgets(this::addRenderableWidget);
         this.repositionElements();
     }

@@ -11,23 +11,25 @@ public class OwnerHurtTargetGoal extends TargetGoal {
     private LivingEntity ownerLastHurt;
     private int timestamp;
 
-    public OwnerHurtTargetGoal(TamableAnimal p_26114_) {
-        super(p_26114_, false);
-        this.tameAnimal = p_26114_;
+    public OwnerHurtTargetGoal(final TamableAnimal tameAnimal) {
+        super(tameAnimal, false);
+        this.tameAnimal = tameAnimal;
         this.setFlags(EnumSet.of(Goal.Flag.TARGET));
     }
 
     @Override
     public boolean canUse() {
         if (this.tameAnimal.isTame() && !this.tameAnimal.isOrderedToSit()) {
-            LivingEntity livingentity = this.tameAnimal.getOwner();
-            if (livingentity == null) {
+            LivingEntity owner = this.tameAnimal.getOwner();
+            if (owner == null) {
                 return false;
-            } else {
-                this.ownerLastHurt = livingentity.getLastHurtMob();
-                int i = livingentity.getLastHurtMobTimestamp();
-                return i != this.timestamp && this.canAttack(this.ownerLastHurt, TargetingConditions.DEFAULT) && this.tameAnimal.wantsToAttack(this.ownerLastHurt, livingentity);
             }
+
+            this.ownerLastHurt = owner.getLastHurtMob();
+            int ts = owner.getLastHurtMobTimestamp();
+            return ts != this.timestamp
+                && this.canAttack(this.ownerLastHurt, TargetingConditions.DEFAULT)
+                && this.tameAnimal.wantsToAttack(this.ownerLastHurt, owner);
         } else {
             return false;
         }
@@ -36,9 +38,9 @@ public class OwnerHurtTargetGoal extends TargetGoal {
     @Override
     public void start() {
         this.mob.setTarget(this.ownerLastHurt);
-        LivingEntity livingentity = this.tameAnimal.getOwner();
-        if (livingentity != null) {
-            this.timestamp = livingentity.getLastHurtMobTimestamp();
+        LivingEntity owner = this.tameAnimal.getOwner();
+        if (owner != null) {
+            this.timestamp = owner.getLastHurtMobTimestamp();
         }
 
         super.start();

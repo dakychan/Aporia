@@ -8,22 +8,20 @@ import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class BlobFoliagePlacer extends FoliagePlacer {
-    public static final MapCodec<BlobFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
-        p_68427_ -> blobParts(p_68427_).apply(p_68427_, BlobFoliagePlacer::new)
-    );
+    public static final MapCodec<BlobFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(i -> blobParts(i).apply(i, BlobFoliagePlacer::new));
     protected final int height;
 
-    protected static <P extends BlobFoliagePlacer> P3<Mu<P>, IntProvider, IntProvider, Integer> blobParts(Instance<P> p_68414_) {
-        return foliagePlacerParts(p_68414_).and(Codec.intRange(0, 16).fieldOf("height").forGetter(p_68412_ -> p_68412_.height));
+    protected static <P extends BlobFoliagePlacer> P3<Mu<P>, IntProvider, IntProvider, Integer> blobParts(final Instance<P> instance) {
+        return foliagePlacerParts(instance).and(Codec.intRange(0, 16).fieldOf("height").forGetter(p -> p.height));
     }
 
-    public BlobFoliagePlacer(IntProvider p_161356_, IntProvider p_161357_, int p_161358_) {
-        super(p_161356_, p_161357_);
-        this.height = p_161358_;
+    public BlobFoliagePlacer(final IntProvider radius, final IntProvider offset, final int height) {
+        super(radius, offset);
+        this.height = height;
     }
 
     @Override
@@ -33,29 +31,29 @@ public class BlobFoliagePlacer extends FoliagePlacer {
 
     @Override
     protected void createFoliage(
-        LevelSimulatedReader p_273066_,
-        FoliagePlacer.FoliageSetter p_272716_,
-        RandomSource p_273178_,
-        TreeConfiguration p_272850_,
-        int p_273067_,
-        FoliagePlacer.FoliageAttachment p_273711_,
-        int p_273580_,
-        int p_273511_,
-        int p_273685_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius,
+        final int offset
     ) {
-        for (int i = p_273685_; i >= p_273685_ - p_273580_; i--) {
-            int j = Math.max(p_273511_ + p_273711_.radiusOffset() - 1 - i / 2, 0);
-            this.placeLeavesRow(p_273066_, p_272716_, p_273178_, p_272850_, p_273711_.pos(), j, i, p_273711_.doubleTrunk());
+        for (int yo = offset; yo >= offset - foliageHeight; yo--) {
+            int currentRadius = Math.max(leafRadius + foliageAttachment.radiusOffset() - 1 - yo / 2, 0);
+            this.placeLeavesRow(level, foliageSetter, random, config, foliageAttachment.pos(), currentRadius, yo, foliageAttachment.doubleTrunk());
         }
     }
 
     @Override
-    public int foliageHeight(RandomSource p_225516_, int p_225517_, TreeConfiguration p_225518_) {
+    public int foliageHeight(final RandomSource random, final int treeHeight, final TreeConfiguration config) {
         return this.height;
     }
 
     @Override
-    protected boolean shouldSkipLocation(RandomSource p_225509_, int p_225510_, int p_225511_, int p_225512_, int p_225513_, boolean p_225514_) {
-        return p_225510_ == p_225513_ && p_225512_ == p_225513_ && (p_225509_.nextInt(2) == 0 || p_225511_ == 0);
+    protected boolean shouldSkipLocation(final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk) {
+        return dx == currentRadius && dz == currentRadius && (random.nextInt(2) == 0 || y == 0);
     }
 }

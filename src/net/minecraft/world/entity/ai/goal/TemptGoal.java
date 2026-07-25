@@ -2,7 +2,6 @@ package net.minecraft.world.entity.ai.goal;
 
 import java.util.EnumSet;
 import java.util.function.Predicate;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
@@ -31,22 +30,22 @@ public class TemptGoal extends Goal {
     private final boolean canScare;
     private final double stopDistance;
 
-    public TemptGoal(PathfinderMob p_25939_, double p_25940_, Predicate<ItemStack> p_329244_, boolean p_25942_) {
-        this((Mob)p_25939_, p_25940_, p_329244_, p_25942_, 2.5);
+    public TemptGoal(final PathfinderMob mob, final double speedModifier, final Predicate<ItemStack> items, final boolean canScare) {
+        this((Mob)mob, speedModifier, items, canScare, 2.5);
     }
 
-    public TemptGoal(PathfinderMob p_406939_, double p_408370_, Predicate<ItemStack> p_409411_, boolean p_405821_, double p_409287_) {
-        this((Mob)p_406939_, p_408370_, p_409411_, p_405821_, p_409287_);
+    public TemptGoal(final PathfinderMob mob, final double speedModifier, final Predicate<ItemStack> items, final boolean canScare, final double stopDistance) {
+        this((Mob)mob, speedModifier, items, canScare, stopDistance);
     }
 
-    TemptGoal(Mob p_405921_, double p_409743_, Predicate<ItemStack> p_409922_, boolean p_406295_, double p_407335_) {
-        this.mob = p_405921_;
-        this.speedModifier = p_409743_;
-        this.items = p_409922_;
-        this.canScare = p_406295_;
-        this.stopDistance = p_407335_;
+    private TemptGoal(final Mob mob, final double speedModifier, final Predicate<ItemStack> items, final boolean canScare, final double stopDistance) {
+        this.mob = mob;
+        this.speedModifier = speedModifier;
+        this.items = items;
+        this.canScare = canScare;
+        this.stopDistance = stopDistance;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        this.targetingConditions = TEMPT_TARGETING.copy().selector((p_370043_, p_361565_) -> this.shouldFollow(p_370043_));
+        this.targetingConditions = TEMPT_TARGETING.copy().selector((target, level) -> this.shouldFollow(target));
     }
 
     @Override
@@ -55,13 +54,14 @@ public class TemptGoal extends Goal {
             this.calmDown--;
             return false;
         } else {
-            this.player = getServerLevel(this.mob).getNearestPlayer(this.targetingConditions.range(this.mob.getAttributeValue(Attributes.TEMPT_RANGE)), this.mob);
+            this.player = getServerLevel(this.mob)
+                .getNearestPlayer(this.targetingConditions.range(this.mob.getAttributeValue(Attributes.TEMPT_RANGE)), this.mob);
             return this.player != null;
         }
     }
 
-    private boolean shouldFollow(LivingEntity p_148139_) {
-        return this.items.test(p_148139_.getMainHandItem()) || this.items.test(p_148139_.getOffhandItem());
+    private boolean shouldFollow(final LivingEntity player) {
+        return this.items.test(player.getMainHandItem()) || this.items.test(player.getOffhandItem());
     }
 
     @Override
@@ -122,8 +122,8 @@ public class TemptGoal extends Goal {
         this.mob.getNavigation().stop();
     }
 
-    protected void navigateTowards(Player p_407647_) {
-        this.mob.getNavigation().moveTo(p_407647_, this.speedModifier);
+    protected void navigateTowards(final Player player) {
+        this.mob.getNavigation().moveTo(player, this.speedModifier);
     }
 
     public boolean isRunning() {
@@ -131,8 +131,8 @@ public class TemptGoal extends Goal {
     }
 
     public static class ForNonPathfinders extends TemptGoal {
-        public ForNonPathfinders(Mob p_407234_, double p_407396_, Predicate<ItemStack> p_410152_, boolean p_410644_, double p_408141_) {
-            super(p_407234_, p_407396_, p_410152_, p_410644_, p_408141_);
+        public ForNonPathfinders(final Mob mob, final double speedModifier, final Predicate<ItemStack> items, final boolean canScare, final double stopDistance) {
+            super(mob, speedModifier, items, canScare, stopDistance);
         }
 
         @Override
@@ -141,12 +141,9 @@ public class TemptGoal extends Goal {
         }
 
         @Override
-        protected void navigateTowards(Player p_410163_) {
-            Vec3 vec3 = p_410163_.getEyePosition()
-                .subtract(this.mob.position())
-                .scale(this.mob.getRandom().nextDouble())
-                .add(this.mob.position());
-            this.mob.getMoveControl().setWantedPosition(vec3.x, vec3.y, vec3.z, this.speedModifier);
+        protected void navigateTowards(final Player player) {
+            Vec3 target = player.getEyePosition().subtract(this.mob.position()).scale(this.mob.getRandom().nextDouble()).add(this.mob.position());
+            this.mob.getMoveControl().setWantedPosition(target.x, target.y, target.z, this.speedModifier);
         }
     }
 }

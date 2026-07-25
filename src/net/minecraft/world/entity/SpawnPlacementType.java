@@ -5,9 +5,9 @@ import net.minecraft.world.level.LevelReader;
 import org.jspecify.annotations.Nullable;
 
 public interface SpawnPlacementType {
-    boolean isSpawnPositionOk(LevelReader p_329488_, BlockPos p_335385_, @Nullable EntityType<?> p_329870_);
+    boolean isSpawnPositionOk(LevelReader level, BlockPos blockPos, @Nullable EntityType<?> type);
 
-    default BlockPos adjustSpawnPosition(LevelReader p_331949_, BlockPos p_333622_) {
-        return p_333622_;
+    default BlockPos adjustSpawnPosition(final LevelReader level, final BlockPos candidate) {
+        return candidate;
     }
 }

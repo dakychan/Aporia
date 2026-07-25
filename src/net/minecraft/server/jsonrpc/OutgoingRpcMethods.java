@@ -70,7 +70,8 @@ public class OutgoingRpcMethods {
         .description("Gamerule was changed")
         .register("gamerules/updated");
     public static final Holder.Reference<OutgoingRpcMethod<ServerStateService.ServerState, Void>> STATUS_HEARTBEAT = OutgoingRpcMethod.<ServerStateService.ServerState>notificationWithParams()
+        .allowPreServerInit()
         .param("status", Schema.SERVER_STATE_SCHEMA.asRef())
-        .description("Server status heartbeat")
+        .description("Server status heartbeat, including before the server has spun up")
         .register("server/status");
 }

@@ -17,179 +17,179 @@ import org.jspecify.annotations.Nullable;
 
 public class ItemPotionFix extends DataFix {
     private static final int SPLASH = 16384;
-    private static final @Nullable String[] POTIONS = DataFixUtils.make(new String[128], p_15997_ -> {
-        p_15997_[0] = "minecraft:water";
-        p_15997_[1] = "minecraft:regeneration";
-        p_15997_[2] = "minecraft:swiftness";
-        p_15997_[3] = "minecraft:fire_resistance";
-        p_15997_[4] = "minecraft:poison";
-        p_15997_[5] = "minecraft:healing";
-        p_15997_[6] = "minecraft:night_vision";
-        p_15997_[7] = null;
-        p_15997_[8] = "minecraft:weakness";
-        p_15997_[9] = "minecraft:strength";
-        p_15997_[10] = "minecraft:slowness";
-        p_15997_[11] = "minecraft:leaping";
-        p_15997_[12] = "minecraft:harming";
-        p_15997_[13] = "minecraft:water_breathing";
-        p_15997_[14] = "minecraft:invisibility";
-        p_15997_[15] = null;
-        p_15997_[16] = "minecraft:awkward";
-        p_15997_[17] = "minecraft:regeneration";
-        p_15997_[18] = "minecraft:swiftness";
-        p_15997_[19] = "minecraft:fire_resistance";
-        p_15997_[20] = "minecraft:poison";
-        p_15997_[21] = "minecraft:healing";
-        p_15997_[22] = "minecraft:night_vision";
-        p_15997_[23] = null;
-        p_15997_[24] = "minecraft:weakness";
-        p_15997_[25] = "minecraft:strength";
-        p_15997_[26] = "minecraft:slowness";
-        p_15997_[27] = "minecraft:leaping";
-        p_15997_[28] = "minecraft:harming";
-        p_15997_[29] = "minecraft:water_breathing";
-        p_15997_[30] = "minecraft:invisibility";
-        p_15997_[31] = null;
-        p_15997_[32] = "minecraft:thick";
-        p_15997_[33] = "minecraft:strong_regeneration";
-        p_15997_[34] = "minecraft:strong_swiftness";
-        p_15997_[35] = "minecraft:fire_resistance";
-        p_15997_[36] = "minecraft:strong_poison";
-        p_15997_[37] = "minecraft:strong_healing";
-        p_15997_[38] = "minecraft:night_vision";
-        p_15997_[39] = null;
-        p_15997_[40] = "minecraft:weakness";
-        p_15997_[41] = "minecraft:strong_strength";
-        p_15997_[42] = "minecraft:slowness";
-        p_15997_[43] = "minecraft:strong_leaping";
-        p_15997_[44] = "minecraft:strong_harming";
-        p_15997_[45] = "minecraft:water_breathing";
-        p_15997_[46] = "minecraft:invisibility";
-        p_15997_[47] = null;
-        p_15997_[48] = null;
-        p_15997_[49] = "minecraft:strong_regeneration";
-        p_15997_[50] = "minecraft:strong_swiftness";
-        p_15997_[51] = "minecraft:fire_resistance";
-        p_15997_[52] = "minecraft:strong_poison";
-        p_15997_[53] = "minecraft:strong_healing";
-        p_15997_[54] = "minecraft:night_vision";
-        p_15997_[55] = null;
-        p_15997_[56] = "minecraft:weakness";
-        p_15997_[57] = "minecraft:strong_strength";
-        p_15997_[58] = "minecraft:slowness";
-        p_15997_[59] = "minecraft:strong_leaping";
-        p_15997_[60] = "minecraft:strong_harming";
-        p_15997_[61] = "minecraft:water_breathing";
-        p_15997_[62] = "minecraft:invisibility";
-        p_15997_[63] = null;
-        p_15997_[64] = "minecraft:mundane";
-        p_15997_[65] = "minecraft:long_regeneration";
-        p_15997_[66] = "minecraft:long_swiftness";
-        p_15997_[67] = "minecraft:long_fire_resistance";
-        p_15997_[68] = "minecraft:long_poison";
-        p_15997_[69] = "minecraft:healing";
-        p_15997_[70] = "minecraft:long_night_vision";
-        p_15997_[71] = null;
-        p_15997_[72] = "minecraft:long_weakness";
-        p_15997_[73] = "minecraft:long_strength";
-        p_15997_[74] = "minecraft:long_slowness";
-        p_15997_[75] = "minecraft:long_leaping";
-        p_15997_[76] = "minecraft:harming";
-        p_15997_[77] = "minecraft:long_water_breathing";
-        p_15997_[78] = "minecraft:long_invisibility";
-        p_15997_[79] = null;
-        p_15997_[80] = "minecraft:awkward";
-        p_15997_[81] = "minecraft:long_regeneration";
-        p_15997_[82] = "minecraft:long_swiftness";
-        p_15997_[83] = "minecraft:long_fire_resistance";
-        p_15997_[84] = "minecraft:long_poison";
-        p_15997_[85] = "minecraft:healing";
-        p_15997_[86] = "minecraft:long_night_vision";
-        p_15997_[87] = null;
-        p_15997_[88] = "minecraft:long_weakness";
-        p_15997_[89] = "minecraft:long_strength";
-        p_15997_[90] = "minecraft:long_slowness";
-        p_15997_[91] = "minecraft:long_leaping";
-        p_15997_[92] = "minecraft:harming";
-        p_15997_[93] = "minecraft:long_water_breathing";
-        p_15997_[94] = "minecraft:long_invisibility";
-        p_15997_[95] = null;
-        p_15997_[96] = "minecraft:thick";
-        p_15997_[97] = "minecraft:regeneration";
-        p_15997_[98] = "minecraft:swiftness";
-        p_15997_[99] = "minecraft:long_fire_resistance";
-        p_15997_[100] = "minecraft:poison";
-        p_15997_[101] = "minecraft:strong_healing";
-        p_15997_[102] = "minecraft:long_night_vision";
-        p_15997_[103] = null;
-        p_15997_[104] = "minecraft:long_weakness";
-        p_15997_[105] = "minecraft:strength";
-        p_15997_[106] = "minecraft:long_slowness";
-        p_15997_[107] = "minecraft:leaping";
-        p_15997_[108] = "minecraft:strong_harming";
-        p_15997_[109] = "minecraft:long_water_breathing";
-        p_15997_[110] = "minecraft:long_invisibility";
-        p_15997_[111] = null;
-        p_15997_[112] = null;
-        p_15997_[113] = "minecraft:regeneration";
-        p_15997_[114] = "minecraft:swiftness";
-        p_15997_[115] = "minecraft:long_fire_resistance";
-        p_15997_[116] = "minecraft:poison";
-        p_15997_[117] = "minecraft:strong_healing";
-        p_15997_[118] = "minecraft:long_night_vision";
-        p_15997_[119] = null;
-        p_15997_[120] = "minecraft:long_weakness";
-        p_15997_[121] = "minecraft:strength";
-        p_15997_[122] = "minecraft:long_slowness";
-        p_15997_[123] = "minecraft:leaping";
-        p_15997_[124] = "minecraft:strong_harming";
-        p_15997_[125] = "minecraft:long_water_breathing";
-        p_15997_[126] = "minecraft:long_invisibility";
-        p_15997_[127] = null;
+    private static final @Nullable String[] POTIONS = DataFixUtils.make(new String[128], map -> {
+        map[0] = "minecraft:water";
+        map[1] = "minecraft:regeneration";
+        map[2] = "minecraft:swiftness";
+        map[3] = "minecraft:fire_resistance";
+        map[4] = "minecraft:poison";
+        map[5] = "minecraft:healing";
+        map[6] = "minecraft:night_vision";
+        map[7] = null;
+        map[8] = "minecraft:weakness";
+        map[9] = "minecraft:strength";
+        map[10] = "minecraft:slowness";
+        map[11] = "minecraft:leaping";
+        map[12] = "minecraft:harming";
+        map[13] = "minecraft:water_breathing";
+        map[14] = "minecraft:invisibility";
+        map[15] = null;
+        map[16] = "minecraft:awkward";
+        map[17] = "minecraft:regeneration";
+        map[18] = "minecraft:swiftness";
+        map[19] = "minecraft:fire_resistance";
+        map[20] = "minecraft:poison";
+        map[21] = "minecraft:healing";
+        map[22] = "minecraft:night_vision";
+        map[23] = null;
+        map[24] = "minecraft:weakness";
+        map[25] = "minecraft:strength";
+        map[26] = "minecraft:slowness";
+        map[27] = "minecraft:leaping";
+        map[28] = "minecraft:harming";
+        map[29] = "minecraft:water_breathing";
+        map[30] = "minecraft:invisibility";
+        map[31] = null;
+        map[32] = "minecraft:thick";
+        map[33] = "minecraft:strong_regeneration";
+        map[34] = "minecraft:strong_swiftness";
+        map[35] = "minecraft:fire_resistance";
+        map[36] = "minecraft:strong_poison";
+        map[37] = "minecraft:strong_healing";
+        map[38] = "minecraft:night_vision";
+        map[39] = null;
+        map[40] = "minecraft:weakness";
+        map[41] = "minecraft:strong_strength";
+        map[42] = "minecraft:slowness";
+        map[43] = "minecraft:strong_leaping";
+        map[44] = "minecraft:strong_harming";
+        map[45] = "minecraft:water_breathing";
+        map[46] = "minecraft:invisibility";
+        map[47] = null;
+        map[48] = null;
+        map[49] = "minecraft:strong_regeneration";
+        map[50] = "minecraft:strong_swiftness";
+        map[51] = "minecraft:fire_resistance";
+        map[52] = "minecraft:strong_poison";
+        map[53] = "minecraft:strong_healing";
+        map[54] = "minecraft:night_vision";
+        map[55] = null;
+        map[56] = "minecraft:weakness";
+        map[57] = "minecraft:strong_strength";
+        map[58] = "minecraft:slowness";
+        map[59] = "minecraft:strong_leaping";
+        map[60] = "minecraft:strong_harming";
+        map[61] = "minecraft:water_breathing";
+        map[62] = "minecraft:invisibility";
+        map[63] = null;
+        map[64] = "minecraft:mundane";
+        map[65] = "minecraft:long_regeneration";
+        map[66] = "minecraft:long_swiftness";
+        map[67] = "minecraft:long_fire_resistance";
+        map[68] = "minecraft:long_poison";
+        map[69] = "minecraft:healing";
+        map[70] = "minecraft:long_night_vision";
+        map[71] = null;
+        map[72] = "minecraft:long_weakness";
+        map[73] = "minecraft:long_strength";
+        map[74] = "minecraft:long_slowness";
+        map[75] = "minecraft:long_leaping";
+        map[76] = "minecraft:harming";
+        map[77] = "minecraft:long_water_breathing";
+        map[78] = "minecraft:long_invisibility";
+        map[79] = null;
+        map[80] = "minecraft:awkward";
+        map[81] = "minecraft:long_regeneration";
+        map[82] = "minecraft:long_swiftness";
+        map[83] = "minecraft:long_fire_resistance";
+        map[84] = "minecraft:long_poison";
+        map[85] = "minecraft:healing";
+        map[86] = "minecraft:long_night_vision";
+        map[87] = null;
+        map[88] = "minecraft:long_weakness";
+        map[89] = "minecraft:long_strength";
+        map[90] = "minecraft:long_slowness";
+        map[91] = "minecraft:long_leaping";
+        map[92] = "minecraft:harming";
+        map[93] = "minecraft:long_water_breathing";
+        map[94] = "minecraft:long_invisibility";
+        map[95] = null;
+        map[96] = "minecraft:thick";
+        map[97] = "minecraft:regeneration";
+        map[98] = "minecraft:swiftness";
+        map[99] = "minecraft:long_fire_resistance";
+        map[100] = "minecraft:poison";
+        map[101] = "minecraft:strong_healing";
+        map[102] = "minecraft:long_night_vision";
+        map[103] = null;
+        map[104] = "minecraft:long_weakness";
+        map[105] = "minecraft:strength";
+        map[106] = "minecraft:long_slowness";
+        map[107] = "minecraft:leaping";
+        map[108] = "minecraft:strong_harming";
+        map[109] = "minecraft:long_water_breathing";
+        map[110] = "minecraft:long_invisibility";
+        map[111] = null;
+        map[112] = null;
+        map[113] = "minecraft:regeneration";
+        map[114] = "minecraft:swiftness";
+        map[115] = "minecraft:long_fire_resistance";
+        map[116] = "minecraft:poison";
+        map[117] = "minecraft:strong_healing";
+        map[118] = "minecraft:long_night_vision";
+        map[119] = null;
+        map[120] = "minecraft:long_weakness";
+        map[121] = "minecraft:strength";
+        map[122] = "minecraft:long_slowness";
+        map[123] = "minecraft:leaping";
+        map[124] = "minecraft:strong_harming";
+        map[125] = "minecraft:long_water_breathing";
+        map[126] = "minecraft:long_invisibility";
+        map[127] = null;
     });
     public static final String DEFAULT = "minecraft:water";
 
-    public ItemPotionFix(Schema p_15990_, boolean p_15991_) {
-        super(p_15990_, p_15991_);
+    public ItemPotionFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("tag");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idFinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<?> tagFinder = itemStackType.findField("tag");
         return this.fixTypeEverywhereTyped(
             "ItemPotionFix",
-            type,
-            p_15995_ -> {
-                Optional<Pair<String, String>> optional = p_15995_.getOptional(opticfinder);
-                if (optional.isPresent() && Objects.equals(optional.get().getSecond(), "minecraft:potion")) {
-                    Dynamic<?> dynamic = p_15995_.get(DSL.remainderFinder());
-                    Optional<? extends Typed<?>> optional1 = p_15995_.getOptionalTyped(opticfinder1);
-                    short short1 = dynamic.get("Damage").asShort((short)0);
-                    if (optional1.isPresent()) {
-                        Typed<?> typed = p_15995_;
-                        Dynamic<?> dynamic1 = optional1.get().get(DSL.remainderFinder());
-                        Optional<String> optional2 = dynamic1.get("Potion").asString().result();
-                        if (optional2.isEmpty()) {
-                            String s = POTIONS[short1 & 127];
-                            Typed<?> typed1 = optional1.get()
-                                .set(DSL.remainderFinder(), dynamic1.set("Potion", dynamic1.createString(s == null ? "minecraft:water" : s)));
-                            typed = p_15995_.set(opticfinder1, typed1);
-                            if ((short1 & 16384) == 16384) {
-                                typed = typed.set(opticfinder, Pair.of(References.ITEM_NAME.typeName(), "minecraft:splash_potion"));
+            itemStackType,
+            input -> {
+                Optional<Pair<String, String>> id = input.getOptional(idFinder);
+                if (id.isPresent() && Objects.equals(id.get().getSecond(), "minecraft:potion")) {
+                    Dynamic<?> rest = input.get(DSL.remainderFinder());
+                    Optional<? extends Typed<?>> tag = input.getOptionalTyped(tagFinder);
+                    short damage = rest.get("Damage").asShort((short)0);
+                    if (tag.isPresent()) {
+                        Typed<?> output = input;
+                        Dynamic<?> tagRest = tag.get().get(DSL.remainderFinder());
+                        Optional<String> potion = tagRest.get("Potion").asString().result();
+                        if (potion.isEmpty()) {
+                            String potionName = POTIONS[damage & 127];
+                            Typed<?> newTag = tag.get()
+                                .set(DSL.remainderFinder(), tagRest.set("Potion", tagRest.createString(potionName == null ? "minecraft:water" : potionName)));
+                            output = output.set(tagFinder, newTag);
+                            if ((damage & 16384) == 16384) {
+                                output = output.set(idFinder, Pair.of(References.ITEM_NAME.typeName(), "minecraft:splash_potion"));
                             }
                         }
 
-                        if (short1 != 0) {
-                            dynamic = dynamic.set("Damage", dynamic.createShort((short)0));
+                        if (damage != 0) {
+                            rest = rest.set("Damage", rest.createShort((short)0));
                         }
 
-                        return typed.set(DSL.remainderFinder(), dynamic);
+                        return output.set(DSL.remainderFinder(), rest);
                     }
                 }
 
-                return p_15995_;
+                return input;
             }
         );
     }

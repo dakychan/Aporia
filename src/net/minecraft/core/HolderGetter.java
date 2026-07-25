@@ -6,37 +6,43 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 
 public interface HolderGetter<T> {
-    Optional<Holder.Reference<T>> get(ResourceKey<T> p_255645_);
+    Optional<Holder.Reference<T>> get(final ResourceKey<T> id);
 
-    default Holder.Reference<T> getOrThrow(ResourceKey<T> p_255990_) {
-        return this.get(p_255990_).orElseThrow(() -> new IllegalStateException("Missing element " + p_255990_));
+    default Holder.Reference<T> getOrThrow(final ResourceKey<T> id) {
+        return this.get(id).orElseThrow(() -> new IllegalStateException("Missing element " + id));
     }
 
-    Optional<HolderSet.Named<T>> get(TagKey<T> p_256283_);
+    Optional<HolderSet.Named<T>> get(final TagKey<T> id);
 
-    default HolderSet.Named<T> getOrThrow(TagKey<T> p_256125_) {
-        return this.get(p_256125_).orElseThrow(() -> new IllegalStateException("Missing tag " + p_256125_));
+    default HolderSet.Named<T> getOrThrow(final TagKey<T> id) {
+        return this.get(id).orElseThrow(() -> new IllegalStateException("Missing tag " + id));
     }
 
-    default Optional<Holder<T>> getRandomElementOf(TagKey<T> p_430702_, RandomSource p_422877_) {
-        return this.get(p_430702_).flatMap(p_421113_ -> p_421113_.getRandomElement(p_422877_));
+    default Optional<Holder<T>> getRandomElementOf(final TagKey<T> tag, final RandomSource random) {
+        return this.get(tag).flatMap(holderSet -> holderSet.getRandomElement(random));
     }
 
-    public interface Provider {
-        <T> Optional<? extends HolderGetter<T>> lookup(ResourceKey<? extends Registry<? extends T>> p_256648_);
+    interface Provider {
+        <T> Optional<? extends HolderGetter<T>> lookup(final ResourceKey<? extends Registry<? extends T>> key);
 
-        default <T> HolderGetter<T> lookupOrThrow(ResourceKey<? extends Registry<? extends T>> p_255881_) {
-            return (HolderGetter<T>)this.lookup(p_255881_).orElseThrow(() -> new IllegalStateException("Registry " + p_255881_.identifier() + " not found"));
+        default <T> HolderGetter<T> lookupOrThrow(final ResourceKey<? extends Registry<? extends T>> key) {
+            return (HolderGetter<T>)this.lookup(key).orElseThrow(() -> new IllegalStateException("Registry " + key.identifier() + " not found"));
         }
 
-        default <T> Optional<Holder.Reference<T>> get(ResourceKey<T> p_331697_) {
-            return this.lookup(p_331697_.registryKey()).flatMap(p_325667_ -> p_325667_.get(p_331697_));
+        default <T> Optional<Holder.Reference<T>> get(final ResourceKey<T> id) {
+            return this.lookup(id.registryKey()).flatMap(l -> l.get(id));
         }
 
-        default <T> Holder.Reference<T> getOrThrow(ResourceKey<T> p_393982_) {
-            return this.lookup(p_393982_.registryKey())
-                .flatMap(p_389657_ -> p_389657_.get(p_393982_))
-                .orElseThrow(() -> new IllegalStateException("Missing element " + p_393982_));
+        default <T> Holder.Reference<T> getOrThrow(final ResourceKey<T> id) {
+            return this.lookup(id.registryKey()).flatMap(l -> l.get(id)).orElseThrow(() -> new IllegalStateException("Missing element " + id));
+        }
+
+        default <T> Optional<HolderSet.Named<T>> get(final TagKey<T> id) {
+            return this.lookup(id.registry()).flatMap(l -> l.get(id));
+        }
+
+        default <T> HolderSet.Named<T> getOrThrow(final TagKey<T> id) {
+            return this.lookup(id.registry()).flatMap(l -> l.get(id)).orElseThrow(() -> new IllegalStateException("Missing tag " + id));
         }
     }
 }

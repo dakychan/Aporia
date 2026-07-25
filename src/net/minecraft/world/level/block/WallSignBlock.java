@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,9 +23,9 @@ import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public class WallSignBlock extends SignBlock {
+public class WallSignBlock extends SignBlock implements PlainSignBlock {
     public static final MapCodec<WallSignBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422137_ -> p_422137_.group(WoodType.CODEC.fieldOf("wood_type").forGetter(SignBlock::type), propertiesCodec()).apply(p_422137_, WallSignBlock::new)
+        i -> i.group(WoodType.CODEC.fieldOf("wood_type").forGetter(SignBlock::type), propertiesCodec()).apply(i, WallSignBlock::new)
     );
     public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     private static final Map<Direction, VoxelShape> SHAPES = Shapes.rotateHorizontal(Block.boxZ(16.0, 4.5, 12.5, 14.0, 16.0));
@@ -36,35 +35,35 @@ public class WallSignBlock extends SignBlock {
         return CODEC;
     }
 
-    public WallSignBlock(WoodType p_58069_, BlockBehaviour.Properties p_58068_) {
-        super(p_58069_, p_58068_.sound(p_58069_.soundType()));
+    public WallSignBlock(final WoodType type, final BlockBehaviour.Properties properties) {
+        super(type, properties.sound(type.soundType()));
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_58092_, BlockGetter p_58093_, BlockPos p_58094_, CollisionContext p_58095_) {
-        return SHAPES.get(p_58092_.getValue(FACING));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES.get(state.getValue(FACING));
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_58073_, LevelReader p_58074_, BlockPos p_58075_) {
-        return p_58074_.getBlockState(p_58075_.relative(p_58073_.getValue(FACING).getOpposite())).isSolid();
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return level.getBlockState(pos.relative(state.getValue(FACING).getOpposite())).isSolid();
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_58071_) {
-        BlockState blockstate = this.defaultBlockState();
-        FluidState fluidstate = p_58071_.getLevel().getFluidState(p_58071_.getClickedPos());
-        LevelReader levelreader = p_58071_.getLevel();
-        BlockPos blockpos = p_58071_.getClickedPos();
-        Direction[] adirection = p_58071_.getNearestLookingDirections();
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = this.defaultBlockState();
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        LevelReader level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        Direction[] directions = context.getNearestLookingDirections();
 
-        for (Direction direction : adirection) {
+        for (Direction direction : directions) {
             if (direction.getAxis().isHorizontal()) {
-                Direction direction1 = direction.getOpposite();
-                blockstate = blockstate.setValue(FACING, direction1);
-                if (blockstate.canSurvive(levelreader, blockpos)) {
-                    return blockstate.setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
+                Direction facing = direction.getOpposite();
+                state = state.setValue(FACING, facing);
+                if (state.canSurvive(level, pos)) {
+                    return state.setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
                 }
             }
         }
@@ -74,42 +73,47 @@ public class WallSignBlock extends SignBlock {
 
     @Override
     protected BlockState updateShape(
-        BlockState p_58083_,
-        LevelReader p_365394_,
-        ScheduledTickAccess p_361332_,
-        BlockPos p_58087_,
-        Direction p_58084_,
-        BlockPos p_58088_,
-        BlockState p_58085_,
-        RandomSource p_364074_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_58084_.getOpposite() == p_58083_.getValue(FACING) && !p_58083_.canSurvive(p_365394_, p_58087_)
+        return directionToNeighbour.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_58083_, p_365394_, p_361332_, p_58087_, p_58084_, p_58088_, p_58085_, p_364074_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public float getYRotationDegrees(BlockState p_278024_) {
-        return p_278024_.getValue(FACING).toYRot();
+    public float getYRotationDegrees(final BlockState state) {
+        return state.getValue(FACING).toYRot();
     }
 
     @Override
-    public Vec3 getSignHitboxCenterPosition(BlockState p_278316_) {
-        return SHAPES.get(p_278316_.getValue(FACING)).bounds().getCenter();
+    public Vec3 getSignHitboxCenterPosition(final BlockState state) {
+        return SHAPES.get(state.getValue(FACING)).bounds().getCenter();
     }
 
     @Override
-    protected BlockState rotate(BlockState p_58080_, Rotation p_58081_) {
-        return p_58080_.setValue(FACING, p_58081_.rotate(p_58080_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_58077_, Mirror p_58078_) {
-        return p_58077_.rotate(p_58078_.getRotation(p_58077_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_58090_) {
-        p_58090_.add(FACING, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, WATERLOGGED);
+    }
+
+    @Override
+    public PlainSignBlock.Attachment attachmentPoint(final BlockState state) {
+        return PlainSignBlock.Attachment.WALL;
     }
 }

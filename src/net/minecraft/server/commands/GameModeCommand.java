@@ -9,6 +9,7 @@ import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.commands.arguments.GameModeArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionCheck;
 import net.minecraft.server.permissions.Permissions;
@@ -18,61 +19,63 @@ import net.minecraft.world.level.gamerules.GameRules;
 public class GameModeCommand {
     public static final PermissionCheck PERMISSION_CHECK = new PermissionCheck.Require(Permissions.COMMANDS_GAMEMASTER);
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_137730_) {
-        p_137730_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("gamemode")
                 .requires(Commands.hasPermission(PERMISSION_CHECK))
                 .then(
                     Commands.argument("gamemode", GameModeArgument.gameMode())
-                        .executes(
-                            p_258228_ -> setMode(
-                                p_258228_, Collections.singleton(p_258228_.getSource().getPlayerOrException()), GameModeArgument.getGameMode(p_258228_, "gamemode")
-                            )
-                        )
+                        .executes(c -> setMode(c, Collections.singleton(c.getSource().getPlayerOrException()), GameModeArgument.getGameMode(c, "gamemode")))
                         .then(
                             Commands.argument("target", EntityArgument.players())
-                                .executes(
-                                    p_258229_ -> setMode(
-                                        p_258229_, EntityArgument.getPlayers(p_258229_, "target"), GameModeArgument.getGameMode(p_258229_, "gamemode")
-                                    )
-                                )
+                                .executes(c -> setMode(c, EntityArgument.getPlayers(c, "target"), GameModeArgument.getGameMode(c, "gamemode")))
                         )
                 )
         );
     }
 
-    private static void logGamemodeChange(CommandSourceStack p_137738_, ServerPlayer p_137739_, GameType p_137740_) {
-        Component component = Component.translatable("gameMode." + p_137740_.getName());
-        if (p_137738_.getEntity() == p_137739_) {
-            p_137738_.sendSuccess(() -> Component.translatable("commands.gamemode.success.self", component), true);
+    private static void logGamemodeChange(final CommandSourceStack source, final ServerPlayer target, final GameType newType) {
+        Component mode = Component.translatable("gameMode." + newType.getName());
+        if (source.getEntity() == target) {
+            source.sendSuccess(() -> Component.translatable("commands.gamemode.success.self", mode), true);
         } else {
-            if (p_137738_.getLevel().getGameRules().get(GameRules.SEND_COMMAND_FEEDBACK)) {
-                p_137739_.sendSystemMessage(Component.translatable("gameMode.changed", component));
+            if (source.getLevel().getGameRules().get(GameRules.SEND_COMMAND_FEEDBACK)) {
+                target.sendSystemMessage(Component.translatable("gameMode.changed", mode));
             }
 
-            p_137738_.sendSuccess(() -> Component.translatable("commands.gamemode.success.other", p_137739_.getDisplayName(), component), true);
+            source.sendSuccess(() -> Component.translatable("commands.gamemode.success.other", target.getDisplayName(), mode), true);
         }
     }
 
-    private static int setMode(CommandContext<CommandSourceStack> p_137732_, Collection<ServerPlayer> p_137733_, GameType p_137734_) {
-        int i = 0;
+    private static int setMode(final CommandContext<CommandSourceStack> context, final Collection<ServerPlayer> players, final GameType type) {
+        int count = 0;
+        MinecraftServer server = context.getSource().getServer();
 
-        for (ServerPlayer serverplayer : p_137733_) {
-            if (setGameMode(p_137732_.getSource(), serverplayer, p_137734_)) {
-                i++;
+        for (ServerPlayer player : players) {
+            if (server.isSingleplayerOwner(player.nameAndId())) {
+                server.setDefaultGameType(type);
+            }
+
+            if (setGameMode(context.getSource(), player, type)) {
+                count++;
             }
         }
 
-        return i;
+        return count;
     }
 
-    public static void setGameMode(ServerPlayer p_407866_, GameType p_407588_) {
-        setGameMode(p_407866_.createCommandSourceStack(), p_407866_, p_407588_);
+    public static void setGameMode(final ServerPlayer player, final GameType type) {
+        setGameMode(player.createCommandSourceStack(), player, type);
     }
 
-    private static boolean setGameMode(CommandSourceStack p_409618_, ServerPlayer p_409736_, GameType p_407947_) {
-        if (p_409736_.setGameMode(p_407947_)) {
-            logGamemodeChange(p_409618_, p_409736_, p_407947_);
+    private static boolean setGameMode(final CommandSourceStack source, final ServerPlayer player, final GameType type) {
+        if (player.setGameMode(type)) {
+            MinecraftServer server = source.getServer();
+            if (server.isSingleplayerOwner(player.nameAndId())) {
+                server.setDefaultGameType(type);
+            }
+
+            logGamemodeChange(source, player, type);
             return true;
         } else {
             return false;

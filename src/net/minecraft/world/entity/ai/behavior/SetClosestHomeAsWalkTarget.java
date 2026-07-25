@@ -3,17 +3,14 @@ package net.minecraft.world.entity.ai.behavior;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2LongMap.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
@@ -29,55 +26,55 @@ public class SetClosestHomeAsWalkTarget {
     private static final int RATE = 20;
     private static final int OK_DISTANCE_SQR = 4;
 
-    public static BehaviorControl<PathfinderMob> create(float p_259960_) {
-        Long2LongMap long2longmap = new Long2LongOpenHashMap();
-        MutableLong mutablelong = new MutableLong(0L);
+    public static BehaviorControl<PathfinderMob> create(final float speedModifier) {
+        Long2LongMap batchCache = new Long2LongOpenHashMap();
+        MutableLong lastUpdate = new MutableLong(0L);
         return BehaviorBuilder.create(
-            p_258633_ -> p_258633_.group(p_258633_.absent(MemoryModuleType.WALK_TARGET), p_258633_.absent(MemoryModuleType.HOME))
+            i -> i.group(i.absent(MemoryModuleType.WALK_TARGET), i.absent(MemoryModuleType.HOME))
                 .apply(
-                    p_258633_,
-                    (p_258626_, p_258627_) -> (p_421694_, p_421695_, p_421696_) -> {
-                        if (p_421694_.getGameTime() - mutablelong.longValue() < 20L) {
+                    i,
+                    (walkTarget, home) -> (level, body, timestamp) -> {
+                        if (level.getGameTime() - lastUpdate.longValue() < 20L) {
                             return false;
-                        } else {
-                            PoiManager poimanager = p_421694_.getPoiManager();
-                            Optional<BlockPos> optional = poimanager.findClosest(
-                                p_217376_ -> p_217376_.is(PoiTypes.HOME), p_421695_.blockPosition(), 48, PoiManager.Occupancy.ANY
-                            );
-                            if (!optional.isEmpty() && !(optional.get().distSqr(p_421695_.blockPosition()) <= 4.0)) {
-                                MutableInt mutableint = new MutableInt(0);
-                                mutablelong.setValue(p_421694_.getGameTime() + p_421694_.getRandom().nextInt(20));
-                                Predicate<BlockPos> predicate = p_449536_ -> {
-                                    long i = p_449536_.asLong();
-                                    if (long2longmap.containsKey(i)) {
-                                        return false;
-                                    } else if (mutableint.incrementAndGet() >= 5) {
-                                        return false;
-                                    } else {
-                                        long2longmap.put(i, mutablelong.longValue() + 40L);
-                                        return true;
-                                    }
-                                };
-                                Set<Pair<Holder<PoiType>, BlockPos>> set = poimanager.findAllWithType(
-                                        p_217372_ -> p_217372_.is(PoiTypes.HOME), predicate, p_421695_.blockPosition(), 48, PoiManager.Occupancy.ANY
-                                    )
-                                    .collect(Collectors.toSet());
-                                Path path = AcquirePoi.findPathToPois(p_421695_, set);
-                                if (path != null && path.canReach()) {
-                                    BlockPos blockpos = path.getTarget();
-                                    Optional<Holder<PoiType>> optional1 = poimanager.getType(blockpos);
-                                    if (optional1.isPresent()) {
-                                        p_258626_.set(new WalkTarget(blockpos, p_259960_, 1));
-                                        p_421694_.debugSynchronizers().updatePoi(blockpos);
-                                    }
-                                } else if (mutableint.intValue() < 5) {
-                                    long2longmap.long2LongEntrySet().removeIf(p_449538_ -> p_449538_.getLongValue() < mutablelong.longValue());
+                        }
+
+                        PoiManager poiManager = level.getPoiManager();
+                        Optional<BlockPos> closest = poiManager.findClosest(p -> p.is(PoiTypes.HOME), body.blockPosition(), 48, PoiManager.Occupancy.ANY);
+                        if (!closest.isEmpty() && !(closest.get().distSqr(body.blockPosition()) <= 4.0)) {
+                            MutableInt triedCount = new MutableInt(0);
+                            lastUpdate.setValue(level.getGameTime() + level.getRandom().nextInt(20));
+                            Predicate<BlockPos> cacheTest = pos -> {
+                                long key = pos.asLong();
+                                if (batchCache.containsKey(key)) {
+                                    return false;
                                 }
 
+                                if (triedCount.incrementAndGet() >= 5) {
+                                    return false;
+                                }
+
+                                batchCache.put(key, lastUpdate.longValue() + 40L);
                                 return true;
-                            } else {
-                                return false;
+                            };
+                            Set<Pair<Holder<PoiType>, BlockPos>> pois = poiManager.findAllWithType(
+                                    p -> p.is(PoiTypes.HOME), cacheTest, body.blockPosition(), 48, PoiManager.Occupancy.ANY
+                                )
+                                .collect(Collectors.toSet());
+                            Path path = AcquirePoi.findPathToPois(body, pois);
+                            if (path != null && path.canReach()) {
+                                BlockPos targetPos = path.getTarget();
+                                Optional<Holder<PoiType>> type = poiManager.getType(targetPos);
+                                if (type.isPresent()) {
+                                    walkTarget.set(new WalkTarget(targetPos, speedModifier, 1));
+                                    level.debugSynchronizers().updatePoi(targetPos);
+                                }
+                            } else if (triedCount.intValue() < 5) {
+                                batchCache.long2LongEntrySet().removeIf(entry -> entry.getLongValue() < lastUpdate.longValue());
                             }
+
+                            return true;
+                        } else {
+                            return false;
                         }
                     }
                 )

@@ -12,7 +12,7 @@ import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import net.minecraft.advancements.criterion.MinMaxBounds;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -23,16 +23,19 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.RandomSequence;
 import net.minecraft.world.RandomSequences;
 import org.jspecify.annotations.Nullable;
 
 public class RandomCommand {
-    private static final SimpleCommandExceptionType ERROR_RANGE_TOO_LARGE = new SimpleCommandExceptionType(Component.translatable("commands.random.error.range_too_large"));
-    private static final SimpleCommandExceptionType ERROR_RANGE_TOO_SMALL = new SimpleCommandExceptionType(Component.translatable("commands.random.error.range_too_small"));
+    private static final SimpleCommandExceptionType ERROR_RANGE_TOO_LARGE = new SimpleCommandExceptionType(
+        Component.translatable("commands.random.error.range_too_large")
+    );
+    private static final SimpleCommandExceptionType ERROR_RANGE_TOO_SMALL = new SimpleCommandExceptionType(
+        Component.translatable("commands.random.error.range_too_small")
+    );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_300897_) {
-        p_300897_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("random")
                 .then(drawRandomValueTree("value", false))
                 .then(drawRandomValueTree("roll", true))
@@ -41,28 +44,28 @@ public class RandomCommand {
                         .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                         .then(
                             Commands.literal("*")
-                                .executes(p_300657_ -> resetAllSequences(p_300657_.getSource()))
+                                .executes(c -> resetAllSequences(c.getSource()))
                                 .then(
                                     Commands.argument("seed", IntegerArgumentType.integer())
-                                        .executes(p_300850_ -> resetAllSequencesAndSetNewDefaults(p_300850_.getSource(), IntegerArgumentType.getInteger(p_300850_, "seed"), true, true))
+                                        .executes(c -> resetAllSequencesAndSetNewDefaults(c.getSource(), IntegerArgumentType.getInteger(c, "seed"), true, true))
                                         .then(
                                             Commands.argument("includeWorldSeed", BoolArgumentType.bool())
                                                 .executes(
-                                                    p_299490_ -> resetAllSequencesAndSetNewDefaults(
-                                                        p_299490_.getSource(),
-                                                        IntegerArgumentType.getInteger(p_299490_, "seed"),
-                                                        BoolArgumentType.getBool(p_299490_, "includeWorldSeed"),
+                                                    c -> resetAllSequencesAndSetNewDefaults(
+                                                        c.getSource(),
+                                                        IntegerArgumentType.getInteger(c, "seed"),
+                                                        BoolArgumentType.getBool(c, "includeWorldSeed"),
                                                         true
                                                     )
                                                 )
                                                 .then(
                                                     Commands.argument("includeSequenceId", BoolArgumentType.bool())
                                                         .executes(
-                                                            p_299589_ -> resetAllSequencesAndSetNewDefaults(
-                                                                p_299589_.getSource(),
-                                                                IntegerArgumentType.getInteger(p_299589_, "seed"),
-                                                                BoolArgumentType.getBool(p_299589_, "includeWorldSeed"),
-                                                                BoolArgumentType.getBool(p_299589_, "includeSequenceId")
+                                                            c -> resetAllSequencesAndSetNewDefaults(
+                                                                c.getSource(),
+                                                                IntegerArgumentType.getInteger(c, "seed"),
+                                                                BoolArgumentType.getBool(c, "includeWorldSeed"),
+                                                                BoolArgumentType.getBool(c, "includeSequenceId")
                                                             )
                                                         )
                                                 )
@@ -72,38 +75,34 @@ public class RandomCommand {
                         .then(
                             Commands.argument("sequence", IdentifierArgument.id())
                                 .suggests(RandomCommand::suggestRandomSequence)
-                                .executes(p_449013_ -> resetSequence(p_449013_.getSource(), IdentifierArgument.getId(p_449013_, "sequence")))
+                                .executes(c -> resetSequence(c.getSource(), IdentifierArgument.getId(c, "sequence")))
                                 .then(
                                     Commands.argument("seed", IntegerArgumentType.integer())
                                         .executes(
-                                            p_449012_ -> resetSequence(
-                                                p_449012_.getSource(),
-                                                IdentifierArgument.getId(p_449012_, "sequence"),
-                                                IntegerArgumentType.getInteger(p_449012_, "seed"),
-                                                true,
-                                                true
+                                            c -> resetSequence(
+                                                c.getSource(), IdentifierArgument.getId(c, "sequence"), IntegerArgumentType.getInteger(c, "seed"), true, true
                                             )
                                         )
                                         .then(
                                             Commands.argument("includeWorldSeed", BoolArgumentType.bool())
                                                 .executes(
-                                                    p_449009_ -> resetSequence(
-                                                        p_449009_.getSource(),
-                                                        IdentifierArgument.getId(p_449009_, "sequence"),
-                                                        IntegerArgumentType.getInteger(p_449009_, "seed"),
-                                                        BoolArgumentType.getBool(p_449009_, "includeWorldSeed"),
+                                                    c -> resetSequence(
+                                                        c.getSource(),
+                                                        IdentifierArgument.getId(c, "sequence"),
+                                                        IntegerArgumentType.getInteger(c, "seed"),
+                                                        BoolArgumentType.getBool(c, "includeWorldSeed"),
                                                         true
                                                     )
                                                 )
                                                 .then(
                                                     Commands.argument("includeSequenceId", BoolArgumentType.bool())
                                                         .executes(
-                                                            p_449014_ -> resetSequence(
-                                                                p_449014_.getSource(),
-                                                                IdentifierArgument.getId(p_449014_, "sequence"),
-                                                                IntegerArgumentType.getInteger(p_449014_, "seed"),
-                                                                BoolArgumentType.getBool(p_449014_, "includeWorldSeed"),
-                                                                BoolArgumentType.getBool(p_449014_, "includeSequenceId")
+                                                            c -> resetSequence(
+                                                                c.getSource(),
+                                                                IdentifierArgument.getId(c, "sequence"),
+                                                                IntegerArgumentType.getInteger(c, "seed"),
+                                                                BoolArgumentType.getBool(c, "includeWorldSeed"),
+                                                                BoolArgumentType.getBool(c, "includeSequenceId")
                                                             )
                                                         )
                                                 )
@@ -114,85 +113,88 @@ public class RandomCommand {
         );
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> drawRandomValueTree(String p_299144_, boolean p_298789_) {
-        return Commands.literal(p_299144_)
+    private static LiteralArgumentBuilder<CommandSourceStack> drawRandomValueTree(final String name, final boolean announce) {
+        return Commands.literal(name)
             .then(
                 Commands.argument("range", RangeArgument.intRange())
-                    .executes(p_449011_ -> randomSample(p_449011_.getSource(), RangeArgument.Ints.getRange(p_449011_, "range"), null, p_298789_))
+                    .executes(c -> randomSample(c.getSource(), RangeArgument.Ints.getRange(c, "range"), null, announce))
                     .then(
                         Commands.argument("sequence", IdentifierArgument.id())
                             .suggests(RandomCommand::suggestRandomSequence)
                             .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                             .executes(
-                                p_449016_ -> randomSample(
-                                    p_449016_.getSource(),
-                                    RangeArgument.Ints.getRange(p_449016_, "range"),
-                                    IdentifierArgument.getId(p_449016_, "sequence"),
-                                    p_298789_
-                                )
+                                c -> randomSample(c.getSource(), RangeArgument.Ints.getRange(c, "range"), IdentifierArgument.getId(c, "sequence"), announce)
                             )
                     )
             );
     }
 
-    private static CompletableFuture<Suggestions> suggestRandomSequence(CommandContext<CommandSourceStack> p_297521_, SuggestionsBuilder p_299165_) {
-        List<String> list = Lists.newArrayList();
-        p_297521_.getSource().getLevel().getRandomSequences().forAllSequences((p_449019_, p_449020_) -> list.add(p_449019_.toString()));
-        return SharedSuggestionProvider.suggest(list, p_299165_);
+    private static CompletableFuture<Suggestions> suggestRandomSequence(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder) {
+        List<String> result = Lists.newArrayList();
+        context.getSource().getServer().getRandomSequences().forAllSequences((key, sequence) -> result.add(key.toString()));
+        return SharedSuggestionProvider.suggest(result, builder);
     }
 
-    private static int randomSample(CommandSourceStack p_299745_, MinMaxBounds.Ints p_455001_, @Nullable Identifier p_453629_, boolean p_298006_) throws CommandSyntaxException {
-        RandomSource randomsource;
-        if (p_453629_ != null) {
-            randomsource = p_299745_.getLevel().getRandomSequence(p_453629_);
+    private static int randomSample(final CommandSourceStack source, final MinMaxBounds.Ints range, final @Nullable Identifier sequence, final boolean announce) throws CommandSyntaxException {
+        RandomSource random;
+        if (sequence != null) {
+            random = source.getServer().getRandomSequence(sequence);
         } else {
-            randomsource = p_299745_.getLevel().getRandom();
+            random = source.getLevel().getRandom();
         }
 
-        int i = p_455001_.min().orElse(Integer.MIN_VALUE);
-        int j = p_455001_.max().orElse(Integer.MAX_VALUE);
-        long k = (long)j - i;
-        if (k == 0L) {
+        int min = range.min().orElse(Integer.MIN_VALUE);
+        int max = range.max().orElse(Integer.MAX_VALUE);
+        long span = (long)max - min;
+        if (span == 0L) {
             throw ERROR_RANGE_TOO_SMALL.create();
-        } else if (k >= 2147483647L) {
-            throw ERROR_RANGE_TOO_LARGE.create();
-        } else {
-            int l = Mth.randomBetweenInclusive(randomsource, i, j);
-            if (p_298006_) {
-                p_299745_.getServer().getPlayerList().broadcastSystemMessage(Component.translatable("commands.random.roll", p_299745_.getDisplayName(), l, i, j), false);
-            } else {
-                p_299745_.sendSuccess(() -> Component.translatable("commands.random.sample.success", l), false);
-            }
-
-            return l;
         }
+
+        if (span >= 2147483647L) {
+            throw ERROR_RANGE_TOO_LARGE.create();
+        }
+
+        int value = Mth.randomBetweenInclusive(random, min, max);
+        if (announce) {
+            source.getServer()
+                .getPlayerList()
+                .broadcastSystemMessage(Component.translatable("commands.random.roll", source.getDisplayName(), value, min, max), false);
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.random.sample.success", value), false);
+        }
+
+        return value;
     }
 
-    private static int resetSequence(CommandSourceStack p_300119_, Identifier p_456774_) throws CommandSyntaxException {
-        ServerLevel serverlevel = p_300119_.getLevel();
-        serverlevel.getRandomSequences().reset(p_456774_, serverlevel.getSeed());
-        p_300119_.sendSuccess(() -> Component.translatable("commands.random.reset.success", Component.translationArg(p_456774_)), false);
+    private static int resetSequence(final CommandSourceStack source, final Identifier sequence) throws CommandSyntaxException {
+        ServerLevel level = source.getLevel();
+        source.getServer().getRandomSequences().reset(sequence, level.getSeed());
+        source.sendSuccess(() -> Component.translatable("commands.random.reset.success", Component.translationArg(sequence)), false);
         return 1;
     }
 
-    private static int resetSequence(CommandSourceStack p_298149_, Identifier p_453504_, int p_300974_, boolean p_298057_, boolean p_300002_) throws CommandSyntaxException {
-        ServerLevel serverlevel = p_298149_.getLevel();
-        serverlevel.getRandomSequences().reset(p_453504_, serverlevel.getSeed(), p_300974_, p_298057_, p_300002_);
-        p_298149_.sendSuccess(() -> Component.translatable("commands.random.reset.success", Component.translationArg(p_453504_)), false);
+    private static int resetSequence(
+        final CommandSourceStack source, final Identifier sequence, final int salt, final boolean includeWorldSeed, final boolean includeSequenceId
+    ) throws CommandSyntaxException {
+        ServerLevel level = source.getLevel();
+        source.getServer().getRandomSequences().reset(sequence, level.getSeed(), salt, includeWorldSeed, includeSequenceId);
+        source.sendSuccess(() -> Component.translatable("commands.random.reset.success", Component.translationArg(sequence)), false);
         return 1;
     }
 
-    private static int resetAllSequences(CommandSourceStack p_299139_) {
-        int i = p_299139_.getLevel().getRandomSequences().clear();
-        p_299139_.sendSuccess(() -> Component.translatable("commands.random.reset.all.success", i), false);
-        return i;
+    private static int resetAllSequences(final CommandSourceStack source) {
+        int count = source.getServer().getRandomSequences().clear();
+        source.sendSuccess(() -> Component.translatable("commands.random.reset.all.success", count), false);
+        return count;
     }
 
-    private static int resetAllSequencesAndSetNewDefaults(CommandSourceStack p_299873_, int p_300494_, boolean p_300184_, boolean p_297446_) {
-        RandomSequences randomsequences = p_299873_.getLevel().getRandomSequences();
-        randomsequences.setSeedDefaults(p_300494_, p_300184_, p_297446_);
-        int i = randomsequences.clear();
-        p_299873_.sendSuccess(() -> Component.translatable("commands.random.reset.all.success", i), false);
-        return i;
+    private static int resetAllSequencesAndSetNewDefaults(
+        final CommandSourceStack source, final int salt, final boolean includeWorldSeed, final boolean includeSequenceId
+    ) {
+        RandomSequences randomSequences = source.getServer().getRandomSequences();
+        randomSequences.setSeedDefaults(salt, includeWorldSeed, includeSequenceId);
+        int count = randomSequences.clear();
+        source.sendSuccess(() -> Component.translatable("commands.random.reset.all.success", count), false);
+        return count;
     }
 }

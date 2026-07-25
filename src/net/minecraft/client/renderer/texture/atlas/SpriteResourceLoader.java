@@ -16,61 +16,58 @@ import net.minecraft.server.packs.metadata.MetadataSectionType;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceMetadata;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
 public interface SpriteResourceLoader {
     Logger LOGGER = LogUtils.getLogger();
 
-    static SpriteResourceLoader create(Set<MetadataSectionType<?>> p_423718_) {
-        return (p_448404_, p_448405_) -> {
-            Optional<AnimationMetadataSection> optional;
-            Optional<TextureMetadataSection> optional1;
-            List<MetadataSectionType.WithValue<?>> list;
+    static SpriteResourceLoader create(final Set<MetadataSectionType<?>> additionalMetadataSections) {
+        return (spriteLocation, resource) -> {
+            Optional<AnimationMetadataSection> animationInfo;
+            Optional<TextureMetadataSection> textureInfo;
+            List<MetadataSectionType.WithValue<?>> additionalMetadata;
             try {
-                ResourceMetadata resourcemetadata = p_448405_.metadata();
-                optional = resourcemetadata.getSection(AnimationMetadataSection.TYPE);
-                optional1 = resourcemetadata.getSection(TextureMetadataSection.TYPE);
-                list = resourcemetadata.getTypedSections(p_423718_);
-            } catch (Exception exception) {
-                LOGGER.error("Unable to parse metadata from {}", p_448404_, exception);
+                ResourceMetadata metadata = resource.metadata();
+                animationInfo = metadata.getSection(AnimationMetadataSection.TYPE);
+                textureInfo = metadata.getSection(TextureMetadataSection.TYPE);
+                additionalMetadata = metadata.getTypedSections(additionalMetadataSections);
+            } catch (Exception e) {
+                LOGGER.error("Unable to parse metadata from {}", spriteLocation, e);
                 return null;
             }
 
-            NativeImage nativeimage;
-            try (InputStream inputstream = p_448405_.open()) {
-                nativeimage = NativeImage.read(inputstream);
-            } catch (IOException ioexception) {
-                LOGGER.error("Using missing texture, unable to load {}", p_448404_, ioexception);
+            NativeImage image;
+            try (InputStream is = resource.open()) {
+                image = NativeImage.read(is);
+            } catch (IOException e) {
+                LOGGER.error("Using missing texture, unable to load {}", spriteLocation, e);
                 return null;
             }
 
-            FrameSize framesize;
-            if (optional.isPresent()) {
-                framesize = optional.get().calculateFrameSize(nativeimage.getWidth(), nativeimage.getHeight());
-                if (!Mth.isMultipleOf(nativeimage.getWidth(), framesize.width()) || !Mth.isMultipleOf(nativeimage.getHeight(), framesize.height())) {
+            FrameSize frameSize;
+            if (animationInfo.isPresent()) {
+                frameSize = animationInfo.get().calculateFrameSize(image.getWidth(), image.getHeight());
+                if (!Mth.isMultipleOf(image.getWidth(), frameSize.width()) || !Mth.isMultipleOf(image.getHeight(), frameSize.height())) {
                     LOGGER.error(
                         "Image {} size {},{} is not multiple of frame size {},{}",
-                        p_448404_,
-                        nativeimage.getWidth(),
-                        nativeimage.getHeight(),
-                        framesize.width(),
-                        framesize.height()
+                        spriteLocation,
+                        image.getWidth(),
+                        image.getHeight(),
+                        frameSize.width(),
+                        frameSize.height()
                     );
-                    nativeimage.close();
+                    image.close();
                     return null;
                 }
             } else {
-                framesize = new FrameSize(nativeimage.getWidth(), nativeimage.getHeight());
+                frameSize = new FrameSize(image.getWidth(), image.getHeight());
             }
 
-            return new SpriteContents(p_448404_, framesize, nativeimage, optional, list, optional1);
+            return new SpriteContents(spriteLocation, frameSize, image, animationInfo, additionalMetadata, textureInfo);
         };
     }
 
-    @Nullable SpriteContents loadSprite(Identifier p_459843_, Resource p_298142_);
+    @Nullable SpriteContents loadSprite(Identifier spriteLocation, Resource resource);
 }

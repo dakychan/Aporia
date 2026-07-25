@@ -8,8 +8,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.client.data.models.ItemModelGenerators;
-import net.minecraft.client.renderer.MaterialMapper;
 import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.SpriteMapper;
 import net.minecraft.client.renderer.blockentity.BellRenderer;
 import net.minecraft.client.renderer.blockentity.ConduitRenderer;
 import net.minecraft.client.renderer.blockentity.EnchantTableRenderer;
@@ -19,8 +19,7 @@ import net.minecraft.client.renderer.texture.atlas.sources.DirectoryLister;
 import net.minecraft.client.renderer.texture.atlas.sources.PalettedPermutations;
 import net.minecraft.client.renderer.texture.atlas.sources.SingleFile;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -30,14 +29,11 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.equipment.trim.MaterialAssetGroup;
 import net.minecraft.world.item.equipment.trim.TrimPattern;
 import net.minecraft.world.item.equipment.trim.TrimPatterns;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class AtlasProvider implements DataProvider {
     private static final Identifier TRIM_PALETTE_KEY = Identifier.withDefaultNamespace("trims/color_palettes/trim_palette");
     private static final Map<String, Identifier> TRIM_PALETTE_VALUES = extractAllMaterialAssets()
-        .collect(Collectors.toMap(MaterialAssetGroup.AssetInfo::suffix, p_447864_ -> Identifier.withDefaultNamespace("trims/color_palettes/" + p_447864_.suffix())));
+        .collect(Collectors.toMap(MaterialAssetGroup.AssetInfo::suffix, asset -> Identifier.withDefaultNamespace("trims/color_palettes/" + asset.suffix())));
     private static final List<ResourceKey<TrimPattern>> VANILLA_PATTERNS = List.of(
         TrimPatterns.SENTRY,
         TrimPatterns.DUNE,
@@ -63,45 +59,45 @@ public class AtlasProvider implements DataProvider {
     );
     private final PackOutput.PathProvider pathProvider;
 
-    public AtlasProvider(PackOutput p_391466_) {
-        this.pathProvider = p_391466_.createPathProvider(PackOutput.Target.RESOURCE_PACK, "atlases");
+    public AtlasProvider(final PackOutput output) {
+        this.pathProvider = output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "atlases");
     }
 
     private static List<Identifier> patternTextures() {
-        List<Identifier> list = new ArrayList<>(VANILLA_PATTERNS.size() * HUMANOID_LAYERS.size());
+        List<Identifier> result = new ArrayList<>(VANILLA_PATTERNS.size() * HUMANOID_LAYERS.size());
 
-        for (ResourceKey<TrimPattern> resourcekey : VANILLA_PATTERNS) {
-            Identifier identifier = TrimPatterns.defaultAssetId(resourcekey);
+        for (ResourceKey<TrimPattern> vanillaPattern : VANILLA_PATTERNS) {
+            Identifier assetId = TrimPatterns.defaultAssetId(vanillaPattern);
 
-            for (EquipmentClientInfo.LayerType equipmentclientinfo$layertype : HUMANOID_LAYERS) {
-                list.add(identifier.withPath(p_392927_ -> equipmentclientinfo$layertype.trimAssetPrefix() + "/" + p_392927_));
+            for (EquipmentClientInfo.LayerType humanoidLayer : HUMANOID_LAYERS) {
+                result.add(assetId.withPath(patternPath -> humanoidLayer.trimAssetPrefix() + "/" + patternPath));
             }
         }
 
-        return list;
+        return result;
     }
 
-    private static SpriteSource forMaterial(Material p_394734_) {
-        return new SingleFile(p_394734_.texture());
+    private static SpriteSource forMaterial(final SpriteId sprite) {
+        return new SingleFile(sprite.texture());
     }
 
-    private static SpriteSource forMapper(MaterialMapper p_392705_) {
-        return new DirectoryLister(p_392705_.prefix(), p_392705_.prefix() + "/");
+    private static SpriteSource forMapper(final SpriteMapper mapper) {
+        return new DirectoryLister(mapper.prefix(), mapper.prefix() + "/");
     }
 
-    private static List<SpriteSource> simpleMapper(MaterialMapper p_395587_) {
-        return List.of(forMapper(p_395587_));
+    private static List<SpriteSource> simpleMapper(final SpriteMapper mapper) {
+        return List.of(forMapper(mapper));
     }
 
-    private static List<SpriteSource> noPrefixMapper(String p_397331_) {
-        return List.of(new DirectoryLister(p_397331_, ""));
+    private static List<SpriteSource> noPrefixMapper(final String directory) {
+        return List.of(new DirectoryLister(directory, ""));
     }
 
     private static Stream<MaterialAssetGroup.AssetInfo> extractAllMaterialAssets() {
         return ItemModelGenerators.TRIM_MATERIAL_MODELS
             .stream()
             .map(ItemModelGenerators.TrimMaterialData::assets)
-            .flatMap(p_392441_ -> Stream.concat(Stream.of(p_392441_.base()), p_392441_.overrides().values().stream()))
+            .flatMap(asset -> Stream.concat(Stream.of(asset.base()), asset.overrides().values().stream()))
             .sorted(Comparator.comparing(MaterialAssetGroup.AssetInfo::suffix));
     }
 
@@ -111,7 +107,10 @@ public class AtlasProvider implements DataProvider {
 
     private static List<SpriteSource> blocksList() {
         return List.of(
-            forMapper(Sheets.BLOCKS_MAPPER), forMapper(ConduitRenderer.MAPPER), forMaterial(BellRenderer.BELL_TEXTURE), forMaterial(EnchantTableRenderer.BOOK_TEXTURE)
+            forMapper(Sheets.BLOCKS_MAPPER),
+            forMapper(ConduitRenderer.MAPPER),
+            forMaterial(BellRenderer.BELL_TEXTURE),
+            forMaterial(EnchantTableRenderer.BOOK_TEXTURE)
         );
     }
 
@@ -119,7 +118,12 @@ public class AtlasProvider implements DataProvider {
         return List.of(
             forMapper(Sheets.ITEMS_MAPPER),
             new PalettedPermutations(
-                List.of(ItemModelGenerators.TRIM_PREFIX_HELMET, ItemModelGenerators.TRIM_PREFIX_CHESTPLATE, ItemModelGenerators.TRIM_PREFIX_LEGGINGS, ItemModelGenerators.TRIM_PREFIX_BOOTS),
+                List.of(
+                    ItemModelGenerators.TRIM_PREFIX_HELMET,
+                    ItemModelGenerators.TRIM_PREFIX_CHESTPLATE,
+                    ItemModelGenerators.TRIM_PREFIX_LEGGINGS,
+                    ItemModelGenerators.TRIM_PREFIX_BOOTS
+                ),
                 TRIM_PALETTE_KEY,
                 TRIM_PALETTE_VALUES
             )
@@ -127,11 +131,11 @@ public class AtlasProvider implements DataProvider {
     }
 
     private static List<SpriteSource> bannerPatterns() {
-        return List.of(forMaterial(ModelBakery.BANNER_BASE), forMapper(Sheets.BANNER_MAPPER));
+        return List.of(forMapper(Sheets.BANNER_MAPPER));
     }
 
     private static List<SpriteSource> shieldPatterns() {
-        return List.of(forMaterial(ModelBakery.SHIELD_BASE), forMaterial(ModelBakery.NO_PATTERN_SHIELD), forMapper(Sheets.SHIELD_MAPPER));
+        return List.of(forMapper(Sheets.SHIELD_MAPPER));
     }
 
     private static List<SpriteSource> guiSprites() {
@@ -139,28 +143,26 @@ public class AtlasProvider implements DataProvider {
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_396582_) {
+    public CompletableFuture<?> run(final CachedOutput cache) {
         return CompletableFuture.allOf(
-            this.storeAtlas(p_396582_, AtlasIds.ARMOR_TRIMS, armorTrims()),
-            this.storeAtlas(p_396582_, AtlasIds.BANNER_PATTERNS, bannerPatterns()),
-            this.storeAtlas(p_396582_, AtlasIds.BEDS, simpleMapper(Sheets.BED_MAPPER)),
-            this.storeAtlas(p_396582_, AtlasIds.BLOCKS, blocksList()),
-            this.storeAtlas(p_396582_, AtlasIds.ITEMS, itemsList()),
-            this.storeAtlas(p_396582_, AtlasIds.CHESTS, simpleMapper(Sheets.CHEST_MAPPER)),
-            this.storeAtlas(p_396582_, AtlasIds.DECORATED_POT, simpleMapper(Sheets.DECORATED_POT_MAPPER)),
-            this.storeAtlas(p_396582_, AtlasIds.GUI, guiSprites()),
-            this.storeAtlas(p_396582_, AtlasIds.MAP_DECORATIONS, noPrefixMapper("map/decorations")),
-            this.storeAtlas(p_396582_, AtlasIds.PAINTINGS, noPrefixMapper("painting")),
-            this.storeAtlas(p_396582_, AtlasIds.PARTICLES, noPrefixMapper("particle")),
-            this.storeAtlas(p_396582_, AtlasIds.SHIELD_PATTERNS, shieldPatterns()),
-            this.storeAtlas(p_396582_, AtlasIds.SHULKER_BOXES, simpleMapper(Sheets.SHULKER_MAPPER)),
-            this.storeAtlas(p_396582_, AtlasIds.SIGNS, simpleMapper(Sheets.SIGN_MAPPER)),
-            this.storeAtlas(p_396582_, AtlasIds.CELESTIALS, noPrefixMapper("environment/celestial"))
+            this.storeAtlas(cache, AtlasIds.ARMOR_TRIMS, armorTrims()),
+            this.storeAtlas(cache, AtlasIds.BANNER_PATTERNS, bannerPatterns()),
+            this.storeAtlas(cache, AtlasIds.BLOCKS, blocksList()),
+            this.storeAtlas(cache, AtlasIds.ITEMS, itemsList()),
+            this.storeAtlas(cache, AtlasIds.CHESTS, simpleMapper(Sheets.CHEST_MAPPER)),
+            this.storeAtlas(cache, AtlasIds.DECORATED_POT, simpleMapper(Sheets.DECORATED_POT_MAPPER)),
+            this.storeAtlas(cache, AtlasIds.GUI, guiSprites()),
+            this.storeAtlas(cache, AtlasIds.MAP_DECORATIONS, noPrefixMapper("map/decorations")),
+            this.storeAtlas(cache, AtlasIds.PAINTINGS, noPrefixMapper("painting")),
+            this.storeAtlas(cache, AtlasIds.PARTICLES, noPrefixMapper("particle")),
+            this.storeAtlas(cache, AtlasIds.SHIELD_PATTERNS, shieldPatterns()),
+            this.storeAtlas(cache, AtlasIds.SHULKER_BOXES, simpleMapper(Sheets.SHULKER_MAPPER)),
+            this.storeAtlas(cache, AtlasIds.CELESTIALS, noPrefixMapper("environment/celestial"))
         );
     }
 
-    private CompletableFuture<?> storeAtlas(CachedOutput p_392737_, Identifier p_450690_, List<SpriteSource> p_393361_) {
-        return DataProvider.saveStable(p_392737_, SpriteSources.FILE_CODEC, p_393361_, this.pathProvider.json(p_450690_));
+    private CompletableFuture<?> storeAtlas(final CachedOutput cache, final Identifier atlasId, final List<SpriteSource> contents) {
+        return DataProvider.saveStable(cache, SpriteSources.FILE_CODEC, contents, this.pathProvider.json(atlasId));
     }
 
     @Override

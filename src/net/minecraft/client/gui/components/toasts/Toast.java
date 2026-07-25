@@ -1,17 +1,14 @@
 package net.minecraft.client.gui.components.toasts;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface Toast {
     Object NO_TOKEN = new Object();
     int DEFAULT_WIDTH = 160;
@@ -19,24 +16,24 @@ public interface Toast {
 
     Toast.Visibility getWantedVisibility();
 
-    void update(ToastManager p_369172_, long p_365500_);
+    void update(final ToastManager manager, final long fullyVisibleForMs);
 
     default @Nullable SoundEvent getSoundEvent() {
         return null;
     }
 
-    void render(GuiGraphics p_361731_, Font p_363216_, long p_366222_);
+    void extractRenderState(final GuiGraphicsExtractor graphics, final Font font, final long fullyVisibleForMs);
 
     default Object getToken() {
         return NO_TOKEN;
     }
 
-    default float xPos(int p_408043_, float p_408621_) {
-        return p_408043_ - this.width() * p_408621_;
+    default float xPos(final int screenWidth, final float visiblePortion) {
+        return screenWidth - this.width() * visiblePortion;
     }
 
-    default float yPos(int p_406321_) {
-        return p_406321_ * this.height();
+    default float yPos(final int firstSlotIndex) {
+        return firstSlotIndex * this.height();
     }
 
     default int width() {
@@ -54,19 +51,18 @@ public interface Toast {
     default void onFinishedRendering() {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Visibility {
+        enum Visibility {
         SHOW(SoundEvents.UI_TOAST_IN),
         HIDE(SoundEvents.UI_TOAST_OUT);
 
         private final SoundEvent soundEvent;
 
-        private Visibility(final SoundEvent p_94908_) {
-            this.soundEvent = p_94908_;
+        Visibility(final SoundEvent soundEvent) {
+            this.soundEvent = soundEvent;
         }
 
-        public void playSound(SoundManager p_94910_) {
-            p_94910_.play(SimpleSoundInstance.forUI(this.soundEvent, 1.0F, 1.0F));
+        public void playSound(final SoundManager manager) {
+            manager.play(SimpleSoundInstance.forUI(this.soundEvent, 1.0F, 1.0F));
         }
     }
 }

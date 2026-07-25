@@ -7,52 +7,52 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public record TracingExecutor(ExecutorService service) implements Executor {
-    public Executor forName(String p_364709_) {
+    public Executor forName(final String name) {
         if (SharedConstants.IS_RUNNING_IN_IDE) {
-            return p_369604_ -> this.service.execute(() -> {
+            return command -> this.service.execute(() -> {
                 Thread thread = Thread.currentThread();
-                String s = thread.getName();
-                thread.setName(p_364709_);
+                String oldName = thread.getName();
+                thread.setName(name);
 
-                try (Zone zone = TracyClient.beginZone(p_364709_, SharedConstants.IS_RUNNING_IN_IDE)) {
-                    p_369604_.run();
+                try (Zone ignored = TracyClient.beginZone(name, SharedConstants.IS_RUNNING_IN_IDE)) {
+                    command.run();
                 } finally {
-                    thread.setName(s);
+                    thread.setName(oldName);
                 }
             });
         } else {
-            return (TracyClient.isAvailable() ? p_366279_ -> this.service.execute(() -> {
-                try (Zone zone = TracyClient.beginZone(p_364709_, SharedConstants.IS_RUNNING_IN_IDE)) {
-                    p_366279_.run();
+            return TracyClient.isAvailable() ? command -> this.service.execute(() -> {
+                try (Zone ignored = TracyClient.beginZone(name, SharedConstants.IS_RUNNING_IN_IDE)) {
+                    command.run();
                 }
-            }) : this.service);
+            }) : this.service;
         }
     }
 
     @Override
-    public void execute(Runnable p_362236_) {
-        this.service.execute(wrapUnnamed(p_362236_));
+    public void execute(final Runnable command) {
+        this.service.execute(wrapUnnamed(command));
     }
 
-    public void shutdownAndAwait(long p_367055_, TimeUnit p_369186_) {
+    public void shutdownAndAwait(final long timeout, final TimeUnit unit) {
         this.service.shutdown();
 
-        boolean flag;
+        boolean terminated;
         try {
-            flag = this.service.awaitTermination(p_367055_, p_369186_);
-        } catch (InterruptedException interruptedexception) {
-            flag = false;
+            terminated = this.service.awaitTermination(timeout, unit);
+        } catch (InterruptedException e) {
+            terminated = false;
         }
 
-        if (!flag) {
+        if (!terminated) {
             this.service.shutdownNow();
         }
     }
 
-    private static Runnable wrapUnnamed(Runnable p_362176_) {
-        return !TracyClient.isAvailable() ? p_362176_ : () -> {
-            try (Zone zone = TracyClient.beginZone("task", SharedConstants.IS_RUNNING_IN_IDE)) {
-                p_362176_.run();
+    private static Runnable wrapUnnamed(final Runnable command) {
+        return !TracyClient.isAvailable() ? command : () -> {
+            try (Zone ignored = TracyClient.beginZone("task", SharedConstants.IS_RUNNING_IN_IDE)) {
+                command.run();
             }
         };
     }

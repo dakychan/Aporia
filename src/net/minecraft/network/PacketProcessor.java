@@ -10,25 +10,25 @@ import net.minecraft.network.protocol.PacketUtils;
 import org.slf4j.Logger;
 
 public class PacketProcessor implements AutoCloseable {
-    static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private final Queue<PacketProcessor.ListenerAndPacket<?>> packetsToBeHandled = Queues.newConcurrentLinkedQueue();
     private final Thread runningThread;
     private boolean closed;
 
-    public PacketProcessor(Thread p_424861_) {
-        this.runningThread = p_424861_;
+    public PacketProcessor(final Thread runningThread) {
+        this.runningThread = runningThread;
     }
 
     public boolean isSameThread() {
         return Thread.currentThread() == this.runningThread;
     }
 
-    public <T extends PacketListener> void scheduleIfPossible(T p_424232_, Packet<T> p_423178_) {
+    public <T extends PacketListener> void scheduleIfPossible(final T listener, final Packet<T> packet) {
         if (this.closed) {
             throw new RejectedExecutionException("Server already shutting down");
-        } else {
-            this.packetsToBeHandled.add(new PacketProcessor.ListenerAndPacket<>(p_424232_, p_423178_));
         }
+
+        this.packetsToBeHandled.add(new PacketProcessor.ListenerAndPacket<>(listener, packet));
     }
 
     public void processQueuedPackets() {
@@ -44,17 +44,17 @@ public class PacketProcessor implements AutoCloseable {
         this.closed = true;
     }
 
-    record ListenerAndPacket<T extends PacketListener>(T listener, Packet<T> packet) {
+    private record ListenerAndPacket<T extends PacketListener>(T listener, Packet<T> packet) {
         public void handle() {
             if (this.listener.shouldHandleMessage(this.packet)) {
                 try {
                     this.packet.handle(this.listener);
-                } catch (Exception exception) {
-                    if (exception instanceof ReportedException reportedexception && reportedexception.getCause() instanceof OutOfMemoryError) {
-                        throw PacketUtils.makeReportedException(exception, this.packet, this.listener);
+                } catch (Exception e) {
+                    if (e instanceof ReportedException re && re.getCause() instanceof OutOfMemoryError) {
+                        throw PacketUtils.makeReportedException(e, this.packet, this.listener);
                     }
 
-                    this.listener.onPacketError(this.packet, exception);
+                    this.listener.onPacketError(this.packet, e);
                 }
             } else {
                 PacketProcessor.LOGGER.debug("Ignoring packet due to disconnection: {}", this.packet);

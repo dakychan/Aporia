@@ -19,17 +19,17 @@ public class EmptyFluid extends Fluid {
     }
 
     @Override
-    public boolean canBeReplacedWith(FluidState p_75930_, BlockGetter p_75931_, BlockPos p_75932_, Fluid p_75933_, Direction p_75934_) {
+    public boolean canBeReplacedWith(final FluidState state, final BlockGetter level, final BlockPos pos, final Fluid other, final Direction direction) {
         return true;
     }
 
     @Override
-    public Vec3 getFlow(BlockGetter p_75918_, BlockPos p_75919_, FluidState p_75920_) {
+    public Vec3 getFlow(final BlockGetter level, final BlockPos pos, final FluidState fluidState) {
         return Vec3.ZERO;
     }
 
     @Override
-    public int getTickDelay(LevelReader p_75922_) {
+    public int getTickDelay(final LevelReader level) {
         return 0;
     }
 
@@ -44,32 +44,32 @@ public class EmptyFluid extends Fluid {
     }
 
     @Override
-    public float getHeight(FluidState p_75926_, BlockGetter p_75927_, BlockPos p_75928_) {
+    public float getHeight(final FluidState fluidState, final BlockGetter level, final BlockPos pos) {
         return 0.0F;
     }
 
     @Override
-    public float getOwnHeight(FluidState p_75924_) {
+    public float getOwnHeight(final FluidState fluidState) {
         return 0.0F;
     }
 
     @Override
-    protected BlockState createLegacyBlock(FluidState p_75937_) {
+    protected BlockState createLegacyBlock(final FluidState fluidState) {
         return Blocks.AIR.defaultBlockState();
     }
 
     @Override
-    public boolean isSource(FluidState p_75944_) {
+    public boolean isSource(final FluidState fluidState) {
         return false;
     }
 
     @Override
-    public int getAmount(FluidState p_75946_) {
+    public int getAmount(final FluidState fluidState) {
         return 0;
     }
 
     @Override
-    public VoxelShape getShape(FluidState p_75939_, BlockGetter p_75940_, BlockPos p_75941_) {
+    public VoxelShape getShape(final FluidState state, final BlockGetter level, final BlockPos pos) {
         return Shapes.empty();
     }
 }

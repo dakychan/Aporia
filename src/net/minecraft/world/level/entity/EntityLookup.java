@@ -16,10 +16,10 @@ public class EntityLookup<T extends EntityAccess> {
     private final Int2ObjectMap<T> byId = new Int2ObjectLinkedOpenHashMap<>();
     private final Map<UUID, T> byUuid = Maps.newHashMap();
 
-    public <U extends T> void getEntities(EntityTypeTest<T, U> p_261575_, AbortableIterationConsumer<U> p_261925_) {
-        for (T t : this.byId.values()) {
-            U u = (U)p_261575_.tryCast(t);
-            if (u != null && p_261925_.accept(u).shouldAbort()) {
+    public <U extends T> void getEntities(final EntityTypeTest<T, U> type, final AbortableIterationConsumer<U> consumer) {
+        for (T entity : this.byId.values()) {
+            U maybeEntity = (U)type.tryCast(entity);
+            if (maybeEntity != null && consumer.accept(maybeEntity).shouldAbort()) {
                 return;
             }
         }
@@ -29,27 +29,27 @@ public class EntityLookup<T extends EntityAccess> {
         return Iterables.unmodifiableIterable(this.byId.values());
     }
 
-    public void add(T p_156815_) {
-        UUID uuid = p_156815_.getUUID();
+    public void add(final T entity) {
+        UUID uuid = entity.getUUID();
         if (this.byUuid.containsKey(uuid)) {
-            LOGGER.warn("Duplicate entity UUID {}: {}", uuid, p_156815_);
+            LOGGER.warn("Duplicate entity UUID {}: {}", uuid, entity);
         } else {
-            this.byUuid.put(uuid, p_156815_);
-            this.byId.put(p_156815_.getId(), p_156815_);
+            this.byUuid.put(uuid, entity);
+            this.byId.put(entity.getId(), entity);
         }
     }
 
-    public void remove(T p_156823_) {
-        this.byUuid.remove(p_156823_.getUUID());
-        this.byId.remove(p_156823_.getId());
+    public void remove(final T entity) {
+        this.byUuid.remove(entity.getUUID());
+        this.byId.remove(entity.getId());
     }
 
-    public @Nullable T getEntity(int p_156813_) {
-        return this.byId.get(p_156813_);
+    public @Nullable T getEntity(final int id) {
+        return this.byId.get(id);
     }
 
-    public @Nullable T getEntity(UUID p_156820_) {
-        return this.byUuid.get(p_156820_);
+    public @Nullable T getEntity(final UUID id) {
+        return this.byUuid.get(id);
     }
 
     public int count() {

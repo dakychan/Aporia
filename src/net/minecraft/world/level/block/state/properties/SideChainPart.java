@@ -10,8 +10,8 @@ public enum SideChainPart implements StringRepresentable {
 
     private final String name;
 
-    private SideChainPart(final String p_424443_) {
-        this.name = p_424443_;
+    SideChainPart(final String name) {
+        this.name = name;
     }
 
     @Override
@@ -28,8 +28,8 @@ public enum SideChainPart implements StringRepresentable {
         return this != UNCONNECTED;
     }
 
-    public boolean isConnectionTowards(SideChainPart p_427898_) {
-        return this == CENTER || this == p_427898_;
+    public boolean isConnectionTowards(final SideChainPart endPart) {
+        return this == CENTER || this == endPart;
     }
 
     public boolean isChainEnd() {

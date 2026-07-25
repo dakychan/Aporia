@@ -11,25 +11,21 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.DefaultUncaughtExceptionHandler;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class LanServerDetection {
-    static final AtomicInteger UNIQUE_THREAD_ID = new AtomicInteger(0);
-    static final Logger LOGGER = LogUtils.getLogger();
+    private static final AtomicInteger UNIQUE_THREAD_ID = new AtomicInteger(0);
+    private static final Logger LOGGER = LogUtils.getLogger();
 
-    @OnlyIn(Dist.CLIENT)
-    public static class LanServerDetector extends Thread {
+        public static class LanServerDetector extends Thread {
         private final LanServerDetection.LanServerList serverList;
         private final InetAddress pingGroup;
         private final MulticastSocket socket;
 
-        public LanServerDetector(LanServerDetection.LanServerList p_120090_) throws IOException {
+        public LanServerDetector(final LanServerDetection.LanServerList serverList) throws IOException {
             super("LanServerDetector #" + LanServerDetection.UNIQUE_THREAD_ID.incrementAndGet());
-            this.serverList = p_120090_;
+            this.serverList = serverList;
             this.setDaemon(true);
             this.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LanServerDetection.LOGGER));
             this.socket = new MulticastSocket(4445);
@@ -40,66 +36,65 @@ public class LanServerDetection {
 
         @Override
         public void run() {
-            byte[] abyte = new byte[1024];
+            byte[] buf = new byte[1024];
 
             while (!this.isInterrupted()) {
-                DatagramPacket datagrampacket = new DatagramPacket(abyte, abyte.length);
+                DatagramPacket packet = new DatagramPacket(buf, buf.length);
 
                 try {
-                    this.socket.receive(datagrampacket);
-                } catch (SocketTimeoutException sockettimeoutexception) {
+                    this.socket.receive(packet);
+                } catch (SocketTimeoutException ignored) {
                     continue;
-                } catch (IOException ioexception1) {
-                    LanServerDetection.LOGGER.error("Couldn't ping server", (Throwable)ioexception1);
+                } catch (IOException e) {
+                    LanServerDetection.LOGGER.error("Couldn't ping server", e);
                     break;
                 }
 
-                String s = new String(datagrampacket.getData(), datagrampacket.getOffset(), datagrampacket.getLength(), StandardCharsets.UTF_8);
-                LanServerDetection.LOGGER.debug("{}: {}", datagrampacket.getAddress(), s);
-                this.serverList.addServer(s, datagrampacket.getAddress());
+                String received = new String(packet.getData(), packet.getOffset(), packet.getLength(), StandardCharsets.UTF_8);
+                LanServerDetection.LOGGER.debug("{}: {}", packet.getAddress(), received);
+                this.serverList.addServer(received, packet.getAddress());
             }
 
             try {
                 this.socket.leaveGroup(this.pingGroup);
-            } catch (IOException ioexception) {
+            } catch (IOException var4) {
             }
 
             this.socket.close();
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class LanServerList {
+        public static class LanServerList {
         private final List<LanServer> servers = Lists.newArrayList();
         private boolean isDirty;
 
         public synchronized @Nullable List<LanServer> takeDirtyServers() {
             if (this.isDirty) {
-                List<LanServer> list = List.copyOf(this.servers);
+                List<LanServer> newServers = List.copyOf(this.servers);
                 this.isDirty = false;
-                return list;
+                return newServers;
             } else {
                 return null;
             }
         }
 
-        public synchronized void addServer(String p_120097_, InetAddress p_120098_) {
-            String s = LanServerPinger.parseMotd(p_120097_);
-            String s1 = LanServerPinger.parseAddress(p_120097_);
-            if (s1 != null) {
-                s1 = p_120098_.getHostAddress() + ":" + s1;
-                boolean flag = false;
+        public synchronized void addServer(final String pingData, final InetAddress socketAddress) {
+            String motd = LanServerPinger.parseMotd(pingData);
+            String address = LanServerPinger.parseAddress(pingData);
+            if (address != null) {
+                address = socketAddress.getHostAddress() + ":" + address;
+                boolean found = false;
 
-                for (LanServer lanserver : this.servers) {
-                    if (lanserver.getAddress().equals(s1)) {
-                        lanserver.updatePingTime();
-                        flag = true;
+                for (LanServer server : this.servers) {
+                    if (server.getAddress().equals(address)) {
+                        server.updatePingTime();
+                        found = true;
                         break;
                     }
                 }
 
-                if (!flag) {
-                    this.servers.add(new LanServer(s, s1));
+                if (!found) {
+                    this.servers.add(new LanServer(motd, address));
                     this.isDirty = true;
                 }
             }

@@ -17,8 +17,8 @@ public class ServerboundConfigurationAcknowledgedPacket implements Packet<Server
         return GamePacketTypes.SERVERBOUND_CONFIGURATION_ACKNOWLEDGED;
     }
 
-    public void handle(ServerGamePacketListener p_297365_) {
-        p_297365_.handleConfigurationAcknowledged(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleConfigurationAcknowledged(this);
     }
 
     @Override

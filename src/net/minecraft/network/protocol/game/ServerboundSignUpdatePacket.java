@@ -15,28 +15,30 @@ public class ServerboundSignUpdatePacket implements Packet<ServerGamePacketListe
     private final String[] lines;
     private final boolean isFrontText;
 
-    public ServerboundSignUpdatePacket(BlockPos p_277902_, boolean p_277750_, String p_278086_, String p_277504_, String p_277814_, String p_277726_) {
-        this.pos = p_277902_;
-        this.isFrontText = p_277750_;
-        this.lines = new String[]{p_278086_, p_277504_, p_277814_, p_277726_};
+    public ServerboundSignUpdatePacket(
+        final BlockPos pos, final boolean isFrontText, final String line0, final String line1, final String line2, final String line3
+    ) {
+        this.pos = pos;
+        this.isFrontText = isFrontText;
+        this.lines = new String[]{line0, line1, line2, line3};
     }
 
-    private ServerboundSignUpdatePacket(FriendlyByteBuf p_179790_) {
-        this.pos = p_179790_.readBlockPos();
-        this.isFrontText = p_179790_.readBoolean();
+    private ServerboundSignUpdatePacket(final FriendlyByteBuf input) {
+        this.pos = input.readBlockPos();
+        this.isFrontText = input.readBoolean();
         this.lines = new String[4];
 
         for (int i = 0; i < 4; i++) {
-            this.lines[i] = p_179790_.readUtf(384);
+            this.lines[i] = input.readUtf(384);
         }
     }
 
-    private void write(FriendlyByteBuf p_134662_) {
-        p_134662_.writeBlockPos(this.pos);
-        p_134662_.writeBoolean(this.isFrontText);
+    private void write(final FriendlyByteBuf output) {
+        output.writeBlockPos(this.pos);
+        output.writeBoolean(this.isFrontText);
 
         for (int i = 0; i < 4; i++) {
-            p_134662_.writeUtf(this.lines[i]);
+            output.writeUtf(this.lines[i]);
         }
     }
 
@@ -45,8 +47,8 @@ public class ServerboundSignUpdatePacket implements Packet<ServerGamePacketListe
         return GamePacketTypes.SERVERBOUND_SIGN_UPDATE;
     }
 
-    public void handle(ServerGamePacketListener p_134659_) {
-        p_134659_.handleSignUpdate(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSignUpdate(this);
     }
 
     public BlockPos getPos() {

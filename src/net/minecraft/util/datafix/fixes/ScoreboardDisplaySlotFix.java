@@ -6,11 +6,8 @@ import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
-import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Dynamic;
 import java.util.Map;
 import org.jspecify.annotations.Nullable;
 
@@ -37,32 +34,30 @@ public class ScoreboardDisplaySlotFix extends DataFix {
         .put("slot_18", "sidebar.team.white")
         .build();
 
-    public ScoreboardDisplaySlotFix(Schema p_300624_) {
-        super(p_300624_, false);
+    public ScoreboardDisplaySlotFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
-    private static @Nullable String rename(String p_297960_) {
-        return SLOT_RENAMES.get(p_297960_);
+    private static @Nullable String rename(final String key) {
+        return SLOT_RENAMES.get(key);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.SAVED_DATA_SCOREBOARD);
-        OpticFinder<?> opticfinder = type.findField("data");
+        Type<?> scoreboardType = this.getInputSchema().getType(References.SAVED_DATA_SCOREBOARD);
+        OpticFinder<?> rootTagFinder = scoreboardType.findField("data");
         return this.fixTypeEverywhereTyped(
             "Scoreboard DisplaySlot rename",
-            type,
-            p_299538_ -> p_299538_.updateTyped(
-                opticfinder,
-                p_297443_ -> p_297443_.update(
+            scoreboardType,
+            input -> input.updateTyped(
+                rootTagFinder,
+                scoreboardInfo -> scoreboardInfo.update(
                     DSL.remainderFinder(),
-                    p_298932_ -> p_298932_.update(
+                    tag -> tag.update(
                         "DisplaySlots",
-                        p_299419_ -> p_299419_.updateMapValues(
-                            p_298934_ -> p_298934_.mapFirst(
-                                p_326643_ -> DataFixUtils.orElse(
-                                    p_326643_.asString().result().map(ScoreboardDisplaySlotFix::rename).map(p_326643_::createString), p_326643_
-                                )
+                        slots -> slots.updateMapValues(
+                            pair -> pair.mapFirst(
+                                key -> DataFixUtils.orElse(key.asString().result().map(ScoreboardDisplaySlotFix::rename).map(key::createString), key)
                             )
                         )
                     )

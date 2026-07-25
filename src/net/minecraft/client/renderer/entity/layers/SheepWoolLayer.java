@@ -12,41 +12,49 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.SheepRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SheepWoolLayer extends RenderLayer<SheepRenderState, SheepModel> {
     private static final Identifier SHEEP_WOOL_LOCATION = Identifier.withDefaultNamespace("textures/entity/sheep/sheep_wool.png");
+    private static final Identifier BABY_SHEEP_WOOL_LOCATION = Identifier.withDefaultNamespace("textures/entity/sheep/sheep_wool_baby.png");
     private final EntityModel<SheepRenderState> adultModel;
     private final EntityModel<SheepRenderState> babyModel;
 
-    public SheepWoolLayer(RenderLayerParent<SheepRenderState, SheepModel> p_367510_, EntityModelSet p_367850_) {
-        super(p_367510_);
-        this.adultModel = new SheepFurModel(p_367850_.bakeLayer(ModelLayers.SHEEP_WOOL));
-        this.babyModel = new SheepFurModel(p_367850_.bakeLayer(ModelLayers.SHEEP_BABY_WOOL));
+    public SheepWoolLayer(final RenderLayerParent<SheepRenderState, SheepModel> renderer, final EntityModelSet modelSet) {
+        super(renderer);
+        this.adultModel = new SheepFurModel(modelSet.bakeLayer(ModelLayers.SHEEP_WOOL));
+        this.babyModel = new SheepFurModel(modelSet.bakeLayer(ModelLayers.SHEEP_BABY_WOOL));
     }
 
-    public void submit(PoseStack p_422890_, SubmitNodeCollector p_429220_, int p_428346_, SheepRenderState p_431415_, float p_425421_, float p_426527_) {
-        if (!p_431415_.isSheared) {
-            EntityModel<SheepRenderState> entitymodel = p_431415_.isBaby ? this.babyModel : this.adultModel;
-            if (p_431415_.isInvisible) {
-                if (p_431415_.appearsGlowing()) {
-                    p_429220_.submitModel(
-                        entitymodel,
-                        p_431415_,
-                        p_422890_,
-                        RenderTypes.outline(SHEEP_WOOL_LOCATION),
-                        p_428346_,
-                        LivingEntityRenderer.getOverlayCoords(p_431415_, 0.0F),
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final SheepRenderState state,
+        final float yRot,
+        final float xRot
+    ) {
+        if (!state.isSheared) {
+            EntityModel<SheepRenderState> model = state.isBaby ? this.babyModel : this.adultModel;
+            Identifier location = state.isBaby ? BABY_SHEEP_WOOL_LOCATION : SHEEP_WOOL_LOCATION;
+            if (state.isInvisible) {
+                if (state.appearsGlowing()) {
+                    submitNodeCollector.submitModel(
+                        model,
+                        state,
+                        poseStack,
+                        RenderTypes.outline(location),
+                        lightCoords,
+                        LivingEntityRenderer.getOverlayCoords(state, 0.0F),
                         -16777216,
                         null,
-                        p_431415_.outlineColor,
+                        state.outlineColor,
                         null
                     );
                 }
             } else {
-                coloredCutoutModelCopyLayerRender(entitymodel, SHEEP_WOOL_LOCATION, p_422890_, p_429220_, p_428346_, p_431415_, p_431415_.getWoolColor(), 0);
+                coloredCutoutModelCopyLayerRender(
+                    model, location, poseStack, submitNodeCollector, lightCoords, state, state.getWoolColor(), state.isBaby ? 1 : 0
+                );
             }
         }
     }

@@ -3,49 +3,58 @@ package net.minecraft.client.gui.screens;
 import aporia.cc.PanicSystem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.screens.multiplayer.RestrictionsScreen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.multiplayer.chat.ChatAbilities;
 import net.minecraft.client.multiplayer.chat.ChatListener;
 import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import so.aporia.utils.user.command.CommandManager;
 
-@OnlyIn(Dist.CLIENT)
 public class ChatScreen extends Screen {
     public static final double MOUSE_SCROLL_SPEED = 7.0;
     private static final Component USAGE_TEXT = Component.translatable("chat_screen.usage");
+    private static final Component RESTRICTED_NARRATION_TEXT = Component.translatable("chat_screen.restricted.narration");
+    public static final int USAGE_BACKGROUND_COLOR = -805306368;
+    private final boolean closeOnSubmit;
     private String historyBuffer = "";
-    protected int historyPos = -1;
+    private int historyPos = -1;
     protected EditBox input;
     protected String initial;
     protected boolean isDraft;
+    private ChatComponent.DisplayMode displayMode = ChatComponent.DisplayMode.FOREGROUND;
     protected ChatScreen.ExitReason exitReason = ChatScreen.ExitReason.INTERRUPTED;
-    protected CommandSuggestions commandSuggestions;
+    private CommandSuggestions commandSuggestions;
 
-    public ChatScreen(String p_95579_, boolean p_430033_) {
+    public ChatScreen(final String initial, final boolean isDraft) {
+        this(initial, isDraft, true);
+    }
+
+    public ChatScreen(final String initial, final boolean isDraft, final boolean closeOnSubmit) {
         super(Component.translatable("chat_screen.title"));
-        this.initial = p_95579_;
-        this.isDraft = p_430033_;
+        this.closeOnSubmit = closeOnSubmit;
+        this.initial = initial;
+        this.isDraft = isDraft;
     }
 
     @Override
     protected void init() {
-        this.historyPos = this.minecraft.gui.getChat().getRecentChat().size();
+        this.historyPos = this.minecraft.gui.hud.getChat().getRecentChat().size();
         this.input = new EditBox(this.minecraft.fontFilterFishy, 4, this.height - 12, this.width - 4, 12, Component.translatable("chat.editBox")) {
             @Override
             protected MutableComponent createNarrationMessage() {
@@ -62,6 +71,9 @@ public class ChatScreen extends Screen {
         this.commandSuggestions = new CommandSuggestions(this.minecraft, this, this.input, this.font, false, false, 1, 10, true, -805306368);
         this.commandSuggestions.setAllowHiding(false);
         this.commandSuggestions.setAllowSuggestions(false);
+        ChatAbilities chatAbilities = this.minecraft.player.chatAbilities();
+        this.displayMode = chatAbilities.hasAnyRestrictions() ? ChatComponent.DisplayMode.FOREGROUND_RESTRICTED : ChatComponent.DisplayMode.FOREGROUND;
+        this.commandSuggestions.setRestrictions(chatAbilities.canSendMessages(), chatAbilities.canSendCommands());
         this.commandSuggestions.updateCommandInfo();
     }
 
@@ -71,9 +83,9 @@ public class ChatScreen extends Screen {
     }
 
     @Override
-    public void resize(int p_95601_, int p_95602_) {
+    public void resize(final int width, final int height) {
         this.initial = this.input.getValue();
-        this.init(p_95601_, p_95602_);
+        this.init(width, height);
     }
 
     @Override
@@ -84,12 +96,12 @@ public class ChatScreen extends Screen {
 
     @Override
     public void removed() {
-        this.minecraft.gui.getChat().resetChatScroll();
+        this.minecraft.gui.hud.getChat().resetChatScroll();
         this.initial = this.input.getValue();
         if (this.shouldDiscardDraft() || StringUtils.isBlank(this.initial)) {
-            this.minecraft.gui.getChat().discardDraft();
+            this.minecraft.gui.hud.getChat().discardDraft();
         } else if (!this.isDraft) {
-            this.minecraft.gui.getChat().saveAsDraft(this.initial);
+            this.minecraft.gui.hud.getChat().saveAsDraft(this.initial);
         }
     }
 
@@ -98,29 +110,45 @@ public class ChatScreen extends Screen {
             && (this.exitReason != ChatScreen.ExitReason.INTENTIONAL || !this.minecraft.options.saveChatDrafts().get());
     }
 
-    private void onEdited(String p_95611_) {
+    private void onEdited(final String value) {
         this.commandSuggestions.setAllowSuggestions(true);
         this.commandSuggestions.updateCommandInfo();
         this.isDraft = false;
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_426273_) {
-        if (this.commandSuggestions.keyPressed(p_426273_)) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (this.commandSuggestions.keyPressed(event)) {
             return true;
-        } else if (this.isDraft && p_426273_.key() == 259) {
+        }
+
+        if (this.isDraft && event.key() == 259) {
             this.input.setValue("");
             this.isDraft = false;
             return true;
-        } else if (super.keyPressed(p_426273_)) {
+        }
+
+        if (super.keyPressed(event)) {
             return true;
-        } else if (p_426273_.isConfirmation()) {
+        }
+
+        if (event.isConfirmation()) {
+            if (!this.commandSuggestions.hasAllowedInput()) {
+                return true;
+            }
+
             this.handleChatInput(this.input.getValue(), true);
-            this.exitReason = ChatScreen.ExitReason.DONE;
-            this.minecraft.setScreen(null);
+            if (this.closeOnSubmit) {
+                this.exitReason = ChatScreen.ExitReason.DONE;
+                this.minecraft.gui.setScreen(null);
+            } else {
+                this.input.setValue("");
+                this.minecraft.gui.hud.getChat().resetChatScroll();
+            }
+
             return true;
         } else {
-            switch (p_426273_.key()) {
+            switch (event.key()) {
                 case 264:
                     this.moveInHistory(1);
                     break;
@@ -128,10 +156,10 @@ public class ChatScreen extends Screen {
                     this.moveInHistory(-1);
                     break;
                 case 266:
-                    this.minecraft.gui.getChat().scrollChat(this.minecraft.gui.getChat().getLinesPerPage() - 1);
+                    this.minecraft.gui.hud.getChat().scrollChat(this.minecraft.gui.hud.getChat().getLinesPerPage() - 1);
                     break;
                 case 267:
-                    this.minecraft.gui.getChat().scrollChat(-this.minecraft.gui.getChat().getLinesPerPage() + 1);
+                    this.minecraft.gui.hud.getChat().scrollChat(-this.minecraft.gui.hud.getChat().getLinesPerPage() + 1);
                     break;
                 default:
                     return false;
@@ -142,61 +170,64 @@ public class ChatScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double p_95581_, double p_95582_, double p_95583_, double p_300876_) {
-        p_300876_ = Mth.clamp(p_300876_, -1.0, 1.0);
-        if (this.commandSuggestions.mouseScrolled(p_300876_)) {
-            return true;
-        } else {
-            if (!this.minecraft.hasShiftDown()) {
-                p_300876_ *= 7.0;
-            }
-
-            this.minecraft.gui.getChat().scrollChat((int)p_300876_);
+    public boolean mouseScrolled(final double x, final double y, final double scrollX, double scrollY) {
+        scrollY = Mth.clamp(scrollY, -1.0, 1.0);
+        if (this.commandSuggestions.mouseScrolled(scrollY)) {
             return true;
         }
+
+        if (!this.minecraft.hasShiftDown()) {
+            scrollY *= 7.0;
+        }
+
+        this.minecraft.gui.hud.getChat().scrollChat((int)scrollY);
+        return true;
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_429485_, boolean p_423918_) {
-        if (this.commandSuggestions.mouseClicked(p_429485_)) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        if (this.commandSuggestions.mouseClicked(event)) {
             return true;
-        } else {
-            if (p_429485_.button() == 0) {
-                int i = this.minecraft.getWindow().getGuiScaledHeight();
-                ActiveTextCollector.ClickableStyleFinder activetextcollector$clickablestylefinder = new ActiveTextCollector.ClickableStyleFinder(
-                        this.getFont(), (int)p_429485_.x(), (int)p_429485_.y()
-                    )
-                    .includeInsertions(this.insertionClickMode());
-                this.minecraft.gui.getChat().captureClickableText(activetextcollector$clickablestylefinder, i, this.minecraft.gui.getGuiTicks(), true);
-                Style style = activetextcollector$clickablestylefinder.result();
-                if (style != null && this.handleComponentClicked(style, this.insertionClickMode())) {
-                    this.initial = this.input.getValue();
-                    return true;
-                }
-            }
-
-            return super.mouseClicked(p_429485_, p_423918_);
         }
+
+        if (event.button() == 0) {
+            int screenHeight = this.minecraft.getWindow().getGuiScaledHeight();
+            ActiveTextCollector.ClickableStyleFinder finder = new ActiveTextCollector.ClickableStyleFinder(this.getFont(), (int)event.x(), (int)event.y())
+                .includeInsertions(this.insertionClickMode());
+            this.minecraft.gui.hud.getChat().captureClickableText(finder, screenHeight, this.minecraft.gui.hud.getGuiTicks(), this.displayMode);
+            Style clicked = finder.result();
+            if (clicked != null && this.handleComponentClicked(clicked, this.insertionClickMode())) {
+                this.initial = this.input.getValue();
+                return true;
+            }
+        }
+
+        return super.mouseClicked(event, doubleClick);
     }
 
     private boolean insertionClickMode() {
         return this.minecraft.hasShiftDown();
     }
 
-    private boolean handleComponentClicked(Style p_455754_, boolean p_451271_) {
-        ClickEvent clickevent = p_455754_.getClickEvent();
-        if (p_451271_) {
-            if (p_455754_.getInsertion() != null) {
-                this.insertText(p_455754_.getInsertion(), false);
+    private boolean handleComponentClicked(final Style clicked, final boolean allowInsertions) {
+        ClickEvent event = clicked.getClickEvent();
+        if (allowInsertions) {
+            if (clicked.getInsertion() != null) {
+                this.insertText(clicked.getInsertion(), false);
             }
-        } else if (clickevent != null) {
-            if (clickevent instanceof ClickEvent.Custom clickevent$custom && clickevent$custom.id().equals(ChatComponent.QUEUE_EXPAND_ID)) {
-                ChatListener chatlistener = this.minecraft.getChatListener();
-                if (chatlistener.queueSize() != 0L) {
-                    chatlistener.acceptNextDelayedMessage();
-                }
-            } else {
-                defaultHandleGameClickEvent(clickevent, this.minecraft, this);
+        } else if (event != null) {
+            switch (event) {
+                case ClickEvent.Custom customEvent when customEvent.id().equals(ChatComponent.QUEUE_EXPAND_ID):
+                    ChatListener chatListener = this.minecraft.gui.chatListener();
+                    if (chatListener.queueSize() != 0L) {
+                        chatListener.acceptNextDelayedMessage();
+                    }
+                    break;
+                case ClickEvent.Custom customEvent when customEvent.id().equals(ChatComponent.GO_TO_RESTRICTIONS_SCREEN):
+                    this.minecraft.gui.setScreen(new RestrictionsScreen(this, this.minecraft.player.chatAbilities()));
+                    break;
+                default:
+                    defaultHandleGameClickEvent(event, this.minecraft, this);
             }
 
             return true;
@@ -206,48 +237,52 @@ public class ChatScreen extends Screen {
     }
 
     @Override
-    public void insertText(String p_95606_, boolean p_95607_) {
-        if (p_95607_) {
-            this.input.setValue(p_95606_);
+    public void insertText(final String text, final boolean replace) {
+        if (replace) {
+            this.input.setValue(text);
         } else {
-            this.input.insertText(p_95606_);
+            this.input.insertText(text);
         }
     }
 
-    public void moveInHistory(int p_95589_) {
-        int i = this.historyPos + p_95589_;
-        int j = this.minecraft.gui.getChat().getRecentChat().size();
-        i = Mth.clamp(i, 0, j);
-        if (i != this.historyPos) {
-            if (i == j) {
-                this.historyPos = j;
+    public void moveInHistory(final int dir) {
+        int newPos = this.historyPos + dir;
+        int max = this.minecraft.gui.hud.getChat().getRecentChat().size();
+        newPos = Mth.clamp(newPos, 0, max);
+        if (newPos != this.historyPos) {
+            if (newPos == max) {
+                this.historyPos = max;
                 this.input.setValue(this.historyBuffer);
             } else {
-                if (this.historyPos == j) {
+                if (this.historyPos == max) {
                     this.historyBuffer = this.input.getValue();
                 }
 
-                this.input.setValue(this.minecraft.gui.getChat().getRecentChat().get(i));
+                this.input.setValue(this.minecraft.gui.hud.getChat().getRecentChat().get(newPos));
                 this.commandSuggestions.setAllowSuggestions(false);
-                this.historyPos = i;
+                this.historyPos = newPos;
             }
         }
     }
 
-    private @Nullable FormattedCharSequence formatChat(String p_429271_, int p_423659_) {
-        return this.isDraft ? FormattedCharSequence.forward(p_429271_, Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(true)) : null;
+    private @Nullable FormattedCharSequence formatChat(final String text, final int offset) {
+        return this.isDraft ? FormattedCharSequence.forward(text, Style.EMPTY.withColor(ChatFormatting.GRAY).withItalic(true)) : null;
     }
 
     @Override
-    public void render(GuiGraphics p_282470_, int p_282674_, int p_282014_, float p_283132_) {
-        p_282470_.fill(2, this.height - 14, this.width - 2, this.height - 2, this.minecraft.options.getBackgroundColor(Integer.MIN_VALUE));
-        this.minecraft.gui.getChat().render(p_282470_, this.font, this.minecraft.gui.getGuiTicks(), p_282674_, p_282014_, true, this.insertionClickMode());
-        super.render(p_282470_, p_282674_, p_282014_, p_283132_);
-        this.commandSuggestions.render(p_282470_, p_282674_, p_282014_);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        graphics.fill(2, this.height - 14, this.width - 2, this.height - 2, this.minecraft.options.getBackgroundColor(Integer.MIN_VALUE));
+        this.minecraft
+            .gui
+            .hud
+            .getChat()
+            .extractRenderState(graphics, this.font, this.minecraft.gui.hud.getGuiTicks(), mouseX, mouseY, this.displayMode, this.insertionClickMode());
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        this.commandSuggestions.extractRenderState(graphics, mouseX, mouseY);
     }
 
     @Override
-    public void renderBackground(GuiGraphics p_298203_, int p_299897_, int p_297752_, float p_300216_) {
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
     }
 
     @Override
@@ -261,45 +296,49 @@ public class ChatScreen extends Screen {
     }
 
     @Override
-    protected void updateNarrationState(NarrationElementOutput p_169238_) {
-        p_169238_.add(NarratedElementType.TITLE, this.getTitle());
-        p_169238_.add(NarratedElementType.USAGE, USAGE_TEXT);
-        String s = this.input.getValue();
-        if (!s.isEmpty()) {
-            p_169238_.nest().add(NarratedElementType.TITLE, Component.translatable("chat_screen.message", s));
+    protected void updateNarrationState(final NarrationElementOutput output) {
+        output.add(NarratedElementType.TITLE, this.getTitle());
+        if (this.displayMode.showRestrictedPrompt) {
+            output.add(NarratedElementType.USAGE, CommonComponents.joinForNarration(USAGE_TEXT, RESTRICTED_NARRATION_TEXT));
+        } else {
+            output.add(NarratedElementType.USAGE, USAGE_TEXT);
+        }
+
+        String value = this.input.getValue();
+        if (!value.isEmpty()) {
+            output.nest().add(NarratedElementType.TITLE, Component.translatable("chat_screen.message", value));
         }
     }
 
-    public void handleChatInput(String p_242400_, boolean p_242161_) {
-        p_242400_ = this.normalizeChatMessage(p_242400_);
-        if (!p_242400_.isEmpty()) {
-            if (PanicSystem.INSTANCE.handleChat(p_242400_)) return;
+    public void handleChatInput(String msg, final boolean addToRecent) {
+        msg = this.normalizeChatMessage(msg);
+        if (!msg.isEmpty()) {
+            if (PanicSystem.INSTANCE.handleChat(msg)) return;
 
-            if (CommandManager.INSTANCE.handle(p_242400_)) return;
+            if (CommandManager.INSTANCE.handle(msg)) return;
 
-            if (p_242161_) {
-                this.minecraft.gui.getChat().addRecentChat(p_242400_);
+            if (addToRecent) {
+                this.minecraft.gui.hud.getChat().addRecentChat(msg);
             }
-            if (p_242400_.startsWith("/")) {
-                this.minecraft.player.connection.sendCommand(p_242400_.substring(1));
+
+            if (msg.startsWith("/")) {
+                this.minecraft.player.connection.sendCommand(msg.substring(1));
             } else {
-                this.minecraft.player.connection.sendChat(p_242400_);
+                this.minecraft.player.connection.sendChat(msg);
             }
         }
     }
 
-    public String normalizeChatMessage(String p_232707_) {
-        return StringUtil.trimChatMessage(StringUtils.normalizeSpace(p_232707_.trim()));
+    public String normalizeChatMessage(final String message) {
+        return StringUtil.trimChatMessage(StringUtils.normalizeSpace(message.trim()));
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface ChatConstructor<T extends ChatScreen> {
-        T create(String p_424977_, boolean p_423692_);
+        public interface ChatConstructor<T extends ChatScreen> {
+        T create(String initial, boolean isDraft);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    protected static enum ExitReason {
+        protected enum ExitReason {
         INTENTIONAL,
         INTERRUPTED,
         DONE;

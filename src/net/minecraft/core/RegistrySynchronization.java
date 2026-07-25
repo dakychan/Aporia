@@ -25,68 +25,67 @@ public class RegistrySynchronization {
         .collect(Collectors.toUnmodifiableSet());
 
     public static void packRegistries(
-        DynamicOps<Tag> p_330752_,
-        RegistryAccess p_332359_,
-        Set<KnownPack> p_331327_,
-        BiConsumer<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> p_335166_
+        final DynamicOps<Tag> ops,
+        final RegistryAccess registries,
+        final Set<KnownPack> clientKnownPacks,
+        final BiConsumer<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> output
     ) {
-        RegistryDataLoader.SYNCHRONIZED_REGISTRIES.forEach(p_325710_ -> packRegistry(p_330752_, (RegistryDataLoader.RegistryData<?>)p_325710_, p_332359_, p_331327_, p_335166_));
+        RegistryDataLoader.SYNCHRONIZED_REGISTRIES
+            .forEach(registryEntry -> packRegistry(ops, (RegistryDataLoader.RegistryData<?>)registryEntry, registries, clientKnownPacks, output));
     }
 
     private static <T> void packRegistry(
-        DynamicOps<Tag> p_328835_,
-        RegistryDataLoader.RegistryData<T> p_329218_,
-        RegistryAccess p_335981_,
-        Set<KnownPack> p_330196_,
-        BiConsumer<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> p_330046_
+        final DynamicOps<Tag> ops,
+        final RegistryDataLoader.RegistryData<T> registryData,
+        final RegistryAccess registries,
+        final Set<KnownPack> clientKnownPacks,
+        final BiConsumer<ResourceKey<? extends Registry<?>>, List<RegistrySynchronization.PackedRegistryEntry>> output
     ) {
-        p_335981_.lookup(p_329218_.key())
+        registries.lookup(registryData.key())
             .ifPresent(
-                p_358104_ -> {
-                    List<RegistrySynchronization.PackedRegistryEntry> list = new ArrayList<>(p_358104_.size());
-                    p_358104_.listElements()
+                registry -> {
+                    List<RegistrySynchronization.PackedRegistryEntry> packedElements = new ArrayList<>(registry.size());
+                    registry.listElements()
                         .forEach(
-                            p_325717_ -> {
-                                boolean flag = p_358104_.registrationInfo(p_325717_.key())
+                            element -> {
+                                boolean canSkipContents = registry.registrationInfo(element.key())
                                     .flatMap(RegistrationInfo::knownPackInfo)
-                                    .filter(p_330196_::contains)
+                                    .filter(clientKnownPacks::contains)
                                     .isPresent();
-                                Optional<Tag> optional;
-                                if (flag) {
-                                    optional = Optional.empty();
+                                Optional<Tag> contents;
+                                if (canSkipContents) {
+                                    contents = Optional.empty();
                                 } else {
-                                    Tag tag = p_329218_.elementCodec()
-                                        .encodeStart(p_328835_, p_325717_.value())
-                                        .getOrThrow(
-                                            p_325700_ -> new IllegalArgumentException("Failed to serialize " + p_325717_.key() + ": " + p_325700_)
-                                        );
-                                    optional = Optional.of(tag);
+                                    Tag encodedElement = registryData.elementCodec()
+                                        .encodeStart(ops, element.value())
+                                        .getOrThrow(s -> new IllegalArgumentException("Failed to serialize " + element.key() + ": " + s));
+                                    contents = Optional.of(encodedElement);
                                 }
 
-                                list.add(new RegistrySynchronization.PackedRegistryEntry(p_325717_.key().identifier(), optional));
+                                packedElements.add(new RegistrySynchronization.PackedRegistryEntry(element.key().identifier(), contents));
                             }
                         );
-                    p_330046_.accept(p_358104_.key(), list);
+                    output.accept(registry.key(), packedElements);
                 }
             );
     }
 
-    private static Stream<RegistryAccess.RegistryEntry<?>> ownedNetworkableRegistries(RegistryAccess p_251842_) {
-        return p_251842_.registries().filter(p_358099_ -> isNetworkable(p_358099_.key()));
+    private static Stream<RegistryAccess.RegistryEntry<?>> ownedNetworkableRegistries(final RegistryAccess access) {
+        return access.registries().filter(e -> isNetworkable(e.key()));
     }
 
-    public static Stream<RegistryAccess.RegistryEntry<?>> networkedRegistries(LayeredRegistryAccess<RegistryLayer> p_259290_) {
-        return ownedNetworkableRegistries(p_259290_.getAccessFrom(RegistryLayer.WORLDGEN));
+    public static Stream<RegistryAccess.RegistryEntry<?>> networkedRegistries(final LayeredRegistryAccess<RegistryLayer> registries) {
+        return ownedNetworkableRegistries(registries.getAccessFrom(RegistryLayer.WORLDGEN));
     }
 
-    public static Stream<RegistryAccess.RegistryEntry<?>> networkSafeRegistries(LayeredRegistryAccess<RegistryLayer> p_249066_) {
-        Stream<RegistryAccess.RegistryEntry<?>> stream = p_249066_.getLayer(RegistryLayer.STATIC).registries();
-        Stream<RegistryAccess.RegistryEntry<?>> stream1 = networkedRegistries(p_249066_);
-        return Stream.concat(stream1, stream);
+    public static Stream<RegistryAccess.RegistryEntry<?>> networkSafeRegistries(final LayeredRegistryAccess<RegistryLayer> registries) {
+        Stream<RegistryAccess.RegistryEntry<?>> staticRegistries = registries.getLayer(RegistryLayer.STATIC).registries();
+        Stream<RegistryAccess.RegistryEntry<?>> networkedRegistries = networkedRegistries(registries);
+        return Stream.concat(networkedRegistries, staticRegistries);
     }
 
-    public static boolean isNetworkable(ResourceKey<? extends Registry<?>> p_362141_) {
-        return NETWORKABLE_REGISTRIES.contains(p_362141_);
+    public static boolean isNetworkable(final ResourceKey<? extends Registry<?>> key) {
+        return NETWORKABLE_REGISTRIES.contains(key);
     }
 
     public record PackedRegistryEntry(Identifier id, Optional<Tag> data) {

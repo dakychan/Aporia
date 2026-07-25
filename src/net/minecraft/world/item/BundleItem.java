@@ -1,8 +1,8 @@
 package net.minecraft.world.item;
 
-import java.util.List;
+import com.mojang.serialization.DataResult.Error;
+import com.mojang.serialization.DataResult.Success;
 import java.util.Optional;
-import java.util.stream.Stream;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -25,6 +25,7 @@ import net.minecraft.world.item.component.BundleContents;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
 import org.apache.commons.lang3.math.Fraction;
+import org.jspecify.annotations.Nullable;
 
 public class BundleItem extends Item {
     public static final int MAX_SHOWN_GRID_ITEMS_X = 4;
@@ -37,160 +38,163 @@ public class BundleItem extends Item {
     private static final int TICKS_BETWEEN_THROWS = 2;
     private static final int TICKS_MAX_THROW_DURATION = 200;
 
-    public BundleItem(Item.Properties p_150726_) {
-        super(p_150726_);
+    public BundleItem(final Item.Properties properties) {
+        super(properties);
     }
 
-    public static float getFullnessDisplay(ItemStack p_150767_) {
-        BundleContents bundlecontents = p_150767_.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-        return bundlecontents.weight().floatValue();
+    private static Fraction getWeightSafe(final BundleContents contents) {
+        return switch (contents.weight()) {
+            case Success<Fraction> success -> (Fraction)success.value();
+            case Error<?> error -> Fraction.ONE;
+            default -> throw new MatchException(null, null);
+        };
+    }
+
+    public static float getFullnessDisplay(final ItemStack itemStack) {
+        BundleContents contents = itemStack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+        return getWeightSafe(contents).floatValue();
     }
 
     @Override
-    public boolean overrideStackedOnOther(ItemStack p_150733_, Slot p_150734_, ClickAction p_150735_, Player p_150736_) {
-        BundleContents bundlecontents = p_150733_.get(DataComponents.BUNDLE_CONTENTS);
-        if (bundlecontents == null) {
+    public boolean overrideStackedOnOther(final ItemStack self, final Slot slot, final ClickAction clickAction, final Player player) {
+        BundleContents initialContents = self.get(DataComponents.BUNDLE_CONTENTS);
+        if (initialContents == null) {
             return false;
-        } else {
-            ItemStack itemstack = p_150734_.getItem();
-            BundleContents.Mutable bundlecontents$mutable = new BundleContents.Mutable(bundlecontents);
-            if (p_150735_ == ClickAction.PRIMARY && !itemstack.isEmpty()) {
-                if (bundlecontents$mutable.tryTransfer(p_150734_, p_150736_) > 0) {
-                    playInsertSound(p_150736_);
-                } else {
-                    playInsertFailSound(p_150736_);
-                }
+        }
 
-                p_150733_.set(DataComponents.BUNDLE_CONTENTS, bundlecontents$mutable.toImmutable());
-                this.broadcastChangesOnContainerMenu(p_150736_);
-                return true;
-            } else if (p_150735_ == ClickAction.SECONDARY && itemstack.isEmpty()) {
-                ItemStack itemstack1 = bundlecontents$mutable.removeOne();
-                if (itemstack1 != null) {
-                    ItemStack itemstack2 = p_150734_.safeInsert(itemstack1);
-                    if (itemstack2.getCount() > 0) {
-                        bundlecontents$mutable.tryInsert(itemstack2);
-                    } else {
-                        playRemoveOneSound(p_150736_);
-                    }
-                }
-
-                p_150733_.set(DataComponents.BUNDLE_CONTENTS, bundlecontents$mutable.toImmutable());
-                this.broadcastChangesOnContainerMenu(p_150736_);
-                return true;
+        ItemStack other = slot.getItem();
+        BundleContents.Mutable contents = new BundleContents.Mutable(initialContents);
+        if (clickAction == ClickAction.PRIMARY && !other.isEmpty()) {
+            if (contents.tryTransfer(slot, player) > 0) {
+                playInsertSound(player);
             } else {
-                return false;
+                playInsertFailSound(player);
             }
+
+            self.set(DataComponents.BUNDLE_CONTENTS, contents.toImmutable());
+            this.broadcastChangesOnContainerMenu(player);
+            return true;
+        } else if (clickAction == ClickAction.SECONDARY && other.isEmpty()) {
+            ItemStack itemStack = contents.removeOne();
+            if (itemStack != null) {
+                ItemStack remainder = slot.safeInsert(itemStack);
+                if (remainder.getCount() > 0) {
+                    contents.tryInsert(remainder);
+                } else {
+                    playRemoveOneSound(player);
+                }
+            }
+
+            self.set(DataComponents.BUNDLE_CONTENTS, contents.toImmutable());
+            this.broadcastChangesOnContainerMenu(player);
+            return true;
+        } else {
+            return false;
         }
     }
 
     @Override
-    public boolean overrideOtherStackedOnMe(ItemStack p_150742_, ItemStack p_150743_, Slot p_150744_, ClickAction p_150745_, Player p_150746_, SlotAccess p_150747_) {
-        if (p_150745_ == ClickAction.PRIMARY && p_150743_.isEmpty()) {
-            toggleSelectedItem(p_150742_, -1);
+    public boolean overrideOtherStackedOnMe(
+        final ItemStack self, final ItemStack other, final Slot slot, final ClickAction clickAction, final Player player, final SlotAccess carriedItem
+    ) {
+        if (clickAction == ClickAction.PRIMARY && other.isEmpty()) {
+            toggleSelectedItem(self, -1);
             return false;
-        } else {
-            BundleContents bundlecontents = p_150742_.get(DataComponents.BUNDLE_CONTENTS);
-            if (bundlecontents == null) {
-                return false;
+        }
+
+        BundleContents initialContents = self.get(DataComponents.BUNDLE_CONTENTS);
+        if (initialContents == null) {
+            return false;
+        }
+
+        BundleContents.Mutable contents = new BundleContents.Mutable(initialContents);
+        if (clickAction == ClickAction.PRIMARY && !other.isEmpty()) {
+            if (slot.allowModification(player) && contents.tryInsert(other) > 0) {
+                playInsertSound(player);
             } else {
-                BundleContents.Mutable bundlecontents$mutable = new BundleContents.Mutable(bundlecontents);
-                if (p_150745_ == ClickAction.PRIMARY && !p_150743_.isEmpty()) {
-                    if (p_150744_.allowModification(p_150746_) && bundlecontents$mutable.tryInsert(p_150743_) > 0) {
-                        playInsertSound(p_150746_);
-                    } else {
-                        playInsertFailSound(p_150746_);
-                    }
+                playInsertFailSound(player);
+            }
 
-                    p_150742_.set(DataComponents.BUNDLE_CONTENTS, bundlecontents$mutable.toImmutable());
-                    this.broadcastChangesOnContainerMenu(p_150746_);
-                    return true;
-                } else if (p_150745_ == ClickAction.SECONDARY && p_150743_.isEmpty()) {
-                    if (p_150744_.allowModification(p_150746_)) {
-                        ItemStack itemstack = bundlecontents$mutable.removeOne();
-                        if (itemstack != null) {
-                            playRemoveOneSound(p_150746_);
-                            p_150747_.set(itemstack);
-                        }
-                    }
-
-                    p_150742_.set(DataComponents.BUNDLE_CONTENTS, bundlecontents$mutable.toImmutable());
-                    this.broadcastChangesOnContainerMenu(p_150746_);
-                    return true;
-                } else {
-                    toggleSelectedItem(p_150742_, -1);
-                    return false;
+            self.set(DataComponents.BUNDLE_CONTENTS, contents.toImmutable());
+            this.broadcastChangesOnContainerMenu(player);
+            return true;
+        } else if (clickAction == ClickAction.SECONDARY && other.isEmpty()) {
+            if (slot.allowModification(player)) {
+                ItemStack removed = contents.removeOne();
+                if (removed != null) {
+                    playRemoveOneSound(player);
+                    carriedItem.set(removed);
                 }
             }
+
+            self.set(DataComponents.BUNDLE_CONTENTS, contents.toImmutable());
+            this.broadcastChangesOnContainerMenu(player);
+            return true;
+        } else {
+            toggleSelectedItem(self, -1);
+            return false;
         }
     }
 
     @Override
-    public InteractionResult use(Level p_150760_, Player p_150761_, InteractionHand p_150762_) {
-        p_150761_.startUsingItem(p_150762_);
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        player.startUsingItem(hand);
         return InteractionResult.SUCCESS;
     }
 
-    private void dropContent(Level p_369525_, Player p_369321_, ItemStack p_365964_) {
-        if (this.dropContent(p_365964_, p_369321_)) {
-            playDropContentsSound(p_369525_, p_369321_);
-            p_369321_.awardStat(Stats.ITEM_USED.get(this));
+    private void dropContent(final Level level, final Player player, final ItemStack itemStack) {
+        if (this.dropContent(itemStack, player)) {
+            playDropContentsSound(level, player);
+            player.awardStat(Stats.ITEM_USED.get(this));
         }
     }
 
     @Override
-    public boolean isBarVisible(ItemStack p_150769_) {
-        BundleContents bundlecontents = p_150769_.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-        return bundlecontents.weight().compareTo(Fraction.ZERO) > 0;
+    public boolean isBarVisible(final ItemStack stack) {
+        BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+        return getWeightSafe(contents).compareTo(Fraction.ZERO) > 0;
     }
 
     @Override
-    public int getBarWidth(ItemStack p_150771_) {
-        BundleContents bundlecontents = p_150771_.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-        return Math.min(1 + Mth.mulAndTruncate(bundlecontents.weight(), 12), 13);
+    public int getBarWidth(final ItemStack stack) {
+        BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+        return Math.min(1 + Mth.mulAndTruncate(getWeightSafe(contents), 12), 13);
     }
 
     @Override
-    public int getBarColor(ItemStack p_150773_) {
-        BundleContents bundlecontents = p_150773_.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-        return bundlecontents.weight().compareTo(Fraction.ONE) >= 0 ? FULL_BAR_COLOR : BAR_COLOR;
+    public int getBarColor(final ItemStack stack) {
+        BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+        return getWeightSafe(contents).compareTo(Fraction.ONE) >= 0 ? FULL_BAR_COLOR : BAR_COLOR;
     }
 
-    public static void toggleSelectedItem(ItemStack p_369957_, int p_362067_) {
-        BundleContents bundlecontents = p_369957_.get(DataComponents.BUNDLE_CONTENTS);
-        if (bundlecontents != null) {
-            BundleContents.Mutable bundlecontents$mutable = new BundleContents.Mutable(bundlecontents);
-            bundlecontents$mutable.toggleSelectedItem(p_362067_);
-            p_369957_.set(DataComponents.BUNDLE_CONTENTS, bundlecontents$mutable.toImmutable());
+    public static void toggleSelectedItem(final ItemStack stack, final int selectedItem) {
+        BundleContents initialContents = stack.get(DataComponents.BUNDLE_CONTENTS);
+        if (initialContents != null) {
+            BundleContents.Mutable contents = new BundleContents.Mutable(initialContents);
+            contents.toggleSelectedItem(selectedItem);
+            stack.set(DataComponents.BUNDLE_CONTENTS, contents.toImmutable());
         }
     }
 
-    public static boolean hasSelectedItem(ItemStack p_369004_) {
-        BundleContents bundlecontents = p_369004_.get(DataComponents.BUNDLE_CONTENTS);
-        return bundlecontents != null && bundlecontents.getSelectedItem() != -1;
+    public static int getSelectedItemIndex(final ItemStack stack) {
+        return stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).getSelectedItemIndex();
     }
 
-    public static int getSelectedItem(ItemStack p_368122_) {
-        BundleContents bundlecontents = p_368122_.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-        return bundlecontents.getSelectedItem();
+    public static @Nullable ItemStackTemplate getSelectedItem(final ItemStack stack) {
+        return stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY).getSelectedItem();
     }
 
-    public static ItemStack getSelectedItemStack(ItemStack p_363510_) {
-        BundleContents bundlecontents = p_363510_.get(DataComponents.BUNDLE_CONTENTS);
-        return bundlecontents != null && bundlecontents.getSelectedItem() != -1 ? bundlecontents.getItemUnsafe(bundlecontents.getSelectedItem()) : ItemStack.EMPTY;
+    public static int getNumberOfItemsToShow(final ItemStack stack) {
+        BundleContents contents = stack.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+        return contents.getNumberOfItemsToShow();
     }
 
-    public static int getNumberOfItemsToShow(ItemStack p_363807_) {
-        BundleContents bundlecontents = p_363807_.getOrDefault(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-        return bundlecontents.getNumberOfItemsToShow();
-    }
-
-    private boolean dropContent(ItemStack p_366961_, Player p_369586_) {
-        BundleContents bundlecontents = p_366961_.get(DataComponents.BUNDLE_CONTENTS);
-        if (bundlecontents != null && !bundlecontents.isEmpty()) {
-            Optional<ItemStack> optional = removeOneItemFromBundle(p_366961_, p_369586_, bundlecontents);
-            if (optional.isPresent()) {
-                p_369586_.drop(optional.get(), true);
+    private boolean dropContent(final ItemStack bundle, final Player player) {
+        BundleContents contents = bundle.get(DataComponents.BUNDLE_CONTENTS);
+        if (contents != null && !contents.isEmpty()) {
+            Optional<ItemStack> itemStack = removeOneItemFromBundle(bundle, player, contents);
+            if (itemStack.isPresent()) {
+                player.drop(itemStack.get(), true);
                 return true;
             } else {
                 return false;
@@ -200,123 +204,78 @@ public class BundleItem extends Item {
         }
     }
 
-    private static Optional<ItemStack> removeOneItemFromBundle(ItemStack p_366514_, Player p_363747_, BundleContents p_363035_) {
-        BundleContents.Mutable bundlecontents$mutable = new BundleContents.Mutable(p_363035_);
-        ItemStack itemstack = bundlecontents$mutable.removeOne();
-        if (itemstack != null) {
-            playRemoveOneSound(p_363747_);
-            p_366514_.set(DataComponents.BUNDLE_CONTENTS, bundlecontents$mutable.toImmutable());
-            return Optional.of(itemstack);
+    private static Optional<ItemStack> removeOneItemFromBundle(final ItemStack self, final Player player, final BundleContents initialContents) {
+        BundleContents.Mutable contents = new BundleContents.Mutable(initialContents);
+        ItemStack removed = contents.removeOne();
+        if (removed != null) {
+            playRemoveOneSound(player);
+            self.set(DataComponents.BUNDLE_CONTENTS, contents.toImmutable());
+            return Optional.of(removed);
         } else {
             return Optional.empty();
         }
     }
 
     @Override
-    public void onUseTick(Level p_369274_, LivingEntity p_365864_, ItemStack p_364728_, int p_366618_) {
-        if (p_365864_ instanceof Player player) {
-            int i = this.getUseDuration(p_364728_, p_365864_);
-            boolean flag = p_366618_ == i;
-            if (flag || p_366618_ < i - 10 && p_366618_ % 2 == 0) {
-                this.dropContent(p_369274_, player, p_364728_);
+    public void onUseTick(final Level level, final LivingEntity livingEntity, final ItemStack itemStack, final int ticksRemaining) {
+        if (livingEntity instanceof Player player) {
+            int useDuration = this.getUseDuration(itemStack, livingEntity);
+            boolean isFirstTick = ticksRemaining == useDuration;
+            if (isFirstTick || ticksRemaining < useDuration - 10 && ticksRemaining % 2 == 0) {
+                this.dropContent(level, player, itemStack);
             }
         }
     }
 
     @Override
-    public int getUseDuration(ItemStack p_363914_, LivingEntity p_368133_) {
+    public int getUseDuration(final ItemStack itemStack, final LivingEntity entity) {
         return 200;
     }
 
     @Override
-    public ItemUseAnimation getUseAnimation(ItemStack p_376256_) {
+    public ItemUseAnimation getUseAnimation(final ItemStack itemStack) {
         return ItemUseAnimation.BUNDLE;
     }
 
     @Override
-    public Optional<TooltipComponent> getTooltipImage(ItemStack p_150775_) {
-        TooltipDisplay tooltipdisplay = p_150775_.getOrDefault(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT);
-        return !tooltipdisplay.shows(DataComponents.BUNDLE_CONTENTS)
+    public Optional<TooltipComponent> getTooltipImage(final ItemStack bundle) {
+        TooltipDisplay display = bundle.getOrDefault(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT);
+        return !display.shows(DataComponents.BUNDLE_CONTENTS)
             ? Optional.empty()
-            : Optional.ofNullable(p_150775_.get(DataComponents.BUNDLE_CONTENTS)).map(BundleTooltip::new);
+            : Optional.ofNullable(bundle.get(DataComponents.BUNDLE_CONTENTS)).map(BundleTooltip::new);
     }
 
     @Override
-    public void onDestroyed(ItemEntity p_150728_) {
-        BundleContents bundlecontents = p_150728_.getItem().get(DataComponents.BUNDLE_CONTENTS);
-        if (bundlecontents != null) {
-            p_150728_.getItem().set(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
-            ItemUtils.onContainerDestroyed(p_150728_, bundlecontents.itemsCopy());
+    public void onDestroyed(final ItemEntity entity) {
+        BundleContents contents = entity.getItem().get(DataComponents.BUNDLE_CONTENTS);
+        if (contents != null) {
+            entity.getItem().set(DataComponents.BUNDLE_CONTENTS, BundleContents.EMPTY);
+            ItemUtils.onContainerDestroyed(entity, contents.itemCopyStream());
         }
     }
 
-    public static List<BundleItem> getAllBundleItemColors() {
-        return Stream.of(
-                Items.BUNDLE,
-                Items.WHITE_BUNDLE,
-                Items.ORANGE_BUNDLE,
-                Items.MAGENTA_BUNDLE,
-                Items.LIGHT_BLUE_BUNDLE,
-                Items.YELLOW_BUNDLE,
-                Items.LIME_BUNDLE,
-                Items.PINK_BUNDLE,
-                Items.GRAY_BUNDLE,
-                Items.LIGHT_GRAY_BUNDLE,
-                Items.CYAN_BUNDLE,
-                Items.BLACK_BUNDLE,
-                Items.BROWN_BUNDLE,
-                Items.GREEN_BUNDLE,
-                Items.RED_BUNDLE,
-                Items.BLUE_BUNDLE,
-                Items.PURPLE_BUNDLE
-            )
-            .map(p_359381_ -> (BundleItem)p_359381_)
-            .toList();
+    private static void playRemoveOneSound(final Entity entity) {
+        entity.playSound(SoundEvents.BUNDLE_REMOVE_ONE, 0.8F, 0.8F + entity.level().getRandom().nextFloat() * 0.4F);
     }
 
-    public static Item getByColor(DyeColor p_369131_) {
-        return switch (p_369131_) {
-            case WHITE -> Items.WHITE_BUNDLE;
-            case ORANGE -> Items.ORANGE_BUNDLE;
-            case MAGENTA -> Items.MAGENTA_BUNDLE;
-            case LIGHT_BLUE -> Items.LIGHT_BLUE_BUNDLE;
-            case YELLOW -> Items.YELLOW_BUNDLE;
-            case LIME -> Items.LIME_BUNDLE;
-            case PINK -> Items.PINK_BUNDLE;
-            case GRAY -> Items.GRAY_BUNDLE;
-            case LIGHT_GRAY -> Items.LIGHT_GRAY_BUNDLE;
-            case CYAN -> Items.CYAN_BUNDLE;
-            case BLUE -> Items.BLUE_BUNDLE;
-            case BROWN -> Items.BROWN_BUNDLE;
-            case GREEN -> Items.GREEN_BUNDLE;
-            case RED -> Items.RED_BUNDLE;
-            case BLACK -> Items.BLACK_BUNDLE;
-            case PURPLE -> Items.PURPLE_BUNDLE;
-        };
+    private static void playInsertSound(final Entity entity) {
+        entity.playSound(SoundEvents.BUNDLE_INSERT, 0.8F, 0.8F + entity.level().getRandom().nextFloat() * 0.4F);
     }
 
-    private static void playRemoveOneSound(Entity p_186343_) {
-        p_186343_.playSound(SoundEvents.BUNDLE_REMOVE_ONE, 0.8F, 0.8F + p_186343_.level().getRandom().nextFloat() * 0.4F);
+    private static void playInsertFailSound(final Entity entity) {
+        entity.playSound(SoundEvents.BUNDLE_INSERT_FAIL, 1.0F, 1.0F);
     }
 
-    private static void playInsertSound(Entity p_186352_) {
-        p_186352_.playSound(SoundEvents.BUNDLE_INSERT, 0.8F, 0.8F + p_186352_.level().getRandom().nextFloat() * 0.4F);
-    }
-
-    private static void playInsertFailSound(Entity p_367200_) {
-        p_367200_.playSound(SoundEvents.BUNDLE_INSERT_FAIL, 1.0F, 1.0F);
-    }
-
-    private static void playDropContentsSound(Level p_362376_, Entity p_186354_) {
-        p_362376_.playSound(
-            null, p_186354_.blockPosition(), SoundEvents.BUNDLE_DROP_CONTENTS, SoundSource.PLAYERS, 0.8F, 0.8F + p_186354_.level().getRandom().nextFloat() * 0.4F
+    private static void playDropContentsSound(final Level level, final Entity entity) {
+        level.playSound(
+            null, entity.blockPosition(), SoundEvents.BUNDLE_DROP_CONTENTS, SoundSource.PLAYERS, 0.8F, 0.8F + entity.level().getRandom().nextFloat() * 0.4F
         );
     }
 
-    private void broadcastChangesOnContainerMenu(Player p_365714_) {
-        AbstractContainerMenu abstractcontainermenu = p_365714_.containerMenu;
-        if (abstractcontainermenu != null) {
-            abstractcontainermenu.slotsChanged(p_365714_.getInventory());
+    private void broadcastChangesOnContainerMenu(final Player player) {
+        AbstractContainerMenu containerMenu = player.containerMenu;
+        if (containerMenu != null) {
+            containerMenu.slotsChanged(player.getInventory());
         }
     }
 }

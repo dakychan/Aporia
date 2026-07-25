@@ -24,33 +24,35 @@ public class EmptyPoolElement extends StructurePoolElement {
     }
 
     @Override
-    public Vec3i getSize(StructureTemplateManager p_227169_, Rotation p_227170_) {
+    public Vec3i getSize(final StructureTemplateManager structureTemplateManager, final Rotation rotation) {
         return Vec3i.ZERO;
     }
 
     @Override
-    public List<StructureTemplate.JigsawBlockInfo> getShuffledJigsawBlocks(StructureTemplateManager p_227176_, BlockPos p_227177_, Rotation p_227178_, RandomSource p_227179_) {
+    public List<StructureTemplate.JigsawBlockInfo> getShuffledJigsawBlocks(
+        final StructureTemplateManager structureTemplateManager, final BlockPos position, final Rotation rotation, final RandomSource random
+    ) {
         return Collections.emptyList();
     }
 
     @Override
-    public BoundingBox getBoundingBox(StructureTemplateManager p_227172_, BlockPos p_227173_, Rotation p_227174_) {
+    public BoundingBox getBoundingBox(final StructureTemplateManager structureTemplateManager, final BlockPos position, final Rotation rotation) {
         throw new IllegalStateException("Invalid call to EmptyPoolElement.getBoundingBox, filter me!");
     }
 
     @Override
     public boolean place(
-        StructureTemplateManager p_227158_,
-        WorldGenLevel p_227159_,
-        StructureManager p_227160_,
-        ChunkGenerator p_227161_,
-        BlockPos p_227162_,
-        BlockPos p_227163_,
-        Rotation p_227164_,
-        BoundingBox p_227165_,
-        RandomSource p_227166_,
-        LiquidSettings p_345294_,
-        boolean p_227167_
+        final StructureTemplateManager structureTemplateManager,
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final BlockPos position,
+        final BlockPos referencePos,
+        final Rotation rotation,
+        final BoundingBox chunkBB,
+        final RandomSource random,
+        final LiquidSettings liquidSettings,
+        final boolean keepJigsaws
     ) {
         return true;
     }

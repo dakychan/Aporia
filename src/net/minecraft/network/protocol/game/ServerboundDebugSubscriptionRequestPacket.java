@@ -11,8 +11,10 @@ import net.minecraft.network.protocol.PacketType;
 import net.minecraft.util.debug.DebugSubscription;
 
 public record ServerboundDebugSubscriptionRequestPacket(Set<DebugSubscription<?>> subscriptions) implements Packet<ServerGamePacketListener> {
-    private static final StreamCodec<RegistryFriendlyByteBuf, Set<DebugSubscription<?>>> SET_STREAM_CODEC = ByteBufCodecs.registry(Registries.DEBUG_SUBSCRIPTION)
-        .apply(ByteBufCodecs.collection(ReferenceOpenHashSet::new));
+    private static final StreamCodec<RegistryFriendlyByteBuf, Set<DebugSubscription<?>>> SET_STREAM_CODEC = ByteBufCodecs.registry(
+            Registries.DEBUG_SUBSCRIPTION
+        )
+        .apply(ByteBufCodecs.collection(ReferenceOpenHashSet::new, 32));
     public static final StreamCodec<RegistryFriendlyByteBuf, ServerboundDebugSubscriptionRequestPacket> STREAM_CODEC = SET_STREAM_CODEC.map(
         ServerboundDebugSubscriptionRequestPacket::new, ServerboundDebugSubscriptionRequestPacket::subscriptions
     );
@@ -22,7 +24,7 @@ public record ServerboundDebugSubscriptionRequestPacket(Set<DebugSubscription<?>
         return GamePacketTypes.SERVERBOUND_DEBUG_SUBSCRIPTION_REQUEST;
     }
 
-    public void handle(ServerGamePacketListener p_427420_) {
-        p_427420_.handleDebugSubscriptionRequest(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleDebugSubscriptionRequest(this);
     }
 }

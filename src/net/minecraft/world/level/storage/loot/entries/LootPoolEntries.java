@@ -4,23 +4,21 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 
 public class LootPoolEntries {
     public static final Codec<LootPoolEntryContainer> CODEC = BuiltInRegistries.LOOT_POOL_ENTRY_TYPE
         .byNameCodec()
-        .dispatch(LootPoolEntryContainer::getType, LootPoolEntryType::codec);
-    public static final LootPoolEntryType EMPTY = register("empty", EmptyLootItem.CODEC);
-    public static final LootPoolEntryType ITEM = register("item", LootItem.CODEC);
-    public static final LootPoolEntryType LOOT_TABLE = register("loot_table", NestedLootTable.CODEC);
-    public static final LootPoolEntryType DYNAMIC = register("dynamic", DynamicLoot.CODEC);
-    public static final LootPoolEntryType TAG = register("tag", TagEntry.CODEC);
-    public static final LootPoolEntryType SLOTS = register("slots", SlotLoot.CODEC);
-    public static final LootPoolEntryType ALTERNATIVES = register("alternatives", AlternativesEntry.CODEC);
-    public static final LootPoolEntryType SEQUENCE = register("sequence", SequentialEntry.CODEC);
-    public static final LootPoolEntryType GROUP = register("group", EntryGroup.CODEC);
+        .dispatch(LootPoolEntryContainer::codec, c -> c);
 
-    private static LootPoolEntryType register(String p_79630_, MapCodec<? extends LootPoolEntryContainer> p_328987_) {
-        return Registry.register(BuiltInRegistries.LOOT_POOL_ENTRY_TYPE, Identifier.withDefaultNamespace(p_79630_), new LootPoolEntryType(p_328987_));
+    public static MapCodec<? extends LootPoolEntryContainer> bootstrap(final Registry<MapCodec<? extends LootPoolEntryContainer>> registry) {
+        Registry.register(registry, "empty", EmptyLootItem.MAP_CODEC);
+        Registry.register(registry, "item", LootItem.MAP_CODEC);
+        Registry.register(registry, "loot_table", NestedLootTable.MAP_CODEC);
+        Registry.register(registry, "dynamic", DynamicLoot.MAP_CODEC);
+        Registry.register(registry, "tag", TagEntry.MAP_CODEC);
+        Registry.register(registry, "slots", SlotLoot.MAP_CODEC);
+        Registry.register(registry, "alternatives", AlternativesEntry.MAP_CODEC);
+        Registry.register(registry, "sequence", SequentialEntry.MAP_CODEC);
+        return Registry.register(registry, "group", EntryGroup.MAP_CODEC);
     }
 }

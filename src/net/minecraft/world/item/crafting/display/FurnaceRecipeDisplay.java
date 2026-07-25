@@ -3,7 +3,6 @@ package net.minecraft.world.item.crafting.display;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -12,7 +11,7 @@ import net.minecraft.world.flag.FeatureFlagSet;
 public record FurnaceRecipeDisplay(SlotDisplay ingredient, SlotDisplay fuel, SlotDisplay result, SlotDisplay craftingStation, int duration, float experience)
     implements RecipeDisplay {
     public static final MapCodec<FurnaceRecipeDisplay> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_362056_ -> p_362056_.group(
+        i -> i.group(
                 SlotDisplay.CODEC.fieldOf("ingredient").forGetter(FurnaceRecipeDisplay::ingredient),
                 SlotDisplay.CODEC.fieldOf("fuel").forGetter(FurnaceRecipeDisplay::fuel),
                 SlotDisplay.CODEC.fieldOf("result").forGetter(FurnaceRecipeDisplay::result),
@@ -20,7 +19,7 @@ public record FurnaceRecipeDisplay(SlotDisplay ingredient, SlotDisplay fuel, Slo
                 Codec.INT.fieldOf("duration").forGetter(FurnaceRecipeDisplay::duration),
                 Codec.FLOAT.fieldOf("experience").forGetter(FurnaceRecipeDisplay::experience)
             )
-            .apply(p_362056_, FurnaceRecipeDisplay::new)
+            .apply(i, FurnaceRecipeDisplay::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, FurnaceRecipeDisplay> STREAM_CODEC = StreamCodec.composite(
         SlotDisplay.STREAM_CODEC,
@@ -45,17 +44,7 @@ public record FurnaceRecipeDisplay(SlotDisplay ingredient, SlotDisplay fuel, Slo
     }
 
     @Override
-    public boolean isEnabled(FeatureFlagSet p_361035_) {
-        return this.ingredient.isEnabled(p_361035_) && this.fuel().isEnabled(p_361035_) && RecipeDisplay.super.isEnabled(p_361035_);
-    }
-
-    @Override
-    public SlotDisplay result() {
-        return this.result;
-    }
-
-    @Override
-    public SlotDisplay craftingStation() {
-        return this.craftingStation;
+    public boolean isEnabled(final FeatureFlagSet enabledFeatures) {
+        return this.ingredient.isEnabled(enabledFeatures) && this.fuel().isEnabled(enabledFeatures) && RecipeDisplay.super.isEnabled(enabledFeatures);
     }
 }

@@ -12,24 +12,24 @@ public enum BooleanModifier implements AttributeModifier<Boolean, Boolean> {
     XOR,
     XNOR;
 
-    public Boolean apply(Boolean p_454599_, Boolean p_455845_) {
+    public Boolean apply(final Boolean subject, final Boolean argument) {
         return switch (this) {
-            case AND -> p_455845_ && p_454599_;
-            case NAND -> !p_455845_ || !p_454599_;
-            case OR -> p_455845_ || p_454599_;
-            case NOR -> !p_455845_ && !p_454599_;
-            case XOR -> p_455845_ ^ p_454599_;
-            case XNOR -> p_455845_ == p_454599_;
+            case AND -> argument && subject;
+            case NAND -> !argument || !subject;
+            case OR -> argument || subject;
+            case NOR -> !argument && !subject;
+            case XOR -> argument ^ subject;
+            case XNOR -> argument == subject;
         };
     }
 
     @Override
-    public Codec<Boolean> argumentCodec(EnvironmentAttribute<Boolean> p_457217_) {
+    public Codec<Boolean> argumentCodec(final EnvironmentAttribute<Boolean> type) {
         return Codec.BOOL;
     }
 
     @Override
-    public LerpFunction<Boolean> argumentKeyframeLerp(EnvironmentAttribute<Boolean> p_454024_) {
+    public LerpFunction<Boolean> argumentKeyframeLerp(final EnvironmentAttribute<Boolean> type) {
         return LerpFunction.ofConstant();
     }
 }

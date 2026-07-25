@@ -21,78 +21,90 @@ public class SleepInBed extends Behavior<LivingEntity> {
     private long nextOkStartTime;
 
     public SleepInBed() {
-        super(ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_PRESENT, MemoryModuleType.LAST_WOKEN, MemoryStatus.REGISTERED));
+        super(
+            ImmutableMap.of(
+                MemoryModuleType.HOME,
+                MemoryStatus.VALUE_PRESENT,
+                MemoryModuleType.LAST_WOKEN,
+                MemoryStatus.REGISTERED,
+                MemoryModuleType.LAST_SLEPT,
+                MemoryStatus.REGISTERED,
+                MemoryModuleType.WALK_TARGET,
+                MemoryStatus.REGISTERED,
+                MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
+                MemoryStatus.REGISTERED
+            )
+        );
     }
 
     @Override
-    protected boolean checkExtraStartConditions(ServerLevel p_24154_, LivingEntity p_24155_) {
-        if (p_24155_.isPassenger()) {
+    protected boolean checkExtraStartConditions(final ServerLevel level, final LivingEntity body) {
+        if (body.isPassenger()) {
             return false;
-        } else {
-            Brain<?> brain = p_24155_.getBrain();
-            GlobalPos globalpos = brain.getMemory(MemoryModuleType.HOME).get();
-            if (p_24154_.dimension() != globalpos.dimension()) {
+        }
+
+        Brain<?> brain = body.getBrain();
+        GlobalPos target = brain.getMemory(MemoryModuleType.HOME).get();
+        if (level.dimension() != target.dimension()) {
+            return false;
+        }
+
+        Optional<Long> lastWokenMemory = brain.getMemory(MemoryModuleType.LAST_WOKEN);
+        if (lastWokenMemory.isPresent()) {
+            long timeSinceLastWoken = level.getGameTime() - lastWokenMemory.get();
+            if (timeSinceLastWoken > 0L && timeSinceLastWoken < 100L) {
                 return false;
-            } else {
-                Optional<Long> optional = brain.getMemory(MemoryModuleType.LAST_WOKEN);
-                if (optional.isPresent()) {
-                    long i = p_24154_.getGameTime() - optional.get();
-                    if (i > 0L && i < 100L) {
-                        return false;
-                    }
-                }
-
-                BlockState blockstate = p_24154_.getBlockState(globalpos.pos());
-                return globalpos.pos().closerToCenterThan(p_24155_.position(), 2.0)
-                    && blockstate.is(BlockTags.BEDS)
-                    && !blockstate.getValue(BedBlock.OCCUPIED);
             }
         }
+
+        BlockState blockState = level.getBlockState(target.pos());
+        return target.pos().closerToCenterThan(body.position(), 2.0) && blockState.is(BlockTags.BEDS) && !blockState.getValue(BedBlock.OCCUPIED);
     }
 
     @Override
-    protected boolean canStillUse(ServerLevel p_24161_, LivingEntity p_24162_, long p_24163_) {
-        Optional<GlobalPos> optional = p_24162_.getBrain().getMemory(MemoryModuleType.HOME);
-        if (optional.isEmpty()) {
+    protected boolean canStillUse(final ServerLevel level, final LivingEntity body, final long timestamp) {
+        Optional<GlobalPos> memory = body.getBrain().getMemory(MemoryModuleType.HOME);
+        if (memory.isEmpty()) {
             return false;
-        } else {
-            BlockPos blockpos = optional.get().pos();
-            return p_24162_.getBrain().isActive(Activity.REST)
-                && p_24162_.getY() > blockpos.getY() + 0.4
-                && blockpos.closerToCenterThan(p_24162_.position(), 1.14);
         }
+
+        BlockPos bedPos = memory.get().pos();
+        return body.getBrain().isActive(Activity.REST) && body.getY() > bedPos.getY() + 0.4 && bedPos.closerToCenterThan(body.position(), 1.14);
     }
 
     @Override
-    protected void start(ServerLevel p_24157_, LivingEntity p_24158_, long p_24159_) {
-        if (p_24159_ > this.nextOkStartTime) {
-            Brain<?> brain = p_24158_.getBrain();
+    protected void start(final ServerLevel level, final LivingEntity body, final long timestamp) {
+        if (timestamp > this.nextOkStartTime) {
+            Brain<?> brain = body.getBrain();
             if (brain.hasMemoryValue(MemoryModuleType.DOORS_TO_CLOSE)) {
-                Set<GlobalPos> set = brain.getMemory(MemoryModuleType.DOORS_TO_CLOSE).get();
-                Optional<List<LivingEntity>> optional;
+                Set<GlobalPos> doors = brain.getMemory(MemoryModuleType.DOORS_TO_CLOSE).get();
+                Optional<List<LivingEntity>> nearestEntities;
                 if (brain.hasMemoryValue(MemoryModuleType.NEAREST_LIVING_ENTITIES)) {
-                    optional = brain.getMemory(MemoryModuleType.NEAREST_LIVING_ENTITIES);
+                    nearestEntities = brain.getMemory(MemoryModuleType.NEAREST_LIVING_ENTITIES);
                 } else {
-                    optional = Optional.empty();
+                    nearestEntities = Optional.empty();
                 }
 
-                InteractWithDoor.closeDoorsThatIHaveOpenedOrPassedThrough(p_24157_, p_24158_, null, null, set, optional);
+                InteractWithDoor.closeDoorsThatIHaveOpenedOrPassedThrough(level, body, null, null, doors, nearestEntities);
             }
 
-            p_24158_.startSleeping(p_24158_.getBrain().getMemory(MemoryModuleType.HOME).get().pos());
+            body.startSleeping(body.getBrain().getMemory(MemoryModuleType.HOME).get().pos());
+            brain.setMemory(MemoryModuleType.LAST_SLEPT, timestamp);
+            brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+            brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
         }
     }
 
     @Override
-    protected boolean timedOut(long p_24152_) {
+    protected boolean timedOut(final long timestamp) {
         return false;
     }
 
     @Override
-    protected void stop(ServerLevel p_24165_, LivingEntity p_24166_, long p_24167_) {
-        if (p_24166_.isSleeping()) {
-            p_24166_.stopSleeping();
-            this.nextOkStartTime = p_24167_ + 40L;
+    protected void stop(final ServerLevel level, final LivingEntity body, final long timestamp) {
+        if (body.isSleeping()) {
+            body.stopSleeping();
+            this.nextOkStartTime = timestamp + 40L;
         }
     }
 }

@@ -8,11 +8,11 @@ import net.minecraft.server.players.UserWhiteListEntry;
 public interface MinecraftAllowListService {
     Collection<UserWhiteListEntry> getEntries();
 
-    boolean add(UserWhiteListEntry p_426274_, ClientInfo p_429915_);
+    boolean add(UserWhiteListEntry infos, ClientInfo clientInfo);
 
-    void clear(ClientInfo p_430854_);
+    void clear(ClientInfo clientInfo);
 
-    void remove(NameAndId p_426177_, ClientInfo p_428967_);
+    void remove(NameAndId nameAndId, ClientInfo clientInfo);
 
-    void kickUnlistedPlayers(ClientInfo p_423213_);
+    void kickUnlistedPlayers(ClientInfo clientInfo);
 }

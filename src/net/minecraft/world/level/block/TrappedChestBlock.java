@@ -10,7 +10,7 @@ import net.minecraft.stats.Stats;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
 import net.minecraft.world.level.block.entity.TrappedChestBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -24,13 +24,13 @@ public class TrappedChestBlock extends ChestBlock {
         return CODEC;
     }
 
-    public TrappedChestBlock(BlockBehaviour.Properties p_57573_) {
-        super(() -> BlockEntityType.TRAPPED_CHEST, SoundEvents.CHEST_OPEN, SoundEvents.CHEST_CLOSE, p_57573_);
+    public TrappedChestBlock(final BlockBehaviour.Properties properties) {
+        super(() -> BlockEntityTypes.TRAPPED_CHEST, SoundEvents.CHEST_OPEN, SoundEvents.CHEST_CLOSE, properties);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_154834_, BlockState p_154835_) {
-        return new TrappedChestBlockEntity(p_154834_, p_154835_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new TrappedChestBlockEntity(worldPosition, blockState);
     }
 
     @Override
@@ -39,17 +39,17 @@ public class TrappedChestBlock extends ChestBlock {
     }
 
     @Override
-    protected boolean isSignalSource(BlockState p_57587_) {
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getSignal(BlockState p_57577_, BlockGetter p_57578_, BlockPos p_57579_, Direction p_57580_) {
-        return Mth.clamp(ChestBlockEntity.getOpenCount(p_57578_, p_57579_), 0, 15);
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return Mth.clamp(ChestBlockEntity.getOpenCount(level, pos), 0, 15);
     }
 
     @Override
-    protected int getDirectSignal(BlockState p_57582_, BlockGetter p_57583_, BlockPos p_57584_, Direction p_57585_) {
-        return p_57585_ == Direction.UP ? p_57582_.getSignal(p_57583_, p_57584_, p_57585_) : 0;
+    protected int getDirectSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return direction == Direction.UP ? state.getSignal(level, pos, direction) : 0;
     }
 }

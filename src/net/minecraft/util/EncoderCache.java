@@ -10,47 +10,47 @@ import com.mojang.serialization.DynamicOps;
 import net.minecraft.nbt.Tag;
 
 public class EncoderCache {
-    final LoadingCache<EncoderCache.Key<?, ?>, DataResult<?>> cache;
+    private final LoadingCache<EncoderCache.Key<?, ?>, DataResult<?>> cache;
 
-    public EncoderCache(int p_328135_) {
+    public EncoderCache(final int maximumSize) {
         this.cache = CacheBuilder.newBuilder()
-            .maximumSize(p_328135_)
+            .maximumSize(maximumSize)
             .concurrencyLevel(1)
             .softValues()
             .build(new CacheLoader<EncoderCache.Key<?, ?>, DataResult<?>>() {
-                public DataResult<?> load(EncoderCache.Key<?, ?> p_334212_) {
-                    return p_334212_.resolve();
+                public DataResult<?> load(final EncoderCache.Key<?, ?> key) {
+                    return key.resolve();
                 }
             });
     }
 
-    public <A> Codec<A> wrap(final Codec<A> p_332774_) {
+    public <A> Codec<A> wrap(final Codec<A> codec) {
         return new Codec<A>() {
             @Override
-            public <T> DataResult<Pair<A, T>> decode(DynamicOps<T> p_335845_, T p_329817_) {
-                return p_332774_.decode(p_335845_, p_329817_);
+            public <T> DataResult<Pair<A, T>> decode(final DynamicOps<T> ops, final T input) {
+                return codec.decode(ops, input);
             }
 
             @Override
-            public <T> DataResult<T> encode(A p_328409_, DynamicOps<T> p_330058_, T p_328392_) {
-                return (DataResult<T>) EncoderCache.this.cache
-                    .getUnchecked(new EncoderCache.Key<>(p_332774_, p_328409_, p_330058_))
-                    .map(p_336406_ -> p_336406_ instanceof Tag tag ? tag.copy() : p_336406_);
+            public <T> DataResult<T> encode(final A input, final DynamicOps<T> ops, final T prefix) {
+                return (DataResult<T>)EncoderCache.this.cache
+                    .getUnchecked(new EncoderCache.Key<>(codec, input, ops))
+                    .map(value -> value instanceof Tag tag ? tag.copy() : value);
             }
         };
     }
 
-    record Key<A, T>(Codec<A> codec, A value, DynamicOps<T> ops) {
+    private record Key<A, T>(Codec<A> codec, A value, DynamicOps<T> ops) {
         public DataResult<T> resolve() {
             return this.codec.encodeStart(this.ops, this.value);
         }
 
         @Override
-        public boolean equals(Object p_334040_) {
-            if (this == p_334040_) {
+        public boolean equals(final Object obj) {
+            if (this == obj) {
                 return true;
             } else {
-                return !(p_334040_ instanceof EncoderCache.Key<?, ?> key)
+                return !(obj instanceof EncoderCache.Key<?, ?> key)
                     ? false
                     : this.codec == key.codec && this.value.equals(key.value) && this.ops.equals(key.ops);
             }
@@ -58,9 +58,9 @@ public class EncoderCache {
 
         @Override
         public int hashCode() {
-            int i = System.identityHashCode(this.codec);
-            i = 31 * i + this.value.hashCode();
-            return 31 * i + this.ops.hashCode();
+            int result = System.identityHashCode(this.codec);
+            result = 31 * result + this.value.hashCode();
+            return 31 * result + this.ops.hashCode();
         }
     }
 }

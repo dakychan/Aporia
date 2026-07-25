@@ -19,11 +19,11 @@ public enum PlayerModelPart implements StringRepresentable {
     private final String id;
     private final Component name;
 
-    private PlayerModelPart(final int p_36443_, final String p_36444_) {
-        this.bit = p_36443_;
-        this.mask = 1 << p_36443_;
-        this.id = p_36444_;
-        this.name = Component.translatable("options.modelPart." + p_36444_);
+    PlayerModelPart(final int bit, final String name) {
+        this.bit = bit;
+        this.mask = 1 << bit;
+        this.id = name;
+        this.name = Component.translatable("options.modelPart." + name);
     }
 
     public int getMask() {

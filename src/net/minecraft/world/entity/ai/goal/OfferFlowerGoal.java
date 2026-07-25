@@ -20,8 +20,8 @@ public class OfferFlowerGoal extends Goal {
     private @Nullable LivingEntity entity;
     private int tick;
 
-    public OfferFlowerGoal(IronGolem p_458154_) {
-        this.golem = p_458154_;
+    public OfferFlowerGoal(final IronGolem golem) {
+        this.golem = golem;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -29,21 +29,23 @@ public class OfferFlowerGoal extends Goal {
     public boolean canUse() {
         if (!this.golem.level().isBrightOutside()) {
             return false;
-        } else if (this.golem.getRandom().nextInt(8000) != 0) {
-            return false;
-        } else {
-            this.entity = getServerLevel(this.golem)
-                .getNearestEntity(
-                    EntityTypeTags.CANDIDATE_FOR_IRON_GOLEM_GIFT,
-                    OFFER_TARGET_CONTEXT,
-                    this.golem,
-                    this.golem.getX(),
-                    this.golem.getY(),
-                    this.golem.getZ(),
-                    this.getGolemBoundingBox()
-                );
-            return this.entity != null;
         }
+
+        if (this.golem.getRandom().nextInt(8000) != 0) {
+            return false;
+        }
+
+        this.entity = getServerLevel(this.golem)
+            .getNearestEntity(
+                EntityTypeTags.CANDIDATE_FOR_IRON_GOLEM_GIFT,
+                OFFER_TARGET_CONTEXT,
+                this.golem,
+                this.golem.getX(),
+                this.golem.getY(),
+                this.golem.getZ(),
+                this.getGolemBoundingBox()
+            );
+        return this.entity != null;
     }
 
     @Override
@@ -62,7 +64,7 @@ public class OfferFlowerGoal extends Goal {
         this.golem.offerFlower(false);
         if (this.tick == 0
             && this.entity instanceof Mob mob
-            && mob.getType().is(EntityTypeTags.ACCEPTS_IRON_GOLEM_GIFT)
+            && mob.is(EntityTypeTags.ACCEPTS_IRON_GOLEM_GIFT)
             && mob.getItemBySlot(CopperGolem.EQUIPMENT_SLOT_ANTENNA).isEmpty()
             && this.getGolemBoundingBox().intersects(mob.getBoundingBox())) {
             mob.setItemSlot(CopperGolem.EQUIPMENT_SLOT_ANTENNA, OFFER_ITEM.getDefaultInstance());

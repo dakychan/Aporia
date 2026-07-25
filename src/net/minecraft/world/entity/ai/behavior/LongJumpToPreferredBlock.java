@@ -21,48 +21,47 @@ public class LongJumpToPreferredBlock<E extends Mob> extends LongJumpToRandomPos
     private boolean currentlyWantingPreferredOnes;
 
     public LongJumpToPreferredBlock(
-        UniformInt p_250024_,
-        int p_249524_,
-        int p_250434_,
-        float p_252307_,
-        Function<E, SoundEvent> p_248661_,
-        TagKey<Block> p_251760_,
-        float p_249002_,
-        BiPredicate<E, BlockPos> p_251818_
+        final UniformInt timeBetweenLongJumps,
+        final int maxLongJumpHeight,
+        final int maxLongJumpWidth,
+        final float maxJumpVelocity,
+        final Function<E, SoundEvent> getJumpSound,
+        final TagKey<Block> preferredBlockTag,
+        final float preferredBlocksChance,
+        final BiPredicate<E, BlockPos> acceptableLandingSpot
     ) {
-        super(p_250024_, p_249524_, p_250434_, p_252307_, p_248661_, p_251818_);
-        this.preferredBlockTag = p_251760_;
-        this.preferredBlocksChance = p_249002_;
+        super(timeBetweenLongJumps, maxLongJumpHeight, maxLongJumpWidth, maxJumpVelocity, getJumpSound, acceptableLandingSpot);
+        this.preferredBlockTag = preferredBlockTag;
+        this.preferredBlocksChance = preferredBlocksChance;
     }
 
     @Override
-    protected void start(ServerLevel p_217279_, E p_217280_, long p_217281_) {
-        super.start(p_217279_, p_217280_, p_217281_);
+    protected void start(final ServerLevel level, final E body, final long timestamp) {
+        super.start(level, body, timestamp);
         this.notPrefferedJumpCandidates.clear();
-        this.currentlyWantingPreferredOnes = p_217280_.getRandom().nextFloat() < this.preferredBlocksChance;
+        this.currentlyWantingPreferredOnes = body.getRandom().nextFloat() < this.preferredBlocksChance;
     }
 
     @Override
-    protected Optional<LongJumpToRandomPos.PossibleJump> getJumpCandidate(ServerLevel p_217273_) {
+    protected Optional<LongJumpToRandomPos.PossibleJump> getJumpCandidate(final ServerLevel level) {
         if (!this.currentlyWantingPreferredOnes) {
-            return super.getJumpCandidate(p_217273_);
-        } else {
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-
-            while (!this.jumpCandidates.isEmpty()) {
-                Optional<LongJumpToRandomPos.PossibleJump> optional = super.getJumpCandidate(p_217273_);
-                if (optional.isPresent()) {
-                    LongJumpToRandomPos.PossibleJump longjumptorandompos$possiblejump = optional.get();
-                    if (p_217273_.getBlockState(blockpos$mutableblockpos.setWithOffset(longjumptorandompos$possiblejump.targetPos(), Direction.DOWN))
-                        .is(this.preferredBlockTag)) {
-                        return optional;
-                    }
-
-                    this.notPrefferedJumpCandidates.add(longjumptorandompos$possiblejump);
-                }
-            }
-
-            return !this.notPrefferedJumpCandidates.isEmpty() ? Optional.of(this.notPrefferedJumpCandidates.remove(0)) : Optional.empty();
+            return super.getJumpCandidate(level);
         }
+
+        BlockPos.MutableBlockPos testPos = new BlockPos.MutableBlockPos();
+
+        while (!this.jumpCandidates.isEmpty()) {
+            Optional<LongJumpToRandomPos.PossibleJump> jumpCandidate = super.getJumpCandidate(level);
+            if (jumpCandidate.isPresent()) {
+                LongJumpToRandomPos.PossibleJump possibleJump = jumpCandidate.get();
+                if (level.getBlockState(testPos.setWithOffset(possibleJump.targetPos(), Direction.DOWN)).is(this.preferredBlockTag)) {
+                    return jumpCandidate;
+                }
+
+                this.notPrefferedJumpCandidates.add(possibleJump);
+            }
+        }
+
+        return !this.notPrefferedJumpCandidates.isEmpty() ? Optional.of(this.notPrefferedJumpCandidates.remove(0)) : Optional.empty();
     }
 }

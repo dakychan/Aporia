@@ -3,7 +3,6 @@ package net.minecraft.world.item.enchantment.effects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -22,30 +21,30 @@ import net.minecraft.world.phys.Vec3;
 
 public record SummonEntityEffect(HolderSet<EntityType<?>> entityTypes, boolean joinTeam) implements EnchantmentEntityEffect {
     public static final MapCodec<SummonEntityEffect> CODEC = RecordCodecBuilder.mapCodec(
-        p_345460_ -> p_345460_.group(
+        i -> i.group(
                 RegistryCodecs.homogeneousList(Registries.ENTITY_TYPE).fieldOf("entity").forGetter(SummonEntityEffect::entityTypes),
                 Codec.BOOL.optionalFieldOf("join_team", false).forGetter(SummonEntityEffect::joinTeam)
             )
-            .apply(p_345460_, SummonEntityEffect::new)
+            .apply(i, SummonEntityEffect::new)
     );
 
     @Override
-    public void apply(ServerLevel p_344501_, int p_344802_, EnchantedItemInUse p_342872_, Entity p_342384_, Vec3 p_342075_) {
-        BlockPos blockpos = BlockPos.containing(p_342075_);
-        if (Level.isInSpawnableBounds(blockpos)) {
-            Optional<Holder<EntityType<?>>> optional = this.entityTypes().getRandomElement(p_344501_.getRandom());
-            if (!optional.isEmpty()) {
-                Entity entity = optional.get().value().spawn(p_344501_, blockpos, EntitySpawnReason.TRIGGERED);
-                if (entity != null) {
-                    if (entity instanceof LightningBolt lightningbolt && p_342872_.owner() instanceof ServerPlayer serverplayer) {
-                        lightningbolt.setCause(serverplayer);
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        BlockPos blockPos = BlockPos.containing(position);
+        if (Level.isInSpawnableBounds(blockPos)) {
+            Optional<Holder<EntityType<?>>> entityType = this.entityTypes().getRandomElement(serverLevel.getRandom());
+            if (!entityType.isEmpty()) {
+                Entity spawned = entityType.get().value().spawn(serverLevel, blockPos, EntitySpawnReason.TRIGGERED);
+                if (spawned != null) {
+                    if (spawned instanceof LightningBolt lightningBolt && item.owner() instanceof ServerPlayer player) {
+                        lightningBolt.setCause(player);
                     }
 
-                    if (this.joinTeam && p_342384_.getTeam() != null) {
-                        p_344501_.getScoreboard().addPlayerToTeam(entity.getScoreboardName(), p_342384_.getTeam());
+                    if (this.joinTeam && entity.getTeam() != null) {
+                        serverLevel.getScoreboard().addPlayerToTeam(spawned.getScoreboardName(), entity.getTeam());
                     }
 
-                    entity.snapTo(p_342075_.x, p_342075_.y, p_342075_.z, entity.getYRot(), entity.getXRot());
+                    spawned.snapTo(position.x, position.y, position.z, spawned.getYRot(), spawned.getXRot());
                 }
             }
         }

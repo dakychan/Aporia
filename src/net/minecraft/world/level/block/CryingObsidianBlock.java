@@ -17,24 +17,22 @@ public class CryingObsidianBlock extends Block {
         return CODEC;
     }
 
-    public CryingObsidianBlock(BlockBehaviour.Properties p_52371_) {
-        super(p_52371_);
+    public CryingObsidianBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public void animateTick(BlockState p_221055_, Level p_221056_, BlockPos p_221057_, RandomSource p_221058_) {
-        if (p_221058_.nextInt(5) == 0) {
-            Direction direction = Direction.getRandom(p_221058_);
-            if (direction != Direction.UP) {
-                BlockPos blockpos = p_221057_.relative(direction);
-                BlockState blockstate = p_221056_.getBlockState(blockpos);
-                if (!p_221055_.canOcclude() || !blockstate.isFaceSturdy(p_221056_, blockpos, direction.getOpposite())) {
-                    double d0 = direction.getStepX() == 0 ? p_221058_.nextDouble() : 0.5 + direction.getStepX() * 0.6;
-                    double d1 = direction.getStepY() == 0 ? p_221058_.nextDouble() : 0.5 + direction.getStepY() * 0.6;
-                    double d2 = direction.getStepZ() == 0 ? p_221058_.nextDouble() : 0.5 + direction.getStepZ() * 0.6;
-                    p_221056_.addParticle(
-                        ParticleTypes.DRIPPING_OBSIDIAN_TEAR, p_221057_.getX() + d0, p_221057_.getY() + d1, p_221057_.getZ() + d2, 0.0, 0.0, 0.0
-                    );
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (random.nextInt(5) == 0) {
+            Direction dir = Direction.getRandom(random);
+            if (dir != Direction.UP) {
+                BlockPos relativePos = pos.relative(dir);
+                BlockState blockState = level.getBlockState(relativePos);
+                if (!state.canOcclude() || !blockState.isFaceSturdy(level, relativePos, dir.getOpposite())) {
+                    double xOffset = dir.getStepX() == 0 ? random.nextDouble() : 0.5 + dir.getStepX() * 0.6;
+                    double yOffset = dir.getStepY() == 0 ? random.nextDouble() : 0.5 + dir.getStepY() * 0.6;
+                    double zOffset = dir.getStepZ() == 0 ? random.nextDouble() : 0.5 + dir.getStepZ() * 0.6;
+                    level.addParticle(ParticleTypes.DRIPPING_OBSIDIAN_TEAR, pos.getX() + xOffset, pos.getY() + yOffset, pos.getZ() + zOffset, 0.0, 0.0, 0.0);
                 }
             }
         }

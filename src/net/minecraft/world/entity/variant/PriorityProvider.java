@@ -3,7 +3,6 @@ package net.minecraft.world.entity.variant;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -18,16 +17,16 @@ import net.minecraft.util.Util;
 public interface PriorityProvider<Context, Condition extends PriorityProvider.SelectorCondition<Context>> {
     List<PriorityProvider.Selector<Context, Condition>> selectors();
 
-    static <C, T> Stream<T> select(Stream<T> p_396955_, Function<T, PriorityProvider<C, ?>> p_397812_, C p_397224_) {
-        List<PriorityProvider.UnpackedEntry<C, T>> list = new ArrayList<>();
-        p_396955_.forEach(
-            p_393783_ -> {
-                PriorityProvider<C, ?> priorityprovider = p_397812_.apply((T)p_393783_);
+    static <C, T> Stream<T> select(final Stream<T> entries, final Function<T, PriorityProvider<C, ?>> extractor, final C context) {
+        List<PriorityProvider.UnpackedEntry<C, T>> unpackedEntries = new ArrayList<>();
+        entries.forEach(
+            entryx -> {
+                PriorityProvider<C, ?> provider = extractor.apply((T)entryx);
 
-                for (PriorityProvider.Selector<C, ?> selector : priorityprovider.selectors()) {
-                    list.add(
+                for (PriorityProvider.Selector<C, ?> selector : provider.selectors()) {
+                    unpackedEntries.add(
                         new PriorityProvider.UnpackedEntry<>(
-                            (T)p_393783_,
+                            (T)entryx,
                             selector.priority(),
                             DataFixUtils.orElseGet(
                                 (Optional<? extends PriorityProvider.SelectorCondition<C>>)selector.condition(), PriorityProvider.SelectorCondition::alwaysTrue
@@ -37,70 +36,76 @@ public interface PriorityProvider<Context, Condition extends PriorityProvider.Se
                 }
             }
         );
-        list.sort(PriorityProvider.UnpackedEntry.HIGHEST_PRIORITY_FIRST);
-        Iterator<PriorityProvider.UnpackedEntry<C, T>> iterator = list.iterator();
-        int i = Integer.MIN_VALUE;
+        unpackedEntries.sort(PriorityProvider.UnpackedEntry.HIGHEST_PRIORITY_FIRST);
+        Iterator<PriorityProvider.UnpackedEntry<C, T>> iterator = unpackedEntries.iterator();
+        int highestMatchedPriority = Integer.MIN_VALUE;
 
         while (iterator.hasNext()) {
-            PriorityProvider.UnpackedEntry<C, T> unpackedentry = iterator.next();
-            if (unpackedentry.priority < i) {
+            PriorityProvider.UnpackedEntry<C, T> entry = iterator.next();
+            if (entry.priority < highestMatchedPriority) {
                 iterator.remove();
-            } else if (unpackedentry.condition.test(p_397224_)) {
-                i = unpackedentry.priority;
+            } else if (entry.condition.test(context)) {
+                highestMatchedPriority = entry.priority;
             } else {
                 iterator.remove();
             }
         }
 
-        return list.stream().map(PriorityProvider.UnpackedEntry::entry);
+        return unpackedEntries.stream().map(PriorityProvider.UnpackedEntry::entry);
     }
 
-    static <C, T> Optional<T> pick(Stream<T> p_396747_, Function<T, PriorityProvider<C, ?>> p_391185_, RandomSource p_393478_, C p_393720_) {
-        List<T> list = select(p_396747_, p_391185_, p_393720_).toList();
-        return Util.getRandomSafe(list, p_393478_);
+    static <C, T> Optional<T> pick(
+        final Stream<T> entries, final Function<T, PriorityProvider<C, ?>> extractor, final RandomSource randomSource, final C context
+    ) {
+        List<T> selected = select(entries, extractor, context).toList();
+        return Util.getRandomSafe(selected, randomSource);
     }
 
     static <Context, Condition extends PriorityProvider.SelectorCondition<Context>> List<PriorityProvider.Selector<Context, Condition>> single(
-        Condition p_396716_, int p_397144_
+        final Condition check, final int priority
     ) {
-        return List.of(new PriorityProvider.Selector<>(p_396716_, p_397144_));
+        return List.of(new PriorityProvider.Selector<>(check, priority));
     }
 
-    static <Context, Condition extends PriorityProvider.SelectorCondition<Context>> List<PriorityProvider.Selector<Context, Condition>> alwaysTrue(int p_393120_) {
-        return List.of(new PriorityProvider.Selector<>(Optional.empty(), p_393120_));
+    static <Context, Condition extends PriorityProvider.SelectorCondition<Context>> List<PriorityProvider.Selector<Context, Condition>> alwaysTrue(
+        final int priority
+    ) {
+        return List.of(new PriorityProvider.Selector<>(Optional.empty(), priority));
     }
 
-    public record Selector<Context, Condition extends PriorityProvider.SelectorCondition<Context>>(Optional<Condition> condition, int priority) {
-        public Selector(Condition p_391905_, int p_391164_) {
-            this(Optional.of(p_391905_), p_391164_);
+    record Selector<Context, Condition extends PriorityProvider.SelectorCondition<Context>>(Optional<Condition> condition, int priority) {
+        public Selector(final Condition condition, final int priority) {
+            this(Optional.of(condition), priority);
         }
 
-        public Selector(int p_397244_) {
-            this(Optional.empty(), p_397244_);
+        public Selector(final int priority) {
+            this(Optional.empty(), priority);
         }
 
         public static <Context, Condition extends PriorityProvider.SelectorCondition<Context>> Codec<PriorityProvider.Selector<Context, Condition>> codec(
-            Codec<Condition> p_395907_
+            final Codec<Condition> conditionCodec
         ) {
             return RecordCodecBuilder.create(
-                p_394411_ -> p_394411_.group(
-                        p_395907_.optionalFieldOf("condition").forGetter(PriorityProvider.Selector::condition),
+                i -> i.group(
+                        conditionCodec.optionalFieldOf("condition").forGetter(PriorityProvider.Selector::condition),
                         Codec.INT.fieldOf("priority").forGetter(PriorityProvider.Selector::priority)
                     )
-                    .apply(p_394411_, PriorityProvider.Selector::new)
+                    .apply(i, PriorityProvider.Selector::new)
             );
         }
     }
 
     @FunctionalInterface
-    public interface SelectorCondition<C> extends Predicate<C> {
+    interface SelectorCondition<C> extends Predicate<C> {
         static <C> PriorityProvider.SelectorCondition<C> alwaysTrue() {
-            return p_397254_ -> true;
+            return context -> true;
         }
     }
 
-    public record UnpackedEntry<C, T>(T entry, int priority, PriorityProvider.SelectorCondition<C> condition) {
-        public static final Comparator<PriorityProvider.UnpackedEntry<?, ?>> HIGHEST_PRIORITY_FIRST = Comparator.<PriorityProvider.UnpackedEntry<?, ?>>comparingInt(PriorityProvider.UnpackedEntry::priority)
+    record UnpackedEntry<C, T>(T entry, int priority, PriorityProvider.SelectorCondition<C> condition) {
+        public static final Comparator<PriorityProvider.UnpackedEntry<?, ?>> HIGHEST_PRIORITY_FIRST = Comparator.<PriorityProvider.UnpackedEntry<?, ?>>comparingInt(
+                PriorityProvider.UnpackedEntry::priority
+            )
             .reversed();
     }
 }

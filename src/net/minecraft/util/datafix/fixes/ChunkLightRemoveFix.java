@@ -4,26 +4,24 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
-import com.mojang.serialization.Dynamic;
 
 public class ChunkLightRemoveFix extends DataFix {
-    public ChunkLightRemoveFix(Schema p_15025_, boolean p_15026_) {
-        super(p_15025_, p_15026_);
+    public ChunkLightRemoveFix(final Schema schema, final boolean changesType) {
+        super(schema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        Type<?> type1 = type.findFieldType("Level");
-        OpticFinder<?> opticfinder = DSL.fieldFinder("Level", type1);
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        Type<?> levelType = chunkType.findFieldType("Level");
+        OpticFinder<?> levelF = DSL.fieldFinder("Level", levelType);
         return this.fixTypeEverywhereTyped(
             "ChunkLightRemoveFix",
-            type,
+            chunkType,
             this.getOutputSchema().getType(References.CHUNK),
-            p_15029_ -> p_15029_.updateTyped(opticfinder, p_145208_ -> p_145208_.update(DSL.remainderFinder(), p_145210_ -> p_145210_.remove("isLightOn")))
+            input -> input.updateTyped(levelF, level -> level.update(DSL.remainderFinder(), tag -> tag.remove("isLightOn")))
         );
     }
 }

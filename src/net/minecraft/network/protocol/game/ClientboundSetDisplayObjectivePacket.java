@@ -16,23 +16,23 @@ public class ClientboundSetDisplayObjectivePacket implements Packet<ClientGamePa
     private final DisplaySlot slot;
     private final String objectiveName;
 
-    public ClientboundSetDisplayObjectivePacket(DisplaySlot p_301315_, @Nullable Objective p_133132_) {
-        this.slot = p_301315_;
-        if (p_133132_ == null) {
+    public ClientboundSetDisplayObjectivePacket(final DisplaySlot slot, final @Nullable Objective objective) {
+        this.slot = slot;
+        if (objective == null) {
             this.objectiveName = "";
         } else {
-            this.objectiveName = p_133132_.getName();
+            this.objectiveName = objective.getName();
         }
     }
 
-    private ClientboundSetDisplayObjectivePacket(FriendlyByteBuf p_179288_) {
-        this.slot = p_179288_.readById(DisplaySlot.BY_ID);
-        this.objectiveName = p_179288_.readUtf();
+    private ClientboundSetDisplayObjectivePacket(final FriendlyByteBuf input) {
+        this.slot = input.readById(DisplaySlot.BY_ID);
+        this.objectiveName = input.readUtf();
     }
 
-    private void write(FriendlyByteBuf p_133141_) {
-        p_133141_.writeById(DisplaySlot::id, this.slot);
-        p_133141_.writeUtf(this.objectiveName);
+    private void write(final FriendlyByteBuf output) {
+        output.writeById(DisplaySlot::id, this.slot);
+        output.writeUtf(this.objectiveName);
     }
 
     @Override
@@ -40,8 +40,8 @@ public class ClientboundSetDisplayObjectivePacket implements Packet<ClientGamePa
         return GamePacketTypes.CLIENTBOUND_SET_DISPLAY_OBJECTIVE;
     }
 
-    public void handle(ClientGamePacketListener p_133138_) {
-        p_133138_.handleSetDisplayObjective(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetDisplayObjective(this);
     }
 
     public DisplaySlot getSlot() {

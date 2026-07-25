@@ -6,23 +6,20 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Blaze;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BlazeRenderer extends MobRenderer<Blaze, LivingEntityRenderState, BlazeModel> {
-    private static final Identifier BLAZE_LOCATION = Identifier.withDefaultNamespace("textures/entity/blaze.png");
+    private static final Identifier BLAZE_LOCATION = Identifier.withDefaultNamespace("textures/entity/blaze/blaze.png");
 
-    public BlazeRenderer(EntityRendererProvider.Context p_173933_) {
-        super(p_173933_, new BlazeModel(p_173933_.bakeLayer(ModelLayers.BLAZE)), 0.5F);
+    public BlazeRenderer(final EntityRendererProvider.Context context) {
+        super(context, new BlazeModel(context.bakeLayer(ModelLayers.BLAZE)), 0.5F);
     }
 
-    protected int getBlockLightLevel(Blaze p_113910_, BlockPos p_113911_) {
+    protected int getBlockLightLevel(final Blaze entity, final BlockPos blockPos) {
         return 15;
     }
 
     @Override
-    public Identifier getTextureLocation(LivingEntityRenderState p_366152_) {
+    public Identifier getTextureLocation(final LivingEntityRenderState state) {
         return BLAZE_LOCATION;
     }
 

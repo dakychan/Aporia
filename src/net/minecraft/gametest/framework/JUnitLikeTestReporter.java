@@ -21,40 +21,40 @@ public class JUnitLikeTestReporter implements TestReporter {
     private final Stopwatch stopwatch;
     private final File destination;
 
-    public JUnitLikeTestReporter(File p_177664_) throws ParserConfigurationException {
-        this.destination = p_177664_;
+    public JUnitLikeTestReporter(final File destination) throws ParserConfigurationException {
+        this.destination = destination;
         this.document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();
         this.testSuite = this.document.createElement("testsuite");
-        Element element = this.document.createElement("testsuite");
-        element.appendChild(this.testSuite);
-        this.document.appendChild(element);
+        Element testSuites = this.document.createElement("testsuite");
+        testSuites.appendChild(this.testSuite);
+        this.document.appendChild(testSuites);
         this.testSuite.setAttribute("timestamp", DateTimeFormatter.ISO_INSTANT.format(Instant.now()));
         this.stopwatch = Stopwatch.createStarted();
     }
 
-    private Element createTestCase(GameTestInfo p_177671_, String p_177672_) {
-        Element element = this.document.createElement("testcase");
-        element.setAttribute("name", p_177672_);
-        element.setAttribute("classname", p_177671_.getStructure().toString());
-        element.setAttribute("time", String.valueOf(p_177671_.getRunTime() / 1000.0));
-        this.testSuite.appendChild(element);
-        return element;
+    private Element createTestCase(final GameTestInfo testInfo, final String name) {
+        Element testCase = this.document.createElement("testcase");
+        testCase.setAttribute("name", name);
+        testCase.setAttribute("classname", testInfo.getStructure().toString());
+        testCase.setAttribute("time", String.valueOf(testInfo.getRunTime() / 1000.0));
+        this.testSuite.appendChild(testCase);
+        return testCase;
     }
 
     @Override
-    public void onTestFailed(GameTestInfo p_177669_) {
-        String s = p_177669_.id().toString();
-        String s1 = p_177669_.getError().getMessage();
-        Element element = this.document.createElement(p_177669_.isRequired() ? "failure" : "skipped");
-        element.setAttribute("message", "(" + p_177669_.getTestBlockPos().toShortString() + ") " + s1);
-        Element element1 = this.createTestCase(p_177669_, s);
-        element1.appendChild(element);
+    public void onTestFailed(final GameTestInfo testInfo) {
+        String name = testInfo.id().toString();
+        String message = testInfo.getError().getMessage();
+        Element result = this.document.createElement(testInfo.isRequired() ? "failure" : "skipped");
+        result.setAttribute("message", "(" + testInfo.getTestBlockPos().toShortString() + ") " + message);
+        Element testCase = this.createTestCase(testInfo, name);
+        testCase.appendChild(result);
     }
 
     @Override
-    public void onTestSuccess(GameTestInfo p_177674_) {
-        String s = p_177674_.id().toString();
-        this.createTestCase(p_177674_, s);
+    public void onTestSuccess(final GameTestInfo testInfo) {
+        String name = testInfo.id().toString();
+        this.createTestCase(testInfo, name);
     }
 
     @Override
@@ -64,16 +64,16 @@ public class JUnitLikeTestReporter implements TestReporter {
 
         try {
             this.save(this.destination);
-        } catch (TransformerException transformerexception) {
-            throw new Error("Couldn't save test report", transformerexception);
+        } catch (TransformerException exception) {
+            throw new Error("Couldn't save test report", exception);
         }
     }
 
-    public void save(File p_177667_) throws TransformerException {
-        TransformerFactory transformerfactory = TransformerFactory.newInstance();
-        Transformer transformer = transformerfactory.newTransformer();
-        DOMSource domsource = new DOMSource(this.document);
-        StreamResult streamresult = new StreamResult(p_177667_);
-        transformer.transform(domsource, streamresult);
+    public void save(final File file) throws TransformerException {
+        TransformerFactory transformerFactory = TransformerFactory.newInstance();
+        Transformer transformer = transformerFactory.newTransformer();
+        DOMSource source = new DOMSource(this.document);
+        StreamResult result = new StreamResult(file);
+        transformer.transform(source, result);
     }
 }

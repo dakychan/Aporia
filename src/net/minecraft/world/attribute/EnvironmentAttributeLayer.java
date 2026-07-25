@@ -5,20 +5,20 @@ import org.jspecify.annotations.Nullable;
 
 public sealed interface EnvironmentAttributeLayer<Value>
     permits EnvironmentAttributeLayer.Constant,
-    EnvironmentAttributeLayer.TimeBased,
-    EnvironmentAttributeLayer.Positional {
+    EnvironmentAttributeLayer.Positional,
+    EnvironmentAttributeLayer.TimeBased {
     @FunctionalInterface
-    public non-sealed interface Constant<Value> extends EnvironmentAttributeLayer<Value> {
-        Value applyConstant(Value p_459450_);
+    non-sealed interface Constant<Value> extends EnvironmentAttributeLayer<Value> {
+        Value applyConstant(Value baseValue);
     }
 
     @FunctionalInterface
-    public non-sealed interface Positional<Value> extends EnvironmentAttributeLayer<Value> {
-        Value applyPositional(Value p_450535_, Vec3 p_459845_, @Nullable SpatialAttributeInterpolator p_457174_);
+    non-sealed interface Positional<Value> extends EnvironmentAttributeLayer<Value> {
+        Value applyPositional(Value baseValue, Vec3 pos, @Nullable SpatialAttributeInterpolator biomeInterpolator);
     }
 
     @FunctionalInterface
-    public non-sealed interface TimeBased<Value> extends EnvironmentAttributeLayer<Value> {
-        Value applyTimeBased(Value p_456873_, int p_452357_);
+    non-sealed interface TimeBased<Value> extends EnvironmentAttributeLayer<Value> {
+        Value applyTimeBased(Value baseValue, int cacheTickId);
     }
 }

@@ -31,9 +31,9 @@ public class CrashReport {
     private StackTraceElement[] uncategorizedStackTrace = new StackTraceElement[0];
     private final SystemReport systemReport = new SystemReport();
 
-    public CrashReport(String p_127509_, Throwable p_127510_) {
-        this.title = p_127509_;
-        this.exception = p_127510_;
+    public CrashReport(final String title, final Throwable t) {
+        this.title = title;
+        this.exception = t;
     }
 
     public String getTitle() {
@@ -45,175 +45,193 @@ public class CrashReport {
     }
 
     public String getDetails() {
-        StringBuilder stringbuilder = new StringBuilder();
-        this.getDetails(stringbuilder);
-        return stringbuilder.toString();
+        StringBuilder builder = new StringBuilder();
+        this.getDetails(builder);
+        return builder.toString();
     }
 
-    public void getDetails(StringBuilder p_127520_) {
-        if ((this.uncategorizedStackTrace == null || this.uncategorizedStackTrace.length <= 0) && !this.details.isEmpty()) {
+    public void getDetails(final StringBuilder builder) {
+        if (this.uncategorizedStackTrace.length <= 0 && !this.details.isEmpty()) {
             this.uncategorizedStackTrace = ArrayUtils.subarray(this.details.get(0).getStacktrace(), 0, 1);
         }
 
-        if (this.uncategorizedStackTrace != null && this.uncategorizedStackTrace.length > 0) {
-            p_127520_.append("-- Head --\n");
-            p_127520_.append("Thread: ").append(Thread.currentThread().getName()).append("\n");
-            p_127520_.append("Stacktrace:\n");
+        if (this.uncategorizedStackTrace.length > 0) {
+            builder.append("-- Head --\n");
+            builder.append("Thread: ").append(Thread.currentThread().getName()).append("\n");
+            builder.append("Stacktrace:\n");
 
-            for (StackTraceElement stacktraceelement : this.uncategorizedStackTrace) {
-                p_127520_.append("\t").append("at ").append(stacktraceelement);
-                p_127520_.append("\n");
+            for (StackTraceElement element : this.uncategorizedStackTrace) {
+                builder.append("\t").append("at ").append(element);
+                builder.append("\n");
             }
 
-            p_127520_.append("\n");
+            builder.append("\n");
         }
 
-        for (CrashReportCategory crashreportcategory : this.details) {
-            crashreportcategory.getDetails(p_127520_);
-            p_127520_.append("\n\n");
+        for (CrashReportCategory entry : this.details) {
+            entry.getDetails(builder);
+            builder.append("\n\n");
         }
 
-        this.systemReport.appendToCrashReportString(p_127520_);
+        this.systemReport.appendToCrashReportString(builder);
     }
 
     public String getExceptionMessage() {
-        StringWriter stringwriter = null;
-        PrintWriter printwriter = null;
-        Throwable throwable = this.exception;
-        if (throwable.getMessage() == null) {
-            if (throwable instanceof NullPointerException) {
-                throwable = new NullPointerException(this.title);
-            } else if (throwable instanceof StackOverflowError) {
-                throwable = new StackOverflowError(this.title);
-            } else if (throwable instanceof OutOfMemoryError) {
-                throwable = new OutOfMemoryError(this.title);
+        StringWriter writer = null;
+        PrintWriter printWriter = null;
+        Throwable exception = this.exception;
+        if (exception.getMessage() == null) {
+            exception = replaceMessage(exception, this.title);
+        }
+
+        try {
+            writer = new StringWriter();
+            printWriter = new PrintWriter(writer);
+            exception.printStackTrace(printWriter);
+            return writer.toString();
+        } finally {
+            IOUtils.closeQuietly(writer);
+            IOUtils.closeQuietly(printWriter);
+        }
+    }
+
+    private static Throwable copyProperties(final Throwable original, final Throwable copy) {
+        try {
+            Throwable cause = original.getCause();
+            if (cause != null) {
+                copy.initCause(cause);
             }
 
-            throwable.setStackTrace(this.exception.getStackTrace());
-        }
+            Throwable[] suppressed = original.getSuppressed();
 
-        String s;
-        try {
-            stringwriter = new StringWriter();
-            printwriter = new PrintWriter(stringwriter);
-            throwable.printStackTrace(printwriter);
-            s = stringwriter.toString();
-        } finally {
-            IOUtils.closeQuietly((Writer)stringwriter);
-            IOUtils.closeQuietly((Writer)printwriter);
-        }
+            for (Throwable throwable : suppressed) {
+                copy.addSuppressed(throwable);
+            }
 
-        return s;
+            copy.setStackTrace(original.getStackTrace());
+            return copy;
+        } catch (Throwable e) {
+            return original;
+        }
     }
 
-    public String getFriendlyReport(ReportType p_343869_, List<String> p_342487_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        p_343869_.appendHeader(stringbuilder, p_342487_);
-        stringbuilder.append("Time: ");
-        stringbuilder.append(DATE_TIME_FORMATTER.format(ZonedDateTime.now()));
-        stringbuilder.append("\n");
-        stringbuilder.append("Description: ");
-        stringbuilder.append(this.title);
-        stringbuilder.append("\n\n");
-        stringbuilder.append(this.getExceptionMessage());
-        stringbuilder.append("\n\nA detailed walkthrough of the error, its code path and all known details is as follows:\n");
+    private static Throwable replaceMessage(final Throwable original, final String title) {
+        return switch (original) {
+            case NullPointerException var4 -> copyProperties(original, new NullPointerException(title));
+            case StackOverflowError var5 -> copyProperties(original, new StackOverflowError(title));
+            case OutOfMemoryError var6 -> copyProperties(original, new OutOfMemoryError(title));
+            default -> original;
+        };
+    }
+
+    public String getFriendlyReport(final ReportType reportType, final List<String> extraComments) {
+        StringBuilder builder = new StringBuilder();
+        reportType.appendHeader(builder, extraComments);
+        builder.append("Time: ");
+        builder.append(DATE_TIME_FORMATTER.format(ZonedDateTime.now()));
+        builder.append("\n");
+        builder.append("Description: ");
+        builder.append(this.title);
+        builder.append("\n\n");
+        builder.append(this.getExceptionMessage());
+        builder.append("\n\nA detailed walkthrough of the error, its code path and all known details is as follows:\n");
 
         for (int i = 0; i < 87; i++) {
-            stringbuilder.append("-");
+            builder.append("-");
         }
 
-        stringbuilder.append("\n\n");
-        this.getDetails(stringbuilder);
-        return stringbuilder.toString();
+        builder.append("\n\n");
+        this.getDetails(builder);
+        return builder.toString();
     }
 
-    public String getFriendlyReport(ReportType p_343367_) {
-        return this.getFriendlyReport(p_343367_, List.of());
+    public String getFriendlyReport(final ReportType reportType) {
+        return this.getFriendlyReport(reportType, List.of());
     }
 
     public @Nullable Path getSaveFile() {
         return this.saveFile;
     }
 
-    public boolean saveToFile(Path p_343023_, ReportType p_343502_, List<String> p_344584_) {
+    public boolean saveToFile(final Path saveFile, final ReportType reportType, final List<String> extraComments) {
         if (this.saveFile != null) {
             return false;
-        } else {
-            try {
-                if (p_343023_.getParent() != null) {
-                    FileUtil.createDirectoriesSafe(p_343023_.getParent());
-                }
+        }
 
-                try (Writer writer = Files.newBufferedWriter(p_343023_, StandardCharsets.UTF_8)) {
-                    writer.write(this.getFriendlyReport(p_343502_, p_344584_));
-                }
-
-                this.saveFile = p_343023_;
-                return true;
-            } catch (Throwable throwable1) {
-                LOGGER.error("Could not save crash report to {}", p_343023_, throwable1);
-                return false;
+        try {
+            if (saveFile.getParent() != null) {
+                FileUtil.createDirectoriesSafe(saveFile.getParent());
             }
+
+            try (Writer writer = Files.newBufferedWriter(saveFile, StandardCharsets.UTF_8)) {
+                writer.write(this.getFriendlyReport(reportType, extraComments));
+            }
+
+            this.saveFile = saveFile;
+            return true;
+        } catch (Throwable t) {
+            LOGGER.error("Could not save crash report to {}", saveFile, t);
+            return false;
         }
     }
 
-    public boolean saveToFile(Path p_342057_, ReportType p_344042_) {
-        return this.saveToFile(p_342057_, p_344042_, List.of());
+    public boolean saveToFile(final Path file, final ReportType reportType) {
+        return this.saveToFile(file, reportType, List.of());
     }
 
     public SystemReport getSystemReport() {
         return this.systemReport;
     }
 
-    public CrashReportCategory addCategory(String p_127515_) {
-        return this.addCategory(p_127515_, 1);
+    public CrashReportCategory addCategory(final String name) {
+        return this.addCategory(name, 1);
     }
 
-    public CrashReportCategory addCategory(String p_127517_, int p_127518_) {
-        CrashReportCategory crashreportcategory = new CrashReportCategory(p_127517_);
+    public CrashReportCategory addCategory(final String name, final int nestedOffset) {
+        CrashReportCategory category = new CrashReportCategory(name);
         if (this.trackingStackTrace) {
-            int i = crashreportcategory.fillInStackTrace(p_127518_);
-            StackTraceElement[] astacktraceelement = this.exception.getStackTrace();
-            StackTraceElement stacktraceelement = null;
-            StackTraceElement stacktraceelement1 = null;
-            int j = astacktraceelement.length - i;
-            if (j < 0) {
-                LOGGER.error("Negative index in crash report handler ({}/{})", astacktraceelement.length, i);
+            int size = category.fillInStackTrace(nestedOffset);
+            StackTraceElement[] fullTrace = this.exception.getStackTrace();
+            StackTraceElement source = null;
+            StackTraceElement next = null;
+            int traceIndex = fullTrace.length - size;
+            if (traceIndex < 0) {
+                LOGGER.error("Negative index in crash report handler ({}/{})", fullTrace.length, size);
             }
 
-            if (astacktraceelement != null && 0 <= j && j < astacktraceelement.length) {
-                stacktraceelement = astacktraceelement[j];
-                if (astacktraceelement.length + 1 - i < astacktraceelement.length) {
-                    stacktraceelement1 = astacktraceelement[astacktraceelement.length + 1 - i];
+            if (0 <= traceIndex && traceIndex < fullTrace.length) {
+                source = fullTrace[traceIndex];
+                if (fullTrace.length + 1 - size < fullTrace.length) {
+                    next = fullTrace[fullTrace.length + 1 - size];
                 }
             }
 
-            this.trackingStackTrace = crashreportcategory.validateStackTrace(stacktraceelement, stacktraceelement1);
-            if (astacktraceelement != null && astacktraceelement.length >= i && 0 <= j && j < astacktraceelement.length) {
-                this.uncategorizedStackTrace = new StackTraceElement[j];
-                System.arraycopy(astacktraceelement, 0, this.uncategorizedStackTrace, 0, this.uncategorizedStackTrace.length);
+            this.trackingStackTrace = category.validateStackTrace(source, next);
+            if (fullTrace.length >= size && 0 <= traceIndex && traceIndex < fullTrace.length) {
+                this.uncategorizedStackTrace = new StackTraceElement[traceIndex];
+                System.arraycopy(fullTrace, 0, this.uncategorizedStackTrace, 0, this.uncategorizedStackTrace.length);
             } else {
                 this.trackingStackTrace = false;
             }
         }
 
-        this.details.add(crashreportcategory);
-        return crashreportcategory;
+        this.details.add(category);
+        return category;
     }
 
-    public static CrashReport forThrowable(Throwable p_127522_, String p_127523_) {
-        while (p_127522_ instanceof CompletionException && p_127522_.getCause() != null) {
-            p_127522_ = p_127522_.getCause();
+    public static CrashReport forThrowable(Throwable t, final String title) {
+        while (t instanceof CompletionException && t.getCause() != null) {
+            t = t.getCause();
         }
 
-        CrashReport crashreport;
-        if (p_127522_ instanceof ReportedException reportedexception) {
-            crashreport = reportedexception.getReport();
+        CrashReport report;
+        if (t instanceof ReportedException reportedException) {
+            report = reportedException.getReport();
         } else {
-            crashreport = new CrashReport(p_127523_, p_127522_);
+            report = new CrashReport(title, t);
         }
 
-        return crashreport;
+        return report;
     }
 
     public static void preload() {

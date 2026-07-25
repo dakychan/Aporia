@@ -10,10 +10,7 @@ import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DarknessFogEnvironment extends MobEffectFogEnvironment {
     @Override
     public Holder<MobEffect> getMobEffect() {
@@ -21,22 +18,22 @@ public class DarknessFogEnvironment extends MobEffectFogEnvironment {
     }
 
     @Override
-    public void setupFog(FogData p_408959_, Camera p_452801_, ClientLevel p_409046_, float p_409573_, DeltaTracker p_408552_) {
-        if (p_452801_.entity() instanceof LivingEntity livingentity) {
-            MobEffectInstance mobeffectinstance = livingentity.getEffect(this.getMobEffect());
-            if (mobeffectinstance != null) {
-                float f = Mth.lerp(mobeffectinstance.getBlendFactor(livingentity, p_408552_.getGameTimeDeltaPartialTick(false)), p_409573_, 15.0F);
-                p_408959_.environmentalStart = f * 0.75F;
-                p_408959_.environmentalEnd = f;
-                p_408959_.skyEnd = f;
-                p_408959_.cloudEnd = f;
+    public void setupFog(final FogData fog, final Camera camera, final ClientLevel level, final float renderDistance, final DeltaTracker deltaTracker) {
+        if (camera.entity() instanceof LivingEntity livingEntity) {
+            MobEffectInstance effect = livingEntity.getEffect(this.getMobEffect());
+            if (effect != null) {
+                float distance = Mth.lerp(effect.getBlendFactor(livingEntity, deltaTracker.getGameTimeDeltaPartialTick(false)), renderDistance, 15.0F);
+                fog.environmentalStart = distance * 0.75F;
+                fog.environmentalEnd = distance;
+                fog.skyEnd = distance;
+                fog.cloudEnd = distance;
             }
         }
     }
 
     @Override
-    public float getModifiedDarkness(LivingEntity p_409078_, float p_405888_, float p_406967_) {
-        MobEffectInstance mobeffectinstance = p_409078_.getEffect(this.getMobEffect());
-        return mobeffectinstance != null ? Math.max(mobeffectinstance.getBlendFactor(p_409078_, p_406967_), p_405888_) : p_405888_;
+    public float getModifiedDarkness(final LivingEntity entity, final float darkness, final float partialTickTime) {
+        MobEffectInstance instance = entity.getEffect(this.getMobEffect());
+        return instance != null ? Math.max(instance.getBlendFactor(entity, partialTickTime), darkness) : darkness;
     }
 }

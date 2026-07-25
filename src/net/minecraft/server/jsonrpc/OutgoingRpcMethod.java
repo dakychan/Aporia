@@ -19,11 +19,11 @@ public interface OutgoingRpcMethod<Params, Result> {
 
     OutgoingRpcMethod.Attributes attributes();
 
-    default @Nullable JsonElement encodeParams(Params p_431028_) {
+    default @Nullable JsonElement encodeParams(final Params params) {
         return null;
     }
 
-    default @Nullable Result decodeResult(JsonElement p_426415_) {
+    default @Nullable Result decodeResult(final JsonElement result) {
         return null;
     }
 
@@ -43,137 +43,109 @@ public interface OutgoingRpcMethod<Params, Result> {
         return new OutgoingRpcMethod.OutgoingRpcMethodBuilder<>(OutgoingRpcMethod.Method::new);
     }
 
-    public record Attributes(boolean discoverable) {
+    record Attributes(boolean discoverable, boolean allowPreServerInit) {
     }
 
     @FunctionalInterface
-    public interface Factory<Params, Result> {
-        OutgoingRpcMethod<Params, Result> create(MethodInfo<Params, Result> p_430664_, OutgoingRpcMethod.Attributes p_425247_);
+    interface Factory<Params, Result> {
+        OutgoingRpcMethod<Params, Result> create(MethodInfo<Params, Result> info, OutgoingRpcMethod.Attributes attributes);
     }
 
-    public record Method<Params, Result>(MethodInfo<Params, Result> info, OutgoingRpcMethod.Attributes attributes)
-        implements OutgoingRpcMethod<Params, Result> {
+    record Method<Params, Result>(MethodInfo<Params, Result> info, OutgoingRpcMethod.Attributes attributes) implements OutgoingRpcMethod<Params, Result> {
         @Override
-        public @Nullable JsonElement encodeParams(Params p_431477_) {
+        public @Nullable JsonElement encodeParams(final Params params) {
             if (this.info.params().isEmpty()) {
                 throw new IllegalStateException("Method defined as having no parameters");
             } else {
-                return this.info.params().get().schema().codec().encodeStart(JsonOps.INSTANCE, p_431477_).getOrThrow();
+                return this.info.params().get().schema().codec().encodeStart(JsonOps.INSTANCE, params).getOrThrow();
             }
         }
 
         @Override
-        public Result decodeResult(JsonElement p_426216_) {
+        public Result decodeResult(final JsonElement result) {
             if (this.info.result().isEmpty()) {
                 throw new IllegalStateException("Method defined as having no result");
             } else {
-                return this.info.result().get().schema().codec().parse(JsonOps.INSTANCE, p_426216_).getOrThrow();
+                return this.info.result().get().schema().codec().parse(JsonOps.INSTANCE, result).getOrThrow();
             }
-        }
-
-        @Override
-        public MethodInfo<Params, Result> info() {
-            return this.info;
-        }
-
-        @Override
-        public OutgoingRpcMethod.Attributes attributes() {
-            return this.attributes;
         }
     }
 
-    public record Notification<Params>(MethodInfo<Params, Void> info, OutgoingRpcMethod.Attributes attributes) implements OutgoingRpcMethod<Params, Void> {
+    record Notification<Params>(MethodInfo<Params, Void> info, OutgoingRpcMethod.Attributes attributes) implements OutgoingRpcMethod<Params, Void> {
         @Override
-        public @Nullable JsonElement encodeParams(Params p_424475_) {
+        public @Nullable JsonElement encodeParams(final Params params) {
             if (this.info.params().isEmpty()) {
                 throw new IllegalStateException("Method defined as having no parameters");
             } else {
-                return this.info.params().get().schema().codec().encodeStart(JsonOps.INSTANCE, p_424475_).getOrThrow();
+                return this.info.params().get().schema().codec().encodeStart(JsonOps.INSTANCE, params).getOrThrow();
             }
-        }
-
-        @Override
-        public MethodInfo<Params, Void> info() {
-            return this.info;
-        }
-
-        @Override
-        public OutgoingRpcMethod.Attributes attributes() {
-            return this.attributes;
         }
     }
 
-    public static class OutgoingRpcMethodBuilder<Params, Result> {
-        public static final OutgoingRpcMethod.Attributes DEFAULT_ATTRIBUTES = new OutgoingRpcMethod.Attributes(true);
+    class OutgoingRpcMethodBuilder<Params, Result> {
+        public static final OutgoingRpcMethod.Attributes DEFAULT_ATTRIBUTES = new OutgoingRpcMethod.Attributes(true, false);
         private final OutgoingRpcMethod.Factory<Params, Result> method;
         private String description = "";
         private @Nullable ParamInfo<Params> paramInfo;
         private @Nullable ResultInfo<Result> resultInfo;
+        private boolean allowPreServerInit = false;
 
-        public OutgoingRpcMethodBuilder(OutgoingRpcMethod.Factory<Params, Result> p_424582_) {
-            this.method = p_424582_;
+        public OutgoingRpcMethodBuilder(final OutgoingRpcMethod.Factory<Params, Result> method) {
+            this.method = method;
         }
 
-        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> description(String p_426554_) {
-            this.description = p_426554_;
+        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> description(final String description) {
+            this.description = description;
             return this;
         }
 
-        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> response(String p_458583_, Schema<Result> p_453663_) {
-            this.resultInfo = new ResultInfo<>(p_458583_, p_453663_);
+        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> response(final String resultName, final Schema<Result> resultSchema) {
+            this.resultInfo = new ResultInfo<>(resultName, resultSchema);
             return this;
         }
 
-        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> param(String p_454653_, Schema<Params> p_457097_) {
-            this.paramInfo = new ParamInfo<>(p_454653_, p_457097_);
+        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> param(final String paramName, final Schema<Params> paramSchema) {
+            this.paramInfo = new ParamInfo<>(paramName, paramSchema);
+            return this;
+        }
+
+        public OutgoingRpcMethod.OutgoingRpcMethodBuilder<Params, Result> allowPreServerInit() {
+            this.allowPreServerInit = true;
             return this;
         }
 
         private OutgoingRpcMethod<Params, Result> build() {
-            MethodInfo<Params, Result> methodinfo = new MethodInfo<>(this.description, this.paramInfo, this.resultInfo);
-            return this.method.create(methodinfo, DEFAULT_ATTRIBUTES);
+            MethodInfo<Params, Result> methodInfo = new MethodInfo<>(this.description, this.paramInfo, this.resultInfo);
+            OutgoingRpcMethod.Attributes attributes;
+            if (this.allowPreServerInit) {
+                attributes = new OutgoingRpcMethod.Attributes(DEFAULT_ATTRIBUTES.discoverable(), true);
+            } else {
+                attributes = DEFAULT_ATTRIBUTES;
+            }
+
+            return this.method.create(methodInfo, attributes);
         }
 
-        public Holder.Reference<OutgoingRpcMethod<Params, Result>> register(String p_423728_) {
-            return this.register(Identifier.withDefaultNamespace("notification/" + p_423728_));
+        public Holder.Reference<OutgoingRpcMethod<Params, Result>> register(final String key) {
+            return this.register(Identifier.withDefaultNamespace("notification/" + key));
         }
 
-        private Holder.Reference<OutgoingRpcMethod<Params, Result>> register(Identifier p_453388_) {
-            return Registry.registerForHolder(BuiltInRegistries.OUTGOING_RPC_METHOD, p_453388_, this.build());
+        private Holder.Reference<OutgoingRpcMethod<Params, Result>> register(final Identifier id) {
+            return Registry.registerForHolder(BuiltInRegistries.OUTGOING_RPC_METHOD, id, this.build());
         }
     }
 
-    public record ParameterlessMethod<Result>(MethodInfo<Void, Result> info, OutgoingRpcMethod.Attributes attributes)
-        implements OutgoingRpcMethod<Void, Result> {
+    record ParameterlessMethod<Result>(MethodInfo<Void, Result> info, OutgoingRpcMethod.Attributes attributes) implements OutgoingRpcMethod<Void, Result> {
         @Override
-        public Result decodeResult(JsonElement p_426562_) {
+        public Result decodeResult(final JsonElement result) {
             if (this.info.result().isEmpty()) {
                 throw new IllegalStateException("Method defined as having no result");
             } else {
-                return this.info.result().get().schema().codec().parse(JsonOps.INSTANCE, p_426562_).getOrThrow();
+                return this.info.result().get().schema().codec().parse(JsonOps.INSTANCE, result).getOrThrow();
             }
-        }
-
-        @Override
-        public MethodInfo<Void, Result> info() {
-            return this.info;
-        }
-
-        @Override
-        public OutgoingRpcMethod.Attributes attributes() {
-            return this.attributes;
         }
     }
 
-    public record ParmeterlessNotification(MethodInfo<Void, Void> info, OutgoingRpcMethod.Attributes attributes) implements OutgoingRpcMethod<Void, Void> {
-        @Override
-        public MethodInfo<Void, Void> info() {
-            return this.info;
-        }
-
-        @Override
-        public OutgoingRpcMethod.Attributes attributes() {
-            return this.attributes;
-        }
+    record ParmeterlessNotification(MethodInfo<Void, Void> info, OutgoingRpcMethod.Attributes attributes) implements OutgoingRpcMethod<Void, Void> {
     }
 }

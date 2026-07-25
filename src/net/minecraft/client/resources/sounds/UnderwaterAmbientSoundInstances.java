@@ -4,18 +4,14 @@ import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class UnderwaterAmbientSoundInstances {
-    @OnlyIn(Dist.CLIENT)
-    public static class SubSound extends AbstractTickableSoundInstance {
+        public static class SubSound extends AbstractTickableSoundInstance {
         private final LocalPlayer player;
 
-        protected SubSound(LocalPlayer p_119861_, SoundEvent p_119862_) {
-            super(p_119862_, SoundSource.AMBIENT, SoundInstance.createUnseededRandom());
-            this.player = p_119861_;
+        protected SubSound(final LocalPlayer player, final SoundEvent event) {
+            super(event, SoundSource.AMBIENT, SoundInstance.createUnseededRandom());
+            this.player = player;
             this.looping = false;
             this.delay = 0;
             this.volume = 1.0F;
@@ -30,15 +26,14 @@ public class UnderwaterAmbientSoundInstances {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class UnderwaterAmbientSoundInstance extends AbstractTickableSoundInstance {
+        public static class UnderwaterAmbientSoundInstance extends AbstractTickableSoundInstance {
         public static final int FADE_DURATION = 40;
         private final LocalPlayer player;
         private int fade;
 
-        public UnderwaterAmbientSoundInstance(LocalPlayer p_119867_) {
+        public UnderwaterAmbientSoundInstance(final LocalPlayer player) {
             super(SoundEvents.AMBIENT_UNDERWATER_LOOP, SoundSource.AMBIENT, SoundInstance.createUnseededRandom());
-            this.player = p_119867_;
+            this.player = player;
             this.looping = true;
             this.delay = 0;
             this.volume = 1.0F;

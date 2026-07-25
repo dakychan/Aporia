@@ -4,16 +4,16 @@ import java.util.function.Consumer;
 
 @FunctionalInterface
 public interface AbortableIterationConsumer<T> {
-    AbortableIterationConsumer.Continuation accept(T p_261708_);
+    AbortableIterationConsumer.Continuation accept(T entry);
 
-    static <T> AbortableIterationConsumer<T> forConsumer(Consumer<T> p_261477_) {
-        return p_261916_ -> {
-            p_261477_.accept(p_261916_);
+    static <T> AbortableIterationConsumer<T> forConsumer(final Consumer<T> consumer) {
+        return e -> {
+            consumer.accept(e);
             return AbortableIterationConsumer.Continuation.CONTINUE;
         };
     }
 
-    public static enum Continuation {
+    enum Continuation {
         CONTINUE,
         ABORT;
 

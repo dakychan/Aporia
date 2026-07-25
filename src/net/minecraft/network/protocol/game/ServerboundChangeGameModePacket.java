@@ -16,7 +16,7 @@ public record ServerboundChangeGameModePacket(GameType mode) implements Packet<S
         return GamePacketTypes.SERVERBOUND_CHANGE_GAME_MODE;
     }
 
-    public void handle(ServerGamePacketListener p_406852_) {
-        p_406852_.handleChangeGameMode(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleChangeGameMode(this);
     }
 }

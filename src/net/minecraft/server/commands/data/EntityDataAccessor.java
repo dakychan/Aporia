@@ -8,7 +8,7 @@ import com.mojang.logging.LogUtils;
 import java.util.Locale;
 import java.util.UUID;
 import java.util.function.Function;
-import net.minecraft.advancements.criterion.NbtPredicate;
+import net.minecraft.advancements.predicates.NbtPredicate;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -26,37 +26,37 @@ import org.slf4j.Logger;
 public class EntityDataAccessor implements DataAccessor {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final SimpleCommandExceptionType ERROR_NO_PLAYERS = new SimpleCommandExceptionType(Component.translatable("commands.data.entity.invalid"));
-    public static final Function<String, DataCommands.DataProvider> PROVIDER = p_139517_ -> new DataCommands.DataProvider() {
+    public static final Function<String, DataCommands.DataProvider> PROVIDER = arg -> new DataCommands.DataProvider() {
         @Override
-        public DataAccessor access(CommandContext<CommandSourceStack> p_139530_) throws CommandSyntaxException {
-            return new EntityDataAccessor(EntityArgument.getEntity(p_139530_, p_139517_));
+        public DataAccessor access(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+            return new EntityDataAccessor(EntityArgument.getEntity(context, arg));
         }
 
         @Override
         public ArgumentBuilder<CommandSourceStack, ?> wrap(
-            ArgumentBuilder<CommandSourceStack, ?> p_139527_,
-            Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> p_139528_
+            final ArgumentBuilder<CommandSourceStack, ?> parent,
+            final Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> function
         ) {
-            return p_139527_.then(Commands.literal("entity").then(p_139528_.apply(Commands.argument(p_139517_, EntityArgument.entity()))));
+            return parent.then(Commands.literal("entity").then(function.apply(Commands.argument(arg, EntityArgument.entity()))));
         }
     };
     private final Entity entity;
 
-    public EntityDataAccessor(Entity p_139510_) {
-        this.entity = p_139510_;
+    public EntityDataAccessor(final Entity entity) {
+        this.entity = entity;
     }
 
     @Override
-    public void setData(CompoundTag p_139519_) throws CommandSyntaxException {
+    public void setData(final CompoundTag tag) throws CommandSyntaxException {
         if (this.entity instanceof Player) {
             throw ERROR_NO_PLAYERS.create();
-        } else {
-            UUID uuid = this.entity.getUUID();
+        }
 
-            try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.entity.problemPath(), LOGGER)) {
-                this.entity.load(TagValueInput.create(problemreporter$scopedcollector, this.entity.registryAccess(), p_139519_));
-                this.entity.setUUID(uuid);
-            }
+        UUID uuid = this.entity.getUUID();
+
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.entity.problemPath(), LOGGER)) {
+            this.entity.load(TagValueInput.create(reporter, this.entity.registryAccess(), tag));
+            this.entity.setUUID(uuid);
         }
     }
 
@@ -71,14 +71,14 @@ public class EntityDataAccessor implements DataAccessor {
     }
 
     @Override
-    public Component getPrintSuccess(Tag p_139521_) {
-        return Component.translatable("commands.data.entity.query", this.entity.getDisplayName(), NbtUtils.toPrettyComponent(p_139521_));
+    public Component getPrintSuccess(final Tag data) {
+        return Component.translatable("commands.data.entity.query", this.entity.getDisplayName(), NbtUtils.toPrettyComponent(data));
     }
 
     @Override
-    public Component getPrintSuccess(NbtPathArgument.NbtPath p_139513_, double p_139514_, int p_139515_) {
+    public Component getPrintSuccess(final NbtPathArgument.NbtPath path, final double scale, final int value) {
         return Component.translatable(
-            "commands.data.entity.get", p_139513_.asString(), this.entity.getDisplayName(), String.format(Locale.ROOT, "%.2f", p_139514_), p_139515_
+            "commands.data.entity.get", path.asString(), this.entity.getDisplayName(), String.format(Locale.ROOT, "%.2f", scale), value
         );
     }
 }

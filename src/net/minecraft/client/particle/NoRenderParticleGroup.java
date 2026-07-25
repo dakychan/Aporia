@@ -1,23 +1,18 @@
 package net.minecraft.client.particle;
 
 import net.minecraft.client.Camera;
-import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.state.CameraRenderState;
-import net.minecraft.client.renderer.state.ParticleGroupRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.renderer.state.level.ParticleGroupRenderState;
 
-@OnlyIn(Dist.CLIENT)
 public class NoRenderParticleGroup extends ParticleGroup<NoRenderParticle> {
-    private static final ParticleGroupRenderState EMPTY_RENDER_STATE = (p_427682_, p_429447_) -> {};
+    private static final ParticleGroupRenderState EMPTY_RENDER_STATE = (ignored, camera) -> {};
 
-    public NoRenderParticleGroup(ParticleEngine p_426004_) {
-        super(p_426004_);
+    public NoRenderParticleGroup(final ParticleEngine engine) {
+        super(engine);
     }
 
     @Override
-    public ParticleGroupRenderState extractRenderState(Frustum p_426078_, Camera p_428684_, float p_426634_) {
+    public ParticleGroupRenderState extractRenderState(final Frustum frustum, final Camera camera, final float partialTickTime) {
         return EMPTY_RENDER_STATE;
     }
 }

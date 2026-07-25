@@ -12,8 +12,8 @@ import org.jspecify.annotations.Nullable;
 public abstract class AbstractDragonPhaseInstance implements DragonPhaseInstance {
     protected final EnderDragon dragon;
 
-    public AbstractDragonPhaseInstance(EnderDragon p_31178_) {
-        this.dragon = p_31178_;
+    public AbstractDragonPhaseInstance(final EnderDragon dragon) {
+        this.dragon = dragon;
     }
 
     @Override
@@ -26,11 +26,11 @@ public abstract class AbstractDragonPhaseInstance implements DragonPhaseInstance
     }
 
     @Override
-    public void doServerTick(ServerLevel p_366147_) {
+    public void doServerTick(final ServerLevel level) {
     }
 
     @Override
-    public void onCrystalDestroyed(EndCrystal p_31184_, BlockPos p_31185_, DamageSource p_31186_, @Nullable Player p_31187_) {
+    public void onCrystalDestroyed(final EndCrystal crystal, final BlockPos pos, final DamageSource source, final @Nullable Player player) {
     }
 
     @Override
@@ -52,14 +52,14 @@ public abstract class AbstractDragonPhaseInstance implements DragonPhaseInstance
     }
 
     @Override
-    public float onHurt(DamageSource p_31181_, float p_31182_) {
-        return p_31182_;
+    public float onHurt(final DamageSource source, final float damage) {
+        return damage;
     }
 
     @Override
     public float getTurnSpeed() {
-        float f = (float)this.dragon.getDeltaMovement().horizontalDistance() + 1.0F;
-        float f1 = Math.min(f, 40.0F);
-        return 0.7F / f1 / f;
+        float rotSpeed = (float)this.dragon.getDeltaMovement().horizontalDistance() + 1.0F;
+        float dist = Math.min(rotSpeed, 40.0F);
+        return 0.7F / dist / rotSpeed;
     }
 }

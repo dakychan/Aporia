@@ -20,7 +20,7 @@ public record ServerboundContainerButtonClickPacket(int containerId, int buttonI
         return GamePacketTypes.SERVERBOUND_CONTAINER_BUTTON_CLICK;
     }
 
-    public void handle(ServerGamePacketListener p_133934_) {
-        p_133934_.handleContainerButtonClick(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleContainerButtonClick(this);
     }
 }

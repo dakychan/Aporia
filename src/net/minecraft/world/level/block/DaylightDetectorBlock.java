@@ -2,17 +2,16 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.DaylightDetectorBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -37,85 +36,87 @@ public class DaylightDetectorBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public DaylightDetectorBlock(BlockBehaviour.Properties p_52382_) {
-        super(p_52382_);
+    public DaylightDetectorBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(POWER, 0).setValue(INVERTED, false));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_52402_, BlockGetter p_52403_, BlockPos p_52404_, CollisionContext p_52405_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean useShapeForLightOcclusion(BlockState p_52409_) {
+    protected boolean useShapeForLightOcclusion(final BlockState state) {
+        return true;
+    }
+
+    private static void updateSignalStrength(final BlockState state, final Level level, final BlockPos pos) {
+        int target = level.getEffectiveSkyBrightness(pos);
+        float sunAngle = level.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, pos) * (float) (Math.PI / 180.0);
+        boolean isInverted = state.getValue(INVERTED);
+        if (isInverted) {
+            target = 15 - target;
+        } else if (target > 0) {
+            float offset = sunAngle < (float) Math.PI ? 0.0F : (float) (Math.PI * 2);
+            sunAngle += (offset - sunAngle) * 0.2F;
+            target = Math.round(target * Mth.cos(sunAngle));
+        }
+
+        target = Mth.clamp(target, 0, 15);
+        if (state.getValue(POWER) != target) {
+            level.setBlock(pos, state.setValue(POWER, target), 3);
+        }
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!player.mayBuild()) {
+            return super.useWithoutItem(state, level, pos, player, hitResult);
+        }
+
+        if (!level.isClientSide()) {
+            BlockState newState = state.cycle(INVERTED);
+            level.setBlock(pos, newState, 2);
+            level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(player, newState));
+            updateSignalStrength(newState, level, pos);
+        }
+
+        return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getSignal(BlockState p_52386_, BlockGetter p_52387_, BlockPos p_52388_, Direction p_52389_) {
-        return p_52386_.getValue(POWER);
-    }
-
-    private static void updateSignalStrength(BlockState p_52411_, Level p_52412_, BlockPos p_52413_) {
-        int i = p_52412_.getBrightness(LightLayer.SKY, p_52413_) - p_52412_.getSkyDarken();
-        float f = p_52412_.environmentAttributes().getValue(EnvironmentAttributes.SUN_ANGLE, p_52413_) * (float) (Math.PI / 180.0);
-        boolean flag = p_52411_.getValue(INVERTED);
-        if (flag) {
-            i = 15 - i;
-        } else if (i > 0) {
-            float f1 = f < (float) Math.PI ? 0.0F : (float) (Math.PI * 2);
-            f += (f1 - f) * 0.2F;
-            i = Math.round(i * Mth.cos(f));
-        }
-
-        i = Mth.clamp(i, 0, 15);
-        if (p_52411_.getValue(POWER) != i) {
-            p_52412_.setBlock(p_52413_, p_52411_.setValue(POWER, i), 3);
-        }
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.getValue(POWER);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_52391_, Level p_52392_, BlockPos p_52393_, Player p_52394_, BlockHitResult p_52396_) {
-        if (!p_52394_.mayBuild()) {
-            return super.useWithoutItem(p_52391_, p_52392_, p_52393_, p_52394_, p_52396_);
-        } else {
-            if (!p_52392_.isClientSide()) {
-                BlockState blockstate = p_52391_.cycle(INVERTED);
-                p_52392_.setBlock(p_52393_, blockstate, 2);
-                p_52392_.gameEvent(GameEvent.BLOCK_CHANGE, p_52393_, GameEvent.Context.of(p_52394_, blockstate));
-                updateSignalStrength(blockstate, p_52392_, p_52393_);
-            }
-
-            return InteractionResult.SUCCESS;
-        }
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new DaylightDetectorBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    protected boolean isSignalSource(BlockState p_52407_) {
-        return true;
-    }
-
-    @Override
-    public BlockEntity newBlockEntity(BlockPos p_153118_, BlockState p_153119_) {
-        return new DaylightDetectorBlockEntity(p_153118_, p_153119_);
-    }
-
-    @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_153109_, BlockState p_153110_, BlockEntityType<T> p_153111_) {
-        return !p_153109_.isClientSide() && p_153109_.dimensionType().hasSkyLight()
-            ? createTickerHelper(p_153111_, BlockEntityType.DAYLIGHT_DETECTOR, DaylightDetectorBlock::tickEntity)
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return !level.isClientSide() && level.dimensionType().hasSkyLight()
+            ? createTickerHelper(type, BlockEntityTypes.DAYLIGHT_DETECTOR, DaylightDetectorBlock::tickEntity)
             : null;
     }
 
-    private static void tickEntity(Level p_153113_, BlockPos p_153114_, BlockState p_153115_, DaylightDetectorBlockEntity p_153116_) {
-        if (p_153113_.getGameTime() % 20L == 0L) {
-            updateSignalStrength(p_153115_, p_153113_, p_153114_);
+    private static void tickEntity(final Level level, final BlockPos blockPos, final BlockState blockState, final DaylightDetectorBlockEntity blockEntity) {
+        if (level.getGameTime() % 20L == 0L) {
+            updateSignalStrength(blockState, level, blockPos);
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_52398_) {
-        p_52398_.add(POWER, INVERTED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(POWER, INVERTED);
     }
 }

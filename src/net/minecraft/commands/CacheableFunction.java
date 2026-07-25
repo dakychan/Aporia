@@ -1,6 +1,7 @@
 package net.minecraft.commands;
 
 import com.mojang.serialization.Codec;
+import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.commands.functions.CommandFunction;
 import net.minecraft.resources.Identifier;
@@ -12,13 +13,13 @@ public class CacheableFunction {
     private boolean resolved;
     private Optional<CommandFunction<CommandSourceStack>> function = Optional.empty();
 
-    public CacheableFunction(Identifier p_460517_) {
-        this.id = p_460517_;
+    public CacheableFunction(final Identifier id) {
+        this.id = id;
     }
 
-    public Optional<CommandFunction<CommandSourceStack>> get(ServerFunctionManager p_310125_) {
+    public Optional<CommandFunction<CommandSourceStack>> get(final ServerFunctionManager manager) {
         if (!this.resolved) {
-            this.function = p_310125_.get(this.id);
+            this.function = manager.get(this.id);
             this.resolved = true;
         }
 
@@ -30,7 +31,12 @@ public class CacheableFunction {
     }
 
     @Override
-    public boolean equals(Object p_313210_) {
-        return p_313210_ == this ? true : p_313210_ instanceof CacheableFunction cacheablefunction && this.getId().equals(cacheablefunction.getId());
+    public boolean equals(final Object obj) {
+        return obj == this ? true : obj instanceof CacheableFunction cacheableFunction && this.getId().equals(cacheableFunction.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.id);
     }
 }

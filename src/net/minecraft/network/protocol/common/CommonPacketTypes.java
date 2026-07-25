@@ -26,11 +26,11 @@ public class CommonPacketTypes {
     public static final PacketType<ServerboundResourcePackPacket> SERVERBOUND_RESOURCE_PACK = createServerbound("resource_pack");
     public static final PacketType<ServerboundCustomClickActionPacket> SERVERBOUND_CUSTOM_CLICK_ACTION = createServerbound("custom_click_action");
 
-    private static <T extends Packet<ClientCommonPacketListener>> PacketType<T> createClientbound(String p_336356_) {
-        return new PacketType<>(PacketFlow.CLIENTBOUND, Identifier.withDefaultNamespace(p_336356_));
+    private static <T extends Packet<ClientCommonPacketListener>> PacketType<T> createClientbound(final String id) {
+        return new PacketType<>(PacketFlow.CLIENTBOUND, Identifier.withDefaultNamespace(id));
     }
 
-    private static <T extends Packet<ServerCommonPacketListener>> PacketType<T> createServerbound(String p_335834_) {
-        return new PacketType<>(PacketFlow.SERVERBOUND, Identifier.withDefaultNamespace(p_335834_));
+    private static <T extends Packet<ServerCommonPacketListener>> PacketType<T> createServerbound(final String id) {
+        return new PacketType<>(PacketFlow.SERVERBOUND, Identifier.withDefaultNamespace(id));
     }
 }

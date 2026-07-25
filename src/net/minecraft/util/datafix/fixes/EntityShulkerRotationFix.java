@@ -7,22 +7,22 @@ import com.mojang.serialization.Dynamic;
 import java.util.List;
 
 public class EntityShulkerRotationFix extends NamedEntityFix {
-    public EntityShulkerRotationFix(Schema p_15680_) {
-        super(p_15680_, false, "EntityShulkerRotationFix", References.ENTITY, "minecraft:shulker");
+    public EntityShulkerRotationFix(final Schema outputSchema) {
+        super(outputSchema, false, "EntityShulkerRotationFix", References.ENTITY, "minecraft:shulker");
     }
 
-    public Dynamic<?> fixTag(Dynamic<?> p_15684_) {
-        List<Double> list = p_15684_.get("Rotation").asList(p_15686_ -> p_15686_.asDouble(180.0));
-        if (!list.isEmpty()) {
-            list.set(0, list.get(0) - 180.0);
-            return p_15684_.set("Rotation", p_15684_.createList(list.stream().map(p_15684_::createDouble)));
+    public Dynamic<?> fixTag(final Dynamic<?> input) {
+        List<Double> rotation = input.get("Rotation").asList(d -> d.asDouble(180.0));
+        if (!rotation.isEmpty()) {
+            rotation.set(0, rotation.get(0) - 180.0);
+            return input.set("Rotation", input.createList(rotation.stream().map(input::createDouble)));
         } else {
-            return p_15684_;
+            return input;
         }
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_15682_) {
-        return p_15682_.update(DSL.remainderFinder(), this::fixTag);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), this::fixTag);
     }
 }

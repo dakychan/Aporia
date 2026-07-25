@@ -11,33 +11,33 @@ public class PathTypeCache {
     private final long[] positions = new long[4096];
     private final PathType[] pathTypes = new PathType[4096];
 
-    public PathType getOrCompute(BlockGetter p_328738_, BlockPos p_328240_) {
-        long i = p_328240_.asLong();
-        int j = index(i);
-        PathType pathtype = this.get(j, i);
-        return pathtype != null ? pathtype : this.compute(p_328738_, p_328240_, j, i);
+    public PathType getOrCompute(final BlockGetter level, final BlockPos pos) {
+        long key = pos.asLong();
+        int index = index(key);
+        PathType cachedPathType = this.get(index, key);
+        return cachedPathType != null ? cachedPathType : this.compute(level, pos, index, key);
     }
 
-    private @Nullable PathType get(int p_331898_, long p_334711_) {
-        return this.positions[p_331898_] == p_334711_ ? this.pathTypes[p_331898_] : null;
+    private @Nullable PathType get(final int index, final long key) {
+        return this.positions[index] == key ? this.pathTypes[index] : null;
     }
 
-    private PathType compute(BlockGetter p_333989_, BlockPos p_334142_, int p_329562_, long p_332989_) {
-        PathType pathtype = WalkNodeEvaluator.getPathTypeFromState(p_333989_, p_334142_);
-        this.positions[p_329562_] = p_332989_;
-        this.pathTypes[p_329562_] = pathtype;
-        return pathtype;
+    private PathType compute(final BlockGetter level, final BlockPos pos, final int index, final long key) {
+        PathType pathType = WalkNodeEvaluator.getPathTypeFromState(level, pos);
+        this.positions[index] = key;
+        this.pathTypes[index] = pathType;
+        return pathType;
     }
 
-    public void invalidate(BlockPos p_332226_) {
-        long i = p_332226_.asLong();
-        int j = index(i);
-        if (this.positions[j] == i) {
-            this.pathTypes[j] = null;
+    public void invalidate(final BlockPos pos) {
+        long key = pos.asLong();
+        int index = index(key);
+        if (this.positions[index] == key) {
+            this.pathTypes[index] = null;
         }
     }
 
-    private static int index(long p_328788_) {
-        return (int)HashCommon.mix(p_328788_) & 4095;
+    private static int index(final long pos) {
+        return (int)HashCommon.mix(pos) & 4095;
     }
 }

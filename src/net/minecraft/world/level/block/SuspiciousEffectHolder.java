@@ -16,11 +16,11 @@ public interface SuspiciousEffectHolder {
         return BuiltInRegistries.ITEM.stream().map(SuspiciousEffectHolder::tryGet).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    static @Nullable SuspiciousEffectHolder tryGet(ItemLike p_259322_) {
-        if (p_259322_.asItem() instanceof BlockItem blockitem && blockitem.getBlock() instanceof SuspiciousEffectHolder suspiciouseffectholder1) {
-            return suspiciouseffectholder1;
+    static @Nullable SuspiciousEffectHolder tryGet(final ItemLike item) {
+        if (item.asItem() instanceof BlockItem blockItem && blockItem.getBlock() instanceof SuspiciousEffectHolder effectHolder) {
+            return effectHolder;
         } else {
-            return p_259322_.asItem() instanceof SuspiciousEffectHolder suspiciouseffectholder ? suspiciouseffectholder : null;
+            return item.asItem() instanceof SuspiciousEffectHolder effectHolder ? effectHolder : null;
         }
     }
 }

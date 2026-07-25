@@ -6,7 +6,6 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JsonOps;
-import com.mojang.serialization.DataResult.Error;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.HashMap;
@@ -27,51 +26,53 @@ public abstract class SimpleJsonResourceReloadListener<T> extends SimplePreparab
     private final Codec<T> codec;
     private final FileToIdConverter lister;
 
-    protected SimpleJsonResourceReloadListener(HolderLookup.Provider p_378826_, Codec<T> p_361980_, ResourceKey<? extends Registry<T>> p_376437_) {
-        this(p_378826_.createSerializationContext(JsonOps.INSTANCE), p_361980_, FileToIdConverter.registry(p_376437_));
+    protected SimpleJsonResourceReloadListener(
+        final HolderLookup.Provider registries, final Codec<T> codec, final ResourceKey<? extends Registry<T>> registryKey
+    ) {
+        this(registries.createSerializationContext(JsonOps.INSTANCE), codec, FileToIdConverter.registry(registryKey));
     }
 
-    protected SimpleJsonResourceReloadListener(Codec<T> p_370137_, FileToIdConverter p_375758_) {
-        this(JsonOps.INSTANCE, p_370137_, p_375758_);
+    protected SimpleJsonResourceReloadListener(final Codec<T> codec, final FileToIdConverter lister) {
+        this(JsonOps.INSTANCE, codec, lister);
     }
 
-    private SimpleJsonResourceReloadListener(DynamicOps<JsonElement> p_376631_, Codec<T> p_362926_, FileToIdConverter p_376605_) {
-        this.ops = p_376631_;
-        this.codec = p_362926_;
-        this.lister = p_376605_;
+    private SimpleJsonResourceReloadListener(final DynamicOps<JsonElement> ops, final Codec<T> codec, final FileToIdConverter lister) {
+        this.ops = ops;
+        this.codec = codec;
+        this.lister = lister;
     }
 
-    protected Map<Identifier, T> prepare(ResourceManager p_10771_, ProfilerFiller p_10772_) {
-        Map<Identifier, T> map = new HashMap<>();
-        scanDirectory(p_10771_, this.lister, this.ops, this.codec, map);
-        return map;
+    protected Map<Identifier, T> prepare(final ResourceManager manager, final ProfilerFiller profiler) {
+        Map<Identifier, T> result = new HashMap<>();
+        scanDirectory(manager, this.lister, this.ops, this.codec, result);
+        return result;
     }
 
     public static <T> void scanDirectory(
-        ResourceManager p_279308_,
-        ResourceKey<? extends Registry<T>> p_377536_,
-        DynamicOps<JsonElement> p_369854_,
-        Codec<T> p_368755_,
-        Map<Identifier, T> p_279404_
+        final ResourceManager manager,
+        final ResourceKey<? extends Registry<T>> registryKey,
+        final DynamicOps<JsonElement> ops,
+        final Codec<T> codec,
+        final Map<Identifier, T> result
     ) {
-        scanDirectory(p_279308_, FileToIdConverter.registry(p_377536_), p_369854_, p_368755_, p_279404_);
+        scanDirectory(manager, FileToIdConverter.registry(registryKey), ops, codec, result);
     }
 
     public static <T> void scanDirectory(
-        ResourceManager p_376562_, FileToIdConverter p_377980_, DynamicOps<JsonElement> p_378080_, Codec<T> p_376362_, Map<Identifier, T> p_377922_
+        final ResourceManager manager, final FileToIdConverter lister, final DynamicOps<JsonElement> ops, final Codec<T> codec, final Map<Identifier, T> result
     ) {
-        for (Entry<Identifier, Resource> entry : p_377980_.listMatchingResources(p_376562_).entrySet()) {
-            Identifier identifier = entry.getKey();
-            Identifier identifier1 = p_377980_.fileToId(identifier);
+        for (Entry<Identifier, Resource> entry : lister.listMatchingResources(manager).entrySet()) {
+            Identifier location = entry.getKey();
+            Identifier id = lister.fileToId(location);
 
             try (Reader reader = entry.getValue().openAsReader()) {
-                p_376362_.parse(p_378080_, StrictJsonParser.parse(reader)).ifSuccess(p_370131_ -> {
-                    if (p_377922_.putIfAbsent(identifier1, (T)p_370131_) != null) {
-                        throw new IllegalStateException("Duplicate data file ignored with ID " + identifier1);
+                codec.parse(ops, StrictJsonParser.parse(reader)).ifSuccess(parsed -> {
+                    if (result.putIfAbsent(id, (T)parsed) != null) {
+                        throw new IllegalStateException("Duplicate data file ignored with ID " + id);
                     }
-                }).ifError(p_362245_ -> LOGGER.error("Couldn't parse data file '{}' from '{}': {}", identifier1, identifier, p_362245_));
-            } catch (IllegalArgumentException | IOException | JsonParseException jsonparseexception) {
-                LOGGER.error("Couldn't parse data file '{}' from '{}'", identifier1, identifier, jsonparseexception);
+                }).ifError(error -> LOGGER.error("Couldn't parse data file '{}' from '{}': {}", id, location, error));
+            } catch (JsonParseException | IllegalArgumentException | IOException e) {
+                LOGGER.error("Couldn't parse data file '{}' from '{}'", id, location, e);
             }
         }
     }

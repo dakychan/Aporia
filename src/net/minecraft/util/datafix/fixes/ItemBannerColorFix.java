@@ -16,54 +16,54 @@ import java.util.stream.Stream;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class ItemBannerColorFix extends DataFix {
-    public ItemBannerColorFix(Schema p_15918_, boolean p_15919_) {
-        super(p_15918_, p_15919_);
+    public ItemBannerColorFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("tag");
-        OpticFinder<?> opticfinder2 = opticfinder1.type().findField("BlockEntityTag");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idF = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<?> tagF = itemStackType.findField("tag");
+        OpticFinder<?> blockEntityF = tagF.type().findField("BlockEntityTag");
         return this.fixTypeEverywhereTyped(
             "ItemBannerColorFix",
-            type,
-            p_15924_ -> {
-                Optional<Pair<String, String>> optional = p_15924_.getOptional(opticfinder);
-                if (optional.isPresent() && Objects.equals(optional.get().getSecond(), "minecraft:banner")) {
-                    Dynamic<?> dynamic = p_15924_.get(DSL.remainderFinder());
-                    Optional<? extends Typed<?>> optional1 = p_15924_.getOptionalTyped(opticfinder1);
-                    if (optional1.isPresent()) {
-                        Typed<?> typed = (Typed<?>)optional1.get();
-                        Optional<? extends Typed<?>> optional2 = typed.getOptionalTyped(opticfinder2);
-                        if (optional2.isPresent()) {
-                            Typed<?> typed1 = (Typed<?>)optional2.get();
-                            Dynamic<?> dynamic1 = typed.get(DSL.remainderFinder());
-                            Dynamic<?> dynamic2 = typed1.getOrCreate(DSL.remainderFinder());
-                            if (dynamic2.get("Base").asNumber().result().isPresent()) {
-                                dynamic = dynamic.set("Damage", dynamic.createShort((short)(dynamic2.get("Base").asInt(0) & 15)));
-                                Optional<? extends Dynamic<?>> optional3 = dynamic1.get("display").result();
-                                if (optional3.isPresent()) {
-                                    Dynamic<?> dynamic3 = (Dynamic<?>)optional3.get();
-                                    Dynamic<?> dynamic4 = dynamic3.createMap(
-                                        ImmutableMap.of(dynamic3.createString("Lore"), dynamic3.createList(Stream.of(dynamic3.createString("(+NBT"))))
+            itemStackType,
+            input -> {
+                Optional<Pair<String, String>> id = input.getOptional(idF);
+                if (id.isPresent() && Objects.equals(id.get().getSecond(), "minecraft:banner")) {
+                    Dynamic<?> rest = input.get(DSL.remainderFinder());
+                    Optional<? extends Typed<?>> tagOpt = input.getOptionalTyped(tagF);
+                    if (tagOpt.isPresent()) {
+                        Typed<?> tag = (Typed<?>)tagOpt.get();
+                        Optional<? extends Typed<?>> blockEntityOpt = tag.getOptionalTyped(blockEntityF);
+                        if (blockEntityOpt.isPresent()) {
+                            Typed<?> blockEntity = (Typed<?>)blockEntityOpt.get();
+                            Dynamic<?> tagRest = tag.get(DSL.remainderFinder());
+                            Dynamic<?> blockEntityRest = blockEntity.getOrCreate(DSL.remainderFinder());
+                            if (blockEntityRest.get("Base").asNumber().result().isPresent()) {
+                                rest = rest.set("Damage", rest.createShort((short)(blockEntityRest.get("Base").asInt(0) & 15)));
+                                Optional<? extends Dynamic<?>> displayOptional = tagRest.get("display").result();
+                                if (displayOptional.isPresent()) {
+                                    Dynamic<?> display = (Dynamic<?>)displayOptional.get();
+                                    Dynamic<?> pickMarker = display.createMap(
+                                        ImmutableMap.of(display.createString("Lore"), display.createList(Stream.of(display.createString("(+NBT"))))
                                     );
-                                    if (Objects.equals(dynamic3, dynamic4)) {
-                                        return p_15924_.set(DSL.remainderFinder(), dynamic);
+                                    if (Objects.equals(display, pickMarker)) {
+                                        return input.set(DSL.remainderFinder(), rest);
                                     }
                                 }
 
-                                dynamic2.remove("Base");
-                                return p_15924_.set(DSL.remainderFinder(), dynamic)
-                                    .set(opticfinder1, typed.set(opticfinder2, typed1.set(DSL.remainderFinder(), dynamic2)));
+                                blockEntityRest.remove("Base");
+                                return input.set(DSL.remainderFinder(), rest)
+                                    .set(tagF, tag.set(blockEntityF, blockEntity.set(DSL.remainderFinder(), blockEntityRest)));
                             }
                         }
                     }
 
-                    return p_15924_.set(DSL.remainderFinder(), dynamic);
+                    return input.set(DSL.remainderFinder(), rest);
                 } else {
-                    return p_15924_;
+                    return input;
                 }
             }
         );

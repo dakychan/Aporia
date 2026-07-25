@@ -32,9 +32,9 @@ public class OldMinecartBehavior extends MinecartBehavior {
     private final InterpolationHandler interpolation;
     private Vec3 targetDeltaMovement = Vec3.ZERO;
 
-    public OldMinecartBehavior(AbstractMinecart p_453164_) {
-        super(p_453164_);
-        this.interpolation = new InterpolationHandler(p_453164_, this::onInterpolation);
+    public OldMinecartBehavior(final AbstractMinecart minecart) {
+        super(minecart);
+        this.interpolation = new InterpolationHandler(minecart, this::onInterpolation);
     }
 
     @Override
@@ -42,49 +42,46 @@ public class OldMinecartBehavior extends MinecartBehavior {
         return this.interpolation;
     }
 
-    public void onInterpolation(InterpolationHandler p_454417_) {
+    public void onInterpolation(final InterpolationHandler interpolation) {
         this.setDeltaMovement(this.targetDeltaMovement);
     }
 
     @Override
-    public void lerpMotion(Vec3 p_450882_) {
-        this.targetDeltaMovement = p_450882_;
+    public void lerpMotion(final Vec3 movement) {
+        this.targetDeltaMovement = movement;
         this.setDeltaMovement(this.targetDeltaMovement);
     }
 
     @Override
     public void tick() {
-        if (this.level() instanceof ServerLevel serverlevel) {
+        if (this.level() instanceof ServerLevel level) {
             this.minecart.applyGravity();
-            BlockPos blockpos = this.minecart.getCurrentBlockPosOrRailBelow();
-            BlockState blockstate = this.level().getBlockState(blockpos);
-            boolean $$4 = BaseRailBlock.isRail(blockstate);
-            this.minecart.setOnRails($$4);
-            if ($$4) {
-                this.moveAlongTrack(serverlevel);
-                if (blockstate.is(Blocks.ACTIVATOR_RAIL)) {
-                    this.minecart
-                        .activateMinecart(
-                            serverlevel, blockpos.getX(), blockpos.getY(), blockpos.getZ(), blockstate.getValue(PoweredRailBlock.POWERED)
-                        );
+            BlockPos var11 = this.minecart.getCurrentBlockPosOrRailBelow();
+            BlockState state = this.level().getBlockState(var11);
+            boolean onRails = BaseRailBlock.isRail(state);
+            this.minecart.setOnRails(onRails);
+            if (onRails) {
+                this.moveAlongTrack(level);
+                if (state.is(Blocks.ACTIVATOR_RAIL)) {
+                    this.minecart.activateMinecart(level, var11.getX(), var11.getY(), var11.getZ(), state.getValue(PoweredRailBlock.POWERED));
                 }
             } else {
-                this.minecart.comeOffTrack(serverlevel);
+                this.minecart.comeOffTrack(level);
             }
 
             this.minecart.applyEffectsFromBlocks();
             this.setXRot(0.0F);
-            double d0 = this.minecart.xo - this.getX();
-            double d1 = this.minecart.zo - this.getZ();
-            if (d0 * d0 + d1 * d1 > 0.001) {
-                this.setYRot((float)(Mth.atan2(d1, d0) * 180.0 / Math.PI));
+            double xDiff = this.minecart.xo - this.getX();
+            double zDiff = this.minecart.zo - this.getZ();
+            if (xDiff * xDiff + zDiff * zDiff > 0.001) {
+                this.setYRot((float)(Mth.atan2(zDiff, xDiff) * 180.0 / Math.PI));
                 if (this.minecart.isFlipped()) {
                     this.setYRot(this.getYRot() + 180.0F);
                 }
             }
 
-            double d2 = Mth.wrapDegrees(this.getYRot() - this.minecart.yRotO);
-            if (d2 < -170.0 || d2 >= 170.0) {
+            double rotDiff = Mth.wrapDegrees(this.getYRot() - this.minecart.yRotO);
+            if (rotDiff < -170.0 || rotDiff >= 170.0) {
                 this.setYRot(this.getYRot() + 180.0F);
                 this.minecart.setFlipped(!this.minecart.isFlipped());
             }
@@ -104,289 +101,288 @@ public class OldMinecartBehavior extends MinecartBehavior {
     }
 
     @Override
-    public void moveAlongTrack(ServerLevel p_458640_) {
-        BlockPos blockpos = this.minecart.getCurrentBlockPosOrRailBelow();
-        BlockState blockstate = this.level().getBlockState(blockpos);
+    public void moveAlongTrack(final ServerLevel level) {
+        BlockPos pos = this.minecart.getCurrentBlockPosOrRailBelow();
+        BlockState state = this.level().getBlockState(pos);
         this.minecart.resetFallDistance();
-        double d0 = this.minecart.getX();
-        double d1 = this.minecart.getY();
-        double d2 = this.minecart.getZ();
-        Vec3 vec3 = this.getPos(d0, d1, d2);
-        d1 = blockpos.getY();
-        boolean flag = false;
-        boolean flag1 = false;
-        if (blockstate.is(Blocks.POWERED_RAIL)) {
-            flag = blockstate.getValue(PoweredRailBlock.POWERED);
-            flag1 = !flag;
+        double x = this.minecart.getX();
+        double y = this.minecart.getY();
+        double z = this.minecart.getZ();
+        Vec3 oldPos = this.getPos(x, y, z);
+        y = pos.getY();
+        boolean powerTrack = false;
+        boolean haltTrack = false;
+        if (state.is(Blocks.POWERED_RAIL)) {
+            powerTrack = state.getValue(PoweredRailBlock.POWERED);
+            haltTrack = !powerTrack;
         }
 
-        double d3 = 0.0078125;
+        double slideSpeed = 0.0078125;
         if (this.minecart.isInWater()) {
-            d3 *= 0.2;
+            slideSpeed *= 0.2;
         }
 
-        Vec3 vec31 = this.getDeltaMovement();
-        RailShape railshape = blockstate.getValue(((BaseRailBlock)blockstate.getBlock()).getShapeProperty());
-        switch (railshape) {
+        Vec3 movement = this.getDeltaMovement();
+        RailShape shape = state.getValue(((BaseRailBlock)state.getBlock()).getShapeProperty());
+        switch (shape) {
             case ASCENDING_EAST:
-                this.setDeltaMovement(vec31.add(-d3, 0.0, 0.0));
-                d1++;
+                this.setDeltaMovement(movement.add(-slideSpeed, 0.0, 0.0));
+                y++;
                 break;
             case ASCENDING_WEST:
-                this.setDeltaMovement(vec31.add(d3, 0.0, 0.0));
-                d1++;
+                this.setDeltaMovement(movement.add(slideSpeed, 0.0, 0.0));
+                y++;
                 break;
             case ASCENDING_NORTH:
-                this.setDeltaMovement(vec31.add(0.0, 0.0, d3));
-                d1++;
+                this.setDeltaMovement(movement.add(0.0, 0.0, slideSpeed));
+                y++;
                 break;
             case ASCENDING_SOUTH:
-                this.setDeltaMovement(vec31.add(0.0, 0.0, -d3));
-                d1++;
+                this.setDeltaMovement(movement.add(0.0, 0.0, -slideSpeed));
+                y++;
         }
 
-        vec31 = this.getDeltaMovement();
-        Pair<Vec3i, Vec3i> pair = AbstractMinecart.exits(railshape);
-        Vec3i vec3i = pair.getFirst();
-        Vec3i vec3i1 = pair.getSecond();
-        double d4 = vec3i1.getX() - vec3i.getX();
-        double d5 = vec3i1.getZ() - vec3i.getZ();
-        double d6 = Math.sqrt(d4 * d4 + d5 * d5);
-        double d7 = vec31.x * d4 + vec31.z * d5;
-        if (d7 < 0.0) {
-            d4 = -d4;
-            d5 = -d5;
+        movement = this.getDeltaMovement();
+        Pair<Vec3i, Vec3i> exits = AbstractMinecart.exits(shape);
+        Vec3i exit0 = exits.getFirst();
+        Vec3i exit1 = exits.getSecond();
+        double xD = exit1.getX() - exit0.getX();
+        double zD = exit1.getZ() - exit0.getZ();
+        double length = Math.sqrt(xD * xD + zD * zD);
+        double flip = movement.x * xD + movement.z * zD;
+        if (flip < 0.0) {
+            xD = -xD;
+            zD = -zD;
         }
 
-        double d8 = Math.min(2.0, vec31.horizontalDistance());
-        vec31 = new Vec3(d8 * d4 / d6, vec31.y, d8 * d5 / d6);
-        this.setDeltaMovement(vec31);
-        Entity entity = this.minecart.getFirstPassenger();
-        Vec3 vec32;
-        if (this.minecart.getFirstPassenger() instanceof ServerPlayer serverplayer) {
-            vec32 = serverplayer.getLastClientMoveIntent();
+        double pow = Math.min(2.0, movement.horizontalDistance());
+        movement = new Vec3(pow * xD / length, movement.y, pow * zD / length);
+        this.setDeltaMovement(movement);
+        Entity controllingPassenger = this.minecart.getFirstPassenger();
+        Vec3 moveIntent;
+        if (this.minecart.getFirstPassenger() instanceof ServerPlayer player) {
+            moveIntent = player.getLastClientMoveIntent();
         } else {
-            vec32 = Vec3.ZERO;
+            moveIntent = Vec3.ZERO;
         }
 
-        if (entity instanceof Player && vec32.lengthSqr() > 0.0) {
-            Vec3 vec35 = vec32.normalize();
-            double d22 = this.getDeltaMovement().horizontalDistanceSqr();
-            if (vec35.lengthSqr() > 0.0 && d22 < 0.01) {
-                this.setDeltaMovement(this.getDeltaMovement().add(vec32.x * 0.001, 0.0, vec32.z * 0.001));
-                flag1 = false;
+        if (controllingPassenger instanceof Player && moveIntent.lengthSqr() > 0.0) {
+            Vec3 riderMovement = moveIntent.normalize();
+            double ownDist = this.getDeltaMovement().horizontalDistanceSqr();
+            if (riderMovement.lengthSqr() > 0.0 && ownDist < 0.01) {
+                this.setDeltaMovement(this.getDeltaMovement().add(moveIntent.x * 0.001, 0.0, moveIntent.z * 0.001));
+                haltTrack = false;
             }
         }
 
-        if (flag1) {
-            double d20 = this.getDeltaMovement().horizontalDistance();
-            if (d20 < 0.03) {
+        if (haltTrack) {
+            double speedLength = this.getDeltaMovement().horizontalDistance();
+            if (speedLength < 0.03) {
                 this.setDeltaMovement(Vec3.ZERO);
             } else {
                 this.setDeltaMovement(this.getDeltaMovement().multiply(0.5, 0.0, 0.5));
             }
         }
 
-        double d21 = blockpos.getX() + 0.5 + vec3i.getX() * 0.5;
-        double d9 = blockpos.getZ() + 0.5 + vec3i.getZ() * 0.5;
-        double d10 = blockpos.getX() + 0.5 + vec3i1.getX() * 0.5;
-        double d11 = blockpos.getZ() + 0.5 + vec3i1.getZ() * 0.5;
-        d4 = d10 - d21;
-        d5 = d11 - d9;
-        double d12;
-        if (d4 == 0.0) {
-            d12 = d2 - blockpos.getZ();
-        } else if (d5 == 0.0) {
-            d12 = d0 - blockpos.getX();
+        double x0 = pos.getX() + 0.5 + exit0.getX() * 0.5;
+        double z0 = pos.getZ() + 0.5 + exit0.getZ() * 0.5;
+        double x1 = pos.getX() + 0.5 + exit1.getX() * 0.5;
+        double z1 = pos.getZ() + 0.5 + exit1.getZ() * 0.5;
+        xD = x1 - x0;
+        zD = z1 - z0;
+        double progress;
+        if (xD == 0.0) {
+            progress = z - pos.getZ();
+        } else if (zD == 0.0) {
+            progress = x - pos.getX();
         } else {
-            double d13 = d0 - d21;
-            double d14 = d2 - d9;
-            d12 = (d13 * d4 + d14 * d5) * 2.0;
+            double xx = x - x0;
+            double zz = z - z0;
+            progress = (xx * xD + zz * zD) * 2.0;
         }
 
-        d0 = d21 + d4 * d12;
-        d2 = d9 + d5 * d12;
-        this.setPos(d0, d1, d2);
-        double d23 = this.minecart.isVehicle() ? 0.75 : 1.0;
-        double d24 = this.minecart.getMaxSpeed(p_458640_);
-        vec31 = this.getDeltaMovement();
-        this.minecart.move(MoverType.SELF, new Vec3(Mth.clamp(d23 * vec31.x, -d24, d24), 0.0, Mth.clamp(d23 * vec31.z, -d24, d24)));
-        if (vec3i.getY() != 0
-            && Mth.floor(this.minecart.getX()) - blockpos.getX() == vec3i.getX()
-            && Mth.floor(this.minecart.getZ()) - blockpos.getZ() == vec3i.getZ()) {
-            this.setPos(this.minecart.getX(), this.minecart.getY() + vec3i.getY(), this.minecart.getZ());
-        } else if (vec3i1.getY() != 0
-            && Mth.floor(this.minecart.getX()) - blockpos.getX() == vec3i1.getX()
-            && Mth.floor(this.minecart.getZ()) - blockpos.getZ() == vec3i1.getZ()) {
-            this.setPos(this.minecart.getX(), this.minecart.getY() + vec3i1.getY(), this.minecart.getZ());
+        x = x0 + xD * progress;
+        z = z0 + zD * progress;
+        this.setPos(x, y, z);
+        double scale = this.minecart.isVehicle() ? 0.75 : 1.0;
+        double maxSpeed = this.minecart.getMaxSpeed(level);
+        movement = this.getDeltaMovement();
+        this.minecart
+            .move(MoverType.SELF, new Vec3(Mth.clamp(scale * movement.x, -maxSpeed, maxSpeed), 0.0, Mth.clamp(scale * movement.z, -maxSpeed, maxSpeed)));
+        if (exit0.getY() != 0 && Mth.floor(this.minecart.getX()) - pos.getX() == exit0.getX() && Mth.floor(this.minecart.getZ()) - pos.getZ() == exit0.getZ()) {
+            this.setPos(this.minecart.getX(), this.minecart.getY() + exit0.getY(), this.minecart.getZ());
+        } else if (exit1.getY() != 0
+            && Mth.floor(this.minecart.getX()) - pos.getX() == exit1.getX()
+            && Mth.floor(this.minecart.getZ()) - pos.getZ() == exit1.getZ()) {
+            this.setPos(this.minecart.getX(), this.minecart.getY() + exit1.getY(), this.minecart.getZ());
         }
 
         this.setDeltaMovement(this.minecart.applyNaturalSlowdown(this.getDeltaMovement()));
-        Vec3 vec33 = this.getPos(this.minecart.getX(), this.minecart.getY(), this.minecart.getZ());
-        if (vec33 != null && vec3 != null) {
-            double d15 = (vec3.y - vec33.y) * 0.05;
-            Vec3 vec34 = this.getDeltaMovement();
-            double d16 = vec34.horizontalDistance();
-            if (d16 > 0.0) {
-                this.setDeltaMovement(vec34.multiply((d16 + d15) / d16, 1.0, (d16 + d15) / d16));
+        Vec3 newPos = this.getPos(this.minecart.getX(), this.minecart.getY(), this.minecart.getZ());
+        if (newPos != null && oldPos != null) {
+            double speed = (oldPos.y - newPos.y) * 0.05;
+            Vec3 vec3 = this.getDeltaMovement();
+            double otherPow = vec3.horizontalDistance();
+            if (otherPow > 0.0) {
+                this.setDeltaMovement(vec3.multiply((otherPow + speed) / otherPow, 1.0, (otherPow + speed) / otherPow));
             }
 
-            this.setPos(this.minecart.getX(), vec33.y, this.minecart.getZ());
+            this.setPos(this.minecart.getX(), newPos.y, this.minecart.getZ());
         }
 
-        int j = Mth.floor(this.minecart.getX());
-        int i = Mth.floor(this.minecart.getZ());
-        if (j != blockpos.getX() || i != blockpos.getZ()) {
-            Vec3 vec36 = this.getDeltaMovement();
-            double d25 = vec36.horizontalDistance();
-            this.setDeltaMovement(d25 * (j - blockpos.getX()), vec36.y, d25 * (i - blockpos.getZ()));
+        int xn = Mth.floor(this.minecart.getX());
+        int zn = Mth.floor(this.minecart.getZ());
+        if (xn != pos.getX() || zn != pos.getZ()) {
+            Vec3 vec3 = this.getDeltaMovement();
+            double otherPow = vec3.horizontalDistance();
+            this.setDeltaMovement(otherPow * (xn - pos.getX()), vec3.y, otherPow * (zn - pos.getZ()));
         }
 
-        if (flag) {
-            Vec3 vec37 = this.getDeltaMovement();
-            double d26 = vec37.horizontalDistance();
-            if (d26 > 0.01) {
-                double d17 = 0.06;
-                this.setDeltaMovement(vec37.add(vec37.x / d26 * 0.06, 0.0, vec37.z / d26 * 0.06));
+        if (powerTrack) {
+            Vec3 vec3 = this.getDeltaMovement();
+            double speedLength = vec3.horizontalDistance();
+            if (speedLength > 0.01) {
+                double speed = 0.06;
+                this.setDeltaMovement(vec3.add(vec3.x / speedLength * 0.06, 0.0, vec3.z / speedLength * 0.06));
             } else {
-                Vec3 vec38 = this.getDeltaMovement();
-                double d18 = vec38.x;
-                double d19 = vec38.z;
-                if (railshape == RailShape.EAST_WEST) {
-                    if (this.minecart.isRedstoneConductor(blockpos.west())) {
-                        d18 = 0.02;
-                    } else if (this.minecart.isRedstoneConductor(blockpos.east())) {
-                        d18 = -0.02;
+                Vec3 deltaMovement = this.getDeltaMovement();
+                double dx = deltaMovement.x;
+                double dz = deltaMovement.z;
+                if (shape == RailShape.EAST_WEST) {
+                    if (this.minecart.isRedstoneConductor(pos.west())) {
+                        dx = 0.02;
+                    } else if (this.minecart.isRedstoneConductor(pos.east())) {
+                        dx = -0.02;
                     }
                 } else {
-                    if (railshape != RailShape.NORTH_SOUTH) {
+                    if (shape != RailShape.NORTH_SOUTH) {
                         return;
                     }
 
-                    if (this.minecart.isRedstoneConductor(blockpos.north())) {
-                        d19 = 0.02;
-                    } else if (this.minecart.isRedstoneConductor(blockpos.south())) {
-                        d19 = -0.02;
+                    if (this.minecart.isRedstoneConductor(pos.north())) {
+                        dz = 0.02;
+                    } else if (this.minecart.isRedstoneConductor(pos.south())) {
+                        dz = -0.02;
                     }
                 }
 
-                this.setDeltaMovement(d18, vec38.y, d19);
+                this.setDeltaMovement(dx, deltaMovement.y, dz);
             }
         }
     }
 
-    public @Nullable Vec3 getPosOffs(double p_451118_, double p_458616_, double p_456337_, double p_451592_) {
-        int i = Mth.floor(p_451118_);
-        int j = Mth.floor(p_458616_);
-        int k = Mth.floor(p_456337_);
-        if (this.level().getBlockState(new BlockPos(i, j - 1, k)).is(BlockTags.RAILS)) {
-            j--;
+    public @Nullable Vec3 getPosOffs(double x, double y, double z, final double offs) {
+        int xt = Mth.floor(x);
+        int yt = Mth.floor(y);
+        int zt = Mth.floor(z);
+        if (this.level().getBlockState(new BlockPos(xt, yt - 1, zt)).is(BlockTags.RAILS)) {
+            yt--;
         }
 
-        BlockState blockstate = this.level().getBlockState(new BlockPos(i, j, k));
-        if (BaseRailBlock.isRail(blockstate)) {
-            RailShape railshape = blockstate.getValue(((BaseRailBlock)blockstate.getBlock()).getShapeProperty());
-            p_458616_ = j;
-            if (railshape.isSlope()) {
-                p_458616_ = j + 1;
+        BlockState state = this.level().getBlockState(new BlockPos(xt, yt, zt));
+        if (BaseRailBlock.isRail(state)) {
+            RailShape shape = state.getValue(((BaseRailBlock)state.getBlock()).getShapeProperty());
+            y = yt;
+            if (shape.isSlope()) {
+                y = yt + 1;
             }
 
-            Pair<Vec3i, Vec3i> pair = AbstractMinecart.exits(railshape);
-            Vec3i vec3i = pair.getFirst();
-            Vec3i vec3i1 = pair.getSecond();
-            double d0 = vec3i1.getX() - vec3i.getX();
-            double d1 = vec3i1.getZ() - vec3i.getZ();
-            double d2 = Math.sqrt(d0 * d0 + d1 * d1);
-            d0 /= d2;
-            d1 /= d2;
-            p_451118_ += d0 * p_451592_;
-            p_456337_ += d1 * p_451592_;
-            if (vec3i.getY() != 0 && Mth.floor(p_451118_) - i == vec3i.getX() && Mth.floor(p_456337_) - k == vec3i.getZ()) {
-                p_458616_ += vec3i.getY();
-            } else if (vec3i1.getY() != 0 && Mth.floor(p_451118_) - i == vec3i1.getX() && Mth.floor(p_456337_) - k == vec3i1.getZ()) {
-                p_458616_ += vec3i1.getY();
+            Pair<Vec3i, Vec3i> exits = AbstractMinecart.exits(shape);
+            Vec3i exit0 = exits.getFirst();
+            Vec3i exit1 = exits.getSecond();
+            double xD = exit1.getX() - exit0.getX();
+            double zD = exit1.getZ() - exit0.getZ();
+            double dd = Math.sqrt(xD * xD + zD * zD);
+            xD /= dd;
+            zD /= dd;
+            x += xD * offs;
+            z += zD * offs;
+            if (exit0.getY() != 0 && Mth.floor(x) - xt == exit0.getX() && Mth.floor(z) - zt == exit0.getZ()) {
+                y += exit0.getY();
+            } else if (exit1.getY() != 0 && Mth.floor(x) - xt == exit1.getX() && Mth.floor(z) - zt == exit1.getZ()) {
+                y += exit1.getY();
             }
 
-            return this.getPos(p_451118_, p_458616_, p_456337_);
+            return this.getPos(x, y, z);
         } else {
             return null;
         }
     }
 
-    public @Nullable Vec3 getPos(double p_451903_, double p_459361_, double p_450954_) {
-        int i = Mth.floor(p_451903_);
-        int j = Mth.floor(p_459361_);
-        int k = Mth.floor(p_450954_);
-        if (this.level().getBlockState(new BlockPos(i, j - 1, k)).is(BlockTags.RAILS)) {
-            j--;
+    public @Nullable Vec3 getPos(double x, double y, double z) {
+        int xt = Mth.floor(x);
+        int yt = Mth.floor(y);
+        int zt = Mth.floor(z);
+        if (this.level().getBlockState(new BlockPos(xt, yt - 1, zt)).is(BlockTags.RAILS)) {
+            yt--;
         }
 
-        BlockState blockstate = this.level().getBlockState(new BlockPos(i, j, k));
-        if (BaseRailBlock.isRail(blockstate)) {
-            RailShape railshape = blockstate.getValue(((BaseRailBlock)blockstate.getBlock()).getShapeProperty());
-            Pair<Vec3i, Vec3i> pair = AbstractMinecart.exits(railshape);
-            Vec3i vec3i = pair.getFirst();
-            Vec3i vec3i1 = pair.getSecond();
-            double d0 = i + 0.5 + vec3i.getX() * 0.5;
-            double d1 = j + 0.0625 + vec3i.getY() * 0.5;
-            double d2 = k + 0.5 + vec3i.getZ() * 0.5;
-            double d3 = i + 0.5 + vec3i1.getX() * 0.5;
-            double d4 = j + 0.0625 + vec3i1.getY() * 0.5;
-            double d5 = k + 0.5 + vec3i1.getZ() * 0.5;
-            double d6 = d3 - d0;
-            double d7 = (d4 - d1) * 2.0;
-            double d8 = d5 - d2;
-            double d9;
-            if (d6 == 0.0) {
-                d9 = p_450954_ - k;
-            } else if (d8 == 0.0) {
-                d9 = p_451903_ - i;
+        BlockState state = this.level().getBlockState(new BlockPos(xt, yt, zt));
+        if (BaseRailBlock.isRail(state)) {
+            RailShape shape = state.getValue(((BaseRailBlock)state.getBlock()).getShapeProperty());
+            Pair<Vec3i, Vec3i> exits = AbstractMinecart.exits(shape);
+            Vec3i exit0 = exits.getFirst();
+            Vec3i exit1 = exits.getSecond();
+            double x0 = xt + 0.5 + exit0.getX() * 0.5;
+            double y0 = yt + 0.0625 + exit0.getY() * 0.5;
+            double z0 = zt + 0.5 + exit0.getZ() * 0.5;
+            double x1 = xt + 0.5 + exit1.getX() * 0.5;
+            double y1 = yt + 0.0625 + exit1.getY() * 0.5;
+            double z1 = zt + 0.5 + exit1.getZ() * 0.5;
+            double xD = x1 - x0;
+            double yD = (y1 - y0) * 2.0;
+            double zD = z1 - z0;
+            double progress;
+            if (xD == 0.0) {
+                progress = z - zt;
+            } else if (zD == 0.0) {
+                progress = x - xt;
             } else {
-                double d10 = p_451903_ - d0;
-                double d11 = p_450954_ - d2;
-                d9 = (d10 * d6 + d11 * d8) * 2.0;
+                double xx = x - x0;
+                double zz = z - z0;
+                progress = (xx * xD + zz * zD) * 2.0;
             }
 
-            p_451903_ = d0 + d6 * d9;
-            p_459361_ = d1 + d7 * d9;
-            p_450954_ = d2 + d8 * d9;
-            if (d7 < 0.0) {
-                p_459361_++;
-            } else if (d7 > 0.0) {
-                p_459361_ += 0.5;
+            x = x0 + xD * progress;
+            y = y0 + yD * progress;
+            z = z0 + zD * progress;
+            if (yD < 0.0) {
+                y++;
+            } else if (yD > 0.0) {
+                y += 0.5;
             }
 
-            return new Vec3(p_451903_, p_459361_, p_450954_);
+            return new Vec3(x, y, z);
         } else {
             return null;
         }
     }
 
     @Override
-    public double stepAlongTrack(BlockPos p_457697_, RailShape p_453398_, double p_457117_) {
+    public double stepAlongTrack(final BlockPos pos, final RailShape shape, final double movementLeft) {
         return 0.0;
     }
 
     @Override
     public boolean pushAndPickupEntities() {
-        AABB aabb = this.minecart.getBoundingBox().inflate(0.2F, 0.0, 0.2F);
+        AABB hitbox = this.minecart.getBoundingBox().inflate(0.2F, 0.0, 0.2F);
         if (this.minecart.isRideable() && this.getDeltaMovement().horizontalDistanceSqr() >= 0.01) {
-            List<Entity> list = this.level().getEntities(this.minecart, aabb, EntitySelector.pushableBy(this.minecart));
-            if (!list.isEmpty()) {
-                for (Entity entity1 : list) {
-                    if (!(entity1 instanceof Player)
-                        && !(entity1 instanceof IronGolem)
-                        && !(entity1 instanceof AbstractMinecart)
+            List<Entity> entities = this.level().getEntities(this.minecart, hitbox, EntitySelector.pushableBy(this.minecart));
+            if (!entities.isEmpty()) {
+                for (Entity entity : entities) {
+                    if (!(entity instanceof Player)
+                        && !(entity instanceof IronGolem)
+                        && !(entity instanceof AbstractMinecart)
                         && !this.minecart.isVehicle()
-                        && !entity1.isPassenger()) {
-                        entity1.startRiding(this.minecart);
+                        && !entity.isPassenger()) {
+                        entity.startRiding(this.minecart);
                     } else {
-                        entity1.push(this.minecart);
+                        entity.push(this.minecart);
                     }
                 }
             }
         } else {
-            for (Entity entity : this.level().getEntities(this.minecart, aabb)) {
+            for (Entity entity : this.level().getEntities(this.minecart, hitbox)) {
                 if (!this.minecart.hasPassenger(entity) && entity.isPushable() && entity instanceof AbstractMinecart) {
                     entity.push(this.minecart);
                 }
@@ -402,14 +398,14 @@ public class OldMinecartBehavior extends MinecartBehavior {
     }
 
     @Override
-    public Vec3 getKnownMovement(Vec3 p_458443_) {
-        return !Double.isNaN(p_458443_.x) && !Double.isNaN(p_458443_.y) && !Double.isNaN(p_458443_.z)
-            ? new Vec3(Mth.clamp(p_458443_.x, -0.4, 0.4), p_458443_.y, Mth.clamp(p_458443_.z, -0.4, 0.4))
+    public Vec3 getKnownMovement(final Vec3 knownMovement) {
+        return !Double.isNaN(knownMovement.x) && !Double.isNaN(knownMovement.y) && !Double.isNaN(knownMovement.z)
+            ? new Vec3(Mth.clamp(knownMovement.x, -0.4, 0.4), knownMovement.y, Mth.clamp(knownMovement.z, -0.4, 0.4))
             : Vec3.ZERO;
     }
 
     @Override
-    public double getMaxSpeed(ServerLevel p_455315_) {
+    public double getMaxSpeed(final ServerLevel level) {
         return this.minecart.isInWater() ? 0.2 : 0.4;
     }
 

@@ -21,7 +21,7 @@ public record ClientboundDebugEntityValuePacket(int entityId, DebugSubscription.
         return GamePacketTypes.CLIENTBOUND_DEBUG_ENTITY_VALUE;
     }
 
-    public void handle(ClientGamePacketListener p_431102_) {
-        p_431102_.handleDebugEntityValue(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDebugEntityValue(this);
     }
 }

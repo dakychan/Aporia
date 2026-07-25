@@ -3,17 +3,14 @@ package net.minecraft.world.level.storage;
 import com.mojang.serialization.Lifecycle;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import net.minecraft.CrashReportCategory;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
-import net.minecraft.world.level.dimension.end.EndDragonFight;
-import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.world.level.levelgen.WorldOptions;
 import org.jspecify.annotations.Nullable;
 
 public interface WorldData {
@@ -22,7 +19,7 @@ public interface WorldData {
 
     WorldDataConfiguration getDataConfiguration();
 
-    void setDataConfiguration(WorldDataConfiguration p_250014_);
+    void setDataConfiguration(final WorldDataConfiguration dataConfiguration);
 
     boolean wasModded();
 
@@ -30,38 +27,31 @@ public interface WorldData {
 
     Set<String> getRemovedFeatureFlags();
 
-    void setModdedInfo(String p_78638_, boolean p_78639_);
+    void setModdedInfo(final String serverBrand, final boolean isModded);
 
-    default void fillCrashReportCategory(CrashReportCategory p_78640_) {
-        p_78640_.setDetail("Known server brands", () -> String.join(", ", this.getKnownServerBrands()));
-        p_78640_.setDetail("Removed feature flags", () -> String.join(", ", this.getRemovedFeatureFlags()));
-        p_78640_.setDetail("Level was modded", () -> Boolean.toString(this.wasModded()));
-        p_78640_.setDetail("Level storage version", () -> {
-            int i = this.getVersion();
-            return String.format(Locale.ROOT, "0x%05X - %s", i, this.getStorageVersionName(i));
+    default void fillCrashReportCategory(final CrashReportCategory category) {
+        category.setDetail("Known server brands", () -> String.join(", ", this.getKnownServerBrands()));
+        category.setDetail("Removed feature flags", () -> String.join(", ", this.getRemovedFeatureFlags()));
+        category.setDetail("Level was modded", () -> Boolean.toString(this.wasModded()));
+        category.setDetail("Level storage version", () -> {
+            int version = this.getVersion();
+            return String.format(Locale.ROOT, "0x%05X - %s", version, this.getStorageVersionName(version));
         });
     }
 
-    default String getStorageVersionName(int p_78647_) {
-        switch (p_78647_) {
-            case 19132:
-                return "McRegion";
-            case 19133:
-                return "Anvil";
-            default:
-                return "Unknown?";
-        }
+    default String getStorageVersionName(final int version) {
+        return switch (version) {
+            case 19132 -> "McRegion";
+            case 19133 -> "Anvil";
+            default -> "Unknown?";
+        };
     }
-
-    @Nullable CompoundTag getCustomBossEvents();
-
-    void setCustomBossEvents(@Nullable CompoundTag p_78643_);
 
     ServerLevelData overworldData();
 
     LevelSettings getLevelSettings();
 
-    CompoundTag createTag(RegistryAccess p_78636_, @Nullable CompoundTag p_78637_);
+    CompoundTag createTag(@Nullable UUID singlePlayerUUID);
 
     boolean isHardcore();
 
@@ -71,27 +61,21 @@ public interface WorldData {
 
     GameType getGameType();
 
-    void setGameType(GameType p_78635_);
+    void setGameType(GameType gameType);
 
     boolean isAllowCommands();
 
+    void setAllowCommands(final boolean allowCommands);
+
     Difficulty getDifficulty();
 
-    void setDifficulty(Difficulty p_78633_);
+    void setDifficulty(final Difficulty difficulty);
 
     boolean isDifficultyLocked();
 
-    void setDifficultyLocked(boolean p_78645_);
+    void setDifficultyLocked(final boolean difficultyLocked);
 
-    GameRules getGameRules();
-
-    @Nullable CompoundTag getLoadedPlayerTag();
-
-    EndDragonFight.Data endDragonFightData();
-
-    void setEndDragonFightData(EndDragonFight.Data p_289783_);
-
-    WorldOptions worldGenOptions();
+    @Nullable UUID getSinglePlayerUUID();
 
     boolean isFlatWorld();
 

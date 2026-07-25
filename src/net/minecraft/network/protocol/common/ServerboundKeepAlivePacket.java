@@ -11,16 +11,16 @@ public class ServerboundKeepAlivePacket implements Packet<ServerCommonPacketList
     );
     private final long id;
 
-    public ServerboundKeepAlivePacket(long p_300615_) {
-        this.id = p_300615_;
+    public ServerboundKeepAlivePacket(final long id) {
+        this.id = id;
     }
 
-    private ServerboundKeepAlivePacket(FriendlyByteBuf p_299677_) {
-        this.id = p_299677_.readLong();
+    private ServerboundKeepAlivePacket(final FriendlyByteBuf input) {
+        this.id = input.readLong();
     }
 
-    private void write(FriendlyByteBuf p_299172_) {
-        p_299172_.writeLong(this.id);
+    private void write(final FriendlyByteBuf output) {
+        output.writeLong(this.id);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ServerboundKeepAlivePacket implements Packet<ServerCommonPacketList
         return CommonPacketTypes.SERVERBOUND_KEEP_ALIVE;
     }
 
-    public void handle(ServerCommonPacketListener p_297247_) {
-        p_297247_.handleKeepAlive(this);
+    public void handle(final ServerCommonPacketListener listener) {
+        listener.handleKeepAlive(this);
     }
 
     public long getId() {

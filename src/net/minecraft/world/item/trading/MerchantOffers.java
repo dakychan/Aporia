@@ -23,37 +23,37 @@ public class MerchantOffers extends ArrayList<MerchantOffer> {
     public MerchantOffers() {
     }
 
-    private MerchantOffers(int p_220323_) {
-        super(p_220323_);
+    private MerchantOffers(final int initialCapacity) {
+        super(initialCapacity);
     }
 
-    private MerchantOffers(Collection<MerchantOffer> p_331802_) {
-        super(p_331802_);
+    private MerchantOffers(final Collection<MerchantOffer> offers) {
+        super(offers);
     }
 
-    public @Nullable MerchantOffer getRecipeFor(ItemStack p_45390_, ItemStack p_45391_, int p_45392_) {
-        if (p_45392_ > 0 && p_45392_ < this.size()) {
-            MerchantOffer merchantoffer1 = this.get(p_45392_);
-            return merchantoffer1.satisfiedBy(p_45390_, p_45391_) ? merchantoffer1 : null;
-        } else {
-            for (int i = 0; i < this.size(); i++) {
-                MerchantOffer merchantoffer = this.get(i);
-                if (merchantoffer.satisfiedBy(p_45390_, p_45391_)) {
-                    return merchantoffer;
-                }
-            }
-
-            return null;
+    public @Nullable MerchantOffer getRecipeFor(final ItemStack buyA, final ItemStack buyB, final int selectionHint) {
+        if (selectionHint > 0 && selectionHint < this.size()) {
+            MerchantOffer offer = this.get(selectionHint);
+            return offer.satisfiedBy(buyA, buyB) ? offer : null;
         }
+
+        for (int i = 0; i < this.size(); i++) {
+            MerchantOffer offer = this.get(i);
+            if (offer.satisfiedBy(buyA, buyB)) {
+                return offer;
+            }
+        }
+
+        return null;
     }
 
     public MerchantOffers copy() {
-        MerchantOffers merchantoffers = new MerchantOffers(this.size());
+        MerchantOffers offers = new MerchantOffers(this.size());
 
-        for (MerchantOffer merchantoffer : this) {
-            merchantoffers.add(merchantoffer.copy());
+        for (MerchantOffer offer : this) {
+            offers.add(offer.copy());
         }
 
-        return merchantoffers;
+        return offers;
     }
 }

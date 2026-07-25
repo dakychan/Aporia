@@ -7,68 +7,66 @@ import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.BlockColumnConfiguration;
 
 public class BlockColumnFeature extends Feature<BlockColumnConfiguration> {
-    public BlockColumnFeature(Codec<BlockColumnConfiguration> p_190789_) {
-        super(p_190789_);
+    public BlockColumnFeature(final Codec<BlockColumnConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<BlockColumnConfiguration> p_190791_) {
-        WorldGenLevel worldgenlevel = p_190791_.level();
-        BlockColumnConfiguration blockcolumnconfiguration = p_190791_.config();
-        RandomSource randomsource = p_190791_.random();
-        int i = blockcolumnconfiguration.layers().size();
-        int[] aint = new int[i];
-        int j = 0;
+    public boolean place(final FeaturePlaceContext<BlockColumnConfiguration> context) {
+        WorldGenLevel level = context.level();
+        BlockColumnConfiguration config = context.config();
+        RandomSource random = context.random();
+        int layerCount = config.layers().size();
+        int[] layerHeights = new int[layerCount];
+        int totalHeight = 0;
 
-        for (int k = 0; k < i; k++) {
-            aint[k] = blockcolumnconfiguration.layers().get(k).height().sample(randomsource);
-            j += aint[k];
+        for (int i = 0; i < layerCount; i++) {
+            layerHeights[i] = config.layers().get(i).height().sample(random);
+            totalHeight += layerHeights[i];
         }
 
-        if (j == 0) {
+        if (totalHeight == 0) {
             return false;
-        } else {
-            BlockPos.MutableBlockPos blockpos$mutableblockpos1 = p_190791_.origin().mutable();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = blockpos$mutableblockpos1.mutable().move(blockcolumnconfiguration.direction());
-
-            for (int l = 0; l < j; l++) {
-                if (!blockcolumnconfiguration.allowedPlacement().test(worldgenlevel, blockpos$mutableblockpos)) {
-                    truncate(aint, j, l, blockcolumnconfiguration.prioritizeTip());
-                    break;
-                }
-
-                blockpos$mutableblockpos.move(blockcolumnconfiguration.direction());
-            }
-
-            for (int k1 = 0; k1 < i; k1++) {
-                int i1 = aint[k1];
-                if (i1 != 0) {
-                    BlockColumnConfiguration.Layer blockcolumnconfiguration$layer = blockcolumnconfiguration.layers().get(k1);
-
-                    for (int j1 = 0; j1 < i1; j1++) {
-                        worldgenlevel.setBlock(
-                            blockpos$mutableblockpos1, blockcolumnconfiguration$layer.state().getState(randomsource, blockpos$mutableblockpos1), 2
-                        );
-                        blockpos$mutableblockpos1.move(blockcolumnconfiguration.direction());
-                    }
-                }
-            }
-
-            return true;
         }
+
+        BlockPos.MutableBlockPos placePos = context.origin().mutable();
+        BlockPos.MutableBlockPos nextPos = placePos.mutable().move(config.direction());
+
+        for (int y = 0; y < totalHeight; y++) {
+            if (!config.allowedPlacement().test(level, nextPos)) {
+                truncate(layerHeights, totalHeight, y, config.prioritizeTip());
+                break;
+            }
+
+            nextPos.move(config.direction());
+        }
+
+        for (int i = 0; i < layerCount; i++) {
+            int count = layerHeights[i];
+            if (count != 0) {
+                BlockColumnConfiguration.Layer layer = config.layers().get(i);
+
+                for (int y = 0; y < count; y++) {
+                    level.setBlock(placePos, layer.state().getState(level, random, placePos), 2);
+                    placePos.move(config.direction());
+                }
+            }
+        }
+
+        return true;
     }
 
-    private static void truncate(int[] p_190793_, int p_190794_, int p_190795_, boolean p_190796_) {
-        int i = p_190794_ - p_190795_;
-        int j = p_190796_ ? 1 : -1;
-        int k = p_190796_ ? 0 : p_190793_.length - 1;
-        int l = p_190796_ ? p_190793_.length : -1;
+    private static void truncate(final int[] layerHeights, final int totalHeight, final int newHeight, final boolean prioritizeTip) {
+        int amountToRemove = totalHeight - newHeight;
+        int direction = prioritizeTip ? 1 : -1;
+        int start = prioritizeTip ? 0 : layerHeights.length - 1;
+        int end = prioritizeTip ? layerHeights.length : -1;
 
-        for (int i1 = k; i1 != l && i > 0; i1 += j) {
-            int j1 = p_190793_[i1];
-            int k1 = Math.min(j1, i);
-            i -= k1;
-            p_190793_[i1] -= k1;
+        for (int i = start; i != end && amountToRemove > 0; i += direction) {
+            int thisLayer = layerHeights[i];
+            int toRemoveFromLayer = Math.min(thisLayer, amountToRemove);
+            amountToRemove -= toRemoveFromLayer;
+            layerHeights[i] -= toRemoveFromLayer;
         }
     }
 }

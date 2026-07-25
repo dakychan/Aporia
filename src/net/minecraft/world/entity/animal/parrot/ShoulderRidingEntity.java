@@ -14,16 +14,16 @@ public abstract class ShoulderRidingEntity extends TamableAnimal {
     private static final int RIDE_COOLDOWN = 100;
     private int rideCooldownCounter;
 
-    protected ShoulderRidingEntity(EntityType<? extends ShoulderRidingEntity> p_453343_, Level p_455523_) {
-        super(p_453343_, p_455523_);
+    protected ShoulderRidingEntity(final EntityType<? extends ShoulderRidingEntity> type, final Level level) {
+        super(type, level);
     }
 
-    public boolean setEntityOnShoulder(ServerPlayer p_456816_) {
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, this.registryAccess());
-            this.saveWithoutId(tagvalueoutput);
-            tagvalueoutput.putString("id", this.getEncodeId());
-            if (p_456816_.setEntityOnShoulder(tagvalueoutput.buildResult())) {
+    public boolean setEntityOnShoulder(final ServerPlayer player) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, this.registryAccess());
+            this.saveWithoutId(output);
+            output.putString("id", this.getEncodeId());
+            if (player.setEntityOnShoulder(output.buildResult())) {
                 this.discard();
                 return true;
             }

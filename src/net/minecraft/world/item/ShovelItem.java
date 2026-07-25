@@ -29,46 +29,46 @@ public class ShovelItem extends Item {
             .build()
     );
 
-    public ShovelItem(ToolMaterial p_366398_, float p_361074_, float p_368875_, Item.Properties p_43117_) {
-        super(p_43117_.shovel(p_366398_, p_361074_, p_368875_));
+    public ShovelItem(final ToolMaterial material, final float attackDamageBaseline, final float attackSpeedBaseline, final Item.Properties properties) {
+        super(properties.shovel(material, attackDamageBaseline, attackSpeedBaseline));
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_43119_) {
-        Level level = p_43119_.getLevel();
-        BlockPos blockpos = p_43119_.getClickedPos();
-        BlockState blockstate = level.getBlockState(blockpos);
-        if (p_43119_.getClickedFace() == Direction.DOWN) {
+    public InteractionResult useOn(final UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState blockState = level.getBlockState(pos);
+        if (context.getClickedFace() == Direction.DOWN) {
             return InteractionResult.PASS;
+        }
+
+        Player player = context.getPlayer();
+        BlockState newState = FLATTENABLES.get(blockState.getBlock());
+        BlockState updatedState = null;
+        if (newState != null && level.getBlockState(pos.above()).isAir()) {
+            level.playSound(player, pos, SoundEvents.SHOVEL_FLATTEN, SoundSource.BLOCKS, 1.0F, 1.0F);
+            updatedState = newState;
+        } else if (blockState.getBlock() instanceof CampfireBlock && blockState.getValue(CampfireBlock.LIT)) {
+            if (!level.isClientSide()) {
+                level.levelEvent(null, 1009, pos, 0);
+            }
+
+            CampfireBlock.dowse(context.getPlayer(), level, pos, blockState);
+            updatedState = blockState.setValue(CampfireBlock.LIT, false);
+        }
+
+        if (updatedState != null) {
+            if (!level.isClientSide()) {
+                level.setBlock(pos, updatedState, 11);
+                level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(player, updatedState));
+                if (player != null) {
+                    context.getItemInHand().hurtAndBreak(1, player, context.getHand().asEquipmentSlot());
+                }
+            }
+
+            return InteractionResult.SUCCESS;
         } else {
-            Player player = p_43119_.getPlayer();
-            BlockState blockstate1 = FLATTENABLES.get(blockstate.getBlock());
-            BlockState blockstate2 = null;
-            if (blockstate1 != null && level.getBlockState(blockpos.above()).isAir()) {
-                level.playSound(player, blockpos, SoundEvents.SHOVEL_FLATTEN, SoundSource.BLOCKS, 1.0F, 1.0F);
-                blockstate2 = blockstate1;
-            } else if (blockstate.getBlock() instanceof CampfireBlock && blockstate.getValue(CampfireBlock.LIT)) {
-                if (!level.isClientSide()) {
-                    level.levelEvent(null, 1009, blockpos, 0);
-                }
-
-                CampfireBlock.dowse(p_43119_.getPlayer(), level, blockpos, blockstate);
-                blockstate2 = blockstate.setValue(CampfireBlock.LIT, false);
-            }
-
-            if (blockstate2 != null) {
-                if (!level.isClientSide()) {
-                    level.setBlock(blockpos, blockstate2, 11);
-                    level.gameEvent(GameEvent.BLOCK_CHANGE, blockpos, GameEvent.Context.of(player, blockstate2));
-                    if (player != null) {
-                        p_43119_.getItemInHand().hurtAndBreak(1, player, p_43119_.getHand().asEquipmentSlot());
-                    }
-                }
-
-                return InteractionResult.SUCCESS;
-            } else {
-                return InteractionResult.PASS;
-            }
+            return InteractionResult.PASS;
         }
     }
 }

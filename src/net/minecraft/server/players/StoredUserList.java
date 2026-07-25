@@ -31,55 +31,55 @@ public abstract class StoredUserList<K, V extends StoredUserEntry<K>> {
     private final Map<String, V> map = Maps.newHashMap();
     protected final NotificationService notificationService;
 
-    public StoredUserList(File p_11380_, NotificationService p_426637_) {
-        this.file = p_11380_;
-        this.notificationService = p_426637_;
+    public StoredUserList(final File file, final NotificationService notificationService) {
+        this.file = file;
+        this.notificationService = notificationService;
     }
 
     public File getFile() {
         return this.file;
     }
 
-    public boolean add(V p_11382_) {
-        String s = this.getKeyForUser(p_11382_.getUser());
-        V v = this.map.get(s);
-        if (p_11382_.equals(v)) {
+    public boolean add(final V infos) {
+        String keyForUser = this.getKeyForUser(infos.getUser());
+        V previous = this.map.get(keyForUser);
+        if (infos.equals(previous)) {
             return false;
-        } else {
-            this.map.put(s, p_11382_);
-
-            try {
-                this.save();
-            } catch (IOException ioexception) {
-                LOGGER.warn("Could not save the list after adding a user.", (Throwable)ioexception);
-            }
-
-            return true;
         }
+
+        this.map.put(keyForUser, infos);
+
+        try {
+            this.save();
+        } catch (IOException e) {
+            LOGGER.warn("Could not save the list after adding a user.", e);
+        }
+
+        return true;
     }
 
-    public @Nullable V get(K p_11389_) {
+    public @Nullable V get(final K user) {
         this.removeExpired();
-        return this.map.get(this.getKeyForUser(p_11389_));
+        return this.map.get(this.getKeyForUser(user));
     }
 
-    public boolean remove(K p_11394_) {
-        V v = this.map.remove(this.getKeyForUser(p_11394_));
-        if (v == null) {
+    public boolean remove(final K user) {
+        V removed = this.map.remove(this.getKeyForUser(user));
+        if (removed == null) {
             return false;
-        } else {
-            try {
-                this.save();
-            } catch (IOException ioexception) {
-                LOGGER.warn("Could not save the list after removing a user.", (Throwable)ioexception);
-            }
-
-            return true;
         }
+
+        try {
+            this.save();
+        } catch (IOException e) {
+            LOGGER.warn("Could not save the list after removing a user.", e);
+        }
+
+        return true;
     }
 
-    public boolean remove(StoredUserEntry<K> p_11387_) {
-        return this.remove(Objects.requireNonNull(p_11387_.getUser()));
+    public boolean remove(final StoredUserEntry<K> infos) {
+        return this.remove(Objects.requireNonNull(infos.getUser()));
     }
 
     public void clear() {
@@ -87,8 +87,8 @@ public abstract class StoredUserList<K, V extends StoredUserEntry<K>> {
 
         try {
             this.save();
-        } catch (IOException ioexception) {
-            LOGGER.warn("Could not save the list after removing a user.", (Throwable)ioexception);
+        } catch (IOException e) {
+            LOGGER.warn("Could not save the list after removing a user.", e);
         }
     }
 
@@ -100,57 +100,57 @@ public abstract class StoredUserList<K, V extends StoredUserEntry<K>> {
         return this.map.isEmpty();
     }
 
-    protected String getKeyForUser(K p_11384_) {
-        return p_11384_.toString();
+    protected String getKeyForUser(final K user) {
+        return user.toString();
     }
 
-    protected boolean contains(K p_11397_) {
-        return this.map.containsKey(this.getKeyForUser(p_11397_));
+    protected boolean contains(final K user) {
+        return this.map.containsKey(this.getKeyForUser(user));
     }
 
     private void removeExpired() {
-        List<K> list = Lists.newArrayList();
+        List<K> toRemove = Lists.newArrayList();
 
-        for (V v : this.map.values()) {
-            if (v.hasExpired()) {
-                list.add(v.getUser());
+        for (V entry : this.map.values()) {
+            if (entry.hasExpired()) {
+                toRemove.add(entry.getUser());
             }
         }
 
-        for (K k : list) {
-            this.map.remove(this.getKeyForUser(k));
+        for (K user : toRemove) {
+            this.map.remove(this.getKeyForUser(user));
         }
     }
 
-    protected abstract StoredUserEntry<K> createEntry(JsonObject p_11383_);
+    protected abstract StoredUserEntry<K> createEntry(final JsonObject object);
 
     public Collection<V> getEntries() {
         return this.map.values();
     }
 
     public void save() throws IOException {
-        JsonArray jsonarray = new JsonArray();
-        this.map.values().stream().map(p_449202_ -> Util.make(new JsonObject(), p_449202_::serialize)).forEach(jsonarray::add);
+        JsonArray result = new JsonArray();
+        this.map.values().stream().map(entry -> Util.make(new JsonObject(), entry::serialize)).forEach(result::add);
 
-        try (BufferedWriter bufferedwriter = Files.newWriter(this.file, StandardCharsets.UTF_8)) {
-            GSON.toJson(jsonarray, GSON.newJsonWriter(bufferedwriter));
+        try (BufferedWriter writer = Files.newWriter(this.file, StandardCharsets.UTF_8)) {
+            GSON.toJson(result, GSON.newJsonWriter(writer));
         }
     }
 
     public void load() throws IOException {
         if (this.file.exists()) {
-            try (BufferedReader bufferedreader = Files.newReader(this.file, StandardCharsets.UTF_8)) {
+            try (BufferedReader reader = Files.newReader(this.file, StandardCharsets.UTF_8)) {
                 this.map.clear();
-                JsonArray jsonarray = GSON.fromJson(bufferedreader, JsonArray.class);
-                if (jsonarray == null) {
+                JsonArray contents = GSON.fromJson(reader, JsonArray.class);
+                if (contents == null) {
                     return;
                 }
 
-                for (JsonElement jsonelement : jsonarray) {
-                    JsonObject jsonobject = GsonHelper.convertToJsonObject(jsonelement, "entry");
-                    StoredUserEntry<K> storeduserentry = this.createEntry(jsonobject);
-                    if (storeduserentry.getUser() != null) {
-                        this.map.put(this.getKeyForUser(storeduserentry.getUser()), (V)storeduserentry);
+                for (JsonElement element : contents) {
+                    JsonObject object = GsonHelper.convertToJsonObject(element, "entry");
+                    StoredUserEntry<K> entry = this.createEntry(object);
+                    if (entry.getUser() != null) {
+                        this.map.put(this.getKeyForUser(entry.getUser()), (V)entry);
                     }
                 }
             }

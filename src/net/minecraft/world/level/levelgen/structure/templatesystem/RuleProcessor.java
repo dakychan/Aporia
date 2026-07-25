@@ -2,50 +2,48 @@ package net.minecraft.world.level.levelgen.structure.templatesystem;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.LevelReader;
-import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
-public class RuleProcessor extends StructureProcessor {
-    public static final MapCodec<RuleProcessor> CODEC = ProcessorRule.CODEC
-        .listOf()
-        .fieldOf("rules")
-        .xmap(RuleProcessor::new, p_74306_ -> p_74306_.rules);
+public class RuleProcessor implements StructureProcessor {
+    public static final MapCodec<RuleProcessor> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(ProcessorRule.CODEC.listOf().fieldOf("rules").forGetter(p -> p.rules)).apply(i, RuleProcessor::new)
+    );
     private final ImmutableList<ProcessorRule> rules;
 
-    public RuleProcessor(List<? extends ProcessorRule> p_74296_) {
-        this.rules = ImmutableList.copyOf(p_74296_);
+    public RuleProcessor(final List<? extends ProcessorRule> rules) {
+        this.rules = ImmutableList.copyOf(rules);
     }
 
     @Override
     public StructureTemplate.@Nullable StructureBlockInfo processBlock(
-        LevelReader p_74299_,
-        BlockPos p_74300_,
-        BlockPos p_74301_,
-        StructureTemplate.StructureBlockInfo p_74302_,
-        StructureTemplate.StructureBlockInfo p_74303_,
-        StructurePlaceSettings p_74304_
+        final LevelReader level,
+        final BlockPos targetPosition,
+        final BlockPos referencePos,
+        final BlockPos templateRelativePos,
+        final StructureTemplate.StructureBlockInfo processedBlockInfo,
+        final StructurePlaceSettings settings
     ) {
-        RandomSource randomsource = RandomSource.create(Mth.getSeed(p_74303_.pos()));
-        BlockState blockstate = p_74299_.getBlockState(p_74303_.pos());
+        RandomSource random = RandomSource.create(Mth.getSeed(processedBlockInfo.pos()));
 
-        for (ProcessorRule processorrule : this.rules) {
-            if (processorrule.test(p_74303_.state(), blockstate, p_74302_.pos(), p_74303_.pos(), p_74301_, randomsource)) {
+        for (ProcessorRule rule : this.rules) {
+            if (rule.test(level, processedBlockInfo.state(), templateRelativePos, processedBlockInfo.pos(), referencePos, random)) {
                 return new StructureTemplate.StructureBlockInfo(
-                    p_74303_.pos(), processorrule.getOutputState(), processorrule.getOutputTag(randomsource, p_74303_.nbt())
+                    processedBlockInfo.pos(), rule.getOutputState(), rule.getOutputTag(random, processedBlockInfo.nbt())
                 );
             }
         }
 
-        return p_74303_;
+        return processedBlockInfo;
     }
 
     @Override
-    protected StructureProcessorType<?> getType() {
-        return StructureProcessorType.RULE;
+    public MapCodec<RuleProcessor> codec() {
+        return MAP_CODEC;
     }
 }

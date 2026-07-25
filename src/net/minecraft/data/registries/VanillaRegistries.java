@@ -26,12 +26,18 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.dialog.Dialogs;
 import net.minecraft.util.Util;
+import net.minecraft.world.clock.WorldClocks;
 import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.SulfurCubeArchetypes;
+import net.minecraft.world.entity.animal.chicken.ChickenSoundVariants;
 import net.minecraft.world.entity.animal.chicken.ChickenVariants;
+import net.minecraft.world.entity.animal.cow.CowSoundVariants;
 import net.minecraft.world.entity.animal.cow.CowVariants;
+import net.minecraft.world.entity.animal.feline.CatSoundVariants;
 import net.minecraft.world.entity.animal.feline.CatVariants;
 import net.minecraft.world.entity.animal.frog.FrogVariants;
 import net.minecraft.world.entity.animal.nautilus.ZombieNautilusVariants;
+import net.minecraft.world.entity.animal.pig.PigSoundVariants;
 import net.minecraft.world.entity.animal.pig.PigVariants;
 import net.minecraft.world.entity.animal.wolf.WolfSoundVariants;
 import net.minecraft.world.entity.animal.wolf.WolfVariants;
@@ -42,6 +48,8 @@ import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.item.enchantment.providers.VanillaEnchantmentProviders;
 import net.minecraft.world.item.equipment.trim.TrimMaterials;
 import net.minecraft.world.item.equipment.trim.TrimPatterns;
+import net.minecraft.world.item.trading.TradeSets;
+import net.minecraft.world.item.trading.VillagerTrades;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterLists;
 import net.minecraft.world.level.block.entity.BannerPatterns;
@@ -57,8 +65,8 @@ import net.minecraft.world.timeline.Timelines;
 public class VanillaRegistries {
     private static final RegistrySetBuilder BUILDER = new RegistrySetBuilder()
         .add(Registries.DIMENSION_TYPE, DimensionTypes::bootstrap)
-        .add(Registries.CONFIGURED_CARVER, (RegistrySetBuilder.RegistryBootstrap)Carvers::bootstrap)
-        .add(Registries.CONFIGURED_FEATURE, (RegistrySetBuilder.RegistryBootstrap)FeatureUtils::bootstrap)
+        .add(Registries.CONFIGURED_CARVER, Carvers::bootstrap)
+        .add(Registries.CONFIGURED_FEATURE, FeatureUtils::bootstrap)
         .add(Registries.PLACED_FEATURE, PlacementUtils::bootstrap)
         .add(Registries.STRUCTURE, Structures::bootstrap)
         .add(Registries.STRUCTURE_SET, StructureSets::bootstrap)
@@ -85,45 +93,53 @@ public class VanillaRegistries {
         .add(Registries.JUKEBOX_SONG, JukeboxSongs::bootstrap)
         .add(Registries.INSTRUMENT, Instruments::bootstrap)
         .add(Registries.PIG_VARIANT, PigVariants::bootstrap)
+        .add(Registries.PIG_SOUND_VARIANT, PigSoundVariants::bootstrap)
         .add(Registries.COW_VARIANT, CowVariants::bootstrap)
+        .add(Registries.COW_SOUND_VARIANT, CowSoundVariants::bootstrap)
         .add(Registries.CHICKEN_VARIANT, ChickenVariants::bootstrap)
+        .add(Registries.CHICKEN_SOUND_VARIANT, ChickenSoundVariants::bootstrap)
         .add(Registries.ZOMBIE_NAUTILUS_VARIANT, ZombieNautilusVariants::bootstrap)
+        .add(Registries.SULFUR_CUBE_ARCHETYPE, SulfurCubeArchetypes::bootstrap)
         .add(Registries.TEST_ENVIRONMENT, GameTestEnvironments::bootstrap)
         .add(Registries.TEST_INSTANCE, GameTestInstances::bootstrap)
         .add(Registries.FROG_VARIANT, FrogVariants::bootstrap)
         .add(Registries.CAT_VARIANT, CatVariants::bootstrap)
+        .add(Registries.CAT_SOUND_VARIANT, CatSoundVariants::bootstrap)
         .add(Registries.DIALOG, Dialogs::bootstrap)
-        .add(Registries.TIMELINE, Timelines::bootstrap);
+        .add(Registries.WORLD_CLOCK, WorldClocks::bootstrap)
+        .add(Registries.TIMELINE, Timelines::bootstrap)
+        .add(Registries.VILLAGER_TRADE, VillagerTrades::bootstrap)
+        .add(Registries.TRADE_SET, TradeSets::bootstrap);
 
-    private static void validateThatAllBiomeFeaturesHaveBiomeFilter(HolderLookup.Provider p_256242_) {
-        validateThatAllBiomeFeaturesHaveBiomeFilter(p_256242_.lookupOrThrow(Registries.PLACED_FEATURE), p_256242_.lookupOrThrow(Registries.BIOME));
+    private static void validateThatAllBiomeFeaturesHaveBiomeFilter(final HolderLookup.Provider provider) {
+        validateThatAllBiomeFeaturesHaveBiomeFilter(provider.lookupOrThrow(Registries.PLACED_FEATURE), provider.lookupOrThrow(Registries.BIOME));
     }
 
-    public static void validateThatAllBiomeFeaturesHaveBiomeFilter(HolderGetter<PlacedFeature> p_272963_, HolderLookup<Biome> p_273693_) {
-        p_273693_.listElements().forEach(p_448728_ -> {
-            Identifier identifier = p_448728_.key().identifier();
-            List<HolderSet<PlacedFeature>> list = p_448728_.value().getGenerationSettings().features();
-            list.stream().flatMap(HolderSet::stream).forEach(p_256657_ -> p_256657_.unwrap().ifLeft(p_448724_ -> {
-                Holder.Reference<PlacedFeature> reference = p_272963_.getOrThrow((ResourceKey<PlacedFeature>)p_448724_);
-                if (!validatePlacedFeature(reference.value())) {
-                    Util.logAndPauseIfInIde("Placed feature " + p_448724_.identifier() + " in biome " + identifier + " is missing BiomeFilter.biome()");
+    public static void validateThatAllBiomeFeaturesHaveBiomeFilter(final HolderGetter<PlacedFeature> placedFeatures, final HolderLookup<Biome> biomes) {
+        biomes.listElements().forEach(biome -> {
+            Identifier biomeKey = biome.key().identifier();
+            List<HolderSet<PlacedFeature>> biomeFeatures = biome.value().getGenerationSettings().features();
+            biomeFeatures.stream().flatMap(HolderSet::stream).forEach(feature -> feature.unwrap().ifLeft(key -> {
+                Holder.Reference<PlacedFeature> value = placedFeatures.getOrThrow((ResourceKey<PlacedFeature>)key);
+                if (!validatePlacedFeature(value.value())) {
+                    Util.logAndPauseIfInIde("Placed feature " + key.identifier() + " in biome " + biomeKey + " is missing BiomeFilter.biome()");
                 }
-            }).ifRight(p_448726_ -> {
-                if (!validatePlacedFeature(p_448726_)) {
-                    Util.logAndPauseIfInIde("Placed inline feature in biome " + p_448728_ + " is missing BiomeFilter.biome()");
+            }).ifRight(value -> {
+                if (!validatePlacedFeature(value)) {
+                    Util.logAndPauseIfInIde("Placed inline feature in biome " + biome + " is missing BiomeFilter.biome()");
                 }
             }));
         });
     }
 
-    private static boolean validatePlacedFeature(PlacedFeature p_255656_) {
-        return p_255656_.placement().contains(BiomeFilter.biome());
+    private static boolean validatePlacedFeature(final PlacedFeature value) {
+        return value.placement().contains(BiomeFilter.biome());
     }
 
     public static HolderLookup.Provider createLookup() {
-        RegistryAccess.Frozen registryaccess$frozen = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
-        HolderLookup.Provider holderlookup$provider = BUILDER.build(registryaccess$frozen);
-        validateThatAllBiomeFeaturesHaveBiomeFilter(holderlookup$provider);
-        return holderlookup$provider;
+        RegistryAccess.Frozen staticRegistries = RegistryAccess.fromRegistryOfRegistries(BuiltInRegistries.REGISTRY);
+        HolderLookup.Provider newRegistries = BUILDER.build(staticRegistries);
+        validateThatAllBiomeFeaturesHaveBiomeFilter(newRegistries);
+        return newRegistries;
     }
 }

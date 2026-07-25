@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.SmokerBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,40 +27,40 @@ public class SmokerBlock extends AbstractFurnaceBlock {
         return CODEC;
     }
 
-    protected SmokerBlock(BlockBehaviour.Properties p_56439_) {
-        super(p_56439_);
+    protected SmokerBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_154644_, BlockState p_154645_) {
-        return new SmokerBlockEntity(p_154644_, p_154645_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new SmokerBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_154640_, BlockState p_154641_, BlockEntityType<T> p_154642_) {
-        return createFurnaceTicker(p_154640_, p_154642_, BlockEntityType.SMOKER);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return createFurnaceTicker(level, type, BlockEntityTypes.SMOKER);
     }
 
     @Override
-    protected void openContainer(Level p_56443_, BlockPos p_56444_, Player p_56445_) {
-        BlockEntity blockentity = p_56443_.getBlockEntity(p_56444_);
-        if (blockentity instanceof SmokerBlockEntity) {
-            p_56445_.openMenu((MenuProvider)blockentity);
-            p_56445_.awardStat(Stats.INTERACT_WITH_SMOKER);
+    protected void openContainer(final Level level, final BlockPos pos, final Player player) {
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity instanceof SmokerBlockEntity) {
+            player.openMenu((MenuProvider)blockEntity);
+            player.awardStat(Stats.INTERACT_WITH_SMOKER);
         }
     }
 
     @Override
-    public void animateTick(BlockState p_222443_, Level p_222444_, BlockPos p_222445_, RandomSource p_222446_) {
-        if (p_222443_.getValue(LIT)) {
-            double d0 = p_222445_.getX() + 0.5;
-            double d1 = p_222445_.getY();
-            double d2 = p_222445_.getZ() + 0.5;
-            if (p_222446_.nextDouble() < 0.1) {
-                p_222444_.playLocalSound(d0, d1, d2, SoundEvents.SMOKER_SMOKE, SoundSource.BLOCKS, 1.0F, 1.0F, false);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(LIT)) {
+            double x = pos.getX() + 0.5;
+            double y = pos.getY();
+            double z = pos.getZ() + 0.5;
+            if (random.nextDouble() < 0.1) {
+                level.playLocalSound(x, y, z, SoundEvents.SMOKER_SMOKE, SoundSource.BLOCKS, 1.0F, 1.0F, false);
             }
 
-            p_222444_.addParticle(ParticleTypes.SMOKE, d0, d1 + 1.1, d2, 0.0, 0.0, 0.0);
+            level.addParticle(ParticleTypes.SMOKE, x, y + 1.1, z, 0.0, 0.0, 0.0);
         }
     }
 }

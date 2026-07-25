@@ -11,13 +11,13 @@ public record ClientboundDebugSamplePacket(long[] sample, RemoteDebugSampleType 
         ClientboundDebugSamplePacket::write, ClientboundDebugSamplePacket::new
     );
 
-    private ClientboundDebugSamplePacket(FriendlyByteBuf p_330326_) {
-        this(p_330326_.readLongArray(), p_330326_.readEnum(RemoteDebugSampleType.class));
+    private ClientboundDebugSamplePacket(final FriendlyByteBuf input) {
+        this(input.readLongArray(), input.readEnum(RemoteDebugSampleType.class));
     }
 
-    private void write(FriendlyByteBuf p_330431_) {
-        p_330431_.writeLongArray(this.sample);
-        p_330431_.writeEnum(this.debugSampleType);
+    private void write(final FriendlyByteBuf output) {
+        output.writeLongArray(this.sample);
+        output.writeEnum(this.debugSampleType);
     }
 
     @Override
@@ -25,7 +25,7 @@ public record ClientboundDebugSamplePacket(long[] sample, RemoteDebugSampleType 
         return GamePacketTypes.CLIENTBOUND_DEBUG_SAMPLE;
     }
 
-    public void handle(ClientGamePacketListener p_330875_) {
-        p_330875_.handleDebugSample(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDebugSample(this);
     }
 }

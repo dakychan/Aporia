@@ -12,29 +12,28 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
 public abstract class BaseEntityBlock extends Block implements EntityBlock {
-    protected BaseEntityBlock(BlockBehaviour.Properties p_49224_) {
-        super(p_49224_);
+    protected BaseEntityBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
     protected abstract MapCodec<? extends BaseEntityBlock> codec();
 
     @Override
-    protected boolean triggerEvent(BlockState p_49226_, Level p_49227_, BlockPos p_49228_, int p_49229_, int p_49230_) {
-        super.triggerEvent(p_49226_, p_49227_, p_49228_, p_49229_, p_49230_);
-        BlockEntity blockentity = p_49227_.getBlockEntity(p_49228_);
-        return blockentity == null ? false : blockentity.triggerEvent(p_49229_, p_49230_);
+    protected boolean triggerEvent(final BlockState state, final Level level, final BlockPos pos, final int b0, final int b1) {
+        super.triggerEvent(state, level, pos, b0, b1);
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        return blockEntity == null ? false : blockEntity.triggerEvent(b0, b1);
     }
 
     @Override
-    protected @Nullable MenuProvider getMenuProvider(BlockState p_49234_, Level p_49235_, BlockPos p_49236_) {
-        BlockEntity blockentity = p_49235_.getBlockEntity(p_49236_);
-        return blockentity instanceof MenuProvider ? (MenuProvider)blockentity : null;
+    protected @Nullable MenuProvider getMenuProvider(final BlockState state, final Level level, final BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof MenuProvider menuProvider ? menuProvider : null;
     }
 
     protected static <E extends BlockEntity, A extends BlockEntity> @Nullable BlockEntityTicker<A> createTickerHelper(
-        BlockEntityType<A> p_152133_, BlockEntityType<E> p_152134_, BlockEntityTicker<? super E> p_152135_
+        final BlockEntityType<A> actual, final BlockEntityType<E> expected, final @Nullable BlockEntityTicker<? super E> ticker
     ) {
-        return p_152134_ == p_152133_ ? (BlockEntityTicker<A>)p_152135_ : null;
+        return expected == actual ? (BlockEntityTicker<A>)ticker : null;
     }
 }

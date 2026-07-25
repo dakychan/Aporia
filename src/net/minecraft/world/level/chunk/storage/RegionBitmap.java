@@ -9,26 +9,26 @@ import java.util.BitSet;
 public class RegionBitmap {
     private final BitSet used = new BitSet();
 
-    public void force(int p_63613_, int p_63614_) {
-        this.used.set(p_63613_, p_63613_ + p_63614_);
+    public void force(final int position, final int size) {
+        this.used.set(position, position + size);
     }
 
-    public void free(int p_63616_, int p_63617_) {
-        this.used.clear(p_63616_, p_63616_ + p_63617_);
+    public void free(final int position, final int size) {
+        this.used.clear(position, position + size);
     }
 
-    public int allocate(int p_63611_) {
-        int i = 0;
+    public int allocate(final int size) {
+        int current = 0;
 
         while (true) {
-            int j = this.used.nextClearBit(i);
-            int k = this.used.nextSetBit(j);
-            if (k == -1 || k - j >= p_63611_) {
-                this.force(j, p_63611_);
-                return j;
+            int freeStart = this.used.nextClearBit(current);
+            int freeEnd = this.used.nextSetBit(freeStart);
+            if (freeEnd == -1 || freeEnd - freeStart >= size) {
+                this.force(freeStart, size);
+                return freeStart;
             }
 
-            i = k;
+            current = freeEnd;
         }
     }
 

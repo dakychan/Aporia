@@ -8,15 +8,18 @@ import net.minecraft.util.profiling.ProfilerFiller;
 public abstract class SimplePreparableReloadListener<T> implements PreparableReloadListener {
     @Override
     public final CompletableFuture<Void> reload(
-        PreparableReloadListener.SharedState p_429663_, Executor p_10784_, PreparableReloadListener.PreparationBarrier p_10780_, Executor p_10785_
+        final PreparableReloadListener.SharedState currentReload,
+        final Executor taskExecutor,
+        final PreparableReloadListener.PreparationBarrier preparationBarrier,
+        final Executor reloadExecutor
     ) {
-        ResourceManager resourcemanager = p_429663_.resourceManager();
-        return CompletableFuture.<T>supplyAsync(() -> this.prepare(resourcemanager, Profiler.get()), p_10784_)
-            .thenCompose(p_10780_::wait)
-            .thenAcceptAsync(p_358748_ -> this.apply((T)p_358748_, resourcemanager, Profiler.get()), p_10785_);
+        ResourceManager manager = currentReload.resourceManager();
+        return CompletableFuture.<T>supplyAsync(() -> this.prepare(manager, Profiler.get()), taskExecutor)
+            .thenCompose(preparationBarrier::wait)
+            .thenAcceptAsync(preparations -> this.apply((T)preparations, manager, Profiler.get()), reloadExecutor);
     }
 
-    protected abstract T prepare(ResourceManager p_10796_, ProfilerFiller p_10797_);
+    protected abstract T prepare(final ResourceManager manager, final ProfilerFiller profiler);
 
-    protected abstract void apply(T p_10793_, ResourceManager p_10794_, ProfilerFiller p_10795_);
+    protected abstract void apply(final T preparations, final ResourceManager manager, final ProfilerFiller profiler);
 }

@@ -3,7 +3,6 @@ package net.minecraft.network.chat.contents;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.network.chat.Component;
@@ -14,13 +13,13 @@ import org.jspecify.annotations.Nullable;
 
 public class KeybindContents implements ComponentContents {
     public static final MapCodec<KeybindContents> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_310396_ -> p_310396_.group(Codec.STRING.fieldOf("keybind").forGetter(p_309709_ -> p_309709_.name)).apply(p_310396_, KeybindContents::new)
+        i -> i.group(Codec.STRING.fieldOf("keybind").forGetter(o -> o.name)).apply(i, KeybindContents::new)
     );
     private final String name;
     private @Nullable Supplier<Component> nameResolver;
 
-    public KeybindContents(String p_237347_) {
-        this.name = p_237347_;
+    public KeybindContents(final String name) {
+        this.name = name;
     }
 
     private Component getNestedComponent() {
@@ -32,18 +31,18 @@ public class KeybindContents implements ComponentContents {
     }
 
     @Override
-    public <T> Optional<T> visit(FormattedText.ContentConsumer<T> p_237350_) {
-        return this.getNestedComponent().visit(p_237350_);
+    public <T> Optional<T> visit(final FormattedText.ContentConsumer<T> output) {
+        return this.getNestedComponent().visit(output);
     }
 
     @Override
-    public <T> Optional<T> visit(FormattedText.StyledContentConsumer<T> p_237352_, Style p_237353_) {
-        return this.getNestedComponent().visit(p_237352_, p_237353_);
+    public <T> Optional<T> visit(final FormattedText.StyledContentConsumer<T> output, final Style currentStyle) {
+        return this.getNestedComponent().visit(output, currentStyle);
     }
 
     @Override
-    public boolean equals(Object p_237356_) {
-        return this == p_237356_ ? true : p_237356_ instanceof KeybindContents keybindcontents && this.name.equals(keybindcontents.name);
+    public boolean equals(final Object o) {
+        return this == o ? true : o instanceof KeybindContents that && this.name.equals(that.name);
     }
 
     @Override

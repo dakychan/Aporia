@@ -1,106 +1,149 @@
 package net.minecraft.world.item.crafting;
 
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.tags.ItemTags;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.WrittenBookContent;
 import net.minecraft.world.level.Level;
 
 public class BookCloningRecipe extends CustomRecipe {
-    public BookCloningRecipe(CraftingBookCategory p_251090_) {
-        super(p_251090_);
+    public static final MinMaxBounds.Ints ALLOWED_BOOK_GENERATION_RANGES = MinMaxBounds.Ints.between(0, 2);
+    public static final MinMaxBounds.Ints DEFAULT_BOOK_GENERATION_RANGES = MinMaxBounds.Ints.between(0, 1);
+    private static final Codec<MinMaxBounds.Ints> ALLOWED_GENERATION_CODEC = MinMaxBounds.Ints.CODEC
+        .validate(MinMaxBounds.validateContainedInRange(ALLOWED_BOOK_GENERATION_RANGES));
+    public static final MapCodec<BookCloningRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
+                Ingredient.CODEC.fieldOf("source").forGetter(o -> o.source),
+                Ingredient.CODEC.fieldOf("material").forGetter(o -> o.material),
+                ALLOWED_GENERATION_CODEC.optionalFieldOf("allowed_generations", DEFAULT_BOOK_GENERATION_RANGES).forGetter(o -> o.allowedGenerations),
+                ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result)
+            )
+            .apply(i, BookCloningRecipe::new)
+    );
+    public static final StreamCodec<RegistryFriendlyByteBuf, BookCloningRecipe> STREAM_CODEC = StreamCodec.composite(
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.source,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.material,
+        MinMaxBounds.Ints.STREAM_CODEC,
+        o -> o.allowedGenerations,
+        ItemStackTemplate.STREAM_CODEC,
+        o -> o.result,
+        BookCloningRecipe::new
+    );
+    public static final RecipeSerializer<BookCloningRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    private final Ingredient source;
+    private final Ingredient material;
+    private final MinMaxBounds.Ints allowedGenerations;
+    private final ItemStackTemplate result;
+
+    public BookCloningRecipe(final Ingredient source, final Ingredient material, final MinMaxBounds.Ints allowedGenerations, final ItemStackTemplate result) {
+        this.source = source;
+        this.material = material;
+        this.allowedGenerations = allowedGenerations;
+        this.result = result;
     }
 
-    public boolean matches(CraftingInput p_342225_, Level p_43815_) {
-        if (p_342225_.ingredientCount() < 2) {
+    private boolean canCraftCopy(final WrittenBookContent writtenBookContent) {
+        return this.allowedGenerations.matches(writtenBookContent.generation());
+    }
+
+    public boolean matches(final CraftingInput input, final Level level) {
+        if (input.ingredientCount() < 2) {
             return false;
-        } else {
-            boolean flag = false;
-            boolean flag1 = false;
+        }
 
-            for (int i = 0; i < p_342225_.size(); i++) {
-                ItemStack itemstack = p_342225_.getItem(i);
-                if (!itemstack.isEmpty()) {
-                    if (itemstack.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
-                        if (flag1) {
-                            return false;
-                        }
+        boolean hasMaterial = false;
+        boolean hasSource = false;
 
-                        flag1 = true;
-                    } else {
-                        if (!itemstack.is(ItemTags.BOOK_CLONING_TARGET)) {
-                            return false;
-                        }
-
-                        flag = true;
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                if (this.source.test(itemStack)) {
+                    WrittenBookContent writtenBookContent = itemStack.get(DataComponents.WRITTEN_BOOK_CONTENT);
+                    if (writtenBookContent == null || !this.canCraftCopy(writtenBookContent)) {
+                        return false;
                     }
+
+                    if (hasSource) {
+                        return false;
+                    }
+
+                    hasSource = true;
+                } else {
+                    if (!this.material.test(itemStack)) {
+                        return false;
+                    }
+
+                    hasMaterial = true;
                 }
             }
-
-            return flag1 && flag;
         }
+
+        return hasSource && hasMaterial;
     }
 
-    public ItemStack assemble(CraftingInput p_344525_, HolderLookup.Provider p_327928_) {
-        int i = 0;
-        ItemStack itemstack = ItemStack.EMPTY;
+    public ItemStack assemble(final CraftingInput input) {
+        int count = 0;
+        ItemStack source = ItemStack.EMPTY;
 
-        for (int j = 0; j < p_344525_.size(); j++) {
-            ItemStack itemstack1 = p_344525_.getItem(j);
-            if (!itemstack1.isEmpty()) {
-                if (itemstack1.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
-                    if (!itemstack.isEmpty()) {
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                if (this.source.test(itemStack) && itemStack.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
+                    if (!source.isEmpty()) {
                         return ItemStack.EMPTY;
                     }
 
-                    itemstack = itemstack1;
+                    source = itemStack;
                 } else {
-                    if (!itemstack1.is(ItemTags.BOOK_CLONING_TARGET)) {
+                    if (!this.material.test(itemStack)) {
                         return ItemStack.EMPTY;
                     }
 
-                    i++;
+                    count++;
                 }
             }
         }
 
-        WrittenBookContent writtenbookcontent = itemstack.get(DataComponents.WRITTEN_BOOK_CONTENT);
-        if (!itemstack.isEmpty() && i >= 1 && writtenbookcontent != null) {
-            WrittenBookContent writtenbookcontent1 = writtenbookcontent.tryCraftCopy();
-            if (writtenbookcontent1 == null) {
-                return ItemStack.EMPTY;
-            } else {
-                ItemStack itemstack2 = itemstack.copyWithCount(i);
-                itemstack2.set(DataComponents.WRITTEN_BOOK_CONTENT, writtenbookcontent1);
-                return itemstack2;
-            }
-        } else {
+        WrittenBookContent sourceContent = source.get(DataComponents.WRITTEN_BOOK_CONTENT);
+        if (sourceContent == null) {
             return ItemStack.EMPTY;
         }
+
+        WrittenBookContent copiedContent = sourceContent.craftCopy();
+        ItemStack result = TransmuteRecipe.createWithOriginalComponents(this.result, source, count - 1);
+        result.set(DataComponents.WRITTEN_BOOK_CONTENT, copiedContent);
+        return result;
     }
 
     @Override
-    public NonNullList<ItemStack> getRemainingItems(CraftingInput p_344901_) {
-        NonNullList<ItemStack> nonnulllist = NonNullList.withSize(p_344901_.size(), ItemStack.EMPTY);
+    public NonNullList<ItemStack> getRemainingItems(final CraftingInput input) {
+        NonNullList<ItemStack> result = NonNullList.withSize(input.size(), ItemStack.EMPTY);
 
-        for (int i = 0; i < nonnulllist.size(); i++) {
-            ItemStack itemstack = p_344901_.getItem(i);
-            ItemStack itemstack1 = itemstack.getItem().getCraftingRemainder();
-            if (!itemstack1.isEmpty()) {
-                nonnulllist.set(i, itemstack1);
-            } else if (itemstack.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
-                nonnulllist.set(i, itemstack.copyWithCount(1));
+        for (int slot = 0; slot < result.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            ItemStackTemplate remainder = itemStack.getItem().getCraftingRemainder();
+            if (remainder != null) {
+                result.set(slot, remainder.create());
+            } else if (itemStack.has(DataComponents.WRITTEN_BOOK_CONTENT)) {
+                result.set(slot, itemStack.copyWithCount(1));
                 break;
             }
         }
 
-        return nonnulllist;
+        return result;
     }
 
     @Override
     public RecipeSerializer<BookCloningRecipe> getSerializer() {
-        return RecipeSerializer.BOOK_CLONING;
+        return SERIALIZER;
     }
 }

@@ -2,7 +2,6 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -13,30 +12,28 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetPotionFunction extends LootItemConditionalFunction {
-    public static final MapCodec<SetPotionFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_342012_ -> commonFields(p_342012_)
-            .and(Potion.CODEC.fieldOf("id").forGetter(p_297173_ -> p_297173_.potion))
-            .apply(p_342012_, SetPotionFunction::new)
+    public static final MapCodec<SetPotionFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i).and(Potion.CODEC.fieldOf("id").forGetter(f -> f.potion)).apply(i, SetPotionFunction::new)
     );
     private final Holder<Potion> potion;
 
-    private SetPotionFunction(List<LootItemCondition> p_297236_, Holder<Potion> p_300134_) {
-        super(p_297236_);
-        this.potion = p_300134_;
+    private SetPotionFunction(final List<LootItemCondition> predicates, final Holder<Potion> potion) {
+        super(predicates);
+        this.potion = potion;
     }
 
     @Override
-    public LootItemFunctionType<SetPotionFunction> getType() {
-        return LootItemFunctions.SET_POTION;
+    public MapCodec<SetPotionFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ItemStack run(ItemStack p_193073_, LootContext p_193074_) {
-        p_193073_.update(DataComponents.POTION_CONTENTS, PotionContents.EMPTY, this.potion, PotionContents::withPotion);
-        return p_193073_;
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        itemStack.update(DataComponents.POTION_CONTENTS, PotionContents.EMPTY, this.potion, PotionContents::withPotion);
+        return itemStack;
     }
 
-    public static LootItemConditionalFunction.Builder<?> setPotion(Holder<Potion> p_329541_) {
-        return simpleBuilder(p_327628_ -> new SetPotionFunction(p_327628_, p_329541_));
+    public static LootItemConditionalFunction.Builder<?> setPotion(final Holder<Potion> value) {
+        return simpleBuilder(conditions -> new SetPotionFunction(conditions, value));
     }
 }

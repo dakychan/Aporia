@@ -4,10 +4,14 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableBiMap.Builder;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.function.Supplier;
-import net.minecraft.advancements.CriteriaTriggers;
+import java.util.stream.Stream;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.server.level.ServerPlayer;
@@ -18,6 +22,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.WeatheringCopperCollection;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.world.level.block.state.BlockState;
@@ -26,151 +31,70 @@ import net.minecraft.world.level.gameevent.GameEvent;
 
 public class HoneycombItem extends Item implements SignApplicator {
     public static final Supplier<BiMap<Block, Block>> WAXABLES = Suppliers.memoize(
-        () -> ImmutableBiMap.<Block, Block>builder()
-            .put(Blocks.COPPER_BLOCK, Blocks.WAXED_COPPER_BLOCK)
-            .put(Blocks.EXPOSED_COPPER, Blocks.WAXED_EXPOSED_COPPER)
-            .put(Blocks.WEATHERED_COPPER, Blocks.WAXED_WEATHERED_COPPER)
-            .put(Blocks.OXIDIZED_COPPER, Blocks.WAXED_OXIDIZED_COPPER)
-            .put(Blocks.CUT_COPPER, Blocks.WAXED_CUT_COPPER)
-            .put(Blocks.EXPOSED_CUT_COPPER, Blocks.WAXED_EXPOSED_CUT_COPPER)
-            .put(Blocks.WEATHERED_CUT_COPPER, Blocks.WAXED_WEATHERED_CUT_COPPER)
-            .put(Blocks.OXIDIZED_CUT_COPPER, Blocks.WAXED_OXIDIZED_CUT_COPPER)
-            .put(Blocks.CUT_COPPER_SLAB, Blocks.WAXED_CUT_COPPER_SLAB)
-            .put(Blocks.EXPOSED_CUT_COPPER_SLAB, Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB)
-            .put(Blocks.WEATHERED_CUT_COPPER_SLAB, Blocks.WAXED_WEATHERED_CUT_COPPER_SLAB)
-            .put(Blocks.OXIDIZED_CUT_COPPER_SLAB, Blocks.WAXED_OXIDIZED_CUT_COPPER_SLAB)
-            .put(Blocks.CUT_COPPER_STAIRS, Blocks.WAXED_CUT_COPPER_STAIRS)
-            .put(Blocks.EXPOSED_CUT_COPPER_STAIRS, Blocks.WAXED_EXPOSED_CUT_COPPER_STAIRS)
-            .put(Blocks.WEATHERED_CUT_COPPER_STAIRS, Blocks.WAXED_WEATHERED_CUT_COPPER_STAIRS)
-            .put(Blocks.OXIDIZED_CUT_COPPER_STAIRS, Blocks.WAXED_OXIDIZED_CUT_COPPER_STAIRS)
-            .put(Blocks.CHISELED_COPPER, Blocks.WAXED_CHISELED_COPPER)
-            .put(Blocks.EXPOSED_CHISELED_COPPER, Blocks.WAXED_EXPOSED_CHISELED_COPPER)
-            .put(Blocks.WEATHERED_CHISELED_COPPER, Blocks.WAXED_WEATHERED_CHISELED_COPPER)
-            .put(Blocks.OXIDIZED_CHISELED_COPPER, Blocks.WAXED_OXIDIZED_CHISELED_COPPER)
-            .put(Blocks.COPPER_DOOR, Blocks.WAXED_COPPER_DOOR)
-            .put(Blocks.EXPOSED_COPPER_DOOR, Blocks.WAXED_EXPOSED_COPPER_DOOR)
-            .put(Blocks.WEATHERED_COPPER_DOOR, Blocks.WAXED_WEATHERED_COPPER_DOOR)
-            .put(Blocks.OXIDIZED_COPPER_DOOR, Blocks.WAXED_OXIDIZED_COPPER_DOOR)
-            .put(Blocks.COPPER_TRAPDOOR, Blocks.WAXED_COPPER_TRAPDOOR)
-            .put(Blocks.EXPOSED_COPPER_TRAPDOOR, Blocks.WAXED_EXPOSED_COPPER_TRAPDOOR)
-            .put(Blocks.WEATHERED_COPPER_TRAPDOOR, Blocks.WAXED_WEATHERED_COPPER_TRAPDOOR)
-            .put(Blocks.OXIDIZED_COPPER_TRAPDOOR, Blocks.WAXED_OXIDIZED_COPPER_TRAPDOOR)
-            .putAll(Blocks.COPPER_BARS.waxedMapping())
-            .put(Blocks.COPPER_GRATE, Blocks.WAXED_COPPER_GRATE)
-            .put(Blocks.EXPOSED_COPPER_GRATE, Blocks.WAXED_EXPOSED_COPPER_GRATE)
-            .put(Blocks.WEATHERED_COPPER_GRATE, Blocks.WAXED_WEATHERED_COPPER_GRATE)
-            .put(Blocks.OXIDIZED_COPPER_GRATE, Blocks.WAXED_OXIDIZED_COPPER_GRATE)
-            .put(Blocks.COPPER_BULB, Blocks.WAXED_COPPER_BULB)
-            .put(Blocks.EXPOSED_COPPER_BULB, Blocks.WAXED_EXPOSED_COPPER_BULB)
-            .put(Blocks.WEATHERED_COPPER_BULB, Blocks.WAXED_WEATHERED_COPPER_BULB)
-            .put(Blocks.OXIDIZED_COPPER_BULB, Blocks.WAXED_OXIDIZED_COPPER_BULB)
-            .put(Blocks.COPPER_CHEST, Blocks.WAXED_COPPER_CHEST)
-            .put(Blocks.EXPOSED_COPPER_CHEST, Blocks.WAXED_EXPOSED_COPPER_CHEST)
-            .put(Blocks.WEATHERED_COPPER_CHEST, Blocks.WAXED_WEATHERED_COPPER_CHEST)
-            .put(Blocks.OXIDIZED_COPPER_CHEST, Blocks.WAXED_OXIDIZED_COPPER_CHEST)
-            .put(Blocks.COPPER_GOLEM_STATUE, Blocks.WAXED_COPPER_GOLEM_STATUE)
-            .put(Blocks.EXPOSED_COPPER_GOLEM_STATUE, Blocks.WAXED_EXPOSED_COPPER_GOLEM_STATUE)
-            .put(Blocks.WEATHERED_COPPER_GOLEM_STATUE, Blocks.WAXED_WEATHERED_COPPER_GOLEM_STATUE)
-            .put(Blocks.OXIDIZED_COPPER_GOLEM_STATUE, Blocks.WAXED_OXIDIZED_COPPER_GOLEM_STATUE)
-            .put(Blocks.LIGHTNING_ROD, Blocks.WAXED_LIGHTNING_ROD)
-            .put(Blocks.EXPOSED_LIGHTNING_ROD, Blocks.WAXED_EXPOSED_LIGHTNING_ROD)
-            .put(Blocks.WEATHERED_LIGHTNING_ROD, Blocks.WAXED_WEATHERED_LIGHTNING_ROD)
-            .put(Blocks.OXIDIZED_LIGHTNING_ROD, Blocks.WAXED_OXIDIZED_LIGHTNING_ROD)
-            .putAll(Blocks.COPPER_LANTERN.waxedMapping())
-            .putAll(Blocks.COPPER_CHAIN.waxedMapping())
-            .build()
+        () -> {
+            Builder<Block, Block> builderx = ImmutableBiMap.builder();
+            Stream.of(
+                    Blocks.COPPER_BLOCK,
+                    Blocks.CUT_COPPER,
+                    Blocks.CUT_COPPER_SLAB,
+                    Blocks.CUT_COPPER_STAIRS,
+                    Blocks.CHISELED_COPPER,
+                    Blocks.COPPER_DOOR,
+                    Blocks.COPPER_TRAPDOOR,
+                    Blocks.COPPER_BARS,
+                    Blocks.COPPER_GRATE,
+                    Blocks.COPPER_BULB,
+                    Blocks.COPPER_CHEST,
+                    Blocks.COPPER_GOLEM_STATUE,
+                    Blocks.LIGHTNING_ROD,
+                    Blocks.COPPER_LANTERN,
+                    Blocks.COPPER_CHAIN
+                )
+                .forEach(collection -> collection.zipUnwaxedWaxed(builderx::put));
+            return builderx.build();
+        }
     );
     public static final Supplier<BiMap<Block, Block>> WAX_OFF_BY_BLOCK = Suppliers.memoize(() -> WAXABLES.get().inverse());
-    private static final String WAXED_COPPER_DOOR = "waxed_copper_door";
-    private static final String WAXED_COPPER_TRAPDOOR = "waxed_copper_trapdoor";
-    private static final String WAXED_COPPER_GOLEM_STATUE = "waxed_copper_golem_statue";
-    private static final String WAXED_COPPER_CHEST = "waxed_copper_chest";
-    private static final String WAXED_LIGHTNING_ROD = "waxed_lightning_rod";
-    private static final String WAXED_COPPER_BAR = "waxed_copper_bar";
-    private static final String WAXED_COPPER_CHAIN = "waxed_copper_chain";
-    private static final String WAXED_COPPER_LANTERN = "waxed_copper_lantern";
-    private static final String WAXED_COPPER_BLOCK = "waxed_copper_block";
-    public static final ImmutableMap<Block, Pair<RecipeCategory, String>> WAXED_RECIPES = ImmutableMap.<Block, Pair<RecipeCategory, String>>builder()
-        .put(Blocks.WAXED_COPPER_BULB, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_bulb"))
-        .put(Blocks.WAXED_WEATHERED_COPPER_BULB, Pair.of(RecipeCategory.REDSTONE, "waxed_weathered_copper_bulb"))
-        .put(Blocks.WAXED_EXPOSED_COPPER_BULB, Pair.of(RecipeCategory.REDSTONE, "waxed_exposed_copper_bulb"))
-        .put(Blocks.WAXED_OXIDIZED_COPPER_BULB, Pair.of(RecipeCategory.REDSTONE, "waxed_oxidized_copper_bulb"))
-        .put(Blocks.WAXED_COPPER_DOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_door"))
-        .put(Blocks.WAXED_WEATHERED_COPPER_DOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_door"))
-        .put(Blocks.WAXED_EXPOSED_COPPER_DOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_door"))
-        .put(Blocks.WAXED_OXIDIZED_COPPER_DOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_door"))
-        .put(Blocks.WAXED_COPPER_TRAPDOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_trapdoor"))
-        .put(Blocks.WAXED_WEATHERED_COPPER_TRAPDOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_trapdoor"))
-        .put(Blocks.WAXED_EXPOSED_COPPER_TRAPDOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_trapdoor"))
-        .put(Blocks.WAXED_OXIDIZED_COPPER_TRAPDOOR, Pair.of(RecipeCategory.REDSTONE, "waxed_copper_trapdoor"))
-        .put(Blocks.WAXED_COPPER_GOLEM_STATUE, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_golem_statue"))
-        .put(Blocks.WAXED_WEATHERED_COPPER_GOLEM_STATUE, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_golem_statue"))
-        .put(Blocks.WAXED_EXPOSED_COPPER_GOLEM_STATUE, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_golem_statue"))
-        .put(Blocks.WAXED_OXIDIZED_COPPER_GOLEM_STATUE, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_golem_statue"))
-        .put(Blocks.WAXED_COPPER_CHEST, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chest"))
-        .put(Blocks.WAXED_WEATHERED_COPPER_CHEST, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chest"))
-        .put(Blocks.WAXED_EXPOSED_COPPER_CHEST, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chest"))
-        .put(Blocks.WAXED_OXIDIZED_COPPER_CHEST, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chest"))
-        .put(Blocks.WAXED_LIGHTNING_ROD, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_lightning_rod"))
-        .put(Blocks.WAXED_WEATHERED_LIGHTNING_ROD, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_lightning_rod"))
-        .put(Blocks.WAXED_EXPOSED_LIGHTNING_ROD, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_lightning_rod"))
-        .put(Blocks.WAXED_OXIDIZED_LIGHTNING_ROD, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_lightning_rod"))
-        .put(Blocks.COPPER_BARS.waxed(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_bar"))
-        .put(Blocks.COPPER_BARS.waxedWeathered(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_bar"))
-        .put(Blocks.COPPER_BARS.waxedExposed(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_bar"))
-        .put(Blocks.COPPER_BARS.waxedOxidized(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_bar"))
-        .put(Blocks.COPPER_CHAIN.waxed(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chain"))
-        .put(Blocks.COPPER_CHAIN.waxedWeathered(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chain"))
-        .put(Blocks.COPPER_CHAIN.waxedExposed(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chain"))
-        .put(Blocks.COPPER_CHAIN.waxedOxidized(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chain"))
-        .put(Blocks.COPPER_LANTERN.waxed(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_lantern"))
-        .put(Blocks.COPPER_LANTERN.waxedWeathered(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_lantern"))
-        .put(Blocks.COPPER_LANTERN.waxedExposed(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_lantern"))
-        .put(Blocks.COPPER_LANTERN.waxedOxidized(), Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_lantern"))
-        .put(Blocks.WAXED_COPPER_BLOCK, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_block"))
-        .put(Blocks.WAXED_WEATHERED_COPPER, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_block"))
-        .put(Blocks.WAXED_EXPOSED_COPPER, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_block"))
-        .put(Blocks.WAXED_OXIDIZED_COPPER, Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_block"))
-        .build();
+    public static final ImmutableMap<Block, Pair<RecipeCategory, String>> WAXED_RECIPES;
 
-    public HoneycombItem(Item.Properties p_150867_) {
-        super(p_150867_);
+    public HoneycombItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_150869_) {
-        Level level = p_150869_.getLevel();
-        BlockPos blockpos = p_150869_.getClickedPos();
-        BlockState blockstate = level.getBlockState(blockpos);
-        return getWaxed(blockstate).<InteractionResult>map(p_430566_ -> {
-            Player player = p_150869_.getPlayer();
-            ItemStack itemstack = p_150869_.getItemInHand();
-            if (player instanceof ServerPlayer serverplayer) {
-                CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(serverplayer, blockpos, itemstack);
+    public InteractionResult useOn(final UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState oldState = level.getBlockState(pos);
+        return getWaxed(oldState).<InteractionResult>map(waxedState -> {
+            Player player = context.getPlayer();
+            ItemStack itemInHand = context.getItemInHand();
+            if (player instanceof ServerPlayer serverPlayer) {
+                CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(serverPlayer, pos, itemInHand);
             }
 
-            itemstack.shrink(1);
-            level.setBlock(blockpos, p_430566_, 11);
-            level.gameEvent(GameEvent.BLOCK_CHANGE, blockpos, GameEvent.Context.of(player, p_430566_));
-            level.levelEvent(player, 3003, blockpos, 0);
-            if (blockstate.getBlock() instanceof ChestBlock && blockstate.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
-                BlockPos blockpos1 = ChestBlock.getConnectedBlockPos(blockpos, blockstate);
-                level.gameEvent(GameEvent.BLOCK_CHANGE, blockpos1, GameEvent.Context.of(player, level.getBlockState(blockpos1)));
-                level.levelEvent(player, 3003, blockpos1, 0);
+            itemInHand.shrink(1);
+            level.setBlock(pos, waxedState, 11);
+            level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(player, waxedState));
+            level.levelEvent(player, 3003, pos, 0);
+            if (oldState.getBlock() instanceof ChestBlock && oldState.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
+                BlockPos neighborPos = ChestBlock.getConnectedBlockPos(pos, oldState);
+                level.gameEvent(GameEvent.BLOCK_CHANGE, neighborPos, GameEvent.Context.of(player, level.getBlockState(neighborPos)));
+                level.levelEvent(player, 3003, neighborPos, 0);
             }
 
             return InteractionResult.SUCCESS;
         }).orElse(InteractionResult.PASS);
     }
 
-    public static Optional<BlockState> getWaxed(BlockState p_150879_) {
-        return Optional.ofNullable(WAXABLES.get().get(p_150879_.getBlock())).map(p_150877_ -> p_150877_.withPropertiesOf(p_150879_));
+    public static Optional<BlockState> getWaxed(final BlockState oldState) {
+        return Optional.ofNullable(WAXABLES.get().get(oldState.getBlock())).map(b -> b.withPropertiesOf(oldState));
     }
 
     @Override
-    public boolean tryApplyToSign(Level p_277838_, SignBlockEntity p_277988_, boolean p_277394_, Player p_277816_) {
-        if (p_277988_.setWaxed(true)) {
-            p_277838_.levelEvent(null, 3003, p_277988_.getBlockPos(), 0);
+    public boolean tryApplyToSign(final Level level, final SignBlockEntity sign, final boolean isFrontText, final ItemStack item, final Player player) {
+        if (sign.setWaxed(true)) {
+            level.levelEvent(null, 3003, sign.getBlockPos(), 0);
             return true;
         } else {
             return false;
@@ -178,7 +102,33 @@ public class HoneycombItem extends Item implements SignApplicator {
     }
 
     @Override
-    public boolean canApplyToSign(SignText p_277550_, Player p_277640_) {
+    public boolean canApplyToSign(final SignText text, final ItemStack item, final Player player) {
         return true;
+    }
+
+    static {
+        com.google.common.collect.ImmutableMap.Builder<Block, Pair<RecipeCategory, String>> builder = ImmutableMap.builder();
+
+        for (HoneycombItem.WaxedRecipeGroup data : List.of(
+            new HoneycombItem.WaxedRecipeGroup(
+                Blocks.COPPER_BULB, block -> Pair.of(RecipeCategory.REDSTONE, block.builtInRegistryHolder().key().identifier().getPath())
+            ),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_DOOR, var0x -> Pair.of(RecipeCategory.REDSTONE, "waxed_copper_door")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_TRAPDOOR, var0x -> Pair.of(RecipeCategory.REDSTONE, "waxed_copper_trapdoor")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_GOLEM_STATUE, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_golem_statue")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_CHEST, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chest")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.LIGHTNING_ROD, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_lightning_rod")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_BARS, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_bar")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_CHAIN, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_chain")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_LANTERN, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_lantern")),
+            new HoneycombItem.WaxedRecipeGroup(Blocks.COPPER_BLOCK, var0x -> Pair.of(RecipeCategory.BUILDING_BLOCKS, "waxed_copper_block"))
+        )) {
+            data.block.waxed().forEach(block -> builder.put(block, data.recipeIdProvider.apply(block)));
+        }
+
+        WAXED_RECIPES = builder.build();
+    }
+
+    private record WaxedRecipeGroup(WeatheringCopperCollection<Block> block, Function<Block, Pair<RecipeCategory, String>> recipeIdProvider) {
     }
 }

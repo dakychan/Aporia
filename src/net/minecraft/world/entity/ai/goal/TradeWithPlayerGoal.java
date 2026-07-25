@@ -7,8 +7,8 @@ import net.minecraft.world.entity.player.Player;
 public class TradeWithPlayerGoal extends Goal {
     private final AbstractVillager mob;
 
-    public TradeWithPlayerGoal(AbstractVillager p_460152_) {
-        this.mob = p_460152_;
+    public TradeWithPlayerGoal(final AbstractVillager mob) {
+        this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
     }
 
@@ -16,16 +16,22 @@ public class TradeWithPlayerGoal extends Goal {
     public boolean canUse() {
         if (!this.mob.isAlive()) {
             return false;
-        } else if (this.mob.isInWater()) {
-            return false;
-        } else if (!this.mob.onGround()) {
-            return false;
-        } else if (this.mob.hurtMarked) {
-            return false;
-        } else {
-            Player player = this.mob.getTradingPlayer();
-            return player == null ? false : !(this.mob.distanceToSqr(player) > 16.0);
         }
+
+        if (this.mob.isInWater()) {
+            return false;
+        }
+
+        if (!this.mob.onGround()) {
+            return false;
+        }
+
+        if (this.mob.hurtMarked) {
+            return false;
+        }
+
+        Player trader = this.mob.getTradingPlayer();
+        return trader == null ? false : !(this.mob.distanceToSqr(trader) > 16.0);
     }
 
     @Override

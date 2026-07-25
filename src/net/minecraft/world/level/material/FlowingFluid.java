@@ -35,211 +35,217 @@ public abstract class FlowingFluid extends Fluid {
     public static final BooleanProperty FALLING = BlockStateProperties.FALLING;
     public static final IntegerProperty LEVEL = BlockStateProperties.LEVEL_FLOWING;
     private static final int CACHE_SIZE = 200;
-    private static final ThreadLocal<Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey>> OCCLUSION_CACHE = ThreadLocal.withInitial(
-        () -> {
-            Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey> object2bytelinkedopenhashmap = new Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey>(
-                200
-            ) {
-                @Override
-                protected void rehash(int p_76102_) {
-                }
-            };
-            object2bytelinkedopenhashmap.defaultReturnValue((byte)127);
-            return object2bytelinkedopenhashmap;
-        }
-    );
+    private static final ThreadLocal<Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey>> OCCLUSION_CACHE = ThreadLocal.withInitial(() -> {
+        Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey> map = new Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey>(200) {
+            @Override
+            protected void rehash(final int newN) {
+            }
+        };
+        map.defaultReturnValue((byte)127);
+        return map;
+    });
     private final Map<FluidState, VoxelShape> shapes = Maps.newIdentityHashMap();
 
     @Override
-    protected void createFluidStateDefinition(StateDefinition.Builder<Fluid, FluidState> p_76046_) {
-        p_76046_.add(FALLING);
+    protected void createFluidStateDefinition(final StateDefinition.Builder<Fluid, FluidState> builder) {
+        builder.add(FALLING);
     }
 
     @Override
-    public Vec3 getFlow(BlockGetter p_75987_, BlockPos p_75988_, FluidState p_75989_) {
-        double d0 = 0.0;
-        double d1 = 0.0;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public Vec3 getFlow(final BlockGetter level, final BlockPos pos, final FluidState fluidState) {
+        double flowX = 0.0;
+        double flowZ = 0.0;
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            blockpos$mutableblockpos.setWithOffset(p_75988_, direction);
-            FluidState fluidstate = p_75987_.getFluidState(blockpos$mutableblockpos);
-            if (this.affectsFlow(fluidstate)) {
-                float f = fluidstate.getOwnHeight();
-                float f1 = 0.0F;
-                if (f == 0.0F) {
-                    if (!p_75987_.getBlockState(blockpos$mutableblockpos).blocksMotion()) {
-                        BlockPos blockpos = blockpos$mutableblockpos.below();
-                        FluidState fluidstate1 = p_75987_.getFluidState(blockpos);
-                        if (this.affectsFlow(fluidstate1)) {
-                            f = fluidstate1.getOwnHeight();
-                            if (f > 0.0F) {
-                                f1 = p_75989_.getOwnHeight() - (f - 0.8888889F);
+            blockPos.setWithOffset(pos, direction);
+            FluidState neighbourFluid = level.getFluidState(blockPos);
+            if (this.affectsFlow(neighbourFluid)) {
+                float neighborHeight = neighbourFluid.getOwnHeight();
+                float distance = 0.0F;
+                if (neighborHeight == 0.0F) {
+                    if (!level.getBlockState(blockPos).blocksMotion()) {
+                        BlockPos neighborPos = blockPos.below();
+                        FluidState belowNeighborState = level.getFluidState(neighborPos);
+                        if (this.affectsFlow(belowNeighborState)) {
+                            neighborHeight = belowNeighborState.getOwnHeight();
+                            if (neighborHeight > 0.0F) {
+                                distance = fluidState.getOwnHeight() - (neighborHeight - 0.8888889F);
                             }
                         }
                     }
-                } else if (f > 0.0F) {
-                    f1 = p_75989_.getOwnHeight() - f;
+                } else if (neighborHeight > 0.0F) {
+                    distance = fluidState.getOwnHeight() - neighborHeight;
                 }
 
-                if (f1 != 0.0F) {
-                    d0 += direction.getStepX() * f1;
-                    d1 += direction.getStepZ() * f1;
+                if (distance != 0.0F) {
+                    flowX += direction.getStepX() * distance;
+                    flowZ += direction.getStepZ() * distance;
                 }
             }
         }
 
-        Vec3 vec3 = new Vec3(d0, 0.0, d1);
-        if (p_75989_.getValue(FALLING)) {
-            for (Direction direction1 : Direction.Plane.HORIZONTAL) {
-                blockpos$mutableblockpos.setWithOffset(p_75988_, direction1);
-                if (this.isSolidFace(p_75987_, blockpos$mutableblockpos, direction1) || this.isSolidFace(p_75987_, blockpos$mutableblockpos.above(), direction1)) {
-                    vec3 = vec3.normalize().add(0.0, -6.0, 0.0);
+        Vec3 flow = new Vec3(flowX, 0.0, flowZ);
+        if (fluidState.getValue(FALLING)) {
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                blockPos.setWithOffset(pos, direction);
+                if (this.isSolidFace(level, blockPos, direction) || this.isSolidFace(level, blockPos.above(), direction)) {
+                    flow = flow.normalize().add(0.0, -6.0, 0.0);
                     break;
                 }
             }
         }
 
-        return vec3.normalize();
+        return flow.normalize();
     }
 
-    private boolean affectsFlow(FluidState p_76095_) {
-        return p_76095_.isEmpty() || p_76095_.getType().isSame(this);
+    private boolean affectsFlow(final FluidState neighbourFluid) {
+        return neighbourFluid.isEmpty() || neighbourFluid.getType().isSame(this);
     }
 
-    protected boolean isSolidFace(BlockGetter p_75991_, BlockPos p_75992_, Direction p_75993_) {
-        BlockState blockstate = p_75991_.getBlockState(p_75992_);
-        FluidState fluidstate = p_75991_.getFluidState(p_75992_);
-        if (fluidstate.getType().isSame(this)) {
+    protected boolean isSolidFace(final BlockGetter level, final BlockPos pos, final Direction direction) {
+        BlockState state = level.getBlockState(pos);
+        FluidState fluidState = level.getFluidState(pos);
+        if (fluidState.getType().isSame(this)) {
             return false;
-        } else if (p_75993_ == Direction.UP) {
+        } else if (direction == Direction.UP) {
             return true;
         } else {
-            return blockstate.getBlock() instanceof IceBlock ? false : blockstate.isFaceSturdy(p_75991_, p_75992_, p_75993_);
+            return state.getBlock() instanceof IceBlock ? false : state.isFaceSturdy(level, pos, direction);
         }
     }
 
-    protected void spread(ServerLevel p_361853_, BlockPos p_76012_, BlockState p_370035_, FluidState p_76013_) {
-        if (!p_76013_.isEmpty()) {
-            BlockPos blockpos = p_76012_.below();
-            BlockState blockstate = p_361853_.getBlockState(blockpos);
-            FluidState fluidstate = blockstate.getFluidState();
-            if (this.canMaybePassThrough(p_361853_, p_76012_, p_370035_, Direction.DOWN, blockpos, blockstate, fluidstate)) {
-                FluidState fluidstate1 = this.getNewLiquid(p_361853_, blockpos, blockstate);
-                Fluid fluid = fluidstate1.getType();
-                if (fluidstate.canBeReplacedWith(p_361853_, blockpos, fluid, Direction.DOWN) && canHoldSpecificFluid(p_361853_, blockpos, blockstate, fluid)) {
-                    this.spreadTo(p_361853_, blockpos, blockstate, Direction.DOWN, fluidstate1);
-                    if (this.sourceNeighborCount(p_361853_, p_76012_) >= 3) {
-                        this.spreadToSides(p_361853_, p_76012_, p_76013_, p_370035_);
+    protected void spread(final ServerLevel level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
+        if (!fluidState.isEmpty()) {
+            BlockPos belowPos = pos.below();
+            BlockState belowState = level.getBlockState(belowPos);
+            FluidState belowFluid = belowState.getFluidState();
+            if (this.canMaybePassThrough(level, pos, state, Direction.DOWN, belowPos, belowState, belowFluid)) {
+                FluidState newBelowFluid = this.getNewLiquid(level, belowPos, belowState);
+                Fluid newBelowFluidType = newBelowFluid.getType();
+                if (belowFluid.canBeReplacedWith(level, belowPos, newBelowFluidType, Direction.DOWN)
+                    && canHoldSpecificFluid(level, belowPos, belowState, newBelowFluidType)) {
+                    this.spreadTo(level, belowPos, belowState, Direction.DOWN, newBelowFluid);
+                    if (this.sourceNeighborCount(level, pos) >= 3) {
+                        this.spreadToSides(level, pos, fluidState, state);
                     }
 
                     return;
                 }
             }
 
-            if (p_76013_.isSource() || !this.isWaterHole(p_361853_, p_76012_, p_370035_, blockpos, blockstate)) {
-                this.spreadToSides(p_361853_, p_76012_, p_76013_, p_370035_);
+            if (fluidState.isSource() || !this.isWaterHole(level, pos, state, belowPos, belowState)) {
+                this.spreadToSides(level, pos, fluidState, state);
             }
         }
     }
 
-    private void spreadToSides(ServerLevel p_367610_, BlockPos p_76016_, FluidState p_76017_, BlockState p_76018_) {
-        int i = p_76017_.getAmount() - this.getDropOff(p_367610_);
-        if (p_76017_.getValue(FALLING)) {
-            i = 7;
+    private void spreadToSides(final ServerLevel level, final BlockPos pos, final FluidState fluidState, final BlockState state) {
+        int neighbor = fluidState.getAmount() - this.getDropOff(level);
+        if (fluidState.getValue(FALLING)) {
+            neighbor = 7;
         }
 
-        if (i > 0) {
-            Map<Direction, FluidState> map = this.getSpread(p_367610_, p_76016_, p_76018_);
+        if (neighbor > 0) {
+            Map<Direction, FluidState> spreads = this.getSpread(level, pos, state);
 
-            for (Entry<Direction, FluidState> entry : map.entrySet()) {
-                Direction direction = entry.getKey();
-                FluidState fluidstate = entry.getValue();
-                BlockPos blockpos = p_76016_.relative(direction);
-                this.spreadTo(p_367610_, blockpos, p_367610_.getBlockState(blockpos), direction, fluidstate);
+            for (Entry<Direction, FluidState> entry : spreads.entrySet()) {
+                Direction spread = entry.getKey();
+                FluidState newNeighborFluid = entry.getValue();
+                BlockPos neighborPos = pos.relative(spread);
+                this.spreadTo(level, neighborPos, level.getBlockState(neighborPos), spread, newNeighborFluid);
             }
         }
     }
 
-    protected FluidState getNewLiquid(ServerLevel p_369574_, BlockPos p_76037_, BlockState p_76038_) {
-        int i = 0;
-        int j = 0;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    protected FluidState getNewLiquid(final ServerLevel level, final BlockPos pos, final BlockState state) {
+        int highestNeighbor = 0;
+        int neighbourSources = 0;
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos blockpos = blockpos$mutableblockpos.setWithOffset(p_76037_, direction);
-            BlockState blockstate = p_369574_.getBlockState(blockpos);
-            FluidState fluidstate = blockstate.getFluidState();
-            if (fluidstate.getType().isSame(this) && canPassThroughWall(direction, p_369574_, p_76037_, p_76038_, blockpos, blockstate)) {
-                if (fluidstate.isSource()) {
-                    j++;
+            BlockPos relativePos = mutablePos.setWithOffset(pos, direction);
+            BlockState blockState = level.getBlockState(relativePos);
+            FluidState fluidState = blockState.getFluidState();
+            if (fluidState.getType().isSame(this) && canPassThroughWall(direction, level, pos, state, relativePos, blockState)) {
+                if (fluidState.isSource()) {
+                    neighbourSources++;
                 }
 
-                i = Math.max(i, fluidstate.getAmount());
+                highestNeighbor = Math.max(highestNeighbor, fluidState.getAmount());
             }
         }
 
-        if (j >= 2 && this.canConvertToSource(p_369574_)) {
-            BlockState blockstate1 = p_369574_.getBlockState(blockpos$mutableblockpos.setWithOffset(p_76037_, Direction.DOWN));
-            FluidState fluidstate1 = blockstate1.getFluidState();
-            if (blockstate1.isSolid() || this.isSourceBlockOfThisType(fluidstate1)) {
+        if (neighbourSources >= 2 && this.canConvertToSource(level)) {
+            BlockState belowState = level.getBlockState(mutablePos.setWithOffset(pos, Direction.DOWN));
+            FluidState belowFluid = belowState.getFluidState();
+            if (belowState.isSolid() || this.isSourceBlockOfThisType(belowFluid)) {
                 return this.getSource(false);
             }
         }
 
-        BlockPos blockpos1 = blockpos$mutableblockpos.setWithOffset(p_76037_, Direction.UP);
-        BlockState blockstate2 = p_369574_.getBlockState(blockpos1);
-        FluidState fluidstate2 = blockstate2.getFluidState();
-        if (!fluidstate2.isEmpty() && fluidstate2.getType().isSame(this) && canPassThroughWall(Direction.UP, p_369574_, p_76037_, p_76038_, blockpos1, blockstate2)) {
+        BlockPos abovePos = mutablePos.setWithOffset(pos, Direction.UP);
+        BlockState aboveState = level.getBlockState(abovePos);
+        FluidState aboveFluid = aboveState.getFluidState();
+        if (!aboveFluid.isEmpty() && aboveFluid.getType().isSame(this) && canPassThroughWall(Direction.UP, level, pos, state, abovePos, aboveState)) {
             return this.getFlowing(8, true);
-        } else {
-            int k = i - this.getDropOff(p_369574_);
-            return k <= 0 ? Fluids.EMPTY.defaultFluidState() : this.getFlowing(k, false);
         }
+
+        int amount = highestNeighbor - this.getDropOff(level);
+        return amount <= 0 ? Fluids.EMPTY.defaultFluidState() : this.getFlowing(amount, false);
     }
 
-    private static boolean canPassThroughWall(Direction p_76062_, BlockGetter p_76063_, BlockPos p_76064_, BlockState p_76065_, BlockPos p_76066_, BlockState p_76067_) {
-        if (!SharedConstants.DEBUG_DISABLE_LIQUID_SPREADING && (!SharedConstants.DEBUG_ONLY_GENERATE_HALF_THE_WORLD || p_76066_.getZ() >= 0)) {
-            VoxelShape voxelshape = p_76067_.getCollisionShape(p_76063_, p_76066_);
-            if (voxelshape == Shapes.block()) {
+    private static boolean canPassThroughWall(
+        final Direction direction,
+        final BlockGetter level,
+        final BlockPos sourcePos,
+        final BlockState sourceState,
+        final BlockPos targetPos,
+        final BlockState targetState
+    ) {
+        if (!SharedConstants.DEBUG_DISABLE_LIQUID_SPREADING && (!SharedConstants.DEBUG_ONLY_GENERATE_HALF_THE_WORLD || targetPos.getZ() >= 0)) {
+            VoxelShape targetShape = targetState.getCollisionShape(level, targetPos);
+            if (targetShape == Shapes.block()) {
                 return false;
-            } else {
-                VoxelShape voxelshape1 = p_76065_.getCollisionShape(p_76063_, p_76064_);
-                if (voxelshape1 == Shapes.block()) {
-                    return false;
-                } else if (voxelshape1 == Shapes.empty() && voxelshape == Shapes.empty()) {
-                    return true;
-                } else {
-                    Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey> object2bytelinkedopenhashmap;
-                    if (!p_76065_.getBlock().hasDynamicShape() && !p_76067_.getBlock().hasDynamicShape()) {
-                        object2bytelinkedopenhashmap = OCCLUSION_CACHE.get();
-                    } else {
-                        object2bytelinkedopenhashmap = null;
-                    }
-
-                    FlowingFluid.BlockStatePairKey flowingfluid$blockstatepairkey;
-                    if (object2bytelinkedopenhashmap != null) {
-                        flowingfluid$blockstatepairkey = new FlowingFluid.BlockStatePairKey(p_76065_, p_76067_, p_76062_);
-                        byte b0 = object2bytelinkedopenhashmap.getAndMoveToFirst(flowingfluid$blockstatepairkey);
-                        if (b0 != 127) {
-                            return b0 != 0;
-                        }
-                    } else {
-                        flowingfluid$blockstatepairkey = null;
-                    }
-
-                    boolean flag = !Shapes.mergedFaceOccludes(voxelshape1, voxelshape, p_76062_);
-                    if (object2bytelinkedopenhashmap != null) {
-                        if (object2bytelinkedopenhashmap.size() == 200) {
-                            object2bytelinkedopenhashmap.removeLastByte();
-                        }
-
-                        object2bytelinkedopenhashmap.putAndMoveToFirst(flowingfluid$blockstatepairkey, (byte)(flag ? 1 : 0));
-                    }
-
-                    return flag;
-                }
             }
+
+            VoxelShape sourceShape = sourceState.getCollisionShape(level, sourcePos);
+            if (sourceShape == Shapes.block()) {
+                return false;
+            }
+
+            if (sourceShape == Shapes.empty() && targetShape == Shapes.empty()) {
+                return true;
+            }
+
+            Object2ByteLinkedOpenHashMap<FlowingFluid.BlockStatePairKey> cache;
+            if (!sourceState.getBlock().hasDynamicShape() && !targetState.getBlock().hasDynamicShape()) {
+                cache = OCCLUSION_CACHE.get();
+            } else {
+                cache = null;
+            }
+
+            FlowingFluid.BlockStatePairKey key;
+            if (cache != null) {
+                key = new FlowingFluid.BlockStatePairKey(sourceState, targetState, direction);
+                byte cached = cache.getAndMoveToFirst(key);
+                if (cached != 127) {
+                    return cached != 0;
+                }
+            } else {
+                key = null;
+            }
+
+            boolean result = !Shapes.mergedFaceOccludes(sourceShape, targetShape, direction);
+            if (cache != null) {
+                if (cache.size() == 200) {
+                    cache.removeLastByte();
+                }
+
+                cache.putAndMoveToFirst(key, (byte)(result ? 1 : 0));
+            }
+
+            return result;
         } else {
             return false;
         }
@@ -247,243 +253,254 @@ public abstract class FlowingFluid extends Fluid {
 
     public abstract Fluid getFlowing();
 
-    public FluidState getFlowing(int p_75954_, boolean p_75955_) {
-        return this.getFlowing().defaultFluidState().setValue(LEVEL, p_75954_).setValue(FALLING, p_75955_);
+    public FluidState getFlowing(final int amount, final boolean falling) {
+        return this.getFlowing().defaultFluidState().setValue(LEVEL, amount).setValue(FALLING, falling);
     }
 
     public abstract Fluid getSource();
 
-    public FluidState getSource(boolean p_76069_) {
-        return this.getSource().defaultFluidState().setValue(FALLING, p_76069_);
+    public FluidState getSource(final boolean falling) {
+        return this.getSource().defaultFluidState().setValue(FALLING, falling);
     }
 
-    protected abstract boolean canConvertToSource(ServerLevel p_369955_);
+    protected abstract boolean canConvertToSource(ServerLevel level);
 
-    protected void spreadTo(LevelAccessor p_76005_, BlockPos p_76006_, BlockState p_76007_, Direction p_76008_, FluidState p_76009_) {
-        if (p_76007_.getBlock() instanceof LiquidBlockContainer liquidblockcontainer) {
-            liquidblockcontainer.placeLiquid(p_76005_, p_76006_, p_76007_, p_76009_);
+    protected void spreadTo(final LevelAccessor level, final BlockPos pos, final BlockState state, final Direction direction, final FluidState target) {
+        if (state.getBlock() instanceof LiquidBlockContainer container) {
+            container.placeLiquid(level, pos, state, target);
         } else {
-            if (!p_76007_.isAir()) {
-                this.beforeDestroyingBlock(p_76005_, p_76006_, p_76007_);
+            if (!state.isAir()) {
+                this.beforeDestroyingBlock(level, pos, state);
             }
 
-            p_76005_.setBlock(p_76006_, p_76009_.createLegacyBlock(), 3);
+            level.setBlock(pos, target.createLegacyBlock(), 3);
         }
     }
 
-    protected abstract void beforeDestroyingBlock(LevelAccessor p_76002_, BlockPos p_76003_, BlockState p_76004_);
+    protected abstract void beforeDestroyingBlock(LevelAccessor level, BlockPos pos, BlockState state);
 
-    protected int getSlopeDistance(LevelReader p_76027_, BlockPos p_76028_, int p_76029_, Direction p_76030_, BlockState p_76031_, FlowingFluid.SpreadContext p_361884_) {
-        int i = 1000;
+    protected int getSlopeDistance(
+        final LevelReader level, final BlockPos pos, final int pass, final Direction from, final BlockState state, final FlowingFluid.SpreadContext context
+    ) {
+        int lowest = 1000;
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            if (direction != p_76030_) {
-                BlockPos blockpos = p_76028_.relative(direction);
-                BlockState blockstate = p_361884_.getBlockState(blockpos);
-                FluidState fluidstate = blockstate.getFluidState();
-                if (this.canPassThrough(p_76027_, this.getFlowing(), p_76028_, p_76031_, direction, blockpos, blockstate, fluidstate)) {
-                    if (p_361884_.isHole(blockpos)) {
-                        return p_76029_;
+            if (direction != from) {
+                BlockPos testPos = pos.relative(direction);
+                BlockState testState = context.getBlockState(testPos);
+                FluidState testFluidState = testState.getFluidState();
+                if (this.canPassThrough(level, this.getFlowing(), pos, state, direction, testPos, testState, testFluidState)) {
+                    if (context.isHole(testPos)) {
+                        return pass;
                     }
 
-                    if (p_76029_ < this.getSlopeFindDistance(p_76027_)) {
-                        int j = this.getSlopeDistance(p_76027_, blockpos, p_76029_ + 1, direction.getOpposite(), blockstate, p_361884_);
-                        if (j < i) {
-                            i = j;
+                    if (pass < this.getSlopeFindDistance(level)) {
+                        int v = this.getSlopeDistance(level, testPos, pass + 1, direction.getOpposite(), testState, context);
+                        if (v < lowest) {
+                            lowest = v;
                         }
                     }
                 }
             }
         }
 
-        return i;
+        return lowest;
     }
 
-    boolean isWaterHole(BlockGetter p_75957_, BlockPos p_75959_, BlockState p_75960_, BlockPos p_75961_, BlockState p_75962_) {
-        if (!canPassThroughWall(Direction.DOWN, p_75957_, p_75959_, p_75960_, p_75961_, p_75962_)) {
+    private boolean isWaterHole(
+        final BlockGetter level, final BlockPos topPos, final BlockState topState, final BlockPos bottomPos, final BlockState bottomState
+    ) {
+        if (!canPassThroughWall(Direction.DOWN, level, topPos, topState, bottomPos, bottomState)) {
             return false;
         } else {
-            return p_75962_.getFluidState().getType().isSame(this) ? true : canHoldFluid(p_75957_, p_75961_, p_75962_, this.getFlowing());
+            return bottomState.getFluidState().getType().isSame(this) ? true : canHoldFluid(level, bottomPos, bottomState, this.getFlowing());
         }
     }
 
     private boolean canPassThrough(
-        BlockGetter p_75964_,
-        Fluid p_75965_,
-        BlockPos p_75966_,
-        BlockState p_75967_,
-        Direction p_75968_,
-        BlockPos p_75969_,
-        BlockState p_75970_,
-        FluidState p_75971_
+        final BlockGetter level,
+        final Fluid fluid,
+        final BlockPos sourcePos,
+        final BlockState sourceState,
+        final Direction direction,
+        final BlockPos testPos,
+        final BlockState testState,
+        final FluidState testFluidState
     ) {
-        return this.canMaybePassThrough(p_75964_, p_75966_, p_75967_, p_75968_, p_75969_, p_75970_, p_75971_) && canHoldSpecificFluid(p_75964_, p_75969_, p_75970_, p_75965_);
+        return this.canMaybePassThrough(level, sourcePos, sourceState, direction, testPos, testState, testFluidState)
+            && canHoldSpecificFluid(level, testPos, testState, fluid);
     }
 
     private boolean canMaybePassThrough(
-        BlockGetter p_366439_, BlockPos p_366289_, BlockState p_368603_, Direction p_367727_, BlockPos p_366544_, BlockState p_366635_, FluidState p_362443_
+        final BlockGetter level,
+        final BlockPos sourcePos,
+        final BlockState sourceState,
+        final Direction direction,
+        final BlockPos testPos,
+        final BlockState testState,
+        final FluidState testFluidState
     ) {
-        return !this.isSourceBlockOfThisType(p_362443_) && canHoldAnyFluid(p_366635_) && canPassThroughWall(p_367727_, p_366439_, p_366289_, p_368603_, p_366544_, p_366635_);
+        return !this.isSourceBlockOfThisType(testFluidState)
+            && canHoldAnyFluid(testState)
+            && canPassThroughWall(direction, level, sourcePos, sourceState, testPos, testState);
     }
 
-    private boolean isSourceBlockOfThisType(FluidState p_76097_) {
-        return p_76097_.getType().isSame(this) && p_76097_.isSource();
+    private boolean isSourceBlockOfThisType(final FluidState state) {
+        return state.getType().isSame(this) && state.isSource();
     }
 
-    protected abstract int getSlopeFindDistance(LevelReader p_76074_);
+    protected abstract int getSlopeFindDistance(LevelReader level);
 
-    private int sourceNeighborCount(LevelReader p_76020_, BlockPos p_76021_) {
-        int i = 0;
+    private int sourceNeighborCount(final LevelReader level, final BlockPos pos) {
+        int count = 0;
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos blockpos = p_76021_.relative(direction);
-            FluidState fluidstate = p_76020_.getFluidState(blockpos);
-            if (this.isSourceBlockOfThisType(fluidstate)) {
-                i++;
+            BlockPos testPos = pos.relative(direction);
+            FluidState testFluidState = level.getFluidState(testPos);
+            if (this.isSourceBlockOfThisType(testFluidState)) {
+                count++;
             }
         }
 
-        return i;
+        return count;
     }
 
-    protected Map<Direction, FluidState> getSpread(ServerLevel p_367926_, BlockPos p_76081_, BlockState p_76082_) {
-        int i = 1000;
-        Map<Direction, FluidState> map = Maps.newEnumMap(Direction.class);
-        FlowingFluid.SpreadContext flowingfluid$spreadcontext = null;
+    protected Map<Direction, FluidState> getSpread(final ServerLevel level, final BlockPos pos, final BlockState state) {
+        int lowest = 1000;
+        Map<Direction, FluidState> result = Maps.newEnumMap(Direction.class);
+        FlowingFluid.SpreadContext context = null;
 
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockPos blockpos = p_76081_.relative(direction);
-            BlockState blockstate = p_367926_.getBlockState(blockpos);
-            FluidState fluidstate = blockstate.getFluidState();
-            if (this.canMaybePassThrough(p_367926_, p_76081_, p_76082_, direction, blockpos, blockstate, fluidstate)) {
-                FluidState fluidstate1 = this.getNewLiquid(p_367926_, blockpos, blockstate);
-                if (canHoldSpecificFluid(p_367926_, blockpos, blockstate, fluidstate1.getType())) {
-                    if (flowingfluid$spreadcontext == null) {
-                        flowingfluid$spreadcontext = new FlowingFluid.SpreadContext(p_367926_, p_76081_);
+            BlockPos testPos = pos.relative(direction);
+            BlockState testState = level.getBlockState(testPos);
+            FluidState testFluidState = testState.getFluidState();
+            if (this.canMaybePassThrough(level, pos, state, direction, testPos, testState, testFluidState)) {
+                FluidState newFluid = this.getNewLiquid(level, testPos, testState);
+                if (canHoldSpecificFluid(level, testPos, testState, newFluid.getType())) {
+                    if (context == null) {
+                        context = new FlowingFluid.SpreadContext(level, pos);
                     }
 
-                    int j;
-                    if (flowingfluid$spreadcontext.isHole(blockpos)) {
-                        j = 0;
+                    int distance;
+                    if (context.isHole(testPos)) {
+                        distance = 0;
                     } else {
-                        j = this.getSlopeDistance(p_367926_, blockpos, 1, direction.getOpposite(), blockstate, flowingfluid$spreadcontext);
+                        distance = this.getSlopeDistance(level, testPos, 1, direction.getOpposite(), testState, context);
                     }
 
-                    if (j < i) {
-                        map.clear();
+                    if (distance < lowest) {
+                        result.clear();
                     }
 
-                    if (j <= i) {
-                        if (fluidstate.canBeReplacedWith(p_367926_, blockpos, fluidstate1.getType(), direction)) {
-                            map.put(direction, fluidstate1);
+                    if (distance <= lowest) {
+                        if (testFluidState.canBeReplacedWith(level, testPos, newFluid.getType(), direction)) {
+                            result.put(direction, newFluid);
                         }
 
-                        i = j;
+                        lowest = distance;
                     }
                 }
             }
         }
 
-        return map;
+        return result;
     }
 
-    private static boolean canHoldAnyFluid(BlockState p_366747_) {
-        Block block = p_366747_.getBlock();
+    private static boolean canHoldAnyFluid(final BlockState state) {
+        Block block = state.getBlock();
         if (block instanceof LiquidBlockContainer) {
             return true;
         } else {
-            return p_366747_.blocksMotion()
+            return state.blocksMotion()
                 ? false
                 : !(block instanceof DoorBlock)
-                    && !p_366747_.is(BlockTags.SIGNS)
-                    && !p_366747_.is(Blocks.LADDER)
-                    && !p_366747_.is(Blocks.SUGAR_CANE)
-                    && !p_366747_.is(Blocks.BUBBLE_COLUMN)
-                    && !p_366747_.is(Blocks.NETHER_PORTAL)
-                    && !p_366747_.is(Blocks.END_PORTAL)
-                    && !p_366747_.is(Blocks.END_GATEWAY)
-                    && !p_366747_.is(Blocks.STRUCTURE_VOID);
+                    && !state.is(BlockTags.SIGNS)
+                    && !state.is(Blocks.LADDER)
+                    && !state.is(Blocks.SUGAR_CANE)
+                    && !state.is(Blocks.BUBBLE_COLUMN)
+                    && !state.is(Blocks.NETHER_PORTAL)
+                    && !state.is(Blocks.END_PORTAL)
+                    && !state.is(Blocks.END_GATEWAY)
+                    && !state.is(Blocks.STRUCTURE_VOID);
         }
     }
 
-    private static boolean canHoldFluid(BlockGetter p_75973_, BlockPos p_75974_, BlockState p_75975_, Fluid p_75976_) {
-        return canHoldAnyFluid(p_75975_) && canHoldSpecificFluid(p_75973_, p_75974_, p_75975_, p_75976_);
+    private static boolean canHoldFluid(final BlockGetter level, final BlockPos pos, final BlockState state, final Fluid newFluid) {
+        return canHoldAnyFluid(state) && canHoldSpecificFluid(level, pos, state, newFluid);
     }
 
-    private static boolean canHoldSpecificFluid(BlockGetter p_368745_, BlockPos p_367421_, BlockState p_366623_, Fluid p_365745_) {
-        return p_366623_.getBlock() instanceof LiquidBlockContainer liquidblockcontainer
-            ? liquidblockcontainer.canPlaceLiquid(null, p_368745_, p_367421_, p_366623_, p_365745_)
-            : true;
+    private static boolean canHoldSpecificFluid(final BlockGetter level, final BlockPos pos, final BlockState state, final Fluid newFluid) {
+        return state.getBlock() instanceof LiquidBlockContainer container ? container.canPlaceLiquid(null, level, pos, state, newFluid) : true;
     }
 
-    protected abstract int getDropOff(LevelReader p_76087_);
+    protected abstract int getDropOff(LevelReader level);
 
-    protected int getSpreadDelay(Level p_75998_, BlockPos p_75999_, FluidState p_76000_, FluidState p_76001_) {
-        return this.getTickDelay(p_75998_);
+    protected int getSpreadDelay(final Level level, final BlockPos pos, final FluidState oldFluidState, final FluidState newFluidState) {
+        return this.getTickDelay(level);
     }
 
     @Override
-    public void tick(ServerLevel p_362527_, BlockPos p_75996_, BlockState p_369266_, FluidState p_75997_) {
-        if (!p_75997_.isSource()) {
-            FluidState fluidstate = this.getNewLiquid(p_362527_, p_75996_, p_362527_.getBlockState(p_75996_));
-            int i = this.getSpreadDelay(p_362527_, p_75996_, p_75997_, fluidstate);
-            if (fluidstate.isEmpty()) {
-                p_75997_ = fluidstate;
-                p_369266_ = Blocks.AIR.defaultBlockState();
-                p_362527_.setBlock(p_75996_, p_369266_, 3);
-            } else if (fluidstate != p_75997_) {
-                p_75997_ = fluidstate;
-                p_369266_ = fluidstate.createLegacyBlock();
-                p_362527_.setBlock(p_75996_, p_369266_, 3);
-                p_362527_.scheduleTick(p_75996_, fluidstate.getType(), i);
+    public void tick(final ServerLevel level, final BlockPos pos, BlockState blockState, FluidState fluidState) {
+        if (!fluidState.isSource()) {
+            FluidState newFluidState = this.getNewLiquid(level, pos, level.getBlockState(pos));
+            int tickDelay = this.getSpreadDelay(level, pos, fluidState, newFluidState);
+            if (newFluidState.isEmpty()) {
+                fluidState = newFluidState;
+                blockState = Blocks.AIR.defaultBlockState();
+                level.setBlock(pos, blockState, 3);
+            } else if (newFluidState != fluidState) {
+                fluidState = newFluidState;
+                blockState = fluidState.createLegacyBlock();
+                level.setBlock(pos, blockState, 3);
+                level.scheduleTick(pos, fluidState.getType(), tickDelay);
             }
         }
 
-        this.spread(p_362527_, p_75996_, p_369266_, p_75997_);
+        this.spread(level, pos, blockState, fluidState);
     }
 
-    protected static int getLegacyLevel(FluidState p_76093_) {
-        return p_76093_.isSource() ? 0 : 8 - Math.min(p_76093_.getAmount(), 8) + (p_76093_.getValue(FALLING) ? 8 : 0);
+    protected static int getLegacyLevel(final FluidState fluidState) {
+        return fluidState.isSource() ? 0 : 8 - Math.min(fluidState.getAmount(), 8) + (fluidState.getValue(FALLING) ? 8 : 0);
     }
 
-    private static boolean hasSameAbove(FluidState p_76089_, BlockGetter p_76090_, BlockPos p_76091_) {
-        return p_76089_.getType().isSame(p_76090_.getFluidState(p_76091_.above()).getType());
-    }
-
-    @Override
-    public float getHeight(FluidState p_76050_, BlockGetter p_76051_, BlockPos p_76052_) {
-        return hasSameAbove(p_76050_, p_76051_, p_76052_) ? 1.0F : p_76050_.getOwnHeight();
+    private static boolean hasSameAbove(final FluidState fluidState, final BlockGetter level, final BlockPos pos) {
+        return fluidState.getType().isSame(level.getFluidState(pos.above()).getType());
     }
 
     @Override
-    public float getOwnHeight(FluidState p_76048_) {
-        return p_76048_.getAmount() / 9.0F;
+    public float getHeight(final FluidState fluidState, final BlockGetter level, final BlockPos pos) {
+        return hasSameAbove(fluidState, level, pos) ? 1.0F : fluidState.getOwnHeight();
     }
 
     @Override
-    public abstract int getAmount(FluidState p_164509_);
+    public float getOwnHeight(final FluidState fluidState) {
+        return fluidState.getAmount() / 9.0F;
+    }
 
     @Override
-    public VoxelShape getShape(FluidState p_76084_, BlockGetter p_76085_, BlockPos p_76086_) {
-        return p_76084_.getAmount() == 9 && hasSameAbove(p_76084_, p_76085_, p_76086_)
+    public abstract int getAmount(final FluidState fluidState);
+
+    @Override
+    public VoxelShape getShape(final FluidState state, final BlockGetter level, final BlockPos pos) {
+        return state.getAmount() == 9 && hasSameAbove(state, level, pos)
             ? Shapes.block()
-            : this.shapes.computeIfAbsent(p_76084_, p_76073_ -> Shapes.box(0.0, 0.0, 0.0, 1.0, p_76073_.getHeight(p_76085_, p_76086_), 1.0));
+            : this.shapes.computeIfAbsent(state, fluidState -> Shapes.box(0.0, 0.0, 0.0, 1.0, fluidState.getHeight(level, pos), 1.0));
     }
 
-    record BlockStatePairKey(BlockState first, BlockState second, Direction direction) {
+    private record BlockStatePairKey(BlockState first, BlockState second, Direction direction) {
         @Override
-        public boolean equals(Object p_364864_) {
-            return p_364864_ instanceof FlowingFluid.BlockStatePairKey flowingfluid$blockstatepairkey
-                && this.first == flowingfluid$blockstatepairkey.first
-                && this.second == flowingfluid$blockstatepairkey.second
-                && this.direction == flowingfluid$blockstatepairkey.direction;
+        public boolean equals(final Object o) {
+            return o instanceof FlowingFluid.BlockStatePairKey that
+                && this.first == that.first
+                && this.second == that.second
+                && this.direction == that.direction;
         }
 
         @Override
         public int hashCode() {
-            int i = System.identityHashCode(this.first);
-            i = 31 * i + System.identityHashCode(this.second);
-            return 31 * i + this.direction.hashCode();
+            int result = System.identityHashCode(this.first);
+            result = 31 * result + System.identityHashCode(this.second);
+            return 31 * result + this.direction.hashCode();
         }
     }
 
@@ -493,32 +510,32 @@ public abstract class FlowingFluid extends Fluid {
         private final Short2ObjectMap<BlockState> stateCache = new Short2ObjectOpenHashMap<>();
         private final Short2BooleanMap holeCache = new Short2BooleanOpenHashMap();
 
-        SpreadContext(final BlockGetter p_369304_, final BlockPos p_362233_) {
-            this.level = p_369304_;
-            this.origin = p_362233_;
+        private SpreadContext(final BlockGetter level, final BlockPos origin) {
+            this.level = level;
+            this.origin = origin;
         }
 
-        public BlockState getBlockState(BlockPos p_366261_) {
-            return this.getBlockState(p_366261_, this.getCacheKey(p_366261_));
+        public BlockState getBlockState(final BlockPos pos) {
+            return this.getBlockState(pos, this.getCacheKey(pos));
         }
 
-        private BlockState getBlockState(BlockPos p_361123_, short p_365944_) {
-            return this.stateCache.computeIfAbsent(p_365944_, p_365254_ -> this.level.getBlockState(p_361123_));
+        private BlockState getBlockState(final BlockPos pos, final short key) {
+            return this.stateCache.computeIfAbsent(key, k -> this.level.getBlockState(pos));
         }
 
-        public boolean isHole(BlockPos p_370165_) {
-            return this.holeCache.computeIfAbsent(this.getCacheKey(p_370165_), p_365811_ -> {
-                BlockState blockstate = this.getBlockState(p_370165_, p_365811_);
-                BlockPos blockpos = p_370165_.below();
-                BlockState blockstate1 = this.level.getBlockState(blockpos);
-                return FlowingFluid.this.isWaterHole(this.level, p_370165_, blockstate, blockpos, blockstate1);
+        public boolean isHole(final BlockPos pos) {
+            return this.holeCache.computeIfAbsent(this.getCacheKey(pos), key -> {
+                BlockState state = this.getBlockState(pos, key);
+                BlockPos below = pos.below();
+                BlockState belowState = this.level.getBlockState(below);
+                return FlowingFluid.this.isWaterHole(this.level, pos, state, below, belowState);
             });
         }
 
-        private short getCacheKey(BlockPos p_363365_) {
-            int i = p_363365_.getX() - this.origin.getX();
-            int j = p_363365_.getZ() - this.origin.getZ();
-            return (short)((i + 128 & 0xFF) << 8 | j + 128 & 0xFF);
+        private short getCacheKey(final BlockPos pos) {
+            int relativeX = pos.getX() - this.origin.getX();
+            int relativeZ = pos.getZ() - this.origin.getZ();
+            return (short)((relativeX + 128 & 0xFF) << 8 | relativeZ + 128 & 0xFF);
         }
     }
 }

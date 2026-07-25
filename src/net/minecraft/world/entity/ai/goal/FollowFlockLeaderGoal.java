@@ -11,13 +11,13 @@ public class FollowFlockLeaderGoal extends Goal {
     private int timeToRecalcPath;
     private int nextStartTick;
 
-    public FollowFlockLeaderGoal(AbstractSchoolingFish p_451334_) {
-        this.mob = p_451334_;
-        this.nextStartTick = this.nextStartTick(p_451334_);
+    public FollowFlockLeaderGoal(final AbstractSchoolingFish mob) {
+        this.mob = mob;
+        this.nextStartTick = this.nextStartTick(mob);
     }
 
-    protected int nextStartTick(AbstractSchoolingFish p_452582_) {
-        return reducedTickDelay(200 + p_452582_.getRandom().nextInt(200) % 20);
+    protected int nextStartTick(final AbstractSchoolingFish mob) {
+        return reducedTickDelay(200 + mob.getRandom().nextInt(200) % 20);
     }
 
     @Override
@@ -31,12 +31,14 @@ public class FollowFlockLeaderGoal extends Goal {
             return false;
         } else {
             this.nextStartTick = this.nextStartTick(this.mob);
-            Predicate<AbstractSchoolingFish> predicate = p_449598_ -> p_449598_.canBeFollowed() || !p_449598_.isFollower();
-            List<? extends AbstractSchoolingFish> list = this.mob
+            Predicate<AbstractSchoolingFish> predicate = fish -> fish.canBeFollowed() || !fish.isFollower();
+            List<? extends AbstractSchoolingFish> leadersWithSpaceOrNotFollowers = this.mob
                 .level()
                 .getEntitiesOfClass((Class<? extends AbstractSchoolingFish>)this.mob.getClass(), this.mob.getBoundingBox().inflate(8.0, 8.0, 8.0), predicate);
-            AbstractSchoolingFish abstractschoolingfish = DataFixUtils.orElse(list.stream().filter(AbstractSchoolingFish::canBeFollowed).findAny(), this.mob);
-            abstractschoolingfish.addFollowers(list.stream().filter(p_449597_ -> !p_449597_.isFollower()));
+            AbstractSchoolingFish leader = DataFixUtils.orElse(
+                leadersWithSpaceOrNotFollowers.stream().filter(AbstractSchoolingFish::canBeFollowed).findAny(), this.mob
+            );
+            leader.addFollowers(leadersWithSpaceOrNotFollowers.stream().filter(fish -> !fish.isFollower()));
             return this.mob.isFollower();
         }
     }

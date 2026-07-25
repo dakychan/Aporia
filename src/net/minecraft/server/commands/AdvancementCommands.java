@@ -1,12 +1,12 @@
 package net.minecraft.server.commands;
 
+import com.google.common.collect.Iterables;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -25,13 +25,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 public class AdvancementCommands {
-    private static final DynamicCommandExceptionType ERROR_NO_ACTION_PERFORMED = new DynamicCommandExceptionType(p_308608_ -> (Component)p_308608_);
+    private static final DynamicCommandExceptionType ERROR_NO_ACTION_PERFORMED = new DynamicCommandExceptionType(msg -> (Component)msg);
     private static final Dynamic2CommandExceptionType ERROR_CRITERION_NOT_FOUND = new Dynamic2CommandExceptionType(
-        (p_341132_, p_341133_) -> Component.translatableEscape("commands.advancement.criterionNotFound", p_341132_, p_341133_)
+        (name, criterion) -> Component.translatableEscape("commands.advancement.criterionNotFound", name, criterion)
     );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_136311_) {
-        p_136311_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("advancement")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
@@ -43,30 +43,27 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358563_ -> perform(
-                                                        p_358563_.getSource(),
-                                                        EntityArgument.getPlayers(p_358563_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.GRANT,
-                                                        getAdvancements(
-                                                            p_358563_, ResourceKeyArgument.getAdvancement(p_358563_, "advancement"), AdvancementCommands.Mode.ONLY
-                                                        )
+                                                        getAdvancements(c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.ONLY)
                                                     )
                                                 )
                                                 .then(
                                                     Commands.argument("criterion", StringArgumentType.greedyString())
                                                         .suggests(
-                                                            (p_358572_, p_358573_) -> SharedSuggestionProvider.suggest(
-                                                                ResourceKeyArgument.getAdvancement(p_358572_, "advancement").value().criteria().keySet(),
-                                                                p_358573_
+                                                            (c, p) -> SharedSuggestionProvider.suggest(
+                                                                ResourceKeyArgument.getAdvancement(c, "advancement").value().criteria().keySet(), p
                                                             )
                                                         )
                                                         .executes(
-                                                            p_358574_ -> performCriterion(
-                                                                p_358574_.getSource(),
-                                                                EntityArgument.getPlayers(p_358574_, "targets"),
+                                                            c -> performCriterion(
+                                                                c.getSource(),
+                                                                EntityArgument.getPlayers(c, "targets"),
                                                                 AdvancementCommands.Action.GRANT,
-                                                                ResourceKeyArgument.getAdvancement(p_358574_, "advancement"),
-                                                                StringArgumentType.getString(p_358574_, "criterion")
+                                                                ResourceKeyArgument.getAdvancement(c, "advancement"),
+                                                                StringArgumentType.getString(c, "criterion")
                                                             )
                                                         )
                                                 )
@@ -77,13 +74,11 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358555_ -> perform(
-                                                        p_358555_.getSource(),
-                                                        EntityArgument.getPlayers(p_358555_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.GRANT,
-                                                        getAdvancements(
-                                                            p_358555_, ResourceKeyArgument.getAdvancement(p_358555_, "advancement"), AdvancementCommands.Mode.FROM
-                                                        )
+                                                        getAdvancements(c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.FROM)
                                                     )
                                                 )
                                         )
@@ -93,13 +88,11 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358564_ -> perform(
-                                                        p_358564_.getSource(),
-                                                        EntityArgument.getPlayers(p_358564_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.GRANT,
-                                                        getAdvancements(
-                                                            p_358564_, ResourceKeyArgument.getAdvancement(p_358564_, "advancement"), AdvancementCommands.Mode.UNTIL
-                                                        )
+                                                        getAdvancements(c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.UNTIL)
                                                     )
                                                 )
                                         )
@@ -109,14 +102,12 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358565_ -> perform(
-                                                        p_358565_.getSource(),
-                                                        EntityArgument.getPlayers(p_358565_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.GRANT,
                                                         getAdvancements(
-                                                            p_358565_,
-                                                            ResourceKeyArgument.getAdvancement(p_358565_, "advancement"),
-                                                            AdvancementCommands.Mode.THROUGH
+                                                            c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.THROUGH
                                                         )
                                                     )
                                                 )
@@ -125,11 +116,11 @@ public class AdvancementCommands {
                                 .then(
                                     Commands.literal("everything")
                                         .executes(
-                                            p_389952_ -> perform(
-                                                p_389952_.getSource(),
-                                                EntityArgument.getPlayers(p_389952_, "targets"),
+                                            c -> perform(
+                                                c.getSource(),
+                                                EntityArgument.getPlayers(c, "targets"),
                                                 AdvancementCommands.Action.GRANT,
-                                                p_389952_.getSource().getServer().getAdvancements().getAllAdvancements(),
+                                                c.getSource().getServer().getAdvancements().getAllAdvancements(),
                                                 false
                                             )
                                         )
@@ -145,30 +136,27 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358556_ -> perform(
-                                                        p_358556_.getSource(),
-                                                        EntityArgument.getPlayers(p_358556_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.REVOKE,
-                                                        getAdvancements(
-                                                            p_358556_, ResourceKeyArgument.getAdvancement(p_358556_, "advancement"), AdvancementCommands.Mode.ONLY
-                                                        )
+                                                        getAdvancements(c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.ONLY)
                                                     )
                                                 )
                                                 .then(
                                                     Commands.argument("criterion", StringArgumentType.greedyString())
                                                         .suggests(
-                                                            (p_358560_, p_358561_) -> SharedSuggestionProvider.suggest(
-                                                                ResourceKeyArgument.getAdvancement(p_358560_, "advancement").value().criteria().keySet(),
-                                                                p_358561_
+                                                            (c, p) -> SharedSuggestionProvider.suggest(
+                                                                ResourceKeyArgument.getAdvancement(c, "advancement").value().criteria().keySet(), p
                                                             )
                                                         )
                                                         .executes(
-                                                            p_358562_ -> performCriterion(
-                                                                p_358562_.getSource(),
-                                                                EntityArgument.getPlayers(p_358562_, "targets"),
+                                                            c -> performCriterion(
+                                                                c.getSource(),
+                                                                EntityArgument.getPlayers(c, "targets"),
                                                                 AdvancementCommands.Action.REVOKE,
-                                                                ResourceKeyArgument.getAdvancement(p_358562_, "advancement"),
-                                                                StringArgumentType.getString(p_358562_, "criterion")
+                                                                ResourceKeyArgument.getAdvancement(c, "advancement"),
+                                                                StringArgumentType.getString(c, "criterion")
                                                             )
                                                         )
                                                 )
@@ -179,13 +167,11 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358569_ -> perform(
-                                                        p_358569_.getSource(),
-                                                        EntityArgument.getPlayers(p_358569_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.REVOKE,
-                                                        getAdvancements(
-                                                            p_358569_, ResourceKeyArgument.getAdvancement(p_358569_, "advancement"), AdvancementCommands.Mode.FROM
-                                                        )
+                                                        getAdvancements(c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.FROM)
                                                     )
                                                 )
                                         )
@@ -195,13 +181,11 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358571_ -> perform(
-                                                        p_358571_.getSource(),
-                                                        EntityArgument.getPlayers(p_358571_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.REVOKE,
-                                                        getAdvancements(
-                                                            p_358571_, ResourceKeyArgument.getAdvancement(p_358571_, "advancement"), AdvancementCommands.Mode.UNTIL
-                                                        )
+                                                        getAdvancements(c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.UNTIL)
                                                     )
                                                 )
                                         )
@@ -211,14 +195,12 @@ public class AdvancementCommands {
                                         .then(
                                             Commands.argument("advancement", ResourceKeyArgument.key(Registries.ADVANCEMENT))
                                                 .executes(
-                                                    p_358570_ -> perform(
-                                                        p_358570_.getSource(),
-                                                        EntityArgument.getPlayers(p_358570_, "targets"),
+                                                    c -> perform(
+                                                        c.getSource(),
+                                                        EntityArgument.getPlayers(c, "targets"),
                                                         AdvancementCommands.Action.REVOKE,
                                                         getAdvancements(
-                                                            p_358570_,
-                                                            ResourceKeyArgument.getAdvancement(p_358570_, "advancement"),
-                                                            AdvancementCommands.Mode.THROUGH
+                                                            c, ResourceKeyArgument.getAdvancement(c, "advancement"), AdvancementCommands.Mode.THROUGH
                                                         )
                                                     )
                                                 )
@@ -227,11 +209,11 @@ public class AdvancementCommands {
                                 .then(
                                     Commands.literal("everything")
                                         .executes(
-                                            p_136313_ -> perform(
-                                                p_136313_.getSource(),
-                                                EntityArgument.getPlayers(p_136313_, "targets"),
+                                            c -> perform(
+                                                c.getSource(),
+                                                EntityArgument.getPlayers(c, "targets"),
                                                 AdvancementCommands.Action.REVOKE,
-                                                p_136313_.getSource().getServer().getAdvancements().getAllAdvancements()
+                                                c.getSource().getServer().getAdvancements().getAllAdvancements()
                                             )
                                         )
                                 )
@@ -241,253 +223,253 @@ public class AdvancementCommands {
     }
 
     private static int perform(
-        CommandSourceStack p_136320_, Collection<ServerPlayer> p_136321_, AdvancementCommands.Action p_136322_, Collection<AdvancementHolder> p_136323_
+        final CommandSourceStack source,
+        final Collection<ServerPlayer> players,
+        final AdvancementCommands.Action action,
+        final Collection<AdvancementHolder> advancements
     ) throws CommandSyntaxException {
-        return perform(p_136320_, p_136321_, p_136322_, p_136323_, true);
+        return perform(source, players, action, advancements, true);
     }
 
     private static int perform(
-        CommandSourceStack p_394429_,
-        Collection<ServerPlayer> p_393248_,
-        AdvancementCommands.Action p_394038_,
-        Collection<AdvancementHolder> p_396830_,
-        boolean p_396922_
+        final CommandSourceStack source,
+        final Collection<ServerPlayer> players,
+        final AdvancementCommands.Action action,
+        final Collection<AdvancementHolder> advancements,
+        final boolean showAdvancements
     ) throws CommandSyntaxException {
-        int i = 0;
+        int advancementCount = 0;
+        int playerCount = 0;
 
-        for (ServerPlayer serverplayer : p_393248_) {
-            i += p_394038_.perform(serverplayer, p_396830_, p_396922_);
+        for (ServerPlayer player : players) {
+            int changedAdvancements = action.perform(player, advancements, showAdvancements);
+            if (changedAdvancements > 0) {
+                playerCount++;
+            }
+
+            advancementCount += changedAdvancements;
         }
 
-        if (i == 0) {
-            if (p_396830_.size() == 1) {
-                if (p_393248_.size() == 1) {
+        if (advancementCount == 0) {
+            if (advancements.size() == 1) {
+                Component advancementName = Advancement.name(Iterables.getOnlyElement(advancements));
+                if (players.size() == 1) {
                     throw ERROR_NO_ACTION_PERFORMED.create(
-                        Component.translatable(
-                            p_394038_.getKey() + ".one.to.one.failure",
-                            Advancement.name(p_396830_.iterator().next()),
-                            p_393248_.iterator().next().getDisplayName()
-                        )
+                        Component.translatable(action.getKey() + ".one.to.one.failure", advancementName, Iterables.getOnlyElement(players).getDisplayName())
                     );
                 } else {
-                    throw ERROR_NO_ACTION_PERFORMED.create(
-                        Component.translatable(
-                            p_394038_.getKey() + ".one.to.many.failure", Advancement.name(p_396830_.iterator().next()), p_393248_.size()
-                        )
-                    );
+                    throw ERROR_NO_ACTION_PERFORMED.create(Component.translatable(action.getKey() + ".one.to.many.failure", advancementName, players.size()));
                 }
-            } else if (p_393248_.size() == 1) {
+            } else if (players.size() == 1) {
                 throw ERROR_NO_ACTION_PERFORMED.create(
-                    Component.translatable(p_394038_.getKey() + ".many.to.one.failure", p_396830_.size(), p_393248_.iterator().next().getDisplayName())
+                    Component.translatable(action.getKey() + ".many.to.one.failure", advancements.size(), Iterables.getOnlyElement(players).getDisplayName())
                 );
             } else {
-                throw ERROR_NO_ACTION_PERFORMED.create(Component.translatable(p_394038_.getKey() + ".many.to.many.failure", p_396830_.size(), p_393248_.size()));
+                throw ERROR_NO_ACTION_PERFORMED.create(Component.translatable(action.getKey() + ".many.to.many.failure", advancements.size(), players.size()));
             }
         } else {
-            if (p_396830_.size() == 1) {
-                if (p_393248_.size() == 1) {
-                    p_394429_.sendSuccess(
+            if (advancements.size() == 1) {
+                Component advancementName = Advancement.name(Iterables.getOnlyElement(advancements));
+                if (players.size() == 1) {
+                    source.sendSuccess(
                         () -> Component.translatable(
-                            p_394038_.getKey() + ".one.to.one.success",
-                            Advancement.name(p_396830_.iterator().next()),
-                            p_393248_.iterator().next().getDisplayName()
+                            action.getKey() + ".one.to.one.success", advancementName, Iterables.getOnlyElement(players).getDisplayName()
                         ),
                         true
                     );
                 } else {
-                    p_394429_.sendSuccess(
+                    int finalPlayerCount = playerCount;
+                    source.sendSuccess(() -> Component.translatable(action.getKey() + ".one.to.many.success", advancementName, finalPlayerCount), true);
+                }
+            } else {
+                int finalAdvancementCount = advancementCount;
+                if (players.size() == 1) {
+                    source.sendSuccess(
                         () -> Component.translatable(
-                            p_394038_.getKey() + ".one.to.many.success", Advancement.name(p_396830_.iterator().next()), p_393248_.size()
+                            action.getKey() + ".many.to.one.success", finalAdvancementCount, Iterables.getOnlyElement(players).getDisplayName()
                         ),
                         true
                     );
+                } else {
+                    int finalPlayerCount = playerCount;
+                    source.sendSuccess(() -> Component.translatable(action.getKey() + ".many.to.many.success", finalAdvancementCount, finalPlayerCount), true);
                 }
-            } else if (p_393248_.size() == 1) {
-                p_394429_.sendSuccess(
-                    () -> Component.translatable(p_394038_.getKey() + ".many.to.one.success", p_396830_.size(), p_393248_.iterator().next().getDisplayName()), true
-                );
-            } else {
-                p_394429_.sendSuccess(() -> Component.translatable(p_394038_.getKey() + ".many.to.many.success", p_396830_.size(), p_393248_.size()), true);
             }
 
-            return i;
+            return advancementCount;
         }
     }
 
     private static int performCriterion(
-        CommandSourceStack p_136325_, Collection<ServerPlayer> p_136326_, AdvancementCommands.Action p_136327_, AdvancementHolder p_299259_, String p_136329_
+        final CommandSourceStack source,
+        final Collection<ServerPlayer> players,
+        final AdvancementCommands.Action action,
+        final AdvancementHolder holder,
+        final String criterion
     ) throws CommandSyntaxException {
-        int i = 0;
-        Advancement advancement = p_299259_.value();
-        if (!advancement.criteria().containsKey(p_136329_)) {
-            throw ERROR_CRITERION_NOT_FOUND.create(Advancement.name(p_299259_), p_136329_);
-        } else {
-            for (ServerPlayer serverplayer : p_136326_) {
-                if (p_136327_.performCriterion(serverplayer, p_299259_, p_136329_)) {
-                    i++;
-                }
-            }
+        int playerCount = 0;
+        Advancement advancement = holder.value();
+        if (!advancement.criteria().containsKey(criterion)) {
+            throw ERROR_CRITERION_NOT_FOUND.create(Advancement.name(holder), criterion);
+        }
 
-            if (i == 0) {
-                if (p_136326_.size() == 1) {
-                    throw ERROR_NO_ACTION_PERFORMED.create(
-                        Component.translatable(
-                            p_136327_.getKey() + ".criterion.to.one.failure",
-                            p_136329_,
-                            Advancement.name(p_299259_),
-                            p_136326_.iterator().next().getDisplayName()
-                        )
-                    );
-                } else {
-                    throw ERROR_NO_ACTION_PERFORMED.create(
-                        Component.translatable(p_136327_.getKey() + ".criterion.to.many.failure", p_136329_, Advancement.name(p_299259_), p_136326_.size())
-                    );
-                }
+        for (ServerPlayer player : players) {
+            if (action.performCriterion(player, holder, criterion)) {
+                playerCount++;
+            }
+        }
+
+        if (playerCount == 0) {
+            if (players.size() == 1) {
+                throw ERROR_NO_ACTION_PERFORMED.create(
+                    Component.translatable(
+                        action.getKey() + ".criterion.to.one.failure", criterion, Advancement.name(holder), Iterables.getOnlyElement(players).getDisplayName()
+                    )
+                );
             } else {
-                if (p_136326_.size() == 1) {
-                    p_136325_.sendSuccess(
-                        () -> Component.translatable(
-                            p_136327_.getKey() + ".criterion.to.one.success",
-                            p_136329_,
-                            Advancement.name(p_299259_),
-                            p_136326_.iterator().next().getDisplayName()
-                        ),
-                        true
-                    );
-                } else {
-                    p_136325_.sendSuccess(
-                        () -> Component.translatable(
-                            p_136327_.getKey() + ".criterion.to.many.success", p_136329_, Advancement.name(p_299259_), p_136326_.size()
-                        ),
-                        true
-                    );
-                }
-
-                return i;
+                throw ERROR_NO_ACTION_PERFORMED.create(
+                    Component.translatable(action.getKey() + ".criterion.to.many.failure", criterion, Advancement.name(holder), players.size())
+                );
             }
+        } else {
+            if (players.size() == 1) {
+                source.sendSuccess(
+                    () -> Component.translatable(
+                        action.getKey() + ".criterion.to.one.success", criterion, Advancement.name(holder), Iterables.getOnlyElement(players).getDisplayName()
+                    ),
+                    true
+                );
+            } else {
+                int finalPlayerCount = playerCount;
+                source.sendSuccess(
+                    () -> Component.translatable(action.getKey() + ".criterion.to.many.success", criterion, Advancement.name(holder), finalPlayerCount), true
+                );
+            }
+
+            return playerCount;
         }
     }
 
     private static List<AdvancementHolder> getAdvancements(
-        CommandContext<CommandSourceStack> p_298043_, AdvancementHolder p_300683_, AdvancementCommands.Mode p_136335_
+        final CommandContext<CommandSourceStack> context, final AdvancementHolder target, final AdvancementCommands.Mode mode
     ) {
-        AdvancementTree advancementtree = p_298043_.getSource().getServer().getAdvancements().tree();
-        AdvancementNode advancementnode = advancementtree.get(p_300683_);
-        if (advancementnode == null) {
-            return List.of(p_300683_);
-        } else {
-            List<AdvancementHolder> list = new ArrayList<>();
-            if (p_136335_.parents) {
-                for (AdvancementNode advancementnode1 = advancementnode.parent(); advancementnode1 != null; advancementnode1 = advancementnode1.parent()) {
-                    list.add(advancementnode1.holder());
-                }
-            }
+        AdvancementTree advancementTree = context.getSource().getServer().getAdvancements().tree();
+        AdvancementNode targetNode = advancementTree.get(target);
+        if (targetNode == null) {
+            return List.of(target);
+        }
 
-            list.add(p_300683_);
-            if (p_136335_.children) {
-                addChildren(advancementnode, list);
+        List<AdvancementHolder> advancements = new ArrayList<>();
+        if (mode.parents) {
+            for (AdvancementNode parent = targetNode.parent(); parent != null; parent = parent.parent()) {
+                advancements.add(parent.holder());
             }
+        }
 
-            return list;
+        advancements.add(target);
+        if (mode.children) {
+            addChildren(targetNode, advancements);
+        }
+
+        return advancements;
+    }
+
+    private static void addChildren(final AdvancementNode parent, final List<AdvancementHolder> output) {
+        for (AdvancementNode child : parent.children()) {
+            output.add(child.holder());
+            addChildren(child, output);
         }
     }
 
-    private static void addChildren(AdvancementNode p_300493_, List<AdvancementHolder> p_136332_) {
-        for (AdvancementNode advancementnode : p_300493_.children()) {
-            p_136332_.add(advancementnode.holder());
-            addChildren(advancementnode, p_136332_);
-        }
-    }
-
-    static enum Action {
+    private enum Action {
         GRANT("grant") {
             @Override
-            protected boolean perform(ServerPlayer p_136395_, AdvancementHolder p_299481_) {
-                AdvancementProgress advancementprogress = p_136395_.getAdvancements().getOrStartProgress(p_299481_);
-                if (advancementprogress.isDone()) {
+            protected boolean perform(final ServerPlayer player, final AdvancementHolder advancement) {
+                AdvancementProgress progress = player.getAdvancements().getOrStartProgress(advancement);
+                if (progress.isDone()) {
                     return false;
-                } else {
-                    for (String s : advancementprogress.getRemainingCriteria()) {
-                        p_136395_.getAdvancements().award(p_299481_, s);
-                    }
-
-                    return true;
                 }
+
+                for (String criterion : progress.getRemainingCriteria()) {
+                    player.getAdvancements().award(advancement, criterion);
+                }
+
+                return true;
             }
 
             @Override
-            protected boolean performCriterion(ServerPlayer p_136398_, AdvancementHolder p_300422_, String p_136400_) {
-                return p_136398_.getAdvancements().award(p_300422_, p_136400_);
+            protected boolean performCriterion(final ServerPlayer player, final AdvancementHolder advancement, final String criterion) {
+                return player.getAdvancements().award(advancement, criterion);
             }
         },
         REVOKE("revoke") {
             @Override
-            protected boolean perform(ServerPlayer p_136406_, AdvancementHolder p_301329_) {
-                AdvancementProgress advancementprogress = p_136406_.getAdvancements().getOrStartProgress(p_301329_);
-                if (!advancementprogress.hasProgress()) {
+            protected boolean perform(final ServerPlayer player, final AdvancementHolder advancement) {
+                AdvancementProgress progress = player.getAdvancements().getOrStartProgress(advancement);
+                if (!progress.hasProgress()) {
                     return false;
-                } else {
-                    for (String s : advancementprogress.getCompletedCriteria()) {
-                        p_136406_.getAdvancements().revoke(p_301329_, s);
-                    }
-
-                    return true;
                 }
+
+                for (String criterion : progress.getCompletedCriteria()) {
+                    player.getAdvancements().revoke(advancement, criterion);
+                }
+
+                return true;
             }
 
             @Override
-            protected boolean performCriterion(ServerPlayer p_136409_, AdvancementHolder p_299512_, String p_136411_) {
-                return p_136409_.getAdvancements().revoke(p_299512_, p_136411_);
+            protected boolean performCriterion(final ServerPlayer player, final AdvancementHolder advancement, final String criterion) {
+                return player.getAdvancements().revoke(advancement, criterion);
             }
         };
 
         private final String key;
 
-        Action(final String p_136372_) {
-            this.key = "commands.advancement." + p_136372_;
+        Action(final String key) {
+            this.key = "commands.advancement." + key;
         }
 
-        public int perform(ServerPlayer p_136380_, Iterable<AdvancementHolder> p_136381_, boolean p_391383_) {
-            int i = 0;
-            if (!p_391383_) {
-                p_136380_.getAdvancements().flushDirty(p_136380_, true);
+        public int perform(final ServerPlayer player, final Iterable<AdvancementHolder> advancements, final boolean showAdvancements) {
+            int count = 0;
+            if (!showAdvancements) {
+                player.getAdvancements().flushDirty(player, true);
             }
 
-            for (AdvancementHolder advancementholder : p_136381_) {
-                if (this.perform(p_136380_, advancementholder)) {
-                    i++;
+            for (AdvancementHolder advancement : advancements) {
+                if (this.perform(player, advancement)) {
+                    count++;
                 }
             }
 
-            if (!p_391383_) {
-                p_136380_.getAdvancements().flushDirty(p_136380_, false);
+            if (!showAdvancements) {
+                player.getAdvancements().flushDirty(player, false);
             }
 
-            return i;
+            return count;
         }
 
-        protected abstract boolean perform(ServerPlayer p_136384_, AdvancementHolder p_298402_);
+        protected abstract boolean perform(ServerPlayer player, AdvancementHolder advancement);
 
-        protected abstract boolean performCriterion(ServerPlayer p_136382_, AdvancementHolder p_300251_, String p_298964_);
+        protected abstract boolean performCriterion(ServerPlayer player, AdvancementHolder advancement, String criterion);
 
         protected String getKey() {
             return this.key;
         }
     }
 
-    static enum Mode {
+    private enum Mode {
         ONLY(false, false),
         THROUGH(true, true),
         FROM(false, true),
         UNTIL(true, false),
         EVERYTHING(true, true);
 
-        final boolean parents;
-        final boolean children;
+        private final boolean parents;
+        private final boolean children;
 
-        private Mode(final boolean p_136424_, final boolean p_136425_) {
-            this.parents = p_136424_;
-            this.children = p_136425_;
+        Mode(final boolean parents, final boolean children) {
+            this.parents = parents;
+            this.children = children;
         }
     }
 }

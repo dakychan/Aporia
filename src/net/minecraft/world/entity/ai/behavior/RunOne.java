@@ -10,11 +10,13 @@ import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
 
 public class RunOne<E extends LivingEntity> extends GateBehavior<E> {
-    public RunOne(List<Pair<? extends BehaviorControl<? super E>, Integer>> p_23832_) {
-        this(ImmutableMap.of(), p_23832_);
+    public RunOne(final List<Pair<? extends BehaviorControl<? super E>, Integer>> weightedBehaviors) {
+        this(ImmutableMap.of(), weightedBehaviors);
     }
 
-    public RunOne(Map<MemoryModuleType<?>, MemoryStatus> p_23834_, List<Pair<? extends BehaviorControl<? super E>, Integer>> p_23835_) {
-        super(p_23834_, ImmutableSet.of(), GateBehavior.OrderPolicy.SHUFFLED, GateBehavior.RunningPolicy.RUN_ONE, p_23835_);
+    public RunOne(
+        final Map<MemoryModuleType<?>, MemoryStatus> entryCondition, final List<Pair<? extends BehaviorControl<? super E>, Integer>> weightedBehaviors
+    ) {
+        super(entryCondition, ImmutableSet.of(), GateBehavior.OrderPolicy.SHUFFLED, GateBehavior.RunningPolicy.RUN_ONE, weightedBehaviors);
     }
 }

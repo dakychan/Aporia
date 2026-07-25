@@ -74,48 +74,58 @@ public class ProcessorLists {
     public static final ResourceKey<StructureProcessorList> TRAIL_RUINS_TOWER_TOP_ARCHAEOLOGY = createKey("trail_ruins_tower_top_archaeology");
     public static final ResourceKey<StructureProcessorList> TRIAL_CHAMBERS_COPPER_BULB_DEGRADATION = createKey("trial_chambers_copper_bulb_degradation");
 
-    private static ResourceKey<StructureProcessorList> createKey(String p_256151_) {
-        return ResourceKey.create(Registries.PROCESSOR_LIST, Identifier.withDefaultNamespace(p_256151_));
+    private static ResourceKey<StructureProcessorList> createKey(final String name) {
+        return ResourceKey.create(Registries.PROCESSOR_LIST, Identifier.withDefaultNamespace(name));
     }
 
     private static void register(
-        BootstrapContext<StructureProcessorList> p_332799_, ResourceKey<StructureProcessorList> p_256192_, List<StructureProcessor> p_255805_
+        final BootstrapContext<StructureProcessorList> context, final ResourceKey<StructureProcessorList> id, final List<StructureProcessor> processors
     ) {
-        p_332799_.register(p_256192_, new StructureProcessorList(p_255805_));
+        context.register(id, new StructureProcessorList(processors));
     }
 
-    public static void bootstrap(BootstrapContext<StructureProcessorList> p_333601_) {
-        HolderGetter<Block> holdergetter = p_333601_.lookup(Registries.BLOCK);
-        ProcessorRule processorrule = new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 0.01F), AlwaysTrueTest.INSTANCE, Blocks.GILDED_BLACKSTONE.defaultBlockState());
-        ProcessorRule processorrule1 = new ProcessorRule(new RandomBlockMatchTest(Blocks.GILDED_BLACKSTONE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.BLACKSTONE.defaultBlockState());
-        register(p_333601_, EMPTY, ImmutableList.of());
+    public static void bootstrap(final BootstrapContext<StructureProcessorList> context) {
+        HolderGetter<Block> blocks = context.lookup(Registries.BLOCK);
+        ProcessorRule ADD_GILDED_BLACKSTONE = new ProcessorRule(
+            new RandomBlockMatchTest(Blocks.BLACKSTONE, 0.01F), AlwaysTrueTest.INSTANCE, Blocks.GILDED_BLACKSTONE.defaultBlockState()
+        );
+        ProcessorRule REMOVE_GILDED_BLACKSTONE = new ProcessorRule(
+            new RandomBlockMatchTest(Blocks.GILDED_BLACKSTONE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.BLACKSTONE.defaultBlockState()
+        );
+        register(context, EMPTY, ImmutableList.of());
         register(
-            p_333601_,
+            context,
             ZOMBIE_PLAINS,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.8F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.8F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()
+                        ),
                         new ProcessorRule(new TagMatchTest(BlockTags.DOORS), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new BlockMatchTest(Blocks.TORCH), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new BlockMatchTest(Blocks.WALL_TORCH), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.07F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.MOSSY_COBBLESTONE, 0.07F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.WHITE_TERRACOTTA, 0.07F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DYED_TERRACOTTA.white(), 0.07F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.OAK_LOG, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.OAK_PLANKS, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.OAK_STAIRS, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.STRIPPED_OAK_LOG, 0.02F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.GLASS_PANE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(
-                            new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)),
+                            new BlockStateMatchTest(
+                                Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            ),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
                         ),
                         new ProcessorRule(
                             new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
                         ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CARROTS.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.POTATOES.defaultBlockState()),
@@ -125,7 +135,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             ZOMBIE_SAVANNA,
             ImmutableList.of(
                 new RuleProcessor(
@@ -137,19 +147,27 @@ public class ProcessorLists {
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.ACACIA_STAIRS, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.ACACIA_LOG, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.ACACIA_WOOD, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.ORANGE_TERRACOTTA, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.YELLOW_TERRACOTTA, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.RED_TERRACOTTA, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DYED_TERRACOTTA.orange(), 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DYED_TERRACOTTA.yellow(), 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DYED_TERRACOTTA.red(), 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.GLASS_PANE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(
-                            new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)),
+                            new BlockStateMatchTest(
+                                Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            ),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
                         ),
                         new ProcessorRule(
                             new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
                         ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MELON_STEM.defaultBlockState())
                     )
@@ -157,7 +175,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             ZOMBIE_SNOWY,
             ImmutableList.of(
                 new RuleProcessor(
@@ -168,18 +186,24 @@ public class ProcessorLists {
                         new ProcessorRule(new BlockMatchTest(Blocks.LANTERN), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SPRUCE_PLANKS, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SPRUCE_SLAB, 0.4F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.STRIPPED_SPRUCE_LOG, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.STRIPPED_SPRUCE_WOOD, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.STRIPPED_SPRUCE_LOG, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.STRIPPED_SPRUCE_WOOD, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.GLASS_PANE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(
-                            new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)),
+                            new BlockStateMatchTest(
+                                Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            ),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
                         ),
                         new ProcessorRule(
                             new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
                         ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.CARROTS.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.8F), AlwaysTrueTest.INSTANCE, Blocks.POTATOES.defaultBlockState())
@@ -188,30 +212,36 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             ZOMBIE_TAIGA,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.8F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.8F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()
+                        ),
                         new ProcessorRule(new TagMatchTest(BlockTags.DOORS), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new BlockMatchTest(Blocks.TORCH), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new BlockMatchTest(Blocks.WALL_TORCH), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(
-                            new BlockMatchTest(Blocks.CAMPFIRE), AlwaysTrueTest.INSTANCE, Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false)
+                            new BlockMatchTest(Blocks.CAMPFIRE),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CAMPFIRE.defaultBlockState().setValue(CampfireBlock.LIT, false)
                         ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SPRUCE_LOG, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.GLASS_PANE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(
-                            new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)),
+                            new BlockStateMatchTest(
+                                Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            ),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.NORTH, true).setValue(IronBarsBlock.SOUTH, true)
                         ),
                         new ProcessorRule(
                             new BlockStateMatchTest(Blocks.GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.BROWN_STAINED_GLASS_PANE.defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
+                            Blocks.STAINED_GLASS_PANE.brown().defaultBlockState().setValue(IronBarsBlock.EAST, true).setValue(IronBarsBlock.WEST, true)
                         ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.PUMPKIN_STEM.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.POTATOES.defaultBlockState())
@@ -220,7 +250,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             ZOMBIE_DESERT,
             ImmutableList.of(
                 new RuleProcessor(
@@ -231,8 +261,12 @@ public class ProcessorLists {
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SMOOTH_SANDSTONE, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.CUT_SANDSTONE, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.TERRACOTTA, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.SMOOTH_SANDSTONE_STAIRS, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.SMOOTH_SANDSTONE_SLAB, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.SMOOTH_SANDSTONE_STAIRS, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.SMOOTH_SANDSTONE_SLAB, 0.08F), AlwaysTrueTest.INSTANCE, Blocks.COBWEB.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.BEETROOTS.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MELON_STEM.defaultBlockState())
                     )
@@ -240,34 +274,46 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             MOSSIFY_10_PERCENT,
             ImmutableList.of(
                 new RuleProcessor(
-                    ImmutableList.of(new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()))
+                    ImmutableList.of(
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()
+                        )
+                    )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             MOSSIFY_20_PERCENT,
             ImmutableList.of(
                 new RuleProcessor(
-                    ImmutableList.of(new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()))
+                    ImmutableList.of(
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.2F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()
+                        )
+                    )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             MOSSIFY_70_PERCENT,
             ImmutableList.of(
                 new RuleProcessor(
-                    ImmutableList.of(new ProcessorRule(new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.7F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()))
+                    ImmutableList.of(
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.COBBLESTONE, 0.7F), AlwaysTrueTest.INSTANCE, Blocks.MOSSY_COBBLESTONE.defaultBlockState()
+                        )
+                    )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             STREET_PLAINS,
             ImmutableList.of(
                 new RuleProcessor(
@@ -281,7 +327,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             STREET_SAVANNA,
             ImmutableList.of(
                 new RuleProcessor(
@@ -295,7 +341,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             STREET_SNOWY_OR_TAIGA,
             ImmutableList.of(
                 new RuleProcessor(
@@ -310,7 +356,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             FARM_PLAINS,
             ImmutableList.of(
                 new RuleProcessor(
@@ -323,16 +369,18 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             FARM_SAVANNA,
             ImmutableList.of(
                 new RuleProcessor(
-                    ImmutableList.of(new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MELON_STEM.defaultBlockState()))
+                    ImmutableList.of(
+                        new ProcessorRule(new RandomBlockMatchTest(Blocks.WHEAT, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.MELON_STEM.defaultBlockState())
+                    )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             FARM_SNOWY,
             ImmutableList.of(
                 new RuleProcessor(
@@ -344,7 +392,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             FARM_TAIGA,
             ImmutableList.of(
                 new RuleProcessor(
@@ -356,7 +404,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             FARM_DESERT,
             ImmutableList.of(
                 new RuleProcessor(
@@ -367,240 +415,350 @@ public class ProcessorLists {
                 )
             )
         );
-        register(p_333601_, OUTPOST_ROT, ImmutableList.of(new BlockRotProcessor(0.05F)));
+        register(context, OUTPOST_ROT, ImmutableList.of(new BlockRotProcessor(0.05F)));
         register(
-            p_333601_,
+            context,
             BOTTOM_RAMPART,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.MAGMA_BLOCK, 0.75F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS, 0.15F), AlwaysTrueTest.INSTANCE, Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.MAGMA_BLOCK, 0.75F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS, 0.15F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             TREASURE_ROOMS,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.35F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.CHISELED_POLISHED_BLACKSTONE, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.35F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.CHISELED_POLISHED_BLACKSTONE, 0.1F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             HOUSING,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             SIDE_WALL_DEGRADATION,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.CHISELED_POLISHED_BLACKSTONE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.CHISELED_POLISHED_BLACKSTONE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.1F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             STABLE_DEGRADATION,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.1F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.1F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             BASTION_GENERIC_DEGRADATION,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             RAMPART_DEGRADATION,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.4F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 0.01F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.4F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.BLACKSTONE, 0.01F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             ENTRANCE_REPLACEMENT,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.CHISELED_POLISHED_BLACKSTONE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.6F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        processorrule1,
-                        processorrule
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.CHISELED_POLISHED_BLACKSTONE, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.6F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE,
+                        ADD_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             BRIDGE,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.BLACKSTONE, 1.0E-4F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState())
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             ROOF,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.15F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.BLACKSTONE.defaultBlockState())
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.15F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.BLACKSTONE.defaultBlockState()
+                        )
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             HIGH_WALL,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.01F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.5F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.BLACKSTONE.defaultBlockState()),
-                        processorrule1
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.01F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.5F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.POLISHED_BLACKSTONE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.BLACKSTONE.defaultBlockState()
+                        ),
+                        REMOVE_GILDED_BLACKSTONE
                     )
                 )
             )
         );
         register(
-            p_333601_,
+            context,
             HIGH_RAMPART,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.GOLD_BLOCK, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_POLISHED_BLACKSTONE_BRICKS.defaultBlockState()
+                        ),
                         new ProcessorRule(
                             AlwaysTrueTest.INSTANCE,
                             AlwaysTrueTest.INSTANCE,
                             new AxisAlignedLinearPosTest(0.0F, 0.05F, 0, 100, Direction.Axis.Y),
                             Blocks.AIR.defaultBlockState()
                         ),
-                        processorrule1
+                        REMOVE_GILDED_BLACKSTONE
                     )
                 )
             )
         );
-        register(p_333601_, FOSSIL_ROT, ImmutableList.of(new BlockRotProcessor(0.9F), new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)));
-        register(p_333601_, FOSSIL_COAL, ImmutableList.of(new BlockRotProcessor(0.1F), new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)));
         register(
-            p_333601_,
+            context,
+            FOSSIL_ROT,
+            ImmutableList.of(new BlockRotProcessor(0.9F), new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE)))
+        );
+        register(
+            context,
+            FOSSIL_COAL,
+            ImmutableList.of(new BlockRotProcessor(0.1F), new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE)))
+        );
+        register(
+            context,
             FOSSIL_DIAMONDS,
             ImmutableList.of(
                 new BlockRotProcessor(0.1F),
                 new RuleProcessor(
-                    ImmutableList.of(new ProcessorRule(new BlockMatchTest(Blocks.COAL_ORE), AlwaysTrueTest.INSTANCE, Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState()))
+                    ImmutableList.of(
+                        new ProcessorRule(new BlockMatchTest(Blocks.COAL_ORE), AlwaysTrueTest.INSTANCE, Blocks.DEEPSLATE_DIAMOND_ORE.defaultBlockState())
+                    )
                 ),
-                new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)
+                new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE))
             )
         );
         register(
-            p_333601_,
+            context,
             ANCIENT_CITY_START_DEGRADATION,
             ImmutableList.of(
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_TILES, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_TILES.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DEEPSLATE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DEEPSLATE_TILES, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_TILES.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SOUL_LANTERN, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState())
                     )
                 ),
-                new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)
+                new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE))
             )
         );
         register(
-            p_333601_,
+            context,
             ANCIENT_CITY_GENERIC_DEGRADATION,
             ImmutableList.of(
-                new BlockRotProcessor(holdergetter.getOrThrow(BlockTags.ANCIENT_CITY_REPLACEABLE), 0.95F),
+                new BlockRotProcessor(blocks.getOrThrow(BlockTags.ANCIENT_CITY_REPLACEABLE), 0.95F),
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_TILES, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_TILES.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DEEPSLATE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DEEPSLATE_TILES, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_TILES.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SOUL_LANTERN, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState())
                     )
                 ),
-                new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)
+                new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE))
             )
         );
         register(
-            p_333601_,
+            context,
             ANCIENT_CITY_WALLS_DEGRADATION,
             ImmutableList.of(
-                new BlockRotProcessor(holdergetter.getOrThrow(BlockTags.ANCIENT_CITY_REPLACEABLE), 0.95F),
+                new BlockRotProcessor(blocks.getOrThrow(BlockTags.ANCIENT_CITY_REPLACEABLE), 0.95F),
                 new RuleProcessor(
                     ImmutableList.of(
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_BRICKS, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState()),
-                        new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_TILES, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_TILES.defaultBlockState()),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DEEPSLATE_BRICKS, 0.3F),
+                            AlwaysTrueTest.INSTANCE,
+                            Blocks.CRACKED_DEEPSLATE_BRICKS.defaultBlockState()
+                        ),
+                        new ProcessorRule(
+                            new RandomBlockMatchTest(Blocks.DEEPSLATE_TILES, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.CRACKED_DEEPSLATE_TILES.defaultBlockState()
+                        ),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.DEEPSLATE_TILE_SLAB, 0.3F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState()),
                         new ProcessorRule(new RandomBlockMatchTest(Blocks.SOUL_LANTERN, 0.05F), AlwaysTrueTest.INSTANCE, Blocks.AIR.defaultBlockState())
                     )
                 ),
-                new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)
+                new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE))
             )
         );
         register(
-            p_333601_,
+            context,
             TRAIL_RUINS_HOUSES_ARCHAEOLOGY,
             List.of(
                 new RuleProcessor(
@@ -615,7 +773,7 @@ public class ProcessorLists {
             )
         );
         register(
-            p_333601_,
+            context,
             TRAIL_RUINS_ROADS_ARCHAEOLOGY,
             List.of(
                 new RuleProcessor(
@@ -628,36 +786,36 @@ public class ProcessorLists {
                 trailsArchyLootProcessor(BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_COMMON, 2)
             )
         );
-        register(p_333601_, TRAIL_RUINS_TOWER_TOP_ARCHAEOLOGY, List.of(trailsArchyLootProcessor(BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_COMMON, 2)));
+        register(context, TRAIL_RUINS_TOWER_TOP_ARCHAEOLOGY, List.of(trailsArchyLootProcessor(BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_COMMON, 2)));
         register(
-            p_333601_,
+            context,
             TRIAL_CHAMBERS_COPPER_BULB_DEGRADATION,
             List.of(
                 new RuleProcessor(
                     List.of(
                         new ProcessorRule(
-                            new RandomBlockMatchTest(Blocks.WAXED_COPPER_BULB, 0.1F),
+                            new RandomBlockMatchTest(Blocks.COPPER_BULB.waxed().unaffected(), 0.1F),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.WAXED_OXIDIZED_COPPER_BULB.defaultBlockState().setValue(CopperBulbBlock.LIT, true)
+                            Blocks.COPPER_BULB.waxed().oxidized().defaultBlockState().setValue(CopperBulbBlock.LIT, true)
                         ),
                         new ProcessorRule(
-                            new RandomBlockMatchTest(Blocks.WAXED_COPPER_BULB, 0.33333334F),
+                            new RandomBlockMatchTest(Blocks.COPPER_BULB.waxed().unaffected(), 0.33333334F),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.WAXED_WEATHERED_COPPER_BULB.defaultBlockState().setValue(CopperBulbBlock.LIT, true)
+                            Blocks.COPPER_BULB.waxed().weathered().defaultBlockState().setValue(CopperBulbBlock.LIT, true)
                         ),
                         new ProcessorRule(
-                            new RandomBlockMatchTest(Blocks.WAXED_COPPER_BULB, 0.5F),
+                            new RandomBlockMatchTest(Blocks.COPPER_BULB.waxed().unaffected(), 0.5F),
                             AlwaysTrueTest.INSTANCE,
-                            Blocks.WAXED_EXPOSED_COPPER_BULB.defaultBlockState().setValue(CopperBulbBlock.LIT, true)
+                            Blocks.COPPER_BULB.waxed().exposed().defaultBlockState().setValue(CopperBulbBlock.LIT, true)
                         )
                     )
                 ),
-                new ProtectedBlockProcessor(BlockTags.FEATURES_CANNOT_REPLACE)
+                new ProtectedBlockProcessor(blocks.getOrThrow(BlockTags.FEATURES_CANNOT_REPLACE))
             )
         );
     }
 
-    private static CappedProcessor trailsArchyLootProcessor(ResourceKey<LootTable> p_332708_, int p_281868_) {
+    private static CappedProcessor trailsArchyLootProcessor(final ResourceKey<LootTable> lootTable, final int count) {
         return new CappedProcessor(
             new RuleProcessor(
                 List.of(
@@ -666,11 +824,11 @@ public class ProcessorLists {
                         AlwaysTrueTest.INSTANCE,
                         PosAlwaysTrueTest.INSTANCE,
                         Blocks.SUSPICIOUS_GRAVEL.defaultBlockState(),
-                        new AppendLoot(p_332708_)
+                        new AppendLoot(lootTable)
                     )
                 )
             ),
-            ConstantInt.of(p_281868_)
+            ConstantInt.of(count)
         );
     }
 }

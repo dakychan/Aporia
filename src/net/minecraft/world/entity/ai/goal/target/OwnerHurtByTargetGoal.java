@@ -11,23 +11,25 @@ public class OwnerHurtByTargetGoal extends TargetGoal {
     private LivingEntity ownerLastHurtBy;
     private int timestamp;
 
-    public OwnerHurtByTargetGoal(TamableAnimal p_26107_) {
-        super(p_26107_, false);
-        this.tameAnimal = p_26107_;
+    public OwnerHurtByTargetGoal(final TamableAnimal tameAnimal) {
+        super(tameAnimal, false);
+        this.tameAnimal = tameAnimal;
         this.setFlags(EnumSet.of(Goal.Flag.TARGET));
     }
 
     @Override
     public boolean canUse() {
         if (this.tameAnimal.isTame() && !this.tameAnimal.isOrderedToSit()) {
-            LivingEntity livingentity = this.tameAnimal.getOwner();
-            if (livingentity == null) {
+            LivingEntity owner = this.tameAnimal.getOwner();
+            if (owner == null) {
                 return false;
-            } else {
-                this.ownerLastHurtBy = livingentity.getLastHurtByMob();
-                int i = livingentity.getLastHurtByMobTimestamp();
-                return i != this.timestamp && this.canAttack(this.ownerLastHurtBy, TargetingConditions.DEFAULT) && this.tameAnimal.wantsToAttack(this.ownerLastHurtBy, livingentity);
             }
+
+            this.ownerLastHurtBy = owner.getLastHurtByMob();
+            int ts = owner.getLastHurtByMobTimestamp();
+            return ts != this.timestamp
+                && this.canAttack(this.ownerLastHurtBy, TargetingConditions.DEFAULT)
+                && this.tameAnimal.wantsToAttack(this.ownerLastHurtBy, owner);
         } else {
             return false;
         }
@@ -36,9 +38,9 @@ public class OwnerHurtByTargetGoal extends TargetGoal {
     @Override
     public void start() {
         this.mob.setTarget(this.ownerLastHurtBy);
-        LivingEntity livingentity = this.tameAnimal.getOwner();
-        if (livingentity != null) {
-            this.timestamp = livingentity.getLastHurtByMobTimestamp();
+        LivingEntity owner = this.tameAnimal.getOwner();
+        if (owner != null) {
+            this.timestamp = owner.getLastHurtByMobTimestamp();
         }
 
         super.start();

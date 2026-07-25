@@ -8,8 +8,8 @@ import net.minecraft.world.entity.ai.util.GoalUtils;
 public class RestrictSunGoal extends Goal {
     private final PathfinderMob mob;
 
-    public RestrictSunGoal(PathfinderMob p_25861_) {
-        this.mob = p_25861_;
+    public RestrictSunGoal(final PathfinderMob mob) {
+        this.mob = mob;
     }
 
     @Override
@@ -19,15 +19,15 @@ public class RestrictSunGoal extends Goal {
 
     @Override
     public void start() {
-        if (this.mob.getNavigation() instanceof GroundPathNavigation groundpathnavigation) {
-            groundpathnavigation.setAvoidSun(true);
+        if (this.mob.getNavigation() instanceof GroundPathNavigation pathNavigation) {
+            pathNavigation.setAvoidSun(true);
         }
     }
 
     @Override
     public void stop() {
-        if (GoalUtils.hasGroundPathNavigation(this.mob) && this.mob.getNavigation() instanceof GroundPathNavigation groundpathnavigation) {
-            groundpathnavigation.setAvoidSun(false);
+        if (GoalUtils.hasGroundPathNavigation(this.mob) && this.mob.getNavigation() instanceof GroundPathNavigation pathNavigation) {
+            pathNavigation.setAvoidSun(false);
         }
     }
 }

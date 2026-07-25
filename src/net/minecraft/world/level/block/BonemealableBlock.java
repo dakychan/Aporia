@@ -11,35 +11,37 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.state.BlockState;
 
 public interface BonemealableBlock {
-    boolean isValidBonemealTarget(LevelReader p_256559_, BlockPos p_50898_, BlockState p_50899_);
+    boolean isValidBonemealTarget(LevelReader level, BlockPos pos, BlockState state);
 
-    boolean isBonemealSuccess(Level p_220878_, RandomSource p_220879_, BlockPos p_220880_, BlockState p_220881_);
+    boolean isBonemealSuccess(Level level, RandomSource random, BlockPos pos, BlockState state);
 
-    void performBonemeal(ServerLevel p_220874_, RandomSource p_220875_, BlockPos p_220876_, BlockState p_220877_);
+    void performBonemeal(ServerLevel level, RandomSource random, BlockPos pos, BlockState state);
 
-    static boolean hasSpreadableNeighbourPos(LevelReader p_394969_, BlockPos p_392373_, BlockState p_397330_) {
-        return getSpreadableNeighbourPos(Direction.Plane.HORIZONTAL.stream().toList(), p_394969_, p_392373_, p_397330_).isPresent();
+    static boolean hasSpreadableNeighbourPos(final LevelReader level, final BlockPos pos, final BlockState blockToPlace) {
+        return getSpreadableNeighbourPos(Direction.Plane.HORIZONTAL.stream().toList(), level, pos, blockToPlace).isPresent();
     }
 
-    static Optional<BlockPos> findSpreadableNeighbourPos(Level p_392087_, BlockPos p_394114_, BlockState p_393728_) {
-        return getSpreadableNeighbourPos(Direction.Plane.HORIZONTAL.shuffledCopy(p_392087_.random), p_392087_, p_394114_, p_393728_);
+    static Optional<BlockPos> findSpreadableNeighbourPos(final Level level, final BlockPos pos, final BlockState blockToPlace) {
+        return getSpreadableNeighbourPos(Direction.Plane.HORIZONTAL.shuffledCopy(level.getRandom()), level, pos, blockToPlace);
     }
 
-    private static Optional<BlockPos> getSpreadableNeighbourPos(List<Direction> p_395759_, LevelReader p_397008_, BlockPos p_391411_, BlockState p_394976_) {
-        for (Direction direction : p_395759_) {
-            BlockPos blockpos = p_391411_.relative(direction);
-            if (p_397008_.isEmptyBlock(blockpos) && p_394976_.canSurvive(p_397008_, blockpos)) {
-                return Optional.of(blockpos);
+    private static Optional<BlockPos> getSpreadableNeighbourPos(
+        final List<Direction> directions, final LevelReader level, final BlockPos pos, final BlockState blockToPlace
+    ) {
+        for (Direction direction : directions) {
+            BlockPos neighbourPos = pos.relative(direction);
+            if (level.isEmptyBlock(neighbourPos) && blockToPlace.canSurvive(level, neighbourPos)) {
+                return Optional.of(neighbourPos);
             }
         }
 
         return Optional.empty();
     }
 
-    default BlockPos getParticlePos(BlockPos p_335812_) {
+    default BlockPos getParticlePos(final BlockPos blockPos) {
         return switch (this.getType()) {
-            case NEIGHBOR_SPREADER -> p_335812_.above();
-            case GROWER -> p_335812_;
+            case NEIGHBOR_SPREADER -> blockPos.above();
+            case GROWER -> blockPos;
         };
     }
 
@@ -47,7 +49,7 @@ public interface BonemealableBlock {
         return BonemealableBlock.Type.GROWER;
     }
 
-    public static enum Type {
+    enum Type {
         NEIGHBOR_SPREADER,
         GROWER;
     }

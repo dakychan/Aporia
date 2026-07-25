@@ -8,19 +8,22 @@ import net.minecraft.client.renderer.entity.LivingEntityRenderer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Unit;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BeeStingerLayer<M extends PlayerModel> extends StuckInBodyLayer<M, Unit> {
     private static final Identifier BEE_STINGER_LOCATION = Identifier.withDefaultNamespace("textures/entity/bee/bee_stinger.png");
 
-    public BeeStingerLayer(LivingEntityRenderer<?, AvatarRenderState, M> p_116580_, EntityRendererProvider.Context p_367387_) {
-        super(p_116580_, new BeeStingerModel(p_367387_.bakeLayer(ModelLayers.BEE_STINGER)), Unit.INSTANCE, BEE_STINGER_LOCATION, StuckInBodyLayer.PlacementStyle.ON_SURFACE);
+    public BeeStingerLayer(final LivingEntityRenderer<?, AvatarRenderState, M> renderer, final EntityRendererProvider.Context context) {
+        super(
+            renderer,
+            new BeeStingerModel(context.bakeLayer(ModelLayers.BEE_STINGER)),
+            Unit.INSTANCE,
+            BEE_STINGER_LOCATION,
+            StuckInBodyLayer.PlacementStyle.ON_SURFACE
+        );
     }
 
     @Override
-    protected int numStuck(AvatarRenderState p_431024_) {
-        return p_431024_.stingerCount;
+    protected int numStuck(final AvatarRenderState state) {
+        return state.stingerCount;
     }
 }

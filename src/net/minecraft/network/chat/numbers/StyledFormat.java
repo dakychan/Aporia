@@ -30,8 +30,8 @@ public record StyledFormat(Style style) implements NumberFormat {
     public static final StyledFormat PLAYER_LIST_DEFAULT = new StyledFormat(Style.EMPTY.withColor(ChatFormatting.YELLOW));
 
     @Override
-    public MutableComponent format(int p_312267_) {
-        return Component.literal(Integer.toString(p_312267_)).withStyle(this.style);
+    public MutableComponent format(final int value) {
+        return Component.literal(Integer.toString(value)).withStyle(this.style);
     }
 
     @Override

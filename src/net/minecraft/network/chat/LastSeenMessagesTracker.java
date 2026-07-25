@@ -12,31 +12,31 @@ public class LastSeenMessagesTracker {
     private int offset;
     private @Nullable MessageSignature lastTrackedMessage;
 
-    public LastSeenMessagesTracker(int p_242388_) {
-        this.trackedMessages = new LastSeenTrackedEntry[p_242388_];
+    public LastSeenMessagesTracker(final int lastSeenCount) {
+        this.trackedMessages = new LastSeenTrackedEntry[lastSeenCount];
     }
 
-    public boolean addPending(MessageSignature p_248926_, boolean p_250312_) {
-        if (Objects.equals(p_248926_, this.lastTrackedMessage)) {
+    public boolean addPending(final MessageSignature message, final boolean wasShown) {
+        if (Objects.equals(message, this.lastTrackedMessage)) {
             return false;
-        } else {
-            this.lastTrackedMessage = p_248926_;
-            this.addEntry(p_250312_ ? new LastSeenTrackedEntry(p_248926_, true) : null);
-            return true;
         }
+
+        this.lastTrackedMessage = message;
+        this.addEntry(wasShown ? new LastSeenTrackedEntry(message, true) : null);
+        return true;
     }
 
-    private void addEntry(@Nullable LastSeenTrackedEntry p_250255_) {
-        int i = this.tail;
-        this.tail = (i + 1) % this.trackedMessages.length;
+    private void addEntry(final @Nullable LastSeenTrackedEntry entry) {
+        int index = this.tail;
+        this.tail = (index + 1) % this.trackedMessages.length;
         this.offset++;
-        this.trackedMessages[i] = p_250255_;
+        this.trackedMessages[index] = entry;
     }
 
-    public void ignorePending(MessageSignature p_251020_) {
+    public void ignorePending(final MessageSignature pendingMessage) {
         for (int i = 0; i < this.trackedMessages.length; i++) {
-            LastSeenTrackedEntry lastseentrackedentry = this.trackedMessages[i];
-            if (lastseentrackedentry != null && lastseentrackedentry.pending() && p_251020_.equals(lastseentrackedentry.signature())) {
+            LastSeenTrackedEntry entry = this.trackedMessages[i];
+            if (entry != null && entry.pending() && pendingMessage.equals(entry.signature())) {
                 this.trackedMessages[i] = null;
                 break;
             }
@@ -44,29 +44,29 @@ public class LastSeenMessagesTracker {
     }
 
     public int getAndClearOffset() {
-        int i = this.offset;
+        int originalOffset = this.offset;
         this.offset = 0;
-        return i;
+        return originalOffset;
     }
 
     public LastSeenMessagesTracker.Update generateAndApplyUpdate() {
-        int i = this.getAndClearOffset();
-        BitSet bitset = new BitSet(this.trackedMessages.length);
-        ObjectList<MessageSignature> objectlist = new ObjectArrayList<>(this.trackedMessages.length);
+        int offset = this.getAndClearOffset();
+        BitSet acknowledged = new BitSet(this.trackedMessages.length);
+        ObjectList<MessageSignature> lastSeenEntries = new ObjectArrayList<>(this.trackedMessages.length);
 
-        for (int j = 0; j < this.trackedMessages.length; j++) {
-            int k = (this.tail + j) % this.trackedMessages.length;
-            LastSeenTrackedEntry lastseentrackedentry = this.trackedMessages[k];
-            if (lastseentrackedentry != null) {
-                bitset.set(j, true);
-                objectlist.add(lastseentrackedentry.signature());
-                this.trackedMessages[k] = lastseentrackedentry.acknowledge();
+        for (int i = 0; i < this.trackedMessages.length; i++) {
+            int index = (this.tail + i) % this.trackedMessages.length;
+            LastSeenTrackedEntry message = this.trackedMessages[index];
+            if (message != null) {
+                acknowledged.set(i, true);
+                lastSeenEntries.add(message.signature());
+                this.trackedMessages[index] = message.acknowledge();
             }
         }
 
-        LastSeenMessages lastseenmessages = new LastSeenMessages(objectlist);
-        LastSeenMessages.Update lastseenmessages$update = new LastSeenMessages.Update(i, bitset, lastseenmessages.computeChecksum());
-        return new LastSeenMessagesTracker.Update(lastseenmessages, lastseenmessages$update);
+        LastSeenMessages lastSeen = new LastSeenMessages(lastSeenEntries);
+        LastSeenMessages.Update update = new LastSeenMessages.Update(offset, acknowledged, lastSeen.computeChecksum());
+        return new LastSeenMessagesTracker.Update(lastSeen, update);
     }
 
     public int offset() {

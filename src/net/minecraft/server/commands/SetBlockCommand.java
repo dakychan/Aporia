@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import java.util.function.Predicate;
@@ -21,20 +20,20 @@ import org.jspecify.annotations.Nullable;
 public class SetBlockCommand {
     private static final SimpleCommandExceptionType ERROR_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.setblock.failed"));
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_214731_, CommandBuildContext p_214732_) {
-        Predicate<BlockInWorld> predicate = p_180517_ -> p_180517_.getLevel().isEmptyBlock(p_180517_.getPos());
-        p_214731_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        Predicate<BlockInWorld> filter = b -> b.getLevel().isEmptyBlock(b.getPos());
+        dispatcher.register(
             Commands.literal("setblock")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
                     Commands.argument("pos", BlockPosArgument.blockPos())
                         .then(
-                            Commands.argument("block", BlockStateArgument.block(p_214732_))
+                            Commands.argument("block", BlockStateArgument.block(context))
                                 .executes(
-                                    p_390090_ -> setBlock(
-                                        p_390090_.getSource(),
-                                        BlockPosArgument.getLoadedBlockPos(p_390090_, "pos"),
-                                        BlockStateArgument.getBlock(p_390090_, "block"),
+                                    c -> setBlock(
+                                        c.getSource(),
+                                        BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                        BlockStateArgument.getBlock(c, "block"),
                                         SetBlockCommand.Mode.REPLACE,
                                         null,
                                         false
@@ -43,10 +42,10 @@ public class SetBlockCommand {
                                 .then(
                                     Commands.literal("destroy")
                                         .executes(
-                                            p_390093_ -> setBlock(
-                                                p_390093_.getSource(),
-                                                BlockPosArgument.getLoadedBlockPos(p_390093_, "pos"),
-                                                BlockStateArgument.getBlock(p_390093_, "block"),
+                                            c -> setBlock(
+                                                c.getSource(),
+                                                BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                                BlockStateArgument.getBlock(c, "block"),
                                                 SetBlockCommand.Mode.DESTROY,
                                                 null,
                                                 false
@@ -56,12 +55,12 @@ public class SetBlockCommand {
                                 .then(
                                     Commands.literal("keep")
                                         .executes(
-                                            p_390095_ -> setBlock(
-                                                p_390095_.getSource(),
-                                                BlockPosArgument.getLoadedBlockPos(p_390095_, "pos"),
-                                                BlockStateArgument.getBlock(p_390095_, "block"),
+                                            c -> setBlock(
+                                                c.getSource(),
+                                                BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                                BlockStateArgument.getBlock(c, "block"),
                                                 SetBlockCommand.Mode.REPLACE,
-                                                predicate,
+                                                filter,
                                                 false
                                             )
                                         )
@@ -69,10 +68,10 @@ public class SetBlockCommand {
                                 .then(
                                     Commands.literal("replace")
                                         .executes(
-                                            p_390092_ -> setBlock(
-                                                p_390092_.getSource(),
-                                                BlockPosArgument.getLoadedBlockPos(p_390092_, "pos"),
-                                                BlockStateArgument.getBlock(p_390092_, "block"),
+                                            c -> setBlock(
+                                                c.getSource(),
+                                                BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                                BlockStateArgument.getBlock(c, "block"),
                                                 SetBlockCommand.Mode.REPLACE,
                                                 null,
                                                 false
@@ -82,10 +81,10 @@ public class SetBlockCommand {
                                 .then(
                                     Commands.literal("strict")
                                         .executes(
-                                            p_390091_ -> setBlock(
-                                                p_390091_.getSource(),
-                                                BlockPosArgument.getLoadedBlockPos(p_390091_, "pos"),
-                                                BlockStateArgument.getBlock(p_390091_, "block"),
+                                            c -> setBlock(
+                                                c.getSource(),
+                                                BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                                BlockStateArgument.getBlock(c, "block"),
                                                 SetBlockCommand.Mode.REPLACE,
                                                 null,
                                                 true
@@ -98,44 +97,44 @@ public class SetBlockCommand {
     }
 
     private static int setBlock(
-        CommandSourceStack p_138608_,
-        BlockPos p_138609_,
-        BlockInput p_138610_,
-        SetBlockCommand.Mode p_138611_,
-        @Nullable Predicate<BlockInWorld> p_138612_,
-        boolean p_391792_
+        final CommandSourceStack source,
+        final BlockPos pos,
+        final BlockInput block,
+        final SetBlockCommand.Mode mode,
+        final @Nullable Predicate<BlockInWorld> predicate,
+        final boolean strict
     ) throws CommandSyntaxException {
-        ServerLevel serverlevel = p_138608_.getLevel();
-        if (serverlevel.isDebug()) {
+        ServerLevel level = source.getLevel();
+        if (level.isDebug()) {
             throw ERROR_FAILED.create();
-        } else if (p_138612_ != null && !p_138612_.test(new BlockInWorld(serverlevel, p_138609_, true))) {
-            throw ERROR_FAILED.create();
-        } else {
-            boolean flag;
-            if (p_138611_ == SetBlockCommand.Mode.DESTROY) {
-                serverlevel.destroyBlock(p_138609_, true);
-                flag = !p_138610_.getState().isAir() || !serverlevel.getBlockState(p_138609_).isAir();
-            } else {
-                flag = true;
-            }
-
-            BlockState blockstate = serverlevel.getBlockState(p_138609_);
-            if (flag && !p_138610_.place(serverlevel, p_138609_, 2 | (p_391792_ ? 816 : 256))) {
-                throw ERROR_FAILED.create();
-            } else {
-                if (!p_391792_) {
-                    serverlevel.updateNeighboursOnBlockSet(p_138609_, blockstate);
-                }
-
-                p_138608_.sendSuccess(
-                    () -> Component.translatable("commands.setblock.success", p_138609_.getX(), p_138609_.getY(), p_138609_.getZ()), true
-                );
-                return 1;
-            }
         }
+
+        if (predicate != null && !predicate.test(new BlockInWorld(level, pos, true))) {
+            throw ERROR_FAILED.create();
+        }
+
+        boolean placeNeeded;
+        if (mode == SetBlockCommand.Mode.DESTROY) {
+            level.destroyBlock(pos, true);
+            placeNeeded = !block.getState().isAir() || !level.getBlockState(pos).isAir();
+        } else {
+            placeNeeded = true;
+        }
+
+        BlockState oldState = level.getBlockState(pos);
+        if (placeNeeded && !block.place(level, pos, 2 | (strict ? 816 : 256))) {
+            throw ERROR_FAILED.create();
+        }
+
+        if (!strict) {
+            level.updateNeighboursOnBlockSet(pos, oldState);
+        }
+
+        source.sendSuccess(() -> Component.translatable("commands.setblock.success", pos.getX(), pos.getY(), pos.getZ()), true);
+        return 1;
     }
 
-    public static enum Mode {
+    public enum Mode {
         REPLACE,
         DESTROY;
     }

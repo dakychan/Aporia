@@ -13,35 +13,35 @@ public final class Profiler {
     private Profiler() {
     }
 
-    public static Profiler.Scope use(ProfilerFiller p_361779_) {
-        startUsing(p_361779_);
+    public static Profiler.Scope use(final ProfilerFiller filler) {
+        startUsing(filler);
         return Profiler::stopUsing;
     }
 
-    private static void startUsing(ProfilerFiller p_367831_) {
+    private static void startUsing(final ProfilerFiller filler) {
         if (ACTIVE.get() != null) {
             throw new IllegalStateException("Profiler is already active");
-        } else {
-            ProfilerFiller profilerfiller = decorateFiller(p_367831_);
-            ACTIVE.set(profilerfiller);
-            ACTIVE_COUNT.incrementAndGet();
-            profilerfiller.startTick();
         }
+
+        ProfilerFiller active = decorateFiller(filler);
+        ACTIVE.set(active);
+        ACTIVE_COUNT.incrementAndGet();
+        active.startTick();
     }
 
     private static void stopUsing() {
-        ProfilerFiller profilerfiller = ACTIVE.get();
-        if (profilerfiller == null) {
+        ProfilerFiller active = ACTIVE.get();
+        if (active == null) {
             throw new IllegalStateException("Profiler was not active");
-        } else {
-            ACTIVE.remove();
-            ACTIVE_COUNT.decrementAndGet();
-            profilerfiller.endTick();
         }
+
+        ACTIVE.remove();
+        ACTIVE_COUNT.decrementAndGet();
+        active.endTick();
     }
 
-    private static ProfilerFiller decorateFiller(ProfilerFiller p_364301_) {
-        return ProfilerFiller.combine(getDefaultFiller(), p_364301_);
+    private static ProfilerFiller decorateFiller(final ProfilerFiller filler) {
+        return ProfilerFiller.combine(getDefaultFiller(), filler);
     }
 
     public static ProfilerFiller get() {
@@ -49,7 +49,7 @@ public final class Profiler {
     }
 
     private static ProfilerFiller getDefaultFiller() {
-        return (ProfilerFiller)(TracyClient.isAvailable() ? TRACY_FILLER.get() : InactiveProfiler.INSTANCE);
+        return TracyClient.isAvailable() ? TRACY_FILLER.get() : InactiveProfiler.INSTANCE;
     }
 
     public interface Scope extends AutoCloseable {

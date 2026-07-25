@@ -15,29 +15,29 @@ public class ServerDebugSubscribers {
     private final MinecraftServer server;
     private final Map<DebugSubscription<?>, List<ServerPlayer>> enabledSubscriptions = new HashMap<>();
 
-    public ServerDebugSubscribers(MinecraftServer p_428570_) {
-        this.server = p_428570_;
+    public ServerDebugSubscribers(final MinecraftServer server) {
+        this.server = server;
     }
 
-    private List<ServerPlayer> getSubscribersFor(DebugSubscription<?> p_431226_) {
-        return this.enabledSubscriptions.getOrDefault(p_431226_, List.of());
+    private List<ServerPlayer> getSubscribersFor(final DebugSubscription<?> subscription) {
+        return this.enabledSubscriptions.getOrDefault(subscription, List.of());
     }
 
     public void tick() {
         this.enabledSubscriptions.values().forEach(List::clear);
 
-        for (ServerPlayer serverplayer : this.server.getPlayerList().getPlayers()) {
-            for (DebugSubscription<?> debugsubscription : serverplayer.debugSubscriptions()) {
-                this.enabledSubscriptions.computeIfAbsent(debugsubscription, p_427534_ -> new ArrayList<>()).add(serverplayer);
+        for (ServerPlayer player : this.server.getPlayerList().getPlayers()) {
+            for (DebugSubscription<?> subscription : player.debugSubscriptions()) {
+                this.enabledSubscriptions.computeIfAbsent(subscription, s -> new ArrayList<>()).add(player);
             }
         }
 
         this.enabledSubscriptions.values().removeIf(List::isEmpty);
     }
 
-    public void broadcastToAll(DebugSubscription<?> p_425191_, Packet<?> p_427581_) {
-        for (ServerPlayer serverplayer : this.getSubscribersFor(p_425191_)) {
-            serverplayer.connection.send(p_427581_);
+    public void broadcastToAll(final DebugSubscription<?> subscription, final Packet<?> packet) {
+        for (ServerPlayer player : this.getSubscribersFor(subscription)) {
+            player.connection.send(packet);
         }
     }
 
@@ -45,12 +45,12 @@ public class ServerDebugSubscribers {
         return Set.copyOf(this.enabledSubscriptions.keySet());
     }
 
-    public boolean hasAnySubscriberFor(DebugSubscription<?> p_429963_) {
-        return !this.getSubscribersFor(p_429963_).isEmpty();
+    public boolean hasAnySubscriberFor(final DebugSubscription<?> subscription) {
+        return !this.getSubscribersFor(subscription).isEmpty();
     }
 
-    public boolean hasRequiredPermissions(ServerPlayer p_431332_) {
-        NameAndId nameandid = p_431332_.nameAndId();
-        return SharedConstants.IS_RUNNING_IN_IDE && this.server.isSingleplayerOwner(nameandid) ? true : this.server.getPlayerList().isOp(nameandid);
+    public boolean hasRequiredPermissions(final ServerPlayer player) {
+        NameAndId nameAndId = player.nameAndId();
+        return SharedConstants.IS_RUNNING_IN_IDE && this.server.isSingleplayerOwner(nameAndId) ? true : this.server.getPlayerList().isOp(nameAndId);
     }
 }

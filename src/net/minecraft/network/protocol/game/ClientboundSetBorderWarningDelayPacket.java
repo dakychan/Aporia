@@ -12,16 +12,16 @@ public class ClientboundSetBorderWarningDelayPacket implements Packet<ClientGame
     );
     private final int warningDelay;
 
-    public ClientboundSetBorderWarningDelayPacket(WorldBorder p_179255_) {
-        this.warningDelay = p_179255_.getWarningTime();
+    public ClientboundSetBorderWarningDelayPacket(final WorldBorder border) {
+        this.warningDelay = border.getWarningTime();
     }
 
-    private ClientboundSetBorderWarningDelayPacket(FriendlyByteBuf p_179257_) {
-        this.warningDelay = p_179257_.readVarInt();
+    private ClientboundSetBorderWarningDelayPacket(final FriendlyByteBuf input) {
+        this.warningDelay = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_179259_) {
-        p_179259_.writeVarInt(this.warningDelay);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.warningDelay);
     }
 
     @Override
@@ -29,8 +29,8 @@ public class ClientboundSetBorderWarningDelayPacket implements Packet<ClientGame
         return GamePacketTypes.CLIENTBOUND_SET_BORDER_WARNING_DELAY;
     }
 
-    public void handle(ClientGamePacketListener p_179263_) {
-        p_179263_.handleSetBorderWarningDelay(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetBorderWarningDelay(this);
     }
 
     public int getWarningDelay() {

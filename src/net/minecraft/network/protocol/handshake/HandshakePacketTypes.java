@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 public class HandshakePacketTypes {
     public static final PacketType<ClientIntentionPacket> CLIENT_INTENTION = createServerbound("intention");
 
-    private static <T extends Packet<ServerHandshakePacketListener>> PacketType<T> createServerbound(String p_329395_) {
-        return new PacketType<>(PacketFlow.SERVERBOUND, Identifier.withDefaultNamespace(p_329395_));
+    private static <T extends Packet<ServerHandshakePacketListener>> PacketType<T> createServerbound(final String id) {
+        return new PacketType<>(PacketFlow.SERVERBOUND, Identifier.withDefaultNamespace(id));
     }
 }

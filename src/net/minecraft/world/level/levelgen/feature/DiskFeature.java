@@ -8,56 +8,63 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.DiskConfiguration;
 
 public class DiskFeature extends Feature<DiskConfiguration> {
-    public DiskFeature(Codec<DiskConfiguration> p_224992_) {
-        super(p_224992_);
+    public DiskFeature(final Codec<DiskConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<DiskConfiguration> p_224994_) {
-        DiskConfiguration diskconfiguration = p_224994_.config();
-        BlockPos blockpos = p_224994_.origin();
-        WorldGenLevel worldgenlevel = p_224994_.level();
-        RandomSource randomsource = p_224994_.random();
-        boolean flag = false;
-        int i = blockpos.getY();
-        int j = i + diskconfiguration.halfHeight();
-        int k = i - diskconfiguration.halfHeight() - 1;
-        int l = diskconfiguration.radius().sample(randomsource);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public boolean place(final FeaturePlaceContext<DiskConfiguration> context) {
+        DiskConfiguration config = context.config();
+        BlockPos origin = context.origin();
+        WorldGenLevel level = context.level();
+        RandomSource random = context.random();
+        boolean placedAny = false;
+        int originY = origin.getY();
+        int top = originY + config.halfHeight();
+        int bottom = originY - config.halfHeight() - 1;
+        int r = config.radius().sample(random);
+        BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
 
-        for (BlockPos blockpos1 : BlockPos.betweenClosed(blockpos.offset(-l, 0, -l), blockpos.offset(l, 0, l))) {
-            int i1 = blockpos1.getX() - blockpos.getX();
-            int j1 = blockpos1.getZ() - blockpos.getZ();
-            if (i1 * i1 + j1 * j1 <= l * l) {
-                flag |= this.placeColumn(diskconfiguration, worldgenlevel, randomsource, j, k, blockpos$mutableblockpos.set(blockpos1));
+        for (BlockPos columnPos : BlockPos.betweenClosed(origin.offset(-r, 0, -r), origin.offset(r, 0, r))) {
+            int xd = columnPos.getX() - origin.getX();
+            int zd = columnPos.getZ() - origin.getZ();
+            if (xd * xd + zd * zd <= r * r) {
+                placedAny |= this.placeColumn(config, level, random, top, bottom, mutablePos.set(columnPos));
             }
         }
 
-        return flag;
+        return placedAny;
     }
 
     protected boolean placeColumn(
-        DiskConfiguration p_224996_, WorldGenLevel p_224997_, RandomSource p_224998_, int p_224999_, int p_225000_, BlockPos.MutableBlockPos p_225001_
+        final DiskConfiguration config,
+        final WorldGenLevel level,
+        final RandomSource random,
+        final int top,
+        final int bottom,
+        final BlockPos.MutableBlockPos pos
     ) {
-        boolean flag = false;
-        boolean flag1 = false;
+        boolean placedAny = false;
+        boolean placedAbove = false;
 
-        for (int i = p_224999_; i > p_225000_; i--) {
-            p_225001_.setY(i);
-            if (p_224996_.target().test(p_224997_, p_225001_)) {
-                BlockState blockstate = p_224996_.stateProvider().getState(p_224997_, p_224998_, p_225001_);
-                p_224997_.setBlock(p_225001_, blockstate, 2);
-                if (!flag1) {
-                    this.markAboveForPostProcessing(p_224997_, p_225001_);
+        for (int y = top; y > bottom; y--) {
+            pos.setY(y);
+            if (config.target().test(level, pos)) {
+                BlockState state = config.stateProvider().getOptionalState(level, random, pos);
+                if (state != null) {
+                    level.setBlock(pos, state, 2);
+                    if (!placedAbove) {
+                        this.markAboveForPostProcessing(level, pos);
+                    }
+
+                    placedAny = true;
+                    placedAbove = true;
                 }
-
-                flag = true;
-                flag1 = true;
             } else {
-                flag1 = false;
+                placedAbove = false;
             }
         }
 
-        return flag;
+        return placedAny;
     }
 }

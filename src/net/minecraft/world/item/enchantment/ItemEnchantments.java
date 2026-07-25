@@ -32,60 +32,62 @@ public class ItemEnchantments implements TooltipProvider {
     private static final Codec<Integer> LEVEL_CODEC = Codec.intRange(1, 255);
     public static final Codec<ItemEnchantments> CODEC = Codec.unboundedMap(Enchantment.CODEC, LEVEL_CODEC)
         .xmap(
-            p_390857_ -> new ItemEnchantments(new Object2IntOpenHashMap<>((Map<? extends Holder<Enchantment>, ? extends Integer>)p_390857_)),
-            p_334450_ -> p_334450_.enchantments
+            map -> new ItemEnchantments(new Object2IntOpenHashMap<>((Map<? extends Holder<Enchantment>, ? extends Integer>)map)),
+            enchantments -> enchantments.enchantments
         );
     public static final StreamCodec<RegistryFriendlyByteBuf, ItemEnchantments> STREAM_CODEC = StreamCodec.composite(
-        ByteBufCodecs.map(Object2IntOpenHashMap::new, Enchantment.STREAM_CODEC, ByteBufCodecs.VAR_INT),
-        p_334569_ -> p_334569_.enchantments,
-        ItemEnchantments::new
+        ByteBufCodecs.map(Object2IntOpenHashMap::new, Enchantment.STREAM_CODEC, ByteBufCodecs.VAR_INT), c -> c.enchantments, ItemEnchantments::new
     );
-    final Object2IntOpenHashMap<Holder<Enchantment>> enchantments;
+    private final Object2IntOpenHashMap<Holder<Enchantment>> enchantments;
 
-    ItemEnchantments(Object2IntOpenHashMap<Holder<Enchantment>> p_329796_) {
-        this.enchantments = p_329796_;
+    private ItemEnchantments(final Object2IntOpenHashMap<Holder<Enchantment>> enchantments) {
+        this.enchantments = enchantments;
 
-        for (Entry<Holder<Enchantment>> entry : p_329796_.object2IntEntrySet()) {
-            int i = entry.getIntValue();
-            if (i < 0 || i > 255) {
-                throw new IllegalArgumentException("Enchantment " + entry.getKey() + " has invalid level " + i);
+        for (Entry<Holder<Enchantment>> entry : enchantments.object2IntEntrySet()) {
+            int level = entry.getIntValue();
+            if (level < 0 || level > 255) {
+                throw new IllegalArgumentException("Enchantment " + entry.getKey() + " has invalid level " + level);
             }
         }
     }
 
-    public int getLevel(Holder<Enchantment> p_343517_) {
-        return this.enchantments.getInt(p_343517_);
+    public int getLevel(final Holder<Enchantment> enchantment) {
+        return this.enchantments.getInt(enchantment);
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_332503_, Consumer<Component> p_333731_, TooltipFlag p_332196_, DataComponentGetter p_396769_) {
-        HolderLookup.Provider holderlookup$provider = p_332503_.registries();
-        HolderSet<Enchantment> holderset = getTagOrEmpty(holderlookup$provider, Registries.ENCHANTMENT, EnchantmentTags.TOOLTIP_ORDER);
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        HolderLookup.Provider registries = context.registries();
+        HolderSet<Enchantment> order = getTagOrEmpty(registries, Registries.ENCHANTMENT, EnchantmentTags.TOOLTIP_ORDER);
 
-        for (Holder<Enchantment> holder : holderset) {
-            int i = this.enchantments.getInt(holder);
-            if (i > 0) {
-                p_333731_.accept(Enchantment.getFullname(holder, i));
+        for (Holder<Enchantment> enchantment : order) {
+            int level = this.enchantments.getInt(enchantment);
+            if (level > 0) {
+                consumer.accept(Enchantment.getFullname(enchantment, level));
             }
         }
 
         for (Entry<Holder<Enchantment>> entry : this.enchantments.object2IntEntrySet()) {
-            Holder<Enchantment> holder1 = entry.getKey();
-            if (!holderset.contains(holder1)) {
-                p_333731_.accept(Enchantment.getFullname(entry.getKey(), entry.getIntValue()));
+            Holder<Enchantment> enchantment = entry.getKey();
+            if (!order.contains(enchantment)) {
+                consumer.accept(Enchantment.getFullname(entry.getKey(), entry.getIntValue()));
             }
         }
     }
 
-    private static <T> HolderSet<T> getTagOrEmpty(HolderLookup.@Nullable Provider p_327799_, ResourceKey<Registry<T>> p_330565_, TagKey<T> p_327764_) {
-        if (p_327799_ != null) {
-            Optional<HolderSet.Named<T>> optional = p_327799_.lookupOrThrow(p_330565_).get(p_327764_);
-            if (optional.isPresent()) {
-                return optional.get();
+    private static <T> HolderSet<T> getTagOrEmpty(
+        final HolderLookup.@Nullable Provider registries, final ResourceKey<Registry<T>> registry, final TagKey<T> tag
+    ) {
+        if (registries != null) {
+            Optional<HolderSet.Named<T>> maybeOrder = registries.lookupOrThrow(registry).get(tag);
+            if (maybeOrder.isPresent()) {
+                return maybeOrder.get();
             }
         }
 
-        return HolderSet.direct();
+        return HolderSet.empty();
     }
 
     public Set<Holder<Enchantment>> keySet() {
@@ -105,11 +107,11 @@ public class ItemEnchantments implements TooltipProvider {
     }
 
     @Override
-    public boolean equals(Object p_328229_) {
-        if (this == p_328229_) {
+    public boolean equals(final Object obj) {
+        if (this == obj) {
             return true;
         } else {
-            return p_328229_ instanceof ItemEnchantments itemenchantments ? this.enchantments.equals(itemenchantments.enchantments) : false;
+            return obj instanceof ItemEnchantments that ? this.enchantments.equals(that.enchantments) : false;
         }
     }
 
@@ -126,30 +128,30 @@ public class ItemEnchantments implements TooltipProvider {
     public static class Mutable {
         private final Object2IntOpenHashMap<Holder<Enchantment>> enchantments = new Object2IntOpenHashMap<>();
 
-        public Mutable(ItemEnchantments p_328128_) {
-            this.enchantments.putAll(p_328128_.enchantments);
+        public Mutable(final ItemEnchantments enchantments) {
+            this.enchantments.putAll(enchantments.enchantments);
         }
 
-        public void set(Holder<Enchantment> p_343732_, int p_330613_) {
-            if (p_330613_ <= 0) {
-                this.enchantments.removeInt(p_343732_);
+        public void set(final Holder<Enchantment> enchantment, final int level) {
+            if (level <= 0) {
+                this.enchantments.removeInt(enchantment);
             } else {
-                this.enchantments.put(p_343732_, Math.min(p_330613_, 255));
+                this.enchantments.put(enchantment, Math.min(level, 255));
             }
         }
 
-        public void upgrade(Holder<Enchantment> p_345245_, int p_332549_) {
-            if (p_332549_ > 0) {
-                this.enchantments.merge(p_345245_, Math.min(p_332549_, 255), Integer::max);
+        public void upgrade(final Holder<Enchantment> enchantment, final int level) {
+            if (level > 0) {
+                this.enchantments.merge(enchantment, Math.min(level, 255), Integer::max);
             }
         }
 
-        public void removeIf(Predicate<Holder<Enchantment>> p_330896_) {
-            this.enchantments.keySet().removeIf(p_330896_);
+        public void removeIf(final Predicate<Holder<Enchantment>> predicate) {
+            this.enchantments.keySet().removeIf(predicate);
         }
 
-        public int getLevel(Holder<Enchantment> p_342208_) {
-            return this.enchantments.getOrDefault(p_342208_, 0);
+        public int getLevel(final Holder<Enchantment> enchantment) {
+            return this.enchantments.getOrDefault(enchantment, 0);
         }
 
         public Set<Holder<Enchantment>> keySet() {

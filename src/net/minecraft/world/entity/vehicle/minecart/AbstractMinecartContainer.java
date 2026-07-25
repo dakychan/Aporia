@@ -27,39 +27,39 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
     private @Nullable ResourceKey<LootTable> lootTable;
     private long lootTableSeed;
 
-    protected AbstractMinecartContainer(EntityType<?> p_458598_, Level p_451360_) {
-        super(p_458598_, p_451360_);
+    protected AbstractMinecartContainer(final EntityType<?> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    public void destroy(ServerLevel p_456184_, DamageSource p_453155_) {
-        super.destroy(p_456184_, p_453155_);
-        this.chestVehicleDestroyed(p_453155_, p_456184_, this);
+    public void destroy(final ServerLevel level, final DamageSource source) {
+        super.destroy(level, source);
+        this.chestVehicleDestroyed(source, level, this);
     }
 
     @Override
-    public ItemStack getItem(int p_458498_) {
-        return this.getChestVehicleItem(p_458498_);
+    public ItemStack getItem(final int slot) {
+        return this.getChestVehicleItem(slot);
     }
 
     @Override
-    public ItemStack removeItem(int p_457872_, int p_450558_) {
-        return this.removeChestVehicleItem(p_457872_, p_450558_);
+    public ItemStack removeItem(final int slot, final int count) {
+        return this.removeChestVehicleItem(slot, count);
     }
 
     @Override
-    public ItemStack removeItemNoUpdate(int p_458605_) {
-        return this.removeChestVehicleItemNoUpdate(p_458605_);
+    public ItemStack removeItemNoUpdate(final int slot) {
+        return this.removeChestVehicleItemNoUpdate(slot);
     }
 
     @Override
-    public void setItem(int p_454119_, ItemStack p_459463_) {
-        this.setChestVehicleItem(p_454119_, p_459463_);
+    public void setItem(final int slot, final ItemStack itemStack) {
+        this.setChestVehicleItem(slot, itemStack);
     }
 
     @Override
-    public SlotAccess getSlot(int p_455459_) {
-        return this.getChestVehicleSlot(p_455459_);
+    public SlotAccess getSlot(final int slot) {
+        return this.getChestVehicleSlot(slot);
     }
 
     @Override
@@ -67,49 +67,49 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
     }
 
     @Override
-    public boolean stillValid(Player p_457351_) {
-        return this.isChestVehicleStillValid(p_457351_);
+    public boolean stillValid(final Player player) {
+        return this.isChestVehicleStillValid(player);
     }
 
     @Override
-    public void remove(Entity.RemovalReason p_454115_) {
-        if (!this.level().isClientSide() && p_454115_.shouldDestroy()) {
+    public void remove(final Entity.RemovalReason reason) {
+        if (!this.level().isClientSide() && reason.shouldDestroy()) {
             Containers.dropContents(this.level(), this, this);
         }
 
-        super.remove(p_454115_);
+        super.remove(reason);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_452089_) {
-        super.addAdditionalSaveData(p_452089_);
-        this.addChestVehicleSaveData(p_452089_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        this.addChestVehicleSaveData(output);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_451805_) {
-        super.readAdditionalSaveData(p_451805_);
-        this.readChestVehicleSaveData(p_451805_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.readChestVehicleSaveData(input);
     }
 
     @Override
-    public InteractionResult interact(Player p_452542_, InteractionHand p_458127_) {
-        return this.interactWithContainerVehicle(p_452542_);
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
+        return this.interactWithContainerVehicle(player);
     }
 
     @Override
-    protected Vec3 applyNaturalSlowdown(Vec3 p_452055_) {
-        float f = 0.98F;
+    protected Vec3 applyNaturalSlowdown(final Vec3 deltaMovement) {
+        float keep = 0.98F;
         if (this.lootTable == null) {
-            int i = 15 - AbstractContainerMenu.getRedstoneSignalFromContainer(this);
-            f += i * 0.001F;
+            int emptiness = 15 - AbstractContainerMenu.getRedstoneSignalFromContainer(this);
+            keep += emptiness * 0.001F;
         }
 
         if (this.isInWater()) {
-            f *= 0.95F;
+            keep *= 0.95F;
         }
 
-        return p_452055_.multiply(f, 0.0, f);
+        return deltaMovement.multiply(keep, 0.0, keep);
     }
 
     @Override
@@ -117,22 +117,22 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
         this.clearChestVehicleContent();
     }
 
-    public void setLootTable(ResourceKey<LootTable> p_455187_, long p_459113_) {
-        this.lootTable = p_455187_;
-        this.lootTableSeed = p_459113_;
+    public void setLootTable(final ResourceKey<LootTable> lootTable, final long seed) {
+        this.lootTable = lootTable;
+        this.lootTableSeed = seed;
     }
 
     @Override
-    public @Nullable AbstractContainerMenu createMenu(int p_452235_, Inventory p_452809_, Player p_460397_) {
-        if (this.lootTable != null && p_460397_.isSpectator()) {
+    public @Nullable AbstractContainerMenu createMenu(final int containerId, final Inventory inventory, final Player player) {
+        if (this.lootTable != null && player.isSpectator()) {
             return null;
-        } else {
-            this.unpackChestVehicleLootTable(p_452809_.player);
-            return this.createMenu(p_452235_, p_452809_);
         }
+
+        this.unpackChestVehicleLootTable(inventory.player);
+        return this.createMenu(containerId, inventory);
     }
 
-    protected abstract AbstractContainerMenu createMenu(int p_459770_, Inventory p_459345_);
+    protected abstract AbstractContainerMenu createMenu(final int containerId, final Inventory inventory);
 
     @Override
     public @Nullable ResourceKey<LootTable> getContainerLootTable() {
@@ -140,8 +140,8 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
     }
 
     @Override
-    public void setContainerLootTable(@Nullable ResourceKey<LootTable> p_454651_) {
-        this.lootTable = p_454651_;
+    public void setContainerLootTable(final @Nullable ResourceKey<LootTable> lootTable) {
+        this.lootTable = lootTable;
     }
 
     @Override
@@ -150,8 +150,8 @@ public abstract class AbstractMinecartContainer extends AbstractMinecart impleme
     }
 
     @Override
-    public void setContainerLootTableSeed(long p_459178_) {
-        this.lootTableSeed = p_459178_;
+    public void setContainerLootTableSeed(final long lootTableSeed) {
+        this.lootTableSeed = lootTableSeed;
     }
 
     @Override

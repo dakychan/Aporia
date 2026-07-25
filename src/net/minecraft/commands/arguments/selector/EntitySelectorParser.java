@@ -17,8 +17,10 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.advancements.criterion.MinMaxBounds;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.commands.arguments.selector.options.EntitySelectorOptions;
+import net.minecraft.commands.arguments.selector.options.InvertableSetOptionState;
+import net.minecraft.commands.arguments.selector.options.SetOnceOptionState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.permissions.PermissionSetSupplier;
@@ -27,6 +29,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.ToFloatFunction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
@@ -45,24 +48,32 @@ public class EntitySelectorParser {
     private static final char SELECTOR_CURRENT_ENTITY = 's';
     private static final char SELECTOR_ALL_ENTITIES = 'e';
     private static final char SELECTOR_NEAREST_ENTITY = 'n';
-    public static final SimpleCommandExceptionType ERROR_INVALID_NAME_OR_UUID = new SimpleCommandExceptionType(Component.translatable("argument.entity.invalid"));
+    public static final SimpleCommandExceptionType ERROR_INVALID_NAME_OR_UUID = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.invalid")
+    );
     public static final DynamicCommandExceptionType ERROR_UNKNOWN_SELECTOR_TYPE = new DynamicCommandExceptionType(
-        p_308409_ -> Component.translatableEscape("argument.entity.selector.unknown", p_308409_)
+        type -> Component.translatableEscape("argument.entity.selector.unknown", type)
     );
-    public static final SimpleCommandExceptionType ERROR_SELECTORS_NOT_ALLOWED = new SimpleCommandExceptionType(Component.translatable("argument.entity.selector.not_allowed"));
-    public static final SimpleCommandExceptionType ERROR_MISSING_SELECTOR_TYPE = new SimpleCommandExceptionType(Component.translatable("argument.entity.selector.missing"));
-    public static final SimpleCommandExceptionType ERROR_EXPECTED_END_OF_OPTIONS = new SimpleCommandExceptionType(Component.translatable("argument.entity.options.unterminated"));
+    public static final SimpleCommandExceptionType ERROR_SELECTORS_NOT_ALLOWED = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.selector.not_allowed")
+    );
+    public static final SimpleCommandExceptionType ERROR_MISSING_SELECTOR_TYPE = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.selector.missing")
+    );
+    public static final SimpleCommandExceptionType ERROR_EXPECTED_END_OF_OPTIONS = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.options.unterminated")
+    );
     public static final DynamicCommandExceptionType ERROR_EXPECTED_OPTION_VALUE = new DynamicCommandExceptionType(
-        p_308408_ -> Component.translatableEscape("argument.entity.options.valueless", p_308408_)
+        name -> Component.translatableEscape("argument.entity.options.valueless", name)
     );
-    public static final BiConsumer<Vec3, List<? extends Entity>> ORDER_NEAREST = (p_121313_, p_121314_) -> p_121314_.sort(
-        (p_175140_, p_175141_) -> Doubles.compare(p_175140_.distanceToSqr(p_121313_), p_175141_.distanceToSqr(p_121313_))
+    public static final BiConsumer<Vec3, List<? extends Entity>> ORDER_NEAREST = (p, c) -> c.sort(
+        (a, b) -> Doubles.compare(a.distanceToSqr(p), b.distanceToSqr(p))
     );
-    public static final BiConsumer<Vec3, List<? extends Entity>> ORDER_FURTHEST = (p_121298_, p_121299_) -> p_121299_.sort(
-        (p_175131_, p_175132_) -> Doubles.compare(p_175132_.distanceToSqr(p_121298_), p_175131_.distanceToSqr(p_121298_))
+    public static final BiConsumer<Vec3, List<? extends Entity>> ORDER_FURTHEST = (p, c) -> c.sort(
+        (a, b) -> Doubles.compare(b.distanceToSqr(p), a.distanceToSqr(p))
     );
-    public static final BiConsumer<Vec3, List<? extends Entity>> ORDER_RANDOM = (p_121264_, p_121265_) -> Collections.shuffle(p_121265_);
-    public static final BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> SUGGEST_NOTHING = (p_121363_, p_121364_) -> p_121363_.buildFuture();
+    public static final BiConsumer<Vec3, List<? extends Entity>> ORDER_RANDOM = (p, c) -> Collections.shuffle(c);
+    public static final BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> SUGGEST_NOTHING = (b, s) -> b.buildFuture();
     private final StringReader reader;
     private final boolean allowSelectors;
     private int maxResults;
@@ -85,58 +96,49 @@ public class EntitySelectorParser {
     private int startPosition;
     private @Nullable UUID entityUUID;
     private BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> suggestions = SUGGEST_NOTHING;
-    private boolean hasNameEquals;
-    private boolean hasNameNotEquals;
-    private boolean isLimited;
-    private boolean isSorted;
-    private boolean hasGamemodeEquals;
-    private boolean hasGamemodeNotEquals;
-    private boolean hasTeamEquals;
-    private boolean hasTeamNotEquals;
+    private final InvertableSetOptionState nameOption = new InvertableSetOptionState();
+    private final SetOnceOptionState limitedOption = new SetOnceOptionState();
+    private final SetOnceOptionState sortedOption = new SetOnceOptionState();
+    private final InvertableSetOptionState gamemodeOption = new InvertableSetOptionState();
+    private final InvertableSetOptionState teamOption = new InvertableSetOptionState();
     private @Nullable EntityType<?> type;
-    private boolean typeInverse;
-    private boolean hasScores;
-    private boolean hasAdvancements;
+    private final InvertableSetOptionState typeOption = new InvertableSetOptionState();
+    private final SetOnceOptionState scoresOption = new SetOnceOptionState();
+    private final SetOnceOptionState advancementsOption = new SetOnceOptionState();
     private boolean usesSelectors;
 
-    public EntitySelectorParser(StringReader p_121220_, boolean p_121221_) {
-        this.reader = p_121220_;
-        this.allowSelectors = p_121221_;
+    public EntitySelectorParser(final StringReader reader, final boolean allowSelectors) {
+        this.reader = reader;
+        this.allowSelectors = allowSelectors;
     }
 
-    public static <S> boolean allowSelectors(S p_345546_) {
-        return p_345546_ instanceof PermissionSetSupplier permissionsetsupplier && permissionsetsupplier.permissions().hasPermission(Permissions.COMMANDS_ENTITY_SELECTORS);
+    public static <S> boolean allowSelectors(final S source) {
+        return source instanceof PermissionSetSupplier sender && sender.permissions().hasPermission(Permissions.COMMANDS_ENTITY_SELECTORS);
     }
 
     @Deprecated
-    public static boolean allowSelectors(PermissionSetSupplier p_456659_) {
-        return p_456659_.permissions().hasPermission(Permissions.COMMANDS_ENTITY_SELECTORS);
+    public static boolean allowSelectors(final PermissionSetSupplier source) {
+        return source.permissions().hasPermission(Permissions.COMMANDS_ENTITY_SELECTORS);
     }
 
     public EntitySelector getSelector() {
         AABB aabb;
         if (this.deltaX == null && this.deltaY == null && this.deltaZ == null) {
             if (this.distance != null && this.distance.max().isPresent()) {
-                double d0 = (Double)this.distance.max().get();
-                aabb = new AABB(-d0, -d0, -d0, d0 + 1.0, d0 + 1.0, d0 + 1.0);
+                double maxRange = (Double)this.distance.max().get();
+                aabb = new AABB(-maxRange, -maxRange, -maxRange, maxRange + 1.0, maxRange + 1.0, maxRange + 1.0);
             } else {
                 aabb = null;
             }
         } else {
-            aabb = this.createAabb(
-                this.deltaX == null ? 0.0 : this.deltaX, this.deltaY == null ? 0.0 : this.deltaY, this.deltaZ == null ? 0.0 : this.deltaZ
-            );
+            aabb = this.createAabb(this.deltaX == null ? 0.0 : this.deltaX, this.deltaY == null ? 0.0 : this.deltaY, this.deltaZ == null ? 0.0 : this.deltaZ);
         }
 
-        Function<Vec3, Vec3> function;
+        Function<Vec3, Vec3> position;
         if (this.x == null && this.y == null && this.z == null) {
-            function = p_121292_ -> p_121292_;
+            position = o -> o;
         } else {
-            function = p_121258_ -> new Vec3(
-                this.x == null ? p_121258_.x : this.x,
-                this.y == null ? p_121258_.y : this.y,
-                this.z == null ? p_121258_.z : this.z
-            );
+            position = o -> new Vec3(this.x == null ? o.x : this.x, this.y == null ? o.y : this.y, this.z == null ? o.z : this.z);
         }
 
         return new EntitySelector(
@@ -145,7 +147,7 @@ public class EntitySelectorParser {
             this.worldLimited,
             List.copyOf(this.predicates),
             this.distance,
-            function,
+            position,
             aabb,
             this.order,
             this.currentEntity,
@@ -156,17 +158,17 @@ public class EntitySelectorParser {
         );
     }
 
-    private AABB createAabb(double p_121234_, double p_121235_, double p_121236_) {
-        boolean flag = p_121234_ < 0.0;
-        boolean flag1 = p_121235_ < 0.0;
-        boolean flag2 = p_121236_ < 0.0;
-        double d0 = flag ? p_121234_ : 0.0;
-        double d1 = flag1 ? p_121235_ : 0.0;
-        double d2 = flag2 ? p_121236_ : 0.0;
-        double d3 = (flag ? 0.0 : p_121234_) + 1.0;
-        double d4 = (flag1 ? 0.0 : p_121235_) + 1.0;
-        double d5 = (flag2 ? 0.0 : p_121236_) + 1.0;
-        return new AABB(d0, d1, d2, d3, d4, d5);
+    private AABB createAabb(final double x, final double y, final double z) {
+        boolean xNeg = x < 0.0;
+        boolean yNeg = y < 0.0;
+        boolean zNeg = z < 0.0;
+        double xMin = xNeg ? x : 0.0;
+        double yMin = yNeg ? y : 0.0;
+        double zMin = zNeg ? z : 0.0;
+        double xMax = (xNeg ? 0.0 : x) + 1.0;
+        double yMax = (yNeg ? 0.0 : y) + 1.0;
+        double zMax = (zNeg ? 0.0 : z) + 1.0;
+        return new AABB(xMin, yMin, zMin, xMax, yMax, zMax);
     }
 
     private void finalizePredicates() {
@@ -179,16 +181,16 @@ public class EntitySelectorParser {
         }
 
         if (this.level != null) {
-            this.predicates.add(p_448538_ -> p_448538_ instanceof ServerPlayer serverplayer && this.level.matches(serverplayer.experienceLevel));
+            this.predicates.add(e -> e instanceof ServerPlayer serverPlayer && this.level.matches(serverPlayer.experienceLevel));
         }
     }
 
-    private Predicate<Entity> createRotationPredicate(MinMaxBounds.FloatDegrees p_458419_, ToFloatFunction<Entity> p_431417_) {
-        float f = Mth.wrapDegrees(p_458419_.min().orElse(0.0F));
-        float f1 = Mth.wrapDegrees(p_458419_.max().orElse(359.0F));
-        return p_175137_ -> {
-            float f2 = Mth.wrapDegrees(p_431417_.applyAsFloat(p_175137_));
-            return f > f1 ? f2 >= f || f2 <= f1 : f2 >= f && f2 <= f1;
+    private Predicate<Entity> createRotationPredicate(final MinMaxBounds.FloatDegrees range, final ToFloatFunction<Entity> function) {
+        float min = Mth.wrapDegrees(range.min().orElse(0.0F));
+        float max = Mth.wrapDegrees(range.max().orElse(359.0F));
+        return e -> {
+            float rotation = Mth.wrapDegrees(function.applyAsFloat(e));
+            return min > max ? rotation >= min || rotation <= max : rotation >= min && rotation <= max;
         };
     }
 
@@ -197,64 +199,64 @@ public class EntitySelectorParser {
         this.suggestions = this::suggestSelector;
         if (!this.reader.canRead()) {
             throw ERROR_MISSING_SELECTOR_TYPE.createWithContext(this.reader);
-        } else {
-            int i = this.reader.getCursor();
-            char c0 = this.reader.read();
+        }
 
-            if (switch (c0) {
-                case 'a' -> {
-                    this.maxResults = Integer.MAX_VALUE;
-                    this.includesEntities = false;
-                    this.order = EntitySelector.ORDER_ARBITRARY;
-                    this.limitToType(EntityType.PLAYER);
-                    yield false;
-                }
-                default -> {
-                    this.reader.setCursor(i);
-                    throw ERROR_UNKNOWN_SELECTOR_TYPE.createWithContext(this.reader, "@" + c0);
-                }
-                case 'e' -> {
-                    this.maxResults = Integer.MAX_VALUE;
-                    this.includesEntities = true;
-                    this.order = EntitySelector.ORDER_ARBITRARY;
-                    yield true;
-                }
-                case 'n' -> {
-                    this.maxResults = 1;
-                    this.includesEntities = true;
-                    this.order = ORDER_NEAREST;
-                    yield true;
-                }
-                case 'p' -> {
-                    this.maxResults = 1;
-                    this.includesEntities = false;
-                    this.order = ORDER_NEAREST;
-                    this.limitToType(EntityType.PLAYER);
-                    yield false;
-                }
-                case 'r' -> {
-                    this.maxResults = 1;
-                    this.includesEntities = false;
-                    this.order = ORDER_RANDOM;
-                    this.limitToType(EntityType.PLAYER);
-                    yield false;
-                }
-                case 's' -> {
-                    this.maxResults = 1;
-                    this.includesEntities = true;
-                    this.currentEntity = true;
-                    yield false;
-                }
-            }) {
-                this.predicates.add(Entity::isAlive);
-            }
+        int start = this.reader.getCursor();
+        char type = this.reader.read();
 
-            this.suggestions = this::suggestOpenOptions;
-            if (this.reader.canRead() && this.reader.peek() == '[') {
-                this.reader.skip();
-                this.suggestions = this::suggestOptionsKeyOrClose;
-                this.parseOptions();
+        if (switch (type) {
+            case 'a' -> {
+                this.maxResults = Integer.MAX_VALUE;
+                this.includesEntities = false;
+                this.order = EntitySelector.ORDER_ARBITRARY;
+                this.limitToType(EntityTypes.PLAYER);
+                yield false;
             }
+            default -> {
+                this.reader.setCursor(start);
+                throw ERROR_UNKNOWN_SELECTOR_TYPE.createWithContext(this.reader, "@" + type);
+            }
+            case 'e' -> {
+                this.maxResults = Integer.MAX_VALUE;
+                this.includesEntities = true;
+                this.order = EntitySelector.ORDER_ARBITRARY;
+                yield true;
+            }
+            case 'n' -> {
+                this.maxResults = 1;
+                this.includesEntities = true;
+                this.order = ORDER_NEAREST;
+                yield true;
+            }
+            case 'p' -> {
+                this.maxResults = 1;
+                this.includesEntities = false;
+                this.order = ORDER_NEAREST;
+                this.limitToType(EntityTypes.PLAYER);
+                yield false;
+            }
+            case 'r' -> {
+                this.maxResults = 1;
+                this.includesEntities = false;
+                this.order = ORDER_RANDOM;
+                this.limitToType(EntityTypes.PLAYER);
+                yield false;
+            }
+            case 's' -> {
+                this.maxResults = 1;
+                this.includesEntities = true;
+                this.currentEntity = true;
+                yield false;
+            }
+        }) {
+            this.predicates.add(Entity::isAlive);
+        }
+
+        this.suggestions = this::suggestOpenOptions;
+        if (this.reader.canRead() && this.reader.peek() == '[') {
+            this.reader.skip();
+            this.suggestions = this::suggestOptionsKeyOrClose;
+            this.parseOptions();
         }
     }
 
@@ -263,20 +265,20 @@ public class EntitySelectorParser {
             this.suggestions = this::suggestName;
         }
 
-        int i = this.reader.getCursor();
-        String s = this.reader.readString();
+        int start = this.reader.getCursor();
+        String name = this.reader.readString();
 
         try {
-            this.entityUUID = UUID.fromString(s);
+            this.entityUUID = UUID.fromString(name);
             this.includesEntities = true;
-        } catch (IllegalArgumentException illegalargumentexception) {
-            if (s.isEmpty() || s.length() > 16) {
-                this.reader.setCursor(i);
+        } catch (IllegalArgumentException ex) {
+            if (name.isEmpty() || name.length() > 16) {
+                this.reader.setCursor(start);
                 throw ERROR_INVALID_NAME_OR_UUID.createWithContext(this.reader);
             }
 
             this.includesEntities = false;
-            this.playerName = s;
+            this.playerName = name;
         }
 
         this.maxResults = 1;
@@ -288,19 +290,19 @@ public class EntitySelectorParser {
 
         while (this.reader.canRead() && this.reader.peek() != ']') {
             this.reader.skipWhitespace();
-            int i = this.reader.getCursor();
-            String s = this.reader.readString();
-            EntitySelectorOptions.Modifier entityselectoroptions$modifier = EntitySelectorOptions.get(this, s, i);
+            int start = this.reader.getCursor();
+            String key = this.reader.readString();
+            EntitySelectorOptions.Modifier modifier = EntitySelectorOptions.get(this, key, start);
             this.reader.skipWhitespace();
             if (!this.reader.canRead() || this.reader.peek() != '=') {
-                this.reader.setCursor(i);
-                throw ERROR_EXPECTED_OPTION_VALUE.createWithContext(this.reader, s);
+                this.reader.setCursor(start);
+                throw ERROR_EXPECTED_OPTION_VALUE.createWithContext(this.reader, key);
             }
 
             this.reader.skip();
             this.reader.skipWhitespace();
             this.suggestions = SUGGEST_NOTHING;
-            entityselectoroptions$modifier.handle(this);
+            modifier.handle(this);
             this.reader.skipWhitespace();
             this.suggestions = this::suggestOptionsNextOrClose;
             if (this.reader.canRead()) {
@@ -350,8 +352,8 @@ public class EntitySelectorParser {
         return this.reader;
     }
 
-    public void addPredicate(Predicate<Entity> p_121273_) {
-        this.predicates.add(p_121273_);
+    public void addPredicate(final Predicate<Entity> predicate) {
+        this.predicates.add(predicate);
     }
 
     public void setWorldLimited() {
@@ -362,32 +364,32 @@ public class EntitySelectorParser {
         return this.distance;
     }
 
-    public void setDistance(MinMaxBounds.Doubles p_460881_) {
-        this.distance = p_460881_;
+    public void setDistance(final MinMaxBounds.Doubles distance) {
+        this.distance = distance;
     }
 
     public MinMaxBounds.@Nullable Ints getLevel() {
         return this.level;
     }
 
-    public void setLevel(MinMaxBounds.Ints p_451798_) {
-        this.level = p_451798_;
+    public void setLevel(final MinMaxBounds.Ints level) {
+        this.level = level;
     }
 
     public MinMaxBounds.@Nullable FloatDegrees getRotX() {
         return this.rotX;
     }
 
-    public void setRotX(MinMaxBounds.FloatDegrees p_456277_) {
-        this.rotX = p_456277_;
+    public void setRotX(final MinMaxBounds.FloatDegrees rotX) {
+        this.rotX = rotX;
     }
 
     public MinMaxBounds.@Nullable FloatDegrees getRotY() {
         return this.rotY;
     }
 
-    public void setRotY(MinMaxBounds.FloatDegrees p_450903_) {
-        this.rotY = p_450903_;
+    public void setRotY(final MinMaxBounds.FloatDegrees rotY) {
+        this.rotY = rotY;
     }
 
     public @Nullable Double getX() {
@@ -402,28 +404,28 @@ public class EntitySelectorParser {
         return this.z;
     }
 
-    public void setX(double p_121232_) {
-        this.x = p_121232_;
+    public void setX(final double x) {
+        this.x = x;
     }
 
-    public void setY(double p_121283_) {
-        this.y = p_121283_;
+    public void setY(final double y) {
+        this.y = y;
     }
 
-    public void setZ(double p_121306_) {
-        this.z = p_121306_;
+    public void setZ(final double z) {
+        this.z = z;
     }
 
-    public void setDeltaX(double p_121319_) {
-        this.deltaX = p_121319_;
+    public void setDeltaX(final double deltaX) {
+        this.deltaX = deltaX;
     }
 
-    public void setDeltaY(double p_121332_) {
-        this.deltaY = p_121332_;
+    public void setDeltaY(final double deltaY) {
+        this.deltaY = deltaY;
     }
 
-    public void setDeltaZ(double p_121340_) {
-        this.deltaZ = p_121340_;
+    public void setDeltaZ(final double deltaZ) {
+        this.deltaZ = deltaZ;
     }
 
     public @Nullable Double getDeltaX() {
@@ -438,20 +440,20 @@ public class EntitySelectorParser {
         return this.deltaZ;
     }
 
-    public void setMaxResults(int p_121238_) {
-        this.maxResults = p_121238_;
+    public void setMaxResults(final int maxResults) {
+        this.maxResults = maxResults;
     }
 
-    public void setIncludesEntities(boolean p_121280_) {
-        this.includesEntities = p_121280_;
+    public void setIncludesEntities(final boolean includesEntities) {
+        this.includesEntities = includesEntities;
     }
 
     public BiConsumer<Vec3, List<? extends Entity>> getOrder() {
         return this.order;
     }
 
-    public void setOrder(BiConsumer<Vec3, List<? extends Entity>> p_121269_) {
-        this.order = p_121269_;
+    public void setOrder(final BiConsumer<Vec3, List<? extends Entity>> order) {
+        this.order = order;
     }
 
     public EntitySelector parse() throws CommandSyntaxException {
@@ -472,169 +474,109 @@ public class EntitySelectorParser {
         return this.getSelector();
     }
 
-    private static void fillSelectorSuggestions(SuggestionsBuilder p_121248_) {
-        p_121248_.suggest("@p", Component.translatable("argument.entity.selector.nearestPlayer"));
-        p_121248_.suggest("@a", Component.translatable("argument.entity.selector.allPlayers"));
-        p_121248_.suggest("@r", Component.translatable("argument.entity.selector.randomPlayer"));
-        p_121248_.suggest("@s", Component.translatable("argument.entity.selector.self"));
-        p_121248_.suggest("@e", Component.translatable("argument.entity.selector.allEntities"));
-        p_121248_.suggest("@n", Component.translatable("argument.entity.selector.nearestEntity"));
+    private static void fillSelectorSuggestions(final SuggestionsBuilder builder) {
+        builder.suggest("@p", Component.translatable("argument.entity.selector.nearestPlayer"));
+        builder.suggest("@a", Component.translatable("argument.entity.selector.allPlayers"));
+        builder.suggest("@r", Component.translatable("argument.entity.selector.randomPlayer"));
+        builder.suggest("@s", Component.translatable("argument.entity.selector.self"));
+        builder.suggest("@e", Component.translatable("argument.entity.selector.allEntities"));
+        builder.suggest("@n", Component.translatable("argument.entity.selector.nearestEntity"));
     }
 
-    private CompletableFuture<Suggestions> suggestNameOrSelector(SuggestionsBuilder p_121287_, Consumer<SuggestionsBuilder> p_121288_) {
-        p_121288_.accept(p_121287_);
+    private CompletableFuture<Suggestions> suggestNameOrSelector(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        names.accept(builder);
         if (this.allowSelectors) {
-            fillSelectorSuggestions(p_121287_);
+            fillSelectorSuggestions(builder);
         }
 
-        return p_121287_.buildFuture();
+        return builder.buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestName(SuggestionsBuilder p_121310_, Consumer<SuggestionsBuilder> p_121311_) {
-        SuggestionsBuilder suggestionsbuilder = p_121310_.createOffset(this.startPosition);
-        p_121311_.accept(suggestionsbuilder);
-        return p_121310_.add(suggestionsbuilder).buildFuture();
+    private CompletableFuture<Suggestions> suggestName(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        SuggestionsBuilder sub = builder.createOffset(this.startPosition);
+        names.accept(sub);
+        return builder.add(sub).buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestSelector(SuggestionsBuilder p_121323_, Consumer<SuggestionsBuilder> p_121324_) {
-        SuggestionsBuilder suggestionsbuilder = p_121323_.createOffset(p_121323_.getStart() - 1);
-        fillSelectorSuggestions(suggestionsbuilder);
-        p_121323_.add(suggestionsbuilder);
-        return p_121323_.buildFuture();
+    private CompletableFuture<Suggestions> suggestSelector(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        SuggestionsBuilder sub = builder.createOffset(builder.getStart() - 1);
+        fillSelectorSuggestions(sub);
+        builder.add(sub);
+        return builder.buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestOpenOptions(SuggestionsBuilder p_121334_, Consumer<SuggestionsBuilder> p_121335_) {
-        p_121334_.suggest(String.valueOf('['));
-        return p_121334_.buildFuture();
+    private CompletableFuture<Suggestions> suggestOpenOptions(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        builder.suggest(String.valueOf('['));
+        return builder.buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestOptionsKeyOrClose(SuggestionsBuilder p_121342_, Consumer<SuggestionsBuilder> p_121343_) {
-        p_121342_.suggest(String.valueOf(']'));
-        EntitySelectorOptions.suggestNames(this, p_121342_);
-        return p_121342_.buildFuture();
+    private CompletableFuture<Suggestions> suggestOptionsKeyOrClose(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        builder.suggest(String.valueOf(']'));
+        EntitySelectorOptions.suggestNames(this, builder);
+        return builder.buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestOptionsKey(SuggestionsBuilder p_121348_, Consumer<SuggestionsBuilder> p_121349_) {
-        EntitySelectorOptions.suggestNames(this, p_121348_);
-        return p_121348_.buildFuture();
+    private CompletableFuture<Suggestions> suggestOptionsKey(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        EntitySelectorOptions.suggestNames(this, builder);
+        return builder.buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestOptionsNextOrClose(SuggestionsBuilder p_121354_, Consumer<SuggestionsBuilder> p_121355_) {
-        p_121354_.suggest(String.valueOf(','));
-        p_121354_.suggest(String.valueOf(']'));
-        return p_121354_.buildFuture();
+    private CompletableFuture<Suggestions> suggestOptionsNextOrClose(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        builder.suggest(String.valueOf(','));
+        builder.suggest(String.valueOf(']'));
+        return builder.buildFuture();
     }
 
-    private CompletableFuture<Suggestions> suggestEquals(SuggestionsBuilder p_175144_, Consumer<SuggestionsBuilder> p_175145_) {
-        p_175144_.suggest(String.valueOf('='));
-        return p_175144_.buildFuture();
+    private CompletableFuture<Suggestions> suggestEquals(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        builder.suggest(String.valueOf('='));
+        return builder.buildFuture();
     }
 
     public boolean isCurrentEntity() {
         return this.currentEntity;
     }
 
-    public void setSuggestions(BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> p_121271_) {
-        this.suggestions = p_121271_;
+    public void setSuggestions(final BiFunction<SuggestionsBuilder, Consumer<SuggestionsBuilder>, CompletableFuture<Suggestions>> suggestions) {
+        this.suggestions = suggestions;
     }
 
-    public CompletableFuture<Suggestions> fillSuggestions(SuggestionsBuilder p_121250_, Consumer<SuggestionsBuilder> p_121251_) {
-        return this.suggestions.apply(p_121250_.createOffset(this.reader.getCursor()), p_121251_);
+    public CompletableFuture<Suggestions> fillSuggestions(final SuggestionsBuilder builder, final Consumer<SuggestionsBuilder> names) {
+        return this.suggestions.apply(builder.createOffset(this.reader.getCursor()), names);
     }
 
-    public boolean hasNameEquals() {
-        return this.hasNameEquals;
+    public InvertableSetOptionState nameOption() {
+        return this.nameOption;
     }
 
-    public void setHasNameEquals(boolean p_121303_) {
-        this.hasNameEquals = p_121303_;
+    public SetOnceOptionState limitedOption() {
+        return this.limitedOption;
     }
 
-    public boolean hasNameNotEquals() {
-        return this.hasNameNotEquals;
+    public SetOnceOptionState sortedOption() {
+        return this.sortedOption;
     }
 
-    public void setHasNameNotEquals(boolean p_121316_) {
-        this.hasNameNotEquals = p_121316_;
+    public InvertableSetOptionState gamemodeOption() {
+        return this.gamemodeOption;
     }
 
-    public boolean isLimited() {
-        return this.isLimited;
+    public InvertableSetOptionState teamOption() {
+        return this.teamOption;
     }
 
-    public void setLimited(boolean p_121329_) {
-        this.isLimited = p_121329_;
+    public void limitToType(final EntityType<?> type) {
+        this.type = type;
     }
 
-    public boolean isSorted() {
-        return this.isSorted;
+    public InvertableSetOptionState typeOption() {
+        return this.typeOption;
     }
 
-    public void setSorted(boolean p_121337_) {
-        this.isSorted = p_121337_;
+    public SetOnceOptionState scoresOption() {
+        return this.scoresOption;
     }
 
-    public boolean hasGamemodeEquals() {
-        return this.hasGamemodeEquals;
-    }
-
-    public void setHasGamemodeEquals(boolean p_121345_) {
-        this.hasGamemodeEquals = p_121345_;
-    }
-
-    public boolean hasGamemodeNotEquals() {
-        return this.hasGamemodeNotEquals;
-    }
-
-    public void setHasGamemodeNotEquals(boolean p_121351_) {
-        this.hasGamemodeNotEquals = p_121351_;
-    }
-
-    public boolean hasTeamEquals() {
-        return this.hasTeamEquals;
-    }
-
-    public void setHasTeamEquals(boolean p_121357_) {
-        this.hasTeamEquals = p_121357_;
-    }
-
-    public boolean hasTeamNotEquals() {
-        return this.hasTeamNotEquals;
-    }
-
-    public void setHasTeamNotEquals(boolean p_121360_) {
-        this.hasTeamNotEquals = p_121360_;
-    }
-
-    public void limitToType(EntityType<?> p_121242_) {
-        this.type = p_121242_;
-    }
-
-    public void setTypeLimitedInversely() {
-        this.typeInverse = true;
-    }
-
-    public boolean isTypeLimited() {
-        return this.type != null;
-    }
-
-    public boolean isTypeLimitedInversely() {
-        return this.typeInverse;
-    }
-
-    public boolean hasScores() {
-        return this.hasScores;
-    }
-
-    public void setHasScores(boolean p_121366_) {
-        this.hasScores = p_121366_;
-    }
-
-    public boolean hasAdvancements() {
-        return this.hasAdvancements;
-    }
-
-    public void setHasAdvancements(boolean p_121369_) {
-        this.hasAdvancements = p_121369_;
+    public SetOnceOptionState advancementsOption() {
+        return this.advancementsOption;
     }
 }

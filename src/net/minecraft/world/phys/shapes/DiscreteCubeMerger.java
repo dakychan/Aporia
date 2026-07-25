@@ -8,19 +8,19 @@ public final class DiscreteCubeMerger implements IndexMerger {
     private final int firstDiv;
     private final int secondDiv;
 
-    DiscreteCubeMerger(int p_82776_, int p_82777_) {
-        this.result = new CubePointRange((int)Shapes.lcm(p_82776_, p_82777_));
-        int i = IntMath.gcd(p_82776_, p_82777_);
-        this.firstDiv = p_82776_ / i;
-        this.secondDiv = p_82777_ / i;
+    DiscreteCubeMerger(final int firstSize, final int secondSize) {
+        this.result = new CubePointRange((int)Shapes.lcm(firstSize, secondSize));
+        int gcd = IntMath.gcd(firstSize, secondSize);
+        this.firstDiv = firstSize / gcd;
+        this.secondDiv = secondSize / gcd;
     }
 
     @Override
-    public boolean forMergedIndexes(IndexMerger.IndexConsumer p_82780_) {
-        int i = this.result.size() - 1;
+    public boolean forMergedIndexes(final IndexMerger.IndexConsumer consumer) {
+        int size = this.result.size() - 1;
 
-        for (int j = 0; j < i; j++) {
-            if (!p_82780_.merge(j / this.secondDiv, j / this.firstDiv, j)) {
+        for (int i = 0; i < size; i++) {
+            if (!consumer.merge(i / this.secondDiv, i / this.firstDiv, i)) {
                 return false;
             }
         }

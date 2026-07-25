@@ -27,37 +27,39 @@ public class TrimPatterns {
     public static final ResourceKey<TrimPattern> FLOW = registryKey("flow");
     public static final ResourceKey<TrimPattern> BOLT = registryKey("bolt");
 
-    public static void bootstrap(BootstrapContext<TrimPattern> p_362921_) {
-        register(p_362921_, SENTRY);
-        register(p_362921_, DUNE);
-        register(p_362921_, COAST);
-        register(p_362921_, WILD);
-        register(p_362921_, WARD);
-        register(p_362921_, EYE);
-        register(p_362921_, VEX);
-        register(p_362921_, TIDE);
-        register(p_362921_, SNOUT);
-        register(p_362921_, RIB);
-        register(p_362921_, SPIRE);
-        register(p_362921_, WAYFINDER);
-        register(p_362921_, SHAPER);
-        register(p_362921_, SILENCE);
-        register(p_362921_, RAISER);
-        register(p_362921_, HOST);
-        register(p_362921_, FLOW);
-        register(p_362921_, BOLT);
+    public static void bootstrap(final BootstrapContext<TrimPattern> context) {
+        register(context, SENTRY);
+        register(context, DUNE);
+        register(context, COAST);
+        register(context, WILD);
+        register(context, WARD);
+        register(context, EYE);
+        register(context, VEX);
+        register(context, TIDE);
+        register(context, SNOUT);
+        register(context, RIB);
+        register(context, SPIRE);
+        register(context, WAYFINDER);
+        register(context, SHAPER);
+        register(context, SILENCE);
+        register(context, RAISER);
+        register(context, HOST);
+        register(context, FLOW);
+        register(context, BOLT);
     }
 
-    public static void register(BootstrapContext<TrimPattern> p_363436_, ResourceKey<TrimPattern> p_366846_) {
-        TrimPattern trimpattern = new TrimPattern(defaultAssetId(p_366846_), Component.translatable(Util.makeDescriptionId("trim_pattern", p_366846_.identifier())), false);
-        p_363436_.register(p_366846_, trimpattern);
+    public static void register(final BootstrapContext<TrimPattern> context, final ResourceKey<TrimPattern> registryKey) {
+        TrimPattern pattern = new TrimPattern(
+            defaultAssetId(registryKey), Component.translatable(Util.makeDescriptionId("trim_pattern", registryKey.identifier())), false
+        );
+        context.register(registryKey, pattern);
     }
 
-    private static ResourceKey<TrimPattern> registryKey(String p_368467_) {
-        return ResourceKey.create(Registries.TRIM_PATTERN, Identifier.withDefaultNamespace(p_368467_));
+    private static ResourceKey<TrimPattern> registryKey(final String id) {
+        return ResourceKey.create(Registries.TRIM_PATTERN, Identifier.withDefaultNamespace(id));
     }
 
-    public static Identifier defaultAssetId(ResourceKey<TrimPattern> p_394517_) {
-        return p_394517_.identifier();
+    public static Identifier defaultAssetId(final ResourceKey<TrimPattern> registryKey) {
+        return registryKey.identifier();
     }
 }

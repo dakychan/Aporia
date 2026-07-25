@@ -12,40 +12,40 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.configurations.ProbabilityFeatureConfiguration;
 
 public class SeagrassFeature extends Feature<ProbabilityFeatureConfiguration> {
-    public SeagrassFeature(Codec<ProbabilityFeatureConfiguration> p_66768_) {
-        super(p_66768_);
+    public SeagrassFeature(final Codec<ProbabilityFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<ProbabilityFeatureConfiguration> p_160318_) {
-        boolean flag = false;
-        RandomSource randomsource = p_160318_.random();
-        WorldGenLevel worldgenlevel = p_160318_.level();
-        BlockPos blockpos = p_160318_.origin();
-        ProbabilityFeatureConfiguration probabilityfeatureconfiguration = p_160318_.config();
-        int i = randomsource.nextInt(8) - randomsource.nextInt(8);
-        int j = randomsource.nextInt(8) - randomsource.nextInt(8);
-        int k = worldgenlevel.getHeight(Heightmap.Types.OCEAN_FLOOR, blockpos.getX() + i, blockpos.getZ() + j);
-        BlockPos blockpos1 = new BlockPos(blockpos.getX() + i, k, blockpos.getZ() + j);
-        if (worldgenlevel.getBlockState(blockpos1).is(Blocks.WATER)) {
-            boolean flag1 = randomsource.nextDouble() < probabilityfeatureconfiguration.probability;
-            BlockState blockstate = flag1 ? Blocks.TALL_SEAGRASS.defaultBlockState() : Blocks.SEAGRASS.defaultBlockState();
-            if (blockstate.canSurvive(worldgenlevel, blockpos1)) {
-                if (flag1) {
-                    BlockState blockstate1 = blockstate.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER);
-                    BlockPos blockpos2 = blockpos1.above();
-                    if (worldgenlevel.getBlockState(blockpos2).is(Blocks.WATER)) {
-                        worldgenlevel.setBlock(blockpos1, blockstate, 2);
-                        worldgenlevel.setBlock(blockpos2, blockstate1, 2);
+    public boolean place(final FeaturePlaceContext<ProbabilityFeatureConfiguration> context) {
+        boolean placedAny = false;
+        RandomSource random = context.random();
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        ProbabilityFeatureConfiguration config = context.config();
+        int x = random.nextInt(8) - random.nextInt(8);
+        int z = random.nextInt(8) - random.nextInt(8);
+        int y = level.getHeight(Heightmap.Types.OCEAN_FLOOR, origin.getX() + x, origin.getZ() + z);
+        BlockPos grassPos = new BlockPos(origin.getX() + x, y, origin.getZ() + z);
+        if (level.getBlockState(grassPos).is(Blocks.WATER)) {
+            boolean isTall = random.nextDouble() < config.probability;
+            BlockState state = isTall ? Blocks.TALL_SEAGRASS.defaultBlockState() : Blocks.SEAGRASS.defaultBlockState();
+            if (state.canSurvive(level, grassPos)) {
+                if (isTall) {
+                    BlockState upperState = state.setValue(TallSeagrassBlock.HALF, DoubleBlockHalf.UPPER);
+                    BlockPos above = grassPos.above();
+                    if (level.getBlockState(above).is(Blocks.WATER)) {
+                        level.setBlock(grassPos, state, 2);
+                        level.setBlock(above, upperState, 2);
                     }
                 } else {
-                    worldgenlevel.setBlock(blockpos1, blockstate, 2);
+                    level.setBlock(grassPos, state, 2);
                 }
 
-                flag = true;
+                placedAny = true;
             }
         }
 
-        return flag;
+        return placedAny;
     }
 }

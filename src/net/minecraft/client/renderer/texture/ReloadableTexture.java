@@ -1,48 +1,45 @@
 package net.minecraft.client.renderer.texture;
 
+import com.mojang.blaze3d.GpuFormat;
 import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.AddressMode;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.TextureFormat;
 import java.io.IOException;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class ReloadableTexture extends AbstractTexture {
     private final Identifier resourceId;
 
-    public ReloadableTexture(Identifier p_454973_) {
-        this.resourceId = p_454973_;
+    public ReloadableTexture(final Identifier resourceId) {
+        this.resourceId = resourceId;
     }
 
     public Identifier resourceId() {
         return this.resourceId;
     }
 
-    public void apply(TextureContents p_376644_) {
-        boolean flag = p_376644_.clamp();
-        boolean flag1 = p_376644_.blur();
-        AddressMode addressmode = flag ? AddressMode.CLAMP_TO_EDGE : AddressMode.REPEAT;
-        FilterMode filtermode = flag1 ? FilterMode.LINEAR : FilterMode.NEAREST;
-        this.sampler = RenderSystem.getSamplerCache().getSampler(addressmode, addressmode, filtermode, filtermode, false);
+    public void apply(final TextureContents contents) {
+        boolean clamp = contents.clamp();
+        boolean blur = contents.blur();
+        AddressMode addressMode = clamp ? AddressMode.CLAMP_TO_EDGE : AddressMode.REPEAT;
+        FilterMode minMag = blur ? FilterMode.LINEAR : FilterMode.NEAREST;
+        this.sampler = RenderSystem.getSamplerCache().getSampler(addressMode, addressMode, minMag, minMag, false);
 
-        try (NativeImage nativeimage = p_376644_.image()) {
-            this.doLoad(nativeimage);
+        try (NativeImage image = contents.image()) {
+            this.doLoad(image);
         }
     }
 
-    protected void doLoad(NativeImage p_378310_) {
-        GpuDevice gpudevice = RenderSystem.getDevice();
+    protected void doLoad(final NativeImage image) {
+        GpuDevice device = RenderSystem.getDevice();
         this.close();
-        this.texture = gpudevice.createTexture(this.resourceId::toString, 5, TextureFormat.RGBA8, p_378310_.getWidth(), p_378310_.getHeight(), 1, 1);
-        this.textureView = gpudevice.createTextureView(this.texture);
-        gpudevice.createCommandEncoder().writeToTexture(this.texture, p_378310_);
+        this.texture = device.createTexture(this.resourceId::toString, 5, GpuFormat.RGBA8_UNORM, image.getWidth(), image.getHeight(), 1, 1);
+        this.textureView = device.createTextureView(this.texture);
+        device.createCommandEncoder().writeToTexture(this.texture, image);
     }
 
-    public abstract TextureContents loadContents(ResourceManager p_378474_) throws IOException;
+    public abstract TextureContents loadContents(ResourceManager resourceManager) throws IOException;
 }

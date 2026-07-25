@@ -3,11 +3,8 @@ package net.minecraft.client.tutorial;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.TutorialToast;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class OpenInventoryTutorialStep implements TutorialStepInstance {
     private static final int HINT_DELAY = 600;
     private static final Component TITLE = Component.translatable("tutorial.open_inventory.title");
@@ -16,8 +13,8 @@ public class OpenInventoryTutorialStep implements TutorialStepInstance {
     private @Nullable TutorialToast toast;
     private int timeWaiting;
 
-    public OpenInventoryTutorialStep(Tutorial p_120537_) {
-        this.tutorial = p_120537_;
+    public OpenInventoryTutorialStep(final Tutorial tutorial) {
+        this.tutorial = tutorial;
     }
 
     @Override
@@ -29,7 +26,7 @@ public class OpenInventoryTutorialStep implements TutorialStepInstance {
             if (this.timeWaiting >= 600 && this.toast == null) {
                 Minecraft minecraft = this.tutorial.getMinecraft();
                 this.toast = new TutorialToast(minecraft.font, TutorialToast.Icons.RECIPE_BOOK, TITLE, DESCRIPTION, false);
-                minecraft.getToastManager().addToast(this.toast);
+                minecraft.gui.toastManager().addToast(this.toast);
             }
         }
     }

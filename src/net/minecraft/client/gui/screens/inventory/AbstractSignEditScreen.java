@@ -1,73 +1,73 @@
 package net.minecraft.client.gui.screens.inventory;
 
 import java.util.stream.IntStream;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.IMEPreeditOverlay;
+import net.minecraft.client.gui.components.TextCursorUtils;
 import net.minecraft.client.gui.font.TextFieldHelper;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.PreeditEvent;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.renderer.blockentity.AbstractSignRenderer;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.Util;
 import net.minecraft.world.level.block.SignBlock;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.world.level.block.state.properties.WoodType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Vector3f;
+import org.joml.Vector2f;
+import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractSignEditScreen extends Screen {
     protected final SignBlockEntity sign;
     private SignText text;
     private final String[] messages;
     private final boolean isFrontText;
     protected final WoodType woodType;
-    private int frame;
+    private long cursorBlinkStartTime;
     private int line;
     private @Nullable TextFieldHelper signField;
+    private @Nullable IMEPreeditOverlay preeditOverlay;
+    private final Vector2f cursorPosScratch = new Vector2f();
 
-    public AbstractSignEditScreen(SignBlockEntity p_277842_, boolean p_277719_, boolean p_277969_) {
-        this(p_277842_, p_277719_, p_277969_, Component.translatable("sign.edit"));
+    public AbstractSignEditScreen(final SignBlockEntity sign, final boolean isFrontText, final boolean shouldFilter) {
+        this(sign, isFrontText, shouldFilter, Component.translatable("sign.edit"));
     }
 
-    public AbstractSignEditScreen(SignBlockEntity p_277792_, boolean p_277607_, boolean p_278039_, Component p_277393_) {
-        super(p_277393_);
-        this.sign = p_277792_;
-        this.text = p_277792_.getText(p_277607_);
-        this.isFrontText = p_277607_;
-        this.woodType = SignBlock.getWoodType(p_277792_.getBlockState().getBlock());
-        this.messages = IntStream.range(0, 4)
-            .mapToObj(p_277214_ -> this.text.getMessage(p_277214_, p_278039_))
-            .map(Component::getString)
-            .toArray(String[]::new);
+    public AbstractSignEditScreen(final SignBlockEntity sign, final boolean isFrontText, final boolean shouldFilter, final Component title) {
+        super(title);
+        this.sign = sign;
+        this.text = sign.getText(isFrontText);
+        this.isFrontText = isFrontText;
+        this.woodType = SignBlock.getWoodType(sign.getBlockState().getBlock());
+        this.messages = IntStream.range(0, 4).mapToObj(index -> this.text.getMessage(index, shouldFilter)).map(Component::getString).toArray(String[]::new);
     }
 
     @Override
     protected void init() {
+        this.minecraft.textInputManager().startTextInput();
+        this.cursorBlinkStartTime = Util.getMillis();
         this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_DONE, p_251194_ -> this.onDone())
-                .bounds(this.width / 2 - 100, this.height / 4 + 144, 200, 20)
-                .build()
+            Button.builder(CommonComponents.GUI_DONE, button -> this.onDone()).bounds(this.width / 2 - 100, this.height / 4 + 144, 200, 20).build()
         );
         this.signField = new TextFieldHelper(
             () -> this.messages[this.line],
             this::setMessage,
             TextFieldHelper.createClipboardGetter(this.minecraft),
             TextFieldHelper.createClipboardSetter(this.minecraft),
-            p_280850_ -> this.minecraft.font.width(p_280850_) <= this.sign.getMaxTextLineWidth()
+            s -> this.minecraft.font.width(s) <= this.sign.getMaxTextLineWidth()
         );
     }
 
     @Override
     public void tick() {
-        this.frame++;
         if (!this.isValid()) {
             this.onDone();
         }
@@ -78,31 +78,37 @@ public abstract class AbstractSignEditScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_425946_) {
-        if (p_425946_.isUp()) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (event.isUp()) {
             this.line = this.line - 1 & 3;
             this.signField.setCursorToEnd();
             return true;
-        } else if (p_425946_.isDown() || p_425946_.isConfirmation()) {
+        } else if (event.isDown() || event.isConfirmation()) {
             this.line = this.line + 1 & 3;
             this.signField.setCursorToEnd();
             return true;
         } else {
-            return this.signField.keyPressed(p_425946_) ? true : super.keyPressed(p_425946_);
+            return this.signField.keyPressed(event) ? true : super.keyPressed(event);
         }
     }
 
     @Override
-    public boolean charTyped(CharacterEvent p_429405_) {
-        this.signField.charTyped(p_429405_);
+    public boolean charTyped(final CharacterEvent event) {
+        this.signField.charTyped(event);
         return true;
     }
 
     @Override
-    public void render(GuiGraphics p_282418_, int p_281700_, int p_283040_, float p_282799_) {
-        super.render(p_282418_, p_281700_, p_283040_, p_282799_);
-        p_282418_.drawCenteredString(this.font, this.title, this.width / 2, 40, -1);
-        this.renderSign(p_282418_);
+    public boolean preeditUpdated(final @Nullable PreeditEvent event) {
+        this.preeditOverlay = event != null ? new IMEPreeditOverlay(event, this.font, this.sign.getTextLineHeight()) : null;
+        return true;
+    }
+
+    @Override
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.centeredText(this.font, this.title, this.width / 2, 40, -1);
+        this.extractSign(graphics);
     }
 
     @Override
@@ -112,14 +118,16 @@ public abstract class AbstractSignEditScreen extends Screen {
 
     @Override
     public void removed() {
-        ClientPacketListener clientpacketlistener = this.minecraft.getConnection();
-        if (clientpacketlistener != null) {
-            clientpacketlistener.send(
+        ClientPacketListener connection = this.minecraft.getConnection();
+        if (connection != null) {
+            connection.send(
                 new ServerboundSignUpdatePacket(
                     this.sign.getBlockPos(), this.isFrontText, this.messages[0], this.messages[1], this.messages[2], this.messages[3]
                 )
             );
         }
+
+        this.minecraft.textInputManager().stopTextInput();
     }
 
     @Override
@@ -132,80 +140,97 @@ public abstract class AbstractSignEditScreen extends Screen {
         return true;
     }
 
-    protected abstract void renderSignBackground(GuiGraphics p_281459_);
+    protected abstract void extractSignBackground(GuiGraphicsExtractor graphics);
 
-    protected abstract Vector3f getSignTextScale();
+    protected abstract Vector3fc getSignTextScale();
 
     protected abstract float getSignYOffset();
 
-    private void renderSign(GuiGraphics p_282006_) {
-        p_282006_.pose().pushMatrix();
-        p_282006_.pose().translate(this.width / 2.0F, this.getSignYOffset());
-        p_282006_.pose().pushMatrix();
-        this.renderSignBackground(p_282006_);
-        p_282006_.pose().popMatrix();
-        this.renderSignText(p_282006_);
-        p_282006_.pose().popMatrix();
+    private void extractSign(final GuiGraphicsExtractor graphics) {
+        graphics.pose().pushMatrix();
+        float offsetX = this.width / 2.0F;
+        float offsetY = this.getSignYOffset();
+        graphics.pose().translate(offsetX, offsetY);
+        graphics.pose().pushMatrix();
+        this.extractSignBackground(graphics);
+        graphics.pose().popMatrix();
+        Vector3fc textScale = this.getSignTextScale();
+        graphics.pose().scale(textScale.x(), textScale.y());
+        this.cursorPosScratch.zero();
+        this.extractSignText(graphics, this.cursorPosScratch);
+        graphics.pose().popMatrix();
+        if (this.preeditOverlay != null) {
+            this.cursorPosScratch.mul(textScale.x(), textScale.y()).add(offsetX, offsetY);
+            this.preeditOverlay.updateInputPosition((int)this.cursorPosScratch.x, (int)this.cursorPosScratch.y);
+            graphics.setPreeditOverlay(this.preeditOverlay);
+        }
     }
 
-    private void renderSignText(GuiGraphics p_282366_) {
-        Vector3f vector3f = this.getSignTextScale();
-        p_282366_.pose().scale(vector3f.x(), vector3f.y());
-        int i = this.text.hasGlowingText() ? this.text.getColor().getTextColor() : AbstractSignRenderer.getDarkColor(this.text);
-        boolean flag = this.frame / 6 % 2 == 0;
-        int j = this.signField.getCursorPos();
-        int k = this.signField.getSelectionPos();
-        int l = 4 * this.sign.getTextLineHeight() / 2;
-        int i1 = this.line * this.sign.getTextLineHeight() - l;
+    private void extractSignText(final GuiGraphicsExtractor graphics, final Vector2f cursorPosOutput) {
+        int color = this.text.hasGlowingText() ? this.text.getColor().getTextColor() : AbstractSignRenderer.getDarkColor(this.text);
+        boolean showCursor = TextCursorUtils.isCursorVisible(Util.getMillis() - this.cursorBlinkStartTime);
+        boolean needsValidCursorPos = this.preeditOverlay != null;
+        int cursorPos = this.signField.getCursorPos();
+        int selectionPos = this.signField.getSelectionPos();
+        int signMidpoint = 4 * this.sign.getTextLineHeight() / 2;
+        int cursorY = this.line * this.sign.getTextLineHeight() - signMidpoint;
 
-        for (int j1 = 0; j1 < this.messages.length; j1++) {
-            String s = this.messages[j1];
-            if (s != null) {
+        for (int i = 0; i < this.messages.length; i++) {
+            String line = this.messages[i];
+            if (line != null) {
                 if (this.font.isBidirectional()) {
-                    s = this.font.bidirectionalShaping(s);
+                    line = this.font.bidirectionalShaping(line);
                 }
 
-                int k1 = -this.font.width(s) / 2;
-                p_282366_.drawString(this.font, s, k1, j1 * this.sign.getTextLineHeight() - l, i, false);
-                if (j1 == this.line && j >= 0 && flag) {
-                    int l1 = this.font.width(s.substring(0, Math.max(Math.min(j, s.length()), 0)));
-                    int i2 = l1 - this.font.width(s) / 2;
-                    if (j >= s.length()) {
-                        p_282366_.drawString(this.font, "_", i2, i1, i, false);
+                int x1 = -this.font.width(line) / 2;
+                graphics.text(this.font, line, x1, i * this.sign.getTextLineHeight() - signMidpoint, color, false);
+                if (i == this.line && cursorPos >= 0 && (showCursor || needsValidCursorPos)) {
+                    int cursorPosition = this.font.width(line.substring(0, Math.max(Math.min(cursorPos, line.length()), 0)));
+                    int cursorX = cursorPosition - this.font.width(line) / 2;
+                    if (cursorPos >= line.length()) {
+                        if (showCursor) {
+                            TextCursorUtils.extractAppendCursor(graphics, this.font, cursorX, cursorY, color, false);
+                        }
+
+                        cursorPosOutput.set(cursorX, cursorY);
                     }
                 }
             }
         }
 
-        for (int k3 = 0; k3 < this.messages.length; k3++) {
-            String s1 = this.messages[k3];
-            if (s1 != null && k3 == this.line && j >= 0) {
-                int l3 = this.font.width(s1.substring(0, Math.max(Math.min(j, s1.length()), 0)));
-                int i4 = l3 - this.font.width(s1) / 2;
-                if (flag && j < s1.length()) {
-                    p_282366_.fill(i4, i1 - 1, i4 + 1, i1 + this.sign.getTextLineHeight(), ARGB.opaque(i));
+        for (int i = 0; i < this.messages.length; i++) {
+            String line = this.messages[i];
+            if (line != null && i == this.line && cursorPos >= 0) {
+                int cursorPosition = this.font.width(line.substring(0, Math.max(Math.min(cursorPos, line.length()), 0)));
+                int cursorX = cursorPosition - this.font.width(line) / 2;
+                if (cursorPos < line.length()) {
+                    if (showCursor) {
+                        TextCursorUtils.extractInsertCursor(graphics, cursorX, cursorY, ARGB.opaque(color), this.sign.getTextLineHeight());
+                    }
+
+                    cursorPosOutput.set(cursorX, cursorY);
                 }
 
-                if (k != j) {
-                    int j4 = Math.min(j, k);
-                    int j2 = Math.max(j, k);
-                    int k2 = this.font.width(s1.substring(0, j4)) - this.font.width(s1) / 2;
-                    int l2 = this.font.width(s1.substring(0, j2)) - this.font.width(s1) / 2;
-                    int i3 = Math.min(k2, l2);
-                    int j3 = Math.max(k2, l2);
-                    p_282366_.textHighlight(i3, i1, j3, i1 + this.sign.getTextLineHeight(), true);
+                if (selectionPos != cursorPos) {
+                    int startIndex = Math.min(cursorPos, selectionPos);
+                    int endIndex = Math.max(cursorPos, selectionPos);
+                    int startPosX = this.font.width(line.substring(0, startIndex)) - this.font.width(line) / 2;
+                    int endPosX = this.font.width(line.substring(0, endIndex)) - this.font.width(line) / 2;
+                    int fromX = Math.min(startPosX, endPosX);
+                    int toX = Math.max(startPosX, endPosX);
+                    graphics.textHighlight(fromX, cursorY, toX, cursorY + this.sign.getTextLineHeight(), true);
                 }
             }
         }
     }
 
-    private void setMessage(String p_277913_) {
-        this.messages[this.line] = p_277913_;
-        this.text = this.text.setMessage(this.line, Component.literal(p_277913_));
+    private void setMessage(final String message) {
+        this.messages[this.line] = message;
+        this.text = this.text.setMessage(this.line, Component.literal(message));
         this.sign.setText(this.text, this.isFrontText);
     }
 
     private void onDone() {
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 }

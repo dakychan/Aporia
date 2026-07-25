@@ -1,9 +1,6 @@
 package net.minecraft.client.model.geom;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class PartNames {
     public static final String LEFT_FIN = "left_fin";
     public static final String RIGHT_FIN = "right_fin";
@@ -65,6 +62,7 @@ public class PartNames {
     public static final String BODY = "body";
     public static final String UPPER_BODY = "upper_body";
     public static final String INNER_BODY = "inner_body";
+    public static final String WAIST = "waist";
     public static final String HAT_RIM = "hat_rim";
     public static final String GOGGLES = "goggles";
     public static final String JACKET = "jacket";
@@ -111,7 +109,7 @@ public class PartNames {
     public static final String RED_CORAL_FIRST = "red_coral_first";
     public static final String RED_CORAL_SECOND = "red_coral_second";
 
-    public static String tentacle(int p_407643_) {
-        return "tentacle" + p_407643_;
+    public static String tentacle(final int i) {
+        return "tentacle" + i;
     }
 }

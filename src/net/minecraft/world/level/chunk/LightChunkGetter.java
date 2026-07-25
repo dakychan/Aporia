@@ -6,9 +6,9 @@ import net.minecraft.world.level.LightLayer;
 import org.jspecify.annotations.Nullable;
 
 public interface LightChunkGetter {
-    @Nullable LightChunk getChunkForLighting(int p_63023_, int p_63024_);
+    @Nullable LightChunk getChunkForLighting(final int x, final int z);
 
-    default void onLightUpdate(LightLayer p_63021_, SectionPos p_63022_) {
+    default void onLightUpdate(final LightLayer layer, final SectionPos pos) {
     }
 
     BlockGetter getLevel();

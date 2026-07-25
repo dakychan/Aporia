@@ -17,36 +17,36 @@ import org.jspecify.annotations.Nullable;
 public class SolidBucketItem extends BlockItem implements DispensibleContainerItem {
     private final SoundEvent placeSound;
 
-    public SolidBucketItem(Block p_151187_, SoundEvent p_151188_, Item.Properties p_151189_) {
-        super(p_151187_, p_151189_);
-        this.placeSound = p_151188_;
+    public SolidBucketItem(final Block content, final SoundEvent placeSound, final Item.Properties properties) {
+        super(content, properties);
+        this.placeSound = placeSound;
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_151197_) {
-        InteractionResult interactionresult = super.useOn(p_151197_);
-        Player player = p_151197_.getPlayer();
-        if (interactionresult.consumesAction() && player != null) {
-            player.setItemInHand(p_151197_.getHand(), BucketItem.getEmptySuccessItem(p_151197_.getItemInHand(), player));
+    public InteractionResult useOn(final UseOnContext context) {
+        InteractionResult placeResult = super.useOn(context);
+        Player player = context.getPlayer();
+        if (placeResult.consumesAction() && player != null) {
+            player.setItemInHand(context.getHand(), BucketItem.getEmptySuccessItem(context.getItemInHand(), player));
         }
 
-        return interactionresult;
+        return placeResult;
     }
 
     @Override
-    protected SoundEvent getPlaceSound(BlockState p_151199_) {
+    protected SoundEvent getPlaceSound(final BlockState blockState) {
         return this.placeSound;
     }
 
     @Override
-    public boolean emptyContents(@Nullable LivingEntity p_394373_, Level p_151193_, BlockPos p_151194_, @Nullable BlockHitResult p_151195_) {
-        if (p_151193_.isInWorldBounds(p_151194_) && p_151193_.isEmptyBlock(p_151194_)) {
-            if (!p_151193_.isClientSide()) {
-                p_151193_.setBlock(p_151194_, this.getBlock().defaultBlockState(), 3);
+    public boolean emptyContents(final @Nullable LivingEntity user, final Level level, final BlockPos pos, final @Nullable BlockHitResult hitResult) {
+        if (level.isInWorldBounds(pos) && level.isEmptyBlock(pos)) {
+            if (!level.isClientSide()) {
+                level.setBlock(pos, this.getBlock().defaultBlockState(), 3);
             }
 
-            p_151193_.gameEvent(p_394373_, GameEvent.FLUID_PLACE, p_151194_);
-            p_151193_.playSound(p_394373_, p_151194_, this.placeSound, SoundSource.BLOCKS, 1.0F, 1.0F);
+            level.gameEvent(user, GameEvent.FLUID_PLACE, pos);
+            level.playSound(user, pos, this.placeSound, SoundSource.BLOCKS, 1.0F, 1.0F);
             return true;
         } else {
             return false;

@@ -2,28 +2,43 @@ package net.minecraft.server.notifications;
 
 import com.google.common.collect.Lists;
 import java.util.List;
+import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.server.players.IpBanListEntry;
 import net.minecraft.server.players.NameAndId;
 import net.minecraft.server.players.ServerOpListEntry;
 import net.minecraft.server.players.UserBanListEntry;
 import net.minecraft.world.level.gamerules.GameRule;
+import org.jspecify.annotations.Nullable;
 
 public class NotificationManager implements NotificationService {
     private final List<NotificationService> notificationServices = Lists.newArrayList();
+    private @Nullable DedicatedServer server;
 
-    public void registerService(NotificationService p_424571_) {
-        this.notificationServices.add(p_424571_);
+    public void registerService(final NotificationService notificationService) {
+        this.notificationServices.add(notificationService);
+    }
+
+    public void setServer(final DedicatedServer server) {
+        if (this.server != null) {
+            throw new IllegalStateException("Server already set");
+        }
+
+        this.server = server;
+    }
+
+    public @Nullable DedicatedServer server() {
+        return this.server;
     }
 
     @Override
-    public void playerJoined(ServerPlayer p_430504_) {
-        this.notificationServices.forEach(p_428033_ -> p_428033_.playerJoined(p_430504_));
+    public void playerJoined(final ServerPlayer player) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerJoined(player));
     }
 
     @Override
-    public void playerLeft(ServerPlayer p_424060_) {
-        this.notificationServices.forEach(p_425371_ -> p_425371_.playerLeft(p_424060_));
+    public void playerLeft(final ServerPlayer player) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerLeft(player));
     }
 
     @Override
@@ -52,48 +67,48 @@ public class NotificationManager implements NotificationService {
     }
 
     @Override
-    public void playerOped(ServerOpListEntry p_425535_) {
-        this.notificationServices.forEach(p_431655_ -> p_431655_.playerOped(p_425535_));
+    public void playerOped(final ServerOpListEntry operator) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerOped(operator));
     }
 
     @Override
-    public void playerDeoped(ServerOpListEntry p_430768_) {
-        this.notificationServices.forEach(p_422313_ -> p_422313_.playerDeoped(p_430768_));
+    public void playerDeoped(final ServerOpListEntry operator) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerDeoped(operator));
     }
 
     @Override
-    public void playerAddedToAllowlist(NameAndId p_429159_) {
-        this.notificationServices.forEach(p_425490_ -> p_425490_.playerAddedToAllowlist(p_429159_));
+    public void playerAddedToAllowlist(final NameAndId player) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerAddedToAllowlist(player));
     }
 
     @Override
-    public void playerRemovedFromAllowlist(NameAndId p_425138_) {
-        this.notificationServices.forEach(p_430717_ -> p_430717_.playerRemovedFromAllowlist(p_425138_));
+    public void playerRemovedFromAllowlist(final NameAndId player) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerRemovedFromAllowlist(player));
     }
 
     @Override
-    public void ipBanned(IpBanListEntry p_426179_) {
-        this.notificationServices.forEach(p_428013_ -> p_428013_.ipBanned(p_426179_));
+    public void ipBanned(final IpBanListEntry ban) {
+        this.notificationServices.forEach(notificationService -> notificationService.ipBanned(ban));
     }
 
     @Override
-    public void ipUnbanned(String p_429529_) {
-        this.notificationServices.forEach(p_424395_ -> p_424395_.ipUnbanned(p_429529_));
+    public void ipUnbanned(final String ip) {
+        this.notificationServices.forEach(notificationService -> notificationService.ipUnbanned(ip));
     }
 
     @Override
-    public void playerBanned(UserBanListEntry p_424235_) {
-        this.notificationServices.forEach(p_422534_ -> p_422534_.playerBanned(p_424235_));
+    public void playerBanned(final UserBanListEntry ban) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerBanned(ban));
     }
 
     @Override
-    public void playerUnbanned(NameAndId p_428436_) {
-        this.notificationServices.forEach(p_427067_ -> p_427067_.playerUnbanned(p_428436_));
+    public void playerUnbanned(final NameAndId player) {
+        this.notificationServices.forEach(notificationService -> notificationService.playerUnbanned(player));
     }
 
     @Override
-    public <T> void onGameRuleChanged(GameRule<T> p_458442_, T p_456935_) {
-        this.notificationServices.forEach(p_449160_ -> p_449160_.onGameRuleChanged(p_458442_, p_456935_));
+    public <T> void onGameRuleChanged(final GameRule<T> gameRule, final T value) {
+        this.notificationServices.forEach(notificationService -> notificationService.onGameRuleChanged(gameRule, value));
     }
 
     @Override

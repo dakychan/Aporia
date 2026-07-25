@@ -6,16 +6,20 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.material.Fluid;
-import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.level.material.FluidIds;
 
-public class FluidTagsProvider extends IntrinsicHolderTagsProvider<Fluid> {
-    public FluidTagsProvider(PackOutput p_255941_, CompletableFuture<HolderLookup.Provider> p_256600_) {
-        super(p_255941_, Registries.FLUID, p_256600_, p_256474_ -> p_256474_.builtInRegistryHolder().key());
+public class FluidTagsProvider extends TagsProvider<Fluid> {
+    public FluidTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.FLUID, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_256366_) {
-        this.tag(FluidTags.WATER).add(Fluids.WATER, Fluids.FLOWING_WATER);
-        this.tag(FluidTags.LAVA).add(Fluids.LAVA, Fluids.FLOWING_LAVA);
+    protected void addTags(final HolderLookup.Provider registries) {
+        this.tag(FluidTags.WATER).add(FluidIds.WATER, FluidIds.FLOWING_WATER);
+        this.tag(FluidTags.LAVA).add(FluidIds.LAVA, FluidIds.FLOWING_LAVA);
+        this.tag(FluidTags.SUPPORTS_SUGAR_CANE_ADJACENTLY).addTag(FluidTags.WATER);
+        this.tag(FluidTags.SUPPORTS_LILY_PAD).add(FluidIds.WATER);
+        this.tag(FluidTags.SUPPORTS_FROGSPAWN).add(FluidIds.WATER);
+        this.tag(FluidTags.BUBBLE_COLUMN_CAN_OCCUPY).add(FluidIds.WATER);
     }
 }

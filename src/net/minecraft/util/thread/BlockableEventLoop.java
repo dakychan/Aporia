@@ -13,27 +13,32 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import javax.annotation.CheckReturnValue;
+import net.minecraft.CrashReport;
 import net.minecraft.ReportedException;
 import net.minecraft.SharedConstants;
 import net.minecraft.util.profiling.metrics.MetricCategory;
 import net.minecraft.util.profiling.metrics.MetricSampler;
 import net.minecraft.util.profiling.metrics.MetricsRegistry;
 import net.minecraft.util.profiling.metrics.ProfilerMeasured;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public abstract class BlockableEventLoop<R extends Runnable> implements ProfilerMeasured, TaskScheduler<R>, Executor {
+public abstract class BlockableEventLoop<R extends Runnable> implements Executor, TaskScheduler<R>, ProfilerMeasured {
     public static final long BLOCK_TIME_NANOS = 100000L;
+    private static volatile @Nullable Supplier<CrashReport> delayedCrash;
+    private final boolean propagatesCrashes;
     private final String name;
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Queue<R> pendingRunnables = Queues.newConcurrentLinkedQueue();
     private int blockingCount;
 
-    protected BlockableEventLoop(String p_18686_) {
-        this.name = p_18686_;
+    protected BlockableEventLoop(final String name, final boolean propagatesCrashes) {
+        this.propagatesCrashes = propagatesCrashes;
+        this.name = name;
         MetricsRegistry.INSTANCE.add(this);
     }
 
-    protected abstract boolean shouldRun(R p_18703_);
+    protected abstract boolean shouldRun(final R task);
 
     public boolean isSameThread() {
         return Thread.currentThread() == this.getRunningThread();
@@ -54,53 +59,53 @@ public abstract class BlockableEventLoop<R extends Runnable> implements Profiler
         return this.name;
     }
 
-    public <V> CompletableFuture<V> submit(Supplier<V> p_18692_) {
-        return this.scheduleExecutables() ? CompletableFuture.supplyAsync(p_18692_, this) : CompletableFuture.completedFuture(p_18692_.get());
+    public <V> CompletableFuture<V> submit(final Supplier<V> supplier) {
+        return this.scheduleExecutables() ? CompletableFuture.supplyAsync(supplier, this) : CompletableFuture.completedFuture(supplier.get());
     }
 
-    private CompletableFuture<Void> submitAsync(Runnable p_18690_) {
+    private CompletableFuture<Void> submitAsync(final Runnable runnable) {
         return CompletableFuture.supplyAsync(() -> {
-            p_18690_.run();
+            runnable.run();
             return null;
         }, this);
     }
 
     @CheckReturnValue
-    public CompletableFuture<Void> submit(Runnable p_18708_) {
+    public CompletableFuture<Void> submit(final Runnable runnable) {
         if (this.scheduleExecutables()) {
-            return this.submitAsync(p_18708_);
-        } else {
-            p_18708_.run();
-            return CompletableFuture.completedFuture(null);
+            return this.submitAsync(runnable);
         }
+
+        runnable.run();
+        return CompletableFuture.completedFuture(null);
     }
 
-    public void executeBlocking(Runnable p_18710_) {
+    public void executeBlocking(final Runnable runnable) {
         if (!this.isSameThread()) {
-            this.submitAsync(p_18710_).join();
+            this.submitAsync(runnable).join();
         } else {
-            p_18710_.run();
+            runnable.run();
         }
     }
 
     @Override
-    public void schedule(R p_18712_) {
-        this.pendingRunnables.add(p_18712_);
+    public void schedule(final R r) {
+        this.pendingRunnables.add(r);
         LockSupport.unpark(this.getRunningThread());
     }
 
     @Override
-    public void execute(Runnable p_18706_) {
-        R r = this.wrapRunnable(p_18706_);
+    public void execute(final Runnable command) {
+        R task = this.wrapRunnable(command);
         if (this.scheduleExecutables()) {
-            this.schedule(r);
+            this.schedule(task);
         } else {
-            this.doRunTask(r);
+            this.doRunTask(task);
         }
     }
 
-    public void executeIfPossible(Runnable p_201937_) {
-        this.execute(p_201937_);
+    public void executeIfPossible(final Runnable command) {
+        this.execute(command);
     }
 
     protected void dropAllTasks() {
@@ -116,23 +121,26 @@ public abstract class BlockableEventLoop<R extends Runnable> implements Profiler
         return this.blockingCount > 0;
     }
 
-    public boolean pollTask() {
-        R r = this.pendingRunnables.peek();
-        if (r == null) {
+    protected boolean pollTask() {
+        this.throwDelayedException();
+        R task = this.pendingRunnables.peek();
+        if (task == null) {
             return false;
-        } else if (!this.shouldRunAllTasks() && !this.shouldRun(r)) {
-            return false;
-        } else {
-            this.doRunTask(this.pendingRunnables.remove());
-            return true;
         }
+
+        if (!this.shouldRunAllTasks() && !this.shouldRun(task)) {
+            return false;
+        }
+
+        this.doRunTask(this.pendingRunnables.remove());
+        return true;
     }
 
-    public void managedBlock(BooleanSupplier p_18702_) {
+    public void managedBlock(final BooleanSupplier condition) {
         this.blockingCount++;
 
         try {
-            while (!p_18702_.getAsBoolean()) {
+            while (!condition.getAsBoolean()) {
                 if (!this.pollTask()) {
                     this.waitForTasks();
                 }
@@ -147,13 +155,13 @@ public abstract class BlockableEventLoop<R extends Runnable> implements Profiler
         LockSupport.parkNanos("waiting for tasks", 100000L);
     }
 
-    protected void doRunTask(R p_18700_) {
-        try (Zone zone = TracyClient.beginZone("Task", SharedConstants.IS_RUNNING_IN_IDE)) {
-            p_18700_.run();
-        } catch (Exception exception) {
-            LOGGER.error(LogUtils.FATAL_MARKER, "Error executing task on {}", this.name(), exception);
-            if (isNonRecoverable(exception)) {
-                throw exception;
+    protected void doRunTask(final R task) {
+        try (Zone ignored = TracyClient.beginZone("Task", SharedConstants.IS_RUNNING_IN_IDE)) {
+            task.run();
+        } catch (Exception e) {
+            LOGGER.error(LogUtils.FATAL_MARKER, "Error executing task on {}", this.name(), e);
+            if (isNonRecoverable(e)) {
+                throw e;
             }
         }
     }
@@ -163,9 +171,29 @@ public abstract class BlockableEventLoop<R extends Runnable> implements Profiler
         return ImmutableList.of(MetricSampler.create(this.name + "-pending-tasks", MetricCategory.EVENT_LOOPS, this::getPendingTasksCount));
     }
 
-    public static boolean isNonRecoverable(Throwable p_366916_) {
-        return p_366916_ instanceof ReportedException reportedexception
-            ? isNonRecoverable(reportedexception.getCause())
-            : p_366916_ instanceof OutOfMemoryError || p_366916_ instanceof StackOverflowError;
+    public static boolean isNonRecoverable(final Throwable t) {
+        return t instanceof ReportedException r ? isNonRecoverable(r.getCause()) : t instanceof OutOfMemoryError || t instanceof StackOverflowError;
+    }
+
+    private void throwDelayedException() {
+        if (this.propagatesCrashes) {
+            Supplier<CrashReport> delayedCrash = BlockableEventLoop.delayedCrash;
+            if (delayedCrash != null) {
+                throw new ReportedException(delayedCrash.get());
+            }
+        }
+    }
+
+    public void delayCrash(final CrashReport crashReport) {
+        delayedCrash = () -> crashReport;
+    }
+
+    public static synchronized void relayDelayCrash(final CrashReport crashReport) {
+        Supplier<CrashReport> delayedCrash = BlockableEventLoop.delayedCrash;
+        if (delayedCrash == null) {
+            BlockableEventLoop.delayedCrash = () -> crashReport;
+        } else {
+            delayedCrash.get().getException().addSuppressed(crashReport.getException());
+        }
     }
 }

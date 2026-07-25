@@ -39,31 +39,31 @@ class LinkFSProvider extends FileSystemProvider {
     }
 
     @Override
-    public FileSystem newFileSystem(URI p_251867_, Map<String, ?> p_250970_) {
+    public FileSystem newFileSystem(final URI uri, final Map<String, ?> env) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public FileSystem getFileSystem(URI p_249279_) {
+    public FileSystem getFileSystem(final URI uri) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Path getPath(URI p_252294_) {
+    public Path getPath(final URI uri) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public SeekableByteChannel newByteChannel(Path p_251835_, Set<? extends OpenOption> p_251780_, FileAttribute<?>... p_250474_) throws IOException {
-        if (!p_251780_.contains(StandardOpenOption.CREATE_NEW)
-            && !p_251780_.contains(StandardOpenOption.CREATE)
-            && !p_251780_.contains(StandardOpenOption.APPEND)
-            && !p_251780_.contains(StandardOpenOption.WRITE)) {
-            Path path = toLinkPath(p_251835_).toAbsolutePath().getTargetPath();
-            if (path == null) {
-                throw new NoSuchFileException(p_251835_.toString());
+    public SeekableByteChannel newByteChannel(final Path path, final Set<? extends OpenOption> options, final FileAttribute<?>... attrs) throws IOException {
+        if (!options.contains(StandardOpenOption.CREATE_NEW)
+            && !options.contains(StandardOpenOption.CREATE)
+            && !options.contains(StandardOpenOption.APPEND)
+            && !options.contains(StandardOpenOption.WRITE)) {
+            Path targetPath = toLinkPath(path).toAbsolutePath().getTargetPath();
+            if (targetPath == null) {
+                throw new NoSuchFileException(path.toString());
             } else {
-                return Files.newByteChannel(path, p_251780_, p_250474_);
+                return Files.newByteChannel(targetPath, options, attrs);
             }
         } else {
             throw new UnsupportedOperationException();
@@ -71,21 +71,21 @@ class LinkFSProvider extends FileSystemProvider {
     }
 
     @Override
-    public DirectoryStream<Path> newDirectoryStream(Path p_250116_, final Filter<? super Path> p_251710_) throws IOException {
-        final PathContents.DirectoryContents pathcontents$directorycontents = toLinkPath(p_250116_).toAbsolutePath().getDirectoryContents();
-        if (pathcontents$directorycontents == null) {
-            throw new NotDirectoryException(p_250116_.toString());
+    public DirectoryStream<Path> newDirectoryStream(final Path dir, final Filter<? super Path> filter) throws IOException {
+        final PathContents.DirectoryContents directoryContents = toLinkPath(dir).toAbsolutePath().getDirectoryContents();
+        if (directoryContents == null) {
+            throw new NotDirectoryException(dir.toString());
         } else {
             return new DirectoryStream<Path>() {
                 @Override
                 public Iterator<Path> iterator() {
-                    return pathcontents$directorycontents.children().values().stream().filter(p_250987_ -> {
+                    return directoryContents.children().values().stream().filter(path -> {
                         try {
-                            return p_251710_.accept(p_250987_);
-                        } catch (IOException ioexception) {
-                            throw new DirectoryIteratorException(ioexception);
+                            return filter.accept(path);
+                        } catch (IOException e) {
+                            throw new DirectoryIteratorException(e);
                         }
-                    }).map(p_249891_ -> (Path)p_249891_).iterator();
+                    }).map(path -> (Path)path).iterator();
                 }
 
                 @Override
@@ -96,98 +96,98 @@ class LinkFSProvider extends FileSystemProvider {
     }
 
     @Override
-    public void createDirectory(Path p_252352_, FileAttribute<?>... p_249694_) {
+    public void createDirectory(final Path dir, final FileAttribute<?>... attrs) {
         throw new ReadOnlyFileSystemException();
     }
 
     @Override
-    public void delete(Path p_252069_) {
+    public void delete(final Path path) {
         throw new ReadOnlyFileSystemException();
     }
 
     @Override
-    public void copy(Path p_250627_, Path p_248906_, CopyOption... p_249289_) {
+    public void copy(final Path source, final Path target, final CopyOption... options) {
         throw new ReadOnlyFileSystemException();
     }
 
     @Override
-    public void move(Path p_250866_, Path p_250335_, CopyOption... p_249156_) {
+    public void move(final Path source, final Path target, final CopyOption... options) {
         throw new ReadOnlyFileSystemException();
     }
 
     @Override
-    public boolean isSameFile(Path p_249846_, Path p_251936_) {
-        return p_249846_ instanceof LinkFSPath && p_251936_ instanceof LinkFSPath && p_249846_.equals(p_251936_);
+    public boolean isSameFile(final Path path, final Path path2) {
+        return path instanceof LinkFSPath && path2 instanceof LinkFSPath && path.equals(path2);
     }
 
     @Override
-    public boolean isHidden(Path p_248957_) {
+    public boolean isHidden(final Path path) {
         return false;
     }
 
     @Override
-    public FileStore getFileStore(Path p_249374_) {
-        return toLinkPath(p_249374_).getFileSystem().store();
+    public FileStore getFileStore(final Path path) {
+        return toLinkPath(path).getFileSystem().store();
     }
 
     @Override
-    public void checkAccess(Path p_248517_, AccessMode... p_248805_) throws IOException {
-        if (p_248805_.length == 0 && !toLinkPath(p_248517_).exists()) {
-            throw new NoSuchFileException(p_248517_.toString());
-        } else {
-            AccessMode[] aaccessmode = p_248805_;
-            int i = p_248805_.length;
-            int j = 0;
+    public void checkAccess(final Path path, final AccessMode... modes) throws IOException {
+        if (modes.length == 0 && !toLinkPath(path).exists()) {
+            throw new NoSuchFileException(path.toString());
+        }
 
-            while (j < i) {
-                AccessMode accessmode = aaccessmode[j];
-                switch (accessmode) {
-                    case READ:
-                        if (!toLinkPath(p_248517_).exists()) {
-                            throw new NoSuchFileException(p_248517_.toString());
-                        }
-                    default:
-                        j++;
-                        break;
-                    case EXECUTE:
-                    case WRITE:
-                        throw new AccessDeniedException(accessmode.toString());
-                }
+        AccessMode[] var3 = modes;
+        int var4 = var3.length;
+        int var5 = 0;
+
+        while (var5 < var4) {
+            AccessMode mode = var3[var5];
+            switch (mode) {
+                case READ:
+                    if (!toLinkPath(path).exists()) {
+                        throw new NoSuchFileException(path.toString());
+                    }
+                default:
+                    var5++;
+                    break;
+                case EXECUTE:
+                case WRITE:
+                    throw new AccessDeniedException(mode.toString());
             }
         }
     }
 
     @Override
-    public <V extends FileAttributeView> @Nullable V getFileAttributeView(Path p_250166_, Class<V> p_252214_, LinkOption... p_250559_) {
-        LinkFSPath linkfspath = toLinkPath(p_250166_);
-        return (V)(p_252214_ == BasicFileAttributeView.class ? linkfspath.getBasicAttributeView() : null);
+    public <V extends FileAttributeView> @Nullable V getFileAttributeView(final Path path, final Class<V> type, final LinkOption... options) {
+        LinkFSPath linkPath = toLinkPath(path);
+        return (V)(type == BasicFileAttributeView.class ? linkPath.getBasicAttributeView() : null);
     }
 
     @Override
-    public <A extends BasicFileAttributes> A readAttributes(Path p_249764_, Class<A> p_248604_, LinkOption... p_252280_) throws IOException {
-        LinkFSPath linkfspath = toLinkPath(p_249764_).toAbsolutePath();
-        if (p_248604_ == BasicFileAttributes.class) {
-            return (A)linkfspath.getBasicAttributes();
+    public <A extends BasicFileAttributes> A readAttributes(final Path path, final Class<A> type, final LinkOption... options) throws IOException {
+        LinkFSPath linkPath = toLinkPath(path).toAbsolutePath();
+        if (type == BasicFileAttributes.class) {
+            return (A)linkPath.getBasicAttributes();
         } else {
-            throw new UnsupportedOperationException("Attributes of type " + p_248604_.getName() + " not supported");
+            throw new UnsupportedOperationException("Attributes of type " + type.getName() + " not supported");
         }
     }
 
     @Override
-    public Map<String, Object> readAttributes(Path p_252124_, String p_249064_, LinkOption... p_252305_) {
+    public Map<String, Object> readAttributes(final Path path, final String attributes, final LinkOption... options) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void setAttribute(Path p_251468_, String p_249411_, Object p_249284_, LinkOption... p_250990_) {
+    public void setAttribute(final Path path, final String attribute, final Object value, final LinkOption... options) {
         throw new ReadOnlyFileSystemException();
     }
 
-    private static LinkFSPath toLinkPath(@Nullable Path p_252065_) {
-        if (p_252065_ == null) {
+    private static LinkFSPath toLinkPath(final @Nullable Path path) {
+        if (path == null) {
             throw new NullPointerException();
-        } else if (p_252065_ instanceof LinkFSPath linkfspath) {
-            return linkfspath;
+        } else if (path instanceof LinkFSPath p) {
+            return p;
         } else {
             throw new ProviderMismatchException();
         }

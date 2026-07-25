@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import net.minecraft.core.Holder;
 import net.minecraft.util.Util;
@@ -13,19 +12,19 @@ public record MapDecorations(Map<String, MapDecorations.Entry> decorations) {
     public static final Codec<MapDecorations> CODEC = Codec.unboundedMap(Codec.STRING, MapDecorations.Entry.CODEC)
         .xmap(MapDecorations::new, MapDecorations::decorations);
 
-    public MapDecorations withDecoration(String p_327714_, MapDecorations.Entry p_334134_) {
-        return new MapDecorations(Util.copyAndPut(this.decorations, p_327714_, p_334134_));
+    public MapDecorations withDecoration(final String id, final MapDecorations.Entry entry) {
+        return new MapDecorations(Util.copyAndPut(this.decorations, id, entry));
     }
 
     public record Entry(Holder<MapDecorationType> type, double x, double z, float rotation) {
         public static final Codec<MapDecorations.Entry> CODEC = RecordCodecBuilder.create(
-            p_334294_ -> p_334294_.group(
+            i -> i.group(
                     MapDecorationType.CODEC.fieldOf("type").forGetter(MapDecorations.Entry::type),
                     Codec.DOUBLE.fieldOf("x").forGetter(MapDecorations.Entry::x),
                     Codec.DOUBLE.fieldOf("z").forGetter(MapDecorations.Entry::z),
                     Codec.FLOAT.fieldOf("rotation").forGetter(MapDecorations.Entry::rotation)
                 )
-                .apply(p_334294_, MapDecorations.Entry::new)
+                .apply(i, MapDecorations.Entry::new)
         );
     }
 }

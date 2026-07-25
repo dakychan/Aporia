@@ -7,18 +7,18 @@ import net.minecraft.world.item.ItemStack;
 public class PlayerEquipment extends EntityEquipment {
     private final Player player;
 
-    public PlayerEquipment(Player p_396069_) {
-        this.player = p_396069_;
+    public PlayerEquipment(final Player player) {
+        this.player = player;
     }
 
     @Override
-    public ItemStack set(EquipmentSlot p_395109_, ItemStack p_393751_) {
-        return p_395109_ == EquipmentSlot.MAINHAND ? this.player.getInventory().setSelectedItem(p_393751_) : super.set(p_395109_, p_393751_);
+    public ItemStack set(final EquipmentSlot slot, final ItemStack itemStack) {
+        return slot == EquipmentSlot.MAINHAND ? this.player.getInventory().setSelectedItem(itemStack) : super.set(slot, itemStack);
     }
 
     @Override
-    public ItemStack get(EquipmentSlot p_396072_) {
-        return p_396072_ == EquipmentSlot.MAINHAND ? this.player.getInventory().getSelectedItem() : super.get(p_396072_);
+    public ItemStack get(final EquipmentSlot slot) {
+        return slot == EquipmentSlot.MAINHAND ? this.player.getInventory().getSelectedItem() : super.get(slot);
     }
 
     @Override

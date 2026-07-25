@@ -3,34 +3,25 @@ package net.minecraft.world.level.storage.loot.providers.score;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
-import java.util.Set;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.scores.ScoreHolder;
 
 public record FixedScoreboardNameProvider(String name) implements ScoreboardNameProvider {
-    public static final MapCodec<FixedScoreboardNameProvider> CODEC = RecordCodecBuilder.mapCodec(
-        p_300953_ -> p_300953_.group(Codec.STRING.fieldOf("name").forGetter(FixedScoreboardNameProvider::name))
-            .apply(p_300953_, FixedScoreboardNameProvider::new)
+    public static final MapCodec<FixedScoreboardNameProvider> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(Codec.STRING.fieldOf("name").forGetter(FixedScoreboardNameProvider::name)).apply(i, FixedScoreboardNameProvider::new)
     );
 
-    public static ScoreboardNameProvider forName(String p_165847_) {
-        return new FixedScoreboardNameProvider(p_165847_);
+    public static ScoreboardNameProvider forName(final String name) {
+        return new FixedScoreboardNameProvider(name);
     }
 
     @Override
-    public LootScoreProviderType getType() {
-        return ScoreboardNameProviders.FIXED;
+    public MapCodec<FixedScoreboardNameProvider> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ScoreHolder getScoreHolder(LootContext p_309765_) {
+    public ScoreHolder getScoreHolder(final LootContext context) {
         return ScoreHolder.forNameOnly(this.name);
-    }
-
-    @Override
-    public Set<ContextKey<?>> getReferencedContextParams() {
-        return Set.of();
     }
 }

@@ -1,9 +1,7 @@
 package net.minecraft.client.gui.screens;
 
-import com.viaversion.viafabricplus.screen.impl.ProtocolSelectionScreen;
-import com.viaversion.viafabricplus.settings.impl.GeneralSettings;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.KeyEvent;
@@ -11,9 +9,6 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-
 
 public class DirectJoinServerScreen extends Screen {
     private static final Component ENTER_IP_LABEL = Component.translatable("manageServer.enterIp");
@@ -23,20 +18,20 @@ public class DirectJoinServerScreen extends Screen {
     private final BooleanConsumer callback;
     private final Screen lastScreen;
 
-    public DirectJoinServerScreen(Screen p_95960_, BooleanConsumer p_95961_, ServerData p_95962_) {
+    public DirectJoinServerScreen(final Screen lastScreen, final BooleanConsumer callback, final ServerData serverData) {
         super(Component.translatable("selectServer.direct"));
-        this.lastScreen = p_95960_;
-        this.serverData = p_95962_;
-        this.callback = p_95961_;
+        this.lastScreen = lastScreen;
+        this.serverData = serverData;
+        this.callback = callback;
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_422310_) {
-        if (this.selectButton.active && this.getFocused() == this.ipEdit && p_422310_.isConfirmation()) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (this.selectButton.active && this.getFocused() == this.ipEdit && event.isConfirmation()) {
             this.onSelect();
             return true;
         } else {
-            return super.keyPressed(p_422310_);
+            return super.keyPressed(event);
         }
     }
 
@@ -45,27 +40,19 @@ public class DirectJoinServerScreen extends Screen {
         this.ipEdit = new EditBox(this.font, this.width / 2 - 100, 116, 200, 20, ENTER_IP_LABEL);
         this.ipEdit.setMaxLength(128);
         this.ipEdit.setValue(this.minecraft.options.lastMpIp);
-        this.ipEdit.setResponder(p_95983_ -> this.updateSelectButtonStatus());
+        this.ipEdit.setResponder(value -> this.updateSelectButtonStatus());
         this.addWidget(this.ipEdit);
         this.selectButton = this.addRenderableWidget(
-            Button.builder(Component.translatable("selectServer.select"), p_95981_ -> this.onSelect())
+            Button.builder(Component.translatable("selectServer.select"), button -> this.onSelect())
                 .bounds(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20)
                 .build()
         );
         this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_CANCEL, p_95977_ -> this.callback.accept(false))
+            Button.builder(CommonComponents.GUI_CANCEL, button -> this.callback.accept(false))
                 .bounds(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20)
                 .build()
         );
         this.updateSelectButtonStatus();
-        final int buttonPosition = GeneralSettings.INSTANCE.directConnectScreenButtonOrientation.getIndex();
-        if (buttonPosition == 0) { // Off
-            return;
-        }
-
-        final Button.Builder builder = Button.builder(Component.nullToEmpty("ViaFabricPlus"), button -> ProtocolSelectionScreen.INSTANCE.open(this)).size(98, 20);
-        GeneralSettings.setOrientation(builder::pos, buttonPosition, width, height);
-        this.addRenderableWidget(builder.build());
     }
 
     @Override
@@ -74,10 +61,10 @@ public class DirectJoinServerScreen extends Screen {
     }
 
     @Override
-    public void resize(int p_95974_, int p_95975_) {
-        String s = this.ipEdit.getValue();
-        this.init(p_95974_, p_95975_);
-        this.ipEdit.setValue(s);
+    public void resize(final int width, final int height) {
+        String oldEdit = this.ipEdit.getValue();
+        this.init(width, height);
+        this.ipEdit.setValue(oldEdit);
     }
 
     private void onSelect() {
@@ -87,7 +74,7 @@ public class DirectJoinServerScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
     @Override
@@ -101,10 +88,10 @@ public class DirectJoinServerScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics p_282464_, int p_95969_, int p_95970_, float p_95971_) {
-        super.render(p_282464_, p_95969_, p_95970_, p_95971_);
-        p_282464_.drawCenteredString(this.font, this.title, this.width / 2, 20, -1);
-        p_282464_.drawString(this.font, ENTER_IP_LABEL, this.width / 2 - 100 + 1, 100, -6250336);
-        this.ipEdit.render(p_282464_, p_95969_, p_95970_, p_95971_);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.centeredText(this.font, this.title, this.width / 2, 20, -1);
+        graphics.text(this.font, ENTER_IP_LABEL, this.width / 2 - 100 + 1, 100, -6250336);
+        this.ipEdit.extractRenderState(graphics, mouseX, mouseY, a);
     }
 }

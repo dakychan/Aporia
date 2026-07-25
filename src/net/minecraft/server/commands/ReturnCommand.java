@@ -17,8 +17,8 @@ import net.minecraft.commands.execution.tasks.BuildContexts;
 import net.minecraft.commands.execution.tasks.FallthroughTask;
 
 public class ReturnCommand {
-    public static <T extends ExecutionCommandSource<T>> void register(CommandDispatcher<T> p_282091_) {
-        p_282091_.register(
+    public static <T extends ExecutionCommandSource<T>> void register(final CommandDispatcher<T> dispatcher) {
+        dispatcher.register(
             LiteralArgumentBuilder.<T>literal("return")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
@@ -26,40 +26,46 @@ public class ReturnCommand {
                         .executes(new ReturnCommand.ReturnValueCustomExecutor<>())
                 )
                 .then(LiteralArgumentBuilder.<T>literal("fail").executes(new ReturnCommand.ReturnFailCustomExecutor<>()))
-                .then(LiteralArgumentBuilder.<T>literal("run").forward(p_282091_.getRoot(), new ReturnCommand.ReturnFromCommandCustomModifier<>(), false))
+                .then(LiteralArgumentBuilder.<T>literal("run").forward(dispatcher.getRoot(), new ReturnCommand.ReturnFromCommandCustomModifier<>(), false))
         );
     }
 
-    static class ReturnFailCustomExecutor<T extends ExecutionCommandSource<T>> implements CustomCommandExecutor.CommandAdapter<T> {
-        public void run(T p_312804_, ContextChain<T> p_313125_, ChainModifiers p_309843_, ExecutionControl<T> p_311523_) {
-            p_312804_.callback().onFailure();
-            Frame frame = p_311523_.currentFrame();
+    private static class ReturnFailCustomExecutor<T extends ExecutionCommandSource<T>> implements CustomCommandExecutor.CommandAdapter<T> {
+        public void run(final T sender, final ContextChain<T> currentStep, final ChainModifiers modifiers, final ExecutionControl<T> output) {
+            sender.callback().onFailure();
+            Frame frame = output.currentFrame();
             frame.returnFailure();
             frame.discard();
         }
     }
 
-    static class ReturnFromCommandCustomModifier<T extends ExecutionCommandSource<T>> implements CustomModifierExecutor.ModifierAdapter<T> {
-        public void apply(T p_310700_, List<T> p_310930_, ContextChain<T> p_313059_, ChainModifiers p_313220_, ExecutionControl<T> p_311638_) {
-            if (p_310930_.isEmpty()) {
-                if (p_313220_.isReturn()) {
-                    p_311638_.queueNext(FallthroughTask.instance());
+    private static class ReturnFromCommandCustomModifier<T extends ExecutionCommandSource<T>> implements CustomModifierExecutor.ModifierAdapter<T> {
+        public void apply(
+            final T originalSource,
+            final List<T> currentSources,
+            final ContextChain<T> currentStep,
+            final ChainModifiers modifiers,
+            final ExecutionControl<T> output
+        ) {
+            if (currentSources.isEmpty()) {
+                if (modifiers.isReturn()) {
+                    output.queueNext(FallthroughTask.instance());
                 }
             } else {
-                p_311638_.currentFrame().discard();
-                ContextChain<T> contextchain = p_313059_.nextStage();
-                String s = contextchain.getTopContext().getInput();
-                p_311638_.queueNext(new BuildContexts.Continuation<>(s, contextchain, p_313220_.setReturn(), p_310700_, p_310930_));
+                output.currentFrame().discard();
+                ContextChain<T> nextState = currentStep.nextStage();
+                String command = nextState.getTopContext().getInput();
+                output.queueNext(new BuildContexts.Continuation<>(command, nextState, modifiers.setReturn(), originalSource, currentSources));
             }
         }
     }
 
-    static class ReturnValueCustomExecutor<T extends ExecutionCommandSource<T>> implements CustomCommandExecutor.CommandAdapter<T> {
-        public void run(T p_309785_, ContextChain<T> p_312976_, ChainModifiers p_309726_, ExecutionControl<T> p_310375_) {
-            int i = IntegerArgumentType.getInteger(p_312976_.getTopContext(), "value");
-            p_309785_.callback().onSuccess(i);
-            Frame frame = p_310375_.currentFrame();
-            frame.returnSuccess(i);
+    private static class ReturnValueCustomExecutor<T extends ExecutionCommandSource<T>> implements CustomCommandExecutor.CommandAdapter<T> {
+        public void run(final T sender, final ContextChain<T> currentStep, final ChainModifiers modifiers, final ExecutionControl<T> output) {
+            int returnValue = IntegerArgumentType.getInteger(currentStep.getTopContext(), "value");
+            sender.callback().onSuccess(returnValue);
+            Frame frame = output.currentFrame();
+            frame.returnSuccess(returnValue);
             frame.discard();
         }
     }

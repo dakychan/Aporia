@@ -7,11 +7,13 @@ import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.animal.frog.Tadpole;
 import net.minecraft.world.level.BlockGetter;
@@ -40,102 +42,109 @@ public class FrogspawnBlock extends Block {
         return CODEC;
     }
 
-    public FrogspawnBlock(BlockBehaviour.Properties p_221177_) {
-        super(p_221177_);
+    public FrogspawnBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_221199_, BlockGetter p_221200_, BlockPos p_221201_, CollisionContext p_221202_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_221209_, LevelReader p_221210_, BlockPos p_221211_) {
-        return mayPlaceOn(p_221210_, p_221211_.below());
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return mayPlaceOn(level, pos.below());
     }
 
     @Override
-    protected void onPlace(BlockState p_221227_, Level p_221228_, BlockPos p_221229_, BlockState p_221230_, boolean p_221231_) {
-        p_221228_.scheduleTick(p_221229_, this, getFrogspawnHatchDelay(p_221228_.getRandom()));
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        level.scheduleTick(pos, this, getFrogspawnHatchDelay(level.getRandom()));
     }
 
-    private static int getFrogspawnHatchDelay(RandomSource p_221186_) {
-        return p_221186_.nextInt(minHatchTickDelay, maxHatchTickDelay);
+    private static int getFrogspawnHatchDelay(final RandomSource random) {
+        return random.nextInt(minHatchTickDelay, maxHatchTickDelay);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_221213_,
-        LevelReader p_365824_,
-        ScheduledTickAccess p_361762_,
-        BlockPos p_221217_,
-        Direction p_221214_,
-        BlockPos p_221218_,
-        BlockState p_221215_,
-        RandomSource p_364719_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return !this.canSurvive(p_221213_, p_365824_, p_221217_)
+        return !this.canSurvive(state, level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_221213_, p_365824_, p_361762_, p_221217_, p_221214_, p_221218_, p_221215_, p_364719_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected void tick(BlockState p_221194_, ServerLevel p_221195_, BlockPos p_221196_, RandomSource p_221197_) {
-        if (!this.canSurvive(p_221194_, p_221195_, p_221196_)) {
-            this.destroyBlock(p_221195_, p_221196_);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!this.canSurvive(state, level, pos)) {
+            this.destroyBlock(level, pos);
         } else {
-            this.hatchFrogspawn(p_221195_, p_221196_, p_221197_);
+            this.hatchFrogspawn(level, pos, random);
         }
     }
 
     @Override
-    protected void entityInside(BlockState p_221204_, Level p_221205_, BlockPos p_221206_, Entity p_221207_, InsideBlockEffectApplier p_392110_, boolean p_432029_) {
-        if (p_221207_.getType().equals(EntityType.FALLING_BLOCK)) {
-            this.destroyBlock(p_221205_, p_221206_);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (entity.is(EntityTypes.FALLING_BLOCK)) {
+            this.destroyBlock(level, pos);
         }
     }
 
-    private static boolean mayPlaceOn(BlockGetter p_221188_, BlockPos p_221189_) {
-        FluidState fluidstate = p_221188_.getFluidState(p_221189_);
-        FluidState fluidstate1 = p_221188_.getFluidState(p_221189_.above());
-        return fluidstate.getType() == Fluids.WATER && fluidstate1.getType() == Fluids.EMPTY;
+    private static boolean mayPlaceOn(final BlockGetter level, final BlockPos pos) {
+        FluidState fluidState = level.getFluidState(pos);
+        FluidState fluidAbove = level.getFluidState(pos.above());
+        return (fluidState.is(FluidTags.SUPPORTS_FROGSPAWN) || level.getBlockState(pos).is(BlockTags.SUPPORTS_FROGSPAWN)) && fluidAbove.is(Fluids.EMPTY);
     }
 
-    private void hatchFrogspawn(ServerLevel p_221182_, BlockPos p_221183_, RandomSource p_221184_) {
-        this.destroyBlock(p_221182_, p_221183_);
-        p_221182_.playSound(null, p_221183_, SoundEvents.FROGSPAWN_HATCH, SoundSource.BLOCKS, 1.0F, 1.0F);
-        this.spawnTadpoles(p_221182_, p_221183_, p_221184_);
+    private void hatchFrogspawn(final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        this.destroyBlock(level, pos);
+        level.playSound(null, pos, SoundEvents.FROGSPAWN_HATCH, SoundSource.BLOCKS, 1.0F, 1.0F);
+        this.spawnTadpoles(level, pos, random);
     }
 
-    private void destroyBlock(Level p_221191_, BlockPos p_221192_) {
-        p_221191_.destroyBlock(p_221192_, false);
+    private void destroyBlock(final Level level, final BlockPos pos) {
+        level.destroyBlock(pos, false);
     }
 
-    private void spawnTadpoles(ServerLevel p_221221_, BlockPos p_221222_, RandomSource p_221223_) {
-        int i = p_221223_.nextInt(2, 6);
+    private void spawnTadpoles(final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        int tadpoleAmount = random.nextInt(2, 6);
 
-        for (int j = 1; j <= i; j++) {
-            Tadpole tadpole = EntityType.TADPOLE.create(p_221221_, EntitySpawnReason.BREEDING);
+        for (int i = 1; i <= tadpoleAmount; i++) {
+            Tadpole tadpole = EntityTypes.TADPOLE.create(level, EntitySpawnReason.BREEDING);
             if (tadpole != null) {
-                double d0 = p_221222_.getX() + this.getRandomTadpolePositionOffset(p_221223_);
-                double d1 = p_221222_.getZ() + this.getRandomTadpolePositionOffset(p_221223_);
-                int k = p_221223_.nextInt(1, 361);
-                tadpole.snapTo(d0, p_221222_.getY() - 0.5, d1, k, 0.0F);
+                double xPos = pos.getX() + this.getRandomTadpolePositionOffset(random);
+                double zPos = pos.getZ() + this.getRandomTadpolePositionOffset(random);
+                int yRot = random.nextInt(1, 361);
+                tadpole.snapTo(xPos, pos.getY() - 0.5, zPos, yRot, 0.0F);
                 tadpole.setPersistenceRequired();
-                p_221221_.addFreshEntity(tadpole);
+                level.addFreshEntity(tadpole);
             }
         }
     }
 
-    private double getRandomTadpolePositionOffset(RandomSource p_221225_) {
-        double d0 = 0.2F;
-        return Mth.clamp(p_221225_.nextDouble(), 0.2F, 0.7999999970197678);
+    private double getRandomTadpolePositionOffset(final RandomSource random) {
+        double tadpoleHitboxCenter = 0.2F;
+        return Mth.clamp(random.nextDouble(), 0.2F, 0.7999999970197678);
     }
 
     @VisibleForTesting
-    public static void setHatchDelay(int p_221179_, int p_221180_) {
-        minHatchTickDelay = p_221179_;
-        maxHatchTickDelay = p_221180_;
+    public static void setHatchDelay(final int minDelay, final int maxDelay) {
+        minHatchTickDelay = minDelay;
+        maxHatchTickDelay = maxDelay;
     }
 
     @VisibleForTesting

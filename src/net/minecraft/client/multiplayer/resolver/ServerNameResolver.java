@@ -2,10 +2,7 @@ package net.minecraft.client.multiplayer.resolver;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.util.Optional;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ServerNameResolver {
     public static final ServerNameResolver DEFAULT = new ServerNameResolver(
         ServerAddressResolver.SYSTEM, ServerRedirectHandler.createDnsSrvRedirectHandler(), AddressCheck.createFromService()
@@ -15,21 +12,21 @@ public class ServerNameResolver {
     private final AddressCheck addressCheck;
 
     @VisibleForTesting
-    ServerNameResolver(ServerAddressResolver p_171887_, ServerRedirectHandler p_171888_, AddressCheck p_171889_) {
-        this.resolver = p_171887_;
-        this.redirectHandler = p_171888_;
-        this.addressCheck = p_171889_;
+    ServerNameResolver(final ServerAddressResolver resolver, final ServerRedirectHandler redirectHandler, final AddressCheck addressCheck) {
+        this.resolver = resolver;
+        this.redirectHandler = redirectHandler;
+        this.addressCheck = addressCheck;
     }
 
-    public Optional<ResolvedServerAddress> resolveAddress(ServerAddress p_171891_) {
-        Optional<ResolvedServerAddress> optional = this.resolver.resolve(p_171891_);
-        if ((!optional.isPresent() || this.addressCheck.isAllowed(optional.get())) && this.addressCheck.isAllowed(p_171891_)) {
-            Optional<ServerAddress> optional1 = this.redirectHandler.lookupRedirect(p_171891_);
-            if (optional1.isPresent()) {
-                optional = this.resolver.resolve(optional1.get()).filter(this.addressCheck::isAllowed);
+    public Optional<ResolvedServerAddress> resolveAddress(final ServerAddress address) {
+        Optional<ResolvedServerAddress> resolvedAddress = this.resolver.resolve(address);
+        if ((!resolvedAddress.isPresent() || this.addressCheck.isAllowed(resolvedAddress.get())) && this.addressCheck.isAllowed(address)) {
+            Optional<ServerAddress> redirectedAddress = this.redirectHandler.lookupRedirect(address);
+            if (redirectedAddress.isPresent()) {
+                resolvedAddress = this.resolver.resolve(redirectedAddress.get()).filter(this.addressCheck::isAllowed);
             }
 
-            return optional;
+            return resolvedAddress;
         } else {
             return Optional.empty();
         }

@@ -105,7 +105,7 @@ class ServerHelper : Module("ServerHelper", Category.MISC) {
             val durationNanos = System.nanoTime() - startTime
             mc.execute {
                 val msg = "§6Aporia.cc §f→ §a${player.name.string} решил капчу за §e${durationNanos} ns§a! (Унижен в нули)"
-                player.displayClientMessage(Component.literal(msg), false)
+                player.sendSystemMessage(Component.literal(msg))
             }
         } catch (_: Exception) {
         }

@@ -3,30 +3,29 @@ package net.minecraft.world.level.storage.loot.predicates;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.storage.loot.LootContext;
 
 public record WeatherCheck(Optional<Boolean> isRaining, Optional<Boolean> isThundering) implements LootItemCondition {
-    public static final MapCodec<WeatherCheck> CODEC = RecordCodecBuilder.mapCodec(
-        p_327656_ -> p_327656_.group(
+    public static final MapCodec<WeatherCheck> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
                 Codec.BOOL.optionalFieldOf("raining").forGetter(WeatherCheck::isRaining),
                 Codec.BOOL.optionalFieldOf("thundering").forGetter(WeatherCheck::isThundering)
             )
-            .apply(p_327656_, WeatherCheck::new)
+            .apply(i, WeatherCheck::new)
     );
 
     @Override
-    public LootItemConditionType getType() {
-        return LootItemConditions.WEATHER_CHECK;
+    public MapCodec<WeatherCheck> codec() {
+        return MAP_CODEC;
     }
 
-    public boolean test(LootContext p_82066_) {
-        ServerLevel serverlevel = p_82066_.getLevel();
-        return this.isRaining.isPresent() && this.isRaining.get() != serverlevel.isRaining()
+    public boolean test(final LootContext context) {
+        ServerLevel level = context.getLevel();
+        return this.isRaining.isPresent() && this.isRaining.get() != level.isRaining()
             ? false
-            : !this.isThundering.isPresent() || this.isThundering.get() == serverlevel.isThundering();
+            : !this.isThundering.isPresent() || this.isThundering.get() == level.isThundering();
     }
 
     public static WeatherCheck.Builder weather() {
@@ -37,13 +36,13 @@ public record WeatherCheck(Optional<Boolean> isRaining, Optional<Boolean> isThun
         private Optional<Boolean> isRaining = Optional.empty();
         private Optional<Boolean> isThundering = Optional.empty();
 
-        public WeatherCheck.Builder setRaining(boolean p_298370_) {
-            this.isRaining = Optional.of(p_298370_);
+        public WeatherCheck.Builder setRaining(final boolean raining) {
+            this.isRaining = Optional.of(raining);
             return this;
         }
 
-        public WeatherCheck.Builder setThundering(boolean p_299917_) {
-            this.isThundering = Optional.of(p_299917_);
+        public WeatherCheck.Builder setThundering(final boolean thundering) {
+            this.isThundering = Optional.of(thundering);
             return this;
         }
 

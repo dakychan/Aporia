@@ -38,94 +38,103 @@ public class EndPortalBlock extends BaseEntityBlock implements Portal {
         return CODEC;
     }
 
-    protected EndPortalBlock(BlockBehaviour.Properties p_53017_) {
-        super(p_53017_);
+    protected EndPortalBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153196_, BlockState p_153197_) {
-        return new TheEndPortalBlockEntity(p_153196_, p_153197_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new TheEndPortalBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_53038_, BlockGetter p_53039_, BlockPos p_53040_, CollisionContext p_53041_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected VoxelShape getEntityInsideCollisionShape(BlockState p_367952_, BlockGetter p_394932_, BlockPos p_366181_, Entity p_394555_) {
-        return p_367952_.getShape(p_394932_, p_366181_);
+    protected VoxelShape getEntityInsideCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final Entity entity) {
+        return state.getShape(level, pos);
     }
 
     @Override
-    protected void entityInside(BlockState p_53025_, Level p_53026_, BlockPos p_53027_, Entity p_53028_, InsideBlockEffectApplier p_393631_, boolean p_432045_) {
-        if (p_53028_.canUsePortal(false)) {
-            if (!p_53026_.isClientSide() && p_53026_.dimension() == Level.END && p_53028_ instanceof ServerPlayer serverplayer && !serverplayer.seenCredits) {
-                serverplayer.showEndCredits();
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (entity.canUsePortal(false)) {
+            if (!level.isClientSide() && level.dimension() == Level.END && entity instanceof ServerPlayer player && !player.seenCredits) {
+                player.showEndCredits();
             } else {
-                p_53028_.setAsInsidePortal(this, p_53027_);
+                entity.setAsInsidePortal(this, pos);
             }
         }
     }
 
     @Override
-    public @Nullable TeleportTransition getPortalDestination(ServerLevel p_342381_, Entity p_345492_, BlockPos p_343875_) {
-        LevelData.RespawnData leveldata$respawndata = p_342381_.getRespawnData();
-        ResourceKey<Level> resourcekey = p_342381_.dimension();
-        boolean flag = resourcekey == Level.END;
-        ResourceKey<Level> resourcekey1 = flag ? leveldata$respawndata.dimension() : Level.END;
-        BlockPos blockpos = flag ? leveldata$respawndata.pos() : ServerLevel.END_SPAWN_POINT;
-        ServerLevel serverlevel = p_342381_.getServer().getLevel(resourcekey1);
-        if (serverlevel == null) {
+    public @Nullable TeleportTransition getPortalDestination(final ServerLevel currentLevel, final Entity entity, final BlockPos portalEntryPos) {
+        LevelData.RespawnData respawnData = currentLevel.getRespawnData();
+        ResourceKey<Level> currentDimension = currentLevel.dimension();
+        boolean fromEnd = currentDimension == Level.END;
+        ResourceKey<Level> newDimension = fromEnd ? respawnData.dimension() : Level.END;
+        BlockPos spawnBlockPos = fromEnd ? respawnData.pos() : ServerLevel.END_SPAWN_POINT;
+        ServerLevel newLevel = currentLevel.getServer().getLevel(newDimension);
+        if (newLevel == null) {
             return null;
-        } else {
-            Vec3 vec3 = blockpos.getBottomCenter();
-            float f;
-            float f1;
-            Set<Relative> set;
-            if (!flag) {
-                EndPlatformFeature.createEndPlatform(serverlevel, BlockPos.containing(vec3).below(), true);
-                f = Direction.WEST.toYRot();
-                f1 = 0.0F;
-                set = Relative.union(Relative.DELTA, Set.of(Relative.X_ROT));
-                if (p_345492_ instanceof ServerPlayer) {
-                    vec3 = vec3.subtract(0.0, 1.0, 0.0);
-                }
-            } else {
-                f = leveldata$respawndata.yaw();
-                f1 = leveldata$respawndata.pitch();
-                set = Relative.union(Relative.DELTA, Relative.ROTATION);
-                if (p_345492_ instanceof ServerPlayer serverplayer) {
-                    return serverplayer.findRespawnPositionAndUseSpawnBlock(false, TeleportTransition.DO_NOTHING);
-                }
+        }
 
-                vec3 = p_345492_.adjustSpawnLocation(serverlevel, blockpos).getBottomCenter();
+        Vec3 spawnPos = Vec3.atBottomCenterOf(spawnBlockPos);
+        float yRot;
+        float xRot;
+        Set<Relative> relatives;
+        if (!fromEnd) {
+            EndPlatformFeature.createEndPlatform(newLevel, BlockPos.containing(spawnPos).below(), true);
+            yRot = Direction.WEST.toYRot();
+            xRot = 0.0F;
+            relatives = Relative.union(Relative.DELTA, Set.of(Relative.X_ROT));
+            if (entity instanceof ServerPlayer) {
+                spawnPos = spawnPos.subtract(0.0, 1.0, 0.0);
+            }
+        } else {
+            yRot = respawnData.yaw();
+            xRot = respawnData.pitch();
+            relatives = Relative.union(Relative.DELTA, Relative.ROTATION);
+            if (entity instanceof ServerPlayer serverPlayer) {
+                return serverPlayer.findRespawnPositionAndUseSpawnBlock(false, TeleportTransition.DO_NOTHING);
             }
 
-            return new TeleportTransition(serverlevel, vec3, Vec3.ZERO, f, f1, set, TeleportTransition.PLAY_PORTAL_SOUND.then(TeleportTransition.PLACE_PORTAL_TICKET));
+            spawnPos = Vec3.atBottomCenterOf(entity.adjustSpawnLocation(newLevel, spawnBlockPos));
         }
+
+        return new TeleportTransition(
+            newLevel, spawnPos, Vec3.ZERO, yRot, xRot, relatives, TeleportTransition.PLAY_PORTAL_SOUND.then(TeleportTransition.PLACE_PORTAL_TICKET)
+        );
     }
 
     @Override
-    public void animateTick(BlockState p_221102_, Level p_221103_, BlockPos p_221104_, RandomSource p_221105_) {
-        double d0 = p_221104_.getX() + p_221105_.nextDouble();
-        double d1 = p_221104_.getY() + 0.8;
-        double d2 = p_221104_.getZ() + p_221105_.nextDouble();
-        p_221103_.addParticle(ParticleTypes.SMOKE, d0, d1, d2, 0.0, 0.0, 0.0);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        double x = pos.getX() + random.nextDouble();
+        double y = pos.getY() + 0.8;
+        double z = pos.getZ() + random.nextDouble();
+        level.addParticle(ParticleTypes.SMOKE, x, y, z, 0.0, 0.0, 0.0);
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_310938_, BlockPos p_53022_, BlockState p_53023_, boolean p_376423_) {
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    protected boolean canBeReplaced(BlockState p_53035_, Fluid p_53036_) {
+    protected boolean canBeReplaced(final BlockState state, final Fluid fluid) {
         return false;
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState p_375791_) {
+    protected RenderShape getRenderShape(final BlockState state) {
         return RenderShape.INVISIBLE;
     }
 }

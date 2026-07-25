@@ -12,8 +12,8 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public class Marker extends Entity {
-    public Marker(EntityType<?> p_147250_, Level p_147251_) {
-        super(p_147250_, p_147251_);
+    public Marker(final EntityType<?> type, final Level level) {
+        super(type, level);
         this.noPhysics = true;
     }
 
@@ -22,24 +22,24 @@ public class Marker extends Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_334647_) {
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_406678_) {
+    protected void readAdditionalSaveData(final ValueInput input) {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_407620_) {
+    protected void addAdditionalSaveData(final ValueOutput output) {
     }
 
     @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket(ServerEntity p_345137_) {
+    public Packet<ClientGamePacketListener> getAddEntityPacket(final ServerEntity serverEntity) {
         throw new IllegalStateException("Markers should never be sent");
     }
 
     @Override
-    protected boolean canAddPassenger(Entity p_265289_) {
+    protected boolean canAddPassenger(final Entity passenger) {
         return false;
     }
 
@@ -49,7 +49,7 @@ public class Marker extends Entity {
     }
 
     @Override
-    protected void addPassenger(Entity p_270306_) {
+    protected void addPassenger(final Entity passenger) {
         throw new IllegalStateException("Should never addPassenger without checking couldAcceptPassenger()");
     }
 
@@ -64,7 +64,7 @@ public class Marker extends Entity {
     }
 
     @Override
-    public final boolean hurtServer(ServerLevel p_366204_, DamageSource p_366965_, float p_363917_) {
+    public final boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         return false;
     }
 }

@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
@@ -31,32 +32,32 @@ public class TallSeagrassBlock extends DoublePlantBlock implements LiquidBlockCo
         return CODEC;
     }
 
-    public TallSeagrassBlock(BlockBehaviour.Properties p_154745_) {
-        super(p_154745_);
+    public TallSeagrassBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_154763_, BlockGetter p_154764_, BlockPos p_154765_, CollisionContext p_154766_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean mayPlaceOn(BlockState p_154774_, BlockGetter p_154775_, BlockPos p_154776_) {
-        return p_154774_.isFaceSturdy(p_154775_, p_154776_, Direction.UP) && !p_154774_.is(Blocks.MAGMA_BLOCK);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.isFaceSturdy(level, pos, Direction.UP) && !state.is(BlockTags.CANNOT_SUPPORT_SEAGRASS);
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_311085_, BlockPos p_154750_, BlockState p_154751_, boolean p_376180_) {
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
         return new ItemStack(Blocks.SEAGRASS);
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_154747_) {
-        BlockState blockstate = super.getStateForPlacement(p_154747_);
-        if (blockstate != null) {
-            FluidState fluidstate = p_154747_.getLevel().getFluidState(p_154747_.getClickedPos().above());
-            if (fluidstate.is(FluidTags.WATER) && fluidstate.getAmount() == 8) {
-                return blockstate;
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = super.getStateForPlacement(context);
+        if (state != null) {
+            FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos().above());
+            if (fluidState.is(FluidTags.WATER) && fluidState.isFull()) {
+                return state;
             }
         }
 
@@ -64,28 +65,28 @@ public class TallSeagrassBlock extends DoublePlantBlock implements LiquidBlockCo
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_154768_, LevelReader p_154769_, BlockPos p_154770_) {
-        if (p_154768_.getValue(HALF) == DoubleBlockHalf.UPPER) {
-            BlockState blockstate = p_154769_.getBlockState(p_154770_.below());
-            return blockstate.is(this) && blockstate.getValue(HALF) == DoubleBlockHalf.LOWER;
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        if (state.getValue(HALF) == DoubleBlockHalf.UPPER) {
+            BlockState belowState = level.getBlockState(pos.below());
+            return belowState.is(this) && belowState.getValue(HALF) == DoubleBlockHalf.LOWER;
         } else {
-            FluidState fluidstate = p_154769_.getFluidState(p_154770_);
-            return super.canSurvive(p_154768_, p_154769_, p_154770_) && fluidstate.is(FluidTags.WATER) && fluidstate.getAmount() == 8;
+            FluidState fluidState = level.getFluidState(pos);
+            return super.canSurvive(state, level, pos) && fluidState.is(FluidTags.WATER) && fluidState.isFull();
         }
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_154772_) {
+    protected FluidState getFluidState(final BlockState state) {
         return Fluids.WATER.getSource(false);
     }
 
     @Override
-    public boolean canPlaceLiquid(@Nullable LivingEntity p_397885_, BlockGetter p_154753_, BlockPos p_154754_, BlockState p_154755_, Fluid p_154756_) {
+    public boolean canPlaceLiquid(final @Nullable LivingEntity user, final BlockGetter level, final BlockPos pos, final BlockState state, final Fluid type) {
         return false;
     }
 
     @Override
-    public boolean placeLiquid(LevelAccessor p_154758_, BlockPos p_154759_, BlockState p_154760_, FluidState p_154761_) {
+    public boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
         return false;
     }
 }

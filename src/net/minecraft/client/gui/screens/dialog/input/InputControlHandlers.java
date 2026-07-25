@@ -26,30 +26,27 @@ import net.minecraft.server.dialog.input.InputControl;
 import net.minecraft.server.dialog.input.NumberRangeInput;
 import net.minecraft.server.dialog.input.SingleOptionInput;
 import net.minecraft.server.dialog.input.TextInput;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class InputControlHandlers {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<MapCodec<? extends InputControl>, InputControlHandler<?>> HANDLERS = new HashMap<>();
 
-    private static <T extends InputControl> void register(MapCodec<T> p_407482_, InputControlHandler<? super T> p_406406_) {
-        HANDLERS.put(p_407482_, p_406406_);
+    private static <T extends InputControl> void register(final MapCodec<T> type, final InputControlHandler<? super T> handler) {
+        HANDLERS.put(type, handler);
     }
 
-    private static <T extends InputControl> @Nullable InputControlHandler<T> get(T p_406934_) {
-        return (InputControlHandler<T>)HANDLERS.get(p_406934_.mapCodec());
+    private static <T extends InputControl> @Nullable InputControlHandler<T> get(final T inputControl) {
+        return (InputControlHandler<T>)HANDLERS.get(inputControl.mapCodec());
     }
 
-    public static <T extends InputControl> void createHandler(T p_408090_, Screen p_407348_, InputControlHandler.Output p_409707_) {
-        InputControlHandler<T> inputcontrolhandler = get(p_408090_);
-        if (inputcontrolhandler == null) {
-            LOGGER.warn("Unrecognized input control {}", p_408090_);
+    public static <T extends InputControl> void createHandler(final T inputControl, final Screen screen, final InputControlHandler.Output outputConsumer) {
+        InputControlHandler<T> handler = get(inputControl);
+        if (handler == null) {
+            LOGGER.warn("Unrecognized input control {}", inputControl);
         } else {
-            inputcontrolhandler.addControl(p_408090_, p_407348_, p_409707_);
+            handler.addControl(inputControl, screen, outputConsumer);
         }
     }
 
@@ -60,52 +57,47 @@ public class InputControlHandlers {
         register(NumberRangeInput.MAP_CODEC, new InputControlHandlers.NumberRangeHandler());
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class BooleanHandler implements InputControlHandler<BooleanInput> {
-        public void addControl(final BooleanInput p_409564_, Screen p_409847_, InputControlHandler.Output p_409802_) {
-            Font font = p_409847_.getFont();
-            final Checkbox checkbox = Checkbox.builder(p_409564_.label(), font).selected(p_409564_.initial()).build();
-            p_409802_.accept(checkbox, new Action.ValueGetter() {
+        private static class BooleanHandler implements InputControlHandler<BooleanInput> {
+        public void addControl(final BooleanInput input, final Screen screen, final InputControlHandler.Output output) {
+            Font font = screen.getFont();
+            final Checkbox control = Checkbox.builder(input.label(), font).selected(input.initial()).build();
+            output.accept(control, new Action.ValueGetter() {
                 @Override
                 public String asTemplateSubstitution() {
-                    return checkbox.selected() ? p_409564_.onTrue() : p_409564_.onFalse();
+                    return control.selected() ? input.onTrue() : input.onFalse();
                 }
 
                 @Override
                 public Tag asTag() {
-                    return ByteTag.valueOf(checkbox.selected());
+                    return ByteTag.valueOf(control.selected());
                 }
             });
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class NumberRangeHandler implements InputControlHandler<NumberRangeInput> {
-        public void addControl(NumberRangeInput p_408461_, Screen p_406549_, InputControlHandler.Output p_407361_) {
-            float f = p_408461_.rangeInfo().initialSliderValue();
-            final InputControlHandlers.NumberRangeHandler.SliderImpl inputcontrolhandlers$numberrangehandler$sliderimpl = new InputControlHandlers.NumberRangeHandler.SliderImpl(
-                p_408461_, f
-            );
-            p_407361_.accept(inputcontrolhandlers$numberrangehandler$sliderimpl, new Action.ValueGetter() {
+        private static class NumberRangeHandler implements InputControlHandler<NumberRangeInput> {
+        public void addControl(final NumberRangeInput input, final Screen screen, final InputControlHandler.Output output) {
+            float initialValue = input.rangeInfo().initialSliderValue();
+            final InputControlHandlers.NumberRangeHandler.SliderImpl control = new InputControlHandlers.NumberRangeHandler.SliderImpl(input, initialValue);
+            output.accept(control, new Action.ValueGetter() {
                 @Override
                 public String asTemplateSubstitution() {
-                    return inputcontrolhandlers$numberrangehandler$sliderimpl.stringValueToSend();
+                    return control.stringValueToSend();
                 }
 
                 @Override
                 public Tag asTag() {
-                    return FloatTag.valueOf(inputcontrolhandlers$numberrangehandler$sliderimpl.floatValueToSend());
+                    return FloatTag.valueOf(control.floatValueToSend());
                 }
             });
         }
 
-        @OnlyIn(Dist.CLIENT)
-        static class SliderImpl extends AbstractSliderButton {
+                private static class SliderImpl extends AbstractSliderButton {
             private final NumberRangeInput input;
 
-            SliderImpl(NumberRangeInput p_408873_, double p_407140_) {
-                super(0, 0, p_408873_.width(), 20, computeMessage(p_408873_, p_407140_), p_407140_);
-                this.input = p_408873_;
+            private SliderImpl(final NumberRangeInput input, final double initialSliderValue) {
+                super(0, 0, input.width(), 20, computeMessage(input, initialSliderValue), initialSliderValue);
+                this.input = input;
             }
 
             @Override
@@ -125,75 +117,71 @@ public class InputControlHandlers {
                 return scaledValue(this.input, this.value);
             }
 
-            private static float scaledValue(NumberRangeInput p_409440_, double p_407596_) {
-                return p_409440_.rangeInfo().computeScaledValue((float)p_407596_);
+            private static float scaledValue(final NumberRangeInput input, final double sliderValue) {
+                return input.rangeInfo().computeScaledValue((float)sliderValue);
             }
 
-            private static String sliderValueToString(NumberRangeInput p_408201_, double p_410113_) {
-                return valueToString(scaledValue(p_408201_, p_410113_));
+            private static String sliderValueToString(final NumberRangeInput input, final double sliderValue) {
+                return valueToString(scaledValue(input, sliderValue));
             }
 
-            private static Component computeMessage(NumberRangeInput p_408035_, double p_408501_) {
-                return p_408035_.computeLabel(sliderValueToString(p_408035_, p_408501_));
+            private static Component computeMessage(final NumberRangeInput input, final double sliderValue) {
+                return input.computeLabel(sliderValueToString(input, sliderValue));
             }
 
-            private static String valueToString(float p_407623_) {
-                int i = (int)p_407623_;
-                return i == p_407623_ ? Integer.toString(i) : Float.toString(p_407623_);
+            private static String valueToString(final float v) {
+                int intV = (int)v;
+                return intV == v ? Integer.toString(intV) : Float.toString(v);
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class SingleOptionHandler implements InputControlHandler<SingleOptionInput> {
-        public void addControl(SingleOptionInput p_407094_, Screen p_406176_, InputControlHandler.Output p_410623_) {
-            SingleOptionInput.Entry singleoptioninput$entry = p_407094_.initial().orElse(p_407094_.entries().getFirst());
-            CycleButton.Builder<SingleOptionInput.Entry> builder = CycleButton.builder(SingleOptionInput.Entry::displayOrDefault, singleoptioninput$entry)
-                .withValues(p_407094_.entries())
-                .displayState(!p_407094_.labelVisible() ? CycleButton.DisplayState.VALUE : CycleButton.DisplayState.NAME_AND_VALUE);
-            CycleButton<SingleOptionInput.Entry> cyclebutton = builder.create(0, 0, p_407094_.width(), 20, p_407094_.label());
-            p_410623_.accept(cyclebutton, Action.ValueGetter.of(() -> cyclebutton.getValue().id()));
+        private static class SingleOptionHandler implements InputControlHandler<SingleOptionInput> {
+        public void addControl(final SingleOptionInput input, final Screen screen, final InputControlHandler.Output output) {
+            SingleOptionInput.Entry initial = input.initial().orElse(input.entries().getFirst());
+            CycleButton.Builder<SingleOptionInput.Entry> controlBuilder = CycleButton.builder(SingleOptionInput.Entry::displayOrDefault, initial)
+                .withValues(input.entries())
+                .displayState(!input.labelVisible() ? CycleButton.DisplayState.VALUE : CycleButton.DisplayState.NAME_AND_VALUE);
+            CycleButton<SingleOptionInput.Entry> control = controlBuilder.create(0, 0, input.width(), 20, input.label());
+            output.accept(control, Action.ValueGetter.of(() -> control.getValue().id()));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class TextInputHandler implements InputControlHandler<TextInput> {
-        public void addControl(TextInput p_410124_, Screen p_408290_, InputControlHandler.Output p_406869_) {
-            Font font = p_408290_.getFont();
-            LayoutElement layoutelement;
-            final Supplier<String> supplier;
-            if (p_410124_.multiline().isPresent()) {
-                TextInput.MultilineOptions textinput$multilineoptions = p_410124_.multiline().get();
-                int i = textinput$multilineoptions.height().orElseGet(() -> {
-                    int j = textinput$multilineoptions.maxLines().orElse(4);
-                    return Math.min(9 * j + 8, 512);
+        private static class TextInputHandler implements InputControlHandler<TextInput> {
+        public void addControl(final TextInput input, final Screen screen, final InputControlHandler.Output output) {
+            Font font = screen.getFont();
+            LayoutElement control;
+            final Supplier<String> getter;
+            if (input.multiline().isPresent()) {
+                TextInput.MultilineOptions multiline = input.multiline().get();
+                int computedHeight = multiline.height().orElseGet(() -> {
+                    int lineCountToFit = multiline.maxLines().orElse(4);
+                    return Math.min(9 * lineCountToFit + 8, 512);
                 });
-                MultiLineEditBox multilineeditbox = MultiLineEditBox.builder().build(font, p_410124_.width(), i, CommonComponents.EMPTY);
-                multilineeditbox.setCharacterLimit(p_410124_.maxLength());
-                textinput$multilineoptions.maxLines().ifPresent(multilineeditbox::setLineLimit);
-                multilineeditbox.setValue(p_410124_.initial());
-                layoutelement = multilineeditbox;
-                supplier = multilineeditbox::getValue;
+                MultiLineEditBox editBox = MultiLineEditBox.builder().build(font, input.width(), computedHeight, CommonComponents.EMPTY);
+                editBox.setCharacterLimit(input.maxLength());
+                multiline.maxLines().ifPresent(editBox::setLineLimit);
+                editBox.setValue(input.initial());
+                control = editBox;
+                getter = editBox::getValue;
             } else {
-                EditBox editbox = new EditBox(font, p_410124_.width(), 20, p_410124_.label());
-                editbox.setMaxLength(p_410124_.maxLength());
-                editbox.setValue(p_410124_.initial());
-                layoutelement = editbox;
-                supplier = editbox::getValue;
+                EditBox editBox = new EditBox(font, input.width(), 20, input.label());
+                editBox.setMaxLength(input.maxLength());
+                editBox.setValue(input.initial());
+                control = editBox;
+                getter = editBox::getValue;
             }
 
-            LayoutElement layoutelement1 = (LayoutElement)(p_410124_.labelVisible()
-                ? CommonLayouts.labeledElement(font, layoutelement, p_410124_.label())
-                : layoutelement);
-            p_406869_.accept(layoutelement1, new Action.ValueGetter() {
+            LayoutElement wrappedControl = input.labelVisible() ? CommonLayouts.labeledElement(font, control, input.label()) : control;
+            output.accept(wrappedControl, new Action.ValueGetter() {
                 @Override
                 public String asTemplateSubstitution() {
-                    return StringTag.escapeWithoutQuotes(supplier.get());
+                    return StringTag.escapeWithoutQuotes(getter.get());
                 }
 
                 @Override
                 public Tag asTag() {
-                    return StringTag.valueOf(supplier.get());
+                    return StringTag.valueOf(getter.get());
                 }
             });
         }

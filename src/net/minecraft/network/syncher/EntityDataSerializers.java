@@ -23,12 +23,16 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.animal.armadillo.Armadillo;
+import net.minecraft.world.entity.animal.chicken.ChickenSoundVariant;
 import net.minecraft.world.entity.animal.chicken.ChickenVariant;
+import net.minecraft.world.entity.animal.cow.CowSoundVariant;
 import net.minecraft.world.entity.animal.cow.CowVariant;
+import net.minecraft.world.entity.animal.feline.CatSoundVariant;
 import net.minecraft.world.entity.animal.feline.CatVariant;
 import net.minecraft.world.entity.animal.frog.FrogVariant;
 import net.minecraft.world.entity.animal.golem.CopperGolemState;
 import net.minecraft.world.entity.animal.nautilus.ZombieNautilusVariant;
+import net.minecraft.world.entity.animal.pig.PigSoundVariant;
 import net.minecraft.world.entity.animal.pig.PigVariant;
 import net.minecraft.world.entity.animal.sniffer.Sniffer;
 import net.minecraft.world.entity.animal.wolf.WolfSoundVariant;
@@ -52,30 +56,32 @@ public class EntityDataSerializers {
     public static final EntityDataSerializer<Float> FLOAT = EntityDataSerializer.forValueType(ByteBufCodecs.FLOAT);
     public static final EntityDataSerializer<String> STRING = EntityDataSerializer.forValueType(ByteBufCodecs.STRING_UTF8);
     public static final EntityDataSerializer<Component> COMPONENT = EntityDataSerializer.forValueType(ComponentSerialization.TRUSTED_STREAM_CODEC);
-    public static final EntityDataSerializer<Optional<Component>> OPTIONAL_COMPONENT = EntityDataSerializer.forValueType(ComponentSerialization.TRUSTED_OPTIONAL_STREAM_CODEC);
+    public static final EntityDataSerializer<Optional<Component>> OPTIONAL_COMPONENT = EntityDataSerializer.forValueType(
+        ComponentSerialization.TRUSTED_OPTIONAL_STREAM_CODEC
+    );
     public static final EntityDataSerializer<ItemStack> ITEM_STACK = new EntityDataSerializer<ItemStack>() {
         @Override
         public StreamCodec<? super RegistryFriendlyByteBuf, ItemStack> codec() {
             return ItemStack.OPTIONAL_STREAM_CODEC;
         }
 
-        public ItemStack copy(ItemStack p_238121_) {
-            return p_238121_.copy();
+        public ItemStack copy(final ItemStack value) {
+            return value.copy();
         }
     };
     public static final EntityDataSerializer<BlockState> BLOCK_STATE = EntityDataSerializer.forValueType(ByteBufCodecs.idMapper(Block.BLOCK_STATE_REGISTRY));
     private static final StreamCodec<ByteBuf, Optional<BlockState>> OPTIONAL_BLOCK_STATE_CODEC = new StreamCodec<ByteBuf, Optional<BlockState>>() {
-        public void encode(ByteBuf p_329740_, Optional<BlockState> p_331636_) {
-            if (p_331636_.isPresent()) {
-                VarInt.write(p_329740_, Block.getId(p_331636_.get()));
+        public void encode(final ByteBuf output, final Optional<BlockState> value) {
+            if (value.isPresent()) {
+                VarInt.write(output, Block.getId(value.get()));
             } else {
-                VarInt.write(p_329740_, 0);
+                VarInt.write(output, 0);
             }
         }
 
-        public Optional<BlockState> decode(ByteBuf p_334256_) {
-            int i = VarInt.read(p_334256_);
-            return i == 0 ? Optional.empty() : Optional.of(Block.stateById(i));
+        public Optional<BlockState> decode(final ByteBuf input) {
+            int id = VarInt.read(input);
+            return id == 0 ? Optional.empty() : Optional.of(Block.stateById(id));
         }
     };
     public static final EntityDataSerializer<Optional<BlockState>> OPTIONAL_BLOCK_STATE = EntityDataSerializer.forValueType(OPTIONAL_BLOCK_STATE_CODEC);
@@ -98,45 +104,57 @@ public class EntityDataSerializers {
     );
     public static final EntityDataSerializer<VillagerData> VILLAGER_DATA = EntityDataSerializer.forValueType(VillagerData.STREAM_CODEC);
     private static final StreamCodec<ByteBuf, OptionalInt> OPTIONAL_UNSIGNED_INT_CODEC = new StreamCodec<ByteBuf, OptionalInt>() {
-        public OptionalInt decode(ByteBuf p_428333_) {
-            int i = VarInt.read(p_428333_);
-            return i == 0 ? OptionalInt.empty() : OptionalInt.of(i - 1);
+        public OptionalInt decode(final ByteBuf input) {
+            int v = VarInt.read(input);
+            return v == 0 ? OptionalInt.empty() : OptionalInt.of(v - 1);
         }
 
-        public void encode(ByteBuf p_430607_, OptionalInt p_422537_) {
-            VarInt.write(p_430607_, p_422537_.orElse(-1) + 1);
+        public void encode(final ByteBuf output, final OptionalInt value) {
+            VarInt.write(output, value.orElse(-1) + 1);
         }
     };
     public static final EntityDataSerializer<OptionalInt> OPTIONAL_UNSIGNED_INT = EntityDataSerializer.forValueType(OPTIONAL_UNSIGNED_INT_CODEC);
     public static final EntityDataSerializer<Pose> POSE = EntityDataSerializer.forValueType(Pose.STREAM_CODEC);
     public static final EntityDataSerializer<Holder<CatVariant>> CAT_VARIANT = EntityDataSerializer.forValueType(CatVariant.STREAM_CODEC);
+    public static final EntityDataSerializer<Holder<CatSoundVariant>> CAT_SOUND_VARIANT = EntityDataSerializer.forValueType(CatSoundVariant.STREAM_CODEC);
     public static final EntityDataSerializer<Holder<ChickenVariant>> CHICKEN_VARIANT = EntityDataSerializer.forValueType(ChickenVariant.STREAM_CODEC);
+    public static final EntityDataSerializer<Holder<ChickenSoundVariant>> CHICKEN_SOUND_VARIANT = EntityDataSerializer.forValueType(
+        ChickenSoundVariant.STREAM_CODEC
+    );
     public static final EntityDataSerializer<Holder<CowVariant>> COW_VARIANT = EntityDataSerializer.forValueType(CowVariant.STREAM_CODEC);
+    public static final EntityDataSerializer<Holder<CowSoundVariant>> COW_SOUND_VARIANT = EntityDataSerializer.forValueType(CowSoundVariant.STREAM_CODEC);
     public static final EntityDataSerializer<Holder<WolfVariant>> WOLF_VARIANT = EntityDataSerializer.forValueType(WolfVariant.STREAM_CODEC);
     public static final EntityDataSerializer<Holder<WolfSoundVariant>> WOLF_SOUND_VARIANT = EntityDataSerializer.forValueType(WolfSoundVariant.STREAM_CODEC);
     public static final EntityDataSerializer<Holder<FrogVariant>> FROG_VARIANT = EntityDataSerializer.forValueType(FrogVariant.STREAM_CODEC);
     public static final EntityDataSerializer<Holder<PigVariant>> PIG_VARIANT = EntityDataSerializer.forValueType(PigVariant.STREAM_CODEC);
-    public static final EntityDataSerializer<Holder<ZombieNautilusVariant>> ZOMBIE_NAUTILUS_VARIANT = EntityDataSerializer.forValueType(ZombieNautilusVariant.STREAM_CODEC);
+    public static final EntityDataSerializer<Holder<PigSoundVariant>> PIG_SOUND_VARIANT = EntityDataSerializer.forValueType(PigSoundVariant.STREAM_CODEC);
+    public static final EntityDataSerializer<Holder<ZombieNautilusVariant>> ZOMBIE_NAUTILUS_VARIANT = EntityDataSerializer.forValueType(
+        ZombieNautilusVariant.STREAM_CODEC
+    );
     public static final EntityDataSerializer<Holder<PaintingVariant>> PAINTING_VARIANT = EntityDataSerializer.forValueType(PaintingVariant.STREAM_CODEC);
-    public static final EntityDataSerializer<Armadillo.ArmadilloState> ARMADILLO_STATE = EntityDataSerializer.forValueType(Armadillo.ArmadilloState.STREAM_CODEC);
+    public static final EntityDataSerializer<Armadillo.ArmadilloState> ARMADILLO_STATE = EntityDataSerializer.forValueType(
+        Armadillo.ArmadilloState.STREAM_CODEC
+    );
     public static final EntityDataSerializer<Sniffer.State> SNIFFER_STATE = EntityDataSerializer.forValueType(Sniffer.State.STREAM_CODEC);
-    public static final EntityDataSerializer<WeatheringCopper.WeatherState> WEATHERING_COPPER_STATE = EntityDataSerializer.forValueType(WeatheringCopper.WeatherState.STREAM_CODEC);
+    public static final EntityDataSerializer<WeatheringCopper.WeatherState> WEATHERING_COPPER_STATE = EntityDataSerializer.forValueType(
+        WeatheringCopper.WeatherState.STREAM_CODEC
+    );
     public static final EntityDataSerializer<CopperGolemState> COPPER_GOLEM_STATE = EntityDataSerializer.forValueType(CopperGolemState.STREAM_CODEC);
     public static final EntityDataSerializer<Vector3fc> VECTOR3 = EntityDataSerializer.forValueType(ByteBufCodecs.VECTOR3F);
     public static final EntityDataSerializer<Quaternionfc> QUATERNION = EntityDataSerializer.forValueType(ByteBufCodecs.QUATERNIONF);
     public static final EntityDataSerializer<ResolvableProfile> RESOLVABLE_PROFILE = EntityDataSerializer.forValueType(ResolvableProfile.STREAM_CODEC);
     public static final EntityDataSerializer<HumanoidArm> HUMANOID_ARM = EntityDataSerializer.forValueType(HumanoidArm.STREAM_CODEC);
 
-    public static void registerSerializer(EntityDataSerializer<?> p_135051_) {
-        SERIALIZERS.add(p_135051_);
+    public static void registerSerializer(final EntityDataSerializer<?> serializer) {
+        SERIALIZERS.add(serializer);
     }
 
-    public static @Nullable EntityDataSerializer<?> getSerializer(int p_135049_) {
-        return SERIALIZERS.byId(p_135049_);
+    public static @Nullable EntityDataSerializer<?> getSerializer(final int id) {
+        return SERIALIZERS.byId(id);
     }
 
-    public static int getSerializedId(EntityDataSerializer<?> p_135053_) {
-        return SERIALIZERS.getId(p_135053_);
+    public static int getSerializedId(final EntityDataSerializer<?> serializer) {
+        return SERIALIZERS.getId(serializer);
     }
 
     private EntityDataSerializers() {
@@ -165,12 +183,16 @@ public class EntityDataSerializers {
         registerSerializer(OPTIONAL_UNSIGNED_INT);
         registerSerializer(POSE);
         registerSerializer(CAT_VARIANT);
+        registerSerializer(CAT_SOUND_VARIANT);
         registerSerializer(COW_VARIANT);
+        registerSerializer(COW_SOUND_VARIANT);
         registerSerializer(WOLF_VARIANT);
         registerSerializer(WOLF_SOUND_VARIANT);
         registerSerializer(FROG_VARIANT);
         registerSerializer(PIG_VARIANT);
+        registerSerializer(PIG_SOUND_VARIANT);
         registerSerializer(CHICKEN_VARIANT);
+        registerSerializer(CHICKEN_SOUND_VARIANT);
         registerSerializer(ZOMBIE_NAUTILUS_VARIANT);
         registerSerializer(OPTIONAL_GLOBAL_POS);
         registerSerializer(PAINTING_VARIANT);

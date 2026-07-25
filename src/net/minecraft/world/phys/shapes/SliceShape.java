@@ -8,26 +8,26 @@ public class SliceShape extends VoxelShape {
     private final Direction.Axis axis;
     private static final DoubleList SLICE_COORDS = new CubePointRange(1);
 
-    public SliceShape(VoxelShape p_83173_, Direction.Axis p_83174_, int p_83175_) {
-        super(makeSlice(p_83173_.shape, p_83174_, p_83175_));
-        this.delegate = p_83173_;
-        this.axis = p_83174_;
+    public SliceShape(final VoxelShape delegate, final Direction.Axis axis, final int point) {
+        super(makeSlice(delegate.shape, axis, point));
+        this.delegate = delegate;
+        this.axis = axis;
     }
 
-    private static DiscreteVoxelShape makeSlice(DiscreteVoxelShape p_83177_, Direction.Axis p_83178_, int p_83179_) {
+    private static DiscreteVoxelShape makeSlice(final DiscreteVoxelShape delegate, final Direction.Axis axis, final int point) {
         return new SubShape(
-            p_83177_,
-            p_83178_.choose(p_83179_, 0, 0),
-            p_83178_.choose(0, p_83179_, 0),
-            p_83178_.choose(0, 0, p_83179_),
-            p_83178_.choose(p_83179_ + 1, p_83177_.xSize, p_83177_.xSize),
-            p_83178_.choose(p_83177_.ySize, p_83179_ + 1, p_83177_.ySize),
-            p_83178_.choose(p_83177_.zSize, p_83177_.zSize, p_83179_ + 1)
+            delegate,
+            axis.choose(point, 0, 0),
+            axis.choose(0, point, 0),
+            axis.choose(0, 0, point),
+            axis.choose(point + 1, delegate.xSize, delegate.xSize),
+            axis.choose(delegate.ySize, point + 1, delegate.ySize),
+            axis.choose(delegate.zSize, delegate.zSize, point + 1)
         );
     }
 
     @Override
-    public DoubleList getCoords(Direction.Axis p_83181_) {
-        return p_83181_ == this.axis ? SLICE_COORDS : this.delegate.getCoords(p_83181_);
+    public DoubleList getCoords(final Direction.Axis axis) {
+        return axis == this.axis ? SLICE_COORDS : this.delegate.getCoords(axis);
     }
 }

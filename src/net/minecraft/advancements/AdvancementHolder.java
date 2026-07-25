@@ -13,8 +13,8 @@ public record AdvancementHolder(Identifier id, Advancement value) {
     public static final StreamCodec<RegistryFriendlyByteBuf, List<AdvancementHolder>> LIST_STREAM_CODEC = STREAM_CODEC.apply(ByteBufCodecs.list());
 
     @Override
-    public boolean equals(Object p_298719_) {
-        return this == p_298719_ ? true : p_298719_ instanceof AdvancementHolder advancementholder && this.id.equals(advancementholder.id);
+    public boolean equals(final Object obj) {
+        return this == obj ? true : obj instanceof AdvancementHolder holder && this.id.equals(holder.id);
     }
 
     @Override

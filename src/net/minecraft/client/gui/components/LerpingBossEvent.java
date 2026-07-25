@@ -5,45 +5,42 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.BossEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LerpingBossEvent extends BossEvent {
     private static final long LERP_MILLISECONDS = 100L;
     protected float targetPercent;
     protected long setTime;
 
     public LerpingBossEvent(
-        UUID p_169021_,
-        Component p_169022_,
-        float p_169023_,
-        BossEvent.BossBarColor p_169024_,
-        BossEvent.BossBarOverlay p_169025_,
-        boolean p_169026_,
-        boolean p_169027_,
-        boolean p_169028_
+        final UUID id,
+        final Component name,
+        final float progress,
+        final BossEvent.BossBarColor color,
+        final BossEvent.BossBarOverlay overlay,
+        final boolean darkenScreen,
+        final boolean playMusic,
+        final boolean createWorldFog
     ) {
-        super(p_169021_, p_169022_, p_169024_, p_169025_);
-        this.targetPercent = p_169023_;
-        this.progress = p_169023_;
+        super(id, name, color, overlay);
+        this.targetPercent = progress;
+        this.progress = progress;
         this.setTime = Util.getMillis();
-        this.setDarkenScreen(p_169026_);
-        this.setPlayBossMusic(p_169027_);
-        this.setCreateWorldFog(p_169028_);
+        this.setDarkenScreen(darkenScreen);
+        this.setPlayBossMusic(playMusic);
+        this.setCreateWorldFog(createWorldFog);
     }
 
     @Override
-    public void setProgress(float p_169030_) {
+    public void setProgress(final float progress) {
         this.progress = this.getProgress();
-        this.targetPercent = p_169030_;
+        this.targetPercent = progress;
         this.setTime = Util.getMillis();
     }
 
     @Override
     public float getProgress() {
-        long i = Util.getMillis() - this.setTime;
-        float f = Mth.clamp((float)i / 100.0F, 0.0F, 1.0F);
-        return Mth.lerp(f, this.progress, this.targetPercent);
+        long timeSinceSet = Util.getMillis() - this.setTime;
+        float lerpPercent = Mth.clamp((float)timeSinceSet / 100.0F, 0.0F, 1.0F);
+        return Mth.lerp(lerpPercent, this.progress, this.targetPercent);
     }
 }

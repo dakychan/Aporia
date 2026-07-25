@@ -1,20 +1,17 @@
 package net.minecraft.client.renderer.chunk;
 
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.block.BlockAndTintGetter;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.SectionPos;
-import net.minecraft.world.level.BlockAndTintGetter;
+import net.minecraft.world.level.CardinalLighting;
 import net.minecraft.world.level.ColorResolver;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.world.level.material.FluidState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class RenderSectionRegion implements BlockAndTintGetter {
     public static final int RADIUS = 1;
     public static final int SIZE = 3;
@@ -22,58 +19,62 @@ public class RenderSectionRegion implements BlockAndTintGetter {
     private final int minSectionY;
     private final int minSectionZ;
     private final SectionCopy[] sections;
-    private final Level level;
+    private final ClientLevel level;
+    private final CardinalLighting cardinalLighting;
+    private final LevelLightEngine lightEngine;
 
-    RenderSectionRegion(Level p_409799_, int p_409303_, int p_407338_, int p_409456_, SectionCopy[] p_408990_) {
-        this.level = p_409799_;
-        this.minSectionX = p_409303_;
-        this.minSectionY = p_407338_;
-        this.minSectionZ = p_409456_;
-        this.sections = p_408990_;
+    public RenderSectionRegion(final ClientLevel level, final int minSectionX, final int minSectionY, final int minSectionZ, final SectionCopy[] sections) {
+        this.level = level;
+        this.minSectionX = minSectionX;
+        this.minSectionY = minSectionY;
+        this.minSectionZ = minSectionZ;
+        this.sections = sections;
+        this.cardinalLighting = level.cardinalLighting();
+        this.lightEngine = level.getLightEngine();
     }
 
     @Override
-    public BlockState getBlockState(BlockPos p_406800_) {
+    public BlockState getBlockState(final BlockPos pos) {
         return this.getSection(
-                SectionPos.blockToSectionCoord(p_406800_.getX()), SectionPos.blockToSectionCoord(p_406800_.getY()), SectionPos.blockToSectionCoord(p_406800_.getZ())
+                SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getY()), SectionPos.blockToSectionCoord(pos.getZ())
             )
-            .getBlockState(p_406800_);
+            .getBlockState(pos);
     }
 
     @Override
-    public FluidState getFluidState(BlockPos p_410161_) {
+    public FluidState getFluidState(final BlockPos pos) {
         return this.getSection(
-                SectionPos.blockToSectionCoord(p_410161_.getX()), SectionPos.blockToSectionCoord(p_410161_.getY()), SectionPos.blockToSectionCoord(p_410161_.getZ())
+                SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getY()), SectionPos.blockToSectionCoord(pos.getZ())
             )
-            .getBlockState(p_410161_)
+            .getBlockState(pos)
             .getFluidState();
     }
 
     @Override
-    public float getShade(Direction p_407825_, boolean p_407266_) {
-        return this.level.getShade(p_407825_, p_407266_);
+    public CardinalLighting cardinalLighting() {
+        return this.cardinalLighting;
     }
 
     @Override
     public LevelLightEngine getLightEngine() {
-        return this.level.getLightEngine();
+        return this.lightEngine;
     }
 
     @Override
-    public @Nullable BlockEntity getBlockEntity(BlockPos p_408091_) {
+    public @Nullable BlockEntity getBlockEntity(final BlockPos pos) {
         return this.getSection(
-                SectionPos.blockToSectionCoord(p_408091_.getX()), SectionPos.blockToSectionCoord(p_408091_.getY()), SectionPos.blockToSectionCoord(p_408091_.getZ())
+                SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getY()), SectionPos.blockToSectionCoord(pos.getZ())
             )
-            .getBlockEntity(p_408091_);
+            .getBlockEntity(pos);
     }
 
-    private SectionCopy getSection(int p_406718_, int p_406216_, int p_406392_) {
-        return this.sections[index(this.minSectionX, this.minSectionY, this.minSectionZ, p_406718_, p_406216_, p_406392_)];
+    private SectionCopy getSection(final int sectionX, final int sectionY, final int sectionZ) {
+        return this.sections[index(this.minSectionX, this.minSectionY, this.minSectionZ, sectionX, sectionY, sectionZ)];
     }
 
     @Override
-    public int getBlockTint(BlockPos p_407872_, ColorResolver p_407807_) {
-        return this.level.getBlockTint(p_407872_, p_407807_);
+    public int getBlockTint(final BlockPos pos, final ColorResolver resolver) {
+        return this.level.getBlockTint(pos, resolver);
     }
 
     @Override
@@ -86,7 +87,7 @@ public class RenderSectionRegion implements BlockAndTintGetter {
         return this.level.getHeight();
     }
 
-    public static int index(int p_409495_, int p_409337_, int p_407713_, int p_409077_, int p_406510_, int p_408332_) {
-        return p_409077_ - p_409495_ + (p_406510_ - p_409337_) * 3 + (p_408332_ - p_407713_) * 3 * 3;
+    public static int index(final int minSectionX, final int minSectionY, final int minSectionZ, final int sectionX, final int sectionY, final int sectionZ) {
+        return sectionX - minSectionX + (sectionY - minSectionY) * 3 + (sectionZ - minSectionZ) * 3 * 3;
     }
 }

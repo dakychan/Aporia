@@ -1,49 +1,60 @@
 package net.minecraft.client.renderer.entity;
 
 import com.google.common.collect.Maps;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
-import net.minecraft.client.model.animal.axolotl.AxolotlModel;
+import net.minecraft.client.model.EntityModel;
+import net.minecraft.client.model.animal.axolotl.AdultAxolotlModel;
+import net.minecraft.client.model.animal.axolotl.BabyAxolotlModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.state.AxolotlRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.animal.axolotl.Axolotl;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
-public class AxolotlRenderer extends AgeableMobRenderer<Axolotl, AxolotlRenderState, AxolotlModel> {
-    private static final Map<Axolotl.Variant, Identifier> TEXTURE_BY_TYPE = Util.make(
+public class AxolotlRenderer extends AgeableMobRenderer<Axolotl, AxolotlRenderState, EntityModel<AxolotlRenderState>> {
+    private static final Map<Axolotl.Variant, AxolotlRenderer.AxolotlTextures> TEXTURE_BY_TYPE = Util.make(
         Maps.newHashMap(),
-        p_448312_ -> {
-            for (Axolotl.Variant axolotl$variant : Axolotl.Variant.values()) {
-                p_448312_.put(
-                    axolotl$variant, Identifier.withDefaultNamespace(String.format(Locale.ROOT, "textures/entity/axolotl/axolotl_%s.png", axolotl$variant.getName()))
+        map -> {
+            for (Axolotl.Variant variant : Axolotl.Variant.values()) {
+                AxolotlRenderer.AxolotlTextures textures = new AxolotlRenderer.AxolotlTextures(
+                    Identifier.withDefaultNamespace(String.format(Locale.ROOT, "textures/entity/axolotl/axolotl_%s.png", variant.getName())),
+                    Identifier.withDefaultNamespace(String.format(Locale.ROOT, "textures/entity/axolotl/axolotl_%s_baby.png", variant.getName()))
                 );
+                map.put(variant, textures);
             }
         }
     );
 
-    public AxolotlRenderer(EntityRendererProvider.Context p_173921_) {
-        super(p_173921_, new AxolotlModel(p_173921_.bakeLayer(ModelLayers.AXOLOTL)), new AxolotlModel(p_173921_.bakeLayer(ModelLayers.AXOLOTL_BABY)), 0.5F);
+    public AxolotlRenderer(final EntityRendererProvider.Context context) {
+        super(context, new AdultAxolotlModel(context.bakeLayer(ModelLayers.AXOLOTL)), new BabyAxolotlModel(context.bakeLayer(ModelLayers.AXOLOTL_BABY)), 0.5F);
     }
 
-    public Identifier getTextureLocation(AxolotlRenderState p_366754_) {
-        return TEXTURE_BY_TYPE.get(p_366754_.variant);
+    public Identifier getTextureLocation(final AxolotlRenderState state) {
+        AxolotlRenderer.AxolotlTextures textures = TEXTURE_BY_TYPE.get(state.variant);
+        return state.isBaby ? textures.baby : textures.adult;
     }
 
     public AxolotlRenderState createRenderState() {
         return new AxolotlRenderState();
     }
 
-    public void extractRenderState(Axolotl p_366530_, AxolotlRenderState p_363503_, float p_370086_) {
-        super.extractRenderState(p_366530_, p_363503_, p_370086_);
-        p_363503_.variant = p_366530_.getVariant();
-        p_363503_.playingDeadFactor = p_366530_.playingDeadAnimator.getFactor(p_370086_);
-        p_363503_.inWaterFactor = p_366530_.inWaterAnimator.getFactor(p_370086_);
-        p_363503_.onGroundFactor = p_366530_.onGroundAnimator.getFactor(p_370086_);
-        p_363503_.movingFactor = p_366530_.movingAnimator.getFactor(p_370086_);
+    public void extractRenderState(final Axolotl entity, final AxolotlRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.variant = entity.getVariant();
+        state.playingDeadFactor = entity.playingDeadAnimator.getFactor(partialTicks);
+        state.inWaterFactor = entity.inWaterAnimator.getFactor(partialTicks);
+        state.onGroundFactor = entity.onGroundAnimator.getFactor(partialTicks);
+        state.movingFactor = entity.movingAnimator.getFactor(partialTicks);
+        state.swimAnimation.copyFrom(entity.swimAnimationState);
+        state.walkAnimationState.copyFrom(entity.walkAnimationState);
+        state.walkUnderWaterAnimationState.copyFrom(entity.walkUnderWaterAnimationState);
+        state.idleOnGroundAnimationState.copyFrom(entity.idleOnGroundAnimationState);
+        state.idleUnderWaterOnGroundAnimationState.copyFrom(entity.idleUnderWaterOnGroundAnimationState);
+        state.idleUnderWaterAnimationState.copyFrom(entity.idleUnderWaterAnimationState);
+        state.playDeadAnimationState.copyFrom(entity.playDeadAnimationState);
+    }
+
+        private record AxolotlTextures(Identifier adult, Identifier baby) {
     }
 }

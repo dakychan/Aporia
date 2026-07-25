@@ -10,33 +10,35 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
 public class DefaultRedstoneWireEvaluator extends RedstoneWireEvaluator {
-    public DefaultRedstoneWireEvaluator(RedStoneWireBlock p_369991_) {
-        super(p_369991_);
+    public DefaultRedstoneWireEvaluator(final RedStoneWireBlock wireBlock) {
+        super(wireBlock);
     }
 
     @Override
-    public void updatePowerStrength(Level p_362765_, BlockPos p_364703_, BlockState p_367621_, @Nullable Orientation p_363846_, boolean p_362932_) {
-        int i = this.calculateTargetStrength(p_362765_, p_364703_);
-        if (p_367621_.getValue(RedStoneWireBlock.POWER) != i) {
-            if (p_362765_.getBlockState(p_364703_) == p_367621_) {
-                p_362765_.setBlock(p_364703_, p_367621_.setValue(RedStoneWireBlock.POWER, i), 2);
+    public void updatePowerStrength(
+        final Level level, final BlockPos pos, final BlockState state, final @Nullable Orientation orientation, final boolean skipShapeUpdates
+    ) {
+        int targetStrength = this.calculateTargetStrength(level, pos);
+        if (state.getValue(RedStoneWireBlock.POWER) != targetStrength) {
+            if (level.getBlockState(pos) == state) {
+                level.setBlock(pos, state.setValue(RedStoneWireBlock.POWER, targetStrength), 2);
             }
 
-            Set<BlockPos> set = Sets.newHashSet();
-            set.add(p_364703_);
+            Set<BlockPos> toUpdate = Sets.newHashSet();
+            toUpdate.add(pos);
 
             for (Direction direction : Direction.values()) {
-                set.add(p_364703_.relative(direction));
+                toUpdate.add(pos.relative(direction));
             }
 
-            for (BlockPos blockpos : set) {
-                p_362765_.updateNeighborsAt(blockpos, this.wireBlock);
+            for (BlockPos blockPos : toUpdate) {
+                level.updateNeighborsAt(blockPos, this.wireBlock);
             }
         }
     }
 
-    private int calculateTargetStrength(Level p_360831_, BlockPos p_367575_) {
-        int i = this.getBlockSignal(p_360831_, p_367575_);
-        return i == 15 ? i : Math.max(i, this.getIncomingWireSignal(p_360831_, p_367575_));
+    private int calculateTargetStrength(final Level level, final BlockPos pos) {
+        int blockSignal = this.getBlockSignal(level, pos);
+        return blockSignal == 15 ? blockSignal : Math.max(blockSignal, this.getIncomingWireSignal(level, pos));
     }
 }

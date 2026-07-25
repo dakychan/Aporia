@@ -7,9 +7,9 @@ import net.minecraft.util.parsing.packrat.ErrorCollector;
 public class StringReaderParserState extends CachedParseState<StringReader> {
     private final StringReader input;
 
-    public StringReaderParserState(ErrorCollector<StringReader> p_327936_, StringReader p_332446_) {
-        super(p_327936_);
-        this.input = p_332446_;
+    public StringReaderParserState(final ErrorCollector<StringReader> errorCollector, final StringReader input) {
+        super(errorCollector);
+        this.input = input;
     }
 
     public StringReader input() {
@@ -22,7 +22,7 @@ public class StringReaderParserState extends CachedParseState<StringReader> {
     }
 
     @Override
-    public void restore(int p_331895_) {
-        this.input.setCursor(p_331895_);
+    public void restore(final int mark) {
+        this.input.setCursor(mark);
     }
 }

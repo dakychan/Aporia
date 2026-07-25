@@ -7,21 +7,22 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public record IsViewEntity() implements ConditionalItemModelProperty {
     public static final MapCodec<IsViewEntity> MAP_CODEC = MapCodec.unit(new IsViewEntity());
 
     @Override
     public boolean get(
-        ItemStack p_378008_, @Nullable ClientLevel p_378463_, @Nullable LivingEntity p_376951_, int p_376819_, ItemDisplayContext p_377915_
+        final ItemStack itemStack,
+        final @Nullable ClientLevel level,
+        final @Nullable LivingEntity owner,
+        final int seed,
+        final ItemDisplayContext displayContext
     ) {
         Minecraft minecraft = Minecraft.getInstance();
-        Entity entity = minecraft.getCameraEntity();
-        return entity != null ? p_376951_ == entity : p_376951_ == minecraft.player;
+        Entity cameraEntity = minecraft.getCameraEntity();
+        return cameraEntity != null ? owner == cameraEntity : owner == minecraft.player;
     }
 
     @Override

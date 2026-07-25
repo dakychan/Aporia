@@ -6,13 +6,13 @@ import java.util.Objects;
 import net.minecraft.server.notifications.NotificationService;
 
 public class ServerOpList extends StoredUserList<NameAndId, ServerOpListEntry> {
-    public ServerOpList(File p_11345_, NotificationService p_422398_) {
-        super(p_11345_, p_422398_);
+    public ServerOpList(final File file, final NotificationService notificationService) {
+        super(file, notificationService);
     }
 
     @Override
-    protected StoredUserEntry<NameAndId> createEntry(JsonObject p_11348_) {
-        return new ServerOpListEntry(p_11348_);
+    protected StoredUserEntry<NameAndId> createEntry(final JsonObject object) {
+        return new ServerOpListEntry(object);
     }
 
     @Override
@@ -20,10 +20,10 @@ public class ServerOpList extends StoredUserList<NameAndId, ServerOpListEntry> {
         return this.getEntries().stream().map(StoredUserEntry::getUser).filter(Objects::nonNull).map(NameAndId::name).toArray(String[]::new);
     }
 
-    public boolean add(ServerOpListEntry p_430726_) {
-        if (super.add(p_430726_)) {
-            if (p_430726_.getUser() != null) {
-                this.notificationService.playerOped(p_430726_);
+    public boolean add(final ServerOpListEntry infos) {
+        if (super.add(infos)) {
+            if (infos.getUser() != null) {
+                this.notificationService.playerOped(infos);
             }
 
             return true;
@@ -32,11 +32,11 @@ public class ServerOpList extends StoredUserList<NameAndId, ServerOpListEntry> {
         }
     }
 
-    public boolean remove(NameAndId p_424121_) {
-        ServerOpListEntry serveroplistentry = this.get(p_424121_);
-        if (super.remove(p_424121_)) {
-            if (serveroplistentry != null) {
-                this.notificationService.playerDeoped(serveroplistentry);
+    public boolean remove(final NameAndId user) {
+        ServerOpListEntry entry = this.get(user);
+        if (super.remove(user)) {
+            if (entry != null) {
+                this.notificationService.playerDeoped(entry);
             }
 
             return true;
@@ -47,21 +47,21 @@ public class ServerOpList extends StoredUserList<NameAndId, ServerOpListEntry> {
 
     @Override
     public void clear() {
-        for (ServerOpListEntry serveroplistentry : this.getEntries()) {
-            if (serveroplistentry.getUser() != null) {
-                this.notificationService.playerDeoped(serveroplistentry);
+        for (ServerOpListEntry user : this.getEntries()) {
+            if (user.getUser() != null) {
+                this.notificationService.playerDeoped(user);
             }
         }
 
         super.clear();
     }
 
-    public boolean canBypassPlayerLimit(NameAndId p_428882_) {
-        ServerOpListEntry serveroplistentry = this.get(p_428882_);
-        return serveroplistentry != null ? serveroplistentry.getBypassesPlayerLimit() : false;
+    public boolean canBypassPlayerLimit(final NameAndId user) {
+        ServerOpListEntry entry = this.get(user);
+        return entry != null ? entry.getBypassesPlayerLimit() : false;
     }
 
-    protected String getKeyForUser(NameAndId p_431721_) {
-        return p_431721_.id().toString();
+    protected String getKeyForUser(final NameAndId user) {
+        return user.id().toString();
     }
 }

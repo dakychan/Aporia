@@ -10,101 +10,91 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.model.geom.PartPose;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class PartDefinition {
     private final List<CubeDefinition> cubes;
     private final PartPose partPose;
     private final Map<String, PartDefinition> children = Maps.newHashMap();
 
-    PartDefinition(List<CubeDefinition> p_171581_, PartPose p_171582_) {
-        this.cubes = p_171581_;
-        this.partPose = p_171582_;
+    PartDefinition(final List<CubeDefinition> cubes, final PartPose partPose) {
+        this.cubes = cubes;
+        this.partPose = partPose;
     }
 
-    public PartDefinition addOrReplaceChild(String p_171600_, CubeListBuilder p_171601_, PartPose p_171602_) {
-        PartDefinition partdefinition = new PartDefinition(p_171601_.getCubes(), p_171602_);
-        return this.addOrReplaceChild(p_171600_, partdefinition);
+    public PartDefinition addOrReplaceChild(final String name, final CubeListBuilder cubes, final PartPose partPose) {
+        PartDefinition child = new PartDefinition(cubes.getCubes(), partPose);
+        return this.addOrReplaceChild(name, child);
     }
 
-    public PartDefinition addOrReplaceChild(String p_366821_, PartDefinition p_363546_) {
-        PartDefinition partdefinition = this.children.put(p_366821_, p_363546_);
-        if (partdefinition != null) {
-            p_363546_.children.putAll(partdefinition.children);
+    public PartDefinition addOrReplaceChild(final String name, final PartDefinition child) {
+        PartDefinition previous = this.children.put(name, child);
+        if (previous != null) {
+            child.children.putAll(previous.children);
         }
 
-        return p_363546_;
+        return child;
     }
 
     public PartDefinition clearRecursively() {
-        for (String s : this.children.keySet()) {
-            this.clearChild(s).clearRecursively();
+        for (String name : this.children.keySet()) {
+            this.clearChild(name).clearRecursively();
         }
 
         return this;
     }
 
-    public PartDefinition clearChild(String p_363088_) {
-        PartDefinition partdefinition = this.children.get(p_363088_);
-        if (partdefinition == null) {
-            throw new IllegalArgumentException("No child with name: " + p_363088_);
+    public PartDefinition clearChild(final String name) {
+        PartDefinition child = this.children.get(name);
+        if (child == null) {
+            throw new IllegalArgumentException("No child with name: " + name);
         } else {
-            return this.addOrReplaceChild(p_363088_, CubeListBuilder.create(), partdefinition.partPose);
+            return this.addOrReplaceChild(name, CubeListBuilder.create(), child.partPose);
         }
     }
 
-    public void retainPartsAndChildren(Set<String> p_422479_) {
+    public void retainPartsAndChildren(final Set<String> parts) {
         for (Entry<String, PartDefinition> entry : this.children.entrySet()) {
-            PartDefinition partdefinition = entry.getValue();
-            if (!p_422479_.contains(entry.getKey())) {
-                this.addOrReplaceChild(entry.getKey(), CubeListBuilder.create(), partdefinition.partPose).retainPartsAndChildren(p_422479_);
+            PartDefinition child = entry.getValue();
+            if (!parts.contains(entry.getKey())) {
+                this.addOrReplaceChild(entry.getKey(), CubeListBuilder.create(), child.partPose).retainPartsAndChildren(parts);
             }
         }
     }
 
-    public void retainExactParts(Set<String> p_426619_) {
+    public void retainExactParts(final Set<String> parts) {
         for (Entry<String, PartDefinition> entry : this.children.entrySet()) {
-            PartDefinition partdefinition = entry.getValue();
-            if (p_426619_.contains(entry.getKey())) {
-                partdefinition.clearRecursively();
+            PartDefinition child = entry.getValue();
+            if (parts.contains(entry.getKey())) {
+                child.clearRecursively();
             } else {
-                this.addOrReplaceChild(entry.getKey(), CubeListBuilder.create(), partdefinition.partPose).retainExactParts(p_426619_);
+                this.addOrReplaceChild(entry.getKey(), CubeListBuilder.create(), child.partPose).retainExactParts(parts);
             }
         }
     }
 
-    public ModelPart bake(int p_171584_, int p_171585_) {
-        Object2ObjectArrayMap<String, ModelPart> object2objectarraymap = this.children
+    public ModelPart bake(final int texScaleX, final int texScaleY) {
+        Object2ObjectArrayMap<String, ModelPart> bakedChildren = this.children
             .entrySet()
             .stream()
-            .collect(
-                Collectors.toMap(
-                    Entry::getKey,
-                    p_171593_ -> ((PartDefinition)p_171593_.getValue()).bake(p_171584_, p_171585_),
-                    (p_171595_, p_171596_) -> p_171595_,
-                    Object2ObjectArrayMap::new
-                )
-            );
-        List<ModelPart.Cube> list = this.cubes.stream().map(p_171589_ -> p_171589_.bake(p_171584_, p_171585_)).toList();
-        ModelPart modelpart = new ModelPart(list, object2objectarraymap);
-        modelpart.setInitialPose(this.partPose);
-        modelpart.loadPose(this.partPose);
-        return modelpart;
+            .collect(Collectors.toMap(Entry::getKey, e -> ((PartDefinition)e.getValue()).bake(texScaleX, texScaleY), (a, b) -> a, Object2ObjectArrayMap::new));
+        List<ModelPart.Cube> bakedCubes = this.cubes.stream().map(definition -> definition.bake(texScaleX, texScaleY)).toList();
+        ModelPart result = new ModelPart(bakedCubes, bakedChildren);
+        result.setInitialPose(this.partPose);
+        result.loadPose(this.partPose);
+        return result;
     }
 
-    public PartDefinition getChild(String p_171598_) {
-        return this.children.get(p_171598_);
+    public PartDefinition getChild(final String name) {
+        return this.children.get(name);
     }
 
     public Set<Entry<String, PartDefinition>> getChildren() {
         return this.children.entrySet();
     }
 
-    public PartDefinition transformed(UnaryOperator<PartPose> p_367495_) {
-        PartDefinition partdefinition = new PartDefinition(this.cubes, p_367495_.apply(this.partPose));
-        partdefinition.children.putAll(this.children);
-        return partdefinition;
+    public PartDefinition transformed(final UnaryOperator<PartPose> function) {
+        PartDefinition newPart = new PartDefinition(this.cubes, function.apply(this.partPose));
+        newPart.children.putAll(this.children);
+        return newPart;
     }
 }

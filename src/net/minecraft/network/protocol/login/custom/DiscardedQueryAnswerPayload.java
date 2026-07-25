@@ -6,6 +6,6 @@ public record DiscardedQueryAnswerPayload() implements CustomQueryAnswerPayload 
     public static final DiscardedQueryAnswerPayload INSTANCE = new DiscardedQueryAnswerPayload();
 
     @Override
-    public void write(FriendlyByteBuf p_299186_) {
+    public void write(final FriendlyByteBuf output) {
     }
 }

@@ -6,92 +6,92 @@ import net.minecraft.util.Util;
 import org.jspecify.annotations.Nullable;
 
 public interface ErrorCollector<S> {
-    void store(int p_334236_, SuggestionSupplier<S> p_329361_, Object p_331748_);
+    void store(int cursor, SuggestionSupplier<S> suggestions, Object reason);
 
-    default void store(int p_330627_, Object p_332187_) {
-        this.store(p_330627_, SuggestionSupplier.empty(), p_332187_);
+    default void store(final int cursor, final Object reason) {
+        this.store(cursor, SuggestionSupplier.empty(), reason);
     }
 
-    void finish(int p_334270_);
+    void finish(int finalCursor);
 
-    public static class LongestOnly<S> implements ErrorCollector<S> {
+    class LongestOnly<S> implements ErrorCollector<S> {
         private ErrorCollector.LongestOnly.@Nullable MutableErrorEntry<S>[] entries = new ErrorCollector.LongestOnly.MutableErrorEntry[16];
         private int nextErrorEntry;
         private int lastCursor = -1;
 
-        private void discardErrorsFromShorterParse(int p_331637_) {
-            if (p_331637_ > this.lastCursor) {
-                this.lastCursor = p_331637_;
+        private void discardErrorsFromShorterParse(final int cursor) {
+            if (cursor > this.lastCursor) {
+                this.lastCursor = cursor;
                 this.nextErrorEntry = 0;
             }
         }
 
         @Override
-        public void finish(int p_334009_) {
-            this.discardErrorsFromShorterParse(p_334009_);
+        public void finish(final int finalCursor) {
+            this.discardErrorsFromShorterParse(finalCursor);
         }
 
         @Override
-        public void store(int p_331115_, SuggestionSupplier<S> p_329965_, Object p_332125_) {
-            this.discardErrorsFromShorterParse(p_331115_);
-            if (p_331115_ == this.lastCursor) {
-                this.addErrorEntry(p_329965_, p_332125_);
+        public void store(final int cursor, final SuggestionSupplier<S> suggestions, final Object reason) {
+            this.discardErrorsFromShorterParse(cursor);
+            if (cursor == this.lastCursor) {
+                this.addErrorEntry(suggestions, reason);
             }
         }
 
-        private void addErrorEntry(SuggestionSupplier<S> p_397931_, Object p_397847_) {
-            int i = this.entries.length;
-            if (this.nextErrorEntry >= i) {
-                int j = Util.growByHalf(i, this.nextErrorEntry + 1);
-                ErrorCollector.LongestOnly.MutableErrorEntry<S>[] mutableerrorentry = new ErrorCollector.LongestOnly.MutableErrorEntry[j];
-                System.arraycopy(this.entries, 0, mutableerrorentry, 0, i);
-                this.entries = mutableerrorentry;
+        private void addErrorEntry(final SuggestionSupplier<S> suggestions, final Object reason) {
+            int currentSize = this.entries.length;
+            if (this.nextErrorEntry >= currentSize) {
+                int newSize = Util.growByHalf(currentSize, this.nextErrorEntry + 1);
+                ErrorCollector.LongestOnly.MutableErrorEntry<S>[] newEntries = new ErrorCollector.LongestOnly.MutableErrorEntry[newSize];
+                System.arraycopy(this.entries, 0, newEntries, 0, currentSize);
+                this.entries = newEntries;
             }
 
-            int k = this.nextErrorEntry++;
-            ErrorCollector.LongestOnly.MutableErrorEntry<S> mutableerrorentry1 = this.entries[k];
-            if (mutableerrorentry1 == null) {
-                mutableerrorentry1 = new ErrorCollector.LongestOnly.MutableErrorEntry<>();
-                this.entries[k] = mutableerrorentry1;
+            int entryIndex = this.nextErrorEntry++;
+            ErrorCollector.LongestOnly.MutableErrorEntry<S> entry = this.entries[entryIndex];
+            if (entry == null) {
+                entry = new ErrorCollector.LongestOnly.MutableErrorEntry<>();
+                this.entries[entryIndex] = entry;
             }
 
-            mutableerrorentry1.suggestions = p_397931_;
-            mutableerrorentry1.reason = p_397847_;
+            entry.suggestions = suggestions;
+            entry.reason = reason;
         }
 
         public List<ErrorEntry<S>> entries() {
-            int i = this.nextErrorEntry;
-            if (i == 0) {
+            int errorCount = this.nextErrorEntry;
+            if (errorCount == 0) {
                 return List.of();
-            } else {
-                List<ErrorEntry<S>> list = new ArrayList<>(i);
-
-                for (int j = 0; j < i; j++) {
-                    ErrorCollector.LongestOnly.MutableErrorEntry<S> mutableerrorentry = this.entries[j];
-                    list.add(new ErrorEntry<>(this.lastCursor, mutableerrorentry.suggestions, mutableerrorentry.reason));
-                }
-
-                return list;
             }
+
+            List<ErrorEntry<S>> result = new ArrayList<>(errorCount);
+
+            for (int i = 0; i < errorCount; i++) {
+                ErrorCollector.LongestOnly.MutableErrorEntry<S> entry = this.entries[i];
+                result.add(new ErrorEntry<>(this.lastCursor, entry.suggestions, entry.reason));
+            }
+
+            return result;
         }
 
         public int cursor() {
             return this.lastCursor;
         }
 
-        static class MutableErrorEntry<S> {
-            SuggestionSupplier<S> suggestions = SuggestionSupplier.empty();
-            Object reason = "empty";
+        private static class MutableErrorEntry<S> {
+            private SuggestionSupplier<S> suggestions = SuggestionSupplier.empty();
+            private Object reason = "empty";
         }
     }
 
-    public static class Nop<S> implements ErrorCollector<S> {
+    class Nop<S> implements ErrorCollector<S> {
         @Override
-        public void store(int p_393771_, SuggestionSupplier<S> p_392237_, Object p_393518_) {
+        public void store(final int cursor, final SuggestionSupplier<S> suggestions, final Object reason) {
         }
 
         @Override
-        public void finish(int p_396049_) {
+        public void finish(final int finalCursor) {
         }
     }
 }

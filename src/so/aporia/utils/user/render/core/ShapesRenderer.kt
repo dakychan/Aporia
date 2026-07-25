@@ -1,27 +1,35 @@
 package so.aporia.utils.user.render.core
 
+import com.mojang.blaze3d.IndexType
+import com.mojang.blaze3d.PrimitiveTopology
 import com.mojang.blaze3d.ProjectionType
 import com.mojang.blaze3d.buffers.GpuBuffer
+import com.mojang.blaze3d.pipeline.BindGroupLayout
 import com.mojang.blaze3d.pipeline.BlendFunction
+import com.mojang.blaze3d.pipeline.ColorTargetState
+import com.mojang.blaze3d.pipeline.DepthStencilState
 import com.mojang.blaze3d.pipeline.RenderPipeline
-import com.mojang.blaze3d.platform.DepthTestFunction
-import com.mojang.blaze3d.platform.SourceFactor
-import com.mojang.blaze3d.platform.DestFactor
+import com.mojang.blaze3d.platform.CompareOp
+import com.mojang.blaze3d.platform.BlendFactor
+
 import com.mojang.blaze3d.shaders.UniformType
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.FilterMode
 import com.mojang.blaze3d.textures.GpuTextureView
 import com.mojang.blaze3d.vertex.DefaultVertexFormat
-import com.mojang.blaze3d.vertex.Tesselator
+import com.mojang.blaze3d.vertex.ByteBufferBuilder
+import com.mojang.blaze3d.vertex.BufferBuilder
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer
+import net.minecraft.client.renderer.ProjectionMatrixBuffer
 import net.minecraft.resources.Identifier
+import org.joml.Matrix4f
+import org.joml.Vector4fc
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.ArrayList
 import java.util.Comparator
-import java.util.OptionalInt
+import java.util.Optional
 
 class ShapesRenderer {
 
@@ -38,8 +46,19 @@ class ShapesRenderer {
 
     fun depth(z: Float) { currentDepth = z }
     fun flush() {
-        taskQueue.sortWith(Comparator.comparingDouble { t -> t.z.toDouble() })
-        for (task in taskQueue) task.action.run()
+        val batch = ArrayList(taskQueue)
+        taskQueue.clear()
+        batch.sortWith(Comparator.comparingDouble { t -> t.z.toDouble() })
+        for (task in batch) task.action.run()
+    }
+
+    fun close() {
+        if (::cachedVertexBuffer.isInitialized) cachedVertexBuffer.close()
+        if (::cachedShapeBuffer.isInitialized) cachedShapeBuffer.close()
+        if (::cachedImageVertexBuffer.isInitialized) cachedImageVertexBuffer.close()
+        if (::cachedImageShapeBuffer.isInitialized) cachedImageShapeBuffer.close()
+        if (::mainmenuUbo.isInitialized) mainmenuUbo.close()
+        if (::logoUbo.isInitialized) logoUbo.close()
         taskQueue.clear()
     }
 
@@ -47,7 +66,7 @@ class ShapesRenderer {
     lateinit var roundedRectPipeline: RenderPipeline
     lateinit var mainmenuPipeline: RenderPipeline
     lateinit var logoPipeline: RenderPipeline
-    lateinit var orthoProjection: CachedOrthoProjectionMatrixBuffer
+    lateinit var orthoProjection: ProjectionMatrixBuffer
 
     lateinit var cachedVertexBuffer: GpuBuffer
     lateinit var cachedShapeBuffer: GpuBuffer
@@ -67,52 +86,48 @@ class ShapesRenderer {
             .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/aporia"))
             .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/aporia"))
-            .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-            .withUniform("ShapeData", UniformType.UNIFORM_BUFFER)
-            .withSampler("BlurTextureSampler")
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction(
-                SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA,
-                SourceFactor.SRC_ALPHA, DestFactor.ONE_MINUS_SRC_ALPHA))
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false).withCull(false).build()
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("ShapeData", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withSampler("BlurTextureSampler").build())
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction(
+                BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA,
+                BlendFactor.SRC_ALPHA, BlendFactor.ONE_MINUS_SRC_ALPHA)))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
 
         roundedRectPipeline = RenderPipeline.builder()
             .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/rounded_rect"))
             .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/rounded_rect"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/rounded_rect"))
-            .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-            .withUniform("ShapeData", UniformType.UNIFORM_BUFFER)
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false).withCull(false).build()
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("ShapeData", UniformType.UNIFORM_BUFFER).build())
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
 
-        orthoProjection = CachedOrthoProjectionMatrixBuffer("aporia", -1000f, 1000f, true)
+        orthoProjection = ProjectionMatrixBuffer("aporia")
 
         mainmenuPipeline = RenderPipeline.builder()
             .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/mainmenu"))
             .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/mainmenu"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/mainmenu"))
-            .withUniform("Time", UniformType.UNIFORM_BUFFER)
-            .withUniform("Resolution", UniformType.UNIFORM_BUFFER)
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false).withCull(false).build()
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("Time", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("Resolution", UniformType.UNIFORM_BUFFER).build())
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
 
         logoPipeline = RenderPipeline.builder()
             .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/logo"))
             .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/logo"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/logo"))
-            .withUniform("Projection", UniformType.UNIFORM_BUFFER)
-            .withUniform("LogoData", UniformType.UNIFORM_BUFFER)
-            .withUniform("u_time", UniformType.UNIFORM_BUFFER)
-            .withSampler("LogoTextureSampler")
-            .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false).withCull(false).build()
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("Projection", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("LogoData", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("u_time", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withSampler("LogoTextureSampler").build())
+            .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false)).withCull(false).build()
 
         cachedVertexBuffer = device.createBuffer({ -> "aporia:cached_vbo" },
             GpuBuffer.USAGE_VERTEX or GpuBuffer.USAGE_COPY_DST, 512L)
@@ -132,45 +147,47 @@ class ShapesRenderer {
 
     fun drawMainMenuBackground(time: Float, width: Int, height: Int) {
         if (!::mainmenuPipeline.isInitialized) return
-        val mainTarget = Minecraft.getInstance().mainRenderTarget
-        val colorView = mainTarget.colorTextureView ?: return
 
-        val device = RenderSystem.getDevice()
-        val encoder = device.createCommandEncoder()
+        taskQueue.add(DrawTask(0f) { ->
+            val colorView = Minecraft.getInstance().gameRenderer.mainRenderTarget().colorTextureView ?: return@DrawTask
+            val device = RenderSystem.getDevice()
+            val encoder = device.createCommandEncoder()
 
-        if (cachedMainmenuBB == null) cachedMainmenuBB = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder())
-        cachedMainmenuBB!!.clear()
-        cachedMainmenuBB!!.putFloat(time)
-        cachedMainmenuBB!!.putFloat(width.toFloat())
-        cachedMainmenuBB!!.putFloat(height.toFloat())
-        cachedMainmenuBB!!.flip()
-        encoder.writeToBuffer(mainmenuUbo.slice(), cachedMainmenuBB!!)
+            if (cachedMainmenuBB == null) cachedMainmenuBB = ByteBuffer.allocateDirect(32).order(ByteOrder.nativeOrder())
+            cachedMainmenuBB!!.clear()
+            cachedMainmenuBB!!.putFloat(time)
+            cachedMainmenuBB!!.putFloat(width.toFloat())
+            cachedMainmenuBB!!.putFloat(height.toFloat())
+            cachedMainmenuBB!!.flip()
+            encoder.writeToBuffer(mainmenuUbo.slice(), cachedMainmenuBB!!)
 
-        val tess = Tesselator.getInstance()
-        val buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX)
-        buf.addVertex(0f, height.toFloat(), 0f).setUv(0f, 1f)
-        buf.addVertex(0f, 0f, 0f).setUv(0f, 0f)
-        buf.addVertex(width.toFloat(), 0f, 0f).setUv(1f, 0f)
-        buf.addVertex(0f, height.toFloat(), 0f).setUv(0f, 1f)
-        buf.addVertex(width.toFloat(), 0f, 0f).setUv(1f, 0f)
-        buf.addVertex(width.toFloat(), height.toFloat(), 0f).setUv(1f, 1f)
-        val mesh = buf.buildOrThrow()
-        encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer())
-        mesh.close()
+            val bb = ByteBufferBuilder.exactlySized(2048)
+            val buf = BufferBuilder(bb, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX)
+            buf.addVertex(0f, height.toFloat(), 0f).setUv(0f, 1f)
+            buf.addVertex(0f, 0f, 0f).setUv(0f, 0f)
+            buf.addVertex(width.toFloat(), 0f, 0f).setUv(1f, 0f)
+            buf.addVertex(0f, height.toFloat(), 0f).setUv(0f, 1f)
+            buf.addVertex(width.toFloat(), 0f, 0f).setUv(1f, 0f)
+            buf.addVertex(width.toFloat(), height.toFloat(), 0f).setUv(1f, 1f)
+            val mesh = buf.buildOrThrow()
+            encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer())
+            mesh.close()
 
-        val projSlice = orthoProjection.getBuffer(width.toFloat(), height.toFloat())
-        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)
+            val projMatrix = Matrix4f().setOrtho(0f, width.toFloat(), height.toFloat(), 0f, -1000f, 1000f)
+            val projSlice = orthoProjection.getBuffer(projMatrix)
+            RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)
 
-        val pass = encoder.createRenderPass({ -> "aporia:mainmenu_bg" }, colorView, OptionalInt.empty())
-        pass.use {
-            pass.setPipeline(mainmenuPipeline)
-            RenderSystem.bindDefaultUniforms(pass)
-            pass.setUniform("Time", mainmenuUbo.slice())
-            pass.setVertexBuffer(0, cachedVertexBuffer)
-            val seq = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES)
-            pass.setIndexBuffer(seq.getBuffer(6), seq.type())
-            pass.drawIndexed(0, 0, 6, 0)
-        }
+            val pass = encoder.createRenderPass({ -> "aporia:mainmenu_bg" }, colorView, Optional.empty<Vector4fc>())
+            pass.use {
+                pass.setPipeline(mainmenuPipeline)
+                RenderSystem.bindDefaultUniforms(pass)
+                pass.setUniform("Time", mainmenuUbo.slice())
+                pass.setVertexBuffer(0, cachedVertexBuffer.slice(0L, cachedVertexBuffer.size()))
+                val seq = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES)
+                pass.setIndexBuffer(seq.getBuffer(6), seq.type())
+                pass.drawIndexed(6, 1, 0, 0, 0)
+            }
+        })
     }
 
     // ── shapes ──
@@ -232,62 +249,70 @@ class ShapesRenderer {
                         blurStrength: Float = 4f, cornerMask: Int = 15) {
         val mc = Minecraft.getInstance()
         val gui = BlurRenderer.useGuiBlur
-        if ((if (gui) (!BlurRenderer.guiBlurReady || !::pipeline.isInitialized || BlurRenderer.guiBlurTarget == null)
-            else (!BlurRenderer.blurReady || !::pipeline.isInitialized || BlurRenderer.blurTarget == null))) {
-            drawRect(x, y, w, h, radius, color)
-            return
-        }
-        val mainTarget = mc.mainRenderTarget
-        val window = mc.window
-        val sw = window.guiScaledWidth.toFloat()
-        val sh = window.guiScaledHeight.toFloat()
-        val colorView = mainTarget.colorTextureView ?: return
+        val depth = currentDepth
+        val sw = mc.window.guiScaledWidth.toFloat()
+        val sh = mc.window.guiScaledHeight.toFloat()
 
-        val overlayA = ((color shr 24) and 0xFF) / 255f
-        val overlayR = ((color shr 16) and 0xFF) / 255f
-        val overlayG = ((color shr 8) and 0xFF) / 255f
-        val overlayB = (color and 0xFF) / 255f
+        taskQueue.add(DrawTask(depth) { ->
+            if (!::pipeline.isInitialized) return@DrawTask
 
-        val projSlice = orthoProjection.getBuffer(sw, sh)
-        RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)
+            val blurReady = if (gui) BlurRenderer.guiBlurReady else BlurRenderer.blurReady
+            val blurTarget = if (gui) BlurRenderer.guiBlurTarget else BlurRenderer.blurTarget
+            if (!blurReady || blurTarget == null) {
+                executeShapeDraw(x, y, w, h, radius, color, MODE_ROUNDED_RECT, cornerMask, depth, sw, sh)
+                return@DrawTask
+            }
 
-        val tess = Tesselator.getInstance()
-        val buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR)
-        buf.addVertex(x, y, 0f).setUv(0f, 1f).setColor(overlayR, overlayG, overlayB, overlayA)
-        buf.addVertex(x + w, y, 0f).setUv(1f, 1f).setColor(overlayR, overlayG, overlayB, overlayA)
-        buf.addVertex(x, y + h, 0f).setUv(0f, 0f).setColor(overlayR, overlayG, overlayB, overlayA)
-        buf.addVertex(x + w, y, 0f).setUv(1f, 1f).setColor(overlayR, overlayG, overlayB, overlayA)
-        buf.addVertex(x + w, y + h, 0f).setUv(1f, 0f).setColor(overlayR, overlayG, overlayB, overlayA)
-        buf.addVertex(x, y + h, 0f).setUv(0f, 0f).setColor(overlayR, overlayG, overlayB, overlayA)
-        val mesh = buf.buildOrThrow()
+            val colorView = mc.gameRenderer.mainRenderTarget().colorTextureView ?: return@DrawTask
 
-        val device = RenderSystem.getDevice()
-        val encoder = device.createCommandEncoder()
-        encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer())
-        mesh.close()
+            val overlayA = ((color shr 24) and 0xFF) / 255f
+            val overlayR = ((color shr 16) and 0xFF) / 255f
+            val overlayG = ((color shr 8) and 0xFF) / 255f
+            val overlayB = (color and 0xFF) / 255f
 
-        if (cachedShapeBB == null) cachedShapeBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder())
-        cachedShapeBB!!.clear()
-        cachedShapeBB!!.putFloat(x); cachedShapeBB!!.putFloat(y); cachedShapeBB!!.putFloat(w); cachedShapeBB!!.putFloat(h)
-        cachedShapeBB!!.putFloat(radius); cachedShapeBB!!.putFloat(1.0f); cachedShapeBB!!.putFloat(MODE_ROUNDED_RECT.toFloat()); cachedShapeBB!!.putFloat(0f)
-        cachedShapeBB!!.putFloat(0f); cachedShapeBB!!.putFloat(0f); cachedShapeBB!!.putFloat(1f); cachedShapeBB!!.putFloat(cornerMask.toFloat())
-        cachedShapeBB!!.putFloat(mainTarget.width.toFloat()); cachedShapeBB!!.putFloat(mainTarget.height.toFloat()); cachedShapeBB!!.putFloat(0f); cachedShapeBB!!.putFloat(0f)
-        cachedShapeBB!!.flip()
-        encoder.writeToBuffer(cachedShapeBuffer.slice(), cachedShapeBB!!)
+            val projMatrix = Matrix4f().setOrtho(0f, sw, sh, 0f, -1000f, 1000f)
+            val projSlice = orthoProjection.getBuffer(projMatrix)
+            RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)
 
-        val indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES)
-        val pass = encoder.createRenderPass({ -> "aporia:blur_rect" }, colorView, OptionalInt.empty())
-        pass.use {
-            pass.setPipeline(pipeline)
-            RenderSystem.bindDefaultUniforms(pass)
-            pass.setUniform("ShapeData", cachedShapeBuffer.slice())
-            pass.bindTexture("BlurTextureSampler",
-                if (BlurRenderer.useGuiBlur) BlurRenderer.guiBlurTarget!!.colorTextureView!! else BlurRenderer.blurTarget!!.colorTextureView!!,
-                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
-            pass.setVertexBuffer(0, cachedVertexBuffer)
-            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type())
-            pass.drawIndexed(0, 0, 6, 0)
-        }
+            val bb = ByteBufferBuilder.exactlySized(2048)
+            val buf = BufferBuilder(bb, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR)
+            buf.addVertex(x, y, 0f).setUv(0f, 1f).setColor(overlayR, overlayG, overlayB, overlayA)
+            buf.addVertex(x + w, y, 0f).setUv(1f, 1f).setColor(overlayR, overlayG, overlayB, overlayA)
+            buf.addVertex(x, y + h, 0f).setUv(0f, 0f).setColor(overlayR, overlayG, overlayB, overlayA)
+            buf.addVertex(x + w, y, 0f).setUv(1f, 1f).setColor(overlayR, overlayG, overlayB, overlayA)
+            buf.addVertex(x + w, y + h, 0f).setUv(1f, 0f).setColor(overlayR, overlayG, overlayB, overlayA)
+            buf.addVertex(x, y + h, 0f).setUv(0f, 0f).setColor(overlayR, overlayG, overlayB, overlayA)
+            val mesh = buf.buildOrThrow()
+
+            val device = RenderSystem.getDevice()
+            val encoder = device.createCommandEncoder()
+            encoder.writeToBuffer(cachedVertexBuffer.slice(), mesh.vertexBuffer())
+            mesh.close()
+
+            val mainTarget = mc.gameRenderer.mainRenderTarget()
+            if (cachedShapeBB == null) cachedShapeBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder())
+            cachedShapeBB!!.clear()
+            cachedShapeBB!!.putFloat(x); cachedShapeBB!!.putFloat(y); cachedShapeBB!!.putFloat(w); cachedShapeBB!!.putFloat(h)
+            cachedShapeBB!!.putFloat(radius); cachedShapeBB!!.putFloat(1.0f); cachedShapeBB!!.putFloat(MODE_ROUNDED_RECT.toFloat()); cachedShapeBB!!.putFloat(0f)
+            cachedShapeBB!!.putFloat(0f); cachedShapeBB!!.putFloat(0f); cachedShapeBB!!.putFloat(1f); cachedShapeBB!!.putFloat(cornerMask.toFloat())
+            cachedShapeBB!!.putFloat(mainTarget.width.toFloat()); cachedShapeBB!!.putFloat(mainTarget.height.toFloat()); cachedShapeBB!!.putFloat(0f); cachedShapeBB!!.putFloat(0f)
+            cachedShapeBB!!.flip()
+            encoder.writeToBuffer(cachedShapeBuffer.slice(), cachedShapeBB!!)
+
+            val indexBuf = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES)
+            val pass = encoder.createRenderPass({ -> "aporia:blur_rect" }, colorView, Optional.empty<Vector4fc>())
+            pass.use {
+                pass.setPipeline(pipeline)
+                RenderSystem.bindDefaultUniforms(pass)
+                pass.setUniform("ShapeData", cachedShapeBuffer.slice())
+                val btv = blurTarget.colorTextureView ?: return@DrawTask
+                pass.bindTexture("BlurTextureSampler", btv,
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
+                pass.setVertexBuffer(0, cachedVertexBuffer.slice(0L, cachedVertexBuffer.size()))
+                pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type())
+                pass.drawIndexed(6, 1, 0, 0, 0)
+            }
+        })
     }
 
     @JvmOverloads
@@ -312,51 +337,58 @@ class ShapesRenderer {
     fun drawLogo(x: Float, y: Float, w: Float, h: Float, view: GpuTextureView?, time: Long) {
         if (view == null) return
         val mc = Minecraft.getInstance()
-        val colorView = mc.mainRenderTarget.colorTextureView ?: return
-
-        if (cachedImageBB == null) cachedImageBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder())
-        cachedImageBB!!.clear()
-        repeat(8) { cachedImageBB!!.putFloat(0f); cachedImageBB!!.putFloat(0f); cachedImageBB!!.putFloat(0f); cachedImageBB!!.putFloat(0f) }
-        cachedImageBB!!.flip()
 
         val sw = mc.window.guiScaledWidth.toFloat()
         val sh = mc.window.guiScaledHeight.toFloat()
         val nx0 = -1f + 2f * x / sw; val ny0 = 1f - 2f * (y + h) / sh
         val nx1 = -1f + 2f * (x + w) / sw; val ny1 = 1f - 2f * y / sh
+        val timeFloat = (time % 1000000L) / 1000f
 
-        val tess = Tesselator.getInstance()
-        val buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR)
-        buf.addVertex(nx0, ny0, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f)
-        buf.addVertex(nx1, ny0, 0f).setUv(1f, 1f).setColor(1f, 1f, 1f, 1f)
-        buf.addVertex(nx1, ny1, 0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f)
-        buf.addVertex(nx0, ny0, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f)
-        buf.addVertex(nx1, ny1, 0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f)
-        buf.addVertex(nx0, ny1, 0f).setUv(0f, 0f).setColor(1f, 1f, 1f, 1f)
-        val mesh = buf.buildOrThrow()
+        taskQueue.add(DrawTask(currentDepth + 0.1f) { ->
+            val colorView = mc.gameRenderer.mainRenderTarget().colorTextureView ?: return@DrawTask
+            if (cachedImageBB == null) cachedImageBB = ByteBuffer.allocateDirect(128).order(ByteOrder.nativeOrder())
+            cachedImageBB!!.clear()
+            repeat(8) { cachedImageBB!!.putFloat(0f); cachedImageBB!!.putFloat(0f); cachedImageBB!!.putFloat(0f); cachedImageBB!!.putFloat(0f) }
+            cachedImageBB!!.flip()
 
-        val device = RenderSystem.getDevice()
-        val encoder = device.createCommandEncoder()
-        encoder.writeToBuffer(cachedImageVertexBuffer.slice(), mesh.vertexBuffer())
-        encoder.writeToBuffer(cachedImageShapeBuffer.slice(), cachedImageBB!!)
-        mesh.close()
+            val bb = ByteBufferBuilder.exactlySized(2048)
+            val buf = BufferBuilder(bb, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR)
+            buf.addVertex(nx0, ny0, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f)
+            buf.addVertex(nx1, ny0, 0f).setUv(1f, 1f).setColor(1f, 1f, 1f, 1f)
+            buf.addVertex(nx1, ny1, 0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f)
+            buf.addVertex(nx0, ny0, 0f).setUv(0f, 1f).setColor(1f, 1f, 1f, 1f)
+            buf.addVertex(nx1, ny1, 0f).setUv(1f, 0f).setColor(1f, 1f, 1f, 1f)
+            buf.addVertex(nx0, ny1, 0f).setUv(0f, 0f).setColor(1f, 1f, 1f, 1f)
+            val mesh = buf.buildOrThrow()
 
-        val indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES)
-        val logoTimeBB = ByteBuffer.allocateDirect(16).order(ByteOrder.nativeOrder())
-        logoTimeBB.clear(); logoTimeBB.putFloat((time % 1000000L) / 1000f); logoTimeBB.flip()
-        encoder.writeToBuffer(logoUbo.slice(), logoTimeBB)
+            val device = RenderSystem.getDevice()
+            val encoder = device.createCommandEncoder()
+            encoder.writeToBuffer(cachedImageVertexBuffer.slice(), mesh.vertexBuffer())
+            encoder.writeToBuffer(cachedImageShapeBuffer.slice(), cachedImageBB!!)
+            mesh.close()
 
-        val pass = encoder.createRenderPass({ -> "aporia:logo_pass" }, colorView, OptionalInt.empty())
-        pass.use {
-            pass.setPipeline(logoPipeline)
-            RenderSystem.bindDefaultUniforms(pass)
-            pass.setUniform("u_time", logoUbo.slice())
-            pass.setUniform("LogoData", cachedImageShapeBuffer.slice())
-            pass.bindTexture("LogoTextureSampler", view,
-                RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
-            pass.setVertexBuffer(0, cachedImageVertexBuffer)
-            pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type())
-            pass.drawIndexed(0, 0, 6, 0)
-        }
+            val indexBuf = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES)
+            val logoTimeBB = ByteBuffer.allocateDirect(16).order(ByteOrder.nativeOrder())
+            logoTimeBB.clear(); logoTimeBB.putFloat(timeFloat); logoTimeBB.flip()
+            encoder.writeToBuffer(logoUbo.slice(), logoTimeBB)
+
+            val projMatrix = Matrix4f().setOrtho(0f, sw, sh, 0f, -1000f, 1000f)
+            val projSlice = orthoProjection.getBuffer(projMatrix)
+            RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)
+
+            val pass = encoder.createRenderPass({ -> "aporia:logo_pass" }, colorView, Optional.empty<Vector4fc>())
+            pass.use {
+                pass.setPipeline(logoPipeline)
+                RenderSystem.bindDefaultUniforms(pass)
+                pass.setUniform("u_time", logoUbo.slice())
+                pass.setUniform("LogoData", cachedImageShapeBuffer.slice())
+                pass.bindTexture("LogoTextureSampler", view,
+                    RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR))
+                pass.setVertexBuffer(0, cachedImageVertexBuffer.slice(0L, cachedImageVertexBuffer.size()))
+                pass.setIndexBuffer(indexBuf.getBuffer(6), indexBuf.type())
+                pass.drawIndexed(6, 1, 0, 0, 0)
+            }
+        })
     }
 
     // ── Internal ──
@@ -386,7 +418,6 @@ class ShapesRenderer {
                      borderMode: Int, thickness: Float, fadeCorner: Float, cornerMask: Int) {
         val mc = Minecraft.getInstance()
         val window = mc.window
-        val colorView = mc.mainRenderTarget.colorTextureView ?: return
         if (!::pipeline.isInitialized) return
 
         val a = ((color shr 24) and 0xFF) / 255f
@@ -394,12 +425,47 @@ class ShapesRenderer {
         val g = ((color shr 8) and 0xFF) / 255f
         val b = (color and 0xFF) / 255f
 
-        val projSlice = orthoProjection.getBuffer(window.guiScaledWidth.toFloat(), window.guiScaledHeight.toFloat())
+        val sw = window.guiScaledWidth.toFloat()
+        val sh = window.guiScaledHeight.toFloat()
+        val depth = currentDepth
+        val capturedVerts = Array(verts.size) { verts[it].copyOf() }
+
+        taskQueue.add(DrawTask(depth) { ->
+            val colorView = mc.gameRenderer.mainRenderTarget().colorTextureView ?: return@DrawTask
+            executeShapeDrawDirect(capturedVerts, a, r, g, b, sw, sh, depth,
+                colorView, bx, by, bw, bh, radius, mode, borderMode, thickness, fadeCorner, cornerMask)
+        })
+    }
+
+    private fun executeShapeDraw(x: Float, y: Float, w: Float, h: Float, radius: Float, color: Int,
+                                 mode: Int, cornerMask: Int, depth: Float, sw: Float, sh: Float) {
+        val mc = Minecraft.getInstance()
+        val colorView = mc.gameRenderer.mainRenderTarget().colorTextureView ?: return
+        if (!::pipeline.isInitialized) return
+        val a = ((color shr 24) and 0xFF) / 255f
+        val r = ((color shr 16) and 0xFF) / 255f
+        val g = ((color shr 8) and 0xFF) / 255f
+        val b = (color and 0xFF) / 255f
+        val verts = arrayOf(
+            floatArrayOf(x, y + h), floatArrayOf(x + w, y + h), floatArrayOf(x + w, y),
+            floatArrayOf(x, y + h), floatArrayOf(x + w, y), floatArrayOf(x, y)
+        )
+        executeShapeDrawDirect(verts, a, r, g, b, sw, sh, depth,
+            colorView, x, y, w, h, radius, mode, 0, 0f, 0f, cornerMask)
+    }
+
+    private fun executeShapeDrawDirect(verts: Array<FloatArray>, a: Float, r: Float, g: Float, b: Float,
+                                       sw: Float, sh: Float, depth: Float, colorView: GpuTextureView,
+                                       bx: Float, by: Float, bw: Float, bh: Float, radius: Float,
+                                       mode: Int, borderMode: Int, thickness: Float, fadeCorner: Float,
+                                       cornerMask: Int) {
+        val projMatrix = Matrix4f().setOrtho(0f, sw, sh, 0f, -1000f, 1000f)
+        val projSlice = orthoProjection.getBuffer(projMatrix)
         RenderSystem.setProjectionMatrix(projSlice, ProjectionType.ORTHOGRAPHIC)
 
-        val tess = Tesselator.getInstance()
-        val buf = tess.begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR)
-        for (v in verts) buf.addVertex(v[0], v[1], currentDepth).setUv(0f, 0f).setColor(r, g, b, a)
+        val bb = ByteBufferBuilder.exactlySized(2048)
+        val buf = BufferBuilder(bb, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR)
+        for (v in verts) buf.addVertex(v[0], v[1], depth).setUv(0f, 0f).setColor(r, g, b, a)
         val mesh = buf.buildOrThrow()
         val device = RenderSystem.getDevice()
         val encoder = device.createCommandEncoder()
@@ -415,16 +481,16 @@ class ShapesRenderer {
         cachedShapeBB!!.flip()
         encoder.writeToBuffer(cachedShapeBuffer.slice(), cachedShapeBB!!)
 
-        val indexBuf = RenderSystem.getSequentialBuffer(VertexFormat.Mode.TRIANGLES)
+        val indexBuf = RenderSystem.getSequentialBuffer(PrimitiveTopology.TRIANGLES)
         val vertexCount = verts.size
-        val pass = encoder.createRenderPass({ -> "aporia:draw" }, colorView, OptionalInt.empty())
+        val pass = encoder.createRenderPass({ -> "aporia:draw" }, colorView, Optional.empty<Vector4fc>())
         pass.use {
             pass.setPipeline(roundedRectPipeline)
             RenderSystem.bindDefaultUniforms(pass)
             pass.setUniform("ShapeData", cachedShapeBuffer.slice())
-            pass.setVertexBuffer(0, cachedVertexBuffer)
+            pass.setVertexBuffer(0, cachedVertexBuffer.slice(0L, cachedVertexBuffer.size()))
             pass.setIndexBuffer(indexBuf.getBuffer(vertexCount), indexBuf.type())
-            pass.drawIndexed(0, 0, vertexCount, 0)
+            pass.drawIndexed(vertexCount, 1, 0, 0, 0)
         }
     }
 }

@@ -6,11 +6,11 @@ import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvi
 public class BlockPileConfiguration implements FeatureConfiguration {
     public static final Codec<BlockPileConfiguration> CODEC = BlockStateProvider.CODEC
         .fieldOf("state_provider")
-        .xmap(BlockPileConfiguration::new, p_67545_ -> p_67545_.stateProvider)
+        .xmap(BlockPileConfiguration::new, c -> c.stateProvider)
         .codec();
     public final BlockStateProvider stateProvider;
 
-    public BlockPileConfiguration(BlockStateProvider p_67543_) {
-        this.stateProvider = p_67543_;
+    public BlockPileConfiguration(final BlockStateProvider stateProvider) {
+        this.stateProvider = stateProvider;
     }
 }

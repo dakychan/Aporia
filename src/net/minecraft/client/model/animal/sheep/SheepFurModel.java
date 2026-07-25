@@ -9,41 +9,36 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.SheepRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SheepFurModel extends QuadrupedModel<SheepRenderState> {
-    public SheepFurModel(ModelPart p_453042_) {
-        super(p_453042_);
+    public SheepFurModel(final ModelPart root) {
+        super(root);
     }
 
     public static LayerDefinition createFurLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        partdefinition.addOrReplaceChild(
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        root.addOrReplaceChild(
             "head",
             CubeListBuilder.create().texOffs(0, 0).addBox(-3.0F, -4.0F, -4.0F, 6.0F, 6.0F, 6.0F, new CubeDeformation(0.6F)),
             PartPose.offset(0.0F, 6.0F, -8.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "body",
             CubeListBuilder.create().texOffs(28, 8).addBox(-4.0F, -10.0F, -7.0F, 8.0F, 16.0F, 6.0F, new CubeDeformation(1.75F)),
             PartPose.offsetAndRotation(0.0F, 5.0F, 2.0F, (float) (Math.PI / 2), 0.0F, 0.0F)
         );
-        CubeListBuilder cubelistbuilder = CubeListBuilder.create()
-            .texOffs(0, 16)
-            .addBox(-2.0F, 0.0F, -2.0F, 4.0F, 6.0F, 4.0F, new CubeDeformation(0.5F));
-        partdefinition.addOrReplaceChild("right_hind_leg", cubelistbuilder, PartPose.offset(-3.0F, 12.0F, 7.0F));
-        partdefinition.addOrReplaceChild("left_hind_leg", cubelistbuilder, PartPose.offset(3.0F, 12.0F, 7.0F));
-        partdefinition.addOrReplaceChild("right_front_leg", cubelistbuilder, PartPose.offset(-3.0F, 12.0F, -5.0F));
-        partdefinition.addOrReplaceChild("left_front_leg", cubelistbuilder, PartPose.offset(3.0F, 12.0F, -5.0F));
-        return LayerDefinition.create(meshdefinition, 64, 32);
+        CubeListBuilder leg = CubeListBuilder.create().texOffs(0, 16).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 6.0F, 4.0F, new CubeDeformation(0.5F));
+        root.addOrReplaceChild("right_hind_leg", leg, PartPose.offset(-3.0F, 12.0F, 7.0F));
+        root.addOrReplaceChild("left_hind_leg", leg, PartPose.offset(3.0F, 12.0F, 7.0F));
+        root.addOrReplaceChild("right_front_leg", leg, PartPose.offset(-3.0F, 12.0F, -5.0F));
+        root.addOrReplaceChild("left_front_leg", leg, PartPose.offset(3.0F, 12.0F, -5.0F));
+        return LayerDefinition.create(mesh, 64, 32);
     }
 
-    public void setupAnim(SheepRenderState p_459392_) {
-        super.setupAnim(p_459392_);
-        this.head.y = this.head.y + p_459392_.headEatPositionScale * 9.0F * p_459392_.ageScale;
-        this.head.xRot = p_459392_.headEatAngleScale;
+    public void setupAnim(final SheepRenderState state) {
+        super.setupAnim(state);
+        this.head.y = this.head.y + state.headEatPositionScale * 9.0F * state.ageScale;
+        this.head.xRot = state.headEatAngleScale;
     }
 }

@@ -30,94 +30,94 @@ public class ClientboundAddEntityPacket implements Packet<ClientGamePacketListen
     private final byte yHeadRot;
     private final int data;
 
-    public ClientboundAddEntityPacket(Entity p_131481_, ServerEntity p_343528_) {
-        this(p_131481_, p_343528_, 0);
+    public ClientboundAddEntityPacket(final Entity entity, final ServerEntity serverEntity) {
+        this(entity, serverEntity, 0);
     }
 
-    public ClientboundAddEntityPacket(Entity p_131483_, ServerEntity p_342757_, int p_131484_) {
+    public ClientboundAddEntityPacket(final Entity entity, final ServerEntity serverEntity, final int data) {
         this(
-            p_131483_.getId(),
-            p_131483_.getUUID(),
-            p_342757_.getPositionBase().x(),
-            p_342757_.getPositionBase().y(),
-            p_342757_.getPositionBase().z(),
-            p_342757_.getLastSentXRot(),
-            p_342757_.getLastSentYRot(),
-            p_131483_.getType(),
-            p_131484_,
-            p_342757_.getLastSentMovement(),
-            p_342757_.getLastSentYHeadRot()
+            entity.getId(),
+            entity.getUUID(),
+            serverEntity.getPositionBase().x(),
+            serverEntity.getPositionBase().y(),
+            serverEntity.getPositionBase().z(),
+            serverEntity.getLastSentXRot(),
+            serverEntity.getLastSentYRot(),
+            entity.getType(),
+            data,
+            serverEntity.getLastSentMovement(),
+            serverEntity.getLastSentYHeadRot()
         );
     }
 
-    public ClientboundAddEntityPacket(Entity p_237558_, int p_237559_, BlockPos p_237560_) {
+    public ClientboundAddEntityPacket(final Entity entity, final int data, final BlockPos pos) {
         this(
-            p_237558_.getId(),
-            p_237558_.getUUID(),
-            p_237560_.getX(),
-            p_237560_.getY(),
-            p_237560_.getZ(),
-            p_237558_.getXRot(),
-            p_237558_.getYRot(),
-            p_237558_.getType(),
-            p_237559_,
-            p_237558_.getDeltaMovement(),
-            p_237558_.getYHeadRot()
+            entity.getId(),
+            entity.getUUID(),
+            pos.getX(),
+            pos.getY(),
+            pos.getZ(),
+            entity.getXRot(),
+            entity.getYRot(),
+            entity.getType(),
+            data,
+            entity.getDeltaMovement(),
+            entity.getYHeadRot()
         );
     }
 
     public ClientboundAddEntityPacket(
-        int p_237546_,
-        UUID p_237547_,
-        double p_237548_,
-        double p_237549_,
-        double p_237550_,
-        float p_237551_,
-        float p_237552_,
-        EntityType<?> p_237553_,
-        int p_237554_,
-        Vec3 p_237555_,
-        double p_237556_
+        final int id,
+        final UUID uuid,
+        final double x,
+        final double y,
+        final double z,
+        final float xRot,
+        final float yRot,
+        final EntityType<?> type,
+        final int data,
+        final Vec3 movement,
+        final double yHeadRot
     ) {
-        this.id = p_237546_;
-        this.uuid = p_237547_;
-        this.x = p_237548_;
-        this.y = p_237549_;
-        this.z = p_237550_;
-        this.movement = p_237555_;
-        this.xRot = Mth.packDegrees(p_237551_);
-        this.yRot = Mth.packDegrees(p_237552_);
-        this.yHeadRot = Mth.packDegrees((float)p_237556_);
-        this.type = p_237553_;
-        this.data = p_237554_;
+        this.id = id;
+        this.uuid = uuid;
+        this.x = x;
+        this.y = y;
+        this.z = z;
+        this.movement = movement;
+        this.xRot = Mth.packDegrees(xRot);
+        this.yRot = Mth.packDegrees(yRot);
+        this.yHeadRot = Mth.packDegrees((float)yHeadRot);
+        this.type = type;
+        this.data = data;
     }
 
-    private ClientboundAddEntityPacket(RegistryFriendlyByteBuf p_327810_) {
-        this.id = p_327810_.readVarInt();
-        this.uuid = p_327810_.readUUID();
-        this.type = ByteBufCodecs.registry(Registries.ENTITY_TYPE).decode(p_327810_);
-        this.x = p_327810_.readDouble();
-        this.y = p_327810_.readDouble();
-        this.z = p_327810_.readDouble();
-        this.movement = p_327810_.readLpVec3();
-        this.xRot = p_327810_.readByte();
-        this.yRot = p_327810_.readByte();
-        this.yHeadRot = p_327810_.readByte();
-        this.data = p_327810_.readVarInt();
+    private ClientboundAddEntityPacket(final RegistryFriendlyByteBuf input) {
+        this.id = input.readVarInt();
+        this.uuid = input.readUUID();
+        this.type = ByteBufCodecs.registry(Registries.ENTITY_TYPE).decode(input);
+        this.x = input.readDouble();
+        this.y = input.readDouble();
+        this.z = input.readDouble();
+        this.movement = Vec3.LP_STREAM_CODEC.decode(input);
+        this.xRot = input.readByte();
+        this.yRot = input.readByte();
+        this.yHeadRot = input.readByte();
+        this.data = input.readVarInt();
     }
 
-    private void write(RegistryFriendlyByteBuf p_332393_) {
-        p_332393_.writeVarInt(this.id);
-        p_332393_.writeUUID(this.uuid);
-        ByteBufCodecs.registry(Registries.ENTITY_TYPE).encode(p_332393_, this.type);
-        p_332393_.writeDouble(this.x);
-        p_332393_.writeDouble(this.y);
-        p_332393_.writeDouble(this.z);
-        p_332393_.writeLpVec3(this.movement);
-        p_332393_.writeByte(this.xRot);
-        p_332393_.writeByte(this.yRot);
-        p_332393_.writeByte(this.yHeadRot);
-        p_332393_.writeVarInt(this.data);
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeVarInt(this.id);
+        output.writeUUID(this.uuid);
+        ByteBufCodecs.registry(Registries.ENTITY_TYPE).encode(output, this.type);
+        output.writeDouble(this.x);
+        output.writeDouble(this.y);
+        output.writeDouble(this.z);
+        Vec3.LP_STREAM_CODEC.encode(output, this.movement);
+        output.writeByte(this.xRot);
+        output.writeByte(this.yRot);
+        output.writeByte(this.yHeadRot);
+        output.writeVarInt(this.data);
     }
 
     @Override
@@ -125,8 +125,8 @@ public class ClientboundAddEntityPacket implements Packet<ClientGamePacketListen
         return GamePacketTypes.CLIENTBOUND_ADD_ENTITY;
     }
 
-    public void handle(ClientGamePacketListener p_131495_) {
-        p_131495_.handleAddEntity(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleAddEntity(this);
     }
 
     public int getId() {

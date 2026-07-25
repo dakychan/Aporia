@@ -30,78 +30,76 @@ public abstract class BuiltInPackSource implements RepositorySource {
     private final Identifier packDir;
     private final DirectoryValidator validator;
 
-    public BuiltInPackSource(PackType p_249137_, VanillaPackResources p_250453_, Identifier p_459603_, DirectoryValidator p_300643_) {
-        this.packType = p_249137_;
-        this.vanillaPack = p_250453_;
-        this.packDir = p_459603_;
-        this.validator = p_300643_;
+    public BuiltInPackSource(final PackType packType, final VanillaPackResources vanillaPack, final Identifier packDir, final DirectoryValidator validator) {
+        this.packType = packType;
+        this.vanillaPack = vanillaPack;
+        this.packDir = packDir;
+        this.validator = validator;
     }
 
     @Override
-    public void loadPacks(Consumer<Pack> p_250708_) {
-        Pack pack = this.createVanillaPack(this.vanillaPack);
-        if (pack != null) {
-            p_250708_.accept(pack);
+    public void loadPacks(final Consumer<Pack> result) {
+        Pack vanilla = this.createVanillaPack(this.vanillaPack);
+        if (vanilla != null) {
+            result.accept(vanilla);
         }
 
-        this.listBundledPacks(p_250708_);
+        this.listBundledPacks(result);
     }
 
-    protected abstract @Nullable Pack createVanillaPack(PackResources p_251690_);
+    protected abstract @Nullable Pack createVanillaPack(final PackResources resources);
 
-    protected abstract Component getPackTitle(String p_251850_);
+    protected abstract Component getPackTitle(final String id);
 
     public VanillaPackResources getVanillaPack() {
         return this.vanillaPack;
     }
 
-    private void listBundledPacks(Consumer<Pack> p_249128_) {
-        Map<String, Function<String, Pack>> map = new HashMap<>();
-        this.populatePackList(map::put);
-        map.forEach((p_250371_, p_250946_) -> {
-            Pack pack = p_250946_.apply(p_250371_);
+    private void listBundledPacks(final Consumer<Pack> packConsumer) {
+        Map<String, Function<String, Pack>> discoveredPacks = new HashMap<>();
+        this.populatePackList(discoveredPacks::put);
+        discoveredPacks.forEach((id, packSupplier) -> {
+            Pack pack = packSupplier.apply(id);
             if (pack != null) {
-                p_249128_.accept(pack);
+                packConsumer.accept(pack);
             }
         });
     }
 
-    protected void populatePackList(BiConsumer<String, Function<String, Pack>> p_250341_) {
-        this.vanillaPack.listRawPaths(this.packType, this.packDir, p_250248_ -> this.discoverPacksInPath(p_250248_, p_250341_));
+    protected void populatePackList(final BiConsumer<String, Function<String, Pack>> discoveredPacks) {
+        this.vanillaPack.listRawPaths(this.packType, this.packDir, path -> this.discoverPacksInPath(path, discoveredPacks));
     }
 
-    protected void discoverPacksInPath(@Nullable Path p_250013_, BiConsumer<String, Function<String, @Nullable Pack>> p_249898_) {
-        if (p_250013_ != null && Files.isDirectory(p_250013_)) {
+    protected void discoverPacksInPath(final @Nullable Path targetDir, final BiConsumer<String, Function<String, @Nullable Pack>> discoveredPacks) {
+        if (targetDir != null && Files.isDirectory(targetDir)) {
             try {
                 FolderRepositorySource.discoverPacks(
-                    p_250013_,
+                    targetDir,
                     this.validator,
-                    (p_252012_, p_249772_) -> p_249898_.accept(
-                        pathToId(p_252012_), p_250601_ -> this.createBuiltinPack(p_250601_, p_249772_, this.getPackTitle(p_250601_))
-                    )
+                    (path, resources) -> discoveredPacks.accept(pathToId(path), id -> this.createBuiltinPack(id, resources, this.getPackTitle(id)))
                 );
-            } catch (IOException ioexception) {
-                LOGGER.warn("Failed to discover packs in {}", p_250013_, ioexception);
+            } catch (IOException e) {
+                LOGGER.warn("Failed to discover packs in {}", targetDir, e);
             }
         }
     }
 
-    private static String pathToId(Path p_252048_) {
-        return StringUtils.removeEnd(p_252048_.getFileName().toString(), ".zip");
+    private static String pathToId(final Path path) {
+        return StringUtils.removeEnd(path.getFileName().toString(), ".zip");
     }
 
-    protected abstract @Nullable Pack createBuiltinPack(String p_249992_, Pack.ResourcesSupplier p_248670_, Component p_252197_);
+    protected abstract @Nullable Pack createBuiltinPack(final String id, final Pack.ResourcesSupplier resources, final Component name);
 
-    protected static Pack.ResourcesSupplier fixedResources(final PackResources p_298206_) {
+    protected static Pack.ResourcesSupplier fixedResources(final PackResources instance) {
         return new Pack.ResourcesSupplier() {
             @Override
-            public PackResources openPrimary(PackLocationInfo p_333958_) {
-                return p_298206_;
+            public PackResources openPrimary(final PackLocationInfo location) {
+                return instance;
             }
 
             @Override
-            public PackResources openFull(PackLocationInfo p_336095_, Pack.Metadata p_328489_) {
-                return p_298206_;
+            public PackResources openFull(final PackLocationInfo location, final Pack.Metadata metadata) {
+                return instance;
             }
         };
     }

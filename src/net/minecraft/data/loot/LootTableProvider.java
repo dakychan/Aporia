@@ -8,10 +8,8 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.MappedRegistry;
@@ -29,9 +27,9 @@ import net.minecraft.util.Util;
 import net.minecraft.util.context.ContextKeySet;
 import net.minecraft.world.RandomSequence;
 import net.minecraft.world.level.levelgen.RandomSupport;
+import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.ValidationContext;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import org.slf4j.Logger;
 
 public class LootTableProvider implements DataProvider {
@@ -42,70 +40,61 @@ public class LootTableProvider implements DataProvider {
     private final CompletableFuture<HolderLookup.Provider> registries;
 
     public LootTableProvider(
-        PackOutput p_254123_,
-        Set<ResourceKey<LootTable>> p_254481_,
-        List<LootTableProvider.SubProviderEntry> p_253798_,
-        CompletableFuture<HolderLookup.Provider> p_330862_
+        final PackOutput output,
+        final Set<ResourceKey<LootTable>> requiredTables,
+        final List<LootTableProvider.SubProviderEntry> subProviders,
+        final CompletableFuture<HolderLookup.Provider> registries
     ) {
-        this.pathProvider = p_254123_.createRegistryElementsPathProvider(Registries.LOOT_TABLE);
-        this.subProviders = p_253798_;
-        this.requiredTables = p_254481_;
-        this.registries = p_330862_;
+        this.pathProvider = output.createRegistryElementsPathProvider(Registries.LOOT_TABLE);
+        this.subProviders = subProviders;
+        this.requiredTables = requiredTables;
+        this.registries = registries;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_254060_) {
-        return this.registries.thenCompose(p_325860_ -> this.run(p_254060_, p_325860_));
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        return this.registries.thenCompose(registries -> this.run(cache, registries));
     }
 
-    private CompletableFuture<?> run(CachedOutput p_327970_, HolderLookup.Provider p_331092_) {
-        WritableRegistry<LootTable> writableregistry = new MappedRegistry<>(Registries.LOOT_TABLE, Lifecycle.experimental());
-        Map<RandomSupport.Seed128bit, Identifier> map = new Object2ObjectOpenHashMap<>();
-        this.subProviders.forEach(p_341016_ -> p_341016_.provider().apply(p_331092_).generate((p_448699_, p_448700_) -> {
-            Identifier identifier = sequenceIdForLootTable(p_448699_);
-            Identifier identifier1 = map.put(RandomSequence.seedForKey(identifier), identifier);
-            if (identifier1 != null) {
-                Util.logAndPauseIfInIde("Loot table random sequence seed collision on " + identifier1 + " and " + p_448699_.identifier());
+    private CompletableFuture<?> run(final CachedOutput cache, final HolderLookup.Provider registries) {
+        WritableRegistry<LootTable> tables = new MappedRegistry<>(Registries.LOOT_TABLE, Lifecycle.experimental());
+        Map<RandomSupport.Seed128bit, Identifier> randomSequenceSeeds = new Object2ObjectOpenHashMap<>();
+        this.subProviders.forEach(subProvider -> subProvider.provider().apply(registries).generate((id, lootTable) -> {
+            Identifier sequenceId = sequenceIdForLootTable(id);
+            Identifier previous = randomSequenceSeeds.put(RandomSequence.seedForKey(sequenceId), sequenceId);
+            if (previous != null) {
+                Util.logAndPauseIfInIde("Loot table random sequence seed collision on " + previous + " and " + id.identifier());
             }
 
-            p_448700_.setRandomSequence(identifier);
-            LootTable loottable = p_448700_.setParamSet(p_341016_.paramSet).build();
-            writableregistry.register(p_448699_, loottable, RegistrationInfo.BUILT_IN);
+            lootTable.setRandomSequence(sequenceId);
+            LootTable table = lootTable.setParamSet(subProvider.paramSet).build();
+            tables.register(id, table, RegistrationInfo.BUILT_IN);
         }));
-        writableregistry.freeze();
-        ProblemReporter.Collector problemreporter$collector = new ProblemReporter.Collector();
-        HolderGetter.Provider holdergetter$provider = new RegistryAccess.ImmutableRegistryAccess(List.of(writableregistry)).freeze();
-        ValidationContext validationcontext = new ValidationContext(problemreporter$collector, LootContextParamSets.ALL_PARAMS, holdergetter$provider);
+        tables.freeze();
+        ProblemReporter.Collector problems = new ProblemReporter.Collector();
+        HolderGetter.Provider validationProvider = new RegistryAccess.ImmutableRegistryAccess(List.of(tables)).freeze();
+        ValidationContextSource validationContext = new ValidationContextSource(problems, validationProvider);
 
-        for (ResourceKey<LootTable> resourcekey : Sets.difference(this.requiredTables, writableregistry.registryKeySet())) {
-            problemreporter$collector.report(new LootTableProvider.MissingTableProblem(resourcekey));
+        for (ResourceKey<LootTable> missingTable : Sets.difference(this.requiredTables, tables.registryKeySet())) {
+            problems.report(new LootTableProvider.MissingTableProblem(missingTable));
         }
 
-        writableregistry.listElements()
-            .forEach(
-                p_405062_ -> p_405062_.value()
-                    .validate(
-                        validationcontext.setContextKeySet(p_405062_.value().getParamSet())
-                            .enterElement(new ProblemReporter.RootElementPathElement(p_405062_.key()), p_405062_.key())
-                    )
-            );
-        if (!problemreporter$collector.isEmpty()) {
-            problemreporter$collector.forEach(
-                (p_405059_, p_405060_) -> LOGGER.warn("Found validation problem in {}: {}", p_405059_, p_405060_.description())
-            );
+        LootDataType.TABLE.runValidation(validationContext, tables);
+        if (!problems.isEmpty()) {
+            problems.forEach((id, problem) -> LOGGER.warn("Found validation problem in {}: {}", id, problem.description()));
             throw new IllegalStateException("Failed to validate loot tables, see logs");
         } else {
-            return CompletableFuture.allOf(writableregistry.entrySet().stream().map(p_448695_ -> {
-                ResourceKey<LootTable> resourcekey1 = p_448695_.getKey();
-                LootTable loottable = p_448695_.getValue();
-                Path path = this.pathProvider.json(resourcekey1.identifier());
-                return DataProvider.saveStable(p_327970_, p_331092_, LootTable.DIRECT_CODEC, loottable, path);
+            return CompletableFuture.allOf(tables.entrySet().stream().<CompletableFuture<?>>map(entry -> {
+                ResourceKey<LootTable> id = entry.getKey();
+                LootTable table = entry.getValue();
+                Path path = this.pathProvider.json(id.identifier());
+                return DataProvider.saveStable(cache, registries, LootTable.DIRECT_CODEC, table, path);
             }).toArray(CompletableFuture[]::new));
         }
     }
 
-    private static Identifier sequenceIdForLootTable(ResourceKey<LootTable> p_331928_) {
-        return p_331928_.identifier();
+    private static Identifier sequenceIdForLootTable(final ResourceKey<LootTable> id) {
+        return id.identifier();
     }
 
     @Override

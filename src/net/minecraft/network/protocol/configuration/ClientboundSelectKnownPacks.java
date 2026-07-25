@@ -18,7 +18,7 @@ public record ClientboundSelectKnownPacks(List<KnownPack> knownPacks) implements
         return ConfigurationPacketTypes.CLIENTBOUND_SELECT_KNOWN_PACKS;
     }
 
-    public void handle(ClientConfigurationPacketListener p_331655_) {
-        p_331655_.handleSelectKnownPacks(this);
+    public void handle(final ClientConfigurationPacketListener listener) {
+        listener.handleSelectKnownPacks(this);
     }
 }

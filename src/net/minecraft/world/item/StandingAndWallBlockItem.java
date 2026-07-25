@@ -14,39 +14,39 @@ public class StandingAndWallBlockItem extends BlockItem {
     protected final Block wallBlock;
     private final Direction attachmentDirection;
 
-    public StandingAndWallBlockItem(Block p_248873_, Block p_251044_, Direction p_250800_, Item.Properties p_249308_) {
-        super(p_248873_, p_249308_);
-        this.wallBlock = p_251044_;
-        this.attachmentDirection = p_250800_;
+    public StandingAndWallBlockItem(final Block block, final Block wallBlock, final Direction attachmentDirection, final Item.Properties properties) {
+        super(block, properties);
+        this.wallBlock = wallBlock;
+        this.attachmentDirection = attachmentDirection;
     }
 
-    protected boolean canPlace(LevelReader p_250350_, BlockState p_249311_, BlockPos p_250328_) {
-        return p_249311_.canSurvive(p_250350_, p_250328_);
+    protected boolean canPlace(final LevelReader level, final BlockState possibleState, final BlockPos pos) {
+        return possibleState.canSurvive(level, pos);
     }
 
     @Override
-    protected @Nullable BlockState getPlacementState(BlockPlaceContext p_43255_) {
-        BlockState blockstate = this.wallBlock.getStateForPlacement(p_43255_);
-        BlockState blockstate1 = null;
-        LevelReader levelreader = p_43255_.getLevel();
-        BlockPos blockpos = p_43255_.getClickedPos();
+    protected @Nullable BlockState getPlacementState(final BlockPlaceContext context) {
+        BlockState wallState = this.wallBlock.getStateForPlacement(context);
+        BlockState stateForPlacement = null;
+        LevelReader level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
 
-        for (Direction direction : p_43255_.getNearestLookingDirections()) {
+        for (Direction direction : context.getNearestLookingDirections()) {
             if (direction != this.attachmentDirection.getOpposite()) {
-                BlockState blockstate2 = direction == this.attachmentDirection ? this.getBlock().getStateForPlacement(p_43255_) : blockstate;
-                if (blockstate2 != null && this.canPlace(levelreader, blockstate2, blockpos)) {
-                    blockstate1 = blockstate2;
+                BlockState possibleState = direction == this.attachmentDirection ? this.getBlock().getStateForPlacement(context) : wallState;
+                if (possibleState != null && this.canPlace(level, possibleState, pos)) {
+                    stateForPlacement = possibleState;
                     break;
                 }
             }
         }
 
-        return blockstate1 != null && levelreader.isUnobstructed(blockstate1, blockpos, CollisionContext.empty()) ? blockstate1 : null;
+        return stateForPlacement != null && level.isUnobstructed(stateForPlacement, pos, CollisionContext.empty()) ? stateForPlacement : null;
     }
 
     @Override
-    public void registerBlocks(Map<Block, Item> p_43252_, Item p_43253_) {
-        super.registerBlocks(p_43252_, p_43253_);
-        p_43252_.put(this.wallBlock, p_43253_);
+    public void registerBlocks(final Map<Block, Item> map, final Item item) {
+        super.registerBlocks(map, item);
+        map.put(this.wallBlock, item);
     }
 }

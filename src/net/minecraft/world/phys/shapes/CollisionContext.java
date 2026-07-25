@@ -21,52 +21,56 @@ public interface CollisionContext {
         return EntityCollisionContext.Empty.WITH_FLUID_COLLISIONS;
     }
 
-    static CollisionContext of(Entity p_82751_) {
-        return (CollisionContext)(switch (p_82751_) {
-            case AbstractMinecart abstractminecart -> AbstractMinecart.useExperimentalMovement(abstractminecart.level())
-                ? new MinecartCollisionContext(abstractminecart, false)
-                : new EntityCollisionContext(p_82751_, false, false);
-            default -> new EntityCollisionContext(p_82751_, false, false);
-        });
+    static CollisionContext of(final Entity entity) {
+        return switch (entity) {
+            case AbstractMinecart minecart -> AbstractMinecart.useExperimentalMovement(minecart.level())
+                ? new MinecartCollisionContext(minecart, false)
+                : new EntityCollisionContext(entity, false, false);
+            default -> new EntityCollisionContext(entity, false, false);
+        };
     }
 
-    static CollisionContext of(Entity p_366094_, boolean p_366904_) {
-        return new EntityCollisionContext(p_366094_, p_366904_, false);
+    static CollisionContext of(final Entity entity, final boolean alwaysCollideWithFluid) {
+        return new EntityCollisionContext(entity, alwaysCollideWithFluid, false);
     }
 
-    static CollisionContext placementContext(@Nullable Player p_410638_) {
+    static CollisionContext positionContext(final double y) {
+        return new PositionCollisionContext(y);
+    }
+
+    static CollisionContext placementContext(final @Nullable Player player) {
         return new EntityCollisionContext(
-            p_410638_ != null ? p_410638_.isDescending() : false,
+            player != null ? player.isDescending() : false,
             true,
-            p_410638_ != null ? p_410638_.getY() : -Double.MAX_VALUE,
-            p_410638_ instanceof LivingEntity ? p_410638_.getMainHandItem() : ItemStack.EMPTY,
+            player != null ? player.getY() : -Double.MAX_VALUE,
+            player != null ? player.getMainHandItem() : ItemStack.EMPTY,
             false,
-            p_410638_
+            player
         );
     }
 
-    static CollisionContext withPosition(@Nullable Entity p_397199_, double p_408609_) {
+    static CollisionContext withPosition(final @Nullable Entity entity, final double position) {
         return new EntityCollisionContext(
-            p_397199_ != null ? p_397199_.isDescending() : false,
+            entity != null ? entity.isDescending() : false,
             true,
-            p_397199_ != null ? p_408609_ : -Double.MAX_VALUE,
-            p_397199_ instanceof LivingEntity livingentity ? livingentity.getMainHandItem() : ItemStack.EMPTY,
+            entity != null ? position : -Double.MAX_VALUE,
+            entity instanceof LivingEntity livingEntity ? livingEntity.getMainHandItem() : ItemStack.EMPTY,
             false,
-            p_397199_
+            entity
         );
     }
 
     boolean isDescending();
 
-    boolean isAbove(VoxelShape p_82755_, BlockPos p_82756_, boolean p_82757_);
+    boolean isAbove(final VoxelShape shape, final BlockPos pos, final boolean defaultValue);
 
-    boolean isHoldingItem(Item p_82752_);
+    boolean isHoldingItem(final Item item);
 
     boolean alwaysCollideWithFluid();
 
-    boolean canStandOnFluid(FluidState p_205110_, FluidState p_205111_);
+    boolean canStandOnFluid(final FluidState fluidStateAbove, final FluidState fluid);
 
-    VoxelShape getCollisionShape(BlockState p_363466_, CollisionGetter p_365376_, BlockPos p_362678_);
+    VoxelShape getCollisionShape(BlockState state, CollisionGetter collisionGetter, BlockPos pos);
 
     default boolean isPlacement() {
         return false;

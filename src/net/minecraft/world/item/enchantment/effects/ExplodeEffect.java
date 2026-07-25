@@ -3,7 +3,6 @@ package net.minecraft.world.item.enchantment.effects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -41,7 +40,7 @@ public record ExplodeEffect(
     Holder<SoundEvent> sound
 ) implements EnchantmentEntityEffect {
     public static final MapCodec<ExplodeEffect> CODEC = RecordCodecBuilder.mapCodec(
-        p_422020_ -> p_422020_.group(
+        i -> i.group(
                 Codec.BOOL.optionalFieldOf("attribute_to_user", false).forGetter(ExplodeEffect::attributeToUser),
                 DamageType.CODEC.optionalFieldOf("damage_type").forGetter(ExplodeEffect::damageType),
                 LevelBasedValue.CODEC.optionalFieldOf("knockback_multiplier").forGetter(ExplodeEffect::knockbackMultiplier),
@@ -52,30 +51,28 @@ public record ExplodeEffect(
                 Level.ExplosionInteraction.CODEC.fieldOf("block_interaction").forGetter(ExplodeEffect::blockInteraction),
                 ParticleTypes.CODEC.fieldOf("small_particle").forGetter(ExplodeEffect::smallParticle),
                 ParticleTypes.CODEC.fieldOf("large_particle").forGetter(ExplodeEffect::largeParticle),
-                WeightedList.codec(ExplosionParticleInfo.CODEC)
-                    .optionalFieldOf("block_particles", WeightedList.of())
-                    .forGetter(ExplodeEffect::blockParticles),
+                WeightedList.codec(ExplosionParticleInfo.CODEC).optionalFieldOf("block_particles", WeightedList.of()).forGetter(ExplodeEffect::blockParticles),
                 SoundEvent.CODEC.fieldOf("sound").forGetter(ExplodeEffect::sound)
             )
-            .apply(p_422020_, ExplodeEffect::new)
+            .apply(i, ExplodeEffect::new)
     );
 
     @Override
-    public void apply(ServerLevel p_343276_, int p_344767_, EnchantedItemInUse p_342948_, Entity p_344263_, Vec3 p_343582_) {
-        Vec3 vec3 = p_343582_.add(this.offset);
-        p_343276_.explode(
-            this.attributeToUser ? p_344263_ : null,
-            this.getDamageSource(p_344263_, vec3),
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        Vec3 pos = position.add(this.offset);
+        serverLevel.explode(
+            this.attributeToUser ? entity : null,
+            this.getDamageSource(entity, pos),
             new SimpleExplosionDamageCalculator(
                 this.blockInteraction != Level.ExplosionInteraction.NONE,
                 this.damageType.isPresent(),
-                this.knockbackMultiplier.map(p_345148_ -> p_345148_.calculate(p_344767_)),
+                this.knockbackMultiplier.map(value -> value.calculate(enchantmentLevel)),
                 this.immuneBlocks
             ),
-            vec3.x(),
-            vec3.y(),
-            vec3.z(),
-            Math.max(this.radius.calculate(p_344767_), 0.0F),
+            pos.x(),
+            pos.y(),
+            pos.z(),
+            Math.max(this.radius.calculate(enchantmentLevel), 0.0F),
             this.createFire,
             this.blockInteraction,
             this.smallParticle,
@@ -85,11 +82,11 @@ public record ExplodeEffect(
         );
     }
 
-    private @Nullable DamageSource getDamageSource(Entity p_343933_, Vec3 p_345099_) {
+    private @Nullable DamageSource getDamageSource(final Entity entity, final Vec3 position) {
         if (this.damageType.isEmpty()) {
             return null;
         } else {
-            return this.attributeToUser ? new DamageSource(this.damageType.get(), p_343933_) : new DamageSource(this.damageType.get(), p_345099_);
+            return this.attributeToUser ? new DamageSource(this.damageType.get(), entity) : new DamageSource(this.damageType.get(), position);
         }
     }
 

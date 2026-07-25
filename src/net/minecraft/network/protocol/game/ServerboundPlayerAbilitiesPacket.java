@@ -13,22 +13,22 @@ public class ServerboundPlayerAbilitiesPacket implements Packet<ServerGamePacket
     private static final int FLAG_FLYING = 2;
     private final boolean isFlying;
 
-    public ServerboundPlayerAbilitiesPacket(Abilities p_134257_) {
-        this.isFlying = p_134257_.flying;
+    public ServerboundPlayerAbilitiesPacket(final Abilities abilities) {
+        this.isFlying = abilities.flying;
     }
 
-    private ServerboundPlayerAbilitiesPacket(FriendlyByteBuf p_179709_) {
-        byte b0 = p_179709_.readByte();
-        this.isFlying = (b0 & 2) != 0;
+    private ServerboundPlayerAbilitiesPacket(final FriendlyByteBuf input) {
+        byte bitfield = input.readByte();
+        this.isFlying = (bitfield & 2) != 0;
     }
 
-    private void write(FriendlyByteBuf p_134266_) {
-        byte b0 = 0;
+    private void write(final FriendlyByteBuf output) {
+        byte bitfield = 0;
         if (this.isFlying) {
-            b0 = (byte)(b0 | 2);
+            bitfield = (byte)(bitfield | 2);
         }
 
-        p_134266_.writeByte(b0);
+        output.writeByte(bitfield);
     }
 
     @Override
@@ -36,8 +36,8 @@ public class ServerboundPlayerAbilitiesPacket implements Packet<ServerGamePacket
         return GamePacketTypes.SERVERBOUND_PLAYER_ABILITIES;
     }
 
-    public void handle(ServerGamePacketListener p_134263_) {
-        p_134263_.handlePlayerAbilities(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePlayerAbilities(this);
     }
 
     public boolean isFlying() {

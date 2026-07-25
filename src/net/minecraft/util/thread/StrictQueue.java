@@ -9,20 +9,20 @@ import org.jspecify.annotations.Nullable;
 public interface StrictQueue<T extends Runnable> {
     @Nullable Runnable pop();
 
-    boolean push(T p_365336_);
+    boolean push(final T t);
 
     boolean isEmpty();
 
     int size();
 
-    public static final class FixedPriorityQueue implements StrictQueue<StrictQueue.RunnableWithPriority> {
+    final class FixedPriorityQueue implements StrictQueue<StrictQueue.RunnableWithPriority> {
         private final Queue<Runnable>[] queues;
         private final AtomicInteger size = new AtomicInteger();
 
-        public FixedPriorityQueue(int p_18773_) {
-            this.queues = new Queue[p_18773_];
+        public FixedPriorityQueue(final int size) {
+            this.queues = new Queue[size];
 
-            for (int i = 0; i < p_18773_; i++) {
+            for (int i = 0; i < size; i++) {
                 this.queues[i] = Queues.newConcurrentLinkedQueue();
             }
         }
@@ -30,25 +30,25 @@ public interface StrictQueue<T extends Runnable> {
         @Override
         public @Nullable Runnable pop() {
             for (Queue<Runnable> queue : this.queues) {
-                Runnable runnable = queue.poll();
-                if (runnable != null) {
+                Runnable task = queue.poll();
+                if (task != null) {
                     this.size.decrementAndGet();
-                    return runnable;
+                    return task;
                 }
             }
 
             return null;
         }
 
-        public boolean push(StrictQueue.RunnableWithPriority p_361706_) {
-            int i = p_361706_.priority;
-            if (i < this.queues.length && i >= 0) {
-                this.queues[i].add(p_361706_);
+        public boolean push(final StrictQueue.RunnableWithPriority task) {
+            int priority = task.priority;
+            if (priority < this.queues.length && priority >= 0) {
+                this.queues[priority].add(task);
                 this.size.incrementAndGet();
                 return true;
             } else {
                 throw new IndexOutOfBoundsException(
-                    String.format(Locale.ROOT, "Priority %d not supported. Expected range [0-%d]", i, this.queues.length - 1)
+                    String.format(Locale.ROOT, "Priority %d not supported. Expected range [0-%d]", priority, this.queues.length - 1)
                 );
             }
         }
@@ -64,11 +64,11 @@ public interface StrictQueue<T extends Runnable> {
         }
     }
 
-    public static final class QueueStrictQueue implements StrictQueue<Runnable> {
+    final class QueueStrictQueue implements StrictQueue<Runnable> {
         private final Queue<Runnable> queue;
 
-        public QueueStrictQueue(Queue<Runnable> p_18792_) {
-            this.queue = p_18792_;
+        public QueueStrictQueue(final Queue<Runnable> queue) {
+            this.queue = queue;
         }
 
         @Override
@@ -77,8 +77,8 @@ public interface StrictQueue<T extends Runnable> {
         }
 
         @Override
-        public boolean push(Runnable p_368428_) {
-            return this.queue.add(p_368428_);
+        public boolean push(final Runnable t) {
+            return this.queue.add(t);
         }
 
         @Override
@@ -92,7 +92,7 @@ public interface StrictQueue<T extends Runnable> {
         }
     }
 
-    public record RunnableWithPriority(int priority, Runnable task) implements Runnable {
+    record RunnableWithPriority(int priority, Runnable task) implements Runnable {
         @Override
         public void run() {
             this.task.run();

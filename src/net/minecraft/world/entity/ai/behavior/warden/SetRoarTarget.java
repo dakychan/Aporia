@@ -2,31 +2,29 @@ package net.minecraft.world.entity.ai.behavior.warden;
 
 import java.util.Optional;
 import java.util.function.Function;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.monster.warden.Warden;
 
 public class SetRoarTarget {
-    public static <E extends Warden> BehaviorControl<E> create(Function<E, Optional<? extends LivingEntity>> p_260275_) {
+    public static <E extends Warden> BehaviorControl<E> create(final Function<E, Optional<? extends LivingEntity>> targetFinderFunction) {
         return BehaviorBuilder.create(
-            p_258921_ -> p_258921_.group(
-                    p_258921_.absent(MemoryModuleType.ROAR_TARGET),
-                    p_258921_.absent(MemoryModuleType.ATTACK_TARGET),
-                    p_258921_.registered(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)
+            i -> i.group(
+                    i.absent(MemoryModuleType.ROAR_TARGET),
+                    i.absent(MemoryModuleType.ATTACK_TARGET),
+                    i.registered(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE)
                 )
-                .apply(p_258921_, (p_258929_, p_258930_, p_258931_) -> (p_258925_, p_258926_, p_258927_) -> {
-                    Optional<? extends LivingEntity> optional = p_260275_.apply(p_258926_);
-                    if (optional.filter(p_258926_::canTargetEntity).isEmpty()) {
+                .apply(i, (roarTarget, attackTarget, cantReachSince) -> (level, body, timestamp) -> {
+                    Optional<? extends LivingEntity> target = targetFinderFunction.apply(body);
+                    if (target.filter(body::canTargetEntity).isEmpty()) {
                         return false;
-                    } else {
-                        p_258929_.set(optional.get());
-                        p_258931_.erase();
-                        return true;
                     }
+
+                    roarTarget.set(target.get());
+                    cantReachSince.erase();
+                    return true;
                 })
         );
     }

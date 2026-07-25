@@ -1,15 +1,20 @@
 package net.minecraft.data.loot.packs;
 
 import java.util.function.BiConsumer;
+import net.minecraft.advancements.predicates.LocationPredicate;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.loot.LootTableSubProvider;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.InstrumentTags;
+import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootPool;
@@ -22,14 +27,16 @@ import net.minecraft.world.level.storage.loot.functions.SetInstrumentFunction;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.functions.SetItemDamageFunction;
 import net.minecraft.world.level.storage.loot.functions.SetPotionFunction;
+import net.minecraft.world.level.storage.loot.predicates.LocationCheck;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implements LootTableSubProvider {
     @Override
-    public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> p_301336_) {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
-        p_301336_.accept(
+    public void generate(final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Biome> biomes = this.registries.lookupOrThrow(Registries.BIOME);
+        output.accept(
             BuiltInLootTables.ABANDONED_MINESHAFT,
             LootTable.lootTable()
                 .withPool(
@@ -45,57 +52,54 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(2.0F, 4.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.REDSTONE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.LAPIS_LAZULI).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 8.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.REDSTONE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F))))
+                        .add(LootItem.lootTableItem(Items.LAPIS_LAZULI).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F))))
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 8.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(
                             LootItem.lootTableItem(Items.GLOW_BERRIES).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F)))
                         )
+                        .add(LootItem.lootTableItem(Items.MELON_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.MELON_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
+                            LootItem.lootTableItem(Items.PUMPKIN_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Items.PUMPKIN_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BEETROOT_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
+                            LootItem.lootTableItem(Items.BEETROOT_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
                         )
                 )
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(3.0F))
-                        .add(
-                            LootItem.lootTableItem(Blocks.RAIL).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Blocks.RAIL).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))))
                         .add(
                             LootItem.lootTableItem(Blocks.POWERED_RAIL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Blocks.DETECTOR_RAIL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
+                            LootItem.lootTableItem(Blocks.DETECTOR_RAIL)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Blocks.ACTIVATOR_RAIL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
+                            LootItem.lootTableItem(Blocks.ACTIVATOR_RAIL)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
                         )
+                        .add(LootItem.lootTableItem(Blocks.TORCH).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 16.0F))))
                         .add(
-                            LootItem.lootTableItem(Blocks.TORCH).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 16.0F)))
+                            LootItem.lootTableItem(Items.MUSIC_DISC_BOUNCE)
+                                .when(
+                                    LocationCheck.checkLocation(
+                                        LocationPredicate.Builder.location().setBiomes(HolderSet.direct(biomes.getOrThrow(Biomes.SULFUR_CAVES)))
+                                    )
+                                )
+                                .setWeight(10)
                         )
                 )
                 .withPool(
@@ -105,18 +109,19 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                         .add(
                             LootItem.lootTableItem(Items.BOOK)
                                 .setWeight(1)
-                                .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.EFFICIENCY)))
+                                .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.EFFICIENCY)))
                         )
                 )
         );
-        p_301336_.accept(BuiltInLootTables.ANCIENT_CITY, this.ancientCityLootTable());
-        p_301336_.accept(BuiltInLootTables.DESERT_PYRAMID, this.desertPyramidLootTable());
-        p_301336_.accept(BuiltInLootTables.JUNGLE_TEMPLE, this.jungleTempleLootTable());
-        p_301336_.accept(BuiltInLootTables.PILLAGER_OUTPOST, this.pillagerOutpostLootTable());
+        output.accept(BuiltInLootTables.ANCIENT_CITY, this.ancientCityLootTable());
+        output.accept(BuiltInLootTables.DESERT_PYRAMID, this.desertPyramidLootTable());
+        output.accept(BuiltInLootTables.JUNGLE_TEMPLE, this.jungleTempleLootTable());
+        output.accept(BuiltInLootTables.PILLAGER_OUTPOST, this.pillagerOutpostLootTable());
     }
 
     public LootTable.Builder pillagerOutpostLootTable() {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Instrument> instruments = this.registries.lookupOrThrow(Registries.INSTRUMENT);
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return LootTable.lootTable()
             .withPool(LootPool.lootPool().setRolls(UniformGenerator.between(0.0F, 1.0F)).add(LootItem.lootTableItem(Items.CROSSBOW)))
             .withPool(
@@ -145,13 +150,17 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                 LootPool.lootPool()
                     .setRolls(UniformGenerator.between(0.0F, 1.0F))
                     .add(LootItem.lootTableItem(Items.GOAT_HORN))
-                    .apply(SetInstrumentFunction.setInstrumentOptions(InstrumentTags.REGULAR_GOAT_HORNS))
+                    .apply(SetInstrumentFunction.setInstrumentOptions(instruments.getOrThrow(InstrumentTags.REGULAR_GOAT_HORNS)))
             )
             .withPool(
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(3))
-                    .add(LootItem.lootTableItem(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             )
             .withPool(
                 LootPool.lootPool()
@@ -160,13 +169,13 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
                             .setWeight(2)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.QUICK_CHARGE)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.QUICK_CHARGE)))
                     )
             );
     }
 
     public LootTable.Builder desertPyramidLootTable() {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return LootTable.lootTable()
             .withPool(
                 LootPool.lootPool()
@@ -201,26 +210,33 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(4))
-                    .add(LootItem.lootTableItem(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
                             .setWeight(2)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.UNBREAKING)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.UNBREAKING)))
                     )
             );
     }
 
     public LootTable.Builder ancientCityLootTable() {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return LootTable.lootTable()
             .withPool(
                 LootPool.lootPool()
                     .setRolls(UniformGenerator.between(5.0F, 10.0F))
-                    .add(LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
+                    )
                     .add(LootItem.lootTableItem(Items.MUSIC_DISC_OTHERSIDE).setWeight(1))
                     .add(LootItem.lootTableItem(Items.COMPASS).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                     .add(LootItem.lootTableItem(Items.SCULK_CATALYST).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
-                    .add(LootItem.lootTableItem(Items.NAME_TAG).setWeight(2))
                     .add(
                         LootItem.lootTableItem(Items.DIAMOND_HOE)
                             .setWeight(2)
@@ -241,13 +257,15 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
                             .setWeight(3)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.SWIFT_SNEAK)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.SWIFT_SNEAK)))
                     )
                     .add(LootItem.lootTableItem(Items.SCULK).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 10.0F))))
                     .add(LootItem.lootTableItem(Items.SCULK_SENSOR).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                     .add(LootItem.lootTableItem(Items.CANDLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                     .add(LootItem.lootTableItem(Items.AMETHYST_SHARD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 15.0F))))
-                    .add(LootItem.lootTableItem(Items.EXPERIENCE_BOTTLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.EXPERIENCE_BOTTLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
+                    )
                     .add(LootItem.lootTableItem(Items.GLOW_BERRIES).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 15.0F))))
                     .add(
                         LootItem.lootTableItem(Items.IRON_LEGGINGS)
@@ -275,7 +293,7 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
                             .setWeight(4)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.MENDING)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.MENDING)))
                     )
                     .add(LootItem.lootTableItem(Items.WARD_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(4))
                     .add(LootItem.lootTableItem(Items.SILENCE_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1))
@@ -283,7 +301,7 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
     }
 
     public LootTable.Builder jungleTempleLootTable() {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return LootTable.lootTable()
             .withPool(
                 LootPool.lootPool()
@@ -306,7 +324,11 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(2))
-                    .add(LootItem.lootTableItem(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             )
             .withPool(
                 LootPool.lootPool()
@@ -314,7 +336,7 @@ public record TradeRebalanceChestLoot(HolderLookup.Provider registries) implemen
                     .add(EmptyLootItem.emptyItem().setWeight(1))
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.UNBREAKING)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.UNBREAKING)))
                     )
             );
     }

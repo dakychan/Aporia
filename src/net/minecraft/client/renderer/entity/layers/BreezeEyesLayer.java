@@ -11,21 +11,24 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BreezeEyesLayer extends RenderLayer<BreezeRenderState, BreezeModel> {
     private static final RenderType BREEZE_EYES = RenderTypes.breezeEyes(Identifier.withDefaultNamespace("textures/entity/breeze/breeze_eyes.png"));
     private final BreezeModel model;
 
-    public BreezeEyesLayer(RenderLayerParent<BreezeRenderState, BreezeModel> p_310165_, EntityModelSet p_422843_) {
-        super(p_310165_);
-        this.model = new BreezeModel(p_422843_.bakeLayer(ModelLayers.BREEZE_EYES));
+    public BreezeEyesLayer(final RenderLayerParent<BreezeRenderState, BreezeModel> renderer, final EntityModelSet modelSet) {
+        super(renderer);
+        this.model = new BreezeModel(modelSet.bakeLayer(ModelLayers.BREEZE_EYES));
     }
 
-    public void submit(PoseStack p_425332_, SubmitNodeCollector p_427127_, int p_422356_, BreezeRenderState p_425741_, float p_428393_, float p_424774_) {
-        p_427127_.order(1)
-            .submitModel(this.model, p_425741_, p_425332_, BREEZE_EYES, p_422356_, OverlayTexture.NO_OVERLAY, -1, null, p_425741_.outlineColor, null);
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final BreezeRenderState state,
+        final float yRot,
+        final float xRot
+    ) {
+        submitNodeCollector.order(1).submitModel(this.model, state, poseStack, BREEZE_EYES, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
     }
 }

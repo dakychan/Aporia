@@ -11,13 +11,13 @@ public record ServerboundResourcePackPacket(UUID id, ServerboundResourcePackPack
         ServerboundResourcePackPacket::write, ServerboundResourcePackPacket::new
     );
 
-    private ServerboundResourcePackPacket(FriendlyByteBuf p_299426_) {
-        this(p_299426_.readUUID(), p_299426_.readEnum(ServerboundResourcePackPacket.Action.class));
+    private ServerboundResourcePackPacket(final FriendlyByteBuf input) {
+        this(input.readUUID(), input.readEnum(ServerboundResourcePackPacket.Action.class));
     }
 
-    private void write(FriendlyByteBuf p_298279_) {
-        p_298279_.writeUUID(this.id);
-        p_298279_.writeEnum(this.action);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUUID(this.id);
+        output.writeEnum(this.action);
     }
 
     @Override
@@ -25,11 +25,11 @@ public record ServerboundResourcePackPacket(UUID id, ServerboundResourcePackPack
         return CommonPacketTypes.SERVERBOUND_RESOURCE_PACK;
     }
 
-    public void handle(ServerCommonPacketListener p_298138_) {
-        p_298138_.handleResourcePackResponse(this);
+    public void handle(final ServerCommonPacketListener listener) {
+        listener.handleResourcePackResponse(this);
     }
 
-    public static enum Action {
+    public enum Action {
         SUCCESSFULLY_LOADED,
         DECLINED,
         FAILED_DOWNLOAD,

@@ -3,9 +3,7 @@ package net.minecraft.world.level.block.entity;
 import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.EndFeatures;
 import net.minecraft.nbt.CompoundTag;
@@ -42,47 +40,47 @@ public class TheEndGatewayBlockEntity extends TheEndPortalBlockEntity {
     private @Nullable BlockPos exitPortal;
     private boolean exactTeleport = false;
 
-    public TheEndGatewayBlockEntity(BlockPos p_155813_, BlockState p_155814_) {
-        super(BlockEntityType.END_GATEWAY, p_155813_, p_155814_);
+    public TheEndGatewayBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.END_GATEWAY, worldPosition, blockState);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_407878_) {
-        super.saveAdditional(p_407878_);
-        p_407878_.putLong("Age", this.age);
-        p_407878_.storeNullable("exit_portal", BlockPos.CODEC, this.exitPortal);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        output.putLong("Age", this.age);
+        output.storeNullable("exit_portal", BlockPos.CODEC, this.exitPortal);
         if (this.exactTeleport) {
-            p_407878_.putBoolean("ExactTeleport", true);
+            output.putBoolean("ExactTeleport", true);
         }
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_408324_) {
-        super.loadAdditional(p_408324_);
-        this.age = p_408324_.getLongOr("Age", 0L);
-        this.exitPortal = p_408324_.read("exit_portal", BlockPos.CODEC).filter(Level::isInSpawnableBounds).orElse(null);
-        this.exactTeleport = p_408324_.getBooleanOr("ExactTeleport", false);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.age = input.getLongOr("Age", 0L);
+        this.exitPortal = input.read("exit_portal", BlockPos.CODEC).filter(Level::isInSpawnableBounds).orElse(null);
+        this.exactTeleport = input.getBooleanOr("ExactTeleport", false);
     }
 
-    public static void beamAnimationTick(Level p_155835_, BlockPos p_155836_, BlockState p_155837_, TheEndGatewayBlockEntity p_155838_) {
-        p_155838_.age++;
-        if (p_155838_.isCoolingDown()) {
-            p_155838_.teleportCooldown--;
+    public static void beamAnimationTick(final Level level, final BlockPos pos, final BlockState state, final TheEndGatewayBlockEntity entity) {
+        entity.age++;
+        if (entity.isCoolingDown()) {
+            entity.teleportCooldown--;
         }
     }
 
-    public static void portalTick(Level p_344808_, BlockPos p_342267_, BlockState p_344200_, TheEndGatewayBlockEntity p_343419_) {
-        boolean flag = p_343419_.isSpawning();
-        boolean flag1 = p_343419_.isCoolingDown();
-        p_343419_.age++;
-        if (flag1) {
-            p_343419_.teleportCooldown--;
-        } else if (p_343419_.age % 2400L == 0L) {
-            triggerCooldown(p_344808_, p_342267_, p_344200_, p_343419_);
+    public static void portalTick(final Level level, final BlockPos pos, final BlockState state, final TheEndGatewayBlockEntity entity) {
+        boolean spawning = entity.isSpawning();
+        boolean coolingDown = entity.isCoolingDown();
+        entity.age++;
+        if (coolingDown) {
+            entity.teleportCooldown--;
+        } else if (entity.age % 2400L == 0L) {
+            triggerCooldown(level, pos, state, entity);
         }
 
-        if (flag != p_343419_.isSpawning() || flag1 != p_343419_.isCoolingDown()) {
-            setChanged(p_344808_, p_342267_, p_344200_);
+        if (spawning != entity.isSpawning() || coolingDown != entity.isCoolingDown()) {
+            setChanged(level, pos, state);
         }
     }
 
@@ -94,12 +92,12 @@ public class TheEndGatewayBlockEntity extends TheEndPortalBlockEntity {
         return this.teleportCooldown > 0;
     }
 
-    public float getSpawnPercent(float p_59934_) {
-        return Mth.clamp(((float)this.age + p_59934_) / 200.0F, 0.0F, 1.0F);
+    public float getSpawnPercent(final float a) {
+        return Mth.clamp(((float)this.age + a) / 200.0F, 0.0F, 1.0F);
     }
 
-    public float getCooldownPercent(float p_59968_) {
-        return 1.0F - Mth.clamp((this.teleportCooldown - p_59968_) / 40.0F, 0.0F, 1.0F);
+    public float getCooldownPercent(final float a) {
+        return 1.0F - Mth.clamp((this.teleportCooldown - a) / 40.0F, 0.0F, 1.0F);
     }
 
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
@@ -107,105 +105,111 @@ public class TheEndGatewayBlockEntity extends TheEndPortalBlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_332673_) {
-        return this.saveCustomOnly(p_332673_);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
-    public static void triggerCooldown(Level p_155850_, BlockPos p_155851_, BlockState p_155852_, TheEndGatewayBlockEntity p_155853_) {
-        if (!p_155850_.isClientSide()) {
-            p_155853_.teleportCooldown = 40;
-            p_155850_.blockEvent(p_155851_, p_155852_.getBlock(), 1, 0);
-            setChanged(p_155850_, p_155851_, p_155852_);
+    public static void triggerCooldown(final Level level, final BlockPos pos, final BlockState blockState, final TheEndGatewayBlockEntity entity) {
+        if (!level.isClientSide()) {
+            entity.teleportCooldown = 40;
+            level.blockEvent(pos, blockState.getBlock(), 1, 0);
+            setChanged(level, pos, blockState);
         }
     }
 
     @Override
-    public boolean triggerEvent(int p_59963_, int p_59964_) {
-        if (p_59963_ == 1) {
+    public boolean triggerEvent(final int b0, final int b1) {
+        if (b0 == 1) {
             this.teleportCooldown = 40;
             return true;
         } else {
-            return super.triggerEvent(p_59963_, p_59964_);
+            return super.triggerEvent(b0, b1);
         }
     }
 
-    public @Nullable Vec3 getPortalPosition(ServerLevel p_342945_, BlockPos p_345486_) {
-        if (this.exitPortal == null && p_342945_.dimension() == Level.END) {
-            BlockPos blockpos = findOrCreateValidTeleportPos(p_342945_, p_345486_);
-            blockpos = blockpos.above(10);
-            LOGGER.debug("Creating portal at {}", blockpos);
-            spawnGatewayPortal(p_342945_, blockpos, EndGatewayConfiguration.knownExit(p_345486_, false));
-            this.setExitPosition(blockpos, this.exactTeleport);
+    public @Nullable Vec3 getPortalPosition(final ServerLevel currentLevel, final BlockPos portalEntryPos) {
+        if (this.exitPortal == null && currentLevel.dimension() == Level.END) {
+            BlockPos exitPortalPos = findOrCreateValidTeleportPos(currentLevel, portalEntryPos);
+            exitPortalPos = exitPortalPos.above(10);
+            LOGGER.debug("Creating portal at {}", exitPortalPos);
+            spawnGatewayPortal(currentLevel, exitPortalPos, EndGatewayConfiguration.knownExit(portalEntryPos, false));
+            this.setExitPosition(exitPortalPos, this.exactTeleport);
         }
 
         if (this.exitPortal != null) {
-            BlockPos blockpos1 = this.exactTeleport ? this.exitPortal : findExitPosition(p_342945_, this.exitPortal);
-            return blockpos1.getBottomCenter();
+            BlockPos pos = this.exactTeleport ? this.exitPortal : findExitPosition(currentLevel, this.exitPortal);
+            return Vec3.atBottomCenterOf(pos);
         } else {
             return null;
         }
     }
 
-    private static BlockPos findExitPosition(Level p_155826_, BlockPos p_155827_) {
-        BlockPos blockpos = findTallestBlock(p_155826_, p_155827_.offset(0, 2, 0), 5, false);
-        LOGGER.debug("Best exit position for portal at {} is {}", p_155827_, blockpos);
-        return blockpos.above();
+    private static BlockPos findExitPosition(final Level level, final BlockPos exitPortal) {
+        BlockPos pos = findTallestBlock(level, exitPortal.offset(0, 2, 0), 5, false);
+        LOGGER.debug("Best exit position for portal at {} is {}", exitPortal, pos);
+        return pos.above();
     }
 
-    private static BlockPos findOrCreateValidTeleportPos(ServerLevel p_155819_, BlockPos p_155820_) {
-        Vec3 vec3 = findExitPortalXZPosTentative(p_155819_, p_155820_);
-        LevelChunk levelchunk = getChunk(p_155819_, vec3);
-        BlockPos blockpos = findValidSpawnInChunk(levelchunk);
-        if (blockpos == null) {
-            BlockPos blockpos1 = BlockPos.containing(vec3.x + 0.5, 75.0, vec3.z + 0.5);
-            LOGGER.debug("Failed to find a suitable block to teleport to, spawning an island on {}", blockpos1);
-            p_155819_.registryAccess()
+    private static BlockPos findOrCreateValidTeleportPos(final ServerLevel level, final BlockPos endGatewayPos) {
+        Vec3 exitPortalXZPosTentative = findExitPortalXZPosTentative(level, endGatewayPos);
+        LevelChunk exitPortalChunk = getChunk(level, exitPortalXZPosTentative);
+        BlockPos exitPortalPos = findValidSpawnInChunk(exitPortalChunk);
+        if (exitPortalPos == null) {
+            BlockPos newExitPortalPos = BlockPos.containing(exitPortalXZPosTentative.x + 0.5, 75.0, exitPortalXZPosTentative.z + 0.5);
+            LOGGER.debug("Failed to find a suitable block to teleport to, spawning an island on {}", newExitPortalPos);
+            level.registryAccess()
                 .lookup(Registries.CONFIGURED_FEATURE)
-                .flatMap(p_360496_ -> p_360496_.get(EndFeatures.END_ISLAND))
+                .flatMap(registry -> registry.get(EndFeatures.END_ISLAND))
                 .ifPresent(
-                    p_256040_ -> p_256040_.value()
-                        .place(p_155819_, p_155819_.getChunkSource().getGenerator(), RandomSource.create(blockpos1.asLong()), blockpos1)
+                    endIsland -> endIsland.value()
+                        .place(level, level.getChunkSource().getGenerator(), RandomSource.create(newExitPortalPos.asLong()), newExitPortalPos)
                 );
-            blockpos = blockpos1;
+            exitPortalPos = newExitPortalPos;
         } else {
-            LOGGER.debug("Found suitable block to teleport to: {}", blockpos);
+            LOGGER.debug("Found suitable block to teleport to: {}", exitPortalPos);
         }
 
-        return findTallestBlock(p_155819_, blockpos, 16, true);
+        return findTallestBlock(level, exitPortalPos, 16, true);
     }
 
-    private static Vec3 findExitPortalXZPosTentative(ServerLevel p_155842_, BlockPos p_155843_) {
-        Vec3 vec3 = new Vec3(p_155843_.getX(), 0.0, p_155843_.getZ()).normalize();
-        int i = 1024;
-        Vec3 vec31 = vec3.scale(1024.0);
+    private static Vec3 findExitPortalXZPosTentative(final ServerLevel level, final BlockPos endGatewayPos) {
+        Vec3 teleportXZDirectionVector = new Vec3(endGatewayPos.getX(), 0.0, endGatewayPos.getZ()).normalize();
+        int teleportDistance = 1024;
+        Vec3 exitPortalXZPosTentative = teleportXZDirectionVector.scale(1024.0);
 
-        for (int j = 16; !isChunkEmpty(p_155842_, vec31) && j-- > 0; vec31 = vec31.add(vec3.scale(-16.0))) {
-            LOGGER.debug("Skipping backwards past nonempty chunk at {}", vec31);
+        for (int chunkLimit = 16;
+            !isChunkEmpty(level, exitPortalXZPosTentative) && chunkLimit-- > 0;
+            exitPortalXZPosTentative = exitPortalXZPosTentative.add(teleportXZDirectionVector.scale(-16.0))
+        ) {
+            LOGGER.debug("Skipping backwards past nonempty chunk at {}", exitPortalXZPosTentative);
         }
 
-        for (int k = 16; isChunkEmpty(p_155842_, vec31) && k-- > 0; vec31 = vec31.add(vec3.scale(16.0))) {
-            LOGGER.debug("Skipping forward past empty chunk at {}", vec31);
+        for (int var6 = 16;
+            isChunkEmpty(level, exitPortalXZPosTentative) && var6-- > 0;
+            exitPortalXZPosTentative = exitPortalXZPosTentative.add(teleportXZDirectionVector.scale(16.0))
+        ) {
+            LOGGER.debug("Skipping forward past empty chunk at {}", exitPortalXZPosTentative);
         }
 
-        LOGGER.debug("Found chunk at {}", vec31);
-        return vec31;
+        LOGGER.debug("Found chunk at {}", exitPortalXZPosTentative);
+        return exitPortalXZPosTentative;
     }
 
-    private static boolean isChunkEmpty(ServerLevel p_155816_, Vec3 p_155817_) {
-        return getChunk(p_155816_, p_155817_).getHighestFilledSectionIndex() == -1;
+    private static boolean isChunkEmpty(final ServerLevel level, final Vec3 xzPos) {
+        return getChunk(level, xzPos).getHighestFilledSectionIndex() == -1;
     }
 
-    private static BlockPos findTallestBlock(BlockGetter p_59943_, BlockPos p_59944_, int p_59945_, boolean p_59946_) {
-        BlockPos blockpos = null;
+    private static BlockPos findTallestBlock(final BlockGetter level, final BlockPos around, final int dist, final boolean allowBedrock) {
+        BlockPos tallest = null;
 
-        for (int i = -p_59945_; i <= p_59945_; i++) {
-            for (int j = -p_59945_; j <= p_59945_; j++) {
-                if (i != 0 || j != 0 || p_59946_) {
-                    for (int k = p_59943_.getMaxY(); k > (blockpos == null ? p_59943_.getMinY() : blockpos.getY()); k--) {
-                        BlockPos blockpos1 = new BlockPos(p_59944_.getX() + i, k, p_59944_.getZ() + j);
-                        BlockState blockstate = p_59943_.getBlockState(blockpos1);
-                        if (blockstate.isCollisionShapeFullBlock(p_59943_, blockpos1) && (p_59946_ || !blockstate.is(Blocks.BEDROCK))) {
-                            blockpos = blockpos1;
+        for (int xd = -dist; xd <= dist; xd++) {
+            for (int zd = -dist; zd <= dist; zd++) {
+                if (xd != 0 || zd != 0 || allowBedrock) {
+                    for (int y = level.getMaxY(); y > (tallest == null ? level.getMinY() : tallest.getY()); y--) {
+                        BlockPos pos = new BlockPos(around.getX() + xd, y, around.getZ() + zd);
+                        BlockState state = level.getBlockState(pos);
+                        if (state.isCollisionShapeFullBlock(level, pos) && (allowBedrock || !state.is(Blocks.BEDROCK))) {
+                            tallest = pos;
                             break;
                         }
                     }
@@ -213,62 +217,61 @@ public class TheEndGatewayBlockEntity extends TheEndPortalBlockEntity {
             }
         }
 
-        return blockpos == null ? p_59944_ : blockpos;
+        return tallest == null ? around : tallest;
     }
 
-    private static LevelChunk getChunk(Level p_59948_, Vec3 p_59949_) {
-        return p_59948_.getChunk(Mth.floor(p_59949_.x / 16.0), Mth.floor(p_59949_.z / 16.0));
+    private static LevelChunk getChunk(final Level level, final Vec3 pos) {
+        return level.getChunk(Mth.floor(pos.x / 16.0), Mth.floor(pos.z / 16.0));
     }
 
-    @SuppressWarnings("removal")
-    private static @Nullable BlockPos findValidSpawnInChunk(LevelChunk p_59954_) {
-        ChunkPos chunkpos = p_59954_.getPos();
-        BlockPos blockpos = new BlockPos(chunkpos.getMinBlockX(), 30, chunkpos.getMinBlockZ());
-        int i = p_59954_.getHighestSectionPosition() + 16 - 1;
-        BlockPos blockpos1 = new BlockPos(chunkpos.getMaxBlockX(), i, chunkpos.getMaxBlockZ());
-        BlockPos blockpos2 = null;
-        double d0 = 0.0;
+    private static @Nullable BlockPos findValidSpawnInChunk(final LevelChunk chunk) {
+        ChunkPos chunkPos = chunk.getPos();
+        BlockPos start = new BlockPos(chunkPos.getMinBlockX(), 30, chunkPos.getMinBlockZ());
+        int maxY = chunk.getHighestSectionPosition() + 16 - 1;
+        BlockPos end = new BlockPos(chunkPos.getMaxBlockX(), maxY, chunkPos.getMaxBlockZ());
+        BlockPos closest = null;
+        double closestDist = 0.0;
 
-        for (BlockPos blockpos3 : BlockPos.betweenClosed(blockpos, blockpos1)) {
-            BlockState blockstate = p_59954_.getBlockState(blockpos3);
-            BlockPos blockpos4 = blockpos3.above();
-            BlockPos blockpos5 = blockpos3.above(2);
-            if (blockstate.is(Blocks.END_STONE)
-                && !p_59954_.getBlockState(blockpos4).isCollisionShapeFullBlock(p_59954_, blockpos4)
-                && !p_59954_.getBlockState(blockpos5).isCollisionShapeFullBlock(p_59954_, blockpos5)) {
-                double d1 = blockpos3.distToCenterSqr(0.0, 0.0, 0.0);
-                if (blockpos2 == null || d1 < d0) {
-                    blockpos2 = blockpos3;
-                    d0 = d1;
+        for (BlockPos pos : BlockPos.betweenClosed(start, end)) {
+            BlockState state = chunk.getBlockState(pos);
+            BlockPos above = pos.above();
+            BlockPos above2 = pos.above(2);
+            if (state.is(Blocks.END_STONE)
+                && !chunk.getBlockState(above).isCollisionShapeFullBlock(chunk, above)
+                && !chunk.getBlockState(above2).isCollisionShapeFullBlock(chunk, above2)) {
+                double dist = pos.distToCenterSqr(0.0, 0.0, 0.0);
+                if (closest == null || dist < closestDist) {
+                    closest = pos;
+                    closestDist = dist;
                 }
             }
         }
 
-        return blockpos2;
+        return closest;
     }
 
-    private static void spawnGatewayPortal(ServerLevel p_155822_, BlockPos p_155823_, EndGatewayConfiguration p_155824_) {
-        Feature.END_GATEWAY.place(p_155824_, p_155822_, p_155822_.getChunkSource().getGenerator(), RandomSource.create(), p_155823_);
+    private static void spawnGatewayPortal(final ServerLevel level, final BlockPos portalPos, final EndGatewayConfiguration config) {
+        Feature.END_GATEWAY.place(config, level, level.getChunkSource().getGenerator(), RandomSource.create(), portalPos);
     }
 
     @Override
-    public boolean shouldRenderFace(Direction p_59959_) {
-        return Block.shouldRenderFace(this.getBlockState(), this.level.getBlockState(this.getBlockPos().relative(p_59959_)), p_59959_);
+    public boolean shouldRenderFace(final Direction direction) {
+        return Block.shouldRenderFace(this.getBlockState(), this.level.getBlockState(this.getBlockPos().relative(direction)), direction);
     }
 
     public int getParticleAmount() {
-        int i = 0;
+        int count = 0;
 
         for (Direction direction : Direction.values()) {
-            i += this.shouldRenderFace(direction) ? 1 : 0;
+            count += this.shouldRenderFace(direction) ? 1 : 0;
         }
 
-        return i;
+        return count;
     }
 
-    public void setExitPosition(BlockPos p_59956_, boolean p_59957_) {
-        this.exactTeleport = p_59957_;
-        this.exitPortal = p_59956_;
+    public void setExitPosition(final BlockPos exactPosition, final boolean exact) {
+        this.exactTeleport = exact;
+        this.exitPortal = exactPosition;
         this.setChanged();
     }
 }

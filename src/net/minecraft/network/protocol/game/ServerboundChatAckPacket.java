@@ -10,12 +10,12 @@ public record ServerboundChatAckPacket(int offset) implements Packet<ServerGameP
         ServerboundChatAckPacket::write, ServerboundChatAckPacket::new
     );
 
-    private ServerboundChatAckPacket(FriendlyByteBuf p_242339_) {
-        this(p_242339_.readVarInt());
+    private ServerboundChatAckPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt());
     }
 
-    private void write(FriendlyByteBuf p_242345_) {
-        p_242345_.writeVarInt(this.offset);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.offset);
     }
 
     @Override
@@ -23,7 +23,7 @@ public record ServerboundChatAckPacket(int offset) implements Packet<ServerGameP
         return GamePacketTypes.SERVERBOUND_CHAT_ACK;
     }
 
-    public void handle(ServerGamePacketListener p_242391_) {
-        p_242391_.handleChatAck(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleChatAck(this);
     }
 }

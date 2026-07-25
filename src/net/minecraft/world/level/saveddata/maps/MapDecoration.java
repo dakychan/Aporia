@@ -24,13 +24,8 @@ public record MapDecoration(Holder<MapDecorationType> type, byte x, byte y, byte
         MapDecoration::new
     );
 
-    public MapDecoration(Holder<MapDecorationType> type, byte x, byte y, byte rot, Optional<Component> name) {
+    public MapDecoration {
         rot = (byte)(rot & 15);
-        this.type = type;
-        this.x = x;
-        this.y = y;
-        this.rot = rot;
-        this.name = name;
     }
 
     public Identifier getSpriteLocation() {

@@ -1,8 +1,8 @@
 package net.minecraft.world.entity.animal.chicken;
 
-import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -10,6 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -19,9 +20,12 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -39,7 +43,6 @@ import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.VariantUtils;
-import net.minecraft.world.item.EitherHolder;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -53,8 +56,15 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Chicken extends Animal {
-    private static final EntityDimensions BABY_DIMENSIONS = EntityType.CHICKEN.getDimensions().scale(0.5F).withEyeHeight(0.2975F);
-    private static final EntityDataAccessor<Holder<ChickenVariant>> DATA_VARIANT_ID = SynchedEntityData.defineId(Chicken.class, EntityDataSerializers.CHICKEN_VARIANT);
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.3F, 0.4F)
+        .withEyeHeight(0.28125F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, 0.375F, 0.0F));
+    private static final EntityDataAccessor<Holder<ChickenVariant>> DATA_VARIANT_ID = SynchedEntityData.defineId(
+        Chicken.class, EntityDataSerializers.CHICKEN_VARIANT
+    );
+    private static final EntityDataAccessor<Holder<ChickenSoundVariant>> DATA_SOUND_VARIANT_ID = SynchedEntityData.defineId(
+        Chicken.class, EntityDataSerializers.CHICKEN_SOUND_VARIANT
+    );
     private static final boolean DEFAULT_CHICKEN_JOCKEY = false;
     public float flap;
     public float flapSpeed;
@@ -65,8 +75,8 @@ public class Chicken extends Animal {
     public int eggTime;
     public boolean isChickenJockey = false;
 
-    public Chicken(EntityType<? extends Chicken> p_453931_, Level p_452306_) {
-        super(p_453931_, p_452306_);
+    public Chicken(final EntityType<? extends Chicken> type, final Level level) {
+        super(type, level);
         this.eggTime = this.random.nextInt(6000) + 6000;
         this.setPathfindingMalus(PathType.WATER, 0.0F);
     }
@@ -76,16 +86,28 @@ public class Chicken extends Animal {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.4));
         this.goalSelector.addGoal(2, new BreedGoal(this, 1.0));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.0, p_456792_ -> p_456792_.is(ItemTags.CHICKEN_FOOD), false));
+        this.goalSelector.addGoal(3, new TemptGoal(this, 1.0, i -> i.is(ItemTags.CHICKEN_FOOD), false));
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
+    private Holder<ChickenSoundVariant> getSoundVariant() {
+        return this.entityData.get(DATA_SOUND_VARIANT_ID);
+    }
+
+    private void setSoundVariant(final Holder<ChickenSoundVariant> soundVariant) {
+        this.entityData.set(DATA_SOUND_VARIANT_ID, soundVariant);
+    }
+
+    private ChickenSoundVariant.ChickenSoundSet getSoundSet() {
+        return this.isBaby() ? this.getSoundVariant().value().babySounds() : this.getSoundVariant().value().adultSounds();
+    }
+
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_459883_) {
-        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(p_459883_);
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -104,14 +126,14 @@ public class Chicken extends Animal {
         }
 
         this.flapping *= 0.9F;
-        Vec3 vec3 = this.getDeltaMovement();
-        if (!this.onGround() && vec3.y < 0.0) {
-            this.setDeltaMovement(vec3.multiply(1.0, 0.6, 1.0));
+        Vec3 movement = this.getDeltaMovement();
+        if (!this.onGround() && movement.y < 0.0) {
+            this.setDeltaMovement(movement.multiply(1.0, 0.6, 1.0));
         }
 
         this.flap = this.flap + this.flapping * 2.0F;
-        if (this.level() instanceof ServerLevel serverlevel && this.isAlive() && !this.isBaby() && !this.isChickenJockey() && --this.eggTime <= 0) {
-            if (this.dropFromGiftLootTable(serverlevel, BuiltInLootTables.CHICKEN_LAY, this::spawnAtLocation)) {
+        if (this.level() instanceof ServerLevel level && this.isAlive() && !this.isBaby() && !this.isChickenJockey() && --this.eggTime <= 0) {
+            if (this.dropFromGiftLootTable(level, BuiltInLootTables.CHICKEN_LAY, this::spawnAtLocation)) {
                 this.playSound(SoundEvents.CHICKEN_EGG, 1.0F, (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
                 this.gameEvent(GameEvent.ENTITY_PLACE);
             }
@@ -132,73 +154,88 @@ public class Chicken extends Animal {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.CHICKEN_AMBIENT;
+        return this.getSoundSet().ambientSound().value();
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_450736_) {
-        return SoundEvents.CHICKEN_HURT;
+    protected SoundEvent getHurtSound(final DamageSource source) {
+        return this.getSoundSet().hurtSound().value();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.CHICKEN_DEATH;
+        return this.getSoundSet().deathSound().value();
     }
 
     @Override
-    protected void playStepSound(BlockPos p_458043_, BlockState p_453761_) {
-        this.playSound(SoundEvents.CHICKEN_STEP, 0.15F, 1.0F);
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
+        this.playSound(this.getSoundSet().stepSound().value(), 0.15F, 1.0F);
     }
 
-    public @Nullable Chicken getBreedOffspring(ServerLevel p_454768_, AgeableMob p_453609_) {
-        Chicken chicken = EntityType.CHICKEN.create(p_454768_, EntitySpawnReason.BREEDING);
-        if (chicken != null && p_453609_ instanceof Chicken chicken1) {
-            chicken.setVariant(this.random.nextBoolean() ? this.getVariant() : chicken1.getVariant());
+    public @Nullable Chicken getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        Chicken baby = EntityTypes.CHICKEN.create(level, EntitySpawnReason.BREEDING);
+        if (baby != null && partner instanceof Chicken partnerChicken) {
+            baby.setVariant(this.random.nextBoolean() ? this.getVariant() : partnerChicken.getVariant());
         }
 
-        return chicken;
+        return baby;
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_452500_, DifficultyInstance p_456996_, EntitySpawnReason p_451151_, @Nullable SpawnGroupData p_458704_) {
-        VariantUtils.selectVariantToSpawn(SpawnContext.create(p_452500_, this.blockPosition()), Registries.CHICKEN_VARIANT).ifPresent(this::setVariant);
-        return super.finalizeSpawn(p_452500_, p_456996_, p_451151_, p_458704_);
+    public SpawnGroupData finalizeSpawn(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
+    ) {
+        VariantUtils.selectVariantToSpawn(SpawnContext.create(level, this.blockPosition()), Registries.CHICKEN_VARIANT).ifPresent(this::setVariant);
+        this.setSoundVariant(ChickenSoundVariants.pickRandomSoundVariant(this.registryAccess(), level.getRandom()));
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
-    public boolean isFood(ItemStack p_457926_) {
-        return p_457926_.is(ItemTags.CHICKEN_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.CHICKEN_FOOD);
     }
 
     @Override
-    protected int getBaseExperienceReward(ServerLevel p_452146_) {
-        return this.isChickenJockey() ? 10 : super.getBaseExperienceReward(p_452146_);
+    protected int getBaseExperienceReward(final ServerLevel level) {
+        return this.isChickenJockey() ? 10 : super.getBaseExperienceReward(level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_457607_) {
-        super.defineSynchedData(p_457607_);
-        p_457607_.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), ChickenVariants.TEMPERATE));
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        Registry<ChickenSoundVariant> chickenSoundVariants = this.registryAccess().lookupOrThrow(Registries.CHICKEN_SOUND_VARIANT);
+        entityData.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), ChickenVariants.TEMPERATE));
+        entityData.define(DATA_SOUND_VARIANT_ID, chickenSoundVariants.get(ChickenSoundVariants.CLASSIC).or(chickenSoundVariants::getAny).orElseThrow());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_459818_) {
-        super.readAdditionalSaveData(p_459818_);
-        this.isChickenJockey = p_459818_.getBooleanOr("IsChickenJockey", false);
-        p_459818_.getInt("EggLayTime").ifPresent(p_458792_ -> this.eggTime = p_458792_);
-        VariantUtils.readVariant(p_459818_, Registries.CHICKEN_VARIANT).ifPresent(this::setVariant);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.isChickenJockey = input.getBooleanOr("IsChickenJockey", false);
+        input.getInt("EggLayTime").ifPresent(time -> this.eggTime = time);
+        VariantUtils.readVariant(input, Registries.CHICKEN_VARIANT).ifPresent(this::setVariant);
+        input.read("sound_variant", ResourceKey.codec(Registries.CHICKEN_SOUND_VARIANT))
+            .flatMap(soundVariant -> this.registryAccess().lookupOrThrow(Registries.CHICKEN_SOUND_VARIANT).get((ResourceKey<ChickenSoundVariant>)soundVariant))
+            .ifPresent(this::setSoundVariant);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_454586_) {
-        super.addAdditionalSaveData(p_454586_);
-        p_454586_.putBoolean("IsChickenJockey", this.isChickenJockey);
-        p_454586_.putInt("EggLayTime", this.eggTime);
-        VariantUtils.writeVariant(p_454586_, this.getVariant());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("IsChickenJockey", this.isChickenJockey);
+        output.putInt("EggLayTime", this.eggTime);
+        VariantUtils.writeVariant(output, this.getVariant());
+        this.getSoundVariant()
+            .unwrapKey()
+            .ifPresent(
+                soundVariant -> output.store(
+                    "sound_variant", ResourceKey.codec(Registries.CHICKEN_SOUND_VARIANT), (ResourceKey<ChickenSoundVariant>)soundVariant
+                )
+            );
     }
 
-    public void setVariant(Holder<ChickenVariant> p_453153_) {
-        this.entityData.set(DATA_VARIANT_ID, p_453153_);
+    public void setVariant(final Holder<ChickenVariant> variant) {
+        this.entityData.set(DATA_VARIANT_ID, variant);
     }
 
     public Holder<ChickenVariant> getVariant() {
@@ -206,43 +243,44 @@ public class Chicken extends Animal {
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_456581_) {
-        return p_456581_ == DataComponents.CHICKEN_VARIANT
-            ? castComponentValue((DataComponentType<T>)p_456581_, new EitherHolder<>(this.getVariant()))
-            : super.get(p_456581_);
-    }
-
-    @Override
-    protected void applyImplicitComponents(DataComponentGetter p_459997_) {
-        this.applyImplicitComponentIfPresent(p_459997_, DataComponents.CHICKEN_VARIANT);
-        super.applyImplicitComponents(p_459997_);
-    }
-
-    @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_459399_, T p_454276_) {
-        if (p_459399_ == DataComponents.CHICKEN_VARIANT) {
-            Optional<Holder<ChickenVariant>> optional = castComponentValue(DataComponents.CHICKEN_VARIANT, p_454276_).unwrap(this.registryAccess());
-            if (optional.isPresent()) {
-                this.setVariant(optional.get());
-                return true;
-            } else {
-                return false;
-            }
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        if (type == DataComponents.CHICKEN_VARIANT) {
+            return castComponentValue((DataComponentType<T>)type, this.getVariant());
         } else {
-            return super.applyImplicitComponent(p_459399_, p_454276_);
+            return type == DataComponents.CHICKEN_SOUND_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getSoundVariant()) : super.get(type);
         }
     }
 
     @Override
-    public boolean removeWhenFarAway(double p_458065_) {
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.CHICKEN_VARIANT);
+        this.applyImplicitComponentIfPresent(components, DataComponents.CHICKEN_SOUND_VARIANT);
+        super.applyImplicitComponents(components);
+    }
+
+    @Override
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.CHICKEN_VARIANT) {
+            this.setVariant(castComponentValue(DataComponents.CHICKEN_VARIANT, value));
+            return true;
+        } else if (type == DataComponents.CHICKEN_SOUND_VARIANT) {
+            this.setSoundVariant(castComponentValue(DataComponents.CHICKEN_SOUND_VARIANT, value));
+            return true;
+        } else {
+            return super.applyImplicitComponent(type, value);
+        }
+    }
+
+    @Override
+    public boolean removeWhenFarAway(final double distSqr) {
         return this.isChickenJockey();
     }
 
     @Override
-    protected void positionRider(Entity p_460170_, Entity.MoveFunction p_459239_) {
-        super.positionRider(p_460170_, p_459239_);
-        if (p_460170_ instanceof LivingEntity) {
-            ((LivingEntity)p_460170_).yBodyRot = this.yBodyRot;
+    protected void positionRider(final Entity passenger, final Entity.MoveFunction moveFunction) {
+        super.positionRider(passenger, moveFunction);
+        if (passenger instanceof LivingEntity livingEntity) {
+            livingEntity.yBodyRot = this.yBodyRot;
         }
     }
 
@@ -250,7 +288,7 @@ public class Chicken extends Animal {
         return this.isChickenJockey;
     }
 
-    public void setChickenJockey(boolean p_458889_) {
-        this.isChickenJockey = p_458889_;
+    public void setChickenJockey(final boolean isChickenJockey) {
+        this.isChickenJockey = isChickenJockey;
     }
 }

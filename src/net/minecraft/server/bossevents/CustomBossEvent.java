@@ -3,7 +3,6 @@ package net.minecraft.server.bossevents;
 import com.google.common.collect.Sets;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Collection;
 import java.util.Set;
 import java.util.UUID;
@@ -12,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerBossEvent;
 import net.minecraft.server.level.ServerPlayer;
@@ -21,142 +19,154 @@ import net.minecraft.world.BossEvent;
 
 public class CustomBossEvent extends ServerBossEvent {
     private static final int DEFAULT_MAX = 100;
-    private final Identifier id;
+    private final Identifier customId;
     private final Set<UUID> players = Sets.newHashSet();
     private int value;
     private int max = 100;
+    private final Runnable dirtyCallback;
 
-    public CustomBossEvent(Identifier p_452936_, Component p_136262_) {
-        super(p_136262_, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
-        this.id = p_452936_;
+    public CustomBossEvent(final UUID id, final Identifier customId, final Component name, final Runnable dirtyCallback) {
+        super(id, name, BossEvent.BossBarColor.WHITE, BossEvent.BossBarOverlay.PROGRESS);
+        this.dirtyCallback = dirtyCallback;
+        this.customId = customId;
         this.setProgress(0.0F);
     }
 
-    public Identifier getTextId() {
-        return this.id;
+    public Identifier customId() {
+        return this.customId;
     }
 
     @Override
-    public void addPlayer(ServerPlayer p_136267_) {
-        super.addPlayer(p_136267_);
-        this.players.add(p_136267_.getUUID());
-    }
-
-    public void addOfflinePlayer(UUID p_136271_) {
-        this.players.add(p_136271_);
+    public void addPlayer(final ServerPlayer player) {
+        super.addPlayer(player);
+        if (this.players.add(player.getUUID())) {
+            this.setDirty();
+        }
     }
 
     @Override
-    public void removePlayer(ServerPlayer p_136281_) {
-        super.removePlayer(p_136281_);
-        this.players.remove(p_136281_.getUUID());
+    public void removePlayer(final ServerPlayer player) {
+        super.removePlayer(player);
+        if (this.players.remove(player.getUUID())) {
+            this.setDirty();
+        }
     }
 
     @Override
     public void removeAllPlayers() {
         super.removeAllPlayers();
-        this.players.clear();
+        if (!this.players.isEmpty()) {
+            this.players.clear();
+            this.setDirty();
+        }
     }
 
-    public int getValue() {
+    public int value() {
         return this.value;
     }
 
-    public int getMax() {
+    public int max() {
         return this.max;
     }
 
-    public void setValue(int p_136265_) {
-        this.value = p_136265_;
-        this.setProgress(Mth.clamp((float)p_136265_ / this.max, 0.0F, 1.0F));
+    public void setValue(final int value) {
+        this.value = value;
+        this.setProgress(Mth.clamp((float)value / this.max, 0.0F, 1.0F));
+        this.setDirty();
     }
 
-    public void setMax(int p_136279_) {
-        this.max = p_136279_;
-        this.setProgress(Mth.clamp((float)this.value / p_136279_, 0.0F, 1.0F));
+    public void setMax(final int max) {
+        this.max = max;
+        this.setProgress(Mth.clamp((float)this.value / max, 0.0F, 1.0F));
+        this.setDirty();
     }
 
     public final Component getDisplayName() {
         return ComponentUtils.wrapInSquareBrackets(this.getName())
             .withStyle(
-                p_448863_ -> p_448863_.withColor(this.getColor().getFormatting())
-                    .withHoverEvent(new HoverEvent.ShowText(Component.literal(this.getTextId().toString())))
-                    .withInsertion(this.getTextId().toString())
+                s -> s.withColor(this.getColor().getFormatting())
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal(this.customId().toString())))
+                    .withInsertion(this.customId().toString())
             );
     }
 
-    public boolean setPlayers(Collection<ServerPlayer> p_136269_) {
-        Set<UUID> set = Sets.newHashSet();
-        Set<ServerPlayer> set1 = Sets.newHashSet();
+    public boolean setPlayers(final Collection<ServerPlayer> players) {
+        Set<UUID> toRemove = Sets.newHashSet();
+        Set<ServerPlayer> toAdd = Sets.newHashSet();
 
         for (UUID uuid : this.players) {
-            boolean flag = false;
+            boolean found = false;
 
-            for (ServerPlayer serverplayer : p_136269_) {
-                if (serverplayer.getUUID().equals(uuid)) {
-                    flag = true;
+            for (ServerPlayer player : players) {
+                if (player.getUUID().equals(uuid)) {
+                    found = true;
                     break;
                 }
             }
 
-            if (!flag) {
-                set.add(uuid);
+            if (!found) {
+                toRemove.add(uuid);
             }
         }
 
-        for (ServerPlayer serverplayer1 : p_136269_) {
-            boolean flag1 = false;
+        for (ServerPlayer player : players) {
+            boolean found = false;
 
-            for (UUID uuid2 : this.players) {
-                if (serverplayer1.getUUID().equals(uuid2)) {
-                    flag1 = true;
+            for (UUID uuid : this.players) {
+                if (player.getUUID().equals(uuid)) {
+                    found = true;
                     break;
                 }
             }
 
-            if (!flag1) {
-                set1.add(serverplayer1);
+            if (!found) {
+                toAdd.add(player);
             }
         }
 
-        for (UUID uuid1 : set) {
-            for (ServerPlayer serverplayer3 : this.getPlayers()) {
-                if (serverplayer3.getUUID().equals(uuid1)) {
-                    this.removePlayer(serverplayer3);
+        for (UUID uuid : toRemove) {
+            for (ServerPlayer player : this.getPlayers()) {
+                if (player.getUUID().equals(uuid)) {
+                    this.removePlayer(player);
                     break;
                 }
             }
 
-            this.players.remove(uuid1);
+            this.players.remove(uuid);
         }
 
-        for (ServerPlayer serverplayer2 : set1) {
-            this.addPlayer(serverplayer2);
+        for (ServerPlayer player : toAdd) {
+            this.addPlayer(player);
         }
 
-        return !set.isEmpty() || !set1.isEmpty();
+        boolean playersChanged = !toRemove.isEmpty() || !toAdd.isEmpty();
+        if (playersChanged) {
+            this.setDirty();
+        }
+
+        return playersChanged;
     }
 
-    public static CustomBossEvent load(Identifier p_453719_, CustomBossEvent.Packed p_392681_) {
-        CustomBossEvent custombossevent = new CustomBossEvent(p_453719_, p_392681_.name);
-        custombossevent.setVisible(p_392681_.visible);
-        custombossevent.setValue(p_392681_.value);
-        custombossevent.setMax(p_392681_.max);
-        custombossevent.setColor(p_392681_.color);
-        custombossevent.setOverlay(p_392681_.overlay);
-        custombossevent.setDarkenScreen(p_392681_.darkenScreen);
-        custombossevent.setPlayBossMusic(p_392681_.playBossMusic);
-        custombossevent.setCreateWorldFog(p_392681_.createWorldFog);
-        p_392681_.players.forEach(custombossevent::addOfflinePlayer);
-        return custombossevent;
+    public static CustomBossEvent load(final UUID id, final Identifier customId, final CustomBossEvent.Packed packed, final Runnable setDirty) {
+        CustomBossEvent event = new CustomBossEvent(id, customId, packed.name, setDirty);
+        event.setVisible(packed.visible);
+        event.setValue(packed.value);
+        event.setMax(packed.max);
+        event.setColor(packed.color);
+        event.setOverlay(packed.overlay);
+        event.setDarkenScreen(packed.darkenScreen);
+        event.setPlayBossMusic(packed.playBossMusic);
+        event.setCreateWorldFog(packed.createWorldFog);
+        event.players.addAll(packed.players);
+        return event;
     }
 
     public CustomBossEvent.Packed pack() {
         return new CustomBossEvent.Packed(
             this.getName(),
             this.isVisible(),
-            this.getValue(),
-            this.getMax(),
+            this.value(),
+            this.max(),
             this.getColor(),
             this.getOverlay(),
             this.shouldDarkenScreen(),
@@ -166,14 +176,19 @@ public class CustomBossEvent extends ServerBossEvent {
         );
     }
 
-    public void onPlayerConnect(ServerPlayer p_136284_) {
-        if (this.players.contains(p_136284_.getUUID())) {
-            this.addPlayer(p_136284_);
+    public void onPlayerConnect(final ServerPlayer player) {
+        if (this.players.contains(player.getUUID())) {
+            this.addPlayer(player);
         }
     }
 
-    public void onPlayerDisconnect(ServerPlayer p_136287_) {
-        super.removePlayer(p_136287_);
+    public void onPlayerDisconnect(final ServerPlayer player) {
+        super.removePlayer(player);
+    }
+
+    @Override
+    public void setDirty() {
+        this.dirtyCallback.run();
     }
 
     public record Packed(
@@ -189,21 +204,19 @@ public class CustomBossEvent extends ServerBossEvent {
         Set<UUID> players
     ) {
         public static final Codec<CustomBossEvent.Packed> CODEC = RecordCodecBuilder.create(
-            p_397740_ -> p_397740_.group(
+            i -> i.group(
                     ComponentSerialization.CODEC.fieldOf("Name").forGetter(CustomBossEvent.Packed::name),
                     Codec.BOOL.optionalFieldOf("Visible", false).forGetter(CustomBossEvent.Packed::visible),
                     Codec.INT.optionalFieldOf("Value", 0).forGetter(CustomBossEvent.Packed::value),
                     Codec.INT.optionalFieldOf("Max", 100).forGetter(CustomBossEvent.Packed::max),
                     BossEvent.BossBarColor.CODEC.optionalFieldOf("Color", BossEvent.BossBarColor.WHITE).forGetter(CustomBossEvent.Packed::color),
-                    BossEvent.BossBarOverlay.CODEC
-                        .optionalFieldOf("Overlay", BossEvent.BossBarOverlay.PROGRESS)
-                        .forGetter(CustomBossEvent.Packed::overlay),
+                    BossEvent.BossBarOverlay.CODEC.optionalFieldOf("Overlay", BossEvent.BossBarOverlay.PROGRESS).forGetter(CustomBossEvent.Packed::overlay),
                     Codec.BOOL.optionalFieldOf("DarkenScreen", false).forGetter(CustomBossEvent.Packed::darkenScreen),
                     Codec.BOOL.optionalFieldOf("PlayBossMusic", false).forGetter(CustomBossEvent.Packed::playBossMusic),
                     Codec.BOOL.optionalFieldOf("CreateWorldFog", false).forGetter(CustomBossEvent.Packed::createWorldFog),
                     UUIDUtil.CODEC_SET.optionalFieldOf("Players", Set.of()).forGetter(CustomBossEvent.Packed::players)
                 )
-                .apply(p_397740_, CustomBossEvent.Packed::new)
+                .apply(i, CustomBossEvent.Packed::new)
         );
     }
 }

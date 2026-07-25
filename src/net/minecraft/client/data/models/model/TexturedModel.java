@@ -3,12 +3,10 @@ package net.minecraft.client.data.models.model;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class TexturedModel {
     public static final TexturedModel.Provider CUBE = createDefault(TextureMapping::cube, ModelTemplates.CUBE_ALL);
     public static final TexturedModel.Provider CUBE_INNER_FACES = createDefault(TextureMapping::cube, ModelTemplates.CUBE_ALL_INNER_FACES);
@@ -44,9 +42,9 @@ public class TexturedModel {
     private final TextureMapping mapping;
     private final ModelTemplate template;
 
-    private TexturedModel(TextureMapping p_378768_, ModelTemplate p_377015_) {
-        this.mapping = p_378768_;
-        this.template = p_377015_;
+    private TexturedModel(final TextureMapping mapping, final ModelTemplate template) {
+        this.mapping = mapping;
+        this.template = template;
     }
 
     public ModelTemplate getTemplate() {
@@ -57,42 +55,41 @@ public class TexturedModel {
         return this.mapping;
     }
 
-    public TexturedModel updateTextures(Consumer<TextureMapping> p_378734_) {
-        p_378734_.accept(this.mapping);
+    public TexturedModel updateTextures(final Consumer<TextureMapping> mutator) {
+        mutator.accept(this.mapping);
         return this;
     }
 
-    public Identifier create(Block p_377060_, BiConsumer<Identifier, ModelInstance> p_377616_) {
-        return this.template.create(p_377060_, this.mapping, p_377616_);
+    public Identifier create(final Block block, final BiConsumer<Identifier, ModelInstance> modelOutput) {
+        return this.template.create(block, this.mapping, modelOutput);
     }
 
-    public Identifier createWithSuffix(Block p_377474_, String p_378409_, BiConsumer<Identifier, ModelInstance> p_378475_) {
-        return this.template.createWithSuffix(p_377474_, p_378409_, this.mapping, p_378475_);
+    public Identifier createWithSuffix(final Block block, final String extraSuffix, final BiConsumer<Identifier, ModelInstance> modelOutput) {
+        return this.template.createWithSuffix(block, extraSuffix, this.mapping, modelOutput);
     }
 
-    private static TexturedModel.Provider createDefault(Function<Block, TextureMapping> p_378290_, ModelTemplate p_378044_) {
-        return p_376579_ -> new TexturedModel(p_378290_.apply(p_376579_), p_378044_);
+    private static TexturedModel.Provider createDefault(final Function<Block, TextureMapping> mapping, final ModelTemplate template) {
+        return block -> new TexturedModel(mapping.apply(block), template);
     }
 
-    public static TexturedModel createAllSame(Identifier p_457641_) {
-        return new TexturedModel(TextureMapping.cube(p_457641_), ModelTemplates.CUBE_ALL);
+    public static TexturedModel createAllSame(final Material material) {
+        return new TexturedModel(TextureMapping.cube(material), ModelTemplates.CUBE_ALL);
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface Provider {
-        TexturedModel get(Block p_378795_);
+        public interface Provider {
+        TexturedModel get(final Block block);
 
-        default Identifier create(Block p_377562_, BiConsumer<Identifier, ModelInstance> p_377737_) {
-            return this.get(p_377562_).create(p_377562_, p_377737_);
+        default Identifier create(final Block block, final BiConsumer<Identifier, ModelInstance> modelOutput) {
+            return this.get(block).create(block, modelOutput);
         }
 
-        default Identifier createWithSuffix(Block p_378618_, String p_377692_, BiConsumer<Identifier, ModelInstance> p_378446_) {
-            return this.get(p_378618_).createWithSuffix(p_378618_, p_377692_, p_378446_);
+        default Identifier createWithSuffix(final Block block, final String suffix, final BiConsumer<Identifier, ModelInstance> modelOutput) {
+            return this.get(block).createWithSuffix(block, suffix, modelOutput);
         }
 
-        default TexturedModel.Provider updateTexture(Consumer<TextureMapping> p_377721_) {
-            return p_378681_ -> this.get(p_378681_).updateTextures(p_377721_);
+        default TexturedModel.Provider updateTexture(final Consumer<TextureMapping> mutator) {
+            return block -> this.get(block).updateTextures(mutator);
         }
     }
 }

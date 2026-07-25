@@ -10,82 +10,82 @@ import org.jspecify.annotations.Nullable;
 public class AttributeSupplier {
     private final Map<Holder<Attribute>, AttributeInstance> instances;
 
-    AttributeSupplier(Map<Holder<Attribute>, AttributeInstance> p_22243_) {
-        this.instances = p_22243_;
+    private AttributeSupplier(final Map<Holder<Attribute>, AttributeInstance> instances) {
+        this.instances = instances;
     }
 
-    private AttributeInstance getAttributeInstance(Holder<Attribute> p_335900_) {
-        AttributeInstance attributeinstance = this.instances.get(p_335900_);
-        if (attributeinstance == null) {
-            throw new IllegalArgumentException("Can't find attribute " + p_335900_.getRegisteredName());
+    private AttributeInstance getAttributeInstance(final Holder<Attribute> attribute) {
+        AttributeInstance instance = this.instances.get(attribute);
+        if (instance == null) {
+            throw new IllegalArgumentException("Can't find attribute " + attribute.getRegisteredName());
         } else {
-            return attributeinstance;
+            return instance;
         }
     }
 
-    public double getValue(Holder<Attribute> p_333974_) {
-        return this.getAttributeInstance(p_333974_).getValue();
+    public double getValue(final Holder<Attribute> attribute) {
+        return this.getAttributeInstance(attribute).getValue();
     }
 
-    public double getBaseValue(Holder<Attribute> p_333849_) {
-        return this.getAttributeInstance(p_333849_).getBaseValue();
+    public double getBaseValue(final Holder<Attribute> attribute) {
+        return this.getAttributeInstance(attribute).getBaseValue();
     }
 
-    public double getModifierValue(Holder<Attribute> p_333807_, Identifier p_450901_) {
-        AttributeModifier attributemodifier = this.getAttributeInstance(p_333807_).getModifier(p_450901_);
-        if (attributemodifier == null) {
-            throw new IllegalArgumentException("Can't find modifier " + p_450901_ + " on attribute " + p_333807_.getRegisteredName());
+    public double getModifierValue(final Holder<Attribute> attribute, final Identifier id) {
+        AttributeModifier modifier = this.getAttributeInstance(attribute).getModifier(id);
+        if (modifier == null) {
+            throw new IllegalArgumentException("Can't find modifier " + id + " on attribute " + attribute.getRegisteredName());
         } else {
-            return attributemodifier.amount();
+            return modifier.amount();
         }
     }
 
-    public @Nullable AttributeInstance createInstance(Consumer<AttributeInstance> p_22251_, Holder<Attribute> p_333997_) {
-        AttributeInstance attributeinstance = this.instances.get(p_333997_);
-        if (attributeinstance == null) {
+    public @Nullable AttributeInstance createInstance(final Consumer<AttributeInstance> onDirty, final Holder<Attribute> attribute) {
+        AttributeInstance template = this.instances.get(attribute);
+        if (template == null) {
             return null;
-        } else {
-            AttributeInstance attributeinstance1 = new AttributeInstance(p_333997_, p_22251_);
-            attributeinstance1.replaceFrom(attributeinstance);
-            return attributeinstance1;
         }
+
+        AttributeInstance result = new AttributeInstance(attribute, onDirty);
+        result.replaceFrom(template);
+        return result;
     }
 
     public static AttributeSupplier.Builder builder() {
         return new AttributeSupplier.Builder();
     }
 
-    public boolean hasAttribute(Holder<Attribute> p_331710_) {
-        return this.instances.containsKey(p_331710_);
+    public boolean hasAttribute(final Holder<Attribute> attribute) {
+        return this.instances.containsKey(attribute);
     }
 
-    public boolean hasModifier(Holder<Attribute> p_335566_, Identifier p_459925_) {
-        AttributeInstance attributeinstance = this.instances.get(p_335566_);
-        return attributeinstance != null && attributeinstance.getModifier(p_459925_) != null;
+    public boolean hasModifier(final Holder<Attribute> attribute, final Identifier modifier) {
+        AttributeInstance attributeInstance = this.instances.get(attribute);
+        return attributeInstance != null && attributeInstance.getModifier(modifier) != null;
     }
 
     public static class Builder {
         private final ImmutableMap.Builder<Holder<Attribute>, AttributeInstance> builder = ImmutableMap.builder();
         private boolean instanceFrozen;
 
-        private AttributeInstance create(Holder<Attribute> p_334904_) {
-            AttributeInstance attributeinstance = new AttributeInstance(p_334904_, p_326800_ -> {
+        private AttributeInstance create(final Holder<Attribute> attribute) {
+            AttributeInstance result = new AttributeInstance(attribute, attributeInstance -> {
                 if (this.instanceFrozen) {
-                    throw new UnsupportedOperationException("Tried to change value for default attribute instance: " + p_334904_.getRegisteredName());
+                    throw new UnsupportedOperationException("Tried to change value for default attribute instance: " + attribute.getRegisteredName());
                 }
             });
-            this.builder.put(p_334904_, attributeinstance);
-            return attributeinstance;
+            this.builder.put(attribute, result);
+            return result;
         }
 
-        public AttributeSupplier.Builder add(Holder<Attribute> p_334664_) {
-            this.create(p_334664_);
+        public AttributeSupplier.Builder add(final Holder<Attribute> attribute) {
+            this.create(attribute);
             return this;
         }
 
-        public AttributeSupplier.Builder add(Holder<Attribute> p_329131_, double p_22270_) {
-            AttributeInstance attributeinstance = this.create(p_329131_);
-            attributeinstance.setBaseValue(p_22270_);
+        public AttributeSupplier.Builder add(final Holder<Attribute> attribute, final double baseValue) {
+            AttributeInstance result = this.create(attribute);
+            result.setBaseValue(baseValue);
             return this;
         }
 

@@ -13,7 +13,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Spliterators;
-import java.util.Map.Entry;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import jdk.jfr.consumer.RecordedEvent;
@@ -51,152 +50,146 @@ public class JfrStatsParser {
     private final List<TickTimeStat> serverTickTimes = new ArrayList<>();
     private @Nullable Duration worldCreationDuration = null;
 
-    private JfrStatsParser(Stream<RecordedEvent> p_185443_) {
-        this.capture(p_185443_);
+    private JfrStatsParser(final Stream<RecordedEvent> events) {
+        this.capture(events);
     }
 
-    public static JfrStatsResult parse(Path p_185448_) {
-        try {
-            JfrStatsResult jfrstatsresult;
-            try (final RecordingFile recordingfile = new RecordingFile(p_185448_)) {
-                Iterator<RecordedEvent> iterator = new Iterator<RecordedEvent>() {
-                    @Override
-                    public boolean hasNext() {
-                        return recordingfile.hasMoreEvents();
+    public static JfrStatsResult parse(final Path path) {
+        try (final RecordingFile recordingFile = new RecordingFile(path)) {
+            Iterator<RecordedEvent> iterator = new Iterator<RecordedEvent>() {
+                @Override
+                public boolean hasNext() {
+                    return recordingFile.hasMoreEvents();
+                }
+
+                public RecordedEvent next() {
+                    if (!this.hasNext()) {
+                        throw new NoSuchElementException();
                     }
 
-                    public RecordedEvent next() {
-                        if (!this.hasNext()) {
-                            throw new NoSuchElementException();
-                        } else {
-                            try {
-                                return recordingfile.readEvent();
-                            } catch (IOException ioexception1) {
-                                throw new UncheckedIOException(ioexception1);
-                            }
-                        }
+                    try {
+                        return recordingFile.readEvent();
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
                     }
-                };
-                Stream<RecordedEvent> stream = StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 1297), false);
-                jfrstatsresult = new JfrStatsParser(stream).results();
-            }
-
-            return jfrstatsresult;
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+                }
+            };
+            Stream<RecordedEvent> events = StreamSupport.stream(Spliterators.spliteratorUnknownSize(iterator, 1297), false);
+            return new JfrStatsParser(events).results();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
     private JfrStatsResult results() {
-        Duration duration = Duration.between(this.recordingStarted, this.recordingEnded);
+        Duration recordingDuration = Duration.between(this.recordingStarted, this.recordingEnded);
         return new JfrStatsResult(
             this.recordingStarted,
             this.recordingEnded,
-            duration,
+            recordingDuration,
             this.worldCreationDuration,
             this.fps,
             this.serverTickTimes,
             this.cpuLoadStat,
-            GcHeapStat.summary(duration, this.gcHeapStats, this.gcTotalDuration, this.garbageCollections),
+            GcHeapStat.summary(recordingDuration, this.gcHeapStats, this.gcTotalDuration, this.garbageCollections),
             ThreadAllocationStat.summary(this.threadAllocationStats),
-            collectIoStats(duration, this.receivedPackets),
-            collectIoStats(duration, this.sentPackets),
-            collectIoStats(duration, this.writtenChunks),
-            collectIoStats(duration, this.readChunks),
-            FileIOStat.summary(duration, this.fileWrites),
-            FileIOStat.summary(duration, this.fileReads),
+            collectIoStats(recordingDuration, this.receivedPackets),
+            collectIoStats(recordingDuration, this.sentPackets),
+            collectIoStats(recordingDuration, this.writtenChunks),
+            collectIoStats(recordingDuration, this.readChunks),
+            FileIOStat.summary(recordingDuration, this.fileWrites),
+            FileIOStat.summary(recordingDuration, this.fileReads),
             this.chunkGenStats,
             this.structureGenStats
         );
     }
 
-    private void capture(Stream<RecordedEvent> p_185455_) {
-        p_185455_.forEach(p_449356_ -> {
-            if (p_449356_.getEndTime().isAfter(this.recordingEnded) || this.recordingEnded.equals(Instant.EPOCH)) {
-                this.recordingEnded = p_449356_.getEndTime();
+    private void capture(final Stream<RecordedEvent> events) {
+        events.forEach(event -> {
+            if (event.getEndTime().isAfter(this.recordingEnded) || this.recordingEnded.equals(Instant.EPOCH)) {
+                this.recordingEnded = event.getEndTime();
             }
 
-            if (p_449356_.getStartTime().isBefore(this.recordingStarted) || this.recordingStarted.equals(Instant.EPOCH)) {
-                this.recordingStarted = p_449356_.getStartTime();
+            if (event.getStartTime().isBefore(this.recordingStarted) || this.recordingStarted.equals(Instant.EPOCH)) {
+                this.recordingStarted = event.getStartTime();
             }
 
-            String s = p_449356_.getEventType().getName();
-            switch (s) {
+            switch (event.getEventType().getName()) {
                 case "minecraft.ChunkGeneration":
-                    this.chunkGenStats.add(ChunkGenStat.from(p_449356_));
+                    this.chunkGenStats.add(ChunkGenStat.from(event));
                     break;
                 case "minecraft.StructureGeneration":
-                    this.structureGenStats.add(StructureGenStat.from(p_449356_));
+                    this.structureGenStats.add(StructureGenStat.from(event));
                     break;
                 case "minecraft.LoadWorld":
-                    this.worldCreationDuration = p_449356_.getDuration();
+                    this.worldCreationDuration = event.getDuration();
                     break;
                 case "minecraft.ClientFps":
-                    this.fps.add(FpsStat.from(p_449356_, "fps"));
+                    this.fps.add(FpsStat.from(event, "fps"));
                     break;
                 case "minecraft.ServerTickTime":
-                    this.serverTickTimes.add(TickTimeStat.from(p_449356_));
+                    this.serverTickTimes.add(TickTimeStat.from(event));
                     break;
                 case "minecraft.PacketReceived":
-                    this.incrementPacket(p_449356_, p_449356_.getInt("bytes"), this.receivedPackets);
+                    this.incrementPacket(event, event.getInt("bytes"), this.receivedPackets);
                     break;
                 case "minecraft.PacketSent":
-                    this.incrementPacket(p_449356_, p_449356_.getInt("bytes"), this.sentPackets);
+                    this.incrementPacket(event, event.getInt("bytes"), this.sentPackets);
                     break;
                 case "minecraft.ChunkRegionRead":
-                    this.incrementChunk(p_449356_, p_449356_.getInt("bytes"), this.readChunks);
+                    this.incrementChunk(event, event.getInt("bytes"), this.readChunks);
                     break;
                 case "minecraft.ChunkRegionWrite":
-                    this.incrementChunk(p_449356_, p_449356_.getInt("bytes"), this.writtenChunks);
+                    this.incrementChunk(event, event.getInt("bytes"), this.writtenChunks);
                     break;
                 case "jdk.ThreadAllocationStatistics":
-                    this.threadAllocationStats.add(ThreadAllocationStat.from(p_449356_));
+                    this.threadAllocationStats.add(ThreadAllocationStat.from(event));
                     break;
                 case "jdk.GCHeapSummary":
-                    this.gcHeapStats.add(GcHeapStat.from(p_449356_));
+                    this.gcHeapStats.add(GcHeapStat.from(event));
                     break;
                 case "jdk.CPULoad":
-                    this.cpuLoadStat.add(CpuLoadStat.from(p_449356_));
+                    this.cpuLoadStat.add(CpuLoadStat.from(event));
                     break;
                 case "jdk.FileWrite":
-                    this.appendFileIO(p_449356_, this.fileWrites, "bytesWritten");
+                    this.appendFileIO(event, this.fileWrites, "bytesWritten");
                     break;
                 case "jdk.FileRead":
-                    this.appendFileIO(p_449356_, this.fileReads, "bytesRead");
+                    this.appendFileIO(event, this.fileReads, "bytesRead");
                     break;
                 case "jdk.GarbageCollection":
                     this.garbageCollections++;
-                    this.gcTotalDuration = this.gcTotalDuration.plus(p_449356_.getDuration());
+                    this.gcTotalDuration = this.gcTotalDuration.plus(event.getDuration());
             }
         });
     }
 
-    private void incrementPacket(RecordedEvent p_185459_, int p_185460_, Map<PacketIdentification, JfrStatsParser.MutableCountAndSize> p_185461_) {
-        p_185461_.computeIfAbsent(PacketIdentification.from(p_185459_), p_326728_ -> new JfrStatsParser.MutableCountAndSize()).increment(p_185460_);
+    private void incrementPacket(final RecordedEvent event, final int packetSize, final Map<PacketIdentification, JfrStatsParser.MutableCountAndSize> packets) {
+        packets.computeIfAbsent(PacketIdentification.from(event), ignored -> new JfrStatsParser.MutableCountAndSize()).increment(packetSize);
     }
 
-    private void incrementChunk(RecordedEvent p_329550_, int p_328110_, Map<ChunkIdentification, JfrStatsParser.MutableCountAndSize> p_329507_) {
-        p_329507_.computeIfAbsent(ChunkIdentification.from(p_329550_), p_332913_ -> new JfrStatsParser.MutableCountAndSize()).increment(p_328110_);
+    private void incrementChunk(final RecordedEvent event, final int chunkSize, final Map<ChunkIdentification, JfrStatsParser.MutableCountAndSize> packets) {
+        packets.computeIfAbsent(ChunkIdentification.from(event), ignored -> new JfrStatsParser.MutableCountAndSize()).increment(chunkSize);
     }
 
-    private void appendFileIO(RecordedEvent p_185463_, List<FileIOStat> p_185464_, String p_185465_) {
-        p_185464_.add(new FileIOStat(p_185463_.getDuration(), p_185463_.getString("path"), p_185463_.getLong(p_185465_)));
+    private void appendFileIO(final RecordedEvent event, final List<FileIOStat> stats, final String sizeField) {
+        stats.add(new FileIOStat(event.getDuration(), event.getString("path"), event.getLong(sizeField)));
     }
 
-    private static <T> IoSummary<T> collectIoStats(Duration p_333492_, Map<T, JfrStatsParser.MutableCountAndSize> p_336276_) {
-        List<Pair<T, IoSummary.CountAndSize>> list = p_336276_.entrySet()
+    private static <T> IoSummary<T> collectIoStats(final Duration recordingDuration, final Map<T, JfrStatsParser.MutableCountAndSize> packetStats) {
+        List<Pair<T, IoSummary.CountAndSize>> summaryStats = packetStats.entrySet()
             .stream()
-            .map(p_326729_ -> Pair.of(p_326729_.getKey(), p_326729_.getValue().toCountAndSize()))
+            .map(e -> Pair.of(e.getKey(), e.getValue().toCountAndSize()))
             .toList();
-        return new IoSummary<>(p_333492_, list);
+        return new IoSummary<>(recordingDuration, summaryStats);
     }
 
     public static final class MutableCountAndSize {
         private long count;
         private long totalSize;
 
-        public void increment(int p_185477_) {
-            this.totalSize += p_185477_;
+        public void increment(final int bytes) {
+            this.totalSize += bytes;
             this.count++;
         }
 

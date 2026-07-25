@@ -9,42 +9,42 @@ import net.minecraft.world.level.pathfinder.PathComputationType;
 import org.jspecify.annotations.Nullable;
 
 public interface SpawnPlacementTypes {
-    SpawnPlacementType NO_RESTRICTIONS = (p_332715_, p_333529_, p_334870_) -> true;
-    SpawnPlacementType IN_WATER = (p_449429_, p_449430_, p_449431_) -> {
-        if (p_449431_ != null && p_449429_.getWorldBorder().isWithinBounds(p_449430_)) {
-            BlockPos blockpos = p_449430_.above();
-            return p_449429_.getFluidState(p_449430_).is(FluidTags.WATER) && !p_449429_.getBlockState(blockpos).isRedstoneConductor(p_449429_, blockpos);
+    SpawnPlacementType NO_RESTRICTIONS = (level, blockPos, type) -> true;
+    SpawnPlacementType IN_WATER = (level, blockPos, type) -> {
+        if (type != null && level.getWorldBorder().isWithinBounds(blockPos)) {
+            BlockPos above = blockPos.above();
+            return level.getFluidState(blockPos).is(FluidTags.WATER) && !level.getBlockState(above).isRedstoneConductor(level, above);
         } else {
             return false;
         }
     };
-    SpawnPlacementType IN_LAVA = (p_449426_, p_449427_, p_449428_) -> p_449428_ != null && p_449426_.getWorldBorder().isWithinBounds(p_449427_)
-        ? p_449426_.getFluidState(p_449427_).is(FluidTags.LAVA)
+    SpawnPlacementType IN_LAVA = (level, blockPos, type) -> type != null && level.getWorldBorder().isWithinBounds(blockPos)
+        ? level.getFluidState(blockPos).is(FluidTags.LAVA)
         : false;
     SpawnPlacementType ON_GROUND = new SpawnPlacementType() {
         @Override
-        public boolean isSpawnPositionOk(LevelReader p_328923_, BlockPos p_332749_, @Nullable EntityType<?> p_334188_) {
-            if (p_334188_ != null && p_328923_.getWorldBorder().isWithinBounds(p_332749_)) {
-                BlockPos blockpos = p_332749_.above();
-                BlockPos blockpos1 = p_332749_.below();
-                BlockState blockstate = p_328923_.getBlockState(blockpos1);
-                return !blockstate.isValidSpawn(p_328923_, blockpos1, p_334188_)
+        public boolean isSpawnPositionOk(final LevelReader level, final BlockPos blockPos, final @Nullable EntityType<?> type) {
+            if (type != null && level.getWorldBorder().isWithinBounds(blockPos)) {
+                BlockPos above = blockPos.above();
+                BlockPos below = blockPos.below();
+                BlockState belowState = level.getBlockState(below);
+                return !belowState.isValidSpawn(level, below, type)
                     ? false
-                    : this.isValidEmptySpawnBlock(p_328923_, p_332749_, p_334188_) && this.isValidEmptySpawnBlock(p_328923_, blockpos, p_334188_);
+                    : this.isValidEmptySpawnBlock(level, blockPos, type) && this.isValidEmptySpawnBlock(level, above, type);
             } else {
                 return false;
             }
         }
 
-        private boolean isValidEmptySpawnBlock(LevelReader p_331376_, BlockPos p_333023_, EntityType<?> p_334970_) {
-            BlockState blockstate = p_331376_.getBlockState(p_333023_);
-            return NaturalSpawner.isValidEmptySpawnBlock(p_331376_, p_333023_, blockstate, blockstate.getFluidState(), p_334970_);
+        private boolean isValidEmptySpawnBlock(final LevelReader level, final BlockPos blockPos, final EntityType<?> type) {
+            BlockState blockState = level.getBlockState(blockPos);
+            return NaturalSpawner.isValidEmptySpawnBlock(level, blockPos, blockState, blockState.getFluidState(), type);
         }
 
         @Override
-        public BlockPos adjustSpawnPosition(LevelReader p_333745_, BlockPos p_335214_) {
-            BlockPos blockpos = p_335214_.below();
-            return p_333745_.getBlockState(blockpos).isPathfindable(PathComputationType.LAND) ? blockpos : p_335214_;
+        public BlockPos adjustSpawnPosition(final LevelReader level, final BlockPos candidate) {
+            BlockPos below = candidate.below();
+            return level.getBlockState(below).isPathfindable(PathComputationType.LAND) ? below : candidate;
         }
     };
 }

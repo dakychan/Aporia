@@ -4,10 +4,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ItemPickupParticle extends Particle {
     protected static final int LIFE_TIME = 3;
     private final Entity target;
@@ -20,10 +17,10 @@ public class ItemPickupParticle extends Particle {
     protected double targetYOld;
     protected double targetZOld;
 
-    public ItemPickupParticle(ClientLevel p_107025_, EntityRenderState p_425655_, Entity p_107026_, Vec3 p_429108_) {
-        super(p_107025_, p_425655_.x, p_425655_.y, p_425655_.z, p_429108_.x, p_429108_.y, p_429108_.z);
-        this.target = p_107026_;
-        this.itemRenderState = p_425655_;
+    public ItemPickupParticle(final ClientLevel level, final EntityRenderState itemEntity, final Entity target, final Vec3 movement) {
+        super(level, itemEntity.x, itemEntity.y, itemEntity.z, movement.x, movement.y, movement.z);
+        this.target = target;
+        this.itemRenderState = itemEntity;
         this.itemRenderState.outlineColor = 0;
         this.updatePosition();
         this.saveOldPosition();

@@ -13,17 +13,15 @@ public enum SwingAnimationType implements StringRepresentable {
     WHACK(1, "whack"),
     STAB(2, "stab");
 
-    private static final IntFunction<SwingAnimationType> BY_ID = ByIdMap.continuous(
-        SwingAnimationType::getId, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-    );
+    private static final IntFunction<SwingAnimationType> BY_ID = ByIdMap.continuous(SwingAnimationType::getId, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
     public static final Codec<SwingAnimationType> CODEC = StringRepresentable.fromEnum(SwingAnimationType::values);
     public static final StreamCodec<ByteBuf, SwingAnimationType> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, SwingAnimationType::getId);
     private final int id;
     private final String name;
 
-    private SwingAnimationType(final int p_459673_, final String p_458859_) {
-        this.id = p_459673_;
-        this.name = p_458859_;
+    SwingAnimationType(final int id, final String name) {
+        this.id = id;
+        this.name = name;
     }
 
     public int getId() {

@@ -17,7 +17,7 @@ import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -51,60 +51,58 @@ public class ServerExplosion implements Explosion {
     private final Map<Player, Vec3> hitPlayers = new HashMap<>();
 
     public ServerExplosion(
-        ServerLevel p_363225_,
-        @Nullable Entity p_367780_,
-        @Nullable DamageSource p_367845_,
-        @Nullable ExplosionDamageCalculator p_361628_,
-        Vec3 p_364875_,
-        float p_361128_,
-        boolean p_362786_,
-        Explosion.BlockInteraction p_367128_
+        final ServerLevel level,
+        final @Nullable Entity source,
+        final @Nullable DamageSource damageSource,
+        final @Nullable ExplosionDamageCalculator damageCalculator,
+        final Vec3 center,
+        final float radius,
+        final boolean fire,
+        final Explosion.BlockInteraction blockInteraction
     ) {
-        this.level = p_363225_;
-        this.source = p_367780_;
-        this.radius = p_361128_;
-        this.center = p_364875_;
-        this.fire = p_362786_;
-        this.blockInteraction = p_367128_;
-        this.damageSource = p_367845_ == null ? p_363225_.damageSources().explosion(this) : p_367845_;
-        this.damageCalculator = p_361628_ == null ? this.makeDamageCalculator(p_367780_) : p_361628_;
+        this.level = level;
+        this.source = source;
+        this.radius = radius;
+        this.center = center;
+        this.fire = fire;
+        this.blockInteraction = blockInteraction;
+        this.damageSource = damageSource == null ? level.damageSources().explosion(this) : damageSource;
+        this.damageCalculator = damageCalculator == null ? this.makeDamageCalculator(source) : damageCalculator;
     }
 
-    private ExplosionDamageCalculator makeDamageCalculator(@Nullable Entity p_362997_) {
-        return (ExplosionDamageCalculator)(p_362997_ == null ? EXPLOSION_DAMAGE_CALCULATOR : new EntityBasedExplosionDamageCalculator(p_362997_));
+    private ExplosionDamageCalculator makeDamageCalculator(final @Nullable Entity source) {
+        return source == null ? EXPLOSION_DAMAGE_CALCULATOR : new EntityBasedExplosionDamageCalculator(source);
     }
 
-    public static float getSeenPercent(Vec3 p_367358_, Entity p_369280_) {
-        AABB aabb = p_369280_.getBoundingBox();
-        double d0 = 1.0 / ((aabb.maxX - aabb.minX) * 2.0 + 1.0);
-        double d1 = 1.0 / ((aabb.maxY - aabb.minY) * 2.0 + 1.0);
-        double d2 = 1.0 / ((aabb.maxZ - aabb.minZ) * 2.0 + 1.0);
-        double d3 = (1.0 - Math.floor(1.0 / d0) * d0) / 2.0;
-        double d4 = (1.0 - Math.floor(1.0 / d2) * d2) / 2.0;
-        if (!(d0 < 0.0) && !(d1 < 0.0) && !(d2 < 0.0)) {
-            int i = 0;
-            int j = 0;
+    public static float getSeenPercent(final Vec3 center, final Entity entity) {
+        AABB bb = entity.getBoundingBox();
+        double xs = 1.0 / ((bb.maxX - bb.minX) * 2.0 + 1.0);
+        double ys = 1.0 / ((bb.maxY - bb.minY) * 2.0 + 1.0);
+        double zs = 1.0 / ((bb.maxZ - bb.minZ) * 2.0 + 1.0);
+        double xOffset = (1.0 - Math.floor(1.0 / xs) * xs) / 2.0;
+        double zOffset = (1.0 - Math.floor(1.0 / zs) * zs) / 2.0;
+        if (!(xs < 0.0) && !(ys < 0.0) && !(zs < 0.0)) {
+            int hits = 0;
+            int count = 0;
 
-            for (double d5 = 0.0; d5 <= 1.0; d5 += d0) {
-                for (double d6 = 0.0; d6 <= 1.0; d6 += d1) {
-                    for (double d7 = 0.0; d7 <= 1.0; d7 += d2) {
-                        double d8 = Mth.lerp(d5, aabb.minX, aabb.maxX);
-                        double d9 = Mth.lerp(d6, aabb.minY, aabb.maxY);
-                        double d10 = Mth.lerp(d7, aabb.minZ, aabb.maxZ);
-                        Vec3 vec3 = new Vec3(d8 + d3, d9, d10 + d4);
-                        if (p_369280_.level()
-                                .clip(new ClipContext(vec3, p_367358_, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p_369280_))
-                                .getType()
+            for (double xx = 0.0; xx <= 1.0; xx += xs) {
+                for (double yy = 0.0; yy <= 1.0; yy += ys) {
+                    for (double zz = 0.0; zz <= 1.0; zz += zs) {
+                        double x = Mth.lerp(xx, bb.minX, bb.maxX);
+                        double y = Mth.lerp(yy, bb.minY, bb.maxY);
+                        double z = Mth.lerp(zz, bb.minZ, bb.maxZ);
+                        Vec3 from = new Vec3(x + xOffset, y, z + zOffset);
+                        if (entity.level().clip(new ClipContext(from, center, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, entity)).getType()
                             == HitResult.Type.MISS) {
-                            i++;
+                            hits++;
                         }
 
-                        j++;
+                        count++;
                     }
                 }
             }
 
-            return (float)i / j;
+            return (float)hits / count;
         } else {
             return 0.0F;
         }
@@ -121,85 +119,89 @@ public class ServerExplosion implements Explosion {
     }
 
     private List<BlockPos> calculateExplodedPositions() {
-        Set<BlockPos> set = new HashSet<>();
-        int i = 16;
+        Set<BlockPos> toBlowSet = new HashSet<>();
+        int size = 16;
 
-        for (int j = 0; j < 16; j++) {
-            for (int k = 0; k < 16; k++) {
-                for (int l = 0; l < 16; l++) {
-                    if (j == 0 || j == 15 || k == 0 || k == 15 || l == 0 || l == 15) {
-                        double d0 = j / 15.0F * 2.0F - 1.0F;
-                        double d1 = k / 15.0F * 2.0F - 1.0F;
-                        double d2 = l / 15.0F * 2.0F - 1.0F;
-                        double d3 = Math.sqrt(d0 * d0 + d1 * d1 + d2 * d2);
-                        d0 /= d3;
-                        d1 /= d3;
-                        d2 /= d3;
-                        float f = this.radius * (0.7F + this.level.random.nextFloat() * 0.6F);
-                        double d4 = this.center.x;
-                        double d5 = this.center.y;
-                        double d6 = this.center.z;
+        for (int xx = 0; xx < 16; xx++) {
+            for (int yy = 0; yy < 16; yy++) {
+                for (int zz = 0; zz < 16; zz++) {
+                    if (xx == 0 || xx == 15 || yy == 0 || yy == 15 || zz == 0 || zz == 15) {
+                        double xd = xx / 15.0F * 2.0F - 1.0F;
+                        double yd = yy / 15.0F * 2.0F - 1.0F;
+                        double zd = zz / 15.0F * 2.0F - 1.0F;
+                        double d = Math.sqrt(xd * xd + yd * yd + zd * zd);
+                        xd /= d;
+                        yd /= d;
+                        zd /= d;
+                        float remainingPower = this.radius * (0.7F + this.level.random.nextFloat() * 0.6F);
+                        double xp = this.center.x;
+                        double yp = this.center.y;
+                        double zp = this.center.z;
+                        float stepSize = 0.3F;
 
-                        for (float f1 = 0.3F; f > 0.0F; f -= 0.22500001F) {
-                            BlockPos blockpos = BlockPos.containing(d4, d5, d6);
-                            BlockState blockstate = this.level.getBlockState(blockpos);
-                            FluidState fluidstate = this.level.getFluidState(blockpos);
-                            if (!this.level.isInWorldBounds(blockpos)) {
+                        while (remainingPower > 0.0F) {
+                            BlockPos pos = BlockPos.containing(xp, yp, zp);
+                            BlockState block = this.level.getBlockState(pos);
+                            FluidState fluid = this.level.getFluidState(pos);
+                            if (!this.level.isInWorldBounds(pos)) {
                                 break;
                             }
 
-                            Optional<Float> optional = this.damageCalculator.getBlockExplosionResistance(this, this.level, blockpos, blockstate, fluidstate);
-                            if (optional.isPresent()) {
-                                f -= (optional.get() + 0.3F) * 0.3F;
+                            Optional<Float> resistance = this.damageCalculator.getBlockExplosionResistance(this, this.level, pos, block, fluid);
+                            if (resistance.isPresent()) {
+                                remainingPower -= (resistance.get() + 0.3F) * 0.3F;
                             }
 
-                            if (f > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, blockpos, blockstate, f)) {
-                                set.add(blockpos);
+                            if (remainingPower > 0.0F && this.damageCalculator.shouldBlockExplode(this, this.level, pos, block, remainingPower)) {
+                                toBlowSet.add(pos);
                             }
 
-                            d4 += d0 * 0.3F;
-                            d5 += d1 * 0.3F;
-                            d6 += d2 * 0.3F;
+                            xp += xd * 0.3F;
+                            yp += yd * 0.3F;
+                            zp += zd * 0.3F;
+                            remainingPower -= 0.22500001F;
                         }
                     }
                 }
             }
         }
 
-        return new ObjectArrayList<>(set);
+        return new ObjectArrayList<>(toBlowSet);
     }
 
     private void hurtEntities() {
         if (!(this.radius < 1.0E-5F)) {
-            float f = this.radius * 2.0F;
-            int i = Mth.floor(this.center.x - f - 1.0);
-            int j = Mth.floor(this.center.x + f + 1.0);
-            int k = Mth.floor(this.center.y - f - 1.0);
-            int l = Mth.floor(this.center.y + f + 1.0);
-            int i1 = Mth.floor(this.center.z - f - 1.0);
-            int j1 = Mth.floor(this.center.z + f + 1.0);
+            float doubleRadius = this.radius * 2.0F;
+            int x0 = Mth.floor(this.center.x - doubleRadius - 1.0);
+            int x1 = Mth.floor(this.center.x + doubleRadius + 1.0);
+            int y0 = Mth.floor(this.center.y - doubleRadius - 1.0);
+            int y1 = Mth.floor(this.center.y + doubleRadius + 1.0);
+            int z0 = Mth.floor(this.center.z - doubleRadius - 1.0);
+            int z1 = Mth.floor(this.center.z + doubleRadius + 1.0);
 
-            for (Entity entity : this.level.getEntities(this.source, new AABB(i, k, i1, j, l, j1))) {
+            for (Entity entity : this.level.getEntities(this.source, new AABB(x0, y0, z0, x1, y1, z1))) {
                 if (!entity.ignoreExplosion(this)) {
-                    double d0 = Math.sqrt(entity.distanceToSqr(this.center)) / f;
-                    if (!(d0 > 1.0)) {
-                        Vec3 vec3 = entity instanceof PrimedTnt ? entity.position() : entity.getEyePosition();
-                        Vec3 vec31 = vec3.subtract(this.center).normalize();
-                        boolean flag = this.damageCalculator.shouldDamageEntity(this, entity);
-                        float f1 = this.damageCalculator.getKnockbackMultiplier(entity);
-                        float f2 = !flag && f1 == 0.0F ? 0.0F : getSeenPercent(this.center, entity);
-                        if (flag) {
-                            entity.hurtServer(this.level, this.damageSource, this.damageCalculator.getEntityDamageAmount(this, entity, f2));
+                    double dist = Math.sqrt(entity.distanceToSqr(this.center)) / doubleRadius;
+                    if (!(dist > 1.0)) {
+                        Vec3 entityOrigin = entity instanceof PrimedTnt ? entity.position() : entity.getEyePosition();
+                        Vec3 direction = entityOrigin.subtract(this.center).normalize();
+                        boolean shouldDamageEntity = this.damageCalculator.shouldDamageEntity(this, entity);
+                        float knockbackMultiplier = this.damageCalculator.getKnockbackMultiplier(entity);
+                        float exposure = !shouldDamageEntity && knockbackMultiplier == 0.0F ? 0.0F : getSeenPercent(this.center, entity);
+                        if (shouldDamageEntity) {
+                            entity.hurtServer(this.level, this.damageSource, this.damageCalculator.getEntityDamageAmount(this, entity, exposure));
                         }
 
-                        double d1 = entity instanceof LivingEntity livingentity ? livingentity.getAttributeValue(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE) : 0.0;
-                        double d2 = (1.0 - d0) * f2 * f1 * (1.0 - d1);
-                        Vec3 vec32 = vec31.scale(d2);
-                        entity.push(vec32);
-                        if (entity.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE) && entity instanceof Projectile projectile) {
+                        double knockbackResistance = entity instanceof LivingEntity livingEntity
+                            ? livingEntity.getAttributeValue(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE)
+                            : 0.0;
+                        double knockbackPower = (1.0 - dist) * exposure * knockbackMultiplier * (1.0 - knockbackResistance);
+                        Vec3 knockback = direction.scale(knockbackPower);
+                        entity.push(knockback);
+                        if (entity.is(EntityTypeTags.REDIRECTABLE_PROJECTILE) && entity instanceof Projectile projectile) {
                             projectile.setOwner(this.damageSource.getEntity());
                         } else if (entity instanceof Player player && !player.isSpectator() && (!player.isCreative() || !player.getAbilities().flying)) {
-                            this.hitPlayers.put(player, vec32);
+                            this.hitPlayers.put(player, knockback);
                         }
 
                         entity.onExplosionHit(this.source);
@@ -209,56 +211,54 @@ public class ServerExplosion implements Explosion {
         }
     }
 
-    private void interactWithBlocks(List<BlockPos> p_361066_) {
-        List<ServerExplosion.StackCollector> list = new ArrayList<>();
-        Util.shuffle(p_361066_, this.level.random);
+    private void interactWithBlocks(final List<BlockPos> targetBlocks) {
+        List<ServerExplosion.StackCollector> stacks = new ArrayList<>();
+        Util.shuffle(targetBlocks, this.level.random);
 
-        for (BlockPos blockpos : p_361066_) {
-            this.level.getBlockState(blockpos).onExplosionHit(this.level, blockpos, this, (p_369158_, p_366512_) -> addOrAppendStack(list, p_369158_, p_366512_));
+        for (BlockPos pos : targetBlocks) {
+            this.level.getBlockState(pos).onExplosionHit(this.level, pos, this, (stackx, position) -> addOrAppendStack(stacks, stackx, position));
         }
 
-        for (ServerExplosion.StackCollector serverexplosion$stackcollector : list) {
-            Block.popResource(this.level, serverexplosion$stackcollector.pos, serverexplosion$stackcollector.stack);
+        for (ServerExplosion.StackCollector stack : stacks) {
+            Block.popResource(this.level, stack.pos, stack.stack);
         }
     }
 
-    private void createFire(List<BlockPos> p_365156_) {
-        for (BlockPos blockpos : p_365156_) {
-            if (this.level.random.nextInt(3) == 0
-                && this.level.getBlockState(blockpos).isAir()
-                && this.level.getBlockState(blockpos.below()).isSolidRender()) {
-                this.level.setBlockAndUpdate(blockpos, BaseFireBlock.getState(this.level, blockpos));
+    private void createFire(final List<BlockPos> targetBlocks) {
+        for (BlockPos pos : targetBlocks) {
+            if (this.level.random.nextInt(3) == 0 && this.level.getBlockState(pos).isAir() && this.level.getBlockState(pos.below()).isSolidRender()) {
+                this.level.setBlockAndUpdate(pos, BaseFireBlock.getState(this.level, pos));
             }
         }
     }
 
     public int explode() {
         this.level.gameEvent(this.source, GameEvent.EXPLODE, this.center);
-        List<BlockPos> list = this.calculateExplodedPositions();
+        List<BlockPos> toBlow = this.calculateExplodedPositions();
         this.hurtEntities();
         if (this.interactsWithBlocks()) {
-            ProfilerFiller profilerfiller = Profiler.get();
-            profilerfiller.push("explosion_blocks");
-            this.interactWithBlocks(list);
-            profilerfiller.pop();
+            ProfilerFiller profiler = Profiler.get();
+            profiler.push("explosion_blocks");
+            this.interactWithBlocks(toBlow);
+            profiler.pop();
         }
 
         if (this.fire) {
-            this.createFire(list);
+            this.createFire(toBlow);
         }
 
-        return list.size();
+        return toBlow.size();
     }
 
-    private static void addOrAppendStack(List<ServerExplosion.StackCollector> p_364783_, ItemStack p_365928_, BlockPos p_366332_) {
-        for (ServerExplosion.StackCollector serverexplosion$stackcollector : p_364783_) {
-            serverexplosion$stackcollector.tryMerge(p_365928_);
-            if (p_365928_.isEmpty()) {
+    private static void addOrAppendStack(final List<ServerExplosion.StackCollector> stacks, final ItemStack stack, final BlockPos pos) {
+        for (ServerExplosion.StackCollector stackCollector : stacks) {
+            stackCollector.tryMerge(stack);
+            if (stack.isEmpty()) {
                 return;
             }
         }
 
-        p_364783_.add(new ServerExplosion.StackCollector(p_366332_, p_365928_));
+        stacks.add(new ServerExplosion.StackCollector(pos, stack));
     }
 
     private boolean interactsWithBlocks() {
@@ -298,35 +298,33 @@ public class ServerExplosion implements Explosion {
         if (this.blockInteraction != Explosion.BlockInteraction.TRIGGER_BLOCK) {
             return false;
         } else {
-            return this.source != null && this.source.getType() == EntityType.BREEZE_WIND_CHARGE
-                ? this.level.getGameRules().get(GameRules.MOB_GRIEFING)
-                : true;
+            return this.source != null && this.source.is(EntityTypes.BREEZE_WIND_CHARGE) ? this.level.getGameRules().get(GameRules.MOB_GRIEFING) : true;
         }
     }
 
     @Override
     public boolean shouldAffectBlocklikeEntities() {
-        boolean flag = this.level.getGameRules().get(GameRules.MOB_GRIEFING);
-        boolean flag1 = this.source == null || this.source.getType() != EntityType.BREEZE_WIND_CHARGE && this.source.getType() != EntityType.WIND_CHARGE;
-        return flag ? flag1 : this.blockInteraction.shouldAffectBlocklikeEntities() && flag1;
+        boolean mobGriefingEnabled = this.level.getGameRules().get(GameRules.MOB_GRIEFING);
+        boolean isNotWindCharge = this.source == null || !this.source.is(EntityTypes.BREEZE_WIND_CHARGE) && !this.source.is(EntityTypes.WIND_CHARGE);
+        return mobGriefingEnabled ? isNotWindCharge : this.blockInteraction.shouldAffectBlocklikeEntities() && isNotWindCharge;
     }
 
     public boolean isSmall() {
         return this.radius < 2.0F || !this.interactsWithBlocks();
     }
 
-    static class StackCollector {
-        final BlockPos pos;
-        ItemStack stack;
+    private static class StackCollector {
+        private final BlockPos pos;
+        private ItemStack stack;
 
-        StackCollector(BlockPos p_361613_, ItemStack p_361574_) {
-            this.pos = p_361613_;
-            this.stack = p_361574_;
+        private StackCollector(final BlockPos pos, final ItemStack stack) {
+            this.pos = pos;
+            this.stack = stack;
         }
 
-        public void tryMerge(ItemStack p_362306_) {
-            if (ItemEntity.areMergable(this.stack, p_362306_)) {
-                this.stack = ItemEntity.merge(this.stack, p_362306_, 16);
+        public void tryMerge(final ItemStack input) {
+            if (ItemEntity.areMergable(this.stack, input)) {
+                this.stack = ItemEntity.merge(this.stack, input, 16);
             }
         }
     }

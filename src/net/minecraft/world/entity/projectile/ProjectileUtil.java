@@ -28,226 +28,254 @@ import org.jspecify.annotations.Nullable;
 public final class ProjectileUtil {
     public static final float DEFAULT_ENTITY_HIT_RESULT_MARGIN = 0.3F;
 
-    public static HitResult getHitResultOnMoveVector(Entity p_278228_, Predicate<Entity> p_278315_) {
-        Vec3 vec3 = p_278228_.getDeltaMovement();
-        Level level = p_278228_.level();
-        Vec3 vec31 = p_278228_.position();
-        return getHitResult(vec31, p_278228_, p_278315_, vec3, level, computeMargin(p_278228_), ClipContext.Block.COLLIDER);
+    public static HitResult getHitResultOnMoveVector(final Entity source, final Predicate<Entity> matching) {
+        Vec3 movement = source.getDeltaMovement();
+        Level level = source.level();
+        Vec3 from = source.position();
+        return getHitResult(from, source, matching, movement, level, computeMargin(source), ClipContext.Block.COLLIDER);
     }
 
     public static Either<BlockHitResult, Collection<EntityHitResult>> getHitEntitiesAlong(
-        Entity p_454545_, AttackRange p_458128_, Predicate<Entity> p_452627_, ClipContext.Block p_457482_
+        final Entity attacker, final AttackRange attackRange, final Predicate<Entity> matching, final ClipContext.Block blockClipType
     ) {
-        Vec3 vec3 = p_454545_.getHeadLookAngle();
-        Vec3 vec31 = p_454545_.getEyePosition();
-        Vec3 vec32 = vec31.add(vec3.scale(p_458128_.effectiveMinRange(p_454545_)));
-        double d0 = p_454545_.getKnownMovement().dot(vec3);
-        Vec3 vec33 = vec31.add(vec3.scale(p_458128_.effectiveMaxRange(p_454545_) + Math.max(0.0, d0)));
-        return getHitEntitiesAlong(p_454545_, vec31, vec32, p_452627_, vec33, p_458128_.hitboxMargin(), p_457482_);
+        Vec3 look = attacker.getHeadLookAngle();
+        Vec3 eyePosition = attacker.getEyePosition();
+        Vec3 from = eyePosition.add(look.scale(attackRange.effectiveMinRange(attacker)));
+        double movementComponent = attacker.getKnownMovement().dot(look);
+        Vec3 to = eyePosition.add(look.scale(attackRange.effectiveMaxRange(attacker) + Math.max(0.0, movementComponent)));
+        return getHitEntitiesAlong(attacker, eyePosition, from, matching, to, attackRange.hitboxMargin(), blockClipType);
     }
 
-    public static HitResult getHitResultOnMoveVector(Entity p_311718_, Predicate<Entity> p_311003_, ClipContext.Block p_312093_) {
-        Vec3 vec3 = p_311718_.getDeltaMovement();
-        Level level = p_311718_.level();
-        Vec3 vec31 = p_311718_.position();
-        return getHitResult(vec31, p_311718_, p_311003_, vec3, level, computeMargin(p_311718_), p_312093_);
+    public static HitResult getHitResultOnMoveVector(final Entity source, final Predicate<Entity> matching, final ClipContext.Block clipType) {
+        Vec3 movement = source.getDeltaMovement();
+        Level level = source.level();
+        Vec3 from = source.position();
+        return getHitResult(from, source, matching, movement, level, computeMargin(source), clipType);
     }
 
-    public static HitResult getHitResultOnViewVector(Entity p_278281_, Predicate<Entity> p_278306_, double p_278293_) {
-        Vec3 vec3 = p_278281_.getViewVector(0.0F).scale(p_278293_);
-        Level level = p_278281_.level();
-        Vec3 vec31 = p_278281_.getEyePosition();
-        return getHitResult(vec31, p_278281_, p_278306_, vec3, level, 0.0F, ClipContext.Block.COLLIDER);
+    public static HitResult getHitResultOnViewVector(final Entity source, final Predicate<Entity> matching, final double distance) {
+        Vec3 viewVector = source.getViewVector(0.0F).scale(distance);
+        Level level = source.level();
+        Vec3 from = source.getEyePosition();
+        return getHitResult(from, source, matching, viewVector, level, 0.0F, ClipContext.Block.COLLIDER);
     }
 
     private static HitResult getHitResult(
-        Vec3 p_278237_, Entity p_278320_, Predicate<Entity> p_278257_, Vec3 p_278342_, Level p_278321_, float p_310295_, ClipContext.Block p_310049_
+        final Vec3 from,
+        final Entity source,
+        final Predicate<Entity> matching,
+        final Vec3 delta,
+        final Level level,
+        final float entityMargin,
+        final ClipContext.Block clipType
     ) {
-        Vec3 vec3 = p_278237_.add(p_278342_);
-        HitResult hitresult = p_278321_.clipIncludingBorder(new ClipContext(p_278237_, vec3, p_310049_, ClipContext.Fluid.NONE, p_278320_));
-        if (hitresult.getType() != HitResult.Type.MISS) {
-            vec3 = hitresult.getLocation();
+        Vec3 to = from.add(delta);
+        HitResult hitResult = level.clipIncludingBorder(new ClipContext(from, to, clipType, ClipContext.Fluid.NONE, source));
+        if (hitResult.getType() != HitResult.Type.MISS) {
+            to = hitResult.getLocation();
         }
 
-        HitResult hitresult1 = getEntityHitResult(p_278321_, p_278320_, p_278237_, vec3, p_278320_.getBoundingBox().expandTowards(p_278342_).inflate(1.0), p_278257_, p_310295_);
-        if (hitresult1 != null) {
-            hitresult = hitresult1;
+        HitResult entityHit = getEntityHitResult(level, source, from, to, source.getBoundingBox().expandTowards(delta).inflate(1.0), matching, entityMargin);
+        if (entityHit != null) {
+            hitResult = entityHit;
         }
 
-        return hitresult;
+        return hitResult;
     }
 
     private static Either<BlockHitResult, Collection<EntityHitResult>> getHitEntitiesAlong(
-        Entity p_451000_, Vec3 p_453216_, Vec3 p_451964_, Predicate<Entity> p_457313_, Vec3 p_453983_, float p_456458_, ClipContext.Block p_457617_
+        final Entity source,
+        final Vec3 origin,
+        final Vec3 from,
+        final Predicate<Entity> matching,
+        Vec3 to,
+        final float entityMargin,
+        final ClipContext.Block clipType
     ) {
-        Level level = p_451000_.level();
-        BlockHitResult blockhitresult = level.clipIncludingBorder(new ClipContext(p_453216_, p_453983_, p_457617_, ClipContext.Fluid.NONE, p_451000_));
-        if (blockhitresult.getType() != HitResult.Type.MISS) {
-            p_453983_ = blockhitresult.getLocation();
-            if (p_453216_.distanceToSqr(p_453983_) < p_453216_.distanceToSqr(p_451964_)) {
-                return Either.left(blockhitresult);
+        Level level = source.level();
+        BlockHitResult hitResult = level.clipIncludingBorder(new ClipContext(origin, to, clipType, ClipContext.Fluid.NONE, source));
+        if (hitResult.getType() != HitResult.Type.MISS) {
+            to = hitResult.getLocation();
+            if (origin.distanceToSqr(to) < origin.distanceToSqr(from)) {
+                return Either.left(hitResult);
             }
         }
 
-        AABB aabb = AABB.ofSize(p_451964_, p_456458_, p_456458_, p_456458_).expandTowards(p_453983_.subtract(p_451964_)).inflate(1.0);
-        Collection<EntityHitResult> collection = getManyEntityHitResult(level, p_451000_, p_451964_, p_453983_, aabb, p_457313_, p_456458_, p_457617_, true);
-        return !collection.isEmpty() ? Either.right(collection) : Either.left(blockhitresult);
+        AABB searchArea = AABB.ofSize(from, entityMargin, entityMargin, entityMargin).expandTowards(to.subtract(from)).inflate(1.0);
+        Collection<EntityHitResult> entityHit = getManyEntityHitResult(level, source, from, to, searchArea, matching, entityMargin, clipType, true);
+        return !entityHit.isEmpty() ? Either.right(entityHit) : Either.left(hitResult);
     }
 
-    public static @Nullable EntityHitResult getEntityHitResult(Entity p_37288_, Vec3 p_37289_, Vec3 p_37290_, AABB p_37291_, Predicate<Entity> p_37292_, double p_37293_) {
-        Level level = p_37288_.level();
-        double d0 = p_37293_;
-        Entity entity = null;
-        Vec3 vec3 = null;
+    public static @Nullable EntityHitResult getEntityHitResult(
+        final Entity except, final Vec3 from, final Vec3 to, final AABB box, final Predicate<Entity> matching, final double maxValue
+    ) {
+        Level level = except.level();
+        double nearest = maxValue;
+        Entity hovered = null;
+        Vec3 hoveredPos = null;
 
-        for (Entity entity1 : level.getEntities(p_37288_, p_37291_, p_37292_)) {
-            AABB aabb = entity1.getBoundingBox().inflate(entity1.getPickRadius());
-            Optional<Vec3> optional = aabb.clip(p_37289_, p_37290_);
-            if (aabb.contains(p_37289_)) {
-                if (d0 >= 0.0) {
-                    entity = entity1;
-                    vec3 = optional.orElse(p_37289_);
-                    d0 = 0.0;
+        for (Entity entity : level.getEntities(except, box, matching)) {
+            AABB bb = entity.getBoundingBox().inflate(entity.getPickRadius());
+            Optional<Vec3> clipPoint = bb.clip(from, to);
+            if (bb.contains(from)) {
+                if (nearest >= 0.0 && entity.canBePickedFromInside()) {
+                    hovered = entity;
+                    hoveredPos = clipPoint.orElse(from);
+                    nearest = 0.0;
                 }
-            } else if (optional.isPresent()) {
-                Vec3 vec31 = optional.get();
-                double d1 = p_37289_.distanceToSqr(vec31);
-                if (d1 < d0 || d0 == 0.0) {
-                    if (entity1.getRootVehicle() == p_37288_.getRootVehicle()) {
-                        if (d0 == 0.0) {
-                            entity = entity1;
-                            vec3 = vec31;
+            } else if (clipPoint.isPresent()) {
+                Vec3 location = clipPoint.get();
+                double dd = from.distanceToSqr(location);
+                if (dd < nearest || nearest == 0.0) {
+                    if (entity.getRootVehicle() == except.getRootVehicle()) {
+                        if (nearest == 0.0) {
+                            hovered = entity;
+                            hoveredPos = location;
                         }
                     } else {
-                        entity = entity1;
-                        vec3 = vec31;
-                        d0 = d1;
+                        hovered = entity;
+                        hoveredPos = location;
+                        nearest = dd;
                     }
                 }
             }
         }
 
-        return entity == null ? null : new EntityHitResult(entity, vec3);
+        return hovered == null ? null : new EntityHitResult(hovered, hoveredPos);
     }
 
     public static @Nullable EntityHitResult getEntityHitResult(
-        Level p_37305_, Projectile p_408325_, Vec3 p_37307_, Vec3 p_37308_, AABB p_37309_, Predicate<Entity> p_37310_
+        final Level level, final Projectile source, final Vec3 from, final Vec3 to, final AABB targetSearchArea, final Predicate<Entity> matching
     ) {
-        return getEntityHitResult(p_37305_, p_408325_, p_37307_, p_37308_, p_37309_, p_37310_, computeMargin(p_408325_));
+        return getEntityHitResult(level, source, from, to, targetSearchArea, matching, computeMargin(source));
     }
 
-    public static float computeMargin(Entity p_407474_) {
-        return Math.max(0.0F, Math.min(0.3F, (p_407474_.tickCount - 2) / 20.0F));
+    public static float computeMargin(final Entity source) {
+        return Math.max(0.0F, Math.min(0.3F, (source.tickCount - 2) / 20.0F));
     }
 
     public static @Nullable EntityHitResult getEntityHitResult(
-        Level p_150176_, Entity p_150177_, Vec3 p_150178_, Vec3 p_150179_, AABB p_150180_, Predicate<Entity> p_150181_, float p_150182_
+        final Level level,
+        final Entity source,
+        final Vec3 from,
+        final Vec3 to,
+        final AABB targetSearchArea,
+        final Predicate<Entity> matching,
+        final float entityMargin
     ) {
-        double d0 = Double.MAX_VALUE;
-        Optional<Vec3> optional = Optional.empty();
-        Entity entity = null;
+        double nearest = Double.MAX_VALUE;
+        Optional<Vec3> nearestLocation = Optional.empty();
+        Entity hitEntity = null;
 
-        for (Entity entity1 : p_150176_.getEntities(p_150177_, p_150180_, p_150181_)) {
-            AABB aabb = entity1.getBoundingBox().inflate(p_150182_);
-            Optional<Vec3> optional1 = aabb.clip(p_150178_, p_150179_);
-            if (optional1.isPresent()) {
-                double d1 = p_150178_.distanceToSqr(optional1.get());
-                if (d1 < d0) {
-                    entity = entity1;
-                    d0 = d1;
-                    optional = optional1;
+        for (Entity entity : level.getEntities(source, targetSearchArea, matching)) {
+            AABB bb = entity.getBoundingBox().inflate(entityMargin);
+            Optional<Vec3> location = bb.clip(from, to);
+            if (location.isPresent()) {
+                double dd = from.distanceToSqr(location.get());
+                if (dd < nearest) {
+                    hitEntity = entity;
+                    nearest = dd;
+                    nearestLocation = location;
                 }
             }
         }
 
-        return entity == null ? null : new EntityHitResult(entity, optional.get());
+        return hitEntity == null ? null : new EntityHitResult(hitEntity, nearestLocation.get());
     }
 
     public static Collection<EntityHitResult> getManyEntityHitResult(
-        Level p_456972_, Entity p_458261_, Vec3 p_456415_, Vec3 p_453329_, AABB p_460938_, Predicate<Entity> p_458156_, boolean p_450635_
+        final Level level,
+        final Entity source,
+        final Vec3 from,
+        final Vec3 to,
+        final AABB targetSearchArea,
+        final Predicate<Entity> matching,
+        final boolean includeFromEntity
     ) {
-        return getManyEntityHitResult(p_456972_, p_458261_, p_456415_, p_453329_, p_460938_, p_458156_, computeMargin(p_458261_), ClipContext.Block.COLLIDER, p_450635_);
+        return getManyEntityHitResult(level, source, from, to, targetSearchArea, matching, computeMargin(source), ClipContext.Block.COLLIDER, includeFromEntity);
     }
 
     public static Collection<EntityHitResult> getManyEntityHitResult(
-        Level p_457406_,
-        Entity p_454771_,
-        Vec3 p_454289_,
-        Vec3 p_451095_,
-        AABB p_457078_,
-        Predicate<Entity> p_455888_,
-        float p_452531_,
-        ClipContext.Block p_450522_,
-        boolean p_460862_
+        final Level level,
+        final Entity source,
+        final Vec3 from,
+        final Vec3 to,
+        final AABB targetSearchArea,
+        final Predicate<Entity> matching,
+        final float entityMargin,
+        final ClipContext.Block clipType,
+        final boolean includeFromEntity
     ) {
-        List<EntityHitResult> list = new ArrayList<>();
+        List<EntityHitResult> collector = new ArrayList<>();
 
-        for (Entity entity : p_457406_.getEntities(p_454771_, p_457078_, p_455888_)) {
-            AABB aabb = entity.getBoundingBox();
-            if (p_460862_ && aabb.contains(p_454289_)) {
-                list.add(new EntityHitResult(entity, p_454289_));
+        for (Entity entity : level.getEntities(source, targetSearchArea, matching)) {
+            AABB entityBB = entity.getBoundingBox();
+            if (includeFromEntity && entityBB.contains(from)) {
+                collector.add(new EntityHitResult(entity, from));
             } else {
-                Optional<Vec3> optional = aabb.clip(p_454289_, p_451095_);
-                if (optional.isPresent()) {
-                    list.add(new EntityHitResult(entity, optional.get()));
-                } else if (!(p_452531_ <= 0.0)) {
-                    Optional<Vec3> optional1 = aabb.inflate(p_452531_).clip(p_454289_, p_451095_);
-                    if (!optional1.isEmpty()) {
-                        Vec3 vec3 = optional1.get();
-                        Vec3 vec31 = aabb.getCenter();
-                        BlockHitResult blockhitresult = p_457406_.clipIncludingBorder(new ClipContext(vec3, vec31, p_450522_, ClipContext.Fluid.NONE, p_454771_));
-                        if (blockhitresult.getType() != HitResult.Type.MISS) {
-                            vec31 = blockhitresult.getLocation();
+                Optional<Vec3> exactHit = entityBB.clip(from, to);
+                if (exactHit.isPresent()) {
+                    collector.add(new EntityHitResult(entity, exactHit.get()));
+                } else if (!(entityMargin <= 0.0)) {
+                    Optional<Vec3> outsideHit = entityBB.inflate(entityMargin).clip(from, to);
+                    if (!outsideHit.isEmpty()) {
+                        Vec3 outsideHitPosition = outsideHit.get();
+                        Vec3 towardsTarget = entityBB.getCenter();
+                        BlockHitResult hitResult = level.clipIncludingBorder(
+                            new ClipContext(outsideHitPosition, towardsTarget, clipType, ClipContext.Fluid.NONE, source)
+                        );
+                        if (hitResult.getType() != HitResult.Type.MISS) {
+                            towardsTarget = hitResult.getLocation();
                         }
 
-                        Optional<Vec3> optional2 = entity.getBoundingBox().clip(vec3, vec31);
-                        if (optional2.isPresent()) {
-                            list.add(new EntityHitResult(entity, optional2.get()));
+                        Optional<Vec3> surfaceHit = entity.getBoundingBox().clip(outsideHitPosition, towardsTarget);
+                        if (surfaceHit.isPresent()) {
+                            collector.add(new EntityHitResult(entity, surfaceHit.get()));
                         }
                     }
                 }
             }
         }
 
-        return list;
+        return collector;
     }
 
-    public static void rotateTowardsMovement(Entity p_37285_, float p_37286_) {
-        Vec3 vec3 = p_37285_.getDeltaMovement();
-        if (vec3.lengthSqr() != 0.0) {
-            double d0 = vec3.horizontalDistance();
-            p_37285_.setYRot((float)(Mth.atan2(vec3.z, vec3.x) * 180.0F / (float)Math.PI) + 90.0F);
-            p_37285_.setXRot((float)(Mth.atan2(d0, vec3.y) * 180.0F / (float)Math.PI) - 90.0F);
+    public static void rotateTowardsMovement(final Entity projectile, final float rotationSpeed) {
+        Vec3 movement = projectile.getDeltaMovement();
+        if (movement.lengthSqr() != 0.0) {
+            double sd = movement.horizontalDistance();
+            projectile.setYRot((float)(Mth.atan2(movement.z, movement.x) * 180.0F / (float)Math.PI) + 90.0F);
+            projectile.setXRot((float)(Mth.atan2(sd, movement.y) * 180.0F / (float)Math.PI) - 90.0F);
 
-            while (p_37285_.getXRot() - p_37285_.xRotO < -180.0F) {
-                p_37285_.xRotO -= 360.0F;
+            while (projectile.getXRot() - projectile.xRotO < -180.0F) {
+                projectile.xRotO -= 360.0F;
             }
 
-            while (p_37285_.getXRot() - p_37285_.xRotO >= 180.0F) {
-                p_37285_.xRotO += 360.0F;
+            while (projectile.getXRot() - projectile.xRotO >= 180.0F) {
+                projectile.xRotO += 360.0F;
             }
 
-            while (p_37285_.getYRot() - p_37285_.yRotO < -180.0F) {
-                p_37285_.yRotO -= 360.0F;
+            while (projectile.getYRot() - projectile.yRotO < -180.0F) {
+                projectile.yRotO -= 360.0F;
             }
 
-            while (p_37285_.getYRot() - p_37285_.yRotO >= 180.0F) {
-                p_37285_.yRotO += 360.0F;
+            while (projectile.getYRot() - projectile.yRotO >= 180.0F) {
+                projectile.yRotO += 360.0F;
             }
 
-            p_37285_.setXRot(Mth.lerp(p_37286_, p_37285_.xRotO, p_37285_.getXRot()));
-            p_37285_.setYRot(Mth.lerp(p_37286_, p_37285_.yRotO, p_37285_.getYRot()));
+            projectile.setXRot(Mth.lerp(rotationSpeed, projectile.xRotO, projectile.getXRot()));
+            projectile.setYRot(Mth.lerp(rotationSpeed, projectile.yRotO, projectile.getYRot()));
         }
     }
 
-    public static InteractionHand getWeaponHoldingHand(LivingEntity p_37298_, Item p_37299_) {
-        return p_37298_.getMainHandItem().is(p_37299_) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+    public static InteractionHand getWeaponHoldingHand(final LivingEntity mob, final Item weaponItem) {
+        return mob.getMainHandItem().is(weaponItem) ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
     }
 
-    public static AbstractArrow getMobArrow(LivingEntity p_37301_, ItemStack p_37302_, float p_37303_, @Nullable ItemStack p_342402_) {
-        ArrowItem arrowitem = (ArrowItem)(p_37302_.getItem() instanceof ArrowItem ? p_37302_.getItem() : Items.ARROW);
-        AbstractArrow abstractarrow = arrowitem.createArrow(p_37301_.level(), p_37302_, p_37301_, p_342402_);
-        abstractarrow.setBaseDamageFromMob(p_37303_);
-        return abstractarrow;
+    public static AbstractArrow getMobArrow(final LivingEntity mob, final ItemStack projectile, final float power, final @Nullable ItemStack firedFromWeapon) {
+        ArrowItem arrowItem = (ArrowItem)(projectile.getItem() instanceof ArrowItem ? projectile.getItem() : Items.ARROW);
+        AbstractArrow arrow = arrowItem.createArrow(mob.level(), projectile, mob, firedFromWeapon);
+        arrow.setBaseDamageFromMob(power);
+        return arrow;
     }
 }

@@ -15,26 +15,25 @@ public class ItemArgument implements ArgumentType<ItemInput> {
     private static final Collection<String> EXAMPLES = Arrays.asList("stick", "minecraft:stick", "stick{foo=bar}");
     private final ItemParser parser;
 
-    public ItemArgument(CommandBuildContext p_235278_) {
-        this.parser = new ItemParser(p_235278_);
+    public ItemArgument(final CommandBuildContext context) {
+        this.parser = new ItemParser(context);
     }
 
-    public static ItemArgument item(CommandBuildContext p_235280_) {
-        return new ItemArgument(p_235280_);
+    public static ItemArgument item(final CommandBuildContext context) {
+        return new ItemArgument(context);
     }
 
-    public ItemInput parse(StringReader p_120962_) throws CommandSyntaxException {
-        ItemParser.ItemResult itemparser$itemresult = this.parser.parse(p_120962_);
-        return new ItemInput(itemparser$itemresult.item(), itemparser$itemresult.components());
+    public ItemInput parse(final StringReader reader) throws CommandSyntaxException {
+        return this.parser.parse(reader);
     }
 
-    public static <S> ItemInput getItem(CommandContext<S> p_120964_, String p_120965_) {
-        return p_120964_.getArgument(p_120965_, ItemInput.class);
+    public static <S> ItemInput getItem(final CommandContext<S> context, final String name) {
+        return context.getArgument(name, ItemInput.class);
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_120968_, SuggestionsBuilder p_120969_) {
-        return this.parser.fillSuggestions(p_120969_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return this.parser.fillSuggestions(builder);
     }
 
     @Override

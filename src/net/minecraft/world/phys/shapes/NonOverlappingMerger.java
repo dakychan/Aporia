@@ -8,10 +8,10 @@ public class NonOverlappingMerger extends AbstractDoubleList implements IndexMer
     private final DoubleList upper;
     private final boolean swap;
 
-    protected NonOverlappingMerger(DoubleList p_83012_, DoubleList p_83013_, boolean p_83014_) {
-        this.lower = p_83012_;
-        this.upper = p_83013_;
-        this.swap = p_83014_;
+    protected NonOverlappingMerger(final DoubleList lower, final DoubleList upper, final boolean swap) {
+        this.lower = lower;
+        this.upper = upper;
+        this.swap = swap;
     }
 
     @Override
@@ -20,23 +20,25 @@ public class NonOverlappingMerger extends AbstractDoubleList implements IndexMer
     }
 
     @Override
-    public boolean forMergedIndexes(IndexMerger.IndexConsumer p_83017_) {
-        return this.swap ? this.forNonSwappedIndexes((p_83020_, p_83021_, p_83022_) -> p_83017_.merge(p_83021_, p_83020_, p_83022_)) : this.forNonSwappedIndexes(p_83017_);
+    public boolean forMergedIndexes(final IndexMerger.IndexConsumer consumer) {
+        return this.swap
+            ? this.forNonSwappedIndexes((firstIndex, secondIndex, resultIndex) -> consumer.merge(secondIndex, firstIndex, resultIndex))
+            : this.forNonSwappedIndexes(consumer);
     }
 
-    private boolean forNonSwappedIndexes(IndexMerger.IndexConsumer p_83024_) {
-        int i = this.lower.size();
+    private boolean forNonSwappedIndexes(final IndexMerger.IndexConsumer consumer) {
+        int lowerSize = this.lower.size();
 
-        for (int j = 0; j < i; j++) {
-            if (!p_83024_.merge(j, -1, j)) {
+        for (int i = 0; i < lowerSize; i++) {
+            if (!consumer.merge(i, -1, i)) {
                 return false;
             }
         }
 
-        int l = this.upper.size() - 1;
+        int upperSize = this.upper.size() - 1;
 
-        for (int k = 0; k < l; k++) {
-            if (!p_83024_.merge(i - 1, k, i + k)) {
+        for (int i = 0; i < upperSize; i++) {
+            if (!consumer.merge(lowerSize - 1, i, lowerSize + i)) {
                 return false;
             }
         }
@@ -45,8 +47,8 @@ public class NonOverlappingMerger extends AbstractDoubleList implements IndexMer
     }
 
     @Override
-    public double getDouble(int p_83026_) {
-        return p_83026_ < this.lower.size() ? this.lower.getDouble(p_83026_) : this.upper.getDouble(p_83026_ - this.lower.size());
+    public double getDouble(final int index) {
+        return index < this.lower.size() ? this.lower.getDouble(index) : this.upper.getDouble(index - this.lower.size());
     }
 
     @Override

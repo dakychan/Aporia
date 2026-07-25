@@ -33,44 +33,44 @@ import org.slf4j.Logger;
 public final class TypedEntityData<IdType> implements TooltipProvider {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String TYPE_TAG = "id";
-    final IdType type;
-    final CompoundTag tag;
+    private final IdType type;
+    private final CompoundTag tag;
 
-    public static <T> Codec<TypedEntityData<T>> codec(final Codec<T> p_429781_) {
+    public static <T> Codec<TypedEntityData<T>> codec(final Codec<T> typeCodec) {
         return new Codec<TypedEntityData<T>>() {
             @Override
-            public <V> DataResult<Pair<TypedEntityData<T>, V>> decode(DynamicOps<V> p_422773_, V p_425689_) {
+            public <V> DataResult<Pair<TypedEntityData<T>, V>> decode(final DynamicOps<V> ops, final V input) {
                 return CustomData.COMPOUND_TAG_CODEC
-                    .decode(p_422773_, p_425689_)
+                    .decode(ops, input)
                     .flatMap(
-                        p_449827_ -> {
-                            CompoundTag compoundtag = p_449827_.getFirst().copy();
-                            Tag tag = compoundtag.remove("id");
-                            return tag == null
-                                ? DataResult.error(() -> "Expected 'id' field in " + p_425689_)
-                                : p_429781_.parse(asNbtOps((DynamicOps<T>)p_422773_), tag)
-                                    .map(p_449823_ -> Pair.of((TypedEntityData<T>)(new TypedEntityData<>(p_449823_, compoundtag)), (V)p_449827_.getSecond()));
+                        pair -> {
+                            CompoundTag tagWithoutType = pair.getFirst().copy();
+                            Tag typeTag = tagWithoutType.remove("id");
+                            return typeTag == null
+                                ? DataResult.error(() -> "Expected 'id' field in " + input)
+                                : typeCodec.parse(asNbtOps((DynamicOps<T>)ops), typeTag)
+                                    .map(type -> Pair.of((TypedEntityData<T>)(new TypedEntityData<>(type, tagWithoutType)), (V)pair.getSecond()));
                         }
                     );
             }
 
-            public <V> DataResult<V> encode(TypedEntityData<T> p_427035_, DynamicOps<V> p_430611_, V p_427633_) {
-                return p_429781_.encodeStart(asNbtOps((DynamicOps<T>)p_430611_), p_427035_.type).flatMap(p_424159_ -> {
-                    CompoundTag compoundtag = p_427035_.tag.copy();
-                    compoundtag.put("id", p_424159_);
-                    return CustomData.COMPOUND_TAG_CODEC.encode(compoundtag, p_430611_, p_427633_);
+            public <V> DataResult<V> encode(final TypedEntityData<T> input, final DynamicOps<V> ops, final V prefix) {
+                return typeCodec.encodeStart(asNbtOps((DynamicOps<T>)ops), input.type).flatMap(typeTag -> {
+                    CompoundTag tag = input.tag.copy();
+                    tag.put("id", typeTag);
+                    return CustomData.COMPOUND_TAG_CODEC.encode(tag, ops, prefix);
                 });
             }
 
-            private static <T> DynamicOps<Tag> asNbtOps(DynamicOps<T> p_427526_) {
-                return (DynamicOps<Tag>)(p_427526_ instanceof RegistryOps<T> registryops ? registryops.withParent(NbtOps.INSTANCE) : NbtOps.INSTANCE);
+            private static <T> DynamicOps<Tag> asNbtOps(final DynamicOps<T> ops) {
+                return ops instanceof RegistryOps<T> registryOps ? registryOps.withParent(NbtOps.INSTANCE) : NbtOps.INSTANCE;
             }
         };
     }
 
-    public static <B extends ByteBuf, T> StreamCodec<B, TypedEntityData<T>> streamCodec(StreamCodec<B, T> p_428134_) {
+    public static <B extends ByteBuf, T> StreamCodec<B, TypedEntityData<T>> streamCodec(final StreamCodec<B, T> typeCodec) {
         return StreamCodec.composite(
-            p_428134_,
+            typeCodec,
             (Function<TypedEntityData<T>, T>)(TypedEntityData::type),
             ByteBufCodecs.COMPOUND_TAG,
             TypedEntityData::tag,
@@ -78,22 +78,22 @@ public final class TypedEntityData<IdType> implements TooltipProvider {
         );
     }
 
-    TypedEntityData(IdType p_430628_, CompoundTag p_431545_) {
-        this.type = p_430628_;
-        this.tag = stripId(p_431545_);
+    private TypedEntityData(final IdType type, final CompoundTag data) {
+        this.type = type;
+        this.tag = stripId(data);
     }
 
-    public static <T> TypedEntityData<T> of(T p_430418_, CompoundTag p_423511_) {
-        return new TypedEntityData<>(p_430418_, p_423511_);
+    public static <T> TypedEntityData<T> of(final T type, final CompoundTag data) {
+        return new TypedEntityData<>(type, data);
     }
 
-    private static CompoundTag stripId(CompoundTag p_427219_) {
-        if (p_427219_.contains("id")) {
-            CompoundTag compoundtag = p_427219_.copy();
-            compoundtag.remove("id");
-            return compoundtag;
+    private static CompoundTag stripId(final CompoundTag tag) {
+        if (tag.contains("id")) {
+            CompoundTag copy = tag.copy();
+            copy.remove("id");
+            return copy;
         } else {
-            return p_427219_;
+            return tag;
         }
     }
 
@@ -101,18 +101,16 @@ public final class TypedEntityData<IdType> implements TooltipProvider {
         return this.type;
     }
 
-    public boolean contains(String p_422813_) {
-        return this.tag.contains(p_422813_);
+    public boolean contains(final String name) {
+        return this.tag.contains(name);
     }
 
     @Override
-    public boolean equals(Object p_431357_) {
-        if (p_431357_ == this) {
+    public boolean equals(final Object obj) {
+        if (obj == this) {
             return true;
         } else {
-            return !(p_431357_ instanceof TypedEntityData<?> typedentitydata)
-                ? false
-                : this.type == typedentitydata.type && this.tag.equals(typedentitydata.tag);
+            return !(obj instanceof TypedEntityData<?> customData) ? false : this.type == customData.type && this.tag.equals(customData.tag);
         }
     }
 
@@ -126,46 +124,43 @@ public final class TypedEntityData<IdType> implements TooltipProvider {
         return this.type + " " + this.tag;
     }
 
-    public void loadInto(Entity p_428590_) {
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(p_428590_.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_428590_.registryAccess());
-            p_428590_.saveWithoutId(tagvalueoutput);
-            CompoundTag compoundtag = tagvalueoutput.buildResult();
-            UUID uuid = p_428590_.getUUID();
-            compoundtag.merge(this.getUnsafe());
-            p_428590_.load(TagValueInput.create(problemreporter$scopedcollector, p_428590_.registryAccess(), compoundtag));
-            p_428590_.setUUID(uuid);
+    public void loadInto(final Entity entity) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, entity.registryAccess());
+            entity.saveWithoutId(output);
+            CompoundTag entityData = output.buildResult();
+            UUID uuid = entity.getUUID();
+            entityData.merge(this.getUnsafe());
+            entity.load(TagValueInput.create(reporter, entity.registryAccess(), entityData));
+            entity.setUUID(uuid);
         }
     }
 
-    public boolean loadInto(BlockEntity p_428879_, HolderLookup.Provider p_424039_) {
-        boolean $$6;
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(p_428879_.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_424039_);
-            p_428879_.saveCustomOnly(tagvalueoutput);
-            CompoundTag compoundtag = tagvalueoutput.buildResult();
-            CompoundTag compoundtag1 = compoundtag.copy();
-            compoundtag.merge(this.getUnsafe());
-            if (!compoundtag.equals(compoundtag1)) {
+    public boolean loadInto(final BlockEntity blockEntity, final HolderLookup.Provider registries) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(blockEntity.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, registries);
+            blockEntity.saveCustomOnly(output);
+            CompoundTag entityTag = output.buildResult();
+            CompoundTag oldTag = entityTag.copy();
+            entityTag.merge(this.getUnsafe());
+            if (!entityTag.equals(oldTag)) {
                 try {
-                    p_428879_.loadCustomOnly(TagValueInput.create(problemreporter$scopedcollector, p_424039_, compoundtag));
-                    p_428879_.setChanged();
+                    blockEntity.loadCustomOnly(TagValueInput.create(reporter, registries, entityTag));
+                    blockEntity.setChanged();
                     return true;
-                } catch (Exception exception1) {
-                    LOGGER.warn("Failed to apply custom data to block entity at {}", p_428879_.getBlockPos(), exception1);
+                } catch (Exception e) {
+                    LOGGER.warn("Failed to apply custom data to block entity at {}", blockEntity.getBlockPos(), e);
 
                     try {
-                        p_428879_.loadCustomOnly(TagValueInput.create(problemreporter$scopedcollector.forChild(() -> "(rollback)"), p_424039_, compoundtag1));
-                    } catch (Exception exception) {
-                        LOGGER.warn("Failed to rollback block entity at {} after failure", p_428879_.getBlockPos(), exception);
+                        blockEntity.loadCustomOnly(TagValueInput.create(reporter.forChild(() -> "(rollback)"), registries, oldTag));
+                    } catch (Exception e2) {
+                        LOGGER.warn("Failed to rollback block entity at {} after failure", blockEntity.getBlockPos(), e2);
                     }
                 }
             }
 
-            $$6 = false;
+            return false;
         }
-
-        return $$6;
     }
 
     private CompoundTag tag() {
@@ -182,11 +177,13 @@ public final class TypedEntityData<IdType> implements TooltipProvider {
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_423064_, Consumer<Component> p_427900_, TooltipFlag p_426496_, DataComponentGetter p_426173_) {
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
         if (this.type.getClass() == EntityType.class) {
-            EntityType<?> entitytype = (EntityType<?>)this.type;
-            if (p_423064_.isPeaceful() && !entitytype.isAllowedInPeaceful()) {
-                p_427900_.accept(Component.translatable("item.spawn_egg.peaceful").withStyle(ChatFormatting.RED));
+            EntityType<?> type = (EntityType<?>)this.type;
+            if (context.isPeaceful() && !type.isAllowedInPeaceful()) {
+                consumer.accept(Component.translatable("item.spawn_egg.peaceful").withStyle(ChatFormatting.RED));
             }
         }
     }

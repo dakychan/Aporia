@@ -13,12 +13,12 @@ public record ClientboundPlayerInfoRemovePacket(List<UUID> profileIds) implement
         ClientboundPlayerInfoRemovePacket::write, ClientboundPlayerInfoRemovePacket::new
     );
 
-    private ClientboundPlayerInfoRemovePacket(FriendlyByteBuf p_248744_) {
-        this(p_248744_.readList(UUIDUtil.STREAM_CODEC));
+    private ClientboundPlayerInfoRemovePacket(final FriendlyByteBuf input) {
+        this(input.readList(UUIDUtil.STREAM_CODEC));
     }
 
-    private void write(FriendlyByteBuf p_249263_) {
-        p_249263_.writeCollection(this.profileIds, UUIDUtil.STREAM_CODEC);
+    private void write(final FriendlyByteBuf output) {
+        output.writeCollection(this.profileIds, UUIDUtil.STREAM_CODEC);
     }
 
     @Override
@@ -26,7 +26,7 @@ public record ClientboundPlayerInfoRemovePacket(List<UUID> profileIds) implement
         return GamePacketTypes.CLIENTBOUND_PLAYER_INFO_REMOVE;
     }
 
-    public void handle(ClientGamePacketListener p_250111_) {
-        p_250111_.handlePlayerInfoRemove(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handlePlayerInfoRemove(this);
     }
 }

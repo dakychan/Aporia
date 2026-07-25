@@ -7,12 +7,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 
 public class Boat extends AbstractBoat {
-    public Boat(EntityType<? extends Boat> p_451130_, Level p_457363_, Supplier<Item> p_460270_) {
-        super(p_451130_, p_457363_, p_460270_);
+    public Boat(final EntityType<? extends Boat> type, final Level level, final Supplier<Item> dropItem) {
+        super(type, level, dropItem);
     }
 
     @Override
-    protected double rideHeight(EntityDimensions p_450287_) {
-        return p_450287_.height() / 3.0F;
+    protected double rideHeight(final EntityDimensions dimensions) {
+        return dimensions.height() / 3.0F;
     }
 }

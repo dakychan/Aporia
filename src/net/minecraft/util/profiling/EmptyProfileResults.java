@@ -11,12 +11,12 @@ public class EmptyProfileResults implements ProfileResults {
     }
 
     @Override
-    public List<ResultField> getTimes(String p_18448_) {
+    public List<ResultField> getTimes(final String path) {
         return Collections.emptyList();
     }
 
     @Override
-    public boolean saveResults(Path p_145937_) {
+    public boolean saveResults(final Path file) {
         return false;
     }
 

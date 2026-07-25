@@ -3,17 +3,14 @@ package net.minecraft.client.gui.components.toasts;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class TutorialToast implements Toast {
     private static final Identifier BACKGROUND_SPRITE = Identifier.withDefaultNamespace("toast/tutorial");
     public static final int PROGRESS_BAR_WIDTH = 154;
@@ -34,20 +31,27 @@ public class TutorialToast implements Toast {
     private final boolean progressable;
     private final int timeToDisplayMs;
 
-    public TutorialToast(Font p_375994_, TutorialToast.Icons p_94958_, Component p_94959_, @Nullable Component p_94960_, boolean p_94961_, int p_378192_) {
-        this.icon = p_94958_;
+    public TutorialToast(
+        final Font font,
+        final TutorialToast.Icons icon,
+        final Component title,
+        final @Nullable Component message,
+        final boolean progressable,
+        final int timeToDisplayMs
+    ) {
+        this.icon = icon;
         this.lines = new ArrayList<>(2);
-        this.lines.addAll(p_375994_.split(p_94959_.copy().withColor(-11534256), 126));
-        if (p_94960_ != null) {
-            this.lines.addAll(p_375994_.split(p_94960_, 126));
+        this.lines.addAll(font.split(title.copy().withColor(-11534256), 126));
+        if (message != null) {
+            this.lines.addAll(font.split(message, 126));
         }
 
-        this.progressable = p_94961_;
-        this.timeToDisplayMs = p_378192_;
+        this.progressable = progressable;
+        this.timeToDisplayMs = timeToDisplayMs;
     }
 
-    public TutorialToast(Font p_376611_, TutorialToast.Icons p_361346_, Component p_369759_, @Nullable Component p_363508_, boolean p_369872_) {
-        this(p_376611_, p_361346_, p_369759_, p_363508_, p_369872_, 0);
+    public TutorialToast(final Font font, final TutorialToast.Icons icon, final Component title, final @Nullable Component message, final boolean progressable) {
+        this(font, icon, title, message, progressable, 0);
     }
 
     @Override
@@ -56,17 +60,17 @@ public class TutorialToast implements Toast {
     }
 
     @Override
-    public void update(ToastManager p_369846_, long p_364600_) {
+    public void update(final ToastManager manager, final long fullyVisibleForMs) {
         if (this.timeToDisplayMs > 0) {
-            this.progress = Math.min((float)p_364600_ / this.timeToDisplayMs, 1.0F);
+            this.progress = Math.min((float)fullyVisibleForMs / this.timeToDisplayMs, 1.0F);
             this.smoothedProgress = this.progress;
-            this.lastSmoothingTime = p_364600_;
-            if (p_364600_ > this.timeToDisplayMs) {
+            this.lastSmoothingTime = fullyVisibleForMs;
+            if (fullyVisibleForMs > this.timeToDisplayMs) {
                 this.hide();
             }
         } else if (this.progressable) {
-            this.smoothedProgress = Mth.clampedLerp((float)(p_364600_ - this.lastSmoothingTime) / 100.0F, this.smoothedProgress, this.progress);
-            this.lastSmoothingTime = p_364600_;
+            this.smoothedProgress = Mth.clampedLerp((float)(fullyVisibleForMs - this.lastSmoothingTime) / 100.0F, this.smoothedProgress, this.progress);
+            this.lastSmoothingTime = fullyVisibleForMs;
         }
     }
 
@@ -80,28 +84,28 @@ public class TutorialToast implements Toast {
     }
 
     @Override
-    public void render(GuiGraphics p_283197_, Font p_365679_, long p_281902_) {
-        int i = this.height();
-        p_283197_.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_SPRITE, 0, 0, this.width(), i);
-        this.icon.render(p_283197_, 6, 6);
-        int j = this.lines.size() * 11;
-        int k = 7 + (this.contentHeight() - j) / 2;
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final Font font, final long fullyVisibleForMs) {
+        int height = this.height();
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BACKGROUND_SPRITE, 0, 0, this.width(), height);
+        this.icon.extractRenderState(graphics, 6, 6);
+        int textHeight = this.lines.size() * 11;
+        int textTop = 7 + (this.contentHeight() - textHeight) / 2;
 
-        for (int l = 0; l < this.lines.size(); l++) {
-            p_283197_.drawString(p_365679_, this.lines.get(l), 30, k + l * 11, -16777216, false);
+        for (int i = 0; i < this.lines.size(); i++) {
+            graphics.text(font, this.lines.get(i), 30, textTop + i * 11, -16777216, false);
         }
 
         if (this.progressable) {
-            int j1 = i - 4;
-            p_283197_.fill(3, j1, 157, j1 + 1, -1);
-            int i1;
+            int progressBarY = height - 4;
+            graphics.fill(3, progressBarY, 157, progressBarY + 1, -1);
+            int col;
             if (this.progress >= this.smoothedProgress) {
-                i1 = -16755456;
+                col = -16755456;
             } else {
-                i1 = -11206656;
+                col = -11206656;
             }
 
-            p_283197_.fill(3, j1, (int)(3.0F + 154.0F * this.smoothedProgress), j1 + 1, i1);
+            graphics.fill(3, progressBarY, (int)(3.0F + 154.0F * this.smoothedProgress), progressBarY + 1, col);
         }
     }
 
@@ -109,12 +113,11 @@ public class TutorialToast implements Toast {
         this.visibility = Toast.Visibility.HIDE;
     }
 
-    public void updateProgress(float p_94963_) {
-        this.progress = p_94963_;
+    public void updateProgress(final float progress) {
+        this.progress = progress;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Icons {
+        public enum Icons {
         MOVEMENT_KEYS(Identifier.withDefaultNamespace("toast/movement_keys")),
         MOUSE(Identifier.withDefaultNamespace("toast/mouse")),
         TREE(Identifier.withDefaultNamespace("toast/tree")),
@@ -125,12 +128,12 @@ public class TutorialToast implements Toast {
 
         private final Identifier sprite;
 
-        private Icons(final Identifier p_455991_) {
-            this.sprite = p_455991_;
+        Icons(final Identifier sprite) {
+            this.sprite = sprite;
         }
 
-        public void render(GuiGraphics p_282818_, int p_283064_, int p_282765_) {
-            p_282818_.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, p_283064_, p_282765_, 20, 20);
+        public void extractRenderState(final GuiGraphicsExtractor graphics, final int x, final int y) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, x, y, 20, 20);
         }
     }
 }

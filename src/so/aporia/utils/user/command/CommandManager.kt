@@ -52,6 +52,6 @@ object CommandManager {
     @JvmStatic
     fun chat(text: String) {
         if (PanicSystem.INSTANCE.isPanicked) return
-        mc.player?.displayClientMessage(Component.literal(text), false)
+        mc.player?.sendSystemMessage(Component.literal(text))
     }
 }

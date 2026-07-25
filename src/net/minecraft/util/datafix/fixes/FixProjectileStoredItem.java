@@ -16,18 +16,18 @@ import net.minecraft.util.datafix.ExtraDataFixUtils;
 public class FixProjectileStoredItem extends DataFix {
     private static final String EMPTY_POTION = "minecraft:empty";
 
-    public FixProjectileStoredItem(Schema p_310923_) {
-        super(p_310923_, true);
+    public FixProjectileStoredItem(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ENTITY);
-        Type<?> type1 = this.getOutputSchema().getType(References.ENTITY);
+        Type<?> inputEntityType = this.getInputSchema().getType(References.ENTITY);
+        Type<?> outputEntityType = this.getOutputSchema().getType(References.ENTITY);
         return this.fixTypeEverywhereTyped(
             "Fix AbstractArrow item type",
-            type,
-            type1,
+            inputEntityType,
+            outputEntityType,
             ExtraDataFixUtils.chainAllFilters(
                 this.fixChoice("minecraft:trident", FixProjectileStoredItem::castUnchecked),
                 this.fixChoice("minecraft:arrow", FixProjectileStoredItem::fixArrow),
@@ -36,42 +36,41 @@ public class FixProjectileStoredItem extends DataFix {
         );
     }
 
-    private Function<Typed<?>, Typed<?>> fixChoice(String p_312752_, FixProjectileStoredItem.SubFixer<?> p_310778_) {
-        Type<?> type = this.getInputSchema().getChoiceType(References.ENTITY, p_312752_);
-        Type<?> type1 = this.getOutputSchema().getChoiceType(References.ENTITY, p_312752_);
-        return fixChoiceCap(p_312752_, p_310778_, type, type1);
+    private Function<Typed<?>, Typed<?>> fixChoice(final String entityName, final FixProjectileStoredItem.SubFixer<?> fixer) {
+        Type<?> inputEntityChoiceType = this.getInputSchema().getChoiceType(References.ENTITY, entityName);
+        Type<?> outputEntityChoiceType = this.getOutputSchema().getChoiceType(References.ENTITY, entityName);
+        return fixChoiceCap(entityName, fixer, inputEntityChoiceType, outputEntityChoiceType);
     }
 
     private static <T> Function<Typed<?>, Typed<?>> fixChoiceCap(
-        String p_312294_, FixProjectileStoredItem.SubFixer<?> p_310164_, Type<?> p_310703_, Type<T> p_312528_
+        final String entityName, final FixProjectileStoredItem.SubFixer<?> fixer, final Type<?> inputEntityChoiceType, final Type<T> outputEntityChoiceType
     ) {
-        OpticFinder<?> opticfinder = DSL.namedChoice(p_312294_, p_310703_);
-        return p_313205_ -> p_313205_.updateTyped(opticfinder, p_312528_, p_312567_ -> p_310164_.fix((Typed)p_312567_, (Type)p_312528_));
+        OpticFinder<?> entityF = DSL.namedChoice(entityName, inputEntityChoiceType);
+        FixProjectileStoredItem.SubFixer<T> typedFixer = (FixProjectileStoredItem.SubFixer<T>)fixer;
+        return input -> input.updateTyped(entityF, outputEntityChoiceType, typed -> typedFixer.fix(typed, outputEntityChoiceType));
     }
 
-    private static <T> Typed<T> fixArrow(Typed<?> p_312190_, Type<T> p_311775_) {
-        return Util.writeAndReadTypedOrThrow(p_312190_, p_311775_, p_312479_ -> p_312479_.set("item", createItemStack(p_312479_, getArrowType(p_312479_))));
+    private static <T> Typed<T> fixArrow(final Typed<?> typed, final Type<T> outputType) {
+        return Util.writeAndReadTypedOrThrow(typed, outputType, input -> input.set("item", createItemStack(input, getArrowType(input))));
     }
 
-    private static String getArrowType(Dynamic<?> p_311918_) {
-        return p_311918_.get("Potion").asString("minecraft:empty").equals("minecraft:empty") ? "minecraft:arrow" : "minecraft:tipped_arrow";
+    private static String getArrowType(final Dynamic<?> input) {
+        return input.get("Potion").asString("minecraft:empty").equals("minecraft:empty") ? "minecraft:arrow" : "minecraft:tipped_arrow";
     }
 
-    private static <T> Typed<T> fixSpectralArrow(Typed<?> p_311496_, Type<T> p_311551_) {
-        return Util.writeAndReadTypedOrThrow(p_311496_, p_311551_, p_310800_ -> p_310800_.set("item", createItemStack(p_310800_, "minecraft:spectral_arrow")));
+    private static <T> Typed<T> fixSpectralArrow(final Typed<?> typed, final Type<T> outputType) {
+        return Util.writeAndReadTypedOrThrow(typed, outputType, input -> input.set("item", createItemStack(input, "minecraft:spectral_arrow")));
     }
 
-    private static Dynamic<?> createItemStack(Dynamic<?> p_310249_, String p_312956_) {
-        return p_310249_.createMap(
-            ImmutableMap.of(p_310249_.createString("id"), p_310249_.createString(p_312956_), p_310249_.createString("Count"), p_310249_.createInt(1))
-        );
+    private static Dynamic<?> createItemStack(final Dynamic<?> input, final String itemName) {
+        return input.createMap(ImmutableMap.of(input.createString("id"), input.createString(itemName), input.createString("Count"), input.createInt(1)));
     }
 
-    private static <T> Typed<T> castUnchecked(Typed<?> p_310006_, Type<T> p_312989_) {
-        return new Typed<>(p_312989_, p_310006_.getOps(), (T)p_310006_.getValue());
+    private static <T> Typed<T> castUnchecked(final Typed<?> input, final Type<T> outputType) {
+        return new Typed<>(outputType, input.getOps(), (T)input.getValue());
     }
 
-    interface SubFixer<F> {
-        Typed<F> fix(Typed<?> p_309643_, Type<F> p_311884_);
+    private interface SubFixer<F> {
+        Typed<F> fix(final Typed<?> input, final Type<F> outputType);
     }
 }

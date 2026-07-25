@@ -1,6 +1,6 @@
 package net.minecraft.client.particle;
 
-import com.google.common.collect.EvictingQueue;
+import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.Queue;
 import net.minecraft.CrashReport;
@@ -8,19 +8,17 @@ import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.state.ParticleGroupRenderState;
-import net.minecraft.core.particles.ParticleLimit;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.renderer.state.level.ParticleGroupRenderState;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class ParticleGroup<P extends Particle> {
     private static final int MAX_PARTICLES = 16384;
+    private static final int RESERVOIR_SIZE = 4096;
+    private static final int RESERVOIR_START = 12288;
     protected final ParticleEngine engine;
-    protected final Queue<P> particles = EvictingQueue.create(16384);
+    protected final Queue<P> particles = new ArrayDeque<>(16384);
 
-    public ParticleGroup(ParticleEngine p_427246_) {
-        this.engine = p_427246_;
+    public ParticleGroup(final ParticleEngine engine) {
+        this.engine = engine;
     }
 
     public boolean isEmpty() {
@@ -32,39 +30,48 @@ public abstract class ParticleGroup<P extends Particle> {
             Iterator<P> iterator = this.particles.iterator();
 
             while (iterator.hasNext()) {
-                P p = iterator.next();
-                this.tickParticle(p);
-                if (!p.isAlive()) {
-                    p.getParticleLimit().ifPresent(p_427352_ -> this.engine.updateCount(p_427352_, -1));
+                P particle = iterator.next();
+                this.tickParticle(particle);
+                if (!particle.isAlive()) {
+                    particle.getParticleLimit().ifPresent(options -> this.engine.updateCount(options, -1));
                     iterator.remove();
                 }
             }
         }
     }
 
-    private void tickParticle(Particle p_423907_) {
+    private void tickParticle(final Particle particle) {
         try {
-            p_423907_.tick();
-        } catch (Throwable throwable) {
-            CrashReport crashreport = CrashReport.forThrowable(throwable, "Ticking Particle");
-            CrashReportCategory crashreportcategory = crashreport.addCategory("Particle being ticked");
-            crashreportcategory.setDetail("Particle", p_423907_::toString);
-            crashreportcategory.setDetail("Particle Type", p_423907_.getGroup()::toString);
-            throw new ReportedException(crashreport);
+            particle.tick();
+        } catch (Throwable t) {
+            CrashReport report = CrashReport.forThrowable(t, "Ticking Particle");
+            CrashReportCategory category = report.addCategory("Particle being ticked");
+            category.setDetail("Particle", particle::toString);
+            category.setDetail("Particle Type", particle.getGroup()::toString);
+            throw new ReportedException(report);
         }
     }
 
-    public void add(Particle p_425439_) {
-        this.particles.add((P)p_425439_);
+    public boolean add(final Particle particle) {
+        int currentSize = this.particles.size();
+        if (currentSize >= 16384) {
+            return false;
+        }
+
+        if (currentSize >= 12288) {
+            float freeSpace = (16384 - currentSize) / 4096.0F;
+            if (this.engine.getRandom().nextFloat() >= freeSpace * freeSpace) {
+                return false;
+            }
+        }
+
+        this.particles.add((P)particle);
+        return true;
     }
 
     public int size() {
         return this.particles.size();
     }
 
-    public abstract ParticleGroupRenderState extractRenderState(Frustum p_423731_, Camera p_431031_, float p_427687_);
-
-    public Queue<P> getAll() {
-        return this.particles;
-    }
+    public abstract ParticleGroupRenderState extractRenderState(Frustum frustum, Camera camera, float partialTickTime);
 }

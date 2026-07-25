@@ -8,29 +8,29 @@ import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugEntryLocalDifficulty implements DebugScreenEntry {
     @Override
-    public void display(DebugScreenDisplayer p_422323_, @Nullable Level p_426366_, @Nullable LevelChunk p_423491_, @Nullable LevelChunk p_431288_) {
+    public void display(
+        final DebugScreenDisplayer displayer,
+        final @Nullable Level serverOrClientLevel,
+        final @Nullable LevelChunk clientChunk,
+        final @Nullable LevelChunk serverChunk
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
         Entity entity = minecraft.getCameraEntity();
-        if (entity != null && p_431288_ != null && p_426366_ instanceof ServerLevel serverlevel) {
-            BlockPos $$8 = entity.blockPosition();
-            if (serverlevel.isInsideBuildHeight($$8.getY())) {
-                float f = serverlevel.getMoonBrightness($$8);
-                long i = p_431288_.getInhabitedTime();
-                DifficultyInstance difficultyinstance = new DifficultyInstance(serverlevel.getDifficulty(), serverlevel.getDayTime(), i, f);
-                p_422323_.addLine(
+        if (entity != null && serverChunk != null && serverOrClientLevel instanceof ServerLevel serverLevel) {
+            BlockPos feetPos = entity.blockPosition();
+            if (serverLevel.isInsideBuildHeight(feetPos.getY())) {
+                float moonBrightness = serverLevel.getMoonBrightness(feetPos);
+                long localTime = serverChunk.getInhabitedTime();
+                DifficultyInstance localDifficulty = new DifficultyInstance(
+                    serverLevel.getDifficulty(), serverLevel.getOverworldClockTime(), localTime, moonBrightness
+                );
+                displayer.addLine(
                     String.format(
-                        Locale.ROOT,
-                        "Local Difficulty: %.2f // %.2f (Day %d)",
-                        difficultyinstance.getEffectiveDifficulty(),
-                        difficultyinstance.getSpecialMultiplier(),
-                        serverlevel.getDayCount()
+                        Locale.ROOT, "Local Difficulty: %.2f // %.2f", localDifficulty.getEffectiveDifficulty(), localDifficulty.getSpecialMultiplier()
                     )
                 );
             }

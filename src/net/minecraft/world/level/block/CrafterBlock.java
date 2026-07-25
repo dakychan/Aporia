@@ -2,7 +2,7 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import java.util.Optional;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.FrontAndTop;
@@ -25,6 +25,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.CrafterBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -49,8 +50,8 @@ public class CrafterBlock extends BaseEntityBlock {
     private static final RecipeCache RECIPE_CACHE = new RecipeCache(10);
     private static final int CRAFTER_ADVANCEMENT_DIAMETER = 17;
 
-    public CrafterBlock(BlockBehaviour.Properties p_310228_) {
-        super(p_310228_);
+    public CrafterBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(ORIENTATION, FrontAndTop.NORTH_UP).setValue(TRIGGERED, false).setValue(CRAFTING, false));
     }
 
@@ -60,178 +61,187 @@ public class CrafterBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_309929_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_311332_, Level p_310277_, BlockPos p_312038_, Direction p_431367_) {
-        return p_310277_.getBlockEntity(p_312038_) instanceof CrafterBlockEntity crafterblockentity ? crafterblockentity.getRedstoneSignal() : 0;
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return level.getBlockEntity(pos) instanceof CrafterBlockEntity crafterBlockEntity ? crafterBlockEntity.getRedstoneSignal() : 0;
     }
 
     @Override
-    protected void neighborChanged(BlockState p_309741_, Level p_312714_, BlockPos p_310958_, Block p_313237_, @Nullable Orientation p_364282_, boolean p_309615_) {
-        boolean flag = p_312714_.hasNeighborSignal(p_310958_);
-        boolean flag1 = p_309741_.getValue(TRIGGERED);
-        BlockEntity blockentity = p_312714_.getBlockEntity(p_310958_);
-        if (flag && !flag1) {
-            p_312714_.scheduleTick(p_310958_, this, 4);
-            p_312714_.setBlock(p_310958_, p_309741_.setValue(TRIGGERED, true), 2);
-            this.setBlockEntityTriggered(blockentity, true);
-        } else if (!flag && flag1) {
-            p_312714_.setBlock(p_310958_, p_309741_.setValue(TRIGGERED, false).setValue(CRAFTING, false), 2);
-            this.setBlockEntityTriggered(blockentity, false);
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        boolean shouldTrigger = level.hasNeighborSignal(pos);
+        boolean isTriggered = state.getValue(TRIGGERED);
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (shouldTrigger && !isTriggered) {
+            level.scheduleTick(pos, this, 4);
+            level.setBlock(pos, state.setValue(TRIGGERED, true), 2);
+            this.setBlockEntityTriggered(blockEntity, true);
+        } else if (!shouldTrigger && isTriggered) {
+            level.setBlock(pos, state.setValue(TRIGGERED, false).setValue(CRAFTING, false), 2);
+            this.setBlockEntityTriggered(blockEntity, false);
         }
     }
 
     @Override
-    protected void tick(BlockState p_310321_, ServerLevel p_312701_, BlockPos p_311281_, RandomSource p_311092_) {
-        this.dispenseFrom(p_310321_, p_312701_, p_311281_);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        this.dispenseFrom(state, level, pos);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_310928_, BlockState p_311648_, BlockEntityType<T> p_310343_) {
-        return p_310928_.isClientSide() ? null : createTickerHelper(p_310343_, BlockEntityType.CRAFTER, CrafterBlockEntity::serverTick);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return level.isClientSide() ? null : createTickerHelper(type, BlockEntityTypes.CRAFTER, CrafterBlockEntity::serverTick);
     }
 
-    private void setBlockEntityTriggered(@Nullable BlockEntity p_312888_, boolean p_312611_) {
-        if (p_312888_ instanceof CrafterBlockEntity crafterblockentity) {
-            crafterblockentity.setTriggered(p_312611_);
+    private void setBlockEntityTriggered(final @Nullable BlockEntity blockEntity, final boolean triggered) {
+        if (blockEntity instanceof CrafterBlockEntity crafterBlockEntity) {
+            crafterBlockEntity.setTriggered(triggered);
         }
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_311818_, BlockState p_310225_) {
-        CrafterBlockEntity crafterblockentity = new CrafterBlockEntity(p_311818_, p_310225_);
-        crafterblockentity.setTriggered(p_310225_.hasProperty(TRIGGERED) && p_310225_.getValue(TRIGGERED));
-        return crafterblockentity;
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        CrafterBlockEntity crafterBlockEntity = new CrafterBlockEntity(worldPosition, blockState);
+        crafterBlockEntity.setTriggered(blockState.hasProperty(TRIGGERED) && blockState.getValue(TRIGGERED));
+        return crafterBlockEntity;
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_311294_) {
-        Direction direction = p_311294_.getNearestLookingDirection().getOpposite();
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        Direction nearestLookingDirection = context.getNearestLookingDirection().getOpposite();
 
-        Direction direction1 = switch (direction) {
-            case DOWN -> p_311294_.getHorizontalDirection().getOpposite();
-            case UP -> p_311294_.getHorizontalDirection();
+        Direction verticalDirection = switch (nearestLookingDirection) {
+            case DOWN -> context.getHorizontalDirection().getOpposite();
+            case UP -> context.getHorizontalDirection();
             case NORTH, SOUTH, WEST, EAST -> Direction.UP;
         };
         return this.defaultBlockState()
-            .setValue(ORIENTATION, FrontAndTop.fromFrontAndTop(direction, direction1))
-            .setValue(TRIGGERED, p_311294_.getLevel().hasNeighborSignal(p_311294_.getClickedPos()));
+            .setValue(ORIENTATION, FrontAndTop.fromFrontAndTop(nearestLookingDirection, verticalDirection))
+            .setValue(TRIGGERED, context.getLevel().hasNeighborSignal(context.getClickedPos()));
     }
 
     @Override
-    public void setPlacedBy(Level p_311617_, BlockPos p_313069_, BlockState p_310230_, @Nullable LivingEntity p_310379_, ItemStack p_311227_) {
-        if (p_310230_.getValue(TRIGGERED)) {
-            p_311617_.scheduleTick(p_313069_, this, 4);
+    public void setPlacedBy(final Level level, final BlockPos pos, final BlockState state, final @Nullable LivingEntity by, final ItemStack itemStack) {
+        if (state.getValue(TRIGGERED)) {
+            level.scheduleTick(pos, this, 4);
         }
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_395375_, ServerLevel p_396974_, BlockPos p_391725_, boolean p_392912_) {
-        Containers.updateNeighboursAfterDestroy(p_395375_, p_396974_, p_391725_);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        Containers.updateNeighboursAfterDestroy(state, level, pos);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_309704_, Level p_312700_, BlockPos p_310945_, Player p_312953_, BlockHitResult p_309965_) {
-        if (!p_312700_.isClientSide() && p_312700_.getBlockEntity(p_310945_) instanceof CrafterBlockEntity crafterblockentity) {
-            p_312953_.openMenu(crafterblockentity);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof CrafterBlockEntity crafter) {
+            player.openMenu(crafter);
         }
 
         return InteractionResult.SUCCESS;
     }
 
-    protected void dispenseFrom(BlockState p_313036_, ServerLevel p_310451_, BlockPos p_310774_) {
-        if (p_310451_.getBlockEntity(p_310774_) instanceof CrafterBlockEntity crafterblockentity) {
-            CraftingInput craftinginput = crafterblockentity.asCraftInput();
-            Optional<RecipeHolder<CraftingRecipe>> optional = getPotentialResults(p_310451_, craftinginput);
-            if (optional.isEmpty()) {
-                p_310451_.levelEvent(1050, p_310774_, 0);
+    protected void dispenseFrom(final BlockState state, final ServerLevel level, final BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof CrafterBlockEntity blockEntity) {
+            CraftingInput var11 = blockEntity.asCraftInput();
+            Optional<RecipeHolder<CraftingRecipe>> recipe = getPotentialResults(level, var11);
+            if (recipe.isEmpty()) {
+                level.levelEvent(1050, pos, 0);
             } else {
-                RecipeHolder<CraftingRecipe> recipeholder = optional.get();
-                ItemStack itemstack = recipeholder.value().assemble(craftinginput, p_310451_.registryAccess());
-                if (itemstack.isEmpty()) {
-                    p_310451_.levelEvent(1050, p_310774_, 0);
+                RecipeHolder<CraftingRecipe> pickedRecipe = recipe.get();
+                ItemStack results = pickedRecipe.value().assemble(var11);
+                if (results.isEmpty()) {
+                    level.levelEvent(1050, pos, 0);
                 } else {
-                    crafterblockentity.setCraftingTicksRemaining(6);
-                    p_310451_.setBlock(p_310774_, p_313036_.setValue(CRAFTING, true), 2);
-                    itemstack.onCraftedBySystem(p_310451_);
-                    this.dispenseItem(p_310451_, p_310774_, crafterblockentity, itemstack, p_313036_, recipeholder);
+                    blockEntity.setCraftingTicksRemaining(6);
+                    level.setBlock(pos, state.setValue(CRAFTING, true), 2);
+                    results.onCraftedBySystem(level);
+                    this.dispenseItem(level, pos, blockEntity, results, state, pickedRecipe);
 
-                    for (ItemStack itemstack1 : recipeholder.value().getRemainingItems(craftinginput)) {
-                        if (!itemstack1.isEmpty()) {
-                            this.dispenseItem(p_310451_, p_310774_, crafterblockentity, itemstack1, p_313036_, recipeholder);
+                    for (ItemStack remainingItem : pickedRecipe.value().getRemainingItems(var11)) {
+                        if (!remainingItem.isEmpty()) {
+                            this.dispenseItem(level, pos, blockEntity, remainingItem, state, pickedRecipe);
                         }
                     }
 
-                    crafterblockentity.getItems().forEach(p_312802_ -> {
-                        if (!p_312802_.isEmpty()) {
-                            p_312802_.shrink(1);
+                    blockEntity.getItems().forEach(it -> {
+                        if (!it.isEmpty()) {
+                            it.shrink(1);
                         }
                     });
-                    crafterblockentity.setChanged();
+                    blockEntity.setChanged();
                 }
             }
         }
     }
 
-    public static Optional<RecipeHolder<CraftingRecipe>> getPotentialResults(ServerLevel p_367007_, CraftingInput p_342419_) {
-        return RECIPE_CACHE.get(p_367007_, p_342419_);
+    public static Optional<RecipeHolder<CraftingRecipe>> getPotentialResults(final ServerLevel level, final CraftingInput input) {
+        return RECIPE_CACHE.get(level, input);
     }
 
     private void dispenseItem(
-        ServerLevel p_336186_, BlockPos p_312358_, CrafterBlockEntity p_309887_, ItemStack p_310474_, BlockState p_310667_, RecipeHolder<?> p_329387_
+        final ServerLevel level,
+        final BlockPos pos,
+        final CrafterBlockEntity blockEntity,
+        final ItemStack results,
+        final BlockState blockState,
+        final RecipeHolder<?> recipe
     ) {
-        Direction direction = p_310667_.getValue(ORIENTATION).front();
-        Container container = HopperBlockEntity.getContainerAt(p_336186_, p_312358_.relative(direction));
-        ItemStack itemstack = p_310474_.copy();
-        if (container != null && (container instanceof CrafterBlockEntity || p_310474_.getCount() > container.getMaxStackSize(p_310474_))) {
-            while (!itemstack.isEmpty()) {
-                ItemStack itemstack2 = itemstack.copyWithCount(1);
-                ItemStack itemstack1 = HopperBlockEntity.addItem(p_309887_, container, itemstack2, direction.getOpposite());
-                if (!itemstack1.isEmpty()) {
+        Direction direction = blockState.getValue(ORIENTATION).front();
+        Container into = HopperBlockEntity.getContainerAt(level, pos.relative(direction));
+        ItemStack remaining = results.copy();
+        if (into != null && (into instanceof CrafterBlockEntity || results.getCount() > into.getMaxStackSize(results))) {
+            while (!remaining.isEmpty()) {
+                ItemStack copy = remaining.copyWithCount(1);
+                ItemStack itemStack = HopperBlockEntity.addItem(blockEntity, into, copy, direction.getOpposite());
+                if (!itemStack.isEmpty()) {
                     break;
                 }
 
-                itemstack.shrink(1);
+                remaining.shrink(1);
             }
-        } else if (container != null) {
-            while (!itemstack.isEmpty()) {
-                int i = itemstack.getCount();
-                itemstack = HopperBlockEntity.addItem(p_309887_, container, itemstack, direction.getOpposite());
-                if (i == itemstack.getCount()) {
+        } else if (into != null) {
+            while (!remaining.isEmpty()) {
+                int oldSize = remaining.getCount();
+                remaining = HopperBlockEntity.addItem(blockEntity, into, remaining, direction.getOpposite());
+                if (oldSize == remaining.getCount()) {
                     break;
                 }
             }
         }
 
-        if (!itemstack.isEmpty()) {
-            Vec3 vec3 = Vec3.atCenterOf(p_312358_);
-            Vec3 vec31 = vec3.relative(direction, 0.7);
-            DefaultDispenseItemBehavior.spawnItem(p_336186_, itemstack, 6, direction, vec31);
+        if (!remaining.isEmpty()) {
+            Vec3 centerPos = Vec3.atCenterOf(pos);
+            Vec3 itemSpawnOffset = centerPos.relative(direction, 0.7);
+            DefaultDispenseItemBehavior.spawnItem(level, remaining, 6, direction, itemSpawnOffset);
 
-            for (ServerPlayer serverplayer : p_336186_.getEntitiesOfClass(ServerPlayer.class, AABB.ofSize(vec3, 17.0, 17.0, 17.0))) {
-                CriteriaTriggers.CRAFTER_RECIPE_CRAFTED.trigger(serverplayer, p_329387_.id(), p_309887_.getItems());
+            for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, AABB.ofSize(centerPos, 17.0, 17.0, 17.0))) {
+                CriteriaTriggers.CRAFTER_RECIPE_CRAFTED.trigger(player, recipe.id(), blockEntity.getItems());
             }
 
-            p_336186_.levelEvent(1049, p_312358_, 0);
-            p_336186_.levelEvent(2010, p_312358_, direction.get3DDataValue());
+            level.levelEvent(1049, pos, 0);
+            level.levelEvent(2010, pos, direction.get3DDataValue());
         }
     }
 
     @Override
-    protected BlockState rotate(BlockState p_312403_, Rotation p_309910_) {
-        return p_312403_.setValue(ORIENTATION, p_309910_.rotation().rotate(p_312403_.getValue(ORIENTATION)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(ORIENTATION, rotation.rotation().rotate(state.getValue(ORIENTATION)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_310178_, Mirror p_311418_) {
-        return p_310178_.setValue(ORIENTATION, p_311418_.rotation().rotate(p_310178_.getValue(ORIENTATION)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.setValue(ORIENTATION, mirror.rotation().rotate(state.getValue(ORIENTATION)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_310076_) {
-        p_310076_.add(ORIENTATION, TRIGGERED, CRAFTING);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(ORIENTATION, TRIGGERED, CRAFTING);
     }
 }

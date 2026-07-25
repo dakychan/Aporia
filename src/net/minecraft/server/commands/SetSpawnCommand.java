@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import java.util.Collection;
 import java.util.Collections;
 import net.minecraft.commands.CommandSourceStack;
@@ -21,46 +20,46 @@ import net.minecraft.world.level.storage.LevelData;
 import net.minecraft.world.phys.Vec2;
 
 public class SetSpawnCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_138644_) {
-        p_138644_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("spawnpoint")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .executes(
-                    p_421354_ -> setSpawn(
-                        p_421354_.getSource(),
-                        Collections.singleton(p_421354_.getSource().getPlayerOrException()),
-                        BlockPos.containing(p_421354_.getSource().getPosition()),
+                    c -> setSpawn(
+                        c.getSource(),
+                        Collections.singleton(c.getSource().getPlayerOrException()),
+                        BlockPos.containing(c.getSource().getPosition()),
                         WorldCoordinates.ZERO_ROTATION
                     )
                 )
                 .then(
                     Commands.argument("targets", EntityArgument.players())
                         .executes(
-                            p_421361_ -> setSpawn(
-                                p_421361_.getSource(),
-                                EntityArgument.getPlayers(p_421361_, "targets"),
-                                BlockPos.containing(p_421361_.getSource().getPosition()),
+                            c -> setSpawn(
+                                c.getSource(),
+                                EntityArgument.getPlayers(c, "targets"),
+                                BlockPos.containing(c.getSource().getPosition()),
                                 WorldCoordinates.ZERO_ROTATION
                             )
                         )
                         .then(
                             Commands.argument("pos", BlockPosArgument.blockPos())
                                 .executes(
-                                    p_421348_ -> setSpawn(
-                                        p_421348_.getSource(),
-                                        EntityArgument.getPlayers(p_421348_, "targets"),
-                                        BlockPosArgument.getSpawnablePos(p_421348_, "pos"),
+                                    c -> setSpawn(
+                                        c.getSource(),
+                                        EntityArgument.getPlayers(c, "targets"),
+                                        BlockPosArgument.getSpawnablePos(c, "pos"),
                                         WorldCoordinates.ZERO_ROTATION
                                     )
                                 )
                                 .then(
                                     Commands.argument("rotation", RotationArgument.rotation())
                                         .executes(
-                                            p_421355_ -> setSpawn(
-                                                p_421355_.getSource(),
-                                                EntityArgument.getPlayers(p_421355_, "targets"),
-                                                BlockPosArgument.getSpawnablePos(p_421355_, "pos"),
-                                                RotationArgument.getRotation(p_421355_, "rotation")
+                                            c -> setSpawn(
+                                                c.getSource(),
+                                                EntityArgument.getPlayers(c, "targets"),
+                                                BlockPosArgument.getSpawnablePos(c, "pos"),
+                                                RotationArgument.getRotation(c, "rotation")
                                             )
                                         )
                                 )
@@ -69,40 +68,40 @@ public class SetSpawnCommand {
         );
     }
 
-    private static int setSpawn(CommandSourceStack p_138650_, Collection<ServerPlayer> p_138651_, BlockPos p_138652_, Coordinates p_430417_) {
-        ResourceKey<Level> resourcekey = p_138650_.getLevel().dimension();
-        Vec2 vec2 = p_430417_.getRotation(p_138650_);
-        float f = Mth.wrapDegrees(vec2.y);
-        float f1 = Mth.clamp(vec2.x, -90.0F, 90.0F);
+    private static int setSpawn(final CommandSourceStack source, final Collection<ServerPlayer> targets, final BlockPos pos, final Coordinates rotation) {
+        ResourceKey<Level> dimension = source.getLevel().dimension();
+        Vec2 rotationVector = rotation.getRotation(source);
+        float yaw = Mth.wrapDegrees(rotationVector.y);
+        float pitch = Mth.clamp(rotationVector.x, -90.0F, 90.0F);
 
-        for (ServerPlayer serverplayer : p_138651_) {
-            serverplayer.setRespawnPosition(new ServerPlayer.RespawnConfig(LevelData.RespawnData.of(resourcekey, p_138652_, f, f1), true), false);
+        for (ServerPlayer target : targets) {
+            target.setRespawnPosition(new ServerPlayer.RespawnConfig(LevelData.RespawnData.of(dimension, pos, yaw, pitch), true), false);
         }
 
-        String s = resourcekey.identifier().toString();
-        if (p_138651_.size() == 1) {
-            p_138650_.sendSuccess(
+        String dimensionName = dimension.identifier().toString();
+        if (targets.size() == 1) {
+            source.sendSuccess(
                 () -> Component.translatable(
                     "commands.spawnpoint.success.single",
-                    p_138652_.getX(),
-                    p_138652_.getY(),
-                    p_138652_.getZ(),
-                    f,
-                    f1,
-                    s,
-                    p_138651_.iterator().next().getDisplayName()
+                    pos.getX(),
+                    pos.getY(),
+                    pos.getZ(),
+                    yaw,
+                    pitch,
+                    dimensionName,
+                    targets.iterator().next().getDisplayName()
                 ),
                 true
             );
         } else {
-            p_138650_.sendSuccess(
+            source.sendSuccess(
                 () -> Component.translatable(
-                    "commands.spawnpoint.success.multiple", p_138652_.getX(), p_138652_.getY(), p_138652_.getZ(), f, f1, s, p_138651_.size()
+                    "commands.spawnpoint.success.multiple", pos.getX(), pos.getY(), pos.getZ(), yaw, pitch, dimensionName, targets.size()
                 ),
                 true
             );
         }
 
-        return p_138651_.size();
+        return targets.size();
     }
 }

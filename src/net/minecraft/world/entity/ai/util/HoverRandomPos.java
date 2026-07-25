@@ -7,29 +7,38 @@ import org.jspecify.annotations.Nullable;
 
 public class HoverRandomPos {
     public static @Nullable Vec3 getPos(
-        PathfinderMob p_148466_, int p_148467_, int p_148468_, double p_148469_, double p_148470_, float p_148471_, int p_148472_, int p_148473_
+        final PathfinderMob mob,
+        final int horizontalDist,
+        final int verticalDist,
+        final double xDir,
+        final double zDir,
+        final float maxXzRadiansDifference,
+        final int hoverMaxHeight,
+        final int hoverMinHeight
     ) {
-        boolean flag = GoalUtils.mobRestricted(p_148466_, p_148467_);
+        boolean restrict = GoalUtils.mobRestricted(mob, horizontalDist);
         return RandomPos.generateRandomPos(
-            p_148466_,
+            mob,
             () -> {
-                BlockPos blockpos = RandomPos.generateRandomDirectionWithinRadians(p_148466_.getRandom(), 0.0, p_148467_, p_148468_, 0, p_148469_, p_148470_, p_148471_);
-                if (blockpos == null) {
+                BlockPos direction = RandomPos.generateRandomDirectionWithinRadians(
+                    mob.getRandom(), 0.0, horizontalDist, verticalDist, 0, xDir, zDir, maxXzRadiansDifference
+                );
+                if (direction == null) {
                     return null;
-                } else {
-                    BlockPos blockpos1 = LandRandomPos.generateRandomPosTowardDirection(p_148466_, p_148467_, flag, blockpos);
-                    if (blockpos1 == null) {
-                        return null;
-                    } else {
-                        blockpos1 = RandomPos.moveUpToAboveSolid(
-                            blockpos1,
-                            p_148466_.getRandom().nextInt(p_148472_ - p_148473_ + 1) + p_148473_,
-                            p_148466_.level().getMaxY(),
-                            p_148486_ -> GoalUtils.isSolid(p_148466_, p_148486_)
-                        );
-                        return !GoalUtils.isWater(p_148466_, blockpos1) && !GoalUtils.hasMalus(p_148466_, blockpos1) ? blockpos1 : null;
-                    }
                 }
+
+                BlockPos pos = LandRandomPos.generateRandomPosTowardDirection(mob, horizontalDist, restrict, direction);
+                if (pos == null) {
+                    return null;
+                }
+
+                pos = RandomPos.moveUpToAboveSolid(
+                    pos,
+                    mob.getRandom().nextInt(hoverMaxHeight - hoverMinHeight + 1) + hoverMinHeight,
+                    mob.level().getMaxY(),
+                    blockPos -> GoalUtils.isSolid(mob, blockPos)
+                );
+                return !GoalUtils.isWater(mob, pos) && !GoalUtils.hasMalus(mob, pos) ? pos : null;
             }
         );
     }

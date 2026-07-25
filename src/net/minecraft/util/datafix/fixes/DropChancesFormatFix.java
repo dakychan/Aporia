@@ -3,7 +3,6 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.OptionalDynamic;
@@ -14,43 +13,43 @@ public class DropChancesFormatFix extends DataFix {
     private static final List<String> HAND_SLOT_NAMES = List.of("mainhand", "offhand");
     private static final float DEFAULT_CHANCE = 0.085F;
 
-    public DropChancesFormatFix(Schema p_395224_) {
-        super(p_395224_, false);
+    public DropChancesFormatFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
         return this.fixTypeEverywhereTyped(
-            "DropChancesFormatFix", this.getInputSchema().getType(References.ENTITY), p_392460_ -> p_392460_.update(DSL.remainderFinder(), p_395033_ -> {
-                List<Float> list = parseDropChances(p_395033_.get("ArmorDropChances"));
-                List<Float> list1 = parseDropChances(p_395033_.get("HandDropChances"));
-                float f = p_395033_.get("body_armor_drop_chance").asNumber().result().map(Number::floatValue).orElse(0.085F);
-                p_395033_ = p_395033_.remove("ArmorDropChances").remove("HandDropChances").remove("body_armor_drop_chance");
-                Dynamic<?> dynamic = p_395033_.emptyMap();
-                dynamic = addSlotChances(dynamic, list, ARMOR_SLOT_NAMES);
-                dynamic = addSlotChances(dynamic, list1, HAND_SLOT_NAMES);
-                if (f != 0.085F) {
-                    dynamic = dynamic.set("body", p_395033_.createFloat(f));
+            "DropChancesFormatFix", this.getInputSchema().getType(References.ENTITY), input -> input.update(DSL.remainderFinder(), remainder -> {
+                List<Float> armorDropChances = parseDropChances(remainder.get("ArmorDropChances"));
+                List<Float> handDropChances = parseDropChances(remainder.get("HandDropChances"));
+                float bodyArmorDropChance = remainder.get("body_armor_drop_chance").asNumber().result().map(Number::floatValue).orElse(0.085F);
+                remainder = remainder.remove("ArmorDropChances").remove("HandDropChances").remove("body_armor_drop_chance");
+                Dynamic<?> slotChances = remainder.emptyMap();
+                slotChances = addSlotChances(slotChances, armorDropChances, ARMOR_SLOT_NAMES);
+                slotChances = addSlotChances(slotChances, handDropChances, HAND_SLOT_NAMES);
+                if (bodyArmorDropChance != 0.085F) {
+                    slotChances = slotChances.set("body", remainder.createFloat(bodyArmorDropChance));
                 }
 
-                return !dynamic.equals(p_395033_.emptyMap()) ? p_395033_.set("drop_chances", dynamic) : p_395033_;
+                return !slotChances.equals(remainder.emptyMap()) ? remainder.set("drop_chances", slotChances) : remainder;
             })
         );
     }
 
-    private static Dynamic<?> addSlotChances(Dynamic<?> p_395257_, List<Float> p_392343_, List<String> p_396856_) {
-        for (int i = 0; i < p_396856_.size() && i < p_392343_.size(); i++) {
-            String s = p_396856_.get(i);
-            float f = p_392343_.get(i);
-            if (f != 0.085F) {
-                p_395257_ = p_395257_.set(s, p_395257_.createFloat(f));
+    private static Dynamic<?> addSlotChances(Dynamic<?> output, final List<Float> chances, final List<String> slotNames) {
+        for (int i = 0; i < slotNames.size() && i < chances.size(); i++) {
+            String slot = slotNames.get(i);
+            float chance = chances.get(i);
+            if (chance != 0.085F) {
+                output = output.set(slot, output.createFloat(chance));
             }
         }
 
-        return p_395257_;
+        return output;
     }
 
-    private static List<Float> parseDropChances(OptionalDynamic<?> p_391345_) {
-        return p_391345_.asStream().map(p_397948_ -> p_397948_.asFloat(0.085F)).toList();
+    private static List<Float> parseDropChances(final OptionalDynamic<?> value) {
+        return value.asStream().map(dynamic -> dynamic.asFloat(0.085F)).toList();
     }
 }

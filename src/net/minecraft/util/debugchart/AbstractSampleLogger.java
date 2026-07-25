@@ -4,35 +4,35 @@ public abstract class AbstractSampleLogger implements SampleLogger {
     protected final long[] defaults;
     protected final long[] sample;
 
-    protected AbstractSampleLogger(int p_330199_, long[] p_328152_) {
-        if (p_328152_.length != p_330199_) {
-            throw new IllegalArgumentException("defaults have incorrect length of " + p_328152_.length);
-        } else {
-            this.sample = new long[p_330199_];
-            this.defaults = p_328152_;
+    protected AbstractSampleLogger(final int dimensions, final long[] defaults) {
+        if (defaults.length != dimensions) {
+            throw new IllegalArgumentException("defaults have incorrect length of " + defaults.length);
         }
+
+        this.sample = new long[dimensions];
+        this.defaults = defaults;
     }
 
     @Override
-    public void logFullSample(long[] p_334735_) {
-        System.arraycopy(p_334735_, 0, this.sample, 0, p_334735_.length);
+    public void logFullSample(final long[] sample) {
+        System.arraycopy(sample, 0, this.sample, 0, sample.length);
         this.useSample();
         this.resetSample();
     }
 
     @Override
-    public void logSample(long p_328993_) {
-        this.sample[0] = p_328993_;
+    public void logSample(final long sample) {
+        this.sample[0] = sample;
         this.useSample();
         this.resetSample();
     }
 
     @Override
-    public void logPartialSample(long p_330576_, int p_334353_) {
-        if (p_334353_ >= 1 && p_334353_ < this.sample.length) {
-            this.sample[p_334353_] = p_330576_;
+    public void logPartialSample(final long sample, final int dimension) {
+        if (dimension >= 1 && dimension < this.sample.length) {
+            this.sample[dimension] = sample;
         } else {
-            throw new IndexOutOfBoundsException(p_334353_ + " out of bounds for dimensions " + this.sample.length);
+            throw new IndexOutOfBoundsException(dimension + " out of bounds for dimensions " + this.sample.length);
         }
     }
 

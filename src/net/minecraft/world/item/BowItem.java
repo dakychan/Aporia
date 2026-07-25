@@ -18,83 +18,89 @@ public class BowItem extends ProjectileWeaponItem {
     public static final int MAX_DRAW_DURATION = 20;
     public static final int DEFAULT_RANGE = 15;
 
-    public BowItem(Item.Properties p_40660_) {
-        super(p_40660_);
+    public BowItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public boolean releaseUsing(ItemStack p_40667_, Level p_40668_, LivingEntity p_40669_, int p_40670_) {
-        if (!(p_40669_ instanceof Player player)) {
-            return false;
-        } else {
-            ItemStack itemstack = player.getProjectile(p_40667_);
-            if (itemstack.isEmpty()) {
+    public boolean releaseUsing(final ItemStack itemStack, final Level level, final LivingEntity entity, final int remainingTime) {
+        if (entity instanceof Player player) {
+            ItemStack projectile = player.getProjectile(itemStack);
+            if (projectile.isEmpty()) {
                 return false;
-            } else {
-                int i = this.getUseDuration(p_40667_, p_40669_) - p_40670_;
-                float f = getPowerForTime(i);
-                if (f < 0.1) {
-                    return false;
-                } else {
-                    List<ItemStack> list = draw(p_40667_, itemstack, player);
-                    if (p_40668_ instanceof ServerLevel serverlevel && !list.isEmpty()) {
-                        this.shoot(serverlevel, player, player.getUsedItemHand(), p_40667_, list, f * 3.0F, 1.0F, f == 1.0F, null);
-                    }
-
-                    p_40668_.playSound(
-                        null,
-                        player.getX(),
-                        player.getY(),
-                        player.getZ(),
-                        SoundEvents.ARROW_SHOOT,
-                        SoundSource.PLAYERS,
-                        1.0F,
-                        1.0F / (p_40668_.getRandom().nextFloat() * 0.4F + 1.2F) + f * 0.5F
-                    );
-                    player.awardStat(Stats.ITEM_USED.get(this));
-                    return true;
-                }
             }
+
+            int timeHeld = this.getUseDuration(itemStack, entity) - remainingTime;
+            float pow = getPowerForTime(timeHeld);
+            if (pow < 0.1) {
+                return false;
+            }
+
+            List<ItemStack> firedProjectiles = draw(itemStack, projectile, player);
+            if (level instanceof ServerLevel serverLevel && !firedProjectiles.isEmpty()) {
+                this.shoot(serverLevel, player, player.getUsedItemHand(), itemStack, firedProjectiles, pow * 3.0F, 1.0F, pow == 1.0F, null);
+            }
+
+            level.playSound(
+                null,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                SoundEvents.ARROW_SHOOT,
+                SoundSource.PLAYERS,
+                1.0F,
+                1.0F / (level.getRandom().nextFloat() * 0.4F + 1.2F) + pow * 0.5F
+            );
+            player.awardStat(Stats.ITEM_USED.get(this));
+            return true;
+        } else {
+            return false;
         }
     }
 
     @Override
     protected void shootProjectile(
-        LivingEntity p_329327_, Projectile p_335269_, int p_331005_, float p_332731_, float p_332848_, float p_332058_, @Nullable LivingEntity p_335061_
+        final LivingEntity shooter,
+        final Projectile projectileEntity,
+        final int index,
+        final float power,
+        final float uncertainty,
+        final float angle,
+        final @Nullable LivingEntity targetOverrride
     ) {
-        p_335269_.shootFromRotation(p_329327_, p_329327_.getXRot(), p_329327_.getYRot() + p_332058_, 0.0F, p_332731_, p_332848_);
+        projectileEntity.shootFromRotation(shooter, shooter.getXRot(), shooter.getYRot() + angle, 0.0F, power, uncertainty);
     }
 
-    public static float getPowerForTime(int p_40662_) {
-        float f = p_40662_ / 20.0F;
-        f = (f * f + f * 2.0F) / 3.0F;
-        if (f > 1.0F) {
-            f = 1.0F;
+    public static float getPowerForTime(final int timeHeld) {
+        float pow = timeHeld / 20.0F;
+        pow = (pow * pow + pow * 2.0F) / 3.0F;
+        if (pow > 1.0F) {
+            pow = 1.0F;
         }
 
-        return f;
+        return pow;
     }
 
     @Override
-    public int getUseDuration(ItemStack p_40680_, LivingEntity p_344246_) {
+    public int getUseDuration(final ItemStack itemStack, final LivingEntity user) {
         return 72000;
     }
 
     @Override
-    public ItemUseAnimation getUseAnimation(ItemStack p_40678_) {
+    public ItemUseAnimation getUseAnimation(final ItemStack itemStack) {
         return ItemUseAnimation.BOW;
     }
 
     @Override
-    public InteractionResult use(Level p_40672_, Player p_40673_, InteractionHand p_40674_) {
-        ItemStack itemstack = p_40673_.getItemInHand(p_40674_);
-        boolean flag = !p_40673_.getProjectile(itemstack).isEmpty();
-        if (!p_40673_.hasInfiniteMaterials() && !flag) {
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        boolean foundProjectile = !player.getProjectile(itemStack).isEmpty();
+        if (!player.hasInfiniteMaterials() && !foundProjectile) {
             return InteractionResult.FAIL;
-        } else {
-            p_40673_.startUsingItem(p_40674_);
-            return InteractionResult.CONSUME;
         }
+
+        player.startUsingItem(hand);
+        return InteractionResult.CONSUME;
     }
 
     @Override

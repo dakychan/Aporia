@@ -4,14 +4,12 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LavaParticle extends SingleQuadParticle {
-    LavaParticle(ClientLevel p_107074_, double p_107075_, double p_107076_, double p_107077_, TextureAtlasSprite p_425968_) {
-        super(p_107074_, p_107075_, p_107076_, p_107077_, 0.0, 0.0, 0.0, p_425968_);
+    private LavaParticle(final ClientLevel level, final double x, final double y, final double z, final TextureAtlasSprite sprite) {
+        super(level, x, y, z, 0.0, 0.0, 0.0, sprite);
         this.gravity = 0.75F;
         this.friction = 0.999F;
         this.xd *= 0.8F;
@@ -28,50 +26,46 @@ public class LavaParticle extends SingleQuadParticle {
     }
 
     @Override
-    public int getLightColor(float p_107086_) {
-        int i = super.getLightColor(p_107086_);
-        int j = 240;
-        int k = i >> 16 & 0xFF;
-        return 240 | k << 16;
+    public int getLightCoords(final float a) {
+        return LightCoordsUtil.withBlock(super.getLightCoords(a), 15);
     }
 
     @Override
-    public float getQuadSize(float p_107089_) {
-        float f = (this.age + p_107089_) / this.lifetime;
-        return this.quadSize * (1.0F - f * f);
+    public float getQuadSize(final float a) {
+        float s = (this.age + a) / this.lifetime;
+        return this.quadSize * (1.0F - s * s);
     }
 
     @Override
     public void tick() {
         super.tick();
         if (!this.removed) {
-            float f = (float)this.age / this.lifetime;
-            if (this.random.nextFloat() > f) {
+            float odds = (float)this.age / this.lifetime;
+            if (this.random.nextFloat() > odds) {
                 this.level.addParticle(ParticleTypes.SMOKE, this.x, this.y, this.z, this.xd, this.yd, this.zd);
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider implements ParticleProvider<SimpleParticleType> {
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public Provider(SpriteSet p_107092_) {
-            this.sprite = p_107092_;
+        public Provider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_107103_,
-            ClientLevel p_107104_,
-            double p_107105_,
-            double p_107106_,
-            double p_107107_,
-            double p_107108_,
-            double p_107109_,
-            double p_107110_,
-            RandomSource p_426382_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new LavaParticle(p_107104_, p_107105_, p_107106_, p_107107_, this.sprite.get(p_426382_));
+            return new LavaParticle(level, x, y, z, this.sprite.get(random));
         }
     }
 }

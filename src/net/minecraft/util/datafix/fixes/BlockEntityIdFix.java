@@ -7,56 +7,48 @@ import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.TaggedChoice.TaggedChoiceType;
-import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.DynamicOps;
-import java.util.HashMap;
 import java.util.Map;
 
 public class BlockEntityIdFix extends DataFix {
-    public static final Map<String, String> ID_MAP = DataFixUtils.make(Maps.newHashMap(), p_14839_ -> {
-        p_14839_.put("Airportal", "minecraft:end_portal");
-        p_14839_.put("Banner", "minecraft:banner");
-        p_14839_.put("Beacon", "minecraft:beacon");
-        p_14839_.put("Cauldron", "minecraft:brewing_stand");
-        p_14839_.put("Chest", "minecraft:chest");
-        p_14839_.put("Comparator", "minecraft:comparator");
-        p_14839_.put("Control", "minecraft:command_block");
-        p_14839_.put("DLDetector", "minecraft:daylight_detector");
-        p_14839_.put("Dropper", "minecraft:dropper");
-        p_14839_.put("EnchantTable", "minecraft:enchanting_table");
-        p_14839_.put("EndGateway", "minecraft:end_gateway");
-        p_14839_.put("EnderChest", "minecraft:ender_chest");
-        p_14839_.put("FlowerPot", "minecraft:flower_pot");
-        p_14839_.put("Furnace", "minecraft:furnace");
-        p_14839_.put("Hopper", "minecraft:hopper");
-        p_14839_.put("MobSpawner", "minecraft:mob_spawner");
-        p_14839_.put("Music", "minecraft:noteblock");
-        p_14839_.put("Piston", "minecraft:piston");
-        p_14839_.put("RecordPlayer", "minecraft:jukebox");
-        p_14839_.put("Sign", "minecraft:sign");
-        p_14839_.put("Skull", "minecraft:skull");
-        p_14839_.put("Structure", "minecraft:structure_block");
-        p_14839_.put("Trap", "minecraft:dispenser");
+    public static final Map<String, String> ID_MAP = DataFixUtils.make(Maps.newHashMap(), map -> {
+        map.put("Airportal", "minecraft:end_portal");
+        map.put("Banner", "minecraft:banner");
+        map.put("Beacon", "minecraft:beacon");
+        map.put("Cauldron", "minecraft:brewing_stand");
+        map.put("Chest", "minecraft:chest");
+        map.put("Comparator", "minecraft:comparator");
+        map.put("Control", "minecraft:command_block");
+        map.put("DLDetector", "minecraft:daylight_detector");
+        map.put("Dropper", "minecraft:dropper");
+        map.put("EnchantTable", "minecraft:enchanting_table");
+        map.put("EndGateway", "minecraft:end_gateway");
+        map.put("EnderChest", "minecraft:ender_chest");
+        map.put("FlowerPot", "minecraft:flower_pot");
+        map.put("Furnace", "minecraft:furnace");
+        map.put("Hopper", "minecraft:hopper");
+        map.put("MobSpawner", "minecraft:mob_spawner");
+        map.put("Music", "minecraft:noteblock");
+        map.put("Piston", "minecraft:piston");
+        map.put("RecordPlayer", "minecraft:jukebox");
+        map.put("Sign", "minecraft:sign");
+        map.put("Skull", "minecraft:skull");
+        map.put("Structure", "minecraft:structure_block");
+        map.put("Trap", "minecraft:dispenser");
     });
 
-    public BlockEntityIdFix(Schema p_14830_, boolean p_14831_) {
-        super(p_14830_, p_14831_);
+    public BlockEntityIdFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        Type<?> type1 = this.getOutputSchema().getType(References.ITEM_STACK);
-        TaggedChoiceType<String> taggedchoicetype = (TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.BLOCK_ENTITY);
-        TaggedChoiceType<String> taggedchoicetype1 = (TaggedChoiceType<String>)this.getOutputSchema().findChoiceType(References.BLOCK_ENTITY);
+        Type<?> oldItemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        Type<?> newItemStackType = this.getOutputSchema().getType(References.ITEM_STACK);
+        TaggedChoiceType<String> oldType = (TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.BLOCK_ENTITY);
+        TaggedChoiceType<String> newType = (TaggedChoiceType<String>)this.getOutputSchema().findChoiceType(References.BLOCK_ENTITY);
         return TypeRewriteRule.seq(
-            this.convertUnchecked("item stack block entity name hook converter", type, type1),
-            this.fixTypeEverywhere(
-                "BlockEntityIdFix",
-                taggedchoicetype,
-                taggedchoicetype1,
-                p_14835_ -> p_145135_ -> p_145135_.mapFirst(p_145137_ -> ID_MAP.getOrDefault(p_145137_, p_145137_))
-            )
+            this.convertUnchecked("item stack block entity name hook converter", oldItemStackType, newItemStackType),
+            this.fixTypeEverywhere("BlockEntityIdFix", oldType, newType, ops -> input -> input.mapFirst(id -> ID_MAP.getOrDefault(id, id)))
         );
     }
 }

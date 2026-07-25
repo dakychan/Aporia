@@ -2,7 +2,6 @@ package net.minecraft.world.entity.animal.nautilus;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
@@ -43,7 +42,6 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.inventory.AbstractMountInventoryMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUtils;
@@ -61,7 +59,7 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
-public abstract class AbstractNautilus extends TamableAnimal implements HasCustomInventoryScreen, PlayerRideableJumping {
+public abstract class AbstractNautilus extends TamableAnimal implements PlayerRideableJumping, HasCustomInventoryScreen {
     public static final int INVENTORY_SLOT_OFFSET = 500;
     public static final int INVENTORY_ROWS = 3;
     public static final int SMALL_RESTRICTION_RADIUS = 16;
@@ -88,25 +86,25 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     private static final float BUBBLE_PROBABILITY_MIN = 0.15F;
     private static final float BUBBLE_PROBABILITY_MAX = 1.0F;
 
-    protected AbstractNautilus(EntityType<? extends AbstractNautilus> p_455832_, Level p_452219_) {
-        super(p_455832_, p_452219_);
-        this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.011F, 0.0F, true);
+    protected AbstractNautilus(final EntityType<? extends AbstractNautilus> type, final Level level) {
+        super(type, level);
+        this.moveControl = new SmoothSwimmingMoveControl<>(this, 85, 10, 0.011F, 0.0F, true);
         this.lookControl = new SmoothSwimmingLookControl(this, 10);
         this.setPathfindingMalus(PathType.WATER, 0.0F);
         this.createInventory();
     }
 
     @Override
-    public boolean isFood(ItemStack p_453020_) {
-        return !this.isTame() && !this.isBaby() ? p_453020_.is(ItemTags.NAUTILUS_TAMING_ITEMS) : p_453020_.is(ItemTags.NAUTILUS_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return !this.isTame() && !this.isBaby() ? itemStack.is(ItemTags.NAUTILUS_TAMING_ITEMS) : itemStack.is(ItemTags.NAUTILUS_FOOD);
     }
 
     @Override
-    protected void usePlayerItem(Player p_450386_, InteractionHand p_450300_, ItemStack p_455954_) {
-        if (p_455954_.is(ItemTags.NAUTILUS_BUCKET_FOOD)) {
-            p_450386_.setItemInHand(p_450300_, ItemUtils.createFilledResult(p_455954_, p_450386_, new ItemStack(Items.WATER_BUCKET)));
+    protected void usePlayerItem(final Player player, final InteractionHand hand, final ItemStack itemStack) {
+        if (itemStack.is(ItemTags.NAUTILUS_BUCKET_FOOD)) {
+            player.setItemInHand(hand, ItemUtils.createFilledResult(itemStack, player, new ItemStack(Items.WATER_BUCKET)));
         } else {
-            super.usePlayerItem(p_450386_, p_450300_, p_455954_);
+            super.usePlayerItem(player, hand, itemStack);
         }
     }
 
@@ -124,90 +122,92 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    protected PathNavigation createNavigation(Level p_450752_) {
-        return new WaterBoundPathNavigation(this, p_450752_);
+    protected PathNavigation createNavigation(final Level level) {
+        return new WaterBoundPathNavigation(this, level);
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos p_457176_, LevelReader p_458494_) {
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
         return 0.0F;
     }
 
     public static boolean checkNautilusSpawnRules(
-        EntityType<? extends AbstractNautilus> p_456993_, LevelAccessor p_452931_, EntitySpawnReason p_458103_, BlockPos p_453882_, RandomSource p_458433_
+        final EntityType<? extends AbstractNautilus> type,
+        final LevelAccessor level,
+        final EntitySpawnReason spawnReason,
+        final BlockPos pos,
+        final RandomSource random
     ) {
-        int i = p_452931_.getSeaLevel();
-        int j = i - 25;
-        return p_453882_.getY() >= j
-            && p_453882_.getY() <= i - 5
-            && p_452931_.getFluidState(p_453882_.below()).is(FluidTags.WATER)
-            && p_452931_.getBlockState(p_453882_.above()).is(Blocks.WATER);
+        int seaLevel = level.getSeaLevel();
+        int minSpawnLevel = seaLevel - 25;
+        return pos.getY() >= minSpawnLevel
+            && pos.getY() <= seaLevel - 5
+            && level.getFluidState(pos.below()).is(FluidTags.WATER)
+            && level.getBlockState(pos.above()).is(Blocks.WATER);
     }
 
     @Override
-    public boolean checkSpawnObstruction(LevelReader p_458655_) {
-        return p_458655_.isUnobstructed(this);
+    public boolean checkSpawnObstruction(final LevelReader level) {
+        return level.isUnobstructed(this);
     }
 
     @Override
-    public boolean canUseSlot(EquipmentSlot p_453536_) {
-        return p_453536_ != EquipmentSlot.SADDLE && p_453536_ != EquipmentSlot.BODY
-            ? super.canUseSlot(p_453536_)
-            : this.isAlive() && !this.isBaby() && this.isTame();
+    public boolean canUseSlot(final EquipmentSlot slot) {
+        return slot != EquipmentSlot.SADDLE && slot != EquipmentSlot.BODY ? super.canUseSlot(slot) : this.isAlive() && !this.isBaby() && this.isTame();
     }
 
     @Override
-    protected boolean canDispenserEquipIntoSlot(EquipmentSlot p_459800_) {
-        return p_459800_ == EquipmentSlot.BODY || p_459800_ == EquipmentSlot.SADDLE || super.canDispenserEquipIntoSlot(p_459800_);
+    protected boolean canDispenserEquipIntoSlot(final EquipmentSlot slot) {
+        return slot == EquipmentSlot.BODY || slot == EquipmentSlot.SADDLE || super.canDispenserEquipIntoSlot(slot);
     }
 
     @Override
-    protected boolean canAddPassenger(Entity p_453027_) {
+    protected boolean canAddPassenger(final Entity passenger) {
         return !this.isVehicle();
     }
 
     @Override
     public @Nullable LivingEntity getControllingPassenger() {
-        return (LivingEntity)(this.isSaddled() && this.getFirstPassenger() instanceof Player player ? player : super.getControllingPassenger());
+        return this.isSaddled() && this.getFirstPassenger() instanceof Player player ? player : super.getControllingPassenger();
     }
 
     @Override
-    protected Vec3 getRiddenInput(Player p_454068_, Vec3 p_458490_) {
-        float f = p_454068_.xxa;
-        float f1 = 0.0F;
-        float f2 = 0.0F;
-        if (p_454068_.zza != 0.0F) {
-            float f3 = Mth.cos(p_454068_.getXRot() * (float) (Math.PI / 180.0));
-            float f4 = -Mth.sin(p_454068_.getXRot() * (float) (Math.PI / 180.0));
-            if (p_454068_.zza < 0.0F) {
-                f3 *= -0.5F;
-                f4 *= -0.5F;
+    protected Vec3 getRiddenInput(final Player controller, final Vec3 selfInput) {
+        float strafe = controller.xxa;
+        float forward = 0.0F;
+        float up = 0.0F;
+        if (controller.zza != 0.0F) {
+            float forwardLook = Mth.cos(controller.getXRot() * (float) (Math.PI / 180.0));
+            float upLook = -Mth.sin(controller.getXRot() * (float) (Math.PI / 180.0));
+            if (controller.zza < 0.0F) {
+                forwardLook *= -0.5F;
+                upLook *= -0.5F;
             }
 
-            f2 = f4;
-            f1 = f3;
+            up = upLook;
+            forward = forwardLook;
         }
 
-        return new Vec3(f, f2, f1);
+        return new Vec3(strafe, up, forward);
     }
 
-    protected Vec2 getRiddenRotation(LivingEntity p_456649_) {
-        return new Vec2(p_456649_.getXRot() * 0.5F, p_456649_.getYRot());
+    protected Vec2 getRiddenRotation(final LivingEntity controller) {
+        return new Vec2(controller.getXRot() * 0.5F, controller.getYRot());
     }
 
     @Override
-    protected void tickRidden(Player p_450782_, Vec3 p_452110_) {
-        super.tickRidden(p_450782_, p_452110_);
-        Vec2 vec2 = this.getRiddenRotation(p_450782_);
-        float f = this.getYRot();
-        float f1 = Mth.wrapDegrees(vec2.y - f);
-        float f2 = 0.5F;
-        f += f1 * 0.5F;
-        this.setRot(f, vec2.x);
-        this.yRotO = this.yBodyRot = this.yHeadRot = f;
+    protected void tickRidden(final Player controller, final Vec3 riddenInput) {
+        super.tickRidden(controller, riddenInput);
+        Vec2 rotation = this.getRiddenRotation(controller);
+        float yRot = this.getYRot();
+        float diff = Mth.wrapDegrees(rotation.y - yRot);
+        float turnSpeed = 0.5F;
+        yRot += diff * 0.5F;
+        this.setRot(yRot, rotation.x);
+        this.yRotO = this.yBodyRot = this.yHeadRot = yRot;
         if (this.isLocalInstanceAuthoritative()) {
             if (this.playerJumpPendingScale > 0.0F && !this.isJumping()) {
-                this.executeRidersJump(this.playerJumpPendingScale, p_450782_);
+                this.executeRidersJump(this.playerJumpPendingScale, controller);
             }
 
             this.playerJumpPendingScale = 0.0F;
@@ -215,21 +215,23 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    protected void travelInWater(Vec3 p_460206_, double p_455904_, boolean p_451288_, double p_457106_) {
-        float f = this.getSpeed();
-        this.moveRelative(f, p_460206_);
+    protected void travelInWater(final Vec3 input, final double baseGravity, final boolean isFalling, final double oldY) {
+        float speed = this.getSpeed();
+        this.moveRelative(speed, input);
         this.move(MoverType.SELF, this.getDeltaMovement());
         this.setDeltaMovement(this.getDeltaMovement().scale(0.9));
     }
 
     @Override
-    protected float getRiddenSpeed(Player p_460619_) {
-        return this.isInWater() ? 0.0325F * (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED) : 0.02F * (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED);
+    protected float getRiddenSpeed(final Player controller) {
+        return this.isInWater()
+            ? 0.0325F * (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED)
+            : 0.02F * (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED);
     }
 
-    protected void doPlayerRide(Player p_457064_) {
+    protected void doPlayerRide(final Player player) {
         if (!this.level().isClientSide()) {
-            p_457064_.startRiding(this);
+            player.startRiding(this);
             if (!this.isVehicle()) {
                 this.clearHome();
             }
@@ -242,49 +244,49 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
 
     protected void checkRestriction() {
         if (!this.isLeashed() && !this.isVehicle() && this.isTame()) {
-            int i = this.getNautilusRestrictionRadius();
-            if (!this.hasHome() || !this.getHomePosition().closerThan(this.blockPosition(), i + 8) || i != this.getHomeRadius()) {
-                this.setHomeTo(this.blockPosition(), i);
+            int radius = this.getNautilusRestrictionRadius();
+            if (!this.hasHome() || !this.getHomePosition().closerThan(this.blockPosition(), radius + 8) || radius != this.getHomeRadius()) {
+                this.setHomeTo(this.blockPosition(), radius);
             }
         }
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_451717_) {
+    protected void customServerAiStep(final ServerLevel level) {
         this.checkRestriction();
-        super.customServerAiStep(p_451717_);
+        super.customServerAiStep(level);
     }
 
-    private void applyEffects(Level p_456301_) {
+    private void applyEffects(final Level level) {
         if (this.getFirstPassenger() instanceof Player player) {
-            boolean flag = player.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS);
-            boolean flag1 = p_456301_.getGameTime() % 40L == 0L;
-            if (!flag || flag1) {
+            boolean hasEffect = player.hasEffect(MobEffects.BREATH_OF_THE_NAUTILUS);
+            boolean shouldRefresh = level.getGameTime() % 40L == 0L;
+            if (!hasEffect || shouldRefresh) {
                 player.addEffect(new MobEffectInstance(MobEffects.BREATH_OF_THE_NAUTILUS, 60, 0, true, true, true));
             }
         }
     }
 
     private void spawnBubbles() {
-        double d0 = this.getDeltaMovement().length();
-        double d1 = Mth.clamp(d0 * 2.0, 0.15F, 1.0);
-        if (this.random.nextFloat() < d1) {
-            float f = this.getYRot();
-            float f1 = Mth.clamp(this.getXRot(), -10.0F, 10.0F);
-            Vec3 vec3 = this.calculateViewVector(f1, f);
-            double d2 = this.random.nextDouble() * 0.8 * (1.0 + d0);
-            double d3 = (this.random.nextFloat() - 0.5) * d2;
-            double d4 = (this.random.nextFloat() - 0.5) * d2;
-            double d5 = (this.random.nextFloat() - 0.5) * d2;
+        double speed = this.getDeltaMovement().length();
+        double bubbleProbability = Mth.clamp(speed * 2.0, 0.15F, 1.0);
+        if (this.random.nextFloat() < bubbleProbability) {
+            float yRot = this.getYRot();
+            float xRot = Mth.clamp(this.getXRot(), -10.0F, 10.0F);
+            Vec3 mouthDirectionVector = this.calculateViewVector(xRot, yRot);
+            double spread = this.random.nextDouble() * 0.8 * (1.0 + speed);
+            double dx = (this.random.nextFloat() - 0.5) * spread;
+            double dy = (this.random.nextFloat() - 0.5) * spread;
+            double dz = (this.random.nextFloat() - 0.5) * spread;
             this.level()
                 .addParticle(
                     ParticleTypes.BUBBLE,
-                    this.getX() - vec3.x * 1.1,
-                    this.getY() - vec3.y + 0.25,
-                    this.getZ() - vec3.z * 1.1,
-                    d3,
-                    d4,
-                    d5
+                    this.getX() - mouthDirectionVector.x * 1.1,
+                    this.getY() - mouthDirectionVector.y + 0.25,
+                    this.getZ() - mouthDirectionVector.z * 1.1,
+                    dx,
+                    dy,
+                    dz
                 );
         }
     }
@@ -318,35 +320,38 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    public void onPlayerJump(int p_452581_) {
+    public void onPlayerJump(final int jumpAmount) {
         if (this.isSaddled() && this.dashCooldown <= 0) {
-            this.playerJumpPendingScale = this.getPlayerJumpPendingScale(p_452581_);
+            this.playerJumpPendingScale = this.getPlayerJumpPendingScale(jumpAmount);
         }
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_454726_) {
-        super.defineSynchedData(p_454726_);
-        p_454726_.define(DASH, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DASH, false);
     }
 
     public boolean isDashing() {
         return this.entityData.get(DASH);
     }
 
-    public void setDashing(boolean p_459445_) {
-        this.entityData.set(DASH, p_459445_);
+    public void setDashing(final boolean isDashing) {
+        this.entityData.set(DASH, isDashing);
     }
 
-    protected void executeRidersJump(float p_452491_, Player p_455774_) {
-        this.addDeltaMovement(p_455774_.getLookAngle().scale((this.isInWater() ? 1.2F : 0.5F) * p_452491_ * this.getAttributeValue(Attributes.MOVEMENT_SPEED) * this.getBlockSpeedFactor()));
+    protected void executeRidersJump(final float amount, final Player controller) {
+        this.addDeltaMovement(
+            controller.getLookAngle()
+                .scale((this.isInWater() ? 1.2F : 0.5F) * amount * this.getAttributeValue(Attributes.MOVEMENT_SPEED) * this.getBlockSpeedFactor())
+        );
         this.dashCooldown = 40;
         this.setDashing(true);
         this.needsSync = true;
     }
 
     @Override
-    public void handleStartJump(int p_450502_) {
+    public void handleStartJump(final int jumpScale) {
         this.makeSound(this.getDashSound());
         this.gameEvent(GameEvent.ENTITY_ACTION);
         this.setDashing(true);
@@ -358,12 +363,12 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_451265_) {
-        if (!this.firstTick && DASH.equals(p_451265_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        if (!this.firstTick && DASH.equals(accessor)) {
             this.dashCooldown = this.dashCooldown == 0 ? 40 : this.dashCooldown;
         }
 
-        super.onSyncedDataUpdated(p_451265_);
+        super.onSyncedDataUpdated(accessor);
     }
 
     @Override
@@ -371,7 +376,7 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    protected void playStepSound(BlockPos p_452461_, BlockState p_455043_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
     }
 
     protected @Nullable SoundEvent getDashSound() {
@@ -383,53 +388,52 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    public InteractionResult interact(Player p_452852_, InteractionHand p_457312_) {
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
         this.setPersistenceRequired();
-        return super.interact(p_452852_, p_457312_);
+        return super.interact(player, hand, location);
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_458952_, InteractionHand p_460677_) {
-        ItemStack itemstack = p_458952_.getItemInHand(p_460677_);
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
         if (this.isBaby()) {
-            return super.mobInteract(p_458952_, p_460677_);
-        } else if (this.isTame() && p_458952_.isSecondaryUseActive()) {
-            this.openCustomInventoryScreen(p_458952_);
+            return super.mobInteract(player, hand);
+        }
+
+        if (this.isTame() && player.isSecondaryUseActive()) {
+            this.openCustomInventoryScreen(player);
+            return InteractionResult.SUCCESS;
+        }
+
+        if (!itemStack.isEmpty()) {
+            if (!this.level().isClientSide() && !this.isTame() && this.isFood(itemStack)) {
+                this.usePlayerItem(player, hand, itemStack);
+                this.tryToTame(player);
+                return InteractionResult.SUCCESS_SERVER;
+            }
+
+            if (this.isFood(itemStack) && this.getHealth() < this.getMaxHealth()) {
+                this.feed(player, hand, itemStack, 2.0F, 1.0F);
+                return InteractionResult.SUCCESS;
+            }
+
+            InteractionResult interactionResult = itemStack.interactLivingEntity(player, this, hand);
+            if (interactionResult.consumesAction()) {
+                return interactionResult;
+            }
+        }
+
+        if (this.isTame() && !player.isSecondaryUseActive() && !this.isFood(itemStack)) {
+            this.doPlayerRide(player);
             return InteractionResult.SUCCESS;
         } else {
-            if (!itemstack.isEmpty()) {
-                if (!this.level().isClientSide() && !this.isTame() && this.isFood(itemstack)) {
-                    this.usePlayerItem(p_458952_, p_460677_, itemstack);
-                    this.tryToTame(p_458952_);
-                    return InteractionResult.SUCCESS_SERVER;
-                }
-
-                if (this.isFood(itemstack) && this.getHealth() < this.getMaxHealth()) {
-                    FoodProperties foodproperties = itemstack.get(DataComponents.FOOD);
-                    this.heal(foodproperties != null ? 2 * foodproperties.nutrition() : 1.0F);
-                    this.usePlayerItem(p_458952_, p_460677_, itemstack);
-                    this.playEatingSound();
-                    return InteractionResult.SUCCESS;
-                }
-
-                InteractionResult interactionresult = itemstack.interactLivingEntity(p_458952_, this, p_460677_);
-                if (interactionresult.consumesAction()) {
-                    return interactionresult;
-                }
-            }
-
-            if (this.isTame() && !p_458952_.isSecondaryUseActive() && !this.isFood(itemstack)) {
-                this.doPlayerRide(p_458952_);
-                return InteractionResult.SUCCESS;
-            } else {
-                return super.mobInteract(p_458952_, p_460677_);
-            }
+            return super.mobInteract(player, hand);
         }
     }
 
-    private void tryToTame(Player p_451972_) {
+    private void tryToTame(final Player player) {
         if (this.random.nextInt(3) == 0) {
-            this.tame(p_451972_);
+            this.tame(player);
             this.navigation.stop();
             this.level().broadcastEntityEvent(this, (byte)7);
         } else {
@@ -440,38 +444,40 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     @Override
-    public boolean removeWhenFarAway(double p_451126_) {
+    public boolean removeWhenFarAway(final double distSqr) {
         return true;
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_456419_, DamageSource p_452812_, float p_452274_) {
-        boolean flag = super.hurtServer(p_456419_, p_452812_, p_452274_);
-        if (flag && p_452812_.getEntity() instanceof LivingEntity livingentity) {
-            NautilusAi.setAngerTarget(p_456419_, this, livingentity);
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        boolean wasHurt = super.hurtServer(level, source, damage);
+        if (wasHurt && source.getEntity() instanceof LivingEntity sourceEntity) {
+            NautilusAi.setAngerTarget(level, this, sourceEntity);
         }
 
-        return flag;
+        return wasHurt;
     }
 
     @Override
-    public boolean canBeAffected(MobEffectInstance p_457976_) {
-        return p_457976_.getEffect() == MobEffects.POISON ? false : super.canBeAffected(p_457976_);
+    public boolean canBeAffected(final MobEffectInstance newEffect) {
+        return newEffect.getEffect() == MobEffects.POISON ? false : super.canBeAffected(newEffect);
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_461085_, DifficultyInstance p_450678_, EntitySpawnReason p_456724_, @Nullable SpawnGroupData p_456970_) {
-        RandomSource randomsource = p_461085_.getRandom();
-        NautilusAi.initMemories(this, randomsource);
-        return super.finalizeSpawn(p_461085_, p_450678_, p_456724_, p_456970_);
+    public SpawnGroupData finalizeSpawn(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
+    ) {
+        RandomSource random = level.getRandom();
+        NautilusAi.initMemories(this, random);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
-    protected Holder<SoundEvent> getEquipSound(EquipmentSlot p_456358_, ItemStack p_456297_, Equippable p_450719_) {
-        if (p_456358_ == EquipmentSlot.SADDLE && this.isUnderWater()) {
+    protected Holder<SoundEvent> getEquipSound(final EquipmentSlot slot, final ItemStack stack, final Equippable equippable) {
+        if (slot == EquipmentSlot.SADDLE && this.isUnderWater()) {
             return SoundEvents.NAUTILUS_SADDLE_UNDERWATER_EQUIP;
         } else {
-            return (Holder<SoundEvent>)(p_456358_ == EquipmentSlot.SADDLE ? SoundEvents.NAUTILUS_SADDLE_EQUIP : super.getEquipSound(p_456358_, p_456297_, p_450719_));
+            return slot == EquipmentSlot.SADDLE ? SoundEvents.NAUTILUS_SADDLE_EQUIP : super.getEquipSound(slot, stack, equippable);
         }
     }
 
@@ -480,35 +486,35 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
     }
 
     protected void createInventory() {
-        SimpleContainer simplecontainer = this.inventory;
+        SimpleContainer old = this.inventory;
         this.inventory = new SimpleContainer(this.getInventorySize());
-        if (simplecontainer != null) {
-            int i = Math.min(simplecontainer.getContainerSize(), this.inventory.getContainerSize());
+        if (old != null) {
+            int max = Math.min(old.getContainerSize(), this.inventory.getContainerSize());
 
-            for (int j = 0; j < i; j++) {
-                ItemStack itemstack = simplecontainer.getItem(j);
-                if (!itemstack.isEmpty()) {
-                    this.inventory.setItem(j, itemstack.copy());
+            for (int slot = 0; slot < max; slot++) {
+                ItemStack itemStack = old.getItem(slot);
+                if (!itemStack.isEmpty()) {
+                    this.inventory.setItem(slot, itemStack.copy());
                 }
             }
         }
     }
 
     @Override
-    public void openCustomInventoryScreen(Player p_460114_) {
-        if (!this.level().isClientSide() && (!this.isVehicle() || this.hasPassenger(p_460114_)) && this.isTame()) {
-            p_460114_.openNautilusInventory(this, this.inventory);
+    public void openCustomInventoryScreen(final Player player) {
+        if (!this.level().isClientSide() && (!this.isVehicle() || this.hasPassenger(player)) && this.isTame()) {
+            player.openNautilusInventory(this, this.inventory);
         }
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_457574_) {
-        int i = p_457574_ - 500;
-        return i >= 0 && i < this.inventory.getContainerSize() ? this.inventory.getSlot(i) : super.getSlot(p_457574_);
+    public @Nullable SlotAccess getSlot(final int slot) {
+        int inventorySlot = slot - 500;
+        return inventorySlot >= 0 && inventorySlot < this.inventory.getContainerSize() ? this.inventory.getSlot(inventorySlot) : super.getSlot(slot);
     }
 
-    public boolean hasInventoryChanged(Container p_455247_) {
-        return this.inventory != p_455247_;
+    public boolean hasInventoryChanged(final Container oldInventory) {
+        return this.inventory != oldInventory;
     }
 
     public int getInventoryColumns() {
@@ -521,5 +527,10 @@ public abstract class AbstractNautilus extends TamableAnimal implements HasCusto
 
     protected boolean isAggravated() {
         return this.getBrain().hasMemoryValue(MemoryModuleType.ANGRY_AT) || this.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET);
+    }
+
+    @Override
+    public boolean requiresCustomPersistence() {
+        return super.requiresCustomPersistence() || this.isTame();
     }
 }

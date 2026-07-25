@@ -5,7 +5,7 @@ import net.minecraft.network.chat.Component;
 public interface CommandSource {
     CommandSource NULL = new CommandSource() {
         @Override
-        public void sendSystemMessage(Component p_230799_) {
+        public void sendSystemMessage(final Component message) {
         }
 
         @Override
@@ -24,7 +24,7 @@ public interface CommandSource {
         }
     };
 
-    void sendSystemMessage(Component p_230797_);
+    void sendSystemMessage(Component message);
 
     boolean acceptsSuccess();
 

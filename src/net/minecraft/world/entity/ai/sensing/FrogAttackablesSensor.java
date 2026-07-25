@@ -1,7 +1,9 @@
 package net.minecraft.world.entity.ai.sensing;
 
+import com.google.common.collect.Sets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -12,22 +14,24 @@ public class FrogAttackablesSensor extends NearestVisibleLivingEntitySensor {
     public static final float TARGET_DETECTION_DISTANCE = 10.0F;
 
     @Override
-    protected boolean isMatchingEntity(ServerLevel p_364007_, LivingEntity p_217810_, LivingEntity p_217811_) {
-        return !p_217810_.getBrain().hasMemoryValue(MemoryModuleType.HAS_HUNTING_COOLDOWN)
-                && Sensor.isEntityAttackable(p_364007_, p_217810_, p_217811_)
-                && Frog.canEat(p_217811_)
-                && !this.isUnreachableAttackTarget(p_217810_, p_217811_)
-            ? p_217811_.closerThan(p_217810_, 10.0)
+    protected boolean isMatchingEntity(final ServerLevel level, final LivingEntity body, final LivingEntity mob) {
+        return Sensor.isEntityAttackable(level, body, mob) && Frog.canEat(mob) && !this.isUnreachableAttackTarget(body, mob)
+            ? mob.closerThan(body, 10.0)
             : false;
     }
 
-    private boolean isUnreachableAttackTarget(LivingEntity p_238336_, LivingEntity p_238337_) {
-        List<UUID> list = p_238336_.getBrain().getMemory(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS).orElseGet(ArrayList::new);
-        return list.contains(p_238337_.getUUID());
+    private boolean isUnreachableAttackTarget(final LivingEntity body, final LivingEntity mob) {
+        List<UUID> unreachableAttackTargets = body.getBrain().getMemory(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS).orElseGet(ArrayList::new);
+        return unreachableAttackTargets.contains(mob.getUUID());
     }
 
     @Override
-    protected MemoryModuleType<LivingEntity> getMemory() {
+    protected MemoryModuleType<LivingEntity> getMemoryToSet() {
         return MemoryModuleType.NEAREST_ATTACKABLE;
+    }
+
+    @Override
+    public Set<MemoryModuleType<?>> requires() {
+        return Sets.union(super.requires(), Set.of(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS));
     }
 }

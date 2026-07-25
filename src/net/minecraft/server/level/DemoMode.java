@@ -19,43 +19,43 @@ public class DemoMode extends ServerPlayerGameMode {
     private int demoEndedReminder;
     private int gameModeTicks;
 
-    public DemoMode(ServerPlayer p_143204_) {
-        super(p_143204_);
+    public DemoMode(final ServerPlayer player) {
+        super(player);
     }
 
     @Override
     public void tick() {
         super.tick();
         this.gameModeTicks++;
-        long i = this.level.getGameTime();
-        long j = i / 24000L + 1L;
+        long time = this.level.getGameTime();
+        long day = time / 24000L + 1L;
         if (!this.displayedIntro && this.gameModeTicks > 20) {
             this.displayedIntro = true;
             this.player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.DEMO_EVENT, 0.0F));
         }
 
-        this.demoHasEnded = i > 120500L;
+        this.demoHasEnded = time > 120500L;
         if (this.demoHasEnded) {
             this.demoEndedReminder++;
         }
 
-        if (i % 24000L == 500L) {
-            if (j <= 6L) {
-                if (j == 6L) {
+        if (time % 24000L == 500L) {
+            if (day <= 6L) {
+                if (day == 6L) {
                     this.player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.DEMO_EVENT, 104.0F));
                 } else {
-                    this.player.sendSystemMessage(Component.translatable("demo.day." + j));
+                    this.player.sendSystemMessage(Component.translatable("demo.day." + day));
                 }
             }
-        } else if (j == 1L) {
-            if (i == 100L) {
+        } else if (day == 1L) {
+            if (time == 100L) {
                 this.player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.DEMO_EVENT, 101.0F));
-            } else if (i == 175L) {
+            } else if (time == 175L) {
                 this.player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.DEMO_EVENT, 102.0F));
-            } else if (i == 250L) {
+            } else if (time == 250L) {
                 this.player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.DEMO_EVENT, 103.0F));
             }
-        } else if (j == 5L && i % 24000L == 22000L) {
+        } else if (day == 5L && time % 24000L == 22000L) {
             this.player.sendSystemMessage(Component.translatable("demo.day.warning"));
         }
     }
@@ -68,31 +68,35 @@ public class DemoMode extends ServerPlayerGameMode {
     }
 
     @Override
-    public void handleBlockBreakAction(BlockPos p_214976_, ServerboundPlayerActionPacket.Action p_214977_, Direction p_214978_, int p_214979_, int p_214980_) {
+    public void handleBlockBreakAction(
+        final BlockPos pos, final ServerboundPlayerActionPacket.Action action, final Direction direction, final int maxY, final int sequence
+    ) {
         if (this.demoHasEnded) {
             this.outputDemoReminder();
         } else {
-            super.handleBlockBreakAction(p_214976_, p_214977_, p_214978_, p_214979_, p_214980_);
+            super.handleBlockBreakAction(pos, action, direction, maxY, sequence);
         }
     }
 
     @Override
-    public InteractionResult useItem(ServerPlayer p_140742_, Level p_140743_, ItemStack p_140744_, InteractionHand p_140745_) {
+    public InteractionResult useItem(final ServerPlayer player, final Level level, final ItemStack itemStack, final InteractionHand hand) {
         if (this.demoHasEnded) {
             this.outputDemoReminder();
             return InteractionResult.PASS;
         } else {
-            return super.useItem(p_140742_, p_140743_, p_140744_, p_140745_);
+            return super.useItem(player, level, itemStack, hand);
         }
     }
 
     @Override
-    public InteractionResult useItemOn(ServerPlayer p_140747_, Level p_140748_, ItemStack p_140749_, InteractionHand p_140750_, BlockHitResult p_140751_) {
+    public InteractionResult useItemOn(
+        final ServerPlayer player, final Level level, final ItemStack itemStack, final InteractionHand hand, final BlockHitResult hitResult
+    ) {
         if (this.demoHasEnded) {
             this.outputDemoReminder();
             return InteractionResult.PASS;
         } else {
-            return super.useItemOn(p_140747_, p_140748_, p_140749_, p_140750_, p_140751_);
+            return super.useItemOn(player, level, itemStack, hand, hitResult);
         }
     }
 }

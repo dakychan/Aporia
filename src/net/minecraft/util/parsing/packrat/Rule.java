@@ -3,49 +3,42 @@ package net.minecraft.util.parsing.packrat;
 import org.jspecify.annotations.Nullable;
 
 public interface Rule<S, T> {
-    @Nullable T parse(ParseState<S> p_335539_);
+    @Nullable T parse(ParseState<S> state);
 
-    static <S, T> Rule<S, T> fromTerm(Term<S> p_334127_, Rule.RuleAction<S, T> p_334890_) {
-        return new Rule.WrappedTerm<>(p_334890_, p_334127_);
+    static <S, T> Rule<S, T> fromTerm(final Term<S> child, final Rule.RuleAction<S, T> action) {
+        return new Rule.WrappedTerm<>(action, child);
     }
 
-    static <S, T> Rule<S, T> fromTerm(Term<S> p_336211_, Rule.SimpleRuleAction<S, T> p_332994_) {
-        return new Rule.WrappedTerm<>(p_332994_, p_336211_);
-    }
-
-    @FunctionalInterface
-    public interface RuleAction<S, T> {
-        @Nullable T run(ParseState<S> p_332162_);
+    static <S, T> Rule<S, T> fromTerm(final Term<S> child, final Rule.SimpleRuleAction<S, T> action) {
+        return new Rule.WrappedTerm<>(action, child);
     }
 
     @FunctionalInterface
-    public interface SimpleRuleAction<S, T> extends Rule.RuleAction<S, T> {
-        T run(Scope p_332535_);
+    interface RuleAction<S, T> {
+        @Nullable T run(ParseState<S> state);
+    }
+
+    @FunctionalInterface
+    interface SimpleRuleAction<S, T> extends Rule.RuleAction<S, T> {
+        T run(Scope ruleScope);
 
         @Override
-        default T run(ParseState<S> p_392774_) {
-            return this.run(p_392774_.scope());
+        default T run(final ParseState<S> state) {
+            return this.run(state.scope());
         }
     }
 
-    public record WrappedTerm<S, T>(Rule.RuleAction<S, T> action, Term<S> child) implements Rule<S, T> {
+    record WrappedTerm<S, T>(Rule.RuleAction<S, T> action, Term<S> child) implements Rule<S, T> {
         @Override
-        public @Nullable T parse(ParseState<S> p_328860_) {
-            Scope scope = p_328860_.scope();
+        public @Nullable T parse(final ParseState<S> state) {
+            Scope scope = state.scope();
             scope.pushFrame();
 
-            Object object;
             try {
-                if (!this.child.parse(p_328860_, scope, Control.UNBOUND)) {
-                    return null;
-                }
-
-                object = this.action.run(p_328860_);
+                return this.child.parse(state, scope, Control.UNBOUND) ? this.action.run(state) : null;
             } finally {
                 scope.popFrame();
             }
-
-            return (T)object;
         }
     }
 }

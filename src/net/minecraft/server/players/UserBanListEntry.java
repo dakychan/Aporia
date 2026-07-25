@@ -8,31 +8,35 @@ import org.jspecify.annotations.Nullable;
 public class UserBanListEntry extends BanListEntry<NameAndId> {
     private static final Component MESSAGE_UNKNOWN_USER = Component.translatable("commands.banlist.entry.unknown");
 
-    public UserBanListEntry(@Nullable NameAndId p_425518_) {
-        this(p_425518_, null, null, null, null);
+    public UserBanListEntry(final @Nullable NameAndId user) {
+        this(user, null, null, null, null);
     }
 
     public UserBanListEntry(
-        @Nullable NameAndId p_427215_, @Nullable Date p_11439_, @Nullable String p_11440_, @Nullable Date p_11441_, @Nullable String p_11442_
+        final @Nullable NameAndId user,
+        final @Nullable Date created,
+        final @Nullable String source,
+        final @Nullable Date expires,
+        final @Nullable String reason
     ) {
-        super(p_427215_, p_11439_, p_11440_, p_11441_, p_11442_);
+        super(user, created, source, expires, reason);
     }
 
-    public UserBanListEntry(JsonObject p_11434_) {
-        super(NameAndId.fromJson(p_11434_), p_11434_);
+    public UserBanListEntry(final JsonObject object) {
+        super(NameAndId.fromJson(object), object);
     }
 
     @Override
-    protected void serialize(JsonObject p_11444_) {
+    protected void serialize(final JsonObject object) {
         if (this.getUser() != null) {
-            this.getUser().appendTo(p_11444_);
-            super.serialize(p_11444_);
+            this.getUser().appendTo(object);
+            super.serialize(object);
         }
     }
 
     @Override
     public Component getDisplayName() {
-        NameAndId nameandid = this.getUser();
-        return (Component)(nameandid != null ? Component.literal(nameandid.name()) : MESSAGE_UNKNOWN_USER);
+        NameAndId user = this.getUser();
+        return user != null ? Component.literal(user.name()) : MESSAGE_UNKNOWN_USER;
     }
 }

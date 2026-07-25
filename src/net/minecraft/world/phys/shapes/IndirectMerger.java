@@ -11,63 +11,63 @@ public class IndirectMerger implements IndexMerger {
     private final int[] secondIndices;
     private final int resultLength;
 
-    public IndirectMerger(DoubleList p_83001_, DoubleList p_83002_, boolean p_83003_, boolean p_83004_) {
-        double d0 = Double.NaN;
-        int i = p_83001_.size();
-        int j = p_83002_.size();
-        int k = i + j;
-        this.result = new double[k];
-        this.firstIndices = new int[k];
-        this.secondIndices = new int[k];
-        boolean flag = !p_83003_;
-        boolean flag1 = !p_83004_;
-        int l = 0;
-        int i1 = 0;
-        int j1 = 0;
+    public IndirectMerger(final DoubleList first, final DoubleList second, final boolean firstOnlyMatters, final boolean secondOnlyMatters) {
+        double lastValue = Double.NaN;
+        int firstSize = first.size();
+        int secondSize = second.size();
+        int capacity = firstSize + secondSize;
+        this.result = new double[capacity];
+        this.firstIndices = new int[capacity];
+        this.secondIndices = new int[capacity];
+        boolean canSkipFirst = !firstOnlyMatters;
+        boolean canSkipSecond = !secondOnlyMatters;
+        int resultIndex = 0;
+        int firstIndex = 0;
+        int secondIndex = 0;
 
         while (true) {
-            boolean flag2 = i1 >= i;
-            boolean flag3 = j1 >= j;
-            if (flag2 && flag3) {
-                this.resultLength = Math.max(1, l);
+            boolean ranOutOfFirst = firstIndex >= firstSize;
+            boolean ranOutOfSecond = secondIndex >= secondSize;
+            if (ranOutOfFirst && ranOutOfSecond) {
+                this.resultLength = Math.max(1, resultIndex);
                 return;
             }
 
-            boolean flag4 = !flag2 && (flag3 || p_83001_.getDouble(i1) < p_83002_.getDouble(j1) + 1.0E-7);
-            if (flag4) {
-                i1++;
-                if (flag && (j1 == 0 || flag3)) {
+            boolean choseFirst = !ranOutOfFirst && (ranOutOfSecond || first.getDouble(firstIndex) < second.getDouble(secondIndex) + 1.0E-7);
+            if (choseFirst) {
+                firstIndex++;
+                if (canSkipFirst && (secondIndex == 0 || ranOutOfSecond)) {
                     continue;
                 }
             } else {
-                j1++;
-                if (flag1 && (i1 == 0 || flag2)) {
+                secondIndex++;
+                if (canSkipSecond && (firstIndex == 0 || ranOutOfFirst)) {
                     continue;
                 }
             }
 
-            int k1 = i1 - 1;
-            int l1 = j1 - 1;
-            double d1 = flag4 ? p_83001_.getDouble(k1) : p_83002_.getDouble(l1);
-            if (!(d0 >= d1 - 1.0E-7)) {
-                this.firstIndices[l] = k1;
-                this.secondIndices[l] = l1;
-                this.result[l] = d1;
-                l++;
-                d0 = d1;
+            int currentFirstIndex = firstIndex - 1;
+            int currentSecondIndex = secondIndex - 1;
+            double nextValue = choseFirst ? first.getDouble(currentFirstIndex) : second.getDouble(currentSecondIndex);
+            if (!(lastValue >= nextValue - 1.0E-7)) {
+                this.firstIndices[resultIndex] = currentFirstIndex;
+                this.secondIndices[resultIndex] = currentSecondIndex;
+                this.result[resultIndex] = nextValue;
+                resultIndex++;
+                lastValue = nextValue;
             } else {
-                this.firstIndices[l - 1] = k1;
-                this.secondIndices[l - 1] = l1;
+                this.firstIndices[resultIndex - 1] = currentFirstIndex;
+                this.secondIndices[resultIndex - 1] = currentSecondIndex;
             }
         }
     }
 
     @Override
-    public boolean forMergedIndexes(IndexMerger.IndexConsumer p_83007_) {
-        int i = this.resultLength - 1;
+    public boolean forMergedIndexes(final IndexMerger.IndexConsumer consumer) {
+        int length = this.resultLength - 1;
 
-        for (int j = 0; j < i; j++) {
-            if (!p_83007_.merge(this.firstIndices[j], this.secondIndices[j], j)) {
+        for (int i = 0; i < length; i++) {
+            if (!consumer.merge(this.firstIndices[i], this.secondIndices[i], i)) {
                 return false;
             }
         }
@@ -82,6 +82,6 @@ public class IndirectMerger implements IndexMerger {
 
     @Override
     public DoubleList getList() {
-        return (DoubleList)(this.resultLength <= 1 ? EMPTY : DoubleArrayList.wrap(this.result, this.resultLength));
+        return this.resultLength <= 1 ? EMPTY : DoubleArrayList.wrap(this.result, this.resultLength);
     }
 }

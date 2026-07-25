@@ -3,6 +3,7 @@ package net.minecraft.util.random;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import io.netty.buffer.ByteBuf;
 import java.util.Arrays;
@@ -12,7 +13,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import org.jspecify.annotations.Nullable;
 
@@ -22,9 +22,9 @@ public final class WeightedList<E> {
     private final List<Weighted<E>> items;
     private final WeightedList.@Nullable Selector<E> selector;
 
-    WeightedList(List<? extends Weighted<E>> p_393632_) {
-        this.items = List.copyOf(p_393632_);
-        this.totalWeight = WeightedRandom.getTotalWeight(p_393632_, Weighted::weight);
+    private WeightedList(final List<? extends Weighted<E>> items) {
+        this.items = List.copyOf(items);
+        this.totalWeight = WeightedRandom.getTotalWeight(items, Weighted::weight);
         if (this.totalWeight == 0) {
             this.selector = null;
         } else if (this.totalWeight < 64) {
@@ -38,17 +38,27 @@ public final class WeightedList<E> {
         return new WeightedList<>(List.of());
     }
 
-    public static <E> WeightedList<E> of(E p_391442_) {
-        return new WeightedList<>(List.of(new Weighted<>(p_391442_, 1)));
+    public static <E> WeightedList<E> of(final E value) {
+        return new WeightedList<>(List.of(new Weighted<>(value, 1)));
+    }
+
+    public static <E> WeightedList<E> of(final E... items) {
+        WeightedList.Builder<E> builder = builder();
+
+        for (E item : items) {
+            builder.add(item);
+        }
+
+        return builder.build();
     }
 
     @SafeVarargs
-    public static <E> WeightedList<E> of(Weighted<E>... p_395273_) {
-        return new WeightedList<>(List.of(p_395273_));
+    public static <E> WeightedList<E> of(final Weighted<E>... items) {
+        return new WeightedList<>(List.of(items));
     }
 
-    public static <E> WeightedList<E> of(List<Weighted<E>> p_396025_) {
-        return new WeightedList<>(p_396025_);
+    public static <E> WeightedList<E> of(final List<Weighted<E>> items) {
+        return new WeightedList<>(items);
     }
 
     public static <E> WeightedList.Builder<E> builder() {
@@ -56,58 +66,71 @@ public final class WeightedList<E> {
     }
 
     public boolean isEmpty() {
-        return this.items.isEmpty();
+        return this.selector == null;
     }
 
-    public <T> WeightedList<T> map(Function<E, T> p_391461_) {
-        return new WeightedList(Lists.transform(this.items, p_392113_ -> p_392113_.map((Function<E, E>)p_391461_)));
+    public <T> WeightedList<T> map(final Function<E, T> mapper) {
+        return new WeightedList(Lists.transform(this.items, e -> e.map((Function<E, E>)mapper)));
     }
 
-    public Optional<E> getRandom(RandomSource p_394760_) {
+    public Optional<E> getRandom(final RandomSource random) {
         if (this.selector == null) {
             return Optional.empty();
-        } else {
-            int i = p_394760_.nextInt(this.totalWeight);
-            return Optional.of(this.selector.get(i));
         }
+
+        int selection = random.nextInt(this.totalWeight);
+        return Optional.of(this.selector.get(selection));
     }
 
-    public E getRandomOrThrow(RandomSource p_395959_) {
+    public E getRandomOrThrow(final RandomSource random) {
         if (this.selector == null) {
             throw new IllegalStateException("Weighted list has no elements");
-        } else {
-            int i = p_395959_.nextInt(this.totalWeight);
-            return this.selector.get(i);
         }
+
+        int selection = random.nextInt(this.totalWeight);
+        return this.selector.get(selection);
     }
 
     public List<Weighted<E>> unwrap() {
         return this.items;
     }
 
-    public static <E> Codec<WeightedList<E>> codec(Codec<E> p_395633_) {
-        return Weighted.codec(p_395633_).listOf().xmap(WeightedList::of, WeightedList::unwrap);
+    private static <E> Codec<WeightedList<E>> entryToListCodec(final Codec<Weighted<E>> weightedElementCodec) {
+        return weightedElementCodec.listOf().xmap(WeightedList::of, WeightedList::unwrap);
     }
 
-    public static <E> Codec<WeightedList<E>> codec(MapCodec<E> p_392171_) {
-        return Weighted.codec(p_392171_).listOf().xmap(WeightedList::of, WeightedList::unwrap);
+    public static <E> Codec<WeightedList<E>> codec(final Codec<E> elementCodec) {
+        return entryToListCodec(Weighted.codec(elementCodec));
     }
 
-    public static <E> Codec<WeightedList<E>> nonEmptyCodec(Codec<E> p_395084_) {
-        return ExtraCodecs.nonEmptyList(Weighted.codec(p_395084_).listOf()).xmap(WeightedList::of, WeightedList::unwrap);
+    public static <E> Codec<WeightedList<E>> codec(final MapCodec<E> elementCodec) {
+        return entryToListCodec(Weighted.codec(elementCodec));
     }
 
-    public static <E> Codec<WeightedList<E>> nonEmptyCodec(MapCodec<E> p_397938_) {
-        return ExtraCodecs.nonEmptyList(Weighted.codec(p_397938_).listOf()).xmap(WeightedList::of, WeightedList::unwrap);
+    private static <E> Codec<WeightedList<E>> entryToNonEmptyListCodec(final Codec<Weighted<E>> weightedElementCodec) {
+        return entryToListCodec(weightedElementCodec)
+            .validate(
+                list -> list.isEmpty()
+                    ? DataResult.error(() -> "Weighted list must contain at least one entry with non-zero weight")
+                    : DataResult.success(list)
+            );
     }
 
-    public static <E, B extends ByteBuf> StreamCodec<B, WeightedList<E>> streamCodec(StreamCodec<B, E> p_423484_) {
-        return Weighted.streamCodec(p_423484_).apply(ByteBufCodecs.list()).map(WeightedList::of, WeightedList::unwrap);
+    public static <E> Codec<WeightedList<E>> nonEmptyCodec(final Codec<E> elementCodec) {
+        return entryToNonEmptyListCodec(Weighted.codec(elementCodec));
     }
 
-    public boolean contains(E p_394468_) {
-        for (Weighted<E> weighted : this.items) {
-            if (weighted.value().equals(p_394468_)) {
+    public static <E> Codec<WeightedList<E>> nonEmptyCodec(final MapCodec<E> elementCodec) {
+        return entryToNonEmptyListCodec(Weighted.codec(elementCodec));
+    }
+
+    public static <E, B extends ByteBuf> StreamCodec<B, WeightedList<E>> streamCodec(final StreamCodec<B, E> elementCodec) {
+        return Weighted.streamCodec(elementCodec).apply(ByteBufCodecs.list()).map(WeightedList::of, WeightedList::unwrap);
+    }
+
+    public boolean contains(final E value) {
+        for (Weighted<E> item : this.items) {
+            if (item.value().equals(value)) {
                 return true;
             }
         }
@@ -116,31 +139,29 @@ public final class WeightedList<E> {
     }
 
     @Override
-    public boolean equals(@Nullable Object p_394129_) {
-        if (this == p_394129_) {
+    public boolean equals(final @Nullable Object obj) {
+        if (this == obj) {
             return true;
         } else {
-            return !(p_394129_ instanceof WeightedList<?> weightedlist)
-                ? false
-                : this.totalWeight == weightedlist.totalWeight && Objects.equals(this.items, weightedlist.items);
+            return !(obj instanceof WeightedList<?> list) ? false : this.totalWeight == list.totalWeight && Objects.equals(this.items, list.items);
         }
     }
 
     @Override
     public int hashCode() {
-        int i = this.totalWeight;
-        return 31 * i + this.items.hashCode();
+        int result = this.totalWeight;
+        return 31 * result + this.items.hashCode();
     }
 
     public static class Builder<E> {
         private final ImmutableList.Builder<Weighted<E>> result = ImmutableList.builder();
 
-        public WeightedList.Builder<E> add(E p_395636_) {
-            return this.add(p_395636_, 1);
+        public WeightedList.Builder<E> add(final E item) {
+            return this.add(item, 1);
         }
 
-        public WeightedList.Builder<E> add(E p_391313_, int p_397962_) {
-            this.result.add(new Weighted<>(p_391313_, p_397962_));
+        public WeightedList.Builder<E> add(final E item, final int weight) {
+            this.result.add(new Weighted<>(item, weight));
             return this;
         }
 
@@ -149,47 +170,47 @@ public final class WeightedList<E> {
         }
     }
 
-    static class Compact<E> implements WeightedList.Selector<E> {
+    private static class Compact<E> implements WeightedList.Selector<E> {
         private final Weighted<?>[] entries;
 
-        Compact(List<Weighted<E>> p_394912_) {
-            this.entries = p_394912_.toArray(Weighted[]::new);
+        private Compact(final List<Weighted<E>> entries) {
+            this.entries = entries.toArray(Weighted[]::new);
         }
 
         @Override
-        public E get(int p_395412_) {
-            for (Weighted<?> weighted : this.entries) {
-                p_395412_ -= weighted.weight();
-                if (p_395412_ < 0) {
-                    return (E)weighted.value();
+        public E get(int selection) {
+            for (Weighted<?> entry : this.entries) {
+                selection -= entry.weight();
+                if (selection < 0) {
+                    return (E)entry.value();
                 }
             }
 
-            throw new IllegalStateException(p_395412_ + " exceeded total weight");
+            throw new IllegalStateException(selection + " exceeded total weight");
         }
     }
 
-    static class Flat<E> implements WeightedList.Selector<E> {
+    private static class Flat<E> implements WeightedList.Selector<E> {
         private final Object[] entries;
 
-        Flat(List<Weighted<E>> p_397273_, int p_391580_) {
-            this.entries = new Object[p_391580_];
+        private Flat(final List<Weighted<E>> entries, final int totalWeight) {
+            this.entries = new Object[totalWeight];
             int i = 0;
 
-            for (Weighted<E> weighted : p_397273_) {
-                int j = weighted.weight();
-                Arrays.fill(this.entries, i, i + j, weighted.value());
-                i += j;
+            for (Weighted<E> entry : entries) {
+                int weight = entry.weight();
+                Arrays.fill(this.entries, i, i + weight, entry.value());
+                i += weight;
             }
         }
 
         @Override
-        public E get(int p_395440_) {
-            return (E)this.entries[p_395440_];
+        public E get(final int selection) {
+            return (E)this.entries[selection];
         }
     }
 
-    interface Selector<E> {
-        E get(int p_393664_);
+    private interface Selector<E> {
+        E get(int selection);
     }
 }

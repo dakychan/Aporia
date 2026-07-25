@@ -22,84 +22,86 @@ public class HolderSetCodec<E> implements Codec<HolderSet<E>> {
     private final Codec<List<Holder<E>>> homogenousListCodec;
     private final Codec<Either<TagKey<E>, List<Holder<E>>>> registryAwareCodec;
 
-    private static <E> Codec<List<Holder<E>>> homogenousList(Codec<Holder<E>> p_206668_, boolean p_206669_) {
-        Codec<List<Holder<E>>> codec = p_206668_.listOf().validate(ExtraCodecs.ensureHomogenous(Holder::kind));
-        return p_206669_ ? codec : ExtraCodecs.compactListCodec(p_206668_, codec);
+    private static <E> Codec<List<Holder<E>>> homogenousList(final Codec<Holder<E>> elementCodec, final boolean alwaysUseList) {
+        Codec<List<Holder<E>>> listCodec = elementCodec.listOf().validate(ExtraCodecs.ensureHomogenous(Holder::kind));
+        return alwaysUseList ? listCodec : ExtraCodecs.compactListCodec(elementCodec, listCodec);
     }
 
-    public static <E> Codec<HolderSet<E>> create(ResourceKey<? extends Registry<E>> p_206686_, Codec<Holder<E>> p_206687_, boolean p_206688_) {
-        return new HolderSetCodec<>(p_206686_, p_206687_, p_206688_);
+    public static <E> Codec<HolderSet<E>> create(
+        final ResourceKey<? extends Registry<E>> registryKey, final Codec<Holder<E>> elementCodec, final boolean alwaysUseList
+    ) {
+        return new HolderSetCodec<>(registryKey, elementCodec, alwaysUseList);
     }
 
-    private HolderSetCodec(ResourceKey<? extends Registry<E>> p_206660_, Codec<Holder<E>> p_206661_, boolean p_206662_) {
-        this.registryKey = p_206660_;
-        this.elementCodec = p_206661_;
-        this.homogenousListCodec = homogenousList(p_206661_, p_206662_);
-        this.registryAwareCodec = Codec.either(TagKey.hashedCodec(p_206660_), this.homogenousListCodec);
+    private HolderSetCodec(final ResourceKey<? extends Registry<E>> registryKey, final Codec<Holder<E>> elementCodec, final boolean alwaysUseList) {
+        this.registryKey = registryKey;
+        this.elementCodec = elementCodec;
+        this.homogenousListCodec = homogenousList(elementCodec, alwaysUseList);
+        this.registryAwareCodec = Codec.either(TagKey.hashedCodec(registryKey), this.homogenousListCodec);
     }
 
     @Override
-    public <T> DataResult<Pair<HolderSet<E>, T>> decode(DynamicOps<T> p_206696_, T p_206697_) {
-        if (p_206696_ instanceof RegistryOps<T> registryops) {
-            Optional<HolderGetter<E>> optional = registryops.getter(this.registryKey);
-            if (optional.isPresent()) {
-                HolderGetter<E> holdergetter = optional.get();
+    public <T> DataResult<Pair<HolderSet<E>, T>> decode(final DynamicOps<T> ops, final T input) {
+        if (ops instanceof RegistryOps<T> registryOps) {
+            Optional<HolderGetter<E>> registryOptional = registryOps.getter(this.registryKey);
+            if (registryOptional.isPresent()) {
+                HolderGetter<E> registry = registryOptional.get();
                 return this.registryAwareCodec
-                    .decode(p_206696_, p_206697_)
+                    .decode(ops, input)
                     .flatMap(
-                        p_326147_ -> {
-                            DataResult<HolderSet<E>> dataresult = p_326147_.getFirst()
+                        p -> {
+                            DataResult<HolderSet<E>> result = p.getFirst()
                                 .map(
-                                    p_326145_ -> lookupTag(holdergetter, (TagKey<E>)p_326145_),
-                                    p_326140_ -> DataResult.success(HolderSet.direct((List<? extends Holder<E>>)p_326140_))
+                                    tag -> lookupTag(registry, (TagKey<E>)tag),
+                                    values -> DataResult.success(HolderSet.direct((List<? extends Holder<E>>)values))
                                 );
-                            return dataresult.map(p_326149_ -> Pair.of((HolderSet<E>)p_326149_, (T)p_326147_.getSecond()));
+                            return result.map(holders -> Pair.of((HolderSet<E>)holders, (T)p.getSecond()));
                         }
                     );
             }
         }
 
-        return this.decodeWithoutRegistry(p_206696_, p_206697_);
+        return this.decodeWithoutRegistry(ops, input);
     }
 
-    private static <E> DataResult<HolderSet<E>> lookupTag(HolderGetter<E> p_331398_, TagKey<E> p_328227_) {
-        return (DataResult)p_331398_.get(p_328227_)
+    private static <E> DataResult<HolderSet<E>> lookupTag(final HolderGetter<E> registry, final TagKey<E> key) {
+        return (DataResult)registry.get(key)
             .map(DataResult::success)
-            .orElseGet(() -> DataResult.error(() -> "Missing tag: '" + p_328227_.location() + "' in '" + p_328227_.registry().identifier() + "'"));
+            .orElseGet(() -> DataResult.error(() -> "Missing tag: '" + key.location() + "' in '" + key.registry().identifier() + "'"));
     }
 
-    public <T> DataResult<T> encode(HolderSet<E> p_206674_, DynamicOps<T> p_206675_, T p_206676_) {
-        if (p_206675_ instanceof RegistryOps<T> registryops) {
-            Optional<HolderOwner<E>> optional = registryops.owner(this.registryKey);
-            if (optional.isPresent()) {
-                if (!p_206674_.canSerializeIn(optional.get())) {
-                    return DataResult.error(() -> "HolderSet " + p_206674_ + " is not valid in current registry set");
+    public <T> DataResult<T> encode(final HolderSet<E> input, final DynamicOps<T> ops, final T prefix) {
+        if (ops instanceof RegistryOps<T> registryOps) {
+            Optional<HolderOwner<E>> maybeOwner = registryOps.owner(this.registryKey);
+            if (maybeOwner.isPresent()) {
+                if (!input.canSerializeIn(maybeOwner.get())) {
+                    return DataResult.error(() -> "HolderSet " + input + " is not valid in current registry set");
                 }
 
-                return this.registryAwareCodec.encode(p_206674_.unwrap().mapRight(List::copyOf), p_206675_, p_206676_);
+                return this.registryAwareCodec.encode(input.unwrap().mapRight(List::copyOf), ops, prefix);
             }
         }
 
-        return this.encodeWithoutRegistry(p_206674_, p_206675_, p_206676_);
+        return this.encodeWithoutRegistry(input, ops, prefix);
     }
 
-    private <T> DataResult<Pair<HolderSet<E>, T>> decodeWithoutRegistry(DynamicOps<T> p_206671_, T p_206672_) {
-        return this.elementCodec.listOf().decode(p_206671_, p_206672_).flatMap(p_206666_ -> {
-            List<Holder.Direct<E>> list = new ArrayList<>();
+    private <T> DataResult<Pair<HolderSet<E>, T>> decodeWithoutRegistry(final DynamicOps<T> ops, final T input) {
+        return this.elementCodec.listOf().decode(ops, input).flatMap(p -> {
+            List<Holder.Direct<E>> directHolders = new ArrayList<>();
 
-            for (Holder<E> holder : p_206666_.getFirst()) {
+            for (Holder<E> holder : p.getFirst()) {
                 if (!(holder instanceof Holder.Direct<E> direct)) {
                     return DataResult.error(() -> "Can't decode element " + holder + " without registry");
                 }
 
-                list.add(direct);
+                directHolders.add(direct);
             }
 
-            return DataResult.success(new Pair<>(HolderSet.direct(list), p_206666_.getSecond()));
+            return DataResult.success(new Pair<>(HolderSet.direct(directHolders), p.getSecond()));
         });
     }
 
-    private <T> DataResult<T> encodeWithoutRegistry(HolderSet<E> p_206690_, DynamicOps<T> p_206691_, T p_206692_) {
-        return this.homogenousListCodec.encode(p_206690_.stream().toList(), p_206691_, p_206692_);
+    private <T> DataResult<T> encodeWithoutRegistry(final HolderSet<E> input, final DynamicOps<T> ops, final T prefix) {
+        return this.homogenousListCodec.encode(input.stream().toList(), ops, prefix);
     }
 }

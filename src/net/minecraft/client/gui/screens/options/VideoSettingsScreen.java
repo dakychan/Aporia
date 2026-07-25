@@ -14,17 +14,16 @@ import net.minecraft.client.Options;
 import net.minecraft.client.TextureFilteringMethod;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.AbstractWidget;
-import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
+import net.minecraft.client.gui.components.StringWidget;
+import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.renderer.GpuWarnlistManager;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class VideoSettingsScreen extends OptionsSubScreen {
     private static final Component TITLE = Component.translatable("options.videoTitle");
     private static final Component IMPROVED_TRANSPARENCY = Component.translatable("options.improvedTransparency").withStyle(ChatFormatting.ITALIC);
@@ -35,101 +34,113 @@ public class VideoSettingsScreen extends OptionsSubScreen {
     private static final Component DISPLAY_HEADER = Component.translatable("options.video.display.header");
     private static final Component QUALITY_HEADER = Component.translatable("options.video.quality.header");
     private static final Component PREFERENCES_HEADER = Component.translatable("options.video.preferences.header");
+    private static final Component RESTART_REQUIRED = Component.translatable("options.restartRequired").withColor(-2142128);
     private final GpuWarnlistManager gpuWarnlistManager;
     private final int oldMipmaps;
     private final int oldAnisotropyBit;
     private final TextureFilteringMethod oldTextureFiltering;
+    private final LinearLayout header = LinearLayout.vertical().spacing(2);
+    private @Nullable StringWidget restartWarning;
 
-    private static OptionInstance<?>[] qualityOptions(Options p_460714_) {
+    private static OptionInstance<?>[] qualityOptions(final Options options) {
         return new OptionInstance[]{
-            p_460714_.biomeBlendRadius(),
-            p_460714_.renderDistance(),
-            p_460714_.prioritizeChunkUpdates(),
-            p_460714_.simulationDistance(),
-            p_460714_.ambientOcclusion(),
-            p_460714_.cloudStatus(),
-            p_460714_.particles(),
-            p_460714_.mipmapLevels(),
-            p_460714_.entityShadows(),
-            p_460714_.entityDistanceScaling(),
-            p_460714_.menuBackgroundBlurriness(),
-            p_460714_.cloudRange(),
-            p_460714_.cutoutLeaves(),
-            p_460714_.improvedTransparency(),
-            p_460714_.textureFiltering(),
-            p_460714_.maxAnisotropyBit(),
-            p_460714_.weatherRadius()
+            options.biomeBlendRadius(),
+            options.renderDistance(),
+            options.prioritizeChunkUpdates(),
+            options.simulationDistance(),
+            options.ambientOcclusion(),
+            options.cloudStatus(),
+            options.particles(),
+            options.mipmapLevels(),
+            options.entityShadows(),
+            options.entityDistanceScaling(),
+            options.menuBackgroundBlurriness(),
+            options.cloudRange(),
+            options.cutoutLeaves(),
+            options.improvedTransparency(),
+            options.textureFiltering(),
+            options.maxAnisotropyBit(),
+            options.weatherRadius()
         };
     }
 
-    private static OptionInstance<?>[] displayOptions(Options p_455698_) {
+    private static OptionInstance<?>[] displayOptions(final Options options) {
         return new OptionInstance[]{
-            p_455698_.framerateLimit(), p_455698_.enableVsync(), p_455698_.inactivityFpsLimit(), p_455698_.guiScale(), p_455698_.fullscreen(), p_455698_.gamma()
+            options.framerateLimit(),
+            options.enableVsync(),
+            options.inactivityFpsLimit(),
+            options.guiScale(),
+            options.fullscreen(),
+            options.exclusiveFullscreen(),
+            options.gamma(),
+            options.preferredGraphicsBackend()
         };
     }
 
-    private static OptionInstance<?>[] preferenceOptions(Options p_459591_) {
-        return new OptionInstance[]{p_459591_.showAutosaveIndicator(), p_459591_.vignette(), p_459591_.attackIndicator(), p_459591_.chunkSectionFadeInTime()};
+    private static OptionInstance<?>[] preferenceOptions(final Options options) {
+        return new OptionInstance[]{options.showAutosaveIndicator(), options.vignette(), options.attackIndicator(), options.chunkSectionFadeInTime()};
     }
 
-    public VideoSettingsScreen(Screen p_342724_, Minecraft p_343064_, Options p_343837_) {
-        super(p_342724_, p_343837_, TITLE);
-        this.gpuWarnlistManager = p_343064_.getGpuWarnlistManager();
+    public VideoSettingsScreen(final Screen lastScreen, final Minecraft minecraft, final Options options) {
+        super(lastScreen, options, TITLE);
+        this.gpuWarnlistManager = minecraft.getGpuWarnlistManager();
         this.gpuWarnlistManager.resetWarnings();
-        if (p_343837_.improvedTransparency().get()) {
+        if (options.improvedTransparency().get()) {
             this.gpuWarnlistManager.dismissWarning();
         }
 
-        this.oldMipmaps = p_343837_.mipmapLevels().get();
-        this.oldAnisotropyBit = p_343837_.maxAnisotropyBit().get();
-        this.oldTextureFiltering = p_343837_.textureFiltering().get();
+        this.oldMipmaps = options.mipmapLevels().get();
+        this.oldAnisotropyBit = options.maxAnisotropyBit().get();
+        this.oldTextureFiltering = options.textureFiltering().get();
     }
 
     @Override
     protected void addOptions() {
-        int i = -1;
+        int CURRENT_MODE = -1;
         Window window = this.minecraft.getWindow();
         Monitor monitor = window.findBestMonitor();
-        int j;
+        int initialValue;
         if (monitor == null) {
-            j = -1;
+            initialValue = -1;
         } else {
-            Optional<VideoMode> optional = window.getPreferredFullscreenVideoMode();
-            j = optional.map(monitor::getVideoModeIndex).orElse(-1);
+            Optional<VideoMode> preferredFullscreenVideoMode = window.getPreferredFullscreenVideoMode();
+            initialValue = preferredFullscreenVideoMode.map(monitor::indexOfMode).orElse(-1);
         }
 
-        OptionInstance<Integer> optioninstance = new OptionInstance<>(
+        OptionInstance<Integer> fullscreenOption = new OptionInstance<>(
             "options.fullscreen.resolution",
             OptionInstance.noTooltip(),
-            (p_344242_, p_344033_) -> {
+            (caption, value) -> {
                 if (monitor == null) {
                     return Component.translatable("options.fullscreen.unavailable");
-                } else if (p_344033_ == -1) {
-                    return Options.genericValueLabel(p_344242_, Component.translatable("options.fullscreen.current"));
-                } else {
-                    VideoMode videomode = monitor.getMode(p_344033_);
-                    return Options.genericValueLabel(
-                        p_344242_,
-                        Component.translatable(
-                            "options.fullscreen.entry",
-                            videomode.getWidth(),
-                            videomode.getHeight(),
-                            videomode.getRefreshRate(),
-                            videomode.getRedBits() + videomode.getGreenBits() + videomode.getBlueBits()
-                        )
-                    );
                 }
+
+                if (value == -1) {
+                    return Options.genericValueLabel(caption, Component.translatable("options.fullscreen.current"));
+                }
+
+                VideoMode mode = monitor.mode(value);
+                return Options.genericValueLabel(
+                    caption,
+                    Component.translatable(
+                        "options.fullscreen.entry",
+                        mode.getWidth(),
+                        mode.getHeight(),
+                        mode.getRefreshRate(),
+                        mode.getRedBits() + mode.getGreenBits() + mode.getBlueBits()
+                    )
+                );
             },
-            new OptionInstance.IntRange(-1, monitor != null ? monitor.getModeCount() - 1 : -1),
-            j,
-            p_345267_ -> {
+            new OptionInstance.IntRange(-1, monitor != null ? monitor.modeCount() - 1 : -1),
+            initialValue,
+            value -> {
                 if (monitor != null) {
-                    window.setPreferredFullscreenVideoMode(p_345267_ == -1 ? Optional.empty() : Optional.of(monitor.getMode(p_345267_)));
+                    window.setPreferredFullscreenVideoMode(value == -1 ? Optional.empty() : Optional.of(monitor.mode(value)));
                 }
             }
         );
         this.list.addHeader(DISPLAY_HEADER);
-        this.list.addBig(optioninstance);
+        this.list.addBig(fullscreenOption);
         this.list.addSmall(displayOptions(this.options));
         this.list.addHeader(QUALITY_HEADER);
         this.list.addBig(this.options.graphicsPreset());
@@ -139,9 +150,36 @@ public class VideoSettingsScreen extends OptionsSubScreen {
     }
 
     @Override
+    protected void addTitle() {
+        this.header.defaultCellSetting().alignHorizontallyCenter().alignVerticallyMiddle();
+        this.header.addChild(new StringWidget(this.title, this.font));
+        if (this.options.isRestartRequiredToApplyVideoSettings()) {
+            this.restartWarning = new StringWidget(RESTART_REQUIRED, this.font);
+            this.header.addChild(this.restartWarning);
+        }
+
+        this.layout.addToHeader(this.header);
+    }
+
+    @Override
     public void tick() {
-        if (this.list != null && this.list.findOption(this.options.maxAnisotropyBit()) instanceof AbstractSliderButton abstractsliderbutton) {
-            abstractsliderbutton.active = this.options.textureFiltering().get() == TextureFilteringMethod.ANISOTROPIC;
+        if (this.list != null && this.list.findOption(this.options.maxAnisotropyBit()) instanceof AbstractSliderButton maxAnisotropy) {
+            maxAnisotropy.active = this.options.textureFiltering().get() == TextureFilteringMethod.ANISOTROPIC;
+        }
+
+        boolean restartRequired = this.options.isRestartRequiredToApplyVideoSettings();
+        if (restartRequired && (this.restartWarning == null || !this.restartWarning.visible)) {
+            if (this.restartWarning == null) {
+                this.restartWarning = new StringWidget(RESTART_REQUIRED, this.font);
+                this.header.addChild(this.restartWarning);
+                this.addRenderableWidget(this.restartWarning);
+            }
+
+            this.restartWarning.visible = true;
+            this.repositionElements();
+        } else if (!restartRequired && this.restartWarning != null && this.restartWarning.visible) {
+            this.restartWarning.visible = false;
+            this.repositionElements();
         }
 
         super.tick();
@@ -166,41 +204,42 @@ public class VideoSettingsScreen extends OptionsSubScreen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_428387_, boolean p_424596_) {
-        if (super.mouseClicked(p_428387_, p_424596_)) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        if (super.mouseClicked(event, doubleClick)) {
             if (this.gpuWarnlistManager.isShowingWarning()) {
-                List<Component> list = Lists.newArrayList(WARNING_MESSAGE, CommonComponents.NEW_LINE);
-                String s = this.gpuWarnlistManager.getRendererWarnings();
-                if (s != null) {
-                    list.add(CommonComponents.NEW_LINE);
-                    list.add(Component.translatable("options.graphics.warning.renderer", s).withStyle(ChatFormatting.GRAY));
+                List<Component> warningMessage = Lists.newArrayList(WARNING_MESSAGE, CommonComponents.NEW_LINE);
+                String rendererWarnings = this.gpuWarnlistManager.getRendererWarnings();
+                if (rendererWarnings != null) {
+                    warningMessage.add(CommonComponents.NEW_LINE);
+                    warningMessage.add(Component.translatable("options.graphics.warning.renderer", rendererWarnings).withStyle(ChatFormatting.GRAY));
                 }
 
-                String s1 = this.gpuWarnlistManager.getVendorWarnings();
-                if (s1 != null) {
-                    list.add(CommonComponents.NEW_LINE);
-                    list.add(Component.translatable("options.graphics.warning.vendor", s1).withStyle(ChatFormatting.GRAY));
+                String vendorWarnings = this.gpuWarnlistManager.getVendorWarnings();
+                if (vendorWarnings != null) {
+                    warningMessage.add(CommonComponents.NEW_LINE);
+                    warningMessage.add(Component.translatable("options.graphics.warning.vendor", vendorWarnings).withStyle(ChatFormatting.GRAY));
                 }
 
-                String s2 = this.gpuWarnlistManager.getVersionWarnings();
-                if (s2 != null) {
-                    list.add(CommonComponents.NEW_LINE);
-                    list.add(Component.translatable("options.graphics.warning.version", s2).withStyle(ChatFormatting.GRAY));
+                String versionWarnings = this.gpuWarnlistManager.getVersionWarnings();
+                if (versionWarnings != null) {
+                    warningMessage.add(CommonComponents.NEW_LINE);
+                    warningMessage.add(Component.translatable("options.graphics.warning.version", versionWarnings).withStyle(ChatFormatting.GRAY));
                 }
 
                 this.minecraft
+                    .gui
                     .setScreen(
                         new UnsupportedGraphicsWarningScreen(
-                            WARNING_TITLE, list, ImmutableList.of(new UnsupportedGraphicsWarningScreen.ButtonOption(BUTTON_ACCEPT, p_448063_ -> {
+                            WARNING_TITLE, warningMessage, ImmutableList.of(new UnsupportedGraphicsWarningScreen.ButtonOption(BUTTON_ACCEPT, btn -> {
                                 this.options.improvedTransparency().set(true);
-                                Minecraft.getInstance().levelRenderer.allChanged();
+                                Minecraft.getInstance().levelExtractor.allChanged();
                                 this.gpuWarnlistManager.dismissWarning();
-                                this.minecraft.setScreen(this);
-                            }), new UnsupportedGraphicsWarningScreen.ButtonOption(BUTTON_CANCEL, p_448064_ -> {
+                                this.minecraft.gui.setScreen(this);
+                            }), new UnsupportedGraphicsWarningScreen.ButtonOption(BUTTON_CANCEL, btn -> {
                                 this.gpuWarnlistManager.dismissWarning();
                                 this.options.improvedTransparency().set(false);
                                 this.updateTransparencyButton();
-                                this.minecraft.setScreen(this);
+                                this.minecraft.gui.setScreen(this);
                             }))
                         )
                     );
@@ -213,18 +252,18 @@ public class VideoSettingsScreen extends OptionsSubScreen {
     }
 
     @Override
-    public boolean mouseScrolled(double p_345374_, double p_345119_, double p_345124_, double p_343217_) {
+    public boolean mouseScrolled(final double x, final double y, final double scrollX, final double scrollY) {
         if (this.minecraft.hasControlDown()) {
-            OptionInstance<Integer> optioninstance = this.options.guiScale();
-            if (optioninstance.values() instanceof OptionInstance.ClampingLazyMaxIntRange optioninstance$clampinglazymaxintrange) {
-                int k = optioninstance.get();
-                int i = k == 0 ? optioninstance$clampinglazymaxintrange.maxInclusive() + 1 : k;
-                int j = i + (int)Math.signum(p_343217_);
-                if (j != 0 && j <= optioninstance$clampinglazymaxintrange.maxInclusive() && j >= optioninstance$clampinglazymaxintrange.minInclusive()) {
-                    CycleButton<Integer> cyclebutton = (CycleButton<Integer>)this.list.findOption(optioninstance);
-                    if (cyclebutton != null) {
-                        optioninstance.set(j);
-                        cyclebutton.setValue(j);
+            OptionInstance<Integer> guiScale = this.options.guiScale();
+            if (guiScale.values() instanceof OptionInstance.ClampingLazyMaxIntRange clampingLazyMaxIntRange) {
+                int oldValue = guiScale.get();
+                int adjustedOldValue = oldValue == 0 ? clampingLazyMaxIntRange.maxInclusive() + 1 : oldValue;
+                int newValue = adjustedOldValue + (int)Math.signum(scrollY);
+                if (newValue != 0 && newValue <= clampingLazyMaxIntRange.maxInclusive() && newValue >= clampingLazyMaxIntRange.minInclusive()) {
+                    CycleButton<Integer> cycleButton = (CycleButton<Integer>)this.list.findOption(guiScale);
+                    if (cycleButton != null) {
+                        guiScale.set(newValue);
+                        cycleButton.setValue(newValue);
                         this.list.setScrollAmount(0.0);
                         return true;
                     }
@@ -233,27 +272,27 @@ public class VideoSettingsScreen extends OptionsSubScreen {
 
             return false;
         } else {
-            return super.mouseScrolled(p_345374_, p_345119_, p_345124_, p_343217_);
+            return super.mouseScrolled(x, y, scrollX, scrollY);
         }
     }
 
-    public void updateFullscreenButton(boolean p_397133_) {
+    public void updateFullscreenButton(final boolean fullscreen) {
         if (this.list != null) {
-            AbstractWidget abstractwidget = this.list.findOption(this.options.fullscreen());
-            if (abstractwidget != null) {
-                CycleButton<Boolean> cyclebutton = (CycleButton<Boolean>)abstractwidget;
-                cyclebutton.setValue(p_397133_);
+            AbstractWidget fullscreenWidget = this.list.findOption(this.options.fullscreen());
+            if (fullscreenWidget != null) {
+                CycleButton<Boolean> fullscreenButton = (CycleButton<Boolean>)fullscreenWidget;
+                fullscreenButton.setValue(fullscreen);
             }
         }
     }
 
     public void updateTransparencyButton() {
         if (this.list != null) {
-            OptionInstance<Boolean> optioninstance = this.options.improvedTransparency();
-            AbstractWidget abstractwidget = this.list.findOption(optioninstance);
-            if (abstractwidget != null) {
-                CycleButton<Boolean> cyclebutton = (CycleButton<Boolean>)abstractwidget;
-                cyclebutton.setValue(optioninstance.get());
+            OptionInstance<Boolean> option = this.options.improvedTransparency();
+            AbstractWidget widget = this.list.findOption(option);
+            if (widget != null) {
+                CycleButton<Boolean> button = (CycleButton<Boolean>)widget;
+                button.setValue(option.get());
             }
         }
     }

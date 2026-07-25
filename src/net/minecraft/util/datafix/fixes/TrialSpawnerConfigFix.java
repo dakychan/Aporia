@@ -8,12 +8,12 @@ import java.util.Map;
 import java.util.Optional;
 
 public class TrialSpawnerConfigFix extends NamedEntityWriteReadFix {
-    public TrialSpawnerConfigFix(Schema p_334159_) {
-        super(p_334159_, true, "Trial Spawner config tag fixer", References.BLOCK_ENTITY, "minecraft:trial_spawner");
+    public TrialSpawnerConfigFix(final Schema outputSchema) {
+        super(outputSchema, true, "Trial Spawner config tag fixer", References.BLOCK_ENTITY, "minecraft:trial_spawner");
     }
 
-    private static <T> Dynamic<T> moveToConfigTag(Dynamic<T> p_330678_) {
-        List<String> list = List.of(
+    private static <T> Dynamic<T> moveToConfigTag(Dynamic<T> input) {
+        List<String> keysToMove = List.of(
             "spawn_range",
             "total_mobs",
             "simultaneous_mobs",
@@ -24,21 +24,21 @@ public class TrialSpawnerConfigFix extends NamedEntityWriteReadFix {
             "loot_tables_to_eject",
             "items_to_drop_when_ominous"
         );
-        Map<Dynamic<T>, Dynamic<T>> map = new HashMap<>(list.size());
+        Map<Dynamic<T>, Dynamic<T>> map = new HashMap<>(keysToMove.size());
 
-        for (String s : list) {
-            Optional<Dynamic<T>> optional = p_330678_.get(s).get().result();
-            if (optional.isPresent()) {
-                map.put(p_330678_.createString(s), optional.get());
-                p_330678_ = p_330678_.remove(s);
+        for (String key : keysToMove) {
+            Optional<Dynamic<T>> maybeValueForKey = input.get(key).get().result();
+            if (maybeValueForKey.isPresent()) {
+                map.put(input.createString(key), maybeValueForKey.get());
+                input = input.remove(key);
             }
         }
 
-        return map.isEmpty() ? p_330678_ : p_330678_.set("normal_config", p_330678_.createMap(map));
+        return map.isEmpty() ? input : input.set("normal_config", input.createMap(map));
     }
 
     @Override
-    protected <T> Dynamic<T> fix(Dynamic<T> p_334514_) {
-        return moveToConfigTag(p_334514_);
+    protected <T> Dynamic<T> fix(final Dynamic<T> input) {
+        return moveToConfigTag(input);
     }
 }

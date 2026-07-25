@@ -2,14 +2,12 @@ package net.minecraft.world.scores;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Objects;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.HoverEvent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.numbers.NumberFormat;
 import net.minecraft.network.chat.numbers.NumberFormatTypes;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
@@ -26,22 +24,22 @@ public class Objective {
     private @Nullable NumberFormat numberFormat;
 
     public Objective(
-        Scoreboard p_83308_,
-        String p_83309_,
-        ObjectiveCriteria p_83310_,
-        Component p_83311_,
-        ObjectiveCriteria.RenderType p_83312_,
-        boolean p_311052_,
-        @Nullable NumberFormat p_309864_
+        final Scoreboard scoreboard,
+        final String name,
+        final ObjectiveCriteria criteria,
+        final Component displayName,
+        final ObjectiveCriteria.RenderType renderType,
+        final boolean displayAutoUpdate,
+        final @Nullable NumberFormat numberFormat
     ) {
-        this.scoreboard = p_83308_;
-        this.name = p_83309_;
-        this.criteria = p_83310_;
-        this.displayName = p_83311_;
+        this.scoreboard = scoreboard;
+        this.name = name;
+        this.criteria = criteria;
+        this.displayName = displayName;
         this.formattedDisplayName = this.createFormattedDisplayName();
-        this.renderType = p_83312_;
-        this.displayAutoUpdate = p_311052_;
-        this.numberFormat = p_309864_;
+        this.renderType = renderType;
+        this.displayAutoUpdate = displayAutoUpdate;
+        this.numberFormat = numberFormat;
     }
 
     public Objective.Packed pack() {
@@ -72,13 +70,13 @@ public class Objective {
         return this.numberFormat;
     }
 
-    public NumberFormat numberFormatOrDefault(NumberFormat p_309891_) {
-        return Objects.requireNonNullElse(this.numberFormat, p_309891_);
+    public NumberFormat numberFormatOrDefault(final NumberFormat _default) {
+        return Objects.requireNonNullElse(this.numberFormat, _default);
     }
 
     private Component createFormattedDisplayName() {
         return ComponentUtils.wrapInSquareBrackets(
-            this.displayName.copy().withStyle(p_391141_ -> p_391141_.withHoverEvent(new HoverEvent.ShowText(Component.literal(this.name))))
+            this.displayName.copy().withStyle(s -> s.withHoverEvent(new HoverEvent.ShowText(Component.literal(this.name))))
         );
     }
 
@@ -86,8 +84,8 @@ public class Objective {
         return this.formattedDisplayName;
     }
 
-    public void setDisplayName(Component p_83317_) {
-        this.displayName = p_83317_;
+    public void setDisplayName(final Component name) {
+        this.displayName = name;
         this.formattedDisplayName = this.createFormattedDisplayName();
         this.scoreboard.onObjectiveChanged(this);
     }
@@ -96,18 +94,18 @@ public class Objective {
         return this.renderType;
     }
 
-    public void setRenderType(ObjectiveCriteria.RenderType p_83315_) {
-        this.renderType = p_83315_;
+    public void setRenderType(final ObjectiveCriteria.RenderType renderType) {
+        this.renderType = renderType;
         this.scoreboard.onObjectiveChanged(this);
     }
 
-    public void setDisplayAutoUpdate(boolean p_309636_) {
-        this.displayAutoUpdate = p_309636_;
+    public void setDisplayAutoUpdate(final boolean displayAutoUpdate) {
+        this.displayAutoUpdate = displayAutoUpdate;
         this.scoreboard.onObjectiveChanged(this);
     }
 
-    public void setNumberFormat(@Nullable NumberFormat p_311380_) {
-        this.numberFormat = p_311380_;
+    public void setNumberFormat(final @Nullable NumberFormat numberFormat) {
+        this.numberFormat = numberFormat;
         this.scoreboard.onObjectiveChanged(this);
     }
 
@@ -120,7 +118,7 @@ public class Objective {
         Optional<NumberFormat> numberFormat
     ) {
         public static final Codec<Objective.Packed> CODEC = RecordCodecBuilder.create(
-            p_393081_ -> p_393081_.group(
+            i -> i.group(
                     Codec.STRING.fieldOf("Name").forGetter(Objective.Packed::name),
                     ObjectiveCriteria.CODEC.optionalFieldOf("CriteriaName", ObjectiveCriteria.DUMMY).forGetter(Objective.Packed::criteria),
                     ComponentSerialization.CODEC.fieldOf("DisplayName").forGetter(Objective.Packed::displayName),
@@ -130,7 +128,7 @@ public class Objective {
                     Codec.BOOL.optionalFieldOf("display_auto_update", false).forGetter(Objective.Packed::displayAutoUpdate),
                     NumberFormatTypes.CODEC.optionalFieldOf("format").forGetter(Objective.Packed::numberFormat)
                 )
-                .apply(p_393081_, Objective.Packed::new)
+                .apply(i, Objective.Packed::new)
         );
     }
 }

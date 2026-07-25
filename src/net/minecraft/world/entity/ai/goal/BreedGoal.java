@@ -16,15 +16,15 @@ public class BreedGoal extends Goal {
     private int loveTime;
     private final double speedModifier;
 
-    public BreedGoal(Animal p_25122_, double p_25123_) {
-        this(p_25122_, p_25123_, (Class<? extends Animal>)p_25122_.getClass());
+    public BreedGoal(final Animal animal, final double speedModifier) {
+        this(animal, speedModifier, (Class<? extends Animal>)animal.getClass());
     }
 
-    public BreedGoal(Animal p_25125_, double p_25126_, Class<? extends Animal> p_25127_) {
-        this.animal = p_25125_;
-        this.level = getServerLevel(p_25125_);
-        this.partnerClass = p_25127_;
-        this.speedModifier = p_25126_;
+    public BreedGoal(final Animal animal, final double speedModifier, final Class<? extends Animal> clazz) {
+        this.animal = animal;
+        this.level = getServerLevel(animal);
+        this.partnerClass = clazz;
+        this.speedModifier = speedModifier;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -32,10 +32,10 @@ public class BreedGoal extends Goal {
     public boolean canUse() {
         if (!this.animal.isInLove()) {
             return false;
-        } else {
-            this.partner = this.getFreePartner();
-            return this.partner != null;
         }
+
+        this.partner = this.getFreePartner();
+        return this.partner != null;
     }
 
     @Override
@@ -60,18 +60,19 @@ public class BreedGoal extends Goal {
     }
 
     private @Nullable Animal getFreePartner() {
-        List<? extends Animal> list = this.level.getNearbyEntities(this.partnerClass, PARTNER_TARGETING, this.animal, this.animal.getBoundingBox().inflate(8.0));
-        double d0 = Double.MAX_VALUE;
-        Animal animal = null;
+        List<? extends Animal> animals = this.level
+            .getNearbyEntities(this.partnerClass, PARTNER_TARGETING, this.animal, this.animal.getBoundingBox().inflate(8.0));
+        double dist = Double.MAX_VALUE;
+        Animal partner = null;
 
-        for (Animal animal1 : list) {
-            if (this.animal.canMate(animal1) && !animal1.isPanicking() && this.animal.distanceToSqr(animal1) < d0) {
-                animal = animal1;
-                d0 = this.animal.distanceToSqr(animal1);
+        for (Animal potentialPartner : animals) {
+            if (this.animal.canMate(potentialPartner) && !potentialPartner.isPanicking() && this.animal.distanceToSqr(potentialPartner) < dist) {
+                partner = potentialPartner;
+                dist = this.animal.distanceToSqr(potentialPartner);
             }
         }
 
-        return animal;
+        return partner;
     }
 
     protected void breed() {

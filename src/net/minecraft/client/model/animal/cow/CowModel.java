@@ -11,27 +11,24 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.MeshTransformer;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class CowModel extends QuadrupedModel<LivingEntityRenderState> {
     public static final MeshTransformer BABY_TRANSFORMER = new BabyModelTransform(false, 8.0F, 6.0F, Set.of("head"));
     private static final int LEG_SIZE = 12;
 
-    public CowModel(ModelPart p_460757_) {
-        super(p_460757_);
+    public CowModel(final ModelPart root) {
+        super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = createBaseCowModel();
-        return LayerDefinition.create(meshdefinition, 64, 64);
+        MeshDefinition mesh = createBaseCowModel();
+        return LayerDefinition.create(mesh, 64, 64);
     }
 
-    static MeshDefinition createBaseCowModel() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        partdefinition.addOrReplaceChild(
+    public static MeshDefinition createBaseCowModel() {
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        root.addOrReplaceChild(
             "head",
             CubeListBuilder.create()
                 .texOffs(0, 0)
@@ -44,7 +41,7 @@ public class CowModel extends QuadrupedModel<LivingEntityRenderState> {
                 .addBox("left_horn", 4.0F, -5.0F, -5.0F, 1.0F, 3.0F, 1.0F),
             PartPose.offset(0.0F, 4.0F, -8.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "body",
             CubeListBuilder.create()
                 .texOffs(18, 4)
@@ -53,13 +50,13 @@ public class CowModel extends QuadrupedModel<LivingEntityRenderState> {
                 .addBox(-2.0F, 2.0F, -8.0F, 4.0F, 6.0F, 1.0F),
             PartPose.offsetAndRotation(0.0F, 5.0F, 2.0F, (float) (Math.PI / 2), 0.0F, 0.0F)
         );
-        CubeListBuilder cubelistbuilder = CubeListBuilder.create().mirror().texOffs(0, 16).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F);
-        CubeListBuilder cubelistbuilder1 = CubeListBuilder.create().texOffs(0, 16).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F);
-        partdefinition.addOrReplaceChild("right_hind_leg", cubelistbuilder1, PartPose.offset(-4.0F, 12.0F, 7.0F));
-        partdefinition.addOrReplaceChild("left_hind_leg", cubelistbuilder, PartPose.offset(4.0F, 12.0F, 7.0F));
-        partdefinition.addOrReplaceChild("right_front_leg", cubelistbuilder1, PartPose.offset(-4.0F, 12.0F, -5.0F));
-        partdefinition.addOrReplaceChild("left_front_leg", cubelistbuilder, PartPose.offset(4.0F, 12.0F, -5.0F));
-        return meshdefinition;
+        CubeListBuilder leftLeg = CubeListBuilder.create().mirror().texOffs(0, 16).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F);
+        CubeListBuilder rightLeg = CubeListBuilder.create().texOffs(0, 16).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F);
+        root.addOrReplaceChild("right_hind_leg", rightLeg, PartPose.offset(-4.0F, 12.0F, 7.0F));
+        root.addOrReplaceChild("left_hind_leg", leftLeg, PartPose.offset(4.0F, 12.0F, 7.0F));
+        root.addOrReplaceChild("right_front_leg", rightLeg, PartPose.offset(-4.0F, 12.0F, -5.0F));
+        root.addOrReplaceChild("left_front_leg", leftLeg, PartPose.offset(4.0F, 12.0F, -5.0F));
+        return mesh;
     }
 
     public ModelPart getHead() {

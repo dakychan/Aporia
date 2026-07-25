@@ -20,29 +20,31 @@ public record MapId(int id) implements TooltipProvider {
     private static final Component LOCKED_TEXT = Component.translatable("filled_map.locked").withStyle(ChatFormatting.GRAY);
 
     public String key() {
-        return "map_" + this.id;
+        return "maps/" + this.id;
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_395024_, Consumer<Component> p_394922_, TooltipFlag p_395978_, DataComponentGetter p_392778_) {
-        MapItemSavedData mapitemsaveddata = p_395024_.mapData(this);
-        if (mapitemsaveddata == null) {
-            p_394922_.accept(Component.translatable("filled_map.unknown").withStyle(ChatFormatting.GRAY));
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        MapItemSavedData data = context.mapData(this);
+        if (data == null) {
+            consumer.accept(Component.translatable("filled_map.unknown").withStyle(ChatFormatting.GRAY));
         } else {
-            MapPostProcessing mappostprocessing = p_392778_.get(DataComponents.MAP_POST_PROCESSING);
-            if (p_392778_.get(DataComponents.CUSTOM_NAME) == null && mappostprocessing == null) {
-                p_394922_.accept(Component.translatable("filled_map.id", this.id).withStyle(ChatFormatting.GRAY));
+            MapPostProcessing postProcessing = components.get(DataComponents.MAP_POST_PROCESSING);
+            if (components.get(DataComponents.CUSTOM_NAME) == null && postProcessing == null) {
+                consumer.accept(Component.translatable("filled_map.id", this.id).withStyle(ChatFormatting.GRAY));
             }
 
-            if (mapitemsaveddata.locked || mappostprocessing == MapPostProcessing.LOCK) {
-                p_394922_.accept(LOCKED_TEXT);
+            if (data.locked || postProcessing == MapPostProcessing.LOCK) {
+                consumer.accept(LOCKED_TEXT);
             }
 
-            if (p_395978_.isAdvanced()) {
-                int i = mappostprocessing == MapPostProcessing.SCALE ? 1 : 0;
-                int j = Math.min(mapitemsaveddata.scale + i, 4);
-                p_394922_.accept(Component.translatable("filled_map.scale", 1 << j).withStyle(ChatFormatting.GRAY));
-                p_394922_.accept(Component.translatable("filled_map.level", j, 4).withStyle(ChatFormatting.GRAY));
+            if (flag.isAdvanced()) {
+                int scaleToAdd = postProcessing == MapPostProcessing.SCALE ? 1 : 0;
+                int scale = Math.min(data.scale + scaleToAdd, 4);
+                consumer.accept(Component.translatable("filled_map.scale", 1 << scale).withStyle(ChatFormatting.GRAY));
+                consumer.accept(Component.translatable("filled_map.level", scale, 4).withStyle(ChatFormatting.GRAY));
             }
         }
     }

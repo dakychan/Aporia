@@ -1,12 +1,13 @@
 package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.LivingEntity;
@@ -34,118 +35,122 @@ public class HoneyBlock extends HalfTransparentBlock {
         return CODEC;
     }
 
-    public HoneyBlock(BlockBehaviour.Properties p_53985_) {
-        super(p_53985_);
+    public HoneyBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
-    private static boolean doesEntityDoHoneyBlockSlideEffects(Entity p_54013_) {
-        return p_54013_ instanceof LivingEntity || p_54013_ instanceof AbstractMinecart || p_54013_ instanceof PrimedTnt || p_54013_ instanceof AbstractBoat;
+    private static boolean doesEntityDoHoneyBlockSlideEffects(final Entity entity) {
+        return entity instanceof LivingEntity || entity instanceof AbstractMinecart || entity instanceof PrimedTnt || entity instanceof AbstractBoat;
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_54015_, BlockGetter p_54016_, BlockPos p_54017_, CollisionContext p_54018_) {
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public void fallOn(Level p_153372_, BlockState p_153373_, BlockPos p_153374_, Entity p_153375_, double p_394083_) {
-        p_153375_.playSound(SoundEvents.HONEY_BLOCK_SLIDE, 1.0F, 1.0F);
-        if (!p_153372_.isClientSide()) {
-            p_153372_.broadcastEntityEvent(p_153375_, (byte)54);
+    public void fallOn(final Level level, final BlockState state, final BlockPos pos, final Entity entity, final double fallDistance) {
+        entity.playSound(SoundEvents.HONEY_BLOCK_SLIDE, 1.0F, 1.0F);
+        if (!level.isClientSide()) {
+            level.broadcastEntityEvent(entity, (byte)54);
         }
 
-        if (p_153375_.causeFallDamage(p_394083_, 0.2F, p_153372_.damageSources().fall())) {
-            p_153375_.playSound(this.soundType.getFallSound(), this.soundType.getVolume() * 0.5F, this.soundType.getPitch() * 0.75F);
+        if (entity.causeFallDamage(fallDistance, 0.2F, level.damageSources().fall())) {
+            entity.playSound(this.soundType.getFallSound(), this.soundType.getVolume() * 0.5F, this.soundType.getPitch() * 0.75F);
         }
     }
 
     @Override
-    protected void entityInside(BlockState p_54003_, Level p_54004_, BlockPos p_54005_, Entity p_54006_, InsideBlockEffectApplier p_395723_, boolean p_432034_) {
-        if (this.isSlidingDown(p_54005_, p_54006_)) {
-            this.maybeDoSlideAchievement(p_54006_, p_54005_);
-            this.doSlideMovement(p_54006_);
-            this.maybeDoSlideEffects(p_54004_, p_54006_);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (this.isSlidingDown(pos, entity)) {
+            this.maybeDoSlideAchievement(entity, pos);
+            this.doSlideMovement(entity);
+            this.maybeDoSlideEffects(level, entity);
         }
 
-        super.entityInside(p_54003_, p_54004_, p_54005_, p_54006_, p_395723_, p_432034_);
+        super.entityInside(state, level, pos, entity, effectApplier, isPrecise);
     }
 
-    private static double getOldDeltaY(double p_368591_) {
-        return p_368591_ / 0.98F + 0.08;
+    private static double getOldDeltaY(final double deltaY) {
+        return deltaY / 0.98F + 0.08;
     }
 
-    private static double getNewDeltaY(double p_369047_) {
-        return (p_369047_ - 0.08) * 0.98F;
+    private static double getNewDeltaY(final double deltaY) {
+        return (deltaY - 0.08) * 0.98F;
     }
 
-    private boolean isSlidingDown(BlockPos p_54008_, Entity p_54009_) {
-        if (p_54009_.onGround()) {
+    private boolean isSlidingDown(final BlockPos pos, final Entity entity) {
+        if (entity.onGround()) {
             return false;
-        } else if (p_54009_.getY() > p_54008_.getY() + 0.9375 - 1.0E-7) {
+        }
+
+        if (entity.getY() > pos.getY() + 0.9375 - 1.0E-7) {
             return false;
-        } else if (getOldDeltaY(p_54009_.getDeltaMovement().y) >= -0.08) {
+        }
+
+        if (getOldDeltaY(entity.getDeltaMovement().y) >= -0.08) {
             return false;
+        }
+
+        double dx = Math.abs(pos.getX() + 0.5 - entity.getX());
+        double dz = Math.abs(pos.getZ() + 0.5 - entity.getZ());
+        double overlapDistance = 0.4375 + entity.getBbWidth() / 2.0F;
+        return dx + 1.0E-7 > overlapDistance || dz + 1.0E-7 > overlapDistance;
+    }
+
+    private void maybeDoSlideAchievement(final Entity entity, final BlockPos pos) {
+        if (entity instanceof ServerPlayer serverPlayer && entity.level().getGameTime() % 20L == 0L) {
+            CriteriaTriggers.HONEY_BLOCK_SLIDE.trigger(serverPlayer, entity.level().getBlockState(pos));
+        }
+    }
+
+    private void doSlideMovement(final Entity entity) {
+        Vec3 deltaMovement = entity.getDeltaMovement();
+        if (getOldDeltaY(entity.getDeltaMovement().y) < -0.13) {
+            double horizontalReductionFactor = -0.05 / getOldDeltaY(entity.getDeltaMovement().y);
+            entity.setDeltaMovement(new Vec3(deltaMovement.x * horizontalReductionFactor, getNewDeltaY(-0.05), deltaMovement.z * horizontalReductionFactor));
         } else {
-            double d0 = Math.abs(p_54008_.getX() + 0.5 - p_54009_.getX());
-            double d1 = Math.abs(p_54008_.getZ() + 0.5 - p_54009_.getZ());
-            double d2 = 0.4375 + p_54009_.getBbWidth() / 2.0F;
-            return d0 + 1.0E-7 > d2 || d1 + 1.0E-7 > d2;
-        }
-    }
-
-    private void maybeDoSlideAchievement(Entity p_53992_, BlockPos p_53993_) {
-        if (p_53992_ instanceof ServerPlayer && p_53992_.level().getGameTime() % 20L == 0L) {
-            CriteriaTriggers.HONEY_BLOCK_SLIDE.trigger((ServerPlayer)p_53992_, p_53992_.level().getBlockState(p_53993_));
-        }
-    }
-
-    private void doSlideMovement(Entity p_54020_) {
-        Vec3 vec3 = p_54020_.getDeltaMovement();
-        if (getOldDeltaY(p_54020_.getDeltaMovement().y) < -0.13) {
-            double d0 = -0.05 / getOldDeltaY(p_54020_.getDeltaMovement().y);
-            p_54020_.setDeltaMovement(new Vec3(vec3.x * d0, getNewDeltaY(-0.05), vec3.z * d0));
-        } else {
-            p_54020_.setDeltaMovement(new Vec3(vec3.x, getNewDeltaY(-0.05), vec3.z));
+            entity.setDeltaMovement(new Vec3(deltaMovement.x, getNewDeltaY(-0.05), deltaMovement.z));
         }
 
-        p_54020_.resetFallDistance();
+        entity.resetFallDistance();
     }
 
-    private void maybeDoSlideEffects(Level p_53995_, Entity p_53996_) {
-        if (doesEntityDoHoneyBlockSlideEffects(p_53996_)) {
-            if (p_53995_.random.nextInt(5) == 0) {
-                p_53996_.playSound(SoundEvents.HONEY_BLOCK_SLIDE, 1.0F, 1.0F);
+    private void maybeDoSlideEffects(final Level level, final Entity entity) {
+        if (doesEntityDoHoneyBlockSlideEffects(entity)) {
+            RandomSource random = level.getRandom();
+            if (random.nextInt(5) == 0) {
+                entity.playSound(SoundEvents.HONEY_BLOCK_SLIDE, 1.0F, 1.0F);
             }
 
-            if (!p_53995_.isClientSide() && p_53995_.random.nextInt(5) == 0) {
-                p_53995_.broadcastEntityEvent(p_53996_, (byte)53);
+            if (!level.isClientSide() && random.nextInt(5) == 0) {
+                level.broadcastEntityEvent(entity, (byte)53);
             }
         }
     }
 
-    public static void showSlideParticles(Entity p_53987_) {
-        showParticles(p_53987_, 5);
+    public static void showSlideParticles(final Entity entity) {
+        showParticles(entity, 5);
     }
 
-    public static void showJumpParticles(Entity p_54011_) {
-        showParticles(p_54011_, 10);
+    public static void showJumpParticles(final Entity entity) {
+        showParticles(entity, 10);
     }
 
-    private static void showParticles(Entity p_53989_, int p_53990_) {
-        if (p_53989_.level().isClientSide()) {
-            BlockState blockstate = Blocks.HONEY_BLOCK.defaultBlockState();
+    private static void showParticles(final Entity entity, final int count) {
+        if (entity.level().isClientSide()) {
+            BlockState blockState = Blocks.HONEY_BLOCK.defaultBlockState();
 
-            for (int i = 0; i < p_53990_; i++) {
-                p_53989_.level()
-                    .addParticle(
-                        new BlockParticleOption(ParticleTypes.BLOCK, blockstate),
-                        p_53989_.getX(),
-                        p_53989_.getY(),
-                        p_53989_.getZ(),
-                        0.0,
-                        0.0,
-                        0.0
-                    );
+            for (int i = 0; i < count; i++) {
+                entity.level()
+                    .addParticle(new BlockParticleOption(ParticleTypes.BLOCK, blockState), entity.getX(), entity.getY(), entity.getZ(), 0.0, 0.0, 0.0);
             }
         }
     }

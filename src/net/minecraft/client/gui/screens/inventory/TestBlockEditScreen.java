@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.screens.inventory;
 
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -13,11 +13,8 @@ import net.minecraft.network.protocol.game.ServerboundSetTestBlockPacket;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.TestBlockEntity;
 import net.minecraft.world.level.block.state.properties.TestBlockMode;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class TestBlockEditScreen extends Screen {
     private static final List<TestBlockMode> MODES = List.of(TestBlockMode.values());
     private static final Component TITLE = Component.translatable(Blocks.TEST_BLOCK.getDescriptionId());
@@ -27,11 +24,11 @@ public class TestBlockEditScreen extends Screen {
     private String message;
     private @Nullable EditBox messageEdit;
 
-    public TestBlockEditScreen(TestBlockEntity p_394367_) {
+    public TestBlockEditScreen(final TestBlockEntity block) {
         super(TITLE);
-        this.position = p_394367_.getBlockPos();
-        this.mode = p_394367_.getMode();
-        this.message = p_394367_.getMessage();
+        this.position = block.getBlockPos();
+        this.mode = block.getMode();
+        this.message = block.getMessage();
     }
 
     @Override
@@ -45,12 +42,10 @@ public class TestBlockEditScreen extends Screen {
             CycleButton.builder(TestBlockMode::getDisplayName, this.mode)
                 .withValues(MODES)
                 .displayOnlyValue()
-                .create(this.width / 2 - 4 - 150, 185, 50, 20, TITLE, (p_396452_, p_393954_) -> this.updateMode(p_393954_))
+                .create(this.width / 2 - 4 - 150, 185, 50, 20, TITLE, (button, value) -> this.updateMode(value))
         );
-        this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_DONE, p_392720_ -> this.onDone()).bounds(this.width / 2 - 4 - 150, 210, 150, 20).build()
-        );
-        this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, p_391429_ -> this.onCancel()).bounds(this.width / 2 + 4, 210, 150, 20).build());
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.onDone()).bounds(this.width / 2 - 4 - 150, 210, 150, 20).build());
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, button -> this.onCancel()).bounds(this.width / 2 + 4, 210, 150, 20).build());
     }
 
     @Override
@@ -63,14 +58,14 @@ public class TestBlockEditScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics p_393246_, int p_397000_, int p_391691_, float p_397480_) {
-        super.render(p_393246_, p_397000_, p_391691_, p_397480_);
-        p_393246_.drawCenteredString(this.font, this.title, this.width / 2, 10, -1);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.centeredText(this.font, this.title, this.width / 2, 10, -1);
         if (this.mode != TestBlockMode.START) {
-            p_393246_.drawString(this.font, MESSAGE_LABEL, this.width / 2 - 153, 70, -6250336);
+            graphics.text(this.font, MESSAGE_LABEL, this.width / 2 - 153, 70, -6250336);
         }
 
-        p_393246_.drawString(this.font, this.mode.getDetailedMessage(), this.width / 2 - 153, 174, -6250336);
+        graphics.text(this.font, this.mode.getDetailedMessage(), this.width / 2 - 153, 174, -6250336);
     }
 
     @Override
@@ -95,11 +90,11 @@ public class TestBlockEditScreen extends Screen {
     }
 
     private void onCancel() {
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
-    private void updateMode(TestBlockMode p_396502_) {
-        this.mode = p_396502_;
-        this.messageEdit.visible = p_396502_ != TestBlockMode.START;
+    private void updateMode(final TestBlockMode value) {
+        this.mode = value;
+        this.messageEdit.visible = value != TestBlockMode.START;
     }
 }

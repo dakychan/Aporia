@@ -21,7 +21,7 @@ public record ClientboundChangeDifficultyPacket(Difficulty difficulty, boolean l
         return GamePacketTypes.CLIENTBOUND_CHANGE_DIFFICULTY;
     }
 
-    public void handle(ClientGamePacketListener p_131816_) {
-        p_131816_.handleChangeDifficulty(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleChangeDifficulty(this);
     }
 }

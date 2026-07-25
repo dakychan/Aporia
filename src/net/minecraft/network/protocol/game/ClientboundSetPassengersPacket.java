@@ -14,24 +14,24 @@ public class ClientboundSetPassengersPacket implements Packet<ClientGamePacketLi
     private final int vehicle;
     private final int[] passengers;
 
-    public ClientboundSetPassengersPacket(Entity p_133276_) {
-        this.vehicle = p_133276_.getId();
-        List<Entity> list = p_133276_.getPassengers();
-        this.passengers = new int[list.size()];
+    public ClientboundSetPassengersPacket(final Entity vehicle) {
+        this.vehicle = vehicle.getId();
+        List<Entity> entities = vehicle.getPassengers();
+        this.passengers = new int[entities.size()];
 
-        for (int i = 0; i < list.size(); i++) {
-            this.passengers[i] = list.get(i).getId();
+        for (int i = 0; i < entities.size(); i++) {
+            this.passengers[i] = entities.get(i).getId();
         }
     }
 
-    private ClientboundSetPassengersPacket(FriendlyByteBuf p_179308_) {
-        this.vehicle = p_179308_.readVarInt();
-        this.passengers = p_179308_.readVarIntArray();
+    private ClientboundSetPassengersPacket(final FriendlyByteBuf input) {
+        this.vehicle = input.readVarInt();
+        this.passengers = input.readVarIntArray();
     }
 
-    private void write(FriendlyByteBuf p_133285_) {
-        p_133285_.writeVarInt(this.vehicle);
-        p_133285_.writeVarIntArray(this.passengers);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.vehicle);
+        output.writeVarIntArray(this.passengers);
     }
 
     @Override
@@ -39,8 +39,8 @@ public class ClientboundSetPassengersPacket implements Packet<ClientGamePacketLi
         return GamePacketTypes.CLIENTBOUND_SET_PASSENGERS;
     }
 
-    public void handle(ClientGamePacketListener p_133282_) {
-        p_133282_.handleSetEntityPassengersPacket(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetEntityPassengersPacket(this);
     }
 
     public int[] getPassengers() {

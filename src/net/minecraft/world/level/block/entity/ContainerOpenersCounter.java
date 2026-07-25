@@ -17,77 +17,81 @@ public abstract class ContainerOpenersCounter {
     private int openCount;
     private double maxInteractionRange;
 
-    protected abstract void onOpen(Level p_155460_, BlockPos p_155461_, BlockState p_155462_);
+    protected abstract void onOpen(final Level level, final BlockPos pos, final BlockState blockState);
 
-    protected abstract void onClose(Level p_155473_, BlockPos p_155474_, BlockState p_155475_);
+    protected abstract void onClose(final Level level, final BlockPos pos, final BlockState blockState);
 
-    protected abstract void openerCountChanged(Level p_155463_, BlockPos p_155464_, BlockState p_155465_, int p_155466_, int p_155467_);
+    protected abstract void openerCountChanged(final Level level, final BlockPos pos, final BlockState blockState, int previous, int current);
 
-    public abstract boolean isOwnContainer(Player p_155451_);
+    public abstract boolean isOwnContainer(final Player player);
 
-    public void incrementOpeners(LivingEntity p_430652_, Level p_155454_, BlockPos p_155455_, BlockState p_155456_, double p_426289_) {
-        int i = this.openCount++;
-        if (i == 0) {
-            this.onOpen(p_155454_, p_155455_, p_155456_);
-            p_155454_.gameEvent(p_430652_, GameEvent.CONTAINER_OPEN, p_155455_);
-            scheduleRecheck(p_155454_, p_155455_, p_155456_);
+    public void incrementOpeners(
+        final LivingEntity entity, final Level level, final BlockPos pos, final BlockState blockState, final double maxInteractionRange
+    ) {
+        int previous = this.openCount++;
+        if (previous == 0) {
+            this.onOpen(level, pos, blockState);
+            level.gameEvent(entity, GameEvent.CONTAINER_OPEN, pos);
+            scheduleRecheck(level, pos, blockState);
         }
 
-        this.openerCountChanged(p_155454_, p_155455_, p_155456_, i, this.openCount);
-        this.maxInteractionRange = Math.max(p_426289_, this.maxInteractionRange);
+        this.openerCountChanged(level, pos, blockState, previous, this.openCount);
+        this.maxInteractionRange = Math.max(maxInteractionRange, this.maxInteractionRange);
     }
 
-    public void decrementOpeners(LivingEntity p_430878_, Level p_155470_, BlockPos p_155471_, BlockState p_155472_) {
-        int i = this.openCount--;
+    public void decrementOpeners(final LivingEntity entity, final Level level, final BlockPos pos, final BlockState blockState) {
+        int previous = this.openCount--;
         if (this.openCount == 0) {
-            this.onClose(p_155470_, p_155471_, p_155472_);
-            p_155470_.gameEvent(p_430878_, GameEvent.CONTAINER_CLOSE, p_155471_);
+            this.onClose(level, pos, blockState);
+            level.gameEvent(entity, GameEvent.CONTAINER_CLOSE, pos);
             this.maxInteractionRange = 0.0;
         }
 
-        this.openerCountChanged(p_155470_, p_155471_, p_155472_, i, this.openCount);
+        this.openerCountChanged(level, pos, blockState, previous, this.openCount);
     }
 
-    public List<ContainerUser> getEntitiesWithContainerOpen(Level p_426166_, BlockPos p_424786_) {
-        double d0 = this.maxInteractionRange + 4.0;
-        AABB aabb = new AABB(p_424786_).inflate(d0);
-        return p_426166_.getEntities((Entity)null, aabb, p_426258_ -> this.hasContainerOpen(p_426258_, p_424786_))
+    public List<ContainerUser> getEntitiesWithContainerOpen(final Level level, final BlockPos pos) {
+        double range = this.maxInteractionRange + 4.0;
+        AABB searchBox = new AABB(pos).inflate(range);
+        return level.getEntities((Entity)null, searchBox, entity -> this.hasContainerOpen(entity, pos))
             .stream()
-            .map(p_431386_ -> (ContainerUser)p_431386_)
+            .map(entity -> (ContainerUser)entity)
             .collect(Collectors.toList());
     }
 
-    private boolean hasContainerOpen(Entity p_431382_, BlockPos p_428254_) {
-        return p_431382_ instanceof ContainerUser containeruser && !containeruser.getLivingEntity().isSpectator() ? containeruser.hasContainerOpen(this, p_428254_) : false;
+    private boolean hasContainerOpen(final Entity entity, final BlockPos blockPos) {
+        return entity instanceof ContainerUser containerUser && !containerUser.getLivingEntity().isSpectator()
+            ? containerUser.hasContainerOpen(this, blockPos)
+            : false;
     }
 
-    public void recheckOpeners(Level p_155477_, BlockPos p_155478_, BlockState p_155479_) {
-        List<ContainerUser> list = this.getEntitiesWithContainerOpen(p_155477_, p_155478_);
+    public void recheckOpeners(final Level level, final BlockPos pos, final BlockState blockState) {
+        List<ContainerUser> containerUsers = this.getEntitiesWithContainerOpen(level, pos);
         this.maxInteractionRange = 0.0;
 
-        for (ContainerUser containeruser : list) {
-            this.maxInteractionRange = Math.max(containeruser.getContainerInteractionRange(), this.maxInteractionRange);
+        for (ContainerUser containerUser : containerUsers) {
+            this.maxInteractionRange = Math.max(containerUser.getContainerInteractionRange(), this.maxInteractionRange);
         }
 
-        int i = list.size();
-        int j = this.openCount;
-        if (j != i) {
-            boolean flag = i != 0;
-            boolean flag1 = j != 0;
-            if (flag && !flag1) {
-                this.onOpen(p_155477_, p_155478_, p_155479_);
-                p_155477_.gameEvent(null, GameEvent.CONTAINER_OPEN, p_155478_);
-            } else if (!flag) {
-                this.onClose(p_155477_, p_155478_, p_155479_);
-                p_155477_.gameEvent(null, GameEvent.CONTAINER_CLOSE, p_155478_);
+        int openCount = containerUsers.size();
+        int prevCount = this.openCount;
+        if (prevCount != openCount) {
+            boolean isOpen = openCount != 0;
+            boolean wasOpen = prevCount != 0;
+            if (isOpen && !wasOpen) {
+                this.onOpen(level, pos, blockState);
+                level.gameEvent(null, GameEvent.CONTAINER_OPEN, pos);
+            } else if (!isOpen) {
+                this.onClose(level, pos, blockState);
+                level.gameEvent(null, GameEvent.CONTAINER_CLOSE, pos);
             }
 
-            this.openCount = i;
+            this.openCount = openCount;
         }
 
-        this.openerCountChanged(p_155477_, p_155478_, p_155479_, j, i);
-        if (i > 0) {
-            scheduleRecheck(p_155477_, p_155478_, p_155479_);
+        this.openerCountChanged(level, pos, blockState, prevCount, openCount);
+        if (openCount > 0) {
+            scheduleRecheck(level, pos, blockState);
         }
     }
 
@@ -95,7 +99,7 @@ public abstract class ContainerOpenersCounter {
         return this.openCount;
     }
 
-    private static void scheduleRecheck(Level p_155481_, BlockPos p_155482_, BlockState p_155483_) {
-        p_155481_.scheduleTick(p_155482_, p_155483_.getBlock(), 5);
+    private static void scheduleRecheck(final Level level, final BlockPos blockPos, final BlockState blockState) {
+        level.scheduleTick(blockPos, blockState.getBlock(), 5);
     }
 }

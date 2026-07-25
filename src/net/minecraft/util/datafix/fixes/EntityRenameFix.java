@@ -16,35 +16,42 @@ import net.minecraft.util.datafix.ExtraDataFixUtils;
 public abstract class EntityRenameFix extends DataFix {
     protected final String name;
 
-    public EntityRenameFix(String p_15618_, Schema p_15619_, boolean p_15620_) {
-        super(p_15619_, p_15620_);
-        this.name = p_15618_;
+    public EntityRenameFix(final String name, final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
+        this.name = name;
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        TaggedChoiceType<String> taggedchoicetype = (TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.ENTITY);
-        TaggedChoiceType<String> taggedchoicetype1 = (TaggedChoiceType<String>)this.getOutputSchema().findChoiceType(References.ENTITY);
-        Function<String, Type<?>> function = Util.memoize(p_358832_ -> {
-            Type<?> type = taggedchoicetype.types().get(p_358832_);
-            return ExtraDataFixUtils.patchSubType(type, taggedchoicetype, taggedchoicetype1);
+        TaggedChoiceType<String> oldType = (TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.ENTITY);
+        TaggedChoiceType<String> newType = (TaggedChoiceType<String>)this.getOutputSchema().findChoiceType(References.ENTITY);
+        Function<String, Type<?>> patchedInputTypes = Util.memoize(name -> {
+            Type<?> type = oldType.types().get(name);
+            return ExtraDataFixUtils.patchSubType(type, oldType, newType);
         });
-        return this.fixTypeEverywhere(this.name, taggedchoicetype, taggedchoicetype1, p_15624_ -> p_358836_ -> {
-            String s = p_358836_.getFirst();
-            Type<?> type = function.apply(s);
-            Pair<String, Typed<?>> pair = this.fix(s, this.getEntity(p_358836_.getSecond(), p_15624_, type));
-            Type<?> type1 = taggedchoicetype1.types().get(pair.getFirst());
-            if (!type1.equals(pair.getSecond().getType(), true, true)) {
-                throw new IllegalStateException(String.format(Locale.ROOT, "Dynamic type check failed: %s not equal to %s", type1, pair.getSecond().getType()));
-            } else {
-                return Pair.of(pair.getFirst(), pair.getSecond().getValue());
+        return this.fixTypeEverywhere(
+            this.name,
+            oldType,
+            newType,
+            ops -> input -> {
+                String oldName = input.getFirst();
+                Type<?> oldEntityType = patchedInputTypes.apply(oldName);
+                Pair<String, Typed<?>> newEntity = this.fix(oldName, this.getEntity(input.getSecond(), ops, oldEntityType));
+                Type<?> expectedType = newType.types().get(newEntity.getFirst());
+                if (!expectedType.equals(newEntity.getSecond().getType(), true, true)) {
+                    throw new IllegalStateException(
+                        String.format(Locale.ROOT, "Dynamic type check failed: %s not equal to %s", expectedType, newEntity.getSecond().getType())
+                    );
+                } else {
+                    return Pair.of(newEntity.getFirst(), newEntity.getSecond().getValue());
+                }
             }
-        });
+        );
     }
 
-    private <A> Typed<A> getEntity(Object p_15631_, DynamicOps<?> p_15632_, Type<A> p_15633_) {
-        return new Typed<>(p_15633_, p_15632_, (A)p_15631_);
+    private <A> Typed<A> getEntity(final Object input, final DynamicOps<?> ops, final Type<A> oldEntityType) {
+        return new Typed<>(oldEntityType, ops, (A)input);
     }
 
-    protected abstract Pair<String, Typed<?>> fix(String p_15634_, Typed<?> p_15635_);
+    protected abstract Pair<String, Typed<?>> fix(final String name, final Typed<?> entity);
 }

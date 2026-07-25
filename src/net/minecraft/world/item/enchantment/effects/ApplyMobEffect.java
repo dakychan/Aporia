@@ -2,7 +2,6 @@ package net.minecraft.world.item.enchantment.effects;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
@@ -23,25 +22,29 @@ public record ApplyMobEffect(
     HolderSet<MobEffect> toApply, LevelBasedValue minDuration, LevelBasedValue maxDuration, LevelBasedValue minAmplifier, LevelBasedValue maxAmplifier
 ) implements EnchantmentEntityEffect {
     public static final MapCodec<ApplyMobEffect> CODEC = RecordCodecBuilder.mapCodec(
-        p_344225_ -> p_344225_.group(
+        i -> i.group(
                 RegistryCodecs.homogeneousList(Registries.MOB_EFFECT).fieldOf("to_apply").forGetter(ApplyMobEffect::toApply),
                 LevelBasedValue.CODEC.fieldOf("min_duration").forGetter(ApplyMobEffect::minDuration),
                 LevelBasedValue.CODEC.fieldOf("max_duration").forGetter(ApplyMobEffect::maxDuration),
                 LevelBasedValue.CODEC.fieldOf("min_amplifier").forGetter(ApplyMobEffect::minAmplifier),
                 LevelBasedValue.CODEC.fieldOf("max_amplifier").forGetter(ApplyMobEffect::maxAmplifier)
             )
-            .apply(p_344225_, ApplyMobEffect::new)
+            .apply(i, ApplyMobEffect::new)
     );
 
     @Override
-    public void apply(ServerLevel p_345011_, int p_344950_, EnchantedItemInUse p_344081_, Entity p_344762_, Vec3 p_343893_) {
-        if (p_344762_ instanceof LivingEntity livingentity) {
-            RandomSource randomsource = livingentity.getRandom();
-            Optional<Holder<MobEffect>> optional = this.toApply.getRandomElement(randomsource);
-            if (optional.isPresent()) {
-                int i = Math.round(Mth.randomBetween(randomsource, this.minDuration.calculate(p_344950_), this.maxDuration.calculate(p_344950_)) * 20.0F);
-                int j = Math.max(0, Math.round(Mth.randomBetween(randomsource, this.minAmplifier.calculate(p_344950_), this.maxAmplifier.calculate(p_344950_))));
-                livingentity.addEffect(new MobEffectInstance(optional.get(), i, j));
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        if (entity instanceof LivingEntity living) {
+            RandomSource random = living.getRandom();
+            Optional<Holder<MobEffect>> selected = this.toApply.getRandomElement(random);
+            if (selected.isPresent()) {
+                int ticks = Math.round(
+                    Mth.randomBetween(random, this.minDuration.calculate(enchantmentLevel), this.maxDuration.calculate(enchantmentLevel)) * 20.0F
+                );
+                int amplifier = Math.max(
+                    0, Math.round(Mth.randomBetween(random, this.minAmplifier.calculate(enchantmentLevel), this.maxAmplifier.calculate(enchantmentLevel)))
+                );
+                living.addEffect(new MobEffectInstance(selected.get(), ticks, amplifier));
             }
         }
     }

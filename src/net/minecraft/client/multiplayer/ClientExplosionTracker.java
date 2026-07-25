@@ -10,56 +10,51 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.util.random.WeightedRandom;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ClientExplosionTracker {
     private static final int MAX_PARTICLES_PER_TICK = 512;
     private final List<ClientExplosionTracker.ExplosionInfo> explosions = new ArrayList<>();
 
-    public void track(Vec3 p_429764_, float p_422326_, int p_422678_, WeightedList<ExplosionParticleInfo> p_424396_) {
-        if (!p_424396_.isEmpty()) {
-            this.explosions.add(new ClientExplosionTracker.ExplosionInfo(p_429764_, p_422326_, p_422678_, p_424396_));
+    public void track(final Vec3 center, final float radius, final int blockCount, final WeightedList<ExplosionParticleInfo> blockParticles) {
+        if (!blockParticles.isEmpty()) {
+            this.explosions.add(new ClientExplosionTracker.ExplosionInfo(center, radius, blockCount, blockParticles));
         }
     }
 
-    public void tick(ClientLevel p_424030_) {
+    public void tick(final ClientLevel level) {
         if (Minecraft.getInstance().options.particles().get() != ParticleStatus.ALL) {
             this.explosions.clear();
         } else {
-            int i = WeightedRandom.getTotalWeight(this.explosions, ClientExplosionTracker.ExplosionInfo::blockCount);
-            int j = Math.min(i, 512);
+            int totalBlocks = WeightedRandom.getTotalWeight(this.explosions, ClientExplosionTracker.ExplosionInfo::blockCount);
+            int totalParticles = Math.min(totalBlocks, 512);
 
-            for (int k = 0; k < j; k++) {
-                WeightedRandom.getRandomItem(p_424030_.getRandom(), this.explosions, i, ClientExplosionTracker.ExplosionInfo::blockCount)
-                    .ifPresent(p_423158_ -> this.addParticle(p_424030_, p_423158_));
+            for (int i = 0; i < totalParticles; i++) {
+                WeightedRandom.getRandomItem(level.getRandom(), this.explosions, totalBlocks, ClientExplosionTracker.ExplosionInfo::blockCount)
+                    .ifPresent(info -> this.addParticle(level, info));
             }
 
             this.explosions.clear();
         }
     }
 
-    private void addParticle(ClientLevel p_424756_, ClientExplosionTracker.ExplosionInfo p_423042_) {
-        RandomSource randomsource = p_424756_.getRandom();
-        Vec3 vec3 = p_423042_.center();
-        Vec3 vec31 = new Vec3(randomsource.nextFloat() * 2.0F - 1.0F, randomsource.nextFloat() * 2.0F - 1.0F, randomsource.nextFloat() * 2.0F - 1.0F)
-            .normalize();
-        float f = (float)Math.cbrt(randomsource.nextFloat()) * p_423042_.radius();
-        Vec3 vec32 = vec31.scale(f);
-        Vec3 vec33 = vec3.add(vec32);
-        if (p_424756_.getBlockState(BlockPos.containing(vec33)).isAir()) {
-            float f1 = 0.5F / (f / p_423042_.radius() + 0.1F) * randomsource.nextFloat() * randomsource.nextFloat() + 0.3F;
-            ExplosionParticleInfo explosionparticleinfo = p_423042_.blockParticles.getRandomOrThrow(randomsource);
-            Vec3 vec34 = vec3.add(vec32.scale(explosionparticleinfo.scaling()));
-            Vec3 vec35 = vec31.scale(f1 * explosionparticleinfo.speed());
-            p_424756_.addParticle(
-                explosionparticleinfo.particle(), vec34.x(), vec34.y(), vec34.z(), vec35.x(), vec35.y(), vec35.z()
+    private void addParticle(final ClientLevel level, final ClientExplosionTracker.ExplosionInfo explosion) {
+        RandomSource random = level.getRandom();
+        Vec3 center = explosion.center();
+        Vec3 directionFromCenter = new Vec3(random.nextFloat() * 2.0F - 1.0F, random.nextFloat() * 2.0F - 1.0F, random.nextFloat() * 2.0F - 1.0F).normalize();
+        float radius = (float)Math.cbrt(random.nextFloat()) * explosion.radius();
+        Vec3 localPos = directionFromCenter.scale(radius);
+        Vec3 pos = center.add(localPos);
+        if (level.getBlockState(BlockPos.containing(pos)).isAir()) {
+            float speed = 0.5F / (radius / explosion.radius() + 0.1F) * random.nextFloat() * random.nextFloat() + 0.3F;
+            ExplosionParticleInfo info = explosion.blockParticles.getRandomOrThrow(random);
+            Vec3 particlePos = center.add(localPos.scale(info.scaling()));
+            Vec3 particleVelocity = directionFromCenter.scale(speed * info.speed());
+            level.addParticle(
+                info.particle(), particlePos.x(), particlePos.y(), particlePos.z(), particleVelocity.x(), particleVelocity.y(), particleVelocity.z()
             );
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record ExplosionInfo(Vec3 center, float radius, int blockCount, WeightedList<ExplosionParticleInfo> blockParticles) {
+        private record ExplosionInfo(Vec3 center, float radius, int blockCount, WeightedList<ExplosionParticleInfo> blockParticles) {
     }
 }

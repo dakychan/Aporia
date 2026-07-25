@@ -15,38 +15,37 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.IntStream;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.util.Util;
 
 public final class UUIDUtil {
     public static final Codec<UUID> CODEC = Codec.INT_STREAM
-        .comapFlatMap(p_448580_ -> Util.fixedSize(p_448580_, 4).map(UUIDUtil::uuidFromIntArray), p_235888_ -> Arrays.stream(uuidToIntArray(p_235888_)));
+        .comapFlatMap(list -> Util.fixedSize(list, 4).map(UUIDUtil::uuidFromIntArray), uuid -> Arrays.stream(uuidToIntArray(uuid)));
     public static final Codec<Set<UUID>> CODEC_SET = Codec.list(CODEC).xmap(Sets::newHashSet, Lists::newArrayList);
     public static final Codec<Set<UUID>> CODEC_LINKED_SET = Codec.list(CODEC).xmap(Sets::newLinkedHashSet, Lists::newArrayList);
-    public static final Codec<UUID> STRING_CODEC = Codec.STRING.comapFlatMap(p_274732_ -> {
+    public static final Codec<UUID> STRING_CODEC = Codec.STRING.comapFlatMap(s -> {
         try {
-            return DataResult.success(UUID.fromString(p_274732_), Lifecycle.stable());
-        } catch (IllegalArgumentException illegalargumentexception) {
-            return DataResult.error(() -> "Invalid UUID " + p_274732_ + ": " + illegalargumentexception.getMessage());
+            return DataResult.success(UUID.fromString(s), Lifecycle.stable());
+        } catch (IllegalArgumentException e) {
+            return DataResult.error(() -> "Invalid UUID " + s + ": " + e.getMessage());
         }
     }, UUID::toString);
-    public static final Codec<UUID> AUTHLIB_CODEC = Codec.withAlternative(Codec.STRING.comapFlatMap(p_296331_ -> {
+    public static final Codec<UUID> AUTHLIB_CODEC = Codec.withAlternative(Codec.STRING.comapFlatMap(s -> {
         try {
-            return DataResult.success(UndashedUuid.fromStringLenient(p_296331_), Lifecycle.stable());
-        } catch (IllegalArgumentException illegalargumentexception) {
-            return DataResult.error(() -> "Invalid UUID " + p_296331_ + ": " + illegalargumentexception.getMessage());
+            return DataResult.success(UndashedUuid.fromStringLenient(s), Lifecycle.stable());
+        } catch (IllegalArgumentException e) {
+            return DataResult.error(() -> "Invalid UUID " + s + ": " + e.getMessage());
         }
     }, UndashedUuid::toString), CODEC);
     public static final Codec<UUID> LENIENT_CODEC = Codec.withAlternative(CODEC, STRING_CODEC);
     public static final StreamCodec<ByteBuf, UUID> STREAM_CODEC = new StreamCodec<ByteBuf, UUID>() {
-        public UUID decode(ByteBuf p_332317_) {
-            return FriendlyByteBuf.readUUID(p_332317_);
+        public UUID decode(final ByteBuf input) {
+            return FriendlyByteBuf.readUUID(input);
         }
 
-        public void encode(ByteBuf p_331213_, UUID p_327754_) {
-            FriendlyByteBuf.writeUUID(p_331213_, p_327754_);
+        public void encode(final ByteBuf output, final UUID value) {
+            FriendlyByteBuf.writeUUID(output, value);
         }
     };
     public static final int UUID_BYTES = 16;
@@ -55,41 +54,41 @@ public final class UUIDUtil {
     private UUIDUtil() {
     }
 
-    public static UUID uuidFromIntArray(int[] p_235886_) {
-        return new UUID((long)p_235886_[0] << 32 | p_235886_[1] & 4294967295L, (long)p_235886_[2] << 32 | p_235886_[3] & 4294967295L);
+    public static UUID uuidFromIntArray(final int[] intArray) {
+        return new UUID((long)intArray[0] << 32 | intArray[1] & 4294967295L, (long)intArray[2] << 32 | intArray[3] & 4294967295L);
     }
 
-    public static int[] uuidToIntArray(UUID p_235882_) {
-        long i = p_235882_.getMostSignificantBits();
-        long j = p_235882_.getLeastSignificantBits();
-        return leastMostToIntArray(i, j);
+    public static int[] uuidToIntArray(final UUID uuid) {
+        long mostSignificantBits = uuid.getMostSignificantBits();
+        long leastSignificantBits = uuid.getLeastSignificantBits();
+        return leastMostToIntArray(mostSignificantBits, leastSignificantBits);
     }
 
-    private static int[] leastMostToIntArray(long p_235873_, long p_235874_) {
-        return new int[]{(int)(p_235873_ >> 32), (int)p_235873_, (int)(p_235874_ >> 32), (int)p_235874_};
+    private static int[] leastMostToIntArray(final long mostSignificantBits, final long leastSignificantBits) {
+        return new int[]{(int)(mostSignificantBits >> 32), (int)mostSignificantBits, (int)(leastSignificantBits >> 32), (int)leastSignificantBits};
     }
 
-    public static byte[] uuidToByteArray(UUID p_241285_) {
-        byte[] abyte = new byte[16];
-        ByteBuffer.wrap(abyte).order(ByteOrder.BIG_ENDIAN).putLong(p_241285_.getMostSignificantBits()).putLong(p_241285_.getLeastSignificantBits());
-        return abyte;
+    public static byte[] uuidToByteArray(final UUID uuid) {
+        byte[] bytes = new byte[16];
+        ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN).putLong(uuid.getMostSignificantBits()).putLong(uuid.getLeastSignificantBits());
+        return bytes;
     }
 
-    public static UUID readUUID(Dynamic<?> p_235878_) {
-        int[] aint = p_235878_.asIntStream().toArray();
-        if (aint.length != 4) {
-            throw new IllegalArgumentException("Could not read UUID. Expected int-array of length 4, got " + aint.length + ".");
+    public static UUID readUUID(final Dynamic<?> input) {
+        int[] intArray = input.asIntStream().toArray();
+        if (intArray.length != 4) {
+            throw new IllegalArgumentException("Could not read UUID. Expected int-array of length 4, got " + intArray.length + ".");
         } else {
-            return uuidFromIntArray(aint);
+            return uuidFromIntArray(intArray);
         }
     }
 
-    public static UUID createOfflinePlayerUUID(String p_235880_) {
-        return UUID.nameUUIDFromBytes(("OfflinePlayer:" + p_235880_).getBytes(StandardCharsets.UTF_8));
+    public static UUID createOfflinePlayerUUID(final String playerName) {
+        return UUID.nameUUIDFromBytes(("OfflinePlayer:" + playerName).getBytes(StandardCharsets.UTF_8));
     }
 
-    public static GameProfile createOfflineProfile(String p_309926_) {
-        UUID uuid = createOfflinePlayerUUID(p_309926_);
-        return new GameProfile(uuid, p_309926_);
+    public static GameProfile createOfflineProfile(final String playerName) {
+        UUID id = createOfflinePlayerUUID(playerName);
+        return new GameProfile(id, playerName);
     }
 }

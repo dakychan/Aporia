@@ -21,7 +21,7 @@ public record ServerboundPickItemFromBlockPacket(BlockPos pos, boolean includeDa
         return GamePacketTypes.SERVERBOUND_PICK_ITEM_FROM_BLOCK;
     }
 
-    public void handle(ServerGamePacketListener p_377743_) {
-        p_377743_.handlePickItemFromBlock(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePickItemFromBlock(this);
     }
 }

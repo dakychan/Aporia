@@ -21,7 +21,9 @@ public record Bees(List<BeehiveBlockEntity.Occupant> bees) implements TooltipPro
     public static final Bees EMPTY = new Bees(List.of());
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_394024_, Consumer<Component> p_396809_, TooltipFlag p_395040_, DataComponentGetter p_396584_) {
-        p_396809_.accept(Component.translatable("container.beehive.bees", this.bees.size(), 3).withStyle(ChatFormatting.GRAY));
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        consumer.accept(Component.translatable("container.beehive.bees", this.bees.size(), 3).withStyle(ChatFormatting.GRAY));
     }
 }

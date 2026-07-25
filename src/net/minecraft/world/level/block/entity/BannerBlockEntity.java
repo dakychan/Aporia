@@ -13,7 +13,6 @@ import net.minecraft.world.Nameable;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.AbstractBannerBlock;
-import net.minecraft.world.level.block.BannerBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -27,13 +26,13 @@ public class BannerBlockEntity extends BlockEntity implements Nameable {
     private final DyeColor baseColor;
     private BannerPatternLayers patterns = BannerPatternLayers.EMPTY;
 
-    public BannerBlockEntity(BlockPos p_155035_, BlockState p_155036_) {
-        this(p_155035_, p_155036_, ((AbstractBannerBlock)p_155036_.getBlock()).getColor());
+    public BannerBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        this(worldPosition, blockState, ((AbstractBannerBlock)blockState.getBlock()).getColor());
     }
 
-    public BannerBlockEntity(BlockPos p_155038_, BlockState p_155039_, DyeColor p_155040_) {
-        super(BlockEntityType.BANNER, p_155038_, p_155039_);
-        this.baseColor = p_155040_;
+    public BannerBlockEntity(final BlockPos worldPosition, final BlockState blockState, final DyeColor color) {
+        super(BlockEntityTypes.BANNER, worldPosition, blockState);
+        this.baseColor = color;
     }
 
     @Override
@@ -47,20 +46,20 @@ public class BannerBlockEntity extends BlockEntity implements Nameable {
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_410544_) {
-        super.saveAdditional(p_410544_);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
         if (!this.patterns.equals(BannerPatternLayers.EMPTY)) {
-            p_410544_.store("patterns", BannerPatternLayers.CODEC, this.patterns);
+            output.store("patterns", BannerPatternLayers.CODEC, this.patterns);
         }
 
-        p_410544_.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_407786_) {
-        super.loadAdditional(p_407786_);
-        this.name = parseCustomNameSafe(p_407786_, "CustomName");
-        this.patterns = p_407786_.read("patterns", BannerPatternLayers.CODEC).orElse(BannerPatternLayers.EMPTY);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.name = parseCustomNameSafe(input, "CustomName");
+        this.patterns = input.read("patterns", BannerPatternLayers.CODEC).orElse(BannerPatternLayers.EMPTY);
     }
 
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
@@ -68,8 +67,8 @@ public class BannerBlockEntity extends BlockEntity implements Nameable {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_335241_) {
-        return this.saveWithoutMetadata(p_335241_);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        return this.saveWithoutMetadata(registries);
     }
 
     public BannerPatternLayers getPatterns() {
@@ -77,9 +76,9 @@ public class BannerBlockEntity extends BlockEntity implements Nameable {
     }
 
     public ItemStack getItem() {
-        ItemStack itemstack = new ItemStack(BannerBlock.byColor(this.baseColor));
-        itemstack.applyComponents(this.collectComponents());
-        return itemstack;
+        ItemStack itemStack = new ItemStack(this.getBlockState().getBlock());
+        itemStack.applyComponents(this.collectComponents());
+        return itemStack;
     }
 
     public DyeColor getBaseColor() {
@@ -87,22 +86,22 @@ public class BannerBlockEntity extends BlockEntity implements Nameable {
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_396293_) {
-        super.applyImplicitComponents(p_396293_);
-        this.patterns = p_396293_.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
-        this.name = p_396293_.get(DataComponents.CUSTOM_NAME);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        this.patterns = components.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+        this.name = components.get(DataComponents.CUSTOM_NAME);
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_332512_) {
-        super.collectImplicitComponents(p_332512_);
-        p_332512_.set(DataComponents.BANNER_PATTERNS, this.patterns);
-        p_332512_.set(DataComponents.CUSTOM_NAME, this.name);
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.BANNER_PATTERNS, this.patterns);
+        components.set(DataComponents.CUSTOM_NAME, this.name);
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_410646_) {
-        p_410646_.discard("patterns");
-        p_410646_.discard("CustomName");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        output.discard("patterns");
+        output.discard("CustomName");
     }
 }

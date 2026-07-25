@@ -1,72 +1,77 @@
 package net.minecraft.server.jsonrpc.internalapi;
 
-import com.mojang.authlib.yggdrasil.ProfileResult;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import net.minecraft.server.dedicated.DedicatedServer;
 import net.minecraft.server.jsonrpc.JsonRpcLogger;
 import net.minecraft.server.jsonrpc.methods.ClientInfo;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.notifications.NotificationManager;
 import net.minecraft.server.players.NameAndId;
 import org.jspecify.annotations.Nullable;
 
 public class MinecraftPlayerListServiceImpl implements MinecraftPlayerListService {
+    private final NotificationManager notificationManager;
     private final JsonRpcLogger jsonRpcLogger;
-    private final DedicatedServer server;
 
-    public MinecraftPlayerListServiceImpl(DedicatedServer p_425359_, JsonRpcLogger p_424652_) {
-        this.jsonRpcLogger = p_424652_;
-        this.server = p_425359_;
+    public MinecraftPlayerListServiceImpl(final NotificationManager notificationManager, final JsonRpcLogger jsonRpcLogger) {
+        this.notificationManager = notificationManager;
+        this.jsonRpcLogger = jsonRpcLogger;
+    }
+
+    private DedicatedServer server() {
+        return Objects.requireNonNull(this.notificationManager.server());
     }
 
     @Override
     public List<ServerPlayer> getPlayers() {
-        return this.server.getPlayerList().getPlayers();
+        return this.server().getPlayerList().getPlayers();
     }
 
     @Override
-    public @Nullable ServerPlayer getPlayer(UUID p_430433_) {
-        return this.server.getPlayerList().getPlayer(p_430433_);
+    public @Nullable ServerPlayer getPlayer(final UUID uuid) {
+        return this.server().getPlayerList().getPlayer(uuid);
     }
 
     @Override
-    public Optional<NameAndId> fetchUserByName(String p_423028_) {
-        return this.server.services().nameToIdCache().get(p_423028_);
+    public Optional<NameAndId> fetchUserByName(final String name) {
+        return this.server().services().nameToIdCache().get(name);
     }
 
     @Override
-    public Optional<NameAndId> fetchUserById(UUID p_422686_) {
-        return Optional.ofNullable(this.server.services().sessionService().fetchProfile(p_422686_, true)).map(p_431716_ -> new NameAndId(p_431716_.profile()));
+    public Optional<NameAndId> fetchUserById(final UUID id) {
+        return Optional.ofNullable(this.server().services().sessionService().fetchProfile(id, true)).map(profile -> new NameAndId(profile.profile()));
     }
 
     @Override
-    public Optional<NameAndId> getCachedUserById(UUID p_423982_) {
-        return this.server.services().nameToIdCache().get(p_423982_);
+    public Optional<NameAndId> getCachedUserById(final UUID id) {
+        return this.server().services().nameToIdCache().get(id);
     }
 
     @Override
-    public Optional<ServerPlayer> getPlayer(Optional<UUID> p_431094_, Optional<String> p_424603_) {
-        if (p_431094_.isPresent()) {
-            return Optional.ofNullable(this.server.getPlayerList().getPlayer(p_431094_.get()));
+    public Optional<ServerPlayer> getPlayer(final Optional<UUID> id, final Optional<String> name) {
+        if (id.isPresent()) {
+            return Optional.ofNullable(this.server().getPlayerList().getPlayer(id.get()));
         } else {
-            return p_424603_.isPresent() ? Optional.ofNullable(this.server.getPlayerList().getPlayerByName(p_424603_.get())) : Optional.empty();
+            return name.isPresent() ? Optional.ofNullable(this.server().getPlayerList().getPlayerByName(name.get())) : Optional.empty();
         }
     }
 
     @Override
-    public List<ServerPlayer> getPlayersWithAddress(String p_423879_) {
-        return this.server.getPlayerList().getPlayersWithAddress(p_423879_);
+    public List<ServerPlayer> getPlayersWithAddress(final String ip) {
+        return this.server().getPlayerList().getPlayersWithAddress(ip);
     }
 
     @Override
-    public void remove(ServerPlayer p_422778_, ClientInfo p_424616_) {
-        this.server.getPlayerList().remove(p_422778_);
-        this.jsonRpcLogger.log(p_424616_, "Remove player '{}'", p_422778_.getPlainTextName());
+    public void remove(final ServerPlayer serverPlayer, final ClientInfo clientInfo) {
+        this.server().getPlayerList().remove(serverPlayer);
+        this.jsonRpcLogger.log(clientInfo, "Remove player '{}'", serverPlayer.getPlainTextName());
     }
 
     @Override
-    public @Nullable ServerPlayer getPlayerByName(String p_430613_) {
-        return this.server.getPlayerList().getPlayerByName(p_430613_);
+    public @Nullable ServerPlayer getPlayerByName(final String name) {
+        return this.server().getPlayerList().getPlayerByName(name);
     }
 }

@@ -12,52 +12,52 @@ public class LinearPalette<T> implements Palette<T> {
     private final int bits;
     private int size;
 
-    private LinearPalette(int p_188016_, List<T> p_188018_) {
-        this.values = (T[])(new Object[1 << p_188016_]);
-        this.bits = p_188016_;
+    private LinearPalette(final int bits, final List<T> paletteEntries) {
+        this.values = (T[])(new Object[1 << bits]);
+        this.bits = bits;
         Validate.isTrue(
-            p_188018_.size() <= this.values.length, "Can't initialize LinearPalette of size %d with %d entries", this.values.length, p_188018_.size()
+            paletteEntries.size() <= this.values.length, "Can't initialize LinearPalette of size %d with %d entries", this.values.length, paletteEntries.size()
         );
 
-        for (int i = 0; i < p_188018_.size(); i++) {
-            this.values[i] = p_188018_.get(i);
+        for (int i = 0; i < paletteEntries.size(); i++) {
+            this.values[i] = paletteEntries.get(i);
         }
 
-        this.size = p_188018_.size();
+        this.size = paletteEntries.size();
     }
 
-    private LinearPalette(T[] p_199922_, int p_199924_, int p_199925_) {
-        this.values = p_199922_;
-        this.bits = p_199924_;
-        this.size = p_199925_;
+    private LinearPalette(final T[] values, final int bits, final int size) {
+        this.values = values;
+        this.bits = bits;
+        this.size = size;
     }
 
-    public static <A> Palette<A> create(int p_188020_, List<A> p_188023_) {
-        return new LinearPalette<>(p_188020_, p_188023_);
+    public static <A> Palette<A> create(final int bits, final List<A> paletteEntries) {
+        return new LinearPalette<>(bits, paletteEntries);
     }
 
     @Override
-    public int idFor(T p_63040_, PaletteResize<T> p_426539_) {
+    public int idFor(final T value, final PaletteResize<T> resizeHandler) {
         for (int i = 0; i < this.size; i++) {
-            if (this.values[i] == p_63040_) {
+            if (this.values[i] == value) {
                 return i;
             }
         }
 
-        int j = this.size;
-        if (j < this.values.length) {
-            this.values[j] = p_63040_;
+        int index = this.size;
+        if (index < this.values.length) {
+            this.values[index] = value;
             this.size++;
-            return j;
+            return index;
         } else {
-            return p_426539_.onResize(this.bits + 1, p_63040_);
+            return resizeHandler.onResize(this.bits + 1, value);
         }
     }
 
     @Override
-    public boolean maybeHas(Predicate<T> p_63042_) {
+    public boolean maybeHas(final Predicate<T> predicate) {
         for (int i = 0; i < this.size; i++) {
-            if (p_63042_.test(this.values[i])) {
+            if (predicate.test(this.values[i])) {
                 return true;
             }
         }
@@ -66,41 +66,41 @@ public class LinearPalette<T> implements Palette<T> {
     }
 
     @Override
-    public T valueFor(int p_63038_) {
-        if (p_63038_ >= 0 && p_63038_ < this.size) {
-            return this.values[p_63038_];
+    public T valueFor(final int index) {
+        if (index >= 0 && index < this.size) {
+            return this.values[index];
         } else {
-            throw new MissingPaletteEntryException(p_63038_);
+            throw new MissingPaletteEntryException(index);
         }
     }
 
     @Override
-    public void read(FriendlyByteBuf p_63046_, IdMap<T> p_425100_) {
-        this.size = p_63046_.readVarInt();
+    public void read(final FriendlyByteBuf buffer, final IdMap<T> globalMap) {
+        this.size = buffer.readVarInt();
 
         for (int i = 0; i < this.size; i++) {
-            this.values[i] = p_425100_.byIdOrThrow(p_63046_.readVarInt());
+            this.values[i] = globalMap.byIdOrThrow(buffer.readVarInt());
         }
     }
 
     @Override
-    public void write(FriendlyByteBuf p_63049_, IdMap<T> p_430932_) {
-        p_63049_.writeVarInt(this.size);
+    public void write(final FriendlyByteBuf buffer, final IdMap<T> globalMap) {
+        buffer.writeVarInt(this.size);
 
         for (int i = 0; i < this.size; i++) {
-            p_63049_.writeVarInt(p_430932_.getId(this.values[i]));
+            buffer.writeVarInt(globalMap.getId(this.values[i]));
         }
     }
 
     @Override
-    public int getSerializedSize(IdMap<T> p_423999_) {
-        int i = VarInt.getByteSize(this.getSize());
+    public int getSerializedSize(final IdMap<T> globalMap) {
+        int result = VarInt.getByteSize(this.getSize());
 
-        for (int j = 0; j < this.getSize(); j++) {
-            i += VarInt.getByteSize(p_423999_.getId(this.values[j]));
+        for (int i = 0; i < this.getSize(); i++) {
+            result += VarInt.getByteSize(globalMap.getId(this.values[i]));
         }
 
-        return i;
+        return result;
     }
 
     @Override

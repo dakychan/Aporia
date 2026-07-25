@@ -25,94 +25,96 @@ import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import org.apache.commons.lang3.mutable.MutableInt;
 
 public class FeatureSorter {
-    public static <T> List<FeatureSorter.StepFeatureData> buildFeaturesPerStep(List<T> p_220604_, Function<T, List<HolderSet<PlacedFeature>>> p_220605_, boolean p_220606_) {
-        Object2IntMap<PlacedFeature> object2intmap = new Object2IntOpenHashMap<>();
-        MutableInt mutableint = new MutableInt(0);
+    public static <T> List<FeatureSorter.StepFeatureData> buildFeaturesPerStep(
+        final List<T> featureSources, final Function<T, List<HolderSet<PlacedFeature>>> featureGetter, final boolean tryReducingError
+    ) {
+        Object2IntMap<PlacedFeature> featureIndex = new Object2IntOpenHashMap<>();
+        MutableInt nextFeatureIndex = new MutableInt(0);
 
         record FeatureData(int featureIndex, int step, PlacedFeature feature) {
         }
 
-        Comparator<FeatureData> comparator = Comparator.comparingInt(FeatureData::step).thenComparingInt(FeatureData::featureIndex);
-        Map<FeatureData, Set<FeatureData>> map = new TreeMap<>(comparator);
-        int i = 0;
+        Comparator<FeatureData> featureDataComparator = Comparator.comparingInt(FeatureData::step).thenComparingInt(FeatureData::featureIndex);
+        Map<FeatureData, Set<FeatureData>> edges = new TreeMap<>(featureDataComparator);
+        int maxStep = 0;
 
-        for (T t : p_220604_) {
-            List<FeatureData> list = Lists.newArrayList();
-            List<HolderSet<PlacedFeature>> list1 = p_220605_.apply(t);
-            i = Math.max(i, list1.size());
+        for (T featureSource : featureSources) {
+            List<FeatureData> featureList = Lists.newArrayList();
+            List<HolderSet<PlacedFeature>> featuresForStep = featureGetter.apply(featureSource);
+            maxStep = Math.max(maxStep, featuresForStep.size());
 
-            for (int j = 0; j < list1.size(); j++) {
-                for (Holder<PlacedFeature> holder : list1.get(j)) {
-                    PlacedFeature placedfeature = holder.value();
-                    list.add(new FeatureData(object2intmap.computeIfAbsent(placedfeature, p_220609_ -> mutableint.getAndIncrement()), j, placedfeature));
+            for (int i = 0; i < featuresForStep.size(); i++) {
+                for (Holder<PlacedFeature> featureSupplier : featuresForStep.get(i)) {
+                    PlacedFeature feature = featureSupplier.value();
+                    featureList.add(new FeatureData(featureIndex.computeIfAbsent(feature, f -> nextFeatureIndex.getAndIncrement()), i, feature));
                 }
             }
 
-            for (int k = 0; k < list.size(); k++) {
-                Set<FeatureData> set2 = map.computeIfAbsent(list.get(k), p_220602_ -> new TreeSet<>(comparator));
-                if (k < list.size() - 1) {
-                    set2.add(list.get(k + 1));
+            for (int i = 0; i < featureList.size(); i++) {
+                Set<FeatureData> data = edges.computeIfAbsent(featureList.get(i), k -> new TreeSet<>(featureDataComparator));
+                if (i < featureList.size() - 1) {
+                    data.add(featureList.get(i + 1));
                 }
             }
         }
 
-        Set<FeatureData> set = new TreeSet<>(comparator);
-        Set<FeatureData> set1 = new TreeSet<>(comparator);
-        List<FeatureData> list2 = Lists.newArrayList();
+        Set<FeatureData> discovered = new TreeSet<>(featureDataComparator);
+        Set<FeatureData> currentlyVisiting = new TreeSet<>(featureDataComparator);
+        List<FeatureData> sortedFeatures = Lists.newArrayList();
 
-        for (FeatureData featuresorter$1featuredata : map.keySet()) {
-            if (!set1.isEmpty()) {
+        for (FeatureData feature : edges.keySet()) {
+            if (!currentlyVisiting.isEmpty()) {
                 throw new IllegalStateException("You somehow broke the universe; DFS bork (iteration finished with non-empty in-progress vertex set");
             }
 
-            if (!set.contains(featuresorter$1featuredata) && Graph.depthFirstSearch(map, set, set1, list2::add, featuresorter$1featuredata)) {
-                if (!p_220606_) {
+            if (!discovered.contains(feature) && Graph.depthFirstSearch(edges, discovered, currentlyVisiting, sortedFeatures::add, feature)) {
+                if (!tryReducingError) {
                     throw new IllegalStateException("Feature order cycle found");
                 }
 
-                List<T> list3 = new ArrayList<>(p_220604_);
+                List<T> reducedSources = new ArrayList<>(featureSources);
 
-                int j1;
+                int lastSize;
                 do {
-                    j1 = list3.size();
-                    ListIterator<T> listiterator = list3.listIterator();
+                    lastSize = reducedSources.size();
+                    ListIterator<T> iterator = reducedSources.listIterator();
 
-                    while (listiterator.hasNext()) {
-                        T t1 = listiterator.next();
-                        listiterator.remove();
+                    while (iterator.hasNext()) {
+                        T source = iterator.next();
+                        iterator.remove();
 
                         try {
-                            buildFeaturesPerStep(list3, p_220605_, false);
-                        } catch (IllegalStateException illegalstateexception) {
+                            buildFeaturesPerStep(reducedSources, featureGetter, false);
+                        } catch (IllegalStateException e) {
                             continue;
                         }
 
-                        listiterator.add(t1);
+                        iterator.add(source);
                     }
-                } while (j1 != list3.size());
+                } while (lastSize != reducedSources.size());
 
-                throw new IllegalStateException("Feature order cycle found, involved sources: " + list3);
+                throw new IllegalStateException("Feature order cycle found, involved sources: " + reducedSources);
             }
         }
 
-        Collections.reverse(list2);
-        Builder<FeatureSorter.StepFeatureData> builder = ImmutableList.builder();
+        Collections.reverse(sortedFeatures);
+        Builder<FeatureSorter.StepFeatureData> features = ImmutableList.builder();
 
-        for (int l = 0; l < i; l++) {
-            int i1 = l;
-            List<PlacedFeature> list4 = list2.stream()
-                .filter(p_220599_ -> p_220599_.step() == i1)
+        for (int step = 0; step < maxStep; step++) {
+            int finalStep = step;
+            List<PlacedFeature> featuresInStep = sortedFeatures.stream()
+                .filter(p -> p.step() == finalStep)
                 .map(FeatureData::feature)
                 .collect(Collectors.toList());
-            builder.add(new FeatureSorter.StepFeatureData(list4));
+            features.add(new FeatureSorter.StepFeatureData(featuresInStep));
         }
 
-        return builder.build();
+        return features.build();
     }
 
     public record StepFeatureData(List<PlacedFeature> features, ToIntFunction<PlacedFeature> indexMapping) {
-        StepFeatureData(List<PlacedFeature> p_220627_) {
-            this(p_220627_, Util.createIndexIdentityLookup(p_220627_));
+        private StepFeatureData(final List<PlacedFeature> features) {
+            this(features, Util.createIndexIdentityLookup(features));
         }
     }
 }

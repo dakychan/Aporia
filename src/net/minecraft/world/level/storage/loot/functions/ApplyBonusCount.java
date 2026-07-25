@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,6 +15,7 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.context.ContextKey;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -28,41 +28,30 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
             ApplyBonusCount.BinomialWithBonusCount.TYPE, ApplyBonusCount.OreDrops.TYPE, ApplyBonusCount.UniformBonusCount.TYPE
         )
         .collect(Collectors.toMap(ApplyBonusCount.FormulaType::id, Function.identity()));
-    private static final Codec<ApplyBonusCount.FormulaType> FORMULA_TYPE_CODEC = Identifier.CODEC
-        .comapFlatMap(
-            p_454505_ -> {
-                ApplyBonusCount.FormulaType applybonuscount$formulatype = FORMULAS.get(p_454505_);
-                return applybonuscount$formulatype != null
-                    ? DataResult.success(applybonuscount$formulatype)
-                    : DataResult.error(() -> "No formula type with id: '" + p_454505_ + "'");
-            },
-            ApplyBonusCount.FormulaType::id
-        );
+    private static final Codec<ApplyBonusCount.FormulaType> FORMULA_TYPE_CODEC = Identifier.CODEC.comapFlatMap(location -> {
+        ApplyBonusCount.FormulaType type = FORMULAS.get(location);
+        return type != null ? DataResult.success(type) : DataResult.error(() -> "No formula type with id: '" + location + "'");
+    }, ApplyBonusCount.FormulaType::id);
     private static final MapCodec<ApplyBonusCount.Formula> FORMULA_CODEC = ExtraCodecs.dispatchOptionalValue(
         "formula", "parameters", FORMULA_TYPE_CODEC, ApplyBonusCount.Formula::getType, ApplyBonusCount.FormulaType::codec
     );
-    public static final MapCodec<ApplyBonusCount> CODEC = RecordCodecBuilder.mapCodec(
-        p_341977_ -> commonFields(p_341977_)
-            .and(
-                p_341977_.group(
-                    Enchantment.CODEC.fieldOf("enchantment").forGetter(p_297072_ -> p_297072_.enchantment),
-                    FORMULA_CODEC.forGetter(p_297058_ -> p_297058_.formula)
-                )
-            )
-            .apply(p_341977_, ApplyBonusCount::new)
+    public static final MapCodec<ApplyBonusCount> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
+            .and(i.group(Enchantment.CODEC.fieldOf("enchantment").forGetter(f -> f.enchantment), FORMULA_CODEC.forGetter(f -> f.formula)))
+            .apply(i, ApplyBonusCount::new)
     );
     private final Holder<Enchantment> enchantment;
     private final ApplyBonusCount.Formula formula;
 
-    private ApplyBonusCount(List<LootItemCondition> p_298095_, Holder<Enchantment> p_298508_, ApplyBonusCount.Formula p_79905_) {
-        super(p_298095_);
-        this.enchantment = p_298508_;
-        this.formula = p_79905_;
+    private ApplyBonusCount(final List<LootItemCondition> predicates, final Holder<Enchantment> enchantment, final ApplyBonusCount.Formula formula) {
+        super(predicates);
+        this.enchantment = enchantment;
+        this.formula = formula;
     }
 
     @Override
-    public LootItemFunctionType<ApplyBonusCount> getType() {
-        return LootItemFunctions.APPLY_BONUS;
+    public MapCodec<ApplyBonusCount> codec() {
+        return MAP_CODEC;
     }
 
     @Override
@@ -71,52 +60,56 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
     }
 
     @Override
-    public ItemStack run(ItemStack p_79913_, LootContext p_79914_) {
-        ItemStack itemstack = p_79914_.getOptionalParameter(LootContextParams.TOOL);
-        if (itemstack != null) {
-            int i = EnchantmentHelper.getItemEnchantmentLevel(this.enchantment, itemstack);
-            int j = this.formula.calculateNewCount(p_79914_.getRandom(), p_79913_.getCount(), i);
-            p_79913_.setCount(j);
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        ItemInstance tool = context.getOptionalParameter(LootContextParams.TOOL);
+        if (tool != null) {
+            int level = EnchantmentHelper.getItemEnchantmentLevel(this.enchantment, tool);
+            int newCount = this.formula.calculateNewCount(context.getRandom(), itemStack.getCount(), level);
+            itemStack.setCount(newCount);
         }
 
-        return p_79913_;
+        return itemStack;
     }
 
-    public static LootItemConditionalFunction.Builder<?> addBonusBinomialDistributionCount(Holder<Enchantment> p_345010_, float p_79919_, int p_79920_) {
-        return simpleBuilder(p_341983_ -> new ApplyBonusCount(p_341983_, p_345010_, new ApplyBonusCount.BinomialWithBonusCount(p_79920_, p_79919_)));
+    public static LootItemConditionalFunction.Builder<?> addBonusBinomialDistributionCount(
+        final Holder<Enchantment> enchantment, final float probability, final int extraRounds
+    ) {
+        return simpleBuilder(conditions -> new ApplyBonusCount(conditions, enchantment, new ApplyBonusCount.BinomialWithBonusCount(extraRounds, probability)));
     }
 
-    public static LootItemConditionalFunction.Builder<?> addOreBonusCount(Holder<Enchantment> p_344898_) {
-        return simpleBuilder(p_450077_ -> new ApplyBonusCount(p_450077_, p_344898_, ApplyBonusCount.OreDrops.INSTANCE));
+    public static LootItemConditionalFunction.Builder<?> addOreBonusCount(final Holder<Enchantment> enchantment) {
+        return simpleBuilder(conditions -> new ApplyBonusCount(conditions, enchantment, ApplyBonusCount.OreDrops.INSTANCE));
     }
 
-    public static LootItemConditionalFunction.Builder<?> addUniformBonusCount(Holder<Enchantment> p_344489_) {
-        return simpleBuilder(p_341988_ -> new ApplyBonusCount(p_341988_, p_344489_, new ApplyBonusCount.UniformBonusCount(1)));
+    public static LootItemConditionalFunction.Builder<?> addUniformBonusCount(final Holder<Enchantment> enchantment) {
+        return simpleBuilder(conditions -> new ApplyBonusCount(conditions, enchantment, new ApplyBonusCount.UniformBonusCount(1)));
     }
 
-    public static LootItemConditionalFunction.Builder<?> addUniformBonusCount(Holder<Enchantment> p_344963_, int p_79923_) {
-        return simpleBuilder(p_341986_ -> new ApplyBonusCount(p_341986_, p_344963_, new ApplyBonusCount.UniformBonusCount(p_79923_)));
+    public static LootItemConditionalFunction.Builder<?> addUniformBonusCount(final Holder<Enchantment> enchantment, final int bonusMultiplier) {
+        return simpleBuilder(conditions -> new ApplyBonusCount(conditions, enchantment, new ApplyBonusCount.UniformBonusCount(bonusMultiplier)));
     }
 
-    record BinomialWithBonusCount(int extraRounds, float probability) implements ApplyBonusCount.Formula {
+    private record BinomialWithBonusCount(int extraRounds, float probability) implements ApplyBonusCount.Formula {
         private static final Codec<ApplyBonusCount.BinomialWithBonusCount> CODEC = RecordCodecBuilder.create(
-            p_299643_ -> p_299643_.group(
+            i -> i.group(
                     Codec.INT.fieldOf("extra").forGetter(ApplyBonusCount.BinomialWithBonusCount::extraRounds),
                     Codec.FLOAT.fieldOf("probability").forGetter(ApplyBonusCount.BinomialWithBonusCount::probability)
                 )
-                .apply(p_299643_, ApplyBonusCount.BinomialWithBonusCount::new)
+                .apply(i, ApplyBonusCount.BinomialWithBonusCount::new)
         );
-        public static final ApplyBonusCount.FormulaType TYPE = new ApplyBonusCount.FormulaType(Identifier.withDefaultNamespace("binomial_with_bonus_count"), CODEC);
+        public static final ApplyBonusCount.FormulaType TYPE = new ApplyBonusCount.FormulaType(
+            Identifier.withDefaultNamespace("binomial_with_bonus_count"), CODEC
+        );
 
         @Override
-        public int calculateNewCount(RandomSource p_230965_, int p_230966_, int p_230967_) {
-            for (int i = 0; i < p_230967_ + this.extraRounds; i++) {
-                if (p_230965_.nextFloat() < this.probability) {
-                    p_230966_++;
+        public int calculateNewCount(final RandomSource random, int count, final int level) {
+            for (int i = 0; i < level + this.extraRounds; i++) {
+                if (random.nextFloat() < this.probability) {
+                    count++;
                 }
             }
 
-            return p_230966_;
+            return count;
         }
 
         @Override
@@ -125,31 +118,31 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
         }
     }
 
-    interface Formula {
-        int calculateNewCount(RandomSource p_230968_, int p_230969_, int p_230970_);
+    private interface Formula {
+        int calculateNewCount(final RandomSource random, final int count, final int level);
 
         ApplyBonusCount.FormulaType getType();
     }
 
-    record FormulaType(Identifier id, Codec<? extends ApplyBonusCount.Formula> codec) {
+    private record FormulaType(Identifier id, Codec<? extends ApplyBonusCount.Formula> codec) {
     }
 
-    record OreDrops() implements ApplyBonusCount.Formula {
+    private record OreDrops() implements ApplyBonusCount.Formula {
         public static final ApplyBonusCount.OreDrops INSTANCE = new ApplyBonusCount.OreDrops();
         public static final Codec<ApplyBonusCount.OreDrops> CODEC = MapCodec.unitCodec(INSTANCE);
         public static final ApplyBonusCount.FormulaType TYPE = new ApplyBonusCount.FormulaType(Identifier.withDefaultNamespace("ore_drops"), CODEC);
 
         @Override
-        public int calculateNewCount(RandomSource p_230972_, int p_230973_, int p_230974_) {
-            if (p_230974_ > 0) {
-                int i = p_230972_.nextInt(p_230974_ + 2) - 1;
-                if (i < 0) {
-                    i = 0;
+        public int calculateNewCount(final RandomSource random, final int count, final int level) {
+            if (level > 0) {
+                int bonus = random.nextInt(level + 2) - 1;
+                if (bonus < 0) {
+                    bonus = 0;
                 }
 
-                return p_230973_ * (i + 1);
+                return count * (bonus + 1);
             } else {
-                return p_230973_;
+                return count;
             }
         }
 
@@ -159,16 +152,16 @@ public class ApplyBonusCount extends LootItemConditionalFunction {
         }
     }
 
-    record UniformBonusCount(int bonusMultiplier) implements ApplyBonusCount.Formula {
+    private record UniformBonusCount(int bonusMultiplier) implements ApplyBonusCount.Formula {
         public static final Codec<ApplyBonusCount.UniformBonusCount> CODEC = RecordCodecBuilder.create(
-            p_297464_ -> p_297464_.group(Codec.INT.fieldOf("bonusMultiplier").forGetter(ApplyBonusCount.UniformBonusCount::bonusMultiplier))
-                .apply(p_297464_, ApplyBonusCount.UniformBonusCount::new)
+            i -> i.group(Codec.INT.fieldOf("bonusMultiplier").forGetter(ApplyBonusCount.UniformBonusCount::bonusMultiplier))
+                .apply(i, ApplyBonusCount.UniformBonusCount::new)
         );
         public static final ApplyBonusCount.FormulaType TYPE = new ApplyBonusCount.FormulaType(Identifier.withDefaultNamespace("uniform_bonus_count"), CODEC);
 
         @Override
-        public int calculateNewCount(RandomSource p_230976_, int p_230977_, int p_230978_) {
-            return p_230977_ + p_230976_.nextInt(this.bonusMultiplier * p_230978_ + 1);
+        public int calculateNewCount(final RandomSource random, final int count, final int level) {
+            return count + random.nextInt(this.bonusMultiplier * level + 1);
         }
 
         @Override

@@ -2,62 +2,60 @@ package net.minecraft.client.gui;
 
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface ComponentPath {
-    static ComponentPath leaf(GuiEventListener p_265344_) {
-        return new ComponentPath.Leaf(p_265344_);
+    static ComponentPath leaf(final GuiEventListener component) {
+        return new ComponentPath.Leaf(component);
     }
 
-    static @Nullable ComponentPath path(ContainerEventHandler p_265254_, @Nullable ComponentPath p_265405_) {
-        return p_265405_ == null ? null : new ComponentPath.Path(p_265254_, p_265405_);
+    static @Nullable ComponentPath path(final ContainerEventHandler container, final @Nullable ComponentPath childPath) {
+        return childPath == null ? null : new ComponentPath.Path(container, childPath);
     }
 
-    static ComponentPath path(GuiEventListener p_265555_, ContainerEventHandler... p_265487_) {
-        ComponentPath componentpath = leaf(p_265555_);
+    static ComponentPath path(final GuiEventListener target, final ContainerEventHandler... containerPath) {
+        ComponentPath path = leaf(target);
 
-        for (ContainerEventHandler containereventhandler : p_265487_) {
-            componentpath = path(containereventhandler, componentpath);
+        for (ContainerEventHandler container : containerPath) {
+            path = path(container, path);
         }
 
-        return componentpath;
+        return path;
     }
 
     GuiEventListener component();
 
-    void applyFocus(boolean p_265077_);
+    void applyFocus(boolean focused);
 
-    @OnlyIn(Dist.CLIENT)
-    public record Leaf(GuiEventListener component) implements ComponentPath {
+    GuiEventListener leafComponent();
+
+        record Leaf(GuiEventListener component) implements ComponentPath {
         @Override
-        public void applyFocus(boolean p_265248_) {
-            this.component.setFocused(p_265248_);
+        public void applyFocus(final boolean focused) {
+            this.component.setFocused(focused);
         }
 
         @Override
-        public GuiEventListener component() {
+        public GuiEventListener leafComponent() {
             return this.component;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Path(ContainerEventHandler component, ComponentPath childPath) implements ComponentPath {
+        record Path(ContainerEventHandler component, ComponentPath childPath) implements ComponentPath {
         @Override
-        public void applyFocus(boolean p_265230_) {
-            if (!p_265230_) {
+        public void applyFocus(final boolean focused) {
+            if (!focused) {
                 this.component.setFocused(null);
             } else {
                 this.component.setFocused(this.childPath.component());
             }
 
-            this.childPath.applyFocus(p_265230_);
+            this.childPath.applyFocus(focused);
         }
 
-        public ContainerEventHandler component() {
-            return this.component;
+        @Override
+        public GuiEventListener leafComponent() {
+            return this.childPath.leafComponent();
         }
     }
 }

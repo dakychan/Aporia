@@ -6,13 +6,10 @@ import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class FaviconTexture implements AutoCloseable {
-    public static final Identifier MISSING_LOCATION = Identifier.withDefaultNamespace("textures/misc/unknown_server.png");
+    private static final Identifier MISSING_LOCATION = Identifier.withDefaultNamespace("textures/misc/unknown_server.png");
     private static final int WIDTH = 64;
     private static final int HEIGHT = 64;
     private final TextureManager textureManager;
@@ -20,42 +17,44 @@ public class FaviconTexture implements AutoCloseable {
     private @Nullable DynamicTexture texture;
     private boolean closed;
 
-    private FaviconTexture(TextureManager p_289556_, Identifier p_452227_) {
-        this.textureManager = p_289556_;
-        this.textureLocation = p_452227_;
+    private FaviconTexture(final TextureManager textureManager, final Identifier textureLocation) {
+        this.textureManager = textureManager;
+        this.textureLocation = textureLocation;
     }
 
-    public static FaviconTexture forWorld(TextureManager p_289550_, String p_289565_) {
+    public static FaviconTexture forWorld(final TextureManager textureManager, final String levelId) {
         return new FaviconTexture(
-            p_289550_,
-            Identifier.withDefaultNamespace("worlds/" + Util.sanitizeName(p_289565_, Identifier::validPathChar) + "/" + Hashing.sha1().hashUnencodedChars(p_289565_) + "/icon")
+            textureManager,
+            Identifier.withDefaultNamespace(
+                "worlds/" + Util.sanitizeName(levelId, Identifier::validPathChar) + "/" + Hashing.sha1().hashUnencodedChars(levelId) + "/icon"
+            )
         );
     }
 
-    public static FaviconTexture forServer(TextureManager p_289553_, String p_289535_) {
-        return new FaviconTexture(p_289553_, Identifier.withDefaultNamespace("servers/" + Hashing.sha1().hashUnencodedChars(p_289535_) + "/icon"));
+    public static FaviconTexture forServer(final TextureManager textureManager, final String address) {
+        return new FaviconTexture(textureManager, Identifier.withDefaultNamespace("servers/" + Hashing.sha1().hashUnencodedChars(address) + "/icon"));
     }
 
-    public void upload(NativeImage p_289543_) {
-        if (p_289543_.getWidth() == 64 && p_289543_.getHeight() == 64) {
+    public void upload(final NativeImage image) {
+        if (image.getWidth() == 64 && image.getHeight() == 64) {
             try {
                 this.checkOpen();
                 if (this.texture == null) {
-                    this.texture = new DynamicTexture(() -> "Favicon " + this.textureLocation, p_289543_);
+                    this.texture = new DynamicTexture(() -> "Favicon " + this.textureLocation, image);
                 } else {
-                    this.texture.setPixels(p_289543_);
+                    this.texture.setPixels(image);
                     this.texture.upload();
                 }
 
                 this.textureManager.register(this.textureLocation, this.texture);
-            } catch (Throwable throwable) {
-                p_289543_.close();
+            } catch (Throwable t) {
+                image.close();
                 this.clear();
-                throw throwable;
+                throw t;
             }
         } else {
-            p_289543_.close();
-            throw new IllegalArgumentException("Icon must be 64x64, but was " + p_289543_.getWidth() + "x" + p_289543_.getHeight());
+            image.close();
+            throw new IllegalArgumentException("Icon must be 64x64, but was " + image.getWidth() + "x" + image.getHeight());
         }
     }
 

@@ -12,86 +12,86 @@ public final class BitSetDiscreteVoxelShape extends DiscreteVoxelShape {
     private int yMax;
     private int zMax;
 
-    public BitSetDiscreteVoxelShape(int p_82588_, int p_82589_, int p_82590_) {
-        super(p_82588_, p_82589_, p_82590_);
-        this.storage = new BitSet(p_82588_ * p_82589_ * p_82590_);
-        this.xMin = p_82588_;
-        this.yMin = p_82589_;
-        this.zMin = p_82590_;
+    public BitSetDiscreteVoxelShape(final int xSize, final int ySize, final int zSize) {
+        super(xSize, ySize, zSize);
+        this.storage = new BitSet(xSize * ySize * zSize);
+        this.xMin = xSize;
+        this.yMin = ySize;
+        this.zMin = zSize;
     }
 
     public static BitSetDiscreteVoxelShape withFilledBounds(
-        int p_165933_, int p_165934_, int p_165935_, int p_165936_, int p_165937_, int p_165938_, int p_165939_, int p_165940_, int p_165941_
+        final int xSize, final int ySize, final int zSize, final int xMin, final int yMin, final int zMin, final int xMax, final int yMax, final int zMax
     ) {
-        BitSetDiscreteVoxelShape bitsetdiscretevoxelshape = new BitSetDiscreteVoxelShape(p_165933_, p_165934_, p_165935_);
-        bitsetdiscretevoxelshape.xMin = p_165936_;
-        bitsetdiscretevoxelshape.yMin = p_165937_;
-        bitsetdiscretevoxelshape.zMin = p_165938_;
-        bitsetdiscretevoxelshape.xMax = p_165939_;
-        bitsetdiscretevoxelshape.yMax = p_165940_;
-        bitsetdiscretevoxelshape.zMax = p_165941_;
+        BitSetDiscreteVoxelShape shape = new BitSetDiscreteVoxelShape(xSize, ySize, zSize);
+        shape.xMin = xMin;
+        shape.yMin = yMin;
+        shape.zMin = zMin;
+        shape.xMax = xMax;
+        shape.yMax = yMax;
+        shape.zMax = zMax;
 
-        for (int i = p_165936_; i < p_165939_; i++) {
-            for (int j = p_165937_; j < p_165940_; j++) {
-                for (int k = p_165938_; k < p_165941_; k++) {
-                    bitsetdiscretevoxelshape.fillUpdateBounds(i, j, k, false);
+        for (int x = xMin; x < xMax; x++) {
+            for (int y = yMin; y < yMax; y++) {
+                for (int z = zMin; z < zMax; z++) {
+                    shape.fillUpdateBounds(x, y, z, false);
                 }
             }
         }
 
-        return bitsetdiscretevoxelshape;
+        return shape;
     }
 
-    public BitSetDiscreteVoxelShape(DiscreteVoxelShape p_82602_) {
-        super(p_82602_.xSize, p_82602_.ySize, p_82602_.zSize);
-        if (p_82602_ instanceof BitSetDiscreteVoxelShape) {
-            this.storage = (BitSet)((BitSetDiscreteVoxelShape)p_82602_).storage.clone();
+    public BitSetDiscreteVoxelShape(final DiscreteVoxelShape voxelShape) {
+        super(voxelShape.xSize, voxelShape.ySize, voxelShape.zSize);
+        if (voxelShape instanceof BitSetDiscreteVoxelShape bitSetDiscreteVoxelShape) {
+            this.storage = (BitSet)bitSetDiscreteVoxelShape.storage.clone();
         } else {
             this.storage = new BitSet(this.xSize * this.ySize * this.zSize);
 
-            for (int i = 0; i < this.xSize; i++) {
-                for (int j = 0; j < this.ySize; j++) {
-                    for (int k = 0; k < this.zSize; k++) {
-                        if (p_82602_.isFull(i, j, k)) {
-                            this.storage.set(this.getIndex(i, j, k));
+            for (int x = 0; x < this.xSize; x++) {
+                for (int y = 0; y < this.ySize; y++) {
+                    for (int z = 0; z < this.zSize; z++) {
+                        if (voxelShape.isFull(x, y, z)) {
+                            this.storage.set(this.getIndex(x, y, z));
                         }
                     }
                 }
             }
         }
 
-        this.xMin = p_82602_.firstFull(Direction.Axis.X);
-        this.yMin = p_82602_.firstFull(Direction.Axis.Y);
-        this.zMin = p_82602_.firstFull(Direction.Axis.Z);
-        this.xMax = p_82602_.lastFull(Direction.Axis.X);
-        this.yMax = p_82602_.lastFull(Direction.Axis.Y);
-        this.zMax = p_82602_.lastFull(Direction.Axis.Z);
+        this.xMin = voxelShape.firstFull(Direction.Axis.X);
+        this.yMin = voxelShape.firstFull(Direction.Axis.Y);
+        this.zMin = voxelShape.firstFull(Direction.Axis.Z);
+        this.xMax = voxelShape.lastFull(Direction.Axis.X);
+        this.yMax = voxelShape.lastFull(Direction.Axis.Y);
+        this.zMax = voxelShape.lastFull(Direction.Axis.Z);
     }
 
-    protected int getIndex(int p_82605_, int p_82606_, int p_82607_) {
-        return (p_82605_ * this.ySize + p_82606_) * this.zSize + p_82607_;
+    private int getIndex(final int x, final int y, final int z) {
+        return (x * this.ySize + y) * this.zSize + z;
     }
 
     @Override
-    public boolean isFull(int p_82676_, int p_82677_, int p_82678_) {
-        return this.storage.get(this.getIndex(p_82676_, p_82677_, p_82678_));
+    public boolean isFull(final int x, final int y, final int z) {
+        return this.storage.get(this.getIndex(x, y, z));
     }
 
-    private void fillUpdateBounds(int p_165943_, int p_165944_, int p_165945_, boolean p_165946_) {
-        this.storage.set(this.getIndex(p_165943_, p_165944_, p_165945_));
-        if (p_165946_) {
-            this.xMin = Math.min(this.xMin, p_165943_);
-            this.yMin = Math.min(this.yMin, p_165944_);
-            this.zMin = Math.min(this.zMin, p_165945_);
-            this.xMax = Math.max(this.xMax, p_165943_ + 1);
-            this.yMax = Math.max(this.yMax, p_165944_ + 1);
-            this.zMax = Math.max(this.zMax, p_165945_ + 1);
+    private void fillUpdateBounds(final int x, final int y, final int z, final boolean updateBounds) {
+        this.storage.set(this.getIndex(x, y, z));
+        if (updateBounds) {
+            this.xMin = Math.min(this.xMin, x);
+            this.yMin = Math.min(this.yMin, y);
+            this.zMin = Math.min(this.zMin, z);
+            this.xMax = Math.max(this.xMax, x + 1);
+            this.yMax = Math.max(this.yMax, y + 1);
+            this.zMax = Math.max(this.zMax, z + 1);
         }
     }
 
     @Override
-    public void fill(int p_165987_, int p_165988_, int p_165989_) {
-        this.fillUpdateBounds(p_165987_, p_165988_, p_165989_, true);
+    public void fill(final int x, final int y, final int z) {
+        this.fillUpdateBounds(x, y, z, true);
     }
 
     @Override
@@ -100,109 +100,112 @@ public final class BitSetDiscreteVoxelShape extends DiscreteVoxelShape {
     }
 
     @Override
-    public int firstFull(Direction.Axis p_82674_) {
-        return p_82674_.choose(this.xMin, this.yMin, this.zMin);
+    public int firstFull(final Direction.Axis axis) {
+        return axis.choose(this.xMin, this.yMin, this.zMin);
     }
 
     @Override
-    public int lastFull(Direction.Axis p_82680_) {
-        return p_82680_.choose(this.xMax, this.yMax, this.zMax);
+    public int lastFull(final Direction.Axis axis) {
+        return axis.choose(this.xMax, this.yMax, this.zMax);
     }
 
-    static BitSetDiscreteVoxelShape join(
-        DiscreteVoxelShape p_82642_, DiscreteVoxelShape p_82643_, IndexMerger p_82644_, IndexMerger p_82645_, IndexMerger p_82646_, BooleanOp p_82647_
+    public static BitSetDiscreteVoxelShape join(
+        final DiscreteVoxelShape first,
+        final DiscreteVoxelShape second,
+        final IndexMerger xMerger,
+        final IndexMerger yMerger,
+        final IndexMerger zMerger,
+        final BooleanOp op
     ) {
-        BitSetDiscreteVoxelShape bitsetdiscretevoxelshape = new BitSetDiscreteVoxelShape(p_82644_.size() - 1, p_82645_.size() - 1, p_82646_.size() - 1);
-        int[] aint = new int[]{Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
-        p_82644_.forMergedIndexes((p_82670_, p_82671_, p_82672_) -> {
-            boolean[] aboolean = new boolean[]{false};
-            p_82645_.forMergedIndexes((p_165978_, p_165979_, p_165980_) -> {
-                boolean[] aboolean1 = new boolean[]{false};
-                p_82646_.forMergedIndexes((p_165960_, p_165961_, p_165962_) -> {
-                    if (p_82647_.apply(p_82642_.isFullWide(p_82670_, p_165978_, p_165960_), p_82643_.isFullWide(p_82671_, p_165979_, p_165961_))) {
-                        bitsetdiscretevoxelshape.storage.set(bitsetdiscretevoxelshape.getIndex(p_82672_, p_165980_, p_165962_));
-                        aint[2] = Math.min(aint[2], p_165962_);
-                        aint[5] = Math.max(aint[5], p_165962_);
-                        aboolean1[0] = true;
+        BitSetDiscreteVoxelShape shape = new BitSetDiscreteVoxelShape(xMerger.size() - 1, yMerger.size() - 1, zMerger.size() - 1);
+        int[] bounds = new int[]{Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE, Integer.MIN_VALUE};
+        xMerger.forMergedIndexes((x1, x2, xr) -> {
+            boolean[] updatedSlice = new boolean[]{false};
+            yMerger.forMergedIndexes((y1, y2, yr) -> {
+                boolean[] updatedColumn = new boolean[]{false};
+                zMerger.forMergedIndexes((z1, z2, zr) -> {
+                    if (op.apply(first.isFullWide(x1, y1, z1), second.isFullWide(x2, y2, z2))) {
+                        shape.storage.set(shape.getIndex(xr, yr, zr));
+                        bounds[2] = Math.min(bounds[2], zr);
+                        bounds[5] = Math.max(bounds[5], zr);
+                        updatedColumn[0] = true;
                     }
 
                     return true;
                 });
-                if (aboolean1[0]) {
-                    aint[1] = Math.min(aint[1], p_165980_);
-                    aint[4] = Math.max(aint[4], p_165980_);
-                    aboolean[0] = true;
+                if (updatedColumn[0]) {
+                    bounds[1] = Math.min(bounds[1], yr);
+                    bounds[4] = Math.max(bounds[4], yr);
+                    updatedSlice[0] = true;
                 }
 
                 return true;
             });
-            if (aboolean[0]) {
-                aint[0] = Math.min(aint[0], p_82672_);
-                aint[3] = Math.max(aint[3], p_82672_);
+            if (updatedSlice[0]) {
+                bounds[0] = Math.min(bounds[0], xr);
+                bounds[3] = Math.max(bounds[3], xr);
             }
 
             return true;
         });
-        bitsetdiscretevoxelshape.xMin = aint[0];
-        bitsetdiscretevoxelshape.yMin = aint[1];
-        bitsetdiscretevoxelshape.zMin = aint[2];
-        bitsetdiscretevoxelshape.xMax = aint[3] + 1;
-        bitsetdiscretevoxelshape.yMax = aint[4] + 1;
-        bitsetdiscretevoxelshape.zMax = aint[5] + 1;
-        return bitsetdiscretevoxelshape;
+        shape.xMin = bounds[0];
+        shape.yMin = bounds[1];
+        shape.zMin = bounds[2];
+        shape.xMax = bounds[3] + 1;
+        shape.yMax = bounds[4] + 1;
+        shape.zMax = bounds[5] + 1;
+        return shape;
     }
 
-    protected static void forAllBoxes(DiscreteVoxelShape p_165964_, DiscreteVoxelShape.IntLineConsumer p_165965_, boolean p_165966_) {
-        BitSetDiscreteVoxelShape bitsetdiscretevoxelshape = new BitSetDiscreteVoxelShape(p_165964_);
+    static void forAllBoxes(final DiscreteVoxelShape voxelShape, final DiscreteVoxelShape.IntLineConsumer consumer, final boolean mergeNeighbors) {
+        BitSetDiscreteVoxelShape shape = new BitSetDiscreteVoxelShape(voxelShape);
 
-        for (int i = 0; i < bitsetdiscretevoxelshape.ySize; i++) {
-            for (int j = 0; j < bitsetdiscretevoxelshape.xSize; j++) {
-                int k = -1;
+        for (int y = 0; y < shape.ySize; y++) {
+            for (int x = 0; x < shape.xSize; x++) {
+                int lastStartZ = -1;
 
-                for (int l = 0; l <= bitsetdiscretevoxelshape.zSize; l++) {
-                    if (bitsetdiscretevoxelshape.isFullWide(j, i, l)) {
-                        if (p_165966_) {
-                            if (k == -1) {
-                                k = l;
+                for (int z = 0; z <= shape.zSize; z++) {
+                    if (shape.isFullWide(x, y, z)) {
+                        if (mergeNeighbors) {
+                            if (lastStartZ == -1) {
+                                lastStartZ = z;
                             }
                         } else {
-                            p_165965_.consume(j, i, l, j + 1, i + 1, l + 1);
+                            consumer.consume(x, y, z, x + 1, y + 1, z + 1);
                         }
-                    } else if (k != -1) {
-                        int i1 = j;
-                        int j1 = i;
-                        bitsetdiscretevoxelshape.clearZStrip(k, l, j, i);
+                    } else if (lastStartZ != -1) {
+                        int endX = x;
+                        int endY = y;
+                        shape.clearZStrip(lastStartZ, z, x, y);
 
-                        while (bitsetdiscretevoxelshape.isZStripFull(k, l, i1 + 1, i)) {
-                            bitsetdiscretevoxelshape.clearZStrip(k, l, i1 + 1, i);
-                            i1++;
+                        while (shape.isZStripFull(lastStartZ, z, endX + 1, y)) {
+                            shape.clearZStrip(lastStartZ, z, endX + 1, y);
+                            endX++;
                         }
 
-                        while (bitsetdiscretevoxelshape.isXZRectangleFull(j, i1 + 1, k, l, j1 + 1)) {
-                            for (int k1 = j; k1 <= i1; k1++) {
-                                bitsetdiscretevoxelshape.clearZStrip(k, l, k1, j1 + 1);
+                        while (shape.isXZRectangleFull(x, endX + 1, lastStartZ, z, endY + 1)) {
+                            for (int cx = x; cx <= endX; cx++) {
+                                shape.clearZStrip(lastStartZ, z, cx, endY + 1);
                             }
 
-                            j1++;
+                            endY++;
                         }
 
-                        p_165965_.consume(j, i, k, i1 + 1, j1 + 1, l);
-                        k = -1;
+                        consumer.consume(x, y, lastStartZ, endX + 1, endY + 1, z);
+                        lastStartZ = -1;
                     }
                 }
             }
         }
     }
 
-    private boolean isZStripFull(int p_82609_, int p_82610_, int p_82611_, int p_82612_) {
-        return p_82611_ < this.xSize && p_82612_ < this.ySize
-            ? this.storage.nextClearBit(this.getIndex(p_82611_, p_82612_, p_82609_)) >= this.getIndex(p_82611_, p_82612_, p_82610_)
-            : false;
+    private boolean isZStripFull(final int startZ, final int endZ, final int x, final int y) {
+        return x < this.xSize && y < this.ySize ? this.storage.nextClearBit(this.getIndex(x, y, startZ)) >= this.getIndex(x, y, endZ) : false;
     }
 
-    private boolean isXZRectangleFull(int p_165927_, int p_165928_, int p_165929_, int p_165930_, int p_165931_) {
-        for (int i = p_165927_; i < p_165928_; i++) {
-            if (!this.isZStripFull(p_165929_, p_165930_, i, p_165931_)) {
+    private boolean isXZRectangleFull(final int startX, final int endX, final int startZ, final int endZ, final int y) {
+        for (int x = startX; x < endX; x++) {
+            if (!this.isZStripFull(startZ, endZ, x, y)) {
                 return false;
             }
         }
@@ -210,24 +213,19 @@ public final class BitSetDiscreteVoxelShape extends DiscreteVoxelShape {
         return true;
     }
 
-    private void clearZStrip(int p_165982_, int p_165983_, int p_165984_, int p_165985_) {
-        this.storage.clear(this.getIndex(p_165984_, p_165985_, p_165982_), this.getIndex(p_165984_, p_165985_, p_165983_));
+    private void clearZStrip(final int startZ, final int endZ, final int x, final int y) {
+        this.storage.clear(this.getIndex(x, y, startZ), this.getIndex(x, y, endZ));
     }
 
-    public boolean isInterior(int p_327963_, int p_332610_, int p_332051_) {
-        boolean flag = p_327963_ > 0
-            && p_327963_ < this.xSize - 1
-            && p_332610_ > 0
-            && p_332610_ < this.ySize - 1
-            && p_332051_ > 0
-            && p_332051_ < this.zSize - 1;
-        return flag
-            && this.isFull(p_327963_, p_332610_, p_332051_)
-            && this.isFull(p_327963_ - 1, p_332610_, p_332051_)
-            && this.isFull(p_327963_ + 1, p_332610_, p_332051_)
-            && this.isFull(p_327963_, p_332610_ - 1, p_332051_)
-            && this.isFull(p_327963_, p_332610_ + 1, p_332051_)
-            && this.isFull(p_327963_, p_332610_, p_332051_ - 1)
-            && this.isFull(p_327963_, p_332610_, p_332051_ + 1);
+    public boolean isInterior(final int x, final int y, final int z) {
+        boolean isInterior = x > 0 && x < this.xSize - 1 && y > 0 && y < this.ySize - 1 && z > 0 && z < this.zSize - 1;
+        return isInterior
+            && this.isFull(x, y, z)
+            && this.isFull(x - 1, y, z)
+            && this.isFull(x + 1, y, z)
+            && this.isFull(x, y - 1, z)
+            && this.isFull(x, y + 1, z)
+            && this.isFull(x, y, z - 1)
+            && this.isFull(x, y, z + 1);
     }
 }

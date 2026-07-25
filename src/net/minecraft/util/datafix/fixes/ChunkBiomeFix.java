@@ -4,51 +4,49 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
-import com.mojang.serialization.Dynamic;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
 public class ChunkBiomeFix extends DataFix {
-    public ChunkBiomeFix(Schema p_15014_, boolean p_15015_) {
-        super(p_15014_, p_15015_);
+    public ChunkBiomeFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        OpticFinder<?> opticfinder = type.findField("Level");
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        OpticFinder<?> levelFinder = chunkType.findField("Level");
         return this.fixTypeEverywhereTyped(
-            "Leaves fix", type, p_15018_ -> p_15018_.updateTyped(opticfinder, p_145204_ -> p_145204_.update(DSL.remainderFinder(), p_145206_ -> {
-                Optional<IntStream> optional = p_145206_.get("Biomes").asIntStreamOpt().result();
-                if (optional.isEmpty()) {
-                    return p_145206_;
-                } else {
-                    int[] aint = optional.get().toArray();
-                    if (aint.length != 256) {
-                        return p_145206_;
-                    } else {
-                        int[] aint1 = new int[1024];
+            "Leaves fix", chunkType, chunk -> chunk.updateTyped(levelFinder, level -> level.update(DSL.remainderFinder(), tag -> {
+                Optional<IntStream> biomes = tag.get("Biomes").asIntStreamOpt().result();
+                if (biomes.isEmpty()) {
+                    return tag;
+                }
 
-                        for (int i = 0; i < 4; i++) {
-                            for (int j = 0; j < 4; j++) {
-                                int k = (j << 2) + 2;
-                                int l = (i << 2) + 2;
-                                int i1 = l << 4 | k;
-                                aint1[i << 2 | j] = aint[i1];
-                            }
-                        }
+                int[] oldBiomes = biomes.get().toArray();
+                if (oldBiomes.length != 256) {
+                    return tag;
+                }
 
-                        for (int j1 = 1; j1 < 64; j1++) {
-                            System.arraycopy(aint1, 0, aint1, j1 * 16, 16);
-                        }
+                int[] newBiomes = new int[1024];
 
-                        return p_145206_.set("Biomes", p_145206_.createIntList(Arrays.stream(aint1)));
+                for (int z = 0; z < 4; z++) {
+                    for (int x = 0; x < 4; x++) {
+                        int oldX = (x << 2) + 2;
+                        int oldZ = (z << 2) + 2;
+                        int index = oldZ << 4 | oldX;
+                        newBiomes[z << 2 | x] = oldBiomes[index];
                     }
                 }
+
+                for (int ySlice = 1; ySlice < 64; ySlice++) {
+                    System.arraycopy(newBiomes, 0, newBiomes, ySlice * 16, 16);
+                }
+
+                return tag.set("Biomes", tag.createIntList(Arrays.stream(newBiomes)));
             }))
         );
     }

@@ -5,18 +5,16 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.FrameLayout;
+import net.minecraft.client.gui.layouts.LayoutElement;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ConfirmScreen extends Screen {
-    private final Component message;
-    protected LinearLayout layout = LinearLayout.vertical().spacing(8);
+    protected final Component message;
+    protected final LinearLayout layout = LinearLayout.vertical().spacing(8);
     protected Component yesButtonComponent;
     protected Component noButtonComponent;
     protected @Nullable Button yesButton;
@@ -24,16 +22,18 @@ public class ConfirmScreen extends Screen {
     private int delayTicker;
     protected final BooleanConsumer callback;
 
-    public ConfirmScreen(BooleanConsumer p_95654_, Component p_95655_, Component p_95656_) {
-        this(p_95654_, p_95655_, p_95656_, CommonComponents.GUI_YES, CommonComponents.GUI_NO);
+    public ConfirmScreen(final BooleanConsumer callback, final Component title, final Component message) {
+        this(callback, title, message, CommonComponents.GUI_YES, CommonComponents.GUI_NO);
     }
 
-    public ConfirmScreen(BooleanConsumer p_95658_, Component p_95659_, Component p_95660_, Component p_95661_, Component p_95662_) {
-        super(p_95659_);
-        this.callback = p_95658_;
-        this.message = p_95660_;
-        this.yesButtonComponent = p_95661_;
-        this.noButtonComponent = p_95662_;
+    public ConfirmScreen(
+        final BooleanConsumer callback, final Component title, final Component message, final Component yesButtonComponent, final Component noButtonComponent
+    ) {
+        super(title);
+        this.callback = callback;
+        this.message = message;
+        this.yesButtonComponent = yesButtonComponent;
+        this.noButtonComponent = noButtonComponent;
     }
 
     @Override
@@ -46,11 +46,11 @@ public class ConfirmScreen extends Screen {
         super.init();
         this.layout.defaultCellSetting().alignHorizontallyCenter();
         this.layout.addChild(new StringWidget(this.title, this.font));
-        this.layout.addChild(new MultiLineTextWidget(this.message, this.font).setMaxWidth(this.width - 50).setMaxRows(15).setCentered(true));
+        this.layout.addChild(this.addMessage());
         this.addAdditionalText();
-        LinearLayout linearlayout = this.layout.addChild(LinearLayout.horizontal().spacing(4));
-        linearlayout.defaultCellSetting().paddingTop(16);
-        this.addButtons(linearlayout);
+        LinearLayout buttonLayout = this.layout.addChild(LinearLayout.horizontal().spacing(4));
+        buttonLayout.defaultCellSetting().paddingTop(16);
+        this.addButtons(buttonLayout);
         this.layout.visitWidgets(this::addRenderableWidget);
         this.repositionElements();
     }
@@ -64,13 +64,17 @@ public class ConfirmScreen extends Screen {
     protected void addAdditionalText() {
     }
 
-    protected void addButtons(LinearLayout p_406110_) {
-        this.yesButton = p_406110_.addChild(Button.builder(this.yesButtonComponent, p_169259_ -> this.callback.accept(true)).build());
-        this.noButton = p_406110_.addChild(Button.builder(this.noButtonComponent, p_169257_ -> this.callback.accept(false)).build());
+    protected LayoutElement addMessage() {
+        return new MultiLineTextWidget(this.message, this.font).setMaxWidth(this.width - 50).setMaxRows(15).setCentered(true);
     }
 
-    public void setDelay(int p_95664_) {
-        this.delayTicker = p_95664_;
+    protected void addButtons(final LinearLayout buttonLayout) {
+        this.yesButton = buttonLayout.addChild(Button.builder(this.yesButtonComponent, button -> this.callback.accept(true)).build());
+        this.noButton = buttonLayout.addChild(Button.builder(this.noButtonComponent, button -> this.callback.accept(false)).build());
+    }
+
+    public void setDelay(final int delay) {
+        this.delayTicker = delay;
         this.yesButton.active = false;
         this.noButton.active = false;
     }
@@ -90,12 +94,12 @@ public class ConfirmScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_427088_) {
-        if (this.delayTicker <= 0 && p_427088_.key() == 256) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (this.delayTicker <= 0 && event.isEscape()) {
             this.callback.accept(false);
             return true;
         } else {
-            return super.keyPressed(p_427088_);
+            return super.keyPressed(event);
         }
     }
 }

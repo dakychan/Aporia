@@ -9,6 +9,7 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.ConversionParams;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -21,22 +22,22 @@ public class Skeleton extends AbstractSkeleton {
     private int inPowderSnowTime;
     private int conversionTime;
 
-    public Skeleton(EntityType<? extends Skeleton> p_459359_, Level p_454273_) {
-        super(p_459359_, p_454273_);
+    public Skeleton(final EntityType<? extends Skeleton> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_460991_) {
-        super.defineSynchedData(p_460991_);
-        p_460991_.define(DATA_STRAY_CONVERSION_ID, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_STRAY_CONVERSION_ID, false);
     }
 
     public boolean isFreezeConverting() {
         return this.getEntityData().get(DATA_STRAY_CONVERSION_ID);
     }
 
-    public void setFreezeConverting(boolean p_453160_) {
-        this.entityData.set(DATA_STRAY_CONVERSION_ID, p_453160_);
+    public void setFreezeConverting(final boolean isConverting) {
+        this.entityData.set(DATA_STRAY_CONVERSION_ID, isConverting);
     }
 
     @Override
@@ -69,30 +70,30 @@ public class Skeleton extends AbstractSkeleton {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_457724_) {
-        super.addAdditionalSaveData(p_457724_);
-        p_457724_.putInt("StrayConversionTime", this.isFreezeConverting() ? this.conversionTime : -1);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("StrayConversionTime", this.isFreezeConverting() ? this.conversionTime : -1);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_455788_) {
-        super.readAdditionalSaveData(p_455788_);
-        int i = p_455788_.getIntOr("StrayConversionTime", -1);
-        if (i != -1) {
-            this.startFreezeConversion(i);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        int conversionTime = input.getIntOr("StrayConversionTime", -1);
+        if (conversionTime != -1) {
+            this.startFreezeConversion(conversionTime);
         } else {
             this.setFreezeConverting(false);
         }
     }
 
     @VisibleForTesting
-    public void startFreezeConversion(int p_457077_) {
-        this.conversionTime = p_457077_;
+    public void startFreezeConversion(final int time) {
+        this.conversionTime = time;
         this.setFreezeConverting(true);
     }
 
     protected void doFreezeConversion() {
-        this.convertTo(EntityType.STRAY, ConversionParams.single(this, true, true), p_451505_ -> {
+        this.convertTo(EntityTypes.STRAY, ConversionParams.single(this, true, true), stray -> {
             if (!this.isSilent()) {
                 this.level().levelEvent(null, 1048, this.blockPosition(), 0);
             }
@@ -110,7 +111,7 @@ public class Skeleton extends AbstractSkeleton {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_450765_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.SKELETON_HURT;
     }
 
@@ -120,7 +121,7 @@ public class Skeleton extends AbstractSkeleton {
     }
 
     @Override
-    SoundEvent getStepSound() {
+    protected SoundEvent getStepSound() {
         return SoundEvents.SKELETON_STEP;
     }
 }

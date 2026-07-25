@@ -15,70 +15,67 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class ContainerObjectSelectionList<E extends ContainerObjectSelectionList.Entry<E>> extends AbstractSelectionList<E> {
-    public ContainerObjectSelectionList(Minecraft p_94010_, int p_94011_, int p_94012_, int p_94013_, int p_94014_) {
-        super(p_94010_, p_94011_, p_94012_, p_94013_, p_94014_);
+    public ContainerObjectSelectionList(final Minecraft minecraft, final int width, final int height, final int y, final int itemHeight) {
+        super(minecraft, width, height, y, itemHeight);
     }
 
     @Override
-    public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent p_265385_) {
+    public @Nullable ComponentPath nextFocusPath(final FocusNavigationEvent navigationEvent) {
         if (this.getItemCount() == 0) {
             return null;
-        } else if (!(p_265385_ instanceof FocusNavigationEvent.ArrowNavigation focusnavigationevent$arrownavigation)) {
-            return super.nextFocusPath(p_265385_);
+        } else if (!(navigationEvent instanceof FocusNavigationEvent.ArrowNavigation arrowNavigation)) {
+            return super.nextFocusPath(navigationEvent);
         } else {
-            E e = this.getFocused();
-            if (focusnavigationevent$arrownavigation.direction().getAxis() == ScreenAxis.HORIZONTAL && e != null) {
-                return ComponentPath.path(this, e.nextFocusPath(p_265385_));
-            } else {
-                int i = -1;
-                ScreenDirection screendirection = focusnavigationevent$arrownavigation.direction();
-                if (e != null) {
-                    i = e.children().indexOf(e.getFocused());
-                }
-
-                if (i == -1) {
-                    switch (screendirection) {
-                        case LEFT:
-                            i = Integer.MAX_VALUE;
-                            screendirection = ScreenDirection.DOWN;
-                            break;
-                        case RIGHT:
-                            i = 0;
-                            screendirection = ScreenDirection.DOWN;
-                            break;
-                        default:
-                            i = 0;
-                    }
-                }
-
-                E e1 = e;
-
-                ComponentPath componentpath;
-                do {
-                    e1 = this.nextEntry(screendirection, p_420704_ -> !p_420704_.children().isEmpty(), e1);
-                    if (e1 == null) {
-                        return null;
-                    }
-
-                    componentpath = e1.focusPathAtIndex(focusnavigationevent$arrownavigation, i);
-                } while (componentpath == null);
-
-                return ComponentPath.path(this, componentpath);
+            E focused = this.getFocused();
+            if (arrowNavigation.direction().getAxis() == ScreenAxis.HORIZONTAL && focused != null) {
+                return ComponentPath.path(this, focused.nextFocusPath(navigationEvent));
             }
+
+            int index = -1;
+            ScreenDirection direction = arrowNavigation.direction();
+            if (focused != null) {
+                index = focused.children().indexOf(focused.getFocused());
+            }
+
+            if (index == -1) {
+                switch (direction) {
+                    case LEFT:
+                        index = Integer.MAX_VALUE;
+                        direction = ScreenDirection.DOWN;
+                        break;
+                    case RIGHT:
+                        index = 0;
+                        direction = ScreenDirection.DOWN;
+                        break;
+                    default:
+                        index = 0;
+                }
+            }
+
+            E entry = focused;
+
+            ComponentPath componentPath;
+            do {
+                entry = this.nextEntry(direction, e -> !e.children().isEmpty(), entry);
+                if (entry == null) {
+                    return null;
+                }
+
+                componentPath = entry.focusPathAtIndex(arrowNavigation, index);
+            } while (componentPath == null);
+
+            return ComponentPath.path(this, componentPath);
         }
     }
 
     @Override
-    public void setFocused(@Nullable GuiEventListener p_265559_) {
-        if (this.getFocused() != p_265559_) {
-            super.setFocused(p_265559_);
-            if (p_265559_ == null) {
+    public void setFocused(final @Nullable GuiEventListener focused) {
+        if (this.getFocused() != focused) {
+            super.setFocused(focused);
+            if (focused == null) {
                 this.setSelected(null);
             }
         }
@@ -95,18 +92,21 @@ public abstract class ContainerObjectSelectionList<E extends ContainerObjectSele
     }
 
     @Override
-    public void updateWidgetNarration(NarrationElementOutput p_313248_) {
-        if (this.getHovered() instanceof E e) {
-            e.updateNarration(p_313248_.nest());
-            this.narrateListElementPosition(p_313248_, e);
-        } else if (this.getFocused() instanceof E e1) {
-            e1.updateNarration(p_313248_.nest());
-            this.narrateListElementPosition(p_313248_, e1);
+    public void updateWidgetNarration(final NarrationElementOutput output) {
+        E hovered = this.getHovered();
+        if (hovered != null) {
+            hovered.updateNarration(output.nest());
+            this.narrateListElementPosition(output, hovered);
+        } else {
+            E focused = this.getFocused();
+            if (focused != null) {
+                focused.updateNarration(output.nest());
+                this.narrateListElementPosition(output, focused);
+            }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public abstract static class Entry<E extends ContainerObjectSelectionList.Entry<E>> extends AbstractSelectionList.Entry<E> implements ContainerEventHandler {
+        public abstract static class Entry<E extends ContainerObjectSelectionList.Entry<E>> extends AbstractSelectionList.Entry<E> implements ContainerEventHandler {
         private @Nullable GuiEventListener focused;
         private @Nullable NarratableEntry lastNarratable;
         private boolean dragging;
@@ -117,26 +117,26 @@ public abstract class ContainerObjectSelectionList<E extends ContainerObjectSele
         }
 
         @Override
-        public void setDragging(boolean p_94028_) {
-            this.dragging = p_94028_;
+        public void setDragging(final boolean dragging) {
+            this.dragging = dragging;
         }
 
         @Override
-        public boolean mouseClicked(MouseButtonEvent p_423427_, boolean p_430949_) {
-            return ContainerEventHandler.super.mouseClicked(p_423427_, p_430949_);
+        public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+            return ContainerEventHandler.super.mouseClicked(event, doubleClick);
         }
 
         @Override
-        public void setFocused(@Nullable GuiEventListener p_94024_) {
+        public void setFocused(final @Nullable GuiEventListener focused) {
             if (this.focused != null) {
                 this.focused.setFocused(false);
             }
 
-            if (p_94024_ != null) {
-                p_94024_.setFocused(true);
+            if (focused != null) {
+                focused.setFocused(true);
             }
 
-            this.focused = p_94024_;
+            this.focused = focused;
         }
 
         @Override
@@ -144,59 +144,56 @@ public abstract class ContainerObjectSelectionList<E extends ContainerObjectSele
             return this.focused;
         }
 
-        public @Nullable ComponentPath focusPathAtIndex(FocusNavigationEvent p_265435_, int p_265432_) {
+        public @Nullable ComponentPath focusPathAtIndex(final FocusNavigationEvent navigationEvent, final int currentIndex) {
             if (this.children().isEmpty()) {
                 return null;
-            } else {
-                ComponentPath componentpath = this.children().get(Math.min(p_265432_, this.children().size() - 1)).nextFocusPath(p_265435_);
-                return ComponentPath.path(this, componentpath);
             }
+
+            ComponentPath componentPath = this.children().get(Math.min(currentIndex, this.children().size() - 1)).nextFocusPath(navigationEvent);
+            return ComponentPath.path(this, componentPath);
         }
 
         @Override
-        public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent p_265672_) {
-            if (p_265672_ instanceof FocusNavigationEvent.ArrowNavigation focusnavigationevent$arrownavigation) {
-                int i = switch (focusnavigationevent$arrownavigation.direction()) {
+        public @Nullable ComponentPath nextFocusPath(final FocusNavigationEvent navigationEvent) {
+            if (navigationEvent instanceof FocusNavigationEvent.ArrowNavigation arrowNavigation) {
+                int delta = switch (arrowNavigation.direction()) {
                     case LEFT -> -1;
                     case RIGHT -> 1;
                     case UP, DOWN -> 0;
                 };
-                if (i == 0) {
+                if (delta == 0) {
                     return null;
                 }
 
-                int j = Mth.clamp(i + this.children().indexOf(this.getFocused()), 0, this.children().size() - 1);
+                int index = Mth.clamp(delta + this.children().indexOf(this.getFocused()), 0, this.children().size() - 1);
 
-                for (int k = j; k >= 0 && k < this.children().size(); k += i) {
-                    GuiEventListener guieventlistener = this.children().get(k);
-                    ComponentPath componentpath = guieventlistener.nextFocusPath(p_265672_);
-                    if (componentpath != null) {
-                        return ComponentPath.path(this, componentpath);
+                for (int i = index; i >= 0 && i < this.children().size(); i += delta) {
+                    GuiEventListener child = this.children().get(i);
+                    ComponentPath componentPath = child.nextFocusPath(navigationEvent);
+                    if (componentPath != null) {
+                        return ComponentPath.path(this, componentPath);
                     }
                 }
             }
 
-            return ContainerEventHandler.super.nextFocusPath(p_265672_);
+            return ContainerEventHandler.super.nextFocusPath(navigationEvent);
         }
 
         public abstract List<? extends NarratableEntry> narratables();
 
-        void updateNarration(NarrationElementOutput p_168855_) {
-            List<? extends NarratableEntry> list = this.narratables();
-            Screen.NarratableSearchResult screen$narratablesearchresult = Screen.findNarratableWidget(list, this.lastNarratable);
-            if (screen$narratablesearchresult != null) {
-                if (screen$narratablesearchresult.priority().isTerminal()) {
-                    this.lastNarratable = screen$narratablesearchresult.entry();
+        void updateNarration(final NarrationElementOutput output) {
+            List<? extends NarratableEntry> narratables = this.narratables();
+            Screen.NarratableSearchResult result = Screen.findNarratableWidget(narratables, this.lastNarratable);
+            if (result != null) {
+                if (result.priority().isTerminal()) {
+                    this.lastNarratable = result.entry();
                 }
 
-                if (list.size() > 1) {
-                    p_168855_.add(
-                        NarratedElementType.POSITION,
-                        Component.translatable("narrator.position.object_list", screen$narratablesearchresult.index() + 1, list.size())
-                    );
+                if (narratables.size() > 1) {
+                    output.add(NarratedElementType.POSITION, Component.translatable("narrator.position.object_list", result.index() + 1, narratables.size()));
                 }
 
-                screen$narratablesearchresult.entry().updateNarration(p_168855_.nest());
+                result.entry().updateNarration(output.nest());
             }
         }
     }

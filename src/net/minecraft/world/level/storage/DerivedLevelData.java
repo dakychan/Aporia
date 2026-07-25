@@ -1,23 +1,17 @@
 package net.minecraft.world.level.storage;
 
-import java.util.Optional;
-import java.util.UUID;
 import net.minecraft.CrashReportCategory;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelHeightAccessor;
-import net.minecraft.world.level.border.WorldBorder;
-import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.world.level.timers.TimerQueue;
 
 public class DerivedLevelData implements ServerLevelData {
     private final WorldData worldData;
     private final ServerLevelData wrapped;
 
-    public DerivedLevelData(WorldData p_78079_, ServerLevelData p_78080_) {
-        this.worldData = p_78079_;
-        this.wrapped = p_78080_;
+    public DerivedLevelData(final WorldData worldData, final ServerLevelData wrapped) {
+        this.worldData = worldData;
+        this.wrapped = wrapped;
     }
 
     @Override
@@ -31,42 +25,8 @@ public class DerivedLevelData implements ServerLevelData {
     }
 
     @Override
-    public long getDayTime() {
-        return this.wrapped.getDayTime();
-    }
-
-    @Override
     public String getLevelName() {
         return this.worldData.getLevelName();
-    }
-
-    @Override
-    public int getClearWeatherTime() {
-        return this.wrapped.getClearWeatherTime();
-    }
-
-    @Override
-    public void setClearWeatherTime(int p_78085_) {
-    }
-
-    @Override
-    public boolean isThundering() {
-        return this.wrapped.isThundering();
-    }
-
-    @Override
-    public int getThunderTime() {
-        return this.wrapped.getThunderTime();
-    }
-
-    @Override
-    public boolean isRaining() {
-        return this.wrapped.isRaining();
-    }
-
-    @Override
-    public int getRainTime() {
-        return this.wrapped.getRainTime();
     }
 
     @Override
@@ -75,36 +35,16 @@ public class DerivedLevelData implements ServerLevelData {
     }
 
     @Override
-    public void setGameTime(long p_78087_) {
+    public void setGameTime(final long time) {
     }
 
     @Override
-    public void setDayTime(long p_78105_) {
+    public void setSpawn(final LevelData.RespawnData respawnData) {
+        this.wrapped.setSpawn(respawnData);
     }
 
     @Override
-    public void setSpawn(LevelData.RespawnData p_428129_) {
-        this.wrapped.setSpawn(p_428129_);
-    }
-
-    @Override
-    public void setThundering(boolean p_78100_) {
-    }
-
-    @Override
-    public void setThunderTime(int p_78118_) {
-    }
-
-    @Override
-    public void setRaining(boolean p_78107_) {
-    }
-
-    @Override
-    public void setRainTime(int p_78121_) {
-    }
-
-    @Override
-    public void setGameType(GameType p_78089_) {
+    public void setGameType(final GameType gameType) {
     }
 
     @Override
@@ -118,26 +58,16 @@ public class DerivedLevelData implements ServerLevelData {
     }
 
     @Override
+    public void setAllowCommands(final boolean allowCommands) {
+    }
+
+    @Override
     public boolean isInitialized() {
         return this.wrapped.isInitialized();
     }
 
     @Override
-    public void setInitialized(boolean p_78112_) {
-    }
-
-    @Override
-    public GameRules getGameRules() {
-        return this.worldData.getGameRules();
-    }
-
-    @Override
-    public Optional<WorldBorder.Settings> getLegacyWorldBorderSettings() {
-        return this.wrapped.getLegacyWorldBorderSettings();
-    }
-
-    @Override
-    public void setLegacyWorldBorderSettings(Optional<WorldBorder.Settings> p_428220_) {
+    public void setInitialized(final boolean initialized) {
     }
 
     @Override
@@ -151,40 +81,8 @@ public class DerivedLevelData implements ServerLevelData {
     }
 
     @Override
-    public TimerQueue<MinecraftServer> getScheduledEvents() {
-        return this.wrapped.getScheduledEvents();
-    }
-
-    @Override
-    public int getWanderingTraderSpawnDelay() {
-        return 0;
-    }
-
-    @Override
-    public void setWanderingTraderSpawnDelay(int p_78124_) {
-    }
-
-    @Override
-    public int getWanderingTraderSpawnChance() {
-        return 0;
-    }
-
-    @Override
-    public void setWanderingTraderSpawnChance(int p_78127_) {
-    }
-
-    @Override
-    public UUID getWanderingTraderId() {
-        return null;
-    }
-
-    @Override
-    public void setWanderingTraderId(UUID p_78096_) {
-    }
-
-    @Override
-    public void fillCrashReportCategory(CrashReportCategory p_164852_, LevelHeightAccessor p_164853_) {
-        p_164852_.setDetail("Derived", true);
-        this.wrapped.fillCrashReportCategory(p_164852_, p_164853_);
+    public void fillCrashReportCategory(final CrashReportCategory category, final LevelHeightAccessor levelHeightAccessor) {
+        category.setDetail("Derived", true);
+        this.wrapped.fillCrashReportCategory(category, levelHeightAccessor);
     }
 }

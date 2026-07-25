@@ -4,7 +4,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBossEventPacket;
@@ -13,10 +13,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.BossEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BossHealthOverlay {
     private static final int BAR_WIDTH = 182;
     private static final int BAR_HEIGHT = 5;
@@ -51,101 +48,107 @@ public class BossHealthOverlay {
         Identifier.withDefaultNamespace("boss_bar/notched_20_progress")
     };
     private final Minecraft minecraft;
-    final Map<UUID, LerpingBossEvent> events = Maps.newLinkedHashMap();
+    private final Map<UUID, LerpingBossEvent> events = Maps.newLinkedHashMap();
 
-    public BossHealthOverlay(Minecraft p_93702_) {
-        this.minecraft = p_93702_;
+    public BossHealthOverlay(final Minecraft minecraft) {
+        this.minecraft = minecraft;
     }
 
-    public void render(GuiGraphics p_283175_) {
+    public void extractRenderState(final GuiGraphicsExtractor graphics) {
         if (!this.events.isEmpty()) {
-            p_283175_.nextStratum();
-            ProfilerFiller profilerfiller = Profiler.get();
-            profilerfiller.push("bossHealth");
-            int i = p_283175_.guiWidth();
-            int j = 12;
+            graphics.nextStratum();
+            ProfilerFiller profiler = Profiler.get();
+            profiler.push("bossHealth");
+            int screenWidth = graphics.guiWidth();
+            int yOffset = 12;
 
-            for (LerpingBossEvent lerpingbossevent : this.events.values()) {
-                int k = i / 2 - 91;
-                this.drawBar(p_283175_, k, j, lerpingbossevent);
-                Component component = lerpingbossevent.getName();
-                int l = this.minecraft.font.width(component);
-                int i1 = i / 2 - l / 2;
-                int j1 = j - 9;
-                p_283175_.drawString(this.minecraft.font, component, i1, j1, -1);
-                j += 10 + 9;
-                if (j >= p_283175_.guiHeight() / 3) {
+            for (LerpingBossEvent event : this.events.values()) {
+                int xLeft = screenWidth / 2 - 91;
+                int yo = yOffset;
+                this.extractBar(graphics, xLeft, yo, event);
+                Component msg = event.getName();
+                int width = this.minecraft.font.width(msg);
+                int x = screenWidth / 2 - width / 2;
+                int y = yo - 9;
+                graphics.text(this.minecraft.font, msg, x, y, -1);
+                yOffset += 10 + 9;
+                if (yOffset >= graphics.guiHeight() / 3) {
                     break;
                 }
             }
 
-            profilerfiller.pop();
+            profiler.pop();
         }
     }
 
-    private void drawBar(GuiGraphics p_283672_, int p_283570_, int p_283306_, BossEvent p_283156_) {
-        this.drawBar(p_283672_, p_283570_, p_283306_, p_283156_, 182, BAR_BACKGROUND_SPRITES, OVERLAY_BACKGROUND_SPRITES);
-        int i = Mth.lerpDiscrete(p_283156_.getProgress(), 0, 182);
-        if (i > 0) {
-            this.drawBar(p_283672_, p_283570_, p_283306_, p_283156_, i, BAR_PROGRESS_SPRITES, OVERLAY_PROGRESS_SPRITES);
+    private void extractBar(final GuiGraphicsExtractor graphics, final int x, final int y, final BossEvent event) {
+        this.extractBar(graphics, x, y, event, 182, BAR_BACKGROUND_SPRITES, OVERLAY_BACKGROUND_SPRITES);
+        int width = Mth.lerpDiscrete(event.getProgress(), 0, 182);
+        if (width > 0) {
+            this.extractBar(graphics, x, y, event, width, BAR_PROGRESS_SPRITES, OVERLAY_PROGRESS_SPRITES);
         }
     }
 
-    private void drawBar(
-        GuiGraphics p_281657_, int p_283675_, int p_282498_, BossEvent p_281288_, int p_283619_, Identifier[] p_458856_, Identifier[] p_460328_
+    private void extractBar(
+        final GuiGraphicsExtractor graphics,
+        final int x,
+        final int y,
+        final BossEvent event,
+        final int width,
+        final Identifier[] sprites,
+        final Identifier[] overlaySprites
     ) {
-        p_281657_.blitSprite(RenderPipelines.GUI_TEXTURED, p_458856_[p_281288_.getColor().ordinal()], 182, 5, 0, 0, p_283675_, p_282498_, p_283619_, 5);
-        if (p_281288_.getOverlay() != BossEvent.BossBarOverlay.PROGRESS) {
-            p_281657_.blitSprite(RenderPipelines.GUI_TEXTURED, p_460328_[p_281288_.getOverlay().ordinal() - 1], 182, 5, 0, 0, p_283675_, p_282498_, p_283619_, 5);
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprites[event.getColor().ordinal()], 182, 5, 0, 0, x, y, width, 5);
+        if (event.getOverlay() != BossEvent.BossBarOverlay.PROGRESS) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, overlaySprites[event.getOverlay().ordinal() - 1], 182, 5, 0, 0, x, y, width, 5);
         }
     }
 
-    public void update(ClientboundBossEventPacket p_93712_) {
-        p_93712_.dispatch(
+    public void update(final ClientboundBossEventPacket packet) {
+        packet.dispatch(
             new ClientboundBossEventPacket.Handler() {
                 @Override
                 public void add(
-                    UUID p_168824_,
-                    Component p_168825_,
-                    float p_168826_,
-                    BossEvent.BossBarColor p_168827_,
-                    BossEvent.BossBarOverlay p_168828_,
-                    boolean p_168829_,
-                    boolean p_168830_,
-                    boolean p_168831_
+                    final UUID id,
+                    final Component name,
+                    final float progress,
+                    final BossEvent.BossBarColor color,
+                    final BossEvent.BossBarOverlay overlay,
+                    final boolean darkenScreen,
+                    final boolean playMusic,
+                    final boolean createWorldFog
                 ) {
-                    BossHealthOverlay.this.events
-                        .put(p_168824_, new LerpingBossEvent(p_168824_, p_168825_, p_168826_, p_168827_, p_168828_, p_168829_, p_168830_, p_168831_));
+                    BossHealthOverlay.this.events.put(id, new LerpingBossEvent(id, name, progress, color, overlay, darkenScreen, playMusic, createWorldFog));
                 }
 
                 @Override
-                public void remove(UUID p_168812_) {
-                    BossHealthOverlay.this.events.remove(p_168812_);
+                public void remove(final UUID id) {
+                    BossHealthOverlay.this.events.remove(id);
                 }
 
                 @Override
-                public void updateProgress(UUID p_168814_, float p_168815_) {
-                    BossHealthOverlay.this.events.get(p_168814_).setProgress(p_168815_);
+                public void updateProgress(final UUID id, final float progress) {
+                    BossHealthOverlay.this.events.get(id).setProgress(progress);
                 }
 
                 @Override
-                public void updateName(UUID p_168821_, Component p_168822_) {
-                    BossHealthOverlay.this.events.get(p_168821_).setName(p_168822_);
+                public void updateName(final UUID id, final Component name) {
+                    BossHealthOverlay.this.events.get(id).setName(name);
                 }
 
                 @Override
-                public void updateStyle(UUID p_168817_, BossEvent.BossBarColor p_168818_, BossEvent.BossBarOverlay p_168819_) {
-                    LerpingBossEvent lerpingbossevent = BossHealthOverlay.this.events.get(p_168817_);
-                    lerpingbossevent.setColor(p_168818_);
-                    lerpingbossevent.setOverlay(p_168819_);
+                public void updateStyle(final UUID id, final BossEvent.BossBarColor color, final BossEvent.BossBarOverlay overlay) {
+                    LerpingBossEvent event = BossHealthOverlay.this.events.get(id);
+                    event.setColor(color);
+                    event.setOverlay(overlay);
                 }
 
                 @Override
-                public void updateProperties(UUID p_168833_, boolean p_168834_, boolean p_168835_, boolean p_168836_) {
-                    LerpingBossEvent lerpingbossevent = BossHealthOverlay.this.events.get(p_168833_);
-                    lerpingbossevent.setDarkenScreen(p_168834_);
-                    lerpingbossevent.setPlayBossMusic(p_168835_);
-                    lerpingbossevent.setCreateWorldFog(p_168836_);
+                public void updateProperties(final UUID id, final boolean darkenScreen, final boolean playMusic, final boolean createWorldFog) {
+                    LerpingBossEvent event = BossHealthOverlay.this.events.get(id);
+                    event.setDarkenScreen(darkenScreen);
+                    event.setPlayBossMusic(playMusic);
+                    event.setCreateWorldFog(createWorldFog);
                 }
             }
         );
@@ -157,8 +160,8 @@ public class BossHealthOverlay {
 
     public boolean shouldPlayMusic() {
         if (!this.events.isEmpty()) {
-            for (BossEvent bossevent : this.events.values()) {
-                if (bossevent.shouldPlayBossMusic()) {
+            for (BossEvent event : this.events.values()) {
+                if (event.shouldPlayBossMusic()) {
                     return true;
                 }
             }
@@ -169,8 +172,8 @@ public class BossHealthOverlay {
 
     public boolean shouldDarkenScreen() {
         if (!this.events.isEmpty()) {
-            for (BossEvent bossevent : this.events.values()) {
-                if (bossevent.shouldDarkenScreen()) {
+            for (BossEvent event : this.events.values()) {
+                if (event.shouldDarkenScreen()) {
                     return true;
                 }
             }
@@ -181,8 +184,8 @@ public class BossHealthOverlay {
 
     public boolean shouldCreateWorldFog() {
         if (!this.events.isEmpty()) {
-            for (BossEvent bossevent : this.events.values()) {
-                if (bossevent.shouldCreateWorldFog()) {
+            for (BossEvent event : this.events.values()) {
+                if (event.shouldCreateWorldFog()) {
                     return true;
                 }
             }

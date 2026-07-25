@@ -9,8 +9,8 @@ import net.minecraft.world.level.block.state.properties.EnumProperty;
 public abstract class DirectionalBlock extends Block {
     public static final EnumProperty<Direction> FACING = BlockStateProperties.FACING;
 
-    protected DirectionalBlock(BlockBehaviour.Properties p_52591_) {
-        super(p_52591_);
+    protected DirectionalBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override

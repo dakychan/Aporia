@@ -10,247 +10,251 @@ public interface ClientGamePacketListener extends ClientCommonPacketListener, Cl
         return ConnectionProtocol.PLAY;
     }
 
-    void handleAddEntity(ClientboundAddEntityPacket p_131367_);
+    void handleAddEntity(ClientboundAddEntityPacket packet);
 
-    void handleAddObjective(ClientboundSetObjectivePacket p_131438_);
+    void handleAddObjective(ClientboundSetObjectivePacket packet);
 
-    void handleAnimate(ClientboundAnimatePacket p_131372_);
+    void handleAnimate(ClientboundAnimatePacket packet);
 
-    void handleHurtAnimation(ClientboundHurtAnimationPacket p_265165_);
+    void handleHurtAnimation(ClientboundHurtAnimationPacket packet);
 
-    void handleAwardStats(ClientboundAwardStatsPacket p_131373_);
+    void handleAwardStats(ClientboundAwardStatsPacket packet);
 
-    void handleRecipeBookAdd(ClientboundRecipeBookAddPacket p_364790_);
+    void handleRecipeBookAdd(ClientboundRecipeBookAddPacket packet);
 
-    void handleRecipeBookRemove(ClientboundRecipeBookRemovePacket p_363804_);
+    void handleRecipeBookRemove(ClientboundRecipeBookRemovePacket packet);
 
-    void handleRecipeBookSettings(ClientboundRecipeBookSettingsPacket p_363431_);
+    void handleRecipeBookSettings(ClientboundRecipeBookSettingsPacket packet);
 
-    void handleBlockDestruction(ClientboundBlockDestructionPacket p_131375_);
+    void handleBlockDestruction(ClientboundBlockDestructionPacket packet);
 
-    void handleOpenSignEditor(ClientboundOpenSignEditorPacket p_131410_);
+    void handleOpenSignEditor(ClientboundOpenSignEditorPacket packet);
 
-    void handleBlockEntityData(ClientboundBlockEntityDataPacket p_131376_);
+    void handleBlockEntityData(ClientboundBlockEntityDataPacket packet);
 
-    void handleBlockEvent(ClientboundBlockEventPacket p_131377_);
+    void handleBlockEvent(ClientboundBlockEventPacket packet);
 
-    void handleBlockUpdate(ClientboundBlockUpdatePacket p_131378_);
+    void handleBlockUpdate(ClientboundBlockUpdatePacket packet);
 
-    void handleSystemChat(ClientboundSystemChatPacket p_237543_);
+    void handleSystemChat(ClientboundSystemChatPacket packet);
 
-    void handlePlayerChat(ClientboundPlayerChatPacket p_237540_);
+    void handlePlayerChat(ClientboundPlayerChatPacket packet);
 
-    void handleDisguisedChat(ClientboundDisguisedChatPacket p_251057_);
+    void handleDisguisedChat(ClientboundDisguisedChatPacket packet);
 
-    void handleDeleteChat(ClientboundDeleteChatPacket p_241462_);
+    void handleDeleteChat(ClientboundDeleteChatPacket packet);
 
-    void handleChunkBlocksUpdate(ClientboundSectionBlocksUpdatePacket p_131423_);
+    void handleChunkBlocksUpdate(ClientboundSectionBlocksUpdatePacket packet);
 
-    void handleMapItemData(ClientboundMapItemDataPacket p_131404_);
+    void handleMapItemData(ClientboundMapItemDataPacket packet);
 
-    void handleContainerClose(ClientboundContainerClosePacket p_131385_);
+    void handleContainerClose(ClientboundContainerClosePacket packet);
 
-    void handleContainerContent(ClientboundContainerSetContentPacket p_131386_);
+    void handleContainerContent(ClientboundContainerSetContentPacket packet);
 
-    void handleMountScreenOpen(ClientboundMountScreenOpenPacket p_456473_);
+    void handleMountScreenOpen(ClientboundMountScreenOpenPacket packet);
 
-    void handleContainerSetData(ClientboundContainerSetDataPacket p_131387_);
+    void handleContainerSetData(ClientboundContainerSetDataPacket packet);
 
-    void handleContainerSetSlot(ClientboundContainerSetSlotPacket p_131388_);
+    void handleContainerSetSlot(ClientboundContainerSetSlotPacket packet);
 
-    void handleEntityEvent(ClientboundEntityEventPacket p_131393_);
+    void handleEntityEvent(ClientboundEntityEventPacket packet);
 
-    void handleEntityLinkPacket(ClientboundSetEntityLinkPacket p_131433_);
+    void handleEntityLinkPacket(ClientboundSetEntityLinkPacket packet);
 
-    void handleSetEntityPassengersPacket(ClientboundSetPassengersPacket p_131439_);
+    void handleSetEntityPassengersPacket(ClientboundSetPassengersPacket packet);
 
-    void handleExplosion(ClientboundExplodePacket p_131394_);
+    void handleExplosion(ClientboundExplodePacket packet);
 
-    void handleGameEvent(ClientboundGameEventPacket p_131396_);
+    void handleGameEvent(ClientboundGameEventPacket packet);
 
-    void handleLevelChunkWithLight(ClientboundLevelChunkWithLightPacket p_195622_);
+    void handleLevelChunkWithLight(ClientboundLevelChunkWithLightPacket packet);
 
-    void handleChunksBiomes(ClientboundChunksBiomesPacket p_275451_);
+    void handleChunksBiomes(ClientboundChunksBiomesPacket packet);
 
-    void handleForgetLevelChunk(ClientboundForgetLevelChunkPacket p_131395_);
+    void handleForgetLevelChunk(ClientboundForgetLevelChunkPacket packet);
 
-    void handleLevelEvent(ClientboundLevelEventPacket p_131400_);
+    void handleLevelEvent(ClientboundLevelEventPacket packet);
 
-    void handleLogin(ClientboundLoginPacket p_131403_);
+    void handleLogin(ClientboundLoginPacket packet);
 
-    void handleMoveEntity(ClientboundMoveEntityPacket p_131406_);
+    void handleMoveEntity(ClientboundMoveEntityPacket packet);
 
-    void handleMinecartAlongTrack(ClientboundMoveMinecartPacket p_361369_);
+    void handleMinecartAlongTrack(ClientboundMoveMinecartPacket packet);
 
-    void handleMovePlayer(ClientboundPlayerPositionPacket p_131416_);
+    void handleMovePlayer(ClientboundPlayerPositionPacket packet);
 
-    void handleRotatePlayer(ClientboundPlayerRotationPacket p_365080_);
+    void handleRotatePlayer(ClientboundPlayerRotationPacket packet);
 
-    void handleParticleEvent(ClientboundLevelParticlesPacket p_131401_);
+    void handleParticleEvent(ClientboundLevelParticlesPacket packet);
 
-    void handlePlayerAbilities(ClientboundPlayerAbilitiesPacket p_131412_);
+    void handlePlayerAbilities(ClientboundPlayerAbilitiesPacket packet);
 
-    void handlePlayerInfoRemove(ClientboundPlayerInfoRemovePacket p_252308_);
+    void handleGameRuleValues(ClientboundGameRuleValuesPacket packet);
 
-    void handlePlayerInfoUpdate(ClientboundPlayerInfoUpdatePacket p_248573_);
+    void handlePlayerInfoRemove(ClientboundPlayerInfoRemovePacket packet);
 
-    void handleRemoveEntities(ClientboundRemoveEntitiesPacket p_182700_);
+    void handlePlayerInfoUpdate(ClientboundPlayerInfoUpdatePacket packet);
 
-    void handleRemoveMobEffect(ClientboundRemoveMobEffectPacket p_131419_);
+    void handleRemoveEntities(ClientboundRemoveEntitiesPacket packet);
 
-    void handleRespawn(ClientboundRespawnPacket p_131421_);
+    void handleRemoveMobEffect(ClientboundRemoveMobEffectPacket packet);
 
-    void handleRotateMob(ClientboundRotateHeadPacket p_131422_);
+    void handleRespawn(ClientboundRespawnPacket packet);
 
-    void handleSetHeldSlot(ClientboundSetHeldSlotPacket p_364003_);
+    void handleRotateMob(ClientboundRotateHeadPacket packet);
 
-    void handleSetDisplayObjective(ClientboundSetDisplayObjectivePacket p_131431_);
+    void handleSetHeldSlot(ClientboundSetHeldSlotPacket packet);
 
-    void handleSetEntityData(ClientboundSetEntityDataPacket p_131432_);
+    void handleSetDisplayObjective(ClientboundSetDisplayObjectivePacket packet);
 
-    void handleSetEntityMotion(ClientboundSetEntityMotionPacket p_131434_);
+    void handleSetEntityData(ClientboundSetEntityDataPacket packet);
 
-    void handleSetEquipment(ClientboundSetEquipmentPacket p_131435_);
+    void handleSetEntityMotion(ClientboundSetEntityMotionPacket packet);
 
-    void handleSetExperience(ClientboundSetExperiencePacket p_131436_);
+    void handleSetEquipment(ClientboundSetEquipmentPacket packet);
 
-    void handleSetHealth(ClientboundSetHealthPacket p_131437_);
+    void handleSetExperience(ClientboundSetExperiencePacket packet);
 
-    void handleSetPlayerTeamPacket(ClientboundSetPlayerTeamPacket p_131440_);
+    void handleSetHealth(ClientboundSetHealthPacket packet);
 
-    void handleSetScore(ClientboundSetScorePacket p_131441_);
+    void handleSetPlayerTeamPacket(ClientboundSetPlayerTeamPacket packet);
 
-    void handleResetScore(ClientboundResetScorePacket p_310831_);
+    void handleSetScore(ClientboundSetScorePacket packet);
 
-    void handleSetSpawn(ClientboundSetDefaultSpawnPositionPacket p_131430_);
+    void handleResetScore(ClientboundResetScorePacket packet);
 
-    void handleSetTime(ClientboundSetTimePacket p_131442_);
+    void handleSetSpawn(ClientboundSetDefaultSpawnPositionPacket packet);
 
-    void handleSoundEvent(ClientboundSoundPacket p_131445_);
+    void handleSetTime(ClientboundSetTimePacket packet);
 
-    void handleSoundEntityEvent(ClientboundSoundEntityPacket p_131444_);
+    void handleSoundEvent(ClientboundSoundPacket packet);
 
-    void handleTakeItemEntity(ClientboundTakeItemEntityPacket p_131449_);
+    void handleSoundEntityEvent(ClientboundSoundEntityPacket packet);
 
-    void handleEntityPositionSync(ClientboundEntityPositionSyncPacket p_363417_);
+    void handleTakeItemEntity(ClientboundTakeItemEntityPacket packet);
 
-    void handleTeleportEntity(ClientboundTeleportEntityPacket p_131450_);
+    void handleEntityPositionSync(ClientboundEntityPositionSyncPacket packet);
 
-    void handleTickingState(ClientboundTickingStatePacket p_309939_);
+    void handleTeleportEntity(ClientboundTeleportEntityPacket packet);
 
-    void handleTickingStep(ClientboundTickingStepPacket p_312343_);
+    void handleTickingState(ClientboundTickingStatePacket packet);
 
-    void handleUpdateAttributes(ClientboundUpdateAttributesPacket p_131452_);
+    void handleTickingStep(ClientboundTickingStepPacket packet);
 
-    void handleUpdateMobEffect(ClientboundUpdateMobEffectPacket p_131453_);
+    void handleUpdateAttributes(ClientboundUpdateAttributesPacket packet);
 
-    void handlePlayerCombatEnd(ClientboundPlayerCombatEndPacket p_178546_);
+    void handleUpdateMobEffect(ClientboundUpdateMobEffectPacket packet);
 
-    void handlePlayerCombatEnter(ClientboundPlayerCombatEnterPacket p_178547_);
+    void handlePlayerCombatEnd(ClientboundPlayerCombatEndPacket packet);
 
-    void handlePlayerCombatKill(ClientboundPlayerCombatKillPacket p_178548_);
+    void handlePlayerCombatEnter(ClientboundPlayerCombatEnterPacket packet);
 
-    void handleChangeDifficulty(ClientboundChangeDifficultyPacket p_131380_);
+    void handlePlayerCombatKill(ClientboundPlayerCombatKillPacket packet);
 
-    void handleSetCamera(ClientboundSetCameraPacket p_131426_);
+    void handleChangeDifficulty(ClientboundChangeDifficultyPacket packet);
 
-    void handleInitializeBorder(ClientboundInitializeBorderPacket p_178544_);
+    void handleSetCamera(ClientboundSetCameraPacket packet);
 
-    void handleSetBorderLerpSize(ClientboundSetBorderLerpSizePacket p_178552_);
+    void handleInitializeBorder(ClientboundInitializeBorderPacket packet);
 
-    void handleSetBorderSize(ClientboundSetBorderSizePacket p_178553_);
+    void handleSetBorderLerpSize(ClientboundSetBorderLerpSizePacket packet);
 
-    void handleSetBorderWarningDelay(ClientboundSetBorderWarningDelayPacket p_178554_);
+    void handleSetBorderSize(ClientboundSetBorderSizePacket packet);
 
-    void handleSetBorderWarningDistance(ClientboundSetBorderWarningDistancePacket p_178555_);
+    void handleSetBorderWarningDelay(ClientboundSetBorderWarningDelayPacket packet);
 
-    void handleSetBorderCenter(ClientboundSetBorderCenterPacket p_178551_);
+    void handleSetBorderWarningDistance(ClientboundSetBorderWarningDistancePacket packet);
 
-    void handleTabListCustomisation(ClientboundTabListPacket p_131447_);
+    void handleSetBorderCenter(ClientboundSetBorderCenterPacket packet);
 
-    void handleBossUpdate(ClientboundBossEventPacket p_131379_);
+    void handleTabListCustomisation(ClientboundTabListPacket packet);
 
-    void handleItemCooldown(ClientboundCooldownPacket p_131389_);
+    void handleBossUpdate(ClientboundBossEventPacket packet);
 
-    void handleMoveVehicle(ClientboundMoveVehiclePacket p_131407_);
+    void handleItemCooldown(ClientboundCooldownPacket packet);
 
-    void handleUpdateAdvancementsPacket(ClientboundUpdateAdvancementsPacket p_131451_);
+    void handleMoveVehicle(ClientboundMoveVehiclePacket packet);
 
-    void handleSelectAdvancementsTab(ClientboundSelectAdvancementsTabPacket p_131424_);
+    void handleUpdateAdvancementsPacket(ClientboundUpdateAdvancementsPacket packet);
 
-    void handlePlaceRecipe(ClientboundPlaceGhostRecipePacket p_131411_);
+    void handleSelectAdvancementsTab(ClientboundSelectAdvancementsTabPacket packet);
 
-    void handleCommands(ClientboundCommandsPacket p_131383_);
+    void handlePlaceRecipe(ClientboundPlaceGhostRecipePacket packet);
 
-    void handleStopSoundEvent(ClientboundStopSoundPacket p_131446_);
+    void handleCommands(ClientboundCommandsPacket packet);
 
-    void handleCommandSuggestions(ClientboundCommandSuggestionsPacket p_131382_);
+    void handleStopSoundEvent(ClientboundStopSoundPacket packet);
 
-    void handleUpdateRecipes(ClientboundUpdateRecipesPacket p_131454_);
+    void handleCommandSuggestions(ClientboundCommandSuggestionsPacket packet);
 
-    void handleLookAt(ClientboundPlayerLookAtPacket p_131415_);
+    void handleUpdateRecipes(ClientboundUpdateRecipesPacket packet);
 
-    void handleTagQueryPacket(ClientboundTagQueryPacket p_131448_);
+    void handleLookAt(ClientboundPlayerLookAtPacket packet);
 
-    void handleLightUpdatePacket(ClientboundLightUpdatePacket p_195623_);
+    void handleTagQueryPacket(ClientboundTagQueryPacket packet);
 
-    void handleOpenBook(ClientboundOpenBookPacket p_131408_);
+    void handleLightUpdatePacket(ClientboundLightUpdatePacket packet);
 
-    void handleOpenScreen(ClientboundOpenScreenPacket p_131409_);
+    void handleOpenBook(ClientboundOpenBookPacket packet);
 
-    void handleMerchantOffers(ClientboundMerchantOffersPacket p_131405_);
+    void handleOpenScreen(ClientboundOpenScreenPacket packet);
 
-    void handleSetChunkCacheRadius(ClientboundSetChunkCacheRadiusPacket p_131429_);
+    void handleMerchantOffers(ClientboundMerchantOffersPacket packet);
 
-    void handleSetSimulationDistance(ClientboundSetSimulationDistancePacket p_195624_);
+    void handleSetChunkCacheRadius(ClientboundSetChunkCacheRadiusPacket packet);
 
-    void handleSetChunkCacheCenter(ClientboundSetChunkCacheCenterPacket p_131428_);
+    void handleSetSimulationDistance(ClientboundSetSimulationDistancePacket packet);
 
-    void handleBlockChangedAck(ClientboundBlockChangedAckPacket p_237538_);
+    void handleSetChunkCacheCenter(ClientboundSetChunkCacheCenterPacket packet);
 
-    void setActionBarText(ClientboundSetActionBarTextPacket p_178550_);
+    void handleBlockChangedAck(ClientboundBlockChangedAckPacket packet);
 
-    void setSubtitleText(ClientboundSetSubtitleTextPacket p_178556_);
+    void setActionBarText(ClientboundSetActionBarTextPacket packet);
 
-    void setTitleText(ClientboundSetTitleTextPacket p_178557_);
+    void setSubtitleText(ClientboundSetSubtitleTextPacket packet);
 
-    void setTitlesAnimation(ClientboundSetTitlesAnimationPacket p_178558_);
+    void setTitleText(ClientboundSetTitleTextPacket packet);
 
-    void handleTitlesClear(ClientboundClearTitlesPacket p_178543_);
+    void setTitlesAnimation(ClientboundSetTitlesAnimationPacket packet);
 
-    void handleServerData(ClientboundServerDataPacket p_237541_);
+    void handleTitlesClear(ClientboundClearTitlesPacket packet);
 
-    void handleCustomChatCompletions(ClientboundCustomChatCompletionsPacket p_240770_);
+    void handleServerData(ClientboundServerDataPacket packet);
 
-    void handleBundlePacket(ClientboundBundlePacket p_265211_);
+    void handleCustomChatCompletions(ClientboundCustomChatCompletionsPacket packet);
 
-    void handleDamageEvent(ClientboundDamageEventPacket p_270900_);
+    void handleBundlePacket(ClientboundBundlePacket packet);
 
-    void handleConfigurationStart(ClientboundStartConfigurationPacket p_298772_);
+    void handleDamageEvent(ClientboundDamageEventPacket packet);
 
-    void handleChunkBatchStart(ClientboundChunkBatchStartPacket p_298767_);
+    void handleConfigurationStart(ClientboundStartConfigurationPacket packet);
 
-    void handleChunkBatchFinished(ClientboundChunkBatchFinishedPacket p_297668_);
+    void handleChunkBatchStart(ClientboundChunkBatchStartPacket packet);
 
-    void handleDebugSample(ClientboundDebugSamplePacket p_328537_);
+    void handleChunkBatchFinished(ClientboundChunkBatchFinishedPacket packet);
 
-    void handleProjectilePowerPacket(ClientboundProjectilePowerPacket p_330129_);
+    void handleDebugSample(ClientboundDebugSamplePacket packet);
 
-    void handleSetCursorItem(ClientboundSetCursorItemPacket p_362172_);
+    void handleProjectilePowerPacket(ClientboundProjectilePowerPacket packet);
 
-    void handleSetPlayerInventory(ClientboundSetPlayerInventoryPacket p_365703_);
+    void handleSetCursorItem(ClientboundSetCursorItemPacket packet);
 
-    void handleTestInstanceBlockStatus(ClientboundTestInstanceBlockStatus p_394171_);
+    void handleSetPlayerInventory(ClientboundSetPlayerInventoryPacket packet);
 
-    void handleWaypoint(ClientboundTrackedWaypointPacket p_408352_);
+    void handleTestInstanceBlockStatus(ClientboundTestInstanceBlockStatus packet);
 
-    void handleDebugChunkValue(ClientboundDebugChunkValuePacket p_426515_);
+    void handleWaypoint(ClientboundTrackedWaypointPacket packet);
 
-    void handleDebugBlockValue(ClientboundDebugBlockValuePacket p_427459_);
+    void handleDebugChunkValue(ClientboundDebugChunkValuePacket packet);
 
-    void handleDebugEntityValue(ClientboundDebugEntityValuePacket p_422330_);
+    void handleDebugBlockValue(ClientboundDebugBlockValuePacket packet);
 
-    void handleDebugEvent(ClientboundDebugEventPacket p_430825_);
+    void handleDebugEntityValue(ClientboundDebugEntityValuePacket packet);
 
-    void handleGameTestHighlightPos(ClientboundGameTestHighlightPosPacket p_429251_);
+    void handleDebugEvent(ClientboundDebugEventPacket packet);
+
+    void handleGameTestHighlightPos(ClientboundGameTestHighlightPosPacket packet);
+
+    void handleLowDiskSpaceWarning(ClientboundLowDiskSpaceWarningPacket packet);
 }

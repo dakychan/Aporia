@@ -20,38 +20,38 @@ public class BlockPatternBuilder {
     private final CharSet unknownCharacters = new CharOpenHashSet();
 
     private BlockPatternBuilder() {
-        this.lookup.put(' ', p_187549_ -> true);
+        this.lookup.put(' ', blockInWorld -> true);
     }
 
-    public BlockPatternBuilder aisle(String... p_61248_) {
-        if (!ArrayUtils.isEmpty((Object[])p_61248_) && !StringUtils.isEmpty(p_61248_[0])) {
+    public BlockPatternBuilder aisle(final String... aisle) {
+        if (!ArrayUtils.isEmpty(aisle) && !StringUtils.isEmpty(aisle[0])) {
             if (this.pattern.isEmpty()) {
-                this.height = p_61248_.length;
-                this.width = p_61248_[0].length();
+                this.height = aisle.length;
+                this.width = aisle[0].length();
             }
 
-            if (p_61248_.length != this.height) {
+            if (aisle.length != this.height) {
                 throw new IllegalArgumentException(
-                    "Expected aisle with height of " + this.height + ", but was given one with a height of " + p_61248_.length + ")"
+                    "Expected aisle with height of " + this.height + ", but was given one with a height of " + aisle.length + ")"
                 );
-            } else {
-                for (String s : p_61248_) {
-                    if (s.length() != this.width) {
-                        throw new IllegalArgumentException(
-                            "Not all rows in the given aisle are the correct width (expected " + this.width + ", found one with " + s.length() + ")"
-                        );
-                    }
+            }
 
-                    for (char c0 : s.toCharArray()) {
-                        if (!this.lookup.containsKey(c0)) {
-                            this.unknownCharacters.add(c0);
-                        }
-                    }
+            for (String row : aisle) {
+                if (row.length() != this.width) {
+                    throw new IllegalArgumentException(
+                        "Not all rows in the given aisle are the correct width (expected " + this.width + ", found one with " + row.length() + ")"
+                    );
                 }
 
-                this.pattern.add(p_61248_);
-                return this;
+                for (char c : row.toCharArray()) {
+                    if (!this.lookup.containsKey(c)) {
+                        this.unknownCharacters.add(c);
+                    }
+                }
             }
+
+            this.pattern.add(aisle);
+            return this;
         } else {
             throw new IllegalArgumentException("Empty pattern for aisle");
         }
@@ -61,9 +61,9 @@ public class BlockPatternBuilder {
         return new BlockPatternBuilder();
     }
 
-    public BlockPatternBuilder where(char p_61245_, Predicate<@Nullable BlockInWorld> p_61246_) {
-        this.lookup.put(p_61245_, p_61246_);
-        this.unknownCharacters.remove(p_61245_);
+    public BlockPatternBuilder where(final char character, final Predicate<@Nullable BlockInWorld> predicate) {
+        this.lookup.put(character, predicate);
+        this.unknownCharacters.remove(character);
         return this;
     }
 
@@ -74,20 +74,18 @@ public class BlockPatternBuilder {
     private Predicate<BlockInWorld>[][][] createPattern() {
         if (!this.unknownCharacters.isEmpty()) {
             throw new IllegalStateException("Predicates for character(s) " + this.unknownCharacters + " are missing");
-        } else {
-            Predicate<BlockInWorld>[][][] predicate = (Predicate<BlockInWorld>[][][])Array.newInstance(
-                Predicate.class, this.pattern.size(), this.height, this.width
-            );
+        }
 
-            for (int i = 0; i < this.pattern.size(); i++) {
-                for (int j = 0; j < this.height; j++) {
-                    for (int k = 0; k < this.width; k++) {
-                        predicate[i][j][k] = this.lookup.get(this.pattern.get(i)[j].charAt(k));
-                    }
+        Predicate<BlockInWorld>[][][] result = (Predicate<BlockInWorld>[][][])Array.newInstance(Predicate.class, this.pattern.size(), this.height, this.width);
+
+        for (int aisle = 0; aisle < this.pattern.size(); aisle++) {
+            for (int row = 0; row < this.height; row++) {
+                for (int col = 0; col < this.width; col++) {
+                    result[aisle][row][col] = this.lookup.get(this.pattern.get(aisle)[row].charAt(col));
                 }
             }
-
-            return predicate;
         }
+
+        return result;
     }
 }

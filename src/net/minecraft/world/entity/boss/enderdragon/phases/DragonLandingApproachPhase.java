@@ -18,8 +18,8 @@ public class DragonLandingApproachPhase extends AbstractDragonPhaseInstance {
     private @Nullable Path currentPath;
     private @Nullable Vec3 targetLocation;
 
-    public DragonLandingApproachPhase(EnderDragon p_31258_) {
-        super(p_31258_);
+    public DragonLandingApproachPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
@@ -34,10 +34,10 @@ public class DragonLandingApproachPhase extends AbstractDragonPhaseInstance {
     }
 
     @Override
-    public void doServerTick(ServerLevel p_369470_) {
-        double d0 = this.targetLocation == null ? 0.0 : this.targetLocation.distanceToSqr(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
-        if (d0 < 100.0 || d0 > 22500.0 || this.dragon.horizontalCollision || this.dragon.verticalCollision) {
-            this.findNewTarget(p_369470_);
+    public void doServerTick(final ServerLevel level) {
+        double distToTarget = this.targetLocation == null ? 0.0 : this.targetLocation.distanceToSqr(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
+        if (distToTarget < 100.0 || distToTarget > 22500.0 || this.dragon.horizontalCollision || this.dragon.verticalCollision) {
+            this.findNewTarget(level);
         }
     }
 
@@ -46,21 +46,21 @@ public class DragonLandingApproachPhase extends AbstractDragonPhaseInstance {
         return this.targetLocation;
     }
 
-    private void findNewTarget(ServerLevel p_364576_) {
+    private void findNewTarget(final ServerLevel level) {
         if (this.currentPath == null || this.currentPath.isDone()) {
-            int i = this.dragon.findClosestNode();
-            BlockPos blockpos = p_364576_.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, EndPodiumFeature.getLocation(this.dragon.getFightOrigin()));
-            Player player = p_364576_.getNearestPlayer(NEAR_EGG_TARGETING, this.dragon, blockpos.getX(), blockpos.getY(), blockpos.getZ());
-            int j;
-            if (player != null) {
-                Vec3 vec3 = new Vec3(player.getX(), 0.0, player.getZ()).normalize();
-                j = this.dragon.findClosestNode(-vec3.x * 40.0, 105.0, -vec3.z * 40.0);
+            int currentNodeIndex = this.dragon.findClosestNode();
+            BlockPos egg = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, EndPodiumFeature.getLocation(this.dragon.getFightOrigin()));
+            Player playerNearestToEgg = level.getNearestPlayer(NEAR_EGG_TARGETING, this.dragon, egg.getX(), egg.getY(), egg.getZ());
+            int targetNodeIndex;
+            if (playerNearestToEgg != null) {
+                Vec3 aim = new Vec3(playerNearestToEgg.getX(), 0.0, playerNearestToEgg.getZ()).normalize();
+                targetNodeIndex = this.dragon.findClosestNode(-aim.x * 40.0, 105.0, -aim.z * 40.0);
             } else {
-                j = this.dragon.findClosestNode(40.0, blockpos.getY(), 0.0);
+                targetNodeIndex = this.dragon.findClosestNode(40.0, egg.getY(), 0.0);
             }
 
-            Node node = new Node(blockpos.getX(), blockpos.getY(), blockpos.getZ());
-            this.currentPath = this.dragon.findPath(i, j, node);
+            Node finalNode = new Node(egg.getX(), egg.getY(), egg.getZ());
+            this.currentPath = this.dragon.findPath(currentNodeIndex, targetNodeIndex, finalNode);
             if (this.currentPath != null) {
                 this.currentPath.advance();
             }
@@ -74,17 +74,17 @@ public class DragonLandingApproachPhase extends AbstractDragonPhaseInstance {
 
     private void navigateToNextPathNode() {
         if (this.currentPath != null && !this.currentPath.isDone()) {
-            Vec3i vec3i = this.currentPath.getNextNodePos();
+            Vec3i current = this.currentPath.getNextNodePos();
             this.currentPath.advance();
-            double d0 = vec3i.getX();
-            double d1 = vec3i.getZ();
+            double xTarget = current.getX();
+            double zTarget = current.getZ();
 
-            double d2;
+            double yTarget;
             do {
-                d2 = vec3i.getY() + this.dragon.getRandom().nextFloat() * 20.0F;
-            } while (d2 < vec3i.getY());
+                yTarget = current.getY() + this.dragon.getRandom().nextFloat() * 20.0F;
+            } while (yTarget < current.getY());
 
-            this.targetLocation = new Vec3(d0, d2, d1);
+            this.targetLocation = new Vec3(xTarget, yTarget, zTarget);
         }
     }
 }

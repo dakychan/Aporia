@@ -25,7 +25,7 @@ public record ClientboundLoginDisconnectPacket(Component reason) implements Pack
         return LoginPacketTypes.CLIENTBOUND_LOGIN_DISCONNECT;
     }
 
-    public void handle(ClientLoginPacketListener p_134818_) {
-        p_134818_.handleDisconnect(this);
+    public void handle(final ClientLoginPacketListener listener) {
+        listener.handleDisconnect(this);
     }
 }

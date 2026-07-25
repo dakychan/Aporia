@@ -10,40 +10,42 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.lighting.LevelLightEngine;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugEntryLight implements DebugScreenEntry {
     public static final Identifier GROUP = Identifier.withDefaultNamespace("light");
 
     @Override
-    public void display(DebugScreenDisplayer p_430626_, @Nullable Level p_422694_, @Nullable LevelChunk p_423987_, @Nullable LevelChunk p_427456_) {
+    public void display(
+        final DebugScreenDisplayer displayer,
+        final @Nullable Level serverOrClientLevel,
+        final @Nullable LevelChunk clientChunk,
+        final @Nullable LevelChunk serverChunk
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
         Entity entity = minecraft.getCameraEntity();
         if (entity != null && minecraft.level != null) {
-            BlockPos blockpos = entity.blockPosition();
-            int i = minecraft.level.getChunkSource().getLightEngine().getRawBrightness(blockpos, 0);
-            int j = minecraft.level.getBrightness(LightLayer.SKY, blockpos);
-            int k = minecraft.level.getBrightness(LightLayer.BLOCK, blockpos);
-            String s = "Client Light: " + i + " (" + j + " sky, " + k + " block)";
+            BlockPos feetPos = entity.blockPosition();
+            int rawBrightness = minecraft.level.getChunkSource().getLightEngine().getRawBrightness(feetPos, 0);
+            int sky = minecraft.level.getBrightness(LightLayer.SKY, feetPos);
+            int block = minecraft.level.getBrightness(LightLayer.BLOCK, feetPos);
+            String clientLight = "Client Light: " + rawBrightness + " (" + sky + " sky, " + block + " block)";
             if (SharedConstants.DEBUG_SHOW_SERVER_DEBUG_VALUES) {
-                String s1;
-                if (p_427456_ != null) {
-                    LevelLightEngine levellightengine = p_427456_.getLevel().getLightEngine();
-                    s1 = "Server Light: ("
-                        + levellightengine.getLayerListener(LightLayer.SKY).getLightValue(blockpos)
+                String serverLight;
+                if (serverChunk != null) {
+                    LevelLightEngine lightEngine = serverChunk.getLevel().getLightEngine();
+                    serverLight = "Server Light: ("
+                        + lightEngine.getLayerListener(LightLayer.SKY).getLightValue(feetPos)
                         + " sky, "
-                        + levellightengine.getLayerListener(LightLayer.BLOCK).getLightValue(blockpos)
+                        + lightEngine.getLayerListener(LightLayer.BLOCK).getLightValue(feetPos)
                         + " block)";
                 } else {
-                    s1 = "Server Light: (?? sky, ?? block)";
+                    serverLight = "Server Light: (?? sky, ?? block)";
                 }
 
-                p_430626_.addToGroup(GROUP, List.of(s, s1));
+                displayer.addToGroup(GROUP, List.of(clientLight, serverLight));
             } else {
-                p_430626_.addToGroup(GROUP, s);
+                displayer.addToGroup(GROUP, clientLight);
             }
         }
     }

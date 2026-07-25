@@ -2,7 +2,6 @@ package net.minecraft.world.level.levelgen.structure.templatesystem.rule.blocken
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.RandomSource;
@@ -11,20 +10,20 @@ import org.jspecify.annotations.Nullable;
 
 public class AppendLoot implements RuleBlockEntityModifier {
     public static final MapCodec<AppendLoot> CODEC = RecordCodecBuilder.mapCodec(
-        p_391094_ -> p_391094_.group(LootTable.KEY_CODEC.fieldOf("loot_table").forGetter(p_327505_ -> p_327505_.lootTable)).apply(p_391094_, AppendLoot::new)
+        i -> i.group(LootTable.KEY_CODEC.fieldOf("loot_table").forGetter(c -> c.lootTable)).apply(i, AppendLoot::new)
     );
     private final ResourceKey<LootTable> lootTable;
 
-    public AppendLoot(ResourceKey<LootTable> p_334648_) {
-        this.lootTable = p_334648_;
+    public AppendLoot(final ResourceKey<LootTable> lootTable) {
+        this.lootTable = lootTable;
     }
 
     @Override
-    public CompoundTag apply(RandomSource p_277994_, @Nullable CompoundTag p_277854_) {
-        CompoundTag compoundtag = p_277854_ == null ? new CompoundTag() : p_277854_.copy();
-        compoundtag.store("LootTable", LootTable.KEY_CODEC, this.lootTable);
-        compoundtag.putLong("LootTableSeed", p_277994_.nextLong());
-        return compoundtag;
+    public CompoundTag apply(final RandomSource random, final @Nullable CompoundTag existingTag) {
+        CompoundTag result = existingTag == null ? new CompoundTag() : existingTag.copy();
+        result.store("LootTable", LootTable.KEY_CODEC, this.lootTable);
+        result.putLong("LootTableSeed", random.nextLong());
+        return result;
     }
 
     @Override

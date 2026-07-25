@@ -5,23 +5,23 @@ import java.util.Map;
 import net.minecraft.nbt.TagType;
 
 public record FieldTree(int depth, Map<String, TagType<?>> selectedFields, Map<String, FieldTree> fieldsToRecurse) {
-    private FieldTree(int p_202527_) {
-        this(p_202527_, new HashMap<>(), new HashMap<>());
+    private FieldTree(final int depth) {
+        this(depth, new HashMap<>(), new HashMap<>());
     }
 
     public static FieldTree createRoot() {
         return new FieldTree(1);
     }
 
-    public void addEntry(FieldSelector p_202539_) {
-        if (this.depth <= p_202539_.path().size()) {
-            this.fieldsToRecurse.computeIfAbsent(p_202539_.path().get(this.depth - 1), p_202534_ -> new FieldTree(this.depth + 1)).addEntry(p_202539_);
+    public void addEntry(final FieldSelector field) {
+        if (this.depth <= field.path().size()) {
+            this.fieldsToRecurse.computeIfAbsent(field.path().get(this.depth - 1), s -> new FieldTree(this.depth + 1)).addEntry(field);
         } else {
-            this.selectedFields.put(p_202539_.name(), p_202539_.type());
+            this.selectedFields.put(field.name(), field.type());
         }
     }
 
-    public boolean isSelected(TagType<?> p_202536_, String p_202537_) {
-        return p_202536_.equals(this.selectedFields().get(p_202537_));
+    public boolean isSelected(final TagType<?> type, final String id) {
+        return type.equals(this.selectedFields().get(id));
     }
 }

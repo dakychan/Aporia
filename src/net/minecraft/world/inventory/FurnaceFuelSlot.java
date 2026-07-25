@@ -7,22 +7,22 @@ import net.minecraft.world.item.Items;
 public class FurnaceFuelSlot extends Slot {
     private final AbstractFurnaceMenu menu;
 
-    public FurnaceFuelSlot(AbstractFurnaceMenu p_39520_, Container p_39521_, int p_39522_, int p_39523_, int p_39524_) {
-        super(p_39521_, p_39522_, p_39523_, p_39524_);
-        this.menu = p_39520_;
+    public FurnaceFuelSlot(final AbstractFurnaceMenu menu, final Container container, final int slot, final int x, final int y) {
+        super(container, slot, x, y);
+        this.menu = menu;
     }
 
     @Override
-    public boolean mayPlace(ItemStack p_39526_) {
-        return this.menu.isFuel(p_39526_) || isBucket(p_39526_);
+    public boolean mayPlace(final ItemStack itemStack) {
+        return this.menu.isFuel(itemStack) || isBucket(itemStack);
     }
 
     @Override
-    public int getMaxStackSize(ItemStack p_39528_) {
-        return isBucket(p_39528_) ? 1 : super.getMaxStackSize(p_39528_);
+    public int getMaxStackSize(final ItemStack itemStack) {
+        return isBucket(itemStack) ? 1 : super.getMaxStackSize(itemStack);
     }
 
-    public static boolean isBucket(ItemStack p_39530_) {
-        return p_39530_.is(Items.BUCKET);
+    public static boolean isBucket(final ItemStack itemStack) {
+        return itemStack.is(Items.BUCKET);
     }
 }

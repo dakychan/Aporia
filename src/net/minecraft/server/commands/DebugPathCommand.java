@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.commands.CommandSourceStack;
@@ -19,31 +18,32 @@ public class DebugPathCommand {
     private static final SimpleCommandExceptionType ERROR_NO_PATH = new SimpleCommandExceptionType(Component.literal("Path not found"));
     private static final SimpleCommandExceptionType ERROR_NOT_COMPLETE = new SimpleCommandExceptionType(Component.literal("Target not reached"));
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_180124_) {
-        p_180124_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("debugpath")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
-                    Commands.argument("to", BlockPosArgument.blockPos())
-                        .executes(p_180126_ -> fillBlocks(p_180126_.getSource(), BlockPosArgument.getLoadedBlockPos(p_180126_, "to")))
+                    Commands.argument("to", BlockPosArgument.blockPos()).executes(c -> fillBlocks(c.getSource(), BlockPosArgument.getLoadedBlockPos(c, "to")))
                 )
         );
     }
 
-    private static int fillBlocks(CommandSourceStack p_180130_, BlockPos p_180131_) throws CommandSyntaxException {
-        if (!(p_180130_.getEntity() instanceof Mob mob)) {
-            throw ERROR_NOT_MOB.create();
-        } else {
-            PathNavigation pathnavigation = new GroundPathNavigation(mob, p_180130_.getLevel());
-            Path path = pathnavigation.createPath(p_180131_, 0);
+    private static int fillBlocks(final CommandSourceStack source, final BlockPos target) throws CommandSyntaxException {
+        if (source.getEntity() instanceof Mob mob) {
+            PathNavigation pathNavigation = new GroundPathNavigation(mob, source.getLevel());
+            Path path = pathNavigation.createPath(target, 0);
             if (path == null) {
                 throw ERROR_NO_PATH.create();
-            } else if (!path.canReach()) {
-                throw ERROR_NOT_COMPLETE.create();
-            } else {
-                p_180130_.sendSuccess(() -> Component.literal("Made path"), true);
-                return 1;
             }
+
+            if (!path.canReach()) {
+                throw ERROR_NOT_COMPLETE.create();
+            }
+
+            source.sendSuccess(() -> Component.literal("Made path"), true);
+            return 1;
+        } else {
+            throw ERROR_NOT_MOB.create();
         }
     }
 }

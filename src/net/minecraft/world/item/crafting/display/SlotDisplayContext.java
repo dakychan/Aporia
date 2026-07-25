@@ -12,7 +12,7 @@ public class SlotDisplayContext {
     public static final ContextKey<HolderLookup.Provider> REGISTRIES = ContextKey.vanilla("registries");
     public static final ContextKeySet CONTEXT = new ContextKeySet.Builder().optional(FUEL_VALUES).optional(REGISTRIES).build();
 
-    public static ContextMap fromLevel(Level p_368648_) {
-        return new ContextMap.Builder().withParameter(FUEL_VALUES, p_368648_.fuelValues()).withParameter(REGISTRIES, p_368648_.registryAccess()).create(CONTEXT);
+    public static ContextMap fromLevel(final Level level) {
+        return new ContextMap.Builder().withParameter(FUEL_VALUES, level.fuelValues()).withParameter(REGISTRIES, level.registryAccess()).create(CONTEXT);
     }
 }

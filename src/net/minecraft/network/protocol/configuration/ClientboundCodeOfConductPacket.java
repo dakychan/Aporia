@@ -16,7 +16,7 @@ public record ClientboundCodeOfConductPacket(String codeOfConduct) implements Pa
         return ConfigurationPacketTypes.CLIENTBOUND_CODE_OF_CONDUCT;
     }
 
-    public void handle(ClientConfigurationPacketListener p_424187_) {
-        p_424187_.handleCodeOfConduct(this);
+    public void handle(final ClientConfigurationPacketListener listener) {
+        listener.handleCodeOfConduct(this);
     }
 }

@@ -4,11 +4,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class WolfRenderState extends LivingEntityRenderState {
     private static final Identifier DEFAULT_TEXTURE = Identifier.withDefaultNamespace("textures/entity/wolf/wolf.png");
     public boolean isAngry;
@@ -21,14 +18,14 @@ public class WolfRenderState extends LivingEntityRenderState {
     public @Nullable DyeColor collarColor;
     public ItemStack bodyArmorItem = ItemStack.EMPTY;
 
-    public float getBodyRollAngle(float p_362171_) {
-        float f = (this.shakeAnim + p_362171_) / 1.8F;
-        if (f < 0.0F) {
-            f = 0.0F;
-        } else if (f > 1.0F) {
-            f = 1.0F;
+    public float getBodyRollAngle(final float offset) {
+        float progress = (this.shakeAnim + offset) / 1.8F;
+        if (progress < 0.0F) {
+            progress = 0.0F;
+        } else if (progress > 1.0F) {
+            progress = 1.0F;
         }
 
-        return Mth.sin(f * (float) Math.PI) * Mth.sin(f * (float) Math.PI * 11.0F) * 0.15F * (float) Math.PI;
+        return Mth.sin(progress * (float) Math.PI) * Mth.sin(progress * (float) Math.PI * 11.0F) * 0.15F * (float) Math.PI;
     }
 }

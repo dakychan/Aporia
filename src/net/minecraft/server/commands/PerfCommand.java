@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.logging.LogUtils;
@@ -29,72 +28,81 @@ import org.slf4j.Logger;
 public class PerfCommand {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final SimpleCommandExceptionType ERROR_NOT_RUNNING = new SimpleCommandExceptionType(Component.translatable("commands.perf.notRunning"));
-    private static final SimpleCommandExceptionType ERROR_ALREADY_RUNNING = new SimpleCommandExceptionType(Component.translatable("commands.perf.alreadyRunning"));
+    private static final SimpleCommandExceptionType ERROR_ALREADY_RUNNING = new SimpleCommandExceptionType(
+        Component.translatable("commands.perf.alreadyRunning")
+    );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_180438_) {
-        p_180438_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("perf")
                 .requires(Commands.hasPermission(Commands.LEVEL_OWNERS))
-                .then(Commands.literal("start").executes(p_180455_ -> startProfilingDedicatedServer(p_180455_.getSource())))
-                .then(Commands.literal("stop").executes(p_180440_ -> stopProfilingDedicatedServer(p_180440_.getSource())))
+                .then(Commands.literal("start").executes(c -> startProfilingDedicatedServer(c.getSource())))
+                .then(Commands.literal("stop").executes(c -> stopProfilingDedicatedServer(c.getSource())))
         );
     }
 
-    private static int startProfilingDedicatedServer(CommandSourceStack p_180442_) throws CommandSyntaxException {
-        MinecraftServer minecraftserver = p_180442_.getServer();
-        if (minecraftserver.isRecordingMetrics()) {
+    private static int startProfilingDedicatedServer(final CommandSourceStack source) throws CommandSyntaxException {
+        MinecraftServer server = source.getServer();
+        if (server.isRecordingMetrics()) {
             throw ERROR_ALREADY_RUNNING.create();
-        } else {
-            Consumer<ProfileResults> consumer = p_180460_ -> whenStopped(p_180442_, p_180460_);
-            Consumer<Path> consumer1 = p_180453_ -> saveResults(p_180442_, p_180453_, minecraftserver);
-            minecraftserver.startRecordingMetrics(consumer, consumer1);
-            p_180442_.sendSuccess(() -> Component.translatable("commands.perf.started"), false);
-            return 0;
         }
+
+        Consumer<ProfileResults> onStopped = results -> whenStopped(source, results);
+        Consumer<Path> onReportFinished = profilingLogs -> saveResults(source, profilingLogs, server);
+        server.startRecordingMetrics(onStopped, onReportFinished);
+        source.sendSuccess(() -> Component.translatable("commands.perf.started"), false);
+        return 0;
     }
 
-    private static int stopProfilingDedicatedServer(CommandSourceStack p_180457_) throws CommandSyntaxException {
-        MinecraftServer minecraftserver = p_180457_.getServer();
-        if (!minecraftserver.isRecordingMetrics()) {
+    private static int stopProfilingDedicatedServer(final CommandSourceStack source) throws CommandSyntaxException {
+        MinecraftServer server = source.getServer();
+        if (!server.isRecordingMetrics()) {
             throw ERROR_NOT_RUNNING.create();
-        } else {
-            minecraftserver.finishRecordingMetrics();
-            return 0;
         }
+
+        server.finishRecordingMetrics();
+        return 0;
     }
 
-    private static void saveResults(CommandSourceStack p_180447_, Path p_180448_, MinecraftServer p_180449_) {
-        String s = String.format(Locale.ROOT, "%s-%s-%s", Util.getFilenameFormattedDateTime(), p_180449_.getWorldData().getLevelName(), SharedConstants.getCurrentVersion().id());
+    private static void saveResults(final CommandSourceStack source, final Path report, final MinecraftServer server) {
+        String profilingName = String.format(
+            Locale.ROOT, "%s-%s-%s", Util.getFilenameFormattedDateTime(), server.getWorldData().getLevelName(), SharedConstants.getCurrentVersion().id()
+        );
 
-        String s1;
+        String zipFile;
         try {
-            s1 = FileUtil.findAvailableName(MetricsPersister.PROFILING_RESULTS_DIR, s, ".zip");
-        } catch (IOException ioexception1) {
-            p_180447_.sendFailure(Component.translatable("commands.perf.reportFailed"));
-            LOGGER.error("Failed to create report name", (Throwable)ioexception1);
+            zipFile = FileUtil.findAvailableName(MetricsPersister.PROFILING_RESULTS_DIR, profilingName, ".zip");
+        } catch (IOException e) {
+            source.sendFailure(Component.translatable("commands.perf.reportFailed"));
+            LOGGER.error("Failed to create report name", e);
             return;
         }
 
-        try (FileZipper filezipper = new FileZipper(MetricsPersister.PROFILING_RESULTS_DIR.resolve(s1))) {
-            filezipper.add(Paths.get("system.txt"), p_180449_.fillSystemReport(new SystemReport()).toLineSeparatedString());
-            filezipper.add(p_180448_);
+        try (FileZipper fileZipper = new FileZipper(MetricsPersister.PROFILING_RESULTS_DIR.resolve(zipFile))) {
+            fileZipper.add(Paths.get("system.txt"), server.fillSystemReport(new SystemReport()).toLineSeparatedString());
+            fileZipper.add(report);
         }
 
         try {
-            FileUtils.forceDelete(p_180448_.toFile());
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to delete temporary profiling file {}", p_180448_, ioexception);
+            FileUtils.forceDelete(report.toFile());
+        } catch (IOException e) {
+            LOGGER.warn("Failed to delete temporary profiling file {}", report, e);
         }
 
-        p_180447_.sendSuccess(() -> Component.translatable("commands.perf.reportSaved", s1), false);
+        source.sendSuccess(() -> Component.translatable("commands.perf.reportSaved", zipFile), false);
     }
 
-    private static void whenStopped(CommandSourceStack p_180444_, ProfileResults p_180445_) {
-        if (p_180445_ != EmptyProfileResults.EMPTY) {
-            int i = p_180445_.getTickDuration();
-            double d0 = (double)p_180445_.getNanoDuration() / TimeUtil.NANOSECONDS_PER_SECOND;
-            p_180444_.sendSuccess(
-                () -> Component.translatable("commands.perf.stopped", String.format(Locale.ROOT, "%.2f", d0), i, String.format(Locale.ROOT, "%.2f", i / d0)),
+    private static void whenStopped(final CommandSourceStack source, final ProfileResults results) {
+        if (results != EmptyProfileResults.EMPTY) {
+            int ticks = results.getTickDuration();
+            double durationInSeconds = (double)results.getNanoDuration() / TimeUtil.NANOSECONDS_PER_SECOND;
+            source.sendSuccess(
+                () -> Component.translatable(
+                    "commands.perf.stopped",
+                    String.format(Locale.ROOT, "%.2f", durationInSeconds),
+                    ticks,
+                    String.format(Locale.ROOT, "%.2f", ticks / durationInSeconds)
+                ),
                 false
             );
         }

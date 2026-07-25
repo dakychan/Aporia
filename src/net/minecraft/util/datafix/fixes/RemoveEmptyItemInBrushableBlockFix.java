@@ -6,19 +6,19 @@ import java.util.Optional;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class RemoveEmptyItemInBrushableBlockFix extends NamedEntityWriteReadFix {
-    public RemoveEmptyItemInBrushableBlockFix(Schema p_328124_) {
-        super(p_328124_, false, "RemoveEmptyItemInSuspiciousBlockFix", References.BLOCK_ENTITY, "minecraft:brushable_block");
+    public RemoveEmptyItemInBrushableBlockFix(final Schema outputSchema) {
+        super(outputSchema, false, "RemoveEmptyItemInSuspiciousBlockFix", References.BLOCK_ENTITY, "minecraft:brushable_block");
     }
 
     @Override
-    protected <T> Dynamic<T> fix(Dynamic<T> p_330310_) {
-        Optional<Dynamic<T>> optional = p_330310_.get("item").result();
-        return optional.isPresent() && isEmptyStack(optional.get()) ? p_330310_.remove("item") : p_330310_;
+    protected <T> Dynamic<T> fix(final Dynamic<T> input) {
+        Optional<Dynamic<T>> item = input.get("item").result();
+        return item.isPresent() && isEmptyStack(item.get()) ? input.remove("item") : input;
     }
 
-    private static boolean isEmptyStack(Dynamic<?> p_328874_) {
-        String s = NamespacedSchema.ensureNamespaced(p_328874_.get("id").asString("minecraft:air"));
-        int i = p_328874_.get("count").asInt(0);
-        return s.equals("minecraft:air") || i == 0;
+    private static boolean isEmptyStack(final Dynamic<?> item) {
+        String id = NamespacedSchema.ensureNamespaced(item.get("id").asString("minecraft:air"));
+        int count = item.get("count").asInt(0);
+        return id.equals("minecraft:air") || count == 0;
     }
 }

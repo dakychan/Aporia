@@ -14,17 +14,17 @@ public class ItemCooldowns {
     private final Map<Identifier, ItemCooldowns.CooldownInstance> cooldowns = Maps.newHashMap();
     private int tickCount;
 
-    public boolean isOnCooldown(ItemStack p_369547_) {
-        return this.getCooldownPercent(p_369547_, 0.0F) > 0.0F;
+    public boolean isOnCooldown(final ItemStack item) {
+        return this.getCooldownPercent(item, 0.0F) > 0.0F;
     }
 
-    public float getCooldownPercent(ItemStack p_366950_, float p_41523_) {
-        Identifier identifier = this.getCooldownGroup(p_366950_);
-        ItemCooldowns.CooldownInstance itemcooldowns$cooldowninstance = this.cooldowns.get(identifier);
-        if (itemcooldowns$cooldowninstance != null) {
-            float f = itemcooldowns$cooldowninstance.endTime - itemcooldowns$cooldowninstance.startTime;
-            float f1 = itemcooldowns$cooldowninstance.endTime - (this.tickCount + p_41523_);
-            return Mth.clamp(f1 / f, 0.0F, 1.0F);
+    public float getCooldownPercent(final ItemStack item, final float a) {
+        Identifier group = this.getCooldownGroup(item);
+        ItemCooldowns.CooldownInstance cooldown = this.cooldowns.get(group);
+        if (cooldown != null) {
+            float duration = cooldown.endTime - cooldown.startTime;
+            float remaining = cooldown.endTime - (this.tickCount + a);
+            return Mth.clamp(remaining / duration, 0.0F, 1.0F);
         } else {
             return 0.0F;
         }
@@ -45,32 +45,32 @@ public class ItemCooldowns {
         }
     }
 
-    public Identifier getCooldownGroup(ItemStack p_361933_) {
-        UseCooldown usecooldown = p_361933_.get(DataComponents.USE_COOLDOWN);
-        Identifier identifier = BuiltInRegistries.ITEM.getKey(p_361933_.getItem());
-        return usecooldown == null ? identifier : usecooldown.cooldownGroup().orElse(identifier);
+    public Identifier getCooldownGroup(final ItemStack item) {
+        UseCooldown useCooldown = item.get(DataComponents.USE_COOLDOWN);
+        Identifier defaultItemGroup = BuiltInRegistries.ITEM.getKey(item.getItem());
+        return useCooldown == null ? defaultItemGroup : useCooldown.cooldownGroup().orElse(defaultItemGroup);
     }
 
-    public void addCooldown(ItemStack p_366379_, int p_367584_) {
-        this.addCooldown(this.getCooldownGroup(p_366379_), p_367584_);
+    public void addCooldown(final ItemStack item, final int time) {
+        this.addCooldown(this.getCooldownGroup(item), time);
     }
 
-    public void addCooldown(Identifier p_455409_, int p_41526_) {
-        this.cooldowns.put(p_455409_, new ItemCooldowns.CooldownInstance(this.tickCount, this.tickCount + p_41526_));
-        this.onCooldownStarted(p_455409_, p_41526_);
+    public void addCooldown(final Identifier cooldownGroup, final int time) {
+        this.cooldowns.put(cooldownGroup, new ItemCooldowns.CooldownInstance(this.tickCount, this.tickCount + time));
+        this.onCooldownStarted(cooldownGroup, time);
     }
 
-    public void removeCooldown(Identifier p_450820_) {
-        this.cooldowns.remove(p_450820_);
-        this.onCooldownEnded(p_450820_);
+    public void removeCooldown(final Identifier cooldownGroup) {
+        this.cooldowns.remove(cooldownGroup);
+        this.onCooldownEnded(cooldownGroup);
     }
 
-    protected void onCooldownStarted(Identifier p_452458_, int p_41530_) {
+    protected void onCooldownStarted(final Identifier cooldownGroup, final int duration) {
     }
 
-    protected void onCooldownEnded(Identifier p_454919_) {
+    protected void onCooldownEnded(final Identifier cooldownGroup) {
     }
 
-    record CooldownInstance(int startTime, int endTime) {
+    private record CooldownInstance(int startTime, int endTime) {
     }
 }

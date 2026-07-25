@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -24,37 +25,42 @@ public class AzaleaBlock extends VegetationBlock implements BonemealableBlock {
         return CODEC;
     }
 
-    protected AzaleaBlock(BlockBehaviour.Properties p_152067_) {
-        super(p_152067_);
+    protected AzaleaBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_152084_, BlockGetter p_152085_, BlockPos p_152086_, CollisionContext p_152087_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean mayPlaceOn(BlockState p_152089_, BlockGetter p_152090_, BlockPos p_152091_) {
-        return p_152089_.is(Blocks.CLAY) || super.mayPlaceOn(p_152089_, p_152090_, p_152091_);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.is(BlockTags.SUPPORTS_AZALEA);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_256329_, BlockPos p_256107_, BlockState p_255771_) {
-        return p_256329_.getFluidState(p_256107_.above()).isEmpty();
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return false;
+        } else {
+            int minHeight = TreeGrower.AZALEA.getMinimumHeight(serverLevel).orElse(0);
+            return level.isInsideBuildHeight(pos.above(minHeight + 2)) && level.getFluidState(pos.above()).isEmpty();
+        }
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_220712_, RandomSource p_220713_, BlockPos p_220714_, BlockState p_220715_) {
-        return p_220712_.random.nextFloat() < 0.45;
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        return level.getRandom().nextFloat() < 0.45;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_220707_, RandomSource p_220708_, BlockPos p_220709_, BlockState p_220710_) {
-        TreeGrower.AZALEA.growTree(p_220707_, p_220707_.getChunkSource().getGenerator(), p_220709_, p_220710_, p_220708_);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        TreeGrower.AZALEA.growTree(level, level.getChunkSource().getGenerator(), pos, state, random);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_370171_, PathComputationType p_369747_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

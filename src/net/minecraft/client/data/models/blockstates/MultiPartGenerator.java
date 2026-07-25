@@ -4,20 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.client.data.models.MultiVariant;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
-import net.minecraft.client.renderer.block.model.multipart.Condition;
-import net.minecraft.client.renderer.block.model.multipart.Selector;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
+import net.minecraft.client.renderer.block.dispatch.multipart.Condition;
+import net.minecraft.client.renderer.block.dispatch.multipart.Selector;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class MultiPartGenerator implements BlockModelDefinitionGenerator {
     private final Block block;
     private final List<MultiPartGenerator.Entry> parts = new ArrayList<>();
 
-    private MultiPartGenerator(Block p_376910_) {
-        this.block = p_376910_;
+    private MultiPartGenerator(final Block block) {
+        this.block = block;
     }
 
     @Override
@@ -25,39 +22,38 @@ public class MultiPartGenerator implements BlockModelDefinitionGenerator {
         return this.block;
     }
 
-    public static MultiPartGenerator multiPart(Block p_376179_) {
-        return new MultiPartGenerator(p_376179_);
+    public static MultiPartGenerator multiPart(final Block block) {
+        return new MultiPartGenerator(block);
     }
 
-    public MultiPartGenerator with(MultiVariant p_396276_) {
-        this.parts.add(new MultiPartGenerator.Entry(Optional.empty(), p_396276_));
+    public MultiPartGenerator with(final MultiVariant variants) {
+        this.parts.add(new MultiPartGenerator.Entry(Optional.empty(), variants));
         return this;
     }
 
-    private void validateCondition(Condition p_392697_) {
-        p_392697_.instantiate(this.block.getStateDefinition());
+    private void validateCondition(final Condition condition) {
+        condition.instantiate(this.block.getStateDefinition());
     }
 
-    public MultiPartGenerator with(Condition p_395503_, MultiVariant p_394665_) {
-        this.validateCondition(p_395503_);
-        this.parts.add(new MultiPartGenerator.Entry(Optional.of(p_395503_), p_394665_));
+    public MultiPartGenerator with(final Condition condition, final MultiVariant variants) {
+        this.validateCondition(condition);
+        this.parts.add(new MultiPartGenerator.Entry(Optional.of(condition), variants));
         return this;
     }
 
-    public MultiPartGenerator with(ConditionBuilder p_396571_, MultiVariant p_392855_) {
-        return this.with(p_396571_.build(), p_392855_);
+    public MultiPartGenerator with(final ConditionBuilder condition, final MultiVariant variants) {
+        return this.with(condition.build(), variants);
     }
 
     @Override
-    public BlockModelDefinition create() {
-        return new BlockModelDefinition(
+    public BlockStateModelDispatcher create() {
+        return new BlockStateModelDispatcher(
             Optional.empty(),
-            Optional.of(new BlockModelDefinition.MultiPartDefinition(this.parts.stream().map(MultiPartGenerator.Entry::toUnbaked).toList()))
+            Optional.of(new BlockStateModelDispatcher.MultiPartDefinition(this.parts.stream().map(MultiPartGenerator.Entry::toUnbaked).toList()))
         );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Entry(Optional<Condition> condition, MultiVariant variants) {
+        private record Entry(Optional<Condition> condition, MultiVariant variants) {
         public Selector toUnbaked() {
             return new Selector(this.condition, this.variants.toUnbaked());
         }

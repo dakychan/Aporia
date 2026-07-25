@@ -15,18 +15,22 @@ public class CommandsReport implements DataProvider {
     private final PackOutput output;
     private final CompletableFuture<HolderLookup.Provider> registries;
 
-    public CommandsReport(PackOutput p_256167_, CompletableFuture<HolderLookup.Provider> p_256506_) {
-        this.output = p_256167_;
-        this.registries = p_256506_;
+    public CommandsReport(final PackOutput output, final CompletableFuture<HolderLookup.Provider> registries) {
+        this.output = output;
+        this.registries = registries;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_253721_) {
+    public CompletableFuture<?> run(final CachedOutput cache) {
         Path path = this.output.getOutputFolder(PackOutput.Target.REPORTS).resolve("commands.json");
-        return this.registries.thenCompose(p_256367_ -> {
-            CommandDispatcher<CommandSourceStack> commanddispatcher = new Commands(Commands.CommandSelection.ALL, Commands.createValidationContext(p_256367_)).getDispatcher();
-            return DataProvider.saveStable(p_253721_, ArgumentUtils.serializeNodeToJson(commanddispatcher, commanddispatcher.getRoot()), path);
-        });
+        return this.registries
+            .thenCompose(
+                provider -> {
+                    CommandDispatcher<CommandSourceStack> dispatcher = new Commands(Commands.CommandSelection.ALL, Commands.createValidationContext(provider))
+                        .getDispatcher();
+                    return DataProvider.saveStable(cache, ArgumentUtils.serializeNodeToJson(dispatcher, dispatcher.getRoot()), path);
+                }
+            );
     }
 
     @Override

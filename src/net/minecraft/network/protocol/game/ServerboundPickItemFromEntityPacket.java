@@ -20,7 +20,7 @@ public record ServerboundPickItemFromEntityPacket(int id, boolean includeData) i
         return GamePacketTypes.SERVERBOUND_PICK_ITEM_FROM_ENTITY;
     }
 
-    public void handle(ServerGamePacketListener p_375533_) {
-        p_375533_.handlePickItemFromEntity(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePickItemFromEntity(this);
     }
 }

@@ -118,21 +118,22 @@ class WorldRenderer : Module("WorldRenderer", Category.VISUAL) {
 
         /* ===== Custom Time ===== */
         if (customTime.isEnabled) {
-            if (baseDayTime < 0) baseDayTime = level.dayTime
-            val data = level.levelData
+            if (baseDayTime < 0) baseDayTime = level.getGameTime()
+            val data = level.getLevelData()
             val speed = timeSpeed.getFloat()
             if (speed <= 0f) {
-                // Фриз — фиксируем на выставленном значении.
                 val t = time.get().toLong().coerceIn(0L, 24000L)
-                if (data.dayTime != t) data.setDayTime(t)
+                val currentGameTime = data.getGameTime()
+                val currentDayTime = (currentGameTime % 24000L + 24000L) % 24000L
+                data.setGameTime(currentGameTime - currentDayTime + t)
             } else {
-                // Обычная прокрутка: ориентируемся на время в ванильном мире и
-                // добавляем смещение через слайдер.
                 baseDayTime = (baseDayTime + speed.toLong()).coerceAtLeast(0)
                 val targetTime = time.get().toLong().coerceIn(0L, 24000L)
-                val offset = targetTime - (baseDayTime % 24000L)
-                val finalTime = ((baseDayTime + offset) % 24000L + 24000L) % 24000L
-                if (data.dayTime != finalTime) data.setDayTime(finalTime)
+                val offset = targetTime - ((baseDayTime % 24000L + 24000L) % 24000L)
+                val finalGameTime = ((baseDayTime + offset) % 24000L + 24000L) % 24000L
+                val currentGameTime = data.getGameTime()
+                val currentDayTime = (currentGameTime % 24000L + 24000L) % 24000L
+                data.setGameTime(currentGameTime - currentDayTime + finalGameTime)
             }
         } else {
             if (baseDayTime >= 0) baseDayTime = -1

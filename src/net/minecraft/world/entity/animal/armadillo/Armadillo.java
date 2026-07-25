@@ -1,8 +1,8 @@
 package net.minecraft.world.entity.animal.armadillo;
 
 import com.mojang.serialization.Codec;
-import com.mojang.serialization.Dynamic;
 import io.netty.buffer.ByteBuf;
+import java.util.List;
 import java.util.function.IntFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -29,14 +29,18 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.AnimationState;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -56,7 +60,16 @@ public class Armadillo extends Animal {
     public static final int SCARE_CHECK_INTERVAL = 80;
     private static final double SCARE_DISTANCE_HORIZONTAL = 7.0;
     private static final double SCARE_DISTANCE_VERTICAL = 2.0;
-    private static final EntityDataAccessor<Armadillo.ArmadilloState> ARMADILLO_STATE = SynchedEntityData.defineId(Armadillo.class, EntityDataSerializers.ARMADILLO_STATE);
+    private static final EntityDimensions BABY_DIMENSIONS = EntityTypes.ARMADILLO.getDimensions().scale(0.6F).withEyeHeight(0.21875F);
+    private static final Brain.Provider<Armadillo> BRAIN_PROVIDER = Brain.<Armadillo>provider(
+        List.of(
+            SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT, SensorType.ARMADILLO_SCARE_DETECTED
+        ),
+        var0 -> ArmadilloAi.getActivities()
+    );
+    private static final EntityDataAccessor<Armadillo.ArmadilloState> ARMADILLO_STATE = SynchedEntityData.defineId(
+        Armadillo.class, EntityDataSerializers.ARMADILLO_STATE
+    );
     private long inStateTicks = 0L;
     public final AnimationState rollOutAnimationState = new AnimationState();
     public final AnimationState rollUpAnimationState = new AnimationState();
@@ -64,15 +77,15 @@ public class Armadillo extends Animal {
     private int scuteTime;
     private boolean peekReceivedClient = false;
 
-    public Armadillo(EntityType<? extends Animal> p_331987_, Level p_331498_) {
-        super(p_331987_, p_331498_);
+    public Armadillo(final EntityType<? extends Animal> type, final Level level) {
+        super(type, level);
         this.getNavigation().setCanFloat(true);
         this.scuteTime = this.pickNextScuteDropTime();
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_330674_, AgeableMob p_330373_) {
-        return EntityType.ARMADILLO.create(p_330674_, EntitySpawnReason.BREEDING);
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.ARMADILLO.create(level, EntitySpawnReason.BREEDING);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -80,9 +93,9 @@ public class Armadillo extends Animal {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_335155_) {
-        super.defineSynchedData(p_335155_);
-        p_335155_.define(ARMADILLO_STATE, Armadillo.ArmadilloState.IDLE);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(ARMADILLO_STATE, Armadillo.ArmadilloState.IDLE);
     }
 
     public boolean isScared() {
@@ -101,40 +114,40 @@ public class Armadillo extends Animal {
         return this.entityData.get(ARMADILLO_STATE);
     }
 
-    public void switchToState(Armadillo.ArmadilloState p_330881_) {
-        this.entityData.set(ARMADILLO_STATE, p_330881_);
+    public void switchToState(final Armadillo.ArmadilloState state) {
+        this.entityData.set(ARMADILLO_STATE, state);
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_328821_) {
-        if (ARMADILLO_STATE.equals(p_328821_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        if (ARMADILLO_STATE.equals(accessor)) {
             this.inStateTicks = 0L;
         }
 
-        super.onSyncedDataUpdated(p_328821_);
+        super.onSyncedDataUpdated(accessor);
     }
 
     @Override
-    protected Brain.Provider<Armadillo> brainProvider() {
-        return ArmadilloAi.brainProvider();
+    protected Brain<Armadillo> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
     @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_334417_) {
-        return ArmadilloAi.makeBrain(this.brainProvider().makeBrain(p_334417_));
+    public Brain<Armadillo> getBrain() {
+        return (Brain<Armadillo>)super.getBrain();
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_360882_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("armadilloBrain");
-        ((Brain<Armadillo>)this.brain).tick(p_360882_, this);
-        profilerfiller.pop();
-        profilerfiller.push("armadilloActivityUpdate");
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("armadilloBrain");
+        this.getBrain().tick(level, this);
+        profiler.pop();
+        profiler.push("armadilloActivityUpdate");
         ArmadilloAi.updateActivity(this);
-        profilerfiller.pop();
-        if (this.isAlive() && --this.scuteTime <= 0 && this.shouldDropLoot(p_360882_)) {
-            if (this.dropFromGiftLootTable(p_360882_, BuiltInLootTables.ARMADILLO_SHED, this::spawnAtLocation)) {
+        profiler.pop();
+        if (this.isAlive() && --this.scuteTime <= 0 && this.shouldDropLoot(level)) {
+            if (this.dropFromGiftLootTable(level, BuiltInLootTables.ARMADILLO_SHED, this::spawnAtLocation)) {
                 this.playSound(SoundEvents.ARMADILLO_SCUTE_DROP, 1.0F, (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
                 this.gameEvent(GameEvent.ENTITY_PLACE);
             }
@@ -142,7 +155,7 @@ public class Armadillo extends Animal {
             this.scuteTime = this.pickNextScuteDropTime();
         }
 
-        super.customServerAiStep(p_360882_);
+        super.customServerAiStep(level);
     }
 
     private int pickNextScuteDropTime() {
@@ -166,6 +179,11 @@ public class Armadillo extends Animal {
     @Override
     public float getAgeScale() {
         return this.isBaby() ? 0.6F : 1.0F;
+    }
+
+    @Override
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
     private void setupAnimationStates() {
@@ -203,34 +221,34 @@ public class Armadillo extends Animal {
     }
 
     @Override
-    public void handleEntityEvent(byte p_330641_) {
-        if (p_330641_ == 64 && this.level().isClientSide()) {
+    public void handleEntityEvent(final byte id) {
+        if (id == 64 && this.level().isClientSide()) {
             this.peekReceivedClient = true;
             this.level().playLocalSound(this.getX(), this.getY(), this.getZ(), SoundEvents.ARMADILLO_PEEK, this.getSoundSource(), 1.0F, 1.0F, false);
         } else {
-            super.handleEntityEvent(p_330641_);
+            super.handleEntityEvent(id);
         }
     }
 
     @Override
-    public boolean isFood(ItemStack p_333396_) {
-        return p_333396_.is(ItemTags.ARMADILLO_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.ARMADILLO_FOOD);
     }
 
     public static boolean checkArmadilloSpawnRules(
-        EntityType<Armadillo> p_328712_, LevelAccessor p_330410_, EntitySpawnReason p_367817_, BlockPos p_328785_, RandomSource p_328859_
+        final EntityType<Armadillo> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_330410_.getBlockState(p_328785_.below()).is(BlockTags.ARMADILLO_SPAWNABLE_ON) && isBrightEnoughToSpawn(p_330410_, p_328785_);
+        return level.getBlockState(pos.below()).is(BlockTags.ARMADILLO_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 
-    public boolean isScaredBy(LivingEntity p_331619_) {
-        if (!this.getBoundingBox().inflate(7.0, 2.0, 7.0).intersects(p_331619_.getBoundingBox())) {
+    public boolean isScaredBy(final LivingEntity livingEntity) {
+        if (!this.getBoundingBox().inflate(7.0, 2.0, 7.0).intersects(livingEntity.getBoundingBox())) {
             return false;
-        } else if (p_331619_.getType().is(EntityTypeTags.UNDEAD)) {
+        } else if (livingEntity.is(EntityTypeTags.UNDEAD)) {
             return true;
-        } else if (this.getLastHurtByMob() == p_331619_) {
+        } else if (this.getLastHurtByMob() == livingEntity) {
             return true;
-        } else if (p_331619_ instanceof Player player) {
+        } else if (livingEntity instanceof Player player) {
             return player.isSpectator() ? false : player.isSprinting() || player.isPassenger();
         } else {
             return false;
@@ -238,17 +256,17 @@ public class Armadillo extends Animal {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_406994_) {
-        super.addAdditionalSaveData(p_406994_);
-        p_406994_.store("state", Armadillo.ArmadilloState.CODEC, this.getState());
-        p_406994_.putInt("scute_time", this.scuteTime);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("state", Armadillo.ArmadilloState.CODEC, this.getState());
+        output.putInt("scute_time", this.scuteTime);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_408658_) {
-        super.readAdditionalSaveData(p_408658_);
-        this.switchToState(p_408658_.read("state", Armadillo.ArmadilloState.CODEC).orElse(Armadillo.ArmadilloState.IDLE));
-        p_408658_.getInt("scute_time").ifPresent(p_394978_ -> this.scuteTime = p_394978_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.switchToState(input.read("state", Armadillo.ArmadilloState.CODEC).orElse(Armadillo.ArmadilloState.IDLE));
+        input.getInt("scute_time").ifPresent(time -> this.scuteTime = time);
     }
 
     public void rollUp() {
@@ -270,52 +288,52 @@ public class Armadillo extends Animal {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_363151_, DamageSource p_369647_, float p_364733_) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, float damage) {
         if (this.isScared()) {
-            p_364733_ = (p_364733_ - 1.0F) / 2.0F;
+            damage = (damage - 1.0F) / 2.0F;
         }
 
-        return super.hurtServer(p_363151_, p_369647_, p_364733_);
+        return super.hurtServer(level, source, damage);
     }
 
     @Override
-    protected void actuallyHurt(ServerLevel p_363157_, DamageSource p_328552_, float p_332199_) {
-        super.actuallyHurt(p_363157_, p_328552_, p_332199_);
+    protected void actuallyHurt(final ServerLevel level, final DamageSource source, final float dmg) {
+        super.actuallyHurt(level, source, dmg);
         if (!this.isNoAi() && !this.isDeadOrDying()) {
-            if (p_328552_.getEntity() instanceof LivingEntity) {
+            if (source.getEntity() instanceof LivingEntity) {
                 this.getBrain().setMemoryWithExpiry(MemoryModuleType.DANGER_DETECTED_RECENTLY, true, 80L);
                 if (this.canStayRolledUp()) {
                     this.rollUp();
                 }
-            } else if (p_328552_.is(DamageTypeTags.PANIC_ENVIRONMENTAL_CAUSES)) {
+            } else if (source.is(DamageTypeTags.PANIC_ENVIRONMENTAL_CAUSES)) {
                 this.rollOut();
             }
         }
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_335255_, InteractionHand p_331602_) {
-        ItemStack itemstack = p_335255_.getItemInHand(p_331602_);
-        if (itemstack.is(Items.BRUSH) && this.brushOffScute(p_335255_, itemstack)) {
-            itemstack.hurtAndBreak(16, p_335255_, p_331602_.asEquipmentSlot());
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (itemStack.is(Items.BRUSH) && this.brushOffScute(player, itemStack)) {
+            itemStack.hurtAndBreak(16, player, hand.asEquipmentSlot());
             return InteractionResult.SUCCESS;
         } else {
-            return (InteractionResult)(this.isScared() ? InteractionResult.FAIL : super.mobInteract(p_335255_, p_331602_));
+            return this.isScared() ? InteractionResult.FAIL : super.mobInteract(player, hand);
         }
     }
 
-    public boolean brushOffScute(@Nullable Entity p_427976_, ItemStack p_427826_) {
+    public boolean brushOffScute(final @Nullable Entity interactingEntity, final ItemStack tool) {
         if (this.isBaby()) {
             return false;
-        } else {
-            if (this.level() instanceof ServerLevel serverlevel) {
-                this.dropFromEntityInteractLootTable(serverlevel, BuiltInLootTables.ARMADILLO_BRUSH, p_427976_, p_427826_, this::spawnAtLocation);
-                this.playSound(SoundEvents.ARMADILLO_BRUSH);
-                this.gameEvent(GameEvent.ENTITY_INTERACT);
-            }
-
-            return true;
         }
+
+        if (this.level() instanceof ServerLevel level) {
+            this.dropFromEntityInteractLootTable(level, BuiltInLootTables.ARMADILLO_BRUSH, interactingEntity, tool, this::spawnAtLocation);
+            this.playSound(SoundEvents.ARMADILLO_BRUSH);
+            this.gameEvent(GameEvent.ENTITY_INTERACT);
+        }
+
+        return true;
     }
 
     public boolean canStayRolledUp() {
@@ -343,12 +361,12 @@ public class Armadillo extends Animal {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_335086_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return this.isScared() ? SoundEvents.ARMADILLO_HURT_REDUCED : SoundEvents.ARMADILLO_HURT;
     }
 
     @Override
-    protected void playStepSound(BlockPos p_333806_, BlockState p_333410_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.ARMADILLO_STEP, 0.15F, 1.0F);
     }
 
@@ -369,33 +387,33 @@ public class Armadillo extends Animal {
         };
     }
 
-    public static enum ArmadilloState implements StringRepresentable {
+    public enum ArmadilloState implements StringRepresentable {
         IDLE("idle", false, 0, 0) {
             @Override
-            public boolean shouldHideInShell(long p_328572_) {
+            public boolean shouldHideInShell(final long ticksInState) {
                 return false;
             }
         },
         ROLLING("rolling", true, 10, 1) {
             @Override
-            public boolean shouldHideInShell(long p_328385_) {
-                return p_328385_ > 5L;
+            public boolean shouldHideInShell(final long ticksInState) {
+                return ticksInState > 5L;
             }
         },
         SCARED("scared", true, 50, 2) {
             @Override
-            public boolean shouldHideInShell(long p_327676_) {
+            public boolean shouldHideInShell(final long ticksInState) {
                 return true;
             }
         },
         UNROLLING("unrolling", true, 30, 3) {
             @Override
-            public boolean shouldHideInShell(long p_328518_) {
-                return p_328518_ < 26L;
+            public boolean shouldHideInShell(final long ticksInState) {
+                return ticksInState < 26L;
             }
         };
 
-        static final Codec<Armadillo.ArmadilloState> CODEC = StringRepresentable.fromEnum(Armadillo.ArmadilloState::values);
+        private static final Codec<Armadillo.ArmadilloState> CODEC = StringRepresentable.fromEnum(Armadillo.ArmadilloState::values);
         private static final IntFunction<Armadillo.ArmadilloState> BY_ID = ByIdMap.continuous(
             Armadillo.ArmadilloState::id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
         );
@@ -405,11 +423,11 @@ public class Armadillo extends Animal {
         private final int animationDuration;
         private final int id;
 
-        ArmadilloState(final String p_327882_, final boolean p_330882_, final int p_328662_, final int p_328018_) {
-            this.name = p_327882_;
-            this.isThreatened = p_330882_;
-            this.animationDuration = p_328662_;
-            this.id = p_328018_;
+        ArmadilloState(final String name, final boolean isThreatened, final int animationDuration, final int id) {
+            this.name = name;
+            this.isThreatened = isThreatened;
+            this.animationDuration = animationDuration;
+            this.id = id;
         }
 
         @Override
@@ -421,7 +439,7 @@ public class Armadillo extends Animal {
             return this.id;
         }
 
-        public abstract boolean shouldHideInShell(long p_329790_);
+        public abstract boolean shouldHideInShell(final long ticksInState);
 
         public boolean isThreatened() {
             return this.isThreatened;

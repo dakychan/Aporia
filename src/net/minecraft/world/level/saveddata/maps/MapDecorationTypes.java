@@ -37,28 +37,39 @@ public class MapDecorationTypes {
     public static final Holder<MapDecorationType> RED_BANNER = register("banner_red", "red_banner", true, true);
     public static final Holder<MapDecorationType> BLACK_BANNER = register("banner_black", "black_banner", true, true);
     public static final Holder<MapDecorationType> RED_X = register("red_x", "red_x", true, false);
-    public static final Holder<MapDecorationType> DESERT_VILLAGE = register("village_desert", "desert_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
-    public static final Holder<MapDecorationType> PLAINS_VILLAGE = register("village_plains", "plains_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
-    public static final Holder<MapDecorationType> SAVANNA_VILLAGE = register("village_savanna", "savanna_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
+    public static final Holder<MapDecorationType> DESERT_VILLAGE = register(
+        "village_desert", "desert_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true
+    );
+    public static final Holder<MapDecorationType> PLAINS_VILLAGE = register(
+        "village_plains", "plains_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true
+    );
+    public static final Holder<MapDecorationType> SAVANNA_VILLAGE = register(
+        "village_savanna", "savanna_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true
+    );
     public static final Holder<MapDecorationType> SNOWY_VILLAGE = register("village_snowy", "snowy_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
     public static final Holder<MapDecorationType> TAIGA_VILLAGE = register("village_taiga", "taiga_village", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
     public static final Holder<MapDecorationType> JUNGLE_TEMPLE = register("jungle_temple", "jungle_temple", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
     public static final Holder<MapDecorationType> SWAMP_HUT = register("swamp_hut", "swamp_hut", true, MapColor.COLOR_LIGHT_GRAY.col, false, true);
     public static final Holder<MapDecorationType> TRIAL_CHAMBERS = register("trial_chambers", "trial_chambers", true, 12741452, false, true);
 
-    public static Holder<MapDecorationType> bootstrap(Registry<MapDecorationType> p_329539_) {
+    public static Holder<MapDecorationType> bootstrap(final Registry<MapDecorationType> registry) {
         return PLAYER;
     }
 
-    private static Holder<MapDecorationType> register(String p_329494_, String p_335821_, boolean p_327749_, boolean p_330406_) {
-        return register(p_329494_, p_335821_, p_327749_, -1, p_330406_, false);
+    private static Holder<MapDecorationType> register(final String name, final String assetName, final boolean showOnItemFrame, final boolean trackCount) {
+        return register(name, assetName, showOnItemFrame, -1, trackCount, false);
     }
 
     private static Holder<MapDecorationType> register(
-        String p_329296_, String p_330955_, boolean p_335378_, int p_330214_, boolean p_328908_, boolean p_332062_
+        final String name,
+        final String assetName,
+        final boolean showOnItemFrame,
+        final int mapColor,
+        final boolean trackCount,
+        final boolean explorationMapElement
     ) {
-        ResourceKey<MapDecorationType> resourcekey = ResourceKey.create(Registries.MAP_DECORATION_TYPE, Identifier.withDefaultNamespace(p_329296_));
-        MapDecorationType mapdecorationtype = new MapDecorationType(Identifier.withDefaultNamespace(p_330955_), p_335378_, p_330214_, p_332062_, p_328908_);
-        return Registry.registerForHolder(BuiltInRegistries.MAP_DECORATION_TYPE, resourcekey, mapdecorationtype);
+        ResourceKey<MapDecorationType> key = ResourceKey.create(Registries.MAP_DECORATION_TYPE, Identifier.withDefaultNamespace(name));
+        MapDecorationType type = new MapDecorationType(Identifier.withDefaultNamespace(assetName), showOnItemFrame, mapColor, explorationMapElement, trackCount);
+        return Registry.registerForHolder(BuiltInRegistries.MAP_DECORATION_TYPE, key, type);
     }
 }

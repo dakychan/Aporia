@@ -11,58 +11,58 @@ public abstract class DataLayerStorageMap<M extends DataLayerStorageMap<M>> {
     private boolean cacheEnabled;
     protected final Long2ObjectOpenHashMap<DataLayer> map;
 
-    protected DataLayerStorageMap(Long2ObjectOpenHashMap<DataLayer> p_75523_) {
-        this.map = p_75523_;
+    protected DataLayerStorageMap(final Long2ObjectOpenHashMap<DataLayer> map) {
+        this.map = map;
         this.clearCache();
         this.cacheEnabled = true;
     }
 
     public abstract M copy();
 
-    public DataLayer copyDataLayer(long p_281841_) {
-        DataLayer datalayer = this.map.get(p_281841_).copy();
-        this.map.put(p_281841_, datalayer);
+    public DataLayer copyDataLayer(final long sectionNode) {
+        DataLayer newDataLayer = this.map.get(sectionNode).copy();
+        this.map.put(sectionNode, newDataLayer);
         this.clearCache();
-        return datalayer;
+        return newDataLayer;
     }
 
-    public boolean hasLayer(long p_75530_) {
-        return this.map.containsKey(p_75530_);
+    public boolean hasLayer(final long sectionNode) {
+        return this.map.containsKey(sectionNode);
     }
 
-    public @Nullable DataLayer getLayer(long p_75533_) {
+    public @Nullable DataLayer getLayer(final long sectionNode) {
         if (this.cacheEnabled) {
             for (int i = 0; i < 2; i++) {
-                if (p_75533_ == this.lastSectionKeys[i]) {
+                if (sectionNode == this.lastSectionKeys[i]) {
                     return this.lastSections[i];
                 }
             }
         }
 
-        DataLayer datalayer = this.map.get(p_75533_);
-        if (datalayer == null) {
+        DataLayer data = this.map.get(sectionNode);
+        if (data == null) {
             return null;
-        } else {
-            if (this.cacheEnabled) {
-                for (int j = 1; j > 0; j--) {
-                    this.lastSectionKeys[j] = this.lastSectionKeys[j - 1];
-                    this.lastSections[j] = this.lastSections[j - 1];
-                }
+        }
 
-                this.lastSectionKeys[0] = p_75533_;
-                this.lastSections[0] = datalayer;
+        if (this.cacheEnabled) {
+            for (int i = 1; i > 0; i--) {
+                this.lastSectionKeys[i] = this.lastSectionKeys[i - 1];
+                this.lastSections[i] = this.lastSections[i - 1];
             }
 
-            return datalayer;
+            this.lastSectionKeys[0] = sectionNode;
+            this.lastSections[0] = data;
         }
+
+        return data;
     }
 
-    public @Nullable DataLayer removeLayer(long p_75536_) {
-        return this.map.remove(p_75536_);
+    public @Nullable DataLayer removeLayer(final long sectionNode) {
+        return this.map.remove(sectionNode);
     }
 
-    public void setLayer(long p_75527_, DataLayer p_75528_) {
-        this.map.put(p_75527_, p_75528_);
+    public void setLayer(final long sectionNode, final DataLayer layer) {
+        this.map.put(sectionNode, layer);
     }
 
     public void clearCache() {

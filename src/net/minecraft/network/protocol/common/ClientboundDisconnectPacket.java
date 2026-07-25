@@ -16,7 +16,7 @@ public record ClientboundDisconnectPacket(Component reason) implements Packet<Cl
         return CommonPacketTypes.CLIENTBOUND_DISCONNECT;
     }
 
-    public void handle(ClientCommonPacketListener p_297710_) {
-        p_297710_.handleDisconnect(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleDisconnect(this);
     }
 }

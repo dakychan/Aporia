@@ -9,8 +9,8 @@ public enum ConnectionProtocol {
 
     private final String id;
 
-    private ConnectionProtocol(final String p_297624_) {
-        this.id = p_297624_;
+    ConnectionProtocol(final String id) {
+        this.id = id;
     }
 
     public String id() {

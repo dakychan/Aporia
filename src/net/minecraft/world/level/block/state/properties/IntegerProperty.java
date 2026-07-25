@@ -10,17 +10,19 @@ public final class IntegerProperty extends Property<Integer> {
     private final int min;
     private final int max;
 
-    private IntegerProperty(String p_61623_, int p_61624_, int p_61625_) {
-        super(p_61623_, Integer.class);
-        if (p_61624_ < 0) {
-            throw new IllegalArgumentException("Min value of " + p_61623_ + " must be 0 or greater");
-        } else if (p_61625_ <= p_61624_) {
-            throw new IllegalArgumentException("Max value of " + p_61623_ + " must be greater than min (" + p_61624_ + ")");
-        } else {
-            this.min = p_61624_;
-            this.max = p_61625_;
-            this.values = IntImmutableList.toList(IntStream.range(p_61624_, p_61625_ + 1));
+    private IntegerProperty(final String name, final int min, final int max) {
+        super(name, Integer.class);
+        if (min < 0) {
+            throw new IllegalArgumentException("Min value of " + name + " must be 0 or greater");
         }
+
+        if (max <= min) {
+            throw new IllegalArgumentException("Max value of " + name + " must be greater than min (" + min + ")");
+        }
+
+        this.min = min;
+        this.max = max;
+        this.values = IntImmutableList.toList(IntStream.range(min, max + 1));
     }
 
     @Override
@@ -29,11 +31,11 @@ public final class IntegerProperty extends Property<Integer> {
     }
 
     @Override
-    public boolean equals(Object p_61639_) {
-        if (this == p_61639_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return p_61639_ instanceof IntegerProperty integerproperty && super.equals(p_61639_) ? this.values.equals(integerproperty.values) : false;
+            return o instanceof IntegerProperty that && super.equals(o) ? this.values.equals(that.values) : false;
         }
     }
 
@@ -42,25 +44,25 @@ public final class IntegerProperty extends Property<Integer> {
         return 31 * super.generateHashCode() + this.values.hashCode();
     }
 
-    public static IntegerProperty create(String p_61632_, int p_61633_, int p_61634_) {
-        return new IntegerProperty(p_61632_, p_61633_, p_61634_);
+    public static IntegerProperty create(final String name, final int min, final int max) {
+        return new IntegerProperty(name, min, max);
     }
 
     @Override
-    public Optional<Integer> getValue(String p_61637_) {
+    public Optional<Integer> getValue(final String name) {
         try {
-            int i = Integer.parseInt(p_61637_);
-            return i >= this.min && i <= this.max ? Optional.of(i) : Optional.empty();
-        } catch (NumberFormatException numberformatexception) {
+            int value = Integer.parseInt(name);
+            return value >= this.min && value <= this.max ? Optional.of(value) : Optional.empty();
+        } catch (NumberFormatException ignored) {
             return Optional.empty();
         }
     }
 
-    public String getName(Integer p_61630_) {
-        return p_61630_.toString();
+    public String getName(final Integer value) {
+        return value.toString();
     }
 
-    public int getInternalIndex(Integer p_369529_) {
-        return p_369529_ <= this.max ? p_369529_ - this.min : -1;
+    public int getInternalIndex(final Integer value) {
+        return value <= this.max ? value - this.min : -1;
     }
 }

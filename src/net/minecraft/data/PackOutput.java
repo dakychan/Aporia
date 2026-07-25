@@ -9,61 +9,65 @@ import net.minecraft.resources.ResourceKey;
 public class PackOutput {
     private final Path outputFolder;
 
-    public PackOutput(Path p_252039_) {
-        this.outputFolder = p_252039_;
+    public PackOutput(final Path outputFolder) {
+        this.outputFolder = outputFolder;
     }
 
     public Path getOutputFolder() {
         return this.outputFolder;
     }
 
-    public Path getOutputFolder(PackOutput.Target p_251669_) {
-        return this.getOutputFolder().resolve(p_251669_.directory);
+    public Path getOutputFolder(final PackOutput.Target target) {
+        return this.getOutputFolder().resolve(target.directory);
     }
 
-    public PackOutput.PathProvider createPathProvider(PackOutput.Target p_249479_, String p_251050_) {
-        return new PackOutput.PathProvider(this, p_249479_, p_251050_);
+    public PackOutput.PathProvider createPathProvider(final PackOutput.Target target, final String kind) {
+        return new PackOutput.PathProvider(this, target, kind);
     }
 
-    public PackOutput.PathProvider createRegistryElementsPathProvider(ResourceKey<? extends Registry<?>> p_344086_) {
-        return this.createPathProvider(PackOutput.Target.DATA_PACK, Registries.elementsDirPath(p_344086_));
+    public PackOutput.PathProvider createRegistryElementsPathProvider(final ResourceKey<? extends Registry<?>> registryKey) {
+        return this.createPathProvider(PackOutput.Target.DATA_PACK, Registries.elementsDirPath(registryKey));
     }
 
-    public PackOutput.PathProvider createRegistryTagsPathProvider(ResourceKey<? extends Registry<?>> p_345128_) {
-        return this.createPathProvider(PackOutput.Target.DATA_PACK, Registries.tagsDirPath(p_345128_));
+    public PackOutput.PathProvider createRegistryTagsPathProvider(final ResourceKey<? extends Registry<?>> registryKey) {
+        return this.createPathProvider(PackOutput.Target.DATA_PACK, Registries.tagsDirPath(registryKey));
+    }
+
+    public PackOutput.PathProvider createRegistryComponentPathProvider(final ResourceKey<? extends Registry<?>> registryKey) {
+        return this.createPathProvider(PackOutput.Target.REPORTS, Registries.componentsDirPath(registryKey));
     }
 
     public static class PathProvider {
         private final Path root;
         private final String kind;
 
-        PathProvider(PackOutput p_249025_, PackOutput.Target p_251200_, String p_251982_) {
-            this.root = p_249025_.getOutputFolder(p_251200_);
-            this.kind = p_251982_;
+        private PathProvider(final PackOutput output, final PackOutput.Target target, final String kind) {
+            this.root = output.getOutputFolder(target);
+            this.kind = kind;
         }
 
-        public Path file(Identifier p_458453_, String p_251208_) {
-            return this.root.resolve(p_458453_.getNamespace()).resolve(this.kind).resolve(p_458453_.getPath() + "." + p_251208_);
+        public Path file(final Identifier element, final String extension) {
+            return element.withPath(path -> this.kind + "/" + path + "." + extension).resolveAgainst(this.root);
         }
 
-        public Path json(Identifier p_453775_) {
-            return this.root.resolve(p_453775_.getNamespace()).resolve(this.kind).resolve(p_453775_.getPath() + ".json");
+        public Path json(final Identifier element) {
+            return element.withPath(path -> this.kind + "/" + path + ".json").resolveAgainst(this.root);
         }
 
-        public Path json(ResourceKey<?> p_376925_) {
-            return this.root.resolve(p_376925_.identifier().getNamespace()).resolve(this.kind).resolve(p_376925_.identifier().getPath() + ".json");
+        public Path json(final ResourceKey<?> element) {
+            return this.json(element.identifier());
         }
     }
 
-    public static enum Target {
+    public enum Target {
         DATA_PACK("data"),
         RESOURCE_PACK("assets"),
         REPORTS("reports");
 
-        final String directory;
+        private final String directory;
 
-        private Target(final String p_251326_) {
-            this.directory = p_251326_;
+        Target(final String directory) {
+            this.directory = directory;
         }
     }
 }

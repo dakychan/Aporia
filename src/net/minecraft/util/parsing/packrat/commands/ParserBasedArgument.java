@@ -11,17 +11,17 @@ import java.util.concurrent.CompletableFuture;
 public abstract class ParserBasedArgument<T> implements ArgumentType<T> {
     private final CommandArgumentParser<T> parser;
 
-    public ParserBasedArgument(CommandArgumentParser<T> p_392092_) {
-        this.parser = p_392092_;
+    public ParserBasedArgument(final CommandArgumentParser<T> parser) {
+        this.parser = parser;
     }
 
     @Override
-    public T parse(StringReader p_393710_) throws CommandSyntaxException {
-        return this.parser.parseForCommands(p_393710_);
+    public T parse(final StringReader reader) throws CommandSyntaxException {
+        return this.parser.parseForCommands(reader);
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_396816_, SuggestionsBuilder p_393526_) {
-        return this.parser.parseForSuggestions(p_393526_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return this.parser.parseForSuggestions(builder);
     }
 }

@@ -1,10 +1,7 @@
 package net.minecraft.client.gui.components;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-@OnlyIn(Dist.CLIENT)
 public interface Renderable {
-    void render(GuiGraphics p_281245_, int p_253973_, int p_254325_, float p_254004_);
+    void extractRenderState(final GuiGraphicsExtractor graphics, int mouseX, int mouseY, final float a);
 }

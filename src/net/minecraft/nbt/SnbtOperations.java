@@ -20,10 +20,10 @@ import net.minecraft.util.parsing.packrat.SuggestionSupplier;
 import org.jspecify.annotations.Nullable;
 
 public class SnbtOperations {
-    static final DelayedException<CommandSyntaxException> ERROR_EXPECTED_STRING_UUID = DelayedException.create(
+    private static final DelayedException<CommandSyntaxException> ERROR_EXPECTED_STRING_UUID = DelayedException.create(
         new SimpleCommandExceptionType(Component.translatable("snbt.parser.expected_string_uuid"))
     );
-    static final DelayedException<CommandSyntaxException> ERROR_EXPECTED_NUMBER_OR_BOOLEAN = DelayedException.create(
+    private static final DelayedException<CommandSyntaxException> ERROR_EXPECTED_NUMBER_OR_BOOLEAN = DelayedException.create(
         new SimpleCommandExceptionType(Component.translatable("snbt.parser.expected_number_or_boolean"))
     );
     public static final String BUILTIN_TRUE = "true";
@@ -31,43 +31,43 @@ public class SnbtOperations {
     public static final Map<SnbtOperations.BuiltinKey, SnbtOperations.BuiltinOperation> BUILTIN_OPERATIONS = Map.of(
         new SnbtOperations.BuiltinKey("bool", 1), new SnbtOperations.BuiltinOperation() {
             @Override
-            public <T> T run(DynamicOps<T> p_395654_, List<T> p_392359_, ParseState<StringReader> p_395490_) {
-                Boolean obool = convert(p_395654_, p_392359_.getFirst());
-                if (obool == null) {
-                    p_395490_.errorCollector().store(p_395490_.mark(), SnbtOperations.ERROR_EXPECTED_NUMBER_OR_BOOLEAN);
+            public <T> T run(final DynamicOps<T> ops, final List<T> arguments, final ParseState<StringReader> state) {
+                Boolean result = convert(ops, arguments.getFirst());
+                if (result == null) {
+                    state.errorCollector().store(state.mark(), SnbtOperations.ERROR_EXPECTED_NUMBER_OR_BOOLEAN);
                     return null;
                 } else {
-                    return p_395654_.createBoolean(obool);
+                    return ops.createBoolean(result);
                 }
             }
 
-            private static <T> @Nullable Boolean convert(DynamicOps<T> p_393221_, T p_394284_) {
-                Optional<Boolean> optional = p_393221_.getBooleanValue(p_394284_).result();
-                if (optional.isPresent()) {
-                    return optional.get();
-                } else {
-                    Optional<Number> optional1 = p_393221_.getNumberValue(p_394284_).result();
-                    return optional1.isPresent() ? optional1.get().doubleValue() != 0.0 : null;
+            private static <T> @Nullable Boolean convert(final DynamicOps<T> ops, final T arg) {
+                Optional<Boolean> asBoolean = ops.getBooleanValue(arg).result();
+                if (asBoolean.isPresent()) {
+                    return asBoolean.get();
                 }
+
+                Optional<Number> asNumber = ops.getNumberValue(arg).result();
+                return asNumber.isPresent() ? asNumber.get().doubleValue() != 0.0 : null;
             }
         }, new SnbtOperations.BuiltinKey("uuid", 1), new SnbtOperations.BuiltinOperation() {
             @Override
-            public <T> T run(DynamicOps<T> p_395077_, List<T> p_392367_, ParseState<StringReader> p_396804_) {
-                Optional<String> optional = p_395077_.getStringValue(p_392367_.getFirst()).result();
-                if (optional.isEmpty()) {
-                    p_396804_.errorCollector().store(p_396804_.mark(), SnbtOperations.ERROR_EXPECTED_STRING_UUID);
+            public <T> T run(final DynamicOps<T> ops, final List<T> arguments, final ParseState<StringReader> state) {
+                Optional<String> arg = ops.getStringValue(arguments.getFirst()).result();
+                if (arg.isEmpty()) {
+                    state.errorCollector().store(state.mark(), SnbtOperations.ERROR_EXPECTED_STRING_UUID);
                     return null;
-                } else {
-                    UUID uuid;
-                    try {
-                        uuid = UUID.fromString(optional.get());
-                    } catch (IllegalArgumentException illegalargumentexception) {
-                        p_396804_.errorCollector().store(p_396804_.mark(), SnbtOperations.ERROR_EXPECTED_STRING_UUID);
-                        return null;
-                    }
-
-                    return p_395077_.createIntList(IntStream.of(UUIDUtil.uuidToIntArray(uuid)));
                 }
+
+                UUID uuid;
+                try {
+                    uuid = UUID.fromString(arg.get());
+                } catch (IllegalArgumentException e) {
+                    state.errorCollector().store(state.mark(), SnbtOperations.ERROR_EXPECTED_STRING_UUID);
+                    return null;
+                }
+
+                return ops.createIntList(IntStream.of(UUIDUtil.uuidToIntArray(uuid)));
             }
         }
     );
@@ -78,7 +78,7 @@ public class SnbtOperations {
             .collect(Collectors.toSet());
 
         @Override
-        public Stream<String> possibleValues(ParseState<StringReader> p_397371_) {
+        public Stream<String> possibleValues(final ParseState<StringReader> state) {
             return this.keys.stream();
         }
     };
@@ -91,6 +91,6 @@ public class SnbtOperations {
     }
 
     public interface BuiltinOperation {
-        <T> @Nullable T run(DynamicOps<T> p_392645_, List<T> p_391696_, ParseState<StringReader> p_396280_);
+        <T> @Nullable T run(DynamicOps<T> ops, List<T> arguments, ParseState<StringReader> state);
     }
 }

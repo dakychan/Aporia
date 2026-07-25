@@ -7,7 +7,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 
@@ -16,96 +15,103 @@ public class ResultSlot extends Slot {
     private final Player player;
     private int removeCount;
 
-    public ResultSlot(Player p_40166_, CraftingContainer p_40167_, Container p_40168_, int p_40169_, int p_40170_, int p_40171_) {
-        super(p_40168_, p_40169_, p_40170_, p_40171_);
-        this.player = p_40166_;
-        this.craftSlots = p_40167_;
+    public ResultSlot(final Player player, final CraftingContainer craftSlots, final Container container, final int id, final int x, final int y) {
+        super(container, id, x, y);
+        this.player = player;
+        this.craftSlots = craftSlots;
     }
 
     @Override
-    public boolean mayPlace(ItemStack p_40178_) {
+    public boolean mayPlace(final ItemStack itemStack) {
         return false;
     }
 
     @Override
-    public ItemStack remove(int p_40173_) {
+    public ItemStack remove(final int amount) {
         if (this.hasItem()) {
-            this.removeCount = this.removeCount + Math.min(p_40173_, this.getItem().getCount());
+            this.removeCount = this.removeCount + Math.min(amount, this.getItem().getCount());
         }
 
-        return super.remove(p_40173_);
+        return super.remove(amount);
     }
 
     @Override
-    protected void onQuickCraft(ItemStack p_40180_, int p_40181_) {
-        this.removeCount += p_40181_;
-        this.checkTakeAchievements(p_40180_);
+    protected void onQuickCraft(final ItemStack picked, final int count) {
+        this.removeCount += count;
+        this.checkTakeAchievements(picked);
     }
 
     @Override
-    protected void onSwapCraft(int p_40183_) {
-        this.removeCount += p_40183_;
+    protected void onSwapCraft(final int count) {
+        this.removeCount += count;
     }
 
     @Override
-    protected void checkTakeAchievements(ItemStack p_40185_) {
+    public ItemStack safeClone(final Player player) {
+        ItemStack result = super.safeClone(player);
+        result.getItem().onCraftedBy(result, player);
+        return result;
+    }
+
+    @Override
+    protected void checkTakeAchievements(final ItemStack carried) {
         if (this.removeCount > 0) {
-            p_40185_.onCraftedBy(this.player, this.removeCount);
+            carried.onCraftedBy(this.player, this.removeCount);
         }
 
-        if (this.container instanceof RecipeCraftingHolder recipecraftingholder) {
-            recipecraftingholder.awardUsedRecipes(this.player, this.craftSlots.getItems());
+        if (this.container instanceof RecipeCraftingHolder recipeCraftingHolder) {
+            recipeCraftingHolder.awardUsedRecipes(this.player, this.craftSlots.getItems());
         }
 
         this.removeCount = 0;
     }
 
-    private static NonNullList<ItemStack> copyAllInputItems(CraftingInput p_369634_) {
-        NonNullList<ItemStack> nonnulllist = NonNullList.withSize(p_369634_.size(), ItemStack.EMPTY);
+    private static NonNullList<ItemStack> copyAllInputItems(final CraftingInput input) {
+        NonNullList<ItemStack> result = NonNullList.withSize(input.size(), ItemStack.EMPTY);
 
-        for (int i = 0; i < nonnulllist.size(); i++) {
-            nonnulllist.set(i, p_369634_.getItem(i));
+        for (int slot = 0; slot < result.size(); slot++) {
+            result.set(slot, input.getItem(slot));
         }
 
-        return nonnulllist;
+        return result;
     }
 
-    private NonNullList<ItemStack> getRemainingItems(CraftingInput p_366682_, Level p_367548_) {
-        return p_367548_ instanceof ServerLevel serverlevel
-            ? serverlevel.recipeAccess()
-                .getRecipeFor(RecipeType.CRAFTING, p_366682_, serverlevel)
-                .map(p_369657_ -> p_369657_.value().getRemainingItems(p_366682_))
-                .orElseGet(() -> copyAllInputItems(p_366682_))
-            : CraftingRecipe.defaultCraftingReminder(p_366682_);
+    private NonNullList<ItemStack> getRemainingItems(final CraftingInput input, final Level level) {
+        return level instanceof ServerLevel serverLevel
+            ? serverLevel.recipeAccess()
+                .getRecipeFor(RecipeType.CRAFTING, input, serverLevel)
+                .map(recipe -> recipe.value().getRemainingItems(input))
+                .orElseGet(() -> copyAllInputItems(input))
+            : CraftingRecipe.defaultCraftingReminder(input);
     }
 
     @Override
-    public void onTake(Player p_150638_, ItemStack p_150639_) {
-        this.checkTakeAchievements(p_150639_);
-        CraftingInput.Positioned craftinginput$positioned = this.craftSlots.asPositionedCraftInput();
-        CraftingInput craftinginput = craftinginput$positioned.input();
-        int i = craftinginput$positioned.left();
-        int j = craftinginput$positioned.top();
-        NonNullList<ItemStack> nonnulllist = this.getRemainingItems(craftinginput, p_150638_.level());
+    public void onTake(final Player player, final ItemStack carried) {
+        this.checkTakeAchievements(carried);
+        CraftingInput.Positioned positionedRecipe = this.craftSlots.asPositionedCraftInput();
+        CraftingInput input = positionedRecipe.input();
+        int recipeLeft = positionedRecipe.left();
+        int recipeTop = positionedRecipe.top();
+        NonNullList<ItemStack> remaining = this.getRemainingItems(input, player.level());
 
-        for (int k = 0; k < craftinginput.height(); k++) {
-            for (int l = 0; l < craftinginput.width(); l++) {
-                int i1 = l + i + (k + j) * this.craftSlots.getWidth();
-                ItemStack itemstack = this.craftSlots.getItem(i1);
-                ItemStack itemstack1 = nonnulllist.get(l + k * craftinginput.width());
-                if (!itemstack.isEmpty()) {
-                    this.craftSlots.removeItem(i1, 1);
-                    itemstack = this.craftSlots.getItem(i1);
+        for (int y = 0; y < input.height(); y++) {
+            for (int x = 0; x < input.width(); x++) {
+                int slot = x + recipeLeft + (y + recipeTop) * this.craftSlots.getWidth();
+                ItemStack itemStack = this.craftSlots.getItem(slot);
+                ItemStack replacement = remaining.get(x + y * input.width());
+                if (!itemStack.isEmpty()) {
+                    this.craftSlots.removeItem(slot, 1);
+                    itemStack = this.craftSlots.getItem(slot);
                 }
 
-                if (!itemstack1.isEmpty()) {
-                    if (itemstack.isEmpty()) {
-                        this.craftSlots.setItem(i1, itemstack1);
-                    } else if (ItemStack.isSameItemSameComponents(itemstack, itemstack1)) {
-                        itemstack1.grow(itemstack.getCount());
-                        this.craftSlots.setItem(i1, itemstack1);
-                    } else if (!this.player.getInventory().add(itemstack1)) {
-                        this.player.drop(itemstack1, false);
+                if (!replacement.isEmpty()) {
+                    if (itemStack.isEmpty()) {
+                        this.craftSlots.setItem(slot, replacement);
+                    } else if (ItemStack.isSameItemSameComponents(itemStack, replacement)) {
+                        replacement.grow(itemStack.getCount());
+                        this.craftSlots.setItem(slot, replacement);
+                    } else if (!this.player.getInventory().add(replacement)) {
+                        this.player.drop(replacement, false);
                     }
                 }
             }

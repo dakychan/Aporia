@@ -9,16 +9,19 @@ import net.minecraft.util.profiling.ProfilerFiller;
 public interface ResourceManagerReloadListener extends PreparableReloadListener {
     @Override
     default CompletableFuture<Void> reload(
-        PreparableReloadListener.SharedState p_422642_, Executor p_10756_, PreparableReloadListener.PreparationBarrier p_10752_, Executor p_10757_
+        final PreparableReloadListener.SharedState currentReload,
+        final Executor taskExecutor,
+        final PreparableReloadListener.PreparationBarrier preparationBarrier,
+        final Executor reloadExecutor
     ) {
-        ResourceManager resourcemanager = p_422642_.resourceManager();
-        return p_10752_.wait(Unit.INSTANCE).thenRunAsync(() -> {
-            ProfilerFiller profilerfiller = Profiler.get();
-            profilerfiller.push("listener");
-            this.onResourceManagerReload(resourcemanager);
-            profilerfiller.pop();
-        }, p_10757_);
+        ResourceManager manager = currentReload.resourceManager();
+        return preparationBarrier.wait(Unit.INSTANCE).thenRunAsync(() -> {
+            ProfilerFiller reloadProfiler = Profiler.get();
+            reloadProfiler.push("listener");
+            this.onResourceManagerReload(manager);
+            reloadProfiler.pop();
+        }, reloadExecutor);
     }
 
-    void onResourceManagerReload(ResourceManager p_10758_);
+    void onResourceManagerReload(ResourceManager resourceManager);
 }

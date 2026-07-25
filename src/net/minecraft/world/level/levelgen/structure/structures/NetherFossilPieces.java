@@ -40,59 +40,74 @@ public class NetherFossilPieces {
         Identifier.withDefaultNamespace("nether_fossils/fossil_14")
     };
 
-    public static void addPieces(StructureTemplateManager p_228535_, StructurePieceAccessor p_228536_, RandomSource p_228537_, BlockPos p_228538_) {
-        Rotation rotation = Rotation.getRandom(p_228537_);
-        p_228536_.addPiece(new NetherFossilPieces.NetherFossilPiece(p_228535_, Util.getRandom(FOSSILS, p_228537_), p_228538_, rotation));
+    public static void addPieces(
+        final StructureTemplateManager structureTemplateManager,
+        final StructurePieceAccessor structurePieceAccessor,
+        final RandomSource random,
+        final BlockPos position
+    ) {
+        Rotation nextRotation = Rotation.getRandom(random);
+        structurePieceAccessor.addPiece(
+            new NetherFossilPieces.NetherFossilPiece(structureTemplateManager, Util.getRandom(FOSSILS, random), position, nextRotation)
+        );
     }
 
     public static class NetherFossilPiece extends TemplateStructurePiece {
-        public NetherFossilPiece(StructureTemplateManager p_228540_, Identifier p_461014_, BlockPos p_228542_, Rotation p_228543_) {
-            super(StructurePieceType.NETHER_FOSSIL, 0, p_228540_, p_461014_, p_461014_.toString(), makeSettings(p_228543_), p_228542_);
+        public NetherFossilPiece(
+            final StructureTemplateManager structureTemplateManager, final Identifier templateLocation, final BlockPos position, final Rotation rotation
+        ) {
+            super(
+                StructurePieceType.NETHER_FOSSIL, 0, structureTemplateManager, templateLocation, templateLocation.toString(), makeSettings(rotation), position
+            );
         }
 
-        public NetherFossilPiece(StructureTemplateManager p_228545_, CompoundTag p_228546_) {
-            super(StructurePieceType.NETHER_FOSSIL, p_228546_, p_228545_, p_456035_ -> makeSettings(p_228546_.read("Rot", Rotation.LEGACY_CODEC).orElseThrow()));
+        public NetherFossilPiece(final StructureTemplateManager structureTemplateManager, final CompoundTag tag) {
+            super(
+                StructurePieceType.NETHER_FOSSIL, tag, structureTemplateManager, location -> makeSettings(tag.read("Rot", Rotation.LEGACY_CODEC).orElseThrow())
+            );
         }
 
-        private static StructurePlaceSettings makeSettings(Rotation p_228556_) {
-            return new StructurePlaceSettings().setRotation(p_228556_).setMirror(Mirror.NONE).addProcessor(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
+        private static StructurePlaceSettings makeSettings(final Rotation rotation) {
+            return new StructurePlaceSettings().setRotation(rotation).setMirror(Mirror.NONE).addProcessor(BlockIgnoreProcessor.STRUCTURE_AND_AIR);
         }
 
         @Override
-        protected void addAdditionalSaveData(StructurePieceSerializationContext p_228558_, CompoundTag p_228559_) {
-            super.addAdditionalSaveData(p_228558_, p_228559_);
-            p_228559_.store("Rot", Rotation.LEGACY_CODEC, this.placeSettings.getRotation());
+        protected void addAdditionalSaveData(final StructurePieceSerializationContext context, final CompoundTag tag) {
+            super.addAdditionalSaveData(context, tag);
+            tag.store("Rot", Rotation.LEGACY_CODEC, this.placeSettings.getRotation());
         }
 
         @Override
-        protected void handleDataMarker(String p_228561_, BlockPos p_228562_, ServerLevelAccessor p_228563_, RandomSource p_228564_, BoundingBox p_228565_) {
+        protected void handleDataMarker(
+            final String markerId, final BlockPos position, final ServerLevelAccessor level, final RandomSource random, final BoundingBox chunkBB
+        ) {
         }
 
         @Override
         public void postProcess(
-            WorldGenLevel p_228548_,
-            StructureManager p_228549_,
-            ChunkGenerator p_228550_,
-            RandomSource p_228551_,
-            BoundingBox p_228552_,
-            ChunkPos p_228553_,
-            BlockPos p_228554_
+            final WorldGenLevel level,
+            final StructureManager structureManager,
+            final ChunkGenerator generator,
+            final RandomSource random,
+            final BoundingBox chunkBB,
+            final ChunkPos chunkPos,
+            final BlockPos referencePos
         ) {
-            BoundingBox boundingbox = this.template.getBoundingBox(this.placeSettings, this.templatePosition);
-            p_228552_.encapsulate(boundingbox);
-            super.postProcess(p_228548_, p_228549_, p_228550_, p_228551_, p_228552_, p_228553_, p_228554_);
-            this.placeDriedGhast(p_228548_, p_228551_, boundingbox, p_228552_);
+            BoundingBox fossilBB = this.template.getBoundingBox(this.placeSettings, this.templatePosition);
+            chunkBB.encapsulate(fossilBB);
+            super.postProcess(level, structureManager, generator, random, chunkBB, chunkPos, referencePos);
+            this.placeDriedGhast(level, random, fossilBB, chunkBB);
         }
 
-        private void placeDriedGhast(WorldGenLevel p_410517_, RandomSource p_410140_, BoundingBox p_407104_, BoundingBox p_406541_) {
-            RandomSource randomsource = RandomSource.create(p_410517_.getSeed()).forkPositional().at(p_407104_.getCenter());
-            if (randomsource.nextFloat() < 0.5F) {
-                int i = p_407104_.minX() + randomsource.nextInt(p_407104_.getXSpan());
-                int j = p_407104_.minY();
-                int k = p_407104_.minZ() + randomsource.nextInt(p_407104_.getZSpan());
-                BlockPos blockpos = new BlockPos(i, j, k);
-                if (p_410517_.getBlockState(blockpos).isAir() && p_406541_.isInside(blockpos)) {
-                    p_410517_.setBlock(blockpos, Blocks.DRIED_GHAST.defaultBlockState().rotate(Rotation.getRandom(randomsource)), 2);
+        private void placeDriedGhast(final WorldGenLevel level, final RandomSource random, final BoundingBox fossilBB, final BoundingBox chunkBB) {
+            RandomSource positionalRandom = RandomSource.createThreadLocalInstance(level.getSeed()).forkPositional().at(fossilBB.getCenter());
+            if (positionalRandom.nextFloat() < 0.5F) {
+                int x = fossilBB.minX() + positionalRandom.nextInt(fossilBB.getXSpan());
+                int y = fossilBB.minY();
+                int z = fossilBB.minZ() + positionalRandom.nextInt(fossilBB.getZSpan());
+                BlockPos randomPos = new BlockPos(x, y, z);
+                if (level.getBlockState(randomPos).isAir() && chunkBB.isInside(randomPos)) {
+                    level.setBlock(randomPos, Blocks.DRIED_GHAST.defaultBlockState().rotate(Rotation.getRandom(positionalRandom)), 2);
                 }
             }
         }

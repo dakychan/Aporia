@@ -10,11 +10,8 @@ import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.entity.player.ProfilePublicKey;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.PlayerTeam;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class PlayerInfo {
     private final GameProfile profile;
     private @Nullable Supplier<PlayerSkin> skinLookup;
@@ -26,15 +23,15 @@ public class PlayerInfo {
     private SignedMessageValidator messageValidator;
     private int tabListOrder;
 
-    public PlayerInfo(GameProfile p_253609_, boolean p_254409_) {
-        this.profile = p_253609_;
-        this.messageValidator = fallbackMessageValidator(p_254409_);
+    public PlayerInfo(final GameProfile profile, final boolean enforcesSecureChat) {
+        this.profile = profile;
+        this.messageValidator = fallbackMessageValidator(enforcesSecureChat);
     }
 
-    private static Supplier<PlayerSkin> createSkinLookup(GameProfile p_298306_) {
+    private static Supplier<PlayerSkin> createSkinLookup(final GameProfile profile) {
         Minecraft minecraft = Minecraft.getInstance();
-        boolean flag = !minecraft.isLocalPlayer(p_298306_.id());
-        return minecraft.getSkinManager().createLookup(p_298306_, flag);
+        boolean requireSecure = !minecraft.isLocalPlayer(profile.id());
+        return minecraft.getSkinManager().createLookup(profile, requireSecure);
     }
 
     public GameProfile getProfile() {
@@ -53,34 +50,34 @@ public class PlayerInfo {
         return this.chatSession != null;
     }
 
-    protected void setChatSession(RemoteChatSession p_249599_) {
-        this.chatSession = p_249599_;
-        this.messageValidator = p_249599_.createMessageValidator(ProfilePublicKey.EXPIRY_GRACE_PERIOD);
+    protected void setChatSession(final RemoteChatSession chatSession) {
+        this.chatSession = chatSession;
+        this.messageValidator = chatSession.createMessageValidator(ProfilePublicKey.EXPIRY_GRACE_PERIOD);
     }
 
-    protected void clearChatSession(boolean p_254536_) {
+    protected void clearChatSession(final boolean enforcesSecureChat) {
         this.chatSession = null;
-        this.messageValidator = fallbackMessageValidator(p_254536_);
+        this.messageValidator = fallbackMessageValidator(enforcesSecureChat);
     }
 
-    private static SignedMessageValidator fallbackMessageValidator(boolean p_254311_) {
-        return p_254311_ ? SignedMessageValidator.REJECT_ALL : SignedMessageValidator.ACCEPT_UNSIGNED;
+    private static SignedMessageValidator fallbackMessageValidator(final boolean enforcesSecureChat) {
+        return enforcesSecureChat ? SignedMessageValidator.REJECT_ALL : SignedMessageValidator.ACCEPT_UNSIGNED;
     }
 
     public GameType getGameMode() {
         return this.gameMode;
     }
 
-    protected void setGameMode(GameType p_105318_) {
-        this.gameMode = p_105318_;
+    protected void setGameMode(final GameType gameMode) {
+        this.gameMode = gameMode;
     }
 
     public int getLatency() {
         return this.latency;
     }
 
-    protected void setLatency(int p_105314_) {
-        this.latency = p_105314_;
+    protected void setLatency(final int latency) {
+        this.latency = latency;
     }
 
     public PlayerSkin getSkin() {
@@ -95,24 +92,24 @@ public class PlayerInfo {
         return Minecraft.getInstance().level.getScoreboard().getPlayersTeam(this.getProfile().name());
     }
 
-    public void setTabListDisplayName(@Nullable Component p_105324_) {
-        this.tabListDisplayName = p_105324_;
+    public void setTabListDisplayName(final @Nullable Component tabListDisplayName) {
+        this.tabListDisplayName = tabListDisplayName;
     }
 
     public @Nullable Component getTabListDisplayName() {
         return this.tabListDisplayName;
     }
 
-    public void setShowHat(boolean p_376365_) {
-        this.showHat = p_376365_;
+    public void setShowHat(final boolean showHat) {
+        this.showHat = showHat;
     }
 
     public boolean showHat() {
         return this.showHat;
     }
 
-    public void setTabListOrder(int p_364557_) {
-        this.tabListOrder = p_364557_;
+    public void setTabListOrder(final int tabListOrder) {
+        this.tabListOrder = tabListOrder;
     }
 
     public int getTabListOrder() {

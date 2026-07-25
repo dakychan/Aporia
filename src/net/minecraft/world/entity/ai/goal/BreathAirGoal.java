@@ -2,7 +2,6 @@ package net.minecraft.world.entity.ai.goal;
 
 import java.util.EnumSet;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.level.LevelReader;
@@ -14,8 +13,8 @@ import net.minecraft.world.phys.Vec3;
 public class BreathAirGoal extends Goal {
     private final PathfinderMob mob;
 
-    public BreathAirGoal(PathfinderMob p_25103_) {
-        this.mob = p_25103_;
+    public BreathAirGoal(final PathfinderMob mob) {
+        this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -36,32 +35,26 @@ public class BreathAirGoal extends Goal {
 
     @Override
     public void start() {
+        this.mob.getNavigation().stop();
         this.findAirPosition();
     }
 
     private void findAirPosition() {
-        Iterable<BlockPos> iterable = BlockPos.betweenClosed(
-            Mth.floor(this.mob.getX() - 1.0),
-            this.mob.getBlockY(),
-            Mth.floor(this.mob.getZ() - 1.0),
-            Mth.floor(this.mob.getX() + 1.0),
-            Mth.floor(this.mob.getY() + 8.0),
-            Mth.floor(this.mob.getZ() + 1.0)
-        );
-        BlockPos blockpos = null;
+        Iterable<BlockPos> between = BlockPos.neighborColumn(this.mob.getBlockX(), this.mob.getBlockY(), this.mob.getBlockZ(), this.mob.getBlockY() + 8);
+        BlockPos destinationPos = null;
 
-        for (BlockPos blockpos1 : iterable) {
-            if (this.givesAir(this.mob.level(), blockpos1)) {
-                blockpos = blockpos1;
+        for (BlockPos pos : between) {
+            if (this.givesAir(this.mob.level(), pos)) {
+                destinationPos = pos;
                 break;
             }
         }
 
-        if (blockpos == null) {
-            blockpos = BlockPos.containing(this.mob.getX(), this.mob.getY() + 8.0, this.mob.getZ());
+        if (destinationPos == null) {
+            destinationPos = BlockPos.containing(this.mob.getX(), this.mob.getY() + 8.0, this.mob.getZ());
         }
 
-        this.mob.getNavigation().moveTo(blockpos.getX(), blockpos.getY() + 1, blockpos.getZ(), 1.0);
+        this.mob.getNavigation().moveTo(destinationPos.getX(), destinationPos.getY() + 1, destinationPos.getZ(), 1.0);
     }
 
     @Override
@@ -71,8 +64,8 @@ public class BreathAirGoal extends Goal {
         this.mob.move(MoverType.SELF, this.mob.getDeltaMovement());
     }
 
-    private boolean givesAir(LevelReader p_25107_, BlockPos p_25108_) {
-        BlockState blockstate = p_25107_.getBlockState(p_25108_);
-        return (p_25107_.getFluidState(p_25108_).isEmpty() || blockstate.is(Blocks.BUBBLE_COLUMN)) && blockstate.isPathfindable(PathComputationType.LAND);
+    private boolean givesAir(final LevelReader level, final BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return (level.getFluidState(pos).isEmpty() || state.is(Blocks.BUBBLE_COLUMN)) && state.isPathfindable(PathComputationType.LAND);
     }
 }

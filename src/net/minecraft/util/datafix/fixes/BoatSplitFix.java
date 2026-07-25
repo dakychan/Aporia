@@ -4,7 +4,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
@@ -13,24 +12,24 @@ import net.minecraft.util.datafix.ExtraDataFixUtils;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class BoatSplitFix extends DataFix {
-    public BoatSplitFix(Schema p_366558_) {
-        super(p_366558_, true);
+    public BoatSplitFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
-    private static boolean isNormalBoat(String p_363922_) {
-        return p_363922_.equals("minecraft:boat");
+    private static boolean isNormalBoat(final String id) {
+        return id.equals("minecraft:boat");
     }
 
-    private static boolean isChestBoat(String p_369570_) {
-        return p_369570_.equals("minecraft:chest_boat");
+    private static boolean isChestBoat(final String id) {
+        return id.equals("minecraft:chest_boat");
     }
 
-    private static boolean isAnyBoat(String p_366835_) {
-        return isNormalBoat(p_366835_) || isChestBoat(p_366835_);
+    private static boolean isAnyBoat(final String id) {
+        return isNormalBoat(id) || isChestBoat(id);
     }
 
-    private static String mapVariantToNormalBoat(String p_362351_) {
-        return switch (p_362351_) {
+    private static String mapVariantToNormalBoat(final String id) {
+        return switch (id) {
             case "spruce" -> "minecraft:spruce_boat";
             case "birch" -> "minecraft:birch_boat";
             case "jungle" -> "minecraft:jungle_boat";
@@ -43,8 +42,8 @@ public class BoatSplitFix extends DataFix {
         };
     }
 
-    private static String mapVariantToChestBoat(String p_368305_) {
-        return switch (p_368305_) {
+    private static String mapVariantToChestBoat(final String id) {
+        return switch (id) {
             case "spruce" -> "minecraft:spruce_chest_boat";
             case "birch" -> "minecraft:birch_chest_boat";
             case "jungle" -> "minecraft:jungle_chest_boat";
@@ -59,24 +58,24 @@ public class BoatSplitFix extends DataFix {
 
     @Override
     public TypeRewriteRule makeRule() {
-        OpticFinder<String> opticfinder = DSL.fieldFinder("id", NamespacedSchema.namespacedString());
-        Type<?> type = this.getInputSchema().getType(References.ENTITY);
-        Type<?> type1 = this.getOutputSchema().getType(References.ENTITY);
-        return this.fixTypeEverywhereTyped("BoatSplitFix", type, type1, p_367696_ -> {
-            Optional<String> optional = p_367696_.getOptional(opticfinder);
-            if (optional.isPresent() && isAnyBoat(optional.get())) {
-                Dynamic<?> dynamic = p_367696_.getOrCreate(DSL.remainderFinder());
-                Optional<String> optional1 = dynamic.get("Type").asString().result();
-                String s;
-                if (isChestBoat(optional.get())) {
-                    s = optional1.map(BoatSplitFix::mapVariantToChestBoat).orElse("minecraft:oak_chest_boat");
+        OpticFinder<String> idF = DSL.fieldFinder("id", NamespacedSchema.namespacedString());
+        Type<?> oldType = this.getInputSchema().getType(References.ENTITY);
+        Type<?> newType = this.getOutputSchema().getType(References.ENTITY);
+        return this.fixTypeEverywhereTyped("BoatSplitFix", oldType, newType, input -> {
+            Optional<String> id = input.getOptional(idF);
+            if (id.isPresent() && isAnyBoat(id.get())) {
+                Dynamic<?> tag = input.getOrCreate(DSL.remainderFinder());
+                Optional<String> maybeBoatId = tag.get("Type").asString().result();
+                String newId;
+                if (isChestBoat(id.get())) {
+                    newId = maybeBoatId.map(BoatSplitFix::mapVariantToChestBoat).orElse("minecraft:oak_chest_boat");
                 } else {
-                    s = optional1.map(BoatSplitFix::mapVariantToNormalBoat).orElse("minecraft:oak_boat");
+                    newId = maybeBoatId.map(BoatSplitFix::mapVariantToNormalBoat).orElse("minecraft:oak_boat");
                 }
 
-                return ExtraDataFixUtils.cast(type1, p_367696_).update(DSL.remainderFinder(), p_362212_ -> p_362212_.remove("Type")).set(opticfinder, s);
+                return ExtraDataFixUtils.cast(newType, input).update(DSL.remainderFinder(), remainder -> remainder.remove("Type")).set(idF, newId);
             } else {
-                return ExtraDataFixUtils.cast(type1, p_367696_);
+                return ExtraDataFixUtils.cast(newType, input);
             }
         });
     }

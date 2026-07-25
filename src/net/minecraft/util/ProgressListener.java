@@ -3,13 +3,13 @@ package net.minecraft.util;
 import net.minecraft.network.chat.Component;
 
 public interface ProgressListener {
-    void progressStartNoAbort(Component p_14212_);
+    void progressStartNoAbort(Component string);
 
-    void progressStart(Component p_14213_);
+    void progressStart(Component string);
 
-    void progressStage(Component p_14214_);
+    void progressStage(Component string);
 
-    void progressStagePercentage(int p_14211_);
+    void progressStagePercentage(int i);
 
     void stop();
 }

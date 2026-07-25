@@ -1,14 +1,11 @@
 package net.minecraft.client.gui.screens.advancements;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
-enum AdvancementTabType {
+public enum AdvancementTabType {
     ABOVE(
         new AdvancementTabType.Sprites(
             Identifier.withDefaultNamespace("advancements/tab_above_left_selected"),
@@ -76,14 +73,14 @@ enum AdvancementTabType {
     private final int height;
     private final int max;
 
-    private AdvancementTabType(
-        final AdvancementTabType.Sprites p_300993_, final AdvancementTabType.Sprites p_299630_, final int p_97205_, final int p_97206_, final int p_97207_
+    AdvancementTabType(
+        final AdvancementTabType.Sprites selectedSprites, final AdvancementTabType.Sprites unselectedSprites, final int width, final int height, final int max
     ) {
-        this.selectedSprites = p_300993_;
-        this.unselectedSprites = p_299630_;
-        this.width = p_97205_;
-        this.height = p_97206_;
-        this.max = p_97207_;
+        this.selectedSprites = selectedSprites;
+        this.unselectedSprites = unselectedSprites;
+        this.width = width;
+        this.height = height;
+        this.max = max;
     }
 
     public int getWidth() {
@@ -98,81 +95,68 @@ enum AdvancementTabType {
         return this.max;
     }
 
-    public void draw(GuiGraphics p_283216_, int p_282432_, int p_283617_, boolean p_282320_, int p_281898_) {
-        AdvancementTabType.Sprites advancementtabtype$sprites = p_282320_ ? this.selectedSprites : this.unselectedSprites;
-        Identifier identifier;
-        if (p_281898_ == 0) {
-            identifier = advancementtabtype$sprites.first();
-        } else if (p_281898_ == this.max - 1) {
-            identifier = advancementtabtype$sprites.last();
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int tabX, final int tabY, final boolean selected, final int index) {
+        AdvancementTabType.Sprites sprites = selected ? this.selectedSprites : this.unselectedSprites;
+        Identifier sprite;
+        if (index == 0) {
+            sprite = sprites.first();
+        } else if (index == this.max - 1) {
+            sprite = sprites.last();
         } else {
-            identifier = advancementtabtype$sprites.middle();
+            sprite = sprites.middle();
         }
 
-        p_283216_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, p_282432_, p_283617_, this.width, this.height);
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, tabX, tabY, this.width, this.height);
     }
 
-    public void drawIcon(GuiGraphics p_281370_, int p_283209_, int p_282807_, int p_282968_, ItemStack p_283383_) {
-        int i = p_283209_ + this.getX(p_282968_);
-        int j = p_282807_ + this.getY(p_282968_);
+    public void extractIcon(final GuiGraphicsExtractor graphics, final int xo, final int yo, final int index, final ItemStack icon) {
+        int x = xo + this.getX(index);
+        int y = yo + this.getY(index);
         switch (this) {
             case ABOVE:
-                i += 6;
-                j += 9;
+                x += 6;
+                y += 9;
                 break;
             case BELOW:
-                i += 6;
-                j += 6;
+                x += 6;
+                y += 6;
                 break;
             case LEFT:
-                i += 10;
-                j += 5;
+                x += 10;
+                y += 5;
                 break;
             case RIGHT:
-                i += 6;
-                j += 5;
+                x += 6;
+                y += 5;
         }
 
-        p_281370_.renderFakeItem(p_283383_, i, j);
+        graphics.fakeItem(icon, x, y);
     }
 
-    public int getX(int p_97212_) {
-        switch (this) {
-            case ABOVE:
-                return (this.width + 4) * p_97212_;
-            case BELOW:
-                return (this.width + 4) * p_97212_;
-            case LEFT:
-                return -this.width + 4;
-            case RIGHT:
-                return 248;
-            default:
-                throw new UnsupportedOperationException("Don't know what this tab type is!" + this);
-        }
+    public int getX(final int index) {
+        return switch (this) {
+            case ABOVE -> (this.width + 4) * index;
+            case BELOW -> (this.width + 4) * index;
+            case LEFT -> -this.width + 4;
+            case RIGHT -> 248;
+        };
     }
 
-    public int getY(int p_97233_) {
-        switch (this) {
-            case ABOVE:
-                return -this.height + 4;
-            case BELOW:
-                return 136;
-            case LEFT:
-                return this.height * p_97233_;
-            case RIGHT:
-                return this.height * p_97233_;
-            default:
-                throw new UnsupportedOperationException("Don't know what this tab type is!" + this);
-        }
+    public int getY(final int index) {
+        return switch (this) {
+            case ABOVE -> -this.height + 4;
+            case BELOW -> 136;
+            case LEFT -> this.height * index;
+            case RIGHT -> this.height * index;
+        };
     }
 
-    public boolean isMouseOver(int p_97214_, int p_97215_, int p_97216_, double p_97217_, double p_97218_) {
-        int i = p_97214_ + this.getX(p_97216_);
-        int j = p_97215_ + this.getY(p_97216_);
-        return p_97217_ > i && p_97217_ < i + this.width && p_97218_ > j && p_97218_ < j + this.height;
+    public boolean isMouseOver(final int xo, final int yo, final int index, final double mx, final double my) {
+        int x = xo + this.getX(index);
+        int y = yo + this.getY(index);
+        return mx > x && mx < x + this.width && my > y && my < y + this.height;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Sprites(Identifier first, Identifier middle, Identifier last) {
+        private record Sprites(Identifier first, Identifier middle, Identifier last) {
     }
 }

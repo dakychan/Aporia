@@ -1,26 +1,22 @@
 package net.minecraft.client;
 
 import it.unimi.dsi.fastutil.floats.FloatUnaryOperator;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface DeltaTracker {
     DeltaTracker ZERO = new DeltaTracker.DefaultValue(0.0F);
     DeltaTracker ONE = new DeltaTracker.DefaultValue(1.0F);
 
     float getGameTimeDeltaTicks();
 
-    float getGameTimeDeltaPartialTick(boolean p_345465_);
+    float getGameTimeDeltaPartialTick(boolean ignoreFrozenGame);
 
     float getRealtimeDeltaTicks();
 
-    @OnlyIn(Dist.CLIENT)
-    public static class DefaultValue implements DeltaTracker {
+        class DefaultValue implements DeltaTracker {
         private final float value;
 
-        DefaultValue(float p_343701_) {
-            this.value = p_343701_;
+        private DefaultValue(final float value) {
+            this.value = value;
         }
 
         @Override
@@ -29,7 +25,7 @@ public interface DeltaTracker {
         }
 
         @Override
-        public float getGameTimeDeltaPartialTick(boolean p_344036_) {
+        public float getGameTimeDeltaPartialTick(final boolean ignored) {
             return this.value;
         }
 
@@ -39,8 +35,7 @@ public interface DeltaTracker {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Timer implements DeltaTracker {
+        class Timer implements DeltaTracker {
         private float deltaTicks;
         private float deltaTickResidual;
         private float realtimeDeltaTicks;
@@ -52,33 +47,28 @@ public interface DeltaTracker {
         private boolean paused;
         private boolean frozen;
 
-        public Timer(float p_343882_, long p_344080_, FloatUnaryOperator p_343677_) {
-            this.msPerTick = 1000.0F / p_343882_;
-            this.lastUiMs = this.lastMs = p_344080_;
-            this.targetMsptProvider = p_343677_;
+        public Timer(final float ticksPerSecond, final long currentMs, final FloatUnaryOperator targetMsptProvider) {
+            this.msPerTick = 1000.0F / ticksPerSecond;
+            this.lastUiMs = this.lastMs = currentMs;
+            this.targetMsptProvider = targetMsptProvider;
         }
 
-        public int advanceTime(long p_343106_, boolean p_342855_) {
-            this.advanceRealTime(p_343106_);
-            return p_342855_ ? this.advanceGameTime(p_343106_) : 0;
-        }
-
-        private int advanceGameTime(long p_342679_) {
-            this.deltaTicks = (float)(p_342679_ - this.lastMs) / this.targetMsptProvider.apply(this.msPerTick);
-            this.lastMs = p_342679_;
+        public int advanceGameTime(final long currentMs) {
+            this.deltaTicks = (float)(currentMs - this.lastMs) / this.targetMsptProvider.apply(this.msPerTick);
+            this.lastMs = currentMs;
             this.deltaTickResidual = this.deltaTickResidual + this.deltaTicks;
-            int i = (int)this.deltaTickResidual;
-            this.deltaTickResidual -= i;
-            return i;
+            int ticks = (int)this.deltaTickResidual;
+            this.deltaTickResidual -= ticks;
+            return ticks;
         }
 
-        private void advanceRealTime(long p_342368_) {
-            this.realtimeDeltaTicks = (float)(p_342368_ - this.lastUiMs) / this.msPerTick;
-            this.lastUiMs = p_342368_;
+        public void advanceRealTime(final long currentMs) {
+            this.realtimeDeltaTicks = (float)(currentMs - this.lastUiMs) / this.msPerTick;
+            this.lastUiMs = currentMs;
         }
 
-        public void updatePauseState(boolean p_342098_) {
-            if (p_342098_) {
+        public void updatePauseState(final boolean pauseState) {
+            if (pauseState) {
                 this.pause();
             } else {
                 this.unPause();
@@ -101,8 +91,8 @@ public interface DeltaTracker {
             this.paused = false;
         }
 
-        public void updateFrozenState(boolean p_344005_) {
-            this.frozen = p_344005_;
+        public void updateFrozenState(final boolean frozen) {
+            this.frozen = frozen;
         }
 
         @Override
@@ -111,8 +101,8 @@ public interface DeltaTracker {
         }
 
         @Override
-        public float getGameTimeDeltaPartialTick(boolean p_344876_) {
-            if (!p_344876_ && this.frozen) {
+        public float getGameTimeDeltaPartialTick(final boolean ignoreFrozenGame) {
+            if (!ignoreFrozenGame && this.frozen) {
                 return 1.0F;
             } else {
                 return this.paused ? this.pausedDeltaTickResidual : this.deltaTickResidual;

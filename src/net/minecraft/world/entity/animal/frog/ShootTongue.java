@@ -32,7 +32,7 @@ public class ShootTongue extends Behavior<Frog> {
     private final SoundEvent eatSound;
     private ShootTongue.State state = ShootTongue.State.DONE;
 
-    public ShootTongue(SoundEvent p_218620_, SoundEvent p_218621_) {
+    public ShootTongue(final SoundEvent tongueSound, final SoundEvent eatSound) {
         super(
             ImmutableMap.of(
                 MemoryModuleType.WALK_TARGET,
@@ -46,69 +46,69 @@ public class ShootTongue extends Behavior<Frog> {
             ),
             100
         );
-        this.tongueSound = p_218620_;
-        this.eatSound = p_218621_;
+        this.tongueSound = tongueSound;
+        this.eatSound = eatSound;
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_218630_, Frog p_218631_) {
-        LivingEntity livingentity = p_218631_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
-        boolean flag = this.canPathfindToTarget(p_218631_, livingentity);
-        if (!flag) {
-            p_218631_.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-            this.addUnreachableTargetToMemory(p_218631_, livingentity);
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Frog body) {
+        LivingEntity target = body.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+        boolean canPathfindToTarget = this.canPathfindToTarget(body, target);
+        if (!canPathfindToTarget) {
+            body.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+            this.addUnreachableTargetToMemory(body, target);
         }
 
-        return flag && p_218631_.getPose() != Pose.CROAKING && Frog.canEat(livingentity);
+        return canPathfindToTarget && body.getPose() != Pose.CROAKING && Frog.canEat(target);
     }
 
-    protected boolean canStillUse(ServerLevel p_218633_, Frog p_218634_, long p_218635_) {
-        return p_218634_.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET)
+    protected boolean canStillUse(final ServerLevel level, final Frog body, final long timestamp) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET)
             && this.state != ShootTongue.State.DONE
-            && !p_218634_.getBrain().hasMemoryValue(MemoryModuleType.IS_PANICKING);
+            && !body.getBrain().hasMemoryValue(MemoryModuleType.IS_PANICKING);
     }
 
-    protected void start(ServerLevel p_218644_, Frog p_218645_, long p_218646_) {
-        LivingEntity livingentity = p_218645_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
-        BehaviorUtils.lookAtEntity(p_218645_, livingentity);
-        p_218645_.setTongueTarget(livingentity);
-        p_218645_.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(livingentity.position(), 2.0F, 0));
+    protected void start(final ServerLevel level, final Frog body, final long timestamp) {
+        LivingEntity target = body.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+        BehaviorUtils.lookAtEntity(body, target);
+        body.setTongueTarget(target);
+        body.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(target.position(), 2.0F, 0));
         this.calculatePathCounter = 10;
         this.state = ShootTongue.State.MOVE_TO_TARGET;
     }
 
-    protected void stop(ServerLevel p_218652_, Frog p_218653_, long p_218654_) {
-        p_218653_.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
-        p_218653_.eraseTongueTarget();
-        p_218653_.setPose(Pose.STANDING);
+    protected void stop(final ServerLevel level, final Frog body, final long timestamp) {
+        body.getBrain().eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        body.eraseTongueTarget();
+        body.setPose(Pose.STANDING);
     }
 
-    private void eatEntity(ServerLevel p_218641_, Frog p_218642_) {
-        p_218641_.playSound(null, p_218642_, this.eatSound, SoundSource.NEUTRAL, 2.0F, 1.0F);
-        Optional<Entity> optional = p_218642_.getTongueTarget();
-        if (optional.isPresent()) {
-            Entity entity = optional.get();
-            if (entity.isAlive()) {
-                p_218642_.doHurtTarget(p_218641_, entity);
-                if (!entity.isAlive()) {
-                    entity.remove(Entity.RemovalReason.KILLED);
+    private void eatEntity(final ServerLevel level, final Frog body) {
+        level.playSound(null, body, this.eatSound, SoundSource.NEUTRAL, 2.0F, 1.0F);
+        Optional<Entity> tongueTarget = body.getTongueTarget();
+        if (tongueTarget.isPresent()) {
+            Entity target = tongueTarget.get();
+            if (target.isAlive()) {
+                body.doHurtTarget(level, target);
+                if (!target.isAlive()) {
+                    target.remove(Entity.RemovalReason.KILLED);
                 }
             }
         }
     }
 
-    protected void tick(ServerLevel p_218660_, Frog p_218661_, long p_218662_) {
-        LivingEntity livingentity = p_218661_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
-        p_218661_.setTongueTarget(livingentity);
+    protected void tick(final ServerLevel level, final Frog body, final long timestamp) {
+        LivingEntity target = body.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get();
+        body.setTongueTarget(target);
         switch (this.state) {
             case MOVE_TO_TARGET:
-                if (livingentity.distanceTo(p_218661_) < 1.75F) {
-                    p_218660_.playSound(null, p_218661_, this.tongueSound, SoundSource.NEUTRAL, 2.0F, 1.0F);
-                    p_218661_.setPose(Pose.USING_TONGUE);
-                    livingentity.setDeltaMovement(livingentity.position().vectorTo(p_218661_.position()).normalize().scale(0.75));
+                if (target.distanceTo(body) < 1.75F) {
+                    level.playSound(null, body, this.tongueSound, SoundSource.NEUTRAL, 2.0F, 1.0F);
+                    body.setPose(Pose.USING_TONGUE);
+                    target.setDeltaMovement(target.position().vectorTo(body.position()).normalize().scale(0.75));
                     this.eatAnimationTimer = 0;
                     this.state = ShootTongue.State.CATCH_ANIMATION;
                 } else if (this.calculatePathCounter <= 0) {
-                    p_218661_.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(livingentity.position(), 2.0F, 0));
+                    body.getBrain().setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(target.position(), 2.0F, 0));
                     this.calculatePathCounter = 10;
                 } else {
                     this.calculatePathCounter--;
@@ -117,7 +117,7 @@ public class ShootTongue extends Behavior<Frog> {
             case CATCH_ANIMATION:
                 if (this.eatAnimationTimer++ >= 6) {
                     this.state = ShootTongue.State.EAT_ANIMATION;
-                    this.eatEntity(p_218660_, p_218661_);
+                    this.eatEntity(level, body);
                 }
                 break;
             case EAT_ANIMATION:
@@ -130,26 +130,26 @@ public class ShootTongue extends Behavior<Frog> {
         }
     }
 
-    private boolean canPathfindToTarget(Frog p_238359_, LivingEntity p_238360_) {
-        Path path = p_238359_.getNavigation().createPath(p_238360_, 0);
+    private boolean canPathfindToTarget(final Frog body, final LivingEntity target) {
+        Path path = body.getNavigation().createPath(target, 0);
         return path != null && path.getDistToTarget() < 1.75F;
     }
 
-    private void addUnreachableTargetToMemory(Frog p_238444_, LivingEntity p_243335_) {
-        List<UUID> list = p_238444_.getBrain().getMemory(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS).orElseGet(ArrayList::new);
-        boolean flag = !list.contains(p_243335_.getUUID());
-        if (list.size() == 5 && flag) {
-            list.remove(0);
+    private void addUnreachableTargetToMemory(final Frog body, final LivingEntity entity) {
+        List<UUID> unreachableTargets = body.getBrain().getMemory(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS).orElseGet(ArrayList::new);
+        boolean shouldAddUnreachableTarget = !unreachableTargets.contains(entity.getUUID());
+        if (unreachableTargets.size() == 5 && shouldAddUnreachableTarget) {
+            unreachableTargets.remove(0);
         }
 
-        if (flag) {
-            list.add(p_243335_.getUUID());
+        if (shouldAddUnreachableTarget) {
+            unreachableTargets.add(entity.getUUID());
         }
 
-        p_238444_.getBrain().setMemoryWithExpiry(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS, list, 100L);
+        body.getBrain().setMemoryWithExpiry(MemoryModuleType.UNREACHABLE_TONGUE_TARGETS, unreachableTargets, 100L);
     }
 
-    static enum State {
+    private enum State {
         MOVE_TO_TARGET,
         CATCH_ANIMATION,
         EAT_ANIMATION,

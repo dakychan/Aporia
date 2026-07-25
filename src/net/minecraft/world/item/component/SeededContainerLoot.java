@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.function.Consumer;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.network.chat.Component;
@@ -14,15 +13,17 @@ import net.minecraft.world.level.storage.loot.LootTable;
 public record SeededContainerLoot(ResourceKey<LootTable> lootTable, long seed) implements TooltipProvider {
     private static final Component UNKNOWN_CONTENTS = Component.translatable("item.container.loot_table.unknown");
     public static final Codec<SeededContainerLoot> CODEC = RecordCodecBuilder.create(
-        p_390822_ -> p_390822_.group(
+        i -> i.group(
                 LootTable.KEY_CODEC.fieldOf("loot_table").forGetter(SeededContainerLoot::lootTable),
                 Codec.LONG.optionalFieldOf("seed", 0L).forGetter(SeededContainerLoot::seed)
             )
-            .apply(p_390822_, SeededContainerLoot::new)
+            .apply(i, SeededContainerLoot::new)
     );
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_393479_, Consumer<Component> p_391736_, TooltipFlag p_396577_, DataComponentGetter p_397801_) {
-        p_391736_.accept(UNKNOWN_CONTENTS);
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        consumer.accept(UNKNOWN_CONTENTS);
     }
 }

@@ -3,11 +3,13 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -21,26 +23,27 @@ public class SpawnerBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    protected SpawnerBlock(BlockBehaviour.Properties p_56781_) {
-        super(p_56781_);
+    protected SpawnerBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_154687_, BlockState p_154688_) {
-        return new SpawnerBlockEntity(p_154687_, p_154688_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new SpawnerBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_154683_, BlockState p_154684_, BlockEntityType<T> p_154685_) {
-        return createTickerHelper(p_154685_, BlockEntityType.MOB_SPAWNER, p_154683_.isClientSide() ? SpawnerBlockEntity::clientTick : SpawnerBlockEntity::serverTick);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return createTickerHelper(type, BlockEntityTypes.MOB_SPAWNER, level.isClientSide() ? SpawnerBlockEntity::clientTick : SpawnerBlockEntity::serverTick);
     }
 
     @Override
-    protected void spawnAfterBreak(BlockState p_222477_, ServerLevel p_222478_, BlockPos p_222479_, ItemStack p_222480_, boolean p_222481_) {
-        super.spawnAfterBreak(p_222477_, p_222478_, p_222479_, p_222480_, p_222481_);
-        if (p_222481_) {
-            int i = 15 + p_222478_.random.nextInt(15) + p_222478_.random.nextInt(15);
-            this.popExperience(p_222478_, p_222479_, i);
+    protected void spawnAfterBreak(final BlockState state, final ServerLevel level, final BlockPos pos, final ItemStack tool, final boolean dropExperience) {
+        super.spawnAfterBreak(state, level, pos, tool, dropExperience);
+        if (dropExperience) {
+            RandomSource random = level.getRandom();
+            int magicCount = 15 + random.nextInt(15) + random.nextInt(15);
+            this.popExperience(level, pos, magicCount);
         }
     }
 }

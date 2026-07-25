@@ -3,7 +3,6 @@ package net.minecraft.advancements;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.commands.CacheableFunction;
@@ -27,63 +26,66 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record AdvancementRewards(int experience, List<ResourceKey<LootTable>> loot, List<ResourceKey<Recipe<?>>> recipes, Optional<CacheableFunction> function) {
     public static final Codec<AdvancementRewards> CODEC = RecordCodecBuilder.create(
-        p_389118_ -> p_389118_.group(
+        i -> i.group(
                 Codec.INT.optionalFieldOf("experience", 0).forGetter(AdvancementRewards::experience),
                 LootTable.KEY_CODEC.listOf().optionalFieldOf("loot", List.of()).forGetter(AdvancementRewards::loot),
                 Recipe.KEY_CODEC.listOf().optionalFieldOf("recipes", List.of()).forGetter(AdvancementRewards::recipes),
                 CacheableFunction.CODEC.optionalFieldOf("function").forGetter(AdvancementRewards::function)
             )
-            .apply(p_389118_, AdvancementRewards::new)
+            .apply(i, AdvancementRewards::new)
     );
     public static final AdvancementRewards EMPTY = new AdvancementRewards(0, List.of(), List.of(), Optional.empty());
 
-    public void grant(ServerPlayer p_9990_) {
-        p_9990_.giveExperiencePoints(this.experience);
-        ServerLevel serverlevel = p_9990_.level();
-        MinecraftServer minecraftserver = serverlevel.getServer();
-        LootParams lootparams = new LootParams.Builder(serverlevel)
-            .withParameter(LootContextParams.THIS_ENTITY, p_9990_)
-            .withParameter(LootContextParams.ORIGIN, p_9990_.position())
+    public void grant(final ServerPlayer player) {
+        player.giveExperiencePoints(this.experience);
+        ServerLevel level = player.level();
+        MinecraftServer server = level.getServer();
+        LootParams params = new LootParams.Builder(level)
+            .withParameter(LootContextParams.THIS_ENTITY, player)
+            .withParameter(LootContextParams.ORIGIN, player.position())
             .create(LootContextParamSets.ADVANCEMENT_REWARD);
-        boolean flag = false;
+        boolean changes = false;
 
-        for (ResourceKey<LootTable> resourcekey : this.loot) {
-            for (ItemStack itemstack : minecraftserver.reloadableRegistries().getLootTable(resourcekey).getRandomItems(lootparams)) {
-                if (p_9990_.addItem(itemstack)) {
-                    serverlevel.playSound(
+        for (ResourceKey<LootTable> lootTable : this.loot) {
+            for (ItemStack itemStack : server.reloadableRegistries().getLootTable(lootTable).getRandomItems(params)) {
+                if (player.addItem(itemStack)) {
+                    level.playSound(
                         null,
-                        p_9990_.getX(),
-                        p_9990_.getY(),
-                        p_9990_.getZ(),
+                        player.getX(),
+                        player.getY(),
+                        player.getZ(),
                         SoundEvents.ITEM_PICKUP,
                         SoundSource.PLAYERS,
                         0.2F,
-                        ((p_9990_.getRandom().nextFloat() - p_9990_.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F
+                        ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F
                     );
-                    flag = true;
+                    changes = true;
                 } else {
-                    ItemEntity itementity = p_9990_.drop(itemstack, false);
-                    if (itementity != null) {
-                        itementity.setNoPickUpDelay();
-                        itementity.setTarget(p_9990_.getUUID());
+                    ItemEntity drop = player.drop(itemStack, false);
+                    if (drop != null) {
+                        drop.setNoPickUpDelay();
+                        drop.setTarget(player.getUUID());
                     }
                 }
             }
         }
 
-        if (flag) {
-            p_9990_.containerMenu.broadcastChanges();
+        if (changes) {
+            player.containerMenu.broadcastChanges();
         }
 
         if (!this.recipes.isEmpty()) {
-            p_9990_.awardRecipesByKey(this.recipes);
+            player.awardRecipesByKey(this.recipes);
         }
 
         this.function
-            .flatMap(p_308107_ -> p_308107_.get(minecraftserver.getFunctions()))
+            .flatMap(function -> function.get(server.getFunctions()))
             .ifPresent(
-                p_447779_ -> minecraftserver.getFunctions()
-                    .execute((CommandFunction<CommandSourceStack>)p_447779_, p_9990_.createCommandSourceStack().withSuppressedOutput().withPermission(LevelBasedPermissionSet.GAMEMASTER))
+                function -> server.getFunctions()
+                    .execute(
+                        (CommandFunction<CommandSourceStack>)function,
+                        player.createCommandSourceStack().withSuppressedOutput().withPermission(LevelBasedPermissionSet.GAMEMASTER)
+                    )
             );
     }
 
@@ -93,39 +95,39 @@ public record AdvancementRewards(int experience, List<ResourceKey<LootTable>> lo
         private final ImmutableList.Builder<ResourceKey<Recipe<?>>> recipes = ImmutableList.builder();
         private Optional<Identifier> function = Optional.empty();
 
-        public static AdvancementRewards.Builder experience(int p_10006_) {
-            return new AdvancementRewards.Builder().addExperience(p_10006_);
+        public static AdvancementRewards.Builder experience(final int amount) {
+            return new AdvancementRewards.Builder().addExperience(amount);
         }
 
-        public AdvancementRewards.Builder addExperience(int p_10008_) {
-            this.experience += p_10008_;
+        public AdvancementRewards.Builder addExperience(final int amount) {
+            this.experience += amount;
             return this;
         }
 
-        public static AdvancementRewards.Builder loot(ResourceKey<LootTable> p_332404_) {
-            return new AdvancementRewards.Builder().addLootTable(p_332404_);
+        public static AdvancementRewards.Builder loot(final ResourceKey<LootTable> id) {
+            return new AdvancementRewards.Builder().addLootTable(id);
         }
 
-        public AdvancementRewards.Builder addLootTable(ResourceKey<LootTable> p_330122_) {
-            this.loot.add(p_330122_);
+        public AdvancementRewards.Builder addLootTable(final ResourceKey<LootTable> id) {
+            this.loot.add(id);
             return this;
         }
 
-        public static AdvancementRewards.Builder recipe(ResourceKey<Recipe<?>> p_365956_) {
-            return new AdvancementRewards.Builder().addRecipe(p_365956_);
+        public static AdvancementRewards.Builder recipe(final ResourceKey<Recipe<?>> id) {
+            return new AdvancementRewards.Builder().addRecipe(id);
         }
 
-        public AdvancementRewards.Builder addRecipe(ResourceKey<Recipe<?>> p_362523_) {
-            this.recipes.add(p_362523_);
+        public AdvancementRewards.Builder addRecipe(final ResourceKey<Recipe<?>> id) {
+            this.recipes.add(id);
             return this;
         }
 
-        public static AdvancementRewards.Builder function(Identifier p_452756_) {
-            return new AdvancementRewards.Builder().runs(p_452756_);
+        public static AdvancementRewards.Builder function(final Identifier id) {
+            return new AdvancementRewards.Builder().runs(id);
         }
 
-        public AdvancementRewards.Builder runs(Identifier p_457198_) {
-            this.function = Optional.of(p_457198_);
+        public AdvancementRewards.Builder runs(final Identifier function) {
+            this.function = Optional.of(function);
             return this;
         }
 

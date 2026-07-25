@@ -3,7 +3,7 @@ package net.minecraft.world.item;
 import com.google.common.collect.ImmutableMap.Builder;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
@@ -52,59 +52,61 @@ public class AxeItem extends Item {
         .put(Blocks.BAMBOO_BLOCK, Blocks.STRIPPED_BAMBOO_BLOCK)
         .build();
 
-    public AxeItem(ToolMaterial p_365403_, float p_363626_, float p_361899_, Item.Properties p_40524_) {
-        super(p_40524_.axe(p_365403_, p_363626_, p_361899_));
+    public AxeItem(final ToolMaterial material, final float attackDamageBaseline, final float attackSpeedBaseline, final Item.Properties properties) {
+        super(properties.axe(material, attackDamageBaseline, attackSpeedBaseline));
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_40529_) {
-        Level level = p_40529_.getLevel();
-        BlockPos blockpos = p_40529_.getClickedPos();
-        Player player = p_40529_.getPlayer();
-        if (playerHasBlockingItemUseIntent(p_40529_)) {
+    public InteractionResult useOn(final UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        Player player = context.getPlayer();
+        if (playerHasBlockingItemUseIntent(context)) {
             return InteractionResult.PASS;
-        } else {
-            Optional<BlockState> optional = this.evaluateNewBlockState(level, blockpos, player, level.getBlockState(blockpos));
-            if (optional.isEmpty()) {
-                return InteractionResult.PASS;
-            } else {
-                ItemStack itemstack = p_40529_.getItemInHand();
-                if (player instanceof ServerPlayer) {
-                    CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger((ServerPlayer)player, blockpos, itemstack);
-                }
-
-                level.setBlock(blockpos, optional.get(), 11);
-                level.gameEvent(GameEvent.BLOCK_CHANGE, blockpos, GameEvent.Context.of(player, optional.get()));
-                if (player != null) {
-                    itemstack.hurtAndBreak(1, player, p_40529_.getHand().asEquipmentSlot());
-                }
-
-                return InteractionResult.SUCCESS;
-            }
         }
+
+        Optional<BlockState> newBlock = this.evaluateNewBlockState(level, pos, player, level.getBlockState(pos));
+        if (newBlock.isEmpty()) {
+            return InteractionResult.PASS;
+        }
+
+        ItemStack itemInHand = context.getItemInHand();
+        if (player instanceof ServerPlayer serverPlayer) {
+            CriteriaTriggers.ITEM_USED_ON_BLOCK.trigger(serverPlayer, pos, itemInHand);
+        }
+
+        level.setBlock(pos, newBlock.get(), 11);
+        level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(player, newBlock.get()));
+        if (player != null) {
+            itemInHand.hurtAndBreak(1, player, context.getHand().asEquipmentSlot());
+        }
+
+        return InteractionResult.SUCCESS;
     }
 
-    private static boolean playerHasBlockingItemUseIntent(UseOnContext p_393811_) {
-        Player player = p_393811_.getPlayer();
-        return p_393811_.getHand().equals(InteractionHand.MAIN_HAND) && player.getOffhandItem().has(DataComponents.BLOCKS_ATTACKS) && !player.isSecondaryUseActive();
+    private static boolean playerHasBlockingItemUseIntent(final UseOnContext context) {
+        Player player = context.getPlayer();
+        return context.getHand().equals(InteractionHand.MAIN_HAND)
+            && player.getOffhandItem().has(DataComponents.BLOCKS_ATTACKS)
+            && !player.isSecondaryUseActive();
     }
 
-    private Optional<BlockState> evaluateNewBlockState(Level p_312809_, BlockPos p_313114_, @Nullable Player p_312029_, BlockState p_311198_) {
-        Optional<BlockState> optional = this.getStripped(p_311198_);
-        if (optional.isPresent()) {
-            p_312809_.playSound(p_312029_, p_313114_, SoundEvents.AXE_STRIP, SoundSource.BLOCKS, 1.0F, 1.0F);
-            return optional;
+    private Optional<BlockState> evaluateNewBlockState(final Level level, final BlockPos pos, final @Nullable Player player, final BlockState oldState) {
+        Optional<BlockState> strippedBlock = this.getStripped(oldState);
+        if (strippedBlock.isPresent()) {
+            level.playSound(player, pos, SoundEvents.AXE_STRIP, SoundSource.BLOCKS, 1.0F, 1.0F);
+            return strippedBlock;
         } else {
-            Optional<BlockState> optional1 = WeatheringCopper.getPrevious(p_311198_);
-            if (optional1.isPresent()) {
-                spawnSoundAndParticle(p_312809_, p_313114_, p_312029_, p_311198_, SoundEvents.AXE_SCRAPE, 3005);
-                return optional1;
+            Optional<BlockState> scrapedBlock = WeatheringCopper.getPrevious(oldState);
+            if (scrapedBlock.isPresent()) {
+                spawnSoundAndParticle(level, pos, player, oldState, SoundEvents.AXE_SCRAPE, 3005);
+                return scrapedBlock;
             } else {
-                Optional<BlockState> optional2 = Optional.ofNullable(HoneycombItem.WAX_OFF_BY_BLOCK.get().get(p_311198_.getBlock()))
-                    .map(p_150694_ -> p_150694_.withPropertiesOf(p_311198_));
-                if (optional2.isPresent()) {
-                    spawnSoundAndParticle(p_312809_, p_313114_, p_312029_, p_311198_, SoundEvents.AXE_WAX_OFF, 3004);
-                    return optional2;
+                Optional<BlockState> waxoffBlock = Optional.ofNullable(HoneycombItem.WAX_OFF_BY_BLOCK.get().get(oldState.getBlock()))
+                    .map(b -> b.withPropertiesOf(oldState));
+                if (waxoffBlock.isPresent()) {
+                    spawnSoundAndParticle(level, pos, player, oldState, SoundEvents.AXE_WAX_OFF, 3004);
+                    return waxoffBlock;
                 } else {
                     return Optional.empty();
                 }
@@ -112,18 +114,20 @@ public class AxeItem extends Item {
         }
     }
 
-    private static void spawnSoundAndParticle(Level p_430522_, BlockPos p_426660_, @Nullable Player p_430118_, BlockState p_423483_, SoundEvent p_431439_, int p_431501_) {
-        p_430522_.playSound(p_430118_, p_426660_, p_431439_, SoundSource.BLOCKS, 1.0F, 1.0F);
-        p_430522_.levelEvent(p_430118_, p_431501_, p_426660_, 0);
-        if (p_423483_.getBlock() instanceof ChestBlock && p_423483_.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
-            BlockPos blockpos = ChestBlock.getConnectedBlockPos(p_426660_, p_423483_);
-            p_430522_.gameEvent(GameEvent.BLOCK_CHANGE, blockpos, GameEvent.Context.of(p_430118_, p_430522_.getBlockState(blockpos)));
-            p_430522_.levelEvent(p_430118_, p_431501_, blockpos, 0);
+    private static void spawnSoundAndParticle(
+        final Level level, final BlockPos pos, final @Nullable Player player, final BlockState oldState, final SoundEvent soundEvent, final int particle
+    ) {
+        level.playSound(player, pos, soundEvent, SoundSource.BLOCKS, 1.0F, 1.0F);
+        level.levelEvent(player, particle, pos, 0);
+        if (oldState.getBlock() instanceof ChestBlock && oldState.getValue(ChestBlock.TYPE) != ChestType.SINGLE) {
+            BlockPos neighborPos = ChestBlock.getConnectedBlockPos(pos, oldState);
+            level.gameEvent(GameEvent.BLOCK_CHANGE, neighborPos, GameEvent.Context.of(player, level.getBlockState(neighborPos)));
+            level.levelEvent(player, particle, neighborPos, 0);
         }
     }
 
-    private Optional<BlockState> getStripped(BlockState p_150691_) {
-        return Optional.ofNullable(STRIPPABLES.get(p_150691_.getBlock()))
-            .map(p_359378_ -> p_359378_.defaultBlockState().setValue(RotatedPillarBlock.AXIS, p_150691_.getValue(RotatedPillarBlock.AXIS)));
+    private Optional<BlockState> getStripped(final BlockState state) {
+        return Optional.ofNullable(STRIPPABLES.get(state.getBlock()))
+            .map(block -> block.defaultBlockState().setValue(RotatedPillarBlock.AXIS, state.getValue(RotatedPillarBlock.AXIS)));
     }
 }

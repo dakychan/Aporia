@@ -4,26 +4,23 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CompassAngle implements RangeSelectItemModelProperty {
-    public static final MapCodec<CompassAngle> MAP_CODEC = CompassAngleState.MAP_CODEC.xmap(CompassAngle::new, p_375840_ -> p_375840_.state);
+    public static final MapCodec<CompassAngle> MAP_CODEC = CompassAngleState.MAP_CODEC.xmap(CompassAngle::new, c -> c.state);
     private final CompassAngleState state;
 
-    public CompassAngle(boolean p_378444_, CompassAngleState.CompassTarget p_378609_) {
-        this(new CompassAngleState(p_378444_, p_378609_));
+    public CompassAngle(final boolean wobble, final CompassAngleState.CompassTarget compassTarget) {
+        this(new CompassAngleState(wobble, compassTarget));
     }
 
-    private CompassAngle(CompassAngleState p_377062_) {
-        this.state = p_377062_;
+    private CompassAngle(final CompassAngleState state) {
+        this.state = state;
     }
 
     @Override
-    public float get(ItemStack p_378698_, @Nullable ClientLevel p_375696_, @Nullable ItemOwner p_431479_, int p_377498_) {
-        return this.state.get(p_378698_, p_375696_, p_431479_, p_377498_);
+    public float get(final ItemStack itemStack, final @Nullable ClientLevel level, final @Nullable ItemOwner owner, final int seed) {
+        return this.state.get(itemStack, level, owner, seed);
     }
 
     @Override

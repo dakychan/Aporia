@@ -3,17 +3,13 @@ package net.minecraft.client.multiplayer.chat;
 import com.mojang.serialization.Codec;
 import java.time.Instant;
 import java.util.Optional;
-import net.minecraft.client.GuiMessageTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public enum ChatTrustLevel implements StringRepresentable {
     SECURE("secure"),
     MODIFIED("modified"),
@@ -22,42 +18,42 @@ public enum ChatTrustLevel implements StringRepresentable {
     public static final Codec<ChatTrustLevel> CODEC = StringRepresentable.fromEnum(ChatTrustLevel::values);
     private final String serializedName;
 
-    private ChatTrustLevel(final String p_254190_) {
-        this.serializedName = p_254190_;
+    ChatTrustLevel(final String serializedName) {
+        this.serializedName = serializedName;
     }
 
-    public static ChatTrustLevel evaluate(PlayerChatMessage p_248663_, Component p_248544_, Instant p_252024_) {
-        if (!p_248663_.hasSignature() || p_248663_.hasExpiredClient(p_252024_)) {
+    public static ChatTrustLevel evaluate(final PlayerChatMessage message, final Component decoratedMessage, final Instant received) {
+        if (!message.hasSignature() || message.hasExpiredClient(received)) {
             return NOT_SECURE;
         } else {
-            return isModified(p_248663_, p_248544_) ? MODIFIED : SECURE;
+            return isModified(message, decoratedMessage) ? MODIFIED : SECURE;
         }
     }
 
-    private static boolean isModified(PlayerChatMessage p_252093_, Component p_250811_) {
-        if (!p_250811_.getString().contains(p_252093_.signedContent())) {
+    private static boolean isModified(final PlayerChatMessage message, final Component decoratedMessage) {
+        if (!decoratedMessage.getString().contains(message.signedContent())) {
             return true;
-        } else {
-            Component component = p_252093_.unsignedContent();
-            return component == null ? false : containsModifiedStyle(component);
         }
+
+        Component decoratedContent = message.unsignedContent();
+        return decoratedContent == null ? false : containsModifiedStyle(decoratedContent);
     }
 
-    private static boolean containsModifiedStyle(Component p_251011_) {
-        return p_251011_.<Boolean>visit((p_251711_, p_250844_) -> isModifiedStyle(p_251711_) ? Optional.of(true) : Optional.empty(), Style.EMPTY).orElse(false);
+    private static boolean containsModifiedStyle(final Component decoratedContent) {
+        return decoratedContent.<Boolean>visit((style, contents) -> isModifiedStyle(style) ? Optional.of(true) : Optional.empty(), Style.EMPTY).orElse(false);
     }
 
-    private static boolean isModifiedStyle(Style p_251347_) {
-        return !p_251347_.getFont().equals(FontDescription.DEFAULT);
+    private static boolean isModifiedStyle(final Style style) {
+        return !style.getFont().equals(FontDescription.DEFAULT);
     }
 
     public boolean isNotSecure() {
         return this == NOT_SECURE;
     }
 
-    public @Nullable GuiMessageTag createTag(PlayerChatMessage p_240632_) {
+    public @Nullable GuiMessageTag createTag(final PlayerChatMessage message) {
         return switch (this) {
-            case MODIFIED -> GuiMessageTag.chatModified(p_240632_.signedContent());
+            case MODIFIED -> GuiMessageTag.chatModified(message.signedContent());
             case NOT_SECURE -> GuiMessageTag.chatNotSecure();
             default -> null;
         };

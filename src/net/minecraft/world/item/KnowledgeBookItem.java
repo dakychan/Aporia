@@ -19,37 +19,37 @@ import org.slf4j.Logger;
 public class KnowledgeBookItem extends Item {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public KnowledgeBookItem(Item.Properties p_42822_) {
-        super(p_42822_);
+    public KnowledgeBookItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult use(Level p_42824_, Player p_42825_, InteractionHand p_42826_) {
-        ItemStack itemstack = p_42825_.getItemInHand(p_42826_);
-        List<ResourceKey<Recipe<?>>> list = itemstack.getOrDefault(DataComponents.RECIPES, List.of());
-        itemstack.consume(1, p_42825_);
-        if (list.isEmpty()) {
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        List<ResourceKey<Recipe<?>>> recipeIds = itemStack.getOrDefault(DataComponents.RECIPES, List.of());
+        itemStack.consume(1, player);
+        if (recipeIds.isEmpty()) {
             return InteractionResult.FAIL;
-        } else {
-            if (!p_42824_.isClientSide()) {
-                RecipeManager recipemanager = p_42824_.getServer().getRecipeManager();
-                List<RecipeHolder<?>> list1 = new ArrayList<>(list.size());
+        }
 
-                for (ResourceKey<Recipe<?>> resourcekey : list) {
-                    Optional<RecipeHolder<?>> optional = recipemanager.byKey(resourcekey);
-                    if (!optional.isPresent()) {
-                        LOGGER.error("Invalid recipe: {}", resourcekey);
-                        return InteractionResult.FAIL;
-                    }
+        if (!level.isClientSide()) {
+            RecipeManager recipeManager = level.getServer().getRecipeManager();
+            List<RecipeHolder<?>> recipes = new ArrayList<>(recipeIds.size());
 
-                    list1.add(optional.get());
+            for (ResourceKey<Recipe<?>> recipeId : recipeIds) {
+                Optional<RecipeHolder<?>> recipe = recipeManager.byKey(recipeId);
+                if (!recipe.isPresent()) {
+                    LOGGER.error("Invalid recipe: {}", recipeId);
+                    return InteractionResult.FAIL;
                 }
 
-                p_42825_.awardRecipes(list1);
-                p_42825_.awardStat(Stats.ITEM_USED.get(this));
+                recipes.add(recipe.get());
             }
 
-            return InteractionResult.SUCCESS;
+            player.awardRecipes(recipes);
+            player.awardStat(Stats.ITEM_USED.get(this));
         }
+
+        return InteractionResult.SUCCESS;
     }
 }

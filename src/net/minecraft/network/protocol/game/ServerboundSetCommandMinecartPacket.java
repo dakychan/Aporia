@@ -4,7 +4,6 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.vehicle.minecart.MinecartCommandBlock;
 import net.minecraft.world.level.BaseCommandBlock;
 import net.minecraft.world.level.Level;
@@ -18,22 +17,22 @@ public class ServerboundSetCommandMinecartPacket implements Packet<ServerGamePac
     private final String command;
     private final boolean trackOutput;
 
-    public ServerboundSetCommandMinecartPacket(int p_134534_, String p_134535_, boolean p_134536_) {
-        this.entity = p_134534_;
-        this.command = p_134535_;
-        this.trackOutput = p_134536_;
+    public ServerboundSetCommandMinecartPacket(final int entity, final String command, final boolean trackOutput) {
+        this.entity = entity;
+        this.command = command;
+        this.trackOutput = trackOutput;
     }
 
-    private ServerboundSetCommandMinecartPacket(FriendlyByteBuf p_179758_) {
-        this.entity = p_179758_.readVarInt();
-        this.command = p_179758_.readUtf();
-        this.trackOutput = p_179758_.readBoolean();
+    private ServerboundSetCommandMinecartPacket(final FriendlyByteBuf input) {
+        this.entity = input.readVarInt();
+        this.command = input.readUtf();
+        this.trackOutput = input.readBoolean();
     }
 
-    private void write(FriendlyByteBuf p_134547_) {
-        p_134547_.writeVarInt(this.entity);
-        p_134547_.writeUtf(this.command);
-        p_134547_.writeBoolean(this.trackOutput);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.entity);
+        output.writeUtf(this.command);
+        output.writeBoolean(this.trackOutput);
     }
 
     @Override
@@ -41,13 +40,12 @@ public class ServerboundSetCommandMinecartPacket implements Packet<ServerGamePac
         return GamePacketTypes.SERVERBOUND_SET_COMMAND_MINECART;
     }
 
-    public void handle(ServerGamePacketListener p_134544_) {
-        p_134544_.handleSetCommandMinecart(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetCommandMinecart(this);
     }
 
-    public @Nullable BaseCommandBlock getCommandBlock(Level p_134538_) {
-        Entity entity = p_134538_.getEntity(this.entity);
-        return entity instanceof MinecartCommandBlock ? ((MinecartCommandBlock)entity).getCommandBlock() : null;
+    public @Nullable BaseCommandBlock getCommandBlock(final Level level) {
+        return level.getEntity(this.entity) instanceof MinecartCommandBlock minecartCommandBlock ? minecartCommandBlock.getCommandBlock() : null;
     }
 
     public String getCommand() {

@@ -11,12 +11,12 @@ public record ServerboundClientInformationPacket(ClientInformation information) 
         ServerboundClientInformationPacket::write, ServerboundClientInformationPacket::new
     );
 
-    private ServerboundClientInformationPacket(FriendlyByteBuf p_299808_) {
-        this(new ClientInformation(p_299808_));
+    private ServerboundClientInformationPacket(final FriendlyByteBuf input) {
+        this(new ClientInformation(input));
     }
 
-    private void write(FriendlyByteBuf p_298054_) {
-        this.information.write(p_298054_);
+    private void write(final FriendlyByteBuf output) {
+        this.information.write(output);
     }
 
     @Override
@@ -24,7 +24,7 @@ public record ServerboundClientInformationPacket(ClientInformation information) 
         return CommonPacketTypes.SERVERBOUND_CLIENT_INFORMATION;
     }
 
-    public void handle(ServerCommonPacketListener p_300686_) {
-        p_300686_.handleClientInformation(this);
+    public void handle(final ServerCommonPacketListener listener) {
+        listener.handleClientInformation(this);
     }
 }

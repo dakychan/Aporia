@@ -14,6 +14,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -26,8 +27,8 @@ public class GlowSquid extends Squid {
     private static final EntityDataAccessor<Integer> DATA_DARK_TICKS_REMAINING = SynchedEntityData.defineId(GlowSquid.class, EntityDataSerializers.INT);
     private static final int DEFAULT_DARK_TICKS_REMAINING = 0;
 
-    public GlowSquid(EntityType<? extends GlowSquid> p_459164_, Level p_460840_) {
-        super(p_459164_, p_460840_);
+    public GlowSquid(final EntityType<? extends GlowSquid> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -36,14 +37,14 @@ public class GlowSquid extends Squid {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_458926_) {
-        super.defineSynchedData(p_458926_);
-        p_458926_.define(DATA_DARK_TICKS_REMAINING, 0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_DARK_TICKS_REMAINING, 0);
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_457193_, AgeableMob p_450861_) {
-        return EntityType.GLOW_SQUID.create(p_457193_, EntitySpawnReason.BREEDING);
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.GLOW_SQUID.create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -57,7 +58,7 @@ public class GlowSquid extends Squid {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_457781_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.GLOW_SQUID_HURT;
     }
 
@@ -67,40 +68,40 @@ public class GlowSquid extends Squid {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_452979_) {
-        super.addAdditionalSaveData(p_452979_);
-        p_452979_.putInt("DarkTicksRemaining", this.getDarkTicksRemaining());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("DarkTicksRemaining", this.getDarkTicksRemaining());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458696_) {
-        super.readAdditionalSaveData(p_458696_);
-        this.setDarkTicks(p_458696_.getIntOr("DarkTicksRemaining", 0));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setDarkTicks(input.getIntOr("DarkTicksRemaining", 0));
     }
 
     @Override
     public void aiStep() {
         super.aiStep();
-        int i = this.getDarkTicksRemaining();
-        if (i > 0) {
-            this.setDarkTicks(i - 1);
+        int darkTicks = this.getDarkTicksRemaining();
+        if (darkTicks > 0) {
+            this.setDarkTicks(darkTicks - 1);
         }
 
         this.level().addParticle(ParticleTypes.GLOW, this.getRandomX(0.6), this.getRandomY(), this.getRandomZ(0.6), 0.0, 0.0, 0.0);
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_450234_, DamageSource p_454030_, float p_460875_) {
-        boolean flag = super.hurtServer(p_450234_, p_454030_, p_460875_);
-        if (flag) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        boolean hurt = super.hurtServer(level, source, damage);
+        if (hurt) {
             this.setDarkTicks(100);
         }
 
-        return flag;
+        return hurt;
     }
 
-    private void setDarkTicks(int p_453236_) {
-        this.entityData.set(DATA_DARK_TICKS_REMAINING, p_453236_);
+    private void setDarkTicks(final int ticks) {
+        this.entityData.set(DATA_DARK_TICKS_REMAINING, ticks);
     }
 
     public int getDarkTicksRemaining() {
@@ -108,10 +109,12 @@ public class GlowSquid extends Squid {
     }
 
     public static boolean checkGlowSquidSpawnRules(
-        EntityType<? extends LivingEntity> p_458336_, ServerLevelAccessor p_457618_, EntitySpawnReason p_456677_, BlockPos p_455023_, RandomSource p_457597_
+        final EntityType<? extends LivingEntity> type,
+        final ServerLevelAccessor level,
+        final EntitySpawnReason spawnReason,
+        final BlockPos pos,
+        final RandomSource random
     ) {
-        return p_455023_.getY() <= p_457618_.getSeaLevel() - 33
-            && p_457618_.getRawBrightness(p_455023_, 0) == 0
-            && p_457618_.getBlockState(p_455023_).is(Blocks.WATER);
+        return pos.getY() <= level.getSeaLevel() - 33 && level.getRawBrightness(pos, 0) == 0 && level.getBlockState(pos).is(Blocks.WATER);
     }
 }

@@ -29,8 +29,8 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.storage.loot.LootDataType;
 import net.minecraft.world.level.storage.loot.LootTable;
-import net.minecraft.world.level.storage.loot.ValidationContext;
-import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContextSource;
 import org.slf4j.Logger;
 
 public class ReloadableServerRegistries {
@@ -38,79 +38,86 @@ public class ReloadableServerRegistries {
     private static final RegistrationInfo DEFAULT_REGISTRATION_INFO = new RegistrationInfo(Optional.empty(), Lifecycle.experimental());
 
     public static CompletableFuture<ReloadableServerRegistries.LoadResult> reload(
-        LayeredRegistryAccess<RegistryLayer> p_331894_, List<Registry.PendingTags<?>> p_361834_, ResourceManager p_333753_, Executor p_334093_
+        final LayeredRegistryAccess<RegistryLayer> context,
+        final List<Registry.PendingTags<?>> updatedContextTags,
+        final ResourceManager manager,
+        final Executor executor
     ) {
-        List<HolderLookup.RegistryLookup<?>> list = TagLoader.buildUpdatedLookups(p_331894_.getAccessForLoading(RegistryLayer.RELOADABLE), p_361834_);
-        HolderLookup.Provider holderlookup$provider = HolderLookup.Provider.create(list.stream());
-        RegistryOps<JsonElement> registryops = holderlookup$provider.createSerializationContext(JsonOps.INSTANCE);
-        List<CompletableFuture<WritableRegistry<?>>> list1 = LootDataType.values()
-            .map(p_358525_ -> scheduleRegistryLoad((LootDataType<?>)p_358525_, registryops, p_333753_, p_334093_))
+        List<HolderLookup.RegistryLookup<?>> contextRegistriesWithTags = TagLoader.buildUpdatedLookups(
+            context.getAccessForLoading(RegistryLayer.RELOADABLE), updatedContextTags
+        );
+        HolderLookup.Provider loadingContextWithTags = HolderLookup.Provider.create(contextRegistriesWithTags.stream());
+        RegistryOps<JsonElement> ops = loadingContextWithTags.createSerializationContext(JsonOps.INSTANCE);
+        List<CompletableFuture<WritableRegistry<?>>> registryLoads = LootDataType.values()
+            .map(type -> scheduleRegistryLoad((LootDataType<?>)type, ops, manager, executor))
             .toList();
-        CompletableFuture<List<WritableRegistry<?>>> completablefuture = Util.sequence(list1);
-        return completablefuture.thenApplyAsync(p_358521_ -> createAndValidateFullContext(p_331894_, holderlookup$provider, (List<WritableRegistry<?>>)p_358521_), p_334093_);
-    }
-
-    private static <T> CompletableFuture<WritableRegistry<?>> scheduleRegistryLoad(
-        LootDataType<T> p_335755_, RegistryOps<JsonElement> p_328500_, ResourceManager p_330738_, Executor p_327700_
-    ) {
-        return CompletableFuture.supplyAsync(() -> {
-            WritableRegistry<T> writableregistry = new MappedRegistry<>(p_335755_.registryKey(), Lifecycle.experimental());
-            Map<Identifier, T> map = new HashMap<>();
-            SimpleJsonResourceReloadListener.scanDirectory(p_330738_, p_335755_.registryKey(), p_328500_, p_335755_.codec(), map);
-            map.forEach((p_448834_, p_448835_) -> writableregistry.register(ResourceKey.create(p_335755_.registryKey(), p_448834_), (T)p_448835_, DEFAULT_REGISTRATION_INFO));
-            TagLoader.loadTagsForRegistry(p_330738_, writableregistry);
-            return writableregistry;
-        }, p_327700_);
-    }
-
-    private static ReloadableServerRegistries.LoadResult createAndValidateFullContext(
-        LayeredRegistryAccess<RegistryLayer> p_368439_, HolderLookup.Provider p_370039_, List<WritableRegistry<?>> p_363778_
-    ) {
-        LayeredRegistryAccess<RegistryLayer> layeredregistryaccess = createUpdatedRegistries(p_368439_, p_363778_);
-        HolderLookup.Provider holderlookup$provider = concatenateLookups(p_370039_, layeredregistryaccess.getLayer(RegistryLayer.RELOADABLE));
-        validateLootRegistries(holderlookup$provider);
-        return new ReloadableServerRegistries.LoadResult(layeredregistryaccess, holderlookup$provider);
-    }
-
-    private static HolderLookup.Provider concatenateLookups(HolderLookup.Provider p_366421_, HolderLookup.Provider p_368061_) {
-        return HolderLookup.Provider.create(Stream.concat(p_366421_.listRegistries(), p_368061_.listRegistries()));
-    }
-
-    private static void validateLootRegistries(HolderLookup.Provider p_368763_) {
-        ProblemReporter.Collector problemreporter$collector = new ProblemReporter.Collector();
-        ValidationContext validationcontext = new ValidationContext(problemreporter$collector, LootContextParamSets.ALL_PARAMS, p_368763_);
-        LootDataType.values().forEach(p_358528_ -> validateRegistry(validationcontext, (LootDataType<?>)p_358528_, p_368763_));
-        problemreporter$collector.forEach(
-            (p_405126_, p_405127_) -> LOGGER.warn("Found loot table element validation problem in {}: {}", p_405126_, p_405127_.description())
+        CompletableFuture<List<WritableRegistry<?>>> sequence = Util.sequence(registryLoads);
+        return sequence.thenApplyAsync(
+            newlyLoadedRegistries -> createAndValidateFullContext(context, loadingContextWithTags, (List<WritableRegistry<?>>)newlyLoadedRegistries), executor
         );
     }
 
-    private static LayeredRegistryAccess<RegistryLayer> createUpdatedRegistries(LayeredRegistryAccess<RegistryLayer> p_334470_, List<WritableRegistry<?>> p_328349_) {
-        return p_334470_.replaceFrom(RegistryLayer.RELOADABLE, new RegistryAccess.ImmutableRegistryAccess(p_328349_).freeze());
+    private static <T extends Validatable> CompletableFuture<WritableRegistry<?>> scheduleRegistryLoad(
+        final LootDataType<T> type, final RegistryOps<JsonElement> ops, final ResourceManager manager, final Executor taskExecutor
+    ) {
+        return CompletableFuture.supplyAsync(() -> {
+            WritableRegistry<T> registry = new MappedRegistry<>(type.registryKey(), Lifecycle.experimental());
+            Map<Identifier, T> elements = new HashMap<>();
+            SimpleJsonResourceReloadListener.scanDirectory(manager, type.registryKey(), ops, type.codec(), elements);
+            elements.forEach((id, element) -> registry.register(ResourceKey.create(type.registryKey(), id), (T)element, DEFAULT_REGISTRATION_INFO));
+            TagLoader.loadTagsForRegistry(manager, registry);
+            return registry;
+        }, taskExecutor);
     }
 
-    private static <T> void validateRegistry(ValidationContext p_335560_, LootDataType<T> p_335486_, HolderLookup.Provider p_365047_) {
-        HolderLookup<T> holderlookup = p_365047_.lookupOrThrow(p_335486_.registryKey());
-        holderlookup.listElements().forEach(p_334560_ -> p_335486_.runValidation(p_335560_, p_334560_.key(), p_334560_.value()));
+    private static ReloadableServerRegistries.LoadResult createAndValidateFullContext(
+        final LayeredRegistryAccess<RegistryLayer> contextLayers,
+        final HolderLookup.Provider contextLookupWithUpdatedTags,
+        final List<WritableRegistry<?>> newRegistries
+    ) {
+        LayeredRegistryAccess<RegistryLayer> fullLayers = createUpdatedRegistries(contextLayers, newRegistries);
+        HolderLookup.Provider fullLookupWithUpdatedTags = concatenateLookups(contextLookupWithUpdatedTags, fullLayers.getLayer(RegistryLayer.RELOADABLE));
+        validateLootRegistries(fullLookupWithUpdatedTags);
+        return new ReloadableServerRegistries.LoadResult(fullLayers, fullLookupWithUpdatedTags);
+    }
+
+    private static HolderLookup.Provider concatenateLookups(final HolderLookup.Provider first, final HolderLookup.Provider second) {
+        return HolderLookup.Provider.create(Stream.concat(first.listRegistries(), second.listRegistries()));
+    }
+
+    private static void validateLootRegistries(final HolderLookup.Provider fullContextWithNewTags) {
+        ProblemReporter.Collector problems = new ProblemReporter.Collector();
+        ValidationContextSource contextSource = new ValidationContextSource(problems, fullContextWithNewTags);
+        LootDataType.values().forEach(lootDataType -> validateRegistry(contextSource, (LootDataType<?>)lootDataType, fullContextWithNewTags));
+        problems.forEach((id, problem) -> LOGGER.warn("Found loot table element validation problem in {}: {}", id, problem.description()));
+    }
+
+    private static LayeredRegistryAccess<RegistryLayer> createUpdatedRegistries(
+        final LayeredRegistryAccess<RegistryLayer> context, final List<WritableRegistry<?>> registries
+    ) {
+        return context.replaceFrom(RegistryLayer.RELOADABLE, new RegistryAccess.ImmutableRegistryAccess(registries).freeze());
+    }
+
+    private static <T extends Validatable> void validateRegistry(
+        final ValidationContextSource contextSource, final LootDataType<T> type, final HolderLookup.Provider registries
+    ) {
+        HolderLookup<T> registry = registries.lookupOrThrow(type.registryKey());
+        type.runValidation(contextSource, registry);
     }
 
     public static class Holder {
         private final HolderLookup.Provider registries;
 
-        public Holder(HolderLookup.Provider p_369437_) {
-            this.registries = p_369437_;
+        public Holder(final HolderLookup.Provider registries) {
+            this.registries = registries;
         }
 
         public HolderLookup.Provider lookup() {
             return this.registries;
         }
 
-        public LootTable getLootTable(ResourceKey<LootTable> p_331432_) {
-            return this.registries
-                .lookup(Registries.LOOT_TABLE)
-                .flatMap(p_328118_ -> p_328118_.get(p_331432_))
-                .map(net.minecraft.core.Holder::value)
-                .orElse(LootTable.EMPTY);
+        public LootTable getLootTable(final ResourceKey<LootTable> id) {
+            return this.registries.lookup(Registries.LOOT_TABLE).flatMap(r -> r.get(id)).map(net.minecraft.core.Holder::value).orElse(LootTable.EMPTY);
         }
     }
 

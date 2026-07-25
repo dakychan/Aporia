@@ -2,6 +2,7 @@ package net.minecraft.util.profiling;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
@@ -19,7 +20,6 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.metrics.MetricCategory;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -39,12 +39,12 @@ public class ActiveProfiler implements ProfileCollector {
     private final BooleanSupplier suppressWarnings;
     private final Set<Pair<String, MetricCategory>> chartedPaths = new ObjectArraySet<>();
 
-    public ActiveProfiler(LongSupplier p_18383_, IntSupplier p_18384_, BooleanSupplier p_397456_) {
-        this.startTimeNano = p_18383_.getAsLong();
-        this.getRealTime = p_18383_;
-        this.startTimeTicks = p_18384_.getAsInt();
-        this.getTickTime = p_18384_;
-        this.suppressWarnings = p_397456_;
+    public ActiveProfiler(final LongSupplier getRealTime, final IntSupplier getTickTime, final BooleanSupplier suppressWarnings) {
+        this.startTimeNano = getRealTime.getAsLong();
+        this.getRealTime = getRealTime;
+        this.startTimeTicks = getTickTime.getAsInt();
+        this.getTickTime = getTickTime;
+        this.suppressWarnings = suppressWarnings;
     }
 
     @Override
@@ -76,15 +76,15 @@ public class ActiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public void push(String p_18390_) {
+    public void push(final String name) {
         if (!this.started) {
-            LOGGER.error("Cannot push '{}' to profiler if profiler tick hasn't started - missing startTick()?", p_18390_);
+            LOGGER.error("Cannot push '{}' to profiler if profiler tick hasn't started - missing startTick()?", name);
         } else {
             if (!this.path.isEmpty()) {
                 this.path = this.path + "\u001e";
             }
 
-            this.path = this.path + p_18390_;
+            this.path = this.path + name;
             this.paths.add(this.path);
             this.startTimes.add(Util.getNanos());
             this.currentEntry = null;
@@ -92,13 +92,13 @@ public class ActiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public void push(Supplier<String> p_18392_) {
-        this.push(p_18392_.get());
+    public void push(final Supplier<String> name) {
+        this.push(name.get());
     }
 
     @Override
-    public void markForCharting(MetricCategory p_145928_) {
-        this.chartedPaths.add(Pair.of(this.path, p_145928_));
+    public void markForCharting(final MetricCategory category) {
+        this.chartedPaths.add(Pair.of(this.path, category));
     }
 
     @Override
@@ -108,20 +108,20 @@ public class ActiveProfiler implements ProfileCollector {
         } else if (this.startTimes.isEmpty()) {
             LOGGER.error("Tried to pop one too many times! Mismatched push() and pop()?");
         } else {
-            long i = Util.getNanos();
-            long j = this.startTimes.removeLong(this.startTimes.size() - 1);
+            long endTime = Util.getNanos();
+            long startTime = this.startTimes.removeLong(this.startTimes.size() - 1);
             this.paths.removeLast();
-            long k = i - j;
-            ActiveProfiler.PathEntry activeprofiler$pathentry = this.getCurrentEntry();
-            activeprofiler$pathentry.accumulatedDuration += k;
-            activeprofiler$pathentry.count++;
-            activeprofiler$pathentry.maxDuration = Math.max(activeprofiler$pathentry.maxDuration, k);
-            activeprofiler$pathentry.minDuration = Math.min(activeprofiler$pathentry.minDuration, k);
-            if (k > WARNING_TIME_NANOS && !this.suppressWarnings.getAsBoolean()) {
+            long time = endTime - startTime;
+            ActiveProfiler.PathEntry currentEntry = this.getCurrentEntry();
+            currentEntry.accumulatedDuration += time;
+            currentEntry.count++;
+            currentEntry.maxDuration = Math.max(currentEntry.maxDuration, time);
+            currentEntry.minDuration = Math.min(currentEntry.minDuration, time);
+            if (time > WARNING_TIME_NANOS && !this.suppressWarnings.getAsBoolean()) {
                 LOGGER.warn(
                     "Something's taking too long! '{}' took aprox {} ms",
                     LogUtils.defer(() -> ProfileResults.demanglePath(this.path)),
-                    LogUtils.defer(() -> k / 1000000.0)
+                    LogUtils.defer(() -> time / 1000000.0)
                 );
             }
 
@@ -131,33 +131,33 @@ public class ActiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public void popPush(String p_18395_) {
+    public void popPush(final String name) {
         this.pop();
-        this.push(p_18395_);
+        this.push(name);
     }
 
     @Override
-    public void popPush(Supplier<String> p_18397_) {
+    public void popPush(final Supplier<String> name) {
         this.pop();
-        this.push(p_18397_);
+        this.push(name);
     }
 
     private ActiveProfiler.PathEntry getCurrentEntry() {
         if (this.currentEntry == null) {
-            this.currentEntry = this.entries.computeIfAbsent(this.path, p_18405_ -> new ActiveProfiler.PathEntry());
+            this.currentEntry = this.entries.computeIfAbsent(this.path, key -> new ActiveProfiler.PathEntry());
         }
 
         return this.currentEntry;
     }
 
     @Override
-    public void incrementCounter(String p_185247_, int p_185248_) {
-        this.getCurrentEntry().counters.addTo(p_185247_, p_185248_);
+    public void incrementCounter(final String name, final int amount) {
+        this.getCurrentEntry().counters.addTo(name, amount);
     }
 
     @Override
-    public void incrementCounter(Supplier<String> p_185250_, int p_185251_) {
-        this.getCurrentEntry().counters.addTo(p_185250_.get(), p_185251_);
+    public void incrementCounter(final Supplier<String> name, final int amount) {
+        this.getCurrentEntry().counters.addTo(name.get(), amount);
     }
 
     @Override
@@ -166,8 +166,8 @@ public class ActiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public ActiveProfiler.@Nullable PathEntry getEntry(String p_145930_) {
-        return this.entries.get(p_145930_);
+    public ActiveProfiler.@Nullable PathEntry getEntry(final String path) {
+        return this.entries.get(path);
     }
 
     @Override
@@ -176,11 +176,11 @@ public class ActiveProfiler implements ProfileCollector {
     }
 
     public static class PathEntry implements ProfilerPathEntry {
-        long maxDuration = Long.MIN_VALUE;
-        long minDuration = Long.MAX_VALUE;
-        long accumulatedDuration;
-        long count;
-        final Object2LongOpenHashMap<String> counters = new Object2LongOpenHashMap<>();
+        private long maxDuration = Long.MIN_VALUE;
+        private long minDuration = Long.MAX_VALUE;
+        private long accumulatedDuration;
+        private long count;
+        private final Object2LongOpenHashMap<String> counters = new Object2LongOpenHashMap<>();
 
         @Override
         public long getDuration() {

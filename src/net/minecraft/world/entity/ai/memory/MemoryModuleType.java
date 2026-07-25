@@ -51,7 +51,6 @@ public class MemoryModuleType<U> {
     public static final MemoryModuleType<AgeableMob> BREED_TARGET = register("breed_target");
     public static final MemoryModuleType<Entity> RIDE_TARGET = register("ride_target");
     public static final MemoryModuleType<Path> PATH = register("path");
-    public static final MemoryModuleType<List<GlobalPos>> INTERACTABLE_DOORS = register("interactable_doors");
     public static final MemoryModuleType<Set<GlobalPos>> DOORS_TO_CLOSE = register("doors_to_close");
     public static final MemoryModuleType<BlockPos> NEAREST_BED = register("nearest_bed");
     public static final MemoryModuleType<DamageSource> HURT_BY = register("hurt_by");
@@ -154,8 +153,8 @@ public class MemoryModuleType<U> {
     private final Optional<Codec<ExpirableValue<U>>> codec;
 
     @VisibleForTesting
-    public MemoryModuleType(Optional<Codec<U>> p_26386_) {
-        this.codec = p_26386_.map(ExpirableValue::codec);
+    public MemoryModuleType(final Optional<Codec<U>> codec) {
+        this.codec = codec.map(ExpirableValue::codec);
     }
 
     @Override
@@ -167,11 +166,15 @@ public class MemoryModuleType<U> {
         return this.codec;
     }
 
-    private static <U> MemoryModuleType<U> register(String p_26391_, Codec<U> p_26392_) {
-        return Registry.register(BuiltInRegistries.MEMORY_MODULE_TYPE, Identifier.withDefaultNamespace(p_26391_), new MemoryModuleType<>(Optional.of(p_26392_)));
+    public boolean canSerialize() {
+        return this.codec.isPresent();
     }
 
-    private static <U> MemoryModuleType<U> register(String p_26389_) {
-        return Registry.register(BuiltInRegistries.MEMORY_MODULE_TYPE, Identifier.withDefaultNamespace(p_26389_), new MemoryModuleType<>(Optional.empty()));
+    private static <U> MemoryModuleType<U> register(final String name, final Codec<U> codec) {
+        return Registry.register(BuiltInRegistries.MEMORY_MODULE_TYPE, Identifier.withDefaultNamespace(name), new MemoryModuleType<>(Optional.of(codec)));
+    }
+
+    private static <U> MemoryModuleType<U> register(final String name) {
+        return Registry.register(BuiltInRegistries.MEMORY_MODULE_TYPE, Identifier.withDefaultNamespace(name), new MemoryModuleType<>(Optional.empty()));
     }
 }

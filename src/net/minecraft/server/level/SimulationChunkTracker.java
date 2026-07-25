@@ -10,33 +10,33 @@ public class SimulationChunkTracker extends ChunkTracker {
     protected final Long2ByteMap chunks = new Long2ByteOpenHashMap();
     private final TicketStorage ticketStorage;
 
-    public SimulationChunkTracker(TicketStorage p_395447_) {
+    public SimulationChunkTracker(final TicketStorage ticketStorage) {
         super(34, 16, 256);
-        this.ticketStorage = p_395447_;
-        p_395447_.setSimulationChunkUpdatedListener(this::update);
+        this.ticketStorage = ticketStorage;
+        ticketStorage.setSimulationChunkUpdatedListener(this::update);
         this.chunks.defaultReturnValue((byte)33);
     }
 
     @Override
-    protected int getLevelFromSource(long p_395160_) {
-        return this.ticketStorage.getTicketLevelAt(p_395160_, true);
+    protected int getLevelFromSource(final long to) {
+        return this.ticketStorage.getTicketLevelAt(to, true);
     }
 
-    public int getLevel(ChunkPos p_396184_) {
-        return this.getLevel(p_396184_.toLong());
-    }
-
-    @Override
-    protected int getLevel(long p_397279_) {
-        return this.chunks.get(p_397279_);
+    public int getLevel(final ChunkPos node) {
+        return this.getLevel(node.pack());
     }
 
     @Override
-    protected void setLevel(long p_393143_, int p_394676_) {
-        if (p_394676_ >= 33) {
-            this.chunks.remove(p_393143_);
+    protected int getLevel(final long node) {
+        return this.chunks.get(node);
+    }
+
+    @Override
+    protected void setLevel(final long node, final int level) {
+        if (level >= 33) {
+            this.chunks.remove(node);
         } else {
-            this.chunks.put(p_393143_, (byte)p_394676_);
+            this.chunks.put(node, (byte)level);
         }
     }
 

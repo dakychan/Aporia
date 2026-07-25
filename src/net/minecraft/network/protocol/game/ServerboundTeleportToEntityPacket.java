@@ -15,16 +15,16 @@ public class ServerboundTeleportToEntityPacket implements Packet<ServerGamePacke
     );
     private final UUID uuid;
 
-    public ServerboundTeleportToEntityPacket(UUID p_134680_) {
-        this.uuid = p_134680_;
+    public ServerboundTeleportToEntityPacket(final UUID uuid) {
+        this.uuid = uuid;
     }
 
-    private ServerboundTeleportToEntityPacket(FriendlyByteBuf p_179794_) {
-        this.uuid = p_179794_.readUUID();
+    private ServerboundTeleportToEntityPacket(final FriendlyByteBuf input) {
+        this.uuid = input.readUUID();
     }
 
-    private void write(FriendlyByteBuf p_134690_) {
-        p_134690_.writeUUID(this.uuid);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUUID(this.uuid);
     }
 
     @Override
@@ -32,11 +32,11 @@ public class ServerboundTeleportToEntityPacket implements Packet<ServerGamePacke
         return GamePacketTypes.SERVERBOUND_TELEPORT_TO_ENTITY;
     }
 
-    public void handle(ServerGamePacketListener p_134688_) {
-        p_134688_.handleTeleportToEntityPacket(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleTeleportToEntityPacket(this);
     }
 
-    public @Nullable Entity getEntity(ServerLevel p_134682_) {
-        return p_134682_.getEntity(this.uuid);
+    public @Nullable Entity getEntity(final ServerLevel level) {
+        return level.getEntity(this.uuid);
     }
 }

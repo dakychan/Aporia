@@ -4,10 +4,7 @@ import com.mojang.serialization.Codec;
 import java.util.function.IntFunction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ByIdMap;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum NarratorStatus {
     OFF(0, "options.narrator.off"),
     ALL(1, "options.narrator.all"),
@@ -19,9 +16,9 @@ public enum NarratorStatus {
     private final int id;
     private final Component name;
 
-    private NarratorStatus(final int p_91616_, final String p_91617_) {
-        this.id = p_91616_;
-        this.name = Component.translatable(p_91617_);
+    NarratorStatus(final int id, final String key) {
+        this.id = id;
+        this.name = Component.translatable(key);
     }
 
     public int getId() {
@@ -32,8 +29,8 @@ public enum NarratorStatus {
         return this.name;
     }
 
-    public static NarratorStatus byId(int p_91620_) {
-        return BY_ID.apply(p_91620_);
+    public static NarratorStatus byId(final int id) {
+        return BY_ID.apply(id);
     }
 
     public boolean shouldNarrateChat() {

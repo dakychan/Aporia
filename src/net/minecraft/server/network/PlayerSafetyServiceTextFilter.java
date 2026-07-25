@@ -8,7 +8,6 @@ import com.microsoft.aad.msal4j.ClientCredentialParameters;
 import com.microsoft.aad.msal4j.ConfidentialClientApplication;
 import com.microsoft.aad.msal4j.IAuthenticationResult;
 import com.microsoft.aad.msal4j.IClientCertificate;
-import com.mojang.authlib.GameProfile;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -30,91 +29,84 @@ public class PlayerSafetyServiceTextFilter extends ServerTextFilter {
     private final int connectionReadTimeoutMs;
 
     private PlayerSafetyServiceTextFilter(
-        URL p_364099_,
-        ServerTextFilter.MessageEncoder p_365356_,
-        ServerTextFilter.IgnoreStrategy p_362188_,
-        ExecutorService p_367186_,
-        ConfidentialClientApplication p_368420_,
-        ClientCredentialParameters p_366786_,
-        Set<String> p_368170_,
-        int p_367351_
+        final URL chatEndpoint,
+        final ServerTextFilter.MessageEncoder chatEncoder,
+        final ServerTextFilter.IgnoreStrategy chatIgnoreStrategy,
+        final ExecutorService workerPool,
+        final ConfidentialClientApplication client,
+        final ClientCredentialParameters clientParameters,
+        final Set<String> fullyFilteredEvents,
+        final int connectionReadTimeoutMs
     ) {
-        super(p_364099_, p_365356_, p_362188_, p_367186_);
-        this.client = p_368420_;
-        this.clientParameters = p_366786_;
-        this.fullyFilteredEvents = p_368170_;
-        this.connectionReadTimeoutMs = p_367351_;
+        super(chatEndpoint, chatEncoder, chatIgnoreStrategy, workerPool);
+        this.client = client;
+        this.clientParameters = clientParameters;
+        this.fullyFilteredEvents = fullyFilteredEvents;
+        this.connectionReadTimeoutMs = connectionReadTimeoutMs;
     }
 
-    public static @Nullable ServerTextFilter createTextFilterFromConfig(String p_365652_) {
-        JsonObject jsonobject = GsonHelper.parse(p_365652_);
-        URI uri = URI.create(GsonHelper.getAsString(jsonobject, "apiServer"));
-        String s = GsonHelper.getAsString(jsonobject, "apiPath");
-        String s1 = GsonHelper.getAsString(jsonobject, "scope");
-        String s2 = GsonHelper.getAsString(jsonobject, "serverId", "");
-        String s3 = GsonHelper.getAsString(jsonobject, "applicationId");
-        String s4 = GsonHelper.getAsString(jsonobject, "tenantId");
-        String s5 = GsonHelper.getAsString(jsonobject, "roomId", "Java:Chat");
-        String s6 = GsonHelper.getAsString(jsonobject, "certificatePath");
-        String s7 = GsonHelper.getAsString(jsonobject, "certificatePassword", "");
-        int i = GsonHelper.getAsInt(jsonobject, "hashesToDrop", -1);
-        int j = GsonHelper.getAsInt(jsonobject, "maxConcurrentRequests", 7);
-        JsonArray jsonarray = GsonHelper.getAsJsonArray(jsonobject, "fullyFilteredEvents");
-        Set<String> set = new HashSet<>();
-        jsonarray.forEach(p_364492_ -> set.add(GsonHelper.convertToString(p_364492_, "filteredEvent")));
-        int k = GsonHelper.getAsInt(jsonobject, "connectionReadTimeoutMs", 2000);
+    public static @Nullable ServerTextFilter createTextFilterFromConfig(final String textFilteringConfig) {
+        JsonObject parsedConfig = GsonHelper.parse(textFilteringConfig);
+        URI host = URI.create(GsonHelper.getAsString(parsedConfig, "apiServer"));
+        String apiPath = GsonHelper.getAsString(parsedConfig, "apiPath");
+        String scope = GsonHelper.getAsString(parsedConfig, "scope");
+        String serverId = GsonHelper.getAsString(parsedConfig, "serverId", "");
+        String applicationId = GsonHelper.getAsString(parsedConfig, "applicationId");
+        String tenantId = GsonHelper.getAsString(parsedConfig, "tenantId");
+        String roomId = GsonHelper.getAsString(parsedConfig, "roomId", "Java:Chat");
+        String certificatePath = GsonHelper.getAsString(parsedConfig, "certificatePath");
+        String certificatePassword = GsonHelper.getAsString(parsedConfig, "certificatePassword", "");
+        int hashesToDrop = GsonHelper.getAsInt(parsedConfig, "hashesToDrop", -1);
+        int maxConcurrentRequests = GsonHelper.getAsInt(parsedConfig, "maxConcurrentRequests", 7);
+        JsonArray fullyFilteredEvents = GsonHelper.getAsJsonArray(parsedConfig, "fullyFilteredEvents");
+        Set<String> fullyFilteredEventsSet = new HashSet<>();
+        fullyFilteredEvents.forEach(elements -> fullyFilteredEventsSet.add(GsonHelper.convertToString(elements, "filteredEvent")));
+        int connectionReadTimeoutMs = GsonHelper.getAsInt(parsedConfig, "connectionReadTimeoutMs", 2000);
 
-        URL url;
+        URL chatEndpoint;
         try {
-            url = uri.resolve(s).toURL();
-        } catch (MalformedURLException malformedurlexception) {
-            throw new RuntimeException(malformedurlexception);
+            chatEndpoint = host.resolve(apiPath).toURL();
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
 
-        ServerTextFilter.MessageEncoder servertextfilter$messageencoder = (p_421493_, p_421494_) -> {
-            JsonObject jsonobject1 = new JsonObject();
-            jsonobject1.addProperty("userId", p_421493_.id().toString());
-            jsonobject1.addProperty("userDisplayName", p_421493_.name());
-            jsonobject1.addProperty("server", s2);
-            jsonobject1.addProperty("room", s5);
-            jsonobject1.addProperty("area", "JavaChatRealms");
-            jsonobject1.addProperty("data", p_421494_);
-            jsonobject1.addProperty("language", "*");
-            return jsonobject1;
+        ServerTextFilter.MessageEncoder chatEncoder = (sender, message) -> {
+            JsonObject object = new JsonObject();
+            object.addProperty("userId", sender.id().toString());
+            object.addProperty("userDisplayName", sender.name());
+            object.addProperty("server", serverId);
+            object.addProperty("room", roomId);
+            object.addProperty("area", "JavaChatRealms");
+            object.addProperty("data", message);
+            object.addProperty("language", "*");
+            return object;
         };
-        ServerTextFilter.IgnoreStrategy servertextfilter$ignorestrategy = ServerTextFilter.IgnoreStrategy.select(i);
-        ExecutorService executorservice = createWorkerPool(j);
+        ServerTextFilter.IgnoreStrategy ignoreStrategy = ServerTextFilter.IgnoreStrategy.select(hashesToDrop);
+        ExecutorService workerPool = createWorkerPool(maxConcurrentRequests);
 
-        IClientCertificate iclientcertificate;
-        try (InputStream inputstream = Files.newInputStream(Path.of(s6))) {
-            iclientcertificate = ClientCredentialFactory.createFromCertificate(inputstream, s7);
-        } catch (Exception exception1) {
+        IClientCertificate certificate;
+        try (InputStream inputStream = Files.newInputStream(Path.of(certificatePath))) {
+            certificate = ClientCredentialFactory.createFromCertificate(inputStream, certificatePassword);
+        } catch (Exception e) {
             LOGGER.warn("Failed to open certificate file");
             return null;
         }
 
-        ConfidentialClientApplication confidentialclientapplication;
+        ConfidentialClientApplication client;
         try {
-            confidentialclientapplication = ConfidentialClientApplication.builder(s3, iclientcertificate)
+            client = ConfidentialClientApplication.builder(applicationId, certificate)
                 .sendX5c(true)
-                .executorService(executorservice)
-                .authority(String.format(Locale.ROOT, "https://login.microsoftonline.com/%s/", s4))
+                .executorService(workerPool)
+                .authority(String.format(Locale.ROOT, "https://login.microsoftonline.com/%s/", tenantId))
                 .build();
-        } catch (Exception exception) {
+        } catch (Exception e) {
             LOGGER.warn("Failed to create confidential client application");
             return null;
         }
 
-        ClientCredentialParameters clientcredentialparameters = ClientCredentialParameters.builder(Set.of(s1)).build();
+        ClientCredentialParameters parameters = ClientCredentialParameters.builder(Set.of(scope)).build();
         return new PlayerSafetyServiceTextFilter(
-            url,
-            servertextfilter$messageencoder,
-            servertextfilter$ignorestrategy,
-            executorservice,
-            confidentialclientapplication,
-            clientcredentialparameters,
-            set,
-            k
+            chatEndpoint, chatEncoder, ignoreStrategy, workerPool, client, parameters, fullyFilteredEventsSet, connectionReadTimeoutMs
         );
     }
 
@@ -123,33 +115,33 @@ public class PlayerSafetyServiceTextFilter extends ServerTextFilter {
     }
 
     @Override
-    protected void setAuthorizationProperty(HttpURLConnection p_362835_) {
-        IAuthenticationResult iauthenticationresult = this.aquireIAuthenticationResult();
-        p_362835_.setRequestProperty("Authorization", "Bearer " + iauthenticationresult.accessToken());
+    protected void setAuthorizationProperty(final HttpURLConnection connection) {
+        IAuthenticationResult authenticationResult = this.aquireIAuthenticationResult();
+        connection.setRequestProperty("Authorization", "Bearer " + authenticationResult.accessToken());
     }
 
     @Override
-    protected FilteredText filterText(String p_370172_, ServerTextFilter.IgnoreStrategy p_361906_, JsonObject p_367044_) {
-        JsonObject jsonobject = GsonHelper.getAsJsonObject(p_367044_, "result", null);
-        if (jsonobject == null) {
-            return FilteredText.fullyFiltered(p_370172_);
-        } else {
-            boolean flag = GsonHelper.getAsBoolean(jsonobject, "filtered", true);
-            if (!flag) {
-                return FilteredText.passThrough(p_370172_);
-            } else {
-                for (JsonElement jsonelement : GsonHelper.getAsJsonArray(jsonobject, "events", new JsonArray())) {
-                    JsonObject jsonobject1 = jsonelement.getAsJsonObject();
-                    String s = GsonHelper.getAsString(jsonobject1, "id", "");
-                    if (this.fullyFilteredEvents.contains(s)) {
-                        return FilteredText.fullyFiltered(p_370172_);
-                    }
-                }
+    protected FilteredText filterText(final String message, final ServerTextFilter.IgnoreStrategy ignoreStrategy, final JsonObject response) {
+        JsonObject result = GsonHelper.getAsJsonObject(response, "result", null);
+        if (result == null) {
+            return FilteredText.fullyFiltered(message);
+        }
 
-                JsonArray jsonarray = GsonHelper.getAsJsonArray(jsonobject, "redactedTextIndex", new JsonArray());
-                return new FilteredText(p_370172_, this.parseMask(p_370172_, jsonarray, p_361906_));
+        boolean filtered = GsonHelper.getAsBoolean(result, "filtered", true);
+        if (!filtered) {
+            return FilteredText.passThrough(message);
+        }
+
+        for (JsonElement element : GsonHelper.getAsJsonArray(result, "events", new JsonArray())) {
+            JsonObject object = element.getAsJsonObject();
+            String event = GsonHelper.getAsString(object, "id", "");
+            if (this.fullyFilteredEvents.contains(event)) {
+                return FilteredText.fullyFiltered(message);
             }
         }
+
+        JsonArray redactedTextIndices = GsonHelper.getAsJsonArray(result, "redactedTextIndex", new JsonArray());
+        return new FilteredText(message, this.parseMask(message, redactedTextIndices, ignoreStrategy));
     }
 
     @Override

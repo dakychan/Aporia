@@ -2,6 +2,7 @@ package net.minecraft.world.entity;
 
 import java.util.Optional;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -16,101 +17,112 @@ public interface NeutralMob {
 
     long getPersistentAngerEndTime();
 
-    default void setTimeToRemainAngry(long p_454333_) {
-        this.setPersistentAngerEndTime(this.level().getGameTime() + p_454333_);
+    default void setTimeToRemainAngry(final long remainingTime) {
+        this.setPersistentAngerEndTime(this.level().getGameTime() + remainingTime);
     }
 
-    void setPersistentAngerEndTime(long p_456375_);
+    void setPersistentAngerEndTime(long endTime);
 
     @Nullable EntityReference<LivingEntity> getPersistentAngerTarget();
 
-    void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> p_459184_);
+    void setPersistentAngerTarget(final @Nullable EntityReference<LivingEntity> persistentAngerTarget);
 
     void startPersistentAngerTimer();
 
     Level level();
 
-    default void addPersistentAngerSaveData(ValueOutput p_407892_) {
-        p_407892_.putLong("anger_end_time", this.getPersistentAngerEndTime());
-        p_407892_.storeNullable("angry_at", EntityReference.codec(), this.getPersistentAngerTarget());
+    default void addPersistentAngerSaveData(final ValueOutput output) {
+        output.putLong("anger_end_time", this.getPersistentAngerEndTime());
+        output.storeNullable("angry_at", EntityReference.codec(), this.getPersistentAngerTarget());
     }
 
-    default void readPersistentAngerSaveData(Level p_147286_, ValueInput p_410075_) {
-        Optional<Long> optional = p_410075_.getLong("anger_end_time");
-        if (optional.isPresent()) {
-            this.setPersistentAngerEndTime(optional.get());
+    default void readPersistentAngerSaveData(final Level level, final ValueInput input) {
+        Optional<Long> endTime = input.getLong("anger_end_time");
+        if (endTime.isPresent()) {
+            this.setPersistentAngerEndTime(endTime.get());
         } else {
-            Optional<Integer> optional1 = p_410075_.getInt("AngerTime");
-            if (optional1.isPresent()) {
-                this.setTimeToRemainAngry(optional1.get().intValue());
+            Optional<Integer> angerTime = input.getInt("AngerTime");
+            if (angerTime.isPresent()) {
+                this.setTimeToRemainAngry(angerTime.get().intValue());
             } else {
                 this.setPersistentAngerEndTime(-1L);
             }
         }
 
-        if (p_147286_ instanceof ServerLevel) {
-            this.setPersistentAngerTarget(EntityReference.read(p_410075_, "angry_at"));
-            this.setTarget(EntityReference.getLivingEntity(this.getPersistentAngerTarget(), p_147286_));
+        if (level instanceof ServerLevel) {
+            this.setPersistentAngerTarget(EntityReference.read(input, "angry_at"));
+            this.setTarget(EntityReference.getLivingEntity(this.getPersistentAngerTarget(), level));
         }
     }
 
-    default void updatePersistentAnger(ServerLevel p_21667_, boolean p_21668_) {
-        LivingEntity livingentity = this.getTarget();
-        EntityReference<LivingEntity> entityreference = this.getPersistentAngerTarget();
-        if (livingentity != null
-            && livingentity.isDeadOrDying()
-            && entityreference != null
-            && entityreference.matches(livingentity)
-            && livingentity instanceof Mob) {
+    default void updatePersistentAnger(final ServerLevel level, final boolean stayAngryIfTargetPresent) {
+        LivingEntity previousTarget = this.getTargetUnchecked();
+        EntityReference<LivingEntity> persistentAngerTarget = this.getPersistentAngerTarget();
+        if (previousTarget != null
+            && previousTarget.isDeadOrDying()
+            && persistentAngerTarget != null
+            && persistentAngerTarget.matches(previousTarget)
+            && previousTarget instanceof Mob) {
             this.stopBeingAngry();
         } else {
-            if (livingentity != null) {
-                if (entityreference == null || !entityreference.matches(livingentity)) {
-                    this.setPersistentAngerTarget(EntityReference.of(livingentity));
+            LivingEntity target = this.getTarget();
+            if (target != null) {
+                boolean newTarget = persistentAngerTarget == null || !persistentAngerTarget.matches(target);
+                if (newTarget) {
+                    this.setPersistentAngerTarget(EntityReference.of(target));
                 }
 
-                this.startPersistentAngerTimer();
+                if (newTarget || stayAngryIfTargetPresent) {
+                    this.startPersistentAngerTimer();
+                }
             }
 
-            if (entityreference != null && !this.isAngry() && (livingentity == null || !isValidPlayerTarget(livingentity) || !p_21668_)) {
+            if (persistentAngerTarget != null && !this.isAngry() && (target == null || !isValidPlayerTarget(target) || !stayAngryIfTargetPresent)) {
+                this.stopBeingAngry();
+            }
+
+            if (EntityReference.getLivingEntity(persistentAngerTarget, level) instanceof Player player
+                && (player.isCreative() || player.isSpectator() || level.getDifficulty() == Difficulty.PEACEFUL)) {
                 this.stopBeingAngry();
             }
         }
     }
 
-    private static boolean isValidPlayerTarget(LivingEntity p_456578_) {
-        return p_456578_ instanceof Player player && !player.isCreative() && !player.isSpectator();
+    private static boolean isValidPlayerTarget(final LivingEntity target) {
+        return target instanceof Player player && !player.isCreative() && !player.isSpectator() && player.level().getDifficulty() != Difficulty.PEACEFUL;
     }
 
-    default boolean isAngryAt(LivingEntity p_21675_, ServerLevel p_366229_) {
-        if (!this.canAttack(p_21675_)) {
+    default boolean isAngryAt(final LivingEntity entity, final ServerLevel level) {
+        if (!this.canAttack(entity)) {
             return false;
-        } else if (isValidPlayerTarget(p_21675_) && this.isAngryAtAllPlayers(p_366229_)) {
-            return true;
-        } else {
-            EntityReference<LivingEntity> entityreference = this.getPersistentAngerTarget();
-            return entityreference != null && entityreference.matches(p_21675_);
         }
+
+        if (isValidPlayerTarget(entity) && this.isAngryAtAllPlayers(level)) {
+            return true;
+        }
+
+        EntityReference<LivingEntity> persistentAngerTarget = this.getPersistentAngerTarget();
+        return persistentAngerTarget != null && persistentAngerTarget.matches(entity);
     }
 
-    default boolean isAngryAtAllPlayers(ServerLevel p_362225_) {
-        return p_362225_.getGameRules().get(GameRules.UNIVERSAL_ANGER) && this.isAngry() && this.getPersistentAngerTarget() == null;
+    default boolean isAngryAtAllPlayers(final ServerLevel level) {
+        return level.getGameRules().get(GameRules.UNIVERSAL_ANGER) && this.isAngry() && this.getPersistentAngerTarget() == null;
     }
 
     default boolean isAngry() {
-        long i = this.getPersistentAngerEndTime();
-        if (i > 0L) {
-            long j = i - this.level().getGameTime();
-            return j > 0L;
+        long endTime = this.getPersistentAngerEndTime();
+        if (endTime > 0L) {
+            long remaining = endTime - this.level().getGameTime();
+            return remaining > 0L;
         } else {
             return false;
         }
     }
 
-    default void playerDied(ServerLevel p_360871_, Player p_21677_) {
-        if (p_360871_.getGameRules().get(GameRules.FORGIVE_DEAD_PLAYERS)) {
-            EntityReference<LivingEntity> entityreference = this.getPersistentAngerTarget();
-            if (entityreference != null && entityreference.matches(p_21677_)) {
+    default void playerDied(final ServerLevel level, final Player player) {
+        if (level.getGameRules().get(GameRules.FORGIVE_DEAD_PLAYERS)) {
+            EntityReference<LivingEntity> persistentAngerTarget = this.getPersistentAngerTarget();
+            if (persistentAngerTarget != null && persistentAngerTarget.matches(player)) {
                 this.stopBeingAngry();
             }
         }
@@ -130,11 +142,13 @@ public interface NeutralMob {
 
     @Nullable LivingEntity getLastHurtByMob();
 
-    void setLastHurtByMob(@Nullable LivingEntity p_21669_);
+    void setLastHurtByMob(final @Nullable LivingEntity hurtBy);
 
-    void setTarget(@Nullable LivingEntity p_21681_);
+    void setTarget(final @Nullable LivingEntity target);
 
-    boolean canAttack(LivingEntity p_181126_);
+    boolean canAttack(final LivingEntity target);
 
     @Nullable LivingEntity getTarget();
+
+    @Nullable LivingEntity getTargetUnchecked();
 }

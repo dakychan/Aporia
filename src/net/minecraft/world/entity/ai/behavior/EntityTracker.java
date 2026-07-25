@@ -13,14 +13,14 @@ public class EntityTracker implements PositionTracker {
     private final boolean trackEyeHeight;
     private final boolean targetEyeHeight;
 
-    public EntityTracker(Entity p_22849_, boolean p_22850_) {
-        this(p_22849_, p_22850_, false);
+    public EntityTracker(final Entity entity, final boolean trackEyeHeight) {
+        this(entity, trackEyeHeight, false);
     }
 
-    public EntityTracker(Entity p_410542_, boolean p_408612_, boolean p_409986_) {
-        this.entity = p_410542_;
-        this.trackEyeHeight = p_408612_;
-        this.targetEyeHeight = p_409986_;
+    public EntityTracker(final Entity entity, final boolean trackEyeHeight, final boolean targetEyeHeight) {
+        this.entity = entity;
+        this.trackEyeHeight = trackEyeHeight;
+        this.targetEyeHeight = targetEyeHeight;
     }
 
     @Override
@@ -34,14 +34,14 @@ public class EntityTracker implements PositionTracker {
     }
 
     @Override
-    public boolean isVisibleBy(LivingEntity p_22853_) {
-        if (this.entity instanceof LivingEntity livingentity) {
-            if (!livingentity.isAlive()) {
+    public boolean isVisibleBy(final LivingEntity body) {
+        if (this.entity instanceof LivingEntity livingEntity) {
+            if (!livingEntity.isAlive()) {
                 return false;
-            } else {
-                Optional<NearestVisibleLivingEntities> optional = p_22853_.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
-                return optional.isPresent() && optional.get().contains(livingentity);
             }
+
+            Optional<NearestVisibleLivingEntities> visibleEntities = body.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES);
+            return visibleEntities.isPresent() && visibleEntities.get().contains(livingEntity);
         } else {
             return true;
         }

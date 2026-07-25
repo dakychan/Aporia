@@ -7,14 +7,12 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 import jdk.jfr.Period;
 import jdk.jfr.StackTrace;
-import net.minecraft.obfuscate.DontObfuscate;
 
 @Name("minecraft.ClientFps")
 @Label("Client fps")
 @Category({"Minecraft", "Ticking"})
 @StackTrace(false)
 @Period("1 s")
-@DontObfuscate
 public class ClientFpsEvent extends Event {
     public static final String EVENT_NAME = "minecraft.ClientFps";
     public static final EventType TYPE = EventType.getEventType(ClientFpsEvent.class);
@@ -22,8 +20,8 @@ public class ClientFpsEvent extends Event {
     @Label("Client fps")
     public final int fps;
 
-    public ClientFpsEvent(int p_457955_) {
-        this.fps = p_457955_;
+    public ClientFpsEvent(final int fps) {
+        this.fps = fps;
     }
 
     public static class Fields {

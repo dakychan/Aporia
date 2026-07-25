@@ -20,7 +20,7 @@ public record DebugPoiInfo(BlockPos pos, Holder<PoiType> poiType, int freeTicket
         DebugPoiInfo::new
     );
 
-    public DebugPoiInfo(PoiRecord p_423253_) {
-        this(p_423253_.getPos(), p_423253_.getPoiType(), p_423253_.getFreeTickets());
+    public DebugPoiInfo(final PoiRecord record) {
+        this(record.getPos(), record.getPoiType(), record.getFreeTickets());
     }
 }

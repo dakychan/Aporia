@@ -13,24 +13,24 @@ public class Varint21FrameDecoder extends ByteToMessageDecoder {
     private final ByteBuf helperBuf = Unpooled.directBuffer(3);
     private final @Nullable BandwidthDebugMonitor monitor;
 
-    public Varint21FrameDecoder(@Nullable BandwidthDebugMonitor p_297525_) {
-        this.monitor = p_297525_;
+    public Varint21FrameDecoder(final @Nullable BandwidthDebugMonitor monitor) {
+        this.monitor = monitor;
     }
 
     @Override
-    protected void handlerRemoved0(ChannelHandlerContext p_299287_) {
+    protected void handlerRemoved0(final ChannelHandlerContext ctx) {
         this.helperBuf.release();
     }
 
-    private static boolean copyVarint(ByteBuf p_299967_, ByteBuf p_298224_) {
+    private static boolean copyVarint(final ByteBuf in, final ByteBuf out) {
         for (int i = 0; i < 3; i++) {
-            if (!p_299967_.isReadable()) {
+            if (!in.isReadable()) {
                 return false;
             }
 
-            byte b0 = p_299967_.readByte();
-            p_298224_.writeByte(b0);
-            if (!VarInt.hasContinuationBit(b0)) {
+            byte b = in.readByte();
+            out.writeByte(b);
+            if (!VarInt.hasContinuationBit(b)) {
                 return true;
             }
         }
@@ -39,23 +39,25 @@ public class Varint21FrameDecoder extends ByteToMessageDecoder {
     }
 
     @Override
-    protected void decode(ChannelHandlerContext p_130566_, ByteBuf p_130567_, List<Object> p_130568_) {
-        p_130567_.markReaderIndex();
+    protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out) {
+        in.markReaderIndex();
         this.helperBuf.clear();
-        if (!copyVarint(p_130567_, this.helperBuf)) {
-            p_130567_.resetReaderIndex();
+        if (!copyVarint(in, this.helperBuf)) {
+            in.resetReaderIndex();
         } else {
-            int i = VarInt.read(this.helperBuf);
-            if (i == 0) {
+            int length = VarInt.read(this.helperBuf);
+            if (length == 0) {
                 throw new CorruptedFrameException("Frame length cannot be zero");
-            } else if (p_130567_.readableBytes() < i) {
-                p_130567_.resetReaderIndex();
+            }
+
+            if (in.readableBytes() < length) {
+                in.resetReaderIndex();
             } else {
                 if (this.monitor != null) {
-                    this.monitor.onReceive(i + VarInt.getByteSize(i));
+                    this.monitor.onReceive(length + VarInt.getByteSize(length));
                 }
 
-                p_130568_.add(p_130567_.readBytes(i));
+                out.add(in.readBytes(length));
             }
         }
     }

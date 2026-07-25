@@ -48,57 +48,57 @@ public class Shoot extends Behavior<Breeze> {
         );
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_310608_, Breeze p_310203_) {
-        return p_310203_.getPose() != Pose.STANDING
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Breeze breeze) {
+        return breeze.getPose() != Pose.STANDING
             ? false
-            : p_310203_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).map(p_311282_ -> isTargetWithinRange(p_310203_, p_311282_)).map(p_311912_ -> {
-                if (!p_311912_) {
-                    p_310203_.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT);
+            : breeze.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).map(target -> isTargetWithinRange(breeze, target)).map(withinRange -> {
+                if (!withinRange) {
+                    breeze.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT);
                 }
 
-                return (Boolean)p_311912_;
+                return (Boolean)withinRange;
             }).orElse(false);
     }
 
-    protected boolean canStillUse(ServerLevel p_309829_, Breeze p_312308_, long p_310493_) {
-        return p_312308_.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET) && p_312308_.getBrain().hasMemoryValue(MemoryModuleType.BREEZE_SHOOT);
+    protected boolean canStillUse(final ServerLevel level, final Breeze body, final long timestamp) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.ATTACK_TARGET) && body.getBrain().hasMemoryValue(MemoryModuleType.BREEZE_SHOOT);
     }
 
-    protected void start(ServerLevel p_312287_, Breeze p_310847_, long p_311799_) {
-        p_310847_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).ifPresent(p_421873_ -> p_310847_.setPose(Pose.SHOOTING));
-        p_310847_.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_CHARGING, Unit.INSTANCE, SHOOT_INITIAL_DELAY_TICKS);
-        p_310847_.playSound(SoundEvents.BREEZE_INHALE, 1.0F, 1.0F);
+    protected void start(final ServerLevel level, final Breeze breeze, final long timestamp) {
+        breeze.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).ifPresent(target -> breeze.setPose(Pose.SHOOTING));
+        breeze.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_CHARGING, Unit.INSTANCE, SHOOT_INITIAL_DELAY_TICKS);
+        breeze.playSound(SoundEvents.BREEZE_INHALE, 1.0F, 1.0F);
     }
 
-    protected void stop(ServerLevel p_312573_, Breeze p_309852_, long p_310968_) {
-        if (p_309852_.getPose() == Pose.SHOOTING) {
-            p_309852_.setPose(Pose.STANDING);
+    protected void stop(final ServerLevel level, final Breeze breeze, final long timestamp) {
+        if (breeze.getPose() == Pose.SHOOTING) {
+            breeze.setPose(Pose.STANDING);
         }
 
-        p_309852_.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_COOLDOWN, Unit.INSTANCE, SHOOT_COOLDOWN_TICKS);
-        p_309852_.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT);
+        breeze.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_COOLDOWN, Unit.INSTANCE, SHOOT_COOLDOWN_TICKS);
+        breeze.getBrain().eraseMemory(MemoryModuleType.BREEZE_SHOOT);
     }
 
-    protected void tick(ServerLevel p_312469_, Breeze p_309721_, long p_312577_) {
-        Brain<Breeze> brain = p_309721_.getBrain();
-        LivingEntity livingentity = brain.getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
-        if (livingentity != null) {
-            p_309721_.lookAt(EntityAnchorArgument.Anchor.EYES, livingentity.position());
+    protected void tick(final ServerLevel level, final Breeze breeze, final long timestamp) {
+        Brain<Breeze> brain = breeze.getBrain();
+        LivingEntity target = brain.getMemory(MemoryModuleType.ATTACK_TARGET).orElse(null);
+        if (target != null) {
+            breeze.lookAt(EntityAnchorArgument.Anchor.EYES, target.position());
             if (!brain.getMemory(MemoryModuleType.BREEZE_SHOOT_CHARGING).isPresent() && !brain.getMemory(MemoryModuleType.BREEZE_SHOOT_RECOVERING).isPresent()) {
                 brain.setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT_RECOVERING, Unit.INSTANCE, SHOOT_RECOVER_DELAY_TICKS);
-                double d0 = livingentity.getX() - p_309721_.getX();
-                double d1 = livingentity.getY(livingentity.isPassenger() ? 0.8 : 0.3) - p_309721_.getFiringYPosition();
-                double d2 = livingentity.getZ() - p_309721_.getZ();
+                double xd = target.getX() - breeze.getX();
+                double yd = target.getY(target.isPassenger() ? 0.8 : 0.3) - breeze.getFiringYPosition();
+                double zd = target.getZ() - breeze.getZ();
                 Projectile.spawnProjectileUsingShoot(
-                    new BreezeWindCharge(p_309721_, p_312469_), p_312469_, ItemStack.EMPTY, d0, d1, d2, 0.7F, 5 - p_312469_.getDifficulty().getId() * 4
+                    new BreezeWindCharge(breeze, level), level, ItemStack.EMPTY, xd, yd, zd, 0.7F, 5 - level.getDifficulty().getId() * 4
                 );
-                p_309721_.playSound(SoundEvents.BREEZE_SHOOT, 1.5F, 1.0F);
+                breeze.playSound(SoundEvents.BREEZE_SHOOT, 1.5F, 1.0F);
             }
         }
     }
 
-    private static boolean isTargetWithinRange(Breeze p_311470_, LivingEntity p_309385_) {
-        double d0 = p_311470_.position().distanceToSqr(p_309385_.position());
-        return d0 < 256.0;
+    private static boolean isTargetWithinRange(final Breeze body, final LivingEntity target) {
+        double distanceSqrt = body.position().distanceToSqr(target.position());
+        return distanceSqrt < 256.0;
     }
 }

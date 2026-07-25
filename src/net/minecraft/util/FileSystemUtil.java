@@ -14,19 +14,19 @@ import org.slf4j.Logger;
 public class FileSystemUtil {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static Path safeGetPath(URI p_396304_) throws IOException {
+    public static Path safeGetPath(final URI probeUri) throws IOException {
         try {
-            return Paths.get(p_396304_);
-        } catch (FileSystemNotFoundException filesystemnotfoundexception) {
-        } catch (Throwable throwable) {
-            LOGGER.warn("Unable to get path for: {}", p_396304_, throwable);
+            return Paths.get(probeUri);
+        } catch (FileSystemNotFoundException var3) {
+        } catch (Throwable t) {
+            LOGGER.warn("Unable to get path for: {}", probeUri, t);
         }
 
         try {
-            FileSystems.newFileSystem(p_396304_, Collections.emptyMap());
-        } catch (FileSystemAlreadyExistsException filesystemalreadyexistsexception) {
+            FileSystems.newFileSystem(probeUri, Collections.emptyMap());
+        } catch (FileSystemAlreadyExistsException var2) {
         }
 
-        return Paths.get(p_396304_);
+        return Paths.get(probeUri);
     }
 }

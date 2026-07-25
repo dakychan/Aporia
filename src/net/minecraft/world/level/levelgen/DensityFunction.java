@@ -5,25 +5,44 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.RegistryFileCodec;
 import net.minecraft.util.KeyDispatchDataCodec;
-import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import org.jspecify.annotations.Nullable;
 
 public interface DensityFunction {
-    Codec<DensityFunction> DIRECT_CODEC = DensityFunctions.DIRECT_CODEC;
-    Codec<Holder<DensityFunction>> CODEC = RegistryFileCodec.create(Registries.DENSITY_FUNCTION, DIRECT_CODEC);
-    Codec<DensityFunction> HOLDER_HELPER_CODEC = CODEC.xmap(
-        DensityFunctions.HolderHolder::new,
-        p_208226_ -> (Holder<DensityFunction>)(p_208226_ instanceof DensityFunctions.HolderHolder densityfunctions$holderholder
-            ? densityfunctions$holderholder.function()
-            : new Holder.Direct<>(p_208226_))
-    );
+    Codec<DensityFunction> CODEC = RegistryFileCodec.create(Registries.DENSITY_FUNCTION, DensityFunctions.DIRECT_CODEC).xmap(holder -> {
+        return switch (holder) {
+            case Holder.Direct<DensityFunction> direct -> (DensityFunction)direct.value();
+            case Holder.Reference<DensityFunction> reference -> new DensityFunctions.HolderHolder(reference);
+            default -> throw new MatchException(null, null);
+        };
+    }, value -> {
+        return switch (value) {
+            case DensityFunctions.HolderHolder(Holder<DensityFunction> function) -> function;
+            default -> Holder.direct(value);
+        };
+    });
 
-    double compute(DensityFunction.FunctionContext p_208223_);
+    double compute(final DensityFunction.FunctionContext context);
 
-    void fillArray(double[] p_208227_, DensityFunction.ContextProvider p_208228_);
+    void fillArray(final double[] output, final DensityFunction.ContextProvider contextProvider);
 
-    DensityFunction mapAll(DensityFunction.Visitor p_208224_);
+    DensityFunction mapChildren(final DensityFunction.Visitor visitor);
+
+    default DensityFunction mapAll(final DensityFunction.Visitor visitor) {
+        class RecursiveVisitor implements DensityFunction.Visitor {
+            @Override
+            public DensityFunction apply(final DensityFunction input) {
+                return visitor.apply(input.mapChildren(this));
+            }
+
+            @Override
+            public DensityFunction.NoiseHolder visitNoise(final DensityFunction.NoiseHolder noise) {
+                return visitor.visitNoise(noise);
+            }
+        }
+
+        return new RecursiveVisitor().apply(this);
+    }
 
     double minValue();
 
@@ -31,8 +50,8 @@ public interface DensityFunction {
 
     KeyDispatchDataCodec<? extends DensityFunction> codec();
 
-    default DensityFunction clamp(double p_208221_, double p_208222_) {
-        return new DensityFunctions.Clamp(this, p_208221_, p_208222_);
+    default DensityFunction clamp(final double min, final double max) {
+        return new DensityFunctions.Clamp(this, min, max);
     }
 
     default DensityFunction abs() {
@@ -63,34 +82,30 @@ public interface DensityFunction {
         return DensityFunctions.map(this, DensityFunctions.Mapped.Type.SQUEEZE);
     }
 
-    public interface ContextProvider {
-        DensityFunction.FunctionContext forIndex(int p_208235_);
+    interface ContextProvider {
+        DensityFunction.FunctionContext forIndex(int index);
 
-        void fillAllDirectly(double[] p_208236_, DensityFunction p_208237_);
+        void fillAllDirectly(double[] output, DensityFunction function);
     }
 
-    public interface FunctionContext {
+    interface FunctionContext {
         int blockX();
 
         int blockY();
 
         int blockZ();
-
-        default Blender getBlender() {
-            return Blender.empty();
-        }
     }
 
-    public record NoiseHolder(Holder<NormalNoise.NoiseParameters> noiseData, @Nullable NormalNoise noise) {
+    record NoiseHolder(Holder<NormalNoise.NoiseParameters> noiseData, @Nullable NormalNoise noise) {
         public static final Codec<DensityFunction.NoiseHolder> CODEC = NormalNoise.NoiseParameters.CODEC
-            .xmap(p_224011_ -> new DensityFunction.NoiseHolder((Holder<NormalNoise.NoiseParameters>)p_224011_, null), DensityFunction.NoiseHolder::noiseData);
+            .xmap(data -> new DensityFunction.NoiseHolder((Holder<NormalNoise.NoiseParameters>)data, null), DensityFunction.NoiseHolder::noiseData);
 
-        public NoiseHolder(Holder<NormalNoise.NoiseParameters> p_224001_) {
-            this(p_224001_, null);
+        public NoiseHolder(final Holder<NormalNoise.NoiseParameters> noiseData) {
+            this(noiseData, null);
         }
 
-        public double getValue(double p_224007_, double p_224008_, double p_224009_) {
-            return this.noise == null ? 0.0 : this.noise.getValue(p_224007_, p_224008_, p_224009_);
+        public double getValue(final double x, final double y, final double z) {
+            return this.noise == null ? 0.0 : this.noise.getValue(x, y, z);
         }
 
         public double maxValue() {
@@ -98,40 +113,26 @@ public interface DensityFunction {
         }
     }
 
-    public interface SimpleFunction extends DensityFunction {
+    interface SimpleFunction extends DensityFunction {
         @Override
-        default void fillArray(double[] p_208241_, DensityFunction.ContextProvider p_208242_) {
-            p_208242_.fillAllDirectly(p_208241_, this);
+        default void fillArray(final double[] output, final DensityFunction.ContextProvider contextProvider) {
+            contextProvider.fillAllDirectly(output, this);
         }
 
         @Override
-        default DensityFunction mapAll(DensityFunction.Visitor p_208239_) {
-            return p_208239_.apply(this);
-        }
-    }
-
-    public record SinglePointContext(int blockX, int blockY, int blockZ) implements DensityFunction.FunctionContext {
-        @Override
-        public int blockX() {
-            return this.blockX;
-        }
-
-        @Override
-        public int blockY() {
-            return this.blockY;
-        }
-
-        @Override
-        public int blockZ() {
-            return this.blockZ;
+        default DensityFunction mapChildren(final DensityFunction.Visitor visitor) {
+            return this;
         }
     }
 
-    public interface Visitor {
-        DensityFunction apply(DensityFunction p_224019_);
+    record SinglePointContext(int blockX, int blockY, int blockZ) implements DensityFunction.FunctionContext {
+    }
 
-        default DensityFunction.NoiseHolder visitNoise(DensityFunction.NoiseHolder p_224018_) {
-            return p_224018_;
+    interface Visitor {
+        DensityFunction apply(DensityFunction input);
+
+        default DensityFunction.NoiseHolder visitNoise(final DensityFunction.NoiseHolder noise) {
+            return noise;
         }
     }
 }

@@ -10,10 +10,7 @@ import net.minecraft.world.inventory.AbstractFurnaceMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.display.FurnaceRecipeDisplay;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class FurnaceRecipeBookComponent extends RecipeBookComponent<AbstractFurnaceMenu> {
     private static final WidgetSprites FILTER_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/furnace_filter_enabled"),
@@ -23,9 +20,9 @@ public class FurnaceRecipeBookComponent extends RecipeBookComponent<AbstractFurn
     );
     private final Component recipeFilterName;
 
-    public FurnaceRecipeBookComponent(AbstractFurnaceMenu p_360736_, Component p_363743_, List<RecipeBookComponent.TabInfo> p_365672_) {
-        super(p_360736_, p_365672_);
-        this.recipeFilterName = p_363743_;
+    public FurnaceRecipeBookComponent(final AbstractFurnaceMenu menu, final Component recipeFilterName, final List<RecipeBookComponent.TabInfo> tabInfos) {
+        super(menu, tabInfos);
+        this.recipeFilterName = recipeFilterName;
     }
 
     @Override
@@ -34,21 +31,21 @@ public class FurnaceRecipeBookComponent extends RecipeBookComponent<AbstractFurn
     }
 
     @Override
-    protected boolean isCraftingSlot(Slot p_366927_) {
-        return switch (p_366927_.index) {
+    protected boolean isCraftingSlot(final Slot slot) {
+        return switch (slot.index) {
             case 0, 1, 2 -> true;
             default -> false;
         };
     }
 
     @Override
-    protected void fillGhostRecipe(GhostSlots p_365891_, RecipeDisplay p_366392_, ContextMap p_365727_) {
-        p_365891_.setResult(this.menu.getResultSlot(), p_365727_, p_366392_.result());
-        if (p_366392_ instanceof FurnaceRecipeDisplay furnacerecipedisplay) {
-            p_365891_.setInput(this.menu.slots.get(0), p_365727_, furnacerecipedisplay.ingredient());
-            Slot slot = this.menu.slots.get(1);
-            if (slot.getItem().isEmpty()) {
-                p_365891_.setInput(slot, p_365727_, furnacerecipedisplay.fuel());
+    protected void fillGhostRecipe(final GhostSlots ghostSlots, final RecipeDisplay recipe, final ContextMap context) {
+        ghostSlots.setResult(this.menu.getResultSlot(), context, recipe.result());
+        if (recipe instanceof FurnaceRecipeDisplay furnaceRecipe) {
+            ghostSlots.setInput(this.menu.slots.get(0), context, furnaceRecipe.ingredient());
+            Slot fuelSlot = this.menu.slots.get(1);
+            if (fuelSlot.getItem().isEmpty()) {
+                ghostSlots.setInput(fuelSlot, context, furnaceRecipe.fuel());
             }
         }
     }
@@ -59,7 +56,7 @@ public class FurnaceRecipeBookComponent extends RecipeBookComponent<AbstractFurn
     }
 
     @Override
-    protected void selectMatchingRecipes(RecipeCollection p_361744_, StackedItemContents p_368936_) {
-        p_361744_.selectRecipes(p_368936_, p_362331_ -> p_362331_ instanceof FurnaceRecipeDisplay);
+    protected void selectMatchingRecipes(final RecipeCollection collection, final StackedItemContents stackedContents) {
+        collection.selectRecipes(stackedContents, display -> display instanceof FurnaceRecipeDisplay);
     }
 }

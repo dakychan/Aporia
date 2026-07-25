@@ -13,9 +13,9 @@ public class ItemBasedSteering {
     private boolean boosting;
     private int boostTime;
 
-    public ItemBasedSteering(SynchedEntityData p_20841_, EntityDataAccessor<Integer> p_20842_) {
-        this.entityData = p_20841_;
-        this.boostTimeAccessor = p_20842_;
+    public ItemBasedSteering(final SynchedEntityData entityData, final EntityDataAccessor<Integer> boostTimeAccessor) {
+        this.entityData = entityData;
+        this.boostTimeAccessor = boostTimeAccessor;
     }
 
     public void onSynced() {
@@ -23,15 +23,15 @@ public class ItemBasedSteering {
         this.boostTime = 0;
     }
 
-    public boolean boost(RandomSource p_217033_) {
+    public boolean boost(final RandomSource random) {
         if (this.boosting) {
             return false;
-        } else {
-            this.boosting = true;
-            this.boostTime = 0;
-            this.entityData.set(this.boostTimeAccessor, p_217033_.nextInt(841) + 140);
-            return true;
         }
+
+        this.boosting = true;
+        this.boostTime = 0;
+        this.entityData.set(this.boostTimeAccessor, random.nextInt(841) + 140);
+        return true;
     }
 
     public void tickBoost() {

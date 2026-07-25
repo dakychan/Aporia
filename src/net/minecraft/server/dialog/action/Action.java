@@ -12,45 +12,45 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.ClickEvent;
 
 public interface Action {
-    Codec<Action> CODEC = BuiltInRegistries.DIALOG_ACTION_TYPE.byNameCodec().dispatch(Action::codec, p_410137_ -> p_410137_);
+    Codec<Action> CODEC = BuiltInRegistries.DIALOG_ACTION_TYPE.byNameCodec().dispatch(Action::codec, c -> c);
 
     MapCodec<? extends Action> codec();
 
-    Optional<ClickEvent> createAction(Map<String, Action.ValueGetter> p_408289_);
+    Optional<ClickEvent> createAction(Map<String, Action.ValueGetter> parameters);
 
-    public interface ValueGetter {
+    interface ValueGetter {
         String asTemplateSubstitution();
 
         Tag asTag();
 
-        static Map<String, String> getAsTemplateSubstitutions(Map<String, Action.ValueGetter> p_407855_) {
-            return Maps.transformValues(p_407855_, Action.ValueGetter::asTemplateSubstitution);
+        static Map<String, String> getAsTemplateSubstitutions(final Map<String, Action.ValueGetter> parameters) {
+            return Maps.transformValues(parameters, Action.ValueGetter::asTemplateSubstitution);
         }
 
-        static Action.ValueGetter of(final String p_407710_) {
+        static Action.ValueGetter of(final String value) {
             return new Action.ValueGetter() {
                 @Override
                 public String asTemplateSubstitution() {
-                    return p_407710_;
+                    return value;
                 }
 
                 @Override
                 public Tag asTag() {
-                    return StringTag.valueOf(p_407710_);
+                    return StringTag.valueOf(value);
                 }
             };
         }
 
-        static Action.ValueGetter of(final Supplier<String> p_406186_) {
+        static Action.ValueGetter of(final Supplier<String> value) {
             return new Action.ValueGetter() {
                 @Override
                 public String asTemplateSubstitution() {
-                    return p_406186_.get();
+                    return value.get();
                 }
 
                 @Override
                 public Tag asTag() {
-                    return StringTag.valueOf(p_406186_.get());
+                    return StringTag.valueOf(value.get());
                 }
             };
         }

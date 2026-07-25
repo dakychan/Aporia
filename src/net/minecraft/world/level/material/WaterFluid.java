@@ -46,29 +46,23 @@ public abstract class WaterFluid extends FlowingFluid {
     }
 
     @Override
-    public void animateTick(Level p_230606_, BlockPos p_230607_, FluidState p_230608_, RandomSource p_230609_) {
-        if (!p_230608_.isSource() && !p_230608_.getValue(FALLING)) {
-            if (p_230609_.nextInt(64) == 0) {
-                p_230606_.playLocalSound(
-                    p_230607_.getX() + 0.5,
-                    p_230607_.getY() + 0.5,
-                    p_230607_.getZ() + 0.5,
+    public void animateTick(final Level level, final BlockPos pos, final FluidState fluidState, final RandomSource random) {
+        if (!fluidState.isSource() && !fluidState.getValue(FALLING)) {
+            if (random.nextInt(64) == 0) {
+                level.playLocalSound(
+                    pos.getX() + 0.5,
+                    pos.getY() + 0.5,
+                    pos.getZ() + 0.5,
                     SoundEvents.WATER_AMBIENT,
                     SoundSource.AMBIENT,
-                    p_230609_.nextFloat() * 0.25F + 0.75F,
-                    p_230609_.nextFloat() + 0.5F,
+                    random.nextFloat() * 0.25F + 0.75F,
+                    random.nextFloat() + 0.5F,
                     false
                 );
             }
-        } else if (p_230609_.nextInt(10) == 0) {
-            p_230606_.addParticle(
-                ParticleTypes.UNDERWATER,
-                p_230607_.getX() + p_230609_.nextDouble(),
-                p_230607_.getY() + p_230609_.nextDouble(),
-                p_230607_.getZ() + p_230609_.nextDouble(),
-                0.0,
-                0.0,
-                0.0
+        } else if (random.nextInt(10) == 0) {
+            level.addParticle(
+                ParticleTypes.UNDERWATER, pos.getX() + random.nextDouble(), pos.getY() + random.nextDouble(), pos.getZ() + random.nextDouble(), 0.0, 0.0, 0.0
             );
         }
     }
@@ -79,49 +73,49 @@ public abstract class WaterFluid extends FlowingFluid {
     }
 
     @Override
-    protected boolean canConvertToSource(ServerLevel p_361550_) {
-        return p_361550_.getGameRules().get(GameRules.WATER_SOURCE_CONVERSION);
+    protected boolean canConvertToSource(final ServerLevel level) {
+        return level.getGameRules().get(GameRules.WATER_SOURCE_CONVERSION);
     }
 
     @Override
-    protected void beforeDestroyingBlock(LevelAccessor p_76450_, BlockPos p_76451_, BlockState p_76452_) {
-        BlockEntity blockentity = p_76452_.hasBlockEntity() ? p_76450_.getBlockEntity(p_76451_) : null;
-        Block.dropResources(p_76452_, p_76450_, p_76451_, blockentity);
+    protected void beforeDestroyingBlock(final LevelAccessor level, final BlockPos pos, final BlockState state) {
+        BlockEntity blockEntity = state.hasBlockEntity() ? level.getBlockEntity(pos) : null;
+        Block.dropResources(state, level, pos, blockEntity);
     }
 
     @Override
-    protected void entityInside(Level p_392669_, BlockPos p_392690_, Entity p_394696_, InsideBlockEffectApplier p_394166_) {
-        p_394166_.apply(InsideBlockEffectType.EXTINGUISH);
+    protected void entityInside(final Level level, final BlockPos pos, final Entity entity, final InsideBlockEffectApplier effectApplier) {
+        effectApplier.apply(InsideBlockEffectType.EXTINGUISH);
     }
 
     @Override
-    public int getSlopeFindDistance(LevelReader p_76464_) {
+    public int getSlopeFindDistance(final LevelReader level) {
         return 4;
     }
 
     @Override
-    public BlockState createLegacyBlock(FluidState p_76466_) {
-        return Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, getLegacyLevel(p_76466_));
+    public BlockState createLegacyBlock(final FluidState fluidState) {
+        return Blocks.WATER.defaultBlockState().setValue(LiquidBlock.LEVEL, getLegacyLevel(fluidState));
     }
 
     @Override
-    public boolean isSame(Fluid p_76456_) {
-        return p_76456_ == Fluids.WATER || p_76456_ == Fluids.FLOWING_WATER;
+    public boolean isSame(final Fluid other) {
+        return other == Fluids.WATER || other == Fluids.FLOWING_WATER;
     }
 
     @Override
-    public int getDropOff(LevelReader p_76469_) {
+    public int getDropOff(final LevelReader level) {
         return 1;
     }
 
     @Override
-    public int getTickDelay(LevelReader p_76454_) {
+    public int getTickDelay(final LevelReader level) {
         return 5;
     }
 
     @Override
-    public boolean canBeReplacedWith(FluidState p_76458_, BlockGetter p_76459_, BlockPos p_76460_, Fluid p_76461_, Direction p_76462_) {
-        return p_76462_ == Direction.DOWN && !p_76461_.is(FluidTags.WATER);
+    public boolean canBeReplacedWith(final FluidState state, final BlockGetter level, final BlockPos pos, final Fluid other, final Direction direction) {
+        return direction == Direction.DOWN && !other.is(FluidTags.WATER);
     }
 
     @Override
@@ -136,30 +130,30 @@ public abstract class WaterFluid extends FlowingFluid {
 
     public static class Flowing extends WaterFluid {
         @Override
-        protected void createFluidStateDefinition(StateDefinition.Builder<Fluid, FluidState> p_76476_) {
-            super.createFluidStateDefinition(p_76476_);
-            p_76476_.add(LEVEL);
+        protected void createFluidStateDefinition(final StateDefinition.Builder<Fluid, FluidState> builder) {
+            super.createFluidStateDefinition(builder);
+            builder.add(LEVEL);
         }
 
         @Override
-        public int getAmount(FluidState p_76480_) {
-            return p_76480_.getValue(LEVEL);
+        public int getAmount(final FluidState fluidState) {
+            return fluidState.getValue(LEVEL);
         }
 
         @Override
-        public boolean isSource(FluidState p_76478_) {
+        public boolean isSource(final FluidState fluidState) {
             return false;
         }
     }
 
     public static class Source extends WaterFluid {
         @Override
-        public int getAmount(FluidState p_76485_) {
+        public int getAmount(final FluidState fluidState) {
             return 8;
         }
 
         @Override
-        public boolean isSource(FluidState p_76483_) {
+        public boolean isSource(final FluidState fluidState) {
             return true;
         }
     }

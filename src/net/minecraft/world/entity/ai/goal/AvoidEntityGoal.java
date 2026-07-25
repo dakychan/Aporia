@@ -2,7 +2,6 @@ package net.minecraft.world.entity.ai.goal;
 
 import java.util.EnumSet;
 import java.util.function.Predicate;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.PathfinderMob;
@@ -26,44 +25,51 @@ public class AvoidEntityGoal<T extends LivingEntity> extends Goal {
     protected final Predicate<? super LivingEntity> predicateOnAvoidEntity;
     private final TargetingConditions avoidEntityTargeting;
 
-    public AvoidEntityGoal(PathfinderMob p_25027_, Class<T> p_25028_, float p_25029_, double p_25030_, double p_25031_) {
-        this(p_25027_, p_25028_, p_25052_ -> true, p_25029_, p_25030_, p_25031_, EntitySelector.NO_CREATIVE_OR_SPECTATOR);
+    public AvoidEntityGoal(
+        final PathfinderMob mob, final Class<T> avoidClass, final float maxDist, final double walkSpeedModifier, final double sprintSpeedModifier
+    ) {
+        this(mob, avoidClass, t -> true, maxDist, walkSpeedModifier, sprintSpeedModifier, EntitySelector.NO_CREATIVE_OR_SPECTATOR);
     }
 
     public AvoidEntityGoal(
-        PathfinderMob p_25040_,
-        Class<T> p_25041_,
-        Predicate<LivingEntity> p_25042_,
-        float p_25043_,
-        double p_25044_,
-        double p_25045_,
-        Predicate<? super LivingEntity> p_25046_
+        final PathfinderMob mob,
+        final Class<T> avoidClass,
+        final Predicate<LivingEntity> avoidPredicate,
+        final float maxDist,
+        final double walkSpeedModifier,
+        final double sprintSpeedModifier,
+        final Predicate<? super LivingEntity> predicateOnAvoidEntity
     ) {
-        this.mob = p_25040_;
-        this.avoidClass = p_25041_;
-        this.avoidPredicate = p_25042_;
-        this.maxDist = p_25043_;
-        this.walkSpeedModifier = p_25044_;
-        this.sprintSpeedModifier = p_25045_;
-        this.predicateOnAvoidEntity = p_25046_;
-        this.pathNav = p_25040_.getNavigation();
+        this.mob = mob;
+        this.avoidClass = avoidClass;
+        this.avoidPredicate = avoidPredicate;
+        this.maxDist = maxDist;
+        this.walkSpeedModifier = walkSpeedModifier;
+        this.sprintSpeedModifier = sprintSpeedModifier;
+        this.predicateOnAvoidEntity = predicateOnAvoidEntity;
+        this.pathNav = mob.getNavigation();
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
         this.avoidEntityTargeting = TargetingConditions.forCombat()
-            .range(p_25043_)
-            .selector((p_359091_, p_359092_) -> p_25046_.test(p_359091_) && p_25042_.test(p_359091_));
+            .range(maxDist)
+            .selector((target, level) -> predicateOnAvoidEntity.test(target) && avoidPredicate.test(target));
     }
 
     public AvoidEntityGoal(
-        PathfinderMob p_25033_, Class<T> p_25034_, float p_25035_, double p_25036_, double p_25037_, Predicate<? super LivingEntity> p_25038_
+        final PathfinderMob mob,
+        final Class<T> avoidClass,
+        final float maxDist,
+        final double walkSpeedModifier,
+        final double sprintSpeedModifier,
+        final Predicate<? super LivingEntity> predicateOnAvoidEntity
     ) {
-        this(p_25033_, p_25034_, p_25049_ -> true, p_25035_, p_25036_, p_25037_, p_25038_);
+        this(mob, avoidClass, t -> true, maxDist, walkSpeedModifier, sprintSpeedModifier, predicateOnAvoidEntity);
     }
 
     @Override
     public boolean canUse() {
         this.toAvoid = getServerLevel(this.mob)
             .getNearestEntity(
-                this.mob.level().getEntitiesOfClass(this.avoidClass, this.mob.getBoundingBox().inflate(this.maxDist, 3.0, this.maxDist), p_148078_ -> true),
+                this.mob.level().getEntitiesOfClass(this.avoidClass, this.mob.getBoundingBox().inflate(this.maxDist, 3.0, this.maxDist), entity -> true),
                 this.avoidEntityTargeting,
                 this.mob,
                 this.mob.getX(),
@@ -72,17 +78,19 @@ public class AvoidEntityGoal<T extends LivingEntity> extends Goal {
             );
         if (this.toAvoid == null) {
             return false;
-        } else {
-            Vec3 vec3 = DefaultRandomPos.getPosAway(this.mob, 16, 7, this.toAvoid.position());
-            if (vec3 == null) {
-                return false;
-            } else if (this.toAvoid.distanceToSqr(vec3.x, vec3.y, vec3.z) < this.toAvoid.distanceToSqr(this.mob)) {
-                return false;
-            } else {
-                this.path = this.pathNav.createPath(vec3.x, vec3.y, vec3.z, 0);
-                return this.path != null;
-            }
         }
+
+        Vec3 pos = DefaultRandomPos.getPosAway(this.mob, 16, 7, this.toAvoid.position());
+        if (pos == null) {
+            return false;
+        }
+
+        if (this.toAvoid.distanceToSqr(pos.x, pos.y, pos.z) < this.toAvoid.distanceToSqr(this.mob)) {
+            return false;
+        }
+
+        this.path = this.pathNav.createPath(pos.x, pos.y, pos.z, 0);
+        return this.path != null;
     }
 
     @Override

@@ -12,15 +12,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class CarrotBlock extends CropBlock {
     public static final MapCodec<CarrotBlock> CODEC = simpleCodec(CarrotBlock::new);
-    private static final VoxelShape[] SHAPES = Block.boxes(7, p_395626_ -> Block.column(16.0, 0.0, 2 + p_395626_));
+    private static final VoxelShape[] SHAPES = Block.boxes(7, age -> Block.column(16.0, 0.0, 2 + age));
 
     @Override
     public MapCodec<CarrotBlock> codec() {
         return CODEC;
     }
 
-    public CarrotBlock(BlockBehaviour.Properties p_51328_) {
-        super(p_51328_);
+    public CarrotBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
@@ -29,7 +29,7 @@ public class CarrotBlock extends CropBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_51330_, BlockGetter p_51331_, BlockPos p_51332_, CollisionContext p_51333_) {
-        return SHAPES[this.getAge(p_51330_)];
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES[this.getAge(state)];
     }
 }

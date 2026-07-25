@@ -3,7 +3,6 @@ package net.minecraft.world.level.levelgen.structure.structures;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Rotation;
@@ -15,39 +14,38 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilde
 
 public class ShipwreckStructure extends Structure {
     public static final MapCodec<ShipwreckStructure> CODEC = RecordCodecBuilder.mapCodec(
-        p_229401_ -> p_229401_.group(settingsCodec(p_229401_), Codec.BOOL.fieldOf("is_beached").forGetter(p_229399_ -> p_229399_.isBeached))
-            .apply(p_229401_, ShipwreckStructure::new)
+        i -> i.group(settingsCodec(i), Codec.BOOL.fieldOf("is_beached").forGetter(s -> s.isBeached)).apply(i, ShipwreckStructure::new)
     );
     public final boolean isBeached;
 
-    public ShipwreckStructure(Structure.StructureSettings p_229388_, boolean p_229389_) {
-        super(p_229388_);
-        this.isBeached = p_229389_;
+    public ShipwreckStructure(final Structure.StructureSettings settings, final boolean isBeached) {
+        super(settings);
+        this.isBeached = isBeached;
     }
 
     @Override
-    public Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext p_229391_) {
-        Heightmap.Types heightmap$types = this.isBeached ? Heightmap.Types.WORLD_SURFACE_WG : Heightmap.Types.OCEAN_FLOOR_WG;
-        return onTopOfChunkCenter(p_229391_, heightmap$types, p_229394_ -> this.generatePieces(p_229394_, p_229391_));
+    public Optional<Structure.GenerationStub> findGenerationPoint(final Structure.GenerationContext context) {
+        Heightmap.Types type = this.isBeached ? Heightmap.Types.WORLD_SURFACE_WG : Heightmap.Types.OCEAN_FLOOR_WG;
+        return onTopOfChunkCenter(context, type, builder -> this.generatePieces(builder, context));
     }
 
-    private void generatePieces(StructurePiecesBuilder p_229396_, Structure.GenerationContext p_229397_) {
-        Rotation rotation = Rotation.getRandom(p_229397_.random());
-        BlockPos blockpos = new BlockPos(p_229397_.chunkPos().getMinBlockX(), 90, p_229397_.chunkPos().getMinBlockZ());
-        ShipwreckPieces.ShipwreckPiece shipwreckpieces$shipwreckpiece = ShipwreckPieces.addRandomPiece(
-            p_229397_.structureTemplateManager(), blockpos, rotation, p_229396_, p_229397_.random(), this.isBeached
+    private void generatePieces(final StructurePiecesBuilder builder, final Structure.GenerationContext context) {
+        Rotation rotation = Rotation.getRandom(context.random());
+        BlockPos offset = new BlockPos(context.chunkPos().getMinBlockX(), 90, context.chunkPos().getMinBlockZ());
+        ShipwreckPieces.ShipwreckPiece piece = ShipwreckPieces.addRandomPiece(
+            context.structureTemplateManager(), offset, rotation, builder, context.random(), this.isBeached
         );
-        if (shipwreckpieces$shipwreckpiece.isTooBigToFitInWorldGenRegion()) {
-            BoundingBox boundingbox = shipwreckpieces$shipwreckpiece.getBoundingBox();
-            int i;
+        if (piece.isTooBigToFitInWorldGenRegion()) {
+            BoundingBox bb = piece.getBoundingBox();
+            int height;
             if (this.isBeached) {
-                int j = Structure.getLowestY(p_229397_, boundingbox.minX(), boundingbox.getXSpan(), boundingbox.minZ(), boundingbox.getZSpan());
-                i = shipwreckpieces$shipwreckpiece.calculateBeachedPosition(j, p_229397_.random());
+                int minY = Structure.getLowestY(context, bb.minX(), bb.getXSpan(), bb.minZ(), bb.getZSpan());
+                height = piece.calculateBeachedPosition(minY, context.random());
             } else {
-                i = Structure.getMeanFirstOccupiedHeight(p_229397_, boundingbox.minX(), boundingbox.getXSpan(), boundingbox.minZ(), boundingbox.getZSpan());
+                height = Structure.getMeanFirstOccupiedHeight(context, bb.minX(), bb.getXSpan(), bb.minZ(), bb.getZSpan());
             }
 
-            shipwreckpieces$shipwreckpiece.adjustPositionHeight(i);
+            piece.adjustPositionHeight(height);
         }
     }
 

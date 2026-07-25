@@ -5,21 +5,21 @@ import java.security.SecureRandom;
 public record SecurityConfig(String secretKey) {
     private static final String SECRET_KEY_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
-    public static boolean isValid(String p_430498_) {
-        return p_430498_.isEmpty() ? false : p_430498_.matches("^[a-zA-Z0-9]{40}$");
+    public static boolean isValid(final String secretKey) {
+        return secretKey.isEmpty() ? false : secretKey.matches("^[a-zA-Z0-9]{40}$");
     }
 
     public static String generateSecretKey() {
-        SecureRandom securerandom = new SecureRandom();
-        StringBuilder stringbuilder = new StringBuilder(40);
+        SecureRandom random = new SecureRandom();
+        StringBuilder key = new StringBuilder(40);
 
         for (int i = 0; i < 40; i++) {
-            stringbuilder.append(
+            key.append(
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-                    .charAt(securerandom.nextInt("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".length()))
+                    .charAt(random.nextInt("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789".length()))
             );
         }
 
-        return stringbuilder.toString();
+        return key.toString();
     }
 }

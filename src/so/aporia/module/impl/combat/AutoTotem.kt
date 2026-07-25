@@ -184,7 +184,7 @@ class AutoTotem : Module("AutoTotem", Category.COMBAT) {
         if (crystalCheck.isEnabled && mc.level != null) {
             val range = crystalRange.getFloat()
             for (entity in mc.level!!.entitiesForRendering()) {
-                if (entity.type == net.minecraft.world.entity.EntityType.END_CRYSTAL
+                if (entity.type == net.minecraft.world.entity.EntityTypes.END_CRYSTAL
                     && pl.distanceTo(entity) <= range) return true
             }
         }

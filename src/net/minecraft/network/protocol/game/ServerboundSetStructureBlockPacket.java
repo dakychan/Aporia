@@ -37,98 +37,94 @@ public class ServerboundSetStructureBlockPacket implements Packet<ServerGamePack
     private final long seed;
 
     public ServerboundSetStructureBlockPacket(
-        BlockPos p_179771_,
-        StructureBlockEntity.UpdateType p_179772_,
-        StructureMode p_179773_,
-        String p_179774_,
-        BlockPos p_179775_,
-        Vec3i p_179776_,
-        Mirror p_179777_,
-        Rotation p_179778_,
-        String p_179779_,
-        boolean p_179780_,
-        boolean p_179781_,
-        boolean p_179782_,
-        boolean p_393817_,
-        float p_179783_,
-        long p_179784_
+        final BlockPos pos,
+        final StructureBlockEntity.UpdateType updateType,
+        final StructureMode mode,
+        final String name,
+        final BlockPos offset,
+        final Vec3i size,
+        final Mirror mirror,
+        final Rotation rotation,
+        final String data,
+        final boolean ignoreEntities,
+        final boolean strict,
+        final boolean showAir,
+        final boolean showBoundingBox,
+        final float integrity,
+        final long seed
     ) {
-        this.pos = p_179771_;
-        this.updateType = p_179772_;
-        this.mode = p_179773_;
-        this.name = p_179774_;
-        this.offset = p_179775_;
-        this.size = p_179776_;
-        this.mirror = p_179777_;
-        this.rotation = p_179778_;
-        this.data = p_179779_;
-        this.ignoreEntities = p_179780_;
-        this.strict = p_179781_;
-        this.showAir = p_179782_;
-        this.showBoundingBox = p_393817_;
-        this.integrity = p_179783_;
-        this.seed = p_179784_;
+        this.pos = pos;
+        this.updateType = updateType;
+        this.mode = mode;
+        this.name = name;
+        this.offset = offset;
+        this.size = size;
+        this.mirror = mirror;
+        this.rotation = rotation;
+        this.data = data;
+        this.ignoreEntities = ignoreEntities;
+        this.strict = strict;
+        this.showAir = showAir;
+        this.showBoundingBox = showBoundingBox;
+        this.integrity = integrity;
+        this.seed = seed;
     }
 
-    private ServerboundSetStructureBlockPacket(FriendlyByteBuf p_179786_) {
-        this.pos = p_179786_.readBlockPos();
-        this.updateType = p_179786_.readEnum(StructureBlockEntity.UpdateType.class);
-        this.mode = p_179786_.readEnum(StructureMode.class);
-        this.name = p_179786_.readUtf();
-        int i = 48;
-        this.offset = new BlockPos(
-            Mth.clamp(p_179786_.readByte(), -48, 48), Mth.clamp(p_179786_.readByte(), -48, 48), Mth.clamp(p_179786_.readByte(), -48, 48)
-        );
-        int j = 48;
-        this.size = new Vec3i(
-            Mth.clamp(p_179786_.readByte(), 0, 48), Mth.clamp(p_179786_.readByte(), 0, 48), Mth.clamp(p_179786_.readByte(), 0, 48)
-        );
-        this.mirror = p_179786_.readEnum(Mirror.class);
-        this.rotation = p_179786_.readEnum(Rotation.class);
-        this.data = p_179786_.readUtf(128);
-        this.integrity = Mth.clamp(p_179786_.readFloat(), 0.0F, 1.0F);
-        this.seed = p_179786_.readVarLong();
-        int k = p_179786_.readByte();
-        this.ignoreEntities = (k & 1) != 0;
-        this.strict = (k & 8) != 0;
-        this.showAir = (k & 2) != 0;
-        this.showBoundingBox = (k & 4) != 0;
+    private ServerboundSetStructureBlockPacket(final FriendlyByteBuf input) {
+        this.pos = input.readBlockPos();
+        this.updateType = input.readEnum(StructureBlockEntity.UpdateType.class);
+        this.mode = input.readEnum(StructureMode.class);
+        this.name = input.readUtf();
+        int maxOffset = 48;
+        this.offset = new BlockPos(Mth.clamp(input.readByte(), -48, 48), Mth.clamp(input.readByte(), -48, 48), Mth.clamp(input.readByte(), -48, 48));
+        int maxSize = 48;
+        this.size = new Vec3i(Mth.clamp(input.readByte(), 0, 48), Mth.clamp(input.readByte(), 0, 48), Mth.clamp(input.readByte(), 0, 48));
+        this.mirror = input.readEnum(Mirror.class);
+        this.rotation = input.readEnum(Rotation.class);
+        this.data = input.readUtf(128);
+        this.integrity = Mth.clamp(input.readFloat(), 0.0F, 1.0F);
+        this.seed = input.readVarLong();
+        int flags = input.readByte();
+        this.ignoreEntities = (flags & 1) != 0;
+        this.strict = (flags & 8) != 0;
+        this.showAir = (flags & 2) != 0;
+        this.showBoundingBox = (flags & 4) != 0;
     }
 
-    private void write(FriendlyByteBuf p_134631_) {
-        p_134631_.writeBlockPos(this.pos);
-        p_134631_.writeEnum(this.updateType);
-        p_134631_.writeEnum(this.mode);
-        p_134631_.writeUtf(this.name);
-        p_134631_.writeByte(this.offset.getX());
-        p_134631_.writeByte(this.offset.getY());
-        p_134631_.writeByte(this.offset.getZ());
-        p_134631_.writeByte(this.size.getX());
-        p_134631_.writeByte(this.size.getY());
-        p_134631_.writeByte(this.size.getZ());
-        p_134631_.writeEnum(this.mirror);
-        p_134631_.writeEnum(this.rotation);
-        p_134631_.writeUtf(this.data);
-        p_134631_.writeFloat(this.integrity);
-        p_134631_.writeVarLong(this.seed);
-        int i = 0;
+    private void write(final FriendlyByteBuf output) {
+        output.writeBlockPos(this.pos);
+        output.writeEnum(this.updateType);
+        output.writeEnum(this.mode);
+        output.writeUtf(this.name);
+        output.writeByte(this.offset.getX());
+        output.writeByte(this.offset.getY());
+        output.writeByte(this.offset.getZ());
+        output.writeByte(this.size.getX());
+        output.writeByte(this.size.getY());
+        output.writeByte(this.size.getZ());
+        output.writeEnum(this.mirror);
+        output.writeEnum(this.rotation);
+        output.writeUtf(this.data);
+        output.writeFloat(this.integrity);
+        output.writeVarLong(this.seed);
+        int flags = 0;
         if (this.ignoreEntities) {
-            i |= 1;
+            flags |= 1;
         }
 
         if (this.showAir) {
-            i |= 2;
+            flags |= 2;
         }
 
         if (this.showBoundingBox) {
-            i |= 4;
+            flags |= 4;
         }
 
         if (this.strict) {
-            i |= 8;
+            flags |= 8;
         }
 
-        p_134631_.writeByte(i);
+        output.writeByte(flags);
     }
 
     @Override
@@ -136,8 +132,8 @@ public class ServerboundSetStructureBlockPacket implements Packet<ServerGamePack
         return GamePacketTypes.SERVERBOUND_SET_STRUCTURE_BLOCK;
     }
 
-    public void handle(ServerGamePacketListener p_134628_) {
-        p_134628_.handleSetStructureBlock(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetStructureBlock(this);
     }
 
     public BlockPos getPos() {

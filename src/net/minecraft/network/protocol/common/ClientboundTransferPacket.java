@@ -10,13 +10,13 @@ public record ClientboundTransferPacket(String host, int port) implements Packet
         ClientboundTransferPacket::write, ClientboundTransferPacket::new
     );
 
-    private ClientboundTransferPacket(FriendlyByteBuf p_330783_) {
-        this(p_330783_.readUtf(), p_330783_.readVarInt());
+    private ClientboundTransferPacket(final FriendlyByteBuf input) {
+        this(input.readUtf(), input.readVarInt());
     }
 
-    private void write(FriendlyByteBuf p_329224_) {
-        p_329224_.writeUtf(this.host);
-        p_329224_.writeVarInt(this.port);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUtf(this.host);
+        output.writeVarInt(this.port);
     }
 
     @Override
@@ -24,7 +24,7 @@ public record ClientboundTransferPacket(String host, int port) implements Packet
         return CommonPacketTypes.CLIENTBOUND_TRANSFER;
     }
 
-    public void handle(ClientCommonPacketListener p_328535_) {
-        p_328535_.handleTransfer(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleTransfer(this);
     }
 }

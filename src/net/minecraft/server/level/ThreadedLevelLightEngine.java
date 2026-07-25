@@ -33,11 +33,17 @@ public class ThreadedLevelLightEngine extends LevelLightEngine implements AutoCl
     private final int taskPerBatch = 1000;
     private final AtomicBoolean scheduled = new AtomicBoolean();
 
-    public ThreadedLevelLightEngine(LightChunkGetter p_9305_, ChunkMap p_9306_, boolean p_9307_, ConsecutiveExecutor p_364647_, ChunkTaskDispatcher p_362920_) {
-        super(p_9305_, true, p_9307_);
-        this.chunkMap = p_9306_;
-        this.taskDispatcher = p_362920_;
-        this.consecutiveExecutor = p_364647_;
+    public ThreadedLevelLightEngine(
+        final LightChunkGetter lightChunkGetter,
+        final ChunkMap chunkMap,
+        final boolean hasSkyLight,
+        final ConsecutiveExecutor consecutiveExecutor,
+        final ChunkTaskDispatcher taskDispatcher
+    ) {
+        super(lightChunkGetter, true, hasSkyLight);
+        this.chunkMap = chunkMap;
+        this.taskDispatcher = taskDispatcher;
+        this.consecutiveExecutor = consecutiveExecutor;
     }
 
     @Override
@@ -50,134 +56,127 @@ public class ThreadedLevelLightEngine extends LevelLightEngine implements AutoCl
     }
 
     @Override
-    public void checkBlock(BlockPos p_9357_) {
-        BlockPos blockpos = p_9357_.immutable();
+    public void checkBlock(final BlockPos pos) {
+        BlockPos immutable = pos.immutable();
         this.addTask(
-            SectionPos.blockToSectionCoord(p_9357_.getX()),
-            SectionPos.blockToSectionCoord(p_9357_.getZ()),
+            SectionPos.blockToSectionCoord(pos.getX()),
+            SectionPos.blockToSectionCoord(pos.getZ()),
             ThreadedLevelLightEngine.TaskType.PRE_UPDATE,
-            Util.name(() -> super.checkBlock(blockpos), () -> "checkBlock " + blockpos)
+            Util.name(() -> super.checkBlock(immutable), () -> "checkBlock " + immutable)
         );
     }
 
-    protected void updateChunkStatus(ChunkPos p_9331_) {
-        this.addTask(p_9331_.x, p_9331_.z, () -> 0, ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> {
-            super.retainData(p_9331_, false);
-            super.setLightEnabled(p_9331_, false);
+    protected void updateChunkStatus(final ChunkPos pos) {
+        this.addTask(pos.x(), pos.z(), () -> 0, ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> {
+            super.retainData(pos, false);
+            super.setLightEnabled(pos, false);
 
-            for (int i = this.getMinLightSection(); i < this.getMaxLightSection(); i++) {
-                super.queueSectionData(LightLayer.BLOCK, SectionPos.of(p_9331_, i), null);
-                super.queueSectionData(LightLayer.SKY, SectionPos.of(p_9331_, i), null);
+            for (int sectionY = this.getMinLightSection(); sectionY < this.getMaxLightSection(); sectionY++) {
+                super.queueSectionData(LightLayer.BLOCK, SectionPos.of(pos, sectionY), null);
+                super.queueSectionData(LightLayer.SKY, SectionPos.of(pos, sectionY), null);
             }
 
-            for (int j = this.levelHeightAccessor.getMinSectionY(); j <= this.levelHeightAccessor.getMaxSectionY(); j++) {
-                super.updateSectionStatus(SectionPos.of(p_9331_, j), true);
+            for (int sectionY = this.levelHeightAccessor.getMinSectionY(); sectionY <= this.levelHeightAccessor.getMaxSectionY(); sectionY++) {
+                super.updateSectionStatus(SectionPos.of(pos, sectionY), true);
             }
-        }, () -> "updateChunkStatus " + p_9331_ + " true"));
+        }, () -> "updateChunkStatus " + pos + " true"));
     }
 
     @Override
-    public void updateSectionStatus(SectionPos p_9364_, boolean p_9365_) {
+    public void updateSectionStatus(final SectionPos pos, final boolean sectionEmpty) {
         this.addTask(
-            p_9364_.x(),
-            p_9364_.z(),
+            pos.x(),
+            pos.z(),
             () -> 0,
             ThreadedLevelLightEngine.TaskType.PRE_UPDATE,
-            Util.name(() -> super.updateSectionStatus(p_9364_, p_9365_), () -> "updateSectionStatus " + p_9364_ + " " + p_9365_)
+            Util.name(() -> super.updateSectionStatus(pos, sectionEmpty), () -> "updateSectionStatus " + pos + " " + sectionEmpty)
         );
     }
 
     @Override
-    public void propagateLightSources(ChunkPos p_285029_) {
+    public void propagateLightSources(final ChunkPos pos) {
         this.addTask(
-            p_285029_.x,
-            p_285029_.z,
+            pos.x(), pos.z(), ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> super.propagateLightSources(pos), () -> "propagateLight " + pos)
+        );
+    }
+
+    @Override
+    public void setLightEnabled(final ChunkPos pos, final boolean enable) {
+        this.addTask(
+            pos.x(),
+            pos.z(),
             ThreadedLevelLightEngine.TaskType.PRE_UPDATE,
-            Util.name(() -> super.propagateLightSources(p_285029_), () -> "propagateLight " + p_285029_)
+            Util.name(() -> super.setLightEnabled(pos, enable), () -> "enableLight " + pos + " " + enable)
         );
     }
 
     @Override
-    public void setLightEnabled(ChunkPos p_9336_, boolean p_9337_) {
+    public void queueSectionData(final LightLayer layer, final SectionPos pos, final @Nullable DataLayer data) {
         this.addTask(
-            p_9336_.x,
-            p_9336_.z,
-            ThreadedLevelLightEngine.TaskType.PRE_UPDATE,
-            Util.name(() -> super.setLightEnabled(p_9336_, p_9337_), () -> "enableLight " + p_9336_ + " " + p_9337_)
-        );
-    }
-
-    @Override
-    public void queueSectionData(LightLayer p_285046_, SectionPos p_285496_, @Nullable DataLayer p_285495_) {
-        this.addTask(
-            p_285496_.x(),
-            p_285496_.z(),
+            pos.x(),
+            pos.z(),
             () -> 0,
             ThreadedLevelLightEngine.TaskType.PRE_UPDATE,
-            Util.name(() -> super.queueSectionData(p_285046_, p_285496_, p_285495_), () -> "queueData " + p_285496_)
+            Util.name(() -> super.queueSectionData(layer, pos, data), () -> "queueData " + pos)
         );
     }
 
-    private void addTask(int p_9313_, int p_9314_, ThreadedLevelLightEngine.TaskType p_9315_, Runnable p_9316_) {
-        this.addTask(p_9313_, p_9314_, this.chunkMap.getChunkQueueLevel(ChunkPos.asLong(p_9313_, p_9314_)), p_9315_, p_9316_);
+    private void addTask(final int chunkX, final int chunkZ, final ThreadedLevelLightEngine.TaskType type, final Runnable runnable) {
+        this.addTask(chunkX, chunkZ, this.chunkMap.getChunkQueueLevel(ChunkPos.pack(chunkX, chunkZ)), type, runnable);
     }
 
-    private void addTask(int p_9318_, int p_9319_, IntSupplier p_9320_, ThreadedLevelLightEngine.TaskType p_9321_, Runnable p_9322_) {
+    private void addTask(final int chunkX, final int chunkZ, final IntSupplier level, final ThreadedLevelLightEngine.TaskType type, final Runnable runnable) {
         this.taskDispatcher.submit(() -> {
-            this.lightTasks.add(Pair.of(p_9321_, p_9322_));
+            this.lightTasks.add(Pair.of(type, runnable));
             if (this.lightTasks.size() >= 1000) {
                 this.runUpdate();
             }
-        }, ChunkPos.asLong(p_9318_, p_9319_), p_9320_);
+        }, ChunkPos.pack(chunkX, chunkZ), level);
     }
 
     @Override
-    public void retainData(ChunkPos p_9370_, boolean p_9371_) {
+    public void retainData(final ChunkPos pos, final boolean retain) {
         this.addTask(
-            p_9370_.x,
-            p_9370_.z,
-            () -> 0,
-            ThreadedLevelLightEngine.TaskType.PRE_UPDATE,
-            Util.name(() -> super.retainData(p_9370_, p_9371_), () -> "retainData " + p_9370_)
+            pos.x(), pos.z(), () -> 0, ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> super.retainData(pos, retain), () -> "retainData " + pos)
         );
     }
 
-    public CompletableFuture<ChunkAccess> initializeLight(ChunkAccess p_285128_, boolean p_285441_) {
-        ChunkPos chunkpos = p_285128_.getPos();
-        this.addTask(chunkpos.x, chunkpos.z, ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> {
-            LevelChunkSection[] alevelchunksection = p_285128_.getSections();
+    public CompletableFuture<ChunkAccess> initializeLight(final ChunkAccess chunk, final boolean lighted) {
+        ChunkPos pos = chunk.getPos();
+        this.addTask(pos.x(), pos.z(), ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> {
+            LevelChunkSection[] sections = chunk.getSections();
 
-            for (int i = 0; i < p_285128_.getSectionsCount(); i++) {
-                LevelChunkSection levelchunksection = alevelchunksection[i];
-                if (!levelchunksection.hasOnlyAir()) {
-                    int j = this.levelHeightAccessor.getSectionYFromSectionIndex(i);
-                    super.updateSectionStatus(SectionPos.of(chunkpos, j), false);
+            for (int sectionIndex = 0; sectionIndex < chunk.getSectionsCount(); sectionIndex++) {
+                LevelChunkSection section = sections[sectionIndex];
+                if (!section.hasOnlyAir()) {
+                    int sectionY = this.levelHeightAccessor.getSectionYFromSectionIndex(sectionIndex);
+                    super.updateSectionStatus(SectionPos.of(pos, sectionY), false);
                 }
             }
-        }, () -> "initializeLight: " + chunkpos));
+        }, () -> "initializeLight: " + pos));
         return CompletableFuture.supplyAsync(() -> {
-            super.setLightEnabled(chunkpos, p_285441_);
-            super.retainData(chunkpos, false);
-            return p_285128_;
-        }, p_215135_ -> this.addTask(chunkpos.x, chunkpos.z, ThreadedLevelLightEngine.TaskType.POST_UPDATE, p_215135_));
+            super.setLightEnabled(pos, lighted);
+            super.retainData(pos, false);
+            return chunk;
+        }, r -> this.addTask(pos.x(), pos.z(), ThreadedLevelLightEngine.TaskType.POST_UPDATE, r));
     }
 
-    public CompletableFuture<ChunkAccess> lightChunk(ChunkAccess p_9354_, boolean p_9355_) {
-        ChunkPos chunkpos = p_9354_.getPos();
-        p_9354_.setLightCorrect(false);
-        this.addTask(chunkpos.x, chunkpos.z, ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> {
-            if (!p_9355_) {
-                super.propagateLightSources(chunkpos);
+    public CompletableFuture<ChunkAccess> lightChunk(final ChunkAccess centerChunk, final boolean lighted) {
+        ChunkPos pos = centerChunk.getPos();
+        centerChunk.setLightCorrect(false);
+        this.addTask(pos.x(), pos.z(), ThreadedLevelLightEngine.TaskType.PRE_UPDATE, Util.name(() -> {
+            if (!lighted) {
+                super.propagateLightSources(pos);
             }
 
             if (SharedConstants.DEBUG_VERBOSE_SERVER_EVENTS) {
-                LOGGER.debug("LIT {}", chunkpos);
+                LOGGER.debug("LIT {}", pos);
             }
-        }, () -> "lightChunk " + chunkpos + " " + p_9355_));
+        }, () -> "lightChunk " + pos + " " + lighted));
         return CompletableFuture.supplyAsync(() -> {
-            p_9354_.setLightCorrect(true);
-            return p_9354_;
-        }, p_280982_ -> this.addTask(chunkpos.x, chunkpos.z, ThreadedLevelLightEngine.TaskType.POST_UPDATE, p_280982_));
+            centerChunk.setLightCorrect(true);
+            return centerChunk;
+        }, r -> this.addTask(pos.x(), pos.z(), ThreadedLevelLightEngine.TaskType.POST_UPDATE, r));
     }
 
     public void tryScheduleUpdate() {
@@ -190,35 +189,35 @@ public class ThreadedLevelLightEngine extends LevelLightEngine implements AutoCl
     }
 
     private void runUpdate() {
-        int i = Math.min(this.lightTasks.size(), 1000);
-        ObjectListIterator<Pair<ThreadedLevelLightEngine.TaskType, Runnable>> objectlistiterator = this.lightTasks.iterator();
+        int totalSize = Math.min(this.lightTasks.size(), 1000);
+        ObjectListIterator<Pair<ThreadedLevelLightEngine.TaskType, Runnable>> iterator = this.lightTasks.iterator();
 
-        int j;
-        for (j = 0; objectlistiterator.hasNext() && j < i; j++) {
-            Pair<ThreadedLevelLightEngine.TaskType, Runnable> pair = objectlistiterator.next();
-            if (pair.getFirst() == ThreadedLevelLightEngine.TaskType.PRE_UPDATE) {
-                pair.getSecond().run();
+        int count;
+        for (count = 0; iterator.hasNext() && count < totalSize; count++) {
+            Pair<ThreadedLevelLightEngine.TaskType, Runnable> task = iterator.next();
+            if (task.getFirst() == ThreadedLevelLightEngine.TaskType.PRE_UPDATE) {
+                task.getSecond().run();
             }
         }
 
-        objectlistiterator.back(j);
+        iterator.back(count);
         super.runLightUpdates();
 
-        for (int k = 0; objectlistiterator.hasNext() && k < i; k++) {
-            Pair<ThreadedLevelLightEngine.TaskType, Runnable> pair1 = objectlistiterator.next();
-            if (pair1.getFirst() == ThreadedLevelLightEngine.TaskType.POST_UPDATE) {
-                pair1.getSecond().run();
+        for (int var5 = 0; iterator.hasNext() && var5 < totalSize; var5++) {
+            Pair<ThreadedLevelLightEngine.TaskType, Runnable> task = iterator.next();
+            if (task.getFirst() == ThreadedLevelLightEngine.TaskType.POST_UPDATE) {
+                task.getSecond().run();
             }
 
-            objectlistiterator.remove();
+            iterator.remove();
         }
     }
 
-    public CompletableFuture<?> waitForPendingTasks(int p_297330_, int p_298866_) {
-        return CompletableFuture.runAsync(() -> {}, p_296584_ -> this.addTask(p_297330_, p_298866_, ThreadedLevelLightEngine.TaskType.POST_UPDATE, p_296584_));
+    public CompletableFuture<?> waitForPendingTasks(final int chunkX, final int chunkZ) {
+        return CompletableFuture.runAsync(() -> {}, r -> this.addTask(chunkX, chunkZ, ThreadedLevelLightEngine.TaskType.POST_UPDATE, r));
     }
 
-    static enum TaskType {
+    private enum TaskType {
         PRE_UPDATE,
         POST_UPDATE;
     }

@@ -4,50 +4,46 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SplashParticle extends WaterDropParticle {
-    SplashParticle(
-        ClientLevel p_107929_,
-        double p_107930_,
-        double p_107931_,
-        double p_107932_,
-        double p_107933_,
-        double p_107934_,
-        double p_107935_,
-        TextureAtlasSprite p_423176_
+    private SplashParticle(
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xa,
+        final double ya,
+        final double za,
+        final TextureAtlasSprite sprite
     ) {
-        super(p_107929_, p_107930_, p_107931_, p_107932_, p_423176_);
+        super(level, x, y, z, sprite);
         this.gravity = 0.04F;
-        if (p_107934_ == 0.0 && (p_107933_ != 0.0 || p_107935_ != 0.0)) {
-            this.xd = p_107933_;
+        if (ya == 0.0 && (xa != 0.0 || za != 0.0)) {
+            this.xd = xa;
             this.yd = 0.1;
-            this.zd = p_107935_;
+            this.zd = za;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider implements ParticleProvider<SimpleParticleType> {
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public Provider(SpriteSet p_107947_) {
-            this.sprite = p_107947_;
+        public Provider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_429292_,
-            ClientLevel p_107950_,
-            double p_107951_,
-            double p_107952_,
-            double p_107953_,
-            double p_107954_,
-            double p_107955_,
-            double p_107956_,
-            RandomSource p_428943_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new SplashParticle(p_107950_, p_107951_, p_107952_, p_107953_, p_107954_, p_107955_, p_107956_, this.sprite.get(p_428943_));
+            return new SplashParticle(level, x, y, z, xAux, yAux, zAux, this.sprite.get(random));
         }
     }
 }

@@ -5,25 +5,18 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 
 public class ScoreboardNameProviders {
     private static final Codec<ScoreboardNameProvider> TYPED_CODEC = BuiltInRegistries.LOOT_SCORE_PROVIDER_TYPE
         .byNameCodec()
-        .dispatch(ScoreboardNameProvider::getType, LootScoreProviderType::codec);
+        .dispatch(ScoreboardNameProvider::codec, c -> c);
     public static final Codec<ScoreboardNameProvider> CODEC = Codec.lazyInitialized(
         () -> Codec.either(ContextScoreboardNameProvider.INLINE_CODEC, TYPED_CODEC)
-            .xmap(
-                Either::unwrap,
-                p_297604_ -> p_297604_ instanceof ContextScoreboardNameProvider contextscoreboardnameprovider
-                    ? Either.left(contextscoreboardnameprovider)
-                    : Either.right(p_297604_)
-            )
+            .xmap(Either::unwrap, provider -> provider instanceof ContextScoreboardNameProvider context ? Either.left(context) : Either.right(provider))
     );
-    public static final LootScoreProviderType FIXED = register("fixed", FixedScoreboardNameProvider.CODEC);
-    public static final LootScoreProviderType CONTEXT = register("context", ContextScoreboardNameProvider.CODEC);
 
-    private static LootScoreProviderType register(String p_165874_, MapCodec<? extends ScoreboardNameProvider> p_327870_) {
-        return Registry.register(BuiltInRegistries.LOOT_SCORE_PROVIDER_TYPE, Identifier.withDefaultNamespace(p_165874_), new LootScoreProviderType(p_327870_));
+    public static MapCodec<? extends ScoreboardNameProvider> bootstrap(final Registry<MapCodec<? extends ScoreboardNameProvider>> registry) {
+        Registry.register(registry, "fixed", FixedScoreboardNameProvider.MAP_CODEC);
+        return Registry.register(registry, "context", ContextScoreboardNameProvider.MAP_CODEC);
     }
 }

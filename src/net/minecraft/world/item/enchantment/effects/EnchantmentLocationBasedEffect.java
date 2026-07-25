@@ -15,28 +15,28 @@ public interface EnchantmentLocationBasedEffect {
         .byNameCodec()
         .dispatch(EnchantmentLocationBasedEffect::codec, Function.identity());
 
-    static MapCodec<? extends EnchantmentLocationBasedEffect> bootstrap(Registry<MapCodec<? extends EnchantmentLocationBasedEffect>> p_344274_) {
-        Registry.register(p_344274_, "all_of", AllOf.LocationBasedEffects.CODEC);
-        Registry.register(p_344274_, "apply_mob_effect", ApplyMobEffect.CODEC);
-        Registry.register(p_344274_, "attribute", EnchantmentAttributeEffect.CODEC);
-        Registry.register(p_344274_, "change_item_damage", ChangeItemDamage.CODEC);
-        Registry.register(p_344274_, "damage_entity", DamageEntity.CODEC);
-        Registry.register(p_344274_, "explode", ExplodeEffect.CODEC);
-        Registry.register(p_344274_, "ignite", Ignite.CODEC);
-        Registry.register(p_344274_, "apply_impulse", ApplyEntityImpulse.CODEC);
-        Registry.register(p_344274_, "apply_exhaustion", ApplyExhaustion.CODEC);
-        Registry.register(p_344274_, "play_sound", PlaySoundEffect.CODEC);
-        Registry.register(p_344274_, "replace_block", ReplaceBlock.CODEC);
-        Registry.register(p_344274_, "replace_disk", ReplaceDisk.CODEC);
-        Registry.register(p_344274_, "run_function", RunFunction.CODEC);
-        Registry.register(p_344274_, "set_block_properties", SetBlockProperties.CODEC);
-        Registry.register(p_344274_, "spawn_particles", SpawnParticlesEffect.CODEC);
-        return Registry.register(p_344274_, "summon_entity", SummonEntityEffect.CODEC);
+    static MapCodec<? extends EnchantmentLocationBasedEffect> bootstrap(final Registry<MapCodec<? extends EnchantmentLocationBasedEffect>> registry) {
+        Registry.register(registry, "all_of", AllOf.LocationBasedEffects.CODEC);
+        Registry.register(registry, "apply_mob_effect", ApplyMobEffect.CODEC);
+        Registry.register(registry, "attribute", EnchantmentAttributeEffect.MAP_CODEC);
+        Registry.register(registry, "change_item_damage", ChangeItemDamage.CODEC);
+        Registry.register(registry, "damage_entity", DamageEntity.CODEC);
+        Registry.register(registry, "explode", ExplodeEffect.CODEC);
+        Registry.register(registry, "ignite", Ignite.CODEC);
+        Registry.register(registry, "apply_impulse", ApplyEntityImpulse.CODEC);
+        Registry.register(registry, "apply_exhaustion", ApplyExhaustion.CODEC);
+        Registry.register(registry, "play_sound", PlaySoundEffect.CODEC);
+        Registry.register(registry, "replace_block", ReplaceBlock.CODEC);
+        Registry.register(registry, "replace_disk", ReplaceDisk.CODEC);
+        Registry.register(registry, "run_function", RunFunction.CODEC);
+        Registry.register(registry, "set_block_properties", SetBlockProperties.CODEC);
+        Registry.register(registry, "spawn_particles", SpawnParticlesEffect.CODEC);
+        return Registry.register(registry, "summon_entity", SummonEntityEffect.CODEC);
     }
 
-    void onChangedBlock(ServerLevel p_342313_, int p_345031_, EnchantedItemInUse p_345418_, Entity p_344951_, Vec3 p_344517_, boolean p_345369_);
+    void onChangedBlock(ServerLevel serverLevel, int enchantmentLevel, EnchantedItemInUse item, Entity entity, Vec3 position, boolean becameActive);
 
-    default void onDeactivated(EnchantedItemInUse p_343068_, Entity p_344744_, Vec3 p_342973_, int p_342439_) {
+    default void onDeactivated(final EnchantedItemInUse item, final Entity entity, final Vec3 position, final int level) {
     }
 
     MapCodec<? extends EnchantmentLocationBasedEffect> codec();

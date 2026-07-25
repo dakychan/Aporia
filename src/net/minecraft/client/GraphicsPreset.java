@@ -1,6 +1,5 @@
 package net.minecraft.client;
 
-import com.mojang.blaze3d.GraphicsWorkarounds;
 import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.serialization.Codec;
@@ -8,11 +7,8 @@ import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.server.level.ParticleStatus;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public enum GraphicsPreset implements StringRepresentable {
     FAST("fast", "options.graphics.fast"),
     FANCY("fancy", "options.graphics.fancy"),
@@ -23,9 +19,9 @@ public enum GraphicsPreset implements StringRepresentable {
     private final String key;
     public static final Codec<GraphicsPreset> CODEC = StringRepresentable.fromEnum(GraphicsPreset::values);
 
-    private GraphicsPreset(final String p_457983_, final String p_458839_) {
-        this.serializedName = p_457983_;
-        this.key = p_458839_;
+    GraphicsPreset(final String serializedName, final String key) {
+        this.serializedName = serializedName;
+        this.key = key;
     }
 
     @Override
@@ -37,81 +33,84 @@ public enum GraphicsPreset implements StringRepresentable {
         return this.key;
     }
 
-    public void apply(Minecraft p_456789_) {
-        OptionsSubScreen optionssubscreen = p_456789_.screen instanceof OptionsSubScreen ? (OptionsSubScreen)p_456789_.screen : null;
-        GpuDevice gpudevice = RenderSystem.getDevice();
+    public void apply(final Minecraft minecraft) {
+        OptionsSubScreen screen = minecraft.gui != null && minecraft.gui.screen() instanceof OptionsSubScreen ? (OptionsSubScreen)minecraft.gui.screen() : null;
+        GpuDevice device = RenderSystem.getDevice();
         switch (this) {
-            case FAST:
-                int k = 8;
-                this.set(optionssubscreen, p_456789_.options.biomeBlendRadius(), 1);
-                this.set(optionssubscreen, p_456789_.options.renderDistance(), 8);
-                this.set(optionssubscreen, p_456789_.options.prioritizeChunkUpdates(), PrioritizeChunkUpdates.NONE);
-                this.set(optionssubscreen, p_456789_.options.simulationDistance(), 6);
-                this.set(optionssubscreen, p_456789_.options.ambientOcclusion(), false);
-                this.set(optionssubscreen, p_456789_.options.cloudStatus(), CloudStatus.FAST);
-                this.set(optionssubscreen, p_456789_.options.particles(), ParticleStatus.DECREASED);
-                this.set(optionssubscreen, p_456789_.options.mipmapLevels(), 2);
-                this.set(optionssubscreen, p_456789_.options.entityShadows(), false);
-                this.set(optionssubscreen, p_456789_.options.entityDistanceScaling(), 0.75);
-                this.set(optionssubscreen, p_456789_.options.menuBackgroundBlurriness(), 2);
-                this.set(optionssubscreen, p_456789_.options.cloudRange(), 32);
-                this.set(optionssubscreen, p_456789_.options.cutoutLeaves(), false);
-                this.set(optionssubscreen, p_456789_.options.improvedTransparency(), false);
-                this.set(optionssubscreen, p_456789_.options.weatherRadius(), 5);
-                this.set(optionssubscreen, p_456789_.options.maxAnisotropyBit(), 1);
-                this.set(optionssubscreen, p_456789_.options.textureFiltering(), TextureFilteringMethod.NONE);
+            case FAST: {
+                int viewDistance = 8;
+                set(screen, minecraft.options.biomeBlendRadius(), 1);
+                set(screen, minecraft.options.renderDistance(), 8);
+                set(screen, minecraft.options.prioritizeChunkUpdates(), PrioritizeChunkUpdates.NONE);
+                set(screen, minecraft.options.simulationDistance(), 6);
+                set(screen, minecraft.options.ambientOcclusion(), false);
+                set(screen, minecraft.options.cloudStatus(), CloudStatus.FAST);
+                set(screen, minecraft.options.particles(), ParticleStatus.DECREASED);
+                set(screen, minecraft.options.mipmapLevels(), 2);
+                set(screen, minecraft.options.entityShadows(), false);
+                set(screen, minecraft.options.entityDistanceScaling(), 0.75);
+                set(screen, minecraft.options.menuBackgroundBlurriness(), 2);
+                set(screen, minecraft.options.cloudRange(), 32);
+                set(screen, minecraft.options.cutoutLeaves(), false);
+                set(screen, minecraft.options.improvedTransparency(), false);
+                set(screen, minecraft.options.weatherRadius(), 5);
+                set(screen, minecraft.options.maxAnisotropyBit(), 1);
+                set(screen, minecraft.options.textureFiltering(), TextureFilteringMethod.NONE);
                 break;
-            case FANCY:
-                int j = 16;
-                this.set(optionssubscreen, p_456789_.options.biomeBlendRadius(), 2);
-                this.set(optionssubscreen, p_456789_.options.renderDistance(), 16);
-                this.set(optionssubscreen, p_456789_.options.prioritizeChunkUpdates(), PrioritizeChunkUpdates.PLAYER_AFFECTED);
-                this.set(optionssubscreen, p_456789_.options.simulationDistance(), 12);
-                this.set(optionssubscreen, p_456789_.options.ambientOcclusion(), true);
-                this.set(optionssubscreen, p_456789_.options.cloudStatus(), CloudStatus.FANCY);
-                this.set(optionssubscreen, p_456789_.options.particles(), ParticleStatus.ALL);
-                this.set(optionssubscreen, p_456789_.options.mipmapLevels(), 4);
-                this.set(optionssubscreen, p_456789_.options.entityShadows(), true);
-                this.set(optionssubscreen, p_456789_.options.entityDistanceScaling(), 1.0);
-                this.set(optionssubscreen, p_456789_.options.menuBackgroundBlurriness(), 5);
-                this.set(optionssubscreen, p_456789_.options.cloudRange(), 64);
-                this.set(optionssubscreen, p_456789_.options.cutoutLeaves(), true);
-                this.set(optionssubscreen, p_456789_.options.improvedTransparency(), false);
-                this.set(optionssubscreen, p_456789_.options.weatherRadius(), 10);
-                this.set(optionssubscreen, p_456789_.options.maxAnisotropyBit(), 1);
-                this.set(optionssubscreen, p_456789_.options.textureFiltering(), TextureFilteringMethod.RGSS);
+            }
+            case FANCY: {
+                int viewDistance = 16;
+                set(screen, minecraft.options.biomeBlendRadius(), 2);
+                set(screen, minecraft.options.renderDistance(), 16);
+                set(screen, minecraft.options.prioritizeChunkUpdates(), PrioritizeChunkUpdates.PLAYER_AFFECTED);
+                set(screen, minecraft.options.simulationDistance(), 12);
+                set(screen, minecraft.options.ambientOcclusion(), true);
+                set(screen, minecraft.options.cloudStatus(), CloudStatus.FANCY);
+                set(screen, minecraft.options.particles(), ParticleStatus.ALL);
+                set(screen, minecraft.options.mipmapLevels(), 4);
+                set(screen, minecraft.options.entityShadows(), true);
+                set(screen, minecraft.options.entityDistanceScaling(), 1.0);
+                set(screen, minecraft.options.menuBackgroundBlurriness(), 5);
+                set(screen, minecraft.options.cloudRange(), 64);
+                set(screen, minecraft.options.cutoutLeaves(), true);
+                set(screen, minecraft.options.improvedTransparency(), false);
+                set(screen, minecraft.options.weatherRadius(), 10);
+                set(screen, minecraft.options.maxAnisotropyBit(), 1);
+                set(screen, minecraft.options.textureFiltering(), TextureFilteringMethod.RGSS);
                 break;
-            case FABULOUS:
-                int i = 32;
-                this.set(optionssubscreen, p_456789_.options.biomeBlendRadius(), 2);
-                this.set(optionssubscreen, p_456789_.options.renderDistance(), 32);
-                this.set(optionssubscreen, p_456789_.options.prioritizeChunkUpdates(), PrioritizeChunkUpdates.PLAYER_AFFECTED);
-                this.set(optionssubscreen, p_456789_.options.simulationDistance(), 12);
-                this.set(optionssubscreen, p_456789_.options.ambientOcclusion(), true);
-                this.set(optionssubscreen, p_456789_.options.cloudStatus(), CloudStatus.FANCY);
-                this.set(optionssubscreen, p_456789_.options.particles(), ParticleStatus.ALL);
-                this.set(optionssubscreen, p_456789_.options.mipmapLevels(), 4);
-                this.set(optionssubscreen, p_456789_.options.entityShadows(), true);
-                this.set(optionssubscreen, p_456789_.options.entityDistanceScaling(), 1.25);
-                this.set(optionssubscreen, p_456789_.options.menuBackgroundBlurriness(), 5);
-                this.set(optionssubscreen, p_456789_.options.cloudRange(), 128);
-                this.set(optionssubscreen, p_456789_.options.cutoutLeaves(), true);
-                this.set(optionssubscreen, p_456789_.options.improvedTransparency(), Util.getPlatform() != Util.OS.OSX);
-                this.set(optionssubscreen, p_456789_.options.weatherRadius(), 10);
-                this.set(optionssubscreen, p_456789_.options.maxAnisotropyBit(), 2);
-                if (GraphicsWorkarounds.get(gpudevice).isAmd()) {
-                    this.set(optionssubscreen, p_456789_.options.textureFiltering(), TextureFilteringMethod.RGSS);
+            }
+            case FABULOUS: {
+                int viewDistance = 32;
+                set(screen, minecraft.options.biomeBlendRadius(), 2);
+                set(screen, minecraft.options.renderDistance(), 32);
+                set(screen, minecraft.options.prioritizeChunkUpdates(), PrioritizeChunkUpdates.PLAYER_AFFECTED);
+                set(screen, minecraft.options.simulationDistance(), 12);
+                set(screen, minecraft.options.ambientOcclusion(), true);
+                set(screen, minecraft.options.cloudStatus(), CloudStatus.FANCY);
+                set(screen, minecraft.options.particles(), ParticleStatus.ALL);
+                set(screen, minecraft.options.mipmapLevels(), 4);
+                set(screen, minecraft.options.entityShadows(), true);
+                set(screen, minecraft.options.entityDistanceScaling(), 1.25);
+                set(screen, minecraft.options.menuBackgroundBlurriness(), 5);
+                set(screen, minecraft.options.cloudRange(), 128);
+                set(screen, minecraft.options.cutoutLeaves(), true);
+                set(screen, minecraft.options.improvedTransparency(), Util.getPlatform() != Util.OS.OSX);
+                set(screen, minecraft.options.weatherRadius(), 10);
+                set(screen, minecraft.options.maxAnisotropyBit(), 2);
+                if (device.getDeviceInfo().hintsAndWorkarounds().anisotropyHasKnownIssues()) {
+                    set(screen, minecraft.options.textureFiltering(), TextureFilteringMethod.RGSS);
                 } else {
-                    this.set(optionssubscreen, p_456789_.options.textureFiltering(), TextureFilteringMethod.ANISOTROPIC);
+                    set(screen, minecraft.options.textureFiltering(), TextureFilteringMethod.ANISOTROPIC);
                 }
+            }
         }
     }
 
-    <T> void set(@Nullable OptionsSubScreen p_451738_, OptionInstance<T> p_452148_, T p_456906_) {
-        if (p_452148_.get() != p_456906_) {
-            p_452148_.set(p_456906_);
-            if (p_451738_ != null) {
-                p_451738_.resetOption(p_452148_);
+    private static <T> void set(final @Nullable OptionsSubScreen screen, final OptionInstance<T> option, final T value) {
+        if (option.get() != value) {
+            option.set(value);
+            if (screen != null) {
+                screen.resetOption(option);
             }
         }
     }

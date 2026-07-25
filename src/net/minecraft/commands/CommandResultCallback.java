@@ -4,7 +4,7 @@ package net.minecraft.commands;
 public interface CommandResultCallback {
     CommandResultCallback EMPTY = new CommandResultCallback() {
         @Override
-        public void onResult(boolean p_310694_, int p_309781_) {
+        public void onResult(final boolean success, final int result) {
         }
 
         @Override
@@ -13,23 +13,23 @@ public interface CommandResultCallback {
         }
     };
 
-    void onResult(boolean p_312490_, int p_311494_);
+    void onResult(boolean success, int result);
 
-    default void onSuccess(int p_312969_) {
-        this.onResult(true, p_312969_);
+    default void onSuccess(final int result) {
+        this.onResult(true, result);
     }
 
     default void onFailure() {
         this.onResult(false, 0);
     }
 
-    static CommandResultCallback chain(CommandResultCallback p_312991_, CommandResultCallback p_310583_) {
-        if (p_312991_ == EMPTY) {
-            return p_310583_;
+    static CommandResultCallback chain(final CommandResultCallback first, final CommandResultCallback second) {
+        if (first == EMPTY) {
+            return second;
         } else {
-            return p_310583_ == EMPTY ? p_312991_ : (p_311372_, p_312527_) -> {
-                p_312991_.onResult(p_311372_, p_312527_);
-                p_310583_.onResult(p_311372_, p_312527_);
+            return second == EMPTY ? first : (success, result) -> {
+                first.onResult(success, result);
+                second.onResult(success, result);
             };
         }
     }

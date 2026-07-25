@@ -6,7 +6,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.Holder;
@@ -18,27 +17,23 @@ import net.minecraft.world.level.levelgen.WorldDimensions;
 
 public class WorldPreset {
     public static final Codec<WorldPreset> DIRECT_CODEC = RecordCodecBuilder.<WorldPreset>create(
-            p_259011_ -> p_259011_.group(
-                    Codec.unboundedMap(ResourceKey.codec(Registries.LEVEL_STEM), LevelStem.CODEC)
-                        .fieldOf("dimensions")
-                        .forGetter(p_226430_ -> p_226430_.dimensions)
-                )
-                .apply(p_259011_, WorldPreset::new)
+            i -> i.group(Codec.unboundedMap(ResourceKey.codec(Registries.LEVEL_STEM), LevelStem.CODEC).fieldOf("dimensions").forGetter(e -> e.dimensions))
+                .apply(i, WorldPreset::new)
         )
         .validate(WorldPreset::requireOverworld);
     public static final Codec<Holder<WorldPreset>> CODEC = RegistryFileCodec.create(Registries.WORLD_PRESET, DIRECT_CODEC);
     private final Map<ResourceKey<LevelStem>, LevelStem> dimensions;
 
-    public WorldPreset(Map<ResourceKey<LevelStem>, LevelStem> p_226419_) {
-        this.dimensions = p_226419_;
+    public WorldPreset(final Map<ResourceKey<LevelStem>, LevelStem> dimensions) {
+        this.dimensions = dimensions;
     }
 
     private ImmutableMap<ResourceKey<LevelStem>, LevelStem> dimensionsInOrder() {
         Builder<ResourceKey<LevelStem>, LevelStem> builder = ImmutableMap.builder();
-        WorldDimensions.keysInOrder(this.dimensions.keySet().stream()).forEach(p_327474_ -> {
-            LevelStem levelstem = this.dimensions.get(p_327474_);
-            if (levelstem != null) {
-                builder.put((ResourceKey<LevelStem>)p_327474_, levelstem);
+        WorldDimensions.keysInOrder(this.dimensions.keySet()).forEach(key -> {
+            LevelStem levelStem = this.dimensions.get(key);
+            if (levelStem != null) {
+                builder.put((ResourceKey<LevelStem>)key, levelStem);
             }
         });
         return builder.build();
@@ -52,7 +47,7 @@ public class WorldPreset {
         return Optional.ofNullable(this.dimensions.get(LevelStem.OVERWORLD));
     }
 
-    private static DataResult<WorldPreset> requireOverworld(WorldPreset p_238379_) {
-        return p_238379_.overworld().isEmpty() ? DataResult.error(() -> "Missing overworld dimension") : DataResult.success(p_238379_, Lifecycle.stable());
+    private static DataResult<WorldPreset> requireOverworld(final WorldPreset preset) {
+        return preset.overworld().isEmpty() ? DataResult.error(() -> "Missing overworld dimension") : DataResult.success(preset, Lifecycle.stable());
     }
 }

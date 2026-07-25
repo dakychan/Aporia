@@ -1,6 +1,7 @@
 package net.minecraft.world.item;
 
 import java.util.List;
+import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.InteractionResult;
@@ -14,47 +15,52 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.Vec3;
 
 public class LeadItem extends Item {
-    public LeadItem(Item.Properties p_42828_) {
-        super(p_42828_);
+    public LeadItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_42834_) {
-        Level level = p_42834_.getLevel();
-        BlockPos blockpos = p_42834_.getClickedPos();
-        BlockState blockstate = level.getBlockState(blockpos);
-        if (blockstate.is(BlockTags.FENCES)) {
-            Player player = p_42834_.getPlayer();
+    public InteractionResult useOn(final UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState state = level.getBlockState(pos);
+        if (state.is(BlockTags.FENCES)) {
+            Player player = context.getPlayer();
             if (!level.isClientSide() && player != null) {
-                return bindPlayerMobs(player, level, blockpos);
+                return bindPlayerMobs(player, level, pos);
             }
         }
 
         return InteractionResult.PASS;
     }
 
-    public static InteractionResult bindPlayerMobs(Player p_42830_, Level p_42831_, BlockPos p_42832_) {
-        LeashFenceKnotEntity leashfenceknotentity = null;
-        List<Leashable> list = Leashable.leashableInArea(p_42831_, Vec3.atCenterOf(p_42832_), p_341570_ -> p_341570_.getLeashHolder() == p_42830_);
-        boolean flag = false;
-
-        for (Leashable leashable : list) {
-            if (leashfenceknotentity == null) {
-                leashfenceknotentity = LeashFenceKnotEntity.getOrCreateKnot(p_42831_, p_42832_);
-                leashfenceknotentity.playPlacementSound();
-            }
-
-            if (leashable.canHaveALeashAttachedTo(leashfenceknotentity)) {
-                leashable.setLeashedTo(leashfenceknotentity, true);
-                flag = true;
-            }
-        }
-
-        if (flag) {
-            p_42831_.gameEvent(GameEvent.BLOCK_ATTACH, p_42832_, GameEvent.Context.of(p_42830_));
-            return InteractionResult.SUCCESS_SERVER;
-        } else {
+    public static InteractionResult bindPlayerMobs(final Player player, final Level level, final BlockPos pos) {
+        List<Leashable> entitiesToLeash = Leashable.leashableInArea(level, Vec3.atCenterOf(pos), l -> l.getLeashHolder() == player);
+        if (entitiesToLeash.isEmpty()) {
             return InteractionResult.PASS;
         }
+
+        Optional<LeashFenceKnotEntity> existingKnot = LeashFenceKnotEntity.getKnot(level, pos);
+        LeashFenceKnotEntity activeKnot = existingKnot.orElseGet(() -> LeashFenceKnotEntity.createKnot(level, pos));
+        boolean anyLeashed = false;
+
+        for (Leashable leashable : entitiesToLeash) {
+            if (leashable.canHaveALeashAttachedTo(activeKnot)) {
+                leashable.setLeashedTo(activeKnot, true);
+                anyLeashed = true;
+            }
+        }
+
+        if (anyLeashed) {
+            activeKnot.playPlacementSound();
+            level.gameEvent(GameEvent.BLOCK_ATTACH, pos, GameEvent.Context.of(player));
+            return InteractionResult.SUCCESS_SERVER;
+        }
+
+        if (existingKnot.isEmpty()) {
+            activeKnot.discard();
+        }
+
+        return InteractionResult.PASS;
     }
 }

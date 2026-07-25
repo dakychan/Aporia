@@ -1,15 +1,22 @@
 package net.minecraft.world.item.crafting;
 
+import com.mojang.serialization.MapCodec;
 import java.util.List;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.item.crafting.display.StonecutterRecipeDisplay;
 
 public class StonecutterRecipe extends SingleItemRecipe {
-    public StonecutterRecipe(String p_44479_, Ingredient p_44480_, ItemStack p_301701_) {
-        super(p_44479_, p_44480_, p_301701_);
+    public static final MapCodec<StonecutterRecipe> MAP_CODEC = simpleMapCodec(StonecutterRecipe::new);
+    public static final StreamCodec<RegistryFriendlyByteBuf, StonecutterRecipe> STREAM_CODEC = simpleStreamCodec(StonecutterRecipe::new);
+    public static final RecipeSerializer<StonecutterRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+
+    public StonecutterRecipe(final Recipe.CommonInfo commonInfo, final Ingredient ingredient, final ItemStackTemplate result) {
+        super(commonInfo, ingredient, result);
     }
 
     @Override
@@ -19,7 +26,12 @@ public class StonecutterRecipe extends SingleItemRecipe {
 
     @Override
     public RecipeSerializer<StonecutterRecipe> getSerializer() {
-        return RecipeSerializer.STONECUTTER;
+        return SERIALIZER;
+    }
+
+    @Override
+    public String group() {
+        return "";
     }
 
     @Override

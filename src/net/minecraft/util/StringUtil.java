@@ -11,85 +11,85 @@ public class StringUtil {
     private static final Pattern LINE_PATTERN = Pattern.compile("\\r\\n|\\v");
     private static final Pattern LINE_END_PATTERN = Pattern.compile("(?:\\r\\n|\\v)$");
 
-    public static String formatTickDuration(int p_14405_, float p_313197_) {
-        int i = Mth.floor(p_14405_ / p_313197_);
-        int j = i / 60;
-        i %= 60;
-        int k = j / 60;
-        j %= 60;
-        return k > 0 ? String.format(Locale.ROOT, "%02d:%02d:%02d", k, j, i) : String.format(Locale.ROOT, "%02d:%02d", j, i);
+    public static String formatTickDuration(final int ticks, final float tickrate) {
+        int seconds = Mth.floor(ticks / tickrate);
+        int minutes = seconds / 60;
+        seconds %= 60;
+        int hours = minutes / 60;
+        minutes %= 60;
+        return hours > 0 ? String.format(Locale.ROOT, "%02d:%02d:%02d", hours, minutes, seconds) : String.format(Locale.ROOT, "%02d:%02d", minutes, seconds);
     }
 
-    public static String stripColor(String p_14407_) {
-        return STRIP_COLOR_PATTERN.matcher(p_14407_).replaceAll("");
+    public static String stripColor(final String input) {
+        return STRIP_COLOR_PATTERN.matcher(input).replaceAll("");
     }
 
-    public static boolean isNullOrEmpty(@Nullable String p_14409_) {
-        return StringUtils.isEmpty(p_14409_);
+    public static boolean isNullOrEmpty(final @Nullable String s) {
+        return StringUtils.isEmpty(s);
     }
 
-    public static String truncateStringIfNecessary(String p_144999_, int p_145000_, boolean p_145001_) {
-        if (p_144999_.length() <= p_145000_) {
-            return p_144999_;
+    public static String truncateStringIfNecessary(final String s, final int maxLength, final boolean addDotDotDotIfTruncated) {
+        if (s.length() <= maxLength) {
+            return s;
         } else {
-            return p_145001_ && p_145000_ > 3 ? p_144999_.substring(0, p_145000_ - 3) + "..." : p_144999_.substring(0, p_145000_);
+            return addDotDotDotIfTruncated && maxLength > 3 ? s.substring(0, maxLength - 3) + "..." : s.substring(0, maxLength);
         }
     }
 
-    public static int lineCount(String p_145003_) {
-        if (p_145003_.isEmpty()) {
+    public static int lineCount(final String s) {
+        if (s.isEmpty()) {
             return 0;
-        } else {
-            Matcher matcher = LINE_PATTERN.matcher(p_145003_);
-            int i = 1;
-
-            while (matcher.find()) {
-                i++;
-            }
-
-            return i;
-        }
-    }
-
-    public static boolean endsWithNewLine(String p_145005_) {
-        return LINE_END_PATTERN.matcher(p_145005_).find();
-    }
-
-    public static String trimChatMessage(String p_216470_) {
-        return truncateStringIfNecessary(p_216470_, 256, false);
-    }
-
-    public static boolean isAllowedChatCharacter(int p_422340_) {
-        return p_422340_ != 167 && p_422340_ >= 32 && p_422340_ != 127;
-    }
-
-    public static boolean isValidPlayerName(String p_328576_) {
-        return p_328576_.length() > 16 ? false : p_328576_.chars().filter(p_333267_ -> p_333267_ <= 32 || p_333267_ >= 127).findAny().isEmpty();
-    }
-
-    public static String filterText(String p_329405_) {
-        return filterText(p_329405_, false);
-    }
-
-    public static String filterText(String p_335196_, boolean p_329791_) {
-        StringBuilder stringbuilder = new StringBuilder();
-
-        for (char c0 : p_335196_.toCharArray()) {
-            if (isAllowedChatCharacter(c0)) {
-                stringbuilder.append(c0);
-            } else if (p_329791_ && c0 == '\n') {
-                stringbuilder.append(c0);
-            }
         }
 
-        return stringbuilder.toString();
+        Matcher matcher = LINE_PATTERN.matcher(s);
+        int count = 1;
+
+        while (matcher.find()) {
+            count++;
+        }
+
+        return count;
     }
 
-    public static boolean isWhitespace(int p_332672_) {
-        return Character.isWhitespace(p_332672_) || Character.isSpaceChar(p_332672_);
+    public static boolean endsWithNewLine(final String s) {
+        return LINE_END_PATTERN.matcher(s).find();
     }
 
-    public static boolean isBlank(@Nullable String p_334499_) {
-        return p_334499_ != null && !p_334499_.isEmpty() ? p_334499_.chars().allMatch(StringUtil::isWhitespace) : true;
+    public static String trimChatMessage(final String message) {
+        return truncateStringIfNecessary(message, 256, false);
+    }
+
+    public static boolean isAllowedChatCharacter(final int ch) {
+        return ch != 167 && ch >= 32 && ch != 127;
+    }
+
+    public static boolean isValidPlayerName(final String name) {
+        return name.length() > 16 ? false : name.chars().filter(c -> c <= 32 || c >= 127).findAny().isEmpty();
+    }
+
+    public static String filterText(final String input) {
+        return filterText(input, false);
+    }
+
+    public static String filterText(final String input, final boolean multiline) {
+        StringBuilder builder = new StringBuilder();
+
+        for (char c : input.toCharArray()) {
+            if (isAllowedChatCharacter(c)) {
+                builder.append(c);
+            } else if (multiline && c == '\n') {
+                builder.append(c);
+            }
+        }
+
+        return builder.toString();
+    }
+
+    public static boolean isWhitespace(final int codepoint) {
+        return Character.isWhitespace(codepoint) || Character.isSpaceChar(codepoint);
+    }
+
+    public static boolean isBlank(final @Nullable String string) {
+        return string != null && !string.isEmpty() ? string.chars().allMatch(StringUtil::isWhitespace) : true;
     }
 }

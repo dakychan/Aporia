@@ -1,14 +1,11 @@
 package net.minecraft.client.gui.screens;
 
 import net.minecraft.client.GameNarrator;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.ProgressListener;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ProgressScreen extends Screen implements ProgressListener {
     private @Nullable Component header;
     private @Nullable Component stage;
@@ -16,9 +13,9 @@ public class ProgressScreen extends Screen implements ProgressListener {
     private boolean stop;
     private final boolean clearScreenAfterStop;
 
-    public ProgressScreen(boolean p_169364_) {
+    public ProgressScreen(final boolean clearScreenAfterStop) {
         super(GameNarrator.NO_TITLE);
-        this.clearScreenAfterStop = p_169364_;
+        this.clearScreenAfterStop = clearScreenAfterStop;
     }
 
     @Override
@@ -32,25 +29,25 @@ public class ProgressScreen extends Screen implements ProgressListener {
     }
 
     @Override
-    public void progressStartNoAbort(Component p_96520_) {
-        this.progressStart(p_96520_);
+    public void progressStartNoAbort(final Component string) {
+        this.progressStart(string);
     }
 
     @Override
-    public void progressStart(Component p_96523_) {
-        this.header = p_96523_;
+    public void progressStart(final Component string) {
+        this.header = string;
         this.progressStage(Component.translatable("menu.working"));
     }
 
     @Override
-    public void progressStage(Component p_96525_) {
-        this.stage = p_96525_;
+    public void progressStage(final Component string) {
+        this.stage = string;
         this.progressStagePercentage(0);
     }
 
     @Override
-    public void progressStagePercentage(int p_96513_) {
-        this.progress = p_96513_;
+    public void progressStagePercentage(final int i) {
+        this.progress = i;
     }
 
     @Override
@@ -59,19 +56,19 @@ public class ProgressScreen extends Screen implements ProgressListener {
     }
 
     @Override
-    public void render(GuiGraphics p_283582_, int p_96516_, int p_96517_, float p_96518_) {
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
         if (this.stop) {
             if (this.clearScreenAfterStop) {
-                this.minecraft.setScreen(null);
+                this.minecraft.gui.setScreen(null);
             }
         } else {
-            super.render(p_283582_, p_96516_, p_96517_, p_96518_);
+            super.extractRenderState(graphics, mouseX, mouseY, a);
             if (this.header != null) {
-                p_283582_.drawCenteredString(this.font, this.header, this.width / 2, 70, -1);
+                graphics.centeredText(this.font, this.header, this.width / 2, 70, -1);
             }
 
             if (this.stage != null && this.progress != 0) {
-                p_283582_.drawCenteredString(this.font, Component.empty().append(this.stage).append(" " + this.progress + "%"), this.width / 2, 90, -1);
+                graphics.centeredText(this.font, Component.empty().append(this.stage).append(" " + this.progress + "%"), this.width / 2, 90, -1);
             }
         }
     }

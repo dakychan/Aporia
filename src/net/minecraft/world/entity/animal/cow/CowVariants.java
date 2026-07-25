@@ -1,5 +1,6 @@
 package net.minecraft.world.entity.animal.cow;
 
+import net.minecraft.core.ClientAsset;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
@@ -19,31 +20,38 @@ public class CowVariants {
     public static final ResourceKey<CowVariant> COLD = createKey(TemperatureVariants.COLD);
     public static final ResourceKey<CowVariant> DEFAULT = TEMPERATE;
 
-    private static ResourceKey<CowVariant> createKey(Identifier p_454463_) {
-        return ResourceKey.create(Registries.COW_VARIANT, p_454463_);
+    private static ResourceKey<CowVariant> createKey(final Identifier id) {
+        return ResourceKey.create(Registries.COW_VARIANT, id);
     }
 
-    public static void bootstrap(BootstrapContext<CowVariant> p_454398_) {
-        register(p_454398_, TEMPERATE, CowVariant.ModelType.NORMAL, "temperate_cow", SpawnPrioritySelectors.fallback(0));
-        register(p_454398_, WARM, CowVariant.ModelType.WARM, "warm_cow", BiomeTags.SPAWNS_WARM_VARIANT_FARM_ANIMALS);
-        register(p_454398_, COLD, CowVariant.ModelType.COLD, "cold_cow", BiomeTags.SPAWNS_COLD_VARIANT_FARM_ANIMALS);
-    }
-
-    private static void register(
-        BootstrapContext<CowVariant> p_459725_, ResourceKey<CowVariant> p_455507_, CowVariant.ModelType p_460893_, String p_451583_, TagKey<Biome> p_458461_
-    ) {
-        HolderSet<Biome> holderset = p_459725_.lookup(Registries.BIOME).getOrThrow(p_458461_);
-        register(p_459725_, p_455507_, p_460893_, p_451583_, SpawnPrioritySelectors.single(new BiomeCheck(holderset), 1));
+    public static void bootstrap(final BootstrapContext<CowVariant> context) {
+        register(context, TEMPERATE, CowVariant.ModelType.NORMAL, "cow_temperate", "cow_temperate_baby", SpawnPrioritySelectors.fallback(0));
+        register(context, WARM, CowVariant.ModelType.WARM, "cow_warm", "cow_warm_baby", BiomeTags.SPAWNS_WARM_VARIANT_FARM_ANIMALS);
+        register(context, COLD, CowVariant.ModelType.COLD, "cow_cold", "cow_cold_baby", BiomeTags.SPAWNS_COLD_VARIANT_FARM_ANIMALS);
     }
 
     private static void register(
-        BootstrapContext<CowVariant> p_454568_,
-        ResourceKey<CowVariant> p_459488_,
-        CowVariant.ModelType p_455755_,
-        String p_459305_,
-        SpawnPrioritySelectors p_453632_
+        final BootstrapContext<CowVariant> context,
+        final ResourceKey<CowVariant> name,
+        final CowVariant.ModelType modelType,
+        final String textureName,
+        final String babyTextureName,
+        final TagKey<Biome> spawnBiome
     ) {
-        Identifier identifier = Identifier.withDefaultNamespace("entity/cow/" + p_459305_);
-        p_454568_.register(p_459488_, new CowVariant(new ModelAndTexture<>(p_455755_, identifier), p_453632_));
+        HolderSet<Biome> biomes = context.lookup(Registries.BIOME).getOrThrow(spawnBiome);
+        register(context, name, modelType, textureName, babyTextureName, SpawnPrioritySelectors.single(new BiomeCheck(biomes), 1));
+    }
+
+    private static void register(
+        final BootstrapContext<CowVariant> context,
+        final ResourceKey<CowVariant> name,
+        final CowVariant.ModelType modelType,
+        final String textureName,
+        final String babyTextureName,
+        final SpawnPrioritySelectors selectors
+    ) {
+        Identifier textureId = Identifier.withDefaultNamespace("entity/cow/" + textureName);
+        Identifier babyTextureId = Identifier.withDefaultNamespace("entity/cow/" + babyTextureName);
+        context.register(name, new CowVariant(new ModelAndTexture<>(modelType, textureId), new ClientAsset.ResourceTexture(babyTextureId), selectors));
     }
 }

@@ -3,7 +3,7 @@ package net.minecraft.client.gui.components;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import net.minecraft.client.InputType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.KeyEvent;
@@ -15,10 +15,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractSliderButton extends AbstractWidget.WithInactiveMessage {
     private static final Identifier SLIDER_SPRITE = Identifier.withDefaultNamespace("widget/slider");
     private static final Identifier HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("widget/slider_highlighted");
@@ -32,9 +29,9 @@ public abstract class AbstractSliderButton extends AbstractWidget.WithInactiveMe
     protected boolean canChangeValue;
     private boolean dragging;
 
-    public AbstractSliderButton(int p_93579_, int p_93580_, int p_93581_, int p_93582_, Component p_93583_, double p_93584_) {
-        super(p_93579_, p_93580_, p_93581_, p_93582_, p_93583_);
-        this.value = p_93584_;
+    public AbstractSliderButton(final int x, final int y, final int width, final int height, final Component message, final double initialValue) {
+        super(x, y, width, height, message);
+        this.value = initialValue;
     }
 
     private Identifier getSprite() {
@@ -51,27 +48,25 @@ public abstract class AbstractSliderButton extends AbstractWidget.WithInactiveMe
     }
 
     @Override
-    public void updateWidgetNarration(NarrationElementOutput p_168798_) {
-        p_168798_.add(NarratedElementType.TITLE, this.createNarrationMessage());
+    public void updateWidgetNarration(final NarrationElementOutput output) {
+        output.add(NarratedElementType.TITLE, this.createNarrationMessage());
         if (this.active) {
             if (this.isFocused()) {
                 if (this.canChangeValue) {
-                    p_168798_.add(NarratedElementType.USAGE, Component.translatable("narration.slider.usage.focused"));
+                    output.add(NarratedElementType.USAGE, Component.translatable("narration.slider.usage.focused"));
                 } else {
-                    p_168798_.add(NarratedElementType.USAGE, Component.translatable("narration.slider.usage.focused.keyboard_cannot_change_value"));
+                    output.add(NarratedElementType.USAGE, Component.translatable("narration.slider.usage.focused.keyboard_cannot_change_value"));
                 }
             } else {
-                p_168798_.add(NarratedElementType.USAGE, Component.translatable("narration.slider.usage.hovered"));
+                output.add(NarratedElementType.USAGE, Component.translatable("narration.slider.usage.hovered"));
             }
         }
     }
 
     @Override
-    public void renderWidget(GuiGraphics p_283427_, int p_281447_, int p_282852_, float p_282409_) {
-        p_283427_.blitSprite(
-            RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.getWidth(), this.getHeight(), ARGB.white(this.alpha)
-        );
-        p_283427_.blitSprite(
+    public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.getWidth(), this.getHeight(), ARGB.white(this.alpha));
+        graphics.blitSprite(
             RenderPipelines.GUI_TEXTURED,
             this.getHandleSprite(),
             this.getX() + (int)(this.value * (this.width - 8)),
@@ -80,59 +75,64 @@ public abstract class AbstractSliderButton extends AbstractWidget.WithInactiveMe
             this.getHeight(),
             ARGB.white(this.alpha)
         );
-        this.renderScrollingStringOverContents(p_283427_.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.NONE), this.getMessage(), 2);
+        this.extractScrollingStringOverContents(graphics.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.NONE), this.getMessage(), 2);
+        this.handleCursor(graphics);
+    }
+
+    @Override
+    protected void handleCursor(final GuiGraphicsExtractor graphics) {
         if (this.isHovered()) {
-            p_283427_.requestCursor(this.dragging ? CursorTypes.RESIZE_EW : CursorTypes.POINTING_HAND);
+            graphics.requestCursor(this.isActive() ? (this.dragging ? CursorTypes.RESIZE_EW : CursorTypes.POINTING_HAND) : CursorTypes.NOT_ALLOWED);
         }
     }
 
     @Override
-    public void onClick(MouseButtonEvent p_424503_, boolean p_424772_) {
+    public void onClick(final MouseButtonEvent event, final boolean doubleClick) {
         this.dragging = this.active;
-        this.setValueFromMouse(p_424503_);
+        this.setValueFromMouse(event);
     }
 
     @Override
-    public void setFocused(boolean p_265705_) {
-        super.setFocused(p_265705_);
-        if (!p_265705_) {
+    public void setFocused(final boolean focused) {
+        super.setFocused(focused);
+        if (!focused) {
             this.canChangeValue = false;
         } else {
-            InputType inputtype = Minecraft.getInstance().getLastInputType();
-            if (inputtype == InputType.MOUSE || inputtype == InputType.KEYBOARD_TAB) {
+            InputType lastInputType = Minecraft.getInstance().getLastInputType();
+            if (lastInputType == InputType.MOUSE || lastInputType == InputType.KEYBOARD_TAB) {
                 this.canChangeValue = true;
             }
         }
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_427303_) {
-        if (p_427303_.isSelection()) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (event.isSelection()) {
             this.canChangeValue = !this.canChangeValue;
             return true;
-        } else {
-            if (this.canChangeValue) {
-                boolean flag = p_427303_.isLeft();
-                boolean flag1 = p_427303_.isRight();
-                if (flag || flag1) {
-                    float f = flag ? -1.0F : 1.0F;
-                    this.setValue(this.value + f / (this.width - 8));
-                    return true;
-                }
-            }
-
-            return false;
         }
+
+        if (this.canChangeValue) {
+            boolean left = event.isLeft();
+            boolean right = event.isRight();
+            if (left || right) {
+                float direction = left ? -1.0F : 1.0F;
+                this.setValue(this.value + direction / (this.width - 8));
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    private void setValueFromMouse(MouseButtonEvent p_423057_) {
-        this.setValue((p_423057_.x() - (this.getX() + 4)) / (this.width - 8));
+    private void setValueFromMouse(final MouseButtonEvent event) {
+        this.setValue((event.x() - (this.getX() + 4)) / (this.width - 8));
     }
 
-    protected void setValue(double p_93612_) {
-        double d0 = this.value;
-        this.value = Mth.clamp(p_93612_, 0.0, 1.0);
-        if (d0 != this.value) {
+    protected void setValue(final double newValue) {
+        double oldValue = this.value;
+        this.value = Mth.clamp(newValue, 0.0, 1.0);
+        if (oldValue != this.value) {
             this.applyValue();
         }
 
@@ -140,17 +140,17 @@ public abstract class AbstractSliderButton extends AbstractWidget.WithInactiveMe
     }
 
     @Override
-    protected void onDrag(MouseButtonEvent p_430133_, double p_93591_, double p_93592_) {
-        this.setValueFromMouse(p_430133_);
-        super.onDrag(p_430133_, p_93591_, p_93592_);
+    protected void onDrag(final MouseButtonEvent event, final double dx, final double dy) {
+        this.setValueFromMouse(event);
+        super.onDrag(event, dx, dy);
     }
 
     @Override
-    public void playDownSound(SoundManager p_93605_) {
+    public void playDownSound(final SoundManager soundManager) {
     }
 
     @Override
-    public void onRelease(MouseButtonEvent p_430023_) {
+    public void onRelease(final MouseButtonEvent event) {
         this.dragging = false;
         super.playDownSound(Minecraft.getInstance().getSoundManager());
     }

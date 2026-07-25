@@ -6,9 +6,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
-public record StructurePieceSerializationContext(ResourceManager resourceManager, RegistryAccess registryAccess, StructureTemplateManager structureTemplateManager) {
-    public static StructurePieceSerializationContext fromLevel(ServerLevel p_192771_) {
-        MinecraftServer minecraftserver = p_192771_.getServer();
-        return new StructurePieceSerializationContext(minecraftserver.getResourceManager(), minecraftserver.registryAccess(), minecraftserver.getStructureManager());
+public record StructurePieceSerializationContext(
+    ResourceManager resourceManager, RegistryAccess registryAccess, StructureTemplateManager structureTemplateManager
+) {
+    public static StructurePieceSerializationContext fromLevel(final ServerLevel level) {
+        MinecraftServer server = level.getServer();
+        return new StructurePieceSerializationContext(server.getResourceManager(), server.registryAccess(), server.getStructureManager());
     }
 }

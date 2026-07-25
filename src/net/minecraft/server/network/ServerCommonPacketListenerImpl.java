@@ -47,12 +47,12 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
     private int latency;
     private volatile boolean suspendFlushingOnServerThread = false;
 
-    public ServerCommonPacketListenerImpl(MinecraftServer p_299469_, Connection p_300872_, CommonListenerCookie p_300277_) {
-        this.server = p_299469_;
-        this.connection = p_300872_;
+    public ServerCommonPacketListenerImpl(final MinecraftServer server, final Connection connection, final CommonListenerCookie cookie) {
+        this.server = server;
+        this.connection = connection;
         this.keepAliveTime = Util.getMillis();
-        this.latency = p_300277_.latency();
-        this.transferred = p_300277_.transferred();
+        this.latency = cookie.latency();
+        this.transferred = cookie.transferred();
     }
 
     private void close() {
@@ -63,7 +63,7 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
     }
 
     @Override
-    public void onDisconnect(DisconnectionDetails p_343448_) {
+    public void onDisconnect(final DisconnectionDetails details) {
         if (this.isSingleplayerOwner()) {
             LOGGER.info("Stopping singleplayer server as player logged out");
             this.server.halt(false);
@@ -71,16 +71,16 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
     }
 
     @Override
-    public void onPacketError(Packet p_364882_, Exception p_362532_) throws ReportedException {
-        ServerCommonPacketListener.super.onPacketError(p_364882_, p_362532_);
-        this.server.reportPacketHandlingException(p_362532_, p_364882_.type());
+    public void onPacketError(final Packet packet, final Exception e) throws ReportedException {
+        ServerCommonPacketListener.super.onPacketError(packet, e);
+        this.server.reportPacketHandlingException(e, packet.type());
     }
 
     @Override
-    public void handleKeepAlive(ServerboundKeepAlivePacket p_299975_) {
-        if (this.keepAlivePending && p_299975_.getId() == this.keepAliveChallenge) {
-            int i = (int)(Util.getMillis() - this.keepAliveTime);
-            this.latency = (this.latency * 3 + i) / 4;
+    public void handleKeepAlive(final ServerboundKeepAlivePacket packet) {
+        if (this.keepAlivePending && packet.getId() == this.keepAliveChallenge) {
+            int time = (int)(Util.getMillis() - this.keepAliveTime);
+            this.latency = (this.latency * 3 + time) / 4;
             this.keepAlivePending = false;
         } else if (!this.isSingleplayerOwner()) {
             this.disconnect(TIMEOUT_DISCONNECTION_MESSAGE);
@@ -88,43 +88,43 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
     }
 
     @Override
-    public void handlePong(ServerboundPongPacket p_299461_) {
+    public void handlePong(final ServerboundPongPacket serverboundPongPacket) {
     }
 
     @Override
-    public void handleCustomPayload(ServerboundCustomPayloadPacket p_300164_) {
+    public void handleCustomPayload(final ServerboundCustomPayloadPacket packet) {
     }
 
     @Override
-    public void handleCustomClickAction(ServerboundCustomClickActionPacket p_410416_) {
-        PacketUtils.ensureRunningOnSameThread(p_410416_, this, this.server.packetProcessor());
-        this.server.handleCustomClickAction(p_410416_.id(), p_410416_.payload());
+    public void handleCustomClickAction(final ServerboundCustomClickActionPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.server.packetProcessor());
+        this.server.handleCustomClickAction(packet.id(), packet.payload());
     }
 
     @Override
-    public void handleResourcePackResponse(ServerboundResourcePackPacket p_300656_) {
-        PacketUtils.ensureRunningOnSameThread(p_300656_, this, this.server.packetProcessor());
-        if (p_300656_.action() == ServerboundResourcePackPacket.Action.DECLINED && this.server.isResourcePackRequired()) {
-            LOGGER.info("Disconnecting {} due to resource pack {} rejection", this.playerProfile().name(), p_300656_.id());
+    public void handleResourcePackResponse(final ServerboundResourcePackPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.server.packetProcessor());
+        if (packet.action() == ServerboundResourcePackPacket.Action.DECLINED && this.server.isResourcePackRequired()) {
+            LOGGER.info("Disconnecting {} due to resource pack {} rejection", this.playerProfile().name(), packet.id());
             this.disconnect(Component.translatable("multiplayer.requiredTexturePrompt.disconnect"));
         }
     }
 
     @Override
-    public void handleCookieResponse(ServerboundCookieResponsePacket p_335443_) {
+    public void handleCookieResponse(final ServerboundCookieResponsePacket packet) {
         this.disconnect(DISCONNECT_UNEXPECTED_QUERY);
     }
 
     protected void keepConnectionAlive() {
         Profiler.get().push("keepAlive");
-        long i = Util.getMillis();
-        if (!this.isSingleplayerOwner() && i - this.keepAliveTime >= 15000L) {
+        long now = Util.getMillis();
+        if (!this.isSingleplayerOwner() && now - this.keepAliveTime >= 15000L) {
             if (this.keepAlivePending) {
                 this.disconnect(TIMEOUT_DISCONNECTION_MESSAGE);
-            } else if (this.checkIfClosed(i)) {
+            } else if (this.checkIfClosed(now)) {
                 this.keepAlivePending = true;
-                this.keepAliveTime = i;
-                this.keepAliveChallenge = i;
+                this.keepAliveTime = now;
+                this.keepAliveChallenge = now;
                 this.send(new ClientboundKeepAlivePacket(this.keepAliveChallenge));
             }
         }
@@ -132,9 +132,9 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
         Profiler.get().pop();
     }
 
-    private boolean checkIfClosed(long p_331601_) {
+    private boolean checkIfClosed(final long now) {
         if (this.closed) {
-            if (p_331601_ - this.closedListenerTime >= 15000L) {
+            if (now - this.closedListenerTime >= 15000L) {
                 this.disconnect(TIMEOUT_DISCONNECTION_MESSAGE);
             }
 
@@ -153,34 +153,33 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
         this.connection.flushChannel();
     }
 
-    public void send(Packet<?> p_300558_) {
-        this.send(p_300558_, null);
+    public void send(final Packet<?> packet) {
+        this.send(packet, null);
     }
 
-    public void send(Packet<?> p_300325_, @Nullable ChannelFutureListener p_409441_) {
-        if (p_300325_.isTerminal()) {
+    public void send(final Packet<?> packet, final @Nullable ChannelFutureListener listener) {
+        if (packet.isTerminal()) {
             this.close();
         }
 
-        boolean flag = !this.suspendFlushingOnServerThread || !this.server.isSameThread();
+        boolean flush = !this.suspendFlushingOnServerThread || !this.server.isSameThread();
 
         try {
-            this.connection.send(p_300325_, p_409441_, flag);
-        } catch (Throwable throwable) {
-            CrashReport crashreport = CrashReport.forThrowable(throwable, "Sending packet");
-            CrashReportCategory crashreportcategory = crashreport.addCategory("Packet being sent");
-            crashreportcategory.setDetail("Packet class", () -> p_300325_.getClass().getCanonicalName());
-            throw new ReportedException(crashreport);
+            this.connection.send(packet, listener, flush);
+        } catch (Throwable t) {
+            CrashReport report = CrashReport.forThrowable(t, "Sending packet");
+            CrashReportCategory category = report.addCategory("Packet being sent");
+            category.setDetail("Packet class", () -> packet.getClass().getCanonicalName());
+            throw new ReportedException(report);
         }
     }
 
-    public void disconnect(Component p_299122_) {
-        this.disconnect(new DisconnectionDetails(p_299122_));
+    public void disconnect(final Component reason) {
+        this.disconnect(new DisconnectionDetails(reason));
     }
 
-    public void disconnect(DisconnectionDetails p_345473_) {
-        this.connection
-            .send(new ClientboundDisconnectPacket(p_345473_.reason()), PacketSendListener.thenRun(() -> this.connection.disconnect(p_345473_)));
+    public void disconnect(final DisconnectionDetails details) {
+        this.connection.send(new ClientboundDisconnectPacket(details.reason()), PacketSendListener.thenRun(() -> this.connection.disconnect(details)));
         this.connection.setReadOnly();
         this.server.executeBlocking(this.connection::handleDisconnection);
     }
@@ -200,7 +199,7 @@ public abstract class ServerCommonPacketListenerImpl implements ServerCommonPack
         return this.latency;
     }
 
-    protected CommonListenerCookie createCookie(ClientInformation p_297318_) {
-        return new CommonListenerCookie(this.playerProfile(), this.latency, p_297318_, this.transferred);
+    protected CommonListenerCookie createCookie(final ClientInformation clientInformation) {
+        return new CommonListenerCookie(this.playerProfile(), this.latency, clientInformation, this.transferred);
     }
 }

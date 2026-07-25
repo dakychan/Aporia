@@ -6,12 +6,12 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 
 public interface Coordinates {
-    Vec3 getPosition(CommandSourceStack p_119566_);
+    Vec3 getPosition(CommandSourceStack sender);
 
-    Vec2 getRotation(CommandSourceStack p_119567_);
+    Vec2 getRotation(CommandSourceStack sender);
 
-    default BlockPos getBlockPos(CommandSourceStack p_119569_) {
-        return BlockPos.containing(this.getPosition(p_119569_));
+    default BlockPos getBlockPos(final CommandSourceStack sender) {
+        return BlockPos.containing(this.getPosition(sender));
     }
 
     boolean isXRelative();

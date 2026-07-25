@@ -15,6 +15,7 @@ import net.minecraft.tags.FluidTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -44,21 +45,23 @@ import net.minecraft.world.phys.Vec3;
 
 public class Witch extends Raider implements RangedAttackMob {
     private static final Identifier SPEED_MODIFIER_DRINKING_ID = Identifier.withDefaultNamespace("drinking");
-    private static final AttributeModifier SPEED_MODIFIER_DRINKING = new AttributeModifier(SPEED_MODIFIER_DRINKING_ID, -0.25, AttributeModifier.Operation.ADD_VALUE);
+    private static final AttributeModifier SPEED_MODIFIER_DRINKING = new AttributeModifier(
+        SPEED_MODIFIER_DRINKING_ID, -0.25, AttributeModifier.Operation.ADD_VALUE
+    );
     private static final EntityDataAccessor<Boolean> DATA_USING_ITEM = SynchedEntityData.defineId(Witch.class, EntityDataSerializers.BOOLEAN);
     private int usingTime;
     private NearestHealableRaiderTargetGoal<Raider> healRaidersGoal;
     private NearestAttackableWitchTargetGoal<Player> attackPlayersGoal;
 
-    public Witch(EntityType<? extends Witch> p_34134_, Level p_34135_) {
-        super(p_34134_, p_34135_);
+    public Witch(final EntityType<? extends Witch> type, final Level level) {
+        super(type, level);
     }
 
     @Override
     protected void registerGoals() {
         super.registerGoals();
         this.healRaidersGoal = new NearestHealableRaiderTargetGoal<>(
-            this, Raider.class, true, (p_449697_, p_449698_) -> this.hasActiveRaid() && p_449697_.getType() != EntityType.WITCH
+            this, Raider.class, true, (target, level) -> this.hasActiveRaid() && !target.is(EntityTypes.WITCH)
         );
         this.attackPlayersGoal = new NearestAttackableWitchTargetGoal<>(this, Player.class, 10, true, false, null);
         this.goalSelector.addGoal(1, new FloatGoal(this));
@@ -72,9 +75,9 @@ public class Witch extends Raider implements RangedAttackMob {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_330124_) {
-        super.defineSynchedData(p_330124_);
-        p_330124_.define(DATA_USING_ITEM, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_USING_ITEM, false);
     }
 
     @Override
@@ -83,7 +86,7 @@ public class Witch extends Raider implements RangedAttackMob {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_34154_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.WITCH_HURT;
     }
 
@@ -92,8 +95,8 @@ public class Witch extends Raider implements RangedAttackMob {
         return SoundEvents.WITCH_DEATH;
     }
 
-    public void setUsingItem(boolean p_34164_) {
-        this.getEntityData().set(DATA_USING_ITEM, p_34164_);
+    public void setUsingItem(final boolean using) {
+        this.getEntityData().set(DATA_USING_ITEM, using);
     }
 
     public boolean isDrinkingPotion() {
@@ -117,35 +120,35 @@ public class Witch extends Raider implements RangedAttackMob {
             if (this.isDrinkingPotion()) {
                 if (this.usingTime-- <= 0) {
                     this.setUsingItem(false);
-                    ItemStack itemstack = this.getMainHandItem();
+                    ItemStack itemStack = this.getMainHandItem();
                     this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-                    PotionContents potioncontents = itemstack.get(DataComponents.POTION_CONTENTS);
-                    if (itemstack.is(Items.POTION) && potioncontents != null) {
-                        potioncontents.forEachEffect(this::addEffect, itemstack.getOrDefault(DataComponents.POTION_DURATION_SCALE, 1.0F));
+                    PotionContents potion = itemStack.get(DataComponents.POTION_CONTENTS);
+                    if (itemStack.is(Items.POTION) && potion != null) {
+                        potion.forEachEffect(this::addEffect, itemStack.getOrDefault(DataComponents.POTION_DURATION_SCALE, 1.0F));
                     }
 
                     this.gameEvent(GameEvent.DRINK);
                     this.getAttribute(Attributes.MOVEMENT_SPEED).removeModifier(SPEED_MODIFIER_DRINKING.id());
                 }
             } else {
-                Holder<Potion> holder = null;
+                Holder<Potion> potion = null;
                 if (this.random.nextFloat() < 0.15F && this.isEyeInFluid(FluidTags.WATER) && !this.hasEffect(MobEffects.WATER_BREATHING)) {
-                    holder = Potions.WATER_BREATHING;
+                    potion = Potions.WATER_BREATHING;
                 } else if (this.random.nextFloat() < 0.15F
                     && (this.isOnFire() || this.getLastDamageSource() != null && this.getLastDamageSource().is(DamageTypeTags.IS_FIRE))
                     && !this.hasEffect(MobEffects.FIRE_RESISTANCE)) {
-                    holder = Potions.FIRE_RESISTANCE;
+                    potion = Potions.FIRE_RESISTANCE;
                 } else if (this.random.nextFloat() < 0.05F && this.getHealth() < this.getMaxHealth()) {
-                    holder = Potions.HEALING;
+                    potion = Potions.HEALING;
                 } else if (this.random.nextFloat() < 0.5F
                     && this.getTarget() != null
                     && !this.hasEffect(MobEffects.SPEED)
                     && this.getTarget().distanceToSqr(this) > 121.0) {
-                    holder = Potions.SWIFTNESS;
+                    potion = Potions.SWIFTNESS;
                 }
 
-                if (holder != null) {
-                    this.setItemSlot(EquipmentSlot.MAINHAND, PotionContents.createItemStack(Items.POTION, holder));
+                if (potion != null) {
+                    this.setItemSlot(EquipmentSlot.MAINHAND, PotionContents.createItemStack(Items.POTION, potion));
                     this.usingTime = this.getMainHandItem().getUseDuration(this);
                     this.setUsingItem(true);
                     if (!this.isSilent()) {
@@ -162,9 +165,9 @@ public class Witch extends Raider implements RangedAttackMob {
                             );
                     }
 
-                    AttributeInstance attributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
-                    attributeinstance.removeModifier(SPEED_MODIFIER_DRINKING_ID);
-                    attributeinstance.addTransientModifier(SPEED_MODIFIER_DRINKING);
+                    AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
+                    speed.removeModifier(SPEED_MODIFIER_DRINKING_ID);
+                    speed.addTransientModifier(SPEED_MODIFIER_DRINKING);
                 }
             }
 
@@ -182,8 +185,8 @@ public class Witch extends Raider implements RangedAttackMob {
     }
 
     @Override
-    public void handleEntityEvent(byte p_34138_) {
-        if (p_34138_ == 15) {
+    public void handleEntityEvent(final byte id) {
+        if (id == 15) {
             for (int i = 0; i < this.random.nextInt(35) + 10; i++) {
                 this.level()
                     .addParticle(
@@ -197,52 +200,54 @@ public class Witch extends Raider implements RangedAttackMob {
                     );
             }
         } else {
-            super.handleEntityEvent(p_34138_);
+            super.handleEntityEvent(id);
         }
     }
 
     @Override
-    protected float getDamageAfterMagicAbsorb(DamageSource p_34149_, float p_34150_) {
-        p_34150_ = super.getDamageAfterMagicAbsorb(p_34149_, p_34150_);
-        if (p_34149_.getEntity() == this) {
-            p_34150_ = 0.0F;
+    protected float getDamageAfterMagicAbsorb(final DamageSource damageSource, float damage) {
+        damage = super.getDamageAfterMagicAbsorb(damageSource, damage);
+        if (damageSource.getEntity() == this) {
+            damage = 0.0F;
         }
 
-        if (p_34149_.is(DamageTypeTags.WITCH_RESISTANT_TO)) {
-            p_34150_ *= 0.15F;
+        if (damageSource.is(DamageTypeTags.WITCH_RESISTANT_TO)) {
+            damage *= 0.15F;
         }
 
-        return p_34150_;
+        return damage;
     }
 
     @Override
-    public void performRangedAttack(LivingEntity p_34143_, float p_34144_) {
+    public void performRangedAttack(final LivingEntity target, final float power) {
         if (!this.isDrinkingPotion()) {
-            Vec3 vec3 = p_34143_.getDeltaMovement();
-            double d0 = p_34143_.getX() + vec3.x - this.getX();
-            double d1 = p_34143_.getEyeY() - 1.1F - this.getY();
-            double d2 = p_34143_.getZ() + vec3.z - this.getZ();
-            double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-            Holder<Potion> holder = Potions.HARMING;
-            if (p_34143_ instanceof Raider) {
-                if (p_34143_.getHealth() <= 4.0F) {
-                    holder = Potions.HEALING;
+            Vec3 targetMovement = target.getDeltaMovement();
+            double xd = target.getX() + targetMovement.x - this.getX();
+            double yd = target.getEyeY() - 1.1F - this.getY();
+            double zd = target.getZ() + targetMovement.z - this.getZ();
+            double dist = Math.sqrt(xd * xd + zd * zd);
+            Holder<Potion> potion = Potions.HARMING;
+            if (target instanceof Raider) {
+                if (target.getHealth() <= 4.0F) {
+                    potion = Potions.HEALING;
                 } else {
-                    holder = Potions.REGENERATION;
+                    potion = Potions.REGENERATION;
                 }
 
                 this.setTarget(null);
-            } else if (d3 >= 8.0 && !p_34143_.hasEffect(MobEffects.SLOWNESS)) {
-                holder = Potions.SLOWNESS;
-            } else if (p_34143_.getHealth() >= 8.0F && !p_34143_.hasEffect(MobEffects.POISON)) {
-                holder = Potions.POISON;
-            } else if (d3 <= 3.0 && !p_34143_.hasEffect(MobEffects.WEAKNESS) && this.random.nextFloat() < 0.25F) {
-                holder = Potions.WEAKNESS;
+            } else if (dist >= 8.0 && !target.hasEffect(MobEffects.SLOWNESS)) {
+                potion = Potions.SLOWNESS;
+            } else if (target.getHealth() >= 8.0F && !target.hasEffect(MobEffects.POISON)) {
+                potion = Potions.POISON;
+            } else if (dist <= 3.0 && !target.hasEffect(MobEffects.WEAKNESS) && this.random.nextFloat() < 0.25F) {
+                potion = Potions.WEAKNESS;
             }
 
-            if (this.level() instanceof ServerLevel serverlevel) {
-                ItemStack itemstack = PotionContents.createItemStack(Items.SPLASH_POTION, holder);
-                Projectile.spawnProjectileUsingShoot(ThrownSplashPotion::new, serverlevel, itemstack, this, d0, d1 + d3 * 0.2, d2, 0.75F, 8.0F);
+            if (this.level() instanceof ServerLevel serverLevel) {
+                ItemStack itemStack = PotionContents.createItemStack(Items.SPLASH_POTION, potion);
+                Projectile.spawnProjectileUsingShoot(
+                    ThrownSplashPotion::new, serverLevel, itemStack, this, xd, yd + dist * 0.2, zd, dist <= 2.0 ? 0.45F : 0.75F, 8.0F
+                );
             }
 
             if (!this.isSilent()) {
@@ -262,7 +267,7 @@ public class Witch extends Raider implements RangedAttackMob {
     }
 
     @Override
-    public void applyRaidBuffs(ServerLevel p_342154_, int p_34140_, boolean p_34141_) {
+    public void applyRaidBuffs(final ServerLevel level, final int wave, final boolean isCaptain) {
     }
 
     @Override

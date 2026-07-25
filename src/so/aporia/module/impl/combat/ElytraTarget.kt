@@ -177,7 +177,7 @@ class ElytraTarget : Module("ElytraTarget", Category.COMBAT) {
         val dist = p.distanceTo(target)
         if (dist > 4.0) { sm.transition(TargetInRange); return }
 
-        p.connection.send(net.minecraft.network.protocol.game.ServerboundInteractPacket.createAttackPacket(target, false))
+        p.connection.send(net.minecraft.network.protocol.game.ServerboundInteractPacket(target.id, net.minecraft.world.InteractionHand.MAIN_HAND, Vec3(target.x, target.y, target.z), false))
         p.swing(net.minecraft.world.InteractionHand.MAIN_HAND)
         mc.gameMode?.attack(p, target)
         sm.transition(AttackExecuted)

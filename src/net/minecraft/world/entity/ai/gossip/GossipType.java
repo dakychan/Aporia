@@ -20,12 +20,12 @@ public enum GossipType implements StringRepresentable {
     public final int decayPerTransfer;
     public static final Codec<GossipType> CODEC = StringRepresentable.fromEnum(GossipType::values);
 
-    private GossipType(final String p_26284_, final int p_26285_, final int p_26286_, final int p_26287_, final int p_26288_) {
-        this.id = p_26284_;
-        this.weight = p_26285_;
-        this.max = p_26286_;
-        this.decayPerDay = p_26287_;
-        this.decayPerTransfer = p_26288_;
+    GossipType(final String id, final int weight, final int max, final int decayPerDay, final int decayPerTransfer) {
+        this.id = id;
+        this.weight = weight;
+        this.max = max;
+        this.decayPerDay = decayPerDay;
+        this.decayPerTransfer = decayPerTransfer;
     }
 
     @Override

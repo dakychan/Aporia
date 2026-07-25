@@ -14,16 +14,16 @@ public class ClientboundSetCameraPacket implements Packet<ClientGamePacketListen
     );
     private final int cameraId;
 
-    public ClientboundSetCameraPacket(Entity p_133058_) {
-        this.cameraId = p_133058_.getId();
+    public ClientboundSetCameraPacket(final Entity camera) {
+        this.cameraId = camera.getId();
     }
 
-    private ClientboundSetCameraPacket(FriendlyByteBuf p_179278_) {
-        this.cameraId = p_179278_.readVarInt();
+    private ClientboundSetCameraPacket(final FriendlyByteBuf input) {
+        this.cameraId = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_133068_) {
-        p_133068_.writeVarInt(this.cameraId);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.cameraId);
     }
 
     @Override
@@ -31,11 +31,11 @@ public class ClientboundSetCameraPacket implements Packet<ClientGamePacketListen
         return GamePacketTypes.CLIENTBOUND_SET_CAMERA;
     }
 
-    public void handle(ClientGamePacketListener p_133066_) {
-        p_133066_.handleSetCamera(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetCamera(this);
     }
 
-    public @Nullable Entity getEntity(Level p_133060_) {
-        return p_133060_.getEntity(this.cameraId);
+    public @Nullable Entity getEntity(final Level level) {
+        return level.getEntity(this.cameraId);
     }
 }

@@ -28,16 +28,16 @@ public record ClientboundCommandSuggestionsPacket(int id, int start, int length,
         ClientboundCommandSuggestionsPacket::new
     );
 
-    public ClientboundCommandSuggestionsPacket(int p_131846_, Suggestions p_131847_) {
+    public ClientboundCommandSuggestionsPacket(final int id, final Suggestions suggestions) {
         this(
-            p_131846_,
-            p_131847_.getRange().getStart(),
-            p_131847_.getRange().getLength(),
-            p_131847_.getList()
+            id,
+            suggestions.getRange().getStart(),
+            suggestions.getRange().getLength(),
+            suggestions.getList()
                 .stream()
                 .map(
-                    p_326097_ -> new ClientboundCommandSuggestionsPacket.Entry(
-                        p_326097_.getText(), Optional.ofNullable(p_326097_.getTooltip()).map(ComponentUtils::fromMessage)
+                    suggestion -> new ClientboundCommandSuggestionsPacket.Entry(
+                        suggestion.getText(), Optional.ofNullable(suggestion.getTooltip()).map(ComponentUtils::fromMessage)
                     )
                 )
                 .toList()
@@ -49,16 +49,13 @@ public record ClientboundCommandSuggestionsPacket(int id, int start, int length,
         return GamePacketTypes.CLIENTBOUND_COMMAND_SUGGESTIONS;
     }
 
-    public void handle(ClientGamePacketListener p_131853_) {
-        p_131853_.handleCommandSuggestions(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleCommandSuggestions(this);
     }
 
     public Suggestions toSuggestions() {
-        StringRange stringrange = StringRange.between(this.start, this.start + this.length);
-        return new Suggestions(
-            stringrange,
-            this.suggestions.stream().map(p_326096_ -> new Suggestion(stringrange, p_326096_.text(), p_326096_.tooltip().orElse(null))).toList()
-        );
+        StringRange range = StringRange.between(this.start, this.start + this.length);
+        return new Suggestions(range, this.suggestions.stream().map(entry -> new Suggestion(range, entry.text(), entry.tooltip().orElse(null))).toList());
     }
 
     public record Entry(String text, Optional<Component> tooltip) {

@@ -45,14 +45,14 @@ public class Phantom extends Mob implements Enemy {
     public static final float FLAP_DEGREES_PER_TICK = 7.448451F;
     public static final int TICKS_PER_FLAP = Mth.ceil(24.166098F);
     private static final EntityDataAccessor<Integer> ID_SIZE = SynchedEntityData.defineId(Phantom.class, EntityDataSerializers.INT);
-    Vec3 moveTargetPoint = Vec3.ZERO;
-    @Nullable BlockPos anchorPoint;
-    Phantom.AttackPhase attackPhase = Phantom.AttackPhase.CIRCLE;
+    private Vec3 moveTargetPoint = Vec3.ZERO;
+    private @Nullable BlockPos anchorPoint;
+    private Phantom.AttackPhase attackPhase = Phantom.AttackPhase.CIRCLE;
 
-    public Phantom(EntityType<? extends Phantom> p_33101_, Level p_33102_) {
-        super(p_33101_, p_33102_);
+    public Phantom(final EntityType<? extends Phantom> type, final Level level) {
+        super(type, level);
         this.xpReward = 5;
-        this.moveControl = new Phantom.PhantomMoveControl(this);
+        this.moveControl = new Phantom.PhantomMoveControl<>(this);
         this.lookControl = new Phantom.PhantomLookControl(this);
     }
 
@@ -75,13 +75,13 @@ public class Phantom extends Mob implements Enemy {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_331815_) {
-        super.defineSynchedData(p_331815_);
-        p_331815_.define(ID_SIZE, 0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(ID_SIZE, 0);
     }
 
-    public void setPhantomSize(int p_33109_) {
-        this.entityData.set(ID_SIZE, Mth.clamp(p_33109_, 0, 64));
+    public void setPhantomSize(final int size) {
+        this.entityData.set(ID_SIZE, Mth.clamp(size, 0, 64));
     }
 
     private void updatePhantomSizeInfo() {
@@ -94,12 +94,12 @@ public class Phantom extends Mob implements Enemy {
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_33134_) {
-        if (ID_SIZE.equals(p_33134_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        if (ID_SIZE.equals(accessor)) {
             this.updatePhantomSizeInfo();
         }
 
-        super.onSyncedDataUpdated(p_33134_);
+        super.onSyncedDataUpdated(accessor);
     }
 
     public int getUniqueFlapTickOffset() {
@@ -110,9 +110,9 @@ public class Phantom extends Mob implements Enemy {
     public void tick() {
         super.tick();
         if (this.level().isClientSide()) {
-            float f = Mth.cos((this.getUniqueFlapTickOffset() + this.tickCount) * 7.448451F * (float) (Math.PI / 180.0) + (float) Math.PI);
-            float f1 = Mth.cos((this.getUniqueFlapTickOffset() + this.tickCount + 1) * 7.448451F * (float) (Math.PI / 180.0) + (float) Math.PI);
-            if (f > 0.0F && f1 <= 0.0F) {
+            float anim = Mth.cos((this.getUniqueFlapTickOffset() + this.tickCount) * 7.448451F * (float) (Math.PI / 180.0) + (float) Math.PI);
+            float nextAnim = Mth.cos((this.getUniqueFlapTickOffset() + this.tickCount + 1) * 7.448451F * (float) (Math.PI / 180.0) + (float) Math.PI);
+            if (anim > 0.0F && nextAnim <= 0.0F) {
                 this.level()
                     .playLocalSound(
                         this.getX(),
@@ -126,17 +126,17 @@ public class Phantom extends Mob implements Enemy {
                     );
             }
 
-            float f2 = this.getBbWidth() * 1.48F;
-            float f3 = Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)) * f2;
-            float f4 = Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)) * f2;
-            float f5 = (0.3F + f * 0.45F) * this.getBbHeight() * 2.5F;
-            this.level().addParticle(ParticleTypes.MYCELIUM, this.getX() + f3, this.getY() + f5, this.getZ() + f4, 0.0, 0.0, 0.0);
-            this.level().addParticle(ParticleTypes.MYCELIUM, this.getX() - f3, this.getY() + f5, this.getZ() - f4, 0.0, 0.0, 0.0);
+            float width = this.getBbWidth() * 1.48F;
+            float c = Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)) * width;
+            float s = Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)) * width;
+            float h = (0.3F + anim * 0.45F) * this.getBbHeight() * 2.5F;
+            this.level().addParticle(ParticleTypes.MYCELIUM, this.getX() + c, this.getY() + h, this.getZ() + s, 0.0, 0.0, 0.0);
+            this.level().addParticle(ParticleTypes.MYCELIUM, this.getX() - c, this.getY() + h, this.getZ() - s, 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    protected void checkFallDamage(double p_406874_, boolean p_406466_, BlockState p_407199_, BlockPos p_407005_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
     }
 
     @Override
@@ -145,33 +145,35 @@ public class Phantom extends Mob implements Enemy {
     }
 
     @Override
-    public void travel(Vec3 p_406303_) {
-        this.travelFlying(p_406303_, 0.2F);
+    public void travel(final Vec3 input) {
+        this.travelFlying(input, 0.2F);
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_33126_, DifficultyInstance p_33127_, EntitySpawnReason p_368653_, @Nullable SpawnGroupData p_33129_) {
+    public @Nullable SpawnGroupData finalizeSpawn(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
+    ) {
         this.anchorPoint = this.blockPosition().above(5);
         this.setPhantomSize(0);
-        return super.finalizeSpawn(p_33126_, p_33127_, p_368653_, p_33129_);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_406172_) {
-        super.readAdditionalSaveData(p_406172_);
-        this.anchorPoint = p_406172_.read("anchor_pos", BlockPos.CODEC).orElse(null);
-        this.setPhantomSize(p_406172_.getIntOr("size", 0));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.anchorPoint = input.read("anchor_pos", BlockPos.CODEC).orElse(null);
+        this.setPhantomSize(input.getIntOr("size", 0));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408922_) {
-        super.addAdditionalSaveData(p_408922_);
-        p_408922_.storeNullable("anchor_pos", BlockPos.CODEC, this.anchorPoint);
-        p_408922_.putInt("size", this.getPhantomSize());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.storeNullable("anchor_pos", BlockPos.CODEC, this.anchorPoint);
+        output.putInt("size", this.getPhantomSize());
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_33107_) {
+    public boolean shouldRenderAtSqrDistance(final double distance) {
         return true;
     }
 
@@ -186,7 +188,7 @@ public class Phantom extends Mob implements Enemy {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_33152_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.PHANTOM_HURT;
     }
 
@@ -196,32 +198,22 @@ public class Phantom extends Mob implements Enemy {
     }
 
     @Override
-    protected float getSoundVolume() {
-        return 1.0F;
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        int size = this.getPhantomSize();
+        EntityDimensions originalDimensions = super.getDefaultDimensions(pose);
+        return originalDimensions.scale(1.0F + 0.15F * size);
     }
 
-    @Override
-    public boolean canAttackType(EntityType<?> p_33111_) {
-        return true;
+    private boolean canAttack(final ServerLevel level, final LivingEntity target, final TargetingConditions targetConditions) {
+        return targetConditions.test(level, this, target);
     }
 
-    @Override
-    public EntityDimensions getDefaultDimensions(Pose p_333771_) {
-        int i = this.getPhantomSize();
-        EntityDimensions entitydimensions = super.getDefaultDimensions(p_333771_);
-        return entitydimensions.scale(1.0F + 0.15F * i);
-    }
-
-    boolean canAttack(ServerLevel p_365188_, LivingEntity p_367013_, TargetingConditions p_364315_) {
-        return p_364315_.test(p_365188_, this, p_367013_);
-    }
-
-    static enum AttackPhase {
+    private enum AttackPhase {
         CIRCLE,
         SWOOP;
     }
 
-    class PhantomAttackPlayerTargetGoal extends Goal {
+    private class PhantomAttackPlayerTargetGoal extends Goal {
         private final TargetingConditions attackTargeting = TargetingConditions.forCombat().range(64.0);
         private int nextScanTick = reducedTickDelay(20);
 
@@ -230,39 +222,39 @@ public class Phantom extends Mob implements Enemy {
             if (this.nextScanTick > 0) {
                 this.nextScanTick--;
                 return false;
-            } else {
-                this.nextScanTick = reducedTickDelay(60);
-                ServerLevel serverlevel = getServerLevel(Phantom.this.level());
-                List<Player> list = serverlevel.getNearbyPlayers(this.attackTargeting, Phantom.this, Phantom.this.getBoundingBox().inflate(16.0, 64.0, 16.0));
-                if (!list.isEmpty()) {
-                    list.sort(Comparator.<Entity, Double>comparing(Entity::getY).reversed());
+            }
 
-                    for (Player player : list) {
-                        if (Phantom.this.canAttack(serverlevel, player, TargetingConditions.DEFAULT)) {
-                            Phantom.this.setTarget(player);
-                            return true;
-                        }
+            this.nextScanTick = reducedTickDelay(60);
+            ServerLevel level = getServerLevel(Phantom.this.level());
+            List<Player> players = level.getNearbyPlayers(this.attackTargeting, Phantom.this, Phantom.this.getBoundingBox().inflate(16.0, 64.0, 16.0));
+            if (!players.isEmpty()) {
+                players.sort(Comparator.<Player, Double>comparing(Entity::getY).reversed());
+
+                for (Player player : players) {
+                    if (Phantom.this.canAttack(level, player, TargetingConditions.DEFAULT)) {
+                        Phantom.this.setTarget(player);
+                        return true;
                     }
                 }
-
-                return false;
             }
+
+            return false;
         }
 
         @Override
         public boolean canContinueToUse() {
-            LivingEntity livingentity = Phantom.this.getTarget();
-            return livingentity != null ? Phantom.this.canAttack(getServerLevel(Phantom.this.level()), livingentity, TargetingConditions.DEFAULT) : false;
+            LivingEntity target = Phantom.this.getTarget();
+            return target != null ? Phantom.this.canAttack(getServerLevel(Phantom.this.level()), target, TargetingConditions.DEFAULT) : false;
         }
     }
 
-    class PhantomAttackStrategyGoal extends Goal {
+    private class PhantomAttackStrategyGoal extends Goal {
         private int nextSweepTick;
 
         @Override
         public boolean canUse() {
-            LivingEntity livingentity = Phantom.this.getTarget();
-            return livingentity != null ? Phantom.this.canAttack(getServerLevel(Phantom.this.level()), livingentity, TargetingConditions.DEFAULT) : false;
+            LivingEntity target = Phantom.this.getTarget();
+            return target != null ? Phantom.this.canAttack(getServerLevel(Phantom.this.level()), target, TargetingConditions.DEFAULT) : false;
         }
 
         @Override
@@ -306,9 +298,9 @@ public class Phantom extends Mob implements Enemy {
         }
     }
 
-    class PhantomBodyRotationControl extends BodyRotationControl {
-        public PhantomBodyRotationControl(final Mob p_33216_) {
-            super(p_33216_);
+    private class PhantomBodyRotationControl extends BodyRotationControl {
+        public PhantomBodyRotationControl(final Mob mob) {
+            super(mob);
         }
 
         @Override
@@ -318,7 +310,7 @@ public class Phantom extends Mob implements Enemy {
         }
     }
 
-    class PhantomCircleAroundAnchorGoal extends Phantom.PhantomMoveTargetGoal {
+    private class PhantomCircleAroundAnchorGoal extends Phantom.PhantomMoveTargetGoal {
         private float angle;
         private float distance;
         private float height;
@@ -382,9 +374,9 @@ public class Phantom extends Mob implements Enemy {
         }
     }
 
-    static class PhantomLookControl extends LookControl {
-        public PhantomLookControl(Mob p_33235_) {
-            super(p_33235_);
+    private static class PhantomLookControl extends LookControl {
+        public PhantomLookControl(final Mob mob) {
+            super(mob);
         }
 
         @Override
@@ -392,11 +384,11 @@ public class Phantom extends Mob implements Enemy {
         }
     }
 
-    class PhantomMoveControl extends MoveControl {
+    private class PhantomMoveControl<T extends Mob> extends MoveControl<T> {
         private float speed = 0.1F;
 
-        public PhantomMoveControl(final Mob p_33241_) {
-            super(p_33241_);
+        public PhantomMoveControl(final T mob) {
+            super(mob);
         }
 
         @Override
@@ -406,41 +398,41 @@ public class Phantom extends Mob implements Enemy {
                 this.speed = 0.1F;
             }
 
-            double d0 = Phantom.this.moveTargetPoint.x - Phantom.this.getX();
-            double d1 = Phantom.this.moveTargetPoint.y - Phantom.this.getY();
-            double d2 = Phantom.this.moveTargetPoint.z - Phantom.this.getZ();
-            double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-            if (Math.abs(d3) > 1.0E-5F) {
-                double d4 = 1.0 - Math.abs(d1 * 0.7F) / d3;
-                d0 *= d4;
-                d2 *= d4;
-                d3 = Math.sqrt(d0 * d0 + d2 * d2);
-                double d5 = Math.sqrt(d0 * d0 + d2 * d2 + d1 * d1);
-                float f = Phantom.this.getYRot();
-                float f1 = (float)Mth.atan2(d2, d0);
-                float f2 = Mth.wrapDegrees(Phantom.this.getYRot() + 90.0F);
-                float f3 = Mth.wrapDegrees(f1 * (180.0F / (float)Math.PI));
-                Phantom.this.setYRot(Mth.approachDegrees(f2, f3, 4.0F) - 90.0F);
+            double tdx = Phantom.this.moveTargetPoint.x - Phantom.this.getX();
+            double tdy = Phantom.this.moveTargetPoint.y - Phantom.this.getY();
+            double tdz = Phantom.this.moveTargetPoint.z - Phantom.this.getZ();
+            double sd = Math.sqrt(tdx * tdx + tdz * tdz);
+            if (Math.abs(sd) > 1.0E-5F) {
+                double yRelativeScale = 1.0 - Math.abs(tdy * 0.7F) / sd;
+                tdx *= yRelativeScale;
+                tdz *= yRelativeScale;
+                sd = Math.sqrt(tdx * tdx + tdz * tdz);
+                double sd2 = Math.sqrt(tdx * tdx + tdz * tdz + tdy * tdy);
+                float prev = Phantom.this.getYRot();
+                float angle = (float)Mth.atan2(tdz, tdx);
+                float a = Mth.wrapDegrees(Phantom.this.getYRot() + 90.0F);
+                float b = Mth.wrapDegrees(angle * (180.0F / (float)Math.PI));
+                Phantom.this.setYRot(Mth.approachDegrees(a, b, 4.0F) - 90.0F);
                 Phantom.this.yBodyRot = Phantom.this.getYRot();
-                if (Mth.degreesDifferenceAbs(f, Phantom.this.getYRot()) < 3.0F) {
+                if (Mth.degreesDifferenceAbs(prev, Phantom.this.getYRot()) < 3.0F) {
                     this.speed = Mth.approach(this.speed, 1.8F, 0.005F * (1.8F / this.speed));
                 } else {
                     this.speed = Mth.approach(this.speed, 0.2F, 0.025F);
                 }
 
-                float f4 = (float)(-(Mth.atan2(-d1, d3) * 180.0F / (float)Math.PI));
-                Phantom.this.setXRot(f4);
-                float f5 = Phantom.this.getYRot() + 90.0F;
-                double d6 = this.speed * Mth.cos(f5 * (float) (Math.PI / 180.0)) * Math.abs(d0 / d5);
-                double d7 = this.speed * Mth.sin(f5 * (float) (Math.PI / 180.0)) * Math.abs(d2 / d5);
-                double d8 = this.speed * Mth.sin(f4 * (float) (Math.PI / 180.0)) * Math.abs(d1 / d5);
-                Vec3 vec3 = Phantom.this.getDeltaMovement();
-                Phantom.this.setDeltaMovement(vec3.add(new Vec3(d6, d8, d7).subtract(vec3).scale(0.2)));
+                float xRotD = (float)(-(Mth.atan2(-tdy, sd) * 180.0F / (float)Math.PI));
+                Phantom.this.setXRot(xRotD);
+                float moveAngle = Phantom.this.getYRot() + 90.0F;
+                double txd = this.speed * Mth.cos(moveAngle * (float) (Math.PI / 180.0)) * Math.abs(tdx / sd2);
+                double tzd = this.speed * Mth.sin(moveAngle * (float) (Math.PI / 180.0)) * Math.abs(tdz / sd2);
+                double tyd = this.speed * Mth.sin(xRotD * (float) (Math.PI / 180.0)) * Math.abs(tdy / sd2);
+                Vec3 movement = Phantom.this.getDeltaMovement();
+                Phantom.this.setDeltaMovement(movement.add(new Vec3(txd, tyd, tzd).subtract(movement).scale(0.2)));
             }
         }
     }
 
-    abstract class PhantomMoveTargetGoal extends Goal {
+    private abstract class PhantomMoveTargetGoal extends Goal {
         public PhantomMoveTargetGoal() {
             this.setFlags(EnumSet.of(Goal.Flag.MOVE));
         }
@@ -450,7 +442,7 @@ public class Phantom extends Mob implements Enemy {
         }
     }
 
-    class PhantomSweepAttackGoal extends Phantom.PhantomMoveTargetGoal {
+    private class PhantomSweepAttackGoal extends Phantom.PhantomMoveTargetGoal {
         private static final int CAT_SEARCH_TICK_DELAY = 20;
         private boolean isScaredOfCat;
         private int catSearchTick;
@@ -462,33 +454,32 @@ public class Phantom extends Mob implements Enemy {
 
         @Override
         public boolean canContinueToUse() {
-            LivingEntity livingentity = Phantom.this.getTarget();
-            if (livingentity == null) {
+            LivingEntity target = Phantom.this.getTarget();
+            if (target == null) {
                 return false;
-            } else if (!livingentity.isAlive()) {
+            } else if (!target.isAlive()) {
                 return false;
-            } else if (livingentity instanceof Player player && (livingentity.isSpectator() || player.isCreative())) {
-                return false;
-            } else if (!this.canUse()) {
+            } else if (target instanceof Player player && (target.isSpectator() || player.isCreative())) {
                 return false;
             } else {
+                if (!this.canUse()) {
+                    return false;
+                }
+
                 if (Phantom.this.tickCount > this.catSearchTick) {
                     this.catSearchTick = Phantom.this.tickCount + 20;
-                    List<Cat> list = Phantom.this.level().getEntitiesOfClass(Cat.class, Phantom.this.getBoundingBox().inflate(16.0), EntitySelector.ENTITY_STILL_ALIVE);
+                    List<Cat> cats = Phantom.this.level()
+                        .getEntitiesOfClass(Cat.class, Phantom.this.getBoundingBox().inflate(16.0), EntitySelector.ENTITY_STILL_ALIVE);
 
-                    for (Cat cat : list) {
+                    for (Cat cat : cats) {
                         cat.hiss();
                     }
 
-                    this.isScaredOfCat = !list.isEmpty();
+                    this.isScaredOfCat = !cats.isEmpty();
                 }
 
                 return !this.isScaredOfCat;
             }
-        }
-
-        @Override
-        public void start() {
         }
 
         @Override
@@ -499,11 +490,11 @@ public class Phantom extends Mob implements Enemy {
 
         @Override
         public void tick() {
-            LivingEntity livingentity = Phantom.this.getTarget();
-            if (livingentity != null) {
-                Phantom.this.moveTargetPoint = new Vec3(livingentity.getX(), livingentity.getY(0.5), livingentity.getZ());
-                if (Phantom.this.getBoundingBox().inflate(0.2F).intersects(livingentity.getBoundingBox())) {
-                    Phantom.this.doHurtTarget(getServerLevel(Phantom.this.level()), livingentity);
+            LivingEntity target = Phantom.this.getTarget();
+            if (target != null) {
+                Phantom.this.moveTargetPoint = new Vec3(target.getX(), target.getY(0.5), target.getZ());
+                if (Phantom.this.getBoundingBox().inflate(0.2F).intersects(target.getBoundingBox())) {
+                    Phantom.this.doHurtTarget(getServerLevel(Phantom.this.level()), target);
                     Phantom.this.attackPhase = Phantom.AttackPhase.CIRCLE;
                     if (!Phantom.this.isSilent()) {
                         Phantom.this.level().levelEvent(1039, Phantom.this.blockPosition(), 0);

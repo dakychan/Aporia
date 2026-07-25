@@ -17,33 +17,35 @@ public abstract class NamedEntityWriteReadFix extends DataFix {
     private final String entityName;
     private final TypeReference type;
 
-    public NamedEntityWriteReadFix(Schema p_310297_, boolean p_312818_, String p_313129_, TypeReference p_311108_, String p_313092_) {
-        super(p_310297_, p_312818_);
-        this.name = p_313129_;
-        this.type = p_311108_;
-        this.entityName = p_313092_;
+    public NamedEntityWriteReadFix(final Schema outputSchema, final boolean changesType, final String name, final TypeReference type, final String entityName) {
+        super(outputSchema, changesType);
+        this.name = name;
+        this.type = type;
+        this.entityName = entityName;
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(this.type);
-        Type<?> type1 = this.getInputSchema().getChoiceType(this.type, this.entityName);
-        Type<?> type2 = this.getOutputSchema().getType(this.type);
-        OpticFinder<?> opticfinder = DSL.namedChoice(this.entityName, type1);
-        Type<?> type3 = ExtraDataFixUtils.patchSubType(type, type, type2);
-        return this.fix(type, type2, type3, opticfinder);
+        Type<?> inputEntityType = this.getInputSchema().getType(this.type);
+        Type<?> inputEntityChoiceType = this.getInputSchema().getChoiceType(this.type, this.entityName);
+        Type<?> outputEntityType = this.getOutputSchema().getType(this.type);
+        OpticFinder<?> entityF = DSL.namedChoice(this.entityName, inputEntityChoiceType);
+        Type<?> patchedEntityType = ExtraDataFixUtils.patchSubType(inputEntityType, inputEntityType, outputEntityType);
+        return this.fix(inputEntityType, outputEntityType, patchedEntityType, entityF);
     }
 
-    private <S, T, A> TypeRewriteRule fix(Type<S> p_334263_, Type<T> p_329342_, Type<?> p_333979_, OpticFinder<A> p_329193_) {
-        return this.fixTypeEverywhereTyped(this.name, p_334263_, p_329342_, p_449314_ -> {
-            if (p_449314_.getOptional(p_329193_).isEmpty()) {
-                return ExtraDataFixUtils.cast(p_329342_, p_449314_);
-            } else {
-                Typed<?> typed = ExtraDataFixUtils.cast(p_333979_, p_449314_);
-                return Util.writeAndReadTypedOrThrow(typed, p_329342_, this::fix);
+    private <S, T, A> TypeRewriteRule fix(
+        final Type<S> inputEntityType, final Type<T> outputEntityType, final Type<?> patchedEntityType, final OpticFinder<A> choiceFinder
+    ) {
+        return this.fixTypeEverywhereTyped(this.name, inputEntityType, outputEntityType, typed -> {
+            if (typed.getOptional(choiceFinder).isEmpty()) {
+                return ExtraDataFixUtils.cast(outputEntityType, typed);
             }
+
+            Typed<?> fakeTyped = ExtraDataFixUtils.cast(patchedEntityType, typed);
+            return Util.writeAndReadTypedOrThrow(fakeTyped, outputEntityType, this::fix);
         });
     }
 
-    protected abstract <T> Dynamic<T> fix(Dynamic<T> p_310304_);
+    protected abstract <T> Dynamic<T> fix(final Dynamic<T> input);
 }

@@ -8,17 +8,17 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V3808_1 extends NamespacedSchema {
-    public V3808_1(int p_335376_, Schema p_331497_) {
-        super(p_335376_, p_331497_);
+    public V3808_1(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_334308_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_334308_);
-        p_334308_.register(
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        schema.register(
             map,
             "minecraft:llama",
-            p_390396_ -> DSL.optionalFields("Items", DSL.list(References.ITEM_STACK.in(p_334308_)), "SaddleItem", References.ITEM_STACK.in(p_334308_))
+            name -> DSL.optionalFields("Items", DSL.list(References.ITEM_STACK.in(schema)), "SaddleItem", References.ITEM_STACK.in(schema))
         );
         return map;
     }

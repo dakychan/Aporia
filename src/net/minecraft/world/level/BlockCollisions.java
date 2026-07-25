@@ -29,68 +29,76 @@ public class BlockCollisions<T> extends AbstractIterator<T> {
     private final BiFunction<BlockPos.MutableBlockPos, VoxelShape, T> resultProvider;
 
     public BlockCollisions(
-        CollisionGetter p_286817_, @Nullable Entity p_286246_, AABB p_286624_, boolean p_286354_, BiFunction<BlockPos.MutableBlockPos, VoxelShape, T> p_286303_
+        final CollisionGetter collisionGetter,
+        final @Nullable Entity source,
+        final AABB box,
+        final boolean onlySuffocatingBlocks,
+        final BiFunction<BlockPos.MutableBlockPos, VoxelShape, T> resultProvider
     ) {
-        this(p_286817_, p_286246_ == null ? CollisionContext.empty() : CollisionContext.of(p_286246_), p_286624_, p_286354_, p_286303_);
+        this(collisionGetter, source == null ? CollisionContext.empty() : CollisionContext.of(source), box, onlySuffocatingBlocks, resultProvider);
     }
 
     public BlockCollisions(
-        CollisionGetter p_367210_, CollisionContext p_366924_, AABB p_365384_, boolean p_365770_, BiFunction<BlockPos.MutableBlockPos, VoxelShape, T> p_361273_
+        final CollisionGetter collisionGetter,
+        final CollisionContext context,
+        final AABB box,
+        final boolean onlySuffocatingBlocks,
+        final BiFunction<BlockPos.MutableBlockPos, VoxelShape, T> resultProvider
     ) {
-        this.context = p_366924_;
+        this.context = context;
         this.pos = new BlockPos.MutableBlockPos();
-        this.entityShape = Shapes.create(p_365384_);
-        this.collisionGetter = p_367210_;
-        this.box = p_365384_;
-        this.onlySuffocatingBlocks = p_365770_;
-        this.resultProvider = p_361273_;
-        int i = Mth.floor(p_365384_.minX - 1.0E-7) - 1;
-        int j = Mth.floor(p_365384_.maxX + 1.0E-7) + 1;
-        int k = Mth.floor(p_365384_.minY - 1.0E-7) - 1;
-        int l = Mth.floor(p_365384_.maxY + 1.0E-7) + 1;
-        int i1 = Mth.floor(p_365384_.minZ - 1.0E-7) - 1;
-        int j1 = Mth.floor(p_365384_.maxZ + 1.0E-7) + 1;
-        this.cursor = new Cursor3D(i, k, i1, j, l, j1);
+        this.entityShape = Shapes.create(box);
+        this.collisionGetter = collisionGetter;
+        this.box = box;
+        this.onlySuffocatingBlocks = onlySuffocatingBlocks;
+        this.resultProvider = resultProvider;
+        int x0 = Mth.floor(box.minX - 1.0E-7) - 1;
+        int x1 = Mth.floor(box.maxX + 1.0E-7) + 1;
+        int y0 = Mth.floor(box.minY - 1.0E-7) - 1;
+        int y1 = Mth.floor(box.maxY + 1.0E-7) + 1;
+        int z0 = Mth.floor(box.minZ - 1.0E-7) - 1;
+        int z1 = Mth.floor(box.maxZ + 1.0E-7) + 1;
+        this.cursor = new Cursor3D(x0, y0, z0, x1, y1, z1);
     }
 
-    private @Nullable BlockGetter getChunk(int p_186412_, int p_186413_) {
-        int i = SectionPos.blockToSectionCoord(p_186412_);
-        int j = SectionPos.blockToSectionCoord(p_186413_);
-        long k = ChunkPos.asLong(i, j);
-        if (this.cachedBlockGetter != null && this.cachedBlockGetterPos == k) {
+    private @Nullable BlockGetter getChunk(final int x, final int z) {
+        int chunkX = SectionPos.blockToSectionCoord(x);
+        int chunkZ = SectionPos.blockToSectionCoord(z);
+        long chunkPos = ChunkPos.pack(chunkX, chunkZ);
+        if (this.cachedBlockGetter != null && this.cachedBlockGetterPos == chunkPos) {
             return this.cachedBlockGetter;
-        } else {
-            BlockGetter blockgetter = this.collisionGetter.getChunkForCollisions(i, j);
-            this.cachedBlockGetter = blockgetter;
-            this.cachedBlockGetterPos = k;
-            return blockgetter;
         }
+
+        BlockGetter result = this.collisionGetter.getChunkForCollisions(chunkX, chunkZ);
+        this.cachedBlockGetter = result;
+        this.cachedBlockGetterPos = chunkPos;
+        return result;
     }
 
     @Override
     protected T computeNext() {
         while (this.cursor.advance()) {
-            int i = this.cursor.nextX();
-            int j = this.cursor.nextY();
-            int k = this.cursor.nextZ();
-            int l = this.cursor.getNextType();
-            if (l != 3) {
-                BlockGetter blockgetter = this.getChunk(i, k);
-                if (blockgetter != null) {
-                    this.pos.set(i, j, k);
-                    BlockState blockstate = blockgetter.getBlockState(this.pos);
-                    if ((!this.onlySuffocatingBlocks || blockstate.isSuffocating(blockgetter, this.pos))
-                        && (l != 1 || blockstate.hasLargeCollisionShape())
-                        && (l != 2 || blockstate.is(Blocks.MOVING_PISTON))) {
-                        VoxelShape voxelshape = this.context.getCollisionShape(blockstate, this.collisionGetter, this.pos);
-                        if (voxelshape == Shapes.block()) {
-                            if (this.box.intersects(i, j, k, i + 1.0, j + 1.0, k + 1.0)) {
-                                return this.resultProvider.apply(this.pos, voxelshape.move(this.pos));
+            int x = this.cursor.nextX();
+            int y = this.cursor.nextY();
+            int z = this.cursor.nextZ();
+            int cursorFaceType = this.cursor.getNextType();
+            if (cursorFaceType != 3) {
+                BlockGetter chunk = this.getChunk(x, z);
+                if (chunk != null) {
+                    this.pos.set(x, y, z);
+                    BlockState blockState = chunk.getBlockState(this.pos);
+                    if ((!this.onlySuffocatingBlocks || blockState.isSuffocating(chunk, this.pos))
+                        && (cursorFaceType != 1 || blockState.hasLargeCollisionShape())
+                        && (cursorFaceType != 2 || blockState.is(Blocks.MOVING_PISTON))) {
+                        VoxelShape blockShape = this.context.getCollisionShape(blockState, this.collisionGetter, this.pos);
+                        if (blockShape == Shapes.block()) {
+                            if (this.box.intersects(x, y, z, x + 1.0, y + 1.0, z + 1.0)) {
+                                return this.resultProvider.apply(this.pos, blockShape.move(this.pos));
                             }
                         } else {
-                            VoxelShape voxelshape1 = voxelshape.move(this.pos);
-                            if (!voxelshape1.isEmpty() && Shapes.joinIsNotEmpty(voxelshape1, this.entityShape, BooleanOp.AND)) {
-                                return this.resultProvider.apply(this.pos, voxelshape1);
+                            VoxelShape shape = blockShape.move(this.pos);
+                            if (!shape.isEmpty() && Shapes.joinIsNotEmpty(shape, this.entityShape, BooleanOp.AND)) {
+                                return this.resultProvider.apply(this.pos, shape);
                             }
                         }
                     }

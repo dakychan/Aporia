@@ -17,25 +17,25 @@ public interface HashedStack {
         }
 
         @Override
-        public boolean matches(ItemStack p_391832_, HashedPatchMap.HashGenerator p_391539_) {
-            return p_391832_.isEmpty();
+        public boolean matches(final ItemStack stack, final HashedPatchMap.HashGenerator hasher) {
+            return stack.isEmpty();
         }
     };
     StreamCodec<RegistryFriendlyByteBuf, HashedStack> STREAM_CODEC = ByteBufCodecs.optional(HashedStack.ActualItem.STREAM_CODEC)
         .map(
-            p_394313_ -> DataFixUtils.orElse((Optional<? extends HashedStack>)p_394313_, EMPTY),
-            p_394053_ -> p_394053_ instanceof HashedStack.ActualItem hashedstack$actualitem ? Optional.of(hashedstack$actualitem) : Optional.empty()
+            actualItem -> DataFixUtils.orElse((Optional<? extends HashedStack>)actualItem, EMPTY),
+            hashedStack -> hashedStack instanceof HashedStack.ActualItem actualItem ? Optional.of(actualItem) : Optional.empty()
         );
 
-    boolean matches(ItemStack p_395146_, HashedPatchMap.HashGenerator p_395334_);
+    boolean matches(ItemStack stack, HashedPatchMap.HashGenerator hasher);
 
-    static HashedStack create(ItemStack p_394077_, HashedPatchMap.HashGenerator p_391374_) {
-        return (HashedStack)(p_394077_.isEmpty()
+    static HashedStack create(final ItemStack itemStack, final HashedPatchMap.HashGenerator hasher) {
+        return itemStack.isEmpty()
             ? EMPTY
-            : new HashedStack.ActualItem(p_394077_.getItemHolder(), p_394077_.getCount(), HashedPatchMap.create(p_394077_.getComponentsPatch(), p_391374_)));
+            : new HashedStack.ActualItem(itemStack.typeHolder(), itemStack.getCount(), HashedPatchMap.create(itemStack.getComponentsPatch(), hasher));
     }
 
-    public record ActualItem(Holder<Item> item, int count, HashedPatchMap components) implements HashedStack {
+    record ActualItem(Holder<Item> item, int count, HashedPatchMap components) implements HashedStack {
         public static final StreamCodec<RegistryFriendlyByteBuf, HashedStack.ActualItem> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.holderRegistry(Registries.ITEM),
             HashedStack.ActualItem::item,
@@ -47,11 +47,11 @@ public interface HashedStack {
         );
 
         @Override
-        public boolean matches(ItemStack p_397217_, HashedPatchMap.HashGenerator p_395066_) {
-            if (this.count != p_397217_.getCount()) {
+        public boolean matches(final ItemStack itemStack, final HashedPatchMap.HashGenerator hasher) {
+            if (this.count != itemStack.getCount()) {
                 return false;
             } else {
-                return !this.item.equals(p_397217_.getItemHolder()) ? false : this.components.matches(p_397217_.getComponentsPatch(), p_395066_);
+                return !this.item.equals(itemStack.typeHolder()) ? false : this.components.matches(itemStack.getComponentsPatch(), hasher);
             }
         }
     }

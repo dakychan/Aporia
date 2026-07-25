@@ -16,11 +16,8 @@ import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.SpecialDates;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class SplashManager extends SimplePreparableReloadListener<List<Component>> {
     private static final Style DEFAULT_STYLE = Style.EMPTY.withColor(-256);
     public static final Component CHRISTMAS = literalSplash("Merry X-mas!");
@@ -31,38 +28,33 @@ public class SplashManager extends SimplePreparableReloadListener<List<Component
     private List<Component> splashes = List.of();
     private final User user;
 
-    public SplashManager(User p_118866_) {
-        this.user = p_118866_;
+    public SplashManager(final User user) {
+        this.user = user;
     }
 
-    private static Component literalSplash(String p_451980_) {
-        return Component.literal(p_451980_).setStyle(DEFAULT_STYLE);
+    private static Component literalSplash(final String text) {
+        return Component.literal(text).setStyle(DEFAULT_STYLE);
     }
 
-    protected List<Component> prepare(ResourceManager p_118869_, ProfilerFiller p_118870_) {
-        try {
-            List list;
-            try (BufferedReader bufferedreader = Minecraft.getInstance().getResourceManager().openAsReader(SPLASHES_LOCATION)) {
-                list = bufferedreader.lines().map(String::trim).filter(p_118876_ -> p_118876_.hashCode() != 125780783).map(SplashManager::literalSplash).toList();
-            }
-
-            return list;
-        } catch (IOException ioexception) {
+    protected List<Component> prepare(final ResourceManager manager, final ProfilerFiller profiler) {
+        try (BufferedReader reader = Minecraft.getInstance().getResourceManager().openAsReader(SPLASHES_LOCATION)) {
+            return reader.lines().map(String::trim).filter(line -> line.hashCode() != 125780783).map(SplashManager::literalSplash).toList();
+        } catch (IOException ignored) {
             return List.of();
         }
     }
 
-    protected void apply(List<Component> p_118878_, ResourceManager p_118879_, ProfilerFiller p_118880_) {
-        this.splashes = List.copyOf(p_118878_);
+    protected void apply(final List<Component> preparations, final ResourceManager manager, final ProfilerFiller profiler) {
+        this.splashes = List.copyOf(preparations);
     }
 
     public @Nullable SplashRenderer getSplash() {
-        MonthDay monthday = SpecialDates.dayNow();
-        if (monthday.equals(SpecialDates.CHRISTMAS)) {
+        MonthDay monthDay = SpecialDates.dayNow();
+        if (monthDay.equals(SpecialDates.CHRISTMAS)) {
             return SplashRenderer.CHRISTMAS;
-        } else if (monthday.equals(SpecialDates.NEW_YEAR)) {
+        } else if (monthDay.equals(SpecialDates.NEW_YEAR)) {
             return SplashRenderer.NEW_YEAR;
-        } else if (monthday.equals(SpecialDates.HALLOWEEN)) {
+        } else if (monthDay.equals(SpecialDates.HALLOWEEN)) {
             return SplashRenderer.HALLOWEEN;
         } else if (this.splashes.isEmpty()) {
             return null;

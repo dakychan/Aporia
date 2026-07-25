@@ -10,28 +10,28 @@ public enum TriState implements StringRepresentable {
     DEFAULT("default");
 
     public static final Codec<TriState> CODEC = Codec.either(Codec.BOOL, StringRepresentable.fromEnum(TriState::values))
-        .xmap(p_453200_ -> p_453200_.map(TriState::from, Function.identity()), p_451665_ -> {
-            return switch (p_451665_) {
+        .xmap(either -> either.map(TriState::from, Function.identity()), triState -> {
+            return switch (triState) {
                 case TRUE -> Either.left(true);
                 case FALSE -> Either.left(false);
-                case DEFAULT -> Either.right(p_451665_);
+                case DEFAULT -> Either.right(triState);
             };
         });
     private final String name;
 
-    private TriState(final String p_451219_) {
-        this.name = p_451219_;
+    TriState(final String name) {
+        this.name = name;
     }
 
-    public static TriState from(boolean p_459009_) {
-        return p_459009_ ? TRUE : FALSE;
+    public static TriState from(final boolean value) {
+        return value ? TRUE : FALSE;
     }
 
-    public boolean toBoolean(boolean p_361597_) {
+    public boolean toBoolean(final boolean defaultValue) {
         return switch (this) {
             case TRUE -> true;
             case FALSE -> false;
-            default -> p_361597_;
+            default -> defaultValue;
         };
     }
 

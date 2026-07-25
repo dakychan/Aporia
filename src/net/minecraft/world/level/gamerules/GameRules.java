@@ -3,7 +3,9 @@ package net.minecraft.world.level.gamerules;
 import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
@@ -15,11 +17,15 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
 import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
 
 public class GameRules {
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final GameRule<Boolean> ADVANCE_TIME = registerBoolean("advance_time", GameRuleCategory.UPDATES, !SharedConstants.DEBUG_WORLD_RECREATE);
     public static final GameRule<Boolean> ADVANCE_WEATHER = registerBoolean("advance_weather", GameRuleCategory.UPDATES, !SharedConstants.DEBUG_WORLD_RECREATE);
-    public static final GameRule<Boolean> ALLOW_ENTERING_NETHER_USING_PORTALS = registerBoolean("allow_entering_nether_using_portals", GameRuleCategory.MISC, true);
+    public static final GameRule<Boolean> ALLOW_ENTERING_NETHER_USING_PORTALS = registerBoolean(
+        "allow_entering_nether_using_portals", GameRuleCategory.MISC, true
+    );
     public static final GameRule<Boolean> BLOCK_DROPS = registerBoolean("block_drops", GameRuleCategory.DROPS, true);
     public static final GameRule<Boolean> BLOCK_EXPLOSION_DROP_DECAY = registerBoolean("block_explosion_drop_decay", GameRuleCategory.DROPS, true);
     public static final GameRule<Boolean> COMMAND_BLOCKS_WORK = registerBoolean("command_blocks_work", GameRuleCategory.MISC, true);
@@ -30,7 +36,9 @@ public class GameRules {
     public static final GameRule<Boolean> ENTITY_DROPS = registerBoolean("entity_drops", GameRuleCategory.DROPS, true);
     public static final GameRule<Boolean> FALL_DAMAGE = registerBoolean("fall_damage", GameRuleCategory.PLAYER, true);
     public static final GameRule<Boolean> FIRE_DAMAGE = registerBoolean("fire_damage", GameRuleCategory.PLAYER, true);
-    public static final GameRule<Integer> FIRE_SPREAD_RADIUS_AROUND_PLAYER = registerInteger("fire_spread_radius_around_player", GameRuleCategory.UPDATES, 128, -1);
+    public static final GameRule<Integer> FIRE_SPREAD_RADIUS_AROUND_PLAYER = registerInteger(
+        "fire_spread_radius_around_player", GameRuleCategory.UPDATES, 128, -1
+    );
     public static final GameRule<Boolean> FORGIVE_DEAD_PLAYERS = registerBoolean("forgive_dead_players", GameRuleCategory.MOBS, true);
     public static final GameRule<Boolean> FREEZE_DAMAGE = registerBoolean("freeze_damage", GameRuleCategory.PLAYER, true);
     public static final GameRule<Boolean> GLOBAL_SOUND_EVENTS = registerBoolean("global_sound_events", GameRuleCategory.MISC, true);
@@ -53,8 +61,12 @@ public class GameRules {
     public static final GameRule<Boolean> MOB_GRIEFING = registerBoolean("mob_griefing", GameRuleCategory.MOBS, true);
     public static final GameRule<Boolean> NATURAL_HEALTH_REGENERATION = registerBoolean("natural_health_regeneration", GameRuleCategory.PLAYER, true);
     public static final GameRule<Boolean> PLAYER_MOVEMENT_CHECK = registerBoolean("player_movement_check", GameRuleCategory.PLAYER, true);
-    public static final GameRule<Integer> PLAYERS_NETHER_PORTAL_CREATIVE_DELAY = registerInteger("players_nether_portal_creative_delay", GameRuleCategory.PLAYER, 0, 0);
-    public static final GameRule<Integer> PLAYERS_NETHER_PORTAL_DEFAULT_DELAY = registerInteger("players_nether_portal_default_delay", GameRuleCategory.PLAYER, 80, 0);
+    public static final GameRule<Integer> PLAYERS_NETHER_PORTAL_CREATIVE_DELAY = registerInteger(
+        "players_nether_portal_creative_delay", GameRuleCategory.PLAYER, 0, 0
+    );
+    public static final GameRule<Integer> PLAYERS_NETHER_PORTAL_DEFAULT_DELAY = registerInteger(
+        "players_nether_portal_default_delay", GameRuleCategory.PLAYER, 80, 0
+    );
     public static final GameRule<Integer> PLAYERS_SLEEPING_PERCENTAGE = registerInteger("players_sleeping_percentage", GameRuleCategory.PLAYER, 100, 0);
     public static final GameRule<Boolean> PROJECTILES_CAN_BREAK_BLOCKS = registerBoolean("projectiles_can_break_blocks", GameRuleCategory.DROPS, true);
     public static final GameRule<Boolean> PVP = registerBoolean("pvp", GameRuleCategory.PLAYER, true);
@@ -80,129 +92,143 @@ public class GameRules {
     public static final GameRule<Boolean> WATER_SOURCE_CONVERSION = registerBoolean("water_source_conversion", GameRuleCategory.UPDATES, true);
     private final GameRuleMap rules;
 
-    public static Codec<GameRules> codec(FeatureFlagSet p_459260_) {
-        return GameRuleMap.CODEC.xmap(p_455040_ -> new GameRules(p_459260_, p_455040_), p_457611_ -> p_457611_.rules);
+    public static Codec<GameRules> codec(final FeatureFlagSet enabledFeatures) {
+        return GameRuleMap.CODEC.xmap(map -> new GameRules(enabledFeatures, map), gameRules -> gameRules.rules);
     }
 
-    public GameRules(FeatureFlagSet p_451018_, GameRuleMap p_460445_) {
-        this(p_451018_);
-        this.rules.setFromIf(p_460445_, this.rules::has);
+    public GameRules(final FeatureFlagSet enabledFeatures, final GameRuleMap map) {
+        BuiltInRegistries.GAME_RULE.stream().forEach(gameRule -> {
+            if (gameRule.isEnabled(enabledFeatures)) {
+                if (!map.has((GameRule<?>)gameRule)) {
+                    map.reset((GameRule<?>)gameRule);
+                }
+            } else if (map.has((GameRule<?>)gameRule)) {
+                map.remove((GameRule<?>)gameRule);
+            }
+        });
+        this.rules = map;
     }
 
-    public GameRules(FeatureFlagSet p_453502_) {
-        this.rules = GameRuleMap.of(BuiltInRegistries.GAME_RULE.filterFeatures(p_453502_).listElements().map(Holder::value));
+    public GameRules(final FeatureFlagSet enabledFeatures) {
+        this.rules = GameRuleMap.of(BuiltInRegistries.GAME_RULE.filterFeatures(enabledFeatures).listElements().map(Holder::value));
+    }
+
+    public GameRules(final List<GameRule<?>> rules) {
+        this.rules = GameRuleMap.of(rules.stream());
     }
 
     public Stream<GameRule<?>> availableRules() {
         return this.rules.keySet().stream();
     }
 
-    public <T> T get(GameRule<T> p_458251_) {
-        T t = this.rules.get(p_458251_);
-        if (t == null) {
-            throw new IllegalArgumentException("Tried to access invalid game rule");
+    public <T> T get(final GameRule<T> gameRule) {
+        T value = this.rules.get(gameRule);
+        if (value == null) {
+            throw new IllegalArgumentException("Tried to access invalid game rule " + gameRule.getIdentifierWithFallback());
         } else {
-            return t;
+            return value;
         }
     }
 
-    public <T> void set(GameRule<T> p_457739_, T p_450832_, @Nullable MinecraftServer p_453139_) {
-        if (!this.rules.has(p_457739_)) {
-            throw new IllegalArgumentException("Tried to set invalid game rule");
+    public <T> void set(final GameRule<T> gameRule, final T value, final @Nullable MinecraftServer server) {
+        if (!this.rules.has(gameRule)) {
+            LOGGER.warn("Tried to set invalid game rule '{}' to value '{}'", gameRule.getIdentifierWithFallback(), value);
         } else {
-            this.rules.set(p_457739_, p_450832_);
-            if (p_453139_ != null) {
-                p_453139_.onGameRuleChanged(p_457739_, p_450832_);
+            this.rules.set(gameRule, value);
+            if (server != null) {
+                server.onGameRuleChanged(gameRule, value);
             }
         }
     }
 
-    public GameRules copy(FeatureFlagSet p_460814_) {
-        return new GameRules(p_460814_, this.rules);
+    public GameRules copy(final FeatureFlagSet enabledFeatures) {
+        return new GameRules(enabledFeatures, GameRuleMap.copyOf(this.rules));
     }
 
-    public void setAll(GameRules p_456658_, @Nullable MinecraftServer p_455033_) {
-        this.setAll(p_456658_.rules, p_455033_);
+    public void setAll(final GameRules other, final @Nullable MinecraftServer server) {
+        this.setAll(other.rules, server);
     }
 
-    public void setAll(GameRuleMap p_452499_, @Nullable MinecraftServer p_450469_) {
-        p_452499_.keySet().forEach(p_455800_ -> this.setFromOther(p_452499_, (GameRule<?>)p_455800_, p_450469_));
+    public void setAll(final GameRuleMap gameRulesMap, final @Nullable MinecraftServer server) {
+        gameRulesMap.keySet().forEach(gameRule -> this.setFromOther(gameRulesMap, (GameRule<?>)gameRule, server));
     }
 
-    private <T> void setFromOther(GameRuleMap p_450857_, GameRule<T> p_459006_, @Nullable MinecraftServer p_456260_) {
-        this.set(p_459006_, Objects.requireNonNull(p_450857_.get(p_459006_)), p_456260_);
+    private <T> void setFromOther(final GameRuleMap gameRulesMap, final GameRule<T> gameRule, final @Nullable MinecraftServer server) {
+        this.set(gameRule, Objects.requireNonNull(gameRulesMap.get(gameRule)), server);
     }
 
-    public void visitGameRuleTypes(GameRuleTypeVisitor p_456778_) {
-        this.rules.keySet().forEach(p_452255_ -> {
-            p_456778_.visit((GameRule<?>)p_452255_);
-            p_452255_.callVisitor(p_456778_);
+    public void visitGameRuleTypes(final GameRuleTypeVisitor visitor) {
+        this.rules.keySet().forEach(gameRule -> {
+            visitor.visit((GameRule<?>)gameRule);
+            gameRule.callVisitor(visitor);
         });
     }
 
-    private static GameRule<Boolean> registerBoolean(String p_455902_, GameRuleCategory p_459816_, boolean p_453746_) {
+    private static GameRule<Boolean> registerBoolean(final String id, final GameRuleCategory category, final boolean defaultValue) {
         return register(
-            p_455902_,
-            p_459816_,
+            id,
+            category,
             GameRuleType.BOOL,
             BoolArgumentType.bool(),
             Codec.BOOL,
-            p_453746_,
+            defaultValue,
             FeatureFlagSet.of(),
             GameRuleTypeVisitor::visitBoolean,
-            p_456160_ -> p_456160_ ? 1 : 0
+            b -> b ? 1 : 0
         );
     }
 
-    private static GameRule<Integer> registerInteger(String p_458768_, GameRuleCategory p_459992_, int p_458612_, int p_456323_) {
-        return registerInteger(p_458768_, p_459992_, p_458612_, p_456323_, Integer.MAX_VALUE, FeatureFlagSet.of());
+    private static GameRule<Integer> registerInteger(final String id, final GameRuleCategory category, final int defaultValue, final int min) {
+        return registerInteger(id, category, defaultValue, min, Integer.MAX_VALUE, FeatureFlagSet.of());
     }
 
-    private static GameRule<Integer> registerInteger(String p_455197_, GameRuleCategory p_457049_, int p_453077_, int p_460312_, int p_454872_) {
-        return registerInteger(p_455197_, p_457049_, p_453077_, p_460312_, p_454872_, FeatureFlagSet.of());
+    private static GameRule<Integer> registerInteger(final String id, final GameRuleCategory category, final int defaultValue, final int min, final int max) {
+        return registerInteger(id, category, defaultValue, min, max, FeatureFlagSet.of());
     }
 
     private static GameRule<Integer> registerInteger(
-        String p_451631_, GameRuleCategory p_451138_, int p_451705_, int p_456148_, int p_454377_, FeatureFlagSet p_460866_
+        final String id, final GameRuleCategory category, final int defaultValue, final int min, final int max, final FeatureFlagSet requiredFeatures
     ) {
         return register(
-            p_451631_,
-            p_451138_,
+            id,
+            category,
             GameRuleType.INT,
-            IntegerArgumentType.integer(p_456148_, p_454377_),
-            Codec.intRange(p_456148_, p_454377_),
-            p_451705_,
-            p_460866_,
+            IntegerArgumentType.integer(min, max),
+            Codec.intRange(min, max),
+            defaultValue,
+            requiredFeatures,
             GameRuleTypeVisitor::visitInteger,
-            p_456700_ -> p_456700_
+            i -> i
         );
     }
 
     private static <T> GameRule<T> register(
-        String p_460600_,
-        GameRuleCategory p_455360_,
-        GameRuleType p_454019_,
-        ArgumentType<T> p_459286_,
-        Codec<T> p_453993_,
-        T p_455662_,
-        FeatureFlagSet p_459432_,
-        GameRules.VisitorCaller<T> p_456018_,
-        ToIntFunction<T> p_456872_
+        final String id,
+        final GameRuleCategory category,
+        final GameRuleType typeHint,
+        final ArgumentType<T> argumentType,
+        final Codec<T> codec,
+        final T defaultValue,
+        final FeatureFlagSet requiredFeatures,
+        final GameRules.VisitorCaller<T> visitorCaller,
+        final ToIntFunction<T> commandResultFunction
     ) {
         return Registry.register(
-            BuiltInRegistries.GAME_RULE, p_460600_, new GameRule<>(p_455360_, p_454019_, p_459286_, p_456018_, p_453993_, p_456872_, p_455662_, p_459432_)
+            BuiltInRegistries.GAME_RULE,
+            id,
+            new GameRule<>(category, typeHint, argumentType, visitorCaller, codec, commandResultFunction, defaultValue, requiredFeatures)
         );
     }
 
-    public static GameRule<?> bootstrap(Registry<GameRule<?>> p_456866_) {
+    public static GameRule<?> bootstrap(final Registry<GameRule<?>> registry) {
         return ADVANCE_TIME;
     }
 
-    public <T> String getAsString(GameRule<T> p_454443_) {
-        return p_454443_.serialize(this.get(p_454443_));
+    public <T> String getAsString(final GameRule<T> gameRule) {
+        return gameRule.serialize(this.get(gameRule));
     }
 
     public interface VisitorCaller<T> {
-        void call(GameRuleTypeVisitor p_455095_, GameRule<T> p_456668_);
+        void call(GameRuleTypeVisitor visitor, GameRule<T> key);
     }
 }

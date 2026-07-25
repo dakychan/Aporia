@@ -6,347 +6,338 @@ import org.joml.Vector4f;
 
 public class ARGB {
     private static final int LINEAR_CHANNEL_DEPTH = 1024;
-    private static final short[] SRGB_TO_LINEAR = Util.make(new short[256], p_460433_ -> {
-        for (int i = 0; i < p_460433_.length; i++) {
-            float f = i / 255.0F;
-            p_460433_[i] = (short)Math.round(computeSrgbToLinear(f) * 1023.0F);
+    private static final short[] SRGB_TO_LINEAR = Util.make(new short[256], lookup -> {
+        for (int i = 0; i < lookup.length; i++) {
+            float channel = i / 255.0F;
+            lookup[i] = (short)Math.round(computeSrgbToLinear(channel) * 1023.0F);
         }
     });
-    private static final byte[] LINEAR_TO_SRGB = Util.make(new byte[1024], p_453372_ -> {
-        for (int i = 0; i < p_453372_.length; i++) {
-            float f = i / 1023.0F;
-            p_453372_[i] = (byte)Math.round(computeLinearToSrgb(f) * 255.0F);
+    private static final byte[] LINEAR_TO_SRGB = Util.make(new byte[1024], lookup -> {
+        for (int i = 0; i < lookup.length; i++) {
+            float channel = i / 1023.0F;
+            lookup[i] = (byte)Math.round(computeLinearToSrgb(channel) * 255.0F);
         }
     });
 
-    private static float computeSrgbToLinear(float p_454092_) {
-        return p_454092_ >= 0.04045F ? (float)Math.pow((p_454092_ + 0.055) / 1.055, 2.4) : p_454092_ / 12.92F;
+    private static float computeSrgbToLinear(final float x) {
+        return x >= 0.04045F ? (float)Math.pow((x + 0.055) / 1.055, 2.4) : x / 12.92F;
     }
 
-    private static float computeLinearToSrgb(float p_455430_) {
-        return p_455430_ >= 0.0031308F ? (float)(1.055 * Math.pow(p_455430_, 0.4166666666666667) - 0.055) : 12.92F * p_455430_;
+    private static float computeLinearToSrgb(final float x) {
+        return x >= 0.0031308F ? (float)(1.055 * Math.pow(x, 0.4166666666666667) - 0.055) : 12.92F * x;
     }
 
-    public static float srgbToLinearChannel(int p_458774_) {
-        return SRGB_TO_LINEAR[p_458774_] / 1023.0F;
+    public static float srgbToLinearChannel(final int srgb) {
+        return SRGB_TO_LINEAR[srgb] / 1023.0F;
     }
 
-    public static int linearToSrgbChannel(float p_456545_) {
-        return LINEAR_TO_SRGB[Mth.floor(p_456545_ * 1023.0F)] & 0xFF;
+    public static int linearToSrgbChannel(final float linear) {
+        return LINEAR_TO_SRGB[Mth.floor(linear * 1023.0F)] & 0xFF;
     }
 
-    public static int meanLinear(int p_454657_, int p_450176_, int p_451556_, int p_452943_) {
+    public static int meanLinear(final int srgb1, final int srgb2, final int srgb3, final int srgb4) {
         return color(
-            (alpha(p_454657_) + alpha(p_450176_) + alpha(p_451556_) + alpha(p_452943_)) / 4,
-            linearChannelMean(red(p_454657_), red(p_450176_), red(p_451556_), red(p_452943_)),
-            linearChannelMean(green(p_454657_), green(p_450176_), green(p_451556_), green(p_452943_)),
-            linearChannelMean(blue(p_454657_), blue(p_450176_), blue(p_451556_), blue(p_452943_))
+            (alpha(srgb1) + alpha(srgb2) + alpha(srgb3) + alpha(srgb4)) / 4,
+            linearChannelMean(red(srgb1), red(srgb2), red(srgb3), red(srgb4)),
+            linearChannelMean(green(srgb1), green(srgb2), green(srgb3), green(srgb4)),
+            linearChannelMean(blue(srgb1), blue(srgb2), blue(srgb3), blue(srgb4))
         );
     }
 
-    private static int linearChannelMean(int p_459814_, int p_459030_, int p_452850_, int p_457272_) {
-        int i = (SRGB_TO_LINEAR[p_459814_] + SRGB_TO_LINEAR[p_459030_] + SRGB_TO_LINEAR[p_452850_] + SRGB_TO_LINEAR[p_457272_]) / 4;
-        return LINEAR_TO_SRGB[i] & 0xFF;
+    private static int linearChannelMean(final int c1, final int c2, final int c3, final int c4) {
+        int linear = (SRGB_TO_LINEAR[c1] + SRGB_TO_LINEAR[c2] + SRGB_TO_LINEAR[c3] + SRGB_TO_LINEAR[c4]) / 4;
+        return LINEAR_TO_SRGB[linear] & 0xFF;
     }
 
-    public static int alpha(int p_362339_) {
-        return p_362339_ >>> 24;
+    public static int alpha(final int color) {
+        return color >>> 24;
     }
 
-    public static int red(int p_363530_) {
-        return p_363530_ >> 16 & 0xFF;
+    public static int red(final int color) {
+        return color >> 16 & 0xFF;
     }
 
-    public static int green(int p_362707_) {
-        return p_362707_ >> 8 & 0xFF;
+    public static int green(final int color) {
+        return color >> 8 & 0xFF;
     }
 
-    public static int blue(int p_367010_) {
-        return p_367010_ & 0xFF;
+    public static int blue(final int color) {
+        return color & 0xFF;
     }
 
-    public static int color(int p_365053_, int p_365624_, int p_367179_, int p_364375_) {
-        return (p_365053_ & 0xFF) << 24 | (p_365624_ & 0xFF) << 16 | (p_367179_ & 0xFF) << 8 | p_364375_ & 0xFF;
+    public static int color(final int alpha, final int red, final int green, final int blue) {
+        return (alpha & 0xFF) << 24 | (red & 0xFF) << 16 | (green & 0xFF) << 8 | blue & 0xFF;
     }
 
-    public static int color(int p_368038_, int p_364189_, int p_366166_) {
-        return color(255, p_368038_, p_364189_, p_366166_);
+    public static int color(final int red, final int green, final int blue) {
+        return color(255, red, green, blue);
     }
 
-    public static int color(Vec3 p_368690_) {
-        return color(as8BitChannel((float)p_368690_.x()), as8BitChannel((float)p_368690_.y()), as8BitChannel((float)p_368690_.z()));
+    public static int color(final Vec3 vec) {
+        return color(as8BitChannel((float)vec.x()), as8BitChannel((float)vec.y()), as8BitChannel((float)vec.z()));
     }
 
-    public static int multiply(int p_368908_, int p_362670_) {
-        if (p_368908_ == -1) {
-            return p_362670_;
+    public static int multiply(final int lhs, final int rhs) {
+        if (lhs == -1) {
+            return rhs;
         } else {
-            return p_362670_ == -1
-                ? p_368908_
-                : color(
-                    alpha(p_368908_) * alpha(p_362670_) / 255,
-                    red(p_368908_) * red(p_362670_) / 255,
-                    green(p_368908_) * green(p_362670_) / 255,
-                    blue(p_368908_) * blue(p_362670_) / 255
-                );
+            return rhs == -1
+                ? lhs
+                : color(alpha(lhs) * alpha(rhs) / 255, red(lhs) * red(rhs) / 255, green(lhs) * green(rhs) / 255, blue(lhs) * blue(rhs) / 255);
         }
     }
 
-    public static int addRgb(int p_454308_, int p_451175_) {
-        return color(
-            alpha(p_454308_),
-            Math.min(red(p_454308_) + red(p_451175_), 255),
-            Math.min(green(p_454308_) + green(p_451175_), 255),
-            Math.min(blue(p_454308_) + blue(p_451175_), 255)
-        );
+    public static int addRgb(final int lhs, final int rhs) {
+        return color(alpha(lhs), Math.min(red(lhs) + red(rhs), 255), Math.min(green(lhs) + green(rhs), 255), Math.min(blue(lhs) + blue(rhs), 255));
     }
 
-    public static int subtractRgb(int p_456227_, int p_458650_) {
-        return color(
-            alpha(p_456227_),
-            Math.max(red(p_456227_) - red(p_458650_), 0),
-            Math.max(green(p_456227_) - green(p_458650_), 0),
-            Math.max(blue(p_456227_) - blue(p_458650_), 0)
-        );
+    public static int subtractRgb(final int lhs, final int rhs) {
+        return color(alpha(lhs), Math.max(red(lhs) - red(rhs), 0), Math.max(green(lhs) - green(rhs), 0), Math.max(blue(lhs) - blue(rhs), 0));
     }
 
-    public static int multiplyAlpha(int p_457126_, float p_450634_) {
-        if (p_457126_ == 0 || p_450634_ <= 0.0F) {
+    public static int multiplyAlpha(final int color, final float alphaMultiplier) {
+        if (color == 0 || alphaMultiplier <= 0.0F) {
             return 0;
         } else {
-            return p_450634_ >= 1.0F ? p_457126_ : color(alphaFloat(p_457126_) * p_450634_, p_457126_);
+            return alphaMultiplier >= 1.0F ? color : color(alphaFloat(color) * alphaMultiplier, color);
         }
     }
 
-    public static int scaleRGB(int p_364590_, float p_365829_) {
-        return scaleRGB(p_364590_, p_365829_, p_365829_, p_365829_);
+    public static int scaleRGB(final int color, final float scale) {
+        return scaleRGB(color, scale, scale, scale);
     }
 
-    public static int scaleRGB(int p_368386_, float p_366859_, float p_367328_, float p_364459_) {
+    public static int scaleRGB(final int color, final float scaleR, final float scaleG, final float scaleB) {
         return color(
-            alpha(p_368386_),
-            Math.clamp((long)((int)(red(p_368386_) * p_366859_)), 0, 255),
-            Math.clamp((long)((int)(green(p_368386_) * p_367328_)), 0, 255),
-            Math.clamp((long)((int)(blue(p_368386_) * p_364459_)), 0, 255)
+            alpha(color),
+            Math.clamp((int)(red(color) * scaleR), 0, 255),
+            Math.clamp((int)(green(color) * scaleG), 0, 255),
+            Math.clamp((int)(blue(color) * scaleB), 0, 255)
         );
     }
 
-    public static int scaleRGB(int p_366038_, int p_368003_) {
+    public static int scaleRGB(final int color, final int scale) {
         return color(
-            alpha(p_366038_),
-            Math.clamp((long)red(p_366038_) * p_368003_ / 255L, 0, 255),
-            Math.clamp((long)green(p_366038_) * p_368003_ / 255L, 0, 255),
-            Math.clamp((long)blue(p_366038_) * p_368003_ / 255L, 0, 255)
+            alpha(color),
+            Math.clamp((long)red(color) * scale / 255L, 0, 255),
+            Math.clamp((long)green(color) * scale / 255L, 0, 255),
+            Math.clamp((long)blue(color) * scale / 255L, 0, 255)
         );
     }
 
-    public static int greyscale(int p_362330_) {
-        int i = (int)(red(p_362330_) * 0.3F + green(p_362330_) * 0.59F + blue(p_362330_) * 0.11F);
-        return color(alpha(p_362330_), i, i, i);
+    public static int greyscale(final int color) {
+        int greyscale = (int)(red(color) * 0.3F + green(color) * 0.59F + blue(color) * 0.11F);
+        return color(alpha(color), greyscale, greyscale, greyscale);
     }
 
-    public static int alphaBlend(int p_458472_, int p_453141_) {
-        int i = alpha(p_458472_);
-        int j = alpha(p_453141_);
-        if (j == 255) {
-            return p_453141_;
-        } else if (j == 0) {
-            return p_458472_;
-        } else {
-            int k = j + i * (255 - j) / 255;
-            return color(
-                k,
-                alphaBlendChannel(k, j, red(p_458472_), red(p_453141_)),
-                alphaBlendChannel(k, j, green(p_458472_), green(p_453141_)),
-                alphaBlendChannel(k, j, blue(p_458472_), blue(p_453141_))
-            );
-        }
-    }
-
-    private static int alphaBlendChannel(int p_456456_, int p_451527_, int p_453924_, int p_452166_) {
-        return (p_452166_ * p_451527_ + p_453924_ * (p_456456_ - p_451527_)) / p_456456_;
-    }
-
-    public static int srgbLerp(float p_368280_, int p_363975_, int p_368594_) {
-        int i = Mth.lerpInt(p_368280_, alpha(p_363975_), alpha(p_368594_));
-        int j = Mth.lerpInt(p_368280_, red(p_363975_), red(p_368594_));
-        int k = Mth.lerpInt(p_368280_, green(p_363975_), green(p_368594_));
-        int l = Mth.lerpInt(p_368280_, blue(p_363975_), blue(p_368594_));
-        return color(i, j, k, l);
-    }
-
-    public static int linearLerp(float p_455266_, int p_458164_, int p_457608_) {
-        return color(
-            Mth.lerpInt(p_455266_, alpha(p_458164_), alpha(p_457608_)),
-            LINEAR_TO_SRGB[Mth.lerpInt(p_455266_, SRGB_TO_LINEAR[red(p_458164_)], SRGB_TO_LINEAR[red(p_457608_)])] & 0xFF,
-            LINEAR_TO_SRGB[Mth.lerpInt(p_455266_, SRGB_TO_LINEAR[green(p_458164_)], SRGB_TO_LINEAR[green(p_457608_)])] & 0xFF,
-            LINEAR_TO_SRGB[Mth.lerpInt(p_455266_, SRGB_TO_LINEAR[blue(p_458164_)], SRGB_TO_LINEAR[blue(p_457608_)])] & 0xFF
-        );
-    }
-
-    public static int opaque(int p_363480_) {
-        return p_363480_ | 0xFF000000;
-    }
-
-    public static int transparent(int p_366691_) {
-        return p_366691_ & 16777215;
-    }
-
-    public static int color(int p_362407_, int p_368043_) {
-        return p_362407_ << 24 | p_368043_ & 16777215;
-    }
-
-    public static int color(float p_407846_, int p_406600_) {
-        return as8BitChannel(p_407846_) << 24 | p_406600_ & 16777215;
-    }
-
-    public static int white(float p_361606_) {
-        return as8BitChannel(p_361606_) << 24 | 16777215;
-    }
-
-    public static int white(int p_455446_) {
-        return p_455446_ << 24 | 16777215;
-    }
-
-    public static int black(float p_455781_) {
-        return as8BitChannel(p_455781_) << 24;
-    }
-
-    public static int black(int p_451585_) {
-        return p_451585_ << 24;
-    }
-
-    public static int colorFromFloat(float p_365014_, float p_365331_, float p_361446_, float p_367224_) {
-        return color(as8BitChannel(p_365014_), as8BitChannel(p_365331_), as8BitChannel(p_361446_), as8BitChannel(p_367224_));
-    }
-
-    public static Vector3f vector3fFromRGB24(int p_368966_) {
-        return new Vector3f(redFloat(p_368966_), greenFloat(p_368966_), blueFloat(p_368966_));
-    }
-
-    public static Vector4f vector4fFromARGB32(int p_460771_) {
-        return new Vector4f(redFloat(p_460771_), greenFloat(p_460771_), blueFloat(p_460771_), alphaFloat(p_460771_));
-    }
-
-    public static int average(int p_368446_, int p_366831_) {
-        return color(
-            (alpha(p_368446_) + alpha(p_366831_)) / 2,
-            (red(p_368446_) + red(p_366831_)) / 2,
-            (green(p_368446_) + green(p_366831_)) / 2,
-            (blue(p_368446_) + blue(p_366831_)) / 2
-        );
-    }
-
-    public static int as8BitChannel(float p_367233_) {
-        return Mth.floor(p_367233_ * 255.0F);
-    }
-
-    public static float alphaFloat(int p_376586_) {
-        return from8BitChannel(alpha(p_376586_));
-    }
-
-    public static float redFloat(int p_375781_) {
-        return from8BitChannel(red(p_375781_));
-    }
-
-    public static float greenFloat(int p_375888_) {
-        return from8BitChannel(green(p_375888_));
-    }
-
-    public static float blueFloat(int p_377428_) {
-        return from8BitChannel(blue(p_377428_));
-    }
-
-    private static float from8BitChannel(int p_370155_) {
-        return p_370155_ / 255.0F;
-    }
-
-    public static int toABGR(int p_368147_) {
-        return p_368147_ & -16711936 | (p_368147_ & 0xFF0000) >> 16 | (p_368147_ & 0xFF) << 16;
-    }
-
-    public static int fromABGR(int p_369336_) {
-        return toABGR(p_369336_);
-    }
-
-    public static int setBrightness(int p_409846_, float p_408870_) {
-        int i = red(p_409846_);
-        int j = green(p_409846_);
-        int k = blue(p_409846_);
-        int l = alpha(p_409846_);
-        int i1 = Math.max(Math.max(i, j), k);
-        int j1 = Math.min(Math.min(i, j), k);
-        float f = i1 - j1;
-        float f1;
-        if (i1 != 0) {
-            f1 = f / i1;
-        } else {
-            f1 = 0.0F;
+    public static int alphaBlend(final int destination, final int source) {
+        int destinationAlpha = alpha(destination);
+        int sourceAlpha = alpha(source);
+        if (sourceAlpha == 255) {
+            return source;
         }
 
-        float f2;
-        if (f1 == 0.0F) {
-            f2 = 0.0F;
+        if (sourceAlpha == 0) {
+            return destination;
+        }
+
+        int alpha = sourceAlpha + destinationAlpha * (255 - sourceAlpha) / 255;
+        return color(
+            alpha,
+            alphaBlendChannel(alpha, sourceAlpha, red(destination), red(source)),
+            alphaBlendChannel(alpha, sourceAlpha, green(destination), green(source)),
+            alphaBlendChannel(alpha, sourceAlpha, blue(destination), blue(source))
+        );
+    }
+
+    private static int alphaBlendChannel(final int resultAlpha, final int sourceAlpha, final int destination, final int source) {
+        return (source * sourceAlpha + destination * (resultAlpha - sourceAlpha)) / resultAlpha;
+    }
+
+    public static int srgbLerp(final float alpha, final int p0, final int p1) {
+        int a = Mth.lerpInt(alpha, alpha(p0), alpha(p1));
+        int red = Mth.lerpInt(alpha, red(p0), red(p1));
+        int green = Mth.lerpInt(alpha, green(p0), green(p1));
+        int blue = Mth.lerpInt(alpha, blue(p0), blue(p1));
+        return color(a, red, green, blue);
+    }
+
+    public static int linearLerp(final float alpha, final int p0, final int p1) {
+        return color(
+            Mth.lerpInt(alpha, alpha(p0), alpha(p1)),
+            LINEAR_TO_SRGB[Mth.lerpInt(alpha, SRGB_TO_LINEAR[red(p0)], SRGB_TO_LINEAR[red(p1)])] & 0xFF,
+            LINEAR_TO_SRGB[Mth.lerpInt(alpha, SRGB_TO_LINEAR[green(p0)], SRGB_TO_LINEAR[green(p1)])] & 0xFF,
+            LINEAR_TO_SRGB[Mth.lerpInt(alpha, SRGB_TO_LINEAR[blue(p0)], SRGB_TO_LINEAR[blue(p1)])] & 0xFF
+        );
+    }
+
+    public static int opaque(final int color) {
+        return color | 0xFF000000;
+    }
+
+    public static int transparent(final int color) {
+        return color & 16777215;
+    }
+
+    public static int color(final int alpha, final int rgb) {
+        return alpha << 24 | rgb & 16777215;
+    }
+
+    public static int color(final float alpha, final int rgb) {
+        return as8BitChannel(alpha) << 24 | rgb & 16777215;
+    }
+
+    public static int white(final float alpha) {
+        return as8BitChannel(alpha) << 24 | 16777215;
+    }
+
+    public static int white(final int alpha) {
+        return alpha << 24 | 16777215;
+    }
+
+    public static int black(final float alpha) {
+        return as8BitChannel(alpha) << 24;
+    }
+
+    public static int black(final int alpha) {
+        return alpha << 24;
+    }
+
+    public static int gray(final float brightness) {
+        int channel = as8BitChannel(brightness);
+        return color(channel, channel, channel);
+    }
+
+    public static int colorFromFloat(final float alpha, final float red, final float green, final float blue) {
+        return color(as8BitChannel(alpha), as8BitChannel(red), as8BitChannel(green), as8BitChannel(blue));
+    }
+
+    public static Vector3f vector3fFromRGB24(final int color) {
+        return new Vector3f(redFloat(color), greenFloat(color), blueFloat(color));
+    }
+
+    public static Vector4f vector4fFromARGB32(final int color) {
+        return new Vector4f(redFloat(color), greenFloat(color), blueFloat(color), alphaFloat(color));
+    }
+
+    public static Vector4f setVector4fFromARGB32(final Vector4f dest, final int color) {
+        return dest.set(redFloat(color), greenFloat(color), blueFloat(color), alphaFloat(color));
+    }
+
+    public static int average(final int lhs, final int rhs) {
+        return color((alpha(lhs) + alpha(rhs)) / 2, (red(lhs) + red(rhs)) / 2, (green(lhs) + green(rhs)) / 2, (blue(lhs) + blue(rhs)) / 2);
+    }
+
+    public static int as8BitChannel(final float value) {
+        return Mth.floor(value * 255.0F);
+    }
+
+    public static float alphaFloat(final int color) {
+        return from8BitChannel(alpha(color));
+    }
+
+    public static float redFloat(final int color) {
+        return from8BitChannel(red(color));
+    }
+
+    public static float greenFloat(final int color) {
+        return from8BitChannel(green(color));
+    }
+
+    public static float blueFloat(final int color) {
+        return from8BitChannel(blue(color));
+    }
+
+    private static float from8BitChannel(final int value) {
+        return value / 255.0F;
+    }
+
+    public static int toABGR(final int color) {
+        return color & -16711936 | (color & 0xFF0000) >> 16 | (color & 0xFF) << 16;
+    }
+
+    public static int fromABGR(final int color) {
+        return toABGR(color);
+    }
+
+    public static int setBrightness(final int color, final float brightness) {
+        int red = red(color);
+        int green = green(color);
+        int blue = blue(color);
+        int alpha = alpha(color);
+        int rgbMax = Math.max(Math.max(red, green), blue);
+        int rgbMin = Math.min(Math.min(red, green), blue);
+        float rgbConstantRange = rgbMax - rgbMin;
+        float saturation;
+        if (rgbMax != 0) {
+            saturation = rgbConstantRange / rgbMax;
         } else {
-            float f3 = (i1 - i) / f;
-            float f4 = (i1 - j) / f;
-            float f5 = (i1 - k) / f;
-            if (i == i1) {
-                f2 = f5 - f4;
-            } else if (j == i1) {
-                f2 = 2.0F + f3 - f5;
+            saturation = 0.0F;
+        }
+
+        float hue;
+        if (saturation == 0.0F) {
+            hue = 0.0F;
+        } else {
+            float constantRed = (rgbMax - red) / rgbConstantRange;
+            float constantGreen = (rgbMax - green) / rgbConstantRange;
+            float constantBlue = (rgbMax - blue) / rgbConstantRange;
+            if (red == rgbMax) {
+                hue = constantBlue - constantGreen;
+            } else if (green == rgbMax) {
+                hue = 2.0F + constantRed - constantBlue;
             } else {
-                f2 = 4.0F + f4 - f3;
+                hue = 4.0F + constantGreen - constantRed;
             }
 
-            f2 /= 6.0F;
-            if (f2 < 0.0F) {
-                f2++;
+            hue /= 6.0F;
+            if (hue < 0.0F) {
+                hue++;
             }
         }
 
-        if (f1 == 0.0F) {
-            i = j = k = Math.round(p_408870_ * 255.0F);
-            return color(l, i, j, k);
-        } else {
-            float f8 = (f2 - (float)Math.floor(f2)) * 6.0F;
-            float f9 = f8 - (float)Math.floor(f8);
-            float f10 = p_408870_ * (1.0F - f1);
-            float f6 = p_408870_ * (1.0F - f1 * f9);
-            float f7 = p_408870_ * (1.0F - f1 * (1.0F - f9));
-            switch ((int)f8) {
-                case 0:
-                    i = Math.round(p_408870_ * 255.0F);
-                    j = Math.round(f7 * 255.0F);
-                    k = Math.round(f10 * 255.0F);
-                    break;
-                case 1:
-                    i = Math.round(f6 * 255.0F);
-                    j = Math.round(p_408870_ * 255.0F);
-                    k = Math.round(f10 * 255.0F);
-                    break;
-                case 2:
-                    i = Math.round(f10 * 255.0F);
-                    j = Math.round(p_408870_ * 255.0F);
-                    k = Math.round(f7 * 255.0F);
-                    break;
-                case 3:
-                    i = Math.round(f10 * 255.0F);
-                    j = Math.round(f6 * 255.0F);
-                    k = Math.round(p_408870_ * 255.0F);
-                    break;
-                case 4:
-                    i = Math.round(f7 * 255.0F);
-                    j = Math.round(f10 * 255.0F);
-                    k = Math.round(p_408870_ * 255.0F);
-                    break;
-                case 5:
-                    i = Math.round(p_408870_ * 255.0F);
-                    j = Math.round(f10 * 255.0F);
-                    k = Math.round(f6 * 255.0F);
-            }
-
-            return color(l, i, j, k);
+        if (saturation == 0.0F) {
+            red = green = blue = Math.round(brightness * 255.0F);
+            return color(alpha, red, green, blue);
         }
+
+        float colorWheelSegment = (hue - (float)Math.floor(hue)) * 6.0F;
+        float colorWheelOffset = colorWheelSegment - (float)Math.floor(colorWheelSegment);
+        float primaryColor = brightness * (1.0F - saturation);
+        float secondaryColor = brightness * (1.0F - saturation * colorWheelOffset);
+        float tertiaryColor = brightness * (1.0F - saturation * (1.0F - colorWheelOffset));
+        switch ((int)colorWheelSegment) {
+            case 0:
+                red = Math.round(brightness * 255.0F);
+                green = Math.round(tertiaryColor * 255.0F);
+                blue = Math.round(primaryColor * 255.0F);
+                break;
+            case 1:
+                red = Math.round(secondaryColor * 255.0F);
+                green = Math.round(brightness * 255.0F);
+                blue = Math.round(primaryColor * 255.0F);
+                break;
+            case 2:
+                red = Math.round(primaryColor * 255.0F);
+                green = Math.round(brightness * 255.0F);
+                blue = Math.round(tertiaryColor * 255.0F);
+                break;
+            case 3:
+                red = Math.round(primaryColor * 255.0F);
+                green = Math.round(secondaryColor * 255.0F);
+                blue = Math.round(brightness * 255.0F);
+                break;
+            case 4:
+                red = Math.round(tertiaryColor * 255.0F);
+                green = Math.round(primaryColor * 255.0F);
+                blue = Math.round(brightness * 255.0F);
+                break;
+            case 5:
+                red = Math.round(brightness * 255.0F);
+                green = Math.round(primaryColor * 255.0F);
+                blue = Math.round(secondaryColor * 255.0F);
+        }
+
+        return color(alpha, red, green, blue);
     }
 }

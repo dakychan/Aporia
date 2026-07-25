@@ -30,6 +30,7 @@ import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
@@ -58,7 +59,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
-import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
@@ -69,16 +69,16 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     private static final int MAX_STRENGTH = 5;
     private static final EntityDataAccessor<Integer> DATA_STRENGTH_ID = SynchedEntityData.defineId(Llama.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_VARIANT_ID = SynchedEntityData.defineId(Llama.class, EntityDataSerializers.INT);
-    private static final EntityDimensions BABY_DIMENSIONS = EntityType.LLAMA
+    private static final EntityDimensions BABY_DIMENSIONS = EntityTypes.LLAMA
         .getDimensions()
-        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.LLAMA.getHeight() - 0.8125F, -0.3F))
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityTypes.LLAMA.getHeight() - 0.25F, -0.3F))
         .scale(0.5F);
-    boolean didSpit;
+    private boolean didSpit;
     private @Nullable Llama caravanHead;
     private @Nullable Llama caravanTail;
 
-    public Llama(EntityType<? extends Llama> p_454548_, Level p_459437_) {
-        super(p_454548_, p_459437_);
+    public Llama(final EntityType<? extends Llama> type, final Level level) {
+        super(type, level);
         this.getNavigation().setRequiredPathLength(40.0F);
     }
 
@@ -86,13 +86,13 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         return false;
     }
 
-    private void setStrength(int p_458785_) {
-        this.entityData.set(DATA_STRENGTH_ID, Math.max(1, Math.min(5, p_458785_)));
+    private void setStrength(final int strength) {
+        this.entityData.set(DATA_STRENGTH_ID, Math.max(1, Math.min(5, strength)));
     }
 
-    private void setRandomStrength(RandomSource p_452169_) {
-        int i = p_452169_.nextFloat() < 0.04F ? 5 : 3;
-        this.setStrength(1 + p_452169_.nextInt(i));
+    private void setRandomStrength(final RandomSource random) {
+        int maxStrength = random.nextFloat() < 0.04F ? 5 : 3;
+        this.setStrength(1 + random.nextInt(maxStrength));
     }
 
     public int getStrength() {
@@ -100,17 +100,17 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_451141_) {
-        super.addAdditionalSaveData(p_451141_);
-        p_451141_.store("Variant", Llama.Variant.LEGACY_CODEC, this.getVariant());
-        p_451141_.putInt("Strength", this.getStrength());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Variant", Llama.Variant.LEGACY_CODEC, this.getVariant());
+        output.putInt("Strength", this.getStrength());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_460090_) {
-        this.setStrength(p_460090_.getIntOr("Strength", 0));
-        super.readAdditionalSaveData(p_460090_);
-        this.setVariant(p_460090_.read("Variant", Llama.Variant.LEGACY_CODEC).orElse(Llama.Variant.DEFAULT));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.setStrength(input.getIntOr("Strength", 0));
+        super.readAdditionalSaveData(input);
+        this.setVariant(input.read("Variant", Llama.Variant.LEGACY_CODEC).orElse(Llama.Variant.DEFAULT));
     }
 
     @Override
@@ -121,7 +121,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         this.goalSelector.addGoal(3, new RangedAttackGoal(this, 1.25, 40, 20.0F));
         this.goalSelector.addGoal(3, new PanicGoal(this, 1.2));
         this.goalSelector.addGoal(4, new BreedGoal(this, 1.0));
-        this.goalSelector.addGoal(5, new TemptGoal(this, 1.25, p_451588_ -> p_451588_.is(ItemTags.LLAMA_TEMPT_ITEMS), false));
+        this.goalSelector.addGoal(5, new TemptGoal(this, 1.25, i -> i.is(ItemTags.LLAMA_TEMPT_ITEMS), false));
         this.goalSelector.addGoal(6, new FollowParentGoal(this, 1.0));
         this.goalSelector.addGoal(7, new WaterAvoidingRandomStrollGoal(this, 0.7));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -135,87 +135,87 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_454681_) {
-        super.defineSynchedData(p_454681_);
-        p_454681_.define(DATA_STRENGTH_ID, 0);
-        p_454681_.define(DATA_VARIANT_ID, 0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_STRENGTH_ID, 0);
+        entityData.define(DATA_VARIANT_ID, 0);
     }
 
     public Llama.Variant getVariant() {
         return Llama.Variant.byId(this.entityData.get(DATA_VARIANT_ID));
     }
 
-    private void setVariant(Llama.Variant p_454530_) {
-        this.entityData.set(DATA_VARIANT_ID, p_454530_.id);
+    private void setVariant(final Llama.Variant variant) {
+        this.entityData.set(DATA_VARIANT_ID, variant.id);
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_460980_) {
-        return p_460980_ == DataComponents.LLAMA_VARIANT ? castComponentValue((DataComponentType<T>)p_460980_, this.getVariant()) : super.get(p_460980_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.LLAMA_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_456100_) {
-        this.applyImplicitComponentIfPresent(p_456100_, DataComponents.LLAMA_VARIANT);
-        super.applyImplicitComponents(p_456100_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.LLAMA_VARIANT);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_451454_, T p_457306_) {
-        if (p_451454_ == DataComponents.LLAMA_VARIANT) {
-            this.setVariant(castComponentValue(DataComponents.LLAMA_VARIANT, p_457306_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.LLAMA_VARIANT) {
+            this.setVariant(castComponentValue(DataComponents.LLAMA_VARIANT, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_451454_, p_457306_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
     @Override
-    public boolean isFood(ItemStack p_455301_) {
-        return p_455301_.is(ItemTags.LLAMA_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.LLAMA_FOOD);
     }
 
     @Override
-    protected boolean handleEating(Player p_455054_, ItemStack p_452745_) {
-        int i = 0;
-        int j = 0;
-        float f = 0.0F;
-        boolean flag = false;
-        if (p_452745_.is(Items.WHEAT)) {
-            i = 10;
-            j = 3;
-            f = 2.0F;
-        } else if (p_452745_.is(Blocks.HAY_BLOCK.asItem())) {
-            i = 90;
-            j = 6;
-            f = 10.0F;
+    protected boolean handleEating(final Player player, final ItemStack itemStack) {
+        int ageUp = 0;
+        int temper = 0;
+        float heal = 0.0F;
+        boolean itemUsed = false;
+        if (itemStack.is(Items.WHEAT)) {
+            ageUp = 10;
+            temper = 3;
+            heal = 2.0F;
+        } else if (itemStack.is(Items.HAY_BLOCK)) {
+            ageUp = 90;
+            temper = 6;
+            heal = 10.0F;
             if (this.isTamed() && this.getAge() == 0 && this.canFallInLove()) {
-                flag = true;
-                this.setInLove(p_455054_);
+                itemUsed = true;
+                this.setInLove(player);
             }
         }
 
-        if (this.getHealth() < this.getMaxHealth() && f > 0.0F) {
-            this.heal(f);
-            flag = true;
+        if (this.getHealth() < this.getMaxHealth() && heal > 0.0F) {
+            this.heal(heal);
+            itemUsed = true;
         }
 
-        if (this.isBaby() && i > 0) {
+        if (this.isBaby() && ageUp > 0 && !this.isAgeLocked()) {
             this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
             if (!this.level().isClientSide()) {
-                this.ageUp(i);
-                flag = true;
+                this.ageUp(ageUp);
+                itemUsed = true;
             }
         }
 
-        if (j > 0 && (flag || !this.isTamed()) && this.getTemper() < this.getMaxTemper() && !this.level().isClientSide()) {
-            this.modifyTemper(j);
-            flag = true;
+        if (temper > 0 && (itemUsed || !this.isTamed()) && this.getTemper() < this.getMaxTemper() && !this.level().isClientSide()) {
+            this.modifyTemper(temper);
+            itemUsed = true;
         }
 
-        if (flag && !this.isSilent()) {
-            SoundEvent soundevent = this.getEatingSound();
-            if (soundevent != null) {
+        if (itemUsed && !this.isSilent()) {
+            SoundEvent eatingSound = this.getEatingSound();
+            if (eatingSound != null) {
                 this.level()
                     .playSound(
                         null,
@@ -230,7 +230,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
             }
         }
 
-        return flag;
+        return itemUsed;
     }
 
     @Override
@@ -240,20 +240,20 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_453507_, DifficultyInstance p_450964_, EntitySpawnReason p_457523_, @Nullable SpawnGroupData p_458001_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        RandomSource randomsource = p_453507_.getRandom();
-        this.setRandomStrength(randomsource);
-        Llama.Variant llama$variant;
-        if (p_458001_ instanceof Llama.LlamaGroupData) {
-            llama$variant = ((Llama.LlamaGroupData)p_458001_).variant;
+        RandomSource random = level.getRandom();
+        this.setRandomStrength(random);
+        Llama.Variant variant;
+        if (groupData instanceof Llama.LlamaGroupData) {
+            variant = ((Llama.LlamaGroupData)groupData).variant;
         } else {
-            llama$variant = Util.getRandom(Llama.Variant.values(), randomsource);
-            p_458001_ = new Llama.LlamaGroupData(llama$variant);
+            variant = Util.getRandom(Llama.Variant.values(), random);
+            groupData = new Llama.LlamaGroupData(variant);
         }
 
-        this.setVariant(llama$variant);
-        return super.finalizeSpawn(p_453507_, p_450964_, p_457523_, p_458001_);
+        this.setVariant(variant);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
@@ -272,7 +272,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_458384_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.LLAMA_HURT;
     }
 
@@ -287,7 +287,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_453659_, BlockState p_458548_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.LLAMA_STEP, 0.15F, 1.0F);
     }
 
@@ -302,7 +302,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    public boolean canUseSlot(EquipmentSlot p_450669_) {
+    public boolean canUseSlot(final EquipmentSlot slot) {
         return true;
     }
 
@@ -312,39 +312,39 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    public boolean canMate(Animal p_456423_) {
-        return p_456423_ != this && p_456423_ instanceof Llama && this.canParent() && ((Llama)p_456423_).canParent();
+    public boolean canMate(final Animal partner) {
+        return partner != this && partner instanceof Llama llama && this.canParent() && llama.canParent();
     }
 
-    public @Nullable Llama getBreedOffspring(ServerLevel p_450769_, AgeableMob p_458736_) {
-        Llama llama = this.makeNewLlama();
-        if (llama != null) {
-            this.setOffspringAttributes(p_458736_, llama);
-            Llama llama1 = (Llama)p_458736_;
-            int i = this.random.nextInt(Math.max(this.getStrength(), llama1.getStrength())) + 1;
+    public @Nullable Llama getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        Llama baby = this.makeNewLlama();
+        if (baby != null) {
+            this.setOffspringAttributes(partner, baby);
+            Llama otherLlama = (Llama)partner;
+            int babyStrength = this.random.nextInt(Math.max(this.getStrength(), otherLlama.getStrength())) + 1;
             if (this.random.nextFloat() < 0.03F) {
-                i++;
+                babyStrength++;
             }
 
-            llama.setStrength(i);
-            llama.setVariant(this.random.nextBoolean() ? this.getVariant() : llama1.getVariant());
+            baby.setStrength(babyStrength);
+            baby.setVariant(this.random.nextBoolean() ? this.getVariant() : otherLlama.getVariant());
         }
 
-        return llama;
+        return baby;
     }
 
     protected @Nullable Llama makeNewLlama() {
-        return EntityType.LLAMA.create(this.level(), EntitySpawnReason.BREEDING);
+        return EntityTypes.LLAMA.create(this.level(), EntitySpawnReason.BREEDING);
     }
 
-    private void spit(LivingEntity p_459090_) {
-        LlamaSpit llamaspit = new LlamaSpit(this.level(), this);
-        double d0 = p_459090_.getX() - this.getX();
-        double d1 = p_459090_.getY(0.3333333333333333) - llamaspit.getY();
-        double d2 = p_459090_.getZ() - this.getZ();
-        double d3 = Math.sqrt(d0 * d0 + d2 * d2) * 0.2F;
-        if (this.level() instanceof ServerLevel serverlevel) {
-            Projectile.spawnProjectileUsingShoot(llamaspit, serverlevel, ItemStack.EMPTY, d0, d1 + d3, d2, 1.5F, 10.0F);
+    private void spit(final LivingEntity target) {
+        LlamaSpit spit = new LlamaSpit(this.level(), this);
+        double xd = target.getX() - this.getX();
+        double yd = target.getY(0.3333333333333333) - spit.getY();
+        double zd = target.getZ() - this.getZ();
+        double yo = Math.sqrt(xd * xd + zd * zd) * 0.2F;
+        if (this.level() instanceof ServerLevel serverLevel) {
+            Projectile.spawnProjectileUsingShoot(spit, serverLevel, ItemStack.EMPTY, xd, yd + yo, zd, 1.5F, 10.0F);
         }
 
         if (!this.isSilent()) {
@@ -364,24 +364,24 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         this.didSpit = true;
     }
 
-    void setDidSpit(boolean p_457758_) {
-        this.didSpit = p_457758_;
+    private void setDidSpit(final boolean b) {
+        this.didSpit = b;
     }
 
     @Override
-    public boolean causeFallDamage(double p_455330_, float p_456237_, DamageSource p_451412_) {
-        int i = this.calculateFallDamage(p_455330_, p_456237_);
-        if (i <= 0) {
+    public boolean causeFallDamage(final double fallDistance, final float damageModifier, final DamageSource damageSource) {
+        int dmg = this.calculateFallDamage(fallDistance, damageModifier);
+        if (dmg <= 0) {
             return false;
-        } else {
-            if (p_455330_ >= 6.0) {
-                this.hurt(p_451412_, i);
-                this.propagateFallToPassengers(p_455330_, p_456237_, p_451412_);
-            }
-
-            this.playBlockFallSound();
-            return true;
         }
+
+        if (fallDistance >= 6.0) {
+            this.hurt(damageSource, dmg);
+            this.propagateFallToPassengers(fallDistance, damageModifier, damageSource);
+        }
+
+        this.playBlockFallSound();
+        return true;
     }
 
     public void leaveCaravan() {
@@ -392,8 +392,8 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         this.caravanHead = null;
     }
 
-    public void joinCaravan(Llama p_460030_) {
-        this.caravanHead = p_460030_;
+    public void joinCaravan(final Llama tail) {
+        this.caravanHead = tail;
         this.caravanHead.caravanTail = this;
     }
 
@@ -420,9 +420,9 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    protected void followMommy(ServerLevel p_459526_) {
+    protected void followMommy(final ServerLevel level) {
         if (!this.inCaravan() && this.isBaby()) {
-            super.followMommy(p_459526_);
+            super.followMommy(level);
         }
     }
 
@@ -432,8 +432,8 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    public void performRangedAttack(LivingEntity p_458621_, float p_456379_) {
-        this.spit(p_458621_);
+    public void performRangedAttack(final LivingEntity target, final float power) {
+        this.spit(target);
     }
 
     @Override
@@ -442,18 +442,18 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_460011_) {
-        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(p_460011_);
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
     @Override
-    protected Vec3 getPassengerAttachmentPoint(Entity p_457942_, EntityDimensions p_457464_, float p_454017_) {
-        return getDefaultPassengerAttachmentPoint(this, p_457942_, p_457464_.attachments());
+    protected Vec3 getPassengerAttachmentPoint(final Entity passenger, final EntityDimensions dimensions, final float scale) {
+        return getDefaultPassengerAttachmentPoint(this, passenger, dimensions.attachments());
     }
 
-    static class LlamaAttackWolfGoal extends NearestAttackableTargetGoal<Wolf> {
-        public LlamaAttackWolfGoal(Llama p_459134_) {
-            super(p_459134_, Wolf.class, 16, false, true, (p_460962_, p_450837_) -> !((Wolf)p_460962_).isTame());
+    private static class LlamaAttackWolfGoal extends NearestAttackableTargetGoal<Wolf> {
+        public LlamaAttackWolfGoal(final Llama llama) {
+            super(llama, Wolf.class, 16, false, true, (target, level) -> !((Wolf)target).isTame());
         }
 
         @Override
@@ -462,18 +462,18 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         }
     }
 
-    static class LlamaGroupData extends AgeableMob.AgeableMobGroupData {
+    private static class LlamaGroupData extends AgeableMob.AgeableMobGroupData {
         public final Llama.Variant variant;
 
-        LlamaGroupData(Llama.Variant p_456492_) {
+        private LlamaGroupData(final Llama.Variant variant) {
             super(true);
-            this.variant = p_456492_;
+            this.variant = variant;
         }
     }
 
-    static class LlamaHurtByTargetGoal extends HurtByTargetGoal {
-        public LlamaHurtByTargetGoal(Llama p_459689_) {
-            super(p_459689_);
+    private static class LlamaHurtByTargetGoal extends HurtByTargetGoal {
+        public LlamaHurtByTargetGoal(final Llama llama) {
+            super(llama);
         }
 
         @Override
@@ -487,7 +487,7 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         }
     }
 
-    public static enum Variant implements StringRepresentable {
+    public enum Variant implements StringRepresentable {
         CREAMY(0, "creamy"),
         WHITE(1, "white"),
         BROWN(2, "brown"),
@@ -499,20 +499,20 @@ public class Llama extends AbstractChestedHorse implements RangedAttackMob {
         @Deprecated
         public static final Codec<Llama.Variant> LEGACY_CODEC = Codec.INT.xmap(BY_ID::apply, Llama.Variant::getId);
         public static final StreamCodec<ByteBuf, Llama.Variant> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, Llama.Variant::getId);
-        final int id;
+        private final int id;
         private final String name;
 
-        private Variant(final int p_454226_, final String p_459299_) {
-            this.id = p_454226_;
-            this.name = p_459299_;
+        Variant(final int id, final String name) {
+            this.id = id;
+            this.name = name;
         }
 
         public int getId() {
             return this.id;
         }
 
-        public static Llama.Variant byId(int p_457530_) {
-            return BY_ID.apply(p_457530_);
+        public static Llama.Variant byId(final int id) {
+            return BY_ID.apply(id);
         }
 
         @Override

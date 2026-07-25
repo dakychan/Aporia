@@ -12,57 +12,59 @@ import net.minecraft.world.level.storage.loot.LootTable;
 import org.jspecify.annotations.Nullable;
 
 public interface EquipmentUser {
-    void setItemSlot(EquipmentSlot p_333752_, ItemStack p_331668_);
+    void setItemSlot(final EquipmentSlot slot, final ItemStack stack);
 
-    ItemStack getItemBySlot(EquipmentSlot p_329199_);
+    ItemStack getItemBySlot(final EquipmentSlot slot);
 
-    void setDropChance(EquipmentSlot p_331517_, float p_334697_);
+    void setDropChance(final EquipmentSlot slot, final float dropChance);
 
-    default void equip(EquipmentTable p_331159_, LootParams p_332346_) {
-        this.equip(p_331159_.lootTable(), p_332346_, p_331159_.slotDropChances());
+    default void equip(final EquipmentTable equipment, final LootParams lootParams) {
+        this.equip(equipment.lootTable(), lootParams, equipment.slotDropChances());
     }
 
-    default void equip(ResourceKey<LootTable> p_329232_, LootParams p_330675_, Map<EquipmentSlot, Float> p_328003_) {
-        this.equip(p_329232_, p_330675_, 0L, p_328003_);
+    default void equip(final ResourceKey<LootTable> lootTable, final LootParams lootParams, final Map<EquipmentSlot, Float> dropChances) {
+        this.equip(lootTable, lootParams, 0L, dropChances);
     }
 
-    default void equip(ResourceKey<LootTable> p_331471_, LootParams p_333826_, long p_331881_, Map<EquipmentSlot, Float> p_328541_) {
-        LootTable loottable = p_333826_.getLevel().getServer().reloadableRegistries().getLootTable(p_331471_);
-        if (loottable != LootTable.EMPTY) {
-            List<ItemStack> list = loottable.getRandomItems(p_333826_, p_331881_);
-            List<EquipmentSlot> list1 = new ArrayList<>();
+    default void equip(
+        final ResourceKey<LootTable> lootTable, final LootParams lootParams, final long optionalLootTableSeed, final Map<EquipmentSlot, Float> dropChances
+    ) {
+        LootTable table = lootParams.getLevel().getServer().reloadableRegistries().getLootTable(lootTable);
+        if (table != LootTable.EMPTY) {
+            List<ItemStack> possibleEquipment = table.getRandomItems(lootParams, optionalLootTableSeed);
+            List<EquipmentSlot> insertedIntoSlots = new ArrayList<>();
 
-            for (ItemStack itemstack : list) {
-                EquipmentSlot equipmentslot = this.resolveSlot(itemstack, list1);
-                if (equipmentslot != null) {
-                    ItemStack itemstack1 = equipmentslot.limit(itemstack);
-                    this.setItemSlot(equipmentslot, itemstack1);
-                    Float f = p_328541_.get(equipmentslot);
-                    if (f != null) {
-                        this.setDropChance(equipmentslot, f);
+            for (ItemStack toEquip : possibleEquipment) {
+                EquipmentSlot slot = this.resolveSlot(toEquip, insertedIntoSlots);
+                if (slot != null) {
+                    ItemStack equipped = slot.limit(toEquip);
+                    this.setItemSlot(slot, equipped);
+                    Float dropChance = dropChances.get(slot);
+                    if (dropChance != null) {
+                        this.setDropChance(slot, dropChance);
                     }
 
-                    list1.add(equipmentslot);
+                    insertedIntoSlots.add(slot);
                 }
             }
         }
     }
 
-    default @Nullable EquipmentSlot resolveSlot(ItemStack p_329649_, List<EquipmentSlot> p_334449_) {
-        if (p_329649_.isEmpty()) {
-            return null;
-        } else {
-            Equippable equippable = p_329649_.get(DataComponents.EQUIPPABLE);
-            if (equippable != null) {
-                EquipmentSlot equipmentslot = equippable.slot();
-                if (!p_334449_.contains(equipmentslot)) {
-                    return equipmentslot;
-                }
-            } else if (!p_334449_.contains(EquipmentSlot.MAINHAND)) {
-                return EquipmentSlot.MAINHAND;
-            }
-
+    default @Nullable EquipmentSlot resolveSlot(final ItemStack toEquip, final List<EquipmentSlot> alreadyInsertedIntoSlots) {
+        if (toEquip.isEmpty()) {
             return null;
         }
+
+        Equippable equippable = toEquip.get(DataComponents.EQUIPPABLE);
+        if (equippable != null) {
+            EquipmentSlot slot = equippable.slot();
+            if (!alreadyInsertedIntoSlots.contains(slot)) {
+                return slot;
+            }
+        } else if (!alreadyInsertedIntoSlots.contains(EquipmentSlot.MAINHAND)) {
+            return EquipmentSlot.MAINHAND;
+        }
+
+        return null;
     }
 }

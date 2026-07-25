@@ -14,64 +14,72 @@ public class SubStringSource {
     private final List<Style> charStyles;
     private final Int2IntFunction reverseCharModifier;
 
-    private SubStringSource(String p_131232_, List<Style> p_131233_, Int2IntFunction p_131234_) {
-        this.plainText = p_131232_;
-        this.charStyles = ImmutableList.copyOf(p_131233_);
-        this.reverseCharModifier = p_131234_;
+    private SubStringSource(final String plainText, final List<Style> charStyles, final Int2IntFunction reverseCharModifier) {
+        this.plainText = plainText;
+        this.charStyles = ImmutableList.copyOf(charStyles);
+        this.reverseCharModifier = reverseCharModifier;
     }
 
     public String getPlainText() {
         return this.plainText;
     }
 
-    public List<FormattedCharSequence> substring(int p_131237_, int p_131238_, boolean p_131239_) {
-        if (p_131238_ == 0) {
+    public List<FormattedCharSequence> substring(final int start, final int length, final boolean reverse) {
+        if (length == 0) {
             return ImmutableList.of();
-        } else {
-            List<FormattedCharSequence> list = Lists.newArrayList();
-            Style style = this.charStyles.get(p_131237_);
-            int i = p_131237_;
-
-            for (int j = 1; j < p_131238_; j++) {
-                int k = p_131237_ + j;
-                Style style1 = this.charStyles.get(k);
-                if (!style1.equals(style)) {
-                    String s = this.plainText.substring(i, k);
-                    list.add(p_131239_ ? FormattedCharSequence.backward(s, style, this.reverseCharModifier) : FormattedCharSequence.forward(s, style));
-                    style = style1;
-                    i = k;
-                }
-            }
-
-            if (i < p_131237_ + p_131238_) {
-                String s1 = this.plainText.substring(i, p_131237_ + p_131238_);
-                list.add(p_131239_ ? FormattedCharSequence.backward(s1, style, this.reverseCharModifier) : FormattedCharSequence.forward(s1, style));
-            }
-
-            return p_131239_ ? Lists.reverse(list) : list;
         }
+
+        List<FormattedCharSequence> parts = Lists.newArrayList();
+        Style currentRunStyle = this.charStyles.get(start);
+        int currentRunStart = start;
+
+        for (int i = 1; i < length; i++) {
+            int actualIndex = start + i;
+            Style charStyle = this.charStyles.get(actualIndex);
+            if (!charStyle.equals(currentRunStyle)) {
+                String currentRunText = this.plainText.substring(currentRunStart, actualIndex);
+                parts.add(
+                    reverse
+                        ? FormattedCharSequence.backward(currentRunText, currentRunStyle, this.reverseCharModifier)
+                        : FormattedCharSequence.forward(currentRunText, currentRunStyle)
+                );
+                currentRunStyle = charStyle;
+                currentRunStart = actualIndex;
+            }
+        }
+
+        if (currentRunStart < start + length) {
+            String lastRunText = this.plainText.substring(currentRunStart, start + length);
+            parts.add(
+                reverse
+                    ? FormattedCharSequence.backward(lastRunText, currentRunStyle, this.reverseCharModifier)
+                    : FormattedCharSequence.forward(lastRunText, currentRunStyle)
+            );
+        }
+
+        return reverse ? Lists.reverse(parts) : parts;
     }
 
-    public static SubStringSource create(FormattedText p_178537_) {
-        return create(p_178537_, p_178527_ -> p_178527_, p_178529_ -> p_178529_);
+    public static SubStringSource create(final FormattedText text) {
+        return create(text, ch -> ch, s -> s);
     }
 
-    public static SubStringSource create(FormattedText p_131252_, Int2IntFunction p_131253_, UnaryOperator<String> p_131254_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        List<Style> list = Lists.newArrayList();
-        p_131252_.visit((p_131249_, p_131250_) -> {
-            StringDecomposer.iterateFormatted(p_131250_, p_131249_, (p_178533_, p_178534_, p_178535_) -> {
-                stringbuilder.appendCodePoint(p_178535_);
-                int i = Character.charCount(p_178535_);
+    public static SubStringSource create(final FormattedText text, final Int2IntFunction reverseCharModifier, final UnaryOperator<String> shaper) {
+        StringBuilder plainText = new StringBuilder();
+        List<Style> charStyles = Lists.newArrayList();
+        text.visit((style, contents) -> {
+            StringDecomposer.iterateFormatted(contents, style, (position, charStyle, codepoint) -> {
+                plainText.appendCodePoint(codepoint);
+                int charCount = Character.charCount(codepoint);
 
-                for (int j = 0; j < i; j++) {
-                    list.add(p_178534_);
+                for (int i = 0; i < charCount; i++) {
+                    charStyles.add(charStyle);
                 }
 
                 return true;
             });
             return Optional.empty();
         }, Style.EMPTY);
-        return new SubStringSource(p_131254_.apply(stringbuilder.toString()), list, p_131253_);
+        return new SubStringSource(shaper.apply(plainText.toString()), charStyles, reverseCharModifier);
     }
 }

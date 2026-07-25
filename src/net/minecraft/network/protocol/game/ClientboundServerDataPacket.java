@@ -23,7 +23,7 @@ public record ClientboundServerDataPacket(Component motd, Optional<byte[]> iconB
         return GamePacketTypes.CLIENTBOUND_SERVER_DATA;
     }
 
-    public void handle(ClientGamePacketListener p_237809_) {
-        p_237809_.handleServerData(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleServerData(this);
     }
 }

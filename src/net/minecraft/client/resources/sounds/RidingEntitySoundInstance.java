@@ -5,10 +5,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class RidingEntitySoundInstance extends AbstractTickableSoundInstance {
     private final Player player;
     private final Entity entity;
@@ -18,19 +15,26 @@ public class RidingEntitySoundInstance extends AbstractTickableSoundInstance {
     private final float volumeAmplifier;
 
     public RidingEntitySoundInstance(
-        Player p_450550_, Entity p_457061_, boolean p_452668_, SoundEvent p_454518_, SoundSource p_460935_, float p_458377_, float p_457734_, float p_452396_
+        final Player player,
+        final Entity entity,
+        final boolean underwaterSound,
+        final SoundEvent soundEvent,
+        final SoundSource soundSource,
+        final float volumeMin,
+        final float volumeMax,
+        final float volumeAmplifier
     ) {
-        super(p_454518_, p_460935_, SoundInstance.createUnseededRandom());
-        this.player = p_450550_;
-        this.entity = p_457061_;
-        this.underwaterSound = p_452668_;
-        this.volumeMin = p_458377_;
-        this.volumeMax = p_457734_;
-        this.volumeAmplifier = p_452396_;
+        super(soundEvent, soundSource, SoundInstance.createUnseededRandom());
+        this.player = player;
+        this.entity = entity;
+        this.underwaterSound = underwaterSound;
+        this.volumeMin = volumeMin;
+        this.volumeMax = volumeMax;
+        this.volumeAmplifier = volumeAmplifier;
         this.attenuation = SoundInstance.Attenuation.NONE;
         this.looping = true;
         this.delay = 0;
-        this.volume = p_458377_;
+        this.volume = volumeMin;
     }
 
     @Override
@@ -62,9 +66,9 @@ public class RidingEntitySoundInstance extends AbstractTickableSoundInstance {
         } else if (this.shouldNotPlayUnderwaterSound()) {
             this.volume = this.volumeMin;
         } else {
-            float f = this.getEntitySpeed();
-            if (f >= 0.01F && this.shoudlPlaySound()) {
-                this.volume = this.volumeAmplifier * Mth.clampedLerp(f, this.volumeMin, this.volumeMax);
+            float speed = this.getEntitySpeed();
+            if (speed >= 0.01F && this.shoudlPlaySound()) {
+                this.volume = this.volumeAmplifier * Mth.clampedLerp(speed, this.volumeMin, this.volumeMax);
             } else {
                 this.volume = this.volumeMin;
             }

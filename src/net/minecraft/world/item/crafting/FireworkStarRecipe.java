@@ -1,128 +1,170 @@
 package net.minecraft.world.item.crafting;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import java.util.HashMap;
 import java.util.Map;
-import net.minecraft.core.HolderLookup;
+import java.util.Map.Entry;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.DyeItem;
-import net.minecraft.world.item.Item;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.component.FireworkExplosion;
 import net.minecraft.world.level.Level;
+import org.jspecify.annotations.Nullable;
 
 public class FireworkStarRecipe extends CustomRecipe {
-    private static final Map<Item, FireworkExplosion.Shape> SHAPE_BY_ITEM = Map.of(
-        Items.FIRE_CHARGE,
-        FireworkExplosion.Shape.LARGE_BALL,
-        Items.FEATHER,
-        FireworkExplosion.Shape.BURST,
-        Items.GOLD_NUGGET,
-        FireworkExplosion.Shape.STAR,
-        Items.SKELETON_SKULL,
-        FireworkExplosion.Shape.CREEPER,
-        Items.WITHER_SKELETON_SKULL,
-        FireworkExplosion.Shape.CREEPER,
-        Items.CREEPER_HEAD,
-        FireworkExplosion.Shape.CREEPER,
-        Items.PLAYER_HEAD,
-        FireworkExplosion.Shape.CREEPER,
-        Items.DRAGON_HEAD,
-        FireworkExplosion.Shape.CREEPER,
-        Items.ZOMBIE_HEAD,
-        FireworkExplosion.Shape.CREEPER,
-        Items.PIGLIN_HEAD,
-        FireworkExplosion.Shape.CREEPER
+    public static final MapCodec<FireworkStarRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
+                Codec.simpleMap(FireworkExplosion.Shape.CODEC, Ingredient.CODEC, StringRepresentable.keys(FireworkExplosion.Shape.values()))
+                    .fieldOf("shapes")
+                    .forGetter(o -> o.shapes),
+                Ingredient.CODEC.fieldOf("trail").forGetter(o -> o.trail),
+                Ingredient.CODEC.fieldOf("twinkle").forGetter(o -> o.twinkle),
+                Ingredient.CODEC.fieldOf("fuel").forGetter(o -> o.fuel),
+                Ingredient.CODEC.fieldOf("dye").forGetter(o -> o.dye),
+                ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result)
+            )
+            .apply(i, FireworkStarRecipe::new)
     );
-    private static final Ingredient TRAIL_INGREDIENT = Ingredient.of(Items.DIAMOND);
-    private static final Ingredient TWINKLE_INGREDIENT = Ingredient.of(Items.GLOWSTONE_DUST);
-    private static final Ingredient GUNPOWDER_INGREDIENT = Ingredient.of(Items.GUNPOWDER);
+    public static final StreamCodec<RegistryFriendlyByteBuf, FireworkStarRecipe> STREAM_CODEC = StreamCodec.composite(
+        ByteBufCodecs.map(HashMap::new, FireworkExplosion.Shape.STREAM_CODEC, Ingredient.CONTENTS_STREAM_CODEC),
+        o -> o.shapes,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.trail,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.twinkle,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.fuel,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.dye,
+        ItemStackTemplate.STREAM_CODEC,
+        o -> o.result,
+        FireworkStarRecipe::new
+    );
+    public static final RecipeSerializer<FireworkStarRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    private final Map<FireworkExplosion.Shape, Ingredient> shapes;
+    private final Ingredient trail;
+    private final Ingredient twinkle;
+    private final Ingredient fuel;
+    private final Ingredient dye;
+    private final ItemStackTemplate result;
 
-    public FireworkStarRecipe(CraftingBookCategory p_251577_) {
-        super(p_251577_);
+    public FireworkStarRecipe(
+        final Map<FireworkExplosion.Shape, Ingredient> shapes,
+        final Ingredient trail,
+        final Ingredient twinkle,
+        final Ingredient fuel,
+        final Ingredient dye,
+        final ItemStackTemplate result
+    ) {
+        this.shapes = shapes;
+        this.trail = trail;
+        this.twinkle = twinkle;
+        this.fuel = fuel;
+        this.dye = dye;
+        this.result = result;
     }
 
-    public boolean matches(CraftingInput p_342190_, Level p_43896_) {
-        if (p_342190_.ingredientCount() < 2) {
+    private FireworkExplosion.@Nullable Shape findShape(final ItemStack itemStack) {
+        for (Entry<FireworkExplosion.Shape, Ingredient> e : this.shapes.entrySet()) {
+            if (e.getValue().test(itemStack)) {
+                return e.getKey();
+            }
+        }
+
+        return null;
+    }
+
+    public boolean matches(final CraftingInput input, final Level level) {
+        if (input.ingredientCount() < 2) {
             return false;
-        } else {
-            boolean flag = false;
-            boolean flag1 = false;
-            boolean flag2 = false;
-            boolean flag3 = false;
-            boolean flag4 = false;
+        }
 
-            for (int i = 0; i < p_342190_.size(); i++) {
-                ItemStack itemstack = p_342190_.getItem(i);
-                if (!itemstack.isEmpty()) {
-                    if (SHAPE_BY_ITEM.containsKey(itemstack.getItem())) {
-                        if (flag2) {
-                            return false;
-                        }
+        boolean hasFuel = false;
+        boolean hasDye = false;
+        boolean hasShape = false;
+        boolean hasTrail = false;
+        boolean hasTwinkle = false;
 
-                        flag2 = true;
-                    } else if (TWINKLE_INGREDIENT.test(itemstack)) {
-                        if (flag4) {
-                            return false;
-                        }
-
-                        flag4 = true;
-                    } else if (TRAIL_INGREDIENT.test(itemstack)) {
-                        if (flag3) {
-                            return false;
-                        }
-
-                        flag3 = true;
-                    } else if (GUNPOWDER_INGREDIENT.test(itemstack)) {
-                        if (flag) {
-                            return false;
-                        }
-
-                        flag = true;
-                    } else {
-                        if (!(itemstack.getItem() instanceof DyeItem)) {
-                            return false;
-                        }
-
-                        flag1 = true;
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                if (this.twinkle.test(itemStack)) {
+                    if (hasTwinkle) {
+                        return false;
                     }
+
+                    hasTwinkle = true;
+                } else if (this.trail.test(itemStack)) {
+                    if (hasTrail) {
+                        return false;
+                    }
+
+                    hasTrail = true;
+                } else if (this.fuel.test(itemStack)) {
+                    if (hasFuel) {
+                        return false;
+                    }
+
+                    hasFuel = true;
+                } else if (this.dye.test(itemStack) && itemStack.has(DataComponents.DYE)) {
+                    hasDye = true;
+                } else {
+                    FireworkExplosion.Shape shape = this.findShape(itemStack);
+                    if (shape == null) {
+                        return false;
+                    }
+
+                    if (hasShape) {
+                        return false;
+                    }
+
+                    hasShape = true;
                 }
             }
-
-            return flag && flag1;
         }
+
+        return hasFuel && hasDye;
     }
 
-    public ItemStack assemble(CraftingInput p_344010_, HolderLookup.Provider p_335220_) {
-        FireworkExplosion.Shape fireworkexplosion$shape = FireworkExplosion.Shape.SMALL_BALL;
-        boolean flag = false;
-        boolean flag1 = false;
-        IntList intlist = new IntArrayList();
+    public ItemStack assemble(final CraftingInput input) {
+        FireworkExplosion.Shape shape = FireworkExplosion.Shape.SMALL_BALL;
+        boolean hasTwinkle = false;
+        boolean hasTrail = false;
+        IntList colors = new IntArrayList();
 
-        for (int i = 0; i < p_344010_.size(); i++) {
-            ItemStack itemstack = p_344010_.getItem(i);
-            if (!itemstack.isEmpty()) {
-                FireworkExplosion.Shape fireworkexplosion$shape1 = SHAPE_BY_ITEM.get(itemstack.getItem());
-                if (fireworkexplosion$shape1 != null) {
-                    fireworkexplosion$shape = fireworkexplosion$shape1;
-                } else if (TWINKLE_INGREDIENT.test(itemstack)) {
-                    flag = true;
-                } else if (TRAIL_INGREDIENT.test(itemstack)) {
-                    flag1 = true;
-                } else if (itemstack.getItem() instanceof DyeItem dyeitem) {
-                    intlist.add(dyeitem.getDyeColor().getFireworkColor());
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                FireworkExplosion.Shape maybeShape = this.findShape(itemStack);
+                if (maybeShape != null) {
+                    shape = maybeShape;
+                } else if (this.twinkle.test(itemStack)) {
+                    hasTwinkle = true;
+                } else if (this.trail.test(itemStack)) {
+                    hasTrail = true;
+                } else if (this.dye.test(itemStack)) {
+                    DyeColor dye = itemStack.getOrDefault(DataComponents.DYE, DyeColor.WHITE);
+                    colors.add(dye.getFireworkColor());
                 }
             }
         }
 
-        ItemStack itemstack1 = new ItemStack(Items.FIREWORK_STAR);
-        itemstack1.set(DataComponents.FIREWORK_EXPLOSION, new FireworkExplosion(fireworkexplosion$shape, intlist, IntList.of(), flag1, flag));
-        return itemstack1;
+        ItemStack star = this.result.create();
+        star.set(DataComponents.FIREWORK_EXPLOSION, new FireworkExplosion(shape, colors, IntList.of(), hasTrail, hasTwinkle));
+        return star;
     }
 
     @Override
     public RecipeSerializer<FireworkStarRecipe> getSerializer() {
-        return RecipeSerializer.FIREWORK_STAR;
+        return SERIALIZER;
     }
 }

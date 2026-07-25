@@ -17,22 +17,22 @@ public class ServerHandshakePacketListenerImpl implements ServerHandshakePacketL
     private final MinecraftServer server;
     private final Connection connection;
 
-    public ServerHandshakePacketListenerImpl(MinecraftServer p_9969_, Connection p_9970_) {
-        this.server = p_9969_;
-        this.connection = p_9970_;
+    public ServerHandshakePacketListenerImpl(final MinecraftServer server, final Connection connection) {
+        this.server = server;
+        this.connection = connection;
     }
 
     @Override
-    public void handleIntention(ClientIntentionPacket p_9975_) {
-        switch (p_9975_.intention()) {
+    public void handleIntention(final ClientIntentionPacket packet) {
+        switch (packet.intention()) {
             case LOGIN:
-                this.beginLogin(p_9975_, false);
+                this.beginLogin(packet, false);
                 break;
             case STATUS:
-                ServerStatus serverstatus = this.server.getStatus();
+                ServerStatus status = this.server.getStatus();
                 this.connection.setupOutboundProtocol(StatusProtocols.CLIENTBOUND);
-                if (this.server.repliesToStatus() && serverstatus != null) {
-                    this.connection.setupInboundProtocol(StatusProtocols.SERVERBOUND, new ServerStatusPacketListenerImpl(serverstatus, this.connection));
+                if (this.server.repliesToStatus() && status != null) {
+                    this.connection.setupInboundProtocol(StatusProtocols.SERVERBOUND, new ServerStatusPacketListenerImpl(status, this.connection));
                 } else {
                     this.connection.disconnect(IGNORE_STATUS_REASON);
                 }
@@ -40,37 +40,37 @@ public class ServerHandshakePacketListenerImpl implements ServerHandshakePacketL
             case TRANSFER:
                 if (!this.server.acceptsTransfers()) {
                     this.connection.setupOutboundProtocol(LoginProtocols.CLIENTBOUND);
-                    Component component = Component.translatable("multiplayer.disconnect.transfers_disabled");
-                    this.connection.send(new ClientboundLoginDisconnectPacket(component));
-                    this.connection.disconnect(component);
+                    Component reason = Component.translatable("multiplayer.disconnect.transfers_disabled");
+                    this.connection.send(new ClientboundLoginDisconnectPacket(reason));
+                    this.connection.disconnect(reason);
                 } else {
-                    this.beginLogin(p_9975_, true);
+                    this.beginLogin(packet, true);
                 }
                 break;
             default:
-                throw new UnsupportedOperationException("Invalid intention " + p_9975_.intention());
+                throw new UnsupportedOperationException("Invalid intention " + packet.intention());
         }
     }
 
-    private void beginLogin(ClientIntentionPacket p_330592_, boolean p_332714_) {
+    private void beginLogin(final ClientIntentionPacket packet, final boolean transfer) {
         this.connection.setupOutboundProtocol(LoginProtocols.CLIENTBOUND);
-        if (p_330592_.protocolVersion() != SharedConstants.getCurrentVersion().protocolVersion()) {
-            Component component;
-            if (p_330592_.protocolVersion() < 754) {
-                component = Component.translatable("multiplayer.disconnect.outdated_client", SharedConstants.getCurrentVersion().name());
+        if (packet.protocolVersion() != SharedConstants.getCurrentVersion().protocolVersion()) {
+            Component reason;
+            if (packet.protocolVersion() < 754) {
+                reason = Component.translatable("multiplayer.disconnect.outdated_client", SharedConstants.getCurrentVersion().name());
             } else {
-                component = Component.translatable("multiplayer.disconnect.incompatible", SharedConstants.getCurrentVersion().name());
+                reason = Component.translatable("multiplayer.disconnect.incompatible", SharedConstants.getCurrentVersion().name());
             }
 
-            this.connection.send(new ClientboundLoginDisconnectPacket(component));
-            this.connection.disconnect(component);
+            this.connection.send(new ClientboundLoginDisconnectPacket(reason));
+            this.connection.disconnect(reason);
         } else {
-            this.connection.setupInboundProtocol(LoginProtocols.SERVERBOUND, new ServerLoginPacketListenerImpl(this.server, this.connection, p_332714_));
+            this.connection.setupInboundProtocol(LoginProtocols.SERVERBOUND, new ServerLoginPacketListenerImpl(this.server, this.connection, transfer));
         }
     }
 
     @Override
-    public void onDisconnect(DisconnectionDetails p_344131_) {
+    public void onDisconnect(final DisconnectionDetails details) {
     }
 
     @Override

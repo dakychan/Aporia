@@ -3,13 +3,11 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class OptionsMusicToastFix extends DataFix {
-    public OptionsMusicToastFix(Schema p_450671_, boolean p_460364_) {
-        super(p_450671_, p_460364_);
+    public OptionsMusicToastFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
@@ -17,12 +15,10 @@ public class OptionsMusicToastFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "OptionsMusicToastFix",
             this.getInputSchema().getType(References.OPTIONS),
-            p_456114_ -> p_456114_.update(
+            input -> input.update(
                 DSL.remainderFinder(),
-                p_458849_ -> p_458849_.renameAndFixField(
-                    "showNowPlayingToast",
-                    "musicToast",
-                    p_460891_ -> p_458849_.createString(p_460891_.asString("false").equals("false") ? "never" : "pause_and_toast")
+                tag -> tag.renameAndFixField(
+                    "showNowPlayingToast", "musicToast", old -> tag.createString(old.asString("false").equals("false") ? "never" : "pause_and_toast")
                 )
             )
         );

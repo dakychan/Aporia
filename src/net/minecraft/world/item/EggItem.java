@@ -16,34 +16,34 @@ import net.minecraft.world.level.Level;
 public class EggItem extends Item implements ProjectileItem {
     public static final float PROJECTILE_SHOOT_POWER = 1.5F;
 
-    public EggItem(Item.Properties p_41126_) {
-        super(p_41126_);
+    public EggItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult use(Level p_41128_, Player p_41129_, InteractionHand p_41130_) {
-        ItemStack itemstack = p_41129_.getItemInHand(p_41130_);
-        p_41128_.playSound(
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        level.playSound(
             null,
-            p_41129_.getX(),
-            p_41129_.getY(),
-            p_41129_.getZ(),
+            player.getX(),
+            player.getY(),
+            player.getZ(),
             SoundEvents.EGG_THROW,
             SoundSource.PLAYERS,
             0.5F,
-            0.4F / (p_41128_.getRandom().nextFloat() * 0.4F + 0.8F)
+            0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F)
         );
-        if (p_41128_ instanceof ServerLevel serverlevel) {
-            Projectile.spawnProjectileFromRotation(ThrownEgg::new, serverlevel, itemstack, p_41129_, 0.0F, 1.5F, 1.0F);
+        if (level instanceof ServerLevel serverLevel) {
+            Projectile.spawnProjectileFromRotation(ThrownEgg::new, serverLevel, itemStack, player, 0.0F, 1.5F, 1.0F);
         }
 
-        p_41129_.awardStat(Stats.ITEM_USED.get(this));
-        itemstack.consume(1, p_41129_);
+        player.awardStat(Stats.ITEM_USED.get(this));
+        itemStack.consume(1, player);
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public Projectile asProjectile(Level p_334937_, Position p_334000_, ItemStack p_330091_, Direction p_336145_) {
-        return new ThrownEgg(p_334937_, p_334000_.x(), p_334000_.y(), p_334000_.z(), p_330091_);
+    public Projectile asProjectile(final Level level, final Position position, final ItemStack itemStack, final Direction direction) {
+        return new ThrownEgg(level, position.x(), position.y(), position.z(), itemStack);
     }
 }

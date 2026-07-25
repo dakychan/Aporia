@@ -21,13 +21,13 @@ public class ClientboundBlockUpdatePacket implements Packet<ClientGamePacketList
     private final BlockPos pos;
     private final BlockState blockState;
 
-    public ClientboundBlockUpdatePacket(BlockPos p_131738_, BlockState p_131739_) {
-        this.pos = p_131738_;
-        this.blockState = p_131739_;
+    public ClientboundBlockUpdatePacket(final BlockPos pos, final BlockState state) {
+        this.pos = pos;
+        this.blockState = state;
     }
 
-    public ClientboundBlockUpdatePacket(BlockGetter p_131735_, BlockPos p_131736_) {
-        this(p_131736_, p_131735_.getBlockState(p_131736_));
+    public ClientboundBlockUpdatePacket(final BlockGetter level, final BlockPos pos) {
+        this(pos, level.getBlockState(pos));
     }
 
     @Override
@@ -35,8 +35,8 @@ public class ClientboundBlockUpdatePacket implements Packet<ClientGamePacketList
         return GamePacketTypes.CLIENTBOUND_BLOCK_UPDATE;
     }
 
-    public void handle(ClientGamePacketListener p_131745_) {
-        p_131745_.handleBlockUpdate(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleBlockUpdate(this);
     }
 
     public BlockState getBlockState() {

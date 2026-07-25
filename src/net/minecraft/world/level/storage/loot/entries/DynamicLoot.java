@@ -2,7 +2,6 @@ package net.minecraft.world.level.storage.loot.entries;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.resources.Identifier;
@@ -12,29 +11,29 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class DynamicLoot extends LootPoolSingletonContainer {
-    public static final MapCodec<DynamicLoot> CODEC = RecordCodecBuilder.mapCodec(
-        p_450069_ -> p_450069_.group(Identifier.CODEC.fieldOf("name").forGetter(p_450075_ -> p_450075_.name))
-            .and(singletonFields(p_450069_))
-            .apply(p_450069_, DynamicLoot::new)
+    public static final MapCodec<DynamicLoot> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(Identifier.CODEC.fieldOf("name").forGetter(e -> e.name)).and(singletonFields(i)).apply(i, DynamicLoot::new)
     );
     private final Identifier name;
 
-    private DynamicLoot(Identifier p_451015_, int p_79466_, int p_79467_, List<LootItemCondition> p_297929_, List<LootItemFunction> p_299695_) {
-        super(p_79466_, p_79467_, p_297929_, p_299695_);
-        this.name = p_451015_;
+    private DynamicLoot(
+        final Identifier name, final int weight, final int quality, final List<LootItemCondition> conditions, final List<LootItemFunction> functions
+    ) {
+        super(weight, quality, conditions, functions);
+        this.name = name;
     }
 
     @Override
-    public LootPoolEntryType getType() {
-        return LootPoolEntries.DYNAMIC;
+    public MapCodec<DynamicLoot> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public void createItemStack(Consumer<ItemStack> p_79481_, LootContext p_79482_) {
-        p_79482_.addDynamicDrops(this.name, p_79481_);
+    public void createItemStack(final Consumer<ItemStack> output, final LootContext context) {
+        context.addDynamicDrops(this.name, output);
     }
 
-    public static LootPoolSingletonContainer.Builder<?> dynamicEntry(Identifier p_452776_) {
-        return simpleBuilder((p_450071_, p_450072_, p_450073_, p_450074_) -> new DynamicLoot(p_452776_, p_450071_, p_450072_, p_450073_, p_450074_));
+    public static LootPoolSingletonContainer.Builder<?> dynamicEntry(final Identifier name) {
+        return simpleBuilder((weight, quality, conditions, functions) -> new DynamicLoot(name, weight, quality, conditions, functions));
     }
 }

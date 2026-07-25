@@ -18,19 +18,19 @@ public class ClientboundAnimatePacket implements Packet<ClientGamePacketListener
     private final int id;
     private final int action;
 
-    public ClientboundAnimatePacket(Entity p_131616_, int p_131617_) {
-        this.id = p_131616_.getId();
-        this.action = p_131617_;
+    public ClientboundAnimatePacket(final Entity entity, final int action) {
+        this.id = entity.getId();
+        this.action = action;
     }
 
-    private ClientboundAnimatePacket(FriendlyByteBuf p_178590_) {
-        this.id = p_178590_.readVarInt();
-        this.action = p_178590_.readUnsignedByte();
+    private ClientboundAnimatePacket(final FriendlyByteBuf input) {
+        this.id = input.readVarInt();
+        this.action = input.readUnsignedByte();
     }
 
-    private void write(FriendlyByteBuf p_131626_) {
-        p_131626_.writeVarInt(this.id);
-        p_131626_.writeByte(this.action);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.id);
+        output.writeByte(this.action);
     }
 
     @Override
@@ -38,8 +38,8 @@ public class ClientboundAnimatePacket implements Packet<ClientGamePacketListener
         return GamePacketTypes.CLIENTBOUND_ANIMATE;
     }
 
-    public void handle(ClientGamePacketListener p_131623_) {
-        p_131623_.handleAnimate(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleAnimate(this);
     }
 
     public int getId() {

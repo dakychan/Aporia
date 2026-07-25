@@ -1,7 +1,5 @@
 package net.minecraft.client.gui.screens;
 
-import java.net.URI;
-import java.nio.file.Path;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
@@ -11,10 +9,7 @@ import net.minecraft.network.DisconnectionDetails;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DisconnectedScreen extends Screen {
     private static final Component TO_SERVER_LIST = Component.translatable("gui.toMenu");
     private static final Component TO_TITLE = Component.translatable("gui.toTitle");
@@ -25,23 +20,23 @@ public class DisconnectedScreen extends Screen {
     private final Component buttonText;
     private final LinearLayout layout = LinearLayout.vertical();
 
-    public DisconnectedScreen(Screen p_95993_, Component p_95994_, Component p_95995_) {
-        this(p_95993_, p_95994_, new DisconnectionDetails(p_95995_));
+    public DisconnectedScreen(final Screen parent, final Component title, final Component reason) {
+        this(parent, title, new DisconnectionDetails(reason));
     }
 
-    public DisconnectedScreen(Screen p_279153_, Component p_279183_, Component p_279332_, Component p_279257_) {
-        this(p_279153_, p_279183_, new DisconnectionDetails(p_279332_), p_279257_);
+    public DisconnectedScreen(final Screen parent, final Component title, final Component reason, final Component buttonText) {
+        this(parent, title, new DisconnectionDetails(reason), buttonText);
     }
 
-    public DisconnectedScreen(Screen p_344110_, Component p_342861_, DisconnectionDetails p_343143_) {
-        this(p_344110_, p_342861_, p_343143_, TO_SERVER_LIST);
+    public DisconnectedScreen(final Screen parent, final Component title, final DisconnectionDetails details) {
+        this(parent, title, details, TO_SERVER_LIST);
     }
 
-    public DisconnectedScreen(Screen p_342965_, Component p_344528_, DisconnectionDetails p_343777_, Component p_345398_) {
-        super(p_344528_);
-        this.parent = p_342965_;
-        this.details = p_343777_;
-        this.buttonText = p_345398_;
+    public DisconnectedScreen(final Screen parent, final Component title, final DisconnectionDetails details, final Component buttonText) {
+        super(title);
+        this.parent = parent;
+        this.details = details;
+        this.buttonText = buttonText;
     }
 
     @Override
@@ -53,23 +48,23 @@ public class DisconnectedScreen extends Screen {
         this.details
             .bugReportLink()
             .ifPresent(
-                p_340800_ -> this.layout
-                    .addChild(Button.builder(REPORT_TO_SERVER_TITLE, ConfirmLinkScreen.confirmLink(this, p_340800_, false)).width(200).build())
+                bugReportLink -> this.layout
+                    .addChild(Button.builder(REPORT_TO_SERVER_TITLE, ConfirmLinkScreen.confirmLink(this, bugReportLink, false)).width(200).build())
             );
         this.details
             .report()
             .ifPresent(
-                p_340799_ -> this.layout
-                    .addChild(Button.builder(OPEN_REPORT_DIR_TITLE, p_448019_ -> Util.getPlatform().openPath(p_340799_.getParent())).width(200).build())
+                report -> this.layout
+                    .addChild(Button.builder(OPEN_REPORT_DIR_TITLE, button -> Util.getPlatform().openPath(report.getParent())).width(200).build())
             );
-        Button button;
+        Button backButton;
         if (this.minecraft.allowsMultiplayer()) {
-            button = Button.builder(this.buttonText, p_280799_ -> this.minecraft.setScreen(this.parent)).width(200).build();
+            backButton = Button.builder(this.buttonText, var1x -> this.minecraft.gui.setScreen(this.parent)).width(200).build();
         } else {
-            button = Button.builder(TO_TITLE, p_280800_ -> this.minecraft.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())).width(200).build();
+            backButton = Button.builder(TO_TITLE, var1x -> this.minecraft.gui.setScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())).width(200).build();
         }
 
-        this.layout.addChild(button);
+        this.layout.addChild(backButton);
         this.layout.arrangeElements();
         this.layout.visitWidgets(this::addRenderableWidget);
         this.repositionElements();

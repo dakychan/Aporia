@@ -9,24 +9,27 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V4059 extends NamespacedSchema {
-    public V4059(int p_365559_, Schema p_368040_) {
-        super(p_365559_, p_368040_);
+    public V4059(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
-    public static SequencedMap<String, Supplier<TypeTemplate>> components(Schema p_363212_) {
-        SequencedMap<String, Supplier<TypeTemplate>> sequencedmap = V3818_3.components(p_363212_);
-        sequencedmap.remove("minecraft:food");
-        sequencedmap.put("minecraft:use_remainder", () -> References.ITEM_STACK.in(p_363212_));
-        sequencedmap.put(
+    public static SequencedMap<String, Supplier<TypeTemplate>> components(final Schema schema) {
+        SequencedMap<String, Supplier<TypeTemplate>> components = V3818_3.components(schema);
+        components.remove("minecraft:food");
+        components.put("minecraft:use_remainder", () -> References.ITEM_STACK.in(schema));
+        components.put(
             "minecraft:equippable",
-            () -> DSL.optionalFields("allowed_entities", DSL.or(References.ENTITY_NAME.in(p_363212_), DSL.list(References.ENTITY_NAME.in(p_363212_))))
+            () -> DSL.optionalFields("allowed_entities", DSL.or(References.ENTITY_NAME.in(schema), DSL.list(References.ENTITY_NAME.in(schema))))
         );
-        return sequencedmap;
+        components.put("minecraft:sulfur_cube_content", () -> References.ITEM_STACK.in(schema));
+        return components;
     }
 
     @Override
-    public void registerTypes(Schema p_361152_, Map<String, Supplier<TypeTemplate>> p_368342_, Map<String, Supplier<TypeTemplate>> p_363758_) {
-        super.registerTypes(p_361152_, p_368342_, p_363758_);
-        p_361152_.registerType(true, References.DATA_COMPONENTS, () -> DSL.optionalFieldsLazy(components(p_361152_)));
+    public void registerTypes(
+        final Schema schema, final Map<String, Supplier<TypeTemplate>> entityTypes, final Map<String, Supplier<TypeTemplate>> blockEntityTypes
+    ) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        schema.registerType(true, References.DATA_COMPONENTS, () -> DSL.optionalFieldsLazy(components(schema)));
     }
 }

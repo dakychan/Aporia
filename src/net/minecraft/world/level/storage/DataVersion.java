@@ -9,7 +9,7 @@ public record DataVersion(int version, String series) {
         return !this.series.equals("main");
     }
 
-    public boolean isCompatible(DataVersion p_193004_) {
-        return SharedConstants.DEBUG_OPEN_INCOMPATIBLE_WORLDS ? true : this.series().equals(p_193004_.series());
+    public boolean isCompatible(final DataVersion other) {
+        return SharedConstants.DEBUG_OPEN_INCOMPATIBLE_WORLDS ? true : this.series().equals(other.series());
     }
 }

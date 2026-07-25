@@ -33,96 +33,95 @@ public class FenceBlock extends CrossCollisionBlock {
         return CODEC;
     }
 
-    public FenceBlock(BlockBehaviour.Properties p_53302_) {
-        super(4.0F, 16.0F, 4.0F, 16.0F, 24.0F, p_53302_);
+    public FenceBlock(final BlockBehaviour.Properties properties) {
+        super(4.0F, 16.0F, 4.0F, 16.0F, 24.0F, properties);
         this.registerDefaultState(
-            this.stateDefinition
-                .any()
-                .setValue(NORTH, false)
-                .setValue(EAST, false)
-                .setValue(SOUTH, false)
-                .setValue(WEST, false)
-                .setValue(WATERLOGGED, false)
+            this.stateDefinition.any().setValue(NORTH, false).setValue(EAST, false).setValue(SOUTH, false).setValue(WEST, false).setValue(WATERLOGGED, false)
         );
         this.occlusionShapes = this.makeShapes(4.0F, 16.0F, 2.0F, 6.0F, 15.0F);
     }
 
     @Override
-    protected VoxelShape getOcclusionShape(BlockState p_53338_) {
-        return this.occlusionShapes.apply(p_53338_);
+    protected VoxelShape getOcclusionShape(final BlockState state) {
+        return this.occlusionShapes.apply(state);
     }
 
     @Override
-    protected VoxelShape getVisualShape(BlockState p_53311_, BlockGetter p_53312_, BlockPos p_53313_, CollisionContext p_53314_) {
-        return this.getShape(p_53311_, p_53312_, p_53313_, p_53314_);
+    protected VoxelShape getVisualShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.getShape(state, level, pos, context);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_53306_, PathComputationType p_53309_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 
-    public boolean connectsTo(BlockState p_53330_, boolean p_53331_, Direction p_53332_) {
-        Block block = p_53330_.getBlock();
-        boolean flag = this.isSameFence(p_53330_);
-        boolean flag1 = block instanceof FenceGateBlock && FenceGateBlock.connectsToDirection(p_53330_, p_53332_);
-        return !isExceptionForConnection(p_53330_) && p_53331_ || flag || flag1;
+    public boolean connectsTo(final BlockState state, final boolean faceSolid, final Direction direction) {
+        Block block = state.getBlock();
+        boolean sameFence = this.isSameFence(state);
+        boolean gate = block instanceof FenceGateBlock && FenceGateBlock.connectsToDirection(state, direction);
+        return !isExceptionForConnection(state) && faceSolid || sameFence || gate;
     }
 
-    private boolean isSameFence(BlockState p_153255_) {
-        return p_153255_.is(BlockTags.FENCES) && p_153255_.is(BlockTags.WOODEN_FENCES) == this.defaultBlockState().is(BlockTags.WOODEN_FENCES);
-    }
-
-    @Override
-    protected InteractionResult useWithoutItem(BlockState p_328142_, Level p_333097_, BlockPos p_335860_, Player p_334259_, BlockHitResult p_333666_) {
-        return (InteractionResult)(!p_333097_.isClientSide() ? LeadItem.bindPlayerMobs(p_334259_, p_333097_, p_335860_) : InteractionResult.PASS);
+    private boolean isSameFence(final BlockState state) {
+        return state.is(BlockTags.FENCES) && state.is(BlockTags.WOODEN_FENCES) == this.defaultBlockState().is(BlockTags.WOODEN_FENCES);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_53304_) {
-        BlockGetter blockgetter = p_53304_.getLevel();
-        BlockPos blockpos = p_53304_.getClickedPos();
-        FluidState fluidstate = p_53304_.getLevel().getFluidState(p_53304_.getClickedPos());
-        BlockPos blockpos1 = blockpos.north();
-        BlockPos blockpos2 = blockpos.east();
-        BlockPos blockpos3 = blockpos.south();
-        BlockPos blockpos4 = blockpos.west();
-        BlockState blockstate = blockgetter.getBlockState(blockpos1);
-        BlockState blockstate1 = blockgetter.getBlockState(blockpos2);
-        BlockState blockstate2 = blockgetter.getBlockState(blockpos3);
-        BlockState blockstate3 = blockgetter.getBlockState(blockpos4);
-        return super.getStateForPlacement(p_53304_)
-            .setValue(NORTH, this.connectsTo(blockstate, blockstate.isFaceSturdy(blockgetter, blockpos1, Direction.SOUTH), Direction.SOUTH))
-            .setValue(EAST, this.connectsTo(blockstate1, blockstate1.isFaceSturdy(blockgetter, blockpos2, Direction.WEST), Direction.WEST))
-            .setValue(SOUTH, this.connectsTo(blockstate2, blockstate2.isFaceSturdy(blockgetter, blockpos3, Direction.NORTH), Direction.NORTH))
-            .setValue(WEST, this.connectsTo(blockstate3, blockstate3.isFaceSturdy(blockgetter, blockpos4, Direction.EAST), Direction.EAST))
-            .setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        return !level.isClientSide() ? LeadItem.bindPlayerMobs(player, level, pos) : InteractionResult.PASS;
+    }
+
+    @Override
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        BlockPos north = pos.north();
+        BlockPos east = pos.east();
+        BlockPos south = pos.south();
+        BlockPos west = pos.west();
+        BlockState northState = level.getBlockState(north);
+        BlockState eastState = level.getBlockState(east);
+        BlockState southState = level.getBlockState(south);
+        BlockState westState = level.getBlockState(west);
+        return super.getStateForPlacement(context)
+            .setValue(NORTH, this.connectsTo(northState, northState.isFaceSturdy(level, north, Direction.SOUTH), Direction.SOUTH))
+            .setValue(EAST, this.connectsTo(eastState, eastState.isFaceSturdy(level, east, Direction.WEST), Direction.WEST))
+            .setValue(SOUTH, this.connectsTo(southState, southState.isFaceSturdy(level, south, Direction.NORTH), Direction.NORTH))
+            .setValue(WEST, this.connectsTo(westState, westState.isFaceSturdy(level, west, Direction.EAST), Direction.EAST))
+            .setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_53323_,
-        LevelReader p_367370_,
-        ScheduledTickAccess p_364464_,
-        BlockPos p_53327_,
-        Direction p_53324_,
-        BlockPos p_53328_,
-        BlockState p_53325_,
-        RandomSource p_368641_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_53323_.getValue(WATERLOGGED)) {
-            p_364464_.scheduleTick(p_53327_, Fluids.WATER, Fluids.WATER.getTickDelay(p_367370_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return p_53324_.getAxis().isHorizontal()
-            ? p_53323_.setValue(
-                PROPERTY_BY_DIRECTION.get(p_53324_), this.connectsTo(p_53325_, p_53325_.isFaceSturdy(p_367370_, p_53328_, p_53324_.getOpposite()), p_53324_.getOpposite())
+        return directionToNeighbour.getAxis().isHorizontal()
+            ? state.setValue(
+                PROPERTY_BY_DIRECTION.get(directionToNeighbour),
+                this.connectsTo(
+                    neighbourState, neighbourState.isFaceSturdy(level, neighbourPos, directionToNeighbour.getOpposite()), directionToNeighbour.getOpposite()
+                )
             )
-            : super.updateShape(p_53323_, p_367370_, p_364464_, p_53327_, p_53324_, p_53328_, p_53325_, p_368641_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_53334_) {
-        p_53334_.add(NORTH, EAST, WEST, SOUTH, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(NORTH, EAST, WEST, SOUTH, WATERLOGGED);
     }
 }

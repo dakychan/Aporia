@@ -9,92 +9,89 @@ import net.minecraft.gizmos.GizmoStyle;
 import net.minecraft.gizmos.Gizmos;
 import net.minecraft.network.protocol.game.DebugEntityNameGenerator;
 import net.minecraft.util.ARGB;
-import net.minecraft.util.debug.DebugBrainDump;
 import net.minecraft.util.debug.DebugPoiInfo;
 import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
-import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class PoiDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
     private static final int MAX_RENDER_DIST_FOR_POI_INFO = 30;
     private static final float TEXT_SCALE = 0.32F;
     private static final int ORANGE = -23296;
     private final BrainDebugRenderer brainRenderer;
 
-    public PoiDebugRenderer(BrainDebugRenderer p_423648_) {
-        this.brainRenderer = p_423648_;
+    public PoiDebugRenderer(final BrainDebugRenderer brainRenderer) {
+        this.brainRenderer = brainRenderer;
     }
 
     @Override
-    public void emitGizmos(double p_452403_, double p_458022_, double p_456589_, DebugValueAccess p_455719_, Frustum p_454926_, float p_450596_) {
-        BlockPos blockpos = BlockPos.containing(p_452403_, p_458022_, p_456589_);
-        p_455719_.forEachBlock(DebugSubscriptions.POIS, (p_448297_, p_448298_) -> {
-            if (blockpos.closerThan(p_448297_, 30.0)) {
-                highlightPoi(p_448297_);
-                this.renderPoiInfo(p_448298_, p_455719_);
+    public void emitGizmos(
+        final double camX, final double camY, final double camZ, final DebugValueAccess debugValues, final Frustum frustum, final float partialTicks
+    ) {
+        BlockPos playerPos = BlockPos.containing(camX, camY, camZ);
+        debugValues.forEachBlock(DebugSubscriptions.POIS, (pos, poi) -> {
+            if (playerPos.closerThan(pos, 30.0)) {
+                highlightPoi(pos);
+                this.renderPoiInfo(poi, debugValues);
             }
         });
-        this.brainRenderer.getGhostPois(p_455719_).forEach((p_448293_, p_448294_) -> {
-            if (p_455719_.getBlockValue(DebugSubscriptions.POIS, p_448293_) == null) {
-                if (blockpos.closerThan(p_448293_, 30.0)) {
-                    this.renderGhostPoi(p_448293_, (List<String>)p_448294_);
+        this.brainRenderer.getGhostPois(debugValues).forEach((poiPos, value) -> {
+            if (debugValues.getBlockValue(DebugSubscriptions.POIS, poiPos) == null) {
+                if (playerPos.closerThan(poiPos, 30.0)) {
+                    this.renderGhostPoi(poiPos, (List<String>)value);
                 }
             }
         });
     }
 
-    private static void highlightPoi(BlockPos p_430422_) {
-        float f = 0.05F;
-        Gizmos.cuboid(p_430422_, 0.05F, GizmoStyle.fill(ARGB.colorFromFloat(0.3F, 0.2F, 0.2F, 1.0F)));
+    private static void highlightPoi(final BlockPos poiPos) {
+        float padding = 0.05F;
+        Gizmos.cuboid(poiPos, 0.05F, GizmoStyle.fill(ARGB.colorFromFloat(0.3F, 0.2F, 0.2F, 1.0F)));
     }
 
-    private void renderGhostPoi(BlockPos p_429608_, List<String> p_428316_) {
-        float f = 0.05F;
-        Gizmos.cuboid(p_429608_, 0.05F, GizmoStyle.fill(ARGB.colorFromFloat(0.3F, 0.2F, 0.2F, 1.0F)));
-        Gizmos.billboardTextOverBlock(p_428316_.toString(), p_429608_, 0, -256, 0.32F);
-        Gizmos.billboardTextOverBlock("Ghost POI", p_429608_, 1, -65536, 0.32F);
+    private void renderGhostPoi(final BlockPos poiPos, final List<String> names) {
+        float padding = 0.05F;
+        Gizmos.cuboid(poiPos, 0.05F, GizmoStyle.fill(ARGB.colorFromFloat(0.3F, 0.2F, 0.2F, 1.0F)));
+        Gizmos.billboardTextOverBlock(names.toString(), poiPos, 0, -256, 0.32F);
+        Gizmos.billboardTextOverBlock("Ghost POI", poiPos, 1, -65536, 0.32F);
     }
 
-    private void renderPoiInfo(DebugPoiInfo p_430302_, DebugValueAccess p_428830_) {
-        int i = 0;
+    private void renderPoiInfo(final DebugPoiInfo poi, final DebugValueAccess debugValues) {
+        int row = 0;
         if (SharedConstants.DEBUG_BRAIN) {
-            List<String> list = this.getTicketHolderNames(p_430302_, false, p_428830_);
-            if (list.size() < 4) {
-                renderTextOverPoi("Owners: " + list, p_430302_, i, -256);
+            List<String> ticketHolderNames = this.getTicketHolderNames(poi, false, debugValues);
+            if (ticketHolderNames.size() < 4) {
+                renderTextOverPoi("Owners: " + ticketHolderNames, poi, row, -256);
             } else {
-                renderTextOverPoi(list.size() + " ticket holders", p_430302_, i, -256);
+                renderTextOverPoi(ticketHolderNames.size() + " ticket holders", poi, row, -256);
             }
 
-            i++;
-            List<String> list1 = this.getTicketHolderNames(p_430302_, true, p_428830_);
-            if (list1.size() < 4) {
-                renderTextOverPoi("Candidates: " + list1, p_430302_, i, -23296);
+            row++;
+            List<String> potentialTicketHolderNames = this.getTicketHolderNames(poi, true, debugValues);
+            if (potentialTicketHolderNames.size() < 4) {
+                renderTextOverPoi("Candidates: " + potentialTicketHolderNames, poi, row, -23296);
             } else {
-                renderTextOverPoi(list1.size() + " potential owners", p_430302_, i, -23296);
+                renderTextOverPoi(potentialTicketHolderNames.size() + " potential owners", poi, row, -23296);
             }
 
-            i++;
+            row++;
         }
 
-        renderTextOverPoi("Free tickets: " + p_430302_.freeTicketCount(), p_430302_, i, -256);
-        renderTextOverPoi(p_430302_.poiType().getRegisteredName(), p_430302_, ++i, -1);
+        renderTextOverPoi("Free tickets: " + poi.freeTicketCount(), poi, row, -256);
+        renderTextOverPoi(poi.poiType().getRegisteredName(), poi, ++row, -1);
     }
 
-    private static void renderTextOverPoi(String p_427463_, DebugPoiInfo p_430300_, int p_426136_, int p_424914_) {
-        Gizmos.billboardTextOverBlock(p_427463_, p_430300_.pos(), p_426136_, p_424914_, 0.32F);
+    private static void renderTextOverPoi(final String text, final DebugPoiInfo poi, final int row, final int color) {
+        Gizmos.billboardTextOverBlock(text, poi.pos(), row, color, 0.32F);
     }
 
-    private List<String> getTicketHolderNames(DebugPoiInfo p_429201_, boolean p_426035_, DebugValueAccess p_429116_) {
-        List<String> list = new ArrayList<>();
-        p_429116_.forEachEntity(DebugSubscriptions.BRAINS, (p_425410_, p_425347_) -> {
-            boolean flag = p_426035_ ? p_425347_.hasPotentialPoi(p_429201_.pos()) : p_425347_.hasPoi(p_429201_.pos());
-            if (flag) {
-                list.add(DebugEntityNameGenerator.getEntityName(p_425410_.getUUID()));
+    private List<String> getTicketHolderNames(final DebugPoiInfo poi, final boolean potential, final DebugValueAccess debugValues) {
+        List<String> names = new ArrayList<>();
+        debugValues.forEachEntity(DebugSubscriptions.BRAINS, (entity, brainDump) -> {
+            boolean include = potential ? brainDump.hasPotentialPoi(poi.pos()) : brainDump.hasPoi(poi.pos());
+            if (include) {
+                names.add(DebugEntityNameGenerator.getEntityName(entity.getUUID()));
             }
         });
-        return list;
+        return names;
     }
 }

@@ -9,6 +9,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.CalibratedSculkSensorBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,51 +28,51 @@ public class CalibratedSculkSensorBlock extends SculkSensorBlock {
         return CODEC;
     }
 
-    public CalibratedSculkSensorBlock(BlockBehaviour.Properties p_277532_) {
-        super(p_277532_);
+    public CalibratedSculkSensorBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.defaultBlockState().setValue(FACING, Direction.NORTH));
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_277925_, BlockState p_277938_) {
-        return new CalibratedSculkSensorBlockEntity(p_277925_, p_277938_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new CalibratedSculkSensorBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_277645_, BlockState p_278033_, BlockEntityType<T> p_277641_) {
-        return !p_277645_.isClientSide()
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return !level.isClientSide()
             ? createTickerHelper(
-                p_277641_,
-                BlockEntityType.CALIBRATED_SCULK_SENSOR,
-                (p_449887_, p_449888_, p_449889_, p_449890_) -> VibrationSystem.Ticker.tick(p_449887_, p_449890_.getVibrationData(), p_449890_.getVibrationUser())
+                type,
+                BlockEntityTypes.CALIBRATED_SCULK_SENSOR,
+                (innerLevel, pos, state, entity) -> VibrationSystem.Ticker.tick(innerLevel, entity.getVibrationData(), entity.getVibrationUser())
             )
             : null;
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_277423_) {
-        return super.getStateForPlacement(p_277423_).setValue(FACING, p_277423_.getHorizontalDirection());
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return super.getStateForPlacement(context).setValue(FACING, context.getHorizontalDirection());
     }
 
     @Override
-    public int getSignal(BlockState p_277782_, BlockGetter p_277556_, BlockPos p_277903_, Direction p_278059_) {
-        return p_278059_ != p_277782_.getValue(FACING) ? super.getSignal(p_277782_, p_277556_, p_277903_, p_278059_) : 0;
+    public int getSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return direction != state.getValue(FACING) ? super.ownSignal(state, level, pos) : 0;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_277652_) {
-        super.createBlockStateDefinition(p_277652_);
-        p_277652_.add(FACING);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(FACING);
     }
 
     @Override
-    public BlockState rotate(BlockState p_277545_, Rotation p_277482_) {
-        return p_277545_.setValue(FACING, p_277482_.rotate(p_277545_.getValue(FACING)));
+    public BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState p_277615_, Mirror p_277916_) {
-        return p_277615_.rotate(p_277916_.getRotation(p_277615_.getValue(FACING)));
+    public BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override

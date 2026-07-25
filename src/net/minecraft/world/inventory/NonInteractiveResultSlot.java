@@ -6,56 +6,56 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 public class NonInteractiveResultSlot extends Slot {
-    public NonInteractiveResultSlot(Container p_311408_, int p_312001_, int p_311632_, int p_309399_) {
-        super(p_311408_, p_312001_, p_311632_, p_309399_);
+    public NonInteractiveResultSlot(final Container container, final int id, final int x, final int y) {
+        super(container, id, x, y);
     }
 
     @Override
-    public void onQuickCraft(ItemStack p_312884_, ItemStack p_313225_) {
+    public void onQuickCraft(final ItemStack picked, final ItemStack original) {
     }
 
     @Override
-    public boolean mayPickup(Player p_311019_) {
+    public boolean mayPickup(final Player player) {
         return false;
     }
 
     @Override
-    public Optional<ItemStack> tryRemove(int p_310666_, int p_311310_, Player p_311612_) {
+    public Optional<ItemStack> tryRemove(final int amount, final int maxAmount, final Player player) {
         return Optional.empty();
     }
 
     @Override
-    public ItemStack safeTake(int p_313087_, int p_310389_, Player p_309608_) {
+    public ItemStack safeTake(final int amount, final int maxAmount, final Player player) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public ItemStack safeInsert(ItemStack p_309950_) {
-        return p_309950_;
+    public ItemStack safeInsert(final ItemStack stack) {
+        return stack;
     }
 
     @Override
-    public ItemStack safeInsert(ItemStack p_311478_, int p_311938_) {
-        return this.safeInsert(p_311478_);
+    public ItemStack safeInsert(final ItemStack inputStack, final int inputAmount) {
+        return this.safeInsert(inputStack);
     }
 
     @Override
-    public boolean allowModification(Player p_309707_) {
+    public boolean allowModification(final Player player) {
         return false;
     }
 
     @Override
-    public boolean mayPlace(ItemStack p_310756_) {
+    public boolean mayPlace(final ItemStack itemStack) {
         return false;
     }
 
     @Override
-    public ItemStack remove(int p_310438_) {
+    public ItemStack remove(final int amount) {
         return ItemStack.EMPTY;
     }
 
     @Override
-    public void onTake(Player p_312646_, ItemStack p_313015_) {
+    public void onTake(final Player player, final ItemStack carried) {
     }
 
     @Override

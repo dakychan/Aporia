@@ -6,20 +6,20 @@ import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.item.alchemy.Potions;
 
 public class TippedArrowItem extends ArrowItem {
-    public TippedArrowItem(Item.Properties p_43354_) {
-        super(p_43354_);
+    public TippedArrowItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
     public ItemStack getDefaultInstance() {
-        ItemStack itemstack = super.getDefaultInstance();
-        itemstack.set(DataComponents.POTION_CONTENTS, new PotionContents(Potions.POISON));
-        return itemstack;
+        ItemStack itemStack = super.getDefaultInstance();
+        itemStack.set(DataComponents.POTION_CONTENTS, new PotionContents(Potions.POISON));
+        return itemStack;
     }
 
     @Override
-    public Component getName(ItemStack p_367491_) {
-        PotionContents potioncontents = p_367491_.get(DataComponents.POTION_CONTENTS);
-        return potioncontents != null ? potioncontents.getName(this.descriptionId + ".effect.") : super.getName(p_367491_);
+    public Component getName(final ItemStack itemStack) {
+        PotionContents potion = itemStack.get(DataComponents.POTION_CONTENTS);
+        return potion != null ? potion.getName(this.descriptionId + ".effect.") : super.getName(itemStack);
     }
 }

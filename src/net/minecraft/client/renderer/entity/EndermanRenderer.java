@@ -2,38 +2,41 @@ package net.minecraft.client.renderer.entity;
 
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.monster.enderman.EndermanModel;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.layers.CarriedBlockLayer;
 import net.minecraft.client.renderer.entity.layers.EnderEyesLayer;
 import net.minecraft.client.renderer.entity.state.EndermanRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class EndermanRenderer extends MobRenderer<EnderMan, EndermanRenderState, EndermanModel<EndermanRenderState>> {
+    public static final BlockDisplayContext BLOCK_DISPLAY_CONTEXT = BlockDisplayContext.create();
     private static final Identifier ENDERMAN_LOCATION = Identifier.withDefaultNamespace("textures/entity/enderman/enderman.png");
     private final RandomSource random = RandomSource.create();
+    private final BlockModelResolver blockModelResolver;
 
-    public EndermanRenderer(EntityRendererProvider.Context p_173992_) {
-        super(p_173992_, new EndermanModel<>(p_173992_.bakeLayer(ModelLayers.ENDERMAN)), 0.5F);
+    public EndermanRenderer(final EntityRendererProvider.Context context) {
+        super(context, new EndermanModel<>(context.bakeLayer(ModelLayers.ENDERMAN)), 0.5F);
+        this.blockModelResolver = context.getBlockModelResolver();
         this.addLayer(new EnderEyesLayer(this));
         this.addLayer(new CarriedBlockLayer(this));
     }
 
-    public Vec3 getRenderOffset(EndermanRenderState p_361852_) {
-        Vec3 vec3 = super.getRenderOffset(p_361852_);
-        if (p_361852_.isCreepy) {
-            double d0 = 0.02 * p_361852_.scale;
-            return vec3.add(this.random.nextGaussian() * d0, 0.0, this.random.nextGaussian() * d0);
+    public Vec3 getRenderOffset(final EndermanRenderState state) {
+        Vec3 offset = super.getRenderOffset(state);
+        if (state.isCreepy) {
+            double d = 0.02 * state.scale;
+            return offset.add(this.random.nextGaussian() * d, 0.0, this.random.nextGaussian() * d);
         } else {
-            return vec3;
+            return offset;
         }
     }
 
-    public Identifier getTextureLocation(EndermanRenderState p_452287_) {
+    public Identifier getTextureLocation(final EndermanRenderState state) {
         return ENDERMAN_LOCATION;
     }
 
@@ -41,10 +44,15 @@ public class EndermanRenderer extends MobRenderer<EnderMan, EndermanRenderState,
         return new EndermanRenderState();
     }
 
-    public void extractRenderState(EnderMan p_364627_, EndermanRenderState p_364804_, float p_362083_) {
-        super.extractRenderState(p_364627_, p_364804_, p_362083_);
-        HumanoidMobRenderer.extractHumanoidRenderState(p_364627_, p_364804_, p_362083_, this.itemModelResolver);
-        p_364804_.isCreepy = p_364627_.isCreepy();
-        p_364804_.carriedBlock = p_364627_.getCarriedBlock();
+    public void extractRenderState(final EnderMan entity, final EndermanRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, partialTicks, this.itemModelResolver);
+        state.isCreepy = entity.isCreepy();
+        BlockState carriedBlock = entity.getCarriedBlock();
+        if (carriedBlock != null) {
+            this.blockModelResolver.update(state.carriedBlock, carriedBlock, BLOCK_DISPLAY_CONTEXT);
+        } else {
+            state.carriedBlock.clear();
+        }
     }
 }

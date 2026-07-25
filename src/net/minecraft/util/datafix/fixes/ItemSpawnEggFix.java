@@ -17,118 +17,118 @@ import net.minecraft.util.datafix.schemas.NamespacedSchema;
 import org.jspecify.annotations.Nullable;
 
 public class ItemSpawnEggFix extends DataFix {
-    private static final @Nullable String[] ID_TO_ENTITY = DataFixUtils.make(new String[256], p_326596_ -> {
-        p_326596_[1] = "Item";
-        p_326596_[2] = "XPOrb";
-        p_326596_[7] = "ThrownEgg";
-        p_326596_[8] = "LeashKnot";
-        p_326596_[9] = "Painting";
-        p_326596_[10] = "Arrow";
-        p_326596_[11] = "Snowball";
-        p_326596_[12] = "Fireball";
-        p_326596_[13] = "SmallFireball";
-        p_326596_[14] = "ThrownEnderpearl";
-        p_326596_[15] = "EyeOfEnderSignal";
-        p_326596_[16] = "ThrownPotion";
-        p_326596_[17] = "ThrownExpBottle";
-        p_326596_[18] = "ItemFrame";
-        p_326596_[19] = "WitherSkull";
-        p_326596_[20] = "PrimedTnt";
-        p_326596_[21] = "FallingSand";
-        p_326596_[22] = "FireworksRocketEntity";
-        p_326596_[23] = "TippedArrow";
-        p_326596_[24] = "SpectralArrow";
-        p_326596_[25] = "ShulkerBullet";
-        p_326596_[26] = "DragonFireball";
-        p_326596_[30] = "ArmorStand";
-        p_326596_[41] = "Boat";
-        p_326596_[42] = "MinecartRideable";
-        p_326596_[43] = "MinecartChest";
-        p_326596_[44] = "MinecartFurnace";
-        p_326596_[45] = "MinecartTNT";
-        p_326596_[46] = "MinecartHopper";
-        p_326596_[47] = "MinecartSpawner";
-        p_326596_[40] = "MinecartCommandBlock";
-        p_326596_[50] = "Creeper";
-        p_326596_[51] = "Skeleton";
-        p_326596_[52] = "Spider";
-        p_326596_[53] = "Giant";
-        p_326596_[54] = "Zombie";
-        p_326596_[55] = "Slime";
-        p_326596_[56] = "Ghast";
-        p_326596_[57] = "PigZombie";
-        p_326596_[58] = "Enderman";
-        p_326596_[59] = "CaveSpider";
-        p_326596_[60] = "Silverfish";
-        p_326596_[61] = "Blaze";
-        p_326596_[62] = "LavaSlime";
-        p_326596_[63] = "EnderDragon";
-        p_326596_[64] = "WitherBoss";
-        p_326596_[65] = "Bat";
-        p_326596_[66] = "Witch";
-        p_326596_[67] = "Endermite";
-        p_326596_[68] = "Guardian";
-        p_326596_[69] = "Shulker";
-        p_326596_[90] = "Pig";
-        p_326596_[91] = "Sheep";
-        p_326596_[92] = "Cow";
-        p_326596_[93] = "Chicken";
-        p_326596_[94] = "Squid";
-        p_326596_[95] = "Wolf";
-        p_326596_[96] = "MushroomCow";
-        p_326596_[97] = "SnowMan";
-        p_326596_[98] = "Ozelot";
-        p_326596_[99] = "VillagerGolem";
-        p_326596_[100] = "EntityHorse";
-        p_326596_[101] = "Rabbit";
-        p_326596_[120] = "Villager";
-        p_326596_[200] = "EnderCrystal";
+    private static final @Nullable String[] ID_TO_ENTITY = DataFixUtils.make(new String[256], map -> {
+        map[1] = "Item";
+        map[2] = "XPOrb";
+        map[7] = "ThrownEgg";
+        map[8] = "LeashKnot";
+        map[9] = "Painting";
+        map[10] = "Arrow";
+        map[11] = "Snowball";
+        map[12] = "Fireball";
+        map[13] = "SmallFireball";
+        map[14] = "ThrownEnderpearl";
+        map[15] = "EyeOfEnderSignal";
+        map[16] = "ThrownPotion";
+        map[17] = "ThrownExpBottle";
+        map[18] = "ItemFrame";
+        map[19] = "WitherSkull";
+        map[20] = "PrimedTnt";
+        map[21] = "FallingSand";
+        map[22] = "FireworksRocketEntity";
+        map[23] = "TippedArrow";
+        map[24] = "SpectralArrow";
+        map[25] = "ShulkerBullet";
+        map[26] = "DragonFireball";
+        map[30] = "ArmorStand";
+        map[41] = "Boat";
+        map[42] = "MinecartRideable";
+        map[43] = "MinecartChest";
+        map[44] = "MinecartFurnace";
+        map[45] = "MinecartTNT";
+        map[46] = "MinecartHopper";
+        map[47] = "MinecartSpawner";
+        map[40] = "MinecartCommandBlock";
+        map[50] = "Creeper";
+        map[51] = "Skeleton";
+        map[52] = "Spider";
+        map[53] = "Giant";
+        map[54] = "Zombie";
+        map[55] = "Slime";
+        map[56] = "Ghast";
+        map[57] = "PigZombie";
+        map[58] = "Enderman";
+        map[59] = "CaveSpider";
+        map[60] = "Silverfish";
+        map[61] = "Blaze";
+        map[62] = "LavaSlime";
+        map[63] = "EnderDragon";
+        map[64] = "WitherBoss";
+        map[65] = "Bat";
+        map[66] = "Witch";
+        map[67] = "Endermite";
+        map[68] = "Guardian";
+        map[69] = "Shulker";
+        map[90] = "Pig";
+        map[91] = "Sheep";
+        map[92] = "Cow";
+        map[93] = "Chicken";
+        map[94] = "Squid";
+        map[95] = "Wolf";
+        map[96] = "MushroomCow";
+        map[97] = "SnowMan";
+        map[98] = "Ozelot";
+        map[99] = "VillagerGolem";
+        map[100] = "EntityHorse";
+        map[101] = "Rabbit";
+        map[120] = "Villager";
+        map[200] = "EnderCrystal";
     });
 
-    public ItemSpawnEggFix(Schema p_16034_, boolean p_16035_) {
-        super(p_16034_, p_16035_);
+    public ItemSpawnEggFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Schema schema = this.getInputSchema();
-        Type<?> type = schema.getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<String> opticfinder1 = DSL.fieldFinder("id", DSL.string());
-        OpticFinder<?> opticfinder2 = type.findField("tag");
-        OpticFinder<?> opticfinder3 = opticfinder2.type().findField("EntityTag");
-        OpticFinder<?> opticfinder4 = DSL.typeFinder(schema.getTypeRaw(References.ENTITY));
+        Schema inputSchema = this.getInputSchema();
+        Type<?> itemStackType = inputSchema.getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idFinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<String> entityIdFinder = DSL.fieldFinder("id", DSL.string());
+        OpticFinder<?> tagFinder = itemStackType.findField("tag");
+        OpticFinder<?> entityTagFinder = tagFinder.type().findField("EntityTag");
+        OpticFinder<?> entityFinder = DSL.typeFinder(inputSchema.getTypeRaw(References.ENTITY));
         return this.fixTypeEverywhereTyped(
             "ItemSpawnEggFix",
-            type,
-            p_390286_ -> {
-                Optional<Pair<String, String>> optional = p_390286_.getOptional(opticfinder);
-                if (optional.isPresent() && Objects.equals(optional.get().getSecond(), "minecraft:spawn_egg")) {
-                    Dynamic<?> dynamic = p_390286_.get(DSL.remainderFinder());
-                    short short1 = dynamic.get("Damage").asShort((short)0);
-                    Optional<? extends Typed<?>> optional1 = p_390286_.getOptionalTyped(opticfinder2);
-                    Optional<? extends Typed<?>> optional2 = optional1.flatMap(p_145417_ -> p_145417_.getOptionalTyped(opticfinder3));
-                    Optional<? extends Typed<?>> optional3 = optional2.flatMap(p_145414_ -> p_145414_.getOptionalTyped(opticfinder4));
-                    Optional<String> optional4 = optional3.flatMap(p_145406_ -> p_145406_.getOptional(opticfinder1));
-                    Typed<?> typed = p_390286_;
-                    String s = ID_TO_ENTITY[short1 & 255];
-                    if (s != null && (optional4.isEmpty() || !Objects.equals(optional4.get(), s))) {
-                        Typed<?> typed1 = p_390286_.getOrCreateTyped(opticfinder2);
-                        Dynamic<?> dynamic1 = DataFixUtils.orElse(
-                            typed1.getOptionalTyped(opticfinder3).map(p_390287_ -> p_390287_.write().getOrThrow()), dynamic.emptyMap()
+            itemStackType,
+            input -> {
+                Optional<Pair<String, String>> id = input.getOptional(idFinder);
+                if (id.isPresent() && Objects.equals(id.get().getSecond(), "minecraft:spawn_egg")) {
+                    Dynamic<?> rest = input.get(DSL.remainderFinder());
+                    short damage = rest.get("Damage").asShort((short)0);
+                    Optional<? extends Typed<?>> tagOptional = input.getOptionalTyped(tagFinder);
+                    Optional<? extends Typed<?>> entityTreeOptional = tagOptional.flatMap(value -> value.getOptionalTyped(entityTagFinder));
+                    Optional<? extends Typed<?>> entityOptional = entityTreeOptional.flatMap(value -> value.getOptionalTyped(entityFinder));
+                    Optional<String> oldId = entityOptional.flatMap(value -> value.getOptional(entityIdFinder));
+                    Typed<?> output = input;
+                    String entityName = ID_TO_ENTITY[damage & 0xFF];
+                    if (entityName != null && (oldId.isEmpty() || !Objects.equals(oldId.get(), entityName))) {
+                        Typed<?> tag = input.getOrCreateTyped(tagFinder);
+                        Dynamic<?> entityTag = DataFixUtils.orElse(
+                            tag.getOptionalTyped(entityTagFinder).map(entityTree -> entityTree.write().getOrThrow()), rest.emptyMap()
                         );
-                        dynamic1 = dynamic1.set("id", dynamic1.createString(s));
-                        typed = p_390286_.set(opticfinder2, ExtraDataFixUtils.readAndSet(typed1, opticfinder3, dynamic1));
+                        entityTag = entityTag.set("id", entityTag.createString(entityName));
+                        output = output.set(tagFinder, ExtraDataFixUtils.readAndSet(tag, entityTagFinder, entityTag));
                     }
 
-                    if (short1 != 0) {
-                        dynamic = dynamic.set("Damage", dynamic.createShort((short)0));
-                        typed = typed.set(DSL.remainderFinder(), dynamic);
+                    if (damage != 0) {
+                        rest = rest.set("Damage", rest.createShort((short)0));
+                        output = output.set(DSL.remainderFinder(), rest);
                     }
 
-                    return typed;
+                    return output;
                 } else {
-                    return p_390286_;
+                    return input;
                 }
             }
         );

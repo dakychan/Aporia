@@ -34,45 +34,45 @@ public class WeatherAttributes {
         .build();
     private static final Set<EnvironmentAttribute<?>> WEATHER_ATTRIBUTES = Sets.union(RAIN.keySet(), THUNDER.keySet());
 
-    public static void addBuiltinLayers(EnvironmentAttributeSystem.Builder p_461038_, WeatherAttributes.WeatherAccess p_451220_) {
-        for (EnvironmentAttribute<?> environmentattribute : WEATHER_ATTRIBUTES) {
-            addLayer(p_461038_, p_451220_, environmentattribute);
+    public static void addBuiltinLayers(final EnvironmentAttributeSystem.Builder system, final WeatherAttributes.WeatherAccess weatherAccess) {
+        for (EnvironmentAttribute<?> attribute : WEATHER_ATTRIBUTES) {
+            addLayer(system, weatherAccess, attribute);
         }
     }
 
     private static <Value> void addLayer(
-        EnvironmentAttributeSystem.Builder p_460738_, WeatherAttributes.WeatherAccess p_459626_, EnvironmentAttribute<Value> p_451581_
+        final EnvironmentAttributeSystem.Builder system, final WeatherAttributes.WeatherAccess weatherAccess, final EnvironmentAttribute<Value> attribute
     ) {
-        EnvironmentAttributeMap.Entry<Value, ?> entry = RAIN.get(p_451581_);
-        EnvironmentAttributeMap.Entry<Value, ?> entry1 = THUNDER.get(p_451581_);
-        p_460738_.addTimeBasedLayer(p_451581_, (p_458061_, p_456008_) -> {
-            float f = p_459626_.thunderLevel();
-            float f1 = p_459626_.rainLevel() - f;
-            if (entry != null && f1 > 0.0F) {
-                Value value = entry.applyModifier(p_458061_);
-                p_458061_ = p_451581_.type().stateChangeLerp().apply(f1, p_458061_, value);
+        EnvironmentAttributeMap.Entry<Value, ?> rainEntry = RAIN.get(attribute);
+        EnvironmentAttributeMap.Entry<Value, ?> thunderEntry = THUNDER.get(attribute);
+        system.addTimeBasedLayer(attribute, (result, cacheTickId) -> {
+            float thunderLevel = weatherAccess.thunderLevel();
+            float rainLevel = weatherAccess.rainLevel() - thunderLevel;
+            if (rainEntry != null && rainLevel > 0.0F) {
+                Value rainValue = rainEntry.applyModifier(result);
+                result = attribute.type().stateChangeLerp().apply(rainLevel, result, rainValue);
             }
 
-            if (entry1 != null && f > 0.0F) {
-                Value value1 = entry1.applyModifier(p_458061_);
-                p_458061_ = p_451581_.type().stateChangeLerp().apply(f, p_458061_, value1);
+            if (thunderEntry != null && thunderLevel > 0.0F) {
+                Value thunderValue = thunderEntry.applyModifier(result);
+                result = attribute.type().stateChangeLerp().apply(thunderLevel, result, thunderValue);
             }
 
-            return p_458061_;
+            return result;
         });
     }
 
     public interface WeatherAccess {
-        static WeatherAttributes.WeatherAccess from(final Level p_452318_) {
+        static WeatherAttributes.WeatherAccess from(final Level level) {
             return new WeatherAttributes.WeatherAccess() {
                 @Override
                 public float rainLevel() {
-                    return p_452318_.getRainLevel(1.0F);
+                    return level.getRainLevel(1.0F);
                 }
 
                 @Override
                 public float thunderLevel() {
-                    return p_452318_.getThunderLevel(1.0F);
+                    return level.getThunderLevel(1.0F);
                 }
             };
         }

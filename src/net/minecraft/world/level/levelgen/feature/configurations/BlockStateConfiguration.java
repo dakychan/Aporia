@@ -4,13 +4,10 @@ import com.mojang.serialization.Codec;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class BlockStateConfiguration implements FeatureConfiguration {
-    public static final Codec<BlockStateConfiguration> CODEC = BlockState.CODEC
-        .fieldOf("state")
-        .xmap(BlockStateConfiguration::new, p_67552_ -> p_67552_.state)
-        .codec();
+    public static final Codec<BlockStateConfiguration> CODEC = BlockState.CODEC.fieldOf("state").xmap(BlockStateConfiguration::new, c -> c.state).codec();
     public final BlockState state;
 
-    public BlockStateConfiguration(BlockState p_67550_) {
-        this.state = p_67550_;
+    public BlockStateConfiguration(final BlockState state) {
+        this.state = state;
     }
 }

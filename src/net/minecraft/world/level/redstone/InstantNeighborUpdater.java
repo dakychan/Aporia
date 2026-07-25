@@ -10,23 +10,32 @@ import org.jspecify.annotations.Nullable;
 public class InstantNeighborUpdater implements NeighborUpdater {
     private final Level level;
 
-    public InstantNeighborUpdater(Level p_230743_) {
-        this.level = p_230743_;
+    public InstantNeighborUpdater(final Level level) {
+        this.level = level;
     }
 
     @Override
-    public void shapeUpdate(Direction p_230755_, BlockState p_230756_, BlockPos p_230757_, BlockPos p_230758_, @Block.UpdateFlags int p_230759_, int p_230760_) {
-        NeighborUpdater.executeShapeUpdate(this.level, p_230755_, p_230757_, p_230758_, p_230756_, p_230759_, p_230760_ - 1);
+    public void shapeUpdate(
+        final Direction direction,
+        final BlockState neighborState,
+        final BlockPos pos,
+        final BlockPos neighborPos,
+        final @Block.UpdateFlags int updateFlags,
+        final int updateLimit
+    ) {
+        NeighborUpdater.executeShapeUpdate(this.level, direction, pos, neighborPos, neighborState, updateFlags, updateLimit - 1);
     }
 
     @Override
-    public void neighborChanged(BlockPos p_230751_, Block p_230752_, @Nullable Orientation p_367804_) {
-        BlockState blockstate = this.level.getBlockState(p_230751_);
-        this.neighborChanged(blockstate, p_230751_, p_230752_, p_367804_, false);
+    public void neighborChanged(final BlockPos pos, final Block changedBlock, final @Nullable Orientation orientation) {
+        BlockState state = this.level.getBlockState(pos);
+        this.neighborChanged(state, pos, changedBlock, orientation, false);
     }
 
     @Override
-    public void neighborChanged(BlockState p_230745_, BlockPos p_230746_, Block p_230747_, @Nullable Orientation p_369588_, boolean p_230749_) {
-        NeighborUpdater.executeUpdate(this.level, p_230745_, p_230746_, p_230747_, p_369588_, p_230749_);
+    public void neighborChanged(
+        final BlockState state, final BlockPos pos, final Block changedBlock, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        NeighborUpdater.executeUpdate(this.level, state, pos, changedBlock, orientation, movedByPiston);
     }
 }

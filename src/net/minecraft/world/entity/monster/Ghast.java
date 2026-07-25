@@ -46,10 +46,10 @@ public class Ghast extends Mob implements Enemy {
     private static final byte DEFAULT_EXPLOSION_POWER = 1;
     private int explosionPower = 1;
 
-    public Ghast(EntityType<? extends Ghast> p_32725_, Level p_32726_) {
-        super(p_32725_, p_32726_);
+    public Ghast(final EntityType<? extends Ghast> type, final Level level) {
+        super(type, level);
         this.xpReward = 5;
-        this.moveControl = new Ghast.GhastMoveControl(this, false, () -> false);
+        this.moveControl = new Ghast.GhastMoveControl<>(this, false, () -> false);
     }
 
     @Override
@@ -58,37 +58,33 @@ public class Ghast extends Mob implements Enemy {
         this.goalSelector.addGoal(7, new Ghast.GhastLookGoal(this));
         this.goalSelector.addGoal(7, new Ghast.GhastShootFireballGoal(this));
         this.targetSelector
-            .addGoal(
-                1,
-                new NearestAttackableTargetGoal<>(
-                    this, Player.class, 10, true, false, (p_449681_, p_449682_) -> Math.abs(p_449681_.getY() - this.getY()) <= 4.0
-                )
-            );
+            .addGoal(1, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, (target, level) -> Math.abs(target.getY() - this.getY()) <= 4.0));
     }
 
     public boolean isCharging() {
         return this.entityData.get(DATA_IS_CHARGING);
     }
 
-    public void setCharging(boolean p_32759_) {
-        this.entityData.set(DATA_IS_CHARGING, p_32759_);
+    public void setCharging(final boolean onOff) {
+        this.entityData.set(DATA_IS_CHARGING, onOff);
     }
 
     public int getExplosionPower() {
         return this.explosionPower;
     }
 
-    private static boolean isReflectedFireball(DamageSource p_238408_) {
-        return p_238408_.getDirectEntity() instanceof LargeFireball && p_238408_.getEntity() instanceof Player;
+    private static boolean isReflectedFireball(final DamageSource source) {
+        return source.getDirectEntity() instanceof LargeFireball && source.getEntity() instanceof Player;
     }
 
     @Override
-    public boolean isInvulnerableTo(ServerLevel p_363213_, DamageSource p_238289_) {
-        return this.isInvulnerable() && !p_238289_.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || !isReflectedFireball(p_238289_) && super.isInvulnerableTo(p_363213_, p_238289_);
+    public boolean isInvulnerableTo(final ServerLevel level, final DamageSource source) {
+        return this.isInvulnerable() && !source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)
+            || !isReflectedFireball(source) && super.isInvulnerableTo(level, source);
     }
 
     @Override
-    protected void checkFallDamage(double p_410052_, boolean p_410300_, BlockState p_407336_, BlockPos p_409059_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
     }
 
     @Override
@@ -97,24 +93,24 @@ public class Ghast extends Mob implements Enemy {
     }
 
     @Override
-    public void travel(Vec3 p_407013_) {
-        this.travelFlying(p_407013_, 0.02F);
+    public void travel(final Vec3 input) {
+        this.travelFlying(input, 0.02F);
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_365264_, DamageSource p_366880_, float p_369426_) {
-        if (isReflectedFireball(p_366880_)) {
-            super.hurtServer(p_365264_, p_366880_, 1000.0F);
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        if (isReflectedFireball(source)) {
+            super.hurtServer(level, source, 1000.0F);
             return true;
         } else {
-            return this.isInvulnerableTo(p_365264_, p_366880_) ? false : super.hurtServer(p_365264_, p_366880_, p_369426_);
+            return this.isInvulnerableTo(level, source) ? false : super.hurtServer(level, source, damage);
         }
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_334321_) {
-        super.defineSynchedData(p_334321_);
-        p_334321_.define(DATA_IS_CHARGING, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_IS_CHARGING, false);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -136,7 +132,7 @@ public class Ghast extends Mob implements Enemy {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_32750_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.GHAST_HURT;
     }
 
@@ -151,9 +147,9 @@ public class Ghast extends Mob implements Enemy {
     }
 
     public static boolean checkGhastSpawnRules(
-        EntityType<Ghast> p_218985_, LevelAccessor p_218986_, EntitySpawnReason p_366739_, BlockPos p_218988_, RandomSource p_218989_
+        final EntityType<Ghast> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_218986_.getDifficulty() != Difficulty.PEACEFUL && p_218989_.nextInt(20) == 0 && checkMobSpawnRules(p_218985_, p_218986_, p_366739_, p_218988_, p_218989_);
+        return level.getDifficulty() != Difficulty.PEACEFUL && random.nextInt(20) == 0 && checkMobSpawnRules(type, level, spawnReason, pos, random);
     }
 
     @Override
@@ -162,15 +158,15 @@ public class Ghast extends Mob implements Enemy {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_407589_) {
-        super.addAdditionalSaveData(p_407589_);
-        p_407589_.putByte("ExplosionPower", (byte)this.explosionPower);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putByte("ExplosionPower", (byte)this.explosionPower);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_409268_) {
-        super.readAdditionalSaveData(p_409268_);
-        this.explosionPower = p_409268_.getByteOr("ExplosionPower", (byte)1);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.explosionPower = input.getByteOr("ExplosionPower", (byte)1);
     }
 
     @Override
@@ -188,19 +184,19 @@ public class Ghast extends Mob implements Enemy {
         return 16.0;
     }
 
-    public static void faceMovementDirection(Mob p_407227_) {
-        if (p_407227_.getTarget() == null) {
-            Vec3 vec3 = p_407227_.getDeltaMovement();
-            p_407227_.setYRot(-((float)Mth.atan2(vec3.x, vec3.z)) * (180.0F / (float)Math.PI));
-            p_407227_.yBodyRot = p_407227_.getYRot();
+    public static void faceMovementDirection(final Mob ghast) {
+        if (ghast.getTarget() == null) {
+            Vec3 movement = ghast.getDeltaMovement();
+            ghast.setYRot(-((float)Mth.atan2(movement.x, movement.z)) * (180.0F / (float)Math.PI));
+            ghast.yBodyRot = ghast.getYRot();
         } else {
-            LivingEntity livingentity = p_407227_.getTarget();
-            double d0 = 64.0;
-            if (livingentity.distanceToSqr(p_407227_) < 4096.0) {
-                double d1 = livingentity.getX() - p_407227_.getX();
-                double d2 = livingentity.getZ() - p_407227_.getZ();
-                p_407227_.setYRot(-((float)Mth.atan2(d1, d2)) * (180.0F / (float)Math.PI));
-                p_407227_.yBodyRot = p_407227_.getYRot();
+            LivingEntity target = ghast.getTarget();
+            double maxDist = 64.0;
+            if (target.distanceToSqr(ghast) < 4096.0) {
+                double xdd = target.getX() - ghast.getX();
+                double zdd = target.getZ() - ghast.getZ();
+                ghast.setYRot(-((float)Mth.atan2(xdd, zdd)) * (180.0F / (float)Math.PI));
+                ghast.yBodyRot = ghast.getYRot();
             }
         }
     }
@@ -208,8 +204,8 @@ public class Ghast extends Mob implements Enemy {
     public static class GhastLookGoal extends Goal {
         private final Mob ghast;
 
-        public GhastLookGoal(Mob p_410360_) {
-            this.ghast = p_410360_;
+        public GhastLookGoal(final Mob ghast) {
+            this.ghast = ghast;
             this.setFlags(EnumSet.of(Goal.Flag.LOOK));
         }
 
@@ -229,35 +225,33 @@ public class Ghast extends Mob implements Enemy {
         }
     }
 
-    public static class GhastMoveControl extends MoveControl {
-        private final Mob ghast;
+    public static class GhastMoveControl<T extends Mob> extends MoveControl<T> {
         private int floatDuration;
         private final boolean careful;
         private final BooleanSupplier shouldBeStopped;
 
-        public GhastMoveControl(Mob p_410451_, boolean p_409437_, BooleanSupplier p_409135_) {
-            super(p_410451_);
-            this.ghast = p_410451_;
-            this.careful = p_409437_;
-            this.shouldBeStopped = p_409135_;
+        public GhastMoveControl(final T ghast, final boolean careful, final BooleanSupplier shouldBeStopped) {
+            super(ghast);
+            this.careful = careful;
+            this.shouldBeStopped = shouldBeStopped;
         }
 
         @Override
         public void tick() {
             if (this.shouldBeStopped.getAsBoolean()) {
                 this.operation = MoveControl.Operation.WAIT;
-                this.ghast.stopInPlace();
+                this.mob.stopInPlace();
             }
 
             if (this.operation == MoveControl.Operation.MOVE_TO) {
                 if (this.floatDuration-- <= 0) {
-                    this.floatDuration = this.floatDuration + this.ghast.getRandom().nextInt(5) + 2;
-                    Vec3 vec3 = new Vec3(
-                        this.wantedX - this.ghast.getX(), this.wantedY - this.ghast.getY(), this.wantedZ - this.ghast.getZ()
-                    );
-                    if (this.canReach(vec3)) {
-                        this.ghast
-                            .setDeltaMovement(this.ghast.getDeltaMovement().add(vec3.normalize().scale(this.ghast.getAttributeValue(Attributes.FLYING_SPEED) * 5.0 / 3.0)));
+                    this.floatDuration = this.floatDuration + this.mob.getRandom().nextInt(5) + 2;
+                    Vec3 travel = new Vec3(this.wantedX - this.mob.getX(), this.wantedY - this.mob.getY(), this.wantedZ - this.mob.getZ());
+                    if (this.canReach(travel)) {
+                        this.mob
+                            .setDeltaMovement(
+                                this.mob.getDeltaMovement().add(travel.normalize().scale(this.mob.getAttributeValue(Attributes.FLYING_SPEED) * 5.0 / 3.0))
+                            );
                     } else {
                         this.operation = MoveControl.Operation.WAIT;
                     }
@@ -265,68 +259,75 @@ public class Ghast extends Mob implements Enemy {
             }
         }
 
-        private boolean canReach(Vec3 p_32771_) {
-            AABB aabb = this.ghast.getBoundingBox();
-            AABB aabb1 = aabb.move(p_32771_);
+        private boolean canReach(final Vec3 travel) {
+            AABB aabb = this.mob.getBoundingBox();
+            AABB aabbAtDestination = aabb.move(travel);
             if (this.careful) {
-                for (BlockPos blockpos : BlockPos.betweenClosed(aabb1.inflate(1.0))) {
-                    if (!this.blockTraversalPossible(this.ghast.level(), null, null, blockpos, false, false)) {
+                for (BlockPos pos : BlockPos.betweenClosed(aabbAtDestination.inflate(1.0))) {
+                    if (!this.blockTraversalPossible(this.mob.level(), null, null, pos, false, false)) {
                         return false;
                     }
                 }
             }
 
-            boolean flag = this.ghast.isInWater();
-            boolean flag1 = this.ghast.isInLava();
-            Vec3 vec3 = this.ghast.position();
-            Vec3 vec31 = vec3.add(p_32771_);
+            boolean isInWater = this.mob.isInWater();
+            boolean isInLava = this.mob.isInLava();
+            Vec3 start = this.mob.position();
+            Vec3 end = start.add(travel);
             return BlockGetter.forEachBlockIntersectedBetween(
-                vec3,
-                vec31,
-                aabb1,
-                (p_449688_, p_449689_) -> aabb.intersects(p_449688_) ? true : this.blockTraversalPossible(this.ghast.level(), vec3, vec31, p_449688_, flag, flag1)
+                start,
+                end,
+                aabbAtDestination,
+                (blockPos, i) -> aabb.intersects(blockPos) ? true : this.blockTraversalPossible(this.mob.level(), start, end, blockPos, isInWater, isInLava)
             );
         }
 
         private boolean blockTraversalPossible(
-            BlockGetter p_408906_, @Nullable Vec3 p_409930_, @Nullable Vec3 p_410665_, BlockPos p_406655_, boolean p_410169_, boolean p_408341_
+            final BlockGetter level,
+            final @Nullable Vec3 start,
+            final @Nullable Vec3 end,
+            final BlockPos pos,
+            final boolean canPathThroughWater,
+            final boolean canPathThroughLava
         ) {
-            BlockState blockstate = p_408906_.getBlockState(p_406655_);
-            if (blockstate.isAir()) {
+            BlockState state = level.getBlockState(pos);
+            if (state.isAir()) {
                 return true;
-            } else {
-                boolean flag = p_409930_ != null && p_410665_ != null;
-                boolean flag1 = flag
-                    ? !this.ghast.collidedWithShapeMovingFrom(p_409930_, p_410665_, blockstate.getCollisionShape(p_408906_, p_406655_).move(new Vec3(p_406655_)).toAabbs())
-                    : blockstate.getCollisionShape(p_408906_, p_406655_).isEmpty();
-                if (!this.careful) {
-                    return flag1;
-                } else if (blockstate.is(BlockTags.HAPPY_GHAST_AVOIDS)) {
-                    return false;
-                } else {
-                    FluidState fluidstate = p_408906_.getFluidState(p_406655_);
-                    if (!fluidstate.isEmpty() && (!flag || this.ghast.collidedWithFluid(fluidstate, p_406655_, p_409930_, p_410665_))) {
-                        if (fluidstate.is(FluidTags.WATER)) {
-                            return p_410169_;
-                        }
+            }
 
-                        if (fluidstate.is(FluidTags.LAVA)) {
-                            return p_408341_;
-                        }
-                    }
+            boolean preciseBlockCollisions = start != null && end != null;
+            boolean pathNoCollisions = preciseBlockCollisions
+                ? !this.mob.collidedWithShapeMovingFrom(start, end, state.getCollisionShape(level, pos).move(new Vec3(pos)).toAabbs())
+                : state.getCollisionShape(level, pos).isEmpty();
+            if (!this.careful) {
+                return pathNoCollisions;
+            }
 
-                    return flag1;
+            if (state.is(BlockTags.HAPPY_GHAST_AVOIDS)) {
+                return false;
+            }
+
+            FluidState fluidState = level.getFluidState(pos);
+            if (!fluidState.isEmpty() && (!preciseBlockCollisions || this.mob.collidedWithFluid(fluidState, pos, start, end))) {
+                if (fluidState.is(FluidTags.WATER)) {
+                    return canPathThroughWater;
+                }
+
+                if (fluidState.is(FluidTags.LAVA)) {
+                    return canPathThroughLava;
                 }
             }
+
+            return pathNoCollisions;
         }
     }
 
-    static class GhastShootFireballGoal extends Goal {
+    private static class GhastShootFireballGoal extends Goal {
         private final Ghast ghast;
         public int chargeTime;
 
-        public GhastShootFireballGoal(Ghast p_32776_) {
-            this.ghast = p_32776_;
+        public GhastShootFireballGoal(final Ghast ghast) {
+            this.ghast = ghast;
         }
 
         @Override
@@ -351,10 +352,10 @@ public class Ghast extends Mob implements Enemy {
 
         @Override
         public void tick() {
-            LivingEntity livingentity = this.ghast.getTarget();
-            if (livingentity != null) {
-                double d0 = 64.0;
-                if (livingentity.distanceToSqr(this.ghast) < 4096.0 && this.ghast.hasLineOfSight(livingentity)) {
+            LivingEntity target = this.ghast.getTarget();
+            if (target != null) {
+                double maxDist = 64.0;
+                if (target.distanceToSqr(this.ghast) < 4096.0 && this.ghast.hasLineOfSight(target)) {
                     Level level = this.ghast.level();
                     this.chargeTime++;
                     if (this.chargeTime == 10 && !this.ghast.isSilent()) {
@@ -362,21 +363,19 @@ public class Ghast extends Mob implements Enemy {
                     }
 
                     if (this.chargeTime == 20) {
-                        double d1 = 4.0;
-                        Vec3 vec3 = this.ghast.getViewVector(1.0F);
-                        double d2 = livingentity.getX() - (this.ghast.getX() + vec3.x * 4.0);
-                        double d3 = livingentity.getY(0.5) - (0.5 + this.ghast.getY(0.5));
-                        double d4 = livingentity.getZ() - (this.ghast.getZ() + vec3.z * 4.0);
-                        Vec3 vec31 = new Vec3(d2, d3, d4);
+                        double d = 4.0;
+                        Vec3 viewVector = this.ghast.getViewVector(1.0F);
+                        double xdd = target.getX() - (this.ghast.getX() + viewVector.x * 4.0);
+                        double ydd = target.getY(0.5) - (0.5 + this.ghast.getY(0.5));
+                        double zdd = target.getZ() - (this.ghast.getZ() + viewVector.z * 4.0);
+                        Vec3 direction = new Vec3(xdd, ydd, zdd);
                         if (!this.ghast.isSilent()) {
                             level.levelEvent(null, 1016, this.ghast.blockPosition(), 0);
                         }
 
-                        LargeFireball largefireball = new LargeFireball(level, this.ghast, vec31.normalize(), this.ghast.getExplosionPower());
-                        largefireball.setPos(
-                            this.ghast.getX() + vec3.x * 4.0, this.ghast.getY(0.5) + 0.5, largefireball.getZ() + vec3.z * 4.0
-                        );
-                        level.addFreshEntity(largefireball);
+                        LargeFireball entity = new LargeFireball(level, this.ghast, direction.normalize(), this.ghast.getExplosionPower());
+                        entity.setPos(this.ghast.getX() + viewVector.x * 4.0, this.ghast.getY(0.5) + 0.5, entity.getZ() + viewVector.z * 4.0);
+                        level.addFreshEntity(entity);
                         this.chargeTime = -40;
                     }
                 } else if (this.chargeTime > 0) {
@@ -393,28 +392,28 @@ public class Ghast extends Mob implements Enemy {
         private final Mob ghast;
         private final int distanceToBlocks;
 
-        public RandomFloatAroundGoal(Mob p_410331_) {
-            this(p_410331_, 0);
+        public RandomFloatAroundGoal(final Mob ghast) {
+            this(ghast, 0);
         }
 
-        public RandomFloatAroundGoal(Mob p_408161_, int p_409935_) {
-            this.ghast = p_408161_;
-            this.distanceToBlocks = p_409935_;
+        public RandomFloatAroundGoal(final Mob ghast, final int distanceToBlocks) {
+            this.ghast = ghast;
+            this.distanceToBlocks = distanceToBlocks;
             this.setFlags(EnumSet.of(Goal.Flag.MOVE));
         }
 
         @Override
         public boolean canUse() {
-            MoveControl movecontrol = this.ghast.getMoveControl();
-            if (!movecontrol.hasWanted()) {
+            MoveControl moveControl = this.ghast.getMoveControl();
+            if (!moveControl.hasWanted()) {
                 return true;
-            } else {
-                double d0 = movecontrol.getWantedX() - this.ghast.getX();
-                double d1 = movecontrol.getWantedY() - this.ghast.getY();
-                double d2 = movecontrol.getWantedZ() - this.ghast.getZ();
-                double d3 = d0 * d0 + d1 * d1 + d2 * d2;
-                return d3 < 1.0 || d3 > 3600.0;
             }
+
+            double xd = moveControl.getWantedX() - this.ghast.getX();
+            double yd = moveControl.getWantedY() - this.ghast.getY();
+            double zd = moveControl.getWantedZ() - this.ghast.getZ();
+            double dd = xd * xd + yd * yd + zd * zd;
+            return dd < 1.0 || dd > 3600.0;
         }
 
         @Override
@@ -424,68 +423,68 @@ public class Ghast extends Mob implements Enemy {
 
         @Override
         public void start() {
-            Vec3 vec3 = getSuitableFlyToPosition(this.ghast, this.distanceToBlocks);
-            this.ghast.getMoveControl().setWantedPosition(vec3.x(), vec3.y(), vec3.z(), 1.0);
+            Vec3 result = getSuitableFlyToPosition(this.ghast, this.distanceToBlocks);
+            this.ghast.getMoveControl().setWantedPosition(result.x(), result.y(), result.z(), 1.0);
         }
 
-        public static Vec3 getSuitableFlyToPosition(Mob p_409499_, int p_410248_) {
-            Level level = p_409499_.level();
-            RandomSource randomsource = p_409499_.getRandom();
-            Vec3 vec3 = p_409499_.position();
-            Vec3 vec31 = null;
+        public static Vec3 getSuitableFlyToPosition(final Mob mob, final int distanceToBlocks) {
+            Level level = mob.level();
+            RandomSource random = mob.getRandom();
+            Vec3 center = mob.position();
+            Vec3 result = null;
 
             for (int i = 0; i < 64; i++) {
-                vec31 = chooseRandomPositionWithRestriction(p_409499_, vec3, randomsource);
-                if (vec31 != null && isGoodTarget(level, vec31, p_410248_)) {
-                    return vec31;
+                result = chooseRandomPositionWithRestriction(mob, center, random);
+                if (result != null && isGoodTarget(level, result, distanceToBlocks)) {
+                    return result;
                 }
             }
 
-            if (vec31 == null) {
-                vec31 = chooseRandomPosition(vec3, randomsource);
+            if (result == null) {
+                result = chooseRandomPosition(center, random);
             }
 
-            BlockPos blockpos = BlockPos.containing(vec31);
-            int j = level.getHeight(Heightmap.Types.MOTION_BLOCKING, blockpos.getX(), blockpos.getZ());
-            if (j < blockpos.getY() && j > level.getMinY()) {
-                vec31 = new Vec3(vec31.x(), p_409499_.getY() - Math.abs(p_409499_.getY() - vec31.y()), vec31.z());
+            BlockPos pos = BlockPos.containing(result);
+            int heightY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, pos.getX(), pos.getZ());
+            if (heightY < pos.getY() && heightY > level.getMinY()) {
+                result = new Vec3(result.x(), mob.getY() - Math.abs(mob.getY() - result.y()), result.z());
             }
 
-            return vec31;
+            return result;
         }
 
-        private static boolean isGoodTarget(Level p_406666_, Vec3 p_408132_, int p_410376_) {
-            if (p_410376_ <= 0) {
+        private static boolean isGoodTarget(final Level level, final Vec3 target, final int distanceToBlocks) {
+            if (distanceToBlocks <= 0) {
                 return true;
-            } else {
-                BlockPos blockpos = BlockPos.containing(p_408132_);
-                if (!p_406666_.getBlockState(blockpos).isAir()) {
-                    return false;
-                } else {
-                    for (Direction direction : Direction.values()) {
-                        for (int i = 1; i < p_410376_; i++) {
-                            BlockPos blockpos1 = blockpos.relative(direction, i);
-                            if (!p_406666_.getBlockState(blockpos1).isAir()) {
-                                return true;
-                            }
-                        }
-                    }
+            }
 
-                    return false;
+            BlockPos pos = BlockPos.containing(target);
+            if (!level.getBlockState(pos).isAir()) {
+                return false;
+            }
+
+            for (Direction dir : Direction.values()) {
+                for (int i = 1; i < distanceToBlocks; i++) {
+                    BlockPos offset = pos.relative(dir, i);
+                    if (!level.getBlockState(offset).isAir()) {
+                        return true;
+                    }
                 }
             }
+
+            return false;
         }
 
-        private static Vec3 chooseRandomPosition(Vec3 p_406802_, RandomSource p_408060_) {
-            double d0 = p_406802_.x() + (p_408060_.nextFloat() * 2.0F - 1.0F) * 16.0F;
-            double d1 = p_406802_.y() + (p_408060_.nextFloat() * 2.0F - 1.0F) * 16.0F;
-            double d2 = p_406802_.z() + (p_408060_.nextFloat() * 2.0F - 1.0F) * 16.0F;
-            return new Vec3(d0, d1, d2);
+        private static Vec3 chooseRandomPosition(final Vec3 center, final RandomSource random) {
+            double xTarget = center.x() + (random.nextFloat() * 2.0F - 1.0F) * 16.0F;
+            double yTarget = center.y() + (random.nextFloat() * 2.0F - 1.0F) * 16.0F;
+            double zTarget = center.z() + (random.nextFloat() * 2.0F - 1.0F) * 16.0F;
+            return new Vec3(xTarget, yTarget, zTarget);
         }
 
-        private static @Nullable Vec3 chooseRandomPositionWithRestriction(Mob p_410298_, Vec3 p_408608_, RandomSource p_406675_) {
-            Vec3 vec3 = chooseRandomPosition(p_408608_, p_406675_);
-            return p_410298_.hasHome() && !p_410298_.isWithinHome(vec3) ? null : vec3;
+        private static @Nullable Vec3 chooseRandomPositionWithRestriction(final Mob mob, final Vec3 center, final RandomSource random) {
+            Vec3 target = chooseRandomPosition(center, random);
+            return mob.hasHome() && !mob.isWithinHome(target) ? null : target;
         }
     }
 }

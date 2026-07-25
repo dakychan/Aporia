@@ -10,24 +10,30 @@ import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import org.jspecify.annotations.Nullable;
 
-class ArmorSlot extends Slot {
+public class ArmorSlot extends Slot {
     private final LivingEntity owner;
     private final EquipmentSlot slot;
     private final @Nullable Identifier emptyIcon;
 
     public ArmorSlot(
-        Container p_344669_, LivingEntity p_343390_, EquipmentSlot p_343712_, int p_344144_, int p_345211_, int p_342796_, @Nullable Identifier p_454870_
+        final Container inventory,
+        final LivingEntity owner,
+        final EquipmentSlot slot,
+        final int slotIndex,
+        final int x,
+        final int y,
+        final @Nullable Identifier emptyIcon
     ) {
-        super(p_344669_, p_344144_, p_345211_, p_342796_);
-        this.owner = p_343390_;
-        this.slot = p_343712_;
-        this.emptyIcon = p_454870_;
+        super(inventory, slotIndex, x, y);
+        this.owner = owner;
+        this.slot = slot;
+        this.emptyIcon = emptyIcon;
     }
 
     @Override
-    public void setByPlayer(ItemStack p_342337_, ItemStack p_345204_) {
-        this.owner.onEquipItem(this.slot, p_345204_, p_342337_);
-        super.setByPlayer(p_342337_, p_345204_);
+    public void setByPlayer(final ItemStack itemStack, final ItemStack previous) {
+        this.owner.onEquipItem(this.slot, previous, itemStack);
+        super.setByPlayer(itemStack, previous);
     }
 
     @Override
@@ -36,8 +42,8 @@ class ArmorSlot extends Slot {
     }
 
     @Override
-    public boolean mayPlace(ItemStack p_344267_) {
-        return this.owner.isEquippableInSlot(p_344267_, this.slot);
+    public boolean mayPlace(final ItemStack itemStack) {
+        return this.owner.isEquippableInSlot(itemStack, this.slot);
     }
 
     @Override
@@ -46,11 +52,11 @@ class ArmorSlot extends Slot {
     }
 
     @Override
-    public boolean mayPickup(Player p_344552_) {
-        ItemStack itemstack = this.getItem();
-        return !itemstack.isEmpty() && !p_344552_.isCreative() && EnchantmentHelper.has(itemstack, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)
+    public boolean mayPickup(final Player player) {
+        ItemStack itemStack = this.getItem();
+        return !itemStack.isEmpty() && !player.isCreative() && EnchantmentHelper.has(itemStack, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)
             ? false
-            : super.mayPickup(p_344552_);
+            : super.mayPickup(player);
     }
 
     @Override

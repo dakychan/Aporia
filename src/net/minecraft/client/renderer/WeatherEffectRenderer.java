@@ -1,248 +1,250 @@
 package net.minecraft.client.renderer;
 
+import com.mojang.blaze3d.IndexType;
+import com.mojang.blaze3d.PrimitiveTopology;
+import com.mojang.blaze3d.buffers.GpuBuffer;
+import com.mojang.blaze3d.buffers.GpuBufferSlice;
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.RenderTarget;
+import com.mojang.blaze3d.systems.GpuDevice;
+import com.mojang.blaze3d.systems.RenderPass;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
+import com.mojang.blaze3d.textures.GpuTextureView;
+import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.MeshData;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import java.nio.ByteBuffer;
 import java.util.List;
-import net.minecraft.client.Camera;
+import java.util.Optional;
+import java.util.OptionalDouble;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.WeatherRenderState;
+import net.minecraft.client.renderer.rendertype.OutputTarget;
+import net.minecraft.client.renderer.state.level.WeatherRenderState;
+import net.minecraft.client.renderer.texture.AbstractTexture;
+import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
-import net.minecraft.core.SectionPos;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.level.ParticleStatus;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.tags.FluidTags;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.CampfireBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
-public class WeatherEffectRenderer {
-    private static final float RAIN_PARTICLES_PER_BLOCK = 0.225F;
-    private static final int RAIN_RADIUS = 10;
+public class WeatherEffectRenderer implements AutoCloseable {
     private static final Identifier RAIN_LOCATION = Identifier.withDefaultNamespace("textures/environment/rain.png");
     private static final Identifier SNOW_LOCATION = Identifier.withDefaultNamespace("textures/environment/snow.png");
     private static final int RAIN_TABLE_SIZE = 32;
     private static final int HALF_RAIN_TABLE_SIZE = 16;
-    private int rainSoundTime;
+    private static final int INDICES_PER_COLUMN = 6;
     private final float[] columnSizeX = new float[1024];
     private final float[] columnSizeZ = new float[1024];
-
-    private int cachedCamX = Integer.MIN_VALUE;
-    private int cachedCamZ = Integer.MIN_VALUE;
-    private int cachedTick = -1;
-    private static final int WEATHER_UPDATE_INTERVAL = 3;
+    private @Nullable GpuBuffer vertexBuffer;
 
     public WeatherEffectRenderer() {
-        for (int i = 0; i < 32; i++) {
-            for (int j = 0; j < 32; j++) {
-                float f = j - 16;
-                float f1 = i - 16;
-                float f2 = Mth.length(f, f1);
-                this.columnSizeX[i * 32 + j] = -f1 / f2;
-                this.columnSizeZ[i * 32 + j] = f / f2;
+        for (int z = 0; z < 32; z++) {
+            for (int x = 0; x < 32; x++) {
+                float deltaX = x - 16;
+                float deltaZ = z - 16;
+                float distance = Mth.length(deltaX, deltaZ);
+                this.columnSizeX[z * 32 + x] = -deltaZ / distance;
+                this.columnSizeZ[z * 32 + x] = deltaX / distance;
             }
         }
     }
 
-    public void extractRenderState(Level p_430760_, int p_428982_, float p_431567_, Vec3 p_427801_, WeatherRenderState p_426425_) {
-        p_426425_.intensity = p_430760_.getRainLevel(p_431567_);
-        if (!(p_426425_.intensity <= 0.0F)) {
-            p_426425_.radius = Minecraft.getInstance().options.weatherRadius().get();
-            int i = Mth.floor(p_427801_.x);
-            int j = Mth.floor(p_427801_.y);
-            int k = Mth.floor(p_427801_.z);
-
-            int camFloorX = i >> 4;
-            int camFloorZ = k >> 4;
-            boolean moved = camFloorX != this.cachedCamX || camFloorZ != this.cachedCamZ || p_428982_ - this.cachedTick >= WEATHER_UPDATE_INTERVAL;
-            if (moved) {
-                this.cachedCamX = camFloorX;
-                this.cachedCamZ = camFloorZ;
-                this.cachedTick = p_428982_;
-                p_426425_.rainColumns.clear();
-                p_426425_.snowColumns.clear();
-            } else {
-                return;
-            }
-
+    public void extractRenderState(final ClientLevel level, final float partialTicks, final Vec3 cameraPos, final WeatherRenderState renderState) {
+        renderState.intensity = level.getRainLevel(partialTicks);
+        if (!(renderState.intensity <= 0.0F)) {
+            renderState.radius = Minecraft.getInstance().options.weatherRadius().get();
+            int cameraBlockX = Mth.floor(cameraPos.x);
+            int cameraBlockY = Mth.floor(cameraPos.y);
+            int cameraBlockZ = Mth.floor(cameraPos.z);
             BlockPos.MutableBlockPos mutablePos = new BlockPos.MutableBlockPos();
-            RandomSource randomsource = RandomSource.create();
+            RandomSource random = RandomSource.createThreadLocalInstance();
 
-            for (int l = k - p_426425_.radius; l <= k + p_426425_.radius; l++) {
-                for (int i1 = i - p_426425_.radius; i1 <= i + p_426425_.radius; i1++) {
-                    int j1 = p_430760_.getHeight(Heightmap.Types.MOTION_BLOCKING, i1, l);
-                    int k1 = Math.max(j - p_426425_.radius, j1);
-                    int l1 = Math.max(j + p_426425_.radius, j1);
-                    if (l1 - k1 != 0) {
-                        Biome.Precipitation biome$precipitation = this.getPrecipitationAt(p_430760_, mutablePos.set(i1, j, l));
-                        if (biome$precipitation != Biome.Precipitation.NONE) {
-                            int i2 = i1 * i1 * 3121 + i1 * 45238971 ^ l * l * 418711 + l * 13761;
-                            randomsource.setSeed(i2);
-                            int j2 = Math.max(j, j1);
-                            int k2 = LevelRenderer.getLightColor(p_430760_, mutablePos.set(i1, j2, l));
-                            if (biome$precipitation == Biome.Precipitation.RAIN) {
-                                p_426425_.rainColumns.add(this.createRainColumnInstance(randomsource, p_428982_, i1, k1, l1, l, k2, p_431567_));
-                            } else if (biome$precipitation == Biome.Precipitation.SNOW) {
-                                p_426425_.snowColumns.add(this.createSnowColumnInstance(randomsource, p_428982_, i1, k1, l1, l, k2, p_431567_));
+            for (int z = cameraBlockZ - renderState.radius; z <= cameraBlockZ + renderState.radius; z++) {
+                for (int x = cameraBlockX - renderState.radius; x <= cameraBlockX + renderState.radius; x++) {
+                    int terrainHeight = level.getHeight(Heightmap.Types.MOTION_BLOCKING, x, z);
+                    int y0 = Math.max(cameraBlockY - renderState.radius, terrainHeight);
+                    int y1 = Math.max(cameraBlockY + renderState.radius, terrainHeight);
+                    if (y1 - y0 != 0) {
+                        Biome.Precipitation precipitation = level.getPrecipitationAt(mutablePos.set(x, cameraBlockY, z));
+                        if (precipitation != Biome.Precipitation.NONE) {
+                            int seed = x * x * 3121 + x * 45238971 ^ z * z * 418711 + z * 13761;
+                            random.setSeed(seed);
+                            int lightSampleY = Math.max(cameraBlockY, terrainHeight);
+                            int lightCoords = LightCoordsUtil.getLightCoords(level, mutablePos.set(x, lightSampleY, z));
+                            if (precipitation == Biome.Precipitation.RAIN) {
+                                renderState.rainColumns
+                                    .add(this.createRainColumnInstance(random, level.getGameTime(), x, y0, y1, z, lightCoords, partialTicks));
+                            } else if (precipitation == Biome.Precipitation.SNOW) {
+                                renderState.snowColumns
+                                    .add(this.createSnowColumnInstance(random, level.getGameTime(), x, y0, y1, z, lightCoords, partialTicks));
                             }
                         }
                     }
                 }
             }
-        } else {
-            this.cachedCamX = Integer.MIN_VALUE;
-            this.cachedCamZ = Integer.MIN_VALUE;
         }
     }
 
-    public void render(MultiBufferSource p_375954_, Vec3 p_368504_, WeatherRenderState p_428296_) {
-        if (!p_428296_.rainColumns.isEmpty()) {
-            RenderType rendertype = RenderTypes.weather(RAIN_LOCATION, Minecraft.useShaderTransparency());
-            this.renderInstances(p_375954_.getBuffer(rendertype), p_428296_.rainColumns, p_368504_, 1.0F, p_428296_.radius, p_428296_.intensity);
+    private void renderWeather(final RenderPass renderPass, final AbstractTexture texture, final int startColumn, final int columnCount) {
+        renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());
+        renderPass.drawIndexed(columnCount * 6, 1, startColumn * 6, 0, 0);
+    }
+
+    private GpuBuffer uploadVertexBuffer(final ByteBuffer buffer) {
+        GpuDevice device = RenderSystem.getDevice();
+        if (this.vertexBuffer == null || this.vertexBuffer.size() < buffer.remaining()) {
+            if (this.vertexBuffer != null) {
+                this.vertexBuffer.close();
+            }
+
+            this.vertexBuffer = device.createBuffer(() -> "Weather Vertex Buffer", 40, buffer.remaining());
         }
 
-        if (!p_428296_.snowColumns.isEmpty()) {
-            RenderType rendertype1 = RenderTypes.weather(SNOW_LOCATION, Minecraft.useShaderTransparency());
-            this.renderInstances(p_375954_.getBuffer(rendertype1), p_428296_.snowColumns, p_368504_, 0.8F, p_428296_.radius, p_428296_.intensity);
+        device.createCommandEncoder().writeToBuffer(this.vertexBuffer.slice(), buffer);
+        return this.vertexBuffer;
+    }
+
+    public void render(final Vec3 cameraPos, final WeatherRenderState renderState) {
+        int columnCount = renderState.rainColumns.size() + renderState.snowColumns.size();
+        if (columnCount != 0) {
+            TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+            AbstractTexture rainTexture = textureManager.getTexture(RAIN_LOCATION);
+            AbstractTexture snowTexture = textureManager.getTexture(SNOW_LOCATION);
+            RenderTarget weatherRenderTarget = OutputTarget.WEATHER_TARGET.getRenderTarget();
+            GpuTextureView colorTexture = weatherRenderTarget.getColorTextureView();
+            GpuTextureView depthTexture = weatherRenderTarget.getDepthTextureView();
+            RenderPipeline renderPipeline = Minecraft.getInstance().gameRenderer.gameRenderState().useShaderTransparency()
+                ? RenderPipelines.WEATHER_DEPTH_WRITE
+                : RenderPipelines.WEATHER_NO_DEPTH_WRITE;
+
+            GpuBuffer vertexBuffer;
+            GpuBuffer indexBuffer;
+            IndexType indexType;
+            try (ByteBufferBuilder builder = ByteBufferBuilder.exactlySized(columnCount * DefaultVertexFormat.PARTICLE.getVertexSize() * 4)) {
+                BufferBuilder bufferBuilder = new BufferBuilder(builder, PrimitiveTopology.QUADS, DefaultVertexFormat.PARTICLE);
+                this.renderInstances(bufferBuilder, renderState.rainColumns, cameraPos, 1.0F, renderState.radius, renderState.intensity);
+                this.renderInstances(bufferBuilder, renderState.snowColumns, cameraPos, 0.8F, renderState.radius, renderState.intensity);
+
+                try (MeshData mesh = bufferBuilder.buildOrThrow()) {
+                    vertexBuffer = this.uploadVertexBuffer(mesh.vertexBuffer());
+                    RenderSystem.AutoStorageIndexBuffer autoIndices = RenderSystem.getSequentialBuffer(mesh.drawState().primitiveTopology());
+                    indexBuffer = autoIndices.getBuffer(mesh.drawState().indexCount());
+                    indexType = autoIndices.type();
+                }
+            }
+
+            GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(RenderSystem.getModelViewMatrixCopy());
+
+            try (RenderPass renderPass = RenderSystem.getDevice()
+                    .createCommandEncoder()
+                    .createRenderPass(() -> "Weather Effect", colorTexture, Optional.empty(), depthTexture, OptionalDouble.empty())) {
+                renderPass.setPipeline(renderPipeline);
+                RenderSystem.bindDefaultUniforms(renderPass);
+                renderPass.setUniform("DynamicTransforms", dynamicTransforms);
+                renderPass.bindTexture(
+                    "Sampler2", Minecraft.getInstance().gameRenderer.lightmap(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
+                );
+                renderPass.setIndexBuffer(indexBuffer, indexType);
+                renderPass.setVertexBuffer(0, vertexBuffer.slice());
+                this.renderWeather(renderPass, rainTexture, 0, renderState.rainColumns.size());
+                this.renderWeather(renderPass, snowTexture, renderState.rainColumns.size(), renderState.snowColumns.size());
+            }
         }
     }
 
     private WeatherEffectRenderer.ColumnInstance createRainColumnInstance(
-        RandomSource p_369207_, int p_369418_, int p_368589_, int p_364560_, int p_362596_, int p_368571_, int p_362548_, float p_362995_
+        final RandomSource random,
+        final long ticks,
+        final int x,
+        final int bottomY,
+        final int topY,
+        final int z,
+        final int lightCoords,
+        final float partialTicks
     ) {
-        int i = p_369418_ & 131071;
-        int j = p_368589_ * p_368589_ * 3121 + p_368589_ * 45238971 + p_368571_ * p_368571_ * 418711 + p_368571_ * 13761 & 0xFF;
-        float f = 3.0F + p_369207_.nextFloat();
-        float f1 = -(i + j + p_362995_) / 32.0F * f;
-        float f2 = f1 % 32.0F;
-        return new WeatherEffectRenderer.ColumnInstance(p_368589_, p_368571_, p_364560_, p_362596_, 0.0F, f2, p_362548_);
+        int wrappedTicks = (int)(ticks & 131071L);
+        int tickOffset = x * x * 3121 + x * 45238971 + z * z * 418711 + z * 13761 & 0xFF;
+        float blockPosRainSpeed = 3.0F + random.nextFloat();
+        float textureOffset = -(wrappedTicks + tickOffset + partialTicks) / 32.0F * blockPosRainSpeed;
+        float wrappedTextureOffset = textureOffset % 32.0F;
+        return new WeatherEffectRenderer.ColumnInstance(x, z, bottomY, topY, 0.0F, wrappedTextureOffset, lightCoords);
     }
 
     private WeatherEffectRenderer.ColumnInstance createSnowColumnInstance(
-        RandomSource p_362287_, int p_363885_, int p_367897_, int p_362095_, int p_364648_, int p_366422_, int p_369864_, float p_367820_
+        final RandomSource random,
+        final long ticks,
+        final int x,
+        final int bottomY,
+        final int topY,
+        final int z,
+        final int lightCoords,
+        final float partialTicks
     ) {
-        float f = p_363885_ + p_367820_;
-        float f1 = (float)(p_362287_.nextDouble() + f * 0.01F * (float)p_362287_.nextGaussian());
-        float f2 = (float)(p_362287_.nextDouble() + f * (float)p_362287_.nextGaussian() * 0.001F);
-        float f3 = -((p_363885_ & 511) + p_367820_) / 512.0F;
-        int i = LightTexture.pack((LightTexture.block(p_369864_) * 3 + 15) / 4, (LightTexture.sky(p_369864_) * 3 + 15) / 4);
-        return new WeatherEffectRenderer.ColumnInstance(p_367897_, p_366422_, p_362095_, p_364648_, f1, f3 + f2, i);
+        int wrappedTicks = (int)(ticks & 131071L);
+        float time = wrappedTicks + partialTicks;
+        float u = (float)(random.nextDouble() + time * 0.01F * (float)random.nextGaussian());
+        float v = (float)(random.nextDouble() + time * (float)random.nextGaussian() * 0.001F);
+        float vOffset = -((float)(ticks & 511L) + partialTicks) / 512.0F;
+        int brightenedLightCoords = LightCoordsUtil.pack((LightCoordsUtil.block(lightCoords) * 3 + 15) / 4, (LightCoordsUtil.sky(lightCoords) * 3 + 15) / 4);
+        return new WeatherEffectRenderer.ColumnInstance(x, z, bottomY, topY, u, vOffset + v, brightenedLightCoords);
     }
 
     private void renderInstances(
-        VertexConsumer p_377303_, List<WeatherEffectRenderer.ColumnInstance> p_364835_, Vec3 p_367411_, float p_360961_, int p_369839_, float p_363459_
+        final VertexConsumer builder,
+        final List<WeatherEffectRenderer.ColumnInstance> columns,
+        final Vec3 cameraPos,
+        final float maxAlpha,
+        final int radius,
+        final float intensity
     ) {
-        float f = p_369839_ * p_369839_;
+        if (!columns.isEmpty()) {
+            float radiusSq = radius * radius;
 
-        for (WeatherEffectRenderer.ColumnInstance weathereffectrenderer$columninstance : p_364835_) {
-            float f1 = (float)(weathereffectrenderer$columninstance.x + 0.5 - p_367411_.x);
-            float f2 = (float)(weathereffectrenderer$columninstance.z + 0.5 - p_367411_.z);
-            float f3 = (float)Mth.lengthSquared(f1, f2);
-            float f4 = Mth.lerp(Math.min(f3 / f, 1.0F), p_360961_, 0.5F) * p_363459_;
-            int i = ARGB.white(f4);
-            int j = (weathereffectrenderer$columninstance.z - Mth.floor(p_367411_.z) + 16) * 32
-                + weathereffectrenderer$columninstance.x
-                - Mth.floor(p_367411_.x)
-                + 16;
-            float f5 = this.columnSizeX[j] / 2.0F;
-            float f6 = this.columnSizeZ[j] / 2.0F;
-            float f7 = f1 - f5;
-            float f8 = f1 + f5;
-            float f9 = (float)(weathereffectrenderer$columninstance.topY - p_367411_.y);
-            float f10 = (float)(weathereffectrenderer$columninstance.bottomY - p_367411_.y);
-            float f11 = f2 - f6;
-            float f12 = f2 + f6;
-            float f13 = weathereffectrenderer$columninstance.uOffset + 0.0F;
-            float f14 = weathereffectrenderer$columninstance.uOffset + 1.0F;
-            float f15 = weathereffectrenderer$columninstance.bottomY * 0.25F + weathereffectrenderer$columninstance.vOffset;
-            float f16 = weathereffectrenderer$columninstance.topY * 0.25F + weathereffectrenderer$columninstance.vOffset;
-            p_377303_.addVertex(f7, f9, f11).setUv(f13, f15).setColor(i).setLight(weathereffectrenderer$columninstance.lightCoords);
-            p_377303_.addVertex(f8, f9, f12).setUv(f14, f15).setColor(i).setLight(weathereffectrenderer$columninstance.lightCoords);
-            p_377303_.addVertex(f8, f10, f12).setUv(f14, f16).setColor(i).setLight(weathereffectrenderer$columninstance.lightCoords);
-            p_377303_.addVertex(f7, f10, f11).setUv(f13, f16).setColor(i).setLight(weathereffectrenderer$columninstance.lightCoords);
-        }
-    }
-
-    public void tickRainParticles(ClientLevel p_365121_, Camera p_364267_, int p_360728_, ParticleStatus p_367686_, int p_455035_) {
-        float f = p_365121_.getRainLevel(1.0F);
-        if (!(f <= 0.0F)) {
-            RandomSource randomsource = RandomSource.create(p_360728_ * 312987231L);
-            BlockPos blockpos = BlockPos.containing(p_364267_.position());
-            BlockPos blockpos1 = null;
-            int i = 2 * p_455035_ + 1;
-            int j = i * i;
-            int k = (int)(0.225F * j * f * f) / (p_367686_ == ParticleStatus.DECREASED ? 2 : 1);
-
-            for (int l = 0; l < k; l++) {
-                int i1 = randomsource.nextInt(i) - p_455035_;
-                int j1 = randomsource.nextInt(i) - p_455035_;
-                BlockPos blockpos2 = p_365121_.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, blockpos.offset(i1, 0, j1));
-                if (blockpos2.getY() > p_365121_.getMinY()
-                    && blockpos2.getY() <= blockpos.getY() + 10
-                    && blockpos2.getY() >= blockpos.getY() - 10
-                    && this.getPrecipitationAt(p_365121_, blockpos2) == Biome.Precipitation.RAIN) {
-                    blockpos1 = blockpos2.below();
-                    if (p_367686_ == ParticleStatus.MINIMAL) {
-                        break;
-                    }
-
-                    double d0 = randomsource.nextDouble();
-                    double d1 = randomsource.nextDouble();
-                    BlockState blockstate = p_365121_.getBlockState(blockpos1);
-                    FluidState fluidstate = p_365121_.getFluidState(blockpos1);
-                    VoxelShape voxelshape = blockstate.getCollisionShape(p_365121_, blockpos1);
-                    double d2 = voxelshape.max(Direction.Axis.Y, d0, d1);
-                    double d3 = fluidstate.getHeight(p_365121_, blockpos1);
-                    double d4 = Math.max(d2, d3);
-                    ParticleOptions particleoptions = !fluidstate.is(FluidTags.LAVA)
-                            && !blockstate.is(Blocks.MAGMA_BLOCK)
-                            && !CampfireBlock.isLitCampfire(blockstate)
-                        ? ParticleTypes.RAIN
-                        : ParticleTypes.SMOKE;
-                    p_365121_.addParticle(particleoptions, blockpos1.getX() + d0, blockpos1.getY() + d4, blockpos1.getZ() + d1, 0.0, 0.0, 0.0);
-                }
-            }
-
-            if (blockpos1 != null && randomsource.nextInt(3) < this.rainSoundTime++) {
-                this.rainSoundTime = 0;
-                if (blockpos1.getY() > blockpos.getY() + 1
-                    && p_365121_.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, blockpos).getY() > Mth.floor(blockpos.getY())) {
-                    p_365121_.playLocalSound(blockpos1, SoundEvents.WEATHER_RAIN_ABOVE, SoundSource.WEATHER, 0.1F, 0.5F, false);
-                } else {
-                    p_365121_.playLocalSound(blockpos1, SoundEvents.WEATHER_RAIN, SoundSource.WEATHER, 0.2F, 1.0F, false);
-                }
+            for (WeatherEffectRenderer.ColumnInstance column : columns) {
+                float relativeX = (float)(column.x + 0.5 - cameraPos.x);
+                float relativeZ = (float)(column.z + 0.5 - cameraPos.z);
+                float distanceSq = (float)Mth.lengthSquared(relativeX, relativeZ);
+                float alpha = Mth.lerp(Math.min(distanceSq / radiusSq, 1.0F), maxAlpha, 0.5F) * intensity;
+                int color = ARGB.white(alpha);
+                int index = (column.z - Mth.floor(cameraPos.z) + 16) * 32 + column.x - Mth.floor(cameraPos.x) + 16;
+                float halfSizeX = this.columnSizeX[index] / 2.0F;
+                float halfSizeZ = this.columnSizeZ[index] / 2.0F;
+                float x0 = relativeX - halfSizeX;
+                float x1 = relativeX + halfSizeX;
+                float y1 = (float)(column.topY - cameraPos.y);
+                float y0 = (float)(column.bottomY - cameraPos.y);
+                float z0 = relativeZ - halfSizeZ;
+                float z1 = relativeZ + halfSizeZ;
+                float u0 = column.uOffset + 0.0F;
+                float u1 = column.uOffset + 1.0F;
+                float v0 = column.bottomY * 0.25F + column.vOffset;
+                float v1 = column.topY * 0.25F + column.vOffset;
+                builder.addVertex(x0, y1, z0).setUv(u0, v0).setColor(color).setLight(column.lightCoords);
+                builder.addVertex(x1, y1, z1).setUv(u1, v0).setColor(color).setLight(column.lightCoords);
+                builder.addVertex(x1, y0, z1).setUv(u1, v1).setColor(color).setLight(column.lightCoords);
+                builder.addVertex(x0, y0, z0).setUv(u0, v1).setColor(color).setLight(column.lightCoords);
             }
         }
     }
 
-    private Biome.Precipitation getPrecipitationAt(Level p_360760_, BlockPos p_361577_) {
-        if (!p_360760_.getChunkSource().hasChunk(SectionPos.blockToSectionCoord(p_361577_.getX()), SectionPos.blockToSectionCoord(p_361577_.getZ()))) {
-            return Biome.Precipitation.NONE;
-        } else {
-            Biome biome = p_360760_.getBiome(p_361577_).value();
-            return biome.getPrecipitationAt(p_361577_, p_360760_.getSeaLevel());
+    @Override
+    public void close() {
+        if (this.vertexBuffer != null) {
+            this.vertexBuffer.close();
+            this.vertexBuffer = null;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record ColumnInstance(int x, int z, int bottomY, int topY, float uOffset, float vOffset, int lightCoords) {
+        public record ColumnInstance(int x, int z, int bottomY, int topY, float uOffset, float vOffset, int lightCoords) {
     }
 }

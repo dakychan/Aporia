@@ -6,15 +6,12 @@ import net.minecraft.client.Options;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SoundOptionsScreen extends OptionsSubScreen {
     private static final Component TITLE = Component.translatable("options.sounds.title");
 
-    public SoundOptionsScreen(Screen p_343471_, Options p_344842_) {
-        super(p_343471_, p_344842_, TITLE);
+    public SoundOptionsScreen(final Screen lastScreen, final Options options) {
+        super(lastScreen, options, TITLE);
     }
 
     @Override
@@ -28,7 +25,7 @@ public class SoundOptionsScreen extends OptionsSubScreen {
 
     private OptionInstance<?>[] getAllSoundOptionsExceptMaster() {
         return Arrays.stream(SoundSource.values())
-            .filter(p_343395_ -> p_343395_ != SoundSource.MASTER)
+            .filter(s -> s != SoundSource.MASTER)
             .map(this.options::getSoundSourceOptionInstance)
             .toArray(OptionInstance[]::new);
     }

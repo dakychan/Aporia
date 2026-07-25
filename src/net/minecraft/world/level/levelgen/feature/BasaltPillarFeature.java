@@ -11,60 +11,60 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 public class BasaltPillarFeature extends Feature<NoneFeatureConfiguration> {
-    public BasaltPillarFeature(Codec<NoneFeatureConfiguration> p_65190_) {
-        super(p_65190_);
+    public BasaltPillarFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_159446_) {
-        BlockPos blockpos = p_159446_.origin();
-        WorldGenLevel worldgenlevel = p_159446_.level();
-        RandomSource randomsource = p_159446_.random();
-        if (worldgenlevel.isEmptyBlock(blockpos) && !worldgenlevel.isEmptyBlock(blockpos.above())) {
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = blockpos.mutable();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos1 = blockpos.mutable();
-            boolean flag = true;
-            boolean flag1 = true;
-            boolean flag2 = true;
-            boolean flag3 = true;
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        BlockPos origin = context.origin();
+        WorldGenLevel level = context.level();
+        RandomSource random = context.random();
+        if (level.isEmptyBlock(origin) && !level.isEmptyBlock(origin.above())) {
+            BlockPos.MutableBlockPos pos = origin.mutable();
+            BlockPos.MutableBlockPos tmpPos = origin.mutable();
+            boolean placeNorthHangoff = true;
+            boolean placeSouthHangoff = true;
+            boolean placeWestHangoff = true;
+            boolean placeEastHangoff = true;
 
-            while (worldgenlevel.isEmptyBlock(blockpos$mutableblockpos)) {
-                if (worldgenlevel.isOutsideBuildHeight(blockpos$mutableblockpos)) {
+            while (level.isEmptyBlock(pos)) {
+                if (level.isOutsideBuildHeight(pos)) {
                     return true;
                 }
 
-                worldgenlevel.setBlock(blockpos$mutableblockpos, Blocks.BASALT.defaultBlockState(), 2);
-                flag = flag && this.placeHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.NORTH));
-                flag1 = flag1 && this.placeHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.SOUTH));
-                flag2 = flag2 && this.placeHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.WEST));
-                flag3 = flag3 && this.placeHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.EAST));
-                blockpos$mutableblockpos.move(Direction.DOWN);
+                level.setBlock(pos, Blocks.BASALT.defaultBlockState(), 2);
+                placeNorthHangoff = placeNorthHangoff && this.placeHangOff(level, random, tmpPos.setWithOffset(pos, Direction.NORTH));
+                placeSouthHangoff = placeSouthHangoff && this.placeHangOff(level, random, tmpPos.setWithOffset(pos, Direction.SOUTH));
+                placeWestHangoff = placeWestHangoff && this.placeHangOff(level, random, tmpPos.setWithOffset(pos, Direction.WEST));
+                placeEastHangoff = placeEastHangoff && this.placeHangOff(level, random, tmpPos.setWithOffset(pos, Direction.EAST));
+                pos.move(Direction.DOWN);
             }
 
-            blockpos$mutableblockpos.move(Direction.UP);
-            this.placeBaseHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.NORTH));
-            this.placeBaseHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.SOUTH));
-            this.placeBaseHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.WEST));
-            this.placeBaseHangOff(worldgenlevel, randomsource, blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, Direction.EAST));
-            blockpos$mutableblockpos.move(Direction.DOWN);
-            BlockPos.MutableBlockPos blockpos$mutableblockpos2 = new BlockPos.MutableBlockPos();
+            pos.move(Direction.UP);
+            this.placeBaseHangOff(level, random, tmpPos.setWithOffset(pos, Direction.NORTH));
+            this.placeBaseHangOff(level, random, tmpPos.setWithOffset(pos, Direction.SOUTH));
+            this.placeBaseHangOff(level, random, tmpPos.setWithOffset(pos, Direction.WEST));
+            this.placeBaseHangOff(level, random, tmpPos.setWithOffset(pos, Direction.EAST));
+            pos.move(Direction.DOWN);
+            BlockPos.MutableBlockPos basePos = new BlockPos.MutableBlockPos();
 
-            for (int i = -3; i < 4; i++) {
-                for (int j = -3; j < 4; j++) {
-                    int k = Mth.abs(i) * Mth.abs(j);
-                    if (randomsource.nextInt(10) < 10 - k) {
-                        blockpos$mutableblockpos2.set(blockpos$mutableblockpos.offset(i, 0, j));
-                        int l = 3;
+            for (int dx = -3; dx < 4; dx++) {
+                for (int dz = -3; dz < 4; dz++) {
+                    int probability = Mth.abs(dx) * Mth.abs(dz);
+                    if (random.nextInt(10) < 10 - probability) {
+                        basePos.set(pos.offset(dx, 0, dz));
+                        int maxDrop = 3;
 
-                        while (worldgenlevel.isEmptyBlock(blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos2, Direction.DOWN))) {
-                            blockpos$mutableblockpos2.move(Direction.DOWN);
-                            if (--l <= 0) {
+                        while (level.isEmptyBlock(tmpPos.setWithOffset(basePos, Direction.DOWN))) {
+                            basePos.move(Direction.DOWN);
+                            if (--maxDrop <= 0) {
                                 break;
                             }
                         }
 
-                        if (!worldgenlevel.isEmptyBlock(blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos2, Direction.DOWN))) {
-                            worldgenlevel.setBlock(blockpos$mutableblockpos2, Blocks.BASALT.defaultBlockState(), 2);
+                        if (!level.isEmptyBlock(tmpPos.setWithOffset(basePos, Direction.DOWN))) {
+                            level.setBlock(basePos, Blocks.BASALT.defaultBlockState(), 2);
                         }
                     }
                 }
@@ -76,15 +76,15 @@ public class BasaltPillarFeature extends Feature<NoneFeatureConfiguration> {
         }
     }
 
-    private void placeBaseHangOff(LevelAccessor p_224937_, RandomSource p_224938_, BlockPos p_224939_) {
-        if (p_224938_.nextBoolean()) {
-            p_224937_.setBlock(p_224939_, Blocks.BASALT.defaultBlockState(), 2);
+    private void placeBaseHangOff(final LevelAccessor level, final RandomSource random, final BlockPos pos) {
+        if (random.nextBoolean()) {
+            level.setBlock(pos, Blocks.BASALT.defaultBlockState(), 2);
         }
     }
 
-    private boolean placeHangOff(LevelAccessor p_224941_, RandomSource p_224942_, BlockPos p_224943_) {
-        if (p_224942_.nextInt(10) != 0) {
-            p_224941_.setBlock(p_224943_, Blocks.BASALT.defaultBlockState(), 2);
+    private boolean placeHangOff(final LevelAccessor level, final RandomSource random, final BlockPos hangOffPos) {
+        if (random.nextInt(10) != 0) {
+            level.setBlock(hangOffPos, Blocks.BASALT.defaultBlockState(), 2);
             return true;
         } else {
             return false;

@@ -14,36 +14,38 @@ public class EntityVariantFix extends NamedEntityFix {
     private final String fieldName;
     private final IntFunction<String> idConversions;
 
-    public EntityVariantFix(Schema p_216623_, String p_216624_, TypeReference p_216625_, String p_216626_, String p_216627_, IntFunction<String> p_216628_) {
-        super(p_216623_, false, p_216624_, p_216625_, p_216626_);
-        this.fieldName = p_216627_;
-        this.idConversions = p_216628_;
+    public EntityVariantFix(
+        final Schema outputSchema,
+        final String name,
+        final TypeReference type,
+        final String entityName,
+        final String fieldName,
+        final IntFunction<String> idConversions
+    ) {
+        super(outputSchema, false, name, type, entityName);
+        this.fieldName = fieldName;
+        this.idConversions = idConversions;
     }
 
-    private static <T> Dynamic<T> updateAndRename(Dynamic<T> p_216637_, String p_216638_, String p_216639_, Function<Dynamic<T>, Dynamic<T>> p_216640_) {
-        return p_216637_.map(
-            p_326583_ -> {
-                DynamicOps<T> dynamicops = p_216637_.getOps();
-                Function<T, T> function = p_216656_ -> p_216640_.apply(new Dynamic<>(dynamicops, p_216656_)).getValue();
-                return dynamicops.get((T)p_326583_, p_216638_)
-                    .map(p_216652_ -> dynamicops.set((T)p_326583_, p_216639_, function.apply((T)p_216652_)))
-                    .result()
-                    .orElse((T)p_326583_);
-            }
-        );
+    private static <T> Dynamic<T> updateAndRename(
+        final Dynamic<T> input, final String oldKey, final String newKey, final Function<Dynamic<T>, Dynamic<T>> function
+    ) {
+        return input.map(v -> {
+            DynamicOps<T> ops = input.getOps();
+            Function<T, T> liftedFunction = value -> function.apply(new Dynamic<>(ops, value)).getValue();
+            return ops.get((T)v, oldKey).map(fieldValue -> ops.set((T)v, newKey, liftedFunction.apply((T)fieldValue))).result().orElse((T)v);
+        });
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_216630_) {
-        return p_216630_.update(
+    protected Typed<?> fix(final Typed<?> typed) {
+        return typed.update(
             DSL.remainderFinder(),
-            p_216632_ -> updateAndRename(
-                p_216632_,
+            remainder -> updateAndRename(
+                remainder,
                 this.fieldName,
                 "variant",
-                p_326578_ -> DataFixUtils.orElse(
-                    p_326578_.asNumber().map(p_216635_ -> p_326578_.createString(this.idConversions.apply(p_216635_.intValue()))).result(), p_326578_
-                )
+                catType -> DataFixUtils.orElse(catType.asNumber().map(e -> catType.createString(this.idConversions.apply(e.intValue()))).result(), catType)
             )
         );
     }

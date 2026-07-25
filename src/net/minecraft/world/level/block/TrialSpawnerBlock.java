@@ -7,6 +7,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.TrialSpawnerBlockEntity;
 import net.minecraft.world.level.block.entity.trialspawner.TrialSpawnerState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -27,35 +28,35 @@ public class TrialSpawnerBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public TrialSpawnerBlock(BlockBehaviour.Properties p_309401_) {
-        super(p_309401_);
+    public TrialSpawnerBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(STATE, TrialSpawnerState.INACTIVE).setValue(OMINOUS, false));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_312861_) {
-        p_312861_.add(STATE, OMINOUS);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(STATE, OMINOUS);
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_310402_, BlockState p_309509_) {
-        return new TrialSpawnerBlockEntity(p_310402_, p_309509_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new TrialSpawnerBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_312042_, BlockState p_312838_, BlockEntityType<T> p_310465_) {
-        return p_312042_ instanceof ServerLevel serverlevel
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return level instanceof ServerLevel serverLevel
             ? createTickerHelper(
-                p_310465_,
-                BlockEntityType.TRIAL_SPAWNER,
-                (p_327270_, p_327271_, p_327272_, p_327273_) -> p_327273_.getTrialSpawner()
-                    .tickServer(serverlevel, p_327271_, p_327272_.getOptionalValue(BlockStateProperties.OMINOUS).orElse(false))
+                type,
+                BlockEntityTypes.TRIAL_SPAWNER,
+                (innerLevel, pos, state, entity) -> entity.getTrialSpawner()
+                    .tickServer(serverLevel, pos, state.getOptionalValue(BlockStateProperties.OMINOUS).orElse(false))
             )
             : createTickerHelper(
-                p_310465_,
-                BlockEntityType.TRIAL_SPAWNER,
-                (p_327274_, p_327275_, p_327276_, p_327277_) -> p_327277_.getTrialSpawner()
-                    .tickClient(p_327274_, p_327275_, p_327276_.getOptionalValue(BlockStateProperties.OMINOUS).orElse(false))
+                type,
+                BlockEntityTypes.TRIAL_SPAWNER,
+                (innerLevel, pos, state, entity) -> entity.getTrialSpawner()
+                    .tickClient(innerLevel, pos, state.getOptionalValue(BlockStateProperties.OMINOUS).orElse(false))
             );
     }
 }

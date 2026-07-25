@@ -3,29 +3,26 @@ package net.minecraft.client.multiplayer.resolver;
 import com.google.common.net.HostAndPort;
 import com.mojang.logging.LogUtils;
 import java.net.IDN;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public final class ServerAddress {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final HostAndPort hostAndPort;
     private static final ServerAddress INVALID = new ServerAddress(HostAndPort.fromParts("server.invalid", 25565));
 
-    public ServerAddress(String p_171861_, int p_171862_) {
-        this(HostAndPort.fromParts(p_171861_, p_171862_));
+    public ServerAddress(final String host, final int port) {
+        this(HostAndPort.fromParts(host, port));
     }
 
-    private ServerAddress(HostAndPort p_171859_) {
-        this.hostAndPort = p_171859_;
+    private ServerAddress(final HostAndPort hostAndPort) {
+        this.hostAndPort = hostAndPort;
     }
 
     public String getHost() {
         try {
             return IDN.toASCII(this.hostAndPort.getHost());
-        } catch (IllegalArgumentException illegalargumentexception) {
+        } catch (IllegalArgumentException ignored) {
             return "";
         }
     }
@@ -34,38 +31,38 @@ public final class ServerAddress {
         return this.hostAndPort.getPort();
     }
 
-    public static ServerAddress parseString(@Nullable String p_171865_) {
-        if (p_171865_ == null) {
+    public static ServerAddress parseString(final @Nullable String input) {
+        if (input == null) {
             return INVALID;
-        } else {
-            try {
-                HostAndPort hostandport = HostAndPort.fromString(p_171865_).withDefaultPort(25565);
-                return hostandport.getHost().isEmpty() ? INVALID : new ServerAddress(hostandport);
-            } catch (IllegalArgumentException illegalargumentexception) {
-                LOGGER.info("Failed to parse URL {}", p_171865_, illegalargumentexception);
-                return INVALID;
-            }
+        }
+
+        try {
+            HostAndPort result = HostAndPort.fromString(input).withDefaultPort(25565);
+            return result.getHost().isEmpty() ? INVALID : new ServerAddress(result);
+        } catch (IllegalArgumentException e) {
+            LOGGER.info("Failed to parse URL {}", input, e);
+            return INVALID;
         }
     }
 
-    public static boolean isValidAddress(String p_171868_) {
+    public static boolean isValidAddress(final String input) {
         try {
-            HostAndPort hostandport = HostAndPort.fromString(p_171868_);
-            String s = hostandport.getHost();
-            if (!s.isEmpty()) {
-                IDN.toASCII(s);
+            HostAndPort hostAndPort = HostAndPort.fromString(input);
+            String host = hostAndPort.getHost();
+            if (!host.isEmpty()) {
+                IDN.toASCII(host);
                 return true;
             }
-        } catch (IllegalArgumentException illegalargumentexception) {
+        } catch (IllegalArgumentException var3) {
         }
 
         return false;
     }
 
-    static int parsePort(String p_171870_) {
+    public static int parsePort(final String str) {
         try {
-            return Integer.parseInt(p_171870_.trim());
-        } catch (Exception exception) {
+            return Integer.parseInt(str.trim());
+        } catch (Exception var2) {
             return 25565;
         }
     }
@@ -76,11 +73,11 @@ public final class ServerAddress {
     }
 
     @Override
-    public boolean equals(Object p_171872_) {
-        if (this == p_171872_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return p_171872_ instanceof ServerAddress ? this.hostAndPort.equals(((ServerAddress)p_171872_).hostAndPort) : false;
+            return o instanceof ServerAddress serverAddress ? this.hostAndPort.equals(serverAddress.hostAndPort) : false;
         }
     }
 

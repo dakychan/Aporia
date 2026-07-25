@@ -11,6 +11,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -44,8 +45,8 @@ import org.jspecify.annotations.Nullable;
 public class Evoker extends SpellcasterIllager {
     private @Nullable Sheep wololoTarget;
 
-    public Evoker(EntityType<? extends Evoker> p_455167_, Level p_453081_) {
-        super(p_455167_, p_453081_);
+    public Evoker(final EntityType<? extends Evoker> type, final Level level) {
+        super(type, level);
         this.xpReward = 10;
     }
 
@@ -78,14 +79,23 @@ public class Evoker extends SpellcasterIllager {
     }
 
     @Override
-    protected boolean considersEntityAsAlly(Entity p_451251_) {
-        if (p_451251_ == this) {
+    protected boolean considersEntityAsAlly(final Entity other) {
+        if (other == this) {
             return true;
-        } else if (super.considersEntityAsAlly(p_451251_)) {
-            return true;
-        } else {
-            return p_451251_ instanceof Vex vex && vex.getOwner() != null ? this.considersEntityAsAlly(vex.getOwner()) : false;
         }
+
+        if (super.considersEntityAsAlly(other)) {
+            return true;
+        }
+
+        if (other instanceof Vex vex) {
+            LivingEntity rootOwner = vex.getRootOwner();
+            if (rootOwner != null && (rootOwner == this || super.considersEntityAsAlly(rootOwner))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
@@ -99,15 +109,15 @@ public class Evoker extends SpellcasterIllager {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_457090_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.EVOKER_HURT;
     }
 
-    void setWololoTarget(@Nullable Sheep p_458381_) {
-        this.wololoTarget = p_458381_;
+    private void setWololoTarget(final @Nullable Sheep wololoTarget) {
+        this.wololoTarget = wololoTarget;
     }
 
-    @Nullable Sheep getWololoTarget() {
+    private @Nullable Sheep getWololoTarget() {
         return this.wololoTarget;
     }
 
@@ -117,10 +127,10 @@ public class Evoker extends SpellcasterIllager {
     }
 
     @Override
-    public void applyRaidBuffs(ServerLevel p_453565_, int p_460558_, boolean p_458712_) {
+    public void applyRaidBuffs(final ServerLevel level, final int wave, final boolean isCaptain) {
     }
 
-    class EvokerAttackSpellGoal extends SpellcasterIllager.SpellcasterUseSpellGoal {
+    private class EvokerAttackSpellGoal extends SpellcasterIllager.SpellcasterUseSpellGoal {
         @Override
         protected int getCastingTime() {
             return 40;
@@ -133,58 +143,63 @@ public class Evoker extends SpellcasterIllager {
 
         @Override
         protected void performSpellCasting() {
-            LivingEntity livingentity = Evoker.this.getTarget();
-            double d0 = Math.min(livingentity.getY(), Evoker.this.getY());
-            double d1 = Math.max(livingentity.getY(), Evoker.this.getY()) + 1.0;
-            float f = (float)Mth.atan2(livingentity.getZ() - Evoker.this.getZ(), livingentity.getX() - Evoker.this.getX());
-            if (Evoker.this.distanceToSqr(livingentity) < 9.0) {
+            LivingEntity target = Evoker.this.getTarget();
+            double minY = Math.min(target.getY(), Evoker.this.getY());
+            double maxY = Math.max(target.getY(), Evoker.this.getY()) + 1.0;
+            float angleTowardsTarget = (float)Mth.atan2(target.getZ() - Evoker.this.getZ(), target.getX() - Evoker.this.getX());
+            if (Evoker.this.distanceToSqr(target) < 9.0) {
                 for (int i = 0; i < 5; i++) {
-                    float f1 = f + i * (float) Math.PI * 0.4F;
-                    this.createSpellEntity(Evoker.this.getX() + Mth.cos(f1) * 1.5, Evoker.this.getZ() + Mth.sin(f1) * 1.5, d0, d1, f1, 0);
+                    float angle = angleTowardsTarget + i * (float) Math.PI * 0.4F;
+                    this.createSpellEntity(Evoker.this.getX() + Mth.cos(angle) * 1.5, Evoker.this.getZ() + Mth.sin(angle) * 1.5, minY, maxY, angle, 0);
                 }
 
-                for (int k = 0; k < 8; k++) {
-                    float f2 = f + k * (float) Math.PI * 2.0F / 8.0F + (float) (Math.PI * 2.0 / 5.0);
-                    this.createSpellEntity(Evoker.this.getX() + Mth.cos(f2) * 2.5, Evoker.this.getZ() + Mth.sin(f2) * 2.5, d0, d1, f2, 3);
+                for (int i = 0; i < 8; i++) {
+                    float angle = angleTowardsTarget + i * (float) Math.PI * 2.0F / 8.0F + (float) (Math.PI * 2.0 / 5.0);
+                    this.createSpellEntity(Evoker.this.getX() + Mth.cos(angle) * 2.5, Evoker.this.getZ() + Mth.sin(angle) * 2.5, minY, maxY, angle, 3);
                 }
             } else {
-                for (int l = 0; l < 16; l++) {
-                    double d2 = 1.25 * (l + 1);
-                    int j = 1 * l;
-                    this.createSpellEntity(Evoker.this.getX() + Mth.cos(f) * d2, Evoker.this.getZ() + Mth.sin(f) * d2, d0, d1, f, j);
+                for (int i = 0; i < 16; i++) {
+                    double reach = 1.25 * (i + 1);
+                    int spellSpeed = 1 * i;
+                    this.createSpellEntity(
+                        Evoker.this.getX() + Mth.cos(angleTowardsTarget) * reach,
+                        Evoker.this.getZ() + Mth.sin(angleTowardsTarget) * reach,
+                        minY,
+                        maxY,
+                        angleTowardsTarget,
+                        spellSpeed
+                    );
                 }
             }
         }
 
-        private void createSpellEntity(double p_453824_, double p_457236_, double p_452259_, double p_454198_, float p_457413_, int p_454168_) {
-            BlockPos blockpos = BlockPos.containing(p_453824_, p_454198_, p_457236_);
-            boolean flag = false;
-            double d0 = 0.0;
+        private void createSpellEntity(final double x, final double z, final double minY, final double maxY, final float angle, final int delayTicks) {
+            BlockPos pos = BlockPos.containing(x, maxY, z);
+            boolean success = false;
+            double topOffset = 0.0;
 
             do {
-                BlockPos blockpos1 = blockpos.below();
-                BlockState blockstate = Evoker.this.level().getBlockState(blockpos1);
-                if (blockstate.isFaceSturdy(Evoker.this.level(), blockpos1, Direction.UP)) {
-                    if (!Evoker.this.level().isEmptyBlock(blockpos)) {
-                        BlockState blockstate1 = Evoker.this.level().getBlockState(blockpos);
-                        VoxelShape voxelshape = blockstate1.getCollisionShape(Evoker.this.level(), blockpos);
-                        if (!voxelshape.isEmpty()) {
-                            d0 = voxelshape.max(Direction.Axis.Y);
+                BlockPos below = pos.below();
+                BlockState belowState = Evoker.this.level().getBlockState(below);
+                if (belowState.isFaceSturdy(Evoker.this.level(), below, Direction.UP)) {
+                    if (!Evoker.this.level().isEmptyBlock(pos)) {
+                        BlockState blockState = Evoker.this.level().getBlockState(pos);
+                        VoxelShape shape = blockState.getCollisionShape(Evoker.this.level(), pos);
+                        if (!shape.isEmpty()) {
+                            topOffset = shape.max(Direction.Axis.Y);
                         }
                     }
 
-                    flag = true;
+                    success = true;
                     break;
                 }
 
-                blockpos = blockpos.below();
-            } while (blockpos.getY() >= Mth.floor(p_452259_) - 1);
+                pos = pos.below();
+            } while (pos.getY() >= Mth.floor(minY) - 1);
 
-            if (flag) {
-                Evoker.this.level()
-                    .addFreshEntity(new EvokerFangs(Evoker.this.level(), p_453824_, blockpos.getY() + d0, p_457236_, p_457413_, p_454168_, Evoker.this));
-                Evoker.this.level()
-                    .gameEvent(GameEvent.ENTITY_PLACE, new Vec3(p_453824_, blockpos.getY() + d0, p_457236_), GameEvent.Context.of(Evoker.this));
+            if (success) {
+                Evoker.this.level().addFreshEntity(new EvokerFangs(Evoker.this.level(), x, pos.getY() + topOffset, z, angle, delayTicks, Evoker.this));
+                Evoker.this.level().gameEvent(GameEvent.ENTITY_PLACE, new Vec3(x, pos.getY() + topOffset, z), GameEvent.Context.of(Evoker.this));
             }
         }
 
@@ -199,7 +214,7 @@ public class Evoker extends SpellcasterIllager {
         }
     }
 
-    class EvokerCastingSpellGoal extends SpellcasterIllager.SpellcasterCastingSpellGoal {
+    private class EvokerCastingSpellGoal extends SpellcasterIllager.SpellcasterCastingSpellGoal {
         @Override
         public void tick() {
             if (Evoker.this.getTarget() != null) {
@@ -210,17 +225,19 @@ public class Evoker extends SpellcasterIllager {
         }
     }
 
-    class EvokerSummonSpellGoal extends SpellcasterIllager.SpellcasterUseSpellGoal {
+    private class EvokerSummonSpellGoal extends SpellcasterIllager.SpellcasterUseSpellGoal {
         private final TargetingConditions vexCountTargeting = TargetingConditions.forNonCombat().range(16.0).ignoreLineOfSight().ignoreInvisibilityTesting();
 
         @Override
         public boolean canUse() {
             if (!super.canUse()) {
                 return false;
-            } else {
-                int i = getServerLevel(Evoker.this.level()).getNearbyEntities(Vex.class, this.vexCountTargeting, Evoker.this, Evoker.this.getBoundingBox().inflate(16.0)).size();
-                return Evoker.this.random.nextInt(8) + 1 > i;
             }
+
+            int vexes = getServerLevel(Evoker.this.level())
+                .getNearbyEntities(Vex.class, this.vexCountTargeting, Evoker.this, Evoker.this.getBoundingBox().inflate(16.0))
+                .size();
+            return Evoker.this.random.nextInt(8) + 1 > vexes;
         }
 
         @Override
@@ -235,24 +252,24 @@ public class Evoker extends SpellcasterIllager {
 
         @Override
         protected void performSpellCasting() {
-            ServerLevel serverlevel = (ServerLevel)Evoker.this.level();
-            PlayerTeam playerteam = Evoker.this.getTeam();
+            ServerLevel serverLevel = (ServerLevel)Evoker.this.level();
+            PlayerTeam evokerTeam = Evoker.this.getTeam();
 
             for (int i = 0; i < 3; i++) {
-                BlockPos blockpos = Evoker.this.blockPosition().offset(-2 + Evoker.this.random.nextInt(5), 1, -2 + Evoker.this.random.nextInt(5));
-                Vex vex = EntityType.VEX.create(Evoker.this.level(), EntitySpawnReason.MOB_SUMMONED);
+                BlockPos pos = Evoker.this.blockPosition().offset(-2 + Evoker.this.random.nextInt(5), 1, -2 + Evoker.this.random.nextInt(5));
+                Vex vex = EntityTypes.VEX.create(Evoker.this.level(), EntitySpawnReason.MOB_SUMMONED);
                 if (vex != null) {
-                    vex.snapTo(blockpos, 0.0F, 0.0F);
-                    vex.finalizeSpawn(serverlevel, serverlevel.getCurrentDifficultyAt(blockpos), EntitySpawnReason.MOB_SUMMONED, null);
+                    vex.snapTo(pos, 0.0F, 0.0F);
+                    vex.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(pos), EntitySpawnReason.MOB_SUMMONED, null);
                     vex.setOwner(Evoker.this);
-                    vex.setBoundOrigin(blockpos);
+                    vex.setBoundOrigin(pos);
                     vex.setLimitedLife(20 * (30 + Evoker.this.random.nextInt(90)));
-                    if (playerteam != null) {
-                        serverlevel.getScoreboard().addPlayerToTeam(vex.getScoreboardName(), playerteam);
+                    if (evokerTeam != null) {
+                        serverLevel.getScoreboard().addPlayerToTeam(vex.getScoreboardName(), evokerTeam);
                     }
 
-                    serverlevel.addFreshEntityWithPassengers(vex);
-                    serverlevel.gameEvent(GameEvent.ENTITY_PLACE, blockpos, GameEvent.Context.of(Evoker.this));
+                    serverLevel.addFreshEntityWithPassengers(vex);
+                    serverLevel.gameEvent(GameEvent.ENTITY_PLACE, pos, GameEvent.Context.of(Evoker.this));
                 }
             }
         }
@@ -271,30 +288,36 @@ public class Evoker extends SpellcasterIllager {
     public class EvokerWololoSpellGoal extends SpellcasterIllager.SpellcasterUseSpellGoal {
         private final TargetingConditions wololoTargeting = TargetingConditions.forNonCombat()
             .range(16.0)
-            .selector((p_458012_, p_455024_) -> ((Sheep)p_458012_).getColor() == DyeColor.BLUE);
+            .selector((target, level) -> ((Sheep)target).getColor() == DyeColor.BLUE);
 
         @Override
         public boolean canUse() {
             if (Evoker.this.getTarget() != null) {
                 return false;
-            } else if (Evoker.this.isCastingSpell()) {
-                return false;
-            } else if (Evoker.this.tickCount < this.nextAttackTickCount) {
-                return false;
-            } else {
-                ServerLevel serverlevel = getServerLevel(Evoker.this.level());
-                if (!serverlevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
-                    return false;
-                } else {
-                    List<Sheep> list = serverlevel.getNearbyEntities(Sheep.class, this.wololoTargeting, Evoker.this, Evoker.this.getBoundingBox().inflate(16.0, 4.0, 16.0));
-                    if (list.isEmpty()) {
-                        return false;
-                    } else {
-                        Evoker.this.setWololoTarget(list.get(Evoker.this.random.nextInt(list.size())));
-                        return true;
-                    }
-                }
             }
+
+            if (Evoker.this.isCastingSpell()) {
+                return false;
+            }
+
+            if (Evoker.this.tickCount < this.nextAttackTickCount) {
+                return false;
+            }
+
+            ServerLevel level = getServerLevel(Evoker.this.level());
+            if (!level.getGameRules().get(GameRules.MOB_GRIEFING)) {
+                return false;
+            }
+
+            List<Sheep> entities = level.getNearbyEntities(
+                Sheep.class, this.wololoTargeting, Evoker.this, Evoker.this.getBoundingBox().inflate(16.0, 4.0, 16.0)
+            );
+            if (entities.isEmpty()) {
+                return false;
+            }
+
+            Evoker.this.setWololoTarget(entities.get(Evoker.this.random.nextInt(entities.size())));
+            return true;
         }
 
         @Override
@@ -310,9 +333,9 @@ public class Evoker extends SpellcasterIllager {
 
         @Override
         protected void performSpellCasting() {
-            Sheep sheep = Evoker.this.getWololoTarget();
-            if (sheep != null && sheep.isAlive()) {
-                sheep.setColor(DyeColor.RED);
+            Sheep wololoTarget = Evoker.this.getWololoTarget();
+            if (wololoTarget != null && wololoTarget.isAlive()) {
+                wololoTarget.setColor(DyeColor.RED);
             }
         }
 

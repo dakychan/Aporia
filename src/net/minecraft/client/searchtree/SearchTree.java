@@ -4,30 +4,27 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 import java.util.stream.Stream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
 public interface SearchTree<T> {
     static <T> SearchTree<T> empty() {
-        return p_344644_ -> List.of();
+        return text -> List.of();
     }
 
-    static <T> SearchTree<T> plainText(List<T> p_344984_, Function<T, Stream<String>> p_343350_) {
-        if (p_344984_.isEmpty()) {
+    static <T> SearchTree<T> plainText(final List<T> elements, final Function<T, Stream<String>> idGetter) {
+        if (elements.isEmpty()) {
             return empty();
-        } else {
-            SuffixArray<T> suffixarray = new SuffixArray<>();
-
-            for (T t : p_344984_) {
-                p_343350_.apply(t).forEach(p_342612_ -> suffixarray.add(t, p_342612_.toLowerCase(Locale.ROOT)));
-            }
-
-            suffixarray.generate();
-            return suffixarray::search;
         }
+
+        SuffixArray<T> tree = new SuffixArray<>();
+
+        for (T element : elements) {
+            idGetter.apply(element).forEach(elementId -> tree.add(element, elementId.toLowerCase(Locale.ROOT)));
+        }
+
+        tree.generate();
+        return tree::search;
     }
 
-    List<T> search(String p_119955_);
+    List<T> search(String text);
 }

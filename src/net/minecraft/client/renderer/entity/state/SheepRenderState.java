@@ -2,10 +2,7 @@ package net.minecraft.client.renderer.entity.state;
 
 import net.minecraft.client.color.ColorLerper;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SheepRenderState extends LivingEntityRenderState {
     public float headEatPositionScale;
     public float headEatAngleScale;

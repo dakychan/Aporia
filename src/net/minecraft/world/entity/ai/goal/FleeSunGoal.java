@@ -17,10 +17,10 @@ public class FleeSunGoal extends Goal {
     private final double speedModifier;
     private final Level level;
 
-    public FleeSunGoal(PathfinderMob p_25221_, double p_25222_) {
-        this.mob = p_25221_;
-        this.speedModifier = p_25222_;
-        this.level = p_25221_.level();
+    public FleeSunGoal(final PathfinderMob mob, final double speedModifier) {
+        this.mob = mob;
+        this.speedModifier = speedModifier;
+        this.level = mob.level();
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
@@ -40,15 +40,15 @@ public class FleeSunGoal extends Goal {
     }
 
     protected boolean setWantedPos() {
-        Vec3 vec3 = this.getHidePos();
-        if (vec3 == null) {
+        Vec3 pos = this.getHidePos();
+        if (pos == null) {
             return false;
-        } else {
-            this.wantedX = vec3.x;
-            this.wantedY = vec3.y;
-            this.wantedZ = vec3.z;
-            return true;
         }
+
+        this.wantedX = pos.x;
+        this.wantedY = pos.y;
+        this.wantedZ = pos.z;
+        return true;
     }
 
     @Override
@@ -62,13 +62,13 @@ public class FleeSunGoal extends Goal {
     }
 
     protected @Nullable Vec3 getHidePos() {
-        RandomSource randomsource = this.mob.getRandom();
-        BlockPos blockpos = this.mob.blockPosition();
+        RandomSource random = this.mob.getRandom();
+        BlockPos pos = this.mob.blockPosition();
 
         for (int i = 0; i < 10; i++) {
-            BlockPos blockpos1 = blockpos.offset(randomsource.nextInt(20) - 10, randomsource.nextInt(6) - 3, randomsource.nextInt(20) - 10);
-            if (!this.level.canSeeSky(blockpos1) && this.mob.getWalkTargetValue(blockpos1) < 0.0F) {
-                return Vec3.atBottomCenterOf(blockpos1);
+            BlockPos randomPos = pos.offset(random.nextInt(20) - 10, random.nextInt(6) - 3, random.nextInt(20) - 10);
+            if (!this.level.canSeeSky(randomPos) && this.mob.getWalkTargetValue(randomPos) < 0.0F) {
+                return Vec3.atBottomCenterOf(randomPos);
             }
         }
 

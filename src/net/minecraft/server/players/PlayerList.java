@@ -55,7 +55,6 @@ import net.minecraft.network.protocol.game.ClientboundSetExperiencePacket;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.network.protocol.game.ClientboundSetPlayerTeamPacket;
 import net.minecraft.network.protocol.game.ClientboundSetSimulationDistancePacket;
-import net.minecraft.network.protocol.game.ClientboundSetTimePacket;
 import net.minecraft.network.protocol.game.ClientboundSoundPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateMobEffectPacket;
 import net.minecraft.network.protocol.game.ClientboundUpdateRecipesPacket;
@@ -128,337 +127,349 @@ public abstract class PlayerList {
     private boolean allowCommandsForAllPlayers;
     private int sendAllPlayerInfoIn;
 
-    public PlayerList(MinecraftServer p_203842_, LayeredRegistryAccess<RegistryLayer> p_251844_, PlayerDataStorage p_203844_, NotificationService p_425184_) {
-        this.server = p_203842_;
-        this.registries = p_251844_;
-        this.playerIo = p_203844_;
-        this.whitelist = new UserWhiteList(WHITELIST_FILE, p_425184_);
-        this.ops = new ServerOpList(OPLIST_FILE, p_425184_);
-        this.bans = new UserBanList(USERBANLIST_FILE, p_425184_);
-        this.ipBans = new IpBanList(IPBANLIST_FILE, p_425184_);
+    public PlayerList(
+        final MinecraftServer server,
+        final LayeredRegistryAccess<RegistryLayer> registries,
+        final PlayerDataStorage playerIo,
+        final NotificationService notificationService
+    ) {
+        this.server = server;
+        this.registries = registries;
+        this.playerIo = playerIo;
+        this.whitelist = new UserWhiteList(WHITELIST_FILE, notificationService);
+        this.ops = new ServerOpList(OPLIST_FILE, notificationService);
+        this.bans = new UserBanList(USERBANLIST_FILE, notificationService);
+        this.ipBans = new IpBanList(IPBANLIST_FILE, notificationService);
     }
 
-    public void placeNewPlayer(Connection p_11262_, ServerPlayer p_11263_, CommonListenerCookie p_297215_) {
-        NameAndId nameandid = p_11263_.nameAndId();
-        UserNameToIdResolver usernametoidresolver = this.server.services().nameToIdCache();
-        Optional<NameAndId> optional = usernametoidresolver.get(nameandid.id());
-        String s = optional.map(NameAndId::name).orElse(nameandid.name());
-        usernametoidresolver.add(nameandid);
-        ServerLevel serverlevel = p_11263_.level();
-        String s1 = p_11262_.getLoggableAddress(this.server.logIPs());
+    public void placeNewPlayer(final Connection connection, final ServerPlayer player, final CommonListenerCookie cookie) {
+        NameAndId gameProfile = player.nameAndId();
+        UserNameToIdResolver profileCache = this.server.services().nameToIdCache();
+        Optional<NameAndId> oldProfile = profileCache.get(gameProfile.id());
+        String oldName = oldProfile.map(NameAndId::name).orElse(gameProfile.name());
+        profileCache.add(gameProfile);
+        ServerLevel level = player.level();
+        String address = connection.getLoggableAddress(this.server.logIPs());
         LOGGER.info(
             "{}[{}] logged in with entity id {} at ({}, {}, {})",
-            p_11263_.getPlainTextName(),
-            s1,
-            p_11263_.getId(),
-            p_11263_.getX(),
-            p_11263_.getY(),
-            p_11263_.getZ()
+            player.getPlainTextName(),
+            address,
+            player.getId(),
+            player.getX(),
+            player.getY(),
+            player.getZ()
         );
-        LevelData leveldata = serverlevel.getLevelData();
-        ServerGamePacketListenerImpl servergamepacketlistenerimpl = new ServerGamePacketListenerImpl(this.server, p_11262_, p_11263_, p_297215_);
-        p_11262_.setupInboundProtocol(
-            GameProtocols.SERVERBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.server.registryAccess()), servergamepacketlistenerimpl),
-            servergamepacketlistenerimpl
+        LevelData levelData = level.getLevelData();
+        ServerGamePacketListenerImpl playerConnection = new ServerGamePacketListenerImpl(this.server, connection, player, cookie);
+        connection.setupInboundProtocol(
+            GameProtocols.SERVERBOUND_TEMPLATE.bind(RegistryFriendlyByteBuf.decorator(this.server.registryAccess()), playerConnection), playerConnection
         );
-        servergamepacketlistenerimpl.suspendFlushing();
-        GameRules gamerules = serverlevel.getGameRules();
-        boolean flag = gamerules.get(GameRules.IMMEDIATE_RESPAWN);
-        boolean flag1 = gamerules.get(GameRules.REDUCED_DEBUG_INFO);
-        boolean flag2 = gamerules.get(GameRules.LIMITED_CRAFTING);
-        servergamepacketlistenerimpl.send(
+        playerConnection.suspendFlushing();
+        GameRules gameRules = level.getGameRules();
+        boolean immediateRespawn = gameRules.get(GameRules.IMMEDIATE_RESPAWN);
+        boolean reducedDebugInfo = gameRules.get(GameRules.REDUCED_DEBUG_INFO);
+        boolean doLimitedCrafting = gameRules.get(GameRules.LIMITED_CRAFTING);
+        playerConnection.send(
             new ClientboundLoginPacket(
-                p_11263_.getId(),
-                leveldata.isHardcore(),
+                player.getId(),
+                levelData.isHardcore(),
                 this.server.levelKeys(),
                 this.getMaxPlayers(),
                 this.getViewDistance(),
                 this.getSimulationDistance(),
-                flag1,
-                !flag,
-                flag2,
-                p_11263_.createCommonSpawnInfo(serverlevel),
+                reducedDebugInfo,
+                !immediateRespawn,
+                doLimitedCrafting,
+                player.createCommonSpawnInfo(level),
+                this.server.usesAuthentication(),
                 this.server.enforceSecureProfile()
             )
         );
-        servergamepacketlistenerimpl.send(new ClientboundChangeDifficultyPacket(leveldata.getDifficulty(), leveldata.isDifficultyLocked()));
-        servergamepacketlistenerimpl.send(new ClientboundPlayerAbilitiesPacket(p_11263_.getAbilities()));
-        servergamepacketlistenerimpl.send(new ClientboundSetHeldSlotPacket(p_11263_.getInventory().getSelectedSlot()));
-        RecipeManager recipemanager = this.server.getRecipeManager();
-        servergamepacketlistenerimpl.send(new ClientboundUpdateRecipesPacket(recipemanager.getSynchronizedItemProperties(), recipemanager.getSynchronizedStonecutterRecipes()));
-        this.sendPlayerPermissionLevel(p_11263_);
-        p_11263_.getStats().markAllDirty();
-        p_11263_.getRecipeBook().sendInitialRecipeBook(p_11263_);
-        this.updateEntireScoreboard(serverlevel.getScoreboard(), p_11263_);
+        playerConnection.send(new ClientboundChangeDifficultyPacket(levelData.getDifficulty(), levelData.isDifficultyLocked()));
+        playerConnection.send(new ClientboundPlayerAbilitiesPacket(player.getAbilities()));
+        playerConnection.send(new ClientboundSetHeldSlotPacket(player.getInventory().getSelectedSlot()));
+        RecipeManager recipeManager = this.server.getRecipeManager();
+        playerConnection.send(
+            new ClientboundUpdateRecipesPacket(recipeManager.getSynchronizedItemProperties(), recipeManager.getSynchronizedStonecutterRecipes())
+        );
+        this.sendPlayerPermissionLevel(player);
+        player.getStats().markAllDirty();
+        player.getRecipeBook().sendInitialRecipeBook(player);
+        this.updateEntireScoreboard(level.getScoreboard(), player);
         this.server.invalidateStatus();
-        MutableComponent mutablecomponent;
-        if (p_11263_.getGameProfile().name().equalsIgnoreCase(s)) {
-            mutablecomponent = Component.translatable("multiplayer.player.joined", p_11263_.getDisplayName());
+        MutableComponent component;
+        if (player.getGameProfile().name().equalsIgnoreCase(oldName)) {
+            component = Component.translatable("multiplayer.player.joined", player.getDisplayName());
         } else {
-            mutablecomponent = Component.translatable("multiplayer.player.joined.renamed", p_11263_.getDisplayName(), s);
+            component = Component.translatable("multiplayer.player.joined.renamed", player.getDisplayName(), oldName);
         }
 
-        this.broadcastSystemMessage(mutablecomponent.withStyle(ChatFormatting.YELLOW), false);
-        servergamepacketlistenerimpl.teleport(p_11263_.getX(), p_11263_.getY(), p_11263_.getZ(), p_11263_.getYRot(), p_11263_.getXRot());
-        ServerStatus serverstatus = this.server.getStatus();
-        if (serverstatus != null && !p_297215_.transferred()) {
-            p_11263_.sendServerStatus(serverstatus);
+        this.broadcastSystemMessage(component.withStyle(ChatFormatting.YELLOW), false);
+        playerConnection.teleport(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+        ServerStatus status = this.server.getStatus();
+        if (status != null && !cookie.transferred()) {
+            player.sendServerStatus(status);
         }
 
-        p_11263_.connection.send(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(this.players));
-        this.players.add(p_11263_);
-        this.playersByUUID.put(p_11263_.getUUID(), p_11263_);
-        this.broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(p_11263_)));
-        this.sendLevelInfo(p_11263_, serverlevel);
-        serverlevel.addNewPlayer(p_11263_);
-        this.server.getCustomBossEvents().onPlayerConnect(p_11263_);
-        this.sendActivePlayerEffects(p_11263_);
-        p_11263_.initInventoryMenu();
-        this.server.notificationManager().playerJoined(p_11263_);
-        servergamepacketlistenerimpl.resumeFlushing();
+        player.connection.send(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(this.players));
+        this.players.add(player);
+        this.playersByUUID.put(player.getUUID(), player);
+        this.broadcastAll(ClientboundPlayerInfoUpdatePacket.createPlayerInitializing(List.of(player)));
+        this.sendLevelInfo(player, level);
+        level.addNewPlayer(player);
+        this.server.getCustomBossEvents().onPlayerConnect(player);
+        this.sendActivePlayerEffects(player);
+        player.initInventoryMenu();
+        this.server.notificationManager().playerJoined(player);
+        playerConnection.resumeFlushing();
     }
 
-    protected void updateEntireScoreboard(ServerScoreboard p_11274_, ServerPlayer p_11275_) {
-        Set<Objective> set = Sets.newHashSet();
+    protected void updateEntireScoreboard(final ServerScoreboard scoreboard, final ServerPlayer player) {
+        Set<Objective> objectives = Sets.newHashSet();
 
-        for (PlayerTeam playerteam : p_11274_.getPlayerTeams()) {
-            p_11275_.connection.send(ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(playerteam, true));
+        for (PlayerTeam team : scoreboard.getPlayerTeams()) {
+            player.connection.send(ClientboundSetPlayerTeamPacket.createAddOrModifyPacket(team, true));
         }
 
-        for (DisplaySlot displayslot : DisplaySlot.values()) {
-            Objective objective = p_11274_.getDisplayObjective(displayslot);
-            if (objective != null && !set.contains(objective)) {
-                for (Packet<?> packet : p_11274_.getStartTrackingPackets(objective)) {
-                    p_11275_.connection.send(packet);
+        for (DisplaySlot slot : DisplaySlot.values()) {
+            Objective objective = scoreboard.getDisplayObjective(slot);
+            if (objective != null && !objectives.contains(objective)) {
+                for (Packet<?> packet : scoreboard.getStartTrackingPackets(objective)) {
+                    player.connection.send(packet);
                 }
 
-                set.add(objective);
+                objectives.add(objective);
             }
         }
     }
 
-    public void addWorldborderListener(final ServerLevel p_184210_) {
-        p_184210_.getWorldBorder().addListener(new BorderChangeListener() {
+    public void addWorldborderListener(final ServerLevel level) {
+        level.getWorldBorder().addListener(new BorderChangeListener() {
             @Override
-            public void onSetSize(WorldBorder p_427674_, double p_430162_) {
-                PlayerList.this.broadcastAll(new ClientboundSetBorderSizePacket(p_427674_), p_184210_.dimension());
+            public void onSetSize(final WorldBorder border, final double newSize) {
+                PlayerList.this.broadcastAll(new ClientboundSetBorderSizePacket(border), level.dimension());
             }
 
             @Override
-            public void onLerpSize(WorldBorder p_427221_, double p_423218_, double p_431392_, long p_424323_, long p_459193_) {
-                PlayerList.this.broadcastAll(new ClientboundSetBorderLerpSizePacket(p_427221_), p_184210_.dimension());
+            public void onLerpSize(final WorldBorder border, final double fromSize, final double targetSize, final long ticks, final long gameTime) {
+                PlayerList.this.broadcastAll(new ClientboundSetBorderLerpSizePacket(border), level.dimension());
             }
 
             @Override
-            public void onSetCenter(WorldBorder p_430241_, double p_429384_, double p_427117_) {
-                PlayerList.this.broadcastAll(new ClientboundSetBorderCenterPacket(p_430241_), p_184210_.dimension());
+            public void onSetCenter(final WorldBorder border, final double x, final double z) {
+                PlayerList.this.broadcastAll(new ClientboundSetBorderCenterPacket(border), level.dimension());
             }
 
             @Override
-            public void onSetWarningTime(WorldBorder p_426124_, int p_424040_) {
-                PlayerList.this.broadcastAll(new ClientboundSetBorderWarningDelayPacket(p_426124_), p_184210_.dimension());
+            public void onSetWarningTime(final WorldBorder border, final int time) {
+                PlayerList.this.broadcastAll(new ClientboundSetBorderWarningDelayPacket(border), level.dimension());
             }
 
             @Override
-            public void onSetWarningBlocks(WorldBorder p_429459_, int p_430035_) {
-                PlayerList.this.broadcastAll(new ClientboundSetBorderWarningDistancePacket(p_429459_), p_184210_.dimension());
+            public void onSetWarningBlocks(final WorldBorder border, final int blocks) {
+                PlayerList.this.broadcastAll(new ClientboundSetBorderWarningDistancePacket(border), level.dimension());
             }
 
             @Override
-            public void onSetDamagePerBlock(WorldBorder p_424621_, double p_430466_) {
+            public void onSetDamagePerBlock(final WorldBorder border, final double damagePerBlock) {
             }
 
             @Override
-            public void onSetSafeZone(WorldBorder p_425557_, double p_424484_) {
+            public void onSetSafeZone(final WorldBorder border, final double safeZone) {
             }
         });
     }
 
-    public Optional<CompoundTag> loadPlayerData(NameAndId p_428198_) {
-        CompoundTag compoundtag = this.server.getWorldData().getLoadedPlayerTag();
-        if (this.server.isSingleplayerOwner(p_428198_) && compoundtag != null) {
+    public Optional<CompoundTag> loadPlayerData(final NameAndId nameAndId) {
+        UUID lastSingleplayerOwnerUUID = this.server.getWorldData().getSinglePlayerUUID();
+        if (this.server.isSingleplayerOwner(nameAndId) && lastSingleplayerOwnerUUID != null) {
             LOGGER.debug("loading single player");
-            return Optional.of(compoundtag);
+            return this.playerIo.load(new NameAndId(lastSingleplayerOwnerUUID, "<singleplayer owner>"));
         } else {
-            return this.playerIo.load(p_428198_);
+            return this.playerIo.load(nameAndId);
         }
     }
 
-    protected void save(ServerPlayer p_11277_) {
-        this.playerIo.save(p_11277_);
-        ServerStatsCounter serverstatscounter = this.stats.get(p_11277_.getUUID());
-        if (serverstatscounter != null) {
-            serverstatscounter.save();
+    protected void save(final ServerPlayer player) {
+        this.playerIo.save(player);
+        ServerStatsCounter stats = this.stats.get(player.getUUID());
+        if (stats != null) {
+            stats.save();
         }
 
-        PlayerAdvancements playeradvancements = this.advancements.get(p_11277_.getUUID());
-        if (playeradvancements != null) {
-            playeradvancements.save();
+        PlayerAdvancements advancements = this.advancements.get(player.getUUID());
+        if (advancements != null) {
+            advancements.save();
         }
     }
 
-    public void remove(ServerPlayer p_11287_) {
-        ServerLevel serverlevel = p_11287_.level();
-        p_11287_.awardStat(Stats.LEAVE_GAME);
-        this.save(p_11287_);
-        if (p_11287_.isPassenger()) {
-            Entity entity = p_11287_.getRootVehicle();
-            if (entity.hasExactlyOnePlayerPassenger()) {
+    public void remove(final ServerPlayer player) {
+        ServerLevel level = player.level();
+        player.awardStat(Stats.LEAVE_GAME);
+        this.save(player);
+        if (player.isPassenger()) {
+            Entity vehicle = player.getRootVehicle();
+            if (vehicle.hasExactlyOnePlayerPassenger()) {
                 LOGGER.debug("Removing player mount");
-                p_11287_.stopRiding();
-                entity.getPassengersAndSelf().forEach(p_215620_ -> p_215620_.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER));
+                player.stopRiding();
+                vehicle.getPassengersAndSelf().forEach(e -> e.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER));
             }
         }
 
-        p_11287_.unRide();
+        player.unRide();
 
-        for (ThrownEnderpearl thrownenderpearl : p_11287_.getEnderPearls()) {
-            thrownenderpearl.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER);
+        for (ThrownEnderpearl enderpearl : player.getEnderPearls()) {
+            enderpearl.setRemoved(Entity.RemovalReason.UNLOADED_WITH_PLAYER);
         }
 
-        serverlevel.removePlayerImmediately(p_11287_, Entity.RemovalReason.UNLOADED_WITH_PLAYER);
-        p_11287_.getAdvancements().stopListening();
-        this.players.remove(p_11287_);
-        this.server.getCustomBossEvents().onPlayerDisconnect(p_11287_);
-        UUID uuid = p_11287_.getUUID();
-        ServerPlayer serverplayer = this.playersByUUID.get(uuid);
-        if (serverplayer == p_11287_) {
+        level.removePlayerImmediately(player, Entity.RemovalReason.UNLOADED_WITH_PLAYER);
+        player.getAdvancements().clearTriggers();
+        this.players.remove(player);
+        this.server.getCustomBossEvents().onPlayerDisconnect(player);
+        UUID uuid = player.getUUID();
+        ServerPlayer serverPlayer = this.playersByUUID.get(uuid);
+        if (serverPlayer == player) {
             this.playersByUUID.remove(uuid);
             this.stats.remove(uuid);
             this.advancements.remove(uuid);
-            this.server.notificationManager().playerLeft(p_11287_);
+            this.server.notificationManager().playerLeft(player);
         }
 
-        this.broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(p_11287_.getUUID())));
+        this.broadcastAll(new ClientboundPlayerInfoRemovePacket(List.of(player.getUUID())));
     }
 
-    public @Nullable Component canPlayerLogin(SocketAddress p_11257_, NameAndId p_426791_) {
-        if (this.bans.isBanned(p_426791_)) {
-            UserBanListEntry userbanlistentry = this.bans.get(p_426791_);
-            MutableComponent mutablecomponent1 = Component.translatable("multiplayer.disconnect.banned.reason", userbanlistentry.getReasonMessage());
-            if (userbanlistentry.getExpires() != null) {
-                mutablecomponent1.append(Component.translatable("multiplayer.disconnect.banned.expiration", BAN_DATE_FORMAT.format(userbanlistentry.getExpires())));
+    public @Nullable Component canPlayerLogin(final SocketAddress address, final NameAndId nameAndId) {
+        if (this.bans.isBanned(nameAndId)) {
+            UserBanListEntry ban = this.bans.get(nameAndId);
+            MutableComponent reason = Component.translatable("multiplayer.disconnect.banned.reason", ban.getReasonMessage());
+            if (ban.getExpires() != null) {
+                reason.append(Component.translatable("multiplayer.disconnect.banned.expiration", BAN_DATE_FORMAT.format(ban.getExpires())));
             }
 
-            return mutablecomponent1;
-        } else if (!this.isWhiteListed(p_426791_)) {
-            return Component.translatable("multiplayer.disconnect.not_whitelisted");
-        } else if (this.ipBans.isBanned(p_11257_)) {
-            IpBanListEntry ipbanlistentry = this.ipBans.get(p_11257_);
-            MutableComponent mutablecomponent = Component.translatable("multiplayer.disconnect.banned_ip.reason", ipbanlistentry.getReasonMessage());
-            if (ipbanlistentry.getExpires() != null) {
-                mutablecomponent.append(Component.translatable("multiplayer.disconnect.banned_ip.expiration", BAN_DATE_FORMAT.format(ipbanlistentry.getExpires())));
-            }
-
-            return mutablecomponent;
+            return reason;
         } else {
-            return this.players.size() >= this.getMaxPlayers() && !this.canBypassPlayerLimit(p_426791_) ? Component.translatable("multiplayer.disconnect.server_full") : null;
+            if (!this.isWhiteListed(nameAndId)) {
+                return Component.translatable("multiplayer.disconnect.not_whitelisted");
+            }
+
+            if (this.ipBans.isBanned(address)) {
+                IpBanListEntry ban = this.ipBans.get(address);
+                MutableComponent reason = Component.translatable("multiplayer.disconnect.banned_ip.reason", ban.getReasonMessage());
+                if (ban.getExpires() != null) {
+                    reason.append(Component.translatable("multiplayer.disconnect.banned_ip.expiration", BAN_DATE_FORMAT.format(ban.getExpires())));
+                }
+
+                return reason;
+            } else {
+                return this.players.size() >= this.getMaxPlayers() && !this.canBypassPlayerLimit(nameAndId)
+                    ? Component.translatable("multiplayer.disconnect.server_full")
+                    : null;
+            }
         }
     }
 
-    public boolean disconnectAllPlayersWithProfile(UUID p_429846_) {
-        Set<ServerPlayer> set = Sets.newIdentityHashSet();
+    public boolean disconnectAllPlayersWithProfile(final UUID playerId) {
+        Set<ServerPlayer> dupes = Sets.newIdentityHashSet();
 
-        for (ServerPlayer serverplayer : this.players) {
-            if (serverplayer.getUUID().equals(p_429846_)) {
-                set.add(serverplayer);
+        for (ServerPlayer player : this.players) {
+            if (player.getUUID().equals(playerId)) {
+                dupes.add(player);
             }
         }
 
-        ServerPlayer serverplayer2 = this.playersByUUID.get(p_429846_);
-        if (serverplayer2 != null) {
-            set.add(serverplayer2);
+        ServerPlayer serverPlayer = this.playersByUUID.get(playerId);
+        if (serverPlayer != null) {
+            dupes.add(serverPlayer);
         }
 
-        for (ServerPlayer serverplayer1 : set) {
-            serverplayer1.connection.disconnect(DUPLICATE_LOGIN_DISCONNECT_MESSAGE);
+        for (ServerPlayer player : dupes) {
+            player.connection.disconnect(DUPLICATE_LOGIN_DISCONNECT_MESSAGE);
         }
 
-        return !set.isEmpty();
+        return !dupes.isEmpty();
     }
 
-    public ServerPlayer respawn(ServerPlayer p_11237_, boolean p_11238_, Entity.RemovalReason p_344452_) {
-        TeleportTransition teleporttransition = p_11237_.findRespawnPositionAndUseSpawnBlock(!p_11238_, TeleportTransition.DO_NOTHING);
-        this.players.remove(p_11237_);
-        p_11237_.level().removePlayerImmediately(p_11237_, p_344452_);
-        ServerLevel serverlevel = teleporttransition.newLevel();
-        ServerPlayer serverplayer = new ServerPlayer(this.server, serverlevel, p_11237_.getGameProfile(), p_11237_.clientInformation());
-        serverplayer.connection = p_11237_.connection;
-        serverplayer.restoreFrom(p_11237_, p_11238_);
-        serverplayer.setId(p_11237_.getId());
-        serverplayer.setMainArm(p_11237_.getMainArm());
-        if (!teleporttransition.missingRespawnBlock()) {
-            serverplayer.copyRespawnPosition(p_11237_);
+    public ServerPlayer respawn(final ServerPlayer serverPlayer, final boolean keepAllPlayerData, final Entity.RemovalReason removalReason) {
+        TeleportTransition respawnInfo = serverPlayer.findRespawnPositionAndUseSpawnBlock(!keepAllPlayerData, TeleportTransition.DO_NOTHING);
+        this.players.remove(serverPlayer);
+        serverPlayer.level().removePlayerImmediately(serverPlayer, removalReason);
+        ServerLevel level = respawnInfo.newLevel();
+        ServerPlayer player = new ServerPlayer(this.server, level, serverPlayer.getGameProfile(), serverPlayer.clientInformation());
+        player.connection = serverPlayer.connection;
+        player.restoreFrom(serverPlayer, keepAllPlayerData);
+        player.setId(serverPlayer.getId());
+        player.setMainArm(serverPlayer.getMainArm());
+        if (!respawnInfo.missingRespawnBlock()) {
+            player.copyRespawnPosition(serverPlayer);
         }
 
-        for (String s : p_11237_.getTags()) {
-            serverplayer.addTag(s);
+        for (String tag : serverPlayer.entityTags()) {
+            player.addTag(tag);
         }
 
-        Vec3 vec3 = teleporttransition.position();
-        serverplayer.snapTo(vec3.x, vec3.y, vec3.z, teleporttransition.yRot(), teleporttransition.xRot());
-        if (teleporttransition.missingRespawnBlock()) {
-            serverplayer.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE, 0.0F));
+        Vec3 pos = respawnInfo.position();
+        player.snapTo(pos.x, pos.y, pos.z, respawnInfo.yRot(), respawnInfo.xRot());
+        if (respawnInfo.missingRespawnBlock()) {
+            player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.NO_RESPAWN_BLOCK_AVAILABLE, 0.0F));
         }
 
-        byte b0 = (byte)(p_11238_ ? 1 : 0);
-        ServerLevel serverlevel1 = serverplayer.level();
-        LevelData leveldata = serverlevel1.getLevelData();
-        serverplayer.connection.send(new ClientboundRespawnPacket(serverplayer.createCommonSpawnInfo(serverlevel1), b0));
-        serverplayer.connection
-            .teleport(serverplayer.getX(), serverplayer.getY(), serverplayer.getZ(), serverplayer.getYRot(), serverplayer.getXRot());
-        serverplayer.connection.send(new ClientboundSetDefaultSpawnPositionPacket(serverlevel.getRespawnData()));
-        serverplayer.connection.send(new ClientboundChangeDifficultyPacket(leveldata.getDifficulty(), leveldata.isDifficultyLocked()));
-        serverplayer.connection.send(new ClientboundSetExperiencePacket(serverplayer.experienceProgress, serverplayer.totalExperience, serverplayer.experienceLevel));
-        this.sendActivePlayerEffects(serverplayer);
-        this.sendLevelInfo(serverplayer, serverlevel);
-        this.sendPlayerPermissionLevel(serverplayer);
-        serverlevel.addRespawnedPlayer(serverplayer);
-        this.players.add(serverplayer);
-        this.playersByUUID.put(serverplayer.getUUID(), serverplayer);
-        serverplayer.initInventoryMenu();
-        serverplayer.setHealth(serverplayer.getHealth());
-        ServerPlayer.RespawnConfig serverplayer$respawnconfig = serverplayer.getRespawnConfig();
-        if (!p_11238_ && serverplayer$respawnconfig != null) {
-            LevelData.RespawnData leveldata$respawndata = serverplayer$respawnconfig.respawnData();
-            ServerLevel serverlevel2 = this.server.getLevel(leveldata$respawndata.dimension());
-            if (serverlevel2 != null) {
-                BlockPos blockpos = leveldata$respawndata.pos();
-                BlockState blockstate = serverlevel2.getBlockState(blockpos);
-                if (blockstate.is(Blocks.RESPAWN_ANCHOR)) {
-                    serverplayer.connection
+        byte dataToKeep = (byte)(keepAllPlayerData ? 1 : 0);
+        ServerLevel playerLevel = player.level();
+        LevelData levelData = playerLevel.getLevelData();
+        player.connection.send(new ClientboundRespawnPacket(player.createCommonSpawnInfo(playerLevel), dataToKeep));
+        player.connection.teleport(player.getX(), player.getY(), player.getZ(), player.getYRot(), player.getXRot());
+        player.connection.send(new ClientboundSetDefaultSpawnPositionPacket(level.getRespawnData()));
+        player.connection.send(new ClientboundChangeDifficultyPacket(levelData.getDifficulty(), levelData.isDifficultyLocked()));
+        player.connection.send(new ClientboundSetExperiencePacket(player.experienceProgress, player.totalExperience, player.experienceLevel));
+        this.sendActivePlayerEffects(player);
+        this.sendLevelInfo(player, level);
+        this.sendPlayerPermissionLevel(player);
+        level.addRespawnedPlayer(player);
+        this.players.add(player);
+        this.playersByUUID.put(player.getUUID(), player);
+        player.initInventoryMenu();
+        player.setHealth(player.getHealth());
+        ServerPlayer.RespawnConfig respawnConfig = player.getRespawnConfig();
+        if (!keepAllPlayerData && respawnConfig != null) {
+            LevelData.RespawnData respawnData = respawnConfig.respawnData();
+            ServerLevel respawnLevel = this.server.getLevel(respawnData.dimension());
+            if (respawnLevel != null) {
+                BlockPos respawnPosition = respawnData.pos();
+                BlockState blockState = respawnLevel.getBlockState(respawnPosition);
+                if (blockState.is(Blocks.RESPAWN_ANCHOR)) {
+                    player.connection
                         .send(
                             new ClientboundSoundPacket(
                                 SoundEvents.RESPAWN_ANCHOR_DEPLETE,
                                 SoundSource.BLOCKS,
-                                blockpos.getX(),
-                                blockpos.getY(),
-                                blockpos.getZ(),
+                                respawnPosition.getX(),
+                                respawnPosition.getY(),
+                                respawnPosition.getZ(),
                                 1.0F,
                                 1.0F,
-                                serverlevel.getRandom().nextLong()
+                                level.getRandom().nextLong()
                             )
                         );
                 }
             }
         }
 
-        return serverplayer;
+        return player;
     }
 
-    public void sendActivePlayerEffects(ServerPlayer p_344496_) {
-        this.sendActiveEffects(p_344496_, p_344496_.connection);
+    public void sendActivePlayerEffects(final ServerPlayer player) {
+        this.sendActiveEffects(player, player.connection);
     }
 
-    public void sendActiveEffects(LivingEntity p_344934_, ServerGamePacketListenerImpl p_343169_) {
-        for (MobEffectInstance mobeffectinstance : p_344934_.getActiveEffects()) {
-            p_343169_.send(new ClientboundUpdateMobEffectPacket(p_344934_.getId(), mobeffectinstance, false));
+    public void sendActiveEffects(final LivingEntity livingEntity, final ServerGamePacketListenerImpl connection) {
+        for (MobEffectInstance effect : livingEntity.getActiveEffects()) {
+            connection.send(new ClientboundUpdateMobEffectPacket(livingEntity.getId(), effect, false));
         }
     }
 
-    public void sendPlayerPermissionLevel(ServerPlayer p_11290_) {
-        LevelBasedPermissionSet levelbasedpermissionset = this.server.getProfilePermissions(p_11290_.nameAndId());
-        this.sendPlayerPermissionLevel(p_11290_, levelbasedpermissionset);
+    public void sendPlayerPermissionLevel(final ServerPlayer player) {
+        LevelBasedPermissionSet permissions = this.server.getProfilePermissions(player.nameAndId());
+        this.sendPlayerPermissionLevel(player, permissions);
     }
 
     public void tick() {
@@ -468,54 +479,54 @@ public abstract class PlayerList {
         }
     }
 
-    public void broadcastAll(Packet<?> p_11269_) {
-        for (ServerPlayer serverplayer : this.players) {
-            serverplayer.connection.send(p_11269_);
+    public void broadcastAll(final Packet<?> packet) {
+        for (ServerPlayer player : this.players) {
+            player.connection.send(packet);
         }
     }
 
-    public void broadcastAll(Packet<?> p_11271_, ResourceKey<Level> p_11272_) {
-        for (ServerPlayer serverplayer : this.players) {
-            if (serverplayer.level().dimension() == p_11272_) {
-                serverplayer.connection.send(p_11271_);
+    public void broadcastAll(final Packet<?> packet, final ResourceKey<Level> dimension) {
+        for (ServerPlayer player : this.players) {
+            if (player.level().dimension() == dimension) {
+                player.connection.send(packet);
             }
         }
     }
 
-    public void broadcastSystemToTeam(Player p_215622_, Component p_215623_) {
-        Team team = p_215622_.getTeam();
+    public void broadcastSystemToTeam(final Player player, final Component message) {
+        Team team = player.getTeam();
         if (team != null) {
-            for (String s : team.getPlayers()) {
-                ServerPlayer serverplayer = this.getPlayerByName(s);
-                if (serverplayer != null && serverplayer != p_215622_) {
-                    serverplayer.sendSystemMessage(p_215623_);
+            for (String name : team.getPlayers()) {
+                ServerPlayer teamPlayer = this.getPlayerByName(name);
+                if (teamPlayer != null && teamPlayer != player) {
+                    teamPlayer.sendSystemMessage(message);
                 }
             }
         }
     }
 
-    public void broadcastSystemToAllExceptTeam(Player p_215650_, Component p_215651_) {
-        Team team = p_215650_.getTeam();
+    public void broadcastSystemToAllExceptTeam(final Player player, final Component message) {
+        Team team = player.getTeam();
         if (team == null) {
-            this.broadcastSystemMessage(p_215651_, false);
+            this.broadcastSystemMessage(message, false);
         } else {
             for (int i = 0; i < this.players.size(); i++) {
-                ServerPlayer serverplayer = this.players.get(i);
-                if (serverplayer.getTeam() != team) {
-                    serverplayer.sendSystemMessage(p_215651_);
+                ServerPlayer targetPlayer = this.players.get(i);
+                if (targetPlayer.getTeam() != team) {
+                    targetPlayer.sendSystemMessage(message);
                 }
             }
         }
     }
 
     public String[] getPlayerNamesArray() {
-        String[] astring = new String[this.players.size()];
+        String[] names = new String[this.players.size()];
 
         for (int i = 0; i < this.players.size(); i++) {
-            astring[i] = this.players.get(i).getGameProfile().name();
+            names[i] = this.players.get(i).getGameProfile().name();
         }
 
-        return astring;
+        return names;
     }
 
     public UserBanList getBans() {
@@ -526,58 +537,66 @@ public abstract class PlayerList {
         return this.ipBans;
     }
 
-    public void op(NameAndId p_423883_) {
-        this.op(p_423883_, Optional.empty(), Optional.empty());
+    public void op(final NameAndId nameAndId) {
+        this.op(nameAndId, Optional.empty(), Optional.empty());
     }
 
-    public void op(NameAndId p_425211_, Optional<LevelBasedPermissionSet> p_427477_, Optional<Boolean> p_426308_) {
+    public void op(final NameAndId nameAndId, final Optional<LevelBasedPermissionSet> permissions, final Optional<Boolean> canBypassPlayerLimit) {
         this.ops
-            .add(new ServerOpListEntry(p_425211_, p_427477_.orElse(this.server.operatorUserPermissions()), p_426308_.orElse(this.ops.canBypassPlayerLimit(p_425211_))));
-        ServerPlayer serverplayer = this.getPlayer(p_425211_.id());
-        if (serverplayer != null) {
-            this.sendPlayerPermissionLevel(serverplayer);
+            .add(
+                new ServerOpListEntry(
+                    nameAndId, permissions.orElse(this.server.operatorUserPermissions()), canBypassPlayerLimit.orElse(this.ops.canBypassPlayerLimit(nameAndId))
+                )
+            );
+        ServerPlayer player = this.getPlayer(nameAndId.id());
+        if (player != null) {
+            this.sendPlayerPermissionLevel(player);
         }
     }
 
-    public void deop(NameAndId p_428113_) {
-        if (this.ops.remove(p_428113_)) {
-            ServerPlayer serverplayer = this.getPlayer(p_428113_.id());
-            if (serverplayer != null) {
-                this.sendPlayerPermissionLevel(serverplayer);
+    public void deop(final NameAndId nameAndId) {
+        if (this.ops.remove(nameAndId)) {
+            ServerPlayer player = this.getPlayer(nameAndId.id());
+            if (player != null) {
+                this.sendPlayerPermissionLevel(player);
             }
         }
     }
 
-    private void sendPlayerPermissionLevel(ServerPlayer p_11227_, LevelBasedPermissionSet p_454787_) {
-        if (p_11227_.connection != null) {
-            byte b0 = switch (p_454787_.level()) {
+    private void sendPlayerPermissionLevel(final ServerPlayer player, final LevelBasedPermissionSet permissions) {
+        if (player.connection != null) {
+            byte eventId = switch (permissions.level()) {
                 case ALL -> 24;
                 case MODERATORS -> 25;
                 case GAMEMASTERS -> 26;
                 case ADMINS -> 27;
                 case OWNERS -> 28;
             };
-            p_11227_.connection.send(new ClientboundEntityEventPacket(p_11227_, b0));
+            player.connection.send(new ClientboundEntityEventPacket(player, eventId));
         }
 
-        this.server.getCommands().sendCommands(p_11227_);
+        this.server.getCommands().sendCommands(player);
     }
 
-    public boolean isWhiteListed(NameAndId p_428911_) {
-        return !this.isUsingWhitelist() || this.ops.contains(p_428911_) || this.whitelist.contains(p_428911_);
+    public boolean isWhiteListed(final NameAndId nameAndId) {
+        return !this.isUsingWhitelist() || this.ops.contains(nameAndId) || this.whitelist.contains(nameAndId);
     }
 
-    public boolean isOp(NameAndId p_430489_) {
-        return this.ops.contains(p_430489_) || this.server.isSingleplayerOwner(p_430489_) && this.server.getWorldData().isAllowCommands() || this.allowCommandsForAllPlayers;
+    public boolean isOp(final NameAndId nameAndId) {
+        if (this.ops.contains(nameAndId)) {
+            return true;
+        } else {
+            return this.server.isSingleplayerOwner(nameAndId) ? this.server.getWorldData().isAllowCommands() : this.allowCommandsForAllPlayers;
+        }
     }
 
-    public @Nullable ServerPlayer getPlayerByName(String p_11256_) {
-        int i = this.players.size();
+    public @Nullable ServerPlayer getPlayerByName(final String name) {
+        int size = this.players.size();
 
-        for (int j = 0; j < i; j++) {
-            ServerPlayer serverplayer = this.players.get(j);
-            if (serverplayer.getGameProfile().name().equalsIgnoreCase(p_11256_)) {
-                return serverplayer;
+        for (int i = 0; i < size; i++) {
+            ServerPlayer player = this.players.get(i);
+            if (player.getGameProfile().name().equalsIgnoreCase(name)) {
+                return player;
             }
         }
 
@@ -585,16 +604,22 @@ public abstract class PlayerList {
     }
 
     public void broadcast(
-        @Nullable Player p_11242_, double p_11243_, double p_11244_, double p_11245_, double p_11246_, ResourceKey<Level> p_11247_, Packet<?> p_11248_
+        final @Nullable Player except,
+        final double x,
+        final double y,
+        final double z,
+        final double range,
+        final ResourceKey<Level> dimension,
+        final Packet<?> packet
     ) {
         for (int i = 0; i < this.players.size(); i++) {
-            ServerPlayer serverplayer = this.players.get(i);
-            if (serverplayer != p_11242_ && serverplayer.level().dimension() == p_11247_) {
-                double d0 = p_11243_ - serverplayer.getX();
-                double d1 = p_11244_ - serverplayer.getY();
-                double d2 = p_11245_ - serverplayer.getZ();
-                if (d0 * d0 + d1 * d1 + d2 * d2 < p_11246_ * p_11246_) {
-                    serverplayer.connection.send(p_11248_);
+            ServerPlayer player = this.players.get(i);
+            if (player != except && player.level().dimension() == dimension) {
+                double xd = x - player.getX();
+                double yd = y - player.getY();
+                double zd = z - player.getZ();
+                if (xd * xd + yd * yd + zd * zd < range * range) {
+                    player.connection.send(packet);
                 }
             }
         }
@@ -625,26 +650,25 @@ public abstract class PlayerList {
     public void reloadWhiteList() {
     }
 
-    public void sendLevelInfo(ServerPlayer p_11230_, ServerLevel p_11231_) {
-        WorldBorder worldborder = p_11231_.getWorldBorder();
-        p_11230_.connection.send(new ClientboundInitializeBorderPacket(worldborder));
-        p_11230_.connection
-            .send(new ClientboundSetTimePacket(p_11231_.getGameTime(), p_11231_.getDayTime(), p_11231_.getGameRules().get(GameRules.ADVANCE_TIME)));
-        p_11230_.connection.send(new ClientboundSetDefaultSpawnPositionPacket(p_11231_.getRespawnData()));
-        if (p_11231_.isRaining()) {
-            p_11230_.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0.0F));
-            p_11230_.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, p_11231_.getRainLevel(1.0F)));
-            p_11230_.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, p_11231_.getThunderLevel(1.0F)));
+    public void sendLevelInfo(final ServerPlayer player, final ServerLevel level) {
+        WorldBorder worldBorder = level.getWorldBorder();
+        player.connection.send(new ClientboundInitializeBorderPacket(worldBorder));
+        player.connection.send(this.server.clockManager().createFullSyncPacket());
+        player.connection.send(new ClientboundSetDefaultSpawnPositionPacket(level.getRespawnData()));
+        if (level.isRaining()) {
+            player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.START_RAINING, 0.0F));
+            player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.RAIN_LEVEL_CHANGE, level.getRainLevel(1.0F)));
+            player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.THUNDER_LEVEL_CHANGE, level.getThunderLevel(1.0F)));
         }
 
-        p_11230_.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.LEVEL_CHUNKS_LOAD_START, 0.0F));
-        this.server.tickRateManager().updateJoiningPlayer(p_11230_);
+        player.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.LEVEL_CHUNKS_LOAD_START, 0.0F));
+        this.server.tickRateManager().updateJoiningPlayer(player);
     }
 
-    public void sendAllPlayerInfo(ServerPlayer p_11293_) {
-        p_11293_.inventoryMenu.sendAllDataToRemote();
-        p_11293_.resetSentInfo();
-        p_11293_.connection.send(new ClientboundSetHeldSlotPacket(p_11293_.getInventory().getSelectedSlot()));
+    public void sendAllPlayerInfo(final ServerPlayer player) {
+        player.inventoryMenu.sendAllDataToRemote();
+        player.resetSentInfo();
+        player.connection.send(new ClientboundSetHeldSlotPacket(player.getInventory().getSelectedSlot()));
     }
 
     public int getPlayerCount() {
@@ -659,16 +683,16 @@ public abstract class PlayerList {
         return this.server.isUsingWhitelist();
     }
 
-    public List<ServerPlayer> getPlayersWithAddress(String p_11283_) {
-        List<ServerPlayer> list = Lists.newArrayList();
+    public List<ServerPlayer> getPlayersWithAddress(final String ip) {
+        List<ServerPlayer> result = Lists.newArrayList();
 
-        for (ServerPlayer serverplayer : this.players) {
-            if (serverplayer.getIpAddress().equals(p_11283_)) {
-                list.add(serverplayer);
+        for (ServerPlayer player : this.players) {
+            if (player.getIpAddress().equals(ip)) {
+                result.add(player);
             }
         }
 
-        return list;
+        return result;
     }
 
     public int getViewDistance() {
@@ -683,12 +707,8 @@ public abstract class PlayerList {
         return this.server;
     }
 
-    public @Nullable CompoundTag getSingleplayerData() {
-        return null;
-    }
-
-    public void setAllowCommandsForAllPlayers(boolean p_335066_) {
-        this.allowCommandsForAllPlayers = p_335066_;
+    public void setAllowCommandsForAllPlayers(final boolean allowCommands) {
+        this.allowCommandsForAllPlayers = allowCommands;
     }
 
     public void removeAll() {
@@ -697,109 +717,111 @@ public abstract class PlayerList {
         }
     }
 
-    public void broadcastSystemMessage(Component p_240618_, boolean p_240644_) {
-        this.broadcastSystemMessage(p_240618_, p_215639_ -> p_240618_, p_240644_);
+    public void broadcastSystemMessage(final Component message, final boolean overlay) {
+        this.broadcastSystemMessage(message, player -> message, overlay);
     }
 
-    public void broadcastSystemMessage(Component p_240526_, Function<ServerPlayer, Component> p_240594_, boolean p_240648_) {
-        this.server.sendSystemMessage(p_240526_);
+    public void broadcastSystemMessage(final Component message, final Function<ServerPlayer, Component> playerMessages, final boolean overlay) {
+        this.server.sendSystemMessage(message);
 
-        for (ServerPlayer serverplayer : this.players) {
-            Component component = p_240594_.apply(serverplayer);
-            if (component != null) {
-                serverplayer.sendSystemMessage(component, p_240648_);
+        for (ServerPlayer player : this.players) {
+            Component playerMessage = playerMessages.apply(player);
+            if (playerMessage != null) {
+                player.sendSystemMessage(playerMessage, overlay);
             }
         }
     }
 
-    public void broadcastChatMessage(PlayerChatMessage p_243229_, CommandSourceStack p_243254_, ChatType.Bound p_243255_) {
-        this.broadcastChatMessage(p_243229_, p_243254_::shouldFilterMessageTo, p_243254_.getPlayer(), p_243255_);
+    public void broadcastChatMessage(final PlayerChatMessage message, final CommandSourceStack sender, final ChatType.Bound chatType) {
+        this.broadcastChatMessage(message, sender::shouldFilterMessageTo, sender.getPlayer(), chatType);
     }
 
-    public void broadcastChatMessage(PlayerChatMessage p_243264_, ServerPlayer p_243234_, ChatType.Bound p_243204_) {
-        this.broadcastChatMessage(p_243264_, p_243234_::shouldFilterMessageTo, p_243234_, p_243204_);
+    public void broadcastChatMessage(final PlayerChatMessage message, final ServerPlayer sender, final ChatType.Bound chatType) {
+        this.broadcastChatMessage(message, sender::shouldFilterMessageTo, sender, chatType);
     }
 
-    private void broadcastChatMessage(PlayerChatMessage p_249952_, Predicate<ServerPlayer> p_250784_, @Nullable ServerPlayer p_249623_, ChatType.Bound p_250276_) {
-        boolean flag = this.verifyChatTrusted(p_249952_);
-        this.server.logChatMessage(p_249952_.decoratedContent(), p_250276_, flag ? null : "Not Secure");
-        OutgoingChatMessage outgoingchatmessage = OutgoingChatMessage.create(p_249952_);
-        boolean flag1 = false;
+    private void broadcastChatMessage(
+        final PlayerChatMessage message, final Predicate<ServerPlayer> isFiltered, final @Nullable ServerPlayer senderPlayer, final ChatType.Bound chatType
+    ) {
+        boolean trusted = this.verifyChatTrusted(message);
+        this.server.logChatMessage(message.decoratedContent(), chatType, trusted ? null : "Not Secure");
+        OutgoingChatMessage tracked = OutgoingChatMessage.create(message);
+        boolean wasFullyFiltered = false;
 
-        for (ServerPlayer serverplayer : this.players) {
-            boolean flag2 = p_250784_.test(serverplayer);
-            serverplayer.sendChatMessage(outgoingchatmessage, flag2, p_250276_);
-            flag1 |= flag2 && p_249952_.isFullyFiltered();
+        for (ServerPlayer player : this.players) {
+            boolean filtered = isFiltered.test(player);
+            player.sendChatMessage(tracked, filtered, chatType);
+            wasFullyFiltered |= filtered && message.isFullyFiltered();
         }
 
-        if (flag1 && p_249623_ != null) {
-            p_249623_.sendSystemMessage(CHAT_FILTERED_FULL);
+        if (wasFullyFiltered && senderPlayer != null) {
+            senderPlayer.sendSystemMessage(CHAT_FILTERED_FULL);
         }
     }
 
-    private boolean verifyChatTrusted(PlayerChatMessage p_251384_) {
-        return p_251384_.hasSignature() && !p_251384_.hasExpiredServer(Instant.now());
+    private boolean verifyChatTrusted(final PlayerChatMessage message) {
+        return message.hasSignature() && !message.hasExpiredServer(Instant.now());
     }
 
-    public ServerStatsCounter getPlayerStats(Player p_11240_) {
-        GameProfile gameprofile = p_11240_.getGameProfile();
-        return this.stats.computeIfAbsent(gameprofile.id(), p_449201_ -> {
-            Path path = this.locateStatsFile(gameprofile);
-            return new ServerStatsCounter(this.server, path);
+    public ServerStatsCounter getPlayerStats(final Player player) {
+        GameProfile gameProfile = player.getGameProfile();
+        return this.stats.computeIfAbsent(gameProfile.id(), id -> {
+            Path targetFile = this.locateStatsFile(gameProfile);
+            return new ServerStatsCounter(this.server, targetFile);
         });
     }
 
-    private Path locateStatsFile(GameProfile p_455756_) {
-        Path path = this.server.getWorldPath(LevelResource.PLAYER_STATS_DIR);
-        Path path1 = path.resolve(p_455756_.id() + ".json");
-        if (Files.exists(path1)) {
-            return path1;
-        } else {
-            String s = p_455756_.name() + ".json";
-            if (FileUtil.isValidPathSegment(s)) {
-                Path path2 = path.resolve(s);
-                if (Files.isRegularFile(path2)) {
-                    try {
-                        return Files.move(path2, path1);
-                    } catch (IOException ioexception) {
-                        LOGGER.warn("Failed to copy file {} to {}", s, path1);
-                        return path2;
-                    }
+    private Path locateStatsFile(final GameProfile gameProfile) {
+        Path statFolder = this.server.getWorldPath(LevelResource.PLAYER_STATS_DIR);
+        Path uuidStatsFile = statFolder.resolve(gameProfile.id() + ".json");
+        if (Files.exists(uuidStatsFile)) {
+            return uuidStatsFile;
+        }
+
+        String playerNameStatsFile = gameProfile.name() + ".json";
+        if (FileUtil.isValidPathSegment(playerNameStatsFile)) {
+            Path playerNameStatsPath = statFolder.resolve(playerNameStatsFile);
+            if (Files.isRegularFile(playerNameStatsPath)) {
+                try {
+                    return Files.move(playerNameStatsPath, uuidStatsFile);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to copy file {} to {}", playerNameStatsFile, uuidStatsFile);
+                    return playerNameStatsPath;
                 }
             }
+        }
 
-            return path1;
+        return uuidStatsFile;
+    }
+
+    public PlayerAdvancements getPlayerAdvancements(final ServerPlayer player) {
+        UUID uuid = player.getUUID();
+        PlayerAdvancements result = this.advancements.get(uuid);
+        if (result == null) {
+            Path uuidStatsFile = this.server.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR).resolve(uuid + ".json");
+            result = new PlayerAdvancements(this.server.getFixerUpper(), this, this.server.getAdvancements(), uuidStatsFile, player);
+            this.advancements.put(uuid, result);
+        }
+
+        result.setPlayer(player);
+        return result;
+    }
+
+    public void setViewDistance(final int viewDistance) {
+        this.viewDistance = viewDistance;
+        this.broadcastAll(new ClientboundSetChunkCacheRadiusPacket(viewDistance));
+
+        for (ServerLevel level : this.server.getAllLevels()) {
+            level.getChunkSource().setViewDistance(viewDistance);
         }
     }
 
-    public PlayerAdvancements getPlayerAdvancements(ServerPlayer p_11297_) {
-        UUID uuid = p_11297_.getUUID();
-        PlayerAdvancements playeradvancements = this.advancements.get(uuid);
-        if (playeradvancements == null) {
-            Path path = this.server.getWorldPath(LevelResource.PLAYER_ADVANCEMENTS_DIR).resolve(uuid + ".json");
-            playeradvancements = new PlayerAdvancements(this.server.getFixerUpper(), this, this.server.getAdvancements(), path, p_11297_);
-            this.advancements.put(uuid, playeradvancements);
-        }
+    public void setSimulationDistance(final int simulationDistance) {
+        this.simulationDistance = simulationDistance;
+        this.broadcastAll(new ClientboundSetSimulationDistancePacket(simulationDistance));
 
-        playeradvancements.setPlayer(p_11297_);
-        return playeradvancements;
-    }
-
-    public void setViewDistance(int p_11218_) {
-        this.viewDistance = p_11218_;
-        this.broadcastAll(new ClientboundSetChunkCacheRadiusPacket(p_11218_));
-
-        for (ServerLevel serverlevel : this.server.getAllLevels()) {
-            serverlevel.getChunkSource().setViewDistance(p_11218_);
-        }
-    }
-
-    public void setSimulationDistance(int p_184212_) {
-        this.simulationDistance = p_184212_;
-        this.broadcastAll(new ClientboundSetSimulationDistancePacket(p_184212_));
-
-        for (ServerLevel serverlevel : this.server.getAllLevels()) {
-            serverlevel.getChunkSource().setSimulationDistance(p_184212_);
+        for (ServerLevel level : this.server.getAllLevels()) {
+            level.getChunkSource().setSimulationDistance(simulationDistance);
         }
     }
 
@@ -807,36 +829,42 @@ public abstract class PlayerList {
         return this.players;
     }
 
-    public @Nullable ServerPlayer getPlayer(UUID p_11260_) {
-        return this.playersByUUID.get(p_11260_);
+    public Map<UUID, ServerPlayer> getPlayersByUUID() {
+        return this.playersByUUID;
     }
 
-    public @Nullable ServerPlayer getPlayer(String p_429821_) {
-        for (ServerPlayer serverplayer : this.players) {
-            if (serverplayer.getGameProfile().name().equalsIgnoreCase(p_429821_)) {
-                return serverplayer;
+    public @Nullable ServerPlayer getPlayer(final UUID uuid) {
+        return this.playersByUUID.get(uuid);
+    }
+
+    public @Nullable ServerPlayer getPlayer(final String playerName) {
+        for (ServerPlayer player : this.players) {
+            if (player.getGameProfile().name().equalsIgnoreCase(playerName)) {
+                return player;
             }
         }
 
         return null;
     }
 
-    public boolean canBypassPlayerLimit(NameAndId p_428989_) {
+    public boolean canBypassPlayerLimit(final NameAndId nameAndId) {
         return false;
     }
 
     public void reloadResources() {
-        for (PlayerAdvancements playeradvancements : this.advancements.values()) {
-            playeradvancements.reload(this.server.getAdvancements());
+        for (PlayerAdvancements advancements : this.advancements.values()) {
+            advancements.reload(this.server.getAdvancements());
         }
 
         this.broadcastAll(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(this.registries)));
-        RecipeManager recipemanager = this.server.getRecipeManager();
-        ClientboundUpdateRecipesPacket clientboundupdaterecipespacket = new ClientboundUpdateRecipesPacket(recipemanager.getSynchronizedItemProperties(), recipemanager.getSynchronizedStonecutterRecipes());
+        RecipeManager recipeManager = this.server.getRecipeManager();
+        ClientboundUpdateRecipesPacket recipes = new ClientboundUpdateRecipesPacket(
+            recipeManager.getSynchronizedItemProperties(), recipeManager.getSynchronizedStonecutterRecipes()
+        );
 
-        for (ServerPlayer serverplayer : this.players) {
-            serverplayer.connection.send(clientboundupdaterecipespacket);
-            serverplayer.getRecipeBook().sendInitialRecipeBook(serverplayer);
+        for (ServerPlayer player : this.players) {
+            player.connection.send(recipes);
+            player.getRecipeBook().sendInitialRecipeBook(player);
         }
     }
 

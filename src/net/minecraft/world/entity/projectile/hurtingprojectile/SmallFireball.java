@@ -5,6 +5,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -17,52 +18,52 @@ import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class SmallFireball extends Fireball {
-    public SmallFireball(EntityType<? extends SmallFireball> p_452464_, Level p_451447_) {
-        super(p_452464_, p_451447_);
+    public SmallFireball(final EntityType<? extends SmallFireball> type, final Level level) {
+        super(type, level);
     }
 
-    public SmallFireball(Level p_454571_, LivingEntity p_452734_, Vec3 p_457678_) {
-        super(EntityType.SMALL_FIREBALL, p_452734_, p_457678_, p_454571_);
+    public SmallFireball(final Level level, final LivingEntity mob, final Vec3 direction) {
+        super(EntityTypes.SMALL_FIREBALL, mob, direction, level);
     }
 
-    public SmallFireball(Level p_453440_, double p_455704_, double p_455700_, double p_456620_, Vec3 p_451748_) {
-        super(EntityType.SMALL_FIREBALL, p_455704_, p_455700_, p_456620_, p_451748_, p_453440_);
+    public SmallFireball(final Level level, final double x, final double y, final double z, final Vec3 direction) {
+        super(EntityTypes.SMALL_FIREBALL, x, y, z, direction, level);
     }
 
     @Override
-    protected void onHitEntity(EntityHitResult p_451427_) {
-        super.onHitEntity(p_451427_);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            Entity entity1 = p_451427_.getEntity();
-            Entity $$4 = this.getOwner();
-            int $$5 = entity1.getRemainingFireTicks();
-            entity1.igniteForSeconds(5.0F);
-            DamageSource $$6 = this.damageSources().fireball(this, $$4);
-            if (!entity1.hurtServer(serverlevel, $$6, 5.0F)) {
-                entity1.setRemainingFireTicks($$5);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        super.onHitEntity(hitResult);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            Entity var7 = hitResult.getEntity();
+            Entity owner = this.getOwner();
+            int remainingFireTicks = var7.getRemainingFireTicks();
+            var7.igniteForSeconds(5.0F);
+            DamageSource damageSource = this.damageSources().fireball(this, owner);
+            if (!var7.hurtServer(serverLevel, damageSource, 5.0F)) {
+                var7.setRemainingFireTicks(remainingFireTicks);
             } else {
-                EnchantmentHelper.doPostAttackEffects(serverlevel, entity1, $$6);
+                EnchantmentHelper.doPostAttackEffects(serverLevel, var7, damageSource);
             }
         }
     }
 
     @Override
-    protected void onHitBlock(BlockHitResult p_452526_) {
-        super.onHitBlock(p_452526_);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            Entity entity = this.getOwner();
-            if (!(entity instanceof Mob) || serverlevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
-                BlockPos blockpos = p_452526_.getBlockPos().relative(p_452526_.getDirection());
-                if (this.level().isEmptyBlock(blockpos)) {
-                    this.level().setBlockAndUpdate(blockpos, BaseFireBlock.getState(this.level(), blockpos));
+    protected void onHitBlock(final BlockHitResult hitResult) {
+        super.onHitBlock(hitResult);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            Entity owner = this.getOwner();
+            if (!(owner instanceof Mob) || serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
+                BlockPos pos = hitResult.getBlockPos().relative(hitResult.getDirection());
+                if (this.level().isEmptyBlock(pos)) {
+                    this.level().setBlockAndUpdate(pos, BaseFireBlock.getState(this.level(), pos));
                 }
             }
         }
     }
 
     @Override
-    protected void onHit(HitResult p_459213_) {
-        super.onHit(p_459213_);
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
         if (!this.level().isClientSide()) {
             this.discard();
         }

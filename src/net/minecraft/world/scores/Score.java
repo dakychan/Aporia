@@ -3,7 +3,6 @@ package net.minecraft.world.scores;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -20,11 +19,11 @@ public class Score implements ReadOnlyScoreInfo {
     public Score() {
     }
 
-    public Score(Score.Packed p_450883_) {
-        this.value = p_450883_.value;
-        this.locked = p_450883_.locked;
-        this.display = p_450883_.display.orElse(null);
-        this.numberFormat = p_450883_.numberFormat.orElse(null);
+    public Score(final Score.Packed packed) {
+        this.value = packed.value;
+        this.locked = packed.locked;
+        this.display = packed.display.orElse(null);
+        this.numberFormat = packed.numberFormat.orElse(null);
     }
 
     public Score.Packed pack() {
@@ -36,8 +35,8 @@ public class Score implements ReadOnlyScoreInfo {
         return this.value;
     }
 
-    public void value(int p_313056_) {
-        this.value = p_313056_;
+    public void value(final int score) {
+        this.value = score;
     }
 
     @Override
@@ -45,16 +44,16 @@ public class Score implements ReadOnlyScoreInfo {
         return this.locked;
     }
 
-    public void setLocked(boolean p_83399_) {
-        this.locked = p_83399_;
+    public void setLocked(final boolean locked) {
+        this.locked = locked;
     }
 
     public @Nullable Component display() {
         return this.display;
     }
 
-    public void display(@Nullable Component p_312952_) {
-        this.display = p_312952_;
+    public void display(final @Nullable Component display) {
+        this.display = display;
     }
 
     @Override
@@ -62,19 +61,19 @@ public class Score implements ReadOnlyScoreInfo {
         return this.numberFormat;
     }
 
-    public void numberFormat(@Nullable NumberFormat p_310093_) {
-        this.numberFormat = p_310093_;
+    public void numberFormat(final @Nullable NumberFormat numberFormat) {
+        this.numberFormat = numberFormat;
     }
 
     public record Packed(int value, boolean locked, Optional<Component> display, Optional<NumberFormat> numberFormat) {
         public static final MapCodec<Score.Packed> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_453897_ -> p_453897_.group(
+            i -> i.group(
                     Codec.INT.optionalFieldOf("Score", 0).forGetter(Score.Packed::value),
                     Codec.BOOL.optionalFieldOf("Locked", false).forGetter(Score.Packed::locked),
                     ComponentSerialization.CODEC.optionalFieldOf("display").forGetter(Score.Packed::display),
                     NumberFormatTypes.CODEC.optionalFieldOf("format").forGetter(Score.Packed::numberFormat)
                 )
-                .apply(p_453897_, Score.Packed::new)
+                .apply(i, Score.Packed::new)
         );
     }
 }

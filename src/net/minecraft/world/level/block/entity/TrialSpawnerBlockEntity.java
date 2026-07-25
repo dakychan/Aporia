@@ -19,32 +19,34 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
-public class TrialSpawnerBlockEntity extends BlockEntity implements Spawner, TrialSpawner.StateAccessor {
+public class TrialSpawnerBlockEntity extends BlockEntity implements TrialSpawner.StateAccessor, Spawner {
     private final TrialSpawner trialSpawner = this.createDefaultSpawner();
 
-    public TrialSpawnerBlockEntity(BlockPos p_309527_, BlockState p_312341_) {
-        super(BlockEntityType.TRIAL_SPAWNER, p_309527_, p_312341_);
+    public TrialSpawnerBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.TRIAL_SPAWNER, worldPosition, blockState);
     }
 
     private TrialSpawner createDefaultSpawner() {
-        PlayerDetector playerdetector = SharedConstants.DEBUG_TRIAL_SPAWNER_DETECTS_SHEEP_AS_PLAYERS ? PlayerDetector.SHEEP : PlayerDetector.NO_CREATIVE_PLAYERS;
-        PlayerDetector.EntitySelector playerdetector$entityselector = PlayerDetector.EntitySelector.SELECT_FROM_LEVEL;
-        return new TrialSpawner(TrialSpawner.FullConfig.DEFAULT, this, playerdetector, playerdetector$entityselector);
+        PlayerDetector playerDetector = SharedConstants.DEBUG_TRIAL_SPAWNER_DETECTS_SHEEP_AS_PLAYERS
+            ? PlayerDetector.SHEEP
+            : PlayerDetector.NO_CREATIVE_PLAYERS;
+        PlayerDetector.EntitySelector entitySelector = PlayerDetector.EntitySelector.SELECT_FROM_LEVEL;
+        return new TrialSpawner(TrialSpawner.FullConfig.DEFAULT, this, playerDetector, entitySelector);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_406809_) {
-        super.loadAdditional(p_406809_);
-        this.trialSpawner.load(p_406809_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.trialSpawner.load(input);
         if (this.level != null) {
             this.markUpdated();
         }
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_410550_) {
-        super.saveAdditional(p_410550_);
-        this.trialSpawner.store(p_410550_);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        this.trialSpawner.store(output);
     }
 
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
@@ -52,16 +54,16 @@ public class TrialSpawnerBlockEntity extends BlockEntity implements Spawner, Tri
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_335483_) {
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
         return this.trialSpawner.getStateData().getUpdateTag(this.getBlockState().getValue(TrialSpawnerBlock.STATE));
     }
 
     @Override
-    public void setEntityId(EntityType<?> p_312357_, RandomSource p_313173_) {
+    public void setEntityId(final EntityType<?> type, final RandomSource random) {
         if (this.level == null) {
             Util.logAndPauseIfInIde("Expected non-null level");
         } else {
-            this.trialSpawner.overrideEntityToSpawn(p_312357_, this.level);
+            this.trialSpawner.overrideEntityToSpawn(type, this.level);
             this.setChanged();
         }
     }
@@ -78,9 +80,9 @@ public class TrialSpawnerBlockEntity extends BlockEntity implements Spawner, Tri
     }
 
     @Override
-    public void setState(Level p_313150_, TrialSpawnerState p_310751_) {
+    public void setState(final Level level, final TrialSpawnerState state) {
         this.setChanged();
-        p_313150_.setBlockAndUpdate(this.worldPosition, this.getBlockState().setValue(BlockStateProperties.TRIAL_SPAWNER_STATE, p_310751_));
+        level.setBlockAndUpdate(this.worldPosition, this.getBlockState().setValue(BlockStateProperties.TRIAL_SPAWNER_STATE, state));
     }
 
     @Override

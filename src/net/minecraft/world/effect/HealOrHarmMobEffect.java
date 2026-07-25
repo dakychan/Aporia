@@ -5,36 +5,43 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import org.jspecify.annotations.Nullable;
 
-class HealOrHarmMobEffect extends InstantenousMobEffect {
+class HealOrHarmMobEffect extends InstantaneousMobEffect {
     private final boolean isHarm;
 
-    public HealOrHarmMobEffect(MobEffectCategory p_299212_, int p_300917_, boolean p_300221_) {
-        super(p_299212_, p_300917_);
-        this.isHarm = p_300221_;
+    public HealOrHarmMobEffect(final MobEffectCategory category, final int color, final boolean isHarm) {
+        super(category, color);
+        this.isHarm = isHarm;
     }
 
     @Override
-    public boolean applyEffectTick(ServerLevel p_364873_, LivingEntity p_300845_, int p_301393_) {
-        if (this.isHarm == p_300845_.isInvertedHealAndHarm()) {
-            p_300845_.heal(Math.max(4 << p_301393_, 0));
+    public boolean applyEffectTick(final ServerLevel level, final LivingEntity mob, final int amplification) {
+        if (this.isHarm == mob.isInvertedHealAndHarm()) {
+            mob.heal(Math.max(4 << amplification, 0));
         } else {
-            p_300845_.hurtServer(p_364873_, p_300845_.damageSources().magic(), 6 << p_301393_);
+            mob.hurtServer(level, mob.damageSources().magic(), 6 << amplification);
         }
 
         return true;
     }
 
     @Override
-    public void applyInstantenousEffect(ServerLevel p_365989_, @Nullable Entity p_298495_, @Nullable Entity p_298887_, LivingEntity p_298479_, int p_298172_, double p_298163_) {
-        if (this.isHarm == p_298479_.isInvertedHealAndHarm()) {
-            int i = (int)(p_298163_ * (4 << p_298172_) + 0.5);
-            p_298479_.heal(i);
+    public void applyInstantaneousEffect(
+        final ServerLevel serverLevel,
+        final @Nullable Entity source,
+        final @Nullable Entity owner,
+        final LivingEntity mob,
+        final int amplification,
+        final double scale
+    ) {
+        if (this.isHarm == mob.isInvertedHealAndHarm()) {
+            int amount = (int)(scale * (4 << amplification) + 0.5);
+            mob.heal(amount);
         } else {
-            int j = (int)(p_298163_ * (6 << p_298172_) + 0.5);
-            if (p_298495_ == null) {
-                p_298479_.hurtServer(p_365989_, p_298479_.damageSources().magic(), j);
+            int amount = (int)(scale * (6 << amplification) + 0.5);
+            if (source == null) {
+                mob.hurtServer(serverLevel, mob.damageSources().magic(), amount);
             } else {
-                p_298479_.hurtServer(p_365989_, p_298479_.damageSources().indirectMagic(p_298495_, p_298887_), j);
+                mob.hurtServer(serverLevel, mob.damageSources().indirectMagic(source, owner), amount);
             }
         }
     }

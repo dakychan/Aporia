@@ -3,13 +3,10 @@ package net.minecraft.client.model.geom.builders;
 import java.util.Set;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public final class CubeDefinition {
     private final @Nullable String comment;
     private final Vector3fc origin;
@@ -20,33 +17,33 @@ public final class CubeDefinition {
     private final UVPair texScale;
     private final Set<Direction> visibleFaces;
 
-    protected CubeDefinition(
-        @Nullable String p_273024_,
-        float p_273620_,
-        float p_273436_,
-        float p_273139_,
-        float p_273013_,
-        float p_272874_,
-        float p_273100_,
-        float p_273756_,
-        float p_273105_,
-        CubeDeformation p_272818_,
-        boolean p_273585_,
-        float p_272829_,
-        float p_273119_,
-        Set<Direction> p_273201_
+    public CubeDefinition(
+        final @Nullable String comment,
+        final float xTexOffs,
+        final float yTexOffs,
+        final float minX,
+        final float minY,
+        final float minZ,
+        final float width,
+        final float height,
+        final float depth,
+        final CubeDeformation grow,
+        final boolean mirror,
+        final float xTexScale,
+        final float yTexScale,
+        final Set<Direction> visibleFaces
     ) {
-        this.comment = p_273024_;
-        this.texCoord = new UVPair(p_273620_, p_273436_);
-        this.origin = new Vector3f(p_273139_, p_273013_, p_272874_);
-        this.dimensions = new Vector3f(p_273100_, p_273756_, p_273105_);
-        this.grow = p_272818_;
-        this.mirror = p_273585_;
-        this.texScale = new UVPair(p_272829_, p_273119_);
-        this.visibleFaces = p_273201_;
+        this.comment = comment;
+        this.texCoord = new UVPair(xTexOffs, yTexOffs);
+        this.origin = new Vector3f(minX, minY, minZ);
+        this.dimensions = new Vector3f(width, height, depth);
+        this.grow = grow;
+        this.mirror = mirror;
+        this.texScale = new UVPair(xTexScale, yTexScale);
+        this.visibleFaces = visibleFaces;
     }
 
-    public ModelPart.Cube bake(int p_171456_, int p_171457_) {
+    public ModelPart.Cube bake(final int texScaleX, final int texScaleY) {
         return new ModelPart.Cube(
             (int)this.texCoord.u(),
             (int)this.texCoord.v(),
@@ -60,8 +57,8 @@ public final class CubeDefinition {
             this.grow.growY,
             this.grow.growZ,
             this.mirror,
-            p_171456_ * this.texScale.u(),
-            p_171457_ * this.texScale.v(),
+            texScaleX * this.texScale.u(),
+            texScaleY * this.texScale.v(),
             this.visibleFaces
         );
     }

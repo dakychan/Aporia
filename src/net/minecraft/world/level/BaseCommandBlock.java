@@ -27,7 +27,7 @@ public abstract class BaseCommandBlock {
     private boolean updateLastExecution = true;
     private int successCount;
     private boolean trackOutput = true;
-    @Nullable Component lastOutput;
+    private @Nullable Component lastOutput;
     private String command = "";
     private @Nullable Component customName;
 
@@ -35,50 +35,50 @@ public abstract class BaseCommandBlock {
         return this.successCount;
     }
 
-    public void setSuccessCount(int p_45411_) {
-        this.successCount = p_45411_;
+    public void setSuccessCount(final int successCount) {
+        this.successCount = successCount;
     }
 
     public Component getLastOutput() {
         return this.lastOutput == null ? CommonComponents.EMPTY : this.lastOutput;
     }
 
-    public void save(ValueOutput p_406663_) {
-        p_406663_.putString("Command", this.command);
-        p_406663_.putInt("SuccessCount", this.successCount);
-        p_406663_.storeNullable("CustomName", ComponentSerialization.CODEC, this.customName);
-        p_406663_.putBoolean("TrackOutput", this.trackOutput);
+    public void save(final ValueOutput output) {
+        output.putString("Command", this.command);
+        output.putInt("SuccessCount", this.successCount);
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, this.customName);
+        output.putBoolean("TrackOutput", this.trackOutput);
         if (this.trackOutput) {
-            p_406663_.storeNullable("LastOutput", ComponentSerialization.CODEC, this.lastOutput);
+            output.storeNullable("LastOutput", ComponentSerialization.CODEC, this.lastOutput);
         }
 
-        p_406663_.putBoolean("UpdateLastExecution", this.updateLastExecution);
+        output.putBoolean("UpdateLastExecution", this.updateLastExecution);
         if (this.updateLastExecution && this.lastExecution != -1L) {
-            p_406663_.putLong("LastExecution", this.lastExecution);
+            output.putLong("LastExecution", this.lastExecution);
         }
     }
 
-    public void load(ValueInput p_409676_) {
-        this.command = p_409676_.getStringOr("Command", "");
-        this.successCount = p_409676_.getIntOr("SuccessCount", 0);
-        this.setCustomName(BlockEntity.parseCustomNameSafe(p_409676_, "CustomName"));
-        this.trackOutput = p_409676_.getBooleanOr("TrackOutput", true);
+    public void load(final ValueInput input) {
+        this.command = input.getStringOr("Command", "");
+        this.successCount = input.getIntOr("SuccessCount", 0);
+        this.setCustomName(BlockEntity.parseCustomNameSafe(input, "CustomName"));
+        this.trackOutput = input.getBooleanOr("TrackOutput", true);
         if (this.trackOutput) {
-            this.lastOutput = BlockEntity.parseCustomNameSafe(p_409676_, "LastOutput");
+            this.lastOutput = BlockEntity.parseCustomNameSafe(input, "LastOutput");
         } else {
             this.lastOutput = null;
         }
 
-        this.updateLastExecution = p_409676_.getBooleanOr("UpdateLastExecution", true);
+        this.updateLastExecution = input.getBooleanOr("UpdateLastExecution", true);
         if (this.updateLastExecution) {
-            this.lastExecution = p_409676_.getLongOr("LastExecution", -1L);
+            this.lastExecution = input.getLongOr("LastExecution", -1L);
         } else {
             this.lastExecution = -1L;
         }
     }
 
-    public void setCommand(String p_45420_) {
-        this.command = p_45420_;
+    public void setCommand(final String command) {
+        this.command = command;
         this.successCount = 0;
     }
 
@@ -86,49 +86,51 @@ public abstract class BaseCommandBlock {
         return this.command;
     }
 
-    public boolean performCommand(ServerLevel p_459824_) {
-        if (p_459824_.getGameTime() == this.lastExecution) {
+    public boolean performCommand(final ServerLevel level) {
+        if (level.getGameTime() == this.lastExecution) {
             return false;
-        } else if ("Searge".equalsIgnoreCase(this.command)) {
+        }
+
+        if ("Searge".equalsIgnoreCase(this.command)) {
             this.lastOutput = Component.literal("#itzlipofutzli");
             this.successCount = 1;
             return true;
-        } else {
-            this.successCount = 0;
-            if (p_459824_.isCommandBlockEnabled() && !StringUtil.isNullOrEmpty(this.command)) {
-                try {
-                    this.lastOutput = null;
-
-                    try (BaseCommandBlock.CloseableCommandBlockSource basecommandblock$closeablecommandblocksource = this.createSource(p_459824_)) {
-                        CommandSource commandsource = Objects.requireNonNullElse(basecommandblock$closeablecommandblocksource, CommandSource.NULL);
-                        CommandSourceStack commandsourcestack = this.createCommandSourceStack(p_459824_, commandsource).withCallback((p_45418_, p_45419_) -> {
-                            if (p_45418_) {
-                                this.successCount++;
-                            }
-                        });
-                        p_459824_.getServer().getCommands().performPrefixedCommand(commandsourcestack, this.command);
-                    }
-                } catch (Throwable throwable1) {
-                    CrashReport crashreport = CrashReport.forThrowable(throwable1, "Executing command block");
-                    CrashReportCategory crashreportcategory = crashreport.addCategory("Command to be executed");
-                    crashreportcategory.setDetail("Command", this::getCommand);
-                    crashreportcategory.setDetail("Name", () -> this.getName().getString());
-                    throw new ReportedException(crashreport);
-                }
-            }
-
-            if (this.updateLastExecution) {
-                this.lastExecution = p_459824_.getGameTime();
-            } else {
-                this.lastExecution = -1L;
-            }
-
-            return true;
         }
+
+        this.successCount = 0;
+        if (level.isCommandBlockEnabled() && !StringUtil.isNullOrEmpty(this.command)) {
+            try {
+                this.lastOutput = null;
+
+                try (BaseCommandBlock.CloseableCommandBlockSource commandSource = this.createSource(level)) {
+                    CommandSource effectiveCommandSource = Objects.requireNonNullElse(commandSource, CommandSource.NULL);
+                    CommandSourceStack commandSourceStack = this.createCommandSourceStack(level, effectiveCommandSource).withCallback((success, result) -> {
+                        if (success) {
+                            this.successCount++;
+                        }
+                    });
+                    level.getServer().getCommands().performPrefixedCommand(commandSourceStack, this.command);
+                }
+            } catch (Throwable t) {
+                CrashReport report = CrashReport.forThrowable(t, "Executing command block");
+                CrashReportCategory category = report.addCategory("Command to be executed");
+                category.setDetail("Command", this::getCommand);
+                category.setDetail("Name", () -> this.getName().getString());
+                throw new ReportedException(report);
+            }
+        }
+
+        if (this.updateLastExecution) {
+            this.lastExecution = level.getGameTime();
+        } else {
+            this.lastExecution = -1L;
+        }
+
+        return true;
     }
 
-    private BaseCommandBlock.@Nullable CloseableCommandBlockSource createSource(ServerLevel p_459376_) {
-        return this.trackOutput ? new BaseCommandBlock.CloseableCommandBlockSource(p_459376_) : null;
+    private BaseCommandBlock.@Nullable CloseableCommandBlockSource createSource(final ServerLevel level) {
+        return this.trackOutput ? new BaseCommandBlock.CloseableCommandBlockSource(level) : null;
     }
 
     public Component getName() {
@@ -139,25 +141,25 @@ public abstract class BaseCommandBlock {
         return this.customName;
     }
 
-    public void setCustomName(@Nullable Component p_327944_) {
-        this.customName = p_327944_;
+    public void setCustomName(final @Nullable Component name) {
+        this.customName = name;
     }
 
-    public abstract void onUpdated(ServerLevel p_453381_);
+    public abstract void onUpdated(ServerLevel level);
 
-    public void setLastOutput(@Nullable Component p_45434_) {
-        this.lastOutput = p_45434_;
+    public void setLastOutput(final @Nullable Component lastOutput) {
+        this.lastOutput = lastOutput;
     }
 
-    public void setTrackOutput(boolean p_45429_) {
-        this.trackOutput = p_45429_;
+    public void setTrackOutput(final boolean trackOutput) {
+        this.trackOutput = trackOutput;
     }
 
     public boolean isTrackOutput() {
         return this.trackOutput;
     }
 
-    public abstract CommandSourceStack createCommandSourceStack(ServerLevel p_458458_, CommandSource p_423061_);
+    public abstract CommandSourceStack createCommandSourceStack(ServerLevel level, CommandSource source);
 
     public abstract boolean isValid();
 
@@ -166,8 +168,8 @@ public abstract class BaseCommandBlock {
         private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.ROOT);
         private boolean closed;
 
-        protected CloseableCommandBlockSource(final ServerLevel p_454535_) {
-            this.level = p_454535_;
+        protected CloseableCommandBlockSource(final ServerLevel level) {
+            this.level = level;
         }
 
         @Override
@@ -186,9 +188,9 @@ public abstract class BaseCommandBlock {
         }
 
         @Override
-        public void sendSystemMessage(Component p_426992_) {
+        public void sendSystemMessage(final Component message) {
             if (!this.closed) {
-                BaseCommandBlock.this.lastOutput = Component.literal("[" + TIME_FORMAT.format(ZonedDateTime.now()) + "] ").append(p_426992_);
+                BaseCommandBlock.this.lastOutput = Component.literal("[" + TIME_FORMAT.format(ZonedDateTime.now()) + "] ").append(message);
                 BaseCommandBlock.this.onUpdated(this.level);
             }
         }

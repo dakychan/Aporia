@@ -10,29 +10,27 @@ import net.minecraft.world.level.gamerules.GameRules;
 import org.jspecify.annotations.Nullable;
 
 public interface RecipeCraftingHolder {
-    void setRecipeUsed(@Nullable RecipeHolder<?> p_297397_);
+    void setRecipeUsed(final @Nullable RecipeHolder<?> recipeUsed);
 
     @Nullable RecipeHolder<?> getRecipeUsed();
 
-    default void awardUsedRecipes(Player p_297343_, List<ItemStack> p_297535_) {
-        RecipeHolder<?> recipeholder = this.getRecipeUsed();
-        if (recipeholder != null) {
-            p_297343_.triggerRecipeCrafted(recipeholder, p_297535_);
-            if (!recipeholder.value().isSpecial()) {
-                p_297343_.awardRecipes(Collections.singleton(recipeholder));
+    default void awardUsedRecipes(final Player player, final List<ItemStack> itemStacks) {
+        RecipeHolder<?> recipeUsed = this.getRecipeUsed();
+        if (recipeUsed != null) {
+            player.triggerRecipeCrafted(recipeUsed, itemStacks);
+            if (!recipeUsed.value().isSpecial()) {
+                player.awardRecipes(Collections.singleton(recipeUsed));
                 this.setRecipeUsed(null);
             }
         }
     }
 
-    default boolean setRecipeUsed(ServerPlayer p_301009_, RecipeHolder<?> p_301264_) {
-        if (!p_301264_.value().isSpecial()
-            && p_301009_.level().getGameRules().get(GameRules.LIMITED_CRAFTING)
-            && !p_301009_.getRecipeBook().contains(p_301264_.id())) {
+    default boolean setRecipeUsed(final ServerPlayer player, final RecipeHolder<?> recipe) {
+        if (!recipe.value().isSpecial() && player.level().getGameRules().get(GameRules.LIMITED_CRAFTING) && !player.getRecipeBook().contains(recipe.id())) {
             return false;
-        } else {
-            this.setRecipeUsed(p_301264_);
-            return true;
         }
+
+        this.setRecipeUsed(recipe);
+        return true;
     }
 }

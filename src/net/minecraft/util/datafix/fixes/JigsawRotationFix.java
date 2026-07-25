@@ -15,18 +15,18 @@ public class JigsawRotationFix extends AbstractBlockPropertyFix {
         .put("east", "east_up")
         .build();
 
-    public JigsawRotationFix(Schema p_16191_) {
-        super(p_16191_, "jigsaw_rotation_fix");
+    public JigsawRotationFix(final Schema outputSchema) {
+        super(outputSchema, "jigsaw_rotation_fix");
     }
 
     @Override
-    protected boolean shouldFix(String p_397701_) {
-        return p_397701_.equals("minecraft:jigsaw");
+    protected boolean shouldFix(final String blockId) {
+        return blockId.equals("minecraft:jigsaw");
     }
 
     @Override
-    protected <T> Dynamic<T> fixProperties(String p_391845_, Dynamic<T> p_397264_) {
-        String s = p_397264_.get("facing").asString("north");
-        return p_397264_.remove("facing").set("orientation", p_397264_.createString(RENAMES.getOrDefault(s, s)));
+    protected <T> Dynamic<T> fixProperties(final String blockId, final Dynamic<T> properties) {
+        String facing = properties.get("facing").asString("north");
+        return properties.remove("facing").set("orientation", properties.createString(RENAMES.getOrDefault(facing, facing)));
     }
 }

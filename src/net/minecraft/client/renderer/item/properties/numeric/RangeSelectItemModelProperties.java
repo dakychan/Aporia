@@ -3,14 +3,11 @@ package net.minecraft.client.renderer.item.properties.numeric;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class RangeSelectItemModelProperties {
     private static final ExtraCodecs.LateBoundIdMapper<Identifier, MapCodec<? extends RangeSelectItemModelProperty>> ID_MAPPER = new ExtraCodecs.LateBoundIdMapper<>();
     public static final MapCodec<RangeSelectItemModelProperty> MAP_CODEC = ID_MAPPER.codec(Identifier.CODEC)
-        .dispatchMap("property", RangeSelectItemModelProperty::type, p_375502_ -> p_375502_);
+        .dispatchMap("property", RangeSelectItemModelProperty::type, c -> c);
 
     public static void bootstrap() {
         ID_MAPPER.put(Identifier.withDefaultNamespace("custom_model_data"), CustomModelDataProperty.MAP_CODEC);

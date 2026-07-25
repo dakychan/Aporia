@@ -5,9 +5,9 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 public interface WorldlyContainer extends Container {
-    int[] getSlotsForFace(Direction p_19238_);
+    int[] getSlotsForFace(Direction direction);
 
-    boolean canPlaceItemThroughFace(int p_19235_, ItemStack p_19236_, @Nullable Direction p_19237_);
+    boolean canPlaceItemThroughFace(int slot, ItemStack itemStack, @Nullable Direction direction);
 
-    boolean canTakeItemThroughFace(int p_19239_, ItemStack p_19240_, Direction p_19241_);
+    boolean canTakeItemThroughFace(int slot, ItemStack itemStack, Direction direction);
 }

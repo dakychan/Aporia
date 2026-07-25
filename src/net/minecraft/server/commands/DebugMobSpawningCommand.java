@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
@@ -11,25 +10,24 @@ import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.NaturalSpawner;
 
 public class DebugMobSpawningCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_180111_) {
-        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("debugmobspawning")
-            .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS));
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        LiteralArgumentBuilder<CommandSourceStack> base = Commands.literal("debugmobspawning").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS));
 
-        for (MobCategory mobcategory : MobCategory.values()) {
-            literalargumentbuilder.then(
-                Commands.literal(mobcategory.getName())
+        for (MobCategory mobCategory : MobCategory.values()) {
+            base.then(
+                Commands.literal(mobCategory.getName())
                     .then(
                         Commands.argument("at", BlockPosArgument.blockPos())
-                            .executes(p_180109_ -> spawnMobs(p_180109_.getSource(), mobcategory, BlockPosArgument.getLoadedBlockPos(p_180109_, "at")))
+                            .executes(c -> spawnMobs(c.getSource(), mobCategory, BlockPosArgument.getLoadedBlockPos(c, "at")))
                     )
             );
         }
 
-        p_180111_.register(literalargumentbuilder);
+        dispatcher.register(base);
     }
 
-    private static int spawnMobs(CommandSourceStack p_180115_, MobCategory p_180116_, BlockPos p_180117_) {
-        NaturalSpawner.spawnCategoryForPosition(p_180116_, p_180115_.getLevel(), p_180117_);
+    private static int spawnMobs(final CommandSourceStack source, final MobCategory mobCategory, final BlockPos at) {
+        NaturalSpawner.spawnCategoryForPosition(mobCategory, source.getLevel(), at);
         return 1;
     }
 }

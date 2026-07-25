@@ -1,6 +1,6 @@
 package net.minecraft.world.entity.animal.happyghast;
 
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundEntityPositionSyncPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -19,11 +19,14 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -31,10 +34,10 @@ import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.control.FlyingMoveControl;
 import net.minecraft.world.entity.ai.control.LookControl;
 import net.minecraft.world.entity.ai.goal.FloatGoal;
-import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.ai.goal.TemptGoal;
 import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.monster.Ghast;
 import net.minecraft.world.entity.player.Player;
@@ -61,31 +64,38 @@ public class HappyGhast extends Animal {
     public static final int MAX_PASSANGERS = 4;
     private static final int STILL_TIMEOUT_ON_LOAD_GRACE_PERIOD = 60;
     private static final int MAX_STILL_TIMEOUT = 10;
+    private static final Brain.Provider<HappyGhast> BRAIN_PROVIDER = Brain.<HappyGhast>provider(
+        List.of(
+            SensorType.NEAREST_LIVING_ENTITIES, SensorType.HURT_BY, SensorType.FOOD_TEMPTATIONS, SensorType.NEAREST_ADULT_ANY_TYPE, SensorType.NEAREST_PLAYERS
+        ),
+        var0 -> HappyGhastAi.getActivities()
+    );
     public static final float SPEED_MULTIPLIER_WHEN_PANICKING = 2.0F;
     private int leashHolderTime = 0;
     private int serverStillTimeout;
     private static final EntityDataAccessor<Boolean> IS_LEASH_HOLDER = SynchedEntityData.defineId(HappyGhast.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> STAYS_STILL = SynchedEntityData.defineId(HappyGhast.class, EntityDataSerializers.BOOLEAN);
     private static final float MAX_SCALE = 1.0F;
+    private static final EntityDimensions BABY_DIMENSIONS = EntityTypes.HAPPY_GHAST.getDimensions().scale(0.2375F).withEyeHeight(0.46875F);
 
-    public HappyGhast(EntityType<? extends HappyGhast> p_452042_, Level p_456805_) {
-        super(p_452042_, p_456805_);
-        this.moveControl = new Ghast.GhastMoveControl(this, true, this::isOnStillTimeout);
+    public HappyGhast(final EntityType<? extends HappyGhast> type, final Level level) {
+        super(type, level);
+        this.moveControl = new Ghast.GhastMoveControl<>(this, true, this::isOnStillTimeout);
         this.lookControl = new HappyGhast.HappyGhastLookControl();
     }
 
-    private void setServerStillTimeout(int p_450627_) {
-        if (this.serverStillTimeout <= 0 && p_450627_ > 0 && this.level() instanceof ServerLevel serverlevel) {
+    private void setServerStillTimeout(final int serverStillTimeout) {
+        if (this.serverStillTimeout <= 0 && serverStillTimeout > 0 && this.level() instanceof ServerLevel serverLevel) {
             this.syncPacketPositionCodec(this.getX(), this.getY(), this.getZ());
-            serverlevel.getChunkSource().chunkMap.sendToTrackingPlayers(this, ClientboundEntityPositionSyncPacket.of(this));
+            serverLevel.getChunkSource().chunkMap.sendToTrackingPlayers(this, ClientboundEntityPositionSyncPacket.of(this));
         }
 
-        this.serverStillTimeout = p_450627_;
+        this.serverStillTimeout = serverStillTimeout;
         this.syncStayStillFlag();
     }
 
-    private PathNavigation createBabyNavigation(Level p_452595_) {
-        return new HappyGhast.BabyFlyingPathNavigation(this, p_452595_);
+    private PathNavigation createBabyNavigation(final Level level) {
+        return new HappyGhast.BabyFlyingPathNavigation(this, level);
     }
 
     @Override
@@ -97,7 +107,9 @@ public class HappyGhast extends Animal {
                 new TemptGoal.ForNonPathfinders(
                     this,
                     1.0,
-                    p_450307_ -> !this.isWearingBodyArmor() && !this.isBaby() ? p_450307_.is(ItemTags.HAPPY_GHAST_TEMPT_ITEMS) : p_450307_.is(ItemTags.HAPPY_GHAST_FOOD),
+                    itemStack -> !this.isWearingBodyArmor() && !this.isBaby()
+                        ? itemStack.is(ItemTags.HAPPY_GHAST_TEMPT_ITEMS)
+                        : itemStack.is(ItemTags.HAPPY_GHAST_FOOD),
                     false,
                     7.0
                 )
@@ -106,23 +118,23 @@ public class HappyGhast extends Animal {
     }
 
     private void adultGhastSetup() {
-        this.moveControl = new Ghast.GhastMoveControl(this, true, this::isOnStillTimeout);
+        this.moveControl = new Ghast.GhastMoveControl<>(this, true, this::isOnStillTimeout);
         this.lookControl = new HappyGhast.HappyGhastLookControl();
         this.navigation = this.createNavigation(this.level());
-        if (this.level() instanceof ServerLevel serverlevel) {
-            this.removeAllGoals(p_456629_ -> true);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.removeAllGoals(goal -> true);
             this.registerGoals();
-            ((Brain<HappyGhast>)this.brain).stopAll(serverlevel, this);
+            this.getBrain().stopAll(serverLevel, this);
             this.brain.clearMemories();
         }
     }
 
     private void babyGhastSetup() {
-        this.moveControl = new FlyingMoveControl(this, 180, true);
+        this.moveControl = new FlyingMoveControl<>(this, 180, true);
         this.lookControl = new LookControl(this);
         this.navigation = this.createBabyNavigation(this.level());
         this.setServerStillTimeout(0);
-        this.removeAllGoals(p_452392_ -> true);
+        this.removeAllGoals(goal -> true);
     }
 
     @Override
@@ -147,12 +159,12 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    protected float sanitizeScale(float p_454188_) {
-        return Math.min(p_454188_, 1.0F);
+    protected float sanitizeScale(final float scale) {
+        return Math.min(scale, 1.0F);
     }
 
     @Override
-    protected void checkFallDamage(double p_459177_, boolean p_451860_, BlockState p_452569_, BlockPos p_459414_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
     }
 
     @Override
@@ -161,17 +173,17 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    public void travel(Vec3 p_450365_) {
-        float f = (float)this.getAttributeValue(Attributes.FLYING_SPEED) * 5.0F / 3.0F;
-        this.travelFlying(p_450365_, f, f, f);
+    public void travel(final Vec3 input) {
+        float speed = (float)this.getAttributeValue(Attributes.FLYING_SPEED) * 5.0F / 3.0F;
+        this.travelFlying(input, speed, speed, speed);
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos p_452493_, LevelReader p_460504_) {
-        if (!p_460504_.isEmptyBlock(p_452493_)) {
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
+        if (!level.isEmptyBlock(pos)) {
             return 0.0F;
         } else {
-            return p_460504_.isEmptyBlock(p_452493_.below()) && !p_460504_.isEmptyBlock(p_452493_.below(2)) ? 10.0F : 5.0F;
+            return level.isEmptyBlock(pos.below()) && !level.isEmptyBlock(pos.below(2)) ? 10.0F : 5.0F;
         }
     }
 
@@ -186,7 +198,7 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_454367_, BlockState p_450468_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
     }
 
     @Override
@@ -201,8 +213,8 @@ public class HappyGhast extends Animal {
 
     @Override
     public int getAmbientSoundInterval() {
-        int i = super.getAmbientSoundInterval();
-        return this.isVehicle() ? i * 6 : i;
+        int interval = super.getAmbientSoundInterval();
+        return this.isVehicle() ? interval * 6 : interval;
     }
 
     @Override
@@ -211,7 +223,7 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_458380_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return this.isBaby() ? SoundEvents.GHASTLING_HURT : SoundEvents.HAPPY_GHAST_HURT;
     }
 
@@ -231,8 +243,13 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_454979_, AgeableMob p_452186_) {
-        return EntityType.HAPPY_GHAST.create(p_454979_, EntitySpawnReason.BREEDING);
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+    }
+
+    @Override
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.HAPPY_GHAST.create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -246,55 +263,55 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    public boolean isFood(ItemStack p_459972_) {
-        return p_459972_.is(ItemTags.HAPPY_GHAST_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.HAPPY_GHAST_FOOD);
     }
 
     @Override
-    public boolean canUseSlot(EquipmentSlot p_455944_) {
-        return p_455944_ != EquipmentSlot.BODY ? super.canUseSlot(p_455944_) : this.isAlive() && !this.isBaby();
+    public boolean canUseSlot(final EquipmentSlot slot) {
+        return slot != EquipmentSlot.BODY ? super.canUseSlot(slot) : this.isAlive() && !this.isBaby();
     }
 
     @Override
-    protected boolean canDispenserEquipIntoSlot(EquipmentSlot p_450651_) {
-        return p_450651_ == EquipmentSlot.BODY;
+    protected boolean canDispenserEquipIntoSlot(final EquipmentSlot slot) {
+        return slot == EquipmentSlot.BODY;
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_453672_, InteractionHand p_460401_) {
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
         if (this.isBaby()) {
-            return super.mobInteract(p_453672_, p_460401_);
-        } else {
-            ItemStack itemstack = p_453672_.getItemInHand(p_460401_);
-            if (!itemstack.isEmpty()) {
-                InteractionResult interactionresult = itemstack.interactLivingEntity(p_453672_, this, p_460401_);
-                if (interactionresult.consumesAction()) {
-                    return interactionresult;
-                }
-            }
+            return super.mobInteract(player, hand);
+        }
 
-            if (this.isWearingBodyArmor() && !p_453672_.isSecondaryUseActive()) {
-                this.doPlayerRide(p_453672_);
-                return InteractionResult.SUCCESS;
-            } else {
-                return super.mobInteract(p_453672_, p_460401_);
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (!itemStack.isEmpty()) {
+            InteractionResult interactionResult = itemStack.interactLivingEntity(player, this, hand);
+            if (interactionResult.consumesAction()) {
+                return interactionResult;
             }
+        }
+
+        if (this.isWearingBodyArmor() && !player.isSecondaryUseActive()) {
+            this.doPlayerRide(player);
+            return InteractionResult.SUCCESS;
+        } else {
+            return super.mobInteract(player, hand);
         }
     }
 
-    private void doPlayerRide(Player p_458319_) {
+    private void doPlayerRide(final Player player) {
         if (!this.level().isClientSide()) {
-            p_458319_.startRiding(this);
+            player.startRiding(this);
         }
     }
 
     @Override
-    protected void addPassenger(Entity p_453310_) {
+    protected void addPassenger(final Entity passenger) {
         if (!this.isVehicle()) {
             this.level().playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.HARNESS_GOGGLES_DOWN, this.getSoundSource(), 1.0F, 1.0F);
         }
 
-        super.addPassenger(p_453310_);
+        super.addPassenger(passenger);
         if (!this.level().isClientSide()) {
             if (!this.scanPlayerAboveGhast()) {
                 this.setServerStillTimeout(0);
@@ -305,8 +322,8 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    protected void removePassenger(Entity p_452513_) {
-        super.removePassenger(p_452513_);
+    protected void removePassenger(final Entity passenger) {
+        super.removePassenger(passenger);
         if (!this.level().isClientSide()) {
             this.setServerStillTimeout(10);
         }
@@ -318,79 +335,81 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    protected boolean canAddPassenger(Entity p_450884_) {
+    protected boolean canAddPassenger(final Entity passenger) {
         return this.getPassengers().size() < 4;
     }
 
     @Override
     public @Nullable LivingEntity getControllingPassenger() {
-        return (LivingEntity)(this.isWearingBodyArmor() && !this.isOnStillTimeout() && this.getFirstPassenger() instanceof Player player ? player : super.getControllingPassenger());
+        return this.isWearingBodyArmor() && !this.isOnStillTimeout() && this.getFirstPassenger() instanceof Player player
+            ? player
+            : super.getControllingPassenger();
     }
 
     @Override
-    protected Vec3 getRiddenInput(Player p_458711_, Vec3 p_457053_) {
-        float f = p_458711_.xxa;
-        float f1 = 0.0F;
-        float f2 = 0.0F;
-        if (p_458711_.zza != 0.0F) {
-            float f3 = Mth.cos(p_458711_.getXRot() * (float) (Math.PI / 180.0));
-            float f4 = -Mth.sin(p_458711_.getXRot() * (float) (Math.PI / 180.0));
-            if (p_458711_.zza < 0.0F) {
-                f3 *= -0.5F;
-                f4 *= -0.5F;
+    protected Vec3 getRiddenInput(final Player controller, final Vec3 selfInput) {
+        float strafe = controller.xxa;
+        float forward = 0.0F;
+        float up = 0.0F;
+        if (controller.zza != 0.0F) {
+            float forwardLook = Mth.cos(controller.getXRot() * (float) (Math.PI / 180.0));
+            float upLook = -Mth.sin(controller.getXRot() * (float) (Math.PI / 180.0));
+            if (controller.zza < 0.0F) {
+                forwardLook *= -0.5F;
+                upLook *= -0.5F;
             }
 
-            f2 = f4;
-            f1 = f3;
+            up = upLook;
+            forward = forwardLook;
         }
 
-        if (p_458711_.isJumping()) {
-            f2 += 0.5F;
+        if (controller.isJumping()) {
+            up += 0.5F;
         }
 
-        return new Vec3(f, f2, f1).scale(3.9F * this.getAttributeValue(Attributes.FLYING_SPEED));
+        return new Vec3(strafe, up, forward).scale(3.9F * this.getAttributeValue(Attributes.FLYING_SPEED));
     }
 
-    protected Vec2 getRiddenRotation(LivingEntity p_457622_) {
-        return new Vec2(p_457622_.getXRot() * 0.5F, p_457622_.getYRot());
-    }
-
-    @Override
-    protected void tickRidden(Player p_450397_, Vec3 p_450697_) {
-        super.tickRidden(p_450397_, p_450697_);
-        Vec2 vec2 = this.getRiddenRotation(p_450397_);
-        float f = this.getYRot();
-        float f1 = Mth.wrapDegrees(vec2.y - f);
-        float f2 = 0.08F;
-        f += f1 * 0.08F;
-        this.setRot(f, vec2.x);
-        this.yRotO = this.yBodyRot = this.yHeadRot = f;
+    protected Vec2 getRiddenRotation(final LivingEntity controller) {
+        return new Vec2(controller.getXRot() * 0.5F, controller.getYRot());
     }
 
     @Override
-    protected Brain.Provider<HappyGhast> brainProvider() {
-        return HappyGhastAi.brainProvider();
+    protected void tickRidden(final Player controller, final Vec3 riddenInput) {
+        super.tickRidden(controller, riddenInput);
+        Vec2 rotation = this.getRiddenRotation(controller);
+        float yRot = this.getYRot();
+        float diff = Mth.wrapDegrees(rotation.y - yRot);
+        float turnSpeed = 0.08F;
+        yRot += diff * 0.08F;
+        this.setRot(yRot, rotation.x);
+        this.yRotO = this.yBodyRot = this.yHeadRot = yRot;
     }
 
     @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_458376_) {
-        return HappyGhastAi.makeBrain(this.brainProvider().makeBrain(p_458376_));
+    protected Brain<HappyGhast> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_453480_) {
+    public Brain<HappyGhast> getBrain() {
+        return (Brain<HappyGhast>)super.getBrain();
+    }
+
+    @Override
+    protected void customServerAiStep(final ServerLevel level) {
         if (this.isBaby()) {
-            ProfilerFiller profilerfiller = Profiler.get();
-            profilerfiller.push("happyGhastBrain");
-            ((Brain<HappyGhast>)this.brain).tick(p_453480_, this);
-            profilerfiller.pop();
-            profilerfiller.push("happyGhastActivityUpdate");
+            ProfilerFiller profiler = Profiler.get();
+            profiler.push("happyGhastBrain");
+            this.getBrain().tick(level, this);
+            profiler.pop();
+            profiler.push("happyGhastActivityUpdate");
             HappyGhastAi.updateActivity(this);
-            profilerfiller.pop();
+            profiler.pop();
         }
 
         this.checkRestriction();
-        super.customServerAiStep(p_453480_);
+        super.customServerAiStep(level);
     }
 
     @Override
@@ -432,31 +451,31 @@ public class HappyGhast extends Animal {
 
     private void checkRestriction() {
         if (!this.isLeashed() && !this.isVehicle()) {
-            int i = this.getHappyGhastRestrictionRadius();
-            if (!this.hasHome() || !this.getHomePosition().closerThan(this.blockPosition(), i + 16) || i != this.getHomeRadius()) {
-                this.setHomeTo(this.blockPosition(), i);
+            int radius = this.getHappyGhastRestrictionRadius();
+            if (!this.hasHome() || !this.getHomePosition().closerThan(this.blockPosition(), radius + 16) || radius != this.getHomeRadius()) {
+                this.setHomeTo(this.blockPosition(), radius);
             }
         }
     }
 
     private void continuousHeal() {
-        if (this.level() instanceof ServerLevel serverlevel && this.isAlive() && this.deathTime == 0 && this.getMaxHealth() != this.getHealth()) {
-            boolean flag = this.isInClouds() || serverlevel.precipitationAt(this.blockPosition()) != Biome.Precipitation.NONE;
-            if (this.tickCount % (flag ? 20 : 600) == 0) {
+        if (this.level() instanceof ServerLevel level && this.isAlive() && this.deathTime == 0 && this.getMaxHealth() != this.getHealth()) {
+            boolean isFastHealing = this.isInClouds() || level.precipitationAt(this.blockPosition()) != Biome.Precipitation.NONE;
+            if (this.tickCount % (isFastHealing ? 20 : 600) == 0) {
                 this.heal(1.0F);
             }
         }
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_459118_) {
-        super.defineSynchedData(p_459118_);
-        p_459118_.define(IS_LEASH_HOLDER, false);
-        p_459118_.define(STAYS_STILL, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(IS_LEASH_HOLDER, false);
+        entityData.define(STAYS_STILL, false);
     }
 
-    private void setLeashHolder(boolean p_456009_) {
-        this.entityData.set(IS_LEASH_HOLDER, p_456009_);
+    private void setLeashHolder(final boolean isLeashHolder) {
+        this.entityData.set(IS_LEASH_HOLDER, isLeashHolder);
     }
 
     public boolean isLeashHolder() {
@@ -503,22 +522,22 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    public void notifyLeashHolder(Leashable p_453015_) {
-        if (p_453015_.supportQuadLeash()) {
+    public void notifyLeashHolder(final Leashable entity) {
+        if (entity.supportQuadLeash()) {
             this.leashHolderTime = 5;
         }
     }
 
     @Override
-    public void addAdditionalSaveData(ValueOutput p_455601_) {
-        super.addAdditionalSaveData(p_455601_);
-        p_455601_.putInt("still_timeout", this.serverStillTimeout);
+    public void addAdditionalSaveData(final ValueOutput tag) {
+        super.addAdditionalSaveData(tag);
+        tag.putInt("still_timeout", this.serverStillTimeout);
     }
 
     @Override
-    public void readAdditionalSaveData(ValueInput p_459491_) {
-        super.readAdditionalSaveData(p_459491_);
-        this.setServerStillTimeout(p_459491_.getIntOr("still_timeout", 0));
+    public void readAdditionalSaveData(final ValueInput tag) {
+        super.readAdditionalSaveData(tag);
+        this.setServerStillTimeout(tag.getIntOr("still_timeout", 0));
     }
 
     public boolean isOnStillTimeout() {
@@ -526,15 +545,20 @@ public class HappyGhast extends Animal {
     }
 
     private boolean scanPlayerAboveGhast() {
-        AABB aabb = this.getBoundingBox();
-        AABB aabb1 = new AABB(
-            aabb.minX - 1.0, aabb.maxY - 1.0E-5F, aabb.minZ - 1.0, aabb.maxX + 1.0, aabb.maxY + aabb.getYsize() / 2.0, aabb.maxZ + 1.0
+        AABB happyGhastBb = this.getBoundingBox();
+        AABB ghastDetectionBox = new AABB(
+            happyGhastBb.minX - 1.0,
+            happyGhastBb.maxY - 1.0E-5F,
+            happyGhastBb.minZ - 1.0,
+            happyGhastBb.maxX + 1.0,
+            happyGhastBb.maxY + happyGhastBb.getYsize() / 2.0,
+            happyGhastBb.maxZ + 1.0
         );
 
         for (Player player : this.level().players()) {
             if (!player.isSpectator()) {
-                Entity entity = player.getRootVehicle();
-                if (!(entity instanceof HappyGhast) && aabb1.contains(entity.position())) {
+                Entity rootVehicle = player.getRootVehicle();
+                if (!(rootVehicle instanceof HappyGhast) && ghastDetectionBox.contains(rootVehicle.position())) {
                     return true;
                 }
             }
@@ -549,12 +573,12 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    public boolean canBeCollidedWith(@Nullable Entity p_452746_) {
+    public boolean canBeCollidedWith(final @Nullable Entity other) {
         if (!this.isBaby() && this.isAlive()) {
-            if (this.level().isClientSide() && p_452746_ instanceof Player && p_452746_.position().y >= this.getBoundingBox().maxY) {
+            if (this.level().isClientSide() && other instanceof Player && other.position().y >= this.getBoundingBox().maxY) {
                 return true;
             } else {
-                return this.isVehicle() && p_452746_ instanceof HappyGhast ? true : this.isOnStillTimeout();
+                return this.isVehicle() && other instanceof HappyGhast ? true : this.isOnStillTimeout();
             }
         } else {
             return false;
@@ -567,25 +591,25 @@ public class HappyGhast extends Animal {
     }
 
     @Override
-    public Vec3 getDismountLocationForPassenger(LivingEntity p_452680_) {
+    public Vec3 getDismountLocationForPassenger(final LivingEntity passenger) {
         return new Vec3(this.getX(), this.getBoundingBox().maxY, this.getZ());
     }
 
-    static class BabyFlyingPathNavigation extends FlyingPathNavigation {
-        public BabyFlyingPathNavigation(HappyGhast p_455201_, Level p_459269_) {
-            super(p_455201_, p_459269_);
+    private static class BabyFlyingPathNavigation extends FlyingPathNavigation {
+        public BabyFlyingPathNavigation(final HappyGhast mob, final Level level) {
+            super(mob, level);
             this.setCanOpenDoors(false);
             this.setCanFloat(true);
             this.setRequiredPathLength(48.0F);
         }
 
         @Override
-        protected boolean canMoveDirectly(Vec3 p_455354_, Vec3 p_451485_) {
-            return isClearForMovementBetween(this.mob, p_455354_, p_451485_, false);
+        protected boolean canMoveDirectly(final Vec3 startPos, final Vec3 stopPos) {
+            return isClearForMovementBetween(this.mob, startPos, stopPos, false);
         }
     }
 
-    class HappyGhastBodyRotationControl extends BodyRotationControl {
+    private class HappyGhastBodyRotationControl extends BodyRotationControl {
         public HappyGhastBodyRotationControl() {
             super(HappyGhast.this);
         }
@@ -601,7 +625,7 @@ public class HappyGhast extends Animal {
         }
     }
 
-    class HappyGhastFloatGoal extends FloatGoal {
+    private class HappyGhastFloatGoal extends FloatGoal {
         public HappyGhastFloatGoal() {
             super(HappyGhast.this);
         }
@@ -612,40 +636,27 @@ public class HappyGhast extends Animal {
         }
     }
 
-    class HappyGhastLookControl extends LookControl {
-        HappyGhastLookControl() {
+    private class HappyGhastLookControl extends LookControl {
+        private HappyGhastLookControl() {
             super(HappyGhast.this);
         }
 
         @Override
         public void tick() {
             if (HappyGhast.this.isOnStillTimeout()) {
-                float f = wrapDegrees90(HappyGhast.this.getYRot());
-                HappyGhast.this.setYRot(HappyGhast.this.getYRot() - f);
+                float closeAngle = Mth.wrapDegrees90(HappyGhast.this.getYRot());
+                HappyGhast.this.setYRot(HappyGhast.this.getYRot() - closeAngle);
                 HappyGhast.this.setYHeadRot(HappyGhast.this.getYRot());
             } else if (this.lookAtCooldown > 0) {
                 this.lookAtCooldown--;
-                double d0 = this.wantedX - HappyGhast.this.getX();
-                double d1 = this.wantedZ - HappyGhast.this.getZ();
-                HappyGhast.this.setYRot(-((float)Mth.atan2(d0, d1)) * (180.0F / (float)Math.PI));
+                double xdd = this.wantedX - HappyGhast.this.getX();
+                double zdd = this.wantedZ - HappyGhast.this.getZ();
+                HappyGhast.this.setYRot(-((float)Mth.atan2(xdd, zdd)) * (180.0F / (float)Math.PI));
                 HappyGhast.this.yBodyRot = HappyGhast.this.getYRot();
                 HappyGhast.this.yHeadRot = HappyGhast.this.yBodyRot;
             } else {
                 Ghast.faceMovementDirection(this.mob);
             }
-        }
-
-        public static float wrapDegrees90(float p_459168_) {
-            float f = p_459168_ % 90.0F;
-            if (f >= 45.0F) {
-                f -= 90.0F;
-            }
-
-            if (f < -45.0F) {
-                f += 90.0F;
-            }
-
-            return f;
         }
     }
 }

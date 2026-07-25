@@ -22,24 +22,26 @@ public interface IncomingRpcMethod<Params, Result> {
 
     IncomingRpcMethod.Attributes attributes();
 
-    JsonElement apply(MinecraftApi p_425181_, @Nullable JsonElement p_424519_, ClientInfo p_431211_);
+    JsonElement apply(MinecraftApi minecraftApi, @Nullable JsonElement paramsJson, ClientInfo clientInfo);
 
-    static <Result> IncomingRpcMethod.IncomingRpcMethodBuilder<Void, Result> method(IncomingRpcMethod.ParameterlessRpcMethodFunction<Result> p_423575_) {
-        return new IncomingRpcMethod.IncomingRpcMethodBuilder<>(p_423575_);
+    static <Result> IncomingRpcMethod.IncomingRpcMethodBuilder<Void, Result> method(final IncomingRpcMethod.ParameterlessRpcMethodFunction<Result> function) {
+        return new IncomingRpcMethod.IncomingRpcMethodBuilder<>(function);
     }
 
-    static <Params, Result> IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> method(IncomingRpcMethod.RpcMethodFunction<Params, Result> p_427772_) {
-        return new IncomingRpcMethod.IncomingRpcMethodBuilder<>(p_427772_);
+    static <Params, Result> IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> method(
+        final IncomingRpcMethod.RpcMethodFunction<Params, Result> function
+    ) {
+        return new IncomingRpcMethod.IncomingRpcMethodBuilder<>(function);
     }
 
-    static <Result> IncomingRpcMethod.IncomingRpcMethodBuilder<Void, Result> method(Function<MinecraftApi, Result> p_426897_) {
-        return new IncomingRpcMethod.IncomingRpcMethodBuilder<>(p_426897_);
+    static <Result> IncomingRpcMethod.IncomingRpcMethodBuilder<Void, Result> method(final Function<MinecraftApi, Result> supplier) {
+        return new IncomingRpcMethod.IncomingRpcMethodBuilder<>(supplier);
     }
 
-    public record Attributes(boolean runOnMainThread, boolean discoverable) {
+    record Attributes(boolean runOnMainThread, boolean discoverable, boolean allowPreServerInit) {
     }
 
-    public static class IncomingRpcMethodBuilder<Params, Result> {
+    class IncomingRpcMethodBuilder<Params, Result> {
         private String description = "";
         private @Nullable ParamInfo<Params> paramInfo;
         private @Nullable ResultInfo<Result> resultInfo;
@@ -47,31 +49,32 @@ public interface IncomingRpcMethod<Params, Result> {
         private boolean runOnMainThread = true;
         private IncomingRpcMethod.@Nullable ParameterlessRpcMethodFunction<Result> parameterlessFunction;
         private IncomingRpcMethod.@Nullable RpcMethodFunction<Params, Result> parameterFunction;
+        private boolean allowPreServerInit = false;
 
-        public IncomingRpcMethodBuilder(IncomingRpcMethod.ParameterlessRpcMethodFunction<Result> p_450437_) {
-            this.parameterlessFunction = p_450437_;
+        public IncomingRpcMethodBuilder(final IncomingRpcMethod.ParameterlessRpcMethodFunction<Result> function) {
+            this.parameterlessFunction = function;
         }
 
-        public IncomingRpcMethodBuilder(IncomingRpcMethod.RpcMethodFunction<Params, Result> p_451290_) {
-            this.parameterFunction = p_451290_;
+        public IncomingRpcMethodBuilder(final IncomingRpcMethod.RpcMethodFunction<Params, Result> function) {
+            this.parameterFunction = function;
         }
 
-        public IncomingRpcMethodBuilder(Function<MinecraftApi, Result> p_455964_) {
-            this.parameterlessFunction = (p_455727_, p_456818_) -> p_455964_.apply(p_455727_);
+        public IncomingRpcMethodBuilder(final Function<MinecraftApi, Result> supplier) {
+            this.parameterlessFunction = (apiService, var2) -> supplier.apply(apiService);
         }
 
-        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> description(String p_429728_) {
-            this.description = p_429728_;
+        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> description(final String description) {
+            this.description = description;
             return this;
         }
 
-        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> response(String p_452506_, Schema<Result> p_456361_) {
-            this.resultInfo = new ResultInfo<>(p_452506_, p_456361_.info());
+        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> response(final String resultName, final Schema<Result> resultSchema) {
+            this.resultInfo = new ResultInfo<>(resultName, resultSchema.info());
             return this;
         }
 
-        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> param(String p_460022_, Schema<Params> p_457026_) {
-            this.paramInfo = new ParamInfo<>(p_460022_, p_457026_.info());
+        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> param(final String paramName, final Schema<Params> paramSchema) {
+            this.paramInfo = new ParamInfo<>(paramName, paramSchema.info());
             return this;
         }
 
@@ -85,110 +88,101 @@ public interface IncomingRpcMethod<Params, Result> {
             return this;
         }
 
+        public IncomingRpcMethod.IncomingRpcMethodBuilder<Params, Result> allowPreServerInit() {
+            this.allowPreServerInit = true;
+            return this;
+        }
+
         public IncomingRpcMethod<Params, Result> build() {
             if (this.resultInfo == null) {
                 throw new IllegalStateException("No response defined");
-            } else {
-                IncomingRpcMethod.Attributes incomingrpcmethod$attributes = new IncomingRpcMethod.Attributes(this.runOnMainThread, this.discoverable);
-                MethodInfo<Params, Result> methodinfo = new MethodInfo<>(this.description, this.paramInfo, this.resultInfo);
-                if (this.parameterlessFunction != null) {
-                    return new IncomingRpcMethod.ParameterlessMethod<>(methodinfo, incomingrpcmethod$attributes, this.parameterlessFunction);
-                } else if (this.parameterFunction != null) {
-                    if (this.paramInfo == null) {
-                        throw new IllegalStateException("No param schema defined");
-                    } else {
-                        return new IncomingRpcMethod.Method<>(methodinfo, incomingrpcmethod$attributes, this.parameterFunction);
-                    }
+            }
+
+            IncomingRpcMethod.Attributes attributes = new IncomingRpcMethod.Attributes(this.runOnMainThread, this.discoverable, this.allowPreServerInit);
+            MethodInfo<Params, Result> methodInfo = new MethodInfo<>(this.description, this.paramInfo, this.resultInfo);
+            if (this.parameterlessFunction != null) {
+                return new IncomingRpcMethod.ParameterlessMethod<>(methodInfo, attributes, this.parameterlessFunction);
+            }
+
+            if (this.parameterFunction != null) {
+                if (this.paramInfo == null) {
+                    throw new IllegalStateException("No param schema defined");
                 } else {
-                    throw new IllegalStateException("No method defined");
+                    return new IncomingRpcMethod.Method<>(methodInfo, attributes, this.parameterFunction);
                 }
+            } else {
+                throw new IllegalStateException("No method defined");
             }
         }
 
-        public IncomingRpcMethod<?, ?> register(Registry<IncomingRpcMethod<?, ?>> p_426192_, String p_428528_) {
-            return this.register(p_426192_, Identifier.withDefaultNamespace(p_428528_));
+        public IncomingRpcMethod<?, ?> register(final Registry<IncomingRpcMethod<?, ?>> methodRegistry, final String key) {
+            return this.register(methodRegistry, Identifier.withDefaultNamespace(key));
         }
 
-        private IncomingRpcMethod<?, ?> register(Registry<IncomingRpcMethod<?, ?>> p_424076_, Identifier p_450798_) {
-            return Registry.register(p_424076_, p_450798_, this.build());
+        private IncomingRpcMethod<?, ?> register(final Registry<IncomingRpcMethod<?, ?>> methodRegistry, final Identifier id) {
+            return Registry.register(methodRegistry, id, this.build());
         }
     }
 
-    public record Method<Params, Result>(
+    record Method<Params, Result>(
         MethodInfo<Params, Result> info, IncomingRpcMethod.Attributes attributes, IncomingRpcMethod.RpcMethodFunction<Params, Result> function
     ) implements IncomingRpcMethod<Params, Result> {
         @Override
-        public JsonElement apply(MinecraftApi p_429665_, @Nullable JsonElement p_424548_, ClientInfo p_427391_) {
-            if (p_424548_ != null && (p_424548_.isJsonArray() || p_424548_.isJsonObject())) {
+        public JsonElement apply(final MinecraftApi minecraftApi, final @Nullable JsonElement paramsJson, final ClientInfo clientInfo) {
+            if (paramsJson != null && (paramsJson.isJsonArray() || paramsJson.isJsonObject())) {
                 if (this.info.params().isEmpty()) {
                     throw new IllegalArgumentException("Method defined as having parameters without describing them");
+                }
+
+                JsonElement paramsJsonElement;
+                if (paramsJson.isJsonObject()) {
+                    String parameterName = this.info.params().get().name();
+                    JsonElement jsonElement = paramsJson.getAsJsonObject().get(parameterName);
+                    if (jsonElement == null) {
+                        throw new InvalidParameterJsonRpcException(
+                            String.format(Locale.ROOT, "Params passed by-name, but expected param [%s] does not exist", parameterName)
+                        );
+                    }
+
+                    paramsJsonElement = jsonElement;
                 } else {
-                    JsonElement jsonelement;
-                    if (p_424548_.isJsonObject()) {
-                        String s = this.info.params().get().name();
-                        JsonElement jsonelement1 = p_424548_.getAsJsonObject().get(s);
-                        if (jsonelement1 == null) {
-                            throw new InvalidParameterJsonRpcException(
-                                String.format(Locale.ROOT, "Params passed by-name, but expected param [%s] does not exist", s)
-                            );
-                        }
-
-                        jsonelement = jsonelement1;
-                    } else {
-                        JsonArray jsonarray = p_424548_.getAsJsonArray();
-                        if (jsonarray.isEmpty() || jsonarray.size() > 1) {
-                            throw new InvalidParameterJsonRpcException("Expected exactly one element in the params array");
-                        }
-
-                        jsonelement = jsonarray.get(0);
+                    JsonArray jsonArray = paramsJson.getAsJsonArray();
+                    if (jsonArray.isEmpty() || jsonArray.size() > 1) {
+                        throw new InvalidParameterJsonRpcException("Expected exactly one element in the params array");
                     }
 
-                    Params params = this.info
-                        .params()
-                        .get()
-                        .schema()
-                        .codec()
-                        .parse(JsonOps.INSTANCE, jsonelement)
-                        .getOrThrow(InvalidParameterJsonRpcException::new);
-                    Result result = this.function.apply(p_429665_, params, p_427391_);
-                    if (this.info.result().isEmpty()) {
-                        throw new IllegalStateException("No result codec defined");
-                    } else {
-                        return this.info
-                            .result()
-                            .get()
-                            .schema()
-                            .codec()
-                            .encodeStart(JsonOps.INSTANCE, result)
-                            .getOrThrow(EncodeJsonRpcException::new);
-                    }
+                    paramsJsonElement = jsonArray.get(0);
+                }
+
+                Params params = this.info
+                    .params()
+                    .get()
+                    .schema()
+                    .codec()
+                    .parse(JsonOps.INSTANCE, paramsJsonElement)
+                    .getOrThrow(InvalidParameterJsonRpcException::new);
+                Result result = this.function.apply(minecraftApi, params, clientInfo);
+                if (this.info.result().isEmpty()) {
+                    throw new IllegalStateException("No result codec defined");
+                } else {
+                    return this.info.result().get().schema().codec().encodeStart(JsonOps.INSTANCE, result).getOrThrow(EncodeJsonRpcException::new);
                 }
             } else {
                 throw new InvalidParameterJsonRpcException("Expected params as array or named");
             }
         }
-
-        @Override
-        public MethodInfo<Params, Result> info() {
-            return this.info;
-        }
-
-        @Override
-        public IncomingRpcMethod.Attributes attributes() {
-            return this.attributes;
-        }
     }
 
-    public record ParameterlessMethod<Params, Result>(
+    record ParameterlessMethod<Params, Result>(
         MethodInfo<Params, Result> info, IncomingRpcMethod.Attributes attributes, IncomingRpcMethod.ParameterlessRpcMethodFunction<Result> supplier
     ) implements IncomingRpcMethod<Params, Result> {
         @Override
-        public JsonElement apply(MinecraftApi p_430683_, @Nullable JsonElement p_427524_, ClientInfo p_423407_) {
-            if (p_427524_ == null || p_427524_.isJsonArray() && p_427524_.getAsJsonArray().isEmpty()) {
+        public JsonElement apply(final MinecraftApi minecraftApi, final @Nullable JsonElement paramsJson, final ClientInfo clientInfo) {
+            if (paramsJson == null || paramsJson.isJsonArray() && paramsJson.getAsJsonArray().isEmpty()) {
                 if (this.info.params().isPresent()) {
                     throw new IllegalArgumentException("Parameterless method unexpectedly has parameter description");
                 } else {
-                    Result result = this.supplier.apply(p_430683_, p_423407_);
+                    Result result = this.supplier.apply(minecraftApi, clientInfo);
                     if (this.info.result().isEmpty()) {
                         throw new IllegalStateException("No result codec defined");
                     } else {
@@ -205,25 +199,15 @@ public interface IncomingRpcMethod<Params, Result> {
                 throw new InvalidParameterJsonRpcException("Expected no params, or an empty array");
             }
         }
-
-        @Override
-        public MethodInfo<Params, Result> info() {
-            return this.info;
-        }
-
-        @Override
-        public IncomingRpcMethod.Attributes attributes() {
-            return this.attributes;
-        }
     }
 
     @FunctionalInterface
-    public interface ParameterlessRpcMethodFunction<Result> {
-        Result apply(MinecraftApi p_423785_, ClientInfo p_429093_);
+    interface ParameterlessRpcMethodFunction<Result> {
+        Result apply(MinecraftApi api, ClientInfo clientInfo);
     }
 
     @FunctionalInterface
-    public interface RpcMethodFunction<Params, Result> {
-        Result apply(MinecraftApi p_426226_, Params p_422805_, ClientInfo p_427691_);
+    interface RpcMethodFunction<Params, Result> {
+        Result apply(MinecraftApi api, Params params, ClientInfo clientInfo);
     }
 }

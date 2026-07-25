@@ -9,24 +9,21 @@ import net.minecraft.client.renderer.blockentity.state.CampfireRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.CampfireBlock;
 import net.minecraft.world.level.block.entity.CampfireBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CampfireRenderer implements BlockEntityRenderer<CampfireBlockEntity, CampfireRenderState> {
     private static final float SIZE = 0.375F;
     private final ItemModelResolver itemModelResolver;
 
-    public CampfireRenderer(BlockEntityRendererProvider.Context p_173602_) {
-        this.itemModelResolver = p_173602_.itemModelResolver();
+    public CampfireRenderer(final BlockEntityRendererProvider.Context context) {
+        this.itemModelResolver = context.itemModelResolver();
     }
 
     public CampfireRenderState createRenderState() {
@@ -34,41 +31,44 @@ public class CampfireRenderer implements BlockEntityRenderer<CampfireBlockEntity
     }
 
     public void extractRenderState(
-        CampfireBlockEntity p_430919_,
-        CampfireRenderState p_428295_,
-        float p_422950_,
-        Vec3 p_429555_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_431013_
+        final CampfireBlockEntity blockEntity,
+        final CampfireRenderState state,
+        final float partialTicks,
+        final Vec3 cameraPosition,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
     ) {
-        BlockEntityRenderer.super.extractRenderState(p_430919_, p_428295_, p_422950_, p_429555_, p_431013_);
-        p_428295_.facing = p_430919_.getBlockState().getValue(CampfireBlock.FACING);
-        int i = (int)p_430919_.getBlockPos().asLong();
-        p_428295_.items = new ArrayList<>();
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
+        state.facing = blockEntity.getBlockState().getValue(CampfireBlock.FACING);
+        int seed = (int)blockEntity.getBlockPos().asLong();
+        state.items = new ArrayList<>();
 
-        for (int j = 0; j < p_430919_.getItems().size(); j++) {
-            ItemStackRenderState itemstackrenderstate = new ItemStackRenderState();
-            this.itemModelResolver.updateForTopItem(itemstackrenderstate, p_430919_.getItems().get(j), ItemDisplayContext.FIXED, p_430919_.getLevel(), null, i + j);
-            p_428295_.items.add(itemstackrenderstate);
+        for (int slot = 0; slot < blockEntity.getItems().size(); slot++) {
+            ItemStackRenderState itemState = new ItemStackRenderState();
+            this.itemModelResolver
+                .updateForTopItem(itemState, blockEntity.getItems().get(slot), ItemDisplayContext.FIXED, blockEntity.getLevel(), null, seed + slot);
+            state.items.add(itemState);
         }
     }
 
-    public void submit(CampfireRenderState p_425058_, PoseStack p_431665_, SubmitNodeCollector p_430223_, CameraRenderState p_424327_) {
-        Direction direction = p_425058_.facing;
-        List<ItemStackRenderState> list = p_425058_.items;
+    public void submit(
+        final CampfireRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
+    ) {
+        Direction facing = state.facing;
+        List<ItemStackRenderState> items = state.items;
 
-        for (int i = 0; i < list.size(); i++) {
-            ItemStackRenderState itemstackrenderstate = list.get(i);
-            if (!itemstackrenderstate.isEmpty()) {
-                p_431665_.pushPose();
-                p_431665_.translate(0.5F, 0.44921875F, 0.5F);
-                Direction direction1 = Direction.from2DDataValue((i + direction.get2DDataValue()) % 4);
-                float f = -direction1.toYRot();
-                p_431665_.mulPose(Axis.YP.rotationDegrees(f));
-                p_431665_.mulPose(Axis.XP.rotationDegrees(90.0F));
-                p_431665_.translate(-0.3125F, -0.3125F, 0.0F);
-                p_431665_.scale(0.375F, 0.375F, 0.375F);
-                itemstackrenderstate.submit(p_431665_, p_430223_, p_425058_.lightCoords, OverlayTexture.NO_OVERLAY, 0);
-                p_431665_.popPose();
+        for (int slot = 0; slot < items.size(); slot++) {
+            ItemStackRenderState itemState = items.get(slot);
+            if (!itemState.isEmpty()) {
+                poseStack.pushPose();
+                poseStack.translate(0.5F, 0.44921875F, 0.5F);
+                Direction direction = Direction.from2DDataValue((slot + facing.get2DDataValue()) % 4);
+                float angle = -direction.toYRot();
+                poseStack.mulPose(Axis.YP.rotationDegrees(angle));
+                poseStack.mulPose(Axis.XP.rotationDegrees(90.0F));
+                poseStack.translate(-0.3125F, -0.3125F, 0.0F);
+                poseStack.scale(0.375F, 0.375F, 0.375F);
+                itemState.submit(poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+                poseStack.popPose();
             }
         }
     }

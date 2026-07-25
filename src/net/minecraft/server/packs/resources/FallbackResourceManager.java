@@ -29,30 +29,30 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class FallbackResourceManager implements ResourceManager {
-    static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     protected final List<FallbackResourceManager.PackEntry> fallbacks = Lists.newArrayList();
     private final PackType type;
     private final String namespace;
 
-    public FallbackResourceManager(PackType p_10605_, String p_10606_) {
-        this.type = p_10605_;
-        this.namespace = p_10606_;
+    public FallbackResourceManager(final PackType type, final String namespace) {
+        this.type = type;
+        this.namespace = namespace;
     }
 
-    public void push(PackResources p_215378_) {
-        this.pushInternal(p_215378_.packId(), p_215378_, null);
+    public void push(final PackResources pack) {
+        this.pushInternal(pack.packId(), pack, null);
     }
 
-    public void push(PackResources p_215383_, Predicate<Identifier> p_215384_) {
-        this.pushInternal(p_215383_.packId(), p_215383_, p_215384_);
+    public void push(final PackResources pack, final Predicate<Identifier> filter) {
+        this.pushInternal(pack.packId(), pack, filter);
     }
 
-    public void pushFilterOnly(String p_215400_, Predicate<Identifier> p_215401_) {
-        this.pushInternal(p_215400_, null, p_215401_);
+    public void pushFilterOnly(final String name, final Predicate<Identifier> filter) {
+        this.pushInternal(name, null, filter);
     }
 
-    private void pushInternal(String p_215396_, @Nullable PackResources p_215397_, @Nullable Predicate<Identifier> p_215398_) {
-        this.fallbacks.add(new FallbackResourceManager.PackEntry(p_215396_, p_215397_, p_215398_));
+    private void pushInternal(final String name, final @Nullable PackResources pack, final @Nullable Predicate<Identifier> contentFilter) {
+        this.fallbacks.add(new FallbackResourceManager.PackEntry(name, pack, contentFilter));
     }
 
     @Override
@@ -61,20 +61,20 @@ public class FallbackResourceManager implements ResourceManager {
     }
 
     @Override
-    public Optional<Resource> getResource(Identifier p_456305_) {
+    public Optional<Resource> getResource(final Identifier location) {
         for (int i = this.fallbacks.size() - 1; i >= 0; i--) {
-            FallbackResourceManager.PackEntry fallbackresourcemanager$packentry = this.fallbacks.get(i);
-            PackResources packresources = fallbackresourcemanager$packentry.resources;
-            if (packresources != null) {
-                IoSupplier<InputStream> iosupplier = packresources.getResource(this.type, p_456305_);
-                if (iosupplier != null) {
-                    IoSupplier<ResourceMetadata> iosupplier1 = this.createStackMetadataFinder(p_456305_, i);
-                    return Optional.of(createResource(packresources, p_456305_, iosupplier, iosupplier1));
+            FallbackResourceManager.PackEntry entry = this.fallbacks.get(i);
+            PackResources fallback = entry.resources;
+            if (fallback != null) {
+                IoSupplier<InputStream> resource = fallback.getResource(this.type, location);
+                if (resource != null) {
+                    IoSupplier<ResourceMetadata> metadataGetter = this.createStackMetadataFinder(location, i);
+                    return Optional.of(createResource(fallback, location, resource, metadataGetter));
                 }
             }
 
-            if (fallbackresourcemanager$packentry.isFiltered(p_456305_)) {
-                LOGGER.warn("Resource {} not found, but was filtered by pack {}", p_456305_, fallbackresourcemanager$packentry.name);
+            if (entry.isFiltered(location)) {
+                LOGGER.warn("Resource {} not found, but was filtered by pack {}", location, entry.name);
                 return Optional.empty();
             }
         }
@@ -82,135 +82,134 @@ public class FallbackResourceManager implements ResourceManager {
         return Optional.empty();
     }
 
-    private static Resource createResource(PackResources p_249946_, Identifier p_457909_, IoSupplier<InputStream> p_250514_, IoSupplier<ResourceMetadata> p_251676_) {
-        return new Resource(p_249946_, wrapForDebug(p_457909_, p_249946_, p_250514_), p_251676_);
+    private static Resource createResource(
+        final PackResources source, final Identifier location, final IoSupplier<InputStream> resource, final IoSupplier<ResourceMetadata> metadata
+    ) {
+        return new Resource(source, wrapForDebug(location, source, resource), metadata);
     }
 
-    private static IoSupplier<InputStream> wrapForDebug(Identifier p_450819_, PackResources p_251740_, IoSupplier<InputStream> p_249116_) {
+    private static IoSupplier<InputStream> wrapForDebug(final Identifier location, final PackResources source, final IoSupplier<InputStream> resource) {
         return LOGGER.isDebugEnabled()
-            ? () -> new FallbackResourceManager.LeakedResourceWarningInputStream(p_249116_.get(), p_450819_, p_251740_.packId())
-            : p_249116_;
+            ? () -> new FallbackResourceManager.LeakedResourceWarningInputStream(resource.get(), location, source.packId())
+            : resource;
     }
 
     @Override
-    public List<Resource> getResourceStack(Identifier p_458089_) {
-        Identifier identifier = getMetadataLocation(p_458089_);
-        List<Resource> list = new ArrayList<>();
-        boolean flag = false;
-        String s = null;
+    public List<Resource> getResourceStack(final Identifier location) {
+        Identifier metadataLocation = getMetadataLocation(location);
+        List<Resource> result = new ArrayList<>();
+        boolean filterMeta = false;
+        String lastFilterName = null;
 
         for (int i = this.fallbacks.size() - 1; i >= 0; i--) {
-            FallbackResourceManager.PackEntry fallbackresourcemanager$packentry = this.fallbacks.get(i);
-            PackResources packresources = fallbackresourcemanager$packentry.resources;
-            if (packresources != null) {
-                IoSupplier<InputStream> iosupplier = packresources.getResource(this.type, p_458089_);
-                if (iosupplier != null) {
-                    IoSupplier<ResourceMetadata> iosupplier1;
-                    if (flag) {
-                        iosupplier1 = ResourceMetadata.EMPTY_SUPPLIER;
+            FallbackResourceManager.PackEntry entry = this.fallbacks.get(i);
+            PackResources fileSource = entry.resources;
+            if (fileSource != null) {
+                IoSupplier<InputStream> resource = fileSource.getResource(this.type, location);
+                if (resource != null) {
+                    IoSupplier<ResourceMetadata> metadataGetter;
+                    if (filterMeta) {
+                        metadataGetter = ResourceMetadata.EMPTY_SUPPLIER;
                     } else {
-                        iosupplier1 = () -> {
-                            IoSupplier<InputStream> iosupplier2 = packresources.getResource(this.type, identifier);
-                            return iosupplier2 != null ? parseMetadata(iosupplier2) : ResourceMetadata.EMPTY;
+                        metadataGetter = () -> {
+                            IoSupplier<InputStream> metaResource = fileSource.getResource(this.type, metadataLocation);
+                            return metaResource != null ? parseMetadata(metaResource) : ResourceMetadata.EMPTY;
                         };
                     }
 
-                    list.add(new Resource(packresources, iosupplier, iosupplier1));
+                    result.add(new Resource(fileSource, resource, metadataGetter));
                 }
             }
 
-            if (fallbackresourcemanager$packentry.isFiltered(p_458089_)) {
-                s = fallbackresourcemanager$packentry.name;
+            if (entry.isFiltered(location)) {
+                lastFilterName = entry.name;
                 break;
             }
 
-            if (fallbackresourcemanager$packentry.isFiltered(identifier)) {
-                flag = true;
+            if (entry.isFiltered(metadataLocation)) {
+                filterMeta = true;
             }
         }
 
-        if (list.isEmpty() && s != null) {
-            LOGGER.warn("Resource {} not found, but was filtered by pack {}", p_458089_, s);
+        if (result.isEmpty() && lastFilterName != null) {
+            LOGGER.warn("Resource {} not found, but was filtered by pack {}", location, lastFilterName);
         }
 
-        return Lists.reverse(list);
+        return Lists.reverse(result);
     }
 
-    private static boolean isMetadata(Identifier p_458557_) {
-        return p_458557_.getPath().endsWith(".mcmeta");
+    private static boolean isMetadata(final Identifier location) {
+        return location.getPath().endsWith(".mcmeta");
     }
 
-    private static Identifier getIdentifierFromMetadata(Identifier p_454436_) {
-        String s = p_454436_.getPath().substring(0, p_454436_.getPath().length() - ".mcmeta".length());
-        return p_454436_.withPath(s);
+    private static Identifier getIdentifierFromMetadata(final Identifier identifier) {
+        String newPath = identifier.getPath().substring(0, identifier.getPath().length() - ".mcmeta".length());
+        return identifier.withPath(newPath);
     }
 
-    static Identifier getMetadataLocation(Identifier p_458734_) {
-        return p_458734_.withPath(p_458734_.getPath() + ".mcmeta");
+    private static Identifier getMetadataLocation(final Identifier identifier) {
+        return identifier.withPath(identifier.getPath() + ".mcmeta");
     }
 
     @Override
-    public Map<Identifier, Resource> listResources(String p_215413_, Predicate<Identifier> p_215414_) {
+    public Map<Identifier, Resource> listResources(final String directory, final Predicate<Identifier> filter) {
         record ResourceWithSourceAndIndex(PackResources packResources, IoSupplier<InputStream> resource, int packIndex) {
         }
 
-        Map<Identifier, ResourceWithSourceAndIndex> map = new HashMap<>();
-        Map<Identifier, ResourceWithSourceAndIndex> map1 = new HashMap<>();
-        int i = this.fallbacks.size();
+        Map<Identifier, ResourceWithSourceAndIndex> topResourceForFileLocation = new HashMap<>();
+        Map<Identifier, ResourceWithSourceAndIndex> topResourceForMetaLocation = new HashMap<>();
+        int packCount = this.fallbacks.size();
 
-        for (int j = 0; j < i; j++) {
-            FallbackResourceManager.PackEntry fallbackresourcemanager$packentry = this.fallbacks.get(j);
-            fallbackresourcemanager$packentry.filterAll(map.keySet());
-            fallbackresourcemanager$packentry.filterAll(map1.keySet());
-            PackResources packresources = fallbackresourcemanager$packentry.resources;
-            if (packresources != null) {
-                int k = j;
-                packresources.listResources(this.type, this.namespace, p_215413_, (p_449180_, p_449181_) -> {
-                    if (isMetadata(p_449180_)) {
-                        if (p_215414_.test(getIdentifierFromMetadata(p_449180_))) {
-                            map1.put(p_449180_, new ResourceWithSourceAndIndex(packresources, p_449181_, k));
+        for (int i = 0; i < packCount; i++) {
+            FallbackResourceManager.PackEntry entry = this.fallbacks.get(i);
+            entry.filterAll(topResourceForFileLocation.keySet());
+            entry.filterAll(topResourceForMetaLocation.keySet());
+            PackResources packResources = entry.resources;
+            if (packResources != null) {
+                int packIndex = i;
+                packResources.listResources(this.type, this.namespace, directory, (resource, streamSupplier) -> {
+                    if (isMetadata(resource)) {
+                        if (filter.test(getIdentifierFromMetadata(resource))) {
+                            topResourceForMetaLocation.put(resource, new ResourceWithSourceAndIndex(packResources, streamSupplier, packIndex));
                         }
-                    } else if (p_215414_.test(p_449180_)) {
-                        map.put(p_449180_, new ResourceWithSourceAndIndex(packresources, p_449181_, k));
+                    } else if (filter.test(resource)) {
+                        topResourceForFileLocation.put(resource, new ResourceWithSourceAndIndex(packResources, streamSupplier, packIndex));
                     }
                 });
             }
         }
 
-        Map<Identifier, Resource> map2 = Maps.newTreeMap();
-        map.forEach(
-            (p_449184_, p_449185_) -> {
-                Identifier identifier = getMetadataLocation(p_449184_);
-                ResourceWithSourceAndIndex fallbackresourcemanager$1resourcewithsourceandindex = map1.get(identifier);
-                IoSupplier<ResourceMetadata> iosupplier;
-                if (fallbackresourcemanager$1resourcewithsourceandindex != null
-                    && fallbackresourcemanager$1resourcewithsourceandindex.packIndex >= p_449185_.packIndex) {
-                    iosupplier = convertToMetadata(fallbackresourcemanager$1resourcewithsourceandindex.resource);
-                } else {
-                    iosupplier = ResourceMetadata.EMPTY_SUPPLIER;
-                }
-
-                map2.put(p_449184_, createResource(p_449185_.packResources, p_449184_, p_449185_.resource, iosupplier));
+        Map<Identifier, Resource> result = Maps.newTreeMap();
+        topResourceForFileLocation.forEach((location, resource) -> {
+            Identifier metadataLocation = getMetadataLocation(location);
+            ResourceWithSourceAndIndex metaResource = topResourceForMetaLocation.get(metadataLocation);
+            IoSupplier<ResourceMetadata> metaGetter;
+            if (metaResource != null && metaResource.packIndex >= resource.packIndex) {
+                metaGetter = convertToMetadata(metaResource.resource);
+            } else {
+                metaGetter = ResourceMetadata.EMPTY_SUPPLIER;
             }
-        );
-        return map2;
+
+            result.put(location, createResource(resource.packResources, location, resource.resource, metaGetter));
+        });
+        return result;
     }
 
-    private IoSupplier<ResourceMetadata> createStackMetadataFinder(Identifier p_451153_, int p_215370_) {
+    private IoSupplier<ResourceMetadata> createStackMetadataFinder(final Identifier location, final int finalPackIndex) {
         return () -> {
-            Identifier identifier = getMetadataLocation(p_451153_);
+            Identifier metadataLocation = getMetadataLocation(location);
 
-            for (int i = this.fallbacks.size() - 1; i >= p_215370_; i--) {
-                FallbackResourceManager.PackEntry fallbackresourcemanager$packentry = this.fallbacks.get(i);
-                PackResources packresources = fallbackresourcemanager$packentry.resources;
-                if (packresources != null) {
-                    IoSupplier<InputStream> iosupplier = packresources.getResource(this.type, identifier);
-                    if (iosupplier != null) {
-                        return parseMetadata(iosupplier);
+            for (int i = this.fallbacks.size() - 1; i >= finalPackIndex; i--) {
+                FallbackResourceManager.PackEntry entry = this.fallbacks.get(i);
+                PackResources metadataPackCandidate = entry.resources;
+                if (metadataPackCandidate != null) {
+                    IoSupplier<InputStream> resource = metadataPackCandidate.getResource(this.type, metadataLocation);
+                    if (resource != null) {
+                        return parseMetadata(resource);
                     }
                 }
 
-                if (fallbackresourcemanager$packentry.isFiltered(identifier)) {
+                if (entry.isFiltered(metadataLocation)) {
                     break;
                 }
             }
@@ -219,57 +218,56 @@ public class FallbackResourceManager implements ResourceManager {
         };
     }
 
-    private static IoSupplier<ResourceMetadata> convertToMetadata(IoSupplier<InputStream> p_250827_) {
-        return () -> parseMetadata(p_250827_);
+    private static IoSupplier<ResourceMetadata> convertToMetadata(final IoSupplier<InputStream> input) {
+        return () -> parseMetadata(input);
     }
 
-    private static ResourceMetadata parseMetadata(IoSupplier<InputStream> p_250103_) throws IOException {
-        ResourceMetadata resourcemetadata;
-        try (InputStream inputstream = p_250103_.get()) {
-            resourcemetadata = ResourceMetadata.fromJsonStream(inputstream);
+    private static ResourceMetadata parseMetadata(final IoSupplier<InputStream> input) throws IOException {
+        try (InputStream metadata = input.get()) {
+            return ResourceMetadata.fromJsonStream(metadata);
         }
-
-        return resourcemetadata;
     }
 
-    private static void applyPackFiltersToExistingResources(FallbackResourceManager.PackEntry p_215393_, Map<Identifier, FallbackResourceManager.EntryStack> p_215394_) {
-        for (FallbackResourceManager.EntryStack fallbackresourcemanager$entrystack : p_215394_.values()) {
-            if (p_215393_.isFiltered(fallbackresourcemanager$entrystack.fileLocation)) {
-                fallbackresourcemanager$entrystack.fileSources.clear();
-            } else if (p_215393_.isFiltered(fallbackresourcemanager$entrystack.metadataLocation())) {
-                fallbackresourcemanager$entrystack.metaSources.clear();
+    private static void applyPackFiltersToExistingResources(
+        final FallbackResourceManager.PackEntry entry, final Map<Identifier, FallbackResourceManager.EntryStack> foundResources
+    ) {
+        for (FallbackResourceManager.EntryStack e : foundResources.values()) {
+            if (entry.isFiltered(e.fileLocation)) {
+                e.fileSources.clear();
+            } else if (entry.isFiltered(e.metadataLocation())) {
+                e.metaSources.clear();
             }
         }
     }
 
     private void listPackResources(
-        FallbackResourceManager.PackEntry p_215388_,
-        String p_215389_,
-        Predicate<Identifier> p_215390_,
-        Map<Identifier, FallbackResourceManager.EntryStack> p_215391_
+        final FallbackResourceManager.PackEntry entry,
+        final String directory,
+        final Predicate<Identifier> filter,
+        final Map<Identifier, FallbackResourceManager.EntryStack> foundResources
     ) {
-        PackResources packresources = p_215388_.resources;
-        if (packresources != null) {
-            packresources.listResources(
+        PackResources pack = entry.resources;
+        if (pack != null) {
+            pack.listResources(
                 this.type,
                 this.namespace,
-                p_215389_,
-                (p_450789_, p_248267_) -> {
-                    if (isMetadata(p_450789_)) {
-                        Identifier identifier = getIdentifierFromMetadata(p_450789_);
-                        if (!p_215390_.test(identifier)) {
+                directory,
+                (id, resource) -> {
+                    if (isMetadata(id)) {
+                        Identifier actualId = getIdentifierFromMetadata(id);
+                        if (!filter.test(actualId)) {
                             return;
                         }
 
-                        p_215391_.computeIfAbsent(identifier, FallbackResourceManager.EntryStack::new).metaSources.put(packresources, p_248267_);
+                        foundResources.computeIfAbsent(actualId, FallbackResourceManager.EntryStack::new).metaSources.put(pack, resource);
                     } else {
-                        if (!p_215390_.test(p_450789_)) {
+                        if (!filter.test(id)) {
                             return;
                         }
 
-                        p_215391_.computeIfAbsent(p_450789_, FallbackResourceManager.EntryStack::new)
+                        foundResources.computeIfAbsent(id, FallbackResourceManager.EntryStack::new)
                             .fileSources
-                            .add(new FallbackResourceManager.ResourceWithSource(packresources, p_248267_));
+                            .add(new FallbackResourceManager.ResourceWithSource(pack, resource));
                     }
                 }
             );
@@ -277,65 +275,61 @@ public class FallbackResourceManager implements ResourceManager {
     }
 
     @Override
-    public Map<Identifier, List<Resource>> listResourceStacks(String p_215416_, Predicate<Identifier> p_215417_) {
-        Map<Identifier, FallbackResourceManager.EntryStack> map = Maps.newHashMap();
+    public Map<Identifier, List<Resource>> listResourceStacks(final String directory, final Predicate<Identifier> filter) {
+        Map<Identifier, FallbackResourceManager.EntryStack> foundResources = Maps.newHashMap();
 
-        for (FallbackResourceManager.PackEntry fallbackresourcemanager$packentry : this.fallbacks) {
-            applyPackFiltersToExistingResources(fallbackresourcemanager$packentry, map);
-            this.listPackResources(fallbackresourcemanager$packentry, p_215416_, p_215417_, map);
+        for (FallbackResourceManager.PackEntry entry : this.fallbacks) {
+            applyPackFiltersToExistingResources(entry, foundResources);
+            this.listPackResources(entry, directory, filter, foundResources);
         }
 
-        TreeMap<Identifier, List<Resource>> treemap = Maps.newTreeMap();
+        TreeMap<Identifier, List<Resource>> result = Maps.newTreeMap();
 
-        for (FallbackResourceManager.EntryStack fallbackresourcemanager$entrystack : map.values()) {
-            if (!fallbackresourcemanager$entrystack.fileSources.isEmpty()) {
-                List<Resource> list = new ArrayList<>();
+        for (FallbackResourceManager.EntryStack entry : foundResources.values()) {
+            if (!entry.fileSources.isEmpty()) {
+                List<Resource> resources = new ArrayList<>();
 
-                for (FallbackResourceManager.ResourceWithSource fallbackresourcemanager$resourcewithsource : fallbackresourcemanager$entrystack.fileSources) {
-                    PackResources packresources = fallbackresourcemanager$resourcewithsource.source;
-                    IoSupplier<InputStream> iosupplier = fallbackresourcemanager$entrystack.metaSources.get(packresources);
-                    IoSupplier<ResourceMetadata> iosupplier1 = iosupplier != null ? convertToMetadata(iosupplier) : ResourceMetadata.EMPTY_SUPPLIER;
-                    list.add(
-                        createResource(
-                            packresources, fallbackresourcemanager$entrystack.fileLocation, fallbackresourcemanager$resourcewithsource.resource, iosupplier1
-                        )
-                    );
+                for (FallbackResourceManager.ResourceWithSource stackEntry : entry.fileSources) {
+                    PackResources source = stackEntry.source;
+                    IoSupplier<InputStream> metaSource = entry.metaSources.get(source);
+                    IoSupplier<ResourceMetadata> metaGetter = metaSource != null ? convertToMetadata(metaSource) : ResourceMetadata.EMPTY_SUPPLIER;
+                    resources.add(createResource(source, entry.fileLocation, stackEntry.resource, metaGetter));
                 }
 
-                treemap.put(fallbackresourcemanager$entrystack.fileLocation, list);
+                result.put(entry.fileLocation, resources);
             }
         }
 
-        return treemap;
+        return result;
     }
 
     @Override
     public Stream<PackResources> listPacks() {
-        return this.fallbacks.stream().map(p_215386_ -> p_215386_.resources).filter(Objects::nonNull);
+        return this.fallbacks.stream().map(p -> p.resources).filter(Objects::nonNull);
     }
 
-    record EntryStack(
+    private record EntryStack(
         Identifier fileLocation,
         Identifier metadataLocation,
         List<FallbackResourceManager.ResourceWithSource> fileSources,
         Map<PackResources, IoSupplier<InputStream>> metaSources
     ) {
-        EntryStack(Identifier p_453083_) {
-            this(p_453083_, FallbackResourceManager.getMetadataLocation(p_453083_), new ArrayList<>(), new Object2ObjectArrayMap<>());
+        public EntryStack(final Identifier fileLocation) {
+            this(fileLocation, FallbackResourceManager.getMetadataLocation(fileLocation), new ArrayList<>(), new Object2ObjectArrayMap<>());
         }
     }
 
-    static class LeakedResourceWarningInputStream extends FilterInputStream {
+    private static class LeakedResourceWarningInputStream extends FilterInputStream {
         private final Supplier<String> message;
         private boolean closed;
 
-        public LeakedResourceWarningInputStream(InputStream p_10633_, Identifier p_456546_, String p_10635_) {
-            super(p_10633_);
+        public LeakedResourceWarningInputStream(final InputStream wrapped, final Identifier location, final String name) {
+            super(wrapped);
             Exception exception = new Exception("Stacktrace");
             this.message = () -> {
-                StringWriter stringwriter = new StringWriter();
-                exception.printStackTrace(new PrintWriter(stringwriter));
-                return "Leaked resource: '" + p_456546_ + "' loaded from pack: '" + p_10635_ + "'\n" + stringwriter;
+                StringWriter data = new StringWriter();
+                exception.printStackTrace(new PrintWriter(data));
+                return "Leaked resource: '" + location + "' loaded from pack: '" + name + "'\n" + data;
             };
         }
 
@@ -344,20 +338,29 @@ public class FallbackResourceManager implements ResourceManager {
             super.close();
             this.closed = true;
         }
+
+        @Override
+        protected void finalize() throws Throwable {
+            if (!this.closed) {
+                FallbackResourceManager.LOGGER.warn("{}", this.message.get());
+            }
+
+            super.finalize();
+        }
     }
 
-    record PackEntry(String name, @Nullable PackResources resources, @Nullable Predicate<Identifier> filter) {
-        public void filterAll(Collection<Identifier> p_215443_) {
+    private record PackEntry(String name, @Nullable PackResources resources, @Nullable Predicate<Identifier> filter) {
+        public void filterAll(final Collection<Identifier> collection) {
             if (this.filter != null) {
-                p_215443_.removeIf(this.filter);
+                collection.removeIf(this.filter);
             }
         }
 
-        public boolean isFiltered(Identifier p_450292_) {
-            return this.filter != null && this.filter.test(p_450292_);
+        public boolean isFiltered(final Identifier location) {
+            return this.filter != null && this.filter.test(location);
         }
     }
 
-    record ResourceWithSource(PackResources source, IoSupplier<InputStream> resource) {
+    private record ResourceWithSource(PackResources source, IoSupplier<InputStream> resource) {
     }
 }

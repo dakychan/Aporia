@@ -14,115 +14,140 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 
 public class ParticleUtils {
-    public static void spawnParticlesOnBlockFaces(Level p_216314_, BlockPos p_216315_, ParticleOptions p_216316_, IntProvider p_216317_) {
+    public static void spawnParticlesOnBlockFaces(
+        final Level level, final BlockPos pos, final ParticleOptions particle, final IntProvider particlesPerFaceRange
+    ) {
+        RandomSource random = level.getRandom();
+
         for (Direction direction : Direction.values()) {
-            spawnParticlesOnBlockFace(p_216314_, p_216315_, p_216316_, p_216317_, direction, () -> getRandomSpeedRanges(p_216314_.random), 0.55);
+            spawnParticlesOnBlockFace(level, pos, particle, particlesPerFaceRange, direction, () -> getRandomSpeedRanges(random), 0.55);
         }
     }
 
     public static void spawnParticlesOnBlockFace(
-        Level p_216319_, BlockPos p_216320_, ParticleOptions p_216321_, IntProvider p_216322_, Direction p_216323_, Supplier<Vec3> p_216324_, double p_216325_
+        final Level level,
+        final BlockPos pos,
+        final ParticleOptions particle,
+        final IntProvider particlesPerFaceRange,
+        final Direction face,
+        final Supplier<Vec3> speedSupplier,
+        final double stepFactor
     ) {
-        int i = p_216322_.sample(p_216319_.random);
+        int particleCount = particlesPerFaceRange.sample(level.getRandom());
 
-        for (int j = 0; j < i; j++) {
-            spawnParticleOnFace(p_216319_, p_216320_, p_216323_, p_216321_, p_216324_.get(), p_216325_);
+        for (int i = 0; i < particleCount; i++) {
+            spawnParticleOnFace(level, pos, face, particle, speedSupplier.get(), stepFactor);
         }
     }
 
-    private static Vec3 getRandomSpeedRanges(RandomSource p_216303_) {
-        return new Vec3(Mth.nextDouble(p_216303_, -0.5, 0.5), Mth.nextDouble(p_216303_, -0.5, 0.5), Mth.nextDouble(p_216303_, -0.5, 0.5));
+    private static Vec3 getRandomSpeedRanges(final RandomSource random) {
+        return new Vec3(Mth.nextDouble(random, -0.5, 0.5), Mth.nextDouble(random, -0.5, 0.5), Mth.nextDouble(random, -0.5, 0.5));
     }
 
     public static void spawnParticlesAlongAxis(
-        Direction.Axis p_144968_, Level p_144969_, BlockPos p_144970_, double p_144971_, ParticleOptions p_144972_, UniformInt p_144973_
+        final Direction.Axis attachedAxis,
+        final Level level,
+        final BlockPos pos,
+        final double radius,
+        final ParticleOptions particle,
+        final UniformInt sparkCount
     ) {
-        Vec3 vec3 = Vec3.atCenterOf(p_144970_);
-        boolean flag = p_144968_ == Direction.Axis.X;
-        boolean flag1 = p_144968_ == Direction.Axis.Y;
-        boolean flag2 = p_144968_ == Direction.Axis.Z;
-        int i = p_144973_.sample(p_144969_.random);
+        Vec3 centerOfBlock = Vec3.atCenterOf(pos);
+        boolean stepX = attachedAxis == Direction.Axis.X;
+        boolean stepY = attachedAxis == Direction.Axis.Y;
+        boolean stepZ = attachedAxis == Direction.Axis.Z;
+        RandomSource random = level.getRandom();
+        int particleCount = sparkCount.sample(random);
 
-        for (int j = 0; j < i; j++) {
-            double d0 = vec3.x + Mth.nextDouble(p_144969_.random, -1.0, 1.0) * (flag ? 0.5 : p_144971_);
-            double d1 = vec3.y + Mth.nextDouble(p_144969_.random, -1.0, 1.0) * (flag1 ? 0.5 : p_144971_);
-            double d2 = vec3.z + Mth.nextDouble(p_144969_.random, -1.0, 1.0) * (flag2 ? 0.5 : p_144971_);
-            double d3 = flag ? Mth.nextDouble(p_144969_.random, -1.0, 1.0) : 0.0;
-            double d4 = flag1 ? Mth.nextDouble(p_144969_.random, -1.0, 1.0) : 0.0;
-            double d5 = flag2 ? Mth.nextDouble(p_144969_.random, -1.0, 1.0) : 0.0;
-            p_144969_.addParticle(p_144972_, d0, d1, d2, d3, d4, d5);
+        for (int i = 0; i < particleCount; i++) {
+            double x = centerOfBlock.x + Mth.nextDouble(random, -1.0, 1.0) * (stepX ? 0.5 : radius);
+            double y = centerOfBlock.y + Mth.nextDouble(random, -1.0, 1.0) * (stepY ? 0.5 : radius);
+            double z = centerOfBlock.z + Mth.nextDouble(random, -1.0, 1.0) * (stepZ ? 0.5 : radius);
+            double xBaseSpeed = stepX ? Mth.nextDouble(random, -1.0, 1.0) : 0.0;
+            double yBaseSpeed = stepY ? Mth.nextDouble(random, -1.0, 1.0) : 0.0;
+            double zBaseSpeed = stepZ ? Mth.nextDouble(random, -1.0, 1.0) : 0.0;
+            level.addParticle(particle, x, y, z, xBaseSpeed, yBaseSpeed, zBaseSpeed);
         }
     }
 
-    public static void spawnParticleOnFace(Level p_216307_, BlockPos p_216308_, Direction p_216309_, ParticleOptions p_216310_, Vec3 p_216311_, double p_216312_) {
-        Vec3 vec3 = Vec3.atCenterOf(p_216308_);
-        int i = p_216309_.getStepX();
-        int j = p_216309_.getStepY();
-        int k = p_216309_.getStepZ();
-        double d0 = vec3.x + (i == 0 ? Mth.nextDouble(p_216307_.random, -0.5, 0.5) : i * p_216312_);
-        double d1 = vec3.y + (j == 0 ? Mth.nextDouble(p_216307_.random, -0.5, 0.5) : j * p_216312_);
-        double d2 = vec3.z + (k == 0 ? Mth.nextDouble(p_216307_.random, -0.5, 0.5) : k * p_216312_);
-        double d3 = i == 0 ? p_216311_.x() : 0.0;
-        double d4 = j == 0 ? p_216311_.y() : 0.0;
-        double d5 = k == 0 ? p_216311_.z() : 0.0;
-        p_216307_.addParticle(p_216310_, d0, d1, d2, d3, d4, d5);
+    public static void spawnParticleOnFace(
+        final Level level, final BlockPos pos, final Direction face, final ParticleOptions particle, final Vec3 speed, final double stepFactor
+    ) {
+        Vec3 centerOfBlock = Vec3.atCenterOf(pos);
+        int stepX = face.getStepX();
+        int stepY = face.getStepY();
+        int stepZ = face.getStepZ();
+        RandomSource random = level.getRandom();
+        double x = centerOfBlock.x + (stepX == 0 ? Mth.nextDouble(random, -0.5, 0.5) : stepX * stepFactor);
+        double y = centerOfBlock.y + (stepY == 0 ? Mth.nextDouble(random, -0.5, 0.5) : stepY * stepFactor);
+        double z = centerOfBlock.z + (stepZ == 0 ? Mth.nextDouble(random, -0.5, 0.5) : stepZ * stepFactor);
+        double xBaseSpeed = stepX == 0 ? speed.x() : 0.0;
+        double yBaseSpeed = stepY == 0 ? speed.y() : 0.0;
+        double zBaseSpeed = stepZ == 0 ? speed.z() : 0.0;
+        level.addParticle(particle, x, y, z, xBaseSpeed, yBaseSpeed, zBaseSpeed);
     }
 
-    public static void spawnParticleBelow(Level p_273159_, BlockPos p_273452_, RandomSource p_273538_, ParticleOptions p_273419_) {
-        double d0 = p_273452_.getX() + p_273538_.nextDouble();
-        double d1 = p_273452_.getY() - 0.05;
-        double d2 = p_273452_.getZ() + p_273538_.nextDouble();
-        p_273159_.addParticle(p_273419_, d0, d1, d2, 0.0, 0.0, 0.0);
+    public static void spawnParticleBelow(final Level level, final BlockPos pos, final RandomSource random, final ParticleOptions particle) {
+        double x = pos.getX() + random.nextDouble();
+        double y = pos.getY() - 0.05;
+        double z = pos.getZ() + random.nextDouble();
+        level.addParticle(particle, x, y, z, 0.0, 0.0, 0.0);
     }
 
-    public static void spawnParticleInBlock(LevelAccessor p_335531_, BlockPos p_329785_, int p_335673_, ParticleOptions p_330338_) {
-        double d0 = 0.5;
-        BlockState blockstate = p_335531_.getBlockState(p_329785_);
-        double d1 = blockstate.isAir() ? 1.0 : blockstate.getShape(p_335531_, p_329785_).max(Direction.Axis.Y);
-        spawnParticles(p_335531_, p_329785_, p_335673_, 0.5, d1, true, p_330338_);
+    public static void spawnParticleInBlock(final LevelAccessor level, final BlockPos pos, final int count, final ParticleOptions particle) {
+        double spreadWidth = 0.5;
+        BlockState blockState = level.getBlockState(pos);
+        double spreadHeight = blockState.isAir() ? 1.0 : blockState.getShape(level, pos).max(Direction.Axis.Y);
+        spawnParticles(level, pos, count, 0.5, spreadHeight, true, particle);
     }
 
     public static void spawnParticles(
-        LevelAccessor p_332146_, BlockPos p_333994_, int p_332880_, double p_335286_, double p_334021_, boolean p_328793_, ParticleOptions p_329517_
+        final LevelAccessor level,
+        final BlockPos pos,
+        final int count,
+        final double spreadWidth,
+        final double spreadHeight,
+        final boolean allowFloatingParticles,
+        final ParticleOptions particle
     ) {
-        RandomSource randomsource = p_332146_.getRandom();
+        RandomSource random = level.getRandom();
 
-        for (int i = 0; i < p_332880_; i++) {
-            double d0 = randomsource.nextGaussian() * 0.02;
-            double d1 = randomsource.nextGaussian() * 0.02;
-            double d2 = randomsource.nextGaussian() * 0.02;
-            double d3 = 0.5 - p_335286_;
-            double d4 = p_333994_.getX() + d3 + randomsource.nextDouble() * p_335286_ * 2.0;
-            double d5 = p_333994_.getY() + randomsource.nextDouble() * p_334021_;
-            double d6 = p_333994_.getZ() + d3 + randomsource.nextDouble() * p_335286_ * 2.0;
-            if (p_328793_ || !p_332146_.getBlockState(BlockPos.containing(d4, d5, d6).below()).isAir()) {
-                p_332146_.addParticle(p_329517_, d4, d5, d6, d0, d1, d2);
+        for (int i = 0; i < count; i++) {
+            double xVelocity = random.nextGaussian() * 0.02;
+            double yVelocity = random.nextGaussian() * 0.02;
+            double zVelocity = random.nextGaussian() * 0.02;
+            double spreadStartOffset = 0.5 - spreadWidth;
+            double x = pos.getX() + spreadStartOffset + random.nextDouble() * spreadWidth * 2.0;
+            double y = pos.getY() + random.nextDouble() * spreadHeight;
+            double z = pos.getZ() + spreadStartOffset + random.nextDouble() * spreadWidth * 2.0;
+            if (allowFloatingParticles || !level.getBlockState(BlockPos.containing(x, y, z).below()).isAir()) {
+                level.addParticle(particle, x, y, z, xVelocity, yVelocity, zVelocity);
             }
         }
     }
 
-    public static void spawnSmashAttackParticles(LevelAccessor p_333323_, BlockPos p_331250_, int p_329230_) {
-        Vec3 vec3 = p_331250_.getCenter().add(0.0, 0.5, 0.0);
-        BlockParticleOption blockparticleoption = new BlockParticleOption(ParticleTypes.DUST_PILLAR, p_333323_.getBlockState(p_331250_));
+    public static void spawnSmashAttackParticles(final LevelAccessor level, final BlockPos pos, final int count) {
+        Vec3 center = Vec3.atCenterOf(pos).add(0.0, 0.5, 0.0);
+        BlockParticleOption particle = new BlockParticleOption(ParticleTypes.DUST_PILLAR, level.getBlockState(pos));
 
-        for (int i = 0; i < p_329230_ / 3.0F; i++) {
-            double d0 = vec3.x + p_333323_.getRandom().nextGaussian() / 2.0;
-            double d1 = vec3.y;
-            double d2 = vec3.z + p_333323_.getRandom().nextGaussian() / 2.0;
-            double d3 = p_333323_.getRandom().nextGaussian() * 0.2F;
-            double d4 = p_333323_.getRandom().nextGaussian() * 0.2F;
-            double d5 = p_333323_.getRandom().nextGaussian() * 0.2F;
-            p_333323_.addParticle(blockparticleoption, d0, d1, d2, d3, d4, d5);
+        for (int i = 0; i < count / 3.0F; i++) {
+            double x = center.x + level.getRandom().nextGaussian() / 2.0;
+            double y = center.y;
+            double z = center.z + level.getRandom().nextGaussian() / 2.0;
+            double xd = level.getRandom().nextGaussian() * 0.2F;
+            double yd = level.getRandom().nextGaussian() * 0.2F;
+            double zd = level.getRandom().nextGaussian() * 0.2F;
+            level.addParticle(particle, x, y, z, xd, yd, zd);
         }
 
-        for (int j = 0; j < p_329230_ / 1.5F; j++) {
-            double d6 = vec3.x + 3.5 * Math.cos(j) + p_333323_.getRandom().nextGaussian() / 2.0;
-            double d7 = vec3.y;
-            double d8 = vec3.z + 3.5 * Math.sin(j) + p_333323_.getRandom().nextGaussian() / 2.0;
-            double d9 = p_333323_.getRandom().nextGaussian() * 0.05F;
-            double d10 = p_333323_.getRandom().nextGaussian() * 0.05F;
-            double d11 = p_333323_.getRandom().nextGaussian() * 0.05F;
-            p_333323_.addParticle(blockparticleoption, d6, d7, d8, d9, d10, d11);
+        for (int i = 0; i < count / 1.5F; i++) {
+            double x = center.x + 3.5 * Math.cos(i) + level.getRandom().nextGaussian() / 2.0;
+            double y = center.y;
+            double z = center.z + 3.5 * Math.sin(i) + level.getRandom().nextGaussian() / 2.0;
+            double xd = level.getRandom().nextGaussian() * 0.05F;
+            double yd = level.getRandom().nextGaussian() * 0.05F;
+            double zd = level.getRandom().nextGaussian() * 0.05F;
+            level.addParticle(particle, x, y, z, xd, yd, zd);
         }
     }
 }

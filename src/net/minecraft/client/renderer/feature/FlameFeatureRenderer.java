@@ -2,77 +2,87 @@ package net.minecraft.client.renderer.feature;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.Sheets;
-import net.minecraft.client.renderer.SubmitNodeCollection;
-import net.minecraft.client.renderer.SubmitNodeStorage;
+import java.util.List;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.feature.submit.SubmitNode;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.ModelBakery;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.util.LightCoordsUtil;
 import org.joml.Quaternionf;
 
-@OnlyIn(Dist.CLIENT)
-public class FlameFeatureRenderer {
-    public void render(SubmitNodeCollection p_426889_, MultiBufferSource.BufferSource p_430500_, AtlasManager p_422974_) {
-        for (SubmitNodeStorage.FlameSubmit submitnodestorage$flamesubmit : p_426889_.getFlameSubmits()) {
-            this.renderFlame(
-                submitnodestorage$flamesubmit.pose(),
-                p_430500_,
-                submitnodestorage$flamesubmit.entityRenderState(),
-                submitnodestorage$flamesubmit.rotation(),
-                p_422974_
-            );
+public class FlameFeatureRenderer extends RenderTypeFeatureRenderer<FlameFeatureRenderer.Submit> {
+    public static final FeatureRendererType<FlameFeatureRenderer.Submit> TYPE = FeatureRendererType.create("Flame");
+
+    @Override
+    protected void buildGroup(final FeatureFrameContext context, final List<FlameFeatureRenderer.Submit> submits) {
+        VertexConsumer builder = this.getVertexBuilder(RenderTypes.entityCutoutCull(TextureAtlas.LOCATION_BLOCKS));
+        TextureAtlasSprite fire1 = context.atlasManager().get(ModelBakery.FIRE_0);
+        TextureAtlasSprite fire2 = context.atlasManager().get(ModelBakery.FIRE_1);
+
+        for (FlameFeatureRenderer.Submit submit : submits) {
+            this.prepare(submit, builder, fire1, fire2);
         }
     }
 
-    private void renderFlame(PoseStack.Pose p_423210_, MultiBufferSource p_428039_, EntityRenderState p_427452_, Quaternionf p_431746_, AtlasManager p_428875_) {
-        TextureAtlasSprite textureatlassprite = p_428875_.get(ModelBakery.FIRE_0);
-        TextureAtlasSprite textureatlassprite1 = p_428875_.get(ModelBakery.FIRE_1);
-        float f = p_427452_.boundingBoxWidth * 1.4F;
-        p_423210_.scale(f, f, f);
-        float f1 = 0.5F;
-        float f2 = 0.0F;
-        float f3 = p_427452_.boundingBoxHeight / f;
-        float f4 = 0.0F;
-        p_423210_.rotate(p_431746_);
-        p_423210_.translate(0.0F, 0.0F, 0.3F - (int)f3 * 0.02F);
-        float f5 = 0.0F;
-        int i = 0;
+    private void prepare(final FlameFeatureRenderer.Submit submit, final VertexConsumer buffer, final TextureAtlasSprite fire1, final TextureAtlasSprite fire2) {
+        EntityRenderState state = submit.entityRenderState();
+        if (so.aporia.module.impl.render.NoRender.hidePlayerFire && state instanceof net.minecraft.client.renderer.entity.state.AvatarRenderState) return;
+        PoseStack.Pose pose = submit.pose();
+        float s = state.boundingBoxWidth * 1.4F;
+        pose.scale(s, s, s);
+        float r = 0.5F;
+        float xo = 0.0F;
+        float h = state.boundingBoxHeight / s;
+        float yo = 0.0F;
+        pose.rotate(submit.rotation());
+        pose.translate(0.0F, 0.0F, 0.3F - (int)h * 0.02F);
+        float zo = 0.0F;
+        int ss = 0;
+        int lightCoords = LightCoordsUtil.withBlock(state.lightCoords, 15);
 
-        for (VertexConsumer vertexconsumer = p_428039_.getBuffer(Sheets.cutoutBlockSheet()); f3 > 0.0F; i++) {
-            TextureAtlasSprite textureatlassprite2 = i % 2 == 0 ? textureatlassprite : textureatlassprite1;
-            float f6 = textureatlassprite2.getU0();
-            float f7 = textureatlassprite2.getV0();
-            float f8 = textureatlassprite2.getU1();
-            float f9 = textureatlassprite2.getV1();
-            if (i / 2 % 2 == 0) {
-                float f10 = f8;
-                f8 = f6;
-                f6 = f10;
+        while (h > 0.0F) {
+            TextureAtlasSprite tex = ss % 2 == 0 ? fire1 : fire2;
+            float u0 = tex.getU0();
+            float v0 = tex.getV0();
+            float u1 = tex.getU1();
+            float v1 = tex.getV1();
+            if (ss / 2 % 2 == 0) {
+                float tmp = u1;
+                u1 = u0;
+                u0 = tmp;
             }
 
-            fireVertex(p_423210_, vertexconsumer, -f1 - 0.0F, 0.0F - f4, f5, f8, f9);
-            fireVertex(p_423210_, vertexconsumer, f1 - 0.0F, 0.0F - f4, f5, f6, f9);
-            fireVertex(p_423210_, vertexconsumer, f1 - 0.0F, 1.4F - f4, f5, f6, f7);
-            fireVertex(p_423210_, vertexconsumer, -f1 - 0.0F, 1.4F - f4, f5, f8, f7);
-            f3 -= 0.45F;
-            f4 -= 0.45F;
-            f1 *= 0.9F;
-            f5 -= 0.03F;
+            fireVertex(pose, buffer, -r - 0.0F, 0.0F - yo, zo, u1, v1, lightCoords);
+            fireVertex(pose, buffer, r - 0.0F, 0.0F - yo, zo, u0, v1, lightCoords);
+            fireVertex(pose, buffer, r - 0.0F, 1.4F - yo, zo, u0, v0, lightCoords);
+            fireVertex(pose, buffer, -r - 0.0F, 1.4F - yo, zo, u1, v0, lightCoords);
+            h -= 0.45F;
+            yo -= 0.45F;
+            r *= 0.9F;
+            zo -= 0.03F;
+            ss++;
         }
     }
 
     private static void fireVertex(
-        PoseStack.Pose p_431295_, VertexConsumer p_426294_, float p_427057_, float p_430429_, float p_426555_, float p_428750_, float p_424333_
+        final PoseStack.Pose pose,
+        final VertexConsumer buffer,
+        final float x,
+        final float y,
+        final float z,
+        final float u,
+        final float v,
+        final int lightCoords
     ) {
-        p_426294_.addVertex(p_431295_, p_427057_, p_430429_, p_426555_)
-            .setColor(-1)
-            .setUv(p_428750_, p_424333_)
-            .setUv1(0, 10)
-            .setLight(240)
-            .setNormal(p_431295_, 0.0F, 1.0F, 0.0F);
+        buffer.addVertex(pose, x, y, z).setColor(-1).setUv(u, v).setUv1(0, 10).setLight(lightCoords).setNormal(pose, 0.0F, 1.0F, 0.0F);
+    }
+
+        public record Submit(PoseStack.Pose pose, EntityRenderState entityRenderState, Quaternionf rotation) implements SubmitNode {
+        @Override
+        public FeatureRendererType<FlameFeatureRenderer.Submit> featureType() {
+            return FlameFeatureRenderer.TYPE;
+        }
     }
 }

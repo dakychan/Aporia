@@ -13,27 +13,34 @@ import net.minecraft.util.Util;
 import net.minecraft.util.datafix.ExtraDataFixUtils;
 
 public class ProjectileStoredWeaponFix extends DataFix {
-    public ProjectileStoredWeaponFix(Schema p_343496_) {
-        super(p_343496_, true);
+    public ProjectileStoredWeaponFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ENTITY);
-        Type<?> type1 = this.getOutputSchema().getType(References.ENTITY);
+        Type<?> inputEntityType = this.getInputSchema().getType(References.ENTITY);
+        Type<?> outputEntityType = this.getOutputSchema().getType(References.ENTITY);
         return this.fixTypeEverywhereTyped(
-            "Fix Arrow stored weapon", type, type1, ExtraDataFixUtils.chainAllFilters(this.fixChoice("minecraft:arrow"), this.fixChoice("minecraft:spectral_arrow"))
+            "Fix Arrow stored weapon",
+            inputEntityType,
+            outputEntityType,
+            ExtraDataFixUtils.chainAllFilters(this.fixChoice("minecraft:arrow"), this.fixChoice("minecraft:spectral_arrow"))
         );
     }
 
-    private Function<Typed<?>, Typed<?>> fixChoice(String p_344208_) {
-        Type<?> type = this.getInputSchema().getChoiceType(References.ENTITY, p_344208_);
-        Type<?> type1 = this.getOutputSchema().getChoiceType(References.ENTITY, p_344208_);
-        return fixChoiceCap(p_344208_, type, type1);
+    private Function<Typed<?>, Typed<?>> fixChoice(final String entityName) {
+        Type<?> inputEntityChoiceType = this.getInputSchema().getChoiceType(References.ENTITY, entityName);
+        Type<?> outputEntityChoiceType = this.getOutputSchema().getChoiceType(References.ENTITY, entityName);
+        return fixChoiceCap(entityName, inputEntityChoiceType, outputEntityChoiceType);
     }
 
-    private static <T> Function<Typed<?>, Typed<?>> fixChoiceCap(String p_344095_, Type<?> p_343078_, Type<T> p_343868_) {
-        OpticFinder<?> opticfinder = DSL.namedChoice(p_344095_, p_343078_);
-        return p_344956_ -> p_344956_.updateTyped(opticfinder, p_343868_, p_449316_ -> Util.writeAndReadTypedOrThrow(p_449316_, p_343868_, UnaryOperator.identity()));
+    private static <T> Function<Typed<?>, Typed<?>> fixChoiceCap(
+        final String entityName, final Type<?> inputEntityChoiceType, final Type<T> outputEntityChoiceType
+    ) {
+        OpticFinder<?> entityF = DSL.namedChoice(entityName, inputEntityChoiceType);
+        return input -> input.updateTyped(
+            entityF, outputEntityChoiceType, typed -> Util.writeAndReadTypedOrThrow(typed, outputEntityChoiceType, UnaryOperator.identity())
+        );
     }
 }

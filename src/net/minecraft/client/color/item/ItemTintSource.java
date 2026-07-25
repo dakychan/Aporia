@@ -4,13 +4,10 @@ import com.mojang.serialization.MapCodec;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface ItemTintSource {
-    int calculate(ItemStack p_376017_, @Nullable ClientLevel p_378129_, @Nullable LivingEntity p_376885_);
+    int calculate(ItemStack itemStack, @Nullable ClientLevel level, @Nullable LivingEntity owner);
 
     MapCodec<? extends ItemTintSource> type();
 }

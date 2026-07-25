@@ -31,43 +31,43 @@ public class ChestBlockEntity extends RandomizableContainerBlockEntity implement
     private NonNullList<ItemStack> items = NonNullList.withSize(27, ItemStack.EMPTY);
     private final ContainerOpenersCounter openersCounter = new ContainerOpenersCounter() {
         @Override
-        protected void onOpen(Level p_155357_, BlockPos p_155358_, BlockState p_155359_) {
-            if (p_155359_.getBlock() instanceof ChestBlock chestblock) {
-                ChestBlockEntity.playSound(p_155357_, p_155358_, p_155359_, chestblock.getOpenChestSound());
+        protected void onOpen(final Level level, final BlockPos pos, final BlockState blockState) {
+            if (blockState.getBlock() instanceof ChestBlock chestBlock) {
+                ChestBlockEntity.playSound(level, pos, blockState, chestBlock.getOpenChestSound());
             }
         }
 
         @Override
-        protected void onClose(Level p_155367_, BlockPos p_155368_, BlockState p_155369_) {
-            if (p_155369_.getBlock() instanceof ChestBlock chestblock) {
-                ChestBlockEntity.playSound(p_155367_, p_155368_, p_155369_, chestblock.getCloseChestSound());
+        protected void onClose(final Level level, final BlockPos pos, final BlockState blockState) {
+            if (blockState.getBlock() instanceof ChestBlock chestBlock) {
+                ChestBlockEntity.playSound(level, pos, blockState, chestBlock.getCloseChestSound());
             }
         }
 
         @Override
-        protected void openerCountChanged(Level p_155361_, BlockPos p_155362_, BlockState p_155363_, int p_155364_, int p_155365_) {
-            ChestBlockEntity.this.signalOpenCount(p_155361_, p_155362_, p_155363_, p_155364_, p_155365_);
+        protected void openerCountChanged(final Level level, final BlockPos pos, final BlockState blockState, final int previous, final int current) {
+            ChestBlockEntity.this.signalOpenCount(level, pos, blockState, previous, current);
         }
 
         @Override
-        public boolean isOwnContainer(Player p_155355_) {
-            if (!(p_155355_.containerMenu instanceof ChestMenu)) {
+        public boolean isOwnContainer(final Player player) {
+            if (!(player.containerMenu instanceof ChestMenu)) {
                 return false;
-            } else {
-                Container container = ((ChestMenu)p_155355_.containerMenu).getContainer();
-                return container == ChestBlockEntity.this
-                    || container instanceof CompoundContainer && ((CompoundContainer)container).contains(ChestBlockEntity.this);
             }
+
+            Container container = ((ChestMenu)player.containerMenu).getContainer();
+            return container == ChestBlockEntity.this
+                || container instanceof CompoundContainer compoundContainer && compoundContainer.contains(ChestBlockEntity.this);
         }
     };
     private final ChestLidController chestLidController = new ChestLidController();
 
-    protected ChestBlockEntity(BlockEntityType<?> p_155327_, BlockPos p_155328_, BlockState p_155329_) {
-        super(p_155327_, p_155328_, p_155329_);
+    protected ChestBlockEntity(final BlockEntityType<?> type, final BlockPos worldPosition, final BlockState blockState) {
+        super(type, worldPosition, blockState);
     }
 
-    public ChestBlockEntity(BlockPos p_155331_, BlockState p_155332_) {
-        this(BlockEntityType.CHEST, p_155331_, p_155332_);
+    public ChestBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        this(BlockEntityTypes.CHEST, worldPosition, blockState);
     }
 
     @Override
@@ -81,63 +81,66 @@ public class ChestBlockEntity extends RandomizableContainerBlockEntity implement
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_406899_) {
-        super.loadAdditional(p_406899_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        if (!this.tryLoadLootTable(p_406899_)) {
-            ContainerHelper.loadAllItems(p_406899_, this.items);
+        if (!this.tryLoadLootTable(input)) {
+            ContainerHelper.loadAllItems(input, this.items);
         }
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_406111_) {
-        super.saveAdditional(p_406111_);
-        if (!this.trySaveLootTable(p_406111_)) {
-            ContainerHelper.saveAllItems(p_406111_, this.items);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        if (!this.trySaveLootTable(output)) {
+            ContainerHelper.saveAllItems(output, this.items);
         }
     }
 
-    public static void lidAnimateTick(Level p_155344_, BlockPos p_155345_, BlockState p_155346_, ChestBlockEntity p_155347_) {
-        p_155347_.chestLidController.tickLid();
+    public static void lidAnimateTick(final Level level, final BlockPos pos, final BlockState state, final ChestBlockEntity entity) {
+        entity.chestLidController.tickLid();
     }
 
-    static void playSound(Level p_155339_, BlockPos p_155340_, BlockState p_155341_, SoundEvent p_155342_) {
-        ChestType chesttype = p_155341_.getValue(ChestBlock.TYPE);
-        if (chesttype != ChestType.LEFT) {
-            double d0 = p_155340_.getX() + 0.5;
-            double d1 = p_155340_.getY() + 0.5;
-            double d2 = p_155340_.getZ() + 0.5;
-            if (chesttype == ChestType.RIGHT) {
-                Direction direction = ChestBlock.getConnectedDirection(p_155341_);
-                d0 += direction.getStepX() * 0.5;
-                d2 += direction.getStepZ() * 0.5;
+    private static void playSound(final Level level, final BlockPos worldPosition, final BlockState blockState, final SoundEvent event) {
+        ChestType type = blockState.getValue(ChestBlock.TYPE);
+        if (type != ChestType.LEFT) {
+            double x = worldPosition.getX() + 0.5;
+            double y = worldPosition.getY() + 0.5;
+            double z = worldPosition.getZ() + 0.5;
+            if (type == ChestType.RIGHT) {
+                Direction direction = ChestBlock.getConnectedDirection(blockState);
+                x += direction.getStepX() * 0.5;
+                z += direction.getStepZ() * 0.5;
             }
 
-            p_155339_.playSound(null, d0, d1, d2, p_155342_, SoundSource.BLOCKS, 0.5F, p_155339_.random.nextFloat() * 0.1F + 0.9F);
+            level.playSound(null, x, y, z, event, SoundSource.BLOCKS, 0.5F, level.getRandom().nextFloat() * 0.1F + 0.9F);
         }
     }
 
     @Override
-    public boolean triggerEvent(int p_59114_, int p_59115_) {
-        if (p_59114_ == 1) {
-            this.chestLidController.shouldBeOpen(p_59115_ > 0);
+    public boolean triggerEvent(final int b0, final int b1) {
+        if (b0 == 1) {
+            this.chestLidController.shouldBeOpen(b1 > 0);
             return true;
         } else {
-            return super.triggerEvent(p_59114_, p_59115_);
+            return super.triggerEvent(b0, b1);
         }
     }
 
     @Override
-    public void startOpen(ContainerUser p_426602_) {
-        if (!this.remove && !p_426602_.getLivingEntity().isSpectator()) {
-            this.openersCounter.incrementOpeners(p_426602_.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState(), p_426602_.getContainerInteractionRange());
+    public void startOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
+            this.openersCounter
+                .incrementOpeners(
+                    containerUser.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState(), containerUser.getContainerInteractionRange()
+                );
         }
     }
 
     @Override
-    public void stopOpen(ContainerUser p_424111_) {
-        if (!this.remove && !p_424111_.getLivingEntity().isSpectator()) {
-            this.openersCounter.decrementOpeners(p_424111_.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState());
+    public void stopOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
+            this.openersCounter.decrementOpeners(containerUser.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState());
         }
     }
 
@@ -152,36 +155,31 @@ public class ChestBlockEntity extends RandomizableContainerBlockEntity implement
     }
 
     @Override
-    protected void setItems(NonNullList<ItemStack> p_59110_) {
-        this.items = p_59110_;
+    protected void setItems(final NonNullList<ItemStack> items) {
+        this.items = items;
     }
 
     @Override
-    public float getOpenNess(float p_59080_) {
-        return this.chestLidController.getOpenness(p_59080_);
+    public float getOpenNess(final float a) {
+        return this.chestLidController.getOpenness(a);
     }
 
-    public static int getOpenCount(BlockGetter p_59087_, BlockPos p_59088_) {
-        BlockState blockstate = p_59087_.getBlockState(p_59088_);
-        if (blockstate.hasBlockEntity()) {
-            BlockEntity blockentity = p_59087_.getBlockEntity(p_59088_);
-            if (blockentity instanceof ChestBlockEntity) {
-                return ((ChestBlockEntity)blockentity).openersCounter.getOpenerCount();
-            }
-        }
-
-        return 0;
+    public static int getOpenCount(final BlockGetter level, final BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        return state.hasBlockEntity() && level.getBlockEntity(pos) instanceof ChestBlockEntity chestBlockEntity
+            ? chestBlockEntity.openersCounter.getOpenerCount()
+            : 0;
     }
 
-    public static void swapContents(ChestBlockEntity p_59104_, ChestBlockEntity p_59105_) {
-        NonNullList<ItemStack> nonnulllist = p_59104_.getItems();
-        p_59104_.setItems(p_59105_.getItems());
-        p_59105_.setItems(nonnulllist);
+    public static void swapContents(final ChestBlockEntity one, final ChestBlockEntity two) {
+        NonNullList<ItemStack> items = one.getItems();
+        one.setItems(two.getItems());
+        two.setItems(items);
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int p_59082_, Inventory p_59083_) {
-        return ChestMenu.threeRows(p_59082_, p_59083_, this);
+    protected AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return ChestMenu.threeRows(containerId, inventory, this);
     }
 
     public void recheckOpen() {
@@ -190,8 +188,8 @@ public class ChestBlockEntity extends RandomizableContainerBlockEntity implement
         }
     }
 
-    protected void signalOpenCount(Level p_155333_, BlockPos p_155334_, BlockState p_155335_, int p_155336_, int p_155337_) {
-        Block block = p_155335_.getBlock();
-        p_155333_.blockEvent(p_155334_, block, 1, p_155337_);
+    protected void signalOpenCount(final Level level, final BlockPos pos, final BlockState blockState, final int previous, final int current) {
+        Block block = blockState.getBlock();
+        level.blockEvent(pos, block, 1, current);
     }
 }

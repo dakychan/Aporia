@@ -22,20 +22,21 @@ public record OminousBottleAmplifier(int value) implements ConsumableListener, T
     public static final int EFFECT_DURATION = 120000;
     public static final int MIN_AMPLIFIER = 0;
     public static final int MAX_AMPLIFIER = 4;
-    public static final Codec<OminousBottleAmplifier> CODEC = ExtraCodecs.intRange(0, 4)
-        .xmap(OminousBottleAmplifier::new, OminousBottleAmplifier::value);
+    public static final Codec<OminousBottleAmplifier> CODEC = ExtraCodecs.intRange(0, 4).xmap(OminousBottleAmplifier::new, OminousBottleAmplifier::value);
     public static final StreamCodec<RegistryFriendlyByteBuf, OminousBottleAmplifier> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT, OminousBottleAmplifier::value, OminousBottleAmplifier::new
     );
 
     @Override
-    public void onConsume(Level p_369560_, LivingEntity p_361776_, ItemStack p_367666_, Consumable p_368178_) {
-        p_361776_.addEffect(new MobEffectInstance(MobEffects.BAD_OMEN, 120000, this.value, false, false, true));
+    public void onConsume(final Level level, final LivingEntity user, final ItemStack stack, final Consumable consumable) {
+        user.addEffect(new MobEffectInstance(MobEffects.BAD_OMEN, 120000, this.value, false, false, true));
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_368730_, Consumer<Component> p_361861_, TooltipFlag p_366397_, DataComponentGetter p_396528_) {
-        List<MobEffectInstance> list = List.of(new MobEffectInstance(MobEffects.BAD_OMEN, 120000, this.value, false, false, true));
-        PotionContents.addPotionTooltip(list, p_361861_, 1.0F, p_368730_.tickRate());
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        List<MobEffectInstance> effects = List.of(new MobEffectInstance(MobEffects.BAD_OMEN, 120000, this.value, false, false, true));
+        PotionContents.addPotionTooltip(effects, consumer, 1.0F, context.tickRate());
     }
 }

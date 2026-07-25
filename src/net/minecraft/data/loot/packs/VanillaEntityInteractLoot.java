@@ -13,8 +13,8 @@ import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 
 public record VanillaEntityInteractLoot(HolderLookup.Provider registries) implements LootTableSubProvider {
     @Override
-    public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> p_423244_) {
-        p_423244_.accept(
+    public void generate(final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
+        output.accept(
             BuiltInLootTables.ARMADILLO_BRUSH,
             LootTable.lootTable().withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.ARMADILLO_SCUTE)))
         );

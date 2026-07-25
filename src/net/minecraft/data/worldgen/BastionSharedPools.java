@@ -9,14 +9,14 @@ import net.minecraft.world.level.levelgen.structure.pools.StructurePoolElement;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 public class BastionSharedPools {
-    public static void bootstrap(BootstrapContext<StructureTemplatePool> p_331441_) {
-        HolderGetter<StructureTemplatePool> holdergetter = p_331441_.lookup(Registries.TEMPLATE_POOL);
-        Holder<StructureTemplatePool> holder = holdergetter.getOrThrow(Pools.EMPTY);
+    public static void bootstrap(final BootstrapContext<StructureTemplatePool> context) {
+        HolderGetter<StructureTemplatePool> pools = context.lookup(Registries.TEMPLATE_POOL);
+        Holder<StructureTemplatePool> empty = pools.getOrThrow(Pools.EMPTY);
         Pools.register(
-            p_331441_,
+            context,
             "bastion/mobs/piglin",
             new StructureTemplatePool(
-                holder,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.single("bastion/mobs/melee_piglin"), 1),
                     Pair.of(StructurePoolElement.single("bastion/mobs/sword_piglin"), 4),
@@ -27,32 +27,28 @@ public class BastionSharedPools {
             )
         );
         Pools.register(
-            p_331441_,
+            context,
             "bastion/mobs/hoglin",
             new StructureTemplatePool(
-                holder,
-                ImmutableList.of(
-                    Pair.of(StructurePoolElement.single("bastion/mobs/hoglin"), 2), Pair.of(StructurePoolElement.single("bastion/mobs/empty"), 1)
-                ),
+                empty,
+                ImmutableList.of(Pair.of(StructurePoolElement.single("bastion/mobs/hoglin"), 2), Pair.of(StructurePoolElement.single("bastion/mobs/empty"), 1)),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331441_,
+            context,
             "bastion/blocks/gold",
             new StructureTemplatePool(
-                holder,
-                ImmutableList.of(
-                    Pair.of(StructurePoolElement.single("bastion/blocks/air"), 3), Pair.of(StructurePoolElement.single("bastion/blocks/gold"), 1)
-                ),
+                empty,
+                ImmutableList.of(Pair.of(StructurePoolElement.single("bastion/blocks/air"), 3), Pair.of(StructurePoolElement.single("bastion/blocks/gold"), 1)),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331441_,
+            context,
             "bastion/mobs/piglin_melee",
             new StructureTemplatePool(
-                holder,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.single("bastion/mobs/melee_piglin_always"), 1),
                     Pair.of(StructurePoolElement.single("bastion/mobs/melee_piglin"), 5),

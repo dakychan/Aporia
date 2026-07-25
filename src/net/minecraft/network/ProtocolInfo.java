@@ -18,21 +18,21 @@ public interface ProtocolInfo<T extends PacketListener> {
 
     @Nullable BundlerInfo bundlerInfo();
 
-    public interface Details {
+    interface Details {
         ConnectionProtocol id();
 
         PacketFlow flow();
 
         @VisibleForDebug
-        void listPackets(ProtocolInfo.Details.PacketVisitor p_391257_);
+        void listPackets(ProtocolInfo.Details.PacketVisitor output);
 
         @FunctionalInterface
-        public interface PacketVisitor {
-            void accept(PacketType<?> p_394380_, int p_394885_);
+        interface PacketVisitor {
+            void accept(PacketType<?> type, int networkId);
         }
     }
 
-    public interface DetailsProvider {
+    interface DetailsProvider {
         ProtocolInfo.Details details();
     }
 }

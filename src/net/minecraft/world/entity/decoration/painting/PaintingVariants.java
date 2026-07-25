@@ -61,82 +61,82 @@ public class PaintingVariants {
     public static final ResourceKey<PaintingVariant> TIDES = create("tides");
     public static final ResourceKey<PaintingVariant> DENNIS = create("dennis");
 
-    public static void bootstrap(BootstrapContext<PaintingVariant> p_453553_) {
-        register(p_453553_, KEBAB, 1, 1);
-        register(p_453553_, AZTEC, 1, 1);
-        register(p_453553_, ALBAN, 1, 1);
-        register(p_453553_, AZTEC2, 1, 1);
-        register(p_453553_, BOMB, 1, 1);
-        register(p_453553_, PLANT, 1, 1);
-        register(p_453553_, WASTELAND, 1, 1);
-        register(p_453553_, POOL, 2, 1);
-        register(p_453553_, COURBET, 2, 1);
-        register(p_453553_, SEA, 2, 1);
-        register(p_453553_, SUNSET, 2, 1);
-        register(p_453553_, CREEBET, 2, 1);
-        register(p_453553_, WANDERER, 1, 2);
-        register(p_453553_, GRAHAM, 1, 2);
-        register(p_453553_, MATCH, 2, 2);
-        register(p_453553_, BUST, 2, 2);
-        register(p_453553_, STAGE, 2, 2);
-        register(p_453553_, VOID, 2, 2);
-        register(p_453553_, SKULL_AND_ROSES, 2, 2);
-        register(p_453553_, WITHER, 2, 2, false);
-        register(p_453553_, FIGHTERS, 4, 2);
-        register(p_453553_, POINTER, 4, 4);
-        register(p_453553_, PIGSCENE, 4, 4);
-        register(p_453553_, BURNING_SKULL, 4, 4);
-        register(p_453553_, SKELETON, 4, 3);
-        register(p_453553_, EARTH, 2, 2, false);
-        register(p_453553_, WIND, 2, 2, false);
-        register(p_453553_, WATER, 2, 2, false);
-        register(p_453553_, FIRE, 2, 2, false);
-        register(p_453553_, DONKEY_KONG, 4, 3);
-        register(p_453553_, BAROQUE, 2, 2);
-        register(p_453553_, HUMBLE, 2, 2);
-        register(p_453553_, MEDITATIVE, 1, 1);
-        register(p_453553_, PRAIRIE_RIDE, 1, 2);
-        register(p_453553_, UNPACKED, 4, 4);
-        register(p_453553_, BACKYARD, 3, 4);
-        register(p_453553_, BOUQUET, 3, 3);
-        register(p_453553_, CAVEBIRD, 3, 3);
-        register(p_453553_, CHANGING, 4, 2);
-        register(p_453553_, COTAN, 3, 3);
-        register(p_453553_, ENDBOSS, 3, 3);
-        register(p_453553_, FERN, 3, 3);
-        register(p_453553_, FINDING, 4, 2);
-        register(p_453553_, LOWMIST, 4, 2);
-        register(p_453553_, ORB, 4, 4);
-        register(p_453553_, OWLEMONS, 3, 3);
-        register(p_453553_, PASSAGE, 4, 2);
-        register(p_453553_, POND, 3, 4);
-        register(p_453553_, SUNFLOWERS, 3, 3);
-        register(p_453553_, TIDES, 3, 3);
-        register(p_453553_, DENNIS, 3, 3);
+    public static void bootstrap(final BootstrapContext<PaintingVariant> context) {
+        register(context, KEBAB, 1, 1);
+        register(context, AZTEC, 1, 1);
+        register(context, ALBAN, 1, 1);
+        register(context, AZTEC2, 1, 1);
+        register(context, BOMB, 1, 1);
+        register(context, PLANT, 1, 1);
+        register(context, WASTELAND, 1, 1);
+        register(context, POOL, 2, 1);
+        register(context, COURBET, 2, 1);
+        register(context, SEA, 2, 1);
+        register(context, SUNSET, 2, 1);
+        register(context, CREEBET, 2, 1);
+        register(context, WANDERER, 1, 2);
+        register(context, GRAHAM, 1, 2);
+        register(context, MATCH, 2, 2);
+        register(context, BUST, 2, 2);
+        register(context, STAGE, 2, 2);
+        register(context, VOID, 2, 2);
+        register(context, SKULL_AND_ROSES, 2, 2);
+        register(context, WITHER, 2, 2, false);
+        register(context, FIGHTERS, 4, 2);
+        register(context, POINTER, 4, 4);
+        register(context, PIGSCENE, 4, 4);
+        register(context, BURNING_SKULL, 4, 4);
+        register(context, SKELETON, 4, 3);
+        register(context, EARTH, 2, 2, false);
+        register(context, WIND, 2, 2, false);
+        register(context, WATER, 2, 2, false);
+        register(context, FIRE, 2, 2, false);
+        register(context, DONKEY_KONG, 4, 3);
+        register(context, BAROQUE, 2, 2);
+        register(context, HUMBLE, 2, 2);
+        register(context, MEDITATIVE, 1, 1);
+        register(context, PRAIRIE_RIDE, 1, 2);
+        register(context, UNPACKED, 4, 4);
+        register(context, BACKYARD, 3, 4);
+        register(context, BOUQUET, 3, 3);
+        register(context, CAVEBIRD, 3, 3);
+        register(context, CHANGING, 4, 2);
+        register(context, COTAN, 3, 3);
+        register(context, ENDBOSS, 3, 3);
+        register(context, FERN, 3, 3);
+        register(context, FINDING, 4, 2);
+        register(context, LOWMIST, 4, 2);
+        register(context, ORB, 4, 4);
+        register(context, OWLEMONS, 3, 3);
+        register(context, PASSAGE, 4, 2);
+        register(context, POND, 3, 4);
+        register(context, SUNFLOWERS, 3, 3);
+        register(context, TIDES, 3, 3);
+        register(context, DENNIS, 3, 3);
     }
 
-    private static void register(BootstrapContext<PaintingVariant> p_451235_, ResourceKey<PaintingVariant> p_453622_, int p_457785_, int p_458756_) {
-        register(p_451235_, p_453622_, p_457785_, p_458756_, true);
+    private static void register(final BootstrapContext<PaintingVariant> context, final ResourceKey<PaintingVariant> id, final int width, final int height) {
+        register(context, id, width, height, true);
     }
 
     private static void register(
-        BootstrapContext<PaintingVariant> p_458267_, ResourceKey<PaintingVariant> p_455445_, int p_460332_, int p_458770_, boolean p_452638_
+        final BootstrapContext<PaintingVariant> context, final ResourceKey<PaintingVariant> id, final int width, final int height, final boolean hasAuthor
     ) {
-        p_458267_.register(
-            p_455445_,
+        context.register(
+            id,
             new PaintingVariant(
-                p_460332_,
-                p_458770_,
-                p_455445_.identifier(),
-                Optional.of(Component.translatable(p_455445_.identifier().toLanguageKey("painting", "title")).withStyle(ChatFormatting.YELLOW)),
-                p_452638_
-                    ? Optional.of(Component.translatable(p_455445_.identifier().toLanguageKey("painting", "author")).withStyle(ChatFormatting.GRAY))
+                width,
+                height,
+                id.identifier(),
+                Optional.of(Component.translatable(id.identifier().toLanguageKey("painting", "title")).withStyle(ChatFormatting.YELLOW)),
+                hasAuthor
+                    ? Optional.of(Component.translatable(id.identifier().toLanguageKey("painting", "author")).withStyle(ChatFormatting.GRAY))
                     : Optional.empty()
             )
         );
     }
 
-    private static ResourceKey<PaintingVariant> create(String p_460846_) {
-        return ResourceKey.create(Registries.PAINTING_VARIANT, Identifier.withDefaultNamespace(p_460846_));
+    private static ResourceKey<PaintingVariant> create(final String name) {
+        return ResourceKey.create(Registries.PAINTING_VARIANT, Identifier.withDefaultNamespace(name));
     }
 }

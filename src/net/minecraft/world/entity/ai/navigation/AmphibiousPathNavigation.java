@@ -8,14 +8,14 @@ import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.phys.Vec3;
 
 public class AmphibiousPathNavigation extends PathNavigation {
-    public AmphibiousPathNavigation(Mob p_217788_, Level p_217789_) {
-        super(p_217788_, p_217789_);
+    public AmphibiousPathNavigation(final Mob mob, final Level level) {
+        super(mob, level);
     }
 
     @Override
-    protected PathFinder createPathFinder(int p_217792_) {
+    protected PathFinder createPathFinder(final int maxVisitedNodes) {
         this.nodeEvaluator = new AmphibiousNodeEvaluator(false);
-        return new PathFinder(this.nodeEvaluator, p_217792_);
+        return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
     }
 
     @Override
@@ -29,22 +29,22 @@ public class AmphibiousPathNavigation extends PathNavigation {
     }
 
     @Override
-    protected double getGroundY(Vec3 p_217794_) {
-        return p_217794_.y;
+    protected double getGroundY(final Vec3 target) {
+        return target.y;
     }
 
     @Override
-    protected boolean canMoveDirectly(Vec3 p_217796_, Vec3 p_217797_) {
-        return this.mob.isInLiquid() ? isClearForMovementBetween(this.mob, p_217796_, p_217797_, false) : false;
+    protected boolean canMoveDirectly(final Vec3 startPos, final Vec3 stopPos) {
+        return this.mob.isInLiquid() ? isClearForMovementBetween(this.mob, startPos, stopPos, false) : false;
     }
 
     @Override
-    public boolean isStableDestination(BlockPos p_217799_) {
-        return !this.level.getBlockState(p_217799_.below()).isAir();
+    public boolean isStableDestination(final BlockPos pos) {
+        return !this.level.getBlockState(pos.below()).isAir();
     }
 
     @Override
-    public void setCanFloat(boolean p_217801_) {
+    public void setCanFloat(final boolean canFloat) {
     }
 
     @Override

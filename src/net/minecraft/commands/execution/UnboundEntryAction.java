@@ -2,9 +2,9 @@ package net.minecraft.commands.execution;
 
 @FunctionalInterface
 public interface UnboundEntryAction<T> {
-    void execute(T p_311343_, ExecutionContext<T> p_309614_, Frame p_309740_);
+    void execute(T sender, ExecutionContext<T> context, Frame frame);
 
-    default EntryAction<T> bind(T p_312071_) {
-        return (p_309583_, p_311194_) -> this.execute(p_312071_, p_309583_, p_311194_);
+    default EntryAction<T> bind(final T sender) {
+        return (context, frame) -> this.execute(sender, context, frame);
     }
 }

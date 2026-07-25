@@ -4,11 +4,11 @@ import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.codec.IdDispatchCodec;
 
 public class SkipPacketDecoderException extends DecoderException implements IdDispatchCodec.DontDecorateException, SkipPacketException {
-    public SkipPacketDecoderException(String p_393826_) {
-        super(p_393826_);
+    public SkipPacketDecoderException(final String message) {
+        super(message);
     }
 
-    public SkipPacketDecoderException(Throwable p_392147_) {
-        super(p_392147_);
+    public SkipPacketDecoderException(final Throwable cause) {
+        super(cause);
     }
 }

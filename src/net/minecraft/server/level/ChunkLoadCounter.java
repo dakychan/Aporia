@@ -10,16 +10,16 @@ public class ChunkLoadCounter {
     private final List<ChunkHolder> pendingChunks = new ArrayList<>();
     private int totalChunks;
 
-    public void track(ServerLevel p_422667_, Runnable p_426227_) {
-        ServerChunkCache serverchunkcache = p_422667_.getChunkSource();
-        LongSet longset = new LongOpenHashSet();
-        serverchunkcache.runDistanceManagerUpdates();
-        serverchunkcache.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(p_425959_ -> longset.add(p_425959_.getPos().toLong()));
-        p_426227_.run();
-        serverchunkcache.runDistanceManagerUpdates();
-        serverchunkcache.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(p_425935_ -> {
-            if (!longset.contains(p_425935_.getPos().toLong())) {
-                this.pendingChunks.add(p_425935_);
+    public void track(final ServerLevel level, final Runnable scheduler) {
+        ServerChunkCache chunkSource = level.getChunkSource();
+        LongSet alreadyLoadedChunks = new LongOpenHashSet();
+        chunkSource.runDistanceManagerUpdates();
+        chunkSource.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(chunkHolder -> alreadyLoadedChunks.add(chunkHolder.getPos().pack()));
+        scheduler.run();
+        chunkSource.runDistanceManagerUpdates();
+        chunkSource.chunkMap.allChunksWithAtLeastStatus(ChunkStatus.FULL).forEach(chunkHolder -> {
+            if (!alreadyLoadedChunks.contains(chunkHolder.getPos().pack())) {
+                this.pendingChunks.add(chunkHolder);
                 this.totalChunks++;
             }
         });
@@ -30,7 +30,7 @@ public class ChunkLoadCounter {
     }
 
     public int pendingChunks() {
-        this.pendingChunks.removeIf(p_427077_ -> p_427077_.getLatestStatus() == ChunkStatus.FULL);
+        this.pendingChunks.removeIf(chunkHolder -> chunkHolder.getLatestStatus() == ChunkStatus.FULL);
         return this.pendingChunks.size();
     }
 

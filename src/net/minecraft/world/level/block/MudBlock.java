@@ -19,32 +19,32 @@ public class MudBlock extends Block {
         return CODEC;
     }
 
-    public MudBlock(BlockBehaviour.Properties p_221545_) {
-        super(p_221545_);
+    public MudBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_221561_, BlockGetter p_221562_, BlockPos p_221563_, CollisionContext p_221564_) {
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected VoxelShape getBlockSupportShape(BlockState p_221566_, BlockGetter p_221567_, BlockPos p_221568_) {
+    protected VoxelShape getBlockSupportShape(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return Shapes.block();
     }
 
     @Override
-    protected VoxelShape getVisualShape(BlockState p_221556_, BlockGetter p_221557_, BlockPos p_221558_, CollisionContext p_221559_) {
+    protected VoxelShape getVisualShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return Shapes.block();
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_221547_, PathComputationType p_221550_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 
     @Override
-    protected float getShadeBrightness(BlockState p_221552_, BlockGetter p_221553_, BlockPos p_221554_) {
+    protected float getShadeBrightness(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return 0.2F;
     }
 }

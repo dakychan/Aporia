@@ -10,6 +10,7 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -28,20 +29,20 @@ public class EyeOfEnder extends Entity implements ItemSupplier {
     private int life;
     private boolean surviveAfterDeath;
 
-    public EyeOfEnder(EntityType<? extends EyeOfEnder> p_36957_, Level p_36958_) {
-        super(p_36957_, p_36958_);
+    public EyeOfEnder(final EntityType<? extends EyeOfEnder> type, final Level level) {
+        super(type, level);
     }
 
-    public EyeOfEnder(Level p_36960_, double p_36961_, double p_36962_, double p_36963_) {
-        this(EntityType.EYE_OF_ENDER, p_36960_);
-        this.setPos(p_36961_, p_36962_, p_36963_);
+    public EyeOfEnder(final Level level, final double x, final double y, final double z) {
+        this(EntityTypes.EYE_OF_ENDER, level);
+        this.setPos(x, y, z);
     }
 
-    public void setItem(ItemStack p_36973_) {
-        if (p_36973_.isEmpty()) {
+    public void setItem(final ItemStack source) {
+        if (source.isEmpty()) {
             this.getEntityData().set(DATA_ITEM_STACK, this.getDefaultItem());
         } else {
-            this.getEntityData().set(DATA_ITEM_STACK, p_36973_.copyWithCount(1));
+            this.getEntityData().set(DATA_ITEM_STACK, source.copyWithCount(1));
         }
     }
 
@@ -51,32 +52,32 @@ public class EyeOfEnder extends Entity implements ItemSupplier {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_333578_) {
-        p_333578_.define(DATA_ITEM_STACK, this.getDefaultItem());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_ITEM_STACK, this.getDefaultItem());
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_36966_) {
-        if (this.tickCount < 2 && p_36966_ < 12.25) {
+    public boolean shouldRenderAtSqrDistance(final double distance) {
+        if (this.tickCount < 2 && distance < 12.25) {
             return false;
-        } else {
-            double d0 = this.getBoundingBox().getSize() * 4.0;
-            if (Double.isNaN(d0)) {
-                d0 = 4.0;
-            }
-
-            d0 *= 64.0;
-            return p_36966_ < d0 * d0;
         }
+
+        double size = this.getBoundingBox().getSize() * 4.0;
+        if (Double.isNaN(size)) {
+            size = 4.0;
+        }
+
+        size *= 64.0;
+        return distance < size * size;
     }
 
-    public void signalTo(Vec3 p_409103_) {
-        Vec3 vec3 = p_409103_.subtract(this.position());
-        double d0 = vec3.horizontalDistance();
-        if (d0 > 12.0) {
-            this.target = this.position().add(vec3.x / d0 * 12.0, 8.0, vec3.z / d0 * 12.0);
+    public void signalTo(final Vec3 target) {
+        Vec3 delta = target.subtract(this.position());
+        double horizontalDistance = delta.horizontalDistance();
+        if (horizontalDistance > 12.0) {
+            this.target = this.position().add(delta.x / horizontalDistance * 12.0, 8.0, delta.z / horizontalDistance * 12.0);
         } else {
-            this.target = p_409103_;
+            this.target = target;
         }
 
         this.life = 0;
@@ -86,17 +87,17 @@ public class EyeOfEnder extends Entity implements ItemSupplier {
     @Override
     public void tick() {
         super.tick();
-        Vec3 vec3 = this.position().add(this.getDeltaMovement());
+        Vec3 newPosition = this.position().add(this.getDeltaMovement());
         if (!this.level().isClientSide() && this.target != null) {
-            this.setDeltaMovement(updateDeltaMovement(this.getDeltaMovement(), vec3, this.target));
+            this.setDeltaMovement(updateDeltaMovement(this.getDeltaMovement(), newPosition, this.target));
         }
 
         if (this.level().isClientSide()) {
-            Vec3 vec31 = vec3.subtract(this.getDeltaMovement().scale(0.25));
-            this.spawnParticles(vec31, this.getDeltaMovement());
+            Vec3 particleOrigin = newPosition.subtract(this.getDeltaMovement().scale(0.25));
+            this.spawnParticles(particleOrigin, this.getDeltaMovement());
         }
 
-        this.setPos(vec3);
+        this.setPos(newPosition);
         if (!this.level().isClientSide()) {
             this.life++;
             if (this.life > 80 && !this.level().isClientSide()) {
@@ -111,56 +112,47 @@ public class EyeOfEnder extends Entity implements ItemSupplier {
         }
     }
 
-    private void spawnParticles(Vec3 p_409874_, Vec3 p_410112_) {
+    private void spawnParticles(final Vec3 origin, final Vec3 movement) {
         if (this.isInWater()) {
             for (int i = 0; i < 4; i++) {
-                this.level()
-                    .addParticle(
-                        ParticleTypes.BUBBLE,
-                        p_409874_.x,
-                        p_409874_.y,
-                        p_409874_.z,
-                        p_410112_.x,
-                        p_410112_.y,
-                        p_410112_.z
-                    );
+                this.level().addParticle(ParticleTypes.BUBBLE, origin.x, origin.y, origin.z, movement.x, movement.y, movement.z);
             }
         } else {
             this.level()
                 .addParticle(
                     ParticleTypes.PORTAL,
-                    p_409874_.x + this.random.nextDouble() * 0.6 - 0.3,
-                    p_409874_.y - 0.5,
-                    p_409874_.z + this.random.nextDouble() * 0.6 - 0.3,
-                    p_410112_.x,
-                    p_410112_.y,
-                    p_410112_.z
+                    origin.x + this.random.nextDouble() * 0.6 - 0.3,
+                    origin.y - 0.5,
+                    origin.z + this.random.nextDouble() * 0.6 - 0.3,
+                    movement.x,
+                    movement.y,
+                    movement.z
                 );
         }
     }
 
-    private static Vec3 updateDeltaMovement(Vec3 p_407352_, Vec3 p_409654_, Vec3 p_408081_) {
-        Vec3 vec3 = new Vec3(p_408081_.x - p_409654_.x, 0.0, p_408081_.z - p_409654_.z);
-        double d0 = vec3.length();
-        double d1 = Mth.lerp(0.0025, p_407352_.horizontalDistance(), d0);
-        double d2 = p_407352_.y;
-        if (d0 < 1.0) {
-            d1 *= 0.8;
-            d2 *= 0.8;
+    private static Vec3 updateDeltaMovement(final Vec3 oldMovement, final Vec3 position, final Vec3 target) {
+        Vec3 horizontalDelta = new Vec3(target.x - position.x, 0.0, target.z - position.z);
+        double horizontalLength = horizontalDelta.length();
+        double wantedSpeed = Mth.lerp(0.0025, oldMovement.horizontalDistance(), horizontalLength);
+        double movementY = oldMovement.y;
+        if (horizontalLength < 1.0) {
+            wantedSpeed *= 0.8;
+            movementY *= 0.8;
         }
 
-        double d3 = p_409654_.y - p_407352_.y < p_408081_.y ? 1.0 : -1.0;
-        return vec3.scale(d1 / d0).add(0.0, d2 + (d3 - d2) * 0.015, 0.0);
+        double wantedMovementY = position.y - oldMovement.y < target.y ? 1.0 : -1.0;
+        return horizontalDelta.scale(wantedSpeed / horizontalLength).add(0.0, movementY + (wantedMovementY - movementY) * 0.015, 0.0);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_406691_) {
-        p_406691_.store("Item", ItemStack.CODEC, this.getItem());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.store("Item", ItemStack.CODEC, this.getItem());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_408863_) {
-        this.setItem(p_408863_.read("Item", ItemStack.CODEC).orElse(this.getDefaultItem()));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.setItem(input.read("Item", ItemStack.CODEC).orElse(this.getDefaultItem()));
     }
 
     private ItemStack getDefaultItem() {
@@ -178,7 +170,7 @@ public class EyeOfEnder extends Entity implements ItemSupplier {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_361156_, DamageSource p_361721_, float p_361974_) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         return false;
     }
 }

@@ -6,10 +6,7 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonLinks;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class CreditsAndAttributionScreen extends Screen {
     private static final int BUTTON_SPACING = 8;
     private static final int BUTTON_WIDTH = 210;
@@ -20,20 +17,20 @@ public class CreditsAndAttributionScreen extends Screen {
     private final Screen lastScreen;
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
 
-    public CreditsAndAttributionScreen(Screen p_276298_) {
+    public CreditsAndAttributionScreen(final Screen lastScreen) {
         super(TITLE);
-        this.lastScreen = p_276298_;
+        this.lastScreen = lastScreen;
     }
 
     @Override
     protected void init() {
         this.layout.addTitleHeader(TITLE, this.font);
-        LinearLayout linearlayout = this.layout.addToContents(LinearLayout.vertical()).spacing(8);
-        linearlayout.defaultCellSetting().alignHorizontallyCenter();
-        linearlayout.addChild(Button.builder(CREDITS_BUTTON, p_276287_ -> this.openCreditsScreen()).width(210).build());
-        linearlayout.addChild(Button.builder(ATTRIBUTION_BUTTON, ConfirmLinkScreen.confirmLink(this, CommonLinks.ATTRIBUTION)).width(210).build());
-        linearlayout.addChild(Button.builder(LICENSES_BUTTON, ConfirmLinkScreen.confirmLink(this, CommonLinks.LICENSES)).width(210).build());
-        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, p_276311_ -> this.onClose()).width(200).build());
+        LinearLayout content = this.layout.addToContents(LinearLayout.vertical()).spacing(8);
+        content.defaultCellSetting().alignHorizontallyCenter();
+        content.addChild(Button.builder(CREDITS_BUTTON, button -> this.openCreditsScreen()).width(210).build());
+        content.addChild(Button.builder(ATTRIBUTION_BUTTON, ConfirmLinkScreen.confirmLink(this, CommonLinks.ATTRIBUTION)).width(210).build());
+        content.addChild(Button.builder(LICENSES_BUTTON, ConfirmLinkScreen.confirmLink(this, CommonLinks.LICENSES)).width(210).build());
+        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).width(200).build());
         this.layout.arrangeElements();
         this.layout.visitWidgets(this::addRenderableWidget);
     }
@@ -44,11 +41,11 @@ public class CreditsAndAttributionScreen extends Screen {
     }
 
     private void openCreditsScreen() {
-        this.minecraft.setScreen(new WinScreen(false, () -> this.minecraft.setScreen(this)));
+        this.minecraft.gui.setScreen(new WinScreen(false, () -> this.minecraft.gui.setScreen(this)));
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 }

@@ -11,40 +11,40 @@ public interface ContainerComponentManipulator<T> {
 
     T empty();
 
-    T setContents(T p_331842_, Stream<ItemStack> p_327717_);
+    T setContents(T component, Stream<ItemStack> newContents);
 
-    Stream<ItemStack> getContents(T p_336301_);
+    Stream<ItemStack> getContents(T component);
 
-    default void setContents(ItemStack p_333844_, T p_334408_, Stream<ItemStack> p_331739_) {
-        T t = p_333844_.getOrDefault(this.type(), p_334408_);
-        T t1 = this.setContents(t, p_331739_);
-        p_333844_.set(this.type(), t1);
+    default void setContents(final ItemStack itemStack, final T defaultValue, final Stream<ItemStack> newContents) {
+        T currentValue = itemStack.getOrDefault(this.type(), defaultValue);
+        T newValue = this.setContents(currentValue, newContents);
+        itemStack.set(this.type(), newValue);
     }
 
-    default void setContents(ItemStack p_331343_, Stream<ItemStack> p_333653_) {
-        this.setContents(p_331343_, this.empty(), p_333653_);
+    default void setContents(final ItemStack itemStack, final Stream<ItemStack> newContents) {
+        this.setContents(itemStack, this.empty(), newContents);
     }
 
-    default void modifyItems(ItemStack p_335094_, UnaryOperator<ItemStack> p_330990_) {
-        T t = p_335094_.get(this.type());
-        if (t != null) {
-            UnaryOperator<ItemStack> unaryoperator = p_341972_ -> {
-                if (p_341972_.isEmpty()) {
-                    return p_341972_;
-                } else {
-                    ItemStack itemstack = p_330990_.apply(p_341972_);
-                    itemstack.limitSize(itemstack.getMaxStackSize());
-                    return itemstack;
+    default void modifyItems(final ItemStack itemStack, final UnaryOperator<ItemStack> modifier) {
+        T contents = itemStack.get(this.type());
+        if (contents != null) {
+            UnaryOperator<ItemStack> nonEmptyModifier = currentItemStack -> {
+                if (currentItemStack.isEmpty()) {
+                    return currentItemStack;
                 }
+
+                ItemStack newItemStack = modifier.apply(currentItemStack);
+                newItemStack.limitSize(newItemStack.getMaxStackSize());
+                return newItemStack;
             };
-            this.setContents(p_335094_, this.getContents(t).map(unaryoperator));
+            this.setContents(itemStack, this.getContents(contents).map(nonEmptyModifier));
         }
     }
 
-    default SlotCollection getSlots(ItemStack p_459268_) {
+    default SlotCollection getSlots(final ItemStack itemStack) {
         return () -> {
-            T t = p_459268_.get(this.type());
-            return t != null ? this.getContents(t).filter(p_450067_ -> !p_450067_.isEmpty()) : Stream.empty();
+            T contents = itemStack.get(this.type());
+            return contents != null ? this.getContents(contents).filter(stack -> !stack.isEmpty()) : Stream.empty();
         };
     }
 }

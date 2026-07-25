@@ -13,162 +13,162 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureProc
 public class TrailRuinsStructurePools {
     public static final ResourceKey<StructureTemplatePool> START = Pools.createKey("trail_ruins/tower");
 
-    public static void bootstrap(BootstrapContext<StructureTemplatePool> p_331263_) {
-        HolderGetter<StructureTemplatePool> holdergetter = p_331263_.lookup(Registries.TEMPLATE_POOL);
-        Holder<StructureTemplatePool> holder = holdergetter.getOrThrow(Pools.EMPTY);
-        HolderGetter<StructureProcessorList> holdergetter1 = p_331263_.lookup(Registries.PROCESSOR_LIST);
-        Holder<StructureProcessorList> holder1 = holdergetter1.getOrThrow(ProcessorLists.TRAIL_RUINS_HOUSES_ARCHAEOLOGY);
-        Holder<StructureProcessorList> holder2 = holdergetter1.getOrThrow(ProcessorLists.TRAIL_RUINS_ROADS_ARCHAEOLOGY);
-        Holder<StructureProcessorList> holder3 = holdergetter1.getOrThrow(ProcessorLists.TRAIL_RUINS_TOWER_TOP_ARCHAEOLOGY);
-        p_331263_.register(
+    public static void bootstrap(final BootstrapContext<StructureTemplatePool> context) {
+        HolderGetter<StructureTemplatePool> pools = context.lookup(Registries.TEMPLATE_POOL);
+        Holder<StructureTemplatePool> empty = pools.getOrThrow(Pools.EMPTY);
+        HolderGetter<StructureProcessorList> processorLists = context.lookup(Registries.PROCESSOR_LIST);
+        Holder<StructureProcessorList> housesArchyProcessor = processorLists.getOrThrow(ProcessorLists.TRAIL_RUINS_HOUSES_ARCHAEOLOGY);
+        Holder<StructureProcessorList> roadsArchyProcessor = processorLists.getOrThrow(ProcessorLists.TRAIL_RUINS_ROADS_ARCHAEOLOGY);
+        Holder<StructureProcessorList> towerTopArchyProcessor = processorLists.getOrThrow(ProcessorLists.TRAIL_RUINS_TOWER_TOP_ARCHAEOLOGY);
+        context.register(
             START,
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_5", holder1), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_5", housesArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331263_,
+            context,
             "trail_ruins/tower/tower_top",
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_1", holder3), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_2", holder3), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_3", holder3), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_4", holder3), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_5", holder3), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_1", towerTopArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_2", towerTopArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_3", towerTopArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_4", towerTopArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/tower_top_5", towerTopArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331263_,
+            context,
             "trail_ruins/tower/additions",
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_5", holder1), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/hall_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/large_hall_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/one_room_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/platform_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/tower/stable_5", housesArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331263_,
+            context,
             "trail_ruins/roads",
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/long_road_end", holder2), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_end_1", holder2), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_1", holder2), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_2", holder2), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_3", holder2), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_4", holder2), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_spacer_1", holder2), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/long_road_end", roadsArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_end_1", roadsArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_1", roadsArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_2", roadsArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_3", roadsArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_section_4", roadsArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/roads/road_spacer_1", roadsArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331263_,
+            context,
             "trail_ruins/buildings",
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_5", holder1), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_hall_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/large_room_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/one_room_5", housesArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331263_,
+            context,
             "trail_ruins/buildings/grouped",
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_5", holder1), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_full_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_lower_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_upper_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/buildings/group_room_5", housesArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_331263_,
+            context,
             "trail_ruins/decor",
             new StructureTemplatePool(
-                holder,
+                empty,
                 List.of(
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_1", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_2", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_3", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_4", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_5", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_6", holder1), 1),
-                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_7", holder1), 1)
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_1", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_2", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_3", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_4", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_5", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_6", housesArchyProcessor), 1),
+                    Pair.of(StructurePoolElement.single("trail_ruins/decor/decor_7", housesArchyProcessor), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )

@@ -32,9 +32,9 @@ public abstract class Goal {
     public void tick() {
     }
 
-    public void setFlags(EnumSet<Goal.Flag> p_25328_) {
+    public void setFlags(final EnumSet<Goal.Flag> requiredControlFlags) {
         this.flags.clear();
-        this.flags.addAll(p_25328_);
+        this.flags.addAll(requiredControlFlags);
     }
 
     @Override
@@ -46,23 +46,23 @@ public abstract class Goal {
         return this.flags;
     }
 
-    protected int adjustedTickDelay(int p_186072_) {
-        return this.requiresUpdateEveryTick() ? p_186072_ : reducedTickDelay(p_186072_);
+    protected int adjustedTickDelay(final int ticks) {
+        return this.requiresUpdateEveryTick() ? ticks : reducedTickDelay(ticks);
     }
 
-    protected static int reducedTickDelay(int p_186074_) {
-        return Mth.positiveCeilDiv(p_186074_, 2);
+    protected static int reducedTickDelay(final int ticks) {
+        return Mth.positiveCeilDiv(ticks, 2);
     }
 
-    protected static ServerLevel getServerLevel(Entity p_363316_) {
-        return (ServerLevel)p_363316_.level();
+    protected static ServerLevel getServerLevel(final Entity entity) {
+        return (ServerLevel)entity.level();
     }
 
-    protected static ServerLevel getServerLevel(Level p_366684_) {
-        return (ServerLevel)p_366684_;
+    protected static ServerLevel getServerLevel(final Level level) {
+        return (ServerLevel)level;
     }
 
-    public static enum Flag {
+    public enum Flag {
         MOVE,
         LOOK,
         JUMP,

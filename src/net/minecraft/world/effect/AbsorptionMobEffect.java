@@ -4,23 +4,23 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 
 class AbsorptionMobEffect extends MobEffect {
-    protected AbsorptionMobEffect(MobEffectCategory p_300567_, int p_300827_) {
-        super(p_300567_, p_300827_);
+    protected AbsorptionMobEffect(final MobEffectCategory category, final int color) {
+        super(category, color);
     }
 
     @Override
-    public boolean applyEffectTick(ServerLevel p_364113_, LivingEntity p_298017_, int p_299434_) {
-        return p_298017_.getAbsorptionAmount() > 0.0F;
+    public boolean applyEffectTick(final ServerLevel level, final LivingEntity mob, final int amplification) {
+        return mob.getAbsorptionAmount() > 0.0F;
     }
 
     @Override
-    public boolean shouldApplyEffectTickThisTick(int p_299365_, int p_298390_) {
+    public boolean shouldApplyEffectTickThisTick(final int tickCount, final int amplification) {
         return true;
     }
 
     @Override
-    public void onEffectStarted(LivingEntity p_298184_, int p_297925_) {
-        super.onEffectStarted(p_298184_, p_297925_);
-        p_298184_.setAbsorptionAmount(Math.max(p_298184_.getAbsorptionAmount(), (float)(4 * (1 + p_297925_))));
+    public void onEffectStarted(final LivingEntity mob, final int amplifier) {
+        super.onEffectStarted(mob, amplifier);
+        mob.setAbsorptionAmount(Math.max(mob.getAbsorptionAmount(), 4 * (1 + amplifier)));
     }
 }

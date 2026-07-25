@@ -17,7 +17,7 @@ public class ServerboundStatusRequestPacket implements Packet<ServerStatusPacket
         return StatusPacketTypes.SERVERBOUND_STATUS_REQUEST;
     }
 
-    public void handle(ServerStatusPacketListener p_135007_) {
-        p_135007_.handleStatusRequest(this);
+    public void handle(final ServerStatusPacketListener listener) {
+        listener.handleStatusRequest(this);
     }
 }

@@ -17,56 +17,56 @@ public class PlayerEnderChestContainer extends SimpleContainer {
         super(27);
     }
 
-    public void setActiveChest(EnderChestBlockEntity p_40106_) {
-        this.activeChest = p_40106_;
+    public void setActiveChest(final EnderChestBlockEntity activeChest) {
+        this.activeChest = activeChest;
     }
 
-    public boolean isActiveChest(EnderChestBlockEntity p_150634_) {
-        return this.activeChest == p_150634_;
+    public boolean isActiveChest(final EnderChestBlockEntity chest) {
+        return this.activeChest == chest;
     }
 
-    public void fromSlots(ValueInput.TypedInputList<ItemStackWithSlot> p_410579_) {
+    public void fromSlots(final ValueInput.TypedInputList<ItemStackWithSlot> list) {
         for (int i = 0; i < this.getContainerSize(); i++) {
             this.setItem(i, ItemStack.EMPTY);
         }
 
-        for (ItemStackWithSlot itemstackwithslot : p_410579_) {
-            if (itemstackwithslot.isValidInContainer(this.getContainerSize())) {
-                this.setItem(itemstackwithslot.slot(), itemstackwithslot.stack());
+        for (ItemStackWithSlot item : list) {
+            if (item.isValidInContainer(this.getContainerSize())) {
+                this.setItem(item.slot(), item.stack());
             }
         }
     }
 
-    public void storeAsSlots(ValueOutput.TypedOutputList<ItemStackWithSlot> p_409232_) {
+    public void storeAsSlots(final ValueOutput.TypedOutputList<ItemStackWithSlot> output) {
         for (int i = 0; i < this.getContainerSize(); i++) {
-            ItemStack itemstack = this.getItem(i);
-            if (!itemstack.isEmpty()) {
-                p_409232_.add(new ItemStackWithSlot(i, itemstack));
+            ItemStack itemStack = this.getItem(i);
+            if (!itemStack.isEmpty()) {
+                output.add(new ItemStackWithSlot(i, itemStack));
             }
         }
     }
 
     @Override
-    public boolean stillValid(Player p_40104_) {
-        return this.activeChest != null && !this.activeChest.stillValid(p_40104_) ? false : super.stillValid(p_40104_);
+    public boolean stillValid(final Player player) {
+        return this.activeChest != null && !this.activeChest.stillValid(player) ? false : super.stillValid(player);
     }
 
     @Override
-    public void startOpen(ContainerUser p_430167_) {
+    public void startOpen(final ContainerUser containerUser) {
         if (this.activeChest != null) {
-            this.activeChest.startOpen(p_430167_);
+            this.activeChest.startOpen(containerUser);
         }
 
-        super.startOpen(p_430167_);
+        super.startOpen(containerUser);
     }
 
     @Override
-    public void stopOpen(ContainerUser p_429559_) {
+    public void stopOpen(final ContainerUser containerUser) {
         if (this.activeChest != null) {
-            this.activeChest.stopOpen(p_429559_);
+            this.activeChest.stopOpen(containerUser);
         }
 
-        super.stopOpen(p_429559_);
+        super.stopOpen(containerUser);
         this.activeChest = null;
     }
 }

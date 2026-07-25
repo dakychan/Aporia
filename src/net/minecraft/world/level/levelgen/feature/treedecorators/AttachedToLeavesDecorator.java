@@ -3,7 +3,6 @@ package net.minecraft.world.level.levelgen.feature.treedecorators;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,15 +15,15 @@ import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvi
 
 public class AttachedToLeavesDecorator extends TreeDecorator {
     public static final MapCodec<AttachedToLeavesDecorator> CODEC = RecordCodecBuilder.mapCodec(
-        p_225996_ -> p_225996_.group(
-                Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(p_226014_ -> p_226014_.probability),
-                Codec.intRange(0, 16).fieldOf("exclusion_radius_xz").forGetter(p_226012_ -> p_226012_.exclusionRadiusXZ),
-                Codec.intRange(0, 16).fieldOf("exclusion_radius_y").forGetter(p_226010_ -> p_226010_.exclusionRadiusY),
-                BlockStateProvider.CODEC.fieldOf("block_provider").forGetter(p_226008_ -> p_226008_.blockProvider),
-                Codec.intRange(1, 16).fieldOf("required_empty_blocks").forGetter(p_226006_ -> p_226006_.requiredEmptyBlocks),
-                ExtraCodecs.nonEmptyList(Direction.CODEC.listOf()).fieldOf("directions").forGetter(p_225998_ -> p_225998_.directions)
+        i -> i.group(
+                Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(p -> p.probability),
+                Codec.intRange(0, 16).fieldOf("exclusion_radius_xz").forGetter(p -> p.exclusionRadiusXZ),
+                Codec.intRange(0, 16).fieldOf("exclusion_radius_y").forGetter(p -> p.exclusionRadiusY),
+                BlockStateProvider.CODEC.fieldOf("block_provider").forGetter(p -> p.blockProvider),
+                Codec.intRange(1, 16).fieldOf("required_empty_blocks").forGetter(p -> p.requiredEmptyBlocks),
+                ExtraCodecs.nonEmptyList(Direction.CODEC.listOf()).fieldOf("directions").forGetter(p -> p.directions)
             )
-            .apply(p_225996_, AttachedToLeavesDecorator::new)
+            .apply(i, AttachedToLeavesDecorator::new)
     );
     protected final float probability;
     protected final int exclusionRadiusXZ;
@@ -33,40 +32,49 @@ public class AttachedToLeavesDecorator extends TreeDecorator {
     protected final int requiredEmptyBlocks;
     protected final List<Direction> directions;
 
-    public AttachedToLeavesDecorator(float p_225988_, int p_225989_, int p_225990_, BlockStateProvider p_225991_, int p_225992_, List<Direction> p_225993_) {
-        this.probability = p_225988_;
-        this.exclusionRadiusXZ = p_225989_;
-        this.exclusionRadiusY = p_225990_;
-        this.blockProvider = p_225991_;
-        this.requiredEmptyBlocks = p_225992_;
-        this.directions = p_225993_;
+    public AttachedToLeavesDecorator(
+        final float probability,
+        final int exclusionRadiusXZ,
+        final int exclusionRadiusY,
+        final BlockStateProvider blockProvider,
+        final int requiredEmptyBlocks,
+        final List<Direction> directions
+    ) {
+        this.probability = probability;
+        this.exclusionRadiusXZ = exclusionRadiusXZ;
+        this.exclusionRadiusY = exclusionRadiusY;
+        this.blockProvider = blockProvider;
+        this.requiredEmptyBlocks = requiredEmptyBlocks;
+        this.directions = directions;
     }
 
     @Override
-    public void place(TreeDecorator.Context p_226000_) {
-        Set<BlockPos> set = new HashSet<>();
-        RandomSource randomsource = p_226000_.random();
+    public void place(final TreeDecorator.Context context) {
+        Set<BlockPos> propaguleBlacklist = new HashSet<>();
+        RandomSource random = context.random();
 
-        for (BlockPos blockpos : Util.shuffledCopy(p_226000_.leaves(), randomsource)) {
-            Direction direction = Util.getRandom(this.directions, randomsource);
-            BlockPos blockpos1 = blockpos.relative(direction);
-            if (!set.contains(blockpos1) && randomsource.nextFloat() < this.probability && this.hasRequiredEmptyBlocks(p_226000_, blockpos, direction)) {
-                BlockPos blockpos2 = blockpos1.offset(-this.exclusionRadiusXZ, -this.exclusionRadiusY, -this.exclusionRadiusXZ);
-                BlockPos blockpos3 = blockpos1.offset(this.exclusionRadiusXZ, this.exclusionRadiusY, this.exclusionRadiusXZ);
+        for (BlockPos leafPos : Util.shuffledCopy(context.leaves(), random)) {
+            Direction direction = Util.getRandom(this.directions, random);
+            BlockPos placementPos = leafPos.relative(direction);
+            if (!propaguleBlacklist.contains(placementPos) && random.nextFloat() < this.probability && this.hasRequiredEmptyBlocks(context, leafPos, direction)
+                )
+             {
+                BlockPos corner1 = placementPos.offset(-this.exclusionRadiusXZ, -this.exclusionRadiusY, -this.exclusionRadiusXZ);
+                BlockPos corner2 = placementPos.offset(this.exclusionRadiusXZ, this.exclusionRadiusY, this.exclusionRadiusXZ);
 
-                for (BlockPos blockpos4 : BlockPos.betweenClosed(blockpos2, blockpos3)) {
-                    set.add(blockpos4.immutable());
+                for (BlockPos inPos : BlockPos.betweenClosed(corner1, corner2)) {
+                    propaguleBlacklist.add(inPos.immutable());
                 }
 
-                p_226000_.setBlock(blockpos1, this.blockProvider.getState(randomsource, blockpos1));
+                context.setBlock(placementPos, this.blockProvider.getState(context.level(), random, placementPos));
             }
         }
     }
 
-    private boolean hasRequiredEmptyBlocks(TreeDecorator.Context p_226002_, BlockPos p_226003_, Direction p_226004_) {
+    private boolean hasRequiredEmptyBlocks(final TreeDecorator.Context context, final BlockPos leafPos, final Direction direction) {
         for (int i = 1; i <= this.requiredEmptyBlocks; i++) {
-            BlockPos blockpos = p_226003_.relative(p_226004_, i);
-            if (!p_226002_.isAir(blockpos)) {
+            BlockPos offsetPos = leafPos.relative(direction, i);
+            if (!context.isAir(offsetPos)) {
                 return false;
             }
         }

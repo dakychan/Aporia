@@ -2,7 +2,6 @@ package net.minecraft.world.inventory;
 
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundContainerSetSlotPacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,7 +13,6 @@ import net.minecraft.world.item.crafting.CraftingInput;
 import net.minecraft.world.item.crafting.CraftingRecipe;
 import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.item.crafting.RecipeType;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
 
@@ -33,53 +31,53 @@ public class CraftingMenu extends AbstractCraftingMenu {
     private final Player player;
     private boolean placingRecipe;
 
-    public CraftingMenu(int p_39353_, Inventory p_39354_) {
-        this(p_39353_, p_39354_, ContainerLevelAccess.NULL);
+    public CraftingMenu(final int containerId, final Inventory inventory) {
+        this(containerId, inventory, ContainerLevelAccess.NULL);
     }
 
-    public CraftingMenu(int p_39356_, Inventory p_39357_, ContainerLevelAccess p_39358_) {
-        super(MenuType.CRAFTING, p_39356_, 3, 3);
-        this.access = p_39358_;
-        this.player = p_39357_.player;
+    public CraftingMenu(final int containerId, final Inventory inventory, final ContainerLevelAccess access) {
+        super(MenuType.CRAFTING, containerId, 3, 3);
+        this.access = access;
+        this.player = inventory.player;
         this.addResultSlot(this.player, 124, 35);
         this.addCraftingGridSlots(30, 17);
-        this.addStandardInventorySlots(p_39357_, 8, 84);
+        this.addStandardInventorySlots(inventory, 8, 84);
     }
 
     protected static void slotChangedCraftingGrid(
-        AbstractContainerMenu p_150547_,
-        ServerLevel p_362728_,
-        Player p_150549_,
-        CraftingContainer p_150550_,
-        ResultContainer p_150551_,
-        @Nullable RecipeHolder<CraftingRecipe> p_344866_
+        final AbstractContainerMenu menu,
+        final ServerLevel level,
+        final Player player,
+        final CraftingContainer container,
+        final ResultContainer resultSlots,
+        final @Nullable RecipeHolder<CraftingRecipe> recipeHint
     ) {
-        CraftingInput craftinginput = p_150550_.asCraftInput();
-        ServerPlayer serverplayer = (ServerPlayer)p_150549_;
-        ItemStack itemstack = ItemStack.EMPTY;
-        Optional<RecipeHolder<CraftingRecipe>> optional = p_362728_.getServer().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, craftinginput, p_362728_, p_344866_);
-        if (optional.isPresent()) {
-            RecipeHolder<CraftingRecipe> recipeholder = optional.get();
-            CraftingRecipe craftingrecipe = recipeholder.value();
-            if (p_150551_.setRecipeUsed(serverplayer, recipeholder)) {
-                ItemStack itemstack1 = craftingrecipe.assemble(craftinginput, p_362728_.registryAccess());
-                if (itemstack1.isItemEnabled(p_362728_.enabledFeatures())) {
-                    itemstack = itemstack1;
+        CraftingInput input = container.asCraftInput();
+        ServerPlayer serverPlayer = (ServerPlayer)player;
+        ItemStack result = ItemStack.EMPTY;
+        Optional<RecipeHolder<CraftingRecipe>> maybeRecipe = level.getServer().getRecipeManager().getRecipeFor(RecipeType.CRAFTING, input, level, recipeHint);
+        if (maybeRecipe.isPresent()) {
+            RecipeHolder<CraftingRecipe> recipeHolder = maybeRecipe.get();
+            CraftingRecipe craftingRecipe = recipeHolder.value();
+            if (resultSlots.setRecipeUsed(serverPlayer, recipeHolder)) {
+                ItemStack recipeResult = craftingRecipe.assemble(input);
+                if (recipeResult.isItemEnabled(level.enabledFeatures())) {
+                    result = recipeResult;
                 }
             }
         }
 
-        p_150551_.setItem(0, itemstack);
-        p_150547_.setRemoteSlot(0, itemstack);
-        serverplayer.connection.send(new ClientboundContainerSetSlotPacket(p_150547_.containerId, p_150547_.incrementStateId(), 0, itemstack));
+        resultSlots.setItem(0, result);
+        menu.setRemoteSlot(0, result);
+        serverPlayer.connection.send(new ClientboundContainerSetSlotPacket(menu.containerId, menu.incrementStateId(), 0, result));
     }
 
     @Override
-    public void slotsChanged(Container p_39366_) {
+    public void slotsChanged(final Container container) {
         if (!this.placingRecipe) {
-            this.access.execute((p_359372_, p_359373_) -> {
-                if (p_359372_ instanceof ServerLevel serverlevel) {
-                    slotChangedCraftingGrid(this, serverlevel, this.player, this.craftSlots, this.resultSlots, null);
+            this.access.execute((level, pos) -> {
+                if (level instanceof ServerLevel serverLevel) {
+                    slotChangedCraftingGrid(this, serverLevel, this.player, this.craftSlots, this.resultSlots, null);
                 }
             });
         }
@@ -91,72 +89,72 @@ public class CraftingMenu extends AbstractCraftingMenu {
     }
 
     @Override
-    public void finishPlacingRecipe(ServerLevel p_368369_, RecipeHolder<CraftingRecipe> p_342309_) {
+    public void finishPlacingRecipe(final ServerLevel level, final RecipeHolder<CraftingRecipe> recipe) {
         this.placingRecipe = false;
-        slotChangedCraftingGrid(this, p_368369_, this.player, this.craftSlots, this.resultSlots, p_342309_);
+        slotChangedCraftingGrid(this, level, this.player, this.craftSlots, this.resultSlots, recipe);
     }
 
     @Override
-    public void removed(Player p_39389_) {
-        super.removed(p_39389_);
-        this.access.execute((p_39371_, p_39372_) -> this.clearContainer(p_39389_, this.craftSlots));
+    public void removed(final Player player) {
+        super.removed(player);
+        this.access.execute((level, pos) -> this.clearContainer(player, this.craftSlots));
     }
 
     @Override
-    public boolean stillValid(Player p_39368_) {
-        return stillValid(this.access, p_39368_, Blocks.CRAFTING_TABLE);
+    public boolean stillValid(final Player player) {
+        return stillValid(this.access, player, Blocks.CRAFTING_TABLE);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_39391_, int p_39392_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_39392_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_39392_ == 0) {
-                itemstack1.getItem().onCraftedBy(itemstack1, p_39391_);
-                if (!this.moveItemStackTo(itemstack1, 10, 46, true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex == 0) {
+                stack.getItem().onCraftedBy(stack, player);
+                if (!this.moveItemStackTo(stack, 10, 46, true)) {
                     return ItemStack.EMPTY;
                 }
 
-                slot.onQuickCraft(itemstack1, itemstack);
-            } else if (p_39392_ >= 10 && p_39392_ < 46) {
-                if (!this.moveItemStackTo(itemstack1, 1, 10, false)) {
-                    if (p_39392_ < 37) {
-                        if (!this.moveItemStackTo(itemstack1, 37, 46, false)) {
+                slot.onQuickCraft(stack, clicked);
+            } else if (slotIndex >= 10 && slotIndex < 46) {
+                if (!this.moveItemStackTo(stack, 1, 10, false)) {
+                    if (slotIndex < 37) {
+                        if (!this.moveItemStackTo(stack, 37, 46, false)) {
                             return ItemStack.EMPTY;
                         }
-                    } else if (!this.moveItemStackTo(itemstack1, 10, 37, false)) {
+                    } else if (!this.moveItemStackTo(stack, 10, 37, false)) {
                         return ItemStack.EMPTY;
                     }
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 10, 46, false)) {
+            } else if (!this.moveItemStackTo(stack, 10, 46, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
 
-            if (itemstack1.getCount() == itemstack.getCount()) {
+            if (stack.getCount() == clicked.getCount()) {
                 return ItemStack.EMPTY;
             }
 
-            slot.onTake(p_39391_, itemstack1);
-            if (p_39392_ == 0) {
-                p_39391_.drop(itemstack1, false);
+            slot.onTake(player, stack);
+            if (slotIndex == 0) {
+                player.drop(stack, false);
             }
         }
 
-        return itemstack;
+        return clicked;
     }
 
     @Override
-    public boolean canTakeItemForPickAll(ItemStack p_39381_, Slot p_39382_) {
-        return p_39382_.container != this.resultSlots && super.canTakeItemForPickAll(p_39381_, p_39382_);
+    public boolean canTakeItemForPickAll(final ItemStack carried, final Slot target) {
+        return target.container != this.resultSlots && super.canTakeItemForPickAll(carried, target);
     }
 
     @Override

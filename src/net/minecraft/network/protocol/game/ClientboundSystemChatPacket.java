@@ -22,8 +22,8 @@ public record ClientboundSystemChatPacket(Component content, boolean overlay) im
         return GamePacketTypes.CLIENTBOUND_SYSTEM_CHAT;
     }
 
-    public void handle(ClientGamePacketListener p_237864_) {
-        p_237864_.handleSystemChat(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSystemChat(this);
     }
 
     @Override

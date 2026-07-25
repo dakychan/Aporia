@@ -16,15 +16,15 @@ import net.minecraft.world.level.storage.ValueOutput;
 public class MinecartSpawner extends AbstractMinecart {
     private final BaseSpawner spawner = new BaseSpawner() {
         @Override
-        public void broadcastEvent(Level p_451201_, BlockPos p_454356_, int p_454162_) {
-            p_451201_.broadcastEntityEvent(MinecartSpawner.this, (byte)p_454162_);
+        public void broadcastEvent(final Level level, final BlockPos pos, final int id) {
+            level.broadcastEntityEvent(MinecartSpawner.this, (byte)id);
         }
     };
     private final Runnable ticker;
 
-    public MinecartSpawner(EntityType<? extends MinecartSpawner> p_457492_, Level p_458146_) {
-        super(p_457492_, p_458146_);
-        this.ticker = this.createTicker(p_458146_);
+    public MinecartSpawner(final EntityType<? extends MinecartSpawner> type, final Level level) {
+        super(type, level);
+        this.ticker = this.createTicker(level);
     }
 
     @Override
@@ -37,10 +37,10 @@ public class MinecartSpawner extends AbstractMinecart {
         return new ItemStack(Items.MINECART);
     }
 
-    private Runnable createTicker(Level p_451990_) {
-        return p_451990_ instanceof ServerLevel
-            ? () -> this.spawner.serverTick((ServerLevel)p_451990_, this.blockPosition())
-            : () -> this.spawner.clientTick(p_451990_, this.blockPosition());
+    private Runnable createTicker(final Level level) {
+        return level instanceof ServerLevel serverLevel
+            ? () -> this.spawner.serverTick(serverLevel, this.blockPosition())
+            : () -> this.spawner.clientTick(level, this.blockPosition());
     }
 
     @Override
@@ -49,20 +49,20 @@ public class MinecartSpawner extends AbstractMinecart {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_455377_) {
-        super.readAdditionalSaveData(p_455377_);
-        this.spawner.load(this.level(), this.blockPosition(), p_455377_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.spawner.load(this.level(), this.blockPosition(), input);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_459218_) {
-        super.addAdditionalSaveData(p_459218_);
-        this.spawner.save(p_459218_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        this.spawner.save(output);
     }
 
     @Override
-    public void handleEntityEvent(byte p_450874_) {
-        this.spawner.onEventTriggered(this.level(), p_450874_);
+    public void handleEntityEvent(final byte id) {
+        this.spawner.onEventTriggered(this.level(), id);
     }
 
     @Override

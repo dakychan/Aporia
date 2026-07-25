@@ -29,164 +29,165 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 
 public class LevelTicks<T> implements LevelTickAccess<T> {
-    private static final Comparator<LevelChunkTicks<?>> CONTAINER_DRAIN_ORDER = (p_193246_, p_193247_) -> ScheduledTick.INTRA_TICK_DRAIN_ORDER
-        .compare(p_193246_.peek(), p_193247_.peek());
+    private static final Comparator<LevelChunkTicks<?>> CONTAINER_DRAIN_ORDER = (o1, o2) -> ScheduledTick.INTRA_TICK_DRAIN_ORDER.compare(o1.peek(), o2.peek());
     private final LongPredicate tickCheck;
     private final Long2ObjectMap<LevelChunkTicks<T>> allContainers = new Long2ObjectOpenHashMap<>();
-    private final Long2LongMap nextTickForContainer = Util.make(new Long2LongOpenHashMap(), p_193262_ -> p_193262_.defaultReturnValue(Long.MAX_VALUE));
+    private final Long2LongMap nextTickForContainer = Util.make(new Long2LongOpenHashMap(), m -> m.defaultReturnValue(Long.MAX_VALUE));
     private final Queue<LevelChunkTicks<T>> containersToTick = new PriorityQueue<>(CONTAINER_DRAIN_ORDER);
     private final Queue<ScheduledTick<T>> toRunThisTick = new ArrayDeque<>();
     private final List<ScheduledTick<T>> alreadyRunThisTick = new ArrayList<>();
     private final Set<ScheduledTick<?>> toRunThisTickSet = new ObjectOpenCustomHashSet<>(ScheduledTick.UNIQUE_TICK_HASH);
-    private final BiConsumer<LevelChunkTicks<T>, ScheduledTick<T>> chunkScheduleUpdater = (p_193249_, p_193250_) -> {
-        if (p_193250_.equals(p_193249_.peek())) {
-            this.updateContainerScheduling(p_193250_);
+    private final BiConsumer<LevelChunkTicks<T>, ScheduledTick<T>> chunkScheduleUpdater = (container, newTick) -> {
+        if (newTick.equals(container.peek())) {
+            this.updateContainerScheduling(newTick);
         }
     };
 
-    public LevelTicks(LongPredicate p_193211_) {
-        this.tickCheck = p_193211_;
+    public LevelTicks(final LongPredicate tickCheck) {
+        this.tickCheck = tickCheck;
     }
 
-    public void addContainer(ChunkPos p_193232_, LevelChunkTicks<T> p_193233_) {
-        long i = p_193232_.toLong();
-        this.allContainers.put(i, p_193233_);
-        ScheduledTick<T> scheduledtick = p_193233_.peek();
-        if (scheduledtick != null) {
-            this.nextTickForContainer.put(i, scheduledtick.triggerTick());
+    public void addContainer(final ChunkPos pos, final LevelChunkTicks<T> container) {
+        long posKey = pos.pack();
+        this.allContainers.put(posKey, container);
+        ScheduledTick<T> nextTick = container.peek();
+        if (nextTick != null) {
+            this.nextTickForContainer.put(posKey, nextTick.triggerTick());
         }
 
-        p_193233_.setOnTickAdded(this.chunkScheduleUpdater);
+        container.setOnTickAdded(this.chunkScheduleUpdater);
     }
 
-    public void removeContainer(ChunkPos p_193230_) {
-        long i = p_193230_.toLong();
-        LevelChunkTicks<T> levelchunkticks = this.allContainers.remove(i);
-        this.nextTickForContainer.remove(i);
-        if (levelchunkticks != null) {
-            levelchunkticks.setOnTickAdded(null);
+    public void removeContainer(final ChunkPos pos) {
+        long chunkKey = pos.pack();
+        LevelChunkTicks<T> removedContainer = this.allContainers.remove(chunkKey);
+        this.nextTickForContainer.remove(chunkKey);
+        if (removedContainer != null) {
+            removedContainer.setOnTickAdded(null);
         }
     }
 
     @Override
-    public void schedule(ScheduledTick<T> p_193252_) {
-        long i = ChunkPos.asLong(p_193252_.pos());
-        LevelChunkTicks<T> levelchunkticks = this.allContainers.get(i);
-        if (levelchunkticks == null) {
-            Util.logAndPauseIfInIde("Trying to schedule tick in not loaded position " + p_193252_.pos());
+    public void schedule(final ScheduledTick<T> tick) {
+        long chunkKey = ChunkPos.pack(tick.pos());
+        LevelChunkTicks<T> tickContainer = this.allContainers.get(chunkKey);
+        if (tickContainer == null) {
+            Util.logAndPauseIfInIde("Trying to schedule tick in not loaded position " + tick.pos());
         } else {
-            levelchunkticks.schedule(p_193252_);
+            tickContainer.schedule(tick);
         }
     }
 
-    public void tick(long p_193226_, int p_193227_, BiConsumer<BlockPos, T> p_193228_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("collect");
-        this.collectTicks(p_193226_, p_193227_, profilerfiller);
-        profilerfiller.popPush("run");
-        profilerfiller.incrementCounter("ticksToRun", this.toRunThisTick.size());
-        this.runCollectedTicks(p_193228_);
-        profilerfiller.popPush("cleanup");
+    public void tick(final long currentTick, final int maxTicksToProcess, final BiConsumer<BlockPos, T> output) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("collect");
+        this.collectTicks(currentTick, maxTicksToProcess, profiler);
+        profiler.popPush("run");
+        profiler.incrementCounter("ticksToRun", this.toRunThisTick.size());
+        this.runCollectedTicks(output);
+        profiler.popPush("cleanup");
         this.cleanupAfterTick();
-        profilerfiller.pop();
+        profiler.pop();
     }
 
-    private void collectTicks(long p_193222_, int p_193223_, ProfilerFiller p_193224_) {
-        this.sortContainersToTick(p_193222_);
-        p_193224_.incrementCounter("containersToTick", this.containersToTick.size());
-        this.drainContainers(p_193222_, p_193223_);
+    private void collectTicks(final long currentTick, final int maxTicksToProcess, final ProfilerFiller profiler) {
+        this.sortContainersToTick(currentTick);
+        profiler.incrementCounter("containersToTick", this.containersToTick.size());
+        this.drainContainers(currentTick, maxTicksToProcess);
         this.rescheduleLeftoverContainers();
     }
 
-    private void sortContainersToTick(long p_193217_) {
-        ObjectIterator<Entry> objectiterator = Long2LongMaps.fastIterator(this.nextTickForContainer);
+    private void sortContainersToTick(final long currentTick) {
+        ObjectIterator<Entry> it = Long2LongMaps.fastIterator(this.nextTickForContainer);
 
-        while (objectiterator.hasNext()) {
-            Entry entry = objectiterator.next();
-            long i = entry.getLongKey();
-            long j = entry.getLongValue();
-            if (j <= p_193217_) {
-                LevelChunkTicks<T> levelchunkticks = this.allContainers.get(i);
-                if (levelchunkticks == null) {
-                    objectiterator.remove();
+        while (it.hasNext()) {
+            Entry entry = it.next();
+            long chunkPos = entry.getLongKey();
+            long nextTick = entry.getLongValue();
+            if (nextTick <= currentTick) {
+                LevelChunkTicks<T> candidateContainer = this.allContainers.get(chunkPos);
+                if (candidateContainer == null) {
+                    it.remove();
                 } else {
-                    ScheduledTick<T> scheduledtick = levelchunkticks.peek();
-                    if (scheduledtick == null) {
-                        objectiterator.remove();
-                    } else if (scheduledtick.triggerTick() > p_193217_) {
-                        entry.setValue(scheduledtick.triggerTick());
-                    } else if (this.tickCheck.test(i)) {
-                        objectiterator.remove();
-                        this.containersToTick.add(levelchunkticks);
+                    ScheduledTick<T> scheduledTick = candidateContainer.peek();
+                    if (scheduledTick == null) {
+                        it.remove();
+                    } else if (scheduledTick.triggerTick() > currentTick) {
+                        entry.setValue(scheduledTick.triggerTick());
+                    } else if (this.tickCheck.test(chunkPos)) {
+                        it.remove();
+                        this.containersToTick.add(candidateContainer);
                     }
                 }
             }
         }
     }
 
-    private void drainContainers(long p_193219_, int p_193220_) {
-        LevelChunkTicks<T> levelchunkticks;
-        while (this.canScheduleMoreTicks(p_193220_) && (levelchunkticks = this.containersToTick.poll()) != null) {
-            ScheduledTick<T> scheduledtick = levelchunkticks.poll();
-            this.scheduleForThisTick(scheduledtick);
-            this.drainFromCurrentContainer(this.containersToTick, levelchunkticks, p_193219_, p_193220_);
-            ScheduledTick<T> scheduledtick1 = levelchunkticks.peek();
-            if (scheduledtick1 != null) {
-                if (scheduledtick1.triggerTick() <= p_193219_ && this.canScheduleMoreTicks(p_193220_)) {
-                    this.containersToTick.add(levelchunkticks);
+    private void drainContainers(final long currentTick, final int maxTicksToProcess) {
+        LevelChunkTicks<T> topContainer;
+        while (this.canScheduleMoreTicks(maxTicksToProcess) && (topContainer = this.containersToTick.poll()) != null) {
+            ScheduledTick<T> tick = topContainer.poll();
+            this.scheduleForThisTick(tick);
+            this.drainFromCurrentContainer(this.containersToTick, topContainer, currentTick, maxTicksToProcess);
+            ScheduledTick<T> nextTick = topContainer.peek();
+            if (nextTick != null) {
+                if (nextTick.triggerTick() <= currentTick && this.canScheduleMoreTicks(maxTicksToProcess)) {
+                    this.containersToTick.add(topContainer);
                 } else {
-                    this.updateContainerScheduling(scheduledtick1);
+                    this.updateContainerScheduling(nextTick);
                 }
             }
         }
     }
 
     private void rescheduleLeftoverContainers() {
-        for (LevelChunkTicks<T> levelchunkticks : this.containersToTick) {
-            this.updateContainerScheduling(levelchunkticks.peek());
+        for (LevelChunkTicks<T> container : this.containersToTick) {
+            this.updateContainerScheduling(container.peek());
         }
     }
 
-    private void updateContainerScheduling(ScheduledTick<T> p_193280_) {
-        this.nextTickForContainer.put(ChunkPos.asLong(p_193280_.pos()), p_193280_.triggerTick());
+    private void updateContainerScheduling(final ScheduledTick<T> nextTick) {
+        this.nextTickForContainer.put(ChunkPos.pack(nextTick.pos()), nextTick.triggerTick());
     }
 
-    private void drainFromCurrentContainer(Queue<LevelChunkTicks<T>> p_193268_, LevelChunkTicks<T> p_193269_, long p_193270_, int p_193271_) {
-        if (this.canScheduleMoreTicks(p_193271_)) {
-            LevelChunkTicks<T> levelchunkticks = p_193268_.peek();
-            ScheduledTick<T> scheduledtick = levelchunkticks != null ? levelchunkticks.peek() : null;
+    private void drainFromCurrentContainer(
+        final Queue<LevelChunkTicks<T>> containersToTick, final LevelChunkTicks<T> currentContainer, final long currentTick, final int maxTicksToProcess
+    ) {
+        if (this.canScheduleMoreTicks(maxTicksToProcess)) {
+            LevelChunkTicks<T> nextBestContainer = containersToTick.peek();
+            ScheduledTick<T> nextFromNextContainer = nextBestContainer != null ? nextBestContainer.peek() : null;
 
-            while (this.canScheduleMoreTicks(p_193271_)) {
-                ScheduledTick<T> scheduledtick1 = p_193269_.peek();
-                if (scheduledtick1 == null
-                    || scheduledtick1.triggerTick() > p_193270_
-                    || scheduledtick != null && ScheduledTick.INTRA_TICK_DRAIN_ORDER.compare(scheduledtick1, scheduledtick) > 0) {
+            while (this.canScheduleMoreTicks(maxTicksToProcess)) {
+                ScheduledTick<T> nextFromCurrentContainer = currentContainer.peek();
+                if (nextFromCurrentContainer == null
+                    || nextFromCurrentContainer.triggerTick() > currentTick
+                    || nextFromNextContainer != null && ScheduledTick.INTRA_TICK_DRAIN_ORDER.compare(nextFromCurrentContainer, nextFromNextContainer) > 0) {
                     break;
                 }
 
-                p_193269_.poll();
-                this.scheduleForThisTick(scheduledtick1);
+                currentContainer.poll();
+                this.scheduleForThisTick(nextFromCurrentContainer);
             }
         }
     }
 
-    private void scheduleForThisTick(ScheduledTick<T> p_193286_) {
-        this.toRunThisTick.add(p_193286_);
+    private void scheduleForThisTick(final ScheduledTick<T> tick) {
+        this.toRunThisTick.add(tick);
     }
 
-    private boolean canScheduleMoreTicks(int p_193215_) {
-        return this.toRunThisTick.size() < p_193215_;
+    private boolean canScheduleMoreTicks(final int maxTicksToProcess) {
+        return this.toRunThisTick.size() < maxTicksToProcess;
     }
 
-    private void runCollectedTicks(BiConsumer<BlockPos, T> p_193273_) {
+    private void runCollectedTicks(final BiConsumer<BlockPos, T> output) {
         while (!this.toRunThisTick.isEmpty()) {
-            ScheduledTick<T> scheduledtick = this.toRunThisTick.poll();
+            ScheduledTick<T> entry = this.toRunThisTick.poll();
             if (!this.toRunThisTickSet.isEmpty()) {
-                this.toRunThisTickSet.remove(scheduledtick);
+                this.toRunThisTickSet.remove(entry);
             }
 
-            this.alreadyRunThisTick.add(scheduledtick);
-            p_193273_.accept(scheduledtick.pos(), scheduledtick.type());
+            this.alreadyRunThisTick.add(entry);
+            output.accept(entry.pos(), entry.type());
         }
     }
 
@@ -198,15 +199,15 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
     }
 
     @Override
-    public boolean hasScheduledTick(BlockPos p_193254_, T p_193255_) {
-        LevelChunkTicks<T> levelchunkticks = this.allContainers.get(ChunkPos.asLong(p_193254_));
-        return levelchunkticks != null && levelchunkticks.hasScheduledTick(p_193254_, p_193255_);
+    public boolean hasScheduledTick(final BlockPos pos, final T block) {
+        LevelChunkTicks<T> tickContainer = this.allContainers.get(ChunkPos.pack(pos));
+        return tickContainer != null && tickContainer.hasScheduledTick(pos, block);
     }
 
     @Override
-    public boolean willTickThisTick(BlockPos p_193282_, T p_193283_) {
+    public boolean willTickThisTick(final BlockPos pos, final T type) {
         this.calculateTickSetIfNeeded();
-        return this.toRunThisTickSet.contains(ScheduledTick.probe(p_193283_, p_193282_));
+        return this.toRunThisTickSet.contains(ScheduledTick.probe(type, pos));
     }
 
     private void calculateTickSetIfNeeded() {
@@ -215,62 +216,58 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
         }
     }
 
-    private void forContainersInArea(BoundingBox p_193237_, LevelTicks.PosAndContainerConsumer<T> p_193238_) {
-        int i = SectionPos.posToSectionCoord(p_193237_.minX());
-        int j = SectionPos.posToSectionCoord(p_193237_.minZ());
-        int k = SectionPos.posToSectionCoord(p_193237_.maxX());
-        int l = SectionPos.posToSectionCoord(p_193237_.maxZ());
+    private void forContainersInArea(final BoundingBox bb, final LevelTicks.PosAndContainerConsumer<T> ouput) {
+        int xMin = SectionPos.posToSectionCoord(bb.minX());
+        int zMin = SectionPos.posToSectionCoord(bb.minZ());
+        int xMax = SectionPos.posToSectionCoord(bb.maxX());
+        int zMax = SectionPos.posToSectionCoord(bb.maxZ());
 
-        for (int i1 = i; i1 <= k; i1++) {
-            for (int j1 = j; j1 <= l; j1++) {
-                long k1 = ChunkPos.asLong(i1, j1);
-                LevelChunkTicks<T> levelchunkticks = this.allContainers.get(k1);
-                if (levelchunkticks != null) {
-                    p_193238_.accept(k1, levelchunkticks);
+        for (int x = xMin; x <= xMax; x++) {
+            for (int z = zMin; z <= zMax; z++) {
+                long containerPos = ChunkPos.pack(x, z);
+                LevelChunkTicks<T> container = this.allContainers.get(containerPos);
+                if (container != null) {
+                    ouput.accept(containerPos, container);
                 }
             }
         }
     }
 
-    public void clearArea(BoundingBox p_193235_) {
-        Predicate<ScheduledTick<T>> predicate = p_193241_ -> p_193235_.isInside(p_193241_.pos());
-        this.forContainersInArea(p_193235_, (p_193276_, p_193277_) -> {
-            ScheduledTick<T> scheduledtick = p_193277_.peek();
-            p_193277_.removeIf(predicate);
-            ScheduledTick<T> scheduledtick1 = p_193277_.peek();
-            if (scheduledtick1 != scheduledtick) {
-                if (scheduledtick1 != null) {
-                    this.updateContainerScheduling(scheduledtick1);
+    public void clearArea(final BoundingBox area) {
+        Predicate<ScheduledTick<T>> tickInsideBB = t -> area.isInside(t.pos());
+        this.forContainersInArea(area, (pos, container) -> {
+            ScheduledTick<T> previousTop = container.peek();
+            container.removeIf(tickInsideBB);
+            ScheduledTick<T> newTop = container.peek();
+            if (newTop != previousTop) {
+                if (newTop != null) {
+                    this.updateContainerScheduling(newTop);
                 } else {
-                    this.nextTickForContainer.remove(p_193276_);
+                    this.nextTickForContainer.remove(pos);
                 }
             }
         });
-        this.alreadyRunThisTick.removeIf(predicate);
-        this.toRunThisTick.removeIf(predicate);
+        this.alreadyRunThisTick.removeIf(tickInsideBB);
+        this.toRunThisTick.removeIf(tickInsideBB);
     }
 
-    public void copyArea(BoundingBox p_193243_, Vec3i p_193244_) {
-        this.copyAreaFrom(this, p_193243_, p_193244_);
+    public void copyArea(final BoundingBox area, final Vec3i offset) {
+        this.copyAreaFrom(this, area, offset);
     }
 
-    public void copyAreaFrom(LevelTicks<T> p_265554_, BoundingBox p_265172_, Vec3i p_265318_) {
-        List<ScheduledTick<T>> list = new ArrayList<>();
-        Predicate<ScheduledTick<T>> predicate = p_200922_ -> p_265172_.isInside(p_200922_.pos());
-        p_265554_.alreadyRunThisTick.stream().filter(predicate).forEach(list::add);
-        p_265554_.toRunThisTick.stream().filter(predicate).forEach(list::add);
-        p_265554_.forContainersInArea(p_265172_, (p_200931_, p_200932_) -> p_200932_.getAll().filter(predicate).forEach(list::add));
-        LongSummaryStatistics longsummarystatistics = list.stream().mapToLong(ScheduledTick::subTickOrder).summaryStatistics();
-        long i = longsummarystatistics.getMin();
-        long j = longsummarystatistics.getMax();
-        list.forEach(
-            p_193260_ -> this.schedule(
+    public void copyAreaFrom(final LevelTicks<T> source, final BoundingBox area, final Vec3i offset) {
+        List<ScheduledTick<T>> ticksToAdd = new ArrayList<>();
+        Predicate<ScheduledTick<T>> tickInsideBB = t -> area.isInside(t.pos());
+        source.alreadyRunThisTick.stream().filter(tickInsideBB).forEach(ticksToAdd::add);
+        source.toRunThisTick.stream().filter(tickInsideBB).forEach(ticksToAdd::add);
+        source.forContainersInArea(area, (pos, container) -> container.getAll().filter(tickInsideBB).forEach(ticksToAdd::add));
+        LongSummaryStatistics info = ticksToAdd.stream().mapToLong(ScheduledTick::subTickOrder).summaryStatistics();
+        long minSubTick = info.getMin();
+        long maxSubTick = info.getMax();
+        ticksToAdd.forEach(
+            tick -> this.schedule(
                 new ScheduledTick<>(
-                    p_193260_.type(),
-                    p_193260_.pos().offset(p_265318_),
-                    p_193260_.triggerTick(),
-                    p_193260_.priority(),
-                    p_193260_.subTickOrder() - i + j + 1L
+                    tick.type(), tick.pos().offset(offset), tick.triggerTick(), tick.priority(), tick.subTickOrder() - minSubTick + maxSubTick + 1L
                 )
             )
         );
@@ -282,7 +279,7 @@ public class LevelTicks<T> implements LevelTickAccess<T> {
     }
 
     @FunctionalInterface
-    interface PosAndContainerConsumer<T> {
-        void accept(long p_193289_, LevelChunkTicks<T> p_193290_);
+    private interface PosAndContainerConsumer<T> {
+        void accept(long pos, LevelChunkTicks<T> container);
     }
 }

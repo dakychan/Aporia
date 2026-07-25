@@ -2,15 +2,11 @@ package net.minecraft.client.renderer.entity.state;
 
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.animal.parrot.Parrot;
 import net.minecraft.world.entity.player.PlayerSkin;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class AvatarRenderState extends HumanoidRenderState {
     public PlayerSkin skin = DefaultPlayerSkin.getDefaultSkin();
     public float capeFlap;
@@ -29,7 +25,6 @@ public class AvatarRenderState extends HumanoidRenderState {
     public float fallFlyingTimeInTicks;
     public boolean shouldApplyFlyingYRot;
     public float flyingYRot;
-    public @Nullable Component scoreText;
     public Parrot.@Nullable Variant parrotOnLeftShoulder;
     public Parrot.@Nullable Variant parrotOnRightShoulder;
     public int id;

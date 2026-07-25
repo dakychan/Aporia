@@ -24,7 +24,7 @@ public record ClientboundCustomReportDetailsPacket(Map<String, String> details) 
         return CommonPacketTypes.CLIENTBOUND_CUSTOM_REPORT_DETAILS;
     }
 
-    public void handle(ClientCommonPacketListener p_344451_) {
-        p_344451_.handleCustomReportDetails(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleCustomReportDetails(this);
     }
 }

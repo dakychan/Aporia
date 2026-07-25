@@ -14,24 +14,24 @@ public class RunAroundLikeCrazyGoal extends Goal {
     private double posY;
     private double posZ;
 
-    public RunAroundLikeCrazyGoal(AbstractHorse p_459032_, double p_25891_) {
-        this.horse = p_459032_;
-        this.speedModifier = p_25891_;
+    public RunAroundLikeCrazyGoal(final AbstractHorse mob, final double speedModifier) {
+        this.horse = mob;
+        this.speedModifier = speedModifier;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
     @Override
     public boolean canUse() {
         if (!this.horse.isMobControlled() && !this.horse.isTamed() && this.horse.isVehicle()) {
-            Vec3 vec3 = DefaultRandomPos.getPos(this.horse, 5, 4);
-            if (vec3 == null) {
+            Vec3 pos = DefaultRandomPos.getPos(this.horse, 5, 4);
+            if (pos == null) {
                 return false;
-            } else {
-                this.posX = vec3.x;
-                this.posY = vec3.y;
-                this.posZ = vec3.z;
-                return true;
             }
+
+            this.posX = pos.x;
+            this.posY = pos.y;
+            this.posZ = pos.z;
+            return true;
         } else {
             return false;
         }
@@ -50,15 +50,15 @@ public class RunAroundLikeCrazyGoal extends Goal {
     @Override
     public void tick() {
         if (!this.horse.isTamed() && this.horse.getRandom().nextInt(this.adjustedTickDelay(50)) == 0) {
-            Entity entity = this.horse.getFirstPassenger();
-            if (entity == null) {
+            Entity passenger = this.horse.getFirstPassenger();
+            if (passenger == null) {
                 return;
             }
 
-            if (entity instanceof Player player) {
-                int i = this.horse.getTemper();
-                int j = this.horse.getMaxTemper();
-                if (j > 0 && this.horse.getRandom().nextInt(j) < i) {
+            if (passenger instanceof Player player) {
+                int temper = this.horse.getTemper();
+                int maxTemper = this.horse.getMaxTemper();
+                if (maxTemper > 0 && this.horse.getRandom().nextInt(maxTemper) < temper) {
                     this.horse.tameWithName(player);
                     return;
                 }

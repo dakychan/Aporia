@@ -16,11 +16,8 @@ import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugRenderer {
     private final List<DebugRenderer.SimpleDebugRenderer> renderers = new ArrayList<>();
     private long lastDebugEntriesVersion;
@@ -72,11 +69,14 @@ public class DebugRenderer {
             this.renderers.add(new StructureRenderer());
         }
 
-        if (minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_BLOCK_LIGHT_LEVELS) || minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_SKY_LIGHT_LEVELS)) {
+        if (minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_BLOCK_LIGHT_LEVELS)
+            || minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_SKY_LIGHT_LEVELS)) {
             this.renderers
                 .add(
                     new LightDebugRenderer(
-                        minecraft, minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_BLOCK_LIGHT_LEVELS), minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_SKY_LIGHT_LEVELS)
+                        minecraft,
+                        minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_BLOCK_LIGHT_LEVELS),
+                        minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.VISUALIZE_SKY_LIGHT_LEVELS)
                     )
                 );
         }
@@ -136,64 +136,63 @@ public class DebugRenderer {
         this.renderers.add(new ChunkCullingDebugRenderer(minecraft));
     }
 
-    public void emitGizmos(Frustum p_450271_, double p_456660_, double p_456605_, double p_454166_, float p_454210_) {
+    public void emitGizmos(final Frustum frustum, final double camX, final double camY, final double camZ, final float partialTicks) {
         Minecraft minecraft = Minecraft.getInstance();
-        DebugValueAccess debugvalueaccess = minecraft.getConnection().createDebugValueAccess();
+        DebugValueAccess debugValues = minecraft.getConnection().createDebugValueAccess();
         if (minecraft.debugEntries.getCurrentlyEnabledVersion() != this.lastDebugEntriesVersion) {
             this.lastDebugEntriesVersion = minecraft.debugEntries.getCurrentlyEnabledVersion();
             this.refreshRendererList();
         }
 
-        for (DebugRenderer.SimpleDebugRenderer debugrenderer$simpledebugrenderer : this.renderers) {
-            debugrenderer$simpledebugrenderer.emitGizmos(p_456660_, p_456605_, p_454166_, debugvalueaccess, p_450271_, p_454210_);
+        for (DebugRenderer.SimpleDebugRenderer renderer : this.renderers) {
+            renderer.emitGizmos(camX, camY, camZ, debugValues, frustum, partialTicks);
         }
     }
 
-    public static Optional<Entity> getTargetedEntity(@Nullable Entity p_113449_, int p_113450_) {
-        if (p_113449_ == null) {
+    public static Optional<Entity> getTargetedEntity(final @Nullable Entity cameraEntity, final int maxTargetingRange) {
+        if (cameraEntity == null) {
             return Optional.empty();
         } else {
-            Vec3 vec3 = p_113449_.getEyePosition();
-            Vec3 vec31 = p_113449_.getViewVector(1.0F).scale(p_113450_);
-            Vec3 vec32 = vec3.add(vec31);
-            AABB aabb = p_113449_.getBoundingBox().expandTowards(vec31).inflate(1.0);
-            int i = p_113450_ * p_113450_;
-            EntityHitResult entityhitresult = ProjectileUtil.getEntityHitResult(p_113449_, vec3, vec32, aabb, EntitySelector.CAN_BE_PICKED, i);
-            if (entityhitresult == null) {
+            Vec3 from = cameraEntity.getEyePosition();
+            Vec3 pick = cameraEntity.getViewVector(1.0F).scale(maxTargetingRange);
+            Vec3 to = from.add(pick);
+            AABB box = cameraEntity.getBoundingBox().expandTowards(pick).inflate(1.0);
+            int rangeSquared = maxTargetingRange * maxTargetingRange;
+            EntityHitResult hitResult = ProjectileUtil.getEntityHitResult(cameraEntity, from, to, box, EntitySelector.CAN_BE_PICKED, rangeSquared);
+            if (hitResult == null) {
                 return Optional.empty();
             } else {
-                return vec3.distanceToSqr(entityhitresult.getLocation()) > i ? Optional.empty() : Optional.of(entityhitresult.getEntity());
+                return from.distanceToSqr(hitResult.getLocation()) > rangeSquared ? Optional.empty() : Optional.of(hitResult.getEntity());
             }
         }
     }
 
-    private static Vec3 mixColor(float p_362317_) {
-        float f = 5.99999F;
-        int i = (int)(Mth.clamp(p_362317_, 0.0F, 1.0F) * 5.99999F);
-        float f1 = p_362317_ * 5.99999F - i;
+    private static Vec3 mixColor(final float hueShift) {
+        float regions = 5.99999F;
+        int region = (int)(Mth.clamp(hueShift, 0.0F, 1.0F) * 5.99999F);
+        float progress = hueShift * 5.99999F - region;
 
-        return switch (i) {
-            case 0 -> new Vec3(1.0, f1, 0.0);
-            case 1 -> new Vec3(1.0F - f1, 1.0, 0.0);
-            case 2 -> new Vec3(0.0, 1.0, f1);
-            case 3 -> new Vec3(0.0, 1.0 - f1, 1.0);
-            case 4 -> new Vec3(f1, 0.0, 1.0);
-            case 5 -> new Vec3(1.0, 0.0, 1.0 - f1);
-            default -> throw new IllegalStateException("Unexpected value: " + i);
+        return switch (region) {
+            case 0 -> new Vec3(1.0, progress, 0.0);
+            case 1 -> new Vec3(1.0F - progress, 1.0, 0.0);
+            case 2 -> new Vec3(0.0, 1.0, progress);
+            case 3 -> new Vec3(0.0, 1.0 - progress, 1.0);
+            case 4 -> new Vec3(progress, 0.0, 1.0);
+            case 5 -> new Vec3(1.0, 0.0, 1.0 - progress);
+            default -> throw new IllegalStateException("Unexpected value: " + region);
         };
     }
 
-    private static Vec3 shiftHue(float p_366349_, float p_365255_, float p_365397_, float p_365478_) {
-        Vec3 vec3 = mixColor(p_365478_).scale(p_366349_);
-        Vec3 vec31 = mixColor((p_365478_ + 0.33333334F) % 1.0F).scale(p_365255_);
-        Vec3 vec32 = mixColor((p_365478_ + 0.6666667F) % 1.0F).scale(p_365397_);
-        Vec3 vec33 = vec3.add(vec31).add(vec32);
-        double d0 = Math.max(Math.max(1.0, vec33.x), Math.max(vec33.y, vec33.z));
-        return new Vec3(vec33.x / d0, vec33.y / d0, vec33.z / d0);
+    private static Vec3 shiftHue(final float r, final float g, final float b, final float hs) {
+        Vec3 rshifted = mixColor(hs).scale(r);
+        Vec3 gshifted = mixColor((hs + 0.33333334F) % 1.0F).scale(g);
+        Vec3 bshifted = mixColor((hs + 0.6666667F) % 1.0F).scale(b);
+        Vec3 combined = rshifted.add(gshifted).add(bshifted);
+        double max = Math.max(Math.max(1.0, combined.x), Math.max(combined.y, combined.z));
+        return new Vec3(combined.x / max, combined.y / max, combined.z / max);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface SimpleDebugRenderer {
-        void emitGizmos(double p_113509_, double p_113510_, double p_113511_, DebugValueAccess p_424575_, Frustum p_431256_, float p_454759_);
+        public interface SimpleDebugRenderer {
+        void emitGizmos(double camX, double camY, double camZ, DebugValueAccess debugValues, final Frustum frustum, final float partialTicks);
     }
 }

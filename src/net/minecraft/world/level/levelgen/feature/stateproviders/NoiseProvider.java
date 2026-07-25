@@ -10,20 +10,23 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 public class NoiseProvider extends NoiseBasedStateProvider {
-    public static final MapCodec<NoiseProvider> CODEC = RecordCodecBuilder.mapCodec(p_191462_ -> noiseProviderCodec(p_191462_).apply(p_191462_, NoiseProvider::new));
+    public static final MapCodec<NoiseProvider> CODEC = RecordCodecBuilder.mapCodec(i -> noiseProviderCodec(i).apply(i, NoiseProvider::new));
     protected final List<BlockState> states;
 
-    protected static <P extends NoiseProvider> P4<Mu<P>, Long, NormalNoise.NoiseParameters, Float, List<BlockState>> noiseProviderCodec(Instance<P> p_191460_) {
-        return noiseCodec(p_191460_).and(ExtraCodecs.nonEmptyList(BlockState.CODEC.listOf()).fieldOf("states").forGetter(p_191448_ -> p_191448_.states));
+    protected static <P extends NoiseProvider> P4<Mu<P>, Long, NormalNoise.NoiseParameters, Float, List<BlockState>> noiseProviderCodec(
+        final Instance<P> instance
+    ) {
+        return noiseCodec(instance).and(ExtraCodecs.nonEmptyList(BlockState.CODEC.listOf()).fieldOf("states").forGetter(p -> p.states));
     }
 
-    public NoiseProvider(long p_191442_, NormalNoise.NoiseParameters p_191443_, float p_191444_, List<BlockState> p_191445_) {
-        super(p_191442_, p_191443_, p_191444_);
-        this.states = p_191445_;
+    public NoiseProvider(final long seed, final NormalNoise.NoiseParameters parameters, final float scale, final List<BlockState> states) {
+        super(seed, parameters, scale);
+        this.states = states;
     }
 
     @Override
@@ -32,17 +35,17 @@ public class NoiseProvider extends NoiseBasedStateProvider {
     }
 
     @Override
-    public BlockState getState(RandomSource p_225913_, BlockPos p_225914_) {
-        return this.getRandomState(this.states, p_225914_, this.scale);
+    public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
+        return this.getRandomState(this.states, pos, this.scale);
     }
 
-    protected BlockState getRandomState(List<BlockState> p_191453_, BlockPos p_191454_, double p_191455_) {
-        double d0 = this.getNoiseValue(p_191454_, p_191455_);
-        return this.getRandomState(p_191453_, d0);
+    protected BlockState getRandomState(final List<BlockState> states, final BlockPos pos, final double scale) {
+        double noiseValue = this.getNoiseValue(pos, scale);
+        return this.getRandomState(states, noiseValue);
     }
 
-    protected BlockState getRandomState(List<BlockState> p_191450_, double p_191451_) {
-        double d0 = Mth.clamp((1.0 + p_191451_) / 2.0, 0.0, 0.9999);
-        return p_191450_.get((int)(d0 * p_191450_.size()));
+    protected BlockState getRandomState(final List<BlockState> states, final double noiseValue) {
+        double placementValue = Mth.clamp((1.0 + noiseValue) / 2.0, 0.0, 0.9999);
+        return states.get((int)(placementValue * states.size()));
     }
 }

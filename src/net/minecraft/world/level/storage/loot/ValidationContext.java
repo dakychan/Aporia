@@ -16,43 +16,60 @@ public class ValidationContext {
     private final Optional<HolderGetter.Provider> resolver;
     private final Set<ResourceKey<?>> visitedElements;
 
-    public ValidationContext(ProblemReporter p_312350_, ContextKeySet p_368637_, HolderGetter.Provider p_331032_) {
-        this(p_312350_, p_368637_, Optional.of(p_331032_), Set.of());
+    public ValidationContext(final ProblemReporter reporter, final ContextKeySet contextKeySet, final HolderGetter.Provider resolver) {
+        this(reporter, contextKeySet, Optional.of(resolver), Set.of());
     }
 
-    public ValidationContext(ProblemReporter p_310867_, ContextKeySet p_363228_) {
-        this(p_310867_, p_363228_, Optional.empty(), Set.of());
+    public ValidationContext(final ProblemReporter reporter, final ContextKeySet contextKeySet) {
+        this(reporter, contextKeySet, Optional.empty(), Set.of());
     }
 
-    private ValidationContext(ProblemReporter p_345071_, ContextKeySet p_370050_, Optional<HolderGetter.Provider> p_343446_, Set<ResourceKey<?>> p_344231_) {
-        this.reporter = p_345071_;
-        this.contextKeySet = p_370050_;
-        this.resolver = p_343446_;
-        this.visitedElements = p_344231_;
+    private ValidationContext(
+        final ProblemReporter reporter,
+        final ContextKeySet contextKeySet,
+        final Optional<HolderGetter.Provider> resolver,
+        final Set<ResourceKey<?>> visitedElements
+    ) {
+        this.reporter = reporter;
+        this.contextKeySet = contextKeySet;
+        this.resolver = resolver;
+        this.visitedElements = visitedElements;
     }
 
-    public ValidationContext forChild(ProblemReporter.PathElement p_407084_) {
-        return new ValidationContext(this.reporter.forChild(p_407084_), this.contextKeySet, this.resolver, this.visitedElements);
+    public ValidationContext forChild(final ProblemReporter.PathElement subContext) {
+        return new ValidationContext(this.reporter.forChild(subContext), this.contextKeySet, this.resolver, this.visitedElements);
     }
 
-    public ValidationContext enterElement(ProblemReporter.PathElement p_406676_, ResourceKey<?> p_331211_) {
-        Set<ResourceKey<?>> set = ImmutableSet.<ResourceKey<?>>builder().addAll(this.visitedElements).add(p_331211_).build();
-        return new ValidationContext(this.reporter.forChild(p_406676_), this.contextKeySet, this.resolver, set);
+    public ValidationContext forField(final String name) {
+        return this.forChild(new ProblemReporter.FieldPathElement(name));
     }
 
-    public boolean hasVisitedElement(ResourceKey<?> p_335461_) {
-        return this.visitedElements.contains(p_335461_);
+    public ValidationContext forIndexedField(final String name, final int index) {
+        return this.forChild(new ProblemReporter.IndexedFieldPathElement(name, index));
     }
 
-    public void reportProblem(ProblemReporter.Problem p_410393_) {
-        this.reporter.report(p_410393_);
+    public ValidationContext forMapField(final String name, final String key) {
+        return this.forChild(new ProblemReporter.MapEntryPathElement(name, key));
     }
 
-    public void validateContextUsage(LootContextUser p_368628_) {
-        Set<ContextKey<?>> set = p_368628_.getReferencedContextParams();
-        Set<ContextKey<?>> set1 = Sets.difference(set, this.contextKeySet.allowed());
-        if (!set1.isEmpty()) {
-            this.reporter.report(new ValidationContext.ParametersNotProvidedProblem(set1));
+    public ValidationContext enterElement(final ProblemReporter.PathElement subContext, final ResourceKey<?> element) {
+        Set<ResourceKey<?>> newVisitedElements = ImmutableSet.<ResourceKey<?>>builder().addAll(this.visitedElements).add(element).build();
+        return new ValidationContext(this.reporter.forChild(subContext), this.contextKeySet, this.resolver, newVisitedElements);
+    }
+
+    public boolean hasVisitedElement(final ResourceKey<?> element) {
+        return this.visitedElements.contains(element);
+    }
+
+    public void reportProblem(final ProblemReporter.Problem description) {
+        this.reporter.report(description);
+    }
+
+    public void validateContextUsage(final LootContextUser lootContextUser) {
+        Set<ContextKey<?>> allReferenced = lootContextUser.getReferencedContextParams();
+        Set<ContextKey<?>> notProvided = Sets.difference(allReferenced, this.contextKeySet.allowed());
+        if (!notProvided.isEmpty()) {
+            this.reporter.report(new ValidationContext.ParametersNotProvidedProblem(notProvided));
         }
     }
 
@@ -62,10 +79,6 @@ public class ValidationContext {
 
     public boolean allowsReferences() {
         return this.resolver.isPresent();
-    }
-
-    public ValidationContext setContextKeySet(ContextKeySet p_369204_) {
-        return new ValidationContext(this.reporter, p_369204_, this.resolver, this.visitedElements);
     }
 
     public ProblemReporter reporter() {

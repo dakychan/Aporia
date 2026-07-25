@@ -8,23 +8,23 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V3439 extends NamespacedSchema {
-    public V3439(int p_396938_, Schema p_397912_) {
-        super(p_396938_, p_397912_);
+    public V3439(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema p_393475_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(p_393475_);
-        this.register(map, "minecraft:sign", () -> sign(p_393475_));
+    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(schema);
+        this.register(map, "minecraft:sign", () -> sign(schema));
         return map;
     }
 
-    public static TypeTemplate sign(Schema p_391619_) {
+    public static TypeTemplate sign(final Schema schema) {
         return DSL.optionalFields(
             "front_text",
-            DSL.optionalFields("messages", DSL.list(References.TEXT_COMPONENT.in(p_391619_)), "filtered_messages", DSL.list(References.TEXT_COMPONENT.in(p_391619_))),
+            DSL.optionalFields("messages", DSL.list(References.TEXT_COMPONENT.in(schema)), "filtered_messages", DSL.list(References.TEXT_COMPONENT.in(schema))),
             "back_text",
-            DSL.optionalFields("messages", DSL.list(References.TEXT_COMPONENT.in(p_391619_)), "filtered_messages", DSL.list(References.TEXT_COMPONENT.in(p_391619_)))
+            DSL.optionalFields("messages", DSL.list(References.TEXT_COMPONENT.in(schema)), "filtered_messages", DSL.list(References.TEXT_COMPONENT.in(schema)))
         );
     }
 }

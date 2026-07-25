@@ -3,13 +3,12 @@ package net.minecraft.world.entity.animal.goat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
-import net.minecraft.server.level.ServerLevel;
+import java.util.List;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.UniformInt;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BabyFollowAdult;
@@ -50,33 +49,26 @@ public class GoatAi {
     private static final UniformInt TIME_BETWEEN_RAMS_SCREAMER = UniformInt.of(100, 300);
     private static final TargetingConditions RAM_TARGET_CONDITIONS = TargetingConditions.forCombat()
         .selector(
-            (p_449661_, p_449662_) -> !p_449661_.getType().equals(EntityType.GOAT)
-                && (p_449662_.getGameRules().get(GameRules.MOB_GRIEFING) || !p_449661_.getType().equals(EntityType.ARMOR_STAND))
-                && p_449662_.getWorldBorder().isWithinBounds(p_449661_.getBoundingBox())
+            (target, level) -> !target.is(EntityTypes.GOAT)
+                && (level.getGameRules().get(GameRules.MOB_GRIEFING) || !target.is(EntityTypes.ARMOR_STAND))
+                && level.getWorldBorder().isWithinBounds(target.getBoundingBox())
         );
     private static final float SPEED_MULTIPLIER_WHEN_RAMMING = 3.0F;
     public static final int RAM_MIN_DISTANCE = 4;
     public static final float ADULT_RAM_KNOCKBACK_FORCE = 2.5F;
     public static final float BABY_RAM_KNOCKBACK_FORCE = 1.0F;
 
-    protected static void initMemories(Goat p_218765_, RandomSource p_218766_) {
-        p_218765_.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, TIME_BETWEEN_LONG_JUMPS.sample(p_218766_));
-        p_218765_.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, TIME_BETWEEN_RAMS.sample(p_218766_));
+    protected static void initMemories(final Goat body, final RandomSource random) {
+        body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, TIME_BETWEEN_LONG_JUMPS.sample(random));
+        body.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, TIME_BETWEEN_RAMS.sample(random));
     }
 
-    protected static Brain<?> makeBrain(Brain<Goat> p_149448_) {
-        initCoreActivity(p_149448_);
-        initIdleActivity(p_149448_);
-        initLongJumpActivity(p_149448_);
-        initRamActivity(p_149448_);
-        p_149448_.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        p_149448_.setDefaultActivity(Activity.IDLE);
-        p_149448_.useDefaultActivity();
-        return p_149448_;
+    protected static List<ActivityData<Goat>> getActivities() {
+        return List.of(initCoreActivity(), initIdleActivity(), initLongJumpActivity(), initRamActivity());
     }
 
-    private static void initCoreActivity(Brain<Goat> p_149454_) {
-        p_149454_.addActivity(
+    private static ActivityData<Goat> initCoreActivity() {
+        return ActivityData.<Goat>create(
             Activity.CORE,
             0,
             ImmutableList.of(
@@ -91,37 +83,43 @@ public class GoatAi {
         );
     }
 
-    private static void initIdleActivity(Brain<Goat> p_149458_) {
-        p_149458_.addActivityWithConditions(
+    private static ActivityData<Goat> initIdleActivity() {
+        return ActivityData.<Goat>create(
             Activity.IDLE,
             ImmutableList.of(
-                Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
-                Pair.of(0, new AnimalMakeLove(EntityType.GOAT)),
-                Pair.of(1, new FollowTemptation(p_149446_ -> 1.25F)),
+                Pair.of(0, SetEntityLookTargetSometimes.create(EntityTypes.PLAYER, 6.0F, UniformInt.of(30, 60))),
+                Pair.of(0, new AnimalMakeLove(EntityTypes.GOAT)),
+                Pair.of(1, new FollowTemptation(s -> 1.25F)),
                 Pair.of(2, BabyFollowAdult.create(ADULT_FOLLOW_RANGE, 1.25F)),
                 Pair.of(
                     3,
                     new RunOne<>(
                         ImmutableList.of(
-                            Pair.of(RandomStroll.stroll(1.0F), 2),
-                            Pair.of(SetWalkTargetFromLookTarget.create(1.0F, 3), 2),
-                            Pair.of(new DoNothing(30, 60), 1)
+                            Pair.of(RandomStroll.stroll(1.0F), 2), Pair.of(SetWalkTargetFromLookTarget.create(1.0F, 3), 2), Pair.of(new DoNothing(30, 60), 1)
                         )
                     )
                 )
             ),
-            ImmutableSet.of(Pair.of(MemoryModuleType.RAM_TARGET, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT))
+            ImmutableSet.of(
+                Pair.of(MemoryModuleType.RAM_TARGET, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT)
+            )
         );
     }
 
-    private static void initLongJumpActivity(Brain<Goat> p_149462_) {
-        p_149462_.addActivityWithConditions(
+    private static ActivityData<Goat> initLongJumpActivity() {
+        return ActivityData.<Goat>create(
             Activity.LONG_JUMP,
             ImmutableList.of(
                 Pair.of(0, new LongJumpMidJump(TIME_BETWEEN_LONG_JUMPS, SoundEvents.GOAT_STEP)),
                 Pair.of(
                     1,
-                    new LongJumpToRandomPos<>(TIME_BETWEEN_LONG_JUMPS, 5, 5, 3.5714288F, p_149476_ -> p_149476_.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_LONG_JUMP : SoundEvents.GOAT_LONG_JUMP)
+                    new LongJumpToRandomPos<>(
+                        TIME_BETWEEN_LONG_JUMPS,
+                        5,
+                        5,
+                        3.5714288F,
+                        goat -> goat.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_LONG_JUMP : SoundEvents.GOAT_LONG_JUMP
+                    )
                 )
             ),
             ImmutableSet.of(
@@ -133,31 +131,31 @@ public class GoatAi {
         );
     }
 
-    private static void initRamActivity(Brain<Goat> p_149466_) {
-        p_149466_.addActivityWithConditions(
+    private static ActivityData<Goat> initRamActivity() {
+        return ActivityData.<Goat>create(
             Activity.RAM,
             ImmutableList.of(
                 Pair.of(
                     0,
                     new RamTarget(
-                        p_149474_ -> p_149474_.isScreamingGoat() ? TIME_BETWEEN_RAMS_SCREAMER : TIME_BETWEEN_RAMS,
+                        goat -> goat.isScreamingGoat() ? TIME_BETWEEN_RAMS_SCREAMER : TIME_BETWEEN_RAMS,
                         RAM_TARGET_CONDITIONS,
                         3.0F,
-                        p_449663_ -> p_449663_.isBaby() ? 1.0 : 2.5,
-                        p_149468_ -> p_149468_.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_RAM_IMPACT : SoundEvents.GOAT_RAM_IMPACT,
-                        p_359211_ -> SoundEvents.GOAT_HORN_BREAK
+                        goat -> goat.isBaby() ? 1.0 : 2.5,
+                        goat -> goat.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_RAM_IMPACT : SoundEvents.GOAT_RAM_IMPACT,
+                        var0 -> SoundEvents.GOAT_HORN_BREAK
                     )
                 ),
                 Pair.of(
                     1,
                     new PrepareRamNearestTarget<>(
-                        p_218770_ -> p_218770_.isScreamingGoat() ? TIME_BETWEEN_RAMS_SCREAMER.getMinValue() : TIME_BETWEEN_RAMS.getMinValue(),
+                        mob -> mob.isScreamingGoat() ? TIME_BETWEEN_RAMS_SCREAMER.minInclusive() : TIME_BETWEEN_RAMS.minInclusive(),
                         4,
                         7,
                         1.25F,
                         RAM_TARGET_CONDITIONS,
                         20,
-                        p_218768_ -> p_218768_.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_PREPARE_RAM : SoundEvents.GOAT_PREPARE_RAM
+                        goat -> goat.isScreamingGoat() ? SoundEvents.GOAT_SCREAMING_PREPARE_RAM : SoundEvents.GOAT_PREPARE_RAM
                     )
                 )
             ),
@@ -169,7 +167,7 @@ public class GoatAi {
         );
     }
 
-    public static void updateActivity(Goat p_149456_) {
-        p_149456_.getBrain().setActiveActivityToFirstValid(ImmutableList.of(Activity.RAM, Activity.LONG_JUMP, Activity.IDLE));
+    public static void updateActivity(final Goat body) {
+        body.getBrain().setActiveActivityToFirstValid(ImmutableList.of(Activity.RAM, Activity.LONG_JUMP, Activity.IDLE));
     }
 }

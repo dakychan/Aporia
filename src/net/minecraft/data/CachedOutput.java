@@ -7,10 +7,10 @@ import java.nio.file.Path;
 import net.minecraft.util.FileUtil;
 
 public interface CachedOutput {
-    CachedOutput NO_CACHE = (p_448624_, p_448625_, p_448626_) -> {
-        FileUtil.createDirectoriesSafe(p_448624_.getParent());
-        Files.write(p_448624_, p_448625_);
+    CachedOutput NO_CACHE = (path, input, hash) -> {
+        FileUtil.createDirectoriesSafe(path.getParent());
+        Files.write(path, input);
     };
 
-    void writeIfNeeded(Path p_236022_, byte[] p_236023_, HashCode p_236024_) throws IOException;
+    void writeIfNeeded(Path path, byte[] input, HashCode hash) throws IOException;
 }

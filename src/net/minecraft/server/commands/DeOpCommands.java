@@ -1,10 +1,8 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.Collection;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -17,35 +15,35 @@ import net.minecraft.server.players.PlayerList;
 public class DeOpCommands {
     private static final SimpleCommandExceptionType ERROR_NOT_OP = new SimpleCommandExceptionType(Component.translatable("commands.deop.failed"));
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_136889_) {
-        p_136889_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("deop")
                 .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .then(
                     Commands.argument("targets", GameProfileArgument.gameProfile())
-                        .suggests((p_136893_, p_136894_) -> SharedSuggestionProvider.suggest(p_136893_.getSource().getServer().getPlayerList().getOpNames(), p_136894_))
-                        .executes(p_136891_ -> deopPlayers(p_136891_.getSource(), GameProfileArgument.getGameProfiles(p_136891_, "targets")))
+                        .suggests((c, p) -> SharedSuggestionProvider.suggest(c.getSource().getServer().getPlayerList().getOpNames(), p))
+                        .executes(c -> deopPlayers(c.getSource(), GameProfileArgument.getGameProfiles(c, "targets")))
                 )
         );
     }
 
-    private static int deopPlayers(CommandSourceStack p_136898_, Collection<NameAndId> p_136899_) throws CommandSyntaxException {
-        PlayerList playerlist = p_136898_.getServer().getPlayerList();
-        int i = 0;
+    private static int deopPlayers(final CommandSourceStack source, final Collection<NameAndId> players) throws CommandSyntaxException {
+        PlayerList list = source.getServer().getPlayerList();
+        int count = 0;
 
-        for (NameAndId nameandid : p_136899_) {
-            if (playerlist.isOp(nameandid)) {
-                playerlist.deop(nameandid);
-                i++;
-                p_136898_.sendSuccess(() -> Component.translatable("commands.deop.success", p_136899_.iterator().next().name()), true);
+        for (NameAndId player : players) {
+            if (list.isOp(player)) {
+                list.deop(player);
+                count++;
+                source.sendSuccess(() -> Component.translatable("commands.deop.success", player.name()), true);
             }
         }
 
-        if (i == 0) {
+        if (count == 0) {
             throw ERROR_NOT_OP.create();
-        } else {
-            p_136898_.getServer().kickUnlistedPlayers();
-            return i;
         }
+
+        source.getServer().kickUnlistedPlayers();
+        return count;
     }
 }

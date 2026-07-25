@@ -10,7 +10,7 @@ public interface ResourceSuggestion extends SuggestionSupplier<StringReader> {
     Stream<Identifier> possibleResources();
 
     @Override
-    default Stream<String> possibleValues(ParseState<StringReader> p_334233_) {
+    default Stream<String> possibleValues(final ParseState<StringReader> state) {
         return this.possibleResources().map(Identifier::toString);
     }
 }

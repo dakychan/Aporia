@@ -15,14 +15,14 @@ public final class MutableComponent implements Component {
     private FormattedCharSequence visualOrderText = FormattedCharSequence.EMPTY;
     private @Nullable Language decomposedWith;
 
-    MutableComponent(ComponentContents p_237200_, List<Component> p_237201_, Style p_237202_) {
-        this.contents = p_237200_;
-        this.siblings = p_237201_;
-        this.style = p_237202_;
+    MutableComponent(final ComponentContents contents, final List<Component> siblings, final Style style) {
+        this.contents = contents;
+        this.siblings = siblings;
+        this.style = style;
     }
 
-    public static MutableComponent create(ComponentContents p_237205_) {
-        return new MutableComponent(p_237205_, Lists.newArrayList(), Style.EMPTY);
+    public static MutableComponent create(final ComponentContents contents) {
+        return new MutableComponent(contents, Lists.newArrayList(), Style.EMPTY);
     }
 
     @Override
@@ -35,8 +35,8 @@ public final class MutableComponent implements Component {
         return this.siblings;
     }
 
-    public MutableComponent setStyle(Style p_130943_) {
-        this.style = p_130943_;
+    public MutableComponent setStyle(final Style style) {
+        this.style = style;
         return this;
     }
 
@@ -45,37 +45,42 @@ public final class MutableComponent implements Component {
         return this.style;
     }
 
-    public MutableComponent append(String p_130947_) {
-        return p_130947_.isEmpty() ? this : this.append(Component.literal(p_130947_));
+    public MutableComponent append(final String text) {
+        return text.isEmpty() ? this : this.append(Component.literal(text));
     }
 
-    public MutableComponent append(Component p_130942_) {
-        this.siblings.add(p_130942_);
+    public MutableComponent append(final Component component) {
+        this.siblings.add(component);
         return this;
     }
 
-    public MutableComponent withStyle(UnaryOperator<Style> p_130939_) {
-        this.setStyle(p_130939_.apply(this.getStyle()));
+    public MutableComponent withStyle(final UnaryOperator<Style> updater) {
+        this.setStyle(updater.apply(this.getStyle()));
         return this;
     }
 
-    public MutableComponent withStyle(Style p_130949_) {
-        this.setStyle(p_130949_.applyTo(this.getStyle()));
+    public MutableComponent withStyle(final Style patch) {
+        this.setStyle(patch.applyTo(this.getStyle()));
         return this;
     }
 
-    public MutableComponent withStyle(ChatFormatting... p_130945_) {
-        this.setStyle(this.getStyle().applyFormats(p_130945_));
+    public MutableComponent withStyle(final ChatFormatting... formats) {
+        this.setStyle(this.getStyle().applyFormats(formats));
         return this;
     }
 
-    public MutableComponent withStyle(ChatFormatting p_130941_) {
-        this.setStyle(this.getStyle().applyFormat(p_130941_));
+    public MutableComponent withStyle(final ChatFormatting format) {
+        this.setStyle(this.getStyle().applyFormat(format));
         return this;
     }
 
-    public MutableComponent withColor(int p_312961_) {
-        this.setStyle(this.getStyle().withColor(p_312961_));
+    public MutableComponent withColor(final int color) {
+        this.setStyle(this.getStyle().withColor(color));
+        return this;
+    }
+
+    public MutableComponent withColor(final TextColor color) {
+        this.setStyle(this.getStyle().withColor(color));
         return this;
     }
 
@@ -86,57 +91,54 @@ public final class MutableComponent implements Component {
 
     @Override
     public FormattedCharSequence getVisualOrderText() {
-        Language language = Language.getInstance();
-        if (this.decomposedWith != language) {
-            this.visualOrderText = language.getVisualOrder(this);
-            this.decomposedWith = language;
+        Language currentLanguage = Language.getInstance();
+        if (this.decomposedWith != currentLanguage) {
+            this.visualOrderText = currentLanguage.getVisualOrder(this);
+            this.decomposedWith = currentLanguage;
         }
 
         return this.visualOrderText;
     }
 
     @Override
-    public boolean equals(Object p_237209_) {
-        return this == p_237209_
+    public boolean equals(final Object o) {
+        return this == o
             ? true
-            : p_237209_ instanceof MutableComponent mutablecomponent
-                && this.contents.equals(mutablecomponent.contents)
-                && this.style.equals(mutablecomponent.style)
-                && this.siblings.equals(mutablecomponent.siblings);
+            : o instanceof MutableComponent that && this.contents.equals(that.contents) && this.style.equals(that.style) && this.siblings.equals(that.siblings);
     }
 
     @Override
     public int hashCode() {
-        int i = 1;
-        i = 31 * i + this.contents.hashCode();
-        i = 31 * i + this.style.hashCode();
-        return 31 * i + this.siblings.hashCode();
+        int result = 1;
+        result = 31 * result + this.contents.hashCode();
+        result = 31 * result + this.style.hashCode();
+        return 31 * result + this.siblings.hashCode();
     }
 
     @Override
     public String toString() {
-        StringBuilder stringbuilder = new StringBuilder(this.contents.toString());
-        boolean flag = !this.style.isEmpty();
-        boolean flag1 = !this.siblings.isEmpty();
-        if (flag || flag1) {
-            stringbuilder.append('[');
-            if (flag) {
-                stringbuilder.append("style=");
-                stringbuilder.append(this.style);
+        StringBuilder result = new StringBuilder(this.contents.toString());
+        boolean hasStyle = !this.style.isEmpty();
+        boolean hasSiblings = !this.siblings.isEmpty();
+        if (hasStyle || hasSiblings) {
+            result.append('[');
+            if (hasStyle) {
+                result.append("style=");
+                result.append(this.style);
             }
 
-            if (flag && flag1) {
-                stringbuilder.append(", ");
+            if (hasStyle && hasSiblings) {
+                result.append(", ");
             }
 
-            if (flag1) {
-                stringbuilder.append("siblings=");
-                stringbuilder.append(this.siblings);
+            if (hasSiblings) {
+                result.append("siblings=");
+                result.append(this.siblings);
             }
 
-            stringbuilder.append(']');
+            result.append(']');
         }
 
-        return stringbuilder.toString();
+        return result.toString();
     }
 }

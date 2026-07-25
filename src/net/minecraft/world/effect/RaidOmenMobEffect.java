@@ -7,22 +7,22 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 
 class RaidOmenMobEffect extends MobEffect {
-    protected RaidOmenMobEffect(MobEffectCategory p_329670_, int p_332984_, ParticleOptions p_332864_) {
-        super(p_329670_, p_332984_, p_332864_);
+    protected RaidOmenMobEffect(final MobEffectCategory category, final int color, final ParticleOptions particleOptions) {
+        super(category, color, particleOptions);
     }
 
     @Override
-    public boolean shouldApplyEffectTickThisTick(int p_331901_, int p_333973_) {
-        return p_331901_ == 1;
+    public boolean shouldApplyEffectTickThisTick(final int remainingDuration, final int amplification) {
+        return remainingDuration == 1;
     }
 
     @Override
-    public boolean applyEffectTick(ServerLevel p_368233_, LivingEntity p_329323_, int p_331707_) {
-        if (p_329323_ instanceof ServerPlayer serverplayer && !p_329323_.isSpectator()) {
-            BlockPos blockpos = serverplayer.getRaidOmenPosition();
-            if (blockpos != null) {
-                p_368233_.getRaids().createOrExtendRaid(serverplayer, blockpos);
-                serverplayer.clearRaidOmenPosition();
+    public boolean applyEffectTick(final ServerLevel level, final LivingEntity mob, final int amplification) {
+        if (mob instanceof ServerPlayer player && !mob.isSpectator()) {
+            BlockPos raidOmenPosition = player.getRaidOmenPosition();
+            if (raidOmenPosition != null) {
+                level.getRaids().createOrExtendRaid(player, raidOmenPosition);
+                player.clearRaidOmenPosition();
                 return false;
             }
         }

@@ -7,7 +7,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.MultiLineTextWidget;
 import net.minecraft.client.gui.components.StringWidget;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.ConfirmLinkScreen;
@@ -16,11 +15,8 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonLinks;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class TelemetryInfoScreen extends Screen {
     private static final Component TITLE = Component.translatable("telemetry_info.screen.title");
     private static final Component DESCRIPTION = Component.translatable("telemetry_info.screen.description").withColor(-4539718);
@@ -40,10 +36,10 @@ public class TelemetryInfoScreen extends Screen {
     private @Nullable Checkbox checkbox;
     private double savedScroll;
 
-    public TelemetryInfoScreen(Screen p_261720_, Options p_262019_) {
+    public TelemetryInfoScreen(final Screen lastScreen, final Options options) {
         super(TITLE);
-        this.lastScreen = p_261720_;
-        this.options = p_262019_;
+        this.lastScreen = lastScreen;
+        this.options = options;
     }
 
     @Override
@@ -53,17 +49,17 @@ public class TelemetryInfoScreen extends Screen {
 
     @Override
     protected void init() {
-        LinearLayout linearlayout = this.layout.addToHeader(LinearLayout.vertical().spacing(4));
-        linearlayout.defaultCellSetting().alignHorizontallyCenter();
-        linearlayout.addChild(new StringWidget(TITLE, this.font));
-        this.description = linearlayout.addChild(new MultiLineTextWidget(DESCRIPTION, this.font).setCentered(true));
-        LinearLayout linearlayout1 = linearlayout.addChild(LinearLayout.horizontal().spacing(8));
-        linearlayout1.addChild(Button.builder(BUTTON_PRIVACY_STATEMENT, this::openPrivacyStatementLink).build());
-        linearlayout1.addChild(Button.builder(BUTTON_GIVE_FEEDBACK, this::openFeedbackLink).build());
-        LinearLayout linearlayout2 = this.layout.addToFooter(LinearLayout.vertical().spacing(4));
-        linearlayout2.defaultCellSetting().alignHorizontallyCenter();
+        LinearLayout header = this.layout.addToHeader(LinearLayout.vertical().spacing(4));
+        header.defaultCellSetting().alignHorizontallyCenter();
+        header.addChild(new StringWidget(TITLE, this.font));
+        this.description = header.addChild(new MultiLineTextWidget(DESCRIPTION, this.font).setCentered(true));
+        LinearLayout upperContentButtons = header.addChild(LinearLayout.horizontal().spacing(8));
+        upperContentButtons.addChild(Button.builder(BUTTON_PRIVACY_STATEMENT, this::openPrivacyStatementLink).build());
+        upperContentButtons.addChild(Button.builder(BUTTON_GIVE_FEEDBACK, this::openFeedbackLink).build());
+        LinearLayout footer = this.layout.addToFooter(LinearLayout.vertical().spacing(4));
+        footer.defaultCellSetting().alignHorizontallyCenter();
         if (EXTRA_TELEMETRY_AVAILABLE) {
-            this.checkbox = linearlayout2.addChild(
+            this.checkbox = footer.addChild(
                 Checkbox.builder(CHECKBOX_OPT_IN, this.font)
                     .maxWidth(this.width - 40)
                     .selected(this.options.telemetryOptInExtra())
@@ -72,15 +68,13 @@ public class TelemetryInfoScreen extends Screen {
             );
         }
 
-        LinearLayout linearlayout3 = linearlayout2.addChild(LinearLayout.horizontal().spacing(8));
-        linearlayout3.addChild(Button.builder(BUTTON_VIEW_DATA, this::openDataFolder).build());
-        linearlayout3.addChild(Button.builder(CommonComponents.GUI_DONE, p_325413_ -> this.onClose()).build());
-        LinearLayout linearlayout4 = this.layout.addToContents(LinearLayout.vertical().spacing(8));
-        this.telemetryEventWidget = linearlayout4.addChild(new TelemetryEventWidget(0, 0, this.width - 40, this.layout.getContentHeight(), this.font));
-        this.telemetryEventWidget.setOnScrolledListener(p_262168_ -> this.savedScroll = p_262168_);
-        this.layout.visitWidgets(p_325415_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_325415_);
-        });
+        LinearLayout footerButtons = footer.addChild(LinearLayout.horizontal().spacing(8));
+        footerButtons.addChild(Button.builder(BUTTON_VIEW_DATA, this::openDataFolder).build());
+        footerButtons.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).build());
+        LinearLayout content = this.layout.addToContents(LinearLayout.vertical().spacing(8));
+        this.telemetryEventWidget = content.addChild(new TelemetryEventWidget(0, 0, this.width - 40, this.layout.getContentHeight(), this.font));
+        this.telemetryEventWidget.setOnScrolledListener(scroll -> this.savedScroll = scroll);
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
     }
 
@@ -111,26 +105,26 @@ public class TelemetryInfoScreen extends Screen {
         }
     }
 
-    private void onOptInChanged(AbstractWidget p_312236_, boolean p_309488_) {
+    private void onOptInChanged(final AbstractWidget widget, final boolean value) {
         if (this.telemetryEventWidget != null) {
-            this.telemetryEventWidget.onOptInChanged(p_309488_);
+            this.telemetryEventWidget.onOptInChanged(value);
         }
     }
 
-    private void openPrivacyStatementLink(Button p_297730_) {
+    private void openPrivacyStatementLink(final Button button) {
         ConfirmLinkScreen.confirmLinkNow(this, CommonLinks.PRIVACY_STATEMENT);
     }
 
-    private void openFeedbackLink(Button p_261531_) {
+    private void openFeedbackLink(final Button button) {
         ConfirmLinkScreen.confirmLinkNow(this, CommonLinks.RELEASE_FEEDBACK);
     }
 
-    private void openDataFolder(Button p_261840_) {
+    private void openDataFolder(final Button button) {
         Util.getPlatform().openPath(this.minecraft.getTelemetryManager().getLogDirectory());
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 }

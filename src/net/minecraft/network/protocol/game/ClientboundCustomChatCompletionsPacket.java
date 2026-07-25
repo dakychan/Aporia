@@ -12,13 +12,13 @@ public record ClientboundCustomChatCompletionsPacket(ClientboundCustomChatComple
         ClientboundCustomChatCompletionsPacket::write, ClientboundCustomChatCompletionsPacket::new
     );
 
-    private ClientboundCustomChatCompletionsPacket(FriendlyByteBuf p_243340_) {
-        this(p_243340_.readEnum(ClientboundCustomChatCompletionsPacket.Action.class), p_243340_.readList(FriendlyByteBuf::readUtf));
+    private ClientboundCustomChatCompletionsPacket(final FriendlyByteBuf input) {
+        this(input.readEnum(ClientboundCustomChatCompletionsPacket.Action.class), input.readList(FriendlyByteBuf::readUtf));
     }
 
-    private void write(FriendlyByteBuf p_240782_) {
-        p_240782_.writeEnum(this.action);
-        p_240782_.writeCollection(this.entries, FriendlyByteBuf::writeUtf);
+    private void write(final FriendlyByteBuf output) {
+        output.writeEnum(this.action);
+        output.writeCollection(this.entries, FriendlyByteBuf::writeUtf);
     }
 
     @Override
@@ -26,11 +26,11 @@ public record ClientboundCustomChatCompletionsPacket(ClientboundCustomChatComple
         return GamePacketTypes.CLIENTBOUND_CUSTOM_CHAT_COMPLETIONS;
     }
 
-    public void handle(ClientGamePacketListener p_240794_) {
-        p_240794_.handleCustomChatCompletions(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleCustomChatCompletions(this);
     }
 
-    public static enum Action {
+    public enum Action {
         ADD,
         REMOVE,
         SET;

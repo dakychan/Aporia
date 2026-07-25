@@ -21,53 +21,53 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilde
 public class WoodlandMansionStructure extends Structure {
     public static final MapCodec<WoodlandMansionStructure> CODEC = simpleCodec(WoodlandMansionStructure::new);
 
-    public WoodlandMansionStructure(Structure.StructureSettings p_230225_) {
-        super(p_230225_);
+    public WoodlandMansionStructure(final Structure.StructureSettings settings) {
+        super(settings);
     }
 
     @Override
-    public Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext p_230235_) {
-        Rotation rotation = Rotation.getRandom(p_230235_.random());
-        BlockPos blockpos = this.getLowestYIn5by5BoxOffset7Blocks(p_230235_, rotation);
-        return blockpos.getY() < 60
+    public Optional<Structure.GenerationStub> findGenerationPoint(final Structure.GenerationContext context) {
+        Rotation rotation = Rotation.getRandom(context.random());
+        BlockPos startPos = this.getLowestYIn5by5BoxOffset7Blocks(context, rotation);
+        return startPos.getY() < 60
             ? Optional.empty()
-            : Optional.of(new Structure.GenerationStub(blockpos, p_230240_ -> this.generatePieces(p_230240_, p_230235_, blockpos, rotation)));
+            : Optional.of(new Structure.GenerationStub(startPos, builder -> this.generatePieces(builder, context, startPos, rotation)));
     }
 
-    private void generatePieces(StructurePiecesBuilder p_230242_, Structure.GenerationContext p_230243_, BlockPos p_230244_, Rotation p_230245_) {
-        List<WoodlandMansionPieces.WoodlandMansionPiece> list = Lists.newLinkedList();
-        WoodlandMansionPieces.generateMansion(p_230243_.structureTemplateManager(), p_230244_, p_230245_, list, p_230243_.random());
-        list.forEach(p_230242_::addPiece);
+    private void generatePieces(
+        final StructurePiecesBuilder builder, final Structure.GenerationContext context, final BlockPos startPos, final Rotation rotation
+    ) {
+        List<WoodlandMansionPieces.WoodlandMansionPiece> wmPieces = Lists.newLinkedList();
+        WoodlandMansionPieces.generateMansion(context.structureTemplateManager(), startPos, rotation, wmPieces, context.random());
+        wmPieces.forEach(builder::addPiece);
     }
 
     @Override
     public void afterPlace(
-        WorldGenLevel p_230227_,
-        StructureManager p_230228_,
-        ChunkGenerator p_230229_,
-        RandomSource p_230230_,
-        BoundingBox p_230231_,
-        ChunkPos p_230232_,
-        PiecesContainer p_230233_
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final RandomSource random,
+        final BoundingBox chunkBB,
+        final ChunkPos chunkPos,
+        final PiecesContainer pieces
     ) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        int i = p_230227_.getMinY();
-        BoundingBox boundingbox = p_230233_.calculateBoundingBox();
-        int j = boundingbox.minY();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int minY = level.getMinY();
+        BoundingBox boundingBox = pieces.calculateBoundingBox();
+        int yStart = boundingBox.minY();
 
-        for (int k = p_230231_.minX(); k <= p_230231_.maxX(); k++) {
-            for (int l = p_230231_.minZ(); l <= p_230231_.maxZ(); l++) {
-                blockpos$mutableblockpos.set(k, j, l);
-                if (!p_230227_.isEmptyBlock(blockpos$mutableblockpos)
-                    && boundingbox.isInside(blockpos$mutableblockpos)
-                    && p_230233_.isInsidePiece(blockpos$mutableblockpos)) {
-                    for (int i1 = j - 1; i1 > i; i1--) {
-                        blockpos$mutableblockpos.setY(i1);
-                        if (!p_230227_.isEmptyBlock(blockpos$mutableblockpos) && !p_230227_.getBlockState(blockpos$mutableblockpos).liquid()) {
+        for (int x = chunkBB.minX(); x <= chunkBB.maxX(); x++) {
+            for (int z = chunkBB.minZ(); z <= chunkBB.maxZ(); z++) {
+                pos.set(x, yStart, z);
+                if (!level.isEmptyBlock(pos) && boundingBox.isInside(pos) && pieces.isInsidePiece(pos)) {
+                    for (int y = yStart - 1; y > minY; y--) {
+                        pos.setY(y);
+                        if (!level.isEmptyBlock(pos) && !level.getBlockState(pos).liquid()) {
                             break;
                         }
 
-                        p_230227_.setBlock(blockpos$mutableblockpos, Blocks.COBBLESTONE.defaultBlockState(), 2);
+                        level.setBlock(pos, Blocks.COBBLESTONE.defaultBlockState(), 2);
                     }
                 }
             }

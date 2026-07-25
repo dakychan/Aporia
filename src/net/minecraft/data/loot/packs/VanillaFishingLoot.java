@@ -1,9 +1,9 @@
 package net.minecraft.data.loot.packs;
 
 import java.util.function.BiConsumer;
-import net.minecraft.advancements.criterion.EntityPredicate;
-import net.minecraft.advancements.criterion.FishingHookPredicate;
-import net.minecraft.advancements.criterion.LocationPredicate;
+import net.minecraft.advancements.predicates.LocationPredicate;
+import net.minecraft.advancements.predicates.entity.EntityPredicate;
+import net.minecraft.advancements.predicates.entity.FishingHookPredicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
@@ -31,9 +31,9 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public record VanillaFishingLoot(HolderLookup.Provider registries) implements LootTableSubProvider {
     @Override
-    public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> p_249559_) {
-        HolderLookup.RegistryLookup<Biome> registrylookup = this.registries.lookupOrThrow(Registries.BIOME);
-        p_249559_.accept(
+    public void generate(final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
+        HolderLookup.RegistryLookup<Biome> biomes = this.registries.lookupOrThrow(Registries.BIOME);
+        output.accept(
             BuiltInLootTables.FISHING,
             LootTable.lootTable()
                 .withPool(
@@ -46,22 +46,24 @@ public record VanillaFishingLoot(HolderLookup.Provider registries) implements Lo
                                 .setQuality(2)
                                 .when(
                                     LootItemEntityPropertyCondition.hasProperties(
-                                        LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().subPredicate(FishingHookPredicate.inOpenWater(true))
+                                        LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().fishingHook(FishingHookPredicate.inOpenWater(true))
                                     )
                                 )
                         )
                         .add(NestedLootTable.lootTableReference(BuiltInLootTables.FISHING_FISH).setWeight(85).setQuality(-1))
                 )
         );
-        p_249559_.accept(BuiltInLootTables.FISHING_FISH, fishingFishLootTable());
-        p_249559_.accept(
+        output.accept(BuiltInLootTables.FISHING_FISH, fishingFishLootTable());
+        output.accept(
             BuiltInLootTables.FISHING_JUNK,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .add(LootItem.lootTableItem(Blocks.LILY_PAD).setWeight(17))
                         .add(
-                            LootItem.lootTableItem(Items.LEATHER_BOOTS).setWeight(10).apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.0F, 0.9F)))
+                            LootItem.lootTableItem(Items.LEATHER_BOOTS)
+                                .setWeight(10)
+                                .apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.0F, 0.9F)))
                         )
                         .add(LootItem.lootTableItem(Items.LEATHER).setWeight(10))
                         .add(LootItem.lootTableItem(Items.BONE).setWeight(10))
@@ -82,9 +84,9 @@ public record VanillaFishingLoot(HolderLookup.Provider registries) implements Lo
                                         LocationPredicate.Builder.location()
                                             .setBiomes(
                                                 HolderSet.direct(
-                                                    registrylookup.getOrThrow(Biomes.JUNGLE),
-                                                    registrylookup.getOrThrow(Biomes.SPARSE_JUNGLE),
-                                                    registrylookup.getOrThrow(Biomes.BAMBOO_JUNGLE)
+                                                    biomes.getOrThrow(Biomes.JUNGLE),
+                                                    biomes.getOrThrow(Biomes.SPARSE_JUNGLE),
+                                                    biomes.getOrThrow(Biomes.BAMBOO_JUNGLE)
                                                 )
                                             )
                                     )
@@ -93,7 +95,7 @@ public record VanillaFishingLoot(HolderLookup.Provider registries) implements Lo
                         )
                 )
         );
-        p_249559_.accept(
+        output.accept(
             BuiltInLootTables.FISHING_TREASURE,
             LootTable.lootTable()
                 .withPool(
@@ -111,7 +113,8 @@ public record VanillaFishingLoot(HolderLookup.Provider registries) implements Lo
                                 .apply(EnchantWithLevelsFunction.enchantWithLevels(this.registries, ConstantValue.exactly(30.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Items.BOOK).apply(EnchantWithLevelsFunction.enchantWithLevels(this.registries, ConstantValue.exactly(30.0F)))
+                            LootItem.lootTableItem(Items.BOOK)
+                                .apply(EnchantWithLevelsFunction.enchantWithLevels(this.registries, ConstantValue.exactly(30.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.NAUTILUS_SHELL))
                 )

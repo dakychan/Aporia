@@ -21,7 +21,7 @@ public record ClientboundDebugBlockValuePacket(BlockPos blockPos, DebugSubscript
         return GamePacketTypes.CLIENTBOUND_DEBUG_BLOCK_VALUE;
     }
 
-    public void handle(ClientGamePacketListener p_426087_) {
-        p_426087_.handleDebugBlockValue(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDebugBlockValue(this);
     }
 }

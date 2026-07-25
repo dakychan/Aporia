@@ -10,7 +10,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.tags.BiomeTags;
 import net.minecraft.util.random.WeightedList;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.MobSpawnSettings;
@@ -45,102 +45,100 @@ import net.minecraft.world.level.levelgen.structure.structures.WoodlandMansionSt
 import net.minecraft.world.level.levelgen.structure.templatesystem.LiquidSettings;
 
 public class Structures {
-    public static void bootstrap(BootstrapContext<Structure> p_329393_) {
-        HolderGetter<Biome> holdergetter = p_329393_.lookup(Registries.BIOME);
-        HolderGetter<StructureTemplatePool> holdergetter1 = p_329393_.lookup(Registries.TEMPLATE_POOL);
-        p_329393_.register(
+    public static void bootstrap(final BootstrapContext<Structure> context) {
+        HolderGetter<Biome> biomes = context.lookup(Registries.BIOME);
+        HolderGetter<StructureTemplatePool> templates = context.lookup(Registries.TEMPLATE_POOL);
+        context.register(
             BuiltinStructures.PILLAGER_OUTPOST,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_PILLAGER_OUTPOST))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_PILLAGER_OUTPOST))
                     .spawnOverrides(
                         Map.of(
                             MobCategory.MONSTER,
                             new StructureSpawnOverride(
-                                StructureSpawnOverride.BoundingBoxType.STRUCTURE,
-                                WeightedList.of(new MobSpawnSettings.SpawnerData(EntityType.PILLAGER, 1, 1))
+                                StructureSpawnOverride.BoundingBoxType.STRUCTURE, WeightedList.of(new MobSpawnSettings.SpawnerData(EntityTypes.PILLAGER, 1, 1))
                             )
                         )
                     )
                     .terrainAdapation(TerrainAdjustment.BEARD_THIN)
                     .build(),
-                holdergetter1.getOrThrow(PillagerOutpostPools.START),
+                templates.getOrThrow(PillagerOutpostPools.START),
                 7,
                 ConstantHeight.of(VerticalAnchor.absolute(0)),
                 true,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.MINESHAFT,
             new MineshaftStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_MINESHAFT))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_MINESHAFT))
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_STRUCTURES)
                     .build(),
                 MineshaftStructure.Type.NORMAL
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.MINESHAFT_MESA,
             new MineshaftStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_MINESHAFT_MESA))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_MINESHAFT_MESA))
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_STRUCTURES)
                     .build(),
                 MineshaftStructure.Type.MESA
             )
         );
-        p_329393_.register(
-            BuiltinStructures.WOODLAND_MANSION, new WoodlandMansionStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_WOODLAND_MANSION)))
+        context.register(
+            BuiltinStructures.WOODLAND_MANSION,
+            new WoodlandMansionStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_WOODLAND_MANSION)))
         );
-        p_329393_.register(
-            BuiltinStructures.JUNGLE_TEMPLE, new JungleTempleStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_JUNGLE_TEMPLE)))
+        context.register(
+            BuiltinStructures.JUNGLE_TEMPLE, new JungleTempleStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_JUNGLE_TEMPLE)))
         );
-        p_329393_.register(
-            BuiltinStructures.DESERT_PYRAMID, new DesertPyramidStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_DESERT_PYRAMID)))
+        context.register(
+            BuiltinStructures.DESERT_PYRAMID, new DesertPyramidStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_DESERT_PYRAMID)))
         );
-        p_329393_.register(BuiltinStructures.IGLOO, new IglooStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_IGLOO))));
-        p_329393_.register(
-            BuiltinStructures.SHIPWRECK, new ShipwreckStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_SHIPWRECK)), false)
+        context.register(BuiltinStructures.IGLOO, new IglooStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_IGLOO))));
+        context.register(
+            BuiltinStructures.SHIPWRECK, new ShipwreckStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_SHIPWRECK)), false)
         );
-        p_329393_.register(
-            BuiltinStructures.SHIPWRECK_BEACHED, new ShipwreckStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_SHIPWRECK_BEACHED)), true)
+        context.register(
+            BuiltinStructures.SHIPWRECK_BEACHED,
+            new ShipwreckStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_SHIPWRECK_BEACHED)), true)
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.SWAMP_HUT,
             new SwampHutStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_SWAMP_HUT))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_SWAMP_HUT))
                     .spawnOverrides(
                         Map.of(
                             MobCategory.MONSTER,
                             new StructureSpawnOverride(
-                                StructureSpawnOverride.BoundingBoxType.PIECE,
-                                WeightedList.of(new MobSpawnSettings.SpawnerData(EntityType.WITCH, 1, 1))
+                                StructureSpawnOverride.BoundingBoxType.PIECE, WeightedList.of(new MobSpawnSettings.SpawnerData(EntityTypes.WITCH, 1, 1))
                             ),
                             MobCategory.CREATURE,
                             new StructureSpawnOverride(
-                                StructureSpawnOverride.BoundingBoxType.PIECE,
-                                WeightedList.of(new MobSpawnSettings.SpawnerData(EntityType.CAT, 1, 1))
+                                StructureSpawnOverride.BoundingBoxType.PIECE, WeightedList.of(new MobSpawnSettings.SpawnerData(EntityTypes.CAT, 1, 1))
                             )
                         )
                     )
                     .build()
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.STRONGHOLD,
             new StrongholdStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_STRONGHOLD)).terrainAdapation(TerrainAdjustment.BURY).build()
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_STRONGHOLD)).terrainAdapation(TerrainAdjustment.BURY).build()
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.OCEAN_MONUMENT,
             new OceanMonumentStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_OCEAN_MONUMENT))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_OCEAN_MONUMENT))
                     .spawnOverrides(
                         Map.of(
                             MobCategory.MONSTER,
                             new StructureSpawnOverride(
-                                StructureSpawnOverride.BoundingBoxType.STRUCTURE,
-                                WeightedList.of(new MobSpawnSettings.SpawnerData(EntityType.GUARDIAN, 2, 4))
+                                StructureSpawnOverride.BoundingBoxType.STRUCTURE, WeightedList.of(new MobSpawnSettings.SpawnerData(EntityTypes.GUARDIAN, 2, 4))
                             ),
                             MobCategory.UNDERGROUND_WATER_CREATURE,
                             new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.STRUCTURE, MobSpawnSettings.EMPTY_MOB_LIST),
@@ -151,181 +149,185 @@ public class Structures {
                     .build()
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.OCEAN_RUIN_COLD,
-            new OceanRuinStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_OCEAN_RUIN_COLD)), OceanRuinStructure.Type.COLD, 0.3F, 0.9F)
+            new OceanRuinStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_OCEAN_RUIN_COLD)), OceanRuinStructure.Type.COLD, 0.3F, 0.9F)
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.OCEAN_RUIN_WARM,
-            new OceanRuinStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_OCEAN_RUIN_WARM)), OceanRuinStructure.Type.WARM, 0.3F, 0.9F)
+            new OceanRuinStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_OCEAN_RUIN_WARM)), OceanRuinStructure.Type.WARM, 0.3F, 0.9F)
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.FORTRESS,
             new NetherFortressStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_NETHER_FORTRESS))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_NETHER_FORTRESS))
                     .spawnOverrides(
-                        Map.of(MobCategory.MONSTER, new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.PIECE, NetherFortressStructure.FORTRESS_ENEMIES))
+                        Map.of(
+                            MobCategory.MONSTER,
+                            new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.PIECE, NetherFortressStructure.FORTRESS_ENEMIES)
+                        )
                     )
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_DECORATION)
                     .build()
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.NETHER_FOSSIL,
             new NetherFossilStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_NETHER_FOSSIL))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_NETHER_FOSSIL))
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_DECORATION)
                     .terrainAdapation(TerrainAdjustment.BEARD_THIN)
                     .build(),
                 UniformHeight.of(VerticalAnchor.absolute(32), VerticalAnchor.belowTop(2))
             )
         );
-        p_329393_.register(BuiltinStructures.END_CITY, new EndCityStructure(new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_END_CITY))));
-        p_329393_.register(
+        context.register(BuiltinStructures.END_CITY, new EndCityStructure(new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_END_CITY))));
+        context.register(
             BuiltinStructures.BURIED_TREASURE,
             new BuriedTreasureStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_BURIED_TREASURE))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_BURIED_TREASURE))
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_STRUCTURES)
                     .build()
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.BASTION_REMNANT,
             new JigsawStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_BASTION_REMNANT)),
-                holdergetter1.getOrThrow(BastionPieces.START),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_BASTION_REMNANT)),
+                templates.getOrThrow(BastionPieces.START),
                 6,
                 ConstantHeight.of(VerticalAnchor.absolute(33)),
                 false
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.VILLAGE_PLAINS,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_VILLAGE_PLAINS)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
-                holdergetter1.getOrThrow(PlainVillagePools.START),
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_VILLAGE_PLAINS)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
+                templates.getOrThrow(PlainVillagePools.START),
                 6,
                 ConstantHeight.of(VerticalAnchor.absolute(0)),
                 true,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.VILLAGE_DESERT,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_VILLAGE_DESERT)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
-                holdergetter1.getOrThrow(DesertVillagePools.START),
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_VILLAGE_DESERT)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
+                templates.getOrThrow(DesertVillagePools.START),
                 6,
                 ConstantHeight.of(VerticalAnchor.absolute(0)),
                 true,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.VILLAGE_SAVANNA,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_VILLAGE_SAVANNA)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
-                holdergetter1.getOrThrow(SavannaVillagePools.START),
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_VILLAGE_SAVANNA))
+                    .terrainAdapation(TerrainAdjustment.BEARD_THIN)
+                    .build(),
+                templates.getOrThrow(SavannaVillagePools.START),
                 6,
                 ConstantHeight.of(VerticalAnchor.absolute(0)),
                 true,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.VILLAGE_SNOWY,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_VILLAGE_SNOWY)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
-                holdergetter1.getOrThrow(SnowyVillagePools.START),
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_VILLAGE_SNOWY)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
+                templates.getOrThrow(SnowyVillagePools.START),
                 6,
                 ConstantHeight.of(VerticalAnchor.absolute(0)),
                 true,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.VILLAGE_TAIGA,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_VILLAGE_TAIGA)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
-                holdergetter1.getOrThrow(TaigaVillagePools.START),
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_VILLAGE_TAIGA)).terrainAdapation(TerrainAdjustment.BEARD_THIN).build(),
+                templates.getOrThrow(TaigaVillagePools.START),
                 6,
                 ConstantHeight.of(VerticalAnchor.absolute(0)),
                 true,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_STANDARD,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_STANDARD)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_STANDARD)),
                 List.of(
                     new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.UNDERGROUND, 1.0F, 0.2F, false, false, true, false, 0.5F),
                     new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.ON_LAND_SURFACE, 0.5F, 0.2F, false, false, true, false, 0.5F)
                 )
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_DESERT,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_DESERT)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_DESERT)),
                 new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.PARTLY_BURIED, 0.0F, 0.0F, false, false, false, false, 1.0F)
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_JUNGLE,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_JUNGLE)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_JUNGLE)),
                 new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.ON_LAND_SURFACE, 0.5F, 0.8F, true, true, false, false, 1.0F)
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_SWAMP,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_SWAMP)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_SWAMP)),
                 new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.ON_OCEAN_FLOOR, 0.0F, 0.5F, false, true, false, false, 1.0F)
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_MOUNTAIN,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_MOUNTAIN)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_MOUNTAIN)),
                 List.of(
                     new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.IN_MOUNTAIN, 1.0F, 0.2F, false, false, true, false, 0.5F),
                     new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.ON_LAND_SURFACE, 0.5F, 0.2F, false, false, true, false, 0.5F)
                 )
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_OCEAN,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_OCEAN)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_OCEAN)),
                 new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.ON_OCEAN_FLOOR, 0.0F, 0.8F, false, false, true, false, 1.0F)
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.RUINED_PORTAL_NETHER,
             new RuinedPortalStructure(
-                new Structure.StructureSettings(holdergetter.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_NETHER)),
+                new Structure.StructureSettings(biomes.getOrThrow(BiomeTags.HAS_RUINED_PORTAL_NETHER)),
                 new RuinedPortalStructure.Setup(RuinedPortalPiece.VerticalPlacement.IN_NETHER, 0.5F, 0.0F, false, false, false, true, 1.0F)
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.ANCIENT_CITY,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_ANCIENT_CITY))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_ANCIENT_CITY))
                     .spawnOverrides(
                         Arrays.stream(MobCategory.values())
                             .collect(
                                 Collectors.toMap(
-                                    p_236555_ -> (MobCategory)p_236555_,
-                                    p_389732_ -> new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.STRUCTURE, WeightedList.of())
+                                    c -> (MobCategory)c, c -> new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.STRUCTURE, WeightedList.of())
                                 )
                             )
                     )
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_DECORATION)
                     .terrainAdapation(TerrainAdjustment.BEARD_BOX)
                     .build(),
-                holdergetter1.getOrThrow(AncientCityStructurePieces.START),
+                templates.getOrThrow(AncientCityStructurePieces.START),
                 Optional.of(Identifier.withDefaultNamespace("city_anchor")),
                 7,
                 ConstantHeight.of(VerticalAnchor.absolute(-27)),
@@ -337,37 +339,36 @@ public class Structures {
                 JigsawStructure.DEFAULT_LIQUID_SETTINGS
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.TRAIL_RUINS,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_TRAIL_RUINS))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_TRAIL_RUINS))
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_STRUCTURES)
                     .terrainAdapation(TerrainAdjustment.BURY)
                     .build(),
-                holdergetter1.getOrThrow(TrailRuinsStructurePools.START),
+                templates.getOrThrow(TrailRuinsStructurePools.START),
                 7,
                 ConstantHeight.of(VerticalAnchor.absolute(-15)),
                 false,
                 Heightmap.Types.WORLD_SURFACE_WG
             )
         );
-        p_329393_.register(
+        context.register(
             BuiltinStructures.TRIAL_CHAMBERS,
             new JigsawStructure(
-                new Structure.StructureSettings.Builder(holdergetter.getOrThrow(BiomeTags.HAS_TRIAL_CHAMBERS))
+                new Structure.StructureSettings.Builder(biomes.getOrThrow(BiomeTags.HAS_TRIAL_CHAMBERS))
                     .generationStep(GenerationStep.Decoration.UNDERGROUND_STRUCTURES)
                     .terrainAdapation(TerrainAdjustment.ENCAPSULATE)
                     .spawnOverrides(
                         Arrays.stream(MobCategory.values())
                             .collect(
                                 Collectors.toMap(
-                                    p_341082_ -> (MobCategory)p_341082_,
-                                    p_389731_ -> new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.PIECE, WeightedList.of())
+                                    c -> (MobCategory)c, c -> new StructureSpawnOverride(StructureSpawnOverride.BoundingBoxType.PIECE, WeightedList.of())
                                 )
                             )
                     )
                     .build(),
-                holdergetter1.getOrThrow(TrialChambersStructurePools.START),
+                templates.getOrThrow(TrialChambersStructurePools.START),
                 Optional.empty(),
                 20,
                 UniformHeight.of(VerticalAnchor.absolute(-40), VerticalAnchor.absolute(-20)),

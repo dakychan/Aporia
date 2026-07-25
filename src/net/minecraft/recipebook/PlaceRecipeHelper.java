@@ -6,54 +6,63 @@ import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.ShapedRecipe;
 
 public interface PlaceRecipeHelper {
-    static <T> void placeRecipe(int p_369532_, int p_361267_, Recipe<?> p_361929_, Iterable<T> p_367857_, PlaceRecipeHelper.Output<T> p_369633_) {
-        if (p_361929_ instanceof ShapedRecipe shapedrecipe) {
-            placeRecipe(p_369532_, p_361267_, shapedrecipe.getWidth(), shapedrecipe.getHeight(), p_367857_, p_369633_);
+    static <T> void placeRecipe(
+        final int gridWidth, final int gridHeight, final Recipe<?> recipe, final Iterable<T> entries, final PlaceRecipeHelper.Output<T> output
+    ) {
+        if (recipe instanceof ShapedRecipe shapedRecipe) {
+            placeRecipe(gridWidth, gridHeight, shapedRecipe.getWidth(), shapedRecipe.getHeight(), entries, output);
         } else {
-            placeRecipe(p_369532_, p_361267_, p_369532_, p_361267_, p_367857_, p_369633_);
+            placeRecipe(gridWidth, gridHeight, gridWidth, gridHeight, entries, output);
         }
     }
 
-    static <T> void placeRecipe(int p_363279_, int p_367196_, int p_360764_, int p_364759_, Iterable<T> p_367701_, PlaceRecipeHelper.Output<T> p_369100_) {
-        Iterator<T> iterator = p_367701_.iterator();
-        int i = 0;
+    static <T> void placeRecipe(
+        final int gridWidth,
+        final int gridHeight,
+        final int recipeWidth,
+        final int recipeHeight,
+        final Iterable<T> entries,
+        final PlaceRecipeHelper.Output<T> output
+    ) {
+        Iterator<T> iterator = entries.iterator();
+        int gridIndex = 0;
 
-        for (int j = 0; j < p_367196_; j++) {
-            boolean flag = p_364759_ < p_367196_ / 2.0F;
-            int k = Mth.floor(p_367196_ / 2.0F - p_364759_ / 2.0F);
-            if (flag && k > j) {
-                i += p_363279_;
-                j++;
+        for (int gridYPos = 0; gridYPos < gridHeight; gridYPos++) {
+            boolean shouldCenterRecipe = recipeHeight < gridHeight / 2.0F;
+            int startPosCenterRecipe = Mth.floor(gridHeight / 2.0F - recipeHeight / 2.0F);
+            if (shouldCenterRecipe && startPosCenterRecipe > gridYPos) {
+                gridIndex += gridWidth;
+                gridYPos++;
             }
 
-            for (int l = 0; l < p_363279_; l++) {
+            for (int gridXPos = 0; gridXPos < gridWidth; gridXPos++) {
                 if (!iterator.hasNext()) {
                     return;
                 }
 
-                flag = p_360764_ < p_363279_ / 2.0F;
-                k = Mth.floor(p_363279_ / 2.0F - p_360764_ / 2.0F);
-                int i1 = p_360764_;
-                boolean flag1 = l < p_360764_;
-                if (flag) {
-                    i1 = k + p_360764_;
-                    flag1 = k <= l && l < k + p_360764_;
+                shouldCenterRecipe = recipeWidth < gridWidth / 2.0F;
+                startPosCenterRecipe = Mth.floor(gridWidth / 2.0F - recipeWidth / 2.0F);
+                int totalRecipeWidthInGrid = recipeWidth;
+                boolean addIngredientToSlot = gridXPos < recipeWidth;
+                if (shouldCenterRecipe) {
+                    totalRecipeWidthInGrid = startPosCenterRecipe + recipeWidth;
+                    addIngredientToSlot = startPosCenterRecipe <= gridXPos && gridXPos < startPosCenterRecipe + recipeWidth;
                 }
 
-                if (flag1) {
-                    p_369100_.addItemToSlot(iterator.next(), i, l, j);
-                } else if (i1 == l) {
-                    i += p_363279_ - l;
+                if (addIngredientToSlot) {
+                    output.addItemToSlot(iterator.next(), gridIndex, gridXPos, gridYPos);
+                } else if (totalRecipeWidthInGrid == gridXPos) {
+                    gridIndex += gridWidth - gridXPos;
                     break;
                 }
 
-                i++;
+                gridIndex++;
             }
         }
     }
 
     @FunctionalInterface
-    public interface Output<T> {
-        void addItemToSlot(T p_363956_, int p_361316_, int p_365726_, int p_362457_);
+    interface Output<T> {
+        void addItemToSlot(T item, int gridIndex, int gridXPos, int gridYPos);
     }
 }

@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -18,20 +19,18 @@ public class CactusFlowerBlock extends VegetationBlock {
         return CODEC;
     }
 
-    public CactusFlowerBlock(BlockBehaviour.Properties p_393021_) {
-        super(p_393021_);
+    public CactusFlowerBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_397058_, BlockGetter p_391254_, BlockPos p_397308_, CollisionContext p_397333_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean mayPlaceOn(BlockState p_395694_, BlockGetter p_391810_, BlockPos p_391352_) {
-        BlockState blockstate = p_391810_.getBlockState(p_391352_);
-        return blockstate.is(Blocks.CACTUS)
-            || blockstate.is(Blocks.FARMLAND)
-            || blockstate.isFaceSturdy(p_391810_, p_391352_, Direction.UP, SupportType.CENTER);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        BlockState blockBelow = level.getBlockState(pos);
+        return blockBelow.is(BlockTags.SUPPORT_OVERRIDE_CACTUS_FLOWER) || blockBelow.isFaceSturdy(level, pos, Direction.UP, SupportType.CENTER);
     }
 }

@@ -5,14 +5,14 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 
 public record DiscardedPayload(Identifier id) implements CustomPacketPayload {
-    public static <T extends FriendlyByteBuf> StreamCodec<T, DiscardedPayload> codec(Identifier p_459293_, int p_334650_) {
-        return CustomPacketPayload.codec((p_330619_, p_329210_) -> {}, p_448782_ -> {
-            int i = p_448782_.readableBytes();
-            if (i >= 0 && i <= p_334650_) {
-                p_448782_.skipBytes(i);
-                return new DiscardedPayload(p_459293_);
+    public static <T extends FriendlyByteBuf> StreamCodec<T, DiscardedPayload> codec(final Identifier id, final int maxPayloadSize) {
+        return CustomPacketPayload.codec((payload, buf) -> {}, buf -> {
+            int length = buf.readableBytes();
+            if (length >= 0 && length <= maxPayloadSize) {
+                buf.skipBytes(length);
+                return new DiscardedPayload(id);
             } else {
-                throw new IllegalArgumentException("Payload may not be larger than " + p_334650_ + " bytes");
+                throw new IllegalArgumentException("Payload may not be larger than " + maxPayloadSize + " bytes");
             }
         });
     }

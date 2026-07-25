@@ -3,7 +3,6 @@ package net.minecraft.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.Message;
 import com.mojang.brigadier.ResultConsumer;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandExceptionType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.commands.execution.TraceCallbacks;
@@ -11,7 +10,7 @@ import net.minecraft.server.permissions.PermissionSetSupplier;
 import org.jspecify.annotations.Nullable;
 
 public interface ExecutionCommandSource<T extends ExecutionCommandSource<T>> extends PermissionSetSupplier {
-    T withCallback(CommandResultCallback p_311254_);
+    T withCallback(CommandResultCallback resultCallback);
 
     CommandResultCallback callback();
 
@@ -21,15 +20,15 @@ public interface ExecutionCommandSource<T extends ExecutionCommandSource<T>> ext
 
     CommandDispatcher<T> dispatcher();
 
-    void handleError(CommandExceptionType p_311834_, Message p_310647_, boolean p_310226_, @Nullable TraceCallbacks p_312033_);
+    void handleError(CommandExceptionType type, Message message, boolean forked, @Nullable TraceCallbacks tracer);
 
     boolean isSilent();
 
-    default void handleError(CommandSyntaxException p_311076_, boolean p_310707_, @Nullable TraceCallbacks p_311569_) {
-        this.handleError(p_311076_.getType(), p_311076_.getRawMessage(), p_310707_, p_311569_);
+    default void handleError(final CommandSyntaxException e, final boolean forked, final @Nullable TraceCallbacks tracer) {
+        this.handleError(e.getType(), e.getRawMessage(), forked, tracer);
     }
 
     static <T extends ExecutionCommandSource<T>> ResultConsumer<T> resultConsumer() {
-        return (p_310000_, p_311414_, p_311999_) -> p_310000_.getSource().callback().onResult(p_311414_, p_311999_);
+        return (context, success, result) -> context.getSource().callback().onResult(success, result);
     }
 }

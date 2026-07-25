@@ -8,36 +8,36 @@ import java.util.Map.Entry;
 import net.minecraft.world.item.ItemStack;
 
 public class EntityEquipment {
-    public static final Codec<EntityEquipment> CODEC = Codec.unboundedMap(EquipmentSlot.CODEC, ItemStack.CODEC).xmap(p_395484_ -> {
-        EnumMap<EquipmentSlot, ItemStack> enummap = new EnumMap<>(EquipmentSlot.class);
-        enummap.putAll((Map<? extends EquipmentSlot, ? extends ItemStack>)p_395484_);
-        return new EntityEquipment(enummap);
-    }, p_392815_ -> {
-        Map<EquipmentSlot, ItemStack> map = new EnumMap<>(p_392815_.items);
-        map.values().removeIf(ItemStack::isEmpty);
-        return map;
+    public static final Codec<EntityEquipment> CODEC = Codec.unboundedMap(EquipmentSlot.CODEC, ItemStack.CODEC).xmap(items -> {
+        EnumMap<EquipmentSlot, ItemStack> map = new EnumMap<>(EquipmentSlot.class);
+        map.putAll((Map<? extends EquipmentSlot, ? extends ItemStack>)items);
+        return new EntityEquipment(map);
+    }, equipment -> {
+        Map<EquipmentSlot, ItemStack> items = new EnumMap<>(equipment.items);
+        items.values().removeIf(ItemStack::isEmpty);
+        return items;
     });
     private final EnumMap<EquipmentSlot, ItemStack> items;
 
-    private EntityEquipment(EnumMap<EquipmentSlot, ItemStack> p_397671_) {
-        this.items = p_397671_;
+    private EntityEquipment(final EnumMap<EquipmentSlot, ItemStack> items) {
+        this.items = items;
     }
 
     public EntityEquipment() {
         this(new EnumMap<>(EquipmentSlot.class));
     }
 
-    public ItemStack set(EquipmentSlot p_397868_, ItemStack p_394019_) {
-        return Objects.requireNonNullElse(this.items.put(p_397868_, p_394019_), ItemStack.EMPTY);
+    public ItemStack set(final EquipmentSlot slot, final ItemStack itemStack) {
+        return Objects.requireNonNullElse(this.items.put(slot, itemStack), ItemStack.EMPTY);
     }
 
-    public ItemStack get(EquipmentSlot p_392964_) {
-        return this.items.getOrDefault(p_392964_, ItemStack.EMPTY);
+    public ItemStack get(final EquipmentSlot slot) {
+        return this.items.getOrDefault(slot, ItemStack.EMPTY);
     }
 
     public boolean isEmpty() {
-        for (ItemStack itemstack : this.items.values()) {
-            if (!itemstack.isEmpty()) {
+        for (ItemStack item : this.items.values()) {
+            if (!item.isEmpty()) {
                 return false;
             }
         }
@@ -45,29 +45,29 @@ public class EntityEquipment {
         return true;
     }
 
-    public void tick(Entity p_394224_) {
+    public void tick(final Entity owner) {
         for (Entry<EquipmentSlot, ItemStack> entry : this.items.entrySet()) {
-            ItemStack itemstack = entry.getValue();
-            if (!itemstack.isEmpty()) {
-                itemstack.inventoryTick(p_394224_.level(), p_394224_, entry.getKey());
+            ItemStack item = entry.getValue();
+            if (!item.isEmpty()) {
+                item.inventoryTick(owner.level(), owner, entry.getKey());
             }
         }
     }
 
-    public void setAll(EntityEquipment p_397344_) {
+    public void setAll(final EntityEquipment equipment) {
         this.items.clear();
-        this.items.putAll(p_397344_.items);
+        this.items.putAll(equipment.items);
     }
 
-    public void dropAll(LivingEntity p_394536_) {
-        for (ItemStack itemstack : this.items.values()) {
-            p_394536_.drop(itemstack, true, false);
+    public void dropAll(final LivingEntity dropper) {
+        for (ItemStack item : this.items.values()) {
+            dropper.drop(item, true, false);
         }
 
         this.clear();
     }
 
     public void clear() {
-        this.items.replaceAll((p_393205_, p_394162_) -> ItemStack.EMPTY);
+        this.items.replaceAll((s, v) -> ItemStack.EMPTY);
     }
 }

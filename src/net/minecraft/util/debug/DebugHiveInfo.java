@@ -20,7 +20,9 @@ public record DebugHiveInfo(Block type, int occupantCount, int honeyLevel, boole
         DebugHiveInfo::new
     );
 
-    public static DebugHiveInfo pack(BeehiveBlockEntity p_430984_) {
-        return new DebugHiveInfo(p_430984_.getBlockState().getBlock(), p_430984_.getOccupantCount(), BeehiveBlockEntity.getHoneyLevel(p_430984_.getBlockState()), p_430984_.isSedated());
+    public static DebugHiveInfo pack(final BeehiveBlockEntity beehive) {
+        return new DebugHiveInfo(
+            beehive.getBlockState().getBlock(), beehive.getOccupantCount(), BeehiveBlockEntity.getHoneyLevel(beehive.getBlockState()), beehive.isSedated()
+        );
     }
 }

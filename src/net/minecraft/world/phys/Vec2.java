@@ -2,6 +2,7 @@ package net.minecraft.world.phys;
 
 import com.mojang.serialization.Codec;
 import java.util.List;
+import java.util.Objects;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 
@@ -16,41 +17,48 @@ public class Vec2 {
     public static final Vec2 MIN = new Vec2(Float.MIN_VALUE, Float.MIN_VALUE);
     public static final Codec<Vec2> CODEC = Codec.FLOAT
         .listOf()
-        .comapFlatMap(
-            p_450124_ -> Util.fixedSize((List<Float>)p_450124_, 2).map(p_397033_ -> new Vec2(p_397033_.get(0), p_397033_.get(1))),
-            p_396734_ -> List.of(p_396734_.x, p_396734_.y)
-        );
+        .comapFlatMap(input -> Util.fixedSize((List<Float>)input, 2).map(floats -> new Vec2(floats.get(0), floats.get(1))), vec -> List.of(vec.x, vec.y));
     public final float x;
     public final float y;
 
-    public Vec2(float p_82474_, float p_82475_) {
-        this.x = p_82474_;
-        this.y = p_82475_;
+    public Vec2(final float x, final float y) {
+        this.x = x;
+        this.y = y;
     }
 
-    public Vec2 scale(float p_165904_) {
-        return new Vec2(this.x * p_165904_, this.y * p_165904_);
+    public Vec2 scale(final float s) {
+        return new Vec2(this.x * s, this.y * s);
     }
 
-    public float dot(Vec2 p_165906_) {
-        return this.x * p_165906_.x + this.y * p_165906_.y;
+    public float dot(final Vec2 v) {
+        return this.x * v.x + this.y * v.y;
     }
 
-    public Vec2 add(Vec2 p_165911_) {
-        return new Vec2(this.x + p_165911_.x, this.y + p_165911_.y);
+    public Vec2 add(final Vec2 rhs) {
+        return new Vec2(this.x + rhs.x, this.y + rhs.y);
     }
 
-    public Vec2 add(float p_165909_) {
-        return new Vec2(this.x + p_165909_, this.y + p_165909_);
+    public Vec2 add(final float v) {
+        return new Vec2(this.x + v, this.y + v);
     }
 
-    public boolean equals(Vec2 p_82477_) {
-        return this.x == p_82477_.x && this.y == p_82477_.y;
+    @Override
+    public boolean equals(final Object rhs) {
+        if (this == rhs) {
+            return true;
+        } else {
+            return !(rhs instanceof Vec2 other) ? false : this.x == other.x && this.y == other.y;
+        }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.x, this.y);
     }
 
     public Vec2 normalized() {
-        float f = Mth.sqrt(this.x * this.x + this.y * this.y);
-        return f < 1.0E-4F ? ZERO : new Vec2(this.x / f, this.y / f);
+        float dist = Mth.sqrt(this.x * this.x + this.y * this.y);
+        return dist < 1.0E-4F ? ZERO : new Vec2(this.x / dist, this.y / dist);
     }
 
     public float length() {
@@ -61,13 +69,19 @@ public class Vec2 {
         return this.x * this.x + this.y * this.y;
     }
 
-    public float distanceToSqr(Vec2 p_165915_) {
-        float f = p_165915_.x - this.x;
-        float f1 = p_165915_.y - this.y;
-        return f * f + f1 * f1;
+    public float distanceToSqr(final Vec2 p) {
+        float xd = p.x - this.x;
+        float yd = p.y - this.y;
+        return xd * xd + yd * yd;
     }
 
     public Vec2 negated() {
         return new Vec2(-this.x, -this.y);
+    }
+
+    public Vec2 rotate(final double angleRadians) {
+        float cosine = Mth.cos(angleRadians);
+        float sine = Mth.sin(angleRadians);
+        return new Vec2(this.x * cosine - this.y * sine, this.y * cosine + this.x * sine);
     }
 }

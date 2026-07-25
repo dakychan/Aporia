@@ -12,35 +12,35 @@ public abstract class GreedyPredicateParseRule implements Rule<StringReader, Str
     private final int maxSize;
     private final DelayedException<CommandSyntaxException> error;
 
-    public GreedyPredicateParseRule(int p_391684_, DelayedException<CommandSyntaxException> p_394387_) {
-        this(p_391684_, Integer.MAX_VALUE, p_394387_);
+    public GreedyPredicateParseRule(final int minSize, final DelayedException<CommandSyntaxException> error) {
+        this(minSize, Integer.MAX_VALUE, error);
     }
 
-    public GreedyPredicateParseRule(int p_394087_, int p_392470_, DelayedException<CommandSyntaxException> p_396328_) {
-        this.minSize = p_394087_;
-        this.maxSize = p_392470_;
-        this.error = p_396328_;
+    public GreedyPredicateParseRule(final int minSize, final int maxSize, final DelayedException<CommandSyntaxException> error) {
+        this.minSize = minSize;
+        this.maxSize = maxSize;
+        this.error = error;
     }
 
-    public @Nullable String parse(ParseState<StringReader> p_397364_) {
-        StringReader stringreader = p_397364_.input();
-        String s = stringreader.getString();
-        int i = stringreader.getCursor();
-        int j = i;
+    public @Nullable String parse(final ParseState<StringReader> state) {
+        StringReader input = state.input();
+        String fullString = input.getString();
+        int start = input.getCursor();
+        int pos = start;
 
-        while (j < s.length() && this.isAccepted(s.charAt(j)) && j - i < this.maxSize) {
-            j++;
+        while (pos < fullString.length() && this.isAccepted(fullString.charAt(pos)) && pos - start < this.maxSize) {
+            pos++;
         }
 
-        int k = j - i;
-        if (k < this.minSize) {
-            p_397364_.errorCollector().store(p_397364_.mark(), this.error);
+        int length = pos - start;
+        if (length < this.minSize) {
+            state.errorCollector().store(state.mark(), this.error);
             return null;
         } else {
-            stringreader.setCursor(j);
-            return s.substring(i, j);
+            input.setCursor(pos);
+            return fullString.substring(start, pos);
         }
     }
 
-    protected abstract boolean isAccepted(char p_395163_);
+    protected abstract boolean isAccepted(char c);
 }

@@ -9,10 +9,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.LayeredRegistryAccess;
 import net.minecraft.core.Registry;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.RegistrySynchronization;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.Identifier;
@@ -20,56 +18,58 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.RegistryLayer;
 
 public class TagNetworkSerialization {
-    public static Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> serializeTagsToNetwork(LayeredRegistryAccess<RegistryLayer> p_251774_) {
-        return RegistrySynchronization.networkSafeRegistries(p_251774_)
-            .map(p_203949_ -> Pair.of(p_203949_.key(), serializeToNetwork(p_203949_.value())))
-            .filter(p_358788_ -> !p_358788_.getSecond().isEmpty())
+    public static Map<ResourceKey<? extends Registry<?>>, TagNetworkSerialization.NetworkPayload> serializeTagsToNetwork(
+        final LayeredRegistryAccess<RegistryLayer> registries
+    ) {
+        return RegistrySynchronization.networkSafeRegistries(registries)
+            .map(e -> Pair.of(e.key(), serializeToNetwork(e.value())))
+            .filter(e -> !e.getSecond().isEmpty())
             .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
     }
 
-    private static <T> TagNetworkSerialization.NetworkPayload serializeToNetwork(Registry<T> p_203943_) {
-        Map<Identifier, IntList> map = new HashMap<>();
-        p_203943_.getTags().forEach(p_358791_ -> {
-            IntList intlist = new IntArrayList(p_358791_.size());
+    private static <T> TagNetworkSerialization.NetworkPayload serializeToNetwork(final Registry<T> registry) {
+        Map<Identifier, IntList> result = new HashMap<>();
+        registry.getTags().forEach(tag -> {
+            IntList ids = new IntArrayList(tag.size());
 
-            for (Holder<T> holder : p_358791_) {
+            for (Holder<T> holder : tag) {
                 if (holder.kind() != Holder.Kind.REFERENCE) {
                     throw new IllegalStateException("Can't serialize unregistered value " + holder);
                 }
 
-                intlist.add(p_203943_.getId(holder.value()));
+                ids.add(registry.getId(holder.value()));
             }
 
-            map.put(p_358791_.key().location(), intlist);
+            result.put(tag.key().location(), ids);
         });
-        return new TagNetworkSerialization.NetworkPayload(map);
+        return new TagNetworkSerialization.NetworkPayload(result);
     }
 
-    static <T> TagLoader.LoadResult<T> deserializeTagsFromNetwork(Registry<T> p_203954_, TagNetworkSerialization.NetworkPayload p_203955_) {
-        ResourceKey<? extends Registry<T>> resourcekey = p_203954_.key();
-        Map<TagKey<T>, List<Holder<T>>> map = new HashMap<>();
-        p_203955_.tags.forEach((p_449235_, p_449236_) -> {
-            TagKey<T> tagkey = TagKey.create(resourcekey, p_449235_);
-            List<Holder<T>> list = p_449236_.intStream().mapToObj(p_203954_::get).flatMap(Optional::stream).collect(Collectors.toUnmodifiableList());
-            map.put(tagkey, list);
+    private static <T> TagLoader.LoadResult<T> deserializeTagsFromNetwork(final Registry<T> registry, final TagNetworkSerialization.NetworkPayload payload) {
+        ResourceKey<? extends Registry<T>> registryKey = registry.key();
+        Map<TagKey<T>, List<Holder<T>>> tags = new HashMap<>();
+        payload.tags.forEach((key, ids) -> {
+            TagKey<T> tagKey = TagKey.create(registryKey, key);
+            List<Holder<T>> values = ids.intStream().mapToObj(registry::get).flatMap(Optional::stream).collect(Collectors.toUnmodifiableList());
+            tags.put(tagKey, values);
         });
-        return new TagLoader.LoadResult<>(resourcekey, map);
+        return new TagLoader.LoadResult<>(registryKey, tags);
     }
 
     public static final class NetworkPayload {
         public static final TagNetworkSerialization.NetworkPayload EMPTY = new TagNetworkSerialization.NetworkPayload(Map.of());
-        final Map<Identifier, IntList> tags;
+        private final Map<Identifier, IntList> tags;
 
-        NetworkPayload(Map<Identifier, IntList> p_203965_) {
-            this.tags = p_203965_;
+        public NetworkPayload(final Map<Identifier, IntList> tags) {
+            this.tags = tags;
         }
 
-        public void write(FriendlyByteBuf p_203968_) {
-            p_203968_.writeMap(this.tags, FriendlyByteBuf::writeIdentifier, FriendlyByteBuf::writeIntIdList);
+        public void write(final FriendlyByteBuf buf) {
+            buf.writeMap(this.tags, FriendlyByteBuf::writeIdentifier, FriendlyByteBuf::writeIntIdList);
         }
 
-        public static TagNetworkSerialization.NetworkPayload read(FriendlyByteBuf p_203970_) {
-            return new TagNetworkSerialization.NetworkPayload(p_203970_.readMap(FriendlyByteBuf::readIdentifier, FriendlyByteBuf::readIntIdList));
+        public static TagNetworkSerialization.NetworkPayload read(final FriendlyByteBuf buf) {
+            return new TagNetworkSerialization.NetworkPayload(buf.readMap(FriendlyByteBuf::readIdentifier, FriendlyByteBuf::readIntIdList));
         }
 
         public boolean isEmpty() {
@@ -80,8 +80,8 @@ public class TagNetworkSerialization {
             return this.tags.size();
         }
 
-        public <T> TagLoader.LoadResult<T> resolve(Registry<T> p_365168_) {
-            return TagNetworkSerialization.deserializeTagsFromNetwork(p_365168_, this);
+        public <T> TagLoader.LoadResult<T> resolve(final Registry<T> registry) {
+            return TagNetworkSerialization.deserializeTagsFromNetwork(registry, this);
         }
     }
 }

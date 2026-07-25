@@ -37,87 +37,92 @@ public class RamTarget extends Behavior<Goat> {
     private final Function<Goat, SoundEvent> getHornBreakSound;
 
     public RamTarget(
-        Function<Goat, UniformInt> p_217342_,
-        TargetingConditions p_217343_,
-        float p_217344_,
-        ToDoubleFunction<Goat> p_217345_,
-        Function<Goat, SoundEvent> p_217346_,
-        Function<Goat, SoundEvent> p_217347_
+        final Function<Goat, UniformInt> getTimeBetweenRams,
+        final TargetingConditions ramTargeting,
+        final float speed,
+        final ToDoubleFunction<Goat> getKnockbackForce,
+        final Function<Goat, SoundEvent> getImpactSound,
+        final Function<Goat, SoundEvent> getHornBreakSound
     ) {
         super(ImmutableMap.of(MemoryModuleType.RAM_COOLDOWN_TICKS, MemoryStatus.VALUE_ABSENT, MemoryModuleType.RAM_TARGET, MemoryStatus.VALUE_PRESENT), 200);
-        this.getTimeBetweenRams = p_217342_;
-        this.ramTargeting = p_217343_;
-        this.speed = p_217344_;
-        this.getKnockbackForce = p_217345_;
-        this.getImpactSound = p_217346_;
-        this.getHornBreakSound = p_217347_;
+        this.getTimeBetweenRams = getTimeBetweenRams;
+        this.ramTargeting = ramTargeting;
+        this.speed = speed;
+        this.getKnockbackForce = getKnockbackForce;
+        this.getImpactSound = getImpactSound;
+        this.getHornBreakSound = getHornBreakSound;
         this.ramDirection = Vec3.ZERO;
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_217349_, Goat p_217350_) {
-        return p_217350_.getBrain().hasMemoryValue(MemoryModuleType.RAM_TARGET);
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Goat body) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.RAM_TARGET);
     }
 
-    protected boolean canStillUse(ServerLevel p_217352_, Goat p_217353_, long p_217354_) {
-        return p_217353_.getBrain().hasMemoryValue(MemoryModuleType.RAM_TARGET);
+    protected boolean canStillUse(final ServerLevel level, final Goat body, final long timestamp) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.RAM_TARGET);
     }
 
-    protected void start(ServerLevel p_217359_, Goat p_217360_, long p_217361_) {
-        BlockPos blockpos = p_217360_.blockPosition();
-        Brain<?> brain = p_217360_.getBrain();
-        Vec3 vec3 = brain.getMemory(MemoryModuleType.RAM_TARGET).get();
-        this.ramDirection = new Vec3(blockpos.getX() - vec3.x(), 0.0, blockpos.getZ() - vec3.z()).normalize();
-        brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(vec3, this.speed, 0));
+    protected void start(final ServerLevel level, final Goat body, final long timestamp) {
+        BlockPos curPos = body.blockPosition();
+        Brain<?> brain = body.getBrain();
+        Vec3 ramTargetPos = brain.getMemory(MemoryModuleType.RAM_TARGET).get();
+        this.ramDirection = new Vec3(curPos.getX() - ramTargetPos.x(), 0.0, curPos.getZ() - ramTargetPos.z()).normalize();
+        brain.setMemory(MemoryModuleType.WALK_TARGET, new WalkTarget(ramTargetPos, this.speed, 0));
     }
 
-    protected void tick(ServerLevel p_217366_, Goat p_217367_, long p_217368_) {
-        List<LivingEntity> list = p_217366_.getNearbyEntities(LivingEntity.class, this.ramTargeting, p_217367_, p_217367_.getBoundingBox());
-        Brain<?> brain = p_217367_.getBrain();
-        if (!list.isEmpty()) {
-            LivingEntity livingentity = list.get(0);
-            DamageSource damagesource = p_217366_.damageSources().noAggroMobAttack(p_217367_);
-            float f = (float)p_217367_.getAttributeValue(Attributes.ATTACK_DAMAGE);
-            if (livingentity.hurtServer(p_217366_, damagesource, f)) {
-                EnchantmentHelper.doPostAttackEffects(p_217366_, livingentity, damagesource);
+    protected void tick(final ServerLevel level, final Goat body, final long timestamp) {
+        List<LivingEntity> nearbyEntities = level.getNearbyEntities(LivingEntity.class, this.ramTargeting, body, body.getBoundingBox());
+        Brain<?> brain = body.getBrain();
+        if (!nearbyEntities.isEmpty()) {
+            LivingEntity ramTarget = nearbyEntities.get(0);
+            DamageSource damageSource = level.damageSources().noAggroMobAttack(body);
+            float damage = (float)body.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            if (ramTarget.hurtServer(level, damageSource, damage)) {
+                EnchantmentHelper.doPostAttackEffects(level, ramTarget, damageSource);
             }
 
-            int i = p_217367_.hasEffect(MobEffects.SPEED) ? p_217367_.getEffect(MobEffects.SPEED).getAmplifier() + 1 : 0;
-            int j = p_217367_.hasEffect(MobEffects.SLOWNESS) ? p_217367_.getEffect(MobEffects.SLOWNESS).getAmplifier() + 1 : 0;
-            float f1 = 0.25F * (i - j);
-            float f2 = Mth.clamp(p_217367_.getSpeed() * 1.65F, 0.2F, 3.0F) + f1;
-            DamageSource damagesource1 = p_217366_.damageSources().mobAttack(p_217367_);
-            float f3 = livingentity.applyItemBlocking(p_217366_, damagesource1, f);
-            float f4 = f3 > 0.0F ? 0.5F : 1.0F;
-            livingentity.knockback(f4 * f2 * this.getKnockbackForce.applyAsDouble(p_217367_), this.ramDirection.x(), this.ramDirection.z());
-            this.finishRam(p_217366_, p_217367_);
-            p_217366_.playSound(null, p_217367_, this.getImpactSound.apply(p_217367_), SoundSource.NEUTRAL, 1.0F, 1.0F);
-        } else if (this.hasRammedHornBreakingBlock(p_217366_, p_217367_)) {
-            p_217366_.playSound(null, p_217367_, this.getImpactSound.apply(p_217367_), SoundSource.NEUTRAL, 1.0F, 1.0F);
-            boolean flag = p_217367_.dropHorn();
-            if (flag) {
-                p_217366_.playSound(null, p_217367_, this.getHornBreakSound.apply(p_217367_), SoundSource.NEUTRAL, 1.0F, 1.0F);
+            int movementSpeedLevel = body.hasEffect(MobEffects.SPEED) ? body.getEffect(MobEffects.SPEED).getAmplifier() + 1 : 0;
+            int movementSlowdownLevel = body.hasEffect(MobEffects.SLOWNESS) ? body.getEffect(MobEffects.SLOWNESS).getAmplifier() + 1 : 0;
+            float speedBoostPower = 0.25F * (movementSpeedLevel - movementSlowdownLevel);
+            float speedFactor = Mth.clamp(body.getSpeed() * 1.65F, 0.2F, 3.0F) + speedBoostPower;
+            DamageSource source = level.damageSources().mobAttack(body);
+            float blockedDamage = ramTarget.applyItemBlocking(level, source, damage);
+            float blockingFactor = blockedDamage > 0.0F ? 0.5F : 1.0F;
+            ramTarget.knockback(
+                blockingFactor * speedFactor * this.getKnockbackForce.applyAsDouble(body), this.ramDirection.x(), this.ramDirection.z(), source, damage
+            );
+            this.finishRam(level, body);
+            level.playSound(null, body, this.getImpactSound.apply(body), SoundSource.NEUTRAL, 1.0F, 1.0F);
+        } else if (this.hasRammedHornBreakingBlock(level, body)) {
+            level.playSound(null, body, this.getImpactSound.apply(body), SoundSource.NEUTRAL, 1.0F, 1.0F);
+            boolean dropped = body.dropHorn();
+            if (dropped) {
+                level.playSound(null, body, this.getHornBreakSound.apply(body), SoundSource.NEUTRAL, 1.0F, 1.0F);
             }
 
-            this.finishRam(p_217366_, p_217367_);
+            this.finishRam(level, body);
         } else {
-            Optional<WalkTarget> optional = brain.getMemory(MemoryModuleType.WALK_TARGET);
-            Optional<Vec3> optional1 = brain.getMemory(MemoryModuleType.RAM_TARGET);
-            boolean flag1 = optional.isEmpty() || optional1.isEmpty() || optional.get().getTarget().currentPosition().closerThan(optional1.get(), 0.25);
-            if (flag1) {
-                this.finishRam(p_217366_, p_217367_);
+            Optional<WalkTarget> walkTarget = brain.getMemory(MemoryModuleType.WALK_TARGET);
+            Optional<Vec3> ramTarget = brain.getMemory(MemoryModuleType.RAM_TARGET);
+            boolean lostOrReachedTarget = walkTarget.isEmpty()
+                || ramTarget.isEmpty()
+                || walkTarget.get().getTarget().currentPosition().closerThan(ramTarget.get(), 0.25);
+            if (lostOrReachedTarget) {
+                this.finishRam(level, body);
             }
         }
     }
 
-    private boolean hasRammedHornBreakingBlock(ServerLevel p_217363_, Goat p_217364_) {
-        Vec3 vec3 = p_217364_.getDeltaMovement().multiply(1.0, 0.0, 1.0).normalize();
-        BlockPos blockpos = BlockPos.containing(p_217364_.position().add(vec3));
-        return p_217363_.getBlockState(blockpos).is(BlockTags.SNAPS_GOAT_HORN) || p_217363_.getBlockState(blockpos.above()).is(BlockTags.SNAPS_GOAT_HORN);
+    private boolean hasRammedHornBreakingBlock(final ServerLevel level, final Goat body) {
+        Vec3 horizontalMovementNormalized = body.getDeltaMovement().multiply(1.0, 0.0, 1.0).normalize();
+        BlockPos facingBlockPosition = BlockPos.containing(body.position().add(horizontalMovementNormalized));
+        return level.getBlockState(facingBlockPosition).is(BlockTags.SNAPS_GOAT_HORN)
+            || level.getBlockState(facingBlockPosition.above()).is(BlockTags.SNAPS_GOAT_HORN);
     }
 
-    protected void finishRam(ServerLevel p_217356_, Goat p_217357_) {
-        p_217356_.broadcastEntityEvent(p_217357_, (byte)59);
-        p_217357_.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, this.getTimeBetweenRams.apply(p_217357_).sample(p_217356_.random));
-        p_217357_.getBrain().eraseMemory(MemoryModuleType.RAM_TARGET);
+    protected void finishRam(final ServerLevel level, final Goat body) {
+        level.broadcastEntityEvent(body, (byte)59);
+        body.getBrain().setMemory(MemoryModuleType.RAM_COOLDOWN_TICKS, this.getTimeBetweenRams.apply(body).sample(level.getRandom()));
+        body.getBrain().eraseMemory(MemoryModuleType.RAM_TARGET);
     }
 }

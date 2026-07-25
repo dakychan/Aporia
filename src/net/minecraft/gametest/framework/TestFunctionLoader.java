@@ -10,15 +10,15 @@ import net.minecraft.resources.ResourceKey;
 public abstract class TestFunctionLoader {
     private static final List<TestFunctionLoader> loaders = new ArrayList<>();
 
-    public static void registerLoader(TestFunctionLoader p_397469_) {
-        loaders.add(p_397469_);
+    public static void registerLoader(final TestFunctionLoader loader) {
+        loaders.add(loader);
     }
 
-    public static void runLoaders(Registry<Consumer<GameTestHelper>> p_395511_) {
-        for (TestFunctionLoader testfunctionloader : loaders) {
-            testfunctionloader.load((p_396342_, p_395649_) -> Registry.register(p_395511_, p_396342_, p_395649_));
+    public static void runLoaders(final Registry<Consumer<GameTestHelper>> registry) {
+        for (TestFunctionLoader loader : loaders) {
+            loader.load((key, function) -> Registry.register(registry, key, function));
         }
     }
 
-    public abstract void load(BiConsumer<ResourceKey<Consumer<GameTestHelper>>, Consumer<GameTestHelper>> p_397485_);
+    public abstract void load(BiConsumer<ResourceKey<Consumer<GameTestHelper>>, Consumer<GameTestHelper>> register);
 }

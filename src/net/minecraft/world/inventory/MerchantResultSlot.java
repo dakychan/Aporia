@@ -12,54 +12,54 @@ public class MerchantResultSlot extends Slot {
     private int removeCount;
     private final Merchant merchant;
 
-    public MerchantResultSlot(Player p_40083_, Merchant p_40084_, MerchantContainer p_40085_, int p_40086_, int p_40087_, int p_40088_) {
-        super(p_40085_, p_40086_, p_40087_, p_40088_);
-        this.player = p_40083_;
-        this.merchant = p_40084_;
-        this.slots = p_40085_;
+    public MerchantResultSlot(final Player player, final Merchant merchant, final MerchantContainer slots, final int id, final int x, final int y) {
+        super(slots, id, x, y);
+        this.player = player;
+        this.merchant = merchant;
+        this.slots = slots;
     }
 
     @Override
-    public boolean mayPlace(ItemStack p_40095_) {
+    public boolean mayPlace(final ItemStack itemStack) {
         return false;
     }
 
     @Override
-    public ItemStack remove(int p_40090_) {
+    public ItemStack remove(final int amount) {
         if (this.hasItem()) {
-            this.removeCount = this.removeCount + Math.min(p_40090_, this.getItem().getCount());
+            this.removeCount = this.removeCount + Math.min(amount, this.getItem().getCount());
         }
 
-        return super.remove(p_40090_);
+        return super.remove(amount);
     }
 
     @Override
-    protected void onQuickCraft(ItemStack p_40097_, int p_40098_) {
-        this.removeCount += p_40098_;
-        this.checkTakeAchievements(p_40097_);
+    protected void onQuickCraft(final ItemStack picked, final int count) {
+        this.removeCount += count;
+        this.checkTakeAchievements(picked);
     }
 
     @Override
-    protected void checkTakeAchievements(ItemStack p_40100_) {
-        p_40100_.onCraftedBy(this.player, this.removeCount);
+    protected void checkTakeAchievements(final ItemStack carried) {
+        carried.onCraftedBy(this.player, this.removeCount);
         this.removeCount = 0;
     }
 
     @Override
-    public void onTake(Player p_150631_, ItemStack p_150632_) {
-        this.checkTakeAchievements(p_150632_);
-        MerchantOffer merchantoffer = this.slots.getActiveOffer();
-        if (merchantoffer != null) {
-            ItemStack itemstack = this.slots.getItem(0);
-            ItemStack itemstack1 = this.slots.getItem(1);
-            if (merchantoffer.take(itemstack, itemstack1) || merchantoffer.take(itemstack1, itemstack)) {
-                this.merchant.notifyTrade(merchantoffer);
-                p_150631_.awardStat(Stats.TRADED_WITH_VILLAGER);
-                this.slots.setItem(0, itemstack);
-                this.slots.setItem(1, itemstack1);
+    public void onTake(final Player player, final ItemStack carried) {
+        this.checkTakeAchievements(carried);
+        MerchantOffer offer = this.slots.getActiveOffer();
+        if (offer != null) {
+            ItemStack buyA = this.slots.getItem(0);
+            ItemStack buyB = this.slots.getItem(1);
+            if (offer.take(buyA, buyB) || offer.take(buyB, buyA)) {
+                this.merchant.notifyTrade(offer);
+                player.awardStat(Stats.TRADED_WITH_VILLAGER);
+                this.slots.setItem(0, buyA);
+                this.slots.setItem(1, buyB);
             }
 
-            this.merchant.overrideXp(this.merchant.getVillagerXp() + merchantoffer.getXp());
+            this.merchant.overrideXp(this.merchant.getVillagerXp() + offer.getXp());
         }
     }
 }

@@ -18,15 +18,16 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class CamelHusk extends Camel {
-    public CamelHusk(EntityType<? extends Camel> p_458403_, Level p_457819_) {
-        super(p_458403_, p_457819_);
+    public CamelHusk(final EntityType<? extends Camel> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    public boolean removeWhenFarAway(double p_452350_) {
+    public boolean removeWhenFarAway(final double distSqr) {
         return true;
     }
 
@@ -36,9 +37,9 @@ public class CamelHusk extends Camel {
     }
 
     @Override
-    public InteractionResult interact(Player p_454664_, InteractionHand p_459304_) {
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
         this.setPersistenceRequired();
-        return super.interact(p_454664_, p_459304_);
+        return super.interact(player, hand, location);
     }
 
     @Override
@@ -47,8 +48,8 @@ public class CamelHusk extends Camel {
     }
 
     @Override
-    public boolean isFood(ItemStack p_450511_) {
-        return p_450511_.is(ItemTags.CAMEL_HUSK_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.CAMEL_HUSK_FOOD);
     }
 
     @Override
@@ -57,12 +58,12 @@ public class CamelHusk extends Camel {
     }
 
     @Override
-    public boolean canMate(Animal p_460463_) {
+    public boolean canMate(final Animal partner) {
         return false;
     }
 
     @Override
-    public @Nullable Camel getBreedOffspring(ServerLevel p_459539_, AgeableMob p_454635_) {
+    public @Nullable Camel getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
         return null;
     }
 
@@ -72,18 +73,23 @@ public class CamelHusk extends Camel {
     }
 
     @Override
+    public boolean canBeABaby() {
+        return false;
+    }
+
+    @Override
     protected SoundEvent getDeathSound() {
         return SoundEvents.CAMEL_HUSK_DEATH;
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_457587_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.CAMEL_HUSK_HURT;
     }
 
     @Override
-    protected void playStepSound(BlockPos p_452071_, BlockState p_456041_) {
-        if (p_456041_.is(BlockTags.CAMEL_SAND_STEP_SOUND_BLOCKS)) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
+        if (blockState.is(BlockTags.CAMEL_SAND_STEP_SOUND_BLOCKS)) {
             this.playSound(SoundEvents.CAMEL_HUSK_STEP_SAND, 0.4F, 1.0F);
         } else {
             this.playSound(SoundEvents.CAMEL_HUSK_STEP, 0.4F, 1.0F);

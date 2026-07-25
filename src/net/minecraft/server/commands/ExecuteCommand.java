@@ -29,7 +29,7 @@ import java.util.function.IntFunction;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import net.minecraft.advancements.criterion.MinMaxBounds;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandResultCallback;
 import net.minecraft.commands.CommandSourceStack;
@@ -128,103 +128,96 @@ public class ExecuteCommand {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int MAX_TEST_AREA = 32768;
     private static final Dynamic2CommandExceptionType ERROR_AREA_TOO_LARGE = new Dynamic2CommandExceptionType(
-        (p_308669_, p_308670_) -> Component.translatableEscape("commands.execute.blocks.toobig", p_308669_, p_308670_)
+        (max, count) -> Component.translatableEscape("commands.execute.blocks.toobig", max, count)
     );
-    private static final SimpleCommandExceptionType ERROR_CONDITIONAL_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.execute.conditional.fail"));
+    private static final SimpleCommandExceptionType ERROR_CONDITIONAL_FAILED = new SimpleCommandExceptionType(
+        Component.translatable("commands.execute.conditional.fail")
+    );
     private static final DynamicCommandExceptionType ERROR_CONDITIONAL_FAILED_COUNT = new DynamicCommandExceptionType(
-        p_308680_ -> Component.translatableEscape("commands.execute.conditional.fail_count", p_308680_)
+        count -> Component.translatableEscape("commands.execute.conditional.fail_count", count)
     );
     @VisibleForTesting
     public static final Dynamic2CommandExceptionType ERROR_FUNCTION_CONDITION_INSTANTATION_FAILURE = new Dynamic2CommandExceptionType(
-        (p_308676_, p_308677_) -> Component.translatableEscape("commands.execute.function.instantiationFailure", p_308676_, p_308677_)
+        (id, reason) -> Component.translatableEscape("commands.execute.function.instantiationFailure", id, reason)
     );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_214435_, CommandBuildContext p_214436_) {
-        LiteralCommandNode<CommandSourceStack> literalcommandnode = p_214435_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        LiteralCommandNode<CommandSourceStack> execute = dispatcher.register(
             Commands.literal("execute").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
         );
-        p_214435_.register(
+        dispatcher.register(
             Commands.literal("execute")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                .then(Commands.literal("run").redirect(p_214435_.getRoot()))
-                .then(addConditionals(literalcommandnode, Commands.literal("if"), true, p_214436_))
-                .then(addConditionals(literalcommandnode, Commands.literal("unless"), false, p_214436_))
-                .then(Commands.literal("as").then(Commands.argument("targets", EntityArgument.entities()).fork(literalcommandnode, p_137299_ -> {
-                    List<CommandSourceStack> list = Lists.newArrayList();
+                .then(Commands.literal("run").redirect(dispatcher.getRoot()))
+                .then(addConditionals(execute, Commands.literal("if"), true, context))
+                .then(addConditionals(execute, Commands.literal("unless"), false, context))
+                .then(Commands.literal("as").then(Commands.argument("targets", EntityArgument.entities()).fork(execute, c -> {
+                    List<CommandSourceStack> result = Lists.newArrayList();
 
-                    for (Entity entity : EntityArgument.getOptionalEntities(p_137299_, "targets")) {
-                        list.add(p_137299_.getSource().withEntity(entity));
+                    for (Entity entity : EntityArgument.getOptionalEntities(c, "targets")) {
+                        result.add(c.getSource().withEntity(entity));
                     }
 
-                    return list;
+                    return result;
                 })))
-                .then(Commands.literal("at").then(Commands.argument("targets", EntityArgument.entities()).fork(literalcommandnode, p_284653_ -> {
-                    List<CommandSourceStack> list = Lists.newArrayList();
+                .then(Commands.literal("at").then(Commands.argument("targets", EntityArgument.entities()).fork(execute, c -> {
+                    List<CommandSourceStack> result = Lists.newArrayList();
 
-                    for (Entity entity : EntityArgument.getOptionalEntities(p_284653_, "targets")) {
-                        list.add(p_284653_.getSource().withLevel((ServerLevel)entity.level()).withPosition(entity.position()).withRotation(entity.getRotationVector()));
+                    for (Entity entity : EntityArgument.getOptionalEntities(c, "targets")) {
+                        result.add(
+                            c.getSource().withLevel((ServerLevel)entity.level()).withPosition(entity.position()).withRotation(entity.getRotationVector())
+                        );
                     }
 
-                    return list;
+                    return result;
                 })))
                 .then(
                     Commands.literal("store")
-                        .then(wrapStores(literalcommandnode, Commands.literal("result"), true))
-                        .then(wrapStores(literalcommandnode, Commands.literal("success"), false))
+                        .then(wrapStores(execute, Commands.literal("result"), true))
+                        .then(wrapStores(execute, Commands.literal("success"), false))
                 )
                 .then(
                     Commands.literal("positioned")
                         .then(
                             Commands.argument("pos", Vec3Argument.vec3())
-                                .redirect(
-                                    literalcommandnode,
-                                    p_137295_ -> p_137295_.getSource()
-                                        .withPosition(Vec3Argument.getVec3(p_137295_, "pos"))
-                                        .withAnchor(EntityAnchorArgument.Anchor.FEET)
-                                )
+                                .redirect(execute, c -> c.getSource().withPosition(Vec3Argument.getVec3(c, "pos")).withAnchor(EntityAnchorArgument.Anchor.FEET))
                         )
-                        .then(Commands.literal("as").then(Commands.argument("targets", EntityArgument.entities()).fork(literalcommandnode, p_137293_ -> {
-                            List<CommandSourceStack> list = Lists.newArrayList();
+                        .then(Commands.literal("as").then(Commands.argument("targets", EntityArgument.entities()).fork(execute, c -> {
+                            List<CommandSourceStack> result = Lists.newArrayList();
 
-                            for (Entity entity : EntityArgument.getOptionalEntities(p_137293_, "targets")) {
-                                list.add(p_137293_.getSource().withPosition(entity.position()));
+                            for (Entity entity : EntityArgument.getOptionalEntities(c, "targets")) {
+                                result.add(c.getSource().withPosition(entity.position()));
                             }
 
-                            return list;
+                            return result;
                         })))
-                        .then(
-                            Commands.literal("over")
-                                .then(Commands.argument("heightmap", HeightmapTypeArgument.heightmap()).redirect(literalcommandnode, p_274814_ -> {
-                                    Vec3 vec3 = p_274814_.getSource().getPosition();
-                                    ServerLevel serverlevel = p_274814_.getSource().getLevel();
-                                    double d0 = vec3.x();
-                                    double d1 = vec3.z();
-                                    if (!serverlevel.hasChunk(SectionPos.blockToSectionCoord(d0), SectionPos.blockToSectionCoord(d1))) {
-                                        throw BlockPosArgument.ERROR_NOT_LOADED.create();
-                                    } else {
-                                        int i = serverlevel.getHeight(HeightmapTypeArgument.getHeightmap(p_274814_, "heightmap"), Mth.floor(d0), Mth.floor(d1));
-                                        return p_274814_.getSource().withPosition(new Vec3(d0, i, d1));
-                                    }
-                                }))
-                        )
+                        .then(Commands.literal("over").then(Commands.argument("heightmap", HeightmapTypeArgument.heightmap()).redirect(execute, c -> {
+                            Vec3 position = c.getSource().getPosition();
+                            ServerLevel level = c.getSource().getLevel();
+                            double x = position.x();
+                            double z = position.z();
+                            if (!level.hasChunk(SectionPos.blockToSectionCoord(x), SectionPos.blockToSectionCoord(z))) {
+                                throw BlockPosArgument.ERROR_NOT_LOADED.create();
+                            }
+
+                            int height = level.getHeight(HeightmapTypeArgument.getHeightmap(c, "heightmap"), Mth.floor(x), Mth.floor(z));
+                            return c.getSource().withPosition(new Vec3(x, height, z));
+                        })))
                 )
                 .then(
                     Commands.literal("rotated")
                         .then(
                             Commands.argument("rot", RotationArgument.rotation())
-                                .redirect(
-                                    literalcommandnode,
-                                    p_137291_ -> p_137291_.getSource().withRotation(RotationArgument.getRotation(p_137291_, "rot").getRotation(p_137291_.getSource()))
-                                )
+                                .redirect(execute, c -> c.getSource().withRotation(RotationArgument.getRotation(c, "rot").getRotation(c.getSource())))
                         )
-                        .then(Commands.literal("as").then(Commands.argument("targets", EntityArgument.entities()).fork(literalcommandnode, p_137289_ -> {
-                            List<CommandSourceStack> list = Lists.newArrayList();
+                        .then(Commands.literal("as").then(Commands.argument("targets", EntityArgument.entities()).fork(execute, c -> {
+                            List<CommandSourceStack> result = Lists.newArrayList();
 
-                            for (Entity entity : EntityArgument.getOptionalEntities(p_137289_, "targets")) {
-                                list.add(p_137289_.getSource().withRotation(entity.getRotationVector()));
+                            for (Entity entity : EntityArgument.getOptionalEntities(c, "targets")) {
+                                result.add(c.getSource().withRotation(entity.getRotationVector()));
                             }
 
-                            return list;
+                            return result;
                         })))
                 )
                 .then(
@@ -233,64 +226,57 @@ public class ExecuteCommand {
                             Commands.literal("entity")
                                 .then(
                                     Commands.argument("targets", EntityArgument.entities())
-                                        .then(Commands.argument("anchor", EntityAnchorArgument.anchor()).fork(literalcommandnode, p_137287_ -> {
-                                            List<CommandSourceStack> list = Lists.newArrayList();
-                                            EntityAnchorArgument.Anchor entityanchorargument$anchor = EntityAnchorArgument.getAnchor(p_137287_, "anchor");
+                                        .then(Commands.argument("anchor", EntityAnchorArgument.anchor()).fork(execute, c -> {
+                                            List<CommandSourceStack> result = Lists.newArrayList();
+                                            EntityAnchorArgument.Anchor anchor = EntityAnchorArgument.getAnchor(c, "anchor");
 
-                                            for (Entity entity : EntityArgument.getOptionalEntities(p_137287_, "targets")) {
-                                                list.add(p_137287_.getSource().facing(entity, entityanchorargument$anchor));
+                                            for (Entity entity : EntityArgument.getOptionalEntities(c, "targets")) {
+                                                result.add(c.getSource().facing(entity, anchor));
                                             }
 
-                                            return list;
+                                            return result;
                                         }))
                                 )
                         )
-                        .then(
-                            Commands.argument("pos", Vec3Argument.vec3())
-                                .redirect(literalcommandnode, p_137285_ -> p_137285_.getSource().facing(Vec3Argument.getVec3(p_137285_, "pos")))
-                        )
+                        .then(Commands.argument("pos", Vec3Argument.vec3()).redirect(execute, c -> c.getSource().facing(Vec3Argument.getVec3(c, "pos"))))
                 )
                 .then(
                     Commands.literal("align")
                         .then(
                             Commands.argument("axes", SwizzleArgument.swizzle())
-                                .redirect(
-                                    literalcommandnode,
-                                    p_137283_ -> p_137283_.getSource()
-                                        .withPosition(p_137283_.getSource().getPosition().align(SwizzleArgument.getSwizzle(p_137283_, "axes")))
-                                )
+                                .redirect(execute, c -> c.getSource().withPosition(c.getSource().getPosition().align(SwizzleArgument.getSwizzle(c, "axes"))))
                         )
                 )
                 .then(
                     Commands.literal("anchored")
                         .then(
                             Commands.argument("anchor", EntityAnchorArgument.anchor())
-                                .redirect(literalcommandnode, p_137281_ -> p_137281_.getSource().withAnchor(EntityAnchorArgument.getAnchor(p_137281_, "anchor")))
+                                .redirect(execute, c -> c.getSource().withAnchor(EntityAnchorArgument.getAnchor(c, "anchor")))
                         )
                 )
                 .then(
                     Commands.literal("in")
                         .then(
                             Commands.argument("dimension", DimensionArgument.dimension())
-                                .redirect(literalcommandnode, p_137279_ -> p_137279_.getSource().withLevel(DimensionArgument.getDimension(p_137279_, "dimension")))
+                                .redirect(execute, c -> c.getSource().withLevel(DimensionArgument.getDimension(c, "dimension")))
                         )
                 )
                 .then(
                     Commands.literal("summon")
                         .then(
-                            Commands.argument("entity", ResourceArgument.resource(p_214436_, Registries.ENTITY_TYPE))
+                            Commands.argument("entity", ResourceArgument.resource(context, Registries.ENTITY_TYPE))
                                 .suggests(SuggestionProviders.cast(SuggestionProviders.SUMMONABLE_ENTITIES))
-                                .redirect(literalcommandnode, p_269759_ -> spawnEntityAndRedirect(p_269759_.getSource(), ResourceArgument.getSummonableEntityType(p_269759_, "entity")))
+                                .redirect(execute, c -> spawnEntityAndRedirect(c.getSource(), ResourceArgument.getSummonableEntityType(c, "entity")))
                         )
                 )
-                .then(createRelationOperations(literalcommandnode, Commands.literal("on")))
+                .then(createRelationOperations(execute, Commands.literal("on")))
         );
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> wrapStores(
-        LiteralCommandNode<CommandSourceStack> p_137094_, LiteralArgumentBuilder<CommandSourceStack> p_137095_, boolean p_137096_
+        final LiteralCommandNode<CommandSourceStack> execute, final LiteralArgumentBuilder<CommandSourceStack> literal, final boolean storeResult
     ) {
-        p_137095_.then(
+        literal.then(
             Commands.literal("score")
                 .then(
                     Commands.argument("targets", ScoreHolderArgument.scoreHolders())
@@ -298,50 +284,44 @@ public class ExecuteCommand {
                         .then(
                             Commands.argument("objective", ObjectiveArgument.objective())
                                 .redirect(
-                                    p_137094_,
-                                    p_137271_ -> storeValue(
-                                        p_137271_.getSource(),
-                                        ScoreHolderArgument.getNamesWithDefaultWildcard(p_137271_, "targets"),
-                                        ObjectiveArgument.getObjective(p_137271_, "objective"),
-                                        p_137096_
+                                    execute,
+                                    c -> storeValue(
+                                        c.getSource(),
+                                        ScoreHolderArgument.getNamesWithDefaultWildcard(c, "targets"),
+                                        ObjectiveArgument.getObjective(c, "objective"),
+                                        storeResult
                                     )
                                 )
                         )
                 )
         );
-        p_137095_.then(
+        literal.then(
             Commands.literal("bossbar")
                 .then(
                     Commands.argument("id", IdentifierArgument.id())
                         .suggests(BossBarCommands.SUGGEST_BOSS_BAR)
-                        .then(
-                            Commands.literal("value")
-                                .redirect(p_137094_, p_137259_ -> storeValue(p_137259_.getSource(), BossBarCommands.getBossBar(p_137259_), true, p_137096_))
-                        )
-                        .then(
-                            Commands.literal("max")
-                                .redirect(p_137094_, p_137247_ -> storeValue(p_137247_.getSource(), BossBarCommands.getBossBar(p_137247_), false, p_137096_))
-                        )
+                        .then(Commands.literal("value").redirect(execute, c -> storeValue(c.getSource(), BossBarCommands.getBossBar(c), true, storeResult)))
+                        .then(Commands.literal("max").redirect(execute, c -> storeValue(c.getSource(), BossBarCommands.getBossBar(c), false, storeResult)))
                 )
         );
 
-        for (DataCommands.DataProvider datacommands$dataprovider : DataCommands.TARGET_PROVIDERS) {
-            datacommands$dataprovider.wrap(
-                p_137095_,
-                p_137101_ -> p_137101_.then(
+        for (DataCommands.DataProvider provider : DataCommands.TARGET_PROVIDERS) {
+            provider.wrap(
+                literal,
+                p -> p.then(
                     Commands.argument("path", NbtPathArgument.nbtPath())
                         .then(
                             Commands.literal("int")
                                 .then(
                                     Commands.argument("scale", DoubleArgumentType.doubleArg())
                                         .redirect(
-                                            p_137094_,
-                                            p_180216_ -> storeData(
-                                                p_180216_.getSource(),
-                                                datacommands$dataprovider.access(p_180216_),
-                                                NbtPathArgument.getPath(p_180216_, "path"),
-                                                p_180219_ -> IntTag.valueOf((int)(p_180219_ * DoubleArgumentType.getDouble(p_180216_, "scale"))),
-                                                p_137096_
+                                            execute,
+                                            c -> storeData(
+                                                c.getSource(),
+                                                provider.access(c),
+                                                NbtPathArgument.getPath(c, "path"),
+                                                v -> IntTag.valueOf((int)(v * DoubleArgumentType.getDouble(c, "scale"))),
+                                                storeResult
                                             )
                                         )
                                 )
@@ -351,13 +331,13 @@ public class ExecuteCommand {
                                 .then(
                                     Commands.argument("scale", DoubleArgumentType.doubleArg())
                                         .redirect(
-                                            p_137094_,
-                                            p_180209_ -> storeData(
-                                                p_180209_.getSource(),
-                                                datacommands$dataprovider.access(p_180209_),
-                                                NbtPathArgument.getPath(p_180209_, "path"),
-                                                p_180212_ -> FloatTag.valueOf((float)(p_180212_ * DoubleArgumentType.getDouble(p_180209_, "scale"))),
-                                                p_137096_
+                                            execute,
+                                            c -> storeData(
+                                                c.getSource(),
+                                                provider.access(c),
+                                                NbtPathArgument.getPath(c, "path"),
+                                                v -> FloatTag.valueOf((float)(v * DoubleArgumentType.getDouble(c, "scale"))),
+                                                storeResult
                                             )
                                         )
                                 )
@@ -367,13 +347,13 @@ public class ExecuteCommand {
                                 .then(
                                     Commands.argument("scale", DoubleArgumentType.doubleArg())
                                         .redirect(
-                                            p_137094_,
-                                            p_180199_ -> storeData(
-                                                p_180199_.getSource(),
-                                                datacommands$dataprovider.access(p_180199_),
-                                                NbtPathArgument.getPath(p_180199_, "path"),
-                                                p_180202_ -> ShortTag.valueOf((short)(p_180202_ * DoubleArgumentType.getDouble(p_180199_, "scale"))),
-                                                p_137096_
+                                            execute,
+                                            c -> storeData(
+                                                c.getSource(),
+                                                provider.access(c),
+                                                NbtPathArgument.getPath(c, "path"),
+                                                v -> ShortTag.valueOf((short)(v * DoubleArgumentType.getDouble(c, "scale"))),
+                                                storeResult
                                             )
                                         )
                                 )
@@ -383,13 +363,13 @@ public class ExecuteCommand {
                                 .then(
                                     Commands.argument("scale", DoubleArgumentType.doubleArg())
                                         .redirect(
-                                            p_137094_,
-                                            p_180189_ -> storeData(
-                                                p_180189_.getSource(),
-                                                datacommands$dataprovider.access(p_180189_),
-                                                NbtPathArgument.getPath(p_180189_, "path"),
-                                                p_180192_ -> LongTag.valueOf((long)(p_180192_ * DoubleArgumentType.getDouble(p_180189_, "scale"))),
-                                                p_137096_
+                                            execute,
+                                            c -> storeData(
+                                                c.getSource(),
+                                                provider.access(c),
+                                                NbtPathArgument.getPath(c, "path"),
+                                                v -> LongTag.valueOf((long)(v * DoubleArgumentType.getDouble(c, "scale"))),
+                                                storeResult
                                             )
                                         )
                                 )
@@ -399,13 +379,13 @@ public class ExecuteCommand {
                                 .then(
                                     Commands.argument("scale", DoubleArgumentType.doubleArg())
                                         .redirect(
-                                            p_137094_,
-                                            p_180179_ -> storeData(
-                                                p_180179_.getSource(),
-                                                datacommands$dataprovider.access(p_180179_),
-                                                NbtPathArgument.getPath(p_180179_, "path"),
-                                                p_180182_ -> DoubleTag.valueOf(p_180182_ * DoubleArgumentType.getDouble(p_180179_, "scale")),
-                                                p_137096_
+                                            execute,
+                                            c -> storeData(
+                                                c.getSource(),
+                                                provider.access(c),
+                                                NbtPathArgument.getPath(c, "path"),
+                                                v -> DoubleTag.valueOf(v * DoubleArgumentType.getDouble(c, "scale")),
+                                                storeResult
                                             )
                                         )
                                 )
@@ -415,13 +395,13 @@ public class ExecuteCommand {
                                 .then(
                                     Commands.argument("scale", DoubleArgumentType.doubleArg())
                                         .redirect(
-                                            p_137094_,
-                                            p_180156_ -> storeData(
-                                                p_180156_.getSource(),
-                                                datacommands$dataprovider.access(p_180156_),
-                                                NbtPathArgument.getPath(p_180156_, "path"),
-                                                p_180165_ -> ByteTag.valueOf((byte)(p_180165_ * DoubleArgumentType.getDouble(p_180156_, "scale"))),
-                                                p_137096_
+                                            execute,
+                                            c -> storeData(
+                                                c.getSource(),
+                                                provider.access(c),
+                                                NbtPathArgument.getPath(c, "path"),
+                                                v -> ByteTag.valueOf((byte)(v * DoubleArgumentType.getDouble(c, "scale"))),
+                                                storeResult
                                             )
                                         )
                                 )
@@ -430,65 +410,76 @@ public class ExecuteCommand {
             );
         }
 
-        return p_137095_;
+        return literal;
     }
 
-    private static CommandSourceStack storeValue(CommandSourceStack p_137108_, Collection<ScoreHolder> p_137109_, Objective p_137110_, boolean p_137111_) {
-        Scoreboard scoreboard = p_137108_.getServer().getScoreboard();
-        return p_137108_.withCallback((p_137137_, p_137138_) -> {
-            for (ScoreHolder scoreholder : p_137109_) {
-                ScoreAccess scoreaccess = scoreboard.getOrCreatePlayerScore(scoreholder, p_137110_);
-                int i = p_137111_ ? p_137138_ : (p_137137_ ? 1 : 0);
-                scoreaccess.set(i);
+    private static CommandSourceStack storeValue(
+        final CommandSourceStack source, final Collection<ScoreHolder> names, final Objective objective, final boolean storeResult
+    ) {
+        Scoreboard scoreboard = source.getServer().getScoreboard();
+        return source.withCallback((success, result) -> {
+            for (ScoreHolder name : names) {
+                ScoreAccess score = scoreboard.getOrCreatePlayerScore(name, objective);
+                int value = storeResult ? result : (success ? 1 : 0);
+                score.set(value);
             }
         }, CommandResultCallback::chain);
     }
 
-    private static CommandSourceStack storeValue(CommandSourceStack p_137113_, CustomBossEvent p_137114_, boolean p_137115_, boolean p_137116_) {
-        return p_137113_.withCallback((p_137186_, p_137187_) -> {
-            int i = p_137116_ ? p_137187_ : (p_137186_ ? 1 : 0);
-            if (p_137115_) {
-                p_137114_.setValue(i);
+    private static CommandSourceStack storeValue(
+        final CommandSourceStack source, final CustomBossEvent event, final boolean storeIntoValue, final boolean storeResult
+    ) {
+        return source.withCallback((success, result) -> {
+            int value = storeResult ? result : (success ? 1 : 0);
+            if (storeIntoValue) {
+                event.setValue(value);
             } else {
-                p_137114_.setMax(i);
+                event.setMax(value);
             }
         }, CommandResultCallback::chain);
     }
 
     private static CommandSourceStack storeData(
-        CommandSourceStack p_137118_, DataAccessor p_137119_, NbtPathArgument.NbtPath p_137120_, IntFunction<Tag> p_137121_, boolean p_137122_
+        final CommandSourceStack source,
+        final DataAccessor accessor,
+        final NbtPathArgument.NbtPath path,
+        final IntFunction<Tag> constructor,
+        final boolean storeResult
     ) {
-        return p_137118_.withCallback((p_137154_, p_137155_) -> {
+        return source.withCallback((success, result) -> {
             try {
-                CompoundTag compoundtag = p_137119_.getData();
-                int i = p_137122_ ? p_137155_ : (p_137154_ ? 1 : 0);
-                p_137120_.set(compoundtag, p_137121_.apply(i));
-                p_137119_.setData(compoundtag);
-            } catch (CommandSyntaxException commandsyntaxexception) {
+                CompoundTag data = accessor.getData();
+                int value = storeResult ? result : (success ? 1 : 0);
+                path.set(data, constructor.apply(value));
+                accessor.setData(data);
+            } catch (CommandSyntaxException var8) {
             }
         }, CommandResultCallback::chain);
     }
 
-    private static boolean isChunkLoaded(ServerLevel p_265261_, BlockPos p_265260_) {
-        ChunkPos chunkpos = new ChunkPos(p_265260_);
-        LevelChunk levelchunk = p_265261_.getChunkSource().getChunkNow(chunkpos.x, chunkpos.z);
-        return levelchunk == null ? false : levelchunk.getFullStatus() == FullChunkStatus.ENTITY_TICKING && p_265261_.areEntitiesLoaded(chunkpos.toLong());
+    private static boolean isChunkLoaded(final ServerLevel level, final BlockPos pos) {
+        ChunkPos chunkPos = ChunkPos.containing(pos);
+        LevelChunk chunk = level.getChunkSource().getChunkNow(chunkPos.x(), chunkPos.z());
+        return chunk == null ? false : chunk.getFullStatus() == FullChunkStatus.ENTITY_TICKING && level.areEntitiesLoaded(chunkPos.pack());
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> addConditionals(
-        CommandNode<CommandSourceStack> p_214438_, LiteralArgumentBuilder<CommandSourceStack> p_214439_, boolean p_214440_, CommandBuildContext p_214441_
+        final CommandNode<CommandSourceStack> execute,
+        final LiteralArgumentBuilder<CommandSourceStack> parent,
+        final boolean expected,
+        final CommandBuildContext context
     ) {
-        p_214439_.then(
+        parent.then(
                 Commands.literal("block")
                     .then(
                         Commands.argument("pos", BlockPosArgument.blockPos())
                             .then(
                                 addConditional(
-                                    p_214438_,
-                                    Commands.argument("block", BlockPredicateArgument.blockPredicate(p_214441_)),
-                                    p_214440_,
-                                    p_137277_ -> BlockPredicateArgument.getBlockPredicate(p_137277_, "block")
-                                        .test(new BlockInWorld(p_137277_.getSource().getLevel(), BlockPosArgument.getLoadedBlockPos(p_137277_, "pos"), true))
+                                    execute,
+                                    Commands.argument("block", BlockPredicateArgument.blockPredicate(context)),
+                                    expected,
+                                    c -> BlockPredicateArgument.getBlockPredicate(c, "block")
+                                        .test(new BlockInWorld(c.getSource().getLevel(), BlockPosArgument.getLoadedBlockPos(c, "pos"), true))
                                 )
                             )
                     )
@@ -499,11 +490,11 @@ public class ExecuteCommand {
                         Commands.argument("pos", BlockPosArgument.blockPos())
                             .then(
                                 addConditional(
-                                    p_214438_,
-                                    Commands.argument("biome", ResourceOrTagArgument.resourceOrTag(p_214441_, Registries.BIOME)),
-                                    p_214440_,
-                                    p_448904_ -> ResourceOrTagArgument.getResourceOrTag(p_448904_, "biome", Registries.BIOME)
-                                        .test(p_448904_.getSource().getLevel().getBiome(BlockPosArgument.getLoadedBlockPos(p_448904_, "pos")))
+                                    execute,
+                                    Commands.argument("biome", ResourceOrTagArgument.resourceOrTag(context, Registries.BIOME)),
+                                    expected,
+                                    c -> ResourceOrTagArgument.getResourceOrTag(c, "biome", Registries.BIOME)
+                                        .test(c.getSource().getLevel().getBiome(BlockPosArgument.getLoadedBlockPos(c, "pos")))
                                 )
                             )
                     )
@@ -512,10 +503,10 @@ public class ExecuteCommand {
                 Commands.literal("loaded")
                     .then(
                         addConditional(
-                            p_214438_,
+                            execute,
                             Commands.argument("pos", BlockPosArgument.blockPos()),
-                            p_214440_,
-                            p_269757_ -> isChunkLoaded(p_269757_.getSource().getLevel(), BlockPosArgument.getBlockPos(p_269757_, "pos"))
+                            expected,
+                            c -> isChunkLoaded(c.getSource().getLevel(), BlockPosArgument.getBlockPos(c, "pos"))
                         )
                     )
             )
@@ -523,10 +514,10 @@ public class ExecuteCommand {
                 Commands.literal("dimension")
                     .then(
                         addConditional(
-                            p_214438_,
+                            execute,
                             Commands.argument("dimension", DimensionArgument.dimension()),
-                            p_214440_,
-                            p_264789_ -> DimensionArgument.getDimension(p_264789_, "dimension") == p_264789_.getSource().getLevel()
+                            expected,
+                            c -> DimensionArgument.getDimension(c, "dimension") == c.getSource().getLevel()
                         )
                     )
             )
@@ -544,10 +535,10 @@ public class ExecuteCommand {
                                                     .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                     .then(
                                                         addConditional(
-                                                            p_214438_,
+                                                            execute,
                                                             Commands.argument("sourceObjective", ObjectiveArgument.objective()),
-                                                            p_214440_,
-                                                            p_308678_ -> checkScore(p_308678_, (p_308655_, p_308656_) -> p_308655_ == p_308656_)
+                                                            expected,
+                                                            c -> checkScore(c, (a, b) -> a == b)
                                                         )
                                                     )
                                             )
@@ -559,10 +550,10 @@ public class ExecuteCommand {
                                                     .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                     .then(
                                                         addConditional(
-                                                            p_214438_,
+                                                            execute,
                                                             Commands.argument("sourceObjective", ObjectiveArgument.objective()),
-                                                            p_214440_,
-                                                            p_308668_ -> checkScore(p_308668_, (p_308681_, p_308682_) -> p_308681_ < p_308682_)
+                                                            expected,
+                                                            c -> checkScore(c, (a, b) -> a < b)
                                                         )
                                                     )
                                             )
@@ -574,10 +565,10 @@ public class ExecuteCommand {
                                                     .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                     .then(
                                                         addConditional(
-                                                            p_214438_,
+                                                            execute,
                                                             Commands.argument("sourceObjective", ObjectiveArgument.objective()),
-                                                            p_214440_,
-                                                            p_308657_ -> checkScore(p_308657_, (p_308658_, p_308659_) -> p_308658_ <= p_308659_)
+                                                            expected,
+                                                            c -> checkScore(c, (a, b) -> a <= b)
                                                         )
                                                     )
                                             )
@@ -589,10 +580,10 @@ public class ExecuteCommand {
                                                     .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                     .then(
                                                         addConditional(
-                                                            p_214438_,
+                                                            execute,
                                                             Commands.argument("sourceObjective", ObjectiveArgument.objective()),
-                                                            p_214440_,
-                                                            p_308665_ -> checkScore(p_308665_, (p_308660_, p_308661_) -> p_308660_ > p_308661_)
+                                                            expected,
+                                                            c -> checkScore(c, (a, b) -> a > b)
                                                         )
                                                     )
                                             )
@@ -604,10 +595,10 @@ public class ExecuteCommand {
                                                     .suggests(ScoreHolderArgument.SUGGEST_SCORE_HOLDERS)
                                                     .then(
                                                         addConditional(
-                                                            p_214438_,
+                                                            execute,
                                                             Commands.argument("sourceObjective", ObjectiveArgument.objective()),
-                                                            p_214440_,
-                                                            p_308683_ -> checkScore(p_308683_, (p_308666_, p_308667_) -> p_308666_ >= p_308667_)
+                                                            expected,
+                                                            c -> checkScore(c, (a, b) -> a >= b)
                                                         )
                                                     )
                                             )
@@ -616,10 +607,10 @@ public class ExecuteCommand {
                                         Commands.literal("matches")
                                             .then(
                                                 addConditional(
-                                                    p_214438_,
+                                                    execute,
                                                     Commands.argument("range", RangeArgument.intRange()),
-                                                    p_214440_,
-                                                    p_448905_ -> checkScore(p_448905_, RangeArgument.Ints.getRange(p_448905_, "range"))
+                                                    expected,
+                                                    c -> checkScore(c, RangeArgument.Ints.getRange(c, "range"))
                                                 )
                                             )
                                     )
@@ -634,8 +625,8 @@ public class ExecuteCommand {
                                 Commands.argument("end", BlockPosArgument.blockPos())
                                     .then(
                                         Commands.argument("destination", BlockPosArgument.blockPos())
-                                            .then(addIfBlocksConditional(p_214438_, Commands.literal("all"), p_214440_, false))
-                                            .then(addIfBlocksConditional(p_214438_, Commands.literal("masked"), p_214440_, true))
+                                            .then(addIfBlocksConditional(execute, Commands.literal("all"), expected, false))
+                                            .then(addIfBlocksConditional(execute, Commands.literal("masked"), expected, true))
                                     )
                             )
                     )
@@ -644,18 +635,18 @@ public class ExecuteCommand {
                 Commands.literal("entity")
                     .then(
                         Commands.argument("entities", EntityArgument.entities())
-                            .fork(p_214438_, p_137232_ -> expect(p_137232_, p_214440_, !EntityArgument.getOptionalEntities(p_137232_, "entities").isEmpty()))
-                            .executes(createNumericConditionalHandler(p_214440_, p_137189_ -> EntityArgument.getOptionalEntities(p_137189_, "entities").size()))
+                            .fork(execute, c -> expect(c, expected, !EntityArgument.getOptionalEntities(c, "entities").isEmpty()))
+                            .executes(createNumericConditionalHandler(expected, c -> EntityArgument.getOptionalEntities(c, "entities").size()))
                     )
             )
             .then(
                 Commands.literal("predicate")
                     .then(
                         addConditional(
-                            p_214438_,
-                            Commands.argument("predicate", ResourceOrIdArgument.lootPredicate(p_214441_)),
-                            p_214440_,
-                            p_326238_ -> checkCustomPredicate(p_326238_.getSource(), ResourceOrIdArgument.getLootPredicate(p_326238_, "predicate"))
+                            execute,
+                            Commands.argument("predicate", ResourceOrIdArgument.lootPredicate(context)),
+                            expected,
+                            c -> checkCustomPredicate(c.getSource(), ResourceOrIdArgument.getLootPredicate(c, "predicate"))
                         )
                     )
             )
@@ -664,7 +655,7 @@ public class ExecuteCommand {
                     .then(
                         Commands.argument("name", FunctionArgument.functions())
                             .suggests(FunctionCommand.SUGGEST_FUNCTION)
-                            .fork(p_214438_, new ExecuteCommand.ExecuteIfFunctionCustomModifier(p_214440_))
+                            .fork(execute, new ExecuteCommand.ExecuteIfFunctionCustomModifier(expected))
                     )
             )
             .then(
@@ -676,27 +667,27 @@ public class ExecuteCommand {
                                     .then(
                                         Commands.argument("slots", SlotsArgument.slots())
                                             .then(
-                                                Commands.argument("item_predicate", ItemPredicateArgument.itemPredicate(p_214441_))
+                                                Commands.argument("item_predicate", ItemPredicateArgument.itemPredicate(context))
                                                     .fork(
-                                                        p_214438_,
-                                                        p_326243_ -> expect(
-                                                            p_326243_,
-                                                            p_214440_,
+                                                        execute,
+                                                        c -> expect(
+                                                            c,
+                                                            expected,
                                                             countItems(
-                                                                    EntityArgument.getEntities(p_326243_, "entities"),
-                                                                    SlotsArgument.getSlots(p_326243_, "slots"),
-                                                                    ItemPredicateArgument.getItemPredicate(p_326243_, "item_predicate")
+                                                                    EntityArgument.getEntities(c, "entities"),
+                                                                    SlotsArgument.getSlots(c, "slots"),
+                                                                    ItemPredicateArgument.getItemPredicate(c, "item_predicate")
                                                                 )
                                                                 > 0
                                                         )
                                                     )
                                                     .executes(
                                                         createNumericConditionalHandler(
-                                                            p_214440_,
-                                                            p_326239_ -> countItems(
-                                                                EntityArgument.getEntities(p_326239_, "entities"),
-                                                                SlotsArgument.getSlots(p_326239_, "slots"),
-                                                                ItemPredicateArgument.getItemPredicate(p_326239_, "item_predicate")
+                                                            expected,
+                                                            c -> countItems(
+                                                                EntityArgument.getEntities(c, "entities"),
+                                                                SlotsArgument.getSlots(c, "slots"),
+                                                                ItemPredicateArgument.getItemPredicate(c, "item_predicate")
                                                             )
                                                         )
                                                     )
@@ -711,29 +702,29 @@ public class ExecuteCommand {
                                     .then(
                                         Commands.argument("slots", SlotsArgument.slots())
                                             .then(
-                                                Commands.argument("item_predicate", ItemPredicateArgument.itemPredicate(p_214441_))
+                                                Commands.argument("item_predicate", ItemPredicateArgument.itemPredicate(context))
                                                     .fork(
-                                                        p_214438_,
-                                                        p_326241_ -> expect(
-                                                            p_326241_,
-                                                            p_214440_,
+                                                        execute,
+                                                        c -> expect(
+                                                            c,
+                                                            expected,
                                                             countItems(
-                                                                    p_326241_.getSource(),
-                                                                    BlockPosArgument.getLoadedBlockPos(p_326241_, "pos"),
-                                                                    SlotsArgument.getSlots(p_326241_, "slots"),
-                                                                    ItemPredicateArgument.getItemPredicate(p_326241_, "item_predicate")
+                                                                    c.getSource(),
+                                                                    BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                                                    SlotsArgument.getSlots(c, "slots"),
+                                                                    ItemPredicateArgument.getItemPredicate(c, "item_predicate")
                                                                 )
                                                                 > 0
                                                         )
                                                     )
                                                     .executes(
                                                         createNumericConditionalHandler(
-                                                            p_214440_,
-                                                            p_326246_ -> countItems(
-                                                                p_326246_.getSource(),
-                                                                BlockPosArgument.getLoadedBlockPos(p_326246_, "pos"),
-                                                                SlotsArgument.getSlots(p_326246_, "slots"),
-                                                                ItemPredicateArgument.getItemPredicate(p_326246_, "item_predicate")
+                                                            expected,
+                                                            c -> countItems(
+                                                                c.getSource(),
+                                                                BlockPosArgument.getLoadedBlockPos(c, "pos"),
+                                                                SlotsArgument.getSlots(c, "slots"),
+                                                                ItemPredicateArgument.getItemPredicate(c, "item_predicate")
                                                             )
                                                         )
                                                     )
@@ -749,165 +740,151 @@ public class ExecuteCommand {
                             .suggests(StopwatchCommand.SUGGEST_STOPWATCHES)
                             .then(
                                 addConditional(
-                                    p_214438_,
+                                    execute,
                                     Commands.argument("range", RangeArgument.floatRange()),
-                                    p_214440_,
-                                    p_448906_ -> checkStopwatch(p_448906_, RangeArgument.Floats.getRange(p_448906_, "range"))
+                                    expected,
+                                    c -> checkStopwatch(c, RangeArgument.Floats.getRange(c, "range"))
                                 )
                             )
                     )
             );
 
-        for (DataCommands.DataProvider datacommands$dataprovider : DataCommands.SOURCE_PROVIDERS) {
-            p_214439_.then(
-                datacommands$dataprovider.wrap(
+        for (DataCommands.DataProvider provider : DataCommands.SOURCE_PROVIDERS) {
+            parent.then(
+                provider.wrap(
                     Commands.literal("data"),
-                    p_137092_ -> p_137092_.then(
+                    p -> p.then(
                         Commands.argument("path", NbtPathArgument.nbtPath())
-                            .fork(
-                                p_214438_,
-                                p_180175_ -> expect(
-                                    p_180175_,
-                                    p_214440_,
-                                    checkMatchingData(datacommands$dataprovider.access(p_180175_), NbtPathArgument.getPath(p_180175_, "path")) > 0
-                                )
-                            )
-                            .executes(
-                                createNumericConditionalHandler(
-                                    p_214440_,
-                                    p_180152_ -> checkMatchingData(datacommands$dataprovider.access(p_180152_), NbtPathArgument.getPath(p_180152_, "path"))
-                                )
-                            )
+                            .fork(execute, c -> expect(c, expected, checkMatchingData(provider.access(c), NbtPathArgument.getPath(c, "path")) > 0))
+                            .executes(createNumericConditionalHandler(expected, c -> checkMatchingData(provider.access(c), NbtPathArgument.getPath(c, "path"))))
                     )
                 )
             );
         }
 
-        return p_214439_;
+        return parent;
     }
 
-    private static int countItems(Iterable<? extends SlotProvider> p_333878_, SlotRange p_329600_, Predicate<ItemStack> p_334297_) {
-        int i = 0;
+    private static int countItems(final Iterable<? extends SlotProvider> sources, final SlotRange slotRange, final Predicate<ItemStack> predicate) {
+        int count = 0;
 
-        for (SlotProvider slotprovider : p_333878_) {
-            IntList intlist = p_329600_.slots();
+        for (SlotProvider slotProvider : sources) {
+            IntList slots = slotRange.slots();
 
-            for (int j = 0; j < intlist.size(); j++) {
-                int k = intlist.getInt(j);
-                SlotAccess slotaccess = slotprovider.getSlot(k);
-                if (slotaccess != null) {
-                    ItemStack itemstack = slotaccess.get();
-                    if (p_334297_.test(itemstack)) {
-                        i += itemstack.getCount();
+            for (int i = 0; i < slots.size(); i++) {
+                int slotId = slots.getInt(i);
+                SlotAccess slot = slotProvider.getSlot(slotId);
+                if (slot != null) {
+                    ItemStack contents = slot.get();
+                    if (predicate.test(contents)) {
+                        count += contents.getCount();
                     }
                 }
             }
         }
 
-        return i;
+        return count;
     }
 
-    private static int countItems(CommandSourceStack p_330313_, BlockPos p_329129_, SlotRange p_327989_, Predicate<ItemStack> p_331312_) throws CommandSyntaxException {
-        int i = 0;
-        Container container = ItemCommands.getContainer(p_330313_, p_329129_, ItemCommands.ERROR_SOURCE_NOT_A_CONTAINER);
-        int j = container.getContainerSize();
-        IntList intlist = p_327989_.slots();
+    private static int countItems(final CommandSourceStack source, final BlockPos pos, final SlotRange slotRange, final Predicate<ItemStack> predicate) throws CommandSyntaxException {
+        int count = 0;
+        Container container = ItemCommands.getContainer(source, pos, ItemCommands.ERROR_SOURCE_NOT_A_CONTAINER);
+        int containerSize = container.getContainerSize();
+        IntList slots = slotRange.slots();
 
-        for (int k = 0; k < intlist.size(); k++) {
-            int l = intlist.getInt(k);
-            if (l >= 0 && l < j) {
-                ItemStack itemstack = container.getItem(l);
-                if (p_331312_.test(itemstack)) {
-                    i += itemstack.getCount();
+        for (int i = 0; i < slots.size(); i++) {
+            int slotId = slots.getInt(i);
+            if (slotId >= 0 && slotId < containerSize) {
+                ItemStack contents = container.getItem(slotId);
+                if (predicate.test(contents)) {
+                    count += contents.getCount();
                 }
             }
         }
 
-        return i;
+        return count;
     }
 
-    private static Command<CommandSourceStack> createNumericConditionalHandler(boolean p_137167_, ExecuteCommand.CommandNumericPredicate p_137168_) {
-        return p_137167_ ? p_288391_ -> {
-            int i = p_137168_.test(p_288391_);
-            if (i > 0) {
-                p_288391_.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass_count", i), false);
-                return i;
+    private static Command<CommandSourceStack> createNumericConditionalHandler(final boolean expected, final ExecuteCommand.CommandNumericPredicate condition) {
+        return expected ? c -> {
+            int count = condition.test(c);
+            if (count > 0) {
+                c.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass_count", count), false);
+                return count;
             } else {
                 throw ERROR_CONDITIONAL_FAILED.create();
             }
-        } : p_288393_ -> {
-            int i = p_137168_.test(p_288393_);
-            if (i == 0) {
-                p_288393_.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass"), false);
+        } : c -> {
+            int count = condition.test(c);
+            if (count == 0) {
+                c.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass"), false);
                 return 1;
             } else {
-                throw ERROR_CONDITIONAL_FAILED_COUNT.create(i);
+                throw ERROR_CONDITIONAL_FAILED_COUNT.create(count);
             }
         };
     }
 
-    private static int checkMatchingData(DataAccessor p_137146_, NbtPathArgument.NbtPath p_137147_) throws CommandSyntaxException {
-        return p_137147_.countMatching(p_137146_.getData());
+    private static int checkMatchingData(final DataAccessor accessor, final NbtPathArgument.NbtPath path) throws CommandSyntaxException {
+        return path.countMatching(accessor.getData());
     }
 
-    private static boolean checkScore(CommandContext<CommandSourceStack> p_137065_, ExecuteCommand.IntBiPredicate p_312767_) throws CommandSyntaxException {
-        ScoreHolder scoreholder = ScoreHolderArgument.getName(p_137065_, "target");
-        Objective objective = ObjectiveArgument.getObjective(p_137065_, "targetObjective");
-        ScoreHolder scoreholder1 = ScoreHolderArgument.getName(p_137065_, "source");
-        Objective objective1 = ObjectiveArgument.getObjective(p_137065_, "sourceObjective");
-        Scoreboard scoreboard = p_137065_.getSource().getServer().getScoreboard();
-        ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(scoreholder, objective);
-        ReadOnlyScoreInfo readonlyscoreinfo1 = scoreboard.getPlayerScoreInfo(scoreholder1, objective1);
-        return readonlyscoreinfo != null && readonlyscoreinfo1 != null
-            ? p_312767_.test(readonlyscoreinfo.value(), readonlyscoreinfo1.value())
-            : false;
+    private static boolean checkScore(final CommandContext<CommandSourceStack> context, final ExecuteCommand.IntBiPredicate operation) throws CommandSyntaxException {
+        ScoreHolder target = ScoreHolderArgument.getName(context, "target");
+        Objective targetObjective = ObjectiveArgument.getObjective(context, "targetObjective");
+        ScoreHolder source = ScoreHolderArgument.getName(context, "source");
+        Objective sourceObjective = ObjectiveArgument.getObjective(context, "sourceObjective");
+        Scoreboard scoreboard = context.getSource().getServer().getScoreboard();
+        ReadOnlyScoreInfo a = scoreboard.getPlayerScoreInfo(target, targetObjective);
+        ReadOnlyScoreInfo b = scoreboard.getPlayerScoreInfo(source, sourceObjective);
+        return a != null && b != null ? operation.test(a.value(), b.value()) : false;
     }
 
-    private static boolean checkScore(CommandContext<CommandSourceStack> p_137059_, MinMaxBounds.Ints p_455750_) throws CommandSyntaxException {
-        ScoreHolder scoreholder = ScoreHolderArgument.getName(p_137059_, "target");
-        Objective objective = ObjectiveArgument.getObjective(p_137059_, "targetObjective");
-        Scoreboard scoreboard = p_137059_.getSource().getServer().getScoreboard();
-        ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(scoreholder, objective);
-        return readonlyscoreinfo == null ? false : p_455750_.matches(readonlyscoreinfo.value());
+    private static boolean checkScore(final CommandContext<CommandSourceStack> context, final MinMaxBounds.Ints range) throws CommandSyntaxException {
+        ScoreHolder target = ScoreHolderArgument.getName(context, "target");
+        Objective targetObjective = ObjectiveArgument.getObjective(context, "targetObjective");
+        Scoreboard scoreboard = context.getSource().getServer().getScoreboard();
+        ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(target, targetObjective);
+        return scoreInfo == null ? false : range.matches(scoreInfo.value());
     }
 
-    private static boolean checkStopwatch(CommandContext<CommandSourceStack> p_455833_, MinMaxBounds.Doubles p_453915_) throws CommandSyntaxException {
-        Identifier identifier = IdentifierArgument.getId(p_455833_, "id");
-        Stopwatches stopwatches = p_455833_.getSource().getServer().getStopwatches();
-        Stopwatch stopwatch = stopwatches.get(identifier);
+    private static boolean checkStopwatch(final CommandContext<CommandSourceStack> context, final MinMaxBounds.Doubles range) throws CommandSyntaxException {
+        Identifier id = IdentifierArgument.getId(context, "id");
+        Stopwatches stopwatches = context.getSource().getServer().getStopwatches();
+        Stopwatch stopwatch = stopwatches.get(id);
         if (stopwatch == null) {
-            throw StopwatchCommand.ERROR_DOES_NOT_EXIST.create(identifier);
-        } else {
-            long i = Stopwatches.currentTime();
-            double d0 = stopwatch.elapsedSeconds(i);
-            return p_453915_.matches(d0);
+            throw StopwatchCommand.ERROR_DOES_NOT_EXIST.create(id);
         }
+
+        long currentTime = Stopwatches.currentTime();
+        double elapsedSeconds = stopwatch.elapsedSeconds(currentTime);
+        return range.matches(elapsedSeconds);
     }
 
-    private static boolean checkCustomPredicate(CommandSourceStack p_137105_, Holder<LootItemCondition> p_335377_) {
-        ServerLevel serverlevel = p_137105_.getLevel();
-        LootParams lootparams = new LootParams.Builder(serverlevel)
-            .withParameter(LootContextParams.ORIGIN, p_137105_.getPosition())
-            .withOptionalParameter(LootContextParams.THIS_ENTITY, p_137105_.getEntity())
+    private static boolean checkCustomPredicate(final CommandSourceStack source, final Holder<LootItemCondition> predicate) {
+        ServerLevel level = source.getLevel();
+        LootParams lootParams = new LootParams.Builder(level)
+            .withParameter(LootContextParams.ORIGIN, source.getPosition())
+            .withOptionalParameter(LootContextParams.THIS_ENTITY, source.getEntity())
             .create(LootContextParamSets.COMMAND);
-        LootContext lootcontext = new LootContext.Builder(lootparams).create(Optional.empty());
-        lootcontext.pushVisitedElement(LootContext.createVisitedEntry(p_335377_.value()));
-        return p_335377_.value().test(lootcontext);
+        LootContext context = new LootContext.Builder(lootParams).create(Optional.empty());
+        context.pushVisitedElement(LootContext.createVisitedEntry(predicate.value()));
+        return predicate.value().test(context);
     }
 
-    private static Collection<CommandSourceStack> expect(CommandContext<CommandSourceStack> p_137071_, boolean p_137072_, boolean p_137073_) {
-        return (Collection<CommandSourceStack>)(p_137073_ == p_137072_ ? Collections.singleton(p_137071_.getSource()) : Collections.emptyList());
+    private static Collection<CommandSourceStack> expect(final CommandContext<CommandSourceStack> context, final boolean expected, final boolean result) {
+        return result == expected ? Collections.singleton(context.getSource()) : Collections.emptyList();
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> addConditional(
-        CommandNode<CommandSourceStack> p_137075_,
-        ArgumentBuilder<CommandSourceStack, ?> p_137076_,
-        boolean p_137077_,
-        ExecuteCommand.CommandPredicate p_137078_
+        final CommandNode<CommandSourceStack> root,
+        final ArgumentBuilder<CommandSourceStack, ?> argument,
+        final boolean expected,
+        final ExecuteCommand.CommandPredicate predicate
     ) {
-        return p_137076_.fork(p_137075_, p_137214_ -> expect(p_137214_, p_137077_, p_137078_.test(p_137214_))).executes(p_288396_ -> {
-            if (p_137077_ == p_137078_.test(p_288396_)) {
-                p_288396_.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass"), false);
+        return argument.fork(root, c -> expect(c, expected, predicate.test(c))).executes(c -> {
+            if (expected == predicate.test(c)) {
+                c.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass"), false);
                 return 1;
             } else {
                 throw ERROR_CONDITIONAL_FAILED.create();
@@ -916,284 +893,275 @@ public class ExecuteCommand {
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> addIfBlocksConditional(
-        CommandNode<CommandSourceStack> p_137080_, ArgumentBuilder<CommandSourceStack, ?> p_137081_, boolean p_137082_, boolean p_137083_
+        final CommandNode<CommandSourceStack> root, final ArgumentBuilder<CommandSourceStack, ?> argument, final boolean expected, final boolean skipAir
     ) {
-        return p_137081_.fork(p_137080_, p_137180_ -> expect(p_137180_, p_137082_, checkRegions(p_137180_, p_137083_).isPresent()))
-            .executes(p_137082_ ? p_137210_ -> checkIfRegions(p_137210_, p_137083_) : p_137165_ -> checkUnlessRegions(p_137165_, p_137083_));
+        return argument.fork(root, c -> expect(c, expected, checkRegions(c, skipAir).isPresent()))
+            .executes(expected ? c -> checkIfRegions(c, skipAir) : c -> checkUnlessRegions(c, skipAir));
     }
 
-    private static int checkIfRegions(CommandContext<CommandSourceStack> p_137068_, boolean p_137069_) throws CommandSyntaxException {
-        OptionalInt optionalint = checkRegions(p_137068_, p_137069_);
-        if (optionalint.isPresent()) {
-            p_137068_.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass_count", optionalint.getAsInt()), false);
-            return optionalint.getAsInt();
+    private static int checkIfRegions(final CommandContext<CommandSourceStack> context, final boolean skipAir) throws CommandSyntaxException {
+        OptionalInt count = checkRegions(context, skipAir);
+        if (count.isPresent()) {
+            context.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass_count", count.getAsInt()), false);
+            return count.getAsInt();
         } else {
             throw ERROR_CONDITIONAL_FAILED.create();
         }
     }
 
-    private static int checkUnlessRegions(CommandContext<CommandSourceStack> p_137194_, boolean p_137195_) throws CommandSyntaxException {
-        OptionalInt optionalint = checkRegions(p_137194_, p_137195_);
-        if (optionalint.isPresent()) {
-            throw ERROR_CONDITIONAL_FAILED_COUNT.create(optionalint.getAsInt());
-        } else {
-            p_137194_.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass"), false);
-            return 1;
+    private static int checkUnlessRegions(final CommandContext<CommandSourceStack> context, final boolean skipAir) throws CommandSyntaxException {
+        OptionalInt count = checkRegions(context, skipAir);
+        if (count.isPresent()) {
+            throw ERROR_CONDITIONAL_FAILED_COUNT.create(count.getAsInt());
         }
+
+        context.getSource().sendSuccess(() -> Component.translatable("commands.execute.conditional.pass"), false);
+        return 1;
     }
 
-    private static OptionalInt checkRegions(CommandContext<CommandSourceStack> p_137221_, boolean p_137222_) throws CommandSyntaxException {
+    private static OptionalInt checkRegions(final CommandContext<CommandSourceStack> context, final boolean skipAir) throws CommandSyntaxException {
         return checkRegions(
-            p_137221_.getSource().getLevel(),
-            BlockPosArgument.getLoadedBlockPos(p_137221_, "start"),
-            BlockPosArgument.getLoadedBlockPos(p_137221_, "end"),
-            BlockPosArgument.getLoadedBlockPos(p_137221_, "destination"),
-            p_137222_
+            context.getSource().getLevel(),
+            BlockPosArgument.getLoadedBlockPos(context, "start"),
+            BlockPosArgument.getLoadedBlockPos(context, "end"),
+            BlockPosArgument.getLoadedBlockPos(context, "destination"),
+            skipAir
         );
     }
 
-    private static OptionalInt checkRegions(ServerLevel p_137037_, BlockPos p_137038_, BlockPos p_137039_, BlockPos p_137040_, boolean p_137041_) throws CommandSyntaxException {
-        BoundingBox boundingbox = BoundingBox.fromCorners(p_137038_, p_137039_);
-        BoundingBox boundingbox1 = BoundingBox.fromCorners(p_137040_, p_137040_.offset(boundingbox.getLength()));
-        BlockPos blockpos = new BlockPos(
-            boundingbox1.minX() - boundingbox.minX(),
-            boundingbox1.minY() - boundingbox.minY(),
-            boundingbox1.minZ() - boundingbox.minZ()
-        );
-        int i = boundingbox.getXSpan() * boundingbox.getYSpan() * boundingbox.getZSpan();
-        if (i > 32768) {
-            throw ERROR_AREA_TOO_LARGE.create(32768, i);
-        } else {
-            int j = 0;
-            RegistryAccess registryaccess = p_137037_.registryAccess();
+    private static OptionalInt checkRegions(
+        final ServerLevel level, final BlockPos startPos, final BlockPos endPos, final BlockPos destPos, final boolean skipAir
+    ) throws CommandSyntaxException {
+        BoundingBox from = BoundingBox.fromCorners(startPos, endPos);
+        BoundingBox destination = BoundingBox.fromCorners(destPos, destPos.offset(from.getLength()));
+        BlockPos offset = new BlockPos(destination.minX() - from.minX(), destination.minY() - from.minY(), destination.minZ() - from.minZ());
+        long area = (long)from.getXSpan() * from.getYSpan() * from.getZSpan();
+        if (area > 32768L) {
+            throw ERROR_AREA_TOO_LARGE.create(32768, area);
+        }
 
-            try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(LOGGER)) {
-                for (int k = boundingbox.minZ(); k <= boundingbox.maxZ(); k++) {
-                    for (int l = boundingbox.minY(); l <= boundingbox.maxY(); l++) {
-                        for (int i1 = boundingbox.minX(); i1 <= boundingbox.maxX(); i1++) {
-                            BlockPos blockpos1 = new BlockPos(i1, l, k);
-                            BlockPos blockpos2 = blockpos1.offset(blockpos);
-                            BlockState blockstate = p_137037_.getBlockState(blockpos1);
-                            if (!p_137041_ || !blockstate.is(Blocks.AIR)) {
-                                if (blockstate != p_137037_.getBlockState(blockpos2)) {
+        int count = 0;
+        RegistryAccess registryAccess = level.registryAccess();
+
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(LOGGER)) {
+            for (int z = from.minZ(); z <= from.maxZ(); z++) {
+                for (int y = from.minY(); y <= from.maxY(); y++) {
+                    for (int x = from.minX(); x <= from.maxX(); x++) {
+                        BlockPos sourcePos = new BlockPos(x, y, z);
+                        BlockPos destinationPos = sourcePos.offset(offset);
+                        BlockState sourceBlock = level.getBlockState(sourcePos);
+                        if (!skipAir || !sourceBlock.is(Blocks.AIR)) {
+                            if (sourceBlock != level.getBlockState(destinationPos)) {
+                                return OptionalInt.empty();
+                            }
+
+                            BlockEntity sourceBlockEntity = level.getBlockEntity(sourcePos);
+                            BlockEntity destinationBlockEntity = level.getBlockEntity(destinationPos);
+                            if (sourceBlockEntity != null) {
+                                if (destinationBlockEntity == null) {
                                     return OptionalInt.empty();
                                 }
 
-                                BlockEntity blockentity = p_137037_.getBlockEntity(blockpos1);
-                                BlockEntity blockentity1 = p_137037_.getBlockEntity(blockpos2);
-                                if (blockentity != null) {
-                                    if (blockentity1 == null) {
-                                        return OptionalInt.empty();
-                                    }
-
-                                    if (blockentity1.getType() != blockentity.getType()) {
-                                        return OptionalInt.empty();
-                                    }
-
-                                    if (!blockentity.components().equals(blockentity1.components())) {
-                                        return OptionalInt.empty();
-                                    }
-
-                                    TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(
-                                        problemreporter$scopedcollector.forChild(blockentity.problemPath()), registryaccess
-                                    );
-                                    blockentity.saveCustomOnly(tagvalueoutput);
-                                    CompoundTag compoundtag = tagvalueoutput.buildResult();
-                                    TagValueOutput tagvalueoutput1 = TagValueOutput.createWithContext(
-                                        problemreporter$scopedcollector.forChild(blockentity1.problemPath()), registryaccess
-                                    );
-                                    blockentity1.saveCustomOnly(tagvalueoutput1);
-                                    CompoundTag compoundtag1 = tagvalueoutput1.buildResult();
-                                    if (!compoundtag.equals(compoundtag1)) {
-                                        return OptionalInt.empty();
-                                    }
+                                if (destinationBlockEntity.getType() != sourceBlockEntity.getType()) {
+                                    return OptionalInt.empty();
                                 }
 
-                                j++;
+                                if (!sourceBlockEntity.components().equals(destinationBlockEntity.components())) {
+                                    return OptionalInt.empty();
+                                }
+
+                                TagValueOutput sourceOutput = TagValueOutput.createWithContext(
+                                    reporter.forChild(sourceBlockEntity.problemPath()), registryAccess
+                                );
+                                sourceBlockEntity.saveCustomOnly(sourceOutput);
+                                CompoundTag sourceTag = sourceOutput.buildResult();
+                                TagValueOutput destinationOutput = TagValueOutput.createWithContext(
+                                    reporter.forChild(destinationBlockEntity.problemPath()), registryAccess
+                                );
+                                destinationBlockEntity.saveCustomOnly(destinationOutput);
+                                CompoundTag destinationTag = destinationOutput.buildResult();
+                                if (!sourceTag.equals(destinationTag)) {
+                                    return OptionalInt.empty();
+                                }
                             }
+
+                            count++;
                         }
                     }
                 }
             }
-
-            return OptionalInt.of(j);
         }
+
+        return OptionalInt.of(count);
     }
 
-    private static RedirectModifier<CommandSourceStack> expandOneToOneEntityRelation(Function<Entity, Optional<Entity>> p_265114_) {
-        return p_264786_ -> {
-            CommandSourceStack commandsourcestack = p_264786_.getSource();
-            Entity entity = commandsourcestack.getEntity();
-            return entity == null
-                ? List.of()
-                : p_265114_.apply(entity)
-                    .filter(p_264783_ -> !p_264783_.isRemoved())
-                    .map(p_264775_ -> List.of(commandsourcestack.withEntity(p_264775_)))
-                    .orElse(List.of());
+    private static RedirectModifier<CommandSourceStack> expandOneToOneEntityRelation(final Function<Entity, Optional<Entity>> unpacker) {
+        return context -> {
+            CommandSourceStack source = context.getSource();
+            Entity entity = source.getEntity();
+            return entity == null ? List.of() : unpacker.apply(entity).filter(e -> !e.isRemoved()).map(e -> List.of(source.withEntity(e))).orElse(List.of());
         };
     }
 
-    private static RedirectModifier<CommandSourceStack> expandOneToManyEntityRelation(Function<Entity, Stream<Entity>> p_265496_) {
-        return p_264780_ -> {
-            CommandSourceStack commandsourcestack = p_264780_.getSource();
-            Entity entity = commandsourcestack.getEntity();
-            return entity == null ? List.of() : p_265496_.apply(entity).filter(p_264784_ -> !p_264784_.isRemoved()).map(commandsourcestack::withEntity).toList();
+    private static RedirectModifier<CommandSourceStack> expandOneToManyEntityRelation(final Function<Entity, Stream<Entity>> unpacker) {
+        return context -> {
+            CommandSourceStack source = context.getSource();
+            Entity entity = source.getEntity();
+            return entity == null ? List.of() : unpacker.apply(entity).filter(e -> !e.isRemoved()).map(source::withEntity).toList();
         };
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> createRelationOperations(
-        CommandNode<CommandSourceStack> p_265189_, LiteralArgumentBuilder<CommandSourceStack> p_265783_
+        final CommandNode<CommandSourceStack> execute, final LiteralArgumentBuilder<CommandSourceStack> on
     ) {
-        return p_265783_.then(
+        return on.then(
                 Commands.literal("owner")
                     .fork(
-                        p_265189_,
+                        execute,
                         expandOneToOneEntityRelation(
-                            p_269758_ -> p_269758_ instanceof OwnableEntity ownableentity ? Optional.ofNullable(ownableentity.getOwner()) : Optional.empty()
+                            e -> e instanceof OwnableEntity ownableEntity ? Optional.ofNullable(ownableEntity.getOwner()) : Optional.empty()
                         )
                     )
             )
             .then(
                 Commands.literal("leasher")
                     .fork(
-                        p_265189_,
-                        expandOneToOneEntityRelation(p_341160_ -> p_341160_ instanceof Leashable leashable ? Optional.ofNullable(leashable.getLeashHolder()) : Optional.empty())
+                        execute,
+                        expandOneToOneEntityRelation(e -> e instanceof Leashable leashable ? Optional.ofNullable(leashable.getLeashHolder()) : Optional.empty())
                     )
             )
             .then(
                 Commands.literal("target")
                     .fork(
-                        p_265189_,
-                        expandOneToOneEntityRelation(p_272389_ -> p_272389_ instanceof Targeting targeting ? Optional.ofNullable(targeting.getTarget()) : Optional.empty())
+                        execute,
+                        expandOneToOneEntityRelation(e -> e instanceof Targeting targeting ? Optional.ofNullable(targeting.getTarget()) : Optional.empty())
                     )
             )
             .then(
                 Commands.literal("attacker")
                     .fork(
-                        p_265189_,
-                        expandOneToOneEntityRelation(p_272388_ -> p_272388_ instanceof Attackable attackable ? Optional.ofNullable(attackable.getLastAttacker()) : Optional.empty())
-                    )
-            )
-            .then(Commands.literal("vehicle").fork(p_265189_, expandOneToOneEntityRelation(p_264776_ -> Optional.ofNullable(p_264776_.getVehicle()))))
-            .then(Commands.literal("controller").fork(p_265189_, expandOneToOneEntityRelation(p_274815_ -> Optional.ofNullable(p_274815_.getControllingPassenger()))))
-            .then(
-                Commands.literal("origin")
-                    .fork(
-                        p_265189_,
+                        execute,
                         expandOneToOneEntityRelation(
-                            p_266631_ -> p_266631_ instanceof TraceableEntity traceableentity
-                                ? Optional.ofNullable(traceableentity.getOwner())
-                                : Optional.empty()
+                            e -> e instanceof Attackable attackable ? Optional.ofNullable(attackable.getLastAttacker()) : Optional.empty()
                         )
                     )
             )
-            .then(Commands.literal("passengers").fork(p_265189_, expandOneToManyEntityRelation(p_264777_ -> p_264777_.getPassengers().stream())));
+            .then(Commands.literal("vehicle").fork(execute, expandOneToOneEntityRelation(e -> Optional.ofNullable(e.getVehicle()))))
+            .then(Commands.literal("controller").fork(execute, expandOneToOneEntityRelation(e -> Optional.ofNullable(e.getControllingPassenger()))))
+            .then(
+                Commands.literal("origin")
+                    .fork(
+                        execute,
+                        expandOneToOneEntityRelation(e -> e instanceof TraceableEntity traceable ? Optional.ofNullable(traceable.getOwner()) : Optional.empty())
+                    )
+            )
+            .then(Commands.literal("passengers").fork(execute, expandOneToManyEntityRelation(e -> e.getPassengers().stream())));
     }
 
-    private static CommandSourceStack spawnEntityAndRedirect(CommandSourceStack p_270320_, Holder.Reference<EntityType<?>> p_270344_) throws CommandSyntaxException {
-        Entity entity = SummonCommand.createEntity(p_270320_, p_270344_, p_270320_.getPosition(), new CompoundTag(), true);
-        return p_270320_.withEntity(entity);
+    private static CommandSourceStack spawnEntityAndRedirect(final CommandSourceStack source, final Holder.Reference<EntityType<?>> type) throws CommandSyntaxException {
+        Entity entity = SummonCommand.createEntity(source, type, source.getPosition(), new CompoundTag(), true);
+        return source.withEntity(entity);
     }
 
     public static <T extends ExecutionCommandSource<T>> void scheduleFunctionConditionsAndTest(
-        T p_311643_,
-        List<T> p_313143_,
-        Function<T, T> p_312920_,
-        IntPredicate p_311696_,
-        ContextChain<T> p_311450_,
-        @Nullable CompoundTag p_313177_,
-        ExecutionControl<T> p_310605_,
-        InCommandFunction<CommandContext<T>, Collection<CommandFunction<T>>> p_393996_,
-        ChainModifiers p_312493_
+        final T originalSource,
+        final List<T> currentSources,
+        final Function<T, T> functionContextModifier,
+        final IntPredicate check,
+        final ContextChain<T> currentStep,
+        final @Nullable CompoundTag parameters,
+        final ExecutionControl<T> output,
+        final InCommandFunction<CommandContext<T>, Collection<CommandFunction<T>>> functionGetter,
+        final ChainModifiers modifiers
     ) {
-        List<T> list = new ArrayList<>(p_313143_.size());
+        List<T> filteredSources = new ArrayList<>(currentSources.size());
 
-        Collection<CommandFunction<T>> collection;
+        Collection<CommandFunction<T>> functionsToRun;
         try {
-            collection = p_393996_.apply(p_311450_.getTopContext().copyFor(p_311643_));
-        } catch (CommandSyntaxException commandsyntaxexception) {
-            p_311643_.handleError(commandsyntaxexception, p_312493_.isForked(), p_310605_.tracer());
+            functionsToRun = functionGetter.apply(currentStep.getTopContext().copyFor(originalSource));
+        } catch (CommandSyntaxException e) {
+            originalSource.handleError(e, modifiers.isForked(), output.tracer());
             return;
         }
 
-        int i = collection.size();
-        if (i != 0) {
-            List<InstantiatedFunction<T>> list1 = new ArrayList<>(i);
+        int functionCount = functionsToRun.size();
+        if (functionCount != 0) {
+            List<InstantiatedFunction<T>> instantiatedFunctions = new ArrayList<>(functionCount);
 
             try {
-                for (CommandFunction<T> commandfunction : collection) {
+                for (CommandFunction<T> function : functionsToRun) {
                     try {
-                        list1.add(commandfunction.instantiate(p_313177_, p_311643_.dispatcher()));
-                    } catch (FunctionInstantiationException functioninstantiationexception) {
-                        throw ERROR_FUNCTION_CONDITION_INSTANTATION_FAILURE.create(commandfunction.id(), functioninstantiationexception.messageComponent());
+                        instantiatedFunctions.add(function.instantiate(parameters, originalSource.dispatcher()));
+                    } catch (FunctionInstantiationException e) {
+                        throw ERROR_FUNCTION_CONDITION_INSTANTATION_FAILURE.create(function.id(), e.messageComponent());
                     }
                 }
-            } catch (CommandSyntaxException commandsyntaxexception1) {
-                p_311643_.handleError(commandsyntaxexception1, p_312493_.isForked(), p_310605_.tracer());
+            } catch (CommandSyntaxException e) {
+                originalSource.handleError(e, modifiers.isForked(), output.tracer());
             }
 
-            for (T t1 : p_313143_) {
-                T t = (T)p_312920_.apply(t1.clearCallbacks());
-                CommandResultCallback commandresultcallback = (p_308674_, p_308675_) -> {
-                    if (p_311696_.test(p_308675_)) {
-                        list.add(t1);
+            for (T source : currentSources) {
+                T newFunctionContext = (T)functionContextModifier.apply(source.clearCallbacks());
+                CommandResultCallback functionCallback = (success, result) -> {
+                    if (check.test(result)) {
+                        filteredSources.add(source);
                     }
                 };
-                p_310605_.queueNext(new IsolatedCall<>(p_308664_ -> {
-                    for (InstantiatedFunction<T> instantiatedfunction : list1) {
-                        p_308664_.queueNext(new CallFunction<>(instantiatedfunction, p_308664_.currentFrame().returnValueConsumer(), true).bind(t));
+                output.queueNext(new IsolatedCall<>(o -> {
+                    for (InstantiatedFunction<T> function : instantiatedFunctions) {
+                        o.queueNext(new CallFunction<>(function, o.currentFrame().returnValueConsumer(), true).bind(newFunctionContext));
                     }
 
-                    p_308664_.queueNext(FallthroughTask.instance());
-                }, commandresultcallback));
+                    o.queueNext(FallthroughTask.instance());
+                }, functionCallback));
             }
 
-            ContextChain<T> contextchain = p_311450_.nextStage();
-            String s = p_311450_.getTopContext().getInput();
-            p_310605_.queueNext(new BuildContexts.Continuation<>(s, contextchain, p_312493_, p_311643_, list));
+            ContextChain<T> nextStage = currentStep.nextStage();
+            String input = currentStep.getTopContext().getInput();
+            output.queueNext(new BuildContexts.Continuation<>(input, nextStage, modifiers, originalSource, filteredSources));
         }
     }
 
     @FunctionalInterface
-    interface CommandNumericPredicate {
-        int test(CommandContext<CommandSourceStack> p_137301_) throws CommandSyntaxException;
+    private interface CommandNumericPredicate {
+        int test(CommandContext<CommandSourceStack> c) throws CommandSyntaxException;
     }
 
     @FunctionalInterface
-    interface CommandPredicate {
-        boolean test(CommandContext<CommandSourceStack> p_137303_) throws CommandSyntaxException;
+    private interface CommandPredicate {
+        boolean test(CommandContext<CommandSourceStack> c) throws CommandSyntaxException;
     }
 
-    static class ExecuteIfFunctionCustomModifier implements CustomModifierExecutor.ModifierAdapter<CommandSourceStack> {
+    private static class ExecuteIfFunctionCustomModifier implements CustomModifierExecutor.ModifierAdapter<CommandSourceStack> {
         private final IntPredicate check;
 
-        ExecuteIfFunctionCustomModifier(boolean p_311621_) {
-            this.check = p_311621_ ? p_311044_ -> p_311044_ != 0 : p_311222_ -> p_311222_ == 0;
+        private ExecuteIfFunctionCustomModifier(final boolean check) {
+            this.check = check ? value -> value != 0 : value -> value == 0;
         }
 
         public void apply(
-            CommandSourceStack p_312164_,
-            List<CommandSourceStack> p_311631_,
-            ContextChain<CommandSourceStack> p_310925_,
-            ChainModifiers p_312971_,
-            ExecutionControl<CommandSourceStack> p_312212_
+            final CommandSourceStack originalSource,
+            final List<CommandSourceStack> currentSources,
+            final ContextChain<CommandSourceStack> currentStep,
+            final ChainModifiers modifiers,
+            final ExecutionControl<CommandSourceStack> output
         ) {
             ExecuteCommand.scheduleFunctionConditionsAndTest(
-                p_312164_,
-                p_311631_,
+                originalSource,
+                currentSources,
                 FunctionCommand::modifySenderForExecution,
                 this.check,
-                p_310925_,
+                currentStep,
                 null,
-                p_312212_,
-                p_312564_ -> FunctionArgument.getFunctions(p_312564_, "name"),
-                p_312971_
+                output,
+                c -> FunctionArgument.getFunctions(c, "name"),
+                modifiers
             );
         }
     }
 
     @FunctionalInterface
-    interface IntBiPredicate {
-        boolean test(int p_311925_, int p_313118_);
+    private interface IntBiPredicate {
+        boolean test(int a, int b);
     }
 }

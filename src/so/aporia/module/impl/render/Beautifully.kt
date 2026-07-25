@@ -1,6 +1,6 @@
 package so.aporia.module.impl.render
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import so.aporia.module.Category
 import so.aporia.module.Module
 import so.aporia.module.ModuleManager
@@ -20,7 +20,7 @@ class Beautifully : Module("Beautifully", Category.VISUAL) {
     override fun onEnable() {}
     override fun onDisable() {}
 
-    fun render(gfx: GuiGraphics, mx: Int, my: Int, delta: Float) {}
+    fun render(gfx: GuiGraphicsExtractor, mx: Int, my: Int, delta: Float) {}
 
     companion object {
         @JvmStatic

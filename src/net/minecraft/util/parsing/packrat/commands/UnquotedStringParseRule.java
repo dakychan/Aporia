@@ -11,20 +11,20 @@ public class UnquotedStringParseRule implements Rule<StringReader, String> {
     private final int minSize;
     private final DelayedException<CommandSyntaxException> error;
 
-    public UnquotedStringParseRule(int p_391791_, DelayedException<CommandSyntaxException> p_397262_) {
-        this.minSize = p_391791_;
-        this.error = p_397262_;
+    public UnquotedStringParseRule(final int minSize, final DelayedException<CommandSyntaxException> error) {
+        this.minSize = minSize;
+        this.error = error;
     }
 
-    public @Nullable String parse(ParseState<StringReader> p_392280_) {
-        p_392280_.input().skipWhitespace();
-        int i = p_392280_.mark();
-        String s = p_392280_.input().readUnquotedString();
-        if (s.length() < this.minSize) {
-            p_392280_.errorCollector().store(i, this.error);
+    public @Nullable String parse(final ParseState<StringReader> state) {
+        state.input().skipWhitespace();
+        int cursor = state.mark();
+        String value = state.input().readUnquotedString();
+        if (value.length() < this.minSize) {
+            state.errorCollector().store(cursor, this.error);
             return null;
         } else {
-            return s;
+            return value;
         }
     }
 }

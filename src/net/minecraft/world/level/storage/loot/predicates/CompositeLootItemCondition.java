@@ -4,58 +4,56 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 
 public abstract class CompositeLootItemCondition implements LootItemCondition {
     protected final List<LootItemCondition> terms;
     private final Predicate<LootContext> composedPredicate;
 
-    protected CompositeLootItemCondition(List<LootItemCondition> p_299430_, Predicate<LootContext> p_286771_) {
-        this.terms = p_299430_;
-        this.composedPredicate = p_286771_;
-    }
-
-    protected static <T extends CompositeLootItemCondition> MapCodec<T> createCodec(Function<List<LootItemCondition>, T> p_297590_) {
-        return RecordCodecBuilder.mapCodec(
-            p_342025_ -> p_342025_.group(LootItemCondition.DIRECT_CODEC.listOf().fieldOf("terms").forGetter(p_297812_ -> p_297812_.terms))
-                .apply(p_342025_, p_297590_)
-        );
-    }
-
-    protected static <T extends CompositeLootItemCondition> Codec<T> createInlineCodec(Function<List<LootItemCondition>, T> p_298800_) {
-        return LootItemCondition.DIRECT_CODEC.listOf().xmap(p_298800_, p_300100_ -> p_300100_.terms);
-    }
-
-    public final boolean test(LootContext p_286298_) {
-        return this.composedPredicate.test(p_286298_);
+    protected CompositeLootItemCondition(final List<LootItemCondition> terms, final Predicate<LootContext> composedPredicate) {
+        this.terms = terms;
+        this.composedPredicate = composedPredicate;
     }
 
     @Override
-    public void validate(ValidationContext p_286819_) {
-        LootItemCondition.super.validate(p_286819_);
+    public abstract MapCodec<? extends CompositeLootItemCondition> codec();
 
-        for (int i = 0; i < this.terms.size(); i++) {
-            this.terms.get(i).validate(p_286819_.forChild(new ProblemReporter.IndexedFieldPathElement("terms", i)));
-        }
+    protected static <T extends CompositeLootItemCondition> MapCodec<T> createCodec(final Function<List<LootItemCondition>, T> factory) {
+        return RecordCodecBuilder.mapCodec(
+            i -> i.group(LootItemCondition.DIRECT_CODEC.listOf().fieldOf("terms").forGetter(condition -> condition.terms)).apply(i, factory)
+        );
+    }
+
+    protected static <T extends CompositeLootItemCondition> Codec<T> createInlineCodec(final Function<List<LootItemCondition>, T> factory) {
+        return LootItemCondition.DIRECT_CODEC.listOf().xmap(factory, condition -> condition.terms);
+    }
+
+    public final boolean test(final LootContext context) {
+        return this.composedPredicate.test(context);
+    }
+
+    @Override
+    public void validate(final ValidationContext output) {
+        LootItemCondition.super.validate(output);
+        Validatable.validate(output, "terms", this.terms);
     }
 
     public abstract static class Builder implements LootItemCondition.Builder {
         private final ImmutableList.Builder<LootItemCondition> terms = ImmutableList.builder();
 
-        protected Builder(LootItemCondition.Builder... p_286619_) {
-            for (LootItemCondition.Builder lootitemcondition$builder : p_286619_) {
-                this.terms.add(lootitemcondition$builder.build());
+        protected Builder(final LootItemCondition.Builder... terms) {
+            for (LootItemCondition.Builder term : terms) {
+                this.terms.add(term.build());
             }
         }
 
-        public void addTerm(LootItemCondition.Builder p_286677_) {
-            this.terms.add(p_286677_.build());
+        public void addTerm(final LootItemCondition.Builder term) {
+            this.terms.add(term.build());
         }
 
         @Override
@@ -63,6 +61,6 @@ public abstract class CompositeLootItemCondition implements LootItemCondition {
             return this.create(this.terms.build());
         }
 
-        protected abstract LootItemCondition create(List<LootItemCondition> p_300168_);
+        protected abstract LootItemCondition create(List<LootItemCondition> terms);
     }
 }

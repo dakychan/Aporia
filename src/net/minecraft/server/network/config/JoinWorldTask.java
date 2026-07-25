@@ -9,8 +9,8 @@ public class JoinWorldTask implements ConfigurationTask {
     public static final ConfigurationTask.Type TYPE = new ConfigurationTask.Type("join_world");
 
     @Override
-    public void start(Consumer<Packet<?>> p_299501_) {
-        p_299501_.accept(ClientboundFinishConfigurationPacket.INSTANCE);
+    public void start(final Consumer<Packet<?>> connection) {
+        connection.accept(ClientboundFinishConfigurationPacket.INSTANCE);
     }
 
     @Override

@@ -10,7 +10,7 @@ import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.AgeableMob;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
@@ -29,7 +29,9 @@ public class VillagerGoalPackages {
     public static final int INTERACT_WALKUP_DIST = 2;
     public static final float INTERACT_SPEED_MODIFIER = 0.5F;
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getCorePackage(Holder<VillagerProfession> p_392340_, float p_24587_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getCorePackage(
+        final Holder<VillagerProfession> profession, final float speedModifier
+    ) {
         return ImmutableList.of(
             Pair.of(0, new Swim<>(0.8F)),
             Pair.of(0, InteractWithDoor.create()),
@@ -38,52 +40,45 @@ public class VillagerGoalPackages {
             Pair.of(0, WakeUp.create()),
             Pair.of(0, ReactToBell.create()),
             Pair.of(0, SetRaidStatus.create()),
-            Pair.of(0, ValidateNearbyPoi.create(p_392340_.value().heldJobSite(), MemoryModuleType.JOB_SITE)),
-            Pair.of(0, ValidateNearbyPoi.create(p_392340_.value().acquirableJobSite(), MemoryModuleType.POTENTIAL_JOB_SITE)),
+            Pair.of(0, ValidateNearbyPoi.create(profession.value().heldJobSite(), MemoryModuleType.JOB_SITE)),
+            Pair.of(0, ValidateNearbyPoi.create(profession.value().acquirableJobSite(), MemoryModuleType.POTENTIAL_JOB_SITE)),
             Pair.of(1, new MoveToTargetSink()),
             Pair.of(2, PoiCompetitorScan.create()),
-            Pair.of(3, new LookAndFollowTradingPlayerSink(p_24587_)),
-            Pair.of(5, GoToWantedItem.create(p_24587_, false, 4)),
+            Pair.of(3, new LookAndFollowTradingPlayerSink(speedModifier)),
+            Pair.of(5, GoToWantedItem.create(speedModifier, false, 4)),
             Pair.of(
                 6,
                 AcquirePoi.create(
-                    p_392340_.value().acquirableJobSite(),
+                    profession.value().acquirableJobSite(),
                     MemoryModuleType.JOB_SITE,
                     MemoryModuleType.POTENTIAL_JOB_SITE,
                     true,
                     Optional.empty(),
-                    (p_375063_, p_375064_) -> true
+                    (l, p) -> true
                 )
             ),
-            Pair.of(7, new GoToPotentialJobSite(p_24587_)),
-            Pair.of(8, YieldJobSite.create(p_24587_)),
-            Pair.of(
-                10,
-                AcquirePoi.create(
-                    p_217499_ -> p_217499_.is(PoiTypes.HOME),
-                    MemoryModuleType.HOME,
-                    false,
-                    Optional.of((byte)14),
-                    VillagerGoalPackages::validateBedPoi
-                )
-            ),
-            Pair.of(10, AcquirePoi.create(p_217497_ -> p_217497_.is(PoiTypes.MEETING), MemoryModuleType.MEETING_POINT, true, Optional.of((byte)14))),
+            Pair.of(7, new GoToPotentialJobSite(speedModifier)),
+            Pair.of(8, YieldJobSite.create(speedModifier)),
+            Pair.of(10, AcquirePoi.create(p -> p.is(PoiTypes.HOME), MemoryModuleType.HOME, false, Optional.of((byte)14), VillagerGoalPackages::validateBedPoi)),
+            Pair.of(10, AcquirePoi.create(p -> p.is(PoiTypes.MEETING), MemoryModuleType.MEETING_POINT, true, Optional.of((byte)14))),
             Pair.of(10, AssignProfessionFromJobSite.create()),
             Pair.of(10, ResetProfession.create())
         );
     }
 
-    private static boolean validateBedPoi(ServerLevel p_376537_, BlockPos p_376729_) {
-        BlockState blockstate = p_376537_.getBlockState(p_376729_);
-        return blockstate.is(BlockTags.BEDS) && !blockstate.getValue(BedBlock.OCCUPIED);
+    private static boolean validateBedPoi(final ServerLevel level, final BlockPos blockPos) {
+        BlockState blockState = level.getBlockState(blockPos);
+        return blockState.is(BlockTags.BEDS) && !blockState.getValue(BedBlock.OCCUPIED);
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getWorkPackage(Holder<VillagerProfession> p_394996_, float p_24591_) {
-        WorkAtPoi workatpoi;
-        if (p_394996_.is(VillagerProfession.FARMER)) {
-            workatpoi = new WorkAtComposter();
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getWorkPackage(
+        final Holder<VillagerProfession> profession, final float speedModifier
+    ) {
+        WorkAtPoi workAtPoi;
+        if (profession.is(VillagerProfession.FARMER)) {
+            workAtPoi = new WorkAtComposter();
         } else {
-            workatpoi = new WorkAtPoi();
+            workAtPoi = new WorkAtPoi();
         }
 
         return ImmutableList.of(
@@ -92,24 +87,24 @@ public class VillagerGoalPackages {
                 5,
                 new RunOne<>(
                     ImmutableList.of(
-                        Pair.of(workatpoi, 7),
+                        Pair.of(workAtPoi, 7),
                         Pair.of(StrollAroundPoi.create(MemoryModuleType.JOB_SITE, 0.4F, 4), 2),
                         Pair.of(StrollToPoi.create(MemoryModuleType.JOB_SITE, 0.4F, 1, 10), 5),
-                        Pair.of(StrollToPoiList.create(MemoryModuleType.SECONDARY_JOB_SITE, p_24591_, 1, 6, MemoryModuleType.JOB_SITE), 5),
-                        Pair.of(new HarvestFarmland(), p_394996_.is(VillagerProfession.FARMER) ? 2 : 5),
-                        Pair.of(new UseBonemeal(), p_394996_.is(VillagerProfession.FARMER) ? 4 : 7)
+                        Pair.of(StrollToPoiList.create(MemoryModuleType.SECONDARY_JOB_SITE, speedModifier, 1, 6, MemoryModuleType.JOB_SITE), 5),
+                        Pair.of(new HarvestFarmland(), profession.is(VillagerProfession.FARMER) ? 2 : 5),
+                        Pair.of(new UseBonemeal(), profession.is(VillagerProfession.FARMER) ? 4 : 7)
                     )
                 )
             ),
             Pair.of(10, new ShowTradesToPlayer(400, 1600)),
-            Pair.of(10, SetLookAndInteract.create(EntityType.PLAYER, 4)),
-            Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.JOB_SITE, p_24591_, 9, 100, 1200)),
+            Pair.of(10, SetLookAndInteract.create(EntityTypes.PLAYER, 4)),
+            Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.JOB_SITE, speedModifier, 9, 100, 1200)),
             Pair.of(3, new GiveGiftToHero(100)),
             Pair.of(99, UpdateActivityFromSchedule.create())
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPlayPackage(float p_24584_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPlayPackage(final float speedModifier) {
         return ImmutableList.of(
             Pair.of(0, new MoveToTargetSink(80, 120)),
             getFullLookBehavior(),
@@ -119,11 +114,11 @@ public class VillagerGoalPackages {
                 new RunOne<>(
                     ImmutableMap.of(MemoryModuleType.VISIBLE_VILLAGER_BABIES, MemoryStatus.VALUE_ABSENT),
                     ImmutableList.of(
-                        Pair.of(InteractWith.of(EntityType.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, p_24584_, 2), 2),
-                        Pair.of(InteractWith.of(EntityType.CAT, 8, MemoryModuleType.INTERACTION_TARGET, p_24584_, 2), 1),
-                        Pair.of(VillageBoundRandomStroll.create(p_24584_), 1),
-                        Pair.of(SetWalkTargetFromLookTarget.create(p_24584_, 2), 1),
-                        Pair.of(new JumpOnBed(p_24584_), 2),
+                        Pair.of(InteractWith.of(EntityTypes.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, speedModifier, 2), 2),
+                        Pair.of(InteractWith.of(EntityTypes.CAT, 8, MemoryModuleType.INTERACTION_TARGET, speedModifier, 2), 1),
+                        Pair.of(VillageBoundRandomStroll.create(speedModifier), 1),
+                        Pair.of(SetWalkTargetFromLookTarget.create(speedModifier, 2), 1),
+                        Pair.of(new JumpOnBed(speedModifier), 2),
                         Pair.of(new DoNothing(20, 40), 2)
                     )
                 )
@@ -132,19 +127,19 @@ public class VillagerGoalPackages {
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRestPackage(Holder<VillagerProfession> p_396136_, float p_24594_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRestPackage(final float speedModifier) {
         return ImmutableList.of(
-            Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.HOME, p_24594_, 1, 150, 1200)),
-            Pair.of(3, ValidateNearbyPoi.create(p_217495_ -> p_217495_.is(PoiTypes.HOME), MemoryModuleType.HOME)),
+            Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.HOME, speedModifier, 1, 150, 1200)),
+            Pair.of(3, ValidateNearbyPoi.create(p -> p.is(PoiTypes.HOME), MemoryModuleType.HOME)),
             Pair.of(3, new SleepInBed()),
             Pair.of(
                 5,
                 new RunOne<>(
                     ImmutableMap.of(MemoryModuleType.HOME, MemoryStatus.VALUE_ABSENT),
                     ImmutableList.of(
-                        Pair.of(SetClosestHomeAsWalkTarget.create(p_24594_), 1),
-                        Pair.of(InsideBrownianWalk.create(p_24594_), 4),
-                        Pair.of(GoToClosestVillage.create(p_24594_, 4), 2),
+                        Pair.of(SetClosestHomeAsWalkTarget.create(speedModifier), 1),
+                        Pair.of(InsideBrownianWalk.create(speedModifier), 4),
+                        Pair.of(GoToClosestVillage.create(speedModifier, 4), 2),
                         Pair.of(new DoNothing(20, 40), 2)
                     )
                 )
@@ -154,7 +149,7 @@ public class VillagerGoalPackages {
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getMeetPackage(Holder<VillagerProfession> p_398018_, float p_24597_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getMeetPackage(final float speedModifier) {
         return ImmutableList.of(
             Pair.of(
                 2,
@@ -163,10 +158,10 @@ public class VillagerGoalPackages {
                 )
             ),
             Pair.of(10, new ShowTradesToPlayer(400, 1600)),
-            Pair.of(10, SetLookAndInteract.create(EntityType.PLAYER, 4)),
-            Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.MEETING_POINT, p_24597_, 6, 100, 200)),
+            Pair.of(10, SetLookAndInteract.create(EntityTypes.PLAYER, 4)),
+            Pair.of(2, SetWalkTargetFromBlockMemory.create(MemoryModuleType.MEETING_POINT, speedModifier, 6, 100, 200)),
             Pair.of(3, new GiveGiftToHero(100)),
-            Pair.of(3, ValidateNearbyPoi.create(p_217493_ -> p_217493_.is(PoiTypes.MEETING), MemoryModuleType.MEETING_POINT)),
+            Pair.of(3, ValidateNearbyPoi.create(p -> p.is(PoiTypes.MEETING), MemoryModuleType.MEETING_POINT)),
             Pair.of(
                 3,
                 new GateBehavior<>(
@@ -182,27 +177,29 @@ public class VillagerGoalPackages {
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getIdlePackage(Holder<VillagerProfession> p_391463_, float p_24600_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getIdlePackage(final float speedModifier) {
         return ImmutableList.of(
             Pair.of(
                 2,
                 new RunOne<>(
                     ImmutableList.of(
-                        Pair.of(InteractWith.of(EntityType.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, p_24600_, 2), 2),
+                        Pair.of(InteractWith.of(EntityTypes.VILLAGER, 8, MemoryModuleType.INTERACTION_TARGET, speedModifier, 2), 2),
                         Pair.of(
-                            InteractWith.of(EntityType.VILLAGER, 8, AgeableMob::canBreed, AgeableMob::canBreed, MemoryModuleType.BREED_TARGET, p_24600_, 2),
+                            InteractWith.of(
+                                EntityTypes.VILLAGER, 8, AgeableMob::canBreed, AgeableMob::canBreed, MemoryModuleType.BREED_TARGET, speedModifier, 2
+                            ),
                             1
                         ),
-                        Pair.of(InteractWith.of(EntityType.CAT, 8, MemoryModuleType.INTERACTION_TARGET, p_24600_, 2), 1),
-                        Pair.of(VillageBoundRandomStroll.create(p_24600_), 1),
-                        Pair.of(SetWalkTargetFromLookTarget.create(p_24600_, 2), 1),
-                        Pair.of(new JumpOnBed(p_24600_), 1),
+                        Pair.of(InteractWith.of(EntityTypes.CAT, 8, MemoryModuleType.INTERACTION_TARGET, speedModifier, 2), 1),
+                        Pair.of(VillageBoundRandomStroll.create(speedModifier), 1),
+                        Pair.of(SetWalkTargetFromLookTarget.create(speedModifier, 2), 1),
+                        Pair.of(new JumpOnBed(speedModifier), 1),
                         Pair.of(new DoNothing(30, 60), 1)
                     )
                 )
             ),
             Pair.of(3, new GiveGiftToHero(100)),
-            Pair.of(3, SetLookAndInteract.create(EntityType.PLAYER, 4)),
+            Pair.of(3, SetLookAndInteract.create(EntityTypes.PLAYER, 4)),
             Pair.of(3, new ShowTradesToPlayer(400, 1600)),
             Pair.of(
                 3,
@@ -229,26 +226,26 @@ public class VillagerGoalPackages {
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPanicPackage(Holder<VillagerProfession> p_396638_, float p_24603_) {
-        float f = p_24603_ * 1.5F;
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPanicPackage(final float speedModifier) {
+        float runawaySpeed = speedModifier * 1.5F;
         return ImmutableList.of(
             Pair.of(0, VillagerCalmDown.create()),
-            Pair.of(1, SetWalkTargetAwayFrom.entity(MemoryModuleType.NEAREST_HOSTILE, f, 6, false)),
-            Pair.of(1, SetWalkTargetAwayFrom.entity(MemoryModuleType.HURT_BY_ENTITY, f, 6, false)),
-            Pair.of(3, VillageBoundRandomStroll.create(f, 2, 2)),
+            Pair.of(1, SetWalkTargetAwayFrom.entity(MemoryModuleType.NEAREST_HOSTILE, runawaySpeed, 6, false)),
+            Pair.of(1, SetWalkTargetAwayFrom.entity(MemoryModuleType.HURT_BY_ENTITY, runawaySpeed, 6, false)),
+            Pair.of(3, VillageBoundRandomStroll.create(runawaySpeed, 2, 2)),
             getMinimalLookBehavior()
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPreRaidPackage(Holder<VillagerProfession> p_393574_, float p_24606_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getPreRaidPackage(final float speedModifier) {
         return ImmutableList.of(
             Pair.of(0, RingBell.create()),
             Pair.of(
                 0,
                 TriggerGate.triggerOneShuffled(
                     ImmutableList.of(
-                        Pair.of(SetWalkTargetFromBlockMemory.create(MemoryModuleType.MEETING_POINT, p_24606_ * 1.5F, 2, 150, 200), 6),
-                        Pair.of(VillageBoundRandomStroll.create(p_24606_ * 1.5F), 2)
+                        Pair.of(SetWalkTargetFromBlockMemory.create(MemoryModuleType.MEETING_POINT, speedModifier * 1.5F, 2, 150, 200), 6),
+                        Pair.of(VillageBoundRandomStroll.create(speedModifier * 1.5F), 2)
                     )
                 )
             ),
@@ -257,29 +254,36 @@ public class VillagerGoalPackages {
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRaidPackage(Holder<VillagerProfession> p_397187_, float p_24609_) {
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getRaidPackage(final float speedModifier) {
         return ImmutableList.of(
             Pair.of(
                 0,
                 BehaviorBuilder.sequence(
                     BehaviorBuilder.triggerIf(VillagerGoalPackages::raidExistsAndNotVictory),
                     TriggerGate.triggerOneShuffled(
-                        ImmutableList.of(Pair.of(MoveToSkySeeingSpot.create(p_24609_), 5), Pair.of(VillageBoundRandomStroll.create(p_24609_ * 1.1F), 2))
+                        ImmutableList.of(
+                            Pair.of(MoveToSkySeeingSpot.create(speedModifier), 5), Pair.of(VillageBoundRandomStroll.create(speedModifier * 1.1F), 2)
+                        )
                     )
                 )
             ),
             Pair.of(0, new CelebrateVillagersSurvivedRaid(600, 600)),
             Pair.of(
-                2, BehaviorBuilder.sequence(BehaviorBuilder.triggerIf(VillagerGoalPackages::raidExistsAndActive), LocateHidingPlace.create(24, p_24609_ * 1.4F, 1))
+                2,
+                BehaviorBuilder.sequence(
+                    BehaviorBuilder.triggerIf(VillagerGoalPackages::raidExistsAndActive), LocateHidingPlace.create(24, speedModifier * 1.4F, 1)
+                )
             ),
             getMinimalLookBehavior(),
             Pair.of(99, ResetRaidStatus.create())
         );
     }
 
-    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getHidePackage(Holder<VillagerProfession> p_397551_, float p_24612_) {
-        int i = 2;
-        return ImmutableList.of(Pair.of(0, SetHiddenState.create(15, 3)), Pair.of(1, LocateHidingPlace.create(32, p_24612_ * 1.25F, 2)), getMinimalLookBehavior());
+    public static ImmutableList<Pair<Integer, ? extends BehaviorControl<? super Villager>>> getHidePackage(final float speedModifier) {
+        int closeEnoughDist = 2;
+        return ImmutableList.of(
+            Pair.of(0, SetHiddenState.create(15, 3)), Pair.of(1, LocateHidingPlace.create(32, speedModifier * 1.25F, 2)), getMinimalLookBehavior()
+        );
     }
 
     private static Pair<Integer, BehaviorControl<LivingEntity>> getFullLookBehavior() {
@@ -287,9 +291,9 @@ public class VillagerGoalPackages {
             5,
             new RunOne<>(
                 ImmutableList.of(
-                    Pair.of(SetEntityLookTarget.create(EntityType.CAT, 8.0F), 8),
-                    Pair.of(SetEntityLookTarget.create(EntityType.VILLAGER, 8.0F), 2),
-                    Pair.of(SetEntityLookTarget.create(EntityType.PLAYER, 8.0F), 2),
+                    Pair.of(SetEntityLookTarget.create(EntityTypes.CAT, 8.0F), 8),
+                    Pair.of(SetEntityLookTarget.create(EntityTypes.VILLAGER, 8.0F), 2),
+                    Pair.of(SetEntityLookTarget.create(EntityTypes.PLAYER, 8.0F), 2),
                     Pair.of(SetEntityLookTarget.create(MobCategory.CREATURE, 8.0F), 1),
                     Pair.of(SetEntityLookTarget.create(MobCategory.WATER_CREATURE, 8.0F), 1),
                     Pair.of(SetEntityLookTarget.create(MobCategory.AXOLOTLS, 8.0F), 1),
@@ -307,21 +311,21 @@ public class VillagerGoalPackages {
             5,
             new RunOne<>(
                 ImmutableList.of(
-                    Pair.of(SetEntityLookTarget.create(EntityType.VILLAGER, 8.0F), 2),
-                    Pair.of(SetEntityLookTarget.create(EntityType.PLAYER, 8.0F), 2),
+                    Pair.of(SetEntityLookTarget.create(EntityTypes.VILLAGER, 8.0F), 2),
+                    Pair.of(SetEntityLookTarget.create(EntityTypes.PLAYER, 8.0F), 2),
                     Pair.of(new DoNothing(30, 60), 8)
                 )
             )
         );
     }
 
-    private static boolean raidExistsAndActive(ServerLevel p_260274_, LivingEntity p_260163_) {
-        Raid raid = p_260274_.getRaidAt(p_260163_.blockPosition());
-        return raid != null && raid.isActive() && !raid.isVictory() && !raid.isLoss();
+    private static boolean raidExistsAndActive(final ServerLevel level, final LivingEntity body) {
+        Raid currentRaid = level.getRaidAt(body.blockPosition());
+        return currentRaid != null && currentRaid.isActive() && !currentRaid.isVictory() && !currentRaid.isLoss();
     }
 
-    private static boolean raidExistsAndNotVictory(ServerLevel p_259939_, LivingEntity p_259384_) {
-        Raid raid = p_259939_.getRaidAt(p_259384_.blockPosition());
-        return raid != null && raid.isVictory();
+    private static boolean raidExistsAndNotVictory(final ServerLevel level, final LivingEntity body) {
+        Raid currentRaid = level.getRaidAt(body.blockPosition());
+        return currentRaid != null && currentRaid.isVictory();
     }
 }

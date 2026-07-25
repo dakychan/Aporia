@@ -23,7 +23,7 @@ public record ClientboundStatusResponsePacket(ServerStatus status) implements Pa
         return StatusPacketTypes.CLIENTBOUND_STATUS_RESPONSE;
     }
 
-    public void handle(ClientStatusPacketListener p_134896_) {
-        p_134896_.handleStatusResponse(this);
+    public void handle(final ClientStatusPacketListener listener) {
+        listener.handleStatusResponse(this);
     }
 }

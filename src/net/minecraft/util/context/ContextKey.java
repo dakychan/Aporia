@@ -5,12 +5,12 @@ import net.minecraft.resources.Identifier;
 public class ContextKey<T> {
     private final Identifier name;
 
-    public ContextKey(Identifier p_460924_) {
-        this.name = p_460924_;
+    public ContextKey(final Identifier name) {
+        this.name = name;
     }
 
-    public static <T> ContextKey<T> vanilla(String p_369920_) {
-        return new ContextKey<>(Identifier.withDefaultNamespace(p_369920_));
+    public static <T> ContextKey<T> vanilla(final String name) {
+        return new ContextKey<>(Identifier.withDefaultNamespace(name));
     }
 
     public Identifier name() {

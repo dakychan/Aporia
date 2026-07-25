@@ -16,81 +16,88 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 public class HugeFungusFeature extends Feature<HugeFungusConfiguration> {
     private static final float HUGE_PROBABILITY = 0.06F;
 
-    public HugeFungusFeature(Codec<HugeFungusConfiguration> p_65922_) {
-        super(p_65922_);
+    public HugeFungusFeature(final Codec<HugeFungusConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<HugeFungusConfiguration> p_159878_) {
-        WorldGenLevel worldgenlevel = p_159878_.level();
-        BlockPos blockpos = p_159878_.origin();
-        RandomSource randomsource = p_159878_.random();
-        ChunkGenerator chunkgenerator = p_159878_.chunkGenerator();
-        HugeFungusConfiguration hugefungusconfiguration = p_159878_.config();
-        Block block = hugefungusconfiguration.validBaseState.getBlock();
-        BlockPos blockpos1 = null;
-        BlockState blockstate = worldgenlevel.getBlockState(blockpos.below());
-        if (blockstate.is(block)) {
-            blockpos1 = blockpos;
+    public boolean place(final FeaturePlaceContext<HugeFungusConfiguration> context) {
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        RandomSource random = context.random();
+        ChunkGenerator chunkGenerator = context.chunkGenerator();
+        HugeFungusConfiguration config = context.config();
+        Block allowedBaseBlock = config.validBaseState.getBlock();
+        BlockPos newOrigin = null;
+        BlockState belowState = level.getBlockState(origin.below());
+        if (belowState.is(allowedBaseBlock)) {
+            newOrigin = origin;
         }
 
-        if (blockpos1 == null) {
+        if (newOrigin == null) {
             return false;
-        } else {
-            int i = Mth.nextInt(randomsource, 4, 13);
-            if (randomsource.nextInt(12) == 0) {
-                i *= 2;
-            }
-
-            if (!hugefungusconfiguration.planted) {
-                int j = chunkgenerator.getGenDepth();
-                if (blockpos1.getY() + i + 1 >= j) {
-                    return false;
-                }
-            }
-
-            boolean flag = !hugefungusconfiguration.planted && randomsource.nextFloat() < 0.06F;
-            worldgenlevel.setBlock(blockpos, Blocks.AIR.defaultBlockState(), 260);
-            this.placeStem(worldgenlevel, randomsource, hugefungusconfiguration, blockpos1, i, flag);
-            this.placeHat(worldgenlevel, randomsource, hugefungusconfiguration, blockpos1, i, flag);
-            return true;
         }
+
+        int totalHeight = Mth.nextInt(random, 4, 13);
+        if (random.nextInt(12) == 0) {
+            totalHeight *= 2;
+        }
+
+        if (!config.planted) {
+            int maxHeight = chunkGenerator.getGenDepth();
+            if (newOrigin.getY() + totalHeight + 1 >= maxHeight) {
+                return false;
+            }
+        }
+
+        boolean isHuge = !config.planted && random.nextFloat() < 0.06F;
+        level.setBlock(origin, Blocks.AIR.defaultBlockState(), 260);
+        this.placeStem(level, random, config, newOrigin, totalHeight, isHuge);
+        this.placeHat(level, random, config, newOrigin, totalHeight, isHuge);
+        return true;
     }
 
-    private static boolean isReplaceable(WorldGenLevel p_285049_, BlockPos p_285309_, HugeFungusConfiguration p_284992_, boolean p_285162_) {
-        if (p_285049_.isStateAtPosition(p_285309_, BlockBehaviour.BlockStateBase::canBeReplaced)) {
+    private static boolean isReplaceable(
+        final WorldGenLevel level, final BlockPos pos, final HugeFungusConfiguration config, final boolean checkNonReplaceablePlants
+    ) {
+        if (level.isStateAtPosition(pos, BlockBehaviour.BlockStateBase::canBeReplaced)) {
             return true;
         } else {
-            return p_285162_ ? p_284992_.replaceableBlocks.test(p_285049_, p_285309_) : false;
+            return checkNonReplaceablePlants ? config.replaceableBlocks.test(level, pos) : false;
         }
     }
 
     private void placeStem(
-        WorldGenLevel p_285364_, RandomSource p_285032_, HugeFungusConfiguration p_285198_, BlockPos p_285090_, int p_285249_, boolean p_285355_
+        final WorldGenLevel level,
+        final RandomSource random,
+        final HugeFungusConfiguration config,
+        final BlockPos surfaceOrigin,
+        final int totalHeight,
+        final boolean isHuge
     ) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        BlockState blockstate = p_285198_.stemState;
-        int i = p_285355_ ? 1 : 0;
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
+        BlockState stem = config.stemState;
+        int stemRadius = isHuge ? 1 : 0;
 
-        for (int j = -i; j <= i; j++) {
-            for (int k = -i; k <= i; k++) {
-                boolean flag = p_285355_ && Mth.abs(j) == i && Mth.abs(k) == i;
+        for (int dx = -stemRadius; dx <= stemRadius; dx++) {
+            for (int dz = -stemRadius; dz <= stemRadius; dz++) {
+                boolean cornerOfHugeStem = isHuge && Mth.abs(dx) == stemRadius && Mth.abs(dz) == stemRadius;
 
-                for (int l = 0; l < p_285249_; l++) {
-                    blockpos$mutableblockpos.setWithOffset(p_285090_, j, l, k);
-                    if (isReplaceable(p_285364_, blockpos$mutableblockpos, p_285198_, true)) {
-                        if (p_285198_.planted) {
-                            if (!p_285364_.getBlockState(blockpos$mutableblockpos.below()).isAir()) {
-                                p_285364_.destroyBlock(blockpos$mutableblockpos, true);
+                for (int dy = 0; dy < totalHeight; dy++) {
+                    blockPos.setWithOffset(surfaceOrigin, dx, dy, dz);
+                    if (isReplaceable(level, blockPos, config, true)) {
+                        if (config.planted) {
+                            if (!level.getBlockState(blockPos.below()).isAir()) {
+                                level.destroyBlock(blockPos, true);
                             }
 
-                            p_285364_.setBlock(blockpos$mutableblockpos, blockstate, 3);
-                        } else if (flag) {
-                            if (p_285032_.nextFloat() < 0.1F) {
-                                this.setBlock(p_285364_, blockpos$mutableblockpos, blockstate);
+                            level.setBlock(blockPos, stem, 3);
+                        } else if (cornerOfHugeStem) {
+                            if (random.nextFloat() < 0.1F) {
+                                this.setBlock(level, blockPos, stem);
                             }
                         } else {
-                            this.setBlock(p_285364_, blockpos$mutableblockpos, blockstate);
+                            this.setBlock(level, blockPos, stem);
                         }
                     }
                 }
@@ -99,46 +106,51 @@ public class HugeFungusFeature extends Feature<HugeFungusConfiguration> {
     }
 
     private void placeHat(
-        WorldGenLevel p_285200_, RandomSource p_285456_, HugeFungusConfiguration p_285146_, BlockPos p_285097_, int p_285156_, boolean p_285265_
+        final WorldGenLevel level,
+        final RandomSource random,
+        final HugeFungusConfiguration config,
+        final BlockPos surfaceOrigin,
+        final int totalHeight,
+        final boolean isHuge
     ) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        boolean flag = p_285146_.hatState.is(Blocks.NETHER_WART_BLOCK);
-        int i = Math.min(p_285456_.nextInt(1 + p_285156_ / 3) + 5, p_285156_);
-        int j = p_285156_ - i;
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
+        boolean placeVines = config.hatState.is(Blocks.NETHER_WART_BLOCK);
+        int hatHeight = Math.min(random.nextInt(1 + totalHeight / 3) + 5, totalHeight);
+        int hatStartY = totalHeight - hatHeight;
 
-        for (int k = j; k <= p_285156_; k++) {
-            int l = k < p_285156_ - p_285456_.nextInt(3) ? 2 : 1;
-            if (i > 8 && k < j + 4) {
-                l = 3;
+        for (int dy = hatStartY; dy <= totalHeight; dy++) {
+            int radius = dy < totalHeight - random.nextInt(3) ? 2 : 1;
+            if (hatHeight > 8 && dy < hatStartY + 4) {
+                radius = 3;
             }
 
-            if (p_285265_) {
-                l++;
+            if (isHuge) {
+                radius++;
             }
 
-            for (int i1 = -l; i1 <= l; i1++) {
-                for (int j1 = -l; j1 <= l; j1++) {
-                    boolean flag1 = i1 == -l || i1 == l;
-                    boolean flag2 = j1 == -l || j1 == l;
-                    boolean flag3 = !flag1 && !flag2 && k != p_285156_;
-                    boolean flag4 = flag1 && flag2;
-                    boolean flag5 = k < j + 3;
-                    blockpos$mutableblockpos.setWithOffset(p_285097_, i1, k, j1);
-                    if (isReplaceable(p_285200_, blockpos$mutableblockpos, p_285146_, false)) {
-                        if (p_285146_.planted && !p_285200_.getBlockState(blockpos$mutableblockpos.below()).isAir()) {
-                            p_285200_.destroyBlock(blockpos$mutableblockpos, true);
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    boolean isEdgeX = dx == -radius || dx == radius;
+                    boolean isEdgeZ = dz == -radius || dz == radius;
+                    boolean inside = !isEdgeX && !isEdgeZ && dy != totalHeight;
+                    boolean corner = isEdgeX && isEdgeZ;
+                    boolean isHatBottom = dy < hatStartY + 3;
+                    blockPos.setWithOffset(surfaceOrigin, dx, dy, dz);
+                    if (isReplaceable(level, blockPos, config, false)) {
+                        if (config.planted && !level.getBlockState(blockPos.below()).isAir()) {
+                            level.destroyBlock(blockPos, true);
                         }
 
-                        if (flag5) {
-                            if (!flag3) {
-                                this.placeHatDropBlock(p_285200_, p_285456_, blockpos$mutableblockpos, p_285146_.hatState, flag);
+                        if (isHatBottom) {
+                            if (!inside) {
+                                this.placeHatDropBlock(level, random, blockPos, config.hatState, placeVines);
                             }
-                        } else if (flag3) {
-                            this.placeHatBlock(p_285200_, p_285456_, p_285146_, blockpos$mutableblockpos, 0.1F, 0.2F, flag ? 0.1F : 0.0F);
-                        } else if (flag4) {
-                            this.placeHatBlock(p_285200_, p_285456_, p_285146_, blockpos$mutableblockpos, 0.01F, 0.7F, flag ? 0.083F : 0.0F);
+                        } else if (inside) {
+                            this.placeHatBlock(level, random, config, blockPos, 0.1F, 0.2F, placeVines ? 0.1F : 0.0F);
+                        } else if (corner) {
+                            this.placeHatBlock(level, random, config, blockPos, 0.01F, 0.7F, placeVines ? 0.083F : 0.0F);
                         } else {
-                            this.placeHatBlock(p_285200_, p_285456_, p_285146_, blockpos$mutableblockpos, 5.0E-4F, 0.98F, flag ? 0.07F : 0.0F);
+                            this.placeHatBlock(level, random, config, blockPos, 5.0E-4F, 0.98F, placeVines ? 0.07F : 0.0F);
                         }
                     }
                 }
@@ -147,46 +159,48 @@ public class HugeFungusFeature extends Feature<HugeFungusConfiguration> {
     }
 
     private void placeHatBlock(
-        LevelAccessor p_225050_,
-        RandomSource p_225051_,
-        HugeFungusConfiguration p_225052_,
-        BlockPos.MutableBlockPos p_225053_,
-        float p_225054_,
-        float p_225055_,
-        float p_225056_
+        final LevelAccessor level,
+        final RandomSource random,
+        final HugeFungusConfiguration config,
+        final BlockPos.MutableBlockPos blockPos,
+        final float decorBlockProbability,
+        final float hatBlockProbability,
+        final float vinesProbability
     ) {
-        if (p_225051_.nextFloat() < p_225054_) {
-            this.setBlock(p_225050_, p_225053_, p_225052_.decorState);
-        } else if (p_225051_.nextFloat() < p_225055_) {
-            this.setBlock(p_225050_, p_225053_, p_225052_.hatState);
-            if (p_225051_.nextFloat() < p_225056_) {
-                tryPlaceWeepingVines(p_225053_, p_225050_, p_225051_);
+        if (random.nextFloat() < decorBlockProbability) {
+            this.setBlock(level, blockPos, config.decorState);
+        } else if (random.nextFloat() < hatBlockProbability) {
+            this.setBlock(level, blockPos, config.hatState);
+            if (random.nextFloat() < vinesProbability) {
+                tryPlaceWeepingVines(blockPos, level, random);
             }
         }
     }
 
-    private void placeHatDropBlock(LevelAccessor p_225065_, RandomSource p_225066_, BlockPos p_225067_, BlockState p_225068_, boolean p_225069_) {
-        if (p_225065_.getBlockState(p_225067_.below()).is(p_225068_.getBlock())) {
-            this.setBlock(p_225065_, p_225067_, p_225068_);
-        } else if (p_225066_.nextFloat() < 0.15) {
-            this.setBlock(p_225065_, p_225067_, p_225068_);
-            if (p_225069_ && p_225066_.nextInt(11) == 0) {
-                tryPlaceWeepingVines(p_225067_, p_225065_, p_225066_);
+    private void placeHatDropBlock(
+        final LevelAccessor level, final RandomSource random, final BlockPos blockPos, final BlockState hatState, final boolean placeVines
+    ) {
+        if (level.getBlockState(blockPos.below()).is(hatState.getBlock())) {
+            this.setBlock(level, blockPos, hatState);
+        } else if (random.nextFloat() < 0.15) {
+            this.setBlock(level, blockPos, hatState);
+            if (placeVines && random.nextInt(11) == 0) {
+                tryPlaceWeepingVines(blockPos, level, random);
             }
         }
     }
 
-    private static void tryPlaceWeepingVines(BlockPos p_225071_, LevelAccessor p_225072_, RandomSource p_225073_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_225071_.mutable().move(Direction.DOWN);
-        if (p_225072_.isEmptyBlock(blockpos$mutableblockpos)) {
-            int i = Mth.nextInt(p_225073_, 1, 5);
-            if (p_225073_.nextInt(7) == 0) {
-                i *= 2;
+    private static void tryPlaceWeepingVines(final BlockPos hatBlockPos, final LevelAccessor level, final RandomSource random) {
+        BlockPos.MutableBlockPos placePos = hatBlockPos.mutable().move(Direction.DOWN);
+        if (level.isEmptyBlock(placePos)) {
+            int goalVineHeight = Mth.nextInt(random, 1, 5);
+            if (random.nextInt(7) == 0) {
+                goalVineHeight *= 2;
             }
 
-            int j = 23;
-            int k = 25;
-            WeepingVinesFeature.placeWeepingVinesColumn(p_225072_, p_225073_, blockpos$mutableblockpos, i, 23, 25);
+            int minVineAge = 23;
+            int maxVineAge = 25;
+            WeepingVinesFeature.placeWeepingVinesColumn(level, random, placePos, goalVineHeight, 23, 25);
         }
     }
 }

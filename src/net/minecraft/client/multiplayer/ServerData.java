@@ -11,18 +11,12 @@ import net.minecraft.SharedConstants;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.status.ServerStatus;
-import com.viaversion.viafabricplus.injection.access.base.IServerData;
-import com.viaversion.viafabricplus.save.impl.SettingsSave;
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.PngInfo;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
-public class ServerData implements IServerData {
+public class ServerData {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final int MAX_ICON_SIZE = 1024;
     public String name;
@@ -39,63 +33,48 @@ public class ServerData implements IServerData {
     private ServerData.Type type;
     private int acceptedCodeOfConduct;
     private ServerData.State state = ServerData.State.INITIAL;
-    private ProtocolVersion viaFabricPlus$forcedVersion = null;
-    private boolean viaFabricPlus$passedDirectConnectScreen;
-    private ProtocolVersion viaFabricPlus$translatingVersion;
 
-    public ServerData(String p_105375_, String p_105376_, ServerData.Type p_297678_) {
-        this.name = p_105375_;
-        this.ip = p_105376_;
-        this.type = p_297678_;
+    public ServerData(final String name, final String ip, final ServerData.Type type) {
+        this.name = name;
+        this.ip = ip;
+        this.type = type;
     }
 
     public CompoundTag write() {
-        CompoundTag compoundtag = new CompoundTag();
-        compoundtag.putString("name", this.name);
-        compoundtag.putString("ip", this.ip);
-        compoundtag.storeNullable("icon", ExtraCodecs.BASE64_STRING, this.iconBytes);
-        compoundtag.store(ServerData.ServerPackStatus.FIELD_CODEC, this.packStatus);
+        CompoundTag tag = new CompoundTag();
+        tag.putString("name", this.name);
+        tag.putString("ip", this.ip);
+        tag.storeNullable("icon", ExtraCodecs.BASE64_STRING, this.iconBytes);
+        tag.store(ServerData.ServerPackStatus.FIELD_CODEC, this.packStatus);
         if (this.acceptedCodeOfConduct != 0) {
-            compoundtag.putInt("acceptedCodeOfConduct", this.acceptedCodeOfConduct);
+            tag.putInt("acceptedCodeOfConduct", this.acceptedCodeOfConduct);
         }
 
-        if (this.viaFabricPlus$forcedVersion != null) {
-            compoundtag.putString("viafabricplus_forcedversion", this.viaFabricPlus$forcedVersion.getName());
-        }
-
-        return compoundtag;
+        return tag;
     }
 
     public ServerData.ServerPackStatus getResourcePackStatus() {
         return this.packStatus;
     }
 
-    public void setResourcePackStatus(ServerData.ServerPackStatus p_105380_) {
-        this.packStatus = p_105380_;
+    public void setResourcePackStatus(final ServerData.ServerPackStatus packStatus) {
+        this.packStatus = packStatus;
     }
 
-    public static ServerData read(CompoundTag p_105386_) {
-        ServerData serverdata = new ServerData(p_105386_.getStringOr("name", ""), p_105386_.getStringOr("ip", ""), ServerData.Type.OTHER);
-        serverdata.setIconBytes(p_105386_.read("icon", ExtraCodecs.BASE64_STRING).orElse(null));
-        serverdata.setResourcePackStatus(p_105386_.read(ServerData.ServerPackStatus.FIELD_CODEC).orElse(ServerData.ServerPackStatus.PROMPT));
-        serverdata.acceptedCodeOfConduct = p_105386_.getIntOr("acceptedCodeOfConduct", 0);
-
-        if (p_105386_.contains("viafabricplus_forcedversion")) {
-            final ProtocolVersion version = SettingsSave.protocolVersionByName(p_105386_.getStringOr("viafabricplus_forcedversion", null));
-            if (version != null) {
-                serverdata.viaFabricPlus$forceVersion(version);
-            }
-        }
-
-        return serverdata;
+    public static ServerData read(final CompoundTag tag) {
+        ServerData server = new ServerData(tag.getStringOr("name", ""), tag.getStringOr("ip", ""), ServerData.Type.OTHER);
+        server.setIconBytes(tag.read("icon", ExtraCodecs.BASE64_STRING).orElse(null));
+        server.setResourcePackStatus(tag.read(ServerData.ServerPackStatus.FIELD_CODEC).orElse(ServerData.ServerPackStatus.PROMPT));
+        server.acceptedCodeOfConduct = tag.getIntOr("acceptedCodeOfConduct", 0);
+        return server;
     }
 
     public byte @Nullable [] getIconBytes() {
         return this.iconBytes;
     }
 
-    public void setIconBytes(byte @Nullable [] p_272760_) {
-        this.iconBytes = p_272760_;
+    public void setIconBytes(final byte @Nullable [] iconBytes) {
+        this.iconBytes = iconBytes;
     }
 
     public boolean isLan() {
@@ -110,65 +89,62 @@ public class ServerData implements IServerData {
         return this.type;
     }
 
-    public boolean hasAcceptedCodeOfConduct(String p_424064_) {
-        return this.acceptedCodeOfConduct == p_424064_.hashCode();
+    public boolean hasAcceptedCodeOfConduct(final String codeOfConduct) {
+        return this.acceptedCodeOfConduct == codeOfConduct.hashCode();
     }
 
-    public void acceptCodeOfConduct(String p_425507_) {
-        this.acceptedCodeOfConduct = p_425507_.hashCode();
+    public void acceptCodeOfConduct(final String codeOfConduct) {
+        this.acceptedCodeOfConduct = codeOfConduct.hashCode();
     }
 
     public void clearCodeOfConduct() {
         this.acceptedCodeOfConduct = 0;
     }
 
-    public void copyNameIconFrom(ServerData p_233804_) {
-        this.ip = p_233804_.ip;
-        this.name = p_233804_.name;
-        this.iconBytes = p_233804_.iconBytes;
-
-        this.viaFabricPlus$forceVersion(p_233804_.viaFabricPlus$forcedVersion());
+    public void copyNameIconFrom(final ServerData other) {
+        this.ip = other.ip;
+        this.name = other.name;
+        this.iconBytes = other.iconBytes;
     }
 
-    public void copyFrom(ServerData p_105382_) {
-        this.copyNameIconFrom(p_105382_);
-        this.setResourcePackStatus(p_105382_.getResourcePackStatus());
-        this.type = p_105382_.type;
+    public void copyFrom(final ServerData other) {
+        this.copyNameIconFrom(other);
+        this.setResourcePackStatus(other.getResourcePackStatus());
+        this.type = other.type;
     }
 
     public ServerData.State state() {
         return this.state;
     }
 
-    public void setState(ServerData.State p_336358_) {
-        this.state = p_336358_;
+    public void setState(final ServerData.State state) {
+        this.state = state;
     }
 
-    public static byte @Nullable [] validateIcon(byte @Nullable [] p_301776_) {
-        if (p_301776_ != null) {
+    public static byte @Nullable [] validateIcon(final byte @Nullable [] bytes) {
+        if (bytes != null) {
             try {
-                PngInfo pnginfo = PngInfo.fromBytes(p_301776_);
-                if (pnginfo.width() <= 1024 && pnginfo.height() <= 1024) {
-                    return p_301776_;
+                PngInfo iconInfo = PngInfo.fromBytes(bytes);
+                if (iconInfo.width() <= 1024 && iconInfo.height() <= 1024) {
+                    return bytes;
                 }
-            } catch (IOException ioexception) {
-                LOGGER.warn("Failed to decode server icon", (Throwable)ioexception);
+            } catch (IOException e) {
+                LOGGER.warn("Failed to decode server icon", e);
             }
         }
 
         return null;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum ServerPackStatus {
+        public enum ServerPackStatus {
         ENABLED("enabled"),
         DISABLED("disabled"),
         PROMPT("prompt");
 
         public static final MapCodec<ServerData.ServerPackStatus> FIELD_CODEC = Codec.BOOL
             .optionalFieldOf("acceptTextures")
-            .xmap(p_391336_ -> p_391336_.<ServerData.ServerPackStatus>map(p_396401_ -> p_396401_ ? ENABLED : DISABLED).orElse(PROMPT), p_394049_ -> {
-                return switch (p_394049_) {
+            .xmap(acceptTextures -> acceptTextures.<ServerData.ServerPackStatus>map(b -> b ? ENABLED : DISABLED).orElse(PROMPT), status -> {
+                return switch (status) {
                     case ENABLED -> Optional.of(true);
                     case DISABLED -> Optional.of(false);
                     case PROMPT -> Optional.empty();
@@ -176,8 +152,8 @@ public class ServerData implements IServerData {
             });
         private final Component name;
 
-        private ServerPackStatus(final String p_105399_) {
-            this.name = Component.translatable("manageServer.resourcePack." + p_105399_);
+        ServerPackStatus(final String name) {
+            this.name = Component.translatable("manageServer.resourcePack." + name);
         }
 
         public Component getName() {
@@ -185,8 +161,7 @@ public class ServerData implements IServerData {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum State {
+        public enum State {
         INITIAL,
         PINGING,
         UNREACHABLE,
@@ -194,40 +169,9 @@ public class ServerData implements IServerData {
         SUCCESSFUL;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Type {
+        public enum Type {
         LAN,
         REALM,
         OTHER;
-    }
-
-    @Override
-    public ProtocolVersion viaFabricPlus$forcedVersion() {
-        return viaFabricPlus$forcedVersion;
-    }
-
-    @Override
-    public void viaFabricPlus$forceVersion(ProtocolVersion version) {
-        viaFabricPlus$forcedVersion = version;
-    }
-
-    @Override
-    public boolean viaFabricPlus$passedDirectConnectScreen() {
-        return viaFabricPlus$passedDirectConnectScreen;
-    }
-
-    @Override
-    public void viaFabricPlus$passDirectConnectScreen(boolean state) {
-        viaFabricPlus$passedDirectConnectScreen = state;
-    }
-
-    @Override
-    public ProtocolVersion viaFabricPlus$translatingVersion() {
-        return viaFabricPlus$translatingVersion;
-    }
-
-    @Override
-    public void viaFabricPlus$setTranslatingVersion(ProtocolVersion version) {
-        viaFabricPlus$translatingVersion = version;
     }
 }

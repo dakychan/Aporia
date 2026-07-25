@@ -21,8 +21,8 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         this(1);
     }
 
-    public ArrayListDeque(int p_299918_) {
-        this.contents = new Object[p_299918_];
+    public ArrayListDeque(final int capacity) {
+        this.contents = new Object[capacity];
         this.head = 0;
         this.size = 0;
     }
@@ -37,64 +37,64 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         return this.contents.length;
     }
 
-    private int getIndex(int p_299728_) {
-        return (p_299728_ + this.head) % this.contents.length;
+    private int getIndex(final int index) {
+        return (index + this.head) % this.contents.length;
     }
 
     @Override
-    public T get(int p_300499_) {
-        this.verifyIndexInRange(p_300499_);
-        return this.getInner(this.getIndex(p_300499_));
+    public T get(final int index) {
+        this.verifyIndexInRange(index);
+        return this.getInner(this.getIndex(index));
     }
 
-    private static void verifyIndexInRange(int p_299791_, int p_299333_) {
-        if (p_299791_ < 0 || p_299791_ >= p_299333_) {
-            throw new IndexOutOfBoundsException(p_299791_);
+    private static void verifyIndexInRange(final int index, final int size) {
+        if (index < 0 || index >= size) {
+            throw new IndexOutOfBoundsException(index);
         }
     }
 
-    private void verifyIndexInRange(int p_298701_) {
-        verifyIndexInRange(p_298701_, this.size);
+    private void verifyIndexInRange(final int index) {
+        verifyIndexInRange(index, this.size);
     }
 
-    private T getInner(int p_299306_) {
-        return (T)this.contents[p_299306_];
-    }
-
-    @Override
-    public T set(int p_300259_, T p_298094_) {
-        this.verifyIndexInRange(p_300259_);
-        Objects.requireNonNull(p_298094_);
-        int i = this.getIndex(p_300259_);
-        T t = this.getInner(i);
-        this.contents[i] = p_298094_;
-        return t;
+    private T getInner(final int innerIndex) {
+        return (T)this.contents[innerIndex];
     }
 
     @Override
-    public void add(int p_301285_, T p_300734_) {
-        verifyIndexInRange(p_301285_, this.size + 1);
-        Objects.requireNonNull(p_300734_);
+    public T set(final int index, final T element) {
+        this.verifyIndexInRange(index);
+        Objects.requireNonNull(element);
+        int innerIndex = this.getIndex(index);
+        T current = this.getInner(innerIndex);
+        this.contents[innerIndex] = element;
+        return current;
+    }
+
+    @Override
+    public void add(final int index, final T element) {
+        verifyIndexInRange(index, this.size + 1);
+        Objects.requireNonNull(element);
         if (this.size == this.contents.length) {
             this.grow();
         }
 
-        int i = this.getIndex(p_301285_);
-        if (p_301285_ == this.size) {
-            this.contents[i] = p_300734_;
-        } else if (p_301285_ == 0) {
+        int internalIndex = this.getIndex(index);
+        if (index == this.size) {
+            this.contents[internalIndex] = element;
+        } else if (index == 0) {
             this.head--;
             if (this.head < 0) {
                 this.head = this.head + this.contents.length;
             }
 
-            this.contents[this.getIndex(0)] = p_300734_;
+            this.contents[this.getIndex(0)] = element;
         } else {
-            for (int j = this.size - 1; j >= p_301285_; j--) {
-                this.contents[this.getIndex(j + 1)] = this.contents[this.getIndex(j)];
+            for (int i = this.size - 1; i >= index; i--) {
+                this.contents[this.getIndex(i + 1)] = this.contents[this.getIndex(i)];
             }
 
-            this.contents[i] = p_300734_;
+            this.contents[internalIndex] = element;
         }
 
         this.modCount++;
@@ -102,26 +102,26 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
     }
 
     private void grow() {
-        int i = this.contents.length + Math.max(this.contents.length >> 1, 1);
-        Object[] aobject = new Object[i];
-        this.copyCount(aobject, this.size);
+        int newLength = this.contents.length + Math.max(this.contents.length >> 1, 1);
+        Object[] newContents = new Object[newLength];
+        this.copyCount(newContents, this.size);
         this.head = 0;
-        this.contents = aobject;
+        this.contents = newContents;
     }
 
     @Override
-    public T remove(int p_297670_) {
-        this.verifyIndexInRange(p_297670_);
-        int i = this.getIndex(p_297670_);
-        T t = this.getInner(i);
-        if (p_297670_ == 0) {
-            this.contents[i] = null;
+    public T remove(final int index) {
+        this.verifyIndexInRange(index);
+        int innerIndex = this.getIndex(index);
+        T value = this.getInner(innerIndex);
+        if (index == 0) {
+            this.contents[innerIndex] = null;
             this.head++;
-        } else if (p_297670_ == this.size - 1) {
-            this.contents[i] = null;
+        } else if (index == this.size - 1) {
+            this.contents[innerIndex] = null;
         } else {
-            for (int j = p_297670_ + 1; j < this.size; j++) {
-                this.contents[this.getIndex(j - 1)] = this.get(j);
+            for (int i = index + 1; i < this.size; i++) {
+                this.contents[this.getIndex(i - 1)] = this.get(i);
             }
 
             this.contents[this.getIndex(this.size - 1)] = null;
@@ -129,68 +129,68 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
 
         this.modCount++;
         this.size--;
-        return t;
+        return value;
     }
 
     @Override
-    public boolean removeIf(Predicate<? super T> p_300785_) {
-        int i = 0;
+    public boolean removeIf(final Predicate<? super T> filter) {
+        int removed = 0;
 
-        for (int j = 0; j < this.size; j++) {
-            T t = this.get(j);
-            if (p_300785_.test(t)) {
-                i++;
-            } else if (i != 0) {
-                this.contents[this.getIndex(j - i)] = t;
-                this.contents[this.getIndex(j)] = null;
+        for (int i = 0; i < this.size; i++) {
+            T value = this.get(i);
+            if (filter.test(value)) {
+                removed++;
+            } else if (removed != 0) {
+                this.contents[this.getIndex(i - removed)] = value;
+                this.contents[this.getIndex(i)] = null;
             }
         }
 
-        this.modCount += i;
-        this.size -= i;
-        return i != 0;
+        this.modCount += removed;
+        this.size -= removed;
+        return removed != 0;
     }
 
-    private void copyCount(Object[] p_300471_, int p_298513_) {
-        for (int i = 0; i < p_298513_; i++) {
-            p_300471_[i] = this.get(i);
+    private void copyCount(final Object[] newContents, final int count) {
+        for (int i = 0; i < count; i++) {
+            newContents[i] = this.get(i);
         }
     }
 
     @Override
-    public void replaceAll(UnaryOperator<T> p_299491_) {
+    public void replaceAll(final UnaryOperator<T> operator) {
         for (int i = 0; i < this.size; i++) {
-            int j = this.getIndex(i);
-            this.contents[j] = Objects.requireNonNull(p_299491_.apply(this.getInner(i)));
+            int index = this.getIndex(i);
+            this.contents[index] = Objects.requireNonNull(operator.apply(this.getInner(i)));
         }
     }
 
     @Override
-    public void forEach(Consumer<? super T> p_297273_) {
+    public void forEach(final Consumer<? super T> action) {
         for (int i = 0; i < this.size; i++) {
-            p_297273_.accept(this.get(i));
+            action.accept(this.get(i));
         }
     }
 
     @Override
-    public void addFirst(T p_300853_) {
-        this.add(0, p_300853_);
+    public void addFirst(final T value) {
+        this.add(0, value);
     }
 
     @Override
-    public void addLast(T p_301090_) {
-        this.add(this.size, p_301090_);
+    public void addLast(final T value) {
+        this.add(this.size, value);
     }
 
     @Override
-    public boolean offerFirst(T p_300075_) {
-        this.addFirst(p_300075_);
+    public boolean offerFirst(final T value) {
+        this.addFirst(value);
         return true;
     }
 
     @Override
-    public boolean offerLast(T p_300597_) {
-        this.addLast(p_300597_);
+    public boolean offerLast(final T value) {
+        this.addLast(value);
         return true;
     }
 
@@ -256,10 +256,10 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
     }
 
     @Override
-    public boolean removeFirstOccurrence(Object p_300960_) {
+    public boolean removeFirstOccurrence(final Object o) {
         for (int i = 0; i < this.size; i++) {
-            T t = this.get(i);
-            if (Objects.equals(p_300960_, t)) {
+            T value = this.get(i);
+            if (Objects.equals(o, value)) {
                 this.remove(i);
                 return true;
             }
@@ -269,10 +269,10 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
     }
 
     @Override
-    public boolean removeLastOccurrence(Object p_297293_) {
+    public boolean removeLastOccurrence(final Object o) {
         for (int i = this.size - 1; i >= 0; i--) {
-            T t = this.get(i);
-            if (Objects.equals(p_297293_, t)) {
+            T value = this.get(i);
+            if (Objects.equals(o, value)) {
                 this.remove(i);
                 return true;
             }
@@ -286,7 +286,7 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         return new ArrayListDeque.DescendingIterator();
     }
 
-    class DescendingIterator implements Iterator<T> {
+    private class DescendingIterator implements Iterator<T> {
         private int index = ArrayListDeque.this.size() - 1;
 
         public DescendingIterator() {
@@ -308,11 +308,11 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         }
     }
 
-    class ReversedView extends AbstractList<T> implements ListAndDeque<T> {
+    private class ReversedView extends AbstractList<T> implements ListAndDeque<T> {
         private final ArrayListDeque<T> source;
 
-        public ReversedView(final ArrayListDeque<T> p_335912_) {
-            this.source = p_335912_;
+        public ReversedView(final ArrayListDeque<T> source) {
+            this.source = source;
         }
 
         @Override
@@ -331,23 +331,23 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         }
 
         @Override
-        public void addFirst(T p_336272_) {
-            this.source.addLast(p_336272_);
+        public void addFirst(final T t) {
+            this.source.addLast(t);
         }
 
         @Override
-        public void addLast(T p_333987_) {
-            this.source.addFirst(p_333987_);
+        public void addLast(final T t) {
+            this.source.addFirst(t);
         }
 
         @Override
-        public boolean offerFirst(T p_331206_) {
-            return this.source.offerLast(p_331206_);
+        public boolean offerFirst(final T t) {
+            return this.source.offerLast(t);
         }
 
         @Override
-        public boolean offerLast(T p_334399_) {
-            return this.source.offerFirst(p_334399_);
+        public boolean offerLast(final T t) {
+            return this.source.offerFirst(t);
         }
 
         @Override
@@ -381,13 +381,13 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         }
 
         @Override
-        public boolean removeFirstOccurrence(Object p_332292_) {
-            return this.source.removeLastOccurrence(p_332292_);
+        public boolean removeFirstOccurrence(final Object o) {
+            return this.source.removeLastOccurrence(o);
         }
 
         @Override
-        public boolean removeLastOccurrence(Object p_328218_) {
-            return this.source.removeFirstOccurrence(p_328218_);
+        public boolean removeLastOccurrence(final Object o) {
+            return this.source.removeFirstOccurrence(o);
         }
 
         @Override
@@ -406,43 +406,43 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
         }
 
         @Override
-        public boolean contains(Object p_328039_) {
-            return this.source.contains(p_328039_);
+        public boolean contains(final Object o) {
+            return this.source.contains(o);
         }
 
         @Override
-        public T get(int p_330114_) {
-            return this.source.get(this.reverseIndex(p_330114_));
+        public T get(final int index) {
+            return this.source.get(this.reverseIndex(index));
         }
 
         @Override
-        public T set(int p_328364_, T p_330947_) {
-            return this.source.set(this.reverseIndex(p_328364_), p_330947_);
+        public T set(final int index, final T element) {
+            return this.source.set(this.reverseIndex(index), element);
         }
 
         @Override
-        public void add(int p_328176_, T p_334553_) {
-            this.source.add(this.reverseIndex(p_328176_) + 1, p_334553_);
+        public void add(final int index, final T element) {
+            this.source.add(this.reverseIndex(index) + 1, element);
         }
 
         @Override
-        public T remove(int p_334028_) {
-            return this.source.remove(this.reverseIndex(p_334028_));
+        public T remove(final int index) {
+            return this.source.remove(this.reverseIndex(index));
         }
 
         @Override
-        public int indexOf(Object p_330150_) {
-            return this.reverseIndex(this.source.lastIndexOf(p_330150_));
+        public int indexOf(final Object o) {
+            return this.reverseIndex(this.source.lastIndexOf(o));
         }
 
         @Override
-        public int lastIndexOf(Object p_332172_) {
-            return this.reverseIndex(this.source.indexOf(p_332172_));
+        public int lastIndexOf(final Object o) {
+            return this.reverseIndex(this.source.indexOf(o));
         }
 
         @Override
-        public List<T> subList(int p_331831_, int p_330462_) {
-            return this.source.subList(this.reverseIndex(p_330462_) + 1, this.reverseIndex(p_331831_) + 1).reversed();
+        public List<T> subList(final int fromIndex, final int toIndex) {
+            return this.source.subList(this.reverseIndex(toIndex) + 1, this.reverseIndex(fromIndex) + 1).reversed();
         }
 
         @Override
@@ -455,8 +455,8 @@ public class ArrayListDeque<T> extends AbstractList<T> implements ListAndDeque<T
             this.source.clear();
         }
 
-        private int reverseIndex(int p_335640_) {
-            return p_335640_ == -1 ? -1 : this.source.size() - 1 - p_335640_;
+        private int reverseIndex(final int index) {
+            return index == -1 ? -1 : this.source.size() - 1 - index;
         }
     }
 }

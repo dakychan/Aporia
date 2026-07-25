@@ -9,11 +9,11 @@ import net.minecraft.world.level.gamerules.GameRule;
 
 public class EmptyNotificationService implements NotificationService {
     @Override
-    public void playerJoined(ServerPlayer p_430080_) {
+    public void playerJoined(final ServerPlayer player) {
     }
 
     @Override
-    public void playerLeft(ServerPlayer p_427884_) {
+    public void playerLeft(final ServerPlayer player) {
     }
 
     @Override
@@ -37,39 +37,39 @@ public class EmptyNotificationService implements NotificationService {
     }
 
     @Override
-    public void playerOped(ServerOpListEntry p_429396_) {
+    public void playerOped(final ServerOpListEntry operator) {
     }
 
     @Override
-    public void playerDeoped(ServerOpListEntry p_428376_) {
+    public void playerDeoped(final ServerOpListEntry operator) {
     }
 
     @Override
-    public void playerAddedToAllowlist(NameAndId p_422419_) {
+    public void playerAddedToAllowlist(final NameAndId player) {
     }
 
     @Override
-    public void playerRemovedFromAllowlist(NameAndId p_423522_) {
+    public void playerRemovedFromAllowlist(final NameAndId player) {
     }
 
     @Override
-    public void ipBanned(IpBanListEntry p_422456_) {
+    public void ipBanned(final IpBanListEntry ban) {
     }
 
     @Override
-    public void ipUnbanned(String p_431536_) {
+    public void ipUnbanned(final String ip) {
     }
 
     @Override
-    public void playerBanned(UserBanListEntry p_430537_) {
+    public void playerBanned(final UserBanListEntry ban) {
     }
 
     @Override
-    public void playerUnbanned(NameAndId p_425895_) {
+    public void playerUnbanned(final NameAndId player) {
     }
 
     @Override
-    public <T> void onGameRuleChanged(GameRule<T> p_451324_, T p_455696_) {
+    public <T> void onGameRuleChanged(final GameRule<T> gameRule, final T value) {
     }
 
     @Override

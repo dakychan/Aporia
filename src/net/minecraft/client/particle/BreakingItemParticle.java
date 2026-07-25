@@ -3,51 +3,48 @@ package net.minecraft.client.particle;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.sprite.Material;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BreakingItemParticle extends SingleQuadParticle {
     private final float uo;
     private final float vo;
     private final SingleQuadParticle.Layer layer;
 
-    BreakingItemParticle(
-        ClientLevel p_105646_,
-        double p_105647_,
-        double p_105648_,
-        double p_105649_,
-        double p_105650_,
-        double p_105651_,
-        double p_105652_,
-        TextureAtlasSprite p_428284_
+    private BreakingItemParticle(
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xa,
+        final double ya,
+        final double za,
+        final TextureAtlasSprite sprite
     ) {
-        this(p_105646_, p_105647_, p_105648_, p_105649_, p_428284_);
+        this(level, x, y, z, sprite);
         this.xd *= 0.1F;
         this.yd *= 0.1F;
         this.zd *= 0.1F;
-        this.xd += p_105650_;
-        this.yd += p_105651_;
-        this.zd += p_105652_;
+        this.xd += xa;
+        this.yd += ya;
+        this.zd += za;
     }
 
-    protected BreakingItemParticle(ClientLevel p_105665_, double p_105666_, double p_105667_, double p_105668_, TextureAtlasSprite p_427941_) {
-        super(p_105665_, p_105666_, p_105667_, p_105668_, 0.0, 0.0, 0.0, p_427941_);
+    protected BreakingItemParticle(final ClientLevel level, final double x, final double y, final double z, final TextureAtlasSprite sprite) {
+        super(level, x, y, z, 0.0, 0.0, 0.0, sprite);
         this.gravity = 1.0F;
         this.quadSize /= 2.0F;
         this.uo = this.random.nextFloat() * 3.0F;
         this.vo = this.random.nextFloat() * 3.0F;
-        this.layer = p_427941_.atlasLocation().equals(TextureAtlas.LOCATION_BLOCKS) ? SingleQuadParticle.Layer.TERRAIN : SingleQuadParticle.Layer.ITEMS;
+        this.layer = SingleQuadParticle.Layer.bySprite(sprite);
     }
 
     @Override
@@ -75,84 +72,99 @@ public class BreakingItemParticle extends SingleQuadParticle {
         return this.layer;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class CobwebProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
+        public static class CobwebProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
         public Particle createParticle(
-            SimpleParticleType p_329960_,
-            ClientLevel p_334942_,
-            double p_332141_,
-            double p_335808_,
-            double p_331451_,
-            double p_330404_,
-            double p_335788_,
-            double p_329792_,
-            RandomSource p_424308_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new BreakingItemParticle(p_334942_, p_332141_, p_335808_, p_331451_, this.getSprite(new ItemStack(Items.COBWEB), p_334942_, p_424308_));
+            return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStackTemplate(Items.COBWEB), level, random));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public abstract static class ItemParticleProvider<T extends ParticleOptions> implements ParticleProvider<T> {
+        public abstract static class ItemParticleProvider<T extends ParticleOptions> implements ParticleProvider<T> {
         private final ItemStackRenderState scratchRenderState = new ItemStackRenderState();
 
-        protected TextureAtlasSprite getSprite(ItemStack p_422701_, ClientLevel p_425581_, RandomSource p_422331_) {
-            Minecraft.getInstance().getItemModelResolver().updateForTopItem(this.scratchRenderState, p_422701_, ItemDisplayContext.GROUND, p_425581_, null, 0);
-            TextureAtlasSprite textureatlassprite = this.scratchRenderState.pickParticleIcon(p_422331_);
-            return textureatlassprite != null ? textureatlassprite : Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.ITEMS).missingSprite();
+        protected TextureAtlasSprite getSprite(final ItemStackTemplate item, final ClientLevel level, final RandomSource random) {
+            Minecraft.getInstance().getItemModelResolver().updateForTopItem(this.scratchRenderState, item.create(), ItemDisplayContext.GROUND, level, null, 0);
+            Material.Baked material = this.scratchRenderState.pickParticleMaterial(random);
+            return material != null ? material.sprite() : Minecraft.getInstance().getAtlasManager().getAtlasOrThrow(AtlasIds.ITEMS).missingSprite();
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider extends BreakingItemParticle.ItemParticleProvider<ItemParticleOption> {
+        public static class Provider extends BreakingItemParticle.ItemParticleProvider<ItemParticleOption> {
         public Particle createParticle(
-            ItemParticleOption p_424773_,
-            ClientLevel p_105687_,
-            double p_105688_,
-            double p_105689_,
-            double p_105690_,
-            double p_105691_,
-            double p_105692_,
-            double p_105693_,
-            RandomSource p_428906_
+            final ItemParticleOption options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new BreakingItemParticle(
-                p_105687_, p_105688_, p_105689_, p_105690_, p_105691_, p_105692_, p_105693_, this.getSprite(p_424773_.getItem(), p_105687_, p_428906_)
-            );
+            return new BreakingItemParticle(level, x, y, z, xAux, yAux, zAux, this.getSprite(options.getItem(), level, random));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class SlimeProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
+        public static class SlimeProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
         public Particle createParticle(
-            SimpleParticleType p_105705_,
-            ClientLevel p_105706_,
-            double p_105707_,
-            double p_105708_,
-            double p_105709_,
-            double p_105710_,
-            double p_105711_,
-            double p_105712_,
-            RandomSource p_426894_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new BreakingItemParticle(p_105706_, p_105707_, p_105708_, p_105709_, this.getSprite(new ItemStack(Items.SLIME_BALL), p_105706_, p_426894_));
+            return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStackTemplate(Items.SLIME_BALL), level, random));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class SnowballProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
+        public static class SnowballProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
         public Particle createParticle(
-            SimpleParticleType p_105724_,
-            ClientLevel p_105725_,
-            double p_105726_,
-            double p_105727_,
-            double p_105728_,
-            double p_105729_,
-            double p_105730_,
-            double p_105731_,
-            RandomSource p_426355_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new BreakingItemParticle(p_105725_, p_105726_, p_105727_, p_105728_, this.getSprite(new ItemStack(Items.SNOWBALL), p_105725_, p_426355_));
+            return new BreakingItemParticle(level, x, y, z, this.getSprite(new ItemStackTemplate(Items.SNOWBALL), level, random));
+        }
+    }
+
+        public static class SulfurCubeProvider extends BreakingItemParticle.ItemParticleProvider<SimpleParticleType> {
+        private final SpriteSet sprites;
+
+        public SulfurCubeProvider(final SpriteSet sprites) {
+            this.sprites = sprites;
+        }
+
+        public Particle createParticle(
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
+        ) {
+            return new BreakingItemParticle(level, x, y, z, this.sprites.first());
         }
     }
 }

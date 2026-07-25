@@ -17,46 +17,46 @@ import org.jspecify.annotations.Nullable;
 public class EmptyLevelChunk extends LevelChunk {
     private final Holder<Biome> biome;
 
-    public EmptyLevelChunk(Level p_204422_, ChunkPos p_204423_, Holder<Biome> p_204424_) {
-        super(p_204422_, p_204423_);
-        this.biome = p_204424_;
+    public EmptyLevelChunk(final Level level, final ChunkPos pos, final Holder<Biome> biome) {
+        super(level, pos);
+        this.biome = biome;
     }
 
     @Override
-    public BlockState getBlockState(BlockPos p_62625_) {
+    public BlockState getBlockState(final BlockPos pos) {
         return Blocks.VOID_AIR.defaultBlockState();
     }
 
     @Override
-    public @Nullable BlockState setBlockState(BlockPos p_62605_, BlockState p_62606_, @Block.UpdateFlags int p_393925_) {
+    public @Nullable BlockState setBlockState(final BlockPos pos, final BlockState state, final @Block.UpdateFlags int flags) {
         return null;
     }
 
     @Override
-    public FluidState getFluidState(BlockPos p_62621_) {
+    public FluidState getFluidState(final BlockPos pos) {
         return Fluids.EMPTY.defaultFluidState();
     }
 
     @Override
-    public int getLightEmission(BlockPos p_62628_) {
+    public int getLightEmission(final BlockPos pos) {
         return 0;
     }
 
     @Override
-    public @Nullable BlockEntity getBlockEntity(BlockPos p_62609_, LevelChunk.EntityCreationType p_62610_) {
+    public @Nullable BlockEntity getBlockEntity(final BlockPos pos, final LevelChunk.EntityCreationType creationType) {
         return null;
     }
 
     @Override
-    public void addAndRegisterBlockEntity(BlockEntity p_156346_) {
+    public void addAndRegisterBlockEntity(final BlockEntity blockEntity) {
     }
 
     @Override
-    public void setBlockEntity(BlockEntity p_156344_) {
+    public void setBlockEntity(final BlockEntity blockEntity) {
     }
 
     @Override
-    public void removeBlockEntity(BlockPos p_62623_) {
+    public void removeBlockEntity(final BlockPos pos) {
     }
 
     @Override
@@ -65,7 +65,7 @@ public class EmptyLevelChunk extends LevelChunk {
     }
 
     @Override
-    public boolean isYSpaceEmpty(int p_62587_, int p_62588_) {
+    public boolean isYSpaceEmpty(final int yStartInclusive, final int yEndInclusive) {
         return true;
     }
 
@@ -75,7 +75,7 @@ public class EmptyLevelChunk extends LevelChunk {
     }
 
     @Override
-    public Holder<Biome> getNoiseBiome(int p_204426_, int p_204427_, int p_204428_) {
+    public Holder<Biome> getNoiseBiome(final int quartX, final int quartY, final int quartZ) {
         return this.biome;
     }
 }

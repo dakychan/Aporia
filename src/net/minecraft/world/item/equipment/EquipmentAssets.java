@@ -20,11 +20,12 @@ public interface EquipmentAssets {
     ResourceKey<EquipmentAsset> ARMADILLO_SCUTE = createId("armadillo_scute");
     ResourceKey<EquipmentAsset> ELYTRA = createId("elytra");
     ResourceKey<EquipmentAsset> SADDLE = createId("saddle");
-    Map<DyeColor, ResourceKey<EquipmentAsset>> CARPETS = Util.makeEnumMap(DyeColor.class, p_378269_ -> createId(p_378269_.getSerializedName() + "_carpet"));
+    Map<DyeColor, ResourceKey<EquipmentAsset>> CARPETS = Util.makeEnumMap(DyeColor.class, color -> createId(color.getSerializedName() + "_carpet"));
     ResourceKey<EquipmentAsset> TRADER_LLAMA = createId("trader_llama");
-    Map<DyeColor, ResourceKey<EquipmentAsset>> HARNESSES = Util.makeEnumMap(DyeColor.class, p_405662_ -> createId(p_405662_.getSerializedName() + "_harness"));
+    ResourceKey<EquipmentAsset> TRADER_LLAMA_BABY = createId("trader_llama_baby");
+    Map<DyeColor, ResourceKey<EquipmentAsset>> HARNESSES = Util.makeEnumMap(DyeColor.class, color -> createId(color.getSerializedName() + "_harness"));
 
-    static ResourceKey<EquipmentAsset> createId(String p_377499_) {
-        return ResourceKey.create(ROOT_ID, Identifier.withDefaultNamespace(p_377499_));
+    static ResourceKey<EquipmentAsset> createId(final String name) {
+        return ResourceKey.create(ROOT_ID, Identifier.withDefaultNamespace(name));
     }
 }

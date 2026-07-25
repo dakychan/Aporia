@@ -7,28 +7,29 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.DynamicOps;
 import java.util.Objects;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class BlockNameFlatteningFix extends DataFix {
-    public BlockNameFlatteningFix(Schema p_14897_, boolean p_14898_) {
-        super(p_14897_, p_14898_);
+    public BlockNameFlatteningFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.BLOCK_NAME);
-        Type<?> type1 = this.getOutputSchema().getType(References.BLOCK_NAME);
-        Type<Pair<String, Either<Integer, String>>> type2 = DSL.named(References.BLOCK_NAME.typeName(), DSL.or(DSL.intType(), NamespacedSchema.namespacedString()));
-        Type<Pair<String, String>> type3 = DSL.named(References.BLOCK_NAME.typeName(), NamespacedSchema.namespacedString());
-        if (Objects.equals(type, type2) && Objects.equals(type1, type3)) {
+        Type<?> blockType = this.getInputSchema().getType(References.BLOCK_NAME);
+        Type<?> newBlockType = this.getOutputSchema().getType(References.BLOCK_NAME);
+        Type<Pair<String, Either<Integer, String>>> expectedBlockType = DSL.named(
+            References.BLOCK_NAME.typeName(), DSL.or(DSL.intType(), NamespacedSchema.namespacedString())
+        );
+        Type<Pair<String, String>> expectedNewBlockType = DSL.named(References.BLOCK_NAME.typeName(), NamespacedSchema.namespacedString());
+        if (Objects.equals(blockType, expectedBlockType) && Objects.equals(newBlockType, expectedNewBlockType)) {
             return this.fixTypeEverywhere(
                 "BlockNameFlatteningFix",
-                type2,
-                type3,
-                p_14904_ -> p_145141_ -> p_145141_.mapSecond(
-                    p_145139_ -> p_145139_.map(BlockStateData::upgradeBlock, p_145143_ -> BlockStateData.upgradeBlock(NamespacedSchema.ensureNamespaced(p_145143_)))
+                expectedBlockType,
+                expectedNewBlockType,
+                ops -> block -> block.mapSecond(
+                    choice -> choice.map(BlockStateData::upgradeBlock, name -> BlockStateData.upgradeBlock(NamespacedSchema.ensureNamespaced(name)))
                 )
             );
         } else {

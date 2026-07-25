@@ -7,8 +7,8 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biome;
 
 public record SpawnContext(BlockPos pos, ServerLevelAccessor level, EnvironmentAttributeReader environmentAttributes, Holder<Biome> biome) {
-    public static SpawnContext create(ServerLevelAccessor p_391608_, BlockPos p_394119_) {
-        Holder<Biome> holder = p_391608_.getBiome(p_394119_);
-        return new SpawnContext(p_394119_, p_391608_, p_391608_.environmentAttributes(), holder);
+    public static SpawnContext create(final ServerLevelAccessor level, final BlockPos pos) {
+        Holder<Biome> biome = level.getBiome(pos);
+        return new SpawnContext(pos, level, level.environmentAttributes(), biome);
     }
 }

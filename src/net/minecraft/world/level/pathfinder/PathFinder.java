@@ -27,144 +27,151 @@ public class PathFinder {
     private final BinaryHeap openSet = new BinaryHeap();
     private BooleanSupplier captureDebug = () -> false;
 
-    public PathFinder(NodeEvaluator p_77425_, int p_77426_) {
-        this.nodeEvaluator = p_77425_;
-        this.maxVisitedNodes = p_77426_;
+    public PathFinder(final NodeEvaluator nodeEvaluator, final int maxVisitedNodes) {
+        this.nodeEvaluator = nodeEvaluator;
+        this.maxVisitedNodes = maxVisitedNodes;
     }
 
-    public void setCaptureDebug(BooleanSupplier p_425869_) {
-        this.captureDebug = p_425869_;
+    public void setCaptureDebug(final BooleanSupplier captureDebug) {
+        this.captureDebug = captureDebug;
     }
 
-    public void setMaxVisitedNodes(int p_364339_) {
-        this.maxVisitedNodes = p_364339_;
+    public void setMaxVisitedNodes(final int maxVisitedNodes) {
+        this.maxVisitedNodes = maxVisitedNodes;
     }
 
-    public @Nullable Path findPath(PathNavigationRegion p_77428_, Mob p_77429_, Set<BlockPos> p_77430_, float p_77431_, int p_77432_, float p_77433_) {
+    public @Nullable Path findPath(
+        final PathNavigationRegion level,
+        final Mob entity,
+        final Set<BlockPos> targets,
+        final float maxPathLength,
+        final int reachRange,
+        final float maxVisitedNodesMultiplier
+    ) {
         this.openSet.clear();
-        this.nodeEvaluator.prepare(p_77428_, p_77429_);
-        Node node = this.nodeEvaluator.getStart();
-        if (node == null) {
+        this.nodeEvaluator.prepare(level, entity);
+        Node from = this.nodeEvaluator.getStart();
+        if (from == null) {
             return null;
-        } else {
-            Map<Target, BlockPos> map = p_77430_.stream()
-                .collect(
-                    Collectors.toMap(
-                        p_327511_ -> this.nodeEvaluator.getTarget(p_327511_.getX(), p_327511_.getY(), p_327511_.getZ()), Function.identity()
-                    )
-                );
-            Path path = this.findPath(node, map, p_77431_, p_77432_, p_77433_);
-            this.nodeEvaluator.done();
-            return path;
         }
+
+        Map<Target, BlockPos> tos = targets.stream()
+            .collect(Collectors.toMap(pos -> this.nodeEvaluator.getTarget(pos.getX(), pos.getY(), pos.getZ()), Function.identity()));
+        Path path = this.findPath(from, tos, maxPathLength, reachRange, maxVisitedNodesMultiplier);
+        this.nodeEvaluator.done();
+        return path;
     }
 
-    private @Nullable Path findPath(Node p_164718_, Map<Target, BlockPos> p_164719_, float p_164720_, int p_164721_, float p_164722_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("find_path");
-        profilerfiller.markForCharting(MetricCategory.PATH_FINDING);
-        Set<Target> set = p_164719_.keySet();
-        p_164718_.g = 0.0F;
-        p_164718_.h = this.getBestH(p_164718_, set);
-        p_164718_.f = p_164718_.h;
+    private @Nullable Path findPath(
+        final Node from, final Map<Target, BlockPos> targetMap, final float maxPathLength, final int reachRange, final float maxVisitedNodesMultiplier
+    ) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("find_path");
+        profiler.markForCharting(MetricCategory.PATH_FINDING);
+        Set<Target> targets = targetMap.keySet();
+        from.g = 0.0F;
+        from.h = this.getBestH(from, targets);
+        from.f = from.h;
         this.openSet.clear();
-        this.openSet.insert(p_164718_);
-        boolean flag = this.captureDebug.getAsBoolean();
-        Set<Node> set1 = flag ? new HashSet<>() : Set.<Node>of();
-        int i = 0;
-        Set<Target> set2 = Sets.newHashSetWithExpectedSize(set.size());
-        int j = (int)(this.maxVisitedNodes * p_164722_);
+        this.openSet.insert(from);
+        boolean captureDebug = this.captureDebug.getAsBoolean();
+        Set<Node> closedSet = captureDebug ? new HashSet<>() : Set.of();
+        int count = 0;
+        Set<Target> reachedTargets = Sets.newHashSetWithExpectedSize(targets.size());
+        int maxVisitedNodesAdjusted = (int)(this.maxVisitedNodes * maxVisitedNodesMultiplier);
 
         while (!this.openSet.isEmpty()) {
-            if (++i >= j) {
+            if (++count >= maxVisitedNodesAdjusted) {
                 break;
             }
 
-            Node node = this.openSet.pop();
-            node.closed = true;
+            Node current = this.openSet.pop();
+            current.closed = true;
 
-            for (Target target : set) {
-                if (node.distanceManhattan(target) <= p_164721_) {
+            for (Target target : targets) {
+                if (current.distanceManhattan(target) <= reachRange) {
                     target.setReached();
-                    set2.add(target);
+                    reachedTargets.add(target);
                 }
             }
 
-            if (!set2.isEmpty()) {
+            if (!reachedTargets.isEmpty()) {
                 break;
             }
 
-            if (flag) {
-                set1.add(node);
+            if (captureDebug) {
+                closedSet.add(current);
             }
 
-            if (!(node.distanceTo(p_164718_) >= p_164720_)) {
-                int k = this.nodeEvaluator.getNeighbors(this.neighbors, node);
+            if (!(current.distanceTo(from) >= maxPathLength)) {
+                int neighborCount = this.nodeEvaluator.getNeighbors(this.neighbors, current);
 
-                for (int l = 0; l < k; l++) {
-                    Node node1 = this.neighbors[l];
-                    float f = this.distance(node, node1);
-                    node1.walkedDistance = node.walkedDistance + f;
-                    float f1 = node.g + f + node1.costMalus;
-                    if (node1.walkedDistance < p_164720_ && (!node1.inOpenSet() || f1 < node1.g)) {
-                        node1.cameFrom = node;
-                        node1.g = f1;
-                        node1.h = this.getBestH(node1, set) * 1.5F;
-                        if (node1.inOpenSet()) {
-                            this.openSet.changeCost(node1, node1.g + node1.h);
+                for (int i = 0; i < neighborCount; i++) {
+                    Node neighbor = this.neighbors[i];
+                    float distance = this.distance(current, neighbor);
+                    neighbor.walkedDistance = current.walkedDistance + distance;
+                    float tentativeGScore = current.g + distance + neighbor.costMalus;
+                    if (neighbor.walkedDistance < maxPathLength && (!neighbor.inOpenSet() || tentativeGScore < neighbor.g)) {
+                        neighbor.cameFrom = current;
+                        neighbor.g = tentativeGScore;
+                        neighbor.h = this.getBestH(neighbor, targets) * 1.5F;
+                        if (neighbor.inOpenSet()) {
+                            this.openSet.changeCost(neighbor, neighbor.g + neighbor.h);
                         } else {
-                            node1.f = node1.g + node1.h;
-                            this.openSet.insert(node1);
+                            neighbor.f = neighbor.g + neighbor.h;
+                            this.openSet.insert(neighbor);
                         }
                     }
                 }
             }
         }
 
-        Optional<Path> optional = !set2.isEmpty()
-            ? set2.stream().map(p_77454_ -> this.reconstructPath(p_77454_.getBestNode(), p_164719_.get(p_77454_), true)).min(Comparator.comparingInt(Path::getNodeCount))
-            : set.stream()
-                .map(p_77451_ -> this.reconstructPath(p_77451_.getBestNode(), p_164719_.get(p_77451_), false))
+        Optional<Path> optPath = !reachedTargets.isEmpty()
+            ? reachedTargets.stream()
+                .map(target -> this.reconstructPath(target.getBestNode(), targetMap.get(target), true))
+                .min(Comparator.comparingInt(Path::getNodeCount))
+            : targets.stream()
+                .map(target -> this.reconstructPath(target.getBestNode(), targetMap.get(target), false))
                 .min(Comparator.comparingDouble(Path::getDistToTarget).thenComparingInt(Path::getNodeCount));
-        profilerfiller.pop();
-        if (optional.isEmpty()) {
+        profiler.pop();
+        if (optPath.isEmpty()) {
             return null;
-        } else {
-            Path path = optional.get();
-            if (flag) {
-                path.setDebug(this.openSet.getHeap(), set1.toArray(Node[]::new), set);
-            }
-
-            return path;
-        }
-    }
-
-    protected float distance(Node p_230617_, Node p_230618_) {
-        return p_230617_.distanceTo(p_230618_);
-    }
-
-    private float getBestH(Node p_77445_, Set<Target> p_77446_) {
-        float f = Float.MAX_VALUE;
-
-        for (Target target : p_77446_) {
-            float f1 = p_77445_.distanceTo(target);
-            target.updateBest(f1, p_77445_);
-            f = Math.min(f1, f);
         }
 
-        return f;
+        Path path = optPath.get();
+        if (captureDebug) {
+            path.setDebug(this.openSet.getHeap(), closedSet.toArray(Node[]::new), targets);
+        }
+
+        return path;
     }
 
-    private Path reconstructPath(Node p_77435_, BlockPos p_77436_, boolean p_77437_) {
-        List<Node> list = Lists.newArrayList();
-        Node node = p_77435_;
-        list.add(0, p_77435_);
+    protected float distance(final Node from, final Node to) {
+        return from.distanceTo(to);
+    }
+
+    private float getBestH(final Node from, final Set<Target> targets) {
+        float bestH = Float.MAX_VALUE;
+
+        for (Target target : targets) {
+            float h = from.distanceTo(target);
+            target.updateBest(h, from);
+            bestH = Math.min(h, bestH);
+        }
+
+        return bestH;
+    }
+
+    private Path reconstructPath(final Node closest, final BlockPos target, final boolean reached) {
+        List<Node> nodes = Lists.newArrayList();
+        Node node = closest;
+        nodes.add(0, node);
 
         while (node.cameFrom != null) {
             node = node.cameFrom;
-            list.add(0, node);
+            nodes.add(0, node);
         }
 
-        return new Path(list, p_77436_, p_77437_);
+        return new Path(nodes, target, reached);
     }
 }

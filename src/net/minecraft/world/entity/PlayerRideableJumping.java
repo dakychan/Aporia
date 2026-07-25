@@ -1,11 +1,11 @@
 package net.minecraft.world.entity;
 
 public interface PlayerRideableJumping extends PlayerRideable {
-    void onPlayerJump(int p_21696_);
+    void onPlayerJump(int jumpAmount);
 
     boolean canJump();
 
-    void handleStartJump(int p_21695_);
+    void handleStartJump(int jumpScale);
 
     void handleStopJump();
 
@@ -13,7 +13,7 @@ public interface PlayerRideableJumping extends PlayerRideable {
         return 0;
     }
 
-    default float getPlayerJumpPendingScale(int p_452206_) {
-        return p_452206_ >= 90 ? 1.0F : 0.4F + 0.4F * p_452206_ / 90.0F;
+    default float getPlayerJumpPendingScale(final int jumpAmount) {
+        return jumpAmount >= 90 ? 1.0F : 0.4F + 0.4F * jumpAmount / 90.0F;
     }
 }

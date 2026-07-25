@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -28,45 +27,45 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class CopyComponentsFunction extends LootItemConditionalFunction {
     private static final Codec<LootContextArg<DataComponentGetter>> GETTER_CODEC = LootContextArg.createArgCodec(
-        p_450080_ -> p_450080_.anyEntity(CopyComponentsFunction.DirectSource::new)
+        builder -> builder.anyEntity(CopyComponentsFunction.DirectSource::new)
             .anyBlockEntity(CopyComponentsFunction.BlockEntitySource::new)
             .anyItemStack(CopyComponentsFunction.DirectSource::new)
     );
-    public static final MapCodec<CopyComponentsFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_450079_ -> commonFields(p_450079_)
+    public static final MapCodec<CopyComponentsFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
             .and(
-                p_450079_.group(
-                    GETTER_CODEC.fieldOf("source").forGetter(p_450078_ -> p_450078_.source),
-                    DataComponentType.CODEC.listOf().optionalFieldOf("include").forGetter(p_330902_ -> p_330902_.include),
-                    DataComponentType.CODEC.listOf().optionalFieldOf("exclude").forGetter(p_331318_ -> p_331318_.exclude)
+                i.group(
+                    GETTER_CODEC.fieldOf("source").forGetter(f -> f.source),
+                    DataComponentType.CODEC.listOf().optionalFieldOf("include").forGetter(f -> f.include),
+                    DataComponentType.CODEC.listOf().optionalFieldOf("exclude").forGetter(f -> f.exclude)
                 )
             )
-            .apply(p_450079_, CopyComponentsFunction::new)
+            .apply(i, CopyComponentsFunction::new)
     );
     private final LootContextArg<DataComponentGetter> source;
     private final Optional<List<DataComponentType<?>>> include;
     private final Optional<List<DataComponentType<?>>> exclude;
     private final Predicate<DataComponentType<?>> bakedPredicate;
 
-    CopyComponentsFunction(
-        List<LootItemCondition> p_332739_,
-        LootContextArg<DataComponentGetter> p_459788_,
-        Optional<List<DataComponentType<?>>> p_332029_,
-        Optional<List<DataComponentType<?>>> p_329656_
+    private CopyComponentsFunction(
+        final List<LootItemCondition> predicates,
+        final LootContextArg<DataComponentGetter> source,
+        final Optional<List<DataComponentType<?>>> include,
+        final Optional<List<DataComponentType<?>>> exclude
     ) {
-        super(p_332739_);
-        this.source = p_459788_;
-        this.include = p_332029_.map(List::copyOf);
-        this.exclude = p_329656_.map(List::copyOf);
-        List<Predicate<DataComponentType<?>>> list = new ArrayList<>(2);
-        p_329656_.ifPresent(p_329848_ -> list.add(p_331276_ -> !p_329848_.contains(p_331276_)));
-        p_332029_.ifPresent(p_331486_ -> list.add(p_331486_::contains));
-        this.bakedPredicate = Util.allOf(list);
+        super(predicates);
+        this.source = source;
+        this.include = include.map(List::copyOf);
+        this.exclude = exclude.map(List::copyOf);
+        List<Predicate<DataComponentType<?>>> componentPredicates = new ArrayList<>(2);
+        exclude.ifPresent(s -> componentPredicates.add(e -> !s.contains(e)));
+        include.ifPresent(s -> componentPredicates.add(s::contains));
+        this.bakedPredicate = Util.allOf(componentPredicates);
     }
 
     @Override
-    public LootItemFunctionType<CopyComponentsFunction> getType() {
-        return LootItemFunctions.COPY_COMPONENTS;
+    public MapCodec<CopyComponentsFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
@@ -75,43 +74,38 @@ public class CopyComponentsFunction extends LootItemConditionalFunction {
     }
 
     @Override
-    public ItemStack run(ItemStack p_329465_, LootContext p_328771_) {
-        DataComponentGetter datacomponentgetter = this.source.get(p_328771_);
-        if (datacomponentgetter != null) {
-            if (datacomponentgetter instanceof DataComponentMap datacomponentmap) {
-                p_329465_.applyComponents(datacomponentmap.filter(this.bakedPredicate));
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        DataComponentGetter data = this.source.get(context);
+        if (data != null) {
+            if (data instanceof DataComponentMap sourceComponents) {
+                itemStack.applyComponents(sourceComponents.filter(this.bakedPredicate));
             } else {
-                Collection<DataComponentType<?>> collection = this.exclude.orElse(List.of());
-                this.include.map(Collection::stream).orElse(BuiltInRegistries.DATA_COMPONENT_TYPE.listElements().map(Holder::value)).forEach(p_422267_ -> {
-                    if (!collection.contains(p_422267_)) {
-                        TypedDataComponent<?> typeddatacomponent = datacomponentgetter.getTyped(p_422267_);
-                        if (typeddatacomponent != null) {
-                            p_329465_.set(typeddatacomponent);
+                Collection<DataComponentType<?>> exclude = this.exclude.orElse(List.of());
+                this.include.map(Collection::stream).orElse(BuiltInRegistries.DATA_COMPONENT_TYPE.listElements().map(Holder::value)).forEach(componentType -> {
+                    if (!exclude.contains(componentType)) {
+                        TypedDataComponent<?> value = data.getTyped(componentType);
+                        if (value != null) {
+                            itemStack.set(value);
                         }
                     }
                 });
             }
         }
 
-        return p_329465_;
+        return itemStack;
     }
 
-    public static CopyComponentsFunction.Builder copyComponentsFromEntity(ContextKey<? extends Entity> p_422628_) {
-        return new CopyComponentsFunction.Builder(new CopyComponentsFunction.DirectSource<>(p_422628_));
+    public static CopyComponentsFunction.Builder copyComponentsFromEntity(final ContextKey<? extends Entity> source) {
+        return new CopyComponentsFunction.Builder(new CopyComponentsFunction.DirectSource<>(source));
     }
 
-    public static CopyComponentsFunction.Builder copyComponentsFromBlockEntity(ContextKey<? extends BlockEntity> p_429680_) {
-        return new CopyComponentsFunction.Builder(new CopyComponentsFunction.BlockEntitySource(p_429680_));
+    public static CopyComponentsFunction.Builder copyComponentsFromBlockEntity(final ContextKey<? extends BlockEntity> source) {
+        return new CopyComponentsFunction.Builder(new CopyComponentsFunction.BlockEntitySource(source));
     }
 
-    record BlockEntitySource(ContextKey<? extends BlockEntity> contextParam) implements LootContextArg.Getter<BlockEntity, DataComponentGetter> {
-        public DataComponentGetter get(BlockEntity p_425299_) {
-            return p_425299_.collectComponents();
-        }
-
-        @Override
-        public ContextKey<? extends BlockEntity> contextParam() {
-            return this.contextParam;
+    private record BlockEntitySource(ContextKey<? extends BlockEntity> contextParam) implements LootContextArg.Getter<BlockEntity, DataComponentGetter> {
+        public DataComponentGetter get(final BlockEntity blockEntity) {
+            return blockEntity.collectComponents();
         }
     }
 
@@ -120,25 +114,25 @@ public class CopyComponentsFunction extends LootItemConditionalFunction {
         private Optional<ImmutableList.Builder<DataComponentType<?>>> include = Optional.empty();
         private Optional<ImmutableList.Builder<DataComponentType<?>>> exclude = Optional.empty();
 
-        Builder(LootContextArg<DataComponentGetter> p_452814_) {
-            this.source = p_452814_;
+        private Builder(final LootContextArg<DataComponentGetter> source) {
+            this.source = source;
         }
 
-        public CopyComponentsFunction.Builder include(DataComponentType<?> p_329871_) {
+        public CopyComponentsFunction.Builder include(final DataComponentType<?> type) {
             if (this.include.isEmpty()) {
                 this.include = Optional.of(ImmutableList.builder());
             }
 
-            this.include.get().add(p_329871_);
+            this.include.get().add(type);
             return this;
         }
 
-        public CopyComponentsFunction.Builder exclude(DataComponentType<?> p_332922_) {
+        public CopyComponentsFunction.Builder exclude(final DataComponentType<?> type) {
             if (this.exclude.isEmpty()) {
                 this.exclude = Optional.of(ImmutableList.builder());
             }
 
-            this.exclude.get().add(p_332922_);
+            this.exclude.get().add(type);
             return this;
         }
 
@@ -154,14 +148,9 @@ public class CopyComponentsFunction extends LootItemConditionalFunction {
         }
     }
 
-    record DirectSource<T extends DataComponentGetter>(ContextKey<? extends T> contextParam) implements LootContextArg.Getter<T, DataComponentGetter> {
-        public DataComponentGetter get(T p_454339_) {
-            return p_454339_;
-        }
-
-        @Override
-        public ContextKey<? extends T> contextParam() {
-            return this.contextParam;
+    private record DirectSource<T extends DataComponentGetter>(ContextKey<? extends T> contextParam) implements LootContextArg.Getter<T, DataComponentGetter> {
+        public DataComponentGetter get(final T value) {
+            return value;
         }
     }
 }

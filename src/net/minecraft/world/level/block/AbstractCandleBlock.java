@@ -31,90 +31,83 @@ public abstract class AbstractCandleBlock extends Block {
     @Override
     protected abstract MapCodec<? extends AbstractCandleBlock> codec();
 
-    protected AbstractCandleBlock(BlockBehaviour.Properties p_151898_) {
-        super(p_151898_);
+    protected AbstractCandleBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
-    protected abstract Iterable<Vec3> getParticleOffsets(BlockState p_151927_);
+    protected abstract Iterable<Vec3> getParticleOffsets(final BlockState state);
 
-    public static boolean isLit(BlockState p_151934_) {
-        return p_151934_.hasProperty(LIT)
-            && (p_151934_.is(BlockTags.CANDLES) || p_151934_.is(BlockTags.CANDLE_CAKES))
-            && p_151934_.getValue(LIT);
-    }
-
-    @Override
-    protected void onProjectileHit(Level p_151905_, BlockState p_151906_, BlockHitResult p_151907_, Projectile p_151908_) {
-        if (!p_151905_.isClientSide() && p_151908_.isOnFire() && this.canBeLit(p_151906_)) {
-            setLit(p_151905_, p_151906_, p_151907_.getBlockPos(), true);
-        }
-    }
-
-    protected boolean canBeLit(BlockState p_151935_) {
-        return !p_151935_.getValue(LIT);
+    public static boolean isLit(final BlockState state) {
+        return state.hasProperty(LIT) && (state.is(BlockTags.CANDLES) || state.is(BlockTags.CANDLE_CAKES)) && state.getValue(LIT);
     }
 
     @Override
-    public void animateTick(BlockState p_220697_, Level p_220698_, BlockPos p_220699_, RandomSource p_220700_) {
-        if (p_220697_.getValue(LIT)) {
-            this.getParticleOffsets(p_220697_)
-                .forEach(p_220695_ -> addParticlesAndSound(p_220698_, p_220695_.add(p_220699_.getX(), p_220699_.getY(), p_220699_.getZ()), p_220700_));
+    protected void onProjectileHit(final Level level, final BlockState state, final BlockHitResult blockHit, final Projectile projectile) {
+        if (!level.isClientSide() && projectile.isOnFire() && this.canBeLit(state)) {
+            setLit(level, state, blockHit.getBlockPos(), true);
         }
     }
 
-    private static void addParticlesAndSound(Level p_220688_, Vec3 p_220689_, RandomSource p_220690_) {
-        float f = p_220690_.nextFloat();
-        if (f < 0.3F) {
-            p_220688_.addParticle(ParticleTypes.SMOKE, p_220689_.x, p_220689_.y, p_220689_.z, 0.0, 0.0, 0.0);
-            if (f < 0.17F) {
-                p_220688_.playLocalSound(
-                    p_220689_.x + 0.5,
-                    p_220689_.y + 0.5,
-                    p_220689_.z + 0.5,
+    protected boolean canBeLit(final BlockState state) {
+        return !state.getValue(LIT);
+    }
+
+    @Override
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(LIT)) {
+            this.getParticleOffsets(state).forEach(particlePos -> addParticlesAndSound(level, particlePos.add(pos.getX(), pos.getY(), pos.getZ()), random));
+        }
+    }
+
+    private static void addParticlesAndSound(final Level level, final Vec3 pos, final RandomSource random) {
+        float chance = random.nextFloat();
+        if (chance < 0.3F) {
+            level.addParticle(ParticleTypes.SMOKE, pos.x, pos.y, pos.z, 0.0, 0.0, 0.0);
+            if (chance < 0.17F) {
+                level.playLocalSound(
+                    pos.x + 0.5,
+                    pos.y + 0.5,
+                    pos.z + 0.5,
                     SoundEvents.CANDLE_AMBIENT,
                     SoundSource.BLOCKS,
-                    1.0F + p_220690_.nextFloat(),
-                    p_220690_.nextFloat() * 0.7F + 0.3F,
+                    1.0F + random.nextFloat(),
+                    random.nextFloat() * 0.7F + 0.3F,
                     false
                 );
             }
         }
 
-        p_220688_.addParticle(ParticleTypes.SMALL_FLAME, p_220689_.x, p_220689_.y, p_220689_.z, 0.0, 0.0, 0.0);
+        level.addParticle(ParticleTypes.SMALL_FLAME, pos.x, pos.y, pos.z, 0.0, 0.0, 0.0);
     }
 
-    public static void extinguish(@Nullable Player p_151900_, BlockState p_151901_, LevelAccessor p_151902_, BlockPos p_151903_) {
-        setLit(p_151902_, p_151901_, p_151903_, false);
-        if (p_151901_.getBlock() instanceof AbstractCandleBlock) {
-            ((AbstractCandleBlock)p_151901_.getBlock())
-                .getParticleOffsets(p_151901_)
+    public static void extinguish(final @Nullable Player player, final BlockState state, final LevelAccessor level, final BlockPos pos) {
+        setLit(level, state, pos, false);
+        if (state.getBlock() instanceof AbstractCandleBlock) {
+            ((AbstractCandleBlock)state.getBlock())
+                .getParticleOffsets(state)
                 .forEach(
-                    p_151926_ -> p_151902_.addParticle(
-                        ParticleTypes.SMOKE,
-                        p_151903_.getX() + p_151926_.x(),
-                        p_151903_.getY() + p_151926_.y(),
-                        p_151903_.getZ() + p_151926_.z(),
-                        0.0,
-                        0.1F,
-                        0.0
+                    particlePos -> level.addParticle(
+                        ParticleTypes.SMOKE, pos.getX() + particlePos.x(), pos.getY() + particlePos.y(), pos.getZ() + particlePos.z(), 0.0, 0.1F, 0.0
                     )
                 );
         }
 
-        p_151902_.playSound(null, p_151903_, SoundEvents.CANDLE_EXTINGUISH, SoundSource.BLOCKS, 1.0F, 1.0F);
-        p_151902_.gameEvent(p_151900_, GameEvent.BLOCK_CHANGE, p_151903_);
+        level.playSound(null, pos, SoundEvents.CANDLE_EXTINGUISH, SoundSource.BLOCKS, 1.0F, 1.0F);
+        level.gameEvent(player, GameEvent.BLOCK_CHANGE, pos);
     }
 
-    private static void setLit(LevelAccessor p_151919_, BlockState p_151920_, BlockPos p_151921_, boolean p_151922_) {
-        p_151919_.setBlock(p_151921_, p_151920_.setValue(LIT, p_151922_), 11);
+    private static void setLit(final LevelAccessor level, final BlockState state, final BlockPos pos, final boolean lit) {
+        level.setBlock(pos, state.setValue(LIT, lit), 11);
     }
 
     @Override
-    protected void onExplosionHit(BlockState p_310999_, ServerLevel p_368647_, BlockPos p_311846_, Explosion p_310799_, BiConsumer<ItemStack, BlockPos> p_310677_) {
-        if (p_310799_.canTriggerBlocks() && p_310999_.getValue(LIT)) {
-            extinguish(null, p_310999_, p_368647_, p_311846_);
+    protected void onExplosionHit(
+        final BlockState state, final ServerLevel level, final BlockPos pos, final Explosion explosion, final BiConsumer<ItemStack, BlockPos> onHit
+    ) {
+        if (explosion.canTriggerBlocks() && state.getValue(LIT)) {
+            extinguish(null, state, level, pos);
         }
 
-        super.onExplosionHit(p_310999_, p_368647_, p_311846_, p_310799_, p_310677_);
+        super.onExplosionHit(state, level, pos, explosion, onHit);
     }
 }

@@ -6,17 +6,17 @@ import org.jspecify.annotations.Nullable;
 public abstract class StoredUserEntry<T> {
     private final @Nullable T user;
 
-    public StoredUserEntry(@Nullable T p_11371_) {
-        this.user = p_11371_;
+    public StoredUserEntry(final @Nullable T user) {
+        this.user = user;
     }
 
     public @Nullable T getUser() {
         return this.user;
     }
 
-    boolean hasExpired() {
+    public boolean hasExpired() {
         return false;
     }
 
-    protected abstract void serialize(JsonObject p_11372_);
+    protected abstract void serialize(final JsonObject object);
 }

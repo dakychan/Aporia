@@ -6,17 +6,17 @@ import java.util.Objects;
 import net.minecraft.server.notifications.NotificationService;
 
 public class UserBanList extends StoredUserList<NameAndId, UserBanListEntry> {
-    public UserBanList(File p_11402_, NotificationService p_424284_) {
-        super(p_11402_, p_424284_);
+    public UserBanList(final File file, final NotificationService notificationService) {
+        super(file, notificationService);
     }
 
     @Override
-    protected StoredUserEntry<NameAndId> createEntry(JsonObject p_11405_) {
-        return new UserBanListEntry(p_11405_);
+    protected StoredUserEntry<NameAndId> createEntry(final JsonObject object) {
+        return new UserBanListEntry(object);
     }
 
-    public boolean isBanned(NameAndId p_427408_) {
-        return this.contains(p_427408_);
+    public boolean isBanned(final NameAndId user) {
+        return this.contains(user);
     }
 
     @Override
@@ -24,14 +24,14 @@ public class UserBanList extends StoredUserList<NameAndId, UserBanListEntry> {
         return this.getEntries().stream().map(StoredUserEntry::getUser).filter(Objects::nonNull).map(NameAndId::name).toArray(String[]::new);
     }
 
-    protected String getKeyForUser(NameAndId p_428270_) {
-        return p_428270_.id().toString();
+    protected String getKeyForUser(final NameAndId user) {
+        return user.id().toString();
     }
 
-    public boolean add(UserBanListEntry p_430672_) {
-        if (super.add(p_430672_)) {
-            if (p_430672_.getUser() != null) {
-                this.notificationService.playerBanned(p_430672_);
+    public boolean add(final UserBanListEntry infos) {
+        if (super.add(infos)) {
+            if (infos.getUser() != null) {
+                this.notificationService.playerBanned(infos);
             }
 
             return true;
@@ -40,9 +40,9 @@ public class UserBanList extends StoredUserList<NameAndId, UserBanListEntry> {
         }
     }
 
-    public boolean remove(NameAndId p_427933_) {
-        if (super.remove(p_427933_)) {
-            this.notificationService.playerUnbanned(p_427933_);
+    public boolean remove(final NameAndId user) {
+        if (super.remove(user)) {
+            this.notificationService.playerUnbanned(user);
             return true;
         } else {
             return false;
@@ -51,9 +51,9 @@ public class UserBanList extends StoredUserList<NameAndId, UserBanListEntry> {
 
     @Override
     public void clear() {
-        for (UserBanListEntry userbanlistentry : this.getEntries()) {
-            if (userbanlistentry.getUser() != null) {
-                this.notificationService.playerUnbanned(userbanlistentry.getUser());
+        for (UserBanListEntry user : this.getEntries()) {
+            if (user.getUser() != null) {
+                this.notificationService.playerUnbanned(user.getUser());
             }
         }
 

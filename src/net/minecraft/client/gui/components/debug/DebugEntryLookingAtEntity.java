@@ -4,29 +4,30 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugEntryLookingAtEntity implements DebugScreenEntry {
-    private static final Identifier GROUP = Identifier.withDefaultNamespace("looking_at_entity");
+    public static final Identifier GROUP = Identifier.withDefaultNamespace("looking_at_entity");
 
     @Override
-    public void display(DebugScreenDisplayer p_426755_, @Nullable Level p_430099_, @Nullable LevelChunk p_425918_, @Nullable LevelChunk p_431370_) {
+    public void display(
+        final DebugScreenDisplayer displayer,
+        final @Nullable Level serverOrClientLevel,
+        final @Nullable LevelChunk clientChunk,
+        final @Nullable LevelChunk serverChunk
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
         Entity entity = minecraft.crosshairPickEntity;
-        List<String> list = new ArrayList<>();
+        List<String> result = new ArrayList<>();
         if (entity != null) {
-            list.add(ChatFormatting.UNDERLINE + "Targeted Entity");
-            list.add(String.valueOf(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType())));
+            result.add(ChatFormatting.UNDERLINE + "Targeted Entity");
+            result.add(entity.typeHolder().getRegisteredName());
         }
 
-        p_426755_.addToGroup(GROUP, list);
+        displayer.addToGroup(GROUP, result);
     }
 }

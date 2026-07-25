@@ -14,18 +14,18 @@ public enum TickPriority {
     public static final Codec<TickPriority> CODEC = Codec.INT.xmap(TickPriority::byValue, TickPriority::getValue);
     private final int value;
 
-    private TickPriority(final int p_193444_) {
-        this.value = p_193444_;
+    TickPriority(final int value) {
+        this.value = value;
     }
 
-    public static TickPriority byValue(int p_193447_) {
-        for (TickPriority tickpriority : values()) {
-            if (tickpriority.value == p_193447_) {
-                return tickpriority;
+    public static TickPriority byValue(final int value) {
+        for (TickPriority priority : values()) {
+            if (priority.value == value) {
+                return priority;
             }
         }
 
-        return p_193447_ < EXTREMELY_HIGH.value ? EXTREMELY_HIGH : EXTREMELY_LOW;
+        return value < EXTREMELY_HIGH.value ? EXTREMELY_HIGH : EXTREMELY_LOW;
     }
 
     public int getValue() {

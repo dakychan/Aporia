@@ -4,11 +4,10 @@ import com.mojang.logging.LogUtils;
 import java.io.IOException;
 import java.util.function.Consumer;
 import net.minecraft.SharedConstants;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.StringWidget;
-import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
@@ -16,57 +15,52 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.FileUtil;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
-import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.storage.LevelSummary;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class SelectWorldScreen extends Screen {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final WorldOptions TEST_OPTIONS = new WorldOptions("test1".hashCode(), true, false);
     protected final Screen lastScreen;
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, 8 + 9 + 8 + 20 + 4, 60);
     private @Nullable Button deleteButton;
-    private @Nullable Button selectButton;
-    private @Nullable Button renameButton;
-    private @Nullable Button copyButton;
+    private @Nullable Button playWorldButton;
+    private @Nullable Button editButton;
+    private @Nullable Button recreateButton;
     protected @Nullable EditBox searchBox;
     private @Nullable WorldSelectionList list;
 
-    public SelectWorldScreen(Screen p_101338_) {
+    public SelectWorldScreen(final Screen lastScreen) {
         super(Component.translatable("selectWorld.title"));
-        this.lastScreen = p_101338_;
+        this.lastScreen = lastScreen;
     }
 
     @Override
     protected void init() {
-        LinearLayout linearlayout = this.layout.addToHeader(LinearLayout.vertical().spacing(4));
-        linearlayout.defaultCellSetting().alignHorizontallyCenter();
-        linearlayout.addChild(new StringWidget(this.title, this.font));
-        LinearLayout linearlayout1 = linearlayout.addChild(LinearLayout.horizontal().spacing(4));
+        LinearLayout header = this.layout.addToHeader(LinearLayout.vertical().spacing(4));
+        header.defaultCellSetting().alignHorizontallyCenter();
+        header.addChild(new StringWidget(this.title, this.font));
+        LinearLayout subHeader = header.addChild(LinearLayout.horizontal().spacing(4));
         if (SharedConstants.DEBUG_WORLD_RECREATE) {
-            linearlayout1.addChild(this.createDebugWorldRecreateButton());
+            subHeader.addChild(this.createDebugWorldRecreateButton());
         }
 
-        this.searchBox = linearlayout1.addChild(
+        this.searchBox = subHeader.addChild(
             new EditBox(this.font, this.width / 2 - 100, 22, 200, 20, this.searchBox, Component.translatable("selectWorld.search"))
         );
-        this.searchBox.setResponder(p_420787_ -> {
+        this.searchBox.setResponder(value -> {
             if (this.list != null) {
-                this.list.updateFilter(p_420787_);
+                this.list.updateFilter(value);
             }
         });
         this.searchBox.setHint(Component.translatable("gui.selectWorld.search").setStyle(EditBox.SEARCH_HINT_STYLE));
-        Consumer<WorldSelectionList.WorldListEntry> consumer = WorldSelectionList.WorldListEntry::joinWorld;
+        Consumer<WorldSelectionList.WorldListEntry> joinWorld = WorldSelectionList.WorldListEntry::joinWorld;
         this.list = this.layout
             .addToContents(
                 new WorldSelectionList.Builder(this.minecraft, this)
@@ -75,82 +69,68 @@ public class SelectWorldScreen extends Screen {
                     .filter(this.searchBox.getValue())
                     .oldList(this.list)
                     .onEntrySelect(this::updateButtonStatus)
-                    .onEntryInteract(consumer)
+                    .onEntryInteract(joinWorld)
                     .build()
             );
-        this.createFooterButtons(consumer, this.list);
-        this.layout.visitWidgets(p_420791_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_420791_);
-        });
+        this.createFooterButtons(joinWorld, this.list);
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
         this.updateButtonStatus(null);
     }
 
-    private void createFooterButtons(Consumer<WorldSelectionList.WorldListEntry> p_430246_, WorldSelectionList p_429546_) {
-        GridLayout gridlayout = this.layout.addToFooter(new GridLayout().columnSpacing(8).rowSpacing(4));
-        gridlayout.defaultCellSetting().alignHorizontallyCenter();
-        GridLayout.RowHelper gridlayout$rowhelper = gridlayout.createRowHelper(4);
-        this.selectButton = gridlayout$rowhelper.addChild(
-            Button.builder(LevelSummary.PLAY_WORLD, p_420800_ -> p_429546_.getSelectedOpt().ifPresent(p_430246_)).build(), 2
-        );
-        gridlayout$rowhelper.addChild(
-            Button.builder(Component.translatable("selectWorld.create"), p_420789_ -> CreateWorldScreen.openFresh(this.minecraft, p_429546_::returnToScreen))
-                .build(),
+    private void createFooterButtons(final Consumer<WorldSelectionList.WorldListEntry> joinWorld, final WorldSelectionList list) {
+        GridLayout footer = this.layout.addToFooter(new GridLayout().columnSpacing(8).rowSpacing(4));
+        footer.defaultCellSetting().alignHorizontallyCenter();
+        GridLayout.RowHelper rowHelper = footer.createRowHelper(4);
+        this.playWorldButton = rowHelper.addChild(Button.builder(LevelSummary.PLAY_WORLD, button -> list.getSelectedOpt().ifPresent(joinWorld)).build(), 2);
+        rowHelper.addChild(
+            Button.builder(Component.translatable("selectWorld.create"), button -> CreateWorldScreen.openFresh(this.minecraft, list::returnToScreen)).build(),
             2
         );
-        this.renameButton = gridlayout$rowhelper.addChild(
+        this.editButton = rowHelper.addChild(
+            Button.builder(Component.translatable("selectWorld.edit"), button -> list.getSelectedOpt().ifPresent(WorldSelectionList.WorldListEntry::editWorld))
+                .width(71)
+                .build()
+        );
+        this.deleteButton = rowHelper.addChild(
             Button.builder(
-                    Component.translatable("selectWorld.edit"), p_420793_ -> p_429546_.getSelectedOpt().ifPresent(WorldSelectionList.WorldListEntry::editWorld)
+                    Component.translatable("selectWorld.delete"), button -> list.getSelectedOpt().ifPresent(WorldSelectionList.WorldListEntry::deleteWorld)
                 )
                 .width(71)
                 .build()
         );
-        this.deleteButton = gridlayout$rowhelper.addChild(
+        this.recreateButton = rowHelper.addChild(
             Button.builder(
-                    Component.translatable("selectWorld.delete"), p_420795_ -> p_429546_.getSelectedOpt().ifPresent(WorldSelectionList.WorldListEntry::deleteWorld)
+                    Component.translatable("selectWorld.recreate"), button -> list.getSelectedOpt().ifPresent(WorldSelectionList.WorldListEntry::recreateWorld)
                 )
                 .width(71)
                 .build()
         );
-        this.copyButton = gridlayout$rowhelper.addChild(
-            Button.builder(
-                    Component.translatable("selectWorld.recreate"), p_420797_ -> p_429546_.getSelectedOpt().ifPresent(WorldSelectionList.WorldListEntry::recreateWorld)
-                )
-                .width(71)
-                .build()
-        );
-        gridlayout$rowhelper.addChild(
-            Button.builder(CommonComponents.GUI_BACK, p_280917_ -> this.minecraft.setScreen(this.lastScreen)).width(71).build()
-        );
+        rowHelper.addChild(Button.builder(CommonComponents.GUI_BACK, button -> this.minecraft.gui.setScreen(this.lastScreen)).width(71).build());
     }
 
     private Button createDebugWorldRecreateButton() {
         return Button.builder(
                 Component.literal("DEBUG recreate"),
-                p_357744_ -> {
+                button -> {
                     try {
-                        String s = "DEBUG world";
+                        String levelName = "DEBUG world";
                         if (this.list != null && !this.list.children().isEmpty()) {
-                            WorldSelectionList.Entry worldselectionlist$entry = this.list.children().getFirst();
-                            if (worldselectionlist$entry instanceof WorldSelectionList.WorldListEntry worldselectionlist$worldlistentry
-                                && worldselectionlist$worldlistentry.getLevelName().equals("DEBUG world")) {
-                                worldselectionlist$worldlistentry.doDeleteWorld();
+                            WorldSelectionList.Entry entry = this.list.children().getFirst();
+                            if (entry instanceof WorldSelectionList.WorldListEntry worldEntry && worldEntry.getLevelName().equals("DEBUG world")) {
+                                worldEntry.doDeleteWorld();
                             }
                         }
 
-                        LevelSettings levelsettings = new LevelSettings(
-                            "DEBUG world",
-                            GameType.SPECTATOR,
-                            false,
-                            Difficulty.NORMAL,
-                            true,
-                            new GameRules(WorldDataConfiguration.DEFAULT.enabledFeatures()),
-                            WorldDataConfiguration.DEFAULT
+                        LevelSettings levelSettings = new LevelSettings(
+                            "DEBUG world", GameType.SPECTATOR, LevelSettings.DifficultySettings.DEFAULT, true, WorldDataConfiguration.DEFAULT
                         );
-                        String s1 = FileUtil.findAvailableName(this.minecraft.getLevelSource().getBaseDir(), "DEBUG world", "");
-                        this.minecraft.createWorldOpenFlows().createFreshLevel(s1, levelsettings, TEST_OPTIONS, WorldPresets::createNormalWorldDimensions, this);
-                    } catch (IOException ioexception) {
-                        LOGGER.error("Failed to recreate the debug world", (Throwable)ioexception);
+                        String resultFolder = FileUtil.findAvailableName(this.minecraft.getLevelSource().getBaseDir(), "DEBUG world", "");
+                        this.minecraft
+                            .createWorldOpenFlows()
+                            .createFreshLevel(resultFolder, levelSettings, TEST_OPTIONS, WorldPresets::createNormalWorldDimensions, this);
+                    } catch (IOException e) {
+                        LOGGER.error("Failed to recreate the debug world", e);
                     }
                 }
             )
@@ -176,23 +156,32 @@ public class SelectWorldScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
-    public void updateButtonStatus(@Nullable LevelSummary p_309997_) {
-        if (this.selectButton != null && this.renameButton != null && this.copyButton != null && this.deleteButton != null) {
-            if (p_309997_ == null) {
-                this.selectButton.setMessage(LevelSummary.PLAY_WORLD);
-                this.selectButton.active = false;
-                this.renameButton.active = false;
-                this.copyButton.active = false;
+    public void updateButtonStatus(final @Nullable LevelSummary summary) {
+        if (this.playWorldButton != null && this.editButton != null && this.recreateButton != null && this.deleteButton != null) {
+            if (summary == null) {
+                this.playWorldButton.setMessage(LevelSummary.PLAY_WORLD);
+                this.playWorldButton.active = false;
+                this.editButton.active = false;
+                this.recreateButton.active = false;
                 this.deleteButton.active = false;
             } else {
-                this.selectButton.setMessage(p_309997_.primaryActionMessage());
-                this.selectButton.active = p_309997_.primaryActionActive();
-                this.renameButton.active = p_309997_.canEdit();
-                this.copyButton.active = p_309997_.canRecreate();
-                this.deleteButton.active = p_309997_.canDelete();
+                this.playWorldButton.setMessage(summary.primaryActionMessage());
+                this.playWorldButton.active = summary.primaryActionActive();
+                this.editButton.active = summary.canEdit();
+                this.recreateButton.active = summary.canRecreate();
+                this.deleteButton.active = summary.canDelete();
+                if (summary.requiresFileFixing()) {
+                    this.editButton.setTooltip(Tooltip.create(Component.translatable("selectWorld.requiresFileFixingTooltip.edit")));
+                    this.playWorldButton.setTooltip(Tooltip.create(Component.translatable("selectWorld.requiresFileFixingTooltip.play")));
+                    this.recreateButton.setTooltip(Tooltip.create(Component.translatable("selectWorld.requiresFileFixingTooltip.recreate")));
+                } else {
+                    this.editButton.setTooltip(null);
+                    this.playWorldButton.setTooltip(null);
+                    this.recreateButton.setTooltip(null);
+                }
             }
         }
     }

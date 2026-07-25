@@ -2,16 +2,13 @@ package net.minecraft.client.gui.components.debug;
 
 import java.util.Collection;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface DebugScreenDisplayer {
-    void addPriorityLine(String p_429600_);
+    void addPriorityLine(String line);
 
-    void addLine(String p_425268_);
+    void addLine(String line);
 
-    void addToGroup(Identifier p_451284_, Collection<String> p_458137_);
+    void addToGroup(final Identifier group, Collection<String> lines);
 
-    void addToGroup(Identifier p_460199_, String p_454980_);
+    void addToGroup(final Identifier group, String lines);
 }

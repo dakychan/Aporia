@@ -7,7 +7,6 @@ import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.CartographyTableMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
@@ -26,24 +25,26 @@ public class CartographyTableBlock extends Block {
         return CODEC;
     }
 
-    protected CartographyTableBlock(BlockBehaviour.Properties p_51349_) {
-        super(p_51349_);
+    protected CartographyTableBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_51357_, Level p_51358_, BlockPos p_51359_, Player p_51360_, BlockHitResult p_51362_) {
-        if (!p_51358_.isClientSide()) {
-            p_51360_.openMenu(p_51357_.getMenuProvider(p_51358_, p_51359_));
-            p_51360_.awardStat(Stats.INTERACT_WITH_CARTOGRAPHY_TABLE);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide()) {
+            player.openMenu(state.getMenuProvider(level, pos));
+            player.awardStat(Stats.INTERACT_WITH_CARTOGRAPHY_TABLE);
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected @Nullable MenuProvider getMenuProvider(BlockState p_51364_, Level p_51365_, BlockPos p_51366_) {
+    protected @Nullable MenuProvider getMenuProvider(final BlockState state, final Level level, final BlockPos pos) {
         return new SimpleMenuProvider(
-            (p_51353_, p_51354_, p_51355_) -> new CartographyTableMenu(p_51353_, p_51354_, ContainerLevelAccess.create(p_51365_, p_51366_)), CONTAINER_TITLE
+            (containerId, inventory, player) -> new CartographyTableMenu(containerId, inventory, ContainerLevelAccess.create(level, pos)), CONTAINER_TITLE
         );
     }
 }

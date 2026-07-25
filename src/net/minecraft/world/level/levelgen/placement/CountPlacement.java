@@ -5,28 +5,27 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 
 public class CountPlacement extends RepeatingPlacement {
-    public static final MapCodec<CountPlacement> CODEC = IntProvider.codec(0, 256)
-        .fieldOf("count")
-        .xmap(CountPlacement::new, p_191633_ -> p_191633_.count);
+    public static final MapCodec<CountPlacement> CODEC = IntProviders.codec(0, 4096).fieldOf("count").xmap(CountPlacement::new, c -> c.count);
     private final IntProvider count;
 
-    private CountPlacement(IntProvider p_191627_) {
-        this.count = p_191627_;
+    private CountPlacement(final IntProvider count) {
+        this.count = count;
     }
 
-    public static CountPlacement of(IntProvider p_191631_) {
-        return new CountPlacement(p_191631_);
+    public static CountPlacement of(final IntProvider count) {
+        return new CountPlacement(count);
     }
 
-    public static CountPlacement of(int p_191629_) {
-        return of(ConstantInt.of(p_191629_));
+    public static CountPlacement of(final int count) {
+        return of(ConstantInt.of(count));
     }
 
     @Override
-    protected int count(RandomSource p_226333_, BlockPos p_226334_) {
-        return this.count.sample(p_226333_);
+    protected int count(final RandomSource random, final BlockPos origin) {
+        return this.count.sample(random);
     }
 
     @Override

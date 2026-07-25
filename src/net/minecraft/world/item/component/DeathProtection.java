@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -17,8 +16,8 @@ import net.minecraft.world.item.consume_effects.ConsumeEffect;
 
 public record DeathProtection(List<ConsumeEffect> deathEffects) {
     public static final Codec<DeathProtection> CODEC = RecordCodecBuilder.create(
-        p_370114_ -> p_370114_.group(ConsumeEffect.CODEC.listOf().optionalFieldOf("death_effects", List.of()).forGetter(DeathProtection::deathEffects))
-            .apply(p_370114_, DeathProtection::new)
+        i -> i.group(ConsumeEffect.CODEC.listOf().optionalFieldOf("death_effects", List.of()).forGetter(DeathProtection::deathEffects))
+            .apply(i, DeathProtection::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, DeathProtection> STREAM_CODEC = StreamCodec.composite(
         ConsumeEffect.STREAM_CODEC.apply(ByteBufCodecs.list()), DeathProtection::deathEffects, DeathProtection::new
@@ -36,9 +35,9 @@ public record DeathProtection(List<ConsumeEffect> deathEffects) {
         )
     );
 
-    public void applyEffects(ItemStack p_368337_, LivingEntity p_363527_) {
-        for (ConsumeEffect consumeeffect : this.deathEffects) {
-            consumeeffect.apply(p_363527_.level(), p_368337_, p_363527_);
+    public void applyEffects(final ItemStack itemStack, final LivingEntity entity) {
+        for (ConsumeEffect effect : this.deathEffects) {
+            effect.apply(entity.level(), itemStack, entity);
         }
     }
 }

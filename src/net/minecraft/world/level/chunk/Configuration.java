@@ -9,39 +9,29 @@ public interface Configuration {
 
     int bitsInStorage();
 
-    <T> Palette<T> createPalette(Strategy<T> p_427431_, List<T> p_423239_);
+    <T> Palette<T> createPalette(Strategy<T> strategy, List<T> paletteEntries);
 
-    public record Global(int bitsInMemory, int bitsInStorage) implements Configuration {
+    record Global(int bitsInMemory, int bitsInStorage) implements Configuration {
         @Override
         public boolean alwaysRepack() {
             return true;
         }
 
         @Override
-        public <T> Palette<T> createPalette(Strategy<T> p_424848_, List<T> p_430068_) {
-            return p_424848_.globalPalette();
-        }
-
-        @Override
-        public int bitsInMemory() {
-            return this.bitsInMemory;
-        }
-
-        @Override
-        public int bitsInStorage() {
-            return this.bitsInStorage;
+        public <T> Palette<T> createPalette(final Strategy<T> strategy, final List<T> paletteEntries) {
+            return strategy.globalPalette();
         }
     }
 
-    public record Simple(Palette.Factory factory, int bits) implements Configuration {
+    record Simple(Palette.Factory factory, int bits) implements Configuration {
         @Override
         public boolean alwaysRepack() {
             return false;
         }
 
         @Override
-        public <T> Palette<T> createPalette(Strategy<T> p_430764_, List<T> p_431147_) {
-            return this.factory.create(this.bits, p_431147_);
+        public <T> Palette<T> createPalette(final Strategy<T> strategy, final List<T> paletteEntries) {
+            return this.factory.create(this.bits, paletteEntries);
         }
 
         @Override

@@ -22,23 +22,19 @@ public record ArmorMaterial(
     TagKey<Item> repairIngredient,
     ResourceKey<EquipmentAsset> assetId
 ) {
-    public ItemAttributeModifiers createAttributes(ArmorType p_361798_) {
-        int i = this.defense.getOrDefault(p_361798_, 0);
-        ItemAttributeModifiers.Builder itemattributemodifiers$builder = ItemAttributeModifiers.builder();
-        EquipmentSlotGroup equipmentslotgroup = EquipmentSlotGroup.bySlot(p_361798_.getSlot());
-        Identifier identifier = Identifier.withDefaultNamespace("armor." + p_361798_.getName());
-        itemattributemodifiers$builder.add(
-            Attributes.ARMOR, new AttributeModifier(identifier, i, AttributeModifier.Operation.ADD_VALUE), equipmentslotgroup
-        );
-        itemattributemodifiers$builder.add(
-            Attributes.ARMOR_TOUGHNESS, new AttributeModifier(identifier, this.toughness, AttributeModifier.Operation.ADD_VALUE), equipmentslotgroup
-        );
+    public ItemAttributeModifiers createAttributes(final ArmorType type) {
+        int defense = this.defense.getOrDefault(type, 0);
+        ItemAttributeModifiers.Builder modifiers = ItemAttributeModifiers.builder();
+        EquipmentSlotGroup slotGroup = EquipmentSlotGroup.bySlot(type.getSlot());
+        Identifier modifierId = Identifier.withDefaultNamespace("armor." + type.getName());
+        modifiers.add(Attributes.ARMOR, new AttributeModifier(modifierId, defense, AttributeModifier.Operation.ADD_VALUE), slotGroup);
+        modifiers.add(Attributes.ARMOR_TOUGHNESS, new AttributeModifier(modifierId, this.toughness, AttributeModifier.Operation.ADD_VALUE), slotGroup);
         if (this.knockbackResistance > 0.0F) {
-            itemattributemodifiers$builder.add(
-                Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(identifier, this.knockbackResistance, AttributeModifier.Operation.ADD_VALUE), equipmentslotgroup
+            modifiers.add(
+                Attributes.KNOCKBACK_RESISTANCE, new AttributeModifier(modifierId, this.knockbackResistance, AttributeModifier.Operation.ADD_VALUE), slotGroup
             );
         }
 
-        return itemattributemodifiers$builder.build();
+        return modifiers.build();
     }
 }

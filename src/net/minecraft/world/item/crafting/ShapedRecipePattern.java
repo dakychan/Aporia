@@ -5,7 +5,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.chars.CharArraySet;
 import it.unimi.dsi.fastutil.chars.CharSet;
 import java.util.ArrayList;
@@ -26,15 +25,15 @@ public final class ShapedRecipePattern {
     public static final MapCodec<ShapedRecipePattern> MAP_CODEC = ShapedRecipePattern.Data.MAP_CODEC
         .flatXmap(
             ShapedRecipePattern::unpack,
-            p_341595_ -> p_341595_.data.map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Cannot encode unpacked recipe"))
+            pattern -> pattern.data.map(DataResult::success).orElseGet(() -> DataResult.error(() -> "Cannot encode unpacked recipe"))
         );
     public static final StreamCodec<RegistryFriendlyByteBuf, ShapedRecipePattern> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT,
-        p_359853_ -> p_359853_.width,
+        e -> e.width,
         ByteBufCodecs.VAR_INT,
-        p_359854_ -> p_359854_.height,
+        e -> e.height,
         Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC.apply(ByteBufCodecs.list()),
-        p_359852_ -> p_359852_.ingredients,
+        e -> e.ingredients,
         ShapedRecipePattern::createFromNetwork
     );
     private final int width;
@@ -44,146 +43,146 @@ public final class ShapedRecipePattern {
     private final int ingredientCount;
     private final boolean symmetrical;
 
-    public ShapedRecipePattern(int p_309692_, int p_311724_, List<Optional<Ingredient>> p_361049_, Optional<ShapedRecipePattern.Data> p_310645_) {
-        this.width = p_309692_;
-        this.height = p_311724_;
-        this.ingredients = p_361049_;
-        this.data = p_310645_;
-        this.ingredientCount = (int)p_361049_.stream().flatMap(Optional::stream).count();
-        this.symmetrical = Util.isSymmetrical(p_309692_, p_311724_, p_361049_);
+    public ShapedRecipePattern(final int width, final int height, final List<Optional<Ingredient>> ingredients, final Optional<ShapedRecipePattern.Data> data) {
+        this.width = width;
+        this.height = height;
+        this.ingredients = ingredients;
+        this.data = data;
+        this.ingredientCount = (int)ingredients.stream().flatMap(Optional::stream).count();
+        this.symmetrical = Util.isSymmetrical(width, height, ingredients);
     }
 
-    private static ShapedRecipePattern createFromNetwork(Integer p_365396_, Integer p_361921_, List<Optional<Ingredient>> p_363051_) {
-        return new ShapedRecipePattern(p_365396_, p_361921_, p_363051_, Optional.empty());
+    private static ShapedRecipePattern createFromNetwork(final Integer width, final Integer height, final List<Optional<Ingredient>> ingredients) {
+        return new ShapedRecipePattern(width, height, ingredients, Optional.empty());
     }
 
-    public static ShapedRecipePattern of(Map<Character, Ingredient> p_310983_, String... p_310430_) {
-        return of(p_310983_, List.of(p_310430_));
+    public static ShapedRecipePattern of(final Map<Character, Ingredient> key, final String... pattern) {
+        return of(key, List.of(pattern));
     }
 
-    public static ShapedRecipePattern of(Map<Character, Ingredient> p_313226_, List<String> p_310089_) {
-        ShapedRecipePattern.Data shapedrecipepattern$data = new ShapedRecipePattern.Data(p_313226_, p_310089_);
-        return unpack(shapedrecipepattern$data).getOrThrow();
+    public static ShapedRecipePattern of(final Map<Character, Ingredient> key, final List<String> pattern) {
+        ShapedRecipePattern.Data data = new ShapedRecipePattern.Data(key, pattern);
+        return unpack(data).getOrThrow();
     }
 
-    private static DataResult<ShapedRecipePattern> unpack(ShapedRecipePattern.Data p_312333_) {
-        String[] astring = shrink(p_312333_.pattern);
-        int i = astring[0].length();
-        int j = astring.length;
-        List<Optional<Ingredient>> list = new ArrayList<>(i * j);
-        CharSet charset = new CharArraySet(p_312333_.key.keySet());
+    private static DataResult<ShapedRecipePattern> unpack(final ShapedRecipePattern.Data data) {
+        String[] shrunkPattern = shrink(data.pattern);
+        int width = shrunkPattern[0].length();
+        int height = shrunkPattern.length;
+        List<Optional<Ingredient>> ingredients = new ArrayList<>(width * height);
+        CharSet unusedSymbols = new CharArraySet(data.key.keySet());
 
-        for (String s : astring) {
-            for (int k = 0; k < s.length(); k++) {
-                char c0 = s.charAt(k);
-                Optional<Ingredient> optional;
-                if (c0 == ' ') {
-                    optional = Optional.empty();
+        for (String line : shrunkPattern) {
+            for (int x = 0; x < line.length(); x++) {
+                char symbol = line.charAt(x);
+                Optional<Ingredient> ingredient;
+                if (symbol == ' ') {
+                    ingredient = Optional.empty();
                 } else {
-                    Ingredient ingredient = p_312333_.key.get(c0);
-                    if (ingredient == null) {
-                        return DataResult.error(() -> "Pattern references symbol '" + c0 + "' but it's not defined in the key");
+                    Ingredient ingredientForSymbol = data.key.get(symbol);
+                    if (ingredientForSymbol == null) {
+                        return DataResult.error(() -> "Pattern references symbol '" + symbol + "' but it's not defined in the key");
                     }
 
-                    optional = Optional.of(ingredient);
+                    ingredient = Optional.of(ingredientForSymbol);
                 }
 
-                charset.remove(c0);
-                list.add(optional);
+                unusedSymbols.remove(symbol);
+                ingredients.add(ingredient);
             }
         }
 
-        return !charset.isEmpty()
-            ? DataResult.error(() -> "Key defines symbols that aren't used in pattern: " + charset)
-            : DataResult.success(new ShapedRecipePattern(i, j, list, Optional.of(p_312333_)));
+        return !unusedSymbols.isEmpty()
+            ? DataResult.error(() -> "Key defines symbols that aren't used in pattern: " + unusedSymbols)
+            : DataResult.success(new ShapedRecipePattern(width, height, ingredients, Optional.of(data)));
     }
 
     @VisibleForTesting
-    static String[] shrink(List<String> p_311492_) {
-        int i = Integer.MAX_VALUE;
-        int j = 0;
-        int k = 0;
-        int l = 0;
+    static String[] shrink(final List<String> pattern) {
+        int left = Integer.MAX_VALUE;
+        int right = 0;
+        int top = 0;
+        int bottom = 0;
 
-        for (int i1 = 0; i1 < p_311492_.size(); i1++) {
-            String s = p_311492_.get(i1);
-            i = Math.min(i, firstNonEmpty(s));
-            int j1 = lastNonEmpty(s);
-            j = Math.max(j, j1);
-            if (j1 < 0) {
-                if (k == i1) {
-                    k++;
+        for (int i = 0; i < pattern.size(); i++) {
+            String line = pattern.get(i);
+            left = Math.min(left, firstNonEmpty(line));
+            int lastNonSpace = lastNonEmpty(line);
+            right = Math.max(right, lastNonSpace);
+            if (lastNonSpace < 0) {
+                if (top == i) {
+                    top++;
                 }
 
-                l++;
+                bottom++;
             } else {
-                l = 0;
+                bottom = 0;
             }
         }
 
-        if (p_311492_.size() == l) {
+        if (pattern.size() == bottom) {
             return new String[0];
-        } else {
-            String[] astring = new String[p_311492_.size() - l - k];
-
-            for (int k1 = 0; k1 < astring.length; k1++) {
-                astring[k1] = p_311492_.get(k1 + k).substring(i, j + 1);
-            }
-
-            return astring;
-        }
-    }
-
-    private static int firstNonEmpty(String p_309836_) {
-        int i = 0;
-
-        while (i < p_309836_.length() && p_309836_.charAt(i) == ' ') {
-            i++;
         }
 
-        return i;
-    }
+        String[] result = new String[pattern.size() - bottom - top];
 
-    private static int lastNonEmpty(String p_312853_) {
-        int i = p_312853_.length() - 1;
-
-        while (i >= 0 && p_312853_.charAt(i) == ' ') {
-            i--;
+        for (int line = 0; line < result.length; line++) {
+            result[line] = pattern.get(line + top).substring(left, right + 1);
         }
 
-        return i;
+        return result;
     }
 
-    public boolean matches(CraftingInput p_343130_) {
-        if (p_343130_.ingredientCount() != this.ingredientCount) {
-            return false;
-        } else {
-            if (p_343130_.width() == this.width && p_343130_.height() == this.height) {
-                if (!this.symmetrical && this.matches(p_343130_, true)) {
-                    return true;
-                }
+    private static int firstNonEmpty(final String line) {
+        int index = 0;
 
-                if (this.matches(p_343130_, false)) {
-                    return true;
-                }
-            }
+        while (index < line.length() && line.charAt(index) == ' ') {
+            index++;
+        }
 
+        return index;
+    }
+
+    private static int lastNonEmpty(final String line) {
+        int index = line.length() - 1;
+
+        while (index >= 0 && line.charAt(index) == ' ') {
+            index--;
+        }
+
+        return index;
+    }
+
+    public boolean matches(final CraftingInput input) {
+        if (input.ingredientCount() != this.ingredientCount) {
             return false;
         }
+
+        if (input.width() == this.width && input.height() == this.height) {
+            if (!this.symmetrical && this.matches(input, true)) {
+                return true;
+            }
+
+            if (this.matches(input, false)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    private boolean matches(CraftingInput p_345096_, boolean p_342488_) {
-        for (int i = 0; i < this.height; i++) {
-            for (int j = 0; j < this.width; j++) {
-                Optional<Ingredient> optional;
-                if (p_342488_) {
-                    optional = this.ingredients.get(this.width - j - 1 + i * this.width);
+    private boolean matches(final CraftingInput input, final boolean xFlip) {
+        for (int y = 0; y < this.height; y++) {
+            for (int x = 0; x < this.width; x++) {
+                Optional<Ingredient> expected;
+                if (xFlip) {
+                    expected = this.ingredients.get(this.width - x - 1 + y * this.width);
                 } else {
-                    optional = this.ingredients.get(j + i * this.width);
+                    expected = this.ingredients.get(x + y * this.width);
                 }
 
-                ItemStack itemstack = p_345096_.getItem(j, i);
-                if (!Ingredient.testOptionalIngredient(optional, itemstack)) {
+                ItemStack actual = input.getItem(x, y);
+                if (!Ingredient.testOptionalIngredient(expected, actual)) {
                     return false;
                 }
             }
@@ -205,40 +204,42 @@ public final class ShapedRecipePattern {
     }
 
     public record Data(Map<Character, Ingredient> key, List<String> pattern) {
-        private static final Codec<List<String>> PATTERN_CODEC = Codec.STRING.listOf().comapFlatMap(p_311191_ -> {
-            if (p_311191_.size() > 3) {
+        private static final Codec<List<String>> PATTERN_CODEC = Codec.STRING.listOf().comapFlatMap(strings -> {
+            if (strings.size() > 3) {
                 return DataResult.error(() -> "Invalid pattern: too many rows, 3 is maximum");
-            } else if (p_311191_.isEmpty()) {
+            }
+
+            if (strings.isEmpty()) {
                 return DataResult.error(() -> "Invalid pattern: empty pattern not allowed");
-            } else {
-                int i = p_311191_.getFirst().length();
+            }
 
-                for (String s : p_311191_) {
-                    if (s.length() > 3) {
-                        return DataResult.error(() -> "Invalid pattern: too many columns, 3 is maximum");
-                    }
+            int firstLength = strings.getFirst().length();
 
-                    if (i != s.length()) {
-                        return DataResult.error(() -> "Invalid pattern: each row must be the same width");
-                    }
+            for (String line : strings) {
+                if (line.length() > 3) {
+                    return DataResult.error(() -> "Invalid pattern: too many columns, 3 is maximum");
                 }
 
-                return DataResult.success(p_311191_);
+                if (firstLength != line.length()) {
+                    return DataResult.error(() -> "Invalid pattern: each row must be the same width");
+                }
             }
+
+            return DataResult.success(strings);
         }, Function.identity());
-        private static final Codec<Character> SYMBOL_CODEC = Codec.STRING.comapFlatMap(p_313217_ -> {
-            if (p_313217_.length() != 1) {
-                return DataResult.error(() -> "Invalid key entry: '" + p_313217_ + "' is an invalid symbol (must be 1 character only).");
+        private static final Codec<Character> SYMBOL_CODEC = Codec.STRING.comapFlatMap(symbol -> {
+            if (symbol.length() != 1) {
+                return DataResult.error(() -> "Invalid key entry: '" + symbol + "' is an invalid symbol (must be 1 character only).");
             } else {
-                return " ".equals(p_313217_) ? DataResult.error(() -> "Invalid key entry: ' ' is a reserved symbol.") : DataResult.success(p_313217_.charAt(0));
+                return " ".equals(symbol) ? DataResult.error(() -> "Invalid key entry: ' ' is a reserved symbol.") : DataResult.success(symbol.charAt(0));
             }
         }, String::valueOf);
         public static final MapCodec<ShapedRecipePattern.Data> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_359855_ -> p_359855_.group(
-                    ExtraCodecs.strictUnboundedMap(SYMBOL_CODEC, Ingredient.CODEC).fieldOf("key").forGetter(p_311797_ -> p_311797_.key),
-                    PATTERN_CODEC.fieldOf("pattern").forGetter(p_309770_ -> p_309770_.pattern)
+            i -> i.group(
+                    ExtraCodecs.strictUnboundedMap(SYMBOL_CODEC, Ingredient.CODEC).fieldOf("key").forGetter(d -> d.key),
+                    PATTERN_CODEC.fieldOf("pattern").forGetter(d -> d.pattern)
                 )
-                .apply(p_359855_, ShapedRecipePattern.Data::new)
+                .apply(i, ShapedRecipePattern.Data::new)
         );
     }
 }

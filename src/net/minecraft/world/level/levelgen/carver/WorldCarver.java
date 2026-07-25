@@ -39,16 +39,16 @@ public abstract class WorldCarver<C extends CarverConfiguration> {
     protected Set<Fluid> liquids = ImmutableSet.of(Fluids.WATER);
     private final MapCodec<ConfiguredWorldCarver<C>> configuredCodec;
 
-    private static <C extends CarverConfiguration, F extends WorldCarver<C>> F register(String p_65066_, F p_65067_) {
-        return Registry.register(BuiltInRegistries.CARVER, p_65066_, p_65067_);
+    private static <C extends CarverConfiguration, F extends WorldCarver<C>> F register(final String name, final F carver) {
+        return Registry.register(BuiltInRegistries.CARVER, name, carver);
     }
 
-    public WorldCarver(Codec<C> p_159366_) {
-        this.configuredCodec = p_159366_.fieldOf("config").xmap(this::configured, ConfiguredWorldCarver::config);
+    public WorldCarver(final Codec<C> codec) {
+        this.configuredCodec = codec.fieldOf("config").xmap(this::configured, ConfiguredWorldCarver::config);
     }
 
-    public ConfiguredWorldCarver<C> configured(C p_65064_) {
-        return new ConfiguredWorldCarver<>(this, p_65064_);
+    public ConfiguredWorldCarver<C> configured(final C configuration) {
+        return new ConfiguredWorldCarver<>(this, configuration);
     }
 
     public MapCodec<ConfiguredWorldCarver<C>> configuredCodec() {
@@ -60,178 +60,168 @@ public abstract class WorldCarver<C extends CarverConfiguration> {
     }
 
     protected boolean carveEllipsoid(
-        CarvingContext p_190754_,
-        C p_190755_,
-        ChunkAccess p_190756_,
-        Function<BlockPos, Holder<Biome>> p_190757_,
-        Aquifer p_190758_,
-        double p_190759_,
-        double p_190760_,
-        double p_190761_,
-        double p_190762_,
-        double p_190763_,
-        CarvingMask p_190764_,
-        WorldCarver.CarveSkipChecker p_190765_
+        final CarvingContext context,
+        final C configuration,
+        final ChunkAccess chunk,
+        final Function<BlockPos, Holder<Biome>> biomeGetter,
+        final Aquifer aquifer,
+        final double x,
+        final double y,
+        final double z,
+        final double horizontalRadius,
+        final double verticalRadius,
+        final CarvingMask mask,
+        final WorldCarver.CarveSkipChecker skipChecker
     ) {
-        ChunkPos chunkpos = p_190756_.getPos();
-        double d0 = chunkpos.getMiddleBlockX();
-        double d1 = chunkpos.getMiddleBlockZ();
-        double d2 = 16.0 + p_190762_ * 2.0;
-        if (!(Math.abs(p_190759_ - d0) > d2) && !(Math.abs(p_190761_ - d1) > d2)) {
-            int i = chunkpos.getMinBlockX();
-            int j = chunkpos.getMinBlockZ();
-            int k = Math.max(Mth.floor(p_190759_ - p_190762_) - i - 1, 0);
-            int l = Math.min(Mth.floor(p_190759_ + p_190762_) - i, 15);
-            int i1 = Math.max(Mth.floor(p_190760_ - p_190763_) - 1, p_190754_.getMinGenY() + 1);
-            int j1 = p_190756_.isUpgrading() ? 0 : 7;
-            int k1 = Math.min(Mth.floor(p_190760_ + p_190763_) + 1, p_190754_.getMinGenY() + p_190754_.getGenDepth() - 1 - j1);
-            int l1 = Math.max(Mth.floor(p_190761_ - p_190762_) - j - 1, 0);
-            int i2 = Math.min(Mth.floor(p_190761_ + p_190762_) - j, 15);
-            boolean flag = false;
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos1 = new BlockPos.MutableBlockPos();
+        ChunkPos chunkPos = chunk.getPos();
+        double centerX = chunkPos.getMiddleBlockX();
+        double centerZ = chunkPos.getMiddleBlockZ();
+        double maxDelta = 16.0 + horizontalRadius * 2.0;
+        if (!(Math.abs(x - centerX) > maxDelta) && !(Math.abs(z - centerZ) > maxDelta)) {
+            int chunkMinX = chunkPos.getMinBlockX();
+            int chunkMinZ = chunkPos.getMinBlockZ();
+            int minXIndex = Math.max(Mth.floor(x - horizontalRadius) - chunkMinX - 1, 0);
+            int maxXIndex = Math.min(Mth.floor(x + horizontalRadius) - chunkMinX, 15);
+            int minY = Math.max(Mth.floor(y - verticalRadius) - 1, context.getMinGenY() + 1);
+            int protectedBlocksOnTop = chunk.isUpgrading() ? 0 : 7;
+            int maxY = Math.min(Mth.floor(y + verticalRadius) + 1, context.getMinGenY() + context.getGenDepth() - 1 - protectedBlocksOnTop);
+            int minZIndex = Math.max(Mth.floor(z - horizontalRadius) - chunkMinZ - 1, 0);
+            int maxZIndex = Math.min(Mth.floor(z + horizontalRadius) - chunkMinZ, 15);
+            boolean carved = false;
+            BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
+            BlockPos.MutableBlockPos helperPos = new BlockPos.MutableBlockPos();
 
-            for (int j2 = k; j2 <= l; j2++) {
-                int k2 = chunkpos.getBlockX(j2);
-                double d3 = (k2 + 0.5 - p_190759_) / p_190762_;
+            for (int xIndex = minXIndex; xIndex <= maxXIndex; xIndex++) {
+                int worldX = chunkPos.getBlockX(xIndex);
+                double xd = (worldX + 0.5 - x) / horizontalRadius;
 
-                for (int l2 = l1; l2 <= i2; l2++) {
-                    int i3 = chunkpos.getBlockZ(l2);
-                    double d4 = (i3 + 0.5 - p_190761_) / p_190762_;
-                    if (!(d3 * d3 + d4 * d4 >= 1.0)) {
-                        MutableBoolean mutableboolean = new MutableBoolean(false);
+                for (int zIndex = minZIndex; zIndex <= maxZIndex; zIndex++) {
+                    int worldZ = chunkPos.getBlockZ(zIndex);
+                    double zd = (worldZ + 0.5 - z) / horizontalRadius;
+                    if (!(xd * xd + zd * zd >= 1.0)) {
+                        MutableBoolean hasGrass = new MutableBoolean(false);
 
-                        for (int j3 = k1; j3 > i1; j3--) {
-                            double d5 = (j3 - 0.5 - p_190760_) / p_190763_;
-                            if (!p_190765_.shouldSkip(p_190754_, d3, d5, d4, j3) && (!p_190764_.get(j2, j3, l2) || isDebugEnabled(p_190755_))) {
-                                p_190764_.set(j2, j3, l2);
-                                blockpos$mutableblockpos.set(k2, j3, i3);
-                                flag |= this.carveBlock(
-                                    p_190754_,
-                                    p_190755_,
-                                    p_190756_,
-                                    p_190757_,
-                                    p_190764_,
-                                    blockpos$mutableblockpos,
-                                    blockpos$mutableblockpos1,
-                                    p_190758_,
-                                    mutableboolean
-                                );
+                        for (int worldY = maxY; worldY > minY; worldY--) {
+                            double yd = (worldY - 0.5 - y) / verticalRadius;
+                            if (!skipChecker.shouldSkip(context, xd, yd, zd, worldY) && (!mask.get(xIndex, worldY, zIndex) || isDebugEnabled(configuration))) {
+                                mask.set(xIndex, worldY, zIndex);
+                                blockPos.set(worldX, worldY, worldZ);
+                                carved |= this.carveBlock(context, configuration, chunk, biomeGetter, mask, blockPos, helperPos, aquifer, hasGrass);
                             }
                         }
                     }
                 }
             }
 
-            return flag;
+            return carved;
         } else {
             return false;
         }
     }
 
     protected boolean carveBlock(
-        CarvingContext p_190744_,
-        C p_190745_,
-        ChunkAccess p_190746_,
-        Function<BlockPos, Holder<Biome>> p_190747_,
-        CarvingMask p_190748_,
-        BlockPos.MutableBlockPos p_190749_,
-        BlockPos.MutableBlockPos p_190750_,
-        Aquifer p_190751_,
-        MutableBoolean p_190752_
+        final CarvingContext context,
+        final C configuration,
+        final ChunkAccess chunk,
+        final Function<BlockPos, Holder<Biome>> biomeGetter,
+        final CarvingMask mask,
+        final BlockPos.MutableBlockPos blockPos,
+        final BlockPos.MutableBlockPos helperPos,
+        final Aquifer aquifer,
+        final MutableBoolean hasGrass
     ) {
-        BlockState blockstate = p_190746_.getBlockState(p_190749_);
-        if (blockstate.is(Blocks.GRASS_BLOCK) || blockstate.is(Blocks.MYCELIUM)) {
-            p_190752_.setTrue();
+        BlockState blockState = chunk.getBlockState(blockPos);
+        if (blockState.is(Blocks.GRASS_BLOCK) || blockState.is(Blocks.MYCELIUM)) {
+            hasGrass.setTrue();
         }
 
-        if (!this.canReplaceBlock(p_190745_, blockstate) && !isDebugEnabled(p_190745_)) {
+        if (!this.canReplaceBlock(configuration, blockState) && !isDebugEnabled(configuration)) {
             return false;
-        } else {
-            BlockState blockstate1 = this.getCarveState(p_190744_, p_190745_, p_190749_, p_190751_);
-            if (blockstate1 == null) {
-                return false;
-            } else {
-                p_190746_.setBlockState(p_190749_, blockstate1);
-                if (p_190751_.shouldScheduleFluidUpdate() && !blockstate1.getFluidState().isEmpty()) {
-                    p_190746_.markPosForPostprocessing(p_190749_);
-                }
+        }
 
-                if (p_190752_.isTrue()) {
-                    p_190750_.setWithOffset(p_190749_, Direction.DOWN);
-                    if (p_190746_.getBlockState(p_190750_).is(Blocks.DIRT)) {
-                        p_190744_.topMaterial(p_190747_, p_190746_, p_190750_, !blockstate1.getFluidState().isEmpty()).ifPresent(p_391040_ -> {
-                            p_190746_.setBlockState(p_190750_, p_391040_);
-                            if (!p_391040_.getFluidState().isEmpty()) {
-                                p_190746_.markPosForPostprocessing(p_190750_);
-                            }
-                        });
+        BlockState state = this.getCarveState(context, configuration, blockPos, aquifer);
+        if (state == null) {
+            return false;
+        }
+
+        chunk.setBlockState(blockPos, state);
+        if (aquifer.shouldScheduleFluidUpdate() && !state.getFluidState().isEmpty()) {
+            chunk.markPosForPostProcessing(blockPos);
+        }
+
+        if (hasGrass.isTrue()) {
+            helperPos.setWithOffset(blockPos, Direction.DOWN);
+            if (chunk.getBlockState(helperPos).is(Blocks.DIRT)) {
+                context.topMaterial(biomeGetter, chunk, helperPos, !state.getFluidState().isEmpty()).ifPresent(topMaterial -> {
+                    chunk.setBlockState(helperPos, topMaterial);
+                    if (!topMaterial.getFluidState().isEmpty()) {
+                        chunk.markPosForPostProcessing(helperPos);
                     }
-                }
-
-                return true;
+                });
             }
         }
+
+        return true;
     }
 
-    private @Nullable BlockState getCarveState(CarvingContext p_159419_, C p_159420_, BlockPos p_159421_, Aquifer p_159422_) {
-        if (p_159421_.getY() <= p_159420_.lavaLevel.resolveY(p_159419_)) {
+    private @Nullable BlockState getCarveState(final CarvingContext context, final C configuration, final BlockPos blockPos, final Aquifer aquifer) {
+        if (blockPos.getY() <= configuration.lavaLevel.resolveY(context)) {
             return LAVA.createLegacyBlock();
         } else {
-            BlockState blockstate = p_159422_.computeSubstance(
-                new DensityFunction.SinglePointContext(p_159421_.getX(), p_159421_.getY(), p_159421_.getZ()), 0.0
-            );
-            if (blockstate == null) {
-                return isDebugEnabled(p_159420_) ? p_159420_.debugSettings.getBarrierState() : null;
+            BlockState state = aquifer.computeSubstance(new DensityFunction.SinglePointContext(blockPos.getX(), blockPos.getY(), blockPos.getZ()), 0.0);
+            if (state == null) {
+                return isDebugEnabled(configuration) ? configuration.debugSettings.getBarrierState() : null;
             } else {
-                return isDebugEnabled(p_159420_) ? getDebugState(p_159420_, blockstate) : blockstate;
+                return isDebugEnabled(configuration) ? getDebugState(configuration, state) : state;
             }
         }
     }
 
-    private static BlockState getDebugState(CarverConfiguration p_159382_, BlockState p_159383_) {
-        if (p_159383_.is(Blocks.AIR)) {
-            return p_159382_.debugSettings.getAirState();
-        } else if (p_159383_.is(Blocks.WATER)) {
-            BlockState blockstate = p_159382_.debugSettings.getWaterState();
-            return blockstate.hasProperty(BlockStateProperties.WATERLOGGED) ? blockstate.setValue(BlockStateProperties.WATERLOGGED, true) : blockstate;
+    private static BlockState getDebugState(final CarverConfiguration configuration, final BlockState state) {
+        if (state.is(Blocks.AIR)) {
+            return configuration.debugSettings.getAirState();
+        } else if (state.is(Blocks.WATER)) {
+            BlockState debugState = configuration.debugSettings.getWaterState();
+            return debugState.hasProperty(BlockStateProperties.WATERLOGGED) ? debugState.setValue(BlockStateProperties.WATERLOGGED, true) : debugState;
         } else {
-            return p_159383_.is(Blocks.LAVA) ? p_159382_.debugSettings.getLavaState() : p_159383_;
+            return state.is(Blocks.LAVA) ? configuration.debugSettings.getLavaState() : state;
         }
     }
 
     public abstract boolean carve(
-        CarvingContext p_224913_,
-        C p_224914_,
-        ChunkAccess p_224915_,
-        Function<BlockPos, Holder<Biome>> p_224916_,
-        RandomSource p_224917_,
-        Aquifer p_224918_,
-        ChunkPos p_224919_,
-        CarvingMask p_224920_
+        final CarvingContext context,
+        final C configuration,
+        final ChunkAccess chunk,
+        final Function<BlockPos, Holder<Biome>> biomeGetter,
+        final RandomSource random,
+        final Aquifer aquifer,
+        final ChunkPos sourceChunkPos,
+        CarvingMask mask
     );
 
-    public abstract boolean isStartChunk(C p_224908_, RandomSource p_224909_);
+    public abstract boolean isStartChunk(final C configuration, final RandomSource random);
 
-    protected boolean canReplaceBlock(C p_224911_, BlockState p_224912_) {
-        return p_224912_.is(p_224911_.replaceable);
+    protected boolean canReplaceBlock(final C configuration, final BlockState state) {
+        return state.is(configuration.replaceable);
     }
 
-    protected static boolean canReach(ChunkPos p_159368_, double p_159369_, double p_159370_, int p_159371_, int p_159372_, float p_159373_) {
-        double d0 = p_159368_.getMiddleBlockX();
-        double d1 = p_159368_.getMiddleBlockZ();
-        double d2 = p_159369_ - d0;
-        double d3 = p_159370_ - d1;
-        double d4 = p_159372_ - p_159371_;
-        double d5 = p_159373_ + 2.0F + 16.0F;
-        return d2 * d2 + d3 * d3 - d4 * d4 <= d5 * d5;
+    protected static boolean canReach(
+        final ChunkPos chunkPos, final double x, final double z, final int currentStep, final int totalSteps, final float thickness
+    ) {
+        double xMid = chunkPos.getMiddleBlockX();
+        double zMid = chunkPos.getMiddleBlockZ();
+        double xd = x - xMid;
+        double zd = z - zMid;
+        double remaining = totalSteps - currentStep;
+        double rr = thickness + 2.0F + 16.0F;
+        return xd * xd + zd * zd - remaining * remaining <= rr * rr;
     }
 
-    private static boolean isDebugEnabled(CarverConfiguration p_159424_) {
-        return SharedConstants.DEBUG_CARVERS || p_159424_.debugSettings.isDebugMode();
+    private static boolean isDebugEnabled(final CarverConfiguration configuration) {
+        return SharedConstants.DEBUG_CARVERS || configuration.debugSettings.isDebugMode();
     }
 
     public interface CarveSkipChecker {
-        boolean shouldSkip(CarvingContext p_159426_, double p_159427_, double p_159428_, double p_159429_, int p_159430_);
+        boolean shouldSkip(CarvingContext context, double xd, double yd, double zd, int y);
     }
 }

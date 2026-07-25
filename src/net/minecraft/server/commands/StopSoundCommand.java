@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import java.util.Collection;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -18,70 +17,56 @@ import net.minecraft.sounds.SoundSource;
 import org.jspecify.annotations.Nullable;
 
 public class StopSoundCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_138795_) {
-        RequiredArgumentBuilder<CommandSourceStack, EntitySelector> requiredargumentbuilder = Commands.argument("targets", EntityArgument.players())
-            .executes(p_449039_ -> stopSound(p_449039_.getSource(), EntityArgument.getPlayers(p_449039_, "targets"), null, null))
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        RequiredArgumentBuilder<CommandSourceStack, EntitySelector> target = Commands.argument("targets", EntityArgument.players())
+            .executes(c -> stopSound(c.getSource(), EntityArgument.getPlayers(c, "targets"), null, null))
             .then(
                 Commands.literal("*")
                     .then(
                         Commands.argument("sound", IdentifierArgument.id())
                             .suggests(SuggestionProviders.cast(SuggestionProviders.AVAILABLE_SOUNDS))
-                            .executes(
-                                p_449036_ -> stopSound(
-                                    p_449036_.getSource(),
-                                    EntityArgument.getPlayers(p_449036_, "targets"),
-                                    null,
-                                    IdentifierArgument.getId(p_449036_, "sound")
-                                )
-                            )
+                            .executes(c -> stopSound(c.getSource(), EntityArgument.getPlayers(c, "targets"), null, IdentifierArgument.getId(c, "sound")))
                     )
             );
 
-        for (SoundSource soundsource : SoundSource.values()) {
-            requiredargumentbuilder.then(
-                Commands.literal(soundsource.getName())
-                    .executes(p_449038_ -> stopSound(p_449038_.getSource(), EntityArgument.getPlayers(p_449038_, "targets"), soundsource, null))
+        for (SoundSource source : SoundSource.values()) {
+            target.then(
+                Commands.literal(source.getName())
+                    .executes(c -> stopSound(c.getSource(), EntityArgument.getPlayers(c, "targets"), source, null))
                     .then(
                         Commands.argument("sound", IdentifierArgument.id())
                             .suggests(SuggestionProviders.cast(SuggestionProviders.AVAILABLE_SOUNDS))
-                            .executes(
-                                p_449035_ -> stopSound(
-                                    p_449035_.getSource(),
-                                    EntityArgument.getPlayers(p_449035_, "targets"),
-                                    soundsource,
-                                    IdentifierArgument.getId(p_449035_, "sound")
-                                )
-                            )
+                            .executes(c -> stopSound(c.getSource(), EntityArgument.getPlayers(c, "targets"), source, IdentifierArgument.getId(c, "sound")))
                     )
             );
         }
 
-        p_138795_.register(Commands.literal("stopsound").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).then(requiredargumentbuilder));
+        dispatcher.register(Commands.literal("stopsound").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).then(target));
     }
 
     private static int stopSound(
-        CommandSourceStack p_138801_, Collection<ServerPlayer> p_138802_, @Nullable SoundSource p_138803_, @Nullable Identifier p_457328_
+        final CommandSourceStack source, final Collection<ServerPlayer> targets, final @Nullable SoundSource soundSource, final @Nullable Identifier sound
     ) {
-        ClientboundStopSoundPacket clientboundstopsoundpacket = new ClientboundStopSoundPacket(p_457328_, p_138803_);
+        ClientboundStopSoundPacket packet = new ClientboundStopSoundPacket(sound, soundSource);
 
-        for (ServerPlayer serverplayer : p_138802_) {
-            serverplayer.connection.send(clientboundstopsoundpacket);
+        for (ServerPlayer player : targets) {
+            player.connection.send(packet);
         }
 
-        if (p_138803_ != null) {
-            if (p_457328_ != null) {
-                p_138801_.sendSuccess(
-                    () -> Component.translatable("commands.stopsound.success.source.sound", Component.translationArg(p_457328_), p_138803_.getName()), true
+        if (soundSource != null) {
+            if (sound != null) {
+                source.sendSuccess(
+                    () -> Component.translatable("commands.stopsound.success.source.sound", Component.translationArg(sound), soundSource.getName()), true
                 );
             } else {
-                p_138801_.sendSuccess(() -> Component.translatable("commands.stopsound.success.source.any", p_138803_.getName()), true);
+                source.sendSuccess(() -> Component.translatable("commands.stopsound.success.source.any", soundSource.getName()), true);
             }
-        } else if (p_457328_ != null) {
-            p_138801_.sendSuccess(() -> Component.translatable("commands.stopsound.success.sourceless.sound", Component.translationArg(p_457328_)), true);
+        } else if (sound != null) {
+            source.sendSuccess(() -> Component.translatable("commands.stopsound.success.sourceless.sound", Component.translationArg(sound)), true);
         } else {
-            p_138801_.sendSuccess(() -> Component.translatable("commands.stopsound.success.sourceless.any"), true);
+            source.sendSuccess(() -> Component.translatable("commands.stopsound.success.sourceless.any"), true);
         }
 
-        return p_138802_.size();
+        return targets.size();
     }
 }

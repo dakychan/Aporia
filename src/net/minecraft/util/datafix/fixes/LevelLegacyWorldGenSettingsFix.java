@@ -3,7 +3,6 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 import java.util.List;
@@ -15,27 +14,25 @@ public class LevelLegacyWorldGenSettingsFix extends DataFix {
         "RandomSeed", "generatorName", "generatorOptions", "generatorVersion", "legacy_custom_options", "MapFeatures", "BonusChest"
     );
 
-    public LevelLegacyWorldGenSettingsFix(Schema p_311836_) {
-        super(p_311836_, false);
+    public LevelLegacyWorldGenSettingsFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
         return this.fixTypeEverywhereTyped(
-            "LevelLegacyWorldGenSettingsFix",
-            this.getInputSchema().getType(References.LEVEL),
-            p_311579_ -> p_311579_.update(DSL.remainderFinder(), p_309406_ -> {
-                Dynamic<?> dynamic = p_309406_.get("WorldGenSettings").orElseEmptyMap();
+            "LevelLegacyWorldGenSettingsFix", this.getInputSchema().getType(References.LEVEL), input -> input.update(DSL.remainderFinder(), dataTag -> {
+                Dynamic<?> worldGenSettings = dataTag.get("WorldGenSettings").orElseEmptyMap();
 
-                for (String s : OLD_SETTINGS_KEYS) {
-                    Optional<? extends Dynamic<?>> optional = p_309406_.get(s).result();
-                    if (optional.isPresent()) {
-                        p_309406_ = p_309406_.remove(s);
-                        dynamic = dynamic.set(s, (Dynamic<?>)optional.get());
+                for (String key : OLD_SETTINGS_KEYS) {
+                    Optional<? extends Dynamic<?>> oldSetting = dataTag.get(key).result();
+                    if (oldSetting.isPresent()) {
+                        dataTag = dataTag.remove(key);
+                        worldGenSettings = worldGenSettings.set(key, (Dynamic<?>)oldSetting.get());
                     }
                 }
 
-                return p_309406_.set("WorldGenSettings", dynamic);
+                return dataTag.set("WorldGenSettings", worldGenSettings);
             })
         );
     }

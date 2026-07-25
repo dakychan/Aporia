@@ -1,79 +1,78 @@
 package net.minecraft.data.recipes;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Objects;
-import net.minecraft.advancements.Advancement;
-import net.minecraft.advancements.AdvancementRequirements;
-import net.minecraft.advancements.AdvancementRewards;
-import net.minecraft.advancements.Criterion;
-import net.minecraft.advancements.criterion.RecipeUnlockedTrigger;
-import net.minecraft.core.Holder;
+import net.minecraft.advancements.predicates.MinMaxBounds;
+import net.minecraft.advancements.triggers.Criterion;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.item.crafting.Recipe;
 import net.minecraft.world.item.crafting.TransmuteRecipe;
-import net.minecraft.world.item.crafting.TransmuteResult;
 import org.jspecify.annotations.Nullable;
 
 public class TransmuteRecipeBuilder implements RecipeBuilder {
     private final RecipeCategory category;
-    private final Holder<Item> result;
+    private final ItemStackTemplate result;
     private final Ingredient input;
     private final Ingredient material;
-    private final Map<String, Criterion<?>> criteria = new LinkedHashMap<>();
+    private final RecipeUnlockAdvancementBuilder advancementBuilder = new RecipeUnlockAdvancementBuilder();
     private @Nullable String group;
+    private MinMaxBounds.Ints materialCount = TransmuteRecipe.DEFAULT_MATERIAL_COUNT;
+    private boolean addMaterialCountToOutput;
 
-    private TransmuteRecipeBuilder(RecipeCategory p_365540_, Holder<Item> p_368366_, Ingredient p_365902_, Ingredient p_366998_) {
-        this.category = p_365540_;
-        this.result = p_368366_;
-        this.input = p_365902_;
-        this.material = p_366998_;
+    private TransmuteRecipeBuilder(final RecipeCategory category, final ItemStackTemplate result, final Ingredient input, final Ingredient material) {
+        this.category = category;
+        this.result = result;
+        this.input = input;
+        this.material = material;
     }
 
-    public static TransmuteRecipeBuilder transmute(RecipeCategory p_367390_, Ingredient p_365855_, Ingredient p_361211_, Item p_366896_) {
-        return new TransmuteRecipeBuilder(p_367390_, p_366896_.builtInRegistryHolder(), p_365855_, p_361211_);
+    public static TransmuteRecipeBuilder transmute(final RecipeCategory category, final Ingredient input, final Ingredient material, final Item result) {
+        return transmute(category, input, material, new ItemStackTemplate(result));
     }
 
-    public TransmuteRecipeBuilder unlockedBy(String p_361429_, Criterion<?> p_362231_) {
-        this.criteria.put(p_361429_, p_362231_);
+    public static TransmuteRecipeBuilder transmute(
+        final RecipeCategory category, final Ingredient input, final Ingredient material, final ItemStackTemplate result
+    ) {
+        return new TransmuteRecipeBuilder(category, result, input, material);
+    }
+
+    public TransmuteRecipeBuilder unlockedBy(final String name, final Criterion<?> criterion) {
+        this.advancementBuilder.unlockedBy(name, criterion);
         return this;
     }
 
-    public TransmuteRecipeBuilder group(@Nullable String p_364491_) {
-        this.group = p_364491_;
+    public TransmuteRecipeBuilder group(final @Nullable String group) {
+        this.group = group;
+        return this;
+    }
+
+    public TransmuteRecipeBuilder addMaterialCountToOutput() {
+        this.addMaterialCountToOutput = true;
+        return this;
+    }
+
+    public TransmuteRecipeBuilder setMaterialCount(final MinMaxBounds.Ints materialCount) {
+        this.materialCount = materialCount;
         return this;
     }
 
     @Override
-    public Item getResult() {
-        return this.result.value();
+    public ResourceKey<Recipe<?>> defaultId() {
+        return RecipeBuilder.getDefaultRecipeId(this.result);
     }
 
     @Override
-    public void save(RecipeOutput p_369743_, ResourceKey<Recipe<?>> p_369659_) {
-        this.ensureValid(p_369659_);
-        Advancement.Builder advancement$builder = p_369743_.advancement()
-            .addCriterion("has_the_recipe", RecipeUnlockedTrigger.unlocked(p_369659_))
-            .rewards(AdvancementRewards.Builder.recipe(p_369659_))
-            .requirements(AdvancementRequirements.Strategy.OR);
-        this.criteria.forEach(advancement$builder::addCriterion);
-        TransmuteRecipe transmuterecipe = new TransmuteRecipe(
-            Objects.requireNonNullElse(this.group, ""),
-            RecipeBuilder.determineBookCategory(this.category),
+    public void save(final RecipeOutput output, final ResourceKey<Recipe<?>> id) {
+        TransmuteRecipe recipe = new TransmuteRecipe(
+            RecipeBuilder.createCraftingCommonInfo(true),
+            RecipeBuilder.createCraftingBookInfo(this.category, this.group),
             this.input,
             this.material,
-            new TransmuteResult(this.result.value())
+            this.materialCount,
+            this.result,
+            this.addMaterialCountToOutput
         );
-        p_369743_.accept(
-            p_369659_, transmuterecipe, advancement$builder.build(p_369659_.identifier().withPrefix("recipes/" + this.category.getFolderName() + "/"))
-        );
-    }
-
-    private void ensureValid(ResourceKey<Recipe<?>> p_368853_) {
-        if (this.criteria.isEmpty()) {
-            throw new IllegalStateException("No way of obtaining recipe " + p_368853_.identifier());
-        }
+        output.accept(id, recipe, this.advancementBuilder.build(output, id, this.category));
     }
 }

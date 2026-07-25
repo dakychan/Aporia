@@ -4,18 +4,15 @@ import com.mojang.blaze3d.pipeline.RenderPipeline;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.state.QuadParticleRenderState;
+import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Quaternionf;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class SingleQuadParticle extends Particle {
     protected float quadSize;
     protected float rCol = 1.0F;
@@ -26,24 +23,24 @@ public abstract class SingleQuadParticle extends Particle {
     protected float oRoll;
     protected TextureAtlasSprite sprite;
 
-    protected SingleQuadParticle(ClientLevel p_107670_, double p_107671_, double p_107672_, double p_107673_, TextureAtlasSprite p_424099_) {
-        super(p_107670_, p_107671_, p_107672_, p_107673_);
-        this.sprite = p_424099_;
+    protected SingleQuadParticle(final ClientLevel level, final double x, final double y, final double z, final TextureAtlasSprite sprite) {
+        super(level, x, y, z);
+        this.sprite = sprite;
         this.quadSize = 0.1F * (this.random.nextFloat() * 0.5F + 0.5F) * 2.0F;
     }
 
     protected SingleQuadParticle(
-        ClientLevel p_107665_,
-        double p_107666_,
-        double p_107667_,
-        double p_107668_,
-        double p_424112_,
-        double p_423135_,
-        double p_430356_,
-        TextureAtlasSprite p_422668_
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xa,
+        final double ya,
+        final double za,
+        final TextureAtlasSprite sprite
     ) {
-        super(p_107665_, p_107666_, p_107667_, p_107668_, p_424112_, p_423135_, p_430356_);
-        this.sprite = p_422668_;
+        super(level, x, y, z, xa, ya, za);
+        this.sprite = sprite;
         this.quadSize = 0.1F * (this.random.nextFloat() * 0.5F + 0.5F) * 2.0F;
     }
 
@@ -51,52 +48,61 @@ public abstract class SingleQuadParticle extends Particle {
         return SingleQuadParticle.FacingCameraMode.LOOKAT_XYZ;
     }
 
-    public void extract(QuadParticleRenderState p_425034_, Camera p_422318_, float p_428246_) {
-        Quaternionf quaternionf = new Quaternionf();
-        this.getFacingCameraMode().setRotation(quaternionf, p_422318_, p_428246_);
+    public void extract(final QuadParticleRenderState particleTypeRenderState, final Camera camera, final float partialTickTime) {
+        Quaternionf rotation = new Quaternionf();
+        this.getFacingCameraMode().setRotation(rotation, camera, partialTickTime);
         if (this.roll != 0.0F) {
-            quaternionf.rotateZ(Mth.lerp(p_428246_, this.oRoll, this.roll));
+            rotation.rotateZ(Mth.lerp(partialTickTime, this.oRoll, this.roll));
         }
 
-        this.extractRotatedQuad(p_425034_, p_422318_, quaternionf, p_428246_);
+        this.extractRotatedQuad(particleTypeRenderState, camera, rotation, partialTickTime);
     }
 
-    protected void extractRotatedQuad(QuadParticleRenderState p_426925_, Camera p_344083_, Quaternionf p_342719_, float p_343457_) {
-        Vec3 vec3 = p_344083_.position();
-        float f = (float)(Mth.lerp(p_343457_, this.xo, this.x) - vec3.x());
-        float f1 = (float)(Mth.lerp(p_343457_, this.yo, this.y) - vec3.y());
-        float f2 = (float)(Mth.lerp(p_343457_, this.zo, this.z) - vec3.z());
-        this.extractRotatedQuad(p_426925_, p_342719_, f, f1, f2, p_343457_);
+    protected void extractRotatedQuad(
+        final QuadParticleRenderState particleTypeRenderState, final Camera camera, final Quaternionf rotation, final float partialTickTime
+    ) {
+        Vec3 pos = camera.position();
+        float x = (float)(Mth.lerp(partialTickTime, this.xo, this.x) - pos.x());
+        float y = (float)(Mth.lerp(partialTickTime, this.yo, this.y) - pos.y());
+        float z = (float)(Mth.lerp(partialTickTime, this.zo, this.z) - pos.z());
+        this.extractRotatedQuad(particleTypeRenderState, rotation, x, y, z, partialTickTime);
     }
 
-    protected void extractRotatedQuad(QuadParticleRenderState p_428884_, Quaternionf p_428365_, float p_422699_, float p_425778_, float p_424046_, float p_429033_) {
-        p_428884_.add(
+    protected void extractRotatedQuad(
+        final QuadParticleRenderState particleTypeRenderState,
+        final Quaternionf rotation,
+        final float x,
+        final float y,
+        final float z,
+        final float partialTickTime
+    ) {
+        particleTypeRenderState.add(
             this.getLayer(),
-            p_422699_,
-            p_425778_,
-            p_424046_,
-            p_428365_.x,
-            p_428365_.y,
-            p_428365_.z,
-            p_428365_.w,
-            this.getQuadSize(p_429033_),
+            x,
+            y,
+            z,
+            rotation.x,
+            rotation.y,
+            rotation.z,
+            rotation.w,
+            this.getQuadSize(partialTickTime),
             this.getU0(),
             this.getU1(),
             this.getV0(),
             this.getV1(),
             ARGB.colorFromFloat(this.alpha, this.rCol, this.gCol, this.bCol),
-            this.getLightColor(p_429033_)
+            this.getLightCoords(partialTickTime)
         );
     }
 
-    public float getQuadSize(float p_107681_) {
+    public float getQuadSize(final float a) {
         return this.quadSize;
     }
 
     @Override
-    public Particle scale(float p_107683_) {
-        this.quadSize *= p_107683_;
-        return super.scale(p_107683_);
+    public Particle scale(final float scale) {
+        this.quadSize *= scale;
+        return super.scale(scale);
     }
 
     @Override
@@ -104,14 +110,14 @@ public abstract class SingleQuadParticle extends Particle {
         return ParticleRenderType.SINGLE_QUADS;
     }
 
-    public void setSpriteFromAge(SpriteSet p_423027_) {
+    public void setSpriteFromAge(final SpriteSet sprites) {
         if (!this.removed) {
-            this.setSprite(p_423027_.get(this.age, this.lifetime));
+            this.setSprite(sprites.get(this.age, this.lifetime));
         }
     }
 
-    protected void setSprite(TextureAtlasSprite p_428553_) {
-        this.sprite = p_428553_;
+    protected void setSprite(final TextureAtlasSprite icon) {
+        this.sprite = icon;
     }
 
     protected float getU0() {
@@ -132,14 +138,14 @@ public abstract class SingleQuadParticle extends Particle {
 
     protected abstract SingleQuadParticle.Layer getLayer();
 
-    public void setColor(float p_430895_, float p_431632_, float p_430848_) {
-        this.rCol = p_430895_;
-        this.gCol = p_431632_;
-        this.bCol = p_430848_;
+    public void setColor(final float r, final float g, final float b) {
+        this.rCol = r;
+        this.gCol = g;
+        this.bCol = b;
     }
 
-    protected void setAlpha(float p_422903_) {
-        this.alpha = p_422903_;
+    protected void setAlpha(final float alpha) {
+        this.alpha = alpha;
     }
 
     @Override
@@ -163,21 +169,42 @@ public abstract class SingleQuadParticle extends Particle {
             + this.age;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface FacingCameraMode {
-        SingleQuadParticle.FacingCameraMode LOOKAT_XYZ = (p_312026_, p_311956_, p_310043_) -> p_312026_.set(p_311956_.rotation());
-        SingleQuadParticle.FacingCameraMode LOOKAT_Y = (p_310770_, p_309904_, p_311153_) -> p_310770_.set(
-            0.0F, p_309904_.rotation().y, 0.0F, p_309904_.rotation().w
-        );
+        public interface FacingCameraMode {
+        SingleQuadParticle.FacingCameraMode LOOKAT_XYZ = (target, camera, partialTickTime) -> target.set(camera.rotation());
+        SingleQuadParticle.FacingCameraMode LOOKAT_Y = (target, camera, partialTickTime) -> target.set(0.0F, camera.rotation().y, 0.0F, camera.rotation().w);
 
-        void setRotation(Quaternionf p_309893_, Camera p_309691_, float p_312801_);
+        void setRotation(final Quaternionf target, final Camera camera, final float partialTickTime);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Layer(boolean translucent, Identifier textureAtlasLocation, RenderPipeline pipeline) {
-        public static final SingleQuadParticle.Layer TERRAIN = new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_BLOCKS, RenderPipelines.TRANSLUCENT_PARTICLE);
-        public static final SingleQuadParticle.Layer ITEMS = new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_ITEMS, RenderPipelines.TRANSLUCENT_PARTICLE);
-        public static final SingleQuadParticle.Layer OPAQUE = new SingleQuadParticle.Layer(false, TextureAtlas.LOCATION_PARTICLES, RenderPipelines.OPAQUE_PARTICLE);
-        public static final SingleQuadParticle.Layer TRANSLUCENT = new SingleQuadParticle.Layer(true, TextureAtlas.LOCATION_PARTICLES, RenderPipelines.TRANSLUCENT_PARTICLE);
+        public record Layer(boolean translucent, Identifier textureAtlasLocation, RenderPipeline pipeline) {
+        public static final SingleQuadParticle.Layer OPAQUE_TERRAIN = new SingleQuadParticle.Layer(
+            false, TextureAtlas.LOCATION_BLOCKS, RenderPipelines.OPAQUE_PARTICLE
+        );
+        public static final SingleQuadParticle.Layer TRANSLUCENT_TERRAIN = new SingleQuadParticle.Layer(
+            true, TextureAtlas.LOCATION_BLOCKS, RenderPipelines.TRANSLUCENT_PARTICLE
+        );
+        public static final SingleQuadParticle.Layer OPAQUE_ITEMS = new SingleQuadParticle.Layer(
+            false, TextureAtlas.LOCATION_ITEMS, RenderPipelines.OPAQUE_PARTICLE
+        );
+        public static final SingleQuadParticle.Layer TRANSLUCENT_ITEMS = new SingleQuadParticle.Layer(
+            true, TextureAtlas.LOCATION_ITEMS, RenderPipelines.TRANSLUCENT_PARTICLE
+        );
+        public static final SingleQuadParticle.Layer OPAQUE = new SingleQuadParticle.Layer(
+            false, TextureAtlas.LOCATION_PARTICLES, RenderPipelines.OPAQUE_PARTICLE
+        );
+        public static final SingleQuadParticle.Layer TRANSLUCENT = new SingleQuadParticle.Layer(
+            true, TextureAtlas.LOCATION_PARTICLES, RenderPipelines.TRANSLUCENT_PARTICLE
+        );
+
+        public static SingleQuadParticle.Layer bySprite(final TextureAtlasSprite sprite) {
+            boolean translucent = sprite.transparency().hasTranslucent();
+            if (sprite.atlasLocation().equals(TextureAtlas.LOCATION_BLOCKS)) {
+                return translucent ? TRANSLUCENT_TERRAIN : OPAQUE_TERRAIN;
+            } else if (sprite.atlasLocation().equals(TextureAtlas.LOCATION_ITEMS)) {
+                return translucent ? TRANSLUCENT_ITEMS : OPAQUE_ITEMS;
+            } else {
+                return translucent ? TRANSLUCENT : OPAQUE;
+            }
+        }
     }
 }

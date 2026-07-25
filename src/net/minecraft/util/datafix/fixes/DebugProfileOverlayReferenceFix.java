@@ -3,14 +3,11 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Dynamic;
 
 public class DebugProfileOverlayReferenceFix extends DataFix {
-    public DebugProfileOverlayReferenceFix(Schema p_454056_) {
-        super(p_454056_, false);
+    public DebugProfileOverlayReferenceFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
@@ -18,12 +15,12 @@ public class DebugProfileOverlayReferenceFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "DebugProfileOverlayReferenceFix",
             this.getInputSchema().getType(References.DEBUG_PROFILE),
-            p_453232_ -> p_453232_.update(
+            typed -> typed.update(
                 DSL.remainderFinder(),
-                p_452069_ -> p_452069_.update(
+                file -> file.update(
                     "custom",
-                    p_450465_ -> p_450465_.updateMapValues(
-                        p_452097_ -> p_452097_.mapSecond(p_453841_ -> p_453841_.asString("").equals("inF3") ? p_453841_.createString("inOverlay") : p_453841_)
+                    custom -> custom.updateMapValues(
+                        pair -> pair.mapSecond(value -> value.asString("").equals("inF3") ? value.createString("inOverlay") : value)
                     )
                 )
             )

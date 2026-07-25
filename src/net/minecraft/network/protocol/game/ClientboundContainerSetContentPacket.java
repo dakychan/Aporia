@@ -27,7 +27,7 @@ public record ClientboundContainerSetContentPacket(int containerId, int stateId,
         return GamePacketTypes.CLIENTBOUND_CONTAINER_SET_CONTENT;
     }
 
-    public void handle(ClientGamePacketListener p_131953_) {
-        p_131953_.handleContainerContent(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleContainerContent(this);
     }
 }

@@ -11,34 +11,36 @@ public abstract class NumberRunParseRule implements Rule<StringReader, String> {
     private final DelayedException<CommandSyntaxException> noValueError;
     private final DelayedException<CommandSyntaxException> underscoreNotAllowedError;
 
-    public NumberRunParseRule(DelayedException<CommandSyntaxException> p_395317_, DelayedException<CommandSyntaxException> p_397647_) {
-        this.noValueError = p_395317_;
-        this.underscoreNotAllowedError = p_397647_;
+    public NumberRunParseRule(
+        final DelayedException<CommandSyntaxException> noValueError, final DelayedException<CommandSyntaxException> underscoreNotAllowedError
+    ) {
+        this.noValueError = noValueError;
+        this.underscoreNotAllowedError = underscoreNotAllowedError;
     }
 
-    public @Nullable String parse(ParseState<StringReader> p_397291_) {
-        StringReader stringreader = p_397291_.input();
-        stringreader.skipWhitespace();
-        String s = stringreader.getString();
-        int i = stringreader.getCursor();
-        int j = i;
+    public @Nullable String parse(final ParseState<StringReader> state) {
+        StringReader input = state.input();
+        input.skipWhitespace();
+        String fullString = input.getString();
+        int start = input.getCursor();
+        int pos = start;
 
-        while (j < s.length() && this.isAccepted(s.charAt(j))) {
-            j++;
+        while (pos < fullString.length() && this.isAccepted(fullString.charAt(pos))) {
+            pos++;
         }
 
-        int k = j - i;
-        if (k == 0) {
-            p_397291_.errorCollector().store(p_397291_.mark(), this.noValueError);
+        int length = pos - start;
+        if (length == 0) {
+            state.errorCollector().store(state.mark(), this.noValueError);
             return null;
-        } else if (s.charAt(i) != '_' && s.charAt(j - 1) != '_') {
-            stringreader.setCursor(j);
-            return s.substring(i, j);
+        } else if (fullString.charAt(start) != '_' && fullString.charAt(pos - 1) != '_') {
+            input.setCursor(pos);
+            return fullString.substring(start, pos);
         } else {
-            p_397291_.errorCollector().store(p_397291_.mark(), this.underscoreNotAllowedError);
+            state.errorCollector().store(state.mark(), this.underscoreNotAllowedError);
             return null;
         }
     }
 
-    protected abstract boolean isAccepted(char p_393505_);
+    protected abstract boolean isAccepted(char c);
 }

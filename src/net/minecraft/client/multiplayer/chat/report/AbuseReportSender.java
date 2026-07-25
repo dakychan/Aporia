@@ -13,16 +13,13 @@ import java.util.concurrent.CompletionException;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ThrowingComponent;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface AbuseReportSender {
-    static AbuseReportSender create(ReportEnvironment p_239536_, UserApiService p_239537_) {
-        return new AbuseReportSender.Services(p_239536_, p_239537_);
+    static AbuseReportSender create(final ReportEnvironment environment, final UserApiService userApiService) {
+        return new AbuseReportSender.Services(environment, userApiService);
     }
 
-    CompletableFuture<Unit> send(UUID p_239838_, ReportType p_300399_, AbuseReport p_239839_);
+    CompletableFuture<Unit> send(UUID id, ReportType reportType, AbuseReport report);
 
     boolean isEnabled();
 
@@ -30,36 +27,40 @@ public interface AbuseReportSender {
         return AbuseReportLimits.DEFAULTS;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class SendException extends ThrowingComponent {
-        public SendException(Component p_239646_, Throwable p_239647_) {
-            super(p_239646_, p_239647_);
+        class SendException extends ThrowingComponent {
+        public SendException(final Component component, final Throwable cause) {
+            super(component, cause);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Services(ReportEnvironment environment, UserApiService userApiService) implements AbuseReportSender {
+        record Services(ReportEnvironment environment, UserApiService userApiService) implements AbuseReportSender {
         private static final Component SERVICE_UNAVAILABLE_TEXT = Component.translatable("gui.abuseReport.send.service_unavailable");
         private static final Component HTTP_ERROR_TEXT = Component.translatable("gui.abuseReport.send.http_error");
         private static final Component JSON_ERROR_TEXT = Component.translatable("gui.abuseReport.send.json_error");
 
         @Override
-        public CompletableFuture<Unit> send(UUID p_239470_, ReportType p_297714_, AbuseReport p_239471_) {
+        public CompletableFuture<Unit> send(final UUID id, final ReportType reportType, final AbuseReport report) {
             return CompletableFuture.supplyAsync(
                 () -> {
-                    AbuseReportRequest abusereportrequest = new AbuseReportRequest(
-                        1, p_239470_, p_239471_, this.environment.clientInfo(), this.environment.thirdPartyServerInfo(), this.environment.realmInfo(), p_297714_.backendName()
+                    AbuseReportRequest request = new AbuseReportRequest(
+                        1,
+                        id,
+                        report,
+                        this.environment.clientInfo(),
+                        this.environment.thirdPartyServerInfo(),
+                        this.environment.realmInfo(),
+                        reportType.backendName()
                     );
 
                     try {
-                        this.userApiService.reportAbuse(abusereportrequest);
+                        this.userApiService.reportAbuse(request);
                         return Unit.INSTANCE;
-                    } catch (MinecraftClientHttpException minecraftclienthttpexception) {
-                        Component component1 = this.getHttpErrorDescription(minecraftclienthttpexception);
-                        throw new CompletionException(new AbuseReportSender.SendException(component1, minecraftclienthttpexception));
-                    } catch (MinecraftClientException minecraftclientexception) {
-                        Component component = this.getErrorDescription(minecraftclientexception);
-                        throw new CompletionException(new AbuseReportSender.SendException(component, minecraftclientexception));
+                    } catch (MinecraftClientHttpException e) {
+                        Component description = this.getHttpErrorDescription(e);
+                        throw new CompletionException(new AbuseReportSender.SendException(description, e));
+                    } catch (MinecraftClientException e) {
+                        Component description = this.getErrorDescription(e);
+                        throw new CompletionException(new AbuseReportSender.SendException(description, e));
                     }
                 },
                 Util.ioPool()
@@ -71,12 +72,12 @@ public interface AbuseReportSender {
             return this.userApiService.canSendReports();
         }
 
-        private Component getHttpErrorDescription(MinecraftClientHttpException p_239705_) {
-            return Component.translatable("gui.abuseReport.send.error_message", p_239705_.getMessage());
+        private Component getHttpErrorDescription(final MinecraftClientHttpException e) {
+            return Component.translatable("gui.abuseReport.send.error_message", e.getMessage());
         }
 
-        private Component getErrorDescription(MinecraftClientException p_240068_) {
-            return switch (p_240068_.getType()) {
+        private Component getErrorDescription(final MinecraftClientException e) {
+            return switch (e.getType()) {
                 case SERVICE_UNAVAILABLE -> SERVICE_UNAVAILABLE_TEXT;
                 case HTTP_ERROR -> HTTP_ERROR_TEXT;
                 case JSON_ERROR -> JSON_ERROR_TEXT;

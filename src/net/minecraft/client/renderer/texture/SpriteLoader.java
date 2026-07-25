@@ -26,133 +26,125 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.Zone;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class SpriteLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Identifier location;
     private final int maxSupportedTextureSize;
 
-    public SpriteLoader(Identifier p_454492_, int p_276121_) {
-        this.location = p_454492_;
-        this.maxSupportedTextureSize = p_276121_;
+    public SpriteLoader(final Identifier location, final int maxSupportedTextureSize) {
+        this.location = location;
+        this.maxSupportedTextureSize = maxSupportedTextureSize;
     }
 
-    public static SpriteLoader create(TextureAtlas p_249085_) {
-        return new SpriteLoader(p_249085_.location(), p_249085_.maxSupportedTextureSize());
+    public static SpriteLoader create(final TextureAtlas atlas) {
+        return new SpriteLoader(atlas.location(), atlas.maxSupportedTextureSize());
     }
 
-    private SpriteLoader.Preparations stitch(List<SpriteContents> p_262029_, int p_261919_, Executor p_261665_) {
-        SpriteLoader.Preparations spriteloader$preparations;
-        try (Zone zone = Profiler.get().zone(() -> "stitch " + this.location)) {
-            int i = this.maxSupportedTextureSize;
-            int j = Integer.MAX_VALUE;
-            int k = 1 << p_261919_;
+    private SpriteLoader.Preparations stitch(final List<SpriteContents> sprites, final int maxMipmapLevels, final Executor executor) {
+        try (Zone ignored = Profiler.get().zone(() -> "stitch " + this.location)) {
+            int maxTextureSize = this.maxSupportedTextureSize;
+            int minTexelSize = Integer.MAX_VALUE;
+            int lowestOneBit = 1 << maxMipmapLevels;
 
-            for (SpriteContents spritecontents : p_262029_) {
-                j = Math.min(j, Math.min(spritecontents.width(), spritecontents.height()));
-                int l = Math.min(Integer.lowestOneBit(spritecontents.width()), Integer.lowestOneBit(spritecontents.height()));
-                if (l < k) {
+            for (SpriteContents spriteInfo : sprites) {
+                minTexelSize = Math.min(minTexelSize, Math.min(spriteInfo.width(), spriteInfo.height()));
+                int lowestTextureBit = Math.min(Integer.lowestOneBit(spriteInfo.width()), Integer.lowestOneBit(spriteInfo.height()));
+                if (lowestTextureBit < lowestOneBit) {
                     LOGGER.warn(
                         "Texture {} with size {}x{} limits mip level from {} to {}",
-                        spritecontents.name(),
-                        spritecontents.width(),
-                        spritecontents.height(),
-                        Mth.log2(k),
-                        Mth.log2(l)
+                        spriteInfo.name(),
+                        spriteInfo.width(),
+                        spriteInfo.height(),
+                        Mth.log2(lowestOneBit),
+                        Mth.log2(lowestTextureBit)
                     );
-                    k = l;
+                    lowestOneBit = lowestTextureBit;
                 }
             }
 
-            int j1 = Math.min(j, k);
-            int k1 = Mth.log2(j1);
-            int l1;
-            if (k1 < p_261919_) {
-                LOGGER.warn("{}: dropping miplevel from {} to {}, because of minimum power of two: {}", this.location, p_261919_, k1, j1);
-                l1 = k1;
+            int minSize = Math.min(minTexelSize, lowestOneBit);
+            int minPowerOfTwo = Mth.log2(minSize);
+            int mipLevel;
+            if (minPowerOfTwo < maxMipmapLevels) {
+                LOGGER.warn("{}: dropping miplevel from {} to {}, because of minimum power of two: {}", this.location, maxMipmapLevels, minPowerOfTwo, minSize);
+                mipLevel = minPowerOfTwo;
             } else {
-                l1 = p_261919_;
+                mipLevel = maxMipmapLevels;
             }
 
             Options options = Minecraft.getInstance().options;
-            int i1 = l1 != 0 && options.textureFiltering().get() == TextureFilteringMethod.ANISOTROPIC ? options.maxAnisotropyBit().get() : 0;
-            Stitcher<SpriteContents> stitcher = new Stitcher<>(i, i, l1, i1);
+            int anisotropyBit = options.textureFiltering().get() != TextureFilteringMethod.ANISOTROPIC ? 0 : options.maxAnisotropyBit().get();
+            Stitcher<SpriteContents> stitcher = new Stitcher<>(maxTextureSize, maxTextureSize, mipLevel, anisotropyBit);
 
-            for (SpriteContents spritecontents1 : p_262029_) {
-                stitcher.registerSprite(spritecontents1);
+            for (SpriteContents spriteInfo : sprites) {
+                stitcher.registerSprite(spriteInfo);
             }
 
             try {
                 stitcher.stitch();
-            } catch (StitcherException stitcherexception) {
-                CrashReport crashreport = CrashReport.forThrowable(stitcherexception, "Stitching");
-                CrashReportCategory crashreportcategory = crashreport.addCategory("Stitcher");
-                crashreportcategory.setDetail(
+            } catch (StitcherException e) {
+                CrashReport report = CrashReport.forThrowable(e, "Stitching");
+                CrashReportCategory category = report.addCategory("Stitcher");
+                category.setDetail(
                     "Sprites",
-                    stitcherexception.getAllSprites()
+                    e.getAllSprites()
                         .stream()
-                        .map(p_448379_ -> String.format(Locale.ROOT, "%s[%dx%d]", p_448379_.name(), p_448379_.width(), p_448379_.height()))
+                        .map(s -> String.format(Locale.ROOT, "%s[%dx%d]", s.name(), s.width(), s.height()))
                         .collect(Collectors.joining(","))
                 );
-                crashreportcategory.setDetail("Max Texture Size", i);
-                throw new ReportedException(crashreport);
+                category.setDetail("Max Texture Size", maxTextureSize);
+                throw new ReportedException(report);
             }
 
-            int i2 = stitcher.getWidth();
-            int j2 = stitcher.getHeight();
-            Map<Identifier, TextureAtlasSprite> map = this.getStitchedSprites(stitcher, i2, j2);
-            TextureAtlasSprite textureatlassprite = map.get(MissingTextureAtlasSprite.getLocation());
-            CompletableFuture<Void> completablefuture = CompletableFuture.runAsync(
-                () -> map.values().forEach(p_251202_ -> p_251202_.contents().increaseMipLevel(l1)), p_261665_
+            int width = stitcher.getWidth();
+            int height = stitcher.getHeight();
+            Map<Identifier, TextureAtlasSprite> result = this.getStitchedSprites(stitcher, width, height);
+            TextureAtlasSprite missingSprite = result.get(MissingTextureAtlasSprite.getLocation());
+            CompletableFuture<Void> readyForUpload = CompletableFuture.runAsync(
+                () -> result.values().forEach(s -> s.contents().increaseMipLevel(mipLevel)), executor
             );
-            spriteloader$preparations = new SpriteLoader.Preparations(i2, j2, l1, textureatlassprite, map, completablefuture);
+            return new SpriteLoader.Preparations(width, height, mipLevel, missingSprite, result, readyForUpload);
         }
-
-        return spriteloader$preparations;
     }
 
-    private static CompletableFuture<List<SpriteContents>> runSpriteSuppliers(SpriteResourceLoader p_297457_, List<SpriteSource.Loader> p_261516_, Executor p_261791_) {
-        List<CompletableFuture<SpriteContents>> list = p_261516_.stream()
-            .map(p_459391_ -> CompletableFuture.supplyAsync(() -> p_459391_.get(p_297457_), p_261791_))
+    private static CompletableFuture<List<SpriteContents>> runSpriteSuppliers(
+        final SpriteResourceLoader resourceLoader, final List<SpriteSource.Loader> sprites, final Executor executor
+    ) {
+        List<CompletableFuture<SpriteContents>> spriteFutures = sprites.stream()
+            .map(supplier -> CompletableFuture.supplyAsync(() -> supplier.get(resourceLoader), executor))
             .toList();
-        return Util.sequence(list).thenApply(p_252234_ -> p_252234_.stream().filter(Objects::nonNull).toList());
+        return Util.sequence(spriteFutures).thenApply(l -> l.stream().filter(Objects::nonNull).toList());
     }
 
     public CompletableFuture<SpriteLoader.Preparations> loadAndStitch(
-        ResourceManager p_262108_, Identifier p_459205_, int p_262104_, Executor p_261687_, Set<MetadataSectionType<?>> p_430900_
+        final ResourceManager manager,
+        final Identifier atlasInfoLocation,
+        final int maxMipmapLevels,
+        final Executor taskExecutor,
+        final Set<MetadataSectionType<?>> additionalMetadata
     ) {
-        SpriteResourceLoader spriteresourceloader = SpriteResourceLoader.create(p_430900_);
-        return CompletableFuture.<List<SpriteSource.Loader>>supplyAsync(() -> SpriteSourceList.load(p_262108_, p_459205_).list(p_262108_), p_261687_)
-            .thenCompose(p_296297_ -> runSpriteSuppliers(spriteresourceloader, (List<SpriteSource.Loader>)p_296297_, p_261687_))
-            .thenApply(p_261393_ -> this.stitch((List<SpriteContents>)p_261393_, p_262104_, p_261687_));
+        SpriteResourceLoader spriteResourceLoader = SpriteResourceLoader.create(additionalMetadata);
+        return CompletableFuture.<List<SpriteSource.Loader>>supplyAsync(() -> SpriteSourceList.load(manager, atlasInfoLocation).list(manager), taskExecutor)
+            .thenCompose(sprites -> runSpriteSuppliers(spriteResourceLoader, (List<SpriteSource.Loader>)sprites, taskExecutor))
+            .thenApply(resources -> this.stitch((List<SpriteContents>)resources, maxMipmapLevels, taskExecutor));
     }
 
-    private Map<Identifier, TextureAtlasSprite> getStitchedSprites(Stitcher<SpriteContents> p_276117_, int p_276111_, int p_276112_) {
-        Map<Identifier, TextureAtlasSprite> map = new HashMap<>();
-        p_276117_.gatherSprites(
-            (p_448383_, p_448384_, p_448385_, p_448386_) -> map.put(
-                p_448383_.name(), new TextureAtlasSprite(this.location, p_448383_, p_276111_, p_276112_, p_448384_, p_448385_, p_448386_)
-            )
+    private Map<Identifier, TextureAtlasSprite> getStitchedSprites(final Stitcher<SpriteContents> stitcher, final int atlasWidth, final int atlasHeight) {
+        Map<Identifier, TextureAtlasSprite> result = new HashMap<>();
+        stitcher.gatherSprites(
+            (contents, x, y, padding) -> result.put(contents.name(), new TextureAtlasSprite(this.location, contents, atlasWidth, atlasHeight, x, y, padding))
         );
-        return map;
+        return result;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Preparations(
-        int width,
-        int height,
-        int mipLevel,
-        TextureAtlasSprite missing,
-        Map<Identifier, TextureAtlasSprite> regions,
-        CompletableFuture<Void> readyForUpload
+        public record Preparations(
+        int width, int height, int mipLevel, TextureAtlasSprite missing, Map<Identifier, TextureAtlasSprite> regions, CompletableFuture<Void> readyForUpload
     ) {
-        public @Nullable TextureAtlasSprite getSprite(Identifier p_459172_) {
-            return this.regions.get(p_459172_);
+        public @Nullable TextureAtlasSprite getSprite(final Identifier id) {
+            return this.regions.get(id);
         }
     }
 }

@@ -36,29 +36,31 @@ public class ChunkStatus {
     private final ChunkType chunkType;
     private final EnumSet<Heightmap.Types> heightmapsAfter;
 
-    private static ChunkStatus register(String p_334704_, @Nullable ChunkStatus p_335238_, EnumSet<Heightmap.Types> p_335194_, ChunkType p_333808_) {
-        return Registry.register(BuiltInRegistries.CHUNK_STATUS, p_334704_, new ChunkStatus(p_335238_, p_335194_, p_333808_));
+    private static ChunkStatus register(
+        final String name, final @Nullable ChunkStatus parent, final EnumSet<Heightmap.Types> heightmaps, final ChunkType chunkType
+    ) {
+        return Registry.register(BuiltInRegistries.CHUNK_STATUS, name, new ChunkStatus(parent, heightmaps, chunkType));
     }
 
     public static List<ChunkStatus> getStatusList() {
         List<ChunkStatus> list = Lists.newArrayList();
 
-        ChunkStatus chunkstatus;
-        for (chunkstatus = FULL; chunkstatus.getParent() != chunkstatus; chunkstatus = chunkstatus.getParent()) {
-            list.add(chunkstatus);
+        ChunkStatus status;
+        for (status = FULL; status.getParent() != status; status = status.getParent()) {
+            list.add(status);
         }
 
-        list.add(chunkstatus);
+        list.add(status);
         Collections.reverse(list);
         return list;
     }
 
     @VisibleForTesting
-    protected ChunkStatus(@Nullable ChunkStatus p_334696_, EnumSet<Heightmap.Types> p_329876_, ChunkType p_336141_) {
-        this.parent = p_334696_ == null ? this : p_334696_;
-        this.chunkType = p_336141_;
-        this.heightmapsAfter = p_329876_;
-        this.index = p_334696_ == null ? 0 : p_334696_.getIndex() + 1;
+    protected ChunkStatus(final @Nullable ChunkStatus parent, final EnumSet<Heightmap.Types> heightmapsAfter, final ChunkType chunkType) {
+        this.parent = parent == null ? this : parent;
+        this.chunkType = chunkType;
+        this.heightmapsAfter = heightmapsAfter;
+        this.index = parent == null ? 0 : parent.getIndex() + 1;
     }
 
     public int getIndex() {
@@ -73,32 +75,32 @@ public class ChunkStatus {
         return this.chunkType;
     }
 
-    public static ChunkStatus byName(String p_329723_) {
-        return BuiltInRegistries.CHUNK_STATUS.getValue(Identifier.tryParse(p_329723_));
+    public static ChunkStatus byName(final String key) {
+        return BuiltInRegistries.CHUNK_STATUS.getValue(Identifier.tryParse(key));
     }
 
     public EnumSet<Heightmap.Types> heightmapsAfter() {
         return this.heightmapsAfter;
     }
 
-    public boolean isOrAfter(ChunkStatus p_334516_) {
-        return this.getIndex() >= p_334516_.getIndex();
+    public boolean isOrAfter(final ChunkStatus step) {
+        return this.getIndex() >= step.getIndex();
     }
 
-    public boolean isAfter(ChunkStatus p_342258_) {
-        return this.getIndex() > p_342258_.getIndex();
+    public boolean isAfter(final ChunkStatus step) {
+        return this.getIndex() > step.getIndex();
     }
 
-    public boolean isOrBefore(ChunkStatus p_343765_) {
-        return this.getIndex() <= p_343765_.getIndex();
+    public boolean isOrBefore(final ChunkStatus step) {
+        return this.getIndex() <= step.getIndex();
     }
 
-    public boolean isBefore(ChunkStatus p_344604_) {
-        return this.getIndex() < p_344604_.getIndex();
+    public boolean isBefore(final ChunkStatus step) {
+        return this.getIndex() < step.getIndex();
     }
 
-    public static ChunkStatus max(ChunkStatus p_345032_, ChunkStatus p_342131_) {
-        return p_345032_.isAfter(p_342131_) ? p_345032_ : p_342131_;
+    public static ChunkStatus max(final ChunkStatus a, final ChunkStatus b) {
+        return a.isAfter(b) ? a : b;
     }
 
     @Override

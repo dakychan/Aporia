@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -30,8 +29,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class TripWireBlock extends Block {
     public static final MapCodec<TripWireBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422133_ -> p_422133_.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("hook").forGetter(p_312791_ -> p_312791_.hook), propertiesCodec())
-            .apply(p_422133_, TripWireBlock::new)
+        i -> i.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("hook").forGetter(b -> b.hook), propertiesCodec()).apply(i, TripWireBlock::new)
     );
     public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
     public static final BooleanProperty ATTACHED = BlockStateProperties.ATTACHED;
@@ -51,8 +49,8 @@ public class TripWireBlock extends Block {
         return CODEC;
     }
 
-    public TripWireBlock(Block p_310222_, BlockBehaviour.Properties p_57604_) {
-        super(p_57604_);
+    public TripWireBlock(final Block hook, final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(
             this.stateDefinition
                 .any()
@@ -64,78 +62,78 @@ public class TripWireBlock extends Block {
                 .setValue(SOUTH, false)
                 .setValue(WEST, false)
         );
-        this.hook = p_310222_;
+        this.hook = hook;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57654_, BlockGetter p_57655_, BlockPos p_57656_, CollisionContext p_57657_) {
-        return p_57654_.getValue(ATTACHED) ? SHAPE_ATTACHED : SHAPE_NOT_ATTACHED;
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return state.getValue(ATTACHED) ? SHAPE_ATTACHED : SHAPE_NOT_ATTACHED;
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_57606_) {
-        BlockGetter blockgetter = p_57606_.getLevel();
-        BlockPos blockpos = p_57606_.getClickedPos();
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
         return this.defaultBlockState()
-            .setValue(NORTH, this.shouldConnectTo(blockgetter.getBlockState(blockpos.north()), Direction.NORTH))
-            .setValue(EAST, this.shouldConnectTo(blockgetter.getBlockState(blockpos.east()), Direction.EAST))
-            .setValue(SOUTH, this.shouldConnectTo(blockgetter.getBlockState(blockpos.south()), Direction.SOUTH))
-            .setValue(WEST, this.shouldConnectTo(blockgetter.getBlockState(blockpos.west()), Direction.WEST));
+            .setValue(NORTH, this.shouldConnectTo(level.getBlockState(pos.north()), Direction.NORTH))
+            .setValue(EAST, this.shouldConnectTo(level.getBlockState(pos.east()), Direction.EAST))
+            .setValue(SOUTH, this.shouldConnectTo(level.getBlockState(pos.south()), Direction.SOUTH))
+            .setValue(WEST, this.shouldConnectTo(level.getBlockState(pos.west()), Direction.WEST));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_57645_,
-        LevelReader p_366467_,
-        ScheduledTickAccess p_366611_,
-        BlockPos p_57649_,
-        Direction p_57646_,
-        BlockPos p_57650_,
-        BlockState p_57647_,
-        RandomSource p_369813_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_57646_.getAxis().isHorizontal()
-            ? p_57645_.setValue(PROPERTY_BY_DIRECTION.get(p_57646_), this.shouldConnectTo(p_57647_, p_57646_))
-            : super.updateShape(p_57645_, p_366467_, p_366611_, p_57649_, p_57646_, p_57650_, p_57647_, p_369813_);
+        return directionToNeighbour.getAxis().isHorizontal()
+            ? state.setValue(PROPERTY_BY_DIRECTION.get(directionToNeighbour), this.shouldConnectTo(neighbourState, directionToNeighbour))
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected void onPlace(BlockState p_57659_, Level p_57660_, BlockPos p_57661_, BlockState p_57662_, boolean p_57663_) {
-        if (!p_57662_.is(p_57659_.getBlock())) {
-            this.updateSource(p_57660_, p_57661_, p_57659_);
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        if (!oldState.is(state.getBlock())) {
+            this.updateSource(level, pos, state);
         }
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_393989_, ServerLevel p_396061_, BlockPos p_396839_, boolean p_392670_) {
-        if (!p_392670_) {
-            this.updateSource(p_396061_, p_396839_, p_393989_.setValue(POWERED, true));
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        if (!movedByPiston) {
+            this.updateSource(level, pos, state.setValue(POWERED, true));
         }
     }
 
     @Override
-    public BlockState playerWillDestroy(Level p_57615_, BlockPos p_57616_, BlockState p_57617_, Player p_57618_) {
-        if (!p_57615_.isClientSide() && !p_57618_.getMainHandItem().isEmpty() && p_57618_.getMainHandItem().is(Items.SHEARS)) {
-            p_57615_.setBlock(p_57616_, p_57617_.setValue(DISARMED, true), 260);
-            p_57615_.gameEvent(p_57618_, GameEvent.SHEAR, p_57616_);
+    public BlockState playerWillDestroy(final Level level, final BlockPos pos, final BlockState state, final Player player) {
+        if (!level.isClientSide() && !player.getMainHandItem().isEmpty() && player.getMainHandItem().is(Items.SHEARS)) {
+            level.setBlock(pos, state.setValue(DISARMED, true), 260);
+            level.gameEvent(player, GameEvent.SHEAR, pos);
         }
 
-        return super.playerWillDestroy(p_57615_, p_57616_, p_57617_, p_57618_);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
-    private void updateSource(Level p_57611_, BlockPos p_57612_, BlockState p_57613_) {
+    private void updateSource(final Level level, final BlockPos pos, final BlockState state) {
         for (Direction direction : new Direction[]{Direction.SOUTH, Direction.WEST}) {
             for (int i = 1; i < 42; i++) {
-                BlockPos blockpos = p_57612_.relative(direction, i);
-                BlockState blockstate = p_57611_.getBlockState(blockpos);
-                if (blockstate.is(this.hook)) {
-                    if (blockstate.getValue(TripWireHookBlock.FACING) == direction.getOpposite()) {
-                        TripWireHookBlock.calculateState(p_57611_, blockpos, blockstate, false, true, i, p_57613_);
+                BlockPos testPos = pos.relative(direction, i);
+                BlockState block = level.getBlockState(testPos);
+                if (block.is(this.hook)) {
+                    if (block.getValue(TripWireHookBlock.FACING) == direction.getOpposite()) {
+                        TripWireHookBlock.calculateState(level, testPos, block, false, true, i, state);
                     }
                     break;
                 }
 
-                if (!blockstate.is(this)) {
+                if (!block.is(this)) {
                     break;
                 }
             }
@@ -143,97 +141,102 @@ public class TripWireBlock extends Block {
     }
 
     @Override
-    protected VoxelShape getEntityInsideCollisionShape(BlockState p_367024_, BlockGetter p_394181_, BlockPos p_366199_, Entity p_391633_) {
-        return p_367024_.getShape(p_394181_, p_366199_);
+    protected VoxelShape getEntityInsideCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final Entity entity) {
+        return state.getShape(level, pos);
     }
 
     @Override
-    protected void entityInside(BlockState p_57625_, Level p_57626_, BlockPos p_57627_, Entity p_57628_, InsideBlockEffectApplier p_392144_, boolean p_432048_) {
-        if (!p_57626_.isClientSide()) {
-            if (!p_57625_.getValue(POWERED)) {
-                this.checkPressed(p_57626_, p_57627_, List.of(p_57628_));
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (!level.isClientSide()) {
+            if (!state.getValue(POWERED) && !level.getBlockTicks().hasScheduledTick(pos, this)) {
+                this.checkPressed(level, pos, List.of(entity));
             }
         }
     }
 
     @Override
-    protected void tick(BlockState p_222598_, ServerLevel p_222599_, BlockPos p_222600_, RandomSource p_222601_) {
-        if (p_222599_.getBlockState(p_222600_).getValue(POWERED)) {
-            this.checkPressed(p_222599_, p_222600_);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (level.getBlockState(pos).getValue(POWERED)) {
+            this.checkPressed(level, pos);
         }
     }
 
-    private void checkPressed(Level p_57608_, BlockPos p_57609_) {
-        BlockState blockstate = p_57608_.getBlockState(p_57609_);
-        List<? extends Entity> list = p_57608_.getEntities(null, blockstate.getShape(p_57608_, p_57609_).bounds().move(p_57609_));
-        this.checkPressed(p_57608_, p_57609_, list);
+    private void checkPressed(final Level level, final BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        List<? extends Entity> entities = level.getEntities(null, state.getShape(level, pos).bounds().move(pos));
+        this.checkPressed(level, pos, entities);
     }
 
-    private void checkPressed(Level p_366903_, BlockPos p_365869_, List<? extends Entity> p_360972_) {
-        BlockState blockstate = p_366903_.getBlockState(p_365869_);
-        boolean flag = blockstate.getValue(POWERED);
-        boolean flag1 = false;
-        if (!p_360972_.isEmpty()) {
-            for (Entity entity : p_360972_) {
+    private void checkPressed(final Level level, final BlockPos pos, final List<? extends Entity> entities) {
+        BlockState state = level.getBlockState(pos);
+        boolean wasPressed = state.getValue(POWERED);
+        boolean shouldBePressed = false;
+        if (!entities.isEmpty()) {
+            for (Entity entity : entities) {
                 if (!entity.isIgnoringBlockTriggers()) {
-                    flag1 = true;
+                    shouldBePressed = true;
                     break;
                 }
             }
         }
 
-        if (flag1 != flag) {
-            blockstate = blockstate.setValue(POWERED, flag1);
-            p_366903_.setBlock(p_365869_, blockstate, 3);
-            this.updateSource(p_366903_, p_365869_, blockstate);
+        if (shouldBePressed != wasPressed) {
+            state = state.setValue(POWERED, shouldBePressed);
+            level.setBlock(pos, state, 3);
+            this.updateSource(level, pos, state);
         }
 
-        if (flag1) {
-            p_366903_.scheduleTick(new BlockPos(p_365869_), this, 10);
+        if (shouldBePressed) {
+            level.scheduleTick(new BlockPos(pos), this, 10);
+        } else if (wasPressed) {
+            level.scheduleTick(new BlockPos(pos), this, 0);
         }
     }
 
-    public boolean shouldConnectTo(BlockState p_57642_, Direction p_57643_) {
-        return p_57642_.is(this.hook) ? p_57642_.getValue(TripWireHookBlock.FACING) == p_57643_.getOpposite() : p_57642_.is(this);
-    }
-
-    @Override
-    protected BlockState rotate(BlockState p_57639_, Rotation p_57640_) {
-        switch (p_57640_) {
-            case CLOCKWISE_180:
-                return p_57639_.setValue(NORTH, p_57639_.getValue(SOUTH))
-                    .setValue(EAST, p_57639_.getValue(WEST))
-                    .setValue(SOUTH, p_57639_.getValue(NORTH))
-                    .setValue(WEST, p_57639_.getValue(EAST));
-            case COUNTERCLOCKWISE_90:
-                return p_57639_.setValue(NORTH, p_57639_.getValue(EAST))
-                    .setValue(EAST, p_57639_.getValue(SOUTH))
-                    .setValue(SOUTH, p_57639_.getValue(WEST))
-                    .setValue(WEST, p_57639_.getValue(NORTH));
-            case CLOCKWISE_90:
-                return p_57639_.setValue(NORTH, p_57639_.getValue(WEST))
-                    .setValue(EAST, p_57639_.getValue(NORTH))
-                    .setValue(SOUTH, p_57639_.getValue(EAST))
-                    .setValue(WEST, p_57639_.getValue(SOUTH));
-            default:
-                return p_57639_;
-        }
+    public boolean shouldConnectTo(final BlockState blockState, final Direction direction) {
+        return blockState.is(this.hook) ? blockState.getValue(TripWireHookBlock.FACING) == direction.getOpposite() : blockState.is(this);
     }
 
     @Override
-    protected BlockState mirror(BlockState p_57636_, Mirror p_57637_) {
-        switch (p_57637_) {
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return switch (rotation) {
+            case CLOCKWISE_180 -> (BlockState)state.setValue(NORTH, state.getValue(SOUTH))
+                .setValue(EAST, state.getValue(WEST))
+                .setValue(SOUTH, state.getValue(NORTH))
+                .setValue(WEST, state.getValue(EAST));
+            case COUNTERCLOCKWISE_90 -> (BlockState)state.setValue(NORTH, state.getValue(EAST))
+                .setValue(EAST, state.getValue(SOUTH))
+                .setValue(SOUTH, state.getValue(WEST))
+                .setValue(WEST, state.getValue(NORTH));
+            case CLOCKWISE_90 -> (BlockState)state.setValue(NORTH, state.getValue(WEST))
+                .setValue(EAST, state.getValue(NORTH))
+                .setValue(SOUTH, state.getValue(EAST))
+                .setValue(WEST, state.getValue(SOUTH));
+            default -> state;
+        };
+    }
+
+    @Override
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        switch (mirror) {
             case LEFT_RIGHT:
-                return p_57636_.setValue(NORTH, p_57636_.getValue(SOUTH)).setValue(SOUTH, p_57636_.getValue(NORTH));
+                return state.setValue(NORTH, state.getValue(SOUTH)).setValue(SOUTH, state.getValue(NORTH));
             case FRONT_BACK:
-                return p_57636_.setValue(EAST, p_57636_.getValue(WEST)).setValue(WEST, p_57636_.getValue(EAST));
+                return state.setValue(EAST, state.getValue(WEST)).setValue(WEST, state.getValue(EAST));
             default:
-                return super.mirror(p_57636_, p_57637_);
+                return super.mirror(state, mirror);
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57652_) {
-        p_57652_.add(POWERED, ATTACHED, DISARMED, NORTH, EAST, WEST, SOUTH);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(POWERED, ATTACHED, DISARMED, NORTH, EAST, WEST, SOUTH);
     }
 }

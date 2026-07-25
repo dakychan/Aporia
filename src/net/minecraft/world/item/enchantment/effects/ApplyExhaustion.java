@@ -2,7 +2,6 @@ package net.minecraft.world.item.enchantment.effects;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -12,13 +11,13 @@ import net.minecraft.world.phys.Vec3;
 
 public record ApplyExhaustion(LevelBasedValue amount) implements EnchantmentEntityEffect {
     public static final MapCodec<ApplyExhaustion> CODEC = RecordCodecBuilder.mapCodec(
-        p_457057_ -> p_457057_.group(LevelBasedValue.CODEC.fieldOf("amount").forGetter(ApplyExhaustion::amount)).apply(p_457057_, ApplyExhaustion::new)
+        i -> i.group(LevelBasedValue.CODEC.fieldOf("amount").forGetter(ApplyExhaustion::amount)).apply(i, ApplyExhaustion::new)
     );
 
     @Override
-    public void apply(ServerLevel p_452260_, int p_461080_, EnchantedItemInUse p_459991_, Entity p_453772_, Vec3 p_452573_) {
-        if (p_453772_ instanceof Player player) {
-            player.causeFoodExhaustion(this.amount.calculate(p_461080_));
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        if (entity instanceof Player livingEntity) {
+            livingEntity.causeFoodExhaustion(this.amount.calculate(enchantmentLevel));
         }
     }
 

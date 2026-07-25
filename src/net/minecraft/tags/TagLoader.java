@@ -37,134 +37,133 @@ import org.slf4j.Logger;
 
 public class TagLoader<T> {
     private static final Logger LOGGER = LogUtils.getLogger();
-    final TagLoader.ElementLookup<T> elementLookup;
+    private final TagLoader.ElementLookup<T> elementLookup;
     private final String directory;
 
-    public TagLoader(TagLoader.ElementLookup<T> p_365781_, String p_144494_) {
-        this.elementLookup = p_365781_;
-        this.directory = p_144494_;
+    public TagLoader(final TagLoader.ElementLookup<T> elementLookup, final String directory) {
+        this.elementLookup = elementLookup;
+        this.directory = directory;
     }
 
-    public Map<Identifier, List<TagLoader.EntryWithSource>> load(ResourceManager p_144496_) {
-        Map<Identifier, List<TagLoader.EntryWithSource>> map = new HashMap<>();
-        FileToIdConverter filetoidconverter = FileToIdConverter.json(this.directory);
+    public Map<Identifier, List<TagLoader.EntryWithSource>> load(final ResourceManager resourceManager) {
+        Map<Identifier, List<TagLoader.EntryWithSource>> builders = new HashMap<>();
+        FileToIdConverter lister = FileToIdConverter.json(this.directory);
 
-        for (Entry<Identifier, List<Resource>> entry : filetoidconverter.listMatchingResourceStacks(p_144496_).entrySet()) {
-            Identifier identifier = entry.getKey();
-            Identifier identifier1 = filetoidconverter.fileToId(identifier);
+        for (Entry<Identifier, List<Resource>> entry : lister.listMatchingResourceStacks(resourceManager).entrySet()) {
+            Identifier location = entry.getKey();
+            Identifier id = lister.fileToId(location);
 
             for (Resource resource : entry.getValue()) {
                 try (Reader reader = resource.openAsReader()) {
-                    JsonElement jsonelement = StrictJsonParser.parse(reader);
-                    List<TagLoader.EntryWithSource> list = map.computeIfAbsent(identifier1, p_451223_ -> new ArrayList<>());
-                    TagFile tagfile = TagFile.CODEC.parse(new Dynamic<>(JsonOps.INSTANCE, jsonelement)).getOrThrow();
-                    if (tagfile.replace()) {
-                        list.clear();
+                    JsonElement element = StrictJsonParser.parse(reader);
+                    List<TagLoader.EntryWithSource> tagContents = builders.computeIfAbsent(id, key -> new ArrayList<>());
+                    TagFile parsedContents = TagFile.CODEC.parse(new Dynamic<>(JsonOps.INSTANCE, element)).getOrThrow();
+                    if (parsedContents.replace()) {
+                        tagContents.clear();
                     }
 
-                    String s = resource.sourcePackId();
-                    tagfile.entries().forEach(p_215997_ -> list.add(new TagLoader.EntryWithSource(p_215997_, s)));
-                } catch (Exception exception) {
-                    LOGGER.error("Couldn't read tag list {} from {} in data pack {}", identifier1, identifier, resource.sourcePackId(), exception);
+                    String sourceId = resource.sourcePackId();
+                    parsedContents.entries().forEach(ex -> tagContents.add(new TagLoader.EntryWithSource(ex, sourceId)));
+                } catch (Exception e) {
+                    LOGGER.error("Couldn't read tag list {} from {} in data pack {}", id, location, resource.sourcePackId(), e);
                 }
             }
         }
 
-        return map;
+        return builders;
     }
 
-    private Either<List<TagLoader.EntryWithSource>, List<T>> tryBuildTag(TagEntry.Lookup<T> p_215979_, List<TagLoader.EntryWithSource> p_215980_) {
-        SequencedSet<T> sequencedset = new LinkedHashSet<>();
-        List<TagLoader.EntryWithSource> list = new ArrayList<>();
+    private Either<List<TagLoader.EntryWithSource>, List<T>> tryBuildTag(final TagEntry.Lookup<T> lookup, final List<TagLoader.EntryWithSource> entries) {
+        SequencedSet<T> values = new LinkedHashSet<>();
+        List<TagLoader.EntryWithSource> missingElements = new ArrayList<>();
 
-        for (TagLoader.EntryWithSource tagloader$entrywithsource : p_215980_) {
-            if (!tagloader$entrywithsource.entry().build(p_215979_, sequencedset::add)) {
-                list.add(tagloader$entrywithsource);
+        for (TagLoader.EntryWithSource entry : entries) {
+            if (!entry.entry().build(lookup, values::add)) {
+                missingElements.add(entry);
             }
         }
 
-        return list.isEmpty() ? Either.right(List.copyOf(sequencedset)) : Either.left(list);
+        return missingElements.isEmpty() ? Either.right(List.copyOf(values)) : Either.left(missingElements);
     }
 
-    public Map<Identifier, List<T>> build(Map<Identifier, List<TagLoader.EntryWithSource>> p_203899_) {
-        final Map<Identifier, List<T>> map = new HashMap<>();
+    public Map<Identifier, List<T>> build(final Map<Identifier, List<TagLoader.EntryWithSource>> builders) {
+        final Map<Identifier, List<T>> newTags = new HashMap<>();
         TagEntry.Lookup<T> lookup = new TagEntry.Lookup<T>() {
             @Override
-            public @Nullable T element(Identifier p_456898_, boolean p_366980_) {
-                return (T)TagLoader.this.elementLookup.get(p_456898_, p_366980_).orElse(null);
+            public @Nullable T element(final Identifier key, final boolean required) {
+                return (T)TagLoader.this.elementLookup.get(key, required).orElse(null);
             }
 
             @Override
-            public @Nullable Collection<T> tag(Identifier p_457870_) {
-                return map.get(p_457870_);
+            public @Nullable Collection<T> tag(final Identifier key) {
+                return newTags.get(key);
             }
         };
-        DependencySorter<Identifier, TagLoader.SortingEntry> dependencysorter = new DependencySorter<>();
-        p_203899_.forEach(
-            (p_450289_, p_284686_) -> dependencysorter.addEntry(p_450289_, new TagLoader.SortingEntry((List<TagLoader.EntryWithSource>)p_284686_))
-        );
-        dependencysorter.orderByDependencies(
-            (p_450305_, p_358781_) -> this.tryBuildTag(lookup, p_358781_.entries)
+        DependencySorter<Identifier, TagLoader.SortingEntry> sorter = new DependencySorter<>();
+        builders.forEach((id, entry) -> sorter.addEntry(id, new TagLoader.SortingEntry((List<TagLoader.EntryWithSource>)entry)));
+        sorter.orderByDependencies(
+            (id, contents) -> this.tryBuildTag(lookup, contents.entries)
                 .ifLeft(
-                    p_358772_ -> LOGGER.error(
+                    missing -> LOGGER.error(
                         "Couldn't load tag {} as it is missing following references: {}",
-                        p_450305_,
-                        p_358772_.stream().map(Objects::toString).collect(Collectors.joining(", "))
+                        id,
+                        missing.stream().map(Objects::toString).collect(Collectors.joining(", "))
                     )
                 )
-                .ifRight(p_369415_ -> map.put(p_450305_, (List<T>)p_369415_))
+                .ifRight(tag -> newTags.put(id, (List<T>)tag))
         );
-        return map;
+        return newTags;
     }
 
-    public static <T> void loadTagsFromNetwork(TagNetworkSerialization.NetworkPayload p_363340_, WritableRegistry<T> p_362274_) {
-        p_363340_.resolve(p_362274_).tags.forEach(p_362274_::bindTag);
+    public static <T> Map<TagKey<T>, List<Holder<T>>> loadTagsFromNetwork(final TagNetworkSerialization.NetworkPayload tags, final Registry<T> registry) {
+        return tags.resolve(registry).tags;
     }
 
-    public static List<Registry.PendingTags<?>> loadTagsForExistingRegistries(ResourceManager p_363516_, RegistryAccess p_365200_) {
-        return p_365200_.registries()
-            .map(p_358777_ -> loadPendingTags(p_363516_, p_358777_.value()))
-            .flatMap(Optional::stream)
-            .collect(Collectors.toUnmodifiableList());
+    public static List<Registry.PendingTags<?>> loadTagsForExistingRegistries(final ResourceManager manager, final RegistryAccess layer) {
+        return layer.registries().map(entry -> loadPendingTags(manager, entry.value())).flatMap(Optional::stream).collect(Collectors.toUnmodifiableList());
     }
 
-    public static <T> void loadTagsForRegistry(ResourceManager p_361002_, WritableRegistry<T> p_369889_) {
-        ResourceKey<? extends Registry<T>> resourcekey = p_369889_.key();
-        TagLoader<Holder<T>> tagloader = new TagLoader<>(TagLoader.ElementLookup.fromWritableRegistry(p_369889_), Registries.tagsDirPath(resourcekey));
-        tagloader.build(tagloader.load(p_361002_))
-            .forEach((p_449223_, p_449224_) -> p_369889_.bindTag(TagKey.create(resourcekey, p_449223_), (List<Holder<T>>)p_449224_));
+    public static <T> void loadTagsForRegistry(final ResourceManager manager, final WritableRegistry<T> registry) {
+        loadTagsForRegistry(manager, registry.key(), TagLoader.ElementLookup.fromWritableRegistry(registry));
     }
 
-    private static <T> Map<TagKey<T>, List<Holder<T>>> wrapTags(ResourceKey<? extends Registry<T>> p_369888_, Map<Identifier, List<Holder<T>>> p_362414_) {
-        return p_362414_.entrySet()
-            .stream()
-            .collect(Collectors.toUnmodifiableMap(p_449220_ -> TagKey.create(p_369888_, p_449220_.getKey()), Entry::getValue));
+    public static <T> Map<TagKey<T>, List<Holder<T>>> loadTagsForRegistry(
+        final ResourceManager manager, final ResourceKey<? extends Registry<T>> registryKey, final TagLoader.ElementLookup<Holder<T>> lookup
+    ) {
+        TagLoader<Holder<T>> loader = new TagLoader<>(lookup, Registries.tagsDirPath(registryKey));
+        return wrapTags(registryKey, loader.build(loader.load(manager)));
     }
 
-    private static <T> Optional<Registry.PendingTags<T>> loadPendingTags(ResourceManager p_366215_, Registry<T> p_369074_) {
-        ResourceKey<? extends Registry<T>> resourcekey = p_369074_.key();
-        TagLoader<Holder<T>> tagloader = new TagLoader<>(
-            (TagLoader.ElementLookup<Holder<T>>)TagLoader.ElementLookup.fromFrozenRegistry(p_369074_), Registries.tagsDirPath(resourcekey)
+    private static <T> Map<TagKey<T>, List<Holder<T>>> wrapTags(
+        final ResourceKey<? extends Registry<T>> registryKey, final Map<Identifier, List<Holder<T>>> tags
+    ) {
+        return tags.entrySet().stream().collect(Collectors.toUnmodifiableMap(e -> TagKey.create(registryKey, e.getKey()), Entry::getValue));
+    }
+
+    private static <T> Optional<Registry.PendingTags<T>> loadPendingTags(final ResourceManager manager, final Registry<T> registry) {
+        ResourceKey<? extends Registry<T>> key = registry.key();
+        TagLoader<Holder<T>> loader = new TagLoader<>(
+            (TagLoader.ElementLookup<Holder<T>>)TagLoader.ElementLookup.fromFrozenRegistry(registry), Registries.tagsDirPath(key)
         );
-        TagLoader.LoadResult<T> loadresult = new TagLoader.LoadResult<>(
-            resourcekey, wrapTags(p_369074_.key(), tagloader.build(tagloader.load(p_366215_)))
-        );
-        return loadresult.tags().isEmpty() ? Optional.empty() : Optional.of(p_369074_.prepareTagReload(loadresult));
+        TagLoader.LoadResult<T> tags = new TagLoader.LoadResult<>(key, wrapTags(registry.key(), loader.build(loader.load(manager))));
+        return tags.tags().isEmpty() ? Optional.empty() : Optional.of(registry.prepareTagReload(tags));
     }
 
-    public static List<HolderLookup.RegistryLookup<?>> buildUpdatedLookups(RegistryAccess.Frozen p_361092_, List<Registry.PendingTags<?>> p_361987_) {
-        List<HolderLookup.RegistryLookup<?>> list = new ArrayList<>();
-        p_361092_.registries().forEach(p_358775_ -> {
-            Registry.PendingTags<?> pendingtags = findTagsForRegistry(p_361987_, p_358775_.key());
-            list.add((HolderLookup.RegistryLookup<?>)(pendingtags != null ? pendingtags.lookup() : p_358775_.value()));
+    public static List<HolderLookup.RegistryLookup<?>> buildUpdatedLookups(final RegistryAccess.Frozen registries, final List<Registry.PendingTags<?>> tags) {
+        List<HolderLookup.RegistryLookup<?>> result = new ArrayList<>();
+        registries.registries().forEach(lookup -> {
+            Registry.PendingTags<?> foundTags = findTagsForRegistry(tags, lookup.key());
+            result.add(foundTags != null ? foundTags.lookup() : lookup.value());
         });
-        return list;
+        return result;
     }
 
-    private static Registry.@Nullable PendingTags<?> findTagsForRegistry(List<Registry.PendingTags<?>> p_361794_, ResourceKey<? extends Registry<?>> p_361930_) {
-        for (Registry.PendingTags<?> pendingtags : p_361794_) {
-            if (pendingtags.key() == p_361930_) {
-                return pendingtags;
+    private static Registry.@Nullable PendingTags<?> findTagsForRegistry(
+        final List<Registry.PendingTags<?>> tags, final ResourceKey<? extends Registry<?>> registryKey
+    ) {
+        for (Registry.PendingTags<?> tag : tags) {
+            if (tag.key() == registryKey) {
+                return tag;
             }
         }
 
@@ -172,16 +171,20 @@ public class TagLoader<T> {
     }
 
     public interface ElementLookup<T> {
-        Optional<? extends T> get(Identifier p_459942_, boolean p_368007_);
+        Optional<? extends T> get(Identifier id, boolean required);
 
-        static <T> TagLoader.ElementLookup<? extends Holder<T>> fromFrozenRegistry(Registry<T> p_369869_) {
-            return (p_449230_, p_449231_) -> p_369869_.get(p_449230_);
+        static <T> TagLoader.ElementLookup<? extends Holder<T>> fromFrozenRegistry(final Registry<T> registry) {
+            return (id, required) -> registry.get(id);
         }
 
-        static <T> TagLoader.ElementLookup<Holder<T>> fromWritableRegistry(WritableRegistry<T> p_361559_) {
-            HolderGetter<T> holdergetter = p_361559_.createRegistrationLookup();
-            return (p_449227_, p_449228_) -> ((HolderGetter<T>)(p_449228_ ? holdergetter : p_361559_))
-                .get(ResourceKey.create(p_361559_.key(), p_449227_));
+        static <T> TagLoader.ElementLookup<Holder<T>> fromWritableRegistry(final WritableRegistry<T> registry) {
+            return fromGetters(registry.key(), registry.createRegistrationLookup(), registry);
+        }
+
+        static <T> TagLoader.ElementLookup<Holder<T>> fromGetters(
+            final ResourceKey<? extends Registry<T>> registryKey, final HolderGetter<T> writable, final HolderGetter<T> immutable
+        ) {
+            return (id, required) -> (required ? writable : immutable).get(ResourceKey.create(registryKey, id));
         }
     }
 
@@ -195,15 +198,15 @@ public class TagLoader<T> {
     public record LoadResult<T>(ResourceKey<? extends Registry<T>> key, Map<TagKey<T>, List<Holder<T>>> tags) {
     }
 
-    record SortingEntry(List<TagLoader.EntryWithSource> entries) implements DependencySorter.Entry<Identifier> {
+    private record SortingEntry(List<TagLoader.EntryWithSource> entries) implements DependencySorter.Entry<Identifier> {
         @Override
-        public void visitRequiredDependencies(Consumer<Identifier> p_285529_) {
-            this.entries.forEach(p_285236_ -> p_285236_.entry.visitRequiredDependencies(p_285529_));
+        public void visitRequiredDependencies(final Consumer<Identifier> output) {
+            this.entries.forEach(e -> e.entry.visitRequiredDependencies(output));
         }
 
         @Override
-        public void visitOptionalDependencies(Consumer<Identifier> p_285469_) {
-            this.entries.forEach(p_284943_ -> p_284943_.entry.visitOptionalDependencies(p_285469_));
+        public void visitOptionalDependencies(final Consumer<Identifier> output) {
+            this.entries.forEach(e -> e.entry.visitOptionalDependencies(output));
         }
     }
 }

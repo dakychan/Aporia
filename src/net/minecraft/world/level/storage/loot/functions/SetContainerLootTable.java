@@ -3,7 +3,6 @@ package net.minecraft.world.level.storage.loot.functions;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -18,60 +17,62 @@ import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetContainerLootTable extends LootItemConditionalFunction {
-    public static final MapCodec<SetContainerLootTable> CODEC = RecordCodecBuilder.mapCodec(
-        p_391134_ -> commonFields(p_391134_)
+    public static final MapCodec<SetContainerLootTable> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
             .and(
-                p_391134_.group(
-                    LootTable.KEY_CODEC.fieldOf("name").forGetter(p_327592_ -> p_327592_.name),
-                    Codec.LONG.optionalFieldOf("seed", 0L).forGetter(p_297122_ -> p_297122_.seed),
-                    BuiltInRegistries.BLOCK_ENTITY_TYPE.holderByNameCodec().fieldOf("type").forGetter(p_297116_ -> p_297116_.type)
+                i.group(
+                    LootTable.KEY_CODEC.fieldOf("name").forGetter(f -> f.name),
+                    Codec.LONG.optionalFieldOf("seed", 0L).forGetter(f -> f.seed),
+                    BuiltInRegistries.BLOCK_ENTITY_TYPE.holderByNameCodec().fieldOf("type").forGetter(f -> f.type)
                 )
             )
-            .apply(p_391134_, SetContainerLootTable::new)
+            .apply(i, SetContainerLootTable::new)
     );
     private final ResourceKey<LootTable> name;
     private final long seed;
     private final Holder<BlockEntityType<?>> type;
 
-    private SetContainerLootTable(List<LootItemCondition> p_297857_, ResourceKey<LootTable> p_335799_, long p_193047_, Holder<BlockEntityType<?>> p_300516_) {
-        super(p_297857_);
-        this.name = p_335799_;
-        this.seed = p_193047_;
-        this.type = p_300516_;
+    private SetContainerLootTable(
+        final List<LootItemCondition> predicates, final ResourceKey<LootTable> name, final long seed, final Holder<BlockEntityType<?>> type
+    ) {
+        super(predicates);
+        this.name = name;
+        this.seed = seed;
+        this.type = type;
     }
 
     @Override
-    public LootItemFunctionType<SetContainerLootTable> getType() {
-        return LootItemFunctions.SET_LOOT_TABLE;
+    public MapCodec<SetContainerLootTable> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ItemStack run(ItemStack p_80967_, LootContext p_80968_) {
-        if (p_80967_.isEmpty()) {
-            return p_80967_;
-        } else {
-            p_80967_.set(DataComponents.CONTAINER_LOOT, new SeededContainerLoot(this.name, this.seed));
-            return p_80967_;
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        if (itemStack.isEmpty()) {
+            return itemStack;
         }
+
+        itemStack.set(DataComponents.CONTAINER_LOOT, new SeededContainerLoot(this.name, this.seed));
+        return itemStack;
     }
 
     @Override
-    public void validate(ValidationContext p_80970_) {
-        super.validate(p_80970_);
-        if (!p_80970_.allowsReferences()) {
-            p_80970_.reportProblem(new ValidationContext.ReferenceNotAllowedProblem(this.name));
+    public void validate(final ValidationContext context) {
+        super.validate(context);
+        if (!context.allowsReferences()) {
+            context.reportProblem(new ValidationContext.ReferenceNotAllowedProblem(this.name));
         } else {
-            if (p_80970_.resolver().get(this.name).isEmpty()) {
-                p_80970_.reportProblem(new ValidationContext.MissingReferenceProblem(this.name));
+            if (context.resolver().get(this.name).isEmpty()) {
+                context.reportProblem(new ValidationContext.MissingReferenceProblem(this.name));
             }
         }
     }
 
-    public static LootItemConditionalFunction.Builder<?> withLootTable(BlockEntityType<?> p_193050_, ResourceKey<LootTable> p_334597_) {
-        return simpleBuilder(p_327599_ -> new SetContainerLootTable(p_327599_, p_334597_, 0L, p_193050_.builtInRegistryHolder()));
+    public static LootItemConditionalFunction.Builder<?> withLootTable(final BlockEntityType<?> type, final ResourceKey<LootTable> value) {
+        return simpleBuilder(conditions -> new SetContainerLootTable(conditions, value, 0L, type.builtInRegistryHolder()));
     }
 
-    public static LootItemConditionalFunction.Builder<?> withLootTable(BlockEntityType<?> p_193053_, ResourceKey<LootTable> p_332251_, long p_193055_) {
-        return simpleBuilder(p_327596_ -> new SetContainerLootTable(p_327596_, p_332251_, p_193055_, p_193053_.builtInRegistryHolder()));
+    public static LootItemConditionalFunction.Builder<?> withLootTable(final BlockEntityType<?> type, final ResourceKey<LootTable> value, final long seed) {
+        return simpleBuilder(conditions -> new SetContainerLootTable(conditions, value, seed, type.builtInRegistryHolder()));
     }
 }

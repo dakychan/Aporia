@@ -1,10 +1,7 @@
 package net.minecraft.client.multiplayer.chat.report;
 
 import java.util.Locale;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum ReportType {
     CHAT("chat"),
     SKIN("skin"),
@@ -12,8 +9,8 @@ public enum ReportType {
 
     private final String backendName;
 
-    private ReportType(final String p_298674_) {
-        this.backendName = p_298674_.toUpperCase(Locale.ROOT);
+    ReportType(final String name) {
+        this.backendName = name.toUpperCase(Locale.ROOT);
     }
 
     public String backendName() {

@@ -2,46 +2,39 @@ package net.minecraft.client.animation;
 
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
 public record AnimationChannel(AnimationChannel.Target target, Keyframe... keyframes) {
-    @OnlyIn(Dist.CLIENT)
-    public interface Interpolation {
-        Vector3f apply(Vector3f p_253818_, float p_232224_, Keyframe[] p_232225_, int p_232226_, int p_232227_, float p_232228_);
+        public interface Interpolation {
+        Vector3f apply(final Vector3f vector, final float alpha, final Keyframe[] keyframes, final int prev, final int next, final float targetScale);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Interpolations {
-        public static final AnimationChannel.Interpolation LINEAR = (p_420672_, p_420673_, p_420674_, p_420675_, p_420676_, p_420677_) -> {
-            Vector3fc vector3fc = p_420674_[p_420675_].postTarget();
-            Vector3fc vector3fc1 = p_420674_[p_420676_].preTarget();
-            return vector3fc.lerp(vector3fc1, p_420673_, p_420672_).mul(p_420677_);
+        public static class Interpolations {
+        public static final AnimationChannel.Interpolation LINEAR = (vector, alpha, keyframes, prev, next, targetScale) -> {
+            Vector3fc point0 = keyframes[prev].postTarget();
+            Vector3fc point1 = keyframes[next].preTarget();
+            return point0.lerp(point1, alpha, vector).mul(targetScale);
         };
-        public static final AnimationChannel.Interpolation CATMULLROM = (p_254076_, p_232235_, p_232236_, p_232237_, p_232238_, p_232239_) -> {
-            Vector3fc vector3fc = p_232236_[Math.max(0, p_232237_ - 1)].postTarget();
-            Vector3fc vector3fc1 = p_232236_[p_232237_].postTarget();
-            Vector3fc vector3fc2 = p_232236_[p_232238_].postTarget();
-            Vector3fc vector3fc3 = p_232236_[Math.min(p_232236_.length - 1, p_232238_ + 1)].postTarget();
-            p_254076_.set(
-                Mth.catmullrom(p_232235_, vector3fc.x(), vector3fc1.x(), vector3fc2.x(), vector3fc3.x()) * p_232239_,
-                Mth.catmullrom(p_232235_, vector3fc.y(), vector3fc1.y(), vector3fc2.y(), vector3fc3.y()) * p_232239_,
-                Mth.catmullrom(p_232235_, vector3fc.z(), vector3fc1.z(), vector3fc2.z(), vector3fc3.z()) * p_232239_
+        public static final AnimationChannel.Interpolation CATMULLROM = (vector, alpha, keyframes, prev, next, targetScale) -> {
+            Vector3fc point0 = keyframes[Math.max(0, prev - 1)].postTarget();
+            Vector3fc point1 = keyframes[prev].postTarget();
+            Vector3fc point2 = keyframes[next].postTarget();
+            Vector3fc point3 = keyframes[Math.min(keyframes.length - 1, next + 1)].postTarget();
+            vector.set(
+                Mth.catmullrom(alpha, point0.x(), point1.x(), point2.x(), point3.x()) * targetScale,
+                Mth.catmullrom(alpha, point0.y(), point1.y(), point2.y(), point3.y()) * targetScale,
+                Mth.catmullrom(alpha, point0.z(), point1.z(), point2.z(), point3.z()) * targetScale
             );
-            return p_254076_;
+            return vector;
         };
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Target {
-        void apply(ModelPart p_232248_, Vector3f p_253771_);
+        public interface Target {
+        void apply(final ModelPart animationBone, final Vector3f target);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Targets {
+        public static class Targets {
         public static final AnimationChannel.Target POSITION = ModelPart::offsetPos;
         public static final AnimationChannel.Target ROTATION = ModelPart::offsetRotation;
         public static final AnimationChannel.Target SCALE = ModelPart::offsetScale;

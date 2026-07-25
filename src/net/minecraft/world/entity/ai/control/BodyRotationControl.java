@@ -11,8 +11,8 @@ public class BodyRotationControl implements Control {
     private int headStableTime;
     private float lastStableYHeadRot;
 
-    public BodyRotationControl(Mob p_24879_) {
-        this.mob = p_24879_;
+    public BodyRotationControl(final Mob mob) {
+        this.mob = mob;
     }
 
     public void clientTick() {
@@ -46,10 +46,10 @@ public class BodyRotationControl implements Control {
     }
 
     private void rotateHeadTowardsFront() {
-        int i = this.headStableTime - 10;
-        float f = Mth.clamp(i / 10.0F, 0.0F, 1.0F);
-        float f1 = this.mob.getMaxHeadYRot() * (1.0F - f);
-        this.mob.yBodyRot = Mth.rotateIfNecessary(this.mob.yBodyRot, this.mob.yHeadRot, f1);
+        int timeSinceStartingToFaceForward = this.headStableTime - 10;
+        float faceForwardFraction = Mth.clamp(timeSinceStartingToFaceForward / 10.0F, 0.0F, 1.0F);
+        float angleRemainingUntilFacingForward = this.mob.getMaxHeadYRot() * (1.0F - faceForwardFraction);
+        this.mob.yBodyRot = Mth.rotateIfNecessary(this.mob.yBodyRot, this.mob.yHeadRot, angleRemainingUntilFacingForward);
     }
 
     private boolean notCarryingMobPassengers() {
@@ -57,8 +57,8 @@ public class BodyRotationControl implements Control {
     }
 
     private boolean isMoving() {
-        double d0 = this.mob.getX() - this.mob.xo;
-        double d1 = this.mob.getZ() - this.mob.zo;
-        return d0 * d0 + d1 * d1 > 2.5000003E-7F;
+        double xd = this.mob.getX() - this.mob.xo;
+        double zd = this.mob.getZ() - this.mob.zo;
+        return xd * xd + zd * zd > 2.5000003E-7F;
     }
 }

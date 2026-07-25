@@ -6,19 +6,19 @@ import net.minecraft.world.entity.player.StackedItemContents;
 import net.minecraft.world.item.crafting.RecipeHolder;
 
 public abstract class RecipeBookMenu extends AbstractContainerMenu {
-    public RecipeBookMenu(MenuType<?> p_40115_, int p_40116_) {
-        super(p_40115_, p_40116_);
+    public RecipeBookMenu(final MenuType<?> menuType, final int containerId) {
+        super(menuType, containerId);
     }
 
     public abstract RecipeBookMenu.PostPlaceAction handlePlacement(
-        boolean p_40119_, boolean p_363647_, RecipeHolder<?> p_297420_, ServerLevel p_367376_, Inventory p_364321_
+        boolean useMaxItems, boolean allowDroppingItemsToClear, RecipeHolder<?> recipe, ServerLevel level, Inventory inventory
     );
 
-    public abstract void fillCraftSlotsStackedContents(StackedItemContents p_365715_);
+    public abstract void fillCraftSlotsStackedContents(StackedItemContents stackedContents);
 
     public abstract RecipeBookType getRecipeBookType();
 
-    public static enum PostPlaceAction {
+    public enum PostPlaceAction {
         NOTHING,
         PLACE_GHOST_RECIPE;
     }

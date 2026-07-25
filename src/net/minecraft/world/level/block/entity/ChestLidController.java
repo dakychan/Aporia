@@ -9,7 +9,7 @@ public class ChestLidController {
 
     public void tickLid() {
         this.oOpenness = this.openness;
-        float f = 0.1F;
+        float speed = 0.1F;
         if (!this.shouldBeOpen && this.openness > 0.0F) {
             this.openness = Math.max(this.openness - 0.1F, 0.0F);
         } else if (this.shouldBeOpen && this.openness < 1.0F) {
@@ -17,11 +17,11 @@ public class ChestLidController {
         }
     }
 
-    public float getOpenness(float p_155376_) {
-        return Mth.lerp(p_155376_, this.oOpenness, this.openness);
+    public float getOpenness(final float a) {
+        return Mth.lerp(a, this.oOpenness, this.openness);
     }
 
-    public void shouldBeOpen(boolean p_155378_) {
-        this.shouldBeOpen = p_155378_;
+    public void shouldBeOpen(final boolean shouldBeOpen) {
+        this.shouldBeOpen = shouldBeOpen;
     }
 }

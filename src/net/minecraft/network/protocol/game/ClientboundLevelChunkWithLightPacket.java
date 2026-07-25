@@ -19,26 +19,31 @@ public class ClientboundLevelChunkWithLightPacket implements Packet<ClientGamePa
     private final ClientboundLevelChunkPacketData chunkData;
     private final ClientboundLightUpdatePacketData lightData;
 
-    public ClientboundLevelChunkWithLightPacket(LevelChunk p_285290_, LevelLightEngine p_285254_, @Nullable BitSet p_285350_, @Nullable BitSet p_285304_) {
-        ChunkPos chunkpos = p_285290_.getPos();
-        this.x = chunkpos.x;
-        this.z = chunkpos.z;
-        this.chunkData = new ClientboundLevelChunkPacketData(p_285290_);
-        this.lightData = new ClientboundLightUpdatePacketData(chunkpos, p_285254_, p_285350_, p_285304_);
+    public ClientboundLevelChunkWithLightPacket(
+        final LevelChunk levelChunk,
+        final LevelLightEngine lightEngine,
+        final @Nullable BitSet skyChangedLightSectionFilter,
+        final @Nullable BitSet blockChangedLightSectionFilter
+    ) {
+        ChunkPos chunkPos = levelChunk.getPos();
+        this.x = chunkPos.x();
+        this.z = chunkPos.z();
+        this.chunkData = new ClientboundLevelChunkPacketData(levelChunk);
+        this.lightData = new ClientboundLightUpdatePacketData(chunkPos, lightEngine, skyChangedLightSectionFilter, blockChangedLightSectionFilter);
     }
 
-    private ClientboundLevelChunkWithLightPacket(RegistryFriendlyByteBuf p_331782_) {
-        this.x = p_331782_.readInt();
-        this.z = p_331782_.readInt();
-        this.chunkData = new ClientboundLevelChunkPacketData(p_331782_, this.x, this.z);
-        this.lightData = new ClientboundLightUpdatePacketData(p_331782_, this.x, this.z);
+    private ClientboundLevelChunkWithLightPacket(final RegistryFriendlyByteBuf input) {
+        this.x = input.readInt();
+        this.z = input.readInt();
+        this.chunkData = new ClientboundLevelChunkPacketData(input, this.x, this.z);
+        this.lightData = new ClientboundLightUpdatePacketData(input, this.x, this.z);
     }
 
-    private void write(RegistryFriendlyByteBuf p_327690_) {
-        p_327690_.writeInt(this.x);
-        p_327690_.writeInt(this.z);
-        this.chunkData.write(p_327690_);
-        this.lightData.write(p_327690_);
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeInt(this.x);
+        output.writeInt(this.z);
+        this.chunkData.write(output);
+        this.lightData.write(output);
     }
 
     @Override
@@ -46,8 +51,8 @@ public class ClientboundLevelChunkWithLightPacket implements Packet<ClientGamePa
         return GamePacketTypes.CLIENTBOUND_LEVEL_CHUNK_WITH_LIGHT;
     }
 
-    public void handle(ClientGamePacketListener p_195716_) {
-        p_195716_.handleLevelChunkWithLight(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleLevelChunkWithLight(this);
     }
 
     public int getX() {

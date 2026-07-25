@@ -13,46 +13,46 @@ import java.util.UUID;
 import net.minecraft.util.StringUtil;
 
 public interface ProfileResolver {
-    Optional<GameProfile> fetchByName(String p_427156_);
+    Optional<GameProfile> fetchByName(String name);
 
-    Optional<GameProfile> fetchById(UUID p_423801_);
+    Optional<GameProfile> fetchById(UUID id);
 
-    default Optional<GameProfile> fetchByNameOrId(Either<String, UUID> p_422954_) {
-        return p_422954_.map(this::fetchByName, this::fetchById);
+    default Optional<GameProfile> fetchByNameOrId(final Either<String, UUID> nameOrId) {
+        return nameOrId.map(this::fetchByName, this::fetchById);
     }
 
-    public static class Cached implements ProfileResolver {
+    class Cached implements ProfileResolver {
         private final LoadingCache<String, Optional<GameProfile>> profileCacheByName;
-        final LoadingCache<UUID, Optional<GameProfile>> profileCacheById;
+        private final LoadingCache<UUID, Optional<GameProfile>> profileCacheById;
 
-        public Cached(final MinecraftSessionService p_425621_, final UserNameToIdResolver p_426272_) {
+        public Cached(final MinecraftSessionService sessionService, final UserNameToIdResolver nameToIdCache) {
             this.profileCacheById = CacheBuilder.newBuilder()
                 .expireAfterAccess(Duration.ofMinutes(10L))
                 .maximumSize(256L)
                 .build(new CacheLoader<UUID, Optional<GameProfile>>() {
-                    public Optional<GameProfile> load(UUID p_430979_) {
-                        ProfileResult profileresult = p_425621_.fetchProfile(p_430979_, true);
-                        return Optional.ofNullable(profileresult).map(ProfileResult::profile);
+                    public Optional<GameProfile> load(final UUID profileId) {
+                        ProfileResult result = sessionService.fetchProfile(profileId, true);
+                        return Optional.ofNullable(result).map(ProfileResult::profile);
                     }
                 });
             this.profileCacheByName = CacheBuilder.newBuilder()
                 .expireAfterAccess(Duration.ofMinutes(10L))
                 .maximumSize(256L)
                 .build(new CacheLoader<String, Optional<GameProfile>>() {
-                    public Optional<GameProfile> load(String p_429387_) {
-                        return p_426272_.get(p_429387_).flatMap(p_423118_ -> Cached.this.profileCacheById.getUnchecked(p_423118_.id()));
+                    public Optional<GameProfile> load(final String name) {
+                        return nameToIdCache.get(name).flatMap(nameAndId -> Cached.this.profileCacheById.getUnchecked(nameAndId.id()));
                     }
                 });
         }
 
         @Override
-        public Optional<GameProfile> fetchByName(String p_422916_) {
-            return StringUtil.isValidPlayerName(p_422916_) ? this.profileCacheByName.getUnchecked(p_422916_) : Optional.empty();
+        public Optional<GameProfile> fetchByName(final String name) {
+            return StringUtil.isValidPlayerName(name) ? this.profileCacheByName.getUnchecked(name) : Optional.empty();
         }
 
         @Override
-        public Optional<GameProfile> fetchById(UUID p_425059_) {
-            return this.profileCacheById.getUnchecked(p_425059_);
+        public Optional<GameProfile> fetchById(final UUID id) {
+            return this.profileCacheById.getUnchecked(id);
         }
     }
 }

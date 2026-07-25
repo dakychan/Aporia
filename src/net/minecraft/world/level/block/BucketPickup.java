@@ -10,7 +10,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
 public interface BucketPickup {
-    ItemStack pickupBlock(@Nullable LivingEntity p_391402_, LevelAccessor p_152719_, BlockPos p_152720_, BlockState p_152721_);
+    ItemStack pickupBlock(@Nullable LivingEntity user, LevelAccessor level, BlockPos pos, BlockState state);
 
     Optional<SoundEvent> getPickupSound();
 }

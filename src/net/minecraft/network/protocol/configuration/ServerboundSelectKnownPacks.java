@@ -18,7 +18,7 @@ public record ServerboundSelectKnownPacks(List<KnownPack> knownPacks) implements
         return ConfigurationPacketTypes.SERVERBOUND_SELECT_KNOWN_PACKS;
     }
 
-    public void handle(ServerConfigurationPacketListener p_331579_) {
-        p_331579_.handleSelectKnownPacks(this);
+    public void handle(final ServerConfigurationPacketListener listener) {
+        listener.handleSelectKnownPacks(this);
     }
 }

@@ -20,25 +20,25 @@ import net.minecraft.world.level.levelgen.Aquifer;
 public record ConfiguredWorldCarver<WC extends CarverConfiguration>(WorldCarver<WC> worldCarver, WC config) {
     public static final Codec<ConfiguredWorldCarver<?>> DIRECT_CODEC = BuiltInRegistries.CARVER
         .byNameCodec()
-        .dispatch(p_64867_ -> p_64867_.worldCarver, WorldCarver::configuredCodec);
+        .dispatch(c -> c.worldCarver, WorldCarver::configuredCodec);
     public static final Codec<Holder<ConfiguredWorldCarver<?>>> CODEC = RegistryFileCodec.create(Registries.CONFIGURED_CARVER, DIRECT_CODEC);
     public static final Codec<HolderSet<ConfiguredWorldCarver<?>>> LIST_CODEC = RegistryCodecs.homogeneousList(Registries.CONFIGURED_CARVER, DIRECT_CODEC);
 
-    public boolean isStartChunk(RandomSource p_224897_) {
-        return this.worldCarver.isStartChunk(this.config, p_224897_);
+    public boolean isStartChunk(final RandomSource random) {
+        return this.worldCarver.isStartChunk(this.config, random);
     }
 
     public boolean carve(
-        CarvingContext p_224899_,
-        ChunkAccess p_224900_,
-        Function<BlockPos, Holder<Biome>> p_224901_,
-        RandomSource p_224902_,
-        Aquifer p_224903_,
-        ChunkPos p_224904_,
-        CarvingMask p_224905_
+        final CarvingContext context,
+        final ChunkAccess chunk,
+        final Function<BlockPos, Holder<Biome>> biomeGetter,
+        final RandomSource random,
+        final Aquifer aquifer,
+        final ChunkPos sourceChunkPos,
+        final CarvingMask mask
     ) {
-        return SharedConstants.debugVoidTerrain(p_224900_.getPos())
+        return SharedConstants.debugVoidTerrain(chunk.getPos())
             ? false
-            : this.worldCarver.carve(p_224899_, this.config, p_224900_, p_224901_, p_224902_, p_224903_, p_224904_, p_224905_);
+            : this.worldCarver.carve(context, this.config, chunk, biomeGetter, random, aquifer, sourceChunkPos, mask);
     }
 }

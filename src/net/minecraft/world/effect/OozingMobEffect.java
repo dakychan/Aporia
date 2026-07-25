@@ -10,9 +10,9 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Slime;
+import net.minecraft.world.entity.monster.cubemob.Slime;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.gamerules.GameRules;
 
@@ -21,47 +21,47 @@ class OozingMobEffect extends MobEffect {
     public static final int SLIME_SIZE = 2;
     private final ToIntFunction<RandomSource> spawnedCount;
 
-    protected OozingMobEffect(MobEffectCategory p_333140_, int p_332642_, ToIntFunction<RandomSource> p_334869_) {
-        super(p_333140_, p_332642_, ParticleTypes.ITEM_SLIME);
-        this.spawnedCount = p_334869_;
+    protected OozingMobEffect(final MobEffectCategory category, final int color, final ToIntFunction<RandomSource> spawnedCount) {
+        super(category, color, ParticleTypes.ITEM_SLIME);
+        this.spawnedCount = spawnedCount;
     }
 
     @VisibleForTesting
-    protected static int numberOfSlimesToSpawn(int p_329727_, OozingMobEffect.NearbySlimes p_343265_, int p_333663_) {
-        return p_329727_ < 1 ? p_333663_ : Mth.clamp(0, p_329727_ - p_343265_.count(p_329727_), p_333663_);
+    protected static int numberOfSlimesToSpawn(final int maxEntityCramming, final OozingMobEffect.NearbySlimes nearbySlimes, final int numberRequested) {
+        return maxEntityCramming < 1 ? numberRequested : Mth.clamp(0, maxEntityCramming - nearbySlimes.count(maxEntityCramming), numberRequested);
     }
 
     @Override
-    public void onMobRemoved(ServerLevel p_362223_, LivingEntity p_329549_, int p_329953_, Entity.RemovalReason p_332875_) {
-        if (p_332875_ == Entity.RemovalReason.KILLED) {
-            int i = this.spawnedCount.applyAsInt(p_329549_.getRandom());
-            int j = p_362223_.getGameRules().get(GameRules.MAX_ENTITY_CRAMMING);
-            int k = numberOfSlimesToSpawn(j, OozingMobEffect.NearbySlimes.closeTo(p_329549_), i);
+    public void onMobRemoved(final ServerLevel level, final LivingEntity mob, final int amplifier, final Entity.RemovalReason reason) {
+        if (reason == Entity.RemovalReason.KILLED) {
+            int requestedSlimesToSpawn = this.spawnedCount.applyAsInt(mob.getRandom());
+            int maxEntityCramming = level.getGameRules().get(GameRules.MAX_ENTITY_CRAMMING);
+            int numberOfSlimesToSpawn = numberOfSlimesToSpawn(maxEntityCramming, OozingMobEffect.NearbySlimes.closeTo(mob), requestedSlimesToSpawn);
 
-            for (int l = 0; l < k; l++) {
-                this.spawnSlimeOffspring(p_329549_.level(), p_329549_.getX(), p_329549_.getY() + 0.5, p_329549_.getZ());
+            for (int i = 0; i < numberOfSlimesToSpawn; i++) {
+                this.spawnSlimeOffspring(mob.level(), mob.getX(), mob.getY() + 0.5, mob.getZ());
             }
         }
     }
 
-    private void spawnSlimeOffspring(Level p_335546_, double p_331630_, double p_328143_, double p_332724_) {
-        Slime slime = EntityType.SLIME.create(p_335546_, EntitySpawnReason.TRIGGERED);
+    private void spawnSlimeOffspring(final Level level, final double x, final double y, final double z) {
+        Slime slime = EntityTypes.SLIME.create(level, EntitySpawnReason.TRIGGERED);
         if (slime != null) {
             slime.setSize(2, true);
-            slime.snapTo(p_331630_, p_328143_, p_332724_, p_335546_.getRandom().nextFloat() * 360.0F, 0.0F);
-            p_335546_.addFreshEntity(slime);
+            slime.snapTo(x, y, z, level.getRandom().nextFloat() * 360.0F, 0.0F);
+            level.addFreshEntity(slime);
         }
     }
 
     @FunctionalInterface
     protected interface NearbySlimes {
-        int count(int p_344907_);
+        int count(final int maxResults);
 
-        static OozingMobEffect.NearbySlimes closeTo(LivingEntity p_342828_) {
-            return p_449381_ -> {
-                List<Slime> list = new ArrayList<>();
-                p_342828_.level().getEntities(EntityType.SLIME, p_342828_.getBoundingBox().inflate(2.0), p_344894_ -> p_344894_ != p_342828_, list, p_449381_);
-                return list.size();
+        private static OozingMobEffect.NearbySlimes closeTo(final LivingEntity mob) {
+            return maxResults -> {
+                List<Slime> slimesNearby = new ArrayList<>();
+                mob.level().getEntities(EntityTypes.SLIME, mob.getBoundingBox().inflate(2.0), slime -> slime != mob, slimesNearby, maxResults);
+                return slimesNearby.size();
             };
         }
     }

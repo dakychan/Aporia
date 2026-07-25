@@ -7,7 +7,7 @@ import net.minecraft.world.item.crafting.Recipe;
 import org.jspecify.annotations.Nullable;
 
 public interface RecipeOutput {
-    void accept(ResourceKey<Recipe<?>> p_367162_, Recipe<?> p_360758_, @Nullable AdvancementHolder p_361155_);
+    void accept(ResourceKey<Recipe<?>> id, Recipe<?> recipe, @Nullable AdvancementHolder advancement);
 
     Advancement.Builder advancement();
 

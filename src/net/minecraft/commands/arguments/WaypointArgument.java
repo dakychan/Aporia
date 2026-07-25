@@ -11,9 +11,9 @@ import net.minecraft.world.waypoints.WaypointTransmitter;
 public class WaypointArgument {
     public static final SimpleCommandExceptionType ERROR_NOT_A_WAYPOINT = new SimpleCommandExceptionType(Component.translatable("argument.waypoint.invalid"));
 
-    public static WaypointTransmitter getWaypoint(CommandContext<CommandSourceStack> p_408148_, String p_405913_) throws CommandSyntaxException {
-        if (p_408148_.getArgument(p_405913_, EntitySelector.class).findSingleEntity(p_408148_.getSource()) instanceof WaypointTransmitter waypointtransmitter) {
-            return waypointtransmitter;
+    public static WaypointTransmitter getWaypoint(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        if (context.getArgument(name, EntitySelector.class).findSingleEntity(context.getSource()) instanceof WaypointTransmitter waypointTransmitter) {
+            return waypointTransmitter;
         } else {
             throw ERROR_NOT_A_WAYPOINT.create();
         }

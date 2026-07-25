@@ -3,7 +3,6 @@ package net.minecraft.world.item.enchantment.effects;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.functions.CommandFunction;
@@ -20,23 +19,23 @@ import org.slf4j.Logger;
 public record RunFunction(Identifier function) implements EnchantmentEntityEffect {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final MapCodec<RunFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_449870_ -> p_449870_.group(Identifier.CODEC.fieldOf("function").forGetter(RunFunction::function)).apply(p_449870_, RunFunction::new)
+        i -> i.group(Identifier.CODEC.fieldOf("function").forGetter(RunFunction::function)).apply(i, RunFunction::new)
     );
 
     @Override
-    public void apply(ServerLevel p_344815_, int p_342426_, EnchantedItemInUse p_343415_, Entity p_344692_, Vec3 p_344054_) {
-        MinecraftServer minecraftserver = p_344815_.getServer();
-        ServerFunctionManager serverfunctionmanager = minecraftserver.getFunctions();
-        Optional<CommandFunction<CommandSourceStack>> optional = serverfunctionmanager.get(this.function);
-        if (optional.isPresent()) {
-            CommandSourceStack commandsourcestack = minecraftserver.createCommandSourceStack()
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        MinecraftServer server = serverLevel.getServer();
+        ServerFunctionManager functions = server.getFunctions();
+        Optional<CommandFunction<CommandSourceStack>> function = functions.get(this.function);
+        if (function.isPresent()) {
+            CommandSourceStack source = server.createCommandSourceStack()
                 .withPermission(LevelBasedPermissionSet.GAMEMASTER)
                 .withSuppressedOutput()
-                .withEntity(p_344692_)
-                .withLevel(p_344815_)
-                .withPosition(p_344054_)
-                .withRotation(p_344692_.getRotationVector());
-            serverfunctionmanager.execute(optional.get(), commandsourcestack);
+                .withEntity(entity)
+                .withLevel(serverLevel)
+                .withPosition(position)
+                .withRotation(entity.getRotationVector());
+            functions.execute(function.get(), source);
         } else {
             LOGGER.error("Enchantment run_function effect failed for non-existent function {}", this.function);
         }

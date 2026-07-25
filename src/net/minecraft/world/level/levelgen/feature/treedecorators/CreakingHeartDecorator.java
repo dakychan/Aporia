@@ -12,17 +12,16 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CreakingHeartBlock;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.CreakingHeartState;
 
 public class CreakingHeartDecorator extends TreeDecorator {
     public static final MapCodec<CreakingHeartDecorator> CODEC = Codec.floatRange(0.0F, 1.0F)
         .fieldOf("probability")
-        .xmap(CreakingHeartDecorator::new, p_364526_ -> p_364526_.probability);
+        .xmap(CreakingHeartDecorator::new, d -> d.probability);
     private final float probability;
 
-    public CreakingHeartDecorator(float p_363257_) {
-        this.probability = p_363257_;
+    public CreakingHeartDecorator(final float probability) {
+        this.probability = probability;
     }
 
     @Override
@@ -31,25 +30,25 @@ public class CreakingHeartDecorator extends TreeDecorator {
     }
 
     @Override
-    public void place(TreeDecorator.Context p_363618_) {
-        RandomSource randomsource = p_363618_.random();
-        List<BlockPos> list = p_363618_.logs();
-        if (!list.isEmpty()) {
-            if (!(randomsource.nextFloat() >= this.probability)) {
-                List<BlockPos> list1 = new ArrayList<>(list);
-                Util.shuffle(list1, randomsource);
-                Optional<BlockPos> optional = list1.stream().filter(p_368858_ -> {
-                    for (Direction direction : Direction.values()) {
-                        if (!p_363618_.checkBlock(p_368858_.relative(direction), p_368826_ -> p_368826_.is(BlockTags.LOGS))) {
+    public void place(final TreeDecorator.Context context) {
+        RandomSource random = context.random();
+        List<BlockPos> logs = context.logs();
+        if (!logs.isEmpty()) {
+            if (!(random.nextFloat() >= this.probability)) {
+                List<BlockPos> heartPlacements = new ArrayList<>(logs);
+                Util.shuffle(heartPlacements, random);
+                Optional<BlockPos> targetPos = heartPlacements.stream().filter(pos -> {
+                    for (Direction dir : Direction.values()) {
+                        if (!context.checkBlock(pos.relative(dir), state -> state.is(BlockTags.LOGS))) {
                             return false;
                         }
                     }
 
                     return true;
                 }).findFirst();
-                if (!optional.isEmpty()) {
-                    p_363618_.setBlock(
-                        optional.get(),
+                if (!targetPos.isEmpty()) {
+                    context.setBlock(
+                        targetPos.get(),
                         Blocks.CREAKING_HEART
                             .defaultBlockState()
                             .setValue(CreakingHeartBlock.STATE, CreakingHeartState.DORMANT)

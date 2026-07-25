@@ -5,18 +5,15 @@ import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class WarmCowModel extends CowModel {
-    public WarmCowModel(ModelPart p_456645_) {
-        super(p_456645_);
+    public WarmCowModel(final ModelPart root) {
+        super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = createBaseCowModel();
-        meshdefinition.getRoot()
+        MeshDefinition mesh = createBaseCowModel();
+        mesh.getRoot()
             .addOrReplaceChild(
                 "head",
                 CubeListBuilder.create()
@@ -38,6 +35,6 @@ public class WarmCowModel extends CowModel {
                     .mirror(false),
                 PartPose.offset(0.0F, 4.0F, -8.0F)
             );
-        return LayerDefinition.create(meshdefinition, 64, 64);
+        return LayerDefinition.create(mesh, 64, 64);
     }
 }

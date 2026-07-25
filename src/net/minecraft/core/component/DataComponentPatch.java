@@ -6,7 +6,6 @@ import com.mojang.serialization.DataResult;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Reference2ObjectMaps;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Map.Entry;
@@ -22,141 +21,150 @@ import org.jspecify.annotations.Nullable;
 public final class DataComponentPatch {
     public static final DataComponentPatch EMPTY = new DataComponentPatch(Reference2ObjectMaps.emptyMap());
     public static final Codec<DataComponentPatch> CODEC = Codec.dispatchedMap(DataComponentPatch.PatchKey.CODEC, DataComponentPatch.PatchKey::valueCodec)
-        .xmap(p_330428_ -> {
-            if (p_330428_.isEmpty()) {
+        .xmap(data -> {
+            if (data.isEmpty()) {
                 return EMPTY;
-            } else {
-                Reference2ObjectMap<DataComponentType<?>, Optional<?>> reference2objectmap = new Reference2ObjectArrayMap<>(p_330428_.size());
-
-                for (Entry<DataComponentPatch.PatchKey, ?> entry : p_330428_.entrySet()) {
-                    DataComponentPatch.PatchKey datacomponentpatch$patchkey = entry.getKey();
-                    if (datacomponentpatch$patchkey.removed()) {
-                        reference2objectmap.put(datacomponentpatch$patchkey.type(), Optional.empty());
-                    } else {
-                        reference2objectmap.put(datacomponentpatch$patchkey.type(), Optional.of(entry.getValue()));
-                    }
-                }
-
-                return new DataComponentPatch(reference2objectmap);
             }
-        }, p_335950_ -> {
-            Reference2ObjectMap<DataComponentPatch.PatchKey, Object> reference2objectmap = new Reference2ObjectArrayMap<>(p_335950_.map.size());
 
-            for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(p_335950_.map)) {
-                DataComponentType<?> datacomponenttype = entry.getKey();
-                if (!datacomponenttype.isTransient()) {
-                    Optional<?> optional = entry.getValue();
-                    if (optional.isPresent()) {
-                        reference2objectmap.put(new DataComponentPatch.PatchKey(datacomponenttype, false), optional.get());
-                    } else {
-                        reference2objectmap.put(new DataComponentPatch.PatchKey(datacomponenttype, true), Unit.INSTANCE);
-                    }
+            Reference2ObjectMap<DataComponentType<?>, Optional<?>> map = new Reference2ObjectArrayMap<>(data.size());
+
+            for (Entry<DataComponentPatch.PatchKey, ?> entry : data.entrySet()) {
+                DataComponentPatch.PatchKey key = entry.getKey();
+                if (key.removed()) {
+                    map.put(key.type(), Optional.empty());
+                } else {
+                    map.put(key.type(), Optional.of(entry.getValue()));
                 }
             }
 
-            return (Reference2ObjectMap)reference2objectmap;
+            return new DataComponentPatch(map);
+        }, patch -> {
+            Reference2ObjectMap<DataComponentPatch.PatchKey, Object> map = new Reference2ObjectArrayMap<>(patch.map.size());
+
+            for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(patch.map)) {
+                DataComponentType<?> type = entry.getKey();
+                if (!type.isTransient()) {
+                    Optional<?> value = entry.getValue();
+                    if (value.isPresent()) {
+                        map.put(new DataComponentPatch.PatchKey(type, false), value.get());
+                    } else {
+                        map.put(new DataComponentPatch.PatchKey(type, true), Unit.INSTANCE);
+                    }
+                }
+            }
+
+            return (Reference2ObjectMap)map;
         });
     public static final StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> STREAM_CODEC = createStreamCodec(new DataComponentPatch.CodecGetter() {
         @Override
-        public <T> StreamCodec<RegistryFriendlyByteBuf, T> apply(DataComponentType<T> p_397940_) {
-            return p_397940_.streamCodec().cast();
+        public <T> StreamCodec<RegistryFriendlyByteBuf, T> apply(final DataComponentType<T> type) {
+            return type.streamCodec().cast();
         }
     });
-    public static final StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> DELIMITED_STREAM_CODEC = createStreamCodec(new DataComponentPatch.CodecGetter() {
-        @Override
-        public <T> StreamCodec<RegistryFriendlyByteBuf, T> apply(DataComponentType<T> p_392185_) {
-            StreamCodec<RegistryFriendlyByteBuf, T> streamcodec = p_392185_.streamCodec().cast();
-            return streamcodec.apply(ByteBufCodecs.registryFriendlyLengthPrefixed(Integer.MAX_VALUE));
+    public static final StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> DELIMITED_STREAM_CODEC = createStreamCodec(
+        new DataComponentPatch.CodecGetter() {
+            @Override
+            public <T> StreamCodec<RegistryFriendlyByteBuf, T> apply(final DataComponentType<T> type) {
+                StreamCodec<RegistryFriendlyByteBuf, T> original = type.streamCodec().cast();
+                return original.apply(ByteBufCodecs.registryFriendlyLengthPrefixed(Integer.MAX_VALUE));
+            }
         }
-    });
+    );
     private static final String REMOVED_PREFIX = "!";
     final Reference2ObjectMap<DataComponentType<?>, Optional<?>> map;
 
-    private static StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> createStreamCodec(final DataComponentPatch.CodecGetter p_395003_) {
+    private static StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> createStreamCodec(final DataComponentPatch.CodecGetter codecGetter) {
         return new StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch>() {
-            public DataComponentPatch decode(RegistryFriendlyByteBuf p_394008_) {
-                int i = p_394008_.readVarInt();
-                int j = p_394008_.readVarInt();
-                if (i == 0 && j == 0) {
+            public DataComponentPatch decode(final RegistryFriendlyByteBuf input) {
+                int positiveCount = input.readVarInt();
+                int negativeCount = input.readVarInt();
+                if (positiveCount == 0 && negativeCount == 0) {
                     return DataComponentPatch.EMPTY;
-                } else {
-                    int k = i + j;
-                    Reference2ObjectMap<DataComponentType<?>, Optional<?>> reference2objectmap = new Reference2ObjectArrayMap<>(Math.min(k, 65536));
-
-                    for (int l = 0; l < i; l++) {
-                        DataComponentType<?> datacomponenttype = DataComponentType.STREAM_CODEC.decode(p_394008_);
-                        Object object = p_395003_.apply(datacomponenttype).decode(p_394008_);
-                        reference2objectmap.put(datacomponenttype, Optional.of(object));
-                    }
-
-                    for (int i1 = 0; i1 < j; i1++) {
-                        DataComponentType<?> datacomponenttype1 = DataComponentType.STREAM_CODEC.decode(p_394008_);
-                        reference2objectmap.put(datacomponenttype1, Optional.empty());
-                    }
-
-                    return new DataComponentPatch(reference2objectmap);
                 }
+
+                int expectedSize = positiveCount + negativeCount;
+                Reference2ObjectMap<DataComponentType<?>, Optional<?>> map = new Reference2ObjectArrayMap<>(Math.min(expectedSize, 65536));
+
+                for (int i = 0; i < positiveCount; i++) {
+                    DataComponentType<?> type = DataComponentType.STREAM_CODEC.decode(input);
+                    Object value = codecGetter.apply(type).decode(input);
+                    map.put(type, Optional.of(value));
+                }
+
+                for (int i = 0; i < negativeCount; i++) {
+                    DataComponentType<?> type = DataComponentType.STREAM_CODEC.decode(input);
+                    map.put(type, Optional.empty());
+                }
+
+                return new DataComponentPatch(map);
             }
 
-            public void encode(RegistryFriendlyByteBuf p_393727_, DataComponentPatch p_394312_) {
-                if (p_394312_.isEmpty()) {
-                    p_393727_.writeVarInt(0);
-                    p_393727_.writeVarInt(0);
+            public void encode(final RegistryFriendlyByteBuf output, final DataComponentPatch patch) {
+                if (patch.isEmpty()) {
+                    output.writeVarInt(0);
+                    output.writeVarInt(0);
                 } else {
-                    int i = 0;
-                    int j = 0;
+                    int positiveCount = 0;
+                    int negativeCount = 0;
 
                     for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(
-                        p_394312_.map
+                        patch.map
                     )) {
                         if (entry.getValue().isPresent()) {
-                            i++;
+                            positiveCount++;
                         } else {
-                            j++;
+                            negativeCount++;
                         }
                     }
 
-                    p_393727_.writeVarInt(i);
-                    p_393727_.writeVarInt(j);
+                    output.writeVarInt(positiveCount);
+                    output.writeVarInt(negativeCount);
 
-                    for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry1 : Reference2ObjectMaps.fastIterable(
-                        p_394312_.map
+                    for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(
+                        patch.map
                     )) {
-                        Optional<?> optional = entry1.getValue();
-                        if (optional.isPresent()) {
-                            DataComponentType<?> datacomponenttype = entry1.getKey();
-                            DataComponentType.STREAM_CODEC.encode(p_393727_, datacomponenttype);
-                            this.encodeComponent(p_393727_, datacomponenttype, optional.get());
+                        Optional<?> value = entry.getValue();
+                        if (value.isPresent()) {
+                            DataComponentType<?> type = entry.getKey();
+                            DataComponentType.STREAM_CODEC.encode(output, type);
+                            this.encodeComponent(output, type, value.get());
                         }
                     }
 
-                    for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry2 : Reference2ObjectMaps.fastIterable(
-                        p_394312_.map
+                    for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(
+                        patch.map
                     )) {
-                        if (entry2.getValue().isEmpty()) {
-                            DataComponentType<?> datacomponenttype1 = entry2.getKey();
-                            DataComponentType.STREAM_CODEC.encode(p_393727_, datacomponenttype1);
+                        if (entry.getValue().isEmpty()) {
+                            DataComponentType<?> type = entry.getKey();
+                            DataComponentType.STREAM_CODEC.encode(output, type);
                         }
                     }
                 }
             }
 
-            private <T> void encodeComponent(RegistryFriendlyByteBuf p_391817_, DataComponentType<T> p_392724_, Object p_397568_) {
-                p_395003_.apply(p_392724_).encode(p_391817_, (T)p_397568_);
+            private <T> void encodeComponent(final RegistryFriendlyByteBuf output, final DataComponentType<T> type, final Object value) {
+                codecGetter.apply(type).encode(output, (T)value);
             }
         };
     }
 
-    DataComponentPatch(Reference2ObjectMap<DataComponentType<?>, Optional<?>> p_329783_) {
-        this.map = p_329783_;
+    DataComponentPatch(final Reference2ObjectMap<DataComponentType<?>, Optional<?>> map) {
+        this.map = map;
     }
 
     public static DataComponentPatch.Builder builder() {
         return new DataComponentPatch.Builder();
     }
 
-    public <T> @Nullable Optional<? extends T> get(DataComponentType<? extends T> p_330742_) {
-        return (Optional<? extends T>)this.map.get(p_330742_);
+    public <T> @Nullable T get(final DataComponentGetter prototype, final DataComponentType<? extends T> type) {
+        return getFromPatchAndPrototype(this.map, prototype, type);
+    }
+
+    static <T> @Nullable T getFromPatchAndPrototype(
+        final Reference2ObjectMap<DataComponentType<?>, Optional<?>> patch, final DataComponentGetter prototype, final DataComponentType<? extends T> type
+    ) {
+        Optional<? extends T> value = (Optional<? extends T>)patch.get(type);
+        return (T)(value != null ? value.orElse(null) : prototype.get(type));
     }
 
     public Set<Entry<DataComponentType<?>, Optional<?>>> entrySet() {
@@ -167,14 +175,14 @@ public final class DataComponentPatch {
         return this.map.size();
     }
 
-    public DataComponentPatch forget(Predicate<DataComponentType<?>> p_333810_) {
+    public DataComponentPatch forget(final Predicate<DataComponentType<?>> test) {
         if (this.isEmpty()) {
             return EMPTY;
-        } else {
-            Reference2ObjectMap<DataComponentType<?>, Optional<?>> reference2objectmap = new Reference2ObjectArrayMap<>(this.map);
-            reference2objectmap.keySet().removeIf(p_333810_);
-            return reference2objectmap.isEmpty() ? EMPTY : new DataComponentPatch(reference2objectmap);
         }
+
+        Reference2ObjectMap<DataComponentType<?>, Optional<?>> newMap = new Reference2ObjectArrayMap<>(this.map);
+        newMap.keySet().removeIf(test);
+        return newMap.isEmpty() ? EMPTY : new DataComponentPatch(newMap);
     }
 
     public boolean isEmpty() {
@@ -184,23 +192,23 @@ public final class DataComponentPatch {
     public DataComponentPatch.SplitResult split() {
         if (this.isEmpty()) {
             return DataComponentPatch.SplitResult.EMPTY;
-        } else {
-            DataComponentMap.Builder datacomponentmap$builder = DataComponentMap.builder();
-            Set<DataComponentType<?>> set = Sets.newIdentityHashSet();
-            this.map.forEach((p_336136_, p_328765_) -> {
-                if (p_328765_.isPresent()) {
-                    datacomponentmap$builder.setUnchecked((DataComponentType<?>)p_336136_, p_328765_.get());
-                } else {
-                    set.add((DataComponentType<?>)p_336136_);
-                }
-            });
-            return new DataComponentPatch.SplitResult(datacomponentmap$builder.build(), set);
         }
+
+        DataComponentMap.Builder added = DataComponentMap.builder();
+        Set<DataComponentType<?>> removed = Sets.newIdentityHashSet();
+        this.map.forEach((type, optionalValue) -> {
+            if (optionalValue.isPresent()) {
+                added.setUnchecked((DataComponentType<?>)type, optionalValue.get());
+            } else {
+                removed.add((DataComponentType<?>)type);
+            }
+        });
+        return new DataComponentPatch.SplitResult(added.build(), removed);
     }
 
     @Override
-    public boolean equals(Object p_334345_) {
-        return this == p_334345_ ? true : p_334345_ instanceof DataComponentPatch datacomponentpatch && this.map.equals(datacomponentpatch.map);
+    public boolean equals(final Object obj) {
+        return this == obj ? true : obj instanceof DataComponentPatch patch && this.map.equals(patch.map);
     }
 
     @Override
@@ -213,51 +221,59 @@ public final class DataComponentPatch {
         return toString(this.map);
     }
 
-    static String toString(Reference2ObjectMap<DataComponentType<?>, Optional<?>> p_335670_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        stringbuilder.append('{');
-        boolean flag = true;
+    static String toString(final Reference2ObjectMap<DataComponentType<?>, Optional<?>> map) {
+        StringBuilder builder = new StringBuilder();
+        builder.append('{');
+        boolean first = true;
 
-        for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(p_335670_)) {
-            if (flag) {
-                flag = false;
+        for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(map)) {
+            if (first) {
+                first = false;
             } else {
-                stringbuilder.append(", ");
+                builder.append(", ");
             }
 
-            Optional<?> optional = entry.getValue();
-            if (optional.isPresent()) {
-                stringbuilder.append(entry.getKey());
-                stringbuilder.append("=>");
-                stringbuilder.append(optional.get());
+            Optional<?> value = entry.getValue();
+            if (value.isPresent()) {
+                builder.append(entry.getKey());
+                builder.append("=>");
+                builder.append(value.get());
             } else {
-                stringbuilder.append("!");
-                stringbuilder.append(entry.getKey());
+                builder.append("!");
+                builder.append(entry.getKey());
             }
         }
 
-        stringbuilder.append('}');
-        return stringbuilder.toString();
+        builder.append('}');
+        return builder.toString();
     }
 
     public static class Builder {
         private final Reference2ObjectMap<DataComponentType<?>, Optional<?>> map = new Reference2ObjectArrayMap<>();
 
-        Builder() {
+        private Builder() {
         }
 
-        public <T> DataComponentPatch.Builder set(DataComponentType<T> p_329935_, T p_331578_) {
-            this.map.put(p_329935_, Optional.of(p_331578_));
+        public <T> DataComponentPatch.Builder set(final DataComponentType<T> type, final T value) {
+            this.map.put(type, Optional.of(value));
             return this;
         }
 
-        public <T> DataComponentPatch.Builder remove(DataComponentType<T> p_329018_) {
-            this.map.put(p_329018_, Optional.empty());
+        public <T> DataComponentPatch.Builder remove(final DataComponentType<T> type) {
+            this.map.put(type, Optional.empty());
             return this;
         }
 
-        public <T> DataComponentPatch.Builder set(TypedDataComponent<T> p_331095_) {
-            return this.set(p_331095_.type(), p_331095_.value());
+        public <T> DataComponentPatch.Builder set(final TypedDataComponent<T> component) {
+            return this.set(component.type(), component.value());
+        }
+
+        public <T> DataComponentPatch.Builder set(final Iterable<TypedDataComponent<?>> components) {
+            for (TypedDataComponent<?> component : components) {
+                this.set(component);
+            }
+
+            return this;
         }
 
         public DataComponentPatch build() {
@@ -266,35 +282,35 @@ public final class DataComponentPatch {
     }
 
     @FunctionalInterface
-    interface CodecGetter {
-        <T> StreamCodec<? super RegistryFriendlyByteBuf, T> apply(DataComponentType<T> p_393254_);
+    private interface CodecGetter {
+        <T> StreamCodec<? super RegistryFriendlyByteBuf, T> apply(DataComponentType<T> type);
     }
 
-    record PatchKey(DataComponentType<?> type, boolean removed) {
+    private record PatchKey(DataComponentType<?> type, boolean removed) {
         public static final Codec<DataComponentPatch.PatchKey> CODEC = Codec.STRING
             .flatXmap(
-                p_330758_ -> {
-                    boolean flag = p_330758_.startsWith("!");
-                    if (flag) {
-                        p_330758_ = p_330758_.substring("!".length());
+                string -> {
+                    boolean removed = string.startsWith("!");
+                    if (removed) {
+                        string = string.substring("!".length());
                     }
 
-                    Identifier identifier = Identifier.tryParse(p_330758_);
-                    DataComponentType<?> datacomponenttype = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(identifier);
-                    if (datacomponenttype == null) {
-                        return DataResult.error(() -> "No component with type: '" + identifier + "'");
+                    Identifier id = Identifier.tryParse(string);
+                    DataComponentType<?> type = BuiltInRegistries.DATA_COMPONENT_TYPE.getValue(id);
+                    if (type == null) {
+                        return DataResult.error(() -> "No component with type: '" + id + "'");
                     } else {
-                        return datacomponenttype.isTransient()
-                            ? DataResult.error(() -> "'" + identifier + "' is not a persistent component")
-                            : DataResult.success(new DataComponentPatch.PatchKey(datacomponenttype, flag));
+                        return type.isTransient()
+                            ? DataResult.error(() -> "'" + id + "' is not a persistent component")
+                            : DataResult.success(new DataComponentPatch.PatchKey(type, removed));
                     }
                 },
-                p_448582_ -> {
-                    DataComponentType<?> datacomponenttype = p_448582_.type();
-                    Identifier identifier = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(datacomponenttype);
-                    return identifier == null
-                        ? DataResult.error(() -> "Unregistered component: " + datacomponenttype)
-                        : DataResult.success(p_448582_.removed() ? "!" + identifier : identifier.toString());
+                key -> {
+                    DataComponentType<?> type = key.type();
+                    Identifier id = BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type);
+                    return id == null
+                        ? DataResult.error(() -> "Unregistered component: " + type)
+                        : DataResult.success(key.removed() ? "!" + id : id.toString());
                 }
             );
 

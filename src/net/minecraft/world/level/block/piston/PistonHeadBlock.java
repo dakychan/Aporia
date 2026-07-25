@@ -46,101 +46,103 @@ public class PistonHeadBlock extends DirectionalBlock {
         return CODEC;
     }
 
-    public PistonHeadBlock(BlockBehaviour.Properties p_60259_) {
-        super(p_60259_);
+    public PistonHeadBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(TYPE, PistonType.DEFAULT).setValue(SHORT, false));
     }
 
     @Override
-    protected boolean useShapeForLightOcclusion(BlockState p_60325_) {
+    protected boolean useShapeForLightOcclusion(final BlockState state) {
         return true;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_60320_, BlockGetter p_60321_, BlockPos p_60322_, CollisionContext p_60323_) {
-        return (p_60320_.getValue(SHORT) ? SHAPES_SHORT : SHAPES).get(p_60320_.getValue(FACING));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return (state.getValue(SHORT) ? SHAPES_SHORT : SHAPES).get(state.getValue(FACING));
     }
 
-    private boolean isFittingBase(BlockState p_60298_, BlockState p_60299_) {
-        Block block = p_60298_.getValue(TYPE) == PistonType.DEFAULT ? Blocks.PISTON : Blocks.STICKY_PISTON;
-        return p_60299_.is(block) && p_60299_.getValue(PistonBaseBlock.EXTENDED) && p_60299_.getValue(FACING) == p_60298_.getValue(FACING);
+    private boolean isFittingBase(final BlockState armState, final BlockState potentialBase) {
+        Block baseBlock = armState.getValue(TYPE) == PistonType.DEFAULT ? Blocks.PISTON : Blocks.STICKY_PISTON;
+        return potentialBase.is(baseBlock) && potentialBase.getValue(PistonBaseBlock.EXTENDED) && potentialBase.getValue(FACING) == armState.getValue(FACING);
     }
 
     @Override
-    public BlockState playerWillDestroy(Level p_60265_, BlockPos p_60266_, BlockState p_60267_, Player p_60268_) {
-        if (!p_60265_.isClientSide() && p_60268_.preventsBlockDrops()) {
-            BlockPos blockpos = p_60266_.relative(p_60267_.getValue(FACING).getOpposite());
-            if (this.isFittingBase(p_60267_, p_60265_.getBlockState(blockpos))) {
-                p_60265_.destroyBlock(blockpos, false);
+    public BlockState playerWillDestroy(final Level level, final BlockPos pos, final BlockState state, final Player player) {
+        if (!level.isClientSide() && player.preventsBlockDrops()) {
+            BlockPos basePos = pos.relative(state.getValue(FACING).getOpposite());
+            if (this.isFittingBase(state, level.getBlockState(basePos))) {
+                level.destroyBlock(basePos, false);
             }
         }
 
-        return super.playerWillDestroy(p_60265_, p_60266_, p_60267_, p_60268_);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_395396_, ServerLevel p_391673_, BlockPos p_396415_, boolean p_397744_) {
-        BlockPos blockpos = p_396415_.relative(p_395396_.getValue(FACING).getOpposite());
-        if (this.isFittingBase(p_395396_, p_391673_.getBlockState(blockpos))) {
-            p_391673_.destroyBlock(blockpos, true);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        BlockPos basePos = pos.relative(state.getValue(FACING).getOpposite());
+        if (this.isFittingBase(state, level.getBlockState(basePos))) {
+            level.destroyBlock(basePos, true);
         }
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_60301_,
-        LevelReader p_369952_,
-        ScheduledTickAccess p_368902_,
-        BlockPos p_60305_,
-        Direction p_60302_,
-        BlockPos p_60306_,
-        BlockState p_60303_,
-        RandomSource p_364503_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_60302_.getOpposite() == p_60301_.getValue(FACING) && !p_60301_.canSurvive(p_369952_, p_60305_)
+        return directionToNeighbour.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_60301_, p_369952_, p_368902_, p_60305_, p_60302_, p_60306_, p_60303_, p_364503_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_60288_, LevelReader p_60289_, BlockPos p_60290_) {
-        BlockState blockstate = p_60289_.getBlockState(p_60290_.relative(p_60288_.getValue(FACING).getOpposite()));
-        return this.isFittingBase(p_60288_, blockstate) || blockstate.is(Blocks.MOVING_PISTON) && blockstate.getValue(FACING) == p_60288_.getValue(FACING);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockState base = level.getBlockState(pos.relative(state.getValue(FACING).getOpposite()));
+        return this.isFittingBase(state, base) || base.is(Blocks.MOVING_PISTON) && base.getValue(FACING) == state.getValue(FACING);
     }
 
     @Override
-    protected void neighborChanged(BlockState p_60275_, Level p_60276_, BlockPos p_60277_, Block p_60278_, @Nullable Orientation p_360849_, boolean p_60280_) {
-        if (p_60275_.canSurvive(p_60276_, p_60277_)) {
-            p_60276_.neighborChanged(
-                p_60277_.relative(p_60275_.getValue(FACING).getOpposite()),
-                p_60278_,
-                ExperimentalRedstoneUtils.withFront(p_360849_, p_60275_.getValue(FACING).getOpposite())
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        if (state.canSurvive(level, pos)) {
+            level.neighborChanged(
+                pos.relative(state.getValue(FACING).getOpposite()),
+                block,
+                ExperimentalRedstoneUtils.withFront(orientation, state.getValue(FACING).getOpposite())
             );
         }
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_312951_, BlockPos p_60262_, BlockState p_60263_, boolean p_377775_) {
-        return new ItemStack(p_60263_.getValue(TYPE) == PistonType.STICKY ? Blocks.STICKY_PISTON : Blocks.PISTON);
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
+        return new ItemStack(state.getValue(TYPE) == PistonType.STICKY ? Blocks.STICKY_PISTON : Blocks.PISTON);
     }
 
     @Override
-    protected BlockState rotate(BlockState p_60295_, Rotation p_60296_) {
-        return p_60295_.setValue(FACING, p_60296_.rotate(p_60295_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_60292_, Mirror p_60293_) {
-        return p_60292_.rotate(p_60293_.getRotation(p_60292_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_60308_) {
-        p_60308_.add(FACING, TYPE, SHORT);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, TYPE, SHORT);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_60270_, PathComputationType p_60273_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

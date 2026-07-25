@@ -2,7 +2,7 @@ package net.minecraft.world.entity.player;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
+import net.minecraft.util.ExtraCodecs;
 
 public class Abilities {
     private static final boolean DEFAULT_INVULNERABLE = false;
@@ -24,44 +24,44 @@ public class Abilities {
         return this.flyingSpeed;
     }
 
-    public void setFlyingSpeed(float p_35944_) {
-        this.flyingSpeed = p_35944_;
+    public void setFlyingSpeed(final float value) {
+        this.flyingSpeed = value;
     }
 
     public float getWalkingSpeed() {
         return this.walkingSpeed;
     }
 
-    public void setWalkingSpeed(float p_35949_) {
-        this.walkingSpeed = p_35949_;
+    public void setWalkingSpeed(final float value) {
+        this.walkingSpeed = value;
     }
 
     public Abilities.Packed pack() {
         return new Abilities.Packed(this.invulnerable, this.flying, this.mayfly, this.instabuild, this.mayBuild, this.flyingSpeed, this.walkingSpeed);
     }
 
-    public void apply(Abilities.Packed p_409414_) {
-        this.invulnerable = p_409414_.invulnerable;
-        this.flying = p_409414_.flying;
-        this.mayfly = p_409414_.mayFly;
-        this.instabuild = p_409414_.instabuild;
-        this.mayBuild = p_409414_.mayBuild;
-        this.flyingSpeed = p_409414_.flyingSpeed;
-        this.walkingSpeed = p_409414_.walkingSpeed;
+    public void apply(final Abilities.Packed packed) {
+        this.invulnerable = packed.invulnerable;
+        this.flying = packed.flying;
+        this.mayfly = packed.mayFly;
+        this.instabuild = packed.instabuild;
+        this.mayBuild = packed.mayBuild;
+        this.flyingSpeed = packed.flyingSpeed;
+        this.walkingSpeed = packed.walkingSpeed;
     }
 
     public record Packed(boolean invulnerable, boolean flying, boolean mayFly, boolean instabuild, boolean mayBuild, float flyingSpeed, float walkingSpeed) {
         public static final Codec<Abilities.Packed> CODEC = RecordCodecBuilder.create(
-            p_409712_ -> p_409712_.group(
-                    Codec.BOOL.fieldOf("invulnerable").orElse(false).forGetter(Abilities.Packed::invulnerable),
-                    Codec.BOOL.fieldOf("flying").orElse(false).forGetter(Abilities.Packed::flying),
-                    Codec.BOOL.fieldOf("mayfly").orElse(false).forGetter(Abilities.Packed::mayFly),
-                    Codec.BOOL.fieldOf("instabuild").orElse(false).forGetter(Abilities.Packed::instabuild),
-                    Codec.BOOL.fieldOf("mayBuild").orElse(true).forGetter(Abilities.Packed::mayBuild),
-                    Codec.FLOAT.fieldOf("flySpeed").orElse(0.05F).forGetter(Abilities.Packed::flyingSpeed),
-                    Codec.FLOAT.fieldOf("walkSpeed").orElse(0.1F).forGetter(Abilities.Packed::walkingSpeed)
+            i -> i.group(
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.BOOL, "invulnerable", false).forGetter(Abilities.Packed::invulnerable),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.BOOL, "flying", false).forGetter(Abilities.Packed::flying),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.BOOL, "mayfly", false).forGetter(Abilities.Packed::mayFly),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.BOOL, "instabuild", false).forGetter(Abilities.Packed::instabuild),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.BOOL, "mayBuild", true).forGetter(Abilities.Packed::mayBuild),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.FLOAT, "flySpeed", 0.05F).forGetter(Abilities.Packed::flyingSpeed),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.FLOAT, "walkSpeed", 0.1F).forGetter(Abilities.Packed::walkingSpeed)
                 )
-                .apply(p_409712_, Abilities.Packed::new)
+                .apply(i, Abilities.Packed::new)
         );
     }
 }

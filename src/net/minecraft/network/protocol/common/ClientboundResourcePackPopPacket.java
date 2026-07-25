@@ -13,12 +13,12 @@ public record ClientboundResourcePackPopPacket(Optional<UUID> id) implements Pac
         ClientboundResourcePackPopPacket::write, ClientboundResourcePackPopPacket::new
     );
 
-    private ClientboundResourcePackPopPacket(FriendlyByteBuf p_310483_) {
-        this(p_310483_.readOptional(UUIDUtil.STREAM_CODEC));
+    private ClientboundResourcePackPopPacket(final FriendlyByteBuf input) {
+        this(input.readOptional(UUIDUtil.STREAM_CODEC));
     }
 
-    private void write(FriendlyByteBuf p_311086_) {
-        p_311086_.writeOptional(this.id, UUIDUtil.STREAM_CODEC);
+    private void write(final FriendlyByteBuf output) {
+        output.writeOptional(this.id, UUIDUtil.STREAM_CODEC);
     }
 
     @Override
@@ -26,7 +26,7 @@ public record ClientboundResourcePackPopPacket(Optional<UUID> id) implements Pac
         return CommonPacketTypes.CLIENTBOUND_RESOURCE_PACK_POP;
     }
 
-    public void handle(ClientCommonPacketListener p_311428_) {
-        p_311428_.handleResourcePackPop(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleResourcePackPop(this);
     }
 }

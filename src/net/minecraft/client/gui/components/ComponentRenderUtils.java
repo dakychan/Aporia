@@ -8,31 +8,35 @@ import net.minecraft.client.ComponentCollector;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.locale.Language;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ComponentRenderUtils {
     private static final FormattedCharSequence INDENT = FormattedCharSequence.codepoint(32, Style.EMPTY);
 
-    private static String stripColor(String p_94000_) {
-        return Minecraft.getInstance().options.chatColors().get() ? p_94000_ : ChatFormatting.stripFormatting(p_94000_);
+    private static String stripColor(final String input) {
+        return Minecraft.getInstance().options.chatColors().get() ? input : ChatFormatting.stripFormatting(input);
     }
 
-    public static List<FormattedCharSequence> wrapComponents(FormattedText p_94006_, int p_94007_, Font p_94008_) {
-        ComponentCollector componentcollector = new ComponentCollector();
-        p_94006_.visit((p_93997_, p_93998_) -> {
-            componentcollector.append(FormattedText.of(stripColor(p_93998_), p_93997_));
+    public static List<FormattedCharSequence> wrapComponents(final FormattedText message, final int maxWidth, final Font font) {
+        ComponentCollector collector = new ComponentCollector();
+        message.visit((style, contents) -> {
+            collector.append(FormattedText.of(stripColor(contents), style));
             return Optional.empty();
         }, Style.EMPTY);
-        List<FormattedCharSequence> list = Lists.newArrayList();
-        p_94008_.getSplitter().splitLines(componentcollector.getResultOrEmpty(), p_94007_, Style.EMPTY, (p_94003_, p_94004_) -> {
-            FormattedCharSequence formattedcharsequence = Language.getInstance().getVisualOrder(p_94003_);
-            list.add(p_94004_ ? FormattedCharSequence.composite(INDENT, formattedcharsequence) : formattedcharsequence);
+        List<FormattedCharSequence> result = Lists.newArrayList();
+        font.getSplitter().splitLines(collector.getResultOrEmpty(), maxWidth, Style.EMPTY, (text, wrapped) -> {
+            FormattedCharSequence reorderedText = Language.getInstance().getVisualOrder(text);
+            result.add(wrapped ? FormattedCharSequence.composite(INDENT, reorderedText) : reorderedText);
         });
-        return (List<FormattedCharSequence>)(list.isEmpty() ? Lists.newArrayList(FormattedCharSequence.EMPTY) : list);
+        return result.isEmpty() ? Lists.newArrayList(FormattedCharSequence.EMPTY) : result;
+    }
+
+    public static FormattedCharSequence clipText(final Component text, final Font font, final int width) {
+        FormattedText clippedText = font.substrByWidth(text, width - font.width(CommonComponents.ELLIPSIS));
+        return Language.getInstance().getVisualOrder(FormattedText.composite(clippedText, CommonComponents.ELLIPSIS));
     }
 }

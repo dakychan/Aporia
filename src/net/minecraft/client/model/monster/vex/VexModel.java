@@ -14,10 +14,7 @@ import net.minecraft.client.renderer.entity.state.VexRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class VexModel extends EntityModel<VexRenderState> implements ArmedModel<VexRenderState> {
     private final ModelPart body = this.root.getChild("body");
     private final ModelPart rightArm = this.body.getChild("right_arm");
@@ -26,20 +23,20 @@ public class VexModel extends EntityModel<VexRenderState> implements ArmedModel<
     private final ModelPart leftWing = this.body.getChild("left_wing");
     private final ModelPart head = this.root.getChild("head");
 
-    public VexModel(ModelPart p_452203_) {
-        super(p_452203_.getChild("root"), RenderTypes::entityTranslucent);
+    public VexModel(final ModelPart root) {
+        super(root.getChild("root"), RenderTypes::entityTranslucent);
     }
 
     public static LayerDefinition createBodyLayer() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
-        PartDefinition partdefinition1 = partdefinition.addOrReplaceChild("root", CubeListBuilder.create(), PartPose.offset(0.0F, -2.5F, 0.0F));
-        partdefinition1.addOrReplaceChild(
+        PartDefinition root = partdefinition.addOrReplaceChild("root", CubeListBuilder.create(), PartPose.offset(0.0F, -2.5F, 0.0F));
+        root.addOrReplaceChild(
             "head",
             CubeListBuilder.create().texOffs(0, 0).addBox(-2.5F, -5.0F, -2.5F, 5.0F, 5.0F, 5.0F, new CubeDeformation(0.0F)),
             PartPose.offset(0.0F, 20.0F, 0.0F)
         );
-        PartDefinition partdefinition2 = partdefinition1.addOrReplaceChild(
+        PartDefinition body = root.addOrReplaceChild(
             "body",
             CubeListBuilder.create()
                 .texOffs(0, 10)
@@ -48,22 +45,22 @@ public class VexModel extends EntityModel<VexRenderState> implements ArmedModel<
                 .addBox(-1.5F, 1.0F, -1.0F, 3.0F, 5.0F, 2.0F, new CubeDeformation(-0.2F)),
             PartPose.offset(0.0F, 20.0F, 0.0F)
         );
-        partdefinition2.addOrReplaceChild(
+        body.addOrReplaceChild(
             "right_arm",
             CubeListBuilder.create().texOffs(23, 0).addBox(-1.25F, -0.5F, -1.0F, 2.0F, 4.0F, 2.0F, new CubeDeformation(-0.1F)),
             PartPose.offset(-1.75F, 0.25F, 0.0F)
         );
-        partdefinition2.addOrReplaceChild(
+        body.addOrReplaceChild(
             "left_arm",
             CubeListBuilder.create().texOffs(23, 6).addBox(-0.75F, -0.5F, -1.0F, 2.0F, 4.0F, 2.0F, new CubeDeformation(-0.1F)),
             PartPose.offset(1.75F, 0.25F, 0.0F)
         );
-        partdefinition2.addOrReplaceChild(
+        body.addOrReplaceChild(
             "left_wing",
             CubeListBuilder.create().texOffs(16, 14).mirror().addBox(0.0F, 0.0F, 0.0F, 0.0F, 5.0F, 8.0F, new CubeDeformation(0.0F)).mirror(false),
             PartPose.offset(0.5F, 1.0F, 1.0F)
         );
-        partdefinition2.addOrReplaceChild(
+        body.addOrReplaceChild(
             "right_wing",
             CubeListBuilder.create().texOffs(16, 14).addBox(0.0F, 0.0F, 0.0F, 0.0F, 5.0F, 8.0F, new CubeDeformation(0.0F)),
             PartPose.offset(-0.5F, 1.0F, 1.0F)
@@ -71,21 +68,21 @@ public class VexModel extends EntityModel<VexRenderState> implements ArmedModel<
         return LayerDefinition.create(meshdefinition, 32, 32);
     }
 
-    public void setupAnim(VexRenderState p_456194_) {
-        super.setupAnim(p_456194_);
-        this.head.yRot = p_456194_.yRot * (float) (Math.PI / 180.0);
-        this.head.xRot = p_456194_.xRot * (float) (Math.PI / 180.0);
-        float f = Mth.cos(p_456194_.ageInTicks * 5.5F * (float) (Math.PI / 180.0)) * 0.1F;
-        this.rightArm.zRot = (float) (Math.PI / 5) + f;
-        this.leftArm.zRot = -((float) (Math.PI / 5) + f);
-        if (p_456194_.isCharging) {
+    public void setupAnim(final VexRenderState state) {
+        super.setupAnim(state);
+        this.head.yRot = state.yRot * (float) (Math.PI / 180.0);
+        this.head.xRot = state.xRot * (float) (Math.PI / 180.0);
+        float movingArmZBob = Mth.cos(state.ageInTicks * 5.5F * (float) (Math.PI / 180.0)) * 0.1F;
+        this.rightArm.zRot = (float) (Math.PI / 5) + movingArmZBob;
+        this.leftArm.zRot = -((float) (Math.PI / 5) + movingArmZBob);
+        if (state.isCharging) {
             this.body.xRot = 0.0F;
-            this.setArmsCharging(!p_456194_.rightHandItemState.isEmpty(), !p_456194_.leftHandItemState.isEmpty(), f);
+            this.setArmsCharging(!state.rightHandItemState.isEmpty(), !state.leftHandItemState.isEmpty(), movingArmZBob);
         } else {
             this.body.xRot = (float) (Math.PI / 20);
         }
 
-        this.leftWing.yRot = 1.0995574F + Mth.cos(p_456194_.ageInTicks * 45.836624F * (float) (Math.PI / 180.0)) * (float) (Math.PI / 180.0) * 16.2F;
+        this.leftWing.yRot = 1.0995574F + Mth.cos(state.ageInTicks * 45.836624F * (float) (Math.PI / 180.0)) * (float) (Math.PI / 180.0) * 16.2F;
         this.rightWing.yRot = -this.leftWing.yRot;
         this.leftWing.xRot = 0.47123888F;
         this.leftWing.zRot = -0.47123888F;
@@ -93,44 +90,44 @@ public class VexModel extends EntityModel<VexRenderState> implements ArmedModel<
         this.rightWing.zRot = 0.47123888F;
     }
 
-    private void setArmsCharging(boolean p_456462_, boolean p_454818_, float p_458825_) {
-        if (!p_456462_ && !p_454818_) {
+    private void setArmsCharging(final boolean hasItemInRightHand, final boolean hasItemInLeftHand, final float movingArmZBob) {
+        if (!hasItemInRightHand && !hasItemInLeftHand) {
             this.rightArm.xRot = -1.2217305F;
             this.rightArm.yRot = (float) (Math.PI / 12);
-            this.rightArm.zRot = -0.47123888F - p_458825_;
+            this.rightArm.zRot = -0.47123888F - movingArmZBob;
             this.leftArm.xRot = -1.2217305F;
             this.leftArm.yRot = (float) (-Math.PI / 12);
-            this.leftArm.zRot = 0.47123888F + p_458825_;
+            this.leftArm.zRot = 0.47123888F + movingArmZBob;
         } else {
-            if (p_456462_) {
+            if (hasItemInRightHand) {
                 this.rightArm.xRot = (float) (Math.PI * 7.0 / 6.0);
                 this.rightArm.yRot = (float) (Math.PI / 12);
-                this.rightArm.zRot = -0.47123888F - p_458825_;
+                this.rightArm.zRot = -0.47123888F - movingArmZBob;
             }
 
-            if (p_454818_) {
+            if (hasItemInLeftHand) {
                 this.leftArm.xRot = (float) (Math.PI * 7.0 / 6.0);
                 this.leftArm.yRot = (float) (-Math.PI / 12);
-                this.leftArm.zRot = 0.47123888F + p_458825_;
+                this.leftArm.zRot = 0.47123888F + movingArmZBob;
             }
         }
     }
 
-    public void translateToHand(VexRenderState p_450432_, HumanoidArm p_452397_, PoseStack p_460231_) {
-        boolean flag = p_452397_ == HumanoidArm.RIGHT;
-        ModelPart modelpart = flag ? this.rightArm : this.leftArm;
-        this.root.translateAndRotate(p_460231_);
-        this.body.translateAndRotate(p_460231_);
-        modelpart.translateAndRotate(p_460231_);
-        p_460231_.scale(0.55F, 0.55F, 0.55F);
-        this.offsetStackPosition(p_460231_, flag);
+    public void translateToHand(final VexRenderState state, final HumanoidArm arm, final PoseStack poseStack) {
+        boolean mainArm = arm == HumanoidArm.RIGHT;
+        ModelPart activeArm = mainArm ? this.rightArm : this.leftArm;
+        this.root.translateAndRotate(poseStack);
+        this.body.translateAndRotate(poseStack);
+        activeArm.translateAndRotate(poseStack);
+        poseStack.scale(0.55F, 0.55F, 0.55F);
+        this.offsetStackPosition(poseStack, mainArm);
     }
 
-    private void offsetStackPosition(PoseStack p_454555_, boolean p_458216_) {
-        if (p_458216_) {
-            p_454555_.translate(0.046875, -0.15625, 0.078125);
+    private void offsetStackPosition(final PoseStack poseStack, final boolean mainArm) {
+        if (mainArm) {
+            poseStack.translate(0.046875, -0.15625, 0.078125);
         } else {
-            p_454555_.translate(-0.046875, -0.15625, 0.078125);
+            poseStack.translate(-0.046875, -0.15625, 0.078125);
         }
     }
 }

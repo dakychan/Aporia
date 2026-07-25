@@ -11,307 +11,296 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.StringDecomposer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.mutable.MutableFloat;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class StringSplitter {
-    final StringSplitter.WidthProvider widthProvider;
+    private final StringSplitter.WidthProvider widthProvider;
 
-    public StringSplitter(StringSplitter.WidthProvider p_92335_) {
-        this.widthProvider = p_92335_;
+    public StringSplitter(final StringSplitter.WidthProvider widthProvider) {
+        this.widthProvider = widthProvider;
     }
 
-    public float stringWidth(@Nullable String p_92354_) {
-        if (p_92354_ == null) {
+    public float stringWidth(final @Nullable String str) {
+        if (str == null) {
             return 0.0F;
-        } else {
-            MutableFloat mutablefloat = new MutableFloat();
-            StringDecomposer.iterateFormatted(p_92354_, Style.EMPTY, (p_92429_, p_92430_, p_92431_) -> {
-                mutablefloat.add(this.widthProvider.getWidth(p_92431_, p_92430_));
-                return true;
-            });
-            return mutablefloat.floatValue();
         }
-    }
 
-    public float stringWidth(FormattedText p_92385_) {
-        MutableFloat mutablefloat = new MutableFloat();
-        StringDecomposer.iterateFormatted(p_92385_, Style.EMPTY, (p_92420_, p_92421_, p_92422_) -> {
-            mutablefloat.add(this.widthProvider.getWidth(p_92422_, p_92421_));
+        MutableFloat result = new MutableFloat();
+        StringDecomposer.iterateFormatted(str, Style.EMPTY, (position, style, codepoint) -> {
+            result.add(this.widthProvider.getWidth(codepoint, style));
             return true;
         });
-        return mutablefloat.floatValue();
+        return result.floatValue();
     }
 
-    public float stringWidth(FormattedCharSequence p_92337_) {
-        MutableFloat mutablefloat = new MutableFloat();
-        p_92337_.accept((p_92400_, p_92401_, p_92402_) -> {
-            mutablefloat.add(this.widthProvider.getWidth(p_92402_, p_92401_));
+    public float stringWidth(final FormattedText text) {
+        MutableFloat result = new MutableFloat();
+        StringDecomposer.iterateFormatted(text, Style.EMPTY, (position, style, codepoint) -> {
+            result.add(this.widthProvider.getWidth(codepoint, style));
             return true;
         });
-        return mutablefloat.floatValue();
+        return result.floatValue();
     }
 
-    public int plainIndexAtWidth(String p_92361_, int p_92362_, Style p_92363_) {
-        StringSplitter.WidthLimitedCharSink stringsplitter$widthlimitedcharsink = new StringSplitter.WidthLimitedCharSink(p_92362_);
-        StringDecomposer.iterate(p_92361_, p_92363_, stringsplitter$widthlimitedcharsink);
-        return stringsplitter$widthlimitedcharsink.getPosition();
+    public float stringWidth(final FormattedCharSequence text) {
+        MutableFloat result = new MutableFloat();
+        text.accept((position, style, codepoint) -> {
+            result.add(this.widthProvider.getWidth(codepoint, style));
+            return true;
+        });
+        return result.floatValue();
     }
 
-    public String plainHeadByWidth(String p_92411_, int p_92412_, Style p_92413_) {
-        return p_92411_.substring(0, this.plainIndexAtWidth(p_92411_, p_92412_, p_92413_));
+    public int plainIndexAtWidth(final String str, final int maxWidth, final Style style) {
+        StringSplitter.WidthLimitedCharSink output = new StringSplitter.WidthLimitedCharSink(maxWidth);
+        StringDecomposer.iterate(str, style, output);
+        return output.getPosition();
     }
 
-    public String plainTailByWidth(String p_92424_, int p_92425_, Style p_92426_) {
-        MutableFloat mutablefloat = new MutableFloat();
-        MutableInt mutableint = new MutableInt(p_92424_.length());
-        StringDecomposer.iterateBackwards(p_92424_, p_92426_, (p_92407_, p_92408_, p_92409_) -> {
-            float f = mutablefloat.addAndGet(this.widthProvider.getWidth(p_92409_, p_92408_));
-            if (f > p_92425_) {
+    public String plainHeadByWidth(final String str, final int maxWidth, final Style style) {
+        return str.substring(0, this.plainIndexAtWidth(str, maxWidth, style));
+    }
+
+    public String plainTailByWidth(final String str, final int maxWidth, final Style style) {
+        MutableFloat currentWidth = new MutableFloat();
+        MutableInt result = new MutableInt(str.length());
+        StringDecomposer.iterateBackwards(str, style, (position, s, codepoint) -> {
+            float w = currentWidth.addAndGet(this.widthProvider.getWidth(codepoint, s));
+            if (w > maxWidth) {
                 return false;
-            } else {
-                mutableint.setValue(p_92407_);
-                return true;
             }
+
+            result.setValue(position);
+            return true;
         });
-        return p_92424_.substring(mutableint.intValue());
+        return str.substring(result.intValue());
     }
 
-    public FormattedText headByWidth(FormattedText p_92390_, int p_92391_, Style p_92392_) {
-        final StringSplitter.WidthLimitedCharSink stringsplitter$widthlimitedcharsink = new StringSplitter.WidthLimitedCharSink(p_92391_);
-        return p_92390_.visit(new FormattedText.StyledContentConsumer<FormattedText>() {
+    public FormattedText headByWidth(final FormattedText text, final int width, final Style initialStyle) {
+        final StringSplitter.WidthLimitedCharSink output = new StringSplitter.WidthLimitedCharSink(width);
+        return text.visit(new FormattedText.StyledContentConsumer<FormattedText>() {
             private final ComponentCollector collector = new ComponentCollector();
 
             @Override
-            public Optional<FormattedText> accept(Style p_92443_, String p_92444_) {
-                stringsplitter$widthlimitedcharsink.resetPosition();
-                if (!StringDecomposer.iterateFormatted(p_92444_, p_92443_, stringsplitter$widthlimitedcharsink)) {
-                    String s = p_92444_.substring(0, stringsplitter$widthlimitedcharsink.getPosition());
-                    if (!s.isEmpty()) {
-                        this.collector.append(FormattedText.of(s, p_92443_));
+            public Optional<FormattedText> accept(final Style style, final String contents) {
+                output.resetPosition();
+                if (!StringDecomposer.iterateFormatted(contents, style, output)) {
+                    String partial = contents.substring(0, output.getPosition());
+                    if (!partial.isEmpty()) {
+                        this.collector.append(FormattedText.of(partial, style));
                     }
 
                     return Optional.of(this.collector.getResultOrEmpty());
                 } else {
-                    if (!p_92444_.isEmpty()) {
-                        this.collector.append(FormattedText.of(p_92444_, p_92443_));
+                    if (!contents.isEmpty()) {
+                        this.collector.append(FormattedText.of(contents, style));
                     }
 
                     return Optional.empty();
                 }
             }
-        }, p_92392_).orElse(p_92390_);
+        }, initialStyle).orElse(text);
     }
 
-    public int findLineBreak(String p_168635_, int p_168636_, Style p_168637_) {
-        StringSplitter.LineBreakFinder stringsplitter$linebreakfinder = new StringSplitter.LineBreakFinder(p_168636_);
-        StringDecomposer.iterateFormatted(p_168635_, p_168637_, stringsplitter$linebreakfinder);
-        return stringsplitter$linebreakfinder.getSplitPosition();
+    public int findLineBreak(final String input, final int max, final Style initialStyle) {
+        StringSplitter.LineBreakFinder finder = new StringSplitter.LineBreakFinder(max);
+        StringDecomposer.iterateFormatted(input, initialStyle, finder);
+        return finder.getSplitPosition();
     }
 
-    public static int getWordPosition(String p_92356_, int p_92357_, int p_92358_, boolean p_92359_) {
-        int i = p_92358_;
-        boolean flag = p_92357_ < 0;
-        int j = Math.abs(p_92357_);
+    public static int getWordPosition(final String text, final int dir, final int from, final boolean stripSpaces) {
+        int result = from;
+        boolean reverse = dir < 0;
+        int abs = Math.abs(dir);
 
-        for (int k = 0; k < j; k++) {
-            if (flag) {
-                while (p_92359_ && i > 0 && (p_92356_.charAt(i - 1) == ' ' || p_92356_.charAt(i - 1) == '\n')) {
-                    i--;
+        for (int i = 0; i < abs; i++) {
+            if (reverse) {
+                while (stripSpaces && result > 0 && (text.charAt(result - 1) == ' ' || text.charAt(result - 1) == '\n')) {
+                    result--;
                 }
 
-                while (i > 0 && p_92356_.charAt(i - 1) != ' ' && p_92356_.charAt(i - 1) != '\n') {
-                    i--;
+                while (result > 0 && text.charAt(result - 1) != ' ' && text.charAt(result - 1) != '\n') {
+                    result--;
                 }
             } else {
-                int l = p_92356_.length();
-                int i1 = p_92356_.indexOf(32, i);
-                int j1 = p_92356_.indexOf(10, i);
-                if (i1 == -1 && j1 == -1) {
-                    i = -1;
-                } else if (i1 != -1 && j1 != -1) {
-                    i = Math.min(i1, j1);
-                } else if (i1 != -1) {
-                    i = i1;
+                int length = text.length();
+                int index1 = text.indexOf(32, result);
+                int index2 = text.indexOf(10, result);
+                if (index1 == -1 && index2 == -1) {
+                    result = -1;
+                } else if (index1 != -1 && index2 != -1) {
+                    result = Math.min(index1, index2);
+                } else if (index1 != -1) {
+                    result = index1;
                 } else {
-                    i = j1;
+                    result = index2;
                 }
 
-                if (i == -1) {
-                    i = l;
+                if (result == -1) {
+                    result = length;
                 } else {
-                    while (p_92359_ && i < l && (p_92356_.charAt(i) == ' ' || p_92356_.charAt(i) == '\n')) {
-                        i++;
+                    while (stripSpaces && result < length && (text.charAt(result) == ' ' || text.charAt(result) == '\n')) {
+                        result++;
                     }
                 }
             }
         }
 
-        return i;
+        return result;
     }
 
-    public void splitLines(String p_92365_, int p_92366_, Style p_92367_, boolean p_92368_, StringSplitter.LinePosConsumer p_92369_) {
-        int i = 0;
-        int j = p_92365_.length();
-        Style style = p_92367_;
+    public void splitLines(
+        final String input, final int maxWidth, final Style initialStyle, final boolean includeAll, final StringSplitter.LinePosConsumer output
+    ) {
+        int start = 0;
+        int size = input.length();
+        Style workStyle = initialStyle;
 
-        while (i < j) {
-            StringSplitter.LineBreakFinder stringsplitter$linebreakfinder = new StringSplitter.LineBreakFinder(p_92366_);
-            boolean flag = StringDecomposer.iterateFormatted(p_92365_, i, style, p_92367_, stringsplitter$linebreakfinder);
-            if (flag) {
-                p_92369_.accept(style, i, j);
+        while (start < size) {
+            StringSplitter.LineBreakFinder finder = new StringSplitter.LineBreakFinder(maxWidth);
+            boolean endOfText = StringDecomposer.iterateFormatted(input, start, workStyle, initialStyle, finder);
+            if (endOfText) {
+                output.accept(workStyle, start, size);
                 break;
             }
 
-            int k = stringsplitter$linebreakfinder.getSplitPosition();
-            char c0 = p_92365_.charAt(k);
-            int l = c0 != '\n' && c0 != ' ' ? k : k + 1;
-            p_92369_.accept(style, i, p_92368_ ? l : k);
-            i = l;
-            style = stringsplitter$linebreakfinder.getSplitStyle();
+            int lineBreak = finder.getSplitPosition();
+            char firstTailChar = input.charAt(lineBreak);
+            int adjustedBreak = firstTailChar != '\n' && firstTailChar != ' ' ? lineBreak : lineBreak + 1;
+            output.accept(workStyle, start, includeAll ? adjustedBreak : lineBreak);
+            start = adjustedBreak;
+            workStyle = finder.getSplitStyle();
         }
     }
 
-    public List<FormattedText> splitLines(String p_92433_, int p_92434_, Style p_92435_) {
-        List<FormattedText> list = Lists.newArrayList();
-        this.splitLines(
-            p_92433_,
-            p_92434_,
-            p_92435_,
-            false,
-            (p_92373_, p_92374_, p_92375_) -> list.add(FormattedText.of(p_92433_.substring(p_92374_, p_92375_), p_92373_))
-        );
-        return list;
+    public List<FormattedText> splitLines(final String input, final int maxWidth, final Style initialStyle) {
+        List<FormattedText> result = Lists.newArrayList();
+        this.splitLines(input, maxWidth, initialStyle, false, (style, start, end) -> result.add(FormattedText.of(input.substring(start, end), style)));
+        return result;
     }
 
-    public List<FormattedText> splitLines(FormattedText p_92415_, int p_92416_, Style p_92417_) {
-        List<FormattedText> list = Lists.newArrayList();
-        this.splitLines(p_92415_, p_92416_, p_92417_, (p_92378_, p_92379_) -> list.add(p_92378_));
-        return list;
+    public List<FormattedText> splitLines(final FormattedText input, final int maxWidth, final Style initialStyle) {
+        List<FormattedText> result = Lists.newArrayList();
+        this.splitLines(input, maxWidth, initialStyle, (text, wrapped) -> result.add(text));
+        return result;
     }
 
-    public void splitLines(FormattedText p_92394_, int p_92395_, Style p_92396_, BiConsumer<FormattedText, Boolean> p_92397_) {
-        List<StringSplitter.LineComponent> list = Lists.newArrayList();
-        p_92394_.visit((p_92382_, p_92383_) -> {
-            if (!p_92383_.isEmpty()) {
-                list.add(new StringSplitter.LineComponent(p_92383_, p_92382_));
+    public void splitLines(final FormattedText input, final int maxWidth, final Style initialStyle, final BiConsumer<FormattedText, Boolean> output) {
+        List<StringSplitter.LineComponent> partList = Lists.newArrayList();
+        input.visit((style, contents) -> {
+            if (!contents.isEmpty()) {
+                partList.add(new StringSplitter.LineComponent(contents, style));
             }
 
             return Optional.empty();
-        }, p_92396_);
-        StringSplitter.FlatComponents stringsplitter$flatcomponents = new StringSplitter.FlatComponents(list);
-        boolean flag = true;
-        boolean flag1 = false;
-        boolean flag2 = false;
+        }, initialStyle);
+        StringSplitter.FlatComponents parts = new StringSplitter.FlatComponents(partList);
+        boolean shouldRestart = true;
+        boolean forceNewLine = false;
+        boolean isWrapped = false;
 
-        while (flag) {
-            flag = false;
-            StringSplitter.LineBreakFinder stringsplitter$linebreakfinder = new StringSplitter.LineBreakFinder(p_92395_);
+        while (shouldRestart) {
+            shouldRestart = false;
+            StringSplitter.LineBreakFinder finder = new StringSplitter.LineBreakFinder(maxWidth);
 
-            for (StringSplitter.LineComponent stringsplitter$linecomponent : stringsplitter$flatcomponents.parts) {
-                boolean flag3 = StringDecomposer.iterateFormatted(
-                    stringsplitter$linecomponent.contents, 0, stringsplitter$linecomponent.style, p_92396_, stringsplitter$linebreakfinder
-                );
-                if (!flag3) {
-                    int i = stringsplitter$linebreakfinder.getSplitPosition();
-                    Style style = stringsplitter$linebreakfinder.getSplitStyle();
-                    char c0 = stringsplitter$flatcomponents.charAt(i);
-                    boolean flag4 = c0 == '\n';
-                    boolean flag5 = flag4 || c0 == ' ';
-                    flag1 = flag4;
-                    FormattedText formattedtext = stringsplitter$flatcomponents.splitAt(i, flag5 ? 1 : 0, style);
-                    p_92397_.accept(formattedtext, flag2);
-                    flag2 = !flag4;
-                    flag = true;
+            for (StringSplitter.LineComponent part : parts.parts) {
+                boolean endOfText = StringDecomposer.iterateFormatted(part.contents, 0, part.style, initialStyle, finder);
+                if (!endOfText) {
+                    int lineBreak = finder.getSplitPosition();
+                    Style lineBreakStyle = finder.getSplitStyle();
+                    char firstTailChar = parts.charAt(lineBreak);
+                    boolean isNewLine = firstTailChar == '\n';
+                    boolean skipNextChar = isNewLine || firstTailChar == ' ';
+                    forceNewLine = isNewLine;
+                    FormattedText result = parts.splitAt(lineBreak, skipNextChar ? 1 : 0, lineBreakStyle);
+                    output.accept(result, isWrapped);
+                    isWrapped = !isNewLine;
+                    shouldRestart = true;
                     break;
                 }
 
-                stringsplitter$linebreakfinder.addToOffset(stringsplitter$linecomponent.contents.length());
+                finder.addToOffset(part.contents.length());
             }
         }
 
-        FormattedText formattedtext1 = stringsplitter$flatcomponents.getRemainder();
-        if (formattedtext1 != null) {
-            p_92397_.accept(formattedtext1, flag2);
-        } else if (flag1) {
-            p_92397_.accept(FormattedText.EMPTY, false);
+        FormattedText lastLine = parts.getRemainder();
+        if (lastLine != null) {
+            output.accept(lastLine, isWrapped);
+        } else if (forceNewLine) {
+            output.accept(FormattedText.EMPTY, false);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class FlatComponents {
-        final List<StringSplitter.LineComponent> parts;
+        private static class FlatComponents {
+        private final List<StringSplitter.LineComponent> parts;
         private String flatParts;
 
-        public FlatComponents(List<StringSplitter.LineComponent> p_92448_) {
-            this.parts = p_92448_;
-            this.flatParts = p_92448_.stream().map(p_92459_ -> p_92459_.contents).collect(Collectors.joining());
+        public FlatComponents(final List<StringSplitter.LineComponent> parts) {
+            this.parts = parts;
+            this.flatParts = parts.stream().map(p -> p.contents).collect(Collectors.joining());
         }
 
-        public char charAt(int p_92451_) {
-            return this.flatParts.charAt(p_92451_);
+        public char charAt(final int position) {
+            return this.flatParts.charAt(position);
         }
 
-        public FormattedText splitAt(int p_92453_, int p_92454_, Style p_92455_) {
-            ComponentCollector componentcollector = new ComponentCollector();
-            ListIterator<StringSplitter.LineComponent> listiterator = this.parts.listIterator();
-            int i = p_92453_;
-            boolean flag = false;
+        public FormattedText splitAt(final int skipPosition, final int skipSize, final Style splitStyle) {
+            ComponentCollector result = new ComponentCollector();
+            ListIterator<StringSplitter.LineComponent> it = this.parts.listIterator();
+            int position = skipPosition;
+            boolean inSkip = false;
 
-            while (listiterator.hasNext()) {
-                StringSplitter.LineComponent stringsplitter$linecomponent = listiterator.next();
-                String s = stringsplitter$linecomponent.contents;
-                int j = s.length();
-                if (!flag) {
-                    if (i > j) {
-                        componentcollector.append(stringsplitter$linecomponent);
-                        listiterator.remove();
-                        i -= j;
+            while (it.hasNext()) {
+                StringSplitter.LineComponent element = it.next();
+                String contents = element.contents;
+                int contentsSize = contents.length();
+                if (!inSkip) {
+                    if (position > contentsSize) {
+                        result.append(element);
+                        it.remove();
+                        position -= contentsSize;
                     } else {
-                        String s1 = s.substring(0, i);
-                        if (!s1.isEmpty()) {
-                            componentcollector.append(FormattedText.of(s1, stringsplitter$linecomponent.style));
+                        String beforeSplit = contents.substring(0, position);
+                        if (!beforeSplit.isEmpty()) {
+                            result.append(FormattedText.of(beforeSplit, element.style));
                         }
 
-                        i += p_92454_;
-                        flag = true;
+                        position += skipSize;
+                        inSkip = true;
                     }
                 }
 
-                if (flag) {
-                    if (i <= j) {
-                        String s2 = s.substring(i);
-                        if (s2.isEmpty()) {
-                            listiterator.remove();
+                if (inSkip) {
+                    if (position <= contentsSize) {
+                        String afterSplit = contents.substring(position);
+                        if (afterSplit.isEmpty()) {
+                            it.remove();
                         } else {
-                            listiterator.set(new StringSplitter.LineComponent(s2, p_92455_));
+                            it.set(new StringSplitter.LineComponent(afterSplit, splitStyle));
                         }
                         break;
                     }
 
-                    listiterator.remove();
-                    i -= j;
+                    it.remove();
+                    position -= contentsSize;
                 }
             }
 
-            this.flatParts = this.flatParts.substring(p_92453_ + p_92454_);
-            return componentcollector.getResultOrEmpty();
+            this.flatParts = this.flatParts.substring(skipPosition + skipSize);
+            return result.getResultOrEmpty();
         }
 
         public @Nullable FormattedText getRemainder() {
-            ComponentCollector componentcollector = new ComponentCollector();
-            this.parts.forEach(componentcollector::append);
+            ComponentCollector result = new ComponentCollector();
+            this.parts.forEach(result::append);
             this.parts.clear();
-            return componentcollector.getResult();
+            return result.getResult();
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class LineBreakFinder implements FormattedCharSink {
+        private class LineBreakFinder implements FormattedCharSink {
         private final float maxWidth;
         private int lineBreak = -1;
         private Style lineBreakStyle = Style.EMPTY;
@@ -322,35 +311,35 @@ public class StringSplitter {
         private int nextChar;
         private int offset;
 
-        public LineBreakFinder(final float p_92472_) {
-            this.maxWidth = Math.max(p_92472_, 1.0F);
+        public LineBreakFinder(final float maxWidth) {
+            this.maxWidth = Math.max(maxWidth, 1.0F);
         }
 
         @Override
-        public boolean accept(int p_92480_, Style p_92481_, int p_92482_) {
-            int i = p_92480_ + this.offset;
-            switch (p_92482_) {
+        public boolean accept(final int position, final Style style, final int codepoint) {
+            int adjustedPosition = position + this.offset;
+            switch (codepoint) {
                 case 10:
-                    return this.finishIteration(i, p_92481_);
+                    return this.finishIteration(adjustedPosition, style);
                 case 32:
-                    this.lastSpace = i;
-                    this.lastSpaceStyle = p_92481_;
+                    this.lastSpace = adjustedPosition;
+                    this.lastSpaceStyle = style;
                 default:
-                    float f = StringSplitter.this.widthProvider.getWidth(p_92482_, p_92481_);
-                    this.width += f;
+                    float charWidth = StringSplitter.this.widthProvider.getWidth(codepoint, style);
+                    this.width += charWidth;
                     if (!this.hadNonZeroWidthChar || !(this.width > this.maxWidth)) {
-                        this.hadNonZeroWidthChar |= f != 0.0F;
-                        this.nextChar = i + Character.charCount(p_92482_);
+                        this.hadNonZeroWidthChar |= charWidth != 0.0F;
+                        this.nextChar = adjustedPosition + Character.charCount(codepoint);
                         return true;
                     } else {
-                        return this.lastSpace != -1 ? this.finishIteration(this.lastSpace, this.lastSpaceStyle) : this.finishIteration(i, p_92481_);
+                        return this.lastSpace != -1 ? this.finishIteration(this.lastSpace, this.lastSpaceStyle) : this.finishIteration(adjustedPosition, style);
                     }
             }
         }
 
-        private boolean finishIteration(int p_92477_, Style p_92478_) {
-            this.lineBreak = p_92477_;
-            this.lineBreakStyle = p_92478_;
+        private boolean finishIteration(final int lineBreak, final Style style) {
+            this.lineBreak = lineBreak;
+            this.lineBreakStyle = style;
             return false;
         }
 
@@ -366,52 +355,49 @@ public class StringSplitter {
             return this.lineBreakStyle;
         }
 
-        public void addToOffset(int p_92475_) {
-            this.offset += p_92475_;
+        public void addToOffset(final int delta) {
+            this.offset += delta;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class LineComponent implements FormattedText {
-        final String contents;
-        final Style style;
+        private static class LineComponent implements FormattedText {
+        private final String contents;
+        private final Style style;
 
-        public LineComponent(String p_92488_, Style p_92489_) {
-            this.contents = p_92488_;
-            this.style = p_92489_;
+        public LineComponent(final String contents, final Style style) {
+            this.contents = contents;
+            this.style = style;
         }
 
         @Override
-        public <T> Optional<T> visit(FormattedText.ContentConsumer<T> p_92493_) {
-            return p_92493_.accept(this.contents);
+        public <T> Optional<T> visit(final FormattedText.ContentConsumer<T> output) {
+            return output.accept(this.contents);
         }
 
         @Override
-        public <T> Optional<T> visit(FormattedText.StyledContentConsumer<T> p_92495_, Style p_92496_) {
-            return p_92495_.accept(this.style.applyTo(p_92496_), this.contents);
+        public <T> Optional<T> visit(final FormattedText.StyledContentConsumer<T> output, final Style parentStyle) {
+            return output.accept(this.style.applyTo(parentStyle), this.contents);
         }
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface LinePosConsumer {
-        void accept(Style p_92500_, int p_92501_, int p_92502_);
+        public interface LinePosConsumer {
+        void accept(final Style style, int start, int end);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class WidthLimitedCharSink implements FormattedCharSink {
+        private class WidthLimitedCharSink implements FormattedCharSink {
         private float maxWidth;
         private int position;
 
-        public WidthLimitedCharSink(final float p_92508_) {
-            this.maxWidth = p_92508_;
+        public WidthLimitedCharSink(final float maxWidth) {
+            this.maxWidth = maxWidth;
         }
 
         @Override
-        public boolean accept(int p_92511_, Style p_92512_, int p_92513_) {
-            this.maxWidth = this.maxWidth - StringSplitter.this.widthProvider.getWidth(p_92513_, p_92512_);
+        public boolean accept(final int position, final Style style, final int codepoint) {
+            this.maxWidth = this.maxWidth - StringSplitter.this.widthProvider.getWidth(codepoint, style);
             if (this.maxWidth >= 0.0F) {
-                this.position = p_92511_ + Character.charCount(p_92513_);
+                this.position = position + Character.charCount(codepoint);
                 return true;
             } else {
                 return false;
@@ -428,8 +414,7 @@ public class StringSplitter {
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface WidthProvider {
-        float getWidth(int p_92516_, Style p_92517_);
+        public interface WidthProvider {
+        float getWidth(int codepoint, Style style);
     }
 }

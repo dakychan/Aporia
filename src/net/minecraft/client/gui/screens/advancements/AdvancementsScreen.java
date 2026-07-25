@@ -6,10 +6,8 @@ import java.util.Map;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementNode;
 import net.minecraft.advancements.AdvancementProgress;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -21,11 +19,8 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundSeenAdvancementsPacket;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class AdvancementsScreen extends Screen implements ClientAdvancements.Listener {
     private static final Identifier WINDOW_LOCATION = Identifier.withDefaultNamespace("textures/gui/advancements/window.png");
     public static final int WINDOW_WIDTH = 252;
@@ -48,19 +43,21 @@ public class AdvancementsScreen extends Screen implements ClientAdvancements.Lis
     private static final Component TITLE = Component.translatable("gui.advancements");
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
     private final @Nullable Screen lastScreen;
+    private int leftPos;
+    private int topPos;
     private final ClientAdvancements advancements;
     private final Map<AdvancementHolder, AdvancementTab> tabs = Maps.newLinkedHashMap();
     private @Nullable AdvancementTab selectedTab;
     private boolean isScrolling;
 
-    public AdvancementsScreen(ClientAdvancements p_97340_) {
-        this(p_97340_, null);
+    public AdvancementsScreen(final ClientAdvancements advancements) {
+        this(advancements, null);
     }
 
-    public AdvancementsScreen(ClientAdvancements p_333280_, @Nullable Screen p_335811_) {
+    public AdvancementsScreen(final ClientAdvancements advancements, final @Nullable Screen lastScreen) {
         super(TITLE);
-        this.advancements = p_333280_;
-        this.lastScreen = p_335811_;
+        this.advancements = advancements;
+        this.lastScreen = lastScreen;
     }
 
     @Override
@@ -70,200 +67,208 @@ public class AdvancementsScreen extends Screen implements ClientAdvancements.Lis
         this.selectedTab = null;
         this.advancements.setListener(this);
         if (this.selectedTab == null && !this.tabs.isEmpty()) {
-            AdvancementTab advancementtab = this.tabs.values().iterator().next();
-            this.advancements.setSelectedTab(advancementtab.getRootNode().holder(), true);
+            AdvancementTab firstTab = this.tabs.values().iterator().next();
+            this.advancements.setSelectedTab(firstTab.getRootNode().holder(), true);
         } else {
             this.advancements.setSelectedTab(this.selectedTab == null ? null : this.selectedTab.getRootNode().holder(), true);
         }
 
-        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, p_329618_ -> this.onClose()).width(200).build());
-        this.layout.visitWidgets(p_335563_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_335563_);
-        });
+        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).width(200).build());
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
     }
 
     @Override
     protected void repositionElements() {
+        this.leftPos = (this.width - 252) / 2;
+        this.topPos = (this.height - 140) / 2;
         this.layout.arrangeElements();
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
     @Override
     public void removed() {
         this.advancements.setListener(null);
-        ClientPacketListener clientpacketlistener = this.minecraft.getConnection();
-        if (clientpacketlistener != null) {
-            clientpacketlistener.send(ServerboundSeenAdvancementsPacket.closedScreen());
+        ClientPacketListener connection = this.minecraft.getConnection();
+        if (connection != null) {
+            connection.send(ServerboundSeenAdvancementsPacket.closedScreen());
         }
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_431395_, boolean p_430650_) {
-        if (p_431395_.button() == 0) {
-            int i = (this.width - 252) / 2;
-            int j = (this.height - 140) / 2;
+    public void tick() {
+        super.tick();
+        if (this.selectedTab != null) {
+            int mouseX = (int)this.minecraft.mouseHandler.getScaledXPos(this.minecraft.getWindow());
+            int mouseY = (int)this.minecraft.mouseHandler.getScaledYPos(this.minecraft.getWindow());
+            this.selectedTab.tick(mouseX - this.leftPos - 9, mouseY - this.topPos - 18);
+        }
+    }
 
-            for (AdvancementTab advancementtab : this.tabs.values()) {
-                if (advancementtab.isMouseOver(i, j, p_431395_.x(), p_431395_.y())) {
-                    this.advancements.setSelectedTab(advancementtab.getRootNode().holder(), true);
+    @Override
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        if (event.button() == 0) {
+            int xo = (this.width - 252) / 2;
+            int yo = (this.height - 140) / 2;
+
+            for (AdvancementTab tab : this.tabs.values()) {
+                if (tab.isMouseOver(xo, yo, event.x(), event.y())) {
+                    this.advancements.setSelectedTab(tab.getRootNode().holder(), true);
                     break;
                 }
             }
         }
 
-        return super.mouseClicked(p_431395_, p_430650_);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_429408_) {
-        if (this.minecraft.options.keyAdvancements.matches(p_429408_)) {
-            this.minecraft.setScreen(null);
+    public boolean keyPressed(final KeyEvent event) {
+        if (this.minecraft.options.keyAdvancements.matches(event)) {
+            this.minecraft.gui.setScreen(null);
             this.minecraft.mouseHandler.grabMouse();
             return true;
         } else {
-            return super.keyPressed(p_429408_);
+            return super.keyPressed(event);
         }
     }
 
     @Override
-    public void render(GuiGraphics p_282589_, int p_282255_, int p_283354_, float p_283123_) {
-        super.render(p_282589_, p_282255_, p_283354_, p_283123_);
-        int i = (this.width - 252) / 2;
-        int j = (this.height - 140) / 2;
-        p_282589_.nextStratum();
-        this.renderInside(p_282589_, i, j);
-        p_282589_.nextStratum();
-        this.renderWindow(p_282589_, i, j, p_282255_, p_283354_);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.nextStratum();
+        this.extractInside(graphics);
+        graphics.nextStratum();
+        this.extractWindow(graphics, mouseX, mouseY);
         if (this.isScrolling && this.selectedTab != null) {
             if (this.selectedTab.canScrollHorizontally() && this.selectedTab.canScrollVertically()) {
-                p_282589_.requestCursor(CursorTypes.RESIZE_ALL);
+                graphics.requestCursor(CursorTypes.RESIZE_ALL);
             } else if (this.selectedTab.canScrollHorizontally()) {
-                p_282589_.requestCursor(CursorTypes.RESIZE_EW);
+                graphics.requestCursor(CursorTypes.RESIZE_EW);
             } else if (this.selectedTab.canScrollVertically()) {
-                p_282589_.requestCursor(CursorTypes.RESIZE_NS);
+                graphics.requestCursor(CursorTypes.RESIZE_NS);
             }
         }
 
-        this.renderTooltips(p_282589_, p_282255_, p_283354_, i, j);
+        this.extractTooltips(graphics, mouseX, mouseY);
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent p_429951_, double p_97347_, double p_97348_) {
-        if (p_429951_.button() != 0) {
+    public boolean mouseDragged(final MouseButtonEvent event, final double dx, final double dy) {
+        if (event.button() != 0) {
             this.isScrolling = false;
             return false;
-        } else {
-            if (!this.isScrolling) {
-                this.isScrolling = true;
-            } else if (this.selectedTab != null) {
-                this.selectedTab.scroll(p_97347_, p_97348_);
-            }
-
-            return true;
         }
+
+        if (!this.isScrolling) {
+            this.isScrolling = true;
+        } else if (this.selectedTab != null) {
+            this.selectedTab.scroll(dx, dy);
+        }
+
+        return true;
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent p_457352_) {
+    public boolean mouseReleased(final MouseButtonEvent event) {
         this.isScrolling = false;
-        return super.mouseReleased(p_457352_);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseScrolled(double p_300678_, double p_297858_, double p_301134_, double p_300488_) {
+    public boolean mouseScrolled(final double x, final double y, final double scrollX, final double scrollY) {
         if (this.selectedTab != null) {
-            this.selectedTab.scroll(p_301134_ * 16.0, p_300488_ * 16.0);
+            this.selectedTab.scroll(scrollX * 16.0, scrollY * 16.0);
             return true;
         } else {
             return false;
         }
     }
 
-    private void renderInside(GuiGraphics p_282012_, int p_97375_, int p_97376_) {
-        AdvancementTab advancementtab = this.selectedTab;
-        if (advancementtab == null) {
-            p_282012_.fill(p_97375_ + 9, p_97376_ + 18, p_97375_ + 9 + 234, p_97376_ + 18 + 113, -16777216);
-            int i = p_97375_ + 9 + 117;
-            p_282012_.drawCenteredString(this.font, NO_ADVANCEMENTS_LABEL, i, p_97376_ + 18 + 56 - 9 / 2, -1);
-            p_282012_.drawCenteredString(this.font, VERY_SAD_LABEL, i, p_97376_ + 18 + 113 - 9, -1);
+    private void extractInside(final GuiGraphicsExtractor graphics) {
+        AdvancementTab tab = this.selectedTab;
+        if (tab == null) {
+            graphics.fill(this.leftPos + 9, this.topPos + 18, this.leftPos + 9 + 234, this.topPos + 18 + 113, -16777216);
+            int midX = this.leftPos + 9 + 117;
+            graphics.centeredText(this.font, NO_ADVANCEMENTS_LABEL, midX, this.topPos + 18 + 56 - 9 / 2, -1);
+            graphics.centeredText(this.font, VERY_SAD_LABEL, midX, this.topPos + 18 + 113 - 9, -1);
         } else {
-            advancementtab.drawContents(p_282012_, p_97375_ + 9, p_97376_ + 18);
+            tab.extractContents(graphics, this.leftPos + 9, this.topPos + 18);
         }
     }
 
-    public void renderWindow(GuiGraphics p_283395_, int p_281890_, int p_282532_, int p_451461_, int p_451545_) {
-        p_283395_.blit(RenderPipelines.GUI_TEXTURED, WINDOW_LOCATION, p_281890_, p_282532_, 0.0F, 0.0F, 252, 140, 256, 256);
+    public void extractWindow(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY) {
+        graphics.blit(RenderPipelines.GUI_TEXTURED, WINDOW_LOCATION, this.leftPos, this.topPos, 0.0F, 0.0F, 252, 140, 256, 256);
         if (this.tabs.size() > 1) {
-            for (AdvancementTab advancementtab : this.tabs.values()) {
-                advancementtab.drawTab(p_283395_, p_281890_, p_282532_, p_451461_, p_451545_, advancementtab == this.selectedTab);
+            for (AdvancementTab tab : this.tabs.values()) {
+                tab.extractTab(graphics, this.leftPos, this.topPos, mouseX, mouseY, tab == this.selectedTab);
             }
 
-            for (AdvancementTab advancementtab1 : this.tabs.values()) {
-                advancementtab1.drawIcon(p_283395_, p_281890_, p_282532_);
+            for (AdvancementTab tab : this.tabs.values()) {
+                tab.extractIcon(graphics, this.leftPos, this.topPos);
             }
         }
 
-        p_283395_.drawString(this.font, this.selectedTab != null ? this.selectedTab.getTitle() : TITLE, p_281890_ + 8, p_282532_ + 6, -12566464, false);
+        graphics.text(this.font, this.selectedTab != null ? this.selectedTab.getTitle() : TITLE, this.leftPos + 8, this.topPos + 6, -12566464, false);
     }
 
-    private void renderTooltips(GuiGraphics p_282784_, int p_283556_, int p_282458_, int p_281519_, int p_283371_) {
+    private void extractTooltips(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY) {
         if (this.selectedTab != null) {
-            p_282784_.pose().pushMatrix();
-            p_282784_.pose().translate(p_281519_ + 9, p_283371_ + 18);
-            p_282784_.nextStratum();
-            this.selectedTab.drawTooltips(p_282784_, p_283556_ - p_281519_ - 9, p_282458_ - p_283371_ - 18, p_281519_, p_283371_);
-            p_282784_.pose().popMatrix();
+            graphics.pose().pushMatrix();
+            graphics.pose().translate(this.leftPos + 9, this.topPos + 18);
+            graphics.nextStratum();
+            this.selectedTab.extractTooltips(graphics, this.leftPos, this.topPos);
+            graphics.pose().popMatrix();
         }
 
         if (this.tabs.size() > 1) {
-            for (AdvancementTab advancementtab : this.tabs.values()) {
-                if (advancementtab.isMouseOver(p_281519_, p_283371_, p_283556_, p_282458_)) {
-                    p_282784_.setTooltipForNextFrame(this.font, advancementtab.getTitle(), p_283556_, p_282458_);
+            for (AdvancementTab tab : this.tabs.values()) {
+                if (tab.isMouseOver(this.leftPos, this.topPos, mouseX, mouseY)) {
+                    graphics.setTooltipForNextFrame(this.font, tab.getTitle(), mouseX, mouseY);
                 }
             }
         }
     }
 
     @Override
-    public void onAddAdvancementRoot(AdvancementNode p_300702_) {
-        AdvancementTab advancementtab = AdvancementTab.create(this.minecraft, this, this.tabs.size(), p_300702_);
-        if (advancementtab != null) {
-            this.tabs.put(p_300702_.holder(), advancementtab);
+    public void onAddAdvancementRoot(final AdvancementNode root) {
+        AdvancementTab tab = AdvancementTab.create(this.minecraft, this, this.tabs.size(), root);
+        if (tab != null) {
+            this.tabs.put(root.holder(), tab);
         }
     }
 
     @Override
-    public void onRemoveAdvancementRoot(AdvancementNode p_298890_) {
+    public void onRemoveAdvancementRoot(final AdvancementNode root) {
     }
 
     @Override
-    public void onAddAdvancementTask(AdvancementNode p_297934_) {
-        AdvancementTab advancementtab = this.getTab(p_297934_);
-        if (advancementtab != null) {
-            advancementtab.addAdvancement(p_297934_);
+    public void onAddAdvancementTask(final AdvancementNode task) {
+        AdvancementTab tab = this.getTab(task);
+        if (tab != null) {
+            tab.addAdvancement(task);
         }
     }
 
     @Override
-    public void onRemoveAdvancementTask(AdvancementNode p_301169_) {
+    public void onRemoveAdvancementTask(final AdvancementNode task) {
     }
 
     @Override
-    public void onUpdateAdvancementProgress(AdvancementNode p_300708_, AdvancementProgress p_97369_) {
-        AdvancementWidget advancementwidget = this.getAdvancementWidget(p_300708_);
-        if (advancementwidget != null) {
-            advancementwidget.setProgress(p_97369_);
+    public void onUpdateAdvancementProgress(final AdvancementNode advancement, final AdvancementProgress progress) {
+        AdvancementWidget widget = this.getAdvancementWidget(advancement);
+        if (widget != null) {
+            widget.setProgress(progress);
         }
     }
 
     @Override
-    public void onSelectedTabChanged(@Nullable AdvancementHolder p_297665_) {
-        this.selectedTab = this.tabs.get(p_297665_);
+    public void onSelectedTabChanged(final @Nullable AdvancementHolder selectedTab) {
+        this.selectedTab = this.tabs.get(selectedTab);
     }
 
     @Override
@@ -272,13 +277,13 @@ public class AdvancementsScreen extends Screen implements ClientAdvancements.Lis
         this.selectedTab = null;
     }
 
-    public @Nullable AdvancementWidget getAdvancementWidget(AdvancementNode p_298026_) {
-        AdvancementTab advancementtab = this.getTab(p_298026_);
-        return advancementtab == null ? null : advancementtab.getWidget(p_298026_.holder());
+    public @Nullable AdvancementWidget getAdvancementWidget(final AdvancementNode node) {
+        AdvancementTab tab = this.getTab(node);
+        return tab == null ? null : tab.getWidget(node.holder());
     }
 
-    private @Nullable AdvancementTab getTab(AdvancementNode p_300894_) {
-        AdvancementNode advancementnode = p_300894_.root();
-        return this.tabs.get(advancementnode.holder());
+    private @Nullable AdvancementTab getTab(final AdvancementNode node) {
+        AdvancementNode root = node.root();
+        return this.tabs.get(root.holder());
     }
 }

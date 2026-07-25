@@ -10,21 +10,20 @@ import net.minecraft.server.dialog.DialogListDialog;
 import net.minecraft.server.dialog.MultiActionDialog;
 import net.minecraft.server.dialog.NoticeDialog;
 import net.minecraft.server.dialog.ServerLinksDialog;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DialogScreens {
     private static final Map<MapCodec<? extends Dialog>, DialogScreens.Factory<?>> FACTORIES = new HashMap<>();
 
-    private static <T extends Dialog> void register(MapCodec<T> p_408218_, DialogScreens.Factory<? super T> p_408705_) {
-        FACTORIES.put(p_408218_, p_408705_);
+    private static <T extends Dialog> void register(final MapCodec<T> type, final DialogScreens.Factory<? super T> factory) {
+        FACTORIES.put(type, factory);
     }
 
-    public static <T extends Dialog> @Nullable DialogScreen<T> createFromData(T p_406293_, @Nullable Screen p_406264_, DialogConnectionAccess p_407821_) {
-        DialogScreens.Factory<T> factory = (DialogScreens.Factory<T>)FACTORIES.get(p_406293_.codec());
-        return factory != null ? factory.create(p_406264_, p_406293_, p_407821_) : null;
+    public static <T extends Dialog> @Nullable DialogScreen<T> createFromData(
+        final T dialog, final @Nullable Screen previousScreen, final DialogConnectionAccess connectionAccess
+    ) {
+        DialogScreens.Factory<T> factory = (DialogScreens.Factory<T>)FACTORIES.get(dialog.codec());
+        return factory != null ? factory.create(previousScreen, dialog, connectionAccess) : null;
     }
 
     public static void bootstrap() {
@@ -36,8 +35,7 @@ public class DialogScreens {
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface Factory<T extends Dialog> {
-        DialogScreen<T> create(@Nullable Screen p_410616_, T p_408348_, DialogConnectionAccess p_408537_);
+        public interface Factory<T extends Dialog> {
+        DialogScreen<T> create(@Nullable Screen previousScreen, T data, DialogConnectionAccess connectionAccess);
     }
 }

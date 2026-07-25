@@ -1,31 +1,27 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.model.Model;
-import net.minecraft.client.renderer.blockentity.SignRenderer;
-import net.minecraft.world.level.block.StandingSignBlock;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.PlainSignBlock;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
-import org.jspecify.annotations.Nullable;
+import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
 public class SignEditScreen extends AbstractSignEditScreen {
-    public static final float MAGIC_SCALE_NUMBER = 62.500004F;
+    public static final float MAGIC_BACKGROUND_SCALE = 3.9F;
     public static final float MAGIC_TEXT_SCALE = 0.9765628F;
-    private static final Vector3f TEXT_SCALE = new Vector3f(0.9765628F, 0.9765628F, 0.9765628F);
-    private Model.@Nullable Simple signModel;
+    private static final int TEXTURE_WIDTH = 24;
+    private static final int TEXTURE_HEIGHT = 26;
+    private static final int POST_HEIGHT = 14;
+    private static final Vector3fc TEXT_SCALE = new Vector3f(0.9765628F, 0.9765628F, 0.9765628F);
+    private final int displayedHeight;
+    private final Identifier texture = Identifier.withDefaultNamespace("textures/gui/signs/" + this.woodType.name() + ".png");
 
-    public SignEditScreen(SignBlockEntity p_277919_, boolean p_277579_, boolean p_277693_) {
-        super(p_277919_, p_277579_, p_277693_);
-    }
-
-    @Override
-    protected void init() {
-        super.init();
-        boolean flag = this.sign.getBlockState().getBlock() instanceof StandingSignBlock;
-        this.signModel = SignRenderer.createSignModel(this.minecraft.getEntityModels(), this.woodType, flag);
+    public SignEditScreen(final SignBlockEntity sign, final boolean isFrontText, final boolean shouldFilter) {
+        super(sign, isFrontText, shouldFilter);
+        boolean isWallSign = PlainSignBlock.getAttachmentPoint(sign.getBlockState()) == PlainSignBlock.Attachment.WALL;
+        this.displayedHeight = isWallSign ? 12 : 26;
     }
 
     @Override
@@ -34,19 +30,14 @@ public class SignEditScreen extends AbstractSignEditScreen {
     }
 
     @Override
-    protected void renderSignBackground(GuiGraphics p_281440_) {
-        if (this.signModel != null) {
-            int i = this.width / 2;
-            int j = i - 48;
-            int k = 66;
-            int l = i + 48;
-            int i1 = 168;
-            p_281440_.submitSignRenderState(this.signModel, 62.500004F, this.woodType, j, 66, l, 168);
-        }
+    protected void extractSignBackground(final GuiGraphicsExtractor graphics) {
+        graphics.pose().translate(0.0F, 27.0F);
+        graphics.pose().scale(3.9F, 3.9F);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, this.texture, -12, -13, 0.0F, 0.0F, 24, this.displayedHeight, 24, 26);
     }
 
     @Override
-    protected Vector3f getSignTextScale() {
+    protected Vector3fc getSignTextScale() {
         return TEXT_SCALE;
     }
 }

@@ -20,59 +20,59 @@ public class FeatureFlagRegistry {
     private final Map<Identifier, FeatureFlag> names;
     private final FeatureFlagSet allFlags;
 
-    FeatureFlagRegistry(FeatureFlagUniverse p_249715_, FeatureFlagSet p_249277_, Map<Identifier, FeatureFlag> p_249557_) {
-        this.universe = p_249715_;
-        this.names = p_249557_;
-        this.allFlags = p_249277_;
+    private FeatureFlagRegistry(final FeatureFlagUniverse universe, final FeatureFlagSet allFlags, final Map<Identifier, FeatureFlag> names) {
+        this.universe = universe;
+        this.names = names;
+        this.allFlags = allFlags;
     }
 
-    public boolean isSubset(FeatureFlagSet p_251939_) {
-        return p_251939_.isSubsetOf(this.allFlags);
+    public boolean isSubset(final FeatureFlagSet set) {
+        return set.isSubsetOf(this.allFlags);
     }
 
     public FeatureFlagSet allFlags() {
         return this.allFlags;
     }
 
-    public FeatureFlagSet fromNames(Iterable<Identifier> p_250759_) {
-        return this.fromNames(p_250759_, p_459406_ -> LOGGER.warn("Unknown feature flag: {}", p_459406_));
+    public FeatureFlagSet fromNames(final Iterable<Identifier> flagIds) {
+        return this.fromNames(flagIds, flagId -> LOGGER.warn("Unknown feature flag: {}", flagId));
     }
 
-    public FeatureFlagSet subset(FeatureFlag... p_252295_) {
-        return FeatureFlagSet.create(this.universe, Arrays.asList(p_252295_));
+    public FeatureFlagSet subset(final FeatureFlag... flags) {
+        return FeatureFlagSet.create(this.universe, Arrays.asList(flags));
     }
 
-    public FeatureFlagSet fromNames(Iterable<Identifier> p_251769_, Consumer<Identifier> p_251521_) {
-        Set<FeatureFlag> set = Sets.newIdentityHashSet();
+    public FeatureFlagSet fromNames(final Iterable<Identifier> flagIds, final Consumer<Identifier> unknownFlags) {
+        Set<FeatureFlag> flags = Sets.newIdentityHashSet();
 
-        for (Identifier identifier : p_251769_) {
-            FeatureFlag featureflag = this.names.get(identifier);
-            if (featureflag == null) {
-                p_251521_.accept(identifier);
+        for (Identifier flagId : flagIds) {
+            FeatureFlag flag = this.names.get(flagId);
+            if (flag == null) {
+                unknownFlags.accept(flagId);
             } else {
-                set.add(featureflag);
+                flags.add(flag);
             }
         }
 
-        return FeatureFlagSet.create(this.universe, set);
+        return FeatureFlagSet.create(this.universe, flags);
     }
 
-    public Set<Identifier> toNames(FeatureFlagSet p_251153_) {
-        Set<Identifier> set = new HashSet<>();
-        this.names.forEach((p_452188_, p_250772_) -> {
-            if (p_251153_.contains(p_250772_)) {
-                set.add(p_452188_);
+    public Set<Identifier> toNames(final FeatureFlagSet set) {
+        Set<Identifier> result = new HashSet<>();
+        this.names.forEach((id, flag) -> {
+            if (set.contains(flag)) {
+                result.add(id);
             }
         });
-        return set;
+        return result;
     }
 
     public Codec<FeatureFlagSet> codec() {
-        return Identifier.CODEC.listOf().comapFlatMap(p_275144_ -> {
-            Set<Identifier> set = new HashSet<>();
-            FeatureFlagSet featureflagset = this.fromNames(p_275144_, set::add);
-            return !set.isEmpty() ? DataResult.error(() -> "Unknown feature ids: " + set, featureflagset) : DataResult.success(featureflagset);
-        }, p_249796_ -> List.copyOf(this.toNames(p_249796_)));
+        return Identifier.CODEC.listOf().comapFlatMap(ids -> {
+            Set<Identifier> unknownIds = new HashSet<>();
+            FeatureFlagSet result = this.fromNames(ids, unknownIds::add);
+            return !unknownIds.isEmpty() ? DataResult.error(() -> "Unknown feature ids: " + unknownIds, result) : DataResult.success(result);
+        }, set -> List.copyOf(this.toNames(set)));
     }
 
     public static class Builder {
@@ -80,31 +80,31 @@ public class FeatureFlagRegistry {
         private int id;
         private final Map<Identifier, FeatureFlag> flags = new LinkedHashMap<>();
 
-        public Builder(String p_251576_) {
-            this.universe = new FeatureFlagUniverse(p_251576_);
+        public Builder(final String universeId) {
+            this.universe = new FeatureFlagUniverse(universeId);
         }
 
-        public FeatureFlag createVanilla(String p_251782_) {
-            return this.create(Identifier.withDefaultNamespace(p_251782_));
+        public FeatureFlag createVanilla(final String name) {
+            return this.create(Identifier.withDefaultNamespace(name));
         }
 
-        public FeatureFlag create(Identifier p_454225_) {
+        public FeatureFlag create(final Identifier name) {
             if (this.id >= 64) {
                 throw new IllegalStateException("Too many feature flags");
             } else {
-                FeatureFlag featureflag = new FeatureFlag(this.universe, this.id++);
-                FeatureFlag featureflag1 = this.flags.put(p_454225_, featureflag);
-                if (featureflag1 != null) {
-                    throw new IllegalStateException("Duplicate feature flag " + p_454225_);
+                FeatureFlag result = new FeatureFlag(this.universe, this.id++);
+                FeatureFlag previous = this.flags.put(name, result);
+                if (previous != null) {
+                    throw new IllegalStateException("Duplicate feature flag " + name);
                 } else {
-                    return featureflag;
+                    return result;
                 }
             }
         }
 
         public FeatureFlagRegistry build() {
-            FeatureFlagSet featureflagset = FeatureFlagSet.create(this.universe, this.flags.values());
-            return new FeatureFlagRegistry(this.universe, featureflagset, Map.copyOf(this.flags));
+            FeatureFlagSet allValues = FeatureFlagSet.create(this.universe, this.flags.values());
+            return new FeatureFlagRegistry(this.universe, allValues, Map.copyOf(this.flags));
         }
     }
 }

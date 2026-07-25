@@ -5,12 +5,12 @@ import java.util.List;
 public interface BeaconBeamOwner {
     List<BeaconBeamOwner.Section> getBeamSections();
 
-    public static class Section {
+    class Section {
         private final int color;
         private int height;
 
-        public Section(int p_396213_) {
-            this.color = p_396213_;
+        public Section(final int color) {
+            this.color = color;
             this.height = 1;
         }
 

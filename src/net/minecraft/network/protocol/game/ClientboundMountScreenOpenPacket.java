@@ -13,22 +13,22 @@ public class ClientboundMountScreenOpenPacket implements Packet<ClientGamePacket
     private final int inventoryColumns;
     private final int entityId;
 
-    public ClientboundMountScreenOpenPacket(int p_455855_, int p_454920_, int p_459100_) {
-        this.containerId = p_455855_;
-        this.inventoryColumns = p_454920_;
-        this.entityId = p_459100_;
+    public ClientboundMountScreenOpenPacket(final int containerId, final int inventoryColumns, final int entityId) {
+        this.containerId = containerId;
+        this.inventoryColumns = inventoryColumns;
+        this.entityId = entityId;
     }
 
-    private ClientboundMountScreenOpenPacket(FriendlyByteBuf p_453492_) {
-        this.containerId = p_453492_.readContainerId();
-        this.inventoryColumns = p_453492_.readVarInt();
-        this.entityId = p_453492_.readInt();
+    private ClientboundMountScreenOpenPacket(final FriendlyByteBuf input) {
+        this.containerId = input.readContainerId();
+        this.inventoryColumns = input.readVarInt();
+        this.entityId = input.readInt();
     }
 
-    private void write(FriendlyByteBuf p_452661_) {
-        p_452661_.writeContainerId(this.containerId);
-        p_452661_.writeVarInt(this.inventoryColumns);
-        p_452661_.writeInt(this.entityId);
+    private void write(final FriendlyByteBuf output) {
+        output.writeContainerId(this.containerId);
+        output.writeVarInt(this.inventoryColumns);
+        output.writeInt(this.entityId);
     }
 
     @Override
@@ -36,8 +36,8 @@ public class ClientboundMountScreenOpenPacket implements Packet<ClientGamePacket
         return GamePacketTypes.CLIENTBOUND_MOUNT_SCREEN_OPEN;
     }
 
-    public void handle(ClientGamePacketListener p_457099_) {
-        p_457099_.handleMountScreenOpen(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleMountScreenOpen(this);
     }
 
     public int getContainerId() {

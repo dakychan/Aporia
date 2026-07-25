@@ -20,15 +20,27 @@ public interface EnvironmentAttributes {
     );
     EnvironmentAttribute<Float> FOG_END_DISTANCE = register(
         "visual/fog_end_distance",
-        EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(1024.0F).valueRange(AttributeRange.NON_NEGATIVE_FLOAT).spatiallyInterpolated().syncable()
+        EnvironmentAttribute.builder(AttributeTypes.FLOAT)
+            .defaultValue(1024.0F)
+            .valueRange(AttributeRange.NON_NEGATIVE_FLOAT)
+            .spatiallyInterpolated()
+            .syncable()
     );
     EnvironmentAttribute<Float> SKY_FOG_END_DISTANCE = register(
         "visual/sky_fog_end_distance",
-        EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(512.0F).valueRange(AttributeRange.NON_NEGATIVE_FLOAT).spatiallyInterpolated().syncable()
+        EnvironmentAttribute.builder(AttributeTypes.FLOAT)
+            .defaultValue(512.0F)
+            .valueRange(AttributeRange.NON_NEGATIVE_FLOAT)
+            .spatiallyInterpolated()
+            .syncable()
     );
     EnvironmentAttribute<Float> CLOUD_FOG_END_DISTANCE = register(
         "visual/cloud_fog_end_distance",
-        EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(2048.0F).valueRange(AttributeRange.NON_NEGATIVE_FLOAT).spatiallyInterpolated().syncable()
+        EnvironmentAttribute.builder(AttributeTypes.FLOAT)
+            .defaultValue(2048.0F)
+            .valueRange(AttributeRange.NON_NEGATIVE_FLOAT)
+            .spatiallyInterpolated()
+            .syncable()
     );
     EnvironmentAttribute<Integer> WATER_FOG_COLOR = register(
         "visual/water_fog_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-16448205).spatiallyInterpolated().syncable()
@@ -68,6 +80,9 @@ public interface EnvironmentAttributes {
         "visual/star_brightness",
         EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.0F).valueRange(AttributeRange.UNIT_FLOAT).spatiallyInterpolated().syncable()
     );
+    EnvironmentAttribute<Integer> BLOCK_LIGHT_TINT = register(
+        "visual/block_light_tint", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-10100).spatiallyInterpolated().syncable()
+    );
     EnvironmentAttribute<Integer> SKY_LIGHT_COLOR = register(
         "visual/sky_light_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-1).spatiallyInterpolated().syncable()
     );
@@ -75,8 +90,15 @@ public interface EnvironmentAttributes {
         "visual/sky_light_factor",
         EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(1.0F).valueRange(AttributeRange.UNIT_FLOAT).spatiallyInterpolated().syncable()
     );
+    EnvironmentAttribute<Integer> NIGHT_VISION_COLOR = register(
+        "visual/night_vision_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-6710887).spatiallyInterpolated().syncable()
+    );
+    EnvironmentAttribute<Integer> AMBIENT_LIGHT_COLOR = register(
+        "visual/ambient_light_color", EnvironmentAttribute.builder(AttributeTypes.RGB_COLOR).defaultValue(-16777216).spatiallyInterpolated().syncable()
+    );
     EnvironmentAttribute<ParticleOptions> DEFAULT_DRIPSTONE_PARTICLE = register(
-        "visual/default_dripstone_particle", EnvironmentAttribute.builder(AttributeTypes.PARTICLE).defaultValue(ParticleTypes.DRIPPING_DRIPSTONE_WATER).syncable()
+        "visual/default_dripstone_particle",
+        EnvironmentAttribute.builder(AttributeTypes.PARTICLE).defaultValue(ParticleTypes.DRIPPING_DRIPSTONE_WATER).syncable()
     );
     EnvironmentAttribute<List<AmbientParticle>> AMBIENT_PARTICLES = register(
         "visual/ambient_particles", EnvironmentAttribute.builder(AttributeTypes.AMBIENT_PARTICLES).defaultValue(List.of()).syncable()
@@ -120,12 +142,14 @@ public interface EnvironmentAttributes {
         "gameplay/eyeblossom_open", EnvironmentAttribute.builder(AttributeTypes.TRI_STATE).defaultValue(TriState.DEFAULT)
     );
     EnvironmentAttribute<Float> TURTLE_EGG_HATCH_CHANCE = register(
-        "gameplay/turtle_egg_hatch_chance", EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.0F).valueRange(AttributeRange.UNIT_FLOAT)
+        "gameplay/turtle_egg_hatch_chance", EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.002F).valueRange(AttributeRange.UNIT_FLOAT)
     );
     EnvironmentAttribute<Boolean> PIGLINS_ZOMBIFY = register(
         "gameplay/piglins_zombify", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(true).syncable()
     );
-    EnvironmentAttribute<Boolean> SNOW_GOLEM_MELTS = register("gameplay/snow_golem_melts", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(false));
+    EnvironmentAttribute<Boolean> SNOW_GOLEM_MELTS = register(
+        "gameplay/snow_golem_melts", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(false)
+    );
     EnvironmentAttribute<Boolean> CREAKING_ACTIVE = register(
         "gameplay/creaking_active", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(false).syncable()
     );
@@ -135,7 +159,9 @@ public interface EnvironmentAttributes {
     EnvironmentAttribute<Float> CAT_WAKING_UP_GIFT_CHANCE = register(
         "gameplay/cat_waking_up_gift_chance", EnvironmentAttribute.builder(AttributeTypes.FLOAT).defaultValue(0.0F).valueRange(AttributeRange.UNIT_FLOAT)
     );
-    EnvironmentAttribute<Boolean> BEES_STAY_IN_HIVE = register("gameplay/bees_stay_in_hive", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(false));
+    EnvironmentAttribute<Boolean> BEES_STAY_IN_HIVE = register(
+        "gameplay/bees_stay_in_hive", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(false)
+    );
     EnvironmentAttribute<Boolean> MONSTERS_BURN = register("gameplay/monsters_burn", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(false));
     EnvironmentAttribute<Boolean> CAN_PILLAGER_PATROL_SPAWN = register(
         "gameplay/can_pillager_patrol_spawn", EnvironmentAttribute.builder(AttributeTypes.BOOLEAN).defaultValue(true)
@@ -148,13 +174,13 @@ public interface EnvironmentAttributes {
     );
     Codec<EnvironmentAttribute<?>> CODEC = BuiltInRegistries.ENVIRONMENT_ATTRIBUTE.byNameCodec();
 
-    static EnvironmentAttribute<?> bootstrap(Registry<EnvironmentAttribute<?>> p_457916_) {
+    static EnvironmentAttribute<?> bootstrap(final Registry<EnvironmentAttribute<?>> registry) {
         return RESPAWN_ANCHOR_WORKS;
     }
 
-    private static <Value> EnvironmentAttribute<Value> register(String p_455107_, EnvironmentAttribute.Builder<Value> p_453768_) {
-        EnvironmentAttribute<Value> environmentattribute = p_453768_.build();
-        Registry.register(BuiltInRegistries.ENVIRONMENT_ATTRIBUTE, Identifier.withDefaultNamespace(p_455107_), environmentattribute);
-        return environmentattribute;
+    private static <Value> EnvironmentAttribute<Value> register(final String id, final EnvironmentAttribute.Builder<Value> attributeBuilder) {
+        EnvironmentAttribute<Value> attribute = attributeBuilder.build();
+        Registry.register(BuiltInRegistries.ENVIRONMENT_ATTRIBUTE, Identifier.withDefaultNamespace(id), attribute);
+        return attribute;
     }
 }

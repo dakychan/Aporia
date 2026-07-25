@@ -1,51 +1,65 @@
 package net.minecraft.util;
 
-import it.unimi.dsi.fastutil.floats.Float2FloatFunction;
 import java.util.function.Function;
 
 public interface BoundedFloatFunction<C> {
-    BoundedFloatFunction<Float> IDENTITY = createUnlimited(p_424716_ -> p_424716_);
+    BoundedFloatFunction<Float> IDENTITY = new BoundedFloatFunction<Float>() {
+        public float apply(final Float value) {
+            return value;
+        }
 
-    float apply(C p_426895_);
+        @Override
+        public float minValue() {
+            return Float.NEGATIVE_INFINITY;
+        }
+
+        @Override
+        public float maxValue() {
+            return Float.POSITIVE_INFINITY;
+        }
+    };
+
+    float apply(final C c);
 
     float minValue();
 
     float maxValue();
 
-    static BoundedFloatFunction<Float> createUnlimited(final Float2FloatFunction p_425005_) {
-        return new BoundedFloatFunction<Float>() {
-            public float apply(Float p_426917_) {
-                return p_425005_.apply(p_426917_);
+    static <C> BoundedFloatFunction<C> constant(final float value) {
+        return new BoundedFloatFunction<C>() {
+            @Override
+            public float apply(final C c) {
+                return value;
             }
 
             @Override
             public float minValue() {
-                return Float.NEGATIVE_INFINITY;
+                return value;
             }
 
             @Override
             public float maxValue() {
-                return Float.POSITIVE_INFINITY;
+                return value;
             }
         };
     }
 
-    default <C2> BoundedFloatFunction<C2> comap(final Function<C2, C> p_425486_) {
-        final BoundedFloatFunction<C> boundedfloatfunction = this;
+    default <C2> BoundedFloatFunction<C2> comap(final Function<C2, C> function) {
+        final BoundedFloatFunction<C> outer = this;
         return new BoundedFloatFunction<C2>() {
             @Override
-            public float apply(C2 p_431624_) {
-                return boundedfloatfunction.apply(p_425486_.apply(p_431624_));
+            public float apply(final C2 c2) {
+                return outer.apply(function.apply(c2));
             }
 
             @Override
             public float minValue() {
-                return boundedfloatfunction.minValue();
+                return outer.minValue();
             }
 
             @Override
             public float maxValue() {
-                return boundedfloatfunction.maxValue();
+                return outer.maxValue();
             }
         };
     }

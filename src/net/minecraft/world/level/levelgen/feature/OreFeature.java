@@ -15,36 +15,36 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguration;
 
 public class OreFeature extends Feature<OreConfiguration> {
-    public OreFeature(Codec<OreConfiguration> p_66531_) {
-        super(p_66531_);
+    public OreFeature(final Codec<OreConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<OreConfiguration> p_160177_) {
-        RandomSource randomsource = p_160177_.random();
-        BlockPos blockpos = p_160177_.origin();
-        WorldGenLevel worldgenlevel = p_160177_.level();
-        OreConfiguration oreconfiguration = p_160177_.config();
-        float f = randomsource.nextFloat() * (float) Math.PI;
-        float f1 = oreconfiguration.size / 8.0F;
-        int i = Mth.ceil((oreconfiguration.size / 16.0F * 2.0F + 1.0F) / 2.0F);
-        double d0 = blockpos.getX() + Math.sin(f) * f1;
-        double d1 = blockpos.getX() - Math.sin(f) * f1;
-        double d2 = blockpos.getZ() + Math.cos(f) * f1;
-        double d3 = blockpos.getZ() - Math.cos(f) * f1;
-        int j = 2;
-        double d4 = blockpos.getY() + randomsource.nextInt(3) - 2;
-        double d5 = blockpos.getY() + randomsource.nextInt(3) - 2;
-        int k = blockpos.getX() - Mth.ceil(f1) - i;
-        int l = blockpos.getY() - 2 - i;
-        int i1 = blockpos.getZ() - Mth.ceil(f1) - i;
-        int j1 = 2 * (Mth.ceil(f1) + i);
-        int k1 = 2 * (2 + i);
+    public boolean place(final FeaturePlaceContext<OreConfiguration> context) {
+        RandomSource random = context.random();
+        BlockPos origin = context.origin();
+        WorldGenLevel level = context.level();
+        OreConfiguration config = context.config();
+        float dir = random.nextFloat() * (float) Math.PI;
+        float spreadXY = config.size / 8.0F;
+        int maxRadius = Mth.ceil((config.size / 16.0F * 2.0F + 1.0F) / 2.0F);
+        double x0 = origin.getX() + Math.sin(dir) * spreadXY;
+        double x1 = origin.getX() - Math.sin(dir) * spreadXY;
+        double z0 = origin.getZ() + Math.cos(dir) * spreadXY;
+        double z1 = origin.getZ() - Math.cos(dir) * spreadXY;
+        int spreadY = 2;
+        double y0 = origin.getY() + random.nextInt(3) - 2;
+        double y1 = origin.getY() + random.nextInt(3) - 2;
+        int xStart = origin.getX() - Mth.ceil(spreadXY) - maxRadius;
+        int yStart = origin.getY() - 2 - maxRadius;
+        int zStart = origin.getZ() - Mth.ceil(spreadXY) - maxRadius;
+        int sizeXZ = 2 * (Mth.ceil(spreadXY) + maxRadius);
+        int sizeY = 2 * (2 + maxRadius);
 
-        for (int l1 = k; l1 <= k + j1; l1++) {
-            for (int i2 = i1; i2 <= i1 + j1; i2++) {
-                if (l <= worldgenlevel.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, l1, i2)) {
-                    return this.doPlace(worldgenlevel, randomsource, oreconfiguration, d0, d1, d2, d3, d4, d5, k, l, i1, j1, k1);
+        for (int xprobe = xStart; xprobe <= xStart + sizeXZ; xprobe++) {
+            for (int zprobe = zStart; zprobe <= zStart + sizeXZ; zprobe++) {
+                if (yStart <= level.getHeight(Heightmap.Types.OCEAN_FLOOR_WG, xprobe, zprobe)) {
+                    return this.doPlace(level, random, config, x0, x1, z0, z1, y0, y1, xStart, yStart, zStart, sizeXZ, sizeY);
                 }
             }
         }
@@ -53,53 +53,53 @@ public class OreFeature extends Feature<OreConfiguration> {
     }
 
     protected boolean doPlace(
-        WorldGenLevel p_225172_,
-        RandomSource p_225173_,
-        OreConfiguration p_225174_,
-        double p_225175_,
-        double p_225176_,
-        double p_225177_,
-        double p_225178_,
-        double p_225179_,
-        double p_225180_,
-        int p_225181_,
-        int p_225182_,
-        int p_225183_,
-        int p_225184_,
-        int p_225185_
+        final WorldGenLevel level,
+        final RandomSource random,
+        final OreConfiguration config,
+        final double x0,
+        final double x1,
+        final double z0,
+        final double z1,
+        final double y0,
+        final double y1,
+        final int xStart,
+        final int yStart,
+        final int zStart,
+        final int sizeXZ,
+        final int sizeY
     ) {
-        int i = 0;
-        BitSet bitset = new BitSet(p_225184_ * p_225185_ * p_225184_);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        int j = p_225174_.size;
-        double[] adouble = new double[j * 4];
+        int placed = 0;
+        BitSet tested = new BitSet(sizeXZ * sizeY * sizeXZ);
+        BlockPos.MutableBlockPos orePos = new BlockPos.MutableBlockPos();
+        int size = config.size;
+        double[] data = new double[size * 4];
 
-        for (int k = 0; k < j; k++) {
-            float f = (float)k / j;
-            double d0 = Mth.lerp(f, p_225175_, p_225176_);
-            double d1 = Mth.lerp(f, p_225179_, p_225180_);
-            double d2 = Mth.lerp(f, p_225177_, p_225178_);
-            double d3 = p_225173_.nextDouble() * j / 16.0;
-            double d4 = ((Mth.sin((float) Math.PI * f) + 1.0F) * d3 + 1.0) / 2.0;
-            adouble[k * 4 + 0] = d0;
-            adouble[k * 4 + 1] = d1;
-            adouble[k * 4 + 2] = d2;
-            adouble[k * 4 + 3] = d4;
+        for (int i = 0; i < size; i++) {
+            float step = (float)i / size;
+            double xx = Mth.lerp(step, x0, x1);
+            double yy = Mth.lerp(step, y0, y1);
+            double zz = Mth.lerp(step, z0, z1);
+            double ss = random.nextDouble() * size / 16.0;
+            double r = ((Mth.sin((float) Math.PI * step) + 1.0F) * ss + 1.0) / 2.0;
+            data[i * 4 + 0] = xx;
+            data[i * 4 + 1] = yy;
+            data[i * 4 + 2] = zz;
+            data[i * 4 + 3] = r;
         }
 
-        for (int l3 = 0; l3 < j - 1; l3++) {
-            if (!(adouble[l3 * 4 + 3] <= 0.0)) {
-                for (int i4 = l3 + 1; i4 < j; i4++) {
-                    if (!(adouble[i4 * 4 + 3] <= 0.0)) {
-                        double d8 = adouble[l3 * 4 + 0] - adouble[i4 * 4 + 0];
-                        double d10 = adouble[l3 * 4 + 1] - adouble[i4 * 4 + 1];
-                        double d12 = adouble[l3 * 4 + 2] - adouble[i4 * 4 + 2];
-                        double d14 = adouble[l3 * 4 + 3] - adouble[i4 * 4 + 3];
-                        if (d14 * d14 > d8 * d8 + d10 * d10 + d12 * d12) {
-                            if (d14 > 0.0) {
-                                adouble[i4 * 4 + 3] = -1.0;
+        for (int i1 = 0; i1 < size - 1; i1++) {
+            if (!(data[i1 * 4 + 3] <= 0.0)) {
+                for (int i2 = i1 + 1; i2 < size; i2++) {
+                    if (!(data[i2 * 4 + 3] <= 0.0)) {
+                        double dx = data[i1 * 4 + 0] - data[i2 * 4 + 0];
+                        double dy = data[i1 * 4 + 1] - data[i2 * 4 + 1];
+                        double dz = data[i1 * 4 + 2] - data[i2 * 4 + 2];
+                        double dr = data[i1 * 4 + 3] - data[i2 * 4 + 3];
+                        if (dr * dr > dx * dx + dy * dy + dz * dz) {
+                            if (dr > 0.0) {
+                                data[i2 * 4 + 3] = -1.0;
                             } else {
-                                adouble[l3 * 4 + 3] = -1.0;
+                                data[i1 * 4 + 3] = -1.0;
                             }
                         }
                     }
@@ -107,52 +107,47 @@ public class OreFeature extends Feature<OreConfiguration> {
             }
         }
 
-        try (BulkSectionAccess bulksectionaccess = new BulkSectionAccess(p_225172_)) {
-            for (int j4 = 0; j4 < j; j4++) {
-                double d9 = adouble[j4 * 4 + 3];
-                if (!(d9 < 0.0)) {
-                    double d11 = adouble[j4 * 4 + 0];
-                    double d13 = adouble[j4 * 4 + 1];
-                    double d15 = adouble[j4 * 4 + 2];
-                    int k4 = Math.max(Mth.floor(d11 - d9), p_225181_);
-                    int l = Math.max(Mth.floor(d13 - d9), p_225182_);
-                    int i1 = Math.max(Mth.floor(d15 - d9), p_225183_);
-                    int j1 = Math.max(Mth.floor(d11 + d9), k4);
-                    int k1 = Math.max(Mth.floor(d13 + d9), l);
-                    int l1 = Math.max(Mth.floor(d15 + d9), i1);
+        try (BulkSectionAccess sectionGetter = new BulkSectionAccess(level)) {
+            for (int i = 0; i < size; i++) {
+                double r = data[i * 4 + 3];
+                if (!(r < 0.0)) {
+                    double xx = data[i * 4 + 0];
+                    double yy = data[i * 4 + 1];
+                    double zz = data[i * 4 + 2];
+                    int xMin = Math.max(Mth.floor(xx - r), xStart);
+                    int yMin = Math.max(Mth.floor(yy - r), yStart);
+                    int zMin = Math.max(Mth.floor(zz - r), zStart);
+                    int xMax = Math.max(Mth.floor(xx + r), xMin);
+                    int yMax = Math.max(Mth.floor(yy + r), yMin);
+                    int zMax = Math.max(Mth.floor(zz + r), zMin);
 
-                    for (int i2 = k4; i2 <= j1; i2++) {
-                        double d5 = (i2 + 0.5 - d11) / d9;
-                        if (d5 * d5 < 1.0) {
-                            for (int j2 = l; j2 <= k1; j2++) {
-                                double d6 = (j2 + 0.5 - d13) / d9;
-                                if (d5 * d5 + d6 * d6 < 1.0) {
-                                    for (int k2 = i1; k2 <= l1; k2++) {
-                                        double d7 = (k2 + 0.5 - d15) / d9;
-                                        if (d5 * d5 + d6 * d6 + d7 * d7 < 1.0 && !p_225172_.isOutsideBuildHeight(j2)) {
-                                            int l2 = i2 - p_225181_ + (j2 - p_225182_) * p_225184_ + (k2 - p_225183_) * p_225184_ * p_225185_;
-                                            if (!bitset.get(l2)) {
-                                                bitset.set(l2);
-                                                blockpos$mutableblockpos.set(i2, j2, k2);
-                                                if (p_225172_.ensureCanWrite(blockpos$mutableblockpos)) {
-                                                    LevelChunkSection levelchunksection = bulksectionaccess.getSection(blockpos$mutableblockpos);
-                                                    if (levelchunksection != null) {
-                                                        int i3 = SectionPos.sectionRelative(i2);
-                                                        int j3 = SectionPos.sectionRelative(j2);
-                                                        int k3 = SectionPos.sectionRelative(k2);
-                                                        BlockState blockstate = levelchunksection.getBlockState(i3, j3, k3);
+                    for (int x = xMin; x <= xMax; x++) {
+                        double xd = (x + 0.5 - xx) / r;
+                        if (xd * xd < 1.0) {
+                            for (int y = yMin; y <= yMax; y++) {
+                                double yd = (y + 0.5 - yy) / r;
+                                if (xd * xd + yd * yd < 1.0) {
+                                    for (int z = zMin; z <= zMax; z++) {
+                                        double zd = (z + 0.5 - zz) / r;
+                                        if (xd * xd + yd * yd + zd * zd < 1.0 && !level.isOutsideBuildHeight(y)) {
+                                            int bitSetIndex = x - xStart + (y - yStart) * sizeXZ + (z - zStart) * sizeXZ * sizeY;
+                                            if (!tested.get(bitSetIndex)) {
+                                                tested.set(bitSetIndex);
+                                                orePos.set(x, y, z);
+                                                if (level.ensureCanWrite(orePos)) {
+                                                    LevelChunkSection section = sectionGetter.getSection(orePos);
+                                                    if (section != null) {
+                                                        int sectionRelativeX = SectionPos.sectionRelative(x);
+                                                        int sectionRelativeY = SectionPos.sectionRelative(y);
+                                                        int sectionRelativeZ = SectionPos.sectionRelative(z);
+                                                        BlockState blockState = section.getBlockState(sectionRelativeX, sectionRelativeY, sectionRelativeZ);
 
-                                                        for (OreConfiguration.TargetBlockState oreconfiguration$targetblockstate : p_225174_.targetStates) {
-                                                            if (canPlaceOre(
-                                                                blockstate,
-                                                                bulksectionaccess::getBlockState,
-                                                                p_225173_,
-                                                                p_225174_,
-                                                                oreconfiguration$targetblockstate,
-                                                                blockpos$mutableblockpos
-                                                            )) {
-                                                                levelchunksection.setBlockState(i3, j3, k3, oreconfiguration$targetblockstate.state, false);
-                                                                i++;
+                                                        for (OreConfiguration.TargetBlockState targetState : config.targetStates) {
+                                                            if (canPlaceOre(blockState, sectionGetter::getBlockState, random, config, targetState, orePos)) {
+                                                                section.setBlockState(
+                                                                    sectionRelativeX, sectionRelativeY, sectionRelativeZ, targetState.state, false
+                                                                );
+                                                                placed++;
                                                                 break;
                                                             }
                                                         }
@@ -169,29 +164,29 @@ public class OreFeature extends Feature<OreConfiguration> {
             }
         }
 
-        return i > 0;
+        return placed > 0;
     }
 
     public static boolean canPlaceOre(
-        BlockState p_225187_,
-        Function<BlockPos, BlockState> p_225188_,
-        RandomSource p_225189_,
-        OreConfiguration p_225190_,
-        OreConfiguration.TargetBlockState p_225191_,
-        BlockPos.MutableBlockPos p_225192_
+        final BlockState orePosState,
+        final Function<BlockPos, BlockState> blockGetter,
+        final RandomSource random,
+        final OreConfiguration config,
+        final OreConfiguration.TargetBlockState targetState,
+        final BlockPos.MutableBlockPos orePos
     ) {
-        if (!p_225191_.target.test(p_225187_, p_225189_)) {
+        if (!targetState.target.test(orePosState, random)) {
             return false;
         } else {
-            return shouldSkipAirCheck(p_225189_, p_225190_.discardChanceOnAirExposure) ? true : !isAdjacentToAir(p_225188_, p_225192_);
+            return shouldSkipAirCheck(random, config.discardChanceOnAirExposure) ? true : !isAdjacentToAir(blockGetter, orePos);
         }
     }
 
-    protected static boolean shouldSkipAirCheck(RandomSource p_225169_, float p_225170_) {
-        if (p_225170_ <= 0.0F) {
+    protected static boolean shouldSkipAirCheck(final RandomSource random, final float discardChanceOnAirExposure) {
+        if (discardChanceOnAirExposure <= 0.0F) {
             return true;
         } else {
-            return p_225170_ >= 1.0F ? false : p_225169_.nextFloat() >= p_225170_;
+            return discardChanceOnAirExposure >= 1.0F ? false : random.nextFloat() >= discardChanceOnAirExposure;
         }
     }
 }

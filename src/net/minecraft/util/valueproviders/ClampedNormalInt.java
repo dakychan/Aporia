@@ -4,63 +4,41 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 
-public class ClampedNormalInt extends IntProvider {
-    public static final MapCodec<ClampedNormalInt> CODEC = RecordCodecBuilder.<ClampedNormalInt>mapCodec(
-            p_185887_ -> p_185887_.group(
-                    Codec.FLOAT.fieldOf("mean").forGetter(p_185905_ -> p_185905_.mean),
-                    Codec.FLOAT.fieldOf("deviation").forGetter(p_185903_ -> p_185903_.deviation),
-                    Codec.INT.fieldOf("min_inclusive").forGetter(p_326736_ -> p_326736_.minInclusive),
-                    Codec.INT.fieldOf("max_inclusive").forGetter(p_326737_ -> p_326737_.maxInclusive)
+public record ClampedNormalInt(float mean, float deviation, int minInclusive, int maxInclusive) implements IntProvider {
+    public static final MapCodec<ClampedNormalInt> MAP_CODEC = RecordCodecBuilder.<ClampedNormalInt>mapCodec(
+            i -> i.group(
+                    Codec.FLOAT.fieldOf("mean").forGetter(ClampedNormalInt::mean),
+                    Codec.FLOAT.fieldOf("deviation").forGetter(ClampedNormalInt::deviation),
+                    Codec.INT.fieldOf("min_inclusive").forGetter(ClampedNormalInt::minInclusive),
+                    Codec.INT.fieldOf("max_inclusive").forGetter(ClampedNormalInt::maxInclusive)
                 )
-                .apply(p_185887_, ClampedNormalInt::new)
+                .apply(i, ClampedNormalInt::new)
         )
         .validate(
-            p_326735_ -> p_326735_.maxInclusive < p_326735_.minInclusive
-                ? DataResult.error(() -> "Max must be larger than min: [" + p_326735_.minInclusive + ", " + p_326735_.maxInclusive + "]")
-                : DataResult.success(p_326735_)
+            c -> c.maxInclusive < c.minInclusive
+                ? DataResult.error(() -> "Max must be larger than min: [" + c.minInclusive + ", " + c.maxInclusive + "]")
+                : DataResult.success(c)
         );
-    private final float mean;
-    private final float deviation;
-    private final int minInclusive;
-    private final int maxInclusive;
 
-    public static ClampedNormalInt of(float p_185880_, float p_185881_, int p_185882_, int p_185883_) {
-        return new ClampedNormalInt(p_185880_, p_185881_, p_185882_, p_185883_);
-    }
-
-    private ClampedNormalInt(float p_185874_, float p_185875_, int p_185876_, int p_185877_) {
-        this.mean = p_185874_;
-        this.deviation = p_185875_;
-        this.minInclusive = p_185876_;
-        this.maxInclusive = p_185877_;
+    public static ClampedNormalInt of(final float mean, final float deviation, final int minInclusive, final int maxInclusive) {
+        return new ClampedNormalInt(mean, deviation, minInclusive, maxInclusive);
     }
 
     @Override
-    public int sample(RandomSource p_216844_) {
-        return sample(p_216844_, this.mean, this.deviation, this.minInclusive, this.maxInclusive);
+    public int sample(final RandomSource random) {
+        return sample(random, this.mean, this.deviation, this.minInclusive, this.maxInclusive);
     }
 
-    public static int sample(RandomSource p_216846_, float p_216847_, float p_216848_, float p_216849_, float p_216850_) {
-        return (int)Mth.clamp(Mth.normal(p_216846_, p_216847_, p_216848_), p_216849_, p_216850_);
-    }
-
-    @Override
-    public int getMinValue() {
-        return this.minInclusive;
+    public static int sample(final RandomSource random, final float mean, final float deviation, final float minInclusive, final float maxInclusive) {
+        return (int)Mth.clamp(Mth.normal(random, mean, deviation), minInclusive, maxInclusive);
     }
 
     @Override
-    public int getMaxValue() {
-        return this.maxInclusive;
-    }
-
-    @Override
-    public IntProviderType<?> getType() {
-        return IntProviderType.CLAMPED_NORMAL;
+    public MapCodec<ClampedNormalInt> codec() {
+        return MAP_CODEC;
     }
 
     @Override

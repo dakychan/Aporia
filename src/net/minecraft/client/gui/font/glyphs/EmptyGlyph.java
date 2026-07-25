@@ -4,16 +4,13 @@ import com.mojang.blaze3d.font.GlyphInfo;
 import com.mojang.blaze3d.font.UnbakedGlyph;
 import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.network.chat.Style;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class EmptyGlyph implements UnbakedGlyph {
-    final GlyphInfo info;
+    private final GlyphInfo info;
 
-    public EmptyGlyph(float p_431122_) {
-        this.info = GlyphInfo.simple(p_431122_);
+    public EmptyGlyph(final float advance) {
+        this.info = GlyphInfo.simple(advance);
     }
 
     @Override
@@ -22,7 +19,7 @@ public class EmptyGlyph implements UnbakedGlyph {
     }
 
     @Override
-    public BakedGlyph bake(UnbakedGlyph.Stitcher p_428658_) {
+    public BakedGlyph bake(final UnbakedGlyph.Stitcher stitcher) {
         return new BakedGlyph() {
             @Override
             public GlyphInfo info() {
@@ -31,7 +28,7 @@ public class EmptyGlyph implements UnbakedGlyph {
 
             @Override
             public TextRenderable.@Nullable Styled createGlyph(
-                float p_430771_, float p_430332_, int p_429540_, int p_429940_, Style p_431398_, float p_431664_, float p_427174_
+                final float x, final float y, final int color, final int shadowColor, final Style style, final float boldOffset, final float shadowOffset
             ) {
                 return null;
             }

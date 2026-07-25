@@ -9,30 +9,29 @@ import net.minecraft.util.profiling.ActiveProfiler;
 import net.minecraft.util.profiling.ProfileCollector;
 import net.minecraft.util.profiling.metrics.MetricCategory;
 import net.minecraft.util.profiling.metrics.MetricSampler;
-import org.apache.commons.lang3.tuple.Pair;
 
 public class ProfilerSamplerAdapter {
     private final Set<String> previouslyFoundSamplerNames = new ObjectOpenHashSet<>();
 
-    public Set<MetricSampler> newSamplersFoundInProfiler(Supplier<ProfileCollector> p_146164_) {
-        Set<MetricSampler> set = p_146164_.get()
+    public Set<MetricSampler> newSamplersFoundInProfiler(final Supplier<ProfileCollector> profiler) {
+        Set<MetricSampler> newSamplers = profiler.get()
             .getChartedPaths()
             .stream()
-            .filter(p_146176_ -> !this.previouslyFoundSamplerNames.contains(p_146176_.getLeft()))
-            .map(p_146174_ -> samplerForProfilingPath(p_146164_, p_146174_.getLeft(), p_146174_.getRight()))
+            .filter(pathAndCategory -> !this.previouslyFoundSamplerNames.contains(pathAndCategory.getFirst()))
+            .map(pathAndCategory -> samplerForProfilingPath(profiler, pathAndCategory.getFirst(), pathAndCategory.getSecond()))
             .collect(Collectors.toSet());
 
-        for (MetricSampler metricsampler : set) {
-            this.previouslyFoundSamplerNames.add(metricsampler.getName());
+        for (MetricSampler sampler : newSamplers) {
+            this.previouslyFoundSamplerNames.add(sampler.getName());
         }
 
-        return set;
+        return newSamplers;
     }
 
-    private static MetricSampler samplerForProfilingPath(Supplier<ProfileCollector> p_146169_, String p_146170_, MetricCategory p_146171_) {
-        return MetricSampler.create(p_146170_, p_146171_, () -> {
-            ActiveProfiler.PathEntry activeprofiler$pathentry = p_146169_.get().getEntry(p_146170_);
-            return activeprofiler$pathentry == null ? 0.0 : (double)activeprofiler$pathentry.getMaxDuration() / TimeUtil.NANOSECONDS_PER_MILLISECOND;
+    private static MetricSampler samplerForProfilingPath(final Supplier<ProfileCollector> profiler, final String profilerPath, final MetricCategory category) {
+        return MetricSampler.create(profilerPath, category, () -> {
+            ActiveProfiler.PathEntry entry = profiler.get().getEntry(profilerPath);
+            return entry == null ? 0.0 : (double)entry.getMaxDuration() / TimeUtil.NANOSECONDS_PER_MILLISECOND;
         });
     }
 }

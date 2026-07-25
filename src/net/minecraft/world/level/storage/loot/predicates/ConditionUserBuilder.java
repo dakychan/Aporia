@@ -3,16 +3,16 @@ package net.minecraft.world.level.storage.loot.predicates;
 import java.util.function.Function;
 
 public interface ConditionUserBuilder<T extends ConditionUserBuilder<T>> {
-    T when(LootItemCondition.Builder p_231043_);
+    T when(final LootItemCondition.Builder builder);
 
-    default <E> T when(Iterable<E> p_231041_, Function<E, LootItemCondition.Builder> p_231042_) {
-        T t = this.unwrap();
+    default <E> T when(final Iterable<E> collection, final Function<E, LootItemCondition.Builder> conditionProvider) {
+        T result = this.unwrap();
 
-        for (E e : p_231041_) {
-            t = t.when(p_231042_.apply(e));
+        for (E value : collection) {
+            result = result.when(conditionProvider.apply(value));
         }
 
-        return t;
+        return result;
     }
 
     T unwrap();

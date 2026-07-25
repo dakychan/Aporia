@@ -14,18 +14,18 @@ public class PlayDead extends Behavior<Axolotl> {
         super(ImmutableMap.of(MemoryModuleType.PLAY_DEAD_TICKS, MemoryStatus.VALUE_PRESENT, MemoryModuleType.HURT_BY_ENTITY, MemoryStatus.VALUE_PRESENT), 200);
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_149319_, Axolotl p_149320_) {
-        return p_149320_.isInWater();
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Axolotl body) {
+        return body.isInWater();
     }
 
-    protected boolean canStillUse(ServerLevel p_149322_, Axolotl p_149323_, long p_149324_) {
-        return p_149323_.isInWater() && p_149323_.getBrain().hasMemoryValue(MemoryModuleType.PLAY_DEAD_TICKS);
+    protected boolean canStillUse(final ServerLevel level, final Axolotl body, final long timestamp) {
+        return body.isInWater() && body.getBrain().hasMemoryValue(MemoryModuleType.PLAY_DEAD_TICKS);
     }
 
-    protected void start(ServerLevel p_149330_, Axolotl p_149331_, long p_149332_) {
-        Brain<Axolotl> brain = p_149331_.getBrain();
+    protected void start(final ServerLevel level, final Axolotl body, final long timestamp) {
+        Brain<Axolotl> brain = body.getBrain();
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
-        p_149331_.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 0));
+        body.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 200, 0));
     }
 }

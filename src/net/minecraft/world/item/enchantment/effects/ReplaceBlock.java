@@ -2,7 +2,6 @@ package net.minecraft.world.item.enchantment.effects;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -18,21 +17,21 @@ import net.minecraft.world.phys.Vec3;
 public record ReplaceBlock(Vec3i offset, Optional<BlockPredicate> predicate, BlockStateProvider blockState, Optional<Holder<GameEvent>> triggerGameEvent)
     implements EnchantmentEntityEffect {
     public static final MapCodec<ReplaceBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_343011_ -> p_343011_.group(
+        i -> i.group(
                 Vec3i.CODEC.optionalFieldOf("offset", Vec3i.ZERO).forGetter(ReplaceBlock::offset),
                 BlockPredicate.CODEC.optionalFieldOf("predicate").forGetter(ReplaceBlock::predicate),
                 BlockStateProvider.CODEC.fieldOf("block_state").forGetter(ReplaceBlock::blockState),
                 GameEvent.CODEC.optionalFieldOf("trigger_game_event").forGetter(ReplaceBlock::triggerGameEvent)
             )
-            .apply(p_343011_, ReplaceBlock::new)
+            .apply(i, ReplaceBlock::new)
     );
 
     @Override
-    public void apply(ServerLevel p_344359_, int p_342438_, EnchantedItemInUse p_343971_, Entity p_343494_, Vec3 p_342839_) {
-        BlockPos blockpos = BlockPos.containing(p_342839_).offset(this.offset);
-        if (this.predicate.map(p_342514_ -> p_342514_.test(p_344359_, blockpos)).orElse(true)
-            && p_344359_.setBlockAndUpdate(blockpos, this.blockState.getState(p_343494_.getRandom(), blockpos))) {
-            this.triggerGameEvent.ifPresent(p_345261_ -> p_344359_.gameEvent(p_343494_, (Holder<GameEvent>)p_345261_, blockpos));
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        BlockPos pos = BlockPos.containing(position).offset(this.offset);
+        if (this.predicate.map(p -> p.test(serverLevel, pos)).orElse(true)
+            && serverLevel.setBlockAndUpdate(pos, this.blockState.getState(serverLevel, entity.getRandom(), pos))) {
+            this.triggerGameEvent.ifPresent(event -> serverLevel.gameEvent(entity, (Holder<GameEvent>)event, pos));
         }
     }
 

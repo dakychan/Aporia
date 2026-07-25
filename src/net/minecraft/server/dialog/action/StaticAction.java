@@ -10,16 +10,16 @@ import net.minecraft.util.Util;
 
 public record StaticAction(ClickEvent value) implements Action {
     public static final Map<ClickEvent.Action, MapCodec<StaticAction>> WRAPPED_CODECS = Util.make(() -> {
-        Map<ClickEvent.Action, MapCodec<StaticAction>> map = new EnumMap<>(ClickEvent.Action.class);
+        Map<ClickEvent.Action, MapCodec<StaticAction>> result = new EnumMap<>(ClickEvent.Action.class);
 
-        for (ClickEvent.Action clickevent$action : ClickEvent.Action.class.getEnumConstants()) {
-            if (clickevent$action.isAllowedFromServer()) {
-                MapCodec<ClickEvent> mapcodec = (MapCodec<ClickEvent>)clickevent$action.valueCodec();
-                map.put(clickevent$action, mapcodec.xmap(StaticAction::new, StaticAction::value));
+        for (ClickEvent.Action action : ClickEvent.Action.class.getEnumConstants()) {
+            if (action.isAllowedFromServer()) {
+                MapCodec<ClickEvent> mapCodec = (MapCodec<ClickEvent>)action.valueCodec();
+                result.put(action, mapCodec.xmap(StaticAction::new, StaticAction::value));
             }
         }
 
-        return Collections.unmodifiableMap(map);
+        return Collections.unmodifiableMap(result);
     });
 
     @Override
@@ -28,7 +28,7 @@ public record StaticAction(ClickEvent value) implements Action {
     }
 
     @Override
-    public Optional<ClickEvent> createAction(Map<String, Action.ValueGetter> p_408882_) {
+    public Optional<ClickEvent> createAction(final Map<String, Action.ValueGetter> parameters) {
         return Optional.of(this.value);
     }
 }

@@ -11,12 +11,12 @@ public record ClientboundForgetLevelChunkPacket(ChunkPos pos) implements Packet<
         ClientboundForgetLevelChunkPacket::write, ClientboundForgetLevelChunkPacket::new
     );
 
-    private ClientboundForgetLevelChunkPacket(FriendlyByteBuf p_178858_) {
-        this(p_178858_.readChunkPos());
+    private ClientboundForgetLevelChunkPacket(final FriendlyByteBuf input) {
+        this(input.readChunkPos());
     }
 
-    private void write(FriendlyByteBuf p_132151_) {
-        p_132151_.writeChunkPos(this.pos);
+    private void write(final FriendlyByteBuf output) {
+        output.writeChunkPos(this.pos);
     }
 
     @Override
@@ -24,7 +24,7 @@ public record ClientboundForgetLevelChunkPacket(ChunkPos pos) implements Packet<
         return GamePacketTypes.CLIENTBOUND_FORGET_LEVEL_CHUNK;
     }
 
-    public void handle(ClientGamePacketListener p_132148_) {
-        p_132148_.handleForgetLevelChunk(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleForgetLevelChunk(this);
     }
 }

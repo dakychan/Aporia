@@ -9,174 +9,183 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
-import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.Fluids;
 
 public abstract class FoliagePlacer {
-    public static final Codec<FoliagePlacer> CODEC = BuiltInRegistries.FOLIAGE_PLACER_TYPE.byNameCodec().dispatch(FoliagePlacer::type, FoliagePlacerType::codec);
+    public static final Codec<FoliagePlacer> CODEC = BuiltInRegistries.FOLIAGE_PLACER_TYPE
+        .byNameCodec()
+        .dispatch(FoliagePlacer::type, FoliagePlacerType::codec);
     protected final IntProvider radius;
     protected final IntProvider offset;
 
-    protected static <P extends FoliagePlacer> P2<Mu<P>, IntProvider, IntProvider> foliagePlacerParts(Instance<P> p_68574_) {
-        return p_68574_.group(
-            IntProvider.codec(0, 16).fieldOf("radius").forGetter(p_161449_ -> p_161449_.radius),
-            IntProvider.codec(0, 16).fieldOf("offset").forGetter(p_161447_ -> p_161447_.offset)
+    protected static <P extends FoliagePlacer> P2<Mu<P>, IntProvider, IntProvider> foliagePlacerParts(final Instance<P> instance) {
+        return instance.group(
+            IntProviders.codec(0, 16).fieldOf("radius").forGetter(p -> p.radius), IntProviders.codec(0, 16).fieldOf("offset").forGetter(p -> p.offset)
         );
     }
 
-    public FoliagePlacer(IntProvider p_161411_, IntProvider p_161412_) {
-        this.radius = p_161411_;
-        this.offset = p_161412_;
+    public FoliagePlacer(final IntProvider radius, final IntProvider offset) {
+        this.radius = radius;
+        this.offset = offset;
     }
 
     protected abstract FoliagePlacerType<?> type();
 
     public void createFoliage(
-        LevelSimulatedReader p_273526_,
-        FoliagePlacer.FoliageSetter p_273018_,
-        RandomSource p_273425_,
-        TreeConfiguration p_273138_,
-        int p_273282_,
-        FoliagePlacer.FoliageAttachment p_272944_,
-        int p_272930_,
-        int p_272727_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius
     ) {
-        this.createFoliage(p_273526_, p_273018_, p_273425_, p_273138_, p_273282_, p_272944_, p_272930_, p_272727_, this.offset(p_273425_));
+        this.createFoliage(level, foliageSetter, random, config, treeHeight, foliageAttachment, foliageHeight, leafRadius, this.offset(random));
     }
 
     protected abstract void createFoliage(
-        LevelSimulatedReader p_225613_,
-        FoliagePlacer.FoliageSetter p_273598_,
-        RandomSource p_225615_,
-        TreeConfiguration p_225616_,
-        int p_225617_,
-        FoliagePlacer.FoliageAttachment p_225618_,
-        int p_225619_,
-        int p_225620_,
-        int p_225621_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius,
+        final int offset
     );
 
-    public abstract int foliageHeight(RandomSource p_225601_, int p_225602_, TreeConfiguration p_225603_);
+    public abstract int foliageHeight(final RandomSource random, final int treeHeight, final TreeConfiguration config);
 
-    public int foliageRadius(RandomSource p_225593_, int p_225594_) {
-        return this.radius.sample(p_225593_);
+    public int foliageRadius(final RandomSource random, final int trunkHeight) {
+        return this.radius.sample(random);
     }
 
-    private int offset(RandomSource p_225592_) {
-        return this.offset.sample(p_225592_);
+    private int offset(final RandomSource random) {
+        return this.offset.sample(random);
     }
 
-    protected abstract boolean shouldSkipLocation(RandomSource p_225595_, int p_225596_, int p_225597_, int p_225598_, int p_225599_, boolean p_225600_);
+    protected abstract boolean shouldSkipLocation(
+        final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk
+    );
 
-    protected boolean shouldSkipLocationSigned(RandomSource p_225639_, int p_225640_, int p_225641_, int p_225642_, int p_225643_, boolean p_225644_) {
-        int i;
-        int j;
-        if (p_225644_) {
-            i = Math.min(Math.abs(p_225640_), Math.abs(p_225640_ - 1));
-            j = Math.min(Math.abs(p_225642_), Math.abs(p_225642_ - 1));
+    protected boolean shouldSkipLocationSigned(
+        final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk
+    ) {
+        int minDx;
+        int minDz;
+        if (doubleTrunk) {
+            minDx = Math.min(Math.abs(dx), Math.abs(dx - 1));
+            minDz = Math.min(Math.abs(dz), Math.abs(dz - 1));
         } else {
-            i = Math.abs(p_225640_);
-            j = Math.abs(p_225642_);
+            minDx = Math.abs(dx);
+            minDz = Math.abs(dz);
         }
 
-        return this.shouldSkipLocation(p_225639_, i, p_225641_, j, p_225643_, p_225644_);
+        return this.shouldSkipLocation(random, minDx, y, minDz, currentRadius, doubleTrunk);
     }
 
     protected void placeLeavesRow(
-        LevelSimulatedReader p_225629_,
-        FoliagePlacer.FoliageSetter p_272772_,
-        RandomSource p_225631_,
-        TreeConfiguration p_225632_,
-        BlockPos p_225633_,
-        int p_225634_,
-        int p_225635_,
-        boolean p_225636_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final BlockPos origin,
+        final int currentRadius,
+        final int y,
+        final boolean doubleTrunk
     ) {
-        int i = p_225636_ ? 1 : 0;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        int offset = doubleTrunk ? 1 : 0;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (int j = -p_225634_; j <= p_225634_ + i; j++) {
-            for (int k = -p_225634_; k <= p_225634_ + i; k++) {
-                if (!this.shouldSkipLocationSigned(p_225631_, j, p_225635_, k, p_225634_, p_225636_)) {
-                    blockpos$mutableblockpos.setWithOffset(p_225633_, j, p_225635_, k);
-                    tryPlaceLeaf(p_225629_, p_272772_, p_225631_, p_225632_, blockpos$mutableblockpos);
+        for (int dx = -currentRadius; dx <= currentRadius + offset; dx++) {
+            for (int dz = -currentRadius; dz <= currentRadius + offset; dz++) {
+                if (!this.shouldSkipLocationSigned(random, dx, y, dz, currentRadius, doubleTrunk)) {
+                    pos.setWithOffset(origin, dx, y, dz);
+                    tryPlaceLeaf(level, foliageSetter, random, config, pos);
                 }
             }
         }
     }
 
     protected final void placeLeavesRowWithHangingLeavesBelow(
-        LevelSimulatedReader p_273087_,
-        FoliagePlacer.FoliageSetter p_273225_,
-        RandomSource p_272629_,
-        TreeConfiguration p_272885_,
-        BlockPos p_273412_,
-        int p_272712_,
-        int p_272656_,
-        boolean p_272689_,
-        float p_273464_,
-        float p_273068_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final BlockPos origin,
+        final int currentRadius,
+        final int y,
+        final boolean doubleTrunk,
+        final float hangingLeavesChance,
+        final float hangingLeavesExtensionChance
     ) {
-        this.placeLeavesRow(p_273087_, p_273225_, p_272629_, p_272885_, p_273412_, p_272712_, p_272656_, p_272689_);
-        int i = p_272689_ ? 1 : 0;
-        BlockPos blockpos = p_273412_.below();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        this.placeLeavesRow(level, foliageSetter, random, config, origin, currentRadius, y, doubleTrunk);
+        int offset = doubleTrunk ? 1 : 0;
+        BlockPos logPos = origin.below();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (Direction direction : Direction.Plane.HORIZONTAL) {
-            Direction direction1 = direction.getClockWise();
-            int j = direction1.getAxisDirection() == Direction.AxisDirection.POSITIVE ? p_272712_ + i : p_272712_;
-            blockpos$mutableblockpos.setWithOffset(p_273412_, 0, p_272656_ - 1, 0).move(direction1, j).move(direction, -p_272712_);
-            int k = -p_272712_;
+        for (Direction alongEdge : Direction.Plane.HORIZONTAL) {
+            Direction toEdge = alongEdge.getClockWise();
+            int offsetToEdge = toEdge.getAxisDirection() == Direction.AxisDirection.POSITIVE ? currentRadius + offset : currentRadius;
+            pos.setWithOffset(origin, 0, y - 1, 0).move(toEdge, offsetToEdge).move(alongEdge, -currentRadius);
+            int offsetAlongEdge = -currentRadius;
 
-            while (k < p_272712_ + i) {
-                boolean flag = p_273225_.isSet(blockpos$mutableblockpos.move(Direction.UP));
-                blockpos$mutableblockpos.move(Direction.DOWN);
-                if (flag && tryPlaceExtension(p_273087_, p_273225_, p_272629_, p_272885_, p_273464_, blockpos, blockpos$mutableblockpos)) {
-                    blockpos$mutableblockpos.move(Direction.DOWN);
-                    tryPlaceExtension(p_273087_, p_273225_, p_272629_, p_272885_, p_273068_, blockpos, blockpos$mutableblockpos);
-                    blockpos$mutableblockpos.move(Direction.UP);
+            while (offsetAlongEdge < currentRadius + offset) {
+                boolean leavesAbove = foliageSetter.isSet(pos.move(Direction.UP));
+                pos.move(Direction.DOWN);
+                if (leavesAbove && tryPlaceExtension(level, foliageSetter, random, config, hangingLeavesChance, logPos, pos)) {
+                    pos.move(Direction.DOWN);
+                    tryPlaceExtension(level, foliageSetter, random, config, hangingLeavesExtensionChance, logPos, pos);
+                    pos.move(Direction.UP);
                 }
 
-                k++;
-                blockpos$mutableblockpos.move(direction);
+                offsetAlongEdge++;
+                pos.move(alongEdge);
             }
         }
     }
 
     private static boolean tryPlaceExtension(
-        LevelSimulatedReader p_277577_,
-        FoliagePlacer.FoliageSetter p_277449_,
-        RandomSource p_277966_,
-        TreeConfiguration p_277897_,
-        float p_277979_,
-        BlockPos p_277833_,
-        BlockPos.MutableBlockPos p_277567_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final float chance,
+        final BlockPos logPos,
+        final BlockPos.MutableBlockPos pos
     ) {
-        if (p_277567_.distManhattan(p_277833_) >= 7) {
+        if (pos.distManhattan(logPos) >= 7) {
             return false;
         } else {
-            return p_277966_.nextFloat() > p_277979_ ? false : tryPlaceLeaf(p_277577_, p_277449_, p_277966_, p_277897_, p_277567_);
+            return random.nextFloat() > chance ? false : tryPlaceLeaf(level, foliageSetter, random, config, pos);
         }
     }
 
     protected static boolean tryPlaceLeaf(
-        LevelSimulatedReader p_273596_, FoliagePlacer.FoliageSetter p_273054_, RandomSource p_272977_, TreeConfiguration p_273040_, BlockPos p_273406_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final BlockPos pos
     ) {
-        boolean flag = p_273596_.isStateAtPosition(p_273406_, p_360613_ -> p_360613_.getValueOrElse(BlockStateProperties.PERSISTENT, false));
-        if (!flag && TreeFeature.validTreePos(p_273596_, p_273406_)) {
-            BlockState blockstate = p_273040_.foliageProvider.getState(p_272977_, p_273406_);
-            if (blockstate.hasProperty(BlockStateProperties.WATERLOGGED)) {
-                blockstate = blockstate.setValue(
-                    BlockStateProperties.WATERLOGGED, p_273596_.isFluidAtPosition(p_273406_, p_225638_ -> p_225638_.isSourceOfType(Fluids.WATER))
+        boolean isPersistent = level.isStateAtPosition(pos, state -> state.getValueOrElse(BlockStateProperties.PERSISTENT, false));
+        if (!isPersistent && TreeFeature.validTreePos(level, pos)) {
+            BlockState foliageState = config.foliageProvider.getState(level, random, pos);
+            if (foliageState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+                foliageState = foliageState.setValue(
+                    BlockStateProperties.WATERLOGGED, level.isFluidAtPosition(pos, fluidState -> fluidState.isSourceOfType(Fluids.WATER))
                 );
             }
 
-            p_273054_.set(p_273406_, blockstate);
+            foliageSetter.set(pos, foliageState);
             return true;
         } else {
             return false;
@@ -188,10 +197,10 @@ public abstract class FoliagePlacer {
         private final int radiusOffset;
         private final boolean doubleTrunk;
 
-        public FoliageAttachment(BlockPos p_68585_, int p_68586_, boolean p_68587_) {
-            this.pos = p_68585_;
-            this.radiusOffset = p_68586_;
-            this.doubleTrunk = p_68587_;
+        public FoliageAttachment(final BlockPos pos, final int radiusOffset, final boolean doubleTrunk) {
+            this.pos = pos;
+            this.radiusOffset = radiusOffset;
+            this.doubleTrunk = doubleTrunk;
         }
 
         public BlockPos pos() {
@@ -208,8 +217,8 @@ public abstract class FoliagePlacer {
     }
 
     public interface FoliageSetter {
-        void set(BlockPos p_273742_, BlockState p_273780_);
+        void set(final BlockPos pos, final BlockState state);
 
-        boolean isSet(BlockPos p_273118_);
+        boolean isSet(final BlockPos pos);
     }
 }

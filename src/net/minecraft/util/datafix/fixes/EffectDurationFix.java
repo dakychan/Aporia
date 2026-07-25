@@ -14,57 +14,59 @@ import java.util.Set;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class EffectDurationFix extends DataFix {
-    private static final Set<String> POTION_ITEMS = Set.of("minecraft:potion", "minecraft:splash_potion", "minecraft:lingering_potion", "minecraft:tipped_arrow");
+    private static final Set<String> POTION_ITEMS = Set.of(
+        "minecraft:potion", "minecraft:splash_potion", "minecraft:lingering_potion", "minecraft:tipped_arrow"
+    );
 
-    public EffectDurationFix(Schema p_267976_) {
-        super(p_267976_, false);
+    public EffectDurationFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Schema schema = this.getInputSchema();
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("tag");
+        Schema inputSchema = this.getInputSchema();
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idFinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<?> tagFinder = itemStackType.findField("tag");
         return TypeRewriteRule.seq(
             this.fixTypeEverywhereTyped(
-                "EffectDurationEntity", schema.getType(References.ENTITY), p_268118_ -> p_268118_.update(DSL.remainderFinder(), this::updateEntity)
+                "EffectDurationEntity", inputSchema.getType(References.ENTITY), input -> input.update(DSL.remainderFinder(), this::updateEntity)
             ),
             this.fixTypeEverywhereTyped(
-                "EffectDurationPlayer", schema.getType(References.PLAYER), p_268326_ -> p_268326_.update(DSL.remainderFinder(), this::updateEntity)
+                "EffectDurationPlayer", inputSchema.getType(References.PLAYER), input -> input.update(DSL.remainderFinder(), this::updateEntity)
             ),
-            this.fixTypeEverywhereTyped("EffectDurationItem", type, p_358828_ -> {
-                if (p_358828_.getOptional(opticfinder).filter(p_358829_ -> POTION_ITEMS.contains(p_358829_.getSecond())).isPresent()) {
-                    Optional<? extends Typed<?>> optional = p_358828_.getOptionalTyped(opticfinder1);
-                    if (optional.isPresent()) {
-                        Dynamic<?> dynamic = optional.get().get(DSL.remainderFinder());
-                        Typed<?> typed = optional.get().set(DSL.remainderFinder(), dynamic.update("CustomPotionEffects", this::fix));
-                        return p_358828_.set(opticfinder1, typed);
+            this.fixTypeEverywhereTyped("EffectDurationItem", itemStackType, input -> {
+                if (input.getOptional(idFinder).filter(typeAndIdPair -> POTION_ITEMS.contains(typeAndIdPair.getSecond())).isPresent()) {
+                    Optional<? extends Typed<?>> tag = input.getOptionalTyped(tagFinder);
+                    if (tag.isPresent()) {
+                        Dynamic<?> tagRest = tag.get().get(DSL.remainderFinder());
+                        Typed<?> newTag = tag.get().set(DSL.remainderFinder(), tagRest.update("CustomPotionEffects", this::fix));
+                        return input.set(tagFinder, newTag);
                     }
                 }
 
-                return p_358828_;
+                return input;
             })
         );
     }
 
-    private Dynamic<?> fixEffect(Dynamic<?> p_267989_) {
-        return p_267989_.update("FactorCalculationData", p_268051_ -> {
-            int i = p_268051_.get("effect_changed_timestamp").asInt(-1);
-            p_268051_ = p_268051_.remove("effect_changed_timestamp");
-            int j = p_267989_.get("Duration").asInt(-1);
-            int k = i - j;
-            return p_268051_.set("ticks_active", p_268051_.createInt(k));
+    private Dynamic<?> fixEffect(final Dynamic<?> effect) {
+        return effect.update("FactorCalculationData", factorData -> {
+            int timestamp = factorData.get("effect_changed_timestamp").asInt(-1);
+            factorData = factorData.remove("effect_changed_timestamp");
+            int duration = effect.get("Duration").asInt(-1);
+            int ticksActive = timestamp - duration;
+            return factorData.set("ticks_active", factorData.createInt(ticksActive));
         });
     }
 
-    private Dynamic<?> fix(Dynamic<?> p_268201_) {
-        return p_268201_.createList(p_268201_.asStream().map(this::fixEffect));
+    private Dynamic<?> fix(final Dynamic<?> input) {
+        return input.createList(input.asStream().map(this::fixEffect));
     }
 
-    private Dynamic<?> updateEntity(Dynamic<?> p_268005_) {
-        p_268005_ = p_268005_.update("Effects", this::fix);
-        p_268005_ = p_268005_.update("ActiveEffects", this::fix);
-        return p_268005_.update("CustomPotionEffects", this::fix);
+    private Dynamic<?> updateEntity(Dynamic<?> data) {
+        data = data.update("Effects", this::fix);
+        data = data.update("ActiveEffects", this::fix);
+        return data.update("CustomPotionEffects", this::fix);
     }
 }

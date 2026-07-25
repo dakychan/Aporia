@@ -13,13 +13,13 @@ public record ServerboundCookieResponsePacket(Identifier key, byte @Nullable [] 
         ServerboundCookieResponsePacket::write, ServerboundCookieResponsePacket::new
     );
 
-    private ServerboundCookieResponsePacket(FriendlyByteBuf p_335580_) {
-        this(p_335580_.readIdentifier(), p_335580_.readNullable(ClientboundStoreCookiePacket.PAYLOAD_STREAM_CODEC));
+    private ServerboundCookieResponsePacket(final FriendlyByteBuf input) {
+        this(input.readIdentifier(), input.readNullable(ClientboundStoreCookiePacket.PAYLOAD_STREAM_CODEC));
     }
 
-    private void write(FriendlyByteBuf p_329068_) {
-        p_329068_.writeIdentifier(this.key);
-        p_329068_.writeNullable(this.payload, ClientboundStoreCookiePacket.PAYLOAD_STREAM_CODEC);
+    private void write(final FriendlyByteBuf output) {
+        output.writeIdentifier(this.key);
+        output.writeNullable(this.payload, ClientboundStoreCookiePacket.PAYLOAD_STREAM_CODEC);
     }
 
     @Override
@@ -27,7 +27,7 @@ public record ServerboundCookieResponsePacket(Identifier key, byte @Nullable [] 
         return CookiePacketTypes.SERVERBOUND_COOKIE_RESPONSE;
     }
 
-    public void handle(ServerCookiePacketListener p_329041_) {
-        p_329041_.handleCookieResponse(this);
+    public void handle(final ServerCookiePacketListener listener) {
+        listener.handleCookieResponse(this);
     }
 }

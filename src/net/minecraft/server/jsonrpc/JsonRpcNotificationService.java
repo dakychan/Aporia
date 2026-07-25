@@ -20,19 +20,19 @@ public class JsonRpcNotificationService implements NotificationService {
     private final ManagementServer managementServer;
     private final MinecraftApi minecraftApi;
 
-    public JsonRpcNotificationService(MinecraftApi p_426698_, ManagementServer p_428555_) {
-        this.minecraftApi = p_426698_;
-        this.managementServer = p_428555_;
+    public JsonRpcNotificationService(final MinecraftApi minecraftApi, final ManagementServer managementServer) {
+        this.minecraftApi = minecraftApi;
+        this.managementServer = managementServer;
     }
 
     @Override
-    public void playerJoined(ServerPlayer p_425976_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_JOINED, PlayerDto.from(p_425976_));
+    public void playerJoined(final ServerPlayer player) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_JOINED, PlayerDto.from(player));
     }
 
     @Override
-    public void playerLeft(ServerPlayer p_428853_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_LEFT, PlayerDto.from(p_428853_));
+    public void playerLeft(final ServerPlayer player) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_LEFT, PlayerDto.from(player));
     }
 
     @Override
@@ -61,48 +61,48 @@ public class JsonRpcNotificationService implements NotificationService {
     }
 
     @Override
-    public void playerOped(ServerOpListEntry p_423535_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_OPED, OperatorService.OperatorDto.from(p_423535_));
+    public void playerOped(final ServerOpListEntry operator) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_OPED, OperatorService.OperatorDto.from(operator));
     }
 
     @Override
-    public void playerDeoped(ServerOpListEntry p_423675_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_DEOPED, OperatorService.OperatorDto.from(p_423675_));
+    public void playerDeoped(final ServerOpListEntry operator) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_DEOPED, OperatorService.OperatorDto.from(operator));
     }
 
     @Override
-    public void playerAddedToAllowlist(NameAndId p_429666_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_ADDED_TO_ALLOWLIST, PlayerDto.from(p_429666_));
+    public void playerAddedToAllowlist(final NameAndId player) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_ADDED_TO_ALLOWLIST, PlayerDto.from(player));
     }
 
     @Override
-    public void playerRemovedFromAllowlist(NameAndId p_422544_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_REMOVED_FROM_ALLOWLIST, PlayerDto.from(p_422544_));
+    public void playerRemovedFromAllowlist(final NameAndId player) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_REMOVED_FROM_ALLOWLIST, PlayerDto.from(player));
     }
 
     @Override
-    public void ipBanned(IpBanListEntry p_428202_) {
-        this.broadcastNotification(OutgoingRpcMethods.IP_BANNED, IpBanlistService.IpBanDto.from(p_428202_));
+    public void ipBanned(final IpBanListEntry ban) {
+        this.broadcastNotification(OutgoingRpcMethods.IP_BANNED, IpBanlistService.IpBanDto.from(ban));
     }
 
     @Override
-    public void ipUnbanned(String p_430123_) {
-        this.broadcastNotification(OutgoingRpcMethods.IP_UNBANNED, p_430123_);
+    public void ipUnbanned(final String ip) {
+        this.broadcastNotification(OutgoingRpcMethods.IP_UNBANNED, ip);
     }
 
     @Override
-    public void playerBanned(UserBanListEntry p_425692_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_BANNED, BanlistService.UserBanDto.from(p_425692_));
+    public void playerBanned(final UserBanListEntry ban) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_BANNED, BanlistService.UserBanDto.from(ban));
     }
 
     @Override
-    public void playerUnbanned(NameAndId p_427919_) {
-        this.broadcastNotification(OutgoingRpcMethods.PLAYER_UNBANNED, PlayerDto.from(p_427919_));
+    public void playerUnbanned(final NameAndId player) {
+        this.broadcastNotification(OutgoingRpcMethods.PLAYER_UNBANNED, PlayerDto.from(player));
     }
 
     @Override
-    public <T> void onGameRuleChanged(GameRule<T> p_452819_, T p_456636_) {
-        this.broadcastNotification(OutgoingRpcMethods.GAMERULE_CHANGED, GameRulesService.getTypedRule(this.minecraftApi, p_452819_, p_456636_));
+    public <T> void onGameRuleChanged(final GameRule<T> gameRule, final T value) {
+        this.broadcastNotification(OutgoingRpcMethods.GAMERULE_CHANGED, GameRulesService.getTypedRule(this.minecraftApi, gameRule, value));
     }
 
     @Override
@@ -110,11 +110,11 @@ public class JsonRpcNotificationService implements NotificationService {
         this.broadcastNotification(OutgoingRpcMethods.STATUS_HEARTBEAT, ServerStateService.status(this.minecraftApi));
     }
 
-    private void broadcastNotification(Holder.Reference<? extends OutgoingRpcMethod<Void, ?>> p_423323_) {
-        this.managementServer.forEachConnection(p_425706_ -> p_425706_.sendNotification(p_423323_));
+    private void broadcastNotification(final Holder.Reference<? extends OutgoingRpcMethod<Void, ?>> method) {
+        this.managementServer.forEachConnection(connection -> connection.sendNotification(method));
     }
 
-    private <Params> void broadcastNotification(Holder.Reference<? extends OutgoingRpcMethod<Params, ?>> p_426626_, Params p_423171_) {
-        this.managementServer.forEachConnection(p_428917_ -> p_428917_.sendNotification(p_426626_, p_423171_));
+    private <Params> void broadcastNotification(final Holder.Reference<? extends OutgoingRpcMethod<Params, ?>> method, final Params params) {
+        this.managementServer.forEachConnection(connection -> connection.sendNotification(method, params));
     }
 }

@@ -2,7 +2,6 @@ package net.minecraft.world.level.levelgen.placement;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -22,46 +21,49 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 
 public record PlacedFeature(Holder<ConfiguredFeature<?, ?>> feature, List<PlacementModifier> placement) {
     public static final Codec<PlacedFeature> DIRECT_CODEC = RecordCodecBuilder.create(
-        p_191788_ -> p_191788_.group(
-                ConfiguredFeature.CODEC.fieldOf("feature").forGetter(p_204928_ -> p_204928_.feature),
-                PlacementModifier.CODEC.listOf().fieldOf("placement").forGetter(p_191796_ -> p_191796_.placement)
+        i -> i.group(
+                ConfiguredFeature.CODEC.fieldOf("feature").forGetter(c -> c.feature),
+                PlacementModifier.CODEC.listOf().fieldOf("placement").forGetter(c -> c.placement)
             )
-            .apply(p_191788_, PlacedFeature::new)
+            .apply(i, PlacedFeature::new)
     );
     public static final Codec<Holder<PlacedFeature>> CODEC = RegistryFileCodec.create(Registries.PLACED_FEATURE, DIRECT_CODEC);
     public static final Codec<HolderSet<PlacedFeature>> LIST_CODEC = RegistryCodecs.homogeneousList(Registries.PLACED_FEATURE, DIRECT_CODEC);
-    public static final Codec<List<HolderSet<PlacedFeature>>> LIST_OF_LISTS_CODEC = RegistryCodecs.homogeneousList(Registries.PLACED_FEATURE, DIRECT_CODEC, true).listOf();
+    public static final Codec<List<HolderSet<PlacedFeature>>> LIST_OF_LISTS_CODEC = RegistryCodecs.homogeneousList(
+            Registries.PLACED_FEATURE, DIRECT_CODEC, true
+        )
+        .listOf();
 
-    public boolean place(WorldGenLevel p_226358_, ChunkGenerator p_226359_, RandomSource p_226360_, BlockPos p_226361_) {
-        return this.placeWithContext(new PlacementContext(p_226358_, p_226359_, Optional.empty()), p_226360_, p_226361_);
+    public boolean place(final WorldGenLevel level, final ChunkGenerator generator, final RandomSource random, final BlockPos origin) {
+        return this.placeWithContext(new PlacementContext(level, generator, Optional.empty()), random, origin);
     }
 
-    public boolean placeWithBiomeCheck(WorldGenLevel p_226378_, ChunkGenerator p_226379_, RandomSource p_226380_, BlockPos p_226381_) {
-        return this.placeWithContext(new PlacementContext(p_226378_, p_226379_, Optional.of(this)), p_226380_, p_226381_);
+    public boolean placeWithBiomeCheck(final WorldGenLevel level, final ChunkGenerator generator, final RandomSource random, final BlockPos origin) {
+        return this.placeWithContext(new PlacementContext(level, generator, Optional.of(this)), random, origin);
     }
 
-    private boolean placeWithContext(PlacementContext p_226369_, RandomSource p_226370_, BlockPos p_226371_) {
-        Stream<BlockPos> stream = Stream.of(p_226371_);
+    private boolean placeWithContext(final PlacementContext context, final RandomSource random, final BlockPos origin) {
+        Stream<BlockPos> placements = Stream.of(origin);
 
-        for (PlacementModifier placementmodifier : this.placement) {
-            stream = stream.flatMap(p_226376_ -> placementmodifier.getPositions(p_226369_, p_226370_, p_226376_));
+        for (PlacementModifier placementModifier : this.placement) {
+            placements = placements.flatMap(p -> placementModifier.getPositions(context, random, p));
         }
 
-        ConfiguredFeature<?, ?> configuredfeature = this.feature.value();
-        MutableBoolean mutableboolean = new MutableBoolean();
-        stream.forEach(p_422237_ -> {
-            if (configuredfeature.place(p_226369_.getLevel(), p_226369_.generator(), p_226370_, p_422237_)) {
-                mutableboolean.setTrue();
+        ConfiguredFeature<?, ?> feature = this.feature.value();
+        MutableBoolean placedAny = new MutableBoolean();
+        placements.forEach(pos -> {
+            if (feature.place(context.getLevel(), context.generator(), random, pos)) {
+                placedAny.setTrue();
                 if (SharedConstants.DEBUG_FEATURE_COUNT) {
-                    FeatureCountTracker.featurePlaced(p_226369_.getLevel().getLevel(), configuredfeature, p_226369_.topFeature());
+                    FeatureCountTracker.featurePlaced(context.getLevel().getLevel(), feature, context.topFeature());
                 }
             }
         });
-        return mutableboolean.isTrue();
+        return placedAny.isTrue();
     }
 
-    public Stream<ConfiguredFeature<?, ?>> getFeatures() {
-        return this.feature.value().getFeatures();
+    public Stream<Holder<ConfiguredFeature<?, ?>>> getFeatures() {
+        return Stream.concat(Stream.of(this.feature), this.feature.value().getSubFeatures());
     }
 
     @Override

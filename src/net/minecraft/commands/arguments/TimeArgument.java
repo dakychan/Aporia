@@ -24,50 +24,50 @@ public class TimeArgument implements ArgumentType<Integer> {
     private static final Collection<String> EXAMPLES = Arrays.asList("0d", "0s", "0t", "0");
     private static final SimpleCommandExceptionType ERROR_INVALID_UNIT = new SimpleCommandExceptionType(Component.translatable("argument.time.invalid_unit"));
     private static final Dynamic2CommandExceptionType ERROR_TICK_COUNT_TOO_LOW = new Dynamic2CommandExceptionType(
-        (p_308389_, p_308390_) -> Component.translatableEscape("argument.time.tick_count_too_low", p_308390_, p_308389_)
+        (value, limit) -> Component.translatableEscape("argument.time.tick_count_too_low", limit, value)
     );
     private static final Object2IntMap<String> UNITS = new Object2IntOpenHashMap<>();
-    final int minimum;
+    private final int minimum;
 
-    private TimeArgument(int p_265107_) {
-        this.minimum = p_265107_;
+    private TimeArgument(final int minimum) {
+        this.minimum = minimum;
     }
 
     public static TimeArgument time() {
         return new TimeArgument(0);
     }
 
-    public static TimeArgument time(int p_265722_) {
-        return new TimeArgument(p_265722_);
+    public static TimeArgument time(final int minimum) {
+        return new TimeArgument(minimum);
     }
 
-    public Integer parse(StringReader p_113039_) throws CommandSyntaxException {
-        float f = p_113039_.readFloat();
-        String s = p_113039_.readUnquotedString();
-        int i = UNITS.getOrDefault(s, 0);
-        if (i == 0) {
-            throw ERROR_INVALID_UNIT.createWithContext(p_113039_);
+    public Integer parse(final StringReader reader) throws CommandSyntaxException {
+        float value = reader.readFloat();
+        String unit = reader.readUnquotedString();
+        int factor = UNITS.getOrDefault(unit, 0);
+        if (factor == 0) {
+            throw ERROR_INVALID_UNIT.createWithContext(reader);
         } else {
-            int j = Math.round(f * i);
-            if (j < this.minimum) {
-                throw ERROR_TICK_COUNT_TOO_LOW.createWithContext(p_113039_, j, this.minimum);
+            int ticks = Math.round(value * factor);
+            if (ticks < this.minimum) {
+                throw ERROR_TICK_COUNT_TOO_LOW.createWithContext(reader, ticks, this.minimum);
             } else {
-                return j;
+                return ticks;
             }
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_113044_, SuggestionsBuilder p_113045_) {
-        StringReader stringreader = new StringReader(p_113045_.getRemaining());
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        StringReader reader = new StringReader(builder.getRemaining());
 
         try {
-            stringreader.readFloat();
-        } catch (CommandSyntaxException commandsyntaxexception) {
-            return p_113045_.buildFuture();
+            reader.readFloat();
+        } catch (CommandSyntaxException ignored) {
+            return builder.buildFuture();
         }
 
-        return SharedSuggestionProvider.suggest(UNITS.keySet(), p_113045_.createOffset(p_113045_.getStart() + stringreader.getCursor()));
+        return SharedSuggestionProvider.suggest(UNITS.keySet(), builder.createOffset(builder.getStart() + reader.getCursor()));
     }
 
     @Override
@@ -83,31 +83,31 @@ public class TimeArgument implements ArgumentType<Integer> {
     }
 
     public static class Info implements ArgumentTypeInfo<TimeArgument, TimeArgument.Info.Template> {
-        public void serializeToNetwork(TimeArgument.Info.Template p_265434_, FriendlyByteBuf p_265320_) {
-            p_265320_.writeInt(p_265434_.min);
+        public void serializeToNetwork(final TimeArgument.Info.Template template, final FriendlyByteBuf out) {
+            out.writeInt(template.min);
         }
 
-        public TimeArgument.Info.Template deserializeFromNetwork(FriendlyByteBuf p_265324_) {
-            int i = p_265324_.readInt();
-            return new TimeArgument.Info.Template(i);
+        public TimeArgument.Info.Template deserializeFromNetwork(final FriendlyByteBuf in) {
+            int min = in.readInt();
+            return new TimeArgument.Info.Template(min);
         }
 
-        public void serializeToJson(TimeArgument.Info.Template p_265110_, JsonObject p_265629_) {
-            p_265629_.addProperty("min", p_265110_.min);
+        public void serializeToJson(final TimeArgument.Info.Template template, final JsonObject out) {
+            out.addProperty("min", template.min);
         }
 
-        public TimeArgument.Info.Template unpack(TimeArgument p_265544_) {
-            return new TimeArgument.Info.Template(p_265544_.minimum);
+        public TimeArgument.Info.Template unpack(final TimeArgument argument) {
+            return new TimeArgument.Info.Template(argument.minimum);
         }
 
         public final class Template implements ArgumentTypeInfo.Template<TimeArgument> {
-            final int min;
+            private final int min;
 
-            Template(final int p_265096_) {
-                this.min = p_265096_;
+            private Template(final int min) {
+                this.min = min;
             }
 
-            public TimeArgument instantiate(CommandBuildContext p_265466_) {
+            public TimeArgument instantiate(final CommandBuildContext context) {
                 return TimeArgument.time(this.min);
             }
 

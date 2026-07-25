@@ -2,14 +2,13 @@ package net.minecraft.server.dialog.action;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.network.chat.ClickEvent;
 
 public record CommandTemplate(ParsedTemplate template) implements Action {
     public static final MapCodec<CommandTemplate> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_406000_ -> p_406000_.group(ParsedTemplate.CODEC.fieldOf("template").forGetter(CommandTemplate::template)).apply(p_406000_, CommandTemplate::new)
+        i -> i.group(ParsedTemplate.CODEC.fieldOf("template").forGetter(CommandTemplate::template)).apply(i, CommandTemplate::new)
     );
 
     @Override
@@ -18,8 +17,8 @@ public record CommandTemplate(ParsedTemplate template) implements Action {
     }
 
     @Override
-    public Optional<ClickEvent> createAction(Map<String, Action.ValueGetter> p_406266_) {
-        String s = this.template.instantiate(Action.ValueGetter.getAsTemplateSubstitutions(p_406266_));
-        return Optional.of(new ClickEvent.RunCommand(s));
+    public Optional<ClickEvent> createAction(final Map<String, Action.ValueGetter> parameters) {
+        String command = this.template.instantiate(Action.ValueGetter.getAsTemplateSubstitutions(parameters));
+        return Optional.of(new ClickEvent.RunCommand(command));
     }
 }

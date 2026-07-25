@@ -10,16 +10,13 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface MultiLineLabel {
     MultiLineLabel EMPTY = new MultiLineLabel() {
         @Override
-        public int visitLines(TextAlignment p_456824_, int p_94389_, int p_94390_, int p_94391_, ActiveTextCollector p_450488_) {
-            return p_94390_;
+        public int visitLines(final TextAlignment align, final int anchorX, final int topY, final int lineHeight, final ActiveTextCollector output) {
+            return topY;
         }
 
         @Override
@@ -33,73 +30,71 @@ public interface MultiLineLabel {
         }
     };
 
-    static MultiLineLabel create(Font p_94351_, Component... p_94352_) {
-        return create(p_94351_, Integer.MAX_VALUE, Integer.MAX_VALUE, p_94352_);
+    static MultiLineLabel create(final Font font, final Component... messages) {
+        return create(font, Integer.MAX_VALUE, Integer.MAX_VALUE, messages);
     }
 
-    static MultiLineLabel create(Font p_94342_, int p_94344_, Component... p_345312_) {
-        return create(p_94342_, p_94344_, Integer.MAX_VALUE, p_345312_);
+    static MultiLineLabel create(final Font font, final int maxWidth, final Component... messages) {
+        return create(font, maxWidth, Integer.MAX_VALUE, messages);
     }
 
-    static MultiLineLabel create(Font p_94346_, Component p_344884_, int p_94348_) {
-        return create(p_94346_, p_94348_, Integer.MAX_VALUE, p_344884_);
+    static MultiLineLabel create(final Font font, final Component message, final int maxWidth) {
+        return create(font, maxWidth, Integer.MAX_VALUE, message);
     }
 
-    static MultiLineLabel create(final Font p_169037_, final int p_342954_, final int p_342610_, final Component... p_345091_) {
-        return p_345091_.length == 0
+    static MultiLineLabel create(final Font font, final int maxWidth, final int maxLines, final Component... messages) {
+        return messages.length == 0
             ? EMPTY
             : new MultiLineLabel() {
                 private @Nullable List<MultiLineLabel.TextAndWidth> cachedTextAndWidth;
                 private @Nullable Language splitWithLanguage;
 
                 @Override
-                public int visitLines(TextAlignment p_453127_, int p_456938_, int p_450235_, int p_460716_, ActiveTextCollector p_455343_) {
-                    int i = p_450235_;
+                public int visitLines(final TextAlignment align, final int anchorX, final int topY, final int lineHeight, final ActiveTextCollector output) {
+                    int y = topY;
 
-                    for (MultiLineLabel.TextAndWidth multilinelabel$textandwidth : this.getSplitMessage()) {
-                        int j = p_453127_.calculateLeft(p_456938_, multilinelabel$textandwidth.width);
-                        p_455343_.accept(j, i, multilinelabel$textandwidth.text);
-                        i += p_460716_;
+                    for (MultiLineLabel.TextAndWidth splitLine : this.getSplitMessage()) {
+                        int leftX = align.calculateLeft(anchorX, splitLine.width);
+                        output.accept(leftX, y, splitLine.text);
+                        y += lineHeight;
                     }
 
-                    return i;
+                    return y;
                 }
 
                 private List<MultiLineLabel.TextAndWidth> getSplitMessage() {
-                    Language language = Language.getInstance();
-                    if (this.cachedTextAndWidth != null && language == this.splitWithLanguage) {
-                        return this.cachedTextAndWidth;
-                    } else {
-                        this.splitWithLanguage = language;
-                        List<FormattedText> list = new ArrayList<>();
-
-                        for (Component component : p_345091_) {
-                            list.addAll(p_169037_.splitIgnoringLanguage(component, p_342954_));
-                        }
-
-                        this.cachedTextAndWidth = new ArrayList<>();
-                        int i = Math.min(list.size(), p_342610_);
-                        List<FormattedText> list1 = list.subList(0, i);
-
-                        for (int j = 0; j < list1.size(); j++) {
-                            FormattedText formattedtext2 = list1.get(j);
-                            FormattedCharSequence formattedcharsequence = Language.getInstance().getVisualOrder(formattedtext2);
-                            if (j == list1.size() - 1 && i == p_342610_ && i != list.size()) {
-                                FormattedText formattedtext = p_169037_.substrByWidth(
-                                    formattedtext2, p_169037_.width(formattedtext2) - p_169037_.width(CommonComponents.ELLIPSIS)
-                                );
-                                FormattedText formattedtext1 = FormattedText.composite(
-                                    formattedtext, CommonComponents.ELLIPSIS.copy().withStyle(p_345091_[p_345091_.length - 1].getStyle())
-                                );
-                                this.cachedTextAndWidth
-                                    .add(new MultiLineLabel.TextAndWidth(Language.getInstance().getVisualOrder(formattedtext1), p_169037_.width(formattedtext1)));
-                            } else {
-                                this.cachedTextAndWidth.add(new MultiLineLabel.TextAndWidth(formattedcharsequence, p_169037_.width(formattedcharsequence)));
-                            }
-                        }
-
+                    Language currentLanguage = Language.getInstance();
+                    if (this.cachedTextAndWidth != null && currentLanguage == this.splitWithLanguage) {
                         return this.cachedTextAndWidth;
                     }
+
+                    this.splitWithLanguage = currentLanguage;
+                    List<FormattedText> splitMessage = new ArrayList<>();
+
+                    for (Component message : messages) {
+                        splitMessage.addAll(font.splitIgnoringLanguage(message, maxWidth));
+                    }
+
+                    this.cachedTextAndWidth = new ArrayList<>();
+                    int actualMaxLines = Math.min(splitMessage.size(), maxLines);
+                    List<FormattedText> linesToAdd = splitMessage.subList(0, actualMaxLines);
+
+                    for (int i = 0; i < linesToAdd.size(); i++) {
+                        FormattedText formattedText = linesToAdd.get(i);
+                        FormattedCharSequence formattedCharSequence = Language.getInstance().getVisualOrder(formattedText);
+                        if (i == linesToAdd.size() - 1 && actualMaxLines == maxLines && actualMaxLines != splitMessage.size()) {
+                            FormattedText clippedText = font.substrByWidth(formattedText, font.width(formattedText) - font.width(CommonComponents.ELLIPSIS));
+                            FormattedText withEllipsis = FormattedText.composite(
+                                clippedText, CommonComponents.ELLIPSIS.copy().withStyle(messages[messages.length - 1].getStyle())
+                            );
+                            this.cachedTextAndWidth
+                                .add(new MultiLineLabel.TextAndWidth(Language.getInstance().getVisualOrder(withEllipsis), font.width(withEllipsis)));
+                        } else {
+                            this.cachedTextAndWidth.add(new MultiLineLabel.TextAndWidth(formattedCharSequence, font.width(formattedCharSequence)));
+                        }
+                    }
+
+                    return this.cachedTextAndWidth;
                 }
 
                 @Override
@@ -109,18 +104,17 @@ public interface MultiLineLabel {
 
                 @Override
                 public int getWidth() {
-                    return Math.min(p_342954_, this.getSplitMessage().stream().mapToInt(MultiLineLabel.TextAndWidth::width).max().orElse(0));
+                    return Math.min(maxWidth, this.getSplitMessage().stream().mapToInt(MultiLineLabel.TextAndWidth::width).max().orElse(0));
                 }
             };
     }
 
-    int visitLines(TextAlignment p_451261_, int p_457401_, int p_451136_, int p_454300_, ActiveTextCollector p_450812_);
+    int visitLines(TextAlignment align, int anchorX, int topY, int lineHeight, ActiveTextCollector output);
 
     int getLineCount();
 
     int getWidth();
 
-    @OnlyIn(Dist.CLIENT)
-    public record TextAndWidth(FormattedCharSequence text, int width) {
+        record TextAndWidth(FormattedCharSequence text, int width) {
     }
 }

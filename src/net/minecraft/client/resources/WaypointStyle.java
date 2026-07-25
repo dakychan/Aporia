@@ -4,15 +4,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record WaypointStyle(int nearDistance, int farDistance, List<Identifier> sprites, List<Identifier> spriteLocations) {
     @VisibleForTesting
     public static final String ICON_LOCATION_PREFIX = "hud/locator_bar_dot/";
@@ -20,17 +16,17 @@ public record WaypointStyle(int nearDistance, int farDistance, List<Identifier> 
     public static final int DEFAULT_FAR_DISTANCE = 332;
     private static final Codec<Integer> DISTANCE_CODEC = Codec.intRange(0, 60000000);
     public static final Codec<WaypointStyle> CODEC = RecordCodecBuilder.<WaypointStyle>create(
-            p_448423_ -> p_448423_.group(
+            i -> i.group(
                     DISTANCE_CODEC.optionalFieldOf("near_distance", 128).forGetter(WaypointStyle::nearDistance),
                     DISTANCE_CODEC.optionalFieldOf("far_distance", 332).forGetter(WaypointStyle::farDistance),
                     ExtraCodecs.nonEmptyList(Identifier.CODEC.listOf()).fieldOf("sprites").forGetter(WaypointStyle::sprites)
                 )
-                .apply(p_448423_, WaypointStyle::new)
+                .apply(i, WaypointStyle::new)
         )
         .validate(WaypointStyle::validate);
 
-    public WaypointStyle(int p_407902_, int p_407519_, List<Identifier> p_407571_) {
-        this(p_407902_, p_407519_, p_407571_, p_407571_.stream().map(p_448422_ -> p_448422_.withPrefix("hud/locator_bar_dot/")).toList());
+    public WaypointStyle(final int nearDistance, final int farDistance, final List<Identifier> sprites) {
+        this(nearDistance, farDistance, sprites, sprites.stream().map(sprite -> sprite.withPrefix("hud/locator_bar_dot/")).toList());
     }
 
     @VisibleForTesting
@@ -46,18 +42,24 @@ public record WaypointStyle(int nearDistance, int farDistance, List<Identifier> 
         }
     }
 
-    public Identifier sprite(float p_407304_) {
-        if (p_407304_ < this.nearDistance) {
+    public Identifier sprite(final float distance) {
+        if (distance < this.nearDistance) {
             return this.spriteLocations.getFirst();
-        } else if (p_407304_ >= this.farDistance) {
-            return this.spriteLocations.getLast();
-        } else if (this.spriteLocations.size() == 1) {
-            return this.spriteLocations.getFirst();
-        } else if (this.spriteLocations.size() == 3) {
-            return this.spriteLocations.get(1);
-        } else {
-            int i = Mth.lerpInt((p_407304_ - this.nearDistance) / (this.farDistance - this.nearDistance), 1, this.spriteLocations.size() - 1);
-            return this.spriteLocations.get(i);
         }
+
+        if (distance >= this.farDistance) {
+            return this.spriteLocations.getLast();
+        }
+
+        if (this.spriteLocations.size() == 1) {
+            return this.spriteLocations.getFirst();
+        }
+
+        if (this.spriteLocations.size() == 3) {
+            return this.spriteLocations.get(1);
+        }
+
+        int index = Mth.lerpInt((distance - this.nearDistance) / (this.farDistance - this.nearDistance), 1, this.spriteLocations.size() - 1);
+        return this.spriteLocations.get(index);
     }
 }

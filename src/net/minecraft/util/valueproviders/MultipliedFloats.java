@@ -6,23 +6,23 @@ import net.minecraft.util.RandomSource;
 public class MultipliedFloats implements SampledFloat {
     private final SampledFloat[] values;
 
-    public MultipliedFloats(SampledFloat... p_216858_) {
-        this.values = p_216858_;
+    public MultipliedFloats(final SampledFloat... values) {
+        this.values = values;
     }
 
     @Override
-    public float sample(RandomSource p_216860_) {
-        float f = 1.0F;
+    public float sample(final RandomSource random) {
+        float result = 1.0F;
 
-        for (SampledFloat sampledfloat : this.values) {
-            f *= sampledfloat.sample(p_216860_);
+        for (SampledFloat value : this.values) {
+            result *= value.sample(random);
         }
 
-        return f;
+        return result;
     }
 
     @Override
     public String toString() {
-        return "MultipliedFloats" + Arrays.toString((Object[])this.values);
+        return "MultipliedFloats" + Arrays.toString(this.values);
     }
 }

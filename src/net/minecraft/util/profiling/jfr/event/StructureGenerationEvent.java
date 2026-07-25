@@ -8,7 +8,6 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 import jdk.jfr.StackTrace;
 import net.minecraft.core.Holder;
-import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
@@ -19,7 +18,6 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 @Category({"Minecraft", "World Generation"})
 @StackTrace(false)
 @Enabled(false)
-@DontObfuscate
 public class StructureGenerationEvent extends Event {
     public static final String EVENT_NAME = "minecraft.StructureGeneration";
     public static final EventType TYPE = EventType.getEventType(StructureGenerationEvent.class);
@@ -39,11 +37,11 @@ public class StructureGenerationEvent extends Event {
     @Label("Success")
     public boolean success;
 
-    public StructureGenerationEvent(ChunkPos p_378583_, Holder<Structure> p_376451_, ResourceKey<Level> p_377292_) {
-        this.chunkPosX = p_378583_.x;
-        this.chunkPosZ = p_378583_.z;
-        this.structure = p_376451_.getRegisteredName();
-        this.level = p_377292_.identifier().toString();
+    public StructureGenerationEvent(final ChunkPos sourceChunkPos, final Holder<Structure> structure, final ResourceKey<Level> level) {
+        this.chunkPosX = sourceChunkPos.x();
+        this.chunkPosZ = sourceChunkPos.z();
+        this.structure = structure.getRegisteredName();
+        this.level = level.identifier().toString();
     }
 
     public interface Fields {

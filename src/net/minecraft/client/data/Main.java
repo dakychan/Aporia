@@ -13,44 +13,39 @@ import net.minecraft.client.data.models.EquipmentAssetProvider;
 import net.minecraft.client.data.models.ModelProvider;
 import net.minecraft.client.data.models.WaypointStyleProvider;
 import net.minecraft.data.DataGenerator;
-import net.minecraft.obfuscate.DontObfuscate;
 import net.minecraft.server.Bootstrap;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class Main {
-    @DontObfuscate
     @SuppressForbidden(reason = "System.out needed before bootstrap")
-    public static void main(String[] p_375526_) throws IOException {
+    public static void main(final String[] args) throws IOException {
         SharedConstants.tryDetectVersion();
-        OptionParser optionparser = new OptionParser();
-        OptionSpec<Void> optionspec = optionparser.accepts("help", "Show the help menu").forHelp();
-        OptionSpec<Void> optionspec1 = optionparser.accepts("client", "Include client generators");
-        OptionSpec<Void> optionspec2 = optionparser.accepts("all", "Include all generators");
-        OptionSpec<String> optionspec3 = optionparser.accepts("output", "Output folder").withRequiredArg().defaultsTo("generated");
-        OptionSet optionset = optionparser.parse(p_375526_);
-        if (!optionset.has(optionspec) && optionset.hasOptions()) {
-            Path path = Paths.get(optionspec3.value(optionset));
-            boolean flag = optionset.has(optionspec2);
-            boolean flag1 = flag || optionset.has(optionspec1);
+        OptionParser parser = new OptionParser();
+        OptionSpec<Void> helpOption = parser.accepts("help", "Show the help menu").forHelp();
+        OptionSpec<Void> clientOption = parser.accepts("client", "Include client generators");
+        OptionSpec<Void> allOption = parser.accepts("all", "Include all generators");
+        OptionSpec<String> outputOption = parser.accepts("output", "Output folder").withRequiredArg().defaultsTo("generated");
+        OptionSet optionSet = parser.parse(args);
+        if (!optionSet.has(helpOption) && optionSet.hasOptions()) {
+            Path output = Paths.get(outputOption.value(optionSet));
+            boolean allOptions = optionSet.has(allOption);
+            boolean client = allOptions || optionSet.has(clientOption);
             Bootstrap.bootStrap();
             ClientBootstrap.bootstrap();
-            DataGenerator datagenerator = new DataGenerator(path, SharedConstants.getCurrentVersion(), true);
-            addClientProviders(datagenerator, flag1);
-            datagenerator.run();
+            DataGenerator generator = new DataGenerator.Cached(output, SharedConstants.getCurrentVersion(), true);
+            addClientProviders(generator, client);
+            generator.run();
             Util.shutdownExecutors();
         } else {
-            optionparser.printHelpOn(System.out);
+            parser.printHelpOn(System.out);
         }
     }
 
-    public static void addClientProviders(DataGenerator p_377181_, boolean p_375717_) {
-        DataGenerator.PackGenerator datagenerator$packgenerator = p_377181_.getVanillaPack(p_375717_);
-        datagenerator$packgenerator.addProvider(ModelProvider::new);
-        datagenerator$packgenerator.addProvider(EquipmentAssetProvider::new);
-        datagenerator$packgenerator.addProvider(WaypointStyleProvider::new);
-        datagenerator$packgenerator.addProvider(AtlasProvider::new);
+    public static void addClientProviders(final DataGenerator generator, final boolean client) {
+        DataGenerator.PackGenerator clientVanillaPack = generator.getVanillaPack(client);
+        clientVanillaPack.addProvider(ModelProvider::new);
+        clientVanillaPack.addProvider(EquipmentAssetProvider::new);
+        clientVanillaPack.addProvider(WaypointStyleProvider::new);
+        clientVanillaPack.addProvider(AtlasProvider::new);
     }
 }

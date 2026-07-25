@@ -1,15 +1,12 @@
 package net.minecraft.client.gui.components;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ItemDisplayWidget extends AbstractWidget {
     private final Minecraft minecraft;
     private final int offsetX;
@@ -19,47 +16,47 @@ public class ItemDisplayWidget extends AbstractWidget {
     private final boolean tooltip;
 
     public ItemDisplayWidget(
-        Minecraft p_409984_,
-        int p_407702_,
-        int p_406955_,
-        int p_408670_,
-        int p_407909_,
-        Component p_405828_,
-        ItemStack p_407541_,
-        boolean p_406789_,
-        boolean p_408752_
+        final Minecraft minecraft,
+        final int offsetX,
+        final int offsetY,
+        final int width,
+        final int height,
+        final Component message,
+        final ItemStack itemStack,
+        final boolean decorations,
+        final boolean tooltip
     ) {
-        super(0, 0, p_408670_, p_407909_, p_405828_);
-        this.minecraft = p_409984_;
-        this.offsetX = p_407702_;
-        this.offsetY = p_406955_;
-        this.itemStack = p_407541_;
-        this.decorations = p_406789_;
-        this.tooltip = p_408752_;
+        super(0, 0, width, height, message);
+        this.minecraft = minecraft;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
+        this.itemStack = itemStack;
+        this.decorations = decorations;
+        this.tooltip = tooltip;
     }
 
     @Override
-    protected void renderWidget(GuiGraphics p_406193_, int p_406793_, int p_407747_, float p_407971_) {
-        p_406193_.renderItem(this.itemStack, this.getX() + this.offsetX, this.getY() + this.offsetY, 0);
+    protected void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        graphics.item(this.itemStack, this.getX() + this.offsetX, this.getY() + this.offsetY, 0);
         if (this.decorations) {
-            p_406193_.renderItemDecorations(this.minecraft.font, this.itemStack, this.getX() + this.offsetX, this.getY() + this.offsetY, null);
+            graphics.itemDecorations(this.minecraft.font, this.itemStack, this.getX() + this.offsetX, this.getY() + this.offsetY, null);
         }
 
         if (this.isFocused()) {
-            p_406193_.renderOutline(this.getX(), this.getY(), this.getWidth(), this.getHeight(), -1);
+            graphics.outline(this.getX(), this.getY(), this.getWidth(), this.getHeight(), -1);
         }
 
-        if (this.tooltip && this.isHoveredOrFocused()) {
-            this.renderTooltip(p_406193_, p_406793_, p_407747_);
+        if (this.tooltip && this.isHovered()) {
+            this.extractTooltip(graphics, mouseX, mouseY);
         }
     }
 
-    protected void renderTooltip(GuiGraphics p_426118_, int p_430049_, int p_425795_) {
-        p_426118_.setTooltipForNextFrame(this.minecraft.font, this.itemStack, p_430049_, p_425795_);
+    protected void extractTooltip(final GuiGraphicsExtractor graphics, final int x, final int y) {
+        graphics.setTooltipForNextFrame(this.minecraft.font, this.itemStack, x, y);
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput p_406080_) {
-        p_406080_.add(NarratedElementType.TITLE, Component.translatable("narration.item", this.itemStack.getHoverName()));
+    protected void updateWidgetNarration(final NarrationElementOutput output) {
+        output.add(NarratedElementType.TITLE, Component.translatable("narration.item", this.itemStack.getHoverName()));
     }
 }

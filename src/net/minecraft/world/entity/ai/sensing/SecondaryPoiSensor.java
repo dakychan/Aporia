@@ -20,26 +20,26 @@ public class SecondaryPoiSensor extends Sensor<Villager> {
         super(40);
     }
 
-    protected void doTick(ServerLevel p_26754_, Villager p_460377_) {
-        ResourceKey<Level> resourcekey = p_26754_.dimension();
-        BlockPos blockpos = p_460377_.blockPosition();
-        List<GlobalPos> list = Lists.newArrayList();
-        int i = 4;
+    protected void doTick(final ServerLevel level, final Villager body) {
+        ResourceKey<Level> dimensionType = level.dimension();
+        BlockPos center = body.blockPosition();
+        List<GlobalPos> jobSites = Lists.newArrayList();
+        int horizontalSearch = 4;
 
-        for (int j = -4; j <= 4; j++) {
-            for (int k = -2; k <= 2; k++) {
-                for (int l = -4; l <= 4; l++) {
-                    BlockPos blockpos1 = blockpos.offset(j, k, l);
-                    if (p_460377_.getVillagerData().profession().value().secondaryPoi().contains(p_26754_.getBlockState(blockpos1).getBlock())) {
-                        list.add(GlobalPos.of(resourcekey, blockpos1));
+        for (int x = -4; x <= 4; x++) {
+            for (int y = -2; y <= 2; y++) {
+                for (int z = -4; z <= 4; z++) {
+                    BlockPos testPos = center.offset(x, y, z);
+                    if (body.getVillagerData().profession().value().secondaryPoi().contains(level.getBlockState(testPos).getBlock())) {
+                        jobSites.add(GlobalPos.of(dimensionType, testPos));
                     }
                 }
             }
         }
 
-        Brain<?> brain = p_460377_.getBrain();
-        if (!list.isEmpty()) {
-            brain.setMemory(MemoryModuleType.SECONDARY_JOB_SITE, list);
+        Brain<?> brain = body.getBrain();
+        if (!jobSites.isEmpty()) {
+            brain.setMemory(MemoryModuleType.SECONDARY_JOB_SITE, jobSites);
         } else {
             brain.eraseMemory(MemoryModuleType.SECONDARY_JOB_SITE);
         }

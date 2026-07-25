@@ -30,6 +30,7 @@ import net.minecraft.world.level.gamerules.GameRules;
 import org.jspecify.annotations.Nullable;
 
 public abstract class LavaFluid extends FlowingFluid {
+    public static final int LIGHT_EMISSION = 15;
     public static final float MIN_LEVEL_CUTOFF = 0.44444445F;
 
     @Override
@@ -48,28 +49,28 @@ public abstract class LavaFluid extends FlowingFluid {
     }
 
     @Override
-    public void animateTick(Level p_230567_, BlockPos p_230568_, FluidState p_230569_, RandomSource p_230570_) {
-        BlockPos blockpos = p_230568_.above();
-        if (p_230567_.getBlockState(blockpos).isAir() && !p_230567_.getBlockState(blockpos).isSolidRender()) {
-            if (p_230570_.nextInt(100) == 0) {
-                double d0 = p_230568_.getX() + p_230570_.nextDouble();
-                double d1 = p_230568_.getY() + 1.0;
-                double d2 = p_230568_.getZ() + p_230570_.nextDouble();
-                p_230567_.addParticle(ParticleTypes.LAVA, d0, d1, d2, 0.0, 0.0, 0.0);
-                p_230567_.playLocalSound(
-                    d0, d1, d2, SoundEvents.LAVA_POP, SoundSource.AMBIENT, 0.2F + p_230570_.nextFloat() * 0.2F, 0.9F + p_230570_.nextFloat() * 0.15F, false
+    public void animateTick(final Level level, final BlockPos pos, final FluidState fluidState, final RandomSource random) {
+        BlockPos above = pos.above();
+        if (level.getBlockState(above).isAir() && !level.getBlockState(above).isSolidRender()) {
+            if (random.nextInt(100) == 0) {
+                double xx = pos.getX() + random.nextDouble();
+                double yy = pos.getY() + 1.0;
+                double zz = pos.getZ() + random.nextDouble();
+                level.addParticle(ParticleTypes.LAVA, xx, yy, zz, 0.0, 0.0, 0.0);
+                level.playLocalSound(
+                    xx, yy, zz, SoundEvents.LAVA_POP, SoundSource.AMBIENT, 0.2F + random.nextFloat() * 0.2F, 0.9F + random.nextFloat() * 0.15F, false
                 );
             }
 
-            if (p_230570_.nextInt(200) == 0) {
-                p_230567_.playLocalSound(
-                    p_230568_.getX(),
-                    p_230568_.getY(),
-                    p_230568_.getZ(),
+            if (random.nextInt(200) == 0) {
+                level.playLocalSound(
+                    pos.getX(),
+                    pos.getY(),
+                    pos.getZ(),
                     SoundEvents.LAVA_AMBIENT,
                     SoundSource.AMBIENT,
-                    0.2F + p_230570_.nextFloat() * 0.2F,
-                    0.9F + p_230570_.nextFloat() * 0.15F,
+                    0.2F + random.nextFloat() * 0.2F,
+                    0.9F + random.nextFloat() * 0.15F,
                     false
                 );
             }
@@ -77,37 +78,37 @@ public abstract class LavaFluid extends FlowingFluid {
     }
 
     @Override
-    public void randomTick(ServerLevel p_367000_, BlockPos p_230573_, FluidState p_230574_, RandomSource p_230575_) {
-        if (p_367000_.canSpreadFireAround(p_230573_)) {
-            int i = p_230575_.nextInt(3);
-            if (i > 0) {
-                BlockPos blockpos = p_230573_;
+    public void randomTick(final ServerLevel level, final BlockPos pos, final FluidState fluidState, final RandomSource random) {
+        if (level.canSpreadFireAround(pos)) {
+            int passes = random.nextInt(3);
+            if (passes > 0) {
+                BlockPos testPos = pos;
 
-                for (int j = 0; j < i; j++) {
-                    blockpos = blockpos.offset(p_230575_.nextInt(3) - 1, 1, p_230575_.nextInt(3) - 1);
-                    if (!p_367000_.isLoaded(blockpos)) {
+                for (int pass = 0; pass < passes; pass++) {
+                    testPos = testPos.offset(random.nextInt(3) - 1, 1, random.nextInt(3) - 1);
+                    if (!level.isLoaded(testPos)) {
                         return;
                     }
 
-                    BlockState blockstate = p_367000_.getBlockState(blockpos);
-                    if (blockstate.isAir()) {
-                        if (this.hasFlammableNeighbours(p_367000_, blockpos)) {
-                            p_367000_.setBlockAndUpdate(blockpos, BaseFireBlock.getState(p_367000_, blockpos));
+                    BlockState blockState = level.getBlockState(testPos);
+                    if (blockState.isAir()) {
+                        if (this.hasFlammableNeighbours(level, testPos)) {
+                            level.setBlockAndUpdate(testPos, BaseFireBlock.getState(level, testPos));
                             return;
                         }
-                    } else if (blockstate.blocksMotion()) {
+                    } else if (blockState.blocksMotion()) {
                         return;
                     }
                 }
             } else {
-                for (int k = 0; k < 3; k++) {
-                    BlockPos blockpos1 = p_230573_.offset(p_230575_.nextInt(3) - 1, 0, p_230575_.nextInt(3) - 1);
-                    if (!p_367000_.isLoaded(blockpos1)) {
+                for (int i = 0; i < 3; i++) {
+                    BlockPos testPos = pos.offset(random.nextInt(3) - 1, 0, random.nextInt(3) - 1);
+                    if (!level.isLoaded(testPos)) {
                         return;
                     }
 
-                    if (p_367000_.isEmptyBlock(blockpos1.above()) && this.isFlammable(p_367000_, blockpos1)) {
-                        p_367000_.setBlockAndUpdate(blockpos1.above(), BaseFireBlock.getState(p_367000_, blockpos1));
+                    if (level.isEmptyBlock(testPos.above()) && this.isFlammable(level, testPos)) {
+                        level.setBlockAndUpdate(testPos.above(), BaseFireBlock.getState(level, testPos));
                     }
                 }
             }
@@ -115,15 +116,15 @@ public abstract class LavaFluid extends FlowingFluid {
     }
 
     @Override
-    protected void entityInside(Level p_397670_, BlockPos p_395605_, Entity p_396547_, InsideBlockEffectApplier p_395270_) {
-        p_395270_.apply(InsideBlockEffectType.CLEAR_FREEZE);
-        p_395270_.apply(InsideBlockEffectType.LAVA_IGNITE);
-        p_395270_.runAfter(InsideBlockEffectType.LAVA_IGNITE, Entity::lavaHurt);
+    protected void entityInside(final Level level, final BlockPos pos, final Entity entity, final InsideBlockEffectApplier effectApplier) {
+        effectApplier.apply(InsideBlockEffectType.CLEAR_FREEZE);
+        effectApplier.apply(InsideBlockEffectType.LAVA_IGNITE);
+        effectApplier.runAfter(InsideBlockEffectType.LAVA_IGNITE, Entity::lavaHurt);
     }
 
-    private boolean hasFlammableNeighbours(LevelReader p_76228_, BlockPos p_76229_) {
+    private boolean hasFlammableNeighbours(final LevelReader level, final BlockPos pos) {
         for (Direction direction : Direction.values()) {
-            if (this.isFlammable(p_76228_, p_76229_.relative(direction))) {
+            if (this.isFlammable(level, pos.relative(direction))) {
                 return true;
             }
         }
@@ -131,8 +132,8 @@ public abstract class LavaFluid extends FlowingFluid {
         return false;
     }
 
-    private boolean isFlammable(LevelReader p_76246_, BlockPos p_76247_) {
-        return p_76246_.isInsideBuildHeight(p_76247_.getY()) && !p_76246_.hasChunkAt(p_76247_) ? false : p_76246_.getBlockState(p_76247_).ignitedByLava();
+    private boolean isFlammable(final LevelReader level, final BlockPos pos) {
+        return level.isInsideBuildHeight(pos.getY()) && !level.hasChunkAt(pos) ? false : level.getBlockState(pos).ignitedByLava();
     }
 
     @Override
@@ -141,79 +142,79 @@ public abstract class LavaFluid extends FlowingFluid {
     }
 
     @Override
-    protected void beforeDestroyingBlock(LevelAccessor p_76216_, BlockPos p_76217_, BlockState p_76218_) {
-        this.fizz(p_76216_, p_76217_);
+    protected void beforeDestroyingBlock(final LevelAccessor level, final BlockPos pos, final BlockState state) {
+        this.fizz(level, pos);
     }
 
     @Override
-    public int getSlopeFindDistance(LevelReader p_76244_) {
-        return isFastLava(p_76244_) ? 4 : 2;
+    public int getSlopeFindDistance(final LevelReader level) {
+        return isFastLava(level) ? 4 : 2;
     }
 
     @Override
-    public BlockState createLegacyBlock(FluidState p_76249_) {
-        return Blocks.LAVA.defaultBlockState().setValue(LiquidBlock.LEVEL, getLegacyLevel(p_76249_));
+    public BlockState createLegacyBlock(final FluidState fluidState) {
+        return Blocks.LAVA.defaultBlockState().setValue(LiquidBlock.LEVEL, getLegacyLevel(fluidState));
     }
 
     @Override
-    public boolean isSame(Fluid p_76231_) {
-        return p_76231_ == Fluids.LAVA || p_76231_ == Fluids.FLOWING_LAVA;
+    public boolean isSame(final Fluid other) {
+        return other == Fluids.LAVA || other == Fluids.FLOWING_LAVA;
     }
 
     @Override
-    public int getDropOff(LevelReader p_76252_) {
-        return isFastLava(p_76252_) ? 1 : 2;
+    public int getDropOff(final LevelReader level) {
+        return isFastLava(level) ? 1 : 2;
     }
 
     @Override
-    public boolean canBeReplacedWith(FluidState p_76233_, BlockGetter p_76234_, BlockPos p_76235_, Fluid p_76236_, Direction p_76237_) {
-        return p_76233_.getHeight(p_76234_, p_76235_) >= 0.44444445F && p_76236_.is(FluidTags.WATER);
+    public boolean canBeReplacedWith(final FluidState state, final BlockGetter level, final BlockPos pos, final Fluid other, final Direction direction) {
+        return state.getHeight(level, pos) >= 0.44444445F && other.is(FluidTags.WATER);
     }
 
     @Override
-    public int getTickDelay(LevelReader p_76226_) {
-        return isFastLava(p_76226_) ? 10 : 30;
+    public int getTickDelay(final LevelReader level) {
+        return isFastLava(level) ? 10 : 30;
     }
 
     @Override
-    public int getSpreadDelay(Level p_76203_, BlockPos p_76204_, FluidState p_76205_, FluidState p_76206_) {
-        int i = this.getTickDelay(p_76203_);
-        if (!p_76205_.isEmpty()
-            && !p_76206_.isEmpty()
-            && !p_76205_.getValue(FALLING)
-            && !p_76206_.getValue(FALLING)
-            && p_76206_.getHeight(p_76203_, p_76204_) > p_76205_.getHeight(p_76203_, p_76204_)
-            && p_76203_.getRandom().nextInt(4) != 0) {
-            i *= 4;
+    public int getSpreadDelay(final Level level, final BlockPos pos, final FluidState oldFluidState, final FluidState newFluidState) {
+        int result = this.getTickDelay(level);
+        if (!oldFluidState.isEmpty()
+            && !newFluidState.isEmpty()
+            && !oldFluidState.getValue(FALLING)
+            && !newFluidState.getValue(FALLING)
+            && newFluidState.getHeight(level, pos) > oldFluidState.getHeight(level, pos)
+            && level.getRandom().nextInt(4) != 0) {
+            result *= 4;
         }
 
-        return i;
+        return result;
     }
 
-    private void fizz(LevelAccessor p_76213_, BlockPos p_76214_) {
-        p_76213_.levelEvent(1501, p_76214_, 0);
-    }
-
-    @Override
-    protected boolean canConvertToSource(ServerLevel p_362658_) {
-        return p_362658_.getGameRules().get(GameRules.LAVA_SOURCE_CONVERSION);
+    private void fizz(final LevelAccessor level, final BlockPos pos) {
+        level.levelEvent(1501, pos, 0);
     }
 
     @Override
-    protected void spreadTo(LevelAccessor p_76220_, BlockPos p_76221_, BlockState p_76222_, Direction p_76223_, FluidState p_76224_) {
-        if (p_76223_ == Direction.DOWN) {
-            FluidState fluidstate = p_76220_.getFluidState(p_76221_);
-            if (this.is(FluidTags.LAVA) && fluidstate.is(FluidTags.WATER)) {
-                if (p_76222_.getBlock() instanceof LiquidBlock) {
-                    p_76220_.setBlock(p_76221_, Blocks.STONE.defaultBlockState(), 3);
+    protected boolean canConvertToSource(final ServerLevel level) {
+        return level.getGameRules().get(GameRules.LAVA_SOURCE_CONVERSION);
+    }
+
+    @Override
+    protected void spreadTo(final LevelAccessor level, final BlockPos pos, final BlockState state, final Direction direction, final FluidState target) {
+        if (direction == Direction.DOWN) {
+            FluidState fluidState = level.getFluidState(pos);
+            if (this.is(FluidTags.LAVA) && fluidState.is(FluidTags.WATER)) {
+                if (state.getBlock() instanceof LiquidBlock) {
+                    level.setBlock(pos, Blocks.STONE.defaultBlockState(), 3);
                 }
 
-                this.fizz(p_76220_, p_76221_);
+                this.fizz(level, pos);
                 return;
             }
         }
 
-        super.spreadTo(p_76220_, p_76221_, p_76222_, p_76223_, p_76224_);
+        super.spreadTo(level, pos, state, direction, target);
     }
 
     @Override
@@ -231,36 +232,36 @@ public abstract class LavaFluid extends FlowingFluid {
         return Optional.of(SoundEvents.BUCKET_FILL_LAVA);
     }
 
-    private static boolean isFastLava(LevelReader p_458627_) {
-        return p_458627_.environmentAttributes().getDimensionValue(EnvironmentAttributes.FAST_LAVA);
+    private static boolean isFastLava(final LevelReader level) {
+        return level.environmentAttributes().getDimensionValue(EnvironmentAttributes.FAST_LAVA);
     }
 
     public static class Flowing extends LavaFluid {
         @Override
-        protected void createFluidStateDefinition(StateDefinition.Builder<Fluid, FluidState> p_76260_) {
-            super.createFluidStateDefinition(p_76260_);
-            p_76260_.add(LEVEL);
+        protected void createFluidStateDefinition(final StateDefinition.Builder<Fluid, FluidState> builder) {
+            super.createFluidStateDefinition(builder);
+            builder.add(LEVEL);
         }
 
         @Override
-        public int getAmount(FluidState p_76264_) {
-            return p_76264_.getValue(LEVEL);
+        public int getAmount(final FluidState fluidState) {
+            return fluidState.getValue(LEVEL);
         }
 
         @Override
-        public boolean isSource(FluidState p_76262_) {
+        public boolean isSource(final FluidState fluidState) {
             return false;
         }
     }
 
     public static class Source extends LavaFluid {
         @Override
-        public int getAmount(FluidState p_76269_) {
+        public int getAmount(final FluidState fluidState) {
             return 8;
         }
 
         @Override
-        public boolean isSource(FluidState p_76267_) {
+        public boolean isSource(final FluidState fluidState) {
             return true;
         }
     }

@@ -14,11 +14,7 @@ import net.minecraft.world.item.crafting.RecipeBookCategories;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapedCraftingRecipeDisplay;
 import net.minecraft.world.item.crafting.display.ShapelessCraftingRecipeDisplay;
-import net.minecraft.world.item.crafting.display.SlotDisplay;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class CraftingRecipeBookComponent extends RecipeBookComponent<AbstractCraftingMenu> {
     private static final WidgetSprites FILTER_BUTTON_SPRITES = new WidgetSprites(
         Identifier.withDefaultNamespace("recipe_book/filter_enabled"),
@@ -35,55 +31,56 @@ public class CraftingRecipeBookComponent extends RecipeBookComponent<AbstractCra
         new RecipeBookComponent.TabInfo(Items.REDSTONE, RecipeBookCategories.CRAFTING_REDSTONE)
     );
 
-    public CraftingRecipeBookComponent(AbstractCraftingMenu p_361849_) {
-        super(p_361849_, TABS);
+    public CraftingRecipeBookComponent(final AbstractCraftingMenu menu) {
+        super(menu, TABS);
     }
 
     @Override
-    protected boolean isCraftingSlot(Slot p_365848_) {
-        return this.menu.getResultSlot() == p_365848_ || this.menu.getInputGridSlots().contains(p_365848_);
+    protected boolean isCraftingSlot(final Slot slot) {
+        return this.menu.getResultSlot() == slot || this.menu.getInputGridSlots().contains(slot);
     }
 
-    private boolean canDisplay(RecipeDisplay p_365142_) {
-        int i = this.menu.getGridWidth();
-        int j = this.menu.getGridHeight();
+    private boolean canDisplay(final RecipeDisplay display) {
+        int gridWidth = this.menu.getGridWidth();
+        int gridHeight = this.menu.getGridHeight();
 
-        return switch (p_365142_) {
-            case ShapedCraftingRecipeDisplay shapedcraftingrecipedisplay -> i >= shapedcraftingrecipedisplay.width()
-                && j >= shapedcraftingrecipedisplay.height();
-            case ShapelessCraftingRecipeDisplay shapelesscraftingrecipedisplay -> i * j >= shapelesscraftingrecipedisplay.ingredients().size();
+        return switch (display) {
+            case ShapedCraftingRecipeDisplay shaped -> gridWidth >= shaped.width() && gridHeight >= shaped.height();
+            case ShapelessCraftingRecipeDisplay shapeless -> gridWidth * gridHeight >= shapeless.ingredients().size();
             default -> false;
         };
     }
 
     @Override
-    protected void fillGhostRecipe(GhostSlots p_364903_, RecipeDisplay p_368451_, ContextMap p_369232_) {
-        p_364903_.setResult(this.menu.getResultSlot(), p_369232_, p_368451_.result());
-        switch (p_368451_) {
-            case ShapedCraftingRecipeDisplay shapedcraftingrecipedisplay:
-                List<Slot> list1 = this.menu.getInputGridSlots();
+    protected void fillGhostRecipe(final GhostSlots ghostSlots, final RecipeDisplay recipe, final ContextMap context) {
+        ghostSlots.setResult(this.menu.getResultSlot(), context, recipe.result());
+        switch (recipe) {
+            case ShapedCraftingRecipeDisplay shaped: {
+                List<Slot> inputSlots = this.menu.getInputGridSlots();
                 PlaceRecipeHelper.placeRecipe(
                     this.menu.getGridWidth(),
                     this.menu.getGridHeight(),
-                    shapedcraftingrecipedisplay.width(),
-                    shapedcraftingrecipedisplay.height(),
-                    shapedcraftingrecipedisplay.ingredients(),
-                    (p_367286_, p_369760_, p_365619_, p_365975_) -> {
-                        Slot slot = list1.get(p_369760_);
-                        p_364903_.setInput(slot, p_369232_, p_367286_);
+                    shaped.width(),
+                    shaped.height(),
+                    shaped.ingredients(),
+                    (ingredient, gridIndex, gridXPos, gridYPos) -> {
+                        Slot slot = inputSlots.get(gridIndex);
+                        ghostSlots.setInput(slot, context, ingredient);
                     }
                 );
                 break;
-            case ShapelessCraftingRecipeDisplay shapelesscraftingrecipedisplay:
+            }
+            case ShapelessCraftingRecipeDisplay shapeless: {
                 label15: {
-                    List<Slot> list = this.menu.getInputGridSlots();
-                    int i = Math.min(shapelesscraftingrecipedisplay.ingredients().size(), list.size());
+                    List<Slot> inputSlots = this.menu.getInputGridSlots();
+                    int slotCount = Math.min(shapeless.ingredients().size(), inputSlots.size());
 
-                    for (int j = 0; j < i; j++) {
-                        p_364903_.setInput(list.get(j), p_369232_, shapelesscraftingrecipedisplay.ingredients().get(j));
+                    for (int i = 0; i < slotCount; i++) {
+                        ghostSlots.setInput(inputSlots.get(i), context, shapeless.ingredients().get(i));
                     }
                     break label15;
                 }
+            }
             default:
         }
     }
@@ -99,7 +96,7 @@ public class CraftingRecipeBookComponent extends RecipeBookComponent<AbstractCra
     }
 
     @Override
-    protected void selectMatchingRecipes(RecipeCollection p_361196_, StackedItemContents p_360883_) {
-        p_361196_.selectRecipes(p_360883_, this::canDisplay);
+    protected void selectMatchingRecipes(final RecipeCollection collection, final StackedItemContents stackedContents) {
+        collection.selectRecipes(stackedContents, this::canDisplay);
     }
 }

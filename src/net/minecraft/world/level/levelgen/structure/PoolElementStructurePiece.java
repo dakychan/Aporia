@@ -34,92 +34,101 @@ public class PoolElementStructurePiece extends StructurePiece {
     private final LiquidSettings liquidSettings;
 
     public PoolElementStructurePiece(
-        StructureTemplateManager p_226495_,
-        StructurePoolElement p_226496_,
-        BlockPos p_226497_,
-        int p_226498_,
-        Rotation p_226499_,
-        BoundingBox p_226500_,
-        LiquidSettings p_345422_
+        final StructureTemplateManager structureTemplateManager,
+        final StructurePoolElement element,
+        final BlockPos position,
+        final int groundLevelDelta,
+        final Rotation rotation,
+        final BoundingBox boundingBox,
+        final LiquidSettings liquidSettings
     ) {
-        super(StructurePieceType.JIGSAW, 0, p_226500_);
-        this.structureTemplateManager = p_226495_;
-        this.element = p_226496_;
-        this.position = p_226497_;
-        this.groundLevelDelta = p_226498_;
-        this.rotation = p_226499_;
-        this.liquidSettings = p_345422_;
+        super(StructurePieceType.JIGSAW, 0, boundingBox);
+        this.structureTemplateManager = structureTemplateManager;
+        this.element = element;
+        this.position = position;
+        this.groundLevelDelta = groundLevelDelta;
+        this.rotation = rotation;
+        this.liquidSettings = liquidSettings;
     }
 
-    public PoolElementStructurePiece(StructurePieceSerializationContext p_192406_, CompoundTag p_192407_) {
-        super(StructurePieceType.JIGSAW, p_192407_);
-        this.structureTemplateManager = p_192406_.structureTemplateManager();
-        this.position = new BlockPos(p_192407_.getIntOr("PosX", 0), p_192407_.getIntOr("PosY", 0), p_192407_.getIntOr("PosZ", 0));
-        this.groundLevelDelta = p_192407_.getIntOr("ground_level_delta", 0);
-        DynamicOps<Tag> dynamicops = p_192406_.registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        this.element = p_192407_.read("pool_element", StructurePoolElement.CODEC, dynamicops)
-            .orElseThrow(() -> new IllegalStateException("Invalid pool element found"));
-        this.rotation = p_192407_.read("rotation", Rotation.LEGACY_CODEC).orElseThrow();
+    public PoolElementStructurePiece(final StructurePieceSerializationContext context, final CompoundTag tag) {
+        super(StructurePieceType.JIGSAW, tag);
+        this.structureTemplateManager = context.structureTemplateManager();
+        this.position = new BlockPos(tag.getIntOr("PosX", 0), tag.getIntOr("PosY", 0), tag.getIntOr("PosZ", 0));
+        this.groundLevelDelta = tag.getIntOr("ground_level_delta", 0);
+        DynamicOps<Tag> ops = context.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        this.element = tag.read("pool_element", StructurePoolElement.CODEC, ops).orElseThrow(() -> new IllegalStateException("Invalid pool element found"));
+        this.rotation = tag.read("rotation", Rotation.LEGACY_CODEC).orElseThrow();
         this.boundingBox = this.element.getBoundingBox(this.structureTemplateManager, this.position, this.rotation);
-        ListTag listtag = p_192407_.getListOrEmpty("junctions");
+        ListTag junctionsTag = tag.getListOrEmpty("junctions");
         this.junctions.clear();
-        listtag.forEach(p_204943_ -> this.junctions.add(JigsawJunction.deserialize(new Dynamic<>(dynamicops, p_204943_))));
-        this.liquidSettings = p_192407_.read("liquid_settings", LiquidSettings.CODEC).orElse(JigsawStructure.DEFAULT_LIQUID_SETTINGS);
+        junctionsTag.forEach(junctionTag -> this.junctions.add(JigsawJunction.deserialize(new Dynamic<>(ops, junctionTag))));
+        this.liquidSettings = tag.read("liquid_settings", LiquidSettings.CODEC).orElse(JigsawStructure.DEFAULT_LIQUID_SETTINGS);
     }
 
     @Override
-    protected void addAdditionalSaveData(StructurePieceSerializationContext p_192425_, CompoundTag p_192426_) {
-        p_192426_.putInt("PosX", this.position.getX());
-        p_192426_.putInt("PosY", this.position.getY());
-        p_192426_.putInt("PosZ", this.position.getZ());
-        p_192426_.putInt("ground_level_delta", this.groundLevelDelta);
-        DynamicOps<Tag> dynamicops = p_192425_.registryAccess().createSerializationContext(NbtOps.INSTANCE);
-        p_192426_.store("pool_element", StructurePoolElement.CODEC, dynamicops, this.element);
-        p_192426_.store("rotation", Rotation.LEGACY_CODEC, this.rotation);
-        ListTag listtag = new ListTag();
+    protected void addAdditionalSaveData(final StructurePieceSerializationContext context, final CompoundTag tag) {
+        tag.putInt("PosX", this.position.getX());
+        tag.putInt("PosY", this.position.getY());
+        tag.putInt("PosZ", this.position.getZ());
+        tag.putInt("ground_level_delta", this.groundLevelDelta);
+        DynamicOps<Tag> ops = context.registryAccess().createSerializationContext(NbtOps.INSTANCE);
+        tag.store("pool_element", StructurePoolElement.CODEC, ops, this.element);
+        tag.store("rotation", Rotation.LEGACY_CODEC, this.rotation);
+        ListTag junctionsTag = new ListTag();
 
-        for (JigsawJunction jigsawjunction : this.junctions) {
-            listtag.add(jigsawjunction.serialize(dynamicops).getValue());
+        for (JigsawJunction junction : this.junctions) {
+            junctionsTag.add(junction.serialize(ops).getValue());
         }
 
-        p_192426_.put("junctions", listtag);
+        tag.put("junctions", junctionsTag);
         if (this.liquidSettings != JigsawStructure.DEFAULT_LIQUID_SETTINGS) {
-            p_192426_.store("liquid_settings", LiquidSettings.CODEC, dynamicops, this.liquidSettings);
+            tag.store("liquid_settings", LiquidSettings.CODEC, ops, this.liquidSettings);
         }
     }
 
     @Override
     public void postProcess(
-        WorldGenLevel p_226502_,
-        StructureManager p_226503_,
-        ChunkGenerator p_226504_,
-        RandomSource p_226505_,
-        BoundingBox p_226506_,
-        ChunkPos p_226507_,
-        BlockPos p_226508_
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final RandomSource random,
+        final BoundingBox chunkBB,
+        final ChunkPos chunkPos,
+        final BlockPos referencePos
     ) {
-        this.place(p_226502_, p_226503_, p_226504_, p_226505_, p_226506_, p_226508_, false);
+        this.place(level, structureManager, generator, random, chunkBB, referencePos, false);
     }
 
     public void place(
-        WorldGenLevel p_226510_,
-        StructureManager p_226511_,
-        ChunkGenerator p_226512_,
-        RandomSource p_226513_,
-        BoundingBox p_226514_,
-        BlockPos p_226515_,
-        boolean p_226516_
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final RandomSource random,
+        final BoundingBox chunkBB,
+        final BlockPos referencePos,
+        final boolean keepJigsaws
     ) {
         this.element
             .place(
-                this.structureTemplateManager, p_226510_, p_226511_, p_226512_, this.position, p_226515_, this.rotation, p_226514_, p_226513_, this.liquidSettings, p_226516_
+                this.structureTemplateManager,
+                level,
+                structureManager,
+                generator,
+                this.position,
+                referencePos,
+                this.rotation,
+                chunkBB,
+                random,
+                this.liquidSettings,
+                keepJigsaws
             );
     }
 
     @Override
-    public void move(int p_72616_, int p_72617_, int p_72618_) {
-        super.move(p_72616_, p_72617_, p_72618_);
-        this.position = this.position.offset(p_72616_, p_72617_, p_72618_);
+    public void move(final int dx, final int dy, final int dz) {
+        super.move(dx, dy, dz);
+        this.position = this.position.offset(dx, dy, dz);
     }
 
     @Override
@@ -144,8 +153,8 @@ public class PoolElementStructurePiece extends StructurePiece {
         return this.groundLevelDelta;
     }
 
-    public void addJunction(JigsawJunction p_209917_) {
-        this.junctions.add(p_209917_);
+    public void addJunction(final JigsawJunction junction) {
+        this.junctions.add(junction);
     }
 
     public List<JigsawJunction> getJunctions() {

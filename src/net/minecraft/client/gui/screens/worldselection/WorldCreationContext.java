@@ -14,10 +14,7 @@ import net.minecraft.world.level.gamerules.GameRuleMap;
 import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record WorldCreationContext(
     WorldOptions options,
     Registry<LevelStem> datapackDimensions,
@@ -28,50 +25,73 @@ public record WorldCreationContext(
     InitialWorldCreationOptions initialWorldCreationOptions
 ) {
     public WorldCreationContext(
-        WorldGenSettings p_249130_, LayeredRegistryAccess<RegistryLayer> p_248513_, ReloadableServerResources p_251786_, WorldDataConfiguration p_248593_
+        final WorldGenSettings worldGenSettings,
+        final LayeredRegistryAccess<RegistryLayer> loadedRegistries,
+        final ReloadableServerResources dataPackResources,
+        final WorldDataConfiguration dataConfiguration
     ) {
         this(
-            p_249130_.options(),
-            p_249130_.dimensions(),
-            p_248513_,
-            p_251786_,
-            p_248593_,
+            worldGenSettings.options(),
+            worldGenSettings.dimensions(),
+            loadedRegistries,
+            dataPackResources,
+            dataConfiguration,
             new InitialWorldCreationOptions(WorldCreationUiState.SelectedGameMode.SURVIVAL, GameRuleMap.of(), null)
         );
     }
 
     public WorldCreationContext(
-        WorldOptions p_249836_,
-        WorldDimensions p_250641_,
-        LayeredRegistryAccess<RegistryLayer> p_251794_,
-        ReloadableServerResources p_250560_,
-        WorldDataConfiguration p_248539_,
-        InitialWorldCreationOptions p_367482_
+        final WorldOptions worldOptions,
+        final WorldDimensions worldDimensions,
+        final LayeredRegistryAccess<RegistryLayer> loadedRegistries,
+        final ReloadableServerResources dataPackResources,
+        final WorldDataConfiguration dataConfiguration,
+        final InitialWorldCreationOptions initialWorldCreationOptions
     ) {
         this(
-            p_249836_,
-            p_251794_.getLayer(RegistryLayer.DIMENSIONS).lookupOrThrow(Registries.LEVEL_STEM),
-            p_250641_,
-            p_251794_.replaceFrom(RegistryLayer.DIMENSIONS),
-            p_250560_,
-            p_248539_,
-            p_367482_
+            worldOptions,
+            loadedRegistries.getLayer(RegistryLayer.DIMENSIONS).lookupOrThrow(Registries.LEVEL_STEM),
+            worldDimensions,
+            loadedRegistries.replaceFrom(RegistryLayer.DIMENSIONS),
+            dataPackResources,
+            dataConfiguration,
+            initialWorldCreationOptions
         );
     }
 
-    public WorldCreationContext withSettings(WorldOptions p_249492_, WorldDimensions p_250298_) {
-        return new WorldCreationContext(p_249492_, this.datapackDimensions, p_250298_, this.worldgenRegistries, this.dataPackResources, this.dataConfiguration, this.initialWorldCreationOptions);
-    }
-
-    public WorldCreationContext withOptions(WorldCreationContext.OptionsModifier p_252288_) {
+    public WorldCreationContext withSettings(final WorldOptions options, final WorldDimensions dimensions) {
         return new WorldCreationContext(
-            p_252288_.apply(this.options), this.datapackDimensions, this.selectedDimensions, this.worldgenRegistries, this.dataPackResources, this.dataConfiguration, this.initialWorldCreationOptions
+            options,
+            this.datapackDimensions,
+            dimensions,
+            this.worldgenRegistries,
+            this.dataPackResources,
+            this.dataConfiguration,
+            this.initialWorldCreationOptions
         );
     }
 
-    public WorldCreationContext withDimensions(WorldCreationContext.DimensionsUpdater p_250676_) {
+    public WorldCreationContext withOptions(final WorldCreationContext.OptionsModifier modifier) {
         return new WorldCreationContext(
-            this.options, this.datapackDimensions, p_250676_.apply(this.worldgenLoadContext(), this.selectedDimensions), this.worldgenRegistries, this.dataPackResources, this.dataConfiguration, this.initialWorldCreationOptions
+            modifier.apply(this.options),
+            this.datapackDimensions,
+            this.selectedDimensions,
+            this.worldgenRegistries,
+            this.dataPackResources,
+            this.dataConfiguration,
+            this.initialWorldCreationOptions
+        );
+    }
+
+    public WorldCreationContext withDimensions(final WorldCreationContext.DimensionsUpdater modifier) {
+        return new WorldCreationContext(
+            this.options,
+            this.datapackDimensions,
+            modifier.apply(this.worldgenLoadContext(), this.selectedDimensions),
+            this.worldgenRegistries,
+            this.dataPackResources,
+            this.dataConfiguration,
+            this.initialWorldCreationOptions
         );
     }
 
@@ -80,17 +100,15 @@ public record WorldCreationContext(
     }
 
     public void validate() {
-        for (LevelStem levelstem : this.datapackDimensions()) {
-            levelstem.generator().validate();
+        for (LevelStem stem : this.datapackDimensions()) {
+            stem.generator().validate();
         }
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface DimensionsUpdater extends BiFunction<RegistryAccess.Frozen, WorldDimensions, WorldDimensions> {
+        public interface DimensionsUpdater extends BiFunction<RegistryAccess.Frozen, WorldDimensions, WorldDimensions> {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface OptionsModifier extends UnaryOperator<WorldOptions> {
+        public interface OptionsModifier extends UnaryOperator<WorldOptions> {
     }
 }

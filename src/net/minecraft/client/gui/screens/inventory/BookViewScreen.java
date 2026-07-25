@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -26,11 +26,8 @@ import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.WritableBookContent;
 import net.minecraft.world.item.component.WrittenBookContent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class BookViewScreen extends Screen {
     public static final int PAGE_INDICATOR_TEXT_Y_OFFSET = 16;
     public static final int PAGE_TEXT_X_OFFSET = 36;
@@ -58,31 +55,31 @@ public class BookViewScreen extends Screen {
     private PageButton backButton;
     private final boolean playTurnSound;
 
-    public BookViewScreen(BookViewScreen.BookAccess p_98264_) {
-        this(p_98264_, true);
+    public BookViewScreen(final BookViewScreen.BookAccess bookAccess) {
+        this(bookAccess, true);
     }
 
     public BookViewScreen() {
         this(EMPTY_ACCESS, false);
     }
 
-    private BookViewScreen(BookViewScreen.BookAccess p_98266_, boolean p_98267_) {
+    private BookViewScreen(final BookViewScreen.BookAccess bookAccess, final boolean playTurnSound) {
         super(TITLE);
-        this.bookAccess = p_98266_;
-        this.playTurnSound = p_98267_;
+        this.bookAccess = bookAccess;
+        this.playTurnSound = playTurnSound;
     }
 
-    public void setBookAccess(BookViewScreen.BookAccess p_98289_) {
-        this.bookAccess = p_98289_;
-        this.currentPage = Mth.clamp(this.currentPage, 0, p_98289_.getPageCount());
+    public void setBookAccess(final BookViewScreen.BookAccess bookAccess) {
+        this.bookAccess = bookAccess;
+        this.currentPage = Mth.clamp(this.currentPage, 0, bookAccess.getPageCount());
         this.updateButtonVisibility();
         this.cachedPage = -1;
     }
 
-    public boolean setPage(int p_98276_) {
-        int i = Mth.clamp(p_98276_, 0, this.bookAccess.getPageCount() - 1);
-        if (i != this.currentPage) {
-            this.currentPage = i;
+    public boolean setPage(final int page) {
+        int clampedPage = Mth.clamp(page, 0, this.bookAccess.getPageCount() - 1);
+        if (clampedPage != this.currentPage) {
+            this.currentPage = clampedPage;
             this.updateButtonVisibility();
             this.cachedPage = -1;
             return true;
@@ -91,8 +88,8 @@ public class BookViewScreen extends Screen {
         }
     }
 
-    protected boolean forcePage(int p_98295_) {
-        return this.setPage(p_98295_);
+    protected boolean forcePage(final int page) {
+        return this.setPage(page);
     }
 
     @Override
@@ -112,18 +109,15 @@ public class BookViewScreen extends Screen {
 
     protected void createMenuControls() {
         this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_DONE, p_420756_ -> this.onClose())
-                .pos((this.width - 200) / 2, this.menuControlsTop())
-                .width(200)
-                .build()
+            Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).pos((this.width - 200) / 2, this.menuControlsTop()).width(200).build()
         );
     }
 
     protected void createPageControlButtons() {
-        int i = this.backgroundLeft();
-        int j = this.backgroundTop();
-        this.forwardButton = this.addRenderableWidget(new PageButton(i + 116, j + 157, true, p_98297_ -> this.pageForward(), this.playTurnSound));
-        this.backButton = this.addRenderableWidget(new PageButton(i + 43, j + 157, false, p_98287_ -> this.pageBack(), this.playTurnSound));
+        int left = this.backgroundLeft();
+        int top = this.backgroundTop();
+        this.forwardButton = this.addRenderableWidget(new PageButton(left + 116, top + 157, true, button -> this.pageForward(), this.playTurnSound));
+        this.backButton = this.addRenderableWidget(new PageButton(left + 43, top + 157, false, button -> this.pageBack(), this.playTurnSound));
         this.updateButtonVisibility();
     }
 
@@ -153,56 +147,56 @@ public class BookViewScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_424186_) {
-        if (super.keyPressed(p_424186_)) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (super.keyPressed(event)) {
             return true;
-        } else {
-            return switch (p_424186_.key()) {
-                case 266 -> {
-                    this.backButton.onPress(p_424186_);
-                    yield true;
-                }
-                case 267 -> {
-                    this.forwardButton.onPress(p_424186_);
-                    yield true;
-                }
-                default -> false;
-            };
         }
+
+        return switch (event.key()) {
+            case 266 -> {
+                this.backButton.onPress(event);
+                yield true;
+            }
+            case 267 -> {
+                this.forwardButton.onPress(event);
+                yield true;
+            }
+            default -> false;
+        };
     }
 
     @Override
-    public void render(GuiGraphics p_281997_, int p_281262_, int p_283321_, float p_282251_) {
-        super.render(p_281997_, p_281262_, p_283321_, p_282251_);
-        this.visitText(p_281997_.textRenderer(GuiGraphics.HoveredTextEffects.TOOLTIP_AND_CURSOR), false);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        this.visitText(graphics.textRenderer(GuiGraphicsExtractor.HoveredTextEffects.TOOLTIP_AND_CURSOR), false);
     }
 
-    private void visitText(ActiveTextCollector p_459457_, boolean p_451733_) {
+    private void visitText(final ActiveTextCollector collector, final boolean clickableOnly) {
         if (this.cachedPage != this.currentPage) {
-            FormattedText formattedtext = ComponentUtils.mergeStyles(this.bookAccess.getPage(this.currentPage), PAGE_TEXT_STYLE);
-            this.cachedPageComponents = this.font.split(formattedtext, 114);
+            FormattedText pageText = ComponentUtils.mergeStyles(this.bookAccess.getPage(this.currentPage), PAGE_TEXT_STYLE);
+            this.cachedPageComponents = this.font.split(pageText, 114);
             this.pageMsg = this.getPageNumberMessage();
             this.cachedPage = this.currentPage;
         }
 
-        int l = this.backgroundLeft();
-        int i = this.backgroundTop();
-        if (!p_451733_) {
-            p_459457_.accept(TextAlignment.RIGHT, l + 148, i + 16, this.pageMsg);
+        int left = this.backgroundLeft();
+        int top = this.backgroundTop();
+        if (!clickableOnly) {
+            collector.accept(TextAlignment.RIGHT, left + 148, top + 16, this.pageMsg);
         }
 
-        int j = Math.min(128 / 9, this.cachedPageComponents.size());
+        int shownLines = Math.min(128 / 9, this.cachedPageComponents.size());
 
-        for (int k = 0; k < j; k++) {
-            FormattedCharSequence formattedcharsequence = this.cachedPageComponents.get(k);
-            p_459457_.accept(l + 36, i + 30 + k * 9, formattedcharsequence);
+        for (int i = 0; i < shownLines; i++) {
+            FormattedCharSequence component = this.cachedPageComponents.get(i);
+            collector.accept(left + 36, top + 30 + i * 9, component);
         }
     }
 
     @Override
-    public void renderBackground(GuiGraphics p_301081_, int p_297765_, int p_300192_, float p_297977_) {
-        super.renderBackground(p_301081_, p_297765_, p_300192_, p_297977_);
-        p_301081_.blit(RenderPipelines.GUI_TEXTURED, BOOK_LOCATION, this.backgroundLeft(), this.backgroundTop(), 0.0F, 0.0F, 192, 192, 256, 256);
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractBackground(graphics, mouseX, mouseY, a);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BOOK_LOCATION, this.backgroundLeft(), this.backgroundTop(), 0.0F, 0.0F, 192, 192, 256, 256);
     }
 
     private int backgroundLeft() {
@@ -218,40 +212,38 @@ public class BookViewScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_426380_, boolean p_425186_) {
-        if (p_426380_.button() == 0) {
-            ActiveTextCollector.ClickableStyleFinder activetextcollector$clickablestylefinder = new ActiveTextCollector.ClickableStyleFinder(
-                this.font, (int)p_426380_.x(), (int)p_426380_.y()
-            );
-            this.visitText(activetextcollector$clickablestylefinder, true);
-            Style style = activetextcollector$clickablestylefinder.result();
-            if (style != null && this.handleClickEvent(style.getClickEvent())) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        if (event.button() == 0) {
+            ActiveTextCollector.ClickableStyleFinder finder = new ActiveTextCollector.ClickableStyleFinder(this.font, (int)event.x(), (int)event.y());
+            this.visitText(finder, true);
+            Style clickedStyle = finder.result();
+            if (clickedStyle != null && this.handleClickEvent(clickedStyle.getClickEvent())) {
                 return true;
             }
         }
 
-        return super.mouseClicked(p_426380_, p_425186_);
+        return super.mouseClicked(event, doubleClick);
     }
 
-    protected boolean handleClickEvent(@Nullable ClickEvent p_407221_) {
-        if (p_407221_ == null) {
+    protected boolean handleClickEvent(final @Nullable ClickEvent event) {
+        if (event == null) {
             return false;
-        } else {
-            LocalPlayer localplayer = Objects.requireNonNull(this.minecraft.player, "Player not available");
-            switch (p_407221_) {
-                case ClickEvent.ChangePage(int i):
-                    this.forcePage(i - 1);
-                    break;
-                case ClickEvent.RunCommand(String s):
-                    this.closeContainerOnServer();
-                    clickCommandAction(localplayer, s, null);
-                    break;
-                default:
-                    defaultHandleGameClickEvent(p_407221_, this.minecraft, this);
-            }
-
-            return true;
         }
+
+        LocalPlayer player = Objects.requireNonNull(this.minecraft.player, "Player not available");
+        switch (event) {
+            case ClickEvent.ChangePage(int page):
+                this.forcePage(page - 1);
+                break;
+            case ClickEvent.RunCommand(String command):
+                this.closeContainerOnServer();
+                clickCommandAction(player, command, null);
+                break;
+            default:
+                defaultHandleGameClickEvent(event, this.minecraft, this);
+        }
+
+        return true;
     }
 
     protected void closeContainerOnServer() {
@@ -262,27 +254,24 @@ public class BookViewScreen extends Screen {
         return true;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record BookAccess(List<Component> pages) {
+        public record BookAccess(List<Component> pages) {
         public int getPageCount() {
             return this.pages.size();
         }
 
-        public Component getPage(int p_98311_) {
-            return p_98311_ >= 0 && p_98311_ < this.getPageCount() ? this.pages.get(p_98311_) : CommonComponents.EMPTY;
+        public Component getPage(final int page) {
+            return page >= 0 && page < this.getPageCount() ? this.pages.get(page) : CommonComponents.EMPTY;
         }
 
-        public static BookViewScreen.@Nullable BookAccess fromItem(ItemStack p_98309_) {
-            boolean flag = Minecraft.getInstance().isTextFilteringEnabled();
-            WrittenBookContent writtenbookcontent = p_98309_.get(DataComponents.WRITTEN_BOOK_CONTENT);
-            if (writtenbookcontent != null) {
-                return new BookViewScreen.BookAccess(writtenbookcontent.getPages(flag));
-            } else {
-                WritableBookContent writablebookcontent = p_98309_.get(DataComponents.WRITABLE_BOOK_CONTENT);
-                return writablebookcontent != null
-                    ? new BookViewScreen.BookAccess(writablebookcontent.getPages(flag).<Component>map(Component::literal).toList())
-                    : null;
+        public static BookViewScreen.@Nullable BookAccess fromItem(final ItemStack itemStack) {
+            boolean filterEnabled = Minecraft.getInstance().isTextFilteringEnabled();
+            WrittenBookContent writtenContent = itemStack.get(DataComponents.WRITTEN_BOOK_CONTENT);
+            if (writtenContent != null) {
+                return new BookViewScreen.BookAccess(writtenContent.getPages(filterEnabled));
             }
+
+            WritableBookContent writableContent = itemStack.get(DataComponents.WRITABLE_BOOK_CONTENT);
+            return writableContent != null ? new BookViewScreen.BookAccess(writableContent.getPages(filterEnabled).<Component>map(Component::literal).toList()) : null;
         }
     }
 }

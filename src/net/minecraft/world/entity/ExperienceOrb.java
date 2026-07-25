@@ -44,43 +44,43 @@ public class ExperienceOrb extends Entity {
     private @Nullable Player followingPlayer;
     private final InterpolationHandler interpolation = new InterpolationHandler(this);
 
-    public ExperienceOrb(Level p_20776_, double p_20777_, double p_20778_, double p_20779_, int p_20780_) {
-        this(p_20776_, new Vec3(p_20777_, p_20778_, p_20779_), Vec3.ZERO, p_20780_);
+    public ExperienceOrb(final Level level, final double x, final double y, final double z, final int value) {
+        this(level, new Vec3(x, y, z), Vec3.ZERO, value);
     }
 
-    public ExperienceOrb(Level p_408368_, Vec3 p_408242_, Vec3 p_408623_, int p_408113_) {
-        this(EntityType.EXPERIENCE_ORB, p_408368_);
-        this.setPos(p_408242_);
-        if (!p_408368_.isClientSide()) {
+    public ExperienceOrb(final Level level, final Vec3 pos, final Vec3 roughly, final int value) {
+        this(EntityTypes.EXPERIENCE_ORB, level);
+        this.setPos(pos);
+        if (!level.isClientSide()) {
             this.setYRot(this.random.nextFloat() * 360.0F);
-            Vec3 vec3 = new Vec3(
+            Vec3 randomMovement = new Vec3(
                 (this.random.nextDouble() * 0.2 - 0.1) * 2.0, this.random.nextDouble() * 0.2 * 2.0, (this.random.nextDouble() * 0.2 - 0.1) * 2.0
             );
-            if (p_408623_.lengthSqr() > 0.0 && p_408623_.dot(vec3) < 0.0) {
-                vec3 = vec3.scale(-1.0);
+            if (roughly.lengthSqr() > 0.0 && roughly.dot(randomMovement) < 0.0) {
+                randomMovement = randomMovement.scale(-1.0);
             }
 
-            double d0 = this.getBoundingBox().getSize();
-            this.setPos(p_408242_.add(p_408623_.normalize().scale(d0 * 0.5)));
-            this.setDeltaMovement(vec3);
-            if (!p_408368_.noCollision(this.getBoundingBox())) {
-                this.unstuckIfPossible(d0);
+            double size = this.getBoundingBox().getSize();
+            this.setPos(pos.add(roughly.normalize().scale(size * 0.5)));
+            this.setDeltaMovement(randomMovement);
+            if (!level.noCollision(this.getBoundingBox())) {
+                this.unstuckIfPossible(size);
             }
         }
 
-        this.setValue(p_408113_);
+        this.setValue(value);
     }
 
-    public ExperienceOrb(EntityType<? extends ExperienceOrb> p_20773_, Level p_20774_) {
-        super(p_20773_, p_20774_);
+    public ExperienceOrb(final EntityType<? extends ExperienceOrb> type, final Level level) {
+        super(type, level);
     }
 
-    protected void unstuckIfPossible(double p_409063_) {
-        Vec3 vec3 = this.position().add(0.0, this.getBbHeight() / 2.0, 0.0);
-        VoxelShape voxelshape = Shapes.create(AABB.ofSize(vec3, p_409063_, p_409063_, p_409063_));
+    protected void unstuckIfPossible(final double maxDistance) {
+        Vec3 center = this.position().add(0.0, this.getBbHeight() / 2.0, 0.0);
+        VoxelShape allowedCenters = Shapes.create(AABB.ofSize(center, maxDistance, maxDistance, maxDistance));
         this.level()
-            .findFreePosition(this, voxelshape, vec3, this.getBbWidth(), this.getBbHeight(), this.getBbWidth())
-            .ifPresent(p_449416_ -> this.setPos(p_449416_.add(0.0, -this.getBbHeight() / 2.0, 0.0)));
+            .findFreePosition(this, allowedCenters, center, this.getBbWidth(), this.getBbHeight(), this.getBbWidth())
+            .ifPresent(pos -> this.setPos(pos.add(0.0, -this.getBbHeight() / 2.0, 0.0)));
     }
 
     @Override
@@ -89,8 +89,8 @@ public class ExperienceOrb extends Entity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_329424_) {
-        p_329424_.define(DATA_VALUE, 0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_VALUE, 0);
     }
 
     @Override
@@ -105,10 +105,10 @@ public class ExperienceOrb extends Entity {
             this.firstTick = false;
         } else {
             super.tick();
-            boolean flag = !this.level().noCollision(this.getBoundingBox());
+            boolean colliding = !this.level().noCollision(this.getBoundingBox());
             if (this.isEyeInFluid(FluidTags.WATER)) {
                 this.setUnderwaterMovement();
-            } else if (!flag) {
+            } else if (!colliding) {
                 this.applyGravity();
             }
 
@@ -123,25 +123,25 @@ public class ExperienceOrb extends Entity {
             }
 
             this.followNearbyPlayer();
-            if (this.followingPlayer == null && !this.level().isClientSide() && flag) {
-                boolean flag1 = !this.level().noCollision(this.getBoundingBox().move(this.getDeltaMovement()));
-                if (flag1) {
+            if (this.followingPlayer == null && !this.level().isClientSide() && colliding) {
+                boolean nextColliding = !this.level().noCollision(this.getBoundingBox().move(this.getDeltaMovement()));
+                if (nextColliding) {
                     this.moveTowardsClosestSpace(this.getX(), (this.getBoundingBox().minY + this.getBoundingBox().maxY) / 2.0, this.getZ());
                     this.needsSync = true;
                 }
             }
 
-            double d0 = this.getDeltaMovement().y;
+            double fallSpeed = this.getDeltaMovement().y;
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.applyEffectsFromBlocks();
-            float f = 0.98F;
+            float friction = this.getAirDrag();
             if (this.onGround()) {
-                f = this.level().getBlockState(this.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction() * 0.98F;
+                friction *= this.level().getBlockState(this.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction();
             }
 
-            this.setDeltaMovement(this.getDeltaMovement().scale(f));
-            if (this.verticalCollisionBelow && d0 < -this.getGravity()) {
-                this.setDeltaMovement(new Vec3(this.getDeltaMovement().x, -d0 * 0.4, this.getDeltaMovement().z));
+            this.setDeltaMovement(this.getDeltaMovement().scale(friction));
+            if (this.verticalCollisionBelow && fallSpeed < -this.getGravity()) {
+                this.setDeltaMovement(new Vec3(this.getDeltaMovement().x, -fallSpeed * 0.4, this.getDeltaMovement().z));
             }
 
             this.age++;
@@ -151,25 +151,30 @@ public class ExperienceOrb extends Entity {
         }
     }
 
+    @Override
+    protected float getAirDrag() {
+        return 0.98F;
+    }
+
     private void followNearbyPlayer() {
         if (this.followingPlayer == null || this.followingPlayer.isSpectator() || this.followingPlayer.distanceToSqr(this) > 64.0) {
-            Player player = this.level().getNearestPlayer(this, 8.0);
-            if (player != null && !player.isSpectator() && !player.isDeadOrDying()) {
-                this.followingPlayer = player;
+            Player nearestPlayer = this.level().getNearestPlayer(this, 8.0);
+            if (nearestPlayer != null && !nearestPlayer.isSpectator() && !nearestPlayer.isDeadOrDying()) {
+                this.followingPlayer = nearestPlayer;
             } else {
                 this.followingPlayer = null;
             }
         }
 
         if (this.followingPlayer != null) {
-            Vec3 vec3 = new Vec3(
+            Vec3 delta = new Vec3(
                 this.followingPlayer.getX() - this.getX(),
                 this.followingPlayer.getY() + this.followingPlayer.getEyeHeight() / 2.0 - this.getY(),
                 this.followingPlayer.getZ() - this.getZ()
             );
-            double d0 = vec3.lengthSqr();
-            double d1 = 1.0 - Math.sqrt(d0) / 8.0;
-            this.setDeltaMovement(this.getDeltaMovement().add(vec3.normalize().scale(d1 * d1 * 0.1)));
+            double length = delta.lengthSqr();
+            double power = 1.0 - Math.sqrt(length) / 8.0;
+            this.setDeltaMovement(this.getDeltaMovement().add(delta.normalize().scale(power * power * 0.1)));
         }
     }
 
@@ -180,58 +185,57 @@ public class ExperienceOrb extends Entity {
 
     private void scanForMerges() {
         if (this.level() instanceof ServerLevel) {
-            for (ExperienceOrb experienceorb : this.level()
-                .getEntities(EntityTypeTest.forClass(ExperienceOrb.class), this.getBoundingBox().inflate(0.5), this::canMerge)) {
-                this.merge(experienceorb);
+            for (ExperienceOrb orb : this.level().getEntities(EntityTypeTest.forClass(ExperienceOrb.class), this.getBoundingBox().inflate(0.5), this::canMerge)) {
+                this.merge(orb);
             }
         }
     }
 
-    public static void award(ServerLevel p_147083_, Vec3 p_147084_, int p_147085_) {
-        awardWithDirection(p_147083_, p_147084_, Vec3.ZERO, p_147085_);
+    public static void award(final ServerLevel level, final Vec3 pos, final int amount) {
+        awardWithDirection(level, pos, Vec3.ZERO, amount);
     }
 
-    public static void awardWithDirection(ServerLevel p_408108_, Vec3 p_405876_, Vec3 p_408359_, int p_409800_) {
-        while (p_409800_ > 0) {
-            int i = getExperienceValue(p_409800_);
-            p_409800_ -= i;
-            if (!tryMergeToExisting(p_408108_, p_405876_, i)) {
-                p_408108_.addFreshEntity(new ExperienceOrb(p_408108_, p_405876_, p_408359_, i));
+    public static void awardWithDirection(final ServerLevel level, final Vec3 pos, final Vec3 roughDirection, int amount) {
+        while (amount > 0) {
+            int newCount = getExperienceValue(amount);
+            amount -= newCount;
+            if (!tryMergeToExisting(level, pos, newCount)) {
+                level.addFreshEntity(new ExperienceOrb(level, pos, roughDirection, newCount));
             }
         }
     }
 
-    private static boolean tryMergeToExisting(ServerLevel p_147097_, Vec3 p_147098_, int p_147099_) {
-        AABB aabb = AABB.ofSize(p_147098_, 1.0, 1.0, 1.0);
-        int i = p_147097_.getRandom().nextInt(40);
-        List<ExperienceOrb> list = p_147097_.getEntities(EntityTypeTest.forClass(ExperienceOrb.class), aabb, p_147081_ -> canMerge(p_147081_, i, p_147099_));
-        if (!list.isEmpty()) {
-            ExperienceOrb experienceorb = list.get(0);
-            experienceorb.count++;
-            experienceorb.age = 0;
+    private static boolean tryMergeToExisting(final ServerLevel level, final Vec3 pos, final int value) {
+        AABB box = AABB.ofSize(pos, 1.0, 1.0, 1.0);
+        int id = level.getRandom().nextInt(40);
+        List<ExperienceOrb> orbs = level.getEntities(EntityTypeTest.forClass(ExperienceOrb.class), box, orbx -> canMerge(orbx, id, value));
+        if (!orbs.isEmpty()) {
+            ExperienceOrb orb = orbs.get(0);
+            orb.count++;
+            orb.age = 0;
             return true;
         } else {
             return false;
         }
     }
 
-    private boolean canMerge(ExperienceOrb p_147087_) {
-        return p_147087_ != this && canMerge(p_147087_, this.getId(), this.getValue());
+    private boolean canMerge(final ExperienceOrb orb) {
+        return orb != this && canMerge(orb, this.getId(), this.getValue());
     }
 
-    private static boolean canMerge(ExperienceOrb p_147089_, int p_147090_, int p_147091_) {
-        return !p_147089_.isRemoved() && (p_147089_.getId() - p_147090_) % 40 == 0 && p_147089_.getValue() == p_147091_;
+    private static boolean canMerge(final ExperienceOrb orb, final int id, final int value) {
+        return !orb.isRemoved() && (orb.getId() - id) % 40 == 0 && orb.getValue() == value;
     }
 
-    private void merge(ExperienceOrb p_147101_) {
-        this.count = this.count + p_147101_.count;
-        this.age = Math.min(this.age, p_147101_.age);
-        p_147101_.discard();
+    private void merge(final ExperienceOrb orb) {
+        this.count = this.count + orb.count;
+        this.age = Math.min(this.age, orb.age);
+        orb.discard();
     }
 
     private void setUnderwaterMovement() {
-        Vec3 vec3 = this.getDeltaMovement();
-        this.setDeltaMovement(vec3.x * 0.99F, Math.min(vec3.y + 5.0E-4F, 0.06F), vec3.z * 0.99F);
+        Vec3 movement = this.getDeltaMovement();
+        this.setDeltaMovement(movement.x * 0.99F, Math.min(movement.y + 5.0E-4F, 0.06F), movement.z * 0.99F);
     }
 
     @Override
@@ -239,50 +243,50 @@ public class ExperienceOrb extends Entity {
     }
 
     @Override
-    public final boolean hurtClient(DamageSource p_369585_) {
-        return !this.isInvulnerableToBase(p_369585_);
+    public final boolean hurtClient(final DamageSource source) {
+        return !this.isInvulnerableToBase(source);
     }
 
     @Override
-    public final boolean hurtServer(ServerLevel p_365476_, DamageSource p_362340_, float p_369855_) {
-        if (this.isInvulnerableToBase(p_362340_)) {
+    public final boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        if (this.isInvulnerableToBase(source)) {
             return false;
-        } else {
-            this.markHurt();
-            this.health = (int)(this.health - p_369855_);
-            if (this.health <= 0) {
-                this.discard();
-            }
-
-            return true;
         }
+
+        this.markHurt();
+        this.health = (int)(this.health - damage);
+        if (this.health <= 0) {
+            this.discard();
+        }
+
+        return true;
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_407131_) {
-        p_407131_.putShort("Health", (short)this.health);
-        p_407131_.putShort("Age", (short)this.age);
-        p_407131_.putShort("Value", (short)this.getValue());
-        p_407131_.putInt("Count", this.count);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.putShort("Health", (short)this.health);
+        output.putShort("Age", (short)this.age);
+        output.putShort("Value", (short)this.getValue());
+        output.putInt("Count", this.count);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_406841_) {
-        this.health = p_406841_.getShortOr("Health", (short)5);
-        this.age = p_406841_.getShortOr("Age", (short)0);
-        this.setValue(p_406841_.getShortOr("Value", (short)0));
-        this.count = p_406841_.read("Count", ExtraCodecs.POSITIVE_INT).orElse(1);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.health = input.getShortOr("Health", (short)5);
+        this.age = input.getShortOr("Age", (short)0);
+        this.setValue(input.getShortOr("Value", (short)0));
+        this.count = input.read("Count", ExtraCodecs.POSITIVE_INT).orElse(1);
     }
 
     @Override
-    public void playerTouch(Player p_20792_) {
-        if (p_20792_ instanceof ServerPlayer serverplayer) {
-            if (p_20792_.takeXpDelay == 0) {
-                p_20792_.takeXpDelay = 2;
-                p_20792_.take(this, 1);
-                int i = this.repairPlayerItems(serverplayer, this.getValue());
-                if (i > 0) {
-                    p_20792_.giveExperiencePoints(i);
+    public void playerTouch(final Player player) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            if (player.takeXpDelay == 0) {
+                player.takeXpDelay = 2;
+                player.take(this, 1);
+                int remaining = this.repairPlayerItems(serverPlayer, this.getValue());
+                if (remaining > 0) {
+                    player.giveExperiencePoints(remaining);
                 }
 
                 this.count--;
@@ -293,23 +297,23 @@ public class ExperienceOrb extends Entity {
         }
     }
 
-    private int repairPlayerItems(ServerPlayer p_343572_, int p_147094_) {
-        Optional<EnchantedItemInUse> optional = EnchantmentHelper.getRandomItemWith(EnchantmentEffectComponents.REPAIR_WITH_XP, p_343572_, ItemStack::isDamaged);
-        if (optional.isPresent()) {
-            ItemStack itemstack = optional.get().itemStack();
-            int i = EnchantmentHelper.modifyDurabilityToRepairFromXp(p_343572_.level(), itemstack, p_147094_);
-            int j = Math.min(i, itemstack.getDamageValue());
-            itemstack.setDamageValue(itemstack.getDamageValue() - j);
-            if (j > 0) {
-                int k = p_147094_ - j * p_147094_ / i;
-                if (k > 0) {
-                    return this.repairPlayerItems(p_343572_, k);
+    private int repairPlayerItems(final ServerPlayer player, final int amount) {
+        Optional<EnchantedItemInUse> selected = EnchantmentHelper.getRandomItemWith(EnchantmentEffectComponents.REPAIR_WITH_XP, player, ItemStack::isDamaged);
+        if (selected.isPresent()) {
+            ItemStack itemStack = selected.get().itemStack();
+            int toRepairFromXpAmount = EnchantmentHelper.modifyDurabilityToRepairFromXp(player.level(), itemStack, amount);
+            int repair = Math.min(toRepairFromXpAmount, itemStack.getDamageValue());
+            itemStack.setDamageValue(itemStack.getDamageValue() - repair);
+            if (repair > 0) {
+                int remaining = amount - repair * amount / toRepairFromXpAmount;
+                if (remaining > 0) {
+                    return this.repairPlayerItems(player, remaining);
                 }
             }
 
             return 0;
         } else {
-            return p_147094_;
+            return amount;
         }
     }
 
@@ -317,56 +321,56 @@ public class ExperienceOrb extends Entity {
         return this.entityData.get(DATA_VALUE);
     }
 
-    private void setValue(int p_396669_) {
-        this.entityData.set(DATA_VALUE, p_396669_);
+    private void setValue(final int value) {
+        this.entityData.set(DATA_VALUE, value);
     }
 
     public int getIcon() {
-        int i = this.getValue();
-        if (i >= 2477) {
+        int value = this.getValue();
+        if (value >= 2477) {
             return 10;
-        } else if (i >= 1237) {
+        } else if (value >= 1237) {
             return 9;
-        } else if (i >= 617) {
+        } else if (value >= 617) {
             return 8;
-        } else if (i >= 307) {
+        } else if (value >= 307) {
             return 7;
-        } else if (i >= 149) {
+        } else if (value >= 149) {
             return 6;
-        } else if (i >= 73) {
+        } else if (value >= 73) {
             return 5;
-        } else if (i >= 37) {
+        } else if (value >= 37) {
             return 4;
-        } else if (i >= 17) {
+        } else if (value >= 17) {
             return 3;
-        } else if (i >= 7) {
+        } else if (value >= 7) {
             return 2;
         } else {
-            return i >= 3 ? 1 : 0;
+            return value >= 3 ? 1 : 0;
         }
     }
 
-    public static int getExperienceValue(int p_20783_) {
-        if (p_20783_ >= 2477) {
+    public static int getExperienceValue(final int maxValue) {
+        if (maxValue >= 2477) {
             return 2477;
-        } else if (p_20783_ >= 1237) {
+        } else if (maxValue >= 1237) {
             return 1237;
-        } else if (p_20783_ >= 617) {
+        } else if (maxValue >= 617) {
             return 617;
-        } else if (p_20783_ >= 307) {
+        } else if (maxValue >= 307) {
             return 307;
-        } else if (p_20783_ >= 149) {
+        } else if (maxValue >= 149) {
             return 149;
-        } else if (p_20783_ >= 73) {
+        } else if (maxValue >= 73) {
             return 73;
-        } else if (p_20783_ >= 37) {
+        } else if (maxValue >= 37) {
             return 37;
-        } else if (p_20783_ >= 17) {
+        } else if (maxValue >= 17) {
             return 17;
-        } else if (p_20783_ >= 7) {
+        } else if (maxValue >= 7) {
             return 7;
         } else {
-            return p_20783_ >= 3 ? 3 : 1;
+            return maxValue >= 3 ? 3 : 1;
         }
     }
 

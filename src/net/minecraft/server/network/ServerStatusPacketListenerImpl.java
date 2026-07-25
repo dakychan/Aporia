@@ -16,13 +16,13 @@ public class ServerStatusPacketListenerImpl implements ServerStatusPacketListene
     private final Connection connection;
     private boolean hasRequestedStatus;
 
-    public ServerStatusPacketListenerImpl(ServerStatus p_272864_, Connection p_273586_) {
-        this.status = p_272864_;
-        this.connection = p_273586_;
+    public ServerStatusPacketListenerImpl(final ServerStatus status, final Connection connection) {
+        this.status = status;
+        this.connection = connection;
     }
 
     @Override
-    public void onDisconnect(DisconnectionDetails p_342663_) {
+    public void onDisconnect(final DisconnectionDetails details) {
     }
 
     @Override
@@ -31,7 +31,7 @@ public class ServerStatusPacketListenerImpl implements ServerStatusPacketListene
     }
 
     @Override
-    public void handleStatusRequest(ServerboundStatusRequestPacket p_10095_) {
+    public void handleStatusRequest(final ServerboundStatusRequestPacket packet) {
         if (this.hasRequestedStatus) {
             this.connection.disconnect(DISCONNECT_REASON);
         } else {
@@ -41,8 +41,8 @@ public class ServerStatusPacketListenerImpl implements ServerStatusPacketListene
     }
 
     @Override
-    public void handlePingRequest(ServerboundPingRequestPacket p_333596_) {
-        this.connection.send(new ClientboundPongResponsePacket(p_333596_.getTime()));
+    public void handlePingRequest(final ServerboundPingRequestPacket packet) {
+        this.connection.send(new ClientboundPongResponsePacket(packet.getTime()));
         this.connection.disconnect(DISCONNECT_REASON);
     }
 }

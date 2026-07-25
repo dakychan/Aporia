@@ -22,61 +22,57 @@ import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
 import net.minecraft.network.chat.MessageSignature;
 import net.minecraft.network.chat.SignedMessageBody;
 import net.minecraft.network.chat.SignedMessageLink;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ChatReport extends Report {
-    final IntSet reportedMessages = new IntOpenHashSet();
+    private final IntSet reportedMessages = new IntOpenHashSet();
 
-    ChatReport(UUID p_298678_, Instant p_299093_, UUID p_300487_) {
-        super(p_298678_, p_299093_, p_300487_);
+    private ChatReport(final UUID reportId, final Instant createdAt, final UUID reportedProfileId) {
+        super(reportId, createdAt, reportedProfileId);
     }
 
-    public void toggleReported(int p_300824_, AbuseReportLimits p_301279_) {
-        if (this.reportedMessages.contains(p_300824_)) {
-            this.reportedMessages.remove(p_300824_);
-        } else if (this.reportedMessages.size() < p_301279_.maxReportedMessageCount()) {
-            this.reportedMessages.add(p_300824_);
+    public void toggleReported(final int id, final AbuseReportLimits limits) {
+        if (this.reportedMessages.contains(id)) {
+            this.reportedMessages.remove(id);
+        } else if (this.reportedMessages.size() < limits.maxReportedMessageCount()) {
+            this.reportedMessages.add(id);
         }
     }
 
     public ChatReport copy() {
-        ChatReport chatreport = new ChatReport(this.reportId, this.createdAt, this.reportedProfileId);
-        chatreport.reportedMessages.addAll(this.reportedMessages);
-        chatreport.comments = this.comments;
-        chatreport.reason = this.reason;
-        chatreport.attested = this.attested;
-        return chatreport;
+        ChatReport result = new ChatReport(this.reportId, this.createdAt, this.reportedProfileId);
+        result.reportedMessages.addAll(this.reportedMessages);
+        result.comments = this.comments;
+        result.reason = this.reason;
+        result.attested = this.attested;
+        return result;
     }
 
     @Override
-    public Screen createScreen(Screen p_300210_, ReportingContext p_298195_) {
-        return new ChatReportScreen(p_300210_, p_298195_, this);
+    public Screen createScreen(final Screen lastScreen, final ReportingContext context) {
+        return new ChatReportScreen(lastScreen, context, this);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder extends Report.Builder<ChatReport> {
-        public Builder(ChatReport p_300891_, AbuseReportLimits p_300207_) {
-            super(p_300891_, p_300207_);
+        public static class Builder extends Report.Builder<ChatReport> {
+        public Builder(final ChatReport report, final AbuseReportLimits limits) {
+            super(report, limits);
         }
 
-        public Builder(UUID p_298582_, AbuseReportLimits p_300464_) {
-            super(new ChatReport(UUID.randomUUID(), Instant.now(), p_298582_), p_300464_);
+        public Builder(final UUID reportedProfileId, final AbuseReportLimits limits) {
+            super(new ChatReport(UUID.randomUUID(), Instant.now(), reportedProfileId), limits);
         }
 
         public IntSet reportedMessages() {
             return this.report.reportedMessages;
         }
 
-        public void toggleReported(int p_300108_) {
-            this.report.toggleReported(p_300108_, this.limits);
+        public void toggleReported(final int id) {
+            this.report.toggleReported(id, this.limits);
         }
 
-        public boolean isReported(int p_298529_) {
-            return this.report.reportedMessages.contains(p_298529_);
+        public boolean isReported(final int id) {
+            return this.report.reportedMessages.contains(id);
         }
 
         @Override
@@ -93,48 +89,44 @@ public class ChatReport extends Report {
             } else if (this.report.reason == null) {
                 return Report.CannotBuildReason.NO_REASON;
             } else {
-                return this.report.comments.length() > this.limits.maxOpinionCommentsLength() ? Report.CannotBuildReason.COMMENT_TOO_LONG : super.checkBuildable();
+                return this.report.comments.length() > this.limits.maxOpinionCommentsLength()
+                    ? Report.CannotBuildReason.COMMENT_TOO_LONG
+                    : super.checkBuildable();
             }
         }
 
         @Override
-        public Either<Report.Result, Report.CannotBuildReason> build(ReportingContext p_298383_) {
-            Report.CannotBuildReason report$cannotbuildreason = this.checkBuildable();
-            if (report$cannotbuildreason != null) {
-                return Either.right(report$cannotbuildreason);
-            } else {
-                String s = Objects.requireNonNull(this.report.reason).backendName();
-                ReportEvidence reportevidence = this.buildEvidence(p_298383_);
-                ReportedEntity reportedentity = new ReportedEntity(this.report.reportedProfileId);
-                AbuseReport abusereport = AbuseReport.chat(this.report.comments, s, reportevidence, reportedentity, this.report.createdAt);
-                return Either.left(new Report.Result(this.report.reportId, ReportType.CHAT, abusereport));
+        public Either<Report.Result, Report.CannotBuildReason> build(final ReportingContext reportingContext) {
+            Report.CannotBuildReason error = this.checkBuildable();
+            if (error != null) {
+                return Either.right(error);
             }
+
+            String reason = Objects.requireNonNull(this.report.reason).backendName();
+            ReportEvidence evidence = this.buildEvidence(reportingContext);
+            ReportedEntity reportedEntity = new ReportedEntity(this.report.reportedProfileId);
+            AbuseReport abuseReport = AbuseReport.chat(this.report.comments, reason, evidence, reportedEntity, this.report.createdAt);
+            return Either.left(new Report.Result(this.report.reportId, ReportType.CHAT, abuseReport));
         }
 
-        private ReportEvidence buildEvidence(ReportingContext p_297642_) {
-            List<ReportChatMessage> list = new ArrayList<>();
-            ChatReportContextBuilder chatreportcontextbuilder = new ChatReportContextBuilder(this.limits.leadingContextMessageCount());
-            chatreportcontextbuilder.collectAllContext(
-                p_297642_.chatLog(), this.report.reportedMessages, (p_299095_, p_300385_) -> list.add(this.buildReportedChatMessage(p_300385_, this.isReported(p_299095_)))
+        private ReportEvidence buildEvidence(final ReportingContext reportingContext) {
+            List<ReportChatMessage> allReportMessages = new ArrayList<>();
+            ChatReportContextBuilder contextBuilder = new ChatReportContextBuilder(this.limits.leadingContextMessageCount());
+            contextBuilder.collectAllContext(
+                reportingContext.chatLog(),
+                this.report.reportedMessages,
+                (id, event) -> allReportMessages.add(this.buildReportedChatMessage(event, this.isReported(id)))
             );
-            return new ReportEvidence(Lists.reverse(list));
+            return new ReportEvidence(Lists.reverse(allReportMessages));
         }
 
-        private ReportChatMessage buildReportedChatMessage(LoggedChatMessage.Player p_299286_, boolean p_299614_) {
-            SignedMessageLink signedmessagelink = p_299286_.message().link();
-            SignedMessageBody signedmessagebody = p_299286_.message().signedBody();
-            List<ByteBuffer> list = signedmessagebody.lastSeen().entries().stream().map(MessageSignature::asByteBuffer).toList();
-            ByteBuffer bytebuffer = Optionull.map(p_299286_.message().signature(), MessageSignature::asByteBuffer);
+        private ReportChatMessage buildReportedChatMessage(final LoggedChatMessage.Player chat, final boolean reported) {
+            SignedMessageLink link = chat.message().link();
+            SignedMessageBody body = chat.message().signedBody();
+            List<ByteBuffer> lastSeen = body.lastSeen().entries().stream().map(MessageSignature::asByteBuffer).toList();
+            ByteBuffer signature = Optionull.map(chat.message().signature(), MessageSignature::asByteBuffer);
             return new ReportChatMessage(
-                signedmessagelink.index(),
-                signedmessagelink.sender(),
-                signedmessagelink.sessionId(),
-                signedmessagebody.timeStamp(),
-                signedmessagebody.salt(),
-                list,
-                signedmessagebody.content(),
-                bytebuffer,
-                p_299614_
+                link.index(), link.sender(), link.sessionId(), body.timeStamp(), body.salt(), lastSeen, body.content(), signature, reported
             );
         }
 

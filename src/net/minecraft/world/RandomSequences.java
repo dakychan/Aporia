@@ -2,9 +2,9 @@ package net.minecraft.world;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 import net.minecraft.resources.Identifier;
@@ -16,16 +16,16 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 public class RandomSequences extends SavedData {
     public static final Codec<RandomSequences> CODEC = RecordCodecBuilder.create(
-        p_449375_ -> p_449375_.group(
+        i -> i.group(
                 Codec.INT.fieldOf("salt").forGetter(RandomSequences::salt),
                 Codec.BOOL.optionalFieldOf("include_world_seed", true).forGetter(RandomSequences::includeWorldSeed),
                 Codec.BOOL.optionalFieldOf("include_sequence_id", true).forGetter(RandomSequences::includeSequenceId),
-                Codec.unboundedMap(Identifier.CODEC, RandomSequence.CODEC).fieldOf("sequences").forGetter(p_390463_ -> p_390463_.sequences)
+                Codec.unboundedMap(Identifier.CODEC, RandomSequence.CODEC).fieldOf("sequences").forGetter(rs -> rs.sequences)
             )
-            .apply(p_449375_, RandomSequences::new)
+            .apply(i, RandomSequences::new)
     );
     public static final SavedDataType<RandomSequences> TYPE = new SavedDataType<>(
-        "random_sequences", RandomSequences::new, CODEC, DataFixTypes.SAVED_DATA_RANDOM_SEQUENCES
+        Identifier.withDefaultNamespace("random_sequences"), RandomSequences::new, CODEC, DataFixTypes.SAVED_DATA_RANDOM_SEQUENCES
     );
     private int salt;
     private boolean includeWorldSeed = true;
@@ -35,49 +35,51 @@ public class RandomSequences extends SavedData {
     public RandomSequences() {
     }
 
-    private RandomSequences(int p_397246_, boolean p_391262_, boolean p_391812_, Map<Identifier, RandomSequence> p_393825_) {
-        this.salt = p_397246_;
-        this.includeWorldSeed = p_391262_;
-        this.includeSequenceId = p_391812_;
-        this.sequences.putAll(p_393825_);
+    private RandomSequences(final int salt, final boolean includeWorldSeed, final boolean includeSequenceId, final Map<Identifier, RandomSequence> sequences) {
+        this.salt = salt;
+        this.includeWorldSeed = includeWorldSeed;
+        this.includeSequenceId = includeSequenceId;
+        this.sequences.putAll(sequences);
     }
 
-    public RandomSource get(Identifier p_457476_, long p_458238_) {
-        RandomSource randomsource = this.sequences.computeIfAbsent(p_457476_, p_449377_ -> this.createSequence(p_449377_, p_458238_)).random();
-        return new RandomSequences.DirtyMarkingRandomSource(randomsource);
+    public RandomSource get(final Identifier key, final long worldSeed) {
+        RandomSource random = this.sequences.computeIfAbsent(key, rl -> this.createSequence(rl, worldSeed)).random();
+        return new RandomSequences.DirtyMarkingRandomSource(random);
     }
 
-    private RandomSequence createSequence(Identifier p_450713_, long p_454682_) {
-        return this.createSequence(p_450713_, p_454682_, this.salt, this.includeWorldSeed, this.includeSequenceId);
+    private RandomSequence createSequence(final Identifier key, final long worldSeed) {
+        return this.createSequence(key, worldSeed, this.salt, this.includeWorldSeed, this.includeSequenceId);
     }
 
-    private RandomSequence createSequence(Identifier p_454550_, long p_459663_, int p_299267_, boolean p_300525_, boolean p_297272_) {
-        long i = (p_300525_ ? p_459663_ : 0L) ^ p_299267_;
-        return new RandomSequence(i, p_297272_ ? Optional.of(p_454550_) : Optional.empty());
+    private RandomSequence createSequence(
+        final Identifier key, final long worldSeed, final int salt, final boolean includeWorldSeed, final boolean includeSequenceId
+    ) {
+        long seed = (includeWorldSeed ? worldSeed : 0L) ^ salt;
+        return new RandomSequence(seed, includeSequenceId ? Optional.of(key) : Optional.empty());
     }
 
-    public void forAllSequences(BiConsumer<Identifier, RandomSequence> p_299883_) {
-        this.sequences.forEach(p_299883_);
+    public void forAllSequences(final BiConsumer<Identifier, RandomSequence> consumer) {
+        this.sequences.forEach(consumer);
     }
 
-    public void setSeedDefaults(int p_299968_, boolean p_298395_, boolean p_298518_) {
-        this.salt = p_299968_;
-        this.includeWorldSeed = p_298395_;
-        this.includeSequenceId = p_298518_;
+    public void setSeedDefaults(final int salt, final boolean includeWorldSeed, final boolean includeSequenceId) {
+        this.salt = salt;
+        this.includeWorldSeed = includeWorldSeed;
+        this.includeSequenceId = includeSequenceId;
     }
 
     public int clear() {
-        int i = this.sequences.size();
+        int count = this.sequences.size();
         this.sequences.clear();
-        return i;
+        return count;
     }
 
-    public void reset(Identifier p_453516_, long p_458199_) {
-        this.sequences.put(p_453516_, this.createSequence(p_453516_, p_458199_));
+    public void reset(final Identifier id, final long worldSeed) {
+        this.sequences.put(id, this.createSequence(id, worldSeed));
     }
 
-    public void reset(Identifier p_458303_, long p_459419_, int p_455321_, boolean p_458404_, boolean p_459283_) {
-        this.sequences.put(p_458303_, this.createSequence(p_458303_, p_459419_, p_455321_, p_458404_, p_459283_));
+    public void reset(final Identifier id, final long worldSeed, final int salt, final boolean includeWorldSeed, final boolean includeSequenceId) {
+        this.sequences.put(id, this.createSequence(id, worldSeed, salt, includeWorldSeed, includeSequenceId));
     }
 
     private int salt() {
@@ -92,11 +94,11 @@ public class RandomSequences extends SavedData {
         return this.includeSequenceId;
     }
 
-    class DirtyMarkingRandomSource implements RandomSource {
+    private class DirtyMarkingRandomSource implements RandomSource {
         private final RandomSource random;
 
-        DirtyMarkingRandomSource(final RandomSource p_299209_) {
-            this.random = p_299209_;
+        private DirtyMarkingRandomSource(final RandomSource random) {
+            this.random = random;
         }
 
         @Override
@@ -112,9 +114,9 @@ public class RandomSequences extends SavedData {
         }
 
         @Override
-        public void setSeed(long p_300098_) {
+        public void setSeed(final long seed) {
             RandomSequences.this.setDirty();
-            this.random.setSeed(p_300098_);
+            this.random.setSeed(seed);
         }
 
         @Override
@@ -124,9 +126,9 @@ public class RandomSequences extends SavedData {
         }
 
         @Override
-        public int nextInt(int p_301106_) {
+        public int nextInt(final int bound) {
             RandomSequences.this.setDirty();
-            return this.random.nextInt(p_301106_);
+            return this.random.nextInt(bound);
         }
 
         @Override
@@ -160,14 +162,17 @@ public class RandomSequences extends SavedData {
         }
 
         @Override
-        public boolean equals(Object p_299603_) {
-            if (this == p_299603_) {
+        public boolean equals(final Object obj) {
+            if (this == obj) {
                 return true;
             } else {
-                return p_299603_ instanceof RandomSequences.DirtyMarkingRandomSource randomsequences$dirtymarkingrandomsource
-                    ? this.random.equals(randomsequences$dirtymarkingrandomsource.random)
-                    : false;
+                return obj instanceof RandomSequences.DirtyMarkingRandomSource other ? this.random.equals(other.random) : false;
             }
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hashCode(this.random);
         }
     }
 }

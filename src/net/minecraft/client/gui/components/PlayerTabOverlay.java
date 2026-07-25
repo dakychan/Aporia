@@ -12,8 +12,8 @@ import java.util.stream.Collectors;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Optionull;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.Hud;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
@@ -34,11 +34,8 @@ import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class PlayerTabOverlay {
     private static final Identifier PING_UNKNOWN_SPRITE = Identifier.withDefaultNamespace("icon/ping_unknown");
     private static final Identifier PING_1_SPRITE = Identifier.withDefaultNamespace("icon/ping_1");
@@ -54,40 +51,40 @@ public class PlayerTabOverlay {
     private static final Identifier HEART_FULL_SPRITE = Identifier.withDefaultNamespace("hud/heart/full");
     private static final Identifier HEART_ABSORBING_HALF_BLINKING_SPRITE = Identifier.withDefaultNamespace("hud/heart/absorbing_half_blinking");
     private static final Identifier HEART_HALF_SPRITE = Identifier.withDefaultNamespace("hud/heart/half");
-    private static final Comparator<PlayerInfo> PLAYER_COMPARATOR = Comparator.<PlayerInfo>comparingInt(p_357670_ -> -p_357670_.getTabListOrder())
-        .thenComparingInt(p_253306_ -> p_253306_.getGameMode() == GameType.SPECTATOR ? 1 : 0)
-        .thenComparing(p_269613_ -> Optionull.mapOrDefault(p_269613_.getTeam(), PlayerTeam::getName, ""))
-        .thenComparing(p_420708_ -> p_420708_.getProfile().name(), String::compareToIgnoreCase);
+    private static final Comparator<PlayerInfo> PLAYER_COMPARATOR = Comparator.<PlayerInfo>comparingInt(p -> -p.getTabListOrder())
+        .thenComparingInt(p -> p.getGameMode() == GameType.SPECTATOR ? 1 : 0)
+        .thenComparing(p -> Optionull.mapOrDefault(p.getTeam(), PlayerTeam::getName, ""))
+        .thenComparing(p -> p.getProfile().name(), String::compareToIgnoreCase);
     public static final int MAX_ROWS_PER_COL = 20;
     private final Minecraft minecraft;
-    private final Gui gui;
+    private final Hud hud;
     private @Nullable Component footer;
     private @Nullable Component header;
     private boolean visible;
     private final Map<UUID, PlayerTabOverlay.HealthState> healthStates = new Object2ObjectOpenHashMap<>();
 
-    public PlayerTabOverlay(Minecraft p_94527_, Gui p_94528_) {
-        this.minecraft = p_94527_;
-        this.gui = p_94528_;
+    public PlayerTabOverlay(final Minecraft minecraft, final Hud hud) {
+        this.minecraft = minecraft;
+        this.hud = hud;
     }
 
-    public Component getNameForDisplay(PlayerInfo p_94550_) {
-        return p_94550_.getTabListDisplayName() != null
-            ? this.decorateName(p_94550_, p_94550_.getTabListDisplayName().copy())
-            : this.decorateName(p_94550_, PlayerTeam.formatNameForTeam(p_94550_.getTeam(), Component.literal(p_94550_.getProfile().name())));
+    public Component getNameForDisplay(final PlayerInfo info) {
+        return info.getTabListDisplayName() != null
+            ? this.decorateName(info, info.getTabListDisplayName().copy())
+            : this.decorateName(info, PlayerTeam.formatNameForTeam(info.getTeam(), Component.literal(info.getProfile().name())));
     }
 
-    private Component decorateName(PlayerInfo p_94552_, MutableComponent p_94553_) {
-        return p_94552_.getGameMode() == GameType.SPECTATOR ? p_94553_.withStyle(ChatFormatting.ITALIC) : p_94553_;
+    private Component decorateName(final PlayerInfo info, final MutableComponent name) {
+        return info.getGameMode() == GameType.SPECTATOR ? name.withStyle(ChatFormatting.ITALIC) : name;
     }
 
-    public void setVisible(boolean p_94557_) {
-        if (this.visible != p_94557_) {
+    public void setVisible(final boolean visible) {
+        if (this.visible != visible) {
             this.healthStates.clear();
-            this.visible = p_94557_;
-            if (p_94557_) {
-                Component component = ComponentUtils.formatList(this.getPlayerInfos(), Component.literal(", "), this::getNameForDisplay);
-                this.minecraft.getNarrator().saySystemNow(Component.translatable("multiplayer.player.list.narration", component));
+            this.visible = visible;
+            if (visible) {
+                Component players = ComponentUtils.formatList(this.getPlayerInfos(), Component.literal(", "), this::getNameForDisplay);
+                this.minecraft.getNarrator().saySystemNow(Component.translatable("multiplayer.player.list.narration", players));
             }
         }
     }
@@ -96,241 +93,257 @@ public class PlayerTabOverlay {
         return this.minecraft.player.connection.getListedOnlinePlayers().stream().sorted(PLAYER_COMPARATOR).limit(80L).toList();
     }
 
-    public void render(GuiGraphics p_281484_, int p_283602_, Scoreboard p_282338_, @Nullable Objective p_282369_) {
-        List<PlayerInfo> list = this.getPlayerInfos();
-        List<PlayerTabOverlay.ScoreDisplayEntry> list1 = new ArrayList<>(list.size());
-        int i = this.minecraft.font.width(" ");
-        int j = 0;
-        int k = 0;
+    public void extractRenderState(
+        final GuiGraphicsExtractor graphics, final int screenWidth, final Scoreboard scoreboard, final @Nullable Objective displayObjective
+    ) {
+        List<PlayerInfo> playerInfos = this.getPlayerInfos();
+        List<PlayerTabOverlay.ScoreDisplayEntry> entriesToDisplay = new ArrayList<>(playerInfos.size());
+        int spacerWidth = this.minecraft.font.width(" ");
+        int maxNameWidth = 0;
+        int maxScoreWidth = 0;
 
-        for (PlayerInfo playerinfo : list) {
-            Component component = this.getNameForDisplay(playerinfo);
-            j = Math.max(j, this.minecraft.font.width(component));
-            int l = 0;
-            Component component1 = null;
-            int i1 = 0;
-            if (p_282369_ != null) {
-                ScoreHolder scoreholder = ScoreHolder.fromGameProfile(playerinfo.getProfile());
-                ReadOnlyScoreInfo readonlyscoreinfo = p_282338_.getPlayerScoreInfo(scoreholder, p_282369_);
-                if (readonlyscoreinfo != null) {
-                    l = readonlyscoreinfo.value();
+        for (PlayerInfo info : playerInfos) {
+            Component playerName = this.getNameForDisplay(info);
+            maxNameWidth = Math.max(maxNameWidth, this.minecraft.font.width(playerName));
+            int playerScore = 0;
+            Component formattedPlayerScore = null;
+            int playerScoreWidth = 0;
+            if (displayObjective != null) {
+                ScoreHolder scoreHolder = ScoreHolder.fromGameProfile(info.getProfile());
+                ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(scoreHolder, displayObjective);
+                if (scoreInfo != null) {
+                    playerScore = scoreInfo.value();
                 }
 
-                if (p_282369_.getRenderType() != ObjectiveCriteria.RenderType.HEARTS) {
-                    NumberFormat numberformat = p_282369_.numberFormatOrDefault(StyledFormat.PLAYER_LIST_DEFAULT);
-                    component1 = ReadOnlyScoreInfo.safeFormatValue(readonlyscoreinfo, numberformat);
-                    i1 = this.minecraft.font.width(component1);
-                    k = Math.max(k, i1 > 0 ? i + i1 : 0);
+                if (displayObjective.getRenderType() != ObjectiveCriteria.RenderType.HEARTS) {
+                    if (scoreInfo != null) {
+                        NumberFormat objectiveDefaultFormat = displayObjective.numberFormatOrDefault(StyledFormat.PLAYER_LIST_DEFAULT);
+                        formattedPlayerScore = scoreInfo.formatValue(objectiveDefaultFormat);
+                        playerScoreWidth = this.minecraft.font.width(formattedPlayerScore);
+                    }
+
+                    maxScoreWidth = Math.max(maxScoreWidth, playerScoreWidth > 0 ? spacerWidth + playerScoreWidth : 0);
                 }
             }
 
-            list1.add(new PlayerTabOverlay.ScoreDisplayEntry(component, l, component1, i1));
+            entriesToDisplay.add(new PlayerTabOverlay.ScoreDisplayEntry(playerName, playerScore, formattedPlayerScore, playerScoreWidth));
         }
 
         if (!this.healthStates.isEmpty()) {
-            Set<UUID> set = list.stream().map(p_420707_ -> p_420707_.getProfile().id()).collect(Collectors.toSet());
-            this.healthStates.keySet().removeIf(p_248583_ -> !set.contains(p_248583_));
+            Set<UUID> playerIds = playerInfos.stream().map(player -> player.getProfile().id()).collect(Collectors.toSet());
+            this.healthStates.keySet().removeIf(id -> !playerIds.contains(id));
         }
 
-        int j2 = list.size();
-        int k2 = j2;
+        int slots = playerInfos.size();
+        int rows = slots;
 
-        int l2;
-        for (l2 = 1; k2 > 20; k2 = (j2 + l2 - 1) / l2) {
-            l2++;
+        int cols;
+        for (cols = 1; rows > 20; rows = (slots + cols - 1) / cols) {
+            cols++;
         }
 
-        boolean flag1 = this.minecraft.isLocalServer() || this.minecraft.getConnection().getConnection().isEncrypted();
-        int i3;
-        if (p_282369_ != null) {
-            if (p_282369_.getRenderType() == ObjectiveCriteria.RenderType.HEARTS) {
-                i3 = 90;
+        boolean showHead = this.minecraft.getConnection().onlineMode();
+        int widthForScore;
+        if (displayObjective != null) {
+            if (displayObjective.getRenderType() == ObjectiveCriteria.RenderType.HEARTS) {
+                widthForScore = 90;
             } else {
-                i3 = k;
+                widthForScore = maxScoreWidth;
             }
         } else {
-            i3 = 0;
+            widthForScore = 0;
         }
 
-        int j3 = Math.min(l2 * ((flag1 ? 9 : 0) + j + i3 + 13), p_283602_ - 50) / l2;
-        int k3 = p_283602_ / 2 - (j3 * l2 + (l2 - 1) * 5) / 2;
-        int l3 = 10;
-        int i4 = j3 * l2 + (l2 - 1) * 5;
-        List<FormattedCharSequence> list2 = null;
+        int slotWidth = Math.min(cols * ((showHead ? 9 : 0) + maxNameWidth + widthForScore + 13), screenWidth - 50) / cols;
+        int xxo = screenWidth / 2 - (slotWidth * cols + (cols - 1) * 5) / 2;
+        int yyo = 10;
+        int maxLineWidth = slotWidth * cols + (cols - 1) * 5;
+        List<FormattedCharSequence> headerLines = null;
         if (this.header != null) {
-            list2 = this.minecraft.font.split(this.header, p_283602_ - 50);
+            headerLines = this.minecraft.font.split(this.header, screenWidth - 50);
 
-            for (FormattedCharSequence formattedcharsequence : list2) {
-                i4 = Math.max(i4, this.minecraft.font.width(formattedcharsequence));
+            for (FormattedCharSequence line : headerLines) {
+                maxLineWidth = Math.max(maxLineWidth, this.minecraft.font.width(line));
             }
         }
 
-        List<FormattedCharSequence> list3 = null;
+        List<FormattedCharSequence> footerLines = null;
         if (this.footer != null) {
-            list3 = this.minecraft.font.split(this.footer, p_283602_ - 50);
+            footerLines = this.minecraft.font.split(this.footer, screenWidth - 50);
 
-            for (FormattedCharSequence formattedcharsequence1 : list3) {
-                i4 = Math.max(i4, this.minecraft.font.width(formattedcharsequence1));
+            for (FormattedCharSequence line : footerLines) {
+                maxLineWidth = Math.max(maxLineWidth, this.minecraft.font.width(line));
             }
         }
 
-        if (list2 != null) {
-            p_281484_.fill(p_283602_ / 2 - i4 / 2 - 1, l3 - 1, p_283602_ / 2 + i4 / 2 + 1, l3 + list2.size() * 9, Integer.MIN_VALUE);
+        if (headerLines != null) {
+            graphics.fill(
+                screenWidth / 2 - maxLineWidth / 2 - 1, yyo - 1, screenWidth / 2 + maxLineWidth / 2 + 1, yyo + headerLines.size() * 9, Integer.MIN_VALUE
+            );
 
-            for (FormattedCharSequence formattedcharsequence2 : list2) {
-                int j1 = this.minecraft.font.width(formattedcharsequence2);
-                p_281484_.drawString(this.minecraft.font, formattedcharsequence2, p_283602_ / 2 - j1 / 2, l3, -1);
-                l3 += 9;
+            for (FormattedCharSequence line : headerLines) {
+                int lineWidth = this.minecraft.font.width(line);
+                graphics.text(this.minecraft.font, line, screenWidth / 2 - lineWidth / 2, yyo, -1);
+                yyo += 9;
             }
 
-            l3++;
+            yyo++;
         }
 
-        p_281484_.fill(p_283602_ / 2 - i4 / 2 - 1, l3 - 1, p_283602_ / 2 + i4 / 2 + 1, l3 + k2 * 9, Integer.MIN_VALUE);
-        int j4 = this.minecraft.options.getBackgroundColor(553648127);
+        graphics.fill(screenWidth / 2 - maxLineWidth / 2 - 1, yyo - 1, screenWidth / 2 + maxLineWidth / 2 + 1, yyo + rows * 9, Integer.MIN_VALUE);
+        int background = this.minecraft.options.getBackgroundColor(553648127);
 
-        for (int k4 = 0; k4 < j2; k4++) {
-            int l4 = k4 / k2;
-            int k1 = k4 % k2;
-            int l1 = k3 + l4 * j3 + l4 * 5;
-            int i2 = l3 + k1 * 9;
-            p_281484_.fill(l1, i2, l1 + j3, i2 + 8, j4);
-            if (k4 < list.size()) {
-                PlayerInfo playerinfo1 = list.get(k4);
-                PlayerTabOverlay.ScoreDisplayEntry playertaboverlay$scoredisplayentry = list1.get(k4);
-                GameProfile gameprofile = playerinfo1.getProfile();
-                if (flag1) {
-                    Player player = this.minecraft.level.getPlayerByUUID(gameprofile.id());
-                    boolean flag = player != null && AvatarRenderer.isPlayerUpsideDown(player);
-                    PlayerFaceRenderer.draw(p_281484_, playerinfo1.getSkin().body().texturePath(), l1, i2, 8, playerinfo1.showHat(), flag, -1);
-                    l1 += 9;
+        for (int i = 0; i < slots; i++) {
+            int col = i / rows;
+            int row = i % rows;
+            int xo = xxo + col * slotWidth + col * 5;
+            int yo = yyo + row * 9;
+            graphics.fill(xo, yo, xo + slotWidth, yo + 8, background);
+            if (i < playerInfos.size()) {
+                PlayerInfo info = playerInfos.get(i);
+                PlayerTabOverlay.ScoreDisplayEntry displayInfo = entriesToDisplay.get(i);
+                GameProfile profile = info.getProfile();
+                if (showHead) {
+                    Player playerByUUID = this.minecraft.level.getPlayerByUUID(profile.id());
+                    boolean flip = playerByUUID != null && AvatarRenderer.isPlayerUpsideDown(playerByUUID);
+                    PlayerFaceExtractor.extractRenderState(graphics, info.getSkin().body().texturePath(), xo, yo, 8, info.showHat(), flip, -1);
+                    xo += 9;
                 }
 
-                p_281484_.drawString(
-                    this.minecraft.font,
-                    playertaboverlay$scoredisplayentry.name,
-                    l1,
-                    i2,
-                    playerinfo1.getGameMode() == GameType.SPECTATOR ? -1862270977 : -1
-                );
-                if (p_282369_ != null && playerinfo1.getGameMode() != GameType.SPECTATOR) {
-                    int j5 = l1 + j + 1;
-                    int k5 = j5 + i3;
-                    if (k5 - j5 > 5) {
-                        this.renderTablistScore(p_282369_, i2, playertaboverlay$scoredisplayentry, j5, k5, gameprofile.id(), p_281484_);
+                graphics.text(this.minecraft.font, displayInfo.name, xo, yo, info.getGameMode() == GameType.SPECTATOR ? -1862270977 : -1);
+                if (displayObjective != null && info.getGameMode() != GameType.SPECTATOR) {
+                    int left = xo + maxNameWidth + 1;
+                    int right = left + widthForScore;
+                    if (right - left > 5) {
+                        this.extractTablistScore(displayObjective, yo, displayInfo, left, right, profile.id(), graphics);
                     }
                 }
 
-                this.renderPingIcon(p_281484_, j3, l1 - (flag1 ? 9 : 0), i2, playerinfo1);
+                this.extractPingIcon(graphics, slotWidth, xo - (showHead ? 9 : 0), yo, info);
             }
         }
 
-        if (list3 != null) {
-            l3 += k2 * 9 + 1;
-            p_281484_.fill(p_283602_ / 2 - i4 / 2 - 1, l3 - 1, p_283602_ / 2 + i4 / 2 + 1, l3 + list3.size() * 9, Integer.MIN_VALUE);
+        if (footerLines != null) {
+            yyo += rows * 9 + 1;
+            graphics.fill(
+                screenWidth / 2 - maxLineWidth / 2 - 1, yyo - 1, screenWidth / 2 + maxLineWidth / 2 + 1, yyo + footerLines.size() * 9, Integer.MIN_VALUE
+            );
 
-            for (FormattedCharSequence formattedcharsequence3 : list3) {
-                int i5 = this.minecraft.font.width(formattedcharsequence3);
-                p_281484_.drawString(this.minecraft.font, formattedcharsequence3, p_283602_ / 2 - i5 / 2, l3, -1);
-                l3 += 9;
+            for (FormattedCharSequence line : footerLines) {
+                int lineWidth = this.minecraft.font.width(line);
+                graphics.text(this.minecraft.font, line, screenWidth / 2 - lineWidth / 2, yyo, -1);
+                yyo += 9;
             }
         }
     }
 
-    protected void renderPingIcon(GuiGraphics p_283286_, int p_281809_, int p_282801_, int p_282223_, PlayerInfo p_282986_) {
-        Identifier identifier;
-        if (p_282986_.getLatency() < 0) {
-            identifier = PING_UNKNOWN_SPRITE;
-        } else if (p_282986_.getLatency() < 150) {
-            identifier = PING_5_SPRITE;
-        } else if (p_282986_.getLatency() < 300) {
-            identifier = PING_4_SPRITE;
-        } else if (p_282986_.getLatency() < 600) {
-            identifier = PING_3_SPRITE;
-        } else if (p_282986_.getLatency() < 1000) {
-            identifier = PING_2_SPRITE;
+    protected void extractPingIcon(final GuiGraphicsExtractor graphics, final int slotWidth, final int xo, final int yo, final PlayerInfo info) {
+        Identifier sprite;
+        if (info.getLatency() < 0) {
+            sprite = PING_UNKNOWN_SPRITE;
+        } else if (info.getLatency() < 150) {
+            sprite = PING_5_SPRITE;
+        } else if (info.getLatency() < 300) {
+            sprite = PING_4_SPRITE;
+        } else if (info.getLatency() < 600) {
+            sprite = PING_3_SPRITE;
+        } else if (info.getLatency() < 1000) {
+            sprite = PING_2_SPRITE;
         } else {
-            identifier = PING_1_SPRITE;
+            sprite = PING_1_SPRITE;
         }
 
-        p_283286_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, p_282801_ + p_281809_ - 11, p_282223_, 10, 8);
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, xo + slotWidth - 11, yo, 10, 8);
     }
 
-    private void renderTablistScore(
-        Objective p_283381_, int p_282557_, PlayerTabOverlay.ScoreDisplayEntry p_312058_, int p_283533_, int p_281254_, UUID p_283099_, GuiGraphics p_282280_
+    private void extractTablistScore(
+        final Objective displayObjective,
+        final int yo,
+        final PlayerTabOverlay.ScoreDisplayEntry entry,
+        final int left,
+        final int right,
+        final UUID profileId,
+        final GuiGraphicsExtractor graphics
     ) {
-        if (p_283381_.getRenderType() == ObjectiveCriteria.RenderType.HEARTS) {
-            this.renderTablistHearts(p_282557_, p_283533_, p_281254_, p_283099_, p_282280_, p_312058_.score);
-        } else if (p_312058_.formattedScore != null) {
-            p_282280_.drawString(this.minecraft.font, p_312058_.formattedScore, p_281254_ - p_312058_.scoreWidth, p_282557_, -1);
+        if (displayObjective.getRenderType() == ObjectiveCriteria.RenderType.HEARTS) {
+            this.extractTablistHearts(yo, left, right, profileId, graphics, entry.score);
+        } else if (entry.formattedScore != null) {
+            graphics.text(this.minecraft.font, entry.formattedScore, right - entry.scoreWidth, yo, -1);
         }
     }
 
-    private void renderTablistHearts(int p_282904_, int p_283173_, int p_282149_, UUID p_283348_, GuiGraphics p_281723_, int p_281354_) {
-        PlayerTabOverlay.HealthState playertaboverlay$healthstate = this.healthStates
-            .computeIfAbsent(p_283348_, p_249546_ -> new PlayerTabOverlay.HealthState(p_281354_));
-        playertaboverlay$healthstate.update(p_281354_, this.gui.getGuiTicks());
-        int i = Mth.positiveCeilDiv(Math.max(p_281354_, playertaboverlay$healthstate.displayedValue()), 2);
-        int j = Math.max(p_281354_, Math.max(playertaboverlay$healthstate.displayedValue(), 20)) / 2;
-        boolean flag = playertaboverlay$healthstate.isBlinking(this.gui.getGuiTicks());
-        if (i > 0) {
-            int k = Mth.floor(Math.min((float)(p_282149_ - p_283173_ - 4) / j, 9.0F));
-            if (k <= 3) {
-                float f1 = Mth.clamp(p_281354_ / 20.0F, 0.0F, 1.0F);
-                int j1 = (int)((1.0F - f1) * 255.0F) << 16 | (int)(f1 * 255.0F) << 8;
-                float f = p_281354_ / 2.0F;
-                Component component = Component.translatable("multiplayer.player.list.hp", f);
-                Component component1;
-                if (p_282149_ - this.minecraft.font.width(component) >= p_283173_) {
-                    component1 = component;
+    private void extractTablistHearts(final int yo, final int left, final int right, final UUID profileId, final GuiGraphicsExtractor graphics, final int score) {
+        PlayerTabOverlay.HealthState health = this.healthStates.computeIfAbsent(profileId, id -> new PlayerTabOverlay.HealthState(score));
+        health.update(score, this.hud.getGuiTicks());
+        int fullHearts = Mth.positiveCeilDiv(Math.max(score, health.displayedValue()), 2);
+        int heartsToRender = Math.max(score, Math.max(health.displayedValue(), 20)) / 2;
+        boolean blink = health.isBlinking(this.hud.getGuiTicks());
+        if (fullHearts > 0) {
+            int widthPerHeart = Mth.floor(Math.min((float)(right - left - 4) / heartsToRender, 9.0F));
+            if (widthPerHeart <= 3) {
+                float pct = Mth.clamp(score / 20.0F, 0.0F, 1.0F);
+                int color = (int)((1.0F - pct) * 255.0F) << 16 | (int)(pct * 255.0F) << 8;
+                float hearts = score / 2.0F;
+                Component hpText = Component.translatable("multiplayer.player.list.hp", hearts);
+                Component text;
+                if (right - this.minecraft.font.width(hpText) >= left) {
+                    text = hpText;
                 } else {
-                    component1 = Component.literal(Float.toString(f));
+                    text = Component.literal(Float.toString(hearts));
                 }
 
-                p_281723_.drawString(
-                    this.minecraft.font,
-                    component1,
-                    (p_282149_ + p_283173_ - this.minecraft.font.width(component1)) / 2,
-                    p_282904_,
-                    ARGB.opaque(j1)
-                );
+                graphics.text(this.minecraft.font, text, (right + left - this.minecraft.font.width(text)) / 2, yo, ARGB.opaque(color));
             } else {
-                Identifier identifier = flag ? HEART_CONTAINER_BLINKING_SPRITE : HEART_CONTAINER_SPRITE;
+                Identifier sprite = blink ? HEART_CONTAINER_BLINKING_SPRITE : HEART_CONTAINER_SPRITE;
 
-                for (int l = i; l < j; l++) {
-                    p_281723_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, p_283173_ + l * k, p_282904_, 9, 9);
+                for (int heart = fullHearts; heart < heartsToRender; heart++) {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, left + heart * widthPerHeart, yo, 9, 9);
                 }
 
-                for (int i1 = 0; i1 < i; i1++) {
-                    p_281723_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, p_283173_ + i1 * k, p_282904_, 9, 9);
-                    if (flag) {
-                        if (i1 * 2 + 1 < playertaboverlay$healthstate.displayedValue()) {
-                            p_281723_.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_FULL_BLINKING_SPRITE, p_283173_ + i1 * k, p_282904_, 9, 9);
+                for (int heart = 0; heart < fullHearts; heart++) {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, left + heart * widthPerHeart, yo, 9, 9);
+                    if (blink) {
+                        if (heart * 2 + 1 < health.displayedValue()) {
+                            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_FULL_BLINKING_SPRITE, left + heart * widthPerHeart, yo, 9, 9);
                         }
 
-                        if (i1 * 2 + 1 == playertaboverlay$healthstate.displayedValue()) {
-                            p_281723_.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_HALF_BLINKING_SPRITE, p_283173_ + i1 * k, p_282904_, 9, 9);
+                        if (heart * 2 + 1 == health.displayedValue()) {
+                            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, HEART_HALF_BLINKING_SPRITE, left + heart * widthPerHeart, yo, 9, 9);
                         }
                     }
 
-                    if (i1 * 2 + 1 < p_281354_) {
-                        p_281723_.blitSprite(RenderPipelines.GUI_TEXTURED, i1 >= 10 ? HEART_ABSORBING_FULL_BLINKING_SPRITE : HEART_FULL_SPRITE, p_283173_ + i1 * k, p_282904_, 9, 9);
+                    if (heart * 2 + 1 < score) {
+                        graphics.blitSprite(
+                            RenderPipelines.GUI_TEXTURED,
+                            heart >= 10 ? HEART_ABSORBING_FULL_BLINKING_SPRITE : HEART_FULL_SPRITE,
+                            left + heart * widthPerHeart,
+                            yo,
+                            9,
+                            9
+                        );
                     }
 
-                    if (i1 * 2 + 1 == p_281354_) {
-                        p_281723_.blitSprite(RenderPipelines.GUI_TEXTURED, i1 >= 10 ? HEART_ABSORBING_HALF_BLINKING_SPRITE : HEART_HALF_SPRITE, p_283173_ + i1 * k, p_282904_, 9, 9);
+                    if (heart * 2 + 1 == score) {
+                        graphics.blitSprite(
+                            RenderPipelines.GUI_TEXTURED,
+                            heart >= 10 ? HEART_ABSORBING_HALF_BLINKING_SPRITE : HEART_HALF_SPRITE,
+                            left + heart * widthPerHeart,
+                            yo,
+                            9,
+                            9
+                        );
                     }
                 }
             }
         }
     }
 
-    public void setFooter(@Nullable Component p_94555_) {
-        this.footer = p_94555_;
+    public void setFooter(final @Nullable Component footer) {
+        this.footer = footer;
     }
 
-    public void setHeader(@Nullable Component p_94559_) {
-        this.header = p_94559_;
+    public void setHeader(final @Nullable Component header) {
+        this.header = header;
     }
 
     public void reset() {
@@ -338,8 +351,7 @@ public class PlayerTabOverlay {
         this.footer = null;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class HealthState {
+        private static class HealthState {
         private static final long DISPLAY_UPDATE_DELAY = 20L;
         private static final long DECREASE_BLINK_DURATION = 20L;
         private static final long INCREASE_BLINK_DURATION = 10L;
@@ -348,21 +360,21 @@ public class PlayerTabOverlay {
         private long lastUpdateTick;
         private long blinkUntilTick;
 
-        public HealthState(int p_250562_) {
-            this.displayedValue = p_250562_;
-            this.lastValue = p_250562_;
+        public HealthState(final int value) {
+            this.displayedValue = value;
+            this.lastValue = value;
         }
 
-        public void update(int p_251066_, long p_251460_) {
-            if (p_251066_ != this.lastValue) {
-                long i = p_251066_ < this.lastValue ? 20L : 10L;
-                this.blinkUntilTick = p_251460_ + i;
-                this.lastValue = p_251066_;
-                this.lastUpdateTick = p_251460_;
+        public void update(final int value, final long tick) {
+            if (value != this.lastValue) {
+                long blinkDuration = value < this.lastValue ? 20L : 10L;
+                this.blinkUntilTick = tick + blinkDuration;
+                this.lastValue = value;
+                this.lastUpdateTick = tick;
             }
 
-            if (p_251460_ - this.lastUpdateTick > 20L) {
-                this.displayedValue = p_251066_;
+            if (tick - this.lastUpdateTick > 20L) {
+                this.displayedValue = value;
             }
         }
 
@@ -370,12 +382,11 @@ public class PlayerTabOverlay {
             return this.displayedValue;
         }
 
-        public boolean isBlinking(long p_251847_) {
-            return this.blinkUntilTick > p_251847_ && (this.blinkUntilTick - p_251847_) % 6L >= 3L;
+        public boolean isBlinking(final long tick) {
+            return this.blinkUntilTick > tick && (this.blinkUntilTick - tick) % 6L >= 3L;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record ScoreDisplayEntry(Component name, int score, @Nullable Component formattedScore, int scoreWidth) {
+        private record ScoreDisplayEntry(Component name, int score, @Nullable Component formattedScore, int scoreWidth) {
     }
 }

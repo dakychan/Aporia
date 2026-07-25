@@ -17,15 +17,15 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.util.Unit;
 import org.slf4j.Logger;
 
-public class ReloadableResourceManager implements ResourceManager, AutoCloseable {
+public class ReloadableResourceManager implements AutoCloseable, ResourceManager {
     private static final Logger LOGGER = LogUtils.getLogger();
     private CloseableResourceManager resources;
     private final List<PreparableReloadListener> listeners = Lists.newArrayList();
     private final PackType type;
 
-    public ReloadableResourceManager(PackType p_203820_) {
-        this.type = p_203820_;
-        this.resources = new MultiPackResourceManager(p_203820_, List.of());
+    public ReloadableResourceManager(final PackType type) {
+        this.type = type;
+        this.resources = new MultiPackResourceManager(type, List.of());
     }
 
     @Override
@@ -33,20 +33,25 @@ public class ReloadableResourceManager implements ResourceManager, AutoCloseable
         this.resources.close();
     }
 
-    public void registerReloadListener(PreparableReloadListener p_10714_) {
-        this.listeners.add(p_10714_);
+    public void registerReloadListener(final PreparableReloadListener listener) {
+        this.listeners.add(listener);
     }
 
-    public ReloadInstance createReload(Executor p_143930_, Executor p_143931_, CompletableFuture<Unit> p_143932_, List<PackResources> p_143933_) {
-        LOGGER.info("Reloading ResourceManager: {}", LogUtils.defer(() -> p_143933_.stream().map(PackResources::packId).collect(Collectors.joining(", "))));
+    public ReloadInstance createReload(
+        final Executor backgroundExecutor,
+        final Executor mainThreadExecutor,
+        final CompletableFuture<Unit> initialTask,
+        final List<PackResources> resourcePacks
+    ) {
+        LOGGER.info("Reloading ResourceManager: {}", LogUtils.defer(() -> resourcePacks.stream().map(PackResources::packId).collect(Collectors.joining(", "))));
         this.resources.close();
-        this.resources = new MultiPackResourceManager(this.type, p_143933_);
-        return SimpleReloadInstance.create(this.resources, this.listeners, p_143930_, p_143931_, p_143932_, LOGGER.isDebugEnabled());
+        this.resources = new MultiPackResourceManager(this.type, resourcePacks);
+        return SimpleReloadInstance.create(this.resources, this.listeners, backgroundExecutor, mainThreadExecutor, initialTask, LOGGER.isDebugEnabled());
     }
 
     @Override
-    public Optional<Resource> getResource(Identifier p_458255_) {
-        return this.resources.getResource(p_458255_);
+    public Optional<Resource> getResource(final Identifier location) {
+        return this.resources.getResource(location);
     }
 
     @Override
@@ -55,18 +60,18 @@ public class ReloadableResourceManager implements ResourceManager, AutoCloseable
     }
 
     @Override
-    public List<Resource> getResourceStack(Identifier p_451491_) {
-        return this.resources.getResourceStack(p_451491_);
+    public List<Resource> getResourceStack(final Identifier location) {
+        return this.resources.getResourceStack(location);
     }
 
     @Override
-    public Map<Identifier, Resource> listResources(String p_215488_, Predicate<Identifier> p_215489_) {
-        return this.resources.listResources(p_215488_, p_215489_);
+    public Map<Identifier, Resource> listResources(final String directory, final Predicate<Identifier> filenameFilter) {
+        return this.resources.listResources(directory, filenameFilter);
     }
 
     @Override
-    public Map<Identifier, List<Resource>> listResourceStacks(String p_215491_, Predicate<Identifier> p_215492_) {
-        return this.resources.listResourceStacks(p_215491_, p_215492_);
+    public Map<Identifier, List<Resource>> listResourceStacks(final String directory, final Predicate<Identifier> filter) {
+        return this.resources.listResourceStacks(directory, filter);
     }
 
     @Override

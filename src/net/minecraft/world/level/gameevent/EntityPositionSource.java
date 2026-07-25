@@ -4,7 +4,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.Optional;
 import java.util.UUID;
@@ -19,59 +18,59 @@ import net.minecraft.world.phys.Vec3;
 
 public class EntityPositionSource implements PositionSource {
     public static final MapCodec<EntityPositionSource> CODEC = RecordCodecBuilder.mapCodec(
-        p_253607_ -> p_253607_.group(
+        i -> i.group(
                 UUIDUtil.CODEC.fieldOf("source_entity").forGetter(EntityPositionSource::getUuid),
-                Codec.FLOAT.fieldOf("y_offset").orElse(0.0F).forGetter(p_223666_ -> p_223666_.yOffset)
+                Codec.FLOAT.optionalFieldOf("y_offset", 0.0F).forGetter(o -> o.yOffset)
             )
-            .apply(p_253607_, (p_223672_, p_223673_) -> new EntityPositionSource(Either.right(Either.left(p_223672_)), p_223673_))
+            .apply(i, (uuid, offset) -> new EntityPositionSource(Either.right(Either.left(uuid)), offset))
     );
     public static final StreamCodec<ByteBuf, EntityPositionSource> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT,
         EntityPositionSource::getId,
         ByteBufCodecs.FLOAT,
-        p_327428_ -> p_327428_.yOffset,
-        (p_327429_, p_327430_) -> new EntityPositionSource(Either.right(Either.right(p_327429_)), p_327430_)
+        o -> o.yOffset,
+        (id, offset) -> new EntityPositionSource(Either.right(Either.right(id)), offset)
     );
     private Either<Entity, Either<UUID, Integer>> entityOrUuidOrId;
     private final float yOffset;
 
-    public EntityPositionSource(Entity p_223648_, float p_223649_) {
-        this(Either.left(p_223648_), p_223649_);
+    public EntityPositionSource(final Entity entity, final float yOffset) {
+        this(Either.left(entity), yOffset);
     }
 
-    private EntityPositionSource(Either<Entity, Either<UUID, Integer>> p_223651_, float p_223652_) {
-        this.entityOrUuidOrId = p_223651_;
-        this.yOffset = p_223652_;
+    private EntityPositionSource(final Either<Entity, Either<UUID, Integer>> entityOrUuidOrId, final float yOffset) {
+        this.entityOrUuidOrId = entityOrUuidOrId;
+        this.yOffset = yOffset;
     }
 
     @Override
-    public Optional<Vec3> getPosition(Level p_157733_) {
+    public Optional<Vec3> getPosition(final Level level) {
         if (this.entityOrUuidOrId.left().isEmpty()) {
-            this.resolveEntity(p_157733_);
+            this.resolveEntity(level);
         }
 
-        return this.entityOrUuidOrId.left().map(p_223676_ -> p_223676_.position().add(0.0, this.yOffset, 0.0));
+        return this.entityOrUuidOrId.left().map(entity -> entity.position().add(0.0, this.yOffset, 0.0));
     }
 
-    private void resolveEntity(Level p_223678_) {
+    private void resolveEntity(final Level level) {
         this.entityOrUuidOrId
             .map(
                 Optional::of,
-                p_223657_ -> Optional.ofNullable(
-                    p_223657_.map(p_422211_ -> p_223678_ instanceof ServerLevel serverlevel ? serverlevel.getEntity(p_422211_) : null, p_223678_::getEntity)
+                uuidOrId -> Optional.ofNullable(
+                    uuidOrId.map(uuid -> level instanceof ServerLevel serverLevel ? serverLevel.getEntity(uuid) : null, level::getEntity)
                 )
             )
-            .ifPresent(p_223654_ -> this.entityOrUuidOrId = Either.left(p_223654_));
+            .ifPresent(entity -> this.entityOrUuidOrId = Either.left(entity));
     }
 
     public UUID getUuid() {
-        return this.entityOrUuidOrId.map(Entity::getUUID, p_223680_ -> p_223680_.map(Function.identity(), p_223668_ -> {
+        return this.entityOrUuidOrId.map(Entity::getUUID, uuidOrId -> uuidOrId.map(Function.identity(), id -> {
             throw new RuntimeException("Unable to get entityId from uuid");
         }));
     }
 
     private int getId() {
-        return this.entityOrUuidOrId.map(Entity::getId, p_223662_ -> p_223662_.map(p_223670_ -> {
+        return this.entityOrUuidOrId.map(Entity::getId, uuidOrId -> uuidOrId.map(uuid -> {
             throw new IllegalStateException("Unable to get entityId from uuid");
         }, Function.identity()));
     }

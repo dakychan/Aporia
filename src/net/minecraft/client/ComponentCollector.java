@@ -3,16 +3,13 @@ package net.minecraft.client;
 import com.google.common.collect.Lists;
 import java.util.List;
 import net.minecraft.network.chat.FormattedText;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ComponentCollector {
     private final List<FormattedText> parts = Lists.newArrayList();
 
-    public void append(FormattedText p_90676_) {
-        this.parts.add(p_90676_);
+    public void append(final FormattedText component) {
+        this.parts.add(component);
     }
 
     public @Nullable FormattedText getResult() {
@@ -24,8 +21,8 @@ public class ComponentCollector {
     }
 
     public FormattedText getResultOrEmpty() {
-        FormattedText formattedtext = this.getResult();
-        return formattedtext != null ? formattedtext : FormattedText.EMPTY;
+        FormattedText result = this.getResult();
+        return result != null ? result : FormattedText.EMPTY;
     }
 
     public void reset() {

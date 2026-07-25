@@ -15,20 +15,20 @@ public class StructureUpdater implements SnbtToNbt.Filter {
     private static final String PREFIX = PackType.SERVER_DATA.getDirectory() + "/minecraft/structure/";
 
     @Override
-    public CompoundTag apply(String p_126503_, CompoundTag p_126504_) {
-        return p_126503_.startsWith(PREFIX) ? update(p_126503_, p_126504_) : p_126504_;
+    public CompoundTag apply(final String name, final CompoundTag input) {
+        return name.startsWith(PREFIX) ? update(name, input) : input;
     }
 
-    public static CompoundTag update(String p_176823_, CompoundTag p_176824_) {
-        StructureTemplate structuretemplate = new StructureTemplate();
-        int i = NbtUtils.getDataVersion(p_176824_, 500);
-        int j = 4650;
-        if (i < 4650) {
-            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", i, 4650, p_176823_);
+    public static CompoundTag update(final String name, final CompoundTag tag) {
+        StructureTemplate structureTemplate = new StructureTemplate();
+        int fromVersion = NbtUtils.getDataVersion(tag, 500);
+        int toVersion = 4882;
+        if (fromVersion < 4882) {
+            LOGGER.warn("SNBT Too old, do not forget to update: {} < {}: {}", fromVersion, 4882, name);
         }
 
-        CompoundTag compoundtag = DataFixTypes.STRUCTURE.updateToCurrentVersion(DataFixers.getDataFixer(), p_176824_, i);
-        structuretemplate.load(BuiltInRegistries.BLOCK, compoundtag);
-        return structuretemplate.save(new CompoundTag());
+        CompoundTag updated = DataFixTypes.STRUCTURE.updateToCurrentVersion(DataFixers.getDataFixer(), tag, fromVersion);
+        structureTemplate.load(BuiltInRegistries.BLOCK, updated);
+        return structureTemplate.save(new CompoundTag());
     }
 }

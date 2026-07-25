@@ -3,7 +3,6 @@ package net.minecraft.world.item.enchantment.effects;
 import com.google.common.collect.HashMultimap;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
@@ -19,46 +18,53 @@ import net.minecraft.world.phys.Vec3;
 
 public record EnchantmentAttributeEffect(Identifier id, Holder<Attribute> attribute, LevelBasedValue amount, AttributeModifier.Operation operation)
     implements EnchantmentLocationBasedEffect {
-    public static final MapCodec<EnchantmentAttributeEffect> CODEC = RecordCodecBuilder.mapCodec(
-        p_449868_ -> p_449868_.group(
+    public static final MapCodec<EnchantmentAttributeEffect> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(EnchantmentAttributeEffect::id),
                 Attribute.CODEC.fieldOf("attribute").forGetter(EnchantmentAttributeEffect::attribute),
                 LevelBasedValue.CODEC.fieldOf("amount").forGetter(EnchantmentAttributeEffect::amount),
                 AttributeModifier.Operation.CODEC.fieldOf("operation").forGetter(EnchantmentAttributeEffect::operation)
             )
-            .apply(p_449868_, EnchantmentAttributeEffect::new)
+            .apply(i, EnchantmentAttributeEffect::new)
     );
 
-    private Identifier idForSlot(StringRepresentable p_345417_) {
-        return this.id.withSuffix("/" + p_345417_.getSerializedName());
+    private Identifier idForSlot(final StringRepresentable slot) {
+        return this.id.withSuffix("/" + slot.getSerializedName());
     }
 
-    public AttributeModifier getModifier(int p_342709_, StringRepresentable p_342150_) {
-        return new AttributeModifier(this.idForSlot(p_342150_), this.amount().calculate(p_342709_), this.operation());
+    public AttributeModifier getModifier(final int level, final StringRepresentable slot) {
+        return new AttributeModifier(this.idForSlot(slot), this.amount().calculate(level), this.operation());
     }
 
     @Override
-    public void onChangedBlock(ServerLevel p_342233_, int p_343426_, EnchantedItemInUse p_344251_, Entity p_342367_, Vec3 p_343372_, boolean p_342530_) {
-        if (p_342530_ && p_342367_ instanceof LivingEntity livingentity) {
-            livingentity.getAttributes().addTransientAttributeModifiers(this.makeAttributeMap(p_343426_, p_344251_.inSlot()));
+    public void onChangedBlock(
+        final ServerLevel serverLevel,
+        final int enchantmentLevel,
+        final EnchantedItemInUse item,
+        final Entity entity,
+        final Vec3 position,
+        final boolean becameActive
+    ) {
+        if (becameActive && entity instanceof LivingEntity living) {
+            living.getAttributes().addTransientAttributeModifiers(this.makeAttributeMap(enchantmentLevel, item.inSlot()));
         }
     }
 
     @Override
-    public void onDeactivated(EnchantedItemInUse p_343672_, Entity p_343519_, Vec3 p_342547_, int p_343187_) {
-        if (p_343519_ instanceof LivingEntity livingentity) {
-            livingentity.getAttributes().removeAttributeModifiers(this.makeAttributeMap(p_343187_, p_343672_.inSlot()));
+    public void onDeactivated(final EnchantedItemInUse item, final Entity entity, final Vec3 position, final int level) {
+        if (entity instanceof LivingEntity living) {
+            living.getAttributes().removeAttributeModifiers(this.makeAttributeMap(level, item.inSlot()));
         }
     }
 
-    private HashMultimap<Holder<Attribute>, AttributeModifier> makeAttributeMap(int p_342373_, EquipmentSlot p_343561_) {
-        HashMultimap<Holder<Attribute>, AttributeModifier> hashmultimap = HashMultimap.create();
-        hashmultimap.put(this.attribute, this.getModifier(p_342373_, p_343561_));
-        return hashmultimap;
+    private HashMultimap<Holder<Attribute>, AttributeModifier> makeAttributeMap(final int enchantmentLevel, final EquipmentSlot slot) {
+        HashMultimap<Holder<Attribute>, AttributeModifier> map = HashMultimap.create();
+        map.put(this.attribute, this.getModifier(enchantmentLevel, slot));
+        return map;
     }
 
     @Override
     public MapCodec<EnchantmentAttributeEffect> codec() {
-        return CODEC;
+        return MAP_CODEC;
     }
 }

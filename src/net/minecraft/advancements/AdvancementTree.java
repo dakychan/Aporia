@@ -20,43 +20,43 @@ public class AdvancementTree {
     private final Set<AdvancementNode> tasks = new ObjectLinkedOpenHashSet<>();
     private AdvancementTree.@Nullable Listener listener;
 
-    private void remove(AdvancementNode p_299357_) {
-        for (AdvancementNode advancementnode : p_299357_.children()) {
-            this.remove(advancementnode);
+    private void remove(final AdvancementNode node) {
+        for (AdvancementNode child : node.children()) {
+            this.remove(child);
         }
 
-        LOGGER.info("Forgot about advancement {}", p_299357_.holder());
-        this.nodes.remove(p_299357_.holder().id());
-        if (p_299357_.parent() == null) {
-            this.roots.remove(p_299357_);
+        LOGGER.info("Forgot about advancement {}", node.holder());
+        this.nodes.remove(node.holder().id());
+        if (node.parent() == null) {
+            this.roots.remove(node);
             if (this.listener != null) {
-                this.listener.onRemoveAdvancementRoot(p_299357_);
+                this.listener.onRemoveAdvancementRoot(node);
             }
         } else {
-            this.tasks.remove(p_299357_);
+            this.tasks.remove(node);
             if (this.listener != null) {
-                this.listener.onRemoveAdvancementTask(p_299357_);
+                this.listener.onRemoveAdvancementTask(node);
             }
         }
     }
 
-    public void remove(Set<Identifier> p_297924_) {
-        for (Identifier identifier : p_297924_) {
-            AdvancementNode advancementnode = this.nodes.get(identifier);
-            if (advancementnode == null) {
-                LOGGER.warn("Told to remove advancement {} but I don't know what that is", identifier);
+    public void remove(final Set<Identifier> ids) {
+        for (Identifier id : ids) {
+            AdvancementNode advancement = this.nodes.get(id);
+            if (advancement == null) {
+                LOGGER.warn("Told to remove advancement {} but I don't know what that is", id);
             } else {
-                this.remove(advancementnode);
+                this.remove(advancement);
             }
         }
     }
 
-    public void addAll(Collection<AdvancementHolder> p_299574_) {
-        List<AdvancementHolder> list = new ArrayList<>(p_299574_);
+    public void addAll(final Collection<AdvancementHolder> advancements) {
+        List<AdvancementHolder> advancementsToAdd = new ArrayList<>(advancements);
 
-        while (!list.isEmpty()) {
-            if (!list.removeIf(this::tryInsert)) {
-                LOGGER.error("Couldn't load advancements: {}", list);
+        while (!advancementsToAdd.isEmpty()) {
+            if (!advancementsToAdd.removeIf(this::tryInsert)) {
+                LOGGER.error("Couldn't load advancements: {}", advancementsToAdd);
                 break;
             }
         }
@@ -64,32 +64,32 @@ public class AdvancementTree {
         LOGGER.info("Loaded {} advancements", this.nodes.size());
     }
 
-    private boolean tryInsert(AdvancementHolder p_300067_) {
-        Optional<Identifier> optional = p_300067_.value().parent();
-        AdvancementNode advancementnode = optional.map(this.nodes::get).orElse(null);
-        if (advancementnode == null && optional.isPresent()) {
+    private boolean tryInsert(final AdvancementHolder holder) {
+        Optional<Identifier> parentId = holder.value().parent();
+        AdvancementNode parentNode = parentId.map(this.nodes::get).orElse(null);
+        if (parentNode == null && parentId.isPresent()) {
             return false;
-        } else {
-            AdvancementNode advancementnode1 = new AdvancementNode(p_300067_, advancementnode);
-            if (advancementnode != null) {
-                advancementnode.addChild(advancementnode1);
-            }
-
-            this.nodes.put(p_300067_.id(), advancementnode1);
-            if (advancementnode == null) {
-                this.roots.add(advancementnode1);
-                if (this.listener != null) {
-                    this.listener.onAddAdvancementRoot(advancementnode1);
-                }
-            } else {
-                this.tasks.add(advancementnode1);
-                if (this.listener != null) {
-                    this.listener.onAddAdvancementTask(advancementnode1);
-                }
-            }
-
-            return true;
         }
+
+        AdvancementNode node = new AdvancementNode(holder, parentNode);
+        if (parentNode != null) {
+            parentNode.addChild(node);
+        }
+
+        this.nodes.put(holder.id(), node);
+        if (parentNode == null) {
+            this.roots.add(node);
+            if (this.listener != null) {
+                this.listener.onAddAdvancementRoot(node);
+            }
+        } else {
+            this.tasks.add(node);
+            if (this.listener != null) {
+                this.listener.onAddAdvancementTask(node);
+            }
+        }
+
+        return true;
     }
 
     public void clear() {
@@ -109,35 +109,35 @@ public class AdvancementTree {
         return this.nodes.values();
     }
 
-    public @Nullable AdvancementNode get(Identifier p_460529_) {
-        return this.nodes.get(p_460529_);
+    public @Nullable AdvancementNode get(final Identifier id) {
+        return this.nodes.get(id);
     }
 
-    public @Nullable AdvancementNode get(AdvancementHolder p_299974_) {
-        return this.nodes.get(p_299974_.id());
+    public @Nullable AdvancementNode get(final AdvancementHolder advancement) {
+        return this.nodes.get(advancement.id());
     }
 
-    public void setListener(AdvancementTree.@Nullable Listener p_299884_) {
-        this.listener = p_299884_;
-        if (p_299884_ != null) {
-            for (AdvancementNode advancementnode : this.roots) {
-                p_299884_.onAddAdvancementRoot(advancementnode);
+    public void setListener(final AdvancementTree.@Nullable Listener listener) {
+        this.listener = listener;
+        if (listener != null) {
+            for (AdvancementNode root : this.roots) {
+                listener.onAddAdvancementRoot(root);
             }
 
-            for (AdvancementNode advancementnode1 : this.tasks) {
-                p_299884_.onAddAdvancementTask(advancementnode1);
+            for (AdvancementNode task : this.tasks) {
+                listener.onAddAdvancementTask(task);
             }
         }
     }
 
     public interface Listener {
-        void onAddAdvancementRoot(AdvancementNode p_300084_);
+        void onAddAdvancementRoot(AdvancementNode root);
 
-        void onRemoveAdvancementRoot(AdvancementNode p_297518_);
+        void onRemoveAdvancementRoot(AdvancementNode root);
 
-        void onAddAdvancementTask(AdvancementNode p_297601_);
+        void onAddAdvancementTask(AdvancementNode task);
 
-        void onRemoveAdvancementTask(AdvancementNode p_300155_);
+        void onRemoveAdvancementTask(AdvancementNode task);
 
         void onAdvancementsCleared();
     }

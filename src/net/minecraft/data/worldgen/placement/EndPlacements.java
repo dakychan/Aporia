@@ -26,19 +26,19 @@ public class EndPlacements {
     public static final ResourceKey<PlacedFeature> CHORUS_PLANT = PlacementUtils.createKey("chorus_plant");
     public static final ResourceKey<PlacedFeature> END_ISLAND_DECORATED = PlacementUtils.createKey("end_island_decorated");
 
-    public static void bootstrap(BootstrapContext<PlacedFeature> p_328049_) {
-        HolderGetter<ConfiguredFeature<?, ?>> holdergetter = p_328049_.lookup(Registries.CONFIGURED_FEATURE);
-        Holder<ConfiguredFeature<?, ?>> holder = holdergetter.getOrThrow(EndFeatures.END_PLATFORM);
-        Holder<ConfiguredFeature<?, ?>> holder1 = holdergetter.getOrThrow(EndFeatures.END_SPIKE);
-        Holder<ConfiguredFeature<?, ?>> holder2 = holdergetter.getOrThrow(EndFeatures.END_GATEWAY_RETURN);
-        Holder<ConfiguredFeature<?, ?>> holder3 = holdergetter.getOrThrow(EndFeatures.CHORUS_PLANT);
-        Holder<ConfiguredFeature<?, ?>> holder4 = holdergetter.getOrThrow(EndFeatures.END_ISLAND);
-        PlacementUtils.register(p_328049_, END_PLATFORM, holder, FixedPlacement.of(ServerLevel.END_SPAWN_POINT.below()), BiomeFilter.biome());
-        PlacementUtils.register(p_328049_, END_SPIKE, holder1, BiomeFilter.biome());
+    public static void bootstrap(final BootstrapContext<PlacedFeature> context) {
+        HolderGetter<ConfiguredFeature<?, ?>> configuredFeatures = context.lookup(Registries.CONFIGURED_FEATURE);
+        Holder<ConfiguredFeature<?, ?>> endPlatform = configuredFeatures.getOrThrow(EndFeatures.END_PLATFORM);
+        Holder<ConfiguredFeature<?, ?>> endSpike = configuredFeatures.getOrThrow(EndFeatures.END_SPIKE);
+        Holder<ConfiguredFeature<?, ?>> endGatewayReturn = configuredFeatures.getOrThrow(EndFeatures.END_GATEWAY_RETURN);
+        Holder<ConfiguredFeature<?, ?>> chorusPlant = configuredFeatures.getOrThrow(EndFeatures.CHORUS_PLANT);
+        Holder<ConfiguredFeature<?, ?>> endIsland = configuredFeatures.getOrThrow(EndFeatures.END_ISLAND);
+        PlacementUtils.register(context, END_PLATFORM, endPlatform, FixedPlacement.of(ServerLevel.END_SPAWN_POINT.below()), BiomeFilter.biome());
+        PlacementUtils.register(context, END_SPIKE, endSpike, BiomeFilter.biome());
         PlacementUtils.register(
-            p_328049_,
+            context,
             END_GATEWAY_RETURN,
-            holder2,
+            endGatewayReturn,
             RarityFilter.onAverageOnceEvery(700),
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP,
@@ -46,18 +46,18 @@ public class EndPlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328049_,
+            context,
             CHORUS_PLANT,
-            holder3,
+            chorusPlant,
             CountPlacement.of(UniformInt.of(0, 4)),
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP,
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328049_,
+            context,
             END_ISLAND_DECORATED,
-            holder4,
+            endIsland,
             RarityFilter.onAverageOnceEvery(14),
             PlacementUtils.countExtra(1, 0.25F, 1),
             InSquarePlacement.spread(),

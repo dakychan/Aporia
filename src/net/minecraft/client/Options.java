@@ -16,7 +16,6 @@ import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
-import com.mojang.serialization.DataResult.Error;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,8 +42,9 @@ import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.options.OptionsSubScreen;
 import net.minecraft.client.input.InputQuirks;
+import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.GpuWarnlistManager;
-import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.extract.LevelExtractor;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.sounds.MusicManager;
 import net.minecraft.client.sounds.SoundEngine;
@@ -71,37 +71,39 @@ import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.player.ChatVisiblity;
 import net.minecraft.world.entity.player.PlayerModelPart;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class Options {
-    static final Logger LOGGER = LogUtils.getLogger();
-    static final Gson GSON = new Gson();
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Gson GSON = new Gson();
     private static final TypeToken<List<String>> LIST_OF_STRINGS_TYPE = new TypeToken<List<String>>() {};
     public static final int RENDER_DISTANCE_SHORT = 4;
     public static final int RENDER_DISTANCE_FAR = 12;
     public static final int RENDER_DISTANCE_REALLY_FAR = 16;
     public static final int RENDER_DISTANCE_EXTREME = 32;
     private static final Splitter OPTION_SPLITTER = Splitter.on(':').limit(2);
-    public static final String DEFAULT_SOUND_DEVICE = "";
+    private static final String DEFAULT_SOUND_DEVICE = "";
+    private static final Component TOOLTIP_NEEDS_RESTART = Component.translatable("options.needsRestart");
     private static final Component ACCESSIBILITY_TOOLTIP_DARK_MOJANG_BACKGROUND = Component.translatable("options.darkMojangStudiosBackgroundColor.tooltip");
     private final OptionInstance<Boolean> darkMojangStudiosBackground = OptionInstance.createBoolean(
         "options.darkMojangStudiosBackgroundColor", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_DARK_MOJANG_BACKGROUND), false
     );
     private static final Component ACCESSIBILITY_TOOLTIP_HIDE_LIGHTNING_FLASHES = Component.translatable("options.hideLightningFlashes.tooltip");
-    private final OptionInstance<Boolean> hideLightningFlash = OptionInstance.createBoolean("options.hideLightningFlashes", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_HIDE_LIGHTNING_FLASHES), false);
+    private final OptionInstance<Boolean> hideLightningFlash = OptionInstance.createBoolean(
+        "options.hideLightningFlashes", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_HIDE_LIGHTNING_FLASHES), false
+    );
     private static final Component ACCESSIBILITY_TOOLTIP_HIDE_SPLASH_TEXTS = Component.translatable("options.hideSplashTexts.tooltip");
-    private final OptionInstance<Boolean> hideSplashTexts = OptionInstance.createBoolean("options.hideSplashTexts", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_HIDE_SPLASH_TEXTS), false);
-    private final OptionInstance<Double> sensitivity = new OptionInstance<>("options.sensitivity", OptionInstance.noTooltip(), (p_232096_, p_232097_) -> {
-        if (p_232097_ == 0.0) {
-            return genericValueLabel(p_232096_, Component.translatable("options.sensitivity.min"));
+    private final OptionInstance<Boolean> hideSplashTexts = OptionInstance.createBoolean(
+        "options.hideSplashTexts", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_HIDE_SPLASH_TEXTS), false
+    );
+    private final OptionInstance<Double> sensitivity = new OptionInstance<>("options.sensitivity", OptionInstance.noTooltip(), (caption, value) -> {
+        if (value == 0.0) {
+            return genericValueLabel(caption, Component.translatable("options.sensitivity.min"));
         } else {
-            return p_232097_ == 1.0 ? genericValueLabel(p_232096_, Component.translatable("options.sensitivity.max")) : percentValueLabel(p_232096_, 2.0 * p_232097_);
+            return value == 1.0 ? genericValueLabel(caption, Component.translatable("options.sensitivity.max")) : percentValueLabel(caption, 2.0 * value);
         }
-    }, OptionInstance.UnitDouble.INSTANCE, 0.5, p_232115_ -> {});
+    }, OptionInstance.UnitDouble.INSTANCE, 0.5, OptionInstance.NO_ACTION);
     private final OptionInstance<Integer> renderDistance;
     private final OptionInstance<Integer> simulationDistance;
     private int serverRenderDistance = 0;
@@ -109,28 +111,54 @@ public class Options {
         "options.entityDistanceScaling",
         OptionInstance.noTooltip(),
         Options::percentValueLabel,
-        new OptionInstance.IntRange(2, 20).xmap(p_232020_ -> p_232020_ / 4.0, p_232054_ -> (int)(p_232054_ * 4.0), true),
+        new OptionInstance.IntRange(2, 20).xmap(value -> value / 4.0, value -> (int)(value * 4.0), true),
         Codec.doubleRange(0.5, 5.0),
         1.0,
-        p_447845_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     public static final int UNLIMITED_FRAMERATE_CUTOFF = 260;
     private final OptionInstance<Integer> framerateLimit = new OptionInstance<>(
         "options.framerateLimit",
         OptionInstance.noTooltip(),
-        (p_232048_, p_232049_) -> p_232049_ == 260
-            ? genericValueLabel(p_232048_, Component.translatable("options.framerateLimit.max"))
-            : genericValueLabel(p_232048_, Component.translatable("options.framerate", p_232049_)),
-        new OptionInstance.IntRange(1, 26).xmap(p_232003_ -> p_232003_ * 10, p_232094_ -> p_232094_ / 10, true),
+        (caption, value) -> value == 260
+            ? genericValueLabel(caption, Component.translatable("options.framerateLimit.max"))
+            : genericValueLabel(caption, Component.translatable("options.framerate", value)),
+        new OptionInstance.IntRange(1, 26).xmap(value -> value * 10, value -> value / 10, true),
         Codec.intRange(10, 260),
         120,
-        p_357644_ -> Minecraft.getInstance().getFramerateLimitTracker().setFramerateLimit(p_357644_)
+        value -> Minecraft.getInstance().getFramerateLimitTracker().setFramerateLimit(value)
+    );
+    private PreferredGraphicsApi preferredGraphicsBackendFromStartup = PreferredGraphicsApi.DEFAULT;
+    private static final Component GRAPHICS_API_TOOLTIP = Component.translatable("options.graphicsApi.tooltip");
+    private static final Component GRAPHICS_API_TOOLTIP_VULKAN = Component.translatable("options.graphicsApi.tooltip.vulkan");
+    private final OptionInstance<PreferredGraphicsApi> preferredGraphicsBackend = new OptionInstance<>(
+        "options.graphicsApi",
+        value -> {
+            List<Component> tooltipLines = new ArrayList<>();
+            if (value != this.preferredGraphicsBackendFromStartup) {
+                tooltipLines.add(TOOLTIP_NEEDS_RESTART);
+                tooltipLines.add(CommonComponents.EMPTY);
+            }
+
+            tooltipLines.add(GRAPHICS_API_TOOLTIP);
+            if (value == PreferredGraphicsApi.VULKAN) {
+                tooltipLines.add(CommonComponents.EMPTY);
+                tooltipLines.add(GRAPHICS_API_TOOLTIP_VULKAN);
+            }
+
+            return Tooltip.create(CommonComponents.joinLines(tooltipLines));
+        },
+        (caption, value) -> ((PreferredGraphicsApi)value).caption(),
+        new OptionInstance.Enum<>(List.of(PreferredGraphicsApi.values()), PreferredGraphicsApi.CODEC),
+        PreferredGraphicsApi.CODEC,
+        PreferredGraphicsApi.DEFAULT,
+        OptionInstance.NO_ACTION
     );
     private boolean isApplyingGraphicsPreset;
     private final OptionInstance<GraphicsPreset> graphicsPreset = new OptionInstance<>(
         "options.graphics.preset",
         OptionInstance.cachedConstantTooltip(Component.translatable("options.graphics.preset.tooltip")),
-        (p_447848_, p_447849_) -> genericValueLabel(p_447848_, Component.translatable(p_447849_.getKey())),
+        (caption, value) -> genericValueLabel(caption, Component.translatable(value.getKey())),
         new OptionInstance.SliderableEnum<>(List.of(GraphicsPreset.values()), GraphicsPreset.CODEC),
         GraphicsPreset.CODEC,
         GraphicsPreset.FANCY,
@@ -140,36 +168,35 @@ public class Options {
     private static final Component INACTIVITY_FPS_LIMIT_TOOLTIP_AFK = Component.translatable("options.inactivityFpsLimit.afk.tooltip");
     private final OptionInstance<InactivityFpsLimit> inactivityFpsLimit = new OptionInstance<>(
         "options.inactivityFpsLimit",
-        p_357645_ -> {
-            return switch (p_357645_) {
+        value -> {
+            return switch (value) {
                 case MINIMIZED -> Tooltip.create(INACTIVITY_FPS_LIMIT_TOOLTIP_MINIMIZED);
                 case AFK -> Tooltip.create(INACTIVITY_FPS_LIMIT_TOOLTIP_AFK);
             };
         },
-        (p_447813_, p_447814_) -> p_447814_.caption(),
+        (caption, value) -> ((InactivityFpsLimit)value).caption(),
         new OptionInstance.Enum<>(Arrays.asList(InactivityFpsLimit.values()), InactivityFpsLimit.CODEC),
         InactivityFpsLimit.AFK,
-        p_458582_ -> {}
+        OptionInstance.NO_ACTION
     );
     private final OptionInstance<CloudStatus> cloudStatus = new OptionInstance<>(
         "options.renderClouds",
         OptionInstance.noTooltip(),
-        (p_447842_, p_447843_) -> p_447843_.caption(),
+        (caption, value) -> value.caption(),
         new OptionInstance.Enum<>(
-            Arrays.asList(CloudStatus.values()),
-            Codec.withAlternative(CloudStatus.CODEC, Codec.BOOL, p_232082_ -> p_232082_ ? CloudStatus.FANCY : CloudStatus.OFF)
+            Arrays.asList(CloudStatus.values()), Codec.withAlternative(CloudStatus.CODEC, Codec.BOOL, b -> b ? CloudStatus.FANCY : CloudStatus.OFF)
         ),
         CloudStatus.FANCY,
-        p_447826_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     private final OptionInstance<Integer> cloudRange = new OptionInstance<>(
         "options.renderCloudsDistance",
         OptionInstance.noTooltip(),
-        (p_264664_, p_430010_) -> genericValueLabel(p_264664_, Component.translatable("options.chunks", p_430010_)),
+        (caption, value) -> genericValueLabel(caption, Component.translatable("options.chunks", value)),
         new OptionInstance.IntRange(2, 128, true),
         128,
-        p_447839_ -> {
-            operateOnLevelRenderer(p_447810_ -> p_447810_.getCloudRenderer().markForRebuild());
+        var1 -> {
+            operateOnLevelExtractor(LevelExtractor::allChanged);
             this.setGraphicsPresetToCustom();
         }
     );
@@ -177,86 +204,93 @@ public class Options {
     private final OptionInstance<Integer> weatherRadius = new OptionInstance<>(
         "options.weatherRadius",
         OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_WEATHER_RADIUS),
-        (p_404794_, p_461059_) -> genericValueLabel(p_404794_, Component.translatable("options.blocks", p_461059_)),
+        (caption, value) -> genericValueLabel(caption, Component.translatable("options.blocks", value)),
         new OptionInstance.IntRange(3, 10, true),
         10,
-        p_447832_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     private static final Component GRAPHICS_TOOLTIP_CUTOUT_LEAVES = Component.translatable("options.cutoutLeaves.tooltip");
     private final OptionInstance<Boolean> cutoutLeaves = OptionInstance.createBoolean(
-        "options.cutoutLeaves", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_CUTOUT_LEAVES), true, p_447825_ -> {
-            operateOnLevelRenderer(LevelRenderer::allChanged);
+        "options.cutoutLeaves", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_CUTOUT_LEAVES), true, var1 -> {
+            operateOnLevelExtractor(LevelExtractor::allChanged);
             this.setGraphicsPresetToCustom();
         }
     );
     private static final Component GRAPHICS_TOOLTIP_VIGNETTE = Component.translatable("options.vignette.tooltip");
-    private final OptionInstance<Boolean> vignette = OptionInstance.createBoolean("options.vignette", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_VIGNETTE), true);
+    private final OptionInstance<Boolean> vignette = OptionInstance.createBoolean(
+        "options.vignette", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_VIGNETTE), true
+    );
     private static final Component GRAPHICS_TOOLTIP_IMPROVED_TRANSPARENCY = Component.translatable("options.improvedTransparency.tooltip");
     private final OptionInstance<Boolean> improvedTransparency = OptionInstance.createBoolean(
-        "options.improvedTransparency", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_IMPROVED_TRANSPARENCY), false, p_447830_ -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            GpuWarnlistManager gpuwarnlistmanager = minecraft.getGpuWarnlistManager();
-            if (p_447830_ && gpuwarnlistmanager.willShowWarning()) {
-                gpuwarnlistmanager.showWarning();
+        "options.improvedTransparency", OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_IMPROVED_TRANSPARENCY), false, value -> {
+            Minecraft minecraftx = Minecraft.getInstance();
+            GpuWarnlistManager gpuWarnlistManager = minecraftx.getGpuWarnlistManager();
+            if (!this.isApplyingGraphicsPreset && value && gpuWarnlistManager.willShowWarning()) {
+                gpuWarnlistManager.showWarning();
             } else {
-                operateOnLevelRenderer(LevelRenderer::allChanged);
+                operateOnLevelExtractor(LevelExtractor::allChanged);
                 this.setGraphicsPresetToCustom();
             }
         }
     );
-    private final OptionInstance<Boolean> ambientOcclusion = OptionInstance.createBoolean("options.ao", true, p_447835_ -> {
-        operateOnLevelRenderer(LevelRenderer::allChanged);
+    private final OptionInstance<Boolean> ambientOcclusion = OptionInstance.createBoolean("options.ao", true, var1 -> {
+        operateOnLevelExtractor(LevelExtractor::allChanged);
         this.setGraphicsPresetToCustom();
     });
     private static final Component GRAPHICS_TOOLTIP_CHUNK_FADE = Component.translatable("options.chunkFade.tooltip");
     private final OptionInstance<Double> chunkSectionFadeInTime = new OptionInstance<>(
         "options.chunkFade",
         OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_CHUNK_FADE),
-        (p_232030_, p_232031_) -> p_232031_ <= 0.0
+        (caption, value) -> value <= 0.0
             ? Component.translatable("options.chunkFade.none")
-            : Component.translatable("options.chunkFade.seconds", String.format(Locale.ROOT, "%.2f", p_232031_)),
-        new OptionInstance.IntRange(0, 40).xmap(p_231986_ -> p_231986_ / 20.0, p_232112_ -> (int)(p_232112_ * 20.0), true),
+            : Component.translatable("options.chunkFade.seconds", String.format(Locale.ROOT, "%.2f", value)),
+        new OptionInstance.IntRange(0, 40).xmap(value -> value / 20.0, value -> (int)(value * 20.0), true),
         Codec.doubleRange(0.0, 2.0),
         0.75,
-        p_458387_ -> {}
+        OptionInstance.NO_ACTION
     );
     private static final Component PRIORITIZE_CHUNK_TOOLTIP_NONE = Component.translatable("options.prioritizeChunkUpdates.none.tooltip");
     private static final Component PRIORITIZE_CHUNK_TOOLTIP_PLAYER_AFFECTED = Component.translatable("options.prioritizeChunkUpdates.byPlayer.tooltip");
     private static final Component PRIORITIZE_CHUNK_TOOLTIP_NEARBY = Component.translatable("options.prioritizeChunkUpdates.nearby.tooltip");
     private final OptionInstance<PrioritizeChunkUpdates> prioritizeChunkUpdates = new OptionInstance<>(
         "options.prioritizeChunkUpdates",
-        p_325284_ -> {
-            return switch (p_325284_) {
+        value -> {
+            return switch (value) {
                 case NONE -> Tooltip.create(PRIORITIZE_CHUNK_TOOLTIP_NONE);
                 case PLAYER_AFFECTED -> Tooltip.create(PRIORITIZE_CHUNK_TOOLTIP_PLAYER_AFFECTED);
                 case NEARBY -> Tooltip.create(PRIORITIZE_CHUNK_TOOLTIP_NEARBY);
             };
         },
-        (p_447853_, p_447854_) -> p_447854_.caption(),
+        (caption, value) -> value.caption(),
         new OptionInstance.Enum<>(Arrays.asList(PrioritizeChunkUpdates.values()), PrioritizeChunkUpdates.LEGACY_CODEC),
         PrioritizeChunkUpdates.NONE,
-        p_447852_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     public List<String> resourcePacks = Lists.newArrayList();
     public List<String> incompatibleResourcePacks = Lists.newArrayList();
     private final OptionInstance<ChatVisiblity> chatVisibility = new OptionInstance<>(
         "options.chat.visibility",
         OptionInstance.noTooltip(),
-        (p_447837_, p_447838_) -> p_447838_.caption(),
+        (caption, value) -> value.caption(),
         new OptionInstance.Enum<>(Arrays.asList(ChatVisiblity.values()), ChatVisiblity.LEGACY_CODEC),
         ChatVisiblity.FULL,
-        p_454915_ -> {}
+        var0 -> {
+            LocalPlayer player = Minecraft.getInstance().player;
+            if (player != null) {
+                player.refreshChatAbilities();
+            }
+        }
     );
     private final OptionInstance<Double> chatOpacity = new OptionInstance<>(
         "options.chat.opacity",
         OptionInstance.noTooltip(),
-        (p_232088_, p_232089_) -> percentValueLabel(p_232088_, p_232089_ * 0.9 + 0.1),
+        (caption, value) -> percentValueLabel(caption, value * 0.9 + 0.1),
         OptionInstance.UnitDouble.INSTANCE,
         1.0,
-        p_232106_ -> Minecraft.getInstance().gui.getChat().rescaleChat()
+        var0 -> Minecraft.getInstance().gui.hud.getChat().rescaleChat()
     );
     private final OptionInstance<Double> chatLineSpacing = new OptionInstance<>(
-        "options.chat.line_spacing", OptionInstance.noTooltip(), Options::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 0.0, p_407875_ -> {}
+        "options.chat.line_spacing", OptionInstance.noTooltip(), Options::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 0.0, OptionInstance.NO_ACTION
     );
     private static final Component MENU_BACKGROUND_BLURRINESS_TOOLTIP = Component.translatable("options.accessibility.menu_background_blurriness.tooltip");
     private static final int BLURRINESS_DEFAULT_VALUE = 5;
@@ -266,7 +300,7 @@ public class Options {
         Options::genericValueOrOffLabel,
         new OptionInstance.IntRange(0, 10),
         5,
-        p_447844_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     private final OptionInstance<Double> textBackgroundOpacity = new OptionInstance<>(
         "options.accessibility.text_background_opacity",
@@ -274,22 +308,27 @@ public class Options {
         Options::percentValueLabel,
         OptionInstance.UnitDouble.INSTANCE,
         0.5,
-        p_232100_ -> Minecraft.getInstance().gui.getChat().rescaleChat()
+        var0 -> Minecraft.getInstance().gui.hud.getChat().rescaleChat()
     );
     private final OptionInstance<Double> panoramaSpeed = new OptionInstance<>(
-        "options.accessibility.panorama_speed", OptionInstance.noTooltip(), Options::percentValueLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, p_456010_ -> {}
+        "options.accessibility.panorama_speed",
+        OptionInstance.noTooltip(),
+        Options::percentValueLabel,
+        OptionInstance.UnitDouble.INSTANCE,
+        1.0,
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_CONTRAST_MODE = Component.translatable("options.accessibility.high_contrast.tooltip");
     private final OptionInstance<Boolean> highContrast = OptionInstance.createBoolean(
-        "options.accessibility.high_contrast", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_CONTRAST_MODE), false, p_275860_ -> {
-            PackRepository packrepository = Minecraft.getInstance().getResourcePackRepository();
-            boolean flag1 = packrepository.getSelectedIds().contains("high_contrast");
-            if (!flag1 && p_275860_) {
-                if (packrepository.addPack("high_contrast")) {
-                    this.updateResourcePacks(packrepository);
+        "options.accessibility.high_contrast", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_CONTRAST_MODE), false, value -> {
+            PackRepository packRepo = Minecraft.getInstance().getResourcePackRepository();
+            boolean isSelected = packRepo.getSelectedIds().contains("high_contrast");
+            if (!isSelected && value) {
+                if (packRepo.addPack("high_contrast")) {
+                    this.updateResourcePacks(packRepo);
                 }
-            } else if (flag1 && !p_275860_ && packrepository.removePack("high_contrast")) {
-                this.updateResourcePacks(packrepository);
+            } else if (isSelected && !value && packRepo.removePack("high_contrast")) {
+                this.updateResourcePacks(packRepo);
             }
         }
     );
@@ -314,86 +353,86 @@ public class Options {
     private final OptionInstance<HumanoidArm> mainHand = new OptionInstance<>(
         "options.mainHand",
         OptionInstance.noTooltip(),
-        (p_447840_, p_447841_) -> p_447841_.caption(),
+        (caption, value) -> ((HumanoidArm)value).caption(),
         new OptionInstance.Enum<>(Arrays.asList(HumanoidArm.values()), HumanoidArm.CODEC),
         HumanoidArm.RIGHT,
-        p_450700_ -> {}
+        OptionInstance.NO_ACTION
     );
     public int overrideWidth;
     public int overrideHeight;
     private final OptionInstance<Double> chatScale = new OptionInstance<>(
         "options.chat.scale",
         OptionInstance.noTooltip(),
-        (p_232078_, p_232079_) -> (Component)(p_232079_ == 0.0 ? CommonComponents.optionStatus(p_232078_, false) : percentValueLabel(p_232078_, p_232079_)),
+        (caption, value) -> value == 0.0 ? CommonComponents.optionStatus(caption, false) : percentValueLabel(caption, value),
         OptionInstance.UnitDouble.INSTANCE,
         1.0,
-        p_232092_ -> Minecraft.getInstance().gui.getChat().rescaleChat()
+        var0 -> Minecraft.getInstance().gui.hud.getChat().rescaleChat()
     );
     private final OptionInstance<Double> chatWidth = new OptionInstance<>(
         "options.chat.width",
         OptionInstance.noTooltip(),
-        (p_232068_, p_232069_) -> pixelValueLabel(p_232068_, ChatComponent.getWidth(p_232069_)),
+        (caption, value) -> pixelValueLabel(caption, ChatComponent.getWidth(value)),
         OptionInstance.UnitDouble.INSTANCE,
         1.0,
-        p_232084_ -> Minecraft.getInstance().gui.getChat().rescaleChat()
+        var0 -> Minecraft.getInstance().gui.hud.getChat().rescaleChat()
     );
     private final OptionInstance<Double> chatHeightUnfocused = new OptionInstance<>(
         "options.chat.height.unfocused",
         OptionInstance.noTooltip(),
-        (p_232058_, p_232059_) -> pixelValueLabel(p_232058_, ChatComponent.getHeight(p_232059_)),
+        (caption, value) -> pixelValueLabel(caption, ChatComponent.getHeight(value)),
         OptionInstance.UnitDouble.INSTANCE,
         ChatComponent.defaultUnfocusedPct(),
-        p_232074_ -> Minecraft.getInstance().gui.getChat().rescaleChat()
+        var0 -> Minecraft.getInstance().gui.hud.getChat().rescaleChat()
     );
     private final OptionInstance<Double> chatHeightFocused = new OptionInstance<>(
         "options.chat.height.focused",
         OptionInstance.noTooltip(),
-        (p_232045_, p_232046_) -> pixelValueLabel(p_232045_, ChatComponent.getHeight(p_232046_)),
+        (caption, value) -> pixelValueLabel(caption, ChatComponent.getHeight(value)),
         OptionInstance.UnitDouble.INSTANCE,
         1.0,
-        p_232064_ -> Minecraft.getInstance().gui.getChat().rescaleChat()
+        var0 -> Minecraft.getInstance().gui.hud.getChat().rescaleChat()
     );
     private final OptionInstance<Double> chatDelay = new OptionInstance<>(
         "options.chat.delay_instant",
         OptionInstance.noTooltip(),
-        (p_447827_, p_447828_) -> p_447828_ <= 0.0
+        (caption, value) -> value <= 0.0
             ? Component.translatable("options.chat.delay_none")
-            : Component.translatable("options.chat.delay", String.format(Locale.ROOT, "%.1f", p_447828_)),
-        new OptionInstance.IntRange(0, 60).xmap(p_264666_ -> p_264666_ / 10.0, p_264667_ -> (int)(p_264667_ * 10.0), true),
+            : Component.translatable("options.chat.delay", String.format(Locale.ROOT, "%.1f", value)),
+        new OptionInstance.IntRange(0, 60).xmap(value -> value / 10.0, value -> (int)(value * 10.0), true),
         Codec.doubleRange(0.0, 6.0),
         0.0,
-        p_232039_ -> Minecraft.getInstance().getChatListener().setMessageDelay(p_232039_)
+        value -> Minecraft.getInstance().gui.chatListener().setMessageDelay(value)
     );
     private static final Component ACCESSIBILITY_TOOLTIP_NOTIFICATION_DISPLAY_TIME = Component.translatable("options.notifications.display_time.tooltip");
     private final OptionInstance<Double> notificationDisplayTime = new OptionInstance<>(
         "options.notifications.display_time",
         OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_NOTIFICATION_DISPLAY_TIME),
-        (p_447815_, p_447816_) -> genericValueLabel(p_447815_, Component.translatable("options.multiplier", p_447816_)),
-        new OptionInstance.IntRange(5, 100).xmap(p_447836_ -> p_447836_ / 10.0, p_447812_ -> (int)(p_447812_ * 10.0), true),
+        (caption, value) -> genericValueLabel(caption, Component.translatable("options.multiplier", value)),
+        new OptionInstance.IntRange(5, 100).xmap(value -> value / 10.0, value -> (int)(value * 10.0), true),
         Codec.doubleRange(0.5, 10.0),
         1.0,
-        p_410500_ -> {}
+        OptionInstance.NO_ACTION
     );
     private final OptionInstance<Integer> mipmapLevels = new OptionInstance<>(
         "options.mipmapLevels",
         OptionInstance.noTooltip(),
-        (p_232033_, p_232034_) -> (Component)(p_232034_ == 0 ? CommonComponents.optionStatus(p_232033_, false) : genericValueLabel(p_232033_, p_232034_)),
+        (caption, value) -> value == 0 ? CommonComponents.optionStatus(caption, false) : genericValueLabel(caption, value),
         new OptionInstance.IntRange(0, 4),
         4,
-        p_447850_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     private static final Component GRAPHICS_TOOLTIP_ANISOTROPIC_FILTERING = Component.translatable("options.maxAnisotropy.tooltip");
     private final OptionInstance<Integer> maxAnisotropyBit = new OptionInstance<>(
         "options.maxAnisotropy",
         OptionInstance.cachedConstantTooltip(GRAPHICS_TOOLTIP_ANISOTROPIC_FILTERING),
-        (p_447817_, p_447818_) -> (Component)(p_447818_ == 0
-            ? CommonComponents.optionStatus(p_447817_, false)
-            : genericValueLabel(p_447817_, Component.translatable("options.multiplier", Integer.toString(1 << p_447818_)))),
+        (caption, value) -> value == 0
+            ? CommonComponents.optionStatus(caption, false)
+            : genericValueLabel(caption, Component.translatable("options.multiplier", Integer.toString(1 << value))),
         new OptionInstance.IntRange(1, 3),
         2,
-        p_447819_ -> {
+        var1 -> {
             this.setGraphicsPresetToCustom();
-            operateOnLevelRenderer(LevelRenderer::resetSampler);
+            operateOnLevelExtractor(LevelExtractor::resetSampler);
         }
     );
     private static final Component FILTERING_NONE_TOOLTIP = Component.translatable("options.textureFiltering.none.tooltip");
@@ -401,165 +440,223 @@ public class Options {
     private static final Component FILTERING_ANISOTROPIC_TOOLTIP = Component.translatable("options.textureFiltering.anisotropic.tooltip");
     private final OptionInstance<TextureFilteringMethod> textureFiltering = new OptionInstance<>(
         "options.textureFiltering",
-        p_447834_ -> {
-            return switch (p_447834_) {
+        value -> {
+            return switch (value) {
                 case NONE -> Tooltip.create(FILTERING_NONE_TOOLTIP);
                 case RGSS -> Tooltip.create(FILTERING_RGSS_TOOLTIP);
                 case ANISOTROPIC -> Tooltip.create(FILTERING_ANISOTROPIC_TOOLTIP);
             };
         },
-        (p_447805_, p_447806_) -> p_447806_.caption(),
+        (caption, value) -> value.caption(),
         new OptionInstance.Enum<>(Arrays.asList(TextureFilteringMethod.values()), TextureFilteringMethod.LEGACY_CODEC),
         TextureFilteringMethod.NONE,
-        p_447809_ -> {
+        var1 -> {
             this.setGraphicsPresetToCustom();
-            operateOnLevelRenderer(LevelRenderer::resetSampler);
+            operateOnLevelExtractor(LevelExtractor::resetSampler);
         }
     );
     private boolean useNativeTransport = true;
     private final OptionInstance<AttackIndicatorStatus> attackIndicator = new OptionInstance<>(
         "options.attackIndicator",
         OptionInstance.noTooltip(),
-        (p_447807_, p_447808_) -> p_447808_.caption(),
+        (caption, value) -> ((AttackIndicatorStatus)value).caption(),
         new OptionInstance.Enum<>(Arrays.asList(AttackIndicatorStatus.values()), AttackIndicatorStatus.LEGACY_CODEC),
         AttackIndicatorStatus.CROSSHAIR,
-        p_459761_ -> {}
+        OptionInstance.NO_ACTION
     );
     public TutorialSteps tutorialStep = TutorialSteps.MOVEMENT;
     public boolean joinedFirstServer = false;
-    private final OptionInstance<Integer> biomeBlendRadius = new OptionInstance<>("options.biomeBlendRadius", OptionInstance.noTooltip(), (p_232016_, p_232017_) -> {
-        int i = p_232017_ * 2 + 1;
-        return genericValueLabel(p_232016_, Component.translatable("options.biomeBlendRadius." + i));
-    }, new OptionInstance.IntRange(0, 7, false), 2, p_447811_ -> {
-        operateOnLevelRenderer(LevelRenderer::allChanged);
+    private final OptionInstance<Integer> biomeBlendRadius = new OptionInstance<>("options.biomeBlendRadius", OptionInstance.noTooltip(), (caption, value) -> {
+        int dist = value * 2 + 1;
+        return genericValueLabel(caption, Component.translatable("options.biomeBlendRadius." + dist));
+    }, new OptionInstance.IntRange(0, 7, false), 2, var1 -> {
+        operateOnLevelExtractor(LevelExtractor::allChanged);
         this.setGraphicsPresetToCustom();
     });
     private final OptionInstance<Double> mouseWheelSensitivity = new OptionInstance<>(
         "options.mouseWheelSensitivity",
         OptionInstance.noTooltip(),
-        (p_232013_, p_232014_) -> genericValueLabel(p_232013_, Component.literal(String.format(Locale.ROOT, "%.2f", p_232014_))),
+        (caption, value) -> genericValueLabel(caption, Component.literal(String.format(Locale.ROOT, "%.2f", value))),
         new OptionInstance.IntRange(-200, 100).xmap(Options::logMouse, Options::unlogMouse, false),
         Codec.doubleRange(logMouse(-200), logMouse(100)),
         logMouse(0),
-        p_459232_ -> {}
+        OptionInstance.NO_ACTION
     );
-    private final OptionInstance<Boolean> rawMouseInput = OptionInstance.createBoolean("options.rawMouseInput", true, p_232062_ -> {
+    private final OptionInstance<Boolean> rawMouseInput = OptionInstance.createBoolean("options.rawMouseInput", true, value -> {
         Window window = Minecraft.getInstance().getWindow();
         if (window != null) {
-            window.updateRawMouseInput(p_232062_);
+            window.updateRawMouseInput(value);
         }
     });
     private static final Component ALLOW_CURSOR_CHANGES_TOOLTIP = Component.translatable("options.allowCursorChanges.tooltip");
     private final OptionInstance<Boolean> allowCursorChanges = OptionInstance.createBoolean(
-        "options.allowCursorChanges", OptionInstance.cachedConstantTooltip(ALLOW_CURSOR_CHANGES_TOOLTIP), true, p_420667_ -> {
+        "options.allowCursorChanges", OptionInstance.cachedConstantTooltip(ALLOW_CURSOR_CHANGES_TOOLTIP), true, value -> {
             Window window = Minecraft.getInstance().getWindow();
             if (window != null) {
-                window.setAllowCursorChanges(p_420667_);
+                window.setAllowCursorChanges(value);
             }
         }
     );
     public int glDebugVerbosity = 1;
     private final OptionInstance<Boolean> autoJump = OptionInstance.createBoolean("options.autoJump", false);
     private static final Component ACCESSIBILITY_TOOLTIP_ROTATE_WITH_MINECART = Component.translatable("options.rotateWithMinecart.tooltip");
-    private final OptionInstance<Boolean> rotateWithMinecart = OptionInstance.createBoolean("options.rotateWithMinecart", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_ROTATE_WITH_MINECART), false);
+    private final OptionInstance<Boolean> rotateWithMinecart = OptionInstance.createBoolean(
+        "options.rotateWithMinecart", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_ROTATE_WITH_MINECART), false
+    );
     private final OptionInstance<Boolean> operatorItemsTab = OptionInstance.createBoolean("options.operatorItemsTab", false);
     private final OptionInstance<Boolean> autoSuggestions = OptionInstance.createBoolean("options.autoSuggestCommands", true);
     private final OptionInstance<Boolean> chatColors = OptionInstance.createBoolean("options.chat.color", true);
     private final OptionInstance<Boolean> chatLinks = OptionInstance.createBoolean("options.chat.links", true);
     private final OptionInstance<Boolean> chatLinksPrompt = OptionInstance.createBoolean("options.chat.links.prompt", true);
-    private final OptionInstance<Boolean> enableVsync = OptionInstance.createBoolean("options.vsync", true, p_232052_ -> {
-        if (Minecraft.getInstance().getWindow() != null) {
-            Minecraft.getInstance().getWindow().updateVsync(p_232052_);
-        }
-    });
-    private final OptionInstance<Boolean> entityShadows = OptionInstance.createBoolean(
-        "options.entityShadows", OptionInstance.noTooltip(), true, p_447851_ -> this.setGraphicsPresetToCustom()
+    private final OptionInstance<Boolean> enableVsync = OptionInstance.createBoolean(
+        "options.vsync", true, var0 -> Minecraft.getInstance().invalidateSurfaceConfiguration()
     );
-    private final OptionInstance<Boolean> forceUnicodeFont = OptionInstance.createBoolean("options.forceUnicodeFont", false, p_325286_ -> updateFontOptions());
+    private final OptionInstance<Boolean> entityShadows = OptionInstance.createBoolean(
+        "options.entityShadows", OptionInstance.noTooltip(), true, var1 -> this.setGraphicsPresetToCustom()
+    );
+    private final OptionInstance<Boolean> forceUnicodeFont = OptionInstance.createBoolean("options.forceUnicodeFont", false, var0 -> updateFontOptions());
     private final OptionInstance<Boolean> japaneseGlyphVariants = OptionInstance.createBoolean(
         "options.japaneseGlyphVariants",
         OptionInstance.cachedConstantTooltip(Component.translatable("options.japaneseGlyphVariants.tooltip")),
         japaneseGlyphVariantsDefault(),
-        p_325287_ -> updateFontOptions()
+        var0 -> updateFontOptions()
     );
     private final OptionInstance<Boolean> invertXMouse = OptionInstance.createBoolean("options.invertMouseX", false);
     private final OptionInstance<Boolean> invertYMouse = OptionInstance.createBoolean("options.invertMouseY", false);
     private final OptionInstance<Boolean> discreteMouseScroll = OptionInstance.createBoolean("options.discrete_mouse_scroll", false);
     private static final Component REALMS_NOTIFICATIONS_TOOLTIP = Component.translatable("options.realmsNotifications.tooltip");
-    private final OptionInstance<Boolean> realmsNotifications = OptionInstance.createBoolean("options.realmsNotifications", OptionInstance.cachedConstantTooltip(REALMS_NOTIFICATIONS_TOOLTIP), true);
+    private final OptionInstance<Boolean> realmsNotifications = OptionInstance.createBoolean(
+        "options.realmsNotifications.button", OptionInstance.cachedConstantTooltip(REALMS_NOTIFICATIONS_TOOLTIP), true
+    );
     private static final Component ALLOW_SERVER_LISTING_TOOLTIP = Component.translatable("options.allowServerListing.tooltip");
     private final OptionInstance<Boolean> allowServerListing = OptionInstance.createBoolean(
-        "options.allowServerListing", OptionInstance.cachedConstantTooltip(ALLOW_SERVER_LISTING_TOOLTIP), true, p_367542_ -> {}
+        "options.allowServerListing", OptionInstance.cachedConstantTooltip(ALLOW_SERVER_LISTING_TOOLTIP), true, OptionInstance.NO_ACTION
     );
     private final OptionInstance<Boolean> reducedDebugInfo = OptionInstance.createBoolean(
-        "options.reducedDebugInfo", OptionInstance.noTooltip(), false, p_420660_ -> Minecraft.getInstance().debugEntries.rebuildCurrentList()
+        "options.reducedDebugInfo", OptionInstance.noTooltip(), false, var0 -> Minecraft.getInstance().debugEntries.rebuildCurrentList()
+    );
+    private static final Component IN_GAME_NOTIFICATION_TOOLTIP = Component.translatable("options.inGameNotification.tooltip");
+    private final OptionInstance<Boolean> inGameNotification = OptionInstance.createBoolean(
+        "options.inGameNotification", OptionInstance.cachedConstantTooltip(IN_GAME_NOTIFICATION_TOOLTIP), false
+    );
+    private final OptionInstance<PresenceSharing> sharePresence = new OptionInstance<>(
+        "options.sharePresence",
+        value -> Tooltip.create(value.getTooltip()),
+        (var0, value) -> value.getTranslation(),
+        new OptionInstance.Enum<>(List.of(PresenceSharing.values()), PresenceSharing.CODEC),
+        PresenceSharing.CODEC,
+        PresenceSharing.ALL,
+        var0 -> {}
     );
     private final Map<SoundSource, OptionInstance<Double>> soundSourceVolumes = Util.makeEnumMap(
-        SoundSource.class, p_389134_ -> this.createSoundSliderOptionInstance("soundCategory." + p_389134_.getName(), p_389134_)
+        SoundSource.class, source -> this.createSoundSliderOptionInstance("soundCategory." + source.getName(), source)
     );
     private static final Component CLOSED_CAPTIONS_TOOLTIP = Component.translatable("options.showSubtitles.tooltip");
-    private final OptionInstance<Boolean> showSubtitles = OptionInstance.createBoolean("options.showSubtitles", OptionInstance.cachedConstantTooltip(CLOSED_CAPTIONS_TOOLTIP), false);
+    private final OptionInstance<Boolean> showSubtitles = OptionInstance.createBoolean(
+        "options.showSubtitles", OptionInstance.cachedConstantTooltip(CLOSED_CAPTIONS_TOOLTIP), false
+    );
     private static final Component DIRECTIONAL_AUDIO_TOOLTIP_ON = Component.translatable("options.directionalAudio.on.tooltip");
     private static final Component DIRECTIONAL_AUDIO_TOOLTIP_OFF = Component.translatable("options.directionalAudio.off.tooltip");
     private final OptionInstance<Boolean> directionalAudio = OptionInstance.createBoolean(
-        "options.directionalAudio", p_231858_ -> p_231858_ ? Tooltip.create(DIRECTIONAL_AUDIO_TOOLTIP_ON) : Tooltip.create(DIRECTIONAL_AUDIO_TOOLTIP_OFF), false, p_425745_ -> {
-            SoundManager soundmanager = Minecraft.getInstance().getSoundManager();
-            soundmanager.reload();
-            soundmanager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        "options.directionalAudio",
+        value -> value ? Tooltip.create(DIRECTIONAL_AUDIO_TOOLTIP_ON) : Tooltip.create(DIRECTIONAL_AUDIO_TOOLTIP_OFF),
+        false,
+        var0 -> {
+            SoundManager soundManager = Minecraft.getInstance().getSoundManager();
+            soundManager.reload();
+            soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
         }
     );
     private final OptionInstance<Boolean> backgroundForChatOnly = new OptionInstance<>(
         "options.accessibility.text_background",
         OptionInstance.noTooltip(),
-        (p_231976_, p_231977_) -> p_231977_
+        (caption, value) -> value
             ? Component.translatable("options.accessibility.text_background.chat")
             : Component.translatable("options.accessibility.text_background.everywhere"),
         OptionInstance.BOOLEAN_VALUES,
         true,
-        p_366394_ -> {}
+        OptionInstance.NO_ACTION
     );
-    private final OptionInstance<Boolean> touchscreen = OptionInstance.createBoolean("options.touchscreen", false);
-    private final OptionInstance<Boolean> fullscreen = OptionInstance.createBoolean("options.fullscreen", false, p_231970_ -> {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.getWindow() != null && minecraft.getWindow().isFullscreen() != p_231970_) {
-            minecraft.getWindow().toggleFullScreen();
-            this.fullscreen().set(minecraft.getWindow().isFullscreen());
+    private final OptionInstance<Boolean> fullscreen = OptionInstance.createBoolean("options.fullscreen", false, value -> {
+        Minecraft minecraftx = Minecraft.getInstance();
+        if (minecraftx.getWindow() != null && minecraftx.getWindow().isFullscreen() != value) {
+            minecraftx.getWindow().toggleFullScreen();
+            this.fullscreen().set(minecraftx.getWindow().isFullscreen());
         }
     });
+    private boolean exclusiveFullscreenFromStartup;
+    private static final Component TOOLTIP_EXCLUSIVE_FULLSCREEN_ON = Component.translatable("options.exclusiveFullscreen.on.tooltip");
+    private static final Component TOOLTIP_EXCLUSIVE_FULLSCREEN_OFF = Component.translatable("options.exclusiveFullscreen.off.tooltip");
+    private final OptionInstance<Boolean> exclusiveFullscreen = OptionInstance.createBoolean("options.exclusiveFullscreen", value -> {
+        List<Component> tooltipLines = new ArrayList<>();
+        if (value != this.exclusiveFullscreenFromStartup) {
+            tooltipLines.add(TOOLTIP_NEEDS_RESTART);
+            tooltipLines.add(CommonComponents.EMPTY);
+        }
+
+        tooltipLines.add(value ? TOOLTIP_EXCLUSIVE_FULLSCREEN_ON : TOOLTIP_EXCLUSIVE_FULLSCREEN_OFF);
+        return Tooltip.create(CommonComponents.joinLines(tooltipLines));
+    }, false);
     private final OptionInstance<Boolean> bobView = OptionInstance.createBoolean("options.viewBobbing", true);
     private static final Component KEY_TOGGLE = Component.translatable("options.key.toggle");
     private static final Component KEY_HOLD = Component.translatable("options.key.hold");
     private final OptionInstance<Boolean> toggleCrouch = new OptionInstance<>(
-        "key.sneak", OptionInstance.noTooltip(), (p_420665_, p_420666_) -> p_420666_ ? KEY_TOGGLE : KEY_HOLD, OptionInstance.BOOLEAN_VALUES, false, p_406715_ -> {}
+        "key.sneak",
+        OptionInstance.noTooltip(),
+        (caption, value) -> value ? KEY_TOGGLE : KEY_HOLD,
+        OptionInstance.BOOLEAN_VALUES,
+        false,
+        OptionInstance.NO_ACTION
     );
     private final OptionInstance<Boolean> toggleSprint = new OptionInstance<>(
-        "key.sprint", OptionInstance.noTooltip(), (p_420654_, p_420655_) -> p_420655_ ? KEY_TOGGLE : KEY_HOLD, OptionInstance.BOOLEAN_VALUES, false, p_424826_ -> {}
+        "key.sprint",
+        OptionInstance.noTooltip(),
+        (caption, value) -> value ? KEY_TOGGLE : KEY_HOLD,
+        OptionInstance.BOOLEAN_VALUES,
+        false,
+        OptionInstance.NO_ACTION
     );
     private final OptionInstance<Boolean> toggleAttack = new OptionInstance<>(
-        "key.attack", OptionInstance.noTooltip(), (p_420663_, p_420664_) -> p_420664_ ? KEY_TOGGLE : KEY_HOLD, OptionInstance.BOOLEAN_VALUES, false, p_451238_ -> {}
+        "key.attack",
+        OptionInstance.noTooltip(),
+        (caption, value) -> value ? KEY_TOGGLE : KEY_HOLD,
+        OptionInstance.BOOLEAN_VALUES,
+        false,
+        OptionInstance.NO_ACTION
     );
     private final OptionInstance<Boolean> toggleUse = new OptionInstance<>(
-        "key.use", OptionInstance.noTooltip(), (p_420658_, p_420659_) -> p_420659_ ? KEY_TOGGLE : KEY_HOLD, OptionInstance.BOOLEAN_VALUES, false, p_429947_ -> {}
+        "key.use",
+        OptionInstance.noTooltip(),
+        (caption, value) -> value ? KEY_TOGGLE : KEY_HOLD,
+        OptionInstance.BOOLEAN_VALUES,
+        false,
+        OptionInstance.NO_ACTION
     );
     private static final Component SPRINT_WINDOW_TOOLTIP = Component.translatable("options.sprintWindow.tooltip");
     private final OptionInstance<Integer> sprintWindow = new OptionInstance<>(
         "options.sprintWindow",
         OptionInstance.cachedConstantTooltip(SPRINT_WINDOW_TOOLTIP),
-        (p_420668_, p_420669_) -> p_420669_ == 0
-            ? genericValueLabel(p_420668_, Component.translatable("options.off"))
-            : genericValueLabel(p_420668_, Component.translatable("options.value", p_420669_)),
+        (caption, value) -> value == 0
+            ? genericValueLabel(caption, Component.translatable("options.off"))
+            : genericValueLabel(caption, Component.translatable("options.value", value)),
         new OptionInstance.IntRange(0, 10),
         7,
-        p_453104_ -> {}
+        OptionInstance.NO_ACTION
     );
     public boolean skipMultiplayerWarning;
     private static final Component CHAT_TOOLTIP_HIDE_MATCHED_NAMES = Component.translatable("options.hideMatchedNames.tooltip");
-    private final OptionInstance<Boolean> hideMatchedNames = OptionInstance.createBoolean("options.hideMatchedNames", OptionInstance.cachedConstantTooltip(CHAT_TOOLTIP_HIDE_MATCHED_NAMES), true);
+    private final OptionInstance<Boolean> hideMatchedNames = OptionInstance.createBoolean(
+        "options.hideMatchedNames", OptionInstance.cachedConstantTooltip(CHAT_TOOLTIP_HIDE_MATCHED_NAMES), true
+    );
     private final OptionInstance<Boolean> showAutosaveIndicator = OptionInstance.createBoolean("options.autosaveIndicator", true);
     private static final Component CHAT_TOOLTIP_ONLY_SHOW_SECURE = Component.translatable("options.onlyShowSecureChat.tooltip");
-    private final OptionInstance<Boolean> onlyShowSecureChat = OptionInstance.createBoolean("options.onlyShowSecureChat", OptionInstance.cachedConstantTooltip(CHAT_TOOLTIP_ONLY_SHOW_SECURE), false);
+    private final OptionInstance<Boolean> onlyShowSecureChat = OptionInstance.createBoolean(
+        "options.onlyShowSecureChat", OptionInstance.cachedConstantTooltip(CHAT_TOOLTIP_ONLY_SHOW_SECURE), false
+    );
     private static final Component CHAT_TOOLTIP_SAVE_DRAFTS = Component.translatable("options.chat.drafts.tooltip");
-    private final OptionInstance<Boolean> saveChatDrafts = OptionInstance.createBoolean("options.chat.drafts", OptionInstance.cachedConstantTooltip(CHAT_TOOLTIP_SAVE_DRAFTS), false);
+    private final OptionInstance<Boolean> saveChatDrafts = OptionInstance.createBoolean(
+        "options.chat.drafts", OptionInstance.cachedConstantTooltip(CHAT_TOOLTIP_SAVE_DRAFTS), false
+    );
     public final KeyMapping keyUp = new KeyMapping("key.forward", 87, KeyMapping.Category.MOVEMENT);
     public final KeyMapping keyLeft = new KeyMapping("key.left", 65, KeyMapping.Category.MOVEMENT);
     public final KeyMapping keyDown = new KeyMapping("key.back", 83, KeyMapping.Category.MOVEMENT);
@@ -570,9 +667,7 @@ public class Options {
     public final KeyMapping keyInventory = new KeyMapping("key.inventory", 69, KeyMapping.Category.INVENTORY);
     public final KeyMapping keySwapOffhand = new KeyMapping("key.swapOffhand", 70, KeyMapping.Category.INVENTORY);
     public final KeyMapping keyDrop = new KeyMapping("key.drop", 81, KeyMapping.Category.INVENTORY);
-    public final KeyMapping keyUse = new ToggleKeyMapping(
-        "key.use", InputConstants.Type.MOUSE, 1, KeyMapping.Category.GAMEPLAY, this.toggleUse::get, false
-    );
+    public final KeyMapping keyUse = new ToggleKeyMapping("key.use", InputConstants.Type.MOUSE, 1, KeyMapping.Category.GAMEPLAY, this.toggleUse::get, false);
     public final KeyMapping keyAttack = new ToggleKeyMapping(
         "key.attack", InputConstants.Type.MOUSE, 0, KeyMapping.Category.GAMEPLAY, this.toggleAttack::get, true
     );
@@ -580,6 +675,7 @@ public class Options {
     public final KeyMapping keyChat = new KeyMapping("key.chat", 84, KeyMapping.Category.MULTIPLAYER);
     public final KeyMapping keyPlayerList = new KeyMapping("key.playerlist", 258, KeyMapping.Category.MULTIPLAYER);
     public final KeyMapping keyCommand = new KeyMapping("key.command", 47, KeyMapping.Category.MULTIPLAYER);
+    public final KeyMapping keyFriends = new KeyMapping("key.friends", 79, KeyMapping.Category.MULTIPLAYER);
     public final KeyMapping keySocialInteractions = new KeyMapping("key.socialInteractions", 80, KeyMapping.Category.MULTIPLAYER);
     public final KeyMapping keyScreenshot = new KeyMapping("key.screenshot", 291, KeyMapping.Category.MISC);
     public final KeyMapping keyTogglePerspective = new KeyMapping("key.togglePerspective", 294, KeyMapping.Category.MISC);
@@ -611,20 +707,29 @@ public class Options {
     public final KeyMapping keyDebugShowHitboxes = new KeyMapping("key.debug.showHitboxes", InputConstants.Type.KEYSYM, 66, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugClearChat = new KeyMapping("key.debug.clearChat", InputConstants.Type.KEYSYM, 68, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugShowChunkBorders = new KeyMapping("key.debug.showChunkBorders", InputConstants.Type.KEYSYM, 71, KeyMapping.Category.DEBUG);
-    public final KeyMapping keyDebugShowAdvancedTooltips = new KeyMapping("key.debug.showAdvancedTooltips", InputConstants.Type.KEYSYM, 72, KeyMapping.Category.DEBUG);
-    public final KeyMapping keyDebugCopyRecreateCommand = new KeyMapping("key.debug.copyRecreateCommand", InputConstants.Type.KEYSYM, 73, KeyMapping.Category.DEBUG);
+    public final KeyMapping keyDebugShowAdvancedTooltips = new KeyMapping(
+        "key.debug.showAdvancedTooltips", InputConstants.Type.KEYSYM, 72, KeyMapping.Category.DEBUG
+    );
+    public final KeyMapping keyDebugCopyRecreateCommand = new KeyMapping(
+        "key.debug.copyRecreateCommand", InputConstants.Type.KEYSYM, 73, KeyMapping.Category.DEBUG
+    );
     public final KeyMapping keyDebugSpectate = new KeyMapping("key.debug.spectate", InputConstants.Type.KEYSYM, 78, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugSwitchGameMode = new KeyMapping("key.debug.switchGameMode", InputConstants.Type.KEYSYM, 293, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugDebugOptions = new KeyMapping("key.debug.debugOptions", InputConstants.Type.KEYSYM, 295, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugFocusPause = new KeyMapping("key.debug.focusPause", InputConstants.Type.KEYSYM, 80, KeyMapping.Category.DEBUG);
-    public final KeyMapping keyDebugDumpDynamicTextures = new KeyMapping("key.debug.dumpDynamicTextures", InputConstants.Type.KEYSYM, 83, KeyMapping.Category.DEBUG);
-    public final KeyMapping keyDebugReloadResourcePacks = new KeyMapping("key.debug.reloadResourcePacks", InputConstants.Type.KEYSYM, 84, KeyMapping.Category.DEBUG);
+    public final KeyMapping keyDebugDumpDynamicTextures = new KeyMapping(
+        "key.debug.dumpDynamicTextures", InputConstants.Type.KEYSYM, 83, KeyMapping.Category.DEBUG
+    );
+    public final KeyMapping keyDebugReloadResourcePacks = new KeyMapping(
+        "key.debug.reloadResourcePacks", InputConstants.Type.KEYSYM, 84, KeyMapping.Category.DEBUG
+    );
     public final KeyMapping keyDebugProfiling = new KeyMapping("key.debug.profiling", InputConstants.Type.KEYSYM, 76, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugCopyLocation = new KeyMapping("key.debug.copyLocation", InputConstants.Type.KEYSYM, 67, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugDumpVersion = new KeyMapping("key.debug.dumpVersion", InputConstants.Type.KEYSYM, 86, KeyMapping.Category.DEBUG);
     public final KeyMapping keyDebugPofilingChart = new KeyMapping("key.debug.profilingChart", InputConstants.Type.KEYSYM, 49, KeyMapping.Category.DEBUG, 1);
     public final KeyMapping keyDebugFpsCharts = new KeyMapping("key.debug.fpsCharts", InputConstants.Type.KEYSYM, 50, KeyMapping.Category.DEBUG, 2);
     public final KeyMapping keyDebugNetworkCharts = new KeyMapping("key.debug.networkCharts", InputConstants.Type.KEYSYM, 51, KeyMapping.Category.DEBUG, 3);
+    public final KeyMapping keyDebugLightmapTexture = new KeyMapping("key.debug.lightmapTexture", InputConstants.Type.KEYSYM, 52, KeyMapping.Category.DEBUG, 4);
     public final KeyMapping[] debugKeys = new KeyMapping[]{
         this.keyDebugReloadChunk,
         this.keyDebugShowHitboxes,
@@ -644,9 +749,10 @@ public class Options {
         this.keyDebugDumpVersion,
         this.keyDebugPofilingChart,
         this.keyDebugFpsCharts,
-        this.keyDebugNetworkCharts
+        this.keyDebugNetworkCharts,
+        this.keyDebugLightmapTexture
     };
-    public KeyMapping[] keyMappings = Stream.of(
+    public final KeyMapping[] keyMappings = Stream.of(
             new KeyMapping[]{
                 this.keyAttack,
                 this.keyUse,
@@ -663,6 +769,7 @@ public class Options {
                 this.keyPlayerList,
                 this.keyPickItem,
                 this.keyCommand,
+                this.keyFriends,
                 this.keySocialInteractions,
                 this.keyToggleGui,
                 this.keyToggleSpectatorShaderEffects,
@@ -687,24 +794,23 @@ public class Options {
         .toArray(KeyMapping[]::new);
     protected Minecraft minecraft;
     private final File optionsFile;
-    public boolean hideGui;
     private CameraType cameraType = CameraType.FIRST_PERSON;
     public String lastMpIp = "";
     public boolean smoothCamera;
     private final OptionInstance<Integer> fov = new OptionInstance<>(
         "options.fov",
         OptionInstance.noTooltip(),
-        (p_231999_, p_232000_) -> {
-            return switch (p_232000_) {
-                case 70 -> genericValueLabel(p_231999_, Component.translatable("options.fov.min"));
-                case 110 -> genericValueLabel(p_231999_, Component.translatable("options.fov.max"));
-                default -> genericValueLabel(p_231999_, p_232000_);
+        (caption, value) -> {
+            return switch (value) {
+                case 70 -> genericValueLabel(caption, Component.translatable("options.fov.min"));
+                case 110 -> genericValueLabel(caption, Component.translatable("options.fov.max"));
+                default -> genericValueLabel(caption, value);
             };
         },
         new OptionInstance.IntRange(30, 110),
-        Codec.DOUBLE.xmap(p_232007_ -> (int)(p_232007_ * 40.0 + 70.0), p_232009_ -> (p_232009_.intValue() - 70.0) / 40.0),
+        Codec.DOUBLE.xmap(value -> (int)(value * 40.0 + 70.0), value -> (value.intValue() - 70.0) / 40.0),
         70,
-        p_447833_ -> operateOnLevelRenderer(LevelRenderer::needsUpdate)
+        OptionInstance.NO_ACTION
     );
     private static final Component TELEMETRY_TOOLTIP = Component.translatable(
         "options.telemetry.button.tooltip", Component.translatable("options.telemetry.state.minimal"), Component.translatable("options.telemetry.state.all")
@@ -712,22 +818,27 @@ public class Options {
     private final OptionInstance<Boolean> telemetryOptInExtra = OptionInstance.createBoolean(
         "options.telemetry.button",
         OptionInstance.cachedConstantTooltip(TELEMETRY_TOOLTIP),
-        (p_261356_, p_261357_) -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            if (!minecraft.allowsTelemetry()) {
+        (caption, value) -> {
+            Minecraft minecraftx = Minecraft.getInstance();
+            if (!minecraftx.allowsTelemetry()) {
                 return Component.translatable("options.telemetry.state.none");
             } else {
-                return p_261357_ && minecraft.extraTelemetryAvailable()
+                return value && minecraftx.extraTelemetryAvailable()
                     ? Component.translatable("options.telemetry.state.all")
                     : Component.translatable("options.telemetry.state.minimal");
             }
         },
         false,
-        p_460898_ -> {}
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_SCREEN_EFFECT = Component.translatable("options.screenEffectScale.tooltip");
     private final OptionInstance<Double> screenEffectScale = new OptionInstance<>(
-        "options.screenEffectScale", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_SCREEN_EFFECT), Options::percentValueOrOffLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, p_453478_ -> {}
+        "options.screenEffectScale",
+        OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_SCREEN_EFFECT),
+        Options::percentValueOrOffLabel,
+        OptionInstance.UnitDouble.INSTANCE,
+        1.0,
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_FOV_EFFECT = Component.translatable("options.fovEffectScale.tooltip");
     private final OptionInstance<Double> fovEffectScale = new OptionInstance<>(
@@ -737,7 +848,7 @@ public class Options {
         OptionInstance.UnitDouble.INSTANCE.xmap(Mth::square, Math::sqrt),
         Codec.doubleRange(0.0, 1.0),
         1.0,
-        p_460948_ -> {}
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_DARKNESS_EFFECT = Component.translatable("options.darknessEffectScale.tooltip");
     private final OptionInstance<Double> darknessEffectScale = new OptionInstance<>(
@@ -746,86 +857,110 @@ public class Options {
         Options::percentValueOrOffLabel,
         OptionInstance.UnitDouble.INSTANCE.xmap(Mth::square, Math::sqrt),
         1.0,
-        p_460471_ -> {}
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_GLINT_SPEED = Component.translatable("options.glintSpeed.tooltip");
     private final OptionInstance<Double> glintSpeed = new OptionInstance<>(
-        "options.glintSpeed", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_GLINT_SPEED), Options::percentValueOrOffLabel, OptionInstance.UnitDouble.INSTANCE, 0.5, p_457260_ -> {}
+        "options.glintSpeed",
+        OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_GLINT_SPEED),
+        Options::percentValueOrOffLabel,
+        OptionInstance.UnitDouble.INSTANCE,
+        0.5,
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_GLINT_STRENGTH = Component.translatable("options.glintStrength.tooltip");
     private final OptionInstance<Double> glintStrength = new OptionInstance<>(
-        "options.glintStrength", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_GLINT_STRENGTH), Options::percentValueOrOffLabel, OptionInstance.UnitDouble.INSTANCE, 0.75, p_457447_ -> {}
+        "options.glintStrength",
+        OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_GLINT_STRENGTH),
+        Options::percentValueOrOffLabel,
+        OptionInstance.UnitDouble.INSTANCE,
+        0.75,
+        OptionInstance.NO_ACTION
     );
     private static final Component ACCESSIBILITY_TOOLTIP_DAMAGE_TILT_STRENGTH = Component.translatable("options.damageTiltStrength.tooltip");
     private final OptionInstance<Double> damageTiltStrength = new OptionInstance<>(
-        "options.damageTiltStrength", OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_DAMAGE_TILT_STRENGTH), Options::percentValueOrOffLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, p_407179_ -> {}
+        "options.damageTiltStrength",
+        OptionInstance.cachedConstantTooltip(ACCESSIBILITY_TOOLTIP_DAMAGE_TILT_STRENGTH),
+        Options::percentValueOrOffLabel,
+        OptionInstance.UnitDouble.INSTANCE,
+        1.0,
+        OptionInstance.NO_ACTION
     );
-    private final OptionInstance<Double> gamma = new OptionInstance<>("options.gamma", OptionInstance.noTooltip(), (p_231913_, p_231914_) -> {
-        int i = (int)(p_231914_ * 100.0);
-        if (i == 0) {
-            return genericValueLabel(p_231913_, Component.translatable("options.gamma.min"));
-        } else if (i == 50) {
-            return genericValueLabel(p_231913_, Component.translatable("options.gamma.default"));
-        } else {
-            return i == 100 ? genericValueLabel(p_231913_, Component.translatable("options.gamma.max")) : genericValueLabel(p_231913_, i);
-        }
-    }, OptionInstance.UnitDouble.INSTANCE, 0.5, p_458219_ -> {});
+    private final OptionInstance<Double> gamma = new OptionInstance<>(
+        "options.gamma",
+        OptionInstance.noTooltip(),
+        (caption, value) -> {
+            int progressValueToDisplay = (int)(value * 100.0);
+            if (progressValueToDisplay == 0) {
+                return genericValueLabel(caption, Component.translatable("options.gamma.min"));
+            } else if (progressValueToDisplay == 50) {
+                return genericValueLabel(caption, Component.translatable("options.gamma.default"));
+            } else {
+                return progressValueToDisplay == 100
+                    ? genericValueLabel(caption, Component.translatable("options.gamma.max"))
+                    : genericValueLabel(caption, progressValueToDisplay);
+            }
+        },
+        OptionInstance.UnitDouble.INSTANCE,
+        0.5,
+        OptionInstance.NO_ACTION
+    );
     public static final int AUTO_GUI_SCALE = 0;
     private static final int MAX_GUI_SCALE_INCLUSIVE = 2147483646;
     private final OptionInstance<Integer> guiScale = new OptionInstance<>(
         "options.guiScale",
         OptionInstance.noTooltip(),
-        (p_231982_, p_231983_) -> p_231983_ == 0 ? Component.translatable("options.guiScale.auto") : Component.literal(Integer.toString(p_231983_)),
+        (caption, value) -> value == 0 ? Component.translatable("options.guiScale.auto") : Component.literal(Integer.toString(value)),
         new OptionInstance.ClampingLazyMaxIntRange(0, () -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            return !minecraft.isRunning() ? 2147483646 : minecraft.getWindow().calculateScale(0, minecraft.isEnforceUnicode());
+            Minecraft minecraftx = Minecraft.getInstance();
+            return !minecraftx.isRunning() ? 2147483646 : minecraftx.getWindow().calculateScale(0, minecraftx.isEnforceUnicode());
         }, 2147483646),
         0,
-        p_325288_ -> this.minecraft.resizeDisplay()
+        var1 -> this.minecraft.resizeGui()
     );
     private final OptionInstance<ParticleStatus> particles = new OptionInstance<>(
         "options.particles",
         OptionInstance.noTooltip(),
-        (p_447855_, p_447856_) -> p_447856_.caption(),
+        (caption, value) -> value.caption(),
         new OptionInstance.Enum<>(Arrays.asList(ParticleStatus.values()), ParticleStatus.LEGACY_CODEC),
         ParticleStatus.ALL,
-        p_447831_ -> this.setGraphicsPresetToCustom()
+        var1 -> this.setGraphicsPresetToCustom()
     );
     private final OptionInstance<NarratorStatus> narrator = new OptionInstance<>(
         "options.narrator",
         OptionInstance.noTooltip(),
-        (p_231907_, p_231908_) -> (Component)(this.minecraft.getNarrator().isActive()
-            ? p_231908_.getName()
-            : Component.translatable("options.narrator.notavailable")),
+        (caption, value) -> this.minecraft.getNarrator().isActive() ? value.getName() : Component.translatable("options.narrator.notavailable"),
         new OptionInstance.Enum<>(Arrays.asList(NarratorStatus.values()), NarratorStatus.LEGACY_CODEC),
         NarratorStatus.OFF,
-        p_231860_ -> this.minecraft.getNarrator().updateNarratorStatus(p_231860_)
+        value -> this.minecraft.getNarrator().updateNarratorStatus(value)
     );
     public String languageCode = "en_us";
     private final OptionInstance<String> soundDevice = new OptionInstance<>(
         "options.audioDevice",
         OptionInstance.noTooltip(),
-        (p_231919_, p_231920_) -> {
-            if ("".equals(p_231920_)) {
+        (caption, value) -> {
+            if ("".equals(value)) {
                 return Component.translatable("options.audioDevice.default");
             } else {
-                return p_231920_.startsWith("OpenAL Soft on ")
-                    ? Component.literal(p_231920_.substring(SoundEngine.OPEN_AL_SOFT_PREFIX_LENGTH))
-                    : Component.literal(p_231920_);
+                return value.startsWith("OpenAL Soft on ")
+                    ? Component.literal(value.substring(SoundEngine.OPEN_AL_SOFT_PREFIX_LENGTH))
+                    : Component.literal(value);
             }
         },
         new OptionInstance.LazyEnum<>(
             () -> Stream.concat(Stream.of(""), Minecraft.getInstance().getSoundManager().getAvailableSoundDevices().stream()).toList(),
-            p_232011_ -> Minecraft.getInstance().isRunning() && p_232011_ != "" && !Minecraft.getInstance().getSoundManager().getAvailableSoundDevices().contains(p_232011_)
+            device -> Minecraft.getInstance().isRunning()
+                    && !isSoundDeviceDefault(device)
+                    && !Minecraft.getInstance().getSoundManager().getAvailableSoundDevices().contains(device)
                 ? Optional.empty()
-                : Optional.of(p_232011_),
+                : Optional.of(device),
             Codec.STRING
         ),
         "",
-        p_424924_ -> {
-            SoundManager soundmanager = Minecraft.getInstance().getSoundManager();
-            soundmanager.reload();
-            soundmanager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+        var0 -> {
+            SoundManager soundManager = Minecraft.getInstance().getSoundManager();
+            soundManager.reload();
+            soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
         }
     );
     public boolean onboardAccessibility = true;
@@ -833,26 +968,30 @@ public class Options {
     private final OptionInstance<MusicManager.MusicFrequency> musicFrequency = new OptionInstance<>(
         "options.music_frequency",
         OptionInstance.cachedConstantTooltip(MUSIC_FREQUENCY_TOOLTIP),
-        (p_447822_, p_447823_) -> p_447823_.caption(),
+        (caption, value) -> value.caption(),
         new OptionInstance.Enum<>(Arrays.asList(MusicManager.MusicFrequency.values()), MusicManager.MusicFrequency.CODEC),
         MusicManager.MusicFrequency.DEFAULT,
-        p_404799_ -> Minecraft.getInstance().getMusicManager().setMinutesBetweenSongs(p_404799_)
+        value -> Minecraft.getInstance().getMusicManager().setMinutesBetweenSongs(value)
     );
     private final OptionInstance<MusicToastDisplayState> musicToast = new OptionInstance<>(
         "options.musicToast",
-        p_447829_ -> Tooltip.create(p_447829_.tooltip()),
-        (p_447820_, p_447821_) -> p_447821_.text(),
+        value -> Tooltip.create(value.tooltip()),
+        (caption, value) -> value.text(),
         new OptionInstance.Enum<>(Arrays.asList(MusicToastDisplayState.values()), MusicToastDisplayState.CODEC),
         MusicToastDisplayState.NEVER,
-        p_447859_ -> this.minecraft.getToastManager().setMusicToastDisplayState(p_447859_)
+        value -> this.minecraft.gui.toastManager().setMusicToastDisplayState(value)
     );
     public boolean syncWrites;
     public boolean startedCleanly = true;
 
-    private static void operateOnLevelRenderer(Consumer<LevelRenderer> p_457625_) {
-        LevelRenderer levelrenderer = Minecraft.getInstance().levelRenderer;
-        if (levelrenderer != null) {
-            p_457625_.accept(levelrenderer);
+    public static boolean isSoundDeviceDefault(final String deviceName) {
+        return deviceName.equals("");
+    }
+
+    private static void operateOnLevelExtractor(final Consumer<LevelExtractor> consumer) {
+        LevelExtractor levelExtractor = Minecraft.getInstance().levelExtractor;
+        if (levelExtractor != null) {
+            consumer.accept(levelExtractor);
         }
     }
 
@@ -888,9 +1027,18 @@ public class Options {
         return this.framerateLimit;
     }
 
-    public void applyGraphicsPreset(GraphicsPreset p_458079_) {
+    public OptionInstance<PreferredGraphicsApi> preferredGraphicsBackend() {
+        return this.preferredGraphicsBackend;
+    }
+
+    public boolean isRestartRequiredToApplyVideoSettings() {
+        return this.preferredGraphicsBackend.get() != this.preferredGraphicsBackendFromStartup
+            || this.exclusiveFullscreen.get() != this.exclusiveFullscreenFromStartup;
+    }
+
+    public void applyGraphicsPreset(final GraphicsPreset value) {
         this.isApplyingGraphicsPreset = true;
-        p_458079_.apply(this.minecraft);
+        value.apply(this.minecraft);
         this.isApplyingGraphicsPreset = false;
     }
 
@@ -938,23 +1086,23 @@ public class Options {
         return this.prioritizeChunkUpdates;
     }
 
-    public void updateResourcePacks(PackRepository p_275268_) {
-        List<String> list = ImmutableList.copyOf(this.resourcePacks);
+    public void updateResourcePacks(final PackRepository packRepository) {
+        List<String> oldPacks = ImmutableList.copyOf(this.resourcePacks);
         this.resourcePacks.clear();
         this.incompatibleResourcePacks.clear();
 
-        for (Pack pack : p_275268_.getSelectedPacks()) {
-            if (!pack.isFixedPosition()) {
-                this.resourcePacks.add(pack.getId());
-                if (!pack.getCompatibility().isCompatible()) {
-                    this.incompatibleResourcePacks.add(pack.getId());
+        for (Pack entry : packRepository.getSelectedPacks()) {
+            if (!entry.isFixedPosition()) {
+                this.resourcePacks.add(entry.getId());
+                if (!entry.getCompatibility().isCompatible()) {
+                    this.incompatibleResourcePacks.add(entry.getId());
                 }
             }
         }
 
         this.save();
-        List<String> list1 = ImmutableList.copyOf(this.resourcePacks);
-        if (!list1.equals(list)) {
+        List<String> newPacks = ImmutableList.copyOf(this.resourcePacks);
+        if (!newPacks.equals(oldPacks)) {
             this.minecraft.reloadResourcePacks();
         }
     }
@@ -1036,7 +1184,7 @@ public class Options {
     }
 
     public int maxAnisotropyValue() {
-        return Math.min(1 << this.maxAnisotropyBit.get(), RenderSystem.getDevice().getMaxSupportedAnisotropy());
+        return Math.min(1 << this.maxAnisotropyBit.get(), RenderSystem.getDevice().getDeviceInfo().limits().maxAnisotropy());
     }
 
     public OptionInstance<TextureFilteringMethod> textureFiltering() {
@@ -1051,12 +1199,12 @@ public class Options {
         return this.biomeBlendRadius;
     }
 
-    private static double logMouse(int p_231966_) {
-        return Math.pow(10.0, p_231966_ / 100.0);
+    private static double logMouse(final int value) {
+        return Math.pow(10.0, value / 100.0);
     }
 
-    private static int unlogMouse(double p_231840_) {
-        return Mth.floor(Math.log10(p_231840_) * 100.0);
+    private static int unlogMouse(final double value) {
+        return Mth.floor(Math.log10(value) * 100.0);
     }
 
     public OptionInstance<Double> mouseWheelSensitivity() {
@@ -1108,10 +1256,10 @@ public class Options {
     }
 
     private static void updateFontOptions() {
-        Minecraft minecraft = Minecraft.getInstance();
-        if (minecraft.getWindow() != null) {
-            minecraft.updateFontOptions();
-            minecraft.resizeDisplay();
+        Minecraft instance = Minecraft.getInstance();
+        if (instance.getWindow() != null) {
+            instance.updateFontOptions();
+            instance.resizeGui();
         }
     }
 
@@ -1151,29 +1299,39 @@ public class Options {
         return this.reducedDebugInfo;
     }
 
-    public final float getFinalSoundSourceVolume(SoundSource p_408775_) {
-        return p_408775_ == SoundSource.MASTER ? this.getSoundSourceVolume(p_408775_) : this.getSoundSourceVolume(p_408775_) * this.getSoundSourceVolume(SoundSource.MASTER);
+    public OptionInstance<Boolean> inGameNotification() {
+        return this.inGameNotification;
     }
 
-    public final float getSoundSourceVolume(SoundSource p_92148_) {
-        return this.getSoundSourceOptionInstance(p_92148_).get().floatValue();
+    public OptionInstance<PresenceSharing> sharePresence() {
+        return this.sharePresence;
     }
 
-    public final OptionInstance<Double> getSoundSourceOptionInstance(SoundSource p_251574_) {
-        return Objects.requireNonNull(this.soundSourceVolumes.get(p_251574_));
+    public final float getFinalSoundSourceVolume(final SoundSource source) {
+        return source == SoundSource.MASTER
+            ? this.getSoundSourceVolume(source)
+            : this.getSoundSourceVolume(source) * this.getSoundSourceVolume(SoundSource.MASTER);
     }
 
-    private OptionInstance<Double> createSoundSliderOptionInstance(String p_250353_, SoundSource p_249262_) {
-        return new OptionInstance<>(p_250353_, OptionInstance.noTooltip(), Options::percentValueOrOffLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, p_447858_ -> {
+    public final float getSoundSourceVolume(final SoundSource source) {
+        return this.getSoundSourceOptionInstance(source).get().floatValue();
+    }
+
+    public final OptionInstance<Double> getSoundSourceOptionInstance(final SoundSource source) {
+        return Objects.requireNonNull(this.soundSourceVolumes.get(source));
+    }
+
+    private OptionInstance<Double> createSoundSliderOptionInstance(final String captionId, final SoundSource category) {
+        return new OptionInstance<>(captionId, OptionInstance.noTooltip(), Options::percentValueOrOffLabel, OptionInstance.UnitDouble.INSTANCE, 1.0, value -> {
             Minecraft minecraft = Minecraft.getInstance();
-            SoundManager soundmanager = minecraft.getSoundManager();
-            if ((p_249262_ == SoundSource.MASTER || p_249262_ == SoundSource.MUSIC) && this.getFinalSoundSourceVolume(SoundSource.MUSIC) > 0.0F) {
+            SoundManager soundManager = minecraft.getSoundManager();
+            if ((category == SoundSource.MASTER || category == SoundSource.MUSIC) && this.getFinalSoundSourceVolume(SoundSource.MUSIC) > 0.0F) {
                 minecraft.getMusicManager().showNowPlayingToastIfNeeded();
             }
 
-            soundmanager.refreshCategoryVolume(p_249262_);
+            soundManager.refreshCategoryVolume(category);
             if (minecraft.level == null) {
-                SoundPreviewHandler.preview(soundmanager, p_249262_, p_447858_.floatValue());
+                SoundPreviewHandler.preview(soundManager, category, value.floatValue());
             }
         });
     }
@@ -1190,12 +1348,12 @@ public class Options {
         return this.backgroundForChatOnly;
     }
 
-    public OptionInstance<Boolean> touchscreen() {
-        return this.touchscreen;
-    }
-
     public OptionInstance<Boolean> fullscreen() {
         return this.fullscreen;
+    }
+
+    public OptionInstance<Boolean> exclusiveFullscreen() {
+        return this.exclusiveFullscreen;
     }
 
     public OptionInstance<Boolean> bobView() {
@@ -1241,8 +1399,8 @@ public class Options {
     private void setGraphicsPresetToCustom() {
         if (!this.isApplyingGraphicsPreset) {
             this.graphicsPreset.set(GraphicsPreset.CUSTOM);
-            if (this.minecraft.screen instanceof OptionsSubScreen optionssubscreen) {
-                optionssubscreen.resetOption(this.graphicsPreset);
+            if (this.minecraft.gui.screen() instanceof OptionsSubScreen optionsSubScreen) {
+                optionsSubScreen.resetOption(this.graphicsPreset);
             }
         }
     }
@@ -1312,175 +1470,175 @@ public class Options {
         return this.musicToast;
     }
 
-    public Options(Minecraft p_92138_, File p_92139_) {
-        this.minecraft = p_92138_;
-        this.optionsFile = new File(p_92139_, "options.txt");
-        boolean flag = Runtime.getRuntime().maxMemory() >= 1000000000L;
+    public Options(final Minecraft minecraft, final File workingDirectory) {
+        this.minecraft = minecraft;
+        this.optionsFile = new File(workingDirectory, "options.txt");
+        boolean largeDistances = Runtime.getRuntime().maxMemory() >= 1000000000L;
         this.renderDistance = new OptionInstance<>(
             "options.renderDistance",
             OptionInstance.noTooltip(),
-            (p_231962_, p_407323_) -> genericValueLabel(p_231962_, Component.translatable("options.chunks", p_407323_)),
-            new OptionInstance.IntRange(2, flag ? 32 : 16, false),
+            (caption, value) -> genericValueLabel(caption, Component.translatable("options.chunks", value)),
+            new OptionInstance.IntRange(2, largeDistances ? 32 : 16, false),
             12,
-            p_447846_ -> {
-                operateOnLevelRenderer(LevelRenderer::needsUpdate);
-                this.setGraphicsPresetToCustom();
-            }
+            var1 -> this.setGraphicsPresetToCustom()
         );
         this.simulationDistance = new OptionInstance<>(
             "options.simulationDistance",
             OptionInstance.noTooltip(),
-            (p_231916_, p_270801_) -> genericValueLabel(p_231916_, Component.translatable("options.chunks", p_270801_)),
-            new OptionInstance.IntRange(SharedConstants.DEBUG_ALLOW_LOW_SIM_DISTANCE ? 2 : 5, flag ? 32 : 16, false),
+            (caption, value) -> genericValueLabel(caption, Component.translatable("options.chunks", value)),
+            new OptionInstance.IntRange(SharedConstants.DEBUG_ALLOW_LOW_SIM_DISTANCE ? 2 : 5, largeDistances ? 32 : 16, false),
             12,
-            p_447824_ -> this.setGraphicsPresetToCustom()
+            var1 -> this.setGraphicsPresetToCustom()
         );
         this.syncWrites = Util.getPlatform() == Util.OS.WINDOWS;
         this.load();
     }
 
-    public float getBackgroundOpacity(float p_92142_) {
-        return this.backgroundForChatOnly.get() ? p_92142_ : this.textBackgroundOpacity().get().floatValue();
+    public float getBackgroundOpacity(final float defaultOpacity) {
+        return this.backgroundForChatOnly.get() ? defaultOpacity : this.textBackgroundOpacity().get().floatValue();
     }
 
-    public int getBackgroundColor(float p_92171_) {
-        return ARGB.colorFromFloat(this.getBackgroundOpacity(p_92171_), 0.0F, 0.0F, 0.0F);
+    public int getBackgroundColor(final float defaultOpacity) {
+        return ARGB.colorFromFloat(this.getBackgroundOpacity(defaultOpacity), 0.0F, 0.0F, 0.0F);
     }
 
-    public int getBackgroundColor(int p_92144_) {
-        return this.backgroundForChatOnly.get() ? p_92144_ : ARGB.colorFromFloat(this.textBackgroundOpacity.get().floatValue(), 0.0F, 0.0F, 0.0F);
+    public int getBackgroundColor(final int defaultColor) {
+        return this.backgroundForChatOnly.get() ? defaultColor : ARGB.colorFromFloat(this.textBackgroundOpacity.get().floatValue(), 0.0F, 0.0F, 0.0F);
     }
 
-    private void processDumpedOptions(Options.OptionAccess p_329807_) {
-        p_329807_.process("ao", this.ambientOcclusion);
-        p_329807_.process("biomeBlendRadius", this.biomeBlendRadius);
-        p_329807_.process("chunkSectionFadeInTime", this.chunkSectionFadeInTime);
-        p_329807_.process("cutoutLeaves", this.cutoutLeaves);
-        p_329807_.process("enableVsync", this.enableVsync);
-        p_329807_.process("entityDistanceScaling", this.entityDistanceScaling);
-        p_329807_.process("entityShadows", this.entityShadows);
-        p_329807_.process("forceUnicodeFont", this.forceUnicodeFont);
-        p_329807_.process("japaneseGlyphVariants", this.japaneseGlyphVariants);
-        p_329807_.process("fov", this.fov);
-        p_329807_.process("fovEffectScale", this.fovEffectScale);
-        p_329807_.process("darknessEffectScale", this.darknessEffectScale);
-        p_329807_.process("glintSpeed", this.glintSpeed);
-        p_329807_.process("glintStrength", this.glintStrength);
-        p_329807_.process("graphicsPreset", this.graphicsPreset);
-        p_329807_.process("prioritizeChunkUpdates", this.prioritizeChunkUpdates);
-        p_329807_.process("fullscreen", this.fullscreen);
-        p_329807_.process("gamma", this.gamma);
-        p_329807_.process("guiScale", this.guiScale);
-        p_329807_.process("maxAnisotropyBit", this.maxAnisotropyBit);
-        p_329807_.process("textureFiltering", this.textureFiltering);
-        p_329807_.process("maxFps", this.framerateLimit);
-        p_329807_.process("improvedTransparency", this.improvedTransparency);
-        p_329807_.process("inactivityFpsLimit", this.inactivityFpsLimit);
-        p_329807_.process("mipmapLevels", this.mipmapLevels);
-        p_329807_.process("narrator", this.narrator);
-        p_329807_.process("particles", this.particles);
-        p_329807_.process("reducedDebugInfo", this.reducedDebugInfo);
-        p_329807_.process("renderClouds", this.cloudStatus);
-        p_329807_.process("cloudRange", this.cloudRange);
-        p_329807_.process("renderDistance", this.renderDistance);
-        p_329807_.process("simulationDistance", this.simulationDistance);
-        p_329807_.process("screenEffectScale", this.screenEffectScale);
-        p_329807_.process("soundDevice", this.soundDevice);
-        p_329807_.process("vignette", this.vignette);
-        p_329807_.process("weatherRadius", this.weatherRadius);
+    private void processDumpedOptions(final Options.OptionAccess access) {
+        access.process("ao", this.ambientOcclusion);
+        access.process("biomeBlendRadius", this.biomeBlendRadius);
+        access.process("chunkSectionFadeInTime", this.chunkSectionFadeInTime);
+        access.process("cutoutLeaves", this.cutoutLeaves);
+        access.process("enableVsync", this.enableVsync);
+        access.process("entityDistanceScaling", this.entityDistanceScaling);
+        access.process("entityShadows", this.entityShadows);
+        access.process("forceUnicodeFont", this.forceUnicodeFont);
+        access.process("japaneseGlyphVariants", this.japaneseGlyphVariants);
+        access.process("fov", this.fov);
+        access.process("fovEffectScale", this.fovEffectScale);
+        access.process("darknessEffectScale", this.darknessEffectScale);
+        access.process("glintSpeed", this.glintSpeed);
+        access.process("glintStrength", this.glintStrength);
+        access.process("preferredGraphicsBackend", this.preferredGraphicsBackend);
+        access.process("graphicsPreset", this.graphicsPreset);
+        access.process("prioritizeChunkUpdates", this.prioritizeChunkUpdates);
+        access.process("fullscreen", this.fullscreen);
+        access.process("exclusiveFullscreen", this.exclusiveFullscreen);
+        access.process("gamma", this.gamma);
+        access.process("guiScale", this.guiScale);
+        access.process("maxAnisotropyBit", this.maxAnisotropyBit);
+        access.process("textureFiltering", this.textureFiltering);
+        access.process("maxFps", this.framerateLimit);
+        access.process("improvedTransparency", this.improvedTransparency);
+        access.process("inactivityFpsLimit", this.inactivityFpsLimit);
+        access.process("mipmapLevels", this.mipmapLevels);
+        access.process("narrator", this.narrator);
+        access.process("particles", this.particles);
+        access.process("reducedDebugInfo", this.reducedDebugInfo);
+        access.process("renderClouds", this.cloudStatus);
+        access.process("cloudRange", this.cloudRange);
+        access.process("renderDistance", this.renderDistance);
+        access.process("simulationDistance", this.simulationDistance);
+        access.process("screenEffectScale", this.screenEffectScale);
+        access.process("soundDevice", this.soundDevice);
+        access.process("vignette", this.vignette);
+        access.process("weatherRadius", this.weatherRadius);
     }
 
-    private void processOptions(Options.FieldAccess p_168428_) {
-        this.processDumpedOptions(p_168428_);
-        p_168428_.process("autoJump", this.autoJump);
-        p_168428_.process("rotateWithMinecart", this.rotateWithMinecart);
-        p_168428_.process("operatorItemsTab", this.operatorItemsTab);
-        p_168428_.process("autoSuggestions", this.autoSuggestions);
-        p_168428_.process("chatColors", this.chatColors);
-        p_168428_.process("chatLinks", this.chatLinks);
-        p_168428_.process("chatLinksPrompt", this.chatLinksPrompt);
-        p_168428_.process("discrete_mouse_scroll", this.discreteMouseScroll);
-        p_168428_.process("invertXMouse", this.invertXMouse);
-        p_168428_.process("invertYMouse", this.invertYMouse);
-        p_168428_.process("realmsNotifications", this.realmsNotifications);
-        p_168428_.process("showSubtitles", this.showSubtitles);
-        p_168428_.process("directionalAudio", this.directionalAudio);
-        p_168428_.process("touchscreen", this.touchscreen);
-        p_168428_.process("bobView", this.bobView);
-        p_168428_.process("toggleCrouch", this.toggleCrouch);
-        p_168428_.process("toggleSprint", this.toggleSprint);
-        p_168428_.process("toggleAttack", this.toggleAttack);
-        p_168428_.process("toggleUse", this.toggleUse);
-        p_168428_.process("sprintWindow", this.sprintWindow);
-        p_168428_.process("darkMojangStudiosBackground", this.darkMojangStudiosBackground);
-        p_168428_.process("hideLightningFlashes", this.hideLightningFlash);
-        p_168428_.process("hideSplashTexts", this.hideSplashTexts);
-        p_168428_.process("mouseSensitivity", this.sensitivity);
-        p_168428_.process("damageTiltStrength", this.damageTiltStrength);
-        p_168428_.process("highContrast", this.highContrast);
-        p_168428_.process("highContrastBlockOutline", this.highContrastBlockOutline);
-        p_168428_.process("narratorHotkey", this.narratorHotkey);
-        this.resourcePacks = p_168428_.process("resourcePacks", this.resourcePacks, Options::readListOfStrings, GSON::toJson);
-        this.incompatibleResourcePacks = p_168428_.process("incompatibleResourcePacks", this.incompatibleResourcePacks, Options::readListOfStrings, GSON::toJson);
-        this.lastMpIp = p_168428_.process("lastServer", this.lastMpIp);
-        this.languageCode = p_168428_.process("lang", this.languageCode);
-        p_168428_.process("chatVisibility", this.chatVisibility);
-        p_168428_.process("chatOpacity", this.chatOpacity);
-        p_168428_.process("chatLineSpacing", this.chatLineSpacing);
-        p_168428_.process("textBackgroundOpacity", this.textBackgroundOpacity);
-        p_168428_.process("backgroundForChatOnly", this.backgroundForChatOnly);
-        this.hideServerAddress = p_168428_.process("hideServerAddress", this.hideServerAddress);
-        this.advancedItemTooltips = p_168428_.process("advancedItemTooltips", this.advancedItemTooltips);
-        this.pauseOnLostFocus = p_168428_.process("pauseOnLostFocus", this.pauseOnLostFocus);
-        this.overrideWidth = p_168428_.process("overrideWidth", this.overrideWidth);
-        this.overrideHeight = p_168428_.process("overrideHeight", this.overrideHeight);
-        p_168428_.process("chatHeightFocused", this.chatHeightFocused);
-        p_168428_.process("chatDelay", this.chatDelay);
-        p_168428_.process("chatHeightUnfocused", this.chatHeightUnfocused);
-        p_168428_.process("chatScale", this.chatScale);
-        p_168428_.process("chatWidth", this.chatWidth);
-        p_168428_.process("notificationDisplayTime", this.notificationDisplayTime);
-        this.useNativeTransport = p_168428_.process("useNativeTransport", this.useNativeTransport);
-        p_168428_.process("mainHand", this.mainHand);
-        p_168428_.process("attackIndicator", this.attackIndicator);
-        this.tutorialStep = p_168428_.process("tutorialStep", this.tutorialStep, TutorialSteps::getByName, TutorialSteps::getName);
-        p_168428_.process("mouseWheelSensitivity", this.mouseWheelSensitivity);
-        p_168428_.process("rawMouseInput", this.rawMouseInput);
-        p_168428_.process("allowCursorChanges", this.allowCursorChanges);
-        this.glDebugVerbosity = p_168428_.process("glDebugVerbosity", this.glDebugVerbosity);
-        this.skipMultiplayerWarning = p_168428_.process("skipMultiplayerWarning", this.skipMultiplayerWarning);
-        p_168428_.process("hideMatchedNames", this.hideMatchedNames);
-        this.joinedFirstServer = p_168428_.process("joinedFirstServer", this.joinedFirstServer);
-        this.syncWrites = p_168428_.process("syncChunkWrites", this.syncWrites);
-        p_168428_.process("showAutosaveIndicator", this.showAutosaveIndicator);
-        p_168428_.process("allowServerListing", this.allowServerListing);
-        p_168428_.process("onlyShowSecureChat", this.onlyShowSecureChat);
-        p_168428_.process("saveChatDrafts", this.saveChatDrafts);
-        p_168428_.process("panoramaScrollSpeed", this.panoramaSpeed);
-        p_168428_.process("telemetryOptInExtra", this.telemetryOptInExtra);
-        this.onboardAccessibility = p_168428_.process("onboardAccessibility", this.onboardAccessibility);
-        p_168428_.process("menuBackgroundBlurriness", this.menuBackgroundBlurriness);
-        this.startedCleanly = p_168428_.process("startedCleanly", this.startedCleanly);
-        p_168428_.process("musicToast", this.musicToast);
-        p_168428_.process("musicFrequency", this.musicFrequency);
+    private void processOptions(final Options.FieldAccess access) {
+        this.processDumpedOptions(access);
+        access.process("autoJump", this.autoJump);
+        access.process("rotateWithMinecart", this.rotateWithMinecart);
+        access.process("operatorItemsTab", this.operatorItemsTab);
+        access.process("autoSuggestions", this.autoSuggestions);
+        access.process("chatColors", this.chatColors);
+        access.process("chatLinks", this.chatLinks);
+        access.process("chatLinksPrompt", this.chatLinksPrompt);
+        access.process("discrete_mouse_scroll", this.discreteMouseScroll);
+        access.process("invertXMouse", this.invertXMouse);
+        access.process("invertYMouse", this.invertYMouse);
+        access.process("realmsNotifications", this.realmsNotifications);
+        access.process("showSubtitles", this.showSubtitles);
+        access.process("directionalAudio", this.directionalAudio);
+        access.process("bobView", this.bobView);
+        access.process("toggleCrouch", this.toggleCrouch);
+        access.process("toggleSprint", this.toggleSprint);
+        access.process("toggleAttack", this.toggleAttack);
+        access.process("toggleUse", this.toggleUse);
+        access.process("sprintWindow", this.sprintWindow);
+        access.process("darkMojangStudiosBackground", this.darkMojangStudiosBackground);
+        access.process("hideLightningFlashes", this.hideLightningFlash);
+        access.process("hideSplashTexts", this.hideSplashTexts);
+        access.process("mouseSensitivity", this.sensitivity);
+        access.process("damageTiltStrength", this.damageTiltStrength);
+        access.process("highContrast", this.highContrast);
+        access.process("highContrastBlockOutline", this.highContrastBlockOutline);
+        access.process("narratorHotkey", this.narratorHotkey);
+        this.resourcePacks = access.process("resourcePacks", this.resourcePacks, Options::readListOfStrings, GSON::toJson);
+        this.incompatibleResourcePacks = access.process("incompatibleResourcePacks", this.incompatibleResourcePacks, Options::readListOfStrings, GSON::toJson);
+        this.lastMpIp = access.process("lastServer", this.lastMpIp);
+        this.languageCode = access.process("lang", this.languageCode);
+        access.process("chatVisibility", this.chatVisibility);
+        access.process("chatOpacity", this.chatOpacity);
+        access.process("chatLineSpacing", this.chatLineSpacing);
+        access.process("textBackgroundOpacity", this.textBackgroundOpacity);
+        access.process("backgroundForChatOnly", this.backgroundForChatOnly);
+        this.hideServerAddress = access.process("hideServerAddress", this.hideServerAddress);
+        this.advancedItemTooltips = access.process("advancedItemTooltips", this.advancedItemTooltips);
+        this.pauseOnLostFocus = access.process("pauseOnLostFocus", this.pauseOnLostFocus);
+        this.overrideWidth = access.process("overrideWidth", this.overrideWidth);
+        this.overrideHeight = access.process("overrideHeight", this.overrideHeight);
+        access.process("chatHeightFocused", this.chatHeightFocused);
+        access.process("chatDelay", this.chatDelay);
+        access.process("chatHeightUnfocused", this.chatHeightUnfocused);
+        access.process("chatScale", this.chatScale);
+        access.process("chatWidth", this.chatWidth);
+        access.process("notificationDisplayTime", this.notificationDisplayTime);
+        this.useNativeTransport = access.process("useNativeTransport", this.useNativeTransport);
+        access.process("mainHand", this.mainHand);
+        access.process("attackIndicator", this.attackIndicator);
+        this.tutorialStep = access.process("tutorialStep", this.tutorialStep, TutorialSteps::getByName, TutorialSteps::getName);
+        access.process("mouseWheelSensitivity", this.mouseWheelSensitivity);
+        access.process("rawMouseInput", this.rawMouseInput);
+        access.process("allowCursorChanges", this.allowCursorChanges);
+        this.glDebugVerbosity = access.process("glDebugVerbosity", this.glDebugVerbosity);
+        this.skipMultiplayerWarning = access.process("skipMultiplayerWarning", this.skipMultiplayerWarning);
+        access.process("hideMatchedNames", this.hideMatchedNames);
+        this.joinedFirstServer = access.process("joinedFirstServer", this.joinedFirstServer);
+        this.syncWrites = access.process("syncChunkWrites", this.syncWrites);
+        access.process("showAutosaveIndicator", this.showAutosaveIndicator);
+        access.process("allowServerListing", this.allowServerListing);
+        access.process("inGameNotification", this.inGameNotification);
+        access.process("sharePresence", this.sharePresence);
+        access.process("onlyShowSecureChat", this.onlyShowSecureChat);
+        access.process("saveChatDrafts", this.saveChatDrafts);
+        access.process("panoramaScrollSpeed", this.panoramaSpeed);
+        access.process("telemetryOptInExtra", this.telemetryOptInExtra);
+        this.onboardAccessibility = access.process("onboardAccessibility", this.onboardAccessibility);
+        access.process("menuBackgroundBlurriness", this.menuBackgroundBlurriness);
+        this.startedCleanly = access.process("startedCleanly", this.startedCleanly);
+        access.process("musicToast", this.musicToast);
+        access.process("musicFrequency", this.musicFrequency);
 
-        for (KeyMapping keymapping : this.keyMappings) {
-            String s = keymapping.saveString();
-            String s1 = p_168428_.process("key_" + keymapping.getName(), s);
-            if (!s.equals(s1)) {
-                keymapping.setKey(InputConstants.getKey(s1));
+        for (KeyMapping keyMapping : this.keyMappings) {
+            String currentValue = keyMapping.saveString();
+            String newValue = access.process("key_" + keyMapping.getName(), currentValue);
+            if (!currentValue.equals(newValue)) {
+                keyMapping.setKey(InputConstants.getKey(newValue));
             }
         }
 
-        for (SoundSource soundsource : SoundSource.values()) {
-            p_168428_.process("soundCategory_" + soundsource.getName(), this.soundSourceVolumes.get(soundsource));
+        for (SoundSource source : SoundSource.values()) {
+            access.process("soundCategory_" + source.getName(), this.soundSourceVolumes.get(source));
         }
 
-        for (PlayerModelPart playermodelpart : PlayerModelPart.values()) {
-            boolean flag = this.modelParts.contains(playermodelpart);
-            boolean flag1 = p_168428_.process("modelPart_" + playermodelpart.getId(), flag);
-            if (flag1 != flag) {
-                this.setModelPart(playermodelpart, flag1);
+        for (PlayerModelPart part : PlayerModelPart.values()) {
+            boolean wasEnabled = this.modelParts.contains(part);
+            boolean isEnabled = access.process("modelPart_" + part.getId(), wasEnabled);
+            if (isEnabled != wasEnabled) {
+                this.setModelPart(part, isEnabled);
             }
         }
     }
@@ -1491,187 +1649,192 @@ public class Options {
                 return;
             }
 
-            CompoundTag compoundtag = new CompoundTag();
+            CompoundTag rawOptions = new CompoundTag();
 
-            try (BufferedReader bufferedreader = Files.newReader(this.optionsFile, StandardCharsets.UTF_8)) {
-                bufferedreader.lines().forEach(p_231896_ -> {
+            try (BufferedReader reader = Files.newReader(this.optionsFile, StandardCharsets.UTF_8)) {
+                reader.lines().forEach(line -> {
                     try {
-                        Iterator<String> iterator = OPTION_SPLITTER.split(p_231896_).iterator();
-                        compoundtag.putString(iterator.next(), iterator.next());
-                    } catch (Exception exception1) {
-                        LOGGER.warn("Skipping bad option: {}", p_231896_);
+                        Iterator<String> iterator = OPTION_SPLITTER.split(line).iterator();
+                        rawOptions.putString(iterator.next(), iterator.next());
+                    } catch (Exception ignored) {
+                        LOGGER.warn("Skipping bad option: {}", line);
                     }
                 });
             }
 
-            final CompoundTag compoundtag1 = this.dataFix(compoundtag);
+            final CompoundTag options = this.dataFix(rawOptions);
             this.processOptions(
                 new Options.FieldAccess() {
-                    private @Nullable String getValue(String p_394210_) {
-                        Tag tag = compoundtag1.get(p_394210_);
+                    private @Nullable String getValue(final String name) {
+                        Tag tag = options.get(name);
                         if (tag == null) {
                             return null;
-                        } else if (tag instanceof StringTag(String s)) {
-                            return s;
+                        } else if (tag instanceof StringTag(String var7)) {
+                            return var7;
                         } else {
                             throw new IllegalStateException("Cannot read field of wrong type, expected string: " + tag);
                         }
                     }
 
                     @Override
-                    public <T> void process(String p_232125_, OptionInstance<T> p_232126_) {
-                        String s = this.getValue(p_232125_);
-                        if (s != null) {
-                            JsonElement jsonelement = LenientJsonParser.parse(s.isEmpty() ? "\"\"" : s);
-                            p_232126_.codec()
-                                .parse(JsonOps.INSTANCE, jsonelement)
-                                .ifError(
-                                    p_389137_ -> Options.LOGGER.error("Error parsing option value {} for option {}: {}", s, p_232126_, p_389137_.message())
-                                )
-                                .ifSuccess(p_232126_::set);
+                    public <T> void process(final String name, final OptionInstance<T> option) {
+                        String result = this.getValue(name);
+                        if (result != null) {
+                            JsonElement element = LenientJsonParser.parse(result.isEmpty() ? "\"\"" : result);
+                            option.codec()
+                                .parse(JsonOps.INSTANCE, element)
+                                .ifError(error -> Options.LOGGER.error("Error parsing option value {} for option {}: {}", result, option, error.message()))
+                                .ifSuccess(option::set);
                         }
                     }
 
                     @Override
-                    public int process(String p_168467_, int p_168468_) {
-                        String s = this.getValue(p_168467_);
-                        if (s != null) {
+                    public int process(final String name, final int current) {
+                        String result = this.getValue(name);
+                        if (result != null) {
                             try {
-                                return Integer.parseInt(s);
-                            } catch (NumberFormatException numberformatexception) {
-                                Options.LOGGER.warn("Invalid integer value for option {} = {}", p_168467_, s, numberformatexception);
+                                return Integer.parseInt(result);
+                            } catch (NumberFormatException e) {
+                                Options.LOGGER.warn("Invalid integer value for option {} = {}", name, result, e);
                             }
                         }
 
-                        return p_168468_;
+                        return current;
                     }
 
                     @Override
-                    public boolean process(String p_168483_, boolean p_168484_) {
-                        String s = this.getValue(p_168483_);
-                        return s != null ? Options.isTrue(s) : p_168484_;
+                    public boolean process(final String name, final boolean current) {
+                        String result = this.getValue(name);
+                        return result != null ? Options.isTrue(result) : current;
                     }
 
                     @Override
-                    public String process(String p_168480_, String p_168481_) {
-                        return MoreObjects.firstNonNull(this.getValue(p_168480_), p_168481_);
+                    public String process(final String name, final String current) {
+                        return MoreObjects.firstNonNull(this.getValue(name), current);
                     }
 
                     @Override
-                    public float process(String p_168464_, float p_168465_) {
-                        String s = this.getValue(p_168464_);
-                        if (s == null) {
-                            return p_168465_;
-                        } else if (Options.isTrue(s)) {
+                    public float process(final String name, final float current) {
+                        String result = this.getValue(name);
+                        if (result == null) {
+                            return current;
+                        }
+
+                        if (Options.isTrue(result)) {
                             return 1.0F;
-                        } else if (Options.isFalse(s)) {
+                        }
+
+                        if (Options.isFalse(result)) {
                             return 0.0F;
-                        } else {
-                            try {
-                                return Float.parseFloat(s);
-                            } catch (NumberFormatException numberformatexception) {
-                                Options.LOGGER.warn("Invalid floating point value for option {} = {}", p_168464_, s, numberformatexception);
-                                return p_168465_;
-                            }
+                        }
+
+                        try {
+                            return Float.parseFloat(result);
+                        } catch (NumberFormatException e) {
+                            Options.LOGGER.warn("Invalid floating point value for option {} = {}", name, result, e);
+                            return current;
                         }
                     }
 
                     @Override
-                    public <T> T process(String p_168470_, T p_168471_, Function<String, T> p_168472_, Function<T, String> p_168473_) {
-                        String s = this.getValue(p_168470_);
-                        return s == null ? p_168471_ : p_168472_.apply(s);
+                    public <T> T process(final String name, final T current, final Function<String, T> reader, final Function<T, String> writer) {
+                        String rawResult = this.getValue(name);
+                        return rawResult == null ? current : reader.apply(rawResult);
                     }
                 }
             );
-            compoundtag1.getString("fullscreenResolution").ifPresent(p_389133_ -> this.fullscreenVideoModeString = p_389133_);
+            options.getString("fullscreenResolution").ifPresent(fullscreenResolution -> this.fullscreenVideoModeString = fullscreenResolution);
             KeyMapping.resetMapping();
-        } catch (Exception exception) {
-            LOGGER.error("Failed to load options", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.error("Failed to load options", e);
         }
+
+        this.preferredGraphicsBackendFromStartup = this.preferredGraphicsBackend.get();
+        this.exclusiveFullscreenFromStartup = this.exclusiveFullscreen.get();
     }
 
-    static boolean isTrue(String p_168436_) {
-        return "true".equals(p_168436_);
+    private static boolean isTrue(final String value) {
+        return "true".equals(value);
     }
 
-    static boolean isFalse(String p_168441_) {
-        return "false".equals(p_168441_);
+    private static boolean isFalse(final String value) {
+        return "false".equals(value);
     }
 
-    private CompoundTag dataFix(CompoundTag p_92165_) {
-        int i = 0;
+    private CompoundTag dataFix(final CompoundTag tag) {
+        int version = 0;
 
         try {
-            i = p_92165_.getString("version").map(Integer::parseInt).orElse(0);
-        } catch (RuntimeException runtimeexception) {
+            version = tag.getString("version").map(Integer::parseInt).orElse(0);
+        } catch (RuntimeException var4) {
         }
 
-        return DataFixTypes.OPTIONS.updateToCurrentVersion(this.minecraft.getFixerUpper(), p_92165_, i);
+        return DataFixTypes.OPTIONS.updateToCurrentVersion(this.minecraft.getFixerUpper(), tag, version);
     }
 
     public void save() {
-        try (final PrintWriter printwriter = new PrintWriter(new OutputStreamWriter(new FileOutputStream(this.optionsFile), StandardCharsets.UTF_8))) {
-            printwriter.println("version:" + SharedConstants.getCurrentVersion().dataVersion().version());
+        try (final PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(this.optionsFile), StandardCharsets.UTF_8))) {
+            writer.println("version:" + SharedConstants.getCurrentVersion().dataVersion().version());
             this.processOptions(
                 new Options.FieldAccess() {
-                    public void writePrefix(String p_168491_) {
-                        printwriter.print(p_168491_);
-                        printwriter.print(':');
+                    public void writePrefix(final String name) {
+                        writer.print(name);
+                        writer.print(':');
                     }
 
                     @Override
-                    public <T> void process(String p_232135_, OptionInstance<T> p_232136_) {
-                        p_232136_.codec()
-                            .encodeStart(JsonOps.INSTANCE, p_232136_.get())
-                            .ifError(p_420671_ -> Options.LOGGER.error("Error saving option {}: {}", p_232136_, p_420671_.message()))
-                            .ifSuccess(p_232140_ -> {
-                                this.writePrefix(p_232135_);
-                                printwriter.println(Options.GSON.toJson(p_232140_));
+                    public <T> void process(final String name, final OptionInstance<T> option) {
+                        option.codec()
+                            .encodeStart(JsonOps.INSTANCE, option.get())
+                            .ifError(error -> Options.LOGGER.error("Error saving option {}: {}", option, error.message()))
+                            .ifSuccess(element -> {
+                                this.writePrefix(name);
+                                writer.println(Options.GSON.toJson(element));
                             });
                     }
 
                     @Override
-                    public int process(String p_168499_, int p_168500_) {
-                        this.writePrefix(p_168499_);
-                        printwriter.println(p_168500_);
-                        return p_168500_;
+                    public int process(final String name, final int value) {
+                        this.writePrefix(name);
+                        writer.println(value);
+                        return value;
                     }
 
                     @Override
-                    public boolean process(String p_168515_, boolean p_168516_) {
-                        this.writePrefix(p_168515_);
-                        printwriter.println(p_168516_);
-                        return p_168516_;
+                    public boolean process(final String name, final boolean value) {
+                        this.writePrefix(name);
+                        writer.println(value);
+                        return value;
                     }
 
                     @Override
-                    public String process(String p_168512_, String p_168513_) {
-                        this.writePrefix(p_168512_);
-                        printwriter.println(p_168513_);
-                        return p_168513_;
+                    public String process(final String name, final String value) {
+                        this.writePrefix(name);
+                        writer.println(value);
+                        return value;
                     }
 
                     @Override
-                    public float process(String p_168496_, float p_168497_) {
-                        this.writePrefix(p_168496_);
-                        printwriter.println(p_168497_);
-                        return p_168497_;
+                    public float process(final String name, final float value) {
+                        this.writePrefix(name);
+                        writer.println(value);
+                        return value;
                     }
 
                     @Override
-                    public <T> T process(String p_168502_, T p_168503_, Function<String, T> p_168504_, Function<T, String> p_168505_) {
-                        this.writePrefix(p_168502_);
-                        printwriter.println(p_168505_.apply(p_168503_));
-                        return p_168503_;
+                    public <T> T process(final String name, final T value, final Function<String, T> reader, final Function<T, String> converter) {
+                        this.writePrefix(name);
+                        writer.println(converter.apply(value));
+                        return value;
                     }
                 }
             );
-            String s = this.getFullscreenVideoModeString();
-            if (s != null) {
-                printwriter.println("fullscreenResolution:" + s);
+            String fullscreenVideoModeString = this.getFullscreenVideoModeString();
+            if (fullscreenVideoModeString != null) {
+                writer.println("fullscreenResolution:" + fullscreenVideoModeString);
             }
-        } catch (Exception exception) {
-            LOGGER.error("Failed to save options", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.error("Failed to save options", e);
         }
 
         this.broadcastOptions();
@@ -1687,10 +1850,10 @@ public class Options {
     }
 
     public ClientInformation buildPlayerInformation() {
-        int i = 0;
+        int parts = 0;
 
-        for (PlayerModelPart playermodelpart : this.modelParts) {
-            i |= playermodelpart.getMask();
+        for (PlayerModelPart part : this.modelParts) {
+            parts |= part.getMask();
         }
 
         return new ClientInformation(
@@ -1698,7 +1861,7 @@ public class Options {
             this.renderDistance.get(),
             this.chatVisibility.get(),
             this.chatColors.get(),
-            i,
+            parts,
             this.mainHand.get(),
             this.minecraft.isTextFilteringEnabled(),
             this.allowServerListing.get(),
@@ -1712,19 +1875,19 @@ public class Options {
         }
     }
 
-    public void setModelPart(PlayerModelPart p_92155_, boolean p_92156_) {
-        if (p_92156_) {
-            this.modelParts.add(p_92155_);
+    public void setModelPart(final PlayerModelPart part, final boolean visible) {
+        if (visible) {
+            this.modelParts.add(part);
         } else {
-            this.modelParts.remove(p_92155_);
+            this.modelParts.remove(part);
         }
     }
 
-    public boolean isModelPartEnabled(PlayerModelPart p_168417_) {
-        return this.modelParts.contains(p_168417_);
+    public boolean isModelPartEnabled(final PlayerModelPart part) {
+        return this.modelParts.contains(part);
     }
 
-    public CloudStatus getCloudsType() {
+    public CloudStatus getCloudStatus() {
         return this.cloudStatus.get();
     }
 
@@ -1732,45 +1895,45 @@ public class Options {
         return this.useNativeTransport;
     }
 
-    public void loadSelectedResourcePacks(PackRepository p_92146_) {
-        Set<String> set = Sets.newLinkedHashSet();
+    public void loadSelectedResourcePacks(final PackRepository repository) {
+        Set<String> selected = Sets.newLinkedHashSet();
         Iterator<String> iterator = this.resourcePacks.iterator();
 
         while (iterator.hasNext()) {
-            String s = iterator.next();
-            Pack pack = p_92146_.getPack(s);
-            if (pack == null && !s.startsWith("file/")) {
-                pack = p_92146_.getPack("file/" + s);
+            String id = iterator.next();
+            Pack pack = repository.getPack(id);
+            if (pack == null && !id.startsWith("file/")) {
+                pack = repository.getPack("file/" + id);
             }
 
             if (pack == null) {
-                LOGGER.warn("Removed resource pack {} from options because it doesn't seem to exist anymore", s);
+                LOGGER.warn("Removed resource pack {} from options because it doesn't seem to exist anymore", id);
                 iterator.remove();
-            } else if (!pack.getCompatibility().isCompatible() && !this.incompatibleResourcePacks.contains(s)) {
-                LOGGER.warn("Removed resource pack {} from options because it is no longer compatible", s);
+            } else if (!pack.getCompatibility().isCompatible() && !this.incompatibleResourcePacks.contains(id)) {
+                LOGGER.warn("Removed resource pack {} from options because it is no longer compatible", id);
                 iterator.remove();
-            } else if (pack.getCompatibility().isCompatible() && this.incompatibleResourcePacks.contains(s)) {
-                LOGGER.info("Removed resource pack {} from incompatibility list because it's now compatible", s);
-                this.incompatibleResourcePacks.remove(s);
+            } else if (pack.getCompatibility().isCompatible() && this.incompatibleResourcePacks.contains(id)) {
+                LOGGER.info("Removed resource pack {} from incompatibility list because it's now compatible", id);
+                this.incompatibleResourcePacks.remove(id);
             } else {
-                set.add(pack.getId());
+                selected.add(pack.getId());
             }
         }
 
-        p_92146_.setSelected(set);
+        repository.setSelected(selected);
     }
 
     public CameraType getCameraType() {
         return this.cameraType;
     }
 
-    public void setCameraType(CameraType p_92158_) {
-        this.cameraType = p_92158_;
+    public void setCameraType(final CameraType cameraType) {
+        this.cameraType = cameraType;
     }
 
-    private static List<String> readListOfStrings(String p_298720_) {
-        List<String> list = GsonHelper.fromNullableJson(GSON, p_298720_, LIST_OF_STRINGS_TYPE);
-        return (List<String>)(list != null ? list : Lists.newArrayList());
+    private static List<String> readListOfStrings(final String value) {
+        List<String> result = GsonHelper.fromNullableJson(GSON, value, LIST_OF_STRINGS_TYPE);
+        return result != null ? result : Lists.newArrayList();
     }
 
     public File getFile() {
@@ -1778,73 +1941,71 @@ public class Options {
     }
 
     public String dumpOptionsForReport() {
-        final List<Pair<String, Object>> list = new ArrayList<>();
+        final List<Pair<String, Object>> optionsForReport = new ArrayList<>();
         this.processDumpedOptions(new Options.OptionAccess() {
             @Override
-            public <T> void process(String p_328704_, OptionInstance<T> p_330356_) {
-                list.add(Pair.of(p_328704_, p_330356_.get()));
+            public <T> void process(final String name, final OptionInstance<T> option) {
+                optionsForReport.add(Pair.of(name, option.get()));
             }
         });
-        list.add(Pair.of("fullscreenResolution", String.valueOf(this.fullscreenVideoModeString)));
-        list.add(Pair.of("glDebugVerbosity", this.glDebugVerbosity));
-        list.add(Pair.of("overrideHeight", this.overrideHeight));
-        list.add(Pair.of("overrideWidth", this.overrideWidth));
-        list.add(Pair.of("syncChunkWrites", this.syncWrites));
-        list.add(Pair.of("useNativeTransport", this.useNativeTransport));
-        list.add(Pair.of("resourcePacks", this.resourcePacks));
-        return list.stream()
+        optionsForReport.add(Pair.of("fullscreenResolution", String.valueOf(this.fullscreenVideoModeString)));
+        optionsForReport.add(Pair.of("glDebugVerbosity", this.glDebugVerbosity));
+        optionsForReport.add(Pair.of("overrideHeight", this.overrideHeight));
+        optionsForReport.add(Pair.of("overrideWidth", this.overrideWidth));
+        optionsForReport.add(Pair.of("syncChunkWrites", this.syncWrites));
+        optionsForReport.add(Pair.of("useNativeTransport", this.useNativeTransport));
+        optionsForReport.add(Pair.of("resourcePacks", this.resourcePacks));
+        return optionsForReport.stream()
             .sorted(Comparator.comparing(Pair::getFirst))
-            .map(p_325285_ -> p_325285_.getFirst() + ": " + p_325285_.getSecond())
+            .map(e -> e.getFirst() + ": " + e.getSecond())
             .collect(Collectors.joining(System.lineSeparator()));
     }
 
-    public void setServerRenderDistance(int p_193771_) {
-        this.serverRenderDistance = p_193771_;
+    public void setServerRenderDistance(final int serverRenderDistance) {
+        this.serverRenderDistance = serverRenderDistance;
     }
 
     public int getEffectiveRenderDistance() {
         return this.serverRenderDistance > 0 ? Math.min(this.renderDistance.get(), this.serverRenderDistance) : this.renderDistance.get();
     }
 
-    private static Component pixelValueLabel(Component p_231953_, int p_231954_) {
-        return Component.translatable("options.pixel_value", p_231953_, p_231954_);
+    private static Component pixelValueLabel(final Component caption, final int value) {
+        return Component.translatable("options.pixel_value", caption, value);
     }
 
-    private static Component percentValueLabel(Component p_231898_, double p_231899_) {
-        return Component.translatable("options.percent_value", p_231898_, (int)(p_231899_ * 100.0));
+    private static Component percentValueLabel(final Component caption, final double value) {
+        return Component.translatable("options.percent_value", caption, (int)(value * 100.0));
     }
 
-    public static Component genericValueLabel(Component p_231922_, Component p_231923_) {
-        return Component.translatable("options.generic_value", p_231922_, p_231923_);
+    public static Component genericValueLabel(final Component caption, final Component value) {
+        return Component.translatable("options.generic_value", caption, value);
     }
 
-    public static Component genericValueLabel(Component p_231901_, int p_231902_) {
-        return genericValueLabel(p_231901_, Component.literal(Integer.toString(p_231902_)));
+    public static Component genericValueLabel(final Component caption, final int value) {
+        return genericValueLabel(caption, Component.literal(Integer.toString(value)));
     }
 
-    public static Component genericValueOrOffLabel(Component p_345288_, int p_344826_) {
-        return p_344826_ == 0 ? genericValueLabel(p_345288_, CommonComponents.OPTION_OFF) : genericValueLabel(p_345288_, p_344826_);
+    public static Component genericValueOrOffLabel(final Component caption, final int value) {
+        return value == 0 ? genericValueLabel(caption, CommonComponents.OPTION_OFF) : genericValueLabel(caption, value);
     }
 
-    private static Component percentValueOrOffLabel(Component p_335881_, double p_328979_) {
-        return p_328979_ == 0.0 ? genericValueLabel(p_335881_, CommonComponents.OPTION_OFF) : percentValueLabel(p_335881_, p_328979_);
+    private static Component percentValueOrOffLabel(final Component caption, final double value) {
+        return value == 0.0 ? genericValueLabel(caption, CommonComponents.OPTION_OFF) : percentValueLabel(caption, value);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    interface FieldAccess extends Options.OptionAccess {
-        int process(String p_168523_, int p_168524_);
+        private interface FieldAccess extends Options.OptionAccess {
+        int process(String name, int value);
 
-        boolean process(String p_168535_, boolean p_168536_);
+        boolean process(String name, boolean value);
 
-        String process(String p_168533_, String p_168534_);
+        String process(String name, String value);
 
-        float process(String p_168521_, float p_168522_);
+        float process(String name, float value);
 
-        <T> T process(String p_168525_, T p_168526_, Function<String, T> p_168527_, Function<T, String> p_168528_);
+        <T> T process(String name, T value, Function<String, T> reader, Function<T, String> writer);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    interface OptionAccess {
-        <T> void process(String p_330128_, OptionInstance<T> p_329013_);
+        private interface OptionAccess {
+        <T> void process(String name, OptionInstance<T> option);
     }
 }

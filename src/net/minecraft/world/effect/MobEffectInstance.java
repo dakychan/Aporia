@@ -5,7 +5,6 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.Int2IntFunction;
 import java.util.Optional;
@@ -29,11 +28,11 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
     public static final int MIN_AMPLIFIER = 0;
     public static final int MAX_AMPLIFIER = 255;
     public static final Codec<MobEffectInstance> CODEC = RecordCodecBuilder.create(
-        p_341259_ -> p_341259_.group(
+        i -> i.group(
                 MobEffect.CODEC.fieldOf("id").forGetter(MobEffectInstance::getEffect),
                 MobEffectInstance.Details.MAP_CODEC.forGetter(MobEffectInstance::asDetails)
             )
-            .apply(p_341259_, MobEffectInstance::new)
+            .apply(i, MobEffectInstance::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, MobEffectInstance> STREAM_CODEC = StreamCodec.composite(
         MobEffect.STREAM_CODEC, MobEffectInstance::getEffect, MobEffectInstance.Details.STREAM_CODEC, MobEffectInstance::asDetails, MobEffectInstance::new
@@ -47,52 +46,60 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
     private @Nullable MobEffectInstance hiddenEffect;
     private final MobEffectInstance.BlendState blendState = new MobEffectInstance.BlendState();
 
-    public MobEffectInstance(Holder<MobEffect> p_333937_) {
-        this(p_333937_, 0, 0);
+    public MobEffectInstance(final Holder<MobEffect> effect) {
+        this(effect, 0, 0);
     }
 
-    public MobEffectInstance(Holder<MobEffect> p_332556_, int p_19523_) {
-        this(p_332556_, p_19523_, 0);
+    public MobEffectInstance(final Holder<MobEffect> effect, final int duration) {
+        this(effect, duration, 0);
     }
 
-    public MobEffectInstance(Holder<MobEffect> p_334453_, int p_328066_, int p_330997_) {
-        this(p_334453_, p_328066_, p_330997_, false, true);
+    public MobEffectInstance(final Holder<MobEffect> effect, final int duration, final int amplifier) {
+        this(effect, duration, amplifier, false, true);
     }
 
-    public MobEffectInstance(Holder<MobEffect> p_327781_, int p_19529_, int p_19530_, boolean p_19531_, boolean p_19532_) {
-        this(p_327781_, p_19529_, p_19530_, p_19531_, p_19532_, p_19532_);
-    }
-
-    public MobEffectInstance(Holder<MobEffect> p_333122_, int p_216888_, int p_216889_, boolean p_216890_, boolean p_216891_, boolean p_216892_) {
-        this(p_333122_, p_216888_, p_216889_, p_216890_, p_216891_, p_216892_, null);
+    public MobEffectInstance(final Holder<MobEffect> effect, final int duration, final int amplifier, final boolean ambient, final boolean visible) {
+        this(effect, duration, amplifier, ambient, visible, visible);
     }
 
     public MobEffectInstance(
-        Holder<MobEffect> p_334558_, int p_19519_, int p_19520_, boolean p_332448_, boolean p_327855_, boolean p_334281_, @Nullable MobEffectInstance p_332569_
+        final Holder<MobEffect> effect, final int duration, final int amplifier, final boolean ambient, final boolean visible, final boolean showIcon
     ) {
-        this.effect = p_334558_;
-        this.duration = p_19519_;
-        this.amplifier = Mth.clamp(p_19520_, 0, 255);
-        this.ambient = p_332448_;
-        this.visible = p_327855_;
-        this.showIcon = p_334281_;
-        this.hiddenEffect = p_332569_;
+        this(effect, duration, amplifier, ambient, visible, showIcon, null);
     }
 
-    public MobEffectInstance(MobEffectInstance p_19543_) {
-        this.effect = p_19543_.effect;
-        this.setDetailsFrom(p_19543_);
+    public MobEffectInstance(
+        final Holder<MobEffect> effect,
+        final int duration,
+        final int amplifier,
+        final boolean ambient,
+        final boolean visible,
+        final boolean showIcon,
+        final @Nullable MobEffectInstance hiddenEffect
+    ) {
+        this.effect = effect;
+        this.duration = duration;
+        this.amplifier = Mth.clamp(amplifier, 0, 255);
+        this.ambient = ambient;
+        this.visible = visible;
+        this.showIcon = showIcon;
+        this.hiddenEffect = hiddenEffect;
     }
 
-    private MobEffectInstance(Holder<MobEffect> p_330051_, MobEffectInstance.Details p_332322_) {
+    public MobEffectInstance(final MobEffectInstance copy) {
+        this.effect = copy.effect;
+        this.setDetailsFrom(copy);
+    }
+
+    private MobEffectInstance(final Holder<MobEffect> effect, final MobEffectInstance.Details details) {
         this(
-            p_330051_,
-            p_332322_.duration(),
-            p_332322_.amplifier(),
-            p_332322_.ambient(),
-            p_332322_.showParticles(),
-            p_332322_.showIcon(),
-            p_332322_.hiddenEffect().map(p_326756_ -> new MobEffectInstance(p_330051_, p_326756_)).orElse(null)
+            effect,
+            details.duration(),
+            details.amplifier(),
+            details.ambient(),
+            details.showParticles(),
+            details.showIcon(),
+            details.hiddenEffect().map(hidden -> new MobEffectInstance(effect, hidden)).orElse(null)
         );
     }
 
@@ -107,87 +114,87 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
         );
     }
 
-    public float getBlendFactor(LivingEntity p_333473_, float p_327866_) {
-        return this.blendState.getFactor(p_333473_, p_327866_);
+    public float getBlendFactor(final LivingEntity livingEntity, final float partialTickTime) {
+        return this.blendState.getFactor(livingEntity, partialTickTime);
     }
 
     public ParticleOptions getParticleOptions() {
         return this.effect.value().createParticleOptions(this);
     }
 
-    void setDetailsFrom(MobEffectInstance p_19549_) {
-        this.duration = p_19549_.duration;
-        this.amplifier = p_19549_.amplifier;
-        this.ambient = p_19549_.ambient;
-        this.visible = p_19549_.visible;
-        this.showIcon = p_19549_.showIcon;
+    private void setDetailsFrom(final MobEffectInstance copy) {
+        this.duration = copy.duration;
+        this.amplifier = copy.amplifier;
+        this.ambient = copy.ambient;
+        this.visible = copy.visible;
+        this.showIcon = copy.showIcon;
     }
 
-    public boolean update(MobEffectInstance p_19559_) {
-        if (!this.effect.equals(p_19559_.effect)) {
+    public boolean update(final MobEffectInstance takeOver) {
+        if (!this.effect.equals(takeOver.effect)) {
             LOGGER.warn("This method should only be called for matching effects!");
         }
 
-        boolean flag = false;
-        if (p_19559_.amplifier > this.amplifier) {
-            if (p_19559_.isShorterDurationThan(this)) {
-                MobEffectInstance mobeffectinstance = this.hiddenEffect;
+        boolean changed = false;
+        if (takeOver.amplifier > this.amplifier) {
+            if (takeOver.isShorterDurationThan(this)) {
+                MobEffectInstance prevHiddenEffect = this.hiddenEffect;
                 this.hiddenEffect = new MobEffectInstance(this);
-                this.hiddenEffect.hiddenEffect = mobeffectinstance;
+                this.hiddenEffect.hiddenEffect = prevHiddenEffect;
             }
 
-            this.amplifier = p_19559_.amplifier;
-            this.duration = p_19559_.duration;
-            flag = true;
-        } else if (this.isShorterDurationThan(p_19559_)) {
-            if (p_19559_.amplifier == this.amplifier) {
-                this.duration = p_19559_.duration;
-                flag = true;
+            this.amplifier = takeOver.amplifier;
+            this.duration = takeOver.duration;
+            changed = true;
+        } else if (this.isShorterDurationThan(takeOver)) {
+            if (takeOver.amplifier == this.amplifier) {
+                this.duration = takeOver.duration;
+                changed = true;
             } else if (this.hiddenEffect == null) {
-                this.hiddenEffect = new MobEffectInstance(p_19559_);
+                this.hiddenEffect = new MobEffectInstance(takeOver);
             } else {
-                this.hiddenEffect.update(p_19559_);
+                this.hiddenEffect.update(takeOver);
             }
         }
 
-        if (!p_19559_.ambient && this.ambient || flag) {
-            this.ambient = p_19559_.ambient;
-            flag = true;
+        if (!takeOver.ambient && this.ambient || changed) {
+            this.ambient = takeOver.ambient;
+            changed = true;
         }
 
-        if (p_19559_.visible != this.visible) {
-            this.visible = p_19559_.visible;
-            flag = true;
+        if (takeOver.visible != this.visible) {
+            this.visible = takeOver.visible;
+            changed = true;
         }
 
-        if (p_19559_.showIcon != this.showIcon) {
-            this.showIcon = p_19559_.showIcon;
-            flag = true;
+        if (takeOver.showIcon != this.showIcon) {
+            this.showIcon = takeOver.showIcon;
+            changed = true;
         }
 
-        return flag;
+        return changed;
     }
 
-    private boolean isShorterDurationThan(MobEffectInstance p_268133_) {
-        return !this.isInfiniteDuration() && (this.duration < p_268133_.duration || p_268133_.isInfiniteDuration());
+    private boolean isShorterDurationThan(final MobEffectInstance other) {
+        return !this.isInfiniteDuration() && (this.duration < other.duration || other.isInfiniteDuration());
     }
 
     public boolean isInfiniteDuration() {
         return this.duration == -1;
     }
 
-    public boolean endsWithin(int p_268088_) {
-        return !this.isInfiniteDuration() && this.duration <= p_268088_;
+    public boolean endsWithin(final int ticks) {
+        return !this.isInfiniteDuration() && this.duration <= ticks;
     }
 
-    public MobEffectInstance withScaledDuration(float p_395912_) {
-        MobEffectInstance mobeffectinstance = new MobEffectInstance(this);
-        mobeffectinstance.duration = mobeffectinstance.mapDuration(p_390476_ -> Math.max(Mth.floor(p_390476_ * p_395912_), 1));
-        return mobeffectinstance;
+    public MobEffectInstance withScaledDuration(final float scale) {
+        MobEffectInstance copy = new MobEffectInstance(this);
+        copy.duration = copy.mapDuration(duration -> Math.max(Mth.floor(duration * scale), 1));
+        return copy;
     }
 
-    public int mapDuration(Int2IntFunction p_268089_) {
-        return !this.isInfiniteDuration() && this.duration != 0 ? p_268089_.applyAsInt(this.duration) : this.duration;
+    public int mapDuration(final Int2IntFunction mapper) {
+        return !this.isInfiniteDuration() && this.duration != 0 ? mapper.applyAsInt(this.duration) : this.duration;
     }
 
     public Holder<MobEffect> getEffect() {
@@ -214,22 +221,23 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
         return this.showIcon;
     }
 
-    public boolean tickServer(ServerLevel p_396790_, LivingEntity p_395235_, Runnable p_391834_) {
+    public boolean tickServer(final ServerLevel serverLevel, final LivingEntity target, final Runnable onEffectUpdate) {
         if (!this.hasRemainingDuration()) {
             return false;
-        } else {
-            int i = this.isInfiniteDuration() ? p_395235_.tickCount : this.duration;
-            if (this.effect.value().shouldApplyEffectTickThisTick(i, this.amplifier) && !this.effect.value().applyEffectTick(p_396790_, p_395235_, this.amplifier)) {
-                return false;
-            } else {
-                this.tickDownDuration();
-                if (this.downgradeToHiddenEffect()) {
-                    p_391834_.run();
-                }
-
-                return this.hasRemainingDuration();
-            }
         }
+
+        int tickCount = this.isInfiniteDuration() ? target.tickCount : this.duration;
+        if (this.effect.value().shouldApplyEffectTickThisTick(tickCount, this.amplifier)
+            && !this.effect.value().applyEffectTick(serverLevel, target, this.amplifier)) {
+            return false;
+        }
+
+        this.tickDownDuration();
+        if (this.downgradeToHiddenEffect()) {
+            onEffectUpdate.run();
+        }
+
+        return this.hasRemainingDuration();
     }
 
     public void tickClient() {
@@ -250,7 +258,7 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
             this.hiddenEffect.tickDownDuration();
         }
 
-        this.duration = this.mapDuration(p_267916_ -> p_267916_ - 1);
+        this.duration = this.mapDuration(d -> d - 1);
     }
 
     private boolean downgradeToHiddenEffect() {
@@ -263,16 +271,16 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
         }
     }
 
-    public void onEffectStarted(LivingEntity p_297679_) {
-        this.effect.value().onEffectStarted(p_297679_, this.amplifier);
+    public void onEffectStarted(final LivingEntity mob) {
+        this.effect.value().onEffectStarted(mob, this.amplifier);
     }
 
-    public void onMobRemoved(ServerLevel p_364127_, LivingEntity p_329318_, Entity.RemovalReason p_333232_) {
-        this.effect.value().onMobRemoved(p_364127_, p_329318_, this.amplifier, p_333232_);
+    public void onMobRemoved(final ServerLevel level, final LivingEntity mob, final Entity.RemovalReason reason) {
+        this.effect.value().onMobRemoved(level, mob, this.amplifier, reason);
     }
 
-    public void onMobHurt(ServerLevel p_361358_, LivingEntity p_327684_, DamageSource p_328403_, float p_331463_) {
-        this.effect.value().onMobHurt(p_361358_, p_327684_, this.amplifier, p_328403_, p_331463_);
+    public void onMobHurt(final ServerLevel level, final LivingEntity mob, final DamageSource source, final float damage) {
+        this.effect.value().onMobHurt(level, mob, this.amplifier, source, damage);
     }
 
     public String getDescriptionId() {
@@ -281,22 +289,22 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
 
     @Override
     public String toString() {
-        String s;
+        String result;
         if (this.amplifier > 0) {
-            s = this.getDescriptionId() + " x " + (this.amplifier + 1) + ", Duration: " + this.describeDuration();
+            result = this.getDescriptionId() + " x " + (this.amplifier + 1) + ", Duration: " + this.describeDuration();
         } else {
-            s = this.getDescriptionId() + ", Duration: " + this.describeDuration();
+            result = this.getDescriptionId() + ", Duration: " + this.describeDuration();
         }
 
         if (!this.visible) {
-            s = s + ", Particles: false";
+            result = result + ", Particles: false";
         }
 
         if (!this.showIcon) {
-            s = s + ", Show Icon: false";
+            result = result + ", Show Icon: false";
         }
 
-        return s;
+        return result;
     }
 
     private String describeDuration() {
@@ -304,122 +312,124 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
     }
 
     @Override
-    public boolean equals(Object p_19574_) {
-        if (this == p_19574_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return !(p_19574_ instanceof MobEffectInstance mobeffectinstance)
+            return !(o instanceof MobEffectInstance that)
                 ? false
-                : this.duration == mobeffectinstance.duration
-                    && this.amplifier == mobeffectinstance.amplifier
-                    && this.ambient == mobeffectinstance.ambient
-                    && this.visible == mobeffectinstance.visible
-                    && this.showIcon == mobeffectinstance.showIcon
-                    && this.effect.equals(mobeffectinstance.effect);
+                : this.duration == that.duration
+                    && this.amplifier == that.amplifier
+                    && this.ambient == that.ambient
+                    && this.visible == that.visible
+                    && this.showIcon == that.showIcon
+                    && this.effect.equals(that.effect);
         }
     }
 
     @Override
     public int hashCode() {
-        int i = this.effect.hashCode();
-        i = 31 * i + this.duration;
-        i = 31 * i + this.amplifier;
-        i = 31 * i + (this.ambient ? 1 : 0);
-        i = 31 * i + (this.visible ? 1 : 0);
-        return 31 * i + (this.showIcon ? 1 : 0);
+        int result = this.effect.hashCode();
+        result = 31 * result + this.duration;
+        result = 31 * result + this.amplifier;
+        result = 31 * result + (this.ambient ? 1 : 0);
+        result = 31 * result + (this.visible ? 1 : 0);
+        return 31 * result + (this.showIcon ? 1 : 0);
     }
 
-    public int compareTo(MobEffectInstance p_19566_) {
-        int i = 32147;
-        return (this.getDuration() <= 32147 || p_19566_.getDuration() <= 32147) && (!this.isAmbient() || !p_19566_.isAmbient())
+    public int compareTo(final MobEffectInstance o) {
+        int updateCutOff = 32147;
+        return (this.getDuration() <= 32147 || o.getDuration() <= 32147) && (!this.isAmbient() || !o.isAmbient())
             ? ComparisonChain.start()
-                .compareFalseFirst(this.isAmbient(), p_19566_.isAmbient())
-                .compareFalseFirst(this.isInfiniteDuration(), p_19566_.isInfiniteDuration())
-                .compare(this.getDuration(), p_19566_.getDuration())
-                .compare(this.getEffect().value().getColor(), p_19566_.getEffect().value().getColor())
+                .compareFalseFirst(this.isAmbient(), o.isAmbient())
+                .compareFalseFirst(this.isInfiniteDuration(), o.isInfiniteDuration())
+                .compare(this.getDuration(), o.getDuration())
+                .compare(this.getEffect().value().getColor(), o.getEffect().value().getColor())
                 .result()
             : ComparisonChain.start()
-                .compare(this.isAmbient(), p_19566_.isAmbient())
-                .compare(this.getEffect().value().getColor(), p_19566_.getEffect().value().getColor())
+                .compare(this.isAmbient(), o.isAmbient())
+                .compare(this.getEffect().value().getColor(), o.getEffect().value().getColor())
                 .result();
     }
 
-    public void onEffectAdded(LivingEntity p_334348_) {
-        this.effect.value().onEffectAdded(p_334348_, this.amplifier);
+    public void onEffectAdded(final LivingEntity livingEntity) {
+        this.effect.value().onEffectAdded(livingEntity, this.amplifier);
     }
 
-    public boolean is(Holder<MobEffect> p_329529_) {
-        return this.effect.equals(p_329529_);
+    public boolean is(final Holder<MobEffect> effect) {
+        return this.effect.equals(effect);
     }
 
-    public void copyBlendState(MobEffectInstance p_335404_) {
-        this.blendState.copyFrom(p_335404_.blendState);
+    public void copyBlendState(final MobEffectInstance instance) {
+        this.blendState.copyFrom(instance.blendState);
     }
 
     public void skipBlending() {
         this.blendState.setImmediate(this);
     }
 
-    static class BlendState {
+    private static class BlendState {
         private float factor;
         private float factorPreviousFrame;
 
-        public void setImmediate(MobEffectInstance p_333918_) {
-            this.factor = hasEffect(p_333918_) ? 1.0F : 0.0F;
+        public void setImmediate(final MobEffectInstance instance) {
+            this.factor = hasEffect(instance) ? 1.0F : 0.0F;
             this.factorPreviousFrame = this.factor;
         }
 
-        public void copyFrom(MobEffectInstance.BlendState p_327821_) {
-            this.factor = p_327821_.factor;
-            this.factorPreviousFrame = p_327821_.factorPreviousFrame;
+        public void copyFrom(final MobEffectInstance.BlendState other) {
+            this.factor = other.factor;
+            this.factorPreviousFrame = other.factorPreviousFrame;
         }
 
-        public void tick(MobEffectInstance p_330345_) {
+        public void tick(final MobEffectInstance instance) {
             this.factorPreviousFrame = this.factor;
-            boolean flag = hasEffect(p_330345_);
-            float f = flag ? 1.0F : 0.0F;
-            if (this.factor != f) {
-                MobEffect mobeffect = p_330345_.getEffect().value();
-                int i = flag ? mobeffect.getBlendInDurationTicks() : mobeffect.getBlendOutDurationTicks();
-                if (i == 0) {
-                    this.factor = f;
+            boolean hasEffect = hasEffect(instance);
+            float target = hasEffect ? 1.0F : 0.0F;
+            if (this.factor != target) {
+                MobEffect effect = instance.getEffect().value();
+                int blendDuration = hasEffect ? effect.getBlendInDurationTicks() : effect.getBlendOutDurationTicks();
+                if (blendDuration == 0) {
+                    this.factor = target;
                 } else {
-                    float f1 = 1.0F / i;
-                    this.factor = this.factor + Mth.clamp(f - this.factor, -f1, f1);
+                    float maxDeltaPerTick = 1.0F / blendDuration;
+                    this.factor = this.factor + Mth.clamp(target - this.factor, -maxDeltaPerTick, maxDeltaPerTick);
                 }
             }
         }
 
-        private static boolean hasEffect(MobEffectInstance p_394489_) {
-            return !p_394489_.endsWithin(p_394489_.getEffect().value().getBlendOutAdvanceTicks());
+        private static boolean hasEffect(final MobEffectInstance instance) {
+            return !instance.endsWithin(instance.getEffect().value().getBlendOutAdvanceTicks());
         }
 
-        public float getFactor(LivingEntity p_333208_, float p_330792_) {
-            if (p_333208_.isRemoved()) {
+        public float getFactor(final LivingEntity livingEntity, final float partialTickTime) {
+            if (livingEntity.isRemoved()) {
                 this.factorPreviousFrame = this.factor;
             }
 
-            return Mth.lerp(p_330792_, this.factorPreviousFrame, this.factor);
+            return Mth.lerp(partialTickTime, this.factorPreviousFrame, this.factor);
         }
     }
 
-    record Details(int amplifier, int duration, boolean ambient, boolean showParticles, boolean showIcon, Optional<MobEffectInstance.Details> hiddenEffect) {
+    private record Details(
+        int amplifier, int duration, boolean ambient, boolean showParticles, boolean showIcon, Optional<MobEffectInstance.Details> hiddenEffect
+    ) {
         public static final MapCodec<MobEffectInstance.Details> MAP_CODEC = MapCodec.recursive(
             "MobEffectInstance.Details",
-            p_332855_ -> RecordCodecBuilder.mapCodec(
-                p_327980_ -> p_327980_.group(
+            codec -> RecordCodecBuilder.mapCodec(
+                i -> i.group(
                         ExtraCodecs.UNSIGNED_BYTE.optionalFieldOf("amplifier", 0).forGetter(MobEffectInstance.Details::amplifier),
                         Codec.INT.optionalFieldOf("duration", 0).forGetter(MobEffectInstance.Details::duration),
                         Codec.BOOL.optionalFieldOf("ambient", false).forGetter(MobEffectInstance.Details::ambient),
                         Codec.BOOL.optionalFieldOf("show_particles", true).forGetter(MobEffectInstance.Details::showParticles),
-                        Codec.BOOL.optionalFieldOf("show_icon").forGetter(p_330483_ -> Optional.of(p_330483_.showIcon())),
-                        p_332855_.optionalFieldOf("hidden_effect").forGetter(MobEffectInstance.Details::hiddenEffect)
+                        Codec.BOOL.optionalFieldOf("show_icon").forGetter(d -> Optional.of(d.showIcon())),
+                        codec.optionalFieldOf("hidden_effect").forGetter(MobEffectInstance.Details::hiddenEffect)
                     )
-                    .apply(p_327980_, MobEffectInstance.Details::create)
+                    .apply(i, MobEffectInstance.Details::create)
             )
         );
         public static final StreamCodec<ByteBuf, MobEffectInstance.Details> STREAM_CODEC = StreamCodec.recursive(
-            p_333279_ -> StreamCodec.composite(
+            subCodec -> StreamCodec.composite(
                 ByteBufCodecs.VAR_INT,
                 MobEffectInstance.Details::amplifier,
                 ByteBufCodecs.VAR_INT,
@@ -430,16 +440,21 @@ public class MobEffectInstance implements Comparable<MobEffectInstance> {
                 MobEffectInstance.Details::showParticles,
                 ByteBufCodecs.BOOL,
                 MobEffectInstance.Details::showIcon,
-                p_333279_.apply(ByteBufCodecs::optional),
+                subCodec.apply(ByteBufCodecs::optional),
                 MobEffectInstance.Details::hiddenEffect,
                 MobEffectInstance.Details::new
             )
         );
 
         private static MobEffectInstance.Details create(
-            int p_334251_, int p_332882_, boolean p_330487_, boolean p_334607_, Optional<Boolean> p_329280_, Optional<MobEffectInstance.Details> p_330477_
+            final int amplifier,
+            final int duration,
+            final boolean ambient,
+            final boolean showParticles,
+            final Optional<Boolean> showIcon,
+            final Optional<MobEffectInstance.Details> hiddenEffect
         ) {
-            return new MobEffectInstance.Details(p_334251_, p_332882_, p_330487_, p_334607_, p_329280_.orElse(p_334607_), p_330477_);
+            return new MobEffectInstance.Details(amplifier, duration, ambient, showParticles, showIcon.orElse(showParticles), hiddenEffect);
         }
     }
 }

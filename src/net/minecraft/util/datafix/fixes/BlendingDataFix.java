@@ -3,7 +3,6 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
@@ -16,51 +15,53 @@ import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class BlendingDataFix extends DataFix {
     private final String name;
-    private static final Set<String> STATUSES_TO_SKIP_BLENDING = Set.of("minecraft:empty", "minecraft:structure_starts", "minecraft:structure_references", "minecraft:biomes");
+    private static final Set<String> STATUSES_TO_SKIP_BLENDING = Set.of(
+        "minecraft:empty", "minecraft:structure_starts", "minecraft:structure_references", "minecraft:biomes"
+    );
 
-    public BlendingDataFix(Schema p_216561_) {
-        super(p_216561_, false);
-        this.name = "Blending Data Fix v" + p_216561_.getVersionKey();
+    public BlendingDataFix(final Schema outputSchema) {
+        super(outputSchema, false);
+        this.name = "Blending Data Fix v" + outputSchema.getVersionKey();
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getOutputSchema().getType(References.CHUNK);
+        Type<?> chunkType = this.getOutputSchema().getType(References.CHUNK);
         return this.fixTypeEverywhereTyped(
-            this.name, type, p_216563_ -> p_216563_.update(DSL.remainderFinder(), p_240248_ -> updateChunkTag(p_240248_, p_240248_.get("__context")))
+            this.name, chunkType, chunk -> chunk.update(DSL.remainderFinder(), chunkTag -> updateChunkTag(chunkTag, chunkTag.get("__context")))
         );
     }
 
-    private static Dynamic<?> updateChunkTag(Dynamic<?> p_240279_, OptionalDynamic<?> p_240280_) {
-        p_240279_ = p_240279_.remove("blending_data");
-        boolean flag = "minecraft:overworld".equals(p_240280_.get("dimension").asString().result().orElse(""));
-        Optional<? extends Dynamic<?>> optional = p_240279_.get("Status").result();
-        if (flag && optional.isPresent()) {
-            String s = NamespacedSchema.ensureNamespaced(optional.get().asString("empty"));
-            Optional<? extends Dynamic<?>> optional1 = p_240279_.get("below_zero_retrogen").result();
-            if (!STATUSES_TO_SKIP_BLENDING.contains(s)) {
-                p_240279_ = updateBlendingData(p_240279_, 384, -64);
-            } else if (optional1.isPresent()) {
-                Dynamic<?> dynamic = (Dynamic<?>)optional1.get();
-                String s1 = NamespacedSchema.ensureNamespaced(dynamic.get("target_status").asString("empty"));
-                if (!STATUSES_TO_SKIP_BLENDING.contains(s1)) {
-                    p_240279_ = updateBlendingData(p_240279_, 256, 0);
+    private static Dynamic<?> updateChunkTag(Dynamic<?> chunkTag, final OptionalDynamic<?> contextTag) {
+        chunkTag = chunkTag.remove("blending_data");
+        boolean isOverworld = "minecraft:overworld".equals(contextTag.get("dimension").asString().result().orElse(""));
+        Optional<? extends Dynamic<?>> statusOpt = chunkTag.get("Status").result();
+        if (isOverworld && statusOpt.isPresent()) {
+            String status = NamespacedSchema.ensureNamespaced(statusOpt.get().asString("empty"));
+            Optional<? extends Dynamic<?>> belowZeroRetrogenOpt = chunkTag.get("below_zero_retrogen").result();
+            if (!STATUSES_TO_SKIP_BLENDING.contains(status)) {
+                chunkTag = updateBlendingData(chunkTag, 384, -64);
+            } else if (belowZeroRetrogenOpt.isPresent()) {
+                Dynamic<?> belowZeroRetrogen = (Dynamic<?>)belowZeroRetrogenOpt.get();
+                String targetStatus = NamespacedSchema.ensureNamespaced(belowZeroRetrogen.get("target_status").asString("empty"));
+                if (!STATUSES_TO_SKIP_BLENDING.contains(targetStatus)) {
+                    chunkTag = updateBlendingData(chunkTag, 256, 0);
                 }
             }
         }
 
-        return p_240279_;
+        return chunkTag;
     }
 
-    private static Dynamic<?> updateBlendingData(Dynamic<?> p_216567_, int p_216568_, int p_216569_) {
-        return p_216567_.set(
+    private static Dynamic<?> updateBlendingData(final Dynamic<?> chunkTag, final int height, final int minY) {
+        return chunkTag.set(
             "blending_data",
-            p_216567_.createMap(
+            chunkTag.createMap(
                 Map.of(
-                    p_216567_.createString("min_section"),
-                    p_216567_.createInt(SectionPos.blockToSectionCoord(p_216569_)),
-                    p_216567_.createString("max_section"),
-                    p_216567_.createInt(SectionPos.blockToSectionCoord(p_216569_ + p_216568_))
+                    chunkTag.createString("min_section"),
+                    chunkTag.createInt(SectionPos.blockToSectionCoord(minY)),
+                    chunkTag.createString("max_section"),
+                    chunkTag.createInt(SectionPos.blockToSectionCoord(minY + height))
                 )
             )
         );

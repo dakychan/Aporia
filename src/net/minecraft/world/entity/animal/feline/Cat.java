@@ -2,8 +2,8 @@ package net.minecraft.world.entity.animal.feline;
 
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.Holder;
+import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.component.DataComponents;
@@ -14,7 +14,6 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
-import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.Mth;
@@ -25,9 +24,13 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.attribute.EnvironmentAttributes;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -55,10 +58,7 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.VariantUtils;
-import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.DyeItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
@@ -78,8 +78,14 @@ public class Cat extends TamableAnimal {
     private static final EntityDataAccessor<Boolean> IS_LYING = SynchedEntityData.defineId(Cat.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> RELAX_STATE_ONE = SynchedEntityData.defineId(Cat.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_COLLAR_COLOR = SynchedEntityData.defineId(Cat.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Holder<CatSoundVariant>> DATA_SOUND_VARIANT_ID = SynchedEntityData.defineId(
+        Cat.class, EntityDataSerializers.CAT_SOUND_VARIANT
+    );
     private static final ResourceKey<CatVariant> DEFAULT_VARIANT = CatVariants.BLACK;
     private static final DyeColor DEFAULT_COLLAR_COLOR = DyeColor.RED;
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.3F, 0.35F)
+        .withEyeHeight(0.34375F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, 0.3125F, 0.0F));
     private Cat.@Nullable CatAvoidEntityGoal<Player> avoidPlayersGoal;
     private @Nullable TemptGoal temptGoal;
     private float lieDownAmount;
@@ -90,14 +96,14 @@ public class Cat extends TamableAnimal {
     private float relaxStateOneAmount;
     private float relaxStateOneAmountO;
 
-    public Cat(EntityType<? extends Cat> p_450475_, Level p_460125_) {
-        super(p_450475_, p_460125_);
+    public Cat(final EntityType<? extends Cat> type, final Level level) {
+        super(type, level);
         this.reassessTameGoals();
     }
 
     @Override
     protected void registerGoals() {
-        this.temptGoal = new Cat.CatTemptGoal(this, 0.6, p_458797_ -> p_458797_.is(ItemTags.CAT_FOOD), true);
+        this.temptGoal = new Cat.CatTemptGoal(this, 0.6, i -> i.is(ItemTags.CAT_FOOD), true);
         this.goalSelector.addGoal(1, new FloatGoal(this));
         this.goalSelector.addGoal(1, new TamableAnimal.TamableAnimalPanicGoal(1.5));
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
@@ -119,52 +125,70 @@ public class Cat extends TamableAnimal {
         return this.entityData.get(DATA_VARIANT_ID);
     }
 
-    private void setVariant(Holder<CatVariant> p_458808_) {
-        this.entityData.set(DATA_VARIANT_ID, p_458808_);
+    private void setVariant(final Holder<CatVariant> variant) {
+        this.entityData.set(DATA_VARIANT_ID, variant);
+    }
+
+    private Holder<CatSoundVariant> getSoundVariant() {
+        return this.entityData.get(DATA_SOUND_VARIANT_ID);
+    }
+
+    private void setSoundVariant(final Holder<CatSoundVariant> soundVariant) {
+        this.entityData.set(DATA_SOUND_VARIANT_ID, soundVariant);
+    }
+
+    private CatSoundVariant.CatSoundSet getSoundSet() {
+        return this.isBaby() ? this.getSoundVariant().value().babySounds() : this.getSoundVariant().value().adultSounds();
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_453519_) {
-        if (p_453519_ == DataComponents.CAT_VARIANT) {
-            return castComponentValue((DataComponentType<T>)p_453519_, this.getVariant());
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        if (type == DataComponents.CAT_VARIANT) {
+            return castComponentValue((DataComponentType<T>)type, this.getVariant());
+        } else if (type == DataComponents.CAT_SOUND_VARIANT) {
+            return castComponentValue((DataComponentType<T>)type, this.getSoundVariant());
         } else {
-            return p_453519_ == DataComponents.CAT_COLLAR ? castComponentValue((DataComponentType<T>)p_453519_, this.getCollarColor()) : super.get(p_453519_);
+            return type == DataComponents.CAT_COLLAR ? castComponentValue((DataComponentType<T>)type, this.getCollarColor()) : super.get(type);
         }
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_453347_) {
-        this.applyImplicitComponentIfPresent(p_453347_, DataComponents.CAT_VARIANT);
-        this.applyImplicitComponentIfPresent(p_453347_, DataComponents.CAT_COLLAR);
-        super.applyImplicitComponents(p_453347_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.CAT_VARIANT);
+        this.applyImplicitComponentIfPresent(components, DataComponents.CAT_SOUND_VARIANT);
+        this.applyImplicitComponentIfPresent(components, DataComponents.CAT_COLLAR);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_459621_, T p_451752_) {
-        if (p_459621_ == DataComponents.CAT_VARIANT) {
-            this.setVariant(castComponentValue(DataComponents.CAT_VARIANT, p_451752_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.CAT_VARIANT) {
+            this.setVariant(castComponentValue(DataComponents.CAT_VARIANT, value));
             return true;
-        } else if (p_459621_ == DataComponents.CAT_COLLAR) {
-            this.setCollarColor(castComponentValue(DataComponents.CAT_COLLAR, p_451752_));
+        } else if (type == DataComponents.CAT_SOUND_VARIANT) {
+            this.setSoundVariant(castComponentValue(DataComponents.CAT_SOUND_VARIANT, value));
+            return true;
+        } else if (type == DataComponents.CAT_COLLAR) {
+            this.setCollarColor(castComponentValue(DataComponents.CAT_COLLAR, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_459621_, p_451752_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
-    public void setLying(boolean p_450189_) {
-        this.entityData.set(IS_LYING, p_450189_);
+    public void setLying(final boolean value) {
+        this.entityData.set(IS_LYING, value);
     }
 
     public boolean isLying() {
         return this.entityData.get(IS_LYING);
     }
 
-    void setRelaxStateOne(boolean p_459955_) {
-        this.entityData.set(RELAX_STATE_ONE, p_459955_);
+    private void setRelaxStateOne(final boolean value) {
+        this.entityData.set(RELAX_STATE_ONE, value);
     }
 
-    boolean isRelaxStateOne() {
+    private boolean isRelaxStateOne() {
         return this.entityData.get(RELAX_STATE_ONE);
     }
 
@@ -172,41 +196,51 @@ public class Cat extends TamableAnimal {
         return DyeColor.byId(this.entityData.get(DATA_COLLAR_COLOR));
     }
 
-    private void setCollarColor(DyeColor p_453421_) {
-        this.entityData.set(DATA_COLLAR_COLOR, p_453421_.getId());
+    private void setCollarColor(final DyeColor color) {
+        this.entityData.set(DATA_COLLAR_COLOR, color.getId());
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_455710_) {
-        super.defineSynchedData(p_455710_);
-        p_455710_.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), DEFAULT_VARIANT));
-        p_455710_.define(IS_LYING, false);
-        p_455710_.define(RELAX_STATE_ONE, false);
-        p_455710_.define(DATA_COLLAR_COLOR, DEFAULT_COLLAR_COLOR.getId());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        Registry<CatSoundVariant> catSoundVariants = this.registryAccess().lookupOrThrow(Registries.CAT_SOUND_VARIANT);
+        entityData.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), DEFAULT_VARIANT));
+        entityData.define(DATA_SOUND_VARIANT_ID, catSoundVariants.get(CatSoundVariants.CLASSIC).or(catSoundVariants::getAny).orElseThrow());
+        entityData.define(IS_LYING, false);
+        entityData.define(RELAX_STATE_ONE, false);
+        entityData.define(DATA_COLLAR_COLOR, DEFAULT_COLLAR_COLOR.getId());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_460693_) {
-        super.addAdditionalSaveData(p_460693_);
-        VariantUtils.writeVariant(p_460693_, this.getVariant());
-        p_460693_.store("CollarColor", DyeColor.LEGACY_ID_CODEC, this.getCollarColor());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        VariantUtils.writeVariant(output, this.getVariant());
+        this.getSoundVariant()
+            .unwrapKey()
+            .ifPresent(
+                soundVariant -> output.store("sound_variant", ResourceKey.codec(Registries.CAT_SOUND_VARIANT), (ResourceKey<CatSoundVariant>)soundVariant)
+            );
+        output.store("CollarColor", DyeColor.LEGACY_ID_CODEC, this.getCollarColor());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_450552_) {
-        super.readAdditionalSaveData(p_450552_);
-        VariantUtils.readVariant(p_450552_, Registries.CAT_VARIANT).ifPresent(this::setVariant);
-        this.setCollarColor(p_450552_.read("CollarColor", DyeColor.LEGACY_ID_CODEC).orElse(DEFAULT_COLLAR_COLOR));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        VariantUtils.readVariant(input, Registries.CAT_VARIANT).ifPresent(this::setVariant);
+        input.read("sound_variant", ResourceKey.codec(Registries.CAT_SOUND_VARIANT))
+            .flatMap(soundVariant -> this.registryAccess().lookupOrThrow(Registries.CAT_SOUND_VARIANT).get((ResourceKey<CatSoundVariant>)soundVariant))
+            .ifPresent(this::setSoundVariant);
+        this.setCollarColor(input.read("CollarColor", DyeColor.LEGACY_ID_CODEC).orElse(DEFAULT_COLLAR_COLOR));
     }
 
     @Override
-    public void customServerAiStep(ServerLevel p_457795_) {
+    public void customServerAiStep(final ServerLevel level) {
         if (this.getMoveControl().hasWanted()) {
-            double d0 = this.getMoveControl().getSpeedModifier();
-            if (d0 == 0.6) {
+            double speed = this.getMoveControl().getSpeedModifier();
+            if (speed == 0.6) {
                 this.setPose(Pose.CROUCHING);
                 this.setSprinting(false);
-            } else if (d0 == 1.33) {
+            } else if (speed == 1.33) {
                 this.setPose(Pose.STANDING);
                 this.setSprinting(true);
             } else {
@@ -223,12 +257,12 @@ public class Cat extends TamableAnimal {
     protected @Nullable SoundEvent getAmbientSound() {
         if (this.isTame()) {
             if (this.isInLove()) {
-                return SoundEvents.CAT_PURR;
+                return this.getSoundSet().purrSound().value();
             } else {
-                return this.random.nextInt(4) == 0 ? SoundEvents.CAT_PURREOW : SoundEvents.CAT_AMBIENT;
+                return this.random.nextInt(4) == 0 ? this.getSoundSet().purreowSound().value() : this.getSoundSet().ambientSound().value();
             }
         } else {
-            return SoundEvents.CAT_STRAY_AMBIENT;
+            return this.getSoundSet().strayAmbientSound().value();
         }
     }
 
@@ -238,17 +272,17 @@ public class Cat extends TamableAnimal {
     }
 
     public void hiss() {
-        this.makeSound(SoundEvents.CAT_HISS);
+        this.makeSound(this.getSoundSet().hissSound().value());
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_451824_) {
-        return SoundEvents.CAT_HURT;
+    protected SoundEvent getHurtSound(final DamageSource source) {
+        return this.getSoundSet().hurtSound().value();
     }
 
     @Override
     protected SoundEvent getDeathSound() {
-        return SoundEvents.CAT_DEATH;
+        return this.getSoundSet().deathSound().value();
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -256,15 +290,20 @@ public class Cat extends TamableAnimal {
     }
 
     @Override
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+    }
+
+    @Override
     protected void playEatingSound() {
-        this.playSound(SoundEvents.CAT_EAT, 1.0F, 1.0F);
+        this.playSound(this.getSoundSet().eatSound().value(), 1.0F, 1.0F);
     }
 
     @Override
     public void tick() {
         super.tick();
         if (this.temptGoal != null && this.temptGoal.isRunning() && !this.isTame() && this.tickCount % 100 == 0) {
-            this.playSound(SoundEvents.CAT_BEG_FOR_FOOD, 1.0F, 1.0F);
+            this.playSound(this.getSoundSet().begForFoodSound().value(), 1.0F, 1.0F);
         }
 
         this.handleLieDown();
@@ -272,16 +311,16 @@ public class Cat extends TamableAnimal {
 
     private void handleLieDown() {
         if ((this.isLying() || this.isRelaxStateOne()) && this.tickCount % 5 == 0) {
-            this.playSound(SoundEvents.CAT_PURR, 0.6F + 0.4F * (this.random.nextFloat() - this.random.nextFloat()), 1.0F);
+            this.playSound(this.getSoundSet().purrSound().value(), 0.6F + 0.4F * (this.random.nextFloat() - this.random.nextFloat()), 1.0F);
         }
 
         this.updateLieDownAmount();
         this.updateRelaxStateOneAmount();
         this.isLyingOnTopOfSleepingPlayer = false;
         if (this.isLying()) {
-            BlockPos blockpos = this.blockPosition();
+            BlockPos catPos = this.blockPosition();
 
-            for (Player player : this.level().getEntitiesOfClass(Player.class, new AABB(blockpos).inflate(2.0, 2.0, 2.0))) {
+            for (Player player : this.level().getEntitiesOfClass(Player.class, new AABB(catPos).inflate(2.0, 2.0, 2.0))) {
                 if (player.isSleeping()) {
                     this.isLyingOnTopOfSleepingPlayer = true;
                     break;
@@ -315,97 +354,94 @@ public class Cat extends TamableAnimal {
         }
     }
 
-    public float getLieDownAmount(float p_459155_) {
-        return Mth.lerp(p_459155_, this.lieDownAmountO, this.lieDownAmount);
+    public float getLieDownAmount(final float a) {
+        return Mth.lerp(a, this.lieDownAmountO, this.lieDownAmount);
     }
 
-    public float getLieDownAmountTail(float p_451054_) {
-        return Mth.lerp(p_451054_, this.lieDownAmountOTail, this.lieDownAmountTail);
+    public float getLieDownAmountTail(final float a) {
+        return Mth.lerp(a, this.lieDownAmountOTail, this.lieDownAmountTail);
     }
 
-    public float getRelaxStateOneAmount(float p_456719_) {
-        return Mth.lerp(p_456719_, this.relaxStateOneAmountO, this.relaxStateOneAmount);
+    public float getRelaxStateOneAmount(final float a) {
+        return Mth.lerp(a, this.relaxStateOneAmountO, this.relaxStateOneAmount);
     }
 
-    public @Nullable Cat getBreedOffspring(ServerLevel p_455151_, AgeableMob p_460287_) {
-        Cat cat = EntityType.CAT.create(p_455151_, EntitySpawnReason.BREEDING);
-        if (cat != null && p_460287_ instanceof Cat cat1) {
+    public @Nullable Cat getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        Cat baby = EntityTypes.CAT.create(level, EntitySpawnReason.BREEDING);
+        if (baby != null && partner instanceof Cat partnerCat) {
             if (this.random.nextBoolean()) {
-                cat.setVariant(this.getVariant());
+                baby.setVariant(this.getVariant());
             } else {
-                cat.setVariant(cat1.getVariant());
+                baby.setVariant(partnerCat.getVariant());
             }
 
             if (this.isTame()) {
-                cat.setOwnerReference(this.getOwnerReference());
-                cat.setTame(true, true);
-                DyeColor dyecolor = this.getCollarColor();
-                DyeColor dyecolor1 = cat1.getCollarColor();
-                cat.setCollarColor(DyeColor.getMixedColor(p_455151_, dyecolor, dyecolor1));
+                baby.setOwnerReference(this.getOwnerReference());
+                baby.setTame(true, true);
+                DyeColor parent1CollarColor = this.getCollarColor();
+                DyeColor parent2CollarColor = partnerCat.getCollarColor();
+                baby.setCollarColor(DyeColor.getMixedColor(level, parent1CollarColor, parent2CollarColor));
             }
         }
 
-        return cat;
+        return baby;
     }
 
     @Override
-    public boolean canMate(Animal p_453545_) {
+    public boolean canMate(final Animal partner) {
         if (!this.isTame()) {
             return false;
         } else {
-            return !(p_453545_ instanceof Cat cat) ? false : cat.isTame() && super.canMate(p_453545_);
+            return !(partner instanceof Cat cat) ? false : cat.isTame() && super.canMate(partner);
         }
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_460172_, DifficultyInstance p_452342_, EntitySpawnReason p_450503_, @Nullable SpawnGroupData p_459350_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        p_459350_ = super.finalizeSpawn(p_460172_, p_452342_, p_450503_, p_459350_);
-        VariantUtils.selectVariantToSpawn(SpawnContext.create(p_460172_, this.blockPosition()), Registries.CAT_VARIANT).ifPresent(this::setVariant);
-        return p_459350_;
+        groupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
+        VariantUtils.selectVariantToSpawn(SpawnContext.create(level, this.blockPosition()), Registries.CAT_VARIANT).ifPresent(this::setVariant);
+        this.setSoundVariant(CatSoundVariants.pickRandomSoundVariant(this.registryAccess(), level.getRandom()));
+        return groupData;
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_460113_, InteractionHand p_450900_) {
-        ItemStack itemstack = p_460113_.getItemInHand(p_450900_);
-        Item item = itemstack.getItem();
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
         if (this.isTame()) {
-            if (this.isOwnedBy(p_460113_)) {
-                if (item instanceof DyeItem dyeitem) {
-                    DyeColor dyecolor = dyeitem.getDyeColor();
-                    if (dyecolor != this.getCollarColor()) {
+            if (this.isOwnedBy(player)) {
+                if (itemStack.is(ItemTags.CAT_COLLAR_DYES)) {
+                    DyeColor color = itemStack.get(DataComponents.DYE);
+                    if (color != null && color != this.getCollarColor()) {
                         if (!this.level().isClientSide()) {
-                            this.setCollarColor(dyecolor);
-                            itemstack.consume(1, p_460113_);
+                            this.setCollarColor(color);
+                            itemStack.consume(1, player);
                             this.setPersistenceRequired();
                         }
 
                         return InteractionResult.SUCCESS;
                     }
-                } else if (this.isFood(itemstack) && this.getHealth() < this.getMaxHealth()) {
+                } else if (this.isFood(itemStack) && this.getHealth() < this.getMaxHealth()) {
                     if (!this.level().isClientSide()) {
-                        this.usePlayerItem(p_460113_, p_450900_, itemstack);
-                        FoodProperties foodproperties = itemstack.get(DataComponents.FOOD);
-                        this.heal(foodproperties != null ? foodproperties.nutrition() : 1.0F);
-                        this.playEatingSound();
+                        this.feed(player, hand, itemStack, 1.0F, 1.0F);
                     }
 
                     return InteractionResult.SUCCESS;
                 }
 
-                InteractionResult interactionresult = super.mobInteract(p_460113_, p_450900_);
-                if (!interactionresult.consumesAction()) {
+                InteractionResult parentInteraction = super.mobInteract(player, hand);
+                if (!parentInteraction.consumesAction()) {
                     this.setOrderedToSit(!this.isOrderedToSit());
                     return InteractionResult.SUCCESS;
                 }
 
-                return interactionresult;
+                return parentInteraction;
             }
-        } else if (this.isFood(itemstack)) {
+        } else if (this.isFood(itemStack)) {
             if (!this.level().isClientSide()) {
-                this.usePlayerItem(p_460113_, p_450900_, itemstack);
-                this.tryToTame(p_460113_);
+                this.usePlayerItem(player, hand, itemStack);
+                this.tryToTame(player);
                 this.setPersistenceRequired();
                 this.playEatingSound();
             }
@@ -413,27 +449,27 @@ public class Cat extends TamableAnimal {
             return InteractionResult.SUCCESS;
         }
 
-        InteractionResult interactionresult1 = super.mobInteract(p_460113_, p_450900_);
-        if (interactionresult1.consumesAction()) {
+        InteractionResult interact = super.mobInteract(player, hand);
+        if (interact.consumesAction()) {
             this.setPersistenceRequired();
         }
 
-        return interactionresult1;
+        return interact;
     }
 
     @Override
-    public boolean isFood(ItemStack p_455899_) {
-        return p_455899_.is(ItemTags.CAT_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.CAT_FOOD);
     }
 
     @Override
-    public boolean removeWhenFarAway(double p_458083_) {
+    public boolean removeWhenFarAway(final double distSqr) {
         return !this.isTame() && this.tickCount > 2400;
     }
 
     @Override
-    public void setTame(boolean p_450192_, boolean p_457887_) {
-        super.setTame(p_450192_, p_457887_);
+    public void setTame(final boolean isTame, final boolean includeSideEffects) {
+        super.setTame(isTame, includeSideEffects);
         this.reassessTameGoals();
     }
 
@@ -448,9 +484,9 @@ public class Cat extends TamableAnimal {
         }
     }
 
-    private void tryToTame(Player p_451247_) {
+    private void tryToTame(final Player player) {
         if (this.random.nextInt(3) == 0) {
-            this.tame(p_451247_);
+            this.tame(player);
             this.setOrderedToSit(true);
             this.level().broadcastEntityEvent(this, (byte)7);
         } else {
@@ -463,12 +499,14 @@ public class Cat extends TamableAnimal {
         return this.isCrouching() || super.isSteppingCarefully();
     }
 
-    static class CatAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
+    private static class CatAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
         private final Cat cat;
 
-        public CatAvoidEntityGoal(Cat p_458123_, Class<T> p_450532_, float p_457006_, double p_454471_, double p_450460_) {
-            super(p_458123_, p_450532_, p_457006_, p_454471_, p_450460_, EntitySelector.NO_CREATIVE_OR_SPECTATOR);
-            this.cat = p_458123_;
+        public CatAvoidEntityGoal(
+            final Cat cat, final Class<T> avoidClass, final float maxDist, final double walkSpeedModifier, final double sprintSpeedModifier
+        ) {
+            super(cat, avoidClass, maxDist, walkSpeedModifier, sprintSpeedModifier, EntitySelector.NO_CREATIVE_OR_SPECTATOR);
+            this.cat = cat;
         }
 
         @Override
@@ -482,51 +520,53 @@ public class Cat extends TamableAnimal {
         }
     }
 
-    static class CatRelaxOnOwnerGoal extends Goal {
+    private static class CatRelaxOnOwnerGoal extends Goal {
         private final Cat cat;
         private @Nullable Player ownerPlayer;
         private @Nullable BlockPos goalPos;
         private int onBedTicks;
 
-        public CatRelaxOnOwnerGoal(Cat p_456002_) {
-            this.cat = p_456002_;
+        public CatRelaxOnOwnerGoal(final Cat cat) {
+            this.cat = cat;
         }
 
         @Override
         public boolean canUse() {
             if (!this.cat.isTame()) {
                 return false;
-            } else if (this.cat.isOrderedToSit()) {
-                return false;
-            } else {
-                LivingEntity livingentity = this.cat.getOwner();
-                if (livingentity instanceof Player player) {
-                    this.ownerPlayer = player;
-                    if (!livingentity.isSleeping()) {
-                        return false;
-                    }
+            }
 
-                    if (this.cat.distanceToSqr(this.ownerPlayer) > 100.0) {
-                        return false;
-                    }
-
-                    BlockPos blockpos = this.ownerPlayer.blockPosition();
-                    BlockState blockstate = this.cat.level().getBlockState(blockpos);
-                    if (blockstate.is(BlockTags.BEDS)) {
-                        this.goalPos = blockstate.getOptionalValue(BedBlock.FACING)
-                            .map(p_455309_ -> blockpos.relative(p_455309_.getOpposite()))
-                            .orElseGet(() -> new BlockPos(blockpos));
-                        return !this.spaceIsOccupied();
-                    }
-                }
-
+            if (this.cat.isOrderedToSit()) {
                 return false;
             }
+
+            LivingEntity owner = this.cat.getOwner();
+            if (owner instanceof Player playerOwner) {
+                this.ownerPlayer = playerOwner;
+                if (!owner.isSleeping()) {
+                    return false;
+                }
+
+                if (this.cat.distanceToSqr(this.ownerPlayer) > 100.0) {
+                    return false;
+                }
+
+                BlockPos ownerPos = this.ownerPlayer.blockPosition();
+                BlockState ownerPosState = this.cat.level().getBlockState(ownerPos);
+                if (ownerPosState.is(BlockTags.BEDS)) {
+                    this.goalPos = ownerPosState.getOptionalValue(BedBlock.FACING)
+                        .map(bedDir -> ownerPos.relative(bedDir.getOpposite()))
+                        .orElseGet(() -> new BlockPos(ownerPos));
+                    return !this.spaceIsOccupied();
+                }
+            }
+
+            return false;
         }
 
         private boolean spaceIsOccupied() {
-            for (Cat cat : this.cat.level().getEntitiesOfClass(Cat.class, new AABB(this.goalPos).inflate(2.0))) {
-                if (cat != this.cat && (cat.isLying() || cat.isRelaxStateOne())) {
+            for (Cat otherCat : this.cat.level().getEntitiesOfClass(Cat.class, new AABB(this.goalPos).inflate(2.0))) {
+                if (otherCat != this.cat && (otherCat.isLying() || otherCat.isRelaxStateOne())) {
                     return true;
                 }
             }
@@ -567,28 +607,23 @@ public class Cat extends TamableAnimal {
         }
 
         private void giveMorningGift() {
-            RandomSource randomsource = this.cat.getRandom();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-            blockpos$mutableblockpos.set(this.cat.isLeashed() ? this.cat.getLeashHolder().blockPosition() : this.cat.blockPosition());
+            RandomSource random = this.cat.getRandom();
+            BlockPos.MutableBlockPos catPos = new BlockPos.MutableBlockPos();
+            catPos.set(this.cat.isLeashed() ? this.cat.getLeashHolder().blockPosition() : this.cat.blockPosition());
             this.cat
-                .randomTeleport(
-                    blockpos$mutableblockpos.getX() + randomsource.nextInt(11) - 5,
-                    blockpos$mutableblockpos.getY() + randomsource.nextInt(5) - 2,
-                    blockpos$mutableblockpos.getZ() + randomsource.nextInt(11) - 5,
-                    false
-                );
-            blockpos$mutableblockpos.set(this.cat.blockPosition());
+                .randomTeleport(catPos.getX() + random.nextInt(11) - 5, catPos.getY() + random.nextInt(5) - 2, catPos.getZ() + random.nextInt(11) - 5, false);
+            catPos.set(this.cat.blockPosition());
             this.cat
                 .dropFromGiftLootTable(
                     getServerLevel(this.cat),
                     BuiltInLootTables.CAT_MORNING_GIFT,
-                    (p_455796_, p_451741_) -> p_455796_.addFreshEntity(
+                    (level, itemStack) -> level.addFreshEntity(
                         new ItemEntity(
-                            p_455796_,
-                            (double)blockpos$mutableblockpos.getX() - Mth.sin(this.cat.yBodyRot * (float) (Math.PI / 180.0)),
-                            blockpos$mutableblockpos.getY(),
-                            (double)blockpos$mutableblockpos.getZ() + Mth.cos(this.cat.yBodyRot * (float) (Math.PI / 180.0)),
-                            p_451741_
+                            level,
+                            (double)catPos.getX() - Mth.sin(this.cat.yBodyRot * (float) (Math.PI / 180.0)),
+                            catPos.getY(),
+                            (double)catPos.getZ() + Mth.cos(this.cat.yBodyRot * (float) (Math.PI / 180.0)),
+                            itemStack
                         )
                     )
                 );
@@ -615,13 +650,13 @@ public class Cat extends TamableAnimal {
         }
     }
 
-    static class CatTemptGoal extends TemptGoal {
+    private static class CatTemptGoal extends TemptGoal {
         private @Nullable Player selectedPlayer;
         private final Cat cat;
 
-        public CatTemptGoal(Cat p_452820_, double p_450936_, Predicate<ItemStack> p_450565_, boolean p_457956_) {
-            super(p_452820_, p_450936_, p_450565_, p_457956_);
-            this.cat = p_452820_;
+        public CatTemptGoal(final Cat mob, final double speedModifier, final Predicate<ItemStack> items, final boolean canScare) {
+            super(mob, speedModifier, items, canScare);
+            this.cat = mob;
         }
 
         @Override

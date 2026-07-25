@@ -4,9 +4,7 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
@@ -14,15 +12,16 @@ import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class NestedLootTable extends LootPoolSingletonContainer {
-    public static final MapCodec<NestedLootTable> CODEC = RecordCodecBuilder.mapCodec(
-        p_391132_ -> p_391132_.group(Codec.either(LootTable.KEY_CODEC, LootTable.DIRECT_CODEC).fieldOf("value").forGetter(p_331624_ -> p_331624_.contents))
-            .and(singletonFields(p_391132_))
-            .apply(p_391132_, NestedLootTable::new)
+    public static final MapCodec<NestedLootTable> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(Codec.either(LootTable.KEY_CODEC, LootTable.DIRECT_CODEC).fieldOf("value").forGetter(e -> e.contents))
+            .and(singletonFields(i))
+            .apply(i, NestedLootTable::new)
     );
     public static final ProblemReporter.PathElement INLINE_LOOT_TABLE_PATH_ELEMENT = new ProblemReporter.PathElement() {
         @Override
@@ -33,66 +32,41 @@ public class NestedLootTable extends LootPoolSingletonContainer {
     private final Either<ResourceKey<LootTable>, LootTable> contents;
 
     private NestedLootTable(
-        Either<ResourceKey<LootTable>, LootTable> p_335218_, int p_332597_, int p_330218_, List<LootItemCondition> p_335913_, List<LootItemFunction> p_331388_
+        final Either<ResourceKey<LootTable>, LootTable> contents,
+        final int weight,
+        final int quality,
+        final List<LootItemCondition> conditions,
+        final List<LootItemFunction> functions
     ) {
-        super(p_332597_, p_330218_, p_335913_, p_331388_);
-        this.contents = p_335218_;
+        super(weight, quality, conditions, functions);
+        this.contents = contents;
     }
 
     @Override
-    public LootPoolEntryType getType() {
-        return LootPoolEntries.LOOT_TABLE;
+    public MapCodec<NestedLootTable> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public void createItemStack(Consumer<ItemStack> p_329435_, LootContext p_332786_) {
+    public void createItemStack(final Consumer<ItemStack> output, final LootContext context) {
         this.contents
-            .map(
-                p_360669_ -> p_332786_.getResolver().get((ResourceKey<LootTable>)p_360669_).map(Holder::value).orElse(LootTable.EMPTY),
-                p_328175_ -> (LootTable)p_328175_
-            )
-            .getRandomItemsRaw(p_332786_, p_329435_);
+            .map(name -> context.getResolver().get((ResourceKey<LootTable>)name).map(Holder::value).orElse(LootTable.EMPTY), table -> (LootTable)table)
+            .getRandomItemsRaw(context, output);
     }
 
     @Override
-    public void validate(ValidationContext p_331194_) {
-        Optional<ResourceKey<LootTable>> optional = this.contents.left();
-        if (optional.isPresent()) {
-            ResourceKey<LootTable> resourcekey = optional.get();
-            if (!p_331194_.allowsReferences()) {
-                p_331194_.reportProblem(new ValidationContext.ReferenceNotAllowedProblem(resourcekey));
-                return;
-            }
-
-            if (p_331194_.hasVisitedElement(resourcekey)) {
-                p_331194_.reportProblem(new ValidationContext.RecursiveReferenceProblem(resourcekey));
-                return;
-            }
-        }
-
-        super.validate(p_331194_);
+    public void validate(final ValidationContext context) {
+        super.validate(context);
         this.contents
-            .ifLeft(
-                p_360667_ -> p_331194_.resolver()
-                    .get((ResourceKey<LootTable>)p_360667_)
-                    .ifPresentOrElse(
-                        p_405790_ -> p_405790_.value()
-                            .validate(
-                                p_331194_.enterElement(new ProblemReporter.ElementReferencePathElement((ResourceKey<?>)p_360667_), (ResourceKey<?>)p_360667_)
-                            ),
-                        () -> p_331194_.reportProblem(new ValidationContext.MissingReferenceProblem((ResourceKey<?>)p_360667_))
-                    )
-            )
-            .ifRight(p_405787_ -> p_405787_.validate(p_331194_.forChild(INLINE_LOOT_TABLE_PATH_ELEMENT)));
+            .ifLeft(id -> Validatable.validateReference(context, (ResourceKey<LootTable>)id))
+            .ifRight(lootTable -> lootTable.validate(context.forChild(INLINE_LOOT_TABLE_PATH_ELEMENT)));
     }
 
-    public static LootPoolSingletonContainer.Builder<?> lootTableReference(ResourceKey<LootTable> p_332425_) {
-        return simpleBuilder((p_331287_, p_328654_, p_335079_, p_330542_) -> new NestedLootTable(Either.left(p_332425_), p_331287_, p_328654_, p_335079_, p_330542_));
+    public static LootPoolSingletonContainer.Builder<?> lootTableReference(final ResourceKey<LootTable> name) {
+        return simpleBuilder((weight, quality, conditions, functions) -> new NestedLootTable(Either.left(name), weight, quality, conditions, functions));
     }
 
-    public static LootPoolSingletonContainer.Builder<?> inlineLootTable(LootTable p_336216_) {
-        return simpleBuilder(
-            (p_327921_, p_332453_, p_332156_, p_328257_) -> new NestedLootTable(Either.right(p_336216_), p_327921_, p_332453_, p_332156_, p_328257_)
-        );
+    public static LootPoolSingletonContainer.Builder<?> inlineLootTable(final LootTable table) {
+        return simpleBuilder((weight, quality, conditions, functions) -> new NestedLootTable(Either.right(table), weight, quality, conditions, functions));
     }
 }

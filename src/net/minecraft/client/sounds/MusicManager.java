@@ -2,6 +2,7 @@ package net.minecraft.client.sounds;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.Sound;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -12,11 +13,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class MusicManager {
     private static final int STARTING_DELAY = 100;
     private final RandomSource random = RandomSource.create();
@@ -27,16 +25,16 @@ public class MusicManager {
     private int nextSongDelay = 100;
     private boolean toastShown = false;
 
-    public MusicManager(Minecraft p_120182_) {
-        this.minecraft = p_120182_;
-        this.gameMusicFrequency = p_120182_.options.musicFrequency().get();
+    public MusicManager(final Minecraft minecraft) {
+        this.minecraft = minecraft;
+        this.gameMusicFrequency = minecraft.options.musicFrequency().get();
     }
 
     public void tick() {
-        float f = this.minecraft.getMusicVolume();
-        if (this.currentMusic != null && this.currentGain != f) {
-            boolean flag = this.fadePlaying(f);
-            if (!flag) {
+        float volume = this.minecraft.getMusicVolume();
+        if (this.currentMusic != null && this.currentGain != volume) {
+            boolean stillPlaying = this.fadePlaying(volume);
+            if (!stillPlaying) {
                 return;
             }
         }
@@ -57,23 +55,23 @@ public class MusicManager {
                 }
             }
 
-            this.nextSongDelay = Math.min(this.nextSongDelay, this.gameMusicFrequency.getNextSongDelay(music, this.random));
-            if (this.currentMusic == null && this.nextSongDelay-- <= 0) {
+            this.nextSongDelay = Math.min(this.nextSongDelay, music.maxDelay());
+            if (this.currentMusic == null && !(this.minecraft.gui.screen() instanceof LevelLoadingScreen) && --this.nextSongDelay <= 0) {
                 this.startPlaying(music);
             }
         }
     }
 
-    private static boolean canReplace(Music p_453339_, SoundInstance p_451463_) {
-        return p_453339_.replaceCurrentMusic() && !p_453339_.sound().value().location().equals(p_451463_.getIdentifier());
+    private static boolean canReplace(final Music music, final SoundInstance currentMusic) {
+        return music.replaceCurrentMusic() && !music.sound().value().location().equals(currentMusic.getIdentifier());
     }
 
-    public void startPlaying(Music p_454803_) {
-        SoundEvent soundevent = p_454803_.sound().value();
-        this.currentMusic = SimpleSoundInstance.forMusic(soundevent);
+    public void startPlaying(final Music music) {
+        SoundEvent soundEvent = music.sound().value();
+        this.currentMusic = SimpleSoundInstance.forMusic(soundEvent);
         switch (this.minecraft.getSoundManager().play(this.currentMusic)) {
             case STARTED:
-                this.minecraft.getToastManager().showNowPlayingToast();
+                this.minecraft.gui.toastManager().showNowPlayingToast();
                 this.toastShown = true;
                 break;
             case STARTED_SILENTLY:
@@ -85,13 +83,13 @@ public class MusicManager {
 
     public void showNowPlayingToastIfNeeded() {
         if (!this.toastShown) {
-            this.minecraft.getToastManager().showNowPlayingToast();
+            this.minecraft.gui.toastManager().showNowPlayingToast();
             this.toastShown = true;
         }
     }
 
-    public void stopPlaying(Music p_278295_) {
-        if (this.isPlayingMusic(p_278295_)) {
+    public void stopPlaying(final Music music) {
+        if (this.isPlayingMusic(music)) {
             this.stopPlaying();
         }
     }
@@ -100,43 +98,45 @@ public class MusicManager {
         if (this.currentMusic != null) {
             this.minecraft.getSoundManager().stop(this.currentMusic);
             this.currentMusic = null;
-            this.minecraft.getToastManager().hideNowPlayingToast();
+            this.minecraft.gui.toastManager().hideNowPlayingToast();
         }
 
-        this.nextSongDelay += 100;
+        this.nextSongDelay = this.gameMusicFrequency.getNextSongDelay(this.minecraft.getSituationalMusic(), this.random) + 100;
     }
 
-    private boolean fadePlaying(float p_375585_) {
+    private boolean fadePlaying(final float volume) {
         if (this.currentMusic == null) {
             return false;
-        } else if (this.currentGain == p_375585_) {
-            return true;
-        } else {
-            if (this.currentGain < p_375585_) {
-                this.currentGain = this.currentGain + Mth.clamp(this.currentGain, 5.0E-4F, 0.005F);
-                if (this.currentGain > p_375585_) {
-                    this.currentGain = p_375585_;
-                }
-            } else {
-                this.currentGain = 0.03F * p_375585_ + 0.97F * this.currentGain;
-                if (Math.abs(this.currentGain - p_375585_) < 1.0E-4F || this.currentGain < p_375585_) {
-                    this.currentGain = p_375585_;
-                }
-            }
+        }
 
-            this.currentGain = Mth.clamp(this.currentGain, 0.0F, 1.0F);
-            if (this.currentGain <= 1.0E-4F) {
-                this.stopPlaying();
-                return false;
-            } else {
-                this.minecraft.getSoundManager().updateCategoryVolume(SoundSource.MUSIC, this.currentGain);
-                return true;
+        if (this.currentGain == volume) {
+            return true;
+        }
+
+        if (this.currentGain < volume) {
+            this.currentGain = this.currentGain + Mth.clamp(this.currentGain, 5.0E-4F, 0.005F);
+            if (this.currentGain > volume) {
+                this.currentGain = volume;
             }
+        } else {
+            this.currentGain = 0.03F * volume + 0.97F * this.currentGain;
+            if (Math.abs(this.currentGain - volume) < 1.0E-4F || this.currentGain < volume) {
+                this.currentGain = volume;
+            }
+        }
+
+        this.currentGain = Mth.clamp(this.currentGain, 0.0F, 1.0F);
+        if (this.currentGain <= 1.0E-4F) {
+            this.stopPlaying();
+            return false;
+        } else {
+            this.minecraft.getSoundManager().updateCategoryVolume(SoundSource.MUSIC, this.currentGain);
+            return true;
         }
     }
 
-    public boolean isPlayingMusic(Music p_120188_) {
-        return this.currentMusic == null ? false : p_120188_.sound().value().location().equals(this.currentMusic.getIdentifier());
+    public boolean isPlayingMusic(final Music music) {
+        return this.currentMusic == null ? false : music.sound().value().location().equals(this.currentMusic.getIdentifier());
     }
 
     public @Nullable String getCurrentMusicTranslationKey() {
@@ -150,13 +150,12 @@ public class MusicManager {
         return null;
     }
 
-    public void setMinutesBetweenSongs(MusicManager.MusicFrequency p_409813_) {
-        this.gameMusicFrequency = p_409813_;
+    public void setMinutesBetweenSongs(final MusicManager.MusicFrequency musicFrequency) {
+        this.gameMusicFrequency = musicFrequency;
         this.nextSongDelay = this.gameMusicFrequency.getNextSongDelay(this.minecraft.getSituationalMusic(), this.random);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum MusicFrequency implements StringRepresentable {
+        public enum MusicFrequency implements StringRepresentable {
         DEFAULT("DEFAULT", "options.music_frequency.default", 20),
         FREQUENT("FREQUENT", "options.music_frequency.frequent", 10),
         CONSTANT("CONSTANT", "options.music_frequency.constant", 0);
@@ -166,22 +165,24 @@ public class MusicManager {
         private final int maxFrequency;
         private final Component caption;
 
-        private MusicFrequency(final String p_457182_, final String p_455835_, final int p_408860_) {
-            this.name = p_457182_;
-            this.maxFrequency = p_408860_ * 1200;
-            this.caption = Component.translatable(p_455835_);
+        MusicFrequency(final String name, final String translationKey, final int maxFrequencyMinutes) {
+            this.name = name;
+            this.maxFrequency = maxFrequencyMinutes * 1200;
+            this.caption = Component.translatable(translationKey);
         }
 
-        int getNextSongDelay(@Nullable Music p_408535_, RandomSource p_409383_) {
-            if (p_408535_ == null) {
+        private int getNextSongDelay(final @Nullable Music music, final RandomSource random) {
+            if (music == null) {
                 return this.maxFrequency;
-            } else if (this == CONSTANT) {
-                return 100;
-            } else {
-                int i = Math.min(p_408535_.minDelay(), this.maxFrequency);
-                int j = Math.min(p_408535_.maxDelay(), this.maxFrequency);
-                return Mth.nextInt(p_409383_, i, j);
             }
+
+            if (this == CONSTANT) {
+                return 100;
+            }
+
+            int minFrequency = Math.min(music.minDelay(), this.maxFrequency);
+            int maxFrequency = Math.min(music.maxDelay(), this.maxFrequency);
+            return Mth.nextInt(random, minFrequency, maxFrequency);
         }
 
         public Component caption() {

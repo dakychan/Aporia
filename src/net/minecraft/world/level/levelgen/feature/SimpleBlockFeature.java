@@ -9,31 +9,35 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.SimpleBlockConfiguration;
 
 public class SimpleBlockFeature extends Feature<SimpleBlockConfiguration> {
-    public SimpleBlockFeature(Codec<SimpleBlockConfiguration> p_66808_) {
-        super(p_66808_);
+    public SimpleBlockFeature(final Codec<SimpleBlockConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<SimpleBlockConfiguration> p_160341_) {
-        SimpleBlockConfiguration simpleblockconfiguration = p_160341_.config();
-        WorldGenLevel worldgenlevel = p_160341_.level();
-        BlockPos blockpos = p_160341_.origin();
-        BlockState blockstate = simpleblockconfiguration.toPlace().getState(p_160341_.random(), blockpos);
-        if (blockstate.canSurvive(worldgenlevel, blockpos)) {
-            if (blockstate.getBlock() instanceof DoublePlantBlock) {
-                if (!worldgenlevel.isEmptyBlock(blockpos.above())) {
+    public boolean place(final FeaturePlaceContext<SimpleBlockConfiguration> context) {
+        SimpleBlockConfiguration config = context.config();
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        BlockState stateToPlace = config.toPlace().getOptionalState(level, context.random(), origin);
+        if (stateToPlace == null) {
+            return false;
+        }
+
+        if (stateToPlace.canSurvive(level, origin)) {
+            if (stateToPlace.getBlock() instanceof DoublePlantBlock) {
+                if (!level.isEmptyBlock(origin.above())) {
                     return false;
                 }
 
-                DoublePlantBlock.placeAt(worldgenlevel, blockstate, blockpos, 2);
-            } else if (blockstate.getBlock() instanceof MossyCarpetBlock) {
-                MossyCarpetBlock.placeAt(worldgenlevel, blockpos, worldgenlevel.getRandom(), 2);
+                DoublePlantBlock.placeAt(level, stateToPlace, origin, 2);
+            } else if (stateToPlace.getBlock() instanceof MossyCarpetBlock) {
+                MossyCarpetBlock.placeAt(level, origin, level.getRandom(), 2);
             } else {
-                worldgenlevel.setBlock(blockpos, blockstate, 2);
+                level.setBlock(origin, stateToPlace, 2);
             }
 
-            if (simpleblockconfiguration.scheduleTick()) {
-                worldgenlevel.scheduleTick(blockpos, worldgenlevel.getBlockState(blockpos).getBlock(), 1);
+            if (config.scheduleTick()) {
+                level.scheduleTick(origin, level.getBlockState(origin).getBlock(), 1);
             }
 
             return true;

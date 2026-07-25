@@ -1,6 +1,5 @@
 package so.aporia.module.impl.combat
 
-import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.item.Items
 import so.aporia.module.Category
@@ -16,6 +15,16 @@ import so.aporia.utils.events.impl.TickEvent
 import so.aporia.utils.imports.*
 import so.aporia.utils.user.player.inventory.InventoryUtil
 import com.chaos.annotation.ChaosNative
+
+/**
+ * AutoGapple — auto-eats golden apples.
+ *
+ * Modes:
+ * - Always: keeps golden apple in offhand at all times
+ * - Safe: eats when HP is low OR right-click held, with safety checks
+ *
+ * Uses direct inventory↔offhand swap via ContainerInput.SWAP(slot=40).
+ */
 @StateMachine
 @ChaosNative
 class AutoGapple : Module("AutoGapple", Category.COMBAT) {
@@ -32,7 +41,6 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
 
     private var waitTicks = 0
     private var savedSlot = -1
-    private var bufferSlot = -1
 
     private val apples = listOf(Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE)
 
@@ -57,23 +65,16 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
 
     override fun onDisable() {
         bus.unregister(this)
-        if (sm.state() != Phase.IDLE) {
-            if (sm.state() == Phase.EATING) {
-                mc.connection?.send(ServerboundSetCarriedItemPacket(bufferSlot))
-                mc.player?.inventory?.selectedSlot = bufferSlot
-                InventoryUtil.sendSwapPacket()
-                if (restoreSlot.isEnabled && savedSlot >= 0) {
-                    mc.connection?.send(ServerboundSetCarriedItemPacket(savedSlot))
-                    mc.player?.inventory?.selectedSlot = savedSlot
-                }
-            }
-            sm.currentState = Phase.IDLE
+        if (sm.state() == Phase.EATING) {
+            // Eating was interrupted — restore offhand
+            if (savedSlot >= 0) InventoryUtil.swapToOffhand(savedSlot)
         }
+        sm.currentState = Phase.IDLE
         reset()
     }
 
     private fun reset() {
-        waitTicks = 0; savedSlot = -1; bufferSlot = -1
+        waitTicks = 0; savedSlot = -1
     }
 
     @EventHandler
@@ -101,6 +102,9 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
                 val rightClick = mc.options.keyUse.isDown
                 if (hp > healthThreshold.getFloat() && !rightClick) return
 
+                // Skip if holding non-eatable items (food/bow/shield/blocks)
+                if (!InventoryUtil.canAutoEat()) return
+
                 // Already have apple in offhand — eat directly
                 if (InventoryUtil.offhandHasAny(Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE)) {
                     mc.gameMode!!.useItem(pl, InteractionHand.OFF_HAND)
@@ -111,15 +115,8 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
                 val slot = InventoryUtil.findItemInInventoryAny(Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE)
                 if (slot == -1) return
 
+                // Save original offhand for restore
                 savedSlot = pl.inventory.selectedSlot
-                if (slot < 9) {
-                    bufferSlot = slot
-                } else {
-                    var buf = InventoryUtil.findEmptyHotbarSlot()
-                    if (buf == -1) buf = savedSlot
-                    InventoryUtil.moveSlotToHotbar(slot, buf)
-                    bufferSlot = buf
-                }
 
                 // Transition to SWAP_IN (on next tick)
                 sm.transition(event)
@@ -127,12 +124,9 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
             }
 
             Phase.SWAP_IN -> {
-                if (bufferSlot < 0) { sm.transition(EatingDone); return }
-
-                mc.connection?.send(ServerboundSetCarriedItemPacket(bufferSlot))
-                mc.player!!.inventory.selectedSlot = bufferSlot
-                InventoryUtil.sendSwapPacket()
-                // Apple is now in offhand — start eating
+                // Direct swap apple into offhand (no hotbar)
+                InventoryUtil.swapToOffhand(InventoryUtil.findItemInInventoryAny(Items.GOLDEN_APPLE, Items.ENCHANTED_GOLDEN_APPLE))
+                // Start eating
                 mc.gameMode!!.useItem(mc.player!!, InteractionHand.OFF_HAND)
 
                 sm.transition(AppleInOffhand) // → EATING
@@ -143,15 +137,9 @@ class AutoGapple : Module("AutoGapple", Category.COMBAT) {
                 if (mc.player!!.isUsingItem) {
                     waitTicks = 5; return
                 }
-                // Eating complete — restore original offhand
-                if (bufferSlot >= 0) {
-                    mc.connection?.send(ServerboundSetCarriedItemPacket(bufferSlot))
-                    mc.player!!.inventory.selectedSlot = bufferSlot
-                }
-                InventoryUtil.sendSwapPacket()
+                // Eating complete — restore original offhand item
                 if (restoreSlot.isEnabled && savedSlot >= 0) {
-                    mc.connection?.send(ServerboundSetCarriedItemPacket(savedSlot))
-                    mc.player!!.inventory.selectedSlot = savedSlot
+                    InventoryUtil.swapToOffhand(savedSlot)
                 }
 
                 sm.transition(EatingDone) // → SWAP_OUT → IDLE on next tick

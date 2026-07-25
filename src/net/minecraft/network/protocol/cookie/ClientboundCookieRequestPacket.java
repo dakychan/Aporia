@@ -11,12 +11,12 @@ public record ClientboundCookieRequestPacket(Identifier key) implements Packet<C
         ClientboundCookieRequestPacket::write, ClientboundCookieRequestPacket::new
     );
 
-    private ClientboundCookieRequestPacket(FriendlyByteBuf p_331420_) {
-        this(p_331420_.readIdentifier());
+    private ClientboundCookieRequestPacket(final FriendlyByteBuf input) {
+        this(input.readIdentifier());
     }
 
-    private void write(FriendlyByteBuf p_330468_) {
-        p_330468_.writeIdentifier(this.key);
+    private void write(final FriendlyByteBuf output) {
+        output.writeIdentifier(this.key);
     }
 
     @Override
@@ -24,7 +24,7 @@ public record ClientboundCookieRequestPacket(Identifier key) implements Packet<C
         return CookiePacketTypes.CLIENTBOUND_COOKIE_REQUEST;
     }
 
-    public void handle(ClientCookiePacketListener p_335745_) {
-        p_335745_.handleRequestCookie(this);
+    public void handle(final ClientCookiePacketListener listener) {
+        listener.handleRequestCookie(this);
     }
 }

@@ -10,8 +10,8 @@ public class Passthrough implements RuleBlockEntityModifier {
     public static final MapCodec<Passthrough> CODEC = MapCodec.unit(INSTANCE);
 
     @Override
-    public @Nullable CompoundTag apply(RandomSource p_277737_, @Nullable CompoundTag p_277665_) {
-        return p_277665_;
+    public @Nullable CompoundTag apply(final RandomSource random, final @Nullable CompoundTag existingTag) {
+        return existingTag;
     }
 
     @Override

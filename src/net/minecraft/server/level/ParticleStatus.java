@@ -10,14 +10,14 @@ public enum ParticleStatus {
     DECREASED(1, "options.particles.decreased"),
     MINIMAL(2, "options.particles.minimal");
 
-    private static final IntFunction<ParticleStatus> BY_ID = ByIdMap.continuous(p_450286_ -> p_450286_.id, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
-    public static final Codec<ParticleStatus> LEGACY_CODEC = Codec.INT.xmap(BY_ID::apply, p_459768_ -> p_459768_.id);
+    private static final IntFunction<ParticleStatus> BY_ID = ByIdMap.continuous(s -> s.id, values(), ByIdMap.OutOfBoundsStrategy.WRAP);
+    public static final Codec<ParticleStatus> LEGACY_CODEC = Codec.INT.xmap(BY_ID::apply, s -> s.id);
     private final int id;
     private final Component caption;
 
-    private ParticleStatus(final int p_363607_, final String p_370037_) {
-        this.id = p_363607_;
-        this.caption = Component.translatable(p_370037_);
+    ParticleStatus(final int id, final String key) {
+        this.id = id;
+        this.caption = Component.translatable(key);
     }
 
     public Component caption() {

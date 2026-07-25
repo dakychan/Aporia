@@ -6,25 +6,25 @@ import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.LayerConfiguration;
 
 public class FillLayerFeature extends Feature<LayerConfiguration> {
-    public FillLayerFeature(Codec<LayerConfiguration> p_65818_) {
-        super(p_65818_);
+    public FillLayerFeature(final Codec<LayerConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<LayerConfiguration> p_159780_) {
-        BlockPos blockpos = p_159780_.origin();
-        LayerConfiguration layerconfiguration = p_159780_.config();
-        WorldGenLevel worldgenlevel = p_159780_.level();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public boolean place(final FeaturePlaceContext<LayerConfiguration> context) {
+        BlockPos origin = context.origin();
+        LayerConfiguration config = context.config();
+        WorldGenLevel level = context.level();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (int i = 0; i < 16; i++) {
-            for (int j = 0; j < 16; j++) {
-                int k = blockpos.getX() + i;
-                int l = blockpos.getZ() + j;
-                int i1 = worldgenlevel.getMinY() + layerconfiguration.height;
-                blockpos$mutableblockpos.set(k, i1, l);
-                if (worldgenlevel.getBlockState(blockpos$mutableblockpos).isAir()) {
-                    worldgenlevel.setBlock(blockpos$mutableblockpos, layerconfiguration.state, 2);
+        for (int dx = 0; dx < 16; dx++) {
+            for (int dz = 0; dz < 16; dz++) {
+                int x = origin.getX() + dx;
+                int z = origin.getZ() + dz;
+                int y = level.getMinY() + config.height;
+                pos.set(x, y, z);
+                if (level.getBlockState(pos).isAir()) {
+                    level.setBlock(pos, config.state, 2);
                 }
             }
         }

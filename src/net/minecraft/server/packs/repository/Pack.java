@@ -1,5 +1,6 @@
 package net.minecraft.server.packs.repository;
 
+import com.google.gson.JsonParseException;
 import com.mojang.logging.LogUtils;
 import java.util.List;
 import java.util.function.Function;
@@ -24,44 +25,48 @@ public class Pack {
     private final Pack.Metadata metadata;
     private final PackSelectionConfig selectionConfig;
 
-    public static @Nullable Pack readMetaAndCreate(PackLocationInfo p_333251_, Pack.ResourcesSupplier p_252210_, PackType p_250595_, PackSelectionConfig p_334202_) {
-        PackFormat packformat = SharedConstants.getCurrentVersion().packVersion(p_250595_);
-        Pack.Metadata pack$metadata = readPackMetadata(p_333251_, p_252210_, packformat, p_250595_);
-        return pack$metadata != null ? new Pack(p_333251_, p_252210_, pack$metadata, p_334202_) : null;
+    public static @Nullable Pack readMetaAndCreate(
+        final PackLocationInfo location, final Pack.ResourcesSupplier resources, final PackType packType, final PackSelectionConfig selectionConfig
+    ) {
+        PackFormat currentPackVersion = SharedConstants.getCurrentVersion().packVersion(packType);
+        Pack.Metadata meta = readPackMetadata(location, resources, currentPackVersion, packType);
+        return meta != null ? new Pack(location, resources, meta, selectionConfig) : null;
     }
 
-    public Pack(PackLocationInfo p_330003_, Pack.ResourcesSupplier p_249377_, Pack.Metadata p_330761_, PackSelectionConfig p_334769_) {
-        this.location = p_330003_;
-        this.resources = p_249377_;
-        this.metadata = p_330761_;
-        this.selectionConfig = p_334769_;
+    public Pack(
+        final PackLocationInfo location, final Pack.ResourcesSupplier resources, final Pack.Metadata metadata, final PackSelectionConfig selectionConfig
+    ) {
+        this.location = location;
+        this.resources = resources;
+        this.metadata = metadata;
+        this.selectionConfig = selectionConfig;
     }
 
-    public static Pack.@Nullable Metadata readPackMetadata(PackLocationInfo p_330799_, Pack.ResourcesSupplier p_331172_, PackFormat p_425340_, PackType p_426910_) {
-        try {
-            Pack.Metadata pack$metadata;
-            try (PackResources packresources = p_331172_.openPrimary(p_330799_)) {
-                PackMetadataSection packmetadatasection = packresources.getMetadataSection(PackMetadataSection.forPackType(p_426910_));
-                if (packmetadatasection == null) {
-                    packmetadatasection = packresources.getMetadataSection(PackMetadataSection.FALLBACK_TYPE);
-                }
-
-                if (packmetadatasection == null) {
-                    LOGGER.warn("Missing metadata in pack {}", p_330799_.id());
-                    return null;
-                }
-
-                FeatureFlagsMetadataSection featureflagsmetadatasection = packresources.getMetadataSection(FeatureFlagsMetadataSection.TYPE);
-                FeatureFlagSet featureflagset = featureflagsmetadatasection != null ? featureflagsmetadatasection.flags() : FeatureFlagSet.of();
-                PackCompatibility packcompatibility = PackCompatibility.forVersion(packmetadatasection.supportedFormats(), p_425340_);
-                OverlayMetadataSection overlaymetadatasection = packresources.getMetadataSection(OverlayMetadataSection.forPackType(p_426910_));
-                List<String> list = overlaymetadatasection != null ? overlaymetadatasection.overlaysForVersion(p_425340_) : List.of();
-                pack$metadata = new Pack.Metadata(packmetadatasection.description(), packcompatibility, featureflagset, list);
+    public static Pack.@Nullable Metadata readPackMetadata(
+        final PackLocationInfo location, final Pack.ResourcesSupplier resources, final PackFormat currentPackVersion, final PackType type
+    ) {
+        try (PackResources pack = resources.openPrimary(location)) {
+            PackMetadataSection meta;
+            try {
+                meta = pack.getMetadataSection(PackMetadataSection.forPackType(type));
+            } catch (JsonParseException e) {
+                LOGGER.warn("Error reading pack metadata, attempting fallback type", e);
+                meta = pack.getMetadataSection(PackMetadataSection.FALLBACK_TYPE);
             }
 
-            return pack$metadata;
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to read pack {} metadata", p_330799_.id(), exception);
+            if (meta == null) {
+                LOGGER.warn("Missing metadata in pack {}", location.id());
+                return null;
+            } else {
+                FeatureFlagsMetadataSection featureFlagMeta = pack.getMetadataSection(FeatureFlagsMetadataSection.TYPE);
+                FeatureFlagSet requiredFlags = featureFlagMeta != null ? featureFlagMeta.flags() : FeatureFlagSet.of();
+                PackCompatibility packCompatibility = PackCompatibility.forVersion(meta.supportedFormats(), currentPackVersion);
+                OverlayMetadataSection overlays = pack.getMetadataSection(OverlayMetadataSection.forPackType(type));
+                List<String> overlaySet = overlays != null ? overlays.overlaysForVersion(currentPackVersion) : List.of();
+                return new Pack.Metadata(meta.description(), packCompatibility, requiredFlags, overlaySet);
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to read pack {} metadata", location.id(), e);
             return null;
         }
     }
@@ -78,8 +83,8 @@ public class Pack {
         return this.metadata.description();
     }
 
-    public Component getChatLink(boolean p_10438_) {
-        return this.location.createChatLink(p_10438_, this.metadata.description);
+    public Component getChatLink(final boolean enabled) {
+        return this.location.createChatLink(enabled, this.metadata.description);
     }
 
     public PackCompatibility getCompatibility() {
@@ -119,11 +124,11 @@ public class Pack {
     }
 
     @Override
-    public boolean equals(Object p_10448_) {
-        if (this == p_10448_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return !(p_10448_ instanceof Pack pack) ? false : this.location.equals(pack.location);
+            return o instanceof Pack that ? this.location.equals(that.location) : false;
         }
     }
 
@@ -135,34 +140,34 @@ public class Pack {
     public record Metadata(Component description, PackCompatibility compatibility, FeatureFlagSet requestedFeatures, List<String> overlays) {
     }
 
-    public static enum Position {
+    public enum Position {
         TOP,
         BOTTOM;
 
-        public <T> int insert(List<T> p_10471_, T p_10472_, Function<T, PackSelectionConfig> p_10473_, boolean p_10474_) {
-            Pack.Position pack$position = p_10474_ ? this.opposite() : this;
-            if (pack$position == BOTTOM) {
-                int j;
-                for (j = 0; j < p_10471_.size(); j++) {
-                    PackSelectionConfig packselectionconfig1 = p_10473_.apply(p_10471_.get(j));
-                    if (!packselectionconfig1.fixedPosition() || packselectionconfig1.defaultPosition() != this) {
+        public <T> int insert(final List<T> list, final T value, final Function<T, PackSelectionConfig> converter, final boolean reverse) {
+            Pack.Position self = reverse ? this.opposite() : this;
+            if (self == BOTTOM) {
+                int index;
+                for (index = 0; index < list.size(); index++) {
+                    PackSelectionConfig pack = converter.apply(list.get(index));
+                    if (!pack.fixedPosition() || pack.defaultPosition() != this) {
                         break;
                     }
                 }
 
-                p_10471_.add(j, p_10472_);
-                return j;
+                list.add(index, value);
+                return index;
             } else {
-                int i;
-                for (i = p_10471_.size() - 1; i >= 0; i--) {
-                    PackSelectionConfig packselectionconfig = p_10473_.apply(p_10471_.get(i));
-                    if (!packselectionconfig.fixedPosition() || packselectionconfig.defaultPosition() != this) {
+                int index;
+                for (index = list.size() - 1; index >= 0; index--) {
+                    PackSelectionConfig pack = converter.apply(list.get(index));
+                    if (!pack.fixedPosition() || pack.defaultPosition() != this) {
                         break;
                     }
                 }
 
-                p_10471_.add(i + 1, p_10472_);
-                return i + 1;
+                list.add(index + 1, value);
+                return index + 1;
             }
         }
 
@@ -172,8 +177,8 @@ public class Pack {
     }
 
     public interface ResourcesSupplier {
-        PackResources openPrimary(PackLocationInfo p_332103_);
+        PackResources openPrimary(PackLocationInfo location);
 
-        PackResources openFull(PackLocationInfo p_330351_, Pack.Metadata p_333429_);
+        PackResources openFull(PackLocationInfo location, Pack.Metadata metadata);
     }
 }

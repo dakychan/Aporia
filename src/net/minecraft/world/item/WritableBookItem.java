@@ -7,15 +7,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 
 public class WritableBookItem extends Item {
-    public WritableBookItem(Item.Properties p_43445_) {
-        super(p_43445_);
+    public WritableBookItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult use(Level p_43449_, Player p_43450_, InteractionHand p_43451_) {
-        ItemStack itemstack = p_43450_.getItemInHand(p_43451_);
-        p_43450_.openItemGui(itemstack, p_43451_);
-        p_43450_.awardStat(Stats.ITEM_USED.get(this));
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        player.openItemGui(itemStack, hand);
+        player.awardStat(Stats.ITEM_USED.get(this));
         return InteractionResult.SUCCESS;
     }
 }

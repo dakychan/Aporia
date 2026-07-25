@@ -10,32 +10,32 @@ public interface AttributeRange<Value> {
     static <Value> AttributeRange<Value> any() {
         return new AttributeRange<Value>() {
             @Override
-            public DataResult<Value> validate(Value p_456412_) {
-                return DataResult.success(p_456412_);
+            public DataResult<Value> validate(final Value value) {
+                return DataResult.success(value);
             }
 
             @Override
-            public Value sanitize(Value p_455294_) {
-                return p_455294_;
+            public Value sanitize(final Value value) {
+                return value;
             }
         };
     }
 
-    static AttributeRange<Float> ofFloat(final float p_457262_, final float p_457736_) {
+    static AttributeRange<Float> ofFloat(final float minValue, final float maxValue) {
         return new AttributeRange<Float>() {
-            public DataResult<Float> validate(Float p_458009_) {
-                return p_458009_ >= p_457262_ && p_458009_ <= p_457736_
-                    ? DataResult.success(p_458009_)
-                    : DataResult.error(() -> p_458009_ + " is not in range [" + p_457262_ + "; " + p_457736_ + "]");
+            public DataResult<Float> validate(final Float value) {
+                return value >= minValue && value <= maxValue
+                    ? DataResult.success(value)
+                    : DataResult.error(() -> value + " is not in range [" + minValue + "; " + maxValue + "]");
             }
 
-            public Float sanitize(Float p_457184_) {
-                return p_457184_ >= p_457262_ && p_457184_ <= p_457736_ ? p_457184_ : Mth.clamp(p_457184_, p_457262_, p_457736_);
+            public Float sanitize(final Float value) {
+                return value >= minValue && value <= maxValue ? value : Mth.clamp(value, minValue, maxValue);
             }
         };
     }
 
-    DataResult<Value> validate(Value p_451091_);
+    DataResult<Value> validate(Value value);
 
-    Value sanitize(Value p_451174_);
+    Value sanitize(Value value);
 }

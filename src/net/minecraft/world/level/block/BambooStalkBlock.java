@@ -43,187 +43,192 @@ public class BambooStalkBlock extends Block implements BonemealableBlock {
         return CODEC;
     }
 
-    public BambooStalkBlock(BlockBehaviour.Properties p_261753_) {
-        super(p_261753_);
+    public BambooStalkBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0).setValue(LEAVES, BambooLeaves.NONE).setValue(STAGE, 0));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_261641_) {
-        p_261641_.add(AGE, LEAVES, STAGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(AGE, LEAVES, STAGE);
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState p_261479_) {
+    protected boolean propagatesSkylightDown(final BlockState state) {
         return true;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_261515_, BlockGetter p_261586_, BlockPos p_261526_, CollisionContext p_261930_) {
-        VoxelShape voxelshape = p_261515_.getValue(LEAVES) == BambooLeaves.LARGE ? SHAPE_LARGE : SHAPE_SMALL;
-        return voxelshape.move(p_261515_.getOffset(p_261526_));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        VoxelShape shape = state.getValue(LEAVES) == BambooLeaves.LARGE ? SHAPE_LARGE : SHAPE_SMALL;
+        return shape.move(state.getOffset(pos));
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_262166_, PathComputationType p_261513_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_261560_, BlockGetter p_261965_, BlockPos p_261950_, CollisionContext p_261571_) {
-        return SHAPE_COLLISION.move(p_261560_.getOffset(p_261950_));
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPE_COLLISION.move(state.getOffset(pos));
     }
 
     @Override
-    protected boolean isCollisionShapeFullBlock(BlockState p_262062_, BlockGetter p_261848_, BlockPos p_261466_) {
+    protected boolean isCollisionShapeFullBlock(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return false;
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_261764_) {
-        FluidState fluidstate = p_261764_.getLevel().getFluidState(p_261764_.getClickedPos());
-        if (!fluidstate.isEmpty()) {
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
+        if (!fluidState.isEmpty()) {
             return null;
-        } else {
-            BlockState blockstate = p_261764_.getLevel().getBlockState(p_261764_.getClickedPos().below());
-            if (blockstate.is(BlockTags.BAMBOO_PLANTABLE_ON)) {
-                if (blockstate.is(Blocks.BAMBOO_SAPLING)) {
-                    return this.defaultBlockState().setValue(AGE, 0);
-                } else if (blockstate.is(Blocks.BAMBOO)) {
-                    int i = blockstate.getValue(AGE) > 0 ? 1 : 0;
-                    return this.defaultBlockState().setValue(AGE, i);
-                } else {
-                    BlockState blockstate1 = p_261764_.getLevel().getBlockState(p_261764_.getClickedPos().above());
-                    return blockstate1.is(Blocks.BAMBOO)
-                        ? this.defaultBlockState().setValue(AGE, blockstate1.getValue(AGE))
-                        : Blocks.BAMBOO_SAPLING.defaultBlockState();
-                }
+        }
+
+        BlockState belowState = context.getLevel().getBlockState(context.getClickedPos().below());
+        if (belowState.is(BlockTags.SUPPORTS_BAMBOO)) {
+            if (belowState.is(Blocks.BAMBOO_SAPLING)) {
+                return this.defaultBlockState().setValue(AGE, 0);
+            } else if (belowState.is(Blocks.BAMBOO)) {
+                int age = belowState.getValue(AGE) > 0 ? 1 : 0;
+                return this.defaultBlockState().setValue(AGE, age);
             } else {
-                return null;
+                BlockState aboveState = context.getLevel().getBlockState(context.getClickedPos().above());
+                return aboveState.is(Blocks.BAMBOO)
+                    ? this.defaultBlockState().setValue(AGE, aboveState.getValue(AGE))
+                    : Blocks.BAMBOO_SAPLING.defaultBlockState();
             }
+        } else {
+            return null;
         }
     }
 
     @Override
-    protected void tick(BlockState p_261612_, ServerLevel p_261527_, BlockPos p_261846_, RandomSource p_261638_) {
-        if (!p_261612_.canSurvive(p_261527_, p_261846_)) {
-            p_261527_.destroyBlock(p_261846_, true);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!state.canSurvive(level, pos)) {
+            level.destroyBlock(pos, true);
         }
     }
 
     @Override
-    protected boolean isRandomlyTicking(BlockState p_262083_) {
-        return p_262083_.getValue(STAGE) == 0;
+    protected boolean isRandomlyTicking(final BlockState state) {
+        return state.getValue(STAGE) == 0;
     }
 
     @Override
-    protected void randomTick(BlockState p_261931_, ServerLevel p_261751_, BlockPos p_261616_, RandomSource p_261766_) {
-        if (p_261931_.getValue(STAGE) == 0) {
-            if (p_261766_.nextInt(3) == 0 && p_261751_.isEmptyBlock(p_261616_.above()) && p_261751_.getRawBrightness(p_261616_.above(), 0) >= 9) {
-                int i = this.getHeightBelowUpToMax(p_261751_, p_261616_) + 1;
-                if (i < 16) {
-                    this.growBamboo(p_261931_, p_261751_, p_261616_, p_261766_, i);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(STAGE) == 0) {
+            if (random.nextInt(3) == 0 && level.isEmptyBlock(pos.above()) && level.getRawBrightness(pos.above(), 0) >= 9) {
+                int height = this.getHeightBelowUpToMax(level, pos) + 1;
+                if (height < 16) {
+                    this.growBamboo(state, level, pos, random, height);
                 }
             }
         }
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_261860_, LevelReader p_262154_, BlockPos p_261493_) {
-        return p_262154_.getBlockState(p_261493_.below()).is(BlockTags.BAMBOO_PLANTABLE_ON);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return level.getBlockState(pos.below()).is(BlockTags.SUPPORTS_BAMBOO);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_261476_,
-        LevelReader p_362157_,
-        ScheduledTickAccess p_366749_,
-        BlockPos p_261876_,
-        Direction p_261512_,
-        BlockPos p_262140_,
-        BlockState p_262167_,
-        RandomSource p_364105_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!p_261476_.canSurvive(p_362157_, p_261876_)) {
-            p_366749_.scheduleTick(p_261876_, this, 1);
+        if (!state.canSurvive(level, pos)) {
+            ticks.scheduleTick(pos, this, 1);
         }
 
-        return p_261512_ == Direction.UP && p_262167_.is(Blocks.BAMBOO) && p_262167_.getValue(AGE) > p_261476_.getValue(AGE)
-            ? p_261476_.cycle(AGE)
-            : super.updateShape(p_261476_, p_362157_, p_366749_, p_261876_, p_261512_, p_262140_, p_262167_, p_364105_);
+        return directionToNeighbour == Direction.UP && neighbourState.is(Blocks.BAMBOO) && neighbourState.getValue(AGE) > state.getValue(AGE)
+            ? state.cycle(AGE)
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_262065_, BlockPos p_262033_, BlockState p_261700_) {
-        int i = this.getHeightAboveUpToMax(p_262065_, p_262033_);
-        int j = this.getHeightBelowUpToMax(p_262065_, p_262033_);
-        return i + j + 1 < 16 && p_262065_.getBlockState(p_262033_.above(i)).getValue(STAGE) != 1;
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        int heightAbove = this.getHeightAboveUpToMax(level, pos);
+        int heightBelow = this.getHeightBelowUpToMax(level, pos);
+        BlockPos growthPos = pos.above(heightAbove + 1);
+        return heightAbove + heightBelow + 1 < 16
+            && level.getBlockState(pos.above(heightAbove)).getValue(STAGE) != 1
+            && level.isInsideBuildHeight(growthPos)
+            && level.isEmptyBlock(growthPos);
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_261870_, RandomSource p_261802_, BlockPos p_262123_, BlockState p_261972_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_261845_, RandomSource p_262034_, BlockPos p_261955_, BlockState p_261685_) {
-        int i = this.getHeightAboveUpToMax(p_261845_, p_261955_);
-        int j = this.getHeightBelowUpToMax(p_261845_, p_261955_);
-        int k = i + j + 1;
-        int l = 1 + p_262034_.nextInt(2);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        int heightAbove = this.getHeightAboveUpToMax(level, pos);
+        int heightBelow = this.getHeightBelowUpToMax(level, pos);
+        int totalHeight = heightAbove + heightBelow + 1;
+        int newBamboo = 1 + random.nextInt(2);
 
-        for (int i1 = 0; i1 < l; i1++) {
-            BlockPos blockpos = p_261955_.above(i);
-            BlockState blockstate = p_261845_.getBlockState(blockpos);
-            if (k >= 16 || blockstate.getValue(STAGE) == 1 || !p_261845_.isEmptyBlock(blockpos.above())) {
+        for (int i = 0; i < newBamboo; i++) {
+            BlockPos topPos = pos.above(heightAbove);
+            BlockState topState = level.getBlockState(topPos);
+            BlockPos growthPos = topPos.above();
+            if (totalHeight >= 16 || topState.getValue(STAGE) == 1 || !level.isEmptyBlock(growthPos) || level.isOutsideBuildHeight(growthPos)) {
                 return;
             }
 
-            this.growBamboo(blockstate, p_261845_, blockpos, p_262034_, k);
-            i++;
-            k++;
+            this.growBamboo(topState, level, topPos, random, totalHeight);
+            heightAbove++;
+            totalHeight++;
         }
     }
 
-    protected void growBamboo(BlockState p_261855_, Level p_262076_, BlockPos p_262109_, RandomSource p_261633_, int p_261759_) {
-        BlockState blockstate = p_262076_.getBlockState(p_262109_.below());
-        BlockPos blockpos = p_262109_.below(2);
-        BlockState blockstate1 = p_262076_.getBlockState(blockpos);
-        BambooLeaves bambooleaves = BambooLeaves.NONE;
-        if (p_261759_ >= 1) {
-            if (!blockstate.is(Blocks.BAMBOO) || blockstate.getValue(LEAVES) == BambooLeaves.NONE) {
-                bambooleaves = BambooLeaves.SMALL;
-            } else if (blockstate.is(Blocks.BAMBOO) && blockstate.getValue(LEAVES) != BambooLeaves.NONE) {
-                bambooleaves = BambooLeaves.LARGE;
-                if (blockstate1.is(Blocks.BAMBOO)) {
-                    p_262076_.setBlock(p_262109_.below(), blockstate.setValue(LEAVES, BambooLeaves.SMALL), 3);
-                    p_262076_.setBlock(blockpos, blockstate1.setValue(LEAVES, BambooLeaves.NONE), 3);
+    protected void growBamboo(final BlockState state, final Level level, final BlockPos pos, final RandomSource random, final int height) {
+        BlockState belowState = level.getBlockState(pos.below());
+        BlockPos twoBelowPos = pos.below(2);
+        BlockState twoBelowState = level.getBlockState(twoBelowPos);
+        BambooLeaves leaves = BambooLeaves.NONE;
+        if (height >= 1) {
+            if (!belowState.is(Blocks.BAMBOO) || belowState.getValue(LEAVES) == BambooLeaves.NONE) {
+                leaves = BambooLeaves.SMALL;
+            } else if (belowState.is(Blocks.BAMBOO) && belowState.getValue(LEAVES) != BambooLeaves.NONE) {
+                leaves = BambooLeaves.LARGE;
+                if (twoBelowState.is(Blocks.BAMBOO)) {
+                    level.setBlock(pos.below(), belowState.setValue(LEAVES, BambooLeaves.SMALL), 3);
+                    level.setBlock(twoBelowPos, twoBelowState.setValue(LEAVES, BambooLeaves.NONE), 3);
                 }
             }
         }
 
-        int i = p_261855_.getValue(AGE) != 1 && !blockstate1.is(Blocks.BAMBOO) ? 0 : 1;
-        int j = (p_261759_ < 11 || !(p_261633_.nextFloat() < 0.25F)) && p_261759_ != 15 ? 0 : 1;
-        p_262076_.setBlock(p_262109_.above(), this.defaultBlockState().setValue(AGE, i).setValue(LEAVES, bambooleaves).setValue(STAGE, j), 3);
+        int age = state.getValue(AGE) != 1 && !twoBelowState.is(Blocks.BAMBOO) ? 0 : 1;
+        int stage = (height < 11 || !(random.nextFloat() < 0.25F)) && height != 15 ? 0 : 1;
+        level.setBlock(pos.above(), this.defaultBlockState().setValue(AGE, age).setValue(LEAVES, leaves).setValue(STAGE, stage), 3);
     }
 
-    protected int getHeightAboveUpToMax(BlockGetter p_261541_, BlockPos p_261593_) {
-        int i = 0;
+    protected int getHeightAboveUpToMax(final BlockGetter level, final BlockPos pos) {
+        int height = 0;
 
-        while (i < 16 && p_261541_.getBlockState(p_261593_.above(i + 1)).is(Blocks.BAMBOO)) {
-            i++;
+        while (height < 16 && level.getBlockState(pos.above(height + 1)).is(Blocks.BAMBOO)) {
+            height++;
         }
 
-        return i;
+        return height;
     }
 
-    protected int getHeightBelowUpToMax(BlockGetter p_261927_, BlockPos p_261481_) {
-        int i = 0;
+    protected int getHeightBelowUpToMax(final BlockGetter level, final BlockPos pos) {
+        int height = 0;
 
-        while (i < 16 && p_261927_.getBlockState(p_261481_.below(i + 1)).is(Blocks.BAMBOO)) {
-            i++;
+        while (height < 16 && level.getBlockState(pos.below(height + 1)).is(Blocks.BAMBOO)) {
+            height++;
         }
 
-        return i;
+        return height;
     }
 }

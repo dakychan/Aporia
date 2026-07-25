@@ -18,23 +18,23 @@ public enum FrontAndTop implements StringRepresentable {
     SOUTH_UP("south_up", Direction.SOUTH, Direction.UP);
 
     private static final int NUM_DIRECTIONS = Direction.values().length;
-    private static final FrontAndTop[] BY_TOP_FRONT = Util.make(new FrontAndTop[NUM_DIRECTIONS * NUM_DIRECTIONS], p_358080_ -> {
-        for (FrontAndTop frontandtop : values()) {
-            p_358080_[lookupKey(frontandtop.front, frontandtop.top)] = frontandtop;
+    private static final FrontAndTop[] BY_TOP_FRONT = Util.make(new FrontAndTop[NUM_DIRECTIONS * NUM_DIRECTIONS], map -> {
+        for (FrontAndTop value : values()) {
+            map[lookupKey(value.front, value.top)] = value;
         }
     });
     private final String name;
     private final Direction top;
     private final Direction front;
 
-    private static int lookupKey(Direction p_122627_, Direction p_122628_) {
-        return p_122627_.ordinal() * NUM_DIRECTIONS + p_122628_.ordinal();
+    private static int lookupKey(final Direction front, final Direction top) {
+        return front.ordinal() * NUM_DIRECTIONS + top.ordinal();
     }
 
-    private FrontAndTop(final String p_122618_, final Direction p_122619_, final Direction p_122620_) {
-        this.name = p_122618_;
-        this.front = p_122619_;
-        this.top = p_122620_;
+    FrontAndTop(final String name, final Direction front, final Direction top) {
+        this.name = name;
+        this.front = front;
+        this.top = top;
     }
 
     @Override
@@ -42,8 +42,8 @@ public enum FrontAndTop implements StringRepresentable {
         return this.name;
     }
 
-    public static FrontAndTop fromFrontAndTop(Direction p_122623_, Direction p_122624_) {
-        return BY_TOP_FRONT[lookupKey(p_122623_, p_122624_)];
+    public static FrontAndTop fromFrontAndTop(final Direction front, final Direction top) {
+        return BY_TOP_FRONT[lookupKey(front, top)];
     }
 
     public Direction front() {

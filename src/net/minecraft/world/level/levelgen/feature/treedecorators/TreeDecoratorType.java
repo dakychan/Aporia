@@ -17,12 +17,12 @@ public class TreeDecoratorType<P extends TreeDecorator> {
     public static final TreeDecoratorType<AttachedToLogsDecorator> ATTACHED_TO_LOGS = register("attached_to_logs", AttachedToLogsDecorator.CODEC);
     private final MapCodec<P> codec;
 
-    private static <P extends TreeDecorator> TreeDecoratorType<P> register(String p_70053_, MapCodec<P> p_329425_) {
-        return Registry.register(BuiltInRegistries.TREE_DECORATOR_TYPE, p_70053_, new TreeDecoratorType<>(p_329425_));
+    private static <P extends TreeDecorator> TreeDecoratorType<P> register(final String name, final MapCodec<P> codec) {
+        return Registry.register(BuiltInRegistries.TREE_DECORATOR_TYPE, name, new TreeDecoratorType<>(codec));
     }
 
-    private TreeDecoratorType(MapCodec<P> p_332594_) {
-        this.codec = p_332594_;
+    private TreeDecoratorType(final MapCodec<P> codec) {
+        this.codec = codec;
     }
 
     public MapCodec<P> codec() {

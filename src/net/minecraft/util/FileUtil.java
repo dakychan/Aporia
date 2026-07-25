@@ -5,9 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,64 +20,59 @@ public class FileUtil {
     private static final Pattern RESERVED_WINDOWS_FILENAMES = Pattern.compile(".*\\.|(?:COM|CLOCK\\$|CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\\..*)?", 2);
     private static final Pattern STRICT_PATH_SEGMENT_CHECK = Pattern.compile("[-._a-z0-9]+");
 
-    public static String sanitizeName(String p_453893_) {
-        for (char c0 : SharedConstants.ILLEGAL_FILE_CHARACTERS) {
-            p_453893_ = p_453893_.replace(c0, '_');
+    public static String sanitizeName(String baseName) {
+        for (char replacer : SharedConstants.ILLEGAL_FILE_CHARACTERS) {
+            baseName = baseName.replace(replacer, '_');
         }
 
-        return p_453893_.replaceAll("[./\"]", "_");
+        return baseName.replaceAll("[./\"]", "_");
     }
 
-    public static String findAvailableName(Path p_459453_, String p_452613_, String p_455848_) throws IOException {
-        p_452613_ = sanitizeName(p_452613_);
-        if (!isPathPartPortable(p_452613_)) {
-            p_452613_ = "_" + p_452613_ + "_";
+    public static String findAvailableName(final Path baseDir, String baseName, final String suffix) throws IOException {
+        baseName = sanitizeName(baseName);
+        if (!isPathPartPortable(baseName)) {
+            baseName = "_" + baseName + "_";
         }
 
-        Matcher matcher = COPY_COUNTER_PATTERN.matcher(p_452613_);
-        int i = 0;
+        Matcher matcher = COPY_COUNTER_PATTERN.matcher(baseName);
+        int count = 0;
         if (matcher.matches()) {
-            p_452613_ = matcher.group("name");
-            i = Integer.parseInt(matcher.group("count"));
+            baseName = matcher.group("name");
+            count = Integer.parseInt(matcher.group("count"));
         }
 
-        if (p_452613_.length() > 255 - p_455848_.length()) {
-            p_452613_ = p_452613_.substring(0, 255 - p_455848_.length());
+        if (baseName.length() > 255 - suffix.length()) {
+            baseName = baseName.substring(0, 255 - suffix.length());
         }
 
         while (true) {
-            String s = p_452613_;
-            if (i != 0) {
-                String s1 = " (" + i + ")";
-                int j = 255 - s1.length();
-                if (p_452613_.length() > j) {
-                    s = p_452613_.substring(0, j);
+            String nameToTest = baseName;
+            if (count != 0) {
+                String countSuffix = " (" + count + ")";
+                int length = 255 - countSuffix.length();
+                if (nameToTest.length() > length) {
+                    nameToTest = nameToTest.substring(0, length);
                 }
 
-                s = s + s1;
+                nameToTest = nameToTest + countSuffix;
             }
 
-            s = s + p_455848_;
-            Path path = p_459453_.resolve(s);
+            nameToTest = nameToTest + suffix;
+            Path fullPath = baseDir.resolve(nameToTest);
 
             try {
-                Path path1 = Files.createDirectory(path);
-                Files.deleteIfExists(path1);
-                return p_459453_.relativize(path1).toString();
-            } catch (FileAlreadyExistsException filealreadyexistsexception) {
-                i++;
+                Path created = Files.createDirectory(fullPath);
+                Files.deleteIfExists(created);
+                return baseDir.relativize(created).toString();
+            } catch (FileAlreadyExistsException e) {
+                count++;
             }
         }
     }
 
-    public static boolean isPathNormalized(Path p_452834_) {
-        Path path = p_452834_.normalize();
-        return path.equals(p_452834_);
-    }
-
-    public static boolean isPathPortable(Path p_452174_) {
-        for (Path path : p_452174_) {
-            if (!isPathPartPortable(path.toString())) {
+    public static boolean isPathPortable(final Path path) {
+        for (Path part : path) {
+            if (!isPathPartPortable(part.toString())) {
                 return false;
             }
         }
@@ -87,107 +80,101 @@ public class FileUtil {
         return true;
     }
 
-    public static boolean isPathPartPortable(String p_460763_) {
-        return !RESERVED_WINDOWS_FILENAMES.matcher(p_460763_).matches();
+    public static boolean isPathPartPortable(final String name) {
+        return !RESERVED_WINDOWS_FILENAMES.matcher(name).matches();
     }
 
-    public static Path createPathToResource(Path p_455653_, String p_456639_, String p_452686_) {
-        String s = p_456639_ + p_452686_;
-        Path path = Paths.get(s);
-        if (path.endsWith(p_452686_)) {
-            throw new InvalidPathException(s, "empty resource name");
-        } else {
-            return p_455653_.resolve(path);
-        }
+    public static String getFullResourcePath(final String filename) {
+        return FilenameUtils.getFullPath(filename).replace(File.separator, "/");
     }
 
-    public static String getFullResourcePath(String p_456803_) {
-        return FilenameUtils.getFullPath(p_456803_).replace(File.separator, "/");
+    public static String normalizeResourcePath(final String filename) {
+        return FilenameUtils.normalize(filename).replace(File.separator, "/");
     }
 
-    public static String normalizeResourcePath(String p_450259_) {
-        return FilenameUtils.normalize(p_450259_).replace(File.separator, "/");
-    }
-
-    public static DataResult<List<String>> decomposePath(String p_450680_) {
-        int i = p_450680_.indexOf(47);
-        if (i == -1) {
-            return switch (p_450680_) {
-                case "", ".", ".." -> DataResult.error(() -> "Invalid path '" + p_450680_ + "'");
-                default -> !containsAllowedCharactersOnly(p_450680_) ? DataResult.error(() -> "Invalid path '" + p_450680_ + "'") : DataResult.success(List.of(p_450680_));
+    public static DataResult<List<String>> decomposePath(final String path) {
+        int segmentEnd = path.indexOf(47);
+        if (segmentEnd == -1) {
+            return switch (path) {
+                case "", ".", ".." -> DataResult.error(() -> "Invalid path '" + path + "'");
+                default -> !containsAllowedCharactersOnly(path) ? DataResult.error(() -> "Invalid path '" + path + "'") : DataResult.success(List.of(path));
             };
         } else {
-            List<String> list = new ArrayList<>();
-            int j = 0;
-            boolean flag = false;
+            List<String> result = new ArrayList<>();
+            int segmentStart = 0;
+            boolean lastSegment = false;
 
             while (true) {
-                String s = p_450680_.substring(j, i);
-                switch (s) {
+                String segment = path.substring(segmentStart, segmentEnd);
+                switch (segment) {
                     case "":
                     case ".":
                     case "..":
-                        return DataResult.error(() -> "Invalid segment '" + s + "' in path '" + p_450680_ + "'");
+                        return DataResult.error(() -> "Invalid segment '" + segment + "' in path '" + path + "'");
                 }
 
-                if (!containsAllowedCharactersOnly(s)) {
-                    return DataResult.error(() -> "Invalid segment '" + s + "' in path '" + p_450680_ + "'");
+                if (!containsAllowedCharactersOnly(segment)) {
+                    return DataResult.error(() -> "Invalid segment '" + segment + "' in path '" + path + "'");
                 }
 
-                list.add(s);
-                if (flag) {
-                    return DataResult.success(list);
+                result.add(segment);
+                if (lastSegment) {
+                    return DataResult.success(result);
                 }
 
-                j = i + 1;
-                i = p_450680_.indexOf(47, j);
-                if (i == -1) {
-                    i = p_450680_.length();
-                    flag = true;
+                segmentStart = segmentEnd + 1;
+                segmentEnd = path.indexOf(47, segmentStart);
+                if (segmentEnd == -1) {
+                    segmentEnd = path.length();
+                    lastSegment = true;
                 }
             }
         }
     }
 
-    public static Path resolvePath(Path p_460552_, List<String> p_452490_) {
-        int i = p_452490_.size();
+    public static Path resolvePath(final Path root, final List<String> segments) {
+        int size = segments.size();
 
-        return switch (i) {
-            case 0 -> p_460552_;
-            case 1 -> p_460552_.resolve(p_452490_.get(0));
+        return switch (size) {
+            case 0 -> root;
+            case 1 -> root.resolve(segments.get(0));
             default -> {
-                String[] astring = new String[i - 1];
+                String[] rest = new String[size - 1];
 
-                for (int j = 1; j < i; j++) {
-                    astring[j - 1] = p_452490_.get(j);
+                for (int i = 1; i < size; i++) {
+                    rest[i - 1] = segments.get(i);
                 }
 
-                yield p_460552_.resolve(p_460552_.getFileSystem().getPath(p_452490_.get(0), astring));
+                yield root.resolve(root.getFileSystem().getPath(segments.get(0), rest));
             }
         };
     }
 
-    private static boolean containsAllowedCharactersOnly(String p_456664_) {
-        return STRICT_PATH_SEGMENT_CHECK.matcher(p_456664_).matches();
+    private static boolean containsAllowedCharactersOnly(final String segment) {
+        return STRICT_PATH_SEGMENT_CHECK.matcher(segment).matches();
     }
 
-    public static boolean isValidPathSegment(String p_456937_) {
-        return !p_456937_.equals("..") && !p_456937_.equals(".") && containsAllowedCharactersOnly(p_456937_);
+    public static boolean isValidPathSegment(final String segment) {
+        return !segment.equals("..") && !segment.equals(".") && containsAllowedCharactersOnly(segment);
     }
 
-    public static void validatePath(String... p_453784_) {
-        if (p_453784_.length == 0) {
+    public static void validatePath(final String... path) {
+        if (path.length == 0) {
             throw new IllegalArgumentException("Path must have at least one element");
-        } else {
-            for (String s : p_453784_) {
-                if (!isValidPathSegment(s)) {
-                    throw new IllegalArgumentException("Illegal segment " + s + " in path " + Arrays.toString((Object[])p_453784_));
-                }
+        }
+
+        for (String segment : path) {
+            if (!isValidPathSegment(segment)) {
+                throw new IllegalArgumentException("Illegal segment " + segment + " in path " + Arrays.toString(path));
             }
         }
     }
 
-    public static void createDirectoriesSafe(Path p_454579_) throws IOException {
-        Files.createDirectories(Files.exists(p_454579_) ? p_454579_.toRealPath() : p_454579_);
+    public static void createDirectoriesSafe(final Path dir) throws IOException {
+        Files.createDirectories(Files.exists(dir) ? dir.toRealPath() : dir);
+    }
+
+    public static boolean isEmptyPath(final Path path) {
+        return path.getNameCount() == 1 && path.getFileName().toString().isEmpty();
     }
 }

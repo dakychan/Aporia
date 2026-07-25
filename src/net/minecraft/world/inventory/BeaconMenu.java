@@ -11,6 +11,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BeaconBlockEntity;
 import org.jspecify.annotations.Nullable;
 
 public class BeaconMenu extends AbstractContainerMenu {
@@ -24,8 +25,8 @@ public class BeaconMenu extends AbstractContainerMenu {
     private static final int NO_EFFECT = 0;
     private final Container beacon = new SimpleContainer(1) {
         @Override
-        public boolean canPlaceItem(int p_39066_, ItemStack p_39067_) {
-            return p_39067_.is(ItemTags.BEACON_PAYMENT_ITEMS);
+        public boolean canPlaceItem(final int slot, final ItemStack itemStack) {
+            return itemStack.is(ItemTags.BEACON_PAYMENT_ITEMS);
         }
 
         @Override
@@ -37,98 +38,98 @@ public class BeaconMenu extends AbstractContainerMenu {
     private final ContainerLevelAccess access;
     private final ContainerData beaconData;
 
-    public BeaconMenu(int p_39036_, Container p_39037_) {
-        this(p_39036_, p_39037_, new SimpleContainerData(3), ContainerLevelAccess.NULL);
+    public BeaconMenu(final int containerId, final Container inventory) {
+        this(containerId, inventory, new SimpleContainerData(3), ContainerLevelAccess.NULL);
     }
 
-    public BeaconMenu(int p_39039_, Container p_39040_, ContainerData p_39041_, ContainerLevelAccess p_39042_) {
-        super(MenuType.BEACON, p_39039_);
-        checkContainerDataCount(p_39041_, 3);
-        this.beaconData = p_39041_;
-        this.access = p_39042_;
+    public BeaconMenu(final int containerId, final Container inventory, final ContainerData beaconData, final ContainerLevelAccess access) {
+        super(MenuType.BEACON, containerId);
+        checkContainerDataCount(beaconData, 3);
+        this.beaconData = beaconData;
+        this.access = access;
         this.paymentSlot = new BeaconMenu.PaymentSlot(this.beacon, 0, 136, 110);
         this.addSlot(this.paymentSlot);
-        this.addDataSlots(p_39041_);
-        this.addStandardInventorySlots(p_39040_, 36, 137);
+        this.addDataSlots(beaconData);
+        this.addStandardInventorySlots(inventory, 36, 137);
     }
 
     @Override
-    public void removed(Player p_39049_) {
-        super.removed(p_39049_);
-        if (!p_39049_.level().isClientSide()) {
-            ItemStack itemstack = this.paymentSlot.remove(this.paymentSlot.getMaxStackSize());
-            if (!itemstack.isEmpty()) {
-                p_39049_.drop(itemstack, false);
+    public void removed(final Player player) {
+        super.removed(player);
+        if (!player.level().isClientSide()) {
+            ItemStack itemStack = this.paymentSlot.remove(this.paymentSlot.getMaxStackSize());
+            if (!itemStack.isEmpty()) {
+                player.drop(itemStack, false);
             }
         }
     }
 
     @Override
-    public boolean stillValid(Player p_39047_) {
-        return stillValid(this.access, p_39047_, Blocks.BEACON);
+    public boolean stillValid(final Player player) {
+        return stillValid(this.access, player, Blocks.BEACON);
     }
 
     @Override
-    public void setData(int p_39044_, int p_39045_) {
-        super.setData(p_39044_, p_39045_);
+    public void setData(final int id, final int value) {
+        super.setData(id, value);
         this.broadcastChanges();
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_39051_, int p_39052_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_39052_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_39052_ == 0) {
-                if (!this.moveItemStackTo(itemstack1, 1, 37, true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex == 0) {
+                if (!this.moveItemStackTo(stack, 1, 37, true)) {
                     return ItemStack.EMPTY;
                 }
 
-                slot.onQuickCraft(itemstack1, itemstack);
-            } else if (!this.paymentSlot.hasItem() && this.paymentSlot.mayPlace(itemstack1) && itemstack1.getCount() == 1) {
-                if (!this.moveItemStackTo(itemstack1, 0, 1, false)) {
+                slot.onQuickCraft(stack, clicked);
+            } else if (!this.paymentSlot.hasItem() && this.paymentSlot.mayPlace(stack) && stack.getCount() == 1) {
+                if (!this.moveItemStackTo(stack, 0, 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (p_39052_ >= 1 && p_39052_ < 28) {
-                if (!this.moveItemStackTo(itemstack1, 28, 37, false)) {
+            } else if (slotIndex >= 1 && slotIndex < 28) {
+                if (!this.moveItemStackTo(stack, 28, 37, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (p_39052_ >= 28 && p_39052_ < 37) {
-                if (!this.moveItemStackTo(itemstack1, 1, 28, false)) {
+            } else if (slotIndex >= 28 && slotIndex < 37) {
+                if (!this.moveItemStackTo(stack, 1, 28, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 1, 37, false)) {
+            } else if (!this.moveItemStackTo(stack, 1, 37, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
 
-            if (itemstack1.getCount() == itemstack.getCount()) {
+            if (stack.getCount() == clicked.getCount()) {
                 return ItemStack.EMPTY;
             }
 
-            slot.onTake(p_39051_, itemstack1);
+            slot.onTake(player, stack);
         }
 
-        return itemstack;
+        return clicked;
     }
 
     public int getLevels() {
         return this.beaconData.get(0);
     }
 
-    public static int encodeEffect(@Nullable Holder<MobEffect> p_334357_) {
-        return p_334357_ == null ? 0 : BuiltInRegistries.MOB_EFFECT.asHolderIdMap().getId(p_334357_) + 1;
+    public static int encodeEffect(final @Nullable Holder<MobEffect> mobEffect) {
+        return mobEffect == null ? 0 : BuiltInRegistries.MOB_EFFECT.asHolderIdMap().getId(mobEffect) + 1;
     }
 
-    public static @Nullable Holder<MobEffect> decodeEffect(int p_297542_) {
-        return p_297542_ == 0 ? null : BuiltInRegistries.MOB_EFFECT.asHolderIdMap().byId(p_297542_ - 1);
+    public static @Nullable Holder<MobEffect> decodeEffect(final int id) {
+        return id == 0 ? null : BuiltInRegistries.MOB_EFFECT.asHolderIdMap().byId(id - 1);
     }
 
     public @Nullable Holder<MobEffect> getPrimaryEffect() {
@@ -139,12 +140,22 @@ public class BeaconMenu extends AbstractContainerMenu {
         return decodeEffect(this.beaconData.get(2));
     }
 
-    public void updateEffects(Optional<Holder<MobEffect>> p_219973_, Optional<Holder<MobEffect>> p_219974_) {
+    public boolean updateEffects(final Optional<Holder<MobEffect>> primary, final Optional<Holder<MobEffect>> secondary) {
         if (this.paymentSlot.hasItem()) {
-            this.beaconData.set(1, encodeEffect(p_219973_.orElse(null)));
-            this.beaconData.set(2, encodeEffect(p_219974_.orElse(null)));
+            int levels = this.getLevels();
+            Holder<MobEffect> primaryEffect = primary.orElse(null);
+            Holder<MobEffect> secondaryEffect = secondary.orElse(null);
+            if (!BeaconBlockEntity.validateEffects(primaryEffect, secondaryEffect, levels)) {
+                return false;
+            }
+
+            this.beaconData.set(1, encodeEffect(primaryEffect));
+            this.beaconData.set(2, encodeEffect(secondaryEffect));
             this.paymentSlot.remove(1);
             this.access.execute(Level::blockEntityChanged);
+            return true;
+        } else {
+            return false;
         }
     }
 
@@ -152,14 +163,14 @@ public class BeaconMenu extends AbstractContainerMenu {
         return !this.beacon.getItem(0).isEmpty();
     }
 
-    static class PaymentSlot extends Slot {
-        public PaymentSlot(Container p_39071_, int p_39072_, int p_39073_, int p_39074_) {
-            super(p_39071_, p_39072_, p_39073_, p_39074_);
+    private static class PaymentSlot extends Slot {
+        public PaymentSlot(final Container container, final int slot, final int x, final int y) {
+            super(container, slot, x, y);
         }
 
         @Override
-        public boolean mayPlace(ItemStack p_39077_) {
-            return p_39077_.is(ItemTags.BEACON_PAYMENT_ITEMS);
+        public boolean mayPlace(final ItemStack itemStack) {
+            return itemStack.is(ItemTags.BEACON_PAYMENT_ITEMS);
         }
 
         @Override

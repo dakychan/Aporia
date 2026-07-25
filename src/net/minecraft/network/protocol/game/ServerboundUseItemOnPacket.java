@@ -15,22 +15,22 @@ public class ServerboundUseItemOnPacket implements Packet<ServerGamePacketListen
     private final InteractionHand hand;
     private final int sequence;
 
-    public ServerboundUseItemOnPacket(InteractionHand p_238005_, BlockHitResult p_238006_, int p_238007_) {
-        this.hand = p_238005_;
-        this.blockHit = p_238006_;
-        this.sequence = p_238007_;
+    public ServerboundUseItemOnPacket(final InteractionHand hand, final BlockHitResult blockHit, final int sequence) {
+        this.hand = hand;
+        this.blockHit = blockHit;
+        this.sequence = sequence;
     }
 
-    private ServerboundUseItemOnPacket(FriendlyByteBuf p_179796_) {
-        this.hand = p_179796_.readEnum(InteractionHand.class);
-        this.blockHit = p_179796_.readBlockHitResult();
-        this.sequence = p_179796_.readVarInt();
+    private ServerboundUseItemOnPacket(final FriendlyByteBuf input) {
+        this.hand = input.readEnum(InteractionHand.class);
+        this.blockHit = input.readBlockHitResult();
+        this.sequence = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_134705_) {
-        p_134705_.writeEnum(this.hand);
-        p_134705_.writeBlockHitResult(this.blockHit);
-        p_134705_.writeVarInt(this.sequence);
+    private void write(final FriendlyByteBuf output) {
+        output.writeEnum(this.hand);
+        output.writeBlockHitResult(this.blockHit);
+        output.writeVarInt(this.sequence);
     }
 
     @Override
@@ -38,8 +38,8 @@ public class ServerboundUseItemOnPacket implements Packet<ServerGamePacketListen
         return GamePacketTypes.SERVERBOUND_USE_ITEM_ON;
     }
 
-    public void handle(ServerGamePacketListener p_134702_) {
-        p_134702_.handleUseItemOn(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleUseItemOn(this);
     }
 
     public InteractionHand getHand() {

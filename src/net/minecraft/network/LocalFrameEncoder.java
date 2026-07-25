@@ -6,7 +6,7 @@ import io.netty.channel.ChannelPromise;
 
 public class LocalFrameEncoder extends ChannelOutboundHandlerAdapter {
     @Override
-    public void write(ChannelHandlerContext p_376273_, Object p_376176_, ChannelPromise p_376593_) {
-        p_376273_.write(HiddenByteBuf.pack(p_376176_), p_376593_);
+    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+        ctx.write(HiddenByteBuf.pack(msg), promise);
     }
 }

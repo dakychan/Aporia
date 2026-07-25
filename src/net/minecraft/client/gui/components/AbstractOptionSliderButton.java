@@ -2,15 +2,12 @@ package net.minecraft.client.gui.components;
 
 import net.minecraft.client.Options;
 import net.minecraft.network.chat.CommonComponents;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractOptionSliderButton extends AbstractSliderButton {
     protected final Options options;
 
-    protected AbstractOptionSliderButton(Options p_93379_, int p_93380_, int p_93381_, int p_93382_, int p_93383_, double p_93384_) {
-        super(p_93380_, p_93381_, p_93382_, p_93383_, CommonComponents.EMPTY, p_93384_);
-        this.options = p_93379_;
+    protected AbstractOptionSliderButton(final Options options, final int x, final int y, final int width, final int height, final double initialValue) {
+        super(x, y, width, height, CommonComponents.EMPTY, initialValue);
+        this.options = options;
     }
 }

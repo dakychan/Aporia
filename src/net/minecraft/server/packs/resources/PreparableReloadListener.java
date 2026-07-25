@@ -9,10 +9,13 @@ import java.util.concurrent.Executor;
 @FunctionalInterface
 public interface PreparableReloadListener {
     CompletableFuture<Void> reload(
-        PreparableReloadListener.SharedState p_425046_, Executor p_10642_, PreparableReloadListener.PreparationBarrier p_10638_, Executor p_10643_
+        PreparableReloadListener.SharedState currentReload,
+        Executor taskExecutor,
+        PreparableReloadListener.PreparationBarrier preparationBarrier,
+        Executor reloadExecutor
     );
 
-    default void prepareSharedState(PreparableReloadListener.SharedState p_429550_) {
+    default void prepareSharedState(final PreparableReloadListener.SharedState currentReload) {
     }
 
     default String getName() {
@@ -20,31 +23,31 @@ public interface PreparableReloadListener {
     }
 
     @FunctionalInterface
-    public interface PreparationBarrier {
-        <T> CompletableFuture<T> wait(T p_10644_);
+    interface PreparationBarrier {
+        <T> CompletableFuture<T> wait(T t);
     }
 
-    public static final class SharedState {
+    final class SharedState {
         private final ResourceManager manager;
         private final Map<PreparableReloadListener.StateKey<?>, Object> state = new IdentityHashMap<>();
 
-        public SharedState(ResourceManager p_427415_) {
-            this.manager = p_427415_;
+        public SharedState(final ResourceManager manager) {
+            this.manager = manager;
         }
 
         public ResourceManager resourceManager() {
             return this.manager;
         }
 
-        public <T> void set(PreparableReloadListener.StateKey<T> p_423258_, T p_426673_) {
-            this.state.put(p_423258_, p_426673_);
+        public <T> void set(final PreparableReloadListener.StateKey<T> key, final T value) {
+            this.state.put(key, value);
         }
 
-        public <T> T get(PreparableReloadListener.StateKey<T> p_422546_) {
-            return Objects.requireNonNull((T)this.state.get(p_422546_));
+        public <T> T get(final PreparableReloadListener.StateKey<T> key) {
+            return Objects.requireNonNull((T)this.state.get(key));
         }
     }
 
-    public static final class StateKey<T> {
+    final class StateKey<T> {
     }
 }

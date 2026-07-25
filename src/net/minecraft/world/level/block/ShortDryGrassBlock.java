@@ -22,32 +22,32 @@ public class ShortDryGrassBlock extends DryVegetationBlock implements Bonemealab
         return CODEC;
     }
 
-    protected ShortDryGrassBlock(BlockBehaviour.Properties p_394311_) {
-        super(p_394311_);
+    protected ShortDryGrassBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_397731_, BlockGetter p_396409_, BlockPos p_396288_, CollisionContext p_396529_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public void animateTick(BlockState p_407460_, Level p_409228_, BlockPos p_407025_, RandomSource p_406398_) {
-        AmbientDesertBlockSoundsPlayer.playAmbientDryGrassSounds(p_409228_, p_407025_, p_406398_);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        AmbientDesertBlockSoundsPlayer.playAmbientDryGrassSounds(level, pos, random);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_393202_, BlockPos p_395169_, BlockState p_392225_) {
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_393007_, RandomSource p_392616_, BlockPos p_396855_, BlockState p_393878_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_395274_, RandomSource p_394266_, BlockPos p_394099_, BlockState p_396116_) {
-        p_395274_.setBlockAndUpdate(p_394099_, Blocks.TALL_DRY_GRASS.defaultBlockState());
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        level.setBlockAndUpdate(pos, Blocks.TALL_DRY_GRASS.defaultBlockState());
     }
 }

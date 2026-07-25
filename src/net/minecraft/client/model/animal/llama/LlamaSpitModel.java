@@ -8,22 +8,19 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LlamaSpitModel extends EntityModel<EntityRenderState> {
     private static final String MAIN = "main";
 
-    public LlamaSpitModel(ModelPart p_460271_) {
-        super(p_460271_);
+    public LlamaSpitModel(final ModelPart root) {
+        super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        int i = 2;
-        partdefinition.addOrReplaceChild(
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        int edge = 2;
+        root.addOrReplaceChild(
             "main",
             CubeListBuilder.create()
                 .texOffs(0, 0)
@@ -36,6 +33,6 @@ public class LlamaSpitModel extends EntityModel<EntityRenderState> {
                 .addBox(0.0F, 0.0F, 2.0F, 2.0F, 2.0F, 2.0F),
             PartPose.ZERO
         );
-        return LayerDefinition.create(meshdefinition, 64, 32);
+        return LayerDefinition.create(mesh, 64, 32);
     }
 }

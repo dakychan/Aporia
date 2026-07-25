@@ -9,8 +9,7 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
 import net.minecraft.world.effect.MobEffect;
 
-public record ServerboundSetBeaconPacket(Optional<Holder<MobEffect>> primary, Optional<Holder<MobEffect>> secondary)
-    implements Packet<ServerGamePacketListener> {
+public record ServerboundSetBeaconPacket(Optional<Holder<MobEffect>> primary, Optional<Holder<MobEffect>> secondary) implements Packet<ServerGamePacketListener> {
     public static final StreamCodec<RegistryFriendlyByteBuf, ServerboundSetBeaconPacket> STREAM_CODEC = StreamCodec.composite(
         MobEffect.STREAM_CODEC.apply(ByteBufCodecs::optional),
         ServerboundSetBeaconPacket::primary,
@@ -24,7 +23,7 @@ public record ServerboundSetBeaconPacket(Optional<Holder<MobEffect>> primary, Op
         return GamePacketTypes.SERVERBOUND_SET_BEACON;
     }
 
-    public void handle(ServerGamePacketListener p_134483_) {
-        p_134483_.handleSetBeaconPacket(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetBeaconPacket(this);
     }
 }

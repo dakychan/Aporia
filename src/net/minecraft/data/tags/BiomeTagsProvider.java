@@ -11,13 +11,13 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.biome.MultiNoiseBiomeSourceParameterList;
 
-public class BiomeTagsProvider extends KeyTagProvider<Biome> {
-    public BiomeTagsProvider(PackOutput p_255800_, CompletableFuture<HolderLookup.Provider> p_256205_) {
-        super(p_255800_, Registries.BIOME, p_256205_);
+public class BiomeTagsProvider extends TagsProvider<Biome> {
+    public BiomeTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.BIOME, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_256485_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(BiomeTags.IS_DEEP_OCEAN).add(Biomes.DEEP_FROZEN_OCEAN).add(Biomes.DEEP_COLD_OCEAN).add(Biomes.DEEP_OCEAN).add(Biomes.DEEP_LUKEWARM_OCEAN);
         this.tag(BiomeTags.IS_OCEAN)
             .addTag(BiomeTags.IS_DEEP_OCEAN)
@@ -49,14 +49,9 @@ public class BiomeTagsProvider extends KeyTagProvider<Biome> {
             .add(Biomes.GROVE);
         this.tag(BiomeTags.IS_SAVANNA).add(Biomes.SAVANNA).add(Biomes.SAVANNA_PLATEAU).add(Biomes.WINDSWEPT_SAVANNA);
         this.tag(BiomeTags.IS_NETHER).addAll(MultiNoiseBiomeSourceParameterList.Preset.NETHER.usedBiomes());
-        List<ResourceKey<Biome>> list = MultiNoiseBiomeSourceParameterList.Preset.OVERWORLD.usedBiomes().toList();
-        this.tag(BiomeTags.IS_OVERWORLD).addAll(list);
-        this.tag(BiomeTags.IS_END)
-            .add(Biomes.THE_END)
-            .add(Biomes.END_HIGHLANDS)
-            .add(Biomes.END_MIDLANDS)
-            .add(Biomes.SMALL_END_ISLANDS)
-            .add(Biomes.END_BARRENS);
+        List<ResourceKey<Biome>> overworldBiomes = MultiNoiseBiomeSourceParameterList.Preset.OVERWORLD.usedBiomes().toList();
+        this.tag(BiomeTags.IS_OVERWORLD).addAll(overworldBiomes);
+        this.tag(BiomeTags.IS_END).add(Biomes.THE_END).add(Biomes.END_HIGHLANDS).add(Biomes.END_MIDLANDS).add(Biomes.SMALL_END_ISLANDS).add(Biomes.END_BARRENS);
         this.tag(BiomeTags.HAS_BURIED_TREASURE).addTag(BiomeTags.IS_BEACH);
         this.tag(BiomeTags.HAS_DESERT_PYRAMID).add(Biomes.DESERT);
         this.tag(BiomeTags.HAS_IGLOO).add(Biomes.SNOWY_TAIGA).add(Biomes.SNOWY_PLAINS).add(Biomes.SNOWY_SLOPES);
@@ -83,7 +78,8 @@ public class BiomeTagsProvider extends KeyTagProvider<Biome> {
             .add(Biomes.MANGROVE_SWAMP)
             .add(Biomes.SAVANNA_PLATEAU)
             .add(Biomes.DRIPSTONE_CAVES)
-            .add(Biomes.LUSH_CAVES);
+            .add(Biomes.LUSH_CAVES)
+            .add(Biomes.SULFUR_CAVES);
         this.tag(BiomeTags.HAS_MINESHAFT_MESA).addTag(BiomeTags.IS_BADLANDS);
         this.tag(BiomeTags.MINESHAFT_BLOCKING).add(Biomes.DEEP_DARK);
         this.tag(BiomeTags.HAS_OCEAN_MONUMENT).addTag(BiomeTags.IS_DEEP_OCEAN);
@@ -124,6 +120,7 @@ public class BiomeTagsProvider extends KeyTagProvider<Biome> {
             .add(Biomes.ICE_SPIKES)
             .add(Biomes.DRIPSTONE_CAVES)
             .add(Biomes.LUSH_CAVES)
+            .add(Biomes.SULFUR_CAVES)
             .add(Biomes.SAVANNA)
             .add(Biomes.SNOWY_PLAINS)
             .add(Biomes.PLAINS)
@@ -181,9 +178,10 @@ public class BiomeTagsProvider extends KeyTagProvider<Biome> {
             .add(Biomes.STONY_PEAKS)
             .add(Biomes.MUSHROOM_FIELDS)
             .add(Biomes.DRIPSTONE_CAVES)
-            .add(Biomes.LUSH_CAVES);
+            .add(Biomes.LUSH_CAVES)
+            .add(Biomes.SULFUR_CAVES);
         this.tag(BiomeTags.HAS_STRONGHOLD).addTag(BiomeTags.IS_OVERWORLD);
-        this.tag(BiomeTags.HAS_TRIAL_CHAMBERS).addAll(list.stream().filter(p_407018_ -> p_407018_ != Biomes.DEEP_DARK));
+        this.tag(BiomeTags.HAS_TRIAL_CHAMBERS).addAll(overworldBiomes.stream().filter(biomeKey -> biomeKey != Biomes.DEEP_DARK));
         this.tag(BiomeTags.HAS_NETHER_FORTRESS).addTag(BiomeTags.IS_NETHER);
         this.tag(BiomeTags.HAS_NETHER_FOSSIL).add(Biomes.SOUL_SAND_VALLEY);
         this.tag(BiomeTags.HAS_BASTION_REMNANT).add(Biomes.CRIMSON_FOREST).add(Biomes.NETHER_WASTES).add(Biomes.SOUL_SAND_VALLEY).add(Biomes.WARPED_FOREST);
@@ -191,11 +189,7 @@ public class BiomeTagsProvider extends KeyTagProvider<Biome> {
         this.tag(BiomeTags.HAS_RUINED_PORTAL_NETHER).addTag(BiomeTags.IS_NETHER);
         this.tag(BiomeTags.HAS_END_CITY).add(Biomes.END_HIGHLANDS).add(Biomes.END_MIDLANDS);
         this.tag(BiomeTags.PRODUCES_CORALS_FROM_BONEMEAL).add(Biomes.WARM_OCEAN);
-        this.tag(BiomeTags.WATER_ON_MAP_OUTLINES)
-            .addTag(BiomeTags.IS_OCEAN)
-            .addTag(BiomeTags.IS_RIVER)
-            .add(Biomes.SWAMP)
-            .add(Biomes.MANGROVE_SWAMP);
+        this.tag(BiomeTags.WATER_ON_MAP_OUTLINES).addTag(BiomeTags.IS_OCEAN).addTag(BiomeTags.IS_RIVER).add(Biomes.SWAMP).add(Biomes.MANGROVE_SWAMP);
         this.tag(BiomeTags.WITHOUT_ZOMBIE_SIEGES).add(Biomes.MUSHROOM_FIELDS);
         this.tag(BiomeTags.WITHOUT_WANDERING_TRADER_SPAWNS).add(Biomes.THE_VOID);
         this.tag(BiomeTags.SPAWNS_COLD_VARIANT_FROGS)

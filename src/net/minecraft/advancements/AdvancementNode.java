@@ -11,9 +11,9 @@ public class AdvancementNode {
     private final Set<AdvancementNode> children = new ReferenceOpenHashSet<>();
 
     @VisibleForTesting
-    public AdvancementNode(AdvancementHolder p_300583_, @Nullable AdvancementNode p_299774_) {
-        this.holder = p_300583_;
-        this.parent = p_299774_;
+    public AdvancementNode(final AdvancementHolder holder, final @Nullable AdvancementNode parent) {
+        this.holder = holder;
+        this.parent = parent;
     }
 
     public Advancement advancement() {
@@ -32,16 +32,16 @@ public class AdvancementNode {
         return getRoot(this);
     }
 
-    public static AdvancementNode getRoot(AdvancementNode p_300357_) {
-        AdvancementNode advancementnode = p_300357_;
+    public static AdvancementNode getRoot(final AdvancementNode advancement) {
+        AdvancementNode root = advancement;
 
         while (true) {
-            AdvancementNode advancementnode1 = advancementnode.parent();
-            if (advancementnode1 == null) {
-                return advancementnode;
+            AdvancementNode parent = root.parent();
+            if (parent == null) {
+                return root;
             }
 
-            advancementnode = advancementnode1;
+            root = parent;
         }
     }
 
@@ -50,13 +50,13 @@ public class AdvancementNode {
     }
 
     @VisibleForTesting
-    public void addChild(AdvancementNode p_298204_) {
-        this.children.add(p_298204_);
+    public void addChild(final AdvancementNode child) {
+        this.children.add(child);
     }
 
     @Override
-    public boolean equals(Object p_297253_) {
-        return this == p_297253_ ? true : p_297253_ instanceof AdvancementNode advancementnode && this.holder.equals(advancementnode.holder);
+    public boolean equals(final Object obj) {
+        return this == obj ? true : obj instanceof AdvancementNode that && this.holder.equals(that.holder);
     }
 
     @Override

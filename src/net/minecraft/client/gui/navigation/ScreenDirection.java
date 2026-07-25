@@ -1,17 +1,14 @@
 package net.minecraft.client.gui.navigation;
 
 import it.unimi.dsi.fastutil.ints.IntComparator;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum ScreenDirection {
     UP,
     DOWN,
     LEFT,
     RIGHT;
 
-    private final IntComparator coordinateValueComparator = (p_265081_, p_265641_) -> p_265081_ == p_265641_ ? 0 : (this.isBefore(p_265081_, p_265641_) ? -1 : 1);
+    private final IntComparator coordinateValueComparator = (k1, k2) -> k1 == k2 ? 0 : (this.isBefore(k1, k2) ? -1 : 1);
 
     public ScreenAxis getAxis() {
         return switch (this) {
@@ -36,12 +33,12 @@ public enum ScreenDirection {
         };
     }
 
-    public boolean isAfter(int p_265461_, int p_265553_) {
-        return this.isPositive() ? p_265461_ > p_265553_ : p_265553_ > p_265461_;
+    public boolean isAfter(final int a, final int b) {
+        return this.isPositive() ? a > b : b > a;
     }
 
-    public boolean isBefore(int p_265215_, int p_265040_) {
-        return this.isPositive() ? p_265215_ < p_265040_ : p_265040_ < p_265215_;
+    public boolean isBefore(final int a, final int b) {
+        return this.isPositive() ? a < b : b < a;
     }
 
     public IntComparator coordinateValueComparator() {

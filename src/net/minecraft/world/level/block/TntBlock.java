@@ -39,56 +39,57 @@ public class TntBlock extends Block {
         return CODEC;
     }
 
-    public TntBlock(BlockBehaviour.Properties p_57422_) {
-        super(p_57422_);
+    public TntBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.defaultBlockState().setValue(UNSTABLE, false));
     }
 
     @Override
-    protected void onPlace(BlockState p_57466_, Level p_57467_, BlockPos p_57468_, BlockState p_57469_, boolean p_57470_) {
-        if (!p_57469_.is(p_57466_.getBlock())) {
-            if (p_57467_.hasNeighborSignal(p_57468_) && prime(p_57467_, p_57468_)) {
-                p_57467_.removeBlock(p_57468_, false);
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        if (!oldState.is(state.getBlock())) {
+            if (level.hasNeighborSignal(pos) && prime(level, pos)) {
+                level.removeBlock(pos, false);
             }
         }
     }
 
     @Override
-    protected void neighborChanged(BlockState p_57457_, Level p_57458_, BlockPos p_57459_, Block p_57460_, @Nullable Orientation p_362896_, boolean p_57462_) {
-        if (p_57458_.hasNeighborSignal(p_57459_) && prime(p_57458_, p_57459_)) {
-            p_57458_.removeBlock(p_57459_, false);
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        if (level.hasNeighborSignal(pos) && prime(level, pos)) {
+            level.removeBlock(pos, false);
         }
     }
 
     @Override
-    public BlockState playerWillDestroy(Level p_57445_, BlockPos p_57446_, BlockState p_57447_, Player p_57448_) {
-        if (!p_57445_.isClientSide() && !p_57448_.getAbilities().instabuild && p_57447_.getValue(UNSTABLE)) {
-            prime(p_57445_, p_57446_);
+    public BlockState playerWillDestroy(final Level level, final BlockPos pos, final BlockState state, final Player player) {
+        if (!level.isClientSide() && !player.getAbilities().instabuild && state.getValue(UNSTABLE)) {
+            prime(level, pos);
         }
 
-        return super.playerWillDestroy(p_57445_, p_57446_, p_57447_, p_57448_);
+        return super.playerWillDestroy(level, pos, state, player);
     }
 
     @Override
-    public void wasExploded(ServerLevel p_368198_, BlockPos p_57442_, Explosion p_57443_) {
-        if (p_368198_.getGameRules().get(GameRules.TNT_EXPLODES)) {
-            PrimedTnt primedtnt = new PrimedTnt(p_368198_, p_57442_.getX() + 0.5, p_57442_.getY(), p_57442_.getZ() + 0.5, p_57443_.getIndirectSourceEntity());
-            int i = primedtnt.getFuse();
-            primedtnt.setFuse((short)(p_368198_.random.nextInt(i / 4) + i / 8));
-            p_368198_.addFreshEntity(primedtnt);
+    public void wasExploded(final ServerLevel level, final BlockPos pos, final Explosion explosion) {
+        if (level.getGameRules().get(GameRules.TNT_EXPLODES)) {
+            PrimedTnt primed = new PrimedTnt(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, explosion.getIndirectSourceEntity());
+            primed.setFuse(PrimedTnt.getRandomShortFuse(primed.getFuse(), level.getRandom()));
+            level.addFreshEntity(primed);
         }
     }
 
-    public static boolean prime(Level p_392759_, BlockPos p_392607_) {
-        return prime(p_392759_, p_392607_, null);
+    public static boolean prime(final Level level, final BlockPos pos) {
+        return prime(level, pos, null);
     }
 
-    private static boolean prime(Level p_396831_, BlockPos p_393566_, @Nullable LivingEntity p_395667_) {
-        if (p_396831_ instanceof ServerLevel serverlevel && serverlevel.getGameRules().get(GameRules.TNT_EXPLODES)) {
-            PrimedTnt primedtnt = new PrimedTnt(p_396831_, p_393566_.getX() + 0.5, p_393566_.getY(), p_393566_.getZ() + 0.5, p_395667_);
-            p_396831_.addFreshEntity(primedtnt);
-            p_396831_.playSound(null, primedtnt.getX(), primedtnt.getY(), primedtnt.getZ(), SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);
-            p_396831_.gameEvent(p_395667_, GameEvent.PRIME_FUSE, p_393566_);
+    private static boolean prime(final Level level, final BlockPos pos, final @Nullable LivingEntity source) {
+        if (level instanceof ServerLevel serverLevel && serverLevel.getGameRules().get(GameRules.TNT_EXPLODES)) {
+            PrimedTnt tnt = new PrimedTnt(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, source);
+            level.addFreshEntity(tnt);
+            level.playSound(null, tnt.getX(), tnt.getY(), tnt.getZ(), SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);
+            level.gameEvent(source, GameEvent.PRIME_FUSE, pos);
             return true;
         } else {
             return false;
@@ -97,50 +98,56 @@ public class TntBlock extends Block {
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_329029_, BlockState p_331413_, Level p_329038_, BlockPos p_333168_, Player p_335932_, InteractionHand p_331663_, BlockHitResult p_330020_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (!p_329029_.is(Items.FLINT_AND_STEEL) && !p_329029_.is(Items.FIRE_CHARGE)) {
-            return super.useItemOn(p_329029_, p_331413_, p_329038_, p_333168_, p_335932_, p_331663_, p_330020_);
-        } else {
-            if (prime(p_329038_, p_333168_, p_335932_)) {
-                p_329038_.setBlock(p_333168_, Blocks.AIR.defaultBlockState(), 11);
-                Item item = p_329029_.getItem();
-                if (p_329029_.is(Items.FLINT_AND_STEEL)) {
-                    p_329029_.hurtAndBreak(1, p_335932_, p_331663_.asEquipmentSlot());
-                } else {
-                    p_329029_.consume(1, p_335932_);
-                }
+        if (!itemStack.is(Items.FLINT_AND_STEEL) && !itemStack.is(Items.FIRE_CHARGE)) {
+            return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+        }
 
-                p_335932_.awardStat(Stats.ITEM_USED.get(item));
-            } else if (p_329038_ instanceof ServerLevel serverlevel && !serverlevel.getGameRules().get(GameRules.TNT_EXPLODES)) {
-                p_335932_.displayClientMessage(Component.translatable("block.minecraft.tnt.disabled"), true);
-                return InteractionResult.PASS;
+        if (prime(level, pos, player)) {
+            level.setBlock(pos, Blocks.AIR.defaultBlockState(), 11);
+            Item item = itemStack.getItem();
+            if (itemStack.is(Items.FLINT_AND_STEEL)) {
+                itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
+            } else {
+                itemStack.consume(1, player);
             }
 
-            return InteractionResult.SUCCESS;
+            player.awardStat(Stats.ITEM_USED.get(item));
+        } else if (level instanceof ServerLevel serverLevel && !serverLevel.getGameRules().get(GameRules.TNT_EXPLODES)) {
+            player.sendOverlayMessage(Component.translatable("block.minecraft.tnt.disabled"));
+            return InteractionResult.PASS;
+        }
+
+        return InteractionResult.SUCCESS;
+    }
+
+    @Override
+    protected void onProjectileHit(final Level level, final BlockState state, final BlockHitResult blockHit, final Projectile projectile) {
+        if (level instanceof ServerLevel serverLevel) {
+            BlockPos pos = blockHit.getBlockPos();
+            Entity owner = projectile.getOwner();
+            if (projectile.isOnFire()
+                && projectile.mayInteract(serverLevel, pos)
+                && prime(level, pos, owner instanceof LivingEntity livingEntity ? livingEntity : null)) {
+                level.removeBlock(pos, false);
+            }
         }
     }
 
     @Override
-    protected void onProjectileHit(Level p_57429_, BlockState p_57430_, BlockHitResult p_57431_, Projectile p_57432_) {
-        if (p_57429_ instanceof ServerLevel serverlevel) {
-            BlockPos blockpos = p_57431_.getBlockPos();
-            Entity entity = p_57432_.getOwner();
-            if (p_57432_.isOnFire()
-                && p_57432_.mayInteract(serverlevel, blockpos)
-                && prime(p_57429_, blockpos, entity instanceof LivingEntity ? (LivingEntity)entity : null)) {
-                p_57429_.removeBlock(blockpos, false);
-            }
-        }
-    }
-
-    @Override
-    public boolean dropFromExplosion(Explosion p_57427_) {
+    public boolean dropFromExplosion(final Explosion explosion) {
         return false;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57464_) {
-        p_57464_.add(UNSTABLE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(UNSTABLE);
     }
 }

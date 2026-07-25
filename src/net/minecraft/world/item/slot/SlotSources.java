@@ -11,37 +11,37 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.level.storage.loot.LootContext;
 
 public interface SlotSources {
-    Codec<SlotSource> TYPED_CODEC = BuiltInRegistries.SLOT_SOURCE_TYPE.byNameCodec().dispatch(SlotSource::codec, p_454987_ -> p_454987_);
+    Codec<SlotSource> TYPED_CODEC = BuiltInRegistries.SLOT_SOURCE_TYPE.byNameCodec().dispatch(SlotSource::codec, c -> c);
     Codec<SlotSource> CODEC = Codec.lazyInitialized(() -> Codec.withAlternative(TYPED_CODEC, GroupSlotSource.INLINE_CODEC));
 
-    static MapCodec<? extends SlotSource> bootstrap(Registry<MapCodec<? extends SlotSource>> p_451547_) {
-        Registry.register(p_451547_, "group", GroupSlotSource.MAP_CODEC);
-        Registry.register(p_451547_, "filtered", FilteredSlotSource.MAP_CODEC);
-        Registry.register(p_451547_, "limit_slots", LimitSlotSource.MAP_CODEC);
-        Registry.register(p_451547_, "slot_range", RangeSlotSource.MAP_CODEC);
-        Registry.register(p_451547_, "contents", ContentsSlotSource.MAP_CODEC);
-        return Registry.register(p_451547_, "empty", EmptySlotSource.MAP_CODEC);
+    static MapCodec<? extends SlotSource> bootstrap(final Registry<MapCodec<? extends SlotSource>> registry) {
+        Registry.register(registry, "group", GroupSlotSource.MAP_CODEC);
+        Registry.register(registry, "filtered", FilteredSlotSource.MAP_CODEC);
+        Registry.register(registry, "limit_slots", LimitSlotSource.MAP_CODEC);
+        Registry.register(registry, "slot_range", RangeSlotSource.MAP_CODEC);
+        Registry.register(registry, "contents", ContentsSlotSource.MAP_CODEC);
+        return Registry.register(registry, "empty", EmptySlotSource.MAP_CODEC);
     }
 
-    static Function<LootContext, SlotCollection> group(Collection<? extends SlotSource> p_451898_) {
-        List<SlotSource> list = List.copyOf(p_451898_);
+    static Function<LootContext, SlotCollection> group(final Collection<? extends SlotSource> list) {
+        List<SlotSource> terms = List.copyOf(list);
 
-        return switch (list.size()) {
-            case 0 -> p_453745_ -> SlotCollection.EMPTY;
-            case 1 -> list.getFirst()::provide;
+        return switch (terms.size()) {
+            case 0 -> context -> SlotCollection.EMPTY;
+            case 1 -> terms.getFirst()::provide;
             case 2 -> {
-                SlotSource slotsource = list.get(0);
-                SlotSource slotsource1 = list.get(1);
-                yield p_455664_ -> SlotCollection.concat(slotsource.provide(p_455664_), slotsource1.provide(p_455664_));
+                SlotSource first = terms.get(0);
+                SlotSource second = terms.get(1);
+                yield context -> SlotCollection.concat(first.provide(context), second.provide(context));
             }
-            default -> p_453043_ -> {
-                List<SlotCollection> list1 = new ArrayList<>();
+            default -> context -> {
+                List<SlotCollection> collections = new ArrayList<>();
 
-                for (SlotSource slotsource2 : list) {
-                    list1.add(slotsource2.provide(p_453043_));
+                for (SlotSource term : terms) {
+                    collections.add(term.provide(context));
                 }
 
-                return SlotCollection.concat(list1);
+                return SlotCollection.concat(collections);
             };
         };
     }

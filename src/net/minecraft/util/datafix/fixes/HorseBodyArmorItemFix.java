@@ -9,37 +9,35 @@ public class HorseBodyArmorItemFix extends NamedEntityWriteReadFix {
     private final String previousBodyArmorTag;
     private final boolean clearArmorItems;
 
-    public HorseBodyArmorItemFix(Schema p_328584_, String p_334943_, String p_330348_, boolean p_334013_) {
-        super(p_328584_, true, "Horse armor fix for " + p_334943_, References.ENTITY, p_334943_);
-        this.previousBodyArmorTag = p_330348_;
-        this.clearArmorItems = p_334013_;
+    public HorseBodyArmorItemFix(final Schema outputSchema, final String entityName, final String previousBodyArmorTag, final boolean clearArmorItems) {
+        super(outputSchema, true, "Horse armor fix for " + entityName, References.ENTITY, entityName);
+        this.previousBodyArmorTag = previousBodyArmorTag;
+        this.clearArmorItems = clearArmorItems;
     }
 
     @Override
-    protected <T> Dynamic<T> fix(Dynamic<T> p_331303_) {
-        Optional<? extends Dynamic<?>> optional = p_331303_.get(this.previousBodyArmorTag).result();
-        if (optional.isPresent()) {
-            Dynamic<?> dynamic = (Dynamic<?>)optional.get();
-            Dynamic<T> dynamic1 = p_331303_.remove(this.previousBodyArmorTag);
+    protected <T> Dynamic<T> fix(final Dynamic<T> input) {
+        Optional<? extends Dynamic<?>> previousBodyArmor = input.get(this.previousBodyArmorTag).result();
+        if (previousBodyArmor.isPresent()) {
+            Dynamic<?> bodyArmorItem = (Dynamic<?>)previousBodyArmor.get();
+            Dynamic<T> output = input.remove(this.previousBodyArmorTag);
             if (this.clearArmorItems) {
-                dynamic1 = dynamic1.update(
+                output = output.update(
                     "ArmorItems",
-                    p_333243_ -> p_333243_.createList(
-                        Streams.mapWithIndex(p_333243_.asStream(), (p_328879_, p_335895_) -> p_335895_ == 2L ? p_328879_.emptyMap() : p_328879_)
-                    )
+                    armorItems -> armorItems.createList(Streams.mapWithIndex(armorItems.asStream(), (entry, index) -> index == 2L ? entry.emptyMap() : entry))
                 );
-                dynamic1 = dynamic1.update(
+                output = output.update(
                     "ArmorDropChances",
-                    p_335133_ -> p_335133_.createList(
-                        Streams.mapWithIndex(p_335133_.asStream(), (p_333050_, p_334688_) -> p_334688_ == 2L ? p_333050_.createFloat(0.085F) : p_333050_)
+                    armorDropChances -> armorDropChances.createList(
+                        Streams.mapWithIndex(armorDropChances.asStream(), (entry, index) -> index == 2L ? entry.createFloat(0.085F) : entry)
                     )
                 );
             }
 
-            dynamic1 = dynamic1.set("body_armor_item", dynamic);
-            return dynamic1.set("body_armor_drop_chance", p_331303_.createFloat(2.0F));
+            output = output.set("body_armor_item", bodyArmorItem);
+            return output.set("body_armor_drop_chance", input.createFloat(2.0F));
         } else {
-            return p_331303_;
+            return input;
         }
     }
 }

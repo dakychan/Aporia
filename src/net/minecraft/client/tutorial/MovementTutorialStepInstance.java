@@ -4,11 +4,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.toasts.TutorialToast;
 import net.minecraft.client.player.ClientInput;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class MovementTutorialStepInstance implements TutorialStepInstance {
     private static final int MINIMUM_TIME_MOVED = 40;
     private static final int MINIMUM_TIME_LOOKED = 40;
@@ -32,8 +29,8 @@ public class MovementTutorialStepInstance implements TutorialStepInstance {
     private int moveCompleted = -1;
     private int lookCompleted = -1;
 
-    public MovementTutorialStepInstance(Tutorial p_120522_) {
-        this.tutorial = p_120522_;
+    public MovementTutorialStepInstance(final Tutorial tutorial) {
+        this.tutorial = tutorial;
     }
 
     @Override
@@ -87,10 +84,10 @@ public class MovementTutorialStepInstance implements TutorialStepInstance {
             Minecraft minecraft = this.tutorial.getMinecraft();
             if (this.moveCompleted == -1 && this.moveToast == null) {
                 this.moveToast = new TutorialToast(minecraft.font, TutorialToast.Icons.MOVEMENT_KEYS, MOVE_TITLE, MOVE_DESCRIPTION, true);
-                minecraft.getToastManager().addToast(this.moveToast);
+                minecraft.gui.toastManager().addToast(this.moveToast);
             } else if (this.moveCompleted != -1 && this.timeWaiting - this.moveCompleted >= 20 && this.lookCompleted == -1 && this.lookToast == null) {
                 this.lookToast = new TutorialToast(minecraft.font, TutorialToast.Icons.MOUSE, LOOK_TITLE, LOOK_DESCRIPTION, true);
-                minecraft.getToastManager().addToast(this.lookToast);
+                minecraft.gui.toastManager().addToast(this.lookToast);
             }
         }
     }
@@ -109,19 +106,15 @@ public class MovementTutorialStepInstance implements TutorialStepInstance {
     }
 
     @Override
-    public void onInput(ClientInput p_363230_) {
-        if (p_363230_.keyPresses.forward()
-            || p_363230_.keyPresses.backward()
-            || p_363230_.keyPresses.left()
-            || p_363230_.keyPresses.right()
-            || p_363230_.keyPresses.jump()) {
+    public void onInput(final ClientInput input) {
+        if (input.keyPresses.forward() || input.keyPresses.backward() || input.keyPresses.left() || input.keyPresses.right() || input.keyPresses.jump()) {
             this.moved = true;
         }
     }
 
     @Override
-    public void onMouse(double p_120525_, double p_120526_) {
-        if (Math.abs(p_120525_) > 0.01 || Math.abs(p_120526_) > 0.01) {
+    public void onMouse(final double xd, final double yd) {
+        if (Math.abs(xd) > 0.01 || Math.abs(yd) > 0.01) {
             this.turned = true;
         }
     }

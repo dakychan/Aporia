@@ -2,20 +2,17 @@ package net.minecraft.world.level.levelgen.feature.foliageplacers;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class DarkOakFoliagePlacer extends FoliagePlacer {
-    public static final MapCodec<DarkOakFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
-        p_68473_ -> foliagePlacerParts(p_68473_).apply(p_68473_, DarkOakFoliagePlacer::new)
-    );
+    public static final MapCodec<DarkOakFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(i -> foliagePlacerParts(i).apply(i, DarkOakFoliagePlacer::new));
 
-    public DarkOakFoliagePlacer(IntProvider p_161384_, IntProvider p_161385_) {
-        super(p_161384_, p_161385_);
+    public DarkOakFoliagePlacer(final IntProvider radius, final IntProvider offset) {
+        super(radius, offset);
     }
 
     @Override
@@ -25,49 +22,51 @@ public class DarkOakFoliagePlacer extends FoliagePlacer {
 
     @Override
     protected void createFoliage(
-        LevelSimulatedReader p_225558_,
-        FoliagePlacer.FoliageSetter p_273641_,
-        RandomSource p_225560_,
-        TreeConfiguration p_225561_,
-        int p_225562_,
-        FoliagePlacer.FoliageAttachment p_225563_,
-        int p_225564_,
-        int p_225565_,
-        int p_225566_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius,
+        final int offset
     ) {
-        BlockPos blockpos = p_225563_.pos().above(p_225566_);
-        boolean flag = p_225563_.doubleTrunk();
-        if (flag) {
-            this.placeLeavesRow(p_225558_, p_273641_, p_225560_, p_225561_, blockpos, p_225565_ + 2, -1, flag);
-            this.placeLeavesRow(p_225558_, p_273641_, p_225560_, p_225561_, blockpos, p_225565_ + 3, 0, flag);
-            this.placeLeavesRow(p_225558_, p_273641_, p_225560_, p_225561_, blockpos, p_225565_ + 2, 1, flag);
-            if (p_225560_.nextBoolean()) {
-                this.placeLeavesRow(p_225558_, p_273641_, p_225560_, p_225561_, blockpos, p_225565_, 2, flag);
+        BlockPos pos = foliageAttachment.pos().above(offset);
+        boolean doubleTrunk = foliageAttachment.doubleTrunk();
+        if (doubleTrunk) {
+            this.placeLeavesRow(level, foliageSetter, random, config, pos, leafRadius + 2, -1, doubleTrunk);
+            this.placeLeavesRow(level, foliageSetter, random, config, pos, leafRadius + 3, 0, doubleTrunk);
+            this.placeLeavesRow(level, foliageSetter, random, config, pos, leafRadius + 2, 1, doubleTrunk);
+            if (random.nextBoolean()) {
+                this.placeLeavesRow(level, foliageSetter, random, config, pos, leafRadius, 2, doubleTrunk);
             }
         } else {
-            this.placeLeavesRow(p_225558_, p_273641_, p_225560_, p_225561_, blockpos, p_225565_ + 2, -1, flag);
-            this.placeLeavesRow(p_225558_, p_273641_, p_225560_, p_225561_, blockpos, p_225565_ + 1, 0, flag);
+            this.placeLeavesRow(level, foliageSetter, random, config, pos, leafRadius + 2, -1, doubleTrunk);
+            this.placeLeavesRow(level, foliageSetter, random, config, pos, leafRadius + 1, 0, doubleTrunk);
         }
     }
 
     @Override
-    public int foliageHeight(RandomSource p_225554_, int p_225555_, TreeConfiguration p_225556_) {
+    public int foliageHeight(final RandomSource random, final int treeHeight, final TreeConfiguration config) {
         return 4;
     }
 
     @Override
-    protected boolean shouldSkipLocationSigned(RandomSource p_225568_, int p_225569_, int p_225570_, int p_225571_, int p_225572_, boolean p_225573_) {
-        return p_225570_ != 0 || !p_225573_ || p_225569_ != -p_225572_ && p_225569_ < p_225572_ || p_225571_ != -p_225572_ && p_225571_ < p_225572_
-            ? super.shouldSkipLocationSigned(p_225568_, p_225569_, p_225570_, p_225571_, p_225572_, p_225573_)
+    protected boolean shouldSkipLocationSigned(
+        final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk
+    ) {
+        return y != 0 || !doubleTrunk || dx != -currentRadius && dx < currentRadius || dz != -currentRadius && dz < currentRadius
+            ? super.shouldSkipLocationSigned(random, dx, y, dz, currentRadius, doubleTrunk)
             : true;
     }
 
     @Override
-    protected boolean shouldSkipLocation(RandomSource p_225547_, int p_225548_, int p_225549_, int p_225550_, int p_225551_, boolean p_225552_) {
-        if (p_225549_ == -1 && !p_225552_) {
-            return p_225548_ == p_225551_ && p_225550_ == p_225551_;
+    protected boolean shouldSkipLocation(final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk) {
+        if (y == -1 && !doubleTrunk) {
+            return dx == currentRadius && dz == currentRadius;
         } else {
-            return p_225549_ == 1 ? p_225548_ + p_225550_ > p_225551_ * 2 - 2 : false;
+            return y == 1 ? dx + dz > currentRadius * 2 - 2 : false;
         }
     }
 }

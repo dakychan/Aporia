@@ -3,15 +3,14 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class AreaEffectCloudDurationScaleFix extends NamedEntityFix {
-    public AreaEffectCloudDurationScaleFix(Schema p_395420_) {
-        super(p_395420_, false, "AreaEffectCloudDurationScaleFix", References.ENTITY, "minecraft:area_effect_cloud");
+    public AreaEffectCloudDurationScaleFix(final Schema outputSchema) {
+        super(outputSchema, false, "AreaEffectCloudDurationScaleFix", References.ENTITY, "minecraft:area_effect_cloud");
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_394738_) {
-        return p_394738_.update(DSL.remainderFinder(), p_393974_ -> p_393974_.set("potion_duration_scale", p_393974_.createFloat(0.25F)));
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), tag -> tag.set("potion_duration_scale", tag.createFloat(0.25F)));
     }
 }

@@ -2,35 +2,63 @@ package net.minecraft.world.item.crafting;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
 import net.minecraft.world.item.crafting.display.SlotDisplay;
 import net.minecraft.world.item.crafting.display.SmithingRecipeDisplay;
-import org.jspecify.annotations.Nullable;
 
-public class SmithingTransformRecipe implements SmithingRecipe {
-    final Optional<Ingredient> template;
-    final Ingredient base;
-    final Optional<Ingredient> addition;
-    final TransmuteResult result;
-    private @Nullable PlacementInfo placementInfo;
+public class SmithingTransformRecipe extends SimpleSmithingRecipe {
+    public static final MapCodec<SmithingTransformRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
+                Recipe.CommonInfo.MAP_CODEC.forGetter(o -> o.commonInfo),
+                Ingredient.CODEC.optionalFieldOf("template").forGetter(o -> o.template),
+                Ingredient.CODEC.fieldOf("base").forGetter(o -> o.base),
+                Ingredient.CODEC.optionalFieldOf("addition").forGetter(o -> o.addition),
+                ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result)
+            )
+            .apply(i, SmithingTransformRecipe::new)
+    );
+    public static final StreamCodec<RegistryFriendlyByteBuf, SmithingTransformRecipe> STREAM_CODEC = StreamCodec.composite(
+        Recipe.CommonInfo.STREAM_CODEC,
+        o -> o.commonInfo,
+        Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
+        o -> o.template,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.base,
+        Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
+        o -> o.addition,
+        ItemStackTemplate.STREAM_CODEC,
+        o -> o.result,
+        SmithingTransformRecipe::new
+    );
+    public static final RecipeSerializer<SmithingTransformRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    private final Optional<Ingredient> template;
+    private final Ingredient base;
+    private final Optional<Ingredient> addition;
+    private final ItemStackTemplate result;
 
-    public SmithingTransformRecipe(Optional<Ingredient> p_366010_, Ingredient p_396043_, Optional<Ingredient> p_367568_, TransmuteResult p_394657_) {
-        this.template = p_366010_;
-        this.base = p_396043_;
-        this.addition = p_367568_;
-        this.result = p_394657_;
+    public SmithingTransformRecipe(
+        final Recipe.CommonInfo commonInfo,
+        final Optional<Ingredient> template,
+        final Ingredient base,
+        final Optional<Ingredient> addition,
+        final ItemStackTemplate result
+    ) {
+        super(commonInfo);
+        this.template = template;
+        this.base = base;
+        this.addition = addition;
+        this.result = result;
     }
 
-    public ItemStack assemble(SmithingRecipeInput p_343590_, HolderLookup.Provider p_331030_) {
-        return this.result.apply(p_343590_.base());
+    public ItemStack assemble(final SmithingRecipeInput input) {
+        return TransmuteRecipe.createWithOriginalComponents(this.result, input.base());
     }
 
     @Override
@@ -50,16 +78,12 @@ public class SmithingTransformRecipe implements SmithingRecipe {
 
     @Override
     public RecipeSerializer<SmithingTransformRecipe> getSerializer() {
-        return RecipeSerializer.SMITHING_TRANSFORM;
+        return SERIALIZER;
     }
 
     @Override
-    public PlacementInfo placementInfo() {
-        if (this.placementInfo == null) {
-            this.placementInfo = PlacementInfo.createFromOptionals(List.of(this.template, Optional.of(this.base), this.addition));
-        }
-
-        return this.placementInfo;
+    protected PlacementInfo createPlacementInfo() {
+        return PlacementInfo.createFromOptionals(List.of(this.template, Optional.of(this.base), this.addition));
     }
 
     @Override
@@ -69,42 +93,9 @@ public class SmithingTransformRecipe implements SmithingRecipe {
                 Ingredient.optionalIngredientToDisplay(this.template),
                 this.base.display(),
                 Ingredient.optionalIngredientToDisplay(this.addition),
-                this.result.display(),
+                new SlotDisplay.ItemStackSlotDisplay(this.result),
                 new SlotDisplay.ItemSlotDisplay(Items.SMITHING_TABLE)
             )
         );
-    }
-
-    public static class Serializer implements RecipeSerializer<SmithingTransformRecipe> {
-        private static final MapCodec<SmithingTransformRecipe> CODEC = RecordCodecBuilder.mapCodec(
-            p_390827_ -> p_390827_.group(
-                    Ingredient.CODEC.optionalFieldOf("template").forGetter(p_359869_ -> p_359869_.template),
-                    Ingredient.CODEC.fieldOf("base").forGetter(p_390828_ -> p_390828_.base),
-                    Ingredient.CODEC.optionalFieldOf("addition").forGetter(p_359867_ -> p_359867_.addition),
-                    TransmuteResult.CODEC.fieldOf("result").forGetter(p_390825_ -> p_390825_.result)
-                )
-                .apply(p_390827_, SmithingTransformRecipe::new)
-        );
-        public static final StreamCodec<RegistryFriendlyByteBuf, SmithingTransformRecipe> STREAM_CODEC = StreamCodec.composite(
-            Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
-            p_359864_ -> p_359864_.template,
-            Ingredient.CONTENTS_STREAM_CODEC,
-            p_390826_ -> p_390826_.base,
-            Ingredient.OPTIONAL_CONTENTS_STREAM_CODEC,
-            p_359870_ -> p_359870_.addition,
-            TransmuteResult.STREAM_CODEC,
-            p_390829_ -> p_390829_.result,
-            SmithingTransformRecipe::new
-        );
-
-        @Override
-        public MapCodec<SmithingTransformRecipe> codec() {
-            return CODEC;
-        }
-
-        @Override
-        public StreamCodec<RegistryFriendlyByteBuf, SmithingTransformRecipe> streamCodec() {
-            return STREAM_CODEC;
-        }
     }
 }

@@ -11,6 +11,8 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntitySelector;
@@ -44,9 +46,13 @@ import net.minecraft.world.phys.AABB;
 import org.jspecify.annotations.Nullable;
 
 public class ZombifiedPiglin extends Zombie implements NeutralMob {
-    private static final EntityDimensions BABY_DIMENSIONS = EntityType.ZOMBIFIED_PIGLIN.getDimensions().scale(0.5F).withEyeHeight(0.97F);
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.49F, 0.98F)
+        .withEyeHeight(0.78F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, 0.0F, 0.1875F, 0.0F));
     private static final Identifier SPEED_MODIFIER_ATTACKING_ID = Identifier.withDefaultNamespace("attacking");
-    private static final AttributeModifier SPEED_MODIFIER_ATTACKING = new AttributeModifier(SPEED_MODIFIER_ATTACKING_ID, 0.05, AttributeModifier.Operation.ADD_VALUE);
+    private static final AttributeModifier SPEED_MODIFIER_ATTACKING = new AttributeModifier(
+        SPEED_MODIFIER_ATTACKING_ID, 0.05, AttributeModifier.Operation.ADD_VALUE
+    );
     private static final UniformInt FIRST_ANGER_SOUND_DELAY = TimeUtil.rangeOfSeconds(0, 1);
     private int playFirstAngerSoundIn;
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
@@ -56,8 +62,8 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     private static final UniformInt ALERT_INTERVAL = TimeUtil.rangeOfSeconds(4, 6);
     private int ticksUntilNextAlert;
 
-    public ZombifiedPiglin(EntityType<? extends ZombifiedPiglin> p_457284_, Level p_451957_) {
-        super(p_457284_, p_451957_);
+    public ZombifiedPiglin(final EntityType<? extends ZombifiedPiglin> type, final Level level) {
+        super(type, level);
         this.setPathfindingMalus(PathType.LAVA, 8.0F);
     }
 
@@ -72,12 +78,15 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Zombie.createAttributes().add(Attributes.SPAWN_REINFORCEMENTS_CHANCE, 0.0).add(Attributes.MOVEMENT_SPEED, 0.23F).add(Attributes.ATTACK_DAMAGE, 5.0);
+        return Zombie.createAttributes()
+            .add(Attributes.SPAWN_REINFORCEMENTS_CHANCE, 0.0)
+            .add(Attributes.MOVEMENT_SPEED, 0.23F)
+            .add(Attributes.ATTACK_DAMAGE, 5.0);
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_458920_) {
-        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(p_458920_);
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
     @Override
@@ -86,24 +95,24 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_459919_) {
-        AttributeInstance attributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
+    protected void customServerAiStep(final ServerLevel level) {
+        AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
         if (this.isAngry()) {
-            if (!this.isBaby() && !attributeinstance.hasModifier(SPEED_MODIFIER_ATTACKING_ID)) {
-                attributeinstance.addTransientModifier(SPEED_MODIFIER_ATTACKING);
+            if (!this.isBaby() && !speed.hasModifier(SPEED_MODIFIER_ATTACKING_ID)) {
+                speed.addTransientModifier(SPEED_MODIFIER_ATTACKING);
             }
 
             this.maybePlayFirstAngerSound();
-        } else if (attributeinstance.hasModifier(SPEED_MODIFIER_ATTACKING_ID)) {
-            attributeinstance.removeModifier(SPEED_MODIFIER_ATTACKING_ID);
+        } else if (speed.hasModifier(SPEED_MODIFIER_ATTACKING_ID)) {
+            speed.removeModifier(SPEED_MODIFIER_ATTACKING_ID);
         }
 
-        this.updatePersistentAnger(p_459919_, true);
+        this.updatePersistentAnger(level, true);
         if (this.getTarget() != null) {
             this.maybeAlertOthers();
         }
 
-        super.customServerAiStep(p_459919_);
+        super.customServerAiStep(level);
     }
 
     private void maybePlayFirstAngerSound() {
@@ -128,15 +137,15 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     private void alertOthers() {
-        double d0 = this.getAttributeValue(Attributes.FOLLOW_RANGE);
-        AABB aabb = AABB.unitCubeFromLowerCorner(this.position()).inflate(d0, 10.0, d0);
+        double within = this.getAttributeValue(Attributes.FOLLOW_RANGE);
+        AABB searchAabb = AABB.unitCubeFromLowerCorner(this.position()).inflate(within, 10.0, within);
         this.level()
-            .getEntitiesOfClass(ZombifiedPiglin.class, aabb, EntitySelector.NO_SPECTATORS)
+            .getEntitiesOfClass(ZombifiedPiglin.class, searchAabb, EntitySelector.NO_SPECTATORS)
             .stream()
-            .filter(p_451301_ -> p_451301_ != this)
-            .filter(p_458817_ -> p_458817_.getTarget() == null)
-            .filter(p_457125_ -> !p_457125_.isAlliedTo(this.getTarget()))
-            .forEach(p_454260_ -> p_454260_.setTarget(this.getTarget()));
+            .filter(other -> other != this)
+            .filter(other -> other.getTarget() == null)
+            .filter(other -> !other.isAlliedTo(this.getTarget()))
+            .forEach(other -> other.setTarget(this.getTarget()));
     }
 
     private void playAngerSound() {
@@ -144,13 +153,13 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     @Override
-    public void setTarget(@Nullable LivingEntity p_460470_) {
-        if (this.getTarget() == null && p_460470_ != null) {
+    public void setTarget(final @Nullable LivingEntity target) {
+        if (this.getTarget() == null && target != null) {
             this.playFirstAngerSoundIn = FIRST_ANGER_SOUND_DELAY.sample(this.random);
             this.ticksUntilNextAlert = ALERT_INTERVAL.sample(this.random);
         }
 
-        super.setTarget(p_460470_);
+        super.setTarget(target);
     }
 
     @Override
@@ -159,31 +168,31 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     public static boolean checkZombifiedPiglinSpawnRules(
-        EntityType<ZombifiedPiglin> p_457443_, LevelAccessor p_456050_, EntitySpawnReason p_454219_, BlockPos p_457562_, RandomSource p_454921_
+        final EntityType<ZombifiedPiglin> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_456050_.getDifficulty() != Difficulty.PEACEFUL && !p_456050_.getBlockState(p_457562_.below()).is(Blocks.NETHER_WART_BLOCK);
+        return level.getDifficulty() != Difficulty.PEACEFUL && !level.getBlockState(pos.below()).is(Blocks.NETHER_WART_BLOCK);
     }
 
     @Override
-    public boolean checkSpawnObstruction(LevelReader p_455957_) {
-        return p_455957_.isUnobstructed(this) && !p_455957_.containsAnyLiquid(this.getBoundingBox());
+    public boolean checkSpawnObstruction(final LevelReader level) {
+        return level.isUnobstructed(this) && !level.containsAnyLiquid(this.getBoundingBox());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_454964_) {
-        super.addAdditionalSaveData(p_454964_);
-        this.addPersistentAngerSaveData(p_454964_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        this.addPersistentAngerSaveData(output);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_455212_) {
-        super.readAdditionalSaveData(p_455212_);
-        this.readPersistentAngerSaveData(this.level(), p_455212_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.readPersistentAngerSaveData(this.level(), input);
     }
 
     @Override
-    public void setPersistentAngerEndTime(long p_453892_) {
-        this.persistentAngerEndTime = p_453892_;
+    public void setPersistentAngerEndTime(final long endTime) {
+        this.persistentAngerEndTime = endTime;
     }
 
     @Override
@@ -192,8 +201,8 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> p_453838_) {
-        this.persistentAngerTarget = p_453838_;
+    public void setPersistentAngerTarget(final @Nullable EntityReference<LivingEntity> persistentAngerTarget) {
+        this.persistentAngerTarget = persistentAngerTarget;
     }
 
     @Override
@@ -202,7 +211,7 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_460703_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.ZOMBIFIED_PIGLIN_HURT;
     }
 
@@ -212,8 +221,8 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     @Override
-    public void populateDefaultEquipmentSlots(RandomSource p_459606_, DifficultyInstance p_452196_) {
-        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(p_459606_.nextInt(20) == 0 ? Items.GOLDEN_SPEAR : Items.GOLDEN_SWORD));
+    public void populateDefaultEquipmentSlots(final RandomSource random, final DifficultyInstance difficulty) {
+        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(random.nextInt(20) == 0 ? Items.GOLDEN_SPEAR : Items.GOLDEN_SWORD));
     }
 
     @Override
@@ -227,12 +236,12 @@ public class ZombifiedPiglin extends Zombie implements NeutralMob {
     }
 
     @Override
-    public boolean isPreventingPlayerRest(ServerLevel p_450742_, Player p_459287_) {
-        return this.isAngryAt(p_459287_, p_450742_);
+    public boolean isPreventingPlayerRest(final ServerLevel level, final Player player) {
+        return this.isAngryAt(player, level);
     }
 
     @Override
-    public boolean wantsToPickUp(ServerLevel p_453151_, ItemStack p_452035_) {
-        return this.canHoldItem(p_452035_);
+    public boolean wantsToPickUp(final ServerLevel level, final ItemStack itemStack) {
+        return this.canHoldItem(itemStack);
     }
 }

@@ -16,7 +16,7 @@ public record ServerboundChangeDifficultyPacket(Difficulty difficulty) implement
         return GamePacketTypes.SERVERBOUND_CHANGE_DIFFICULTY;
     }
 
-    public void handle(ServerGamePacketListener p_133823_) {
-        p_133823_.handleChangeDifficulty(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleChangeDifficulty(this);
     }
 }

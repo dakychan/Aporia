@@ -8,30 +8,33 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V1929 extends NamespacedSchema {
-    public V1929(int p_17811_, Schema p_17812_) {
-        super(p_17811_, p_17812_);
+    public V1929(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_17820_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_17820_);
-        p_17820_.register(
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        schema.register(
             map,
             "minecraft:wandering_trader",
-            p_390384_ -> DSL.optionalFields(
-                "Inventory", DSL.list(References.ITEM_STACK.in(p_17820_)), "Offers", DSL.optionalFields("Recipes", DSL.list(References.VILLAGER_TRADE.in(p_17820_)))
+            name -> DSL.optionalFields(
+                "Inventory",
+                DSL.list(References.ITEM_STACK.in(schema)),
+                "Offers",
+                DSL.optionalFields("Recipes", DSL.list(References.VILLAGER_TRADE.in(schema)))
             )
         );
-        p_17820_.register(
+        schema.register(
             map,
             "minecraft:trader_llama",
-            p_390386_ -> DSL.optionalFields(
+            name -> DSL.optionalFields(
                 "Items",
-                DSL.list(References.ITEM_STACK.in(p_17820_)),
+                DSL.list(References.ITEM_STACK.in(schema)),
                 "SaddleItem",
-                References.ITEM_STACK.in(p_17820_),
+                References.ITEM_STACK.in(schema),
                 "DecorItem",
-                References.ITEM_STACK.in(p_17820_)
+                References.ITEM_STACK.in(schema)
             )
         );
         return map;

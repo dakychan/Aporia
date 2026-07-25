@@ -12,52 +12,52 @@ public class PlacementInfo {
     private final List<Ingredient> ingredients;
     private final IntList slotsToIngredientIndex;
 
-    private PlacementInfo(List<Ingredient> p_365245_, IntList p_378164_) {
-        this.ingredients = p_365245_;
-        this.slotsToIngredientIndex = p_378164_;
+    private PlacementInfo(final List<Ingredient> ingredients, final IntList slotsToIngredientIndex) {
+        this.ingredients = ingredients;
+        this.slotsToIngredientIndex = slotsToIngredientIndex;
     }
 
-    public static PlacementInfo create(Ingredient p_361591_) {
-        return p_361591_.isEmpty() ? NOT_PLACEABLE : new PlacementInfo(List.of(p_361591_), IntList.of(0));
+    public static PlacementInfo create(final Ingredient ingredient) {
+        return ingredient.isEmpty() ? NOT_PLACEABLE : new PlacementInfo(List.of(ingredient), IntList.of(0));
     }
 
-    public static PlacementInfo createFromOptionals(List<Optional<Ingredient>> p_362899_) {
-        int i = p_362899_.size();
-        List<Ingredient> list = new ArrayList<>(i);
-        IntList intlist = new IntArrayList(i);
-        int j = 0;
+    public static PlacementInfo createFromOptionals(final List<Optional<Ingredient>> ingredients) {
+        int ingredientCount = ingredients.size();
+        List<Ingredient> presentIngredients = new ArrayList<>(ingredientCount);
+        IntList slotsToIngredientIndex = new IntArrayList(ingredientCount);
+        int placementIndex = 0;
 
-        for (Optional<Ingredient> optional : p_362899_) {
-            if (optional.isPresent()) {
-                Ingredient ingredient = optional.get();
+        for (Optional<Ingredient> maybeIngredient : ingredients) {
+            if (maybeIngredient.isPresent()) {
+                Ingredient ingredient = maybeIngredient.get();
                 if (ingredient.isEmpty()) {
                     return NOT_PLACEABLE;
                 }
 
-                list.add(ingredient);
-                intlist.add(j++);
+                presentIngredients.add(ingredient);
+                slotsToIngredientIndex.add(placementIndex++);
             } else {
-                intlist.add(-1);
+                slotsToIngredientIndex.add(-1);
             }
         }
 
-        return new PlacementInfo(list, intlist);
+        return new PlacementInfo(presentIngredients, slotsToIngredientIndex);
     }
 
-    public static PlacementInfo create(List<Ingredient> p_366350_) {
-        int i = p_366350_.size();
-        IntList intlist = new IntArrayList(i);
+    public static PlacementInfo create(final List<Ingredient> ingredients) {
+        int ingredientCount = ingredients.size();
+        IntList slotsToIngredientIndex = new IntArrayList(ingredientCount);
 
-        for (int j = 0; j < i; j++) {
-            Ingredient ingredient = p_366350_.get(j);
+        for (int i = 0; i < ingredientCount; i++) {
+            Ingredient ingredient = ingredients.get(i);
             if (ingredient.isEmpty()) {
                 return NOT_PLACEABLE;
             }
 
-            intlist.add(j);
+            slotsToIngredientIndex.add(i);
         }
 
-        return new PlacementInfo(p_366350_, intlist);
+        return new PlacementInfo(ingredients, slotsToIngredientIndex);
     }
 
     public IntList slotsToIngredientIndex() {

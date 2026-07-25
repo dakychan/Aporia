@@ -3,39 +3,36 @@ package net.minecraft.client.particle;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.ScalableParticleOptionsBase;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DustParticleBase<T extends ScalableParticleOptionsBase> extends SingleQuadParticle {
     private final SpriteSet sprites;
 
     protected DustParticleBase(
-        ClientLevel p_172094_,
-        double p_172095_,
-        double p_172096_,
-        double p_172097_,
-        double p_172098_,
-        double p_172099_,
-        double p_172100_,
-        T p_335358_,
-        SpriteSet p_172102_
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xAux,
+        final double yAux,
+        final double zAux,
+        final T options,
+        final SpriteSet sprites
     ) {
-        super(p_172094_, p_172095_, p_172096_, p_172097_, p_172098_, p_172099_, p_172100_, p_172102_.first());
+        super(level, x, y, z, xAux, yAux, zAux, sprites.first());
         this.friction = 0.96F;
         this.speedUpWhenYMotionIsBlocked = true;
-        this.sprites = p_172102_;
+        this.sprites = sprites;
         this.xd *= 0.1F;
         this.yd *= 0.1F;
         this.zd *= 0.1F;
-        this.quadSize = this.quadSize * (0.75F * p_335358_.getScale());
-        int i = (int)(8.0 / (this.random.nextDouble() * 0.8 + 0.2));
-        this.lifetime = (int)Math.max(i * p_335358_.getScale(), 1.0F);
-        this.setSpriteFromAge(p_172102_);
+        this.quadSize = this.quadSize * (0.75F * options.getScale());
+        int baseLifetime = (int)(8.0 / (this.random.nextDouble() * 0.8 + 0.2));
+        this.lifetime = (int)Math.max(baseLifetime * options.getScale(), 1.0F);
+        this.setSpriteFromAge(sprites);
     }
 
-    protected float randomizeColor(float p_172105_, float p_172106_) {
-        return (this.random.nextFloat() * 0.2F + 0.8F) * p_172105_ * p_172106_;
+    protected float randomizeColor(final float color, final float baseFactor) {
+        return (this.random.nextFloat() * 0.2F + 0.8F) * color * baseFactor;
     }
 
     @Override
@@ -44,8 +41,8 @@ public class DustParticleBase<T extends ScalableParticleOptionsBase> extends Sin
     }
 
     @Override
-    public float getQuadSize(float p_172109_) {
-        return this.quadSize * Mth.clamp((this.age + p_172109_) / this.lifetime * 32.0F, 0.0F, 1.0F);
+    public float getQuadSize(final float a) {
+        return this.quadSize * Mth.clamp((this.age + a) / this.lifetime * 32.0F, 0.0F, 1.0F);
     }
 
     @Override

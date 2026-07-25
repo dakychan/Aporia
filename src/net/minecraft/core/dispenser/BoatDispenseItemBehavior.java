@@ -15,45 +15,45 @@ public class BoatDispenseItemBehavior extends DefaultDispenseItemBehavior {
     private final DefaultDispenseItemBehavior defaultDispenseItemBehavior = new DefaultDispenseItemBehavior();
     private final EntityType<? extends AbstractBoat> type;
 
-    public BoatDispenseItemBehavior(EntityType<? extends AbstractBoat> p_369323_) {
-        this.type = p_369323_;
+    public BoatDispenseItemBehavior(final EntityType<? extends AbstractBoat> type) {
+        this.type = type;
     }
 
     @Override
-    public ItemStack execute(BlockSource p_123375_, ItemStack p_123376_) {
-        Direction direction = p_123375_.state().getValue(DispenserBlock.FACING);
-        ServerLevel serverlevel = p_123375_.level();
-        Vec3 vec3 = p_123375_.center();
-        double d0 = 0.5625 + this.type.getWidth() / 2.0;
-        double d1 = vec3.x() + direction.getStepX() * d0;
-        double d2 = vec3.y() + direction.getStepY() * 1.125F;
-        double d3 = vec3.z() + direction.getStepZ() * d0;
-        BlockPos blockpos = p_123375_.pos().relative(direction);
-        double d4;
-        if (serverlevel.getFluidState(blockpos).is(FluidTags.WATER)) {
-            d4 = 1.0;
+    public ItemStack execute(final BlockSource source, final ItemStack dispensed) {
+        Direction direction = source.state().getValue(DispenserBlock.FACING);
+        ServerLevel level = source.level();
+        Vec3 center = source.center();
+        double justOutsideDispenser = 0.5625 + this.type.getWidth() / 2.0;
+        double spawnX = center.x() + direction.getStepX() * justOutsideDispenser;
+        double spawnY = center.y() + direction.getStepY() * 1.125F;
+        double spawnZ = center.z() + direction.getStepZ() * justOutsideDispenser;
+        BlockPos frontPos = source.pos().relative(direction);
+        double yOffset;
+        if (level.getFluidState(frontPos).is(FluidTags.WATER)) {
+            yOffset = 1.0;
         } else {
-            if (!serverlevel.getBlockState(blockpos).isAir() || !serverlevel.getFluidState(blockpos.below()).is(FluidTags.WATER)) {
-                return this.defaultDispenseItemBehavior.dispense(p_123375_, p_123376_);
+            if (!level.getBlockState(frontPos).isAir() || !level.getFluidState(frontPos.below()).is(FluidTags.WATER)) {
+                return this.defaultDispenseItemBehavior.dispense(source, dispensed);
             }
 
-            d4 = 0.0;
+            yOffset = 0.0;
         }
 
-        AbstractBoat abstractboat = this.type.create(serverlevel, EntitySpawnReason.DISPENSER);
-        if (abstractboat != null) {
-            abstractboat.setInitialPos(d1, d2 + d4, d3);
-            EntityType.<AbstractBoat>createDefaultStackConfig(serverlevel, p_123376_, null).accept(abstractboat);
-            abstractboat.setYRot(direction.toYRot());
-            serverlevel.addFreshEntity(abstractboat);
-            p_123376_.shrink(1);
+        AbstractBoat boat = this.type.create(level, EntitySpawnReason.DISPENSER);
+        if (boat != null) {
+            boat.setInitialPos(spawnX, spawnY + yOffset, spawnZ);
+            EntityType.<AbstractBoat>createDefaultStackConfig(level, dispensed, null).apply(boat);
+            boat.setYRot(direction.toYRot());
+            level.addFreshEntity(boat);
+            dispensed.shrink(1);
         }
 
-        return p_123376_;
+        return dispensed;
     }
 
     @Override
-    protected void playSound(BlockSource p_123373_) {
-        p_123373_.level().levelEvent(1000, p_123373_.pos(), 0);
+    protected void playSound(final BlockSource source) {
+        source.level().levelEvent(1000, source.pos(), 0);
     }
 }

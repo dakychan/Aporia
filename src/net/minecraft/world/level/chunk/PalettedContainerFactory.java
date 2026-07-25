@@ -19,19 +19,19 @@ public record PalettedContainerFactory(
     Holder<Biome> defaultBiome,
     Codec<PalettedContainerRO<Holder<Biome>>> biomeContainerCodec
 ) {
-    public static PalettedContainerFactory create(RegistryAccess p_425828_) {
-        Strategy<BlockState> strategy = Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY);
-        BlockState blockstate = Blocks.AIR.defaultBlockState();
-        Registry<Biome> registry = p_425828_.lookupOrThrow(Registries.BIOME);
-        Strategy<Holder<Biome>> strategy1 = Strategy.createForBiomes(registry.asHolderIdMap());
-        Holder.Reference<Biome> reference = registry.getOrThrow(Biomes.PLAINS);
+    public static PalettedContainerFactory create(final RegistryAccess registries) {
+        Strategy<BlockState> blockStateStrategy = Strategy.createForBlockStates(Block.BLOCK_STATE_REGISTRY);
+        BlockState defaultBlockState = Blocks.AIR.defaultBlockState();
+        Registry<Biome> biomes = registries.lookupOrThrow(Registries.BIOME);
+        Strategy<Holder<Biome>> biomeStrategy = Strategy.createForBiomes(biomes.asHolderIdMap());
+        Holder.Reference<Biome> defaultBiome = biomes.getOrThrow(Biomes.PLAINS);
         return new PalettedContainerFactory(
-            strategy,
-            blockstate,
-            PalettedContainer.codecRW(BlockState.CODEC, strategy, blockstate),
-            strategy1,
-            reference,
-            PalettedContainer.codecRO(registry.holderByNameCodec(), strategy1, reference)
+            blockStateStrategy,
+            defaultBlockState,
+            PalettedContainer.codecRW(BlockState.CODEC, blockStateStrategy, defaultBlockState),
+            biomeStrategy,
+            defaultBiome,
+            PalettedContainer.codecRO(biomes.holderByNameCodec(), biomeStrategy, defaultBiome)
         );
     }
 

@@ -26,6 +26,7 @@ import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractChestBoat extends AbstractBoat implements HasCustomInventoryScreen, ContainerEntity {
@@ -34,8 +35,8 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     private @Nullable ResourceKey<LootTable> lootTable;
     private long lootTableSeed;
 
-    public AbstractChestBoat(EntityType<? extends AbstractChestBoat> p_459229_, Level p_460860_, Supplier<Item> p_460245_) {
-        super(p_459229_, p_460860_, p_460245_);
+    public AbstractChestBoat(final EntityType<? extends AbstractChestBoat> type, final Level level, final Supplier<Item> dropItem) {
+        super(type, level, dropItem);
     }
 
     @Override
@@ -49,56 +50,58 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_451064_) {
-        super.addAdditionalSaveData(p_451064_);
-        this.addChestVehicleSaveData(p_451064_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        this.addChestVehicleSaveData(output);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_456965_) {
-        super.readAdditionalSaveData(p_456965_);
-        this.readChestVehicleSaveData(p_456965_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.readChestVehicleSaveData(input);
     }
 
     @Override
-    public void destroy(ServerLevel p_454094_, DamageSource p_458824_) {
-        this.destroy(p_454094_, this.getDropItem());
-        this.chestVehicleDestroyed(p_458824_, p_454094_, this);
+    public void destroy(final ServerLevel level, final DamageSource source) {
+        this.destroy(level, this.getDropItem());
+        this.chestVehicleDestroyed(source, level, this);
     }
 
     @Override
-    public void remove(Entity.RemovalReason p_459202_) {
-        if (!this.level().isClientSide() && p_459202_.shouldDestroy()) {
+    public void remove(final Entity.RemovalReason reason) {
+        if (!this.level().isClientSide() && reason.shouldDestroy()) {
             Containers.dropContents(this.level(), this, this);
         }
 
-        super.remove(p_459202_);
+        super.remove(reason);
     }
 
     @Override
-    public InteractionResult interact(Player p_458305_, InteractionHand p_452194_) {
-        InteractionResult interactionresult = super.interact(p_458305_, p_452194_);
-        if (interactionresult != InteractionResult.PASS) {
-            return interactionresult;
-        } else if (this.canAddPassenger(p_458305_) && !p_458305_.isSecondaryUseActive()) {
-            return InteractionResult.PASS;
-        } else {
-            InteractionResult interactionresult1 = this.interactWithContainerVehicle(p_458305_);
-            if (interactionresult1.consumesAction() && p_458305_.level() instanceof ServerLevel serverlevel) {
-                this.gameEvent(GameEvent.CONTAINER_OPEN, p_458305_);
-                PiglinAi.angerNearbyPiglins(serverlevel, p_458305_, true);
-            }
-
-            return interactionresult1;
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
+        InteractionResult superInteraction = super.interact(player, hand, location);
+        if (superInteraction != InteractionResult.PASS) {
+            return superInteraction;
         }
+
+        if (this.canAddPassenger(player) && !player.isSecondaryUseActive()) {
+            return InteractionResult.PASS;
+        }
+
+        InteractionResult result = this.interactWithContainerVehicle(player);
+        if (result.consumesAction() && player.level() instanceof ServerLevel serverLevel) {
+            this.gameEvent(GameEvent.CONTAINER_OPEN, player);
+            PiglinAi.angerNearbyPiglins(serverLevel, player, true);
+        }
+
+        return result;
     }
 
     @Override
-    public void openCustomInventoryScreen(Player p_455682_) {
-        p_455682_.openMenu(this);
-        if (p_455682_.level() instanceof ServerLevel serverlevel) {
-            this.gameEvent(GameEvent.CONTAINER_OPEN, p_455682_);
-            PiglinAi.angerNearbyPiglins(serverlevel, p_455682_, true);
+    public void openCustomInventoryScreen(final Player player) {
+        player.openMenu(this);
+        if (player.level() instanceof ServerLevel level) {
+            this.gameEvent(GameEvent.CONTAINER_OPEN, player);
+            PiglinAi.angerNearbyPiglins(level, player, true);
         }
     }
 
@@ -113,28 +116,28 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     }
 
     @Override
-    public ItemStack getItem(int p_454668_) {
-        return this.getChestVehicleItem(p_454668_);
+    public ItemStack getItem(final int slot) {
+        return this.getChestVehicleItem(slot);
     }
 
     @Override
-    public ItemStack removeItem(int p_458614_, int p_457863_) {
-        return this.removeChestVehicleItem(p_458614_, p_457863_);
+    public ItemStack removeItem(final int slot, final int count) {
+        return this.removeChestVehicleItem(slot, count);
     }
 
     @Override
-    public ItemStack removeItemNoUpdate(int p_453144_) {
-        return this.removeChestVehicleItemNoUpdate(p_453144_);
+    public ItemStack removeItemNoUpdate(final int slot) {
+        return this.removeChestVehicleItemNoUpdate(slot);
     }
 
     @Override
-    public void setItem(int p_458744_, ItemStack p_454793_) {
-        this.setChestVehicleItem(p_458744_, p_454793_);
+    public void setItem(final int slot, final ItemStack itemStack) {
+        this.setChestVehicleItem(slot, itemStack);
     }
 
     @Override
-    public SlotAccess getSlot(int p_450768_) {
-        return this.getChestVehicleSlot(p_450768_);
+    public SlotAccess getSlot(final int slot) {
+        return this.getChestVehicleSlot(slot);
     }
 
     @Override
@@ -142,22 +145,22 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     }
 
     @Override
-    public boolean stillValid(Player p_458855_) {
-        return this.isChestVehicleStillValid(p_458855_);
+    public boolean stillValid(final Player player) {
+        return this.isChestVehicleStillValid(player);
     }
 
     @Override
-    public @Nullable AbstractContainerMenu createMenu(int p_452727_, Inventory p_455200_, Player p_454656_) {
-        if (this.lootTable != null && p_454656_.isSpectator()) {
+    public @Nullable AbstractContainerMenu createMenu(final int containerId, final Inventory inventory, final Player player) {
+        if (this.lootTable != null && player.isSpectator()) {
             return null;
-        } else {
-            this.unpackLootTable(p_455200_.player);
-            return ChestMenu.threeRows(p_452727_, p_455200_, this);
         }
+
+        this.unpackLootTable(inventory.player);
+        return ChestMenu.threeRows(containerId, inventory, this);
     }
 
-    public void unpackLootTable(@Nullable Player p_453726_) {
-        this.unpackChestVehicleLootTable(p_453726_);
+    public void unpackLootTable(final @Nullable Player player) {
+        this.unpackChestVehicleLootTable(player);
     }
 
     @Override
@@ -166,8 +169,8 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     }
 
     @Override
-    public void setContainerLootTable(@Nullable ResourceKey<LootTable> p_456367_) {
-        this.lootTable = p_456367_;
+    public void setContainerLootTable(final @Nullable ResourceKey<LootTable> lootTable) {
+        this.lootTable = lootTable;
     }
 
     @Override
@@ -176,8 +179,8 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     }
 
     @Override
-    public void setContainerLootTableSeed(long p_455055_) {
-        this.lootTableSeed = p_455055_;
+    public void setContainerLootTableSeed(final long lootTableSeed) {
+        this.lootTableSeed = lootTableSeed;
     }
 
     @Override
@@ -191,7 +194,7 @@ public abstract class AbstractChestBoat extends AbstractBoat implements HasCusto
     }
 
     @Override
-    public void stopOpen(ContainerUser p_452104_) {
-        this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(p_452104_.getLivingEntity()));
+    public void stopOpen(final ContainerUser containerUser) {
+        this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(containerUser.getLivingEntity()));
     }
 }

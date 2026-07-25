@@ -12,23 +12,23 @@ public class ServerboundPaddleBoatPacket implements Packet<ServerGamePacketListe
     private final boolean left;
     private final boolean right;
 
-    public ServerboundPaddleBoatPacket(boolean p_134210_, boolean p_134211_) {
-        this.left = p_134210_;
-        this.right = p_134211_;
+    public ServerboundPaddleBoatPacket(final boolean left, final boolean right) {
+        this.left = left;
+        this.right = right;
     }
 
-    private ServerboundPaddleBoatPacket(FriendlyByteBuf p_179702_) {
-        this.left = p_179702_.readBoolean();
-        this.right = p_179702_.readBoolean();
+    private ServerboundPaddleBoatPacket(final FriendlyByteBuf input) {
+        this.left = input.readBoolean();
+        this.right = input.readBoolean();
     }
 
-    private void write(FriendlyByteBuf p_134220_) {
-        p_134220_.writeBoolean(this.left);
-        p_134220_.writeBoolean(this.right);
+    private void write(final FriendlyByteBuf output) {
+        output.writeBoolean(this.left);
+        output.writeBoolean(this.right);
     }
 
-    public void handle(ServerGamePacketListener p_134217_) {
-        p_134217_.handlePaddleBoat(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePaddleBoat(this);
     }
 
     @Override

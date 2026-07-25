@@ -2,7 +2,6 @@ package net.minecraft.world.item.equipment;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderGetter;
@@ -21,6 +20,7 @@ import net.minecraft.stats.Stats;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
@@ -44,7 +44,7 @@ public record Equippable(
     Holder<SoundEvent> shearingSound
 ) {
     public static final Codec<Equippable> CODEC = RecordCodecBuilder.create(
-        p_362866_ -> p_362866_.group(
+        i -> i.group(
                 EquipmentSlot.CODEC.fieldOf("slot").forGetter(Equippable::slot),
                 SoundEvent.CODEC.optionalFieldOf("equip_sound", SoundEvents.ARMOR_EQUIP_GENERIC).forGetter(Equippable::equipSound),
                 ResourceKey.codec(EquipmentAssets.ROOT_ID).optionalFieldOf("asset_id").forGetter(Equippable::assetId),
@@ -59,7 +59,7 @@ public record Equippable(
                     .optionalFieldOf("shearing_sound", BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.SHEARS_SNIP))
                     .forGetter(Equippable::shearingSound)
             )
-            .apply(p_362866_, Equippable::new)
+            .apply(i, Equippable::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, Equippable> STREAM_CODEC = StreamCodec.composite(
         EquipmentSlot.STREAM_CODEC,
@@ -87,68 +87,68 @@ public record Equippable(
         Equippable::new
     );
 
-    public static Equippable llamaSwag(DyeColor p_369724_) {
+    public static Equippable llamaSwag(final DyeColor color) {
         return builder(EquipmentSlot.BODY)
             .setEquipSound(SoundEvents.LLAMA_SWAG)
-            .setAsset(EquipmentAssets.CARPETS.get(p_369724_))
-            .setAllowedEntities(EntityType.LLAMA, EntityType.TRADER_LLAMA)
+            .setAsset(EquipmentAssets.CARPETS.get(color))
+            .setAllowedEntities(EntityTypes.LLAMA, EntityTypes.TRADER_LLAMA)
             .setCanBeSheared(true)
             .setShearingSound(SoundEvents.LLAMA_CARPET_UNEQUIP)
             .build();
     }
 
     public static Equippable saddle() {
-        HolderGetter<EntityType<?>> holdergetter = BuiltInRegistries.acquireBootstrapRegistrationLookup(BuiltInRegistries.ENTITY_TYPE);
+        HolderGetter<EntityType<?>> entityGetter = BuiltInRegistries.acquireBootstrapRegistrationLookup(BuiltInRegistries.ENTITY_TYPE);
         return builder(EquipmentSlot.SADDLE)
             .setEquipSound(SoundEvents.HORSE_SADDLE)
             .setAsset(EquipmentAssets.SADDLE)
-            .setAllowedEntities(holdergetter.getOrThrow(EntityTypeTags.CAN_EQUIP_SADDLE))
+            .setAllowedEntities(entityGetter.getOrThrow(EntityTypeTags.CAN_EQUIP_SADDLE))
             .setEquipOnInteract(true)
             .setCanBeSheared(true)
             .setShearingSound(SoundEvents.SADDLE_UNEQUIP)
             .build();
     }
 
-    public static Equippable harness(DyeColor p_409861_) {
-        HolderGetter<EntityType<?>> holdergetter = BuiltInRegistries.acquireBootstrapRegistrationLookup(BuiltInRegistries.ENTITY_TYPE);
+    public static Equippable harness(final DyeColor color) {
+        HolderGetter<EntityType<?>> entityGetter = BuiltInRegistries.acquireBootstrapRegistrationLookup(BuiltInRegistries.ENTITY_TYPE);
         return builder(EquipmentSlot.BODY)
             .setEquipSound(SoundEvents.HARNESS_EQUIP)
-            .setAsset(EquipmentAssets.HARNESSES.get(p_409861_))
-            .setAllowedEntities(holdergetter.getOrThrow(EntityTypeTags.CAN_EQUIP_HARNESS))
+            .setAsset(EquipmentAssets.HARNESSES.get(color))
+            .setAllowedEntities(entityGetter.getOrThrow(EntityTypeTags.CAN_EQUIP_HARNESS))
             .setEquipOnInteract(true)
             .setCanBeSheared(true)
             .setShearingSound(BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.HARNESS_UNEQUIP))
             .build();
     }
 
-    public static Equippable.Builder builder(EquipmentSlot p_362012_) {
-        return new Equippable.Builder(p_362012_);
+    public static Equippable.Builder builder(final EquipmentSlot slot) {
+        return new Equippable.Builder(slot);
     }
 
-    public InteractionResult swapWithEquipmentSlot(ItemStack p_362062_, Player p_365204_) {
-        if (p_365204_.canUseSlot(this.slot) && this.canBeEquippedBy(p_365204_.getType())) {
-            ItemStack itemstack = p_365204_.getItemBySlot(this.slot);
-            if ((!EnchantmentHelper.has(itemstack, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE) || p_365204_.isCreative())
-                && !ItemStack.isSameItemSameComponents(p_362062_, itemstack)) {
-                if (!p_365204_.level().isClientSide()) {
-                    p_365204_.awardStat(Stats.ITEM_USED.get(p_362062_.getItem()));
+    public InteractionResult swapWithEquipmentSlot(final ItemStack inHand, final Player player) {
+        if (player.canUseSlot(this.slot) && this.canBeEquippedBy(player.typeHolder())) {
+            ItemStack inEquipmentSlot = player.getItemBySlot(this.slot);
+            if ((!EnchantmentHelper.has(inEquipmentSlot, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE) || player.isCreative())
+                && !ItemStack.isSameItemSameComponents(inHand, inEquipmentSlot)) {
+                if (!player.level().isClientSide()) {
+                    player.awardStat(Stats.ITEM_USED.get(inHand.getItem()));
                 }
 
-                if (p_362062_.getCount() <= 1) {
-                    ItemStack itemstack3 = itemstack.isEmpty() ? p_362062_ : itemstack.copyAndClear();
-                    ItemStack itemstack4 = p_365204_.isCreative() ? p_362062_.copy() : p_362062_.copyAndClear();
-                    p_365204_.setItemSlot(this.slot, itemstack4);
-                    return InteractionResult.SUCCESS.heldItemTransformedTo(itemstack3);
-                } else {
-                    ItemStack itemstack1 = itemstack.copyAndClear();
-                    ItemStack itemstack2 = p_362062_.consumeAndReturn(1, p_365204_);
-                    p_365204_.setItemSlot(this.slot, itemstack2);
-                    if (!p_365204_.getInventory().add(itemstack1)) {
-                        p_365204_.drop(itemstack1, false);
-                    }
-
-                    return InteractionResult.SUCCESS.heldItemTransformedTo(p_362062_);
+                if (inHand.getCount() <= 1) {
+                    ItemStack swappedToHand = inEquipmentSlot.isEmpty() ? inHand : inEquipmentSlot.copyAndClear();
+                    ItemStack swappedToEquipment = player.isCreative() ? inHand.copy() : inHand.copyAndClear();
+                    player.setItemSlot(this.slot, swappedToEquipment);
+                    return InteractionResult.SUCCESS.heldItemTransformedTo(swappedToHand);
                 }
+
+                ItemStack swappedToInventory = inEquipmentSlot.copyAndClear();
+                ItemStack swappedToEquipment = inHand.consumeAndReturn(1, player);
+                player.setItemSlot(this.slot, swappedToEquipment);
+                if (!player.getInventory().add(swappedToInventory)) {
+                    player.drop(swappedToInventory, false);
+                }
+
+                return InteractionResult.SUCCESS.heldItemTransformedTo(inHand);
             } else {
                 return InteractionResult.FAIL;
             }
@@ -157,11 +157,11 @@ public record Equippable(
         }
     }
 
-    public InteractionResult equipOnTarget(Player p_392379_, LivingEntity p_392687_, ItemStack p_396718_) {
-        if (p_392687_.isEquippableInSlot(p_396718_, this.slot) && !p_392687_.hasItemInSlot(this.slot) && p_392687_.isAlive()) {
-            if (!p_392379_.level().isClientSide()) {
-                p_392687_.setItemSlot(this.slot, p_396718_.split(1));
-                if (p_392687_ instanceof Mob mob) {
+    public InteractionResult equipOnTarget(final Player player, final LivingEntity target, final ItemStack itemStack) {
+        if (target.isEquippableInSlot(itemStack, this.slot) && !target.hasItemInSlot(this.slot) && target.isAlive()) {
+            if (!player.level().isClientSide()) {
+                target.setItemSlot(this.slot, itemStack.split(1));
+                if (target instanceof Mob mob) {
                     mob.setGuaranteedDrop(this.slot);
                 }
             }
@@ -172,8 +172,8 @@ public record Equippable(
         }
     }
 
-    public boolean canBeEquippedBy(EntityType<?> p_365620_) {
-        return this.allowedEntities.isEmpty() || this.allowedEntities.get().contains(p_365620_.builtInRegistryHolder());
+    public boolean canBeEquippedBy(final Holder<EntityType<?>> type) {
+        return this.allowedEntities.isEmpty() || this.allowedEntities.get().contains(type);
     }
 
     public static class Builder {
@@ -189,61 +189,61 @@ public record Equippable(
         private boolean canBeSheared;
         private Holder<SoundEvent> shearingSound = BuiltInRegistries.SOUND_EVENT.wrapAsHolder(SoundEvents.SHEARS_SNIP);
 
-        Builder(EquipmentSlot p_363455_) {
-            this.slot = p_363455_;
+        private Builder(final EquipmentSlot slot) {
+            this.slot = slot;
         }
 
-        public Equippable.Builder setEquipSound(Holder<SoundEvent> p_368836_) {
-            this.equipSound = p_368836_;
+        public Equippable.Builder setEquipSound(final Holder<SoundEvent> equipSound) {
+            this.equipSound = equipSound;
             return this;
         }
 
-        public Equippable.Builder setAsset(ResourceKey<EquipmentAsset> p_378631_) {
-            this.assetId = Optional.of(p_378631_);
+        public Equippable.Builder setAsset(final ResourceKey<EquipmentAsset> assetId) {
+            this.assetId = Optional.of(assetId);
             return this;
         }
 
-        public Equippable.Builder setCameraOverlay(Identifier p_450542_) {
-            this.cameraOverlay = Optional.of(p_450542_);
+        public Equippable.Builder setCameraOverlay(final Identifier cameraOverlay) {
+            this.cameraOverlay = Optional.of(cameraOverlay);
             return this;
         }
 
-        public Equippable.Builder setAllowedEntities(EntityType<?>... p_370045_) {
-            return this.setAllowedEntities(HolderSet.direct(EntityType::builtInRegistryHolder, p_370045_));
+        public Equippable.Builder setAllowedEntities(final EntityType<?>... allowedEntities) {
+            return this.setAllowedEntities(HolderSet.direct(EntityType::builtInRegistryHolder, allowedEntities));
         }
 
-        public Equippable.Builder setAllowedEntities(HolderSet<EntityType<?>> p_363901_) {
-            this.allowedEntities = Optional.of(p_363901_);
+        public Equippable.Builder setAllowedEntities(final HolderSet<EntityType<?>> allowedEntities) {
+            this.allowedEntities = Optional.of(allowedEntities);
             return this;
         }
 
-        public Equippable.Builder setDispensable(boolean p_370164_) {
-            this.dispensable = p_370164_;
+        public Equippable.Builder setDispensable(final boolean dispensable) {
+            this.dispensable = dispensable;
             return this;
         }
 
-        public Equippable.Builder setSwappable(boolean p_367437_) {
-            this.swappable = p_367437_;
+        public Equippable.Builder setSwappable(final boolean swappable) {
+            this.swappable = swappable;
             return this;
         }
 
-        public Equippable.Builder setDamageOnHurt(boolean p_363080_) {
-            this.damageOnHurt = p_363080_;
+        public Equippable.Builder setDamageOnHurt(final boolean damageOnHurt) {
+            this.damageOnHurt = damageOnHurt;
             return this;
         }
 
-        public Equippable.Builder setEquipOnInteract(boolean p_391423_) {
-            this.equipOnInteract = p_391423_;
+        public Equippable.Builder setEquipOnInteract(final boolean equipOnInteract) {
+            this.equipOnInteract = equipOnInteract;
             return this;
         }
 
-        public Equippable.Builder setCanBeSheared(boolean p_408600_) {
-            this.canBeSheared = p_408600_;
+        public Equippable.Builder setCanBeSheared(final boolean canBeSheared) {
+            this.canBeSheared = canBeSheared;
             return this;
         }
 
-        public Equippable.Builder setShearingSound(Holder<SoundEvent> p_406896_) {
-            this.shearingSound = p_406896_;
+        public Equippable.Builder setShearingSound(final Holder<SoundEvent> shearingSound) {
+            this.shearingSound = shearingSound;
             return this;
         }
 

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
 import it.unimi.dsi.fastutil.longs.Long2LongMap;
 import it.unimi.dsi.fastutil.longs.Long2LongOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2LongMap.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -37,35 +36,37 @@ public class NearestBedSensor extends Sensor<Mob> {
         return ImmutableSet.of(MemoryModuleType.NEAREST_BED);
     }
 
-    protected void doTick(ServerLevel p_26685_, Mob p_26686_) {
-        if (p_26686_.isBaby()) {
+    protected void doTick(final ServerLevel level, final Mob body) {
+        if (body.isBaby()) {
             this.triedCount = 0;
-            this.lastUpdate = p_26685_.getGameTime() + p_26685_.getRandom().nextInt(20);
-            PoiManager poimanager = p_26685_.getPoiManager();
-            Predicate<BlockPos> predicate = p_26688_ -> {
-                long i = p_26688_.asLong();
-                if (this.batchCache.containsKey(i)) {
+            this.lastUpdate = level.getGameTime() + level.getRandom().nextInt(20);
+            PoiManager poiManager = level.getPoiManager();
+            Predicate<BlockPos> cacheTest = pos -> {
+                long key = pos.asLong();
+                if (this.batchCache.containsKey(key)) {
                     return false;
-                } else if (++this.triedCount >= 5) {
-                    return false;
-                } else {
-                    this.batchCache.put(i, this.lastUpdate + 40L);
-                    return true;
                 }
+
+                if (++this.triedCount >= 5) {
+                    return false;
+                }
+
+                this.batchCache.put(key, this.lastUpdate + 40L);
+                return true;
             };
-            Set<Pair<Holder<PoiType>, BlockPos>> set = poimanager.findAllWithType(
-                    p_217819_ -> p_217819_.is(PoiTypes.HOME), predicate, p_26686_.blockPosition(), 48, PoiManager.Occupancy.ANY
+            Set<Pair<Holder<PoiType>, BlockPos>> pois = poiManager.findAllWithType(
+                    e -> e.is(PoiTypes.HOME), cacheTest, body.blockPosition(), 48, PoiManager.Occupancy.ANY
                 )
                 .collect(Collectors.toSet());
-            Path path = AcquirePoi.findPathToPois(p_26686_, set);
+            Path path = AcquirePoi.findPathToPois(body, pois);
             if (path != null && path.canReach()) {
-                BlockPos blockpos = path.getTarget();
-                Optional<Holder<PoiType>> optional = poimanager.getType(blockpos);
-                if (optional.isPresent()) {
-                    p_26686_.getBrain().setMemory(MemoryModuleType.NEAREST_BED, blockpos);
+                BlockPos targetPos = path.getTarget();
+                Optional<Holder<PoiType>> type = poiManager.getType(targetPos);
+                if (type.isPresent()) {
+                    body.getBrain().setMemory(MemoryModuleType.NEAREST_BED, targetPos);
                 }
             } else if (this.triedCount < 5) {
-                this.batchCache.long2LongEntrySet().removeIf(p_217821_ -> p_217821_.getLongValue() < this.lastUpdate);
+                this.batchCache.long2LongEntrySet().removeIf(entry -> entry.getLongValue() < this.lastUpdate);
             }
         }
     }

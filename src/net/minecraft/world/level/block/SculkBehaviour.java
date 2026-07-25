@@ -13,34 +13,32 @@ public interface SculkBehaviour {
     SculkBehaviour DEFAULT = new SculkBehaviour() {
         @Override
         public boolean attemptSpreadVein(
-            LevelAccessor p_222048_, BlockPos p_222049_, BlockState p_222050_, @Nullable Collection<Direction> p_222051_, boolean p_222052_
+            final LevelAccessor level, final BlockPos pos, final BlockState state, final @Nullable Collection<Direction> facings, final boolean postProcess
         ) {
-            if (p_222051_ == null) {
-                return ((SculkVeinBlock)Blocks.SCULK_VEIN).getSameSpaceSpreader().spreadAll(p_222048_.getBlockState(p_222049_), p_222048_, p_222049_, p_222052_) > 0L;
-            } else if (!p_222051_.isEmpty()) {
-                return !p_222050_.isAir() && !p_222050_.getFluidState().is(Fluids.WATER)
-                    ? false
-                    : SculkVeinBlock.regrow(p_222048_, p_222049_, p_222050_, p_222051_);
+            if (facings == null) {
+                return ((SculkVeinBlock)Blocks.SCULK_VEIN).getSameSpaceSpreader().spreadAll(level.getBlockState(pos), level, pos, postProcess) > 0L;
+            } else if (!facings.isEmpty()) {
+                return !state.isAir() && !state.getFluidState().is(Fluids.WATER) ? false : SculkVeinBlock.regrow(level, pos, state, facings);
             } else {
-                return SculkBehaviour.super.attemptSpreadVein(p_222048_, p_222049_, p_222050_, p_222051_, p_222052_);
+                return SculkBehaviour.super.attemptSpreadVein(level, pos, state, facings, postProcess);
             }
         }
 
         @Override
         public int attemptUseCharge(
-            SculkSpreader.ChargeCursor p_222054_,
-            LevelAccessor p_222055_,
-            BlockPos p_222056_,
-            RandomSource p_222057_,
-            SculkSpreader p_222058_,
-            boolean p_222059_
+            final SculkSpreader.ChargeCursor cursor,
+            final LevelAccessor level,
+            final BlockPos originPos,
+            final RandomSource random,
+            final SculkSpreader spreader,
+            final boolean spreadVeins
         ) {
-            return p_222054_.getDecayDelay() > 0 ? p_222054_.getCharge() : 0;
+            return cursor.getDecayDelay() > 0 ? cursor.getCharge() : 0;
         }
 
         @Override
-        public int updateDecayDelay(int p_222061_) {
-            return Math.max(p_222061_ - 1, 0);
+        public int updateDecayDelay(final int age) {
+            return Math.max(age - 1, 0);
         }
     };
 
@@ -48,26 +46,28 @@ public interface SculkBehaviour {
         return 1;
     }
 
-    default void onDischarged(LevelAccessor p_222026_, BlockState p_222027_, BlockPos p_222028_, RandomSource p_222029_) {
+    default void onDischarged(final LevelAccessor level, final BlockState state, final BlockPos pos, final RandomSource random) {
     }
 
-    default boolean depositCharge(LevelAccessor p_222031_, BlockPos p_222032_, RandomSource p_222033_) {
+    default boolean depositCharge(final LevelAccessor level, final BlockPos pos, final RandomSource random) {
         return false;
     }
 
-    default boolean attemptSpreadVein(LevelAccessor p_222034_, BlockPos p_222035_, BlockState p_222036_, @Nullable Collection<Direction> p_222037_, boolean p_222038_) {
-        return ((MultifaceSpreadeableBlock)Blocks.SCULK_VEIN).getSpreader().spreadAll(p_222036_, p_222034_, p_222035_, p_222038_) > 0L;
+    default boolean attemptSpreadVein(
+        final LevelAccessor level, final BlockPos pos, final BlockState state, final @Nullable Collection<Direction> facings, final boolean postProcess
+    ) {
+        return ((MultifaceSpreadeableBlock)Blocks.SCULK_VEIN).getSpreader().spreadAll(state, level, pos, postProcess) > 0L;
     }
 
     default boolean canChangeBlockStateOnSpread() {
         return true;
     }
 
-    default int updateDecayDelay(int p_222045_) {
+    default int updateDecayDelay(final int age) {
         return 1;
     }
 
     int attemptUseCharge(
-        SculkSpreader.ChargeCursor p_222039_, LevelAccessor p_222040_, BlockPos p_222041_, RandomSource p_222042_, SculkSpreader p_222043_, boolean p_222044_
+        SculkSpreader.ChargeCursor cursor, LevelAccessor level, BlockPos originPos, RandomSource random, SculkSpreader spreader, boolean spreadVeins
     );
 }

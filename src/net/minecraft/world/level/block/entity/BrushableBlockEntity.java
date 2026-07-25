@@ -3,7 +3,7 @@ package net.minecraft.world.level.block.entity;
 import com.mojang.logging.LogUtils;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import java.util.Objects;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -15,9 +15,10 @@ import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -51,60 +52,60 @@ public class BrushableBlockEntity extends BlockEntity {
     private @Nullable ResourceKey<LootTable> lootTable;
     private long lootTableSeed;
 
-    public BrushableBlockEntity(BlockPos p_277558_, BlockState p_278093_) {
-        super(BlockEntityType.BRUSHABLE_BLOCK, p_277558_, p_278093_);
+    public BrushableBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.BRUSHABLE_BLOCK, worldPosition, blockState);
     }
 
-    public boolean brush(long p_277786_, ServerLevel p_368993_, LivingEntity p_393398_, Direction p_277424_, ItemStack p_363346_) {
+    public boolean brush(final long gameTime, final ServerLevel level, final LivingEntity user, final Direction direction, final ItemStack brush) {
         if (this.hitDirection == null) {
-            this.hitDirection = p_277424_;
+            this.hitDirection = direction;
         }
 
-        this.brushCountResetsAtTick = p_277786_ + 40L;
-        if (p_277786_ < this.coolDownEndsAtTick) {
+        this.brushCountResetsAtTick = gameTime + 40L;
+        if (gameTime < this.coolDownEndsAtTick) {
             return false;
-        } else {
-            this.coolDownEndsAtTick = p_277786_ + 10L;
-            this.unpackLootTable(p_368993_, p_393398_, p_363346_);
-            int i = this.getCompletionState();
-            if (++this.brushCount >= 10) {
-                this.brushingCompleted(p_368993_, p_393398_, p_363346_);
-                return true;
-            } else {
-                p_368993_.scheduleTick(this.getBlockPos(), this.getBlockState().getBlock(), 2);
-                int j = this.getCompletionState();
-                if (i != j) {
-                    BlockState blockstate = this.getBlockState();
-                    BlockState blockstate1 = blockstate.setValue(BlockStateProperties.DUSTED, j);
-                    p_368993_.setBlock(this.getBlockPos(), blockstate1, 3);
-                }
-
-                return false;
-            }
         }
+
+        this.coolDownEndsAtTick = gameTime + 10L;
+        this.unpackLootTable(level, user, brush);
+        int previousCompletionState = this.getCompletionState();
+        if (++this.brushCount >= 10) {
+            this.brushingCompleted(level, user, brush);
+            return true;
+        }
+
+        level.scheduleTick(this.getBlockPos(), this.getBlockState().getBlock(), 2);
+        int completionState = this.getCompletionState();
+        if (previousCompletionState != completionState) {
+            BlockState previousState = this.getBlockState();
+            BlockState state = previousState.setValue(BlockStateProperties.DUSTED, completionState);
+            level.setBlock(this.getBlockPos(), state, 3);
+        }
+
+        return false;
     }
 
-    private void unpackLootTable(ServerLevel p_367709_, LivingEntity p_392563_, ItemStack p_365744_) {
+    private void unpackLootTable(final ServerLevel level, final LivingEntity user, final ItemInstance brush) {
         if (this.lootTable != null) {
-            LootTable loottable = p_367709_.getServer().reloadableRegistries().getLootTable(this.lootTable);
-            if (p_392563_ instanceof ServerPlayer serverplayer) {
-                CriteriaTriggers.GENERATE_LOOT.trigger(serverplayer, this.lootTable);
+            LootTable lootTable = level.getServer().reloadableRegistries().getLootTable(this.lootTable);
+            if (user instanceof ServerPlayer serverPlayer) {
+                CriteriaTriggers.GENERATE_LOOT.trigger(serverPlayer, this.lootTable);
             }
 
-            LootParams lootparams = new LootParams.Builder(p_367709_)
+            LootParams params = new LootParams.Builder(level)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(this.worldPosition))
-                .withLuck(p_392563_.getLuck())
-                .withParameter(LootContextParams.THIS_ENTITY, p_392563_)
-                .withParameter(LootContextParams.TOOL, p_365744_)
+                .withLuck(user.getLuck())
+                .withParameter(LootContextParams.THIS_ENTITY, user)
+                .withParameter(LootContextParams.TOOL, brush)
                 .create(LootContextParamSets.ARCHAEOLOGY);
-            ObjectArrayList<ItemStack> objectarraylist = loottable.getRandomItems(lootparams, this.lootTableSeed);
+            ObjectArrayList<ItemStack> loot = lootTable.getRandomItems(params, this.lootTableSeed);
 
-            this.item = switch (objectarraylist.size()) {
+            this.item = switch (loot.size()) {
                 case 0 -> ItemStack.EMPTY;
-                case 1 -> (ItemStack)objectarraylist.getFirst();
+                case 1 -> (ItemStack)loot.getFirst();
                 default -> {
-                    LOGGER.warn("Expected max 1 loot from loot table {}, but got {}", this.lootTable.identifier(), objectarraylist.size());
-                    yield objectarraylist.getFirst();
+                    LOGGER.warn("Expected max 1 loot from loot table {}, but got {}", this.lootTable.identifier(), loot.size());
+                    yield loot.getFirst();
                 }
             };
             this.lootTable = null;
@@ -112,49 +113,49 @@ public class BrushableBlockEntity extends BlockEntity {
         }
     }
 
-    private void brushingCompleted(ServerLevel p_369249_, LivingEntity p_395246_, ItemStack p_364625_) {
-        this.dropContent(p_369249_, p_395246_, p_364625_);
-        BlockState blockstate = this.getBlockState();
-        p_369249_.levelEvent(3008, this.getBlockPos(), Block.getId(blockstate));
-        Block block;
-        if (this.getBlockState().getBlock() instanceof BrushableBlock brushableblock) {
-            block = brushableblock.getTurnsInto();
+    private void brushingCompleted(final ServerLevel level, final LivingEntity user, final ItemStack brush) {
+        this.dropContent(level, user, brush);
+        BlockState blockState = this.getBlockState();
+        level.levelEvent(3008, this.getBlockPos(), Block.getId(blockState));
+        Block turnsInto;
+        if (this.getBlockState().getBlock() instanceof BrushableBlock brushableBlock) {
+            turnsInto = brushableBlock.getTurnsInto();
         } else {
-            block = Blocks.AIR;
+            turnsInto = Blocks.AIR;
         }
 
-        p_369249_.setBlock(this.worldPosition, block.defaultBlockState(), 3);
+        level.setBlock(this.worldPosition, turnsInto.defaultBlockState(), 3);
     }
 
-    private void dropContent(ServerLevel p_360769_, LivingEntity p_391963_, ItemStack p_369575_) {
-        this.unpackLootTable(p_360769_, p_391963_, p_369575_);
+    private void dropContent(final ServerLevel level, final LivingEntity user, final ItemStack brush) {
+        this.unpackLootTable(level, user, brush);
         if (!this.item.isEmpty()) {
-            double d0 = EntityType.ITEM.getWidth();
-            double d1 = 1.0 - d0;
-            double d2 = d0 / 2.0;
-            Direction direction = Objects.requireNonNullElse(this.hitDirection, Direction.UP);
-            BlockPos blockpos = this.worldPosition.relative(direction, 1);
-            double d3 = blockpos.getX() + 0.5 * d1 + d2;
-            double d4 = blockpos.getY() + 0.5 + EntityType.ITEM.getHeight() / 2.0F;
-            double d5 = blockpos.getZ() + 0.5 * d1 + d2;
-            ItemEntity itementity = new ItemEntity(p_360769_, d3, d4, d5, this.item.split(p_360769_.random.nextInt(21) + 10));
-            itementity.setDeltaMovement(Vec3.ZERO);
-            p_360769_.addFreshEntity(itementity);
+            double size = EntityTypes.ITEM.getWidth();
+            double centerRange = 1.0 - size;
+            double halfSize = size / 2.0;
+            Direction dropDirection = Objects.requireNonNullElse(this.hitDirection, Direction.UP);
+            BlockPos dropPos = this.worldPosition.relative(dropDirection, 1);
+            double xo = dropPos.getX() + 0.5 * centerRange + halfSize;
+            double yo = dropPos.getY() + 0.5 + EntityTypes.ITEM.getHeight() / 2.0F;
+            double zo = dropPos.getZ() + 0.5 * centerRange + halfSize;
+            ItemEntity entity = new ItemEntity(level, xo, yo, zo, this.item.split(level.getRandom().nextInt(21) + 10));
+            entity.setDeltaMovement(Vec3.ZERO);
+            level.addFreshEntity(entity);
             this.item = ItemStack.EMPTY;
         }
     }
 
-    public void checkReset(ServerLevel p_367879_) {
-        if (this.brushCount != 0 && p_367879_.getGameTime() >= this.brushCountResetsAtTick) {
-            int i = this.getCompletionState();
+    public void checkReset(final ServerLevel level) {
+        if (this.brushCount != 0 && level.getGameTime() >= this.brushCountResetsAtTick) {
+            int previousCompletionState = this.getCompletionState();
             this.brushCount = Math.max(0, this.brushCount - 2);
-            int j = this.getCompletionState();
-            if (i != j) {
-                p_367879_.setBlock(this.getBlockPos(), this.getBlockState().setValue(BlockStateProperties.DUSTED, j), 3);
+            int completionState = this.getCompletionState();
+            if (previousCompletionState != completionState) {
+                level.setBlock(this.getBlockPos(), this.getBlockState().setValue(BlockStateProperties.DUSTED, completionState), 3);
             }
 
-            int k = 4;
-            this.brushCountResetsAtTick = p_367879_.getGameTime() + 4L;
+            int retractionSpeed = 4;
+            this.brushCountResetsAtTick = level.getGameTime() + 4L;
         }
 
         if (this.brushCount == 0) {
@@ -162,39 +163,39 @@ public class BrushableBlockEntity extends BlockEntity {
             this.brushCountResetsAtTick = 0L;
             this.coolDownEndsAtTick = 0L;
         } else {
-            p_367879_.scheduleTick(this.getBlockPos(), this.getBlockState().getBlock(), 2);
+            level.scheduleTick(this.getBlockPos(), this.getBlockState().getBlock(), 2);
         }
     }
 
-    private boolean tryLoadLootTable(ValueInput p_407555_) {
-        this.lootTable = p_407555_.read("LootTable", LootTable.KEY_CODEC).orElse(null);
-        this.lootTableSeed = p_407555_.getLongOr("LootTableSeed", 0L);
+    private boolean tryLoadLootTable(final ValueInput input) {
+        this.lootTable = input.read("LootTable", LootTable.KEY_CODEC).orElse(null);
+        this.lootTableSeed = input.getLongOr("LootTableSeed", 0L);
         return this.lootTable != null;
     }
 
-    private boolean trySaveLootTable(ValueOutput p_407896_) {
+    private boolean trySaveLootTable(final ValueOutput base) {
         if (this.lootTable == null) {
             return false;
-        } else {
-            p_407896_.store("LootTable", LootTable.KEY_CODEC, this.lootTable);
-            if (this.lootTableSeed != 0L) {
-                p_407896_.putLong("LootTableSeed", this.lootTableSeed);
-            }
-
-            return true;
         }
+
+        base.store("LootTable", LootTable.KEY_CODEC, this.lootTable);
+        if (this.lootTableSeed != 0L) {
+            base.putLong("LootTableSeed", this.lootTableSeed);
+        }
+
+        return true;
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_329297_) {
-        CompoundTag compoundtag = super.getUpdateTag(p_329297_);
-        compoundtag.storeNullable("hit_direction", Direction.LEGACY_ID_CODEC, this.hitDirection);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        tag.storeNullable("hit_direction", Direction.LEGACY_ID_CODEC, this.hitDirection);
         if (!this.item.isEmpty()) {
-            RegistryOps<Tag> registryops = p_329297_.createSerializationContext(NbtOps.INSTANCE);
-            compoundtag.store("item", ItemStack.CODEC, registryops, this.item);
+            RegistryOps<Tag> ops = registries.createSerializationContext(NbtOps.INSTANCE);
+            tag.store("item", ItemStack.CODEC, ops, this.item);
         }
 
-        return compoundtag;
+        return tag;
     }
 
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
@@ -202,28 +203,28 @@ public class BrushableBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_410042_) {
-        super.loadAdditional(p_410042_);
-        if (!this.tryLoadLootTable(p_410042_)) {
-            this.item = p_410042_.read("item", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        if (!this.tryLoadLootTable(input)) {
+            this.item = input.read("item", ItemStack.CODEC).orElse(ItemStack.EMPTY);
         } else {
             this.item = ItemStack.EMPTY;
         }
 
-        this.hitDirection = p_410042_.read("hit_direction", Direction.LEGACY_ID_CODEC).orElse(null);
+        this.hitDirection = input.read("hit_direction", Direction.LEGACY_ID_CODEC).orElse(null);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_407877_) {
-        super.saveAdditional(p_407877_);
-        if (!this.trySaveLootTable(p_407877_) && !this.item.isEmpty()) {
-            p_407877_.store("item", ItemStack.CODEC, this.item);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        if (!this.trySaveLootTable(output) && !this.item.isEmpty()) {
+            output.store("item", ItemStack.CODEC, this.item);
         }
     }
 
-    public void setLootTable(ResourceKey<LootTable> p_330093_, long p_277991_) {
-        this.lootTable = p_330093_;
-        this.lootTableSeed = p_277991_;
+    public void setLootTable(final ResourceKey<LootTable> lootTable, final long seed) {
+        this.lootTable = lootTable;
+        this.lootTableSeed = seed;
     }
 
     private int getCompletionState() {

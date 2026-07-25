@@ -27,64 +27,64 @@ import org.apache.commons.io.FilenameUtils;
 public class ResourceSelectorArgument<T> implements ArgumentType<Collection<Holder.Reference<T>>> {
     private static final Collection<String> EXAMPLES = List.of("minecraft:*", "*:asset", "*");
     public static final Dynamic2CommandExceptionType ERROR_NO_MATCHES = new Dynamic2CommandExceptionType(
-        (p_396458_, p_395304_) -> Component.translatableEscape("argument.resource_selector.not_found", p_396458_, p_395304_)
+        (selector, registry) -> Component.translatableEscape("argument.resource_selector.not_found", selector, registry)
     );
-    final ResourceKey<? extends Registry<T>> registryKey;
+    private final ResourceKey<? extends Registry<T>> registryKey;
     private final HolderLookup<T> registryLookup;
 
-    ResourceSelectorArgument(CommandBuildContext p_394732_, ResourceKey<? extends Registry<T>> p_397573_) {
-        this.registryKey = p_397573_;
-        this.registryLookup = p_394732_.lookupOrThrow(p_397573_);
+    private ResourceSelectorArgument(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> registryKey) {
+        this.registryKey = registryKey;
+        this.registryLookup = context.lookupOrThrow(registryKey);
     }
 
-    public Collection<Holder.Reference<T>> parse(StringReader p_393369_) throws CommandSyntaxException {
-        String s = ensureNamespaced(readPattern(p_393369_));
-        List<Holder.Reference<T>> list = this.registryLookup.listElements().filter(p_448504_ -> matches(s, p_448504_.key().identifier())).toList();
-        if (list.isEmpty()) {
-            throw ERROR_NO_MATCHES.createWithContext(p_393369_, s, this.registryKey.identifier());
+    public Collection<Holder.Reference<T>> parse(final StringReader reader) throws CommandSyntaxException {
+        String pattern = ensureNamespaced(readPattern(reader));
+        List<Holder.Reference<T>> results = this.registryLookup.listElements().filter(element -> matches(pattern, element.key().identifier())).toList();
+        if (results.isEmpty()) {
+            throw ERROR_NO_MATCHES.createWithContext(reader, pattern, this.registryKey.identifier());
         } else {
-            return list;
+            return results;
         }
     }
 
-    public static <T> Collection<Holder.Reference<T>> parse(StringReader p_393805_, HolderLookup<T> p_396234_) {
-        String s = ensureNamespaced(readPattern(p_393805_));
-        return p_396234_.listElements().filter(p_448502_ -> matches(s, p_448502_.key().identifier())).toList();
+    public static <T> Collection<Holder.Reference<T>> parse(final StringReader reader, final HolderLookup<T> registry) {
+        String pattern = ensureNamespaced(readPattern(reader));
+        return registry.listElements().filter(element -> matches(pattern, element.key().identifier())).toList();
     }
 
-    private static String readPattern(StringReader p_391311_) {
-        int i = p_391311_.getCursor();
+    private static String readPattern(final StringReader reader) {
+        int start = reader.getCursor();
 
-        while (p_391311_.canRead() && isAllowedPatternCharacter(p_391311_.peek())) {
-            p_391311_.skip();
+        while (reader.canRead() && isAllowedPatternCharacter(reader.peek())) {
+            reader.skip();
         }
 
-        return p_391311_.getString().substring(i, p_391311_.getCursor());
+        return reader.getString().substring(start, reader.getCursor());
     }
 
-    private static boolean isAllowedPatternCharacter(char p_392586_) {
-        return Identifier.isAllowedInIdentifier(p_392586_) || p_392586_ == '*' || p_392586_ == '?';
+    private static boolean isAllowedPatternCharacter(final char character) {
+        return Identifier.isAllowedInIdentifier(character) || character == '*' || character == '?';
     }
 
-    private static String ensureNamespaced(String p_396733_) {
-        return !p_396733_.contains(":") ? "minecraft:" + p_396733_ : p_396733_;
+    private static String ensureNamespaced(final String input) {
+        return !input.contains(":") ? "minecraft:" + input : input;
     }
 
-    private static boolean matches(String p_396263_, Identifier p_459609_) {
-        return FilenameUtils.wildcardMatch(p_459609_.toString(), p_396263_);
+    private static boolean matches(final String pattern, final Identifier key) {
+        return FilenameUtils.wildcardMatch(key.toString(), pattern);
     }
 
-    public static <T> ResourceSelectorArgument<T> resourceSelector(CommandBuildContext p_397963_, ResourceKey<? extends Registry<T>> p_393390_) {
-        return new ResourceSelectorArgument<>(p_397963_, p_393390_);
+    public static <T> ResourceSelectorArgument<T> resourceSelector(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> registry) {
+        return new ResourceSelectorArgument<>(context, registry);
     }
 
-    public static <T> Collection<Holder.Reference<T>> getSelectedResources(CommandContext<CommandSourceStack> p_394081_, String p_393093_) {
-        return p_394081_.getArgument(p_393093_, Collection.class);
+    public static <T> Collection<Holder.Reference<T>> getSelectedResources(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Collection.class);
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_396736_, SuggestionsBuilder p_395731_) {
-        return SharedSuggestionProvider.listSuggestions(p_396736_, p_395731_, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ELEMENTS);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.listSuggestions(context, builder, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ELEMENTS);
     }
 
     @Override
@@ -93,31 +93,31 @@ public class ResourceSelectorArgument<T> implements ArgumentType<Collection<Hold
     }
 
     public static class Info<T> implements ArgumentTypeInfo<ResourceSelectorArgument<T>, ResourceSelectorArgument.Info<T>.Template> {
-        public void serializeToNetwork(ResourceSelectorArgument.Info<T>.Template p_395331_, FriendlyByteBuf p_392665_) {
-            p_392665_.writeResourceKey(p_395331_.registryKey);
+        public void serializeToNetwork(final ResourceSelectorArgument.Info<T>.Template template, final FriendlyByteBuf out) {
+            out.writeResourceKey(template.registryKey);
         }
 
-        public ResourceSelectorArgument.Info<T>.Template deserializeFromNetwork(FriendlyByteBuf p_395716_) {
-            return new ResourceSelectorArgument.Info.Template(p_395716_.readRegistryKey());
+        public ResourceSelectorArgument.Info<T>.Template deserializeFromNetwork(final FriendlyByteBuf in) {
+            return new ResourceSelectorArgument.Info.Template(in.readRegistryKey());
         }
 
-        public void serializeToJson(ResourceSelectorArgument.Info<T>.Template p_397745_, JsonObject p_391870_) {
-            p_391870_.addProperty("registry", p_397745_.registryKey.identifier().toString());
+        public void serializeToJson(final ResourceSelectorArgument.Info<T>.Template template, final JsonObject out) {
+            out.addProperty("registry", template.registryKey.identifier().toString());
         }
 
-        public ResourceSelectorArgument.Info<T>.Template unpack(ResourceSelectorArgument<T> p_391303_) {
-            return new ResourceSelectorArgument.Info.Template(p_391303_.registryKey);
+        public ResourceSelectorArgument.Info<T>.Template unpack(final ResourceSelectorArgument<T> argument) {
+            return new ResourceSelectorArgument.Info.Template(argument.registryKey);
         }
 
         public final class Template implements ArgumentTypeInfo.Template<ResourceSelectorArgument<T>> {
-            final ResourceKey<? extends Registry<T>> registryKey;
+            private final ResourceKey<? extends Registry<T>> registryKey;
 
-            Template(final ResourceKey<? extends Registry<T>> p_393919_) {
-                this.registryKey = p_393919_;
+            private Template(final ResourceKey<? extends Registry<T>> registryKey) {
+                this.registryKey = registryKey;
             }
 
-            public ResourceSelectorArgument<T> instantiate(CommandBuildContext p_397803_) {
-                return new ResourceSelectorArgument<>(p_397803_, this.registryKey);
+            public ResourceSelectorArgument<T> instantiate(final CommandBuildContext context) {
+                return new ResourceSelectorArgument<>(context, this.registryKey);
             }
 
             @Override

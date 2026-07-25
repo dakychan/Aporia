@@ -2,24 +2,20 @@ package net.minecraft.client.color.item;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GrassColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public record GrassColorSource(float temperature, float downfall) implements ItemTintSource {
     public static final MapCodec<GrassColorSource> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_376799_ -> p_376799_.group(
+        i -> i.group(
                 ExtraCodecs.floatRange(0.0F, 1.0F).fieldOf("temperature").forGetter(GrassColorSource::temperature),
                 ExtraCodecs.floatRange(0.0F, 1.0F).fieldOf("downfall").forGetter(GrassColorSource::downfall)
             )
-            .apply(p_376799_, GrassColorSource::new)
+            .apply(i, GrassColorSource::new)
     );
 
     public GrassColorSource() {
@@ -27,7 +23,7 @@ public record GrassColorSource(float temperature, float downfall) implements Ite
     }
 
     @Override
-    public int calculate(ItemStack p_378178_, @Nullable ClientLevel p_376564_, @Nullable LivingEntity p_378295_) {
+    public int calculate(final ItemStack itemStack, final @Nullable ClientLevel level, final @Nullable LivingEntity owner) {
         return GrassColor.get(this.temperature, this.downfall);
     }
 

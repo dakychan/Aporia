@@ -3,32 +3,29 @@ package net.minecraft.client.gui.spectator;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Lists;
 import java.util.List;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.spectator.categories.SpectatorPage;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SpectatorMenu {
-    static final Identifier CLOSE_SPRITE = Identifier.withDefaultNamespace("spectator/close");
-    static final Identifier SCROLL_LEFT_SPRITE = Identifier.withDefaultNamespace("spectator/scroll_left");
-    static final Identifier SCROLL_RIGHT_SPRITE = Identifier.withDefaultNamespace("spectator/scroll_right");
+    private static final Identifier CLOSE_SPRITE = Identifier.withDefaultNamespace("spectator/close");
+    private static final Identifier SCROLL_LEFT_SPRITE = Identifier.withDefaultNamespace("spectator/scroll_left");
+    private static final Identifier SCROLL_RIGHT_SPRITE = Identifier.withDefaultNamespace("spectator/scroll_right");
     private static final SpectatorMenuItem CLOSE_ITEM = new SpectatorMenu.CloseSpectatorItem();
     private static final SpectatorMenuItem SCROLL_LEFT = new SpectatorMenu.ScrollMenuItem(-1, true);
     private static final SpectatorMenuItem SCROLL_RIGHT_ENABLED = new SpectatorMenu.ScrollMenuItem(1, true);
     private static final SpectatorMenuItem SCROLL_RIGHT_DISABLED = new SpectatorMenu.ScrollMenuItem(1, false);
     private static final int MAX_PER_PAGE = 8;
-    static final Component CLOSE_MENU_TEXT = Component.translatable("spectatorMenu.close");
-    static final Component PREVIOUS_PAGE_TEXT = Component.translatable("spectatorMenu.previous_page");
-    static final Component NEXT_PAGE_TEXT = Component.translatable("spectatorMenu.next_page");
+    private static final Component CLOSE_MENU_TEXT = Component.translatable("spectatorMenu.close");
+    private static final Component PREVIOUS_PAGE_TEXT = Component.translatable("spectatorMenu.previous_page");
+    private static final Component NEXT_PAGE_TEXT = Component.translatable("spectatorMenu.next_page");
     public static final SpectatorMenuItem EMPTY_SLOT = new SpectatorMenuItem() {
         @Override
-        public void selectItem(SpectatorMenu p_101812_) {
+        public void selectItem(final SpectatorMenu menu) {
         }
 
         @Override
@@ -37,7 +34,7 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(GuiGraphics p_283652_, float p_101809_, float p_363989_) {
+        public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
         }
 
         @Override
@@ -48,34 +45,36 @@ public class SpectatorMenu {
     private final SpectatorMenuListener listener;
     private SpectatorMenuCategory category;
     private int selectedSlot = -1;
-    int page;
+    private int page;
 
-    public SpectatorMenu(SpectatorMenuListener p_101785_) {
+    public SpectatorMenu(final SpectatorMenuListener listener) {
         this.category = new RootSpectatorMenuCategory();
-        this.listener = p_101785_;
+        this.listener = listener;
     }
 
-    public SpectatorMenuItem getItem(int p_101788_) {
-        int i = p_101788_ + this.page * 6;
-        if (this.page > 0 && p_101788_ == 0) {
+    public SpectatorMenuItem getItem(final int slot) {
+        int index = slot + this.page * 6;
+        if (this.page > 0 && slot == 0) {
             return SCROLL_LEFT;
-        } else if (p_101788_ == 7) {
-            return i < this.category.getItems().size() ? SCROLL_RIGHT_ENABLED : SCROLL_RIGHT_DISABLED;
-        } else if (p_101788_ == 8) {
+        } else if (slot == 7) {
+            return index < this.category.getItems().size() ? SCROLL_RIGHT_ENABLED : SCROLL_RIGHT_DISABLED;
+        } else if (slot == 8) {
             return CLOSE_ITEM;
         } else {
-            return i >= 0 && i < this.category.getItems().size() ? MoreObjects.firstNonNull(this.category.getItems().get(i), EMPTY_SLOT) : EMPTY_SLOT;
+            return index >= 0 && index < this.category.getItems().size()
+                ? MoreObjects.firstNonNull(this.category.getItems().get(index), EMPTY_SLOT)
+                : EMPTY_SLOT;
         }
     }
 
     public List<SpectatorMenuItem> getItems() {
-        List<SpectatorMenuItem> list = Lists.newArrayList();
+        List<SpectatorMenuItem> items = Lists.newArrayList();
 
         for (int i = 0; i <= 8; i++) {
-            list.add(this.getItem(i));
+            items.add(this.getItem(i));
         }
 
-        return list;
+        return items;
     }
 
     public SpectatorMenuItem getSelectedItem() {
@@ -86,13 +85,13 @@ public class SpectatorMenu {
         return this.category;
     }
 
-    public void selectSlot(int p_101798_) {
-        SpectatorMenuItem spectatormenuitem = this.getItem(p_101798_);
-        if (spectatormenuitem != EMPTY_SLOT) {
-            if (this.selectedSlot == p_101798_ && spectatormenuitem.isEnabled()) {
-                spectatormenuitem.selectItem(this);
+    public void selectSlot(final int slot) {
+        SpectatorMenuItem item = this.getItem(slot);
+        if (item != EMPTY_SLOT) {
+            if (this.selectedSlot == slot && item.isEnabled()) {
+                item.selectItem(this);
             } else {
-                this.selectedSlot = p_101798_;
+                this.selectedSlot = slot;
             }
         }
     }
@@ -105,8 +104,8 @@ public class SpectatorMenu {
         return this.selectedSlot;
     }
 
-    public void selectCategory(SpectatorMenuCategory p_101795_) {
-        this.category = p_101795_;
+    public void selectCategory(final SpectatorMenuCategory category) {
+        this.category = category;
         this.selectedSlot = -1;
         this.page = 0;
     }
@@ -115,11 +114,10 @@ public class SpectatorMenu {
         return new SpectatorPage(this.getItems(), this.selectedSlot);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class CloseSpectatorItem implements SpectatorMenuItem {
+        private static class CloseSpectatorItem implements SpectatorMenuItem {
         @Override
-        public void selectItem(SpectatorMenu p_101823_) {
-            p_101823_.exit();
+        public void selectItem(final SpectatorMenu menu) {
+            menu.exit();
         }
 
         @Override
@@ -128,8 +126,10 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(GuiGraphics p_283113_, float p_282295_, float p_361644_) {
-            p_283113_.blitSprite(RenderPipelines.GUI_TEXTURED, SpectatorMenu.CLOSE_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(p_361644_, p_282295_, p_282295_, p_282295_));
+        public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
+            graphics.blitSprite(
+                RenderPipelines.GUI_TEXTURED, SpectatorMenu.CLOSE_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(alpha, brightness, brightness, brightness)
+            );
         }
 
         @Override
@@ -138,19 +138,18 @@ public class SpectatorMenu {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class ScrollMenuItem implements SpectatorMenuItem {
+        private static class ScrollMenuItem implements SpectatorMenuItem {
         private final int direction;
         private final boolean enabled;
 
-        public ScrollMenuItem(int p_101829_, boolean p_101830_) {
-            this.direction = p_101829_;
-            this.enabled = p_101830_;
+        public ScrollMenuItem(final int direction, final boolean enabled) {
+            this.direction = direction;
+            this.enabled = enabled;
         }
 
         @Override
-        public void selectItem(SpectatorMenu p_101836_) {
-            p_101836_.page = p_101836_.page + this.direction;
+        public void selectItem(final SpectatorMenu menu) {
+            menu.page = menu.page + this.direction;
         }
 
         @Override
@@ -159,12 +158,12 @@ public class SpectatorMenu {
         }
 
         @Override
-        public void renderIcon(GuiGraphics p_281376_, float p_282065_, float p_360875_) {
-            int i = ARGB.colorFromFloat(p_360875_, p_282065_, p_282065_, p_282065_);
+        public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
+            int color = ARGB.colorFromFloat(alpha, brightness, brightness, brightness);
             if (this.direction < 0) {
-                p_281376_.blitSprite(RenderPipelines.GUI_TEXTURED, SpectatorMenu.SCROLL_LEFT_SPRITE, 0, 0, 16, 16, i);
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SpectatorMenu.SCROLL_LEFT_SPRITE, 0, 0, 16, 16, color);
             } else {
-                p_281376_.blitSprite(RenderPipelines.GUI_TEXTURED, SpectatorMenu.SCROLL_RIGHT_SPRITE, 0, 0, 16, 16, i);
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SpectatorMenu.SCROLL_RIGHT_SPRITE, 0, 0, 16, 16, color);
             }
         }
 

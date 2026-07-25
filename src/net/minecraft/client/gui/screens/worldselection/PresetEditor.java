@@ -18,53 +18,49 @@ import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.FlatLevelSource;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
-import net.minecraft.world.level.levelgen.WorldDimensions;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 import net.minecraft.world.level.levelgen.structure.StructureSet;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface PresetEditor {
     Map<Optional<ResourceKey<WorldPreset>>, PresetEditor> EDITORS = Map.of(
         Optional.of(WorldPresets.FLAT),
-        (p_232974_, p_232975_) -> {
-            ChunkGenerator chunkgenerator = p_232975_.selectedDimensions().overworld();
-            RegistryAccess registryaccess = p_232975_.worldgenLoadContext();
-            HolderGetter<Biome> holdergetter = registryaccess.lookupOrThrow(Registries.BIOME);
-            HolderGetter<StructureSet> holdergetter1 = registryaccess.lookupOrThrow(Registries.STRUCTURE_SET);
-            HolderGetter<PlacedFeature> holdergetter2 = registryaccess.lookupOrThrow(Registries.PLACED_FEATURE);
+        (parent, settings) -> {
+            ChunkGenerator overworld = settings.selectedDimensions().overworld();
+            RegistryAccess registryAccess = settings.worldgenLoadContext();
+            HolderGetter<Biome> biomes = registryAccess.lookupOrThrow(Registries.BIOME);
+            HolderGetter<StructureSet> structureSets = registryAccess.lookupOrThrow(Registries.STRUCTURE_SET);
+            HolderGetter<PlacedFeature> placedFeatures = registryAccess.lookupOrThrow(Registries.PLACED_FEATURE);
             return new CreateFlatWorldScreen(
-                p_232974_,
-                p_267859_ -> p_232974_.getUiState().updateDimensions(flatWorldConfigurator(p_267859_)),
-                chunkgenerator instanceof FlatLevelSource
-                    ? ((FlatLevelSource)chunkgenerator).settings()
-                    : FlatLevelGeneratorSettings.getDefault(holdergetter, holdergetter1, holdergetter2)
+                parent,
+                flatWorldSettings -> parent.getUiState().updateDimensions(flatWorldConfigurator(flatWorldSettings)),
+                overworld instanceof FlatLevelSource flatLevelSource
+                    ? flatLevelSource.settings()
+                    : FlatLevelGeneratorSettings.getDefault(biomes, structureSets, placedFeatures)
             );
         },
         Optional.of(WorldPresets.SINGLE_BIOME_SURFACE),
-        (p_232962_, p_232963_) -> new CreateBuffetWorldScreen(p_232962_, p_232963_, p_267861_ -> p_232962_.getUiState().updateDimensions(fixedBiomeConfigurator(p_267861_)))
+        (parent, settings) -> new CreateBuffetWorldScreen(parent, settings, biome -> parent.getUiState().updateDimensions(fixedBiomeConfigurator(biome)))
     );
 
-    Screen createEditScreen(CreateWorldScreen p_232977_, WorldCreationContext p_232978_);
+    Screen createEditScreen(final CreateWorldScreen parent, final WorldCreationContext settings);
 
-    static WorldCreationContext.DimensionsUpdater flatWorldConfigurator(FlatLevelGeneratorSettings p_250871_) {
-        return (p_357742_, p_357743_) -> {
-            ChunkGenerator chunkgenerator = new FlatLevelSource(p_250871_);
-            return p_357743_.replaceOverworldGenerator(p_357742_, chunkgenerator);
+    static WorldCreationContext.DimensionsUpdater flatWorldConfigurator(final FlatLevelGeneratorSettings generatorSettings) {
+        return (registryAccess, dimensions) -> {
+            ChunkGenerator generator = new FlatLevelSource(generatorSettings);
+            return dimensions.replaceOverworldGenerator(registryAccess, generator);
         };
     }
 
-    private static WorldCreationContext.DimensionsUpdater fixedBiomeConfigurator(Holder<Biome> p_248835_) {
-        return (p_389320_, p_389321_) -> {
-            Registry<NoiseGeneratorSettings> registry = p_389320_.lookupOrThrow(Registries.NOISE_SETTINGS);
-            Holder<NoiseGeneratorSettings> holder = registry.getOrThrow(NoiseGeneratorSettings.OVERWORLD);
-            BiomeSource biomesource = new FixedBiomeSource(p_248835_);
-            ChunkGenerator chunkgenerator = new NoiseBasedChunkGenerator(biomesource, holder);
-            return p_389321_.replaceOverworldGenerator(p_389320_, chunkgenerator);
+    private static WorldCreationContext.DimensionsUpdater fixedBiomeConfigurator(final Holder<Biome> biome) {
+        return (registryAccess, dimensions) -> {
+            Registry<NoiseGeneratorSettings> noiseGeneratorSettings = registryAccess.lookupOrThrow(Registries.NOISE_SETTINGS);
+            Holder<NoiseGeneratorSettings> noiseSettings = noiseGeneratorSettings.getOrThrow(NoiseGeneratorSettings.OVERWORLD);
+            BiomeSource biomeSource = new FixedBiomeSource(biome);
+            ChunkGenerator generator = new NoiseBasedChunkGenerator(biomeSource, noiseSettings);
+            return dimensions.replaceOverworldGenerator(registryAccess, generator);
         };
     }
 }

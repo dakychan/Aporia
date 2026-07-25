@@ -15,29 +15,29 @@ public abstract class ResourceLookupRule<C, V> implements Rule<StringReader, V>,
     protected final C context;
     private final DelayedException<CommandSyntaxException> error;
 
-    protected ResourceLookupRule(NamedRule<StringReader, Identifier> p_397427_, C p_330414_) {
-        this.idParser = p_397427_;
-        this.context = p_330414_;
+    protected ResourceLookupRule(final NamedRule<StringReader, Identifier> idParser, final C context) {
+        this.idParser = idParser;
+        this.context = context;
         this.error = DelayedException.create(Identifier.ERROR_INVALID);
     }
 
     @Override
-    public @Nullable V parse(ParseState<StringReader> p_332578_) {
-        p_332578_.input().skipWhitespace();
-        int i = p_332578_.mark();
-        Identifier identifier = p_332578_.parse(this.idParser);
-        if (identifier != null) {
+    public @Nullable V parse(final ParseState<StringReader> state) {
+        state.input().skipWhitespace();
+        int mark = state.mark();
+        Identifier id = state.parse(this.idParser);
+        if (id != null) {
             try {
-                return this.validateElement(p_332578_.input(), identifier);
-            } catch (Exception exception) {
-                p_332578_.errorCollector().store(i, this, exception);
+                return this.validateElement(state.input(), id);
+            } catch (Exception e) {
+                state.errorCollector().store(mark, this, e);
                 return null;
             }
         } else {
-            p_332578_.errorCollector().store(i, this, this.error);
+            state.errorCollector().store(mark, this, this.error);
             return null;
         }
     }
 
-    protected abstract V validateElement(ImmutableStringReader p_336199_, Identifier p_454359_) throws Exception;
+    protected abstract V validateElement(ImmutableStringReader reader, Identifier id) throws Exception;
 }

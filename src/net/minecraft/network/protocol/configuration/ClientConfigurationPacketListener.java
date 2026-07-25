@@ -9,15 +9,15 @@ public interface ClientConfigurationPacketListener extends ClientCommonPacketLis
         return ConnectionProtocol.CONFIGURATION;
     }
 
-    void handleCodeOfConduct(ClientboundCodeOfConductPacket p_424153_);
+    void handleCodeOfConduct(ClientboundCodeOfConductPacket packet);
 
-    void handleConfigurationFinished(ClientboundFinishConfigurationPacket p_301141_);
+    void handleConfigurationFinished(ClientboundFinishConfigurationPacket packet);
 
-    void handleRegistryData(ClientboundRegistryDataPacket p_298669_);
+    void handleRegistryData(ClientboundRegistryDataPacket packet);
 
-    void handleEnabledFeatures(ClientboundUpdateEnabledFeaturesPacket p_298844_);
+    void handleEnabledFeatures(ClientboundUpdateEnabledFeaturesPacket packet);
 
-    void handleSelectKnownPacks(ClientboundSelectKnownPacks p_333475_);
+    void handleSelectKnownPacks(ClientboundSelectKnownPacks packet);
 
-    void handleResetChat(ClientboundResetChatPacket p_333315_);
+    void handleResetChat(ClientboundResetChatPacket packet);
 }

@@ -29,63 +29,63 @@ public class HangingRootsBlock extends Block implements SimpleWaterloggedBlock {
         return CODEC;
     }
 
-    protected HangingRootsBlock(BlockBehaviour.Properties p_153337_) {
-        super(p_153337_);
+    protected HangingRootsBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_153358_) {
-        p_153358_.add(WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(WATERLOGGED);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_153360_) {
-        return p_153360_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_153360_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_153340_) {
-        BlockState blockstate = super.getStateForPlacement(p_153340_);
-        if (blockstate != null) {
-            FluidState fluidstate = p_153340_.getLevel().getFluidState(p_153340_.getClickedPos());
-            return blockstate.setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = super.getStateForPlacement(context);
+        if (state != null) {
+            FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
+            return state.setValue(WATERLOGGED, fluidState.is(Fluids.WATER));
         } else {
             return null;
         }
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_153347_, LevelReader p_153348_, BlockPos p_153349_) {
-        BlockPos blockpos = p_153349_.above();
-        BlockState blockstate = p_153348_.getBlockState(blockpos);
-        return blockstate.isFaceSturdy(p_153348_, blockpos, Direction.DOWN);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockPos attachedToPos = pos.above();
+        BlockState attachedToState = level.getBlockState(attachedToPos);
+        return attachedToState.isFaceSturdy(level, attachedToPos, Direction.DOWN);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_153342_, BlockGetter p_153343_, BlockPos p_153344_, CollisionContext p_153345_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_153351_,
-        LevelReader p_360752_,
-        ScheduledTickAccess p_361430_,
-        BlockPos p_153355_,
-        Direction p_153352_,
-        BlockPos p_153356_,
-        BlockState p_153353_,
-        RandomSource p_363570_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_153352_ == Direction.UP && !this.canSurvive(p_153351_, p_360752_, p_153355_)) {
+        if (directionToNeighbour == Direction.UP && !this.canSurvive(state, level, pos)) {
             return Blocks.AIR.defaultBlockState();
-        } else {
-            if (p_153351_.getValue(WATERLOGGED)) {
-                p_361430_.scheduleTick(p_153355_, Fluids.WATER, Fluids.WATER.getTickDelay(p_360752_));
-            }
-
-            return super.updateShape(p_153351_, p_360752_, p_361430_, p_153355_, p_153352_, p_153356_, p_153353_, p_363570_);
         }
+
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 }

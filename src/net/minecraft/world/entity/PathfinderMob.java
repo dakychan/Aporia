@@ -13,21 +13,21 @@ import net.minecraft.world.phys.Vec3;
 public abstract class PathfinderMob extends Mob {
     protected static final float DEFAULT_WALK_TARGET_VALUE = 0.0F;
 
-    protected PathfinderMob(EntityType<? extends PathfinderMob> p_21683_, Level p_21684_) {
-        super(p_21683_, p_21684_);
+    protected PathfinderMob(final EntityType<? extends PathfinderMob> type, final Level level) {
+        super(type, level);
     }
 
-    public float getWalkTargetValue(BlockPos p_21693_) {
-        return this.getWalkTargetValue(p_21693_, this.level());
+    public float getWalkTargetValue(final BlockPos pos) {
+        return this.getWalkTargetValue(pos, this.level());
     }
 
-    public float getWalkTargetValue(BlockPos p_21688_, LevelReader p_21689_) {
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
         return 0.0F;
     }
 
     @Override
-    public boolean checkSpawnRules(LevelAccessor p_21686_, EntitySpawnReason p_368415_) {
-        return this.getWalkTargetValue(this.blockPosition(), p_21686_) >= 0.0F;
+    public boolean checkSpawnRules(final LevelAccessor level, final EntitySpawnReason spawnReason) {
+        return this.getWalkTargetValue(this.blockPosition(), level) >= 0.0F;
     }
 
     public boolean isPathFinding() {
@@ -35,17 +35,17 @@ public abstract class PathfinderMob extends Mob {
     }
 
     public boolean isPanicking() {
-        if (this.brain.hasMemoryValue(MemoryModuleType.IS_PANICKING)) {
+        if (!this.brain.isBrainDead() && this.brain.hasMemoryValue(MemoryModuleType.IS_PANICKING)) {
             return this.brain.getMemory(MemoryModuleType.IS_PANICKING).isPresent();
-        } else {
-            for (WrappedGoal wrappedgoal : this.goalSelector.getAvailableGoals()) {
-                if (wrappedgoal.isRunning() && wrappedgoal.getGoal() instanceof PanicGoal) {
-                    return true;
-                }
-            }
-
-            return false;
         }
+
+        for (WrappedGoal wrappedGoal : this.goalSelector.getAvailableGoals()) {
+            if (wrappedGoal.isRunning() && wrappedGoal.getGoal() instanceof PanicGoal) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected boolean shouldStayCloseToLeashHolder() {
@@ -53,23 +53,23 @@ public abstract class PathfinderMob extends Mob {
     }
 
     @Override
-    public void closeRangeLeashBehaviour(Entity p_343614_) {
-        super.closeRangeLeashBehaviour(p_343614_);
+    public void closeRangeLeashBehaviour(final Entity leashHolder) {
+        super.closeRangeLeashBehaviour(leashHolder);
         if (this.shouldStayCloseToLeashHolder() && !this.isPanicking()) {
             this.goalSelector.enableControlFlag(Goal.Flag.MOVE);
-            float f = 2.0F;
-            float f1 = this.distanceTo(p_343614_);
-            Vec3 vec3 = new Vec3(p_343614_.getX() - this.getX(), p_343614_.getY() - this.getY(), p_343614_.getZ() - this.getZ())
+            float wantedDistance = 2.0F;
+            float distanceTo = this.distanceTo(leashHolder);
+            Vec3 delta = new Vec3(leashHolder.getX() - this.getX(), leashHolder.getY() - this.getY(), leashHolder.getZ() - this.getZ())
                 .normalize()
-                .scale(Math.max(f1 - 2.0F, 0.0F));
-            this.getNavigation().moveTo(this.getX() + vec3.x, this.getY() + vec3.y, this.getZ() + vec3.z, this.followLeashSpeed());
+                .scale(Math.max(distanceTo - 2.0F, 0.0F));
+            this.getNavigation().moveTo(this.getX() + delta.x, this.getY() + delta.y, this.getZ() + delta.z, this.followLeashSpeed());
         }
     }
 
     @Override
-    public void whenLeashedTo(Entity p_408000_) {
-        this.setHomeTo(p_408000_.blockPosition(), (int)this.leashElasticDistance() - 1);
-        super.whenLeashedTo(p_408000_);
+    public void whenLeashedTo(final Entity leashHolder) {
+        this.setHomeTo(leashHolder.blockPosition(), (int)this.leashElasticDistance() - 1);
+        super.whenLeashedTo(leashHolder);
     }
 
     protected double followLeashSpeed() {

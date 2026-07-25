@@ -23,10 +23,10 @@ public class EuclideanGameEventListenerRegistry implements GameEventListenerRegi
     private final int sectionY;
     private final EuclideanGameEventListenerRegistry.OnEmptyAction onEmptyAction;
 
-    public EuclideanGameEventListenerRegistry(ServerLevel p_281505_, int p_283450_, EuclideanGameEventListenerRegistry.OnEmptyAction p_282325_) {
-        this.level = p_281505_;
-        this.sectionY = p_283450_;
-        this.onEmptyAction = p_282325_;
+    public EuclideanGameEventListenerRegistry(final ServerLevel level, final int sectionY, final EuclideanGameEventListenerRegistry.OnEmptyAction onEmptyAction) {
+        this.level = level;
+        this.sectionY = sectionY;
+        this.onEmptyAction = onEmptyAction;
     }
 
     @Override
@@ -35,37 +35,37 @@ public class EuclideanGameEventListenerRegistry implements GameEventListenerRegi
     }
 
     @Override
-    public void register(GameEventListener p_248767_) {
+    public void register(final GameEventListener listener) {
         if (this.processing) {
-            this.listenersToAdd.add(p_248767_);
+            this.listenersToAdd.add(listener);
         } else {
-            this.listeners.add(p_248767_);
+            this.listeners.add(listener);
         }
 
-        sendDebugInfo(this.level, p_248767_);
+        sendDebugInfo(this.level, listener);
     }
 
-    private static void sendDebugInfo(ServerLevel p_422395_, GameEventListener p_425344_) {
-        if (p_422395_.debugSynchronizers().hasAnySubscriberFor(DebugSubscriptions.GAME_EVENT_LISTENERS)) {
-            DebugGameEventListenerInfo debuggameeventlistenerinfo = new DebugGameEventListenerInfo(p_425344_.getListenerRadius());
-            PositionSource positionsource = p_425344_.getListenerSource();
-            if (positionsource instanceof BlockPositionSource blockpositionsource) {
-                p_422395_.debugSynchronizers().sendBlockValue(blockpositionsource.pos(), DebugSubscriptions.GAME_EVENT_LISTENERS, debuggameeventlistenerinfo);
-            } else if (positionsource instanceof EntityPositionSource entitypositionsource) {
-                Entity entity = p_422395_.getEntity(entitypositionsource.getUuid());
+    private static void sendDebugInfo(final ServerLevel level, final GameEventListener listener) {
+        if (level.debugSynchronizers().hasAnySubscriberFor(DebugSubscriptions.GAME_EVENT_LISTENERS)) {
+            DebugGameEventListenerInfo info = new DebugGameEventListenerInfo(listener.getListenerRadius());
+            PositionSource listenerSource = listener.getListenerSource();
+            if (listenerSource instanceof BlockPositionSource blockSource) {
+                level.debugSynchronizers().sendBlockValue(blockSource.pos(), DebugSubscriptions.GAME_EVENT_LISTENERS, info);
+            } else if (listenerSource instanceof EntityPositionSource entitySource) {
+                Entity entity = level.getEntity(entitySource.getUuid());
                 if (entity != null) {
-                    p_422395_.debugSynchronizers().sendEntityValue(entity, DebugSubscriptions.GAME_EVENT_LISTENERS, debuggameeventlistenerinfo);
+                    level.debugSynchronizers().sendEntityValue(entity, DebugSubscriptions.GAME_EVENT_LISTENERS, info);
                 }
             }
         }
     }
 
     @Override
-    public void unregister(GameEventListener p_250006_) {
+    public void unregister(final GameEventListener listener) {
         if (this.processing) {
-            this.listenersToRemove.add(p_250006_);
+            this.listenersToRemove.add(listener);
         } else {
-            this.listeners.remove(p_250006_);
+            this.listeners.remove(listener);
         }
 
         if (this.listeners.isEmpty()) {
@@ -74,22 +74,24 @@ public class EuclideanGameEventListenerRegistry implements GameEventListenerRegi
     }
 
     @Override
-    public boolean visitInRangeListeners(Holder<GameEvent> p_328893_, Vec3 p_251445_, GameEvent.Context p_252317_, GameEventListenerRegistry.ListenerVisitor p_251422_) {
+    public boolean visitInRangeListeners(
+        final Holder<GameEvent> event, final Vec3 sourcePosition, final GameEvent.Context context, final GameEventListenerRegistry.ListenerVisitor action
+    ) {
         this.processing = true;
-        boolean flag = false;
+        boolean applicable = false;
 
         try {
             Iterator<GameEventListener> iterator = this.listeners.iterator();
 
             while (iterator.hasNext()) {
-                GameEventListener gameeventlistener = iterator.next();
-                if (this.listenersToRemove.remove(gameeventlistener)) {
+                GameEventListener listener = iterator.next();
+                if (this.listenersToRemove.remove(listener)) {
                     iterator.remove();
                 } else {
-                    Optional<Vec3> optional = getPostableListenerPosition(this.level, p_251445_, gameeventlistener);
-                    if (optional.isPresent()) {
-                        p_251422_.visit(gameeventlistener, optional.get());
-                        flag = true;
+                    Optional<Vec3> optionalPosition = getPostableListenerPosition(this.level, sourcePosition, listener);
+                    if (optionalPosition.isPresent()) {
+                        action.visit(listener, optionalPosition.get());
+                        applicable = true;
                     }
                 }
             }
@@ -107,22 +109,22 @@ public class EuclideanGameEventListenerRegistry implements GameEventListenerRegi
             this.listenersToRemove.clear();
         }
 
-        return flag;
+        return applicable;
     }
 
-    private static Optional<Vec3> getPostableListenerPosition(ServerLevel p_249585_, Vec3 p_251333_, GameEventListener p_251051_) {
-        Optional<Vec3> optional = p_251051_.getListenerSource().getPosition(p_249585_);
-        if (optional.isEmpty()) {
+    private static Optional<Vec3> getPostableListenerPosition(final ServerLevel level, final Vec3 sourcePosition, final GameEventListener listener) {
+        Optional<Vec3> position = listener.getListenerSource().getPosition(level);
+        if (position.isEmpty()) {
             return Optional.empty();
-        } else {
-            double d0 = BlockPos.containing(optional.get()).distSqr(BlockPos.containing(p_251333_));
-            int i = p_251051_.getListenerRadius() * p_251051_.getListenerRadius();
-            return d0 > i ? Optional.empty() : optional;
         }
+
+        double distanceFromOrigin = BlockPos.containing(position.get()).distSqr(BlockPos.containing(sourcePosition));
+        int radiusSqr = listener.getListenerRadius() * listener.getListenerRadius();
+        return distanceFromOrigin > radiusSqr ? Optional.empty() : position;
     }
 
     @FunctionalInterface
     public interface OnEmptyAction {
-        void apply(int p_282867_);
+        void apply(final int sectionY);
     }
 }

@@ -11,16 +11,16 @@ public class ServerboundClientCommandPacket implements Packet<ServerGamePacketLi
     );
     private final ServerboundClientCommandPacket.Action action;
 
-    public ServerboundClientCommandPacket(ServerboundClientCommandPacket.Action p_133843_) {
-        this.action = p_133843_;
+    public ServerboundClientCommandPacket(final ServerboundClientCommandPacket.Action action) {
+        this.action = action;
     }
 
-    private ServerboundClientCommandPacket(FriendlyByteBuf p_179547_) {
-        this.action = p_179547_.readEnum(ServerboundClientCommandPacket.Action.class);
+    private ServerboundClientCommandPacket(final FriendlyByteBuf input) {
+        this.action = input.readEnum(ServerboundClientCommandPacket.Action.class);
     }
 
-    private void write(FriendlyByteBuf p_133852_) {
-        p_133852_.writeEnum(this.action);
+    private void write(final FriendlyByteBuf output) {
+        output.writeEnum(this.action);
     }
 
     @Override
@@ -28,16 +28,17 @@ public class ServerboundClientCommandPacket implements Packet<ServerGamePacketLi
         return GamePacketTypes.SERVERBOUND_CLIENT_COMMAND;
     }
 
-    public void handle(ServerGamePacketListener p_133849_) {
-        p_133849_.handleClientCommand(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleClientCommand(this);
     }
 
     public ServerboundClientCommandPacket.Action getAction() {
         return this.action;
     }
 
-    public static enum Action {
+    public enum Action {
         PERFORM_RESPAWN,
-        REQUEST_STATS;
+        REQUEST_STATS,
+        REQUEST_GAMERULE_VALUES;
     }
 }

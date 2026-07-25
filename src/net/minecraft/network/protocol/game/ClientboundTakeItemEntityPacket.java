@@ -13,22 +13,22 @@ public class ClientboundTakeItemEntityPacket implements Packet<ClientGamePacketL
     private final int playerId;
     private final int amount;
 
-    public ClientboundTakeItemEntityPacket(int p_133515_, int p_133516_, int p_133517_) {
-        this.itemId = p_133515_;
-        this.playerId = p_133516_;
-        this.amount = p_133517_;
+    public ClientboundTakeItemEntityPacket(final int itemId, final int playerId, final int amount) {
+        this.itemId = itemId;
+        this.playerId = playerId;
+        this.amount = amount;
     }
 
-    private ClientboundTakeItemEntityPacket(FriendlyByteBuf p_179435_) {
-        this.itemId = p_179435_.readVarInt();
-        this.playerId = p_179435_.readVarInt();
-        this.amount = p_179435_.readVarInt();
+    private ClientboundTakeItemEntityPacket(final FriendlyByteBuf input) {
+        this.itemId = input.readVarInt();
+        this.playerId = input.readVarInt();
+        this.amount = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_133526_) {
-        p_133526_.writeVarInt(this.itemId);
-        p_133526_.writeVarInt(this.playerId);
-        p_133526_.writeVarInt(this.amount);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.itemId);
+        output.writeVarInt(this.playerId);
+        output.writeVarInt(this.amount);
     }
 
     @Override
@@ -36,8 +36,8 @@ public class ClientboundTakeItemEntityPacket implements Packet<ClientGamePacketL
         return GamePacketTypes.CLIENTBOUND_TAKE_ITEM_ENTITY;
     }
 
-    public void handle(ClientGamePacketListener p_133523_) {
-        p_133523_.handleTakeItemEntity(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleTakeItemEntity(this);
     }
 
     public int getItemId() {

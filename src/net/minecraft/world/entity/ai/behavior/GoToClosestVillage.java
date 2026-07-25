@@ -2,9 +2,7 @@ package net.minecraft.world.entity.ai.behavior;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
@@ -13,38 +11,36 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.phys.Vec3;
 
 public class GoToClosestVillage {
-    public static BehaviorControl<Villager> create(float p_260342_, int p_259691_) {
-        return BehaviorBuilder.create(
-            p_258357_ -> p_258357_.group(p_258357_.absent(MemoryModuleType.WALK_TARGET)).apply(p_258357_, p_258366_ -> (p_274970_, p_457179_, p_274972_) -> {
-                if (p_274970_.isVillage(p_457179_.blockPosition())) {
-                    return false;
-                } else {
-                    PoiManager poimanager = p_274970_.getPoiManager();
-                    int i = poimanager.sectionsToVillage(SectionPos.of(p_457179_.blockPosition()));
-                    Vec3 vec3 = null;
+    public static BehaviorControl<Villager> create(final float speedModifier, final int closeEnoughDistance) {
+        return BehaviorBuilder.create(i -> i.group(i.absent(MemoryModuleType.WALK_TARGET)).apply(i, walkTarget -> (level, body, timestamp) -> {
+            if (level.isVillage(body.blockPosition())) {
+                return false;
+            }
 
-                    for (int j = 0; j < 5; j++) {
-                        Vec3 vec31 = LandRandomPos.getPos(p_457179_, 15, 7, p_147554_ -> -poimanager.sectionsToVillage(SectionPos.of(p_147554_)));
-                        if (vec31 != null) {
-                            int k = poimanager.sectionsToVillage(SectionPos.of(BlockPos.containing(vec31)));
-                            if (k < i) {
-                                vec3 = vec31;
-                                break;
-                            }
+            PoiManager poiManager = level.getPoiManager();
+            int sectionsToVillage = poiManager.sectionsToVillage(SectionPos.of(body.blockPosition()));
+            Vec3 targetPos = null;
 
-                            if (k == i) {
-                                vec3 = vec31;
-                            }
-                        }
+            for (int j = 0; j < 5; j++) {
+                Vec3 landPos = LandRandomPos.getPos(body, 15, 7, p -> -poiManager.sectionsToVillage(SectionPos.of(p)));
+                if (landPos != null) {
+                    int landPosSectionsToVillage = poiManager.sectionsToVillage(SectionPos.of(BlockPos.containing(landPos)));
+                    if (landPosSectionsToVillage < sectionsToVillage) {
+                        targetPos = landPos;
+                        break;
                     }
 
-                    if (vec3 != null) {
-                        p_258366_.set(new WalkTarget(vec3, p_260342_, p_259691_));
+                    if (landPosSectionsToVillage == sectionsToVillage) {
+                        targetPos = landPos;
                     }
-
-                    return true;
                 }
-            })
-        );
+            }
+
+            if (targetPos != null) {
+                walkTarget.set(new WalkTarget(targetPos, speedModifier, closeEnoughDistance));
+            }
+
+            return true;
+        }));
     }
 }

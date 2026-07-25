@@ -2,29 +2,29 @@ package net.minecraft.server.level;
 
 import net.minecraft.world.level.TicketStorage;
 
-class LoadingChunkTracker extends ChunkTracker {
+public class LoadingChunkTracker extends ChunkTracker {
     private static final int MAX_LEVEL = ChunkLevel.MAX_LEVEL + 1;
     private final DistanceManager distanceManager;
     private final TicketStorage ticketStorage;
 
-    public LoadingChunkTracker(DistanceManager p_394758_, TicketStorage p_395397_) {
+    public LoadingChunkTracker(final DistanceManager distanceManager, final TicketStorage ticketStorage) {
         super(MAX_LEVEL + 1, 16, 256);
-        this.distanceManager = p_394758_;
-        this.ticketStorage = p_395397_;
-        p_395397_.setLoadingChunkUpdatedListener(this::update);
+        this.distanceManager = distanceManager;
+        this.ticketStorage = ticketStorage;
+        ticketStorage.setLoadingChunkUpdatedListener(this::update);
     }
 
     @Override
-    protected int getLevelFromSource(long p_391415_) {
-        return this.ticketStorage.getTicketLevelAt(p_391415_, false);
+    protected int getLevelFromSource(final long to) {
+        return this.ticketStorage.getTicketLevelAt(to, false);
     }
 
     @Override
-    protected int getLevel(long p_395921_) {
-        if (!this.distanceManager.isChunkToRemove(p_395921_)) {
-            ChunkHolder chunkholder = this.distanceManager.getChunk(p_395921_);
-            if (chunkholder != null) {
-                return chunkholder.getTicketLevel();
+    protected int getLevel(final long node) {
+        if (!this.distanceManager.isChunkToRemove(node)) {
+            ChunkHolder chunk = this.distanceManager.getChunk(node);
+            if (chunk != null) {
+                return chunk.getTicketLevel();
             }
         }
 
@@ -32,18 +32,18 @@ class LoadingChunkTracker extends ChunkTracker {
     }
 
     @Override
-    protected void setLevel(long p_391454_, int p_396240_) {
-        ChunkHolder chunkholder = this.distanceManager.getChunk(p_391454_);
-        int i = chunkholder == null ? MAX_LEVEL : chunkholder.getTicketLevel();
-        if (i != p_396240_) {
-            chunkholder = this.distanceManager.updateChunkScheduling(p_391454_, p_396240_, chunkholder, i);
-            if (chunkholder != null) {
-                this.distanceManager.chunksToUpdateFutures.add(chunkholder);
+    protected void setLevel(final long node, final int level) {
+        ChunkHolder chunk = this.distanceManager.getChunk(node);
+        int oldLevel = chunk == null ? MAX_LEVEL : chunk.getTicketLevel();
+        if (oldLevel != level) {
+            chunk = this.distanceManager.updateChunkScheduling(node, level, chunk, oldLevel);
+            if (chunk != null) {
+                this.distanceManager.chunksToUpdateFutures.add(chunk);
             }
         }
     }
 
-    public int runDistanceUpdates(int p_397586_) {
-        return this.runUpdates(p_397586_);
+    public int runDistanceUpdates(final int count) {
+        return this.runUpdates(count);
     }
 }

@@ -2,11 +2,8 @@ package net.minecraft.client.gui.components.debug;
 
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugEntryNoop implements DebugScreenEntry {
     private final boolean isAllowedWithReducedDebugInfo;
 
@@ -14,17 +11,22 @@ public class DebugEntryNoop implements DebugScreenEntry {
         this(false);
     }
 
-    public DebugEntryNoop(boolean p_429492_) {
-        this.isAllowedWithReducedDebugInfo = p_429492_;
+    public DebugEntryNoop(final boolean isAllowedWithReducedDebugInfo) {
+        this.isAllowedWithReducedDebugInfo = isAllowedWithReducedDebugInfo;
     }
 
     @Override
-    public void display(DebugScreenDisplayer p_429238_, @Nullable Level p_423621_, @Nullable LevelChunk p_426327_, @Nullable LevelChunk p_430722_) {
+    public void display(
+        final DebugScreenDisplayer displayer,
+        final @Nullable Level serverOrClientLevel,
+        final @Nullable LevelChunk clientChunk,
+        final @Nullable LevelChunk serverChunk
+    ) {
     }
 
     @Override
-    public boolean isAllowed(boolean p_425715_) {
-        return this.isAllowedWithReducedDebugInfo || !p_425715_;
+    public boolean isAllowed(final boolean reducedDebugInfo) {
+        return this.isAllowedWithReducedDebugInfo || !reducedDebugInfo;
     }
 
     @Override

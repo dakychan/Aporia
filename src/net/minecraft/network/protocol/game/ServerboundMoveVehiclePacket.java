@@ -21,12 +21,12 @@ public record ServerboundMoveVehiclePacket(Vec3 position, float yRot, float xRot
         ServerboundMoveVehiclePacket::new
     );
 
-    public static ServerboundMoveVehiclePacket fromEntity(Entity p_377579_) {
-        return p_377579_.isInterpolating()
+    public static ServerboundMoveVehiclePacket fromEntity(final Entity entity) {
+        return entity.isInterpolating()
             ? new ServerboundMoveVehiclePacket(
-                p_377579_.getInterpolation().position(), p_377579_.getInterpolation().yRot(), p_377579_.getInterpolation().xRot(), p_377579_.onGround()
+                entity.getInterpolation().position(), entity.getInterpolation().yRot(), entity.getInterpolation().xRot(), entity.onGround()
             )
-            : new ServerboundMoveVehiclePacket(p_377579_.position(), p_377579_.getYRot(), p_377579_.getXRot(), p_377579_.onGround());
+            : new ServerboundMoveVehiclePacket(entity.position(), entity.getYRot(), entity.getXRot(), entity.onGround());
     }
 
     @Override
@@ -34,7 +34,7 @@ public record ServerboundMoveVehiclePacket(Vec3 position, float yRot, float xRot
         return GamePacketTypes.SERVERBOUND_MOVE_VEHICLE;
     }
 
-    public void handle(ServerGamePacketListener p_134198_) {
-        p_134198_.handleMoveVehicle(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleMoveVehicle(this);
     }
 }

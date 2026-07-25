@@ -5,25 +5,25 @@ import org.jspecify.annotations.Nullable;
 public interface IdMap<T> extends Iterable<T> {
     int DEFAULT = -1;
 
-    int getId(T p_122652_);
+    int getId(T thing);
 
-    @Nullable T byId(int p_122651_);
+    @Nullable T byId(int id);
 
-    default T byIdOrThrow(int p_200958_) {
-        T t = this.byId(p_200958_);
-        if (t == null) {
-            throw new IllegalArgumentException("No value with id " + p_200958_);
+    default T byIdOrThrow(final int id) {
+        T result = this.byId(id);
+        if (result == null) {
+            throw new IllegalArgumentException("No value with id " + id);
         } else {
-            return t;
+            return result;
         }
     }
 
-    default int getIdOrThrow(T p_329088_) {
-        int i = this.getId(p_329088_);
-        if (i == -1) {
-            throw new IllegalArgumentException("Can't find id for '" + p_329088_ + "' in map " + this);
+    default int getIdOrThrow(final T value) {
+        int id = this.getId(value);
+        if (id == -1) {
+            throw new IllegalArgumentException("Can't find id for '" + value + "' in map " + this);
         } else {
-            return i;
+            return id;
         }
     }
 

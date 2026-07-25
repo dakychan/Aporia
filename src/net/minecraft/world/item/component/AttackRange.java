@@ -3,7 +3,6 @@ package net.minecraft.world.item.component;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.Collection;
 import java.util.function.Predicate;
@@ -25,27 +24,27 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
-public record AttackRange(float minRange, float maxRange, float minCreativeRange, float maxCreativeRange, float hitboxMargin, float mobFactor) {
+public record AttackRange(float minReach, float maxReach, float minCreativeReach, float maxCreativeReach, float hitboxMargin, float mobFactor) {
     public static final Codec<AttackRange> CODEC = RecordCodecBuilder.create(
-        p_454041_ -> p_454041_.group(
-                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("min_reach", 0.0F).forGetter(AttackRange::minRange),
-                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("max_reach", 3.0F).forGetter(AttackRange::maxRange),
-                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("min_creative_reach", 0.0F).forGetter(AttackRange::minCreativeRange),
-                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("max_creative_reach", 5.0F).forGetter(AttackRange::maxCreativeRange),
+        i -> i.group(
+                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("min_reach", 0.0F).forGetter(AttackRange::minReach),
+                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("max_reach", 3.0F).forGetter(AttackRange::maxReach),
+                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("min_creative_reach", 0.0F).forGetter(AttackRange::minCreativeReach),
+                ExtraCodecs.floatRange(0.0F, 64.0F).optionalFieldOf("max_creative_reach", 5.0F).forGetter(AttackRange::maxCreativeReach),
                 ExtraCodecs.floatRange(0.0F, 1.0F).optionalFieldOf("hitbox_margin", 0.3F).forGetter(AttackRange::hitboxMargin),
                 Codec.floatRange(0.0F, 2.0F).optionalFieldOf("mob_factor", 1.0F).forGetter(AttackRange::mobFactor)
             )
-            .apply(p_454041_, AttackRange::new)
+            .apply(i, AttackRange::new)
     );
     public static final StreamCodec<ByteBuf, AttackRange> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.FLOAT,
-        AttackRange::minRange,
+        AttackRange::minReach,
         ByteBufCodecs.FLOAT,
-        AttackRange::maxRange,
+        AttackRange::maxReach,
         ByteBufCodecs.FLOAT,
-        AttackRange::minCreativeRange,
+        AttackRange::minCreativeReach,
         ByteBufCodecs.FLOAT,
-        AttackRange::maxCreativeRange,
+        AttackRange::maxCreativeReach,
         ByteBufCodecs.FLOAT,
         AttackRange::hitboxMargin,
         ByteBufCodecs.FLOAT,
@@ -53,70 +52,67 @@ public record AttackRange(float minRange, float maxRange, float minCreativeRange
         AttackRange::new
     );
 
-    public static AttackRange defaultFor(LivingEntity p_456142_) {
-        return new AttackRange(0.0F, (float)p_456142_.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE), 0.0F, (float)p_456142_.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE), 0.0F, 1.0F);
+    public static AttackRange defaultFor(final LivingEntity livingEntity) {
+        float interactionRange = (float)livingEntity.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
+        return new AttackRange(0.0F, interactionRange, 0.0F, interactionRange, 0.0F, 1.0F);
     }
 
-    public HitResult getClosesetHit(Entity p_460657_, float p_460900_, Predicate<Entity> p_458573_) {
-        Either<BlockHitResult, Collection<EntityHitResult>> either = ProjectileUtil.getHitEntitiesAlong(p_460657_, this, p_458573_, ClipContext.Block.OUTLINE);
-        if (either.left().isPresent()) {
-            return either.left().get();
+    public HitResult getClosesetHit(final Entity attacker, final float partial, final Predicate<Entity> matching) {
+        Either<BlockHitResult, Collection<EntityHitResult>> result = ProjectileUtil.getHitEntitiesAlong(attacker, this, matching, ClipContext.Block.OUTLINE);
+        if (result.left().isPresent()) {
+            return result.left().get();
+        }
+
+        Collection<EntityHitResult> targets = result.right().get();
+        EntityHitResult entity = null;
+        Vec3 attackerPos = attacker.getEyePosition(partial);
+        double closestDistance = Double.MAX_VALUE;
+
+        for (EntityHitResult target : targets) {
+            double distance = attackerPos.distanceToSqr(target.getLocation());
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                entity = target;
+            }
+        }
+
+        if (entity != null) {
+            return entity;
+        }
+
+        Vec3 eyeGaze = attacker.getHeadLookAngle();
+        Vec3 missPosition = attacker.getEyePosition(partial).add(eyeGaze);
+        return BlockHitResult.miss(missPosition, Direction.getApproximateNearest(eyeGaze), BlockPos.containing(missPosition));
+    }
+
+    public float effectiveMinRange(final Entity entity) {
+        if (entity instanceof Player player) {
+            return player.isCreative() ? this.minCreativeReach : this.minReach;
         } else {
-            Collection<EntityHitResult> collection = either.right().get();
-            EntityHitResult entityhitresult = null;
-            Vec3 vec3 = p_460657_.getEyePosition(p_460900_);
-            double d0 = Double.MAX_VALUE;
-
-            for (EntityHitResult entityhitresult1 : collection) {
-                double d1 = vec3.distanceToSqr(entityhitresult1.getLocation());
-                if (d1 < d0) {
-                    d0 = d1;
-                    entityhitresult = entityhitresult1;
-                }
-            }
-
-            if (entityhitresult != null) {
-                return entityhitresult;
-            } else {
-                Vec3 vec31 = p_460657_.getHeadLookAngle();
-                Vec3 vec32 = p_460657_.getEyePosition(p_460900_).add(vec31);
-                return BlockHitResult.miss(vec32, Direction.getApproximateNearest(vec31), BlockPos.containing(vec32));
-            }
+            return this.minReach * this.mobFactor;
         }
     }
 
-    public float effectiveMinRange(Entity p_460694_) {
-        if (p_460694_ instanceof Player player) {
-            if (player.isSpectator()) {
-                return 0.0F;
-            } else {
-                return player.isCreative() ? this.minCreativeRange : this.minRange;
-            }
+    public float effectiveMaxRange(final Entity entity) {
+        if (entity instanceof Player player) {
+            return player.isCreative() ? this.maxCreativeReach : this.maxReach;
         } else {
-            return this.minRange * this.mobFactor;
+            return this.maxReach * this.mobFactor;
         }
     }
 
-    public float effectiveMaxRange(Entity p_450477_) {
-        if (p_450477_ instanceof Player player) {
-            return player.isCreative() ? this.maxCreativeRange : this.maxRange;
-        } else {
-            return this.maxRange * this.mobFactor;
-        }
+    public boolean isInRange(final LivingEntity attacker, final Vec3 location) {
+        return this.isInRange(attacker, location::distanceToSqr, 0.0);
     }
 
-    public boolean isInRange(LivingEntity p_450206_, Vec3 p_456236_) {
-        return this.isInRange(p_450206_, p_456236_::distanceToSqr, 0.0);
+    public boolean isInRange(final LivingEntity attacker, final AABB boundingBox, final double extraBuffer) {
+        return this.isInRange(attacker, boundingBox::distanceToSqr, extraBuffer);
     }
 
-    public boolean isInRange(LivingEntity p_460499_, AABB p_459371_, double p_459884_) {
-        return this.isInRange(p_460499_, p_459371_::distanceToSqr, p_459884_);
-    }
-
-    private boolean isInRange(LivingEntity p_452636_, ToDoubleFunction<Vec3> p_457212_, double p_457293_) {
-        double d0 = Math.sqrt(p_457212_.applyAsDouble(p_452636_.getEyePosition()));
-        double d1 = this.effectiveMinRange(p_452636_) - this.hitboxMargin - p_457293_;
-        double d2 = this.effectiveMaxRange(p_452636_) + this.hitboxMargin + p_457293_;
-        return d0 >= d1 && d0 <= d2;
+    private boolean isInRange(final LivingEntity attacker, final ToDoubleFunction<Vec3> distanceFunction, final double extraBuffer) {
+        double distance = Math.sqrt(distanceFunction.applyAsDouble(attacker.getEyePosition()));
+        double minReach = this.effectiveMinRange(attacker) - this.hitboxMargin - extraBuffer;
+        double maxReach = this.effectiveMaxRange(attacker) + this.hitboxMargin + extraBuffer;
+        return distance >= minReach && distance <= maxReach;
     }
 }

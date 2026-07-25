@@ -23,9 +23,12 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ItemBasedSteering;
 import net.minecraft.world.entity.ItemSteerable;
@@ -58,8 +61,8 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
@@ -69,75 +72,85 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
 public class Strider extends Animal implements ItemSteerable {
     private static final Identifier SUFFOCATING_MODIFIER_ID = Identifier.withDefaultNamespace("suffocating");
-    private static final AttributeModifier SUFFOCATING_MODIFIER = new AttributeModifier(SUFFOCATING_MODIFIER_ID, -0.34F, AttributeModifier.Operation.ADD_MULTIPLIED_BASE);
+    private static final AttributeModifier SUFFOCATING_MODIFIER = new AttributeModifier(
+        SUFFOCATING_MODIFIER_ID, -0.34F, AttributeModifier.Operation.ADD_MULTIPLIED_BASE
+    );
     private static final float SUFFOCATE_STEERING_MODIFIER = 0.35F;
     private static final float STEERING_MODIFIER = 0.55F;
     private static final EntityDataAccessor<Integer> DATA_BOOST_TIME = SynchedEntityData.defineId(Strider.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_SUFFOCATING = SynchedEntityData.defineId(Strider.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.45F, 0.85F)
+        .withEyeHeight(0.4375F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, 0.65625F, 0.0F));
     private final ItemBasedSteering steering = new ItemBasedSteering(this.entityData, DATA_BOOST_TIME);
     private @Nullable TemptGoal temptGoal;
 
-    public Strider(EntityType<? extends Strider> p_33862_, Level p_33863_) {
-        super(p_33862_, p_33863_);
+    public Strider(final EntityType<? extends Strider> strider, final Level level) {
+        super(strider, level);
         this.blocksBuilding = true;
         this.setPathfindingMalus(PathType.WATER, -1.0F);
         this.setPathfindingMalus(PathType.LAVA, 0.0F);
-        this.setPathfindingMalus(PathType.DANGER_FIRE, 0.0F);
-        this.setPathfindingMalus(PathType.DAMAGE_FIRE, 0.0F);
+        this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 0.0F);
+        this.setPathfindingMalus(PathType.FIRE, 0.0F);
     }
 
     public static boolean checkStriderSpawnRules(
-        EntityType<Strider> p_219129_, LevelAccessor p_219130_, EntitySpawnReason p_368751_, BlockPos p_219132_, RandomSource p_219133_
+        final EntityType<Strider> ignoredType,
+        final LevelAccessor level,
+        final EntitySpawnReason ignoredSpawnType,
+        final BlockPos pos,
+        final RandomSource ignoredRandom
     ) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_219132_.mutable();
+        BlockPos.MutableBlockPos checkPos = pos.mutable();
 
         do {
-            blockpos$mutableblockpos.move(Direction.UP);
-        } while (p_219130_.getFluidState(blockpos$mutableblockpos).is(FluidTags.LAVA));
+            checkPos.move(Direction.UP);
+        } while (level.getFluidState(checkPos).is(FluidTags.LAVA));
 
-        return p_219130_.getBlockState(blockpos$mutableblockpos).isAir();
+        return level.getBlockState(checkPos).isAir();
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_33900_) {
-        if (DATA_BOOST_TIME.equals(p_33900_) && this.level().isClientSide()) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        if (DATA_BOOST_TIME.equals(accessor) && this.level().isClientSide()) {
             this.steering.onSynced();
         }
 
-        super.onSyncedDataUpdated(p_33900_);
+        super.onSyncedDataUpdated(accessor);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_331129_) {
-        super.defineSynchedData(p_331129_);
-        p_331129_.define(DATA_BOOST_TIME, 0);
-        p_331129_.define(DATA_SUFFOCATING, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_BOOST_TIME, 0);
+        entityData.define(DATA_SUFFOCATING, false);
     }
 
     @Override
-    public boolean canUseSlot(EquipmentSlot p_396730_) {
-        return p_396730_ != EquipmentSlot.SADDLE ? super.canUseSlot(p_396730_) : this.isAlive() && !this.isBaby();
+    public boolean canUseSlot(final EquipmentSlot slot) {
+        return slot != EquipmentSlot.SADDLE ? super.canUseSlot(slot) : this.isAlive() && !this.isBaby();
     }
 
     @Override
-    protected boolean canDispenserEquipIntoSlot(EquipmentSlot p_397501_) {
-        return p_397501_ == EquipmentSlot.SADDLE || super.canDispenserEquipIntoSlot(p_397501_);
+    protected boolean canDispenserEquipIntoSlot(final EquipmentSlot slot) {
+        return slot == EquipmentSlot.SADDLE || super.canDispenserEquipIntoSlot(slot);
     }
 
     @Override
-    protected Holder<SoundEvent> getEquipSound(EquipmentSlot p_392918_, ItemStack p_397621_, Equippable p_396978_) {
-        return (Holder<SoundEvent>)(p_392918_ == EquipmentSlot.SADDLE ? SoundEvents.STRIDER_SADDLE : super.getEquipSound(p_392918_, p_397621_, p_396978_));
+    protected Holder<SoundEvent> getEquipSound(final EquipmentSlot slot, final ItemStack stack, final Equippable equippable) {
+        return slot == EquipmentSlot.SADDLE ? SoundEvents.STRIDER_SADDLE : super.getEquipSound(slot, stack, equippable);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new PanicGoal(this, 1.65));
         this.goalSelector.addGoal(2, new BreedGoal(this, 1.0));
-        this.temptGoal = new TemptGoal(this, 1.4, p_328939_ -> p_328939_.is(ItemTags.STRIDER_TEMPT_ITEMS), false);
+        this.temptGoal = new TemptGoal(this, 1.4, i -> i.is(ItemTags.STRIDER_TEMPT_ITEMS), false);
         this.goalSelector.addGoal(3, this.temptGoal);
         this.goalSelector.addGoal(4, new Strider.StriderGoToLavaGoal(this, 1.0));
         this.goalSelector.addGoal(5, new FollowParentGoal(this, 1.0));
@@ -147,14 +160,14 @@ public class Strider extends Animal implements ItemSteerable {
         this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Strider.class, 8.0F));
     }
 
-    public void setSuffocating(boolean p_33952_) {
-        this.entityData.set(DATA_SUFFOCATING, p_33952_);
-        AttributeInstance attributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (attributeinstance != null) {
-            if (p_33952_) {
-                attributeinstance.addOrUpdateTransientModifier(SUFFOCATING_MODIFIER);
+    public void setSuffocating(final boolean flag) {
+        this.entityData.set(DATA_SUFFOCATING, flag);
+        AttributeInstance attribute = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (attribute != null) {
+            if (flag) {
+                attribute.addOrUpdateTransientModifier(SUFFOCATING_MODIFIER);
             } else {
-                attributeinstance.removeModifier(SUFFOCATING_MODIFIER_ID);
+                attribute.removeModifier(SUFFOCATING_MODIFIER_ID);
             }
         }
     }
@@ -164,66 +177,73 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    public boolean canStandOnFluid(FluidState p_204067_) {
-        return p_204067_.is(FluidTags.LAVA);
+    public boolean canStandOnFluid(final FluidState fluid) {
+        return fluid.is(FluidTags.LAVA);
     }
 
     @Override
-    protected Vec3 getPassengerAttachmentPoint(Entity p_298003_, EntityDimensions p_300798_, float p_299514_) {
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+    }
+
+    @Override
+    protected Vec3 getPassengerAttachmentPoint(final Entity passenger, final EntityDimensions dimensions, final float scale) {
         if (!this.level().isClientSide()) {
-            return super.getPassengerAttachmentPoint(p_298003_, p_300798_, p_299514_);
-        } else {
-            float f = Math.min(0.25F, this.walkAnimation.speed());
-            float f1 = this.walkAnimation.position();
-            float f2 = 0.12F * Mth.cos(f1 * 1.5F) * 2.0F * f;
-            return super.getPassengerAttachmentPoint(p_298003_, p_300798_, p_299514_).add(0.0, f2 * p_299514_, 0.0);
+            return super.getPassengerAttachmentPoint(passenger, dimensions, scale);
         }
+
+        float animSpeed = Math.min(0.25F, this.walkAnimation.speed());
+        float animPos = this.walkAnimation.position();
+        float offset = 0.12F * Mth.cos(animPos * 1.5F) * 2.0F * animSpeed;
+        return super.getPassengerAttachmentPoint(passenger, dimensions, scale).add(0.0, offset * scale, 0.0);
     }
 
     @Override
-    public boolean checkSpawnObstruction(LevelReader p_33880_) {
-        return p_33880_.isUnobstructed(this);
+    public boolean checkSpawnObstruction(final LevelReader level) {
+        return level.isUnobstructed(this);
     }
 
     @Override
     public @Nullable LivingEntity getControllingPassenger() {
-        return (LivingEntity)(this.isSaddled() && this.getFirstPassenger() instanceof Player player && player.isHolding(Items.WARPED_FUNGUS_ON_A_STICK) ? player : super.getControllingPassenger());
+        return this.isSaddled() && this.getFirstPassenger() instanceof Player player && player.isHolding(Items.WARPED_FUNGUS_ON_A_STICK)
+            ? player
+            : super.getControllingPassenger();
     }
 
     @Override
-    public Vec3 getDismountLocationForPassenger(LivingEntity p_33908_) {
-        Vec3[] avec3 = new Vec3[]{
-            getCollisionHorizontalEscapeVector(this.getBbWidth(), p_33908_.getBbWidth(), p_33908_.getYRot()),
-            getCollisionHorizontalEscapeVector(this.getBbWidth(), p_33908_.getBbWidth(), p_33908_.getYRot() - 22.5F),
-            getCollisionHorizontalEscapeVector(this.getBbWidth(), p_33908_.getBbWidth(), p_33908_.getYRot() + 22.5F),
-            getCollisionHorizontalEscapeVector(this.getBbWidth(), p_33908_.getBbWidth(), p_33908_.getYRot() - 45.0F),
-            getCollisionHorizontalEscapeVector(this.getBbWidth(), p_33908_.getBbWidth(), p_33908_.getYRot() + 45.0F)
+    public Vec3 getDismountLocationForPassenger(final LivingEntity passenger) {
+        Vec3[] directions = new Vec3[]{
+            getCollisionHorizontalEscapeVector(this.getBbWidth(), passenger.getBbWidth(), passenger.getYRot()),
+            getCollisionHorizontalEscapeVector(this.getBbWidth(), passenger.getBbWidth(), passenger.getYRot() - 22.5F),
+            getCollisionHorizontalEscapeVector(this.getBbWidth(), passenger.getBbWidth(), passenger.getYRot() + 22.5F),
+            getCollisionHorizontalEscapeVector(this.getBbWidth(), passenger.getBbWidth(), passenger.getYRot() - 45.0F),
+            getCollisionHorizontalEscapeVector(this.getBbWidth(), passenger.getBbWidth(), passenger.getYRot() + 45.0F)
         };
-        Set<BlockPos> set = Sets.newLinkedHashSet();
-        double d0 = this.getBoundingBox().maxY;
-        double d1 = this.getBoundingBox().minY - 0.5;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        Set<BlockPos> targetBlockPositions = Sets.newLinkedHashSet();
+        double colliderTop = this.getBoundingBox().maxY;
+        double colliderBottom = this.getBoundingBox().minY - 0.5;
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
 
-        for (Vec3 vec3 : avec3) {
-            blockpos$mutableblockpos.set(this.getX() + vec3.x, d0, this.getZ() + vec3.z);
+        for (Vec3 direction : directions) {
+            blockPos.set(this.getX() + direction.x, colliderTop, this.getZ() + direction.z);
 
-            for (double d2 = d0; d2 > d1; d2--) {
-                set.add(blockpos$mutableblockpos.immutable());
-                blockpos$mutableblockpos.move(Direction.DOWN);
+            for (double y = colliderTop; y > colliderBottom; y--) {
+                targetBlockPositions.add(blockPos.immutable());
+                blockPos.move(Direction.DOWN);
             }
         }
 
-        for (BlockPos blockpos : set) {
-            if (!this.level().getFluidState(blockpos).is(FluidTags.LAVA)) {
-                double d3 = this.level().getBlockFloorHeight(blockpos);
-                if (DismountHelper.isBlockFloorValid(d3)) {
-                    Vec3 vec31 = Vec3.upFromBottomCenterOf(blockpos, d3);
+        for (BlockPos targetBlockPos : targetBlockPositions) {
+            if (!this.level().getFluidState(targetBlockPos).is(FluidTags.LAVA)) {
+                double blockFloorHeight = this.level().getBlockFloorHeight(targetBlockPos);
+                if (DismountHelper.isBlockFloorValid(blockFloorHeight)) {
+                    Vec3 location = Vec3.upFromBottomCenterOf(targetBlockPos, blockFloorHeight);
 
-                    for (Pose pose : p_33908_.getDismountPoses()) {
-                        AABB aabb = p_33908_.getLocalBoundsForPose(pose);
-                        if (DismountHelper.canDismountTo(this.level(), p_33908_, aabb.move(vec31))) {
-                            p_33908_.setPose(pose);
-                            return vec31;
+                    for (Pose dismountPose : passenger.getDismountPoses()) {
+                        AABB poseCollisionBox = passenger.getLocalBoundsForPose(dismountPose);
+                        if (DismountHelper.canDismountTo(this.level(), passenger, poseCollisionBox.move(location))) {
+                            passenger.setPose(dismountPose);
+                            return location;
                         }
                     }
                 }
@@ -234,20 +254,20 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    protected void tickRidden(Player p_278331_, Vec3 p_278234_) {
-        this.setRot(p_278331_.getYRot(), p_278331_.getXRot() * 0.5F);
+    protected void tickRidden(final Player controller, final Vec3 riddenInput) {
+        this.setRot(controller.getYRot(), controller.getXRot() * 0.5F);
         this.yRotO = this.yBodyRot = this.yHeadRot = this.getYRot();
         this.steering.tickBoost();
-        super.tickRidden(p_278331_, p_278234_);
+        super.tickRidden(controller, riddenInput);
     }
 
     @Override
-    protected Vec3 getRiddenInput(Player p_278251_, Vec3 p_275578_) {
+    protected Vec3 getRiddenInput(final Player controller, final Vec3 selfInput) {
         return new Vec3(0.0, 0.0, 1.0);
     }
 
     @Override
-    protected float getRiddenSpeed(Player p_278317_) {
+    protected float getRiddenSpeed(final Player controller) {
         return (float)(this.getAttributeValue(Attributes.MOVEMENT_SPEED) * (this.isSuffocating() ? 0.35F : 0.55F) * this.steering.boostFactor());
     }
 
@@ -257,7 +277,7 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_33915_, BlockState p_33916_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(this.isInLava() ? SoundEvents.STRIDER_STEP_LAVA : SoundEvents.STRIDER_STEP, 1.0F, 1.0F);
     }
 
@@ -267,11 +287,11 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    protected void checkFallDamage(double p_33870_, boolean p_33871_, BlockState p_33872_, BlockPos p_33873_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
         if (this.isInLava()) {
             this.resetFallDistance();
         } else {
-            super.checkFallDamage(p_33870_, p_33871_, p_33872_, p_33873_);
+            super.checkFallDamage(ya, onGround, onState, pos);
         }
     }
 
@@ -284,11 +304,13 @@ public class Strider extends Animal implements ItemSteerable {
         }
 
         if (!this.isNoAi()) {
-            BlockState blockstate = this.level().getBlockState(this.blockPosition());
-            BlockState blockstate1 = this.getBlockStateOnLegacy();
-            boolean flag = blockstate.is(BlockTags.STRIDER_WARM_BLOCKS) || blockstate1.is(BlockTags.STRIDER_WARM_BLOCKS) || this.getFluidHeight(FluidTags.LAVA) > 0.0;
-            boolean flag1 = this.getVehicle() instanceof Strider strider && strider.isSuffocating();
-            this.setSuffocating(!flag || flag1);
+            BlockState stateInside = this.level().getBlockState(this.blockPosition());
+            BlockState stateOn = this.getBlockStateOnLegacy();
+            boolean inWarmBlocks = stateInside.is(BlockTags.STRIDER_WARM_BLOCKS)
+                || stateOn.is(BlockTags.STRIDER_WARM_BLOCKS)
+                || this.getFluidHeight(FluidTags.LAVA) > 0.0;
+            boolean onWarmStrider = this.getVehicle() instanceof Strider strider && !strider.isSuffocating();
+            this.setSuffocating(!inWarmBlocks && !onWarmStrider);
         }
 
         super.tick();
@@ -306,14 +328,19 @@ public class Strider extends Animal implements ItemSteerable {
 
     private void floatStrider() {
         if (this.isInLava()) {
-            CollisionContext collisioncontext = CollisionContext.of(this);
-            if (collisioncontext.isAbove(LiquidBlock.SHAPE_STABLE, this.blockPosition(), true)
+            CollisionContext context = CollisionContext.of(this);
+            if (context.isAbove(this.getLiquidCollisionShape(), this.blockPosition(), true)
                 && !this.level().getFluidState(this.blockPosition().above()).is(FluidTags.LAVA)) {
                 this.setOnGround(true);
             } else {
                 this.setDeltaMovement(this.getDeltaMovement().scale(0.5).add(0.0, 0.05, 0.0));
             }
         }
+    }
+
+    @Override
+    public VoxelShape getLiquidCollisionShape() {
+        return Block.column(16.0, 0.0, 8.0);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -326,7 +353,7 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_33934_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.STRIDER_HURT;
     }
 
@@ -336,7 +363,7 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    protected boolean canAddPassenger(Entity p_33950_) {
+    protected boolean canAddPassenger(final Entity passenger) {
         return !this.isVehicle() && !this.isEyeInFluid(FluidTags.LAVA);
     }
 
@@ -351,61 +378,59 @@ public class Strider extends Animal implements ItemSteerable {
     }
 
     @Override
-    protected PathNavigation createNavigation(Level p_33913_) {
-        return new Strider.StriderPathNavigation(this, p_33913_);
+    protected PathNavigation createNavigation(final Level level) {
+        return new Strider.StriderPathNavigation(this, level);
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos p_33895_, LevelReader p_33896_) {
-        if (p_33896_.getBlockState(p_33895_).getFluidState().is(FluidTags.LAVA)) {
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
+        if (level.getBlockState(pos).getFluidState().is(FluidTags.LAVA)) {
             return 10.0F;
         } else {
             return this.isInLava() ? Float.NEGATIVE_INFINITY : 0.0F;
         }
     }
 
-    public @Nullable Strider getBreedOffspring(ServerLevel p_149861_, AgeableMob p_149862_) {
-        return EntityType.STRIDER.create(p_149861_, EntitySpawnReason.BREEDING);
+    public @Nullable Strider getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.STRIDER.create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
-    public boolean isFood(ItemStack p_33946_) {
-        return p_33946_.is(ItemTags.STRIDER_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.STRIDER_FOOD);
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_33910_, InteractionHand p_33911_) {
-        boolean flag = this.isFood(p_33910_.getItemInHand(p_33911_));
-        if (!flag && this.isSaddled() && !this.isVehicle() && !p_33910_.isSecondaryUseActive()) {
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        boolean hasFood = this.isFood(player.getItemInHand(hand));
+        if (!hasFood && this.isSaddled() && !this.isVehicle() && !player.isSecondaryUseActive()) {
             if (!this.level().isClientSide()) {
-                p_33910_.startRiding(this);
+                player.startRiding(this);
             }
 
             return InteractionResult.SUCCESS;
         } else {
-            InteractionResult interactionresult = super.mobInteract(p_33910_, p_33911_);
-            if (!interactionresult.consumesAction()) {
-                ItemStack itemstack = p_33910_.getItemInHand(p_33911_);
-                return (InteractionResult)(this.isEquippableInSlot(itemstack, EquipmentSlot.SADDLE)
-                    ? itemstack.interactLivingEntity(p_33910_, this, p_33911_)
-                    : InteractionResult.PASS);
-            } else {
-                if (flag && !this.isSilent()) {
-                    this.level()
-                        .playSound(
-                            null,
-                            this.getX(),
-                            this.getY(),
-                            this.getZ(),
-                            SoundEvents.STRIDER_EAT,
-                            this.getSoundSource(),
-                            1.0F,
-                            1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F
-                        );
-                }
-
-                return interactionresult;
+            InteractionResult interactionResult = super.mobInteract(player, hand);
+            if (!interactionResult.consumesAction()) {
+                ItemStack itemStack = player.getItemInHand(hand);
+                return this.isEquippableInSlot(itemStack, EquipmentSlot.SADDLE) ? itemStack.interactLivingEntity(player, this, hand) : InteractionResult.PASS;
             }
+
+            if (hasFood && !this.isSilent()) {
+                this.level()
+                    .playSound(
+                        null,
+                        this.getX(),
+                        this.getY(),
+                        this.getZ(),
+                        SoundEvents.STRIDER_EAT,
+                        this.getSoundSource(),
+                        1.0F,
+                        1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F
+                    );
+            }
+
+            return interactionResult;
         }
     }
 
@@ -416,47 +441,49 @@ public class Strider extends Animal implements ItemSteerable {
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_33887_, DifficultyInstance p_33888_, EntitySpawnReason p_370149_, @Nullable SpawnGroupData p_33890_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
         if (this.isBaby()) {
-            return super.finalizeSpawn(p_33887_, p_33888_, p_370149_, p_33890_);
-        } else {
-            RandomSource randomsource = p_33887_.getRandom();
-            if (randomsource.nextInt(30) == 0) {
-                Mob mob = EntityType.ZOMBIFIED_PIGLIN.create(p_33887_.getLevel(), EntitySpawnReason.JOCKEY);
-                if (mob != null) {
-                    p_33890_ = this.spawnJockey(p_33887_, p_33888_, mob, new Zombie.ZombieGroupData(Zombie.getSpawnAsBabyOdds(randomsource), false));
-                    mob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.WARPED_FUNGUS_ON_A_STICK));
-                    this.setItemSlot(EquipmentSlot.SADDLE, new ItemStack(Items.SADDLE));
-                    this.setGuaranteedDrop(EquipmentSlot.SADDLE);
-                }
-            } else if (randomsource.nextInt(10) == 0) {
-                AgeableMob ageablemob = EntityType.STRIDER.create(p_33887_.getLevel(), EntitySpawnReason.JOCKEY);
-                if (ageablemob != null) {
-                    ageablemob.setAge(-24000);
-                    p_33890_ = this.spawnJockey(p_33887_, p_33888_, ageablemob, null);
-                }
-            } else {
-                p_33890_ = new AgeableMob.AgeableMobGroupData(0.5F);
-            }
-
-            return super.finalizeSpawn(p_33887_, p_33888_, p_370149_, p_33890_);
+            return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
         }
+
+        RandomSource random = level.getRandom();
+        if (random.nextInt(30) == 0) {
+            Mob jockey = EntityTypes.ZOMBIFIED_PIGLIN.create(level.getLevel(), EntitySpawnReason.JOCKEY);
+            if (jockey != null) {
+                groupData = this.spawnJockey(level, difficulty, jockey, new Zombie.ZombieGroupData(Zombie.getSpawnAsBabyOdds(random), false));
+                jockey.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.WARPED_FUNGUS_ON_A_STICK));
+                this.setItemSlot(EquipmentSlot.SADDLE, new ItemStack(Items.SADDLE));
+                this.setGuaranteedDrop(EquipmentSlot.SADDLE);
+            }
+        } else if (random.nextInt(10) == 0) {
+            AgeableMob jockey = EntityTypes.STRIDER.create(level.getLevel(), EntitySpawnReason.JOCKEY);
+            if (jockey != null) {
+                jockey.setAge(-24000);
+                groupData = this.spawnJockey(level, difficulty, jockey, null);
+            }
+        } else {
+            groupData = new AgeableMob.AgeableMobGroupData(0.5F);
+        }
+
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
-    private SpawnGroupData spawnJockey(ServerLevelAccessor p_33882_, DifficultyInstance p_33883_, Mob p_33884_, @Nullable SpawnGroupData p_33885_) {
-        p_33884_.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
-        p_33884_.finalizeSpawn(p_33882_, p_33883_, EntitySpawnReason.JOCKEY, p_33885_);
-        p_33884_.startRiding(this, true, false);
+    private SpawnGroupData spawnJockey(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final Mob jockey, final @Nullable SpawnGroupData jockeyGroupData
+    ) {
+        jockey.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
+        jockey.finalizeSpawn(level, difficulty, EntitySpawnReason.JOCKEY, jockeyGroupData);
+        jockey.startRiding(this, true, false);
         return new AgeableMob.AgeableMobGroupData(0.0F);
     }
 
-    static class StriderGoToLavaGoal extends MoveToBlockGoal {
+    private static class StriderGoToLavaGoal extends MoveToBlockGoal {
         private final Strider strider;
 
-        StriderGoToLavaGoal(Strider p_33955_, double p_33956_) {
-            super(p_33955_, p_33956_, 8, 2);
-            this.strider = p_33955_;
+        private StriderGoToLavaGoal(final Strider strider, final double speedModifier) {
+            super(strider, speedModifier, 8, 2);
+            this.strider = strider;
         }
 
         @Override
@@ -480,30 +507,25 @@ public class Strider extends Animal implements ItemSteerable {
         }
 
         @Override
-        protected boolean isValidTarget(LevelReader p_33963_, BlockPos p_33964_) {
-            return p_33963_.getBlockState(p_33964_).is(Blocks.LAVA) && p_33963_.getBlockState(p_33964_.above()).isPathfindable(PathComputationType.LAND);
+        protected boolean isValidTarget(final LevelReader level, final BlockPos pos) {
+            return level.getBlockState(pos).is(Blocks.LAVA) && level.getBlockState(pos.above()).isPathfindable(PathComputationType.LAND);
         }
     }
 
-    static class StriderPathNavigation extends GroundPathNavigation {
-        StriderPathNavigation(Strider p_33969_, Level p_33970_) {
-            super(p_33969_, p_33970_);
+    private static class StriderPathNavigation extends GroundPathNavigation {
+        public StriderPathNavigation(final Strider mob, final Level level) {
+            super(mob, level);
         }
 
         @Override
-        protected PathFinder createPathFinder(int p_33972_) {
+        protected PathFinder createPathFinder(final int maxVisitedNodes) {
             this.nodeEvaluator = new WalkNodeEvaluator();
-            return new PathFinder(this.nodeEvaluator, p_33972_);
+            return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
         }
 
         @Override
-        protected boolean hasValidPathType(PathType p_330836_) {
-            return p_330836_ != PathType.LAVA && p_330836_ != PathType.DAMAGE_FIRE && p_330836_ != PathType.DANGER_FIRE ? super.hasValidPathType(p_330836_) : true;
-        }
-
-        @Override
-        public boolean isStableDestination(BlockPos p_33976_) {
-            return this.level.getBlockState(p_33976_).is(Blocks.LAVA) || super.isStableDestination(p_33976_);
+        public boolean isStableDestination(final BlockPos pos) {
+            return this.level.getBlockState(pos).is(Blocks.LAVA) || super.isStableDestination(pos);
         }
     }
 }

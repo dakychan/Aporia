@@ -16,7 +16,7 @@ public record ClientboundSetHeldSlotPacket(int slot) implements Packet<ClientGam
         return GamePacketTypes.CLIENTBOUND_SET_HELD_SLOT;
     }
 
-    public void handle(ClientGamePacketListener p_367345_) {
-        p_367345_.handleSetHeldSlot(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetHeldSlot(this);
     }
 }

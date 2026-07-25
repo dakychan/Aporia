@@ -20,128 +20,133 @@ public class V1451_6 extends NamespacedSchema {
     public static final String SPECIAL_OBJECTIVE_MARKER = "_special";
     protected static final HookFunction UNPACK_OBJECTIVE_ID = new HookFunction() {
         @Override
-        public <T> T apply(DynamicOps<T> p_181096_, T p_181097_) {
-            Dynamic<T> dynamic = new Dynamic<>(p_181096_, p_181097_);
+        public <T> T apply(final DynamicOps<T> ops, final T value) {
+            Dynamic<T> input = new Dynamic<>(ops, value);
             return DataFixUtils.orElse(
-                    dynamic.get("CriteriaName")
+                    input.get("CriteriaName")
                         .asString()
                         .result()
-                        .map(p_181094_ -> {
-                            int i = p_181094_.indexOf(58);
-                            if (i < 0) {
-                                return Pair.of("_special", p_181094_);
-                            } else {
-                                try {
-                                    Identifier identifier = Identifier.bySeparator(p_181094_.substring(0, i), '.');
-                                    Identifier identifier1 = Identifier.bySeparator(p_181094_.substring(i + 1), '.');
-                                    return Pair.of(identifier.toString(), identifier1.toString());
-                                } catch (Exception exception) {
-                                    return Pair.of("_special", p_181094_);
-                                }
+                        .map(name -> {
+                            int colonPos = name.indexOf(58);
+                            if (colonPos < 0) {
+                                return Pair.of("_special", name);
+                            }
+
+                            try {
+                                Identifier statType = Identifier.bySeparator(name.substring(0, colonPos), '.');
+                                Identifier statId = Identifier.bySeparator(name.substring(colonPos + 1), '.');
+                                return Pair.of(statType.toString(), statId.toString());
+                            } catch (Exception e) {
+                                return Pair.of("_special", name);
                             }
                         })
                         .map(
-                            p_181092_ -> dynamic.set(
+                            explodedId -> input.set(
                                 "CriteriaType",
-                                dynamic.createMap(
+                                input.createMap(
                                     ImmutableMap.of(
-                                        dynamic.createString("type"),
-                                        dynamic.createString(p_181092_.getFirst()),
-                                        dynamic.createString("id"),
-                                        dynamic.createString(p_181092_.getSecond())
+                                        input.createString("type"),
+                                        input.createString(explodedId.getFirst()),
+                                        input.createString("id"),
+                                        input.createString(explodedId.getSecond())
                                     )
                                 )
                             )
                         ),
-                    dynamic
+                    input
                 )
                 .getValue();
         }
     };
     protected static final HookFunction REPACK_OBJECTIVE_ID = new HookFunction() {
         @Override
-        public <T> T apply(DynamicOps<T> p_181105_, T p_181106_) {
-            Dynamic<T> dynamic = new Dynamic<>(p_181105_, p_181106_);
-            Optional<Dynamic<T>> optional = dynamic.get("CriteriaType")
+        public <T> T apply(final DynamicOps<T> ops, final T value) {
+            Dynamic<T> input = new Dynamic<>(ops, value);
+            Optional<Dynamic<T>> repackedId = input.get("CriteriaType")
                 .get()
                 .result()
                 .flatMap(
-                    p_296644_ -> {
-                        Optional<String> optional1 = p_296644_.get("type").asString().result();
-                        Optional<String> optional2 = p_296644_.get("id").asString().result();
-                        if (optional1.isPresent() && optional2.isPresent()) {
-                            String s = optional1.get();
-                            return s.equals("_special")
-                                ? Optional.of(dynamic.createString(optional2.get()))
-                                : Optional.of(p_296644_.createString(V1451_6.packNamespacedWithDot(s) + ":" + V1451_6.packNamespacedWithDot(optional2.get())));
+                    type -> {
+                        Optional<String> statType = type.get("type").asString().result();
+                        Optional<String> statId = type.get("id").asString().result();
+                        if (statType.isPresent() && statId.isPresent()) {
+                            String unpackedType = statType.get();
+                            return unpackedType.equals("_special")
+                                ? Optional.of(input.createString(statId.get()))
+                                : Optional.of(
+                                    type.createString(V1451_6.packNamespacedWithDot(unpackedType) + ":" + V1451_6.packNamespacedWithDot(statId.get()))
+                                );
                         } else {
                             return Optional.empty();
                         }
                     }
                 );
-            return DataFixUtils.orElse(optional.map(p_181101_ -> dynamic.set("CriteriaName", (Dynamic<?>)p_181101_).remove("CriteriaType")), dynamic)
-                .getValue();
+            return DataFixUtils.orElse(repackedId.map(id -> input.set("CriteriaName", (Dynamic<?>)id).remove("CriteriaType")), input).getValue();
         }
     };
 
-    public V1451_6(int p_17532_, Schema p_17533_) {
-        super(p_17532_, p_17533_);
+    public V1451_6(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public void registerTypes(Schema p_17540_, Map<String, Supplier<TypeTemplate>> p_17541_, Map<String, Supplier<TypeTemplate>> p_17542_) {
-        super.registerTypes(p_17540_, p_17541_, p_17542_);
-        Supplier<TypeTemplate> supplier = () -> DSL.compoundList(References.ITEM_NAME.in(p_17540_), DSL.constType(DSL.intType()));
-        p_17540_.registerType(
+    public void registerTypes(
+        final Schema schema, final Map<String, Supplier<TypeTemplate>> entityTypes, final Map<String, Supplier<TypeTemplate>> blockEntityTypes
+    ) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        Supplier<TypeTemplate> ITEM_STATS = () -> DSL.compoundList(References.ITEM_NAME.in(schema), DSL.constType(DSL.intType()));
+        schema.registerType(
             false,
             References.STATS,
             () -> DSL.optionalFields(
                 "stats",
                 DSL.optionalFields(
-                    Pair.of("minecraft:mined", DSL.compoundList(References.BLOCK_NAME.in(p_17540_), DSL.constType(DSL.intType()))),
-                    Pair.of("minecraft:crafted", supplier.get()),
-                    Pair.of("minecraft:used", supplier.get()),
-                    Pair.of("minecraft:broken", supplier.get()),
-                    Pair.of("minecraft:picked_up", supplier.get()),
-                    Pair.of("minecraft:dropped", supplier.get()),
-                    Pair.of("minecraft:killed", DSL.compoundList(References.ENTITY_NAME.in(p_17540_), DSL.constType(DSL.intType()))),
-                    Pair.of("minecraft:killed_by", DSL.compoundList(References.ENTITY_NAME.in(p_17540_), DSL.constType(DSL.intType()))),
+                    Pair.of("minecraft:mined", DSL.compoundList(References.BLOCK_NAME.in(schema), DSL.constType(DSL.intType()))),
+                    Pair.of("minecraft:crafted", ITEM_STATS.get()),
+                    Pair.of("minecraft:used", ITEM_STATS.get()),
+                    Pair.of("minecraft:broken", ITEM_STATS.get()),
+                    Pair.of("minecraft:picked_up", ITEM_STATS.get()),
+                    Pair.of("minecraft:dropped", ITEM_STATS.get()),
+                    Pair.of("minecraft:killed", DSL.compoundList(References.ENTITY_NAME.in(schema), DSL.constType(DSL.intType()))),
+                    Pair.of("minecraft:killed_by", DSL.compoundList(References.ENTITY_NAME.in(schema), DSL.constType(DSL.intType()))),
                     Pair.of("minecraft:custom", DSL.compoundList(DSL.constType(namespacedString()), DSL.constType(DSL.intType())))
                 )
             )
         );
-        Map<String, Supplier<TypeTemplate>> map = createCriterionTypes(p_17540_);
-        p_17540_.registerType(
+        Map<String, Supplier<TypeTemplate>> criterionTypes = createCriterionTypes(schema);
+        schema.registerType(
             false,
             References.OBJECTIVE,
             () -> DSL.hook(
-                DSL.optionalFields("CriteriaType", DSL.taggedChoiceLazy("type", DSL.string(), map), "DisplayName", References.TEXT_COMPONENT.in(p_17540_)),
+                DSL.optionalFields(
+                    "CriteriaType", DSL.taggedChoiceLazy("type", DSL.string(), criterionTypes), "DisplayName", References.TEXT_COMPONENT.in(schema)
+                ),
                 UNPACK_OBJECTIVE_ID,
                 REPACK_OBJECTIVE_ID
             )
         );
     }
 
-    protected static Map<String, Supplier<TypeTemplate>> createCriterionTypes(Schema p_181078_) {
-        Supplier<TypeTemplate> supplier = () -> DSL.optionalFields("id", References.ITEM_NAME.in(p_181078_));
-        Supplier<TypeTemplate> supplier1 = () -> DSL.optionalFields("id", References.BLOCK_NAME.in(p_181078_));
-        Supplier<TypeTemplate> supplier2 = () -> DSL.optionalFields("id", References.ENTITY_NAME.in(p_181078_));
-        Map<String, Supplier<TypeTemplate>> map = Maps.newHashMap();
-        map.put("minecraft:mined", supplier1);
-        map.put("minecraft:crafted", supplier);
-        map.put("minecraft:used", supplier);
-        map.put("minecraft:broken", supplier);
-        map.put("minecraft:picked_up", supplier);
-        map.put("minecraft:dropped", supplier);
-        map.put("minecraft:killed", supplier2);
-        map.put("minecraft:killed_by", supplier2);
-        map.put("minecraft:custom", () -> DSL.optionalFields("id", DSL.constType(namespacedString())));
-        map.put("_special", () -> DSL.optionalFields("id", DSL.constType(DSL.string())));
-        return map;
+    protected static Map<String, Supplier<TypeTemplate>> createCriterionTypes(final Schema schema) {
+        Supplier<TypeTemplate> itemCriterion = () -> DSL.optionalFields("id", References.ITEM_NAME.in(schema));
+        Supplier<TypeTemplate> blockCriterion = () -> DSL.optionalFields("id", References.BLOCK_NAME.in(schema));
+        Supplier<TypeTemplate> entityCriterion = () -> DSL.optionalFields("id", References.ENTITY_NAME.in(schema));
+        Map<String, Supplier<TypeTemplate>> criterionTypes = Maps.newHashMap();
+        criterionTypes.put("minecraft:mined", blockCriterion);
+        criterionTypes.put("minecraft:crafted", itemCriterion);
+        criterionTypes.put("minecraft:used", itemCriterion);
+        criterionTypes.put("minecraft:broken", itemCriterion);
+        criterionTypes.put("minecraft:picked_up", itemCriterion);
+        criterionTypes.put("minecraft:dropped", itemCriterion);
+        criterionTypes.put("minecraft:killed", entityCriterion);
+        criterionTypes.put("minecraft:killed_by", entityCriterion);
+        criterionTypes.put("minecraft:custom", () -> DSL.optionalFields("id", DSL.constType(namespacedString())));
+        criterionTypes.put("_special", () -> DSL.optionalFields("id", DSL.constType(DSL.string())));
+        return criterionTypes;
     }
 
-    public static String packNamespacedWithDot(String p_298534_) {
-        Identifier identifier = Identifier.tryParse(p_298534_);
-        return identifier != null ? identifier.getNamespace() + "." + identifier.getPath() : p_298534_;
+    public static String packNamespacedWithDot(final String location) {
+        Identifier parsedLoc = Identifier.tryParse(location);
+        return parsedLoc != null ? parsedLoc.getNamespace() + "." + parsedLoc.getPath() : location;
     }
 }

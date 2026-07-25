@@ -13,8 +13,8 @@ public class FallthroughTask<T extends ExecutionCommandSource<T>> implements Ent
     }
 
     @Override
-    public void execute(ExecutionContext<T> p_311441_, Frame p_309937_) {
-        p_309937_.returnFailure();
-        p_309937_.discard();
+    public void execute(final ExecutionContext<T> context, final Frame frame) {
+        frame.returnFailure();
+        frame.discard();
     }
 }

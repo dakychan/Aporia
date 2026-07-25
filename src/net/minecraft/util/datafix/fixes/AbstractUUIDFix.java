@@ -13,44 +13,41 @@ import java.util.UUID;
 import java.util.function.Function;
 
 public abstract class AbstractUUIDFix extends DataFix {
-    protected TypeReference typeReference;
+    protected final TypeReference typeReference;
 
-    public AbstractUUIDFix(Schema p_14572_, TypeReference p_14573_) {
-        super(p_14572_, false);
-        this.typeReference = p_14573_;
+    public AbstractUUIDFix(final Schema outputSchema, final TypeReference typeReference) {
+        super(outputSchema, false);
+        this.typeReference = typeReference;
     }
 
-    protected Typed<?> updateNamedChoice(Typed<?> p_14575_, String p_14576_, Function<Dynamic<?>, Dynamic<?>> p_14577_) {
-        Type<?> type = this.getInputSchema().getChoiceType(this.typeReference, p_14576_);
-        Type<?> type1 = this.getOutputSchema().getChoiceType(this.typeReference, p_14576_);
-        return p_14575_.updateTyped(DSL.namedChoice(p_14576_, type), type1, p_14607_ -> p_14607_.update(DSL.remainderFinder(), p_14577_));
+    protected Typed<?> updateNamedChoice(final Typed<?> input, final String name, final Function<Dynamic<?>, Dynamic<?>> function) {
+        Type<?> oldType = this.getInputSchema().getChoiceType(this.typeReference, name);
+        Type<?> newType = this.getOutputSchema().getChoiceType(this.typeReference, name);
+        return input.updateTyped(DSL.namedChoice(name, oldType), newType, typedTag -> typedTag.update(DSL.remainderFinder(), function));
     }
 
-    protected static Optional<Dynamic<?>> replaceUUIDString(Dynamic<?> p_14591_, String p_14592_, String p_14593_) {
-        return createUUIDFromString(p_14591_, p_14592_).map(p_14616_ -> p_14591_.remove(p_14592_).set(p_14593_, (Dynamic<?>)p_14616_));
+    protected static Optional<Dynamic<?>> replaceUUIDString(final Dynamic<?> tag, final String oldKey, final String newKey) {
+        return createUUIDFromString(tag, oldKey).map(uuidTag -> tag.remove(oldKey).set(newKey, (Dynamic<?>)uuidTag));
     }
 
-    protected static Optional<Dynamic<?>> replaceUUIDMLTag(Dynamic<?> p_14609_, String p_14610_, String p_14611_) {
-        return p_14609_.get(p_14610_)
-            .result()
-            .flatMap(AbstractUUIDFix::createUUIDFromML)
-            .map(p_14598_ -> p_14609_.remove(p_14610_).set(p_14611_, (Dynamic<?>)p_14598_));
+    protected static Optional<Dynamic<?>> replaceUUIDMLTag(final Dynamic<?> tag, final String oldKey, final String newKey) {
+        return tag.get(oldKey).result().flatMap(AbstractUUIDFix::createUUIDFromML).map(uuidTag -> tag.remove(oldKey).set(newKey, (Dynamic<?>)uuidTag));
     }
 
-    protected static Optional<Dynamic<?>> replaceUUIDLeastMost(Dynamic<?> p_14618_, String p_14619_, String p_14620_) {
-        String s = p_14619_ + "Most";
-        String s1 = p_14619_ + "Least";
-        return createUUIDFromLongs(p_14618_, s, s1).map(p_14604_ -> p_14618_.remove(s).remove(s1).set(p_14620_, (Dynamic<?>)p_14604_));
+    protected static Optional<Dynamic<?>> replaceUUIDLeastMost(final Dynamic<?> tag, final String oldKey, final String newKey) {
+        String mostKey = oldKey + "Most";
+        String leastKey = oldKey + "Least";
+        return createUUIDFromLongs(tag, mostKey, leastKey).map(uuidTag -> tag.remove(mostKey).remove(leastKey).set(newKey, (Dynamic<?>)uuidTag));
     }
 
-    protected static Optional<Dynamic<?>> createUUIDFromString(Dynamic<?> p_14588_, String p_14589_) {
-        return p_14588_.get(p_14589_).result().flatMap(p_14586_ -> {
-            String s = p_14586_.asString(null);
-            if (s != null) {
+    protected static Optional<Dynamic<?>> createUUIDFromString(final Dynamic<?> tag, final String oldKey) {
+        return tag.get(oldKey).result().flatMap(uuidStringTag -> {
+            String uuidString = uuidStringTag.asString(null);
+            if (uuidString != null) {
                 try {
-                    UUID uuid = UUID.fromString(s);
-                    return createUUIDTag(p_14588_, uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
-                } catch (IllegalArgumentException illegalargumentexception) {
+                    UUID uuid = UUID.fromString(uuidString);
+                    return createUUIDTag(tag, uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
+                } catch (IllegalArgumentException var4) {
                 }
             }
 
@@ -58,17 +55,23 @@ public abstract class AbstractUUIDFix extends DataFix {
         });
     }
 
-    protected static Optional<Dynamic<?>> createUUIDFromML(Dynamic<?> p_14579_) {
-        return createUUIDFromLongs(p_14579_, "M", "L");
+    protected static Optional<Dynamic<?>> createUUIDFromML(final Dynamic<?> tag) {
+        return createUUIDFromLongs(tag, "M", "L");
     }
 
-    protected static Optional<Dynamic<?>> createUUIDFromLongs(Dynamic<?> p_14622_, String p_14623_, String p_14624_) {
-        long i = p_14622_.get(p_14623_).asLong(0L);
-        long j = p_14622_.get(p_14624_).asLong(0L);
-        return i != 0L && j != 0L ? createUUIDTag(p_14622_, i, j) : Optional.empty();
+    protected static Optional<Dynamic<?>> createUUIDFromLongs(final Dynamic<?> tag, final String mostKey, final String leastKey) {
+        long mostSignificantBits = tag.get(mostKey).asLong(0L);
+        long leastSignificantBits = tag.get(leastKey).asLong(0L);
+        return mostSignificantBits != 0L && leastSignificantBits != 0L ? createUUIDTag(tag, mostSignificantBits, leastSignificantBits) : Optional.empty();
     }
 
-    protected static Optional<Dynamic<?>> createUUIDTag(Dynamic<?> p_14581_, long p_14582_, long p_14583_) {
-        return Optional.of(p_14581_.createIntList(Arrays.stream(new int[]{(int)(p_14582_ >> 32), (int)p_14582_, (int)(p_14583_ >> 32), (int)p_14583_})));
+    protected static Optional<Dynamic<?>> createUUIDTag(final Dynamic<?> tag, final long mostSignificantBits, final long leastSignificantBits) {
+        return Optional.of(
+            tag.createIntList(
+                Arrays.stream(
+                    new int[]{(int)(mostSignificantBits >> 32), (int)mostSignificantBits, (int)(leastSignificantBits >> 32), (int)leastSignificantBits}
+                )
+            )
+        );
     }
 }

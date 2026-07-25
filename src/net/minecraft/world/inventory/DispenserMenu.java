@@ -14,67 +14,67 @@ public class DispenserMenu extends AbstractContainerMenu {
     private static final int USE_ROW_SLOT_END = 45;
     private final Container dispenser;
 
-    public DispenserMenu(int p_39433_, Inventory p_39434_) {
-        this(p_39433_, p_39434_, new SimpleContainer(9));
+    public DispenserMenu(final int containerId, final Inventory inventory) {
+        this(containerId, inventory, new SimpleContainer(9));
     }
 
-    public DispenserMenu(int p_39436_, Inventory p_39437_, Container p_39438_) {
-        super(MenuType.GENERIC_3x3, p_39436_);
-        checkContainerSize(p_39438_, 9);
-        this.dispenser = p_39438_;
-        p_39438_.startOpen(p_39437_.player);
-        this.add3x3GridSlots(p_39438_, 62, 17);
-        this.addStandardInventorySlots(p_39437_, 8, 84);
+    public DispenserMenu(final int containerId, final Inventory inventory, final Container dispenser) {
+        super(MenuType.GENERIC_3x3, containerId);
+        checkContainerSize(dispenser, 9);
+        this.dispenser = dispenser;
+        dispenser.startOpen(inventory.player);
+        this.add3x3GridSlots(dispenser, 62, 17);
+        this.addStandardInventorySlots(inventory, 8, 84);
     }
 
-    protected void add3x3GridSlots(Container p_363126_, int p_368501_, int p_366608_) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                int k = j + i * 3;
-                this.addSlot(new Slot(p_363126_, k, p_368501_ + j * 18, p_366608_ + i * 18));
+    protected void add3x3GridSlots(final Container container, final int left, final int top) {
+        for (int y = 0; y < 3; y++) {
+            for (int x = 0; x < 3; x++) {
+                int slot = x + y * 3;
+                this.addSlot(new Slot(container, slot, left + x * 18, top + y * 18));
             }
         }
     }
 
     @Override
-    public boolean stillValid(Player p_39440_) {
-        return this.dispenser.stillValid(p_39440_);
+    public boolean stillValid(final Player player) {
+        return this.dispenser.stillValid(player);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_39444_, int p_39445_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_39445_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_39445_ < 9) {
-                if (!this.moveItemStackTo(itemstack1, 9, 45, true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex < 9) {
+                if (!this.moveItemStackTo(stack, 9, 45, true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 0, 9, false)) {
+            } else if (!this.moveItemStackTo(stack, 0, 9, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
 
-            if (itemstack1.getCount() == itemstack.getCount()) {
+            if (stack.getCount() == clicked.getCount()) {
                 return ItemStack.EMPTY;
             }
 
-            slot.onTake(p_39444_, itemstack1);
+            slot.onTake(player, stack);
         }
 
-        return itemstack;
+        return clicked;
     }
 
     @Override
-    public void removed(Player p_39442_) {
-        super.removed(p_39442_);
-        this.dispenser.stopOpen(p_39442_);
+    public void removed(final Player player) {
+        super.removed(player);
+        this.dispenser.stopOpen(player);
     }
 }

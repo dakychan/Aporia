@@ -31,8 +31,8 @@ public class Endermite extends Monster {
     private static final int DEFAULT_LIFE = 0;
     private int life = 0;
 
-    public Endermite(EntityType<? extends Endermite> p_32591_, Level p_32592_) {
-        super(p_32591_, p_32592_);
+    public Endermite(final EntityType<? extends Endermite> type, final Level level) {
+        super(type, level);
         this.xpReward = 3;
     }
 
@@ -63,7 +63,7 @@ public class Endermite extends Monster {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_32615_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.ENDERMITE_HURT;
     }
 
@@ -73,20 +73,20 @@ public class Endermite extends Monster {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_32607_, BlockState p_32608_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.ENDERMITE_STEP, 0.15F, 1.0F);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_407027_) {
-        super.readAdditionalSaveData(p_407027_);
-        this.life = p_407027_.getIntOr("Lifetime", 0);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.life = input.getIntOr("Lifetime", 0);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_410669_) {
-        super.addAdditionalSaveData(p_410669_);
-        p_410669_.putInt("Lifetime", this.life);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("Lifetime", this.life);
     }
 
     @Override
@@ -96,9 +96,9 @@ public class Endermite extends Monster {
     }
 
     @Override
-    public void setYBodyRot(float p_32621_) {
-        this.setYRot(p_32621_);
-        super.setYBodyRot(p_32621_);
+    public void setYBodyRot(final float yBodyRot) {
+        this.setYRot(yBodyRot);
+        super.setYBodyRot(yBodyRot);
     }
 
     @Override
@@ -129,15 +129,17 @@ public class Endermite extends Monster {
     }
 
     public static boolean checkEndermiteSpawnRules(
-        EntityType<Endermite> p_218969_, LevelAccessor p_218970_, EntitySpawnReason p_364641_, BlockPos p_218972_, RandomSource p_218973_
+        final EntityType<Endermite> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        if (!checkAnyLightMonsterSpawnRules(p_218969_, p_218970_, p_364641_, p_218972_, p_218973_)) {
+        if (!checkAnyLightMonsterSpawnRules(type, level, spawnReason, pos, random)) {
             return false;
-        } else if (EntitySpawnReason.isSpawner(p_364641_)) {
-            return true;
-        } else {
-            Player player = p_218970_.getNearestPlayer(p_218972_.getX() + 0.5, p_218972_.getY() + 0.5, p_218972_.getZ() + 0.5, 5.0, true);
-            return player == null;
         }
+
+        if (EntitySpawnReason.isSpawner(spawnReason)) {
+            return true;
+        }
+
+        Player nearestPlayer = level.getNearestPlayer(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5, 5.0, true);
+        return nearestPlayer == null;
     }
 }

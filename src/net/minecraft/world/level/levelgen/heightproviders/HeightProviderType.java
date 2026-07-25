@@ -14,7 +14,7 @@ public interface HeightProviderType<P extends HeightProvider> {
 
     MapCodec<P> codec();
 
-    private static <P extends HeightProvider> HeightProviderType<P> register(String p_161990_, MapCodec<P> p_330940_) {
-        return Registry.register(BuiltInRegistries.HEIGHT_PROVIDER_TYPE, p_161990_, () -> p_330940_);
+    private static <P extends HeightProvider> HeightProviderType<P> register(final String id, final MapCodec<P> codec) {
+        return Registry.register(BuiltInRegistries.HEIGHT_PROVIDER_TYPE, id, () -> codec);
     }
 }

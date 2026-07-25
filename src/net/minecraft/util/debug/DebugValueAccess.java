@@ -7,22 +7,22 @@ import net.minecraft.world.level.ChunkPos;
 import org.jspecify.annotations.Nullable;
 
 public interface DebugValueAccess {
-    <T> void forEachChunk(DebugSubscription<T> p_431573_, BiConsumer<ChunkPos, T> p_427196_);
+    <T> void forEachChunk(DebugSubscription<T> subscription, BiConsumer<ChunkPos, T> consumer);
 
-    <T> @Nullable T getChunkValue(DebugSubscription<T> p_422421_, ChunkPos p_425150_);
+    <T> @Nullable T getChunkValue(DebugSubscription<T> subscription, ChunkPos chunkPos);
 
-    <T> void forEachBlock(DebugSubscription<T> p_423780_, BiConsumer<BlockPos, T> p_422845_);
+    <T> void forEachBlock(DebugSubscription<T> subscription, BiConsumer<BlockPos, T> consumer);
 
-    <T> @Nullable T getBlockValue(DebugSubscription<T> p_426579_, BlockPos p_424108_);
+    <T> @Nullable T getBlockValue(DebugSubscription<T> subscription, BlockPos blockPos);
 
-    <T> void forEachEntity(DebugSubscription<T> p_429971_, BiConsumer<Entity, T> p_427937_);
+    <T> void forEachEntity(DebugSubscription<T> subscription, BiConsumer<Entity, T> consumer);
 
-    <T> @Nullable T getEntityValue(DebugSubscription<T> p_431438_, Entity p_424713_);
+    <T> @Nullable T getEntityValue(DebugSubscription<T> subscription, Entity entity);
 
-    <T> void forEachEvent(DebugSubscription<T> p_425113_, DebugValueAccess.EventVisitor<T> p_427490_);
+    <T> void forEachEvent(DebugSubscription<T> subscription, DebugValueAccess.EventVisitor<T> visitor);
 
     @FunctionalInterface
-    public interface EventVisitor<T> {
-        void accept(T p_425042_, int p_431703_, int p_425916_);
+    interface EventVisitor<T> {
+        void accept(T value, int remainingTicks, int totalLifetime);
     }
 }

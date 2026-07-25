@@ -33,151 +33,153 @@ public abstract class LeavesBlock extends Block implements SimpleWaterloggedBloc
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     protected final float leafParticleChance;
     private static final int TICK_DELAY = 1;
-    private static boolean cutoutLeaves = true;
+    private static volatile boolean cutoutLeaves = true;
 
     @Override
     public abstract MapCodec<? extends LeavesBlock> codec();
 
-    public LeavesBlock(float p_395099_, BlockBehaviour.Properties p_54422_) {
-        super(p_54422_);
-        this.leafParticleChance = p_395099_;
+    public LeavesBlock(final float leafParticleChance, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.leafParticleChance = leafParticleChance;
         this.registerDefaultState(this.stateDefinition.any().setValue(DISTANCE, 7).setValue(PERSISTENT, false).setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected boolean skipRendering(BlockState p_451532_, BlockState p_456220_, Direction p_460006_) {
-        return !cutoutLeaves && p_456220_.getBlock() instanceof LeavesBlock ? true : super.skipRendering(p_451532_, p_456220_, p_460006_);
+    protected boolean skipRendering(final BlockState state, final BlockState neighborState, final Direction direction) {
+        return !cutoutLeaves && neighborState.getBlock() instanceof LeavesBlock ? true : super.skipRendering(state, neighborState, direction);
     }
 
-    public static void setCutoutLeaves(boolean p_459255_) {
-        cutoutLeaves = p_459255_;
+    public static void setCutoutLeaves(final boolean cutoutLeaves) {
+        LeavesBlock.cutoutLeaves = cutoutLeaves;
     }
 
     @Override
-    protected VoxelShape getBlockSupportShape(BlockState p_54456_, BlockGetter p_54457_, BlockPos p_54458_) {
+    protected VoxelShape getBlockSupportShape(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return Shapes.empty();
     }
 
     @Override
-    protected boolean isRandomlyTicking(BlockState p_54449_) {
-        return p_54449_.getValue(DISTANCE) == 7 && !p_54449_.getValue(PERSISTENT);
+    protected boolean isRandomlyTicking(final BlockState state) {
+        return state.getValue(DISTANCE) == 7 && !state.getValue(PERSISTENT);
     }
 
     @Override
-    protected void randomTick(BlockState p_221379_, ServerLevel p_221380_, BlockPos p_221381_, RandomSource p_221382_) {
-        if (this.decaying(p_221379_)) {
-            dropResources(p_221379_, p_221380_, p_221381_);
-            p_221380_.removeBlock(p_221381_, false);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (this.decaying(state)) {
+            dropResources(state, level, pos);
+            level.removeBlock(pos, false);
         }
     }
 
-    protected boolean decaying(BlockState p_221386_) {
-        return !p_221386_.getValue(PERSISTENT) && p_221386_.getValue(DISTANCE) == 7;
+    protected boolean decaying(final BlockState state) {
+        return !state.getValue(PERSISTENT) && state.getValue(DISTANCE) == 7;
     }
 
     @Override
-    protected void tick(BlockState p_221369_, ServerLevel p_221370_, BlockPos p_221371_, RandomSource p_221372_) {
-        p_221370_.setBlock(p_221371_, updateDistance(p_221369_, p_221370_, p_221371_), 3);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        level.setBlock(pos, updateDistance(state, level, pos), 3);
     }
 
     @Override
-    protected int getLightBlock(BlockState p_54460_) {
+    protected int getLightDampening(final BlockState state) {
         return 1;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_54440_,
-        LevelReader p_369206_,
-        ScheduledTickAccess p_362574_,
-        BlockPos p_54444_,
-        Direction p_54441_,
-        BlockPos p_54445_,
-        BlockState p_54442_,
-        RandomSource p_363861_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_54440_.getValue(WATERLOGGED)) {
-            p_362574_.scheduleTick(p_54444_, Fluids.WATER, Fluids.WATER.getTickDelay(p_369206_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        int i = getDistanceAt(p_54442_) + 1;
-        if (i != 1 || p_54440_.getValue(DISTANCE) != i) {
-            p_362574_.scheduleTick(p_54444_, this, 1);
+        int distanceFromNeighbor = getDistanceAt(neighbourState) + 1;
+        if (distanceFromNeighbor != 1 || state.getValue(DISTANCE) != distanceFromNeighbor) {
+            ticks.scheduleTick(pos, this, 1);
         }
 
-        return p_54440_;
+        return state;
     }
 
-    private static BlockState updateDistance(BlockState p_54436_, LevelAccessor p_54437_, BlockPos p_54438_) {
-        int i = 7;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    private static BlockState updateDistance(final BlockState state, final LevelAccessor level, final BlockPos pos) {
+        int newDistance = 7;
+        BlockPos.MutableBlockPos neighborPos = new BlockPos.MutableBlockPos();
 
         for (Direction direction : Direction.values()) {
-            blockpos$mutableblockpos.setWithOffset(p_54438_, direction);
-            i = Math.min(i, getDistanceAt(p_54437_.getBlockState(blockpos$mutableblockpos)) + 1);
-            if (i == 1) {
+            neighborPos.setWithOffset(pos, direction);
+            newDistance = Math.min(newDistance, getDistanceAt(level.getBlockState(neighborPos)) + 1);
+            if (newDistance == 1) {
                 break;
             }
         }
 
-        return p_54436_.setValue(DISTANCE, i);
+        return state.setValue(DISTANCE, newDistance);
     }
 
-    private static int getDistanceAt(BlockState p_54464_) {
-        return getOptionalDistanceAt(p_54464_).orElse(7);
+    private static int getDistanceAt(final BlockState state) {
+        return getOptionalDistanceAt(state).orElse(7);
     }
 
-    public static OptionalInt getOptionalDistanceAt(BlockState p_277868_) {
-        if (p_277868_.is(BlockTags.LOGS)) {
+    public static OptionalInt getOptionalDistanceAt(final BlockState state) {
+        if (state.is(BlockTags.PREVENTS_NEARBY_LEAF_DECAY)) {
             return OptionalInt.of(0);
         } else {
-            return p_277868_.hasProperty(DISTANCE) ? OptionalInt.of(p_277868_.getValue(DISTANCE)) : OptionalInt.empty();
+            return state.hasProperty(DISTANCE) ? OptionalInt.of(state.getValue(DISTANCE)) : OptionalInt.empty();
         }
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_221384_) {
-        return p_221384_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_221384_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    public void animateTick(BlockState p_221374_, Level p_221375_, BlockPos p_221376_, RandomSource p_221377_) {
-        super.animateTick(p_221374_, p_221375_, p_221376_, p_221377_);
-        BlockPos blockpos = p_221376_.below();
-        BlockState blockstate = p_221375_.getBlockState(blockpos);
-        makeDrippingWaterParticles(p_221375_, p_221376_, p_221377_, blockstate, blockpos);
-        this.makeFallingLeavesParticles(p_221375_, p_221376_, p_221377_, blockstate, blockpos);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        super.animateTick(state, level, pos, random);
+        BlockPos below = pos.below();
+        BlockState belowState = level.getBlockState(below);
+        makeDrippingWaterParticles(level, pos, random, belowState, below);
+        this.makeFallingLeavesParticles(level, pos, random, belowState, below);
     }
 
-    private static void makeDrippingWaterParticles(Level p_395380_, BlockPos p_398019_, RandomSource p_393134_, BlockState p_394825_, BlockPos p_393458_) {
-        if (p_395380_.isRainingAt(p_398019_.above())) {
-            if (p_393134_.nextInt(15) == 1) {
-                if (!p_394825_.canOcclude() || !p_394825_.isFaceSturdy(p_395380_, p_393458_, Direction.UP)) {
-                    ParticleUtils.spawnParticleBelow(p_395380_, p_398019_, p_393134_, ParticleTypes.DRIPPING_WATER);
+    private static void makeDrippingWaterParticles(
+        final Level level, final BlockPos pos, final RandomSource random, final BlockState belowState, final BlockPos below
+    ) {
+        if (level.isRainingAt(pos.above())) {
+            if (random.nextInt(15) == 1) {
+                if (!belowState.canOcclude() || !belowState.isFaceSturdy(level, below, Direction.UP)) {
+                    ParticleUtils.spawnParticleBelow(level, pos, random, ParticleTypes.DRIPPING_WATER);
                 }
             }
         }
     }
 
-    private void makeFallingLeavesParticles(Level p_392380_, BlockPos p_391974_, RandomSource p_396413_, BlockState p_391693_, BlockPos p_397349_) {
-        if (!(p_396413_.nextFloat() >= this.leafParticleChance)) {
-            if (!isFaceFull(p_391693_.getCollisionShape(p_392380_, p_397349_), Direction.UP)) {
-                this.spawnFallingLeavesParticle(p_392380_, p_391974_, p_396413_);
+    private void makeFallingLeavesParticles(final Level level, final BlockPos pos, final RandomSource random, final BlockState belowState, final BlockPos below) {
+        if (!(random.nextFloat() >= this.leafParticleChance)) {
+            if (!isFaceFull(belowState.getCollisionShape(level, below), Direction.UP)) {
+                this.spawnFallingLeavesParticle(level, pos, random);
             }
         }
     }
 
-    protected abstract void spawnFallingLeavesParticle(Level p_393082_, BlockPos p_394741_, RandomSource p_391181_);
+    protected abstract void spawnFallingLeavesParticle(Level level, BlockPos pos, RandomSource random);
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_54447_) {
-        p_54447_.add(DISTANCE, PERSISTENT, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(DISTANCE, PERSISTENT, WATERLOGGED);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_54424_) {
-        FluidState fluidstate = p_54424_.getLevel().getFluidState(p_54424_.getClickedPos());
-        BlockState blockstate = this.defaultBlockState().setValue(PERSISTENT, true).setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
-        return updateDistance(blockstate, p_54424_.getLevel(), p_54424_.getClickedPos());
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        BlockState state = this.defaultBlockState().setValue(PERSISTENT, true).setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
+        return updateDistance(state, context.getLevel(), context.getClickedPos());
     }
 }

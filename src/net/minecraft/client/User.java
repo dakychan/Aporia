@@ -3,10 +3,7 @@ package net.minecraft.client;
 import com.mojang.util.UndashedUuid;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class User {
     private final String name;
     private final UUID uuid;
@@ -14,12 +11,12 @@ public class User {
     private final Optional<String> xuid;
     private final Optional<String> clientId;
 
-    public User(String p_193799_, UUID p_297254_, String p_193800_, Optional<String> p_193802_, Optional<String> p_193803_) {
-        this.name = p_193799_;
-        this.uuid = p_297254_;
-        this.accessToken = p_193800_;
-        this.xuid = p_193802_;
-        this.clientId = p_193803_;
+    public User(final String name, final UUID uuid, final String accessToken, final Optional<String> xuid, final Optional<String> clientId) {
+        this.name = name;
+        this.uuid = uuid;
+        this.accessToken = accessToken;
+        this.xuid = xuid;
+        this.clientId = clientId;
     }
 
     public String getSessionId() {

@@ -17,56 +17,55 @@ public class ClassInstanceMultiMap<T> extends AbstractCollection<T> {
     private final Class<T> baseClass;
     private final List<T> allInstances = Lists.newArrayList();
 
-    public ClassInstanceMultiMap(Class<T> p_13531_) {
-        this.baseClass = p_13531_;
-        this.byClass.put(p_13531_, this.allInstances);
+    public ClassInstanceMultiMap(final Class<T> baseClass) {
+        this.baseClass = baseClass;
+        this.byClass.put(baseClass, this.allInstances);
     }
 
     @Override
-    public boolean add(T p_13536_) {
-        boolean flag = false;
+    public boolean add(final T instance) {
+        boolean success = false;
 
         for (Entry<Class<?>, List<T>> entry : this.byClass.entrySet()) {
-            if (entry.getKey().isInstance(p_13536_)) {
-                flag |= entry.getValue().add(p_13536_);
+            if (entry.getKey().isInstance(instance)) {
+                success |= entry.getValue().add(instance);
             }
         }
 
-        return flag;
+        return success;
     }
 
     @Override
-    public boolean remove(Object p_13543_) {
-        boolean flag = false;
+    public boolean remove(final Object object) {
+        boolean success = false;
 
         for (Entry<Class<?>, List<T>> entry : this.byClass.entrySet()) {
-            if (entry.getKey().isInstance(p_13543_)) {
+            if (entry.getKey().isInstance(object)) {
                 List<T> list = entry.getValue();
-                flag |= list.remove(p_13543_);
+                success |= list.remove(object);
             }
         }
 
-        return flag;
+        return success;
     }
 
     @Override
-    public boolean contains(Object p_13540_) {
-        return this.find(p_13540_.getClass()).contains(p_13540_);
+    public boolean contains(final Object o) {
+        return this.find(o.getClass()).contains(o);
     }
 
-    public <S> Collection<S> find(Class<S> p_13534_) {
-        if (!this.baseClass.isAssignableFrom(p_13534_)) {
-            throw new IllegalArgumentException("Don't know how to search for " + p_13534_);
-        } else {
-            List<? extends T> list = this.byClass
-                .computeIfAbsent(p_13534_, p_449237_ -> this.allInstances.stream().filter(p_449237_::isInstance).collect(Util.toMutableList()));
-            return (Collection<S>)Collections.unmodifiableCollection(list);
+    public <S> Collection<S> find(final Class<S> index) {
+        if (!this.baseClass.isAssignableFrom(index)) {
+            throw new IllegalArgumentException("Don't know how to search for " + index);
         }
+
+        List<? extends T> instances = this.byClass.computeIfAbsent(index, k -> this.allInstances.stream().filter(k::isInstance).collect(Util.toMutableList()));
+        return (Collection<S>)Collections.unmodifiableCollection(instances);
     }
 
     @Override
     public Iterator<T> iterator() {
-        return (Iterator<T>)(this.allInstances.isEmpty() ? Collections.emptyIterator() : Iterators.unmodifiableIterator(this.allInstances.iterator()));
+        return this.allInstances.isEmpty() ? Collections.emptyIterator() : Iterators.unmodifiableIterator(this.allInstances.iterator());
     }
 
     public List<T> getAllInstances() {

@@ -15,8 +15,8 @@ import net.minecraft.world.level.material.Fluids;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
 public class NetherWorldCarver extends CaveWorldCarver {
-    public NetherWorldCarver(Codec<CaveCarverConfiguration> p_64873_) {
-        super(p_64873_);
+    public NetherWorldCarver(final Codec<CaveCarverConfiguration> configurationFactory) {
+        super(configurationFactory);
         this.liquids = ImmutableSet.of(Fluids.LAVA, Fluids.WATER);
     }
 
@@ -26,8 +26,8 @@ public class NetherWorldCarver extends CaveWorldCarver {
     }
 
     @Override
-    protected float getThickness(RandomSource p_224907_) {
-        return (p_224907_.nextFloat() * 2.0F + p_224907_.nextFloat()) * 2.0F;
+    protected float getThickness(final RandomSource random) {
+        return (random.nextFloat() * 2.0F + random.nextFloat()) * 2.0F;
     }
 
     @Override
@@ -36,25 +36,25 @@ public class NetherWorldCarver extends CaveWorldCarver {
     }
 
     protected boolean carveBlock(
-        CarvingContext p_190731_,
-        CaveCarverConfiguration p_190732_,
-        ChunkAccess p_190733_,
-        Function<BlockPos, Holder<Biome>> p_190734_,
-        CarvingMask p_190735_,
-        BlockPos.MutableBlockPos p_190736_,
-        BlockPos.MutableBlockPos p_190737_,
-        Aquifer p_190738_,
-        MutableBoolean p_190739_
+        final CarvingContext context,
+        final CaveCarverConfiguration configuration,
+        final ChunkAccess chunk,
+        final Function<BlockPos, Holder<Biome>> biomeGetter,
+        final CarvingMask mask,
+        final BlockPos.MutableBlockPos blockPos,
+        final BlockPos.MutableBlockPos helperPos,
+        final Aquifer aquifer,
+        final MutableBoolean hasGrass
     ) {
-        if (this.canReplaceBlock(p_190732_, p_190733_.getBlockState(p_190736_))) {
-            BlockState blockstate;
-            if (p_190736_.getY() <= p_190731_.getMinGenY() + 31) {
-                blockstate = LAVA.createLegacyBlock();
+        if (this.canReplaceBlock(configuration, chunk.getBlockState(blockPos))) {
+            BlockState state;
+            if (blockPos.getY() <= context.getMinGenY() + 31) {
+                state = LAVA.createLegacyBlock();
             } else {
-                blockstate = CAVE_AIR;
+                state = CAVE_AIR;
             }
 
-            p_190733_.setBlockState(p_190736_, blockstate);
+            chunk.setBlockState(blockPos, state);
             return true;
         } else {
             return false;

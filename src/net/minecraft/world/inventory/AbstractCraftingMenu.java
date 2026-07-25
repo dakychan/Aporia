@@ -15,37 +15,38 @@ public abstract class AbstractCraftingMenu extends RecipeBookMenu {
     protected final CraftingContainer craftSlots;
     protected final ResultContainer resultSlots = new ResultContainer();
 
-    public AbstractCraftingMenu(MenuType<?> p_366631_, int p_364244_, int p_366819_, int p_362264_) {
-        super(p_366631_, p_364244_);
-        this.width = p_366819_;
-        this.height = p_362264_;
-        this.craftSlots = new TransientCraftingContainer(this, p_366819_, p_362264_);
+    public AbstractCraftingMenu(final MenuType<?> menuType, final int containerId, final int width, final int height) {
+        super(menuType, containerId);
+        this.width = width;
+        this.height = height;
+        this.craftSlots = new TransientCraftingContainer(this, width, height);
     }
 
-    protected Slot addResultSlot(Player p_368097_, int p_367668_, int p_363802_) {
-        return this.addSlot(new ResultSlot(p_368097_, this.craftSlots, this.resultSlots, 0, p_367668_, p_363802_));
+    protected Slot addResultSlot(final Player player, final int x, final int y) {
+        return this.addSlot(new ResultSlot(player, this.craftSlots, this.resultSlots, 0, x, y));
     }
 
-    protected void addCraftingGridSlots(int p_361557_, int p_366601_) {
-        for (int i = 0; i < this.width; i++) {
-            for (int j = 0; j < this.height; j++) {
-                this.addSlot(new Slot(this.craftSlots, j + i * this.width, p_361557_ + j * 18, p_366601_ + i * 18));
+    protected void addCraftingGridSlots(final int left, final int top) {
+        for (int y = 0; y < this.width; y++) {
+            for (int x = 0; x < this.height; x++) {
+                this.addSlot(new Slot(this.craftSlots, x + y * this.width, left + x * 18, top + y * 18));
             }
         }
     }
 
     @Override
-    public RecipeBookMenu.PostPlaceAction handlePlacement(boolean p_367003_, boolean p_360772_, RecipeHolder<?> p_361387_, ServerLevel p_365408_, Inventory p_368520_) {
-        RecipeHolder<CraftingRecipe> recipeholder = (RecipeHolder<CraftingRecipe>)p_361387_;
+    public RecipeBookMenu.PostPlaceAction handlePlacement(
+        final boolean useMaxItems, final boolean allowDroppingItemsToClear, final RecipeHolder<?> recipe, final ServerLevel level, final Inventory inventory
+    ) {
+        RecipeHolder<CraftingRecipe> typedRecipe = (RecipeHolder<CraftingRecipe>)recipe;
         this.beginPlacingRecipe();
 
-        RecipeBookMenu.PostPlaceAction recipebookmenu$postplaceaction;
         try {
-            List<Slot> list = this.getInputGridSlots();
-            recipebookmenu$postplaceaction = ServerPlaceRecipe.placeRecipe(new ServerPlaceRecipe.CraftingMenuAccess<CraftingRecipe>() {
+            List<Slot> inputSlots = this.getInputGridSlots();
+            return ServerPlaceRecipe.placeRecipe(new ServerPlaceRecipe.CraftingMenuAccess<CraftingRecipe>() {
                 @Override
-                public void fillCraftSlotsStackedContents(StackedItemContents p_367296_) {
-                    AbstractCraftingMenu.this.fillCraftSlotsStackedContents(p_367296_);
+                public void fillCraftSlotsStackedContents(final StackedItemContents stackedContents) {
+                    AbstractCraftingMenu.this.fillCraftSlotsStackedContents(stackedContents);
                 }
 
                 @Override
@@ -55,21 +56,19 @@ public abstract class AbstractCraftingMenu extends RecipeBookMenu {
                 }
 
                 @Override
-                public boolean recipeMatches(RecipeHolder<CraftingRecipe> p_368304_) {
-                    return p_368304_.value().matches(AbstractCraftingMenu.this.craftSlots.asCraftInput(), AbstractCraftingMenu.this.owner().level());
+                public boolean recipeMatches(final RecipeHolder<CraftingRecipe> recipe) {
+                    return recipe.value().matches(AbstractCraftingMenu.this.craftSlots.asCraftInput(), AbstractCraftingMenu.this.owner().level());
                 }
-            }, this.width, this.height, list, list, p_368520_, recipeholder, p_367003_, p_360772_);
+            }, this.width, this.height, inputSlots, inputSlots, inventory, typedRecipe, useMaxItems, allowDroppingItemsToClear);
         } finally {
-            this.finishPlacingRecipe(p_365408_, (RecipeHolder<CraftingRecipe>)p_361387_);
+            this.finishPlacingRecipe(level, typedRecipe);
         }
-
-        return recipebookmenu$postplaceaction;
     }
 
     protected void beginPlacingRecipe() {
     }
 
-    protected void finishPlacingRecipe(ServerLevel p_365958_, RecipeHolder<CraftingRecipe> p_364067_) {
+    protected void finishPlacingRecipe(final ServerLevel level, final RecipeHolder<CraftingRecipe> recipe) {
     }
 
     public abstract Slot getResultSlot();
@@ -87,7 +86,7 @@ public abstract class AbstractCraftingMenu extends RecipeBookMenu {
     protected abstract Player owner();
 
     @Override
-    public void fillCraftSlotsStackedContents(StackedItemContents p_365758_) {
-        this.craftSlots.fillStackedContents(p_365758_);
+    public void fillCraftSlotsStackedContents(final StackedItemContents stackedContents) {
+        this.craftSlots.fillStackedContents(stackedContents);
     }
 }

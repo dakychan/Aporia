@@ -3,7 +3,6 @@ package net.minecraft.world.entity.decoration;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import net.minecraft.core.component.DataComponentGetter;
@@ -16,6 +15,7 @@ import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.world.entity.Avatar;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.PlayerModelPart;
@@ -26,20 +26,22 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
 
 public class Mannequin extends Avatar {
-    protected static final EntityDataAccessor<ResolvableProfile> DATA_PROFILE = SynchedEntityData.defineId(Mannequin.class, EntityDataSerializers.RESOLVABLE_PROFILE);
+    protected static final EntityDataAccessor<ResolvableProfile> DATA_PROFILE = SynchedEntityData.defineId(
+        Mannequin.class, EntityDataSerializers.RESOLVABLE_PROFILE
+    );
     private static final EntityDataAccessor<Boolean> DATA_IMMOVABLE = SynchedEntityData.defineId(Mannequin.class, EntityDataSerializers.BOOLEAN);
-    private static final EntityDataAccessor<Optional<Component>> DATA_DESCRIPTION = SynchedEntityData.defineId(Mannequin.class, EntityDataSerializers.OPTIONAL_COMPONENT);
-    private static final byte ALL_LAYERS = (byte)Arrays.stream(PlayerModelPart.values())
-        .mapToInt(PlayerModelPart::getMask)
-        .reduce(0, (p_431306_, p_428431_) -> p_431306_ | p_428431_);
+    private static final EntityDataAccessor<Optional<Component>> DATA_DESCRIPTION = SynchedEntityData.defineId(
+        Mannequin.class, EntityDataSerializers.OPTIONAL_COMPONENT
+    );
+    private static final byte ALL_LAYERS = (byte)Arrays.stream(PlayerModelPart.values()).mapToInt(PlayerModelPart::getMask).reduce(0, (a, b) -> a | b);
     private static final Set<Pose> VALID_POSES = Set.of(Pose.STANDING, Pose.CROUCHING, Pose.SWIMMING, Pose.FALL_FLYING, Pose.SLEEPING);
     public static final Codec<Pose> POSE_CODEC = Pose.CODEC
-        .validate(p_422458_ -> VALID_POSES.contains(p_422458_) ? DataResult.success(p_422458_) : DataResult.error(() -> "Invalid pose: " + p_422458_.getSerializedName()));
+        .validate(pose -> VALID_POSES.contains(pose) ? DataResult.success(pose) : DataResult.error(() -> "Invalid pose: " + pose.getSerializedName()));
     private static final Codec<Byte> LAYERS_CODEC = PlayerModelPart.CODEC
         .listOf()
         .xmap(
-            p_422893_ -> (byte)p_422893_.stream().mapToInt(PlayerModelPart::getMask).reduce(ALL_LAYERS, (p_430254_, p_428514_) -> p_430254_ & ~p_428514_),
-            p_426029_ -> Arrays.stream(PlayerModelPart.values()).filter(p_428580_ -> (p_426029_ & p_428580_.getMask()) == 0).toList()
+            list -> (byte)list.stream().mapToInt(PlayerModelPart::getMask).reduce(ALL_LAYERS, (a, b) -> a & ~b),
+            mask -> Arrays.stream(PlayerModelPart.values()).filter(part -> (mask & part.getMask()) == 0).toList()
         );
     public static final ResolvableProfile DEFAULT_PROFILE = ResolvableProfile.Static.EMPTY;
     private static final Component DEFAULT_DESCRIPTION = Component.translatable("entity.minecraft.mannequin.label");
@@ -54,54 +56,55 @@ public class Mannequin extends Avatar {
     private Component description = DEFAULT_DESCRIPTION;
     private boolean hideDescription = false;
 
-    public Mannequin(EntityType<Mannequin> p_429023_, Level p_428437_) {
-        super(p_429023_, p_428437_);
+    public Mannequin(final EntityType<Mannequin> type, final Level level) {
+        super(type, level);
         this.entityData.set(DATA_PLAYER_MODE_CUSTOMISATION, ALL_LAYERS);
     }
 
-    protected Mannequin(Level p_427767_) {
-        this(EntityType.MANNEQUIN, p_427767_);
+    protected Mannequin(final Level level) {
+        this(EntityTypes.MANNEQUIN, level);
     }
 
-    public static @Nullable Mannequin create(EntityType<Mannequin> p_429731_, Level p_427402_) {
-        return constructor.create(p_429731_, p_427402_);
+    public static @Nullable Mannequin create(final EntityType<Mannequin> type, final Level level) {
+        return constructor.create(type, level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_422847_) {
-        super.defineSynchedData(p_422847_);
-        p_422847_.define(DATA_PROFILE, DEFAULT_PROFILE);
-        p_422847_.define(DATA_IMMOVABLE, false);
-        p_422847_.define(DATA_DESCRIPTION, Optional.of(DEFAULT_DESCRIPTION));
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_PROFILE, DEFAULT_PROFILE);
+        entityData.define(DATA_IMMOVABLE, false);
+        entityData.define(DATA_DESCRIPTION, Optional.of(DEFAULT_DESCRIPTION));
     }
 
-    protected ResolvableProfile getProfile() {
+    @Override
+    public ResolvableProfile getProfile() {
         return this.entityData.get(DATA_PROFILE);
     }
 
-    private void setProfile(ResolvableProfile p_431040_) {
-        this.entityData.set(DATA_PROFILE, p_431040_);
+    private void setProfile(final ResolvableProfile profile) {
+        this.entityData.set(DATA_PROFILE, profile);
     }
 
     private boolean getImmovable() {
         return this.entityData.get(DATA_IMMOVABLE);
     }
 
-    private void setImmovable(boolean p_422902_) {
-        this.entityData.set(DATA_IMMOVABLE, p_422902_);
+    private void setImmovable(final boolean immovable) {
+        this.entityData.set(DATA_IMMOVABLE, immovable);
     }
 
     protected @Nullable Component getDescription() {
         return this.entityData.get(DATA_DESCRIPTION).orElse(null);
     }
 
-    private void setDescription(Component p_426397_) {
-        this.description = p_426397_;
+    private void setDescription(final Component description) {
+        this.description = description;
         this.updateDescription();
     }
 
-    private void setHideDescription(boolean p_427548_) {
-        this.hideDescription = p_427548_;
+    private void setHideDescription(final boolean hideDescription) {
+        this.hideDescription = hideDescription;
         this.updateDescription();
     }
 
@@ -120,53 +123,59 @@ public class Mannequin extends Avatar {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_431411_) {
-        super.addAdditionalSaveData(p_431411_);
-        p_431411_.store("profile", ResolvableProfile.CODEC, this.getProfile());
-        p_431411_.store("hidden_layers", LAYERS_CODEC, this.entityData.get(DATA_PLAYER_MODE_CUSTOMISATION));
-        p_431411_.store("main_hand", HumanoidArm.CODEC, this.getMainArm());
-        p_431411_.store("pose", POSE_CODEC, this.getPose());
-        p_431411_.putBoolean("immovable", this.getImmovable());
-        Component component = this.getDescription();
-        if (component != null) {
-            if (!component.equals(DEFAULT_DESCRIPTION)) {
-                p_431411_.store("description", ComponentSerialization.CODEC, component);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("profile", ResolvableProfile.CODEC, this.getProfile());
+        output.store("hidden_layers", LAYERS_CODEC, this.entityData.get(DATA_PLAYER_MODE_CUSTOMISATION));
+        output.store("main_hand", HumanoidArm.CODEC, this.getMainArm());
+        output.store("pose", POSE_CODEC, this.getPose());
+        output.putBoolean("immovable", this.getImmovable());
+        Component description = this.getDescription();
+        if (description != null) {
+            if (!description.equals(DEFAULT_DESCRIPTION)) {
+                output.store("description", ComponentSerialization.CODEC, description);
             }
         } else {
-            p_431411_.putBoolean("hide_description", true);
+            output.putBoolean("hide_description", true);
         }
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_431030_) {
-        super.readAdditionalSaveData(p_431030_);
-        p_431030_.read("profile", ResolvableProfile.CODEC).ifPresent(this::setProfile);
-        this.entityData.set(DATA_PLAYER_MODE_CUSTOMISATION, p_431030_.read("hidden_layers", LAYERS_CODEC).orElse(ALL_LAYERS));
-        this.setMainArm(p_431030_.read("main_hand", HumanoidArm.CODEC).orElse(DEFAULT_MAIN_HAND));
-        this.setPose(p_431030_.read("pose", POSE_CODEC).orElse(Pose.STANDING));
-        this.setImmovable(p_431030_.getBooleanOr("immovable", false));
-        this.setHideDescription(p_431030_.getBooleanOr("hide_description", false));
-        this.setDescription(p_431030_.read("description", ComponentSerialization.CODEC).orElse(DEFAULT_DESCRIPTION));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        input.read("profile", ResolvableProfile.CODEC).ifPresent(this::setProfile);
+        this.entityData.set(DATA_PLAYER_MODE_CUSTOMISATION, input.read("hidden_layers", LAYERS_CODEC).orElse(ALL_LAYERS));
+        this.setMainArm(input.read("main_hand", HumanoidArm.CODEC).orElse(DEFAULT_MAIN_HAND));
+        this.setPose(input.read("pose", POSE_CODEC).orElse(Pose.STANDING));
+        this.setImmovable(input.getBooleanOr("immovable", false));
+        this.setHideDescription(input.getBooleanOr("hide_description", false));
+        this.setDescription(input.read("description", ComponentSerialization.CODEC).orElse(DEFAULT_DESCRIPTION));
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_422747_) {
-        return p_422747_ == DataComponents.PROFILE ? castComponentValue((DataComponentType<T>)p_422747_, this.getProfile()) : super.get(p_422747_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.PROFILE ? castComponentValue((DataComponentType<T>)type, this.getProfile()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_428149_) {
-        this.applyImplicitComponentIfPresent(p_428149_, DataComponents.PROFILE);
-        super.applyImplicitComponents(p_428149_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.PROFILE);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_423584_, T p_426129_) {
-        if (p_423584_ == DataComponents.PROFILE) {
-            this.setProfile(castComponentValue(DataComponents.PROFILE, p_426129_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.PROFILE) {
+            this.setProfile(castComponentValue(DataComponents.PROFILE, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_423584_, p_426129_);
+            return super.applyImplicitComponent(type, value);
         }
+    }
+
+    @Override
+    public void aiStep() {
+        super.aiStep();
+        this.updateSwingTime();
     }
 }

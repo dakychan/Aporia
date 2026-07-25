@@ -13,31 +13,31 @@ import net.minecraft.world.entity.projectile.throwableitemprojectile.AbstractThr
 import net.minecraft.world.level.Level;
 
 public abstract class ThrowablePotionItem extends PotionItem implements ProjectileItem {
-    public static float PROJECTILE_SHOOT_POWER = 0.5F;
+    public static final float PROJECTILE_SHOOT_POWER = 0.5F;
 
-    public ThrowablePotionItem(Item.Properties p_43301_) {
-        super(p_43301_);
+    public ThrowablePotionItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult use(Level p_43303_, Player p_43304_, InteractionHand p_43305_) {
-        ItemStack itemstack = p_43304_.getItemInHand(p_43305_);
-        if (p_43303_ instanceof ServerLevel serverlevel) {
-            Projectile.spawnProjectileFromRotation(this::createPotion, serverlevel, itemstack, p_43304_, -20.0F, PROJECTILE_SHOOT_POWER, 1.0F);
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (level instanceof ServerLevel serverLevel) {
+            Projectile.spawnProjectileFromRotation(this::createPotion, serverLevel, itemStack, player, -20.0F, 0.5F, 1.0F);
         }
 
-        p_43304_.awardStat(Stats.ITEM_USED.get(this));
-        itemstack.consume(1, p_43304_);
+        player.awardStat(Stats.ITEM_USED.get(this));
+        itemStack.consume(1, player);
         return InteractionResult.SUCCESS;
     }
 
-    protected abstract AbstractThrownPotion createPotion(ServerLevel p_451772_, LivingEntity p_451710_, ItemStack p_394580_);
+    protected abstract AbstractThrownPotion createPotion(ServerLevel level, LivingEntity owner, ItemStack itemStack);
 
-    protected abstract AbstractThrownPotion createPotion(Level p_453109_, Position p_451322_, ItemStack p_394618_);
+    protected abstract AbstractThrownPotion createPotion(Level level, Position position, ItemStack itemStack);
 
     @Override
-    public Projectile asProjectile(Level p_332520_, Position p_329324_, ItemStack p_333928_, Direction p_335406_) {
-        return this.createPotion(p_332520_, p_329324_, p_333928_);
+    public Projectile asProjectile(final Level level, final Position position, final ItemStack itemStack, final Direction direction) {
+        return this.createPotion(level, position, itemStack);
     }
 
     @Override

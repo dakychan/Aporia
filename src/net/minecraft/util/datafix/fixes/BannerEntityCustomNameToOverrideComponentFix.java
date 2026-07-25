@@ -16,43 +16,45 @@ import net.minecraft.util.Util;
 import net.minecraft.util.datafix.LegacyComponentDataFixUtils;
 
 public class BannerEntityCustomNameToOverrideComponentFix extends DataFix {
-    public BannerEntityCustomNameToOverrideComponentFix(Schema p_335786_) {
-        super(p_335786_, false);
+    public BannerEntityCustomNameToOverrideComponentFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.BLOCK_ENTITY);
-        TaggedChoiceType<?> taggedchoicetype = this.getInputSchema().findChoiceType(References.BLOCK_ENTITY);
-        OpticFinder<?> opticfinder = type.findField("CustomName");
-        OpticFinder<Pair<String, String>> opticfinder1 = DSL.typeFinder((Type<Pair<String, String>>)this.getInputSchema().getType(References.TEXT_COMPONENT));
-        return this.fixTypeEverywhereTyped("Banner entity custom_name to item_name component fix", type, p_390222_ -> {
-            Object object = p_390222_.get(taggedchoicetype.finder()).getFirst();
-            return object.equals("minecraft:banner") ? this.fix(p_390222_, opticfinder1, opticfinder) : p_390222_;
+        Type<?> blockEntityType = this.getInputSchema().getType(References.BLOCK_ENTITY);
+        TaggedChoiceType<?> blockEntityIdFinder = this.getInputSchema().findChoiceType(References.BLOCK_ENTITY);
+        OpticFinder<?> customNameFinder = blockEntityType.findField("CustomName");
+        OpticFinder<Pair<String, String>> textComponentFinder = DSL.typeFinder(
+            (Type<Pair<String, String>>)this.getInputSchema().getType(References.TEXT_COMPONENT)
+        );
+        return this.fixTypeEverywhereTyped("Banner entity custom_name to item_name component fix", blockEntityType, input -> {
+            Object blockEntityId = input.get(blockEntityIdFinder.finder()).getFirst();
+            return blockEntityId.equals("minecraft:banner") ? this.fix(input, textComponentFinder, customNameFinder) : input;
         });
     }
 
-    private Typed<?> fix(Typed<?> p_328297_, OpticFinder<Pair<String, String>> p_334644_, OpticFinder<?> p_391749_) {
-        Optional<String> optional = p_328297_.getOptionalTyped(p_391749_).flatMap(p_390218_ -> p_390218_.getOptional(p_334644_).map(Pair::getSecond));
-        boolean flag = optional.flatMap(LegacyComponentDataFixUtils::extractTranslationString)
-            .filter(p_334057_ -> p_334057_.equals("block.minecraft.ominous_banner"))
+    private Typed<?> fix(final Typed<?> input, final OpticFinder<Pair<String, String>> textComponentFinder, final OpticFinder<?> customNameFinder) {
+        Optional<String> customName = input.getOptionalTyped(customNameFinder).flatMap(name -> name.getOptional(textComponentFinder).map(Pair::getSecond));
+        boolean isOminousBanner = customName.flatMap(LegacyComponentDataFixUtils::extractTranslationString)
+            .filter(e -> e.equals("block.minecraft.ominous_banner"))
             .isPresent();
-        return flag
+        return isOminousBanner
             ? Util.writeAndReadTypedOrThrow(
-                p_328297_,
-                p_328297_.getType(),
-                p_390216_ -> {
-                    Dynamic<?> dynamic = p_390216_.createMap(
+                input,
+                input.getType(),
+                dynamic -> {
+                    Dynamic<?> components = dynamic.createMap(
                         Map.of(
-                            p_390216_.createString("minecraft:item_name"),
-                            p_390216_.createString(optional.get()),
-                            p_390216_.createString("minecraft:hide_additional_tooltip"),
-                            p_390216_.emptyMap()
+                            dynamic.createString("minecraft:item_name"),
+                            dynamic.createString(customName.get()),
+                            dynamic.createString("minecraft:hide_additional_tooltip"),
+                            dynamic.emptyMap()
                         )
                     );
-                    return p_390216_.set("components", dynamic).remove("CustomName");
+                    return dynamic.set("components", components).remove("CustomName");
                 }
             )
-            : p_328297_;
+            : input;
     }
 }

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
@@ -14,42 +13,42 @@ import net.minecraft.world.entity.schedule.Activity;
 
 public class GoToPotentialJobSite extends Behavior<Villager> {
     private static final int TICKS_UNTIL_TIMEOUT = 1200;
-    final float speedModifier;
+    private final float speedModifier;
 
-    public GoToPotentialJobSite(float p_23098_) {
+    public GoToPotentialJobSite(final float speedModifier) {
         super(ImmutableMap.of(MemoryModuleType.POTENTIAL_JOB_SITE, MemoryStatus.VALUE_PRESENT), 1200);
-        this.speedModifier = p_23098_;
+        this.speedModifier = speedModifier;
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_23103_, Villager p_459789_) {
-        return p_459789_.getBrain()
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Villager body) {
+        return body.getBrain()
             .getActiveNonCoreActivity()
-            .map(p_23115_ -> p_23115_ == Activity.IDLE || p_23115_ == Activity.WORK || p_23115_ == Activity.PLAY)
+            .map(activity -> activity == Activity.IDLE || activity == Activity.WORK || activity == Activity.PLAY)
             .orElse(true);
     }
 
-    protected boolean canStillUse(ServerLevel p_23106_, Villager p_454029_, long p_23108_) {
-        return p_454029_.getBrain().hasMemoryValue(MemoryModuleType.POTENTIAL_JOB_SITE);
+    protected boolean canStillUse(final ServerLevel level, final Villager body, final long timestamp) {
+        return body.getBrain().hasMemoryValue(MemoryModuleType.POTENTIAL_JOB_SITE);
     }
 
-    protected void tick(ServerLevel p_23121_, Villager p_455132_, long p_23123_) {
-        BehaviorUtils.setWalkAndLookTargetMemories(p_455132_, p_455132_.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).get().pos(), this.speedModifier, 1);
+    protected void tick(final ServerLevel level, final Villager body, final long timestamp) {
+        BehaviorUtils.setWalkAndLookTargetMemories(body, body.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE).get().pos(), this.speedModifier, 1);
     }
 
-    protected void stop(ServerLevel p_23129_, Villager p_457361_, long p_23131_) {
-        Optional<GlobalPos> optional = p_457361_.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
-        optional.ifPresent(p_421630_ -> {
-            BlockPos blockpos = p_421630_.pos();
-            ServerLevel serverlevel = p_23129_.getServer().getLevel(p_421630_.dimension());
-            if (serverlevel != null) {
-                PoiManager poimanager = serverlevel.getPoiManager();
-                if (poimanager.exists(blockpos, p_217230_ -> true)) {
-                    poimanager.release(blockpos);
+    protected void stop(final ServerLevel level, final Villager body, final long timestamp) {
+        Optional<GlobalPos> potentialJobSitePos = body.getBrain().getMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+        potentialJobSitePos.ifPresent(globalPos -> {
+            BlockPos pos = globalPos.pos();
+            ServerLevel serverLevel = level.getServer().getLevel(globalPos.dimension());
+            if (serverLevel != null) {
+                PoiManager manager = serverLevel.getPoiManager();
+                if (manager.exists(pos, p -> true)) {
+                    manager.release(pos);
                 }
 
-                p_23129_.debugSynchronizers().updatePoi(blockpos);
+                level.debugSynchronizers().updatePoi(pos);
             }
         });
-        p_457361_.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
+        body.getBrain().eraseMemory(MemoryModuleType.POTENTIAL_JOB_SITE);
     }
 }

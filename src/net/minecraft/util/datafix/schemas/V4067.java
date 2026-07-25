@@ -8,13 +8,13 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V4067 extends NamespacedSchema {
-    public V4067(int p_368989_, Schema p_367118_) {
-        super(p_368989_, p_367118_);
+    public V4067(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_368746_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_368746_);
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
         map.remove("minecraft:boat");
         map.remove("minecraft:chest_boat");
         this.registerSimple(map, "minecraft:oak_boat");
@@ -38,7 +38,7 @@ public class V4067 extends NamespacedSchema {
         return map;
     }
 
-    private void registerChestBoat(Map<String, Supplier<TypeTemplate>> p_365012_, String p_364668_) {
-        this.register(p_365012_, p_364668_, p_366954_ -> DSL.optionalFields("Items", DSL.list(References.ITEM_STACK.in(this))));
+    private void registerChestBoat(final Map<String, Supplier<TypeTemplate>> map, final String id) {
+        this.register(map, id, name -> DSL.optionalFields("Items", DSL.list(References.ITEM_STACK.in(this))));
     }
 }

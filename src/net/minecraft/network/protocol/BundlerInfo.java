@@ -11,47 +11,52 @@ public interface BundlerInfo {
     int BUNDLE_SIZE_LIMIT = 4096;
 
     static <T extends PacketListener, P extends BundlePacket<? super T>> BundlerInfo createForPacket(
-        final PacketType<P> p_329276_, final Function<Iterable<Packet<? super T>>, P> p_265627_, final BundleDelimiterPacket<? super T> p_265373_
+        final PacketType<P> bundlePacketType,
+        final Function<Iterable<Packet<? super T>>, P> constructor,
+        final BundleDelimiterPacket<? super T> delimiterPacket
     ) {
         return new BundlerInfo() {
             @Override
-            public void unbundlePacket(Packet<?> p_265538_, Consumer<Packet<?>> p_265064_) {
-                if (p_265538_.type() == p_329276_) {
-                    P p = (P)p_265538_;
-                    p_265064_.accept(p_265373_);
-                    p.subPackets().forEach(p_265064_);
-                    p_265064_.accept(p_265373_);
+            public void unbundlePacket(final Packet<?> packet, final Consumer<Packet<?>> output) {
+                if (packet.type() == bundlePacketType) {
+                    P bundlerPacket = (P)packet;
+                    output.accept(delimiterPacket);
+                    bundlerPacket.subPackets().forEach(output);
+                    output.accept(delimiterPacket);
                 } else {
-                    p_265064_.accept(p_265538_);
+                    output.accept(packet);
                 }
             }
 
             @Override
-            public BundlerInfo.@Nullable Bundler startPacketBundling(Packet<?> p_265749_) {
-                return p_265749_ == p_265373_ ? new BundlerInfo.Bundler() {
+            public BundlerInfo.@Nullable Bundler startPacketBundling(final Packet<?> packet) {
+                return packet == delimiterPacket ? new BundlerInfo.Bundler() {
                     private final List<Packet<? super T>> bundlePackets = new ArrayList<>();
 
                     @Override
-                    public @Nullable Packet<?> addPacket(Packet<?> p_336207_) {
-                        if (p_336207_ == p_265373_) {
-                            return p_265627_.apply(this.bundlePackets);
-                        } else if (this.bundlePackets.size() >= 4096) {
-                            throw new IllegalStateException("Too many packets in a bundle");
-                        } else {
-                            this.bundlePackets.add((Packet<? super T>)p_336207_);
-                            return null;
+                    public @Nullable Packet<?> addPacket(final Packet<?> packet) {
+                        if (packet == delimiterPacket) {
+                            return constructor.apply(this.bundlePackets);
                         }
+
+                        Packet<T> castPacket = (Packet<T>)packet;
+                        if (this.bundlePackets.size() >= 4096) {
+                            throw new IllegalStateException("Too many packets in a bundle");
+                        }
+
+                        this.bundlePackets.add(castPacket);
+                        return null;
                     }
                 } : null;
             }
         };
     }
 
-    void unbundlePacket(Packet<?> p_265095_, Consumer<Packet<?>> p_265715_);
+    void unbundlePacket(Packet<?> packet, Consumer<Packet<?>> output);
 
-    BundlerInfo.@Nullable Bundler startPacketBundling(Packet<?> p_265162_);
+    BundlerInfo.@Nullable Bundler startPacketBundling(Packet<?> packet);
 
-    public interface Bundler {
-        @Nullable Packet<?> addPacket(Packet<?> p_265601_);
+    interface Bundler {
+        @Nullable Packet<?> addPacket(Packet<?> packet);
     }
 }

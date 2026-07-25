@@ -5,15 +5,14 @@ import net.minecraft.client.ClientBrandRetriever;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
-class DebugEntryVersion implements DebugScreenEntry {
+public class DebugEntryVersion implements DebugScreenEntry {
     @Override
-    public void display(DebugScreenDisplayer p_429141_, @Nullable Level p_424693_, @Nullable LevelChunk p_428094_, @Nullable LevelChunk p_428934_) {
-        p_429141_.addPriorityLine(
+    public void display(
+        final DebugScreenDisplayer displayer, final @Nullable Level level, final @Nullable LevelChunk clientChunk, final @Nullable LevelChunk serverChunk
+    ) {
+        displayer.addPriorityLine(
             "Aporia "
                 + SharedConstants.getCurrentVersion().name()
                 + " ("
@@ -25,7 +24,7 @@ class DebugEntryVersion implements DebugScreenEntry {
     }
 
     @Override
-    public boolean isAllowed(boolean p_427225_) {
+    public boolean isAllowed(final boolean reducedDebugInfo) {
         return true;
     }
 }

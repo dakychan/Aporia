@@ -1,33 +1,30 @@
 package net.minecraft.client.gui.layouts;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface LayoutSettings {
-    LayoutSettings padding(int p_265143_);
+    LayoutSettings padding(int padding);
 
-    LayoutSettings padding(int p_265473_, int p_265776_);
+    LayoutSettings padding(int horizontal, int vertical);
 
-    LayoutSettings padding(int p_265186_, int p_265177_, int p_265631_, int p_265369_);
+    LayoutSettings padding(int left, int top, int right, int bottom);
 
-    LayoutSettings paddingLeft(int p_265709_);
+    LayoutSettings paddingLeft(int padding);
 
-    LayoutSettings paddingTop(int p_265644_);
+    LayoutSettings paddingTop(int padding);
 
-    LayoutSettings paddingRight(int p_265608_);
+    LayoutSettings paddingRight(int padding);
 
-    LayoutSettings paddingBottom(int p_265758_);
+    LayoutSettings paddingBottom(int padding);
 
-    LayoutSettings paddingHorizontal(int p_265366_);
+    LayoutSettings paddingHorizontal(int padding);
 
-    LayoutSettings paddingVertical(int p_265142_);
+    LayoutSettings paddingVertical(int padding);
 
-    LayoutSettings align(float p_265408_, float p_265269_);
+    LayoutSettings align(float xAlignment, float yAlignment);
 
-    LayoutSettings alignHorizontally(float p_265729_);
+    LayoutSettings alignHorizontally(float xAlignment);
 
-    LayoutSettings alignVertically(float p_265557_);
+    LayoutSettings alignVertically(float yAlignment);
 
     default LayoutSettings alignHorizontallyLeft() {
         return this.alignHorizontally(0.0F);
@@ -61,8 +58,7 @@ public interface LayoutSettings {
         return new LayoutSettings.LayoutSettingsImpl();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class LayoutSettingsImpl implements LayoutSettings {
+        class LayoutSettingsImpl implements LayoutSettings {
         public int paddingLeft;
         public int paddingTop;
         public int paddingRight;
@@ -73,68 +69,68 @@ public interface LayoutSettings {
         public LayoutSettingsImpl() {
         }
 
-        public LayoutSettingsImpl(LayoutSettings.LayoutSettingsImpl p_265146_) {
-            this.paddingLeft = p_265146_.paddingLeft;
-            this.paddingTop = p_265146_.paddingTop;
-            this.paddingRight = p_265146_.paddingRight;
-            this.paddingBottom = p_265146_.paddingBottom;
-            this.xAlignment = p_265146_.xAlignment;
-            this.yAlignment = p_265146_.yAlignment;
+        public LayoutSettingsImpl(final LayoutSettings.LayoutSettingsImpl copy) {
+            this.paddingLeft = copy.paddingLeft;
+            this.paddingTop = copy.paddingTop;
+            this.paddingRight = copy.paddingRight;
+            this.paddingBottom = copy.paddingBottom;
+            this.xAlignment = copy.xAlignment;
+            this.yAlignment = copy.yAlignment;
         }
 
-        public LayoutSettings.LayoutSettingsImpl padding(int p_265467_) {
-            return this.padding(p_265467_, p_265467_);
+        public LayoutSettings.LayoutSettingsImpl padding(final int padding) {
+            return this.padding(padding, padding);
         }
 
-        public LayoutSettings.LayoutSettingsImpl padding(int p_265284_, int p_265730_) {
-            return this.paddingHorizontal(p_265284_).paddingVertical(p_265730_);
+        public LayoutSettings.LayoutSettingsImpl padding(final int horizontal, final int vertical) {
+            return this.paddingHorizontal(horizontal).paddingVertical(vertical);
         }
 
-        public LayoutSettings.LayoutSettingsImpl padding(int p_265241_, int p_265325_, int p_265634_, int p_265174_) {
-            return this.paddingLeft(p_265241_).paddingRight(p_265634_).paddingTop(p_265325_).paddingBottom(p_265174_);
+        public LayoutSettings.LayoutSettingsImpl padding(final int left, final int top, final int right, final int bottom) {
+            return this.paddingLeft(left).paddingRight(right).paddingTop(top).paddingBottom(bottom);
         }
 
-        public LayoutSettings.LayoutSettingsImpl paddingLeft(int p_265137_) {
-            this.paddingLeft = p_265137_;
+        public LayoutSettings.LayoutSettingsImpl paddingLeft(final int padding) {
+            this.paddingLeft = padding;
             return this;
         }
 
-        public LayoutSettings.LayoutSettingsImpl paddingTop(int p_265512_) {
-            this.paddingTop = p_265512_;
+        public LayoutSettings.LayoutSettingsImpl paddingTop(final int padding) {
+            this.paddingTop = padding;
             return this;
         }
 
-        public LayoutSettings.LayoutSettingsImpl paddingRight(int p_265595_) {
-            this.paddingRight = p_265595_;
+        public LayoutSettings.LayoutSettingsImpl paddingRight(final int padding) {
+            this.paddingRight = padding;
             return this;
         }
 
-        public LayoutSettings.LayoutSettingsImpl paddingBottom(int p_265336_) {
-            this.paddingBottom = p_265336_;
+        public LayoutSettings.LayoutSettingsImpl paddingBottom(final int padding) {
+            this.paddingBottom = padding;
             return this;
         }
 
-        public LayoutSettings.LayoutSettingsImpl paddingHorizontal(int p_265592_) {
-            return this.paddingLeft(p_265592_).paddingRight(p_265592_);
+        public LayoutSettings.LayoutSettingsImpl paddingHorizontal(final int padding) {
+            return this.paddingLeft(padding).paddingRight(padding);
         }
 
-        public LayoutSettings.LayoutSettingsImpl paddingVertical(int p_265151_) {
-            return this.paddingTop(p_265151_).paddingBottom(p_265151_);
+        public LayoutSettings.LayoutSettingsImpl paddingVertical(final int padding) {
+            return this.paddingTop(padding).paddingBottom(padding);
         }
 
-        public LayoutSettings.LayoutSettingsImpl align(float p_265459_, float p_265051_) {
-            this.xAlignment = p_265459_;
-            this.yAlignment = p_265051_;
+        public LayoutSettings.LayoutSettingsImpl align(final float xAlignment, final float yAlignment) {
+            this.xAlignment = xAlignment;
+            this.yAlignment = yAlignment;
             return this;
         }
 
-        public LayoutSettings.LayoutSettingsImpl alignHorizontally(float p_265331_) {
-            this.xAlignment = p_265331_;
+        public LayoutSettings.LayoutSettingsImpl alignHorizontally(final float xAlignment) {
+            this.xAlignment = xAlignment;
             return this;
         }
 
-        public LayoutSettings.LayoutSettingsImpl alignVertically(float p_265657_) {
-            this.yAlignment = p_265657_;
+        public LayoutSettings.LayoutSettingsImpl alignVertically(final float yAlignment) {
+            this.yAlignment = yAlignment;
             return this;
         }
 

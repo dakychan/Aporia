@@ -4,19 +4,18 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
+import java.util.List;
 import java.util.function.Predicate;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
-import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.behavior.AnimalMakeLove;
 import net.minecraft.world.entity.ai.behavior.AnimalPanic;
 import net.minecraft.world.entity.ai.behavior.BehaviorUtils;
@@ -37,7 +36,7 @@ import net.minecraft.world.entity.ai.behavior.StartAttacking;
 import net.minecraft.world.entity.ai.behavior.StopAttackingIfTargetInvalid;
 import net.minecraft.world.entity.ai.behavior.TryFindLand;
 import net.minecraft.world.entity.ai.behavior.TryFindLandNearWater;
-import net.minecraft.world.entity.ai.behavior.TryLaySpawnOnWaterNearLand;
+import net.minecraft.world.entity.ai.behavior.TryLaySpawnOnFluidNearLand;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.MemoryStatus;
@@ -61,25 +60,16 @@ public class FrogAi {
     private static final float MAX_JUMP_VELOCITY_MULTIPLIER = 3.5714288F;
     private static final float SPEED_MULTIPLIER_WHEN_TEMPTED = 1.25F;
 
-    protected static void initMemories(Frog p_218580_, RandomSource p_218581_) {
-        p_218580_.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, TIME_BETWEEN_LONG_JUMPS.sample(p_218581_));
+    protected static void initMemories(final Frog body, final RandomSource random) {
+        body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, TIME_BETWEEN_LONG_JUMPS.sample(random));
     }
 
-    protected static Brain<?> makeBrain(Brain<Frog> p_218576_) {
-        initCoreActivity(p_218576_);
-        initIdleActivity(p_218576_);
-        initSwimActivity(p_218576_);
-        initLaySpawnActivity(p_218576_);
-        initTongueActivity(p_218576_);
-        initJumpActivity(p_218576_);
-        p_218576_.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        p_218576_.setDefaultActivity(Activity.IDLE);
-        p_218576_.useDefaultActivity();
-        return p_218576_;
+    protected static List<ActivityData<Frog>> getActivities() {
+        return List.of(initCoreActivity(), initIdleActivity(), initSwimActivity(), initLaySpawnActivity(), initTongueActivity(), initJumpActivity());
     }
 
-    private static void initCoreActivity(Brain<Frog> p_218587_) {
-        p_218587_.addActivity(
+    private static ActivityData<Frog> initCoreActivity() {
+        return ActivityData.<Frog>create(
             Activity.CORE,
             0,
             ImmutableList.of(
@@ -92,18 +82,15 @@ public class FrogAi {
         );
     }
 
-    private static void initIdleActivity(Brain<Frog> p_218591_) {
-        p_218591_.addActivityWithConditions(
+    private static ActivityData<Frog> initIdleActivity() {
+        return ActivityData.<Frog>create(
             Activity.IDLE,
             ImmutableList.of(
-                Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
-                Pair.of(0, new AnimalMakeLove(EntityType.FROG)),
-                Pair.of(1, new FollowTemptation(p_218585_ -> 1.25F)),
+                Pair.of(0, SetEntityLookTargetSometimes.create(EntityTypes.PLAYER, 6.0F, UniformInt.of(30, 60))),
+                Pair.of(0, new AnimalMakeLove(EntityTypes.FROG)),
+                Pair.of(1, new FollowTemptation(s -> 1.25F)),
                 Pair.of(
-                    2,
-                    StartAttacking.create(
-                        (p_359203_, p_359204_) -> canAttack(p_359204_), (p_367558_, p_218605_) -> p_218605_.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE)
-                    )
+                    2, StartAttacking.create((level, body) -> canAttack(body), (level, body) -> body.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE))
                 ),
                 Pair.of(3, TryFindLand.create(6, 1.0F)),
                 Pair.of(
@@ -119,21 +106,20 @@ public class FrogAi {
                     )
                 )
             ),
-            ImmutableSet.of(Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.IS_IN_WATER, MemoryStatus.VALUE_ABSENT))
+            ImmutableSet.of(
+                Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.IS_IN_WATER, MemoryStatus.VALUE_ABSENT)
+            )
         );
     }
 
-    private static void initSwimActivity(Brain<Frog> p_218595_) {
-        p_218595_.addActivityWithConditions(
+    private static ActivityData<Frog> initSwimActivity() {
+        return ActivityData.<Frog>create(
             Activity.SWIM,
             ImmutableList.of(
-                Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
-                Pair.of(1, new FollowTemptation(p_218574_ -> 1.25F)),
+                Pair.of(0, SetEntityLookTargetSometimes.create(EntityTypes.PLAYER, 6.0F, UniformInt.of(30, 60))),
+                Pair.of(1, new FollowTemptation(s -> 1.25F)),
                 Pair.of(
-                    2,
-                    StartAttacking.create(
-                        (p_359207_, p_359208_) -> canAttack(p_359208_), (p_367407_, p_218601_) -> p_218601_.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE)
-                    )
+                    2, StartAttacking.create((level, body) -> canAttack(body), (level, body) -> body.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE))
                 ),
                 Pair.of(3, TryFindLand.create(8, 1.5F)),
                 Pair.of(
@@ -152,23 +138,22 @@ public class FrogAi {
                     )
                 )
             ),
-            ImmutableSet.of(Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.IS_IN_WATER, MemoryStatus.VALUE_PRESENT))
+            ImmutableSet.of(
+                Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.IS_IN_WATER, MemoryStatus.VALUE_PRESENT)
+            )
         );
     }
 
-    private static void initLaySpawnActivity(Brain<Frog> p_218599_) {
-        p_218599_.addActivityWithConditions(
+    private static ActivityData<Frog> initLaySpawnActivity() {
+        return ActivityData.<Frog>create(
             Activity.LAY_SPAWN,
             ImmutableList.of(
-                Pair.of(0, SetEntityLookTargetSometimes.create(EntityType.PLAYER, 6.0F, UniformInt.of(30, 60))),
+                Pair.of(0, SetEntityLookTargetSometimes.create(EntityTypes.PLAYER, 6.0F, UniformInt.of(30, 60))),
                 Pair.of(
-                    1,
-                    StartAttacking.create(
-                        (p_359205_, p_359206_) -> canAttack(p_359206_), (p_369128_, p_218597_) -> p_218597_.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE)
-                    )
+                    1, StartAttacking.create((level, body) -> canAttack(body), (level, body) -> body.getBrain().getMemory(MemoryModuleType.NEAREST_ATTACKABLE))
                 ),
                 Pair.of(2, TryFindLandNearWater.create(8, 1.0F)),
-                Pair.of(3, TryLaySpawnOnWaterNearLand.create(Blocks.FROGSPAWN)),
+                Pair.of(3, TryLaySpawnOnFluidNearLand.create(Blocks.FROGSPAWN)),
                 Pair.of(
                     4,
                     new RunOne<>(
@@ -181,19 +166,28 @@ public class FrogAi {
                     )
                 )
             ),
-            ImmutableSet.of(Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.IS_PREGNANT, MemoryStatus.VALUE_PRESENT))
+            ImmutableSet.of(
+                Pair.of(MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_ABSENT), Pair.of(MemoryModuleType.IS_PREGNANT, MemoryStatus.VALUE_PRESENT)
+            )
         );
     }
 
-    private static void initJumpActivity(Brain<Frog> p_218603_) {
-        p_218603_.addActivityWithConditions(
+    private static ActivityData<Frog> initJumpActivity() {
+        return ActivityData.<Frog>create(
             Activity.LONG_JUMP,
             ImmutableList.of(
                 Pair.of(0, new LongJumpMidJump(TIME_BETWEEN_LONG_JUMPS, SoundEvents.FROG_STEP)),
                 Pair.of(
                     1,
                     new LongJumpToPreferredBlock<>(
-                        TIME_BETWEEN_LONG_JUMPS, 2, 4, 3.5714288F, p_218593_ -> SoundEvents.FROG_LONG_JUMP, BlockTags.FROG_PREFER_JUMP_TO, 0.5F, FrogAi::isAcceptableLandingSpot
+                        TIME_BETWEEN_LONG_JUMPS,
+                        2,
+                        4,
+                        3.5714288F,
+                        var0 -> SoundEvents.FROG_LONG_JUMP,
+                        BlockTags.FROG_PREFER_JUMP_TO,
+                        0.5F,
+                        FrogAi::isAcceptableLandingSpot
                     )
                 )
             ),
@@ -206,8 +200,8 @@ public class FrogAi {
         );
     }
 
-    private static void initTongueActivity(Brain<Frog> p_218607_) {
-        p_218607_.addActivityAndRemoveMemoryWhenStopped(
+    private static ActivityData<Frog> initTongueActivity() {
+        return ActivityData.<Frog>create(
             Activity.TONGUE,
             0,
             ImmutableList.of(StopAttackingIfTargetInvalid.create(), new ShootTongue(SoundEvents.FROG_TONGUE, SoundEvents.FROG_EAT)),
@@ -215,18 +209,18 @@ public class FrogAi {
         );
     }
 
-    private static <E extends Mob> boolean isAcceptableLandingSpot(E p_249699_, BlockPos p_250057_) {
-        Level level = p_249699_.level();
-        BlockPos blockpos = p_250057_.below();
-        if (level.getFluidState(p_250057_).isEmpty() && level.getFluidState(blockpos).isEmpty() && level.getFluidState(p_250057_.above()).isEmpty()) {
-            BlockState blockstate = level.getBlockState(p_250057_);
-            BlockState blockstate1 = level.getBlockState(blockpos);
-            if (!blockstate.is(BlockTags.FROG_PREFER_JUMP_TO) && !blockstate1.is(BlockTags.FROG_PREFER_JUMP_TO)) {
-                PathfindingContext pathfindingcontext = new PathfindingContext(p_249699_.level(), p_249699_);
-                PathType pathtype = WalkNodeEvaluator.getPathTypeStatic(pathfindingcontext, p_250057_.mutable());
-                PathType pathtype1 = WalkNodeEvaluator.getPathTypeStatic(pathfindingcontext, blockpos.mutable());
-                return pathtype != PathType.TRAPDOOR && (!blockstate.isAir() || pathtype1 != PathType.TRAPDOOR)
-                    ? LongJumpToRandomPos.defaultAcceptableLandingSpot(p_249699_, p_250057_)
+    private static <E extends Mob> boolean isAcceptableLandingSpot(final E body, final BlockPos targetPos) {
+        Level level = body.level();
+        BlockPos below = targetPos.below();
+        if (level.getFluidState(targetPos).isEmpty() && level.getFluidState(below).isEmpty() && level.getFluidState(targetPos.above()).isEmpty()) {
+            BlockState bs = level.getBlockState(targetPos);
+            BlockState bsBelow = level.getBlockState(below);
+            if (!bs.is(BlockTags.FROG_PREFER_JUMP_TO) && !bsBelow.is(BlockTags.FROG_PREFER_JUMP_TO)) {
+                PathfindingContext context = new PathfindingContext(body.level(), body);
+                PathType pathType = WalkNodeEvaluator.getPathTypeStatic(context, targetPos.mutable());
+                PathType pathTypeBelow = WalkNodeEvaluator.getPathTypeStatic(context, below.mutable());
+                return pathType != PathType.TRAPDOOR && (!bs.isAir() || pathTypeBelow != PathType.TRAPDOOR)
+                    ? LongJumpToRandomPos.defaultAcceptableLandingSpot(body, targetPos)
                     : true;
             } else {
                 return true;
@@ -236,15 +230,15 @@ public class FrogAi {
         }
     }
 
-    private static boolean canAttack(Frog p_218589_) {
-        return !BehaviorUtils.isBreeding(p_218589_);
+    private static boolean canAttack(final Mob mob) {
+        return !BehaviorUtils.isBreeding(mob);
     }
 
-    public static void updateActivity(Frog p_218578_) {
-        p_218578_.getBrain().setActiveActivityToFirstValid(ImmutableList.of(Activity.TONGUE, Activity.LAY_SPAWN, Activity.LONG_JUMP, Activity.SWIM, Activity.IDLE));
+    public static void updateActivity(final Frog body) {
+        body.getBrain().setActiveActivityToFirstValid(ImmutableList.of(Activity.TONGUE, Activity.LAY_SPAWN, Activity.LONG_JUMP, Activity.SWIM, Activity.IDLE));
     }
 
     public static Predicate<ItemStack> getTemptations() {
-        return p_326992_ -> p_326992_.is(ItemTags.FROG_FOOD);
+        return i -> i.is(ItemTags.FROG_FOOD);
     }
 }

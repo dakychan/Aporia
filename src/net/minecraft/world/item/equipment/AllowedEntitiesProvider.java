@@ -6,5 +6,5 @@ import net.minecraft.world.entity.EntityType;
 
 @FunctionalInterface
 public interface AllowedEntitiesProvider {
-    HolderSet<EntityType<?>> get(HolderGetter<EntityType<?>> p_391559_);
+    HolderSet<EntityType<?>> get(HolderGetter<EntityType<?>> entityGetter);
 }

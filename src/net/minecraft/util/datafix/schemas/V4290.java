@@ -8,34 +8,36 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V4290 extends NamespacedSchema {
-    public V4290(int p_394483_, Schema p_395200_) {
-        super(p_394483_, p_395200_);
+    public V4290(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public void registerTypes(Schema p_393696_, Map<String, Supplier<TypeTemplate>> p_391173_, Map<String, Supplier<TypeTemplate>> p_396637_) {
-        super.registerTypes(p_393696_, p_391173_, p_396637_);
-        p_393696_.registerType(
+    public void registerTypes(
+        final Schema schema, final Map<String, Supplier<TypeTemplate>> entityTypes, final Map<String, Supplier<TypeTemplate>> blockEntityTypes
+    ) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        schema.registerType(
             true,
             References.TEXT_COMPONENT,
             () -> DSL.or(
-                DSL.or(DSL.constType(DSL.string()), DSL.list(References.TEXT_COMPONENT.in(p_393696_))),
+                DSL.or(DSL.constType(DSL.string()), DSL.list(References.TEXT_COMPONENT.in(schema))),
                 DSL.optionalFields(
                     "extra",
-                    DSL.list(References.TEXT_COMPONENT.in(p_393696_)),
+                    DSL.list(References.TEXT_COMPONENT.in(schema)),
                     "separator",
-                    References.TEXT_COMPONENT.in(p_393696_),
+                    References.TEXT_COMPONENT.in(schema),
                     "hoverEvent",
                     DSL.taggedChoice(
                         "action",
                         DSL.string(),
                         Map.of(
                             "show_text",
-                            DSL.optionalFields("contents", References.TEXT_COMPONENT.in(p_393696_)),
+                            DSL.optionalFields("contents", References.TEXT_COMPONENT.in(schema)),
                             "show_item",
-                            DSL.optionalFields("contents", DSL.or(References.ITEM_STACK.in(p_393696_), References.ITEM_NAME.in(p_393696_))),
+                            DSL.optionalFields("contents", DSL.or(References.ITEM_STACK.in(schema), References.ITEM_NAME.in(schema))),
                             "show_entity",
-                            DSL.optionalFields("type", References.ENTITY_NAME.in(p_393696_), "name", References.TEXT_COMPONENT.in(p_393696_))
+                            DSL.optionalFields("type", References.ENTITY_NAME.in(schema), "name", References.TEXT_COMPONENT.in(schema))
                         )
                     )
                 )

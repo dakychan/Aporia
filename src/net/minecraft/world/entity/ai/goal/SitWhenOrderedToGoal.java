@@ -7,8 +7,8 @@ import net.minecraft.world.entity.TamableAnimal;
 public class SitWhenOrderedToGoal extends Goal {
     private final TamableAnimal mob;
 
-    public SitWhenOrderedToGoal(TamableAnimal p_25898_) {
-        this.mob = p_25898_;
+    public SitWhenOrderedToGoal(final TamableAnimal mob) {
+        this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
     }
 
@@ -19,19 +19,19 @@ public class SitWhenOrderedToGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        boolean flag = this.mob.isOrderedToSit();
-        if (!flag && !this.mob.isTame()) {
+        boolean orderedToSit = this.mob.isOrderedToSit();
+        if (!orderedToSit && !this.mob.isTame()) {
             return false;
         } else if (this.mob.isInWater()) {
             return false;
         } else if (!this.mob.onGround()) {
             return false;
         } else {
-            LivingEntity livingentity = this.mob.getOwner();
-            if (livingentity == null || livingentity.level() != this.mob.level()) {
+            LivingEntity owner = this.mob.getOwner();
+            if (owner == null || owner.level() != this.mob.level()) {
                 return true;
             } else {
-                return this.mob.distanceToSqr(livingentity) < 144.0 && livingentity.getLastHurtByMob() != null ? false : flag;
+                return this.mob.distanceToSqr(owner) < 144.0 && owner.getLastHurtByMob() != null ? false : orderedToSit;
             }
         }
     }

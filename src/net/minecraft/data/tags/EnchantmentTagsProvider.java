@@ -12,21 +12,21 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.enchantment.Enchantment;
 
-public abstract class EnchantmentTagsProvider extends KeyTagProvider<Enchantment> {
-    public EnchantmentTagsProvider(PackOutput p_332794_, CompletableFuture<HolderLookup.Provider> p_331070_) {
-        super(p_332794_, Registries.ENCHANTMENT, p_331070_);
+public abstract class EnchantmentTagsProvider extends TagsProvider<Enchantment> {
+    public EnchantmentTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.ENCHANTMENT, lookupProvider);
     }
 
-    protected void tooltipOrder(HolderLookup.Provider p_335292_, ResourceKey<Enchantment>... p_343612_) {
-        this.tag(EnchantmentTags.TOOLTIP_ORDER).add(p_343612_);
-        Set<ResourceKey<Enchantment>> set = Set.of(p_343612_);
-        List<String> list = p_335292_.lookupOrThrow(Registries.ENCHANTMENT)
+    protected void tooltipOrder(final HolderLookup.Provider registries, final ResourceKey<Enchantment>... order) {
+        this.tag(EnchantmentTags.TOOLTIP_ORDER).add(order);
+        Set<ResourceKey<Enchantment>> set = Set.of(order);
+        List<String> unlisted = registries.lookupOrThrow(Registries.ENCHANTMENT)
             .listElements()
-            .filter(p_341081_ -> !set.contains(p_341081_.unwrapKey().get()))
+            .filter(e -> !set.contains(e.unwrapKey().get()))
             .map(Holder::getRegisteredName)
             .collect(Collectors.toList());
-        if (!list.isEmpty()) {
-            throw new IllegalStateException("Not all enchantments were registered for tooltip ordering. Missing: " + String.join(", ", list));
+        if (!unlisted.isEmpty()) {
+            throw new IllegalStateException("Not all enchantments were registered for tooltip ordering. Missing: " + String.join(", ", unlisted));
         }
     }
 }

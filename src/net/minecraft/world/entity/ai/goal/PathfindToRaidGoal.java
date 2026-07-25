@@ -17,8 +17,8 @@ public class PathfindToRaidGoal<T extends Raider> extends Goal {
     private final T mob;
     private int recruitmentTick;
 
-    public PathfindToRaidGoal(T p_25706_) {
-        this.mob = p_25706_;
+    public PathfindToRaidGoal(final T mob) {
+        this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
@@ -46,25 +46,25 @@ public class PathfindToRaidGoal<T extends Raider> extends Goal {
             }
 
             if (!this.mob.isPathFinding()) {
-                Vec3 vec3 = DefaultRandomPos.getPosTowards(this.mob, 15, 4, Vec3.atBottomCenterOf(raid.getCenter()), (float) (Math.PI / 2));
-                if (vec3 != null) {
-                    this.mob.getNavigation().moveTo(vec3.x, vec3.y, vec3.z, 1.0);
+                Vec3 posTowards = DefaultRandomPos.getPosTowards(this.mob, 15, 4, Vec3.atBottomCenterOf(raid.getCenter()), (float) (Math.PI / 2));
+                if (posTowards != null) {
+                    this.mob.getNavigation().moveTo(posTowards.x, posTowards.y, posTowards.z, 1.0);
                 }
             }
         }
     }
 
-    private void recruitNearby(Raid p_25709_) {
-        if (p_25709_.isActive()) {
-            ServerLevel serverlevel = getServerLevel(this.mob.level());
-            Set<Raider> set = Sets.newHashSet();
-            List<Raider> list = serverlevel.getEntitiesOfClass(
-                Raider.class, this.mob.getBoundingBox().inflate(16.0), p_390635_ -> !p_390635_.hasActiveRaid() && Raids.canJoinRaid(p_390635_)
+    private void recruitNearby(final Raid raid) {
+        if (raid.isActive()) {
+            ServerLevel level = getServerLevel(this.mob.level());
+            Set<Raider> raidersToAdd = Sets.newHashSet();
+            List<Raider> raidersNearby = level.getEntitiesOfClass(
+                Raider.class, this.mob.getBoundingBox().inflate(16.0), mob -> !mob.hasActiveRaid() && Raids.canJoinRaid(mob)
             );
-            set.addAll(list);
+            raidersToAdd.addAll(raidersNearby);
 
-            for (Raider raider : set) {
-                p_25709_.joinRaid(serverlevel, p_25709_.getGroupsSpawned(), raider, null, true);
+            for (Raider raider : raidersToAdd) {
+                raid.joinRaid(level, raid.getGroupsSpawned(), raider, null, true);
             }
         }
     }

@@ -12,8 +12,8 @@ public class FailedTestTracker {
         return LAST_FAILED_TESTS.stream();
     }
 
-    public static void rememberFailedTest(Holder.Reference<GameTestInstance> p_395977_) {
-        LAST_FAILED_TESTS.add(p_395977_);
+    public static void rememberFailedTest(final Holder.Reference<GameTestInstance> test) {
+        LAST_FAILED_TESTS.add(test);
     }
 
     public static void forgetFailedTests() {

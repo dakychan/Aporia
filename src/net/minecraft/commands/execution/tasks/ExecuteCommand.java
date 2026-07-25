@@ -15,26 +15,26 @@ public class ExecuteCommand<T extends ExecutionCommandSource<T>> implements Unbo
     private final ChainModifiers modifiers;
     private final CommandContext<T> executionContext;
 
-    public ExecuteCommand(String p_310766_, ChainModifiers p_309629_, CommandContext<T> p_310460_) {
-        this.commandInput = p_310766_;
-        this.modifiers = p_309629_;
-        this.executionContext = p_310460_;
+    public ExecuteCommand(final String commandInput, final ChainModifiers modifiers, final CommandContext<T> executionContext) {
+        this.commandInput = commandInput;
+        this.modifiers = modifiers;
+        this.executionContext = executionContext;
     }
 
-    public void execute(T p_310632_, ExecutionContext<T> p_310757_, Frame p_311301_) {
-        p_310757_.profiler().push(() -> "execute " + this.commandInput);
+    public void execute(final T sender, final ExecutionContext<T> context, final Frame frame) {
+        context.profiler().push(() -> "execute " + this.commandInput);
 
         try {
-            p_310757_.incrementCost();
-            int i = ContextChain.runExecutable(this.executionContext, p_310632_, ExecutionCommandSource.resultConsumer(), this.modifiers.isForked());
-            TraceCallbacks tracecallbacks = p_310757_.tracer();
-            if (tracecallbacks != null) {
-                tracecallbacks.onReturn(p_311301_.depth(), this.commandInput, i);
+            context.incrementCost();
+            int result = ContextChain.runExecutable(this.executionContext, sender, ExecutionCommandSource.resultConsumer(), this.modifiers.isForked());
+            TraceCallbacks tracer = context.tracer();
+            if (tracer != null) {
+                tracer.onReturn(frame.depth(), this.commandInput, result);
             }
-        } catch (CommandSyntaxException commandsyntaxexception) {
-            p_310632_.handleError(commandsyntaxexception, this.modifiers.isForked(), p_310757_.tracer());
+        } catch (CommandSyntaxException e) {
+            sender.handleError(e, this.modifiers.isForked(), context.tracer());
         } finally {
-            p_310757_.profiler().pop();
+            context.profiler().pop();
         }
     }
 }

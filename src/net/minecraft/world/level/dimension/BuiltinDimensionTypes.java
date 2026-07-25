@@ -10,7 +10,7 @@ public class BuiltinDimensionTypes {
     public static final ResourceKey<DimensionType> END = register("the_end");
     public static final ResourceKey<DimensionType> OVERWORLD_CAVES = register("overworld_caves");
 
-    private static ResourceKey<DimensionType> register(String p_223548_) {
-        return ResourceKey.create(Registries.DIMENSION_TYPE, Identifier.withDefaultNamespace(p_223548_));
+    private static ResourceKey<DimensionType> register(final String id) {
+        return ResourceKey.create(Registries.DIMENSION_TYPE, Identifier.withDefaultNamespace(id));
     }
 }

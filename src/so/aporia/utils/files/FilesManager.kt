@@ -69,7 +69,10 @@ object FilesManager {
 
     private fun hideWindowsDirectory(path: Path) {
         try {
-            Runtime.getRuntime().exec(arrayOf("attrib", "+s", "+h", path.toAbsolutePath().toString()))
+            val p = Runtime.getRuntime().exec(arrayOf("attrib", "+s", "+h", path.toAbsolutePath().toString()))
+            p.inputStream.bufferedReader().readText()
+            p.errorStream.bufferedReader().readText()
+            p.waitFor()
             Logger.debug("Hidden directory: $path")
         } catch (e: IOException) {
             Logger.warn("Failed to hide directory: $path")

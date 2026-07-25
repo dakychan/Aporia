@@ -19,30 +19,37 @@ public class EntityCollisionContext implements CollisionContext {
     private final boolean alwaysCollideWithFluid;
     private final @Nullable Entity entity;
 
-    protected EntityCollisionContext(boolean p_365888_, boolean p_396699_, double p_396474_, ItemStack p_395757_, boolean p_426169_, @Nullable Entity p_82872_) {
-        this.descending = p_365888_;
-        this.placement = p_396699_;
-        this.entityBottom = p_396474_;
-        this.heldItem = p_395757_;
-        this.alwaysCollideWithFluid = p_426169_;
-        this.entity = p_82872_;
+    protected EntityCollisionContext(
+        final boolean descending,
+        final boolean placement,
+        final double entityBottom,
+        final ItemStack heldItem,
+        final boolean alwaysCollideWithFluid,
+        final @Nullable Entity entity
+    ) {
+        this.descending = descending;
+        this.placement = placement;
+        this.entityBottom = entityBottom;
+        this.heldItem = heldItem;
+        this.alwaysCollideWithFluid = alwaysCollideWithFluid;
+        this.entity = entity;
     }
 
     @Deprecated
-    protected EntityCollisionContext(Entity p_198920_, boolean p_198916_, boolean p_394820_) {
+    protected EntityCollisionContext(final Entity entity, final boolean alwaysCollideWithFluid, final boolean placement) {
         this(
-            p_198920_.isDescending(),
-            p_394820_,
-            p_198920_.getY(),
-            p_198920_ instanceof LivingEntity livingentity ? livingentity.getMainHandItem() : ItemStack.EMPTY,
-            p_198916_,
-            p_198920_
+            entity.isDescending(),
+            placement,
+            entity.getY(),
+            entity instanceof LivingEntity livingEntity ? livingEntity.getMainHandItem() : ItemStack.EMPTY,
+            alwaysCollideWithFluid,
+            entity
         );
     }
 
     @Override
-    public boolean isHoldingItem(Item p_82879_) {
-        return this.heldItem.is(p_82879_);
+    public boolean isHoldingItem(final Item item) {
+        return this.heldItem.is(item);
     }
 
     @Override
@@ -51,15 +58,15 @@ public class EntityCollisionContext implements CollisionContext {
     }
 
     @Override
-    public boolean canStandOnFluid(FluidState p_205115_, FluidState p_205116_) {
-        return !(this.entity instanceof LivingEntity livingentity)
+    public boolean canStandOnFluid(final FluidState fluidStateAbove, final FluidState fluid) {
+        return !(this.entity instanceof LivingEntity livingEntity)
             ? false
-            : livingentity.canStandOnFluid(p_205116_) && !p_205115_.getType().isSame(p_205116_.getType());
+            : livingEntity.canStandOnFluid(fluid) && !fluidStateAbove.getType().isSame(fluid.getType());
     }
 
     @Override
-    public VoxelShape getCollisionShape(BlockState p_367344_, CollisionGetter p_362064_, BlockPos p_364238_) {
-        return p_367344_.getCollisionShape(p_362064_, p_364238_, this);
+    public VoxelShape getCollisionShape(final BlockState state, final CollisionGetter collisionGetter, final BlockPos pos) {
+        return state.getCollisionShape(collisionGetter, pos, this);
     }
 
     @Override
@@ -68,8 +75,8 @@ public class EntityCollisionContext implements CollisionContext {
     }
 
     @Override
-    public boolean isAbove(VoxelShape p_82886_, BlockPos p_82887_, boolean p_82888_) {
-        return this.entityBottom > p_82887_.getY() + p_82886_.max(Direction.Axis.Y) - 1.0E-5F;
+    public boolean isAbove(final VoxelShape shape, final BlockPos pos, final boolean defaultValue) {
+        return this.entityBottom > pos.getY() + shape.max(Direction.Axis.Y) - 1.0E-5F;
     }
 
     public @Nullable Entity getEntity() {
@@ -85,13 +92,13 @@ public class EntityCollisionContext implements CollisionContext {
         protected static final CollisionContext WITHOUT_FLUID_COLLISIONS = new EntityCollisionContext.Empty(false);
         protected static final CollisionContext WITH_FLUID_COLLISIONS = new EntityCollisionContext.Empty(true);
 
-        public Empty(boolean p_430882_) {
-            super(false, false, -Double.MAX_VALUE, ItemStack.EMPTY, p_430882_, null);
+        public Empty(final boolean alwaysCollideWithFluid) {
+            super(false, false, -Double.MAX_VALUE, ItemStack.EMPTY, alwaysCollideWithFluid, null);
         }
 
         @Override
-        public boolean isAbove(VoxelShape p_430920_, BlockPos p_425533_, boolean p_428784_) {
-            return p_428784_;
+        public boolean isAbove(final VoxelShape shape, final BlockPos pos, final boolean defaultValue) {
+            return defaultValue;
         }
     }
 }

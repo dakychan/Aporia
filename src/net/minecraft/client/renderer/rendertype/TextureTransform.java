@@ -3,11 +3,8 @@ package net.minecraft.client.renderer.rendertype;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 
-@OnlyIn(Dist.CLIENT)
 public class TextureTransform {
     public static final double MAX_ENCHANTMENT_GLINT_SPEED_MILLIS = 8.0;
     private final String name;
@@ -17,12 +14,12 @@ public class TextureTransform {
     public static final TextureTransform ENTITY_GLINT_TEXTURING = new TextureTransform("entity_glint_texturing", () -> setupGlintTexturing(0.5F));
     public static final TextureTransform ARMOR_ENTITY_GLINT_TEXTURING = new TextureTransform("armor_entity_glint_texturing", () -> setupGlintTexturing(0.16F));
 
-    public TextureTransform(String p_451692_, Supplier<Matrix4f> p_460424_) {
-        this.name = p_451692_;
-        this.supplier = p_460424_;
+    public TextureTransform(final String name, final Supplier<Matrix4f> matrix) {
+        this.name = name;
+        this.supplier = matrix;
     }
 
-    public Matrix4f getMatrix() {
+    public Matrix4f createMatrix() {
         return this.supplier.get();
     }
 
@@ -31,19 +28,18 @@ public class TextureTransform {
         return "TexturingStateShard[" + this.name + "]";
     }
 
-    private static Matrix4f setupGlintTexturing(float p_454799_) {
-        long i = (long)(Util.getMillis() * Minecraft.getInstance().options.glintSpeed().get() * 8.0);
-        float f = (float)(i % 110000L) / 110000.0F;
-        float f1 = (float)(i % 30000L) / 30000.0F;
-        Matrix4f matrix4f = new Matrix4f().translation(-f, f1, 0.0F);
-        matrix4f.rotateZ((float) (Math.PI / 18)).scale(p_454799_);
-        return matrix4f;
+    private static Matrix4f setupGlintTexturing(final float scale) {
+        long millis = (long)(Util.getMillis() * Minecraft.getInstance().gameRenderer.gameRenderState().optionsRenderState.glintSpeed * 8.0);
+        float layerOffset0 = (float)(millis % 110000L) / 110000.0F;
+        float layerOffset1 = (float)(millis % 30000L) / 30000.0F;
+        Matrix4f matrix = new Matrix4f().translation(-layerOffset0, layerOffset1, 0.0F);
+        matrix.rotateZ((float) (Math.PI / 18)).scale(scale);
+        return matrix;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static final class OffsetTextureTransform extends TextureTransform {
-        public OffsetTextureTransform(float p_454869_, float p_455303_) {
-            super("offset_texturing", () -> new Matrix4f().translation(p_454869_, p_455303_, 0.0F));
+        public static final class OffsetTextureTransform extends TextureTransform {
+        public OffsetTextureTransform(final float uOffset, final float vOffset) {
+            super("offset_texturing", () -> new Matrix4f().translation(uOffset, vOffset, 0.0F));
         }
     }
 }

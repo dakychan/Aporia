@@ -1,11 +1,7 @@
 package net.minecraft.client.gui.screens;
 
-import com.viaversion.viafabricplus.injection.access.base.IServerData;
-import com.viaversion.viafabricplus.screen.impl.PerServerVersionScreen;
-import com.viaversion.viafabricplus.settings.impl.GeneralSettings;
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
@@ -13,9 +9,6 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-
 
 public class ManageServerScreen extends Screen {
     private static final Component NAME_LABEL = Component.translatable("manageServer.enterName");
@@ -28,26 +21,24 @@ public class ManageServerScreen extends Screen {
     private EditBox nameEdit;
     private final Screen lastScreen;
 
-    public ManageServerScreen(Screen p_422541_, Component p_423637_, BooleanConsumer p_431383_, ServerData p_426065_) {
-        super(p_423637_);
-        this.lastScreen = p_422541_;
-        this.callback = p_431383_;
-        this.serverData = p_426065_;
+    public ManageServerScreen(final Screen lastScreen, final Component title, final BooleanConsumer callback, final ServerData serverData) {
+        super(title);
+        this.lastScreen = lastScreen;
+        this.callback = callback;
+        this.serverData = serverData;
     }
-    private String viaFabricPlus$nameField;
-    private String viaFabricPlus$addressField;
 
     @Override
     protected void init() {
         this.nameEdit = new EditBox(this.font, this.width / 2 - 100, 66, 200, 20, NAME_LABEL);
         this.nameEdit.setValue(this.serverData.name);
         this.nameEdit.setHint(DEFAULT_SERVER_NAME);
-        this.nameEdit.setResponder(p_424250_ -> this.updateAddButtonStatus());
+        this.nameEdit.setResponder(v -> this.updateAddButtonStatus());
         this.addWidget(this.nameEdit);
         this.ipEdit = new EditBox(this.font, this.width / 2 - 100, 106, 200, 20, IP_LABEL);
         this.ipEdit.setMaxLength(128);
         this.ipEdit.setValue(this.serverData.ip);
-        this.ipEdit.setResponder(p_427210_ -> this.updateAddButtonStatus());
+        this.ipEdit.setResponder(v -> this.updateAddButtonStatus());
         this.addWidget(this.ipEdit);
         this.addRenderableWidget(
             CycleButton.builder(ServerData.ServerPackStatus::getName, this.serverData.getResourcePackStatus())
@@ -58,46 +49,18 @@ public class ManageServerScreen extends Screen {
                     200,
                     20,
                     Component.translatable("manageServer.resourcePack"),
-                    (p_427981_, p_423372_) -> this.serverData.setResourcePackStatus(p_423372_)
+                    (button, value) -> this.serverData.setResourcePackStatus(value)
                 )
         );
         this.addButton = this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_DONE, p_429360_ -> this.onAdd())
-                .bounds(this.width / 2 - 100, this.height / 4 + 96 + 18, 200, 20)
-                .build()
+            Button.builder(CommonComponents.GUI_DONE, button -> this.onAdd()).bounds(this.width / 2 - 100, this.height / 4 + 96 + 18, 200, 20).build()
         );
         this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_CANCEL, p_429638_ -> this.callback.accept(false))
+            Button.builder(CommonComponents.GUI_CANCEL, button -> this.callback.accept(false))
                 .bounds(this.width / 2 - 100, this.height / 4 + 120 + 18, 200, 20)
                 .build()
         );
         this.updateAddButtonStatus();
-        final int buttonPosition = GeneralSettings.INSTANCE.addServerScreenButtonOrientation.getIndex();
-        if (buttonPosition == 0) { // Off
-            return;
-        }
-
-        final IServerData mixinServerInfo = (IServerData) serverData;
-        final ProtocolVersion forcedVersion = mixinServerInfo.viaFabricPlus$forcedVersion();
-
-        // Restore input if the user cancels the version selection screen (or if the user is editing an existing server)
-        if (viaFabricPlus$nameField != null && viaFabricPlus$addressField != null) {
-            this.nameEdit.setValue(viaFabricPlus$nameField);
-            this.ipEdit.setValue(viaFabricPlus$addressField);
-
-            viaFabricPlus$nameField = null;
-            viaFabricPlus$addressField = null;
-        }
-
-        final Button.Builder buttonBuilder = Button.builder(forcedVersion == null ? Component.translatable("base.viafabricplus.set_version") : Component.nullToEmpty(forcedVersion.getName()), button -> {
-            // Store current input in case the user cancels the version selection
-            viaFabricPlus$nameField = nameEdit.getValue();
-            viaFabricPlus$addressField = ipEdit.getValue();
-
-            minecraft.setScreen(new PerServerVersionScreen(this, mixinServerInfo::viaFabricPlus$forceVersion, mixinServerInfo::viaFabricPlus$forcedVersion));
-        }).size(98, 20);
-        GeneralSettings.setOrientation(buttonBuilder::pos, buttonPosition, width, height);
-        this.addRenderableWidget(buttonBuilder.build());
     }
 
     @Override
@@ -106,24 +69,24 @@ public class ManageServerScreen extends Screen {
     }
 
     @Override
-    public void resize(int p_429730_, int p_430843_) {
-        String s = this.ipEdit.getValue();
-        String s1 = this.nameEdit.getValue();
-        this.init(p_429730_, p_430843_);
-        this.ipEdit.setValue(s);
-        this.nameEdit.setValue(s1);
+    public void resize(final int width, final int height) {
+        String oldIpEdit = this.ipEdit.getValue();
+        String oldNameEdit = this.nameEdit.getValue();
+        this.init(width, height);
+        this.ipEdit.setValue(oldIpEdit);
+        this.nameEdit.setValue(oldNameEdit);
     }
 
     private void onAdd() {
-        String s = this.nameEdit.getValue();
-        this.serverData.name = s.isEmpty() ? DEFAULT_SERVER_NAME.getString() : s;
+        String name = this.nameEdit.getValue();
+        this.serverData.name = name.isEmpty() ? DEFAULT_SERVER_NAME.getString() : name;
         this.serverData.ip = this.ipEdit.getValue();
         this.callback.accept(true);
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
     private void updateAddButtonStatus() {
@@ -131,12 +94,12 @@ public class ManageServerScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics p_427803_, int p_424352_, int p_429377_, float p_428630_) {
-        super.render(p_427803_, p_424352_, p_429377_, p_428630_);
-        p_427803_.drawCenteredString(this.font, this.title, this.width / 2, 17, -1);
-        p_427803_.drawString(this.font, NAME_LABEL, this.width / 2 - 100 + 1, 53, -6250336);
-        p_427803_.drawString(this.font, IP_LABEL, this.width / 2 - 100 + 1, 94, -6250336);
-        this.nameEdit.render(p_427803_, p_424352_, p_429377_, p_428630_);
-        this.ipEdit.render(p_427803_, p_424352_, p_429377_, p_428630_);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.centeredText(this.font, this.title, this.width / 2, 17, -1);
+        graphics.text(this.font, NAME_LABEL, this.width / 2 - 100 + 1, 53, -6250336);
+        graphics.text(this.font, IP_LABEL, this.width / 2 - 100 + 1, 94, -6250336);
+        this.nameEdit.extractRenderState(graphics, mouseX, mouseY, a);
+        this.ipEdit.extractRenderState(graphics, mouseX, mouseY, a);
     }
 }

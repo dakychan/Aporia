@@ -13,9 +13,9 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public class JigsawReplacementProcessor extends StructureProcessor {
+public class JigsawReplacementProcessor implements StructureProcessor {
     private static final Logger LOGGER = LogUtils.getLogger();
-    public static final MapCodec<JigsawReplacementProcessor> CODEC = MapCodec.unit(() -> JigsawReplacementProcessor.INSTANCE);
+    public static final MapCodec<JigsawReplacementProcessor> MAP_CODEC = MapCodec.unit(() -> JigsawReplacementProcessor.INSTANCE);
     public static final JigsawReplacementProcessor INSTANCE = new JigsawReplacementProcessor();
 
     private JigsawReplacementProcessor() {
@@ -23,37 +23,39 @@ public class JigsawReplacementProcessor extends StructureProcessor {
 
     @Override
     public StructureTemplate.@Nullable StructureBlockInfo processBlock(
-        LevelReader p_74127_,
-        BlockPos p_74128_,
-        BlockPos p_74129_,
-        StructureTemplate.StructureBlockInfo p_74130_,
-        StructureTemplate.StructureBlockInfo p_74131_,
-        StructurePlaceSettings p_74132_
+        final LevelReader level,
+        final BlockPos targetPosition,
+        final BlockPos referencePos,
+        final BlockPos templateRelativePos,
+        final StructureTemplate.StructureBlockInfo processedBlockInfo,
+        final StructurePlaceSettings settings
     ) {
-        BlockState blockstate = p_74131_.state();
-        if (!blockstate.is(Blocks.JIGSAW) || SharedConstants.DEBUG_KEEP_JIGSAW_BLOCKS_DURING_STRUCTURE_GEN) {
-            return p_74131_;
-        } else if (p_74131_.nbt() == null) {
-            LOGGER.warn("Jigsaw block at {} is missing nbt, will not replace", p_74128_);
-            return p_74131_;
-        } else {
-            String s = p_74131_.nbt().getStringOr("final_state", "minecraft:air");
-
-            BlockState blockstate1;
-            try {
-                BlockStateParser.BlockResult blockstateparser$blockresult = BlockStateParser.parseForBlock(p_74127_.holderLookup(Registries.BLOCK), s, true);
-                blockstate1 = blockstateparser$blockresult.blockState();
-            } catch (CommandSyntaxException commandsyntaxexception) {
-                LOGGER.error("Failed to parse jigsaw replacement state '{}' at {}: {}", s, p_74128_, commandsyntaxexception.getMessage());
-                return null;
-            }
-
-            return blockstate1.is(Blocks.STRUCTURE_VOID) ? null : new StructureTemplate.StructureBlockInfo(p_74131_.pos(), blockstate1, null);
+        BlockState state = processedBlockInfo.state();
+        if (!state.is(Blocks.JIGSAW) || SharedConstants.DEBUG_KEEP_JIGSAW_BLOCKS_DURING_STRUCTURE_GEN) {
+            return processedBlockInfo;
         }
+
+        if (processedBlockInfo.nbt() == null) {
+            LOGGER.warn("Jigsaw block at {} is missing nbt, will not replace", targetPosition);
+            return processedBlockInfo;
+        }
+
+        String stateString = processedBlockInfo.nbt().getStringOr("final_state", "minecraft:air");
+
+        BlockState blockState;
+        try {
+            BlockStateParser.BlockResult result = BlockStateParser.parseForBlock(level.holderLookup(Registries.BLOCK), stateString, true);
+            blockState = result.blockState();
+        } catch (CommandSyntaxException e) {
+            LOGGER.error("Failed to parse jigsaw replacement state '{}' at {}: {}", stateString, targetPosition, e.getMessage());
+            return null;
+        }
+
+        return blockState.is(Blocks.STRUCTURE_VOID) ? null : new StructureTemplate.StructureBlockInfo(processedBlockInfo.pos(), blockState, null);
     }
 
     @Override
-    protected StructureProcessorType<?> getType() {
-        return StructureProcessorType.JIGSAW_REPLACEMENT;
+    public MapCodec<JigsawReplacementProcessor> codec() {
+        return MAP_CODEC;
     }
 }

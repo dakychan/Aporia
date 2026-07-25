@@ -7,11 +7,11 @@ public class FoliageColor {
     public static final int FOLIAGE_MANGROVE = -7158200;
     private static int[] pixels = new int[65536];
 
-    public static void init(int[] p_46111_) {
-        pixels = p_46111_;
+    public static void init(final int[] pixels) {
+        FoliageColor.pixels = pixels;
     }
 
-    public static int get(double p_46108_, double p_46109_) {
-        return ColorMapColorUtil.get(p_46108_, p_46109_, pixels, -12012264);
+    public static int get(final double temp, final double rain) {
+        return ColorMapColorUtil.get(temp, rain, pixels, -12012264);
     }
 }

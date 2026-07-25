@@ -7,8 +7,8 @@ import net.minecraft.core.particles.PowerParticleOption;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AreaEffectCloud;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
@@ -18,44 +18,43 @@ import net.minecraft.world.phys.Vec3;
 public class DragonFireball extends AbstractHurtingProjectile {
     public static final float SPLASH_RANGE = 4.0F;
 
-    public DragonFireball(EntityType<? extends DragonFireball> p_451756_, Level p_450201_) {
-        super(p_451756_, p_450201_);
+    public DragonFireball(final EntityType<? extends DragonFireball> type, final Level level) {
+        super(type, level);
     }
 
-    public DragonFireball(Level p_454224_, LivingEntity p_455715_, Vec3 p_451259_) {
-        super(EntityType.DRAGON_FIREBALL, p_455715_, p_451259_, p_454224_);
+    public DragonFireball(final Level level, final LivingEntity mob, final Vec3 direction) {
+        super(EntityTypes.DRAGON_FIREBALL, mob, direction, level);
     }
 
     @Override
-    protected void onHit(HitResult p_453570_) {
-        super.onHit(p_453570_);
-        if (p_453570_.getType() != HitResult.Type.ENTITY || !this.ownedBy(((EntityHitResult)p_453570_).getEntity())) {
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
+        if (hitResult.getType() != HitResult.Type.ENTITY || !this.ownedBy(((EntityHitResult)hitResult).getEntity())) {
             if (!this.level().isClientSide()) {
-                List<LivingEntity> list = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(4.0, 2.0, 4.0));
-                AreaEffectCloud areaeffectcloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
-                Entity entity = this.getOwner();
-                if (entity instanceof LivingEntity) {
-                    areaeffectcloud.setOwner((LivingEntity)entity);
+                List<LivingEntity> entitiesOfClass = this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(4.0, 2.0, 4.0));
+                AreaEffectCloud cloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
+                if (this.getOwner() instanceof LivingEntity livingEntity) {
+                    cloud.setOwner(livingEntity);
                 }
 
-                areaeffectcloud.setCustomParticle(PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F));
-                areaeffectcloud.setRadius(3.0F);
-                areaeffectcloud.setDuration(600);
-                areaeffectcloud.setRadiusPerTick((7.0F - areaeffectcloud.getRadius()) / areaeffectcloud.getDuration());
-                areaeffectcloud.setPotionDurationScale(0.25F);
-                areaeffectcloud.addEffect(new MobEffectInstance(MobEffects.INSTANT_DAMAGE, 1, 1));
-                if (!list.isEmpty()) {
-                    for (LivingEntity livingentity : list) {
-                        double d0 = this.distanceToSqr(livingentity);
-                        if (d0 < 16.0) {
-                            areaeffectcloud.setPos(livingentity.getX(), livingentity.getY(), livingentity.getZ());
+                cloud.setCustomParticle(PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F));
+                cloud.setRadius(3.0F);
+                cloud.setDuration(600);
+                cloud.setRadiusPerTick((7.0F - cloud.getRadius()) / cloud.getDuration());
+                cloud.setPotionDurationScale(0.25F);
+                cloud.addEffect(new MobEffectInstance(MobEffects.INSTANT_DAMAGE, 1, 1));
+                if (!entitiesOfClass.isEmpty()) {
+                    for (LivingEntity entity : entitiesOfClass) {
+                        double dist = this.distanceToSqr(entity);
+                        if (dist < 16.0) {
+                            cloud.setPos(entity.getX(), entity.getY(), entity.getZ());
                             break;
                         }
                     }
                 }
 
                 this.level().levelEvent(2006, this.blockPosition(), this.isSilent() ? -1 : 1);
-                this.level().addFreshEntity(areaeffectcloud);
+                this.level().addFreshEntity(cloud);
                 this.discard();
             }
         }

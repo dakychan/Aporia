@@ -19,53 +19,51 @@ import net.minecraft.world.phys.Vec3;
 public class MinecartItem extends Item {
     private final EntityType<? extends AbstractMinecart> type;
 
-    public MinecartItem(EntityType<? extends AbstractMinecart> p_364411_, Item.Properties p_42939_) {
-        super(p_42939_);
-        this.type = p_364411_;
+    public MinecartItem(final EntityType<? extends AbstractMinecart> type, final Item.Properties properties) {
+        super(properties);
+        this.type = type;
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_42943_) {
-        Level level = p_42943_.getLevel();
-        BlockPos blockpos = p_42943_.getClickedPos();
-        BlockState blockstate = level.getBlockState(blockpos);
-        if (!blockstate.is(BlockTags.RAILS)) {
+    public InteractionResult useOn(final UseOnContext context) {
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState blockState = level.getBlockState(pos);
+        if (!blockState.is(BlockTags.RAILS)) {
             return InteractionResult.FAIL;
-        } else {
-            ItemStack itemstack = p_42943_.getItemInHand();
-            RailShape railshape = blockstate.getBlock() instanceof BaseRailBlock
-                ? blockstate.getValue(((BaseRailBlock)blockstate.getBlock()).getShapeProperty())
-                : RailShape.NORTH_SOUTH;
-            double d0 = 0.0;
-            if (railshape.isSlope()) {
-                d0 = 0.5;
-            }
+        }
 
-            Vec3 vec3 = new Vec3(blockpos.getX() + 0.5, blockpos.getY() + 0.0625 + d0, blockpos.getZ() + 0.5);
-            AbstractMinecart abstractminecart = AbstractMinecart.createMinecart(
-                level, vec3.x, vec3.y, vec3.z, this.type, EntitySpawnReason.DISPENSER, itemstack, p_42943_.getPlayer()
-            );
-            if (abstractminecart == null) {
-                return InteractionResult.FAIL;
-            } else {
-                if (AbstractMinecart.useExperimentalMovement(level)) {
-                    for (Entity entity : level.getEntities(null, abstractminecart.getBoundingBox())) {
-                        if (entity instanceof AbstractMinecart) {
-                            return InteractionResult.FAIL;
-                        }
-                    }
+        ItemStack itemStack = context.getItemInHand();
+        RailShape shape = blockState.getBlock() instanceof BaseRailBlock
+            ? blockState.getValue(((BaseRailBlock)blockState.getBlock()).getShapeProperty())
+            : RailShape.NORTH_SOUTH;
+        double offset = 0.0;
+        if (shape.isSlope()) {
+            offset = 0.5;
+        }
+
+        Vec3 spawnPos = new Vec3(pos.getX() + 0.5, pos.getY() + 0.0625 + offset, pos.getZ() + 0.5);
+        AbstractMinecart cart = AbstractMinecart.createMinecart(
+            level, spawnPos.x, spawnPos.y, spawnPos.z, this.type, EntitySpawnReason.DISPENSER, itemStack, context.getPlayer()
+        );
+        if (cart == null) {
+            return InteractionResult.FAIL;
+        }
+
+        if (AbstractMinecart.useExperimentalMovement(level)) {
+            for (Entity entity : level.getEntities(null, cart.getBoundingBox())) {
+                if (entity instanceof AbstractMinecart) {
+                    return InteractionResult.FAIL;
                 }
-
-                if (level instanceof ServerLevel serverlevel) {
-                    serverlevel.addFreshEntity(abstractminecart);
-                    serverlevel.gameEvent(
-                        GameEvent.ENTITY_PLACE, blockpos, GameEvent.Context.of(p_42943_.getPlayer(), serverlevel.getBlockState(blockpos.below()))
-                    );
-                }
-
-                itemstack.shrink(1);
-                return InteractionResult.SUCCESS;
             }
         }
+
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.addFreshEntity(cart);
+            serverLevel.gameEvent(GameEvent.ENTITY_PLACE, pos, GameEvent.Context.of(context.getPlayer(), serverLevel.getBlockState(pos.below())));
+        }
+
+        itemStack.shrink(1);
+        return InteractionResult.SUCCESS;
     }
 }

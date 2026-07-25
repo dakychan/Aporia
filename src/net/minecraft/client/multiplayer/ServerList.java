@@ -12,12 +12,9 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtIo;
 import net.minecraft.util.Util;
 import net.minecraft.util.thread.ConsecutiveExecutor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class ServerList {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final ConsecutiveExecutor IO_EXECUTOR = new ConsecutiveExecutor(Util.backgroundExecutor(), "server-list-io");
@@ -26,109 +23,109 @@ public class ServerList {
     private final List<ServerData> serverList = Lists.newArrayList();
     private final List<ServerData> hiddenServerList = Lists.newArrayList();
 
-    public ServerList(Minecraft p_105430_) {
-        this.minecraft = p_105430_;
+    public ServerList(final Minecraft minecraft) {
+        this.minecraft = minecraft;
     }
 
     public void load() {
         try {
             this.serverList.clear();
             this.hiddenServerList.clear();
-            CompoundTag compoundtag = NbtIo.read(this.minecraft.gameDirectory.toPath().resolve("servers.dat"));
-            if (compoundtag == null) {
+            CompoundTag tag = NbtIo.read(this.minecraft.gameDirectory.toPath().resolve("servers.dat"));
+            if (tag == null) {
                 return;
             }
 
-            compoundtag.getListOrEmpty("servers").compoundStream().forEach(p_389344_ -> {
-                ServerData serverdata = ServerData.read(p_389344_);
-                if (p_389344_.getBooleanOr("hidden", false)) {
-                    this.hiddenServerList.add(serverdata);
+            tag.getListOrEmpty("servers").compoundStream().forEach(serverTag -> {
+                ServerData serverData = ServerData.read(serverTag);
+                if (serverTag.getBooleanOr("hidden", false)) {
+                    this.hiddenServerList.add(serverData);
                 } else {
-                    this.serverList.add(serverdata);
+                    this.serverList.add(serverData);
                 }
             });
-        } catch (Exception exception) {
-            LOGGER.error("Couldn't load server list", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.error("Couldn't load server list", e);
         }
     }
 
     public void save() {
         try {
-            ListTag listtag = new ListTag();
+            ListTag serverTags = new ListTag();
 
-            for (ServerData serverdata : this.serverList) {
-                CompoundTag compoundtag = serverdata.write();
-                compoundtag.putBoolean("hidden", false);
-                listtag.add(compoundtag);
+            for (ServerData server : this.serverList) {
+                CompoundTag serverTag = server.write();
+                serverTag.putBoolean("hidden", false);
+                serverTags.add(serverTag);
             }
 
-            for (ServerData serverdata1 : this.hiddenServerList) {
-                CompoundTag compoundtag2 = serverdata1.write();
-                compoundtag2.putBoolean("hidden", true);
-                listtag.add(compoundtag2);
+            for (ServerData server : this.hiddenServerList) {
+                CompoundTag serverTag = server.write();
+                serverTag.putBoolean("hidden", true);
+                serverTags.add(serverTag);
             }
 
-            CompoundTag compoundtag1 = new CompoundTag();
-            compoundtag1.put("servers", listtag);
-            Path path2 = this.minecraft.gameDirectory.toPath();
-            Path path3 = Files.createTempFile(path2, "servers", ".dat");
-            NbtIo.write(compoundtag1, path3);
-            Path path = path2.resolve("servers.dat_old");
-            Path path1 = path2.resolve("servers.dat");
-            Util.safeReplaceFile(path1, path3, path);
-        } catch (Exception exception) {
-            LOGGER.error("Couldn't save server list", (Throwable)exception);
+            CompoundTag tag = new CompoundTag();
+            tag.put("servers", serverTags);
+            Path gameDirectoryPath = this.minecraft.gameDirectory.toPath();
+            Path newFile = Files.createTempFile(gameDirectoryPath, "servers", ".dat");
+            NbtIo.write(tag, newFile);
+            Path oldFile = gameDirectoryPath.resolve("servers.dat_old");
+            Path currentFile = gameDirectoryPath.resolve("servers.dat");
+            Util.safeReplaceFile(currentFile, newFile, oldFile);
+        } catch (Exception e) {
+            LOGGER.error("Couldn't save server list", e);
         }
     }
 
-    public ServerData get(int p_105433_) {
-        return this.serverList.get(p_105433_);
+    public ServerData get(final int index) {
+        return this.serverList.get(index);
     }
 
-    public @Nullable ServerData get(String p_233846_) {
-        for (ServerData serverdata : this.serverList) {
-            if (serverdata.ip.equals(p_233846_)) {
-                return serverdata;
+    public @Nullable ServerData get(final String ip) {
+        for (ServerData serverData : this.serverList) {
+            if (serverData.ip.equals(ip)) {
+                return serverData;
             }
         }
 
-        for (ServerData serverdata1 : this.hiddenServerList) {
-            if (serverdata1.ip.equals(p_233846_)) {
-                return serverdata1;
+        for (ServerData serverData : this.hiddenServerList) {
+            if (serverData.ip.equals(ip)) {
+                return serverData;
             }
         }
 
         return null;
     }
 
-    public @Nullable ServerData unhide(String p_233848_) {
+    public @Nullable ServerData unhide(final String ip) {
         for (int i = 0; i < this.hiddenServerList.size(); i++) {
-            ServerData serverdata = this.hiddenServerList.get(i);
-            if (serverdata.ip.equals(p_233848_)) {
+            ServerData serverData = this.hiddenServerList.get(i);
+            if (serverData.ip.equals(ip)) {
                 this.hiddenServerList.remove(i);
-                this.serverList.add(serverdata);
-                return serverdata;
+                this.serverList.add(serverData);
+                return serverData;
             }
         }
 
         return null;
     }
 
-    public void remove(ServerData p_105441_) {
-        if (!this.serverList.remove(p_105441_)) {
-            this.hiddenServerList.remove(p_105441_);
+    public void remove(final ServerData thing) {
+        if (!this.serverList.remove(thing)) {
+            this.hiddenServerList.remove(thing);
         }
     }
 
-    public void add(ServerData p_233843_, boolean p_233844_) {
-        if (p_233844_) {
-            this.hiddenServerList.add(0, p_233843_);
+    public void add(final ServerData server, final boolean hidden) {
+        if (hidden) {
+            this.hiddenServerList.add(0, server);
 
             while (this.hiddenServerList.size() > 16) {
                 this.hiddenServerList.remove(this.hiddenServerList.size() - 1);
             }
         } else {
-            this.serverList.add(p_233843_);
+            this.serverList.add(server);
         }
     }
 
@@ -136,22 +133,22 @@ public class ServerList {
         return this.serverList.size();
     }
 
-    public void swap(int p_105435_, int p_105436_) {
-        ServerData serverdata = this.get(p_105435_);
-        this.serverList.set(p_105435_, this.get(p_105436_));
-        this.serverList.set(p_105436_, serverdata);
+    public void swap(final int a, final int b) {
+        ServerData swap = this.get(a);
+        this.serverList.set(a, this.get(b));
+        this.serverList.set(b, swap);
         this.save();
     }
 
-    public void replace(int p_105438_, ServerData p_105439_) {
-        this.serverList.set(p_105438_, p_105439_);
+    public void replace(final int id, final ServerData data) {
+        this.serverList.set(id, data);
     }
 
-    private static boolean set(ServerData p_233840_, List<ServerData> p_233841_) {
-        for (int i = 0; i < p_233841_.size(); i++) {
-            ServerData serverdata = p_233841_.get(i);
-            if (Objects.equals(serverdata.name, p_233840_.name) && serverdata.ip.equals(p_233840_.ip)) {
-                p_233841_.set(i, p_233840_);
+    private static boolean set(final ServerData data, final List<ServerData> list) {
+        for (int i = 0; i < list.size(); i++) {
+            ServerData target = list.get(i);
+            if (Objects.equals(target.name, data.name) && target.ip.equals(data.ip)) {
+                list.set(i, data);
                 return true;
             }
         }
@@ -159,15 +156,15 @@ public class ServerList {
         return false;
     }
 
-    public static void saveSingleServer(ServerData p_105447_) {
+    public static void saveSingleServer(final ServerData data) {
         IO_EXECUTOR.schedule(() -> {
-            ServerList serverlist = new ServerList(Minecraft.getInstance());
-            serverlist.load();
-            if (!set(p_105447_, serverlist.serverList)) {
-                set(p_105447_, serverlist.hiddenServerList);
+            ServerList list = new ServerList(Minecraft.getInstance());
+            list.load();
+            if (!set(data, list.serverList)) {
+                set(data, list.hiddenServerList);
             }
 
-            serverlist.save();
+            list.save();
         });
     }
 }

@@ -9,14 +9,14 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public class ExplosionCondition implements LootItemCondition {
     private static final ExplosionCondition INSTANCE = new ExplosionCondition();
-    public static final MapCodec<ExplosionCondition> CODEC = MapCodec.unit(INSTANCE);
+    public static final MapCodec<ExplosionCondition> MAP_CODEC = MapCodec.unit(INSTANCE);
 
     private ExplosionCondition() {
     }
 
     @Override
-    public LootItemConditionType getType() {
-        return LootItemConditions.SURVIVES_EXPLOSION;
+    public MapCodec<ExplosionCondition> codec() {
+        return MAP_CODEC;
     }
 
     @Override
@@ -24,12 +24,12 @@ public class ExplosionCondition implements LootItemCondition {
         return Set.of(LootContextParams.EXPLOSION_RADIUS);
     }
 
-    public boolean test(LootContext p_81659_) {
-        Float f = p_81659_.getOptionalParameter(LootContextParams.EXPLOSION_RADIUS);
-        if (f != null) {
-            RandomSource randomsource = p_81659_.getRandom();
-            float f1 = 1.0F / f;
-            return randomsource.nextFloat() <= f1;
+    public boolean test(final LootContext context) {
+        Float explosionRadius = context.getOptionalParameter(LootContextParams.EXPLOSION_RADIUS);
+        if (explosionRadius != null) {
+            RandomSource random = context.getRandom();
+            float probability = 1.0F / explosionRadius;
+            return random.nextFloat() <= probability;
         } else {
             return true;
         }

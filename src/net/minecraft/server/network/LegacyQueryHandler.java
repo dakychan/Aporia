@@ -15,110 +15,110 @@ public class LegacyQueryHandler extends ChannelInboundHandlerAdapter {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final ServerInfo server;
 
-    public LegacyQueryHandler(ServerInfo p_298392_) {
-        this.server = p_298392_;
+    public LegacyQueryHandler(final ServerInfo server) {
+        this.server = server;
     }
 
     @Override
-    public void channelRead(ChannelHandlerContext p_9686_, Object p_9687_) {
-        ByteBuf bytebuf = (ByteBuf)p_9687_;
-        bytebuf.markReaderIndex();
-        boolean flag = true;
+    public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
+        ByteBuf in = (ByteBuf)msg;
+        in.markReaderIndex();
+        boolean connectNormally = true;
 
         try {
             try {
-                if (bytebuf.readUnsignedByte() != 254) {
+                if (in.readUnsignedByte() != 254) {
                     return;
                 }
 
-                SocketAddress socketaddress = p_9686_.channel().remoteAddress();
-                int i = bytebuf.readableBytes();
-                if (i == 0) {
-                    LOGGER.debug("Ping: (<1.3.x) from {}", socketaddress);
-                    String s = createVersion0Response(this.server);
-                    sendFlushAndClose(p_9686_, createLegacyDisconnectPacket(p_9686_.alloc(), s));
+                SocketAddress socket = ctx.channel().remoteAddress();
+                int length = in.readableBytes();
+                if (length == 0) {
+                    LOGGER.debug("Ping: (<1.3.x) from {}", socket);
+                    String body = createVersion0Response(this.server);
+                    sendFlushAndClose(ctx, createLegacyDisconnectPacket(ctx.alloc(), body));
                 } else {
-                    if (bytebuf.readUnsignedByte() != 1) {
+                    if (in.readUnsignedByte() != 1) {
                         return;
                     }
 
-                    if (bytebuf.isReadable()) {
-                        if (!readCustomPayloadPacket(bytebuf)) {
+                    if (in.isReadable()) {
+                        if (!readCustomPayloadPacket(in)) {
                             return;
                         }
 
-                        LOGGER.debug("Ping: (1.6) from {}", socketaddress);
+                        LOGGER.debug("Ping: (1.6) from {}", socket);
                     } else {
-                        LOGGER.debug("Ping: (1.4-1.5.x) from {}", socketaddress);
+                        LOGGER.debug("Ping: (1.4-1.5.x) from {}", socket);
                     }
 
-                    String s1 = createVersion1Response(this.server);
-                    sendFlushAndClose(p_9686_, createLegacyDisconnectPacket(p_9686_.alloc(), s1));
+                    String body = createVersion1Response(this.server);
+                    sendFlushAndClose(ctx, createLegacyDisconnectPacket(ctx.alloc(), body));
                 }
 
-                bytebuf.release();
-                flag = false;
-            } catch (RuntimeException runtimeexception) {
+                in.release();
+                connectNormally = false;
+            } catch (RuntimeException var11) {
             }
         } finally {
-            if (flag) {
-                bytebuf.resetReaderIndex();
-                p_9686_.channel().pipeline().remove(this);
-                p_9686_.fireChannelRead(p_9687_);
+            if (connectNormally) {
+                in.resetReaderIndex();
+                ctx.channel().pipeline().remove(this);
+                ctx.fireChannelRead(msg);
             }
         }
     }
 
-    private static boolean readCustomPayloadPacket(ByteBuf p_297429_) {
-        short short1 = p_297429_.readUnsignedByte();
-        if (short1 != 250) {
+    private static boolean readCustomPayloadPacket(final ByteBuf in) {
+        short packetId = in.readUnsignedByte();
+        if (packetId != 250) {
             return false;
-        } else {
-            String s = LegacyProtocolUtils.readLegacyString(p_297429_);
-            if (!"MC|PingHost".equals(s)) {
-                return false;
-            } else {
-                int i = p_297429_.readUnsignedShort();
-                if (p_297429_.readableBytes() != i) {
-                    return false;
-                } else {
-                    short short2 = p_297429_.readUnsignedByte();
-                    if (short2 < 73) {
-                        return false;
-                    } else {
-                        String s1 = LegacyProtocolUtils.readLegacyString(p_297429_);
-                        int j = p_297429_.readInt();
-                        return j <= 65535;
-                    }
-                }
-            }
         }
+
+        String channelId = LegacyProtocolUtils.readLegacyString(in);
+        if (!"MC|PingHost".equals(channelId)) {
+            return false;
+        }
+
+        int payloadSize = in.readUnsignedShort();
+        if (in.readableBytes() != payloadSize) {
+            return false;
+        }
+
+        short protocolVersion = in.readUnsignedByte();
+        if (protocolVersion < 73) {
+            return false;
+        }
+
+        String host = LegacyProtocolUtils.readLegacyString(in);
+        int port = in.readInt();
+        return port <= 65535;
     }
 
-    private static String createVersion0Response(ServerInfo p_300881_) {
-        return String.format(Locale.ROOT, "%s\u00a7%d\u00a7%d", p_300881_.getMotd(), p_300881_.getPlayerCount(), p_300881_.getMaxPlayers());
+    private static String createVersion0Response(final ServerInfo server) {
+        return String.format(Locale.ROOT, "%s\u00a7%d\u00a7%d", server.getMotd(), server.getPlayerCount(), server.getMaxPlayers());
     }
 
-    private static String createVersion1Response(ServerInfo p_297753_) {
+    private static String createVersion1Response(final ServerInfo server) {
         return String.format(
             Locale.ROOT,
             "\u00a71\u0000%d\u0000%s\u0000%s\u0000%d\u0000%d",
             127,
-            p_297753_.getServerVersion(),
-            p_297753_.getMotd(),
-            p_297753_.getPlayerCount(),
-            p_297753_.getMaxPlayers()
+            server.getServerVersion(),
+            server.getMotd(),
+            server.getPlayerCount(),
+            server.getMaxPlayers()
         );
     }
 
-    private static void sendFlushAndClose(ChannelHandlerContext p_9681_, ByteBuf p_9682_) {
-        p_9681_.pipeline().firstContext().writeAndFlush(p_9682_).addListener(ChannelFutureListener.CLOSE);
+    private static void sendFlushAndClose(final ChannelHandlerContext ctx, final ByteBuf out) {
+        ctx.pipeline().firstContext().writeAndFlush(out).addListener(ChannelFutureListener.CLOSE);
     }
 
-    private static ByteBuf createLegacyDisconnectPacket(ByteBufAllocator p_298175_, String p_298389_) {
-        ByteBuf bytebuf = p_298175_.buffer();
-        bytebuf.writeByte(255);
-        LegacyProtocolUtils.writeLegacyString(bytebuf, p_298389_);
-        return bytebuf;
+    private static ByteBuf createLegacyDisconnectPacket(final ByteBufAllocator alloc, final String reason) {
+        ByteBuf out = alloc.buffer();
+        out.writeByte(255);
+        LegacyProtocolUtils.writeLegacyString(out, reason);
+        return out;
     }
 }

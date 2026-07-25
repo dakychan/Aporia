@@ -4,16 +4,13 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
 import net.minecraft.client.color.ColorLerper;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class NowPlayingToast implements Toast {
     private static final Identifier NOW_PLAYING_BACKGROUND_SPRITE = Identifier.withDefaultNamespace("toast/now_playing");
     private static final Identifier MUSIC_NOTES_SPRITE = Identifier.parse("icon/music_notes");
@@ -36,13 +33,13 @@ public class NowPlayingToast implements Toast {
         this.minecraft = Minecraft.getInstance();
     }
 
-    public static void renderToast(GuiGraphics p_410666_, Font p_408972_) {
-        String s = getCurrentSongName();
-        if (s != null) {
-            p_410666_.blitSprite(RenderPipelines.GUI_TEXTURED, NOW_PLAYING_BACKGROUND_SPRITE, 0, 0, getWidth(s, p_408972_), 30);
-            int i = 7;
-            p_410666_.blitSprite(RenderPipelines.GUI_TEXTURED, MUSIC_NOTES_SPRITE, 7, 7, 16, 16, musicNoteColor);
-            p_410666_.drawString(p_408972_, getNowPlayingString(s), 30, 15 - 9 / 2, TEXT_COLOR);
+    public static void extractToast(final GuiGraphicsExtractor graphics, final Font font) {
+        String currentSong = getCurrentSongName();
+        if (currentSong != null) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, NOW_PLAYING_BACKGROUND_SPRITE, 0, 0, getWidth(currentSong, font), 30);
+            int notesOffset = 7;
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, MUSIC_NOTES_SPRITE, 7, 7, 16, 16, musicNoteColor);
+            graphics.text(font, getNowPlayingString(currentSong), 30, 15 - 9 / 2, TEXT_COLOR);
         }
     }
 
@@ -52,36 +49,36 @@ public class NowPlayingToast implements Toast {
 
     public static void tickMusicNotes() {
         if (getCurrentSongName() != null) {
-            long i = System.currentTimeMillis();
-            if (i > lastMusicNoteColorChange + 25L) {
+            long now = System.currentTimeMillis();
+            if (now > lastMusicNoteColorChange + 25L) {
                 musicNoteColorTick++;
-                lastMusicNoteColorChange = i;
+                lastMusicNoteColorChange = now;
                 musicNoteColor = ColorLerper.getLerpedColor(ColorLerper.Type.MUSIC_NOTE, musicNoteColorTick);
             }
         }
     }
 
-    private static Component getNowPlayingString(@Nullable String p_410596_) {
-        return p_410596_ == null ? Component.empty() : Component.translatable(p_410596_.replace("/", "."));
+    private static Component getNowPlayingString(final @Nullable String currentSongKey) {
+        return currentSongKey == null ? Component.empty() : Component.translatable(currentSongKey.replace("/", "."));
     }
 
-    public void showToast(Options p_410557_) {
+    public void showToast(final Options options) {
         this.updateToast = true;
-        this.notificationDisplayTimeMultiplier = p_410557_.notificationDisplayTime().get();
+        this.notificationDisplayTimeMultiplier = options.notificationDisplayTime().get();
         this.setWantedVisibility(Toast.Visibility.SHOW);
     }
 
     @Override
-    public void update(ToastManager p_410553_, long p_408175_) {
+    public void update(final ToastManager manager, final long fullyVisibleForMs) {
         if (this.updateToast) {
-            this.wantedVisibility = p_408175_ < 5000.0 * this.notificationDisplayTimeMultiplier ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
+            this.wantedVisibility = fullyVisibleForMs < 5000.0 * this.notificationDisplayTimeMultiplier ? Toast.Visibility.SHOW : Toast.Visibility.HIDE;
             tickMusicNotes();
         }
     }
 
     @Override
-    public void render(GuiGraphics p_405968_, Font p_406720_, long p_408292_) {
-        renderToast(p_405968_, p_406720_);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final Font font, final long fullyVisibleForMs) {
+        extractToast(graphics, font);
     }
 
     @Override
@@ -94,8 +91,8 @@ public class NowPlayingToast implements Toast {
         return getWidth(getCurrentSongName(), this.minecraft.font);
     }
 
-    private static int getWidth(@Nullable String p_405957_, Font p_408471_) {
-        return 30 + p_408471_.width(getNowPlayingString(p_405957_)) + 7;
+    private static int getWidth(final @Nullable String currentSong, final Font font) {
+        return 30 + font.width(getNowPlayingString(currentSong)) + 7;
     }
 
     @Override
@@ -104,12 +101,12 @@ public class NowPlayingToast implements Toast {
     }
 
     @Override
-    public float xPos(int p_407715_, float p_407970_) {
-        return this.width() * p_407970_ - this.width();
+    public float xPos(final int screenWidth, final float visiblePortion) {
+        return this.width() * visiblePortion - this.width();
     }
 
     @Override
-    public float yPos(int p_408258_) {
+    public float yPos(final int firstSlotIndex) {
         return 0.0F;
     }
 
@@ -118,7 +115,7 @@ public class NowPlayingToast implements Toast {
         return this.wantedVisibility;
     }
 
-    public void setWantedVisibility(Toast.Visibility p_409088_) {
-        this.wantedVisibility = p_409088_;
+    public void setWantedVisibility(final Toast.Visibility visibility) {
+        this.wantedVisibility = visibility;
     }
 }

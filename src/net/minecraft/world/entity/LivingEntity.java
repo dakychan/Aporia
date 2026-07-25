@@ -7,10 +7,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.DataResult;
-import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.JavaOps;
 import it.unimi.dsi.fastutil.doubles.DoubleDoubleImmutablePair;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
@@ -30,7 +26,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -40,8 +36,6 @@ import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
 import net.minecraft.network.protocol.game.ClientboundAnimatePacket;
 import net.minecraft.network.protocol.game.ClientboundEntityEventPacket;
@@ -91,7 +85,6 @@ import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.attributes.DefaultAttributes;
-import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.animal.wolf.Wolf;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -99,7 +92,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.AttackRange;
 import net.minecraft.world.item.component.BlocksAttacks;
@@ -153,11 +148,12 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     public static final String TAG_FALL_FLYING = "FallFlying";
     public static final String TAG_HURT_TIME = "HurtTime";
     public static final String TAG_DEATH_TIME = "DeathTime";
-    public static final String TAG_HURT_BY_TIMESTAMP = "HurtByTimestamp";
     public static final String TAG_HEALTH = "Health";
     private static final Identifier SPEED_MODIFIER_POWDER_SNOW_ID = Identifier.withDefaultNamespace("powder_snow");
     private static final Identifier SPRINTING_MODIFIER_ID = Identifier.withDefaultNamespace("sprinting");
-    private static final AttributeModifier SPEED_MODIFIER_SPRINTING = new AttributeModifier(SPRINTING_MODIFIER_ID, 0.3F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
+    private static final AttributeModifier SPEED_MODIFIER_SPRINTING = new AttributeModifier(
+        SPRINTING_MODIFIER_ID, 0.3F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+    );
     public static final int EQUIPMENT_SLOT_OFFSET = 98;
     public static final int ARMOR_SLOT_OFFSET = 100;
     public static final int BODY_ARMOR_OFFSET = 105;
@@ -173,38 +169,61 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     public static final float BASE_JUMP_POWER = 0.42F;
     protected static final float DEFAULT_KNOCKBACK = 0.4F;
     protected static final int INVULNERABLE_DURATION = 20;
+    protected static final int HURT_DURATION_TICKS = 10;
+    private static final double CLIMBING_VERTICAL_SPEED = 0.2;
+    private static final float SWIM_AMOUNT_PER_TICK = 0.09F;
     private static final double MAX_LINE_OF_SIGHT_TEST_RANGE = 128.0;
     protected static final int LIVING_ENTITY_FLAG_IS_USING = 1;
     protected static final int LIVING_ENTITY_FLAG_OFF_HAND = 2;
     protected static final int LIVING_ENTITY_FLAG_SPIN_ATTACK = 4;
     protected static final EntityDataAccessor<Byte> DATA_LIVING_ENTITY_FLAGS = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.BYTE);
     private static final EntityDataAccessor<Float> DATA_HEALTH_ID = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.FLOAT);
-    private static final EntityDataAccessor<List<ParticleOptions>> DATA_EFFECT_PARTICLES = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.PARTICLES);
+    private static final EntityDataAccessor<List<ParticleOptions>> DATA_EFFECT_PARTICLES = SynchedEntityData.defineId(
+        LivingEntity.class, EntityDataSerializers.PARTICLES
+    );
     private static final EntityDataAccessor<Boolean> DATA_EFFECT_AMBIENCE_ID = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> DATA_ARROW_COUNT_ID = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_STINGER_COUNT_ID = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Optional<BlockPos>> SLEEPING_POS_ID = SynchedEntityData.defineId(LivingEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    private static final EntityDataAccessor<Optional<BlockPos>> SLEEPING_POS_ID = SynchedEntityData.defineId(
+        LivingEntity.class, EntityDataSerializers.OPTIONAL_BLOCK_POS
+    );
     private static final int PARTICLE_FREQUENCY_WHEN_INVISIBLE = 15;
     protected static final EntityDimensions SLEEPING_DIMENSIONS = EntityDimensions.fixed(0.2F, 0.2F).withEyeHeight(0.2F);
     public static final float EXTRA_RENDER_CULLING_SIZE_WITH_BIG_HAT = 0.5F;
     public static final float DEFAULT_BABY_SCALE = 0.5F;
-    private static final float WATER_FLOAT_IMPULSE = 0.04F;
-    public static final Predicate<LivingEntity> PLAYER_NOT_WEARING_DISGUISE_ITEM = p_390518_ -> {
-        if (p_390518_ instanceof Player player) {
-            ItemStack itemstack = player.getItemBySlot(EquipmentSlot.HEAD);
-            return !itemstack.is(ItemTags.GAZE_DISGUISE_EQUIPMENT);
+    protected static final float SWIMMING_VERTICAL_SPEED = 0.04F;
+    private static final int CURRENT_IMPULSE_CONTEXT_RESET_GRACE_TIME_TICKS = 40;
+    private static final int DEFAULT_CURRENT_IMPULSE_CONTEXT_RESET_GRACE_TIME = 0;
+    public static final float BASE_HORIZONTAL_AIR_DRAG = 0.91F;
+    public static final float BASE_VERTICAL_AIR_DRAG = 0.98F;
+    public static final float WATER_DRAG = 0.8F;
+    public static final float SPRINTING_WATER_DRAG = 0.9F;
+    public static final float LAVA_DRAG = 0.5F;
+    public static final float LAVA_SHALLOW_VERTICAL_DRAG = 0.8F;
+    public static final float DOLPHINS_GRACE_WATER_DRAG = 0.96F;
+    public static final float FLYING_AIR_DRAG = 0.91F;
+    public static final float FLYING_VERTICAL_AIR_DRAG = 0.91F;
+    public static final float FLYING_LAVA_DRAG = 0.5F;
+    public static final float FLYING_WATER_DRAG = 0.8F;
+    public static final float ELYTRA_HORIZONTAL_AIR_DRAG = 0.99F;
+    public static final float ELYTRA_VERTICAL_AIR_DRAG = 0.98F;
+    public static final float BASE_SWIM_SPEED = 0.02F;
+    private int currentImpulseContextResetGraceTime = 0;
+    public static final Predicate<LivingEntity> PLAYER_NOT_WEARING_DISGUISE_ITEM = livingEntity -> {
+        if (livingEntity instanceof Player player) {
+            ItemStack helmet = player.getItemBySlot(EquipmentSlot.HEAD);
+            return !helmet.is(ItemTags.GAZE_DISGUISE_EQUIPMENT);
         } else {
             return true;
         }
     };
-    private static final Dynamic<?> EMPTY_BRAIN = new Dynamic<>(JavaOps.INSTANCE, Map.of("memories", Map.of()));
     private final AttributeMap attributes;
     private final CombatTracker combatTracker = new CombatTracker(this);
     private final Map<Holder<MobEffect>, MobEffectInstance> activeEffects = Maps.newHashMap();
-    private final Map<EquipmentSlot, ItemStack> lastEquipmentItems = Util.makeEnumMap(EquipmentSlot.class, p_390519_ -> ItemStack.EMPTY);
+    private final Map<EquipmentSlot, ItemStack> lastEquipmentItems = Util.makeEnumMap(EquipmentSlot.class, slot -> ItemStack.EMPTY);
     public boolean swinging;
     private boolean discardFriction = false;
-    public InteractionHand swingingArm;
+    public @Nullable InteractionHand swingingArm;
     public int swingTime;
     public int removeArrowTime;
     public int removeStingerTime;
@@ -230,7 +249,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     public float xxa;
     public float yya;
     public float zza;
-    protected InterpolationHandler interpolation = new InterpolationHandler(this);
+    protected final InterpolationHandler interpolation = new InterpolationHandler(this);
     protected double lerpYHeadRot;
     protected int lerpHeadSteps;
     private boolean effectsDirty = true;
@@ -257,20 +276,23 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     private float swimAmountO;
     protected Brain<?> brain;
     private boolean skipDropExperience;
-    private final EnumMap<EquipmentSlot, Reference2ObjectMap<Enchantment, Set<EnchantmentLocationBasedEffect>>> activeLocationDependentEnchantments = new EnumMap<>(EquipmentSlot.class);
+    private final EnumMap<EquipmentSlot, Reference2ObjectMap<Enchantment, Set<EnchantmentLocationBasedEffect>>> activeLocationDependentEnchantments = new EnumMap<>(
+        EquipmentSlot.class
+    );
     protected final EntityEquipment equipment;
     private Waypoint.Icon locatorBarIcon = new Waypoint.Icon();
+    public @Nullable Vec3 currentImpulseImpactPos;
 
-    protected LivingEntity(EntityType<? extends LivingEntity> p_20966_, Level p_20967_) {
-        super(p_20966_, p_20967_);
-        this.attributes = new AttributeMap(DefaultAttributes.getSupplier(p_20966_));
+    protected LivingEntity(final EntityType<? extends LivingEntity> type, final Level level) {
+        super(type, level);
+        this.attributes = new AttributeMap(DefaultAttributes.getSupplier(type));
         this.setHealth(this.getMaxHealth());
         this.equipment = this.createEquipment();
         this.blocksBuilding = true;
         this.reapplyPosition();
         this.setYRot(this.random.nextFloat() * (float) (Math.PI * 2));
         this.yHeadRot = this.getYRot();
-        this.brain = this.makeBrain(EMPTY_BRAIN);
+        this.brain = this.makeBrain(Brain.Packed.EMPTY);
     }
 
     @Override
@@ -283,36 +305,28 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return new EntityEquipment();
     }
 
-    public Brain<?> getBrain() {
-        return this.brain;
+    public Brain<? extends LivingEntity> getBrain() {
+        return (Brain<? extends LivingEntity>)this.brain;
     }
 
-    protected Brain.Provider<?> brainProvider() {
-        return Brain.provider(ImmutableList.of(), ImmutableList.of());
-    }
-
-    protected Brain<?> makeBrain(Dynamic<?> p_21069_) {
-        return this.brainProvider().makeBrain(p_21069_);
+    protected Brain<? extends LivingEntity> makeBrain(final Brain.Packed packedBrain) {
+        return new Brain<>();
     }
 
     @Override
-    public void kill(ServerLevel p_367431_) {
-        this.hurtServer(p_367431_, this.damageSources().genericKill(), Float.MAX_VALUE);
-    }
-
-    public boolean canAttackType(EntityType<?> p_21032_) {
-        return true;
+    public void kill(final ServerLevel level) {
+        this.hurtServer(level, this.damageSources().genericKill(), Float.MAX_VALUE);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_329703_) {
-        p_329703_.define(DATA_LIVING_ENTITY_FLAGS, (byte)0);
-        p_329703_.define(DATA_EFFECT_PARTICLES, List.of());
-        p_329703_.define(DATA_EFFECT_AMBIENCE_ID, false);
-        p_329703_.define(DATA_ARROW_COUNT_ID, 0);
-        p_329703_.define(DATA_STINGER_COUNT_ID, 0);
-        p_329703_.define(DATA_HEALTH_ID, 1.0F);
-        p_329703_.define(SLEEPING_POS_ID, Optional.empty());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_LIVING_ENTITY_FLAGS, (byte)0);
+        entityData.define(DATA_EFFECT_PARTICLES, List.of());
+        entityData.define(DATA_EFFECT_AMBIENCE_ID, false);
+        entityData.define(DATA_ARROW_COUNT_ID, 0);
+        entityData.define(DATA_STINGER_COUNT_ID, 0);
+        entityData.define(DATA_HEALTH_ID, 1.0F);
+        entityData.define(SLEEPING_POS_ID, Optional.empty());
     }
 
     public static AttributeSupplier.Builder createLivingAttributes() {
@@ -329,6 +343,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             .add(Attributes.SAFE_FALL_DISTANCE)
             .add(Attributes.FALL_DAMAGE_MULTIPLIER)
             .add(Attributes.JUMP_STRENGTH)
+            .add(Attributes.ENTITY_INTERACTION_RANGE)
             .add(Attributes.OXYGEN_BONUS)
             .add(Attributes.BURNING_TIME)
             .add(Attributes.EXPLOSION_KNOCKBACK_RESISTANCE)
@@ -336,49 +351,54 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             .add(Attributes.MOVEMENT_EFFICIENCY)
             .add(Attributes.ATTACK_KNOCKBACK)
             .add(Attributes.CAMERA_DISTANCE)
-            .add(Attributes.WAYPOINT_TRANSMIT_RANGE);
+            .add(Attributes.WAYPOINT_TRANSMIT_RANGE)
+            .add(Attributes.BOUNCINESS)
+            .add(Attributes.AIR_DRAG_MODIFIER)
+            .add(Attributes.FRICTION_MODIFIER)
+            .add(Attributes.NAME_TAG_DISTANCE)
+            .add(Attributes.BELOW_NAME_DISTANCE);
     }
 
     @Override
-    protected void checkFallDamage(double p_20990_, boolean p_20991_, BlockState p_20992_, BlockPos p_20993_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
         if (!this.isInWater()) {
-            this.updateInWaterStateAndDoWaterCurrentPushing();
+            this.updateFluidInteraction();
         }
 
-        if (this.level() instanceof ServerLevel serverlevel && p_20991_ && this.fallDistance > 0.0) {
-            this.onChangedBlock(serverlevel, p_20993_);
-            double d6 = Math.max(0, Mth.floor(this.calculateFallPower(this.fallDistance)));
-            if (d6 > 0.0 && !p_20992_.isAir()) {
-                double d0 = this.getX();
-                double d1 = this.getY();
-                double d2 = this.getZ();
-                BlockPos blockpos = this.blockPosition();
-                if (p_20993_.getX() != blockpos.getX() || p_20993_.getZ() != blockpos.getZ()) {
-                    double d3 = d0 - p_20993_.getX() - 0.5;
-                    double d4 = d2 - p_20993_.getZ() - 0.5;
-                    double d5 = Math.max(Math.abs(d3), Math.abs(d4));
-                    d0 = p_20993_.getX() + 0.5 + d3 / d5 * 0.5;
-                    d2 = p_20993_.getZ() + 0.5 + d4 / d5 * 0.5;
+        if (this.level() instanceof ServerLevel level && onGround && this.fallDistance > 0.0) {
+            this.onChangedBlock(level, pos);
+            double power = Math.max(0, Mth.floor(this.calculateFallPower(this.fallDistance)));
+            if (power > 0.0 && !onState.isAir()) {
+                double x = this.getX();
+                double y = this.getY();
+                double z = this.getZ();
+                BlockPos entityPos = this.blockPosition();
+                if (pos.getX() != entityPos.getX() || pos.getZ() != entityPos.getZ()) {
+                    double xDiff = x - pos.getX() - 0.5;
+                    double zDiff = z - pos.getZ() - 0.5;
+                    double maxDiff = Math.max(Math.abs(xDiff), Math.abs(zDiff));
+                    x = pos.getX() + 0.5 + xDiff / maxDiff * 0.5;
+                    z = pos.getZ() + 0.5 + zDiff / maxDiff * 0.5;
                 }
 
-                double d7 = Math.min(0.2F + d6 / 15.0, 2.5);
-                int i = (int)(150.0 * d7);
-                serverlevel.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, p_20992_), d0, d1, d2, i, 0.0, 0.0, 0.0, 0.15F);
+                double scale = Math.min(0.2F + power / 15.0, 2.5);
+                int particles = (int)(150.0 * scale);
+                level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, onState), x, y, z, particles, 0.0, 0.0, 0.0, 0.15F);
             }
         }
 
-        super.checkFallDamage(p_20990_, p_20991_, p_20992_, p_20993_);
-        if (p_20991_) {
+        super.checkFallDamage(ya, onGround, onState, pos);
+        if (onGround) {
             this.lastClimbablePos = Optional.empty();
         }
     }
 
     public boolean canBreatheUnderwater() {
-        return this.getType().is(EntityTypeTags.CAN_BREATHE_UNDER_WATER);
+        return this.is(EntityTypeTags.CAN_BREATHE_UNDER_WATER);
     }
 
-    public float getSwimAmount(float p_20999_) {
-        return Mth.lerp(p_20999_, this.swimAmountO, this.swimAmount);
+    public float getSwimAmount(final float a) {
+        return Mth.lerp(a, this.swimAmountO, this.swimAmount);
     }
 
     public boolean hasLandedInLiquid() {
@@ -392,36 +412,38 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.getSleepingPos().ifPresent(this::setPosToBed);
         }
 
-        if (this.level() instanceof ServerLevel serverlevel) {
-            EnchantmentHelper.tickEffects(serverlevel, this);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            EnchantmentHelper.tickEffects(serverLevel, this);
         }
 
         super.baseTick();
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("livingEntityBaseTick");
-        if (this.isAlive() && this.level() instanceof ServerLevel serverlevel1) {
-            boolean flag = this instanceof Player;
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("livingEntityBaseTick");
+        if (this.isAlive() && this.level() instanceof ServerLevel level) {
+            boolean isPlayer = this instanceof Player;
             if (this.isInWall()) {
-                this.hurtServer(serverlevel1, this.damageSources().inWall(), 1.0F);
-            } else if (flag && !serverlevel1.getWorldBorder().isWithinBounds(this.getBoundingBox())) {
-                double d0 = serverlevel1.getWorldBorder().getDistanceToBorder(this) + serverlevel1.getWorldBorder().getSafeZone();
-                if (d0 < 0.0) {
-                    double d1 = serverlevel1.getWorldBorder().getDamagePerBlock();
-                    if (d1 > 0.0) {
-                        this.hurtServer(serverlevel1, this.damageSources().outOfBorder(), Math.max(1, Mth.floor(-d0 * d1)));
+                this.hurtServer(level, this.damageSources().inWall(), 1.0F);
+            } else if (isPlayer && !level.getWorldBorder().isWithinBounds(this.getBoundingBox())) {
+                double dist = level.getWorldBorder().getDistanceToBorder(this) + level.getWorldBorder().getSafeZone();
+                if (dist < 0.0) {
+                    double damagePerBlock = level.getWorldBorder().getDamagePerBlock();
+                    if (damagePerBlock > 0.0) {
+                        this.hurtServer(level, this.damageSources().outOfBorder(), Math.max(1, Mth.floor(-dist * damagePerBlock)));
                     }
                 }
             }
 
             if (this.isEyeInFluid(FluidTags.WATER)
-                && !serverlevel1.getBlockState(BlockPos.containing(this.getX(), this.getEyeY(), this.getZ())).is(Blocks.BUBBLE_COLUMN)) {
-                boolean flag1 = !this.canBreatheUnderwater() && !MobEffectUtil.hasWaterBreathing(this) && (!flag || !((Player)this).getAbilities().invulnerable);
-                if (flag1) {
+                && !level.getBlockState(BlockPos.containing(this.getX(), this.getEyeY(), this.getZ())).is(Blocks.BUBBLE_COLUMN)) {
+                boolean canDrownInWater = !this.canBreatheUnderwater()
+                    && !MobEffectUtil.hasWaterBreathing(this)
+                    && (!isPlayer || !((Player)this).getAbilities().invulnerable);
+                if (canDrownInWater) {
                     this.setAirSupply(this.decreaseAirSupply(this.getAirSupply()));
                     if (this.shouldTakeDrowningDamage()) {
                         this.setAirSupply(0);
-                        serverlevel1.broadcastEntityEvent(this, (byte)67);
-                        this.hurtServer(serverlevel1, this.damageSources().drown(), 2.0F);
+                        level.broadcastEntityEvent(this, (byte)67);
+                        this.hurtServer(level, this.damageSources().drown(), 2.0F);
                     }
                 } else if (this.getAirSupply() < this.getMaxAirSupply() && MobEffectUtil.shouldEffectsRefillAirsupply(this)) {
                     this.setAirSupply(this.increaseAirSupply(this.getAirSupply()));
@@ -434,10 +456,10 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
                 this.setAirSupply(this.increaseAirSupply(this.getAirSupply()));
             }
 
-            BlockPos blockpos = this.blockPosition();
-            if (!Objects.equal(this.lastPos, blockpos)) {
-                this.lastPos = blockpos;
-                this.onChangedBlock(serverlevel1, blockpos);
+            BlockPos pos = this.blockPosition();
+            if (!Objects.equal(this.lastPos, pos)) {
+                this.lastPos = pos;
+                this.onChangedBlock(level, pos);
             }
         }
 
@@ -463,9 +485,9 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.lastHurtMob = null;
         }
 
-        LivingEntity livingentity = this.getLastHurtByMob();
-        if (livingentity != null) {
-            if (!livingentity.isAlive()) {
+        LivingEntity hurtByMob = this.getLastHurtByMob();
+        if (hurtByMob != null) {
+            if (!hurtByMob.isAlive()) {
                 this.setLastHurtByMob(null);
             } else if (this.tickCount - this.lastHurtByMobTimestamp > 100) {
                 this.setLastHurtByMob(null);
@@ -477,7 +499,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         this.yBodyRotO = this.yBodyRot;
         this.yRotO = this.getYRot();
         this.xRotO = this.getXRot();
-        profilerfiller.pop();
+        profiler.pop();
     }
 
     protected boolean shouldTakeDrowningDamage() {
@@ -489,36 +511,40 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return Mth.lerp((float)this.getAttributeValue(Attributes.MOVEMENT_EFFICIENCY), super.getBlockSpeedFactor(), 1.0F);
     }
 
+    private static float computeModifiedFriction(final float friction, final float modifier) {
+        return Mth.clamp(1.0F - (1.0F - friction) * modifier, 0.0F, 1.0F);
+    }
+
     public float getLuck() {
         return 0.0F;
     }
 
     protected void removeFrost() {
-        AttributeInstance attributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        if (attributeinstance != null) {
-            if (attributeinstance.getModifier(SPEED_MODIFIER_POWDER_SNOW_ID) != null) {
-                attributeinstance.removeModifier(SPEED_MODIFIER_POWDER_SNOW_ID);
+        AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        if (speed != null) {
+            if (speed.getModifier(SPEED_MODIFIER_POWDER_SNOW_ID) != null) {
+                speed.removeModifier(SPEED_MODIFIER_POWDER_SNOW_ID);
             }
         }
     }
 
     protected void tryAddFrost() {
         if (!this.getBlockStateOnLegacy().isAir()) {
-            int i = this.getTicksFrozen();
-            if (i > 0) {
-                AttributeInstance attributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
-                if (attributeinstance == null) {
+            int ticksFrozen = this.getTicksFrozen();
+            if (ticksFrozen > 0) {
+                AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
+                if (speed == null) {
                     return;
                 }
 
-                float f = -0.05F * this.getPercentFrozen();
-                attributeinstance.addTransientModifier(new AttributeModifier(SPEED_MODIFIER_POWDER_SNOW_ID, f, AttributeModifier.Operation.ADD_VALUE));
+                float slowAmount = -0.05F * this.getPercentFrozen();
+                speed.addTransientModifier(new AttributeModifier(SPEED_MODIFIER_POWDER_SNOW_ID, slowAmount, AttributeModifier.Operation.ADD_VALUE));
             }
         }
     }
 
-    protected void onChangedBlock(ServerLevel p_343619_, BlockPos p_21175_) {
-        EnchantmentHelper.runLocationChangedEffects(p_343619_, this);
+    protected void onChangedBlock(final ServerLevel level, final BlockPos pos) {
+        EnchantmentHelper.runLocationChangedEffects(level, this);
     }
 
     public boolean isBaby() {
@@ -530,12 +556,12 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     public final float getScale() {
-        AttributeMap attributemap = this.getAttributes();
-        return attributemap == null ? 1.0F : this.sanitizeScale((float)attributemap.getValue(Attributes.SCALE));
+        AttributeMap attributes = this.getAttributes();
+        return attributes == null ? 1.0F : this.sanitizeScale((float)attributes.getValue(Attributes.SCALE));
     }
 
-    protected float sanitizeScale(float p_330116_) {
-        return p_330116_;
+    protected float sanitizeScale(final float scale) {
+        return scale;
     }
 
     public boolean isAffectedByFluids() {
@@ -554,31 +580,31 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return !this.isBaby();
     }
 
-    protected boolean shouldDropLoot(ServerLevel p_429041_) {
-        return !this.isBaby() && p_429041_.getGameRules().get(GameRules.MOB_DROPS);
+    protected boolean shouldDropLoot(final ServerLevel level) {
+        return !this.isBaby() && level.getGameRules().get(GameRules.MOB_DROPS);
     }
 
-    protected int decreaseAirSupply(int p_21303_) {
-        AttributeInstance attributeinstance = this.getAttribute(Attributes.OXYGEN_BONUS);
-        double d0;
-        if (attributeinstance != null) {
-            d0 = attributeinstance.getValue();
+    protected int decreaseAirSupply(final int currentSupply) {
+        AttributeInstance respiration = this.getAttribute(Attributes.OXYGEN_BONUS);
+        double oxygenBonus;
+        if (respiration != null) {
+            oxygenBonus = respiration.getValue();
         } else {
-            d0 = 0.0;
+            oxygenBonus = 0.0;
         }
 
-        return d0 > 0.0 && this.random.nextDouble() >= 1.0 / (d0 + 1.0) ? p_21303_ : p_21303_ - 1;
+        return oxygenBonus > 0.0 && this.random.nextDouble() >= 1.0 / (oxygenBonus + 1.0) ? currentSupply : currentSupply - 1;
     }
 
-    protected int increaseAirSupply(int p_21307_) {
-        return Math.min(p_21307_ + 4, this.getMaxAirSupply());
+    protected int increaseAirSupply(final int currentSupply) {
+        return Math.min(currentSupply + 4, this.getMaxAirSupply());
     }
 
-    public final int getExperienceReward(ServerLevel p_342563_, @Nullable Entity p_343916_) {
-        return EnchantmentHelper.processMobExperience(p_342563_, p_343916_, this, this.getBaseExperienceReward(p_342563_));
+    public final int getExperienceReward(final ServerLevel level, final @Nullable Entity killer) {
+        return EnchantmentHelper.processMobExperience(level, killer, this, this.getBaseExperienceReward(level));
     }
 
-    protected int getBaseExperienceReward(ServerLevel p_361539_) {
+    protected int getBaseExperienceReward(final ServerLevel level) {
         return 0;
     }
 
@@ -603,21 +629,21 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.lastHurtByMobTimestamp;
     }
 
-    public void setLastHurtByPlayer(Player p_395411_, int p_391223_) {
-        this.setLastHurtByPlayer(EntityReference.of(p_395411_), p_391223_);
+    public void setLastHurtByPlayer(final Player player, final int timeToRemember) {
+        this.setLastHurtByPlayer(EntityReference.of(player), timeToRemember);
     }
 
-    public void setLastHurtByPlayer(UUID p_393536_, int p_396369_) {
-        this.setLastHurtByPlayer(EntityReference.of(p_393536_), p_396369_);
+    public void setLastHurtByPlayer(final UUID player, final int timeToRemember) {
+        this.setLastHurtByPlayer(EntityReference.of(player), timeToRemember);
     }
 
-    private void setLastHurtByPlayer(EntityReference<Player> p_394032_, int p_392614_) {
-        this.lastHurtByPlayer = p_394032_;
-        this.lastHurtByPlayerMemoryTime = p_392614_;
+    private void setLastHurtByPlayer(final EntityReference<Player> player, final int timeToRemember) {
+        this.lastHurtByPlayer = player;
+        this.lastHurtByPlayerMemoryTime = timeToRemember;
     }
 
-    public void setLastHurtByMob(@Nullable LivingEntity p_21039_) {
-        this.lastHurtByMob = EntityReference.of(p_21039_);
+    public void setLastHurtByMob(final @Nullable LivingEntity hurtBy) {
+        this.lastHurtByMob = EntityReference.of(hurtBy);
         this.lastHurtByMobTimestamp = this.tickCount;
     }
 
@@ -629,9 +655,9 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.lastHurtMobTimestamp;
     }
 
-    public void setLastHurtMob(Entity p_21336_) {
-        if (p_21336_ instanceof LivingEntity) {
-            this.lastHurtMob = (LivingEntity)p_21336_;
+    public void setLastHurtMob(final Entity target) {
+        if (target instanceof LivingEntity livingEntity) {
+            this.lastHurtMob = livingEntity;
         } else {
             this.lastHurtMob = null;
         }
@@ -643,34 +669,34 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.noActionTime;
     }
 
-    public void setNoActionTime(int p_21311_) {
-        this.noActionTime = p_21311_;
+    public void setNoActionTime(final int noActionTime) {
+        this.noActionTime = noActionTime;
     }
 
     public boolean shouldDiscardFriction() {
         return this.discardFriction;
     }
 
-    public void setDiscardFriction(boolean p_147245_) {
-        this.discardFriction = p_147245_;
+    public void setDiscardFriction(final boolean discardFriction) {
+        this.discardFriction = discardFriction;
     }
 
-    protected boolean doesEmitEquipEvent(EquipmentSlot p_217035_) {
+    protected boolean doesEmitEquipEvent(final EquipmentSlot slot) {
         return true;
     }
 
-    public void onEquipItem(EquipmentSlot p_238393_, ItemStack p_238394_, ItemStack p_238395_) {
+    public void onEquipItem(final EquipmentSlot slot, final ItemStack oldStack, final ItemStack stack) {
         if (!this.level().isClientSide() && !this.isSpectator()) {
-            if (!ItemStack.isSameItemSameComponents(p_238394_, p_238395_) && !this.firstTick) {
-                Equippable equippable = p_238395_.get(DataComponents.EQUIPPABLE);
-                if (!this.isSilent() && equippable != null && p_238393_ == equippable.slot()) {
+            if (!ItemStack.isSameItemSameComponents(oldStack, stack) && !this.firstTick) {
+                Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
+                if (!this.isSilent() && equippable != null && slot == equippable.slot()) {
                     this.level()
                         .playSeededSound(
                             null,
                             this.getX(),
                             this.getY(),
                             this.getZ(),
-                            this.getEquipSound(p_238393_, p_238395_, equippable),
+                            this.getEquipSound(slot, stack, equippable),
                             this.getSoundSource(),
                             1.0F,
                             1.0F,
@@ -678,136 +704,139 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
                         );
                 }
 
-                if (this.doesEmitEquipEvent(p_238393_)) {
+                if (this.doesEmitEquipEvent(slot)) {
                     this.gameEvent(equippable != null ? GameEvent.EQUIP : GameEvent.UNEQUIP);
                 }
             }
         }
     }
 
-    protected Holder<SoundEvent> getEquipSound(EquipmentSlot p_397900_, ItemStack p_395451_, Equippable p_396028_) {
-        return p_396028_.equipSound();
+    protected Holder<SoundEvent> getEquipSound(final EquipmentSlot slot, final ItemStack stack, final Equippable equippable) {
+        return equippable.equipSound();
     }
 
     @Override
-    public void remove(Entity.RemovalReason p_276115_) {
-        if ((p_276115_ == Entity.RemovalReason.KILLED || p_276115_ == Entity.RemovalReason.DISCARDED) && this.level() instanceof ServerLevel serverlevel) {
-            this.triggerOnDeathMobEffects(serverlevel, p_276115_);
+    public void remove(final Entity.RemovalReason reason) {
+        if ((reason == Entity.RemovalReason.KILLED || reason == Entity.RemovalReason.DISCARDED) && this.level() instanceof ServerLevel level) {
+            this.triggerOnDeathMobEffects(level, reason);
         }
 
-        super.remove(p_276115_);
+        super.remove(reason);
         this.brain.clearMemories();
     }
 
     @Override
-    public void onRemoval(Entity.RemovalReason p_409817_) {
-        super.onRemoval(p_409817_);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            serverlevel.getWaypointManager().untrackWaypoint((WaypointTransmitter)this);
+    public void onRemoval(final Entity.RemovalReason reason) {
+        super.onRemoval(reason);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            serverLevel.getWaypointManager().untrackWaypoint(this);
         }
     }
 
-    protected void triggerOnDeathMobEffects(ServerLevel p_366893_, Entity.RemovalReason p_344022_) {
-        for (MobEffectInstance mobeffectinstance : this.getActiveEffects()) {
-            mobeffectinstance.onMobRemoved(p_366893_, this, p_344022_);
+    protected void triggerOnDeathMobEffects(final ServerLevel level, final Entity.RemovalReason reason) {
+        for (MobEffectInstance effect : this.getActiveEffects()) {
+            effect.onMobRemoved(level, this, reason);
         }
 
         this.activeEffects.clear();
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408314_) {
-        p_408314_.putFloat("Health", this.getHealth());
-        p_408314_.putShort("HurtTime", (short)this.hurtTime);
-        p_408314_.putInt("HurtByTimestamp", this.lastHurtByMobTimestamp);
-        p_408314_.putShort("DeathTime", (short)this.deathTime);
-        p_408314_.putFloat("AbsorptionAmount", this.getAbsorptionAmount());
-        p_408314_.store("attributes", AttributeInstance.Packed.LIST_CODEC, this.getAttributes().pack());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.putFloat("Health", this.getHealth());
+        output.putShort("HurtTime", (short)this.hurtTime);
+        output.putShort("DeathTime", (short)this.deathTime);
+        output.putFloat("AbsorptionAmount", this.getAbsorptionAmount());
+        output.putInt("current_impulse_context_reset_grace_time", this.currentImpulseContextResetGraceTime);
+        output.storeNullable("current_explosion_impact_pos", Vec3.CODEC, this.currentImpulseImpactPos);
+        output.store("attributes", AttributeInstance.Packed.LIST_CODEC, this.getAttributes().pack());
         if (!this.activeEffects.isEmpty()) {
-            p_408314_.store("active_effects", MobEffectInstance.CODEC.listOf(), List.copyOf(this.activeEffects.values()));
+            output.store("active_effects", MobEffectInstance.CODEC.listOf(), List.copyOf(this.activeEffects.values()));
         }
 
-        p_408314_.putBoolean("FallFlying", this.isFallFlying());
-        this.getSleepingPos().ifPresent(p_405284_ -> p_408314_.store("sleeping_pos", BlockPos.CODEC, p_405284_));
-        DataResult<Dynamic<?>> dataresult = this.brain.serializeStart(NbtOps.INSTANCE).map(p_405291_ -> new Dynamic<>(NbtOps.INSTANCE, p_405291_));
-        dataresult.resultOrPartial(LOGGER::error).ifPresent(p_405286_ -> p_408314_.store("Brain", Codec.PASSTHROUGH, (Dynamic<?>)p_405286_));
+        output.putBoolean("FallFlying", this.isFallFlying());
+        this.getSleepingPos().ifPresent(sleepingPos -> output.store("sleeping_pos", BlockPos.CODEC, sleepingPos));
+        output.store("Brain", Brain.Packed.CODEC, this.brain.pack());
         if (this.lastHurtByPlayer != null) {
-            this.lastHurtByPlayer.store(p_408314_, "last_hurt_by_player");
-            p_408314_.putInt("last_hurt_by_player_memory_time", this.lastHurtByPlayerMemoryTime);
+            this.lastHurtByPlayer.store(output, "last_hurt_by_player");
+            output.putInt("last_hurt_by_player_memory_time", this.lastHurtByPlayerMemoryTime);
         }
 
         if (this.lastHurtByMob != null) {
-            this.lastHurtByMob.store(p_408314_, "last_hurt_by_mob");
-            p_408314_.putInt("ticks_since_last_hurt_by_mob", this.tickCount - this.lastHurtByMobTimestamp);
+            this.lastHurtByMob.store(output, "last_hurt_by_mob");
+            output.putInt("ticks_since_last_hurt_by_mob", this.tickCount - this.lastHurtByMobTimestamp);
         }
 
         if (!this.equipment.isEmpty()) {
-            p_408314_.store("equipment", EntityEquipment.CODEC, this.equipment);
+            output.store("equipment", EntityEquipment.CODEC, this.equipment);
         }
 
         if (this.locatorBarIcon.hasData()) {
-            p_408314_.store("locator_bar_icon", Waypoint.Icon.CODEC, this.locatorBarIcon);
+            output.store("locator_bar_icon", Waypoint.Icon.CODEC, this.locatorBarIcon);
         }
     }
 
-    public @Nullable ItemEntity drop(ItemStack p_395943_, boolean p_393118_, boolean p_392158_) {
-        if (p_395943_.isEmpty()) {
+    public @Nullable ItemEntity drop(final ItemStack itemStack, final boolean randomly, final boolean thrownFromHand) {
+        if (itemStack.isEmpty()) {
             return null;
-        } else if (this.level().isClientSide()) {
+        }
+
+        if (this.level().isClientSide()) {
             this.swing(InteractionHand.MAIN_HAND);
             return null;
-        } else {
-            ItemEntity itementity = this.createItemStackToDrop(p_395943_, p_393118_, p_392158_);
-            if (itementity != null) {
-                this.level().addFreshEntity(itementity);
-            }
-
-            return itementity;
         }
+
+        ItemEntity entity = this.createItemStackToDrop(itemStack, randomly, thrownFromHand);
+        if (entity != null) {
+            this.level().addFreshEntity(entity);
+        }
+
+        return entity;
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_406679_) {
-        this.internalSetAbsorptionAmount(p_406679_.getFloatOr("AbsorptionAmount", 0.0F));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.internalSetAbsorptionAmount(input.getFloatOr("AbsorptionAmount", 0.0F));
         if (this.level() != null && !this.level().isClientSide()) {
-            p_406679_.read("attributes", AttributeInstance.Packed.LIST_CODEC).ifPresent(this.getAttributes()::apply);
+            input.read("attributes", AttributeInstance.Packed.LIST_CODEC).ifPresent(this.getAttributes()::apply);
         }
 
-        List<MobEffectInstance> list = p_406679_.read("active_effects", MobEffectInstance.CODEC.listOf()).orElse(List.of());
+        List<MobEffectInstance> effects = input.read("active_effects", MobEffectInstance.CODEC.listOf()).orElse(List.of());
         this.activeEffects.clear();
 
-        for (MobEffectInstance mobeffectinstance : list) {
-            this.activeEffects.put(mobeffectinstance.getEffect(), mobeffectinstance);
+        for (MobEffectInstance effect : effects) {
+            this.activeEffects.put(effect.getEffect(), effect);
             this.effectsDirty = true;
         }
 
-        this.setHealth(p_406679_.getFloatOr("Health", this.getMaxHealth()));
-        this.hurtTime = p_406679_.getShortOr("HurtTime", (short)0);
-        this.deathTime = p_406679_.getShortOr("DeathTime", (short)0);
-        this.lastHurtByMobTimestamp = p_406679_.getIntOr("HurtByTimestamp", 0);
-        p_406679_.getString("Team").ifPresent(p_449419_ -> {
+        this.setHealth(input.getFloatOr("Health", this.getMaxHealth()));
+        this.hurtTime = input.getShortOr("HurtTime", (short)0);
+        this.deathTime = input.getShortOr("DeathTime", (short)0);
+        input.getString("Team").ifPresent(teamName -> {
             Scoreboard scoreboard = this.level().getScoreboard();
-            PlayerTeam playerteam = scoreboard.getPlayerTeam(p_449419_);
-            boolean flag = playerteam != null && scoreboard.addPlayerToTeam(this.getStringUUID(), playerteam);
-            if (!flag) {
-                LOGGER.warn("Unable to add mob to team \"{}\" (that team probably doesn't exist)", p_449419_);
+            PlayerTeam team = scoreboard.getPlayerTeam(teamName);
+            boolean success = team != null && scoreboard.addPlayerToTeam(this.getStringUUID(), team);
+            if (!success) {
+                LOGGER.warn("Unable to add mob to team \"{}\" (that team probably doesn't exist)", teamName);
             }
         });
-        this.setSharedFlag(7, p_406679_.getBooleanOr("FallFlying", false));
-        p_406679_.read("sleeping_pos", BlockPos.CODEC).ifPresentOrElse(p_390515_ -> {
-            this.setSleepingPos(p_390515_);
+        this.setSharedFlag(7, input.getBooleanOr("FallFlying", false));
+        input.read("sleeping_pos", BlockPos.CODEC).ifPresentOrElse(sleepingPos -> {
+            this.setSleepingPos(sleepingPos);
             this.entityData.set(DATA_POSE, Pose.SLEEPING);
             if (!this.firstTick) {
-                this.setPosToBed(p_390515_);
+                this.setPosToBed(sleepingPos);
             }
         }, this::clearSleepingPos);
-        p_406679_.read("Brain", Codec.PASSTHROUGH).ifPresent(p_405289_ -> this.brain = this.makeBrain((Dynamic<?>)p_405289_));
-        this.lastHurtByPlayer = EntityReference.read(p_406679_, "last_hurt_by_player");
-        this.lastHurtByPlayerMemoryTime = p_406679_.getIntOr("last_hurt_by_player_memory_time", 0);
-        this.lastHurtByMob = EntityReference.read(p_406679_, "last_hurt_by_mob");
-        this.lastHurtByMobTimestamp = p_406679_.getIntOr("ticks_since_last_hurt_by_mob", 0) + this.tickCount;
-        this.equipment.setAll(p_406679_.read("equipment", EntityEquipment.CODEC).orElseGet(EntityEquipment::new));
-        this.locatorBarIcon = p_406679_.read("locator_bar_icon", Waypoint.Icon.CODEC).orElseGet(Waypoint.Icon::new);
+        input.read("Brain", Brain.Packed.CODEC).ifPresent(packedBrain -> this.brain = this.makeBrain(packedBrain));
+        this.lastHurtByPlayer = EntityReference.read(input, "last_hurt_by_player");
+        this.lastHurtByPlayerMemoryTime = input.getIntOr("last_hurt_by_player_memory_time", 0);
+        this.lastHurtByMob = EntityReference.read(input, "last_hurt_by_mob");
+        this.lastHurtByMobTimestamp = this.tickCount - input.getIntOr("ticks_since_last_hurt_by_mob", 0);
+        this.equipment.setAll(input.read("equipment", EntityEquipment.CODEC).orElseGet(EntityEquipment::new));
+        this.locatorBarIcon = input.read("locator_bar_icon", Waypoint.Icon.CODEC).orElseGet(Waypoint.Icon::new);
+        this.currentImpulseContextResetGraceTime = input.getIntOr("current_impulse_context_reset_grace_time", 0);
+        this.currentImpulseImpactPos = input.read("current_explosion_impact_pos", Vec3.CODEC).orElse(null);
     }
 
     @Override
@@ -817,34 +846,35 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     protected void tickEffects() {
-        if (this.level() instanceof ServerLevel serverlevel) {
+        if (this.level() instanceof ServerLevel serverLevel) {
             Iterator<Holder<MobEffect>> iterator = this.activeEffects.keySet().iterator();
 
             try {
                 while (iterator.hasNext()) {
-                    Holder<MobEffect> holder = iterator.next();
-                    MobEffectInstance mobeffectinstance = this.activeEffects.get(holder);
-                    if (!mobeffectinstance.tickServer(serverlevel, this, () -> this.onEffectUpdated(mobeffectinstance, true, null))) {
+                    Holder<MobEffect> mobEffect = iterator.next();
+                    MobEffectInstance effect = this.activeEffects.get(mobEffect);
+                    if (!effect.tickServer(serverLevel, this, () -> this.onEffectUpdated(effect, true, null))) {
                         iterator.remove();
-                        this.onEffectsRemoved(List.of(mobeffectinstance));
-                    } else if (mobeffectinstance.getDuration() % 600 == 0) {
-                        this.onEffectUpdated(mobeffectinstance, false, null);
+                        this.onEffectsRemoved(List.of(effect));
+                    } else if (effect.getDuration() % 600 == 0) {
+                        this.onEffectUpdated(effect, false, null);
                     }
                 }
-            } catch (ConcurrentModificationException concurrentmodificationexception) {
+            } catch (ConcurrentModificationException var6) {
             }
         } else {
-            for (MobEffectInstance mobeffectinstance1 : this.activeEffects.values()) {
-                mobeffectinstance1.tickClient();
+            for (MobEffectInstance effect : this.activeEffects.values()) {
+                effect.tickClient();
             }
 
-            List<ParticleOptions> list = this.entityData.get(DATA_EFFECT_PARTICLES);
-            if (!list.isEmpty()) {
-                boolean flag = this.entityData.get(DATA_EFFECT_AMBIENCE_ID);
-                int j = this.isInvisible() ? 15 : 4;
-                int i = flag ? 5 : 1;
-                if (this.random.nextInt(j * i) == 0) {
-                    this.level().addParticle(Util.getRandom(list, this.random), this.getRandomX(0.5), this.getRandomY(), this.getRandomZ(0.5), 1.0, 1.0, 1.0);
+            List<ParticleOptions> particles = this.entityData.get(DATA_EFFECT_PARTICLES);
+            if (!particles.isEmpty()) {
+                boolean isAmbient = this.entityData.get(DATA_EFFECT_AMBIENCE_ID);
+                int bound = this.isInvisible() ? 15 : 4;
+                int ambientFactor = isAmbient ? 5 : 1;
+                if (this.random.nextInt(bound * ambientFactor) == 0) {
+                    this.level()
+                        .addParticle(Util.getRandom(particles, this.random), this.getRandomX(0.5), this.getRandomY(), this.getRandomZ(0.5), 1.0, 1.0, 1.0);
                 }
             }
         }
@@ -869,50 +899,54 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     private void updateSynchronizedMobEffectParticles() {
-        List<ParticleOptions> list = this.activeEffects.values().stream().filter(MobEffectInstance::isVisible).map(MobEffectInstance::getParticleOptions).toList();
-        this.entityData.set(DATA_EFFECT_PARTICLES, list);
+        List<ParticleOptions> visibleEffectParticles = this.activeEffects
+            .values()
+            .stream()
+            .filter(MobEffectInstance::isVisible)
+            .map(MobEffectInstance::getParticleOptions)
+            .toList();
+        this.entityData.set(DATA_EFFECT_PARTICLES, visibleEffectParticles);
         this.entityData.set(DATA_EFFECT_AMBIENCE_ID, areAllEffectsAmbient(this.activeEffects.values()));
     }
 
     private void updateGlowingStatus() {
-        boolean flag = this.isCurrentlyGlowing();
-        if (this.getSharedFlag(6) != flag) {
-            this.setSharedFlag(6, flag);
+        boolean glowingState = this.isCurrentlyGlowing();
+        if (this.getSharedFlag(6) != glowingState) {
+            this.setSharedFlag(6, glowingState);
         }
     }
 
-    public double getVisibilityPercent(@Nullable Entity p_20969_) {
-        double d0 = 1.0;
+    public double getVisibilityPercent(final @Nullable Entity targetingEntity) {
+        double visibilityPercent = 1.0;
         if (this.isDiscrete()) {
-            d0 *= 0.8;
+            visibilityPercent *= 0.8;
         }
 
         if (this.isInvisible()) {
-            float f = this.getArmorCoverPercentage();
-            if (f < 0.1F) {
-                f = 0.1F;
+            float coverPercentage = this.getArmorCoverPercentage();
+            if (coverPercentage < 0.1F) {
+                coverPercentage = 0.1F;
             }
 
-            d0 *= 0.7 * f;
+            visibilityPercent *= 0.7 * coverPercentage;
         }
 
-        if (p_20969_ != null) {
-            ItemStack itemstack = this.getItemBySlot(EquipmentSlot.HEAD);
-            EntityType<?> entitytype = p_20969_.getType();
-            if (entitytype == EntityType.SKELETON && itemstack.is(Items.SKELETON_SKULL)
-                || entitytype == EntityType.ZOMBIE && itemstack.is(Items.ZOMBIE_HEAD)
-                || entitytype == EntityType.PIGLIN && itemstack.is(Items.PIGLIN_HEAD)
-                || entitytype == EntityType.PIGLIN_BRUTE && itemstack.is(Items.PIGLIN_HEAD)
-                || entitytype == EntityType.CREEPER && itemstack.is(Items.CREEPER_HEAD)) {
-                d0 *= 0.5;
+        if (targetingEntity != null) {
+            ItemStack itemStack = this.getItemBySlot(EquipmentSlot.HEAD);
+            if (targetingEntity.is(EntityTypes.SKELETON) && itemStack.is(Items.SKELETON_SKULL)
+                || targetingEntity.is(EntityTypes.ZOMBIE) && itemStack.is(Items.ZOMBIE_HEAD)
+                || targetingEntity.is(EntityTypes.PIGLIN) && itemStack.is(Items.PIGLIN_HEAD)
+                || targetingEntity.is(EntityTypes.PIGLIN_BRUTE) && itemStack.is(Items.PIGLIN_HEAD)
+                || targetingEntity.is(EntityTypes.CREEPER) && itemStack.is(Items.CREEPER_HEAD)) {
+                visibilityPercent *= 0.5;
             }
         }
 
-        return d0;
+        return visibilityPercent;
     }
 
-    public boolean canAttack(LivingEntity p_21171_) {
-        return p_21171_ instanceof Player && this.level().getDifficulty() == Difficulty.PEACEFUL ? false : p_21171_.canBeSeenAsEnemy();
+    public boolean canAttack(final LivingEntity target) {
+        return target instanceof Player && this.level().getDifficulty() == Difficulty.PEACEFUL ? false : target.canBeSeenAsEnemy();
     }
 
     public boolean canBeSeenAsEnemy() {
@@ -923,9 +957,9 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return !this.isSpectator() && this.isAlive();
     }
 
-    public static boolean areAllEffectsAmbient(Collection<MobEffectInstance> p_21180_) {
-        for (MobEffectInstance mobeffectinstance : p_21180_) {
-            if (mobeffectinstance.isVisible() && !mobeffectinstance.isAmbient()) {
+    public static boolean areAllEffectsAmbient(final Collection<MobEffectInstance> effects) {
+        for (MobEffectInstance effect : effects) {
+            if (effect.isVisible() && !effect.isAmbient()) {
                 return false;
             }
         }
@@ -940,14 +974,16 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     public boolean removeAllEffects() {
         if (this.level().isClientSide()) {
             return false;
-        } else if (this.activeEffects.isEmpty()) {
-            return false;
-        } else {
-            Map<Holder<MobEffect>, MobEffectInstance> map = Maps.newHashMap(this.activeEffects);
-            this.activeEffects.clear();
-            this.onEffectsRemoved(map.values());
-            return true;
         }
+
+        if (this.activeEffects.isEmpty()) {
+            return false;
+        }
+
+        Map<Holder<MobEffect>, MobEffectInstance> copy = Maps.newHashMap(this.activeEffects);
+        this.activeEffects.clear();
+        this.onEffectsRemoved(copy.values());
+        return true;
     }
 
     public Collection<MobEffectInstance> getActiveEffects() {
@@ -958,126 +994,124 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.activeEffects;
     }
 
-    public boolean hasEffect(Holder<MobEffect> p_329256_) {
-        return this.activeEffects.containsKey(p_329256_);
+    public boolean hasEffect(final Holder<MobEffect> effect) {
+        return this.activeEffects.containsKey(effect);
     }
 
-    public @Nullable MobEffectInstance getEffect(Holder<MobEffect> p_328338_) {
-        return this.activeEffects.get(p_328338_);
+    public @Nullable MobEffectInstance getEffect(final Holder<MobEffect> effect) {
+        return this.activeEffects.get(effect);
     }
 
-    public float getEffectBlendFactor(Holder<MobEffect> p_397089_, float p_396175_) {
-        MobEffectInstance mobeffectinstance = this.getEffect(p_397089_);
-        return mobeffectinstance != null ? mobeffectinstance.getBlendFactor(this, p_396175_) : 0.0F;
+    public float getEffectBlendFactor(final Holder<MobEffect> effect, final float partialTicks) {
+        MobEffectInstance instance = this.getEffect(effect);
+        return instance != null ? instance.getBlendFactor(this, partialTicks) : 0.0F;
     }
 
-    public final boolean addEffect(MobEffectInstance p_21165_) {
-        return this.addEffect(p_21165_, null);
+    public final boolean addEffect(final MobEffectInstance newEffect) {
+        return this.addEffect(newEffect, null);
     }
 
-    public boolean addEffect(MobEffectInstance p_147208_, @Nullable Entity p_147209_) {
-        if (!this.canBeAffected(p_147208_)) {
+    public boolean addEffect(final MobEffectInstance newEffect, final @Nullable Entity source) {
+        if (!this.canBeAffected(newEffect)) {
             return false;
-        } else {
-            MobEffectInstance mobeffectinstance = this.activeEffects.get(p_147208_.getEffect());
-            boolean flag = false;
-            if (mobeffectinstance == null) {
-                this.activeEffects.put(p_147208_.getEffect(), p_147208_);
-                this.onEffectAdded(p_147208_, p_147209_);
-                flag = true;
-                p_147208_.onEffectAdded(this);
-            } else if (mobeffectinstance.update(p_147208_)) {
-                this.onEffectUpdated(mobeffectinstance, true, p_147209_);
-                flag = true;
-            }
+        }
 
-            p_147208_.onEffectStarted(this);
-            return flag;
+        MobEffectInstance effect = this.activeEffects.get(newEffect.getEffect());
+        boolean changed = false;
+        if (effect == null) {
+            this.activeEffects.put(newEffect.getEffect(), newEffect);
+            this.onEffectAdded(newEffect, source);
+            changed = true;
+            newEffect.onEffectAdded(this);
+        } else if (effect.update(newEffect)) {
+            this.onEffectUpdated(effect, true, source);
+            changed = true;
+        }
+
+        newEffect.onEffectStarted(this);
+        return changed;
+    }
+
+    public boolean canBeAffected(final MobEffectInstance newEffect) {
+        if (this.is(EntityTypeTags.IMMUNE_TO_INFESTED)) {
+            return !newEffect.is(MobEffects.INFESTED);
+        } else if (this.is(EntityTypeTags.IMMUNE_TO_OOZING)) {
+            return !newEffect.is(MobEffects.OOZING);
+        } else {
+            return !this.is(EntityTypeTags.IGNORES_POISON_AND_REGEN) ? true : !newEffect.is(MobEffects.REGENERATION) && !newEffect.is(MobEffects.POISON);
         }
     }
 
-    public boolean canBeAffected(MobEffectInstance p_21197_) {
-        if (this.getType().is(EntityTypeTags.IMMUNE_TO_INFESTED)) {
-            return !p_21197_.is(MobEffects.INFESTED);
-        } else if (this.getType().is(EntityTypeTags.IMMUNE_TO_OOZING)) {
-            return !p_21197_.is(MobEffects.OOZING);
-        } else {
-            return !this.getType().is(EntityTypeTags.IGNORES_POISON_AND_REGEN)
-                ? true
-                : !p_21197_.is(MobEffects.REGENERATION) && !p_21197_.is(MobEffects.POISON);
-        }
-    }
-
-    public void forceAddEffect(MobEffectInstance p_147216_, @Nullable Entity p_147217_) {
-        if (this.canBeAffected(p_147216_)) {
-            MobEffectInstance mobeffectinstance = this.activeEffects.put(p_147216_.getEffect(), p_147216_);
-            if (mobeffectinstance == null) {
-                this.onEffectAdded(p_147216_, p_147217_);
+    public void forceAddEffect(final MobEffectInstance newEffect, final @Nullable Entity source) {
+        if (this.canBeAffected(newEffect)) {
+            MobEffectInstance previousEffect = this.activeEffects.put(newEffect.getEffect(), newEffect);
+            if (previousEffect == null) {
+                this.onEffectAdded(newEffect, source);
             } else {
-                p_147216_.copyBlendState(mobeffectinstance);
-                this.onEffectUpdated(p_147216_, true, p_147217_);
+                newEffect.copyBlendState(previousEffect);
+                this.onEffectUpdated(newEffect, true, source);
             }
         }
     }
 
     public boolean isInvertedHealAndHarm() {
-        return this.getType().is(EntityTypeTags.INVERTED_HEALING_AND_HARM);
+        return this.is(EntityTypeTags.INVERTED_HEALING_AND_HARM);
     }
 
-    public final @Nullable MobEffectInstance removeEffectNoUpdate(Holder<MobEffect> p_329442_) {
-        return this.activeEffects.remove(p_329442_);
+    public final @Nullable MobEffectInstance removeEffectNoUpdate(final Holder<MobEffect> effect) {
+        return this.activeEffects.remove(effect);
     }
 
-    public boolean removeEffect(Holder<MobEffect> p_335910_) {
-        MobEffectInstance mobeffectinstance = this.removeEffectNoUpdate(p_335910_);
-        if (mobeffectinstance != null) {
-            this.onEffectsRemoved(List.of(mobeffectinstance));
+    public boolean removeEffect(final Holder<MobEffect> effect) {
+        MobEffectInstance effectInstance = this.removeEffectNoUpdate(effect);
+        if (effectInstance != null) {
+            this.onEffectsRemoved(List.of(effectInstance));
             return true;
         } else {
             return false;
         }
     }
 
-    protected void onEffectAdded(MobEffectInstance p_147190_, @Nullable Entity p_147191_) {
+    protected void onEffectAdded(final MobEffectInstance effect, final @Nullable Entity source) {
         if (!this.level().isClientSide()) {
             this.effectsDirty = true;
-            p_147190_.getEffect().value().addAttributeModifiers(this.getAttributes(), p_147190_.getAmplifier());
-            this.sendEffectToPassengers(p_147190_);
+            effect.getEffect().value().addAttributeModifiers(this.getAttributes(), effect.getAmplifier());
+            this.sendEffectToPassengers(effect);
         }
     }
 
-    public void sendEffectToPassengers(MobEffectInstance p_289695_) {
-        for (Entity entity : this.getPassengers()) {
-            if (entity instanceof ServerPlayer serverplayer) {
-                serverplayer.connection.send(new ClientboundUpdateMobEffectPacket(this.getId(), p_289695_, false));
+    public void sendEffectToPassengers(final MobEffectInstance effect) {
+        for (Entity passenger : this.getPassengers()) {
+            if (passenger instanceof ServerPlayer serverPlayer) {
+                serverPlayer.connection.send(new ClientboundUpdateMobEffectPacket(this.getId(), effect, false));
             }
         }
     }
 
-    protected void onEffectUpdated(MobEffectInstance p_147192_, boolean p_147193_, @Nullable Entity p_147194_) {
+    protected void onEffectUpdated(final MobEffectInstance effect, final boolean doRefreshAttributes, final @Nullable Entity source) {
         if (!this.level().isClientSide()) {
             this.effectsDirty = true;
-            if (p_147193_) {
-                MobEffect mobeffect = p_147192_.getEffect().value();
-                mobeffect.removeAttributeModifiers(this.getAttributes());
-                mobeffect.addAttributeModifiers(this.getAttributes(), p_147192_.getAmplifier());
+            if (doRefreshAttributes) {
+                MobEffect mobEffect = effect.getEffect().value();
+                mobEffect.removeAttributeModifiers(this.getAttributes());
+                mobEffect.addAttributeModifiers(this.getAttributes(), effect.getAmplifier());
                 this.refreshDirtyAttributes();
             }
 
-            this.sendEffectToPassengers(p_147192_);
+            this.sendEffectToPassengers(effect);
         }
     }
 
-    protected void onEffectsRemoved(Collection<MobEffectInstance> p_364717_) {
+    protected void onEffectsRemoved(final Collection<MobEffectInstance> effects) {
         if (!this.level().isClientSide()) {
             this.effectsDirty = true;
 
-            for (MobEffectInstance mobeffectinstance : p_364717_) {
-                mobeffectinstance.getEffect().value().removeAttributeModifiers(this.getAttributes());
+            for (MobEffectInstance effect : effects) {
+                effect.getEffect().value().removeAttributeModifiers(this.getAttributes());
 
-                for (Entity entity : this.getPassengers()) {
-                    if (entity instanceof ServerPlayer serverplayer) {
-                        serverplayer.connection.send(new ClientboundRemoveMobEffectPacket(this.getId(), mobeffectinstance.getEffect()));
+                for (Entity passenger : this.getPassengers()) {
+                    if (passenger instanceof ServerPlayer serverPlayer) {
+                        serverPlayer.connection.send(new ClientboundRemoveMobEffectPacket(this.getId(), effect.getEffect()));
                     }
                 }
             }
@@ -1087,42 +1121,42 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     private void refreshDirtyAttributes() {
-        Set<AttributeInstance> set = this.getAttributes().getAttributesToUpdate();
+        Set<AttributeInstance> attributesToUpdate = this.getAttributes().getAttributesToUpdate();
 
-        for (AttributeInstance attributeinstance : set) {
-            this.onAttributeUpdated(attributeinstance.getAttribute());
+        for (AttributeInstance changedAttributeInstance : attributesToUpdate) {
+            this.onAttributeUpdated(changedAttributeInstance.getAttribute());
         }
 
-        set.clear();
+        attributesToUpdate.clear();
     }
 
-    protected void onAttributeUpdated(Holder<Attribute> p_328945_) {
-        if (p_328945_.is(Attributes.MAX_HEALTH)) {
-            float f = this.getMaxHealth();
-            if (this.getHealth() > f) {
-                this.setHealth(f);
+    protected void onAttributeUpdated(final Holder<Attribute> attribute) {
+        if (attribute.is(Attributes.MAX_HEALTH)) {
+            float currentMaxHealth = this.getMaxHealth();
+            if (this.getHealth() > currentMaxHealth) {
+                this.setHealth(currentMaxHealth);
             }
-        } else if (p_328945_.is(Attributes.MAX_ABSORPTION)) {
-            float f1 = this.getMaxAbsorption();
-            if (this.getAbsorptionAmount() > f1) {
-                this.setAbsorptionAmount(f1);
+        } else if (attribute.is(Attributes.MAX_ABSORPTION)) {
+            float currentMaxAbsorption = this.getMaxAbsorption();
+            if (this.getAbsorptionAmount() > currentMaxAbsorption) {
+                this.setAbsorptionAmount(currentMaxAbsorption);
             }
-        } else if (p_328945_.is(Attributes.SCALE)) {
+        } else if (attribute.is(Attributes.SCALE)) {
             this.refreshDimensions();
-        } else if (p_328945_.is(Attributes.WAYPOINT_TRANSMIT_RANGE) && this.level() instanceof ServerLevel serverlevel) {
-            ServerWaypointManager serverwaypointmanager = serverlevel.getWaypointManager();
-            if (this.attributes.getValue(p_328945_) > 0.0) {
-                serverwaypointmanager.trackWaypoint((WaypointTransmitter)this);
+        } else if (attribute.is(Attributes.WAYPOINT_TRANSMIT_RANGE) && this.level() instanceof ServerLevel serverLevel) {
+            ServerWaypointManager waypointManager = serverLevel.getWaypointManager();
+            if (this.attributes.getValue(attribute) > 0.0) {
+                waypointManager.trackWaypoint(this);
             } else {
-                serverwaypointmanager.untrackWaypoint((WaypointTransmitter)this);
+                waypointManager.untrackWaypoint(this);
             }
         }
     }
 
-    public void heal(float p_21116_) {
-        float f = this.getHealth();
-        if (f > 0.0F) {
-            this.setHealth(f + p_21116_);
+    public void heal(final float heal) {
+        float health = this.getHealth();
+        if (health > 0.0F) {
+            this.setHealth(health + heal);
         }
     }
 
@@ -1130,197 +1164,206 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.entityData.get(DATA_HEALTH_ID);
     }
 
-    public void setHealth(float p_21154_) {
-        this.entityData.set(DATA_HEALTH_ID, Mth.clamp(p_21154_, 0.0F, this.getMaxHealth()));
+    public void setHealth(final float health) {
+        this.entityData.set(DATA_HEALTH_ID, Mth.clamp(health, 0.0F, this.getMaxHealth()));
     }
 
     public boolean isDeadOrDying() {
-        return this.getHealth() <= 0.0F;
+        return this.getHealth() <= 0.0F || this.dead;
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_361743_, DamageSource p_361865_, float p_365677_) {
-        if (this.isInvulnerableTo(p_361743_, p_361865_)) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, float damage) {
+        if (this.isInvulnerableTo(level, source)) {
             return false;
-        } else if (this.isDeadOrDying()) {
+        }
+
+        if (this.isDeadOrDying()) {
             return false;
-        } else if (p_361865_.is(DamageTypeTags.IS_FIRE) && this.hasEffect(MobEffects.FIRE_RESISTANCE)) {
+        }
+
+        if (source.is(DamageTypeTags.IS_FIRE) && this.hasEffect(MobEffects.FIRE_RESISTANCE)) {
             return false;
+        }
+
+        if (this.isSleeping()) {
+            this.stopSleeping();
+        }
+
+        this.noActionTime = 0;
+        if (damage < 0.0F) {
+            damage = 0.0F;
+        }
+
+        float originalDamage = damage;
+        ItemStack itemInUse = this.getUseItem();
+        float damageBlocked = this.applyItemBlocking(level, source, damage);
+        damage -= damageBlocked;
+        boolean blocked = damageBlocked > 0.0F;
+        if (source.is(DamageTypeTags.IS_FREEZING) && this.is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
+            damage *= 5.0F;
+        }
+
+        if (source.is(DamageTypeTags.DAMAGES_HELMET) && !this.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
+            this.hurtHelmet(source, damage);
+            damage *= 0.75F;
+        }
+
+        if (Float.isNaN(damage) || Float.isInfinite(damage)) {
+            damage = Float.MAX_VALUE;
+        }
+
+        boolean tookFullDamage = true;
+        if (this.invulnerableTime > 10.0F && !source.is(DamageTypeTags.BYPASSES_COOLDOWN)) {
+            if (damage <= this.lastHurt) {
+                return false;
+            }
+
+            this.actuallyHurt(level, source, damage - this.lastHurt);
+            this.lastHurt = damage;
+            tookFullDamage = false;
         } else {
-            if (this.isSleeping()) {
-                this.stopSleeping();
-            }
+            this.lastHurt = damage;
+            this.invulnerableTime = 20;
+            this.actuallyHurt(level, source, damage);
+            this.hurtDuration = 10;
+            this.hurtTime = this.hurtDuration;
+        }
 
-            this.noActionTime = 0;
-            if (p_365677_ < 0.0F) {
-                p_365677_ = 0.0F;
-            }
-
-            ItemStack itemstack = this.getUseItem();
-            float f = this.applyItemBlocking(p_361743_, p_361865_, p_365677_);
-            p_365677_ -= f;
-            boolean flag = f > 0.0F;
-            if (p_361865_.is(DamageTypeTags.IS_FREEZING) && this.getType().is(EntityTypeTags.FREEZE_HURTS_EXTRA_TYPES)) {
-                p_365677_ *= 5.0F;
-            }
-
-            if (p_361865_.is(DamageTypeTags.DAMAGES_HELMET) && !this.getItemBySlot(EquipmentSlot.HEAD).isEmpty()) {
-                this.hurtHelmet(p_361865_, p_365677_);
-                p_365677_ *= 0.75F;
-            }
-
-            if (Float.isNaN(p_365677_) || Float.isInfinite(p_365677_)) {
-                p_365677_ = Float.MAX_VALUE;
-            }
-
-            boolean flag1 = true;
-            if (this.invulnerableTime > 10.0F && !p_361865_.is(DamageTypeTags.BYPASSES_COOLDOWN)) {
-                if (p_365677_ <= this.lastHurt) {
-                    return false;
-                }
-
-                this.actuallyHurt(p_361743_, p_361865_, p_365677_ - this.lastHurt);
-                this.lastHurt = p_365677_;
-                flag1 = false;
+        this.resolveMobResponsibleForDamage(source);
+        this.resolvePlayerResponsibleForDamage(source);
+        if (tookFullDamage) {
+            BlocksAttacks blocksAttacks = itemInUse.get(DataComponents.BLOCKS_ATTACKS);
+            if (blocked && blocksAttacks != null) {
+                blocksAttacks.onBlocked(level, this);
             } else {
-                this.lastHurt = p_365677_;
-                this.invulnerableTime = 20;
-                this.actuallyHurt(p_361743_, p_361865_, p_365677_);
-                this.hurtDuration = 10;
-                this.hurtTime = this.hurtDuration;
+                level.broadcastDamageEvent(this, source);
             }
 
-            this.resolveMobResponsibleForDamage(p_361865_);
-            this.resolvePlayerResponsibleForDamage(p_361865_);
-            if (flag1) {
-                BlocksAttacks blocksattacks = itemstack.get(DataComponents.BLOCKS_ATTACKS);
-                if (flag && blocksattacks != null) {
-                    blocksattacks.onBlocked(p_361743_, this);
-                } else {
-                    p_361743_.broadcastDamageEvent(this, p_361865_);
-                }
-
-                if (!p_361865_.is(DamageTypeTags.NO_IMPACT) && (!flag || p_365677_ > 0.0F)) {
-                    this.markHurt();
-                }
-
-                if (!p_361865_.is(DamageTypeTags.NO_KNOCKBACK)) {
-                    double d0 = 0.0;
-                    double d1 = 0.0;
-                    if (p_361865_.getDirectEntity() instanceof Projectile projectile) {
-                        DoubleDoubleImmutablePair doubledoubleimmutablepair = projectile.calculateHorizontalHurtKnockbackDirection(this, p_361865_);
-                        d0 = -doubledoubleimmutablepair.leftDouble();
-                        d1 = -doubledoubleimmutablepair.rightDouble();
-                    } else if (p_361865_.getSourcePosition() != null) {
-                        d0 = p_361865_.getSourcePosition().x() - this.getX();
-                        d1 = p_361865_.getSourcePosition().z() - this.getZ();
-                    }
-
-                    this.knockback(0.4F, d0, d1);
-                    if (!flag) {
-                        this.indicateDamage(d0, d1);
-                    }
-                }
+            if (!source.is(DamageTypeTags.NO_IMPACT) && (!blocked || damage > 0.0F)) {
+                this.markHurt();
             }
 
-            if (this.isDeadOrDying()) {
-                if (!this.checkTotemDeathProtection(p_361865_)) {
-                    if (flag1) {
-                        this.makeSound(this.getDeathSound());
-                        this.playSecondaryHurtSound(p_361865_);
-                    }
+            if (!source.is(DamageTypeTags.NO_KNOCKBACK)) {
+                this.dealDefaultKnockback(source, damage, blocked);
+            }
+        }
 
-                    this.die(p_361865_);
+        if (this.isDeadOrDying()) {
+            if (!this.checkTotemDeathProtection(source)) {
+                if (tookFullDamage) {
+                    this.makeSound(this.getDeathSound());
+                    this.playSecondaryHurtSound(source);
                 }
-            } else if (flag1) {
-                this.playHurtSound(p_361865_);
-                this.playSecondaryHurtSound(p_361865_);
+
+                this.die(source);
             }
+        } else if (tookFullDamage) {
+            this.playHurtSound(source);
+            this.playSecondaryHurtSound(source);
+        }
 
-            boolean flag2 = !flag || p_365677_ > 0.0F;
-            if (flag2) {
-                this.lastDamageSource = p_361865_;
-                this.lastDamageStamp = this.level().getGameTime();
+        boolean success = !blocked || damage > 0.0F;
+        if (success) {
+            this.lastDamageSource = source;
+            this.lastDamageStamp = this.level().getGameTime();
 
-                for (MobEffectInstance mobeffectinstance : this.getActiveEffects()) {
-                    mobeffectinstance.onMobHurt(p_361743_, this, p_361865_, p_365677_);
-                }
+            for (MobEffectInstance effect : this.getActiveEffects()) {
+                effect.onMobHurt(level, this, source, damage);
             }
+        }
 
-            if (this instanceof ServerPlayer serverplayer) {
-                CriteriaTriggers.ENTITY_HURT_PLAYER.trigger(serverplayer, p_361865_, p_365677_, p_365677_, flag);
-                if (f > 0.0F && f < 3.4028235E37F) {
-                    serverplayer.awardStat(Stats.DAMAGE_BLOCKED_BY_SHIELD, Math.round(f * 10.0F));
-                }
+        if (this instanceof ServerPlayer serverPlayer) {
+            CriteriaTriggers.ENTITY_HURT_PLAYER.trigger(serverPlayer, source, originalDamage, damage, blocked);
+            if (damageBlocked > 0.0F && damageBlocked < 3.4028235E37F) {
+                serverPlayer.awardStat(Stats.DAMAGE_BLOCKED_BY_SHIELD, Math.round(damageBlocked * 10.0F));
             }
+        }
 
-            if (p_361865_.getEntity() instanceof ServerPlayer serverplayer1) {
-                CriteriaTriggers.PLAYER_HURT_ENTITY.trigger(serverplayer1, this, p_361865_, p_365677_, p_365677_, flag);
-            }
+        if (source.getEntity() instanceof ServerPlayer sourcePlayer) {
+            CriteriaTriggers.PLAYER_HURT_ENTITY.trigger(sourcePlayer, this, source, originalDamage, damage, blocked);
+        }
 
-            return flag2;
+        return success;
+    }
+
+    public void dealDefaultKnockback(final DamageSource source, final float damage, final boolean blocked) {
+        double xd = 0.0;
+        double zd = 0.0;
+        if (source.getDirectEntity() instanceof Projectile projectile) {
+            DoubleDoubleImmutablePair knockbackDirection = projectile.calculateHorizontalHurtKnockbackDirection(this, source);
+            xd = -knockbackDirection.leftDouble();
+            zd = -knockbackDirection.rightDouble();
+        } else if (source.getSourcePosition() != null) {
+            xd = source.getSourcePosition().x() - this.getX();
+            zd = source.getSourcePosition().z() - this.getZ();
+        }
+
+        this.knockback(0.4F, xd, zd, source, damage);
+        if (!blocked) {
+            this.indicateDamage(xd, zd);
         }
     }
 
-    public float applyItemBlocking(ServerLevel p_396198_, DamageSource p_392511_, float p_394545_) {
-        if (p_394545_ <= 0.0F) {
+    public float applyItemBlocking(final ServerLevel level, final DamageSource source, final float damage) {
+        if (damage <= 0.0F) {
             return 0.0F;
-        } else {
-            ItemStack itemstack = this.getItemBlockingWith();
-            if (itemstack == null) {
+        }
+
+        ItemStack blockingWith = this.getItemBlockingWith();
+        if (blockingWith == null) {
+            return 0.0F;
+        }
+
+        BlocksAttacks blocksAttacks = blockingWith.get(DataComponents.BLOCKS_ATTACKS);
+        if (blocksAttacks != null && !blocksAttacks.bypassedBy().map(t -> t.contains(source.typeHolder())).orElse(false)) {
+            if (source.getDirectEntity() instanceof AbstractArrow abstractArrow && abstractArrow.getPierceLevel() > 0) {
                 return 0.0F;
             } else {
-                BlocksAttacks blocksattacks = itemstack.get(DataComponents.BLOCKS_ATTACKS);
-                if (blocksattacks != null && !blocksattacks.bypassedBy().map(p_392511_::is).orElse(false)) {
-                    if (p_392511_.getDirectEntity() instanceof AbstractArrow abstractarrow && abstractarrow.getPierceLevel() > 0) {
-                        return 0.0F;
-                    } else {
-                        Vec3 vec3 = p_392511_.getSourcePosition();
-                        double d0;
-                        if (vec3 != null) {
-                            Vec3 vec31 = this.calculateViewVector(0.0F, this.getYHeadRot());
-                            Vec3 vec32 = vec3.subtract(this.position());
-                            vec32 = new Vec3(vec32.x, 0.0, vec32.z).normalize();
-                            d0 = Math.acos(vec32.dot(vec31));
-                        } else {
-                            d0 = (float) Math.PI;
-                        }
-
-                        float f = blocksattacks.resolveBlockedDamage(p_392511_, p_394545_, d0);
-                        blocksattacks.hurtBlockingItem(this.level(), itemstack, this, this.getUsedItemHand(), f);
-                        if (f > 0.0F && !p_392511_.is(DamageTypeTags.IS_PROJECTILE) && p_392511_.getDirectEntity() instanceof LivingEntity livingentity) {
-                            this.blockUsingItem(p_396198_, livingentity);
-                        }
-
-                        return f;
-                    }
+                Vec3 sourcePosition = source.getSourcePosition();
+                double angle;
+                if (sourcePosition != null) {
+                    Vec3 viewVector = this.calculateViewVector(0.0F, this.getYHeadRot());
+                    Vec3 vectorTo = sourcePosition.subtract(this.position());
+                    vectorTo = new Vec3(vectorTo.x, 0.0, vectorTo.z).normalize();
+                    angle = Math.acos(vectorTo.dot(viewVector));
                 } else {
-                    return 0.0F;
+                    angle = (float) Math.PI;
                 }
+
+                float damageBlocked = blocksAttacks.resolveBlockedDamage(source, damage, angle);
+                blocksAttacks.hurtBlockingItem(this.level(), blockingWith, this, this.getUsedItemHand(), damageBlocked);
+                if (damageBlocked > 0.0F && !source.is(DamageTypeTags.IS_PROJECTILE) && source.getDirectEntity() instanceof LivingEntity livingEntity) {
+                    this.blockUsingItem(level, livingEntity, source, damage);
+                }
+
+                return damageBlocked;
             }
+        } else {
+            return 0.0F;
         }
     }
 
-    private void playSecondaryHurtSound(DamageSource p_394905_) {
-        if (p_394905_.is(DamageTypes.THORNS)) {
-            SoundSource soundsource = this instanceof Player ? SoundSource.PLAYERS : SoundSource.HOSTILE;
-            this.level().playSound(null, this.position().x, this.position().y, this.position().z, SoundEvents.THORNS_HIT, soundsource);
+    private void playSecondaryHurtSound(final DamageSource source) {
+        if (source.is(DamageTypes.THORNS)) {
+            SoundSource soundSource = this instanceof Player ? SoundSource.PLAYERS : SoundSource.HOSTILE;
+            this.level().playSound(null, this.position().x, this.position().y, this.position().z, SoundEvents.THORNS_HIT, soundSource);
         }
     }
 
-    protected void resolveMobResponsibleForDamage(DamageSource p_377003_) {
-        if (p_377003_.getEntity() instanceof LivingEntity livingentity
-            && !p_377003_.is(DamageTypeTags.NO_ANGER)
-            && (!p_377003_.is(DamageTypes.WIND_CHARGE) || !this.getType().is(EntityTypeTags.NO_ANGER_FROM_WIND_CHARGE))) {
-            this.setLastHurtByMob(livingentity);
+    protected void resolveMobResponsibleForDamage(final DamageSource source) {
+        if (source.getEntity() instanceof LivingEntity livingSource
+            && !source.is(DamageTypeTags.NO_ANGER)
+            && (!source.is(DamageTypes.WIND_CHARGE) || !this.is(EntityTypeTags.NO_ANGER_FROM_WIND_CHARGE))) {
+            this.setLastHurtByMob(livingSource);
         }
     }
 
-    protected @Nullable Player resolvePlayerResponsibleForDamage(DamageSource p_378258_) {
-        Entity entity = p_378258_.getEntity();
-        if (entity instanceof Player player) {
-            this.setLastHurtByPlayer(player, 100);
-        } else if (entity instanceof Wolf wolf && wolf.isTame()) {
+    protected @Nullable Player resolvePlayerResponsibleForDamage(final DamageSource source) {
+        Entity sourceEntity = source.getEntity();
+        if (sourceEntity instanceof Player playerSource) {
+            this.setLastHurtByPlayer(playerSource, 100);
+        } else if (sourceEntity instanceof Wolf wolf && wolf.isTame()) {
             if (wolf.getOwnerReference() != null) {
                 this.setLastHurtByPlayer(wolf.getOwnerReference().getUUID(), 100);
             } else {
@@ -1332,45 +1375,45 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return EntityReference.getPlayer(this.lastHurtByPlayer, this.level());
     }
 
-    protected void blockUsingItem(ServerLevel p_395319_, LivingEntity p_392570_) {
-        p_392570_.blockedByItem(this);
+    protected void blockUsingItem(final ServerLevel level, final LivingEntity attacker, final DamageSource source, final float damage) {
+        attacker.blockedByItem(this, source, damage);
     }
 
-    protected void blockedByItem(LivingEntity p_21246_) {
-        p_21246_.knockback(0.5, p_21246_.getX() - this.getX(), p_21246_.getZ() - this.getZ());
+    protected void blockedByItem(final LivingEntity defender, final DamageSource source, final float damage) {
+        defender.knockback(0.5, defender.getX() - this.getX(), defender.getZ() - this.getZ(), source, damage);
     }
 
-    private boolean checkTotemDeathProtection(DamageSource p_21263_) {
-        if (p_21263_.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+    private boolean checkTotemDeathProtection(final DamageSource killingDamage) {
+        if (killingDamage.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
             return false;
-        } else {
-            ItemStack itemstack = null;
-            DeathProtection deathprotection = null;
-
-            for (InteractionHand interactionhand : InteractionHand.values()) {
-                ItemStack itemstack1 = this.getItemInHand(interactionhand);
-                deathprotection = itemstack1.get(DataComponents.DEATH_PROTECTION);
-                if (deathprotection != null) {
-                    itemstack = itemstack1.copy();
-                    itemstack1.shrink(1);
-                    break;
-                }
-            }
-
-            if (itemstack != null) {
-                if (this instanceof ServerPlayer serverplayer) {
-                    serverplayer.awardStat(Stats.ITEM_USED.get(itemstack.getItem()));
-                    CriteriaTriggers.USED_TOTEM.trigger(serverplayer, itemstack);
-                    itemstack.causeUseVibration(this, GameEvent.ITEM_INTERACT_FINISH);
-                }
-
-                this.setHealth(1.0F);
-                deathprotection.applyEffects(itemstack, this);
-                this.level().broadcastEntityEvent(this, (byte)35);
-            }
-
-            return deathprotection != null;
         }
+
+        ItemStack protectionItem = null;
+        DeathProtection protection = null;
+
+        for (InteractionHand hand : InteractionHand.values()) {
+            ItemStack itemStack = this.getItemInHand(hand);
+            protection = itemStack.get(DataComponents.DEATH_PROTECTION);
+            if (protection != null) {
+                protectionItem = itemStack.copy();
+                itemStack.shrink(1);
+                break;
+            }
+        }
+
+        if (protectionItem != null) {
+            if (this instanceof ServerPlayer player) {
+                player.awardStat(Stats.ITEM_USED.get(protectionItem.getItem()));
+                CriteriaTriggers.USED_TOTEM.trigger(player, protectionItem);
+                protectionItem.causeUseVibration(this, GameEvent.ITEM_INTERACT_FINISH);
+            }
+
+            this.setHealth(1.0F);
+            protection.applyEffects(protectionItem, this);
+            this.level().broadcastEntityEvent(this, (byte)35);
+        }
+
+        return protection != null;
     }
 
     public @Nullable DamageSource getLastDamageSource() {
@@ -1381,43 +1424,36 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.lastDamageSource;
     }
 
-    protected void playHurtSound(DamageSource p_21160_) {
-        this.makeSound(this.getHurtSound(p_21160_));
+    protected void playHurtSound(final DamageSource source) {
+        this.makeSound(this.getHurtSound(source));
     }
 
-    public void makeSound(@Nullable SoundEvent p_334191_) {
-        if (p_334191_ != null) {
-            this.playSound(p_334191_, this.getSoundVolume(), this.getVoicePitch());
+    public void makeSound(final @Nullable SoundEvent sound) {
+        if (sound != null) {
+            this.playSound(sound, this.getSoundVolume(), this.getVoicePitch());
         }
     }
 
-    private void breakItem(ItemStack p_21279_) {
-        if (!p_21279_.isEmpty()) {
-            Holder<SoundEvent> holder = p_21279_.get(DataComponents.BREAK_SOUND);
-            if (holder != null && !this.isSilent()) {
+    private void breakItem(final ItemStack itemStack) {
+        if (!itemStack.isEmpty()) {
+            Holder<SoundEvent> breakSound = itemStack.get(DataComponents.BREAK_SOUND);
+            if (breakSound != null && !this.isSilent()) {
                 this.level()
                     .playLocalSound(
-                        this.getX(),
-                        this.getY(),
-                        this.getZ(),
-                        holder.value(),
-                        this.getSoundSource(),
-                        0.8F,
-                        0.8F + this.level().random.nextFloat() * 0.4F,
-                        false
+                        this.getX(), this.getY(), this.getZ(), breakSound.value(), this.getSoundSource(), 0.8F, 0.8F + this.random.nextFloat() * 0.4F, false
                     );
             }
 
-            this.spawnItemParticles(p_21279_, 5);
+            this.spawnItemParticles(itemStack, 5);
         }
     }
 
-    public void die(DamageSource p_21014_) {
+    public void die(final DamageSource source) {
         if (!this.isRemoved() && !this.dead) {
-            Entity entity = p_21014_.getEntity();
-            LivingEntity livingentity = this.getKillCredit();
-            if (livingentity != null) {
-                livingentity.awardKillScore(this, p_21014_);
+            Entity sourceEntity = source.getEntity();
+            LivingEntity killer = this.getKillCredit();
+            if (killer != null) {
+                killer.awardKillScore(this, source);
             }
 
             if (this.isSleeping()) {
@@ -1429,13 +1465,13 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
                 LOGGER.info("Named entity {} died: {}", this, this.getCombatTracker().getDeathMessage().getString());
             }
 
-            this.dead = true;
+            this.handleKillingBlow();
             this.getCombatTracker().recheckStatus();
-            if (this.level() instanceof ServerLevel serverlevel) {
-                if (entity == null || entity.killedEntity(serverlevel, this, p_21014_)) {
+            if (this.level() instanceof ServerLevel serverLevel) {
+                if (sourceEntity == null || sourceEntity.killedEntity(serverLevel, this, source)) {
                     this.gameEvent(GameEvent.ENTITY_DIE);
-                    this.dropAllDeathLoot(serverlevel, p_21014_);
-                    this.createWitherRose(livingentity);
+                    this.dropAllDeathLoot(serverLevel, source);
+                    this.createWitherRose(killer);
                 }
 
                 this.level().broadcastEntityEvent(this, (byte)3);
@@ -1445,167 +1481,191 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    protected void createWitherRose(@Nullable LivingEntity p_21269_) {
-        if (this.level() instanceof ServerLevel serverlevel) {
-            boolean flag = false;
-            if (p_21269_ instanceof WitherBoss) {
-                if (serverlevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
-                    BlockPos blockpos = this.blockPosition();
-                    BlockState blockstate = Blocks.WITHER_ROSE.defaultBlockState();
-                    if (this.level().getBlockState(blockpos).isAir() && blockstate.canSurvive(this.level(), blockpos)) {
-                        this.level().setBlock(blockpos, blockstate, 3);
-                        flag = true;
+    protected void handleKillingBlow() {
+        this.dead = true;
+    }
+
+    protected void createWitherRose(final @Nullable LivingEntity killer) {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            boolean var6 = false;
+            if (killer instanceof WitherBoss) {
+                if (serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
+                    BlockPos pos = this.blockPosition();
+                    BlockState state = Blocks.WITHER_ROSE.defaultBlockState();
+                    if (this.level().getBlockState(pos).isAir() && state.canSurvive(this.level(), pos)) {
+                        this.level().setBlock(pos, state, 3);
+                        var6 = true;
                     }
                 }
 
-                if (!flag) {
-                    ItemEntity itementity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), new ItemStack(Items.WITHER_ROSE));
-                    this.level().addFreshEntity(itementity);
+                if (!var6) {
+                    ItemEntity itemEntity = new ItemEntity(this.level(), this.getX(), this.getY(), this.getZ(), new ItemStack(Items.WITHER_ROSE));
+                    this.level().addFreshEntity(itemEntity);
                 }
             }
         }
     }
 
-    protected void dropAllDeathLoot(ServerLevel p_342160_, DamageSource p_21192_) {
-        boolean flag = this.lastHurtByPlayerMemoryTime > 0;
-        if (this.shouldDropLoot(p_342160_)) {
-            this.dropFromLootTable(p_342160_, p_21192_, flag);
-            this.dropCustomDeathLoot(p_342160_, p_21192_, flag);
+    protected void dropAllDeathLoot(final ServerLevel level, final DamageSource source) {
+        boolean playerKilled = this.lastHurtByPlayerMemoryTime > 0;
+        if (this.shouldDropLoot(level)) {
+            this.dropFromLootTable(level, source, playerKilled);
+            this.dropCustomDeathLoot(level, source, playerKilled);
         }
 
-        this.dropEquipment(p_342160_);
-        this.dropExperience(p_342160_, p_21192_.getEntity());
+        this.dropEquipment(level);
+        this.dropExperience(level, source.getEntity());
     }
 
-    protected void dropEquipment(ServerLevel p_365823_) {
+    protected void dropEquipment(final ServerLevel level) {
     }
 
-    protected void dropExperience(ServerLevel p_370040_, @Nullable Entity p_342525_) {
-        if (!this.wasExperienceConsumed() && (this.isAlwaysExperienceDropper() || this.lastHurtByPlayerMemoryTime > 0 && this.shouldDropExperience() && p_370040_.getGameRules().get(GameRules.MOB_DROPS))) {
-            ExperienceOrb.award(p_370040_, this.position(), this.getExperienceReward(p_370040_, p_342525_));
+    protected void dropExperience(final ServerLevel level, final @Nullable Entity killer) {
+        if (!this.wasExperienceConsumed()
+            && (
+                this.isAlwaysExperienceDropper()
+                    || this.lastHurtByPlayerMemoryTime > 0 && this.shouldDropExperience() && level.getGameRules().get(GameRules.MOB_DROPS)
+            )) {
+            ExperienceOrb.award(level, this.position(), this.getExperienceReward(level, killer));
         }
     }
 
-    protected void dropCustomDeathLoot(ServerLevel p_344205_, DamageSource p_21018_, boolean p_21020_) {
+    protected void dropCustomDeathLoot(final ServerLevel level, final DamageSource source, final boolean killedByPlayer) {
     }
 
     public long getLootTableSeed() {
         return 0L;
     }
 
-    protected float getKnockback(Entity p_344037_, DamageSource p_343881_) {
-        float f = (float)this.getAttributeValue(Attributes.ATTACK_KNOCKBACK);
-        return this.level() instanceof ServerLevel serverlevel
-            ? EnchantmentHelper.modifyKnockback(serverlevel, this.getWeaponItem(), p_344037_, p_343881_, f) / 2.0F
-            : f / 2.0F;
+    protected float getKnockback(final Entity target, final DamageSource damageSource) {
+        float knockback = (float)this.getAttributeValue(Attributes.ATTACK_KNOCKBACK);
+        return this.level() instanceof ServerLevel level
+            ? EnchantmentHelper.modifyKnockback(level, this.getWeaponItem(), target, damageSource, knockback) / 2.0F
+            : knockback / 2.0F;
     }
 
-    protected void dropFromLootTable(ServerLevel p_365510_, DamageSource p_364726_, boolean p_367117_) {
-        Optional<ResourceKey<LootTable>> optional = this.getLootTable();
-        if (!optional.isEmpty()) {
-            this.dropFromLootTable(p_365510_, p_364726_, p_367117_, optional.get());
+    protected void dropFromLootTable(final ServerLevel level, final DamageSource source, final boolean playerKilled) {
+        Optional<ResourceKey<LootTable>> lootTable = this.getLootTable();
+        if (!lootTable.isEmpty()) {
+            this.dropFromLootTable(level, source, playerKilled, lootTable.get());
         }
     }
 
-    public void dropFromLootTable(ServerLevel p_423504_, DamageSource p_431427_, boolean p_427346_, ResourceKey<LootTable> p_426450_) {
-        this.dropFromLootTable(p_423504_, p_431427_, p_427346_, p_426450_, p_358880_ -> this.spawnAtLocation(p_423504_, p_358880_));
+    public void dropFromLootTable(final ServerLevel level, final DamageSource source, final boolean playerKilled, final ResourceKey<LootTable> lootTable) {
+        this.dropFromLootTable(level, source, playerKilled, lootTable, itemStack -> this.spawnAtLocation(level, itemStack));
     }
 
-    public void dropFromLootTable(ServerLevel p_425407_, DamageSource p_427053_, boolean p_428226_, ResourceKey<LootTable> p_422362_, Consumer<ItemStack> p_429171_) {
-        LootTable loottable = p_425407_.getServer().reloadableRegistries().getLootTable(p_422362_);
-        LootParams.Builder lootparams$builder = new LootParams.Builder(p_425407_)
+    public void dropFromLootTable(
+        final ServerLevel level,
+        final DamageSource source,
+        final boolean playerKilled,
+        final ResourceKey<LootTable> lootTable,
+        final Consumer<ItemStack> itemStackConsumer
+    ) {
+        LootTable table = level.getServer().reloadableRegistries().getLootTable(lootTable);
+        LootParams.Builder builder = new LootParams.Builder(level)
             .withParameter(LootContextParams.THIS_ENTITY, this)
             .withParameter(LootContextParams.ORIGIN, this.position())
-            .withParameter(LootContextParams.DAMAGE_SOURCE, p_427053_)
-            .withOptionalParameter(LootContextParams.ATTACKING_ENTITY, p_427053_.getEntity())
-            .withOptionalParameter(LootContextParams.DIRECT_ATTACKING_ENTITY, p_427053_.getDirectEntity());
-        Player player = this.getLastHurtByPlayer();
-        if (p_428226_ && player != null) {
-            lootparams$builder = lootparams$builder.withParameter(LootContextParams.LAST_DAMAGE_PLAYER, player).withLuck(player.getLuck());
+            .withParameter(LootContextParams.DAMAGE_SOURCE, source)
+            .withOptionalParameter(LootContextParams.ATTACKING_ENTITY, source.getEntity())
+            .withOptionalParameter(LootContextParams.DIRECT_ATTACKING_ENTITY, source.getDirectEntity());
+        Player killerPlayer = this.getLastHurtByPlayer();
+        if (playerKilled && killerPlayer != null) {
+            builder = builder.withParameter(LootContextParams.LAST_DAMAGE_PLAYER, killerPlayer).withLuck(killerPlayer.getLuck());
         }
 
-        LootParams lootparams = lootparams$builder.create(LootContextParamSets.ENTITY);
-        loottable.getRandomItems(lootparams, this.getLootTableSeed(), p_429171_);
+        LootParams params = builder.create(LootContextParamSets.ENTITY);
+        table.getRandomItems(params, this.getLootTableSeed(), itemStackConsumer);
     }
 
     public boolean dropFromEntityInteractLootTable(
-        ServerLevel p_426199_, ResourceKey<LootTable> p_429278_, @Nullable Entity p_428787_, ItemStack p_422740_, BiConsumer<ServerLevel, ItemStack> p_426513_
+        final ServerLevel level,
+        final ResourceKey<LootTable> key,
+        final @Nullable Entity interactingEntity,
+        final ItemInstance tool,
+        final BiConsumer<ServerLevel, ItemStack> consumer
     ) {
         return this.dropFromLootTable(
-            p_426199_,
-            p_429278_,
-            p_421594_ -> p_421594_.withParameter(LootContextParams.TARGET_ENTITY, this)
-                .withOptionalParameter(LootContextParams.INTERACTING_ENTITY, p_428787_)
-                .withParameter(LootContextParams.TOOL, p_422740_)
+            level,
+            key,
+            params -> params.withParameter(LootContextParams.TARGET_ENTITY, this)
+                .withOptionalParameter(LootContextParams.INTERACTING_ENTITY, interactingEntity)
+                .withParameter(LootContextParams.TOOL, tool)
                 .create(LootContextParamSets.ENTITY_INTERACT),
-            p_426513_
+            consumer
         );
     }
 
-    public boolean dropFromGiftLootTable(ServerLevel p_363120_, ResourceKey<LootTable> p_363326_, BiConsumer<ServerLevel, ItemStack> p_368812_) {
+    public boolean dropFromGiftLootTable(final ServerLevel level, final ResourceKey<LootTable> key, final BiConsumer<ServerLevel, ItemStack> consumer) {
         return this.dropFromLootTable(
-            p_363120_,
-            p_363326_,
-            p_449423_ -> p_449423_.withParameter(LootContextParams.ORIGIN, this.position())
+            level,
+            key,
+            params -> params.withParameter(LootContextParams.ORIGIN, this.position())
                 .withParameter(LootContextParams.THIS_ENTITY, this)
                 .create(LootContextParamSets.GIFT),
-            p_368812_
+            consumer
         );
     }
 
-    protected void dropFromShearingLootTable(ServerLevel p_361428_, ResourceKey<LootTable> p_365429_, ItemStack p_361064_, BiConsumer<ServerLevel, ItemStack> p_369621_) {
+    protected void dropFromShearingLootTable(
+        final ServerLevel level, final ResourceKey<LootTable> key, final ItemInstance tool, final BiConsumer<ServerLevel, ItemStack> consumer
+    ) {
         this.dropFromLootTable(
-            p_361428_,
-            p_365429_,
-            p_449421_ -> p_449421_.withParameter(LootContextParams.ORIGIN, this.position())
+            level,
+            key,
+            params -> params.withParameter(LootContextParams.ORIGIN, this.position())
                 .withParameter(LootContextParams.THIS_ENTITY, this)
-                .withParameter(LootContextParams.TOOL, p_361064_)
+                .withParameter(LootContextParams.TOOL, tool)
                 .create(LootContextParamSets.SHEARING),
-            p_369621_
+            consumer
         );
     }
 
     protected boolean dropFromLootTable(
-        ServerLevel p_363272_,
-        ResourceKey<LootTable> p_363593_,
-        Function<LootParams.Builder, LootParams> p_362309_,
-        BiConsumer<ServerLevel, ItemStack> p_366393_
+        final ServerLevel level,
+        final ResourceKey<LootTable> key,
+        final Function<LootParams.Builder, LootParams> paramsBuilder,
+        final BiConsumer<ServerLevel, ItemStack> consumer
     ) {
-        LootTable loottable = p_363272_.getServer().reloadableRegistries().getLootTable(p_363593_);
-        LootParams lootparams = p_362309_.apply(new LootParams.Builder(p_363272_));
-        List<ItemStack> list = loottable.getRandomItems(lootparams);
-        if (!list.isEmpty()) {
-            list.forEach(p_358893_ -> p_366393_.accept(p_363272_, p_358893_));
+        LootTable lootTable = level.getServer().reloadableRegistries().getLootTable(key);
+        LootParams params = paramsBuilder.apply(new LootParams.Builder(level));
+        List<ItemStack> drops = lootTable.getRandomItems(params);
+        if (!drops.isEmpty()) {
+            drops.forEach(stack -> consumer.accept(level, stack));
             return true;
         } else {
             return false;
         }
     }
 
-    public void knockback(double p_147241_, double p_147242_, double p_147243_) {
-        p_147241_ *= 1.0 - this.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
-        if (!(p_147241_ <= 0.0)) {
+    public void knockback(double power, double xd, double zd, final DamageSource source, final float damage, final boolean comesFromEffect) {
+        power *= 1.0 - this.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE);
+        if (!(power <= 0.0)) {
             this.needsSync = true;
-            Vec3 vec3 = this.getDeltaMovement();
+            Vec3 deltaMovement = this.getDeltaMovement();
 
-            while (p_147242_ * p_147242_ + p_147243_ * p_147243_ < 1.0E-5F) {
-                p_147242_ = (this.random.nextDouble() - this.random.nextDouble()) * 0.01;
-                p_147243_ = (this.random.nextDouble() - this.random.nextDouble()) * 0.01;
+            while (xd * xd + zd * zd < 1.0E-5F) {
+                xd = (this.random.nextDouble() - this.random.nextDouble()) * 0.01;
+                zd = (this.random.nextDouble() - this.random.nextDouble()) * 0.01;
             }
 
-            Vec3 vec31 = new Vec3(p_147242_, 0.0, p_147243_).normalize().scale(p_147241_);
+            Vec3 deltaVector = new Vec3(xd, 0.0, zd).normalize().scale(power);
             this.setDeltaMovement(
-                vec3.x / 2.0 - vec31.x,
-                this.onGround() ? Math.min(0.4, vec3.y / 2.0 + p_147241_) : vec3.y,
-                vec3.z / 2.0 - vec31.z
+                deltaMovement.x / 2.0 - deltaVector.x,
+                this.onGround() ? Math.min(0.4, deltaMovement.y / 2.0 + power) : deltaMovement.y,
+                deltaMovement.z / 2.0 - deltaVector.z
             );
         }
     }
 
-    public void indicateDamage(double p_270514_, double p_270826_) {
+    public void knockback(final double power, final double xd, final double zd, final DamageSource source, final float damage) {
+        this.knockback(power, xd, zd, source, damage, false);
     }
 
-    protected @Nullable SoundEvent getHurtSound(DamageSource p_21239_) {
+    public void indicateDamage(final double xd, final double zd) {
+    }
+
+    protected @Nullable SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.GENERIC_HURT;
     }
 
@@ -1613,8 +1673,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return SoundEvents.GENERIC_DEATH;
     }
 
-    private SoundEvent getFallDamageSound(int p_21313_) {
-        return p_21313_ > 4 ? this.getFallSounds().big() : this.getFallSounds().small();
+    private SoundEvent getFallDamageSound(final int dmg) {
+        return dmg > 4 ? this.getFallSounds().big() : this.getFallSounds().small();
     }
 
     public void skipDropExperience() {
@@ -1631,22 +1691,22 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
     protected AABB getHitbox() {
         AABB aabb = this.getBoundingBox();
-        Entity entity = this.getVehicle();
-        if (entity != null) {
-            Vec3 vec3 = entity.getPassengerRidingPosition(this);
-            return aabb.setMinY(Math.max(vec3.y, aabb.minY));
+        Entity vehicle = this.getVehicle();
+        if (vehicle != null) {
+            Vec3 pos = vehicle.getPassengerRidingPosition(this);
+            return aabb.setMinY(Math.max(pos.y, aabb.minY));
         } else {
             return aabb;
         }
     }
 
-    public Map<Enchantment, Set<EnchantmentLocationBasedEffect>> activeLocationDependentEnchantments(EquipmentSlot p_363512_) {
-        return this.activeLocationDependentEnchantments.computeIfAbsent(p_363512_, p_358895_ -> new Reference2ObjectArrayMap<>());
+    public Map<Enchantment, Set<EnchantmentLocationBasedEffect>> activeLocationDependentEnchantments(final EquipmentSlot slot) {
+        return this.activeLocationDependentEnchantments.computeIfAbsent(slot, s -> new Reference2ObjectArrayMap<>());
     }
 
-    public void lungeForwardMaybe() {
-        if (this.level() instanceof ServerLevel serverlevel) {
-            EnchantmentHelper.doLungeEffects(serverlevel, this);
+    public void postPiercingAttack() {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            EnchantmentHelper.doPostPiercingAttackEffects(serverLevel, this);
         }
     }
 
@@ -1662,15 +1722,15 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         if (this.isSpectator()) {
             return false;
         } else {
-            BlockPos blockpos = this.blockPosition();
-            BlockState blockstate = this.getInBlockState();
-            if (this.isFallFlying() && blockstate.is(BlockTags.CAN_GLIDE_THROUGH)) {
+            BlockPos ladderCheckPos = this.blockPosition();
+            BlockState state = this.getInBlockState();
+            if (this.isFallFlying() && state.is(BlockTags.CAN_GLIDE_THROUGH)) {
                 return false;
-            } else if (blockstate.is(BlockTags.CLIMBABLE)) {
-                this.lastClimbablePos = Optional.of(blockpos);
+            } else if (state.is(BlockTags.CLIMBABLE)) {
+                this.lastClimbablePos = Optional.of(ladderCheckPos);
                 return true;
-            } else if (blockstate.getBlock() instanceof TrapDoorBlock && this.trapdoorUsableAsLadder(blockpos, blockstate)) {
-                this.lastClimbablePos = Optional.of(blockpos);
+            } else if (state.getBlock() instanceof TrapDoorBlock && this.trapdoorUsableAsLadder(ladderCheckPos, state)) {
+                this.lastClimbablePos = Optional.of(ladderCheckPos);
                 return true;
             } else {
                 return false;
@@ -1678,13 +1738,13 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    private boolean trapdoorUsableAsLadder(BlockPos p_21177_, BlockState p_21178_) {
-        if (!p_21178_.getValue(TrapDoorBlock.OPEN)) {
+    private boolean trapdoorUsableAsLadder(final BlockPos pos, final BlockState state) {
+        if (!state.getValue(TrapDoorBlock.OPEN)) {
             return false;
-        } else {
-            BlockState blockstate = this.level().getBlockState(p_21177_.below());
-            return blockstate.is(Blocks.LADDER) && blockstate.getValue(LadderBlock.FACING) == p_21178_.getValue(TrapDoorBlock.FACING);
         }
+
+        BlockState belowState = this.level().getBlockState(pos.below());
+        return belowState.is(Blocks.LADDER) && belowState.getValue(LadderBlock.FACING) == state.getValue(TrapDoorBlock.FACING);
     }
 
     @Override
@@ -1692,16 +1752,24 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return !this.isRemoved() && this.getHealth() > 0.0F;
     }
 
-    public boolean isLookingAtMe(LivingEntity p_365362_, double p_366130_, boolean p_364554_, boolean p_368791_, double... p_377772_) {
-        Vec3 vec3 = p_365362_.getViewVector(1.0F).normalize();
+    public boolean isLookingAtMe(
+        final LivingEntity target,
+        final double coneSize,
+        final boolean adjustForDistance,
+        final boolean seeThroughTransparentBlocks,
+        final double... gazeHeights
+    ) {
+        Vec3 look = target.getViewVector(1.0F).normalize();
 
-        for (double d0 : p_377772_) {
-            Vec3 vec31 = new Vec3(this.getX() - p_365362_.getX(), d0 - p_365362_.getEyeY(), this.getZ() - p_365362_.getZ());
-            double d1 = vec31.length();
-            vec31 = vec31.normalize();
-            double d2 = vec3.dot(vec31);
-            if (d2 > 1.0 - p_366130_ / (p_364554_ ? d1 : 1.0)
-                && p_365362_.hasLineOfSight(this, p_368791_ ? ClipContext.Block.VISUAL : ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, d0)) {
+        for (double gazeHeight : gazeHeights) {
+            Vec3 dir = new Vec3(this.getX() - target.getX(), gazeHeight - target.getEyeY(), this.getZ() - target.getZ());
+            double dist = dir.length();
+            dir = dir.normalize();
+            double dot = look.dot(dir);
+            if (dot > 1.0 - coneSize / (adjustForDistance ? dist : 1.0)
+                && target.hasLineOfSight(
+                    this, seeThroughTransparentBlocks ? ClipContext.Block.VISUAL : ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, gazeHeight
+                )) {
                 return true;
             }
         }
@@ -1714,52 +1782,98 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.getComfortableFallDistance(0.0F);
     }
 
-    protected final int getComfortableFallDistance(float p_327795_) {
-        return Mth.floor(p_327795_ + 3.0F);
+    protected final int getComfortableFallDistance(final float allowedDamage) {
+        return Mth.floor(allowedDamage + 3.0F);
     }
 
     @Override
-    public boolean causeFallDamage(double p_393354_, float p_147187_, DamageSource p_147189_) {
-        boolean flag = super.causeFallDamage(p_393354_, p_147187_, p_147189_);
-        int i = this.calculateFallDamage(p_393354_, p_147187_);
-        if (i > 0) {
-            this.playSound(this.getFallDamageSound(i), 1.0F, 1.0F);
+    public boolean causeFallDamage(final double fallDistance, final float damageModifier, final DamageSource damageSource) {
+        double effectiveFallDistance;
+        if (this.isIgnoringFallDamageFromCurrentImpulse()) {
+            effectiveFallDistance = Math.min(fallDistance, this.currentImpulseImpactPos.y - this.getY());
+            boolean hasLandedAboveCurrentImpulseImpactPosY = effectiveFallDistance <= 0.0;
+            if (hasLandedAboveCurrentImpulseImpactPosY) {
+                this.resetCurrentImpulseContext();
+            } else {
+                this.tryResetCurrentImpulseContext();
+            }
+        } else {
+            effectiveFallDistance = fallDistance;
+        }
+
+        boolean damaged = super.causeFallDamage(effectiveFallDistance, damageModifier, damageSource);
+        int dmg = this.calculateFallDamage(effectiveFallDistance, damageModifier);
+        if (dmg > 0) {
+            this.resetCurrentImpulseContext();
+            this.playSound(this.getFallDamageSound(dmg), 1.0F, 1.0F);
             this.playBlockFallSound();
-            this.hurt(p_147189_, i);
+            this.hurt(damageSource, dmg);
             return true;
         } else {
-            return flag;
+            return damaged;
         }
     }
 
-    protected int calculateFallDamage(double p_393496_, float p_21237_) {
-        if (this.getType().is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
-            return 0;
+    public void setIgnoreFallDamageFromCurrentImpulse(final boolean ignoreFallDamage, final Vec3 newImpulseImpactPos) {
+        if (ignoreFallDamage) {
+            this.applyPostImpulseGraceTime(40);
+            this.currentImpulseImpactPos = newImpulseImpactPos;
         } else {
-            double d0 = this.calculateFallPower(p_393496_);
-            return Mth.floor(d0 * p_21237_ * this.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER));
+            this.currentImpulseContextResetGraceTime = 0;
         }
     }
 
-    private double calculateFallPower(double p_393609_) {
-        return p_393609_ + 1.0E-6 - this.getAttributeValue(Attributes.SAFE_FALL_DISTANCE);
+    public void applyPostImpulseGraceTime(final int ticks) {
+        this.currentImpulseContextResetGraceTime = Math.max(this.currentImpulseContextResetGraceTime, ticks);
+    }
+
+    public boolean isIgnoringFallDamageFromCurrentImpulse() {
+        return this.currentImpulseImpactPos != null;
+    }
+
+    public void tryResetCurrentImpulseContext() {
+        if (this.currentImpulseContextResetGraceTime == 0) {
+            this.resetCurrentImpulseContext();
+        }
+    }
+
+    public boolean isInPostImpulseGraceTime() {
+        return this.currentImpulseContextResetGraceTime > 0;
+    }
+
+    public void resetCurrentImpulseContext() {
+        this.currentImpulseContextResetGraceTime = 0;
+        this.currentImpulseImpactPos = null;
+    }
+
+    protected int calculateFallDamage(final double fallDistance, final float damageModifier) {
+        if (this.is(EntityTypeTags.FALL_DAMAGE_IMMUNE)) {
+            return 0;
+        }
+
+        double baseDamage = this.calculateFallPower(fallDistance);
+        return Mth.floor(baseDamage * damageModifier * this.getAttributeValue(Attributes.FALL_DAMAGE_MULTIPLIER));
+    }
+
+    private double calculateFallPower(final double fallDistance) {
+        return fallDistance + 1.0E-6 - this.getAttributeValue(Attributes.SAFE_FALL_DISTANCE);
     }
 
     protected void playBlockFallSound() {
         if (!this.isSilent()) {
-            int i = Mth.floor(this.getX());
-            int j = Mth.floor(this.getY() - 0.2F);
-            int k = Mth.floor(this.getZ());
-            BlockState blockstate = this.level().getBlockState(new BlockPos(i, j, k));
-            if (!blockstate.isAir()) {
-                SoundType soundtype = blockstate.getSoundType();
-                this.playSound(soundtype.getFallSound(), soundtype.getVolume() * 0.5F, soundtype.getPitch() * 0.75F);
+            int xx = Mth.floor(this.getX());
+            int yy = Mth.floor(this.getY() - 0.2F);
+            int zz = Mth.floor(this.getZ());
+            BlockState state = this.level().getBlockState(new BlockPos(xx, yy, zz));
+            if (!state.isAir()) {
+                SoundType soundType = state.getSoundType();
+                this.playSound(soundType.getFallSound(), soundType.getVolume() * 0.5F, soundType.getPitch() * 0.75F);
             }
         }
     }
 
     @Override
-    public void animateHurt(float p_265265_) {
+    public void animateHurt(final float yaw) {
         this.hurtDuration = 10;
         this.hurtTime = this.hurtDuration;
     }
@@ -1768,91 +1882,96 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return Mth.floor(this.getAttributeValue(Attributes.ARMOR));
     }
 
-    protected void hurtArmor(DamageSource p_21122_, float p_21123_) {
+    protected void hurtArmor(final DamageSource damageSource, final float damage) {
     }
 
-    protected void hurtHelmet(DamageSource p_147213_, float p_147214_) {
+    protected void hurtHelmet(final DamageSource damageSource, final float damage) {
     }
 
-    protected void doHurtEquipment(DamageSource p_330939_, float p_333962_, EquipmentSlot... p_335230_) {
-        if (!(p_333962_ <= 0.0F)) {
-            int i = (int)Math.max(1.0F, p_333962_ / 4.0F);
+    protected void doHurtEquipment(final DamageSource damageSource, final float damage, final EquipmentSlot... slots) {
+        if (!(damage <= 0.0F)) {
+            int durabilityDamage = (int)Math.max(1.0F, damage / 4.0F);
 
-            for (EquipmentSlot equipmentslot : p_335230_) {
-                ItemStack itemstack = this.getItemBySlot(equipmentslot);
-                Equippable equippable = itemstack.get(DataComponents.EQUIPPABLE);
-                if (equippable != null && equippable.damageOnHurt() && itemstack.isDamageableItem() && itemstack.canBeHurtBy(p_330939_)) {
-                    itemstack.hurtAndBreak(i, this, equipmentslot);
+            for (EquipmentSlot slot : slots) {
+                ItemStack itemStack = this.getItemBySlot(slot);
+                Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
+                if (equippable != null && equippable.damageOnHurt() && itemStack.isDamageableItem() && itemStack.canBeHurtBy(damageSource)) {
+                    itemStack.hurtAndBreak(durabilityDamage, this, slot);
                 }
             }
         }
     }
 
-    protected float getDamageAfterArmorAbsorb(DamageSource p_21162_, float p_21163_) {
-        if (!p_21162_.is(DamageTypeTags.BYPASSES_ARMOR)) {
-            this.hurtArmor(p_21162_, p_21163_);
-            p_21163_ = CombatRules.getDamageAfterAbsorb(this, p_21163_, p_21162_, this.getArmorValue(), (float)this.getAttributeValue(Attributes.ARMOR_TOUGHNESS));
+    protected float getDamageAfterArmorAbsorb(final DamageSource damageSource, float damage) {
+        if (!damageSource.is(DamageTypeTags.BYPASSES_ARMOR)) {
+            this.hurtArmor(damageSource, damage);
+            damage = CombatRules.getDamageAfterAbsorb(
+                this, damage, damageSource, this.getArmorValue(), (float)this.getAttributeValue(Attributes.ARMOR_TOUGHNESS)
+            );
         }
 
-        return p_21163_;
+        return damage;
     }
 
-    protected float getDamageAfterMagicAbsorb(DamageSource p_21193_, float p_21194_) {
-        if (p_21193_.is(DamageTypeTags.BYPASSES_EFFECTS)) {
-            return p_21194_;
+    protected float getDamageAfterMagicAbsorb(final DamageSource damageSource, float damage) {
+        if (damageSource.is(DamageTypeTags.BYPASSES_EFFECTS)) {
+            return damage;
+        }
+
+        if (this.hasEffect(MobEffects.RESISTANCE) && !damageSource.is(DamageTypeTags.BYPASSES_RESISTANCE)) {
+            int absorbValue = (this.getEffect(MobEffects.RESISTANCE).getAmplifier() + 1) * 5;
+            int absorb = 25 - absorbValue;
+            float v = damage * absorb;
+            float oldDamage = damage;
+            damage = Math.max(v / 25.0F, 0.0F);
+            float damageResisted = oldDamage - damage;
+            if (damageResisted > 0.0F && damageResisted < 3.4028235E37F) {
+                if (this instanceof ServerPlayer serverPlayer) {
+                    serverPlayer.awardStat(Stats.DAMAGE_RESISTED, Math.round(damageResisted * 10.0F));
+                } else if (damageSource.getEntity() instanceof ServerPlayer) {
+                    ((ServerPlayer)damageSource.getEntity()).awardStat(Stats.DAMAGE_DEALT_RESISTED, Math.round(damageResisted * 10.0F));
+                }
+            }
+        }
+
+        if (damage <= 0.0F) {
+            return 0.0F;
+        }
+
+        if (damageSource.is(DamageTypeTags.BYPASSES_ENCHANTMENTS)) {
+            return damage;
+        }
+
+        float enchantmentArmor;
+        if (this.level() instanceof ServerLevel serverLevel) {
+            enchantmentArmor = EnchantmentHelper.getDamageProtection(serverLevel, this, damageSource);
         } else {
-            if (this.hasEffect(MobEffects.RESISTANCE) && !p_21193_.is(DamageTypeTags.BYPASSES_RESISTANCE)) {
-                int i = (this.getEffect(MobEffects.RESISTANCE).getAmplifier() + 1) * 5;
-                int j = 25 - i;
-                float f = p_21194_ * j;
-                float f1 = p_21194_;
-                p_21194_ = Math.max(f / 25.0F, 0.0F);
-                float f2 = f1 - p_21194_;
-                if (f2 > 0.0F && f2 < 3.4028235E37F) {
-                    if (this instanceof ServerPlayer) {
-                        ((ServerPlayer)this).awardStat(Stats.DAMAGE_RESISTED, Math.round(f2 * 10.0F));
-                    } else if (p_21193_.getEntity() instanceof ServerPlayer) {
-                        ((ServerPlayer)p_21193_.getEntity()).awardStat(Stats.DAMAGE_DEALT_RESISTED, Math.round(f2 * 10.0F));
-                    }
-                }
-            }
-
-            if (p_21194_ <= 0.0F) {
-                return 0.0F;
-            } else if (p_21193_.is(DamageTypeTags.BYPASSES_ENCHANTMENTS)) {
-                return p_21194_;
-            } else {
-                float f3;
-                if (this.level() instanceof ServerLevel serverlevel) {
-                    f3 = EnchantmentHelper.getDamageProtection(serverlevel, this, p_21193_);
-                } else {
-                    f3 = 0.0F;
-                }
-
-                if (f3 > 0.0F) {
-                    p_21194_ = CombatRules.getDamageAfterMagicAbsorb(p_21194_, f3);
-                }
-
-                return p_21194_;
-            }
+            enchantmentArmor = 0.0F;
         }
+
+        if (enchantmentArmor > 0.0F) {
+            damage = CombatRules.getDamageAfterMagicAbsorb(damage, enchantmentArmor);
+        }
+
+        return damage;
     }
 
-    protected void actuallyHurt(ServerLevel p_365124_, DamageSource p_21240_, float p_21241_) {
-        if (!this.isInvulnerableTo(p_365124_, p_21240_)) {
-            p_21241_ = this.getDamageAfterArmorAbsorb(p_21240_, p_21241_);
-            p_21241_ = this.getDamageAfterMagicAbsorb(p_21240_, p_21241_);
-            float f1 = Math.max(p_21241_ - this.getAbsorptionAmount(), 0.0F);
-            this.setAbsorptionAmount(this.getAbsorptionAmount() - (p_21241_ - f1));
-            float f = p_21241_ - f1;
-            if (f > 0.0F && f < 3.4028235E37F && p_21240_.getEntity() instanceof ServerPlayer serverplayer) {
-                serverplayer.awardStat(Stats.DAMAGE_DEALT_ABSORBED, Math.round(f * 10.0F));
+    protected void actuallyHurt(final ServerLevel level, final DamageSource source, float dmg) {
+        if (!this.isInvulnerableTo(level, source)) {
+            dmg = this.getDamageAfterArmorAbsorb(source, dmg);
+            dmg = this.getDamageAfterMagicAbsorb(source, dmg);
+            float originalDamage = dmg;
+            dmg = Math.max(dmg - this.getAbsorptionAmount(), 0.0F);
+            this.setAbsorptionAmount(this.getAbsorptionAmount() - (originalDamage - dmg));
+            float absorbedDamage = originalDamage - dmg;
+            if (absorbedDamage > 0.0F && absorbedDamage < 3.4028235E37F && source.getEntity() instanceof ServerPlayer serverPlayer) {
+                serverPlayer.awardStat(Stats.DAMAGE_DEALT_ABSORBED, Math.round(absorbedDamage * 10.0F));
             }
 
-            if (f1 != 0.0F) {
-                this.getCombatTracker().recordDamage(p_21240_, f1);
-                this.setHealth(this.getHealth() - f1);
-                this.setAbsorptionAmount(this.getAbsorptionAmount() - f1);
+            if (dmg != 0.0F) {
+                this.getCombatTracker().recordDamage(source, dmg);
+                this.setHealth(this.getHealth() - dmg);
+                this.setAbsorptionAmount(this.getAbsorptionAmount() - dmg);
                 this.gameEvent(GameEvent.ENTITY_DAMAGE);
             }
         }
@@ -1882,74 +2001,77 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.entityData.get(DATA_ARROW_COUNT_ID);
     }
 
-    public final void setArrowCount(int p_21318_) {
-        this.entityData.set(DATA_ARROW_COUNT_ID, p_21318_);
+    public final void setArrowCount(final int count) {
+        this.entityData.set(DATA_ARROW_COUNT_ID, count);
     }
 
     public final int getStingerCount() {
         return this.entityData.get(DATA_STINGER_COUNT_ID);
     }
 
-    public final void setStingerCount(int p_21322_) {
-        this.entityData.set(DATA_STINGER_COUNT_ID, p_21322_);
+    public final void setStingerCount(final int count) {
+        this.entityData.set(DATA_STINGER_COUNT_ID, count);
     }
 
     private int getCurrentSwingDuration() {
-        ItemStack itemstack = this.getItemInHand(InteractionHand.MAIN_HAND);
-        int i = itemstack.getSwingAnimation().duration();
+        InteractionHand hand = this.swingingArm != null ? this.swingingArm : InteractionHand.MAIN_HAND;
+        ItemStack handStack = this.getItemInHand(hand);
+        int swingDuration = handStack.getSwingAnimation().duration();
         if (MobEffectUtil.hasDigSpeed(this)) {
-            return i - (1 + MobEffectUtil.getDigSpeedAmplification(this));
+            return swingDuration - (1 + MobEffectUtil.getDigSpeedAmplification(this));
         } else {
-            return this.hasEffect(MobEffects.MINING_FATIGUE) ? i + (1 + this.getEffect(MobEffects.MINING_FATIGUE).getAmplifier()) * 2 : i;
+            return this.hasEffect(MobEffects.MINING_FATIGUE)
+                ? swingDuration + (1 + this.getEffect(MobEffects.MINING_FATIGUE).getAmplifier()) * 2
+                : swingDuration;
         }
     }
 
-    public void swing(InteractionHand p_21007_) {
-        this.swing(p_21007_, false);
+    public void swing(final InteractionHand hand) {
+        this.swing(hand, false);
     }
 
-    public void swing(InteractionHand p_21012_, boolean p_21013_) {
+    public void swing(final InteractionHand hand, final boolean sendToSwingingEntity) {
         if (!this.swinging || this.swingTime >= this.getCurrentSwingDuration() / 2 || this.swingTime < 0) {
             this.swingTime = -1;
             this.swinging = true;
-            this.swingingArm = p_21012_;
+            this.swingingArm = hand;
             if (this.level() instanceof ServerLevel) {
-                ClientboundAnimatePacket clientboundanimatepacket = new ClientboundAnimatePacket(this, p_21012_ == InteractionHand.MAIN_HAND ? 0 : 3);
-                ServerChunkCache serverchunkcache = ((ServerLevel)this.level()).getChunkSource();
-                if (p_21013_) {
-                    serverchunkcache.sendToTrackingPlayersAndSelf(this, clientboundanimatepacket);
+                ClientboundAnimatePacket packet = new ClientboundAnimatePacket(this, hand == InteractionHand.MAIN_HAND ? 0 : 3);
+                ServerChunkCache chunkSource = ((ServerLevel)this.level()).getChunkSource();
+                if (sendToSwingingEntity) {
+                    chunkSource.sendToTrackingPlayersAndSelf(this, packet);
                 } else {
-                    serverchunkcache.sendToTrackingPlayers(this, clientboundanimatepacket);
+                    chunkSource.sendToTrackingPlayers(this, packet);
                 }
             }
         }
     }
 
     @Override
-    public void handleDamageEvent(DamageSource p_270229_) {
+    public void handleDamageEvent(final DamageSource source) {
         this.walkAnimation.setSpeed(1.5F);
         this.invulnerableTime = 20;
         this.hurtDuration = 10;
         this.hurtTime = this.hurtDuration;
-        SoundEvent soundevent = this.getHurtSound(p_270229_);
-        if (soundevent != null) {
-            this.playSound(soundevent, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
+        SoundEvent hurtSound = this.getHurtSound(source);
+        if (hurtSound != null) {
+            this.playSound(hurtSound, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
         }
 
-        this.lastDamageSource = p_270229_;
+        this.lastDamageSource = source;
         this.lastDamageStamp = this.level().getGameTime();
     }
 
     @Override
-    public void handleEntityEvent(byte p_20975_) {
-        switch (p_20975_) {
+    public void handleEntityEvent(final byte id) {
+        switch (id) {
             case 2:
                 this.onKineticHit();
                 break;
             case 3:
-                SoundEvent soundevent = this.getDeathSound();
-                if (soundevent != null) {
-                    this.playSound(soundevent, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
+                SoundEvent deathSound = this.getDeathSound();
+                if (deathSound != null) {
+                    this.playSound(deathSound, this.getSoundVolume(), (this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F);
                 }
 
                 if (!(this instanceof Player)) {
@@ -1958,17 +2080,17 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
                 }
                 break;
             case 46:
-                int i = 128;
+                int count = 128;
 
-                for (int j = 0; j < 128; j++) {
-                    double d0 = j / 127.0;
-                    float f = (this.random.nextFloat() - 0.5F) * 0.2F;
-                    float f1 = (this.random.nextFloat() - 0.5F) * 0.2F;
-                    float f2 = (this.random.nextFloat() - 0.5F) * 0.2F;
-                    double d1 = Mth.lerp(d0, this.xo, this.getX()) + (this.random.nextDouble() - 0.5) * this.getBbWidth() * 2.0;
-                    double d2 = Mth.lerp(d0, this.yo, this.getY()) + this.random.nextDouble() * this.getBbHeight();
-                    double d3 = Mth.lerp(d0, this.zo, this.getZ()) + (this.random.nextDouble() - 0.5) * this.getBbWidth() * 2.0;
-                    this.level().addParticle(ParticleTypes.PORTAL, d1, d2, d3, f, f1, f2);
+                for (int i = 0; i < 128; i++) {
+                    double d = i / 127.0;
+                    float xa = (this.random.nextFloat() - 0.5F) * 0.2F;
+                    float ya = (this.random.nextFloat() - 0.5F) * 0.2F;
+                    float za = (this.random.nextFloat() - 0.5F) * 0.2F;
+                    double x = Mth.lerp(d, this.xo, this.getX()) + (this.random.nextDouble() - 0.5) * this.getBbWidth() * 2.0;
+                    double y = Mth.lerp(d, this.yo, this.getY()) + this.random.nextDouble() * this.getBbHeight();
+                    double z = Mth.lerp(d, this.zo, this.getZ()) + (this.random.nextDouble() - 0.5) * this.getBbWidth() * 2.0;
+                    this.level().addParticle(ParticleTypes.PORTAL, x, y, z, xa, ya, za);
                 }
                 break;
             case 47:
@@ -2008,51 +2130,51 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
                 this.breakItem(this.getItemBySlot(EquipmentSlot.SADDLE));
                 break;
             default:
-                super.handleEntityEvent(p_20975_);
+                super.handleEntityEvent(id);
         }
     }
 
-    public float getTicksSinceLastKineticHitFeedback(float p_451822_) {
-        return this.lastKineticHitFeedbackTime < 0L ? 0.0F : (float)(this.level().getGameTime() - this.lastKineticHitFeedbackTime) + p_451822_;
+    public float getTicksSinceLastKineticHitFeedback(final float partial) {
+        return this.lastKineticHitFeedbackTime < 0L ? 0.0F : (float)(this.level().getGameTime() - this.lastKineticHitFeedbackTime) + partial;
     }
 
     public void makePoofParticles() {
         for (int i = 0; i < 20; i++) {
-            double d0 = this.random.nextGaussian() * 0.02;
-            double d1 = this.random.nextGaussian() * 0.02;
-            double d2 = this.random.nextGaussian() * 0.02;
-            double d3 = 10.0;
+            double xa = this.random.nextGaussian() * 0.02;
+            double ya = this.random.nextGaussian() * 0.02;
+            double za = this.random.nextGaussian() * 0.02;
+            double dd = 10.0;
             this.level()
-                .addParticle(ParticleTypes.POOF, this.getRandomX(1.0) - d0 * 10.0, this.getRandomY() - d1 * 10.0, this.getRandomZ(1.0) - d2 * 10.0, d0, d1, d2);
+                .addParticle(ParticleTypes.POOF, this.getRandomX(1.0) - xa * 10.0, this.getRandomY() - ya * 10.0, this.getRandomZ(1.0) - za * 10.0, xa, ya, za);
         }
     }
 
     private void makeDrownParticles() {
-        Vec3 vec3 = this.getDeltaMovement();
+        Vec3 movement = this.getDeltaMovement();
 
         for (int i = 0; i < 8; i++) {
-            double d0 = this.random.triangle(0.0, 1.0);
-            double d1 = this.random.triangle(0.0, 1.0);
-            double d2 = this.random.triangle(0.0, 1.0);
+            double offsetX = this.random.triangle(0.0, 1.0);
+            double offsetY = this.random.triangle(0.0, 1.0);
+            double offsetZ = this.random.triangle(0.0, 1.0);
             this.level()
-                .addParticle(ParticleTypes.BUBBLE, this.getX() + d0, this.getY() + d1, this.getZ() + d2, vec3.x, vec3.y, vec3.z);
+                .addParticle(ParticleTypes.BUBBLE, this.getX() + offsetX, this.getY() + offsetY, this.getZ() + offsetZ, movement.x, movement.y, movement.z);
         }
     }
 
     private void onKineticHit() {
         if (this.level().getGameTime() - this.lastKineticHitFeedbackTime > 10L) {
             this.lastKineticHitFeedbackTime = this.level().getGameTime();
-            KineticWeapon kineticweapon = this.useItem.get(DataComponents.KINETIC_WEAPON);
-            if (kineticweapon != null) {
-                kineticweapon.makeLocalHitSound(this);
+            KineticWeapon kineticWeapon = this.useItem.get(DataComponents.KINETIC_WEAPON);
+            if (kineticWeapon != null) {
+                kineticWeapon.makeLocalHitSound(this);
             }
         }
     }
 
     private void swapHandItems() {
-        ItemStack itemstack = this.getItemBySlot(EquipmentSlot.OFFHAND);
+        ItemStack tmp = this.getItemBySlot(EquipmentSlot.OFFHAND);
         this.setItemSlot(EquipmentSlot.OFFHAND, this.getItemBySlot(EquipmentSlot.MAINHAND));
-        this.setItemSlot(EquipmentSlot.MAINHAND, itemstack);
+        this.setItemSlot(EquipmentSlot.MAINHAND, tmp);
     }
 
     @Override
@@ -2061,10 +2183,10 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     protected void updateSwingTime() {
-        int i = this.getCurrentSwingDuration();
+        int currentSwingDuration = this.getCurrentSwingDuration();
         if (this.swinging) {
             this.swingTime++;
-            if (this.swingTime >= i) {
+            if (this.swingTime >= currentSwingDuration) {
                 this.swingTime = 0;
                 this.swinging = false;
             }
@@ -2072,19 +2194,24 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.swingTime = 0;
         }
 
-        this.attackAnim = (float)this.swingTime / i;
+        this.attackAnim = (float)this.swingTime / currentSwingDuration;
     }
 
-    public @Nullable AttributeInstance getAttribute(Holder<Attribute> p_332356_) {
-        return this.getAttributes().getInstance(p_332356_);
+    @Override
+    protected double getEntityBounciness() {
+        return this.getAttributeValue(Attributes.BOUNCINESS);
     }
 
-    public double getAttributeValue(Holder<Attribute> p_251296_) {
-        return this.getAttributes().getValue(p_251296_);
+    public @Nullable AttributeInstance getAttribute(final Holder<Attribute> attribute) {
+        return this.getAttributes().getInstance(attribute);
     }
 
-    public double getAttributeBaseValue(Holder<Attribute> p_248605_) {
-        return this.getAttributes().getBaseValue(p_248605_);
+    public double getAttributeValue(final Holder<Attribute> attribute) {
+        return this.getAttributes().getValue(attribute);
+    }
+
+    public double getAttributeBaseValue(final Holder<Attribute> attribute) {
+        return this.getAttributes().getBaseValue(attribute);
     }
 
     public AttributeMap getAttributes() {
@@ -2099,8 +2226,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.getItemBySlot(EquipmentSlot.OFFHAND);
     }
 
-    public ItemStack getItemHeldByArm(HumanoidArm p_365937_) {
-        return this.getMainArm() == p_365937_ ? this.getMainHandItem() : this.getOffhandItem();
+    public ItemStack getItemHeldByArm(final HumanoidArm arm) {
+        return this.getMainArm() == arm ? this.getMainHandItem() : this.getOffhandItem();
     }
 
     @Override
@@ -2108,86 +2235,90 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.getMainHandItem();
     }
 
-    public AttackRange entityAttackRange() {
-        AttackRange attackrange = this.getActiveItem().get(DataComponents.ATTACK_RANGE);
-        return attackrange != null ? attackrange : AttackRange.defaultFor(this);
+    public AttackRange getAttackRangeWith(final ItemStack weaponItem) {
+        AttackRange attackRange = weaponItem.get(DataComponents.ATTACK_RANGE);
+        return attackRange != null ? attackRange : AttackRange.defaultFor(this);
     }
 
     public ItemStack getActiveItem() {
-        return this.isUsingItem() ? this.getUseItem() : this.getMainHandItem();
+        if (this.isSpectator()) {
+            return ItemStack.EMPTY;
+        } else {
+            return this.isUsingItem() ? this.getUseItem() : this.getMainHandItem();
+        }
     }
 
-    public boolean isHolding(Item p_21056_) {
-        return this.isHolding(p_147200_ -> p_147200_.is(p_21056_));
+    public boolean isHolding(final Item item) {
+        return this.isHolding(heldItem -> heldItem.is(item));
     }
 
-    public boolean isHolding(Predicate<ItemStack> p_21094_) {
-        return p_21094_.test(this.getMainHandItem()) || p_21094_.test(this.getOffhandItem());
+    public boolean isHolding(final Predicate<ItemStack> itemPredicate) {
+        return itemPredicate.test(this.getMainHandItem()) || itemPredicate.test(this.getOffhandItem());
     }
 
-    public ItemStack getItemInHand(InteractionHand p_21121_) {
-        if (p_21121_ == InteractionHand.MAIN_HAND) {
+    public ItemStack getItemInHand(final InteractionHand hand) {
+        if (hand == InteractionHand.MAIN_HAND) {
             return this.getItemBySlot(EquipmentSlot.MAINHAND);
-        } else if (p_21121_ == InteractionHand.OFF_HAND) {
+        } else if (hand == InteractionHand.OFF_HAND) {
             return this.getItemBySlot(EquipmentSlot.OFFHAND);
         } else {
-            throw new IllegalArgumentException("Invalid hand " + p_21121_);
+            throw new IllegalArgumentException("Invalid hand " + hand);
         }
     }
 
-    public void setItemInHand(InteractionHand p_21009_, ItemStack p_21010_) {
-        if (p_21009_ == InteractionHand.MAIN_HAND) {
-            this.setItemSlot(EquipmentSlot.MAINHAND, p_21010_);
+    public void setItemInHand(final InteractionHand hand, final ItemStack itemStack) {
+        if (hand == InteractionHand.MAIN_HAND) {
+            this.setItemSlot(EquipmentSlot.MAINHAND, itemStack);
         } else {
-            if (p_21009_ != InteractionHand.OFF_HAND) {
-                throw new IllegalArgumentException("Invalid hand " + p_21009_);
+            if (hand != InteractionHand.OFF_HAND) {
+                throw new IllegalArgumentException("Invalid hand " + hand);
             }
 
-            this.setItemSlot(EquipmentSlot.OFFHAND, p_21010_);
+            this.setItemSlot(EquipmentSlot.OFFHAND, itemStack);
         }
     }
 
-    public boolean hasItemInSlot(EquipmentSlot p_21034_) {
-        return !this.getItemBySlot(p_21034_).isEmpty();
+    public boolean hasItemInSlot(final EquipmentSlot slot) {
+        return !this.getItemBySlot(slot).isEmpty();
     }
 
-    public boolean canUseSlot(EquipmentSlot p_328587_) {
+    public boolean canUseSlot(final EquipmentSlot slot) {
         return true;
     }
 
-    public ItemStack getItemBySlot(EquipmentSlot p_21127_) {
-        return this.equipment.get(p_21127_);
+    public ItemStack getItemBySlot(final EquipmentSlot slot) {
+        return this.equipment.get(slot);
     }
 
-    public void setItemSlot(EquipmentSlot p_21036_, ItemStack p_21037_) {
-        this.onEquipItem(p_21036_, this.equipment.set(p_21036_, p_21037_), p_21037_);
+    public void setItemSlot(final EquipmentSlot slot, final ItemStack itemStack) {
+        this.onEquipItem(slot, this.equipment.set(slot, itemStack), itemStack);
     }
 
     public float getArmorCoverPercentage() {
-        int i = 0;
-        int j = 0;
+        int total = 0;
+        int count = 0;
 
-        for (EquipmentSlot equipmentslot : EquipmentSlotGroup.ARMOR) {
-            if (equipmentslot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
-                ItemStack itemstack = this.getItemBySlot(equipmentslot);
-                if (!itemstack.isEmpty()) {
-                    j++;
+        for (EquipmentSlot slot : EquipmentSlotGroup.ARMOR) {
+            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+                ItemStack itemStack = this.getItemBySlot(slot);
+                if (!itemStack.isEmpty()) {
+                    count++;
                 }
 
-                i++;
+                total++;
             }
         }
 
-        return i > 0 ? (float)j / i : 0.0F;
+        return total > 0 ? (float)count / total : 0.0F;
     }
 
     @Override
-    public void setSprinting(boolean p_21284_) {
-        super.setSprinting(p_21284_);
-        AttributeInstance attributeinstance = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        attributeinstance.removeModifier(SPEED_MODIFIER_SPRINTING.id());
-        if (p_21284_) {
-            attributeinstance.addTransientModifier(SPEED_MODIFIER_SPRINTING);
+    public void setSprinting(final boolean isSprinting) {
+        super.setSprinting(isSprinting);
+        AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
+        speed.removeModifier(SPEED_MODIFIER_SPRINTING.id());
+        if (isSprinting) {
+            speed.addTransientModifier(SPEED_MODIFIER_SPRINTING);
         }
     }
 
@@ -2206,34 +2337,34 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public void push(Entity p_21294_) {
+    public void push(final Entity entity) {
         if (!this.isSleeping()) {
-            super.push(p_21294_);
+            super.push(entity);
         }
     }
 
-    private void dismountVehicle(Entity p_21029_) {
-        Vec3 vec3;
+    private void dismountVehicle(final Entity vehicle) {
+        Vec3 teleportTarget;
         if (this.isRemoved()) {
-            vec3 = this.position();
-        } else if (!p_21029_.isRemoved() && !this.level().getBlockState(p_21029_.blockPosition()).is(BlockTags.PORTALS)) {
-            vec3 = p_21029_.getDismountLocationForPassenger(this);
+            teleportTarget = this.position();
+        } else if (!vehicle.isRemoved() && !this.level().getBlockState(vehicle.blockPosition()).is(BlockTags.PORTALS)) {
+            teleportTarget = vehicle.getDismountLocationForPassenger(this);
         } else {
-            double d0 = Math.max(this.getY(), p_21029_.getY());
-            vec3 = new Vec3(this.getX(), d0, this.getZ());
-            boolean flag = this.getBbWidth() <= 4.0F && this.getBbHeight() <= 4.0F;
-            if (flag) {
-                double d1 = this.getBbHeight() / 2.0;
-                Vec3 vec31 = vec3.add(0.0, d1, 0.0);
-                VoxelShape voxelshape = Shapes.create(AABB.ofSize(vec31, this.getBbWidth(), this.getBbHeight(), this.getBbWidth()));
-                vec3 = this.level()
-                    .findFreePosition(this, voxelshape, vec31, this.getBbWidth(), this.getBbHeight(), this.getBbWidth())
-                    .map(p_358887_ -> p_358887_.add(0.0, -d1, 0.0))
-                    .orElse(vec3);
+            double maxY = Math.max(this.getY(), vehicle.getY());
+            teleportTarget = new Vec3(this.getX(), maxY, this.getZ());
+            boolean isSmall = this.getBbWidth() <= 4.0F && this.getBbHeight() <= 4.0F;
+            if (isSmall) {
+                double halfHeight = this.getBbHeight() / 2.0;
+                Vec3 center = teleportTarget.add(0.0, halfHeight, 0.0);
+                VoxelShape allowedCenters = Shapes.create(AABB.ofSize(center, this.getBbWidth(), this.getBbHeight(), this.getBbWidth()));
+                teleportTarget = this.level()
+                    .findFreePosition(this, allowedCenters, center, this.getBbWidth(), this.getBbHeight(), this.getBbWidth())
+                    .map(pos -> pos.add(0.0, -halfHeight, 0.0))
+                    .orElse(teleportTarget);
             }
         }
 
-        this.dismountTo(vec3.x, vec3.y, vec3.z);
+        this.dismountTo(teleportTarget.x, teleportTarget.y, teleportTarget.z);
     }
 
     @Override
@@ -2245,8 +2376,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.getJumpPower(1.0F);
     }
 
-    protected float getJumpPower(float p_329899_) {
-        return (float)this.getAttributeValue(Attributes.JUMP_STRENGTH) * p_329899_ * this.getBlockJumpFactor() + this.getJumpBoostPower();
+    protected float getJumpPower(final float multiplier) {
+        return (float)this.getAttributeValue(Attributes.JUMP_STRENGTH) * multiplier * this.getBlockJumpFactor() + this.getJumpBoostPower();
     }
 
     public float getJumpBoostPower() {
@@ -2255,13 +2386,13 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
     @VisibleForTesting
     public void jumpFromGround() {
-        float f = this.getJumpPower();
-        if (!(f <= 1.0E-5F)) {
-            Vec3 vec3 = this.getDeltaMovement();
-            this.setDeltaMovement(vec3.x, Math.max((double)f, vec3.y), vec3.z);
+        float jumpPower = this.getJumpPower();
+        if (!(jumpPower <= 1.0E-5F)) {
+            Vec3 movement = this.getDeltaMovement();
+            this.setDeltaMovement(movement.x, Math.max(jumpPower, movement.y), movement.z);
             if (this.isSprinting()) {
-                float f1 = this.getYRot() * (float) (Math.PI / 180.0);
-                this.addDeltaMovement(new Vec3(-Mth.sin(f1) * 0.2, 0.0, Mth.cos(f1) * 0.2));
+                float angle = this.getYRot() * (float) (Math.PI / 180.0);
+                this.addDeltaMovement(new Vec3(-Mth.sin(angle) * 0.2, 0.0, Mth.cos(angle) * 0.2));
             }
 
             this.needsSync = true;
@@ -2272,7 +2403,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         this.setDeltaMovement(this.getDeltaMovement().add(0.0, -0.04F, 0.0));
     }
 
-    protected void jumpInLiquid(TagKey<Fluid> p_204043_) {
+    protected void jumpInLiquid(final TagKey<Fluid> type) {
         this.setDeltaMovement(this.getDeltaMovement().add(0.0, 0.04F, 0.0));
     }
 
@@ -2280,7 +2411,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return 0.8F;
     }
 
-    public boolean canStandOnFluid(FluidState p_204042_) {
+    public boolean canStandOnFluid(final FluidState fluid) {
         return false;
     }
 
@@ -2289,155 +2420,175 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.getAttributeValue(Attributes.GRAVITY);
     }
 
+    @Override
     protected double getEffectiveGravity() {
-        boolean flag = this.getDeltaMovement().y <= 0.0;
-        return flag && this.hasEffect(MobEffects.SLOW_FALLING) ? Math.min(this.getGravity(), 0.01) : this.getGravity();
+        boolean isFalling = this.getDeltaMovement().y <= 0.0;
+        return isFalling && this.hasEffect(MobEffects.SLOW_FALLING) ? Math.min(this.getGravity(), 0.01) : this.getGravity();
     }
 
-    public void travel(Vec3 p_21280_) {
+    public void travel(final Vec3 input) {
         if (this.shouldTravelInFluid(this.level().getFluidState(this.blockPosition()))) {
-            this.travelInFluid(p_21280_);
+            this.travelInFluid(input);
         } else if (this.isFallFlying()) {
-            this.travelFallFlying(p_21280_);
+            this.travelFallFlying(input);
         } else {
-            this.travelInAir(p_21280_);
+            this.travelInAir(input);
         }
     }
 
-    protected boolean shouldTravelInFluid(FluidState p_453099_) {
-        return (this.isInWater() || this.isInLava()) && this.isAffectedByFluids() && !this.canStandOnFluid(p_453099_);
+    public VoxelShape getLiquidCollisionShape() {
+        return Shapes.empty();
     }
 
-    protected void travelFlying(Vec3 p_407126_, float p_407105_) {
-        this.travelFlying(p_407126_, 0.02F, 0.02F, p_407105_);
+    protected boolean shouldTravelInFluid(final FluidState fluidState) {
+        return (this.isInWater() || this.isInLava()) && this.isAffectedByFluids() && !this.canStandOnFluid(fluidState);
     }
 
-    protected void travelFlying(Vec3 p_409764_, float p_406455_, float p_409948_, float p_410640_) {
+    protected void travelFlying(final Vec3 input, final float speed) {
+        this.travelFlying(input, 0.02F, 0.02F, speed);
+    }
+
+    protected void travelFlying(final Vec3 input, final float waterSpeed, final float lavaSpeed, final float airSpeed) {
         if (this.isInWater()) {
-            this.moveRelative(p_406455_, p_409764_);
+            this.moveRelative(waterSpeed, input);
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.8F));
         } else if (this.isInLava()) {
-            this.moveRelative(p_409948_, p_409764_);
+            this.moveRelative(lavaSpeed, input);
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.5));
         } else {
-            this.moveRelative(p_410640_, p_409764_);
+            this.moveRelative(airSpeed, input);
             this.move(MoverType.SELF, this.getDeltaMovement());
             this.setDeltaMovement(this.getDeltaMovement().scale(0.91F));
         }
     }
 
-    private void travelInAir(Vec3 p_362087_) {
-        BlockPos blockpos = this.getBlockPosBelowThatAffectsMyMovement();
-        float f = this.onGround() ? this.level().getBlockState(blockpos).getBlock().getFriction() : 1.0F;
-        float f1 = f * 0.91F;
-        Vec3 vec3 = this.handleRelativeFrictionAndCalculateMovement(p_362087_, f);
-        double d0 = vec3.y;
-        MobEffectInstance mobeffectinstance = this.getEffect(MobEffects.LEVITATION);
-        if (mobeffectinstance != null) {
-            d0 += (0.05 * (mobeffectinstance.getAmplifier() + 1) - vec3.y) * 0.2;
-        } else if (!this.level().isClientSide() || this.level().hasChunkAt(blockpos)) {
-            d0 -= this.getEffectiveGravity();
+    private void travelInAir(final Vec3 input) {
+        BlockPos posBelow = this.getBlockPosBelowThatAffectsMyMovement();
+        float blockFriction = this.onGround()
+            ? computeModifiedFriction(
+                this.level().getBlockState(posBelow).getBlock().getFriction(), (float)this.getAttributeValue(Attributes.FRICTION_MODIFIER)
+            )
+            : 1.0F;
+        Vec3 movement = this.handleRelativeFrictionAndCalculateMovement(input, blockFriction);
+        double movementY = movement.y;
+        MobEffectInstance levitationEffect = this.getEffect(MobEffects.LEVITATION);
+        if (levitationEffect != null) {
+            movementY += (0.05 * (levitationEffect.getAmplifier() + 1) - movement.y) * 0.2;
+        } else if (!this.level().isClientSide() || this.level().hasChunkAt(posBelow)) {
+            movementY -= this.getEffectiveGravity();
         } else if (this.getY() > this.level().getMinY()) {
-            d0 = -0.1;
+            movementY = -0.1;
         } else {
-            d0 = 0.0;
+            movementY = 0.0;
         }
 
         if (this.shouldDiscardFriction()) {
-            this.setDeltaMovement(vec3.x, d0, vec3.z);
+            this.setDeltaMovement(movement.x, movementY, movement.z);
         } else {
-            float f2 = this instanceof FlyingAnimal ? f1 : 0.98F;
-            this.setDeltaMovement(vec3.x * f1, d0 * f2, vec3.z * f1);
+            float entityAirDragModifier = (float)this.getAttributeValue(Attributes.AIR_DRAG_MODIFIER);
+            float airDrag = computeModifiedFriction(0.91F, entityAirDragModifier);
+            float friction = blockFriction * airDrag;
+            float verticalFriction = this.omnidirectionalAirMover() ? airDrag : computeModifiedFriction(0.98F, entityAirDragModifier);
+            this.setDeltaMovement(movement.x * friction, movementY * verticalFriction, movement.z * friction);
         }
     }
 
-    private void travelInFluid(Vec3 p_362114_) {
-        boolean flag = this.getDeltaMovement().y <= 0.0;
-        double d0 = this.getY();
-        double d1 = this.getEffectiveGravity();
+    @Override
+    protected float getAirDrag() {
+        return computeModifiedFriction(this.omnidirectionalAirMover() ? 0.91F : 0.98F, (float)this.getAttributeValue(Attributes.AIR_DRAG_MODIFIER));
+    }
+
+    protected void travelInFluid(final Vec3 input) {
+        boolean isFalling = this.getDeltaMovement().y <= 0.0;
+        double oldY = this.getY();
+        double baseGravity = this.getEffectiveGravity();
         if (this.isInWater()) {
-            this.travelInWater(p_362114_, d1, flag, d0);
+            this.travelInWater(input, baseGravity, isFalling, oldY);
             this.floatInWaterWhileRidden();
         } else {
-            this.travelInLava(p_362114_, d1, flag, d0);
+            this.travelInLava(input, baseGravity, isFalling, oldY);
         }
     }
 
-    protected void travelInWater(Vec3 p_451732_, double p_452538_, boolean p_455561_, double p_450436_) {
-        float f = this.isSprinting() ? 0.9F : this.getWaterSlowDown();
-        float f1 = 0.02F;
-        float f2 = (float)this.getAttributeValue(Attributes.WATER_MOVEMENT_EFFICIENCY);
+    protected void travelInWater(final Vec3 input, final double baseGravity, final boolean isFalling, final double oldY) {
+        float slowDown = this.isSprinting() ? 0.9F : this.getWaterSlowDown();
+        float speed = 0.02F;
+        float waterWalker = (float)this.getAttributeValue(Attributes.WATER_MOVEMENT_EFFICIENCY);
         if (!this.onGround()) {
-            f2 *= 0.5F;
+            waterWalker *= 0.5F;
         }
 
-        if (f2 > 0.0F) {
-            f += (0.54600006F - f) * f2;
-            f1 += (this.getSpeed() - f1) * f2;
+        if (waterWalker > 0.0F) {
+            slowDown += (0.54600006F - slowDown) * waterWalker;
+            speed += (this.getSpeed() - speed) * waterWalker;
         }
 
         if (this.hasEffect(MobEffects.DOLPHINS_GRACE)) {
-            f = 0.96F;
+            slowDown = 0.96F;
         }
 
-        this.moveRelative(f1, p_451732_);
+        this.moveRelative(speed, input);
         this.move(MoverType.SELF, this.getDeltaMovement());
-        Vec3 vec3 = this.getDeltaMovement();
+        Vec3 movement = this.getDeltaMovement();
         if (this.horizontalCollision && this.onClimbable()) {
-            vec3 = new Vec3(vec3.x, 0.2, vec3.z);
+            movement = new Vec3(movement.x, 0.2, movement.z);
         }
 
-        vec3 = vec3.multiply(f, 0.8F, f);
-        this.setDeltaMovement(this.getFluidFallingAdjustedMovement(p_452538_, p_455561_, vec3));
-        this.jumpOutOfFluid(p_450436_);
+        movement = movement.multiply(slowDown, 0.8F, slowDown);
+        this.setDeltaMovement(this.getFluidFallingAdjustedMovement(baseGravity, isFalling, movement));
+        this.jumpOutOfFluid(oldY);
     }
 
-    private void travelInLava(Vec3 p_452494_, double p_452041_, boolean p_451529_, double p_457703_) {
-        this.moveRelative(0.02F, p_452494_);
+    protected boolean isInShallowFluid(final TagKey<Fluid> fluidTag) {
+        return this.getFluidHeight(fluidTag) <= this.getFluidJumpThreshold();
+    }
+
+    private void travelInLava(final Vec3 input, final double baseGravity, final boolean isFalling, final double oldY) {
+        this.moveRelative(0.02F, input);
         this.move(MoverType.SELF, this.getDeltaMovement());
-        if (this.getFluidHeight(FluidTags.LAVA) <= this.getFluidJumpThreshold()) {
+        if (this.isInShallowFluid(FluidTags.LAVA)) {
             this.setDeltaMovement(this.getDeltaMovement().multiply(0.5, 0.8F, 0.5));
-            Vec3 vec3 = this.getFluidFallingAdjustedMovement(p_452041_, p_451529_, this.getDeltaMovement());
-            this.setDeltaMovement(vec3);
+            Vec3 movement = this.getFluidFallingAdjustedMovement(baseGravity, isFalling, this.getDeltaMovement());
+            this.setDeltaMovement(movement);
         } else {
             this.setDeltaMovement(this.getDeltaMovement().scale(0.5));
         }
 
-        if (p_452041_ != 0.0) {
-            this.setDeltaMovement(this.getDeltaMovement().add(0.0, -p_452041_ / 4.0, 0.0));
+        if (baseGravity != 0.0) {
+            this.setDeltaMovement(this.getDeltaMovement().add(0.0, -baseGravity / 4.0, 0.0));
         }
 
-        this.jumpOutOfFluid(p_457703_);
+        this.jumpOutOfFluid(oldY);
     }
 
-    private void jumpOutOfFluid(double p_453724_) {
-        Vec3 vec3 = this.getDeltaMovement();
-        if (this.horizontalCollision && this.isFree(vec3.x, vec3.y + 0.6F - this.getY() + p_453724_, vec3.z)) {
-            this.setDeltaMovement(vec3.x, 0.3F, vec3.z);
+    private void jumpOutOfFluid(final double oldY) {
+        Vec3 movement = this.getDeltaMovement();
+        if (this.horizontalCollision && this.isFree(movement.x, movement.y + 0.6F - this.getY() + oldY, movement.z)) {
+            this.setDeltaMovement(movement.x, 0.3F, movement.z);
         }
     }
 
     private void floatInWaterWhileRidden() {
-        boolean flag = this.getType().is(EntityTypeTags.CAN_FLOAT_WHILE_RIDDEN);
-        if (flag && this.isVehicle() && this.getFluidHeight(FluidTags.WATER) > this.getFluidJumpThreshold()) {
+        boolean canEntityFloatInWater = this.is(EntityTypeTags.CAN_FLOAT_WHILE_RIDDEN);
+        if (canEntityFloatInWater && this.isVehicle() && this.getFluidHeight(FluidTags.WATER) > this.getFluidJumpThreshold()) {
             this.setDeltaMovement(this.getDeltaMovement().add(0.0, 0.04F, 0.0));
         }
     }
 
-    private void travelFallFlying(Vec3 p_391378_) {
+    private void travelFallFlying(final Vec3 input) {
         if (this.onClimbable()) {
-            this.travelInAir(p_391378_);
+            this.travelInAir(input);
             this.stopFallFlying();
         } else {
-            Vec3 vec3 = this.getDeltaMovement();
-            double d0 = vec3.horizontalDistance();
-            this.setDeltaMovement(this.updateFallFlyingMovement(vec3));
+            Vec3 lastMovement = this.getDeltaMovement();
+            double lastSpeed = lastMovement.horizontalDistance();
+            this.setDeltaMovement(this.updateFallFlyingMovement(lastMovement));
             this.move(MoverType.SELF, this.getDeltaMovement());
             if (!this.level().isClientSide()) {
-                double d1 = this.getDeltaMovement().horizontalDistance();
-                this.handleFallFlyingCollisions(d0, d1);
+                double newSpeed = this.getDeltaMovement().horizontalDistance();
+                this.handleFallFlyingCollisions(lastSpeed, newSpeed);
             }
         }
     }
@@ -2447,124 +2598,130 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         this.setSharedFlag(7, false);
     }
 
-    private Vec3 updateFallFlyingMovement(Vec3 p_366729_) {
-        Vec3 vec3 = this.getLookAngle();
-        float f = this.getXRot() * (float) (Math.PI / 180.0);
-        double d0 = Math.sqrt(vec3.x * vec3.x + vec3.z * vec3.z);
-        double d1 = p_366729_.horizontalDistance();
-        double d2 = this.getEffectiveGravity();
-        double d3 = Mth.square(Math.cos(f));
-        p_366729_ = p_366729_.add(0.0, d2 * (-1.0 + d3 * 0.75), 0.0);
-        if (p_366729_.y < 0.0 && d0 > 0.0) {
-            double d4 = p_366729_.y * -0.1 * d3;
-            p_366729_ = p_366729_.add(vec3.x * d4 / d0, d4, vec3.z * d4 / d0);
+    private Vec3 updateFallFlyingMovement(Vec3 movement) {
+        Vec3 lookAngle = this.getLookAngle();
+        float leanAngle = this.getXRot() * (float) (Math.PI / 180.0);
+        double lookHorLength = Math.sqrt(lookAngle.x * lookAngle.x + lookAngle.z * lookAngle.z);
+        double moveHorLength = movement.horizontalDistance();
+        double gravity = this.getEffectiveGravity();
+        double liftForce = Mth.square(Math.cos(leanAngle));
+        movement = movement.add(0.0, gravity * (-1.0 + liftForce * 0.75), 0.0);
+        if (movement.y < 0.0 && lookHorLength > 0.0) {
+            double convert = movement.y * -0.1 * liftForce;
+            movement = movement.add(lookAngle.x * convert / lookHorLength, convert, lookAngle.z * convert / lookHorLength);
         }
 
-        if (f < 0.0F && d0 > 0.0) {
-            double d5 = d1 * -Mth.sin(f) * 0.04;
-            p_366729_ = p_366729_.add(-vec3.x * d5 / d0, d5 * 3.2, -vec3.z * d5 / d0);
+        if (leanAngle < 0.0F && lookHorLength > 0.0) {
+            double convert = moveHorLength * -Mth.sin(leanAngle) * 0.04;
+            movement = movement.add(-lookAngle.x * convert / lookHorLength, convert * 3.2, -lookAngle.z * convert / lookHorLength);
         }
 
-        if (d0 > 0.0) {
-            p_366729_ = p_366729_.add((vec3.x / d0 * d1 - p_366729_.x) * 0.1, 0.0, (vec3.z / d0 * d1 - p_366729_.z) * 0.1);
+        if (lookHorLength > 0.0) {
+            movement = movement.add(
+                (lookAngle.x / lookHorLength * moveHorLength - movement.x) * 0.1, 0.0, (lookAngle.z / lookHorLength * moveHorLength - movement.z) * 0.1
+            );
         }
 
-        return p_366729_.multiply(0.99F, 0.98F, 0.99F);
+        return movement.multiply(0.99F, 0.98F, 0.99F);
     }
 
-    private void handleFallFlyingCollisions(double p_368432_, double p_367807_) {
+    private void handleFallFlyingCollisions(final double moveHorLength, final double newMoveHorLength) {
         if (this.horizontalCollision) {
-            double d0 = p_368432_ - p_367807_;
-            float f = (float)(d0 * 10.0 - 3.0);
-            if (f > 0.0F) {
-                this.playSound(this.getFallDamageSound((int)f), 1.0F, 1.0F);
-                this.hurt(this.damageSources().flyIntoWall(), f);
+            double diff = moveHorLength - newMoveHorLength;
+            float dmg = (float)(diff * 10.0 - 3.0);
+            if (dmg > 0.0F) {
+                this.playSound(this.getFallDamageSound((int)dmg), 1.0F, 1.0F);
+                this.hurt(this.damageSources().flyIntoWall(), dmg);
             }
         }
     }
 
-    private void travelRidden(Player p_278244_, Vec3 p_278231_) {
-        Vec3 vec3 = this.getRiddenInput(p_278244_, p_278231_);
-        this.tickRidden(p_278244_, vec3);
+    private void travelRidden(final Player controller, final Vec3 selfInput) {
+        Vec3 riddenInput = this.getRiddenInput(controller, selfInput);
+        this.tickRidden(controller, riddenInput);
         if (this.canSimulateMovement()) {
-            this.setSpeed(this.getRiddenSpeed(p_278244_));
-            this.travel(vec3);
+            this.setSpeed(this.getRiddenSpeed(controller));
+            this.travel(riddenInput);
         } else {
             this.setDeltaMovement(Vec3.ZERO);
         }
     }
 
-    protected void tickRidden(Player p_278262_, Vec3 p_275242_) {
+    protected void tickRidden(final Player controller, final Vec3 riddenInput) {
     }
 
-    protected Vec3 getRiddenInput(Player p_278326_, Vec3 p_275300_) {
-        return p_275300_;
+    protected Vec3 getRiddenInput(final Player controller, final Vec3 selfInput) {
+        return selfInput;
     }
 
-    protected float getRiddenSpeed(Player p_278286_) {
+    protected float getRiddenSpeed(final Player controller) {
         return this.getSpeed();
     }
 
-    public void calculateEntityAnimation(boolean p_268129_) {
-        float f = (float)Mth.length(this.getX() - this.xo, p_268129_ ? this.getY() - this.yo : 0.0, this.getZ() - this.zo);
+    public void calculateEntityAnimation(final boolean useY) {
+        float distance = (float)Mth.length(this.getX() - this.xo, useY ? this.getY() - this.yo : 0.0, this.getZ() - this.zo);
         if (!this.isPassenger() && this.isAlive()) {
-            this.updateWalkAnimation(f);
+            this.updateWalkAnimation(distance);
         } else {
             this.walkAnimation.stop();
         }
     }
 
-    protected void updateWalkAnimation(float p_268283_) {
-        float f = Math.min(p_268283_ * 4.0F, 1.0F);
-        this.walkAnimation.update(f, 0.4F, this.isBaby() ? 3.0F : 1.0F);
+    protected void updateWalkAnimation(final float distance) {
+        float targetSpeed = Math.min(distance * 4.0F, 1.0F);
+        this.walkAnimation.update(targetSpeed, 0.4F, this.isBaby() ? 3.0F : 1.0F);
     }
 
-    private Vec3 handleRelativeFrictionAndCalculateMovement(Vec3 p_21075_, float p_21076_) {
-        this.moveRelative(this.getFrictionInfluencedSpeed(p_21076_), p_21075_);
+    private Vec3 handleRelativeFrictionAndCalculateMovement(final Vec3 input, final float friction) {
+        this.moveRelative(this.getFrictionInfluencedSpeed(friction), input);
         this.setDeltaMovement(this.handleOnClimbable(this.getDeltaMovement()));
         this.move(MoverType.SELF, this.getDeltaMovement());
-        Vec3 vec3 = this.getDeltaMovement();
+        Vec3 movement = this.getDeltaMovement();
         if ((this.horizontalCollision || this.jumping) && (this.onClimbable() || this.wasInPowderSnow && PowderSnowBlock.canEntityWalkOnPowderSnow(this))) {
-            vec3 = new Vec3(vec3.x, 0.2, vec3.z);
+            movement = new Vec3(movement.x, 0.2, movement.z);
         }
 
-        return vec3;
+        return movement;
     }
 
-    public Vec3 getFluidFallingAdjustedMovement(double p_20995_, boolean p_20996_, Vec3 p_20997_) {
-        if (p_20995_ != 0.0 && !this.isSprinting()) {
-            double d0;
-            if (p_20996_ && Math.abs(p_20997_.y - 0.005) >= 0.003 && Math.abs(p_20997_.y - p_20995_ / 16.0) < 0.003) {
-                d0 = -0.003;
+    public Vec3 getFluidFallingAdjustedMovement(final double baseGravity, final boolean isFalling, final Vec3 movement) {
+        if (baseGravity != 0.0 && !this.isSprinting()) {
+            double yd;
+            if (isFalling && Math.abs(movement.y - 0.005) >= 0.003 && Math.abs(movement.y - baseGravity / 16.0) < 0.003) {
+                yd = -0.003;
             } else {
-                d0 = p_20997_.y - p_20995_ / 16.0;
+                yd = movement.y - baseGravity / 16.0;
             }
 
-            return new Vec3(p_20997_.x, d0, p_20997_.z);
+            return new Vec3(movement.x, yd, movement.z);
         } else {
-            return p_20997_;
+            return movement;
         }
     }
 
-    private Vec3 handleOnClimbable(Vec3 p_21298_) {
+    private Vec3 handleOnClimbable(Vec3 delta) {
         if (this.onClimbable()) {
             this.resetFallDistance();
-            float f = 0.15F;
-            double d0 = Mth.clamp(p_21298_.x, -0.15F, 0.15F);
-            double d1 = Mth.clamp(p_21298_.z, -0.15F, 0.15F);
-            double d2 = Math.max(p_21298_.y, -0.15F);
-            if (d2 < 0.0 && !this.getInBlockState().is(Blocks.SCAFFOLDING) && this.isSuppressingSlidingDownLadder() && this instanceof Player) {
-                d2 = 0.0;
+            float max = 0.15F;
+            double xd = Mth.clamp(delta.x, -0.15F, 0.15F);
+            double zd = Mth.clamp(delta.z, -0.15F, 0.15F);
+            double yd = Math.max(delta.y, -0.15F);
+            if (yd < 0.0 && !this.getInBlockState().is(Blocks.SCAFFOLDING) && this.isSuppressingSlidingDownLadder() && this instanceof Player) {
+                yd = 0.0;
             }
 
-            p_21298_ = new Vec3(d0, d2, d1);
+            delta = new Vec3(xd, yd, zd);
         }
 
-        return p_21298_;
+        return delta;
     }
 
-    private float getFrictionInfluencedSpeed(float p_21331_) {
-        return this.onGround() ? this.getSpeed() * (0.21600002F / (p_21331_ * p_21331_ * p_21331_)) : this.getFlyingSpeed();
+    private float getFrictionInfluencedSpeed(final float blockFriction) {
+        if (this.onGround()) {
+            return blockFriction > 0.6 ? this.getSpeed() * (0.21600002F / (blockFriction * blockFriction * blockFriction)) : this.getSpeed();
+        } else {
+            return this.getFlyingSpeed();
+        }
     }
 
     protected float getFlyingSpeed() {
@@ -2575,19 +2732,26 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.speed;
     }
 
-    public void setSpeed(float p_21320_) {
-        this.speed = p_21320_;
+    public void setSpeed(final float speed) {
+        this.speed = speed;
     }
 
-    public boolean doHurtTarget(ServerLevel p_366333_, Entity p_20970_) {
-        this.setLastHurtMob(p_20970_);
+    public boolean doHurtTarget(final ServerLevel level, final Entity target) {
+        this.setLastHurtMob(target);
         return false;
     }
 
-    public void causeExtraKnockback(Entity p_453814_, float p_452611_, Vec3 p_456040_) {
-        if (p_452611_ > 0.0F && p_453814_ instanceof LivingEntity livingentity) {
-            livingentity.knockback(
-                p_452611_, Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)), -Mth.cos(this.getYRot() * (float) (Math.PI / 180.0))
+    public void causeExtraKnockback(
+        final Entity target, final float knockback, final Vec3 oldMovement, final DamageSource damageSource, final float damage, final boolean comesFromEffect
+    ) {
+        if (knockback > 0.0F && target instanceof LivingEntity livingTarget) {
+            livingTarget.knockback(
+                knockback,
+                Mth.sin(this.getYRot() * (float) (Math.PI / 180.0)),
+                -Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)),
+                damageSource,
+                damage,
+                comesFromEffect
             );
             this.setDeltaMovement(this.getDeltaMovement().multiply(0.6, 1.0, 0.6));
         }
@@ -2602,27 +2766,27 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         this.updatingUsingItem();
         this.updateSwimAmount();
         if (!this.level().isClientSide()) {
-            int i = this.getArrowCount();
-            if (i > 0) {
+            int arrowCount = this.getArrowCount();
+            if (arrowCount > 0) {
                 if (this.removeArrowTime <= 0) {
-                    this.removeArrowTime = 20 * (30 - i);
+                    this.removeArrowTime = 20 * (30 - arrowCount);
                 }
 
                 this.removeArrowTime--;
                 if (this.removeArrowTime <= 0) {
-                    this.setArrowCount(i - 1);
+                    this.setArrowCount(arrowCount - 1);
                 }
             }
 
-            int j = this.getStingerCount();
-            if (j > 0) {
+            int stingerCount = this.getStingerCount();
+            if (stingerCount > 0) {
                 if (this.removeStingerTime <= 0) {
-                    this.removeStingerTime = 20 * (30 - j);
+                    this.removeStingerTime = 20 * (30 - stingerCount);
                 }
 
                 this.removeStingerTime--;
                 if (this.removeStingerTime <= 0) {
-                    this.setStingerCount(j - 1);
+                    this.setStingerCount(stingerCount - 1);
                 }
             }
 
@@ -2640,29 +2804,29 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.aiStep();
         }
 
-        double d1 = this.getX() - this.xo;
-        double d0 = this.getZ() - this.zo;
-        float f = (float)(d1 * d1 + d0 * d0);
-        float f1 = this.yBodyRot;
-        if (f > 0.0025000002F) {
-            float f2 = (float)Mth.atan2(d0, d1) * (180.0F / (float)Math.PI) - 90.0F;
-            float f3 = Mth.abs(Mth.wrapDegrees(this.getYRot()) - f2);
-            if (95.0F < f3 && f3 < 265.0F) {
-                f1 = f2 - 180.0F;
+        double xd = this.getX() - this.xo;
+        double zd = this.getZ() - this.zo;
+        float sideDist = (float)(xd * xd + zd * zd);
+        float yBodyRotT = this.yBodyRot;
+        if (sideDist > 0.0025000002F) {
+            float walkDirection = (float)Mth.atan2(zd, xd) * (180.0F / (float)Math.PI) - 90.0F;
+            float diffBetweenDirectionAndFacing = Mth.abs(Mth.wrapDegrees(this.getYRot()) - walkDirection);
+            if (95.0F < diffBetweenDirectionAndFacing && diffBetweenDirectionAndFacing < 265.0F) {
+                yBodyRotT = walkDirection - 180.0F;
             } else {
-                f1 = f2;
+                yBodyRotT = walkDirection;
             }
         }
 
         if (this.attackAnim > 0.0F) {
-            f1 = this.getYRot();
+            yBodyRotT = this.getYRot();
         }
 
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("headTurn");
-        this.tickHeadTurn(f1);
-        profilerfiller.pop();
-        profilerfiller.push("rangeChecks");
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("headTurn");
+        this.tickHeadTurn(yBodyRotT);
+        profiler.pop();
+        profiler.push("rangeChecks");
 
         while (this.getYRot() - this.yRotO < -180.0F) {
             this.yRotO -= 360.0F;
@@ -2696,7 +2860,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.yHeadRotO += 360.0F;
         }
 
-        profilerfiller.pop();
+        profiler.pop();
         if (this.isFallFlying()) {
             this.fallFlyTicks++;
         } else {
@@ -2709,60 +2873,72 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
         this.refreshDirtyAttributes();
         this.elytraAnimationState.tick();
+        if (this.currentImpulseContextResetGraceTime > 0) {
+            this.currentImpulseContextResetGraceTime--;
+        }
     }
 
-    public boolean wasRecentlyStabbed(Entity p_453379_, int p_453316_) {
+    public boolean wasRecentlyStabbed(final Entity target, final int allowedTime) {
         if (this.recentKineticEnemies == null) {
             return false;
         } else {
-            return this.recentKineticEnemies.containsKey(p_453379_) ? this.level().getGameTime() - this.recentKineticEnemies.getLong(p_453379_) < p_453316_ : false;
+            return this.recentKineticEnemies.containsKey(target) ? this.level().getGameTime() - this.recentKineticEnemies.getLong(target) < allowedTime : false;
         }
     }
 
-    public void rememberStabbedEntity(Entity p_460223_) {
+    public void rememberStabbedEntity(final Entity target) {
         if (this.recentKineticEnemies != null) {
-            this.recentKineticEnemies.put(p_460223_, this.level().getGameTime());
+            this.recentKineticEnemies.put(target, this.level().getGameTime());
         }
     }
 
-    public int stabbedEntities(Predicate<Entity> p_457499_) {
-        return this.recentKineticEnemies == null ? 0 : (int)this.recentKineticEnemies.keySet().stream().filter(p_457499_).count();
+    public int stabbedEntities(final Predicate<Entity> filter) {
+        return this.recentKineticEnemies == null ? 0 : (int)this.recentKineticEnemies.keySet().stream().filter(filter).count();
     }
 
-    public boolean stabAttack(EquipmentSlot p_450512_, Entity p_454015_, float p_460028_, boolean p_451169_, boolean p_460628_, boolean p_459099_) {
-        if (!(this.level() instanceof ServerLevel serverlevel)) {
+    public boolean stabAttack(
+        final EquipmentSlot weaponSlot,
+        final Entity target,
+        final float baseDamage,
+        final boolean dealsDamage,
+        final boolean dealsKnockback,
+        final boolean dismounts
+    ) {
+        if (!(this.level() instanceof ServerLevel serverLevel)) {
             return false;
         } else {
-            ItemStack itemstack = this.getItemBySlot(p_450512_);
-            DamageSource $$9 = itemstack.getDamageSource(this, () -> this.damageSources().mobAttack(this));
-            float $$10 = EnchantmentHelper.modifyDamage(serverlevel, itemstack, p_454015_, $$9, p_460028_);
-            Vec3 $$11 = p_454015_.getDeltaMovement();
-            boolean flag1 = p_451169_ && p_454015_.hurtServer(serverlevel, $$9, $$10);
-            boolean $$12 = p_460628_ | flag1;
-            if (p_460628_) {
-                this.causeExtraKnockback(p_454015_, 0.4F + this.getKnockback(p_454015_, $$9), $$11);
+            ItemStack weaponItem = this.getItemBySlot(weaponSlot);
+            DamageSource damageSource = weaponItem.getDamageSource(this);
+            float postEnchantmentDamage = EnchantmentHelper.modifyDamage(serverLevel, weaponItem, target, damageSource, baseDamage);
+            Vec3 oldMovement = target.getDeltaMovement();
+            boolean affected = dealsKnockback;
+            boolean dealtDamage = dealsDamage && target.hurtServer(serverLevel, damageSource, postEnchantmentDamage);
+            affected |= dealtDamage;
+            if (dealsKnockback) {
+                this.causeExtraKnockback(target, 0.4F, oldMovement, damageSource, postEnchantmentDamage, false);
+                this.causeExtraKnockback(target, this.getKnockback(target, damageSource), oldMovement, damageSource, postEnchantmentDamage, true);
             }
 
-            if (p_459099_ && p_454015_.isPassenger()) {
-                $$12 = true;
-                p_454015_.stopRiding();
+            if (dismounts && target.isPassenger()) {
+                affected = true;
+                target.stopRiding();
             }
 
-            if (p_454015_ instanceof LivingEntity livingentity) {
-                itemstack.hurtEnemy(livingentity, this);
+            if (target instanceof LivingEntity livingTarget) {
+                weaponItem.hurtEnemy(livingTarget, this);
             }
 
-            if (flag1) {
-                EnchantmentHelper.doPostAttackEffects(serverlevel, p_454015_, $$9);
+            if (dealtDamage) {
+                EnchantmentHelper.doPostAttackEffects(serverLevel, target, damageSource);
             }
 
-            if (!$$12) {
+            if (!affected) {
                 return false;
-            } else {
-                this.setLastHurtMob(p_454015_);
-                this.playAttackSound();
-                return true;
             }
+
+            this.setLastHurtMob(target);
+            this.playAttackSound();
+            return true;
         }
     }
 
@@ -2770,92 +2946,92 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     private void detectEquipmentUpdates() {
-        Map<EquipmentSlot, ItemStack> map = this.collectEquipmentChanges();
-        if (map != null) {
-            this.handleHandSwap(map);
-            if (!map.isEmpty()) {
-                this.handleEquipmentChanges(map);
+        Map<EquipmentSlot, ItemStack> changedItems = this.collectEquipmentChanges(this.lastEquipmentItems);
+        if (changedItems != null) {
+            this.handleHandSwap(changedItems);
+            if (!changedItems.isEmpty()) {
+                this.handleEquipmentChanges(changedItems);
             }
         }
     }
 
-    private @Nullable Map<EquipmentSlot, ItemStack> collectEquipmentChanges() {
-        Map<EquipmentSlot, ItemStack> map = null;
+    protected @Nullable Map<EquipmentSlot, ItemStack> collectEquipmentChanges(final Map<EquipmentSlot, ItemStack> lastEquipmentItems) {
+        Map<EquipmentSlot, ItemStack> changedItems = null;
 
-        for (EquipmentSlot equipmentslot : EquipmentSlot.VALUES) {
-            ItemStack itemstack = this.lastEquipmentItems.get(equipmentslot);
-            ItemStack itemstack1 = this.getItemBySlot(equipmentslot);
-            if (this.equipmentHasChanged(itemstack, itemstack1)) {
-                if (map == null) {
-                    map = Maps.newEnumMap(EquipmentSlot.class);
+        for (EquipmentSlot slot : EquipmentSlot.VALUES) {
+            ItemStack previous = lastEquipmentItems.get(slot);
+            ItemStack current = this.getItemBySlot(slot);
+            if (this.equipmentHasChanged(previous, current)) {
+                if (changedItems == null) {
+                    changedItems = Maps.newEnumMap(EquipmentSlot.class);
                 }
 
-                map.put(equipmentslot, itemstack1);
-                AttributeMap attributemap = this.getAttributes();
-                if (!itemstack.isEmpty()) {
-                    this.stopLocationBasedEffects(itemstack, equipmentslot, attributemap);
+                changedItems.put(slot, current);
+                AttributeMap attributes = this.getAttributes();
+                if (!previous.isEmpty()) {
+                    this.stopLocationBasedEffects(previous, slot, attributes);
                 }
             }
         }
 
-        if (map != null) {
-            for (Entry<EquipmentSlot, ItemStack> entry : map.entrySet()) {
-                EquipmentSlot equipmentslot1 = entry.getKey();
-                ItemStack itemstack2 = entry.getValue();
-                if (!itemstack2.isEmpty() && !itemstack2.isBroken()) {
-                    itemstack2.forEachModifier(equipmentslot1, (p_449417_, p_449418_) -> {
-                        AttributeInstance attributeinstance = this.attributes.getInstance(p_449417_);
-                        if (attributeinstance != null) {
-                            attributeinstance.removeModifier(p_449418_.id());
-                            attributeinstance.addTransientModifier(p_449418_);
+        if (changedItems != null) {
+            for (Entry<EquipmentSlot, ItemStack> entry : changedItems.entrySet()) {
+                EquipmentSlot slot = entry.getKey();
+                ItemStack current = entry.getValue();
+                if (!current.isEmpty() && !current.isBroken()) {
+                    current.forEachModifier(slot, (attribute, modifier) -> {
+                        AttributeInstance instance = this.attributes.getInstance(attribute);
+                        if (instance != null) {
+                            instance.removeModifier(modifier.id());
+                            instance.addTransientModifier(modifier);
                         }
                     });
-                    if (this.level() instanceof ServerLevel serverlevel) {
-                        EnchantmentHelper.runLocationChangedEffects(serverlevel, itemstack2, this, equipmentslot1);
+                    if (this.level() instanceof ServerLevel serverLevel) {
+                        EnchantmentHelper.runLocationChangedEffects(serverLevel, current, this, slot);
                     }
                 }
             }
         }
 
-        return map;
+        return changedItems;
     }
 
-    public boolean equipmentHasChanged(ItemStack p_252265_, ItemStack p_251043_) {
-        return !ItemStack.matches(p_251043_, p_252265_);
+    public boolean equipmentHasChanged(final ItemStack previous, final ItemStack current) {
+        return !ItemStack.matches(current, previous);
     }
 
-    private void handleHandSwap(Map<EquipmentSlot, ItemStack> p_21092_) {
-        ItemStack itemstack = p_21092_.get(EquipmentSlot.MAINHAND);
-        ItemStack itemstack1 = p_21092_.get(EquipmentSlot.OFFHAND);
-        if (itemstack != null
-            && itemstack1 != null
-            && ItemStack.matches(itemstack, this.lastEquipmentItems.get(EquipmentSlot.OFFHAND))
-            && ItemStack.matches(itemstack1, this.lastEquipmentItems.get(EquipmentSlot.MAINHAND))) {
+    private void handleHandSwap(final Map<EquipmentSlot, ItemStack> changedItems) {
+        ItemStack currentMainHand = changedItems.get(EquipmentSlot.MAINHAND);
+        ItemStack currentOffHand = changedItems.get(EquipmentSlot.OFFHAND);
+        if (currentMainHand != null
+            && currentOffHand != null
+            && ItemStack.matches(currentMainHand, this.lastEquipmentItems.get(EquipmentSlot.OFFHAND))
+            && ItemStack.matches(currentOffHand, this.lastEquipmentItems.get(EquipmentSlot.MAINHAND))) {
             ((ServerLevel)this.level()).getChunkSource().sendToTrackingPlayers(this, new ClientboundEntityEventPacket(this, (byte)55));
-            p_21092_.remove(EquipmentSlot.MAINHAND);
-            p_21092_.remove(EquipmentSlot.OFFHAND);
-            this.lastEquipmentItems.put(EquipmentSlot.MAINHAND, itemstack.copy());
-            this.lastEquipmentItems.put(EquipmentSlot.OFFHAND, itemstack1.copy());
+            changedItems.remove(EquipmentSlot.MAINHAND);
+            changedItems.remove(EquipmentSlot.OFFHAND);
+            this.lastEquipmentItems.put(EquipmentSlot.MAINHAND, currentMainHand.copy());
+            this.lastEquipmentItems.put(EquipmentSlot.OFFHAND, currentOffHand.copy());
         }
     }
 
-    private void handleEquipmentChanges(Map<EquipmentSlot, ItemStack> p_21143_) {
-        List<Pair<EquipmentSlot, ItemStack>> list = Lists.newArrayListWithCapacity(p_21143_.size());
-        p_21143_.forEach((p_390521_, p_390522_) -> {
-            ItemStack itemstack = p_390522_.copy();
-            list.add(Pair.of(p_390521_, itemstack));
-            this.lastEquipmentItems.put(p_390521_, itemstack);
+    private void handleEquipmentChanges(final Map<EquipmentSlot, ItemStack> changedItems) {
+        List<Pair<EquipmentSlot, ItemStack>> itemsToSend = Lists.newArrayListWithCapacity(changedItems.size());
+        changedItems.forEach((slot, newItem) -> {
+            ItemStack newItemToStore = newItem.copy();
+            itemsToSend.add(Pair.of(slot, newItemToStore));
+            this.lastEquipmentItems.put(slot, newItemToStore);
         });
-        ((ServerLevel)this.level()).getChunkSource().sendToTrackingPlayers(this, new ClientboundSetEquipmentPacket(this.getId(), list));
+        ((ServerLevel)this.level()).getChunkSource().sendToTrackingPlayers(this, new ClientboundSetEquipmentPacket(this.getId(), itemsToSend));
     }
 
-    protected void tickHeadTurn(float p_21260_) {
-        float f = Mth.wrapDegrees(p_21260_ - this.yBodyRot);
-        this.yBodyRot += f * 0.3F;
-        float f1 = Mth.wrapDegrees(this.getYRot() - this.yBodyRot);
-        float f2 = this.getMaxHeadRotationRelativeToBody();
-        if (Math.abs(f1) > f2) {
-            this.yBodyRot = this.yBodyRot + (f1 - Mth.sign(f1) * f2);
+    protected void tickHeadTurn(final float yBodyRotT) {
+        float yBodyRotD = Mth.wrapDegrees(yBodyRotT - this.yBodyRot);
+        this.yBodyRot += yBodyRotD * 0.3F;
+        float headDiff = Mth.wrapDegrees(this.getYRot() - this.yBodyRot);
+        float maxHeadRotation = this.getMaxHeadRotationRelativeToBody();
+        if (Math.abs(headDiff) > maxHeadRotation) {
+            this.yBodyRot = this.yBodyRot + (headDiff - Mth.sign(headDiff) * maxHeadRotation);
         }
     }
 
@@ -2880,58 +3056,58 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
 
         this.equipment.tick(this);
-        Vec3 vec3 = this.getDeltaMovement();
-        double d0 = vec3.x;
-        double d1 = vec3.y;
-        double d2 = vec3.z;
-        if (this.getType().equals(EntityType.PLAYER)) {
-            if (vec3.horizontalDistanceSqr() < 9.0E-6) {
-                d0 = 0.0;
-                d2 = 0.0;
+        Vec3 movement = this.getDeltaMovement();
+        double dx = movement.x;
+        double dy = movement.y;
+        double dz = movement.z;
+        if (this.is(EntityTypes.PLAYER)) {
+            if (movement.horizontalDistanceSqr() < 9.0E-6) {
+                dx = 0.0;
+                dz = 0.0;
             }
         } else {
-            if (Math.abs(vec3.x) < 0.003) {
-                d0 = 0.0;
+            if (Math.abs(movement.x) < 0.003) {
+                dx = 0.0;
             }
 
-            if (Math.abs(vec3.z) < 0.003) {
-                d2 = 0.0;
+            if (Math.abs(movement.z) < 0.003) {
+                dz = 0.0;
             }
         }
 
-        if (Math.abs(vec3.y) < 0.003) {
-            d1 = 0.0;
+        if (Math.abs(movement.y) < 0.003) {
+            dy = 0.0;
         }
 
-        this.setDeltaMovement(d0, d1, d2);
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("ai");
+        this.setDeltaMovement(dx, dy, dz);
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("ai");
         this.applyInput();
         if (this.isImmobile()) {
             this.jumping = false;
             this.xxa = 0.0F;
             this.zza = 0.0F;
         } else if (this.isEffectiveAi() && !this.level().isClientSide()) {
-            profilerfiller.push("newAi");
+            profiler.push("newAi");
             this.serverAiStep();
-            profilerfiller.pop();
+            profiler.pop();
         }
 
-        profilerfiller.pop();
-        profilerfiller.push("jump");
+        profiler.pop();
+        profiler.push("jump");
         if (this.jumping && this.isAffectedByFluids()) {
-            double d3;
+            double fluidHeight;
             if (this.isInLava()) {
-                d3 = this.getFluidHeight(FluidTags.LAVA);
+                fluidHeight = this.getFluidHeight(FluidTags.LAVA);
             } else {
-                d3 = this.getFluidHeight(FluidTags.WATER);
+                fluidHeight = this.getFluidHeight(FluidTags.WATER);
             }
 
-            boolean flag = this.isInWater() && d3 > 0.0;
-            double d4 = this.getFluidJumpThreshold();
-            if (!flag || this.onGround() && !(d3 > d4)) {
-                if (!this.isInLava() || this.onGround() && !(d3 > d4)) {
-                    if ((this.onGround() || flag && d3 <= d4) && this.noJumpDelay == 0) {
+            boolean inWaterAndHasFluidHeight = this.isInWater() && fluidHeight > 0.0;
+            double fluidJumpThreshold = this.getFluidJumpThreshold();
+            if (!inWaterAndHasFluidHeight || this.onGround() && !(fluidHeight > fluidJumpThreshold)) {
+                if (!this.isInLava() || this.onGround() && this.isInShallowFluid(FluidTags.LAVA)) {
+                    if ((this.onGround() || inWaterAndHasFluidHeight && fluidHeight <= fluidJumpThreshold) && this.noJumpDelay == 0) {
                         this.jumpFromGround();
                         this.noJumpDelay = 10;
                     }
@@ -2945,22 +3121,22 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.noJumpDelay = 0;
         }
 
-        profilerfiller.pop();
-        profilerfiller.push("travel");
+        profiler.pop();
+        profiler.push("travel");
         if (this.isFallFlying()) {
             this.updateFallFlying();
         }
 
-        AABB aabb = this.getBoundingBox();
-        Vec3 vec31 = new Vec3(this.xxa, this.yya, this.zza);
+        AABB beforeTravelBox = this.getBoundingBox();
+        Vec3 input = new Vec3(this.xxa, this.yya, this.zza);
         if (this.hasEffect(MobEffects.SLOW_FALLING) || this.hasEffect(MobEffects.LEVITATION)) {
             this.resetFallDistance();
         }
 
-        if (this.getControllingPassenger() instanceof Player player && this.isAlive()) {
-            this.travelRidden(player, vec31);
+        if (this.getControllingPassenger() instanceof Player controller && this.isAlive()) {
+            this.travelRidden(controller, input);
         } else if (this.canSimulateMovement() && this.isEffectiveAi()) {
-            this.travel(vec31);
+            this.travel(input);
         }
 
         if (!this.level().isClientSide() || this.isLocalInstanceAuthoritative()) {
@@ -2968,12 +3144,12 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
 
         if (this.level().isClientSide()) {
-            this.calculateEntityAnimation(this instanceof FlyingAnimal);
+            this.calculateEntityAnimation(this.omnidirectionalAirMover());
         }
 
-        profilerfiller.pop();
-        if (this.level() instanceof ServerLevel serverlevel) {
-            profilerfiller.push("freezing");
+        profiler.pop();
+        if (this.level() instanceof ServerLevel serverLevel) {
+            profiler.push("freezing");
             if (!this.isInPowderSnow || !this.canFreeze()) {
                 this.setTicksFrozen(Math.max(0, this.getTicksFrozen() - 2));
             }
@@ -2981,22 +3157,22 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
             this.removeFrost();
             this.tryAddFrost();
             if (this.tickCount % 40 == 0 && this.isFullyFrozen() && this.canFreeze()) {
-                this.hurtServer(serverlevel, this.damageSources().freeze(), 1.0F);
+                this.hurtServer(serverLevel, this.damageSources().freeze(), 1.0F);
             }
 
-            profilerfiller.pop();
+            profiler.pop();
         }
 
-        profilerfiller.push("push");
+        profiler.push("push");
         if (this.autoSpinAttackTicks > 0) {
             this.autoSpinAttackTicks--;
-            this.checkAutoSpinAttack(aabb, this.getBoundingBox());
+            this.checkAutoSpinAttack(beforeTravelBox, this.getBoundingBox());
         }
 
         this.pushEntities();
-        profilerfiller.pop();
-        if (this.level() instanceof ServerLevel serverlevel1 && this.isSensitiveToWater() && this.isInWaterOrRain()) {
-            this.hurtServer(serverlevel1, this.damageSources().drown(), 1.0F);
+        profiler.pop();
+        if (this.level() instanceof ServerLevel serverLevel && this.isSensitiveToWater() && this.isInWaterOrRain()) {
+            this.hurtServer(serverLevel, this.damageSources().drown(), 1.0F);
         }
     }
 
@@ -3021,13 +3197,13 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
                 return;
             }
 
-            int i = this.fallFlyTicks + 1;
-            if (i % 10 == 0) {
-                int j = i / 10;
-                if (j % 2 == 0) {
-                    List<EquipmentSlot> list = EquipmentSlot.VALUES.stream().filter(p_358890_ -> canGlideUsing(this.getItemBySlot(p_358890_), p_358890_)).toList();
-                    EquipmentSlot equipmentslot = Util.getRandom(list, this.random);
-                    this.getItemBySlot(equipmentslot).hurtAndBreak(1, this, equipmentslot);
+            int checkFallFlyTicks = this.fallFlyTicks + 1;
+            if (checkFallFlyTicks % 10 == 0) {
+                int freeFallInterval = checkFallFlyTicks / 10;
+                if (freeFallInterval % 2 == 0) {
+                    List<EquipmentSlot> slotsWithGliders = EquipmentSlot.VALUES.stream().filter(slot -> canGlideUsing(this.getItemBySlot(slot), slot)).toList();
+                    EquipmentSlot slotToDamage = Util.getRandom(slotsWithGliders, this.random);
+                    this.getItemBySlot(slotToDamage).hurtAndBreak(1, this, slotToDamage);
                 }
 
                 this.gameEvent(GameEvent.ELYTRA_GLIDE);
@@ -3037,8 +3213,8 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
     protected boolean canGlide() {
         if (!this.onGround() && !this.isPassenger() && !this.hasEffect(MobEffects.LEVITATION)) {
-            for (EquipmentSlot equipmentslot : EquipmentSlot.VALUES) {
-                if (canGlideUsing(this.getItemBySlot(equipmentslot), equipmentslot)) {
+            for (EquipmentSlot slot : EquipmentSlot.VALUES) {
+                if (canGlideUsing(this.getItemBySlot(slot), slot)) {
                     return true;
                 }
             }
@@ -3053,38 +3229,38 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     protected void pushEntities() {
-        List<Entity> list = this.level().getPushableEntities(this, this.getBoundingBox());
-        if (!list.isEmpty()) {
-            if (this.level() instanceof ServerLevel serverlevel) {
-                int j = serverlevel.getGameRules().get(GameRules.MAX_ENTITY_CRAMMING);
-                if (j > 0 && list.size() > j - 1 && this.random.nextInt(4) == 0) {
-                    int i = 0;
+        List<Entity> pushableEntities = this.level().getPushableEntities(this, this.getBoundingBox());
+        if (!pushableEntities.isEmpty()) {
+            if (this.level() instanceof ServerLevel serverLevel) {
+                int maxCramming = serverLevel.getGameRules().get(GameRules.MAX_ENTITY_CRAMMING);
+                if (maxCramming > 0 && pushableEntities.size() > maxCramming - 1 && this.random.nextInt(4) == 0) {
+                    int count = 0;
 
-                    for (Entity entity : list) {
+                    for (Entity entity : pushableEntities) {
                         if (!entity.isPassenger()) {
-                            i++;
+                            count++;
                         }
                     }
 
-                    if (i > j - 1) {
-                        this.hurtServer(serverlevel, this.damageSources().cramming(), 6.0F);
+                    if (count > maxCramming - 1) {
+                        this.hurtServer(serverLevel, this.damageSources().cramming(), 6.0F);
                     }
                 }
             }
 
-            for (Entity entity1 : list) {
-                this.doPush(entity1);
+            for (Entity entity : pushableEntities) {
+                this.doPush(entity);
             }
         }
     }
 
-    protected void checkAutoSpinAttack(AABB p_21072_, AABB p_21073_) {
-        AABB aabb = p_21072_.minmax(p_21073_);
-        List<Entity> list = this.level().getEntities(this, aabb);
-        if (!list.isEmpty()) {
-            for (Entity entity : list) {
-                if (entity instanceof LivingEntity) {
-                    this.doAutoAttackOnTouch((LivingEntity)entity);
+    protected void checkAutoSpinAttack(final AABB old, final AABB current) {
+        AABB minmax = old.minmax(current);
+        List<Entity> entities = this.level().getEntities(this, minmax);
+        if (!entities.isEmpty()) {
+            for (Entity entity : entities) {
+                if (entity instanceof LivingEntity livingEntity) {
+                    this.doAutoAttackOnTouch(livingEntity);
                     this.autoSpinAttackTicks = 0;
                     this.setDeltaMovement(this.getDeltaMovement().scale(-0.2));
                     break;
@@ -3101,11 +3277,11 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    protected void doPush(Entity p_20971_) {
-        p_20971_.push(this);
+    protected void doPush(final Entity entity) {
+        entity.push(this);
     }
 
-    protected void doAutoAttackOnTouch(LivingEntity p_21277_) {
+    protected void doAutoAttackOnTouch(final LivingEntity entity) {
     }
 
     public boolean isAutoSpinAttack() {
@@ -3114,10 +3290,10 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
     @Override
     public void stopRiding() {
-        Entity entity = this.getVehicle();
+        Entity oldVehicle = this.getVehicle();
         super.stopRiding();
-        if (entity != null && entity != this.getVehicle() && !this.level().isClientSide()) {
-            this.dismountVehicle(entity);
+        if (oldVehicle != null && oldVehicle != this.getVehicle() && !this.level().isClientSide()) {
+            this.dismountVehicle(oldVehicle);
         }
     }
 
@@ -3133,58 +3309,61 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public void lerpHeadTo(float p_21005_, int p_21006_) {
-        this.lerpYHeadRot = p_21005_;
-        this.lerpHeadSteps = p_21006_;
+    public void lerpHeadTo(final float yRot, final int steps) {
+        this.lerpYHeadRot = yRot;
+        this.lerpHeadSteps = steps;
     }
 
-    public void setJumping(boolean p_21314_) {
-        this.jumping = p_21314_;
+    public void setJumping(final boolean jump) {
+        this.jumping = jump;
     }
 
-    public void onItemPickup(ItemEntity p_21054_) {
-        Entity entity = p_21054_.getOwner();
-        if (entity instanceof ServerPlayer) {
-            CriteriaTriggers.THROWN_ITEM_PICKED_UP_BY_ENTITY.trigger((ServerPlayer)entity, p_21054_.getItem(), this);
+    public void onItemPickup(final ItemEntity entity) {
+        if (entity.getOwner() instanceof ServerPlayer serverPlayer) {
+            CriteriaTriggers.THROWN_ITEM_PICKED_UP_BY_ENTITY.trigger(serverPlayer, entity.getItem(), this);
         }
     }
 
-    public void take(Entity p_21030_, int p_21031_) {
-        if (!p_21030_.isRemoved()
+    public void take(final Entity entity, final int orgCount) {
+        if (!entity.isRemoved()
             && !this.level().isClientSide()
-            && (p_21030_ instanceof ItemEntity || p_21030_ instanceof AbstractArrow || p_21030_ instanceof ExperienceOrb)) {
-            ((ServerLevel)this.level()).getChunkSource().sendToTrackingPlayers(p_21030_, new ClientboundTakeItemEntityPacket(p_21030_.getId(), this.getId(), p_21031_));
+            && (entity instanceof ItemEntity || entity instanceof AbstractArrow || entity instanceof ExperienceOrb)) {
+            ((ServerLevel)this.level())
+                .getChunkSource()
+                .sendToTrackingPlayers(entity, new ClientboundTakeItemEntityPacket(entity.getId(), this.getId(), orgCount));
         }
     }
 
-    public boolean hasLineOfSight(Entity p_147185_) {
-        return this.hasLineOfSight(p_147185_, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p_147185_.getEyeY());
+    public boolean hasLineOfSight(final Entity target) {
+        return this.hasLineOfSight(target, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, target.getEyeY());
     }
 
-    public boolean hasLineOfSight(Entity p_364584_, ClipContext.Block p_368226_, ClipContext.Fluid p_368626_, double p_375593_) {
-        if (p_364584_.level() != this.level()) {
+    public boolean hasLineOfSight(
+        final Entity target, final ClipContext.Block blockCollidingContext, final ClipContext.Fluid fluidCollidingContext, final double eyeHeight
+    ) {
+        if (target.level() != this.level()) {
             return false;
-        } else {
-            Vec3 vec3 = new Vec3(this.getX(), this.getEyeY(), this.getZ());
-            Vec3 vec31 = new Vec3(p_364584_.getX(), p_375593_, p_364584_.getZ());
-            return vec31.distanceTo(vec3) > 128.0
-                ? false
-                : this.level().clip(new ClipContext(vec3, vec31, p_368226_, p_368626_, this)).getType() == HitResult.Type.MISS;
         }
+
+        Vec3 from = new Vec3(this.getX(), this.getEyeY(), this.getZ());
+        Vec3 to = new Vec3(target.getX(), eyeHeight, target.getZ());
+        return to.distanceTo(from) > 128.0
+            ? false
+            : this.level().clip(new ClipContext(from, to, blockCollidingContext, fluidCollidingContext, this)).getType() == HitResult.Type.MISS;
     }
 
     @Override
-    public float getViewYRot(float p_21286_) {
-        return p_21286_ == 1.0F ? this.yHeadRot : Mth.rotLerp(p_21286_, this.yHeadRotO, this.yHeadRot);
+    public float getViewYRot(final float a) {
+        return a == 1.0F ? this.yHeadRot : Mth.rotLerp(a, this.yHeadRotO, this.yHeadRot);
     }
 
-    public float getAttackAnim(float p_21325_) {
-        float f = this.attackAnim - this.oAttackAnim;
-        if (f < 0.0F) {
-            f++;
+    public float getAttackAnim(final float a) {
+        float diff = this.attackAnim - this.oAttackAnim;
+        if (diff < 0.0F) {
+            diff++;
         }
 
-        return this.oAttackAnim + f * p_21325_;
+        return this.oAttackAnim + diff * a;
     }
 
     @Override
@@ -3203,34 +3382,34 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public void setYHeadRot(float p_21306_) {
-        this.yHeadRot = p_21306_;
+    public void setYHeadRot(final float yHeadRot) {
+        this.yHeadRot = yHeadRot;
     }
 
     @Override
-    public void setYBodyRot(float p_21309_) {
-        this.yBodyRot = p_21309_;
+    public void setYBodyRot(final float yBodyRot) {
+        this.yBodyRot = yBodyRot;
     }
 
     @Override
-    public Vec3 getRelativePortalPosition(Direction.Axis p_21085_, BlockUtil.FoundRectangle p_459153_) {
-        return resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(p_21085_, p_459153_));
+    public Vec3 getRelativePortalPosition(final Direction.Axis axis, final BlockUtil.FoundRectangle portalArea) {
+        return resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(axis, portalArea));
     }
 
-    public static Vec3 resetForwardDirectionOfRelativePortalPosition(Vec3 p_21290_) {
-        return new Vec3(p_21290_.x, p_21290_.y, 0.0);
+    public static Vec3 resetForwardDirectionOfRelativePortalPosition(final Vec3 offsets) {
+        return new Vec3(offsets.x, offsets.y, 0.0);
     }
 
     public float getAbsorptionAmount() {
         return this.absorptionAmount;
     }
 
-    public final void setAbsorptionAmount(float p_21328_) {
-        this.internalSetAbsorptionAmount(Mth.clamp(p_21328_, 0.0F, this.getMaxAbsorption()));
+    public final void setAbsorptionAmount(final float absorptionAmount) {
+        this.internalSetAbsorptionAmount(Mth.clamp(absorptionAmount, 0.0F, this.getMaxAbsorption()));
     }
 
-    protected void internalSetAbsorptionAmount(float p_299471_) {
-        this.absorptionAmount = p_299471_;
+    protected void internalSetAbsorptionAmount(final float absorptionAmount) {
+        this.absorptionAmount = absorptionAmount;
     }
 
     public void onEnterCombat() {
@@ -3264,43 +3443,43 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    private @Nullable ItemEntity createItemStackToDrop(ItemStack p_395029_, boolean p_394798_, boolean p_392209_) {
-        if (p_395029_.isEmpty()) {
+    private @Nullable ItemEntity createItemStackToDrop(final ItemStack itemStack, final boolean randomly, final boolean thrownFromHand) {
+        if (itemStack.isEmpty()) {
             return null;
-        } else {
-            double d0 = this.getEyeY() - 0.3F;
-            ItemEntity itementity = new ItemEntity(this.level(), this.getX(), d0, this.getZ(), p_395029_);
-            itementity.setPickUpDelay(40);
-            if (p_392209_) {
-                itementity.setThrower(this);
-            }
-
-            if (p_394798_) {
-                float f = this.random.nextFloat() * 0.5F;
-                float f1 = this.random.nextFloat() * (float) (Math.PI * 2);
-                itementity.setDeltaMovement(-Mth.sin(f1) * f, 0.2F, Mth.cos(f1) * f);
-            } else {
-                float f7 = 0.3F;
-                float f8 = Mth.sin(this.getXRot() * (float) (Math.PI / 180.0));
-                float f2 = Mth.cos(this.getXRot() * (float) (Math.PI / 180.0));
-                float f3 = Mth.sin(this.getYRot() * (float) (Math.PI / 180.0));
-                float f4 = Mth.cos(this.getYRot() * (float) (Math.PI / 180.0));
-                float f5 = this.random.nextFloat() * (float) (Math.PI * 2);
-                float f6 = 0.02F * this.random.nextFloat();
-                itementity.setDeltaMovement(
-                    -f3 * f2 * 0.3F + Math.cos(f5) * f6,
-                    -f8 * 0.3F + 0.1F + (this.random.nextFloat() - this.random.nextFloat()) * 0.1F,
-                    f4 * f2 * 0.3F + Math.sin(f5) * f6
-                );
-            }
-
-            return itementity;
         }
+
+        double yHandPos = this.getEyeY() - 0.3F;
+        ItemEntity entity = new ItemEntity(this.level(), this.getX(), yHandPos, this.getZ(), itemStack);
+        entity.setPickUpDelay(40);
+        if (thrownFromHand) {
+            entity.setThrower(this);
+        }
+
+        if (randomly) {
+            float pow = this.random.nextFloat() * 0.5F;
+            float dir = this.random.nextFloat() * (float) (Math.PI * 2);
+            entity.setDeltaMovement(-Mth.sin(dir) * pow, 0.2F, Mth.cos(dir) * pow);
+        } else {
+            float pow = 0.3F;
+            float sinX = Mth.sin(this.getXRot() * (float) (Math.PI / 180.0));
+            float cosX = Mth.cos(this.getXRot() * (float) (Math.PI / 180.0));
+            float sinY = Mth.sin(this.getYRot() * (float) (Math.PI / 180.0));
+            float cosY = Mth.cos(this.getYRot() * (float) (Math.PI / 180.0));
+            float dir = this.random.nextFloat() * (float) (Math.PI * 2);
+            float pow2 = 0.02F * this.random.nextFloat();
+            entity.setDeltaMovement(
+                -sinY * cosX * 0.3F + Math.cos(dir) * pow2,
+                -sinX * 0.3F + 0.1F + (this.random.nextFloat() - this.random.nextFloat()) * 0.1F,
+                cosY * cosX * 0.3F + Math.sin(dir) * pow2
+            );
+        }
+
+        return entity;
     }
 
-    protected void updateUsingItem(ItemStack p_147201_) {
-        p_147201_.onUseTick(this.level(), this, this.getUseItemRemainingTicks());
-        if (--this.useItemRemaining == 0 && !this.level().isClientSide() && !p_147201_.useOnRelease()) {
+    protected void updateUsingItem(final ItemStack useItem) {
+        useItem.onUseTick(this.level(), this, this.getUseItemRemainingTicks());
+        if (--this.useItemRemaining == 0 && !this.level().isClientSide() && !useItem.useOnRelease()) {
             this.completeUsingItem();
         }
     }
@@ -3314,25 +3493,25 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    protected void setLivingEntityFlag(int p_21156_, boolean p_21157_) {
-        int i = this.entityData.get(DATA_LIVING_ENTITY_FLAGS);
-        if (p_21157_) {
-            i |= p_21156_;
+    protected void setLivingEntityFlag(final int flag, final boolean value) {
+        int currentFlags = this.entityData.get(DATA_LIVING_ENTITY_FLAGS);
+        if (value) {
+            currentFlags |= flag;
         } else {
-            i &= ~p_21156_;
+            currentFlags &= ~flag;
         }
 
-        this.entityData.set(DATA_LIVING_ENTITY_FLAGS, (byte)i);
+        this.entityData.set(DATA_LIVING_ENTITY_FLAGS, (byte)currentFlags);
     }
 
-    public void startUsingItem(InteractionHand p_21159_) {
-        ItemStack itemstack = this.getItemInHand(p_21159_);
-        if (!itemstack.isEmpty() && !this.isUsingItem()) {
-            this.useItem = itemstack;
-            this.useItemRemaining = itemstack.getUseDuration(this);
+    public void startUsingItem(final InteractionHand hand) {
+        ItemStack itemStack = this.getItemInHand(hand);
+        if (!itemStack.isEmpty() && !this.isUsingItem()) {
+            this.useItem = itemStack;
+            this.useItemRemaining = itemStack.getUseDuration(this);
             if (!this.level().isClientSide()) {
                 this.setLivingEntityFlag(1, true);
-                this.setLivingEntityFlag(2, p_21159_ == InteractionHand.OFF_HAND);
+                this.setLivingEntityFlag(2, hand == InteractionHand.OFF_HAND);
                 this.useItem.causeUseVibration(this, GameEvent.ITEM_INTERACT_START);
                 if (this.useItem.has(DataComponents.KINETIC_WEAPON)) {
                     this.recentKineticEnemies = new Object2LongOpenHashMap<>();
@@ -3342,13 +3521,13 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_21104_) {
-        super.onSyncedDataUpdated(p_21104_);
-        if (SLEEPING_POS_ID.equals(p_21104_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (SLEEPING_POS_ID.equals(accessor)) {
             if (this.level().isClientSide()) {
                 this.getSleepingPos().ifPresent(this::setPosToBed);
             }
-        } else if (DATA_LIVING_ENTITY_FLAGS.equals(p_21104_) && this.level().isClientSide()) {
+        } else if (DATA_LIVING_ENTITY_FLAGS.equals(accessor) && this.level().isClientSide()) {
             if (this.isUsingItem() && this.useItem.isEmpty()) {
                 this.useItem = this.getItemInHand(this.getUsedItemHand());
                 if (!this.useItem.isEmpty()) {
@@ -3362,51 +3541,46 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public void lookAt(EntityAnchorArgument.Anchor p_21078_, Vec3 p_21079_) {
-        super.lookAt(p_21078_, p_21079_);
+    public void lookAt(final EntityAnchorArgument.Anchor anchor, final Vec3 pos) {
+        super.lookAt(anchor, pos);
         this.yHeadRotO = this.yHeadRot;
         this.yBodyRot = this.yHeadRot;
         this.yBodyRotO = this.yBodyRot;
     }
 
     @Override
-    public float getPreciseBodyRotation(float p_345405_) {
-        return Mth.lerp(p_345405_, this.yBodyRotO, this.yBodyRot);
+    public float getPreciseBodyRotation(final float partial) {
+        return Mth.lerp(partial, this.yBodyRotO, this.yBodyRot);
     }
 
-    public void spawnItemParticles(ItemStack p_21061_, int p_21062_) {
-        for (int i = 0; i < p_21062_; i++) {
-            Vec3 vec3 = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, 0.0);
-            vec3 = vec3.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
-            vec3 = vec3.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
-            double d0 = -this.random.nextFloat() * 0.6 - 0.3;
-            Vec3 vec31 = new Vec3((this.random.nextFloat() - 0.5) * 0.3, d0, 0.6);
-            vec31 = vec31.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
-            vec31 = vec31.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
-            vec31 = vec31.add(this.getX(), this.getEyeY(), this.getZ());
-            this.level()
-                .addParticle(
-                    new ItemParticleOption(ParticleTypes.ITEM, p_21061_),
-                    vec31.x,
-                    vec31.y,
-                    vec31.z,
-                    vec3.x,
-                    vec3.y + 0.05,
-                    vec3.z
-                );
+    public void spawnItemParticles(final ItemStack itemStack, final int count) {
+        if (!itemStack.isEmpty()) {
+            ItemParticleOption breakParticle = new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(itemStack));
+
+            for (int i = 0; i < count; i++) {
+                Vec3 d = new Vec3((this.random.nextFloat() - 0.5) * 0.1, this.random.nextFloat() * 0.1 + 0.1, 0.0);
+                d = d.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
+                d = d.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+                double y1 = -this.random.nextFloat() * 0.6 - 0.3;
+                Vec3 p = new Vec3((this.random.nextFloat() - 0.5) * 0.3, y1, 0.6);
+                p = p.xRot(-this.getXRot() * (float) (Math.PI / 180.0));
+                p = p.yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+                p = p.add(this.getX(), this.getEyeY(), this.getZ());
+                this.level().addParticle(breakParticle, p.x, p.y, p.z, d.x, d.y + 0.05, d.z);
+            }
         }
     }
 
     protected void completeUsingItem() {
         if (!this.level().isClientSide() || this.isUsingItem()) {
-            InteractionHand interactionhand = this.getUsedItemHand();
-            if (!this.useItem.equals(this.getItemInHand(interactionhand))) {
+            InteractionHand hand = this.getUsedItemHand();
+            if (!this.useItem.equals(this.getItemInHand(hand))) {
                 this.releaseUsingItem();
             } else {
                 if (!this.useItem.isEmpty() && this.isUsingItem()) {
-                    ItemStack itemstack = this.useItem.finishUsingItem(this.level(), this);
-                    if (itemstack != this.useItem) {
-                        this.setItemInHand(interactionhand, itemstack);
+                    ItemStack result = this.useItem.finishUsingItem(this.level(), this);
+                    if (result != this.useItem) {
+                        this.setItemInHand(hand, result);
                     }
 
                     this.stopUsingItem();
@@ -3415,7 +3589,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    public void handleExtraItemsCreatedOnUse(ItemStack p_367452_) {
+    public void handleExtraItemsCreatedOnUse(final ItemStack extraCreatedRemainder) {
     }
 
     public ItemStack getUseItem() {
@@ -3430,14 +3604,14 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.isUsingItem() ? this.useItem.getUseDuration(this) - this.getUseItemRemainingTicks() : 0;
     }
 
-    public float getTicksUsingItem(float p_456290_) {
-        return !this.isUsingItem() ? 0.0F : this.getTicksUsingItem() + p_456290_;
+    public float getTicksUsingItem(final float partialTicks) {
+        return !this.isUsingItem() ? 0.0F : this.getTicksUsingItem() + partialTicks;
     }
 
     public void releaseUsingItem() {
-        ItemStack itemstack = this.getItemInHand(this.getUsedItemHand());
-        if (!this.useItem.isEmpty() && ItemStack.isSameItem(itemstack, this.useItem)) {
-            this.useItem = itemstack;
+        ItemStack itemInUsedHand = this.getItemInHand(this.getUsedItemHand());
+        if (!this.useItem.isEmpty() && ItemStack.isSameItem(itemInUsedHand, this.useItem)) {
+            this.useItem = itemInUsedHand;
             this.useItem.releaseUsing(this.level(), this, this.getUseItemRemainingTicks());
             if (this.useItem.useOnRelease()) {
                 this.updatingUsingItem();
@@ -3449,10 +3623,10 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
 
     public void stopUsingItem() {
         if (!this.level().isClientSide()) {
-            boolean flag = this.isUsingItem();
+            boolean wasUsingItem = this.isUsingItem();
             this.recentKineticEnemies = null;
             this.setLivingEntityFlag(1, false);
-            if (flag) {
+            if (wasUsingItem) {
                 this.useItem.causeUseVibration(this, GameEvent.ITEM_INTERACT_FINISH);
             }
         }
@@ -3468,17 +3642,17 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     public @Nullable ItemStack getItemBlockingWith() {
         if (!this.isUsingItem()) {
             return null;
-        } else {
-            BlocksAttacks blocksattacks = this.useItem.get(DataComponents.BLOCKS_ATTACKS);
-            if (blocksattacks != null) {
-                int i = this.useItem.getItem().getUseDuration(this.useItem, this) - this.useItemRemaining;
-                if (i >= blocksattacks.blockDelayTicks()) {
-                    return this.useItem;
-                }
-            }
-
-            return null;
         }
+
+        BlocksAttacks blocksAttacks = this.useItem.get(DataComponents.BLOCKS_ATTACKS);
+        if (blocksAttacks != null) {
+            int elapsedTicks = this.useItem.getItem().getUseDuration(this.useItem, this) - this.useItemRemaining;
+            if (elapsedTicks >= blocksAttacks.blockDelayTicks()) {
+                return this.useItem;
+            }
+        }
+
+        return null;
     }
 
     public boolean isSuppressingSlidingDownLadder() {
@@ -3498,50 +3672,50 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.fallFlyTicks;
     }
 
-    public boolean randomTeleport(double p_20985_, double p_20986_, double p_20987_, boolean p_20988_) {
-        double d0 = this.getX();
-        double d1 = this.getY();
-        double d2 = this.getZ();
-        double d3 = p_20986_;
-        boolean flag = false;
-        BlockPos blockpos = BlockPos.containing(p_20985_, p_20986_, p_20987_);
+    public boolean randomTeleport(final double xx, final double yy, final double zz, final boolean showParticles) {
+        double xo = this.getX();
+        double yo = this.getY();
+        double zo = this.getZ();
+        double y = yy;
+        boolean ok = false;
+        BlockPos pos = BlockPos.containing(xx, y, zz);
         Level level = this.level();
-        if (level.hasChunkAt(blockpos)) {
-            boolean flag1 = false;
+        if (level.hasChunkAt(pos)) {
+            boolean landed = false;
 
-            while (!flag1 && blockpos.getY() > level.getMinY()) {
-                BlockPos blockpos1 = blockpos.below();
-                BlockState blockstate = level.getBlockState(blockpos1);
-                if (blockstate.blocksMotion()) {
-                    flag1 = true;
+            while (!landed && pos.getY() > level.getMinY()) {
+                BlockPos below = pos.below();
+                BlockState state = level.getBlockState(below);
+                if (state.blocksMotion()) {
+                    landed = true;
                 } else {
-                    d3--;
-                    blockpos = blockpos1;
+                    y--;
+                    pos = below;
                 }
             }
 
-            if (flag1) {
-                this.teleportTo(p_20985_, d3, p_20987_);
+            if (landed) {
+                this.teleportTo(xx, y, zz);
                 if (level.noCollision(this) && !level.containsAnyLiquid(this.getBoundingBox())) {
-                    flag = true;
+                    ok = true;
                 }
             }
         }
 
-        if (!flag) {
-            this.teleportTo(d0, d1, d2);
+        if (!ok) {
+            this.teleportTo(xo, yo, zo);
             return false;
-        } else {
-            if (p_20988_) {
-                level.broadcastEntityEvent(this, (byte)46);
-            }
-
-            if (this instanceof PathfinderMob pathfindermob) {
-                pathfindermob.getNavigation().stop();
-            }
-
-            return true;
         }
+
+        if (showParticles) {
+            level.broadcastEntityEvent(this, (byte)46);
+        }
+
+        if (this instanceof PathfinderMob pathfinderMob) {
+            pathfinderMob.getNavigation().stop();
+        }
+
+        return true;
     }
 
     public boolean isAffectedByPotions() {
@@ -3552,7 +3726,7 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return true;
     }
 
-    public void setRecordPlayingNearby(BlockPos p_21082_, boolean p_21083_) {
+    public void setRecordPlayingNearby(final BlockPos jukebox, final boolean isPlaying) {
     }
 
     public boolean canPickUpLoot() {
@@ -3560,11 +3734,11 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public final EntityDimensions getDimensions(Pose p_21047_) {
-        return p_21047_ == Pose.SLEEPING ? SLEEPING_DIMENSIONS : this.getDefaultDimensions(p_21047_).scale(this.getScale());
+    public final EntityDimensions getDimensions(final Pose pose) {
+        return pose == Pose.SLEEPING ? SLEEPING_DIMENSIONS : this.getDefaultDimensions(pose).scale(this.getScale());
     }
 
-    protected EntityDimensions getDefaultDimensions(Pose p_334284_) {
+    protected EntityDimensions getDefaultDimensions(final Pose pose) {
         return this.getType().getDimensions().scale(this.getAgeScale());
     }
 
@@ -3572,34 +3746,27 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return ImmutableList.of(Pose.STANDING);
     }
 
-    public AABB getLocalBoundsForPose(Pose p_21271_) {
-        EntityDimensions entitydimensions = this.getDimensions(p_21271_);
-        return new AABB(
-            -entitydimensions.width() / 2.0F,
-            0.0,
-            -entitydimensions.width() / 2.0F,
-            entitydimensions.width() / 2.0F,
-            entitydimensions.height(),
-            entitydimensions.width() / 2.0F
-        );
+    public AABB getLocalBoundsForPose(final Pose pose) {
+        EntityDimensions dimensions = this.getDimensions(pose);
+        return new AABB(-dimensions.width() / 2.0F, 0.0, -dimensions.width() / 2.0F, dimensions.width() / 2.0F, dimensions.height(), dimensions.width() / 2.0F);
     }
 
-    protected boolean wouldNotSuffocateAtTargetPose(Pose p_297537_) {
-        AABB aabb = this.getDimensions(p_297537_).makeBoundingBox(this.position());
-        return this.level().noBlockCollision(this, aabb);
+    protected boolean wouldNotSuffocateAtTargetPose(final Pose pose) {
+        AABB targetBB = this.getDimensions(pose).makeBoundingBox(this.position());
+        return this.level().noBlockCollision(this, targetBB);
     }
 
     @Override
-    public boolean canUsePortal(boolean p_342370_) {
-        return super.canUsePortal(p_342370_) && !this.isSleeping();
+    public boolean canUsePortal(final boolean ignorePassenger) {
+        return super.canUsePortal(ignorePassenger) && !this.isSleeping();
     }
 
     public Optional<BlockPos> getSleepingPos() {
         return this.entityData.get(SLEEPING_POS_ID);
     }
 
-    public void setSleepingPos(BlockPos p_21251_) {
-        this.entityData.set(SLEEPING_POS_ID, Optional.of(p_21251_));
+    public void setSleepingPos(final BlockPos bedPosition) {
+        this.entityData.set(SLEEPING_POS_ID, Optional.of(bedPosition));
     }
 
     public void clearSleepingPos() {
@@ -3610,57 +3777,57 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return this.getSleepingPos().isPresent();
     }
 
-    public void startSleeping(BlockPos p_21141_) {
+    public void startSleeping(final BlockPos bedPosition) {
         if (this.isPassenger()) {
             this.stopRiding();
         }
 
-        BlockState blockstate = this.level().getBlockState(p_21141_);
-        if (blockstate.getBlock() instanceof BedBlock) {
-            this.level().setBlock(p_21141_, blockstate.setValue(BedBlock.OCCUPIED, true), 3);
+        BlockState blockState = this.level().getBlockState(bedPosition);
+        if (blockState.getBlock() instanceof BedBlock) {
+            this.level().setBlock(bedPosition, blockState.setValue(BedBlock.OCCUPIED, true), 3);
         }
 
         this.setPose(Pose.SLEEPING);
-        this.setPosToBed(p_21141_);
-        this.setSleepingPos(p_21141_);
+        this.setPosToBed(bedPosition);
+        this.setSleepingPos(bedPosition);
         this.setDeltaMovement(Vec3.ZERO);
         this.needsSync = true;
     }
 
-    private void setPosToBed(BlockPos p_21081_) {
-        this.setPos(p_21081_.getX() + 0.5, p_21081_.getY() + 0.6875, p_21081_.getZ() + 0.5);
+    private void setPosToBed(final BlockPos bedPosition) {
+        this.setPos(bedPosition.getX() + 0.5, bedPosition.getY() + 0.6875, bedPosition.getZ() + 0.5);
     }
 
     private boolean checkBedExists() {
-        return this.getSleepingPos().map(p_449422_ -> this.level().getBlockState(p_449422_).getBlock() instanceof BedBlock).orElse(false);
+        return this.getSleepingPos().map(bedPosition -> this.level().getBlockState(bedPosition).getBlock() instanceof BedBlock).orElse(false);
     }
 
     public void stopSleeping() {
-        this.getSleepingPos().filter(this.level()::hasChunkAt).ifPresent(p_261435_ -> {
-            BlockState blockstate = this.level().getBlockState(p_261435_);
-            if (blockstate.getBlock() instanceof BedBlock) {
-                Direction direction = blockstate.getValue(BedBlock.FACING);
-                this.level().setBlock(p_261435_, blockstate.setValue(BedBlock.OCCUPIED, false), 3);
-                Vec3 vec31 = BedBlock.findStandUpPosition(this.getType(), this.level(), p_261435_, direction, this.getYRot()).orElseGet(() -> {
-                    BlockPos blockpos = p_261435_.above();
-                    return new Vec3(blockpos.getX() + 0.5, blockpos.getY() + 0.1, blockpos.getZ() + 0.5);
+        this.getSleepingPos().filter(this.level()::hasChunkAt).ifPresent(bedPosition -> {
+            BlockState state = this.level().getBlockState(bedPosition);
+            if (state.getBlock() instanceof BedBlock) {
+                Direction facing = state.getValue(BedBlock.FACING);
+                this.level().setBlock(bedPosition, state.setValue(BedBlock.OCCUPIED, false), 3);
+                Vec3 standUp = BedBlock.findStandUpPosition(this.getType(), this.level(), bedPosition, facing, this.getYRot()).orElseGet(() -> {
+                    BlockPos above = bedPosition.above();
+                    return new Vec3(above.getX() + 0.5, above.getY() + 0.1, above.getZ() + 0.5);
                 });
-                Vec3 vec32 = Vec3.atBottomCenterOf(p_261435_).subtract(vec31).normalize();
-                float f = (float)Mth.wrapDegrees(Mth.atan2(vec32.z, vec32.x) * 180.0F / (float)Math.PI - 90.0);
-                this.setPos(vec31.x, vec31.y, vec31.z);
-                this.setYRot(f);
+                Vec3 lookDirection = Vec3.atBottomCenterOf(bedPosition).subtract(standUp).normalize();
+                float yaw = (float)Mth.wrapDegrees(Mth.atan2(lookDirection.z, lookDirection.x) * 180.0F / (float)Math.PI - 90.0);
+                this.setPos(standUp.x, standUp.y, standUp.z);
+                this.setYRot(yaw);
                 this.setXRot(0.0F);
             }
         });
-        Vec3 vec3 = this.position();
+        Vec3 pos = this.position();
         this.setPose(Pose.STANDING);
-        this.setPos(vec3.x, vec3.y, vec3.z);
+        this.setPos(pos.x, pos.y, pos.z);
         this.clearSleepingPos();
     }
 
     public @Nullable Direction getBedOrientation() {
-        BlockPos blockpos = this.getSleepingPos().orElse(null);
-        return blockpos != null ? BedBlock.getBedOrientation(this.level(), blockpos) : null;
+        BlockPos bedPos = this.getSleepingPos().orElse(null);
+        return bedPos != null ? BedBlock.getBedOrientation(this.level(), bedPos) : null;
     }
 
     @Override
@@ -3668,12 +3835,12 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         return !this.isSleeping() && super.isInWall();
     }
 
-    public ItemStack getProjectile(ItemStack p_21272_) {
+    public ItemStack getProjectile(final ItemStack heldWeapon) {
         return ItemStack.EMPTY;
     }
 
-    private static byte entityEventForEquipmentBreak(EquipmentSlot p_21267_) {
-        return switch (p_21267_) {
+    private static byte entityEventForEquipmentBreak(final EquipmentSlot equipmentSlot) {
+        return switch (equipmentSlot) {
             case MAINHAND -> 47;
             case OFFHAND -> 48;
             case HEAD -> 49;
@@ -3685,28 +3852,28 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         };
     }
 
-    public void onEquippedItemBroken(Item p_343772_, EquipmentSlot p_345353_) {
-        this.level().broadcastEntityEvent(this, entityEventForEquipmentBreak(p_345353_));
-        this.stopLocationBasedEffects(this.getItemBySlot(p_345353_), p_345353_, this.attributes);
+    public void onEquippedItemBroken(final Item brokenItem, final EquipmentSlot inSlot) {
+        this.level().broadcastEntityEvent(this, entityEventForEquipmentBreak(inSlot));
+        this.stopLocationBasedEffects(this.getItemBySlot(inSlot), inSlot, this.attributes);
     }
 
-    private void stopLocationBasedEffects(ItemStack p_369098_, EquipmentSlot p_365471_, AttributeMap p_363505_) {
-        p_369098_.forEachModifier(p_365471_, (p_358882_, p_358883_) -> {
-            AttributeInstance attributeinstance = p_363505_.getInstance(p_358882_);
-            if (attributeinstance != null) {
-                attributeinstance.removeModifier(p_358883_);
+    private void stopLocationBasedEffects(final ItemStack previous, final EquipmentSlot inSlot, final AttributeMap attributes) {
+        previous.forEachModifier(inSlot, (attribute, modifier) -> {
+            AttributeInstance instance = attributes.getInstance(attribute);
+            if (instance != null) {
+                instance.removeModifier(modifier);
             }
         });
-        EnchantmentHelper.stopLocationBasedEffects(p_369098_, this, p_365471_);
+        EnchantmentHelper.stopLocationBasedEffects(previous, this, inSlot);
     }
 
-    public final boolean canEquipWithDispenser(ItemStack p_362526_) {
+    public final boolean canEquipWithDispenser(final ItemStack itemStack) {
         if (this.isAlive() && !this.isSpectator()) {
-            Equippable equippable = p_362526_.get(DataComponents.EQUIPPABLE);
+            Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
             if (equippable != null && equippable.dispensable()) {
-                EquipmentSlot equipmentslot = equippable.slot();
-                return this.canUseSlot(equipmentslot) && equippable.canBeEquippedBy(this.getType())
-                    ? this.getItemBySlot(equipmentslot).isEmpty() && this.canDispenserEquipIntoSlot(equipmentslot)
+                EquipmentSlot slot = equippable.slot();
+                return this.canUseSlot(slot) && equippable.canBeEquippedBy(this.typeHolder())
+                    ? this.getItemBySlot(slot).isEmpty() && this.canDispenserEquipIntoSlot(slot)
                     : false;
             } else {
                 return false;
@@ -3716,67 +3883,67 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
         }
     }
 
-    protected boolean canDispenserEquipIntoSlot(EquipmentSlot p_362370_) {
+    protected boolean canDispenserEquipIntoSlot(final EquipmentSlot slot) {
         return true;
     }
 
-    public final EquipmentSlot getEquipmentSlotForItem(ItemStack p_147234_) {
-        Equippable equippable = p_147234_.get(DataComponents.EQUIPPABLE);
+    public EquipmentSlot getEquipmentSlotForItem(final ItemStack itemStack) {
+        Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
         return equippable != null && this.canUseSlot(equippable.slot()) ? equippable.slot() : EquipmentSlot.MAINHAND;
     }
 
-    public final boolean isEquippableInSlot(ItemStack p_21138_, EquipmentSlot p_361200_) {
-        Equippable equippable = p_21138_.get(DataComponents.EQUIPPABLE);
+    public boolean isEquippableInSlot(final ItemStack itemStack, final EquipmentSlot slot) {
+        Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
         return equippable == null
-            ? p_361200_ == EquipmentSlot.MAINHAND && this.canUseSlot(EquipmentSlot.MAINHAND)
-            : p_361200_ == equippable.slot() && this.canUseSlot(equippable.slot()) && equippable.canBeEquippedBy(this.getType());
+            ? slot == EquipmentSlot.MAINHAND && this.canUseSlot(EquipmentSlot.MAINHAND)
+            : slot == equippable.slot() && this.canUseSlot(equippable.slot()) && equippable.canBeEquippedBy(this.typeHolder());
     }
 
-    private static SlotAccess createEquipmentSlotAccess(LivingEntity p_147196_, EquipmentSlot p_147197_) {
-        return p_147197_ != EquipmentSlot.HEAD && p_147197_ != EquipmentSlot.MAINHAND && p_147197_ != EquipmentSlot.OFFHAND
-            ? SlotAccess.forEquipmentSlot(p_147196_, p_147197_, p_341262_ -> p_341262_.isEmpty() || p_147196_.getEquipmentSlotForItem(p_341262_) == p_147197_)
-            : SlotAccess.forEquipmentSlot(p_147196_, p_147197_);
+    private static SlotAccess createEquipmentSlotAccess(final LivingEntity entity, final EquipmentSlot equipmentSlot) {
+        return equipmentSlot != EquipmentSlot.HEAD && equipmentSlot != EquipmentSlot.MAINHAND && equipmentSlot != EquipmentSlot.OFFHAND
+            ? SlotAccess.forEquipmentSlot(entity, equipmentSlot, stack -> stack.isEmpty() || entity.getEquipmentSlotForItem(stack) == equipmentSlot)
+            : SlotAccess.forEquipmentSlot(entity, equipmentSlot);
     }
 
-    private static @Nullable EquipmentSlot getEquipmentSlot(int p_147212_) {
-        if (p_147212_ == 100 + EquipmentSlot.HEAD.getIndex()) {
+    private static @Nullable EquipmentSlot getEquipmentSlot(final int slot) {
+        if (slot == 100 + EquipmentSlot.HEAD.getIndex()) {
             return EquipmentSlot.HEAD;
-        } else if (p_147212_ == 100 + EquipmentSlot.CHEST.getIndex()) {
+        } else if (slot == 100 + EquipmentSlot.CHEST.getIndex()) {
             return EquipmentSlot.CHEST;
-        } else if (p_147212_ == 100 + EquipmentSlot.LEGS.getIndex()) {
+        } else if (slot == 100 + EquipmentSlot.LEGS.getIndex()) {
             return EquipmentSlot.LEGS;
-        } else if (p_147212_ == 100 + EquipmentSlot.FEET.getIndex()) {
+        } else if (slot == 100 + EquipmentSlot.FEET.getIndex()) {
             return EquipmentSlot.FEET;
-        } else if (p_147212_ == 98) {
+        } else if (slot == 98) {
             return EquipmentSlot.MAINHAND;
-        } else if (p_147212_ == 99) {
+        } else if (slot == 99) {
             return EquipmentSlot.OFFHAND;
-        } else if (p_147212_ == 105) {
+        } else if (slot == 105) {
             return EquipmentSlot.BODY;
         } else {
-            return p_147212_ == 106 ? EquipmentSlot.SADDLE : null;
+            return slot == 106 ? EquipmentSlot.SADDLE : null;
         }
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_147238_) {
-        EquipmentSlot equipmentslot = getEquipmentSlot(p_147238_);
-        return equipmentslot != null ? createEquipmentSlotAccess(this, equipmentslot) : super.getSlot(p_147238_);
+    public @Nullable SlotAccess getSlot(final int slot) {
+        EquipmentSlot equipmentSlot = getEquipmentSlot(slot);
+        return equipmentSlot != null ? createEquipmentSlotAccess(this, equipmentSlot) : super.getSlot(slot);
     }
 
     @Override
     public boolean canFreeze() {
         if (this.isSpectator()) {
             return false;
-        } else {
-            for (EquipmentSlot equipmentslot : EquipmentSlotGroup.ARMOR) {
-                if (this.getItemBySlot(equipmentslot).is(ItemTags.FREEZE_IMMUNE_WEARABLES)) {
-                    return false;
-                }
-            }
-
-            return super.canFreeze();
         }
+
+        for (EquipmentSlot slot : EquipmentSlotGroup.ARMOR) {
+            if (this.getItemBySlot(slot).is(ItemTags.FREEZE_IMMUNE_WEARABLES)) {
+                return false;
+            }
+        }
+
+        return super.canFreeze();
     }
 
     @Override
@@ -3790,64 +3957,64 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public void recreateFromPacket(ClientboundAddEntityPacket p_217037_) {
-        double d0 = p_217037_.getX();
-        double d1 = p_217037_.getY();
-        double d2 = p_217037_.getZ();
-        float f = p_217037_.getYRot();
-        float f1 = p_217037_.getXRot();
-        this.syncPacketPositionCodec(d0, d1, d2);
-        this.yBodyRot = p_217037_.getYHeadRot();
-        this.yHeadRot = p_217037_.getYHeadRot();
+    public void recreateFromPacket(final ClientboundAddEntityPacket packet) {
+        double x = packet.getX();
+        double y = packet.getY();
+        double z = packet.getZ();
+        float yRot = packet.getYRot();
+        float xRot = packet.getXRot();
+        this.syncPacketPositionCodec(x, y, z);
+        this.yBodyRot = packet.getYHeadRot();
+        this.yHeadRot = packet.getYHeadRot();
         this.yBodyRotO = this.yBodyRot;
         this.yHeadRotO = this.yHeadRot;
-        this.setId(p_217037_.getId());
-        this.setUUID(p_217037_.getUUID());
-        this.absSnapTo(d0, d1, d2, f, f1);
-        this.setDeltaMovement(p_217037_.getMovement());
+        this.setId(packet.getId());
+        this.setUUID(packet.getUUID());
+        this.absSnapTo(x, y, z, yRot, xRot);
+        this.setDeltaMovement(packet.getMovement());
     }
 
     public float getSecondsToDisableBlocking() {
-        ItemStack itemstack = this.getWeaponItem();
-        Weapon weapon = itemstack.get(DataComponents.WEAPON);
-        return weapon != null && itemstack == this.getActiveItem() ? weapon.disableBlockingForSeconds() : 0.0F;
+        ItemStack weaponItem = this.getWeaponItem();
+        Weapon weapon = weaponItem.get(DataComponents.WEAPON);
+        return weapon != null && weaponItem == this.getActiveItem() ? weapon.disableBlockingForSeconds() : 0.0F;
     }
 
     @Override
     public float maxUpStep() {
-        float f = (float)this.getAttributeValue(Attributes.STEP_HEIGHT);
-        return this.getControllingPassenger() instanceof Player ? Math.max(f, 1.0F) : f;
+        float maxUpStep = (float)this.getAttributeValue(Attributes.STEP_HEIGHT);
+        return this.getControllingPassenger() instanceof Player ? Math.max(maxUpStep, 1.0F) : maxUpStep;
     }
 
     @Override
-    public Vec3 getPassengerRidingPosition(Entity p_299288_) {
-        return this.position().add(this.getPassengerAttachmentPoint(p_299288_, this.getDimensions(this.getPose()), this.getScale() * this.getAgeScale()));
+    public Vec3 getPassengerRidingPosition(final Entity passenger) {
+        return this.position().add(this.getPassengerAttachmentPoint(passenger, this.getDimensions(this.getPose()), this.getScale() * this.getAgeScale()));
     }
 
-    protected void lerpHeadRotationStep(int p_297258_, double p_301409_) {
-        this.yHeadRot = (float)Mth.rotLerp(1.0 / p_297258_, this.yHeadRot, p_301409_);
+    protected void lerpHeadRotationStep(final int lerpHeadSteps, final double targetYHeadRot) {
+        this.yHeadRot = (float)Mth.rotLerp(1.0 / lerpHeadSteps, this.yHeadRot, targetYHeadRot);
     }
 
     @Override
-    public void igniteForTicks(int p_328356_) {
-        super.igniteForTicks(Mth.ceil(p_328356_ * this.getAttributeValue(Attributes.BURNING_TIME)));
+    public void igniteForTicks(final int numberOfTicks) {
+        super.igniteForTicks(Mth.ceil(numberOfTicks * this.getAttributeValue(Attributes.BURNING_TIME)));
     }
 
     public boolean hasInfiniteMaterials() {
         return false;
     }
 
-    public boolean isInvulnerableTo(ServerLevel p_361436_, DamageSource p_345519_) {
-        return this.isInvulnerableToBase(p_345519_) || EnchantmentHelper.isImmuneToDamage(p_361436_, this, p_345519_);
+    public boolean isInvulnerableTo(final ServerLevel level, final DamageSource source) {
+        return this.isInvulnerableToBase(source) || EnchantmentHelper.isImmuneToDamage(level, this, source);
     }
 
-    public static boolean canGlideUsing(ItemStack p_369788_, EquipmentSlot p_365879_) {
-        if (!p_369788_.has(DataComponents.GLIDER)) {
+    public static boolean canGlideUsing(final ItemStack itemStack, final EquipmentSlot slot) {
+        if (!itemStack.has(DataComponents.GLIDER)) {
             return false;
-        } else {
-            Equippable equippable = p_369788_.get(DataComponents.EQUIPPABLE);
-            return equippable != null && p_365879_ == equippable.slot() && !p_369788_.nextDamageWillBreak();
         }
+
+        Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
+        return equippable != null && slot == equippable.slot() && !itemStack.nextDamageWillBreak();
     }
 
     @VisibleForTesting
@@ -3861,19 +4028,19 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     }
 
     @Override
-    public Optional<WaypointTransmitter.Connection> makeWaypointConnectionWith(ServerPlayer p_410245_) {
-        if (this.firstTick || p_410245_ == this) {
+    public Optional<WaypointTransmitter.Connection> makeWaypointConnectionWith(final ServerPlayer player) {
+        if (this.firstTick || player == this) {
             return Optional.empty();
-        } else if (WaypointTransmitter.doesSourceIgnoreReceiver(this, p_410245_)) {
+        } else if (WaypointTransmitter.doesSourceIgnoreReceiver(this, player)) {
             return Optional.empty();
         } else {
-            Waypoint.Icon waypoint$icon = this.locatorBarIcon.cloneAndAssignStyle(this);
-            if (WaypointTransmitter.isReallyFar(this, p_410245_)) {
-                return Optional.of(new WaypointTransmitter.EntityAzimuthConnection(this, waypoint$icon, p_410245_));
+            Waypoint.Icon icon = this.locatorBarIcon.cloneAndAssignStyle(this);
+            if (WaypointTransmitter.isReallyFar(this, player)) {
+                return Optional.of(new WaypointTransmitter.EntityAzimuthConnection(this, icon, player));
             } else {
-                return !WaypointTransmitter.isChunkVisible(this.chunkPosition(), p_410245_)
-                    ? Optional.of(new WaypointTransmitter.EntityChunkConnection(this, waypoint$icon, p_410245_))
-                    : Optional.of(new WaypointTransmitter.EntityBlockConnection(this, waypoint$icon, p_410245_));
+                return !WaypointTransmitter.isChunkVisible(this.chunkPosition(), player)
+                    ? Optional.of(new WaypointTransmitter.EntityChunkConnection(this, icon, player))
+                    : Optional.of(new WaypointTransmitter.EntityBlockConnection(this, icon, player));
             }
         }
     }
@@ -3881,6 +4048,10 @@ public abstract class LivingEntity extends Entity implements Attackable, Waypoin
     @Override
     public Waypoint.Icon waypointIcon() {
         return this.locatorBarIcon;
+    }
+
+    public DamageSource createDamageSource() {
+        return this.damageSources().mobAttack(this);
     }
 
     public record Fallsounds(SoundEvent small, SoundEvent big) {

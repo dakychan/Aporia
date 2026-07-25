@@ -8,7 +8,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.OptionInstance;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.InputWithModifiers;
@@ -18,11 +18,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CycleButton<T> extends AbstractButton implements ResettableOptionWidget {
     public static final BooleanSupplier DEFAULT_ALT_LIST_SELECTOR = () -> Minecraft.getInstance().hasAltDown();
     private static final List<Boolean> BOOLEAN_OPTIONS = ImmutableList.of(Boolean.TRUE, Boolean.FALSE);
@@ -38,50 +35,50 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
     private final OptionInstance.TooltipSupplier<T> tooltipSupplier;
     private final CycleButton.SpriteSupplier<T> spriteSupplier;
 
-    CycleButton(
-        int p_232484_,
-        int p_232485_,
-        int p_232486_,
-        int p_232487_,
-        Component p_232488_,
-        Component p_232489_,
-        int p_232490_,
-        T p_232491_,
-        Supplier<T> p_457487_,
-        CycleButton.ValueListSupplier<T> p_232492_,
-        Function<T, Component> p_232493_,
-        Function<CycleButton<T>, MutableComponent> p_232494_,
-        CycleButton.OnValueChange<T> p_232495_,
-        OptionInstance.TooltipSupplier<T> p_232496_,
-        CycleButton.DisplayState p_454340_,
-        CycleButton.SpriteSupplier<T> p_454413_
+    private CycleButton(
+        final int x,
+        final int y,
+        final int width,
+        final int height,
+        final Component message,
+        final Component name,
+        final int index,
+        final T value,
+        final Supplier<T> defaultValueSupplier,
+        final CycleButton.ValueListSupplier<T> values,
+        final Function<T, Component> valueStringifier,
+        final Function<CycleButton<T>, MutableComponent> narrationProvider,
+        final CycleButton.OnValueChange<T> onValueChange,
+        final OptionInstance.TooltipSupplier<T> tooltipSupplier,
+        final CycleButton.DisplayState displayState,
+        final CycleButton.SpriteSupplier<T> spriteSupplier
     ) {
-        super(p_232484_, p_232485_, p_232486_, p_232487_, p_232488_);
-        this.name = p_232489_;
-        this.index = p_232490_;
-        this.defaultValueSupplier = p_457487_;
-        this.value = p_232491_;
-        this.values = p_232492_;
-        this.valueStringifier = p_232493_;
-        this.narrationProvider = p_232494_;
-        this.onValueChange = p_232495_;
-        this.displayState = p_454340_;
-        this.tooltipSupplier = p_232496_;
-        this.spriteSupplier = p_454413_;
+        super(x, y, width, height, message);
+        this.name = name;
+        this.index = index;
+        this.defaultValueSupplier = defaultValueSupplier;
+        this.value = value;
+        this.values = values;
+        this.valueStringifier = valueStringifier;
+        this.narrationProvider = narrationProvider;
+        this.onValueChange = onValueChange;
+        this.displayState = displayState;
+        this.tooltipSupplier = tooltipSupplier;
+        this.spriteSupplier = spriteSupplier;
         this.updateTooltip();
     }
 
     @Override
-    protected void renderContents(GuiGraphics p_456835_, int p_454494_, int p_454886_, float p_450515_) {
-        Identifier identifier = this.spriteSupplier.apply(this, this.getValue());
-        if (identifier != null) {
-            p_456835_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+    protected void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        Identifier sprite = this.spriteSupplier.apply(this, this.getValue());
+        if (sprite != null) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, this.getX(), this.getY(), this.getWidth(), this.getHeight());
         } else {
-            this.renderDefaultSprite(p_456835_);
+            this.extractDefaultSprite(graphics);
         }
 
         if (this.displayState != CycleButton.DisplayState.HIDE) {
-            this.renderDefaultLabel(p_456835_.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.NONE));
+            this.extractDefaultLabel(graphics.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.NONE));
         }
     }
 
@@ -90,46 +87,46 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
     }
 
     @Override
-    public void onPress(InputWithModifiers p_425965_) {
-        if (p_425965_.hasShiftDown()) {
+    public void onPress(final InputWithModifiers input) {
+        if (input.hasShiftDown()) {
             this.cycleValue(-1);
         } else {
             this.cycleValue(1);
         }
     }
 
-    private void cycleValue(int p_168909_) {
+    private void cycleValue(final int delta) {
         List<T> list = this.values.getSelectedList();
-        this.index = Mth.positiveModulo(this.index + p_168909_, list.size());
-        T t = list.get(this.index);
-        this.updateValue(t);
-        this.onValueChange.onValueChange(this, t);
+        this.index = Mth.positiveModulo(this.index + delta, list.size());
+        T newValue = list.get(this.index);
+        this.updateValue(newValue);
+        this.onValueChange.onValueChange(this, newValue);
     }
 
-    private T getCycledValue(int p_168915_) {
+    private T getCycledValue(final int delta) {
         List<T> list = this.values.getSelectedList();
-        return list.get(Mth.positiveModulo(this.index + p_168915_, list.size()));
+        return list.get(Mth.positiveModulo(this.index + delta, list.size()));
     }
 
     @Override
-    public boolean mouseScrolled(double p_168885_, double p_168886_, double p_168887_, double p_300536_) {
-        if (p_300536_ > 0.0) {
+    public boolean mouseScrolled(final double x, final double y, final double scrollX, final double scrollY) {
+        if (scrollY > 0.0) {
             this.cycleValue(-1);
-        } else if (p_300536_ < 0.0) {
+        } else if (scrollY < 0.0) {
             this.cycleValue(1);
         }
 
         return true;
     }
 
-    public void setValue(T p_168893_) {
+    public void setValue(final T newValue) {
         List<T> list = this.values.getSelectedList();
-        int i = list.indexOf(p_168893_);
-        if (i != -1) {
-            this.index = i;
+        int newIndex = list.indexOf(newValue);
+        if (newIndex != -1) {
+            this.index = newIndex;
         }
 
-        this.updateValue(p_168893_);
+        this.updateValue(newValue);
     }
 
     @Override
@@ -137,19 +134,19 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
         this.setValue(this.defaultValueSupplier.get());
     }
 
-    private void updateValue(T p_168906_) {
-        Component component = this.createLabelForValue(p_168906_);
-        this.setMessage(component);
-        this.value = p_168906_;
+    private void updateValue(final T newValue) {
+        Component newMessage = this.createLabelForValue(newValue);
+        this.setMessage(newMessage);
+        this.value = newValue;
         this.updateTooltip();
     }
 
-    private Component createLabelForValue(T p_168911_) {
-        return (Component)(this.displayState == CycleButton.DisplayState.VALUE ? this.valueStringifier.apply(p_168911_) : this.createFullName(p_168911_));
+    private Component createLabelForValue(final T newValue) {
+        return this.displayState == CycleButton.DisplayState.VALUE ? this.valueStringifier.apply(newValue) : this.createFullName(newValue);
     }
 
-    private MutableComponent createFullName(T p_168913_) {
-        return CommonComponents.optionNameValue(this.name, this.valueStringifier.apply(p_168913_));
+    private MutableComponent createFullName(final T newValue) {
+        return CommonComponents.optionNameValue(this.name, this.valueStringifier.apply(newValue));
     }
 
     public T getValue() {
@@ -162,94 +159,93 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
     }
 
     @Override
-    public void updateWidgetNarration(NarrationElementOutput p_168889_) {
-        p_168889_.add(NarratedElementType.TITLE, this.createNarrationMessage());
+    public void updateWidgetNarration(final NarrationElementOutput output) {
+        output.add(NarratedElementType.TITLE, this.createNarrationMessage());
         if (this.active) {
-            T t = this.getCycledValue(1);
-            Component component = this.createLabelForValue(t);
+            T nextValue = this.getCycledValue(1);
+            Component nextValueText = this.createLabelForValue(nextValue);
             if (this.isFocused()) {
-                p_168889_.add(NarratedElementType.USAGE, Component.translatable("narration.cycle_button.usage.focused", component));
+                output.add(NarratedElementType.USAGE, Component.translatable("narration.cycle_button.usage.focused", nextValueText));
             } else {
-                p_168889_.add(NarratedElementType.USAGE, Component.translatable("narration.cycle_button.usage.hovered", component));
+                output.add(NarratedElementType.USAGE, Component.translatable("narration.cycle_button.usage.hovered", nextValueText));
             }
         }
     }
 
     public MutableComponent createDefaultNarrationMessage() {
-        return wrapDefaultNarrationMessage((Component)(this.displayState == CycleButton.DisplayState.VALUE ? this.createFullName(this.value) : this.getMessage()));
+        return wrapDefaultNarrationMessage(this.displayState == CycleButton.DisplayState.VALUE ? this.createFullName(this.value) : this.getMessage());
     }
 
-    public static <T> CycleButton.Builder<T> builder(Function<T, Component> p_168895_, Supplier<T> p_453650_) {
-        return new CycleButton.Builder<>(p_168895_, p_453650_);
+    public static <T> CycleButton.Builder<T> builder(final Function<T, Component> valueStringifier, final Supplier<T> defaultValueSupplier) {
+        return new CycleButton.Builder<>(valueStringifier, defaultValueSupplier);
     }
 
-    public static <T> CycleButton.Builder<T> builder(Function<T, Component> p_457614_, T p_457615_) {
-        return new CycleButton.Builder<>(p_457614_, () -> p_457615_);
+    public static <T> CycleButton.Builder<T> builder(final Function<T, Component> valueStringifier, final T defaultValue) {
+        return new CycleButton.Builder<>(valueStringifier, () -> defaultValue);
     }
 
-    public static CycleButton.Builder<Boolean> booleanBuilder(Component p_168897_, Component p_168898_, boolean p_453738_) {
-        return new CycleButton.Builder<>(p_447970_ -> p_447970_ == Boolean.TRUE ? p_168897_ : p_168898_, () -> p_453738_).withValues(BOOLEAN_OPTIONS);
+    public static CycleButton.Builder<Boolean> booleanBuilder(final Component trueText, final Component falseText, final boolean defaultValue) {
+        return new CycleButton.Builder<>(b -> b == Boolean.TRUE ? trueText : falseText, () -> defaultValue).withValues(BOOLEAN_OPTIONS);
     }
 
-    public static CycleButton.Builder<Boolean> onOffBuilder(boolean p_168917_) {
-        return new CycleButton.Builder<>(p_447967_ -> p_447967_ == Boolean.TRUE ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF, () -> p_168917_)
+    public static CycleButton.Builder<Boolean> onOffBuilder(final boolean initialValue) {
+        return new CycleButton.Builder<>(b -> b == Boolean.TRUE ? CommonComponents.OPTION_ON : CommonComponents.OPTION_OFF, () -> initialValue)
             .withValues(BOOLEAN_OPTIONS);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder<T> {
+        public static class Builder<T> {
         private final Supplier<T> defaultValueSupplier;
         private final Function<T, Component> valueStringifier;
-        private OptionInstance.TooltipSupplier<T> tooltipSupplier = p_168964_ -> null;
-        private CycleButton.SpriteSupplier<T> spriteSupplier = (p_447974_, p_447975_) -> null;
+        private OptionInstance.TooltipSupplier<T> tooltipSupplier = value -> null;
+        private CycleButton.SpriteSupplier<T> spriteSupplier = (button, value) -> null;
         private Function<CycleButton<T>, MutableComponent> narrationProvider = CycleButton::createDefaultNarrationMessage;
         private CycleButton.ValueListSupplier<T> values = CycleButton.ValueListSupplier.create(ImmutableList.of());
         private CycleButton.DisplayState displayState = CycleButton.DisplayState.NAME_AND_VALUE;
 
-        public Builder(Function<T, Component> p_168928_, Supplier<T> p_456533_) {
-            this.valueStringifier = p_168928_;
-            this.defaultValueSupplier = p_456533_;
+        public Builder(final Function<T, Component> valueStringifier, final Supplier<T> defaultValueSupplier) {
+            this.valueStringifier = valueStringifier;
+            this.defaultValueSupplier = defaultValueSupplier;
         }
 
-        public CycleButton.Builder<T> withValues(Collection<T> p_232503_) {
-            return this.withValues(CycleButton.ValueListSupplier.create(p_232503_));
+        public CycleButton.Builder<T> withValues(final Collection<T> values) {
+            return this.withValues(CycleButton.ValueListSupplier.create(values));
         }
 
         @SafeVarargs
-        public final CycleButton.Builder<T> withValues(T... p_168962_) {
-            return this.withValues(ImmutableList.copyOf(p_168962_));
+        public final CycleButton.Builder<T> withValues(final T... values) {
+            return this.withValues(ImmutableList.copyOf(values));
         }
 
-        public CycleButton.Builder<T> withValues(List<T> p_168953_, List<T> p_168954_) {
-            return this.withValues(CycleButton.ValueListSupplier.create(CycleButton.DEFAULT_ALT_LIST_SELECTOR, p_168953_, p_168954_));
+        public CycleButton.Builder<T> withValues(final List<T> values, final List<T> altValues) {
+            return this.withValues(CycleButton.ValueListSupplier.create(CycleButton.DEFAULT_ALT_LIST_SELECTOR, values, altValues));
         }
 
-        public CycleButton.Builder<T> withValues(BooleanSupplier p_168956_, List<T> p_168957_, List<T> p_168958_) {
-            return this.withValues(CycleButton.ValueListSupplier.create(p_168956_, p_168957_, p_168958_));
+        public CycleButton.Builder<T> withValues(final BooleanSupplier altCondition, final List<T> values, final List<T> altValues) {
+            return this.withValues(CycleButton.ValueListSupplier.create(altCondition, values, altValues));
         }
 
-        public CycleButton.Builder<T> withValues(CycleButton.ValueListSupplier<T> p_232501_) {
-            this.values = p_232501_;
+        public CycleButton.Builder<T> withValues(final CycleButton.ValueListSupplier<T> valueListSupplier) {
+            this.values = valueListSupplier;
             return this;
         }
 
-        public CycleButton.Builder<T> withTooltip(OptionInstance.TooltipSupplier<T> p_232499_) {
-            this.tooltipSupplier = p_232499_;
+        public CycleButton.Builder<T> withTooltip(final OptionInstance.TooltipSupplier<T> tooltipSupplier) {
+            this.tooltipSupplier = tooltipSupplier;
             return this;
         }
 
-        public CycleButton.Builder<T> withCustomNarration(Function<CycleButton<T>, MutableComponent> p_168960_) {
-            this.narrationProvider = p_168960_;
+        public CycleButton.Builder<T> withCustomNarration(final Function<CycleButton<T>, MutableComponent> narrationProvider) {
+            this.narrationProvider = narrationProvider;
             return this;
         }
 
-        public CycleButton.Builder<T> withSprite(CycleButton.SpriteSupplier<T> p_456551_) {
-            this.spriteSupplier = p_456551_;
+        public CycleButton.Builder<T> withSprite(final CycleButton.SpriteSupplier<T> spriteSupplier) {
+            this.spriteSupplier = spriteSupplier;
             return this;
         }
 
-        public CycleButton.Builder<T> displayState(CycleButton.DisplayState p_458174_) {
-            this.displayState = p_458174_;
+        public CycleButton.Builder<T> displayState(final CycleButton.DisplayState state) {
+            this.displayState = state;
             return this;
         }
 
@@ -257,99 +253,95 @@ public class CycleButton<T> extends AbstractButton implements ResettableOptionWi
             return this.displayState(CycleButton.DisplayState.VALUE);
         }
 
-        public CycleButton<T> create(Component p_331414_, CycleButton.OnValueChange<T> p_335090_) {
-            return this.create(0, 0, 150, 20, p_331414_, p_335090_);
+        public CycleButton<T> create(final Component name, final CycleButton.OnValueChange<T> valueChangeListener) {
+            return this.create(0, 0, 150, 20, name, valueChangeListener);
         }
 
-        public CycleButton<T> create(int p_168931_, int p_168932_, int p_168933_, int p_168934_, Component p_168935_) {
-            return this.create(p_168931_, p_168932_, p_168933_, p_168934_, p_168935_, (p_168946_, p_168947_) -> {});
+        public CycleButton<T> create(final int x, final int y, final int width, final int height, final Component name) {
+            return this.create(x, y, width, height, name, (button, value) -> {});
         }
 
-        public CycleButton<T> create(int p_168937_, int p_168938_, int p_168939_, int p_168940_, Component p_168941_, CycleButton.OnValueChange<T> p_168942_) {
-            List<T> list = this.values.getDefaultList();
-            if (list.isEmpty()) {
+        public CycleButton<T> create(
+            final int x, final int y, final int width, final int height, final Component name, final CycleButton.OnValueChange<T> valueChangeListener
+        ) {
+            List<T> values = this.values.getDefaultList();
+            if (values.isEmpty()) {
                 throw new IllegalStateException("No values for cycle button");
-            } else {
-                T t = this.defaultValueSupplier.get();
-                int i = list.indexOf(t);
-                Component component = this.valueStringifier.apply(t);
-                Component component1 = (Component)(this.displayState == CycleButton.DisplayState.VALUE
-                    ? component
-                    : CommonComponents.optionNameValue(p_168941_, component));
-                return new CycleButton<>(
-                    p_168937_,
-                    p_168938_,
-                    p_168939_,
-                    p_168940_,
-                    component1,
-                    p_168941_,
-                    i,
-                    t,
-                    this.defaultValueSupplier,
-                    this.values,
-                    this.valueStringifier,
-                    this.narrationProvider,
-                    p_168942_,
-                    this.tooltipSupplier,
-                    this.displayState,
-                    this.spriteSupplier
-                );
             }
+
+            T initialValue = this.defaultValueSupplier.get();
+            int initialIndex = values.indexOf(initialValue);
+            Component valueText = this.valueStringifier.apply(initialValue);
+            Component initialTitle = this.displayState == CycleButton.DisplayState.VALUE ? valueText : CommonComponents.optionNameValue(name, valueText);
+            return new CycleButton<>(
+                x,
+                y,
+                width,
+                height,
+                initialTitle,
+                name,
+                initialIndex,
+                initialValue,
+                this.defaultValueSupplier,
+                this.values,
+                this.valueStringifier,
+                this.narrationProvider,
+                valueChangeListener,
+                this.tooltipSupplier,
+                this.displayState,
+                this.spriteSupplier
+            );
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum DisplayState {
+        public enum DisplayState {
         NAME_AND_VALUE,
         VALUE,
         HIDE;
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface OnValueChange<T> {
-        void onValueChange(CycleButton<T> p_168966_, T p_168967_);
+        public interface OnValueChange<T> {
+        void onValueChange(CycleButton<T> button, T value);
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface SpriteSupplier<T> {
-        @Nullable Identifier apply(CycleButton<T> p_453214_, T p_452989_);
+        public interface SpriteSupplier<T> {
+        @Nullable Identifier apply(CycleButton<T> button, T value);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface ValueListSupplier<T> {
+        public interface ValueListSupplier<T> {
         List<T> getSelectedList();
 
         List<T> getDefaultList();
 
-        static <T> CycleButton.ValueListSupplier<T> create(Collection<T> p_232505_) {
-            final List<T> list = ImmutableList.copyOf(p_232505_);
+        static <T> CycleButton.ValueListSupplier<T> create(final Collection<T> values) {
+            final List<T> copy = ImmutableList.copyOf(values);
             return new CycleButton.ValueListSupplier<T>() {
                 @Override
                 public List<T> getSelectedList() {
-                    return list;
+                    return copy;
                 }
 
                 @Override
                 public List<T> getDefaultList() {
-                    return list;
+                    return copy;
                 }
             };
         }
 
-        static <T> CycleButton.ValueListSupplier<T> create(final BooleanSupplier p_168971_, List<T> p_168972_, List<T> p_168973_) {
-            final List<T> list = ImmutableList.copyOf(p_168972_);
-            final List<T> list1 = ImmutableList.copyOf(p_168973_);
+        static <T> CycleButton.ValueListSupplier<T> create(final BooleanSupplier altSelector, final List<T> defaultList, final List<T> altList) {
+            final List<T> defaultCopy = ImmutableList.copyOf(defaultList);
+            final List<T> altCopy = ImmutableList.copyOf(altList);
             return new CycleButton.ValueListSupplier<T>() {
                 @Override
                 public List<T> getSelectedList() {
-                    return p_168971_.getAsBoolean() ? list1 : list;
+                    return altSelector.getAsBoolean() ? altCopy : defaultCopy;
                 }
 
                 @Override
                 public List<T> getDefaultList() {
-                    return list;
+                    return defaultCopy;
                 }
             };
         }

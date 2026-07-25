@@ -9,19 +9,16 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Witch;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class WitchRenderer extends MobRenderer<Witch, WitchRenderState, WitchModel> {
-    private static final Identifier WITCH_LOCATION = Identifier.withDefaultNamespace("textures/entity/witch.png");
+    private static final Identifier WITCH_LOCATION = Identifier.withDefaultNamespace("textures/entity/witch/witch.png");
 
-    public WitchRenderer(EntityRendererProvider.Context p_174443_) {
-        super(p_174443_, new WitchModel(p_174443_.bakeLayer(ModelLayers.WITCH)), 0.5F);
+    public WitchRenderer(final EntityRendererProvider.Context context) {
+        super(context, new WitchModel(context.bakeLayer(ModelLayers.WITCH)), 0.5F);
         this.addLayer(new WitchItemLayer(this));
     }
 
-    public Identifier getTextureLocation(WitchRenderState p_455203_) {
+    public Identifier getTextureLocation(final WitchRenderState state) {
         return WITCH_LOCATION;
     }
 
@@ -29,12 +26,12 @@ public class WitchRenderer extends MobRenderer<Witch, WitchRenderState, WitchMod
         return new WitchRenderState();
     }
 
-    public void extractRenderState(Witch p_363206_, WitchRenderState p_362711_, float p_363215_) {
-        super.extractRenderState(p_363206_, p_362711_, p_363215_);
-        HoldingEntityRenderState.extractHoldingEntityRenderState(p_363206_, p_362711_, this.itemModelResolver);
-        p_362711_.entityId = p_363206_.getId();
-        ItemStack itemstack = p_363206_.getMainHandItem();
-        p_362711_.isHoldingItem = !itemstack.isEmpty();
-        p_362711_.isHoldingPotion = itemstack.is(Items.POTION);
+    public void extractRenderState(final Witch entity, final WitchRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        HoldingEntityRenderState.extractHoldingEntityRenderState(entity, state, this.itemModelResolver);
+        state.entityId = entity.getId();
+        ItemStack mainHandItem = entity.getMainHandItem();
+        state.isHoldingItem = !mainHandItem.isEmpty();
+        state.isHoldingPotion = mainHandItem.is(Items.POTION);
     }
 }

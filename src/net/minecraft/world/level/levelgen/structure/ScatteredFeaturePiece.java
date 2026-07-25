@@ -15,82 +15,89 @@ public abstract class ScatteredFeaturePiece extends StructurePiece {
     protected int heightPosition = -1;
 
     protected ScatteredFeaturePiece(
-        StructurePieceType p_209920_, int p_209921_, int p_209922_, int p_209923_, int p_209924_, int p_209925_, int p_209926_, Direction p_209927_
+        final StructurePieceType type,
+        final int west,
+        final int floor,
+        final int north,
+        final int width,
+        final int height,
+        final int depth,
+        final Direction direction
     ) {
-        super(p_209920_, 0, StructurePiece.makeBoundingBox(p_209921_, p_209922_, p_209923_, p_209927_, p_209924_, p_209925_, p_209926_));
-        this.width = p_209924_;
-        this.height = p_209925_;
-        this.depth = p_209926_;
-        this.setOrientation(p_209927_);
+        super(type, 0, StructurePiece.makeBoundingBox(west, floor, north, direction, width, height, depth));
+        this.width = width;
+        this.height = height;
+        this.depth = depth;
+        this.setOrientation(direction);
     }
 
-    protected ScatteredFeaturePiece(StructurePieceType p_209929_, CompoundTag p_209930_) {
-        super(p_209929_, p_209930_);
-        this.width = p_209930_.getIntOr("Width", 0);
-        this.height = p_209930_.getIntOr("Height", 0);
-        this.depth = p_209930_.getIntOr("Depth", 0);
-        this.heightPosition = p_209930_.getIntOr("HPos", 0);
+    protected ScatteredFeaturePiece(final StructurePieceType type, final CompoundTag tag) {
+        super(type, tag);
+        this.width = tag.getIntOr("Width", 0);
+        this.height = tag.getIntOr("Height", 0);
+        this.depth = tag.getIntOr("Depth", 0);
+        this.heightPosition = tag.getIntOr("HPos", 0);
     }
 
     @Override
-    protected void addAdditionalSaveData(StructurePieceSerializationContext p_192471_, CompoundTag p_192472_) {
-        p_192472_.putInt("Width", this.width);
-        p_192472_.putInt("Height", this.height);
-        p_192472_.putInt("Depth", this.depth);
-        p_192472_.putInt("HPos", this.heightPosition);
+    protected void addAdditionalSaveData(final StructurePieceSerializationContext context, final CompoundTag tag) {
+        tag.putInt("Width", this.width);
+        tag.putInt("Height", this.height);
+        tag.putInt("Depth", this.depth);
+        tag.putInt("HPos", this.heightPosition);
     }
 
-    protected boolean updateAverageGroundHeight(LevelAccessor p_72804_, BoundingBox p_72805_, int p_72806_) {
+    protected boolean updateAverageGroundHeight(final LevelAccessor level, final BoundingBox chunkBB, final int offset) {
         if (this.heightPosition >= 0) {
             return true;
-        } else {
-            int i = 0;
-            int j = 0;
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        }
 
-            for (int k = this.boundingBox.minZ(); k <= this.boundingBox.maxZ(); k++) {
-                for (int l = this.boundingBox.minX(); l <= this.boundingBox.maxX(); l++) {
-                    blockpos$mutableblockpos.set(l, 64, k);
-                    if (p_72805_.isInside(blockpos$mutableblockpos)) {
-                        i += p_72804_.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, blockpos$mutableblockpos).getY();
-                        j++;
-                    }
+        int total = 0;
+        int count = 0;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
+            for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
+                pos.set(x, 64, z);
+                if (chunkBB.isInside(pos)) {
+                    total += level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos).getY();
+                    count++;
                 }
             }
-
-            if (j == 0) {
-                return false;
-            } else {
-                this.heightPosition = i / j;
-                this.boundingBox.move(0, this.heightPosition - this.boundingBox.minY() + p_72806_, 0);
-                return true;
-            }
         }
+
+        if (count == 0) {
+            return false;
+        }
+
+        this.heightPosition = total / count;
+        this.boundingBox.move(0, this.heightPosition - this.boundingBox.minY() + offset, 0);
+        return true;
     }
 
-    protected boolean updateHeightPositionToLowestGroundHeight(LevelAccessor p_192468_, int p_192469_) {
+    protected boolean updateHeightPositionToLowestGroundHeight(final LevelAccessor level, final int offset) {
         if (this.heightPosition >= 0) {
             return true;
-        } else {
-            int i = p_192468_.getMaxY() + 1;
-            boolean flag = false;
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        }
 
-            for (int j = this.boundingBox.minZ(); j <= this.boundingBox.maxZ(); j++) {
-                for (int k = this.boundingBox.minX(); k <= this.boundingBox.maxX(); k++) {
-                    blockpos$mutableblockpos.set(k, 0, j);
-                    i = Math.min(i, p_192468_.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, blockpos$mutableblockpos).getY());
-                    flag = true;
-                }
-            }
+        int lowestGroundHeight = level.getMaxY() + 1;
+        boolean foundPositionWithinBoundingBox = false;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-            if (!flag) {
-                return false;
-            } else {
-                this.heightPosition = i;
-                this.boundingBox.move(0, this.heightPosition - this.boundingBox.minY() + p_192469_, 0);
-                return true;
+        for (int z = this.boundingBox.minZ(); z <= this.boundingBox.maxZ(); z++) {
+            for (int x = this.boundingBox.minX(); x <= this.boundingBox.maxX(); x++) {
+                pos.set(x, 0, z);
+                lowestGroundHeight = Math.min(lowestGroundHeight, level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos).getY());
+                foundPositionWithinBoundingBox = true;
             }
         }
+
+        if (!foundPositionWithinBoundingBox) {
+            return false;
+        }
+
+        this.heightPosition = lowestGroundHeight;
+        this.boundingBox.move(0, this.heightPosition - this.boundingBox.minY() + offset, 0);
+        return true;
     }
 }

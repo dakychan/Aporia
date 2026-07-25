@@ -4,7 +4,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 
 public interface MinecraftExecutorService {
-    <V> CompletableFuture<V> submit(Supplier<V> p_424557_);
+    <V> CompletableFuture<V> submit(final Supplier<V> supplier);
 
-    CompletableFuture<Void> submit(Runnable p_430098_);
+    CompletableFuture<Void> submit(final Runnable runnable);
 }

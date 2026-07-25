@@ -16,12 +16,12 @@ public class IdentifierArgument implements ArgumentType<Identifier> {
         return new IdentifierArgument();
     }
 
-    public static Identifier getId(CommandContext<CommandSourceStack> p_458057_, String p_459465_) {
-        return p_458057_.getArgument(p_459465_, Identifier.class);
+    public static Identifier getId(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Identifier.class);
     }
 
-    public Identifier parse(StringReader p_452815_) throws CommandSyntaxException {
-        return Identifier.read(p_452815_);
+    public Identifier parse(final StringReader reader) throws CommandSyntaxException {
+        return Identifier.read(reader);
     }
 
     @Override

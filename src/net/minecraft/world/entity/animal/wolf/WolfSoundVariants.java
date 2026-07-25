@@ -18,51 +18,53 @@ public class WolfSoundVariants {
     public static final ResourceKey<WolfSoundVariant> BIG = createKey(WolfSoundVariants.SoundSet.BIG);
     public static final ResourceKey<WolfSoundVariant> CUTE = createKey(WolfSoundVariants.SoundSet.CUTE);
 
-    private static ResourceKey<WolfSoundVariant> createKey(WolfSoundVariants.SoundSet p_392951_) {
-        return ResourceKey.create(Registries.WOLF_SOUND_VARIANT, Identifier.withDefaultNamespace(p_392951_.getIdentifier()));
+    private static ResourceKey<WolfSoundVariant> createKey(final WolfSoundVariants.SoundSet wolfSoundVariant) {
+        return ResourceKey.create(Registries.WOLF_SOUND_VARIANT, Identifier.withDefaultNamespace(wolfSoundVariant.getIdentifier()));
     }
 
-    public static void bootstrap(BootstrapContext<WolfSoundVariant> p_392134_) {
-        register(p_392134_, CLASSIC, WolfSoundVariants.SoundSet.CLASSIC);
-        register(p_392134_, PUGLIN, WolfSoundVariants.SoundSet.PUGLIN);
-        register(p_392134_, SAD, WolfSoundVariants.SoundSet.SAD);
-        register(p_392134_, ANGRY, WolfSoundVariants.SoundSet.ANGRY);
-        register(p_392134_, GRUMPY, WolfSoundVariants.SoundSet.GRUMPY);
-        register(p_392134_, BIG, WolfSoundVariants.SoundSet.BIG);
-        register(p_392134_, CUTE, WolfSoundVariants.SoundSet.CUTE);
+    public static void bootstrap(final BootstrapContext<WolfSoundVariant> context) {
+        register(context, CLASSIC, WolfSoundVariants.SoundSet.CLASSIC);
+        register(context, PUGLIN, WolfSoundVariants.SoundSet.PUGLIN);
+        register(context, SAD, WolfSoundVariants.SoundSet.SAD);
+        register(context, ANGRY, WolfSoundVariants.SoundSet.ANGRY);
+        register(context, GRUMPY, WolfSoundVariants.SoundSet.GRUMPY);
+        register(context, BIG, WolfSoundVariants.SoundSet.BIG);
+        register(context, CUTE, WolfSoundVariants.SoundSet.CUTE);
     }
 
-    private static void register(BootstrapContext<WolfSoundVariant> p_392299_, ResourceKey<WolfSoundVariant> p_394952_, WolfSoundVariants.SoundSet p_397964_) {
-        p_392299_.register(p_394952_, SoundEvents.WOLF_SOUNDS.get(p_397964_));
+    private static void register(
+        final BootstrapContext<WolfSoundVariant> context, final ResourceKey<WolfSoundVariant> key, final WolfSoundVariants.SoundSet wolfSoundVariant
+    ) {
+        context.register(key, SoundEvents.WOLF_SOUNDS.get(wolfSoundVariant));
     }
 
-    public static Holder<WolfSoundVariant> pickRandomSoundVariant(RegistryAccess p_392552_, RandomSource p_392469_) {
-        return p_392552_.lookupOrThrow(Registries.WOLF_SOUND_VARIANT).getRandom(p_392469_).orElseThrow();
+    public static Holder<WolfSoundVariant> pickRandomSoundVariant(final RegistryAccess registryAccess, final RandomSource random) {
+        return registryAccess.lookupOrThrow(Registries.WOLF_SOUND_VARIANT).getRandom(random).orElseThrow();
     }
 
-    public static enum SoundSet {
-        CLASSIC("classic", ""),
-        PUGLIN("puglin", "_puglin"),
-        SAD("sad", "_sad"),
-        ANGRY("angry", "_angry"),
-        GRUMPY("grumpy", "_grumpy"),
-        BIG("big", "_big"),
-        CUTE("cute", "_cute");
+    public enum SoundSet {
+        CLASSIC("classic", "wolf"),
+        PUGLIN("puglin", "wolf_puglin"),
+        SAD("sad", "wolf_sad"),
+        ANGRY("angry", "wolf_angry"),
+        GRUMPY("grumpy", "wolf_grumpy"),
+        BIG("big", "wolf_big"),
+        CUTE("cute", "wolf_cute");
 
         private final String identifier;
-        private final String soundEventSuffix;
+        private final String soundEventIdentifier;
 
-        private SoundSet(final String p_393467_, final String p_395756_) {
-            this.identifier = p_393467_;
-            this.soundEventSuffix = p_395756_;
+        SoundSet(final String identifier, final String soundEventIdentifier) {
+            this.identifier = identifier;
+            this.soundEventIdentifier = soundEventIdentifier;
         }
 
         public String getIdentifier() {
             return this.identifier;
         }
 
-        public String getSoundEventSuffix() {
-            return this.soundEventSuffix;
+        public String getSoundEventIdentifier() {
+            return this.soundEventIdentifier;
         }
     }
 }

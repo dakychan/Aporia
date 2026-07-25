@@ -18,22 +18,22 @@ public class TallFlowerBlock extends DoublePlantBlock implements BonemealableBlo
         return CODEC;
     }
 
-    public TallFlowerBlock(BlockBehaviour.Properties p_57296_) {
-        super(p_57296_);
+    public TallFlowerBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_256234_, BlockPos p_57304_, BlockState p_57305_) {
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_222573_, RandomSource p_222574_, BlockPos p_222575_, BlockState p_222576_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_222568_, RandomSource p_222569_, BlockPos p_222570_, BlockState p_222571_) {
-        popResource(p_222568_, p_222570_, new ItemStack(this));
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        popResource(level, pos, new ItemStack(this));
     }
 }

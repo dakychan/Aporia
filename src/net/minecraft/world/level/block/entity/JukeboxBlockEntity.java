@@ -25,8 +25,8 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
     private ItemStack item = ItemStack.EMPTY;
     private final JukeboxSongPlayer jukeboxSongPlayer = new JukeboxSongPlayer(this::onSongChanged, this.getBlockPos());
 
-    public JukeboxBlockEntity(BlockPos p_155613_, BlockState p_155614_) {
-        super(BlockEntityType.JUKEBOX, p_155613_, p_155614_);
+    public JukeboxBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.JUKEBOX, worldPosition, blockState);
     }
 
     public JukeboxSongPlayer getSongPlayer() {
@@ -38,62 +38,62 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
         this.setChanged();
     }
 
-    private void notifyItemChangedInJukebox(boolean p_342785_) {
+    private void notifyItemChangedInJukebox(final boolean wasInserted) {
         if (this.level != null && this.level.getBlockState(this.getBlockPos()) == this.getBlockState()) {
-            this.level.setBlock(this.getBlockPos(), this.getBlockState().setValue(JukeboxBlock.HAS_RECORD, p_342785_), 2);
+            this.level.setBlock(this.getBlockPos(), this.getBlockState().setValue(JukeboxBlock.HAS_RECORD, wasInserted), 2);
             this.level.gameEvent(GameEvent.BLOCK_CHANGE, this.getBlockPos(), GameEvent.Context.of(this.getBlockState()));
         }
     }
 
     public void popOutTheItem() {
         if (this.level != null && !this.level.isClientSide()) {
-            BlockPos blockpos = this.getBlockPos();
-            ItemStack itemstack = this.getTheItem();
-            if (!itemstack.isEmpty()) {
+            BlockPos pos = this.getBlockPos();
+            ItemStack itemBeforePoppingOut = this.getTheItem();
+            if (!itemBeforePoppingOut.isEmpty()) {
                 this.removeTheItem();
-                Vec3 vec3 = Vec3.atLowerCornerWithOffset(blockpos, 0.5, 1.01, 0.5).offsetRandomXZ(this.level.random, 0.7F);
-                ItemStack itemstack1 = itemstack.copy();
-                ItemEntity itementity = new ItemEntity(this.level, vec3.x(), vec3.y(), vec3.z(), itemstack1);
-                itementity.setDefaultPickUpDelay();
-                this.level.addFreshEntity(itementity);
+                Vec3 itemPos = Vec3.atLowerCornerWithOffset(pos, 0.5, 1.01, 0.5).offsetRandomXZ(this.level.getRandom(), 0.7F);
+                ItemStack itemStack = itemBeforePoppingOut.copy();
+                ItemEntity entity = new ItemEntity(this.level, itemPos.x(), itemPos.y(), itemPos.z(), itemStack);
+                entity.setDefaultPickUpDelay();
+                this.level.addFreshEntity(entity);
                 this.onSongChanged();
             }
         }
     }
 
-    public static void tick(Level p_273615_, BlockPos p_273143_, BlockState p_273372_, JukeboxBlockEntity p_343932_) {
-        p_343932_.jukeboxSongPlayer.tick(p_273615_, p_273372_);
+    public static void tick(final Level level, final BlockPos blockPos, final BlockState blockState, final JukeboxBlockEntity jukebox) {
+        jukebox.jukeboxSongPlayer.tick(level, blockState);
     }
 
     public int getComparatorOutput() {
-        return JukeboxSong.fromStack(this.level.registryAccess(), this.item).map(Holder::value).map(JukeboxSong::comparatorOutput).orElse(0);
+        return JukeboxSong.fromStack(this.item).map(Holder::value).map(JukeboxSong::comparatorOutput).orElse(0);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_407761_) {
-        super.loadAdditional(p_407761_);
-        ItemStack itemstack = p_407761_.read("RecordItem", ItemStack.CODEC).orElse(ItemStack.EMPTY);
-        if (!this.item.isEmpty() && !ItemStack.isSameItemSameComponents(itemstack, this.item)) {
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        ItemStack newItem = input.read("RecordItem", ItemStack.CODEC).orElse(ItemStack.EMPTY);
+        if (!this.item.isEmpty() && !ItemStack.isSameItemSameComponents(newItem, this.item)) {
             this.jukeboxSongPlayer.stop(this.level, this.getBlockState());
         }
 
-        this.item = itemstack;
-        p_407761_.getLong("ticks_since_song_started")
+        this.item = newItem;
+        input.getLong("ticks_since_song_started")
             .ifPresent(
-                p_405711_ -> JukeboxSong.fromStack(p_407761_.lookup(), this.item)
-                    .ifPresent(p_390967_ -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)p_390967_, p_405711_))
+                ticksSinceSongStarted -> JukeboxSong.fromStack(this.item)
+                    .ifPresent(song -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)song, ticksSinceSongStarted))
             );
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_407537_) {
-        super.saveAdditional(p_407537_);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
         if (!this.getTheItem().isEmpty()) {
-            p_407537_.store("RecordItem", ItemStack.CODEC, this.getTheItem());
+            output.store("RecordItem", ItemStack.CODEC, this.getTheItem());
         }
 
         if (this.jukeboxSongPlayer.getSong() != null) {
-            p_407537_.putLong("ticks_since_song_started", this.jukeboxSongPlayer.getTicksSinceSongStarted());
+            output.putLong("ticks_since_song_started", this.jukeboxSongPlayer.getTicksSinceSongStarted());
         }
     }
 
@@ -103,20 +103,20 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
     }
 
     @Override
-    public ItemStack splitTheItem(int p_309876_) {
-        ItemStack itemstack = this.item;
+    public ItemStack splitTheItem(final int count) {
+        ItemStack retrievedItem = this.item;
         this.setTheItem(ItemStack.EMPTY);
-        return itemstack;
+        return retrievedItem;
     }
 
     @Override
-    public void setTheItem(ItemStack p_309430_) {
-        this.item = p_309430_;
-        boolean flag = !this.item.isEmpty();
-        Optional<Holder<JukeboxSong>> optional = JukeboxSong.fromStack(this.level.registryAccess(), this.item);
-        this.notifyItemChangedInJukebox(flag);
-        if (flag && optional.isPresent()) {
-            this.jukeboxSongPlayer.play(this.level, optional.get());
+    public void setTheItem(final ItemStack itemStack) {
+        this.item = itemStack;
+        boolean itemWasInserted = !this.item.isEmpty();
+        Optional<Holder<JukeboxSong>> maybeSong = JukeboxSong.fromStack(this.item);
+        this.notifyItemChangedInJukebox(itemWasInserted);
+        if (itemWasInserted && maybeSong.isPresent()) {
+            this.jukeboxSongPlayer.play(this.level, maybeSong.get());
         } else {
             this.jukeboxSongPlayer.stop(this.level, this.getBlockState());
         }
@@ -140,31 +140,30 @@ public class JukeboxBlockEntity extends BlockEntity implements ContainerSingleIt
     }
 
     @Override
-    public boolean canPlaceItem(int p_273369_, ItemStack p_273689_) {
-        return p_273689_.has(DataComponents.JUKEBOX_PLAYABLE) && this.getItem(p_273369_).isEmpty();
+    public boolean canPlaceItem(final int slot, final ItemStack itemStack) {
+        return itemStack.has(DataComponents.JUKEBOX_PLAYABLE) && this.getItem(slot).isEmpty();
     }
 
     @Override
-    public boolean canTakeItem(Container p_273497_, int p_273168_, ItemStack p_273785_) {
-        return p_273497_.hasAnyMatching(ItemStack::isEmpty);
+    public boolean canTakeItem(final Container into, final int slot, final ItemStack itemStack) {
+        return into.hasAnyMatching(ItemStack::isEmpty);
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos p_392593_, BlockState p_397692_) {
+    public void preRemoveSideEffects(final BlockPos pos, final BlockState state) {
         this.popOutTheItem();
     }
 
     @VisibleForTesting
-    public void setSongItemWithoutPlaying(ItemStack p_343692_) {
-        this.item = p_343692_;
-        JukeboxSong.fromStack(this.level.registryAccess(), p_343692_).ifPresent(p_343857_ -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)p_343857_, 0L));
+    public void setSongItemWithoutPlaying(final ItemStack itemStack) {
+        this.item = itemStack;
+        JukeboxSong.fromStack(itemStack).ifPresent(song -> this.jukeboxSongPlayer.setSongWithoutPlaying((Holder<JukeboxSong>)song, 0L));
         this.level.updateNeighborsAt(this.getBlockPos(), this.getBlockState().getBlock());
         this.setChanged();
     }
 
     @VisibleForTesting
     public void tryForcePlaySong() {
-        JukeboxSong.fromStack(this.level.registryAccess(), this.getTheItem())
-            .ifPresent(p_343793_ -> this.jukeboxSongPlayer.play(this.level, (Holder<JukeboxSong>)p_343793_));
+        JukeboxSong.fromStack(this.getTheItem()).ifPresent(song -> this.jukeboxSongPlayer.play(this.level, (Holder<JukeboxSong>)song));
     }
 }

@@ -29,55 +29,59 @@ public class RepeaterBlock extends DiodeBlock {
         return CODEC;
     }
 
-    protected RepeaterBlock(BlockBehaviour.Properties p_55801_) {
-        super(p_55801_);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(DELAY, 1).setValue(LOCKED, false).setValue(POWERED, false));
+    protected RepeaterBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.registerDefaultState(
+            this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(DELAY, 1).setValue(LOCKED, false).setValue(POWERED, false)
+        );
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_55809_, Level p_55810_, BlockPos p_55811_, Player p_55812_, BlockHitResult p_55814_) {
-        if (!p_55812_.getAbilities().mayBuild) {
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!player.getAbilities().mayBuild) {
             return InteractionResult.PASS;
-        } else {
-            p_55810_.setBlock(p_55811_, p_55809_.cycle(DELAY), 3);
-            return InteractionResult.SUCCESS;
         }
+
+        level.setBlock(pos, state.cycle(DELAY), 3);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected int getDelay(BlockState p_55830_) {
-        return p_55830_.getValue(DELAY) * 2;
+    protected int getDelay(final BlockState state) {
+        return state.getValue(DELAY) * 2;
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_55803_) {
-        BlockState blockstate = super.getStateForPlacement(p_55803_);
-        return blockstate.setValue(LOCKED, this.isLocked(p_55803_.getLevel(), p_55803_.getClickedPos(), blockstate));
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = super.getStateForPlacement(context);
+        return state.setValue(LOCKED, this.isLocked(context.getLevel(), context.getClickedPos(), state));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_55821_,
-        LevelReader p_365910_,
-        ScheduledTickAccess p_369041_,
-        BlockPos p_55825_,
-        Direction p_55822_,
-        BlockPos p_55826_,
-        BlockState p_55823_,
-        RandomSource p_370128_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_55822_ == Direction.DOWN && !this.canSurviveOn(p_365910_, p_55826_, p_55823_)) {
+        if (directionToNeighbour == Direction.DOWN && !this.canSurviveOn(level, neighbourPos, neighbourState)) {
             return Blocks.AIR.defaultBlockState();
         } else {
-            return !p_365910_.isClientSide() && p_55822_.getAxis() != p_55821_.getValue(FACING).getAxis()
-                ? p_55821_.setValue(LOCKED, this.isLocked(p_365910_, p_55825_, p_55821_))
-                : super.updateShape(p_55821_, p_365910_, p_369041_, p_55825_, p_55822_, p_55826_, p_55823_, p_370128_);
+            return !level.isClientSide() && directionToNeighbour.getAxis() != state.getValue(FACING).getAxis()
+                ? state.setValue(LOCKED, this.isLocked(level, pos, state))
+                : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
         }
     }
 
     @Override
-    public boolean isLocked(LevelReader p_55805_, BlockPos p_55806_, BlockState p_55807_) {
-        return this.getAlternateSignal(p_55805_, p_55806_, p_55807_) > 0;
+    public boolean isLocked(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return this.getAlternateSignal(level, pos, state) > 0;
     }
 
     @Override
@@ -86,26 +90,26 @@ public class RepeaterBlock extends DiodeBlock {
     }
 
     @Override
-    public void animateTick(BlockState p_221964_, Level p_221965_, BlockPos p_221966_, RandomSource p_221967_) {
-        if (p_221964_.getValue(POWERED)) {
-            Direction direction = p_221964_.getValue(FACING);
-            double d0 = p_221966_.getX() + 0.5 + (p_221967_.nextDouble() - 0.5) * 0.2;
-            double d1 = p_221966_.getY() + 0.4 + (p_221967_.nextDouble() - 0.5) * 0.2;
-            double d2 = p_221966_.getZ() + 0.5 + (p_221967_.nextDouble() - 0.5) * 0.2;
-            float f = -5.0F;
-            if (p_221967_.nextBoolean()) {
-                f = p_221964_.getValue(DELAY) * 2 - 1;
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(POWERED)) {
+            Direction direction = state.getValue(FACING);
+            double x = pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.2;
+            double y = pos.getY() + 0.4 + (random.nextDouble() - 0.5) * 0.2;
+            double z = pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.2;
+            float offset = -5.0F;
+            if (random.nextBoolean()) {
+                offset = state.getValue(DELAY) * 2 - 1;
             }
 
-            f /= 16.0F;
-            double d3 = f * direction.getStepX();
-            double d4 = f * direction.getStepZ();
-            p_221965_.addParticle(DustParticleOptions.REDSTONE, d0 + d3, d1, d2 + d4, 0.0, 0.0, 0.0);
+            offset /= 16.0F;
+            double xo = offset * direction.getStepX();
+            double zo = offset * direction.getStepZ();
+            level.addParticle(DustParticleOptions.REDSTONE, x + xo, y, z + zo, 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_55828_) {
-        p_55828_.add(FACING, DELAY, LOCKED, POWERED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, DELAY, LOCKED, POWERED);
     }
 }

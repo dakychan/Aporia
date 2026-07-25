@@ -1,7 +1,6 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ImageButton;
 import net.minecraft.client.gui.navigation.ScreenPosition;
 import net.minecraft.client.gui.screens.recipebook.RecipeBookComponent;
@@ -11,21 +10,18 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.RecipeBookMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.crafting.display.RecipeDisplay;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends AbstractContainerScreen<T> implements RecipeUpdateListener {
     private final RecipeBookComponent<?> recipeBookComponent;
     private boolean widthTooNarrow;
 
-    public AbstractRecipeBookScreen(T p_365857_, RecipeBookComponent<?> p_370150_, Inventory p_369435_, Component p_366314_) {
-        super(p_365857_, p_369435_, p_366314_);
-        this.recipeBookComponent = p_370150_;
+    public AbstractRecipeBookScreen(final T menu, final RecipeBookComponent<?> recipeBookComponent, final Inventory inventory, final Component title) {
+        super(menu, inventory, title);
+        this.recipeBookComponent = recipeBookComponent;
     }
 
     @Override
@@ -40,12 +36,12 @@ public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends
     protected abstract ScreenPosition getRecipeBookButtonPosition();
 
     private void initButton() {
-        ScreenPosition screenposition = this.getRecipeBookButtonPosition();
-        this.addRenderableWidget(new ImageButton(screenposition.x(), screenposition.y(), 20, 18, RecipeBookComponent.RECIPE_BUTTON_SPRITES, p_367715_ -> {
+        ScreenPosition buttonPos = this.getRecipeBookButtonPosition();
+        this.addRenderableWidget(new ImageButton(buttonPos.x(), buttonPos.y(), 20, 18, RecipeBookComponent.RECIPE_BUTTON_SPRITES, button -> {
             this.recipeBookComponent.toggleVisibility();
             this.leftPos = this.recipeBookComponent.updateScreenPosition(this.width, this.imageWidth);
-            ScreenPosition screenposition1 = this.getRecipeBookButtonPosition();
-            p_367715_.setPosition(screenposition1.x(), screenposition1.y());
+            ScreenPosition updatedButtonPos = this.getRecipeBookButtonPosition();
+            button.setPosition(updatedButtonPos.x(), updatedButtonPos.y());
             this.onRecipeBookButtonClick();
         }));
         this.addWidget(this.recipeBookComponent);
@@ -55,26 +51,25 @@ public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends
     }
 
     @Override
-    public void render(GuiGraphics p_369592_, int p_362399_, int p_367501_, float p_361085_) {
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
         if (this.recipeBookComponent.isVisible() && this.widthTooNarrow) {
-            this.renderBackground(p_369592_, p_362399_, p_367501_, p_361085_);
+            this.extractBackground(graphics, mouseX, mouseY, a);
         } else {
-            super.renderContents(p_369592_, p_362399_, p_367501_, p_361085_);
+            super.extractContents(graphics, mouseX, mouseY, a);
         }
 
-        p_369592_.nextStratum();
-        this.recipeBookComponent.render(p_369592_, p_362399_, p_367501_, p_361085_);
-        p_369592_.nextStratum();
-        this.renderCarriedItem(p_369592_, p_362399_, p_367501_);
-        this.renderSnapbackItem(p_369592_);
-        this.renderTooltip(p_369592_, p_362399_, p_367501_);
-        this.recipeBookComponent.renderTooltip(p_369592_, p_362399_, p_367501_, this.hoveredSlot);
+        graphics.nextStratum();
+        this.recipeBookComponent.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.nextStratum();
+        this.extractCarriedItem(graphics, mouseX, mouseY);
+        this.extractTooltip(graphics, mouseX, mouseY);
+        this.recipeBookComponent.extractTooltip(graphics, mouseX, mouseY, this.hoveredSlot);
     }
 
     @Override
-    protected void renderSlots(GuiGraphics p_361216_, int p_452650_, int p_453121_) {
-        super.renderSlots(p_361216_, p_452650_, p_453121_);
-        this.recipeBookComponent.renderGhostRecipe(p_361216_, this.isBiggerResultSlot());
+    protected void extractSlots(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY) {
+        super.extractSlots(graphics, mouseX, mouseY);
+        this.recipeBookComponent.extractGhostRecipe(graphics, this.isBiggerResultSlot());
     }
 
     protected boolean isBiggerResultSlot() {
@@ -82,45 +77,45 @@ public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends
     }
 
     @Override
-    public boolean charTyped(CharacterEvent p_427241_) {
-        return this.recipeBookComponent.charTyped(p_427241_) ? true : super.charTyped(p_427241_);
+    public boolean charTyped(final CharacterEvent event) {
+        return this.recipeBookComponent.charTyped(event) ? true : super.charTyped(event);
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_430781_) {
-        return this.recipeBookComponent.keyPressed(p_430781_) ? true : super.keyPressed(p_430781_);
+    public boolean keyPressed(final KeyEvent event) {
+        return this.recipeBookComponent.keyPressed(event) ? true : super.keyPressed(event);
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_427917_, boolean p_423683_) {
-        if (this.recipeBookComponent.mouseClicked(p_427917_, p_423683_)) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        if (this.recipeBookComponent.mouseClicked(event, doubleClick)) {
             this.setFocused(this.recipeBookComponent);
             return true;
         } else {
-            return this.widthTooNarrow && this.recipeBookComponent.isVisible() ? true : super.mouseClicked(p_427917_, p_423683_);
+            return this.widthTooNarrow && this.recipeBookComponent.isVisible() ? true : super.mouseClicked(event, doubleClick);
         }
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent p_423602_, double p_422571_, double p_423110_) {
-        return this.recipeBookComponent.mouseDragged(p_423602_, p_422571_, p_423110_) ? true : super.mouseDragged(p_423602_, p_422571_, p_423110_);
+    public boolean mouseDragged(final MouseButtonEvent event, final double dx, final double dy) {
+        return this.recipeBookComponent.mouseDragged(event, dx, dy) ? true : super.mouseDragged(event, dx, dy);
     }
 
     @Override
-    protected boolean isHovering(int p_365583_, int p_365247_, int p_369651_, int p_367039_, double p_362562_, double p_363251_) {
-        return (!this.widthTooNarrow || !this.recipeBookComponent.isVisible()) && super.isHovering(p_365583_, p_365247_, p_369651_, p_367039_, p_362562_, p_363251_);
+    protected boolean isHovering(final int left, final int top, final int w, final int h, final double xm, final double ym) {
+        return (!this.widthTooNarrow || !this.recipeBookComponent.isVisible()) && super.isHovering(left, top, w, h, xm, ym);
     }
 
     @Override
-    protected boolean hasClickedOutside(double p_361722_, double p_361253_, int p_370022_, int p_369977_) {
-        boolean flag = p_361722_ < p_370022_ || p_361253_ < p_369977_ || p_361722_ >= p_370022_ + this.imageWidth || p_361253_ >= p_369977_ + this.imageHeight;
-        return this.recipeBookComponent.hasClickedOutside(p_361722_, p_361253_, this.leftPos, this.topPos, this.imageWidth, this.imageHeight) && flag;
+    protected boolean hasClickedOutside(final double mx, final double my, final int xo, final int yo) {
+        boolean clickedOutside = mx < xo || my < yo || mx >= xo + this.imageWidth || my >= yo + this.imageHeight;
+        return this.recipeBookComponent.hasClickedOutside(mx, my, this.leftPos, this.topPos, this.imageWidth, this.imageHeight) && clickedOutside;
     }
 
     @Override
-    protected void slotClicked(Slot p_366850_, int p_365209_, int p_363173_, ClickType p_369612_) {
-        super.slotClicked(p_366850_, p_365209_, p_363173_, p_369612_);
-        this.recipeBookComponent.slotClicked(p_366850_);
+    protected void slotClicked(final Slot slot, final int slotId, final int buttonNum, final ContainerInput containerInput) {
+        super.slotClicked(slot, slotId, buttonNum, containerInput);
+        this.recipeBookComponent.slotClicked(slot);
     }
 
     @Override
@@ -135,7 +130,7 @@ public abstract class AbstractRecipeBookScreen<T extends RecipeBookMenu> extends
     }
 
     @Override
-    public void fillGhostRecipe(RecipeDisplay p_367089_) {
-        this.recipeBookComponent.fillGhostRecipe(p_367089_);
+    public void fillGhostRecipe(final RecipeDisplay display) {
+        this.recipeBookComponent.fillGhostRecipe(display);
     }
 }

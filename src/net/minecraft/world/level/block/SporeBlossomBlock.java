@@ -27,51 +27,51 @@ public class SporeBlossomBlock extends Block {
         return CODEC;
     }
 
-    public SporeBlossomBlock(BlockBehaviour.Properties p_154697_) {
-        super(p_154697_);
+    public SporeBlossomBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_154709_, LevelReader p_154710_, BlockPos p_154711_) {
-        return Block.canSupportCenter(p_154710_, p_154711_.above(), Direction.DOWN) && !p_154710_.isWaterAt(p_154711_);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return Block.canSupportCenter(level, pos.above(), Direction.DOWN) && !level.isWaterAt(pos);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_154713_,
-        LevelReader p_364689_,
-        ScheduledTickAccess p_361752_,
-        BlockPos p_154717_,
-        Direction p_154714_,
-        BlockPos p_154718_,
-        BlockState p_154715_,
-        RandomSource p_368691_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_154714_ == Direction.UP && !this.canSurvive(p_154713_, p_364689_, p_154717_)
+        return directionToNeighbour == Direction.UP && !this.canSurvive(state, level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_154713_, p_364689_, p_361752_, p_154717_, p_154714_, p_154718_, p_154715_, p_368691_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public void animateTick(BlockState p_222503_, Level p_222504_, BlockPos p_222505_, RandomSource p_222506_) {
-        int i = p_222505_.getX();
-        int j = p_222505_.getY();
-        int k = p_222505_.getZ();
-        double d0 = i + p_222506_.nextDouble();
-        double d1 = j + 0.7;
-        double d2 = k + p_222506_.nextDouble();
-        p_222504_.addParticle(ParticleTypes.FALLING_SPORE_BLOSSOM, d0, d1, d2, 0.0, 0.0, 0.0);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        int plantX = pos.getX();
+        int plantY = pos.getY();
+        int plantZ = pos.getZ();
+        double xFalling = plantX + random.nextDouble();
+        double yFalling = plantY + 0.7;
+        double zFalling = plantZ + random.nextDouble();
+        level.addParticle(ParticleTypes.FALLING_SPORE_BLOSSOM, xFalling, yFalling, zFalling, 0.0, 0.0, 0.0);
+        BlockPos.MutableBlockPos ambientPos = new BlockPos.MutableBlockPos();
 
-        for (int l = 0; l < 14; l++) {
-            blockpos$mutableblockpos.set(i + Mth.nextInt(p_222506_, -10, 10), j - p_222506_.nextInt(10), k + Mth.nextInt(p_222506_, -10, 10));
-            BlockState blockstate = p_222504_.getBlockState(blockpos$mutableblockpos);
-            if (!blockstate.isCollisionShapeFullBlock(p_222504_, blockpos$mutableblockpos)) {
-                p_222504_.addParticle(
+        for (int i = 0; i < 14; i++) {
+            ambientPos.set(plantX + Mth.nextInt(random, -10, 10), plantY - random.nextInt(10), plantZ + Mth.nextInt(random, -10, 10));
+            BlockState particlePosState = level.getBlockState(ambientPos);
+            if (!particlePosState.isCollisionShapeFullBlock(level, ambientPos)) {
+                level.addParticle(
                     ParticleTypes.SPORE_BLOSSOM_AIR,
-                    blockpos$mutableblockpos.getX() + p_222506_.nextDouble(),
-                    blockpos$mutableblockpos.getY() + p_222506_.nextDouble(),
-                    blockpos$mutableblockpos.getZ() + p_222506_.nextDouble(),
+                    ambientPos.getX() + random.nextDouble(),
+                    ambientPos.getY() + random.nextDouble(),
+                    ambientPos.getZ() + random.nextDouble(),
                     0.0,
                     0.0,
                     0.0
@@ -81,7 +81,7 @@ public class SporeBlossomBlock extends Block {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_154699_, BlockGetter p_154700_, BlockPos p_154701_, CollisionContext p_154702_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 }

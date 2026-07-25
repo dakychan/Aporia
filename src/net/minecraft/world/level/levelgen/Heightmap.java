@@ -27,51 +27,50 @@ import org.slf4j.Logger;
 
 public class Heightmap {
     private static final Logger LOGGER = LogUtils.getLogger();
-    static final Predicate<BlockState> NOT_AIR = p_360584_ -> !p_360584_.isAir();
-    static final Predicate<BlockState> MATERIAL_MOTION_BLOCKING = BlockBehaviour.BlockStateBase::blocksMotion;
+    private static final Predicate<BlockState> NOT_AIR = input -> !input.isAir();
+    private static final Predicate<BlockState> MATERIAL_MOTION_BLOCKING = BlockBehaviour.BlockStateBase::blocksMotion;
     private final BitStorage data;
     private final Predicate<BlockState> isOpaque;
     private final ChunkAccess chunk;
 
-    public Heightmap(ChunkAccess p_64237_, Heightmap.Types p_64238_) {
-        this.isOpaque = p_64238_.isOpaque();
-        this.chunk = p_64237_;
-        int i = Mth.ceillog2(p_64237_.getHeight() + 1);
-        this.data = new SimpleBitStorage(i, 256);
+    public Heightmap(final ChunkAccess chunk, final Heightmap.Types heightmapType) {
+        this.isOpaque = heightmapType.isOpaque();
+        this.chunk = chunk;
+        int heightBits = Mth.ceillog2(chunk.getHeight() + 1);
+        this.data = new SimpleBitStorage(heightBits, 256);
     }
 
-    @SuppressWarnings("removal")
-    public static void primeHeightmaps(ChunkAccess p_64257_, Set<Heightmap.Types> p_64258_) {
-        if (!p_64258_.isEmpty()) {
-            int i = p_64258_.size();
-            ObjectList<Heightmap> objectlist = new ObjectArrayList<>(i);
-            ObjectListIterator<Heightmap> objectlistiterator = objectlist.iterator();
-            int j = p_64257_.getHighestSectionPosition() + 16;
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public static void primeHeightmaps(final ChunkAccess chunk, final Set<Heightmap.Types> types) {
+        if (!types.isEmpty()) {
+            int size = types.size();
+            ObjectList<Heightmap> heightmaps = new ObjectArrayList<>(size);
+            ObjectListIterator<Heightmap> iterator = heightmaps.iterator();
+            int highestSectionPosition = chunk.getHighestSectionPosition() + 16;
+            BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-            for (int k = 0; k < 16; k++) {
-                for (int l = 0; l < 16; l++) {
-                    for (Heightmap.Types heightmap$types : p_64258_) {
-                        objectlist.add(p_64257_.getOrCreateHeightmapUnprimed(heightmap$types));
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
+                    for (Heightmap.Types type : types) {
+                        heightmaps.add(chunk.getOrCreateHeightmapUnprimed(type));
                     }
 
-                    for (int i1 = j - 1; i1 >= p_64257_.getMinY(); i1--) {
-                        blockpos$mutableblockpos.set(k, i1, l);
-                        BlockState blockstate = p_64257_.getBlockState(blockpos$mutableblockpos);
-                        if (!blockstate.is(Blocks.AIR)) {
-                            while (objectlistiterator.hasNext()) {
-                                Heightmap heightmap = objectlistiterator.next();
-                                if (heightmap.isOpaque.test(blockstate)) {
-                                    heightmap.setHeight(k, l, i1 + 1);
-                                    objectlistiterator.remove();
+                    for (int y = highestSectionPosition - 1; y >= chunk.getMinY(); y--) {
+                        pos.set(x, y, z);
+                        BlockState state = chunk.getBlockState(pos);
+                        if (!state.is(Blocks.AIR)) {
+                            while (iterator.hasNext()) {
+                                Heightmap heightmap = iterator.next();
+                                if (heightmap.isOpaque.test(state)) {
+                                    heightmap.setHeight(x, z, y + 1);
+                                    iterator.remove();
                                 }
                             }
 
-                            if (objectlist.isEmpty()) {
+                            if (heightmaps.isEmpty()) {
                                 break;
                             }
 
-                            objectlistiterator.back(i);
+                            iterator.back(size);
                         }
                     }
                 }
@@ -79,60 +78,58 @@ public class Heightmap {
         }
     }
 
-    public boolean update(int p_64250_, int p_64251_, int p_64252_, BlockState p_64253_) {
-        int i = this.getFirstAvailable(p_64250_, p_64252_);
-        if (p_64251_ <= i - 2) {
-            return false;
-        } else {
-            if (this.isOpaque.test(p_64253_)) {
-                if (p_64251_ >= i) {
-                    this.setHeight(p_64250_, p_64252_, p_64251_ + 1);
-                    return true;
-                }
-            } else if (i - 1 == p_64251_) {
-                BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-
-                for (int j = p_64251_ - 1; j >= this.chunk.getMinY(); j--) {
-                    blockpos$mutableblockpos.set(p_64250_, j, p_64252_);
-                    if (this.isOpaque.test(this.chunk.getBlockState(blockpos$mutableblockpos))) {
-                        this.setHeight(p_64250_, p_64252_, j + 1);
-                        return true;
-                    }
-                }
-
-                this.setHeight(p_64250_, p_64252_, this.chunk.getMinY());
-                return true;
-            }
-
+    public boolean update(final int localX, final int localY, final int localZ, final BlockState state) {
+        int firstAvailable = this.getFirstAvailable(localX, localZ);
+        if (localY <= firstAvailable - 2) {
             return false;
         }
+
+        if (this.isOpaque.test(state)) {
+            if (localY >= firstAvailable) {
+                this.setHeight(localX, localZ, localY + 1);
+                return true;
+            }
+        } else if (firstAvailable - 1 == localY) {
+            BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+            for (int y = localY - 1; y >= this.chunk.getMinY(); y--) {
+                pos.set(localX, y, localZ);
+                if (this.isOpaque.test(this.chunk.getBlockState(pos))) {
+                    this.setHeight(localX, localZ, y + 1);
+                    return true;
+                }
+            }
+
+            this.setHeight(localX, localZ, this.chunk.getMinY());
+            return true;
+        }
+
+        return false;
     }
 
-    public int getFirstAvailable(int p_64243_, int p_64244_) {
-        return this.getFirstAvailable(getIndex(p_64243_, p_64244_));
+    public int getFirstAvailable(final int x, final int z) {
+        return this.getFirstAvailable(getIndex(x, z));
     }
 
-    public int getHighestTaken(int p_158369_, int p_158370_) {
-        return this.getFirstAvailable(getIndex(p_158369_, p_158370_)) - 1;
+    public int getHighestTaken(final int x, final int z) {
+        return this.getFirstAvailable(getIndex(x, z)) - 1;
     }
 
-    private int getFirstAvailable(int p_64241_) {
-        return this.data.get(p_64241_) + this.chunk.getMinY();
+    private int getFirstAvailable(final int index) {
+        return this.data.get(index) + this.chunk.getMinY();
     }
 
-    private void setHeight(int p_64246_, int p_64247_, int p_64248_) {
-        this.data.set(getIndex(p_64246_, p_64247_), p_64248_ - this.chunk.getMinY());
+    private void setHeight(final int x, final int z, final int height) {
+        this.data.set(getIndex(x, z), height - this.chunk.getMinY());
     }
 
-    public void setRawData(ChunkAccess p_158365_, Heightmap.Types p_158366_, long[] p_158367_) {
-        long[] along = this.data.getRaw();
-        if (along.length == p_158367_.length) {
-            System.arraycopy(p_158367_, 0, along, 0, p_158367_.length);
+    public void setRawData(final ChunkAccess chunk, final Heightmap.Types type, final long[] data) {
+        long[] rawData = this.data.getRaw();
+        if (rawData.length == data.length) {
+            System.arraycopy(data, 0, rawData, 0, data.length);
         } else {
-            LOGGER.warn(
-                "Ignoring heightmap data for chunk {}, size does not match; expected: {}, got: {}", p_158365_.getPos(), along.length, p_158367_.length
-            );
-            primeHeightmaps(p_158365_, EnumSet.of(p_158366_));
+            LOGGER.warn("Ignoring heightmap data for chunk {}, size does not match; expected: {}, got: {}", chunk.getPos(), rawData.length, data.length);
+            primeHeightmaps(chunk, EnumSet.of(type));
         }
     }
 
@@ -140,38 +137,36 @@ public class Heightmap {
         return this.data.getRaw();
     }
 
-    private static int getIndex(int p_64266_, int p_64267_) {
-        return p_64266_ + p_64267_ * 16;
+    private static int getIndex(final int x, final int z) {
+        return x + z * 16;
     }
 
-    public static enum Types implements StringRepresentable {
+    public enum Types implements StringRepresentable {
         WORLD_SURFACE_WG(0, "WORLD_SURFACE_WG", Heightmap.Usage.WORLDGEN, Heightmap.NOT_AIR),
         WORLD_SURFACE(1, "WORLD_SURFACE", Heightmap.Usage.CLIENT, Heightmap.NOT_AIR),
         OCEAN_FLOOR_WG(2, "OCEAN_FLOOR_WG", Heightmap.Usage.WORLDGEN, Heightmap.MATERIAL_MOTION_BLOCKING),
         OCEAN_FLOOR(3, "OCEAN_FLOOR", Heightmap.Usage.LIVE_WORLD, Heightmap.MATERIAL_MOTION_BLOCKING),
-        MOTION_BLOCKING(4, "MOTION_BLOCKING", Heightmap.Usage.CLIENT, p_360586_ -> p_360586_.blocksMotion() || !p_360586_.getFluidState().isEmpty()),
+        MOTION_BLOCKING(4, "MOTION_BLOCKING", Heightmap.Usage.CLIENT, input -> input.blocksMotion() || !input.getFluidState().isEmpty()),
         MOTION_BLOCKING_NO_LEAVES(
             5,
             "MOTION_BLOCKING_NO_LEAVES",
             Heightmap.Usage.CLIENT,
-            p_360585_ -> (p_360585_.blocksMotion() || !p_360585_.getFluidState().isEmpty()) && !(p_360585_.getBlock() instanceof LeavesBlock)
+            input -> (input.blocksMotion() || !input.getFluidState().isEmpty()) && !(input.getBlock() instanceof LeavesBlock)
         );
 
         public static final Codec<Heightmap.Types> CODEC = StringRepresentable.fromEnum(Heightmap.Types::values);
-        private static final IntFunction<Heightmap.Types> BY_ID = ByIdMap.continuous(
-            p_391036_ -> p_391036_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-        );
-        public static final StreamCodec<ByteBuf, Heightmap.Types> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_391037_ -> p_391037_.id);
+        private static final IntFunction<Heightmap.Types> BY_ID = ByIdMap.continuous(t -> t.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+        public static final StreamCodec<ByteBuf, Heightmap.Types> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, t -> t.id);
         private final int id;
         private final String serializationKey;
         private final Heightmap.Usage usage;
         private final Predicate<BlockState> isOpaque;
 
-        private Types(final int p_391676_, final String p_64284_, final Heightmap.Usage p_64285_, final Predicate<BlockState> p_64286_) {
-            this.id = p_391676_;
-            this.serializationKey = p_64284_;
-            this.usage = p_64285_;
-            this.isOpaque = p_64286_;
+        Types(final int id, final String serializationKey, final Heightmap.Usage usage, final Predicate<BlockState> isOpaque) {
+            this.id = id;
+            this.serializationKey = serializationKey;
+            this.usage = usage;
+            this.isOpaque = isOpaque;
         }
 
         public String getSerializationKey() {
@@ -196,7 +191,7 @@ public class Heightmap {
         }
     }
 
-    public static enum Usage {
+    public enum Usage {
         WORLDGEN,
         LIVE_WORLD,
         CLIENT;

@@ -1,118 +1,109 @@
 package net.minecraft.world.level.storage.loot;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
-import java.util.Set;
 import java.util.function.Function;
 import net.minecraft.util.Mth;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProvider;
 import net.minecraft.world.level.storage.loot.providers.number.NumberProviders;
 import org.jspecify.annotations.Nullable;
 
-public class IntRange {
+public class IntRange implements LootContextUser {
     private static final Codec<IntRange> RECORD_CODEC = RecordCodecBuilder.create(
-        p_327547_ -> p_327547_.group(
-                NumberProviders.CODEC.optionalFieldOf("min").forGetter(p_296994_ -> Optional.ofNullable(p_296994_.min)),
-                NumberProviders.CODEC.optionalFieldOf("max").forGetter(p_296996_ -> Optional.ofNullable(p_296996_.max))
+        i -> i.group(
+                NumberProviders.CODEC.optionalFieldOf("min").forGetter(r -> Optional.ofNullable(r.min)),
+                NumberProviders.CODEC.optionalFieldOf("max").forGetter(r -> Optional.ofNullable(r.max))
             )
-            .apply(p_327547_, IntRange::new)
+            .apply(i, IntRange::new)
     );
-    public static final Codec<IntRange> CODEC = Codec.either(Codec.INT, RECORD_CODEC)
-        .xmap(p_296998_ -> p_296998_.map(IntRange::exact, Function.identity()), p_296997_ -> {
-            OptionalInt optionalint = p_296997_.unpackExact();
-            return optionalint.isPresent() ? Either.left(optionalint.getAsInt()) : Either.right(p_296997_);
-        });
+    public static final Codec<IntRange> CODEC = Codec.either(Codec.INT, RECORD_CODEC).xmap(e -> e.map(IntRange::exact, Function.identity()), range -> {
+        OptionalInt exact = range.unpackExact();
+        return exact.isPresent() ? Either.left(exact.getAsInt()) : Either.right(range);
+    });
     private final @Nullable NumberProvider min;
     private final @Nullable NumberProvider max;
     private final IntRange.IntLimiter limiter;
     private final IntRange.IntChecker predicate;
 
-    public Set<ContextKey<?>> getReferencedContextParams() {
-        Builder<ContextKey<?>> builder = ImmutableSet.builder();
+    @Override
+    public void validate(final ValidationContext context) {
+        LootContextUser.super.validate(context);
         if (this.min != null) {
-            builder.addAll(this.min.getReferencedContextParams());
+            Validatable.validate(context, "min", this.min);
         }
 
         if (this.max != null) {
-            builder.addAll(this.max.getReferencedContextParams());
+            Validatable.validate(context, "max", this.max);
         }
-
-        return builder.build();
     }
 
-    private IntRange(Optional<NumberProvider> p_300812_, Optional<NumberProvider> p_298905_) {
-        this(p_300812_.orElse(null), p_298905_.orElse(null));
+    private IntRange(final Optional<NumberProvider> min, final Optional<NumberProvider> max) {
+        this(min.orElse(null), max.orElse(null));
     }
 
-    private IntRange(@Nullable NumberProvider p_165006_, @Nullable NumberProvider p_165007_) {
-        this.min = p_165006_;
-        this.max = p_165007_;
-        if (p_165006_ == null) {
-            if (p_165007_ == null) {
-                this.limiter = (p_165050_, p_165051_) -> p_165051_;
-                this.predicate = (p_165043_, p_165044_) -> true;
+    private IntRange(final @Nullable NumberProvider min, final @Nullable NumberProvider max) {
+        this.min = min;
+        this.max = max;
+        if (min == null) {
+            if (max == null) {
+                this.limiter = (context, value) -> value;
+                this.predicate = (context, value) -> true;
             } else {
-                this.limiter = (p_165054_, p_165055_) -> Math.min(p_165007_.getInt(p_165054_), p_165055_);
-                this.predicate = (p_165047_, p_165048_) -> p_165048_ <= p_165007_.getInt(p_165047_);
+                this.limiter = (context, value) -> Math.min(max.getInt(context), value);
+                this.predicate = (context, value) -> value <= max.getInt(context);
             }
-        } else if (p_165007_ == null) {
-            this.limiter = (p_165033_, p_165034_) -> Math.max(p_165006_.getInt(p_165033_), p_165034_);
-            this.predicate = (p_165019_, p_165020_) -> p_165020_ >= p_165006_.getInt(p_165019_);
+        } else if (max == null) {
+            this.limiter = (context, value) -> Math.max(min.getInt(context), value);
+            this.predicate = (context, value) -> value >= min.getInt(context);
         } else {
-            this.limiter = (p_165038_, p_165039_) -> Mth.clamp(p_165039_, p_165006_.getInt(p_165038_), p_165007_.getInt(p_165038_));
-            this.predicate = (p_165024_, p_165025_) -> p_165025_ >= p_165006_.getInt(p_165024_) && p_165025_ <= p_165007_.getInt(p_165024_);
+            this.limiter = (context, value) -> Mth.clamp(value, min.getInt(context), max.getInt(context));
+            this.predicate = (context, value) -> value >= min.getInt(context) && value <= max.getInt(context);
         }
     }
 
-    public static IntRange exact(int p_165010_) {
-        ConstantValue constantvalue = ConstantValue.exactly(p_165010_);
-        return new IntRange(Optional.of(constantvalue), Optional.of(constantvalue));
+    public static IntRange exact(final int value) {
+        ConstantValue c = ConstantValue.exactly(value);
+        return new IntRange(Optional.of(c), Optional.of(c));
     }
 
-    public static IntRange range(int p_165012_, int p_165013_) {
-        return new IntRange(Optional.of(ConstantValue.exactly(p_165012_)), Optional.of(ConstantValue.exactly(p_165013_)));
+    public static IntRange range(final int min, final int max) {
+        return new IntRange(Optional.of(ConstantValue.exactly(min)), Optional.of(ConstantValue.exactly(max)));
     }
 
-    public static IntRange lowerBound(int p_165027_) {
-        return new IntRange(Optional.of(ConstantValue.exactly(p_165027_)), Optional.empty());
+    public static IntRange lowerBound(final int value) {
+        return new IntRange(Optional.of(ConstantValue.exactly(value)), Optional.empty());
     }
 
-    public static IntRange upperBound(int p_165041_) {
-        return new IntRange(Optional.empty(), Optional.of(ConstantValue.exactly(p_165041_)));
+    public static IntRange upperBound(final int value) {
+        return new IntRange(Optional.empty(), Optional.of(ConstantValue.exactly(value)));
     }
 
-    public int clamp(LootContext p_165015_, int p_165016_) {
-        return this.limiter.apply(p_165015_, p_165016_);
+    public int clamp(final LootContext context, final int value) {
+        return this.limiter.apply(context, value);
     }
 
-    public boolean test(LootContext p_165029_, int p_165030_) {
-        return this.predicate.test(p_165029_, p_165030_);
+    public boolean test(final LootContext context, final int value) {
+        return this.predicate.test(context, value);
     }
 
     private OptionalInt unpackExact() {
-        return Objects.equals(this.min, this.max)
-                && this.min instanceof ConstantValue constantvalue
-                && Math.floor(constantvalue.value()) == constantvalue.value()
-            ? OptionalInt.of((int)constantvalue.value())
+        return Objects.equals(this.min, this.max) && this.min instanceof ConstantValue constant && Math.floor(constant.value()) == constant.value()
+            ? OptionalInt.of((int)constant.value())
             : OptionalInt.empty();
     }
 
     @FunctionalInterface
-    interface IntChecker {
-        boolean test(LootContext p_165057_, int p_165058_);
+    private interface IntChecker {
+        boolean test(LootContext context, int value);
     }
 
     @FunctionalInterface
-    interface IntLimiter {
-        int apply(LootContext p_165060_, int p_165061_);
+    private interface IntLimiter {
+        int apply(LootContext context, int value);
     }
 }

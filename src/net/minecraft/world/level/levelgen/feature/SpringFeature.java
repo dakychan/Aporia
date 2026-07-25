@@ -7,75 +7,77 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.SpringConfiguration;
 
 public class SpringFeature extends Feature<SpringConfiguration> {
-    public SpringFeature(Codec<SpringConfiguration> p_66914_) {
-        super(p_66914_);
+    public SpringFeature(final Codec<SpringConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<SpringConfiguration> p_160404_) {
-        SpringConfiguration springconfiguration = p_160404_.config();
-        WorldGenLevel worldgenlevel = p_160404_.level();
-        BlockPos blockpos = p_160404_.origin();
-        if (!worldgenlevel.getBlockState(blockpos.above()).is(springconfiguration.validBlocks)) {
+    public boolean place(final FeaturePlaceContext<SpringConfiguration> context) {
+        SpringConfiguration config = context.config();
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        if (!level.getBlockState(origin.above()).is(config.validBlocks)) {
             return false;
-        } else if (springconfiguration.requiresBlockBelow && !worldgenlevel.getBlockState(blockpos.below()).is(springconfiguration.validBlocks)) {
-            return false;
-        } else {
-            BlockState blockstate = worldgenlevel.getBlockState(blockpos);
-            if (!blockstate.isAir() && !blockstate.is(springconfiguration.validBlocks)) {
-                return false;
-            } else {
-                int i = 0;
-                int j = 0;
-                if (worldgenlevel.getBlockState(blockpos.west()).is(springconfiguration.validBlocks)) {
-                    j++;
-                }
-
-                if (worldgenlevel.getBlockState(blockpos.east()).is(springconfiguration.validBlocks)) {
-                    j++;
-                }
-
-                if (worldgenlevel.getBlockState(blockpos.north()).is(springconfiguration.validBlocks)) {
-                    j++;
-                }
-
-                if (worldgenlevel.getBlockState(blockpos.south()).is(springconfiguration.validBlocks)) {
-                    j++;
-                }
-
-                if (worldgenlevel.getBlockState(blockpos.below()).is(springconfiguration.validBlocks)) {
-                    j++;
-                }
-
-                int k = 0;
-                if (worldgenlevel.isEmptyBlock(blockpos.west())) {
-                    k++;
-                }
-
-                if (worldgenlevel.isEmptyBlock(blockpos.east())) {
-                    k++;
-                }
-
-                if (worldgenlevel.isEmptyBlock(blockpos.north())) {
-                    k++;
-                }
-
-                if (worldgenlevel.isEmptyBlock(blockpos.south())) {
-                    k++;
-                }
-
-                if (worldgenlevel.isEmptyBlock(blockpos.below())) {
-                    k++;
-                }
-
-                if (j == springconfiguration.rockCount && k == springconfiguration.holeCount) {
-                    worldgenlevel.setBlock(blockpos, springconfiguration.state.createLegacyBlock(), 2);
-                    worldgenlevel.scheduleTick(blockpos, springconfiguration.state.getType(), 0);
-                    i++;
-                }
-
-                return i > 0;
-            }
         }
+
+        if (config.requiresBlockBelow && !level.getBlockState(origin.below()).is(config.validBlocks)) {
+            return false;
+        }
+
+        BlockState currentState = level.getBlockState(origin);
+        if (!currentState.isAir() && !currentState.is(config.validBlocks)) {
+            return false;
+        }
+
+        int placed = 0;
+        int rockCount = 0;
+        if (level.getBlockState(origin.west()).is(config.validBlocks)) {
+            rockCount++;
+        }
+
+        if (level.getBlockState(origin.east()).is(config.validBlocks)) {
+            rockCount++;
+        }
+
+        if (level.getBlockState(origin.north()).is(config.validBlocks)) {
+            rockCount++;
+        }
+
+        if (level.getBlockState(origin.south()).is(config.validBlocks)) {
+            rockCount++;
+        }
+
+        if (level.getBlockState(origin.below()).is(config.validBlocks)) {
+            rockCount++;
+        }
+
+        int holeCount = 0;
+        if (level.isEmptyBlock(origin.west())) {
+            holeCount++;
+        }
+
+        if (level.isEmptyBlock(origin.east())) {
+            holeCount++;
+        }
+
+        if (level.isEmptyBlock(origin.north())) {
+            holeCount++;
+        }
+
+        if (level.isEmptyBlock(origin.south())) {
+            holeCount++;
+        }
+
+        if (level.isEmptyBlock(origin.below())) {
+            holeCount++;
+        }
+
+        if (rockCount == config.rockCount && holeCount == config.holeCount) {
+            level.setBlock(origin, config.state.createLegacyBlock(), 2);
+            level.scheduleTick(origin, config.state.getType(), 0);
+            placed++;
+        }
+
+        return placed > 0;
     }
 }

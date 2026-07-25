@@ -12,20 +12,20 @@ public final class GreedyPatternParseRule implements Rule<StringReader, String> 
     private final Pattern pattern;
     private final DelayedException<CommandSyntaxException> error;
 
-    public GreedyPatternParseRule(Pattern p_394998_, DelayedException<CommandSyntaxException> p_397620_) {
-        this.pattern = p_394998_;
-        this.error = p_397620_;
+    public GreedyPatternParseRule(final Pattern pattern, final DelayedException<CommandSyntaxException> error) {
+        this.pattern = pattern;
+        this.error = error;
     }
 
-    public String parse(ParseState<StringReader> p_392596_) {
-        StringReader stringreader = p_392596_.input();
-        String s = stringreader.getString();
-        Matcher matcher = this.pattern.matcher(s).region(stringreader.getCursor(), s.length());
+    public String parse(final ParseState<StringReader> state) {
+        StringReader input = state.input();
+        String fullString = input.getString();
+        Matcher matcher = this.pattern.matcher(fullString).region(input.getCursor(), fullString.length());
         if (!matcher.lookingAt()) {
-            p_392596_.errorCollector().store(p_392596_.mark(), this.error);
+            state.errorCollector().store(state.mark(), this.error);
             return null;
         } else {
-            stringreader.setCursor(matcher.end());
+            input.setCursor(matcher.end());
             return matcher.group(0);
         }
     }

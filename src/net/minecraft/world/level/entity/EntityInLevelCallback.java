@@ -9,11 +9,11 @@ public interface EntityInLevelCallback {
         }
 
         @Override
-        public void onRemove(Entity.RemovalReason p_156805_) {
+        public void onRemove(final Entity.RemovalReason reason) {
         }
     };
 
     void onMove();
 
-    void onRemove(Entity.RemovalReason p_156801_);
+    void onRemove(final Entity.RemovalReason reason);
 }

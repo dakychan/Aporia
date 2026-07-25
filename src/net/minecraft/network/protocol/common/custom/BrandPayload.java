@@ -7,12 +7,12 @@ public record BrandPayload(String brand) implements CustomPacketPayload {
     public static final StreamCodec<FriendlyByteBuf, BrandPayload> STREAM_CODEC = CustomPacketPayload.codec(BrandPayload::write, BrandPayload::new);
     public static final CustomPacketPayload.Type<BrandPayload> TYPE = CustomPacketPayload.createType("brand");
 
-    private BrandPayload(FriendlyByteBuf p_299720_) {
-        this(p_299720_.readUtf());
+    private BrandPayload(final FriendlyByteBuf input) {
+        this(input.readUtf());
     }
 
-    private void write(FriendlyByteBuf p_297362_) {
-        p_297362_.writeUtf(this.brand);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUtf(this.brand);
     }
 
     @Override

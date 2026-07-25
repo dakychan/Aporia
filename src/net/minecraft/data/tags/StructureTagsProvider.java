@@ -8,13 +8,13 @@ import net.minecraft.tags.StructureTags;
 import net.minecraft.world.level.levelgen.structure.BuiltinStructures;
 import net.minecraft.world.level.levelgen.structure.Structure;
 
-public class StructureTagsProvider extends KeyTagProvider<Structure> {
-    public StructureTagsProvider(PackOutput p_256522_, CompletableFuture<HolderLookup.Provider> p_256661_) {
-        super(p_256522_, Registries.STRUCTURE, p_256661_);
+public class StructureTagsProvider extends TagsProvider<Structure> {
+    public StructureTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.STRUCTURE, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_256087_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(StructureTags.VILLAGE)
             .add(BuiltinStructures.VILLAGE_PLAINS)
             .add(BuiltinStructures.VILLAGE_DESERT)

@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableMap;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Pair;
@@ -120,32 +119,30 @@ public class ChunkStructuresTemplateRenameFix extends DataFix {
         )
         .build();
 
-    public ChunkStructuresTemplateRenameFix(Schema p_15269_, boolean p_15270_) {
-        super(p_15269_, p_15270_);
+    public ChunkStructuresTemplateRenameFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
         Type<?> type = this.getInputSchema().getType(References.STRUCTURE_FEATURE);
-        return this.fixTypeEverywhereTyped("ChunkStructuresTemplateRenameFix", type, p_274927_ -> p_274927_.update(DSL.remainderFinder(), this::fixChildren));
+        return this.fixTypeEverywhereTyped("ChunkStructuresTemplateRenameFix", type, input -> input.update(DSL.remainderFinder(), this::fixChildren));
     }
 
-    private Dynamic<?> fixChildren(Dynamic<?> p_275363_) {
-        return p_275363_.update(
-            "Children", p_274926_ -> p_275363_.createList(p_274926_.asStream().map(p_274924_ -> this.fixTag(p_275363_, (Dynamic<?>)p_274924_)))
-        );
+    private Dynamic<?> fixChildren(final Dynamic<?> structure) {
+        return structure.update("Children", children -> structure.createList(children.asStream().map(child -> this.fixTag(structure, (Dynamic<?>)child))));
     }
 
-    private Dynamic<?> fixTag(Dynamic<?> p_15281_, Dynamic<?> p_15282_) {
-        String s = p_15281_.get("id").asString("");
-        if (RENAMES.containsKey(s)) {
-            Pair<String, ImmutableMap<String, String>> pair = RENAMES.get(s);
-            if (pair.getFirst().equals(p_15282_.get("id").asString(""))) {
-                String s1 = p_15282_.get("Template").asString("");
-                p_15282_ = p_15282_.set("Template", p_15282_.createString(pair.getSecond().getOrDefault(s1, s1)));
+    private Dynamic<?> fixTag(final Dynamic<?> structure, Dynamic<?> child) {
+        String id = structure.get("id").asString("");
+        if (RENAMES.containsKey(id)) {
+            Pair<String, ImmutableMap<String, String>> data = RENAMES.get(id);
+            if (data.getFirst().equals(child.get("id").asString(""))) {
+                String template = child.get("Template").asString("");
+                child = child.set("Template", child.createString(data.getSecond().getOrDefault(template, template)));
             }
         }
 
-        return p_15282_;
+        return child;
     }
 }

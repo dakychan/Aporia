@@ -9,5 +9,5 @@ public interface ServerHandshakePacketListener extends ServerPacketListener {
         return ConnectionProtocol.HANDSHAKING;
     }
 
-    void handleIntention(ClientIntentionPacket p_134739_);
+    void handleIntention(ClientIntentionPacket packet);
 }

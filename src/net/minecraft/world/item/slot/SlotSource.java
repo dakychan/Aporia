@@ -7,5 +7,5 @@ import net.minecraft.world.level.storage.loot.LootContextUser;
 public interface SlotSource extends LootContextUser {
     MapCodec<? extends SlotSource> codec();
 
-    SlotCollection provide(LootContext p_458990_);
+    SlotCollection provide(LootContext context);
 }

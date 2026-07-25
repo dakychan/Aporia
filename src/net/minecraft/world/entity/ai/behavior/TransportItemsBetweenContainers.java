@@ -33,7 +33,6 @@ import net.minecraft.world.level.block.state.properties.ChestType;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
-import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.function.TriConsumer;
@@ -65,14 +64,14 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
     private int ticksSinceReachingTarget;
 
     public TransportItemsBetweenContainers(
-        float p_424497_,
-        Predicate<BlockState> p_430226_,
-        Predicate<BlockState> p_431607_,
-        int p_422794_,
-        int p_426431_,
-        Map<TransportItemsBetweenContainers.ContainerInteractionState, TransportItemsBetweenContainers.OnTargetReachedInteraction> p_427019_,
-        Consumer<PathfinderMob> p_431304_,
-        Predicate<TransportItemsBetweenContainers.TransportItemTarget> p_422647_
+        final float speedModifier,
+        final Predicate<BlockState> sourceBlockType,
+        final Predicate<BlockState> destinationBlockType,
+        final int horizontalSearchDistance,
+        final int verticalSearchDistance,
+        final Map<TransportItemsBetweenContainers.ContainerInteractionState, TransportItemsBetweenContainers.OnTargetReachedInteraction> onTargetInteractionActions,
+        final Consumer<PathfinderMob> onStartTravelling,
+        final Predicate<TransportItemsBetweenContainers.TransportItemTarget> shouldQueueForTarget
     ) {
         super(
             ImmutableMap.of(
@@ -86,66 +85,66 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
                 MemoryStatus.VALUE_ABSENT
             )
         );
-        this.speedModifier = p_424497_;
-        this.sourceBlockType = p_430226_;
-        this.destinationBlockType = p_431607_;
-        this.horizontalSearchDistance = p_422794_;
-        this.verticalSearchDistance = p_426431_;
-        this.onStartTravelling = p_431304_;
-        this.shouldQueueForTarget = p_422647_;
-        this.onTargetInteractionActions = p_427019_;
+        this.speedModifier = speedModifier;
+        this.sourceBlockType = sourceBlockType;
+        this.destinationBlockType = destinationBlockType;
+        this.horizontalSearchDistance = horizontalSearchDistance;
+        this.verticalSearchDistance = verticalSearchDistance;
+        this.onStartTravelling = onStartTravelling;
+        this.shouldQueueForTarget = shouldQueueForTarget;
+        this.onTargetInteractionActions = onTargetInteractionActions;
         this.state = TransportItemsBetweenContainers.TransportItemState.TRAVELLING;
     }
 
-    protected void start(ServerLevel p_422501_, PathfinderMob p_428990_, long p_422511_) {
-        if (p_428990_.getNavigation() instanceof GroundPathNavigation groundpathnavigation) {
-            groundpathnavigation.setCanPathToTargetsBelowSurface(true);
+    protected void start(final ServerLevel level, final PathfinderMob body, final long timestamp) {
+        if (body.getNavigation() instanceof GroundPathNavigation pathNavigation) {
+            pathNavigation.setCanPathToTargetsBelowSurface(true);
         }
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_427337_, PathfinderMob p_426012_) {
-        return !p_426012_.isLeashed();
+    protected boolean checkExtraStartConditions(final ServerLevel level, final PathfinderMob body) {
+        return !body.isLeashed();
     }
 
-    protected boolean canStillUse(ServerLevel p_428991_, PathfinderMob p_428695_, long p_429576_) {
-        return p_428695_.getBrain().getMemory(MemoryModuleType.TRANSPORT_ITEMS_COOLDOWN_TICKS).isEmpty() && !p_428695_.isPanicking() && !p_428695_.isLeashed();
+    protected boolean canStillUse(final ServerLevel level, final PathfinderMob body, final long timestamp) {
+        return body.getBrain().getMemory(MemoryModuleType.TRANSPORT_ITEMS_COOLDOWN_TICKS).isEmpty() && !body.isPanicking() && !body.isLeashed();
     }
 
     @Override
-    protected boolean timedOut(long p_424301_) {
+    protected boolean timedOut(final long timestamp) {
         return false;
     }
 
-    protected void tick(ServerLevel p_430265_, PathfinderMob p_423613_, long p_430914_) {
-        boolean flag = this.updateInvalidTarget(p_430265_, p_423613_);
+    protected void tick(final ServerLevel level, final PathfinderMob body, final long timestamp) {
+        boolean updatedInvalidTarget = this.updateInvalidTarget(level, body);
         if (this.target == null) {
-            this.stop(p_430265_, p_423613_, p_430914_);
-        } else if (!flag) {
+            this.stop(level, body, timestamp);
+        } else if (!updatedInvalidTarget) {
             if (this.state.equals(TransportItemsBetweenContainers.TransportItemState.QUEUING)) {
-                this.onQueuingForTarget(this.target, p_430265_, p_423613_);
+                this.onQueuingForTarget(this.target, level, body);
             }
 
             if (this.state.equals(TransportItemsBetweenContainers.TransportItemState.TRAVELLING)) {
-                this.onTravelToTarget(this.target, p_430265_, p_423613_);
+                this.onTravelToTarget(this.target, level, body);
             }
 
             if (this.state.equals(TransportItemsBetweenContainers.TransportItemState.INTERACTING)) {
-                this.onReachedTarget(this.target, p_430265_, p_423613_);
+                this.onReachedTarget(this.target, level, body);
             }
         }
     }
 
-    private boolean updateInvalidTarget(ServerLevel p_429508_, PathfinderMob p_430783_) {
-        if (!this.hasValidTarget(p_429508_, p_430783_)) {
-            this.stopTargetingCurrentTarget(p_430783_);
-            Optional<TransportItemsBetweenContainers.TransportItemTarget> optional = this.getTransportTarget(p_429508_, p_430783_);
-            if (optional.isPresent()) {
-                this.target = optional.get();
-                this.onStartTravelling(p_430783_);
-                this.setVisitedBlockPos(p_430783_, p_429508_, this.target.pos);
+    private boolean updateInvalidTarget(final ServerLevel level, final PathfinderMob body) {
+        if (!this.hasValidTarget(level, body)) {
+            this.stopTargetingCurrentTarget(body);
+            Optional<TransportItemsBetweenContainers.TransportItemTarget> targetBlockPosition = this.getTransportTarget(level, body);
+            if (targetBlockPosition.isPresent()) {
+                this.target = targetBlockPosition.get();
+                this.onStartTravelling(body);
+                this.setVisitedBlockPos(body, level, this.target.pos);
                 return true;
             } else {
-                this.enterCooldownAfterNoMatchingTargetFound(p_430783_);
+                this.enterCooldownAfterNoMatchingTargetFound(body);
                 return true;
             }
         } else {
@@ -153,66 +152,66 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
         }
     }
 
-    private void onQueuingForTarget(TransportItemsBetweenContainers.TransportItemTarget p_429932_, Level p_425226_, PathfinderMob p_423308_) {
-        if (!this.isAnotherMobInteractingWithTarget(p_429932_, p_425226_)) {
-            this.resumeTravelling(p_423308_);
+    private void onQueuingForTarget(final TransportItemsBetweenContainers.TransportItemTarget target, final Level level, final PathfinderMob body) {
+        if (!this.isAnotherMobInteractingWithTarget(target, level)) {
+            this.resumeTravelling(body);
         }
     }
 
-    protected void onTravelToTarget(TransportItemsBetweenContainers.TransportItemTarget p_424055_, Level p_431702_, PathfinderMob p_424815_) {
-        if (this.isWithinTargetDistance(3.0, p_424055_, p_431702_, p_424815_, this.getCenterPos(p_424815_)) && this.isAnotherMobInteractingWithTarget(p_424055_, p_431702_)) {
-            this.startQueuing(p_424815_);
-        } else if (this.isWithinTargetDistance(getInteractionRange(p_424815_), p_424055_, p_431702_, p_424815_, this.getCenterPos(p_424815_))) {
-            this.startOnReachedTargetInteraction(p_424055_, p_424815_);
+    protected void onTravelToTarget(final TransportItemsBetweenContainers.TransportItemTarget target, final Level level, final PathfinderMob body) {
+        if (this.isWithinTargetDistance(3.0, target, level, body, this.getCenterPos(body)) && this.isAnotherMobInteractingWithTarget(target, level)) {
+            this.startQueuing(body);
+        } else if (this.isWithinTargetDistance(getInteractionRange(body), target, level, body, this.getCenterPos(body))) {
+            this.startOnReachedTargetInteraction(target, body);
         } else {
-            this.walkTowardsTarget(p_424815_);
+            this.walkTowardsTarget(body);
         }
     }
 
-    private Vec3 getCenterPos(PathfinderMob p_429723_) {
-        return this.setMiddleYPosition(p_429723_, p_429723_.position());
+    private Vec3 getCenterPos(final PathfinderMob body) {
+        return this.setMiddleYPosition(body, body.position());
     }
 
-    protected void onReachedTarget(TransportItemsBetweenContainers.TransportItemTarget p_431168_, Level p_423012_, PathfinderMob p_431642_) {
-        if (!this.isWithinTargetDistance(2.0, p_431168_, p_423012_, p_431642_, this.getCenterPos(p_431642_))) {
-            this.onStartTravelling(p_431642_);
+    protected void onReachedTarget(final TransportItemsBetweenContainers.TransportItemTarget target, final Level level, final PathfinderMob body) {
+        if (!this.isWithinTargetDistance(2.0, target, level, body, this.getCenterPos(body))) {
+            this.onStartTravelling(body);
         } else {
             this.ticksSinceReachingTarget++;
-            this.onTargetInteraction(p_431168_, p_431642_);
+            this.onTargetInteraction(target, body);
             if (this.ticksSinceReachingTarget >= 60) {
                 this.doReachedTargetInteraction(
-                    p_431642_,
-                    p_431168_.container,
+                    body,
+                    target.container,
                     this::pickUpItems,
-                    (p_430921_, p_425673_) -> this.stopTargetingCurrentTarget(p_431642_),
+                    (mob, container) -> this.stopTargetingCurrentTarget(body),
                     this::putDownItem,
-                    (p_431419_, p_423494_) -> this.stopTargetingCurrentTarget(p_431642_)
+                    (mob, container) -> this.stopTargetingCurrentTarget(body)
                 );
-                this.onStartTravelling(p_431642_);
+                this.onStartTravelling(body);
             }
         }
     }
 
-    private void startQueuing(PathfinderMob p_426818_) {
-        this.stopInPlace(p_426818_);
+    private void startQueuing(final PathfinderMob body) {
+        this.stopInPlace(body);
         this.setTransportingState(TransportItemsBetweenContainers.TransportItemState.QUEUING);
     }
 
-    private void resumeTravelling(PathfinderMob p_431513_) {
+    private void resumeTravelling(final PathfinderMob body) {
         this.setTransportingState(TransportItemsBetweenContainers.TransportItemState.TRAVELLING);
-        this.walkTowardsTarget(p_431513_);
+        this.walkTowardsTarget(body);
     }
 
-    private void walkTowardsTarget(PathfinderMob p_424859_) {
+    private void walkTowardsTarget(final PathfinderMob body) {
         if (this.target != null) {
-            BehaviorUtils.setWalkAndLookTargetMemories(p_424859_, this.target.pos, this.speedModifier, 0);
+            BehaviorUtils.setWalkAndLookTargetMemories(body, this.target.pos, this.speedModifier, 0);
         }
     }
 
-    private void startOnReachedTargetInteraction(TransportItemsBetweenContainers.TransportItemTarget p_427600_, PathfinderMob p_425815_) {
+    private void startOnReachedTargetInteraction(final TransportItemsBetweenContainers.TransportItemTarget target, final PathfinderMob body) {
         this.doReachedTargetInteraction(
-            p_425815_,
-            p_427600_.container,
+            body,
+            target.container,
             this.onReachedInteraction(TransportItemsBetweenContainers.ContainerInteractionState.PICKUP_ITEM),
             this.onReachedInteraction(TransportItemsBetweenContainers.ContainerInteractionState.PICKUP_NO_ITEM),
             this.onReachedInteraction(TransportItemsBetweenContainers.ContainerInteractionState.PLACE_ITEM),
@@ -221,75 +220,77 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
         this.setTransportingState(TransportItemsBetweenContainers.TransportItemState.INTERACTING);
     }
 
-    private void onStartTravelling(PathfinderMob p_430410_) {
-        this.onStartTravelling.accept(p_430410_);
+    private void onStartTravelling(final PathfinderMob body) {
+        this.onStartTravelling.accept(body);
         this.setTransportingState(TransportItemsBetweenContainers.TransportItemState.TRAVELLING);
         this.interactionState = null;
         this.ticksSinceReachingTarget = 0;
     }
 
-    private BiConsumer<PathfinderMob, Container> onReachedInteraction(TransportItemsBetweenContainers.ContainerInteractionState p_425192_) {
-        return (p_427688_, p_425484_) -> this.setInteractionState(p_425192_);
+    private BiConsumer<PathfinderMob, Container> onReachedInteraction(final TransportItemsBetweenContainers.ContainerInteractionState state) {
+        return (mob, container) -> this.setInteractionState(state);
     }
 
-    private void setTransportingState(TransportItemsBetweenContainers.TransportItemState p_430587_) {
-        this.state = p_430587_;
+    private void setTransportingState(final TransportItemsBetweenContainers.TransportItemState state) {
+        this.state = state;
     }
 
-    private void setInteractionState(TransportItemsBetweenContainers.ContainerInteractionState p_428548_) {
-        this.interactionState = p_428548_;
+    private void setInteractionState(final TransportItemsBetweenContainers.ContainerInteractionState state) {
+        this.interactionState = state;
     }
 
-    private void onTargetInteraction(TransportItemsBetweenContainers.TransportItemTarget p_429611_, PathfinderMob p_424978_) {
-        p_424978_.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(p_429611_.pos));
-        this.stopInPlace(p_424978_);
+    private void onTargetInteraction(final TransportItemsBetweenContainers.TransportItemTarget target, final PathfinderMob body) {
+        body.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(target.pos));
+        this.stopInPlace(body);
         if (this.interactionState != null) {
-            Optional.ofNullable(this.onTargetInteractionActions.get(this.interactionState)).ifPresent(p_426924_ -> p_426924_.accept(p_424978_, p_429611_, this.ticksSinceReachingTarget));
+            Optional.ofNullable(this.onTargetInteractionActions.get(this.interactionState))
+                .ifPresent(action -> action.accept(body, target, this.ticksSinceReachingTarget));
         }
     }
 
     private void doReachedTargetInteraction(
-        PathfinderMob p_429612_,
-        Container p_423430_,
-        BiConsumer<PathfinderMob, Container> p_422762_,
-        BiConsumer<PathfinderMob, Container> p_428229_,
-        BiConsumer<PathfinderMob, Container> p_423271_,
-        BiConsumer<PathfinderMob, Container> p_430791_
+        final PathfinderMob body,
+        final Container container,
+        final BiConsumer<PathfinderMob, Container> onPickupSuccess,
+        final BiConsumer<PathfinderMob, Container> onPickupFailure,
+        final BiConsumer<PathfinderMob, Container> onPlaceSuccess,
+        final BiConsumer<PathfinderMob, Container> onPlaceFailure
     ) {
-        if (isPickingUpItems(p_429612_)) {
-            if (matchesGettingItemsRequirement(p_423430_)) {
-                p_422762_.accept(p_429612_, p_423430_);
+        if (isPickingUpItems(body)) {
+            if (matchesGettingItemsRequirement(container)) {
+                onPickupSuccess.accept(body, container);
             } else {
-                p_428229_.accept(p_429612_, p_423430_);
+                onPickupFailure.accept(body, container);
             }
-        } else if (matchesLeavingItemsRequirement(p_429612_, p_423430_)) {
-            p_423271_.accept(p_429612_, p_423430_);
+        } else if (matchesLeavingItemsRequirement(body, container)) {
+            onPlaceSuccess.accept(body, container);
         } else {
-            p_430791_.accept(p_429612_, p_423430_);
+            onPlaceFailure.accept(body, container);
         }
     }
 
-    private Optional<TransportItemsBetweenContainers.TransportItemTarget> getTransportTarget(ServerLevel p_426099_, PathfinderMob p_430780_) {
-        AABB aabb = this.getTargetSearchArea(p_430780_);
-        Set<GlobalPos> set = getVisitedPositions(p_430780_);
-        Set<GlobalPos> set1 = getUnreachablePositions(p_430780_);
-        List<ChunkPos> list = ChunkPos.rangeClosed(new ChunkPos(p_430780_.blockPosition()), Math.floorDiv(this.getHorizontalSearchDistance(p_430780_), 16) + 1).toList();
-        TransportItemsBetweenContainers.TransportItemTarget transportitemsbetweencontainers$transportitemtarget = null;
-        double d0 = Float.MAX_VALUE;
+    private Optional<TransportItemsBetweenContainers.TransportItemTarget> getTransportTarget(final ServerLevel level, final PathfinderMob body) {
+        AABB targetBlockSearchArea = this.getTargetSearchArea(body);
+        Set<GlobalPos> visitedPositions = getVisitedPositions(body);
+        Set<GlobalPos> unreachablePositions = getUnreachablePositions(body);
+        List<ChunkPos> list = ChunkPos.rangeClosed(ChunkPos.containing(body.blockPosition()), Math.floorDiv(this.getHorizontalSearchDistance(body), 16) + 1)
+            .toList();
+        TransportItemsBetweenContainers.TransportItemTarget target = null;
+        double closestDistance = Float.MAX_VALUE;
 
-        for (ChunkPos chunkpos : list) {
-            LevelChunk levelchunk = p_426099_.getChunkSource().getChunkNow(chunkpos.x, chunkpos.z);
-            if (levelchunk != null) {
-                for (BlockEntity blockentity : levelchunk.getBlockEntities().values()) {
-                    if (blockentity instanceof ChestBlockEntity chestblockentity) {
-                        double d1 = chestblockentity.getBlockPos().distToCenterSqr(p_430780_.position());
-                        if (d1 < d0) {
-                            TransportItemsBetweenContainers.TransportItemTarget transportitemsbetweencontainers$transportitemtarget1 = this.isTargetValidToPick(
-                                p_430780_, p_426099_, chestblockentity, set, set1, aabb
+        for (ChunkPos chunkPos : list) {
+            LevelChunk levelChunk = level.getChunkSource().getChunkNow(chunkPos.x(), chunkPos.z());
+            if (levelChunk != null) {
+                for (BlockEntity potentialTarget : levelChunk.getBlockEntities().values()) {
+                    if (potentialTarget instanceof ChestBlockEntity chestBlockEntity) {
+                        double distance = chestBlockEntity.getBlockPos().distToCenterSqr(body.position());
+                        if (distance < closestDistance) {
+                            TransportItemsBetweenContainers.TransportItemTarget targetValidToPick = this.isTargetValidToPick(
+                                body, level, chestBlockEntity, visitedPositions, unreachablePositions, targetBlockSearchArea
                             );
-                            if (transportitemsbetweencontainers$transportitemtarget1 != null) {
-                                transportitemsbetweencontainers$transportitemtarget = transportitemsbetweencontainers$transportitemtarget1;
-                                d0 = d1;
+                            if (targetValidToPick != null) {
+                                target = targetValidToPick;
+                                closestDistance = distance;
                             }
                         }
                     }
@@ -297,207 +298,216 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
             }
         }
 
-        return transportitemsbetweencontainers$transportitemtarget == null
-            ? Optional.empty()
-            : Optional.of(transportitemsbetweencontainers$transportitemtarget);
+        return target == null ? Optional.empty() : Optional.of(target);
     }
 
     private TransportItemsBetweenContainers.@Nullable TransportItemTarget isTargetValidToPick(
-        PathfinderMob p_423147_, Level p_425510_, BlockEntity p_426039_, Set<GlobalPos> p_424376_, Set<GlobalPos> p_429336_, AABB p_424224_
+        final PathfinderMob body,
+        final Level level,
+        final BlockEntity blockEntity,
+        final Set<GlobalPos> visitedPositions,
+        final Set<GlobalPos> unreachablePositions,
+        final AABB targetBlockSearchArea
     ) {
-        BlockPos blockpos = p_426039_.getBlockPos();
-        boolean flag = p_424224_.contains(blockpos.getX(), blockpos.getY(), blockpos.getZ());
-        if (!flag) {
+        BlockPos blockPos = blockEntity.getBlockPos();
+        boolean isWithinSearchArea = targetBlockSearchArea.contains(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        if (!isWithinSearchArea) {
             return null;
-        } else {
-            TransportItemsBetweenContainers.TransportItemTarget transportitemsbetweencontainers$transportitemtarget = TransportItemsBetweenContainers.TransportItemTarget.tryCreatePossibleTarget(
-                p_426039_, p_425510_
-            );
-            if (transportitemsbetweencontainers$transportitemtarget == null) {
-                return null;
-            } else {
-                boolean flag1 = this.isWantedBlock(p_423147_, transportitemsbetweencontainers$transportitemtarget.state)
-                    && !this.isPositionAlreadyVisited(p_424376_, p_429336_, transportitemsbetweencontainers$transportitemtarget, p_425510_)
-                    && !this.isContainerLocked(transportitemsbetweencontainers$transportitemtarget);
-                return flag1 ? transportitemsbetweencontainers$transportitemtarget : null;
-            }
         }
+
+        TransportItemsBetweenContainers.TransportItemTarget transportItemTarget = TransportItemsBetweenContainers.TransportItemTarget.tryCreatePossibleTarget(
+            blockEntity, level
+        );
+        if (transportItemTarget == null) {
+            return null;
+        }
+
+        boolean isValidTarget = this.isWantedBlock(body, transportItemTarget.state)
+            && !this.isPositionAlreadyVisited(visitedPositions, unreachablePositions, transportItemTarget, level)
+            && !this.isContainerLocked(transportItemTarget);
+        return isValidTarget ? transportItemTarget : null;
     }
 
-    private boolean isContainerLocked(TransportItemsBetweenContainers.TransportItemTarget p_428315_) {
-        return p_428315_.blockEntity instanceof BaseContainerBlockEntity basecontainerblockentity && basecontainerblockentity.isLocked();
+    private boolean isContainerLocked(final TransportItemsBetweenContainers.TransportItemTarget transportItemTarget) {
+        return transportItemTarget.blockEntity instanceof BaseContainerBlockEntity blockEntity && blockEntity.isLocked();
     }
 
-    private boolean hasValidTarget(Level p_423114_, PathfinderMob p_426599_) {
-        boolean flag = this.target != null && this.isWantedBlock(p_426599_, this.target.state) && this.targetHasNotChanged(p_423114_, this.target);
-        if (flag && !this.isTargetBlocked(p_423114_, this.target)) {
+    private boolean hasValidTarget(final Level level, final PathfinderMob body) {
+        boolean targetIsOfValidType = this.target != null && this.isWantedBlock(body, this.target.state) && this.targetHasNotChanged(level, this.target);
+        if (targetIsOfValidType && !this.isTargetBlocked(level, this.target)) {
             if (!this.state.equals(TransportItemsBetweenContainers.TransportItemState.TRAVELLING)) {
                 return true;
             }
 
-            if (this.hasValidTravellingPath(p_423114_, this.target, p_426599_)) {
+            if (this.hasValidTravellingPath(level, this.target, body)) {
                 return true;
             }
 
-            this.markVisitedBlockPosAsUnreachable(p_426599_, p_423114_, this.target.pos);
+            this.markVisitedBlockPosAsUnreachable(body, level, this.target.pos);
         }
 
         return false;
     }
 
-    private boolean hasValidTravellingPath(Level p_431874_, TransportItemsBetweenContainers.TransportItemTarget p_431898_, PathfinderMob p_431868_) {
-        Path path = p_431868_.getNavigation().getPath() == null ? p_431868_.getNavigation().createPath(p_431898_.pos, 0) : p_431868_.getNavigation().getPath();
-        Vec3 vec3 = this.getPositionToReachTargetFrom(path, p_431868_);
-        boolean flag = this.isWithinTargetDistance(getInteractionRange(p_431868_), p_431898_, p_431874_, p_431868_, vec3);
-        boolean flag1 = path == null && !flag;
-        return flag1 || this.targetIsReachableFromPosition(p_431874_, flag, vec3, p_431898_, p_431868_);
+    private boolean hasValidTravellingPath(final Level level, final TransportItemsBetweenContainers.TransportItemTarget target, final PathfinderMob body) {
+        Path path = body.getNavigation().getPath() == null ? body.getNavigation().createPath(target.pos, 0) : body.getNavigation().getPath();
+        Vec3 posFromWhichToReachTarget = this.getPositionToReachTargetFrom(path, body);
+        boolean canReachTarget = this.isWithinTargetDistance(getInteractionRange(body), target, level, body, posFromWhichToReachTarget);
+        boolean hasNotYetCreatedPathToTarget = path == null && !canReachTarget;
+        return hasNotYetCreatedPathToTarget || this.targetIsReachableFromPosition(level, canReachTarget, posFromWhichToReachTarget, target, body);
     }
 
-    private Vec3 getPositionToReachTargetFrom(@Nullable Path p_426108_, PathfinderMob p_425120_) {
-        boolean flag = p_426108_ == null || p_426108_.getEndNode() == null;
-        Vec3 vec3 = flag ? p_425120_.position() : p_426108_.getEndNode().asBlockPos().getBottomCenter();
-        return this.setMiddleYPosition(p_425120_, vec3);
+    private Vec3 getPositionToReachTargetFrom(final @Nullable Path path, final PathfinderMob body) {
+        boolean haveNoValidPath = path == null || path.getEndNode() == null;
+        Vec3 bottomCenter = haveNoValidPath ? body.position() : Vec3.atBottomCenterOf(path.getEndNode().asBlockPos());
+        return this.setMiddleYPosition(body, bottomCenter);
     }
 
-    private Vec3 setMiddleYPosition(PathfinderMob p_429844_, Vec3 p_425090_) {
-        return p_425090_.add(0.0, p_429844_.getBoundingBox().getYsize() / 2.0, 0.0);
+    private Vec3 setMiddleYPosition(final PathfinderMob body, final Vec3 pos) {
+        return pos.add(0.0, body.getBoundingBox().getYsize() / 2.0, 0.0);
     }
 
-    private boolean isTargetBlocked(Level p_422595_, TransportItemsBetweenContainers.TransportItemTarget p_424779_) {
-        return ChestBlock.isChestBlockedAt(p_422595_, p_424779_.pos);
+    private boolean isTargetBlocked(final Level level, final TransportItemsBetweenContainers.TransportItemTarget target) {
+        return ChestBlock.isChestBlockedAt(level, target.pos);
     }
 
-    private boolean targetHasNotChanged(Level p_430472_, TransportItemsBetweenContainers.TransportItemTarget p_431475_) {
-        return p_431475_.blockEntity.equals(p_430472_.getBlockEntity(p_431475_.pos));
+    private boolean targetHasNotChanged(final Level level, final TransportItemsBetweenContainers.TransportItemTarget target) {
+        return target.blockEntity.equals(level.getBlockEntity(target.pos));
     }
 
     private Stream<TransportItemsBetweenContainers.TransportItemTarget> getConnectedTargets(
-        TransportItemsBetweenContainers.TransportItemTarget p_429991_, Level p_422587_
+        final TransportItemsBetweenContainers.TransportItemTarget target, final Level level
     ) {
-        if (p_429991_.state.getValueOrElse(ChestBlock.TYPE, ChestType.SINGLE) != ChestType.SINGLE) {
-            TransportItemsBetweenContainers.TransportItemTarget transportitemsbetweencontainers$transportitemtarget = TransportItemsBetweenContainers.TransportItemTarget.tryCreatePossibleTarget(
-                ChestBlock.getConnectedBlockPos(p_429991_.pos, p_429991_.state), p_422587_
+        if (target.state.getValueOrElse(ChestBlock.TYPE, ChestType.SINGLE) != ChestType.SINGLE) {
+            TransportItemsBetweenContainers.TransportItemTarget connectedTarget = TransportItemsBetweenContainers.TransportItemTarget.tryCreatePossibleTarget(
+                ChestBlock.getConnectedBlockPos(target.pos, target.state), level
             );
-            return transportitemsbetweencontainers$transportitemtarget != null
-                ? Stream.of(p_429991_, transportitemsbetweencontainers$transportitemtarget)
-                : Stream.of(p_429991_);
+            return connectedTarget != null ? Stream.of(target, connectedTarget) : Stream.of(target);
         } else {
-            return Stream.of(p_429991_);
+            return Stream.of(target);
         }
     }
 
-    private AABB getTargetSearchArea(PathfinderMob p_428330_) {
-        int i = this.getHorizontalSearchDistance(p_428330_);
-        return new AABB(p_428330_.blockPosition()).inflate(i, this.getVerticalSearchDistance(p_428330_), i);
+    private AABB getTargetSearchArea(final PathfinderMob mob) {
+        int horizontalSearchDistance = this.getHorizontalSearchDistance(mob);
+        return new AABB(mob.blockPosition()).inflate(horizontalSearchDistance, this.getVerticalSearchDistance(mob), horizontalSearchDistance);
     }
 
-    private int getHorizontalSearchDistance(PathfinderMob p_431290_) {
-        return p_431290_.isPassenger() ? 1 : this.horizontalSearchDistance;
+    private int getHorizontalSearchDistance(final PathfinderMob mob) {
+        return mob.isPassenger() ? 1 : this.horizontalSearchDistance;
     }
 
-    private int getVerticalSearchDistance(PathfinderMob p_431476_) {
-        return p_431476_.isPassenger() ? 1 : this.verticalSearchDistance;
+    private int getVerticalSearchDistance(final PathfinderMob mob) {
+        return mob.isPassenger() ? 1 : this.verticalSearchDistance;
     }
 
-    private static Set<GlobalPos> getVisitedPositions(PathfinderMob p_423632_) {
-        return p_423632_.getBrain().getMemory(MemoryModuleType.VISITED_BLOCK_POSITIONS).orElse(Set.of());
+    private static Set<GlobalPos> getVisitedPositions(final PathfinderMob mob) {
+        return mob.getBrain().getMemory(MemoryModuleType.VISITED_BLOCK_POSITIONS).orElse(Set.of());
     }
 
-    private static Set<GlobalPos> getUnreachablePositions(PathfinderMob p_425740_) {
-        return p_425740_.getBrain().getMemory(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS).orElse(Set.of());
+    private static Set<GlobalPos> getUnreachablePositions(final PathfinderMob mob) {
+        return mob.getBrain().getMemory(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS).orElse(Set.of());
     }
 
     private boolean isPositionAlreadyVisited(
-        Set<GlobalPos> p_422913_, Set<GlobalPos> p_426081_, TransportItemsBetweenContainers.TransportItemTarget p_423166_, Level p_426127_
+        final Set<GlobalPos> visitedPositions,
+        final Set<GlobalPos> unreachablePositions,
+        final TransportItemsBetweenContainers.TransportItemTarget target,
+        final Level level
     ) {
-        return this.getConnectedTargets(p_423166_, p_426127_)
-            .map(p_422480_ -> new GlobalPos(p_426127_.dimension(), p_422480_.pos))
-            .anyMatch(p_430238_ -> p_422913_.contains(p_430238_) || p_426081_.contains(p_430238_));
+        return this.getConnectedTargets(target, level)
+            .map(transportItemTarget -> new GlobalPos(level.dimension(), transportItemTarget.pos))
+            .anyMatch(pos -> visitedPositions.contains(pos) || unreachablePositions.contains(pos));
     }
 
-    private static boolean hasFinishedPath(PathfinderMob p_422952_) {
-        return p_422952_.getNavigation().getPath() != null && p_422952_.getNavigation().getPath().isDone();
+    private static boolean hasFinishedPath(final PathfinderMob body) {
+        return body.getNavigation().getPath() != null && body.getNavigation().getPath().isDone();
     }
 
-    protected void setVisitedBlockPos(PathfinderMob p_428904_, Level p_424578_, BlockPos p_430799_) {
-        Set<GlobalPos> set = new HashSet<>(getVisitedPositions(p_428904_));
-        set.add(new GlobalPos(p_424578_.dimension(), p_430799_));
-        if (set.size() > 10) {
-            this.enterCooldownAfterNoMatchingTargetFound(p_428904_);
+    protected void setVisitedBlockPos(final PathfinderMob body, final Level level, final BlockPos target) {
+        Set<GlobalPos> visitedPositions = new HashSet<>(getVisitedPositions(body));
+        visitedPositions.add(new GlobalPos(level.dimension(), target));
+        if (visitedPositions.size() > 10) {
+            this.enterCooldownAfterNoMatchingTargetFound(body);
         } else {
-            p_428904_.getBrain().setMemoryWithExpiry(MemoryModuleType.VISITED_BLOCK_POSITIONS, set, 6000L);
+            body.getBrain().setMemoryWithExpiry(MemoryModuleType.VISITED_BLOCK_POSITIONS, visitedPositions, 6000L);
         }
     }
 
-    protected void markVisitedBlockPosAsUnreachable(PathfinderMob p_427338_, Level p_426597_, BlockPos p_428719_) {
-        Set<GlobalPos> set = new HashSet<>(getVisitedPositions(p_427338_));
-        set.remove(new GlobalPos(p_426597_.dimension(), p_428719_));
-        Set<GlobalPos> set1 = new HashSet<>(getUnreachablePositions(p_427338_));
-        set1.add(new GlobalPos(p_426597_.dimension(), p_428719_));
-        if (set1.size() > 50) {
-            this.enterCooldownAfterNoMatchingTargetFound(p_427338_);
+    protected void markVisitedBlockPosAsUnreachable(final PathfinderMob body, final Level level, final BlockPos target) {
+        Set<GlobalPos> visitedPositions = new HashSet<>(getVisitedPositions(body));
+        visitedPositions.remove(new GlobalPos(level.dimension(), target));
+        Set<GlobalPos> unreachablePositions = new HashSet<>(getUnreachablePositions(body));
+        unreachablePositions.add(new GlobalPos(level.dimension(), target));
+        if (unreachablePositions.size() > 50) {
+            this.enterCooldownAfterNoMatchingTargetFound(body);
         } else {
-            p_427338_.getBrain().setMemoryWithExpiry(MemoryModuleType.VISITED_BLOCK_POSITIONS, set, 6000L);
-            p_427338_.getBrain().setMemoryWithExpiry(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS, set1, 6000L);
+            body.getBrain().setMemoryWithExpiry(MemoryModuleType.VISITED_BLOCK_POSITIONS, visitedPositions, 6000L);
+            body.getBrain().setMemoryWithExpiry(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS, unreachablePositions, 6000L);
         }
     }
 
-    private boolean isWantedBlock(PathfinderMob p_430555_, BlockState p_427764_) {
-        return isPickingUpItems(p_430555_) ? this.sourceBlockType.test(p_427764_) : this.destinationBlockType.test(p_427764_);
+    private boolean isWantedBlock(final PathfinderMob mob, final BlockState block) {
+        return isPickingUpItems(mob) ? this.sourceBlockType.test(block) : this.destinationBlockType.test(block);
     }
 
-    private static double getInteractionRange(PathfinderMob p_429333_) {
-        return hasFinishedPath(p_429333_) ? 1.0 : 0.5;
+    private static double getInteractionRange(final PathfinderMob body) {
+        return hasFinishedPath(body) ? 1.0 : 0.5;
     }
 
     private boolean isWithinTargetDistance(
-        double p_425352_, TransportItemsBetweenContainers.TransportItemTarget p_428034_, Level p_429222_, PathfinderMob p_430342_, Vec3 p_422690_
+        final double distance,
+        final TransportItemsBetweenContainers.TransportItemTarget target,
+        final Level level,
+        final PathfinderMob body,
+        final Vec3 fromPos
     ) {
-        AABB aabb = p_430342_.getBoundingBox();
-        AABB aabb1 = AABB.ofSize(p_422690_, aabb.getXsize(), aabb.getYsize(), aabb.getZsize());
-        return p_428034_.state
-            .getCollisionShape(p_429222_, p_428034_.pos)
-            .bounds()
-            .inflate(p_425352_, 0.5, p_425352_)
-            .move(p_428034_.pos)
-            .intersects(aabb1);
+        AABB boundingBox = body.getBoundingBox();
+        AABB movedBoundBox = AABB.ofSize(fromPos, boundingBox.getXsize(), boundingBox.getYsize(), boundingBox.getZsize());
+        return target.state.getCollisionShape(level, target.pos).bounds().inflate(distance, 0.5, distance).move(target.pos).intersects(movedBoundBox);
     }
 
     private boolean targetIsReachableFromPosition(
-        Level p_430308_, boolean p_422924_, Vec3 p_428497_, TransportItemsBetweenContainers.TransportItemTarget p_423186_, PathfinderMob p_427703_
+        final Level level,
+        final boolean canReachTarget,
+        final Vec3 pos,
+        final TransportItemsBetweenContainers.TransportItemTarget target,
+        final PathfinderMob body
     ) {
-        return p_422924_ && this.canSeeAnyTargetSide(p_423186_, p_430308_, p_427703_, p_428497_);
+        return canReachTarget && this.canSeeAnyTargetSide(target, level, body, pos);
     }
 
-    private boolean canSeeAnyTargetSide(TransportItemsBetweenContainers.TransportItemTarget p_426777_, Level p_428844_, PathfinderMob p_425798_, Vec3 p_424847_) {
-        Vec3 vec3 = p_426777_.pos.getCenter();
+    private boolean canSeeAnyTargetSide(
+        final TransportItemsBetweenContainers.TransportItemTarget target, final Level level, final PathfinderMob body, final Vec3 eyePosition
+    ) {
+        Vec3 center = Vec3.atCenterOf(target.pos);
         return Direction.stream()
-            .map(p_425993_ -> vec3.add(0.5 * p_425993_.getStepX(), 0.5 * p_425993_.getStepY(), 0.5 * p_425993_.getStepZ()))
-            .map(p_424471_ -> p_428844_.clip(new ClipContext(p_424847_, p_424471_, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, p_425798_)))
-            .anyMatch(p_422369_ -> p_422369_.getType() == HitResult.Type.BLOCK && p_422369_.getBlockPos().equals(p_426777_.pos));
+            .map(direction -> center.add(0.5 * direction.getStepX(), 0.5 * direction.getStepY(), 0.5 * direction.getStepZ()))
+            .map(hitTarget -> level.clip(new ClipContext(eyePosition, hitTarget, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, body)))
+            .anyMatch(hitResult -> hitResult.getType() == HitResult.Type.BLOCK && hitResult.getBlockPos().equals(target.pos));
     }
 
-    private boolean isAnotherMobInteractingWithTarget(TransportItemsBetweenContainers.TransportItemTarget p_429626_, Level p_425245_) {
-        return this.getConnectedTargets(p_429626_, p_425245_).anyMatch(this.shouldQueueForTarget);
+    private boolean isAnotherMobInteractingWithTarget(final TransportItemsBetweenContainers.TransportItemTarget target, final Level level) {
+        return this.getConnectedTargets(target, level).anyMatch(this.shouldQueueForTarget);
     }
 
-    private static boolean isPickingUpItems(PathfinderMob p_428670_) {
-        return p_428670_.getMainHandItem().isEmpty();
+    private static boolean isPickingUpItems(final PathfinderMob body) {
+        return body.getMainHandItem().isEmpty();
     }
 
-    private static boolean matchesGettingItemsRequirement(Container p_427231_) {
-        return !p_427231_.isEmpty();
+    private static boolean matchesGettingItemsRequirement(final Container container) {
+        return !container.isEmpty();
     }
 
-    private static boolean matchesLeavingItemsRequirement(PathfinderMob p_429049_, Container p_426778_) {
-        return p_426778_.isEmpty() || hasItemMatchingHandItem(p_429049_, p_426778_);
+    private static boolean matchesLeavingItemsRequirement(final PathfinderMob body, final Container container) {
+        return container.isEmpty() || hasItemMatchingHandItem(body, container);
     }
 
-    private static boolean hasItemMatchingHandItem(PathfinderMob p_430719_, Container p_426288_) {
-        ItemStack itemstack = p_430719_.getMainHandItem();
+    private static boolean hasItemMatchingHandItem(final PathfinderMob body, final Container container) {
+        ItemStack mainHandItem = body.getMainHandItem();
 
-        for (ItemStack itemstack1 : p_426288_) {
-            if (ItemStack.isSameItem(itemstack1, itemstack)) {
+        for (ItemStack itemStack : container) {
+            if (ItemStack.isSameItem(itemStack, mainHandItem)) {
                 return true;
             }
         }
@@ -505,102 +515,102 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
         return false;
     }
 
-    private void pickUpItems(PathfinderMob p_429859_, Container p_428102_) {
-        p_429859_.setItemSlot(EquipmentSlot.MAINHAND, pickupItemFromContainer(p_428102_));
-        p_429859_.setGuaranteedDrop(EquipmentSlot.MAINHAND);
-        p_428102_.setChanged();
-        this.clearMemoriesAfterMatchingTargetFound(p_429859_);
+    private void pickUpItems(final PathfinderMob body, final Container container) {
+        body.setItemSlot(EquipmentSlot.MAINHAND, pickupItemFromContainer(container));
+        body.setGuaranteedDrop(EquipmentSlot.MAINHAND);
+        container.setChanged();
+        this.clearMemoriesAfterMatchingTargetFound(body);
     }
 
-    private void putDownItem(PathfinderMob p_429357_, Container p_429652_) {
-        ItemStack itemstack = addItemsToContainer(p_429357_, p_429652_);
-        p_429652_.setChanged();
-        p_429357_.setItemSlot(EquipmentSlot.MAINHAND, itemstack);
-        if (itemstack.isEmpty()) {
-            this.clearMemoriesAfterMatchingTargetFound(p_429357_);
+    private void putDownItem(final PathfinderMob body, final Container container) {
+        ItemStack itemsLeftAfterVisitingChest = addItemsToContainer(body, container);
+        container.setChanged();
+        body.setItemSlot(EquipmentSlot.MAINHAND, itemsLeftAfterVisitingChest);
+        if (itemsLeftAfterVisitingChest.isEmpty()) {
+            this.clearMemoriesAfterMatchingTargetFound(body);
         } else {
-            this.stopTargetingCurrentTarget(p_429357_);
+            this.stopTargetingCurrentTarget(body);
         }
     }
 
-    private static ItemStack pickupItemFromContainer(Container p_422876_) {
-        int i = 0;
+    private static ItemStack pickupItemFromContainer(final Container container) {
+        int slot = 0;
 
-        for (ItemStack itemstack : p_422876_) {
-            if (!itemstack.isEmpty()) {
-                int j = Math.min(itemstack.getCount(), 16);
-                return p_422876_.removeItem(i, j);
+        for (ItemStack itemStack : container) {
+            if (!itemStack.isEmpty()) {
+                int itemCount = Math.min(itemStack.getCount(), 16);
+                return container.removeItem(slot, itemCount);
             }
 
-            i++;
+            slot++;
         }
 
         return ItemStack.EMPTY;
     }
 
-    private static ItemStack addItemsToContainer(PathfinderMob p_423175_, Container p_423503_) {
-        int i = 0;
-        ItemStack itemstack = p_423175_.getMainHandItem();
+    private static ItemStack addItemsToContainer(final PathfinderMob body, final Container container) {
+        int slot = 0;
+        ItemStack itemStack = body.getMainHandItem();
 
-        for (ItemStack itemstack1 : p_423503_) {
-            if (itemstack1.isEmpty()) {
-                p_423503_.setItem(i, itemstack);
+        for (ItemStack containerItemStack : container) {
+            if (containerItemStack.isEmpty()) {
+                container.setItem(slot, itemStack);
                 return ItemStack.EMPTY;
             }
 
-            if (ItemStack.isSameItemSameComponents(itemstack1, itemstack) && itemstack1.getCount() < itemstack1.getMaxStackSize()) {
-                int j = itemstack1.getMaxStackSize() - itemstack1.getCount();
-                int k = Math.min(j, itemstack.getCount());
-                itemstack1.setCount(itemstack1.getCount() + k);
-                itemstack.setCount(itemstack.getCount() - j);
-                p_423503_.setItem(i, itemstack1);
-                if (itemstack.isEmpty()) {
+            if (ItemStack.isSameItemSameComponents(containerItemStack, itemStack) && containerItemStack.getCount() < containerItemStack.getMaxStackSize()) {
+                int countThatCanBeAdded = containerItemStack.getMaxStackSize() - containerItemStack.getCount();
+                int countToAdd = Math.min(countThatCanBeAdded, itemStack.getCount());
+                containerItemStack.setCount(containerItemStack.getCount() + countToAdd);
+                itemStack.setCount(itemStack.getCount() - countThatCanBeAdded);
+                container.setItem(slot, containerItemStack);
+                if (itemStack.isEmpty()) {
                     return ItemStack.EMPTY;
                 }
             }
 
-            i++;
+            slot++;
         }
 
-        return itemstack;
+        return itemStack;
     }
 
-    protected void stopTargetingCurrentTarget(PathfinderMob p_427621_) {
+    protected void stopTargetingCurrentTarget(final PathfinderMob body) {
         this.ticksSinceReachingTarget = 0;
         this.target = null;
-        p_427621_.getNavigation().stop();
-        p_427621_.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        body.getNavigation().stop();
+        body.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
     }
 
-    protected void clearMemoriesAfterMatchingTargetFound(PathfinderMob p_428810_) {
-        this.stopTargetingCurrentTarget(p_428810_);
-        p_428810_.getBrain().eraseMemory(MemoryModuleType.VISITED_BLOCK_POSITIONS);
-        p_428810_.getBrain().eraseMemory(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS);
+    protected void clearMemoriesAfterMatchingTargetFound(final PathfinderMob body) {
+        this.stopTargetingCurrentTarget(body);
+        body.getBrain().eraseMemory(MemoryModuleType.VISITED_BLOCK_POSITIONS);
+        body.getBrain().eraseMemory(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS);
     }
 
-    private void enterCooldownAfterNoMatchingTargetFound(PathfinderMob p_428759_) {
-        this.stopTargetingCurrentTarget(p_428759_);
-        p_428759_.getBrain().setMemory(MemoryModuleType.TRANSPORT_ITEMS_COOLDOWN_TICKS, 140);
-        p_428759_.getBrain().eraseMemory(MemoryModuleType.VISITED_BLOCK_POSITIONS);
-        p_428759_.getBrain().eraseMemory(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS);
+    private void enterCooldownAfterNoMatchingTargetFound(final PathfinderMob body) {
+        this.stopTargetingCurrentTarget(body);
+        body.getBrain().setMemory(MemoryModuleType.TRANSPORT_ITEMS_COOLDOWN_TICKS, 140);
+        body.getBrain().eraseMemory(MemoryModuleType.VISITED_BLOCK_POSITIONS);
+        body.getBrain().eraseMemory(MemoryModuleType.UNREACHABLE_TRANSPORT_BLOCK_POSITIONS);
     }
 
-    protected void stop(ServerLevel p_428411_, PathfinderMob p_430299_, long p_430531_) {
-        this.onStartTravelling(p_430299_);
-        if (p_430299_.getNavigation() instanceof GroundPathNavigation groundpathnavigation) {
-            groundpathnavigation.setCanPathToTargetsBelowSurface(false);
+    protected void stop(final ServerLevel level, final PathfinderMob body, final long timestamp) {
+        this.onStartTravelling(body);
+        if (body.getNavigation() instanceof GroundPathNavigation pathNavigation) {
+            pathNavigation.setCanPathToTargetsBelowSurface(false);
         }
     }
 
-    private void stopInPlace(PathfinderMob p_430904_) {
-        p_430904_.getNavigation().stop();
-        p_430904_.setXxa(0.0F);
-        p_430904_.setYya(0.0F);
-        p_430904_.setSpeed(0.0F);
-        p_430904_.setDeltaMovement(0.0, p_430904_.getDeltaMovement().y, 0.0);
+    private void stopInPlace(final PathfinderMob mob) {
+        mob.getNavigation().stop();
+        mob.setXxa(0.0F);
+        mob.setYya(0.0F);
+        mob.setSpeed(0.0F);
+        mob.setDeltaMovement(0.0, mob.getDeltaMovement().y, 0.0);
     }
 
-    public static enum ContainerInteractionState {
+    public enum ContainerInteractionState {
         PICKUP_ITEM,
         PICKUP_NO_ITEM,
         PLACE_ITEM,
@@ -611,30 +621,32 @@ public class TransportItemsBetweenContainers extends Behavior<PathfinderMob> {
     public interface OnTargetReachedInteraction extends TriConsumer<PathfinderMob, TransportItemsBetweenContainers.TransportItemTarget, Integer> {
     }
 
-    public static enum TransportItemState {
+    public enum TransportItemState {
         TRAVELLING,
         QUEUING,
         INTERACTING;
     }
 
     public record TransportItemTarget(BlockPos pos, Container container, BlockEntity blockEntity, BlockState state) {
-        public static TransportItemsBetweenContainers.@Nullable TransportItemTarget tryCreatePossibleTarget(BlockEntity p_430951_, Level p_430204_) {
-            BlockPos blockpos = p_430951_.getBlockPos();
-            BlockState blockstate = p_430951_.getBlockState();
-            Container container = getBlockEntityContainer(p_430951_, blockstate, p_430204_, blockpos);
-            return container != null ? new TransportItemsBetweenContainers.TransportItemTarget(blockpos, container, p_430951_, blockstate) : null;
+        public static TransportItemsBetweenContainers.@Nullable TransportItemTarget tryCreatePossibleTarget(final BlockEntity blockEntity, final Level level) {
+            BlockPos blockPos = blockEntity.getBlockPos();
+            BlockState blockState = blockEntity.getBlockState();
+            Container container = getBlockEntityContainer(blockEntity, blockState, level, blockPos);
+            return container != null ? new TransportItemsBetweenContainers.TransportItemTarget(blockPos, container, blockEntity, blockState) : null;
         }
 
-        public static TransportItemsBetweenContainers.@Nullable TransportItemTarget tryCreatePossibleTarget(BlockPos p_422547_, Level p_431755_) {
-            BlockEntity blockentity = p_431755_.getBlockEntity(p_422547_);
-            return blockentity == null ? null : tryCreatePossibleTarget(blockentity, p_431755_);
+        public static TransportItemsBetweenContainers.@Nullable TransportItemTarget tryCreatePossibleTarget(final BlockPos blockPos, final Level level) {
+            BlockEntity blockEntity = level.getBlockEntity(blockPos);
+            return blockEntity == null ? null : tryCreatePossibleTarget(blockEntity, level);
         }
 
-        private static @Nullable Container getBlockEntityContainer(BlockEntity p_430260_, BlockState p_425178_, Level p_424291_, BlockPos p_429679_) {
-            if (p_425178_.getBlock() instanceof ChestBlock chestblock) {
-                return ChestBlock.getContainer(chestblock, p_425178_, p_424291_, p_429679_, false);
+        private static @Nullable Container getBlockEntityContainer(
+            final BlockEntity blockEntity, final BlockState blockState, final Level level, final BlockPos blockPos
+        ) {
+            if (blockState.getBlock() instanceof ChestBlock chestBlock) {
+                return ChestBlock.getContainer(chestBlock, blockState, level, blockPos, false);
             } else {
-                return p_430260_ instanceof Container container ? container : null;
+                return blockEntity instanceof Container container ? container : null;
             }
         }
     }

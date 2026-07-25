@@ -10,7 +10,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.animal.happyghast.HappyGhast;
 import net.minecraft.world.item.ItemStack;
@@ -48,110 +48,110 @@ public class DriedGhastBlock extends HorizontalDirectionalBlock implements Simpl
         return CODEC;
     }
 
-    public DriedGhastBlock(BlockBehaviour.Properties p_409185_) {
-        super(p_409185_);
+    public DriedGhastBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(HYDRATION_LEVEL, 0).setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_408532_) {
-        p_408532_.add(FACING, HYDRATION_LEVEL, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, HYDRATION_LEVEL, WATERLOGGED);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_407458_,
-        LevelReader p_408178_,
-        ScheduledTickAccess p_407118_,
-        BlockPos p_409751_,
-        Direction p_409868_,
-        BlockPos p_410676_,
-        BlockState p_410607_,
-        RandomSource p_408903_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_407458_.getValue(WATERLOGGED)) {
-            p_407118_.scheduleTick(p_409751_, Fluids.WATER, Fluids.WATER.getTickDelay(p_408178_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_407458_, p_408178_, p_407118_, p_409751_, p_409868_, p_410676_, p_410607_, p_408903_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public VoxelShape getShape(BlockState p_408150_, BlockGetter p_408217_, BlockPos p_410707_, CollisionContext p_409317_) {
+    public VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
-    public int getHydrationLevel(BlockState p_407654_) {
-        return p_407654_.getValue(HYDRATION_LEVEL);
+    public int getHydrationLevel(final BlockState state) {
+        return state.getValue(HYDRATION_LEVEL);
     }
 
-    private boolean isReadyToSpawn(BlockState p_408747_) {
-        return this.getHydrationLevel(p_408747_) == 3;
-    }
-
-    @Override
-    protected void tick(BlockState p_410355_, ServerLevel p_408755_, BlockPos p_410688_, RandomSource p_409015_) {
-        if (p_410355_.getValue(WATERLOGGED)) {
-            this.tickWaterlogged(p_410355_, p_408755_, p_410688_, p_409015_);
-        } else {
-            int i = this.getHydrationLevel(p_410355_);
-            if (i > 0) {
-                p_408755_.setBlock(p_410688_, p_410355_.setValue(HYDRATION_LEVEL, i - 1), 2);
-                p_408755_.gameEvent(GameEvent.BLOCK_CHANGE, p_410688_, GameEvent.Context.of(p_410355_));
-            }
-        }
-    }
-
-    private void tickWaterlogged(BlockState p_406049_, ServerLevel p_410023_, BlockPos p_406811_, RandomSource p_407411_) {
-        if (!this.isReadyToSpawn(p_406049_)) {
-            p_410023_.playSound(null, p_406811_, SoundEvents.DRIED_GHAST_TRANSITION, SoundSource.BLOCKS, 1.0F, 1.0F);
-            p_410023_.setBlock(p_406811_, p_406049_.setValue(HYDRATION_LEVEL, this.getHydrationLevel(p_406049_) + 1), 2);
-            p_410023_.gameEvent(GameEvent.BLOCK_CHANGE, p_406811_, GameEvent.Context.of(p_406049_));
-        } else {
-            this.spawnGhastling(p_410023_, p_406811_, p_406049_);
-        }
-    }
-
-    private void spawnGhastling(ServerLevel p_409691_, BlockPos p_410120_, BlockState p_406426_) {
-        p_409691_.removeBlock(p_410120_, false);
-        HappyGhast happyghast = EntityType.HAPPY_GHAST.create(p_409691_, EntitySpawnReason.BREEDING);
-        if (happyghast != null) {
-            Vec3 vec3 = p_410120_.getBottomCenter();
-            happyghast.setBaby(true);
-            float f = Direction.getYRot(p_406426_.getValue(FACING));
-            happyghast.setYHeadRot(f);
-            happyghast.snapTo(vec3.x(), vec3.y(), vec3.z(), f, 0.0F);
-            p_409691_.addFreshEntity(happyghast);
-            p_409691_.playSound(null, happyghast, SoundEvents.GHASTLING_SPAWN, SoundSource.BLOCKS, 1.0F, 1.0F);
-        }
+    private boolean isReadyToSpawn(final BlockState state) {
+        return this.getHydrationLevel(state) == 3;
     }
 
     @Override
-    public void animateTick(BlockState p_410332_, Level p_406099_, BlockPos p_408939_, RandomSource p_409178_) {
-        double d0 = p_408939_.getX() + 0.5;
-        double d1 = p_408939_.getY() + 0.5;
-        double d2 = p_408939_.getZ() + 0.5;
-        if (!p_410332_.getValue(WATERLOGGED)) {
-            if (p_409178_.nextInt(40) == 0 && p_406099_.getBlockState(p_408939_.below()).is(BlockTags.TRIGGERS_AMBIENT_DRIED_GHAST_BLOCK_SOUNDS)) {
-                p_406099_.playLocalSound(d0, d1, d2, SoundEvents.DRIED_GHAST_AMBIENT, SoundSource.BLOCKS, 1.0F, 1.0F, false);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos position, final RandomSource random) {
+        if (state.getValue(WATERLOGGED)) {
+            this.tickWaterlogged(state, level, position, random);
+        } else {
+            int hydrationLevel = this.getHydrationLevel(state);
+            if (hydrationLevel > 0) {
+                level.setBlock(position, state.setValue(HYDRATION_LEVEL, hydrationLevel - 1), 2);
+                level.gameEvent(GameEvent.BLOCK_CHANGE, position, GameEvent.Context.of(state));
+            }
+        }
+    }
+
+    private void tickWaterlogged(final BlockState state, final ServerLevel level, final BlockPos position, final RandomSource random) {
+        if (!this.isReadyToSpawn(state)) {
+            level.playSound(null, position, SoundEvents.DRIED_GHAST_TRANSITION, SoundSource.BLOCKS, 1.0F, 1.0F);
+            level.setBlock(position, state.setValue(HYDRATION_LEVEL, this.getHydrationLevel(state) + 1), 2);
+            level.gameEvent(GameEvent.BLOCK_CHANGE, position, GameEvent.Context.of(state));
+        } else {
+            this.spawnGhastling(level, position, state);
+        }
+    }
+
+    private void spawnGhastling(final ServerLevel level, final BlockPos position, final BlockState state) {
+        level.removeBlock(position, false);
+        HappyGhast ghastling = EntityTypes.HAPPY_GHAST.create(level, EntitySpawnReason.BREEDING);
+        if (ghastling != null) {
+            Vec3 spawnAt = Vec3.atBottomCenterOf(position);
+            ghastling.setBaby(true);
+            float blockRotation = Direction.getYRot(state.getValue(FACING));
+            ghastling.setYHeadRot(blockRotation);
+            ghastling.snapTo(spawnAt.x(), spawnAt.y(), spawnAt.z(), blockRotation, 0.0F);
+            level.addFreshEntity(ghastling);
+            level.playSound(null, ghastling, SoundEvents.GHASTLING_SPAWN, SoundSource.BLOCKS, 1.0F, 1.0F);
+        }
+    }
+
+    @Override
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        double x = pos.getX() + 0.5;
+        double y = pos.getY() + 0.5;
+        double z = pos.getZ() + 0.5;
+        if (!state.getValue(WATERLOGGED)) {
+            if (random.nextInt(40) == 0 && level.getBlockState(pos.below()).is(BlockTags.TRIGGERS_AMBIENT_DRIED_GHAST_BLOCK_SOUNDS)) {
+                level.playLocalSound(x, y, z, SoundEvents.DRIED_GHAST_AMBIENT, SoundSource.BLOCKS, 1.0F, 1.0F, false);
             }
 
-            if (p_409178_.nextInt(6) == 0) {
-                p_406099_.addParticle(ParticleTypes.WHITE_SMOKE, d0, d1, d2, 0.0, 0.02, 0.0);
+            if (random.nextInt(6) == 0) {
+                level.addParticle(ParticleTypes.WHITE_SMOKE, x, y, z, 0.0, 0.02, 0.0);
             }
         } else {
-            if (p_409178_.nextInt(40) == 0) {
-                p_406099_.playLocalSound(d0, d1, d2, SoundEvents.DRIED_GHAST_AMBIENT_WATER, SoundSource.BLOCKS, 1.0F, 1.0F, false);
+            if (random.nextInt(40) == 0) {
+                level.playLocalSound(x, y, z, SoundEvents.DRIED_GHAST_AMBIENT_WATER, SoundSource.BLOCKS, 1.0F, 1.0F, false);
             }
 
-            if (p_409178_.nextInt(6) == 0) {
-                p_406099_.addParticle(
+            if (random.nextInt(6) == 0) {
+                level.addParticle(
                     ParticleTypes.HAPPY_VILLAGER,
-                    d0 + (p_409178_.nextFloat() * 2.0F - 1.0F) / 3.0F,
-                    d1 + 0.4,
-                    d2 + (p_409178_.nextFloat() * 2.0F - 1.0F) / 3.0F,
+                    x + (random.nextFloat() * 2.0F - 1.0F) / 3.0F,
+                    y + 0.4,
+                    z + (random.nextFloat() * 2.0F - 1.0F) / 3.0F,
                     0.0,
-                    p_409178_.nextFloat(),
+                    random.nextFloat(),
                     0.0
                 );
             }
@@ -159,31 +159,31 @@ public class DriedGhastBlock extends HorizontalDirectionalBlock implements Simpl
     }
 
     @Override
-    protected void randomTick(BlockState p_409379_, ServerLevel p_408492_, BlockPos p_406630_, RandomSource p_409352_) {
-        if ((p_409379_.getValue(WATERLOGGED) || p_409379_.getValue(HYDRATION_LEVEL) > 0) && !p_408492_.getBlockTicks().hasScheduledTick(p_406630_, this)) {
-            p_408492_.scheduleTick(p_406630_, this, 5000);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if ((state.getValue(WATERLOGGED) || state.getValue(HYDRATION_LEVEL) > 0) && !level.getBlockTicks().hasScheduledTick(pos, this)) {
+            level.scheduleTick(pos, this, 5000);
         }
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_410426_) {
-        FluidState fluidstate = p_410426_.getLevel().getFluidState(p_410426_.getClickedPos());
-        boolean flag = fluidstate.getType() == Fluids.WATER;
-        return super.getStateForPlacement(p_410426_).setValue(WATERLOGGED, flag).setValue(FACING, p_410426_.getHorizontalDirection().getOpposite());
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
+        return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource).setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_409292_) {
-        return p_409292_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_409292_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    public boolean placeLiquid(LevelAccessor p_408704_, BlockPos p_408154_, BlockState p_410312_, FluidState p_407237_) {
-        if (!p_410312_.getValue(BlockStateProperties.WATERLOGGED) && p_407237_.getType() == Fluids.WATER) {
-            if (!p_408704_.isClientSide()) {
-                p_408704_.setBlock(p_408154_, p_410312_.setValue(BlockStateProperties.WATERLOGGED, true), 3);
-                p_408704_.scheduleTick(p_408154_, p_407237_.getType(), p_407237_.getType().getTickDelay(p_408704_));
-                p_408704_.playSound(null, p_408154_, SoundEvents.DRIED_GHAST_PLACE_IN_WATER, SoundSource.BLOCKS, 1.0F, 1.0F);
+    public boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
+        if (!state.getValue(BlockStateProperties.WATERLOGGED) && fluidState.is(Fluids.WATER)) {
+            if (!level.isClientSide()) {
+                level.setBlock(pos, state.setValue(BlockStateProperties.WATERLOGGED, true), 3);
+                level.scheduleTick(pos, fluidState.getType(), fluidState.getType().getTickDelay(level));
+                level.playSound(null, pos, SoundEvents.DRIED_GHAST_PLACE_IN_WATER, SoundSource.BLOCKS, 1.0F, 1.0F);
             }
 
             return true;
@@ -193,13 +193,15 @@ public class DriedGhastBlock extends HorizontalDirectionalBlock implements Simpl
     }
 
     @Override
-    public void setPlacedBy(Level p_409809_, BlockPos p_408301_, BlockState p_410233_, @Nullable LivingEntity p_410420_, ItemStack p_406050_) {
-        super.setPlacedBy(p_409809_, p_408301_, p_410233_, p_410420_, p_406050_);
-        p_409809_.playSound(null, p_408301_, p_410233_.getValue(WATERLOGGED) ? SoundEvents.DRIED_GHAST_PLACE_IN_WATER : SoundEvents.DRIED_GHAST_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
+    public void setPlacedBy(final Level level, final BlockPos pos, final BlockState state, final @Nullable LivingEntity by, final ItemStack itemStack) {
+        super.setPlacedBy(level, pos, state, by, itemStack);
+        level.playSound(
+            null, pos, state.getValue(WATERLOGGED) ? SoundEvents.DRIED_GHAST_PLACE_IN_WATER : SoundEvents.DRIED_GHAST_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F
+        );
     }
 
     @Override
-    public boolean isPathfindable(BlockState p_410548_, PathComputationType p_407974_) {
+    public boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

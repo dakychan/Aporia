@@ -21,42 +21,42 @@ import net.minecraft.util.StringRepresentable;
 
 public class StringRepresentableArgument<T extends Enum<T> & StringRepresentable> implements ArgumentType<T> {
     private static final DynamicCommandExceptionType ERROR_INVALID_VALUE = new DynamicCommandExceptionType(
-        p_308387_ -> Component.translatableEscape("argument.enum.invalid", p_308387_)
+        value -> Component.translatableEscape("argument.enum.invalid", value)
     );
     private final Codec<T> codec;
     private final Supplier<T[]> values;
 
-    protected StringRepresentableArgument(Codec<T> p_234060_, Supplier<T[]> p_234061_) {
-        this.codec = p_234060_;
-        this.values = p_234061_;
+    protected StringRepresentableArgument(final Codec<T> codec, final Supplier<T[]> values) {
+        this.codec = codec;
+        this.values = values;
     }
 
-    public T parse(StringReader p_234063_) throws CommandSyntaxException {
-        String s = p_234063_.readUnquotedString();
-        return this.codec.parse(JsonOps.INSTANCE, new JsonPrimitive(s)).result().orElseThrow(() -> ERROR_INVALID_VALUE.createWithContext(p_234063_, s));
+    public T parse(final StringReader reader) throws CommandSyntaxException {
+        String id = reader.readUnquotedString();
+        return this.codec.parse(JsonOps.INSTANCE, new JsonPrimitive(id)).result().orElseThrow(() -> ERROR_INVALID_VALUE.createWithContext(reader, id));
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_234074_, SuggestionsBuilder p_234075_) {
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
             Arrays.<Enum>stream((Enum[])this.values.get())
-                .map(p_234069_ -> ((StringRepresentable)p_234069_).getSerializedName())
+                .map(rec$ -> ((StringRepresentable)rec$).getSerializedName())
                 .map(this::convertId)
                 .collect(Collectors.toList()),
-            p_234075_
+            builder
         );
     }
 
     @Override
     public Collection<String> getExamples() {
         return Arrays.<Enum>stream((Enum[])this.values.get())
-            .map(p_234065_ -> ((StringRepresentable)p_234065_).getSerializedName())
+            .map(rec$ -> ((StringRepresentable)rec$).getSerializedName())
             .map(this::convertId)
             .limit(2L)
             .collect(Collectors.toList());
     }
 
-    protected String convertId(String p_275436_) {
-        return p_275436_;
+    protected String convertId(final String id) {
+        return id;
     }
 }

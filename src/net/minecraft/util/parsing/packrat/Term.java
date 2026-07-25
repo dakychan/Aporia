@@ -4,63 +4,67 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface Term<S> {
-    boolean parse(ParseState<S> p_334989_, Scope p_334936_, Control p_335743_);
+    boolean parse(ParseState<S> state, Scope scope, Control control);
 
-    static <S, T> Term<S> marker(Atom<T> p_333477_, T p_335010_) {
-        return new Term.Marker<>(p_333477_, p_335010_);
+    static <S, T> Term<S> marker(final Atom<T> name, final T value) {
+        return new Term.Marker<>(name, value);
     }
 
     @SafeVarargs
-    static <S> Term<S> sequence(Term<S>... p_331306_) {
-        return new Term.Sequence<>(p_331306_);
+    static <S> Term<S> sequence(final Term<S>... terms) {
+        return new Term.Sequence<>(terms);
     }
 
     @SafeVarargs
-    static <S> Term<S> alternative(Term<S>... p_334441_) {
-        return new Term.Alternative<>(p_334441_);
+    static <S> Term<S> alternative(final Term<S>... terms) {
+        return new Term.Alternative<>(terms);
     }
 
-    static <S> Term<S> optional(Term<S> p_335256_) {
-        return new Term.Maybe<>(p_335256_);
+    static <S> Term<S> optional(final Term<S> term) {
+        return new Term.Maybe<>(term);
     }
 
-    static <S, T> Term<S> repeated(NamedRule<S, T> p_391997_, Atom<List<T>> p_395278_) {
-        return repeated(p_391997_, p_395278_, 0);
+    static <S, T> Term<S> repeated(final NamedRule<S, T> element, final Atom<List<T>> listName) {
+        return repeated(element, listName, 0);
     }
 
-    static <S, T> Term<S> repeated(NamedRule<S, T> p_394090_, Atom<List<T>> p_396235_, int p_397596_) {
-        return new Term.Repeated<>(p_394090_, p_396235_, p_397596_);
+    static <S, T> Term<S> repeated(final NamedRule<S, T> element, final Atom<List<T>> listName, final int minRepetitions) {
+        return new Term.Repeated<>(element, listName, minRepetitions);
     }
 
-    static <S, T> Term<S> repeatedWithTrailingSeparator(NamedRule<S, T> p_395582_, Atom<List<T>> p_391503_, Term<S> p_394717_) {
-        return repeatedWithTrailingSeparator(p_395582_, p_391503_, p_394717_, 0);
+    static <S, T> Term<S> repeatedWithTrailingSeparator(final NamedRule<S, T> element, final Atom<List<T>> listName, final Term<S> separator) {
+        return repeatedWithTrailingSeparator(element, listName, separator, 0);
     }
 
-    static <S, T> Term<S> repeatedWithTrailingSeparator(NamedRule<S, T> p_397489_, Atom<List<T>> p_392214_, Term<S> p_395301_, int p_391759_) {
-        return new Term.RepeatedWithSeparator<>(p_397489_, p_392214_, p_395301_, p_391759_, true);
+    static <S, T> Term<S> repeatedWithTrailingSeparator(
+        final NamedRule<S, T> element, final Atom<List<T>> listName, final Term<S> separator, final int minRepetitions
+    ) {
+        return new Term.RepeatedWithSeparator<>(element, listName, separator, minRepetitions, true);
     }
 
-    static <S, T> Term<S> repeatedWithoutTrailingSeparator(NamedRule<S, T> p_392740_, Atom<List<T>> p_397250_, Term<S> p_393470_) {
-        return repeatedWithoutTrailingSeparator(p_392740_, p_397250_, p_393470_, 0);
+    static <S, T> Term<S> repeatedWithoutTrailingSeparator(final NamedRule<S, T> element, final Atom<List<T>> listName, final Term<S> separator) {
+        return repeatedWithoutTrailingSeparator(element, listName, separator, 0);
     }
 
-    static <S, T> Term<S> repeatedWithoutTrailingSeparator(NamedRule<S, T> p_393071_, Atom<List<T>> p_395445_, Term<S> p_395475_, int p_392015_) {
-        return new Term.RepeatedWithSeparator<>(p_393071_, p_395445_, p_395475_, p_392015_, false);
+    static <S, T> Term<S> repeatedWithoutTrailingSeparator(
+        final NamedRule<S, T> element, final Atom<List<T>> listName, final Term<S> separator, final int minRepetitions
+    ) {
+        return new Term.RepeatedWithSeparator<>(element, listName, separator, minRepetitions, false);
     }
 
-    static <S> Term<S> positiveLookahead(Term<S> p_395551_) {
-        return new Term.LookAhead<>(p_395551_, true);
+    static <S> Term<S> positiveLookahead(final Term<S> term) {
+        return new Term.LookAhead<>(term, true);
     }
 
-    static <S> Term<S> negativeLookahead(Term<S> p_395059_) {
-        return new Term.LookAhead<>(p_395059_, false);
+    static <S> Term<S> negativeLookahead(final Term<S> term) {
+        return new Term.LookAhead<>(term, false);
     }
 
     static <S> Term<S> cut() {
         return new Term<S>() {
             @Override
-            public boolean parse(ParseState<S> p_333527_, Scope p_336097_, Control p_335047_) {
-                p_335047_.cut();
+            public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+                control.cut();
                 return true;
             }
 
@@ -74,7 +78,7 @@ public interface Term<S> {
     static <S> Term<S> empty() {
         return new Term<S>() {
             @Override
-            public boolean parse(ParseState<S> p_328418_, Scope p_332040_, Control p_328784_) {
+            public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
                 return true;
             }
 
@@ -85,11 +89,11 @@ public interface Term<S> {
         };
     }
 
-    static <S> Term<S> fail(final Object p_396725_) {
+    static <S> Term<S> fail(final Object message) {
         return new Term<S>() {
             @Override
-            public boolean parse(ParseState<S> p_394241_, Scope p_396858_, Control p_393969_) {
-                p_394241_.errorCollector().store(p_394241_.mark(), p_396725_);
+            public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+                state.errorCollector().store(state.mark(), message);
                 return false;
             }
 
@@ -100,144 +104,144 @@ public interface Term<S> {
         };
     }
 
-    public record Alternative<S>(Term<S>[] elements) implements Term<S> {
+    record Alternative<S>(Term<S>[] elements) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_328094_, Scope p_331753_, Control p_334626_) {
-            Control control = p_328094_.acquireControl();
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            Control controlForThis = state.acquireControl();
 
             try {
-                int i = p_328094_.mark();
-                p_331753_.splitFrame();
+                int mark = state.mark();
+                scope.splitFrame();
 
-                for (Term<S> term : this.elements) {
-                    if (term.parse(p_328094_, p_331753_, control)) {
-                        p_331753_.mergeFrame();
+                for (Term<S> element : this.elements) {
+                    if (element.parse(state, scope, controlForThis)) {
+                        scope.mergeFrame();
                         return true;
                     }
 
-                    p_331753_.clearFrameValues();
-                    p_328094_.restore(i);
-                    if (control.hasCut()) {
+                    scope.clearFrameValues();
+                    state.restore(mark);
+                    if (controlForThis.hasCut()) {
                         break;
                     }
                 }
 
-                p_331753_.popFrame();
+                scope.popFrame();
                 return false;
             } finally {
-                p_328094_.releaseControl();
+                state.releaseControl();
             }
         }
     }
 
-    public record LookAhead<S>(Term<S> term, boolean positive) implements Term<S> {
+    record LookAhead<S>(Term<S> term, boolean positive) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_391493_, Scope p_395827_, Control p_391882_) {
-            int i = p_391493_.mark();
-            boolean flag = this.term.parse(p_391493_.silent(), p_395827_, p_391882_);
-            p_391493_.restore(i);
-            return this.positive == flag;
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            int mark = state.mark();
+            boolean result = this.term.parse(state.silent(), scope, control);
+            state.restore(mark);
+            return this.positive == result;
         }
     }
 
-    public record Marker<S, T>(Atom<T> name, T value) implements Term<S> {
+    record Marker<S, T>(Atom<T> name, T value) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_332878_, Scope p_331621_, Control p_334053_) {
-            p_331621_.put(this.name, this.value);
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            scope.put(this.name, this.value);
             return true;
         }
     }
 
-    public record Maybe<S>(Term<S> term) implements Term<S> {
+    record Maybe<S>(Term<S> term) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_332001_, Scope p_329861_, Control p_331352_) {
-            int i = p_332001_.mark();
-            if (!this.term.parse(p_332001_, p_329861_, p_331352_)) {
-                p_332001_.restore(i);
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            int mark = state.mark();
+            if (!this.term.parse(state, scope, control)) {
+                state.restore(mark);
             }
 
             return true;
         }
     }
 
-    public record Repeated<S, T>(NamedRule<S, T> element, Atom<List<T>> listName, int minRepetitions) implements Term<S> {
+    record Repeated<S, T>(NamedRule<S, T> element, Atom<List<T>> listName, int minRepetitions) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_393223_, Scope p_397132_, Control p_396901_) {
-            int i = p_393223_.mark();
-            List<T> list = new ArrayList<>(this.minRepetitions);
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            int mark = state.mark();
+            List<T> elements = new ArrayList<>(this.minRepetitions);
 
             while (true) {
-                int j = p_393223_.mark();
-                T t = p_393223_.parse(this.element);
-                if (t == null) {
-                    p_393223_.restore(j);
-                    if (list.size() < this.minRepetitions) {
-                        p_393223_.restore(i);
+                int entryMark = state.mark();
+                T parsedElement = state.parse(this.element);
+                if (parsedElement == null) {
+                    state.restore(entryMark);
+                    if (elements.size() < this.minRepetitions) {
+                        state.restore(mark);
                         return false;
                     } else {
-                        p_397132_.put(this.listName, list);
+                        scope.put(this.listName, elements);
                         return true;
                     }
                 }
 
-                list.add(t);
+                elements.add(parsedElement);
             }
         }
     }
 
-    public record RepeatedWithSeparator<S, T>(NamedRule<S, T> element, Atom<List<T>> listName, Term<S> separator, int minRepetitions, boolean allowTrailingSeparator)
+    record RepeatedWithSeparator<S, T>(NamedRule<S, T> element, Atom<List<T>> listName, Term<S> separator, int minRepetitions, boolean allowTrailingSeparator)
         implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_396935_, Scope p_392276_, Control p_393022_) {
-            int i = p_396935_.mark();
-            List<T> list = new ArrayList<>(this.minRepetitions);
-            boolean flag = true;
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            int listMark = state.mark();
+            List<T> elements = new ArrayList<>(this.minRepetitions);
+            boolean first = true;
 
             while (true) {
-                int j = p_396935_.mark();
-                if (!flag && !this.separator.parse(p_396935_, p_392276_, p_393022_)) {
-                    p_396935_.restore(j);
+                int markBeforeSeparator = state.mark();
+                if (!first && !this.separator.parse(state, scope, control)) {
+                    state.restore(markBeforeSeparator);
                     break;
                 }
 
-                int k = p_396935_.mark();
-                T t = p_396935_.parse(this.element);
-                if (t == null) {
-                    if (flag) {
-                        p_396935_.restore(k);
+                int markAfterSeparator = state.mark();
+                T parsedElement = state.parse(this.element);
+                if (parsedElement == null) {
+                    if (first) {
+                        state.restore(markAfterSeparator);
                     } else {
                         if (!this.allowTrailingSeparator) {
-                            p_396935_.restore(i);
+                            state.restore(listMark);
                             return false;
                         }
 
-                        p_396935_.restore(k);
+                        state.restore(markAfterSeparator);
                     }
                     break;
                 }
 
-                list.add(t);
-                flag = false;
+                elements.add(parsedElement);
+                first = false;
             }
 
-            if (list.size() < this.minRepetitions) {
-                p_396935_.restore(i);
+            if (elements.size() < this.minRepetitions) {
+                state.restore(listMark);
                 return false;
             } else {
-                p_392276_.put(this.listName, list);
+                scope.put(this.listName, elements);
                 return true;
             }
         }
     }
 
-    public record Sequence<S>(Term<S>[] elements) implements Term<S> {
+    record Sequence<S>(Term<S>[] elements) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_330195_, Scope p_336361_, Control p_328798_) {
-            int i = p_330195_.mark();
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            int mark = state.mark();
 
-            for (Term<S> term : this.elements) {
-                if (!term.parse(p_330195_, p_336361_, p_328798_)) {
-                    p_330195_.restore(i);
+            for (Term<S> element : this.elements) {
+                if (!element.parse(state, scope, control)) {
+                    state.restore(mark);
                     return false;
                 }
             }

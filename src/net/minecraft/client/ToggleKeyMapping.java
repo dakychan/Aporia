@@ -2,25 +2,29 @@ package net.minecraft.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import java.util.function.BooleanSupplier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ToggleKeyMapping extends KeyMapping {
     private final BooleanSupplier needsToggle;
     private boolean releasedByScreenWhenDown;
     private final boolean shouldRestore;
 
-    public ToggleKeyMapping(String p_92529_, int p_92530_, KeyMapping.Category p_429407_, BooleanSupplier p_92532_, boolean p_428841_) {
-        this(p_92529_, InputConstants.Type.KEYSYM, p_92530_, p_429407_, p_92532_, p_428841_);
+    public ToggleKeyMapping(
+        final String name, final int value, final KeyMapping.Category category, final BooleanSupplier needsToggle, final boolean shouldRestore
+    ) {
+        this(name, InputConstants.Type.KEYSYM, value, category, needsToggle, shouldRestore);
     }
 
     public ToggleKeyMapping(
-        String p_426167_, InputConstants.Type p_427837_, int p_425923_, KeyMapping.Category p_422745_, BooleanSupplier p_431674_, boolean p_430720_
+        final String name,
+        final InputConstants.Type type,
+        final int value,
+        final KeyMapping.Category category,
+        final BooleanSupplier needsToggle,
+        final boolean shouldRestore
     ) {
-        super(p_426167_, p_427837_, p_425923_, p_422745_);
-        this.needsToggle = p_431674_;
-        this.shouldRestore = p_430720_;
+        super(name, type, value, category);
+        this.needsToggle = needsToggle;
+        this.shouldRestore = shouldRestore;
     }
 
     @Override
@@ -29,13 +33,13 @@ public class ToggleKeyMapping extends KeyMapping {
     }
 
     @Override
-    public void setDown(boolean p_92534_) {
+    public void setDown(final boolean down) {
         if (this.needsToggle.getAsBoolean()) {
-            if (p_92534_) {
+            if (down) {
                 super.setDown(!this.isDown());
             }
         } else {
-            super.setDown(p_92534_);
+            super.setDown(down);
         }
     }
 
@@ -49,9 +53,12 @@ public class ToggleKeyMapping extends KeyMapping {
     }
 
     public boolean shouldRestoreStateOnScreenClosed() {
-        boolean flag = this.shouldRestore && this.needsToggle.getAsBoolean() && this.key.getType() == InputConstants.Type.KEYSYM && this.releasedByScreenWhenDown;
+        boolean shouldRestore = this.shouldRestore
+            && this.needsToggle.getAsBoolean()
+            && this.key.getType() == InputConstants.Type.KEYSYM
+            && this.releasedByScreenWhenDown;
         this.releasedByScreenWhenDown = false;
-        return flag;
+        return shouldRestore;
     }
 
     protected void reset() {

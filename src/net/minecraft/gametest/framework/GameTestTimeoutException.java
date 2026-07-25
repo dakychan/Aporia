@@ -5,9 +5,9 @@ import net.minecraft.network.chat.Component;
 public class GameTestTimeoutException extends GameTestException {
     protected final Component message;
 
-    public GameTestTimeoutException(Component p_392190_) {
-        super(p_392190_.getString());
-        this.message = p_392190_;
+    public GameTestTimeoutException(final Component message) {
+        super(message.getString());
+        this.message = message;
     }
 
     @Override

@@ -10,12 +10,14 @@ import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.util.Unit;
+import net.minecraft.util.context.ContextKeySet;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.enchantment.effects.DamageImmunity;
 import net.minecraft.world.item.enchantment.effects.EnchantmentAttributeEffect;
 import net.minecraft.world.item.enchantment.effects.EnchantmentEntityEffect;
 import net.minecraft.world.item.enchantment.effects.EnchantmentLocationBasedEffect;
 import net.minecraft.world.item.enchantment.effects.EnchantmentValueEffect;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 
 public interface EnchantmentEffectComponents {
@@ -23,112 +25,114 @@ public interface EnchantmentEffectComponents {
     Codec<DataComponentMap> CODEC = DataComponentMap.makeCodec(COMPONENT_CODEC);
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> DAMAGE_PROTECTION = register(
         "damage_protection",
-        p_343083_ -> p_343083_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<DamageImmunity>>> DAMAGE_IMMUNITY = register(
-        "damage_immunity", p_342369_ -> p_342369_.persistent(ConditionalEffect.codec(DamageImmunity.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        "damage_immunity", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(DamageImmunity.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> DAMAGE = register(
-        "damage", p_343665_ -> p_343665_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        "damage", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> SMASH_DAMAGE_PER_FALLEN_BLOCK = register(
         "smash_damage_per_fallen_block",
-        p_342204_ -> p_342204_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> KNOCKBACK = register(
-        "knockback", p_342778_ -> p_342778_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        "knockback", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> ARMOR_EFFECTIVENESS = register(
         "armor_effectiveness",
-        p_342687_ -> p_342687_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<TargetedConditionalEffect<EnchantmentEntityEffect>>> POST_ATTACK = register(
         "post_attack",
-        p_344691_ -> p_344691_.persistent(TargetedConditionalEffect.codec(EnchantmentEntityEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        b -> b.persistent(validatedListCodec(TargetedConditionalEffect.codec(EnchantmentEntityEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentEntityEffect>>> POST_PIERCING_ATTACK = register(
         "post_piercing_attack",
-        p_449850_ -> p_449850_.persistent(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentEntityEffect>>> HIT_BLOCK = register(
-        "hit_block", p_343726_ -> p_343726_.persistent(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC, LootContextParamSets.HIT_BLOCK).listOf())
+        "hit_block", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC), LootContextParamSets.HIT_BLOCK))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> ITEM_DAMAGE = register(
-        "item_damage", p_343745_ -> p_343745_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ITEM).listOf())
-    );
-    DataComponentType<List<EnchantmentAttributeEffect>> ATTRIBUTES = register(
-        "attributes", p_342151_ -> p_342151_.persistent(EnchantmentAttributeEffect.CODEC.codec().listOf())
+        "item_damage", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ITEM))
     );
     DataComponentType<List<TargetedConditionalEffect<EnchantmentValueEffect>>> EQUIPMENT_DROPS = register(
         "equipment_drops",
-        p_342441_ -> p_342441_.persistent(TargetedConditionalEffect.equipmentDropsCodec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_DAMAGE).listOf())
+        b -> b.persistent(
+            validatedListCodec(TargetedConditionalEffect.equipmentDropsCodec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_DAMAGE)
+        )
     );
     DataComponentType<List<ConditionalEffect<EnchantmentLocationBasedEffect>>> LOCATION_CHANGED = register(
         "location_changed",
-        p_344782_ -> p_344782_.persistent(ConditionalEffect.codec(EnchantmentLocationBasedEffect.CODEC, LootContextParamSets.ENCHANTED_LOCATION).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentLocationBasedEffect.CODEC), LootContextParamSets.ENCHANTED_LOCATION))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentEntityEffect>>> TICK = register(
-        "tick", p_345201_ -> p_345201_.persistent(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        "tick", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> AMMO_USE = register(
-        "ammo_use", p_344537_ -> p_344537_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ITEM).listOf())
+        "ammo_use", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ITEM))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> PROJECTILE_PIERCING = register(
         "projectile_piercing",
-        p_344214_ -> p_344214_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ITEM).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ITEM))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentEntityEffect>>> PROJECTILE_SPAWNED = register(
         "projectile_spawned",
-        p_345464_ -> p_345464_.persistent(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentEntityEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> PROJECTILE_SPREAD = register(
         "projectile_spread",
-        p_342569_ -> p_342569_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> PROJECTILE_COUNT = register(
-        "projectile_count",
-        p_344670_ -> p_344670_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        "projectile_count", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> TRIDENT_RETURN_ACCELERATION = register(
         "trident_return_acceleration",
-        p_342620_ -> p_342620_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> FISHING_TIME_REDUCTION = register(
         "fishing_time_reduction",
-        p_342994_ -> p_342994_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> FISHING_LUCK_BONUS = register(
         "fishing_luck_bonus",
-        p_345348_ -> p_345348_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> BLOCK_EXPERIENCE = register(
-        "block_experience",
-        p_344261_ -> p_344261_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ITEM).listOf())
+        "block_experience", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ITEM))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> MOB_EXPERIENCE = register(
-        "mob_experience",
-        p_344594_ -> p_344594_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ENTITY).listOf())
+        "mob_experience", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ENTITY))
     );
     DataComponentType<List<ConditionalEffect<EnchantmentValueEffect>>> REPAIR_WITH_XP = register(
-        "repair_with_xp",
-        p_344724_ -> p_344724_.persistent(ConditionalEffect.codec(EnchantmentValueEffect.CODEC, LootContextParamSets.ENCHANTED_ITEM).listOf())
+        "repair_with_xp", b -> b.persistent(validatedListCodec(ConditionalEffect.codec(EnchantmentValueEffect.CODEC), LootContextParamSets.ENCHANTED_ITEM))
     );
-    DataComponentType<EnchantmentValueEffect> CROSSBOW_CHARGE_TIME = register("crossbow_charge_time", p_344938_ -> p_344938_.persistent(EnchantmentValueEffect.CODEC));
+    DataComponentType<List<EnchantmentAttributeEffect>> ATTRIBUTES = register(
+        "attributes", b -> b.persistent(EnchantmentAttributeEffect.MAP_CODEC.codec().listOf())
+    );
+    DataComponentType<EnchantmentValueEffect> CROSSBOW_CHARGE_TIME = register("crossbow_charge_time", b -> b.persistent(EnchantmentValueEffect.CODEC));
     DataComponentType<List<CrossbowItem.ChargingSounds>> CROSSBOW_CHARGING_SOUNDS = register(
-        "crossbow_charging_sounds", p_344355_ -> p_344355_.persistent(CrossbowItem.ChargingSounds.CODEC.listOf())
+        "crossbow_charging_sounds", b -> b.persistent(CrossbowItem.ChargingSounds.CODEC.listOf())
     );
-    DataComponentType<List<Holder<SoundEvent>>> TRIDENT_SOUND = register("trident_sound", p_345273_ -> p_345273_.persistent(SoundEvent.CODEC.listOf()));
-    DataComponentType<Unit> PREVENT_EQUIPMENT_DROP = register("prevent_equipment_drop", p_345068_ -> p_345068_.persistent(Unit.CODEC));
-    DataComponentType<Unit> PREVENT_ARMOR_CHANGE = register("prevent_armor_change", p_344955_ -> p_344955_.persistent(Unit.CODEC));
+    DataComponentType<List<Holder<SoundEvent>>> TRIDENT_SOUND = register("trident_sound", b -> b.persistent(SoundEvent.CODEC.listOf()));
+    DataComponentType<Unit> PREVENT_EQUIPMENT_DROP = register("prevent_equipment_drop", b -> b.persistent(Unit.CODEC));
+    DataComponentType<Unit> PREVENT_ARMOR_CHANGE = register("prevent_armor_change", b -> b.persistent(Unit.CODEC));
     DataComponentType<EnchantmentValueEffect> TRIDENT_SPIN_ATTACK_STRENGTH = register(
-        "trident_spin_attack_strength", p_343362_ -> p_343362_.persistent(EnchantmentValueEffect.CODEC)
+        "trident_spin_attack_strength", b -> b.persistent(EnchantmentValueEffect.CODEC)
     );
 
-    static DataComponentType<?> bootstrap(Registry<DataComponentType<?>> p_342462_) {
+    private static <T extends Validatable> Codec<List<T>> validatedListCodec(final Codec<T> elementCodec, final ContextKeySet paramSet) {
+        return elementCodec.listOf().validate(Validatable.listValidatorForContext(paramSet));
+    }
+
+    static DataComponentType<?> bootstrap(final Registry<DataComponentType<?>> registry) {
         return DAMAGE_PROTECTION;
     }
 
-    private static <T> DataComponentType<T> register(String p_342959_, UnaryOperator<DataComponentType.Builder<T>> p_345175_) {
-        return Registry.register(BuiltInRegistries.ENCHANTMENT_EFFECT_COMPONENT_TYPE, p_342959_, p_345175_.apply(DataComponentType.builder()).build());
+    private static <T> DataComponentType<T> register(final String id, final UnaryOperator<DataComponentType.Builder<T>> builder) {
+        return Registry.register(BuiltInRegistries.ENCHANTMENT_EFFECT_COMPONENT_TYPE, id, builder.apply(DataComponentType.builder()).build());
     }
 }

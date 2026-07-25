@@ -21,55 +21,55 @@ import org.jspecify.annotations.Nullable;
 public class CompassItem extends Item {
     private static final Component LODESTONE_COMPASS_NAME = Component.translatable("item.minecraft.lodestone_compass");
 
-    public CompassItem(Item.Properties p_40718_) {
-        super(p_40718_);
+    public CompassItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public boolean isFoil(ItemStack p_40739_) {
-        return p_40739_.has(DataComponents.LODESTONE_TRACKER) || super.isFoil(p_40739_);
+    public boolean isFoil(final ItemStack itemStack) {
+        return itemStack.has(DataComponents.LODESTONE_TRACKER) || super.isFoil(itemStack);
     }
 
     @Override
-    public void inventoryTick(ItemStack p_40720_, ServerLevel p_392994_, Entity p_40722_, @Nullable EquipmentSlot p_395318_) {
-        LodestoneTracker lodestonetracker = p_40720_.get(DataComponents.LODESTONE_TRACKER);
-        if (lodestonetracker != null) {
-            LodestoneTracker lodestonetracker1 = lodestonetracker.tick(p_392994_);
-            if (lodestonetracker1 != lodestonetracker) {
-                p_40720_.set(DataComponents.LODESTONE_TRACKER, lodestonetracker1);
+    public void inventoryTick(final ItemStack itemStack, final ServerLevel level, final Entity owner, final @Nullable EquipmentSlot slot) {
+        LodestoneTracker tracker = itemStack.get(DataComponents.LODESTONE_TRACKER);
+        if (tracker != null) {
+            LodestoneTracker newTracker = tracker.tick(level);
+            if (newTracker != tracker) {
+                itemStack.set(DataComponents.LODESTONE_TRACKER, newTracker);
             }
         }
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_40726_) {
-        BlockPos blockpos = p_40726_.getClickedPos();
-        Level level = p_40726_.getLevel();
-        if (!level.getBlockState(blockpos).is(Blocks.LODESTONE)) {
-            return super.useOn(p_40726_);
+    public InteractionResult useOn(final UseOnContext context) {
+        BlockPos blockPos = context.getClickedPos();
+        Level level = context.getLevel();
+        if (!level.getBlockState(blockPos).is(Blocks.LODESTONE)) {
+            return super.useOn(context);
+        }
+
+        level.playSound(null, blockPos, SoundEvents.LODESTONE_COMPASS_LOCK, SoundSource.PLAYERS, 1.0F, 1.0F);
+        Player player = context.getPlayer();
+        ItemStack itemStack = context.getItemInHand();
+        boolean replaceExistingStack = !player.hasInfiniteMaterials() && itemStack.getCount() == 1;
+        LodestoneTracker target = new LodestoneTracker(Optional.of(GlobalPos.of(level.dimension(), blockPos)), true);
+        if (replaceExistingStack) {
+            itemStack.set(DataComponents.LODESTONE_TRACKER, target);
         } else {
-            level.playSound(null, blockpos, SoundEvents.LODESTONE_COMPASS_LOCK, SoundSource.PLAYERS, 1.0F, 1.0F);
-            Player player = p_40726_.getPlayer();
-            ItemStack itemstack = p_40726_.getItemInHand();
-            boolean flag = !player.hasInfiniteMaterials() && itemstack.getCount() == 1;
-            LodestoneTracker lodestonetracker = new LodestoneTracker(Optional.of(GlobalPos.of(level.dimension(), blockpos)), true);
-            if (flag) {
-                itemstack.set(DataComponents.LODESTONE_TRACKER, lodestonetracker);
-            } else {
-                ItemStack itemstack1 = itemstack.transmuteCopy(Items.COMPASS, 1);
-                itemstack.consume(1, player);
-                itemstack1.set(DataComponents.LODESTONE_TRACKER, lodestonetracker);
-                if (!player.getInventory().add(itemstack1)) {
-                    player.drop(itemstack1, false);
-                }
+            ItemStack lodestoneCompass = itemStack.transmuteCopy(Items.COMPASS, 1);
+            itemStack.consume(1, player);
+            lodestoneCompass.set(DataComponents.LODESTONE_TRACKER, target);
+            if (!player.getInventory().add(lodestoneCompass)) {
+                player.drop(lodestoneCompass, false);
             }
-
-            return InteractionResult.SUCCESS;
         }
+
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public Component getName(ItemStack p_368976_) {
-        return p_368976_.has(DataComponents.LODESTONE_TRACKER) ? LODESTONE_COMPASS_NAME : super.getName(p_368976_);
+    public Component getName(final ItemStack itemStack) {
+        return itemStack.has(DataComponents.LODESTONE_TRACKER) ? LODESTONE_COMPASS_NAME : super.getName(itemStack);
     }
 }

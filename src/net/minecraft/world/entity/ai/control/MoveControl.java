@@ -12,11 +12,11 @@ import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
-public class MoveControl implements Control {
+public class MoveControl<T extends Mob> implements Control {
     public static final float MIN_SPEED = 5.0E-4F;
     public static final float MIN_SPEED_SQR = 2.5000003E-7F;
     protected static final int MAX_TURN = 90;
-    protected final Mob mob;
+    protected final T mob;
     protected double wantedX;
     protected double wantedY;
     protected double wantedZ;
@@ -25,8 +25,8 @@ public class MoveControl implements Control {
     protected float strafeRight;
     protected MoveControl.Operation operation = MoveControl.Operation.WAIT;
 
-    public MoveControl(Mob p_24983_) {
-        this.mob = p_24983_;
+    public MoveControl(final T mob) {
+        this.mob = mob;
     }
 
     public boolean hasWanted() {
@@ -37,72 +37,72 @@ public class MoveControl implements Control {
         return this.speedModifier;
     }
 
-    public void setWantedPosition(double p_24984_, double p_24985_, double p_24986_, double p_24987_) {
-        this.wantedX = p_24984_;
-        this.wantedY = p_24985_;
-        this.wantedZ = p_24986_;
-        this.speedModifier = p_24987_;
+    public void setWantedPosition(final double x, final double y, final double z, final double speedModifier) {
+        this.wantedX = x;
+        this.wantedY = y;
+        this.wantedZ = z;
+        this.speedModifier = speedModifier;
         if (this.operation != MoveControl.Operation.JUMPING) {
             this.operation = MoveControl.Operation.MOVE_TO;
         }
     }
 
-    public void strafe(float p_24989_, float p_24990_) {
+    public void strafe(final float forwards, final float right) {
         this.operation = MoveControl.Operation.STRAFE;
-        this.strafeForwards = p_24989_;
-        this.strafeRight = p_24990_;
+        this.strafeForwards = forwards;
+        this.strafeRight = right;
         this.speedModifier = 0.25;
     }
 
     public void tick() {
         if (this.operation == MoveControl.Operation.STRAFE) {
-            float f = (float)this.mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
-            float f1 = (float)this.speedModifier * f;
-            float f2 = this.strafeForwards;
-            float f3 = this.strafeRight;
-            float f4 = Mth.sqrt(f2 * f2 + f3 * f3);
-            if (f4 < 1.0F) {
-                f4 = 1.0F;
+            float speed = (float)this.mob.getAttributeValue(Attributes.MOVEMENT_SPEED);
+            float speedModified = (float)this.speedModifier * speed;
+            float xa = this.strafeForwards;
+            float za = this.strafeRight;
+            float dist = Mth.sqrt(xa * xa + za * za);
+            if (dist < 1.0F) {
+                dist = 1.0F;
             }
 
-            f4 = f1 / f4;
-            f2 *= f4;
-            f3 *= f4;
-            float f5 = Mth.sin(this.mob.getYRot() * (float) (Math.PI / 180.0));
-            float f6 = Mth.cos(this.mob.getYRot() * (float) (Math.PI / 180.0));
-            float f7 = f2 * f6 - f3 * f5;
-            float f8 = f3 * f6 + f2 * f5;
-            if (!this.isWalkable(f7, f8)) {
+            dist = speedModified / dist;
+            xa *= dist;
+            za *= dist;
+            float sin = Mth.sin(this.mob.getYRot() * (float) (Math.PI / 180.0));
+            float cos = Mth.cos(this.mob.getYRot() * (float) (Math.PI / 180.0));
+            float dx = xa * cos - za * sin;
+            float dz = za * cos + xa * sin;
+            if (!this.isWalkable(dx, dz)) {
                 this.strafeForwards = 1.0F;
                 this.strafeRight = 0.0F;
             }
 
-            this.mob.setSpeed(f1);
+            this.mob.setSpeed(speedModified);
             this.mob.setZza(this.strafeForwards);
             this.mob.setXxa(this.strafeRight);
             this.operation = MoveControl.Operation.WAIT;
         } else if (this.operation == MoveControl.Operation.MOVE_TO) {
             this.operation = MoveControl.Operation.WAIT;
-            double d0 = this.wantedX - this.mob.getX();
-            double d1 = this.wantedZ - this.mob.getZ();
-            double d2 = this.wantedY - this.mob.getY();
-            double d3 = d0 * d0 + d2 * d2 + d1 * d1;
-            if (d3 < 2.5000003E-7F) {
+            double xd = this.wantedX - this.mob.getX();
+            double zd = this.wantedZ - this.mob.getZ();
+            double yd = this.wantedY - this.mob.getY();
+            double dd = xd * xd + yd * yd + zd * zd;
+            if (dd < 2.5000003E-7F) {
                 this.mob.setZza(0.0F);
                 return;
             }
 
-            float f9 = (float)(Mth.atan2(d1, d0) * 180.0F / (float)Math.PI) - 90.0F;
-            this.mob.setYRot(this.rotlerp(this.mob.getYRot(), f9, 90.0F));
+            float yRotD = (float)(Mth.atan2(zd, xd) * 180.0F / (float)Math.PI) - 90.0F;
+            this.mob.setYRot(this.rotlerp(this.mob.getYRot(), yRotD, 90.0F));
             this.mob.setSpeed((float)(this.speedModifier * this.mob.getAttributeValue(Attributes.MOVEMENT_SPEED)));
-            BlockPos blockpos = this.mob.blockPosition();
-            BlockState blockstate = this.mob.level().getBlockState(blockpos);
-            VoxelShape voxelshape = blockstate.getCollisionShape(this.mob.level(), blockpos);
-            if (d2 > this.mob.maxUpStep() && d0 * d0 + d1 * d1 < Math.max(1.0F, this.mob.getBbWidth())
-                || !voxelshape.isEmpty()
-                    && this.mob.getY() < voxelshape.max(Direction.Axis.Y) + blockpos.getY()
-                    && !blockstate.is(BlockTags.DOORS)
-                    && !blockstate.is(BlockTags.FENCES)) {
+            BlockPos pos = this.mob.blockPosition();
+            BlockState blockState = this.mob.level().getBlockState(pos);
+            VoxelShape shape = blockState.getCollisionShape(this.mob.level(), pos);
+            if (yd > this.mob.maxUpStep() && xd * xd + zd * zd < Math.max(1.0F, this.mob.getBbWidth())
+                || !shape.isEmpty()
+                    && this.mob.getY() < shape.max(Direction.Axis.Y) + pos.getY()
+                    && !blockState.is(BlockTags.DOORS)
+                    && !blockState.is(BlockTags.FENCES)) {
                 this.mob.getJumpControl().jump();
                 this.operation = MoveControl.Operation.JUMPING;
             }
@@ -116,14 +116,12 @@ public class MoveControl implements Control {
         }
     }
 
-    private boolean isWalkable(float p_24997_, float p_24998_) {
-        PathNavigation pathnavigation = this.mob.getNavigation();
-        if (pathnavigation != null) {
-            NodeEvaluator nodeevaluator = pathnavigation.getNodeEvaluator();
-            if (nodeevaluator != null
-                && nodeevaluator.getPathType(
-                        this.mob, BlockPos.containing(this.mob.getX() + p_24997_, this.mob.getBlockY(), this.mob.getZ() + p_24998_)
-                    )
+    private boolean isWalkable(final float dx, final float dz) {
+        PathNavigation pathNavigation = this.mob.getNavigation();
+        if (pathNavigation != null) {
+            NodeEvaluator nodeEvaluator = pathNavigation.getNodeEvaluator();
+            if (nodeEvaluator != null
+                && nodeEvaluator.getPathType(this.mob, BlockPos.containing(this.mob.getX() + dx, this.mob.getBlockY(), this.mob.getZ() + dz))
                     != PathType.WALKABLE) {
                 return false;
             }
@@ -132,24 +130,24 @@ public class MoveControl implements Control {
         return true;
     }
 
-    protected float rotlerp(float p_24992_, float p_24993_, float p_24994_) {
-        float f = Mth.wrapDegrees(p_24993_ - p_24992_);
-        if (f > p_24994_) {
-            f = p_24994_;
+    protected float rotlerp(final float a, final float b, final float max) {
+        float diff = Mth.wrapDegrees(b - a);
+        if (diff > max) {
+            diff = max;
         }
 
-        if (f < -p_24994_) {
-            f = -p_24994_;
+        if (diff < -max) {
+            diff = -max;
         }
 
-        float f1 = p_24992_ + f;
-        if (f1 < 0.0F) {
-            f1 += 360.0F;
-        } else if (f1 > 360.0F) {
-            f1 -= 360.0F;
+        float result = a + diff;
+        if (result < 0.0F) {
+            result += 360.0F;
+        } else if (result > 360.0F) {
+            result -= 360.0F;
         }
 
-        return f1;
+        return result;
     }
 
     public double getWantedX() {
@@ -168,7 +166,7 @@ public class MoveControl implements Control {
         this.operation = MoveControl.Operation.WAIT;
     }
 
-    protected static enum Operation {
+    protected enum Operation {
         WAIT,
         MOVE_TO,
         STRAFE,

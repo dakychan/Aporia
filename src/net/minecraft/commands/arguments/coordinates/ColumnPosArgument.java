@@ -26,43 +26,43 @@ public class ColumnPosArgument implements ArgumentType<Coordinates> {
         return new ColumnPosArgument();
     }
 
-    public static ColumnPos getColumnPos(CommandContext<CommandSourceStack> p_118993_, String p_118994_) {
-        BlockPos blockpos = p_118993_.getArgument(p_118994_, Coordinates.class).getBlockPos(p_118993_.getSource());
-        return new ColumnPos(blockpos.getX(), blockpos.getZ());
+    public static ColumnPos getColumnPos(final CommandContext<CommandSourceStack> context, final String name) {
+        BlockPos pos = context.getArgument(name, Coordinates.class).getBlockPos(context.getSource());
+        return new ColumnPos(pos.getX(), pos.getZ());
     }
 
-    public Coordinates parse(StringReader p_118991_) throws CommandSyntaxException {
-        int i = p_118991_.getCursor();
-        if (!p_118991_.canRead()) {
-            throw ERROR_NOT_COMPLETE.createWithContext(p_118991_);
+    public Coordinates parse(final StringReader reader) throws CommandSyntaxException {
+        int start = reader.getCursor();
+        if (!reader.canRead()) {
+            throw ERROR_NOT_COMPLETE.createWithContext(reader);
         } else {
-            WorldCoordinate worldcoordinate = WorldCoordinate.parseInt(p_118991_);
-            if (p_118991_.canRead() && p_118991_.peek() == ' ') {
-                p_118991_.skip();
-                WorldCoordinate worldcoordinate1 = WorldCoordinate.parseInt(p_118991_);
-                return new WorldCoordinates(worldcoordinate, new WorldCoordinate(true, 0.0), worldcoordinate1);
+            WorldCoordinate x = WorldCoordinate.parseInt(reader);
+            if (reader.canRead() && reader.peek() == ' ') {
+                reader.skip();
+                WorldCoordinate z = WorldCoordinate.parseInt(reader);
+                return new WorldCoordinates(x, new WorldCoordinate(true, 0.0), z);
             } else {
-                p_118991_.setCursor(i);
-                throw ERROR_NOT_COMPLETE.createWithContext(p_118991_);
+                reader.setCursor(start);
+                throw ERROR_NOT_COMPLETE.createWithContext(reader);
             }
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_118997_, SuggestionsBuilder p_118998_) {
-        if (!(p_118997_.getSource() instanceof SharedSuggestionProvider)) {
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        if (!(context.getSource() instanceof SharedSuggestionProvider)) {
             return Suggestions.empty();
-        } else {
-            String s = p_118998_.getRemaining();
-            Collection<SharedSuggestionProvider.TextCoordinates> collection;
-            if (!s.isEmpty() && s.charAt(0) == '^') {
-                collection = Collections.singleton(SharedSuggestionProvider.TextCoordinates.DEFAULT_LOCAL);
-            } else {
-                collection = ((SharedSuggestionProvider)p_118997_.getSource()).getRelevantCoordinates();
-            }
-
-            return SharedSuggestionProvider.suggest2DCoordinates(s, collection, p_118998_, Commands.createValidator(this::parse));
         }
+
+        String remainder = builder.getRemaining();
+        Collection<SharedSuggestionProvider.TextCoordinates> suggestedCoordinates;
+        if (!remainder.isEmpty() && remainder.charAt(0) == '^') {
+            suggestedCoordinates = Collections.singleton(SharedSuggestionProvider.TextCoordinates.DEFAULT_LOCAL);
+        } else {
+            suggestedCoordinates = ((SharedSuggestionProvider)context.getSource()).getRelevantCoordinates();
+        }
+
+        return SharedSuggestionProvider.suggest2DCoordinates(remainder, suggestedCoordinates, builder, Commands.createValidator(this::parse));
     }
 
     @Override

@@ -7,86 +7,90 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jspecify.annotations.Nullable;
 
 public interface LootContextArg<R> {
     Codec<LootContextArg<Object>> ENTITY_OR_BLOCK = createArgCodec(
-        p_451045_ -> p_451045_.anyOf(LootContext.EntityTarget.values()).anyOf(LootContext.BlockEntityTarget.values())
+        builder -> builder.anyOf(LootContext.EntityTarget.values()).anyOf(LootContext.BlockEntityTarget.values())
     );
 
-    @Nullable R get(LootContext p_455598_);
+    @Nullable R get(LootContext context);
 
     ContextKey<?> contextParam();
 
-    static <U> LootContextArg<U> cast(LootContextArg<? extends U> p_454137_) {
-        return (LootContextArg<U>)p_454137_;
+    static <U> LootContextArg<U> cast(final LootContextArg<? extends U> original) {
+        return (LootContextArg<U>)original;
     }
 
-    static <R> Codec<LootContextArg<R>> createArgCodec(UnaryOperator<LootContextArg.ArgCodecBuilder<R>> p_453817_) {
-        return p_453817_.apply(new LootContextArg.ArgCodecBuilder<>()).build();
+    static <R> Codec<LootContextArg<R>> createArgCodec(final UnaryOperator<LootContextArg.ArgCodecBuilder<R>> consumer) {
+        return consumer.apply(new LootContextArg.ArgCodecBuilder<>()).build();
     }
 
-    public static final class ArgCodecBuilder<R> {
+    final class ArgCodecBuilder<R> {
         private final ExtraCodecs.LateBoundIdMapper<String, LootContextArg<R>> sources = new ExtraCodecs.LateBoundIdMapper<>();
 
-        ArgCodecBuilder() {
+        private ArgCodecBuilder() {
         }
 
-        public <T> LootContextArg.ArgCodecBuilder<R> anyOf(T[] p_458446_, Function<T, String> p_454035_, Function<T, ? extends LootContextArg<R>> p_457810_) {
-            for (T t : p_458446_) {
-                this.sources.put(p_454035_.apply(t), (LootContextArg<R>)p_457810_.apply(t));
+        public <T> LootContextArg.ArgCodecBuilder<R> anyOf(
+            final T[] targets, final Function<T, String> nameGetter, final Function<T, ? extends LootContextArg<R>> argFactory
+        ) {
+            for (T target : targets) {
+                this.sources.put(nameGetter.apply(target), (LootContextArg<R>)argFactory.apply(target));
             }
 
             return this;
         }
 
-        public <T extends StringRepresentable> LootContextArg.ArgCodecBuilder<R> anyOf(T[] p_459676_, Function<T, ? extends LootContextArg<R>> p_456250_) {
-            return this.anyOf(p_459676_, StringRepresentable::getSerializedName, p_456250_);
+        public <T extends StringRepresentable> LootContextArg.ArgCodecBuilder<R> anyOf(
+            final T[] targets, final Function<T, ? extends LootContextArg<R>> argFactory
+        ) {
+            return this.anyOf(targets, StringRepresentable::getSerializedName, argFactory);
         }
 
-        public <T extends StringRepresentable & LootContextArg<? extends R>> LootContextArg.ArgCodecBuilder<R> anyOf(T[] p_461000_) {
-            return this.anyOf(p_461000_, p_460261_ -> LootContextArg.cast((LootContextArg<? extends R>)p_460261_));
+        public <T extends StringRepresentable & LootContextArg<? extends R>> LootContextArg.ArgCodecBuilder<R> anyOf(final T[] targets) {
+            return this.anyOf(targets, x$0 -> LootContextArg.cast((LootContextArg<? extends R>)x$0));
         }
 
-        public LootContextArg.ArgCodecBuilder<R> anyEntity(Function<? super ContextKey<? extends Entity>, ? extends LootContextArg<R>> p_455805_) {
-            return this.anyOf(LootContext.EntityTarget.values(), p_451991_ -> p_455805_.apply(p_451991_.contextParam()));
+        public LootContextArg.ArgCodecBuilder<R> anyEntity(final Function<? super ContextKey<? extends Entity>, ? extends LootContextArg<R>> function) {
+            return this.anyOf(LootContext.EntityTarget.values(), target -> function.apply(target.contextParam()));
         }
 
-        public LootContextArg.ArgCodecBuilder<R> anyBlockEntity(Function<? super ContextKey<? extends BlockEntity>, ? extends LootContextArg<R>> p_459109_) {
-            return this.anyOf(LootContext.BlockEntityTarget.values(), p_459556_ -> p_459109_.apply(p_459556_.contextParam()));
+        public LootContextArg.ArgCodecBuilder<R> anyBlockEntity(final Function<? super ContextKey<? extends BlockEntity>, ? extends LootContextArg<R>> function) {
+            return this.anyOf(LootContext.BlockEntityTarget.values(), target -> function.apply(target.contextParam()));
         }
 
-        public LootContextArg.ArgCodecBuilder<R> anyItemStack(Function<? super ContextKey<? extends ItemStack>, ? extends LootContextArg<R>> p_457168_) {
-            return this.anyOf(LootContext.ItemStackTarget.values(), p_455639_ -> p_457168_.apply(p_455639_.contextParam()));
+        public LootContextArg.ArgCodecBuilder<R> anyItemStack(final Function<? super ContextKey<? extends ItemInstance>, ? extends LootContextArg<R>> function) {
+            return this.anyOf(LootContext.ItemStackTarget.values(), target -> function.apply(target.contextParam()));
         }
 
-        Codec<LootContextArg<R>> build() {
+        private Codec<LootContextArg<R>> build() {
             return this.sources.codec(Codec.STRING);
         }
     }
 
-    public interface Getter<T, R> extends LootContextArg<R> {
-        @Nullable R get(T p_452867_);
+    interface Getter<T, R> extends LootContextArg<R> {
+        @Nullable R get(T value);
 
         @Override
         ContextKey<? extends T> contextParam();
 
         @Override
-        default @Nullable R get(LootContext p_454993_) {
-            T t = p_454993_.getOptionalParameter((ContextKey<T>)this.contextParam());
-            return t != null ? this.get(t) : null;
+        default @Nullable R get(final LootContext context) {
+            T value = context.getOptionalParameter((ContextKey<T>)this.contextParam());
+            return value != null ? this.get(value) : null;
         }
     }
 
-    public interface SimpleGetter<T> extends LootContextArg<T> {
+    interface SimpleGetter<T> extends LootContextArg<T> {
         @Override
         ContextKey<? extends T> contextParam();
 
         @Override
-        default @Nullable T get(LootContext p_454884_) {
-            return p_454884_.getOptionalParameter((ContextKey<T>)this.contextParam());
+        default @Nullable T get(final LootContext context) {
+            return context.getOptionalParameter((ContextKey<T>)this.contextParam());
         }
     }
 }

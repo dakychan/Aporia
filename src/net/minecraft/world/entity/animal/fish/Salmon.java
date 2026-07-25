@@ -1,5 +1,6 @@
 package net.minecraft.world.entity.animal.fish;
 
+import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
 import java.util.function.IntFunction;
 import net.minecraft.core.component.DataComponentGetter;
@@ -17,12 +18,12 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Bucketable;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
-import net.minecraft.world.entity.animal.Bucketable;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
@@ -35,8 +36,8 @@ public class Salmon extends AbstractSchoolingFish {
     private static final String TAG_TYPE = "type";
     private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(Salmon.class, EntityDataSerializers.INT);
 
-    public Salmon(EntityType<? extends Salmon> p_451549_, Level p_459343_) {
-        super(p_451549_, p_459343_);
+    public Salmon(final EntityType<? extends Salmon> type, final Level level) {
+        super(type, level);
         this.refreshDimensions();
     }
 
@@ -61,7 +62,7 @@ public class Salmon extends AbstractSchoolingFish {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_461050_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.SALMON_HURT;
     }
 
@@ -71,39 +72,39 @@ public class Salmon extends AbstractSchoolingFish {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_454451_) {
-        super.defineSynchedData(p_454451_);
-        p_454451_.define(DATA_TYPE, Salmon.Variant.DEFAULT.id());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_TYPE, Salmon.Variant.DEFAULT.id());
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_454002_) {
-        super.onSyncedDataUpdated(p_454002_);
-        if (DATA_TYPE.equals(p_454002_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (DATA_TYPE.equals(accessor)) {
             this.refreshDimensions();
         }
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_458418_) {
-        super.addAdditionalSaveData(p_458418_);
-        p_458418_.store("type", Salmon.Variant.CODEC, this.getVariant());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("type", Salmon.Variant.CODEC, this.getVariant());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_450324_) {
-        super.readAdditionalSaveData(p_450324_);
-        this.setVariant(p_450324_.read("type", Salmon.Variant.CODEC).orElse(Salmon.Variant.DEFAULT));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setVariant(input.read("type", Salmon.Variant.CODEC).orElse(Salmon.Variant.DEFAULT));
     }
 
     @Override
-    public void saveToBucketTag(ItemStack p_454325_) {
-        Bucketable.saveDefaultDataToBucketTag(this, p_454325_);
-        p_454325_.copyFrom(DataComponents.SALMON_SIZE, this);
+    public void saveToBucketTag(final ItemStack bucket) {
+        Bucketable.saveDefaultDataToBucketTag(this, bucket);
+        bucket.copyFrom(DataComponents.SALMON_SIZE, this);
     }
 
-    private void setVariant(Salmon.Variant p_451459_) {
-        this.entityData.set(DATA_TYPE, p_451459_.id);
+    private void setVariant(final Salmon.Variant variant) {
+        this.entityData.set(DATA_TYPE, variant.id);
     }
 
     public Salmon.Variant getVariant() {
@@ -111,36 +112,36 @@ public class Salmon extends AbstractSchoolingFish {
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_457412_) {
-        return p_457412_ == DataComponents.SALMON_SIZE ? castComponentValue((DataComponentType<T>)p_457412_, this.getVariant()) : super.get(p_457412_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.SALMON_SIZE ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_455413_) {
-        this.applyImplicitComponentIfPresent(p_455413_, DataComponents.SALMON_SIZE);
-        super.applyImplicitComponents(p_455413_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.SALMON_SIZE);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_460906_, T p_461079_) {
-        if (p_460906_ == DataComponents.SALMON_SIZE) {
-            this.setVariant(castComponentValue(DataComponents.SALMON_SIZE, p_461079_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.SALMON_SIZE) {
+            this.setVariant(castComponentValue(DataComponents.SALMON_SIZE, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_460906_, p_461079_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_459412_, DifficultyInstance p_458114_, EntitySpawnReason p_459699_, @Nullable SpawnGroupData p_456095_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
         WeightedList.Builder<Salmon.Variant> builder = WeightedList.builder();
         builder.add(Salmon.Variant.SMALL, 30);
         builder.add(Salmon.Variant.MEDIUM, 50);
         builder.add(Salmon.Variant.LARGE, 15);
         builder.build().getRandom(this.random).ifPresent(this::setVariant);
-        return super.finalizeSpawn(p_459412_, p_458114_, p_459699_, p_456095_);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     public float getSalmonScale() {
@@ -148,27 +149,27 @@ public class Salmon extends AbstractSchoolingFish {
     }
 
     @Override
-    protected EntityDimensions getDefaultDimensions(Pose p_451707_) {
-        return super.getDefaultDimensions(p_451707_).scale(this.getSalmonScale());
+    protected EntityDimensions getDefaultDimensions(final Pose pose) {
+        return super.getDefaultDimensions(pose).scale(this.getSalmonScale());
     }
 
-    public static enum Variant implements StringRepresentable {
+    public enum Variant implements StringRepresentable {
         SMALL("small", 0, 0.5F),
         MEDIUM("medium", 1, 1.0F),
         LARGE("large", 2, 1.5F);
 
         public static final Salmon.Variant DEFAULT = MEDIUM;
-        public static final StringRepresentable.EnumCodec<Salmon.Variant> CODEC = StringRepresentable.fromEnum(Salmon.Variant::values);
-        static final IntFunction<Salmon.Variant> BY_ID = ByIdMap.continuous(Salmon.Variant::id, values(), ByIdMap.OutOfBoundsStrategy.CLAMP);
+        public static final Codec<Salmon.Variant> CODEC = StringRepresentable.fromEnum(Salmon.Variant::values);
+        private static final IntFunction<Salmon.Variant> BY_ID = ByIdMap.continuous(Salmon.Variant::id, values(), ByIdMap.OutOfBoundsStrategy.CLAMP);
         public static final StreamCodec<ByteBuf, Salmon.Variant> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, Salmon.Variant::id);
         private final String name;
-        final int id;
-        final float boundingBoxScale;
+        private final int id;
+        private final float boundingBoxScale;
 
-        private Variant(final String p_455456_, final int p_456977_, final float p_455649_) {
-            this.name = p_455456_;
-            this.id = p_456977_;
-            this.boundingBoxScale = p_455649_;
+        Variant(final String name, final int id, final float boundingBoxScale) {
+            this.name = name;
+            this.id = id;
+            this.boundingBoxScale = boundingBoxScale;
         }
 
         @Override
@@ -176,7 +177,7 @@ public class Salmon extends AbstractSchoolingFish {
             return this.name;
         }
 
-        int id() {
+        private int id() {
             return this.id;
         }
     }

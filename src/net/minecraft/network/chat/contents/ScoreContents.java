@@ -5,31 +5,31 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.arguments.EntityArgument;
-import net.minecraft.commands.arguments.selector.SelectorPattern;
+import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentContents;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.chat.numbers.StyledFormat;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.util.CompilableString;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
-import org.jspecify.annotations.Nullable;
 
-public record ScoreContents(Either<SelectorPattern, String> name, String objective) implements ComponentContents {
+public record ScoreContents(Either<CompilableString<EntitySelector>, String> name, String objective) implements ComponentContents {
     public static final MapCodec<ScoreContents> INNER_CODEC = RecordCodecBuilder.mapCodec(
-        p_358479_ -> p_358479_.group(
-                Codec.either(SelectorPattern.CODEC, Codec.STRING).fieldOf("name").forGetter(ScoreContents::name),
+        i -> i.group(
+                Codec.either(EntitySelector.COMPILABLE_CODEC, Codec.STRING).fieldOf("name").forGetter(ScoreContents::name),
                 Codec.STRING.fieldOf("objective").forGetter(ScoreContents::objective)
             )
-            .apply(p_358479_, ScoreContents::new)
+            .apply(i, ScoreContents::new)
     );
     public static final MapCodec<ScoreContents> MAP_CODEC = INNER_CODEC.fieldOf("score");
 
@@ -38,33 +38,33 @@ public record ScoreContents(Either<SelectorPattern, String> name, String objecti
         return MAP_CODEC;
     }
 
-    private ScoreHolder findTargetName(CommandSourceStack p_237442_) throws CommandSyntaxException {
-        Optional<SelectorPattern> optional = this.name.left();
-        if (optional.isPresent()) {
-            List<? extends Entity> list = optional.get().resolved().findEntities(p_237442_);
-            if (!list.isEmpty()) {
-                if (list.size() != 1) {
+    private ScoreHolder findTargetName(final CommandSourceStack source) throws CommandSyntaxException {
+        Optional<CompilableString<EntitySelector>> selector = this.name.left();
+        if (selector.isPresent()) {
+            List<? extends Entity> entities = selector.get().compiled().findEntities(source);
+            if (!entities.isEmpty()) {
+                if (entities.size() != 1) {
                     throw EntityArgument.ERROR_NOT_SINGLE_ENTITY.create();
                 } else {
-                    return list.getFirst();
+                    return entities.getFirst();
                 }
             } else {
-                return ScoreHolder.forNameOnly(optional.get().pattern());
+                return ScoreHolder.forNameOnly(selector.get().source());
             }
         } else {
             return ScoreHolder.forNameOnly(this.name.right().orElseThrow());
         }
     }
 
-    private MutableComponent getScore(ScoreHolder p_312678_, CommandSourceStack p_237451_) {
-        MinecraftServer minecraftserver = p_237451_.getServer();
-        if (minecraftserver != null) {
-            Scoreboard scoreboard = minecraftserver.getScoreboard();
+    private MutableComponent getScore(final ScoreHolder name, final CommandSourceStack source) {
+        MinecraftServer server = source.getServer();
+        if (server != null) {
+            Scoreboard scoreboard = server.getScoreboard();
             Objective objective = scoreboard.getObjective(this.objective);
             if (objective != null) {
-                ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(p_312678_, objective);
-                if (readonlyscoreinfo != null) {
-                    return readonlyscoreinfo.formatValue(objective.numberFormatOrDefault(StyledFormat.NO_STYLE));
+                ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(name, objective);
+                if (scoreInfo != null) {
+                    return scoreInfo.formatValue(objective.numberFormatOrDefault(StyledFormat.NO_STYLE));
                 }
             }
         }
@@ -73,14 +73,16 @@ public record ScoreContents(Either<SelectorPattern, String> name, String objecti
     }
 
     @Override
-    public MutableComponent resolve(@Nullable CommandSourceStack p_237444_, @Nullable Entity p_237445_, int p_237446_) throws CommandSyntaxException {
-        if (p_237444_ == null) {
+    public MutableComponent resolve(final ResolutionContext context, final int recursionDepth) throws CommandSyntaxException {
+        CommandSourceStack source = context.source();
+        if (source == null) {
             return Component.empty();
-        } else {
-            ScoreHolder scoreholder = this.findTargetName(p_237444_);
-            ScoreHolder scoreholder1 = (ScoreHolder)(p_237445_ != null && scoreholder.equals(ScoreHolder.WILDCARD) ? p_237445_ : scoreholder);
-            return this.getScore(scoreholder1, p_237444_);
         }
+
+        ScoreHolder scoreHolder = this.findTargetName(source);
+        Entity entity = context.defaultScoreboardEntity();
+        ScoreHolder scoreName = entity != null && scoreHolder.equals(ScoreHolder.WILDCARD) ? entity : scoreHolder;
+        return this.getScore(scoreName, source);
     }
 
     @Override

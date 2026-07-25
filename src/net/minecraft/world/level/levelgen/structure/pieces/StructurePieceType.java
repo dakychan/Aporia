@@ -59,7 +59,7 @@ public interface StructurePieceType {
     StructurePieceType JUNGLE_PYRAMID_PIECE = setPieceId(JungleTemplePiece::new, "TeJP");
     StructurePieceType OCEAN_RUIN = setTemplatePieceId(OceanRuinPieces.OceanRuinPiece::create, "ORP");
     StructurePieceType IGLOO = setTemplatePieceId(IglooPieces.IglooPiece::new, "Iglu");
-    StructurePieceType RUINED_PORTAL = setTemplatePieceId(RuinedPortalPiece::new, "RUPO");
+    StructurePieceType RUINED_PORTAL = setFullContextPieceId(RuinedPortalPiece::new, "RUPO");
     StructurePieceType SWAMPLAND_HUT = setPieceId(SwampHutPiece::new, "TeSH");
     StructurePieceType DESERT_PYRAMID_PIECE = setPieceId(DesertPyramidPiece::new, "TeDP");
     StructurePieceType OCEAN_MONUMENT_BUILDING = setPieceId(OceanMonumentPieces.MonumentBuilding::new, "OMB");
@@ -81,35 +81,35 @@ public interface StructurePieceType {
     StructurePieceType NETHER_FOSSIL = setTemplatePieceId(NetherFossilPieces.NetherFossilPiece::new, "NeFos");
     StructurePieceType JIGSAW = setFullContextPieceId(PoolElementStructurePiece::new, "jigsaw");
 
-    StructurePiece load(StructurePieceSerializationContext p_210161_, CompoundTag p_210162_);
+    StructurePiece load(StructurePieceSerializationContext context, CompoundTag tag);
 
-    private static StructurePieceType setFullContextPieceId(StructurePieceType p_210159_, String p_210160_) {
-        return Registry.register(BuiltInRegistries.STRUCTURE_PIECE, p_210160_.toLowerCase(Locale.ROOT), p_210159_);
+    private static StructurePieceType setFullContextPieceId(final StructurePieceType type, final String id) {
+        return Registry.register(BuiltInRegistries.STRUCTURE_PIECE, id.toLowerCase(Locale.ROOT), type);
     }
 
-    private static StructurePieceType setPieceId(StructurePieceType.ContextlessType p_210153_, String p_210154_) {
-        return setFullContextPieceId(p_210153_, p_210154_);
+    private static StructurePieceType setPieceId(final StructurePieceType.ContextlessType type, final String id) {
+        return setFullContextPieceId(type, id);
     }
 
-    private static StructurePieceType setTemplatePieceId(StructurePieceType.StructureTemplateType p_210156_, String p_210157_) {
-        return setFullContextPieceId(p_210156_, p_210157_);
+    private static StructurePieceType setTemplatePieceId(final StructurePieceType.StructureTemplateType type, final String id) {
+        return setFullContextPieceId(type, id);
     }
 
-    public interface ContextlessType extends StructurePieceType {
-        StructurePiece load(CompoundTag p_210167_);
+    interface ContextlessType extends StructurePieceType {
+        StructurePiece load(final CompoundTag tag);
 
         @Override
-        default StructurePiece load(StructurePieceSerializationContext p_210164_, CompoundTag p_210165_) {
-            return this.load(p_210165_);
+        default StructurePiece load(final StructurePieceSerializationContext context, final CompoundTag tag) {
+            return this.load(tag);
         }
     }
 
-    public interface StructureTemplateType extends StructurePieceType {
-        StructurePiece load(StructureTemplateManager p_226963_, CompoundTag p_226964_);
+    interface StructureTemplateType extends StructurePieceType {
+        StructurePiece load(final StructureTemplateManager structureTemplateManager, final CompoundTag tag);
 
         @Override
-        default StructurePiece load(StructurePieceSerializationContext p_210169_, CompoundTag p_210170_) {
-            return this.load(p_210169_.structureTemplateManager(), p_210170_);
+        default StructurePiece load(final StructurePieceSerializationContext context, final CompoundTag tag) {
+            return this.load(context.structureTemplateManager(), tag);
         }
     }
 }

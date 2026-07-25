@@ -1,12 +1,26 @@
 package net.minecraft.world.item.crafting;
 
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 
 public class SmokingRecipe extends AbstractCookingRecipe {
-    public SmokingRecipe(String p_249312_, CookingBookCategory p_251017_, Ingredient p_252345_, ItemStack p_250002_, float p_250535_, int p_251222_) {
-        super(p_249312_, p_251017_, p_252345_, p_250002_, p_250535_, p_251222_);
+    public static final MapCodec<SmokingRecipe> MAP_CODEC = cookingMapCodec(SmokingRecipe::new, 100);
+    public static final StreamCodec<RegistryFriendlyByteBuf, SmokingRecipe> STREAM_CODEC = cookingStreamCodec(SmokingRecipe::new);
+    public static final RecipeSerializer<SmokingRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+
+    public SmokingRecipe(
+        final Recipe.CommonInfo commonInfo,
+        final AbstractCookingRecipe.CookingBookInfo bookInfo,
+        final Ingredient ingredient,
+        final ItemStackTemplate result,
+        final float experience,
+        final int cookingTime
+    ) {
+        super(commonInfo, bookInfo, ingredient, result, experience, cookingTime);
     }
 
     @Override
@@ -21,7 +35,7 @@ public class SmokingRecipe extends AbstractCookingRecipe {
 
     @Override
     public RecipeSerializer<SmokingRecipe> getSerializer() {
-        return RecipeSerializer.SMOKING_RECIPE;
+        return SERIALIZER;
     }
 
     @Override

@@ -37,12 +37,12 @@ class ClickGui : Module("ClickGui", Category.VISUAL, 41) {
 
     override fun onEnable() {
         bus.register(this)
-        mc.setScreen(ClickGuiScreen(this))
+        mc.gui.setScreen(ClickGuiScreen(this))
     }
 
     override fun onDisable() {
         bus.unregister(this)
-        if (mc.screen is ClickGuiScreen) mc.setScreen(null)
+        if (mc.gui.screen() is ClickGuiScreen) mc.gui.setScreen(null)
     }
 
     override val settings = listOf(guiMode, browserUrl, fontRendererMode, fontFamily, savedCategory, savedScroll, savedSettingsScroll)

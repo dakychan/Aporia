@@ -8,8 +8,8 @@ public final class BooleanProperty extends Property<Boolean> {
     private static final int TRUE_INDEX = 0;
     private static final int FALSE_INDEX = 1;
 
-    private BooleanProperty(String p_61459_) {
-        super(p_61459_, Boolean.class);
+    private BooleanProperty(final String name) {
+        super(name, Boolean.class);
     }
 
     @Override
@@ -17,24 +17,24 @@ public final class BooleanProperty extends Property<Boolean> {
         return VALUES;
     }
 
-    public static BooleanProperty create(String p_61466_) {
-        return new BooleanProperty(p_61466_);
+    public static BooleanProperty create(final String name) {
+        return new BooleanProperty(name);
     }
 
     @Override
-    public Optional<Boolean> getValue(String p_61469_) {
-        return switch (p_61469_) {
+    public Optional<Boolean> getValue(final String name) {
+        return switch (name) {
             case "true" -> Optional.of(true);
             case "false" -> Optional.of(false);
             default -> Optional.empty();
         };
     }
 
-    public String getName(Boolean p_61462_) {
-        return p_61462_.toString();
+    public String getName(final Boolean value) {
+        return value.toString();
     }
 
-    public int getInternalIndex(Boolean p_361970_) {
-        return p_361970_ ? 0 : 1;
+    public int getInternalIndex(final Boolean value) {
+        return value ? 0 : 1;
     }
 }

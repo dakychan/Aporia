@@ -19,11 +19,8 @@ public record ServerboundEditBookPacket(int slot, List<String> pages, Optional<S
         ServerboundEditBookPacket::new
     );
 
-    public ServerboundEditBookPacket(int slot, List<String> pages, Optional<String> title) {
+    public ServerboundEditBookPacket {
         pages = List.copyOf(pages);
-        this.slot = slot;
-        this.pages = pages;
-        this.title = title;
     }
 
     @Override
@@ -31,7 +28,7 @@ public record ServerboundEditBookPacket(int slot, List<String> pages, Optional<S
         return GamePacketTypes.SERVERBOUND_EDIT_BOOK;
     }
 
-    public void handle(ServerGamePacketListener p_134008_) {
-        p_134008_.handleEditBook(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleEditBook(this);
     }
 }

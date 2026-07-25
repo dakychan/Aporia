@@ -10,60 +10,53 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
 import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
 
 public class AttributesRenameLegacy extends DataFix {
     private final String name;
     private final UnaryOperator<String> renames;
 
-    public AttributesRenameLegacy(Schema p_369510_, String p_366609_, UnaryOperator<String> p_366659_) {
-        super(p_369510_, false);
-        this.name = p_366609_;
-        this.renames = p_366659_;
+    public AttributesRenameLegacy(final Schema outputSchema, final String name, final UnaryOperator<String> renames) {
+        super(outputSchema, false);
+        this.name = name;
+        this.renames = renames;
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<?> opticfinder = type.findField("tag");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<?> tagF = itemStackType.findField("tag");
         return TypeRewriteRule.seq(
-            this.fixTypeEverywhereTyped(this.name + " (ItemStack)", type, p_361468_ -> p_361468_.updateTyped(opticfinder, this::fixItemStackTag)),
+            this.fixTypeEverywhereTyped(this.name + " (ItemStack)", itemStackType, itemStack -> itemStack.updateTyped(tagF, this::fixItemStackTag)),
             this.fixTypeEverywhereTyped(this.name + " (Entity)", this.getInputSchema().getType(References.ENTITY), this::fixEntity),
             this.fixTypeEverywhereTyped(this.name + " (Player)", this.getInputSchema().getType(References.PLAYER), this::fixEntity)
         );
     }
 
-    private Dynamic<?> fixName(Dynamic<?> p_362328_) {
-        return DataFixUtils.orElse(p_362328_.asString().result().map(this.renames).map(p_362328_::createString), p_362328_);
+    private Dynamic<?> fixName(final Dynamic<?> name) {
+        return DataFixUtils.orElse(name.asString().result().map(this.renames).map(name::createString), name);
     }
 
-    private Typed<?> fixItemStackTag(Typed<?> p_369182_) {
-        return p_369182_.update(
+    private Typed<?> fixItemStackTag(final Typed<?> itemStack) {
+        return itemStack.update(
             DSL.remainderFinder(),
-            p_365782_ -> p_365782_.update(
+            tag -> tag.update(
                 "AttributeModifiers",
-                p_361291_ -> DataFixUtils.orElse(
-                    p_361291_.asStreamOpt()
-                        .result()
-                        .map(p_368448_ -> p_368448_.map(p_363415_ -> p_363415_.update("AttributeName", this::fixName)))
-                        .map(p_361291_::createList),
-                    p_361291_
+                modifiers -> DataFixUtils.orElse(
+                    modifiers.asStreamOpt().result().map(s -> s.map(modifier -> modifier.update("AttributeName", this::fixName))).map(modifiers::createList),
+                    modifiers
                 )
             )
         );
     }
 
-    private Typed<?> fixEntity(Typed<?> p_360706_) {
-        return p_360706_.update(
+    private Typed<?> fixEntity(final Typed<?> entity) {
+        return entity.update(
             DSL.remainderFinder(),
-            p_370146_ -> p_370146_.update(
+            tag -> tag.update(
                 "Attributes",
-                p_369341_ -> DataFixUtils.orElse(
-                    p_369341_.asStreamOpt()
-                        .result()
-                        .map(p_361263_ -> p_361263_.map(p_362038_ -> p_362038_.update("Name", this::fixName)))
-                        .map(p_369341_::createList),
-                    p_369341_
+                attributeList -> DataFixUtils.orElse(
+                    attributeList.asStreamOpt().result().map(s -> s.map(attribute -> attribute.update("Name", this::fixName))).map(attributeList::createList),
+                    attributeList
                 )
             )
         );

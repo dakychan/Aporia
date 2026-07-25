@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -19,8 +18,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class ConcretePowderBlock extends FallingBlock {
     public static final MapCodec<ConcretePowderBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422101_ -> p_422101_.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("concrete").forGetter(p_313163_ -> p_313163_.concrete), propertiesCodec())
-            .apply(p_422101_, ConcretePowderBlock::new)
+        i -> i.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("concrete").forGetter(b -> b.concrete), propertiesCodec())
+            .apply(i, ConcretePowderBlock::new)
     );
     private final Block concrete;
 
@@ -29,71 +28,71 @@ public class ConcretePowderBlock extends FallingBlock {
         return CODEC;
     }
 
-    public ConcretePowderBlock(Block p_52060_, BlockBehaviour.Properties p_52061_) {
-        super(p_52061_);
-        this.concrete = p_52060_;
+    public ConcretePowderBlock(final Block concrete, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.concrete = concrete;
     }
 
     @Override
-    public void onLand(Level p_52068_, BlockPos p_52069_, BlockState p_52070_, BlockState p_52071_, FallingBlockEntity p_52072_) {
-        if (shouldSolidify(p_52068_, p_52069_, p_52071_)) {
-            p_52068_.setBlock(p_52069_, this.concrete.defaultBlockState(), 3);
+    public void onLand(final Level level, final BlockPos pos, final BlockState state, final BlockState replacedBlock, final FallingBlockEntity entity) {
+        if (shouldSolidify(level, pos, replacedBlock)) {
+            level.setBlock(pos, this.concrete.defaultBlockState(), 3);
         }
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_52063_) {
-        BlockGetter blockgetter = p_52063_.getLevel();
-        BlockPos blockpos = p_52063_.getClickedPos();
-        BlockState blockstate = blockgetter.getBlockState(blockpos);
-        return shouldSolidify(blockgetter, blockpos, blockstate) ? this.concrete.defaultBlockState() : super.getStateForPlacement(p_52063_);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState replacedBlock = level.getBlockState(pos);
+        return shouldSolidify(level, pos, replacedBlock) ? this.concrete.defaultBlockState() : super.getStateForPlacement(context);
     }
 
-    private static boolean shouldSolidify(BlockGetter p_52081_, BlockPos p_52082_, BlockState p_52083_) {
-        return canSolidify(p_52083_) || touchesLiquid(p_52081_, p_52082_);
+    private static boolean shouldSolidify(final BlockGetter level, final BlockPos pos, final BlockState replacedBlock) {
+        return canSolidify(replacedBlock) || touchesLiquid(level, pos);
     }
 
-    private static boolean touchesLiquid(BlockGetter p_52065_, BlockPos p_52066_) {
-        boolean flag = false;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_52066_.mutable();
+    private static boolean touchesLiquid(final BlockGetter level, final BlockPos pos) {
+        boolean touchesLiquid = false;
+        BlockPos.MutableBlockPos testPos = pos.mutable();
 
         for (Direction direction : Direction.values()) {
-            BlockState blockstate = p_52065_.getBlockState(blockpos$mutableblockpos);
-            if (direction != Direction.DOWN || canSolidify(blockstate)) {
-                blockpos$mutableblockpos.setWithOffset(p_52066_, direction);
-                blockstate = p_52065_.getBlockState(blockpos$mutableblockpos);
-                if (canSolidify(blockstate) && !blockstate.isFaceSturdy(p_52065_, p_52066_, direction.getOpposite())) {
-                    flag = true;
+            BlockState blockState = level.getBlockState(testPos);
+            if (direction != Direction.DOWN || canSolidify(blockState)) {
+                testPos.setWithOffset(pos, direction);
+                blockState = level.getBlockState(testPos);
+                if (canSolidify(blockState) && !blockState.isFaceSturdy(level, pos, direction.getOpposite())) {
+                    touchesLiquid = true;
                     break;
                 }
             }
         }
 
-        return flag;
+        return touchesLiquid;
     }
 
-    private static boolean canSolidify(BlockState p_52089_) {
-        return p_52089_.getFluidState().is(FluidTags.WATER);
+    private static boolean canSolidify(final BlockState state) {
+        return state.getFluidState().is(FluidTags.WATER);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_52074_,
-        LevelReader p_361484_,
-        ScheduledTickAccess p_362145_,
-        BlockPos p_52078_,
-        Direction p_52075_,
-        BlockPos p_52079_,
-        BlockState p_52076_,
-        RandomSource p_369257_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return touchesLiquid(p_361484_, p_52078_)
+        return touchesLiquid(level, pos)
             ? this.concrete.defaultBlockState()
-            : super.updateShape(p_52074_, p_361484_, p_362145_, p_52078_, p_52075_, p_52079_, p_52076_, p_369257_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public int getDustColor(BlockState p_52085_, BlockGetter p_52086_, BlockPos p_52087_) {
-        return p_52085_.getMapColor(p_52086_, p_52087_).col;
+    public int getDustColor(final BlockState blockState, final BlockGetter level, final BlockPos pos) {
+        return blockState.getMapColor(level, pos).col;
     }
 }

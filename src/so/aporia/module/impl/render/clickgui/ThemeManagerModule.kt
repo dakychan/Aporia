@@ -97,93 +97,93 @@ class ThemeManagerModule : Module("Theme Manager", Category.VISUAL) {
     private fun createDefault() = Theme("DefaultAporia")
 
     private fun createAmethyst() = Theme("Amethyst").apply {
-        guiBackground  = c(0xCC1A0A2E); guiTitleBg     = c(0xE02D1060); guiTitleText   = c(0xFFD4A0FF)
-        guiModuleText  = c(0xFFE8D0FF); guiEnabledDot  = c(0xFFB060FF); guiDisabledDot = c(0xFF503070)
-        guiHoverBg     = c(0x30A050FF); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFC8B0E0)
-        guiSettingValue= c(0xFFE8D0FF); espPlayer      = c(0xFFFF55FF); espFriend      = c(0xFF55FFAA)
+        guiBackground  = c(0xCC180828); guiTitleBg     = c(0xE0301058); guiTitleText   = c(0xFFD4A0FF)
+        guiModuleText  = c(0xFFE8D0FF); guiEnabledDot  = c(0xFFB040FF); guiDisabledDot = c(0xFF503070)
+        guiHoverBg     = c(0x30A040FF); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFC8B0E0)
+        guiSettingValue= c(0xFFE8D0FF); espPlayer      = c(0xFFFF40FF); espFriend      = c(0xFF55FFAA)
         espItem        = c(0xFFFFD700); espMob         = c(0xFFFF6600); fontNormal     = c(0xFFFFFFFF)
         fontHighlight  = c(0xFFFFAAFF); fontShadow     = c(0x80000000); mmTitle        = c(0xFFFFD0FF)
-        mmSubtitle     = c(0xFFD080FF); mmButtonBg     = c(0x4C2A0055); mmButtonFg     = c(0xFFFFD0FF)
+        mmSubtitle     = c(0xFFD080FF); mmButtonBg     = c(0x50301060); mmButtonFg     = c(0xFFFFD0FF)
     }
 
     private fun createSynthwave() = Theme("Synthwave").apply {
-        guiBackground  = c(0xCC0A0020); guiTitleBg     = c(0xE01A0050); guiTitleText   = c(0xFFFF6EB4)
-        guiModuleText  = c(0xFFE0E0FF); guiEnabledDot  = c(0xFFFF00AA); guiDisabledDot = c(0xFF401060)
+        guiBackground  = c(0xCC080018); guiTitleBg     = c(0xE0180048); guiTitleText   = c(0xFFFF6EB4)
+        guiModuleText  = c(0xFFE0E0FF); guiEnabledDot  = c(0xFFFF00AA); guiDisabledDot = c(0xFF381050)
         guiHoverBg     = c(0x30FF00AA); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFC080D0)
         guiSettingValue= c(0xFF80D0FF); espPlayer      = c(0xFFFF0080); espFriend      = c(0xFF00FFAA)
         espItem        = c(0xFFFFCC00); espMob         = c(0xFFFF4400); fontNormal     = c(0xFFFFFFFF)
         fontHighlight  = c(0xFFFF00AA); fontShadow     = c(0x80000000); mmTitle        = c(0xFFFF6EB4)
-        mmSubtitle     = c(0xFF4ADEFF); mmButtonBg     = c(0x4C1A0050); mmButtonFg     = c(0xFFFF6EB4)
+        mmSubtitle     = c(0xFF4ADEFF); mmButtonBg     = c(0x501A0050); mmButtonFg     = c(0xFFFF6EB4)
     }
 
     private fun createMatrix() = Theme("Matrix").apply {
-        guiBackground  = c(0xCC001000); guiTitleBg     = c(0xE0003000); guiTitleText   = c(0xFF00FF41)
-        guiModuleText  = c(0xFFAAFFAA); guiEnabledDot  = c(0xFF00FF41); guiDisabledDot = c(0xFF005000)
+        guiBackground  = c(0xCC001800); guiTitleBg     = c(0xE0004000); guiTitleText   = c(0xFF00FF41)
+        guiModuleText  = c(0xFFAAFFAA); guiEnabledDot  = c(0xFF00FF41); guiDisabledDot = c(0xFF006000)
         guiHoverBg     = c(0x3000FF41); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFF80C080)
         guiSettingValue= c(0xFF00FF41); espPlayer      = c(0xFFFF3333); espFriend      = c(0xFF00FF41)
         espItem        = c(0xFFFFFF00); espMob         = c(0xFFFF8800); fontNormal     = c(0xFF00FF41)
         fontHighlight  = c(0xFFFFFFFF); fontShadow     = c(0x80000000); mmTitle        = c(0xFF00FF41)
-        mmSubtitle     = c(0xFF80FF80); mmButtonBg     = c(0x4C003000); mmButtonFg     = c(0xFF00FF41)
+        mmSubtitle     = c(0xFF80FF80); mmButtonBg     = c(0x50004000); mmButtonFg     = c(0xFF00FF41)
     }
 
     private fun createOcean() = Theme("Ocean").apply {
-        guiBackground  = c(0xCC001828); guiTitleBg     = c(0xE0003050); guiTitleText   = c(0xFF80D0FF)
-        guiModuleText  = c(0xFFD0F0FF); guiEnabledDot  = c(0xFF00AAFF); guiDisabledDot = c(0xFF004060)
-        guiHoverBg     = c(0x3000AAFF); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFF90C0D0)
+        guiBackground  = c(0xCC002040); guiTitleBg     = c(0xE0004070); guiTitleText   = c(0xFF80D0FF)
+        guiModuleText  = c(0xFFD0F0FF); guiEnabledDot  = c(0xFF00BBFF); guiDisabledDot = c(0xFF004868)
+        guiHoverBg     = c(0x3000BBFF); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFF90C0D0)
         guiSettingValue= c(0xFFC0F0FF); espPlayer      = c(0xFFFF5555); espFriend      = c(0xFF55FFAA)
         espItem        = c(0xFFFFDD00); espMob         = c(0xFFFF8800); fontNormal     = c(0xFFFFFFFF)
         fontHighlight  = c(0xFF00CCFF); fontShadow     = c(0x80000000); mmTitle        = c(0xFF80D0FF)
-        mmSubtitle     = c(0xFF40A0D0); mmButtonBg     = c(0x4C003860); mmButtonFg     = c(0xFF80D0FF)
+        mmSubtitle     = c(0xFF40A0D0); mmButtonBg     = c(0x50004870); mmButtonFg     = c(0xFF80D0FF)
     }
 
     private fun createBlood() = Theme("Blood").apply {
-        guiBackground  = c(0xCC200000); guiTitleBg     = c(0xE0400000); guiTitleText   = c(0xFFFF6060)
-        guiModuleText  = c(0xFFFFC0C0); guiEnabledDot  = c(0xFFFF0000); guiDisabledDot = c(0xFF600000)
+        guiBackground  = c(0xCC280000); guiTitleBg     = c(0xE0500000); guiTitleText   = c(0xFFFF6060)
+        guiModuleText  = c(0xFFFFC0C0); guiEnabledDot  = c(0xFFFF0000); guiDisabledDot = c(0xFF700000)
         guiHoverBg     = c(0x30FF0000); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFD08080)
         guiSettingValue= c(0xFFFFA0A0); espPlayer      = c(0xFFFF0000); espFriend      = c(0xFF55FF55)
         espItem        = c(0xFFFFAA00); espMob         = c(0xFFFF5500); fontNormal     = c(0xFFFFFFFF)
         fontHighlight  = c(0xFFFF6060); fontShadow     = c(0x80000000); mmTitle        = c(0xFFFF6060)
-        mmSubtitle     = c(0xFFD04040); mmButtonBg     = c(0x4C400000); mmButtonFg     = c(0xFFFF6060)
+        mmSubtitle     = c(0xFFD04040); mmButtonBg     = c(0x50500000); mmButtonFg     = c(0xFFFF6060)
     }
 
     private fun createMidnight() = Theme("Midnight").apply {
-        guiBackground  = c(0xCC080810); guiTitleBg     = c(0xE0101028); guiTitleText   = c(0xFF8899CC)
-        guiModuleText  = c(0xFFCCD6F0); guiEnabledDot  = c(0xFF4488FF); guiDisabledDot = c(0xFF334466)
+        guiBackground  = c(0xCC0A0A18); guiTitleBg     = c(0xE0141430); guiTitleText   = c(0xFF8899CC)
+        guiModuleText  = c(0xFFCCD6F0); guiEnabledDot  = c(0xFF4488FF); guiDisabledDot = c(0xFF384868)
         guiHoverBg     = c(0x184488FF); guiSeparator   = c(0x10FFFFFF); guiSettingText = c(0xFF7788AA)
         guiSettingValue= c(0xFFAABBEE); espPlayer      = c(0xFFFF4444); espFriend      = c(0xFF44FF88)
         espItem        = c(0xFFDDCC44); espMob         = c(0xFFFF8833); fontNormal     = c(0xFFCCCCDD)
         fontHighlight  = c(0xFF8899FF); fontShadow     = c(0x80000000); mmTitle        = c(0xFF8899CC)
-        mmSubtitle     = c(0xFF6677AA); mmButtonBg     = c(0x4C101028); mmButtonFg     = c(0xFF8899CC)
+        mmSubtitle     = c(0xFF6677AA); mmButtonBg     = c(0x50141430); mmButtonFg     = c(0xFF8899CC)
     }
 
     private fun createForest() = Theme("Forest").apply {
-        guiBackground  = c(0xCC0A180A); guiTitleBg     = c(0xE0183018); guiTitleText   = c(0xFF88CC88)
-        guiModuleText  = c(0xFFC0E8C0); guiEnabledDot  = c(0xFF44AA44); guiDisabledDot = c(0xFF2A552A)
-        guiHoverBg     = c(0x2044AA44); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFF80A880)
+        guiBackground  = c(0xCC0C200C); guiTitleBg     = c(0xE01C3C1C); guiTitleText   = c(0xFF88CC88)
+        guiModuleText  = c(0xFFC0E8C0); guiEnabledDot  = c(0xFF44BB44); guiDisabledDot = c(0xFF2E602E)
+        guiHoverBg     = c(0x2044BB44); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFF80A880)
         guiSettingValue= c(0xFFB0E0B0); espPlayer      = c(0xFFFF6644); espFriend      = c(0xFF66FF66)
         espItem        = c(0xFFFFDD44); espMob         = c(0xFFFF8833); fontNormal     = c(0xFFE0E8D0)
         fontHighlight  = c(0xFF88FF88); fontShadow     = c(0x80000000); mmTitle        = c(0xFF88CC88)
-        mmSubtitle     = c(0xFF66AA66); mmButtonBg     = c(0x4C183018); mmButtonFg     = c(0xFF88CC88)
+        mmSubtitle     = c(0xFF66AA66); mmButtonBg     = c(0x501C3C1C); mmButtonFg     = c(0xFF88CC88)
     }
 
     private fun createSunrise() = Theme("Sunrise").apply {
-        guiBackground  = c(0xCC1A1008); guiTitleBg     = c(0xE0302010); guiTitleText   = c(0xFFFFAA44)
-        guiModuleText  = c(0xFFFFD8B0); guiEnabledDot  = c(0xFFFF8800); guiDisabledDot = c(0xFF663300)
-        guiHoverBg     = c(0x30FF8800); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFD0A070)
+        guiBackground  = c(0xCC201408); guiTitleBg     = c(0xE03C2810); guiTitleText   = c(0xFFFFAA44)
+        guiModuleText  = c(0xFFFFD8B0); guiEnabledDot  = c(0xFFFF9900); guiDisabledDot = c(0xFF703800)
+        guiHoverBg     = c(0x30FF9900); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFD0A070)
         guiSettingValue= c(0xFFFFCC88); espPlayer      = c(0xFFFF4444); espFriend      = c(0xFF44FF88)
         espItem        = c(0xFFFFDD00); espMob         = c(0xFFFF6600); fontNormal     = c(0xFFFFF0E0)
         fontHighlight  = c(0xFFFFAA44); fontShadow     = c(0x80000000); mmTitle        = c(0xFFFFAA44)
-        mmSubtitle     = c(0xFFDD8844); mmButtonBg     = c(0x4C302010); mmButtonFg     = c(0xFFFFAA44)
+        mmSubtitle     = c(0xFFDD8844); mmButtonBg     = c(0x503C2810); mmButtonFg     = c(0xFFFFAA44)
     }
 
     private fun createCyberpunk() = Theme("Cyberpunk").apply {
-        guiBackground  = c(0xCC080010); guiTitleBg     = c(0xE0200030); guiTitleText   = c(0xFFFFDD00)
-        guiModuleText  = c(0xFFE0E0FF); guiEnabledDot  = c(0xFF00FFC8); guiDisabledDot = c(0xFF400060)
+        guiBackground  = c(0xCC0A0018); guiTitleBg     = c(0xE0280038); guiTitleText   = c(0xFFFFDD00)
+        guiModuleText  = c(0xFFE0E0FF); guiEnabledDot  = c(0xFF00FFD0); guiDisabledDot = c(0xFF480068)
         guiHoverBg     = c(0x30FFDD00); guiSeparator   = c(0x20FFFFFF); guiSettingText = c(0xFFC080D0)
-        guiSettingValue= c(0xFF00FFC8); espPlayer      = c(0xFFFF0066); espFriend      = c(0xFF00FFC8)
+        guiSettingValue= c(0xFF00FFD0); espPlayer      = c(0xFFFF0066); espFriend      = c(0xFF00FFD0)
         espItem        = c(0xFFFFDD00); espMob         = c(0xFFFF6600); fontNormal     = c(0xFFFFF0E0)
-        fontHighlight  = c(0xFF00FFC8); fontShadow     = c(0x80000000); mmTitle        = c(0xFFFFDD00)
-        mmSubtitle     = c(0xFF00FFC8); mmButtonBg     = c(0x4C200030); mmButtonFg     = c(0xFFFFDD00)
+        fontHighlight  = c(0xFF00FFD0); fontShadow     = c(0x80000000); mmTitle        = c(0xFFFFDD00)
+        mmSubtitle     = c(0xFF00FFD0); mmButtonBg     = c(0x50280038); mmButtonFg     = c(0xFFFFDD00)
     }
 
     private fun saveOne(name: String) {

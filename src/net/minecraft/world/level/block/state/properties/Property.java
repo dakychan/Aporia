@@ -16,24 +16,24 @@ public abstract class Property<T extends Comparable<T>> {
     private @Nullable Integer hashCode;
     private final Codec<T> codec = Codec.STRING
         .comapFlatMap(
-            p_61698_ -> this.getValue(p_61698_)
+            namex -> this.getValue(namex)
                 .map(DataResult::success)
-                .orElseGet(() -> DataResult.error(() -> "Unable to read property: " + this + " with value: " + p_61698_)),
+                .orElseGet(() -> DataResult.error(() -> "Unable to read property: " + this + " with value: " + namex)),
             this::getName
         );
     private final Codec<Property.Value<T>> valueCodec = this.codec.xmap(this::value, Property.Value::value);
 
-    protected Property(String p_61692_, Class<T> p_61693_) {
-        this.clazz = p_61693_;
-        this.name = p_61692_;
+    protected Property(final String name, final Class<T> clazz) {
+        this.clazz = clazz;
+        this.name = name;
     }
 
-    public Property.Value<T> value(T p_61700_) {
-        return new Property.Value<>(this, p_61700_);
+    public Property.Value<T> value(final T value) {
+        return new Property.Value<>(this, value);
     }
 
-    public Property.Value<T> value(StateHolder<?, ?> p_61695_) {
-        return new Property.Value<>(this, p_61695_.getValue(this));
+    public Property.Value<T> value(final StateHolder<?, ?> stateHolder) {
+        return new Property.Value<>(this, stateHolder.getValue(this));
     }
 
     public Stream<Property.Value<T>> getAllValues() {
@@ -58,11 +58,11 @@ public abstract class Property<T extends Comparable<T>> {
 
     public abstract List<T> getPossibleValues();
 
-    public abstract String getName(T p_61696_);
+    public abstract String getName(final T value);
 
-    public abstract Optional<T> getValue(String p_61701_);
+    public abstract Optional<T> getValue(final String name);
 
-    public abstract int getInternalIndex(T p_366384_);
+    public abstract int getInternalIndex(final T value);
 
     @Override
     public String toString() {
@@ -70,11 +70,11 @@ public abstract class Property<T extends Comparable<T>> {
     }
 
     @Override
-    public boolean equals(Object p_61707_) {
-        if (this == p_61707_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return !(p_61707_ instanceof Property<?> property) ? false : this.clazz.equals(property.clazz) && this.name.equals(property.name);
+            return !(o instanceof Property<?> that) ? false : this.clazz.equals(that.clazz) && this.name.equals(that.name);
         }
     }
 
@@ -91,24 +91,25 @@ public abstract class Property<T extends Comparable<T>> {
         return 31 * this.clazz.hashCode() + this.name.hashCode();
     }
 
-    public <U, S extends StateHolder<?, S>> DataResult<S> parseValue(DynamicOps<U> p_156032_, S p_156033_, U p_156034_) {
-        DataResult<T> dataresult = this.codec.parse(p_156032_, p_156034_);
-        return dataresult.<S>map(p_156030_ -> p_156033_.setValue(this, p_156030_)).setPartial(p_156033_);
+    public <U, S extends StateHolder<?, S>> DataResult<S> parseValue(final DynamicOps<U> ops, final S state, final U value) {
+        DataResult<T> parsed = this.codec.parse(ops, value);
+        return parsed.<S>map(v -> state.setValue(this, v)).setPartial(state);
     }
 
     public record Value<T extends Comparable<T>>(Property<T> property, T value) {
-        public Value(Property<T> property, T value) {
+        public Value {
             if (!property.getPossibleValues().contains(value)) {
                 throw new IllegalArgumentException("Value " + value + " does not belong to property " + property);
-            } else {
-                this.property = property;
-                this.value = value;
             }
         }
 
         @Override
         public String toString() {
             return this.property.getName() + "=" + this.property.getName(this.value);
+        }
+
+        public String valueName() {
+            return this.property.getName(this.value);
         }
     }
 }

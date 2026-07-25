@@ -7,7 +7,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -33,20 +32,22 @@ public abstract class TagsProvider<T> implements DataProvider {
     protected final ResourceKey<? extends Registry<T>> registryKey;
     private final Map<Identifier, TagBuilder> builders = Maps.newLinkedHashMap();
 
-    protected TagsProvider(PackOutput p_256596_, ResourceKey<? extends Registry<T>> p_255886_, CompletableFuture<HolderLookup.Provider> p_256513_) {
-        this(p_256596_, p_255886_, p_256513_, CompletableFuture.completedFuture(TagsProvider.TagLookup.empty()));
+    protected TagsProvider(
+        final PackOutput output, final ResourceKey<? extends Registry<T>> registryKey, final CompletableFuture<HolderLookup.Provider> lookupProvider
+    ) {
+        this(output, registryKey, lookupProvider, CompletableFuture.completedFuture(TagsProvider.TagLookup.empty()));
     }
 
     protected TagsProvider(
-        PackOutput p_275432_,
-        ResourceKey<? extends Registry<T>> p_275476_,
-        CompletableFuture<HolderLookup.Provider> p_275222_,
-        CompletableFuture<TagsProvider.TagLookup<T>> p_275565_
+        final PackOutput output,
+        final ResourceKey<? extends Registry<T>> registryKey,
+        final CompletableFuture<HolderLookup.Provider> lookupProvider,
+        final CompletableFuture<TagsProvider.TagLookup<T>> parentProvider
     ) {
-        this.pathProvider = p_275432_.createRegistryTagsPathProvider(p_275476_);
-        this.registryKey = p_275476_;
-        this.parentProvider = p_275565_;
-        this.lookupProvider = p_275222_;
+        this.pathProvider = output.createRegistryTagsPathProvider(registryKey);
+        this.registryKey = registryKey;
+        this.parentProvider = parentProvider;
+        this.lookupProvider = lookupProvider;
     }
 
     @Override
@@ -54,48 +55,47 @@ public abstract class TagsProvider<T> implements DataProvider {
         return "Tags for " + this.registryKey.identifier();
     }
 
-    protected abstract void addTags(HolderLookup.Provider p_256380_);
+    protected abstract void addTags(HolderLookup.Provider registries);
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_253684_) {
+    public CompletableFuture<?> run(final CachedOutput cache) {
         record CombinedData<T>(HolderLookup.Provider contents, TagsProvider.TagLookup<T> parent) {
         }
 
         return this.createContentsProvider()
-            .thenApply(p_275895_ -> {
+            .thenApply(provider -> {
                 this.contentsDone.complete(null);
-                return (HolderLookup.Provider)p_275895_;
+                return (HolderLookup.Provider)provider;
             })
-            .thenCombineAsync(this.parentProvider, (p_274778_, p_274779_) -> new CombinedData<>(p_274778_, (TagsProvider.TagLookup<T>)p_274779_), Util.backgroundExecutor())
+            .thenCombineAsync(this.parentProvider, (x$0, x$1) -> new CombinedData<>(x$0, (TagsProvider.TagLookup<T>)x$1), Util.backgroundExecutor())
             .thenCompose(
-                p_325926_ -> {
-                    HolderLookup.RegistryLookup<T> registrylookup = p_325926_.contents.lookupOrThrow(this.registryKey);
-                    Predicate<Identifier> predicate = p_448741_ -> registrylookup.get(ResourceKey.create(this.registryKey, p_448741_)).isPresent();
-                    Predicate<Identifier> predicate1 = p_448739_ -> this.builders.containsKey(p_448739_)
-                        || p_325926_.parent.contains(TagKey.create(this.registryKey, p_448739_));
+                c -> {
+                    HolderLookup.RegistryLookup<T> lookup = c.contents.lookupOrThrow(this.registryKey);
+                    Predicate<Identifier> elementCheck = id -> lookup.get(ResourceKey.create(this.registryKey, id)).isPresent();
+                    Predicate<Identifier> tagCheck = id -> this.builders.containsKey(id) || c.parent.contains(TagKey.create(this.registryKey, id));
                     return CompletableFuture.allOf(
                         this.builders
                             .entrySet()
                             .stream()
-                            .map(
-                                p_325931_ -> {
-                                    Identifier identifier = p_325931_.getKey();
-                                    TagBuilder tagbuilder = p_325931_.getValue();
-                                    List<TagEntry> list = tagbuilder.build();
-                                    List<TagEntry> list1 = list.stream().filter(p_274771_ -> !p_274771_.verifyIfPresent(predicate, predicate1)).toList();
-                                    if (!list1.isEmpty()) {
+                            .<CompletableFuture<?>>map(
+                                entry -> {
+                                    Identifier id = entry.getKey();
+                                    TagBuilder builder = entry.getValue();
+                                    List<TagEntry> entries = builder.build();
+                                    List<TagEntry> unresolvedEntries = entries.stream().filter(e -> !e.verifyIfPresent(elementCheck, tagCheck)).toList();
+                                    if (!unresolvedEntries.isEmpty()) {
                                         throw new IllegalArgumentException(
                                             String.format(
                                                 Locale.ROOT,
                                                 "Couldn't define tag %s as it is missing following references: %s",
-                                                identifier,
-                                                list1.stream().map(Objects::toString).collect(Collectors.joining(","))
+                                                id,
+                                                unresolvedEntries.stream().map(Objects::toString).collect(Collectors.joining(","))
                                             )
                                         );
-                                    } else {
-                                        Path path = this.pathProvider.json(identifier);
-                                        return DataProvider.saveStable(p_253684_, p_325926_.contents, TagFile.CODEC, new TagFile(list, false), path);
                                     }
+
+                                    Path path = this.pathProvider.json(id);
+                                    return DataProvider.saveStable(cache, c.contents, TagFile.CODEC, new TagFile(entries, builder.shouldReplace()), path);
                                 }
                             )
                             .toArray(CompletableFuture[]::new)
@@ -104,30 +104,41 @@ public abstract class TagsProvider<T> implements DataProvider {
             );
     }
 
-    protected TagBuilder getOrCreateRawBuilder(TagKey<T> p_236452_) {
-        return this.builders.computeIfAbsent(p_236452_.location(), p_460082_ -> TagBuilder.create());
+    protected TagBuilder getOrCreateRawBuilder(final TagKey<T> tag) {
+        return this.builders.computeIfAbsent(tag.location(), k -> TagBuilder.create());
     }
 
     public CompletableFuture<TagsProvider.TagLookup<T>> contentsGetter() {
-        return this.contentsDone.thenApply(p_276016_ -> p_448737_ -> Optional.ofNullable(this.builders.get(p_448737_.location())));
+        return this.contentsDone.thenApply(ignore -> id -> Optional.ofNullable(this.builders.get(id.location())));
     }
 
     protected CompletableFuture<HolderLookup.Provider> createContentsProvider() {
-        return this.lookupProvider.thenApply(p_274768_ -> {
+        return this.lookupProvider.thenApply(registries -> {
             this.builders.clear();
-            this.addTags(p_274768_);
-            return (HolderLookup.Provider)p_274768_;
+            this.addTags(registries);
+            return (HolderLookup.Provider)registries;
         });
+    }
+
+    protected TagAppender<T> tag(final TagKey<T> tag) {
+        TagBuilder builder = this.getOrCreateRawBuilder(tag);
+        return TagAppender.forBuilder(builder);
+    }
+
+    protected TagAppender<T> tag(final TagKey<T> tag, final boolean replace) {
+        TagBuilder builder = this.getOrCreateRawBuilder(tag);
+        builder.setReplace(replace);
+        return TagAppender.forBuilder(builder);
     }
 
     @FunctionalInterface
     public interface TagLookup<T> extends Function<TagKey<T>, Optional<TagBuilder>> {
         static <T> TagsProvider.TagLookup<T> empty() {
-            return p_275247_ -> Optional.empty();
+            return id -> Optional.empty();
         }
 
-        default boolean contains(TagKey<T> p_275413_) {
-            return this.apply(p_275413_).isPresent();
+        default boolean contains(final TagKey<T> key) {
+            return this.apply(key).isPresent();
         }
     }
 }

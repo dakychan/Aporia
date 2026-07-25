@@ -15,22 +15,17 @@ public class Eula {
     private final Path file;
     private final boolean agreed;
 
-    public Eula(Path p_135943_) {
-        this.file = p_135943_;
+    public Eula(final Path file) {
+        this.file = file;
         this.agreed = SharedConstants.IS_RUNNING_IN_IDE || this.readFile();
     }
 
     private boolean readFile() {
-        try {
-            boolean flag;
-            try (InputStream inputstream = Files.newInputStream(this.file)) {
-                Properties properties = new Properties();
-                properties.load(inputstream);
-                flag = Boolean.parseBoolean(properties.getProperty("eula", "false"));
-            }
-
-            return flag;
-        } catch (Exception exception) {
+        try (InputStream input = Files.newInputStream(this.file)) {
+            Properties properties = new Properties();
+            properties.load(input);
+            return Boolean.parseBoolean(properties.getProperty("eula", "false"));
+        } catch (Exception ignored) {
             LOGGER.warn("Failed to load {}", this.file);
             this.saveDefaults();
             return false;
@@ -43,14 +38,12 @@ public class Eula {
 
     private void saveDefaults() {
         if (!SharedConstants.IS_RUNNING_IN_IDE) {
-            try (OutputStream outputstream = Files.newOutputStream(this.file)) {
+            try (OutputStream output = Files.newOutputStream(this.file)) {
                 Properties properties = new Properties();
                 properties.setProperty("eula", "false");
-                properties.store(
-                    outputstream, "By changing the setting below to TRUE you are indicating your agreement to our EULA (" + CommonLinks.EULA + ")."
-                );
-            } catch (Exception exception) {
-                LOGGER.warn("Failed to save {}", this.file, exception);
+                properties.store(output, "By changing the setting below to TRUE you are indicating your agreement to our EULA (" + CommonLinks.EULA + ").");
+            } catch (Exception e) {
+                LOGGER.warn("Failed to save {}", this.file, e);
             }
         }
     }

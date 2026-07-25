@@ -19,8 +19,8 @@ public class ResultContainer implements Container, RecipeCraftingHolder {
 
     @Override
     public boolean isEmpty() {
-        for (ItemStack itemstack : this.itemStacks) {
-            if (!itemstack.isEmpty()) {
+        for (ItemStack itemStack : this.itemStacks) {
+            if (!itemStack.isEmpty()) {
                 return false;
             }
         }
@@ -29,23 +29,23 @@ public class ResultContainer implements Container, RecipeCraftingHolder {
     }
 
     @Override
-    public ItemStack getItem(int p_40147_) {
+    public ItemStack getItem(final int slot) {
         return this.itemStacks.get(0);
     }
 
     @Override
-    public ItemStack removeItem(int p_40149_, int p_40150_) {
+    public ItemStack removeItem(final int slot, final int count) {
         return ContainerHelper.takeItem(this.itemStacks, 0);
     }
 
     @Override
-    public ItemStack removeItemNoUpdate(int p_40160_) {
+    public ItemStack removeItemNoUpdate(final int slot) {
         return ContainerHelper.takeItem(this.itemStacks, 0);
     }
 
     @Override
-    public void setItem(int p_40152_, ItemStack p_40153_) {
-        this.itemStacks.set(0, p_40153_);
+    public void setItem(final int slot, final ItemStack itemStack) {
+        this.itemStacks.set(0, itemStack);
     }
 
     @Override
@@ -53,7 +53,7 @@ public class ResultContainer implements Container, RecipeCraftingHolder {
     }
 
     @Override
-    public boolean stillValid(Player p_40155_) {
+    public boolean stillValid(final Player player) {
         return true;
     }
 
@@ -63,8 +63,8 @@ public class ResultContainer implements Container, RecipeCraftingHolder {
     }
 
     @Override
-    public void setRecipeUsed(@Nullable RecipeHolder<?> p_297508_) {
-        this.recipeUsed = p_297508_;
+    public void setRecipeUsed(final @Nullable RecipeHolder<?> recipeUsed) {
+        this.recipeUsed = recipeUsed;
     }
 
     @Override

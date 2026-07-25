@@ -2,7 +2,6 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.component.DataComponents;
@@ -14,21 +13,19 @@ import net.minecraft.world.level.storage.loot.LootContextArg;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class CopyNameFunction extends LootItemConditionalFunction {
-    public static final MapCodec<CopyNameFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_450084_ -> commonFields(p_450084_)
-            .and(LootContextArg.ENTITY_OR_BLOCK.fieldOf("source").forGetter(p_450083_ -> p_450083_.source))
-            .apply(p_450084_, CopyNameFunction::new)
+    public static final MapCodec<CopyNameFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i).and(LootContextArg.ENTITY_OR_BLOCK.fieldOf("source").forGetter(f -> f.source)).apply(i, CopyNameFunction::new)
     );
     private final LootContextArg<Object> source;
 
-    private CopyNameFunction(List<LootItemCondition> p_300985_, LootContextArg<?> p_451737_) {
-        super(p_300985_);
-        this.source = LootContextArg.cast((LootContextArg<? extends Object>)p_451737_);
+    private CopyNameFunction(final List<LootItemCondition> predicates, final LootContextArg<?> source) {
+        super(predicates);
+        this.source = LootContextArg.cast((LootContextArg<? extends Object>)source);
     }
 
     @Override
-    public LootItemFunctionType<CopyNameFunction> getType() {
-        return LootItemFunctions.COPY_NAME;
+    public MapCodec<CopyNameFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
@@ -37,15 +34,15 @@ public class CopyNameFunction extends LootItemConditionalFunction {
     }
 
     @Override
-    public ItemStack run(ItemStack p_80185_, LootContext p_80186_) {
-        if (this.source.get(p_80186_) instanceof Nameable nameable) {
-            p_80185_.set(DataComponents.CUSTOM_NAME, nameable.getCustomName());
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        if (this.source.get(context) instanceof Nameable nameable) {
+            itemStack.set(DataComponents.CUSTOM_NAME, nameable.getCustomName());
         }
 
-        return p_80185_;
+        return itemStack;
     }
 
-    public static LootItemConditionalFunction.Builder<?> copyName(LootContextArg<?> p_456670_) {
-        return simpleBuilder(p_450086_ -> new CopyNameFunction(p_450086_, p_456670_));
+    public static LootItemConditionalFunction.Builder<?> copyName(final LootContextArg<?> target) {
+        return simpleBuilder(conditions -> new CopyNameFunction(conditions, target));
     }
 }

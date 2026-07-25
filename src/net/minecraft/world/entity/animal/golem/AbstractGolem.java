@@ -8,8 +8,8 @@ import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public abstract class AbstractGolem extends PathfinderMob {
-    protected AbstractGolem(EntityType<? extends AbstractGolem> p_456706_, Level p_451466_) {
-        super(p_456706_, p_451466_);
+    protected AbstractGolem(final EntityType<? extends AbstractGolem> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -18,7 +18,7 @@ public abstract class AbstractGolem extends PathfinderMob {
     }
 
     @Override
-    protected @Nullable SoundEvent getHurtSound(DamageSource p_452305_) {
+    protected @Nullable SoundEvent getHurtSound(final DamageSource source) {
         return null;
     }
 
@@ -33,7 +33,7 @@ public abstract class AbstractGolem extends PathfinderMob {
     }
 
     @Override
-    public boolean removeWhenFarAway(double p_457896_) {
+    public boolean removeWhenFarAway(final double distSqr) {
         return false;
     }
 }

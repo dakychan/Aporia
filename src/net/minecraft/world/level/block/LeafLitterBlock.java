@@ -20,8 +20,8 @@ public class LeafLitterBlock extends VegetationBlock implements SegmentableBlock
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private final Function<BlockState, VoxelShape> shapes;
 
-    public LeafLitterBlock(BlockBehaviour.Properties p_395316_) {
-        super(p_395316_);
+    public LeafLitterBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(this.getSegmentAmountProperty(), 1));
         this.shapes = this.makeShapes();
     }
@@ -36,38 +36,38 @@ public class LeafLitterBlock extends VegetationBlock implements SegmentableBlock
     }
 
     @Override
-    public BlockState rotate(BlockState p_395016_, Rotation p_395981_) {
-        return p_395016_.setValue(FACING, p_395981_.rotate(p_395016_.getValue(FACING)));
+    public BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState p_395508_, Mirror p_397194_) {
-        return p_395508_.rotate(p_397194_.getRotation(p_395508_.getValue(FACING)));
+    public BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    public boolean canBeReplaced(BlockState p_397082_, BlockPlaceContext p_396781_) {
-        return this.canBeReplaced(p_397082_, p_396781_, this.getSegmentAmountProperty()) ? true : super.canBeReplaced(p_397082_, p_396781_);
+    public boolean canBeReplaced(final BlockState state, final BlockPlaceContext context) {
+        return this.canBeReplaced(state, context, this.getSegmentAmountProperty()) ? true : super.canBeReplaced(state, context);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_395618_, LevelReader p_391636_, BlockPos p_391950_) {
-        BlockPos blockpos = p_391950_.below();
-        return p_391636_.getBlockState(blockpos).isFaceSturdy(p_391636_, blockpos, Direction.UP);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockPos belowPos = pos.below();
+        return level.getBlockState(belowPos).isFaceSturdy(level, belowPos, Direction.UP);
     }
 
     @Override
-    public VoxelShape getShape(BlockState p_395469_, BlockGetter p_393305_, BlockPos p_393404_, CollisionContext p_392068_) {
-        return this.shapes.apply(p_395469_);
+    public VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.shapes.apply(state);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_397461_) {
-        return this.getStateForPlacement(p_397461_, this, this.getSegmentAmountProperty(), FACING);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return this.getStateForPlacement(context, this, this.getSegmentAmountProperty(), FACING);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_397592_) {
-        p_397592_.add(FACING, this.getSegmentAmountProperty());
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, this.getSegmentAmountProperty());
     }
 }

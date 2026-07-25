@@ -27,25 +27,25 @@ public class BarrelBlockEntity extends RandomizableContainerBlockEntity {
     private NonNullList<ItemStack> items = NonNullList.withSize(27, ItemStack.EMPTY);
     private final ContainerOpenersCounter openersCounter = new ContainerOpenersCounter() {
         @Override
-        protected void onOpen(Level p_155062_, BlockPos p_155063_, BlockState p_155064_) {
-            BarrelBlockEntity.this.playSound(p_155064_, SoundEvents.BARREL_OPEN);
-            BarrelBlockEntity.this.updateBlockState(p_155064_, true);
+        protected void onOpen(final Level level, final BlockPos pos, final BlockState state) {
+            BarrelBlockEntity.this.playSound(state, SoundEvents.BARREL_OPEN);
+            BarrelBlockEntity.this.updateBlockState(state, true);
         }
 
         @Override
-        protected void onClose(Level p_155072_, BlockPos p_155073_, BlockState p_155074_) {
-            BarrelBlockEntity.this.playSound(p_155074_, SoundEvents.BARREL_CLOSE);
-            BarrelBlockEntity.this.updateBlockState(p_155074_, false);
+        protected void onClose(final Level level, final BlockPos pos, final BlockState state) {
+            BarrelBlockEntity.this.playSound(state, SoundEvents.BARREL_CLOSE);
+            BarrelBlockEntity.this.updateBlockState(state, false);
         }
 
         @Override
-        protected void openerCountChanged(Level p_155066_, BlockPos p_155067_, BlockState p_155068_, int p_155069_, int p_155070_) {
+        protected void openerCountChanged(final Level level, final BlockPos pos, final BlockState blockState, final int previous, final int current) {
         }
 
         @Override
-        public boolean isOwnContainer(Player p_155060_) {
-            if (p_155060_.containerMenu instanceof ChestMenu) {
-                Container container = ((ChestMenu)p_155060_.containerMenu).getContainer();
+        public boolean isOwnContainer(final Player player) {
+            if (player.containerMenu instanceof ChestMenu) {
+                Container container = ((ChestMenu)player.containerMenu).getContainer();
                 return container == BarrelBlockEntity.this;
             } else {
                 return false;
@@ -53,24 +53,24 @@ public class BarrelBlockEntity extends RandomizableContainerBlockEntity {
         }
     };
 
-    public BarrelBlockEntity(BlockPos p_155052_, BlockState p_155053_) {
-        super(BlockEntityType.BARREL, p_155052_, p_155053_);
+    public BarrelBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.BARREL, worldPosition, blockState);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_410315_) {
-        super.saveAdditional(p_410315_);
-        if (!this.trySaveLootTable(p_410315_)) {
-            ContainerHelper.saveAllItems(p_410315_, this.items);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        if (!this.trySaveLootTable(output)) {
+            ContainerHelper.saveAllItems(output, this.items);
         }
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_410699_) {
-        super.loadAdditional(p_410699_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
         this.items = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        if (!this.tryLoadLootTable(p_410699_)) {
-            ContainerHelper.loadAllItems(p_410699_, this.items);
+        if (!this.tryLoadLootTable(input)) {
+            ContainerHelper.loadAllItems(input, this.items);
         }
     }
 
@@ -85,8 +85,8 @@ public class BarrelBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    protected void setItems(NonNullList<ItemStack> p_58610_) {
-        this.items = p_58610_;
+    protected void setItems(final NonNullList<ItemStack> items) {
+        this.items = items;
     }
 
     @Override
@@ -95,21 +95,24 @@ public class BarrelBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int p_58598_, Inventory p_58599_) {
-        return ChestMenu.threeRows(p_58598_, p_58599_, this);
+    protected AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return ChestMenu.threeRows(containerId, inventory, this);
     }
 
     @Override
-    public void startOpen(ContainerUser p_430862_) {
-        if (!this.remove && !p_430862_.getLivingEntity().isSpectator()) {
-            this.openersCounter.incrementOpeners(p_430862_.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState(), p_430862_.getContainerInteractionRange());
+    public void startOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
+            this.openersCounter
+                .incrementOpeners(
+                    containerUser.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState(), containerUser.getContainerInteractionRange()
+                );
         }
     }
 
     @Override
-    public void stopOpen(ContainerUser p_429340_) {
-        if (!this.remove && !p_429340_.getLivingEntity().isSpectator()) {
-            this.openersCounter.decrementOpeners(p_429340_.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState());
+    public void stopOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
+            this.openersCounter.decrementOpeners(containerUser.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState());
         }
     }
 
@@ -124,15 +127,15 @@ public class BarrelBlockEntity extends RandomizableContainerBlockEntity {
         }
     }
 
-    void updateBlockState(BlockState p_58607_, boolean p_58608_) {
-        this.level.setBlock(this.getBlockPos(), p_58607_.setValue(BarrelBlock.OPEN, p_58608_), 3);
+    private void updateBlockState(final BlockState state, final boolean isOpen) {
+        this.level.setBlock(this.getBlockPos(), state.setValue(BarrelBlock.OPEN, isOpen), 3);
     }
 
-    void playSound(BlockState p_58601_, SoundEvent p_58602_) {
-        Vec3i vec3i = p_58601_.getValue(BarrelBlock.FACING).getUnitVec3i();
-        double d0 = this.worldPosition.getX() + 0.5 + vec3i.getX() / 2.0;
-        double d1 = this.worldPosition.getY() + 0.5 + vec3i.getY() / 2.0;
-        double d2 = this.worldPosition.getZ() + 0.5 + vec3i.getZ() / 2.0;
-        this.level.playSound(null, d0, d1, d2, p_58602_, SoundSource.BLOCKS, 0.5F, this.level.random.nextFloat() * 0.1F + 0.9F);
+    private void playSound(final BlockState state, final SoundEvent event) {
+        Vec3i direction = state.getValue(BarrelBlock.FACING).getUnitVec3i();
+        double x = this.worldPosition.getX() + 0.5 + direction.getX() / 2.0;
+        double y = this.worldPosition.getY() + 0.5 + direction.getY() / 2.0;
+        double z = this.worldPosition.getZ() + 0.5 + direction.getZ() / 2.0;
+        this.level.playSound(null, x, y, z, event, SoundSource.BLOCKS, 0.5F, this.level.getRandom().nextFloat() * 0.1F + 0.9F);
     }
 }

@@ -10,68 +10,72 @@ import net.minecraft.world.level.storage.ValueOutput;
 public class ContainerHelper {
     public static final String TAG_ITEMS = "Items";
 
-    public static ItemStack removeItem(List<ItemStack> p_18970_, int p_18971_, int p_18972_) {
-        return p_18971_ >= 0 && p_18971_ < p_18970_.size() && !p_18970_.get(p_18971_).isEmpty() && p_18972_ > 0
-            ? p_18970_.get(p_18971_).split(p_18972_)
-            : ItemStack.EMPTY;
+    public static ItemStack removeItem(final List<ItemStack> itemStacks, final int slot, final int count) {
+        return slot >= 0 && slot < itemStacks.size() && !itemStacks.get(slot).isEmpty() && count > 0 ? itemStacks.get(slot).split(count) : ItemStack.EMPTY;
     }
 
-    public static ItemStack takeItem(List<ItemStack> p_18967_, int p_18968_) {
-        return p_18968_ >= 0 && p_18968_ < p_18967_.size() ? p_18967_.set(p_18968_, ItemStack.EMPTY) : ItemStack.EMPTY;
+    public static ItemStack takeItem(final List<ItemStack> itemStacks, final int slot) {
+        return slot >= 0 && slot < itemStacks.size() ? itemStacks.set(slot, ItemStack.EMPTY) : ItemStack.EMPTY;
     }
 
-    public static void saveAllItems(ValueOutput p_408970_, NonNullList<ItemStack> p_18978_) {
-        saveAllItems(p_408970_, p_18978_, true);
+    public static void saveAllItems(final ValueOutput output, final NonNullList<ItemStack> itemStacks) {
+        saveAllItems(output, itemStacks, true);
     }
 
-    public static void saveAllItems(ValueOutput p_409332_, NonNullList<ItemStack> p_18975_, boolean p_336339_) {
-        ValueOutput.TypedOutputList<ItemStackWithSlot> typedoutputlist = p_409332_.list("Items", ItemStackWithSlot.CODEC);
+    public static void saveAllItems(final ValueOutput output, final NonNullList<ItemStack> itemStacks, final boolean alsoWhenEmpty) {
+        ValueOutput.TypedOutputList<ItemStackWithSlot> itemsOutput = output.list("Items", ItemStackWithSlot.CODEC);
 
-        for (int i = 0; i < p_18975_.size(); i++) {
-            ItemStack itemstack = p_18975_.get(i);
-            if (!itemstack.isEmpty()) {
-                typedoutputlist.add(new ItemStackWithSlot(i, itemstack));
+        for (int i = 0; i < itemStacks.size(); i++) {
+            ItemStack itemStack = itemStacks.get(i);
+            if (!itemStack.isEmpty()) {
+                itemsOutput.add(new ItemStackWithSlot(i, itemStack));
             }
         }
 
-        if (typedoutputlist.isEmpty() && !p_336339_) {
-            p_409332_.discard("Items");
+        if (itemsOutput.isEmpty() && !alsoWhenEmpty) {
+            output.discard("Items");
         }
     }
 
-    public static void loadAllItems(ValueInput p_408837_, NonNullList<ItemStack> p_18982_) {
-        for (ItemStackWithSlot itemstackwithslot : p_408837_.listOrEmpty("Items", ItemStackWithSlot.CODEC)) {
-            if (itemstackwithslot.isValidInContainer(p_18982_.size())) {
-                p_18982_.set(itemstackwithslot.slot(), itemstackwithslot.stack());
+    public static void loadAllItems(final ValueInput input, final NonNullList<ItemStack> itemStacks) {
+        for (ItemStackWithSlot item : input.listOrEmpty("Items", ItemStackWithSlot.CODEC)) {
+            if (item.isValidInContainer(itemStacks.size())) {
+                itemStacks.set(item.slot(), item.stack());
             }
         }
     }
 
-    public static int clearOrCountMatchingItems(Container p_18957_, Predicate<ItemStack> p_18958_, int p_18959_, boolean p_18960_) {
-        int i = 0;
+    public static int clearOrCountMatchingItems(
+        final Container container, final Predicate<ItemStack> predicate, final int amountToRemove, final boolean countingOnly
+    ) {
+        int count = 0;
 
-        for (int j = 0; j < p_18957_.getContainerSize(); j++) {
-            ItemStack itemstack = p_18957_.getItem(j);
-            int k = clearOrCountMatchingItems(itemstack, p_18958_, p_18959_ - i, p_18960_);
-            if (k > 0 && !p_18960_ && itemstack.isEmpty()) {
-                p_18957_.setItem(j, ItemStack.EMPTY);
+        for (int i = 0; i < container.getContainerSize(); i++) {
+            ItemStack itemStack = container.getItem(i);
+            int amountRemoved = clearOrCountMatchingItems(itemStack, predicate, amountToRemove - count, countingOnly);
+            if (amountRemoved > 0 && !countingOnly && itemStack.isEmpty()) {
+                container.setItem(i, ItemStack.EMPTY);
             }
 
-            i += k;
+            count += amountRemoved;
         }
 
-        return i;
+        return count;
     }
 
-    public static int clearOrCountMatchingItems(ItemStack p_18962_, Predicate<ItemStack> p_18963_, int p_18964_, boolean p_18965_) {
-        if (p_18962_.isEmpty() || !p_18963_.test(p_18962_)) {
+    public static int clearOrCountMatchingItems(
+        final ItemStack itemStack, final Predicate<ItemStack> predicate, final int amountToRemove, final boolean countingOnly
+    ) {
+        if (itemStack.isEmpty() || !predicate.test(itemStack)) {
             return 0;
-        } else if (p_18965_) {
-            return p_18962_.getCount();
-        } else {
-            int i = p_18964_ < 0 ? p_18962_.getCount() : Math.min(p_18964_, p_18962_.getCount());
-            p_18962_.shrink(i);
-            return i;
         }
+
+        if (countingOnly) {
+            return itemStack.getCount();
+        }
+
+        int amountRemoved = amountToRemove < 0 ? itemStack.getCount() : Math.min(amountToRemove, itemStack.getCount());
+        itemStack.shrink(amountRemoved);
+        return amountRemoved;
     }
 }

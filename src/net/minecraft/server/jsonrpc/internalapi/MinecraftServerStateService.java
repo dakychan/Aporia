@@ -8,13 +8,13 @@ import net.minecraft.server.level.ServerPlayer;
 public interface MinecraftServerStateService {
     boolean isReady();
 
-    boolean saveEverything(boolean p_426842_, boolean p_428239_, boolean p_430536_, ClientInfo p_429738_);
+    boolean saveEverything(boolean suppressLogs, boolean flush, boolean force, ClientInfo clientInfo);
 
-    void halt(boolean p_423775_, ClientInfo p_426874_);
+    void halt(boolean waitForShutdown, ClientInfo clientInfo);
 
-    void sendSystemMessage(Component p_427537_, ClientInfo p_429301_);
+    void sendSystemMessage(Component message, ClientInfo clientInfo);
 
-    void sendSystemMessage(Component p_423422_, boolean p_423639_, Collection<ServerPlayer> p_429466_, ClientInfo p_426003_);
+    void sendSystemMessage(Component message, boolean overlay, Collection<ServerPlayer> players, ClientInfo clientInfo);
 
-    void broadcastSystemMessage(Component p_422757_, boolean p_428858_, ClientInfo p_423624_);
+    void broadcastSystemMessage(Component message, boolean overlay, ClientInfo clientInfo);
 }

@@ -6,31 +6,27 @@ import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MapRenderer;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
-import net.minecraft.client.renderer.block.BlockRenderDispatcher;
+import net.minecraft.client.renderer.block.BlockModelResolver;
 import net.minecraft.client.renderer.entity.layers.EquipmentLayerRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
 import net.minecraft.client.renderer.texture.TextureAtlas;
-import net.minecraft.client.resources.model.AtlasManager;
 import net.minecraft.client.resources.model.EquipmentAssetManager;
-import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
 import net.minecraft.data.AtlasIds;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 @FunctionalInterface
-@OnlyIn(Dist.CLIENT)
 public interface EntityRendererProvider<T extends Entity> {
-    EntityRenderer<T, ?> create(EntityRendererProvider.Context p_174010_);
+    EntityRenderer<T, ?> create(EntityRendererProvider.Context context);
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Context {
+        class Context {
         private final EntityRenderDispatcher entityRenderDispatcher;
+        private final BlockModelResolver blockModelResolver;
         private final ItemModelResolver itemModelResolver;
         private final MapRenderer mapRenderer;
-        private final BlockRenderDispatcher blockRenderDispatcher;
         private final ResourceManager resourceManager;
         private final EntityModelSet modelSet;
         private final EquipmentAssetManager equipmentAssets;
@@ -40,32 +36,36 @@ public interface EntityRendererProvider<T extends Entity> {
         private final PlayerSkinRenderCache playerSkinRenderCache;
 
         public Context(
-            EntityRenderDispatcher p_234590_,
-            ItemModelResolver p_376231_,
-            MapRenderer p_361143_,
-            BlockRenderDispatcher p_234592_,
-            ResourceManager p_234594_,
-            EntityModelSet p_234595_,
-            EquipmentAssetManager p_377420_,
-            AtlasManager p_431176_,
-            Font p_234596_,
-            PlayerSkinRenderCache p_431507_
+            final EntityRenderDispatcher entityRenderDispatcher,
+            final BlockModelResolver blockModelResolver,
+            final ItemModelResolver itemModelResolver,
+            final MapRenderer mapRenderer,
+            final ResourceManager resourceManager,
+            final EntityModelSet modelSet,
+            final EquipmentAssetManager equipmentAssets,
+            final AtlasManager atlasManager,
+            final Font font,
+            final PlayerSkinRenderCache playerSkinRenderCache
         ) {
-            this.entityRenderDispatcher = p_234590_;
-            this.itemModelResolver = p_376231_;
-            this.mapRenderer = p_361143_;
-            this.blockRenderDispatcher = p_234592_;
-            this.resourceManager = p_234594_;
-            this.modelSet = p_234595_;
-            this.equipmentAssets = p_377420_;
-            this.font = p_234596_;
-            this.atlasManager = p_431176_;
-            this.playerSkinRenderCache = p_431507_;
-            this.equipmentRenderer = new EquipmentLayerRenderer(p_377420_, p_431176_.getAtlasOrThrow(AtlasIds.ARMOR_TRIMS));
+            this.entityRenderDispatcher = entityRenderDispatcher;
+            this.blockModelResolver = blockModelResolver;
+            this.itemModelResolver = itemModelResolver;
+            this.mapRenderer = mapRenderer;
+            this.resourceManager = resourceManager;
+            this.modelSet = modelSet;
+            this.equipmentAssets = equipmentAssets;
+            this.font = font;
+            this.atlasManager = atlasManager;
+            this.playerSkinRenderCache = playerSkinRenderCache;
+            this.equipmentRenderer = new EquipmentLayerRenderer(equipmentAssets, atlasManager.getAtlasOrThrow(AtlasIds.ARMOR_TRIMS));
         }
 
         public EntityRenderDispatcher getEntityRenderDispatcher() {
             return this.entityRenderDispatcher;
+        }
+
+        public BlockModelResolver getBlockModelResolver() {
+            return this.blockModelResolver;
         }
 
         public ItemModelResolver getItemModelResolver() {
@@ -74,10 +74,6 @@ public interface EntityRendererProvider<T extends Entity> {
 
         public MapRenderer getMapRenderer() {
             return this.mapRenderer;
-        }
-
-        public BlockRenderDispatcher getBlockRenderDispatcher() {
-            return this.blockRenderDispatcher;
         }
 
         public ResourceManager getResourceManager() {
@@ -96,16 +92,16 @@ public interface EntityRendererProvider<T extends Entity> {
             return this.equipmentRenderer;
         }
 
-        public MaterialSet getMaterials() {
+        public SpriteGetter getSprites() {
             return this.atlasManager;
         }
 
-        public TextureAtlas getAtlas(Identifier p_456157_) {
-            return this.atlasManager.getAtlasOrThrow(p_456157_);
+        public TextureAtlas getAtlas(final Identifier sheet) {
+            return this.atlasManager.getAtlasOrThrow(sheet);
         }
 
-        public ModelPart bakeLayer(ModelLayerLocation p_174024_) {
-            return this.modelSet.bakeLayer(p_174024_);
+        public ModelPart bakeLayer(final ModelLayerLocation id) {
+            return this.modelSet.bakeLayer(id);
         }
 
         public Font getFont() {

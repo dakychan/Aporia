@@ -8,40 +8,38 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.Shearable;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
-import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.AABB;
 
 public class ShearsDispenseItemBehavior extends OptionalDispenseItemBehavior {
     @Override
-    protected ItemStack execute(BlockSource p_301806_, ItemStack p_123581_) {
-        ServerLevel serverlevel = p_301806_.level();
-        if (!serverlevel.isClientSide()) {
-            BlockPos blockpos = p_301806_.pos().relative(p_301806_.state().getValue(DispenserBlock.FACING));
-            this.setSuccess(tryShearBeehive(serverlevel, p_123581_, blockpos) || tryShearEntity(serverlevel, blockpos, p_123581_));
+    protected ItemStack execute(final BlockSource source, final ItemStack dispensed) {
+        ServerLevel level = source.level();
+        if (!level.isClientSide()) {
+            BlockPos pos = source.pos().relative(source.state().getValue(DispenserBlock.FACING));
+            this.setSuccess(tryShearBeehive(level, dispensed, pos) || tryShearEntity(level, pos, dispensed));
             if (this.isSuccess()) {
-                p_123581_.hurtAndBreak(1, serverlevel, null, p_341008_ -> {});
+                dispensed.hurtAndBreak(1, level, null, item -> {});
             }
         }
 
-        return p_123581_;
+        return dispensed;
     }
 
-    private static boolean tryShearBeehive(ServerLevel p_123577_, ItemStack p_426624_, BlockPos p_123578_) {
-        BlockState blockstate = p_123577_.getBlockState(p_123578_);
-        if (blockstate.is(BlockTags.BEEHIVES, p_202454_ -> p_202454_.hasProperty(BeehiveBlock.HONEY_LEVEL) && p_202454_.getBlock() instanceof BeehiveBlock)) {
-            int i = blockstate.getValue(BeehiveBlock.HONEY_LEVEL);
-            if (i >= 5) {
-                p_123577_.playSound(null, p_123578_, SoundEvents.BEEHIVE_SHEAR, SoundSource.BLOCKS, 1.0F, 1.0F);
-                BeehiveBlock.dropHoneycomb(p_123577_, p_426624_, blockstate, p_123577_.getBlockEntity(p_123578_), null, p_123578_);
-                ((BeehiveBlock)blockstate.getBlock()).releaseBeesAndResetHoneyLevel(p_123577_, blockstate, p_123578_, null, BeehiveBlockEntity.BeeReleaseStatus.BEE_RELEASED);
-                p_123577_.gameEvent(null, GameEvent.SHEAR, p_123578_);
+    private static boolean tryShearBeehive(final ServerLevel level, final ItemStack tool, final BlockPos pos) {
+        BlockState state = level.getBlockState(pos);
+        if (state.is(BlockTags.BEEHIVES, s -> s.hasProperty(BeehiveBlock.HONEY_LEVEL) && s.getBlock() instanceof BeehiveBlock)) {
+            int honeyLevel = state.getValue(BeehiveBlock.HONEY_LEVEL);
+            if (honeyLevel >= 5) {
+                level.playSound(null, pos, SoundEvents.BEEHIVE_SHEAR, SoundSource.BLOCKS, 1.0F, 1.0F);
+                BeehiveBlock.dropHoneycomb(level, tool, state, level.getBlockEntity(pos), null, pos);
+                ((BeehiveBlock)state.getBlock()).releaseBeesAndResetHoneyLevel(level, state, pos, null, BeehiveBlockEntity.BeeReleaseStatus.BEE_RELEASED);
+                level.gameEvent(null, GameEvent.SHEAR, pos);
                 return true;
             }
         }
@@ -49,15 +47,15 @@ public class ShearsDispenseItemBehavior extends OptionalDispenseItemBehavior {
         return false;
     }
 
-    private static boolean tryShearEntity(ServerLevel p_408066_, BlockPos p_407103_, ItemStack p_407295_) {
-        for (Entity entity : p_408066_.getEntitiesOfClass(Entity.class, new AABB(p_407103_), EntitySelector.NO_SPECTATORS)) {
+    private static boolean tryShearEntity(final ServerLevel level, final BlockPos pos, final ItemStack tool) {
+        for (Entity entity : level.getEntitiesOfClass(Entity.class, new AABB(pos), EntitySelector.NO_SPECTATORS)) {
             if (entity.shearOffAllLeashConnections(null)) {
                 return true;
             }
 
-            if (entity instanceof Shearable shearable && shearable.readyForShearing()) {
-                shearable.shear(p_408066_, SoundSource.BLOCKS, p_407295_);
-                p_408066_.gameEvent(null, GameEvent.SHEAR, p_407103_);
+            if (entity.isAlive() && entity instanceof Shearable shearable && shearable.readyForShearing()) {
+                shearable.shear(level, SoundSource.BLOCKS, tool);
+                level.gameEvent(null, GameEvent.SHEAR, pos);
                 return true;
             }
         }

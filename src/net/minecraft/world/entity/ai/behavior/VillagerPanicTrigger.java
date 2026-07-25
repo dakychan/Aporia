@@ -13,13 +13,13 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         super(ImmutableMap.of());
     }
 
-    protected boolean canStillUse(ServerLevel p_24684_, Villager p_456484_, long p_24686_) {
-        return isHurt(p_456484_) || hasHostile(p_456484_);
+    protected boolean canStillUse(final ServerLevel level, final Villager body, final long timestamp) {
+        return isHurt(body) || hasHostile(body);
     }
 
-    protected void start(ServerLevel p_24694_, Villager p_458171_, long p_24696_) {
-        if (isHurt(p_458171_) || hasHostile(p_458171_)) {
-            Brain<?> brain = p_458171_.getBrain();
+    protected void start(final ServerLevel level, final Villager body, final long timestamp) {
+        if (isHurt(body) || hasHostile(body)) {
+            Brain<?> brain = body.getBrain();
             if (!brain.isActive(Activity.PANIC)) {
                 brain.eraseMemory(MemoryModuleType.PATH);
                 brain.eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -32,17 +32,17 @@ public class VillagerPanicTrigger extends Behavior<Villager> {
         }
     }
 
-    protected void tick(ServerLevel p_24700_, Villager p_457484_, long p_24702_) {
-        if (p_24702_ % 100L == 0L) {
-            p_457484_.spawnGolemIfNeeded(p_24700_, p_24702_, 3);
+    protected void tick(final ServerLevel level, final Villager body, final long timestamp) {
+        if (timestamp % 100L == 0L) {
+            body.spawnGolemIfNeeded(level, timestamp, 3);
         }
     }
 
-    public static boolean hasHostile(LivingEntity p_24688_) {
-        return p_24688_.getBrain().hasMemoryValue(MemoryModuleType.NEAREST_HOSTILE);
+    public static boolean hasHostile(final LivingEntity myBody) {
+        return myBody.getBrain().hasMemoryValue(MemoryModuleType.NEAREST_HOSTILE);
     }
 
-    public static boolean isHurt(LivingEntity p_24698_) {
-        return p_24698_.getBrain().hasMemoryValue(MemoryModuleType.HURT_BY);
+    public static boolean isHurt(final LivingEntity myBody) {
+        return myBody.getBrain().hasMemoryValue(MemoryModuleType.HURT_BY);
     }
 }

@@ -37,6 +37,7 @@ object ModuleManager {
             so.aporia.module.impl.move.Flight(),
             so.aporia.module.impl.combat.Criticals(),
             so.aporia.module.impl.combat.TPAura(),
+            so.aporia.module.impl.combat.MaceExploit(),
             so.aporia.module.impl.combat.Aura(),
             so.aporia.module.impl.combat.SpearTarget(),
             so.aporia.module.impl.combat.NoFriendDamage(),

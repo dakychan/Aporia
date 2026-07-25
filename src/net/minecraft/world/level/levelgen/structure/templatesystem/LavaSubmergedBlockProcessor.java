@@ -7,28 +7,28 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
 
-public class LavaSubmergedBlockProcessor extends StructureProcessor {
-    public static final MapCodec<LavaSubmergedBlockProcessor> CODEC = MapCodec.unit(() -> LavaSubmergedBlockProcessor.INSTANCE);
+public class LavaSubmergedBlockProcessor implements StructureProcessor {
+    public static final MapCodec<LavaSubmergedBlockProcessor> MAP_CODEC = MapCodec.unit(() -> LavaSubmergedBlockProcessor.INSTANCE);
     public static final LavaSubmergedBlockProcessor INSTANCE = new LavaSubmergedBlockProcessor();
 
     @Override
     public StructureTemplate.@Nullable StructureBlockInfo processBlock(
-        LevelReader p_74140_,
-        BlockPos p_74141_,
-        BlockPos p_74142_,
-        StructureTemplate.StructureBlockInfo p_74143_,
-        StructureTemplate.StructureBlockInfo p_74144_,
-        StructurePlaceSettings p_74145_
+        final LevelReader level,
+        final BlockPos targetPosition,
+        final BlockPos referencePos,
+        final BlockPos templateRelativePos,
+        final StructureTemplate.StructureBlockInfo processedBlockInfo,
+        final StructurePlaceSettings settings
     ) {
-        BlockPos blockpos = p_74144_.pos();
-        boolean flag = p_74140_.getBlockState(blockpos).is(Blocks.LAVA);
-        return flag && !Block.isShapeFullBlock(p_74144_.state().getShape(p_74140_, blockpos))
-            ? new StructureTemplate.StructureBlockInfo(blockpos, Blocks.LAVA.defaultBlockState(), p_74144_.nbt())
-            : p_74144_;
+        BlockPos pos = processedBlockInfo.pos();
+        boolean wasLavaBefore = level.getBlockState(pos).is(Blocks.LAVA);
+        return wasLavaBefore && !Block.isShapeFullBlock(processedBlockInfo.state().getShape(level, pos))
+            ? new StructureTemplate.StructureBlockInfo(pos, Blocks.LAVA.defaultBlockState(), processedBlockInfo.nbt())
+            : processedBlockInfo;
     }
 
     @Override
-    protected StructureProcessorType<?> getType() {
-        return StructureProcessorType.LAVA_SUBMERGED_BLOCK;
+    public MapCodec<LavaSubmergedBlockProcessor> codec() {
+        return MAP_CODEC;
     }
 }

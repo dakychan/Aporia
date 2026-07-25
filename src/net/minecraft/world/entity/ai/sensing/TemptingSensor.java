@@ -8,7 +8,6 @@ import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySelector;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.Brain;
@@ -23,43 +22,43 @@ public class TemptingSensor extends Sensor<PathfinderMob> {
     private static final TargetingConditions TEMPT_TARGETING = TargetingConditions.forNonCombat().ignoreLineOfSight();
     private final BiPredicate<PathfinderMob, ItemStack> temptations;
 
-    public TemptingSensor(Predicate<ItemStack> p_328517_) {
-        this((p_449612_, p_449613_) -> p_328517_.test(p_449613_));
+    public TemptingSensor(final Predicate<ItemStack> tt) {
+        this((m, i) -> tt.test(i));
     }
 
     public static TemptingSensor forAnimal() {
-        return new TemptingSensor((p_449609_, p_449610_) -> p_449609_ instanceof Animal animal ? animal.isFood(p_449610_) : false);
+        return new TemptingSensor((m, i) -> m instanceof Animal animal ? animal.isFood(i) : false);
     }
 
-    private TemptingSensor(BiPredicate<PathfinderMob, ItemStack> p_450662_) {
-        this.temptations = p_450662_;
+    private TemptingSensor(final BiPredicate<PathfinderMob, ItemStack> temptations) {
+        this.temptations = temptations;
     }
 
-    protected void doTick(ServerLevel p_148331_, PathfinderMob p_148332_) {
-        Brain<?> brain = p_148332_.getBrain();
-        TargetingConditions targetingconditions = TEMPT_TARGETING.copy().range((float)p_148332_.getAttributeValue(Attributes.TEMPT_RANGE));
-        List<Player> list = p_148331_.players()
+    protected void doTick(final ServerLevel level, final PathfinderMob body) {
+        Brain<?> brain = body.getBrain();
+        TargetingConditions targeting = TEMPT_TARGETING.copy().range((float)body.getAttributeValue(Attributes.TEMPT_RANGE));
+        List<Player> players = level.players()
             .stream()
             .filter(EntitySelector.NO_SPECTATORS)
-            .filter(p_359128_ -> targetingconditions.test(p_148331_, p_148332_, p_359128_))
-            .filter(p_449615_ -> this.playerHoldingTemptation(p_148332_, p_449615_))
-            .filter(p_405425_ -> !p_148332_.hasPassenger(p_405425_))
-            .sorted(Comparator.comparingDouble(p_148332_::distanceToSqr))
+            .filter(playerx -> targeting.test(level, body, playerx))
+            .filter(p -> this.playerHoldingTemptation(body, p))
+            .filter(playerx -> !body.hasPassenger(playerx))
+            .sorted(Comparator.comparingDouble(body::distanceToSqr))
             .collect(Collectors.toList());
-        if (!list.isEmpty()) {
-            Player player = list.get(0);
+        if (!players.isEmpty()) {
+            Player player = players.get(0);
             brain.setMemory(MemoryModuleType.TEMPTING_PLAYER, player);
         } else {
             brain.eraseMemory(MemoryModuleType.TEMPTING_PLAYER);
         }
     }
 
-    private boolean playerHoldingTemptation(PathfinderMob p_456814_, Player p_148337_) {
-        return this.isTemptation(p_456814_, p_148337_.getMainHandItem()) || this.isTemptation(p_456814_, p_148337_.getOffhandItem());
+    private boolean playerHoldingTemptation(final PathfinderMob mob, final Player player) {
+        return this.isTemptation(mob, player.getMainHandItem()) || this.isTemptation(mob, player.getOffhandItem());
     }
 
-    private boolean isTemptation(PathfinderMob p_460428_, ItemStack p_148339_) {
-        return this.temptations.test(p_460428_, p_148339_);
+    private boolean isTemptation(final PathfinderMob mob, final ItemStack itemStack) {
+        return this.temptations.test(mob, itemStack);
     }
 
     @Override

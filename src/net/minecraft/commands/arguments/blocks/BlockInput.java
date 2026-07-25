@@ -25,10 +25,10 @@ public class BlockInput implements Predicate<BlockInWorld> {
     private final Set<Property<?>> properties;
     private final @Nullable CompoundTag tag;
 
-    public BlockInput(BlockState p_114666_, Set<Property<?>> p_114667_, @Nullable CompoundTag p_114668_) {
-        this.state = p_114666_;
-        this.properties = p_114667_;
-        this.tag = p_114668_;
+    public BlockInput(final BlockState state, final Set<Property<?>> properties, final @Nullable CompoundTag tag) {
+        this.state = state;
+        this.properties = properties;
+        this.tag = tag;
     }
 
     public BlockState getState() {
@@ -39,80 +39,80 @@ public class BlockInput implements Predicate<BlockInWorld> {
         return this.properties;
     }
 
-    public boolean test(BlockInWorld p_114675_) {
-        BlockState blockstate = p_114675_.getState();
-        if (!blockstate.is(this.state.getBlock())) {
+    public boolean test(final BlockInWorld blockInWorld) {
+        BlockState state = blockInWorld.getState();
+        if (!state.is(this.state.getBlock())) {
             return false;
-        } else {
-            for (Property<?> property : this.properties) {
-                if (blockstate.getValue(property) != this.state.getValue(property)) {
-                    return false;
-                }
-            }
-
-            if (this.tag == null) {
-                return true;
-            } else {
-                BlockEntity blockentity = p_114675_.getEntity();
-                return blockentity != null && NbtUtils.compareNbt(this.tag, blockentity.saveWithFullMetadata(p_114675_.getLevel().registryAccess()), true);
-            }
-        }
-    }
-
-    public boolean test(ServerLevel p_173524_, BlockPos p_173525_) {
-        return this.test(new BlockInWorld(p_173524_, p_173525_, false));
-    }
-
-    public boolean place(ServerLevel p_114671_, BlockPos p_114672_, @Block.UpdateFlags int p_114673_) {
-        BlockState blockstate = (p_114673_ & 16) != 0 ? this.state : Block.updateFromNeighbourShapes(this.state, p_114671_, p_114672_);
-        if (blockstate.isAir()) {
-            blockstate = this.state;
         }
 
-        blockstate = this.overwriteWithDefinedProperties(blockstate);
-        boolean flag = false;
-        if (p_114671_.setBlock(p_114672_, blockstate, p_114673_)) {
-            flag = true;
+        for (Property<?> property : this.properties) {
+            if (state.getValue(property) != this.state.getValue(property)) {
+                return false;
+            }
+        }
+
+        if (this.tag == null) {
+            return true;
+        }
+
+        BlockEntity entity = blockInWorld.getEntity();
+        return entity != null && NbtUtils.compareNbt(this.tag, entity.saveWithFullMetadata(blockInWorld.getLevel().registryAccess()), true);
+    }
+
+    public boolean test(final ServerLevel level, final BlockPos pos) {
+        return this.test(new BlockInWorld(level, pos, false));
+    }
+
+    public boolean place(final ServerLevel level, final BlockPos pos, final @Block.UpdateFlags int update) {
+        BlockState state = (update & 16) != 0 ? this.state : Block.updateFromNeighbourShapes(this.state, level, pos);
+        if (state.isAir()) {
+            state = this.state;
+        }
+
+        state = this.overwriteWithDefinedProperties(state);
+        boolean affected = false;
+        if (level.setBlock(pos, state, update)) {
+            affected = true;
         }
 
         if (this.tag != null) {
-            BlockEntity blockentity = p_114671_.getBlockEntity(p_114672_);
-            if (blockentity != null) {
-                try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(LOGGER)) {
-                    HolderLookup.Provider holderlookup$provider = p_114671_.registryAccess();
-                    ProblemReporter problemreporter = problemreporter$scopedcollector.forChild(blockentity.problemPath());
-                    TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter.forChild(() -> "(before)"), holderlookup$provider);
-                    blockentity.saveWithoutMetadata(tagvalueoutput);
-                    CompoundTag compoundtag = tagvalueoutput.buildResult();
-                    blockentity.loadWithComponents(TagValueInput.create(problemreporter$scopedcollector, holderlookup$provider, this.tag));
-                    TagValueOutput tagvalueoutput1 = TagValueOutput.createWithContext(problemreporter.forChild(() -> "(after)"), holderlookup$provider);
-                    blockentity.saveWithoutMetadata(tagvalueoutput1);
-                    CompoundTag compoundtag1 = tagvalueoutput1.buildResult();
-                    if (!compoundtag1.equals(compoundtag)) {
-                        flag = true;
-                        blockentity.setChanged();
-                        p_114671_.getChunkSource().blockChanged(p_114672_);
+            BlockEntity entity = level.getBlockEntity(pos);
+            if (entity != null) {
+                try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(LOGGER)) {
+                    HolderLookup.Provider registries = level.registryAccess();
+                    ProblemReporter blockEntityReporter = reporter.forChild(entity.problemPath());
+                    TagValueOutput initialOutput = TagValueOutput.createWithContext(blockEntityReporter.forChild(() -> "(before)"), registries);
+                    entity.saveWithoutMetadata(initialOutput);
+                    CompoundTag before = initialOutput.buildResult();
+                    entity.loadWithComponents(TagValueInput.create(reporter, registries, this.tag));
+                    TagValueOutput updatedOutput = TagValueOutput.createWithContext(blockEntityReporter.forChild(() -> "(after)"), registries);
+                    entity.saveWithoutMetadata(updatedOutput);
+                    CompoundTag after = updatedOutput.buildResult();
+                    if (!after.equals(before)) {
+                        affected = true;
+                        entity.setChanged();
+                        level.getChunkSource().blockChanged(pos);
                     }
                 }
             }
         }
 
-        return flag;
+        return affected;
     }
 
-    private BlockState overwriteWithDefinedProperties(BlockState p_376464_) {
-        if (p_376464_ == this.state) {
-            return p_376464_;
-        } else {
-            for (Property<?> property : this.properties) {
-                p_376464_ = copyProperty(p_376464_, this.state, property);
-            }
-
-            return p_376464_;
+    private BlockState overwriteWithDefinedProperties(BlockState state) {
+        if (state == this.state) {
+            return state;
         }
+
+        for (Property<?> property : this.properties) {
+            state = copyProperty(state, this.state, property);
+        }
+
+        return state;
     }
 
-    private static <T extends Comparable<T>> BlockState copyProperty(BlockState p_377223_, BlockState p_377871_, Property<T> p_378516_) {
-        return p_377223_.trySetValue(p_378516_, p_377871_.getValue(p_378516_));
+    private static <T extends Comparable<T>> BlockState copyProperty(final BlockState target, final BlockState source, final Property<T> property) {
+        return target.trySetValue(property, source.getValue(property));
     }
 }

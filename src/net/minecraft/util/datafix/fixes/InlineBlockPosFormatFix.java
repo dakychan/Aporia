@@ -4,7 +4,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 import java.util.List;
@@ -14,16 +13,16 @@ import java.util.stream.Stream;
 import net.minecraft.util.datafix.ExtraDataFixUtils;
 
 public class InlineBlockPosFormatFix extends DataFix {
-    public InlineBlockPosFormatFix(Schema p_391535_) {
-        super(p_391535_, false);
+    public InlineBlockPosFormatFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        OpticFinder<?> opticfinder = this.entityFinder("minecraft:vex");
-        OpticFinder<?> opticfinder1 = this.entityFinder("minecraft:phantom");
-        OpticFinder<?> opticfinder2 = this.entityFinder("minecraft:turtle");
-        List<OpticFinder<?>> list = List.of(
+        OpticFinder<?> vexFinder = this.entityFinder("minecraft:vex");
+        OpticFinder<?> phantomFinder = this.entityFinder("minecraft:phantom");
+        OpticFinder<?> turtleFinder = this.entityFinder("minecraft:turtle");
+        List<OpticFinder<?>> blockAttachedFinders = List.of(
             this.entityFinder("minecraft:item_frame"),
             this.entityFinder("minecraft:glow_item_frame"),
             this.entityFinder("minecraft:painting"),
@@ -33,87 +32,86 @@ public class InlineBlockPosFormatFix extends DataFix {
             this.fixTypeEverywhereTyped(
                 "InlineBlockPosFormatFix - player",
                 this.getInputSchema().getType(References.PLAYER),
-                p_391680_ -> p_391680_.update(DSL.remainderFinder(), this::fixPlayer)
+                player -> player.update(DSL.remainderFinder(), this::fixPlayer)
             ),
             this.fixTypeEverywhereTyped(
                 "InlineBlockPosFormatFix - entity",
                 this.getInputSchema().getType(References.ENTITY),
-                p_397287_ -> {
-                    p_397287_ = p_397287_.update(DSL.remainderFinder(), this::fixLivingEntity)
-                        .updateTyped(opticfinder, p_393874_ -> p_393874_.update(DSL.remainderFinder(), this::fixVex))
-                        .updateTyped(opticfinder1, p_392186_ -> p_392186_.update(DSL.remainderFinder(), this::fixPhantom))
-                        .updateTyped(opticfinder2, p_391416_ -> p_391416_.update(DSL.remainderFinder(), this::fixTurtle));
+                entity -> {
+                    entity = entity.update(DSL.remainderFinder(), this::fixLivingEntity)
+                        .updateTyped(vexFinder, vex -> vex.update(DSL.remainderFinder(), this::fixVex))
+                        .updateTyped(phantomFinder, phantom -> phantom.update(DSL.remainderFinder(), this::fixPhantom))
+                        .updateTyped(turtleFinder, turtle -> turtle.update(DSL.remainderFinder(), this::fixTurtle));
 
-                    for (OpticFinder<?> opticfinder3 : list) {
-                        p_397287_ = p_397287_.updateTyped(opticfinder3, p_391296_ -> p_391296_.update(DSL.remainderFinder(), this::fixBlockAttached));
+                    for (OpticFinder<?> blockAttachedFinder : blockAttachedFinders) {
+                        entity = entity.updateTyped(blockAttachedFinder, blockAttached -> blockAttached.update(DSL.remainderFinder(), this::fixBlockAttached));
                     }
 
-                    return p_397287_;
+                    return entity;
                 }
             )
         );
     }
 
-    private OpticFinder<?> entityFinder(String p_391479_) {
-        return DSL.namedChoice(p_391479_, this.getInputSchema().getChoiceType(References.ENTITY, p_391479_));
+    private OpticFinder<?> entityFinder(final String choiceName) {
+        return DSL.namedChoice(choiceName, this.getInputSchema().getChoiceType(References.ENTITY, choiceName));
     }
 
-    private Dynamic<?> fixPlayer(Dynamic<?> p_393275_) {
-        p_393275_ = this.fixLivingEntity(p_393275_);
-        Optional<Number> optional = p_393275_.get("SpawnX").asNumber().result();
-        Optional<Number> optional1 = p_393275_.get("SpawnY").asNumber().result();
-        Optional<Number> optional2 = p_393275_.get("SpawnZ").asNumber().result();
-        if (optional.isPresent() && optional1.isPresent() && optional2.isPresent()) {
-            Dynamic<?> dynamic = p_393275_.createMap(
+    private Dynamic<?> fixPlayer(Dynamic<?> tag) {
+        tag = this.fixLivingEntity(tag);
+        Optional<Number> spawnX = tag.get("SpawnX").asNumber().result();
+        Optional<Number> spawnY = tag.get("SpawnY").asNumber().result();
+        Optional<Number> spawnZ = tag.get("SpawnZ").asNumber().result();
+        if (spawnX.isPresent() && spawnY.isPresent() && spawnZ.isPresent()) {
+            Dynamic<?> respawn = tag.createMap(
                 Map.of(
-                    p_393275_.createString("pos"),
-                    ExtraDataFixUtils.createBlockPos(p_393275_, optional.get().intValue(), optional1.get().intValue(), optional2.get().intValue())
+                    tag.createString("pos"), ExtraDataFixUtils.createBlockPos(tag, spawnX.get().intValue(), spawnY.get().intValue(), spawnZ.get().intValue())
                 )
             );
-            dynamic = Dynamic.copyField(p_393275_, "SpawnAngle", dynamic, "angle");
-            dynamic = Dynamic.copyField(p_393275_, "SpawnDimension", dynamic, "dimension");
-            dynamic = Dynamic.copyField(p_393275_, "SpawnForced", dynamic, "forced");
-            p_393275_ = p_393275_.remove("SpawnX").remove("SpawnY").remove("SpawnZ").remove("SpawnAngle").remove("SpawnDimension").remove("SpawnForced");
-            p_393275_ = p_393275_.set("respawn", dynamic);
+            respawn = Dynamic.copyField(tag, "SpawnAngle", respawn, "angle");
+            respawn = Dynamic.copyField(tag, "SpawnDimension", respawn, "dimension");
+            respawn = Dynamic.copyField(tag, "SpawnForced", respawn, "forced");
+            tag = tag.remove("SpawnX").remove("SpawnY").remove("SpawnZ").remove("SpawnAngle").remove("SpawnDimension").remove("SpawnForced");
+            tag = tag.set("respawn", respawn);
         }
 
-        Optional<? extends Dynamic<?>> optional3 = p_393275_.get("enteredNetherPosition").result();
-        if (optional3.isPresent()) {
-            p_393275_ = p_393275_.remove("enteredNetherPosition")
+        Optional<? extends Dynamic<?>> enteredNetherPos = tag.get("enteredNetherPosition").result();
+        if (enteredNetherPos.isPresent()) {
+            tag = tag.remove("enteredNetherPosition")
                 .set(
                     "entered_nether_pos",
-                    p_393275_.createList(
+                    tag.createList(
                         Stream.of(
-                            p_393275_.createDouble(optional3.get().get("x").asDouble(0.0)),
-                            p_393275_.createDouble(optional3.get().get("y").asDouble(0.0)),
-                            p_393275_.createDouble(optional3.get().get("z").asDouble(0.0))
+                            tag.createDouble(enteredNetherPos.get().get("x").asDouble(0.0)),
+                            tag.createDouble(enteredNetherPos.get().get("y").asDouble(0.0)),
+                            tag.createDouble(enteredNetherPos.get().get("z").asDouble(0.0))
                         )
                     )
                 );
         }
 
-        return p_393275_;
+        return tag;
     }
 
-    private Dynamic<?> fixLivingEntity(Dynamic<?> p_394790_) {
-        return ExtraDataFixUtils.fixInlineBlockPos(p_394790_, "SleepingX", "SleepingY", "SleepingZ", "sleeping_pos");
+    private Dynamic<?> fixLivingEntity(final Dynamic<?> tag) {
+        return ExtraDataFixUtils.fixInlineBlockPos(tag, "SleepingX", "SleepingY", "SleepingZ", "sleeping_pos");
     }
 
-    private Dynamic<?> fixVex(Dynamic<?> p_393116_) {
-        return ExtraDataFixUtils.fixInlineBlockPos(p_393116_.renameField("LifeTicks", "life_ticks"), "BoundX", "BoundY", "BoundZ", "bound_pos");
+    private Dynamic<?> fixVex(final Dynamic<?> tag) {
+        return ExtraDataFixUtils.fixInlineBlockPos(tag.renameField("LifeTicks", "life_ticks"), "BoundX", "BoundY", "BoundZ", "bound_pos");
     }
 
-    private Dynamic<?> fixPhantom(Dynamic<?> p_397511_) {
-        return ExtraDataFixUtils.fixInlineBlockPos(p_397511_.renameField("Size", "size"), "AX", "AY", "AZ", "anchor_pos");
+    private Dynamic<?> fixPhantom(final Dynamic<?> tag) {
+        return ExtraDataFixUtils.fixInlineBlockPos(tag.renameField("Size", "size"), "AX", "AY", "AZ", "anchor_pos");
     }
 
-    private Dynamic<?> fixTurtle(Dynamic<?> p_392400_) {
-        p_392400_ = p_392400_.remove("TravelPosX").remove("TravelPosY").remove("TravelPosZ");
-        p_392400_ = ExtraDataFixUtils.fixInlineBlockPos(p_392400_, "HomePosX", "HomePosY", "HomePosZ", "home_pos");
-        return p_392400_.renameField("HasEgg", "has_egg");
+    private Dynamic<?> fixTurtle(Dynamic<?> tag) {
+        tag = tag.remove("TravelPosX").remove("TravelPosY").remove("TravelPosZ");
+        tag = ExtraDataFixUtils.fixInlineBlockPos(tag, "HomePosX", "HomePosY", "HomePosZ", "home_pos");
+        return tag.renameField("HasEgg", "has_egg");
     }
 
-    private Dynamic<?> fixBlockAttached(Dynamic<?> p_392055_) {
-        return ExtraDataFixUtils.fixInlineBlockPos(p_392055_, "TileX", "TileY", "TileZ", "block_pos");
+    private Dynamic<?> fixBlockAttached(final Dynamic<?> tag) {
+        return ExtraDataFixUtils.fixInlineBlockPos(tag, "TileX", "TileY", "TileZ", "block_pos");
     }
 }

@@ -10,60 +10,60 @@ public class ShulkerBoxMenu extends AbstractContainerMenu {
     private static final int CONTAINER_SIZE = 27;
     private final Container container;
 
-    public ShulkerBoxMenu(int p_40188_, Inventory p_40189_) {
-        this(p_40188_, p_40189_, new SimpleContainer(27));
+    public ShulkerBoxMenu(final int containerId, final Inventory inventory) {
+        this(containerId, inventory, new SimpleContainer(27));
     }
 
-    public ShulkerBoxMenu(int p_40191_, Inventory p_40192_, Container p_40193_) {
-        super(MenuType.SHULKER_BOX, p_40191_);
-        checkContainerSize(p_40193_, 27);
-        this.container = p_40193_;
-        p_40193_.startOpen(p_40192_.player);
-        int i = 3;
-        int j = 9;
+    public ShulkerBoxMenu(final int containerId, final Inventory inventory, final Container container) {
+        super(MenuType.SHULKER_BOX, containerId);
+        checkContainerSize(container, 27);
+        this.container = container;
+        container.startOpen(inventory.player);
+        int rows = 3;
+        int columns = 9;
 
-        for (int k = 0; k < 3; k++) {
-            for (int l = 0; l < 9; l++) {
-                this.addSlot(new ShulkerBoxSlot(p_40193_, l + k * 9, 8 + l * 18, 18 + k * 18));
+        for (int y = 0; y < 3; y++) {
+            for (int x = 0; x < 9; x++) {
+                this.addSlot(new ShulkerBoxSlot(container, x + y * 9, 8 + x * 18, 18 + y * 18));
             }
         }
 
-        this.addStandardInventorySlots(p_40192_, 8, 84);
+        this.addStandardInventorySlots(inventory, 8, 84);
     }
 
     @Override
-    public boolean stillValid(Player p_40195_) {
-        return this.container.stillValid(p_40195_);
+    public boolean stillValid(final Player player) {
+        return this.container.stillValid(player);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_40199_, int p_40200_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_40200_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_40200_ < this.container.getContainerSize()) {
-                if (!this.moveItemStackTo(itemstack1, this.container.getContainerSize(), this.slots.size(), true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex < this.container.getContainerSize()) {
+                if (!this.moveItemStackTo(stack, this.container.getContainerSize(), this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 0, this.container.getContainerSize(), false)) {
+            } else if (!this.moveItemStackTo(stack, 0, this.container.getContainerSize(), false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
         }
 
-        return itemstack;
+        return clicked;
     }
 
     @Override
-    public void removed(Player p_40197_) {
-        super.removed(p_40197_);
-        this.container.stopOpen(p_40197_);
+    public void removed(final Player player) {
+        super.removed(player);
+        this.container.stopOpen(player);
     }
 }

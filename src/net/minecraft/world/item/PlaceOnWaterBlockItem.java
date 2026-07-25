@@ -10,19 +10,19 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class PlaceOnWaterBlockItem extends BlockItem {
-    public PlaceOnWaterBlockItem(Block p_220226_, Item.Properties p_220227_) {
-        super(p_220226_, p_220227_);
+    public PlaceOnWaterBlockItem(final Block block, final Item.Properties properties) {
+        super(block, properties);
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_220229_) {
+    public InteractionResult useOn(final UseOnContext context) {
         return InteractionResult.PASS;
     }
 
     @Override
-    public InteractionResult use(Level p_220231_, Player p_220232_, InteractionHand p_220233_) {
-        BlockHitResult blockhitresult = getPlayerPOVHitResult(p_220231_, p_220232_, ClipContext.Fluid.SOURCE_ONLY);
-        BlockHitResult blockhitresult1 = blockhitresult.withPosition(blockhitresult.getBlockPos().above());
-        return super.useOn(new UseOnContext(p_220232_, p_220233_, blockhitresult1));
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        BlockHitResult hitResult = getPlayerPOVHitResult(level, player, ClipContext.Fluid.SOURCE_ONLY);
+        BlockHitResult blockAboveResult = hitResult.withPosition(hitResult.getBlockPos().above());
+        return super.useOn(new UseOnContext(player, hand, blockAboveResult));
     }
 }

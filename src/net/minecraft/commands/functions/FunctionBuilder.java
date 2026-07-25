@@ -14,58 +14,56 @@ class FunctionBuilder<T extends ExecutionCommandSource<T>> {
     private @Nullable List<MacroFunction.Entry<T>> macroEntries;
     private final List<String> macroArguments = new ArrayList<>();
 
-    public void addCommand(UnboundEntryAction<T> p_309592_) {
+    public void addCommand(final UnboundEntryAction<T> command) {
         if (this.macroEntries != null) {
-            this.macroEntries.add(new MacroFunction.PlainTextEntry<>(p_309592_));
+            this.macroEntries.add(new MacroFunction.PlainTextEntry<>(command));
         } else {
-            this.plainEntries.add(p_309592_);
+            this.plainEntries.add(command);
         }
     }
 
-    private int getArgumentIndex(String p_312711_) {
-        int i = this.macroArguments.indexOf(p_312711_);
-        if (i == -1) {
-            i = this.macroArguments.size();
-            this.macroArguments.add(p_312711_);
+    private int getArgumentIndex(final String id) {
+        int index = this.macroArguments.indexOf(id);
+        if (index == -1) {
+            index = this.macroArguments.size();
+            this.macroArguments.add(id);
         }
 
-        return i;
+        return index;
     }
 
-    private IntList convertToIndices(List<String> p_311467_) {
-        IntArrayList intarraylist = new IntArrayList(p_311467_.size());
+    private IntList convertToIndices(final List<String> ids) {
+        IntArrayList result = new IntArrayList(ids.size());
 
-        for (String s : p_311467_) {
-            intarraylist.add(this.getArgumentIndex(s));
+        for (String id : ids) {
+            result.add(this.getArgumentIndex(id));
         }
 
-        return intarraylist;
+        return result;
     }
 
-    public void addMacro(String p_312905_, int p_310777_, T p_328106_) {
-        StringTemplate stringtemplate;
+    public void addMacro(final String command, final int line, final T compilationContext) {
+        StringTemplate parseResults;
         try {
-            stringtemplate = StringTemplate.fromString(p_312905_);
-        } catch (Exception exception) {
-            throw new IllegalArgumentException("Can't parse function line " + p_310777_ + ": '" + p_312905_ + "'", exception);
+            parseResults = StringTemplate.fromString(command);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Can't parse function line " + line + ": '" + command + "'", e);
         }
 
         if (this.plainEntries != null) {
             this.macroEntries = new ArrayList<>(this.plainEntries.size() + 1);
 
-            for (UnboundEntryAction<T> unboundentryaction : this.plainEntries) {
-                this.macroEntries.add(new MacroFunction.PlainTextEntry<>(unboundentryaction));
+            for (UnboundEntryAction<T> plainEntry : this.plainEntries) {
+                this.macroEntries.add(new MacroFunction.PlainTextEntry<>(plainEntry));
             }
 
             this.plainEntries = null;
         }
 
-        this.macroEntries.add(new MacroFunction.MacroEntry<>(stringtemplate, this.convertToIndices(stringtemplate.variables()), p_328106_));
+        this.macroEntries.add(new MacroFunction.MacroEntry<>(parseResults, this.convertToIndices(parseResults.variables()), compilationContext));
     }
 
-    public CommandFunction<T> build(Identifier p_450484_) {
-        return (CommandFunction<T>)(this.macroEntries != null
-            ? new MacroFunction<>(p_450484_, this.macroEntries, this.macroArguments)
-            : new PlainTextFunction<>(p_450484_, this.plainEntries));
+    public CommandFunction<T> build(final Identifier id) {
+        return this.macroEntries != null ? new MacroFunction<>(id, this.macroEntries, this.macroArguments) : new PlainTextFunction<>(id, this.plainEntries);
     }
 }

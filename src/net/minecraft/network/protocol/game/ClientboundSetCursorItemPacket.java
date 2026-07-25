@@ -16,7 +16,7 @@ public record ClientboundSetCursorItemPacket(ItemStack contents) implements Pack
         return GamePacketTypes.CLIENTBOUND_SET_CURSOR_ITEM;
     }
 
-    public void handle(ClientGamePacketListener p_364084_) {
-        p_364084_.handleSetCursorItem(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetCursorItem(this);
     }
 }

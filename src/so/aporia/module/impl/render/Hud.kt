@@ -3,7 +3,7 @@ package so.aporia.module.impl.render
 import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.ChatScreen
 import org.lwjgl.glfw.GLFW
 import so.aporia.module.Category
@@ -81,7 +81,7 @@ class Hud : Module("HUD", Category.VISUAL) {
         }
     }
 
-    fun render(gfx: GuiGraphics, mx: Int, my: Int, delta: Float) {
+    fun render(gfx: GuiGraphicsExtractor, mx: Int, my: Int, delta: Float) {
         if (mc.player == null) return
 
         val sw = mc.window.guiScaledWidth
@@ -89,7 +89,7 @@ class Hud : Module("HUD", Category.VISUAL) {
 
         mouseX = mc.mouseHandler.getScaledXPos(mc.window).toFloat()
         mouseY = mc.mouseHandler.getScaledYPos(mc.window).toFloat()
-        isChatOpen = mc.screen is ChatScreen
+        isChatOpen = mc.gui.screen() is ChatScreen
 
         if (isDragging &&
             GLFW.glfwGetMouseButton(mc.window.handle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) != 1) {

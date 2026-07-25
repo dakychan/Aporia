@@ -12,36 +12,38 @@ public class SpatialAttributeInterpolator {
         this.weightsBySource.clear();
     }
 
-    public SpatialAttributeInterpolator accumulate(double p_457391_, EnvironmentAttributeMap p_457338_) {
-        this.weightsBySource.mergeDouble(p_457338_, p_457391_, Double::sum);
+    public SpatialAttributeInterpolator accumulate(final double weight, final EnvironmentAttributeMap attributes) {
+        this.weightsBySource.mergeDouble(attributes, weight, Double::sum);
         return this;
     }
 
-    public <Value> Value applyAttributeLayer(EnvironmentAttribute<Value> p_453750_, Value p_453240_) {
+    public <Value> Value applyAttributeLayer(final EnvironmentAttribute<Value> attribute, final Value baseValue) {
         if (this.weightsBySource.isEmpty()) {
-            return p_453240_;
-        } else if (this.weightsBySource.size() == 1) {
-            EnvironmentAttributeMap environmentattributemap1 = this.weightsBySource.keySet().iterator().next();
-            return environmentattributemap1.applyModifier(p_453750_, p_453240_);
-        } else {
-            LerpFunction<Value> lerpfunction = p_453750_.type().spatialLerp();
-            Value value = null;
-            double d0 = 0.0;
-
-            for (Entry<EnvironmentAttributeMap> entry : Reference2DoubleMaps.fastIterable(this.weightsBySource)) {
-                EnvironmentAttributeMap environmentattributemap = entry.getKey();
-                double d1 = entry.getDoubleValue();
-                Value value1 = environmentattributemap.applyModifier(p_453750_, p_453240_);
-                d0 += d1;
-                if (value == null) {
-                    value = value1;
-                } else {
-                    float f = (float)(d1 / d0);
-                    value = lerpfunction.apply(f, value, value1);
-                }
-            }
-
-            return Objects.requireNonNull(value);
+            return baseValue;
         }
+
+        if (this.weightsBySource.size() == 1) {
+            EnvironmentAttributeMap sourceAttributes = this.weightsBySource.keySet().iterator().next();
+            return sourceAttributes.applyModifier(attribute, baseValue);
+        }
+
+        LerpFunction<Value> lerp = attribute.type().spatialLerp();
+        Value resultValue = null;
+        double accumulatedWeight = 0.0;
+
+        for (Entry<EnvironmentAttributeMap> entry : Reference2DoubleMaps.fastIterable(this.weightsBySource)) {
+            EnvironmentAttributeMap sourceAttributes = entry.getKey();
+            double sourceWeight = entry.getDoubleValue();
+            Value sourceValue = sourceAttributes.applyModifier(attribute, baseValue);
+            accumulatedWeight += sourceWeight;
+            if (resultValue == null) {
+                resultValue = sourceValue;
+            } else {
+                float relativeFraction = (float)(sourceWeight / accumulatedWeight);
+                resultValue = lerp.apply(relativeFraction, resultValue, sourceValue);
+            }
+        }
+
+        return Objects.requireNonNull(resultValue);
     }
 }

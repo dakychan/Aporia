@@ -24,58 +24,58 @@ public class DirtPathBlock extends Block {
         return CODEC;
     }
 
-    protected DirtPathBlock(BlockBehaviour.Properties p_153129_) {
-        super(p_153129_);
+    protected DirtPathBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected boolean useShapeForLightOcclusion(BlockState p_153159_) {
+    protected boolean useShapeForLightOcclusion(final BlockState state) {
         return true;
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_153131_) {
-        return !this.defaultBlockState().canSurvive(p_153131_.getLevel(), p_153131_.getClickedPos())
-            ? Block.pushEntitiesUp(this.defaultBlockState(), Blocks.DIRT.defaultBlockState(), p_153131_.getLevel(), p_153131_.getClickedPos())
-            : super.getStateForPlacement(p_153131_);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return !this.defaultBlockState().canSurvive(context.getLevel(), context.getClickedPos())
+            ? Block.pushEntitiesUp(this.defaultBlockState(), Blocks.DIRT.defaultBlockState(), context.getLevel(), context.getClickedPos())
+            : super.getStateForPlacement(context);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_153152_,
-        LevelReader p_366770_,
-        ScheduledTickAccess p_367951_,
-        BlockPos p_153156_,
-        Direction p_153153_,
-        BlockPos p_153157_,
-        BlockState p_153154_,
-        RandomSource p_363364_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_153153_ == Direction.UP && !p_153152_.canSurvive(p_366770_, p_153156_)) {
-            p_367951_.scheduleTick(p_153156_, this, 1);
+        if (directionToNeighbour == Direction.UP && !state.canSurvive(level, pos)) {
+            ticks.scheduleTick(pos, this, 1);
         }
 
-        return super.updateShape(p_153152_, p_366770_, p_367951_, p_153156_, p_153153_, p_153157_, p_153154_, p_363364_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected void tick(BlockState p_221070_, ServerLevel p_221071_, BlockPos p_221072_, RandomSource p_221073_) {
-        FarmBlock.turnToDirt(null, p_221070_, p_221071_, p_221072_);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        FarmlandBlock.turnToDirt(null, state, level, pos);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_153148_, LevelReader p_153149_, BlockPos p_153150_) {
-        BlockState blockstate = p_153149_.getBlockState(p_153150_.above());
-        return !blockstate.isSolid() || blockstate.getBlock() instanceof FenceGateBlock;
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockState aboveState = level.getBlockState(pos.above());
+        return !aboveState.isSolid() || aboveState.getBlock() instanceof FenceGateBlock;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_153143_, BlockGetter p_153144_, BlockPos p_153145_, CollisionContext p_153146_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_153138_, PathComputationType p_153141_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

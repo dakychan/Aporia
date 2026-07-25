@@ -23,29 +23,37 @@ public class DebugSubscriptions<T> {
     );
     public static final DebugSubscription<DebugHiveInfo> BEE_HIVES = registerWithValue("bee_hives", DebugHiveInfo.STREAM_CODEC);
     public static final DebugSubscription<DebugPoiInfo> POIS = registerWithValue("pois", DebugPoiInfo.STREAM_CODEC);
-    public static final DebugSubscription<Orientation> REDSTONE_WIRE_ORIENTATIONS = registerTemporaryValue("redstone_wire_orientations", Orientation.STREAM_CODEC, 200);
+    public static final DebugSubscription<Orientation> REDSTONE_WIRE_ORIENTATIONS = registerTemporaryValue(
+        "redstone_wire_orientations", Orientation.STREAM_CODEC, 200
+    );
     public static final DebugSubscription<Unit> VILLAGE_SECTIONS = registerWithValue("village_sections", Unit.STREAM_CODEC);
     public static final DebugSubscription<List<BlockPos>> RAIDS = registerWithValue("raids", BlockPos.STREAM_CODEC.apply(ByteBufCodecs.list()));
     public static final DebugSubscription<List<DebugStructureInfo>> STRUCTURES = registerWithValue(
         "structures", DebugStructureInfo.STREAM_CODEC.apply(ByteBufCodecs.list())
     );
-    public static final DebugSubscription<DebugGameEventListenerInfo> GAME_EVENT_LISTENERS = registerWithValue("game_event_listeners", DebugGameEventListenerInfo.STREAM_CODEC);
+    public static final DebugSubscription<DebugGameEventListenerInfo> GAME_EVENT_LISTENERS = registerWithValue(
+        "game_event_listeners", DebugGameEventListenerInfo.STREAM_CODEC
+    );
     public static final DebugSubscription<BlockPos> NEIGHBOR_UPDATES = registerTemporaryValue("neighbor_updates", BlockPos.STREAM_CODEC, 200);
     public static final DebugSubscription<DebugGameEventInfo> GAME_EVENTS = registerTemporaryValue("game_events", DebugGameEventInfo.STREAM_CODEC, 60);
 
-    public static DebugSubscription<?> bootstrap(Registry<DebugSubscription<?>> p_428718_) {
+    public static DebugSubscription<?> bootstrap(final Registry<DebugSubscription<?>> registry) {
         return DEDICATED_SERVER_TICK_TIME;
     }
 
-    private static DebugSubscription<?> registerSimple(String p_422904_) {
-        return Registry.register(BuiltInRegistries.DEBUG_SUBSCRIPTION, Identifier.withDefaultNamespace(p_422904_), new DebugSubscription(null));
+    private static DebugSubscription<?> registerSimple(final String id) {
+        return Registry.register(BuiltInRegistries.DEBUG_SUBSCRIPTION, Identifier.withDefaultNamespace(id), new DebugSubscription(null));
     }
 
-    private static <T> DebugSubscription<T> registerWithValue(String p_429418_, StreamCodec<? super RegistryFriendlyByteBuf, T> p_428513_) {
-        return Registry.register(BuiltInRegistries.DEBUG_SUBSCRIPTION, Identifier.withDefaultNamespace(p_429418_), new DebugSubscription<>(p_428513_));
+    private static <T> DebugSubscription<T> registerWithValue(final String id, final StreamCodec<? super RegistryFriendlyByteBuf, T> valueStreamCodec) {
+        return Registry.register(BuiltInRegistries.DEBUG_SUBSCRIPTION, Identifier.withDefaultNamespace(id), new DebugSubscription<>(valueStreamCodec));
     }
 
-    private static <T> DebugSubscription<T> registerTemporaryValue(String p_430317_, StreamCodec<? super RegistryFriendlyByteBuf, T> p_424522_, int p_422345_) {
-        return Registry.register(BuiltInRegistries.DEBUG_SUBSCRIPTION, Identifier.withDefaultNamespace(p_430317_), new DebugSubscription<>(p_424522_, p_422345_));
+    private static <T> DebugSubscription<T> registerTemporaryValue(
+        final String id, final StreamCodec<? super RegistryFriendlyByteBuf, T> valueStreamCodec, final int expireAfterTicks
+    ) {
+        return Registry.register(
+            BuiltInRegistries.DEBUG_SUBSCRIPTION, Identifier.withDefaultNamespace(id), new DebugSubscription<>(valueStreamCodec, expireAfterTicks)
+        );
     }
 }

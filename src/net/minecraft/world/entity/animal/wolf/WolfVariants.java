@@ -25,48 +25,60 @@ public class WolfVariants {
     public static final ResourceKey<WolfVariant> STRIPED = createKey("striped");
     public static final ResourceKey<WolfVariant> DEFAULT = PALE;
 
-    private static ResourceKey<WolfVariant> createKey(String p_392253_) {
-        return ResourceKey.create(Registries.WOLF_VARIANT, Identifier.withDefaultNamespace(p_392253_));
-    }
-
-    private static void register(BootstrapContext<WolfVariant> p_393304_, ResourceKey<WolfVariant> p_395007_, String p_391332_, ResourceKey<Biome> p_395826_) {
-        register(p_393304_, p_395007_, p_391332_, highPrioBiome(HolderSet.direct(p_393304_.lookup(Registries.BIOME).getOrThrow(p_395826_))));
-    }
-
-    private static void register(BootstrapContext<WolfVariant> p_391328_, ResourceKey<WolfVariant> p_397780_, String p_392447_, TagKey<Biome> p_391941_) {
-        register(p_391328_, p_397780_, p_392447_, highPrioBiome(p_391328_.lookup(Registries.BIOME).getOrThrow(p_391941_)));
-    }
-
-    private static SpawnPrioritySelectors highPrioBiome(HolderSet<Biome> p_397468_) {
-        return SpawnPrioritySelectors.single(new BiomeCheck(p_397468_), 1);
+    private static ResourceKey<WolfVariant> createKey(final String name) {
+        return ResourceKey.create(Registries.WOLF_VARIANT, Identifier.withDefaultNamespace(name));
     }
 
     private static void register(
-        BootstrapContext<WolfVariant> p_395425_, ResourceKey<WolfVariant> p_392059_, String p_392274_, SpawnPrioritySelectors p_392241_
+        final BootstrapContext<WolfVariant> context, final ResourceKey<WolfVariant> name, final String fileName, final ResourceKey<Biome> spawnBiome
     ) {
-        Identifier identifier = Identifier.withDefaultNamespace("entity/wolf/" + p_392274_);
-        Identifier identifier1 = Identifier.withDefaultNamespace("entity/wolf/" + p_392274_ + "_tame");
-        Identifier identifier2 = Identifier.withDefaultNamespace("entity/wolf/" + p_392274_ + "_angry");
-        p_395425_.register(
-            p_392059_,
+        register(context, name, fileName, highPrioBiome(HolderSet.direct(context.lookup(Registries.BIOME).getOrThrow(spawnBiome))));
+    }
+
+    private static void register(
+        final BootstrapContext<WolfVariant> context, final ResourceKey<WolfVariant> name, final String fileName, final TagKey<Biome> spawnBiome
+    ) {
+        register(context, name, fileName, highPrioBiome(context.lookup(Registries.BIOME).getOrThrow(spawnBiome)));
+    }
+
+    private static SpawnPrioritySelectors highPrioBiome(final HolderSet<Biome> biomes) {
+        return SpawnPrioritySelectors.single(new BiomeCheck(biomes), 1);
+    }
+
+    private static void register(
+        final BootstrapContext<WolfVariant> context, final ResourceKey<WolfVariant> name, final String fileName, final SpawnPrioritySelectors selectors
+    ) {
+        Identifier wildTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName);
+        Identifier tameTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_tame");
+        Identifier angryTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_angry");
+        Identifier babyTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_baby");
+        Identifier tameBabyTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_tame_baby");
+        Identifier angryBabyTexture = Identifier.withDefaultNamespace("entity/wolf/" + fileName + "_angry_baby");
+        context.register(
+            name,
             new WolfVariant(
                 new WolfVariant.AssetInfo(
-                    new ClientAsset.ResourceTexture(identifier), new ClientAsset.ResourceTexture(identifier1), new ClientAsset.ResourceTexture(identifier2)
+                    new ClientAsset.ResourceTexture(wildTexture), new ClientAsset.ResourceTexture(tameTexture), new ClientAsset.ResourceTexture(angryTexture)
                 ),
-                p_392241_
+                new WolfVariant.AssetInfo(
+                    new ClientAsset.ResourceTexture(babyTexture),
+                    new ClientAsset.ResourceTexture(tameBabyTexture),
+                    new ClientAsset.ResourceTexture(angryBabyTexture)
+                ),
+                selectors
             )
         );
     }
 
-    public static void bootstrap(BootstrapContext<WolfVariant> p_395773_) {
-        register(p_395773_, PALE, "wolf", SpawnPrioritySelectors.fallback(0));
-        register(p_395773_, SPOTTED, "wolf_spotted", BiomeTags.IS_SAVANNA);
-        register(p_395773_, SNOWY, "wolf_snowy", Biomes.GROVE);
-        register(p_395773_, BLACK, "wolf_black", Biomes.OLD_GROWTH_PINE_TAIGA);
-        register(p_395773_, ASHEN, "wolf_ashen", Biomes.SNOWY_TAIGA);
-        register(p_395773_, RUSTY, "wolf_rusty", BiomeTags.IS_JUNGLE);
-        register(p_395773_, WOODS, "wolf_woods", Biomes.FOREST);
-        register(p_395773_, CHESTNUT, "wolf_chestnut", Biomes.OLD_GROWTH_SPRUCE_TAIGA);
-        register(p_395773_, STRIPED, "wolf_striped", BiomeTags.IS_BADLANDS);
+    public static void bootstrap(final BootstrapContext<WolfVariant> context) {
+        register(context, PALE, "wolf", SpawnPrioritySelectors.fallback(0));
+        register(context, SPOTTED, "wolf_spotted", BiomeTags.IS_SAVANNA);
+        register(context, SNOWY, "wolf_snowy", Biomes.GROVE);
+        register(context, BLACK, "wolf_black", Biomes.OLD_GROWTH_PINE_TAIGA);
+        register(context, ASHEN, "wolf_ashen", Biomes.SNOWY_TAIGA);
+        register(context, RUSTY, "wolf_rusty", BiomeTags.IS_JUNGLE);
+        register(context, WOODS, "wolf_woods", Biomes.FOREST);
+        register(context, CHESTNUT, "wolf_chestnut", Biomes.OLD_GROWTH_SPRUCE_TAIGA);
+        register(context, STRIPED, "wolf_striped", BiomeTags.IS_BADLANDS);
     }
 }

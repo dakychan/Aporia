@@ -11,16 +11,16 @@ import net.minecraft.world.phys.Vec3;
 public abstract class MinecartBehavior {
     protected final AbstractMinecart minecart;
 
-    protected MinecartBehavior(AbstractMinecart p_459098_) {
-        this.minecart = p_459098_;
+    protected MinecartBehavior(final AbstractMinecart minecart) {
+        this.minecart = minecart;
     }
 
     public InterpolationHandler getInterpolation() {
         return null;
     }
 
-    public void lerpMotion(Vec3 p_456840_) {
-        this.setDeltaMovement(p_456840_);
+    public void lerpMotion(final Vec3 movement) {
+        this.setDeltaMovement(movement);
     }
 
     public abstract void tick();
@@ -29,9 +29,9 @@ public abstract class MinecartBehavior {
         return this.minecart.level();
     }
 
-    public abstract void moveAlongTrack(ServerLevel p_454679_);
+    public abstract void moveAlongTrack(ServerLevel level);
 
-    public abstract double stepAlongTrack(BlockPos p_460173_, RailShape p_457746_, double p_451121_);
+    public abstract double stepAlongTrack(final BlockPos pos, final RailShape shape, final double movementLeft);
 
     public abstract boolean pushAndPickupEntities();
 
@@ -39,12 +39,12 @@ public abstract class MinecartBehavior {
         return this.minecart.getDeltaMovement();
     }
 
-    public void setDeltaMovement(Vec3 p_452074_) {
-        this.minecart.setDeltaMovement(p_452074_);
+    public void setDeltaMovement(final Vec3 deltaMovement) {
+        this.minecart.setDeltaMovement(deltaMovement);
     }
 
-    public void setDeltaMovement(double p_460988_, double p_460782_, double p_455178_) {
-        this.minecart.setDeltaMovement(p_460988_, p_460782_, p_455178_);
+    public void setDeltaMovement(final double x, final double y, final double z) {
+        this.minecart.setDeltaMovement(x, y, z);
     }
 
     public Vec3 position() {
@@ -63,39 +63,39 @@ public abstract class MinecartBehavior {
         return this.minecart.getZ();
     }
 
-    public void setPos(Vec3 p_452786_) {
-        this.minecart.setPos(p_452786_);
+    public void setPos(final Vec3 pos) {
+        this.minecart.setPos(pos);
     }
 
-    public void setPos(double p_459820_, double p_458300_, double p_452733_) {
-        this.minecart.setPos(p_459820_, p_458300_, p_452733_);
+    public void setPos(final double x, final double y, final double z) {
+        this.minecart.setPos(x, y, z);
     }
 
     public float getXRot() {
         return this.minecart.getXRot();
     }
 
-    public void setXRot(float p_450914_) {
-        this.minecart.setXRot(p_450914_);
+    public void setXRot(final float rot) {
+        this.minecart.setXRot(rot);
     }
 
     public float getYRot() {
         return this.minecart.getYRot();
     }
 
-    public void setYRot(float p_454907_) {
-        this.minecart.setYRot(p_454907_);
+    public void setYRot(final float rot) {
+        this.minecart.setYRot(rot);
     }
 
     public Direction getMotionDirection() {
         return this.minecart.getDirection();
     }
 
-    public Vec3 getKnownMovement(Vec3 p_459988_) {
-        return p_459988_;
+    public Vec3 getKnownMovement(final Vec3 knownMovement) {
+        return knownMovement;
     }
 
-    public abstract double getMaxSpeed(ServerLevel p_458385_);
+    public abstract double getMaxSpeed(ServerLevel level);
 
     public abstract double getSlowdownFactor();
 }

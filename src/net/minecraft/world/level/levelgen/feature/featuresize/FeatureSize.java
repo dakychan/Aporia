@@ -14,20 +14,17 @@ public abstract class FeatureSize {
     protected static <S extends FeatureSize> RecordCodecBuilder<S, OptionalInt> minClippedHeightCodec() {
         return Codec.intRange(0, 80)
             .optionalFieldOf("min_clipped_height")
-            .xmap(
-                p_68292_ -> p_68292_.map(OptionalInt::of).orElse(OptionalInt.empty()),
-                p_68294_ -> p_68294_.isPresent() ? Optional.of(p_68294_.getAsInt()) : Optional.empty()
-            )
-            .forGetter(p_68290_ -> p_68290_.minClippedHeight);
+            .xmap(o -> o.map(OptionalInt::of).orElse(OptionalInt.empty()), o -> o.isPresent() ? Optional.of(o.getAsInt()) : Optional.empty())
+            .forGetter(f -> f.minClippedHeight);
     }
 
-    public FeatureSize(OptionalInt p_68285_) {
-        this.minClippedHeight = p_68285_;
+    public FeatureSize(final OptionalInt minClippedHeight) {
+        this.minClippedHeight = minClippedHeight;
     }
 
     protected abstract FeatureSizeType<?> type();
 
-    public abstract int getSizeAtHeight(int p_68287_, int p_68288_);
+    public abstract int getSizeAtHeight(final int treeHeight, final int yo);
 
     public OptionalInt minClippedHeight() {
         return this.minClippedHeight;

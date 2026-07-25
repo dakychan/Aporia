@@ -5,26 +5,28 @@ import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 
 public class Snowball extends ThrowableItemProjectile {
-    public Snowball(EntityType<? extends Snowball> p_453581_, Level p_460903_) {
-        super(p_453581_, p_460903_);
+    public Snowball(final EntityType<? extends Snowball> type, final Level level) {
+        super(type, level);
     }
 
-    public Snowball(Level p_454836_, LivingEntity p_458340_, ItemStack p_456258_) {
-        super(EntityType.SNOWBALL, p_458340_, p_454836_, p_456258_);
+    public Snowball(final Level level, final LivingEntity mob, final ItemStack itemStack) {
+        super(EntityTypes.SNOWBALL, mob, level, itemStack);
     }
 
-    public Snowball(Level p_457788_, double p_455743_, double p_457695_, double p_452739_, ItemStack p_457593_) {
-        super(EntityType.SNOWBALL, p_455743_, p_457695_, p_452739_, p_457788_, p_457593_);
+    public Snowball(final Level level, final double x, final double y, final double z, final ItemStack itemStack) {
+        super(EntityTypes.SNOWBALL, x, y, z, level, itemStack);
     }
 
     @Override
@@ -33,32 +35,32 @@ public class Snowball extends ThrowableItemProjectile {
     }
 
     private ParticleOptions getParticle() {
-        ItemStack itemstack = this.getItem();
-        return (ParticleOptions)(itemstack.isEmpty() ? ParticleTypes.ITEM_SNOWBALL : new ItemParticleOption(ParticleTypes.ITEM, itemstack));
+        ItemStack item = this.getItem();
+        return item.isEmpty() ? ParticleTypes.ITEM_SNOWBALL : new ItemParticleOption(ParticleTypes.ITEM, ItemStackTemplate.fromNonEmptyStack(item));
     }
 
     @Override
-    public void handleEntityEvent(byte p_455160_) {
-        if (p_455160_ == 3) {
-            ParticleOptions particleoptions = this.getParticle();
+    public void handleEntityEvent(final byte id) {
+        if (id == 3) {
+            ParticleOptions particle = this.getParticle();
 
             for (int i = 0; i < 8; i++) {
-                this.level().addParticle(particleoptions, this.getX(), this.getY(), this.getZ(), 0.0, 0.0, 0.0);
+                this.level().addParticle(particle, this.getX(), this.getY(), this.getZ(), 0.0, 0.0, 0.0);
             }
         }
     }
 
     @Override
-    protected void onHitEntity(EntityHitResult p_458051_) {
-        super.onHitEntity(p_458051_);
-        Entity entity = p_458051_.getEntity();
-        int i = entity instanceof Blaze ? 3 : 0;
-        entity.hurt(this.damageSources().thrown(this, this.getOwner()), i);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        super.onHitEntity(hitResult);
+        Entity entity = hitResult.getEntity();
+        int damage = entity instanceof Blaze ? 3 : 0;
+        entity.hurt(this.damageSources().thrown(this, this.getOwner()), damage);
     }
 
     @Override
-    protected void onHit(HitResult p_456066_) {
-        super.onHit(p_456066_);
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
         if (!this.level().isClientSide()) {
             this.level().broadcastEntityEvent(this, (byte)3);
             this.discard();

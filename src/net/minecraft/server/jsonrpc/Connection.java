@@ -14,13 +14,11 @@ import io.netty.handler.timeout.ReadTimeoutException;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap.Entry;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -32,6 +30,7 @@ import net.minecraft.server.jsonrpc.methods.InvalidParameterJsonRpcException;
 import net.minecraft.server.jsonrpc.methods.InvalidRequestJsonRpcException;
 import net.minecraft.server.jsonrpc.methods.MethodNotFoundJsonRpcException;
 import net.minecraft.server.jsonrpc.methods.RemoteRpcErrorException;
+import net.minecraft.server.notifications.NotificationManager;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Contract;
@@ -49,216 +48,231 @@ public class Connection extends SimpleChannelInboundHandler<JsonElement> {
     private final AtomicInteger transactionId = new AtomicInteger();
     private final Int2ObjectMap<PendingRpcRequest<?>> pendingRequests = Int2ObjectMaps.synchronize(new Int2ObjectOpenHashMap<>());
 
-    public Connection(Channel p_426477_, ManagementServer p_430885_, MinecraftApi p_423684_, JsonRpcLogger p_422992_) {
+    public Connection(final Channel channel, final ManagementServer managementServer, final MinecraftApi minecraftApi, final JsonRpcLogger jsonrpcLogger) {
         this.clientInfo = ClientInfo.of(CONNECTION_ID_COUNTER.incrementAndGet());
-        this.managementServer = p_430885_;
-        this.minecraftApi = p_423684_;
-        this.channel = p_426477_;
-        this.jsonRpcLogger = p_422992_;
+        this.managementServer = managementServer;
+        this.minecraftApi = minecraftApi;
+        this.channel = channel;
+        this.jsonRpcLogger = jsonrpcLogger;
     }
 
     public void tick() {
-        long i = Util.getMillis();
+        long time = Util.getMillis();
         this.pendingRequests
             .int2ObjectEntrySet()
             .removeIf(
-                p_449115_ -> {
-                    boolean flag = p_449115_.getValue().timedOut(i);
-                    if (flag) {
-                        p_449115_.getValue()
+                entry -> {
+                    boolean timedOut = entry.getValue().timedOut(time);
+                    if (timedOut) {
+                        entry.getValue()
                             .resultFuture()
                             .completeExceptionally(
-                                new ReadTimeoutException(
-                                    "RPC method " + p_449115_.getValue().method().key().identifier() + " timed out waiting for response"
-                                )
+                                new ReadTimeoutException("RPC method " + entry.getValue().method().key().identifier() + " timed out waiting for response")
                             );
                     }
 
-                    return flag;
+                    return timedOut;
                 }
             );
     }
 
     @Override
-    public void channelActive(ChannelHandlerContext p_425017_) throws Exception {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         this.jsonRpcLogger.log(this.clientInfo, "Management connection opened for {}", this.channel.remoteAddress());
-        super.channelActive(p_425017_);
+        super.channelActive(ctx);
         this.managementServer.onConnected(this);
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext p_422732_) throws Exception {
+    public void channelInactive(final ChannelHandlerContext ctx) throws Exception {
         this.jsonRpcLogger.log(this.clientInfo, "Management connection closed for {}", this.channel.remoteAddress());
-        super.channelInactive(p_422732_);
+        super.channelInactive(ctx);
         this.managementServer.onDisconnected(this);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext p_422364_, Throwable p_423460_) throws Exception {
-        if (p_423460_.getCause() instanceof JsonParseException) {
-            this.channel.writeAndFlush(JsonRPCErrors.PARSE_ERROR.createWithUnknownId(p_423460_.getMessage()));
+    public void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) throws Exception {
+        if (cause.getCause() instanceof JsonParseException) {
+            this.channel.writeAndFlush(JsonRPCErrors.PARSE_ERROR.createWithUnknownId(cause.getMessage()));
         } else {
-            super.exceptionCaught(p_422364_, p_423460_);
+            super.exceptionCaught(ctx, cause);
             this.channel.close().awaitUninterruptibly();
         }
     }
 
-    protected void channelRead0(ChannelHandlerContext p_425031_, JsonElement p_423367_) {
-        if (p_423367_.isJsonObject()) {
-            JsonObject jsonobject = this.handleJsonObject(p_423367_.getAsJsonObject());
-            if (jsonobject != null) {
-                this.channel.writeAndFlush(jsonobject);
+    protected void channelRead0(final ChannelHandlerContext channelHandlerContext, final JsonElement jsonElement) {
+        if (jsonElement.isJsonObject()) {
+            JsonObject response = this.handleJsonObject(jsonElement.getAsJsonObject());
+            if (response != null) {
+                this.channel.writeAndFlush(response);
             }
-        } else if (p_423367_.isJsonArray()) {
-            this.channel.writeAndFlush(this.handleBatchRequest(p_423367_.getAsJsonArray().asList()));
+        } else if (jsonElement.isJsonArray()) {
+            this.channel.writeAndFlush(this.handleBatchRequest(jsonElement.getAsJsonArray().asList()));
         } else {
             this.channel.writeAndFlush(JsonRPCErrors.INVALID_REQUEST.createWithUnknownId(null));
         }
     }
 
-    private JsonArray handleBatchRequest(List<JsonElement> p_431423_) {
-        JsonArray jsonarray = new JsonArray();
-        p_431423_.stream().map(p_428168_ -> this.handleJsonObject(p_428168_.getAsJsonObject())).filter(Objects::nonNull).forEach(jsonarray::add);
-        return jsonarray;
+    private JsonArray handleBatchRequest(final List<JsonElement> batchRequests) {
+        JsonArray batchResponses = new JsonArray();
+        batchRequests.stream().map(batchEntry -> this.handleJsonObject(batchEntry.getAsJsonObject())).filter(Objects::nonNull).forEach(batchResponses::add);
+        return batchResponses;
     }
 
-    public void sendNotification(Holder.Reference<? extends OutgoingRpcMethod<Void, ?>> p_423389_) {
-        this.sendRequest(p_423389_, null, false);
+    public void sendNotification(final Holder.Reference<? extends OutgoingRpcMethod<Void, ?>> method) {
+        this.sendRequest(method, null, false);
     }
 
-    public <Params> void sendNotification(Holder.Reference<? extends OutgoingRpcMethod<Params, ?>> p_429716_, Params p_422987_) {
-        this.sendRequest(p_429716_, p_422987_, false);
+    public <Params> void sendNotification(final Holder.Reference<? extends OutgoingRpcMethod<Params, ?>> method, final Params params) {
+        this.sendRequest(method, params, false);
     }
 
-    public <Result> CompletableFuture<Result> sendRequest(Holder.Reference<? extends OutgoingRpcMethod<Void, Result>> p_430250_) {
-        return this.sendRequest(p_430250_, null, true);
+    public <Result> CompletableFuture<Result> sendRequest(final Holder.Reference<? extends OutgoingRpcMethod<Void, Result>> method) {
+        return this.sendRequest(method, null, true);
     }
 
-    public <Params, Result> CompletableFuture<Result> sendRequest(Holder.Reference<? extends OutgoingRpcMethod<Params, Result>> p_426489_, Params p_424704_) {
-        return this.sendRequest(p_426489_, p_424704_, true);
+    public <Params, Result> CompletableFuture<Result> sendRequest(
+        final Holder.Reference<? extends OutgoingRpcMethod<Params, Result>> method, final Params params
+    ) {
+        return this.sendRequest(method, params, true);
     }
 
     @Contract("_,_,false->null;_,_,true->!null")
     private <Params, Result> @Nullable CompletableFuture<Result> sendRequest(
-        Holder.Reference<? extends OutgoingRpcMethod<Params, ? extends Result>> p_424976_, @Nullable Params p_431689_, boolean p_428466_
+        final Holder.Reference<? extends OutgoingRpcMethod<Params, ? extends Result>> methodHolder, final @Nullable Params params, final boolean expectReply
     ) {
-        List<JsonElement> list = p_431689_ != null ? List.of(Objects.requireNonNull(p_424976_.value().encodeParams(p_431689_))) : List.of();
-        if (p_428466_) {
-            CompletableFuture<Result> completablefuture = new CompletableFuture<>();
-            int i = this.transactionId.incrementAndGet();
-            long j = Util.timeSource.get(TimeUnit.MILLISECONDS);
-            this.pendingRequests.put(i, new PendingRpcRequest<>(p_424976_, completablefuture, j + 5000L));
-            this.channel.writeAndFlush(JsonRPCUtils.createRequest(i, p_424976_.key().identifier(), list));
-            return completablefuture;
+        OutgoingRpcMethod<Params, ? extends Result> method = (OutgoingRpcMethod<Params, ? extends Result>)methodHolder.value();
+        if (this.minecraftApi.notificationManager().server() == null && !method.attributes().allowPreServerInit()) {
+            return CompletableFuture.failedFuture(new InvalidRequestJsonRpcException("Method cannot be dispatched pre server initialization: " + method));
         } else {
-            this.channel.writeAndFlush(JsonRPCUtils.createRequest(null, p_424976_.key().identifier(), list));
-            return null;
+            List<JsonElement> jsonParams = params != null ? List.of(Objects.requireNonNull(method.encodeParams(params))) : List.of();
+            if (expectReply) {
+                CompletableFuture<Result> future = new CompletableFuture<>();
+                int id = this.transactionId.incrementAndGet();
+                long time = Util.getMillis();
+                this.pendingRequests.put(id, new PendingRpcRequest<>(methodHolder, future, time + 5000L));
+                this.channel.writeAndFlush(JsonRPCUtils.createRequest(id, methodHolder.key().identifier(), jsonParams));
+                return future;
+            } else {
+                this.channel.writeAndFlush(JsonRPCUtils.createRequest(null, methodHolder.key().identifier(), jsonParams));
+                return null;
+            }
         }
     }
 
     @VisibleForTesting
-    @Nullable JsonObject handleJsonObject(JsonObject p_428341_) {
+    @Nullable JsonObject handleJsonObject(final JsonObject jsonObject) {
         try {
-            JsonElement jsonelement = JsonRPCUtils.getRequestId(p_428341_);
-            String s = JsonRPCUtils.getMethodName(p_428341_);
-            JsonElement jsonelement1 = JsonRPCUtils.getResult(p_428341_);
-            JsonElement jsonelement2 = JsonRPCUtils.getParams(p_428341_);
-            JsonObject jsonobject = JsonRPCUtils.getError(p_428341_);
-            if (s != null && jsonelement1 == null && jsonobject == null) {
-                return jsonelement != null && !isValidRequestId(jsonelement)
+            JsonElement id = JsonRPCUtils.getRequestId(jsonObject);
+            String method = JsonRPCUtils.getMethodName(jsonObject);
+            JsonElement result = JsonRPCUtils.getResult(jsonObject);
+            JsonElement params = JsonRPCUtils.getParams(jsonObject);
+            JsonObject error = JsonRPCUtils.getError(jsonObject);
+            if (method != null && result == null && error == null) {
+                return id != null && !isValidRequestId(id)
                     ? JsonRPCErrors.INVALID_REQUEST.createWithUnknownId("Invalid request id - only String, Number and NULL supported")
-                    : this.handleIncomingRequest(jsonelement, s, jsonelement2);
-            } else if (s == null && jsonelement1 != null && jsonobject == null && jsonelement != null) {
-                if (isValidResponseId(jsonelement)) {
-                    this.handleRequestResponse(jsonelement.getAsInt(), jsonelement1);
+                    : this.handleIncomingRequest(id, method, params);
+            }
+
+            if (method == null && result != null && error == null && id != null) {
+                if (isValidResponseId(id)) {
+                    this.handleRequestResponse(id.getAsInt(), result);
                 } else {
-                    LOGGER.warn("Received respose {} with id {} we did not request", jsonelement1, jsonelement);
+                    LOGGER.warn("Received respose {} with id {} we did not request", result, id);
                 }
 
                 return null;
             } else {
-                return s == null && jsonelement1 == null && jsonobject != null
-                    ? this.handleError(jsonelement, jsonobject)
-                    : JsonRPCErrors.INVALID_REQUEST.createWithoutData(Objects.requireNonNullElse(jsonelement, JsonNull.INSTANCE));
+                return method == null && result == null && error != null
+                    ? this.handleError(id, error)
+                    : JsonRPCErrors.INVALID_REQUEST.createWithoutData(Objects.requireNonNullElse(id, JsonNull.INSTANCE));
             }
-        } catch (Exception exception) {
-            LOGGER.error("Error while handling rpc request", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.error("Error while handling rpc request", e);
             return JsonRPCErrors.INTERNAL_ERROR.createWithUnknownId("Unknown error handling request - check server logs for stack trace");
         }
     }
 
-    private static boolean isValidRequestId(JsonElement p_429929_) {
-        return p_429929_.isJsonNull() || GsonHelper.isNumberValue(p_429929_) || GsonHelper.isStringValue(p_429929_);
+    private static boolean isValidRequestId(final JsonElement id) {
+        return id.isJsonNull() || GsonHelper.isNumberValue(id) || GsonHelper.isStringValue(id);
     }
 
-    private static boolean isValidResponseId(JsonElement p_422655_) {
-        return GsonHelper.isNumberValue(p_422655_);
+    private static boolean isValidResponseId(final JsonElement id) {
+        return GsonHelper.isNumberValue(id);
     }
 
-    private @Nullable JsonObject handleIncomingRequest(@Nullable JsonElement p_423022_, String p_425180_, @Nullable JsonElement p_423468_) {
-        boolean flag = p_423022_ != null;
+    private @Nullable JsonObject handleIncomingRequest(final @Nullable JsonElement id, final String method, final @Nullable JsonElement params) {
+        boolean sendResponse = id != null;
 
         try {
-            JsonElement jsonelement = this.dispatchIncomingRequest(p_425180_, p_423468_);
-            return jsonelement != null && flag ? JsonRPCUtils.createSuccessResult(p_423022_, jsonelement) : null;
-        } catch (InvalidParameterJsonRpcException invalidparameterjsonrpcexception) {
-            LOGGER.debug("Invalid parameter invocation {}: {}, {}", p_425180_, p_423468_, invalidparameterjsonrpcexception.getMessage());
-            return flag ? JsonRPCErrors.INVALID_PARAMS.create(p_423022_, invalidparameterjsonrpcexception.getMessage()) : null;
-        } catch (EncodeJsonRpcException encodejsonrpcexception) {
-            LOGGER.error("Failed to encode json rpc response {}: {}", p_425180_, encodejsonrpcexception.getMessage());
-            return flag ? JsonRPCErrors.INTERNAL_ERROR.create(p_423022_, encodejsonrpcexception.getMessage()) : null;
-        } catch (InvalidRequestJsonRpcException invalidrequestjsonrpcexception) {
-            return flag ? JsonRPCErrors.INVALID_REQUEST.create(p_423022_, invalidrequestjsonrpcexception.getMessage()) : null;
-        } catch (MethodNotFoundJsonRpcException methodnotfoundjsonrpcexception) {
-            return flag ? JsonRPCErrors.METHOD_NOT_FOUND.create(p_423022_, methodnotfoundjsonrpcexception.getMessage()) : null;
-        } catch (Exception exception) {
-            LOGGER.error("Error while dispatching rpc method {}", p_425180_, exception);
-            return flag ? JsonRPCErrors.INTERNAL_ERROR.createWithoutData(p_423022_) : null;
+            JsonElement result = this.dispatchIncomingRequest(method, params);
+            return result != null && sendResponse ? JsonRPCUtils.createSuccessResult(id, result) : null;
+        } catch (InvalidParameterJsonRpcException e) {
+            LOGGER.debug("Invalid parameter invocation {}: {}, {}", method, params, e.getMessage());
+            return sendResponse ? JsonRPCErrors.INVALID_PARAMS.create(id, e.getMessage()) : null;
+        } catch (EncodeJsonRpcException e) {
+            LOGGER.error("Failed to encode json rpc response {}: {}", method, e.getMessage());
+            return sendResponse ? JsonRPCErrors.INTERNAL_ERROR.create(id, e.getMessage()) : null;
+        } catch (InvalidRequestJsonRpcException e) {
+            return sendResponse ? JsonRPCErrors.INVALID_REQUEST.create(id, e.getMessage()) : null;
+        } catch (MethodNotFoundJsonRpcException e) {
+            return sendResponse ? JsonRPCErrors.METHOD_NOT_FOUND.create(id, e.getMessage()) : null;
+        } catch (Exception e) {
+            LOGGER.error("Error while dispatching rpc method {}", method, e);
+            return sendResponse ? JsonRPCErrors.INTERNAL_ERROR.createWithoutData(id) : null;
         }
     }
 
-    public @Nullable JsonElement dispatchIncomingRequest(String p_426702_, @Nullable JsonElement p_429101_) {
-        Identifier identifier = Identifier.tryParse(p_426702_);
+    public @Nullable JsonElement dispatchIncomingRequest(final String method, final @Nullable JsonElement params) {
+        Identifier identifier = Identifier.tryParse(method);
         if (identifier == null) {
-            throw new InvalidRequestJsonRpcException("Failed to parse method value: " + p_426702_);
-        } else {
-            Optional<IncomingRpcMethod<?, ?>> optional = BuiltInRegistries.INCOMING_RPC_METHOD.getOptional(identifier);
-            if (optional.isEmpty()) {
-                throw new MethodNotFoundJsonRpcException("Method not found: " + p_426702_);
-            } else if (optional.get().attributes().runOnMainThread()) {
-                try {
-                    return this.minecraftApi.<JsonElement>submit(() -> optional.get().apply(this.minecraftApi, p_429101_, this.clientInfo)).join();
-                } catch (CompletionException completionexception) {
-                    if (completionexception.getCause() instanceof RuntimeException runtimeexception) {
-                        throw runtimeexception;
-                    } else {
-                        throw completionexception;
-                    }
+            throw new InvalidRequestJsonRpcException("Failed to parse method value: " + method);
+        }
+
+        Optional<IncomingRpcMethod<?, ?>> incomingRpcMethod = BuiltInRegistries.INCOMING_RPC_METHOD.getOptional(identifier);
+        if (incomingRpcMethod.isEmpty()) {
+            throw new MethodNotFoundJsonRpcException("Method not found: " + method);
+        }
+
+        IncomingRpcMethod.Attributes attributes = incomingRpcMethod.get().attributes();
+        NotificationManager notificationManager = this.minecraftApi.notificationManager();
+        if (notificationManager != null && notificationManager.server() == null && !attributes.allowPreServerInit()) {
+            throw new InvalidRequestJsonRpcException("Method cannot be dispatched pre server initialization: " + method);
+        }
+
+        if (attributes.runOnMainThread()) {
+            try {
+                return this.minecraftApi.<JsonElement>submit(() -> incomingRpcMethod.get().apply(this.minecraftApi, params, this.clientInfo)).join();
+            } catch (CompletionException e) {
+                if (e.getCause() instanceof RuntimeException re) {
+                    throw re;
+                } else {
+                    throw e;
                 }
-            } else {
-                return optional.get().apply(this.minecraftApi, p_429101_, this.clientInfo);
             }
-        }
-    }
-
-    private void handleRequestResponse(int p_425412_, JsonElement p_424729_) {
-        PendingRpcRequest<?> pendingrpcrequest = this.pendingRequests.remove(p_425412_);
-        if (pendingrpcrequest == null) {
-            LOGGER.warn("Received unknown response (id: {}): {}", p_425412_, p_424729_);
         } else {
-            pendingrpcrequest.accept(p_424729_);
+            return incomingRpcMethod.get().apply(this.minecraftApi, params, this.clientInfo);
         }
     }
 
-    private @Nullable JsonObject handleError(@Nullable JsonElement p_428115_, JsonObject p_424320_) {
-        if (p_428115_ != null && isValidResponseId(p_428115_)) {
-            PendingRpcRequest<?> pendingrpcrequest = this.pendingRequests.remove(p_428115_.getAsInt());
-            if (pendingrpcrequest != null) {
-                pendingrpcrequest.resultFuture().completeExceptionally(new RemoteRpcErrorException(p_428115_, p_424320_));
+    private void handleRequestResponse(final int id, final JsonElement result) {
+        PendingRpcRequest<?> request = this.pendingRequests.remove(id);
+        if (request == null) {
+            LOGGER.warn("Received unknown response (id: {}): {}", id, result);
+        } else {
+            request.accept(result);
+        }
+    }
+
+    private @Nullable JsonObject handleError(final @Nullable JsonElement id, final JsonObject error) {
+        if (id != null && isValidResponseId(id)) {
+            PendingRpcRequest<?> request = this.pendingRequests.remove(id.getAsInt());
+            if (request != null) {
+                request.resultFuture().completeExceptionally(new RemoteRpcErrorException(id, error));
             }
         }
 
-        LOGGER.error("Received error (id: {}): {}", p_428115_, p_424320_);
+        LOGGER.error("Received error (id: {}): {}", id, error);
         return null;
     }
 }

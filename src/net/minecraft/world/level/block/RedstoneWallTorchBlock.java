@@ -31,81 +31,81 @@ public class RedstoneWallTorchBlock extends RedstoneTorchBlock {
         return CODEC;
     }
 
-    protected RedstoneWallTorchBlock(BlockBehaviour.Properties p_55744_) {
-        super(p_55744_);
+    protected RedstoneWallTorchBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(LIT, true));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_55781_, BlockGetter p_55782_, BlockPos p_55783_, CollisionContext p_55784_) {
-        return WallTorchBlock.getShape(p_55781_);
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return WallTorchBlock.getShape(state);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_55762_, LevelReader p_55763_, BlockPos p_55764_) {
-        return WallTorchBlock.canSurvive(p_55763_, p_55764_, p_55762_.getValue(FACING));
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return WallTorchBlock.canSurvive(level, pos, state.getValue(FACING));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_55772_,
-        LevelReader p_368456_,
-        ScheduledTickAccess p_367259_,
-        BlockPos p_55776_,
-        Direction p_55773_,
-        BlockPos p_55777_,
-        BlockState p_55774_,
-        RandomSource p_364909_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_55773_.getOpposite() == p_55772_.getValue(FACING) && !p_55772_.canSurvive(p_368456_, p_55776_) ? Blocks.AIR.defaultBlockState() : p_55772_;
+        return directionToNeighbour.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos) ? Blocks.AIR.defaultBlockState() : state;
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_55746_) {
-        BlockState blockstate = Blocks.WALL_TORCH.getStateForPlacement(p_55746_);
-        return blockstate == null ? null : this.defaultBlockState().setValue(FACING, blockstate.getValue(FACING));
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = Blocks.WALL_TORCH.getStateForPlacement(context);
+        return state == null ? null : this.defaultBlockState().setValue(FACING, state.getValue(FACING));
     }
 
     @Override
-    public void animateTick(BlockState p_221959_, Level p_221960_, BlockPos p_221961_, RandomSource p_221962_) {
-        if (p_221959_.getValue(LIT)) {
-            Direction direction = p_221959_.getValue(FACING).getOpposite();
-            double d0 = 0.27;
-            double d1 = p_221961_.getX() + 0.5 + (p_221962_.nextDouble() - 0.5) * 0.2 + 0.27 * direction.getStepX();
-            double d2 = p_221961_.getY() + 0.7 + (p_221962_.nextDouble() - 0.5) * 0.2 + 0.22;
-            double d3 = p_221961_.getZ() + 0.5 + (p_221962_.nextDouble() - 0.5) * 0.2 + 0.27 * direction.getStepZ();
-            p_221960_.addParticle(DustParticleOptions.REDSTONE, d1, d2, d3, 0.0, 0.0, 0.0);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(LIT)) {
+            Direction opposite = state.getValue(FACING).getOpposite();
+            double r = 0.27;
+            double x = pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.2 + 0.27 * opposite.getStepX();
+            double y = pos.getY() + 0.7 + (random.nextDouble() - 0.5) * 0.2 + 0.22;
+            double z = pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.2 + 0.27 * opposite.getStepZ();
+            level.addParticle(DustParticleOptions.REDSTONE, x, y, z, 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    protected boolean hasNeighborSignal(Level p_55748_, BlockPos p_55749_, BlockState p_55750_) {
-        Direction direction = p_55750_.getValue(FACING).getOpposite();
-        return p_55748_.hasSignal(p_55749_.relative(direction), direction);
+    protected boolean hasNeighborSignal(final Level level, final BlockPos pos, final BlockState state) {
+        Direction opposite = state.getValue(FACING).getOpposite();
+        return level.hasSignal(pos.relative(opposite), opposite);
     }
 
     @Override
-    protected int getSignal(BlockState p_55752_, BlockGetter p_55753_, BlockPos p_55754_, Direction p_55755_) {
-        return p_55752_.getValue(LIT) && p_55752_.getValue(FACING) != p_55755_ ? 15 : 0;
+    protected int getSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return state.getValue(FACING) != direction ? this.ownSignal(state, level, pos) : 0;
     }
 
     @Override
-    protected BlockState rotate(BlockState p_55769_, Rotation p_55770_) {
-        return p_55769_.setValue(FACING, p_55770_.rotate(p_55769_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_55766_, Mirror p_55767_) {
-        return p_55766_.rotate(p_55767_.getRotation(p_55766_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_55779_) {
-        p_55779_.add(FACING, LIT);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, LIT);
     }
 
     @Override
-    protected @Nullable Orientation randomOrientation(Level p_362412_, BlockState p_365417_) {
-        return ExperimentalRedstoneUtils.initialOrientation(p_362412_, p_365417_.getValue(FACING).getOpposite(), Direction.UP);
+    protected @Nullable Orientation randomOrientation(final Level level, final BlockState state) {
+        return ExperimentalRedstoneUtils.initialOrientation(level, state.getValue(FACING).getOpposite(), Direction.UP);
     }
 }

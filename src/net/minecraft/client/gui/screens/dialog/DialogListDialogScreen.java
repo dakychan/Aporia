@@ -10,24 +10,21 @@ import net.minecraft.server.dialog.CommonButtonData;
 import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.dialog.DialogListDialog;
 import net.minecraft.server.dialog.action.StaticAction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DialogListDialogScreen extends ButtonListDialogScreen<DialogListDialog> {
-    public DialogListDialogScreen(@Nullable Screen p_408049_, DialogListDialog p_409827_, DialogConnectionAccess p_405973_) {
-        super(p_408049_, p_409827_, p_405973_);
+    public DialogListDialogScreen(final @Nullable Screen previousScreen, final DialogListDialog dialog, final DialogConnectionAccess connectionAccess) {
+        super(previousScreen, dialog, connectionAccess);
     }
 
-    protected Stream<ActionButton> createListActions(DialogListDialog p_409917_, DialogConnectionAccess p_409822_) {
-        return p_409917_.dialogs().stream().map(p_408364_ -> createDialogClickAction(p_409917_, (Holder<Dialog>)p_408364_));
+    protected Stream<ActionButton> createListActions(final DialogListDialog data, final DialogConnectionAccess connectionAccess) {
+        return data.dialogs().stream().map(subDialog -> createDialogClickAction(data, (Holder<Dialog>)subDialog));
     }
 
-    private static ActionButton createDialogClickAction(DialogListDialog p_406400_, Holder<Dialog> p_406387_) {
+    private static ActionButton createDialogClickAction(final DialogListDialog data, final Holder<Dialog> subDialog) {
         return new ActionButton(
-            new CommonButtonData(p_406387_.value().common().computeExternalTitle(), p_406400_.buttonWidth()),
-            Optional.of(new StaticAction(new ClickEvent.ShowDialog(p_406387_)))
+            new CommonButtonData(subDialog.value().common().computeExternalTitle(), data.buttonWidth()),
+            Optional.of(new StaticAction(new ClickEvent.ShowDialog(subDialog)))
         );
     }
 }

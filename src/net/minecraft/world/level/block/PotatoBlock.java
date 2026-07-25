@@ -12,15 +12,15 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class PotatoBlock extends CropBlock {
     public static final MapCodec<PotatoBlock> CODEC = simpleCodec(PotatoBlock::new);
-    private static final VoxelShape[] SHAPES = Block.boxes(7, p_396923_ -> Block.column(16.0, 0.0, 2 + p_396923_));
+    private static final VoxelShape[] SHAPES = Block.boxes(7, age -> Block.column(16.0, 0.0, 2 + age));
 
     @Override
     public MapCodec<PotatoBlock> codec() {
         return CODEC;
     }
 
-    public PotatoBlock(BlockBehaviour.Properties p_55198_) {
-        super(p_55198_);
+    public PotatoBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
@@ -29,7 +29,7 @@ public class PotatoBlock extends CropBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_55200_, BlockGetter p_55201_, BlockPos p_55202_, CollisionContext p_55203_) {
-        return SHAPES[this.getAge(p_55200_)];
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES[this.getAge(state)];
     }
 }

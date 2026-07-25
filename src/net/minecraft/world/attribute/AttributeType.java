@@ -5,8 +5,10 @@ import com.mojang.serialization.Codec;
 import java.util.Map;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.ExtraCodecs;
+import net.minecraft.util.ToFloatFunction;
 import net.minecraft.util.Util;
 import net.minecraft.world.attribute.modifier.AttributeModifier;
+import org.jspecify.annotations.Nullable;
 
 public record AttributeType<Value>(
     Codec<Value> valueCodec,
@@ -15,50 +17,65 @@ public record AttributeType<Value>(
     LerpFunction<Value> keyframeLerp,
     LerpFunction<Value> stateChangeLerp,
     LerpFunction<Value> spatialLerp,
-    LerpFunction<Value> partialTickLerp
+    LerpFunction<Value> partialTickLerp,
+    @Nullable ToFloatFunction<Value> toFloat
 ) {
     public static <Value> AttributeType<Value> ofInterpolated(
-        Codec<Value> p_452435_, Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> p_458803_, LerpFunction<Value> p_457385_
+        final Codec<Value> valueCodec, final Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifierLibrary, final LerpFunction<Value> lerp
     ) {
-        return ofInterpolated(p_452435_, p_458803_, p_457385_, p_457385_);
+        return ofInterpolated(valueCodec, modifierLibrary, lerp, lerp, null);
     }
 
     public static <Value> AttributeType<Value> ofInterpolated(
-        Codec<Value> p_456291_,
-        Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> p_452389_,
-        LerpFunction<Value> p_459023_,
-        LerpFunction<Value> p_460276_
+        final Codec<Value> valueCodec,
+        final Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifierLibrary,
+        final LerpFunction<Value> lerp,
+        final LerpFunction<Value> partialTickLerp,
+        final @Nullable ToFloatFunction<Value> toFloat
     ) {
-        return new AttributeType<>(p_456291_, p_452389_, createModifierCodec(p_452389_), p_459023_, p_459023_, p_459023_, p_460276_);
+        return new AttributeType<>(valueCodec, modifierLibrary, createModifierCodec(modifierLibrary), lerp, lerp, lerp, partialTickLerp, toFloat);
     }
 
-    public static <Value> AttributeType<Value> ofNotInterpolated(Codec<Value> p_457138_, Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> p_453935_) {
+    public static <Value> AttributeType<Value> ofNotInterpolated(
+        final Codec<Value> valueCodec, final Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifierLibrary
+    ) {
         return new AttributeType<>(
-            p_457138_,
-            p_453935_,
-            createModifierCodec(p_453935_),
+            valueCodec,
+            modifierLibrary,
+            createModifierCodec(modifierLibrary),
             LerpFunction.ofStep(1.0F),
             LerpFunction.ofStep(0.0F),
             LerpFunction.ofStep(0.5F),
-            LerpFunction.ofStep(0.0F)
+            LerpFunction.ofStep(0.0F),
+            null
         );
     }
 
-    public static <Value> AttributeType<Value> ofNotInterpolated(Codec<Value> p_458235_) {
-        return ofNotInterpolated(p_458235_, Map.of());
+    public static <Value> AttributeType<Value> ofNotInterpolated(final Codec<Value> valueCodec) {
+        return ofNotInterpolated(valueCodec, Map.of());
     }
 
-    private static <Value> Codec<AttributeModifier<Value, ?>> createModifierCodec(Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> p_458451_) {
-        ImmutableBiMap<AttributeModifier.OperationId, AttributeModifier<Value, ?>> immutablebimap = ImmutableBiMap.<AttributeModifier.OperationId, AttributeModifier<Value, ?>>builder()
+    private static <Value> Codec<AttributeModifier<Value, ?>> createModifierCodec(
+        final Map<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifiers
+    ) {
+        ImmutableBiMap<AttributeModifier.OperationId, AttributeModifier<Value, ?>> modifierLookup = ImmutableBiMap.<AttributeModifier.OperationId, AttributeModifier<Value, ?>>builder()
             .put(AttributeModifier.OperationId.OVERRIDE, AttributeModifier.override())
-            .putAll(p_458451_)
+            .putAll(modifiers)
             .buildOrThrow();
-        return ExtraCodecs.idResolverCodec(AttributeModifier.OperationId.CODEC, immutablebimap::get, immutablebimap.inverse()::get);
+        return ExtraCodecs.idResolverCodec(AttributeModifier.OperationId.CODEC, modifierLookup::get, modifierLookup.inverse()::get);
     }
 
-    public void checkAllowedModifier(AttributeModifier<Value, ?> p_460861_) {
-        if (p_460861_ != AttributeModifier.override() && !this.modifierLibrary.containsValue(p_460861_)) {
-            throw new IllegalArgumentException("Modifier " + p_460861_ + " is not valid for " + this);
+    public void checkAllowedModifier(final AttributeModifier<Value, ?> modifier) {
+        if (modifier != AttributeModifier.override() && !this.modifierLibrary.containsValue(modifier)) {
+            throw new IllegalArgumentException("Modifier " + modifier + " is not valid for " + this);
+        }
+    }
+
+    public float toFloat(final Value value) {
+        if (this.toFloat == null) {
+            throw new IllegalStateException(value + " cannot be represented as a float");
+        } else {
+            return this.toFloat.applyAsFloat(value);
         }
     }
 

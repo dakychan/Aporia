@@ -17,17 +17,17 @@ public class AirBlock extends Block {
         return CODEC;
     }
 
-    public AirBlock(BlockBehaviour.Properties p_48756_) {
-        super(p_48756_);
+    public AirBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState p_48758_) {
+    protected RenderShape getRenderShape(final BlockState state) {
         return RenderShape.INVISIBLE;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_48760_, BlockGetter p_48761_, BlockPos p_48762_, CollisionContext p_48763_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return Shapes.empty();
     }
 }

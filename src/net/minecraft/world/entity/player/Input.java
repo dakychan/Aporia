@@ -12,29 +12,29 @@ public record Input(boolean forward, boolean backward, boolean left, boolean rig
     private static final byte FLAG_SHIFT = 32;
     private static final byte FLAG_SPRINT = 64;
     public static final StreamCodec<FriendlyByteBuf, Input> STREAM_CODEC = new StreamCodec<FriendlyByteBuf, Input>() {
-        public void encode(FriendlyByteBuf p_362132_, Input p_369013_) {
-            byte b0 = 0;
-            b0 = (byte)(b0 | (p_369013_.forward() ? 1 : 0));
-            b0 = (byte)(b0 | (p_369013_.backward() ? 2 : 0));
-            b0 = (byte)(b0 | (p_369013_.left() ? 4 : 0));
-            b0 = (byte)(b0 | (p_369013_.right() ? 8 : 0));
-            b0 = (byte)(b0 | (p_369013_.jump() ? 16 : 0));
-            b0 = (byte)(b0 | (p_369013_.shift() ? 32 : 0));
-            b0 = (byte)(b0 | (p_369013_.sprint() ? 64 : 0));
-            p_362132_.writeByte(b0);
+        public void encode(final FriendlyByteBuf output, final Input value) {
+            byte flags = 0;
+            flags = (byte)(flags | (value.forward() ? 1 : 0));
+            flags = (byte)(flags | (value.backward() ? 2 : 0));
+            flags = (byte)(flags | (value.left() ? 4 : 0));
+            flags = (byte)(flags | (value.right() ? 8 : 0));
+            flags = (byte)(flags | (value.jump() ? 16 : 0));
+            flags = (byte)(flags | (value.shift() ? 32 : 0));
+            flags = (byte)(flags | (value.sprint() ? 64 : 0));
+            output.writeByte(flags);
         }
 
-        public Input decode(FriendlyByteBuf p_366245_) {
-            byte b0 = p_366245_.readByte();
-            boolean flag = (b0 & 1) != 0;
-            boolean flag1 = (b0 & 2) != 0;
-            boolean flag2 = (b0 & 4) != 0;
-            boolean flag3 = (b0 & 8) != 0;
-            boolean flag4 = (b0 & 16) != 0;
-            boolean flag5 = (b0 & 32) != 0;
-            boolean flag6 = (b0 & 64) != 0;
-            return new Input(flag, flag1, flag2, flag3, flag4, flag5, flag6);
+        public Input decode(final FriendlyByteBuf input) {
+            byte flags = input.readByte();
+            boolean forward = (flags & 1) != 0;
+            boolean backward = (flags & 2) != 0;
+            boolean left = (flags & 4) != 0;
+            boolean right = (flags & 8) != 0;
+            boolean jump = (flags & 16) != 0;
+            boolean shift = (flags & 32) != 0;
+            boolean sprint = (flags & 64) != 0;
+            return new Input(forward, backward, left, right, jump, shift, sprint);
         }
     };
-    public static Input EMPTY = new Input(false, false, false, false, false, false, false);
+    public static final Input EMPTY = new Input(false, false, false, false, false, false, false);
 }

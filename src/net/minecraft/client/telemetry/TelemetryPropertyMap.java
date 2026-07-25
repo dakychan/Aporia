@@ -10,71 +10,68 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class TelemetryPropertyMap {
-    final Map<TelemetryProperty<?>, Object> entries;
+    private final Map<TelemetryProperty<?>, Object> entries;
 
-    TelemetryPropertyMap(Map<TelemetryProperty<?>, Object> p_262135_) {
-        this.entries = p_262135_;
+    private TelemetryPropertyMap(final Map<TelemetryProperty<?>, Object> entries) {
+        this.entries = entries;
     }
 
     public static TelemetryPropertyMap.Builder builder() {
         return new TelemetryPropertyMap.Builder();
     }
 
-    public static MapCodec<TelemetryPropertyMap> createCodec(final List<TelemetryProperty<?>> p_262139_) {
+    public static MapCodec<TelemetryPropertyMap> createCodec(final List<TelemetryProperty<?>> properties) {
         return new MapCodec<TelemetryPropertyMap>() {
-            public <T> RecordBuilder<T> encode(TelemetryPropertyMap p_261525_, DynamicOps<T> p_262068_, RecordBuilder<T> p_261850_) {
-                RecordBuilder<T> recordbuilder = p_261850_;
+            public <T> RecordBuilder<T> encode(final TelemetryPropertyMap input, final DynamicOps<T> ops, final RecordBuilder<T> prefix) {
+                RecordBuilder<T> result = prefix;
 
-                for (TelemetryProperty<?> telemetryproperty : p_262139_) {
-                    recordbuilder = this.encodeProperty(p_261525_, recordbuilder, telemetryproperty);
+                for (TelemetryProperty<?> property : properties) {
+                    result = this.encodeProperty(input, result, property);
                 }
 
-                return recordbuilder;
+                return result;
             }
 
-            private <T, V> RecordBuilder<T> encodeProperty(TelemetryPropertyMap p_262128_, RecordBuilder<T> p_261947_, TelemetryProperty<V> p_261911_) {
-                V v = p_262128_.get(p_261911_);
-                return v != null ? p_261947_.add(p_261911_.id(), v, p_261911_.codec()) : p_261947_;
+            private <T, V> RecordBuilder<T> encodeProperty(final TelemetryPropertyMap input, final RecordBuilder<T> result, final TelemetryProperty<V> property) {
+                V value = input.get(property);
+                return value != null ? result.add(property.id(), value, property.codec()) : result;
             }
 
             @Override
-            public <T> DataResult<TelemetryPropertyMap> decode(DynamicOps<T> p_261767_, MapLike<T> p_262176_) {
-                DataResult<TelemetryPropertyMap.Builder> dataresult = DataResult.success(new TelemetryPropertyMap.Builder());
+            public <T> DataResult<TelemetryPropertyMap> decode(final DynamicOps<T> ops, final MapLike<T> input) {
+                DataResult<TelemetryPropertyMap.Builder> result = DataResult.success(new TelemetryPropertyMap.Builder());
 
-                for (TelemetryProperty<?> telemetryproperty : p_262139_) {
-                    dataresult = this.decodeProperty(dataresult, p_261767_, p_262176_, telemetryproperty);
+                for (TelemetryProperty<?> property : properties) {
+                    result = this.decodeProperty(result, ops, input, property);
                 }
 
-                return dataresult.map(TelemetryPropertyMap.Builder::build);
+                return result.map(TelemetryPropertyMap.Builder::build);
             }
 
             private <T, V> DataResult<TelemetryPropertyMap.Builder> decodeProperty(
-                DataResult<TelemetryPropertyMap.Builder> p_261892_, DynamicOps<T> p_261859_, MapLike<T> p_261668_, TelemetryProperty<V> p_261627_
+                final DataResult<TelemetryPropertyMap.Builder> result, final DynamicOps<T> ops, final MapLike<T> input, final TelemetryProperty<V> property
             ) {
-                T t = p_261668_.get(p_261627_.id());
-                if (t != null) {
-                    DataResult<V> dataresult = p_261627_.codec().parse(p_261859_, t);
-                    return p_261892_.apply2stable((p_262028_, p_261796_) -> p_262028_.put(p_261627_, (V)p_261796_), dataresult);
+                T value = input.get(property.id());
+                if (value != null) {
+                    DataResult<V> parse = property.codec().parse(ops, value);
+                    return result.apply2stable((b, v) -> b.put(property, (V)v), parse);
                 } else {
-                    return p_261892_;
+                    return result;
                 }
             }
 
             @Override
-            public <T> Stream<T> keys(DynamicOps<T> p_261746_) {
-                return p_262139_.stream().map(TelemetryProperty::id).map(p_261746_::createString);
+            public <T> Stream<T> keys(final DynamicOps<T> ops) {
+                return properties.stream().map(TelemetryProperty::id).map(ops::createString);
             }
         };
     }
 
-    public <T> @Nullable T get(TelemetryProperty<T> p_261667_) {
-        return (T)this.entries.get(p_261667_);
+    public <T> @Nullable T get(final TelemetryProperty<T> property) {
+        return (T)this.entries.get(property);
     }
 
     @Override
@@ -86,28 +83,27 @@ public class TelemetryPropertyMap {
         return this.entries.keySet();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder {
+        public static class Builder {
         private final Map<TelemetryProperty<?>, Object> entries = new Reference2ObjectOpenHashMap<>();
 
-        Builder() {
+        private Builder() {
         }
 
-        public <T> TelemetryPropertyMap.Builder put(TelemetryProperty<T> p_261681_, T p_262093_) {
-            this.entries.put(p_261681_, p_262093_);
+        public <T> TelemetryPropertyMap.Builder put(final TelemetryProperty<T> property, final T value) {
+            this.entries.put(property, value);
             return this;
         }
 
-        public <T> TelemetryPropertyMap.Builder putIfNotNull(TelemetryProperty<T> p_286534_, @Nullable T p_286699_) {
-            if (p_286699_ != null) {
-                this.entries.put(p_286534_, p_286699_);
+        public <T> TelemetryPropertyMap.Builder putIfNotNull(final TelemetryProperty<T> property, final @Nullable T value) {
+            if (value != null) {
+                this.entries.put(property, value);
             }
 
             return this;
         }
 
-        public TelemetryPropertyMap.Builder putAll(TelemetryPropertyMap p_261779_) {
-            this.entries.putAll(p_261779_.entries);
+        public TelemetryPropertyMap.Builder putAll(final TelemetryPropertyMap properties) {
+            this.entries.putAll(properties.entries);
             return this;
         }
 

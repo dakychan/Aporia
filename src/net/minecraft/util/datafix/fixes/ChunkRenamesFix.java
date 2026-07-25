@@ -17,51 +17,49 @@ import com.mojang.serialization.MapLike;
 import java.util.function.Function;
 
 public class ChunkRenamesFix extends DataFix {
-    public ChunkRenamesFix(Schema p_185100_) {
-        super(p_185100_, true);
+    public ChunkRenamesFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        OpticFinder<?> opticfinder = type.findField("Level");
-        OpticFinder<?> opticfinder1 = opticfinder.type().findField("Structures");
-        Type<?> type1 = this.getOutputSchema().getType(References.CHUNK);
-        Type<?> type2 = type1.findFieldType("structures");
-        return this.fixTypeEverywhereTyped("Chunk Renames; purge Level-tag", type, type1, p_199427_ -> {
-            Typed<?> typed = p_199427_.getTyped(opticfinder);
-            Typed<?> typed1 = appendChunkName(typed);
-            typed1 = typed1.set(DSL.remainderFinder(), mergeRemainders(p_199427_, typed.get(DSL.remainderFinder())));
-            typed1 = renameField(typed1, "TileEntities", "block_entities");
-            typed1 = renameField(typed1, "TileTicks", "block_ticks");
-            typed1 = renameField(typed1, "Entities", "entities");
-            typed1 = renameField(typed1, "Sections", "sections");
-            typed1 = typed1.updateTyped(opticfinder1, type2, p_185128_ -> renameField(p_185128_, "Starts", "starts"));
-            typed1 = renameField(typed1, "Structures", "structures");
-            return typed1.update(DSL.remainderFinder(), p_199429_ -> p_199429_.remove("Level"));
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        OpticFinder<?> levelFinder = chunkType.findField("Level");
+        OpticFinder<?> structureFinder = levelFinder.type().findField("Structures");
+        Type<?> newChunkType = this.getOutputSchema().getType(References.CHUNK);
+        Type<?> newStructuresType = newChunkType.findFieldType("structures");
+        return this.fixTypeEverywhereTyped("Chunk Renames; purge Level-tag", chunkType, newChunkType, chunk -> {
+            Typed<?> level = chunk.getTyped(levelFinder);
+            Typed<?> chunkTyped = appendChunkName(level);
+            chunkTyped = chunkTyped.set(DSL.remainderFinder(), mergeRemainders(chunk, level.get(DSL.remainderFinder())));
+            chunkTyped = renameField(chunkTyped, "TileEntities", "block_entities");
+            chunkTyped = renameField(chunkTyped, "TileTicks", "block_ticks");
+            chunkTyped = renameField(chunkTyped, "Entities", "entities");
+            chunkTyped = renameField(chunkTyped, "Sections", "sections");
+            chunkTyped = chunkTyped.updateTyped(structureFinder, newStructuresType, structure -> renameField(structure, "Starts", "starts"));
+            chunkTyped = renameField(chunkTyped, "Structures", "structures");
+            return chunkTyped.update(DSL.remainderFinder(), remainder -> remainder.remove("Level"));
         });
     }
 
-    private static Typed<?> renameField(Typed<?> p_185112_, String p_185113_, String p_185114_) {
-        return renameFieldHelper(p_185112_, p_185113_, p_185114_, p_185112_.getType().findFieldType(p_185113_))
-            .update(DSL.remainderFinder(), p_199439_ -> p_199439_.remove(p_185113_));
+    private static Typed<?> renameField(final Typed<?> input, final String oldName, final String newName) {
+        return renameFieldHelper(input, oldName, newName, input.getType().findFieldType(oldName)).update(DSL.remainderFinder(), tag -> tag.remove(oldName));
     }
 
-    private static <A> Typed<?> renameFieldHelper(Typed<?> p_185116_, String p_185117_, String p_185118_, Type<A> p_185119_) {
-        Type<Either<A, Unit>> type = DSL.optional(DSL.field(p_185117_, p_185119_));
-        Type<Either<A, Unit>> type1 = DSL.optional(DSL.field(p_185118_, p_185119_));
-        return p_185116_.update(type.finder(), type1, Function.identity());
+    private static <A> Typed<?> renameFieldHelper(final Typed<?> input, final String oldName, final String newName, final Type<A> fieldType) {
+        Type<Either<A, Unit>> oldType = DSL.optional(DSL.field(oldName, fieldType));
+        Type<Either<A, Unit>> newType = DSL.optional(DSL.field(newName, fieldType));
+        return input.update(oldType.finder(), newType, Function.identity());
     }
 
-    private static <A> Typed<Pair<String, A>> appendChunkName(Typed<A> p_185107_) {
-        return new Typed<>(DSL.named("chunk", p_185107_.getType()), p_185107_.getOps(), Pair.of("chunk", p_185107_.getValue()));
+    private static <A> Typed<Pair<String, A>> appendChunkName(final Typed<A> input) {
+        return new Typed<>(DSL.named("chunk", input.getType()), input.getOps(), Pair.of("chunk", input.getValue()));
     }
 
-    private static <T> Dynamic<T> mergeRemainders(Typed<?> p_185109_, Dynamic<T> p_185110_) {
-        DynamicOps<T> dynamicops = p_185110_.getOps();
-        Dynamic<T> dynamic = p_185109_.get(DSL.remainderFinder()).convert(dynamicops);
-        DataResult<T> dataresult = dynamicops.getMap(p_185110_.getValue())
-            .flatMap(p_199433_ -> dynamicops.mergeToMap(dynamic.getValue(), (MapLike<T>)p_199433_));
-        return dataresult.result().map(p_199436_ -> new Dynamic<>(dynamicops, (T)p_199436_)).orElse(p_185110_);
+    private static <T> Dynamic<T> mergeRemainders(final Typed<?> chunk, final Dynamic<T> levelRemainder) {
+        DynamicOps<T> ops = levelRemainder.getOps();
+        Dynamic<T> chunkRemainder = chunk.get(DSL.remainderFinder()).convert(ops);
+        DataResult<T> toMap = ops.getMap(levelRemainder.getValue()).flatMap(map -> ops.mergeToMap(chunkRemainder.getValue(), (MapLike<T>)map));
+        return toMap.result().map(v -> new Dynamic<>(ops, (T)v)).orElse(levelRemainder);
     }
 }

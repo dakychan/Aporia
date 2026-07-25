@@ -11,16 +11,16 @@ public class ServerboundSetCarriedItemPacket implements Packet<ServerGamePacketL
     );
     private final int slot;
 
-    public ServerboundSetCarriedItemPacket(int p_134491_) {
-        this.slot = p_134491_;
+    public ServerboundSetCarriedItemPacket(final int slot) {
+        this.slot = slot;
     }
 
-    private ServerboundSetCarriedItemPacket(FriendlyByteBuf p_179751_) {
-        this.slot = p_179751_.readShort();
+    private ServerboundSetCarriedItemPacket(final FriendlyByteBuf input) {
+        this.slot = input.readShort();
     }
 
-    private void write(FriendlyByteBuf p_134500_) {
-        p_134500_.writeShort(this.slot);
+    private void write(final FriendlyByteBuf output) {
+        output.writeShort(this.slot);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ServerboundSetCarriedItemPacket implements Packet<ServerGamePacketL
         return GamePacketTypes.SERVERBOUND_SET_CARRIED_ITEM;
     }
 
-    public void handle(ServerGamePacketListener p_134497_) {
-        p_134497_.handleSetCarriedItem(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetCarriedItem(this);
     }
 
     public int getSlot() {

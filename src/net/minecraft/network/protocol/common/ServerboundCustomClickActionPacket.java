@@ -26,7 +26,7 @@ public record ServerboundCustomClickActionPacket(Identifier id, Optional<Tag> pa
         return CommonPacketTypes.SERVERBOUND_CUSTOM_CLICK_ACTION;
     }
 
-    public void handle(ServerCommonPacketListener p_407494_) {
-        p_407494_.handleCustomClickAction(this);
+    public void handle(final ServerCommonPacketListener listener) {
+        listener.handleCustomClickAction(this);
     }
 }

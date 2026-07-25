@@ -8,11 +8,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class EntityRenderState {
     public static final int NO_OUTLINE = 0;
     public EntityType<?> entityType;
@@ -31,6 +28,7 @@ public class EntityRenderState {
     public int outlineColor = 0;
     public @Nullable Vec3 passengerOffset;
     public @Nullable Component nameTag;
+    public @Nullable Component scoreText;
     public @Nullable Vec3 nameTagAttachment;
     public @Nullable List<EntityRenderState.LeashState> leashStates;
     public float shadowRadius;
@@ -40,13 +38,12 @@ public class EntityRenderState {
         return this.outlineColor != 0;
     }
 
-    public void fillCrashReportCategory(CrashReportCategory p_392281_) {
-        p_392281_.setDetail("EntityRenderState", this.getClass().getCanonicalName());
-        p_392281_.setDetail("Entity's Exact location", String.format(Locale.ROOT, "%.2f, %.2f, %.2f", this.x, this.y, this.z));
+    public void fillCrashReportCategory(final CrashReportCategory category) {
+        category.setDetail("EntityRenderState", this.getClass().getCanonicalName());
+        category.setDetail("Entity's Exact location", String.format(Locale.ROOT, "%.2f, %.2f, %.2f", this.x, this.y, this.z));
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class LeashState {
+        public static class LeashState {
         public Vec3 offset = Vec3.ZERO;
         public Vec3 start = Vec3.ZERO;
         public Vec3 end = Vec3.ZERO;
@@ -57,7 +54,6 @@ public class EntityRenderState {
         public boolean slack = true;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record ShadowPiece(float relativeX, float relativeY, float relativeZ, VoxelShape shapeBelow, float alpha) {
+        public record ShadowPiece(float relativeX, float relativeY, float relativeZ, VoxelShape shapeBelow, float alpha) {
     }
 }

@@ -40,17 +40,15 @@ public class CandleBlock extends AbstractCandleBlock implements SimpleWaterlogge
     public static final IntegerProperty CANDLES = BlockStateProperties.CANDLES;
     public static final BooleanProperty LIT = AbstractCandleBlock.LIT;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
-    public static final ToIntFunction<BlockState> LIGHT_EMISSION = p_152848_ -> p_152848_.getValue(LIT) ? 3 * p_152848_.getValue(CANDLES) : 0;
+    public static final ToIntFunction<BlockState> LIGHT_EMISSION = state -> state.getValue(LIT) ? 3 * state.getValue(CANDLES) : 0;
     private static final Int2ObjectMap<List<Vec3>> PARTICLE_OFFSETS = Util.make(
         new Int2ObjectOpenHashMap<>(4),
-        p_390929_ -> {
-            float f = 0.0625F;
-            p_390929_.put(1, List.of(new Vec3(8.0, 8.0, 8.0).scale(0.0625)));
-            p_390929_.put(2, List.of(new Vec3(6.0, 7.0, 8.0).scale(0.0625), new Vec3(10.0, 8.0, 7.0).scale(0.0625)));
-            p_390929_.put(
-                3, List.of(new Vec3(8.0, 5.0, 10.0).scale(0.0625), new Vec3(6.0, 7.0, 8.0).scale(0.0625), new Vec3(9.0, 8.0, 7.0).scale(0.0625))
-            );
-            p_390929_.put(
+        map -> {
+            float s = 0.0625F;
+            map.put(1, List.of(new Vec3(8.0, 8.0, 8.0).scale(0.0625)));
+            map.put(2, List.of(new Vec3(6.0, 7.0, 8.0).scale(0.0625), new Vec3(10.0, 8.0, 7.0).scale(0.0625)));
+            map.put(3, List.of(new Vec3(8.0, 5.0, 10.0).scale(0.0625), new Vec3(6.0, 7.0, 8.0).scale(0.0625), new Vec3(9.0, 8.0, 7.0).scale(0.0625)));
+            map.put(
                 4,
                 List.of(
                     new Vec3(7.0, 5.0, 9.0).scale(0.0625),
@@ -73,110 +71,114 @@ public class CandleBlock extends AbstractCandleBlock implements SimpleWaterlogge
         return CODEC;
     }
 
-    public CandleBlock(BlockBehaviour.Properties p_152801_) {
-        super(p_152801_);
+    public CandleBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(CANDLES, 1).setValue(LIT, false).setValue(WATERLOGGED, false));
     }
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_333640_, BlockState p_329233_, Level p_330828_, BlockPos p_332080_, Player p_327941_, InteractionHand p_333741_, BlockHitResult p_331416_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (p_333640_.isEmpty() && p_327941_.getAbilities().mayBuild && p_329233_.getValue(LIT)) {
-            extinguish(p_327941_, p_329233_, p_330828_, p_332080_);
+        if (itemStack.isEmpty() && player.getAbilities().mayBuild && state.getValue(LIT)) {
+            extinguish(player, state, level, pos);
             return InteractionResult.SUCCESS;
         } else {
-            return super.useItemOn(p_333640_, p_329233_, p_330828_, p_332080_, p_327941_, p_333741_, p_331416_);
+            return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
         }
     }
 
     @Override
-    protected boolean canBeReplaced(BlockState p_152814_, BlockPlaceContext p_152815_) {
-        return !p_152815_.isSecondaryUseActive() && p_152815_.getItemInHand().getItem() == this.asItem() && p_152814_.getValue(CANDLES) < 4
+    protected boolean canBeReplaced(final BlockState state, final BlockPlaceContext context) {
+        return !context.isSecondaryUseActive() && context.getItemInHand().getItem() == this.asItem() && state.getValue(CANDLES) < 4
             ? true
-            : super.canBeReplaced(p_152814_, p_152815_);
+            : super.canBeReplaced(state, context);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_152803_) {
-        BlockState blockstate = p_152803_.getLevel().getBlockState(p_152803_.getClickedPos());
-        if (blockstate.is(this)) {
-            return blockstate.cycle(CANDLES);
-        } else {
-            FluidState fluidstate = p_152803_.getLevel().getFluidState(p_152803_.getClickedPos());
-            boolean flag = fluidstate.getType() == Fluids.WATER;
-            return super.getStateForPlacement(p_152803_).setValue(WATERLOGGED, flag);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = context.getLevel().getBlockState(context.getClickedPos());
+        if (state.is(this)) {
+            return state.cycle(CANDLES);
         }
+
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
+        return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_152833_,
-        LevelReader p_364051_,
-        ScheduledTickAccess p_366701_,
-        BlockPos p_152837_,
-        Direction p_152834_,
-        BlockPos p_152838_,
-        BlockState p_152835_,
-        RandomSource p_365341_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_152833_.getValue(WATERLOGGED)) {
-            p_366701_.scheduleTick(p_152837_, Fluids.WATER, Fluids.WATER.getTickDelay(p_364051_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_152833_, p_364051_, p_366701_, p_152837_, p_152834_, p_152838_, p_152835_, p_365341_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_152844_) {
-        return p_152844_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_152844_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_152817_, BlockGetter p_152818_, BlockPos p_152819_, CollisionContext p_152820_) {
-        return SHAPES[p_152817_.getValue(CANDLES) - 1];
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES[state.getValue(CANDLES) - 1];
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_152840_) {
-        p_152840_.add(CANDLES, LIT, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(CANDLES, LIT, WATERLOGGED);
     }
 
     @Override
-    public boolean placeLiquid(LevelAccessor p_152805_, BlockPos p_152806_, BlockState p_152807_, FluidState p_152808_) {
-        if (!p_152807_.getValue(WATERLOGGED) && p_152808_.getType() == Fluids.WATER) {
-            BlockState blockstate = p_152807_.setValue(WATERLOGGED, true);
-            if (p_152807_.getValue(LIT)) {
-                extinguish(null, blockstate, p_152805_, p_152806_);
+    public boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
+        if (!state.getValue(WATERLOGGED) && fluidState.is(Fluids.WATER)) {
+            BlockState newState = state.setValue(WATERLOGGED, true);
+            if (state.getValue(LIT)) {
+                extinguish(null, newState, level, pos);
             } else {
-                p_152805_.setBlock(p_152806_, blockstate, 3);
+                level.setBlock(pos, newState, 3);
             }
 
-            p_152805_.scheduleTick(p_152806_, p_152808_.getType(), p_152808_.getType().getTickDelay(p_152805_));
+            level.scheduleTick(pos, fluidState.getType(), fluidState.getType().getTickDelay(level));
             return true;
         } else {
             return false;
         }
     }
 
-    public static boolean canLight(BlockState p_152846_) {
-        return p_152846_.is(BlockTags.CANDLES, p_152810_ -> p_152810_.hasProperty(LIT) && p_152810_.hasProperty(WATERLOGGED))
-            && !p_152846_.getValue(LIT)
-            && !p_152846_.getValue(WATERLOGGED);
+    public static boolean canLight(final BlockState state) {
+        return state.is(BlockTags.CANDLES, s -> s.hasProperty(LIT) && s.hasProperty(WATERLOGGED)) && !state.getValue(LIT) && !state.getValue(WATERLOGGED);
     }
 
     @Override
-    protected Iterable<Vec3> getParticleOffsets(BlockState p_152812_) {
-        return PARTICLE_OFFSETS.get(p_152812_.getValue(CANDLES).intValue());
+    protected Iterable<Vec3> getParticleOffsets(final BlockState state) {
+        return PARTICLE_OFFSETS.get(state.getValue(CANDLES).intValue());
     }
 
     @Override
-    protected boolean canBeLit(BlockState p_152842_) {
-        return !p_152842_.getValue(WATERLOGGED) && super.canBeLit(p_152842_);
+    protected boolean canBeLit(final BlockState state) {
+        return !state.getValue(WATERLOGGED) && super.canBeLit(state);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_152829_, LevelReader p_152830_, BlockPos p_152831_) {
-        return Block.canSupportCenter(p_152830_, p_152831_.below(), Direction.UP);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return Block.canSupportCenter(level, pos.below(), Direction.UP);
     }
 }

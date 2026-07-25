@@ -9,48 +9,45 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class WeighedSoundEvents implements Weighted<Sound> {
     private final List<Weighted<Sound>> list = Lists.newArrayList();
     private final @Nullable Component subtitle;
 
-    public WeighedSoundEvents(Identifier p_454312_, @Nullable String p_120447_) {
+    public WeighedSoundEvents(final Identifier location, final @Nullable String subtitle) {
         if (SharedConstants.DEBUG_SUBTITLES) {
-            MutableComponent mutablecomponent = Component.literal(p_454312_.getPath());
-            if ("FOR THE DEBUG!".equals(p_120447_)) {
-                mutablecomponent = mutablecomponent.append(Component.literal(" missing").withStyle(ChatFormatting.RED));
+            MutableComponent components = Component.literal(location.getPath());
+            if ("FOR THE DEBUG!".equals(subtitle)) {
+                components = components.append(Component.literal(" missing").withStyle(ChatFormatting.RED));
             }
 
-            this.subtitle = mutablecomponent;
+            this.subtitle = components;
         } else {
-            this.subtitle = p_120447_ == null ? null : Component.translatable(p_120447_);
+            this.subtitle = subtitle == null ? null : Component.translatable(subtitle);
         }
     }
 
     @Override
     public int getWeight() {
-        int i = 0;
+        int sum = 0;
 
-        for (Weighted<Sound> weighted : this.list) {
-            i += weighted.getWeight();
+        for (Weighted<Sound> sound : this.list) {
+            sum += sound.getWeight();
         }
 
-        return i;
+        return sum;
     }
 
-    public Sound getSound(RandomSource p_235265_) {
-        int i = this.getWeight();
-        if (!this.list.isEmpty() && i != 0) {
-            int j = p_235265_.nextInt(i);
+    public Sound getSound(final RandomSource random) {
+        int weight = this.getWeight();
+        if (!this.list.isEmpty() && weight != 0) {
+            int index = random.nextInt(weight);
 
             for (Weighted<Sound> weighted : this.list) {
-                j -= weighted.getWeight();
-                if (j < 0) {
-                    return weighted.getSound(p_235265_);
+                index -= weighted.getWeight();
+                if (index < 0) {
+                    return weighted.getSound(random);
                 }
             }
 
@@ -60,8 +57,8 @@ public class WeighedSoundEvents implements Weighted<Sound> {
         }
     }
 
-    public void addSound(Weighted<Sound> p_120452_) {
-        this.list.add(p_120452_);
+    public void addSound(final Weighted<Sound> sound) {
+        this.list.add(sound);
     }
 
     public @Nullable Component getSubtitle() {
@@ -69,9 +66,9 @@ public class WeighedSoundEvents implements Weighted<Sound> {
     }
 
     @Override
-    public void preloadIfRequired(SoundEngine p_120450_) {
+    public void preloadIfRequired(final SoundEngine soundEngine) {
         for (Weighted<Sound> weighted : this.list) {
-            weighted.preloadIfRequired(p_120450_);
+            weighted.preloadIfRequired(soundEngine);
         }
     }
 }

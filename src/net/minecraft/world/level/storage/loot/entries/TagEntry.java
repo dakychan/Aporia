@@ -3,7 +3,6 @@ package net.minecraft.world.level.storage.loot.entries;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.core.Holder;
@@ -17,62 +16,64 @@ import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class TagEntry extends LootPoolSingletonContainer {
-    public static final MapCodec<TagEntry> CODEC = RecordCodecBuilder.mapCodec(
-        p_297046_ -> p_297046_.group(
-                TagKey.codec(Registries.ITEM).fieldOf("name").forGetter(p_297052_ -> p_297052_.tag),
-                Codec.BOOL.fieldOf("expand").forGetter(p_297045_ -> p_297045_.expand)
-            )
-            .and(singletonFields(p_297046_))
-            .apply(p_297046_, TagEntry::new)
+    public static final MapCodec<TagEntry> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(TagKey.codec(Registries.ITEM).fieldOf("name").forGetter(e -> e.tag), Codec.BOOL.fieldOf("expand").forGetter(e -> e.expand))
+            .and(singletonFields(i))
+            .apply(i, TagEntry::new)
     );
     private final TagKey<Item> tag;
     private final boolean expand;
 
     private TagEntry(
-        TagKey<Item> p_205078_, boolean p_205079_, int p_205080_, int p_205081_, List<LootItemCondition> p_298538_, List<LootItemFunction> p_301109_
+        final TagKey<Item> tag,
+        final boolean expand,
+        final int weight,
+        final int quality,
+        final List<LootItemCondition> conditions,
+        final List<LootItemFunction> functions
     ) {
-        super(p_205080_, p_205081_, p_298538_, p_301109_);
-        this.tag = p_205078_;
-        this.expand = p_205079_;
+        super(weight, quality, conditions, functions);
+        this.tag = tag;
+        this.expand = expand;
     }
 
     @Override
-    public LootPoolEntryType getType() {
-        return LootPoolEntries.TAG;
+    public MapCodec<TagEntry> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public void createItemStack(Consumer<ItemStack> p_79854_, LootContext p_79855_) {
-        BuiltInRegistries.ITEM.getTagOrEmpty(this.tag).forEach(p_205094_ -> p_79854_.accept(new ItemStack((Holder<Item>)p_205094_)));
+    public void createItemStack(final Consumer<ItemStack> output, final LootContext context) {
+        BuiltInRegistries.ITEM.getTagOrEmpty(this.tag).forEach(item -> output.accept(new ItemStack((Holder<Item>)item)));
     }
 
-    private boolean expandTag(LootContext p_79846_, Consumer<LootPoolEntry> p_79847_) {
-        if (!this.canRun(p_79846_)) {
+    private boolean expandTag(final LootContext context, final Consumer<LootPoolEntry> output) {
+        if (!this.canRun(context)) {
             return false;
-        } else {
-            for (final Holder<Item> holder : BuiltInRegistries.ITEM.getTagOrEmpty(this.tag)) {
-                p_79847_.accept(new LootPoolSingletonContainer.EntryBase() {
-                    @Override
-                    public void createItemStack(Consumer<ItemStack> p_79869_, LootContext p_79870_) {
-                        p_79869_.accept(new ItemStack(holder));
-                    }
-                });
-            }
-
-            return true;
         }
+
+        for (final Holder<Item> item : BuiltInRegistries.ITEM.getTagOrEmpty(this.tag)) {
+            output.accept(new LootPoolSingletonContainer.EntryBase() {
+                @Override
+                public void createItemStack(final Consumer<ItemStack> output, final LootContext contextx) {
+                    output.accept(new ItemStack(item));
+                }
+            });
+        }
+
+        return true;
     }
 
     @Override
-    public boolean expand(LootContext p_79861_, Consumer<LootPoolEntry> p_79862_) {
-        return this.expand ? this.expandTag(p_79861_, p_79862_) : super.expand(p_79861_, p_79862_);
+    public boolean expand(final LootContext context, final Consumer<LootPoolEntry> output) {
+        return this.expand ? this.expandTag(context, output) : super.expand(context, output);
     }
 
-    public static LootPoolSingletonContainer.Builder<?> tagContents(TagKey<Item> p_205085_) {
-        return simpleBuilder((p_297054_, p_297055_, p_297056_, p_297057_) -> new TagEntry(p_205085_, false, p_297054_, p_297055_, p_297056_, p_297057_));
+    public static LootPoolSingletonContainer.Builder<?> tagContents(final TagKey<Item> tag) {
+        return simpleBuilder((weight, quality, conditions, functions) -> new TagEntry(tag, false, weight, quality, conditions, functions));
     }
 
-    public static LootPoolSingletonContainer.Builder<?> expandTag(TagKey<Item> p_205096_) {
-        return simpleBuilder((p_297048_, p_297049_, p_297050_, p_297051_) -> new TagEntry(p_205096_, true, p_297048_, p_297049_, p_297050_, p_297051_));
+    public static LootPoolSingletonContainer.Builder<?> expandTag(final TagKey<Item> tag) {
+        return simpleBuilder((weight, quality, conditions, functions) -> new TagEntry(tag, true, weight, quality, conditions, functions));
     }
 }

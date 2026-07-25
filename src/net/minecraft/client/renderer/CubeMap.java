@@ -1,5 +1,6 @@
 package net.minecraft.client.renderer;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.ProjectionType;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
@@ -12,106 +13,103 @@ import com.mojang.blaze3d.vertex.BufferBuilder;
 import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.OptionalInt;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.state.WindowRenderState;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.CubeMapTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fStack;
-import org.joml.Vector3f;
-import org.joml.Vector4f;
 
-@OnlyIn(Dist.CLIENT)
 public class CubeMap implements AutoCloseable {
     private static final int SIDES = 6;
+    private static final float PROJECTION_Z_NEAR = 0.05F;
+    private static final float PROJECTION_Z_FAR = 10.0F;
+    private static final float PROJECTION_FOV = 85.0F;
     private final GpuBuffer vertexBuffer;
-    private final CachedPerspectiveProjectionMatrixBuffer projectionMatrixUbo;
+    private final Projection projection;
+    private final ProjectionMatrixBuffer projectionMatrixUbo;
     private final Identifier location;
 
-    public CubeMap(Identifier p_450775_) {
-        this.location = p_450775_;
-        this.projectionMatrixUbo = new CachedPerspectiveProjectionMatrixBuffer("cubemap", 0.05F, 10.0F);
+    public CubeMap(final Identifier base) {
+        this.location = base;
+        this.projection = new Projection();
+        this.projectionMatrixUbo = new ProjectionMatrixBuffer("cubemap");
         this.vertexBuffer = initializeVertices();
     }
 
-    public void render(Minecraft p_108850_, float p_108851_, float p_108852_) {
-        RenderSystem.setProjectionMatrix(
-            this.projectionMatrixUbo.getBuffer(p_108850_.getWindow().getWidth(), p_108850_.getWindow().getHeight(), 85.0F), ProjectionType.PERSPECTIVE
-        );
-        RenderPipeline renderpipeline = RenderPipelines.PANORAMA;
-        RenderTarget rendertarget = Minecraft.getInstance().getMainRenderTarget();
-        GpuTextureView gputextureview = rendertarget.getColorTextureView();
-        GpuTextureView gputextureview1 = rendertarget.getDepthTextureView();
-        RenderSystem.AutoStorageIndexBuffer rendersystem$autostorageindexbuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-        GpuBuffer gpubuffer = rendersystem$autostorageindexbuffer.getBuffer(36);
-        Matrix4fStack matrix4fstack = RenderSystem.getModelViewStack();
-        matrix4fstack.pushMatrix();
-        matrix4fstack.rotationX((float) Math.PI);
-        matrix4fstack.rotateX(p_108851_ * (float) (Math.PI / 180.0));
-        matrix4fstack.rotateY(p_108852_ * (float) (Math.PI / 180.0));
-        GpuBufferSlice gpubufferslice = RenderSystem.getDynamicUniforms()
-            .writeTransform(new Matrix4f(matrix4fstack), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F), new Vector3f(), new Matrix4f());
-        matrix4fstack.popMatrix();
+    public void render(final float rotXInDegrees, final float rotYInDegrees) {
+        Minecraft minecraft = Minecraft.getInstance();
+        WindowRenderState windowState = minecraft.gameRenderer.gameRenderState().windowRenderState;
+        this.projection.setupPerspective(0.05F, 10.0F, 85.0F, windowState.width, windowState.height);
+        RenderSystem.setProjectionMatrix(this.projectionMatrixUbo.getBuffer(this.projection), ProjectionType.PERSPECTIVE);
+        RenderPipeline renderPipeline = RenderPipelines.PANORAMA;
+        RenderTarget mainRenderTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
+        GpuTextureView colorTexture = mainRenderTarget.getColorTextureView();
+        GpuTextureView depthTexture = mainRenderTarget.getDepthTextureView();
+        RenderSystem.AutoStorageIndexBuffer indices = RenderSystem.getSequentialBuffer(PrimitiveTopology.QUADS);
+        GpuBuffer indexBuffer = indices.getBuffer(36);
+        Matrix4fStack modelViewStack = RenderSystem.getModelViewStack();
+        modelViewStack.pushMatrix();
+        modelViewStack.rotationX((float) Math.PI);
+        modelViewStack.rotateX(rotXInDegrees * (float) (Math.PI / 180.0));
+        modelViewStack.rotateY(rotYInDegrees * (float) (Math.PI / 180.0));
+        GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(new Matrix4f(modelViewStack));
+        modelViewStack.popMatrix();
 
-        try (RenderPass renderpass = RenderSystem.getDevice()
+        try (RenderPass renderPass = RenderSystem.getDevice()
                 .createCommandEncoder()
-                .createRenderPass(() -> "Cubemap", gputextureview, OptionalInt.empty(), gputextureview1, OptionalDouble.empty())) {
-            renderpass.setPipeline(renderpipeline);
-            RenderSystem.bindDefaultUniforms(renderpass);
-            renderpass.setVertexBuffer(0, this.vertexBuffer);
-            renderpass.setIndexBuffer(gpubuffer, rendersystem$autostorageindexbuffer.type());
-            renderpass.setUniform("DynamicTransforms", gpubufferslice);
-            AbstractTexture abstracttexture = p_108850_.getTextureManager().getTexture(this.location);
-            renderpass.bindTexture("Sampler0", abstracttexture.getTextureView(), abstracttexture.getSampler());
-            renderpass.drawIndexed(0, 0, 36, 1);
+                .createRenderPass(() -> "Cubemap", colorTexture, Optional.empty(), depthTexture, OptionalDouble.empty())) {
+            renderPass.setPipeline(renderPipeline);
+            RenderSystem.bindDefaultUniforms(renderPass);
+            renderPass.setVertexBuffer(0, this.vertexBuffer.slice());
+            renderPass.setIndexBuffer(indexBuffer, indices.type());
+            renderPass.setUniform("DynamicTransforms", dynamicTransforms);
+            AbstractTexture texture = minecraft.getTextureManager().getTexture(this.location);
+            renderPass.bindTexture("Sampler0", texture.getTextureView(), texture.getSampler());
+            renderPass.drawIndexed(36, 1, 0, 0, 0);
         }
     }
 
     private static GpuBuffer initializeVertices() {
-        GpuBuffer gpubuffer;
-        try (ByteBufferBuilder bytebufferbuilder = ByteBufferBuilder.exactlySized(DefaultVertexFormat.POSITION.getVertexSize() * 4 * 6)) {
-            BufferBuilder bufferbuilder = new BufferBuilder(bytebufferbuilder, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION);
-            bufferbuilder.addVertex(-1.0F, -1.0F, 1.0F);
-            bufferbuilder.addVertex(-1.0F, 1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, 1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, -1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, -1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, 1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, 1.0F, -1.0F);
-            bufferbuilder.addVertex(1.0F, -1.0F, -1.0F);
-            bufferbuilder.addVertex(1.0F, -1.0F, -1.0F);
-            bufferbuilder.addVertex(1.0F, 1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, 1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, -1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, -1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, 1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, 1.0F, 1.0F);
-            bufferbuilder.addVertex(-1.0F, -1.0F, 1.0F);
-            bufferbuilder.addVertex(-1.0F, -1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, -1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, -1.0F, 1.0F);
-            bufferbuilder.addVertex(1.0F, -1.0F, -1.0F);
-            bufferbuilder.addVertex(-1.0F, 1.0F, 1.0F);
-            bufferbuilder.addVertex(-1.0F, 1.0F, -1.0F);
-            bufferbuilder.addVertex(1.0F, 1.0F, -1.0F);
-            bufferbuilder.addVertex(1.0F, 1.0F, 1.0F);
+        try (ByteBufferBuilder byteBufferBuilder = ByteBufferBuilder.exactlySized(DefaultVertexFormat.POSITION.getVertexSize() * 4 * 6)) {
+            BufferBuilder bufferBuilder = new BufferBuilder(byteBufferBuilder, PrimitiveTopology.QUADS, DefaultVertexFormat.POSITION);
+            bufferBuilder.addVertex(-1.0F, -1.0F, 1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, -1.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, -1.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, -1.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, -1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, -1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, 1.0F);
+            bufferBuilder.addVertex(-1.0F, -1.0F, 1.0F);
+            bufferBuilder.addVertex(-1.0F, -1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, -1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, 1.0F);
+            bufferBuilder.addVertex(1.0F, -1.0F, -1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, 1.0F);
+            bufferBuilder.addVertex(-1.0F, 1.0F, -1.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, -1.0F);
+            bufferBuilder.addVertex(1.0F, 1.0F, 1.0F);
 
-            try (MeshData meshdata = bufferbuilder.buildOrThrow()) {
-                gpubuffer = RenderSystem.getDevice().createBuffer(() -> "Cube map vertex buffer", 32, meshdata.vertexBuffer());
+            try (MeshData meshData = bufferBuilder.buildOrThrow()) {
+                return RenderSystem.getDevice().createBuffer(() -> "Cube map vertex buffer", 32, meshData.vertexBuffer());
             }
         }
-
-        return gpubuffer;
     }
 
-    public void registerTextures(TextureManager p_376665_) {
-        p_376665_.register(this.location, new CubeMapTexture(this.location));
+    public void registerTextures(final TextureManager textureManager) {
+        textureManager.register(this.location, new CubeMapTexture(this.location));
     }
 
     @Override

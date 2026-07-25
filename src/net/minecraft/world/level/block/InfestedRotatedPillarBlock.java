@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -12,8 +11,8 @@ import net.minecraft.world.level.block.state.StateDefinition;
 
 public class InfestedRotatedPillarBlock extends InfestedBlock {
     public static final MapCodec<InfestedRotatedPillarBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422114_ -> p_422114_.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("host").forGetter(InfestedBlock::getHostBlock), propertiesCodec())
-            .apply(p_422114_, InfestedRotatedPillarBlock::new)
+        i -> i.group(BuiltInRegistries.BLOCK.byNameCodec().fieldOf("host").forGetter(InfestedBlock::getHostBlock), propertiesCodec())
+            .apply(i, InfestedRotatedPillarBlock::new)
     );
 
     @Override
@@ -21,23 +20,23 @@ public class InfestedRotatedPillarBlock extends InfestedBlock {
         return CODEC;
     }
 
-    public InfestedRotatedPillarBlock(Block p_153438_, BlockBehaviour.Properties p_153439_) {
-        super(p_153438_, p_153439_);
+    public InfestedRotatedPillarBlock(final Block hostBlock, final BlockBehaviour.Properties properties) {
+        super(hostBlock, properties);
         this.registerDefaultState(this.defaultBlockState().setValue(RotatedPillarBlock.AXIS, Direction.Axis.Y));
     }
 
     @Override
-    protected BlockState rotate(BlockState p_153443_, Rotation p_153444_) {
-        return RotatedPillarBlock.rotatePillar(p_153443_, p_153444_);
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return RotatedPillarBlock.rotatePillar(state, rotation);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_153446_) {
-        p_153446_.add(RotatedPillarBlock.AXIS);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(RotatedPillarBlock.AXIS);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_153441_) {
-        return this.defaultBlockState().setValue(RotatedPillarBlock.AXIS, p_153441_.getClickedFace().getAxis());
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return this.defaultBlockState().setValue(RotatedPillarBlock.AXIS, context.getClickedFace().getAxis());
     }
 }

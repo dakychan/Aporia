@@ -14,16 +14,16 @@ public enum HumanoidArm implements StringRepresentable {
     RIGHT(1, "right", "options.mainHand.right");
 
     public static final Codec<HumanoidArm> CODEC = StringRepresentable.fromEnum(HumanoidArm::values);
-    private static final IntFunction<HumanoidArm> BY_ID = ByIdMap.continuous(p_459739_ -> p_459739_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
-    public static final StreamCodec<ByteBuf, HumanoidArm> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_452007_ -> p_452007_.id);
+    private static final IntFunction<HumanoidArm> BY_ID = ByIdMap.continuous(a -> a.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+    public static final StreamCodec<ByteBuf, HumanoidArm> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, a -> a.id);
     private final int id;
     private final String name;
     private final Component caption;
 
-    private HumanoidArm(final int p_217028_, final String p_217029_, final String p_301052_) {
-        this.id = p_217028_;
-        this.name = p_217029_;
-        this.caption = Component.translatable(p_301052_);
+    HumanoidArm(final int id, final String name, final String translationKey) {
+        this.id = id;
+        this.name = name;
+        this.caption = Component.translatable(translationKey);
     }
 
     public HumanoidArm getOpposite() {

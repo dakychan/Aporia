@@ -10,19 +10,17 @@ public class PowerParticleOption implements ParticleOptions {
     private final ParticleType<PowerParticleOption> type;
     private final float power;
 
-    public static MapCodec<PowerParticleOption> codec(ParticleType<PowerParticleOption> p_423521_) {
-        return Codec.FLOAT
-            .xmap(p_424842_ -> new PowerParticleOption(p_423521_, p_424842_), p_430579_ -> p_430579_.power)
-            .optionalFieldOf("power", create(p_423521_, 1.0F));
+    public static MapCodec<PowerParticleOption> codec(final ParticleType<PowerParticleOption> type) {
+        return Codec.FLOAT.xmap(power -> new PowerParticleOption(type, power), o -> o.power).optionalFieldOf("power", create(type, 1.0F));
     }
 
-    public static StreamCodec<? super ByteBuf, PowerParticleOption> streamCodec(ParticleType<PowerParticleOption> p_422514_) {
-        return ByteBufCodecs.FLOAT.map(p_426690_ -> new PowerParticleOption(p_422514_, p_426690_), p_423974_ -> p_423974_.power);
+    public static StreamCodec<? super ByteBuf, PowerParticleOption> streamCodec(final ParticleType<PowerParticleOption> type) {
+        return ByteBufCodecs.FLOAT.map(color -> new PowerParticleOption(type, color), o -> o.power);
     }
 
-    private PowerParticleOption(ParticleType<PowerParticleOption> p_426735_, float p_423165_) {
-        this.type = p_426735_;
-        this.power = p_423165_;
+    private PowerParticleOption(final ParticleType<PowerParticleOption> type, final float power) {
+        this.type = type;
+        this.power = power;
     }
 
     @Override
@@ -34,7 +32,7 @@ public class PowerParticleOption implements ParticleOptions {
         return this.power;
     }
 
-    public static PowerParticleOption create(ParticleType<PowerParticleOption> p_425037_, float p_428381_) {
-        return new PowerParticleOption(p_425037_, p_428381_);
+    public static PowerParticleOption create(final ParticleType<PowerParticleOption> type, final float power) {
+        return new PowerParticleOption(type, power);
     }
 }

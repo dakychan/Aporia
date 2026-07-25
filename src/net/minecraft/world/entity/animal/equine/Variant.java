@@ -23,17 +23,17 @@ public enum Variant implements StringRepresentable {
     private final int id;
     private final String name;
 
-    private Variant(final int p_457204_, final String p_459354_) {
-        this.id = p_457204_;
-        this.name = p_459354_;
+    Variant(final int id, final String name) {
+        this.id = id;
+        this.name = name;
     }
 
     public int getId() {
         return this.id;
     }
 
-    public static Variant byId(int p_458395_) {
-        return BY_ID.apply(p_458395_);
+    public static Variant byId(final int id) {
+        return BY_ID.apply(id);
     }
 
     @Override

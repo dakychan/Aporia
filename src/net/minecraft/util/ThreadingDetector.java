@@ -22,30 +22,30 @@ public class ThreadingDetector {
     private volatile @Nullable Thread threadThatFailedToAcquire;
     private volatile @Nullable ReportedException fullException;
 
-    public ThreadingDetector(String p_199415_) {
-        this.name = p_199415_;
+    public ThreadingDetector(final String name) {
+        this.name = name;
     }
 
     public void checkAndLock() {
-        boolean flag = false;
+        boolean released = false;
 
         try {
             this.stackTraceLock.lock();
             if (!this.lock.tryAcquire()) {
                 this.threadThatFailedToAcquire = Thread.currentThread();
-                flag = true;
+                released = true;
                 this.stackTraceLock.unlock();
 
                 try {
                     this.lock.acquire();
-                } catch (InterruptedException interruptedexception) {
+                } catch (InterruptedException ignored) {
                     Thread.currentThread().interrupt();
                 }
 
                 throw this.fullException;
             }
         } finally {
-            if (!flag) {
+            if (!released) {
                 this.stackTraceLock.unlock();
             }
         }
@@ -54,12 +54,12 @@ public class ThreadingDetector {
     public void checkAndUnlock() {
         try {
             this.stackTraceLock.lock();
-            Thread thread = this.threadThatFailedToAcquire;
-            if (thread != null) {
-                ReportedException reportedexception = makeThreadingException(this.name, thread);
-                this.fullException = reportedexception;
+            Thread threadThatFailedToAcquire = this.threadThatFailedToAcquire;
+            if (threadThatFailedToAcquire != null) {
+                ReportedException fullException = makeThreadingException(this.name, threadThatFailedToAcquire);
+                this.fullException = fullException;
                 this.lock.release();
-                throw reportedexception;
+                throw fullException;
             }
 
             this.lock.release();
@@ -68,17 +68,20 @@ public class ThreadingDetector {
         }
     }
 
-    public static ReportedException makeThreadingException(String p_199418_, @Nullable Thread p_199419_) {
-        String s = Stream.of(Thread.currentThread(), p_199419_).filter(Objects::nonNull).map(ThreadingDetector::stackTrace).collect(Collectors.joining("\n"));
-        String s1 = "Accessing " + p_199418_ + " from multiple threads";
-        CrashReport crashreport = new CrashReport(s1, new IllegalStateException(s1));
-        CrashReportCategory crashreportcategory = crashreport.addCategory("Thread dumps");
-        crashreportcategory.setDetail("Thread dumps", s);
-        LOGGER.error("Thread dumps: \n{}", s);
-        return new ReportedException(crashreport);
+    public static ReportedException makeThreadingException(final String name, final @Nullable Thread threadThatFailedToAcquire) {
+        String threads = Stream.of(Thread.currentThread(), threadThatFailedToAcquire)
+            .filter(Objects::nonNull)
+            .map(ThreadingDetector::stackTrace)
+            .collect(Collectors.joining("\n"));
+        String error = "Accessing " + name + " from multiple threads";
+        CrashReport report = new CrashReport(error, new IllegalStateException(error));
+        CrashReportCategory category = report.addCategory("Thread dumps");
+        category.setDetail("Thread dumps", threads);
+        LOGGER.error("Thread dumps: \n{}", threads);
+        return new ReportedException(report);
     }
 
-    private static String stackTrace(Thread p_199421_) {
-        return p_199421_.getName() + ": \n\tat " + Arrays.stream(p_199421_.getStackTrace()).map(Object::toString).collect(Collectors.joining("\n\tat "));
+    private static String stackTrace(final Thread thread) {
+        return thread.getName() + ": \n\tat " + Arrays.stream(thread.getStackTrace()).map(Object::toString).collect(Collectors.joining("\n\tat "));
     }
 }

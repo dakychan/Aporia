@@ -9,8 +9,8 @@ public class RandomLookAroundGoal extends Goal {
     private double relZ;
     private int lookTime;
 
-    public RandomLookAroundGoal(Mob p_25720_) {
-        this.mob = p_25720_;
+    public RandomLookAroundGoal(final Mob mob) {
+        this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
@@ -26,9 +26,9 @@ public class RandomLookAroundGoal extends Goal {
 
     @Override
     public void start() {
-        double d0 = (Math.PI * 2) * this.mob.getRandom().nextDouble();
-        this.relX = Math.cos(d0);
-        this.relZ = Math.sin(d0);
+        double rnd = (Math.PI * 2) * this.mob.getRandom().nextDouble();
+        this.relX = Math.cos(rnd);
+        this.relZ = Math.sin(rnd);
         this.lookTime = 20 + this.mob.getRandom().nextInt(20);
     }
 

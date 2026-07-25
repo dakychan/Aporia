@@ -53,30 +53,26 @@ public class BannerPatternFormatFix extends NamedEntityFix {
         Map.entry("pig", "minecraft:piglin")
     );
 
-    public BannerPatternFormatFix(Schema p_331151_) {
-        super(p_331151_, false, "BannerPatternFormatFix", References.BLOCK_ENTITY, "minecraft:banner");
+    public BannerPatternFormatFix(final Schema outputSchema) {
+        super(outputSchema, false, "BannerPatternFormatFix", References.BLOCK_ENTITY, "minecraft:banner");
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_332978_) {
-        return p_332978_.update(DSL.remainderFinder(), BannerPatternFormatFix::fixTag);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), BannerPatternFormatFix::fixTag);
     }
 
-    private static Dynamic<?> fixTag(Dynamic<?> p_329398_) {
-        return p_329398_.renameAndFixField(
-            "Patterns", "patterns", p_330184_ -> p_330184_.createList(p_330184_.asStream().map(BannerPatternFormatFix::fixLayer))
-        );
+    private static Dynamic<?> fixTag(final Dynamic<?> tag) {
+        return tag.renameAndFixField("Patterns", "patterns", patterns -> patterns.createList(patterns.asStream().map(BannerPatternFormatFix::fixLayer)));
     }
 
-    private static Dynamic<?> fixLayer(Dynamic<?> p_333413_) {
-        p_333413_ = p_333413_.renameAndFixField(
+    private static Dynamic<?> fixLayer(Dynamic<?> dynamic) {
+        dynamic = dynamic.renameAndFixField(
             "Pattern",
             "pattern",
-            p_328292_ -> DataFixUtils.orElse(
-                p_328292_.asString().map(p_331883_ -> PATTERN_ID_MAP.getOrDefault(p_331883_, p_331883_)).map(p_328292_::createString).result(), p_328292_
-            )
+            pattern -> DataFixUtils.orElse(pattern.asString().map(id -> PATTERN_ID_MAP.getOrDefault(id, id)).map(pattern::createString).result(), pattern)
         );
-        p_333413_ = p_333413_.set("color", p_333413_.createString(ExtraDataFixUtils.dyeColorIdToName(p_333413_.get("Color").asInt(0))));
-        return p_333413_.remove("Color");
+        dynamic = dynamic.set("color", dynamic.createString(ExtraDataFixUtils.dyeColorIdToName(dynamic.get("Color").asInt(0))));
+        return dynamic.remove("Color");
     }
 }

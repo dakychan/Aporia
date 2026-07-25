@@ -21,9 +21,9 @@ public enum CopperGolemState implements StringRepresentable {
     private final String name;
     private final int id;
 
-    private CopperGolemState(final String p_455602_, final int p_451714_) {
-        this.name = p_455602_;
-        this.id = p_451714_;
+    CopperGolemState(final String name, final int id) {
+        this.name = name;
+        this.id = id;
     }
 
     @Override

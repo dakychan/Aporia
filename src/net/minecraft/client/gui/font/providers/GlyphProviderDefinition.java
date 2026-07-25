@@ -5,15 +5,11 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.io.IOException;
 import net.minecraft.client.gui.font.FontOption;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface GlyphProviderDefinition {
     MapCodec<GlyphProviderDefinition> MAP_CODEC = GlyphProviderType.CODEC.dispatchMap(GlyphProviderDefinition::type, GlyphProviderType::mapCodec);
 
@@ -21,25 +17,20 @@ public interface GlyphProviderDefinition {
 
     Either<GlyphProviderDefinition.Loader, GlyphProviderDefinition.Reference> unpack();
 
-    @OnlyIn(Dist.CLIENT)
-    public record Conditional(GlyphProviderDefinition definition, FontOption.Filter filter) {
+        record Conditional(GlyphProviderDefinition definition, FontOption.Filter filter) {
         public static final Codec<GlyphProviderDefinition.Conditional> CODEC = RecordCodecBuilder.create(
-            p_330851_ -> p_330851_.group(
+            i -> i.group(
                     GlyphProviderDefinition.MAP_CODEC.forGetter(GlyphProviderDefinition.Conditional::definition),
-                    FontOption.Filter.CODEC
-                        .optionalFieldOf("filter", FontOption.Filter.ALWAYS_PASS)
-                        .forGetter(GlyphProviderDefinition.Conditional::filter)
+                    FontOption.Filter.CODEC.optionalFieldOf("filter", FontOption.Filter.ALWAYS_PASS).forGetter(GlyphProviderDefinition.Conditional::filter)
                 )
-                .apply(p_330851_, GlyphProviderDefinition.Conditional::new)
+                .apply(i, GlyphProviderDefinition.Conditional::new)
         );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Loader {
-        GlyphProvider load(ResourceManager p_286639_) throws IOException;
+        interface Loader {
+        GlyphProvider load(ResourceManager resourceManager) throws IOException;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Reference(Identifier id) {
+        record Reference(Identifier id) {
     }
 }

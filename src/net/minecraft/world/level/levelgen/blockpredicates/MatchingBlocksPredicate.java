@@ -2,7 +2,6 @@ package net.minecraft.world.level.levelgen.blockpredicates;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.Vec3i;
@@ -10,22 +9,22 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
-class MatchingBlocksPredicate extends StateTestingPredicate {
-    private final HolderSet<Block> blocks;
+public class MatchingBlocksPredicate extends StateTestingPredicate {
     public static final MapCodec<MatchingBlocksPredicate> CODEC = RecordCodecBuilder.mapCodec(
-        p_259004_ -> stateTestingCodec(p_259004_)
-            .and(RegistryCodecs.homogeneousList(Registries.BLOCK).fieldOf("blocks").forGetter(p_204693_ -> p_204693_.blocks))
-            .apply(p_259004_, MatchingBlocksPredicate::new)
+        i -> stateTestingCodec(i)
+            .and(RegistryCodecs.homogeneousList(Registries.BLOCK).fieldOf("blocks").forGetter(c -> c.blocks))
+            .apply(i, MatchingBlocksPredicate::new)
     );
+    private final HolderSet<Block> blocks;
 
-    public MatchingBlocksPredicate(Vec3i p_204690_, HolderSet<Block> p_204691_) {
-        super(p_204690_);
-        this.blocks = p_204691_;
+    public MatchingBlocksPredicate(final Vec3i offset, final HolderSet<Block> blocks) {
+        super(offset);
+        this.blocks = blocks;
     }
 
     @Override
-    protected boolean test(BlockState p_190487_) {
-        return p_190487_.is(this.blocks);
+    protected boolean test(final BlockState state) {
+        return state.is(this.blocks);
     }
 
     @Override

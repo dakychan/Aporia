@@ -11,10 +11,10 @@ public record RetryOptions(int numberOfTries, boolean haltOnFailure) {
         return this.numberOfTries < 1;
     }
 
-    public boolean hasTriesLeft(int p_334342_, int p_328826_) {
-        boolean flag = p_334342_ != p_328826_;
-        boolean flag1 = this.unlimitedTries() || p_334342_ < this.numberOfTries;
-        return flag1 && (!flag || !this.haltOnFailure);
+    public boolean hasTriesLeft(final int attempts, final int successes) {
+        boolean hasFailures = attempts != successes;
+        boolean hasMoreAttempts = this.unlimitedTries() || attempts < this.numberOfTries;
+        return hasMoreAttempts && (!hasFailures || !this.haltOnFailure);
     }
 
     public boolean hasRetries() {

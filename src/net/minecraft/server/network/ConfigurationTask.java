@@ -4,7 +4,7 @@ import java.util.function.Consumer;
 import net.minecraft.network.protocol.Packet;
 
 public interface ConfigurationTask {
-    void start(Consumer<Packet<?>> p_299398_);
+    void start(Consumer<Packet<?>> connection);
 
     default boolean tick() {
         return false;
@@ -12,7 +12,7 @@ public interface ConfigurationTask {
 
     ConfigurationTask.Type type();
 
-    public record Type(String id) {
+    record Type(String id) {
         @Override
         public String toString() {
             return this.id;

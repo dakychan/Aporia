@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.animal.nautilus;
 
-import com.mojang.serialization.Dynamic;
-import java.util.Optional;
+import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentType;
@@ -25,9 +24,10 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.variant.SpawnContext;
 import net.minecraft.world.entity.variant.VariantUtils;
-import net.minecraft.world.item.EitherHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.storage.ValueInput;
@@ -35,19 +35,24 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
 
 public class ZombieNautilus extends AbstractNautilus {
+    private static final Brain.Provider<ZombieNautilus> BRAIN_PROVIDER = Brain.<ZombieNautilus>provider(
+        List.of(MemoryModuleType.ANGRY_AT, MemoryModuleType.ATTACK_TARGET_COOLDOWN),
+        List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_ADULT, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.NAUTILUS_TEMPTATIONS),
+        var0 -> ZombieNautilusAi.getActivities()
+    );
     private static final EntityDataAccessor<Holder<ZombieNautilusVariant>> DATA_VARIANT_ID = SynchedEntityData.defineId(
         ZombieNautilus.class, EntityDataSerializers.ZOMBIE_NAUTILUS_VARIANT
     );
 
-    public ZombieNautilus(EntityType<? extends ZombieNautilus> p_457129_, Level p_452024_) {
-        super(p_457129_, p_452024_);
+    public ZombieNautilus(final EntityType<? extends ZombieNautilus> type, final Level level) {
+        super(type, level);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return AbstractNautilus.createAttributes().add(Attributes.MOVEMENT_SPEED, 1.1F);
     }
 
-    public @Nullable ZombieNautilus getBreedOffspring(ServerLevel p_456201_, AgeableMob p_455778_) {
+    public @Nullable ZombieNautilus getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
         return null;
     }
 
@@ -57,13 +62,8 @@ public class ZombieNautilus extends AbstractNautilus {
     }
 
     @Override
-    protected Brain.Provider<ZombieNautilus> brainProvider() {
-        return ZombieNautilusAi.brainProvider();
-    }
-
-    @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_453332_) {
-        return ZombieNautilusAi.makeBrain(this.brainProvider().makeBrain(p_453332_));
+    protected Brain<ZombieNautilus> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
     @Override
@@ -72,15 +72,15 @@ public class ZombieNautilus extends AbstractNautilus {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_455575_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("zombieNautilusBrain");
-        this.getBrain().tick(p_455575_, this);
-        profilerfiller.pop();
-        profilerfiller.push("zombieNautilusActivityUpdate");
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("zombieNautilusBrain");
+        this.getBrain().tick(level, this);
+        profiler.pop();
+        profiler.push("zombieNautilusActivityUpdate");
         ZombieNautilusAi.updateActivity(this);
-        profilerfiller.pop();
-        super.customServerAiStep(p_455575_);
+        profiler.pop();
+        super.customServerAiStep(level);
     }
 
     @Override
@@ -89,7 +89,7 @@ public class ZombieNautilus extends AbstractNautilus {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_454717_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return this.isUnderWater() ? SoundEvents.ZOMBIE_NAUTILUS_HURT : SoundEvents.ZOMBIE_NAUTILUS_HURT_ON_LAND;
     }
 
@@ -119,25 +119,25 @@ public class ZombieNautilus extends AbstractNautilus {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_450929_) {
-        super.defineSynchedData(p_450929_);
-        p_450929_.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), ZombieNautilusVariants.TEMPERATE));
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_VARIANT_ID, VariantUtils.getDefaultOrAny(this.registryAccess(), ZombieNautilusVariants.TEMPERATE));
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_460301_) {
-        super.readAdditionalSaveData(p_460301_);
-        VariantUtils.readVariant(p_460301_, Registries.ZOMBIE_NAUTILUS_VARIANT).ifPresent(this::setVariant);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        VariantUtils.readVariant(input, Registries.ZOMBIE_NAUTILUS_VARIANT).ifPresent(this::setVariant);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_460414_) {
-        super.addAdditionalSaveData(p_460414_);
-        VariantUtils.writeVariant(p_460414_, this.getVariant());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        VariantUtils.writeVariant(output, this.getVariant());
     }
 
-    public void setVariant(Holder<ZombieNautilusVariant> p_452334_) {
-        this.entityData.set(DATA_VARIANT_ID, p_452334_);
+    public void setVariant(final Holder<ZombieNautilusVariant> variant) {
+        this.entityData.set(DATA_VARIANT_ID, variant);
     }
 
     public Holder<ZombieNautilusVariant> getVariant() {
@@ -145,37 +145,33 @@ public class ZombieNautilus extends AbstractNautilus {
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_451258_) {
-        return p_451258_ == DataComponents.ZOMBIE_NAUTILUS_VARIANT
-            ? castComponentValue((DataComponentType<T>)p_451258_, new EitherHolder<>(this.getVariant()))
-            : super.get(p_451258_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.ZOMBIE_NAUTILUS_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_455795_) {
-        this.applyImplicitComponentIfPresent(p_455795_, DataComponents.ZOMBIE_NAUTILUS_VARIANT);
-        super.applyImplicitComponents(p_455795_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.ZOMBIE_NAUTILUS_VARIANT);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_453765_, T p_457488_) {
-        if (p_453765_ == DataComponents.ZOMBIE_NAUTILUS_VARIANT) {
-            Optional<Holder<ZombieNautilusVariant>> optional = castComponentValue(DataComponents.ZOMBIE_NAUTILUS_VARIANT, p_457488_).unwrap(this.registryAccess());
-            if (optional.isPresent()) {
-                this.setVariant(optional.get());
-                return true;
-            } else {
-                return false;
-            }
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.ZOMBIE_NAUTILUS_VARIANT) {
+            Holder<ZombieNautilusVariant> variant = castComponentValue(DataComponents.ZOMBIE_NAUTILUS_VARIANT, value);
+            this.setVariant(variant);
+            return true;
         } else {
-            return super.applyImplicitComponent(p_453765_, p_457488_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_458159_, DifficultyInstance p_458323_, EntitySpawnReason p_455232_, @Nullable SpawnGroupData p_454792_) {
-        VariantUtils.selectVariantToSpawn(SpawnContext.create(p_458159_, this.blockPosition()), Registries.ZOMBIE_NAUTILUS_VARIANT).ifPresent(this::setVariant);
-        return super.finalizeSpawn(p_458159_, p_458323_, p_455232_, p_454792_);
+    public SpawnGroupData finalizeSpawn(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
+    ) {
+        VariantUtils.selectVariantToSpawn(SpawnContext.create(level, this.blockPosition()), Registries.ZOMBIE_NAUTILUS_VARIANT).ifPresent(this::setVariant);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
@@ -184,7 +180,7 @@ public class ZombieNautilus extends AbstractNautilus {
     }
 
     @Override
-    public boolean isBaby() {
+    protected boolean canBeABaby() {
         return false;
     }
 }

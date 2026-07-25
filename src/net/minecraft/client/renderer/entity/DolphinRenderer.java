@@ -7,29 +7,27 @@ import net.minecraft.client.renderer.entity.state.DolphinRenderState;
 import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.dolphin.Dolphin;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DolphinRenderer extends AgeableMobRenderer<Dolphin, DolphinRenderState, DolphinModel> {
-    private static final Identifier DOLPHIN_LOCATION = Identifier.withDefaultNamespace("textures/entity/dolphin.png");
+    private static final Identifier DOLPHIN_LOCATION = Identifier.withDefaultNamespace("textures/entity/dolphin/dolphin.png");
+    private static final Identifier DOLPHIN_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/dolphin/dolphin_baby.png");
 
-    public DolphinRenderer(EntityRendererProvider.Context p_173960_) {
-        super(p_173960_, new DolphinModel(p_173960_.bakeLayer(ModelLayers.DOLPHIN)), new DolphinModel(p_173960_.bakeLayer(ModelLayers.DOLPHIN_BABY)), 0.7F);
+    public DolphinRenderer(final EntityRendererProvider.Context context) {
+        super(context, new DolphinModel(context.bakeLayer(ModelLayers.DOLPHIN)), new DolphinModel(context.bakeLayer(ModelLayers.DOLPHIN_BABY)), 0.7F);
         this.addLayer(new DolphinCarryingItemLayer(this));
     }
 
-    public Identifier getTextureLocation(DolphinRenderState p_457859_) {
-        return DOLPHIN_LOCATION;
+    public Identifier getTextureLocation(final DolphinRenderState state) {
+        return state.isBaby ? DOLPHIN_BABY_LOCATION : DOLPHIN_LOCATION;
     }
 
     public DolphinRenderState createRenderState() {
         return new DolphinRenderState();
     }
 
-    public void extractRenderState(Dolphin p_456322_, DolphinRenderState p_370009_, float p_361573_) {
-        super.extractRenderState(p_456322_, p_370009_, p_361573_);
-        HoldingEntityRenderState.extractHoldingEntityRenderState(p_456322_, p_370009_, this.itemModelResolver);
-        p_370009_.isMoving = p_456322_.getDeltaMovement().horizontalDistanceSqr() > 1.0E-7;
+    public void extractRenderState(final Dolphin entity, final DolphinRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        HoldingEntityRenderState.extractHoldingEntityRenderState(entity, state, this.itemModelResolver);
+        state.isMoving = entity.getDeltaMovement().horizontalDistanceSqr() > 1.0E-7;
     }
 }

@@ -2,7 +2,6 @@ package net.minecraft.world.level.saveddata.maps;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -15,19 +14,19 @@ import org.jspecify.annotations.Nullable;
 
 public record MapBanner(BlockPos pos, DyeColor color, Optional<Component> name) {
     public static final Codec<MapBanner> CODEC = RecordCodecBuilder.create(
-        p_391095_ -> p_391095_.group(
+        i -> i.group(
                 BlockPos.CODEC.fieldOf("pos").forGetter(MapBanner::pos),
                 DyeColor.CODEC.lenientOptionalFieldOf("color", DyeColor.WHITE).forGetter(MapBanner::color),
                 ComponentSerialization.CODEC.lenientOptionalFieldOf("name").forGetter(MapBanner::name)
             )
-            .apply(p_391095_, MapBanner::new)
+            .apply(i, MapBanner::new)
     );
 
-    public static @Nullable MapBanner fromWorld(BlockGetter p_77775_, BlockPos p_77776_) {
-        if (p_77775_.getBlockEntity(p_77776_) instanceof BannerBlockEntity bannerblockentity) {
-            DyeColor dyecolor = bannerblockentity.getBaseColor();
-            Optional<Component> optional = Optional.ofNullable(bannerblockentity.getCustomName());
-            return new MapBanner(p_77776_, dyecolor, optional);
+    public static @Nullable MapBanner fromWorld(final BlockGetter level, final BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof BannerBlockEntity banner) {
+            DyeColor color = banner.getBaseColor();
+            Optional<Component> name = Optional.ofNullable(banner.getCustomName());
+            return new MapBanner(pos, color, name);
         } else {
             return null;
         }

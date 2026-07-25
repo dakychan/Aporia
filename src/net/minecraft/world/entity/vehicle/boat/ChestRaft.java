@@ -7,12 +7,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 
 public class ChestRaft extends AbstractChestBoat {
-    public ChestRaft(EntityType<? extends ChestRaft> p_454835_, Level p_458215_, Supplier<Item> p_453308_) {
-        super(p_454835_, p_458215_, p_453308_);
+    public ChestRaft(final EntityType<? extends ChestRaft> type, final Level level, final Supplier<Item> dropItem) {
+        super(type, level, dropItem);
     }
 
     @Override
-    protected double rideHeight(EntityDimensions p_458718_) {
-        return p_458718_.height() * 0.8888889F;
+    protected double rideHeight(final EntityDimensions dimensions) {
+        return dimensions.height() * 0.8888889F;
     }
 }

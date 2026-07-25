@@ -32,66 +32,66 @@ import net.minecraft.tags.TagKey;
 public class ResourceOrTagArgument<T> implements ArgumentType<ResourceOrTagArgument.Result<T>> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "012", "#skeletons", "#minecraft:skeletons");
     private static final Dynamic2CommandExceptionType ERROR_UNKNOWN_TAG = new Dynamic2CommandExceptionType(
-        (p_308372_, p_308373_) -> Component.translatableEscape("argument.resource_tag.not_found", p_308372_, p_308373_)
+        (id, registry) -> Component.translatableEscape("argument.resource_tag.not_found", id, registry)
     );
     private static final Dynamic3CommandExceptionType ERROR_INVALID_TAG_TYPE = new Dynamic3CommandExceptionType(
-        (p_308374_, p_308375_, p_308376_) -> Component.translatableEscape("argument.resource_tag.invalid_type", p_308374_, p_308375_, p_308376_)
+        (id, actualRegistry, expectedRegistry) -> Component.translatableEscape("argument.resource_tag.invalid_type", id, actualRegistry, expectedRegistry)
     );
     private final HolderLookup<T> registryLookup;
-    final ResourceKey<? extends Registry<T>> registryKey;
+    private final ResourceKey<? extends Registry<T>> registryKey;
 
-    public ResourceOrTagArgument(CommandBuildContext p_249382_, ResourceKey<? extends Registry<T>> p_251209_) {
-        this.registryKey = p_251209_;
-        this.registryLookup = p_249382_.lookupOrThrow(p_251209_);
+    public ResourceOrTagArgument(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> registryKey) {
+        this.registryKey = registryKey;
+        this.registryLookup = context.lookupOrThrow(registryKey);
     }
 
-    public static <T> ResourceOrTagArgument<T> resourceOrTag(CommandBuildContext p_251101_, ResourceKey<? extends Registry<T>> p_248888_) {
-        return new ResourceOrTagArgument<>(p_251101_, p_248888_);
+    public static <T> ResourceOrTagArgument<T> resourceOrTag(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> key) {
+        return new ResourceOrTagArgument<>(context, key);
     }
 
     public static <T> ResourceOrTagArgument.Result<T> getResourceOrTag(
-        CommandContext<CommandSourceStack> p_249001_, String p_251520_, ResourceKey<Registry<T>> p_250370_
+        final CommandContext<CommandSourceStack> context, final String name, final ResourceKey<Registry<T>> registryKey
     ) throws CommandSyntaxException {
-        ResourceOrTagArgument.Result<?> result = p_249001_.getArgument(p_251520_, ResourceOrTagArgument.Result.class);
-        Optional<ResourceOrTagArgument.Result<T>> optional = result.cast(p_250370_);
-        return optional.orElseThrow(() -> result.unwrap().map(p_448494_ -> {
-            ResourceKey<?> resourcekey = p_448494_.key();
-            return ResourceArgument.ERROR_INVALID_RESOURCE_TYPE.create(resourcekey.identifier(), resourcekey.registry(), p_250370_.identifier());
-        }, p_448496_ -> {
-            TagKey<?> tagkey = p_448496_.key();
-            return ERROR_INVALID_TAG_TYPE.create(tagkey.location(), tagkey.registry(), p_250370_.identifier());
+        ResourceOrTagArgument.Result<?> argument = context.getArgument(name, ResourceOrTagArgument.Result.class);
+        Optional<ResourceOrTagArgument.Result<T>> value = argument.cast(registryKey);
+        return value.orElseThrow(() -> argument.unwrap().map(element -> {
+            ResourceKey<?> elementKey = element.key();
+            return ResourceArgument.ERROR_INVALID_RESOURCE_TYPE.create(elementKey.identifier(), elementKey.registry(), registryKey.identifier());
+        }, tag -> {
+            TagKey<?> tagKey = tag.key();
+            return ERROR_INVALID_TAG_TYPE.create(tagKey.location(), tagKey.registry(), registryKey.identifier());
         }));
     }
 
-    public ResourceOrTagArgument.Result<T> parse(StringReader p_250860_) throws CommandSyntaxException {
-        if (p_250860_.canRead() && p_250860_.peek() == '#') {
-            int i = p_250860_.getCursor();
+    public ResourceOrTagArgument.Result<T> parse(final StringReader reader) throws CommandSyntaxException {
+        if (reader.canRead() && reader.peek() == '#') {
+            int cursor = reader.getCursor();
 
             try {
-                p_250860_.skip();
-                Identifier identifier1 = Identifier.read(p_250860_);
-                TagKey<T> tagkey = TagKey.create(this.registryKey, identifier1);
-                HolderSet.Named<T> named = this.registryLookup
-                    .get(tagkey)
-                    .orElseThrow(() -> ERROR_UNKNOWN_TAG.createWithContext(p_250860_, identifier1, this.registryKey.identifier()));
-                return new ResourceOrTagArgument.TagResult<>(named);
-            } catch (CommandSyntaxException commandsyntaxexception) {
-                p_250860_.setCursor(i);
-                throw commandsyntaxexception;
+                reader.skip();
+                Identifier tagId = Identifier.read(reader);
+                TagKey<T> tagKey = TagKey.create(this.registryKey, tagId);
+                HolderSet.Named<T> holderSet = this.registryLookup
+                    .get(tagKey)
+                    .orElseThrow(() -> ERROR_UNKNOWN_TAG.createWithContext(reader, tagId, this.registryKey.identifier()));
+                return new ResourceOrTagArgument.TagResult<>(holderSet);
+            } catch (CommandSyntaxException e) {
+                reader.setCursor(cursor);
+                throw e;
             }
         } else {
-            Identifier identifier = Identifier.read(p_250860_);
-            ResourceKey<T> resourcekey = ResourceKey.create(this.registryKey, identifier);
-            Holder.Reference<T> reference = this.registryLookup
-                .get(resourcekey)
-                .orElseThrow(() -> ResourceArgument.ERROR_UNKNOWN_RESOURCE.createWithContext(p_250860_, identifier, this.registryKey.identifier()));
-            return new ResourceOrTagArgument.ResourceResult<>(reference);
+            Identifier resourceId = Identifier.read(reader);
+            ResourceKey<T> resourceKey = ResourceKey.create(this.registryKey, resourceId);
+            Holder.Reference<T> holder = this.registryLookup
+                .get(resourceKey)
+                .orElseThrow(() -> ResourceArgument.ERROR_UNKNOWN_RESOURCE.createWithContext(reader, resourceId, this.registryKey.identifier()));
+            return new ResourceOrTagArgument.ResourceResult<>(holder);
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_250223_, SuggestionsBuilder p_252354_) {
-        return SharedSuggestionProvider.listSuggestions(p_250223_, p_252354_, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ALL);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.listSuggestions(context, builder, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ALL);
     }
 
     @Override
@@ -100,31 +100,31 @@ public class ResourceOrTagArgument<T> implements ArgumentType<ResourceOrTagArgum
     }
 
     public static class Info<T> implements ArgumentTypeInfo<ResourceOrTagArgument<T>, ResourceOrTagArgument.Info<T>.Template> {
-        public void serializeToNetwork(ResourceOrTagArgument.Info<T>.Template p_250419_, FriendlyByteBuf p_249726_) {
-            p_249726_.writeResourceKey(p_250419_.registryKey);
+        public void serializeToNetwork(final ResourceOrTagArgument.Info<T>.Template template, final FriendlyByteBuf out) {
+            out.writeResourceKey(template.registryKey);
         }
 
-        public ResourceOrTagArgument.Info<T>.Template deserializeFromNetwork(FriendlyByteBuf p_250205_) {
-            return new ResourceOrTagArgument.Info.Template(p_250205_.readRegistryKey());
+        public ResourceOrTagArgument.Info<T>.Template deserializeFromNetwork(final FriendlyByteBuf in) {
+            return new ResourceOrTagArgument.Info.Template(in.readRegistryKey());
         }
 
-        public void serializeToJson(ResourceOrTagArgument.Info<T>.Template p_251957_, JsonObject p_249067_) {
-            p_249067_.addProperty("registry", p_251957_.registryKey.identifier().toString());
+        public void serializeToJson(final ResourceOrTagArgument.Info<T>.Template template, final JsonObject out) {
+            out.addProperty("registry", template.registryKey.identifier().toString());
         }
 
-        public ResourceOrTagArgument.Info<T>.Template unpack(ResourceOrTagArgument<T> p_252206_) {
-            return new ResourceOrTagArgument.Info.Template(p_252206_.registryKey);
+        public ResourceOrTagArgument.Info<T>.Template unpack(final ResourceOrTagArgument<T> argument) {
+            return new ResourceOrTagArgument.Info.Template(argument.registryKey);
         }
 
         public final class Template implements ArgumentTypeInfo.Template<ResourceOrTagArgument<T>> {
-            final ResourceKey<? extends Registry<T>> registryKey;
+            private final ResourceKey<? extends Registry<T>> registryKey;
 
-            Template(final ResourceKey<? extends Registry<T>> p_250107_) {
-                this.registryKey = p_250107_;
+            private Template(final ResourceKey<? extends Registry<T>> registryKey) {
+                this.registryKey = registryKey;
             }
 
-            public ResourceOrTagArgument<T> instantiate(CommandBuildContext p_251386_) {
-                return new ResourceOrTagArgument<>(p_251386_, this.registryKey);
+            public ResourceOrTagArgument<T> instantiate(final CommandBuildContext context) {
+                return new ResourceOrTagArgument<>(context, this.registryKey);
             }
 
             @Override
@@ -134,19 +134,19 @@ public class ResourceOrTagArgument<T> implements ArgumentType<ResourceOrTagArgum
         }
     }
 
-    record ResourceResult<T>(Holder.Reference<T> value) implements ResourceOrTagArgument.Result<T> {
+    private record ResourceResult<T>(Holder.Reference<T> value) implements ResourceOrTagArgument.Result<T> {
         @Override
         public Either<Holder.Reference<T>, HolderSet.Named<T>> unwrap() {
             return Either.left(this.value);
         }
 
         @Override
-        public <E> Optional<ResourceOrTagArgument.Result<E>> cast(ResourceKey<? extends Registry<E>> p_250007_) {
-            return this.value.key().isFor(p_250007_) ? Optional.of((ResourceOrTagArgument.Result<E>)this) : Optional.empty();
+        public <E> Optional<ResourceOrTagArgument.Result<E>> cast(final ResourceKey<? extends Registry<E>> registryKey) {
+            return this.value.key().isFor(registryKey) ? Optional.of((ResourceOrTagArgument.Result<E>)this) : Optional.empty();
         }
 
-        public boolean test(Holder<T> p_249230_) {
-            return p_249230_.equals(this.value);
+        public boolean test(final Holder<T> holder) {
+            return holder.equals(this.value);
         }
 
         @Override
@@ -158,24 +158,24 @@ public class ResourceOrTagArgument<T> implements ArgumentType<ResourceOrTagArgum
     public interface Result<T> extends Predicate<Holder<T>> {
         Either<Holder.Reference<T>, HolderSet.Named<T>> unwrap();
 
-        <E> Optional<ResourceOrTagArgument.Result<E>> cast(ResourceKey<? extends Registry<E>> p_249572_);
+        <E> Optional<ResourceOrTagArgument.Result<E>> cast(final ResourceKey<? extends Registry<E>> registryKey);
 
         String asPrintable();
     }
 
-    record TagResult<T>(HolderSet.Named<T> tag) implements ResourceOrTagArgument.Result<T> {
+    private record TagResult<T>(HolderSet.Named<T> tag) implements ResourceOrTagArgument.Result<T> {
         @Override
         public Either<Holder.Reference<T>, HolderSet.Named<T>> unwrap() {
             return Either.right(this.tag);
         }
 
         @Override
-        public <E> Optional<ResourceOrTagArgument.Result<E>> cast(ResourceKey<? extends Registry<E>> p_250945_) {
-            return this.tag.key().isFor(p_250945_) ? Optional.of((ResourceOrTagArgument.Result<E>)this) : Optional.empty();
+        public <E> Optional<ResourceOrTagArgument.Result<E>> cast(final ResourceKey<? extends Registry<E>> registryKey) {
+            return this.tag.key().isFor(registryKey) ? Optional.of((ResourceOrTagArgument.Result<E>)this) : Optional.empty();
         }
 
-        public boolean test(Holder<T> p_252187_) {
-            return this.tag.contains(p_252187_);
+        public boolean test(final Holder<T> holder) {
+            return this.tag.contains(holder);
         }
 
         @Override

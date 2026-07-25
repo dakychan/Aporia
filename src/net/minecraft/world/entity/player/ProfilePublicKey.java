@@ -2,7 +2,6 @@ package net.minecraft.world.entity.player;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.PublicKey;
@@ -23,11 +22,11 @@ public record ProfilePublicKey(ProfilePublicKey.Data data) {
     public static final Duration EXPIRY_GRACE_PERIOD = Duration.ofHours(8L);
     public static final Codec<ProfilePublicKey> TRUSTED_CODEC = ProfilePublicKey.Data.CODEC.xmap(ProfilePublicKey::new, ProfilePublicKey::data);
 
-    public static ProfilePublicKey createValidated(SignatureValidator p_243373_, UUID p_243390_, ProfilePublicKey.Data p_243374_) throws ProfilePublicKey.ValidationException {
-        if (!p_243374_.validateSignature(p_243373_, p_243390_)) {
+    public static ProfilePublicKey createValidated(final SignatureValidator validator, final UUID profileId, final ProfilePublicKey.Data data) throws ProfilePublicKey.ValidationException {
+        if (!data.validateSignature(validator, profileId)) {
             throw new ProfilePublicKey.ValidationException(INVALID_SIGNATURE);
         } else {
-            return new ProfilePublicKey(p_243374_);
+            return new ProfilePublicKey(data);
         }
     }
 
@@ -38,60 +37,58 @@ public record ProfilePublicKey(ProfilePublicKey.Data data) {
     public record Data(Instant expiresAt, PublicKey key, byte[] keySignature) {
         private static final int MAX_KEY_SIGNATURE_SIZE = 4096;
         public static final Codec<ProfilePublicKey.Data> CODEC = RecordCodecBuilder.create(
-            p_219814_ -> p_219814_.group(
+            i -> i.group(
                     ExtraCodecs.INSTANT_ISO8601.fieldOf("expires_at").forGetter(ProfilePublicKey.Data::expiresAt),
                     Crypt.PUBLIC_KEY_CODEC.fieldOf("key").forGetter(ProfilePublicKey.Data::key),
                     ExtraCodecs.BASE64_STRING.fieldOf("signature_v2").forGetter(ProfilePublicKey.Data::keySignature)
                 )
-                .apply(p_219814_, ProfilePublicKey.Data::new)
+                .apply(i, ProfilePublicKey.Data::new)
         );
 
-        public Data(FriendlyByteBuf p_219809_) {
-            this(p_219809_.readInstant(), p_219809_.readPublicKey(), p_219809_.readByteArray(4096));
+        public Data(final FriendlyByteBuf input) {
+            this(input.readInstant(), input.readPublicKey(), input.readByteArray(4096));
         }
 
-        public void write(FriendlyByteBuf p_219816_) {
-            p_219816_.writeInstant(this.expiresAt);
-            p_219816_.writePublicKey(this.key);
-            p_219816_.writeByteArray(this.keySignature);
+        public void write(final FriendlyByteBuf output) {
+            output.writeInstant(this.expiresAt);
+            output.writePublicKey(this.key);
+            output.writeByteArray(this.keySignature);
         }
 
-        boolean validateSignature(SignatureValidator p_240296_, UUID p_240297_) {
-            return p_240296_.validate(this.signedPayload(p_240297_), this.keySignature);
+        private boolean validateSignature(final SignatureValidator validator, final UUID profileId) {
+            return validator.validate(this.signedPayload(profileId), this.keySignature);
         }
 
-        private byte[] signedPayload(UUID p_240267_) {
-            byte[] abyte = this.key.getEncoded();
-            byte[] abyte1 = new byte[24 + abyte.length];
-            ByteBuffer bytebuffer = ByteBuffer.wrap(abyte1).order(ByteOrder.BIG_ENDIAN);
-            bytebuffer.putLong(p_240267_.getMostSignificantBits())
-                .putLong(p_240267_.getLeastSignificantBits())
+        private byte[] signedPayload(final UUID profileId) {
+            byte[] keyBytes = this.key.getEncoded();
+            byte[] signedPayload = new byte[24 + keyBytes.length];
+            ByteBuffer buffer = ByteBuffer.wrap(signedPayload).order(ByteOrder.BIG_ENDIAN);
+            buffer.putLong(profileId.getMostSignificantBits())
+                .putLong(profileId.getLeastSignificantBits())
                 .putLong(this.expiresAt.toEpochMilli())
-                .put(abyte);
-            return abyte1;
+                .put(keyBytes);
+            return signedPayload;
         }
 
         public boolean hasExpired() {
             return this.expiresAt.isBefore(Instant.now());
         }
 
-        public boolean hasExpired(Duration p_243376_) {
-            return this.expiresAt.plus(p_243376_).isBefore(Instant.now());
+        public boolean hasExpired(final Duration gracePeriod) {
+            return this.expiresAt.plus(gracePeriod).isBefore(Instant.now());
         }
 
         @Override
-        public boolean equals(Object p_219822_) {
-            return !(p_219822_ instanceof ProfilePublicKey.Data profilepublickey$data)
+        public boolean equals(final Object o) {
+            return !(o instanceof ProfilePublicKey.Data data)
                 ? false
-                : this.expiresAt.equals(profilepublickey$data.expiresAt)
-                    && this.key.equals(profilepublickey$data.key)
-                    && Arrays.equals(this.keySignature, profilepublickey$data.keySignature);
+                : this.expiresAt.equals(data.expiresAt) && this.key.equals(data.key) && Arrays.equals(this.keySignature, data.keySignature);
         }
     }
 
     public static class ValidationException extends ThrowingComponent {
-        public ValidationException(Component p_243378_) {
-            super(p_243378_);
+        public ValidationException(final Component component) {
+            super(component);
         }
     }
 }

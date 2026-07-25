@@ -8,12 +8,9 @@ import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.minecraft.DefaultUncaughtExceptionHandler;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class LanServerPinger extends Thread {
     private static final AtomicInteger UNIQUE_THREAD_ID = new AtomicInteger(0);
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -25,10 +22,10 @@ public class LanServerPinger extends Thread {
     private boolean isRunning = true;
     private final String serverAddress;
 
-    public LanServerPinger(String p_120109_, String p_120110_) throws IOException {
+    public LanServerPinger(final String motd, final String serverAddress) throws IOException {
         super("LanServerPinger #" + UNIQUE_THREAD_ID.incrementAndGet());
-        this.motd = p_120109_;
-        this.serverAddress = p_120110_;
+        this.motd = motd;
+        this.serverAddress = serverAddress;
         this.setDaemon(true);
         this.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER));
         this.socket = new DatagramSocket();
@@ -36,22 +33,22 @@ public class LanServerPinger extends Thread {
 
     @Override
     public void run() {
-        String s = createPingString(this.motd, this.serverAddress);
-        byte[] abyte = s.getBytes(StandardCharsets.UTF_8);
+        String pingString = createPingString(this.motd, this.serverAddress);
+        byte[] ping = pingString.getBytes(StandardCharsets.UTF_8);
 
         while (!this.isInterrupted() && this.isRunning) {
             try {
-                InetAddress inetaddress = InetAddress.getByName("224.0.2.60");
-                DatagramPacket datagrampacket = new DatagramPacket(abyte, abyte.length, inetaddress, 4445);
-                this.socket.send(datagrampacket);
-            } catch (IOException ioexception) {
-                LOGGER.warn("LanServerPinger: {}", ioexception.getMessage());
+                InetAddress group = InetAddress.getByName("224.0.2.60");
+                DatagramPacket packet = new DatagramPacket(ping, ping.length, group, 4445);
+                this.socket.send(packet);
+            } catch (IOException e) {
+                LOGGER.warn("LanServerPinger: {}", e.getMessage());
                 break;
             }
 
             try {
                 sleep(1500L);
-            } catch (InterruptedException interruptedexception) {
+            } catch (InterruptedException var5) {
             }
         }
     }
@@ -62,37 +59,37 @@ public class LanServerPinger extends Thread {
         this.isRunning = false;
     }
 
-    public static String createPingString(String p_120114_, String p_120115_) {
-        return "[MOTD]" + p_120114_ + "[/MOTD][AD]" + p_120115_ + "[/AD]";
+    public static String createPingString(final String motd, final String address) {
+        return "[MOTD]" + motd + "[/MOTD][AD]" + address + "[/AD]";
     }
 
-    public static String parseMotd(String p_120112_) {
-        int i = p_120112_.indexOf("[MOTD]");
-        if (i < 0) {
+    public static String parseMotd(final String pingString) {
+        int startIndex = pingString.indexOf("[MOTD]");
+        if (startIndex < 0) {
             return "missing no";
-        } else {
-            int j = p_120112_.indexOf("[/MOTD]", i + "[MOTD]".length());
-            return j < i ? "missing no" : p_120112_.substring(i + "[MOTD]".length(), j);
         }
+
+        int endIndex = pingString.indexOf("[/MOTD]", startIndex + "[MOTD]".length());
+        return endIndex < startIndex ? "missing no" : pingString.substring(startIndex + "[MOTD]".length(), endIndex);
     }
 
-    public static @Nullable String parseAddress(String p_120117_) {
-        int i = p_120117_.indexOf("[/MOTD]");
-        if (i < 0) {
+    public static @Nullable String parseAddress(final String pingString) {
+        int endMotdIndex = pingString.indexOf("[/MOTD]");
+        if (endMotdIndex < 0) {
             return null;
-        } else {
-            int j = p_120117_.indexOf("[/MOTD]", i + "[/MOTD]".length());
-            if (j >= 0) {
-                return null;
-            } else {
-                int k = p_120117_.indexOf("[AD]", i + "[/MOTD]".length());
-                if (k < 0) {
-                    return null;
-                } else {
-                    int l = p_120117_.indexOf("[/AD]", k + "[AD]".length());
-                    return l < k ? null : p_120117_.substring(k + "[AD]".length(), l);
-                }
-            }
         }
+
+        int secondEndMotdIndex = pingString.indexOf("[/MOTD]", endMotdIndex + "[/MOTD]".length());
+        if (secondEndMotdIndex >= 0) {
+            return null;
+        }
+
+        int startIndex = pingString.indexOf("[AD]", endMotdIndex + "[/MOTD]".length());
+        if (startIndex < 0) {
+            return null;
+        }
+
+        int endIndex = pingString.indexOf("[/AD]", startIndex + "[AD]".length());
+        return endIndex < startIndex ? null : pingString.substring(startIndex + "[AD]".length(), endIndex);
     }
 }

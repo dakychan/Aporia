@@ -2,7 +2,6 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.world.item.Item;
@@ -11,25 +10,23 @@ import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class SetItemFunction extends LootItemConditionalFunction {
-    public static final MapCodec<SetItemFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_335262_ -> commonFields(p_335262_)
-            .and(Item.CODEC.fieldOf("item").forGetter(p_334713_ -> p_334713_.item))
-            .apply(p_335262_, SetItemFunction::new)
+    public static final MapCodec<SetItemFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i).and(Item.CODEC.fieldOf("item").forGetter(f -> f.item)).apply(i, SetItemFunction::new)
     );
     private final Holder<Item> item;
 
-    private SetItemFunction(List<LootItemCondition> p_334628_, Holder<Item> p_334791_) {
-        super(p_334628_);
-        this.item = p_334791_;
+    private SetItemFunction(final List<LootItemCondition> predicates, final Holder<Item> item) {
+        super(predicates);
+        this.item = item;
     }
 
     @Override
-    public LootItemFunctionType<SetItemFunction> getType() {
-        return LootItemFunctions.SET_ITEM;
+    public MapCodec<SetItemFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ItemStack run(ItemStack p_330993_, LootContext p_332197_) {
-        return p_330993_.transmuteCopy(this.item.value());
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        return itemStack.transmuteCopy(this.item.value());
     }
 }

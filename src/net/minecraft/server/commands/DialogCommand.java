@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import java.util.Collection;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
@@ -15,8 +14,8 @@ import net.minecraft.server.dialog.Dialog;
 import net.minecraft.server.level.ServerPlayer;
 
 public class DialogCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_410179_, CommandBuildContext p_408009_) {
-        p_410179_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        dispatcher.register(
             Commands.literal("dialog")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
@@ -24,12 +23,12 @@ public class DialogCommand {
                         .then(
                             Commands.argument("targets", EntityArgument.players())
                                 .then(
-                                    Commands.argument("dialog", ResourceOrIdArgument.dialog(p_408009_))
+                                    Commands.argument("dialog", ResourceOrIdArgument.dialog(context))
                                         .executes(
-                                            p_409348_ -> showDialog(
-                                                (CommandSourceStack)p_409348_.getSource(),
-                                                EntityArgument.getPlayers(p_409348_, "targets"),
-                                                ResourceOrIdArgument.getDialog(p_409348_, "dialog")
+                                            c -> showDialog(
+                                                (CommandSourceStack)c.getSource(),
+                                                EntityArgument.getPlayers(c, "targets"),
+                                                ResourceOrIdArgument.getDialog(c, "dialog")
                                             )
                                         )
                                 )
@@ -39,37 +38,37 @@ public class DialogCommand {
                     Commands.literal("clear")
                         .then(
                             Commands.argument("targets", EntityArgument.players())
-                                .executes(p_408723_ -> clearDialog(p_408723_.getSource(), EntityArgument.getPlayers(p_408723_, "targets")))
+                                .executes(c -> clearDialog(c.getSource(), EntityArgument.getPlayers(c, "targets")))
                         )
                 )
         );
     }
 
-    private static int showDialog(CommandSourceStack p_408221_, Collection<ServerPlayer> p_410671_, Holder<Dialog> p_408690_) {
-        for (ServerPlayer serverplayer : p_410671_) {
-            serverplayer.openDialog(p_408690_);
+    private static int showDialog(final CommandSourceStack sender, final Collection<ServerPlayer> targets, final Holder<Dialog> dialog) {
+        for (ServerPlayer target : targets) {
+            target.openDialog(dialog);
         }
 
-        if (p_410671_.size() == 1) {
-            p_408221_.sendSuccess(() -> Component.translatable("commands.dialog.show.single", p_410671_.iterator().next().getDisplayName()), true);
+        if (targets.size() == 1) {
+            sender.sendSuccess(() -> Component.translatable("commands.dialog.show.single", targets.iterator().next().getDisplayName()), true);
         } else {
-            p_408221_.sendSuccess(() -> Component.translatable("commands.dialog.show.multiple", p_410671_.size()), true);
+            sender.sendSuccess(() -> Component.translatable("commands.dialog.show.multiple", targets.size()), true);
         }
 
-        return p_410671_.size();
+        return targets.size();
     }
 
-    private static int clearDialog(CommandSourceStack p_410567_, Collection<ServerPlayer> p_406347_) {
-        for (ServerPlayer serverplayer : p_406347_) {
-            serverplayer.connection.send(ClientboundClearDialogPacket.INSTANCE);
+    private static int clearDialog(final CommandSourceStack sender, final Collection<ServerPlayer> targets) {
+        for (ServerPlayer target : targets) {
+            target.connection.send(ClientboundClearDialogPacket.INSTANCE);
         }
 
-        if (p_406347_.size() == 1) {
-            p_410567_.sendSuccess(() -> Component.translatable("commands.dialog.clear.single", p_406347_.iterator().next().getDisplayName()), true);
+        if (targets.size() == 1) {
+            sender.sendSuccess(() -> Component.translatable("commands.dialog.clear.single", targets.iterator().next().getDisplayName()), true);
         } else {
-            p_410567_.sendSuccess(() -> Component.translatable("commands.dialog.clear.multiple", p_406347_.size()), true);
+            sender.sendSuccess(() -> Component.translatable("commands.dialog.clear.multiple", targets.size()), true);
         }
 
-        return p_406347_.size();
+        return targets.size();
     }
 }

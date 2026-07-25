@@ -35,105 +35,112 @@ public class RedstoneTorchBlock extends BaseTorchBlock {
         return CODEC;
     }
 
-    protected RedstoneTorchBlock(BlockBehaviour.Properties p_55678_) {
-        super(p_55678_);
+    protected RedstoneTorchBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(LIT, true));
     }
 
     @Override
-    protected void onPlace(BlockState p_55724_, Level p_55725_, BlockPos p_55726_, BlockState p_55727_, boolean p_55728_) {
-        this.notifyNeighbors(p_55725_, p_55726_, p_55724_);
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        this.notifyNeighbors(level, pos, state);
     }
 
-    private void notifyNeighbors(Level p_369825_, BlockPos p_369455_, BlockState p_368137_) {
-        Orientation orientation = this.randomOrientation(p_369825_, p_368137_);
+    private void notifyNeighbors(final Level level, final BlockPos pos, final BlockState state) {
+        Orientation orientation = this.randomOrientation(level, state);
 
         for (Direction direction : Direction.values()) {
-            p_369825_.updateNeighborsAt(p_369455_.relative(direction), this, ExperimentalRedstoneUtils.withFront(orientation, direction));
+            level.updateNeighborsAt(pos.relative(direction), this, ExperimentalRedstoneUtils.withFront(orientation, direction));
         }
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_396570_, ServerLevel p_391552_, BlockPos p_392704_, boolean p_397552_) {
-        if (!p_397552_) {
-            this.notifyNeighbors(p_391552_, p_392704_, p_396570_);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        if (!movedByPiston) {
+            this.notifyNeighbors(level, pos, state);
         }
     }
 
-    @Override
-    protected int getSignal(BlockState p_55694_, BlockGetter p_55695_, BlockPos p_55696_, Direction p_55697_) {
-        return p_55694_.getValue(LIT) && Direction.UP != p_55697_ ? 15 : 0;
-    }
-
-    protected boolean hasNeighborSignal(Level p_55681_, BlockPos p_55682_, BlockState p_55683_) {
-        return p_55681_.hasSignal(p_55682_.below(), Direction.DOWN);
+    protected boolean hasNeighborSignal(final Level level, final BlockPos pos, final BlockState state) {
+        return level.hasSignal(pos.below(), Direction.DOWN);
     }
 
     @Override
-    protected void tick(BlockState p_221949_, ServerLevel p_221950_, BlockPos p_221951_, RandomSource p_221952_) {
-        boolean flag = this.hasNeighborSignal(p_221950_, p_221951_, p_221949_);
-        List<RedstoneTorchBlock.Toggle> list = RECENT_TOGGLES.get(p_221950_);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        boolean neighborSignal = this.hasNeighborSignal(level, pos, state);
+        List<RedstoneTorchBlock.Toggle> toggles = RECENT_TOGGLES.get(level);
 
-        while (list != null && !list.isEmpty() && p_221950_.getGameTime() - list.get(0).when > 60L) {
-            list.remove(0);
+        while (toggles != null && !toggles.isEmpty() && level.getGameTime() - toggles.get(0).when > 60L) {
+            toggles.remove(0);
         }
 
-        if (p_221949_.getValue(LIT)) {
-            if (flag) {
-                p_221950_.setBlock(p_221951_, p_221949_.setValue(LIT, false), 3);
-                if (isToggledTooFrequently(p_221950_, p_221951_, true)) {
-                    p_221950_.levelEvent(1502, p_221951_, 0);
-                    p_221950_.scheduleTick(p_221951_, p_221950_.getBlockState(p_221951_).getBlock(), 160);
+        if (state.getValue(LIT)) {
+            if (neighborSignal) {
+                level.setBlock(pos, state.setValue(LIT, false), 3);
+                if (isToggledTooFrequently(level, pos, true)) {
+                    level.levelEvent(1502, pos, 0);
+                    level.scheduleTick(pos, level.getBlockState(pos).getBlock(), 160);
                 }
             }
-        } else if (!flag && !isToggledTooFrequently(p_221950_, p_221951_, false)) {
-            p_221950_.setBlock(p_221951_, p_221949_.setValue(LIT, true), 3);
+        } else if (!neighborSignal && !isToggledTooFrequently(level, pos, false)) {
+            level.setBlock(pos, state.setValue(LIT, true), 3);
         }
     }
 
     @Override
-    protected void neighborChanged(BlockState p_55699_, Level p_55700_, BlockPos p_55701_, Block p_55702_, @Nullable Orientation p_368542_, boolean p_55704_) {
-        if (p_55699_.getValue(LIT) == this.hasNeighborSignal(p_55700_, p_55701_, p_55699_) && !p_55700_.getBlockTicks().willTickThisTick(p_55701_, this)) {
-            p_55700_.scheduleTick(p_55701_, this, 2);
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        if (state.getValue(LIT) == this.hasNeighborSignal(level, pos, state) && !level.getBlockTicks().willTickThisTick(pos, this)) {
+            level.scheduleTick(pos, this, 2);
         }
     }
 
     @Override
-    protected int getDirectSignal(BlockState p_55719_, BlockGetter p_55720_, BlockPos p_55721_, Direction p_55722_) {
-        return p_55722_ == Direction.DOWN ? p_55719_.getSignal(p_55720_, p_55721_, p_55722_) : 0;
+    protected int getDirectSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return direction == Direction.DOWN ? state.getSignal(level, pos, direction) : 0;
     }
 
     @Override
-    protected boolean isSignalSource(BlockState p_55730_) {
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
     @Override
-    public void animateTick(BlockState p_221954_, Level p_221955_, BlockPos p_221956_, RandomSource p_221957_) {
-        if (p_221954_.getValue(LIT)) {
-            double d0 = p_221956_.getX() + 0.5 + (p_221957_.nextDouble() - 0.5) * 0.2;
-            double d1 = p_221956_.getY() + 0.7 + (p_221957_.nextDouble() - 0.5) * 0.2;
-            double d2 = p_221956_.getZ() + 0.5 + (p_221957_.nextDouble() - 0.5) * 0.2;
-            p_221955_.addParticle(DustParticleOptions.REDSTONE, d0, d1, d2, 0.0, 0.0, 0.0);
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.getValue(LIT) ? 15 : 0;
+    }
+
+    @Override
+    protected int getSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return Direction.UP != direction ? this.ownSignal(state, level, pos) : 0;
+    }
+
+    @Override
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(LIT)) {
+            double x = pos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.2;
+            double y = pos.getY() + 0.7 + (random.nextDouble() - 0.5) * 0.2;
+            double z = pos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.2;
+            level.addParticle(DustParticleOptions.REDSTONE, x, y, z, 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_55717_) {
-        p_55717_.add(LIT);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(LIT);
     }
 
-    private static boolean isToggledTooFrequently(Level p_55685_, BlockPos p_55686_, boolean p_55687_) {
-        List<RedstoneTorchBlock.Toggle> list = RECENT_TOGGLES.computeIfAbsent(p_55685_, p_55680_ -> Lists.newArrayList());
-        if (p_55687_) {
-            list.add(new RedstoneTorchBlock.Toggle(p_55686_.immutable(), p_55685_.getGameTime()));
+    private static boolean isToggledTooFrequently(final Level level, final BlockPos pos, final boolean add) {
+        List<RedstoneTorchBlock.Toggle> toggles = RECENT_TOGGLES.computeIfAbsent(level, k -> Lists.newArrayList());
+        if (add) {
+            toggles.add(new RedstoneTorchBlock.Toggle(pos.immutable(), level.getGameTime()));
         }
 
-        int i = 0;
+        int count = 0;
 
-        for (RedstoneTorchBlock.Toggle redstonetorchblock$toggle : list) {
-            if (redstonetorchblock$toggle.pos.equals(p_55686_)) {
-                if (++i >= 8) {
+        for (RedstoneTorchBlock.Toggle toggle : toggles) {
+            if (toggle.pos.equals(pos)) {
+                if (++count >= 8) {
                     return true;
                 }
             }
@@ -142,17 +149,17 @@ public class RedstoneTorchBlock extends BaseTorchBlock {
         return false;
     }
 
-    protected @Nullable Orientation randomOrientation(Level p_362843_, BlockState p_364833_) {
-        return ExperimentalRedstoneUtils.initialOrientation(p_362843_, null, Direction.UP);
+    protected @Nullable Orientation randomOrientation(final Level level, final BlockState state) {
+        return ExperimentalRedstoneUtils.initialOrientation(level, null, Direction.UP);
     }
 
     public static class Toggle {
-        final BlockPos pos;
-        final long when;
+        private final BlockPos pos;
+        private final long when;
 
-        public Toggle(BlockPos p_55734_, long p_55735_) {
-            this.pos = p_55734_;
-            this.when = p_55735_;
+        public Toggle(final BlockPos pos, final long when) {
+            this.pos = pos;
+            this.when = when;
         }
     }
 }

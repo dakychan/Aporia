@@ -16,7 +16,7 @@ public record ClientboundSetDefaultSpawnPositionPacket(LevelData.RespawnData res
         return GamePacketTypes.CLIENTBOUND_SET_DEFAULT_SPAWN_POSITION;
     }
 
-    public void handle(ClientGamePacketListener p_133122_) {
-        p_133122_.handleSetSpawn(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetSpawn(this);
     }
 }

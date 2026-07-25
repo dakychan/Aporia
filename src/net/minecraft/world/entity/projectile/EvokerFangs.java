@@ -8,6 +8,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.TraceableEntity;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -27,24 +28,26 @@ public class EvokerFangs extends Entity implements TraceableEntity {
     private boolean clientSideAttackStarted;
     private @Nullable EntityReference<LivingEntity> owner;
 
-    public EvokerFangs(EntityType<? extends EvokerFangs> p_36923_, Level p_36924_) {
-        super(p_36923_, p_36924_);
+    public EvokerFangs(final EntityType<? extends EvokerFangs> type, final Level level) {
+        super(type, level);
     }
 
-    public EvokerFangs(Level p_36926_, double p_36927_, double p_36928_, double p_36929_, float p_36930_, int p_36931_, LivingEntity p_36932_) {
-        this(EntityType.EVOKER_FANGS, p_36926_);
-        this.warmupDelayTicks = p_36931_;
-        this.setOwner(p_36932_);
-        this.setYRot(p_36930_ * (180.0F / (float)Math.PI));
-        this.setPos(p_36927_, p_36928_, p_36929_);
+    public EvokerFangs(
+        final Level level, final double x, final double y, final double z, final float rotaionRadians, final int warmupDelayTicks, final LivingEntity owner
+    ) {
+        this(EntityTypes.EVOKER_FANGS, level);
+        this.warmupDelayTicks = warmupDelayTicks;
+        this.setOwner(owner);
+        this.setYRot(rotaionRadians * (180.0F / (float)Math.PI));
+        this.setPos(x, y, z);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_335129_) {
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
     }
 
-    public void setOwner(@Nullable LivingEntity p_36939_) {
-        this.owner = EntityReference.of(p_36939_);
+    public void setOwner(final @Nullable LivingEntity owner) {
+        this.owner = EntityReference.of(owner);
     }
 
     public @Nullable LivingEntity getOwner() {
@@ -52,15 +55,15 @@ public class EvokerFangs extends Entity implements TraceableEntity {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_408053_) {
-        this.warmupDelayTicks = p_408053_.getIntOr("Warmup", 0);
-        this.owner = EntityReference.read(p_408053_, "Owner");
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.warmupDelayTicks = input.getIntOr("Warmup", 0);
+        this.owner = EntityReference.read(input, "Owner");
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_409274_) {
-        p_409274_.putInt("Warmup", this.warmupDelayTicks);
-        EntityReference.store(this.owner, p_409274_, "Owner");
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.putInt("Warmup", this.warmupDelayTicks);
+        EntityReference.store(this.owner, output, "Owner");
     }
 
     @Override
@@ -71,20 +74,20 @@ public class EvokerFangs extends Entity implements TraceableEntity {
                 this.lifeTicks--;
                 if (this.lifeTicks == 14) {
                     for (int i = 0; i < 12; i++) {
-                        double d0 = this.getX() + (this.random.nextDouble() * 2.0 - 1.0) * this.getBbWidth() * 0.5;
-                        double d1 = this.getY() + 0.05 + this.random.nextDouble();
-                        double d2 = this.getZ() + (this.random.nextDouble() * 2.0 - 1.0) * this.getBbWidth() * 0.5;
-                        double d3 = (this.random.nextDouble() * 2.0 - 1.0) * 0.3;
-                        double d4 = 0.3 + this.random.nextDouble() * 0.3;
-                        double d5 = (this.random.nextDouble() * 2.0 - 1.0) * 0.3;
-                        this.level().addParticle(ParticleTypes.CRIT, d0, d1 + 1.0, d2, d3, d4, d5);
+                        double x = this.getX() + (this.random.nextDouble() * 2.0 - 1.0) * this.getBbWidth() * 0.5;
+                        double y = this.getY() + 0.05 + this.random.nextDouble();
+                        double z = this.getZ() + (this.random.nextDouble() * 2.0 - 1.0) * this.getBbWidth() * 0.5;
+                        double xd = (this.random.nextDouble() * 2.0 - 1.0) * 0.3;
+                        double yd = 0.3 + this.random.nextDouble() * 0.3;
+                        double zd = (this.random.nextDouble() * 2.0 - 1.0) * 0.3;
+                        this.level().addParticle(ParticleTypes.CRIT, x, y + 1.0, z, xd, yd, zd);
                     }
                 }
             }
         } else if (--this.warmupDelayTicks < 0) {
             if (this.warmupDelayTicks == -8) {
-                for (LivingEntity livingentity : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(0.2, 0.0, 0.2))) {
-                    this.dealDamageTo(livingentity);
+                for (LivingEntity entity : this.level().getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(0.2, 0.0, 0.2))) {
+                    this.dealDamageTo(entity);
                 }
             }
 
@@ -99,28 +102,28 @@ public class EvokerFangs extends Entity implements TraceableEntity {
         }
     }
 
-    private void dealDamageTo(LivingEntity p_36945_) {
-        LivingEntity livingentity = this.getOwner();
-        if (p_36945_.isAlive() && !p_36945_.isInvulnerable() && p_36945_ != livingentity) {
-            if (livingentity == null) {
-                p_36945_.hurt(this.damageSources().magic(), 6.0F);
+    private void dealDamageTo(final LivingEntity entity) {
+        LivingEntity currentOwner = this.getOwner();
+        if (entity.isAlive() && !entity.isInvulnerable() && entity != currentOwner) {
+            if (currentOwner == null) {
+                entity.hurt(this.damageSources().magic(), 6.0F);
             } else {
-                if (livingentity.isAlliedTo(p_36945_)) {
+                if (currentOwner.isAlliedTo(entity)) {
                     return;
                 }
 
-                DamageSource damagesource = this.damageSources().indirectMagic(this, livingentity);
-                if (this.level() instanceof ServerLevel serverlevel && p_36945_.hurtServer(serverlevel, damagesource, 6.0F)) {
-                    EnchantmentHelper.doPostAttackEffects(serverlevel, p_36945_, damagesource);
+                DamageSource damageSource = this.damageSources().indirectMagic(this, currentOwner);
+                if (this.level() instanceof ServerLevel serverLevel && entity.hurtServer(serverLevel, damageSource, 6.0F)) {
+                    EnchantmentHelper.doPostAttackEffects(serverLevel, entity, damageSource);
                 }
             }
         }
     }
 
     @Override
-    public void handleEntityEvent(byte p_36935_) {
-        super.handleEntityEvent(p_36935_);
-        if (p_36935_ == 4) {
+    public void handleEntityEvent(final byte id) {
+        super.handleEntityEvent(id);
+        if (id == 4) {
             this.clientSideAttackStarted = true;
             if (!this.isSilent()) {
                 this.level()
@@ -138,17 +141,17 @@ public class EvokerFangs extends Entity implements TraceableEntity {
         }
     }
 
-    public float getAnimationProgress(float p_36937_) {
+    public float getAnimationProgress(final float a) {
         if (!this.clientSideAttackStarted) {
             return 0.0F;
-        } else {
-            int i = this.lifeTicks - 2;
-            return i <= 0 ? 1.0F : 1.0F - (i - p_36937_) / 20.0F;
         }
+
+        int remainingLife = this.lifeTicks - 2;
+        return remainingLife <= 0 ? 1.0F : 1.0F - (remainingLife - a) / 20.0F;
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_362713_, DamageSource p_362680_, float p_369558_) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         return false;
     }
 }

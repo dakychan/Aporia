@@ -12,17 +12,17 @@ public class TintedGlassBlock extends TransparentBlock {
         return CODEC;
     }
 
-    public TintedGlassBlock(BlockBehaviour.Properties p_154822_) {
-        super(p_154822_);
+    public TintedGlassBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState p_154824_) {
+    protected boolean propagatesSkylightDown(final BlockState state) {
         return false;
     }
 
     @Override
-    protected int getLightBlock(BlockState p_154828_) {
+    protected int getLightDampening(final BlockState state) {
         return 15;
     }
 }

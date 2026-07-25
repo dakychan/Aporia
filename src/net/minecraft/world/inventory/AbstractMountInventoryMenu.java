@@ -14,75 +14,79 @@ public abstract class AbstractMountInventoryMenu extends AbstractContainerMenu {
     protected final int SLOT_INVENTORY_START = 2;
     protected static final int INVENTORY_ROWS = 3;
 
-    protected AbstractMountInventoryMenu(int p_451193_, Inventory p_453764_, Container p_451444_, LivingEntity p_453510_) {
-        super(null, p_451193_);
-        this.mountContainer = p_451444_;
-        this.mount = p_453510_;
-        p_451444_.startOpen(p_453764_.player);
+    protected AbstractMountInventoryMenu(final int containerId, final Inventory playerInventory, final Container mountInventory, final LivingEntity mount) {
+        super(null, containerId);
+        this.mountContainer = mountInventory;
+        this.mount = mount;
+        mountInventory.startOpen(playerInventory.player);
     }
 
-    protected abstract boolean hasInventoryChanged(Container p_459200_);
+    protected abstract boolean hasInventoryChanged(final Container container);
 
     @Override
-    public boolean stillValid(Player p_459837_) {
-        return !this.hasInventoryChanged(this.mountContainer) && this.mountContainer.stillValid(p_459837_) && this.mount.isAlive() && p_459837_.isWithinEntityInteractionRange(this.mount, 4.0);
-    }
-
-    @Override
-    public void removed(Player p_454265_) {
-        super.removed(p_454265_);
-        this.mountContainer.stopOpen(p_454265_);
+    public boolean stillValid(final Player player) {
+        return !this.hasInventoryChanged(this.mountContainer)
+            && this.mountContainer.stillValid(player)
+            && this.mount.isAlive()
+            && player.isWithinEntityInteractionRange(this.mount, 4.0);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_456705_, int p_457058_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_457058_);
+    public void removed(final Player player) {
+        super.removed(player);
+        this.mountContainer.stopOpen(player);
+    }
+
+    @Override
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            int i = 2 + this.mountContainer.getContainerSize();
-            if (p_457058_ < i) {
-                if (!this.moveItemStackTo(itemstack1, i, this.slots.size(), true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            int playerContainerStart = 2 + this.mountContainer.getContainerSize();
+            if (slotIndex < playerContainerStart) {
+                if (!this.moveItemStackTo(stack, playerContainerStart, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (this.getSlot(1).mayPlace(itemstack1) && !this.getSlot(1).hasItem()) {
-                if (!this.moveItemStackTo(itemstack1, 1, 2, false)) {
+            } else if (this.getSlot(1).mayPlace(stack) && !this.getSlot(1).hasItem()) {
+                if (!this.moveItemStackTo(stack, 1, 2, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (this.getSlot(0).mayPlace(itemstack1) && !this.getSlot(0).hasItem()) {
-                if (!this.moveItemStackTo(itemstack1, 0, 1, false)) {
+            } else if (this.getSlot(0).mayPlace(stack) && !this.getSlot(0).hasItem()) {
+                if (!this.moveItemStackTo(stack, 0, 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (this.mountContainer.getContainerSize() == 0 || !this.moveItemStackTo(itemstack1, 2, i, false)) {
-                int j = i + 27;
-                int k = j + 9;
-                if (p_457058_ >= j && p_457058_ < k) {
-                    if (!this.moveItemStackTo(itemstack1, i, j, false)) {
+            } else if (this.mountContainer.getContainerSize() == 0 || !this.moveItemStackTo(stack, 2, playerContainerStart, false)) {
+                int playerContainerEnd = playerContainerStart + 27;
+                int playerHotBarStart = playerContainerEnd;
+                int playerHotBarEnd = playerHotBarStart + 9;
+                if (slotIndex >= playerHotBarStart && slotIndex < playerHotBarEnd) {
+                    if (!this.moveItemStackTo(stack, playerContainerStart, playerContainerEnd, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (p_457058_ >= i && p_457058_ < j) {
-                    if (!this.moveItemStackTo(itemstack1, j, k, false)) {
+                } else if (slotIndex >= playerContainerStart && slotIndex < playerContainerEnd) {
+                    if (!this.moveItemStackTo(stack, playerHotBarStart, playerHotBarEnd, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (!this.moveItemStackTo(itemstack1, j, j, false)) {
+                } else if (!this.moveItemStackTo(stack, playerHotBarStart, playerContainerEnd, false)) {
                     return ItemStack.EMPTY;
                 }
 
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
         }
 
-        return itemstack;
+        return clicked;
     }
 
-    public static int getInventorySize(int p_457364_) {
-        return p_457364_ * 3;
+    public static int getInventorySize(final int inventoryColumns) {
+        return inventoryColumns * 3;
     }
 }

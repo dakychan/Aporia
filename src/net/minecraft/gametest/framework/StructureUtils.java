@@ -1,7 +1,6 @@
 package net.minecraft.gametest.framework;
 
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -9,7 +8,6 @@ import java.util.Optional;
 import java.util.stream.Stream;
 import net.minecraft.commands.arguments.blocks.BlockInput;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -23,128 +21,119 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Mirror;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.TestInstanceBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import org.jspecify.annotations.Nullable;
 
 public class StructureUtils {
     public static final int DEFAULT_Y_SEARCH_RADIUS = 10;
-    public static final String DEFAULT_TEST_STRUCTURES_DIR = "Minecraft.Server/src/test/convertables/data";
-    public static Path testStructuresDir = Paths.get("Minecraft.Server/src/test/convertables/data");
+    public static @Nullable Path testStructuresTargetDir;
+    public static @Nullable Path testStructuresSourceDir;
 
-    public static Rotation getRotationForRotationSteps(int p_127836_) {
-        switch (p_127836_) {
-            case 0:
-                return Rotation.NONE;
-            case 1:
-                return Rotation.CLOCKWISE_90;
-            case 2:
-                return Rotation.CLOCKWISE_180;
-            case 3:
-                return Rotation.COUNTERCLOCKWISE_90;
-            default:
-                throw new IllegalArgumentException("rotationSteps must be a value from 0-3. Got value " + p_127836_);
-        }
+    public static Rotation getRotationForRotationSteps(final int rotationSteps) {
+        return switch (rotationSteps) {
+            case 0 -> Rotation.NONE;
+            case 1 -> Rotation.CLOCKWISE_90;
+            case 2 -> Rotation.CLOCKWISE_180;
+            case 3 -> Rotation.COUNTERCLOCKWISE_90;
+            default -> throw new IllegalArgumentException("rotationSteps must be a value from 0-3. Got value " + rotationSteps);
+        };
     }
 
-    public static int getRotationStepsForRotation(Rotation p_177752_) {
-        switch (p_177752_) {
-            case NONE:
-                return 0;
-            case CLOCKWISE_90:
-                return 1;
-            case CLOCKWISE_180:
-                return 2;
-            case COUNTERCLOCKWISE_90:
-                return 3;
-            default:
-                throw new IllegalArgumentException("Unknown rotation value, don't know how many steps it represents: " + p_177752_);
-        }
+    public static int getRotationStepsForRotation(final Rotation rotation) {
+        return switch (rotation) {
+            case NONE -> 0;
+            case CLOCKWISE_90 -> 1;
+            case CLOCKWISE_180 -> 2;
+            case COUNTERCLOCKWISE_90 -> 3;
+            default -> throw new IllegalArgumentException("Unknown rotation value, don't know how many steps it represents: " + rotation);
+        };
     }
 
-    public static TestInstanceBlockEntity createNewEmptyTest(Identifier p_458884_, BlockPos p_391956_, Vec3i p_394926_, Rotation p_395782_, ServerLevel p_396943_) {
-        BoundingBox boundingbox = getStructureBoundingBox(TestInstanceBlockEntity.getStructurePos(p_391956_), p_394926_, p_395782_);
-        clearSpaceForStructure(boundingbox, p_396943_);
-        p_396943_.setBlockAndUpdate(p_391956_, Blocks.TEST_INSTANCE_BLOCK.defaultBlockState());
-        TestInstanceBlockEntity testinstanceblockentity = (TestInstanceBlockEntity)p_396943_.getBlockEntity(p_391956_);
-        ResourceKey<GameTestInstance> resourcekey = ResourceKey.create(Registries.TEST_INSTANCE, p_458884_);
-        testinstanceblockentity.set(
-            new TestInstanceBlockEntity.Data(Optional.of(resourcekey), p_394926_, p_395782_, false, TestInstanceBlockEntity.Status.CLEARED, Optional.empty())
-        );
-        return testinstanceblockentity;
+    public static TestInstanceBlockEntity createNewEmptyTest(
+        final Identifier id, final BlockPos structurePos, final Vec3i size, final Rotation rotation, final ServerLevel level
+    ) {
+        BoundingBox structureBoundingBox = getStructureBoundingBox(TestInstanceBlockEntity.getStructurePos(structurePos), size, rotation);
+        clearSpaceForStructure(structureBoundingBox, level);
+        level.setBlockAndUpdate(structurePos, Blocks.TEST_INSTANCE_BLOCK.defaultBlockState());
+        TestInstanceBlockEntity test = (TestInstanceBlockEntity)level.getBlockEntity(structurePos);
+        ResourceKey<GameTestInstance> key = ResourceKey.create(Registries.TEST_INSTANCE, id);
+        test.set(new TestInstanceBlockEntity.Data(Optional.of(key), size, rotation, false, TestInstanceBlockEntity.Status.CLEARED, Optional.empty()));
+        return test;
     }
 
-    public static void clearSpaceForStructure(BoundingBox p_127850_, ServerLevel p_127852_) {
-        int i = p_127850_.minY() - 1;
-        BlockPos.betweenClosedStream(p_127850_).forEach(p_177748_ -> clearBlock(i, p_177748_, p_127852_));
-        p_127852_.getBlockTicks().clearArea(p_127850_);
-        p_127852_.clearBlockEvents(p_127850_);
-        AABB aabb = AABB.of(p_127850_);
-        List<Entity> list = p_127852_.getEntitiesOfClass(Entity.class, aabb, p_177750_ -> !(p_177750_ instanceof Player));
-        list.forEach(Entity::discard);
+    public static void clearSpaceForStructure(final BoundingBox structureBoundingBox, final ServerLevel level) {
+        int groundHeight = structureBoundingBox.minY() - 1;
+        BlockPos.betweenClosedStream(structureBoundingBox).forEach(pos -> clearBlock(groundHeight, pos, level));
+        level.getBlockTicks().clearArea(structureBoundingBox);
+        level.clearBlockEvents(structureBoundingBox);
+        AABB bounds = AABB.of(structureBoundingBox);
+        List<Entity> livingEntities = level.getEntitiesOfClass(Entity.class, bounds, mob -> !(mob instanceof Player));
+        livingEntities.forEach(Entity::discard);
     }
 
-    public static BlockPos getTransformedFarCorner(BlockPos p_310098_, Vec3i p_312132_, Rotation p_309587_) {
-        BlockPos blockpos = p_310098_.offset(p_312132_).offset(-1, -1, -1);
-        return StructureTemplate.transform(blockpos, Mirror.NONE, p_309587_, p_310098_);
+    public static BlockPos getTransformedFarCorner(final BlockPos structurePosition, final Vec3i size, final Rotation rotation) {
+        BlockPos farCornerBeforeTransform = structurePosition.offset(size).offset(-1, -1, -1);
+        return StructureTemplate.transform(farCornerBeforeTransform, Mirror.NONE, rotation, structurePosition);
     }
 
-    public static BoundingBox getStructureBoundingBox(BlockPos p_177761_, Vec3i p_177762_, Rotation p_177763_) {
-        BlockPos blockpos = getTransformedFarCorner(p_177761_, p_177762_, p_177763_);
-        BoundingBox boundingbox = BoundingBox.fromCorners(p_177761_, blockpos);
-        int i = Math.min(boundingbox.minX(), boundingbox.maxX());
-        int j = Math.min(boundingbox.minZ(), boundingbox.maxZ());
-        return boundingbox.move(p_177761_.getX() - i, 0, p_177761_.getZ() - j);
+    public static BoundingBox getStructureBoundingBox(final BlockPos northWestCorner, final Vec3i size, final Rotation rotation) {
+        BlockPos farCorner = getTransformedFarCorner(northWestCorner, size, rotation);
+        BoundingBox boundingBox = BoundingBox.fromCorners(northWestCorner, farCorner);
+        int currentNorthWestCornerX = Math.min(boundingBox.minX(), boundingBox.maxX());
+        int currentNorthWestCornerZ = Math.min(boundingBox.minZ(), boundingBox.maxZ());
+        return boundingBox.move(northWestCorner.getX() - currentNorthWestCornerX, 0, northWestCorner.getZ() - currentNorthWestCornerZ);
     }
 
-    public static Optional<BlockPos> findTestContainingPos(BlockPos p_396694_, int p_391597_, ServerLevel p_393804_) {
-        return findTestBlocks(p_396694_, p_391597_, p_393804_).filter(p_177756_ -> doesStructureContain(p_177756_, p_396694_, p_393804_)).findFirst();
+    public static Optional<BlockPos> findTestContainingPos(final BlockPos pos, final int searchRadius, final ServerLevel level) {
+        return findTestBlocks(pos, searchRadius, level).filter(testBlockPosToCheck -> doesStructureContain(testBlockPosToCheck, pos, level)).findFirst();
     }
 
-    public static Optional<BlockPos> findNearestTest(BlockPos p_397473_, int p_391969_, ServerLevel p_395973_) {
-        Comparator<BlockPos> comparator = Comparator.comparingInt(p_177759_ -> p_177759_.distManhattan(p_397473_));
-        return findTestBlocks(p_397473_, p_391969_, p_395973_).min(comparator);
+    public static Optional<BlockPos> findNearestTest(final BlockPos relativeToPos, final int searchRadius, final ServerLevel level) {
+        Comparator<BlockPos> distanceToPlayer = Comparator.comparingInt(pos -> pos.distManhattan(relativeToPos));
+        return findTestBlocks(relativeToPos, searchRadius, level).min(distanceToPlayer);
     }
 
-    public static Stream<BlockPos> findTestBlocks(BlockPos p_127911_, int p_127912_, ServerLevel p_127913_) {
-        return p_127913_.getPoiManager()
-            .findAll(p_405074_ -> p_405074_.is(PoiTypes.TEST_INSTANCE), p_405075_ -> true, p_127911_, p_127912_, PoiManager.Occupancy.ANY)
+    public static Stream<BlockPos> findTestBlocks(final BlockPos centerPos, final int searchRadius, final ServerLevel level) {
+        return level.getPoiManager()
+            .findAll(p -> p.is(PoiTypes.TEST_INSTANCE), p -> true, centerPos, searchRadius, PoiManager.Occupancy.ANY)
             .map(BlockPos::immutable);
     }
 
-    public static Stream<BlockPos> lookedAtTestPos(BlockPos p_393627_, Entity p_395264_, ServerLevel p_392963_) {
-        int i = 250;
-        Vec3 vec3 = p_395264_.getEyePosition();
-        Vec3 vec31 = vec3.add(p_395264_.getLookAngle().scale(250.0));
-        return findTestBlocks(p_393627_, 250, p_392963_)
-            .map(p_389787_ -> p_392963_.getBlockEntity(p_389787_, BlockEntityType.TEST_INSTANCE_BLOCK))
+    public static Stream<BlockPos> lookedAtTestPos(final BlockPos pos, final Entity camera, final ServerLevel level) {
+        int radius = 250;
+        Vec3 start = camera.getEyePosition();
+        Vec3 end = start.add(camera.getLookAngle().scale(250.0));
+        return findTestBlocks(pos, 250, level)
+            .map(blockPos -> level.getBlockEntity(blockPos, BlockEntityTypes.TEST_INSTANCE_BLOCK))
             .flatMap(Optional::stream)
-            .filter(p_389792_ -> p_389792_.getStructureBounds().clip(vec3, vec31).isPresent())
+            .filter(blockEntity -> blockEntity.getStructureBounds().clip(start, end).isPresent())
             .map(BlockEntity::getBlockPos)
-            .sorted(Comparator.comparing(p_393627_::distSqr))
+            .sorted(Comparator.comparing(pos::distSqr))
             .limit(1L);
     }
 
-    private static void clearBlock(int p_127842_, BlockPos p_127843_, ServerLevel p_127844_) {
-        BlockState blockstate;
-        if (p_127843_.getY() < p_127842_) {
-            blockstate = Blocks.STONE.defaultBlockState();
+    private static void clearBlock(final int airIfAboveThisY, final BlockPos pos, final ServerLevel level) {
+        BlockState blockState;
+        if (pos.getY() < airIfAboveThisY) {
+            blockState = Blocks.STONE.defaultBlockState();
         } else {
-            blockstate = Blocks.AIR.defaultBlockState();
+            blockState = Blocks.AIR.defaultBlockState();
         }
 
-        BlockInput blockinput = new BlockInput(blockstate, Collections.emptySet(), null);
-        blockinput.place(p_127844_, p_127843_, 818);
-        p_127844_.updateNeighborsAt(p_127843_, blockstate.getBlock());
+        BlockInput blockInput = new BlockInput(blockState, Collections.emptySet(), null);
+        blockInput.place(level, pos, 818);
+        level.updateNeighborsAt(pos, blockState.getBlock());
     }
 
-    private static boolean doesStructureContain(BlockPos p_127868_, BlockPos p_127869_, ServerLevel p_127870_) {
-        return p_127870_.getBlockEntity(p_127868_) instanceof TestInstanceBlockEntity testinstanceblockentity
-            ? testinstanceblockentity.getStructureBoundingBox().isInside(p_127869_)
+    private static boolean doesStructureContain(final BlockPos testInstanceBlockPos, final BlockPos pos, final ServerLevel level) {
+        return level.getBlockEntity(testInstanceBlockPos) instanceof TestInstanceBlockEntity blockEntity
+            ? blockEntity.getStructureBoundingBox().isInside(pos)
             : false;
     }
 }

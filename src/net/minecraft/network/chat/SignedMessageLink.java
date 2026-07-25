@@ -3,7 +3,6 @@ package net.minecraft.network.chat;
 import com.google.common.primitives.Ints;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.security.SignatureException;
 import java.util.UUID;
 import net.minecraft.core.UUIDUtil;
@@ -14,30 +13,30 @@ import org.jspecify.annotations.Nullable;
 
 public record SignedMessageLink(int index, UUID sender, UUID sessionId) {
     public static final Codec<SignedMessageLink> CODEC = RecordCodecBuilder.create(
-        p_253768_ -> p_253768_.group(
+        i -> i.group(
                 ExtraCodecs.NON_NEGATIVE_INT.fieldOf("index").forGetter(SignedMessageLink::index),
                 UUIDUtil.CODEC.fieldOf("sender").forGetter(SignedMessageLink::sender),
                 UUIDUtil.CODEC.fieldOf("session_id").forGetter(SignedMessageLink::sessionId)
             )
-            .apply(p_253768_, SignedMessageLink::new)
+            .apply(i, SignedMessageLink::new)
     );
 
-    public static SignedMessageLink unsigned(UUID p_251496_) {
-        return root(p_251496_, Util.NIL_UUID);
+    public static SignedMessageLink unsigned(final UUID sender) {
+        return root(sender, Util.NIL_UUID);
     }
 
-    public static SignedMessageLink root(UUID p_249990_, UUID p_248913_) {
-        return new SignedMessageLink(0, p_249990_, p_248913_);
+    public static SignedMessageLink root(final UUID sender, final UUID sessionId) {
+        return new SignedMessageLink(0, sender, sessionId);
     }
 
-    public void updateSignature(SignatureUpdater.Output p_249261_) throws SignatureException {
-        p_249261_.update(UUIDUtil.uuidToByteArray(this.sender));
-        p_249261_.update(UUIDUtil.uuidToByteArray(this.sessionId));
-        p_249261_.update(Ints.toByteArray(this.index));
+    public void updateSignature(final SignatureUpdater.Output output) throws SignatureException {
+        output.update(UUIDUtil.uuidToByteArray(this.sender));
+        output.update(UUIDUtil.uuidToByteArray(this.sessionId));
+        output.update(Ints.toByteArray(this.index));
     }
 
-    public boolean isDescendantOf(SignedMessageLink p_250977_) {
-        return this.index > p_250977_.index() && this.sender.equals(p_250977_.sender()) && this.sessionId.equals(p_250977_.sessionId());
+    public boolean isDescendantOf(final SignedMessageLink link) {
+        return this.index > link.index() && this.sender.equals(link.sender()) && this.sessionId.equals(link.sessionId());
     }
 
     public @Nullable SignedMessageLink advance() {

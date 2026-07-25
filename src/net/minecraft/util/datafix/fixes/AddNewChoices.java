@@ -4,47 +4,45 @@ import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.DSL.TypeReference;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.TaggedChoice.TaggedChoiceType;
-import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.DynamicOps;
 import java.util.Locale;
 
 public class AddNewChoices extends DataFix {
     private final String name;
     private final TypeReference type;
 
-    public AddNewChoices(Schema p_14628_, String p_14629_, TypeReference p_14630_) {
-        super(p_14628_, true);
-        this.name = p_14629_;
-        this.type = p_14630_;
+    public AddNewChoices(final Schema outputSchema, final String name, final TypeReference type) {
+        super(outputSchema, true);
+        this.name = name;
+        this.type = type;
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        TaggedChoiceType<?> taggedchoicetype = this.getInputSchema().findChoiceType(this.type);
-        TaggedChoiceType<?> taggedchoicetype1 = this.getOutputSchema().findChoiceType(this.type);
-        return this.cap(taggedchoicetype, taggedchoicetype1);
+        TaggedChoiceType<?> inputType = this.getInputSchema().findChoiceType(this.type);
+        TaggedChoiceType<?> outputType = this.getOutputSchema().findChoiceType(this.type);
+        return this.cap(inputType, outputType);
     }
 
-    private <K> TypeRewriteRule cap(TaggedChoiceType<K> p_14639_, TaggedChoiceType<?> p_14640_) {
-        if (p_14639_.getKeyType() != p_14640_.getKeyType()) {
+    private <K> TypeRewriteRule cap(final TaggedChoiceType<K> inputType, final TaggedChoiceType<?> outputType) {
+        if (inputType.getKeyType() != outputType.getKeyType()) {
             throw new IllegalStateException("Could not inject: key type is not the same");
-        } else {
-            return this.fixTypeEverywhere(
-                this.name,
-                p_14639_,
-                (TaggedChoiceType<K>)p_14640_,
-                p_14636_ -> p_326542_ -> {
-                    if (!((TaggedChoiceType<K>)p_14640_).hasType(p_326542_.getFirst())) {
-                        throw new IllegalArgumentException(
-                            String.format(Locale.ROOT, "%s: Unknown type %s in '%s'", this.name, p_326542_.getFirst(), this.type.typeName())
-                        );
-                    } else {
-                        return p_326542_;
-                    }
-                }
-            );
         }
+
+        TaggedChoiceType<K> outputChoiceType = (TaggedChoiceType<K>)outputType;
+        return this.fixTypeEverywhere(
+            this.name,
+            inputType,
+            outputChoiceType,
+            ops -> input -> {
+                if (!outputChoiceType.hasType(input.getFirst())) {
+                    throw new IllegalArgumentException(
+                        String.format(Locale.ROOT, "%s: Unknown type %s in '%s'", this.name, input.getFirst(), this.type.typeName())
+                    );
+                } else {
+                    return input;
+                }
+            }
+        );
     }
 }

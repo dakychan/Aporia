@@ -8,26 +8,29 @@ import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
 
 public class BlockEntityBlockStateFix extends NamedEntityFix {
-    public BlockEntityBlockStateFix(Schema p_14810_, boolean p_14811_) {
-        super(p_14810_, p_14811_, "BlockEntityBlockStateFix", References.BLOCK_ENTITY, "minecraft:piston");
+    public BlockEntityBlockStateFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType, "BlockEntityBlockStateFix", References.BLOCK_ENTITY, "minecraft:piston");
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_14814_) {
-        Type<?> type = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:piston");
-        Type<?> type1 = type.findFieldType("blockState");
-        OpticFinder<?> opticfinder = DSL.fieldFinder("blockState", type1);
-        Dynamic<?> dynamic = p_14814_.get(DSL.remainderFinder());
-        int i = dynamic.get("blockId").asInt(0);
-        dynamic = dynamic.remove("blockId");
-        int j = dynamic.get("blockData").asInt(0) & 15;
-        dynamic = dynamic.remove("blockData");
-        Dynamic<?> dynamic1 = BlockStateData.getTag(i << 4 | j);
-        Typed<?> typed = type.pointTyped(p_14814_.getOps()).orElseThrow(() -> new IllegalStateException("Could not create new piston block entity."));
-        return typed.set(DSL.remainderFinder(), dynamic)
+    protected Typed<?> fix(final Typed<?> entity) {
+        Type<?> newType = this.getOutputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:piston");
+        Type<?> blockStateType = newType.findFieldType("blockState");
+        OpticFinder<?> blockStateF = DSL.fieldFinder("blockState", blockStateType);
+        Dynamic<?> tag = entity.get(DSL.remainderFinder());
+        int block = tag.get("blockId").asInt(0);
+        tag = tag.remove("blockId");
+        int data = tag.get("blockData").asInt(0) & 15;
+        tag = tag.remove("blockData");
+        Dynamic<?> blockStateTag = BlockStateData.getTag(block << 4 | data);
+        Typed<?> output = newType.pointTyped(entity.getOps()).orElseThrow(() -> new IllegalStateException("Could not create new piston block entity."));
+        return output.set(DSL.remainderFinder(), tag)
             .set(
-                opticfinder,
-                type1.readTyped(dynamic1).result().orElseThrow(() -> new IllegalStateException("Could not parse newly created block state tag.")).getFirst()
+                blockStateF,
+                blockStateType.readTyped(blockStateTag)
+                    .result()
+                    .orElseThrow(() -> new IllegalStateException("Could not parse newly created block state tag."))
+                    .getFirst()
             );
     }
 }

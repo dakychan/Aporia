@@ -12,8 +12,8 @@ import org.jspecify.annotations.Nullable;
 public class BlockStateData {
     private static final @Nullable Dynamic<?>[] MAP = new Dynamic[4096];
     private static final @Nullable Dynamic<?>[] BLOCK_DEFAULTS = new Dynamic[256];
-    private static final Object2IntMap<Dynamic<?>> ID_BY_OLD = DataFixUtils.make(new Object2IntOpenHashMap<>(), p_14955_ -> p_14955_.defaultReturnValue(-1));
-    private static final Object2IntMap<String> ID_BY_OLD_NAME = DataFixUtils.make(new Object2IntOpenHashMap<>(), p_14949_ -> p_14949_.defaultReturnValue(-1));
+    private static final Object2IntMap<Dynamic<?>> ID_BY_OLD = DataFixUtils.make(new Object2IntOpenHashMap<>(), map -> map.defaultReturnValue(-1));
+    private static final Object2IntMap<String> ID_BY_OLD_NAME = DataFixUtils.make(new Object2IntOpenHashMap<>(), map -> map.defaultReturnValue(-1));
     static final String FILTER_ME = "%%FILTER_ME%%";
     private static final String TAG_NAME = "Name";
     private static final String TAG_PROPERTIES = "Properties";
@@ -113,22 +113,54 @@ public class BlockStateData {
     private static final Map<String, String> FACING_EAST_CONDITIONAL_TRUE = Map.of("conditional", "true", "facing", "east");
     private static final Map<String, String> FACING_EAST_EXTENDED_FALSE = Map.of("extended", "false", "facing", "east");
     private static final Map<String, String> FACING_EAST_EXTENDED_TRUE = Map.of("extended", "true", "facing", "east");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "east", "half", "lower", "hinge", "right", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "east", "half", "upper", "hinge", "right", "open", "true", "powered", "true");
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "east", "half", "lower", "hinge", "right", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_EAST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "east", "half", "upper", "hinge", "right", "open", "true", "powered", "true"
+    );
     private static final Map<String, String> FACING_EAST_POWERED_FALSE = Map.of("facing", "east", "powered", "false");
     private static final Map<String, String> FACING_EAST_POWERED_TRUE = Map.of("facing", "east", "powered", "true");
     private static final Map<String, String> FACING_NORTH = Map.of("facing", "north");
@@ -136,22 +168,54 @@ public class BlockStateData {
     private static final Map<String, String> FACING_NORTH_CONDITIONAL_TRUE = Map.of("conditional", "true", "facing", "north");
     private static final Map<String, String> FACING_NORTH_EXTENDED_FALSE = Map.of("extended", "false", "facing", "north");
     private static final Map<String, String> FACING_NORTH_EXTENDED_TRUE = Map.of("extended", "true", "facing", "north");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "north", "half", "lower", "hinge", "right", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "north", "half", "upper", "hinge", "right", "open", "true", "powered", "true");
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "north", "half", "lower", "hinge", "right", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_NORTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "north", "half", "upper", "hinge", "right", "open", "true", "powered", "true"
+    );
     private static final Map<String, String> FACING_NORTH_POWERED_FALSE = Map.of("facing", "north", "powered", "false");
     private static final Map<String, String> FACING_NORTH_POWERED_TRUE = Map.of("facing", "north", "powered", "true");
     private static final Map<String, String> FACING_SOUTH = Map.of("facing", "south");
@@ -159,22 +223,54 @@ public class BlockStateData {
     private static final Map<String, String> FACING_SOUTH_CONDITIONAL_TRUE = Map.of("conditional", "true", "facing", "south");
     private static final Map<String, String> FACING_SOUTH_EXTENDED_FALSE = Map.of("extended", "false", "facing", "south");
     private static final Map<String, String> FACING_SOUTH_EXTENDED_TRUE = Map.of("extended", "true", "facing", "south");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "south", "half", "lower", "hinge", "right", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "south", "half", "upper", "hinge", "right", "open", "true", "powered", "true");
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "south", "half", "lower", "hinge", "right", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_SOUTH_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "south", "half", "upper", "hinge", "right", "open", "true", "powered", "true"
+    );
     private static final Map<String, String> FACING_SOUTH_POWERED_FALSE = Map.of("facing", "south", "powered", "false");
     private static final Map<String, String> FACING_SOUTH_POWERED_TRUE = Map.of("facing", "south", "powered", "true");
     private static final Map<String, String> FACING_UP = Map.of("facing", "up");
@@ -189,22 +285,54 @@ public class BlockStateData {
     private static final Map<String, String> FACING_WEST_CONDITIONAL_TRUE = Map.of("conditional", "true", "facing", "west");
     private static final Map<String, String> FACING_WEST_EXTENDED_FALSE = Map.of("extended", "false", "facing", "west");
     private static final Map<String, String> FACING_WEST_EXTENDED_TRUE = Map.of("extended", "true", "facing", "west");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "left", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "right", "open", "false", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "left", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "right", "open", "false", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "left", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "right", "open", "true", "powered", "false");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "left", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of("facing", "west", "half", "lower", "hinge", "right", "open", "true", "powered", "true");
-    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of("facing", "west", "half", "upper", "hinge", "right", "open", "true", "powered", "true");
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "left", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "right", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "left", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_FALSE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "right", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "left", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_FALSE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "right", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_LEFT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "left", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_LOWER = Map.of(
+        "facing", "west", "half", "lower", "hinge", "right", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> FACING_WEST_OPEN_TRUE_POWERED_TRUE_HINGE_RIGHT_HALF_UPPER = Map.of(
+        "facing", "west", "half", "upper", "hinge", "right", "open", "true", "powered", "true"
+    );
     private static final Map<String, String> FACING_WEST_POWERED_FALSE = Map.of("facing", "west", "powered", "false");
     private static final Map<String, String> FACING_WEST_POWERED_TRUE = Map.of("facing", "west", "powered", "true");
     private static final Map<String, String> HALF_BOTTOM_OPEN_FALSE_FACING_EAST = Map.of("facing", "east", "half", "bottom", "open", "false");
@@ -316,24 +444,58 @@ public class BlockStateData {
     private static final Map<String, String> NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE = Map.of(
         "down", "false", "east", "true", "north", "true", "south", "false", "up", "true", "west", "false"
     );
-    private static final Map<String, String> NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE = Map.of("down", "true", "east", "true", "north", "true", "south", "true", "up", "true", "west", "true");
+    private static final Map<String, String> NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE = Map.of(
+        "down", "true", "east", "true", "north", "true", "south", "true", "up", "true", "west", "true"
+    );
     private static final Map<String, String> POWERED_FALSE = Map.of("powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST = Map.of("facing", "east", "in_wall", "false", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH = Map.of("facing", "north", "in_wall", "false", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "false", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST = Map.of("facing", "west", "in_wall", "false", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST = Map.of("facing", "east", "in_wall", "false", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH = Map.of("facing", "north", "in_wall", "false", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "false", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST = Map.of("facing", "west", "in_wall", "false", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST = Map.of("facing", "east", "in_wall", "true", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH = Map.of("facing", "north", "in_wall", "true", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "true", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST = Map.of("facing", "west", "in_wall", "true", "open", "false", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST = Map.of("facing", "east", "in_wall", "true", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH = Map.of("facing", "north", "in_wall", "true", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "true", "open", "true", "powered", "false");
-    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST = Map.of("facing", "west", "in_wall", "true", "open", "true", "powered", "false");
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "false", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "false", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "false", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "false", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "false", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "false", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "false", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "false", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "true", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "true", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "true", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "true", "open", "false", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "true", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "true", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "true", "open", "true", "powered", "false"
+    );
+    private static final Map<String, String> POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "true", "open", "true", "powered", "false"
+    );
     private static final Map<String, String> POWERED_FALSE_MODE_COMPARE_FACING_EAST = Map.of("facing", "east", "mode", "compare", "powered", "false");
     private static final Map<String, String> POWERED_FALSE_MODE_COMPARE_FACING_NORTH = Map.of("facing", "north", "mode", "compare", "powered", "false");
     private static final Map<String, String> POWERED_FALSE_MODE_COMPARE_FACING_SOUTH = Map.of("facing", "south", "mode", "compare", "powered", "false");
@@ -343,22 +505,54 @@ public class BlockStateData {
     private static final Map<String, String> POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH = Map.of("facing", "south", "mode", "subtract", "powered", "false");
     private static final Map<String, String> POWERED_FALSE_MODE_SUBTRACT_FACING_WEST = Map.of("facing", "west", "mode", "subtract", "powered", "false");
     private static final Map<String, String> POWERED_TRUE = Map.of("powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST = Map.of("facing", "east", "in_wall", "false", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH = Map.of("facing", "north", "in_wall", "false", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "false", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST = Map.of("facing", "west", "in_wall", "false", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST = Map.of("facing", "east", "in_wall", "false", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH = Map.of("facing", "north", "in_wall", "false", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "false", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST = Map.of("facing", "west", "in_wall", "false", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST = Map.of("facing", "east", "in_wall", "true", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH = Map.of("facing", "north", "in_wall", "true", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "true", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST = Map.of("facing", "west", "in_wall", "true", "open", "false", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST = Map.of("facing", "east", "in_wall", "true", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH = Map.of("facing", "north", "in_wall", "true", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH = Map.of("facing", "south", "in_wall", "true", "open", "true", "powered", "true");
-    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST = Map.of("facing", "west", "in_wall", "true", "open", "true", "powered", "true");
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "false", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "false", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "false", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "false", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "false", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "false", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "false", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "false", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "true", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "true", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "true", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "true", "open", "false", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST = Map.of(
+        "facing", "east", "in_wall", "true", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH = Map.of(
+        "facing", "north", "in_wall", "true", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH = Map.of(
+        "facing", "south", "in_wall", "true", "open", "true", "powered", "true"
+    );
+    private static final Map<String, String> POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST = Map.of(
+        "facing", "west", "in_wall", "true", "open", "true", "powered", "true"
+    );
     private static final Map<String, String> POWERED_TRUE_MODE_COMPARE_FACING_EAST = Map.of("facing", "east", "mode", "compare", "powered", "true");
     private static final Map<String, String> POWERED_TRUE_MODE_COMPARE_FACING_NORTH = Map.of("facing", "north", "mode", "compare", "powered", "true");
     private static final Map<String, String> POWERED_TRUE_MODE_COMPARE_FACING_SOUTH = Map.of("facing", "south", "mode", "compare", "powered", "true");
@@ -429,43 +623,77 @@ public class BlockStateData {
     private static final Map<String, String> TYPE_BOTTOM = Map.of("type", "bottom");
     private static final Map<String, String> TYPE_DOUBLE = Map.of("type", "double");
     private static final Map<String, String> TYPE_TOP = Map.of("type", "top");
-    private static final Map<String, String> UP_FALSE_EAST_FALSE_NORTH_FALSE_SOUTH_FALSE_WEST_FALSE = Map.of("east", "false", "north", "false", "south", "false", "up", "false", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_FALSE_EAST_FALSE = Map.of("east", "false", "north", "false", "south", "false", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_FALSE_EAST_TRUE = Map.of("east", "true", "north", "false", "south", "false", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_TRUE_EAST_FALSE = Map.of("east", "false", "north", "false", "south", "true", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_TRUE_EAST_TRUE = Map.of("east", "true", "north", "false", "south", "true", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_FALSE_EAST_FALSE = Map.of("east", "false", "north", "true", "south", "false", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_FALSE_EAST_TRUE = Map.of("east", "true", "north", "true", "south", "false", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_TRUE_EAST_FALSE = Map.of("east", "false", "north", "true", "south", "true", "west", "false");
-    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_TRUE_EAST_TRUE = Map.of("east", "true", "north", "true", "south", "true", "west", "false");
-    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_FALSE_EAST_FALSE = Map.of("east", "false", "north", "false", "south", "false", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_FALSE_EAST_TRUE = Map.of("east", "true", "north", "false", "south", "false", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_TRUE_EAST_FALSE = Map.of("east", "false", "north", "false", "south", "true", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_TRUE_EAST_TRUE = Map.of("east", "true", "north", "false", "south", "true", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_FALSE_EAST_FALSE = Map.of("east", "false", "north", "true", "south", "false", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_FALSE_EAST_TRUE = Map.of("east", "true", "north", "true", "south", "false", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_TRUE_EAST_FALSE = Map.of("east", "false", "north", "true", "south", "true", "west", "true");
-    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_TRUE_EAST_TRUE = Map.of("east", "true", "north", "true", "south", "true", "west", "true");
+    private static final Map<String, String> UP_FALSE_EAST_FALSE_NORTH_FALSE_SOUTH_FALSE_WEST_FALSE = Map.of(
+        "east", "false", "north", "false", "south", "false", "up", "false", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_FALSE_EAST_FALSE = Map.of(
+        "east", "false", "north", "false", "south", "false", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_FALSE_EAST_TRUE = Map.of(
+        "east", "true", "north", "false", "south", "false", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_TRUE_EAST_FALSE = Map.of(
+        "east", "false", "north", "false", "south", "true", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_FALSE_SOUTH_TRUE_EAST_TRUE = Map.of(
+        "east", "true", "north", "false", "south", "true", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_FALSE_EAST_FALSE = Map.of(
+        "east", "false", "north", "true", "south", "false", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_FALSE_EAST_TRUE = Map.of(
+        "east", "true", "north", "true", "south", "false", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_TRUE_EAST_FALSE = Map.of(
+        "east", "false", "north", "true", "south", "true", "west", "false"
+    );
+    private static final Map<String, String> WEST_FALSE_NORTH_TRUE_SOUTH_TRUE_EAST_TRUE = Map.of(
+        "east", "true", "north", "true", "south", "true", "west", "false"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_FALSE_EAST_FALSE = Map.of(
+        "east", "false", "north", "false", "south", "false", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_FALSE_EAST_TRUE = Map.of(
+        "east", "true", "north", "false", "south", "false", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_TRUE_EAST_FALSE = Map.of(
+        "east", "false", "north", "false", "south", "true", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_FALSE_SOUTH_TRUE_EAST_TRUE = Map.of(
+        "east", "true", "north", "false", "south", "true", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_FALSE_EAST_FALSE = Map.of(
+        "east", "false", "north", "true", "south", "false", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_FALSE_EAST_TRUE = Map.of(
+        "east", "true", "north", "true", "south", "false", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_TRUE_EAST_FALSE = Map.of(
+        "east", "false", "north", "true", "south", "true", "west", "true"
+    );
+    private static final Map<String, String> WEST_TRUE_NORTH_TRUE_SOUTH_TRUE_EAST_TRUE = Map.of(
+        "east", "true", "north", "true", "south", "true", "west", "true"
+    );
 
-    private static Dynamic<?> create(String p_393491_) {
-        return new Dynamic<>(JavaOps.INSTANCE, Map.of("Name", p_393491_)).convert(NbtOps.INSTANCE);
+    private static Dynamic<?> create(final String name) {
+        return new Dynamic<>(JavaOps.INSTANCE, Map.of("Name", name)).convert(NbtOps.INSTANCE);
     }
 
-    private static Dynamic<?> create(String p_396094_, Map<String, String> p_393702_) {
-        return new Dynamic<>(JavaOps.INSTANCE, Map.of("Name", p_396094_, "Properties", p_393702_)).convert(NbtOps.INSTANCE);
+    private static Dynamic<?> create(final String name, final Map<String, String> properties) {
+        return new Dynamic<>(JavaOps.INSTANCE, Map.of("Name", name, "Properties", properties)).convert(NbtOps.INSTANCE);
     }
 
-    private static void register(int p_14943_, Dynamic<?> p_391239_, Dynamic<?>... p_393258_) {
-        MAP[p_14943_] = p_391239_;
-        int i = p_14943_ >> 4;
-        if (BLOCK_DEFAULTS[i] == null) {
-            BLOCK_DEFAULTS[i] = p_391239_;
+    private static void register(final int id, final Dynamic<?> tag, final Dynamic<?>... legacy) {
+        MAP[id] = tag;
+        int blockId = id >> 4;
+        if (BLOCK_DEFAULTS[blockId] == null) {
+            BLOCK_DEFAULTS[blockId] = tag;
         }
 
-        for (Dynamic<?> dynamic : p_393258_) {
-            String s = dynamic.get("Name").asString("");
-            ID_BY_OLD_NAME.putIfAbsent(s, p_14943_);
-            ID_BY_OLD.put(dynamic, p_14943_);
+        for (Dynamic<?> oldTag : legacy) {
+            String name = oldTag.get("Name").asString("");
+            ID_BY_OLD_NAME.putIfAbsent(name, id);
+            ID_BY_OLD.put(oldTag, id);
         }
     }
 
@@ -477,42 +705,42 @@ public class BlockStateData {
         }
     }
 
-    public static Dynamic<?> upgradeBlockStateTag(Dynamic<?> p_14947_) {
-        int i = ID_BY_OLD.getInt(p_14947_);
-        if (i >= 0 && i < MAP.length) {
-            Dynamic<?> dynamic = MAP[i];
-            return dynamic == null ? p_14947_ : dynamic;
+    public static Dynamic<?> upgradeBlockStateTag(final Dynamic<?> oldTag) {
+        int id = ID_BY_OLD.getInt(oldTag);
+        if (id >= 0 && id < MAP.length) {
+            Dynamic<?> tag = MAP[id];
+            return tag == null ? oldTag : tag;
         } else {
-            return p_14947_;
+            return oldTag;
         }
     }
 
-    public static String upgradeBlock(String p_14951_) {
-        int i = ID_BY_OLD_NAME.getInt(p_14951_);
-        if (i >= 0 && i < MAP.length) {
-            Dynamic<?> dynamic = MAP[i];
-            return dynamic == null ? p_14951_ : dynamic.get("Name").asString("");
+    public static String upgradeBlock(final String oldName) {
+        int id = ID_BY_OLD_NAME.getInt(oldName);
+        if (id >= 0 && id < MAP.length) {
+            Dynamic<?> tag = MAP[id];
+            return tag == null ? oldName : tag.get("Name").asString("");
         } else {
-            return p_14951_;
+            return oldName;
         }
     }
 
-    public static String upgradeBlock(int p_14941_) {
-        if (p_14941_ >= 0 && p_14941_ < MAP.length) {
-            Dynamic<?> dynamic = MAP[p_14941_];
-            return dynamic == null ? "minecraft:air" : dynamic.get("Name").asString("");
+    public static String upgradeBlock(final int id) {
+        if (id >= 0 && id < MAP.length) {
+            Dynamic<?> tag = MAP[id];
+            return tag == null ? "minecraft:air" : tag.get("Name").asString("");
         } else {
             return "minecraft:air";
         }
     }
 
-    public static Dynamic<?> getTag(int p_14953_) {
-        Dynamic<?> dynamic = null;
-        if (p_14953_ >= 0 && p_14953_ < MAP.length) {
-            dynamic = MAP[p_14953_];
+    public static Dynamic<?> getTag(final int id) {
+        Dynamic<?> tag = null;
+        if (id >= 0 && id < MAP.length) {
+            tag = MAP[id];
         }
 
-        return dynamic == null ? MAP[0] : dynamic;
+        return tag == null ? MAP[0] : tag;
     }
 
     private static void bootstrap0() {
@@ -524,9 +752,7 @@ public class BlockStateData {
         register(20, create("minecraft:polished_diorite"), create("minecraft:stone", Map.of("variant", "smooth_diorite")));
         register(21, create("minecraft:andesite"), create("minecraft:stone", Map.of("variant", "andesite")));
         register(22, create("minecraft:polished_andesite"), create("minecraft:stone", Map.of("variant", "smooth_andesite")));
-        register(
-            32, create("minecraft:grass_block", SNOWY_FALSE), create("minecraft:grass", SNOWY_FALSE), create("minecraft:grass", Map.of("snowy", "true"))
-        );
+        register(32, create("minecraft:grass_block", SNOWY_FALSE), create("minecraft:grass", SNOWY_FALSE), create("minecraft:grass", Map.of("snowy", "true")));
         register(
             48,
             create("minecraft:dirt"),
@@ -823,8 +1049,12 @@ public class BlockStateData {
         register(433, create("minecraft:powered_rail", SHAPE_EAST_WEST_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_EAST_WEST_POWERED_FALSE));
         register(434, create("minecraft:powered_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE));
         register(435, create("minecraft:powered_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE));
-        register(436, create("minecraft:powered_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE));
-        register(437, create("minecraft:powered_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE));
+        register(
+            436, create("minecraft:powered_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE)
+        );
+        register(
+            437, create("minecraft:powered_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE), create("minecraft:golden_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE)
+        );
         register(440, create("minecraft:powered_rail", SHAPE_NORTH_SOUTH_POWERED_TRUE), create("minecraft:golden_rail", SHAPE_NORTH_SOUTH_POWERED_TRUE));
         register(441, create("minecraft:powered_rail", SHAPE_EAST_WEST_POWERED_TRUE), create("minecraft:golden_rail", SHAPE_EAST_WEST_POWERED_TRUE));
         register(442, create("minecraft:powered_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE), create("minecraft:golden_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE));
@@ -833,16 +1063,32 @@ public class BlockStateData {
         register(445, create("minecraft:powered_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE), create("minecraft:golden_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE));
         register(448, create("minecraft:detector_rail", SHAPE_NORTH_SOUTH_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_NORTH_SOUTH_POWERED_FALSE));
         register(449, create("minecraft:detector_rail", SHAPE_EAST_WEST_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_EAST_WEST_POWERED_FALSE));
-        register(450, create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE));
-        register(451, create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE));
-        register(452, create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE));
-        register(453, create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE));
+        register(
+            450, create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE)
+        );
+        register(
+            451, create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE)
+        );
+        register(
+            452, create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE)
+        );
+        register(
+            453, create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE), create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE)
+        );
         register(456, create("minecraft:detector_rail", SHAPE_NORTH_SOUTH_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_NORTH_SOUTH_POWERED_TRUE));
         register(457, create("minecraft:detector_rail", SHAPE_EAST_WEST_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_EAST_WEST_POWERED_TRUE));
-        register(458, create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE));
-        register(459, create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE));
-        register(460, create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE));
-        register(461, create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE));
+        register(
+            458, create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE)
+        );
+        register(
+            459, create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE)
+        );
+        register(
+            460, create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE)
+        );
+        register(
+            461, create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE), create("minecraft:detector_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE)
+        );
         register(464, create("minecraft:sticky_piston", FACING_DOWN_EXTENDED_FALSE), create("minecraft:sticky_piston", FACING_DOWN_EXTENDED_FALSE));
         register(465, create("minecraft:sticky_piston", FACING_UP_EXTENDED_FALSE), create("minecraft:sticky_piston", FACING_UP_EXTENDED_FALSE));
         register(466, create("minecraft:sticky_piston", FACING_NORTH_EXTENDED_FALSE), create("minecraft:sticky_piston", FACING_NORTH_EXTENDED_FALSE));
@@ -1039,14 +1285,10 @@ public class BlockStateData {
         register(672, create("minecraft:iron_block"), create("minecraft:iron_block"));
         register(688, create("minecraft:stone_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "false", "variant", "stone")));
         register(
-            689,
-            create("minecraft:sandstone_slab", TYPE_DOUBLE),
-            create("minecraft:double_stone_slab", Map.of("seamless", "false", "variant", "sandstone"))
+            689, create("minecraft:sandstone_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "false", "variant", "sandstone"))
         );
         register(
-            690,
-            create("minecraft:petrified_oak_slab", TYPE_DOUBLE),
-            create("minecraft:double_stone_slab", Map.of("seamless", "false", "variant", "wood_old"))
+            690, create("minecraft:petrified_oak_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "false", "variant", "wood_old"))
         );
         register(
             691,
@@ -1068,20 +1310,14 @@ public class BlockStateData {
         register(696, create("minecraft:smooth_stone"), create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "stone")));
         register(697, create("minecraft:smooth_sandstone"), create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "sandstone")));
         register(
-            698,
-            create("minecraft:petrified_oak_slab", TYPE_DOUBLE),
-            create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "wood_old"))
+            698, create("minecraft:petrified_oak_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "wood_old"))
         );
         register(
-            699,
-            create("minecraft:cobblestone_slab", TYPE_DOUBLE),
-            create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "cobblestone"))
+            699, create("minecraft:cobblestone_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "cobblestone"))
         );
         register(700, create("minecraft:brick_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "brick")));
         register(
-            701,
-            create("minecraft:stone_brick_slab", TYPE_DOUBLE),
-            create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "stone_brick"))
+            701, create("minecraft:stone_brick_slab", TYPE_DOUBLE), create("minecraft:double_stone_slab", Map.of("seamless", "true", "variant", "stone_brick"))
         );
         register(
             702,
@@ -1095,9 +1331,7 @@ public class BlockStateData {
         register(707, create("minecraft:cobblestone_slab", TYPE_BOTTOM), create("minecraft:stone_slab", Map.of("half", "bottom", "variant", "cobblestone")));
         register(708, create("minecraft:brick_slab", TYPE_BOTTOM), create("minecraft:stone_slab", Map.of("half", "bottom", "variant", "brick")));
         register(709, create("minecraft:stone_brick_slab", TYPE_BOTTOM), create("minecraft:stone_slab", Map.of("half", "bottom", "variant", "stone_brick")));
-        register(
-            710, create("minecraft:nether_brick_slab", TYPE_BOTTOM), create("minecraft:stone_slab", Map.of("half", "bottom", "variant", "nether_brick"))
-        );
+        register(710, create("minecraft:nether_brick_slab", TYPE_BOTTOM), create("minecraft:stone_slab", Map.of("half", "bottom", "variant", "nether_brick")));
         register(711, create("minecraft:quartz_slab", TYPE_BOTTOM), create("minecraft:stone_slab", Map.of("half", "bottom", "variant", "quartz")));
         register(712, create("minecraft:stone_slab", TYPE_TOP), create("minecraft:stone_slab", Map.of("half", "top", "variant", "stone")));
         register(713, create("minecraft:sandstone_slab", TYPE_TOP), create("minecraft:stone_slab", Map.of("half", "top", "variant", "sandstone")));
@@ -3398,13 +3632,17 @@ public class BlockStateData {
         register(1106, create("minecraft:lever", FACE_WALL_POWERED_FALSE_FACING_WEST), create("minecraft:lever", FACING_WEST_POWERED_FALSE));
         register(1107, create("minecraft:lever", FACE_WALL_POWERED_FALSE_FACING_SOUTH), create("minecraft:lever", FACING_SOUTH_POWERED_FALSE));
         register(1108, create("minecraft:lever", FACE_WALL_POWERED_FALSE_FACING_NORTH), create("minecraft:lever", FACING_NORTH_POWERED_FALSE));
-        register(1109, create("minecraft:lever", FACE_FLOOR_POWERED_FALSE_FACING_NORTH), create("minecraft:lever", Map.of("facing", "up_z", "powered", "false")));
+        register(
+            1109, create("minecraft:lever", FACE_FLOOR_POWERED_FALSE_FACING_NORTH), create("minecraft:lever", Map.of("facing", "up_z", "powered", "false"))
+        );
         register(
             1110,
             create("minecraft:lever", Map.of("face", "floor", "facing", "west", "powered", "false")),
             create("minecraft:lever", Map.of("facing", "up_x", "powered", "false"))
         );
-        register(1111, create("minecraft:lever", FACE_CEILING_POWERED_FALSE_FACING_NORTH), create("minecraft:lever", Map.of("facing", "down_z", "powered", "false")));
+        register(
+            1111, create("minecraft:lever", FACE_CEILING_POWERED_FALSE_FACING_NORTH), create("minecraft:lever", Map.of("facing", "down_z", "powered", "false"))
+        );
         register(
             1112,
             create("minecraft:lever", Map.of("face", "ceiling", "facing", "west", "powered", "true")),
@@ -3420,7 +3658,9 @@ public class BlockStateData {
             create("minecraft:lever", Map.of("face", "floor", "facing", "west", "powered", "true")),
             create("minecraft:lever", Map.of("facing", "up_x", "powered", "true"))
         );
-        register(1119, create("minecraft:lever", FACE_CEILING_POWERED_TRUE_FACING_NORTH), create("minecraft:lever", Map.of("facing", "down_z", "powered", "true")));
+        register(
+            1119, create("minecraft:lever", FACE_CEILING_POWERED_TRUE_FACING_NORTH), create("minecraft:lever", Map.of("facing", "down_z", "powered", "true"))
+        );
         register(1120, create("minecraft:stone_pressure_plate", POWERED_FALSE), create("minecraft:stone_pressure_plate", POWERED_FALSE));
         register(1121, create("minecraft:stone_pressure_plate", POWERED_TRUE), create("minecraft:stone_pressure_plate", POWERED_TRUE));
         register(
@@ -3543,12 +3783,8 @@ public class BlockStateData {
         register(1153, create("minecraft:oak_pressure_plate", POWERED_TRUE), create("minecraft:wooden_pressure_plate", POWERED_TRUE));
         register(1168, create("minecraft:redstone_ore", LIT_FALSE), create("minecraft:redstone_ore"));
         register(1184, create("minecraft:redstone_ore", LIT_TRUE), create("minecraft:lit_redstone_ore"));
-        register(
-            1201, create("minecraft:redstone_wall_torch", Map.of("facing", "east", "lit", "false")), create("minecraft:unlit_redstone_torch", FACING_EAST)
-        );
-        register(
-            1202, create("minecraft:redstone_wall_torch", Map.of("facing", "west", "lit", "false")), create("minecraft:unlit_redstone_torch", FACING_WEST)
-        );
+        register(1201, create("minecraft:redstone_wall_torch", Map.of("facing", "east", "lit", "false")), create("minecraft:unlit_redstone_torch", FACING_EAST));
+        register(1202, create("minecraft:redstone_wall_torch", Map.of("facing", "west", "lit", "false")), create("minecraft:unlit_redstone_torch", FACING_WEST));
         register(
             1203, create("minecraft:redstone_wall_torch", Map.of("facing", "south", "lit", "false")), create("minecraft:unlit_redstone_torch", FACING_SOUTH)
         );
@@ -3898,38 +4134,142 @@ public class BlockStateData {
         register(1569, create("minecraft:mossy_stone_bricks"), create("minecraft:stonebrick", Map.of("variant", "mossy_stonebrick")));
         register(1570, create("minecraft:cracked_stone_bricks"), create("minecraft:stonebrick", Map.of("variant", "cracked_stonebrick")));
         register(1571, create("minecraft:chiseled_stone_bricks"), create("minecraft:stonebrick", Map.of("variant", "chiseled_stonebrick")));
-        register(1584, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "all_inside")));
-        register(1585, create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "north_west")));
-        register(1586, create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "north")));
-        register(1587, create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "north_east")));
-        register(1588, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "west")));
-        register(1589, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "center")));
-        register(1590, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "east")));
-        register(1591, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "south_west")));
-        register(1592, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "south")));
-        register(1593, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "south_east")));
-        register(1594, create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_FALSE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:brown_mushroom_block", Map.of("variant", "stem")));
+        register(
+            1584,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "all_inside"))
+        );
+        register(
+            1585,
+            create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "north_west"))
+        );
+        register(
+            1586,
+            create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "north"))
+        );
+        register(
+            1587,
+            create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "north_east"))
+        );
+        register(
+            1588,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "west"))
+        );
+        register(
+            1589,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "center"))
+        );
+        register(
+            1590,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "east"))
+        );
+        register(
+            1591,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "south_west"))
+        );
+        register(
+            1592,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "south"))
+        );
+        register(
+            1593,
+            create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "south_east"))
+        );
+        register(
+            1594,
+            create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_FALSE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "stem"))
+        );
         register(1595, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE));
         register(1596, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE));
         register(1597, create("minecraft:brown_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE));
-        register(1598, create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE), create("minecraft:brown_mushroom_block", Map.of("variant", "all_outside")));
-        register(1599, create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE), create("minecraft:brown_mushroom_block", Map.of("variant", "all_stem")));
-        register(1600, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "all_inside")));
-        register(1601, create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "north_west")));
-        register(1602, create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "north")));
-        register(1603, create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "north_east")));
-        register(1604, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "west")));
-        register(1605, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "center")));
-        register(1606, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "east")));
-        register(1607, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "south_west")));
-        register(1608, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "south")));
-        register(1609, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "south_east")));
-        register(1610, create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_FALSE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE), create("minecraft:red_mushroom_block", Map.of("variant", "stem")));
+        register(
+            1598,
+            create("minecraft:brown_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "all_outside"))
+        );
+        register(
+            1599,
+            create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE),
+            create("minecraft:brown_mushroom_block", Map.of("variant", "all_stem"))
+        );
+        register(
+            1600,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "all_inside"))
+        );
+        register(
+            1601,
+            create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "north_west"))
+        );
+        register(
+            1602,
+            create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "north"))
+        );
+        register(
+            1603,
+            create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "north_east"))
+        );
+        register(
+            1604,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "west"))
+        );
+        register(
+            1605,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "center"))
+        );
+        register(
+            1606,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "east"))
+        );
+        register(
+            1607,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "south_west"))
+        );
+        register(
+            1608,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "south"))
+        );
+        register(
+            1609,
+            create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_TRUE_UP_TRUE_WEST_FALSE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "south_east"))
+        );
+        register(
+            1610,
+            create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_FALSE_WEST_TRUE_SOUTH_TRUE_DOWN_FALSE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "stem"))
+        );
         register(1611, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE));
         register(1612, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE));
         register(1613, create("minecraft:red_mushroom_block", NORTH_FALSE_EAST_FALSE_UP_FALSE_WEST_FALSE_SOUTH_FALSE_DOWN_FALSE));
-        register(1614, create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE), create("minecraft:red_mushroom_block", Map.of("variant", "all_outside")));
-        register(1615, create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE), create("minecraft:red_mushroom_block", Map.of("variant", "all_stem")));
+        register(
+            1614,
+            create("minecraft:red_mushroom_block", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "all_outside"))
+        );
+        register(
+            1615,
+            create("minecraft:mushroom_stem", NORTH_TRUE_EAST_TRUE_UP_TRUE_WEST_TRUE_SOUTH_TRUE_DOWN_TRUE),
+            create("minecraft:red_mushroom_block", Map.of("variant", "all_stem"))
+        );
         register(
             1616,
             create("minecraft:iron_bars", WEST_FALSE_NORTH_FALSE_SOUTH_FALSE_EAST_FALSE),
@@ -4212,52 +4552,100 @@ public class BlockStateData {
             create("minecraft:vine", Map.of("east", "true", "north", "true", "south", "true", "up", "true", "west", "true"))
         );
         register(
-            1712, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH)
+            1712,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH)
         );
         register(
-            1713, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST)
+            1713,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST)
         );
         register(
-            1714, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH)
+            1714,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH)
         );
         register(
-            1715, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST)
+            1715,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST)
         );
         register(
-            1716, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH)
+            1716,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH)
         );
         register(
-            1717, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST)
+            1717,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST)
         );
         register(
-            1718, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH)
+            1718,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH)
         );
         register(
-            1719, create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST), create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST)
+            1719,
+            create("minecraft:oak_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_FALSE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST)
         );
         register(
-            1720, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH)
+            1720,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_SOUTH)
         );
         register(
-            1721, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST)
+            1721,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_WEST)
         );
         register(
-            1722, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH)
+            1722,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_NORTH)
         );
         register(
-            1723, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST)
+            1723,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_FALSE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_FALSE_FACING_EAST)
         );
         register(
-            1724, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH)
+            1724,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_SOUTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_SOUTH)
         );
         register(
-            1725, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST)
+            1725,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_WEST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_WEST)
         );
         register(
-            1726, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH)
+            1726,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_NORTH),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_NORTH)
         );
         register(
-            1727, create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST), create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST)
+            1727,
+            create("minecraft:oak_fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_FALSE_OPEN_TRUE_FACING_EAST),
+            create("minecraft:fence_gate", POWERED_TRUE_IN_WALL_TRUE_OPEN_TRUE_FACING_EAST)
         );
         register(
             1728,
@@ -4404,10 +4792,7 @@ public class BlockStateData {
             create("minecraft:stone_brick_stairs", HALF_TOP_SHAPE_STRAIGHT_FACING_NORTH)
         );
         register(
-            1760,
-            create("minecraft:mycelium", SNOWY_FALSE),
-            create("minecraft:mycelium", SNOWY_FALSE),
-            create("minecraft:mycelium", Map.of("snowy", "true"))
+            1760, create("minecraft:mycelium", SNOWY_FALSE), create("minecraft:mycelium", SNOWY_FALSE), create("minecraft:mycelium", Map.of("snowy", "true"))
         );
         register(1776, create("minecraft:lily_pad"), create("minecraft:waterlily"));
     }
@@ -6259,15 +6644,9 @@ public class BlockStateData {
 
     private static void bootstrap9() {
         register(
-            2304,
-            create("%%FILTER_ME%%", Map.of("facing", "down", "nodrop", "false")),
-            create("minecraft:skull", Map.of("facing", "down", "nodrop", "false"))
+            2304, create("%%FILTER_ME%%", Map.of("facing", "down", "nodrop", "false")), create("minecraft:skull", Map.of("facing", "down", "nodrop", "false"))
         );
-        register(
-            2305,
-            create("%%FILTER_ME%%", Map.of("facing", "up", "nodrop", "false")),
-            create("minecraft:skull", Map.of("facing", "up", "nodrop", "false"))
-        );
+        register(2305, create("%%FILTER_ME%%", Map.of("facing", "up", "nodrop", "false")), create("minecraft:skull", Map.of("facing", "up", "nodrop", "false")));
         register(
             2306,
             create("%%FILTER_ME%%", Map.of("facing", "north", "nodrop", "false")),
@@ -6279,42 +6658,26 @@ public class BlockStateData {
             create("minecraft:skull", Map.of("facing", "south", "nodrop", "false"))
         );
         register(
-            2308,
-            create("%%FILTER_ME%%", Map.of("facing", "west", "nodrop", "false")),
-            create("minecraft:skull", Map.of("facing", "west", "nodrop", "false"))
+            2308, create("%%FILTER_ME%%", Map.of("facing", "west", "nodrop", "false")), create("minecraft:skull", Map.of("facing", "west", "nodrop", "false"))
         );
         register(
-            2309,
-            create("%%FILTER_ME%%", Map.of("facing", "east", "nodrop", "false")),
-            create("minecraft:skull", Map.of("facing", "east", "nodrop", "false"))
+            2309, create("%%FILTER_ME%%", Map.of("facing", "east", "nodrop", "false")), create("minecraft:skull", Map.of("facing", "east", "nodrop", "false"))
         );
         register(
-            2312,
-            create("%%FILTER_ME%%", Map.of("facing", "down", "nodrop", "true")),
-            create("minecraft:skull", Map.of("facing", "down", "nodrop", "true"))
+            2312, create("%%FILTER_ME%%", Map.of("facing", "down", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "down", "nodrop", "true"))
+        );
+        register(2313, create("%%FILTER_ME%%", Map.of("facing", "up", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "up", "nodrop", "true")));
+        register(
+            2314, create("%%FILTER_ME%%", Map.of("facing", "north", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "north", "nodrop", "true"))
         );
         register(
-            2313, create("%%FILTER_ME%%", Map.of("facing", "up", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "up", "nodrop", "true"))
+            2315, create("%%FILTER_ME%%", Map.of("facing", "south", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "south", "nodrop", "true"))
         );
         register(
-            2314,
-            create("%%FILTER_ME%%", Map.of("facing", "north", "nodrop", "true")),
-            create("minecraft:skull", Map.of("facing", "north", "nodrop", "true"))
+            2316, create("%%FILTER_ME%%", Map.of("facing", "west", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "west", "nodrop", "true"))
         );
         register(
-            2315,
-            create("%%FILTER_ME%%", Map.of("facing", "south", "nodrop", "true")),
-            create("minecraft:skull", Map.of("facing", "south", "nodrop", "true"))
-        );
-        register(
-            2316,
-            create("%%FILTER_ME%%", Map.of("facing", "west", "nodrop", "true")),
-            create("minecraft:skull", Map.of("facing", "west", "nodrop", "true"))
-        );
-        register(
-            2317,
-            create("%%FILTER_ME%%", Map.of("facing", "east", "nodrop", "true")),
-            create("minecraft:skull", Map.of("facing", "east", "nodrop", "true"))
+            2317, create("%%FILTER_ME%%", Map.of("facing", "east", "nodrop", "true")), create("minecraft:skull", Map.of("facing", "east", "nodrop", "true"))
         );
         register(2320, create("minecraft:anvil", FACING_SOUTH), create("minecraft:anvil", Map.of("damage", "0", "facing", "south")));
         register(2321, create("minecraft:anvil", FACING_WEST), create("minecraft:anvil", Map.of("damage", "0", "facing", "west")));
@@ -6364,38 +6727,166 @@ public class BlockStateData {
         register(2381, create("minecraft:heavy_weighted_pressure_plate", POWER_13), create("minecraft:heavy_weighted_pressure_plate", POWER_13));
         register(2382, create("minecraft:heavy_weighted_pressure_plate", POWER_14), create("minecraft:heavy_weighted_pressure_plate", POWER_14));
         register(2383, create("minecraft:heavy_weighted_pressure_plate", POWER_15), create("minecraft:heavy_weighted_pressure_plate", POWER_15));
-        register(2384, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH));
-        register(2385, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST));
-        register(2386, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH));
-        register(2387, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST));
-        register(2388, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH));
-        register(2389, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST));
-        register(2390, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH));
-        register(2391, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST), create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST));
-        register(2392, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH));
-        register(2393, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST));
-        register(2394, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH));
-        register(2395, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST));
-        register(2396, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH));
-        register(2397, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST));
-        register(2398, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH));
-        register(2399, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST), create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST));
-        register(2400, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH), create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH));
-        register(2401, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST), create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST));
-        register(2402, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH), create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH));
-        register(2403, create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST), create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST));
-        register(2404, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH), create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH));
-        register(2405, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST), create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST));
-        register(2406, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH), create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH));
-        register(2407, create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST), create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST));
-        register(2408, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH), create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH));
-        register(2409, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST), create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST));
-        register(2410, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH), create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH));
-        register(2411, create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST), create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST));
-        register(2412, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH), create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH));
-        register(2413, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST), create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST));
-        register(2414, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH), create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH));
-        register(2415, create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST), create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST));
+        register(
+            2384,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH)
+        );
+        register(
+            2385,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST)
+        );
+        register(
+            2386,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH)
+        );
+        register(
+            2387,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST)
+        );
+        register(
+            2388,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH)
+        );
+        register(
+            2389,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST)
+        );
+        register(
+            2390,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH)
+        );
+        register(
+            2391,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST),
+            create("minecraft:unpowered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST)
+        );
+        register(
+            2392,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH)
+        );
+        register(
+            2393,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST)
+        );
+        register(
+            2394,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH)
+        );
+        register(
+            2395,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST)
+        );
+        register(
+            2396,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH)
+        );
+        register(
+            2397,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST)
+        );
+        register(
+            2398,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH)
+        );
+        register(
+            2399,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST),
+            create("minecraft:unpowered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST)
+        );
+        register(
+            2400,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_SOUTH)
+        );
+        register(
+            2401,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_WEST)
+        );
+        register(
+            2402,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_NORTH)
+        );
+        register(
+            2403,
+            create("minecraft:comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_COMPARE_FACING_EAST)
+        );
+        register(
+            2404,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_SOUTH)
+        );
+        register(
+            2405,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_WEST)
+        );
+        register(
+            2406,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_NORTH)
+        );
+        register(
+            2407,
+            create("minecraft:comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST),
+            create("minecraft:powered_comparator", POWERED_FALSE_MODE_SUBTRACT_FACING_EAST)
+        );
+        register(
+            2408,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_SOUTH)
+        );
+        register(
+            2409,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_WEST)
+        );
+        register(
+            2410,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_NORTH)
+        );
+        register(
+            2411,
+            create("minecraft:comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_COMPARE_FACING_EAST)
+        );
+        register(
+            2412,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_SOUTH)
+        );
+        register(
+            2413,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_WEST)
+        );
+        register(
+            2414,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_NORTH)
+        );
+        register(
+            2415,
+            create("minecraft:comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST),
+            create("minecraft:powered_comparator", POWERED_TRUE_MODE_SUBTRACT_FACING_EAST)
+        );
         register(2416, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "0")), create("minecraft:daylight_detector", POWER_0));
         register(2417, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "1")), create("minecraft:daylight_detector", POWER_1));
         register(2418, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "2")), create("minecraft:daylight_detector", POWER_2));
@@ -6406,24 +6897,12 @@ public class BlockStateData {
         register(2423, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "7")), create("minecraft:daylight_detector", POWER_7));
         register(2424, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "8")), create("minecraft:daylight_detector", POWER_8));
         register(2425, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "9")), create("minecraft:daylight_detector", POWER_9));
-        register(
-            2426, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "10")), create("minecraft:daylight_detector", POWER_10)
-        );
-        register(
-            2427, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "11")), create("minecraft:daylight_detector", POWER_11)
-        );
-        register(
-            2428, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "12")), create("minecraft:daylight_detector", POWER_12)
-        );
-        register(
-            2429, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "13")), create("minecraft:daylight_detector", POWER_13)
-        );
-        register(
-            2430, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "14")), create("minecraft:daylight_detector", POWER_14)
-        );
-        register(
-            2431, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "15")), create("minecraft:daylight_detector", POWER_15)
-        );
+        register(2426, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "10")), create("minecraft:daylight_detector", POWER_10));
+        register(2427, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "11")), create("minecraft:daylight_detector", POWER_11));
+        register(2428, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "12")), create("minecraft:daylight_detector", POWER_12));
+        register(2429, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "13")), create("minecraft:daylight_detector", POWER_13));
+        register(2430, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "14")), create("minecraft:daylight_detector", POWER_14));
+        register(2431, create("minecraft:daylight_detector", Map.of("inverted", "false", "power", "15")), create("minecraft:daylight_detector", POWER_15));
         register(2432, create("minecraft:redstone_block"), create("minecraft:redstone_block"));
         register(2448, create("minecraft:nether_quartz_ore"), create("minecraft:quartz_ore"));
         register(
@@ -6555,16 +7034,44 @@ public class BlockStateData {
         );
         register(2512, create("minecraft:activator_rail", SHAPE_NORTH_SOUTH_POWERED_FALSE), create("minecraft:activator_rail", SHAPE_NORTH_SOUTH_POWERED_FALSE));
         register(2513, create("minecraft:activator_rail", SHAPE_EAST_WEST_POWERED_FALSE), create("minecraft:activator_rail", SHAPE_EAST_WEST_POWERED_FALSE));
-        register(2514, create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE), create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE));
-        register(2515, create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE), create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE));
-        register(2516, create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE), create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE));
-        register(2517, create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE), create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE));
+        register(
+            2514,
+            create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE),
+            create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_FALSE)
+        );
+        register(
+            2515,
+            create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE),
+            create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_FALSE)
+        );
+        register(
+            2516,
+            create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE),
+            create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_FALSE)
+        );
+        register(
+            2517,
+            create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE),
+            create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_FALSE)
+        );
         register(2520, create("minecraft:activator_rail", SHAPE_NORTH_SOUTH_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_NORTH_SOUTH_POWERED_TRUE));
         register(2521, create("minecraft:activator_rail", SHAPE_EAST_WEST_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_EAST_WEST_POWERED_TRUE));
-        register(2522, create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE));
-        register(2523, create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE));
-        register(2524, create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE));
-        register(2525, create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE));
+        register(
+            2522, create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_ASCENDING_EAST_POWERED_TRUE)
+        );
+        register(
+            2523, create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE), create("minecraft:activator_rail", SHAPE_ASCENDING_WEST_POWERED_TRUE)
+        );
+        register(
+            2524,
+            create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE),
+            create("minecraft:activator_rail", SHAPE_ASCENDING_NORTH_POWERED_TRUE)
+        );
+        register(
+            2525,
+            create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE),
+            create("minecraft:activator_rail", SHAPE_ASCENDING_SOUTH_POWERED_TRUE)
+        );
         register(2528, create("minecraft:dropper", TRIGGERED_FALSE_FACING_DOWN), create("minecraft:dropper", TRIGGERED_FALSE_FACING_DOWN));
         register(2529, create("minecraft:dropper", TRIGGERED_FALSE_FACING_UP), create("minecraft:dropper", TRIGGERED_FALSE_FACING_UP));
         register(2530, create("minecraft:dropper", TRIGGERED_FALSE_FACING_NORTH), create("minecraft:dropper", TRIGGERED_FALSE_FACING_NORTH));
@@ -7110,14 +7617,34 @@ public class BlockStateData {
         );
         register(2640, create("minecraft:slime_block"), create("minecraft:slime"));
         register(2656, create("minecraft:barrier"), create("minecraft:barrier"));
-        register(2672, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_NORTH), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_NORTH));
-        register(2673, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_SOUTH), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_SOUTH));
-        register(2674, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_WEST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_WEST));
-        register(2675, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_EAST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_EAST));
-        register(2676, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_NORTH), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_NORTH));
-        register(2677, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_SOUTH), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_SOUTH));
-        register(2678, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_WEST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_WEST));
-        register(2679, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_EAST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_EAST));
+        register(
+            2672,
+            create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_NORTH),
+            create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_NORTH)
+        );
+        register(
+            2673,
+            create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_SOUTH),
+            create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_SOUTH)
+        );
+        register(
+            2674, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_WEST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_WEST)
+        );
+        register(
+            2675, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_EAST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_FALSE_FACING_EAST)
+        );
+        register(
+            2676, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_NORTH), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_NORTH)
+        );
+        register(
+            2677, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_SOUTH), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_SOUTH)
+        );
+        register(
+            2678, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_WEST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_WEST)
+        );
+        register(
+            2679, create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_EAST), create("minecraft:iron_trapdoor", HALF_BOTTOM_OPEN_TRUE_FACING_EAST)
+        );
         register(2680, create("minecraft:iron_trapdoor", HALF_TOP_OPEN_FALSE_FACING_NORTH), create("minecraft:iron_trapdoor", HALF_TOP_OPEN_FALSE_FACING_NORTH));
         register(2681, create("minecraft:iron_trapdoor", HALF_TOP_OPEN_FALSE_FACING_SOUTH), create("minecraft:iron_trapdoor", HALF_TOP_OPEN_FALSE_FACING_SOUTH));
         register(2682, create("minecraft:iron_trapdoor", HALF_TOP_OPEN_FALSE_FACING_WEST), create("minecraft:iron_trapdoor", HALF_TOP_OPEN_FALSE_FACING_WEST));
@@ -7263,85 +7790,33 @@ public class BlockStateData {
         register(2835, create("minecraft:white_wall_banner", FACING_SOUTH), create("minecraft:wall_banner", FACING_SOUTH));
         register(2836, create("minecraft:white_wall_banner", FACING_WEST), create("minecraft:wall_banner", FACING_WEST));
         register(2837, create("minecraft:white_wall_banner", FACING_EAST), create("minecraft:wall_banner", FACING_EAST));
+        register(2848, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "0")), create("minecraft:daylight_detector_inverted", POWER_0));
+        register(2849, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "1")), create("minecraft:daylight_detector_inverted", POWER_1));
+        register(2850, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "2")), create("minecraft:daylight_detector_inverted", POWER_2));
+        register(2851, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "3")), create("minecraft:daylight_detector_inverted", POWER_3));
+        register(2852, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "4")), create("minecraft:daylight_detector_inverted", POWER_4));
+        register(2853, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "5")), create("minecraft:daylight_detector_inverted", POWER_5));
+        register(2854, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "6")), create("minecraft:daylight_detector_inverted", POWER_6));
+        register(2855, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "7")), create("minecraft:daylight_detector_inverted", POWER_7));
+        register(2856, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "8")), create("minecraft:daylight_detector_inverted", POWER_8));
+        register(2857, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "9")), create("minecraft:daylight_detector_inverted", POWER_9));
         register(
-            2848,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "0")),
-            create("minecraft:daylight_detector_inverted", POWER_0)
+            2858, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "10")), create("minecraft:daylight_detector_inverted", POWER_10)
         );
         register(
-            2849,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "1")),
-            create("minecraft:daylight_detector_inverted", POWER_1)
+            2859, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "11")), create("minecraft:daylight_detector_inverted", POWER_11)
         );
         register(
-            2850,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "2")),
-            create("minecraft:daylight_detector_inverted", POWER_2)
+            2860, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "12")), create("minecraft:daylight_detector_inverted", POWER_12)
         );
         register(
-            2851,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "3")),
-            create("minecraft:daylight_detector_inverted", POWER_3)
+            2861, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "13")), create("minecraft:daylight_detector_inverted", POWER_13)
         );
         register(
-            2852,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "4")),
-            create("minecraft:daylight_detector_inverted", POWER_4)
+            2862, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "14")), create("minecraft:daylight_detector_inverted", POWER_14)
         );
         register(
-            2853,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "5")),
-            create("minecraft:daylight_detector_inverted", POWER_5)
-        );
-        register(
-            2854,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "6")),
-            create("minecraft:daylight_detector_inverted", POWER_6)
-        );
-        register(
-            2855,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "7")),
-            create("minecraft:daylight_detector_inverted", POWER_7)
-        );
-        register(
-            2856,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "8")),
-            create("minecraft:daylight_detector_inverted", POWER_8)
-        );
-        register(
-            2857,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "9")),
-            create("minecraft:daylight_detector_inverted", POWER_9)
-        );
-        register(
-            2858,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "10")),
-            create("minecraft:daylight_detector_inverted", POWER_10)
-        );
-        register(
-            2859,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "11")),
-            create("minecraft:daylight_detector_inverted", POWER_11)
-        );
-        register(
-            2860,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "12")),
-            create("minecraft:daylight_detector_inverted", POWER_12)
-        );
-        register(
-            2861,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "13")),
-            create("minecraft:daylight_detector_inverted", POWER_13)
-        );
-        register(
-            2862,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "14")),
-            create("minecraft:daylight_detector_inverted", POWER_14)
-        );
-        register(
-            2863,
-            create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "15")),
-            create("minecraft:daylight_detector_inverted", POWER_15)
+            2863, create("minecraft:daylight_detector", Map.of("inverted", "true", "power", "15")), create("minecraft:daylight_detector_inverted", POWER_15)
         );
         register(2864, create("minecraft:red_sandstone"), create("minecraft:red_sandstone", Map.of("type", "red_sandstone")));
         register(2865, create("minecraft:chiseled_red_sandstone"), create("minecraft:red_sandstone", Map.of("type", "chiseled_red_sandstone")));
@@ -7423,19 +7898,11 @@ public class BlockStateData {
             create("minecraft:red_sandstone_slab", TYPE_DOUBLE),
             create("minecraft:double_stone_slab2", Map.of("seamless", "false", "variant", "red_sandstone"))
         );
+        register(2904, create("minecraft:smooth_red_sandstone"), create("minecraft:double_stone_slab2", Map.of("seamless", "true", "variant", "red_sandstone")));
         register(
-            2904,
-            create("minecraft:smooth_red_sandstone"),
-            create("minecraft:double_stone_slab2", Map.of("seamless", "true", "variant", "red_sandstone"))
+            2912, create("minecraft:red_sandstone_slab", TYPE_BOTTOM), create("minecraft:stone_slab2", Map.of("half", "bottom", "variant", "red_sandstone"))
         );
-        register(
-            2912,
-            create("minecraft:red_sandstone_slab", TYPE_BOTTOM),
-            create("minecraft:stone_slab2", Map.of("half", "bottom", "variant", "red_sandstone"))
-        );
-        register(
-            2920, create("minecraft:red_sandstone_slab", TYPE_TOP), create("minecraft:stone_slab2", Map.of("half", "top", "variant", "red_sandstone"))
-        );
+        register(2920, create("minecraft:red_sandstone_slab", TYPE_TOP), create("minecraft:stone_slab2", Map.of("half", "top", "variant", "red_sandstone")));
         register(
             2928,
             create("minecraft:spruce_fence_gate", POWERED_FALSE_IN_WALL_FALSE_OPEN_FALSE_FACING_SOUTH),
@@ -8748,30 +9215,114 @@ public class BlockStateData {
     private static void bootstrapD() {
         register(3328, create("minecraft:grass_path"), create("minecraft:grass_path"));
         register(3344, create("minecraft:end_gateway"), create("minecraft:end_gateway"));
-        register(3360, create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_FALSE), create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_FALSE));
-        register(3361, create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_FALSE), create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_FALSE));
-        register(3362, create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_FALSE), create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_FALSE));
-        register(3363, create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_FALSE), create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_FALSE));
-        register(3364, create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_FALSE), create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_FALSE));
-        register(3365, create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_FALSE), create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_FALSE));
-        register(3368, create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_TRUE), create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_TRUE));
-        register(3369, create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_TRUE), create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_TRUE));
-        register(3370, create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_TRUE), create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_TRUE));
-        register(3371, create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_TRUE), create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_TRUE));
-        register(3372, create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_TRUE), create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_TRUE));
-        register(3373, create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_TRUE), create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_TRUE));
-        register(3376, create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_FALSE));
-        register(3377, create("minecraft:chain_command_block", FACING_UP_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_UP_CONDITIONAL_FALSE));
-        register(3378, create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_FALSE));
-        register(3379, create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_FALSE));
-        register(3380, create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_FALSE));
-        register(3381, create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_FALSE));
-        register(3384, create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_TRUE));
+        register(
+            3360,
+            create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_FALSE),
+            create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_FALSE)
+        );
+        register(
+            3361,
+            create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_FALSE),
+            create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_FALSE)
+        );
+        register(
+            3362,
+            create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_FALSE),
+            create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_FALSE)
+        );
+        register(
+            3363,
+            create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_FALSE),
+            create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_FALSE)
+        );
+        register(
+            3364,
+            create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_FALSE),
+            create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_FALSE)
+        );
+        register(
+            3365,
+            create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_FALSE),
+            create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_FALSE)
+        );
+        register(
+            3368,
+            create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_TRUE),
+            create("minecraft:repeating_command_block", FACING_DOWN_CONDITIONAL_TRUE)
+        );
+        register(
+            3369,
+            create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_TRUE),
+            create("minecraft:repeating_command_block", FACING_UP_CONDITIONAL_TRUE)
+        );
+        register(
+            3370,
+            create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_TRUE),
+            create("minecraft:repeating_command_block", FACING_NORTH_CONDITIONAL_TRUE)
+        );
+        register(
+            3371,
+            create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_TRUE),
+            create("minecraft:repeating_command_block", FACING_SOUTH_CONDITIONAL_TRUE)
+        );
+        register(
+            3372,
+            create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_TRUE),
+            create("minecraft:repeating_command_block", FACING_WEST_CONDITIONAL_TRUE)
+        );
+        register(
+            3373,
+            create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_TRUE),
+            create("minecraft:repeating_command_block", FACING_EAST_CONDITIONAL_TRUE)
+        );
+        register(
+            3376,
+            create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_FALSE),
+            create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_FALSE)
+        );
+        register(
+            3377, create("minecraft:chain_command_block", FACING_UP_CONDITIONAL_FALSE), create("minecraft:chain_command_block", FACING_UP_CONDITIONAL_FALSE)
+        );
+        register(
+            3378,
+            create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_FALSE),
+            create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_FALSE)
+        );
+        register(
+            3379,
+            create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_FALSE),
+            create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_FALSE)
+        );
+        register(
+            3380,
+            create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_FALSE),
+            create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_FALSE)
+        );
+        register(
+            3381,
+            create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_FALSE),
+            create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_FALSE)
+        );
+        register(
+            3384, create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_DOWN_CONDITIONAL_TRUE)
+        );
         register(3385, create("minecraft:chain_command_block", FACING_UP_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_UP_CONDITIONAL_TRUE));
-        register(3386, create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_TRUE));
-        register(3387, create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_TRUE));
-        register(3388, create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_TRUE));
-        register(3389, create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_TRUE));
+        register(
+            3386,
+            create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_TRUE),
+            create("minecraft:chain_command_block", FACING_NORTH_CONDITIONAL_TRUE)
+        );
+        register(
+            3387,
+            create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_TRUE),
+            create("minecraft:chain_command_block", FACING_SOUTH_CONDITIONAL_TRUE)
+        );
+        register(
+            3388, create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_WEST_CONDITIONAL_TRUE)
+        );
+        register(
+            3389, create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_TRUE), create("minecraft:chain_command_block", FACING_EAST_CONDITIONAL_TRUE)
+        );
         register(3392, create("minecraft:frosted_ice", AGE_0), create("minecraft:frosted_ice", AGE_0));
         register(3393, create("minecraft:frosted_ice", AGE_1), create("minecraft:frosted_ice", AGE_1));
         register(3394, create("minecraft:frosted_ice", AGE_2), create("minecraft:frosted_ice", AGE_2));

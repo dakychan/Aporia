@@ -30,45 +30,52 @@ public class SaddleEquipmentSlotFix extends DataFix {
     private static final String SADDLE_FLAG = "Saddle";
     private static final String NEW_SADDLE = "saddle";
 
-    public SaddleEquipmentSlotFix(Schema p_395052_) {
-        super(p_395052_, true);
+    public SaddleEquipmentSlotFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        TaggedChoiceType<String> taggedchoicetype = (TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.ENTITY);
-        OpticFinder<Pair<String, ?>> opticfinder = DSL.typeFinder(taggedchoicetype);
-        Type<?> type = this.getInputSchema().getType(References.ENTITY);
-        Type<?> type1 = this.getOutputSchema().getType(References.ENTITY);
-        Type<?> type2 = ExtraDataFixUtils.patchSubType(type, type, type1);
-        return this.fixTypeEverywhereTyped("SaddleEquipmentSlotFix", type, type1, p_392493_ -> {
-            String s = p_392493_.getOptional(opticfinder).map(Pair::getFirst).map(NamespacedSchema::ensureNamespaced).orElse("");
-            Typed<?> typed = ExtraDataFixUtils.cast(type2, p_392493_);
-            if (ENTITIES_WITH_SADDLE_ITEM.contains(s)) {
-                return Util.writeAndReadTypedOrThrow(typed, type1, SaddleEquipmentSlotFix::fixEntityWithSaddleItem);
-            } else {
-                return ENTITIES_WITH_SADDLE_FLAG.contains(s) ? Util.writeAndReadTypedOrThrow(typed, type1, SaddleEquipmentSlotFix::fixEntityWithSaddleFlag) : ExtraDataFixUtils.cast(type1, p_392493_);
+        TaggedChoiceType<String> entityIdType = (TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.ENTITY);
+        OpticFinder<Pair<String, ?>> entityIdF = DSL.typeFinder(entityIdType);
+        Type<?> inputType = this.getInputSchema().getType(References.ENTITY);
+        Type<?> outputType = this.getOutputSchema().getType(References.ENTITY);
+        Type<?> patchedInputType = ExtraDataFixUtils.patchSubType(inputType, inputType, outputType);
+        return this.fixTypeEverywhereTyped(
+            "SaddleEquipmentSlotFix",
+            inputType,
+            outputType,
+            input -> {
+                String entityId = input.getOptional(entityIdF).map(Pair::getFirst).map(NamespacedSchema::ensureNamespaced).orElse("");
+                Typed<?> fixedInput = ExtraDataFixUtils.cast(patchedInputType, input);
+                if (ENTITIES_WITH_SADDLE_ITEM.contains(entityId)) {
+                    return Util.writeAndReadTypedOrThrow(fixedInput, outputType, SaddleEquipmentSlotFix::fixEntityWithSaddleItem);
+                } else {
+                    return ENTITIES_WITH_SADDLE_FLAG.contains(entityId)
+                        ? Util.writeAndReadTypedOrThrow(fixedInput, outputType, SaddleEquipmentSlotFix::fixEntityWithSaddleFlag)
+                        : ExtraDataFixUtils.cast(outputType, input);
+                }
             }
-        });
+        );
     }
 
-    private static Dynamic<?> fixEntityWithSaddleItem(Dynamic<?> p_395990_) {
-        return p_395990_.get("SaddleItem").result().isEmpty() ? p_395990_ : fixDropChances(p_395990_.renameField("SaddleItem", "saddle"));
+    private static Dynamic<?> fixEntityWithSaddleItem(final Dynamic<?> input) {
+        return input.get("SaddleItem").result().isEmpty() ? input : fixDropChances(input.renameField("SaddleItem", "saddle"));
     }
 
-    private static Dynamic<?> fixEntityWithSaddleFlag(Dynamic<?> p_394156_) {
-        boolean flag = p_394156_.get("Saddle").asBoolean(false);
-        p_394156_ = p_394156_.remove("Saddle");
-        if (!flag) {
-            return p_394156_;
-        } else {
-            Dynamic<?> dynamic = p_394156_.emptyMap().set("id", p_394156_.createString("minecraft:saddle")).set("count", p_394156_.createInt(1));
-            return fixDropChances(p_394156_.set("saddle", dynamic));
+    private static Dynamic<?> fixEntityWithSaddleFlag(Dynamic<?> tag) {
+        boolean hasSaddle = tag.get("Saddle").asBoolean(false);
+        tag = tag.remove("Saddle");
+        if (!hasSaddle) {
+            return tag;
         }
+
+        Dynamic<?> saddleItem = tag.emptyMap().set("id", tag.createString("minecraft:saddle")).set("count", tag.createInt(1));
+        return fixDropChances(tag.set("saddle", saddleItem));
     }
 
-    private static Dynamic<?> fixDropChances(Dynamic<?> p_397318_) {
-        Dynamic<?> dynamic = p_397318_.get("drop_chances").orElseEmptyMap().set("saddle", p_397318_.createFloat(2.0F));
-        return p_397318_.set("drop_chances", dynamic);
+    private static Dynamic<?> fixDropChances(final Dynamic<?> tag) {
+        Dynamic<?> dropChances = tag.get("drop_chances").orElseEmptyMap().set("saddle", tag.createFloat(2.0F));
+        return tag.set("drop_chances", dropChances);
     }
 }

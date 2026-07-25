@@ -33,27 +33,29 @@ public class LightBlock extends Block implements SimpleWaterloggedBlock {
     public static final int MAX_LEVEL = 15;
     public static final IntegerProperty LEVEL = BlockStateProperties.LEVEL;
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
-    public static final ToIntFunction<BlockState> LIGHT_EMISSION = p_153701_ -> p_153701_.getValue(LEVEL);
+    public static final ToIntFunction<BlockState> LIGHT_EMISSION = state -> state.getValue(LEVEL);
 
     @Override
     public MapCodec<LightBlock> codec() {
         return CODEC;
     }
 
-    public LightBlock(BlockBehaviour.Properties p_153662_) {
-        super(p_153662_);
+    public LightBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(LEVEL, 15).setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_153687_) {
-        p_153687_.add(LEVEL, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(LEVEL, WATERLOGGED);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_153673_, Level p_153674_, BlockPos p_153675_, Player p_153676_, BlockHitResult p_153678_) {
-        if (!p_153674_.isClientSide() && p_153676_.canUseGameMasterBlocks()) {
-            p_153674_.setBlock(p_153675_, p_153673_.cycle(LEVEL), 2);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide() && player.canUseGameMasterBlocks()) {
+            level.setBlock(pos, state.cycle(LEVEL), 2);
             return InteractionResult.SUCCESS_SERVER;
         } else {
             return InteractionResult.CONSUME;
@@ -61,55 +63,55 @@ public class LightBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_153668_, BlockGetter p_153669_, BlockPos p_153670_, CollisionContext p_153671_) {
-        return p_153671_.isHoldingItem(Items.LIGHT) ? Shapes.block() : Shapes.empty();
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return context.isHoldingItem(Items.LIGHT) ? Shapes.block() : Shapes.empty();
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState p_153695_) {
-        return p_153695_.getFluidState().isEmpty();
+    protected boolean propagatesSkylightDown(final BlockState state) {
+        return state.getFluidState().isEmpty();
     }
 
     @Override
-    protected RenderShape getRenderShape(BlockState p_153693_) {
+    protected RenderShape getRenderShape(final BlockState state) {
         return RenderShape.INVISIBLE;
     }
 
     @Override
-    protected float getShadeBrightness(BlockState p_153689_, BlockGetter p_153690_, BlockPos p_153691_) {
+    protected float getShadeBrightness(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return 1.0F;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_153680_,
-        LevelReader p_367699_,
-        ScheduledTickAccess p_366283_,
-        BlockPos p_153684_,
-        Direction p_153681_,
-        BlockPos p_153685_,
-        BlockState p_153682_,
-        RandomSource p_361423_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction direction,
+        final BlockPos neighbourPos,
+        final BlockState neighbour,
+        final RandomSource random
     ) {
-        if (p_153680_.getValue(WATERLOGGED)) {
-            p_366283_.scheduleTick(p_153684_, Fluids.WATER, Fluids.WATER.getTickDelay(p_367699_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_153680_, p_367699_, p_366283_, p_153684_, p_153681_, p_153685_, p_153682_, p_361423_);
+        return super.updateShape(state, level, ticks, pos, direction, neighbourPos, neighbour, random);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_153699_) {
-        return p_153699_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_153699_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_310734_, BlockPos p_153665_, BlockState p_153666_, boolean p_375572_) {
-        return setLightOnStack(super.getCloneItemStack(p_310734_, p_153665_, p_153666_, p_375572_), p_153666_.getValue(LEVEL));
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
+        return setLightOnStack(super.getCloneItemStack(level, pos, state, includeData), state.getValue(LEVEL));
     }
 
-    public static ItemStack setLightOnStack(ItemStack p_259339_, int p_259353_) {
-        p_259339_.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(LEVEL, p_259353_));
-        return p_259339_;
+    public static ItemStack setLightOnStack(final ItemStack result, final int lightLevel) {
+        result.set(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY.with(LEVEL, lightLevel));
+        return result;
     }
 }

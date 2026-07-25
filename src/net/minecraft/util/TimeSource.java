@@ -5,12 +5,16 @@ import java.util.function.LongSupplier;
 
 @FunctionalInterface
 public interface TimeSource {
-    long get(TimeUnit p_239337_);
+    long get(TimeUnit timeUnit);
 
-    public interface NanoTimeSource extends TimeSource, LongSupplier {
+    static TimeSource.NanoTimeSource constant(final long value) {
+        return () -> value;
+    }
+
+    interface NanoTimeSource extends LongSupplier, TimeSource {
         @Override
-        default long get(TimeUnit p_239379_) {
-            return p_239379_.convert(this.getAsLong(), TimeUnit.NANOSECONDS);
+        default long get(final TimeUnit timeUnit) {
+            return timeUnit.convert(this.getAsLong(), TimeUnit.NANOSECONDS);
         }
     }
 }

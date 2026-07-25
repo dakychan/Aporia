@@ -4,57 +4,46 @@ import com.google.common.collect.Queues;
 import com.mojang.logging.LogUtils;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Queue;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import java.util.concurrent.ArrayBlockingQueue;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
-public class SectionBufferBuilderPool {
+public class SectionBufferBuilderPool implements AutoCloseable {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private final Queue<SectionBufferBuilderPack> freeBuffers;
-    private volatile int freeBufferCount;
+    private final ArrayBlockingQueue<SectionBufferBuilderPack> freeBuffers;
 
-    private SectionBufferBuilderPool(List<SectionBufferBuilderPack> p_312374_) {
-        this.freeBuffers = Queues.newArrayDeque(p_312374_);
-        this.freeBufferCount = this.freeBuffers.size();
+    private SectionBufferBuilderPool(final List<SectionBufferBuilderPack> buffers) {
+        this.freeBuffers = Queues.newArrayBlockingQueue(buffers.size());
+        this.freeBuffers.addAll(buffers);
     }
 
-    public static SectionBufferBuilderPool allocate(int p_310783_) {
-        int i = Math.max(1, (int)(Runtime.getRuntime().maxMemory() * 0.3) / SectionBufferBuilderPack.TOTAL_BUFFERS_SIZE);
-        int j = Math.max(1, Math.min(p_310783_, i));
-        List<SectionBufferBuilderPack> list = new ArrayList<>(j);
+    public static SectionBufferBuilderPool allocate(final int maxWorkers) {
+        int maxBuffers = Math.max(1, (int)(Runtime.getRuntime().maxMemory() * 0.3) / SectionBufferBuilderPack.TOTAL_BUFFERS_SIZE);
+        int targetBufferCount = Math.max(1, Math.min(maxWorkers, maxBuffers));
+        List<SectionBufferBuilderPack> buffers = new ArrayList<>(targetBufferCount);
 
         try {
-            for (int k = 0; k < j; k++) {
-                list.add(new SectionBufferBuilderPack());
+            for (int i = 0; i < targetBufferCount; i++) {
+                buffers.add(new SectionBufferBuilderPack());
             }
-        } catch (OutOfMemoryError outofmemoryerror) {
-            LOGGER.warn("Allocated only {}/{} buffers", list.size(), j);
-            int l = Math.min(list.size() * 2 / 3, list.size() - 1);
+        } catch (OutOfMemoryError e) {
+            LOGGER.warn("Allocated only {}/{} buffers", buffers.size(), targetBufferCount);
+            int buffersToDrop = Math.min(buffers.size() * 2 / 3, buffers.size() - 1);
 
-            for (int i1 = 0; i1 < l; i1++) {
-                list.remove(list.size() - 1).close();
+            for (int i = 0; i < buffersToDrop; i++) {
+                buffers.remove(buffers.size() - 1).close();
             }
         }
 
-        return new SectionBufferBuilderPool(list);
+        return new SectionBufferBuilderPool(buffers);
     }
 
     public @Nullable SectionBufferBuilderPack acquire() {
-        SectionBufferBuilderPack sectionbufferbuilderpack = this.freeBuffers.poll();
-        if (sectionbufferbuilderpack != null) {
-            this.freeBufferCount = this.freeBuffers.size();
-            return sectionbufferbuilderpack;
-        } else {
-            return null;
-        }
+        return this.freeBuffers.poll();
     }
 
-    public void release(SectionBufferBuilderPack p_310220_) {
-        this.freeBuffers.add(p_310220_);
-        this.freeBufferCount = this.freeBuffers.size();
+    public void release(final SectionBufferBuilderPack buffer) {
+        this.freeBuffers.offer(buffer);
     }
 
     public boolean isEmpty() {
@@ -62,6 +51,12 @@ public class SectionBufferBuilderPool {
     }
 
     public int getFreeBufferCount() {
-        return this.freeBufferCount;
+        return this.freeBuffers.size();
+    }
+
+    @Override
+    public void close() {
+        this.freeBuffers.forEach(SectionBufferBuilderPack::close);
+        this.freeBuffers.clear();
     }
 }

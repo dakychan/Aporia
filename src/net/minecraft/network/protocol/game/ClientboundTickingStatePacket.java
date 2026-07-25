@@ -11,17 +11,17 @@ public record ClientboundTickingStatePacket(float tickRate, boolean isFrozen) im
         ClientboundTickingStatePacket::write, ClientboundTickingStatePacket::new
     );
 
-    private ClientboundTickingStatePacket(FriendlyByteBuf p_312542_) {
-        this(p_312542_.readFloat(), p_312542_.readBoolean());
+    private ClientboundTickingStatePacket(final FriendlyByteBuf input) {
+        this(input.readFloat(), input.readBoolean());
     }
 
-    public static ClientboundTickingStatePacket from(TickRateManager p_312239_) {
-        return new ClientboundTickingStatePacket(p_312239_.tickrate(), p_312239_.isFrozen());
+    public static ClientboundTickingStatePacket from(final TickRateManager manager) {
+        return new ClientboundTickingStatePacket(manager.tickrate(), manager.isFrozen());
     }
 
-    private void write(FriendlyByteBuf p_312400_) {
-        p_312400_.writeFloat(this.tickRate);
-        p_312400_.writeBoolean(this.isFrozen);
+    private void write(final FriendlyByteBuf output) {
+        output.writeFloat(this.tickRate);
+        output.writeBoolean(this.isFrozen);
     }
 
     @Override
@@ -29,7 +29,7 @@ public record ClientboundTickingStatePacket(float tickRate, boolean isFrozen) im
         return GamePacketTypes.CLIENTBOUND_TICKING_STATE;
     }
 
-    public void handle(ClientGamePacketListener p_311641_) {
-        p_311641_.handleTickingState(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleTickingState(this);
     }
 }

@@ -37,55 +37,55 @@ public abstract class StructurePoolElement {
         return StructureTemplatePool.Projection.CODEC.fieldOf("projection").forGetter(StructurePoolElement::getProjection);
     }
 
-    protected StructurePoolElement(StructureTemplatePool.Projection p_210471_) {
-        this.projection = p_210471_;
+    protected StructurePoolElement(final StructureTemplatePool.Projection projection) {
+        this.projection = projection;
     }
 
-    public abstract Vec3i getSize(StructureTemplateManager p_227346_, Rotation p_227347_);
+    public abstract Vec3i getSize(StructureTemplateManager structureTemplateManager, Rotation rotation);
 
     public abstract List<StructureTemplate.JigsawBlockInfo> getShuffledJigsawBlocks(
-        StructureTemplateManager p_227351_, BlockPos p_227352_, Rotation p_227353_, RandomSource p_227354_
+        StructureTemplateManager structureTemplateManager, BlockPos position, Rotation rotation, RandomSource random
     );
 
-    public abstract BoundingBox getBoundingBox(StructureTemplateManager p_227348_, BlockPos p_227349_, Rotation p_227350_);
+    public abstract BoundingBox getBoundingBox(StructureTemplateManager structureTemplateManager, BlockPos position, Rotation rotation);
 
     public abstract boolean place(
-        StructureTemplateManager p_227336_,
-        WorldGenLevel p_227337_,
-        StructureManager p_227338_,
-        ChunkGenerator p_227339_,
-        BlockPos p_227340_,
-        BlockPos p_227341_,
-        Rotation p_227342_,
-        BoundingBox p_227343_,
-        RandomSource p_227344_,
-        LiquidSettings p_342484_,
-        boolean p_227345_
+        final StructureTemplateManager structureTemplateManager,
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final BlockPos position,
+        final BlockPos referencePos,
+        final Rotation rotation,
+        final BoundingBox chunkBB,
+        final RandomSource random,
+        final LiquidSettings liquidSettings,
+        final boolean keepJigsaws
     );
 
     public abstract StructurePoolElementType<?> getType();
 
     public void handleDataMarker(
-        LevelAccessor p_227330_,
-        StructureTemplate.StructureBlockInfo p_227331_,
-        BlockPos p_227332_,
-        Rotation p_227333_,
-        RandomSource p_227334_,
-        BoundingBox p_227335_
+        final LevelAccessor level,
+        final StructureTemplate.StructureBlockInfo dataMarker,
+        final BlockPos position,
+        final Rotation rotation,
+        final RandomSource random,
+        final BoundingBox chunkBB
     ) {
     }
 
-    public StructurePoolElement setProjection(StructureTemplatePool.Projection p_210479_) {
-        this.projection = p_210479_;
+    public StructurePoolElement setProjection(final StructureTemplatePool.Projection projection) {
+        this.projection = projection;
         return this;
     }
 
     public StructureTemplatePool.Projection getProjection() {
-        StructureTemplatePool.Projection structuretemplatepool$projection = this.projection;
-        if (structuretemplatepool$projection == null) {
+        StructureTemplatePool.Projection projection = this.projection;
+        if (projection == null) {
             throw new IllegalStateException();
         } else {
-            return structuretemplatepool$projection;
+            return projection;
         }
     }
 
@@ -94,42 +94,44 @@ public abstract class StructurePoolElement {
     }
 
     public static Function<StructureTemplatePool.Projection, EmptyPoolElement> empty() {
-        return p_210525_ -> EmptyPoolElement.INSTANCE;
+        return p -> EmptyPoolElement.INSTANCE;
     }
 
-    public static Function<StructureTemplatePool.Projection, LegacySinglePoolElement> legacy(String p_210508_) {
-        return p_450032_ -> new LegacySinglePoolElement(Either.left(Identifier.parse(p_210508_)), EMPTY, p_450032_, Optional.empty());
+    public static Function<StructureTemplatePool.Projection, LegacySinglePoolElement> legacy(final String location) {
+        return p -> new LegacySinglePoolElement(Either.left(Identifier.parse(location)), EMPTY, p, Optional.empty());
     }
 
-    public static Function<StructureTemplatePool.Projection, LegacySinglePoolElement> legacy(String p_210513_, Holder<StructureProcessorList> p_210514_) {
-        return p_450030_ -> new LegacySinglePoolElement(Either.left(Identifier.parse(p_210513_)), p_210514_, p_450030_, Optional.empty());
+    public static Function<StructureTemplatePool.Projection, LegacySinglePoolElement> legacy(
+        final String location, final Holder<StructureProcessorList> processors
+    ) {
+        return p -> new LegacySinglePoolElement(Either.left(Identifier.parse(location)), processors, p, Optional.empty());
     }
 
-    public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(String p_210527_) {
-        return p_450027_ -> new SinglePoolElement(Either.left(Identifier.parse(p_210527_)), EMPTY, p_450027_, Optional.empty());
+    public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(final String location) {
+        return p -> new SinglePoolElement(Either.left(Identifier.parse(location)), EMPTY, p, Optional.empty());
     }
 
-    public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(String p_210532_, Holder<StructureProcessorList> p_210533_) {
-        return p_450035_ -> new SinglePoolElement(Either.left(Identifier.parse(p_210532_)), p_210533_, p_450035_, Optional.empty());
+    public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(final String location, final Holder<StructureProcessorList> processors) {
+        return p -> new SinglePoolElement(Either.left(Identifier.parse(location)), processors, p, Optional.empty());
     }
 
-    public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(String p_342465_, LiquidSettings p_344698_) {
-        return p_450038_ -> new SinglePoolElement(Either.left(Identifier.parse(p_342465_)), EMPTY, p_450038_, Optional.of(p_344698_));
+    public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(final String location, final LiquidSettings overrideLiquidSettings) {
+        return p -> new SinglePoolElement(Either.left(Identifier.parse(location)), EMPTY, p, Optional.of(overrideLiquidSettings));
     }
 
     public static Function<StructureTemplatePool.Projection, SinglePoolElement> single(
-        String p_343039_, Holder<StructureProcessorList> p_343135_, LiquidSettings p_342378_
+        final String location, final Holder<StructureProcessorList> processors, final LiquidSettings overrideLiquidSettings
     ) {
-        return p_450025_ -> new SinglePoolElement(Either.left(Identifier.parse(p_343039_)), p_343135_, p_450025_, Optional.of(p_342378_));
+        return p -> new SinglePoolElement(Either.left(Identifier.parse(location)), processors, p, Optional.of(overrideLiquidSettings));
     }
 
-    public static Function<StructureTemplatePool.Projection, FeaturePoolElement> feature(Holder<PlacedFeature> p_210503_) {
-        return p_210506_ -> new FeaturePoolElement(p_210503_, p_210506_);
+    public static Function<StructureTemplatePool.Projection, FeaturePoolElement> feature(final Holder<PlacedFeature> feature) {
+        return p -> new FeaturePoolElement(feature, p);
     }
 
     public static Function<StructureTemplatePool.Projection, ListPoolElement> list(
-        List<Function<StructureTemplatePool.Projection, ? extends StructurePoolElement>> p_210520_
+        final List<Function<StructureTemplatePool.Projection, ? extends StructurePoolElement>> elements
     ) {
-        return p_210523_ -> new ListPoolElement(p_210520_.stream().map(p_210482_ -> p_210482_.apply(p_210523_)).collect(Collectors.toList()), p_210523_);
+        return p -> new ListPoolElement(elements.stream().map(e -> e.apply(p)).collect(Collectors.toList()), p);
     }
 }

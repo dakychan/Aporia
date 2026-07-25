@@ -3,7 +3,6 @@ package net.minecraft.world.level.block;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -11,7 +10,7 @@ import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
@@ -29,64 +28,77 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class StemBlock extends VegetationBlock implements BonemealableBlock {
     public static final MapCodec<StemBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422129_ -> p_422129_.group(
-                ResourceKey.codec(Registries.BLOCK).fieldOf("fruit").forGetter(p_312514_ -> p_312514_.fruit),
-                ResourceKey.codec(Registries.BLOCK).fieldOf("attached_stem").forGetter(p_309847_ -> p_309847_.attachedStem),
-                ResourceKey.codec(Registries.ITEM).fieldOf("seed").forGetter(p_311480_ -> p_311480_.seed),
+        i -> i.group(
+                ResourceKey.codec(Registries.BLOCK).fieldOf("fruit").forGetter(b -> b.fruit),
+                ResourceKey.codec(Registries.BLOCK).fieldOf("attached_stem").forGetter(b -> b.attachedStem),
+                ResourceKey.codec(Registries.ITEM).fieldOf("seed").forGetter(b -> b.seed),
+                TagKey.codec(Registries.BLOCK).fieldOf("stem_support_blocks").forGetter(b -> b.stemSupportBlocks),
+                TagKey.codec(Registries.BLOCK).fieldOf("fruit_support_blocks").forGetter(b -> b.fruitSupportBlocks),
                 propertiesCodec()
             )
-            .apply(p_422129_, StemBlock::new)
+            .apply(i, StemBlock::new)
     );
     public static final int MAX_AGE = 7;
     public static final IntegerProperty AGE = BlockStateProperties.AGE_7;
-    private static final VoxelShape[] SHAPES = Block.boxes(7, p_390954_ -> Block.column(2.0, 0.0, 2 + p_390954_ * 2));
+    private static final VoxelShape[] SHAPES = Block.boxes(7, age -> Block.column(2.0, 0.0, 2 + age * 2));
     private final ResourceKey<Block> fruit;
     private final ResourceKey<Block> attachedStem;
     private final ResourceKey<Item> seed;
+    private final TagKey<Block> stemSupportBlocks;
+    private final TagKey<Block> fruitSupportBlocks;
 
     @Override
     public MapCodec<StemBlock> codec() {
         return CODEC;
     }
 
-    protected StemBlock(ResourceKey<Block> p_310213_, ResourceKey<Block> p_312966_, ResourceKey<Item> p_312034_, BlockBehaviour.Properties p_154730_) {
-        super(p_154730_);
-        this.fruit = p_310213_;
-        this.attachedStem = p_312966_;
-        this.seed = p_312034_;
+    protected StemBlock(
+        final ResourceKey<Block> fruit,
+        final ResourceKey<Block> attachedStem,
+        final ResourceKey<Item> seed,
+        final TagKey<Block> stemSupportBlocks,
+        final TagKey<Block> fruitSupportBlocks,
+        final BlockBehaviour.Properties properties
+    ) {
+        super(properties);
+        this.fruit = fruit;
+        this.attachedStem = attachedStem;
+        this.seed = seed;
+        this.stemSupportBlocks = stemSupportBlocks;
+        this.fruitSupportBlocks = fruitSupportBlocks;
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57047_, BlockGetter p_57048_, BlockPos p_57049_, CollisionContext p_57050_) {
-        return SHAPES[p_57047_.getValue(AGE)];
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES[state.getValue(AGE)];
     }
 
     @Override
-    protected boolean mayPlaceOn(BlockState p_57053_, BlockGetter p_57054_, BlockPos p_57055_) {
-        return p_57053_.is(Blocks.FARMLAND);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.is(this.stemSupportBlocks);
     }
 
     @Override
-    protected void randomTick(BlockState p_222538_, ServerLevel p_222539_, BlockPos p_222540_, RandomSource p_222541_) {
-        if (p_222539_.getRawBrightness(p_222540_, 0) >= 9) {
-            float f = CropBlock.getGrowthSpeed(this, p_222539_, p_222540_);
-            if (p_222541_.nextInt((int)(25.0F / f) + 1) == 0) {
-                int i = p_222538_.getValue(AGE);
-                if (i < 7) {
-                    p_222538_ = p_222538_.setValue(AGE, i + 1);
-                    p_222539_.setBlock(p_222540_, p_222538_, 2);
+    protected void randomTick(BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (level.getRawBrightness(pos, 0) >= 9) {
+            float growthSpeed = CropBlock.getGrowthSpeed(this, level, pos);
+            if (random.nextInt((int)(25.0F / growthSpeed) + 1) == 0) {
+                int age = state.getValue(AGE);
+                if (age < 7) {
+                    state = state.setValue(AGE, age + 1);
+                    level.setBlock(pos, state, 2);
                 } else {
-                    Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(p_222541_);
-                    BlockPos blockpos = p_222540_.relative(direction);
-                    BlockState blockstate = p_222539_.getBlockState(blockpos.below());
-                    if (p_222539_.getBlockState(blockpos).isAir() && (blockstate.is(Blocks.FARMLAND) || blockstate.is(BlockTags.DIRT))) {
-                        Registry<Block> registry = p_222539_.registryAccess().lookupOrThrow(Registries.BLOCK);
-                        Optional<Block> optional = registry.getOptional(this.fruit);
-                        Optional<Block> optional1 = registry.getOptional(this.attachedStem);
-                        if (optional.isPresent() && optional1.isPresent()) {
-                            p_222539_.setBlockAndUpdate(blockpos, optional.get().defaultBlockState());
-                            p_222539_.setBlockAndUpdate(p_222540_, optional1.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, direction));
+                    Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+                    BlockPos relative = pos.relative(direction);
+                    BlockState stateBelow = level.getBlockState(relative.below());
+                    if (level.getBlockState(relative).isAir() && stateBelow.is(this.fruitSupportBlocks)) {
+                        Registry<Block> blocks = level.registryAccess().lookupOrThrow(Registries.BLOCK);
+                        Optional<Block> fruit = blocks.getOptional(this.fruit);
+                        Optional<Block> stem = blocks.getOptional(this.attachedStem);
+                        if (fruit.isPresent() && stem.isPresent()) {
+                            level.setBlockAndUpdate(relative, fruit.get().defaultBlockState());
+                            level.setBlockAndUpdate(pos, stem.get().defaultBlockState().setValue(HorizontalDirectionalBlock.FACING, direction));
                         }
                     }
                 }
@@ -95,32 +107,32 @@ public class StemBlock extends VegetationBlock implements BonemealableBlock {
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_312829_, BlockPos p_57027_, BlockState p_57028_, boolean p_375751_) {
-        return new ItemStack(DataFixUtils.orElse(p_312829_.registryAccess().lookupOrThrow(Registries.ITEM).getOptional(this.seed), this));
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
+        return new ItemStack(DataFixUtils.orElse(level.registryAccess().lookupOrThrow(Registries.ITEM).getOptional(this.seed), this));
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_255699_, BlockPos p_57031_, BlockState p_57032_) {
-        return p_57032_.getValue(AGE) != 7;
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return state.getValue(AGE) != 7;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_222533_, RandomSource p_222534_, BlockPos p_222535_, BlockState p_222536_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_222528_, RandomSource p_222529_, BlockPos p_222530_, BlockState p_222531_) {
-        int i = Math.min(7, p_222531_.getValue(AGE) + Mth.nextInt(p_222528_.random, 2, 5));
-        BlockState blockstate = p_222531_.setValue(AGE, i);
-        p_222528_.setBlock(p_222530_, blockstate, 2);
-        if (i == 7) {
-            blockstate.randomTick(p_222528_, p_222530_, p_222528_.random);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        int age = Math.min(7, state.getValue(AGE) + Mth.nextInt(random, 2, 5));
+        BlockState newState = state.setValue(AGE, age);
+        level.setBlock(pos, newState, 2);
+        if (age == 7) {
+            newState.randomTick(level, pos, random);
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57040_) {
-        p_57040_.add(AGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(AGE);
     }
 }

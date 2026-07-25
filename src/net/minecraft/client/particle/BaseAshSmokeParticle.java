@@ -2,51 +2,48 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class BaseAshSmokeParticle extends SingleQuadParticle {
     private final SpriteSet sprites;
 
     protected BaseAshSmokeParticle(
-        ClientLevel p_171904_,
-        double p_171905_,
-        double p_171906_,
-        double p_171907_,
-        float p_171908_,
-        float p_171909_,
-        float p_171910_,
-        double p_171911_,
-        double p_171912_,
-        double p_171913_,
-        float p_171914_,
-        SpriteSet p_171915_,
-        float p_171916_,
-        int p_171917_,
-        float p_171918_,
-        boolean p_171919_
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final float dirX,
+        final float dirY,
+        final float dirZ,
+        final double xa,
+        final double ya,
+        final double za,
+        final float scale,
+        final SpriteSet sprites,
+        final float colorRandom,
+        final int maxLifetime,
+        final float gravity,
+        final boolean hasPhysics
     ) {
-        super(p_171904_, p_171905_, p_171906_, p_171907_, 0.0, 0.0, 0.0, p_171915_.first());
+        super(level, x, y, z, 0.0, 0.0, 0.0, sprites.first());
         this.friction = 0.96F;
-        this.gravity = p_171918_;
+        this.gravity = gravity;
         this.speedUpWhenYMotionIsBlocked = true;
-        this.sprites = p_171915_;
-        this.xd *= p_171908_;
-        this.yd *= p_171909_;
-        this.zd *= p_171910_;
-        this.xd += p_171911_;
-        this.yd += p_171912_;
-        this.zd += p_171913_;
-        float f = this.random.nextFloat() * p_171916_;
-        this.rCol = f;
-        this.gCol = f;
-        this.bCol = f;
-        this.quadSize *= 0.75F * p_171914_;
-        this.lifetime = (int)(p_171917_ / (this.random.nextFloat() * 0.8 + 0.2) * p_171914_);
+        this.sprites = sprites;
+        this.xd *= dirX;
+        this.yd *= dirY;
+        this.zd *= dirZ;
+        this.xd += xa;
+        this.yd += ya;
+        this.zd += za;
+        float col = this.random.nextFloat() * colorRandom;
+        this.rCol = col;
+        this.gCol = col;
+        this.bCol = col;
+        this.quadSize *= 0.75F * scale;
+        this.lifetime = (int)(maxLifetime / (this.random.nextFloat() * 0.8 + 0.2) * scale);
         this.lifetime = Math.max(this.lifetime, 1);
-        this.setSpriteFromAge(p_171915_);
-        this.hasPhysics = p_171919_;
+        this.setSpriteFromAge(sprites);
+        this.hasPhysics = hasPhysics;
     }
 
     @Override
@@ -55,8 +52,8 @@ public abstract class BaseAshSmokeParticle extends SingleQuadParticle {
     }
 
     @Override
-    public float getQuadSize(float p_105642_) {
-        return this.quadSize * Mth.clamp((this.age + p_105642_) / this.lifetime * 32.0F, 0.0F, 1.0F);
+    public float getQuadSize(final float a) {
+        return this.quadSize * Mth.clamp((this.age + a) / this.lifetime * 32.0F, 0.0F, 1.0F);
     }
 
     @Override

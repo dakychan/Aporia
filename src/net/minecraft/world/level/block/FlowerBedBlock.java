@@ -31,8 +31,8 @@ public class FlowerBedBlock extends VegetationBlock implements BonemealableBlock
         return CODEC;
     }
 
-    protected FlowerBedBlock(BlockBehaviour.Properties p_397218_) {
-        super(p_397218_);
+    protected FlowerBedBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(AMOUNT, 1));
         this.shapes = this.makeShapes();
     }
@@ -42,23 +42,23 @@ public class FlowerBedBlock extends VegetationBlock implements BonemealableBlock
     }
 
     @Override
-    public BlockState rotate(BlockState p_393921_, Rotation p_392639_) {
-        return p_393921_.setValue(FACING, p_392639_.rotate(p_393921_.getValue(FACING)));
+    public BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState p_391796_, Mirror p_392417_) {
-        return p_391796_.rotate(p_392417_.getRotation(p_391796_.getValue(FACING)));
+    public BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    public boolean canBeReplaced(BlockState p_392482_, BlockPlaceContext p_397242_) {
-        return this.canBeReplaced(p_392482_, p_397242_, AMOUNT) ? true : super.canBeReplaced(p_392482_, p_397242_);
+    public boolean canBeReplaced(final BlockState state, final BlockPlaceContext context) {
+        return this.canBeReplaced(state, context, AMOUNT) ? true : super.canBeReplaced(state, context);
     }
 
     @Override
-    public VoxelShape getShape(BlockState p_392309_, BlockGetter p_396575_, BlockPos p_394826_, CollisionContext p_394289_) {
-        return this.shapes.apply(p_392309_);
+    public VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.shapes.apply(state);
     }
 
     @Override
@@ -72,32 +72,32 @@ public class FlowerBedBlock extends VegetationBlock implements BonemealableBlock
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_395692_) {
-        return this.getStateForPlacement(p_395692_, this, AMOUNT, FACING);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return this.getStateForPlacement(context, this, AMOUNT, FACING);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_397787_) {
-        p_397787_.add(FACING, AMOUNT);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, AMOUNT);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_395020_, BlockPos p_395501_, BlockState p_395088_) {
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_392861_, RandomSource p_396866_, BlockPos p_392975_, BlockState p_391909_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_393621_, RandomSource p_397965_, BlockPos p_393101_, BlockState p_394965_) {
-        int i = p_394965_.getValue(AMOUNT);
-        if (i < 4) {
-            p_393621_.setBlock(p_393101_, p_394965_.setValue(AMOUNT, i + 1), 2);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        int currentAmount = state.getValue(AMOUNT);
+        if (currentAmount < 4) {
+            level.setBlock(pos, state.setValue(AMOUNT, currentAmount + 1), 2);
         } else {
-            popResource(p_393621_, p_393101_, new ItemStack(this));
+            popResource(level, pos, new ItemStack(this));
         }
     }
 }

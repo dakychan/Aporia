@@ -7,78 +7,78 @@ import net.minecraft.SuppressForbidden;
 public class DelegateDataOutput implements DataOutput {
     private final DataOutput parent;
 
-    public DelegateDataOutput(DataOutput p_311826_) {
-        this.parent = p_311826_;
+    public DelegateDataOutput(final DataOutput parent) {
+        this.parent = parent;
     }
 
     @Override
-    public void write(int p_312870_) throws IOException {
-        this.parent.write(p_312870_);
+    public void write(final int b) throws IOException {
+        this.parent.write(b);
     }
 
     @Override
-    public void write(byte[] p_311646_) throws IOException {
-        this.parent.write(p_311646_);
+    public void write(final byte[] b) throws IOException {
+        this.parent.write(b);
     }
 
     @Override
-    public void write(byte[] p_309909_, int p_313250_, int p_311853_) throws IOException {
-        this.parent.write(p_309909_, p_313250_, p_311853_);
+    public void write(final byte[] b, final int off, final int len) throws IOException {
+        this.parent.write(b, off, len);
     }
 
     @Override
-    public void writeBoolean(boolean p_310495_) throws IOException {
-        this.parent.writeBoolean(p_310495_);
+    public void writeBoolean(final boolean v) throws IOException {
+        this.parent.writeBoolean(v);
     }
 
     @Override
-    public void writeByte(int p_311940_) throws IOException {
-        this.parent.writeByte(p_311940_);
+    public void writeByte(final int v) throws IOException {
+        this.parent.writeByte(v);
     }
 
     @Override
-    public void writeShort(int p_310680_) throws IOException {
-        this.parent.writeShort(p_310680_);
+    public void writeShort(final int v) throws IOException {
+        this.parent.writeShort(v);
     }
 
     @Override
-    public void writeChar(int p_310364_) throws IOException {
-        this.parent.writeChar(p_310364_);
+    public void writeChar(final int v) throws IOException {
+        this.parent.writeChar(v);
     }
 
     @Override
-    public void writeInt(int p_310767_) throws IOException {
-        this.parent.writeInt(p_310767_);
+    public void writeInt(final int v) throws IOException {
+        this.parent.writeInt(v);
     }
 
     @Override
-    public void writeLong(long p_313222_) throws IOException {
-        this.parent.writeLong(p_313222_);
+    public void writeLong(final long v) throws IOException {
+        this.parent.writeLong(v);
     }
 
     @Override
-    public void writeFloat(float p_311489_) throws IOException {
-        this.parent.writeFloat(p_311489_);
+    public void writeFloat(final float v) throws IOException {
+        this.parent.writeFloat(v);
     }
 
     @Override
-    public void writeDouble(double p_312046_) throws IOException {
-        this.parent.writeDouble(p_312046_);
+    public void writeDouble(final double v) throws IOException {
+        this.parent.writeDouble(v);
     }
 
     @SuppressForbidden(reason = "Delegation is not use")
     @Override
-    public void writeBytes(String p_310549_) throws IOException {
-        this.parent.writeBytes(p_310549_);
+    public void writeBytes(final String s) throws IOException {
+        this.parent.writeBytes(s);
     }
 
     @Override
-    public void writeChars(String p_311977_) throws IOException {
-        this.parent.writeChars(p_311977_);
+    public void writeChars(final String s) throws IOException {
+        this.parent.writeChars(s);
     }
 
     @Override
-    public void writeUTF(String p_309650_) throws IOException {
-        this.parent.writeUTF(p_309650_);
+    public void writeUTF(final String s) throws IOException {
+        this.parent.writeUTF(s);
     }
 }

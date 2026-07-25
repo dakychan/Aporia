@@ -1,41 +1,38 @@
 package net.minecraft.client.renderer;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class RunningTrimmedMean {
     private final long[] values;
     private int count;
     private int cursor;
 
-    public RunningTrimmedMean(int p_110711_) {
-        this.values = new long[p_110711_];
+    public RunningTrimmedMean(final int maxCount) {
+        this.values = new long[maxCount];
     }
 
-    public long registerValueAndGetMean(long p_110713_) {
+    public long registerValueAndGetMean(final long value) {
         if (this.count < this.values.length) {
             this.count++;
         }
 
-        this.values[this.cursor] = p_110713_;
+        this.values[this.cursor] = value;
         this.cursor = (this.cursor + 1) % this.values.length;
-        long i = Long.MAX_VALUE;
-        long j = Long.MIN_VALUE;
-        long k = 0L;
+        long min = Long.MAX_VALUE;
+        long max = Long.MIN_VALUE;
+        long total = 0L;
 
-        for (int l = 0; l < this.count; l++) {
-            long i1 = this.values[l];
-            k += i1;
-            i = Math.min(i, i1);
-            j = Math.max(j, i1);
+        for (int i = 0; i < this.count; i++) {
+            long current = this.values[i];
+            total += current;
+            min = Math.min(min, current);
+            max = Math.max(max, current);
         }
 
         if (this.count > 2) {
-            k -= i + j;
-            return k / (this.count - 2);
+            total -= min + max;
+            return total / (this.count - 2);
         } else {
-            return k > 0L ? this.count / k : 0L;
+            return total > 0L ? this.count / total : 0L;
         }
     }
 }

@@ -37,49 +37,49 @@ public class Bogged extends AbstractSkeleton implements Shearable {
         return AbstractSkeleton.createAttributes().add(Attributes.MAX_HEALTH, 16.0);
     }
 
-    public Bogged(EntityType<? extends Bogged> p_460563_, Level p_457706_) {
-        super(p_460563_, p_457706_);
+    public Bogged(final EntityType<? extends Bogged> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_452459_) {
-        super.defineSynchedData(p_452459_);
-        p_452459_.define(DATA_SHEARED, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_SHEARED, false);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_455849_) {
-        super.addAdditionalSaveData(p_455849_);
-        p_455849_.putBoolean("sheared", this.isSheared());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("sheared", this.isSheared());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458358_) {
-        super.readAdditionalSaveData(p_458358_);
-        this.setSheared(p_458358_.getBooleanOr("sheared", false));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setSheared(input.getBooleanOr("sheared", false));
     }
 
     public boolean isSheared() {
         return this.entityData.get(DATA_SHEARED);
     }
 
-    public void setSheared(boolean p_456183_) {
-        this.entityData.set(DATA_SHEARED, p_456183_);
+    public void setSheared(final boolean sheared) {
+        this.entityData.set(DATA_SHEARED, sheared);
     }
 
     @Override
-    protected InteractionResult mobInteract(Player p_453508_, InteractionHand p_459904_) {
-        ItemStack itemstack = p_453508_.getItemInHand(p_459904_);
-        if (itemstack.is(Items.SHEARS) && this.readyForShearing()) {
-            if (this.level() instanceof ServerLevel serverlevel) {
-                this.shear(serverlevel, SoundSource.PLAYERS, itemstack);
-                this.gameEvent(GameEvent.SHEAR, p_453508_);
-                itemstack.hurtAndBreak(1, p_453508_, p_459904_.asEquipmentSlot());
+    protected InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (itemStack.is(Items.SHEARS) && this.readyForShearing()) {
+            if (this.level() instanceof ServerLevel level) {
+                this.shear(level, SoundSource.PLAYERS, itemStack);
+                this.gameEvent(GameEvent.SHEAR, player);
+                itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
             }
 
             return InteractionResult.SUCCESS;
         } else {
-            return super.mobInteract(p_453508_, p_459904_);
+            return super.mobInteract(player, hand);
         }
     }
 
@@ -89,7 +89,7 @@ public class Bogged extends AbstractSkeleton implements Shearable {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_451367_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.BOGGED_HURT;
     }
 
@@ -104,13 +104,13 @@ public class Bogged extends AbstractSkeleton implements Shearable {
     }
 
     @Override
-    protected AbstractArrow getArrow(ItemStack p_451963_, float p_451518_, @Nullable ItemStack p_458834_) {
-        AbstractArrow abstractarrow = super.getArrow(p_451963_, p_451518_, p_458834_);
-        if (abstractarrow instanceof Arrow arrow) {
+    protected AbstractArrow getArrow(final ItemStack projectile, final float power, final @Nullable ItemStack firingWeapon) {
+        AbstractArrow abstractArrow = super.getArrow(projectile, power, firingWeapon);
+        if (abstractArrow instanceof Arrow arrow) {
             arrow.addEffect(new MobEffectInstance(MobEffects.POISON, 100));
         }
 
-        return abstractarrow;
+        return abstractArrow;
     }
 
     @Override
@@ -124,18 +124,18 @@ public class Bogged extends AbstractSkeleton implements Shearable {
     }
 
     @Override
-    public void shear(ServerLevel p_454864_, SoundSource p_459798_, ItemStack p_453652_) {
-        p_454864_.playSound(null, this, SoundEvents.BOGGED_SHEAR, p_459798_, 1.0F, 1.0F);
-        this.spawnShearedMushrooms(p_454864_, p_453652_);
+    public void shear(final ServerLevel level, final SoundSource soundSource, final ItemStack tool) {
+        level.playSound(null, this, SoundEvents.BOGGED_SHEAR, soundSource, 1.0F, 1.0F);
+        this.spawnShearedMushrooms(level, tool);
         this.setSheared(true);
     }
 
-    private void spawnShearedMushrooms(ServerLevel p_454731_, ItemStack p_453578_) {
-        this.dropFromShearingLootTable(p_454731_, BuiltInLootTables.BOGGED_SHEAR, p_453578_, (p_456269_, p_457387_) -> this.spawnAtLocation(p_456269_, p_457387_, this.getBbHeight()));
+    private void spawnShearedMushrooms(final ServerLevel level, final ItemStack tool) {
+        this.dropFromShearingLootTable(level, BuiltInLootTables.BOGGED_SHEAR, tool, (l, drop) -> this.spawnAtLocation(l, drop, this.getBbHeight()));
     }
 
     @Override
     public boolean readyForShearing() {
-        return !this.isSheared() && this.isAlive();
+        return !this.isSheared();
     }
 }

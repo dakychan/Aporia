@@ -14,114 +14,117 @@ public class ParallelMapTransform {
     private static final int DEFAULT_TASKS_PER_THREAD = 16;
 
     public static <K, U, V> CompletableFuture<Map<K, V>> schedule(
-        Map<K, U> p_391667_, BiFunction<K, U, @Nullable V> p_396121_, int p_392374_, Executor p_392136_
+        final Map<K, U> input, final BiFunction<K, U, @Nullable V> operation, final int maxTaskCount, final Executor executor
     ) {
-        int i = p_391667_.size();
-        if (i == 0) {
+        int inputSize = input.size();
+        if (inputSize == 0) {
             return CompletableFuture.completedFuture(Map.of());
-        } else if (i == 1) {
-            Entry<K, U> entry = p_391667_.entrySet().iterator().next();
-            K k = entry.getKey();
-            U u = entry.getValue();
+        } else if (inputSize == 1) {
+            Entry<K, U> element = input.entrySet().iterator().next();
+            K key = element.getKey();
+            U value = element.getValue();
             return CompletableFuture.supplyAsync(() -> {
-                V v = p_396121_.apply(k, u);
-                return v != null ? Map.of(k, v) : Map.of();
-            }, p_392136_);
+                V result = operation.apply(key, value);
+                return result != null ? Map.of(key, result) : Map.of();
+            }, executor);
         } else {
-            ParallelMapTransform.SplitterBase<K, U, V> splitterbase = (ParallelMapTransform.SplitterBase<K, U, V>)(i <= p_392374_
-                ? new ParallelMapTransform.SingleTaskSplitter<>(p_396121_, i)
-                : new ParallelMapTransform.BatchedTaskSplitter<>(p_396121_, i, p_392374_));
-            return splitterbase.scheduleTasks(p_391667_, p_392136_);
+            ParallelMapTransform.SplitterBase<K, U, V> splitter = inputSize <= maxTaskCount
+                ? new ParallelMapTransform.SingleTaskSplitter<>(operation, inputSize)
+                : new ParallelMapTransform.BatchedTaskSplitter<>(operation, inputSize, maxTaskCount);
+            return splitter.scheduleTasks(input, executor);
         }
     }
 
-    public static <K, U, V> CompletableFuture<Map<K, V>> schedule(Map<K, U> p_392177_, BiFunction<K, U, @Nullable V> p_395566_, Executor p_391925_) {
-        int i = Util.maxAllowedExecutorThreads() * 16;
-        return schedule(p_392177_, p_395566_, i, p_391925_);
+    public static <K, U, V> CompletableFuture<Map<K, V>> schedule(final Map<K, U> input, final BiFunction<K, U, @Nullable V> operation, final Executor executor) {
+        int maxTaskCount = Util.maxAllowedExecutorThreads() * 16;
+        return schedule(input, operation, maxTaskCount, executor);
     }
 
-    static class BatchedTaskSplitter<K, U, V> extends ParallelMapTransform.SplitterBase<K, U, V> {
+    private static class BatchedTaskSplitter<K, U, V> extends ParallelMapTransform.SplitterBase<K, U, V> {
         private final Map<K, V> result;
         private final int batchSize;
         private final int firstUndersizedBatchIndex;
 
-        BatchedTaskSplitter(BiFunction<K, U, V> p_397810_, int p_391927_, int p_394050_) {
-            super(p_397810_, p_391927_, p_394050_);
-            this.result = new HashMap<>(p_391927_);
-            this.batchSize = Mth.positiveCeilDiv(p_391927_, p_394050_);
-            int i = this.batchSize * p_394050_;
-            int j = i - p_391927_;
-            this.firstUndersizedBatchIndex = p_394050_ - j;
-
-            assert this.firstUndersizedBatchIndex > 0 && this.firstUndersizedBatchIndex <= p_394050_;
+        private BatchedTaskSplitter(final BiFunction<K, U, V> operation, final int size, final int maxTasks) {
+            super(operation, size, maxTasks);
+            this.result = new HashMap<>(size);
+            this.batchSize = Mth.positiveCeilDiv(size, maxTasks);
+            int fullCapacity = this.batchSize * maxTasks;
+            int leftoverCapacity = fullCapacity - size;
+            this.firstUndersizedBatchIndex = maxTasks - leftoverCapacity;
+            assert this.firstUndersizedBatchIndex > 0 && this.firstUndersizedBatchIndex <= maxTasks;
         }
 
         @Override
-        protected CompletableFuture<?> scheduleBatch(ParallelMapTransform.Container<K, U, V> p_395039_, int p_391190_, int p_393559_, Executor p_393890_) {
-            int i = p_393559_ - p_391190_;
-
-            assert i == this.batchSize || i == this.batchSize - 1;
-
-            return CompletableFuture.runAsync(createTask(this.result, p_391190_, p_393559_, p_395039_), p_393890_);
+        protected CompletableFuture<?> scheduleBatch(
+            final ParallelMapTransform.Container<K, U, V> container, final int startIndex, final int endIndex, final Executor executor
+        ) {
+            int batchSize = endIndex - startIndex;
+            assert batchSize == this.batchSize || batchSize == this.batchSize - 1;
+            return CompletableFuture.runAsync(createTask(this.result, startIndex, endIndex, container), executor);
         }
 
         @Override
-        protected int batchSize(int p_396019_) {
-            return p_396019_ < this.firstUndersizedBatchIndex ? this.batchSize : this.batchSize - 1;
+        protected int batchSize(final int index) {
+            return index < this.firstUndersizedBatchIndex ? this.batchSize : this.batchSize - 1;
         }
 
-        private static <K, U, V> Runnable createTask(Map<K, V> p_393441_, int p_398008_, int p_397004_, ParallelMapTransform.Container<K, U, V> p_397180_) {
+        private static <K, U, V> Runnable createTask(
+            final Map<K, V> result, final int startIndex, final int endIndex, final ParallelMapTransform.Container<K, U, V> container
+        ) {
             return () -> {
-                for (int i = p_398008_; i < p_397004_; i++) {
-                    p_397180_.applyOperation(i);
+                for (int i = startIndex; i < endIndex; i++) {
+                    container.applyOperation(i);
                 }
 
-                synchronized (p_393441_) {
-                    for (int j = p_398008_; j < p_397004_; j++) {
-                        p_397180_.copyOut(j, p_393441_);
+                synchronized (result) {
+                    for (int i = startIndex; i < endIndex; i++) {
+                        container.copyOut(i, result);
                     }
                 }
             };
         }
 
         @Override
-        protected CompletableFuture<Map<K, V>> scheduleFinalOperation(CompletableFuture<?> p_396406_, ParallelMapTransform.Container<K, U, V> p_397157_) {
-            Map<K, V> map = this.result;
-            return p_396406_.thenApply(p_391758_ -> map);
+        protected CompletableFuture<Map<K, V>> scheduleFinalOperation(
+            final CompletableFuture<?> allTasksDone, final ParallelMapTransform.Container<K, U, V> container
+        ) {
+            Map<K, V> result = this.result;
+            return allTasksDone.thenApply(ignored -> result);
         }
     }
 
-    record Container<K, U, V>(BiFunction<K, U, V> operation, @Nullable Object[] keys, @Nullable Object[] values) {
-        public Container(BiFunction<K, U, V> p_396981_, int p_394307_) {
-            this(p_396981_, new Object[p_394307_], new Object[p_394307_]);
+    private record Container<K, U, V>(BiFunction<K, U, V> operation, @Nullable Object[] keys, @Nullable Object[] values) {
+        public Container(final BiFunction<K, U, V> operation, final int size) {
+            this(operation, new Object[size], new Object[size]);
         }
 
-        public void put(int p_392891_, K p_397977_, U p_393337_) {
-            this.keys[p_392891_] = p_397977_;
-            this.values[p_392891_] = p_393337_;
+        public void put(final int index, final K key, final U input) {
+            this.keys[index] = key;
+            this.values[index] = input;
         }
 
-        private @Nullable K key(int p_394735_) {
-            return (K)this.keys[p_394735_];
+        private @Nullable K key(final int index) {
+            return (K)this.keys[index];
         }
 
-        private @Nullable V output(int p_392623_) {
-            return (V)this.values[p_392623_];
+        private @Nullable V output(final int index) {
+            return (V)this.values[index];
         }
 
-        private @Nullable U input(int p_397071_) {
-            return (U)this.values[p_397071_];
+        private @Nullable U input(final int index) {
+            return (U)this.values[index];
         }
 
-        public void applyOperation(int p_396060_) {
-            this.values[p_396060_] = this.operation.apply(this.key(p_396060_), this.input(p_396060_));
+        public void applyOperation(final int index) {
+            this.values[index] = this.operation.apply(this.key(index), this.input(index));
         }
 
-        public void copyOut(int p_392298_, Map<K, V> p_392589_) {
-            V v = this.output(p_392298_);
-            if (v != null) {
-                K k = this.key(p_392298_);
-                p_392589_.put(k, v);
+        public void copyOut(final int index, final Map<K, V> output) {
+            V value = this.output(index);
+            if (value != null) {
+                K key = this.key(index);
+                output.put(key, value);
             }
         }
 
@@ -130,75 +133,78 @@ public class ParallelMapTransform {
         }
     }
 
-    static class SingleTaskSplitter<K, U, V> extends ParallelMapTransform.SplitterBase<K, U, V> {
-        SingleTaskSplitter(BiFunction<K, U, V> p_395290_, int p_392198_) {
-            super(p_395290_, p_392198_, p_392198_);
+    private static class SingleTaskSplitter<K, U, V> extends ParallelMapTransform.SplitterBase<K, U, V> {
+        private SingleTaskSplitter(final BiFunction<K, U, V> operation, final int size) {
+            super(operation, size, size);
         }
 
         @Override
-        protected int batchSize(int p_397895_) {
+        protected int batchSize(final int index) {
             return 1;
         }
 
         @Override
-        protected CompletableFuture<?> scheduleBatch(ParallelMapTransform.Container<K, U, V> p_394262_, int p_393896_, int p_396012_, Executor p_392458_) {
-            assert p_393896_ + 1 == p_396012_;
-
-            return CompletableFuture.runAsync(() -> p_394262_.applyOperation(p_393896_), p_392458_);
+        protected CompletableFuture<?> scheduleBatch(
+            final ParallelMapTransform.Container<K, U, V> container, final int startIndex, final int endIndex, final Executor executor
+        ) {
+            assert startIndex + 1 == endIndex;
+            return CompletableFuture.runAsync(() -> container.applyOperation(startIndex), executor);
         }
 
         @Override
-        protected CompletableFuture<Map<K, V>> scheduleFinalOperation(CompletableFuture<?> p_391498_, ParallelMapTransform.Container<K, U, V> p_397732_) {
-            return p_391498_.thenApply(p_391357_ -> {
-                Map<K, V> map = new HashMap<>(p_397732_.size());
+        protected CompletableFuture<Map<K, V>> scheduleFinalOperation(
+            final CompletableFuture<?> allTasksDone, final ParallelMapTransform.Container<K, U, V> container
+        ) {
+            return allTasksDone.thenApply(ignored -> {
+                Map<K, V> result = new HashMap<>(container.size());
 
-                for (int i = 0; i < p_397732_.size(); i++) {
-                    p_397732_.copyOut(i, map);
+                for (int i = 0; i < container.size(); i++) {
+                    container.copyOut(i, result);
                 }
 
-                return map;
+                return result;
             });
         }
     }
 
-    abstract static class SplitterBase<K, U, V> {
+    private abstract static class SplitterBase<K, U, V> {
         private int lastScheduledIndex;
         private int currentIndex;
         private final CompletableFuture<?>[] tasks;
         private int batchIndex;
         private final ParallelMapTransform.Container<K, U, V> container;
 
-        SplitterBase(BiFunction<K, U, V> p_396626_, int p_397347_, int p_391371_) {
-            this.container = new ParallelMapTransform.Container<>(p_396626_, p_397347_);
-            this.tasks = new CompletableFuture[p_391371_];
+        private SplitterBase(final BiFunction<K, U, V> operation, final int size, final int taskCount) {
+            this.container = new ParallelMapTransform.Container<>(operation, size);
+            this.tasks = new CompletableFuture[taskCount];
         }
 
         private int pendingBatchSize() {
             return this.currentIndex - this.lastScheduledIndex;
         }
 
-        public CompletableFuture<Map<K, V>> scheduleTasks(Map<K, U> p_395063_, Executor p_395226_) {
-            p_395063_.forEach((p_392446_, p_396440_) -> {
-                this.container.put(this.currentIndex++, (K)p_392446_, (U)p_396440_);
+        public CompletableFuture<Map<K, V>> scheduleTasks(final Map<K, U> input, final Executor executor) {
+            input.forEach((key, inputValue) -> {
+                this.container.put(this.currentIndex++, (K)key, (U)inputValue);
                 if (this.pendingBatchSize() == this.batchSize(this.batchIndex)) {
-                    this.tasks[this.batchIndex++] = this.scheduleBatch(this.container, this.lastScheduledIndex, this.currentIndex, p_395226_);
+                    this.tasks[this.batchIndex++] = this.scheduleBatch(this.container, this.lastScheduledIndex, this.currentIndex, executor);
                     this.lastScheduledIndex = this.currentIndex;
                 }
             });
-
             assert this.currentIndex == this.container.size();
-
             assert this.lastScheduledIndex == this.currentIndex;
-
             assert this.batchIndex == this.tasks.length;
-
             return this.scheduleFinalOperation(CompletableFuture.allOf(this.tasks), this.container);
         }
 
-        protected abstract int batchSize(int p_395662_);
+        protected abstract int batchSize(int index);
 
-        protected abstract CompletableFuture<?> scheduleBatch(ParallelMapTransform.Container<K, U, V> p_395364_, int p_395627_, int p_392426_, Executor p_394681_);
+        protected abstract CompletableFuture<?> scheduleBatch(
+            ParallelMapTransform.Container<K, U, V> container, int startIndex, int endIndex, Executor executor
+        );
 
-        protected abstract CompletableFuture<Map<K, V>> scheduleFinalOperation(CompletableFuture<?> p_391655_, ParallelMapTransform.Container<K, U, V> p_392297_);
+        protected abstract CompletableFuture<Map<K, V>> scheduleFinalOperation(
+            CompletableFuture<?> allTasksDone, ParallelMapTransform.Container<K, U, V> container
+        );
     }
 }

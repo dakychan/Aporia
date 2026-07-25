@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import java.util.List;
 import java.util.function.Function;
 import net.minecraft.commands.CommandSourceStack;
@@ -13,29 +12,29 @@ import net.minecraft.server.players.PlayerList;
 import net.minecraft.world.entity.player.Player;
 
 public class ListPlayersCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_137821_) {
-        p_137821_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("list")
-                .executes(p_137830_ -> listPlayers(p_137830_.getSource()))
-                .then(Commands.literal("uuids").executes(p_137823_ -> listPlayersWithUuids(p_137823_.getSource())))
+                .executes(c -> listPlayers(c.getSource()))
+                .then(Commands.literal("uuids").executes(c -> listPlayersWithUuids(c.getSource())))
         );
     }
 
-    private static int listPlayers(CommandSourceStack p_137825_) {
-        return format(p_137825_, Player::getDisplayName);
+    private static int listPlayers(final CommandSourceStack source) {
+        return format(source, Player::getDisplayName);
     }
 
-    private static int listPlayersWithUuids(CommandSourceStack p_137832_) {
+    private static int listPlayersWithUuids(final CommandSourceStack source) {
         return format(
-            p_137832_, p_448962_ -> Component.translatable("commands.list.nameAndId", p_448962_.getName(), Component.translationArg(p_448962_.getGameProfile().id()))
+            source, player -> Component.translatable("commands.list.nameAndId", player.getName(), Component.translationArg(player.getGameProfile().id()))
         );
     }
 
-    private static int format(CommandSourceStack p_137827_, Function<ServerPlayer, Component> p_137828_) {
-        PlayerList playerlist = p_137827_.getServer().getPlayerList();
-        List<ServerPlayer> list = playerlist.getPlayers();
-        Component component = ComponentUtils.formatList(list, p_137828_);
-        p_137827_.sendSuccess(() -> Component.translatable("commands.list.players", list.size(), playerlist.getMaxPlayers(), component), false);
-        return list.size();
+    private static int format(final CommandSourceStack source, final Function<ServerPlayer, Component> formatter) {
+        PlayerList playerList = source.getServer().getPlayerList();
+        List<ServerPlayer> players = playerList.getPlayers();
+        Component listComponent = ComponentUtils.formatList(players, formatter);
+        source.sendSuccess(() -> Component.translatable("commands.list.players", players.size(), playerList.getMaxPlayers(), listComponent), false);
+        return players.size();
     }
 }

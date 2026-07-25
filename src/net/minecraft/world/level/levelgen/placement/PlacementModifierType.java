@@ -7,7 +7,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 public interface PlacementModifierType<P extends PlacementModifier> {
     PlacementModifierType<BlockPredicateFilter> BLOCK_PREDICATE_FILTER = register("block_predicate_filter", BlockPredicateFilter.CODEC);
     PlacementModifierType<RarityFilter> RARITY_FILTER = register("rarity_filter", RarityFilter.CODEC);
-    PlacementModifierType<SurfaceRelativeThresholdFilter> SURFACE_RELATIVE_THRESHOLD_FILTER = register("surface_relative_threshold_filter", SurfaceRelativeThresholdFilter.CODEC);
+    PlacementModifierType<SurfaceRelativeThresholdFilter> SURFACE_RELATIVE_THRESHOLD_FILTER = register(
+        "surface_relative_threshold_filter", SurfaceRelativeThresholdFilter.CODEC
+    );
     PlacementModifierType<SurfaceWaterDepthFilter> SURFACE_WATER_DEPTH_FILTER = register("surface_water_depth_filter", SurfaceWaterDepthFilter.CODEC);
     PlacementModifierType<BiomeFilter> BIOME_FILTER = register("biome", BiomeFilter.CODEC);
     PlacementModifierType<CountPlacement> COUNT = register("count", CountPlacement.CODEC);
@@ -23,7 +25,7 @@ public interface PlacementModifierType<P extends PlacementModifier> {
 
     MapCodec<P> codec();
 
-    private static <P extends PlacementModifier> PlacementModifierType<P> register(String p_191867_, MapCodec<P> p_333192_) {
-        return Registry.register(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, p_191867_, () -> p_333192_);
+    private static <P extends PlacementModifier> PlacementModifierType<P> register(final String id, final MapCodec<P> codec) {
+        return Registry.register(BuiltInRegistries.PLACEMENT_MODIFIER_TYPE, id, () -> codec);
     }
 }

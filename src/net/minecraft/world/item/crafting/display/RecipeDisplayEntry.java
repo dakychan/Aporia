@@ -30,11 +30,11 @@ public record RecipeDisplayEntry(
         RecipeDisplayEntry::new
     );
 
-    public List<ItemStack> resultItems(ContextMap p_363258_) {
-        return this.display.result().resolveForStacks(p_363258_);
+    public List<ItemStack> resultItems(final ContextMap context) {
+        return this.display.result().resolveForStacks(context);
     }
 
-    public boolean canCraft(StackedItemContents p_367444_) {
-        return this.craftingRequirements.isEmpty() ? false : p_367444_.canCraft(this.craftingRequirements.get(), null);
+    public boolean canCraft(final StackedItemContents providedContents) {
+        return this.craftingRequirements.isEmpty() ? false : providedContents.canCraft(this.craftingRequirements.get(), null);
     }
 }

@@ -28,29 +28,29 @@ public class CommandBlockEntity extends BlockEntity {
     private boolean conditionMet = false;
     private final BaseCommandBlock commandBlock = new BaseCommandBlock() {
         @Override
-        public void setCommand(String p_59157_) {
-            super.setCommand(p_59157_);
+        public void setCommand(final String command) {
+            super.setCommand(command);
             CommandBlockEntity.this.setChanged();
         }
 
         @Override
-        public void onUpdated(ServerLevel p_450592_) {
-            BlockState blockstate = p_450592_.getBlockState(CommandBlockEntity.this.worldPosition);
-            p_450592_.sendBlockUpdated(CommandBlockEntity.this.worldPosition, blockstate, blockstate, 3);
+        public void onUpdated(final ServerLevel level) {
+            BlockState state = level.getBlockState(CommandBlockEntity.this.worldPosition);
+            level.sendBlockUpdated(CommandBlockEntity.this.worldPosition, state, state, 3);
         }
 
         @Override
-        public CommandSourceStack createCommandSourceStack(ServerLevel p_458950_, CommandSource p_430668_) {
-            Direction direction = CommandBlockEntity.this.getBlockState().getValue(CommandBlock.FACING);
+        public CommandSourceStack createCommandSourceStack(final ServerLevel level, final CommandSource source) {
+            Direction facing = CommandBlockEntity.this.getBlockState().getValue(CommandBlock.FACING);
             return new CommandSourceStack(
-                p_430668_,
+                source,
                 Vec3.atCenterOf(CommandBlockEntity.this.worldPosition),
-                new Vec2(0.0F, direction.toYRot()),
-                p_458950_,
+                new Vec2(0.0F, facing.toYRot()),
+                level,
                 LevelBasedPermissionSet.GAMEMASTER,
                 this.getName().getString(),
                 this.getName(),
-                p_458950_.getServer(),
+                level.getServer(),
                 null
             );
         }
@@ -61,34 +61,34 @@ public class CommandBlockEntity extends BlockEntity {
         }
     };
 
-    public CommandBlockEntity(BlockPos p_155380_, BlockState p_155381_) {
-        super(BlockEntityType.COMMAND_BLOCK, p_155380_, p_155381_);
+    public CommandBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.COMMAND_BLOCK, worldPosition, blockState);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_410309_) {
-        super.saveAdditional(p_410309_);
-        this.commandBlock.save(p_410309_);
-        p_410309_.putBoolean("powered", this.isPowered());
-        p_410309_.putBoolean("conditionMet", this.wasConditionMet());
-        p_410309_.putBoolean("auto", this.isAutomatic());
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        this.commandBlock.save(output);
+        output.putBoolean("powered", this.isPowered());
+        output.putBoolean("conditionMet", this.wasConditionMet());
+        output.putBoolean("auto", this.isAutomatic());
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_409355_) {
-        super.loadAdditional(p_409355_);
-        this.commandBlock.load(p_409355_);
-        this.powered = p_409355_.getBooleanOr("powered", false);
-        this.conditionMet = p_409355_.getBooleanOr("conditionMet", false);
-        this.setAutomatic(p_409355_.getBooleanOr("auto", false));
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.commandBlock.load(input);
+        this.powered = input.getBooleanOr("powered", false);
+        this.conditionMet = input.getBooleanOr("conditionMet", false);
+        this.setAutomatic(input.getBooleanOr("auto", false));
     }
 
     public BaseCommandBlock getCommandBlock() {
         return this.commandBlock;
     }
 
-    public void setPowered(boolean p_59136_) {
-        this.powered = p_59136_;
+    public void setPowered(final boolean powered) {
+        this.powered = powered;
     }
 
     public boolean isPowered() {
@@ -99,26 +99,26 @@ public class CommandBlockEntity extends BlockEntity {
         return this.auto;
     }
 
-    public void setAutomatic(boolean p_59138_) {
-        boolean flag = this.auto;
-        this.auto = p_59138_;
-        if (!flag && p_59138_ && !this.powered && this.level != null && this.getMode() != CommandBlockEntity.Mode.SEQUENCE) {
+    public void setAutomatic(final boolean auto) {
+        boolean previousAuto = this.auto;
+        this.auto = auto;
+        if (!previousAuto && auto && !this.powered && this.level != null && this.getMode() != CommandBlockEntity.Mode.SEQUENCE) {
             this.scheduleTick();
         }
     }
 
     public void onModeSwitch() {
-        CommandBlockEntity.Mode commandblockentity$mode = this.getMode();
-        if (commandblockentity$mode == CommandBlockEntity.Mode.AUTO && (this.powered || this.auto) && this.level != null) {
+        CommandBlockEntity.Mode newMode = this.getMode();
+        if (newMode == CommandBlockEntity.Mode.AUTO && (this.powered || this.auto) && this.level != null) {
             this.scheduleTick();
         }
     }
 
     private void scheduleTick() {
-        Block block = this.getBlockState().getBlock();
-        if (block instanceof CommandBlock) {
+        Block commandBlock = this.getBlockState().getBlock();
+        if (commandBlock instanceof CommandBlock) {
             this.markConditionMet();
-            this.level.scheduleTick(this.worldPosition, block, 1);
+            this.level.scheduleTick(this.worldPosition, commandBlock, 1);
         }
     }
 
@@ -129,10 +129,10 @@ public class CommandBlockEntity extends BlockEntity {
     public boolean markConditionMet() {
         this.conditionMet = true;
         if (this.isConditional()) {
-            BlockPos blockpos = this.worldPosition.relative(this.level.getBlockState(this.worldPosition).getValue(CommandBlock.FACING).getOpposite());
-            if (this.level.getBlockState(blockpos).getBlock() instanceof CommandBlock) {
-                BlockEntity blockentity = this.level.getBlockEntity(blockpos);
-                this.conditionMet = blockentity instanceof CommandBlockEntity && ((CommandBlockEntity)blockentity).getCommandBlock().getSuccessCount() > 0;
+            BlockPos relative = this.worldPosition.relative(this.level.getBlockState(this.worldPosition).getValue(CommandBlock.FACING).getOpposite());
+            if (this.level.getBlockState(relative).getBlock() instanceof CommandBlock) {
+                this.conditionMet = this.level.getBlockEntity(relative) instanceof CommandBlockEntity commandBlockEntity
+                    && commandBlockEntity.getCommandBlock().getSuccessCount() > 0;
             } else {
                 this.conditionMet = false;
             }
@@ -142,42 +142,42 @@ public class CommandBlockEntity extends BlockEntity {
     }
 
     public CommandBlockEntity.Mode getMode() {
-        BlockState blockstate = this.getBlockState();
-        if (blockstate.is(Blocks.COMMAND_BLOCK)) {
+        BlockState state = this.getBlockState();
+        if (state.is(Blocks.COMMAND_BLOCK)) {
             return CommandBlockEntity.Mode.REDSTONE;
-        } else if (blockstate.is(Blocks.REPEATING_COMMAND_BLOCK)) {
+        } else if (state.is(Blocks.REPEATING_COMMAND_BLOCK)) {
             return CommandBlockEntity.Mode.AUTO;
         } else {
-            return blockstate.is(Blocks.CHAIN_COMMAND_BLOCK) ? CommandBlockEntity.Mode.SEQUENCE : CommandBlockEntity.Mode.REDSTONE;
+            return state.is(Blocks.CHAIN_COMMAND_BLOCK) ? CommandBlockEntity.Mode.SEQUENCE : CommandBlockEntity.Mode.REDSTONE;
         }
     }
 
     public boolean isConditional() {
-        BlockState blockstate = this.level.getBlockState(this.getBlockPos());
-        return blockstate.getBlock() instanceof CommandBlock ? blockstate.getValue(CommandBlock.CONDITIONAL) : false;
+        BlockState blockState = this.level.getBlockState(this.getBlockPos());
+        return blockState.getBlock() instanceof CommandBlock ? blockState.getValue(CommandBlock.CONDITIONAL) : false;
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_397908_) {
-        super.applyImplicitComponents(p_397908_);
-        this.commandBlock.setCustomName(p_397908_.get(DataComponents.CUSTOM_NAME));
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        this.commandBlock.setCustomName(components.get(DataComponents.CUSTOM_NAME));
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_329197_) {
-        super.collectImplicitComponents(p_329197_);
-        p_329197_.set(DataComponents.CUSTOM_NAME, this.commandBlock.getCustomName());
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CUSTOM_NAME, this.commandBlock.getCustomName());
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_408069_) {
-        super.removeComponentsFromTag(p_408069_);
-        p_408069_.discard("CustomName");
-        p_408069_.discard("conditionMet");
-        p_408069_.discard("powered");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        super.removeComponentsFromTag(output);
+        output.discard("CustomName");
+        output.discard("conditionMet");
+        output.discard("powered");
     }
 
-    public static enum Mode {
+    public enum Mode {
         SEQUENCE,
         AUTO,
         REDSTONE;

@@ -5,60 +5,61 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 
 public class StopAttackingIfTargetInvalid {
     private static final int TIMEOUT_TO_GET_WITHIN_ATTACK_RANGE = 200;
 
-    public static <E extends Mob> BehaviorControl<E> create(StopAttackingIfTargetInvalid.TargetErasedCallback<E> p_362440_) {
-        return create((p_364423_, p_147988_) -> false, p_362440_, true);
+    public static <E extends Mob> BehaviorControl<E> create(final StopAttackingIfTargetInvalid.TargetErasedCallback<E> onTargetErased) {
+        return create((level, entity) -> false, onTargetErased, true);
     }
 
-    public static <E extends Mob> BehaviorControl<E> create(StopAttackingIfTargetInvalid.StopAttackCondition p_361383_) {
-        return create(p_361383_, (p_363632_, p_217411_, p_217412_) -> {}, true);
+    public static <E extends Mob> BehaviorControl<E> create(final StopAttackingIfTargetInvalid.StopAttackCondition stopAttackingWhen) {
+        return create(stopAttackingWhen, (level, body, target) -> {}, true);
     }
 
     public static <E extends Mob> BehaviorControl<E> create() {
-        return create((p_367631_, p_147986_) -> false, (p_363605_, p_217408_, p_217409_) -> {}, true);
+        return create((level, entity) -> false, (level, body, target) -> {}, true);
     }
 
     public static <E extends Mob> BehaviorControl<E> create(
-        StopAttackingIfTargetInvalid.StopAttackCondition p_363585_, StopAttackingIfTargetInvalid.TargetErasedCallback<E> p_365345_, boolean p_260319_
+        final StopAttackingIfTargetInvalid.StopAttackCondition stopAttackingWhen,
+        final StopAttackingIfTargetInvalid.TargetErasedCallback<E> onTargetErased,
+        final boolean canGrowTiredOfTryingToReachTarget
     ) {
         return BehaviorBuilder.create(
-            p_258801_ -> p_258801_.group(p_258801_.present(MemoryModuleType.ATTACK_TARGET), p_258801_.registered(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE))
+            i -> i.group(i.present(MemoryModuleType.ATTACK_TARGET), i.registered(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE))
                 .apply(
-                    p_258801_,
-                    (p_258787_, p_258788_) -> (p_359057_, p_359058_, p_359059_) -> {
-                        LivingEntity livingentity = p_258801_.get(p_258787_);
-                        if (p_359058_.canAttack(livingentity)
-                            && (!p_260319_ || !isTiredOfTryingToReachTarget(p_359058_, p_258801_.tryGet(p_258788_)))
-                            && livingentity.isAlive()
-                            && livingentity.level() == p_359058_.level()
-                            && !p_363585_.test(p_359057_, livingentity)) {
-                            return true;
-                        } else {
-                            p_365345_.accept(p_359057_, p_359058_, livingentity);
-                            p_258787_.erase();
+                    i,
+                    (attackTarget, cantReachSince) -> (level, body, timestamp) -> {
+                        LivingEntity target = i.get(attackTarget);
+                        if (body.canAttack(target)
+                            && (!canGrowTiredOfTryingToReachTarget || !isTiredOfTryingToReachTarget(body, i.tryGet(cantReachSince)))
+                            && target.isAlive()
+                            && target.level() == body.level()
+                            && !stopAttackingWhen.test(level, target)) {
                             return true;
                         }
+
+                        onTargetErased.accept(level, body, target);
+                        attackTarget.erase();
+                        return true;
                     }
                 )
         );
     }
 
-    private static boolean isTiredOfTryingToReachTarget(LivingEntity p_259416_, Optional<Long> p_259377_) {
-        return p_259377_.isPresent() && p_259416_.level().getGameTime() - p_259377_.get() > 200L;
+    private static boolean isTiredOfTryingToReachTarget(final LivingEntity body, final Optional<Long> cantReachSince) {
+        return cantReachSince.isPresent() && body.level().getGameTime() - cantReachSince.get() > 200L;
     }
 
     @FunctionalInterface
     public interface StopAttackCondition {
-        boolean test(ServerLevel p_362890_, LivingEntity p_360805_);
+        boolean test(ServerLevel level, LivingEntity target);
     }
 
     @FunctionalInterface
     public interface TargetErasedCallback<E> {
-        void accept(ServerLevel p_367391_, E p_366933_, LivingEntity p_366591_);
+        void accept(ServerLevel level, E body, LivingEntity target);
     }
 }

@@ -20,32 +20,32 @@ public class GlowLichenBlock extends MultifaceSpreadeableBlock implements Boneme
         return CODEC;
     }
 
-    public GlowLichenBlock(BlockBehaviour.Properties p_153282_) {
-        super(p_153282_);
+    public GlowLichenBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
-    public static ToIntFunction<BlockState> emission(int p_181223_) {
-        return p_181221_ -> MultifaceBlock.hasAnyFace(p_181221_) ? p_181223_ : 0;
-    }
-
-    @Override
-    public boolean isValidBonemealTarget(LevelReader p_256569_, BlockPos p_153290_, BlockState p_153291_) {
-        return Direction.stream().anyMatch(p_153316_ -> this.spreader.canSpreadInAnyDirection(p_153291_, p_256569_, p_153290_, p_153316_.getOpposite()));
+    public static ToIntFunction<BlockState> emission(final int lightEmission) {
+        return state -> MultifaceBlock.hasAnyFace(state) ? lightEmission : 0;
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_221264_, RandomSource p_221265_, BlockPos p_221266_, BlockState p_221267_) {
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return Direction.stream().anyMatch(face -> this.spreader.canSpreadInAnyDirection(state, level, pos, face.getOpposite()));
+    }
+
+    @Override
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_221259_, RandomSource p_221260_, BlockPos p_221261_, BlockState p_221262_) {
-        this.spreader.spreadFromRandomFaceTowardRandomDirection(p_221262_, p_221259_, p_221261_, p_221260_);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        this.spreader.spreadFromRandomFaceTowardRandomDirection(state, level, pos, random);
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState p_181225_) {
-        return p_181225_.getFluidState().isEmpty();
+    protected boolean propagatesSkylightDown(final BlockState state) {
+        return state.getFluidState().isEmpty();
     }
 
     @Override

@@ -2,28 +2,26 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SculkChargeParticleOptions;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SculkChargeParticle extends SingleQuadParticle {
     private final SpriteSet sprites;
 
-    SculkChargeParticle(
-        ClientLevel p_233892_, double p_233893_, double p_233894_, double p_233895_, double p_233896_, double p_233897_, double p_233898_, SpriteSet p_233899_
+    private SculkChargeParticle(
+        final ClientLevel level, final double x, final double y, final double z, final double xd, final double yd, final double zd, final SpriteSet sprites
     ) {
-        super(p_233892_, p_233893_, p_233894_, p_233895_, p_233896_, p_233897_, p_233898_, p_233899_.first());
+        super(level, x, y, z, xd, yd, zd, sprites.first());
         this.friction = 0.96F;
-        this.sprites = p_233899_;
+        this.sprites = sprites;
         this.scale(1.5F);
         this.hasPhysics = false;
-        this.setSpriteFromAge(p_233899_);
+        this.setSpriteFromAge(sprites);
     }
 
     @Override
-    public int getLightColor(float p_233902_) {
-        return 240;
+    public int getLightCoords(final float a) {
+        return LightCoordsUtil.withBlock(super.getLightCoords(a), 15);
     }
 
     @Override
@@ -37,28 +35,25 @@ public class SculkChargeParticle extends SingleQuadParticle {
         this.setSpriteFromAge(this.sprites);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Provider(SpriteSet sprite) implements ParticleProvider<SculkChargeParticleOptions> {
+        public record Provider(SpriteSet sprite) implements ParticleProvider<SculkChargeParticleOptions> {
         public Particle createParticle(
-            SculkChargeParticleOptions p_233918_,
-            ClientLevel p_233919_,
-            double p_233920_,
-            double p_233921_,
-            double p_233922_,
-            double p_233923_,
-            double p_233924_,
-            double p_233925_,
-            RandomSource p_423753_
+            final SculkChargeParticleOptions options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            SculkChargeParticle sculkchargeparticle = new SculkChargeParticle(
-                p_233919_, p_233920_, p_233921_, p_233922_, p_233923_, p_233924_, p_233925_, this.sprite
-            );
-            sculkchargeparticle.setAlpha(1.0F);
-            sculkchargeparticle.setParticleSpeed(p_233923_, p_233924_, p_233925_);
-            sculkchargeparticle.oRoll = p_233918_.roll();
-            sculkchargeparticle.roll = p_233918_.roll();
-            sculkchargeparticle.setLifetime(p_423753_.nextInt(12) + 8);
-            return sculkchargeparticle;
+            SculkChargeParticle particle = new SculkChargeParticle(level, x, y, z, xAux, yAux, zAux, this.sprite);
+            particle.setAlpha(1.0F);
+            particle.setParticleSpeed(xAux, yAux, zAux);
+            particle.oRoll = options.roll();
+            particle.roll = options.roll();
+            particle.setLifetime(random.nextInt(12) + 8);
+            return particle;
         }
     }
 }

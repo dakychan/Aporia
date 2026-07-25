@@ -32,7 +32,6 @@ import net.minecraft.server.dialog.Dialog;
 import net.minecraft.util.parsing.packrat.Atom;
 import net.minecraft.util.parsing.packrat.Dictionary;
 import net.minecraft.util.parsing.packrat.NamedRule;
-import net.minecraft.util.parsing.packrat.Scope;
 import net.minecraft.util.parsing.packrat.Term;
 import net.minecraft.util.parsing.packrat.commands.Grammar;
 import net.minecraft.util.parsing.packrat.commands.IdentifierParseRule;
@@ -45,10 +44,10 @@ import org.jspecify.annotations.Nullable;
 public class ResourceOrIdArgument<T> implements ArgumentType<Holder<T>> {
     private static final Collection<String> EXAMPLES = List.of("foo", "foo:bar", "012", "{}", "true");
     public static final DynamicCommandExceptionType ERROR_FAILED_TO_PARSE = new DynamicCommandExceptionType(
-        p_334248_ -> Component.translatableEscape("argument.resource_or_id.failed_to_parse", p_334248_)
+        error -> Component.translatableEscape("argument.resource_or_id.failed_to_parse", error)
     );
     public static final Dynamic2CommandExceptionType ERROR_NO_SUCH_ELEMENT = new Dynamic2CommandExceptionType(
-        (p_405039_, p_405040_) -> Component.translatableEscape("argument.resource_or_id.no_such_element", p_405039_, p_405040_)
+        (id, registry) -> Component.translatableEscape("argument.resource_or_id.no_such_element", id, registry)
     );
     public static final DynamicOps<Tag> OPS = NbtOps.INSTANCE;
     private final HolderLookup.Provider registryLookup;
@@ -57,86 +56,86 @@ public class ResourceOrIdArgument<T> implements ArgumentType<Holder<T>> {
     private final Grammar<ResourceOrIdArgument.Result<T, Tag>> grammar;
     private final ResourceKey<? extends Registry<T>> registryKey;
 
-    protected ResourceOrIdArgument(CommandBuildContext p_334973_, ResourceKey<? extends Registry<T>> p_336087_, Codec<T> p_332112_) {
-        this.registryLookup = p_334973_;
-        this.elementLookup = p_334973_.lookup(p_336087_);
-        this.registryKey = p_336087_;
-        this.codec = p_332112_;
-        this.grammar = createGrammar(p_336087_, OPS);
+    protected ResourceOrIdArgument(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> registryKey, final Codec<T> codec) {
+        this.registryLookup = context;
+        this.elementLookup = context.lookup(registryKey);
+        this.registryKey = registryKey;
+        this.codec = codec;
+        this.grammar = createGrammar(registryKey, OPS);
     }
 
-    public static <T, O> Grammar<ResourceOrIdArgument.Result<T, O>> createGrammar(ResourceKey<? extends Registry<T>> p_406976_, DynamicOps<O> p_407708_) {
-        Grammar<O> grammar = SnbtGrammar.createParser(p_407708_);
-        Dictionary<StringReader> dictionary = new Dictionary<>();
-        Atom<ResourceOrIdArgument.Result<T, O>> atom = Atom.of("result");
-        Atom<Identifier> atom1 = Atom.of("id");
-        Atom<O> atom2 = Atom.of("value");
-        dictionary.put(atom1, IdentifierParseRule.INSTANCE);
-        dictionary.put(atom2, grammar.top().value());
-        NamedRule<StringReader, ResourceOrIdArgument.Result<T, O>> namedrule = dictionary.put(
-            atom, Term.alternative(dictionary.named(atom1), dictionary.named(atom2)), p_448491_ -> {
-                Identifier identifier = p_448491_.get(atom1);
-                if (identifier != null) {
-                    return new ResourceOrIdArgument.ReferenceResult<>(ResourceKey.create(p_406976_, identifier));
-                } else {
-                    O o = p_448491_.getOrThrow(atom2);
-                    return new ResourceOrIdArgument.InlineResult<>(o);
+    public static <T, O> Grammar<ResourceOrIdArgument.Result<T, O>> createGrammar(final ResourceKey<? extends Registry<T>> registryKey, final DynamicOps<O> ops) {
+        Grammar<O> inlineValueGrammar = SnbtGrammar.createParser(ops);
+        Dictionary<StringReader> rules = new Dictionary<>();
+        Atom<ResourceOrIdArgument.Result<T, O>> result = Atom.of("result");
+        Atom<Identifier> id = Atom.of("id");
+        Atom<O> value = Atom.of("value");
+        rules.put(id, IdentifierParseRule.INSTANCE);
+        rules.put(value, inlineValueGrammar.top().value());
+        NamedRule<StringReader, ResourceOrIdArgument.Result<T, O>> topRule = rules.put(
+            result, Term.alternative(rules.named(id), rules.named(value)), scope -> {
+                Identifier parsedId = scope.get(id);
+                if (parsedId != null) {
+                    return new ResourceOrIdArgument.ReferenceResult<>(ResourceKey.create(registryKey, parsedId));
                 }
+
+                O parsedInline = scope.getOrThrow(value);
+                return new ResourceOrIdArgument.InlineResult<>(parsedInline);
             }
         );
-        return new Grammar<>(dictionary, namedrule);
+        return new Grammar<>(rules, topRule);
     }
 
-    public static ResourceOrIdArgument.LootTableArgument lootTable(CommandBuildContext p_329328_) {
-        return new ResourceOrIdArgument.LootTableArgument(p_329328_);
+    public static ResourceOrIdArgument.LootTableArgument lootTable(final CommandBuildContext context) {
+        return new ResourceOrIdArgument.LootTableArgument(context);
     }
 
-    public static Holder<LootTable> getLootTable(CommandContext<CommandSourceStack> p_335148_, String p_329251_) throws CommandSyntaxException {
-        return getResource(p_335148_, p_329251_);
+    public static Holder<LootTable> getLootTable(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name);
     }
 
-    public static ResourceOrIdArgument.LootModifierArgument lootModifier(CommandBuildContext p_329720_) {
-        return new ResourceOrIdArgument.LootModifierArgument(p_329720_);
+    public static ResourceOrIdArgument.LootModifierArgument lootModifier(final CommandBuildContext context) {
+        return new ResourceOrIdArgument.LootModifierArgument(context);
     }
 
-    public static Holder<LootItemFunction> getLootModifier(CommandContext<CommandSourceStack> p_334458_, String p_330525_) {
-        return getResource(p_334458_, p_330525_);
+    public static Holder<LootItemFunction> getLootModifier(final CommandContext<CommandSourceStack> context, final String name) {
+        return getResource(context, name);
     }
 
-    public static ResourceOrIdArgument.LootPredicateArgument lootPredicate(CommandBuildContext p_330159_) {
-        return new ResourceOrIdArgument.LootPredicateArgument(p_330159_);
+    public static ResourceOrIdArgument.LootPredicateArgument lootPredicate(final CommandBuildContext context) {
+        return new ResourceOrIdArgument.LootPredicateArgument(context);
     }
 
-    public static Holder<LootItemCondition> getLootPredicate(CommandContext<CommandSourceStack> p_335366_, String p_334649_) {
-        return getResource(p_335366_, p_334649_);
+    public static Holder<LootItemCondition> getLootPredicate(final CommandContext<CommandSourceStack> context, final String name) {
+        return getResource(context, name);
     }
 
-    public static ResourceOrIdArgument.DialogArgument dialog(CommandBuildContext p_409305_) {
-        return new ResourceOrIdArgument.DialogArgument(p_409305_);
+    public static ResourceOrIdArgument.DialogArgument dialog(final CommandBuildContext context) {
+        return new ResourceOrIdArgument.DialogArgument(context);
     }
 
-    public static Holder<Dialog> getDialog(CommandContext<CommandSourceStack> p_407444_, String p_407109_) {
-        return getResource(p_407444_, p_407109_);
+    public static Holder<Dialog> getDialog(final CommandContext<CommandSourceStack> context, final String name) {
+        return getResource(context, name);
     }
 
-    private static <T> Holder<T> getResource(CommandContext<CommandSourceStack> p_328476_, String p_329877_) {
-        return p_328476_.getArgument(p_329877_, Holder.class);
+    private static <T> Holder<T> getResource(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Holder.class);
     }
 
-    public @Nullable Holder<T> parse(StringReader p_330381_) throws CommandSyntaxException {
-        return this.parse(p_330381_, this.grammar, OPS);
+    public @Nullable Holder<T> parse(final StringReader reader) throws CommandSyntaxException {
+        return this.parse(reader, this.grammar, OPS);
     }
 
-    private <O> @Nullable Holder<T> parse(StringReader p_397396_, Grammar<ResourceOrIdArgument.Result<T, O>> p_406421_, DynamicOps<O> p_406083_) throws CommandSyntaxException {
-        ResourceOrIdArgument.Result<T, O> result = p_406421_.parseForCommands(p_397396_);
+    private <O> @Nullable Holder<T> parse(final StringReader reader, final Grammar<ResourceOrIdArgument.Result<T, O>> grammar, final DynamicOps<O> ops) throws CommandSyntaxException {
+        ResourceOrIdArgument.Result<T, O> contents = grammar.parseForCommands(reader);
         return this.elementLookup.isEmpty()
             ? null
-            : result.parse(p_397396_, this.registryLookup, p_406083_, this.codec, (HolderLookup.RegistryLookup<T>)this.elementLookup.get());
+            : contents.parse(reader, this.registryLookup, ops, this.codec, (HolderLookup.RegistryLookup<T>)this.elementLookup.get());
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_406356_, SuggestionsBuilder p_406812_) {
-        return SharedSuggestionProvider.listSuggestions(p_406356_, p_406812_, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ELEMENTS);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.listSuggestions(context, builder, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ELEMENTS);
     }
 
     @Override
@@ -145,66 +144,62 @@ public class ResourceOrIdArgument<T> implements ArgumentType<Holder<T>> {
     }
 
     public static class DialogArgument extends ResourceOrIdArgument<Dialog> {
-        protected DialogArgument(CommandBuildContext p_406394_) {
-            super(p_406394_, Registries.DIALOG, Dialog.DIRECT_CODEC);
+        protected DialogArgument(final CommandBuildContext context) {
+            super(context, Registries.DIALOG, Dialog.DIRECT_CODEC);
         }
     }
 
     public record InlineResult<T, O>(O value) implements ResourceOrIdArgument.Result<T, O> {
         @Override
         public Holder<T> parse(
-            ImmutableStringReader p_409546_,
-            HolderLookup.Provider p_410228_,
-            DynamicOps<O> p_410382_,
-            Codec<T> p_408251_,
-            HolderLookup.RegistryLookup<T> p_406267_
+            final ImmutableStringReader reader,
+            final HolderLookup.Provider lookup,
+            final DynamicOps<O> ops,
+            final Codec<T> codec,
+            final HolderLookup.RegistryLookup<T> elementLookup
         ) throws CommandSyntaxException {
             return Holder.direct(
-                p_408251_.parse(p_410228_.createSerializationContext(p_410382_), this.value)
-                    .getOrThrow(p_408685_ -> ResourceOrIdArgument.ERROR_FAILED_TO_PARSE.createWithContext(p_409546_, p_408685_))
+                codec.parse(lookup.createSerializationContext(ops), this.value)
+                    .getOrThrow(msg -> ResourceOrIdArgument.ERROR_FAILED_TO_PARSE.createWithContext(reader, msg))
             );
         }
     }
 
     public static class LootModifierArgument extends ResourceOrIdArgument<LootItemFunction> {
-        protected LootModifierArgument(CommandBuildContext p_333515_) {
-            super(p_333515_, Registries.ITEM_MODIFIER, LootItemFunctions.ROOT_CODEC);
+        protected LootModifierArgument(final CommandBuildContext context) {
+            super(context, Registries.ITEM_MODIFIER, LootItemFunctions.ROOT_CODEC);
         }
     }
 
     public static class LootPredicateArgument extends ResourceOrIdArgument<LootItemCondition> {
-        protected LootPredicateArgument(CommandBuildContext p_334679_) {
-            super(p_334679_, Registries.PREDICATE, LootItemCondition.DIRECT_CODEC);
+        protected LootPredicateArgument(final CommandBuildContext context) {
+            super(context, Registries.PREDICATE, LootItemCondition.DIRECT_CODEC);
         }
     }
 
     public static class LootTableArgument extends ResourceOrIdArgument<LootTable> {
-        protected LootTableArgument(CommandBuildContext p_332797_) {
-            super(p_332797_, Registries.LOOT_TABLE, LootTable.DIRECT_CODEC);
+        protected LootTableArgument(final CommandBuildContext context) {
+            super(context, Registries.LOOT_TABLE, LootTable.DIRECT_CODEC);
         }
     }
 
     public record ReferenceResult<T, O>(ResourceKey<T> key) implements ResourceOrIdArgument.Result<T, O> {
         @Override
         public Holder<T> parse(
-            ImmutableStringReader p_410510_,
-            HolderLookup.Provider p_406672_,
-            DynamicOps<O> p_409410_,
-            Codec<T> p_410626_,
-            HolderLookup.RegistryLookup<T> p_406658_
+            final ImmutableStringReader reader,
+            final HolderLookup.Provider lookup,
+            final DynamicOps<O> ops,
+            final Codec<T> codec,
+            final HolderLookup.RegistryLookup<T> elementLookup
         ) throws CommandSyntaxException {
-            return p_406658_.get(this.key)
-                .orElseThrow(() -> ResourceOrIdArgument.ERROR_NO_SUCH_ELEMENT.createWithContext(p_410510_, this.key.identifier(), this.key.registry()));
+            return elementLookup.get(this.key)
+                .orElseThrow(() -> ResourceOrIdArgument.ERROR_NO_SUCH_ELEMENT.createWithContext(reader, this.key.identifier(), this.key.registry()));
         }
     }
 
     public sealed interface Result<T, O> permits ResourceOrIdArgument.InlineResult, ResourceOrIdArgument.ReferenceResult {
         Holder<T> parse(
-            ImmutableStringReader p_407932_,
-            HolderLookup.Provider p_407745_,
-            DynamicOps<O> p_408765_,
-            Codec<T> p_407782_,
-            HolderLookup.RegistryLookup<T> p_407372_
+            ImmutableStringReader reader, HolderLookup.Provider lookup, DynamicOps<O> ops, Codec<T> codec, HolderLookup.RegistryLookup<T> elementLookup
         ) throws CommandSyntaxException;
     }
 }

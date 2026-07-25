@@ -55,32 +55,32 @@ public class Inventory implements Container, Nameable {
     private final NonNullList<ItemStack> items = NonNullList.withSize(36, ItemStack.EMPTY);
     private int selected;
     public final Player player;
-    public final EntityEquipment equipment;
+    private final EntityEquipment equipment;
     private int timesChanged;
 
-    public Inventory(Player p_35983_, EntityEquipment p_392430_) {
-        this.player = p_35983_;
-        this.equipment = p_392430_;
+    public Inventory(final Player player, final EntityEquipment equipment) {
+        this.player = player;
+        this.equipment = equipment;
     }
 
     public int getSelectedSlot() {
         return this.selected;
     }
 
-    public void setSelectedSlot(int p_398009_) {
-        if (!isHotbarSlot(p_398009_)) {
+    public void setSelectedSlot(final int selected) {
+        if (!isHotbarSlot(selected)) {
             throw new IllegalArgumentException("Invalid selected slot");
-        } else {
-            this.selected = p_398009_;
         }
+
+        this.selected = selected;
     }
 
     public ItemStack getSelectedItem() {
         return this.items.get(this.selected);
     }
 
-    public ItemStack setSelectedItem(ItemStack p_393963_) {
-        return this.items.set(this.selected, p_393963_);
+    public ItemStack setSelectedItem(final ItemStack itemStack) {
+        return this.items.set(this.selected, itemStack);
     }
 
     public static int getSelectionSize() {
@@ -91,8 +91,11 @@ public class Inventory implements Container, Nameable {
         return this.items;
     }
 
-    private boolean hasRemainingSpaceForItem(ItemStack p_36015_, ItemStack p_36016_) {
-        return !p_36015_.isEmpty() && ItemStack.isSameItemSameComponents(p_36015_, p_36016_) && p_36015_.isStackable() && p_36015_.getCount() < this.getMaxStackSize(p_36015_);
+    private boolean hasRemainingSpaceForItem(final ItemStack slotItemStack, final ItemStack newItemStack) {
+        return !slotItemStack.isEmpty()
+            && ItemStack.isSameItemSameComponents(slotItemStack, newItemStack)
+            && slotItemStack.isStackable()
+            && slotItemStack.getCount() < this.getMaxStackSize(slotItemStack);
     }
 
     public int getFreeSlot() {
@@ -105,32 +108,32 @@ public class Inventory implements Container, Nameable {
         return -1;
     }
 
-    public void addAndPickItem(ItemStack p_378587_) {
+    public void addAndPickItem(final ItemStack itemStack) {
         this.setSelectedSlot(this.getSuitableHotbarSlot());
         if (!this.items.get(this.selected).isEmpty()) {
-            int i = this.getFreeSlot();
-            if (i != -1) {
-                this.items.set(i, this.items.get(this.selected));
+            int freeSlot = this.getFreeSlot();
+            if (freeSlot != -1) {
+                this.items.set(freeSlot, this.items.get(this.selected));
             }
         }
 
-        this.items.set(this.selected, p_378587_);
+        this.items.set(this.selected, itemStack);
     }
 
-    public void pickSlot(int p_36039_) {
+    public void pickSlot(final int slot) {
         this.setSelectedSlot(this.getSuitableHotbarSlot());
-        ItemStack itemstack = this.items.get(this.selected);
-        this.items.set(this.selected, this.items.get(p_36039_));
-        this.items.set(p_36039_, itemstack);
+        ItemStack tmp = this.items.get(this.selected);
+        this.items.set(this.selected, this.items.get(slot));
+        this.items.set(slot, tmp);
     }
 
-    public static boolean isHotbarSlot(int p_36046_) {
-        return p_36046_ >= 0 && p_36046_ < 9;
+    public static boolean isHotbarSlot(final int slot) {
+        return slot >= 0 && slot < 9;
     }
 
-    public int findSlotMatchingItem(ItemStack p_36031_) {
+    public int findSlotMatchingItem(final ItemStack itemStack) {
         for (int i = 0; i < this.items.size(); i++) {
-            if (!this.items.get(i).isEmpty() && ItemStack.isSameItemSameComponents(p_36031_, this.items.get(i))) {
+            if (!this.items.get(i).isEmpty() && ItemStack.isSameItemSameComponents(itemStack, this.items.get(i))) {
                 return i;
             }
         }
@@ -138,17 +141,17 @@ public class Inventory implements Container, Nameable {
         return -1;
     }
 
-    public static boolean isUsableForCrafting(ItemStack p_362871_) {
-        return !p_362871_.isDamaged() && !p_362871_.isEnchanted() && !p_362871_.has(DataComponents.CUSTOM_NAME);
+    public static boolean isUsableForCrafting(final ItemStack item) {
+        return !item.isDamaged() && !item.isEnchanted() && !item.has(DataComponents.CUSTOM_NAME);
     }
 
-    public int findSlotMatchingCraftingIngredient(Holder<Item> p_363996_, ItemStack p_376934_) {
+    public int findSlotMatchingCraftingIngredient(final Holder<Item> item, final ItemStack existingItem) {
         for (int i = 0; i < this.items.size(); i++) {
-            ItemStack itemstack = this.items.get(i);
-            if (!itemstack.isEmpty()
-                && itemstack.is(p_363996_)
-                && isUsableForCrafting(itemstack)
-                && (p_376934_.isEmpty() || ItemStack.isSameItemSameComponents(p_376934_, itemstack))) {
+            ItemStack inventoryItemStack = this.items.get(i);
+            if (!inventoryItemStack.isEmpty()
+                && inventoryItemStack.is(item)
+                && isUsableForCrafting(inventoryItemStack)
+                && (existingItem.isEmpty() || ItemStack.isSameItemSameComponents(existingItem, inventoryItemStack))) {
                 return i;
             }
         }
@@ -157,244 +160,246 @@ public class Inventory implements Container, Nameable {
     }
 
     public int getSuitableHotbarSlot() {
-        for (int i = 0; i < 9; i++) {
-            int j = (this.selected + i) % 9;
-            if (this.items.get(j).isEmpty()) {
-                return j;
+        for (int slot = 0; slot < 9; slot++) {
+            int index = (this.selected + slot) % 9;
+            if (this.items.get(index).isEmpty()) {
+                return index;
             }
         }
 
-        for (int k = 0; k < 9; k++) {
-            int l = (this.selected + k) % 9;
-            if (!this.items.get(l).isEnchanted()) {
-                return l;
+        for (int slot = 0; slot < 9; slot++) {
+            int index = (this.selected + slot) % 9;
+            if (!this.items.get(index).isEnchanted()) {
+                return index;
             }
         }
 
         return this.selected;
     }
 
-    public int clearOrCountMatchingItems(Predicate<ItemStack> p_36023_, int p_36024_, Container p_36025_) {
-        int i = 0;
-        boolean flag = p_36024_ == 0;
-        i += ContainerHelper.clearOrCountMatchingItems(this, p_36023_, p_36024_ - i, flag);
-        i += ContainerHelper.clearOrCountMatchingItems(p_36025_, p_36023_, p_36024_ - i, flag);
-        ItemStack itemstack = this.player.containerMenu.getCarried();
-        i += ContainerHelper.clearOrCountMatchingItems(itemstack, p_36023_, p_36024_ - i, flag);
-        if (itemstack.isEmpty()) {
+    public int clearOrCountMatchingItems(final Predicate<ItemStack> predicate, final int amountToRemove, final Container craftSlots) {
+        int count = 0;
+        boolean countingOnly = amountToRemove == 0;
+        count += ContainerHelper.clearOrCountMatchingItems(this, predicate, amountToRemove - count, countingOnly);
+        count += ContainerHelper.clearOrCountMatchingItems(craftSlots, predicate, amountToRemove - count, countingOnly);
+        ItemStack carried = this.player.containerMenu.getCarried();
+        count += ContainerHelper.clearOrCountMatchingItems(carried, predicate, amountToRemove - count, countingOnly);
+        if (carried.isEmpty()) {
             this.player.containerMenu.setCarried(ItemStack.EMPTY);
         }
 
-        return i;
+        return count;
     }
 
-    private int addResource(ItemStack p_36067_) {
-        int i = this.getSlotWithRemainingSpace(p_36067_);
-        if (i == -1) {
-            i = this.getFreeSlot();
+    private int addResource(final ItemStack itemStack) {
+        int slot = this.getSlotWithRemainingSpace(itemStack);
+        if (slot == -1) {
+            slot = this.getFreeSlot();
         }
 
-        return i == -1 ? p_36067_.getCount() : this.addResource(i, p_36067_);
+        return slot == -1 ? itemStack.getCount() : this.addResource(slot, itemStack);
     }
 
-    private int addResource(int p_36048_, ItemStack p_36049_) {
-        int i = p_36049_.getCount();
-        ItemStack itemstack = this.getItem(p_36048_);
-        if (itemstack.isEmpty()) {
-            itemstack = p_36049_.copyWithCount(0);
-            this.setItem(p_36048_, itemstack);
+    private int addResource(final int slot, final ItemStack itemStack) {
+        int count = itemStack.getCount();
+        ItemStack itemStackInSlot = this.getItem(slot);
+        if (itemStackInSlot.isEmpty()) {
+            itemStackInSlot = itemStack.copyWithCount(0);
+            this.setItem(slot, itemStackInSlot);
         }
 
-        int j = this.getMaxStackSize(itemstack) - itemstack.getCount();
-        int k = Math.min(i, j);
-        if (k == 0) {
-            return i;
-        } else {
-            i -= k;
-            itemstack.grow(k);
-            itemstack.setPopTime(5);
-            return i;
+        int maxToAdd = this.getMaxStackSize(itemStackInSlot) - itemStackInSlot.getCount();
+        int toAdd = Math.min(count, maxToAdd);
+        if (toAdd == 0) {
+            return count;
         }
+
+        count -= toAdd;
+        itemStackInSlot.grow(toAdd);
+        itemStackInSlot.setPopTime(5);
+        return count;
     }
 
-    public int getSlotWithRemainingSpace(ItemStack p_36051_) {
-        if (this.hasRemainingSpaceForItem(this.getItem(this.selected), p_36051_)) {
+    public int getSlotWithRemainingSpace(final ItemStack newItemStack) {
+        if (this.hasRemainingSpaceForItem(this.getItem(this.selected), newItemStack)) {
             return this.selected;
-        } else if (this.hasRemainingSpaceForItem(this.getItem(40), p_36051_)) {
-            return 40;
-        } else {
-            for (int i = 0; i < this.items.size(); i++) {
-                if (this.hasRemainingSpaceForItem(this.items.get(i), p_36051_)) {
-                    return i;
-                }
-            }
-
-            return -1;
         }
+
+        if (this.hasRemainingSpaceForItem(this.getItem(40), newItemStack)) {
+            return 40;
+        }
+
+        for (int i = 0; i < this.items.size(); i++) {
+            if (this.hasRemainingSpaceForItem(this.items.get(i), newItemStack)) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     public void tick() {
         for (int i = 0; i < this.items.size(); i++) {
-            ItemStack itemstack = this.getItem(i);
-            if (!itemstack.isEmpty()) {
-                itemstack.inventoryTick(this.player.level(), this.player, i == this.selected ? EquipmentSlot.MAINHAND : null);
+            ItemStack itemStack = this.getItem(i);
+            if (!itemStack.isEmpty()) {
+                itemStack.inventoryTick(this.player.level(), this.player, i == this.selected ? EquipmentSlot.MAINHAND : null);
             }
         }
     }
 
-    public boolean add(ItemStack p_36055_) {
-        return this.add(-1, p_36055_);
+    public boolean add(final ItemStack itemStack) {
+        return this.add(-1, itemStack);
     }
 
-    public boolean add(int p_36041_, ItemStack p_36042_) {
-        if (p_36042_.isEmpty()) {
+    public boolean add(int slot, final ItemStack itemStack) {
+        if (itemStack.isEmpty()) {
             return false;
-        } else {
-            try {
-                if (p_36042_.isDamaged()) {
-                    if (p_36041_ == -1) {
-                        p_36041_ = this.getFreeSlot();
-                    }
+        }
 
-                    if (p_36041_ >= 0) {
-                        this.items.set(p_36041_, p_36042_.copyAndClear());
-                        this.items.get(p_36041_).setPopTime(5);
-                        return true;
-                    } else if (this.player.hasInfiniteMaterials()) {
-                        p_36042_.setCount(0);
-                        return true;
-                    } else {
-                        return false;
-                    }
-                } else {
-                    int i;
-                    do {
-                        i = p_36042_.getCount();
-                        if (p_36041_ == -1) {
-                            p_36042_.setCount(this.addResource(p_36042_));
-                        } else {
-                            p_36042_.setCount(this.addResource(p_36041_, p_36042_));
-                        }
-                    } while (!p_36042_.isEmpty() && p_36042_.getCount() < i);
-
-                    if (p_36042_.getCount() == i && this.player.hasInfiniteMaterials()) {
-                        p_36042_.setCount(0);
-                        return true;
-                    } else {
-                        return p_36042_.getCount() < i;
-                    }
+        try {
+            if (itemStack.isDamaged()) {
+                if (slot == -1) {
+                    slot = this.getFreeSlot();
                 }
-            } catch (Throwable throwable) {
-                CrashReport crashreport = CrashReport.forThrowable(throwable, "Adding item to inventory");
-                CrashReportCategory crashreportcategory = crashreport.addCategory("Item being added");
-                crashreportcategory.setDetail("Item ID", Item.getId(p_36042_.getItem()));
-                crashreportcategory.setDetail("Item data", p_36042_.getDamageValue());
-                crashreportcategory.setDetail("Item name", () -> p_36042_.getHoverName().getString());
-                throw new ReportedException(crashreport);
+
+                if (slot >= 0) {
+                    this.items.set(slot, itemStack.copyAndClear());
+                    this.items.get(slot).setPopTime(5);
+                    return true;
+                } else if (this.player.hasInfiniteMaterials()) {
+                    itemStack.setCount(0);
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                int lastSize;
+                do {
+                    lastSize = itemStack.getCount();
+                    if (slot == -1) {
+                        itemStack.setCount(this.addResource(itemStack));
+                    } else {
+                        itemStack.setCount(this.addResource(slot, itemStack));
+                    }
+                } while (!itemStack.isEmpty() && itemStack.getCount() < lastSize);
+
+                if (itemStack.getCount() == lastSize && this.player.hasInfiniteMaterials()) {
+                    itemStack.setCount(0);
+                    return true;
+                } else {
+                    return itemStack.getCount() < lastSize;
+                }
             }
+        } catch (Throwable t) {
+            CrashReport report = CrashReport.forThrowable(t, "Adding item to inventory");
+            CrashReportCategory category = report.addCategory("Item being added");
+            category.setDetail("Item ID", Item.getId(itemStack.getItem()));
+            category.setDetail("Item data", itemStack.getDamageValue());
+            category.setDetail("Item name", () -> itemStack.getHoverName().getString());
+            throw new ReportedException(report);
         }
     }
 
-    public void placeItemBackInInventory(ItemStack p_150080_) {
-        this.placeItemBackInInventory(p_150080_, true);
+    public void placeItemBackInInventory(final ItemStack itemStack) {
+        this.placeItemBackInInventory(itemStack, true);
     }
 
-    public void placeItemBackInInventory(ItemStack p_150077_, boolean p_150078_) {
-        while (!p_150077_.isEmpty()) {
-            int i = this.getSlotWithRemainingSpace(p_150077_);
-            if (i == -1) {
-                i = this.getFreeSlot();
+    public void placeItemBackInInventory(final ItemStack itemStack, final boolean shouldSendSetSlotPacket) {
+        while (!itemStack.isEmpty()) {
+            int slot = this.getSlotWithRemainingSpace(itemStack);
+            if (slot == -1) {
+                slot = this.getFreeSlot();
             }
 
-            if (i == -1) {
-                this.player.drop(p_150077_, false);
+            if (slot == -1) {
+                this.player.drop(itemStack, false);
                 break;
             }
 
-            int j = p_150077_.getMaxStackSize() - this.getItem(i).getCount();
-            if (this.add(i, p_150077_.split(j)) && p_150078_ && this.player instanceof ServerPlayer serverplayer) {
-                serverplayer.connection.send(this.createInventoryUpdatePacket(i));
+            int slotHasSpaceFor = itemStack.getMaxStackSize() - this.getItem(slot).getCount();
+            if (this.add(slot, itemStack.split(slotHasSpaceFor)) && shouldSendSetSlotPacket && this.player instanceof ServerPlayer serverPlayer) {
+                serverPlayer.connection.send(this.createInventoryUpdatePacket(slot));
             }
         }
     }
 
-    public ClientboundSetPlayerInventoryPacket createInventoryUpdatePacket(int p_362278_) {
-        return new ClientboundSetPlayerInventoryPacket(p_362278_, this.getItem(p_362278_).copy());
+    public ClientboundSetPlayerInventoryPacket createInventoryUpdatePacket(final int slot) {
+        return new ClientboundSetPlayerInventoryPacket(slot, this.getItem(slot).copy());
     }
 
     @Override
-    public ItemStack removeItem(int p_35993_, int p_35994_) {
-        if (p_35993_ < this.items.size()) {
-            return ContainerHelper.removeItem(this.items, p_35993_, p_35994_);
-        } else {
-            EquipmentSlot equipmentslot = EQUIPMENT_SLOT_MAPPING.get(p_35993_);
-            if (equipmentslot != null) {
-                ItemStack itemstack = this.equipment.get(equipmentslot);
-                if (!itemstack.isEmpty()) {
-                    return itemstack.split(p_35994_);
-                }
-            }
-
-            return ItemStack.EMPTY;
+    public ItemStack removeItem(final int slot, final int count) {
+        if (slot < this.items.size()) {
+            return ContainerHelper.removeItem(this.items, slot, count);
         }
+
+        EquipmentSlot equipmentSlot = EQUIPMENT_SLOT_MAPPING.get(slot);
+        if (equipmentSlot != null) {
+            ItemStack itemStack = this.equipment.get(equipmentSlot);
+            if (!itemStack.isEmpty()) {
+                return itemStack.split(count);
+            }
+        }
+
+        return ItemStack.EMPTY;
     }
 
-    public void removeItem(ItemStack p_36058_) {
-        for (int i = 0; i < this.items.size(); i++) {
-            if (this.items.get(i) == p_36058_) {
-                this.items.set(i, ItemStack.EMPTY);
+    public void removeItem(final ItemStack itemStack) {
+        for (int slot = 0; slot < this.items.size(); slot++) {
+            if (this.items.get(slot) == itemStack) {
+                this.items.set(slot, ItemStack.EMPTY);
                 return;
             }
         }
 
-        for (EquipmentSlot equipmentslot : EQUIPMENT_SLOT_MAPPING.values()) {
-            ItemStack itemstack = this.equipment.get(equipmentslot);
-            if (itemstack == p_36058_) {
-                this.equipment.set(equipmentslot, ItemStack.EMPTY);
+        for (EquipmentSlot equipmentSlot : EQUIPMENT_SLOT_MAPPING.values()) {
+            ItemStack stackInSlot = this.equipment.get(equipmentSlot);
+            if (stackInSlot == itemStack) {
+                this.equipment.set(equipmentSlot, ItemStack.EMPTY);
                 return;
             }
         }
     }
 
     @Override
-    public ItemStack removeItemNoUpdate(int p_36029_) {
-        if (p_36029_ < this.items.size()) {
-            ItemStack itemstack = this.items.get(p_36029_);
-            this.items.set(p_36029_, ItemStack.EMPTY);
-            return itemstack;
+    public ItemStack removeItemNoUpdate(final int slot) {
+        if (slot < this.items.size()) {
+            ItemStack itemStack = this.items.get(slot);
+            this.items.set(slot, ItemStack.EMPTY);
+            return itemStack;
         } else {
-            EquipmentSlot equipmentslot = EQUIPMENT_SLOT_MAPPING.get(p_36029_);
-            return equipmentslot != null ? this.equipment.set(equipmentslot, ItemStack.EMPTY) : ItemStack.EMPTY;
+            EquipmentSlot equipmentSlot = EQUIPMENT_SLOT_MAPPING.get(slot);
+            return equipmentSlot != null ? this.equipment.set(equipmentSlot, ItemStack.EMPTY) : ItemStack.EMPTY;
         }
     }
 
     @Override
-    public void setItem(int p_35999_, ItemStack p_36000_) {
-        if (p_35999_ < this.items.size()) {
-            this.items.set(p_35999_, p_36000_);
+    public void setItem(final int slot, final ItemStack itemStack) {
+        if (slot < this.items.size()) {
+            this.items.set(slot, itemStack);
         }
 
-        EquipmentSlot equipmentslot = EQUIPMENT_SLOT_MAPPING.get(p_35999_);
-        if (equipmentslot != null) {
-            this.equipment.set(equipmentslot, p_36000_);
+        EquipmentSlot equipmentSlot = EQUIPMENT_SLOT_MAPPING.get(slot);
+        if (equipmentSlot != null) {
+            this.equipment.set(equipmentSlot, itemStack);
         }
     }
 
-    public void save(ValueOutput.TypedOutputList<ItemStackWithSlot> p_406529_) {
+    public void save(final ValueOutput.TypedOutputList<ItemStackWithSlot> output) {
         for (int i = 0; i < this.items.size(); i++) {
-            ItemStack itemstack = this.items.get(i);
-            if (!itemstack.isEmpty()) {
-                p_406529_.add(new ItemStackWithSlot(i, itemstack));
+            ItemStack item = this.items.get(i);
+            if (!item.isEmpty()) {
+                output.add(new ItemStackWithSlot(i, item));
             }
         }
     }
 
-    public void load(ValueInput.TypedInputList<ItemStackWithSlot> p_409752_) {
+    public void load(final ValueInput.TypedInputList<ItemStackWithSlot> input) {
         this.items.clear();
 
-        for (ItemStackWithSlot itemstackwithslot : p_409752_) {
-            if (itemstackwithslot.isValidInContainer(this.items.size())) {
-                this.setItem(itemstackwithslot.slot(), itemstackwithslot.stack());
+        for (ItemStackWithSlot item : input) {
+            if (item.isValidInContainer(this.items.size())) {
+                this.setItem(item.slot(), item.stack());
             }
         }
     }
@@ -406,14 +411,14 @@ public class Inventory implements Container, Nameable {
 
     @Override
     public boolean isEmpty() {
-        for (ItemStack itemstack : this.items) {
-            if (!itemstack.isEmpty()) {
+        for (ItemStack itemStack : this.items) {
+            if (!itemStack.isEmpty()) {
                 return false;
             }
         }
 
-        for (EquipmentSlot equipmentslot : EQUIPMENT_SLOT_MAPPING.values()) {
-            if (!this.equipment.get(equipmentslot).isEmpty()) {
+        for (EquipmentSlot slot : EQUIPMENT_SLOT_MAPPING.values()) {
+            if (!this.equipment.get(slot).isEmpty()) {
                 return false;
             }
         }
@@ -422,13 +427,13 @@ public class Inventory implements Container, Nameable {
     }
 
     @Override
-    public ItemStack getItem(int p_35991_) {
-        if (p_35991_ < this.items.size()) {
-            return this.items.get(p_35991_);
-        } else {
-            EquipmentSlot equipmentslot = EQUIPMENT_SLOT_MAPPING.get(p_35991_);
-            return equipmentslot != null ? this.equipment.get(equipmentslot) : ItemStack.EMPTY;
+    public ItemStack getItem(final int slot) {
+        if (slot < this.items.size()) {
+            return this.items.get(slot);
         }
+
+        EquipmentSlot equipmentSlot = EQUIPMENT_SLOT_MAPPING.get(slot);
+        return equipmentSlot != null ? this.equipment.get(equipmentSlot) : ItemStack.EMPTY;
     }
 
     @Override
@@ -438,9 +443,9 @@ public class Inventory implements Container, Nameable {
 
     public void dropAll() {
         for (int i = 0; i < this.items.size(); i++) {
-            ItemStack itemstack = this.items.get(i);
-            if (!itemstack.isEmpty()) {
-                this.player.drop(itemstack, true, false);
+            ItemStack itemStack = this.items.get(i);
+            if (!itemStack.isEmpty()) {
+                this.player.drop(itemStack, true, false);
                 this.items.set(i, ItemStack.EMPTY);
             }
         }
@@ -458,13 +463,13 @@ public class Inventory implements Container, Nameable {
     }
 
     @Override
-    public boolean stillValid(Player p_36009_) {
+    public boolean stillValid(final Player player) {
         return true;
     }
 
-    public boolean contains(ItemStack p_36064_) {
-        for (ItemStack itemstack : this) {
-            if (!itemstack.isEmpty() && ItemStack.isSameItemSameComponents(itemstack, p_36064_)) {
+    public boolean contains(final ItemStack searchStack) {
+        for (ItemStack itemStack : this) {
+            if (!itemStack.isEmpty() && ItemStack.isSameItemSameComponents(itemStack, searchStack)) {
                 return true;
             }
         }
@@ -472,9 +477,9 @@ public class Inventory implements Container, Nameable {
         return false;
     }
 
-    public boolean contains(TagKey<Item> p_204076_) {
-        for (ItemStack itemstack : this) {
-            if (!itemstack.isEmpty() && itemstack.is(p_204076_)) {
+    public boolean contains(final TagKey<Item> tag) {
+        for (ItemStack itemStack : this) {
+            if (!itemStack.isEmpty() && itemStack.is(tag)) {
                 return true;
             }
         }
@@ -482,9 +487,9 @@ public class Inventory implements Container, Nameable {
         return false;
     }
 
-    public boolean contains(Predicate<ItemStack> p_332183_) {
-        for (ItemStack itemstack : this) {
-            if (p_332183_.test(itemstack)) {
+    public boolean contains(final Predicate<ItemStack> predicate) {
+        for (ItemStack stack : this) {
+            if (predicate.test(stack)) {
                 return true;
             }
         }
@@ -492,12 +497,12 @@ public class Inventory implements Container, Nameable {
         return false;
     }
 
-    public void replaceWith(Inventory p_36007_) {
+    public void replaceWith(final Inventory other) {
         for (int i = 0; i < this.getContainerSize(); i++) {
-            this.setItem(i, p_36007_.getItem(i));
+            this.setItem(i, other.getItem(i));
         }
 
-        this.setSelectedSlot(p_36007_.getSelectedSlot());
+        this.setSelectedSlot(other.getSelectedSlot());
     }
 
     @Override
@@ -506,14 +511,14 @@ public class Inventory implements Container, Nameable {
         this.equipment.clear();
     }
 
-    public void fillStackedContents(StackedItemContents p_364670_) {
-        for (ItemStack itemstack : this.items) {
-            p_364670_.accountSimpleStack(itemstack);
+    public void fillStackedContents(final StackedItemContents contents) {
+        for (ItemStack itemStack : this.items) {
+            contents.accountSimpleStack(itemStack);
         }
     }
 
-    public ItemStack removeFromSelected(boolean p_182404_) {
-        ItemStack itemstack = this.getSelectedItem();
-        return itemstack.isEmpty() ? ItemStack.EMPTY : this.removeItem(this.selected, p_182404_ ? itemstack.getCount() : 1);
+    public ItemStack removeFromSelected(final boolean all) {
+        ItemStack selectedItem = this.getSelectedItem();
+        return selectedItem.isEmpty() ? ItemStack.EMPTY : this.removeItem(this.selected, all ? selectedItem.getCount() : 1);
     }
 }

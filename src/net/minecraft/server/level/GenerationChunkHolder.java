@@ -9,10 +9,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import net.minecraft.CrashReport;
-import net.minecraft.ReportedException;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.StaticCache2D;
 import net.minecraft.util.VisibleForDebug;
+import net.minecraft.util.thread.BlockableEventLoop;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ImposterProtoChunk;
@@ -34,154 +33,156 @@ public abstract class GenerationChunkHolder {
     private final AtomicInteger generationRefCount = new AtomicInteger();
     private volatile CompletableFuture<Void> generationSaveSyncFuture = CompletableFuture.completedFuture(null);
 
-    public GenerationChunkHolder(ChunkPos p_342238_) {
-        this.pos = p_342238_;
-        if (!p_342238_.isValid()) {
-            throw new IllegalStateException("Trying to create chunk out of reasonable bounds: " + p_342238_);
+    public GenerationChunkHolder(final ChunkPos pos) {
+        this.pos = pos;
+        if (!pos.isValid()) {
+            throw new IllegalStateException("Trying to create chunk out of reasonable bounds: " + pos);
         }
     }
 
-    public CompletableFuture<ChunkResult<ChunkAccess>> scheduleChunkGenerationTask(ChunkStatus p_342080_, ChunkMap p_343602_) {
-        if (this.isStatusDisallowed(p_342080_)) {
+    public CompletableFuture<ChunkResult<ChunkAccess>> scheduleChunkGenerationTask(final ChunkStatus status, final ChunkMap scheduler) {
+        if (this.isStatusDisallowed(status)) {
             return UNLOADED_CHUNK_FUTURE;
-        } else {
-            CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.getOrCreateFuture(p_342080_);
-            if (completablefuture.isDone()) {
-                return completablefuture;
-            } else {
-                ChunkGenerationTask chunkgenerationtask = this.task.get();
-                if (chunkgenerationtask == null || p_342080_.isAfter(chunkgenerationtask.targetStatus)) {
-                    this.rescheduleChunkTask(p_343602_, p_342080_);
-                }
-
-                return completablefuture;
-            }
         }
+
+        CompletableFuture<ChunkResult<ChunkAccess>> future = this.getOrCreateFuture(status);
+        if (future.isDone()) {
+            return future;
+        }
+
+        ChunkGenerationTask task = this.task.get();
+        if (task == null || status.isAfter(task.targetStatus)) {
+            this.rescheduleChunkTask(scheduler, status);
+        }
+
+        return future;
     }
 
-    CompletableFuture<ChunkResult<ChunkAccess>> applyStep(ChunkStep p_344844_, GeneratingChunkMap p_342173_, StaticCache2D<GenerationChunkHolder> p_343026_) {
-        if (this.isStatusDisallowed(p_344844_.targetStatus())) {
+    CompletableFuture<ChunkResult<ChunkAccess>> applyStep(
+        final ChunkStep step, final GeneratingChunkMap chunkMap, final StaticCache2D<GenerationChunkHolder> cache
+    ) {
+        if (this.isStatusDisallowed(step.targetStatus())) {
             return UNLOADED_CHUNK_FUTURE;
         } else {
-            return this.acquireStatusBump(p_344844_.targetStatus()) ? p_342173_.applyStep(this, p_344844_, p_343026_).handle((p_343850_, p_344393_) -> {
-                if (p_344393_ != null) {
-                    CrashReport crashreport = CrashReport.forThrowable(p_344393_, "Exception chunk generation/loading");
-                    MinecraftServer.setFatalException(new ReportedException(crashreport));
+            return this.acquireStatusBump(step.targetStatus()) ? chunkMap.applyStep(this, step, cache).handle((chunk, exception) -> {
+                if (exception != null) {
+                    CrashReport report = CrashReport.forThrowable(exception, "Exception chunk generation/loading");
+                    BlockableEventLoop.relayDelayCrash(report);
                 } else {
-                    this.completeFuture(p_344844_.targetStatus(), p_343850_);
+                    this.completeFuture(step.targetStatus(), chunk);
                 }
 
-                return ChunkResult.of(p_343850_);
-            }) : this.getOrCreateFuture(p_344844_.targetStatus());
+                return ChunkResult.of(chunk);
+            }) : this.getOrCreateFuture(step.targetStatus());
         }
     }
 
-    protected void updateHighestAllowedStatus(ChunkMap p_345117_) {
-        ChunkStatus chunkstatus = this.highestAllowedStatus;
-        ChunkStatus chunkstatus1 = ChunkLevel.generationStatus(this.getTicketLevel());
-        this.highestAllowedStatus = chunkstatus1;
-        boolean flag = chunkstatus != null && (chunkstatus1 == null || chunkstatus1.isBefore(chunkstatus));
-        if (flag) {
-            this.failAndClearPendingFuturesBetween(chunkstatus1, chunkstatus);
+    protected void updateHighestAllowedStatus(final ChunkMap scheduler) {
+        ChunkStatus oldStatus = this.highestAllowedStatus;
+        ChunkStatus newStatus = ChunkLevel.generationStatus(this.getTicketLevel());
+        this.highestAllowedStatus = newStatus;
+        boolean statusDropped = oldStatus != null && (newStatus == null || newStatus.isBefore(oldStatus));
+        if (statusDropped) {
+            this.failAndClearPendingFuturesBetween(newStatus, oldStatus);
             if (this.task.get() != null) {
-                this.rescheduleChunkTask(p_345117_, this.findHighestStatusWithPendingFuture(chunkstatus1));
+                this.rescheduleChunkTask(scheduler, this.findHighestStatusWithPendingFuture(newStatus));
             }
         }
     }
 
-    public void replaceProtoChunk(ImposterProtoChunk p_343560_) {
-        CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = CompletableFuture.completedFuture(ChunkResult.of(p_343560_));
+    public void replaceProtoChunk(final ImposterProtoChunk chunk) {
+        CompletableFuture<ChunkResult<ChunkAccess>> imposterFuture = CompletableFuture.completedFuture(ChunkResult.of(chunk));
 
         for (int i = 0; i < this.futures.length() - 1; i++) {
-            CompletableFuture<ChunkResult<ChunkAccess>> completablefuture1 = this.futures.get(i);
-            Objects.requireNonNull(completablefuture1);
-            ChunkAccess chunkaccess = completablefuture1.getNow(NOT_DONE_YET).orElse(null);
-            if (!(chunkaccess instanceof ProtoChunk)) {
-                throw new IllegalStateException("Trying to replace a ProtoChunk, but found " + chunkaccess);
+            CompletableFuture<ChunkResult<ChunkAccess>> future = this.futures.get(i);
+            Objects.requireNonNull(future);
+            ChunkAccess maybeProtoChunk = future.getNow(NOT_DONE_YET).orElse(null);
+            if (!(maybeProtoChunk instanceof ProtoChunk)) {
+                throw new IllegalStateException("Trying to replace a ProtoChunk, but found " + maybeProtoChunk);
             }
 
-            if (!this.futures.compareAndSet(i, completablefuture1, completablefuture)) {
+            if (!this.futures.compareAndSet(i, future, imposterFuture)) {
                 throw new IllegalStateException("Future changed by other thread while trying to replace it");
             }
         }
     }
 
-    void removeTask(ChunkGenerationTask p_342447_) {
-        this.task.compareAndSet(p_342447_, null);
+    void removeTask(final ChunkGenerationTask task) {
+        this.task.compareAndSet(task, null);
     }
 
-    private void rescheduleChunkTask(ChunkMap p_344344_, @Nullable ChunkStatus p_343189_) {
-        ChunkGenerationTask chunkgenerationtask;
-        if (p_343189_ != null) {
-            chunkgenerationtask = p_344344_.scheduleGenerationTask(p_343189_, this.getPos());
+    private void rescheduleChunkTask(final ChunkMap scheduler, final @Nullable ChunkStatus status) {
+        ChunkGenerationTask newTask;
+        if (status != null) {
+            newTask = scheduler.scheduleGenerationTask(status, this.getPos());
         } else {
-            chunkgenerationtask = null;
+            newTask = null;
         }
 
-        ChunkGenerationTask chunkgenerationtask1 = this.task.getAndSet(chunkgenerationtask);
-        if (chunkgenerationtask1 != null) {
-            chunkgenerationtask1.markForCancellation();
+        ChunkGenerationTask oldTask = this.task.getAndSet(newTask);
+        if (oldTask != null) {
+            oldTask.markForCancellation();
         }
     }
 
-    private CompletableFuture<ChunkResult<ChunkAccess>> getOrCreateFuture(ChunkStatus p_342279_) {
-        if (this.isStatusDisallowed(p_342279_)) {
+    private CompletableFuture<ChunkResult<ChunkAccess>> getOrCreateFuture(final ChunkStatus status) {
+        if (this.isStatusDisallowed(status)) {
             return UNLOADED_CHUNK_FUTURE;
-        } else {
-            int i = p_342279_.getIndex();
-            CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.futures.get(i);
+        }
 
-            while (completablefuture == null) {
-                CompletableFuture<ChunkResult<ChunkAccess>> completablefuture1 = new CompletableFuture<>();
-                completablefuture = this.futures.compareAndExchange(i, null, completablefuture1);
-                if (completablefuture == null) {
-                    if (this.isStatusDisallowed(p_342279_)) {
-                        this.failAndClearPendingFuture(i, completablefuture1);
-                        return UNLOADED_CHUNK_FUTURE;
-                    }
+        int index = status.getIndex();
+        CompletableFuture<ChunkResult<ChunkAccess>> future = this.futures.get(index);
 
-                    return completablefuture1;
+        while (future == null) {
+            CompletableFuture<ChunkResult<ChunkAccess>> newValue = new CompletableFuture<>();
+            future = this.futures.compareAndExchange(index, null, newValue);
+            if (future == null) {
+                if (this.isStatusDisallowed(status)) {
+                    this.failAndClearPendingFuture(index, newValue);
+                    return UNLOADED_CHUNK_FUTURE;
                 }
-            }
 
-            return completablefuture;
+                return newValue;
+            }
+        }
+
+        return future;
+    }
+
+    private void failAndClearPendingFuturesBetween(final @Nullable ChunkStatus fromExclusive, final ChunkStatus toInclusive) {
+        int start = fromExclusive == null ? 0 : fromExclusive.getIndex() + 1;
+        int end = toInclusive.getIndex();
+
+        for (int i = start; i <= end; i++) {
+            CompletableFuture<ChunkResult<ChunkAccess>> previous = this.futures.get(i);
+            if (previous != null) {
+                this.failAndClearPendingFuture(i, previous);
+            }
         }
     }
 
-    private void failAndClearPendingFuturesBetween(@Nullable ChunkStatus p_343092_, ChunkStatus p_345118_) {
-        int i = p_343092_ == null ? 0 : p_343092_.getIndex() + 1;
-        int j = p_345118_.getIndex();
-
-        for (int k = i; k <= j; k++) {
-            CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.futures.get(k);
-            if (completablefuture != null) {
-                this.failAndClearPendingFuture(k, completablefuture);
-            }
-        }
-    }
-
-    private void failAndClearPendingFuture(int p_342343_, CompletableFuture<ChunkResult<ChunkAccess>> p_345346_) {
-        if (p_345346_.complete(UNLOADED_CHUNK) && !this.futures.compareAndSet(p_342343_, p_345346_, null)) {
+    private void failAndClearPendingFuture(final int index, final CompletableFuture<ChunkResult<ChunkAccess>> previous) {
+        if (previous.complete(UNLOADED_CHUNK) && !this.futures.compareAndSet(index, previous, null)) {
             throw new IllegalStateException("Nothing else should replace the future here");
         }
     }
 
-    private void completeFuture(ChunkStatus p_342456_, ChunkAccess p_342625_) {
-        ChunkResult<ChunkAccess> chunkresult = ChunkResult.of(p_342625_);
-        int i = p_342456_.getIndex();
+    private void completeFuture(final ChunkStatus status, final ChunkAccess chunk) {
+        ChunkResult<ChunkAccess> result = ChunkResult.of(chunk);
+        int index = status.getIndex();
 
         while (true) {
-            CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.futures.get(i);
-            if (completablefuture == null) {
-                if (this.futures.compareAndSet(i, null, CompletableFuture.completedFuture(chunkresult))) {
+            CompletableFuture<ChunkResult<ChunkAccess>> future = this.futures.get(index);
+            if (future == null) {
+                if (this.futures.compareAndSet(index, null, CompletableFuture.completedFuture(result))) {
                     return;
                 }
             } else {
-                if (completablefuture.complete(chunkresult)) {
+                if (future.complete(result)) {
                     return;
                 }
 
-                if (completablefuture.getNow(NOT_DONE_YET).isSuccess()) {
+                if (future.getNow(NOT_DONE_YET).isSuccess()) {
                     throw new IllegalStateException("Trying to complete a future but found it to be completed successfully already");
                 }
 
@@ -190,47 +191,47 @@ public abstract class GenerationChunkHolder {
         }
     }
 
-    private @Nullable ChunkStatus findHighestStatusWithPendingFuture(@Nullable ChunkStatus p_342852_) {
-        if (p_342852_ == null) {
+    private @Nullable ChunkStatus findHighestStatusWithPendingFuture(final @Nullable ChunkStatus newStatus) {
+        if (newStatus == null) {
             return null;
-        } else {
-            ChunkStatus chunkstatus = p_342852_;
+        }
 
-            for (ChunkStatus chunkstatus1 = this.startedWork.get();
-                chunkstatus1 == null || chunkstatus.isAfter(chunkstatus1);
-                chunkstatus = chunkstatus.getParent()
-            ) {
-                if (this.futures.get(chunkstatus.getIndex()) != null) {
-                    return chunkstatus;
-                }
+        ChunkStatus highestStatus = newStatus;
 
-                if (chunkstatus == ChunkStatus.EMPTY) {
-                    break;
-                }
+        for (ChunkStatus alreadyStarted = this.startedWork.get();
+            alreadyStarted == null || highestStatus.isAfter(alreadyStarted);
+            highestStatus = highestStatus.getParent()
+        ) {
+            if (this.futures.get(highestStatus.getIndex()) != null) {
+                return highestStatus;
             }
 
-            return null;
+            if (highestStatus == ChunkStatus.EMPTY) {
+                break;
+            }
         }
+
+        return null;
     }
 
-    private boolean acquireStatusBump(ChunkStatus p_343283_) {
-        ChunkStatus chunkstatus = p_343283_ == ChunkStatus.EMPTY ? null : p_343283_.getParent();
-        ChunkStatus chunkstatus1 = this.startedWork.compareAndExchange(chunkstatus, p_343283_);
-        if (chunkstatus1 == chunkstatus) {
+    private boolean acquireStatusBump(final ChunkStatus status) {
+        ChunkStatus parent = status == ChunkStatus.EMPTY ? null : status.getParent();
+        ChunkStatus previousStarted = this.startedWork.compareAndExchange(parent, status);
+        if (previousStarted == parent) {
             return true;
-        } else if (chunkstatus1 != null && !p_343283_.isAfter(chunkstatus1)) {
+        } else if (previousStarted != null && !status.isAfter(previousStarted)) {
             return false;
         } else {
-            throw new IllegalStateException("Unexpected last startedWork status: " + chunkstatus1 + " while trying to start: " + p_343283_);
+            throw new IllegalStateException("Unexpected last startedWork status: " + previousStarted + " while trying to start: " + status);
         }
     }
 
-    private boolean isStatusDisallowed(ChunkStatus p_342117_) {
-        ChunkStatus chunkstatus = this.highestAllowedStatus;
-        return chunkstatus == null || p_342117_.isAfter(chunkstatus);
+    private boolean isStatusDisallowed(final ChunkStatus status) {
+        ChunkStatus highestAllowedStatus = this.highestAllowedStatus;
+        return highestAllowedStatus == null || status.isAfter(highestAllowedStatus);
     }
 
-    protected abstract void addSaveDependency(CompletableFuture<?> p_363915_);
+    protected abstract void addSaveDependency(final CompletableFuture<?> sync);
 
     public void increaseGenerationRefCount() {
         if (this.generationRefCount.getAndIncrement() == 0) {
@@ -240,40 +241,40 @@ public abstract class GenerationChunkHolder {
     }
 
     public void decreaseGenerationRefCount() {
-        CompletableFuture<Void> completablefuture = this.generationSaveSyncFuture;
-        int i = this.generationRefCount.decrementAndGet();
-        if (i == 0) {
-            completablefuture.complete(null);
+        CompletableFuture<Void> future = this.generationSaveSyncFuture;
+        int newValue = this.generationRefCount.decrementAndGet();
+        if (newValue == 0) {
+            future.complete(null);
         }
 
-        if (i < 0) {
-            throw new IllegalStateException("More releases than claims. Count: " + i);
+        if (newValue < 0) {
+            throw new IllegalStateException("More releases than claims. Count: " + newValue);
         }
     }
 
-    public @Nullable ChunkAccess getChunkIfPresentUnchecked(ChunkStatus p_342422_) {
-        CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.futures.get(p_342422_.getIndex());
-        return completablefuture == null ? null : completablefuture.getNow(NOT_DONE_YET).orElse(null);
+    public @Nullable ChunkAccess getChunkIfPresentUnchecked(final ChunkStatus status) {
+        CompletableFuture<ChunkResult<ChunkAccess>> future = this.futures.get(status.getIndex());
+        return future == null ? null : future.getNow(NOT_DONE_YET).orElse(null);
     }
 
-    public @Nullable ChunkAccess getChunkIfPresent(ChunkStatus p_342964_) {
-        return this.isStatusDisallowed(p_342964_) ? null : this.getChunkIfPresentUnchecked(p_342964_);
+    public @Nullable ChunkAccess getChunkIfPresent(final ChunkStatus status) {
+        return this.isStatusDisallowed(status) ? null : this.getChunkIfPresentUnchecked(status);
     }
 
     public @Nullable ChunkAccess getLatestChunk() {
-        ChunkStatus chunkstatus = this.startedWork.get();
-        if (chunkstatus == null) {
+        ChunkStatus status = this.startedWork.get();
+        if (status == null) {
             return null;
-        } else {
-            ChunkAccess chunkaccess = this.getChunkIfPresentUnchecked(chunkstatus);
-            return chunkaccess != null ? chunkaccess : this.getChunkIfPresentUnchecked(chunkstatus.getParent());
         }
+
+        ChunkAccess chunk = this.getChunkIfPresentUnchecked(status);
+        return chunk != null ? chunk : this.getChunkIfPresentUnchecked(status.getParent());
     }
 
     public @Nullable ChunkStatus getPersistedStatus() {
-        CompletableFuture<ChunkResult<ChunkAccess>> completablefuture = this.futures.get(ChunkStatus.EMPTY.getIndex());
-        ChunkAccess chunkaccess = completablefuture == null ? null : completablefuture.getNow(NOT_DONE_YET).orElse(null);
-        return chunkaccess == null ? null : chunkaccess.getPersistedStatus();
+        CompletableFuture<ChunkResult<ChunkAccess>> future = this.futures.get(ChunkStatus.EMPTY.getIndex());
+        ChunkAccess chunkAccess = future == null ? null : future.getNow(NOT_DONE_YET).orElse(null);
+        return chunkAccess == null ? null : chunkAccess.getPersistedStatus();
     }
 
     public ChunkPos getPos() {
@@ -290,23 +291,23 @@ public abstract class GenerationChunkHolder {
 
     @VisibleForDebug
     public List<Pair<ChunkStatus, @Nullable CompletableFuture<ChunkResult<ChunkAccess>>>> getAllFutures() {
-        List<Pair<ChunkStatus, CompletableFuture<ChunkResult<ChunkAccess>>>> list = new ArrayList<>();
+        List<Pair<ChunkStatus, CompletableFuture<ChunkResult<ChunkAccess>>>> result = new ArrayList<>();
 
         for (int i = 0; i < CHUNK_STATUSES.size(); i++) {
-            list.add(Pair.of(CHUNK_STATUSES.get(i), this.futures.get(i)));
+            result.add(Pair.of(CHUNK_STATUSES.get(i), this.futures.get(i)));
         }
 
-        return list;
+        return result;
     }
 
     @VisibleForDebug
     public @Nullable ChunkStatus getLatestStatus() {
-        ChunkStatus chunkstatus = this.startedWork.get();
-        if (chunkstatus == null) {
+        ChunkStatus status = this.startedWork.get();
+        if (status == null) {
             return null;
-        } else {
-            ChunkAccess chunkaccess = this.getChunkIfPresentUnchecked(chunkstatus);
-            return chunkaccess != null ? chunkstatus : chunkstatus.getParent();
         }
+
+        ChunkAccess chunk = this.getChunkIfPresentUnchecked(status);
+        return chunk != null ? status : status.getParent();
     }
 }

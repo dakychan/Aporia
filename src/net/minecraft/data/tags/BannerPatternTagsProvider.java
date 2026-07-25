@@ -8,13 +8,13 @@ import net.minecraft.tags.BannerPatternTags;
 import net.minecraft.world.level.block.entity.BannerPattern;
 import net.minecraft.world.level.block.entity.BannerPatterns;
 
-public class BannerPatternTagsProvider extends KeyTagProvider<BannerPattern> {
-    public BannerPatternTagsProvider(PackOutput p_256451_, CompletableFuture<HolderLookup.Provider> p_256420_) {
-        super(p_256451_, Registries.BANNER_PATTERN, p_256420_);
+public class BannerPatternTagsProvider extends TagsProvider<BannerPattern> {
+    public BannerPatternTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.BANNER_PATTERN, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_255819_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(BannerPatternTags.NO_ITEM_REQUIRED)
             .add(
                 BannerPatterns.SQUARE_BOTTOM_LEFT,

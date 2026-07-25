@@ -2,59 +2,60 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.advancements.criterion.ItemPredicate;
-import net.minecraft.util.ProblemReporter;
+import net.minecraft.advancements.predicates.ItemPredicate;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class FilteredFunction extends LootItemConditionalFunction {
-    public static final MapCodec<FilteredFunction> CODEC = RecordCodecBuilder.mapCodec(
-        p_450091_ -> commonFields(p_450091_)
+    public static final MapCodec<FilteredFunction> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> commonFields(i)
             .and(
-                p_450091_.group(
-                    ItemPredicate.CODEC.fieldOf("item_filter").forGetter(p_450088_ -> p_450088_.filter),
-                    LootItemFunctions.ROOT_CODEC.optionalFieldOf("on_pass").forGetter(p_450089_ -> p_450089_.onPass),
-                    LootItemFunctions.ROOT_CODEC.optionalFieldOf("on_fail").forGetter(p_450090_ -> p_450090_.onFail)
+                i.group(
+                    ItemPredicate.CODEC.fieldOf("item_filter").forGetter(f -> f.filter),
+                    LootItemFunctions.ROOT_CODEC.optionalFieldOf("on_pass").forGetter(f -> f.onPass),
+                    LootItemFunctions.ROOT_CODEC.optionalFieldOf("on_fail").forGetter(f -> f.onFail)
                 )
             )
-            .apply(p_450091_, FilteredFunction::new)
+            .apply(i, FilteredFunction::new)
     );
     private final ItemPredicate filter;
     private final Optional<LootItemFunction> onPass;
     private final Optional<LootItemFunction> onFail;
 
-    FilteredFunction(List<LootItemCondition> p_333409_, ItemPredicate p_454248_, Optional<LootItemFunction> p_451708_, Optional<LootItemFunction> p_452548_) {
-        super(p_333409_);
-        this.filter = p_454248_;
-        this.onPass = p_451708_;
-        this.onFail = p_452548_;
+    private FilteredFunction(
+        final List<LootItemCondition> predicates, final ItemPredicate filter, final Optional<LootItemFunction> onPass, final Optional<LootItemFunction> onFail
+    ) {
+        super(predicates);
+        this.filter = filter;
+        this.onPass = onPass;
+        this.onFail = onFail;
     }
 
     @Override
-    public LootItemFunctionType<FilteredFunction> getType() {
-        return LootItemFunctions.FILTERED;
+    public MapCodec<FilteredFunction> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public ItemStack run(ItemStack p_330820_, LootContext p_333822_) {
-        Optional<LootItemFunction> optional = this.filter.test(p_330820_) ? this.onPass : this.onFail;
-        return optional.isPresent() ? optional.get().apply(p_330820_, p_333822_) : p_330820_;
+    public ItemStack run(final ItemStack itemStack, final LootContext context) {
+        Optional<LootItemFunction> function = this.filter.test(itemStack) ? this.onPass : this.onFail;
+        return function.isPresent() ? function.get().apply(itemStack, context) : itemStack;
     }
 
     @Override
-    public void validate(ValidationContext p_336040_) {
-        super.validate(p_336040_);
-        this.onPass.ifPresent(p_450093_ -> p_450093_.validate(p_336040_.forChild(new ProblemReporter.FieldPathElement("on_pass"))));
-        this.onFail.ifPresent(p_450095_ -> p_450095_.validate(p_336040_.forChild(new ProblemReporter.FieldPathElement("on_fail"))));
+    public void validate(final ValidationContext context) {
+        super.validate(context);
+        Validatable.validate(context, "on_pass", this.onPass);
+        Validatable.validate(context, "on_fail", this.onFail);
     }
 
-    public static FilteredFunction.Builder filtered(ItemPredicate p_459669_) {
-        return new FilteredFunction.Builder(p_459669_);
+    public static FilteredFunction.Builder filtered(final ItemPredicate predicate) {
+        return new FilteredFunction.Builder(predicate);
     }
 
     public static class Builder extends LootItemConditionalFunction.Builder<FilteredFunction.Builder> {
@@ -62,21 +63,21 @@ public class FilteredFunction extends LootItemConditionalFunction {
         private Optional<LootItemFunction> onPass = Optional.empty();
         private Optional<LootItemFunction> onFail = Optional.empty();
 
-        Builder(ItemPredicate p_457221_) {
-            this.itemPredicate = p_457221_;
+        private Builder(final ItemPredicate itemPredicate) {
+            this.itemPredicate = itemPredicate;
         }
 
         protected FilteredFunction.Builder getThis() {
             return this;
         }
 
-        public FilteredFunction.Builder onPass(Optional<LootItemFunction> p_454584_) {
-            this.onPass = p_454584_;
+        public FilteredFunction.Builder onPass(final Optional<LootItemFunction> onPass) {
+            this.onPass = onPass;
             return this;
         }
 
-        public FilteredFunction.Builder onFail(Optional<LootItemFunction> p_451739_) {
-            this.onFail = p_451739_;
+        public FilteredFunction.Builder onFail(final Optional<LootItemFunction> onFail) {
+            this.onFail = onFail;
             return this;
         }
 

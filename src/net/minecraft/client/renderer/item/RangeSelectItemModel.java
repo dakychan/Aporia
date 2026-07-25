@@ -1,9 +1,9 @@
 package net.minecraft.client.renderer.item;
 
+import com.mojang.math.Transformation;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -16,11 +16,9 @@ import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Matrix4fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class RangeSelectItemModel implements ItemModel {
     private static final int LINEAR_SEARCH_THRESHOLD = 16;
     private final RangeSelectItemModelProperty property;
@@ -29,81 +27,86 @@ public class RangeSelectItemModel implements ItemModel {
     private final ItemModel[] models;
     private final ItemModel fallback;
 
-    RangeSelectItemModel(RangeSelectItemModelProperty p_378527_, float p_378148_, float[] p_377531_, ItemModel[] p_375411_, ItemModel p_378323_) {
-        this.property = p_378527_;
-        this.thresholds = p_377531_;
-        this.models = p_375411_;
-        this.fallback = p_378323_;
-        this.scale = p_378148_;
+    private RangeSelectItemModel(
+        final RangeSelectItemModelProperty property, final float scale, final float[] thresholds, final ItemModel[] models, final ItemModel fallback
+    ) {
+        this.property = property;
+        this.thresholds = thresholds;
+        this.models = models;
+        this.fallback = fallback;
+        this.scale = scale;
     }
 
-    private static int lastIndexLessOrEqual(float[] p_378298_, float p_378394_) {
-        if (p_378298_.length < 16) {
-            for (int k = 0; k < p_378298_.length; k++) {
-                if (p_378298_[k] > p_378394_) {
-                    return k - 1;
+    private static int lastIndexLessOrEqual(final float[] haystack, final float needle) {
+        if (haystack.length < 16) {
+            for (int i = 0; i < haystack.length; i++) {
+                if (haystack[i] > needle) {
+                    return i - 1;
                 }
             }
 
-            return p_378298_.length - 1;
+            return haystack.length - 1;
         } else {
-            int i = Arrays.binarySearch(p_378298_, p_378394_);
-            if (i < 0) {
-                int j = ~i;
-                return j - 1;
+            int index = Arrays.binarySearch(haystack, needle);
+            if (index < 0) {
+                int insertionPoint = ~index;
+                return insertionPoint - 1;
             } else {
-                return i;
+                return index;
             }
         }
     }
 
     @Override
     public void update(
-        ItemStackRenderState p_376727_,
-        ItemStack p_377507_,
-        ItemModelResolver p_377370_,
-        ItemDisplayContext p_377791_,
-        @Nullable ClientLevel p_377343_,
-        @Nullable ItemOwner p_427086_,
-        int p_376528_
+        final ItemStackRenderState output,
+        final ItemStack item,
+        final ItemModelResolver resolver,
+        final ItemDisplayContext displayContext,
+        final @Nullable ClientLevel level,
+        final @Nullable ItemOwner owner,
+        final int seed
     ) {
-        p_376727_.appendModelIdentityElement(this);
-        float f = this.property.get(p_377507_, p_377343_, p_427086_, p_376528_) * this.scale;
-        ItemModel itemmodel;
-        if (Float.isNaN(f)) {
-            itemmodel = this.fallback;
+        output.appendModelIdentityElement(this);
+        float value = this.property.get(item, level, owner, seed) * this.scale;
+        ItemModel selectedModel;
+        if (Float.isNaN(value)) {
+            selectedModel = this.fallback;
         } else {
-            int i = lastIndexLessOrEqual(this.thresholds, f);
-            itemmodel = i == -1 ? this.fallback : this.models[i];
+            int index = lastIndexLessOrEqual(this.thresholds, value);
+            selectedModel = index == -1 ? this.fallback : this.models[index];
         }
 
-        itemmodel.update(p_376727_, p_377507_, p_377370_, p_377791_, p_377343_, p_427086_, p_376528_);
+        selectedModel.update(output, item, resolver, displayContext, level, owner, seed);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Entry(float threshold, ItemModel.Unbaked model) {
+        public record Entry(float threshold, ItemModel.Unbaked model) {
         public static final Codec<RangeSelectItemModel.Entry> CODEC = RecordCodecBuilder.create(
-            p_375497_ -> p_375497_.group(
+            i -> i.group(
                     Codec.FLOAT.fieldOf("threshold").forGetter(RangeSelectItemModel.Entry::threshold),
                     ItemModels.CODEC.fieldOf("model").forGetter(RangeSelectItemModel.Entry::model)
                 )
-                .apply(p_375497_, RangeSelectItemModel.Entry::new)
+                .apply(i, RangeSelectItemModel.Entry::new)
         );
         public static final Comparator<RangeSelectItemModel.Entry> BY_THRESHOLD = Comparator.comparingDouble(RangeSelectItemModel.Entry::threshold);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Unbaked(
-        RangeSelectItemModelProperty property, float scale, List<RangeSelectItemModel.Entry> entries, Optional<ItemModel.Unbaked> fallback
+        public record Unbaked(
+        Optional<Transformation> transformation,
+        RangeSelectItemModelProperty property,
+        float scale,
+        List<RangeSelectItemModel.Entry> entries,
+        Optional<ItemModel.Unbaked> fallback
     ) implements ItemModel.Unbaked {
         public static final MapCodec<RangeSelectItemModel.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_376755_ -> p_376755_.group(
+            i -> i.group(
+                    Transformation.EXTENDED_CODEC.optionalFieldOf("transformation").forGetter(RangeSelectItemModel.Unbaked::transformation),
                     RangeSelectItemModelProperties.MAP_CODEC.forGetter(RangeSelectItemModel.Unbaked::property),
                     Codec.FLOAT.optionalFieldOf("scale", 1.0F).forGetter(RangeSelectItemModel.Unbaked::scale),
                     RangeSelectItemModel.Entry.CODEC.listOf().fieldOf("entries").forGetter(RangeSelectItemModel.Unbaked::entries),
                     ItemModels.CODEC.optionalFieldOf("fallback").forGetter(RangeSelectItemModel.Unbaked::fallback)
                 )
-                .apply(p_376755_, RangeSelectItemModel.Unbaked::new)
+                .apply(i, RangeSelectItemModel.Unbaked::new)
         );
 
         @Override
@@ -112,26 +115,29 @@ public class RangeSelectItemModel implements ItemModel {
         }
 
         @Override
-        public ItemModel bake(ItemModel.BakingContext p_378439_) {
-            float[] afloat = new float[this.entries.size()];
-            ItemModel[] aitemmodel = new ItemModel[this.entries.size()];
-            List<RangeSelectItemModel.Entry> list = new ArrayList<>(this.entries);
-            list.sort(RangeSelectItemModel.Entry.BY_THRESHOLD);
+        public ItemModel bake(final ItemModel.BakingContext context, final Matrix4fc transformation) {
+            Matrix4fc childTransform = Transformation.compose(transformation, this.transformation);
+            float[] thresholds = new float[this.entries.size()];
+            ItemModel[] models = new ItemModel[this.entries.size()];
+            List<RangeSelectItemModel.Entry> mutableEntries = new ArrayList<>(this.entries);
+            mutableEntries.sort(RangeSelectItemModel.Entry.BY_THRESHOLD);
 
-            for (int i = 0; i < list.size(); i++) {
-                RangeSelectItemModel.Entry rangeselectitemmodel$entry = list.get(i);
-                afloat[i] = rangeselectitemmodel$entry.threshold;
-                aitemmodel[i] = rangeselectitemmodel$entry.model.bake(p_378439_);
+            for (int i = 0; i < mutableEntries.size(); i++) {
+                RangeSelectItemModel.Entry entry = mutableEntries.get(i);
+                thresholds[i] = entry.threshold;
+                models[i] = entry.model.bake(context, childTransform);
             }
 
-            ItemModel itemmodel = this.fallback.<ItemModel>map(p_375876_ -> p_375876_.bake(p_378439_)).orElse(p_378439_.missingItemModel());
-            return new RangeSelectItemModel(this.property, this.scale, afloat, aitemmodel, itemmodel);
+            ItemModel bakedFallback = this.fallback
+                .<ItemModel>map(m -> m.bake(context, childTransform))
+                .orElseGet(() -> context.missingItemModel(childTransform));
+            return new RangeSelectItemModel(this.property, this.scale, thresholds, models, bakedFallback);
         }
 
         @Override
-        public void resolveDependencies(ResolvableModel.Resolver p_378233_) {
-            this.fallback.ifPresent(p_378531_ -> p_378531_.resolveDependencies(p_378233_));
-            this.entries.forEach(p_377402_ -> p_377402_.model.resolveDependencies(p_378233_));
+        public void resolveDependencies(final ResolvableModel.Resolver resolver) {
+            this.fallback.ifPresent(m -> m.resolveDependencies(resolver));
+            this.entries.forEach(entry -> entry.model.resolveDependencies(resolver));
         }
     }
 }

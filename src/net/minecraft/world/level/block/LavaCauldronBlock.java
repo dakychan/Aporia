@@ -3,7 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.cauldron.CauldronInteraction;
+import net.minecraft.core.cauldron.CauldronInteractions;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.InsideBlockEffectApplier;
 import net.minecraft.world.entity.InsideBlockEffectType;
@@ -24,34 +24,41 @@ public class LavaCauldronBlock extends AbstractCauldronBlock {
         return CODEC;
     }
 
-    public LavaCauldronBlock(BlockBehaviour.Properties p_153498_) {
-        super(p_153498_, CauldronInteraction.LAVA);
+    public LavaCauldronBlock(final BlockBehaviour.Properties properties) {
+        super(properties, CauldronInteractions.LAVA);
     }
 
     @Override
-    protected double getContentHeight(BlockState p_153500_) {
+    protected double getContentHeight(final BlockState state) {
         return 0.9375;
     }
 
     @Override
-    public boolean isFull(BlockState p_153511_) {
+    public boolean isFull(final BlockState state) {
         return true;
     }
 
     @Override
-    protected VoxelShape getEntityInsideCollisionShape(BlockState p_406571_, BlockGetter p_408197_, BlockPos p_409119_, Entity p_407100_) {
+    protected VoxelShape getEntityInsideCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final Entity entity) {
         return FILLED_SHAPE;
     }
 
     @Override
-    protected void entityInside(BlockState p_153506_, Level p_153507_, BlockPos p_153508_, Entity p_153509_, InsideBlockEffectApplier p_394329_, boolean p_432040_) {
-        p_394329_.apply(InsideBlockEffectType.CLEAR_FREEZE);
-        p_394329_.apply(InsideBlockEffectType.LAVA_IGNITE);
-        p_394329_.runAfter(InsideBlockEffectType.LAVA_IGNITE, Entity::lavaHurt);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        effectApplier.apply(InsideBlockEffectType.CLEAR_FREEZE);
+        effectApplier.apply(InsideBlockEffectType.LAVA_IGNITE);
+        effectApplier.runAfter(InsideBlockEffectType.LAVA_IGNITE, Entity::lavaHurt);
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_153502_, Level p_153503_, BlockPos p_153504_, Direction p_428271_) {
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
         return 3;
     }
 }

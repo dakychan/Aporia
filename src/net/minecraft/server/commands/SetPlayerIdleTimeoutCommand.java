@@ -2,31 +2,30 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 
 public class SetPlayerIdleTimeoutCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_138635_) {
-        p_138635_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("setidletimeout")
                 .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .then(
                     Commands.argument("minutes", IntegerArgumentType.integer(0))
-                        .executes(p_138637_ -> setIdleTimeout(p_138637_.getSource(), IntegerArgumentType.getInteger(p_138637_, "minutes")))
+                        .executes(c -> setIdleTimeout(c.getSource(), IntegerArgumentType.getInteger(c, "minutes")))
                 )
         );
     }
 
-    private static int setIdleTimeout(CommandSourceStack p_138641_, int p_138642_) {
-        p_138641_.getServer().setPlayerIdleTimeout(p_138642_);
-        if (p_138642_ > 0) {
-            p_138641_.sendSuccess(() -> Component.translatable("commands.setidletimeout.success", p_138642_), true);
+    private static int setIdleTimeout(final CommandSourceStack source, final int time) {
+        source.getServer().setPlayerIdleTimeout(time);
+        if (time > 0) {
+            source.sendSuccess(() -> Component.translatable("commands.setidletimeout.success", time), true);
         } else {
-            p_138641_.sendSuccess(() -> Component.translatable("commands.setidletimeout.success.disabled"), true);
+            source.sendSuccess(() -> Component.translatable("commands.setidletimeout.success.disabled"), true);
         }
 
-        return p_138642_;
+        return time;
     }
 }

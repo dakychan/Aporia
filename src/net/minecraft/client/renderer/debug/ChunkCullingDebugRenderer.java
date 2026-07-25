@@ -14,118 +14,117 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector4f;
 
-@OnlyIn(Dist.CLIENT)
 public class ChunkCullingDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
     public static final Direction[] DIRECTIONS = Direction.values();
     private final Minecraft minecraft;
 
-    public ChunkCullingDebugRenderer(Minecraft p_365943_) {
-        this.minecraft = p_365943_;
+    public ChunkCullingDebugRenderer(final Minecraft minecraft) {
+        this.minecraft = minecraft;
     }
 
     @Override
-    public void emitGizmos(double p_458282_, double p_456343_, double p_453270_, DebugValueAccess p_452995_, Frustum p_451688_, float p_456786_) {
-        LevelRenderer levelrenderer = this.minecraft.levelRenderer;
-        boolean flag = this.minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.CHUNK_SECTION_PATHS);
-        boolean flag1 = this.minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.CHUNK_SECTION_VISIBILITY);
-        if (flag || flag1) {
-            SectionOcclusionGraph sectionocclusiongraph = levelrenderer.getSectionOcclusionGraph();
+    public void emitGizmos(
+        final double camX, final double camY, final double camZ, final DebugValueAccess debugValues, final Frustum frustum, final float partialTicks
+    ) {
+        LevelRenderer levelRenderer = this.minecraft.levelRenderer;
+        boolean sectionPath = this.minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.CHUNK_SECTION_PATHS);
+        boolean sectionVisibility = this.minecraft.debugEntries.isCurrentlyEnabled(DebugScreenEntries.CHUNK_SECTION_VISIBILITY);
+        if (sectionPath || sectionVisibility) {
+            SectionOcclusionGraph sectionOcclusionGraph = levelRenderer.sectionOcclusionGraph();
 
-            for (SectionRenderDispatcher.RenderSection sectionrenderdispatcher$rendersection : levelrenderer.getVisibleSections()) {
-                SectionOcclusionGraph.Node sectionocclusiongraph$node = sectionocclusiongraph.getNode(sectionrenderdispatcher$rendersection);
-                if (sectionocclusiongraph$node != null) {
-                    BlockPos blockpos = sectionrenderdispatcher$rendersection.getRenderOrigin();
-                    if (flag) {
-                        int i = sectionocclusiongraph$node.step == 0 ? 0 : Mth.hsvToRgb(sectionocclusiongraph$node.step / 50.0F, 0.9F, 0.9F);
+            for (SectionRenderDispatcher.RenderSection section : levelRenderer.visibleSections()) {
+                SectionOcclusionGraph.Node node = sectionOcclusionGraph.getNode(section);
+                if (node != null) {
+                    BlockPos renderOffset = section.getRenderOrigin();
+                    if (sectionPath) {
+                        int color = node.step == 0 ? 0 : Mth.hsvToRgb(node.step / 50.0F, 0.9F, 0.9F);
 
-                        for (int j = 0; j < DIRECTIONS.length; j++) {
-                            if (sectionocclusiongraph$node.hasSourceDirection(j)) {
-                                Direction direction = DIRECTIONS[j];
+                        for (int i = 0; i < DIRECTIONS.length; i++) {
+                            if (node.hasSourceDirection(i)) {
+                                Direction direction = DIRECTIONS[i];
                                 Gizmos.line(
-                                    Vec3.atLowerCornerWithOffset(blockpos, 8.0, 8.0, 8.0),
-                                    Vec3.atLowerCornerWithOffset(blockpos, 8 - 16 * direction.getStepX(), 8 - 16 * direction.getStepY(), 8 - 16 * direction.getStepZ()),
-                                    ARGB.opaque(i)
+                                    Vec3.atLowerCornerWithOffset(renderOffset, 8.0, 8.0, 8.0),
+                                    Vec3.atLowerCornerWithOffset(
+                                        renderOffset, 8 - 16 * direction.getStepX(), 8 - 16 * direction.getStepY(), 8 - 16 * direction.getStepZ()
+                                    ),
+                                    ARGB.opaque(color)
                                 );
                             }
                         }
                     }
 
-                    if (flag1 && sectionrenderdispatcher$rendersection.getSectionMesh().hasRenderableLayers()) {
-                        int k = 0;
+                    if (sectionVisibility && section.getSectionMesh().hasRenderableLayers()) {
+                        int c = 0;
 
                         for (Direction direction1 : DIRECTIONS) {
                             for (Direction direction2 : DIRECTIONS) {
-                                boolean flag2 = sectionrenderdispatcher$rendersection.getSectionMesh().facesCanSeeEachother(direction1, direction2);
-                                if (!flag2) {
-                                    k++;
+                                boolean b = section.getSectionMesh().facesCanSeeEachother(direction1, direction2);
+                                if (!b) {
+                                    c++;
                                     Gizmos.line(
-                                        Vec3.atLowerCornerWithOffset(blockpos, 8 + 8 * direction1.getStepX(), 8 + 8 * direction1.getStepY(), 8 + 8 * direction1.getStepZ()),
-                                        Vec3.atLowerCornerWithOffset(blockpos, 8 + 8 * direction2.getStepX(), 8 + 8 * direction2.getStepY(), 8 + 8 * direction2.getStepZ()),
+                                        Vec3.atLowerCornerWithOffset(
+                                            renderOffset, 8 + 8 * direction1.getStepX(), 8 + 8 * direction1.getStepY(), 8 + 8 * direction1.getStepZ()
+                                        ),
+                                        Vec3.atLowerCornerWithOffset(
+                                            renderOffset, 8 + 8 * direction2.getStepX(), 8 + 8 * direction2.getStepY(), 8 + 8 * direction2.getStepZ()
+                                        ),
                                         ARGB.color(255, 255, 0, 0)
                                     );
                                 }
                             }
                         }
 
-                        if (k > 0) {
-                            float f = 0.5F;
-                            float f1 = 0.2F;
-                            Gizmos.cuboid(
-                                sectionrenderdispatcher$rendersection.getBoundingBox().deflate(0.5), GizmoStyle.fill(ARGB.colorFromFloat(0.2F, 0.9F, 0.9F, 0.0F))
-                            );
+                        if (c > 0) {
+                            float delta = 0.5F;
+                            float a = 0.2F;
+                            Gizmos.cuboid(section.getBoundingBox().deflate(0.5), GizmoStyle.fill(ARGB.colorFromFloat(0.2F, 0.9F, 0.9F, 0.0F)));
                         }
                     }
                 }
             }
         }
 
-        Frustum frustum = levelrenderer.getCapturedFrustum();
-        if (frustum != null) {
-            Vec3 vec3 = new Vec3(frustum.getCamX(), frustum.getCamY(), frustum.getCamZ());
-            Vector4f[] avector4f = frustum.getFrustumPoints();
-            this.addFrustumQuad(vec3, avector4f, 0, 1, 2, 3, 0, 1, 1);
-            this.addFrustumQuad(vec3, avector4f, 4, 5, 6, 7, 1, 0, 0);
-            this.addFrustumQuad(vec3, avector4f, 0, 1, 5, 4, 1, 1, 0);
-            this.addFrustumQuad(vec3, avector4f, 2, 3, 7, 6, 0, 0, 1);
-            this.addFrustumQuad(vec3, avector4f, 0, 4, 7, 3, 0, 1, 0);
-            this.addFrustumQuad(vec3, avector4f, 1, 5, 6, 2, 1, 0, 1);
-            this.addFrustumLine(vec3, avector4f[0], avector4f[1]);
-            this.addFrustumLine(vec3, avector4f[1], avector4f[2]);
-            this.addFrustumLine(vec3, avector4f[2], avector4f[3]);
-            this.addFrustumLine(vec3, avector4f[3], avector4f[0]);
-            this.addFrustumLine(vec3, avector4f[4], avector4f[5]);
-            this.addFrustumLine(vec3, avector4f[5], avector4f[6]);
-            this.addFrustumLine(vec3, avector4f[6], avector4f[7]);
-            this.addFrustumLine(vec3, avector4f[7], avector4f[4]);
-            this.addFrustumLine(vec3, avector4f[0], avector4f[4]);
-            this.addFrustumLine(vec3, avector4f[1], avector4f[5]);
-            this.addFrustumLine(vec3, avector4f[2], avector4f[6]);
-            this.addFrustumLine(vec3, avector4f[3], avector4f[7]);
+        Frustum capturedFrustum = this.minecraft.gameRenderer.mainCamera().getCapturedFrustum();
+        if (capturedFrustum != null) {
+            Vec3 offset = new Vec3(capturedFrustum.getCamX(), capturedFrustum.getCamY(), capturedFrustum.getCamZ());
+            Vector4f[] frustumPoints = capturedFrustum.getFrustumPoints();
+            this.addFrustumQuad(offset, frustumPoints, 0, 1, 2, 3, 0, 1, 1);
+            this.addFrustumQuad(offset, frustumPoints, 4, 5, 6, 7, 1, 0, 0);
+            this.addFrustumQuad(offset, frustumPoints, 0, 1, 5, 4, 1, 1, 0);
+            this.addFrustumQuad(offset, frustumPoints, 2, 3, 7, 6, 0, 0, 1);
+            this.addFrustumQuad(offset, frustumPoints, 0, 4, 7, 3, 0, 1, 0);
+            this.addFrustumQuad(offset, frustumPoints, 1, 5, 6, 2, 1, 0, 1);
+            this.addFrustumLine(offset, frustumPoints[0], frustumPoints[1]);
+            this.addFrustumLine(offset, frustumPoints[1], frustumPoints[2]);
+            this.addFrustumLine(offset, frustumPoints[2], frustumPoints[3]);
+            this.addFrustumLine(offset, frustumPoints[3], frustumPoints[0]);
+            this.addFrustumLine(offset, frustumPoints[4], frustumPoints[5]);
+            this.addFrustumLine(offset, frustumPoints[5], frustumPoints[6]);
+            this.addFrustumLine(offset, frustumPoints[6], frustumPoints[7]);
+            this.addFrustumLine(offset, frustumPoints[7], frustumPoints[4]);
+            this.addFrustumLine(offset, frustumPoints[0], frustumPoints[4]);
+            this.addFrustumLine(offset, frustumPoints[1], frustumPoints[5]);
+            this.addFrustumLine(offset, frustumPoints[2], frustumPoints[6]);
+            this.addFrustumLine(offset, frustumPoints[3], frustumPoints[7]);
         }
     }
 
-    private void addFrustumLine(Vec3 p_459044_, Vector4f p_455562_, Vector4f p_450162_) {
-        Gizmos.line(
-            new Vec3(p_459044_.x + p_455562_.x, p_459044_.y + p_455562_.y, p_459044_.z + p_455562_.z),
-            new Vec3(p_459044_.x + p_450162_.x, p_459044_.y + p_450162_.y, p_459044_.z + p_450162_.z),
-            -16777216
-        );
+    private void addFrustumLine(final Vec3 offset, final Vector4f a, final Vector4f b) {
+        Gizmos.line(new Vec3(offset.x + a.x, offset.y + a.y, offset.z + a.z), new Vec3(offset.x + b.x, offset.y + b.y, offset.z + b.z), -16777216);
     }
 
     private void addFrustumQuad(
-        Vec3 p_456923_, Vector4f[] p_369613_, int p_360822_, int p_362980_, int p_367860_, int p_360867_, int p_367084_, int p_367738_, int p_367810_
+        final Vec3 offset, final Vector4f[] frustumPoints, final int i0, final int i1, final int i2, final int i3, final int r, final int g, final int b
     ) {
-        float f = 0.25F;
+        float a = 0.25F;
         Gizmos.rect(
-            new Vec3(p_369613_[p_360822_].x(), p_369613_[p_360822_].y(), p_369613_[p_360822_].z()).add(p_456923_),
-            new Vec3(p_369613_[p_362980_].x(), p_369613_[p_362980_].y(), p_369613_[p_362980_].z()).add(p_456923_),
-            new Vec3(p_369613_[p_367860_].x(), p_369613_[p_367860_].y(), p_369613_[p_367860_].z()).add(p_456923_),
-            new Vec3(p_369613_[p_360867_].x(), p_369613_[p_360867_].y(), p_369613_[p_360867_].z()).add(p_456923_),
-            GizmoStyle.fill(ARGB.colorFromFloat(0.25F, p_367084_, p_367738_, p_367810_))
+            new Vec3(frustumPoints[i0].x(), frustumPoints[i0].y(), frustumPoints[i0].z()).add(offset),
+            new Vec3(frustumPoints[i1].x(), frustumPoints[i1].y(), frustumPoints[i1].z()).add(offset),
+            new Vec3(frustumPoints[i2].x(), frustumPoints[i2].y(), frustumPoints[i2].z()).add(offset),
+            new Vec3(frustumPoints[i3].x(), frustumPoints[i3].y(), frustumPoints[i3].z()).add(offset),
+            GizmoStyle.fill(ARGB.colorFromFloat(0.25F, r, g, b))
         );
     }
 }

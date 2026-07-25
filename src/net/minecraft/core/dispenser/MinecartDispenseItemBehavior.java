@@ -18,62 +18,62 @@ public class MinecartDispenseItemBehavior extends DefaultDispenseItemBehavior {
     private final DefaultDispenseItemBehavior defaultDispenseItemBehavior = new DefaultDispenseItemBehavior();
     private final EntityType<? extends AbstractMinecart> entityType;
 
-    public MinecartDispenseItemBehavior(EntityType<? extends AbstractMinecart> p_367202_) {
-        this.entityType = p_367202_;
+    public MinecartDispenseItemBehavior(final EntityType<? extends AbstractMinecart> entityType) {
+        this.entityType = entityType;
     }
 
     @Override
-    public ItemStack execute(BlockSource p_366036_, ItemStack p_368867_) {
-        Direction direction = p_366036_.state().getValue(DispenserBlock.FACING);
-        ServerLevel serverlevel = p_366036_.level();
-        Vec3 vec3 = p_366036_.center();
-        double d0 = vec3.x() + direction.getStepX() * 1.125;
-        double d1 = Math.floor(vec3.y()) + direction.getStepY();
-        double d2 = vec3.z() + direction.getStepZ() * 1.125;
-        BlockPos blockpos = p_366036_.pos().relative(direction);
-        BlockState blockstate = serverlevel.getBlockState(blockpos);
-        double d3;
-        if (blockstate.is(BlockTags.RAILS)) {
-            if (getRailShape(blockstate).isSlope()) {
-                d3 = 0.6;
+    public ItemStack execute(final BlockSource source, final ItemStack dispensed) {
+        Direction direction = source.state().getValue(DispenserBlock.FACING);
+        ServerLevel level = source.level();
+        Vec3 center = source.center();
+        double spawnX = center.x() + direction.getStepX() * 1.125;
+        double spawnY = Math.floor(center.y()) + direction.getStepY();
+        double spawnZ = center.z() + direction.getStepZ() * 1.125;
+        BlockPos front = source.pos().relative(direction);
+        BlockState blockFront = level.getBlockState(front);
+        double yOffset;
+        if (blockFront.is(BlockTags.RAILS)) {
+            if (getRailShape(blockFront).isSlope()) {
+                yOffset = 0.6;
             } else {
-                d3 = 0.1;
+                yOffset = 0.1;
             }
         } else {
-            if (!blockstate.isAir()) {
-                return this.defaultDispenseItemBehavior.dispense(p_366036_, p_368867_);
+            if (!blockFront.isAir()) {
+                return this.defaultDispenseItemBehavior.dispense(source, dispensed);
             }
 
-            BlockState blockstate1 = serverlevel.getBlockState(blockpos.below());
-            if (!blockstate1.is(BlockTags.RAILS)) {
-                return this.defaultDispenseItemBehavior.dispense(p_366036_, p_368867_);
+            BlockState blockBelow = level.getBlockState(front.below());
+            if (!blockBelow.is(BlockTags.RAILS)) {
+                return this.defaultDispenseItemBehavior.dispense(source, dispensed);
             }
 
-            if (direction != Direction.DOWN && getRailShape(blockstate1).isSlope()) {
-                d3 = -0.4;
+            if (direction != Direction.DOWN && getRailShape(blockBelow).isSlope()) {
+                yOffset = -0.4;
             } else {
-                d3 = -0.9;
+                yOffset = -0.9;
             }
         }
 
-        Vec3 vec31 = new Vec3(d0, d1 + d3, d2);
-        AbstractMinecart abstractminecart = AbstractMinecart.createMinecart(
-            serverlevel, vec31.x, vec31.y, vec31.z, this.entityType, EntitySpawnReason.DISPENSER, p_368867_, null
+        Vec3 spawnPos = new Vec3(spawnX, spawnY + yOffset, spawnZ);
+        AbstractMinecart minecart = AbstractMinecart.createMinecart(
+            level, spawnPos.x, spawnPos.y, spawnPos.z, this.entityType, EntitySpawnReason.DISPENSER, dispensed, null
         );
-        if (abstractminecart != null) {
-            serverlevel.addFreshEntity(abstractminecart);
-            p_368867_.shrink(1);
+        if (minecart != null) {
+            level.addFreshEntity(minecart);
+            dispensed.shrink(1);
         }
 
-        return p_368867_;
+        return dispensed;
     }
 
-    private static RailShape getRailShape(BlockState p_364080_) {
-        return p_364080_.getBlock() instanceof BaseRailBlock baserailblock ? p_364080_.getValue(baserailblock.getShapeProperty()) : RailShape.NORTH_SOUTH;
+    private static RailShape getRailShape(final BlockState blockFront) {
+        return blockFront.getBlock() instanceof BaseRailBlock railBlock ? blockFront.getValue(railBlock.getShapeProperty()) : RailShape.NORTH_SOUTH;
     }
 
     @Override
-    protected void playSound(BlockSource p_362755_) {
-        p_362755_.level().levelEvent(1000, p_362755_.pos(), 0);
+    protected void playSound(final BlockSource source) {
+        source.level().levelEvent(1000, source.pos(), 0);
     }
 }

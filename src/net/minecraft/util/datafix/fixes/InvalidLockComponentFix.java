@@ -10,27 +10,29 @@ import org.jspecify.annotations.Nullable;
 public class InvalidLockComponentFix extends DataComponentRemainderFix {
     private static final Optional<String> INVALID_LOCK_CUSTOM_NAME = Optional.of("\"\"");
 
-    public InvalidLockComponentFix(Schema p_376929_) {
-        super(p_376929_, "InvalidLockComponentPredicateFix", "minecraft:lock");
+    public InvalidLockComponentFix(final Schema outputSchema) {
+        super(outputSchema, "InvalidLockComponentPredicateFix", "minecraft:lock");
     }
 
     @Override
-    protected <T> @Nullable Dynamic<T> fixComponent(Dynamic<T> p_377274_) {
-        return fixLock(p_377274_);
+    protected <T> @Nullable Dynamic<T> fixComponent(final Dynamic<T> input) {
+        return fixLock(input);
     }
 
-    public static <T> @Nullable Dynamic<T> fixLock(Dynamic<T> p_376516_) {
-        return isBrokenLock(p_376516_) ? null : p_376516_;
+    public static <T> @Nullable Dynamic<T> fixLock(final Dynamic<T> input) {
+        return isBrokenLock(input) ? null : input;
     }
 
-    private static <T> boolean isBrokenLock(Dynamic<T> p_375919_) {
+    private static <T> boolean isBrokenLock(final Dynamic<T> input) {
         return isMapWithOneField(
-            p_375919_, "components", p_378206_ -> isMapWithOneField(p_378206_, "minecraft:custom_name", p_377439_ -> p_377439_.asString().result().equals(INVALID_LOCK_CUSTOM_NAME))
+            input,
+            "components",
+            components -> isMapWithOneField(components, "minecraft:custom_name", customName -> customName.asString().result().equals(INVALID_LOCK_CUSTOM_NAME))
         );
     }
 
-    private static <T> boolean isMapWithOneField(Dynamic<T> p_378567_, String p_378713_, Predicate<Dynamic<T>> p_378445_) {
-        Optional<Map<Dynamic<T>, Dynamic<T>>> optional = p_378567_.getMapValues().result();
-        return !optional.isEmpty() && optional.get().size() == 1 ? p_378567_.get(p_378713_).result().filter(p_378445_).isPresent() : false;
+    private static <T> boolean isMapWithOneField(final Dynamic<T> input, final String fieldName, final Predicate<Dynamic<T>> predicate) {
+        Optional<Map<Dynamic<T>, Dynamic<T>>> map = input.getMapValues().result();
+        return !map.isEmpty() && map.get().size() == 1 ? input.get(fieldName).result().filter(predicate).isPresent() : false;
     }
 }

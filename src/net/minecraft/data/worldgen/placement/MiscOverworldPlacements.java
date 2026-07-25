@@ -38,6 +38,7 @@ public class MiscOverworldPlacements {
     public static final ResourceKey<PlacedFeature> BLUE_ICE = PlacementUtils.createKey("blue_ice");
     public static final ResourceKey<PlacedFeature> LAKE_LAVA_UNDERGROUND = PlacementUtils.createKey("lake_lava_underground");
     public static final ResourceKey<PlacedFeature> LAKE_LAVA_SURFACE = PlacementUtils.createKey("lake_lava_surface");
+    public static final ResourceKey<PlacedFeature> SULFUR_POOL = PlacementUtils.createKey("sulfur_pool");
     public static final ResourceKey<PlacedFeature> DISK_CLAY = PlacementUtils.createKey("disk_clay");
     public static final ResourceKey<PlacedFeature> DISK_GRAVEL = PlacementUtils.createKey("disk_gravel");
     public static final ResourceKey<PlacedFeature> DISK_SAND = PlacementUtils.createKey("disk_sand");
@@ -49,32 +50,31 @@ public class MiscOverworldPlacements {
     public static final ResourceKey<PlacedFeature> SPRING_LAVA_FROZEN = PlacementUtils.createKey("spring_lava_frozen");
     public static final ResourceKey<PlacedFeature> SPRING_WATER = PlacementUtils.createKey("spring_water");
 
-    public static void bootstrap(BootstrapContext<PlacedFeature> p_331286_) {
-        HolderGetter<ConfiguredFeature<?, ?>> holdergetter = p_331286_.lookup(Registries.CONFIGURED_FEATURE);
-        Holder<ConfiguredFeature<?, ?>> holder = holdergetter.getOrThrow(MiscOverworldFeatures.ICE_SPIKE);
-        Holder<ConfiguredFeature<?, ?>> holder1 = holdergetter.getOrThrow(MiscOverworldFeatures.ICE_PATCH);
-        Holder<ConfiguredFeature<?, ?>> holder2 = holdergetter.getOrThrow(MiscOverworldFeatures.FOREST_ROCK);
-        Holder<ConfiguredFeature<?, ?>> holder3 = holdergetter.getOrThrow(MiscOverworldFeatures.ICEBERG_PACKED);
-        Holder<ConfiguredFeature<?, ?>> holder4 = holdergetter.getOrThrow(MiscOverworldFeatures.ICEBERG_BLUE);
-        Holder<ConfiguredFeature<?, ?>> holder5 = holdergetter.getOrThrow(MiscOverworldFeatures.BLUE_ICE);
-        Holder<ConfiguredFeature<?, ?>> holder6 = holdergetter.getOrThrow(MiscOverworldFeatures.LAKE_LAVA);
-        Holder<ConfiguredFeature<?, ?>> holder7 = holdergetter.getOrThrow(MiscOverworldFeatures.DISK_CLAY);
-        Holder<ConfiguredFeature<?, ?>> holder8 = holdergetter.getOrThrow(MiscOverworldFeatures.DISK_GRAVEL);
-        Holder<ConfiguredFeature<?, ?>> holder9 = holdergetter.getOrThrow(MiscOverworldFeatures.DISK_SAND);
-        Holder<ConfiguredFeature<?, ?>> holder10 = holdergetter.getOrThrow(MiscOverworldFeatures.DISK_GRASS);
-        Holder<ConfiguredFeature<?, ?>> holder11 = holdergetter.getOrThrow(MiscOverworldFeatures.FREEZE_TOP_LAYER);
-        Holder<ConfiguredFeature<?, ?>> holder12 = holdergetter.getOrThrow(MiscOverworldFeatures.VOID_START_PLATFORM);
-        Holder<ConfiguredFeature<?, ?>> holder13 = holdergetter.getOrThrow(MiscOverworldFeatures.DESERT_WELL);
-        Holder<ConfiguredFeature<?, ?>> holder14 = holdergetter.getOrThrow(MiscOverworldFeatures.SPRING_LAVA_OVERWORLD);
-        Holder<ConfiguredFeature<?, ?>> holder15 = holdergetter.getOrThrow(MiscOverworldFeatures.SPRING_LAVA_FROZEN);
-        Holder<ConfiguredFeature<?, ?>> holder16 = holdergetter.getOrThrow(MiscOverworldFeatures.SPRING_WATER);
+    public static void bootstrap(final BootstrapContext<PlacedFeature> context) {
+        HolderGetter<ConfiguredFeature<?, ?>> configuredFeatures = context.lookup(Registries.CONFIGURED_FEATURE);
+        Holder<ConfiguredFeature<?, ?>> iceSpike = configuredFeatures.getOrThrow(MiscOverworldFeatures.ICE_SPIKE);
+        Holder<ConfiguredFeature<?, ?>> icePatch = configuredFeatures.getOrThrow(MiscOverworldFeatures.ICE_PATCH);
+        Holder<ConfiguredFeature<?, ?>> forestRock = configuredFeatures.getOrThrow(MiscOverworldFeatures.FOREST_ROCK);
+        Holder<ConfiguredFeature<?, ?>> icebergPacked = configuredFeatures.getOrThrow(MiscOverworldFeatures.ICEBERG_PACKED);
+        Holder<ConfiguredFeature<?, ?>> icebergBlue = configuredFeatures.getOrThrow(MiscOverworldFeatures.ICEBERG_BLUE);
+        Holder<ConfiguredFeature<?, ?>> blueIce = configuredFeatures.getOrThrow(MiscOverworldFeatures.BLUE_ICE);
+        Holder<ConfiguredFeature<?, ?>> lakeLava = configuredFeatures.getOrThrow(MiscOverworldFeatures.LAKE_LAVA);
+        Holder<ConfiguredFeature<?, ?>> sulfurPool = configuredFeatures.getOrThrow(MiscOverworldFeatures.SULFUR_POOL);
+        Holder<ConfiguredFeature<?, ?>> diskClay = configuredFeatures.getOrThrow(MiscOverworldFeatures.DISK_CLAY);
+        Holder<ConfiguredFeature<?, ?>> diskGravel = configuredFeatures.getOrThrow(MiscOverworldFeatures.DISK_GRAVEL);
+        Holder<ConfiguredFeature<?, ?>> diskSand = configuredFeatures.getOrThrow(MiscOverworldFeatures.DISK_SAND);
+        Holder<ConfiguredFeature<?, ?>> diskGrass = configuredFeatures.getOrThrow(MiscOverworldFeatures.DISK_GRASS);
+        Holder<ConfiguredFeature<?, ?>> freezeTopLayer = configuredFeatures.getOrThrow(MiscOverworldFeatures.FREEZE_TOP_LAYER);
+        Holder<ConfiguredFeature<?, ?>> voidStartPlatform = configuredFeatures.getOrThrow(MiscOverworldFeatures.VOID_START_PLATFORM);
+        Holder<ConfiguredFeature<?, ?>> desertWell = configuredFeatures.getOrThrow(MiscOverworldFeatures.DESERT_WELL);
+        Holder<ConfiguredFeature<?, ?>> springLavaOverworld = configuredFeatures.getOrThrow(MiscOverworldFeatures.SPRING_LAVA_OVERWORLD);
+        Holder<ConfiguredFeature<?, ?>> springLavaFrozen = configuredFeatures.getOrThrow(MiscOverworldFeatures.SPRING_LAVA_FROZEN);
+        Holder<ConfiguredFeature<?, ?>> springWater = configuredFeatures.getOrThrow(MiscOverworldFeatures.SPRING_WATER);
+        PlacementUtils.register(context, ICE_SPIKE, iceSpike, CountPlacement.of(3), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP, BiomeFilter.biome());
         PlacementUtils.register(
-            p_331286_, ICE_SPIKE, holder, CountPlacement.of(3), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP, BiomeFilter.biome()
-        );
-        PlacementUtils.register(
-            p_331286_,
+            context,
             ICE_PATCH,
-            holder1,
+            icePatch,
             CountPlacement.of(2),
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP,
@@ -83,23 +83,23 @@ public class MiscOverworldPlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_, FOREST_ROCK, holder2, CountPlacement.of(2), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP, BiomeFilter.biome()
+            context, FOREST_ROCK, forestRock, CountPlacement.of(2), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP, BiomeFilter.biome()
         );
-        PlacementUtils.register(p_331286_, ICEBERG_BLUE, holder4, RarityFilter.onAverageOnceEvery(200), InSquarePlacement.spread(), BiomeFilter.biome());
-        PlacementUtils.register(p_331286_, ICEBERG_PACKED, holder3, RarityFilter.onAverageOnceEvery(16), InSquarePlacement.spread(), BiomeFilter.biome());
+        PlacementUtils.register(context, ICEBERG_BLUE, icebergBlue, RarityFilter.onAverageOnceEvery(200), InSquarePlacement.spread(), BiomeFilter.biome());
+        PlacementUtils.register(context, ICEBERG_PACKED, icebergPacked, RarityFilter.onAverageOnceEvery(16), InSquarePlacement.spread(), BiomeFilter.biome());
         PlacementUtils.register(
-            p_331286_,
+            context,
             BLUE_ICE,
-            holder5,
+            blueIce,
             CountPlacement.of(UniformInt.of(0, 19)),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.absolute(30), VerticalAnchor.absolute(61)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             LAKE_LAVA_UNDERGROUND,
-            holder6,
+            lakeLava,
             RarityFilter.onAverageOnceEvery(9),
             InSquarePlacement.spread(),
             HeightRangePlacement.of(UniformHeight.of(VerticalAnchor.absolute(0), VerticalAnchor.top())),
@@ -112,30 +112,49 @@ public class MiscOverworldPlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_, LAKE_LAVA_SURFACE, holder6, RarityFilter.onAverageOnceEvery(200), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP_WORLD_SURFACE, BiomeFilter.biome()
+            context,
+            LAKE_LAVA_SURFACE,
+            lakeLava,
+            RarityFilter.onAverageOnceEvery(200),
+            InSquarePlacement.spread(),
+            PlacementUtils.HEIGHTMAP_WORLD_SURFACE,
+            BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
+            SULFUR_POOL,
+            sulfurPool,
+            CountPlacement.of(256),
+            InSquarePlacement.spread(),
+            PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
+            BlockPredicateFilter.forPredicate(BlockPredicate.solid()),
+            EnvironmentScanPlacement.scanningFor(Direction.UP, BlockPredicate.ONLY_IN_AIR_PREDICATE, 32),
+            RandomOffsetPlacement.vertical(ConstantInt.of(-1)),
+            BlockPredicateFilter.forPredicate(BlockPredicate.matchesBlocks(Blocks.SULFUR)),
+            BiomeFilter.biome()
+        );
+        PlacementUtils.register(
+            context,
             DISK_CLAY,
-            holder7,
+            diskClay,
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP_TOP_SOLID,
             BlockPredicateFilter.forPredicate(BlockPredicate.matchesFluids(Fluids.WATER)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             DISK_GRAVEL,
-            holder8,
+            diskGravel,
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP_TOP_SOLID,
             BlockPredicateFilter.forPredicate(BlockPredicate.matchesFluids(Fluids.WATER)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             DISK_SAND,
-            holder9,
+            diskSand,
             CountPlacement.of(3),
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP_TOP_SOLID,
@@ -143,9 +162,9 @@ public class MiscOverworldPlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             DISK_GRASS,
-            holder10,
+            diskGrass,
             CountPlacement.of(1),
             InSquarePlacement.spread(),
             PlacementUtils.HEIGHTMAP_TOP_SOLID,
@@ -153,33 +172,33 @@ public class MiscOverworldPlacements {
             BlockPredicateFilter.forPredicate(BlockPredicate.matchesBlocks(Blocks.MUD)),
             BiomeFilter.biome()
         );
-        PlacementUtils.register(p_331286_, FREEZE_TOP_LAYER, holder11, BiomeFilter.biome());
-        PlacementUtils.register(p_331286_, VOID_START_PLATFORM, holder12, BiomeFilter.biome());
+        PlacementUtils.register(context, FREEZE_TOP_LAYER, freezeTopLayer, BiomeFilter.biome());
+        PlacementUtils.register(context, VOID_START_PLATFORM, voidStartPlatform, BiomeFilter.biome());
         PlacementUtils.register(
-            p_331286_, DESERT_WELL, holder13, RarityFilter.onAverageOnceEvery(1000), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP, BiomeFilter.biome()
+            context, DESERT_WELL, desertWell, RarityFilter.onAverageOnceEvery(1000), InSquarePlacement.spread(), PlacementUtils.HEIGHTMAP, BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             SPRING_LAVA,
-            holder14,
+            springLavaOverworld,
             CountPlacement.of(20),
             InSquarePlacement.spread(),
             HeightRangePlacement.of(VeryBiasedToBottomHeight.of(VerticalAnchor.bottom(), VerticalAnchor.belowTop(8), 8)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             SPRING_LAVA_FROZEN,
-            holder15,
+            springLavaFrozen,
             CountPlacement.of(20),
             InSquarePlacement.spread(),
             HeightRangePlacement.of(VeryBiasedToBottomHeight.of(VerticalAnchor.bottom(), VerticalAnchor.belowTop(8), 8)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_331286_,
+            context,
             SPRING_WATER,
-            holder16,
+            springWater,
             CountPlacement.of(25),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.absolute(192)),

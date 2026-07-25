@@ -14,14 +14,14 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.pathfinder.PathType;
 
 public abstract class AgeableWaterCreature extends AgeableMob {
-    protected AgeableWaterCreature(EntityType<? extends AgeableWaterCreature> p_367291_, Level p_361850_) {
-        super(p_367291_, p_361850_);
+    protected AgeableWaterCreature(final EntityType<? extends AgeableWaterCreature> type, final Level level) {
+        super(type, level);
         this.setPathfindingMalus(PathType.WATER, 0.0F);
     }
 
     @Override
-    public boolean checkSpawnObstruction(LevelReader p_364787_) {
-        return p_364787_.isUnobstructed(this);
+    public boolean checkSpawnObstruction(final LevelReader level) {
+        return level.isUnobstructed(this);
     }
 
     @Override
@@ -30,13 +30,13 @@ public abstract class AgeableWaterCreature extends AgeableMob {
     }
 
     @Override
-    public int getBaseExperienceReward(ServerLevel p_361071_) {
+    public int getBaseExperienceReward(final ServerLevel level) {
         return 1 + this.random.nextInt(3);
     }
 
-    protected void handleAirSupply(int p_366101_) {
+    protected void handleAirSupply(final int preTickAirSupply) {
         if (this.isAlive() && !this.isInWater()) {
-            this.setAirSupply(p_366101_ - 1);
+            this.setAirSupply(preTickAirSupply - 1);
             if (this.shouldTakeDrowningDamage()) {
                 this.setAirSupply(0);
                 this.hurt(this.damageSources().drown(), 2.0F);
@@ -48,9 +48,9 @@ public abstract class AgeableWaterCreature extends AgeableMob {
 
     @Override
     public void baseTick() {
-        int i = this.getAirSupply();
+        int airSupply = this.getAirSupply();
         super.baseTick();
-        this.handleAirSupply(i);
+        this.handleAirSupply(airSupply);
     }
 
     @Override
@@ -64,13 +64,17 @@ public abstract class AgeableWaterCreature extends AgeableMob {
     }
 
     public static boolean checkSurfaceAgeableWaterCreatureSpawnRules(
-        EntityType<? extends AgeableWaterCreature> p_369363_, LevelAccessor p_370080_, EntitySpawnReason p_367384_, BlockPos p_370200_, RandomSource p_362509_
+        final EntityType<? extends AgeableWaterCreature> type,
+        final LevelAccessor level,
+        final EntitySpawnReason spawnReason,
+        final BlockPos pos,
+        final RandomSource random
     ) {
-        int i = p_370080_.getSeaLevel();
-        int j = i - 13;
-        return p_370200_.getY() >= j
-            && p_370200_.getY() <= i
-            && p_370080_.getFluidState(p_370200_.below()).is(FluidTags.WATER)
-            && p_370080_.getBlockState(p_370200_.above()).is(Blocks.WATER);
+        int seaLevel = level.getSeaLevel();
+        int minSpawnLevel = seaLevel - 13;
+        return pos.getY() >= minSpawnLevel
+            && pos.getY() <= seaLevel
+            && level.getFluidState(pos.below()).is(FluidTags.WATER)
+            && level.getBlockState(pos.above()).is(Blocks.WATER);
     }
 }

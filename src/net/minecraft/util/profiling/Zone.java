@@ -7,37 +7,37 @@ public class Zone implements AutoCloseable {
     public static final Zone INACTIVE = new Zone(null);
     private final @Nullable ProfilerFiller profiler;
 
-    Zone(@Nullable ProfilerFiller p_363013_) {
-        this.profiler = p_363013_;
+    Zone(final @Nullable ProfilerFiller profiler) {
+        this.profiler = profiler;
     }
 
-    public Zone addText(String p_367379_) {
+    public Zone addText(final String text) {
         if (this.profiler != null) {
-            this.profiler.addZoneText(p_367379_);
+            this.profiler.addZoneText(text);
         }
 
         return this;
     }
 
-    public Zone addText(Supplier<String> p_364057_) {
+    public Zone addText(final Supplier<String> text) {
         if (this.profiler != null) {
-            this.profiler.addZoneText(p_364057_.get());
+            this.profiler.addZoneText(text.get());
         }
 
         return this;
     }
 
-    public Zone addValue(long p_368374_) {
+    public Zone addValue(final long value) {
         if (this.profiler != null) {
-            this.profiler.addZoneValue(p_368374_);
+            this.profiler.addZoneValue(value);
         }
 
         return this;
     }
 
-    public Zone setColor(int p_361254_) {
+    public Zone setColor(final int color) {
         if (this.profiler != null) {
-            this.profiler.setZoneColor(p_361254_);
+            this.profiler.setZoneColor(color);
         }
 
         return this;

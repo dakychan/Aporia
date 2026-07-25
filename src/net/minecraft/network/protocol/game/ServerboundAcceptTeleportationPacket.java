@@ -11,16 +11,16 @@ public class ServerboundAcceptTeleportationPacket implements Packet<ServerGamePa
     );
     private final int id;
 
-    public ServerboundAcceptTeleportationPacket(int p_133788_) {
-        this.id = p_133788_;
+    public ServerboundAcceptTeleportationPacket(final int id) {
+        this.id = id;
     }
 
-    private ServerboundAcceptTeleportationPacket(FriendlyByteBuf p_179538_) {
-        this.id = p_179538_.readVarInt();
+    private ServerboundAcceptTeleportationPacket(final FriendlyByteBuf input) {
+        this.id = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_133797_) {
-        p_133797_.writeVarInt(this.id);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.id);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ServerboundAcceptTeleportationPacket implements Packet<ServerGamePa
         return GamePacketTypes.SERVERBOUND_ACCEPT_TELEPORTATION;
     }
 
-    public void handle(ServerGamePacketListener p_133794_) {
-        p_133794_.handleAcceptTeleportPacket(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleAcceptTeleportPacket(this);
     }
 
     public int getId() {

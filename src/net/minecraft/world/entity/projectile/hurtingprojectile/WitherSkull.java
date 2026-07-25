@@ -11,6 +11,7 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
@@ -29,12 +30,12 @@ public class WitherSkull extends AbstractHurtingProjectile {
     private static final EntityDataAccessor<Boolean> DATA_DANGEROUS = SynchedEntityData.defineId(WitherSkull.class, EntityDataSerializers.BOOLEAN);
     private static final boolean DEFAULT_DANGEROUS = false;
 
-    public WitherSkull(EntityType<? extends WitherSkull> p_460972_, Level p_451016_) {
-        super(p_460972_, p_451016_);
+    public WitherSkull(final EntityType<? extends WitherSkull> type, final Level level) {
+        super(type, level);
     }
 
-    public WitherSkull(Level p_459998_, LivingEntity p_452438_, Vec3 p_459911_) {
-        super(EntityType.WITHER_SKULL, p_452438_, p_459911_, p_459998_);
+    public WitherSkull(final Level level, final LivingEntity mob, final Vec3 direction) {
+        super(EntityTypes.WITHER_SKULL, mob, direction, level);
     }
 
     @Override
@@ -48,48 +49,50 @@ public class WitherSkull extends AbstractHurtingProjectile {
     }
 
     @Override
-    public float getBlockExplosionResistance(Explosion p_459983_, BlockGetter p_451795_, BlockPos p_456538_, BlockState p_459565_, FluidState p_454710_, float p_453616_) {
-        return this.isDangerous() && WitherBoss.canDestroy(p_459565_) ? Math.min(0.8F, p_453616_) : p_453616_;
+    public float getBlockExplosionResistance(
+        final Explosion explosion, final BlockGetter level, final BlockPos pos, final BlockState block, final FluidState fluid, final float resistance
+    ) {
+        return this.isDangerous() && WitherBoss.canDestroy(block) ? Math.min(0.8F, resistance) : resistance;
     }
 
     @Override
-    protected void onHitEntity(EntityHitResult p_452288_) {
-        super.onHitEntity(p_452288_);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            Entity entity = p_452288_.getEntity();
-            boolean flag;
-            if (this.getOwner() instanceof LivingEntity livingentity) {
-                DamageSource damagesource = this.damageSources().witherSkull(this, livingentity);
-                flag = entity.hurtServer(serverlevel, damagesource, 8.0F);
-                if (flag) {
-                    if (entity.isAlive()) {
-                        EnchantmentHelper.doPostAttackEffects(serverlevel, entity, damagesource);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        super.onHitEntity(hitResult);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            Entity var8 = hitResult.getEntity();
+            boolean wasHurt;
+            if (this.getOwner() instanceof LivingEntity livingOwner) {
+                DamageSource damageSource = this.damageSources().witherSkull(this, livingOwner);
+                wasHurt = var8.hurtServer(serverLevel, damageSource, 8.0F);
+                if (wasHurt) {
+                    if (var8.isAlive()) {
+                        EnchantmentHelper.doPostAttackEffects(serverLevel, var8, damageSource);
                     } else {
-                        livingentity.heal(5.0F);
+                        livingOwner.heal(5.0F);
                     }
                 }
             } else {
-                flag = entity.hurtServer(serverlevel, this.damageSources().magic(), 5.0F);
+                wasHurt = var8.hurtServer(serverLevel, this.damageSources().magic(), 5.0F);
             }
 
-            if (flag && entity instanceof LivingEntity livingentity1) {
-                int i = 0;
+            if (wasHurt && var8 instanceof LivingEntity livingEntity) {
+                int witherSeconds = 0;
                 if (this.level().getDifficulty() == Difficulty.NORMAL) {
-                    i = 10;
+                    witherSeconds = 10;
                 } else if (this.level().getDifficulty() == Difficulty.HARD) {
-                    i = 40;
+                    witherSeconds = 40;
                 }
 
-                if (i > 0) {
-                    livingentity1.addEffect(new MobEffectInstance(MobEffects.WITHER, 20 * i, 1), this.getEffectSource());
+                if (witherSeconds > 0) {
+                    livingEntity.addEffect(new MobEffectInstance(MobEffects.WITHER, 20 * witherSeconds, 1), this.getEffectSource());
                 }
             }
         }
     }
 
     @Override
-    protected void onHit(HitResult p_452878_) {
-        super.onHit(p_452878_);
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
         if (!this.level().isClientSide()) {
             this.level().explode(this, this.getX(), this.getY(), this.getZ(), 1.0F, false, Level.ExplosionInteraction.MOB);
             this.discard();
@@ -97,16 +100,16 @@ public class WitherSkull extends AbstractHurtingProjectile {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_460919_) {
-        p_460919_.define(DATA_DANGEROUS, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_DANGEROUS, false);
     }
 
     public boolean isDangerous() {
         return this.entityData.get(DATA_DANGEROUS);
     }
 
-    public void setDangerous(boolean p_455380_) {
-        this.entityData.set(DATA_DANGEROUS, p_455380_);
+    public void setDangerous(final boolean value) {
+        this.entityData.set(DATA_DANGEROUS, value);
     }
 
     @Override
@@ -115,14 +118,14 @@ public class WitherSkull extends AbstractHurtingProjectile {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_452289_) {
-        super.addAdditionalSaveData(p_452289_);
-        p_452289_.putBoolean("dangerous", this.isDangerous());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("dangerous", this.isDangerous());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_460994_) {
-        super.readAdditionalSaveData(p_460994_);
-        this.setDangerous(p_460994_.getBooleanOr("dangerous", false));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setDangerous(input.getBooleanOr("dangerous", false));
     }
 }

@@ -18,7 +18,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.IntTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.visitors.CollectFields;
 import net.minecraft.nbt.visitors.FieldSelector;
 import net.minecraft.resources.Identifier;
@@ -55,51 +54,53 @@ public class StructureCheck {
     private final Map<Structure, Long2BooleanMap> featureChecks = new HashMap<>();
 
     public StructureCheck(
-        ChunkScanAccess p_226712_,
-        RegistryAccess p_226713_,
-        StructureTemplateManager p_226714_,
-        ResourceKey<Level> p_226715_,
-        ChunkGenerator p_226716_,
-        RandomState p_226717_,
-        LevelHeightAccessor p_226718_,
-        BiomeSource p_226719_,
-        long p_226720_,
-        DataFixer p_226721_
+        final ChunkScanAccess storageAccess,
+        final RegistryAccess registryAccess,
+        final StructureTemplateManager structureTemplateManager,
+        final ResourceKey<Level> dimension,
+        final ChunkGenerator chunkGenerator,
+        final RandomState randomState,
+        final LevelHeightAccessor heightAccessor,
+        final BiomeSource biomeSource,
+        final long seed,
+        final DataFixer fixerUpper
     ) {
-        this.storageAccess = p_226712_;
-        this.registryAccess = p_226713_;
-        this.structureTemplateManager = p_226714_;
-        this.dimension = p_226715_;
-        this.chunkGenerator = p_226716_;
-        this.randomState = p_226717_;
-        this.heightAccessor = p_226718_;
-        this.biomeSource = p_226719_;
-        this.seed = p_226720_;
-        this.fixerUpper = p_226721_;
+        this.storageAccess = storageAccess;
+        this.registryAccess = registryAccess;
+        this.structureTemplateManager = structureTemplateManager;
+        this.dimension = dimension;
+        this.chunkGenerator = chunkGenerator;
+        this.randomState = randomState;
+        this.heightAccessor = heightAccessor;
+        this.biomeSource = biomeSource;
+        this.seed = seed;
+        this.fixerUpper = fixerUpper;
     }
 
-    public StructureCheckResult checkStart(ChunkPos p_226730_, Structure p_226731_, StructurePlacement p_327807_, boolean p_226732_) {
-        long i = p_226730_.toLong();
-        Object2IntMap<Structure> object2intmap = this.loadedChunks.get(i);
-        if (object2intmap != null) {
-            return this.checkStructureInfo(object2intmap, p_226731_, p_226732_);
-        } else {
-            StructureCheckResult structurecheckresult = this.tryLoadFromStorage(p_226730_, p_226731_, p_226732_, i);
-            if (structurecheckresult != null) {
-                return structurecheckresult;
-            } else if (!p_327807_.applyAdditionalChunkRestrictions(p_226730_.x, p_226730_.z, this.seed)) {
-                return StructureCheckResult.START_NOT_PRESENT;
-            } else {
-                boolean flag = this.featureChecks
-                    .computeIfAbsent(p_226731_, p_226739_ -> new Long2BooleanOpenHashMap())
-                    .computeIfAbsent(i, p_226728_ -> this.canCreateStructure(p_226730_, p_226731_));
-                return !flag ? StructureCheckResult.START_NOT_PRESENT : StructureCheckResult.CHUNK_LOAD_NEEDED;
-            }
+    public StructureCheckResult checkStart(final ChunkPos pos, final Structure structure, final StructurePlacement placement, final boolean requireUnreferenced) {
+        long posKey = pos.pack();
+        Object2IntMap<Structure> cachedResult = this.loadedChunks.get(posKey);
+        if (cachedResult != null) {
+            return this.checkStructureInfo(cachedResult, structure, requireUnreferenced);
         }
+
+        StructureCheckResult storageCheckResult = this.tryLoadFromStorage(pos, structure, requireUnreferenced, posKey);
+        if (storageCheckResult != null) {
+            return storageCheckResult;
+        }
+
+        if (!placement.applyAdditionalChunkRestrictions(pos.x(), pos.z(), this.seed)) {
+            return StructureCheckResult.START_NOT_PRESENT;
+        }
+
+        boolean isFeatureChunk = this.featureChecks
+            .computeIfAbsent(structure, k -> new Long2BooleanOpenHashMap())
+            .computeIfAbsent(posKey, k -> this.canCreateStructure(pos, structure));
+        return !isFeatureChunk ? StructureCheckResult.START_NOT_PRESENT : StructureCheckResult.CHUNK_LOAD_NEEDED;
     }
 
-    private boolean canCreateStructure(ChunkPos p_226756_, Structure p_226757_) {
-        return p_226757_.findValidGenerationPoint(
+    private boolean canCreateStructure(final ChunkPos pos, final Structure structure) {
+        return structure.findValidGenerationPoint(
                 new Structure.GenerationContext(
                     this.registryAccess,
                     this.chunkGenerator,
@@ -107,120 +108,120 @@ public class StructureCheck {
                     this.randomState,
                     this.structureTemplateManager,
                     this.seed,
-                    p_226756_,
+                    pos,
                     this.heightAccessor,
-                    p_226757_.biomes()::contains
+                    structure.biomes()::contains
                 )
             )
             .isPresent();
     }
 
-    private @Nullable StructureCheckResult tryLoadFromStorage(ChunkPos p_226734_, Structure p_226735_, boolean p_226736_, long p_226737_) {
-        CollectFields collectfields = new CollectFields(
+    private @Nullable StructureCheckResult tryLoadFromStorage(
+        final ChunkPos pos, final Structure structure, final boolean requireUnreferenced, final long posKey
+    ) {
+        CollectFields collectFields = new CollectFields(
             new FieldSelector(IntTag.TYPE, "DataVersion"),
             new FieldSelector("Level", "Structures", CompoundTag.TYPE, "Starts"),
             new FieldSelector("structures", CompoundTag.TYPE, "starts")
         );
 
         try {
-            this.storageAccess.scanChunk(p_226734_, collectfields).join();
-        } catch (Exception exception1) {
-            LOGGER.warn("Failed to read chunk {}", p_226734_, exception1);
+            this.storageAccess.scanChunk(pos, collectFields).join();
+        } catch (Exception e) {
+            LOGGER.warn("Failed to read chunk {}", pos, e);
             return StructureCheckResult.CHUNK_LOAD_NEEDED;
         }
 
-        if (!(collectfields.getResult() instanceof CompoundTag compoundtag)) {
-            return null;
-        } else {
-            int i = NbtUtils.getDataVersion(compoundtag);
-            if (i <= 1493) {
+        if (collectFields.getResult() instanceof CompoundTag chunkTag) {
+            int version = NbtUtils.getDataVersion(chunkTag);
+            SimpleRegionStorage.injectDatafixingContext(
+                chunkTag, ChunkMap.getChunkDataFixContextTag(this.dimension, this.chunkGenerator.getTypeNameForDataFixer())
+            );
+
+            CompoundTag fixedChunkTag;
+            try {
+                fixedChunkTag = DataFixTypes.CHUNK.updateToCurrentVersion(this.fixerUpper, chunkTag, version);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to partially datafix chunk {}", pos, e);
                 return StructureCheckResult.CHUNK_LOAD_NEEDED;
-            } else {
-                SimpleRegionStorage.injectDatafixingContext(compoundtag, ChunkMap.getChunkDataFixContextTag(this.dimension, this.chunkGenerator.getTypeNameForDataFixer()));
-
-                CompoundTag compoundtag1;
-                try {
-                    compoundtag1 = DataFixTypes.CHUNK.updateToCurrentVersion(this.fixerUpper, compoundtag, i);
-                } catch (Exception exception) {
-                    LOGGER.warn("Failed to partially datafix chunk {}", p_226734_, exception);
-                    return StructureCheckResult.CHUNK_LOAD_NEEDED;
-                }
-
-                Object2IntMap<Structure> object2intmap = this.loadStructures(compoundtag1);
-                if (object2intmap == null) {
-                    return null;
-                } else {
-                    this.storeFullResults(p_226737_, object2intmap);
-                    return this.checkStructureInfo(object2intmap, p_226735_, p_226736_);
-                }
             }
-        }
-    }
 
-    private @Nullable Object2IntMap<Structure> loadStructures(CompoundTag p_197312_) {
-        Optional<CompoundTag> optional = p_197312_.getCompound("structures").flatMap(p_391059_ -> p_391059_.getCompound("starts"));
-        if (optional.isEmpty()) {
-            return null;
+            Object2IntMap<Structure> knownStarts = this.loadStructures(fixedChunkTag);
+            if (knownStarts == null) {
+                return null;
+            }
+
+            this.storeFullResults(posKey, knownStarts);
+            return this.checkStructureInfo(knownStarts, structure, requireUnreferenced);
         } else {
-            CompoundTag compoundtag = optional.get();
-            if (compoundtag.isEmpty()) {
-                return Object2IntMaps.emptyMap();
-            } else {
-                Object2IntMap<Structure> object2intmap = new Object2IntOpenHashMap<>();
-                Registry<Structure> registry = this.registryAccess.lookupOrThrow(Registries.STRUCTURE);
-                compoundtag.forEach((p_450018_, p_450019_) -> {
-                    Identifier identifier = Identifier.tryParse(p_450018_);
-                    if (identifier != null) {
-                        Structure structure = registry.getValue(identifier);
-                        if (structure != null) {
-                            p_450019_.asCompound().ifPresent(p_391062_ -> {
-                                String s = p_391062_.getStringOr("id", "");
-                                if (!"INVALID".equals(s)) {
-                                    int i = p_391062_.getIntOr("references", 0);
-                                    object2intmap.put(structure, i);
-                                }
-                            });
-                        }
-                    }
-                });
-                return object2intmap;
-            }
+            return null;
         }
     }
 
-    private static Object2IntMap<Structure> deduplicateEmptyMap(Object2IntMap<Structure> p_197299_) {
-        return p_197299_.isEmpty() ? Object2IntMaps.emptyMap() : p_197299_;
-    }
+    private @Nullable Object2IntMap<Structure> loadStructures(final CompoundTag chunkTag) {
+        Optional<CompoundTag> maybeStartsTag = chunkTag.getCompound("structures").flatMap(tag -> tag.getCompound("starts"));
+        if (maybeStartsTag.isEmpty()) {
+            return null;
+        }
 
-    private StructureCheckResult checkStructureInfo(Object2IntMap<Structure> p_226752_, Structure p_226753_, boolean p_226754_) {
-        int i = p_226752_.getOrDefault(p_226753_, -1);
-        return i == -1 || p_226754_ && i != 0 ? StructureCheckResult.START_NOT_PRESENT : StructureCheckResult.START_PRESENT;
-    }
+        CompoundTag startsTag = maybeStartsTag.get();
+        if (startsTag.isEmpty()) {
+            return Object2IntMaps.emptyMap();
+        }
 
-    public void onStructureLoad(ChunkPos p_197283_, Map<Structure, StructureStart> p_197284_) {
-        long i = p_197283_.toLong();
-        Object2IntMap<Structure> object2intmap = new Object2IntOpenHashMap<>();
-        p_197284_.forEach((p_226749_, p_226750_) -> {
-            if (p_226750_.isValid()) {
-                object2intmap.put(p_226749_, p_226750_.getReferences());
+        Object2IntMap<Structure> knownStarts = new Object2IntOpenHashMap<>();
+        Registry<Structure> structuresRegistry = this.registryAccess.lookupOrThrow(Registries.STRUCTURE);
+        startsTag.forEach((key, tag) -> {
+            Identifier id = Identifier.tryParse(key);
+            if (id != null) {
+                Structure foundFeature = structuresRegistry.getValue(id);
+                if (foundFeature != null) {
+                    tag.asCompound().ifPresent(structureData -> {
+                        String pieceId = structureData.getStringOr("id", "");
+                        if (!"INVALID".equals(pieceId)) {
+                            int referenceCount = structureData.getIntOr("references", 0);
+                            knownStarts.put(foundFeature, referenceCount);
+                        }
+                    });
+                }
             }
         });
-        this.storeFullResults(i, object2intmap);
+        return knownStarts;
     }
 
-    private void storeFullResults(long p_197264_, Object2IntMap<Structure> p_197265_) {
-        this.loadedChunks.put(p_197264_, deduplicateEmptyMap(p_197265_));
-        this.featureChecks.values().forEach(p_209956_ -> p_209956_.remove(p_197264_));
+    private static Object2IntMap<Structure> deduplicateEmptyMap(final Object2IntMap<Structure> map) {
+        return map.isEmpty() ? Object2IntMaps.emptyMap() : map;
     }
 
-    public void incrementReference(ChunkPos p_226723_, Structure p_226724_) {
-        this.loadedChunks.compute(p_226723_.toLong(), (p_226745_, p_226746_) -> {
-            if (p_226746_ == null || p_226746_.isEmpty()) {
-                p_226746_ = new Object2IntOpenHashMap<>();
+    private StructureCheckResult checkStructureInfo(final Object2IntMap<Structure> cachedResult, final Structure structure, final boolean requireUnreferenced) {
+        int referenceCount = cachedResult.getOrDefault(structure, -1);
+        return referenceCount == -1 || requireUnreferenced && referenceCount != 0 ? StructureCheckResult.START_NOT_PRESENT : StructureCheckResult.START_PRESENT;
+    }
+
+    public void onStructureLoad(final ChunkPos pos, final Map<Structure, StructureStart> starts) {
+        long posKey = pos.pack();
+        Object2IntMap<Structure> startsToReferences = new Object2IntOpenHashMap<>();
+        starts.forEach((structure, structureStart) -> {
+            if (structureStart.isValid()) {
+                startsToReferences.put(structure, structureStart.getReferences());
+            }
+        });
+        this.storeFullResults(posKey, startsToReferences);
+    }
+
+    private void storeFullResults(final long posKey, final Object2IntMap<Structure> starts) {
+        this.loadedChunks.put(posKey, deduplicateEmptyMap(starts));
+        this.featureChecks.values().forEach(m -> m.remove(posKey));
+    }
+
+    public void incrementReference(final ChunkPos chunkPos, final Structure structure) {
+        this.loadedChunks.compute(chunkPos.pack(), (key, counts) -> {
+            if (counts == null || counts.isEmpty()) {
+                counts = new Object2IntOpenHashMap<>();
             }
 
-            p_226746_.computeInt(p_226724_, (p_226741_, p_226742_) -> p_226742_ == null ? 1 : p_226742_ + 1);
-            return p_226746_;
+            counts.computeInt(structure, (k, value) -> value == null ? 1 : value + 1);
+            return counts;
         });
     }
 }

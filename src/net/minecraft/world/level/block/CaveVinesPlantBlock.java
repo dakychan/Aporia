@@ -24,8 +24,8 @@ public class CaveVinesPlantBlock extends GrowingPlantBodyBlock implements CaveVi
         return CODEC;
     }
 
-    public CaveVinesPlantBlock(BlockBehaviour.Properties p_153000_) {
-        super(p_153000_, Direction.DOWN, SHAPE, false);
+    public CaveVinesPlantBlock(final BlockBehaviour.Properties properties) {
+        super(properties, Direction.DOWN, SHAPE, false);
         this.registerDefaultState(this.stateDefinition.any().setValue(BERRIES, false));
     }
 
@@ -35,37 +35,39 @@ public class CaveVinesPlantBlock extends GrowingPlantBodyBlock implements CaveVi
     }
 
     @Override
-    protected BlockState updateHeadAfterConvertedFromBody(BlockState p_153028_, BlockState p_153029_) {
-        return p_153029_.setValue(BERRIES, p_153028_.getValue(BERRIES));
+    protected BlockState updateHeadAfterConvertedFromBody(final BlockState bodyState, final BlockState headState) {
+        return headState.setValue(BERRIES, bodyState.getValue(BERRIES));
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_310155_, BlockPos p_153008_, BlockState p_153009_, boolean p_376305_) {
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
         return new ItemStack(Items.GLOW_BERRIES);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_153021_, Level p_153022_, BlockPos p_153023_, Player p_153024_, BlockHitResult p_153026_) {
-        return CaveVines.use(p_153024_, p_153021_, p_153022_, p_153023_);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        return CaveVines.use(player, state, level, pos);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_153031_) {
-        p_153031_.add(BERRIES);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(BERRIES);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_255942_, BlockPos p_153012_, BlockState p_153013_) {
-        return !p_153013_.getValue(BERRIES);
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return !state.getValue(BERRIES);
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_220943_, RandomSource p_220944_, BlockPos p_220945_, BlockState p_220946_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_220938_, RandomSource p_220939_, BlockPos p_220940_, BlockState p_220941_) {
-        p_220938_.setBlock(p_220940_, p_220941_.setValue(BERRIES, true), 2);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        level.setBlock(pos, state.setValue(BERRIES, true), 2);
     }
 }

@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.stream.Stream;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -29,58 +30,49 @@ public class SnbtToNbt implements DataProvider {
     private final Iterable<Path> inputFolders;
     private final List<SnbtToNbt.Filter> filters = Lists.newArrayList();
 
-    public SnbtToNbt(PackOutput p_249104_, Iterable<Path> p_249523_) {
-        this.output = p_249104_;
-        this.inputFolders = p_249523_;
+    public SnbtToNbt(final PackOutput output, final Path inputFolder) {
+        this(output, List.of(inputFolder));
     }
 
-    public SnbtToNbt addFilter(SnbtToNbt.Filter p_126476_) {
-        this.filters.add(p_126476_);
+    public SnbtToNbt(final PackOutput output, final Iterable<Path> inputFolders) {
+        this.output = output;
+        this.inputFolders = inputFolders;
+    }
+
+    public SnbtToNbt addFilter(final SnbtToNbt.Filter filter) {
+        this.filters.add(filter);
         return this;
     }
 
-    private CompoundTag applyFilters(String p_126461_, CompoundTag p_126462_) {
-        CompoundTag compoundtag = p_126462_;
+    private CompoundTag applyFilters(final String name, final CompoundTag input) {
+        CompoundTag result = input;
 
-        for (SnbtToNbt.Filter snbttonbt$filter : this.filters) {
-            compoundtag = snbttonbt$filter.apply(p_126461_, compoundtag);
+        for (SnbtToNbt.Filter filter : this.filters) {
+            result = filter.apply(name, result);
         }
 
-        return compoundtag;
+        return result;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_254336_) {
-        Path path = this.output.getOutputFolder();
-        List<CompletableFuture<?>> list = Lists.newArrayList();
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        Path output = this.output.getOutputFolder();
+        List<CompletableFuture<?>> tasks = Lists.newArrayList();
 
-        for (Path path1 : this.inputFolders) {
-            list.add(
-                CompletableFuture.<CompletableFuture>supplyAsync(
-                        () -> {
-                            try {
-                                CompletableFuture completablefuture;
-                                try (Stream<Path> stream = Files.walk(path1)) {
-                                    completablefuture = CompletableFuture.allOf(
-                                        stream.filter(p_126464_ -> p_126464_.toString().endsWith(".snbt")).map(p_448736_ -> CompletableFuture.runAsync(() -> {
-                                            SnbtToNbt.TaskResult snbttonbt$taskresult = this.readStructure(p_448736_, this.getName(path1, p_448736_));
-                                            this.storeStructureIfChanged(p_254336_, snbttonbt$taskresult, path);
-                                        }, Util.backgroundExecutor().forName("SnbtToNbt"))).toArray(CompletableFuture[]::new)
-                                    );
-                                }
-
-                                return completablefuture;
-                            } catch (Exception exception) {
-                                throw new RuntimeException("Failed to read structure input directory, aborting", exception);
-                            }
-                        },
-                        Util.backgroundExecutor().forName("SnbtToNbt")
-                    )
-                    .thenCompose(p_253441_ -> p_253441_)
-            );
+        for (Path input : this.inputFolders) {
+            tasks.add(CompletableFuture.<CompletableFuture<Void>>supplyAsync(() -> {
+                try (Stream<Path> files = Files.walk(input)) {
+                    return CompletableFuture.allOf(files.filter(path -> path.toString().endsWith(".snbt")).map(path -> CompletableFuture.runAsync(() -> {
+                        SnbtToNbt.TaskResult structure = this.readStructure(path, this.getName(input, path));
+                        this.storeStructureIfChanged(cache, structure, output);
+                    }, Util.backgroundExecutor().forName("SnbtToNbt"))).toArray(CompletableFuture[]::new));
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to read structure input directory, aborting", e);
+                }
+            }, Util.backgroundExecutor().forName("SnbtToNbt")).thenCompose(v -> (CompletionStage<Void>)v));
         }
 
-        return Util.sequenceFailFast(list);
+        return Util.sequenceFailFast(tasks);
     }
 
     @Override
@@ -88,52 +80,47 @@ public class SnbtToNbt implements DataProvider {
         return "SNBT -> NBT";
     }
 
-    private String getName(Path p_126469_, Path p_126470_) {
-        String s = p_126469_.relativize(p_126470_).toString().replaceAll("\\\\", "/");
-        return s.substring(0, s.length() - ".snbt".length());
+    private String getName(final Path root, final Path path) {
+        String name = root.relativize(path).toString().replaceAll("\\\\", "/");
+        return name.substring(0, name.length() - ".snbt".length());
     }
 
-    private SnbtToNbt.TaskResult readStructure(Path p_126466_, String p_126467_) {
-        try {
-            SnbtToNbt.TaskResult snbttonbt$taskresult;
-            try (BufferedReader bufferedreader = Files.newBufferedReader(p_126466_)) {
-                String s = IOUtils.toString(bufferedreader);
-                CompoundTag compoundtag = this.applyFilters(p_126467_, NbtUtils.snbtToStructure(s));
-                ByteArrayOutputStream bytearrayoutputstream = new ByteArrayOutputStream();
-                HashingOutputStream hashingoutputstream = new HashingOutputStream(Hashing.sha1(), bytearrayoutputstream);
-                NbtIo.writeCompressed(compoundtag, hashingoutputstream);
-                byte[] abyte = bytearrayoutputstream.toByteArray();
-                HashCode hashcode = hashingoutputstream.hash();
-                snbttonbt$taskresult = new SnbtToNbt.TaskResult(p_126467_, abyte, hashcode);
-            }
-
-            return snbttonbt$taskresult;
-        } catch (Throwable throwable1) {
-            throw new SnbtToNbt.StructureConversionException(p_126466_, throwable1);
+    private SnbtToNbt.TaskResult readStructure(final Path path, final String name) {
+        try (BufferedReader reader = Files.newBufferedReader(path)) {
+            String input = IOUtils.toString(reader);
+            CompoundTag updated = this.applyFilters(name, NbtUtils.snbtToStructure(input));
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            HashingOutputStream hos = new HashingOutputStream(Hashing.sha1(), bos);
+            NbtIo.writeCompressed(updated, hos);
+            byte[] bytes = bos.toByteArray();
+            HashCode hash = hos.hash();
+            return new SnbtToNbt.TaskResult(name, bytes, hash);
+        } catch (Throwable t) {
+            throw new SnbtToNbt.StructureConversionException(path, t);
         }
     }
 
-    private void storeStructureIfChanged(CachedOutput p_236394_, SnbtToNbt.TaskResult p_236395_, Path p_236396_) {
-        Path path = p_236396_.resolve(p_236395_.name + ".nbt");
+    private void storeStructureIfChanged(final CachedOutput cache, final SnbtToNbt.TaskResult task, final Path output) {
+        Path destination = output.resolve(task.name + ".nbt");
 
         try {
-            p_236394_.writeIfNeeded(path, p_236395_.payload, p_236395_.hash);
-        } catch (IOException ioexception) {
-            LOGGER.error("Couldn't write structure {} at {}", p_236395_.name, path, ioexception);
+            cache.writeIfNeeded(destination, task.payload, task.hash);
+        } catch (IOException e) {
+            LOGGER.error("Couldn't write structure {} at {}", task.name, destination, e);
         }
     }
 
     @FunctionalInterface
     public interface Filter {
-        CompoundTag apply(String p_126480_, CompoundTag p_126481_);
+        CompoundTag apply(final String name, final CompoundTag input);
     }
 
-    static class StructureConversionException extends RuntimeException {
-        public StructureConversionException(Path p_176820_, Throwable p_176821_) {
-            super(p_176820_.toAbsolutePath().toString(), p_176821_);
+    private static class StructureConversionException extends RuntimeException {
+        public StructureConversionException(final Path path, final Throwable t) {
+            super(path.toAbsolutePath().toString(), t);
         }
     }
 
-    record TaskResult(String name, byte[] payload, HashCode hash) {
+    private record TaskResult(String name, byte[] payload, HashCode hash) {
     }
 }

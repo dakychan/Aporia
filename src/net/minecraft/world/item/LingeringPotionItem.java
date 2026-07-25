@@ -13,32 +13,32 @@ import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownLinge
 import net.minecraft.world.level.Level;
 
 public class LingeringPotionItem extends ThrowablePotionItem {
-    public LingeringPotionItem(Item.Properties p_42836_) {
-        super(p_42836_);
+    public LingeringPotionItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult use(Level p_42843_, Player p_42844_, InteractionHand p_42845_) {
-        p_42843_.playSound(
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        level.playSound(
             null,
-            p_42844_.getX(),
-            p_42844_.getY(),
-            p_42844_.getZ(),
+            player.getX(),
+            player.getY(),
+            player.getZ(),
             SoundEvents.LINGERING_POTION_THROW,
             SoundSource.NEUTRAL,
             0.5F,
-            0.4F / (p_42843_.getRandom().nextFloat() * 0.4F + 0.8F)
+            0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F)
         );
-        return super.use(p_42843_, p_42844_, p_42845_);
+        return super.use(level, player, hand);
     }
 
     @Override
-    protected AbstractThrownPotion createPotion(ServerLevel p_392278_, LivingEntity p_393517_, ItemStack p_393847_) {
-        return new ThrownLingeringPotion(p_392278_, p_393517_, p_393847_);
+    protected AbstractThrownPotion createPotion(final ServerLevel level, final LivingEntity owner, final ItemStack itemStack) {
+        return new ThrownLingeringPotion(level, owner, itemStack);
     }
 
     @Override
-    protected AbstractThrownPotion createPotion(Level p_396164_, Position p_395707_, ItemStack p_396077_) {
-        return new ThrownLingeringPotion(p_396164_, p_395707_.x(), p_395707_.y(), p_395707_.z(), p_396077_);
+    protected AbstractThrownPotion createPotion(final Level level, final Position position, final ItemStack itemStack) {
+        return new ThrownLingeringPotion(level, position.x(), position.y(), position.z(), itemStack);
     }
 }

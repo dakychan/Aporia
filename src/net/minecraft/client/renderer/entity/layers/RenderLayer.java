@@ -10,53 +10,50 @@ import net.minecraft.client.renderer.entity.state.EntityRenderState;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class RenderLayer<S extends EntityRenderState, M extends EntityModel<? super S>> {
     private final RenderLayerParent<S, M> renderer;
 
-    public RenderLayer(RenderLayerParent<S, M> p_117346_) {
-        this.renderer = p_117346_;
+    public RenderLayer(final RenderLayerParent<S, M> renderer) {
+        this.renderer = renderer;
     }
 
     protected static <S extends LivingEntityRenderState> void coloredCutoutModelCopyLayerRender(
-        Model<? super S> p_431218_,
-        Identifier p_460802_,
-        PoseStack p_117363_,
-        SubmitNodeCollector p_429375_,
-        int p_117365_,
-        S p_366295_,
-        int p_345259_,
-        int p_430778_
+        final Model<? super S> model,
+        final Identifier texture,
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final S state,
+        final int color,
+        final int order
     ) {
-        if (!p_366295_.isInvisible) {
-            renderColoredCutoutModel(p_431218_, p_460802_, p_117363_, p_429375_, p_117365_, p_366295_, p_345259_, p_430778_);
+        if (!state.isInvisible) {
+            renderColoredCutoutModel(model, texture, poseStack, submitNodeCollector, lightCoords, state, color, order);
         }
     }
 
     protected static <S extends LivingEntityRenderState> void renderColoredCutoutModel(
-        Model<? super S> p_425116_,
-        Identifier p_458878_,
-        PoseStack p_117379_,
-        SubmitNodeCollector p_424185_,
-        int p_117381_,
-        S p_360714_,
-        int p_343754_,
-        int p_426846_
+        final Model<? super S> model,
+        final Identifier texture,
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final S state,
+        final int color,
+        final int order
     ) {
-        p_424185_.order(p_426846_)
+        submitNodeCollector.order(order)
             .submitModel(
-                p_425116_,
-                p_360714_,
-                p_117379_,
-                RenderTypes.entityCutoutNoCull(p_458878_),
-                p_117381_,
-                LivingEntityRenderer.getOverlayCoords(p_360714_, 0.0F),
-                p_343754_,
+                model,
+                state,
+                poseStack,
+                RenderTypes.entityCutout(texture),
+                lightCoords,
+                LivingEntityRenderer.getOverlayCoords(state, 0.0F),
+                color,
                 null,
-                p_360714_.outlineColor,
+                state.outlineColor,
                 null
             );
     }
@@ -65,5 +62,7 @@ public abstract class RenderLayer<S extends EntityRenderState, M extends EntityM
         return this.renderer.getModel();
     }
 
-    public abstract void submit(PoseStack p_117349_, SubmitNodeCollector p_425597_, int p_117351_, S p_361637_, float p_117353_, float p_117354_);
+    public abstract void submit(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, S state, float yRot, float xRot
+    );
 }

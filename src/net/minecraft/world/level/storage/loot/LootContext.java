@@ -12,6 +12,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
@@ -25,38 +26,38 @@ public class LootContext {
     private final HolderGetter.Provider lootDataResolver;
     private final Set<LootContext.VisitedEntry<?>> visitedElements = Sets.newLinkedHashSet();
 
-    LootContext(LootParams p_287722_, RandomSource p_287702_, HolderGetter.Provider p_330439_) {
-        this.params = p_287722_;
-        this.random = p_287702_;
-        this.lootDataResolver = p_330439_;
+    private LootContext(final LootParams params, final RandomSource random, final HolderGetter.Provider lootDataResolver) {
+        this.params = params;
+        this.random = random;
+        this.lootDataResolver = lootDataResolver;
     }
 
-    public boolean hasParameter(ContextKey<?> p_368930_) {
-        return this.params.contextMap().has(p_368930_);
+    public boolean hasParameter(final ContextKey<?> key) {
+        return this.params.contextMap().has(key);
     }
 
-    public <T> T getParameter(ContextKey<T> p_363450_) {
-        return this.params.contextMap().getOrThrow(p_363450_);
+    public <T> T getParameter(final ContextKey<T> key) {
+        return this.params.contextMap().getOrThrow(key);
     }
 
-    public <T> @Nullable T getOptionalParameter(ContextKey<T> p_368704_) {
-        return this.params.contextMap().getOptional(p_368704_);
+    public <T> @Nullable T getOptionalParameter(final ContextKey<T> key) {
+        return this.params.contextMap().getOptional(key);
     }
 
-    public void addDynamicDrops(Identifier p_458292_, Consumer<ItemStack> p_78944_) {
-        this.params.addDynamicDrops(p_458292_, p_78944_);
+    public void addDynamicDrops(final Identifier location, final Consumer<ItemStack> output) {
+        this.params.addDynamicDrops(location, output);
     }
 
-    public boolean hasVisitedElement(LootContext.VisitedEntry<?> p_279182_) {
-        return this.visitedElements.contains(p_279182_);
+    public boolean hasVisitedElement(final LootContext.VisitedEntry<?> element) {
+        return this.visitedElements.contains(element);
     }
 
-    public boolean pushVisitedElement(LootContext.VisitedEntry<?> p_279152_) {
-        return this.visitedElements.add(p_279152_);
+    public boolean pushVisitedElement(final LootContext.VisitedEntry<?> element) {
+        return this.visitedElements.add(element);
     }
 
-    public void popVisitedElement(LootContext.VisitedEntry<?> p_279198_) {
-        this.visitedElements.remove(p_279198_);
+    public void popVisitedElement(final LootContext.VisitedEntry<?> element) {
+        this.visitedElements.remove(element);
     }
 
     public HolderGetter.Provider getResolver() {
@@ -75,27 +76,27 @@ public class LootContext {
         return this.params.getLevel();
     }
 
-    public static LootContext.VisitedEntry<LootTable> createVisitedEntry(LootTable p_279327_) {
-        return new LootContext.VisitedEntry<>(LootDataType.TABLE, p_279327_);
+    public static LootContext.VisitedEntry<LootTable> createVisitedEntry(final LootTable table) {
+        return new LootContext.VisitedEntry<>(LootDataType.TABLE, table);
     }
 
-    public static LootContext.VisitedEntry<LootItemCondition> createVisitedEntry(LootItemCondition p_279250_) {
-        return new LootContext.VisitedEntry<>(LootDataType.PREDICATE, p_279250_);
+    public static LootContext.VisitedEntry<LootItemCondition> createVisitedEntry(final LootItemCondition table) {
+        return new LootContext.VisitedEntry<>(LootDataType.PREDICATE, table);
     }
 
-    public static LootContext.VisitedEntry<LootItemFunction> createVisitedEntry(LootItemFunction p_279163_) {
-        return new LootContext.VisitedEntry<>(LootDataType.MODIFIER, p_279163_);
+    public static LootContext.VisitedEntry<LootItemFunction> createVisitedEntry(final LootItemFunction table) {
+        return new LootContext.VisitedEntry<>(LootDataType.MODIFIER, table);
     }
 
-    public static enum BlockEntityTarget implements StringRepresentable, LootContextArg.SimpleGetter<BlockEntity> {
+    public enum BlockEntityTarget implements StringRepresentable, LootContextArg.SimpleGetter<BlockEntity> {
         BLOCK_ENTITY("block_entity", LootContextParams.BLOCK_ENTITY);
 
         private final String name;
         private final ContextKey<? extends BlockEntity> param;
 
-        private BlockEntityTarget(final String p_425102_, final ContextKey<? extends BlockEntity> p_425125_) {
-            this.name = p_425102_;
-            this.param = p_425125_;
+        BlockEntityTarget(final String name, final ContextKey<? extends BlockEntity> param) {
+            this.name = name;
+            this.param = param;
         }
 
         @Override
@@ -113,20 +114,20 @@ public class LootContext {
         private final LootParams params;
         private @Nullable RandomSource random;
 
-        public Builder(LootParams p_287628_) {
-            this.params = p_287628_;
+        public Builder(final LootParams params) {
+            this.params = params;
         }
 
-        public LootContext.Builder withOptionalRandomSeed(long p_78966_) {
-            if (p_78966_ != 0L) {
-                this.random = RandomSource.create(p_78966_);
+        public LootContext.Builder withOptionalRandomSeed(final long seed) {
+            if (seed != 0L) {
+                this.random = RandomSource.create(seed);
             }
 
             return this;
         }
 
-        public LootContext.Builder withOptionalRandomSource(RandomSource p_345173_) {
-            this.random = p_345173_;
+        public LootContext.Builder withOptionalRandomSource(final RandomSource randomSource) {
+            this.random = randomSource;
             return this;
         }
 
@@ -134,15 +135,15 @@ public class LootContext {
             return this.params.getLevel();
         }
 
-        public LootContext create(Optional<Identifier> p_299315_) {
-            ServerLevel serverlevel = this.getLevel();
-            MinecraftServer minecraftserver = serverlevel.getServer();
-            RandomSource randomsource = Optional.ofNullable(this.random).or(() -> p_299315_.map(serverlevel::getRandomSequence)).orElseGet(serverlevel::getRandom);
-            return new LootContext(this.params, randomsource, minecraftserver.reloadableRegistries().lookup());
+        public LootContext create(final Optional<Identifier> randomSequenceKey) {
+            ServerLevel level = this.getLevel();
+            MinecraftServer server = level.getServer();
+            RandomSource random = Optional.ofNullable(this.random).or(() -> randomSequenceKey.map(server::getRandomSequence)).orElseGet(level::getRandom);
+            return new LootContext(this.params, random, server.reloadableRegistries().lookup());
         }
     }
 
-    public static enum EntityTarget implements StringRepresentable, LootContextArg.SimpleGetter<Entity> {
+    public enum EntityTarget implements StringRepresentable, LootContextArg.SimpleGetter<Entity> {
         THIS("this", LootContextParams.THIS_ENTITY),
         ATTACKER("attacker", LootContextParams.ATTACKING_ENTITY),
         DIRECT_ATTACKER("direct_attacker", LootContextParams.DIRECT_ATTACKING_ENTITY),
@@ -154,9 +155,9 @@ public class LootContext {
         private final String name;
         private final ContextKey<? extends Entity> param;
 
-        private EntityTarget(final String p_79001_, final ContextKey<? extends Entity> p_361944_) {
-            this.name = p_79001_;
-            this.param = p_361944_;
+        EntityTarget(final String name, final ContextKey<? extends Entity> param) {
+            this.name = name;
+            this.param = param;
         }
 
         @Override
@@ -164,12 +165,12 @@ public class LootContext {
             return this.param;
         }
 
-        public static LootContext.EntityTarget getByName(String p_79007_) {
-            LootContext.EntityTarget lootcontext$entitytarget = CODEC.byName(p_79007_);
-            if (lootcontext$entitytarget != null) {
-                return lootcontext$entitytarget;
+        public static LootContext.EntityTarget getByName(final String name) {
+            LootContext.EntityTarget target = CODEC.byName(name);
+            if (target != null) {
+                return target;
             } else {
-                throw new IllegalArgumentException("Invalid entity target " + p_79007_);
+                throw new IllegalArgumentException("Invalid entity target " + name);
             }
         }
 
@@ -179,19 +180,19 @@ public class LootContext {
         }
     }
 
-    public static enum ItemStackTarget implements StringRepresentable, LootContextArg.SimpleGetter<ItemStack> {
+    public enum ItemStackTarget implements StringRepresentable, LootContextArg.SimpleGetter<ItemInstance> {
         TOOL("tool", LootContextParams.TOOL);
 
         private final String name;
-        private final ContextKey<? extends ItemStack> param;
+        private final ContextKey<? extends ItemInstance> param;
 
-        private ItemStackTarget(final String p_429623_, final ContextKey<? extends ItemStack> p_422507_) {
-            this.name = p_429623_;
-            this.param = p_422507_;
+        ItemStackTarget(final String name, final ContextKey<? extends ItemInstance> param) {
+            this.name = name;
+            this.param = param;
         }
 
         @Override
-        public ContextKey<? extends ItemStack> contextParam() {
+        public ContextKey<? extends ItemInstance> contextParam() {
             return this.param;
         }
 
@@ -201,6 +202,6 @@ public class LootContext {
         }
     }
 
-    public record VisitedEntry<T>(LootDataType<T> type, T value) {
+    public record VisitedEntry<T extends Validatable>(LootDataType<T> type, T value) {
     }
 }

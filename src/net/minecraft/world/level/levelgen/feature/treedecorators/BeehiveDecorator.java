@@ -13,21 +13,19 @@ import net.minecraft.util.Util;
 import net.minecraft.world.level.block.BeehiveBlock;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BeehiveBlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 
 public class BeehiveDecorator extends TreeDecorator {
-    public static final MapCodec<BeehiveDecorator> CODEC = Codec.floatRange(0.0F, 1.0F)
-        .fieldOf("probability")
-        .xmap(BeehiveDecorator::new, p_69971_ -> p_69971_.probability);
+    public static final MapCodec<BeehiveDecorator> CODEC = Codec.floatRange(0.0F, 1.0F).fieldOf("probability").xmap(BeehiveDecorator::new, d -> d.probability);
     private static final Direction WORLDGEN_FACING = Direction.SOUTH;
     private static final Direction[] SPAWN_DIRECTIONS = Direction.Plane.HORIZONTAL
         .stream()
-        .filter(p_202307_ -> p_202307_ != WORLDGEN_FACING.getOpposite())
+        .filter(dir -> dir != WORLDGEN_FACING.getOpposite())
         .toArray(Direction[]::new);
     private final float probability;
 
-    public BeehiveDecorator(float p_69958_) {
-        this.probability = p_69958_;
+    public BeehiveDecorator(final float probability) {
+        this.probability = probability;
     }
 
     @Override
@@ -36,31 +34,31 @@ public class BeehiveDecorator extends TreeDecorator {
     }
 
     @Override
-    public void place(TreeDecorator.Context p_226019_) {
-        List<BlockPos> list = p_226019_.leaves();
-        List<BlockPos> list1 = p_226019_.logs();
-        if (!list1.isEmpty()) {
-            RandomSource randomsource = p_226019_.random();
-            if (!(randomsource.nextFloat() >= this.probability)) {
-                int i = !list.isEmpty()
-                    ? Math.max(list.getFirst().getY() - 1, list1.getFirst().getY() + 1)
-                    : Math.min(list1.getFirst().getY() + 1 + randomsource.nextInt(3), list1.getLast().getY());
-                List<BlockPos> list2 = list1.stream()
-                    .filter(p_202300_ -> p_202300_.getY() == i)
-                    .flatMap(p_202305_ -> Stream.of(SPAWN_DIRECTIONS).map(p_202305_::relative))
+    public void place(final TreeDecorator.Context context) {
+        List<BlockPos> leaves = context.leaves();
+        List<BlockPos> logs = context.logs();
+        if (!logs.isEmpty()) {
+            RandomSource random = context.random();
+            if (!(random.nextFloat() >= this.probability)) {
+                int hiveY = !leaves.isEmpty()
+                    ? Math.max(leaves.getFirst().getY() - 1, logs.getFirst().getY() + 1)
+                    : Math.min(logs.getFirst().getY() + 1 + random.nextInt(3), logs.getLast().getY());
+                List<BlockPos> hivePlacements = logs.stream()
+                    .filter(pos -> pos.getY() == hiveY)
+                    .flatMap(pos -> Stream.of(SPAWN_DIRECTIONS).map(pos::relative))
                     .collect(Collectors.toList());
-                if (!list2.isEmpty()) {
-                    Util.shuffle(list2, randomsource);
-                    Optional<BlockPos> optional = list2.stream()
-                        .filter(p_226022_ -> p_226019_.isAir(p_226022_) && p_226019_.isAir(p_226022_.relative(WORLDGEN_FACING)))
+                if (!hivePlacements.isEmpty()) {
+                    Util.shuffle(hivePlacements, random);
+                    Optional<BlockPos> hivePos = hivePlacements.stream()
+                        .filter(pos -> context.isAir(pos) && context.isAir(pos.relative(WORLDGEN_FACING)))
                         .findFirst();
-                    if (!optional.isEmpty()) {
-                        p_226019_.setBlock(optional.get(), Blocks.BEE_NEST.defaultBlockState().setValue(BeehiveBlock.FACING, WORLDGEN_FACING));
-                        p_226019_.level().getBlockEntity(optional.get(), BlockEntityType.BEEHIVE).ifPresent(p_327471_ -> {
-                            int j = 2 + randomsource.nextInt(2);
+                    if (!hivePos.isEmpty()) {
+                        context.setBlock(hivePos.get(), Blocks.BEE_NEST.defaultBlockState().setValue(BeehiveBlock.FACING, WORLDGEN_FACING));
+                        context.level().getBlockEntity(hivePos.get(), BlockEntityTypes.BEEHIVE).ifPresent(beehive -> {
+                            int numBees = 2 + random.nextInt(2);
 
-                            for (int k = 0; k < j; k++) {
-                                p_327471_.storeBee(BeehiveBlockEntity.Occupant.create(randomsource.nextInt(599)));
+                            for (int count = 0; count < numBees; count++) {
+                                beehive.storeBee(BeehiveBlockEntity.Occupant.create(random.nextInt(599)));
                             }
                         });
                     }

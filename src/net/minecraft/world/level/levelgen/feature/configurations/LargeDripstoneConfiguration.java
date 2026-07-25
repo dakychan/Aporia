@@ -2,25 +2,32 @@ package net.minecraft.world.level.levelgen.feature.configurations;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.RegistryCodecs;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.util.valueproviders.FloatProvider;
+import net.minecraft.util.valueproviders.FloatProviders;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.block.Block;
 
 public class LargeDripstoneConfiguration implements FeatureConfiguration {
     public static final Codec<LargeDripstoneConfiguration> CODEC = RecordCodecBuilder.create(
-        p_160966_ -> p_160966_.group(
-                Codec.intRange(1, 512).fieldOf("floor_to_ceiling_search_range").orElse(30).forGetter(p_160984_ -> p_160984_.floorToCeilingSearchRange),
-                IntProvider.codec(1, 60).fieldOf("column_radius").forGetter(p_160982_ -> p_160982_.columnRadius),
-                FloatProvider.codec(0.0F, 20.0F).fieldOf("height_scale").forGetter(p_160980_ -> p_160980_.heightScale),
-                Codec.floatRange(0.1F, 1.0F).fieldOf("max_column_radius_to_cave_height_ratio").forGetter(p_160978_ -> p_160978_.maxColumnRadiusToCaveHeightRatio),
-                FloatProvider.codec(0.1F, 10.0F).fieldOf("stalactite_bluntness").forGetter(p_160976_ -> p_160976_.stalactiteBluntness),
-                FloatProvider.codec(0.1F, 10.0F).fieldOf("stalagmite_bluntness").forGetter(p_160974_ -> p_160974_.stalagmiteBluntness),
-                FloatProvider.codec(0.0F, 2.0F).fieldOf("wind_speed").forGetter(p_160972_ -> p_160972_.windSpeed),
-                Codec.intRange(0, 100).fieldOf("min_radius_for_wind").forGetter(p_160970_ -> p_160970_.minRadiusForWind),
-                Codec.floatRange(0.0F, 5.0F).fieldOf("min_bluntness_for_wind").forGetter(p_160968_ -> p_160968_.minBluntnessForWind)
+        i -> i.group(
+                RegistryCodecs.homogeneousList(Registries.BLOCK).fieldOf("replaceable_blocks").forGetter(c -> c.replaceableBlocks),
+                Codec.intRange(1, 512).optionalFieldOf("floor_to_ceiling_search_range", 30).forGetter(c -> c.floorToCeilingSearchRange),
+                IntProviders.codec(1, 16).fieldOf("column_radius").forGetter(c -> c.columnRadius),
+                FloatProviders.codec(0.0F, 20.0F).fieldOf("height_scale").forGetter(c -> c.heightScale),
+                Codec.floatRange(0.1F, 1.0F).fieldOf("max_column_radius_to_cave_height_ratio").forGetter(c -> c.maxColumnRadiusToCaveHeightRatio),
+                FloatProviders.codec(0.1F, 10.0F).fieldOf("stalactite_bluntness").forGetter(c -> c.stalactiteBluntness),
+                FloatProviders.codec(0.1F, 10.0F).fieldOf("stalagmite_bluntness").forGetter(c -> c.stalagmiteBluntness),
+                FloatProviders.codec(0.0F, 2.0F).fieldOf("wind_speed").forGetter(c -> c.windSpeed),
+                Codec.intRange(0, 100).fieldOf("min_radius_for_wind").forGetter(c -> c.minRadiusForWind),
+                Codec.floatRange(0.0F, 5.0F).fieldOf("min_bluntness_for_wind").forGetter(c -> c.minBluntnessForWind)
             )
-            .apply(p_160966_, LargeDripstoneConfiguration::new)
+            .apply(i, LargeDripstoneConfiguration::new)
     );
+    public final HolderSet<Block> replaceableBlocks;
     public final int floorToCeilingSearchRange;
     public final IntProvider columnRadius;
     public final FloatProvider heightScale;
@@ -32,24 +39,26 @@ public class LargeDripstoneConfiguration implements FeatureConfiguration {
     public final float minBluntnessForWind;
 
     public LargeDripstoneConfiguration(
-        int p_160956_,
-        IntProvider p_160957_,
-        FloatProvider p_160958_,
-        float p_160959_,
-        FloatProvider p_160960_,
-        FloatProvider p_160961_,
-        FloatProvider p_160962_,
-        int p_160963_,
-        float p_160964_
+        final HolderSet<Block> replaceableBlocks,
+        final int floorToCeilingSearchRange,
+        final IntProvider columnRadius,
+        final FloatProvider heightScale,
+        final float maxColumnRadiusToCaveHeightRatio,
+        final FloatProvider stalactiteBluntness,
+        final FloatProvider stalagmiteBluntness,
+        final FloatProvider windSpeed,
+        final int minRadiusForWind,
+        final float minBluntnessForWind
     ) {
-        this.floorToCeilingSearchRange = p_160956_;
-        this.columnRadius = p_160957_;
-        this.heightScale = p_160958_;
-        this.maxColumnRadiusToCaveHeightRatio = p_160959_;
-        this.stalactiteBluntness = p_160960_;
-        this.stalagmiteBluntness = p_160961_;
-        this.windSpeed = p_160962_;
-        this.minRadiusForWind = p_160963_;
-        this.minBluntnessForWind = p_160964_;
+        this.replaceableBlocks = replaceableBlocks;
+        this.floorToCeilingSearchRange = floorToCeilingSearchRange;
+        this.columnRadius = columnRadius;
+        this.heightScale = heightScale;
+        this.maxColumnRadiusToCaveHeightRatio = maxColumnRadiusToCaveHeightRatio;
+        this.stalactiteBluntness = stalactiteBluntness;
+        this.stalagmiteBluntness = stalagmiteBluntness;
+        this.windSpeed = windSpeed;
+        this.minRadiusForWind = minRadiusForWind;
+        this.minBluntnessForWind = minBluntnessForWind;
     }
 }

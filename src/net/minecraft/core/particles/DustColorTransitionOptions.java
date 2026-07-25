@@ -2,7 +2,6 @@ package net.minecraft.core.particles;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -14,18 +13,18 @@ public class DustColorTransitionOptions extends ScalableParticleOptionsBase {
     public static final int SCULK_PARTICLE_COLOR = 3790560;
     public static final DustColorTransitionOptions SCULK_TO_REDSTONE = new DustColorTransitionOptions(3790560, 16711680, 1.0F);
     public static final MapCodec<DustColorTransitionOptions> CODEC = RecordCodecBuilder.mapCodec(
-        p_358148_ -> p_358148_.group(
-                ExtraCodecs.RGB_COLOR_CODEC.fieldOf("from_color").forGetter(p_358146_ -> p_358146_.fromColor),
-                ExtraCodecs.RGB_COLOR_CODEC.fieldOf("to_color").forGetter(p_358147_ -> p_358147_.toColor),
+        i -> i.group(
+                ExtraCodecs.RGB_COLOR_CODEC.fieldOf("from_color").forGetter(o -> o.fromColor),
+                ExtraCodecs.RGB_COLOR_CODEC.fieldOf("to_color").forGetter(o -> o.toColor),
                 SCALE.fieldOf("scale").forGetter(ScalableParticleOptionsBase::getScale)
             )
-            .apply(p_358148_, DustColorTransitionOptions::new)
+            .apply(i, DustColorTransitionOptions::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, DustColorTransitionOptions> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.INT,
-        p_358150_ -> p_358150_.fromColor,
+        o -> o.fromColor,
         ByteBufCodecs.INT,
-        p_358149_ -> p_358149_.toColor,
+        o -> o.toColor,
         ByteBufCodecs.FLOAT,
         ScalableParticleOptionsBase::getScale,
         DustColorTransitionOptions::new
@@ -33,10 +32,10 @@ public class DustColorTransitionOptions extends ScalableParticleOptionsBase {
     private final int fromColor;
     private final int toColor;
 
-    public DustColorTransitionOptions(int p_367182_, int p_360907_, float p_254178_) {
-        super(p_254178_);
-        this.fromColor = p_367182_;
-        this.toColor = p_360907_;
+    public DustColorTransitionOptions(final int fromColor, final int toColor, final float scale) {
+        super(scale);
+        this.fromColor = fromColor;
+        this.toColor = toColor;
     }
 
     public Vector3f getFromColor() {

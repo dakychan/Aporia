@@ -1,6 +1,5 @@
 package net.minecraft.world;
 
-import com.google.common.collect.Lists;
 import java.util.List;
 import java.util.stream.Collectors;
 import net.minecraft.core.NonNullList;
@@ -11,124 +10,112 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
-import org.jspecify.annotations.Nullable;
 
 public class SimpleContainer implements Container, StackedContentsCompatible {
     private final int size;
     private final NonNullList<ItemStack> items;
-    private @Nullable List<ContainerListener> listeners;
 
-    public SimpleContainer(int p_19150_) {
-        this.size = p_19150_;
-        this.items = NonNullList.withSize(p_19150_, ItemStack.EMPTY);
+    public SimpleContainer(final int size) {
+        this.size = size;
+        this.items = NonNullList.withSize(size, ItemStack.EMPTY);
     }
 
-    public SimpleContainer(ItemStack... p_19152_) {
-        this.size = p_19152_.length;
-        this.items = NonNullList.of(ItemStack.EMPTY, p_19152_);
-    }
-
-    public void addListener(ContainerListener p_19165_) {
-        if (this.listeners == null) {
-            this.listeners = Lists.newArrayList();
-        }
-
-        this.listeners.add(p_19165_);
-    }
-
-    public void removeListener(ContainerListener p_19182_) {
-        if (this.listeners != null) {
-            this.listeners.remove(p_19182_);
-        }
+    public SimpleContainer(final ItemStack... itemstacks) {
+        this.size = itemstacks.length;
+        this.items = NonNullList.of(ItemStack.EMPTY, itemstacks);
     }
 
     @Override
-    public ItemStack getItem(int p_19157_) {
-        return p_19157_ >= 0 && p_19157_ < this.items.size() ? this.items.get(p_19157_) : ItemStack.EMPTY;
+    public ItemStack getItem(final int slot) {
+        return slot >= 0 && slot < this.items.size() ? this.items.get(slot) : ItemStack.EMPTY;
     }
 
     public List<ItemStack> removeAllItems() {
-        List<ItemStack> list = this.items.stream().filter(p_19197_ -> !p_19197_.isEmpty()).collect(Collectors.toList());
+        List<ItemStack> itemsRemoved = this.items.stream().filter(item -> !item.isEmpty()).collect(Collectors.toList());
         this.clearContent();
-        return list;
+        return itemsRemoved;
     }
 
     @Override
-    public ItemStack removeItem(int p_19159_, int p_19160_) {
-        ItemStack itemstack = ContainerHelper.removeItem(this.items, p_19159_, p_19160_);
-        if (!itemstack.isEmpty()) {
+    public ItemStack removeItem(final int slot, final int count) {
+        ItemStack result = ContainerHelper.removeItem(this.items, slot, count);
+        if (!result.isEmpty()) {
             this.setChanged();
         }
 
-        return itemstack;
+        return result;
     }
 
-    public ItemStack removeItemType(Item p_19171_, int p_19172_) {
-        ItemStack itemstack = new ItemStack(p_19171_, 0);
+    public ItemStack removeItemType(final Item itemType, final int count) {
+        ItemStack removed = new ItemStack(itemType, 0);
 
-        for (int i = this.size - 1; i >= 0; i--) {
-            ItemStack itemstack1 = this.getItem(i);
-            if (itemstack1.getItem().equals(p_19171_)) {
-                int j = p_19172_ - itemstack.getCount();
-                ItemStack itemstack2 = itemstack1.split(j);
-                itemstack.grow(itemstack2.getCount());
-                if (itemstack.getCount() == p_19172_) {
+        for (int slot = this.size - 1; slot >= 0; slot--) {
+            ItemStack current = this.getItem(slot);
+            if (current.getItem().equals(itemType)) {
+                int stillNeeded = count - removed.getCount();
+                ItemStack removedFromThisSlot = current.split(stillNeeded);
+                removed.grow(removedFromThisSlot.getCount());
+                if (removed.getCount() == count) {
                     break;
                 }
             }
         }
 
-        if (!itemstack.isEmpty()) {
+        if (!removed.isEmpty()) {
             this.setChanged();
         }
 
-        return itemstack;
+        return removed;
     }
 
-    public ItemStack addItem(ItemStack p_19174_) {
-        if (p_19174_.isEmpty()) {
+    public ItemStack addItem(final ItemStack itemStack) {
+        if (itemStack.isEmpty()) {
             return ItemStack.EMPTY;
-        } else {
-            ItemStack itemstack = p_19174_.copy();
-            this.moveItemToOccupiedSlotsWithSameType(itemstack);
-            if (itemstack.isEmpty()) {
-                return ItemStack.EMPTY;
-            } else {
-                this.moveItemToEmptySlots(itemstack);
-                return itemstack.isEmpty() ? ItemStack.EMPTY : itemstack;
-            }
         }
+
+        ItemStack remainingItems = itemStack.copy();
+        this.moveItemToOccupiedSlotsWithSameType(remainingItems);
+        if (remainingItems.isEmpty()) {
+            return ItemStack.EMPTY;
+        }
+
+        this.moveItemToEmptySlots(remainingItems);
+        return remainingItems.isEmpty() ? ItemStack.EMPTY : remainingItems;
     }
 
-    public boolean canAddItem(ItemStack p_19184_) {
-        boolean flag = false;
+    public boolean canAddItem(final ItemStack itemStack) {
+        boolean hasSpace = false;
 
-        for (ItemStack itemstack : this.items) {
-            if (itemstack.isEmpty() || ItemStack.isSameItemSameComponents(itemstack, p_19184_) && itemstack.getCount() < itemstack.getMaxStackSize()) {
-                flag = true;
+        for (ItemStack targetStack : this.items) {
+            if (targetStack.isEmpty() || ItemStack.isSameItemSameComponents(targetStack, itemStack) && targetStack.getCount() < targetStack.getMaxStackSize()) {
+                hasSpace = true;
                 break;
             }
         }
 
-        return flag;
+        return hasSpace;
     }
 
     @Override
-    public ItemStack removeItemNoUpdate(int p_19180_) {
-        ItemStack itemstack = this.items.get(p_19180_);
-        if (itemstack.isEmpty()) {
+    public ItemStack removeItemNoUpdate(final int slot) {
+        ItemStack itemStack = this.items.get(slot);
+        if (itemStack.isEmpty()) {
             return ItemStack.EMPTY;
-        } else {
-            this.items.set(p_19180_, ItemStack.EMPTY);
-            return itemstack;
         }
+
+        this.items.set(slot, ItemStack.EMPTY);
+        return itemStack;
     }
 
     @Override
-    public void setItem(int p_19162_, ItemStack p_19163_) {
-        this.items.set(p_19162_, p_19163_);
-        p_19163_.limitSize(this.getMaxStackSize(p_19163_));
+    public void setItem(final int slot, final ItemStack itemStack) {
+        this.items.set(slot, itemStack);
+        itemStack.limitSize(this.getMaxStackSize(itemStack));
         this.setChanged();
+    }
+
+    @Override
+    public void setChanged() {
     }
 
     @Override
@@ -138,8 +125,8 @@ public class SimpleContainer implements Container, StackedContentsCompatible {
 
     @Override
     public boolean isEmpty() {
-        for (ItemStack itemstack : this.items) {
-            if (!itemstack.isEmpty()) {
+        for (ItemStack itemStack : this.items) {
+            if (!itemStack.isEmpty()) {
                 return false;
             }
         }
@@ -148,16 +135,7 @@ public class SimpleContainer implements Container, StackedContentsCompatible {
     }
 
     @Override
-    public void setChanged() {
-        if (this.listeners != null) {
-            for (ContainerListener containerlistener : this.listeners) {
-                containerlistener.containerChanged(this);
-            }
-        }
-    }
-
-    @Override
-    public boolean stillValid(Player p_19167_) {
+    public boolean stillValid(final Player player) {
         return true;
     }
 
@@ -168,62 +146,62 @@ public class SimpleContainer implements Container, StackedContentsCompatible {
     }
 
     @Override
-    public void fillStackedContents(StackedItemContents p_361993_) {
-        for (ItemStack itemstack : this.items) {
-            p_361993_.accountStack(itemstack);
+    public void fillStackedContents(final StackedItemContents contents) {
+        for (ItemStack itemStack : this.items) {
+            contents.accountStack(itemStack);
         }
     }
 
     @Override
     public String toString() {
-        return this.items.stream().filter(p_19194_ -> !p_19194_.isEmpty()).collect(Collectors.toList()).toString();
+        return this.items.stream().filter(item -> !item.isEmpty()).toList().toString();
     }
 
-    private void moveItemToEmptySlots(ItemStack p_19190_) {
-        for (int i = 0; i < this.size; i++) {
-            ItemStack itemstack = this.getItem(i);
-            if (itemstack.isEmpty()) {
-                this.setItem(i, p_19190_.copyAndClear());
+    private void moveItemToEmptySlots(final ItemStack sourceStack) {
+        for (int slot = 0; slot < this.size; slot++) {
+            ItemStack targetStack = this.getItem(slot);
+            if (targetStack.isEmpty()) {
+                this.setItem(slot, sourceStack.copyAndClear());
                 return;
             }
         }
     }
 
-    private void moveItemToOccupiedSlotsWithSameType(ItemStack p_19192_) {
-        for (int i = 0; i < this.size; i++) {
-            ItemStack itemstack = this.getItem(i);
-            if (ItemStack.isSameItemSameComponents(itemstack, p_19192_)) {
-                this.moveItemsBetweenStacks(p_19192_, itemstack);
-                if (p_19192_.isEmpty()) {
+    private void moveItemToOccupiedSlotsWithSameType(final ItemStack sourceStack) {
+        for (int slot = 0; slot < this.size; slot++) {
+            ItemStack targetStack = this.getItem(slot);
+            if (ItemStack.isSameItemSameComponents(targetStack, sourceStack)) {
+                this.moveItemsBetweenStacks(sourceStack, targetStack);
+                if (sourceStack.isEmpty()) {
                     return;
                 }
             }
         }
     }
 
-    private void moveItemsBetweenStacks(ItemStack p_19186_, ItemStack p_19187_) {
-        int i = this.getMaxStackSize(p_19187_);
-        int j = Math.min(p_19186_.getCount(), i - p_19187_.getCount());
-        if (j > 0) {
-            p_19187_.grow(j);
-            p_19186_.shrink(j);
+    private void moveItemsBetweenStacks(final ItemStack sourceStack, final ItemStack targetStack) {
+        int maxCount = this.getMaxStackSize(targetStack);
+        int diff = Math.min(sourceStack.getCount(), maxCount - targetStack.getCount());
+        if (diff > 0) {
+            targetStack.grow(diff);
+            sourceStack.shrink(diff);
             this.setChanged();
         }
     }
 
-    public void fromItemList(ValueInput.TypedInputList<ItemStack> p_410556_) {
+    public void fromItemList(final ValueInput.TypedInputList<ItemStack> items) {
         this.clearContent();
 
-        for (ItemStack itemstack : p_410556_) {
-            this.addItem(itemstack);
+        for (ItemStack stack : items) {
+            this.addItem(stack);
         }
     }
 
-    public void storeAsItemList(ValueOutput.TypedOutputList<ItemStack> p_408131_) {
+    public void storeAsItemList(final ValueOutput.TypedOutputList<ItemStack> output) {
         for (int i = 0; i < this.getContainerSize(); i++) {
-            ItemStack itemstack = this.getItem(i);
-            if (!itemstack.isEmpty()) {
-                p_408131_.add(itemstack);
+            ItemStack itemStack = this.getItem(i);
+            if (!itemStack.isEmpty()) {
+                output.add(itemStack);
             }
         }
     }

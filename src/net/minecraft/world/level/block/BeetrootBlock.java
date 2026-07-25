@@ -20,15 +20,15 @@ public class BeetrootBlock extends CropBlock {
     public static final MapCodec<BeetrootBlock> CODEC = simpleCodec(BeetrootBlock::new);
     public static final int MAX_AGE = 3;
     public static final IntegerProperty AGE = BlockStateProperties.AGE_3;
-    private static final VoxelShape[] SHAPES = Block.boxes(3, p_395900_ -> Block.column(16.0, 0.0, 2 + p_395900_ * 2));
+    private static final VoxelShape[] SHAPES = Block.boxes(3, age -> Block.column(16.0, 0.0, 2 + age * 2));
 
     @Override
     public MapCodec<BeetrootBlock> codec() {
         return CODEC;
     }
 
-    public BeetrootBlock(BlockBehaviour.Properties p_49661_) {
-        super(p_49661_);
+    public BeetrootBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
@@ -47,24 +47,24 @@ public class BeetrootBlock extends CropBlock {
     }
 
     @Override
-    protected void randomTick(BlockState p_220778_, ServerLevel p_220779_, BlockPos p_220780_, RandomSource p_220781_) {
-        if (p_220781_.nextInt(3) != 0) {
-            super.randomTick(p_220778_, p_220779_, p_220780_, p_220781_);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (random.nextInt(3) != 0) {
+            super.randomTick(state, level, pos, random);
         }
     }
 
     @Override
-    protected int getBonemealAgeIncrease(Level p_49663_) {
-        return super.getBonemealAgeIncrease(p_49663_) / 3;
+    protected int getBonemealAgeIncrease(final Level level) {
+        return super.getBonemealAgeIncrease(level) / 3;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_49665_) {
-        p_49665_.add(AGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(AGE);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_49672_, BlockGetter p_49673_, BlockPos p_49674_, CollisionContext p_49675_) {
-        return SHAPES[this.getAge(p_49672_)];
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES[this.getAge(state)];
     }
 }

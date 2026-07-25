@@ -19,29 +19,31 @@ import net.minecraft.world.inventory.SlotRanges;
 
 public class SlotsArgument implements ArgumentType<SlotRange> {
     private static final Collection<String> EXAMPLES = List.of("container.*", "container.5", "weapon");
-    private static final DynamicCommandExceptionType ERROR_UNKNOWN_SLOT = new DynamicCommandExceptionType(p_331324_ -> Component.translatableEscape("slot.unknown", p_331324_));
+    private static final DynamicCommandExceptionType ERROR_UNKNOWN_SLOT = new DynamicCommandExceptionType(
+        id -> Component.translatableEscape("slot.unknown", id)
+    );
 
     public static SlotsArgument slots() {
         return new SlotsArgument();
     }
 
-    public static SlotRange getSlots(CommandContext<CommandSourceStack> p_333218_, String p_328819_) {
-        return p_333218_.getArgument(p_328819_, SlotRange.class);
+    public static SlotRange getSlots(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, SlotRange.class);
     }
 
-    public SlotRange parse(StringReader p_329039_) throws CommandSyntaxException {
-        String s = ParserUtils.readWhile(p_329039_, p_329908_ -> p_329908_ != ' ');
-        SlotRange slotrange = SlotRanges.nameToIds(s);
-        if (slotrange == null) {
-            throw ERROR_UNKNOWN_SLOT.createWithContext(p_329039_, s);
+    public SlotRange parse(final StringReader reader) throws CommandSyntaxException {
+        String name = ParserUtils.readWhile(reader, c -> c != ' ');
+        SlotRange result = SlotRanges.nameToIds(name);
+        if (result == null) {
+            throw ERROR_UNKNOWN_SLOT.createWithContext(reader, name);
         } else {
-            return slotrange;
+            return result;
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_329445_, SuggestionsBuilder p_329636_) {
-        return SharedSuggestionProvider.suggest(SlotRanges.allNames(), p_329636_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> contextBuilder, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(SlotRanges.allNames(), builder);
     }
 
     @Override

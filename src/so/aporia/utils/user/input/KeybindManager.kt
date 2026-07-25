@@ -23,14 +23,14 @@ object KeybindManager {
     fun onKey(e: KeyInputEvent) {
         if (e.action() != KeyInputEvent.Action.PRESS) return
 
-        val screen = mc.screen
+        val screen = mc.gui.screen()
 
         if (e.scancode() == KEY_CLICK_GUI) {
             if (screen is ClickGuiScreen) {
-                mc.execute { mc.setScreen(null) }
+                mc.execute { mc.gui.setScreen(null) }
             } else if (screen == null) {
                 val clickGuiModule = ModuleManager.get("ClickGui") as? ClickGui ?: return
-                mc.execute { mc.setScreen(ClickGuiScreen(clickGuiModule)) }
+                mc.execute { mc.gui.setScreen(ClickGuiScreen(clickGuiModule)) }
             }
             return
         }
@@ -47,7 +47,7 @@ object KeybindManager {
     @EventHandler
     fun onMouseClick(e: MouseClickEvent) {
         if (e.action() != MouseClickEvent.Action.PRESS) return
-        val screen = mc.screen
+        val screen = mc.gui.screen()
         if (screen == null) {
             val raw = e.button()
             // Buttons 0-2 (left/right/middle) go through mouse event

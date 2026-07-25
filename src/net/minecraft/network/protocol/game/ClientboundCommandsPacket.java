@@ -43,147 +43,147 @@ public class ClientboundCommandsPacket implements Packet<ClientGamePacketListene
     private final int rootIndex;
     private final List<ClientboundCommandsPacket.Entry> entries;
 
-    public <S> ClientboundCommandsPacket(RootCommandNode<S> p_131861_, ClientboundCommandsPacket.NodeInspector<S> p_408963_) {
-        Object2IntMap<CommandNode<S>> object2intmap = enumerateNodes(p_131861_);
-        this.entries = createEntries(object2intmap, p_408963_);
-        this.rootIndex = object2intmap.getInt(p_131861_);
+    public <S> ClientboundCommandsPacket(final RootCommandNode<S> root, final ClientboundCommandsPacket.NodeInspector<S> inspector) {
+        Object2IntMap<CommandNode<S>> nodeToId = enumerateNodes(root);
+        this.entries = createEntries(nodeToId, inspector);
+        this.rootIndex = nodeToId.getInt(root);
     }
 
-    private ClientboundCommandsPacket(FriendlyByteBuf p_178805_) {
-        this.entries = p_178805_.readList(ClientboundCommandsPacket::readNode);
-        this.rootIndex = p_178805_.readVarInt();
+    private ClientboundCommandsPacket(final FriendlyByteBuf input) {
+        this.entries = input.readList(ClientboundCommandsPacket::readNode);
+        this.rootIndex = input.readVarInt();
         validateEntries(this.entries);
     }
 
-    private void write(FriendlyByteBuf p_131886_) {
-        p_131886_.writeCollection(this.entries, (p_237642_, p_237643_) -> p_237643_.write(p_237642_));
-        p_131886_.writeVarInt(this.rootIndex);
+    private void write(final FriendlyByteBuf output) {
+        output.writeCollection(this.entries, (buffer, entry) -> entry.write(buffer));
+        output.writeVarInt(this.rootIndex);
     }
 
-    private static void validateEntries(List<ClientboundCommandsPacket.Entry> p_237631_, BiPredicate<ClientboundCommandsPacket.Entry, IntSet> p_237632_) {
-        IntSet intset = new IntOpenHashSet(IntSets.fromTo(0, p_237631_.size()));
+    private static void validateEntries(
+        final List<ClientboundCommandsPacket.Entry> entries, final BiPredicate<ClientboundCommandsPacket.Entry, IntSet> validator
+    ) {
+        IntSet elementsToCheck = new IntOpenHashSet(IntSets.fromTo(0, entries.size()));
 
-        while (!intset.isEmpty()) {
-            boolean flag = intset.removeIf(p_237637_ -> p_237632_.test(p_237631_.get(p_237637_), intset));
-            if (!flag) {
+        while (!elementsToCheck.isEmpty()) {
+            boolean worked = elementsToCheck.removeIf(index -> validator.test(entries.get(index), elementsToCheck));
+            if (!worked) {
                 throw new IllegalStateException("Server sent an impossible command tree");
             }
         }
     }
 
-    private static void validateEntries(List<ClientboundCommandsPacket.Entry> p_237629_) {
-        validateEntries(p_237629_, ClientboundCommandsPacket.Entry::canBuild);
-        validateEntries(p_237629_, ClientboundCommandsPacket.Entry::canResolve);
+    private static void validateEntries(final List<ClientboundCommandsPacket.Entry> entries) {
+        validateEntries(entries, ClientboundCommandsPacket.Entry::canBuild);
+        validateEntries(entries, ClientboundCommandsPacket.Entry::canResolve);
     }
 
-    private static <S> Object2IntMap<CommandNode<S>> enumerateNodes(RootCommandNode<S> p_131863_) {
-        Object2IntMap<CommandNode<S>> object2intmap = new Object2IntOpenHashMap<>();
+    private static <S> Object2IntMap<CommandNode<S>> enumerateNodes(final RootCommandNode<S> root) {
+        Object2IntMap<CommandNode<S>> nodeToId = new Object2IntOpenHashMap<>();
         Queue<CommandNode<S>> queue = new ArrayDeque<>();
-        queue.add(p_131863_);
+        queue.add(root);
 
-        CommandNode<S> commandnode;
-        while ((commandnode = queue.poll()) != null) {
-            if (!object2intmap.containsKey(commandnode)) {
-                int i = object2intmap.size();
-                object2intmap.put(commandnode, i);
-                queue.addAll(commandnode.getChildren());
-                if (commandnode.getRedirect() != null) {
-                    queue.add(commandnode.getRedirect());
+        CommandNode<S> node;
+        while ((node = queue.poll()) != null) {
+            if (!nodeToId.containsKey(node)) {
+                int id = nodeToId.size();
+                nodeToId.put(node, id);
+                queue.addAll(node.getChildren());
+                if (node.getRedirect() != null) {
+                    queue.add(node.getRedirect());
                 }
             }
         }
 
-        return object2intmap;
+        return nodeToId;
     }
 
     private static <S> List<ClientboundCommandsPacket.Entry> createEntries(
-        Object2IntMap<CommandNode<S>> p_237627_, ClientboundCommandsPacket.NodeInspector<S> p_408878_
+        final Object2IntMap<CommandNode<S>> nodeToId, final ClientboundCommandsPacket.NodeInspector<S> inspector
     ) {
-        ObjectArrayList<ClientboundCommandsPacket.Entry> objectarraylist = new ObjectArrayList<>(p_237627_.size());
-        objectarraylist.size(p_237627_.size());
+        ObjectArrayList<ClientboundCommandsPacket.Entry> result = new ObjectArrayList<>(nodeToId.size());
+        result.size(nodeToId.size());
 
-        for (Object2IntMap.Entry<CommandNode<S>> entry : Object2IntMaps.fastIterable(p_237627_)) {
-            objectarraylist.set(entry.getIntValue(), createEntry(entry.getKey(), p_408878_, p_237627_));
+        for (Object2IntMap.Entry<CommandNode<S>> entry : Object2IntMaps.fastIterable(nodeToId)) {
+            result.set(entry.getIntValue(), createEntry(entry.getKey(), inspector, nodeToId));
         }
 
-        return objectarraylist;
+        return result;
     }
 
-    private static ClientboundCommandsPacket.Entry readNode(FriendlyByteBuf p_131888_) {
-        byte b0 = p_131888_.readByte();
-        int[] aint = p_131888_.readVarIntArray();
-        int i = (b0 & 8) != 0 ? p_131888_.readVarInt() : 0;
-        ClientboundCommandsPacket.NodeStub clientboundcommandspacket$nodestub = read(p_131888_, b0);
-        return new ClientboundCommandsPacket.Entry(clientboundcommandspacket$nodestub, b0, i, aint);
+    private static ClientboundCommandsPacket.Entry readNode(final FriendlyByteBuf input) {
+        byte flags = input.readByte();
+        int[] children = input.readVarIntArray();
+        int redirect = (flags & 8) != 0 ? input.readVarInt() : 0;
+        ClientboundCommandsPacket.NodeStub stub = read(input, flags);
+        return new ClientboundCommandsPacket.Entry(stub, flags, redirect, children);
     }
 
-    private static ClientboundCommandsPacket.@Nullable NodeStub read(FriendlyByteBuf p_237639_, byte p_237640_) {
-        int i = p_237640_ & 3;
-        if (i == 2) {
-            String s1 = p_237639_.readUtf();
-            int j = p_237639_.readVarInt();
-            ArgumentTypeInfo<?, ?> argumenttypeinfo = BuiltInRegistries.COMMAND_ARGUMENT_TYPE.byId(j);
-            if (argumenttypeinfo == null) {
+    private static ClientboundCommandsPacket.@Nullable NodeStub read(final FriendlyByteBuf input, final byte flags) {
+        int type = flags & 3;
+        if (type == 2) {
+            String name = input.readUtf();
+            int id = input.readVarInt();
+            ArgumentTypeInfo<?, ?> argumentType = BuiltInRegistries.COMMAND_ARGUMENT_TYPE.byId(id);
+            if (argumentType == null) {
                 return null;
-            } else {
-                ArgumentTypeInfo.Template<?> template = argumenttypeinfo.deserializeFromNetwork(p_237639_);
-                Identifier identifier = (p_237640_ & 16) != 0 ? p_237639_.readIdentifier() : null;
-                return new ClientboundCommandsPacket.ArgumentNodeStub(s1, template, identifier);
             }
-        } else if (i == 1) {
-            String s = p_237639_.readUtf();
-            return new ClientboundCommandsPacket.LiteralNodeStub(s);
+
+            ArgumentTypeInfo.Template<?> argument = argumentType.deserializeFromNetwork(input);
+            Identifier suggestionId = (flags & 16) != 0 ? input.readIdentifier() : null;
+            return new ClientboundCommandsPacket.ArgumentNodeStub(name, argument, suggestionId);
+        } else if (type == 1) {
+            String id = input.readUtf();
+            return new ClientboundCommandsPacket.LiteralNodeStub(id);
         } else {
             return null;
         }
     }
 
     private static <S> ClientboundCommandsPacket.Entry createEntry(
-        CommandNode<S> p_237622_, ClientboundCommandsPacket.NodeInspector<S> p_409182_, Object2IntMap<CommandNode<S>> p_237623_
+        final CommandNode<S> node, final ClientboundCommandsPacket.NodeInspector<S> inspector, final Object2IntMap<CommandNode<S>> ids
     ) {
-        int i = 0;
-        int j;
-        if (p_237622_.getRedirect() != null) {
-            i |= 8;
-            j = p_237623_.getInt(p_237622_.getRedirect());
+        int flags = 0;
+        int redirect;
+        if (node.getRedirect() != null) {
+            flags |= 8;
+            redirect = ids.getInt(node.getRedirect());
         } else {
-            j = 0;
+            redirect = 0;
         }
 
-        if (p_409182_.isExecutable(p_237622_)) {
-            i |= 4;
+        if (inspector.isExecutable(node)) {
+            flags |= 4;
         }
 
-        if (p_409182_.isRestricted(p_237622_)) {
-            i |= 32;
+        if (inspector.isRestricted(node)) {
+            flags |= 32;
         }
 
-        ClientboundCommandsPacket.NodeStub clientboundcommandspacket$nodestub;
-        switch (p_237622_) {
-            case RootCommandNode<S> rootcommandnode:
-                i |= 0;
-                clientboundcommandspacket$nodestub = null;
+        ClientboundCommandsPacket.NodeStub nodeStub;
+        switch (node) {
+            case RootCommandNode<S> ignored:
+                flags |= 0;
+                nodeStub = null;
                 break;
-            case ArgumentCommandNode<S, ?> argumentcommandnode:
-                Identifier identifier = p_409182_.suggestionId(argumentcommandnode);
-                clientboundcommandspacket$nodestub = new ClientboundCommandsPacket.ArgumentNodeStub(
-                    argumentcommandnode.getName(), ArgumentTypeInfos.unpack(argumentcommandnode.getType()), identifier
-                );
-                i |= 2;
-                if (identifier != null) {
-                    i |= 16;
+            case ArgumentCommandNode<S, ?> arg:
+                Identifier suggestionId = inspector.suggestionId(arg);
+                nodeStub = new ClientboundCommandsPacket.ArgumentNodeStub(arg.getName(), ArgumentTypeInfos.unpack(arg.getType()), suggestionId);
+                flags |= 2;
+                if (suggestionId != null) {
+                    flags |= 16;
                 }
                 break;
-            case LiteralCommandNode<S> literalcommandnode:
-                clientboundcommandspacket$nodestub = new ClientboundCommandsPacket.LiteralNodeStub(literalcommandnode.getLiteral());
-                i |= 1;
+            case LiteralCommandNode<S> literal:
+                nodeStub = new ClientboundCommandsPacket.LiteralNodeStub(literal.getLiteral());
+                flags |= 1;
                 break;
             default:
-                throw new UnsupportedOperationException("Unknown node type " + p_237622_);
+                throw new UnsupportedOperationException("Unknown node type " + node);
         }
 
-        int[] aint = p_237622_.getChildren().stream().mapToInt(p_237623_::getInt).toArray();
-        return new ClientboundCommandsPacket.Entry(clientboundcommandspacket$nodestub, i, j, aint);
+        int[] childrenIds = node.getChildren().stream().mapToInt(ids::getInt).toArray();
+        return new ClientboundCommandsPacket.Entry(nodeStub, flags, redirect, childrenIds);
     }
 
     @Override
@@ -191,63 +191,63 @@ public class ClientboundCommandsPacket implements Packet<ClientGamePacketListene
         return GamePacketTypes.CLIENTBOUND_COMMANDS;
     }
 
-    public void handle(ClientGamePacketListener p_131878_) {
-        p_131878_.handleCommands(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleCommands(this);
     }
 
-    public <S> RootCommandNode<S> getRoot(CommandBuildContext p_237625_, ClientboundCommandsPacket.NodeBuilder<S> p_409424_) {
-        return (RootCommandNode<S>)new ClientboundCommandsPacket.NodeResolver<>(p_237625_, p_409424_, this.entries).resolve(this.rootIndex);
+    public <S> RootCommandNode<S> getRoot(final CommandBuildContext context, final ClientboundCommandsPacket.NodeBuilder<S> builder) {
+        return (RootCommandNode<S>)new ClientboundCommandsPacket.NodeResolver<>(context, builder, this.entries).resolve(this.rootIndex);
     }
 
-    record ArgumentNodeStub(String id, ArgumentTypeInfo.Template<?> argumentType, @Nullable Identifier suggestionId)
+    private record ArgumentNodeStub(String id, ArgumentTypeInfo.Template<?> argumentType, @Nullable Identifier suggestionId)
         implements ClientboundCommandsPacket.NodeStub {
         @Override
-        public <S> ArgumentBuilder<S, ?> build(CommandBuildContext p_237656_, ClientboundCommandsPacket.NodeBuilder<S> p_407604_) {
-            ArgumentType<?> argumenttype = this.argumentType.instantiate(p_237656_);
-            return p_407604_.createArgument(this.id, argumenttype, this.suggestionId);
+        public <S> ArgumentBuilder<S, ?> build(final CommandBuildContext context, final ClientboundCommandsPacket.NodeBuilder<S> builder) {
+            ArgumentType<?> type = this.argumentType.instantiate(context);
+            return builder.createArgument(this.id, type, this.suggestionId);
         }
 
         @Override
-        public void write(FriendlyByteBuf p_237658_) {
-            p_237658_.writeUtf(this.id);
-            serializeCap(p_237658_, this.argumentType);
+        public void write(final FriendlyByteBuf output) {
+            output.writeUtf(this.id);
+            serializeCap(output, this.argumentType);
             if (this.suggestionId != null) {
-                p_237658_.writeIdentifier(this.suggestionId);
+                output.writeIdentifier(this.suggestionId);
             }
         }
 
-        private static <A extends ArgumentType<?>> void serializeCap(FriendlyByteBuf p_237660_, ArgumentTypeInfo.Template<A> p_237661_) {
-            serializeCap(p_237660_, p_237661_.type(), p_237661_);
+        private static <A extends ArgumentType<?>> void serializeCap(final FriendlyByteBuf output, final ArgumentTypeInfo.Template<A> argumentType) {
+            serializeCap(output, argumentType.type(), argumentType);
         }
 
         private static <A extends ArgumentType<?>, T extends ArgumentTypeInfo.Template<A>> void serializeCap(
-            FriendlyByteBuf p_237663_, ArgumentTypeInfo<A, T> p_237664_, ArgumentTypeInfo.Template<A> p_237665_
+            final FriendlyByteBuf output, final ArgumentTypeInfo<A, T> info, final ArgumentTypeInfo.Template<A> argumentType
         ) {
-            p_237663_.writeVarInt(BuiltInRegistries.COMMAND_ARGUMENT_TYPE.getId(p_237664_));
-            p_237664_.serializeToNetwork((T)p_237665_, p_237663_);
+            output.writeVarInt(BuiltInRegistries.COMMAND_ARGUMENT_TYPE.getId(info));
+            info.serializeToNetwork((T)argumentType, output);
         }
     }
 
-    record Entry(ClientboundCommandsPacket.@Nullable NodeStub stub, int flags, int redirect, int[] children) {
-        public void write(FriendlyByteBuf p_237675_) {
-            p_237675_.writeByte(this.flags);
-            p_237675_.writeVarIntArray(this.children);
+    private record Entry(ClientboundCommandsPacket.@Nullable NodeStub stub, int flags, int redirect, int[] children) {
+        public void write(final FriendlyByteBuf output) {
+            output.writeByte(this.flags);
+            output.writeVarIntArray(this.children);
             if ((this.flags & 8) != 0) {
-                p_237675_.writeVarInt(this.redirect);
+                output.writeVarInt(this.redirect);
             }
 
             if (this.stub != null) {
-                this.stub.write(p_237675_);
+                this.stub.write(output);
             }
         }
 
-        public boolean canBuild(IntSet p_237673_) {
-            return (this.flags & 8) != 0 ? !p_237673_.contains(this.redirect) : true;
+        public boolean canBuild(final IntSet unbuiltNodes) {
+            return (this.flags & 8) != 0 ? !unbuiltNodes.contains(this.redirect) : true;
         }
 
-        public boolean canResolve(IntSet p_237677_) {
-            for (int i : this.children) {
-                if (p_237677_.contains(i)) {
+        public boolean canResolve(final IntSet unresolvedNodes) {
+            for (int child : this.children) {
+                if (unresolvedNodes.contains(child)) {
                     return false;
                 }
             }
@@ -256,86 +256,88 @@ public class ClientboundCommandsPacket implements Packet<ClientGamePacketListene
         }
     }
 
-    record LiteralNodeStub(String id) implements ClientboundCommandsPacket.NodeStub {
+    private record LiteralNodeStub(String id) implements ClientboundCommandsPacket.NodeStub {
         @Override
-        public <S> ArgumentBuilder<S, ?> build(CommandBuildContext p_237682_, ClientboundCommandsPacket.NodeBuilder<S> p_407985_) {
-            return p_407985_.createLiteral(this.id);
+        public <S> ArgumentBuilder<S, ?> build(final CommandBuildContext context, final ClientboundCommandsPacket.NodeBuilder<S> builder) {
+            return builder.createLiteral(this.id);
         }
 
         @Override
-        public void write(FriendlyByteBuf p_237684_) {
-            p_237684_.writeUtf(this.id);
+        public void write(final FriendlyByteBuf output) {
+            output.writeUtf(this.id);
         }
     }
 
     public interface NodeBuilder<S> {
-        ArgumentBuilder<S, ?> createLiteral(String p_407241_);
+        ArgumentBuilder<S, ?> createLiteral(String id);
 
-        ArgumentBuilder<S, ?> createArgument(String p_405834_, ArgumentType<?> p_408931_, @Nullable Identifier p_452401_);
+        ArgumentBuilder<S, ?> createArgument(String id, ArgumentType<?> argumentType, @Nullable Identifier suggestionId);
 
-        ArgumentBuilder<S, ?> configure(ArgumentBuilder<S, ?> p_410034_, boolean p_407748_, boolean p_410139_);
+        ArgumentBuilder<S, ?> configure(ArgumentBuilder<S, ?> input, boolean executable, boolean restricted);
     }
 
     public interface NodeInspector<S> {
-        @Nullable Identifier suggestionId(ArgumentCommandNode<S, ?> p_408083_);
+        @Nullable Identifier suggestionId(ArgumentCommandNode<S, ?> node);
 
-        boolean isExecutable(CommandNode<S> p_409793_);
+        boolean isExecutable(CommandNode<S> node);
 
-        boolean isRestricted(CommandNode<S> p_409201_);
+        boolean isRestricted(CommandNode<S> node);
     }
 
-    static class NodeResolver<S> {
+    private static class NodeResolver<S> {
         private final CommandBuildContext context;
         private final ClientboundCommandsPacket.NodeBuilder<S> builder;
         private final List<ClientboundCommandsPacket.Entry> entries;
         private final List<CommandNode<S>> nodes;
 
-        NodeResolver(CommandBuildContext p_237689_, ClientboundCommandsPacket.NodeBuilder<S> p_406424_, List<ClientboundCommandsPacket.Entry> p_237690_) {
-            this.context = p_237689_;
-            this.builder = p_406424_;
-            this.entries = p_237690_;
-            ObjectArrayList<CommandNode<S>> objectarraylist = new ObjectArrayList<>();
-            objectarraylist.size(p_237690_.size());
-            this.nodes = objectarraylist;
+        private NodeResolver(
+            final CommandBuildContext context, final ClientboundCommandsPacket.NodeBuilder<S> builder, final List<ClientboundCommandsPacket.Entry> entries
+        ) {
+            this.context = context;
+            this.builder = builder;
+            this.entries = entries;
+            ObjectArrayList<CommandNode<S>> nodes = new ObjectArrayList<>();
+            nodes.size(entries.size());
+            this.nodes = nodes;
         }
 
-        public CommandNode<S> resolve(int p_237692_) {
-            CommandNode<S> commandnode = this.nodes.get(p_237692_);
-            if (commandnode != null) {
-                return commandnode;
-            } else {
-                ClientboundCommandsPacket.Entry clientboundcommandspacket$entry = this.entries.get(p_237692_);
-                CommandNode<S> commandnode1;
-                if (clientboundcommandspacket$entry.stub == null) {
-                    commandnode1 = new RootCommandNode<>();
-                } else {
-                    ArgumentBuilder<S, ?> argumentbuilder = clientboundcommandspacket$entry.stub.build(this.context, this.builder);
-                    if ((clientboundcommandspacket$entry.flags & 8) != 0) {
-                        argumentbuilder.redirect(this.resolve(clientboundcommandspacket$entry.redirect));
-                    }
-
-                    boolean flag = (clientboundcommandspacket$entry.flags & 4) != 0;
-                    boolean flag1 = (clientboundcommandspacket$entry.flags & 32) != 0;
-                    commandnode1 = this.builder.configure(argumentbuilder, flag, flag1).build();
-                }
-
-                this.nodes.set(p_237692_, commandnode1);
-
-                for (int i : clientboundcommandspacket$entry.children) {
-                    CommandNode<S> commandnode2 = this.resolve(i);
-                    if (!(commandnode2 instanceof RootCommandNode)) {
-                        commandnode1.addChild(commandnode2);
-                    }
-                }
-
-                return commandnode1;
+        public CommandNode<S> resolve(final int index) {
+            CommandNode<S> currentNode = this.nodes.get(index);
+            if (currentNode != null) {
+                return currentNode;
             }
+
+            ClientboundCommandsPacket.Entry entry = this.entries.get(index);
+            CommandNode<S> result;
+            if (entry.stub == null) {
+                result = new RootCommandNode<>();
+            } else {
+                ArgumentBuilder<S, ?> resultBuilder = entry.stub.build(this.context, this.builder);
+                if ((entry.flags & 8) != 0) {
+                    resultBuilder.redirect(this.resolve(entry.redirect));
+                }
+
+                boolean isExecutable = (entry.flags & 4) != 0;
+                boolean isRestricted = (entry.flags & 32) != 0;
+                result = this.builder.configure(resultBuilder, isExecutable, isRestricted).build();
+            }
+
+            this.nodes.set(index, result);
+
+            for (int childId : entry.children) {
+                CommandNode<S> child = this.resolve(childId);
+                if (!(child instanceof RootCommandNode)) {
+                    result.addChild(child);
+                }
+            }
+
+            return result;
         }
     }
 
-    interface NodeStub {
-        <S> ArgumentBuilder<S, ?> build(CommandBuildContext p_237695_, ClientboundCommandsPacket.NodeBuilder<S> p_408785_);
+    private interface NodeStub {
+        <S> ArgumentBuilder<S, ?> build(CommandBuildContext context, ClientboundCommandsPacket.NodeBuilder<S> builder);
 
-        void write(FriendlyByteBuf p_237696_);
+        void write(FriendlyByteBuf output);
     }
 }

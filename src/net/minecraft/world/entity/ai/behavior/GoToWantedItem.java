@@ -2,7 +2,6 @@ package net.minecraft.world.entity.ai.behavior;
 
 import com.mojang.datafixers.kinds.K1;
 import java.util.function.Predicate;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
 import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
@@ -11,34 +10,36 @@ import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.item.ItemEntity;
 
 public class GoToWantedItem {
-    public static BehaviorControl<LivingEntity> create(float p_260027_, boolean p_259769_, int p_259671_) {
-        return create(p_23158_ -> true, p_260027_, p_259769_, p_259671_);
+    public static BehaviorControl<LivingEntity> create(final float speedModifier, final boolean interruptOngoingWalk, final int maxDistToWalk) {
+        return create(body -> true, speedModifier, interruptOngoingWalk, maxDistToWalk);
     }
 
-    public static <E extends LivingEntity> BehaviorControl<E> create(Predicate<E> p_259490_, float p_260346_, boolean p_259637_, int p_259054_) {
+    public static <E extends LivingEntity> BehaviorControl<E> create(
+        final Predicate<E> predicate, final float speedModifier, final boolean interruptOngoingWalk, final int maxDistToWalk
+    ) {
         return BehaviorBuilder.create(
-            p_258371_ -> {
-                BehaviorBuilder<E, ? extends MemoryAccessor<? extends K1, WalkTarget>> behaviorbuilder = p_259637_
-                    ? p_258371_.registered(MemoryModuleType.WALK_TARGET)
-                    : p_258371_.absent(MemoryModuleType.WALK_TARGET);
-                return p_258371_.group(
-                        p_258371_.registered(MemoryModuleType.LOOK_TARGET),
-                        behaviorbuilder,
-                        p_258371_.present(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM),
-                        p_258371_.registered(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS)
+            i -> {
+                BehaviorBuilder<E, ? extends MemoryAccessor<? extends K1, WalkTarget>> walkCondition = interruptOngoingWalk
+                    ? i.registered(MemoryModuleType.WALK_TARGET)
+                    : i.absent(MemoryModuleType.WALK_TARGET);
+                return i.group(
+                        i.registered(MemoryModuleType.LOOK_TARGET),
+                        walkCondition,
+                        i.present(MemoryModuleType.NEAREST_VISIBLE_WANTED_ITEM),
+                        i.registered(MemoryModuleType.ITEM_PICKUP_COOLDOWN_TICKS)
                     )
                     .apply(
-                        p_258371_,
-                        (p_258387_, p_258388_, p_258389_, p_258390_) -> (p_358949_, p_358950_, p_358951_) -> {
-                            ItemEntity itementity = p_258371_.get(p_258389_);
-                            if (p_258371_.tryGet(p_258390_).isEmpty()
-                                && p_259490_.test(p_358950_)
-                                && itementity.closerThan(p_358950_, p_259054_)
-                                && p_358950_.level().getWorldBorder().isWithinBounds(itementity.blockPosition())
-                                && p_358950_.canPickUpLoot()) {
-                                WalkTarget walktarget = new WalkTarget(new EntityTracker(itementity, false), p_260346_, 0);
-                                p_258387_.set(new EntityTracker(itementity, true));
-                                p_258388_.set(walktarget);
+                        i,
+                        (lookTarget, walkTarget, wantedItem, cooldown) -> (level, body, timestamp) -> {
+                            ItemEntity item = i.get(wantedItem);
+                            if (i.tryGet(cooldown).isEmpty()
+                                && predicate.test(body)
+                                && item.closerThan(body, maxDistToWalk)
+                                && body.level().getWorldBorder().isWithinBounds(item.blockPosition())
+                                && body.canPickUpLoot()) {
+                                WalkTarget target = new WalkTarget(new EntityTracker(item, false), speedModifier, 0);
+                                lookTarget.set(new EntityTracker(item, true));
+                                walkTarget.set(target);
                                 return true;
                             } else {
                                 return false;

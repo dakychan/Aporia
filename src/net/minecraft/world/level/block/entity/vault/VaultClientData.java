@@ -7,9 +7,6 @@ public class VaultClientData {
     private float currentSpin;
     private float previousSpin;
 
-    VaultClientData() {
-    }
-
     public float currentSpin() {
         return this.currentSpin;
     }
@@ -18,7 +15,7 @@ public class VaultClientData {
         return this.previousSpin;
     }
 
-    void updateDisplayItemSpin() {
+    public void updateDisplayItemSpin() {
         this.previousSpin = this.currentSpin;
         this.currentSpin = Mth.wrapDegrees(this.currentSpin + 10.0F);
     }

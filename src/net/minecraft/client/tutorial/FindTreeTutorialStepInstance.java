@@ -15,11 +15,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class FindTreeTutorialStepInstance implements TutorialStepInstance {
     private static final int HINT_DELAY = 6000;
     private static final Component TITLE = Component.translatable("tutorial.find_tree.title");
@@ -28,8 +25,8 @@ public class FindTreeTutorialStepInstance implements TutorialStepInstance {
     private @Nullable TutorialToast toast;
     private int timeWaiting;
 
-    public FindTreeTutorialStepInstance(Tutorial p_120496_) {
-        this.tutorial = p_120496_;
+    public FindTreeTutorialStepInstance(final Tutorial tutorial) {
+        this.tutorial = tutorial;
     }
 
     @Override
@@ -40,8 +37,8 @@ public class FindTreeTutorialStepInstance implements TutorialStepInstance {
         } else {
             Minecraft minecraft = this.tutorial.getMinecraft();
             if (this.timeWaiting == 1) {
-                LocalPlayer localplayer = minecraft.player;
-                if (localplayer != null && (hasCollectedTreeItems(localplayer) || hasPunchedTreesPreviously(localplayer))) {
+                LocalPlayer player = minecraft.player;
+                if (player != null && (hasCollectedTreeItems(player) || hasPunchedTreesPreviously(player))) {
                     this.tutorial.setStep(TutorialSteps.CRAFT_PLANKS);
                     return;
                 }
@@ -49,7 +46,7 @@ public class FindTreeTutorialStepInstance implements TutorialStepInstance {
 
             if (this.timeWaiting >= 6000 && this.toast == null) {
                 this.toast = new TutorialToast(minecraft.font, TutorialToast.Icons.TREE, TITLE, DESCRIPTION, false);
-                minecraft.getToastManager().addToast(this.toast);
+                minecraft.gui.toastManager().addToast(this.toast);
             }
         }
     }
@@ -63,30 +60,30 @@ public class FindTreeTutorialStepInstance implements TutorialStepInstance {
     }
 
     @Override
-    public void onLookAt(ClientLevel p_120501_, HitResult p_120502_) {
-        if (p_120502_.getType() == HitResult.Type.BLOCK) {
-            BlockState blockstate = p_120501_.getBlockState(((BlockHitResult)p_120502_).getBlockPos());
-            if (blockstate.is(BlockTags.COMPLETES_FIND_TREE_TUTORIAL)) {
+    public void onLookAt(final ClientLevel level, final HitResult hit) {
+        if (hit.getType() == HitResult.Type.BLOCK) {
+            BlockState state = level.getBlockState(((BlockHitResult)hit).getBlockPos());
+            if (state.is(BlockTags.COMPLETES_FIND_TREE_TUTORIAL)) {
                 this.tutorial.setStep(TutorialSteps.PUNCH_TREE);
             }
         }
     }
 
     @Override
-    public void onGetItem(ItemStack p_120499_) {
-        if (p_120499_.is(ItemTags.COMPLETES_FIND_TREE_TUTORIAL)) {
+    public void onGetItem(final ItemStack itemStack) {
+        if (itemStack.is(ItemTags.COMPLETES_FIND_TREE_TUTORIAL)) {
             this.tutorial.setStep(TutorialSteps.CRAFT_PLANKS);
         }
     }
 
-    private static boolean hasCollectedTreeItems(LocalPlayer p_235272_) {
-        return p_235272_.getInventory().hasAnyMatching(p_235270_ -> p_235270_.is(ItemTags.COMPLETES_FIND_TREE_TUTORIAL));
+    private static boolean hasCollectedTreeItems(final LocalPlayer player) {
+        return player.getInventory().hasAnyMatching(item -> item.is(ItemTags.COMPLETES_FIND_TREE_TUTORIAL));
     }
 
-    public static boolean hasPunchedTreesPreviously(LocalPlayer p_120504_) {
+    public static boolean hasPunchedTreesPreviously(final LocalPlayer player) {
         for (Holder<Block> holder : BuiltInRegistries.BLOCK.getTagOrEmpty(BlockTags.COMPLETES_FIND_TREE_TUTORIAL)) {
             Block block = holder.value();
-            if (p_120504_.getStats().getValue(Stats.BLOCK_MINED.get(block)) > 0) {
+            if (player.getStats().getValue(Stats.BLOCK_MINED.get(block)) > 0) {
                 return true;
             }
         }

@@ -11,27 +11,27 @@ public final class PlayerMap {
         return this.players.keySet();
     }
 
-    public void addPlayer(ServerPlayer p_8254_, boolean p_8255_) {
-        this.players.put(p_8254_, p_8255_);
+    public void addPlayer(final ServerPlayer player, final boolean ignored) {
+        this.players.put(player, ignored);
     }
 
-    public void removePlayer(ServerPlayer p_8251_) {
-        this.players.removeBoolean(p_8251_);
+    public void removePlayer(final ServerPlayer player) {
+        this.players.removeBoolean(player);
     }
 
-    public void ignorePlayer(ServerPlayer p_8257_) {
-        this.players.replace(p_8257_, true);
+    public void ignorePlayer(final ServerPlayer player) {
+        this.players.replace(player, true);
     }
 
-    public void unIgnorePlayer(ServerPlayer p_8259_) {
-        this.players.replace(p_8259_, false);
+    public void unIgnorePlayer(final ServerPlayer player) {
+        this.players.replace(player, false);
     }
 
-    public boolean ignoredOrUnknown(ServerPlayer p_8261_) {
-        return this.players.getOrDefault(p_8261_, true);
+    public boolean ignoredOrUnknown(final ServerPlayer player) {
+        return this.players.getOrDefault(player, true);
     }
 
-    public boolean ignored(ServerPlayer p_8263_) {
-        return this.players.getBoolean(p_8263_);
+    public boolean ignored(final ServerPlayer player) {
+        return this.players.getBoolean(player);
     }
 }

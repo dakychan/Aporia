@@ -27,7 +27,7 @@ public class BlankFormat implements NumberFormat {
     }
 
     @Override
-    public MutableComponent format(int p_310442_) {
+    public MutableComponent format(final int value) {
         return Component.empty();
     }
 

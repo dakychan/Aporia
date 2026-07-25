@@ -7,18 +7,18 @@ import java.io.IOException;
 public record ByteTag(byte value) implements NumericTag {
     private static final int SELF_SIZE_IN_BYTES = 9;
     public static final TagType<ByteTag> TYPE = new TagType.StaticSize<ByteTag>() {
-        public ByteTag load(DataInput p_128297_, NbtAccounter p_128299_) throws IOException {
-            return ByteTag.valueOf(readAccounted(p_128297_, p_128299_));
+        public ByteTag load(final DataInput input, final NbtAccounter accounter) throws IOException {
+            return ByteTag.valueOf(readAccounted(input, accounter));
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197438_, StreamTagVisitor p_197439_, NbtAccounter p_301726_) throws IOException {
-            return p_197439_.visit(readAccounted(p_197438_, p_301726_));
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            return output.visit(readAccounted(input, accounter));
         }
 
-        private static byte readAccounted(DataInput p_301730_, NbtAccounter p_301751_) throws IOException {
-            p_301751_.accountBytes(9L);
-            return p_301730_.readByte();
+        private static byte readAccounted(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(9L);
+            return input.readByte();
         }
 
         @Override
@@ -40,21 +40,20 @@ public record ByteTag(byte value) implements NumericTag {
     public static final ByteTag ONE = valueOf((byte)1);
 
     @Deprecated(forRemoval = true)
-    public ByteTag(byte value) {
-        this.value = value;
+    public ByteTag {
     }
 
-    public static ByteTag valueOf(byte p_128267_) {
-        return ByteTag.Cache.cache[128 + p_128267_];
+    public static ByteTag valueOf(final byte data) {
+        return ByteTag.Cache.cache[128 + data];
     }
 
-    public static ByteTag valueOf(boolean p_128274_) {
-        return p_128274_ ? ONE : ZERO;
+    public static ByteTag valueOf(final boolean data) {
+        return data ? ONE : ZERO;
     }
 
     @Override
-    public void write(DataOutput p_128269_) throws IOException {
-        p_128269_.writeByte(this.value);
+    public void write(final DataOutput output) throws IOException {
+        output.writeByte(this.value);
     }
 
     @Override
@@ -77,8 +76,8 @@ public record ByteTag(byte value) implements NumericTag {
     }
 
     @Override
-    public void accept(TagVisitor p_177842_) {
-        p_177842_.visitByte(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitByte(this);
     }
 
     @Override
@@ -117,22 +116,19 @@ public record ByteTag(byte value) implements NumericTag {
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197436_) {
-        return p_197436_.visit(this.value);
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
+        return visitor.visit(this.value);
     }
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitByte(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitByte(this);
+        return visitor.build();
     }
 
-    static class Cache {
-        static final ByteTag[] cache = new ByteTag[256];
-
-        private Cache() {
-        }
+    private static class Cache {
+        private static final ByteTag[] cache = new ByteTag[256];
 
         static {
             for (int i = 0; i < cache.length; i++) {

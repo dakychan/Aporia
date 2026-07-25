@@ -7,32 +7,29 @@ import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.Zone;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class RemotePlayer extends AbstractClientPlayer {
     private Vec3 lerpDeltaMovement = Vec3.ZERO;
     private int lerpDeltaMovementSteps;
 
-    public RemotePlayer(ClientLevel p_252213_, GameProfile p_250471_) {
-        super(p_252213_, p_250471_);
+    public RemotePlayer(final ClientLevel level, final GameProfile gameProfile) {
+        super(level, gameProfile);
         this.noPhysics = true;
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_108770_) {
-        double d0 = this.getBoundingBox().getSize() * 10.0;
-        if (Double.isNaN(d0)) {
-            d0 = 1.0;
+    public boolean shouldRenderAtSqrDistance(final double distance) {
+        double size = this.getBoundingBox().getSize() * 10.0;
+        if (Double.isNaN(size)) {
+            size = 1.0;
         }
 
-        d0 *= 64.0 * getViewScale();
-        return p_108770_ < d0 * d0;
+        size *= 64.0 * getViewScale();
+        return distance < size * size;
     }
 
     @Override
-    public boolean hurtClient(DamageSource p_108772_) {
+    public boolean hurtClient(final DamageSource source) {
         return true;
     }
 
@@ -67,14 +64,14 @@ public class RemotePlayer extends AbstractClientPlayer {
         this.updateSwingTime();
         this.updateBob();
 
-        try (Zone zone = Profiler.get().zone("push")) {
+        try (Zone ignored = Profiler.get().zone("push")) {
             this.pushEntities();
         }
     }
 
     @Override
-    public void lerpMotion(Vec3 p_430711_) {
-        this.lerpDeltaMovement = p_430711_;
+    public void lerpMotion(final Vec3 movement) {
+        this.lerpDeltaMovement = movement;
         this.lerpDeltaMovementSteps = this.getType().updateInterval() + 1;
     }
 
@@ -83,8 +80,8 @@ public class RemotePlayer extends AbstractClientPlayer {
     }
 
     @Override
-    public void recreateFromPacket(ClientboundAddEntityPacket p_301606_) {
-        super.recreateFromPacket(p_301606_);
+    public void recreateFromPacket(final ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
         this.setOldPosAndRot();
     }
 }

@@ -23,119 +23,119 @@ public class FallenTreeFeature extends Feature<FallenTreeConfiguration> {
     private static final int FALLEN_LOG_MAX_GROUND_GAP = 2;
     private static final int FALLEN_LOG_MAX_SPACE_FROM_STUMP = 2;
 
-    public FallenTreeFeature(Codec<FallenTreeConfiguration> p_392549_) {
-        super(p_392549_);
+    public FallenTreeFeature(final Codec<FallenTreeConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<FallenTreeConfiguration> p_393978_) {
-        this.placeFallenTree(p_393978_.config(), p_393978_.origin(), p_393978_.level(), p_393978_.random());
+    public boolean place(final FeaturePlaceContext<FallenTreeConfiguration> context) {
+        this.placeFallenTree(context.config(), context.origin(), context.level(), context.random());
         return true;
     }
 
-    private void placeFallenTree(FallenTreeConfiguration p_392644_, BlockPos p_394187_, WorldGenLevel p_395647_, RandomSource p_391733_) {
-        this.placeStump(p_392644_, p_395647_, p_391733_, p_394187_.mutable());
-        Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(p_391733_);
-        int i = p_392644_.logLength.sample(p_391733_) - 2;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_394187_.relative(direction, 2 + p_391733_.nextInt(2)).mutable();
-        this.setGroundHeightForFallenLogStartPos(p_395647_, blockpos$mutableblockpos);
-        if (this.canPlaceEntireFallenLog(p_395647_, i, blockpos$mutableblockpos, direction)) {
-            this.placeFallenLog(p_392644_, p_395647_, p_391733_, i, blockpos$mutableblockpos, direction);
+    private void placeFallenTree(final FallenTreeConfiguration config, final BlockPos origin, final WorldGenLevel level, final RandomSource random) {
+        this.placeStump(config, level, random, origin.mutable());
+        Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+        int logLength = config.logLength.sample(random) - 2;
+        BlockPos.MutableBlockPos logStartPos = origin.relative(direction, 2 + random.nextInt(2)).mutable();
+        this.setGroundHeightForFallenLogStartPos(level, logStartPos);
+        if (this.canPlaceEntireFallenLog(level, logLength, logStartPos, direction)) {
+            this.placeFallenLog(config, level, random, logLength, logStartPos, direction);
         }
     }
 
-    private void setGroundHeightForFallenLogStartPos(WorldGenLevel p_396419_, BlockPos.MutableBlockPos p_397012_) {
-        p_397012_.move(Direction.UP, 1);
+    private void setGroundHeightForFallenLogStartPos(final WorldGenLevel level, final BlockPos.MutableBlockPos logStartPos) {
+        logStartPos.move(Direction.UP, 1);
 
         for (int i = 0; i < 6; i++) {
-            if (this.mayPlaceOn(p_396419_, p_397012_)) {
+            if (this.mayPlaceOn(level, logStartPos)) {
                 return;
             }
 
-            p_397012_.move(Direction.DOWN);
+            logStartPos.move(Direction.DOWN);
         }
     }
 
-    private void placeStump(FallenTreeConfiguration p_395657_, WorldGenLevel p_396801_, RandomSource p_392489_, BlockPos.MutableBlockPos p_394715_) {
-        BlockPos blockpos = this.placeLogBlock(p_395657_, p_396801_, p_392489_, p_394715_, Function.identity());
-        this.decorateLogs(p_396801_, p_392489_, Set.of(blockpos), p_395657_.stumpDecorators);
+    private void placeStump(final FallenTreeConfiguration config, final WorldGenLevel level, final RandomSource random, final BlockPos.MutableBlockPos stumpPos) {
+        BlockPos stump = this.placeLogBlock(config, level, random, stumpPos, Function.identity());
+        this.decorateLogs(level, random, Set.of(stump), config.stumpDecorators);
     }
 
-    private boolean canPlaceEntireFallenLog(WorldGenLevel p_394921_, int p_393137_, BlockPos.MutableBlockPos p_393745_, Direction p_393391_) {
-        int i = 0;
+    private boolean canPlaceEntireFallenLog(
+        final WorldGenLevel level, final int logLength, final BlockPos.MutableBlockPos logStartPos, final Direction direction
+    ) {
+        int gapInGround = 0;
 
-        for (int j = 0; j < p_393137_; j++) {
-            if (!TreeFeature.validTreePos(p_394921_, p_393745_)) {
+        for (int i = 0; i < logLength; i++) {
+            if (!TreeFeature.validTreePos(level, logStartPos)) {
                 return false;
             }
 
-            if (!this.isOverSolidGround(p_394921_, p_393745_)) {
-                if (++i > 2) {
+            if (!this.isOverSolidGround(level, logStartPos)) {
+                if (++gapInGround > 2) {
                     return false;
                 }
             } else {
-                i = 0;
+                gapInGround = 0;
             }
 
-            p_393745_.move(p_393391_);
+            logStartPos.move(direction);
         }
 
-        p_393745_.move(p_393391_.getOpposite(), p_393137_);
+        logStartPos.move(direction.getOpposite(), logLength);
         return true;
     }
 
     private void placeFallenLog(
-        FallenTreeConfiguration p_394838_,
-        WorldGenLevel p_396397_,
-        RandomSource p_394699_,
-        int p_396625_,
-        BlockPos.MutableBlockPos p_394037_,
-        Direction p_396491_
+        final FallenTreeConfiguration config,
+        final WorldGenLevel level,
+        final RandomSource random,
+        final int logLength,
+        final BlockPos.MutableBlockPos logStartPos,
+        final Direction direction
     ) {
-        Set<BlockPos> set = new HashSet<>();
+        Set<BlockPos> fallenLog = new HashSet<>();
 
-        for (int i = 0; i < p_396625_; i++) {
-            set.add(this.placeLogBlock(p_394838_, p_396397_, p_394699_, p_394037_, getSidewaysStateModifier(p_396491_)));
-            p_394037_.move(p_396491_);
+        for (int i = 0; i < logLength; i++) {
+            fallenLog.add(this.placeLogBlock(config, level, random, logStartPos, getSidewaysStateModifier(direction)));
+            logStartPos.move(direction);
         }
 
-        this.decorateLogs(p_396397_, p_394699_, set, p_394838_.logDecorators);
+        this.decorateLogs(level, random, fallenLog, config.logDecorators);
     }
 
-    private boolean mayPlaceOn(LevelAccessor p_394406_, BlockPos p_392150_) {
-        return TreeFeature.validTreePos(p_394406_, p_392150_) && this.isOverSolidGround(p_394406_, p_392150_);
+    private boolean mayPlaceOn(final LevelAccessor level, final BlockPos blockPos) {
+        return TreeFeature.validTreePos(level, blockPos) && this.isOverSolidGround(level, blockPos);
     }
 
-    private boolean isOverSolidGround(LevelAccessor p_395614_, BlockPos p_395166_) {
-        return p_395614_.getBlockState(p_395166_.below()).isFaceSturdy(p_395614_, p_395166_, Direction.UP);
+    private boolean isOverSolidGround(final LevelAccessor level, final BlockPos blockPos) {
+        return level.getBlockState(blockPos.below()).isFaceSturdy(level, blockPos, Direction.UP);
     }
 
     private BlockPos placeLogBlock(
-        FallenTreeConfiguration p_395209_,
-        WorldGenLevel p_394250_,
-        RandomSource p_392111_,
-        BlockPos.MutableBlockPos p_394770_,
-        Function<BlockState, BlockState> p_397029_
+        final FallenTreeConfiguration config,
+        final WorldGenLevel level,
+        final RandomSource random,
+        final BlockPos.MutableBlockPos blockPos,
+        final Function<BlockState, BlockState> sidewaysStateModifier
     ) {
-        p_394250_.setBlock(p_394770_, p_397029_.apply(p_395209_.trunkProvider.getState(p_392111_, p_394770_)), 3);
-        this.markAboveForPostProcessing(p_394250_, p_394770_);
-        return p_394770_.immutable();
+        level.setBlock(blockPos, sidewaysStateModifier.apply(config.trunkProvider.getState(level, random, blockPos)), 3);
+        this.markAboveForPostProcessing(level, blockPos);
+        return blockPos.immutable();
     }
 
-    private void decorateLogs(WorldGenLevel p_395747_, RandomSource p_396895_, Set<BlockPos> p_394439_, List<TreeDecorator> p_394258_) {
-        if (!p_394258_.isEmpty()) {
-            TreeDecorator.Context treedecorator$context = new TreeDecorator.Context(
-                p_395747_, this.getDecorationSetter(p_395747_), p_396895_, p_394439_, Set.of(), Set.of()
-            );
-            p_394258_.forEach(p_393767_ -> p_393767_.place(treedecorator$context));
+    private void decorateLogs(final WorldGenLevel level, final RandomSource random, final Set<BlockPos> logs, final List<TreeDecorator> decorators) {
+        if (!decorators.isEmpty()) {
+            TreeDecorator.Context decoratorContext = new TreeDecorator.Context(level, this.getDecorationSetter(level), random, logs, Set.of(), Set.of());
+            decorators.forEach(decorator -> decorator.place(decoratorContext));
         }
     }
 
-    private BiConsumer<BlockPos, BlockState> getDecorationSetter(WorldGenLevel p_392222_) {
-        return (p_391644_, p_394520_) -> p_392222_.setBlock(p_391644_, p_394520_, 19);
+    private BiConsumer<BlockPos, BlockState> getDecorationSetter(final WorldGenLevel level) {
+        return (pos, state) -> level.setBlock(pos, state, 19);
     }
 
-    private static Function<BlockState, BlockState> getSidewaysStateModifier(Direction p_397923_) {
-        return p_391565_ -> p_391565_.trySetValue(RotatedPillarBlock.AXIS, p_397923_.getAxis());
+    private static Function<BlockState, BlockState> getSidewaysStateModifier(final Direction direction) {
+        return state -> state.trySetValue(RotatedPillarBlock.AXIS, direction.getAxis());
     }
 }

@@ -3,7 +3,6 @@ package net.minecraft.world.level.levelgen.feature.treedecorators;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -14,32 +13,32 @@ import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvi
 
 public class AttachedToLogsDecorator extends TreeDecorator {
     public static final MapCodec<AttachedToLogsDecorator> CODEC = RecordCodecBuilder.mapCodec(
-        p_394426_ -> p_394426_.group(
-                Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(p_396823_ -> p_396823_.probability),
-                BlockStateProvider.CODEC.fieldOf("block_provider").forGetter(p_393035_ -> p_393035_.blockProvider),
-                ExtraCodecs.nonEmptyList(Direction.CODEC.listOf()).fieldOf("directions").forGetter(p_397159_ -> p_397159_.directions)
+        i -> i.group(
+                Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(p -> p.probability),
+                BlockStateProvider.CODEC.fieldOf("block_provider").forGetter(p -> p.blockProvider),
+                ExtraCodecs.nonEmptyList(Direction.CODEC.listOf()).fieldOf("directions").forGetter(p -> p.directions)
             )
-            .apply(p_394426_, AttachedToLogsDecorator::new)
+            .apply(i, AttachedToLogsDecorator::new)
     );
     private final float probability;
     private final BlockStateProvider blockProvider;
     private final List<Direction> directions;
 
-    public AttachedToLogsDecorator(float p_394913_, BlockStateProvider p_394694_, List<Direction> p_392249_) {
-        this.probability = p_394913_;
-        this.blockProvider = p_394694_;
-        this.directions = p_392249_;
+    public AttachedToLogsDecorator(final float probability, final BlockStateProvider blockProvider, final List<Direction> directions) {
+        this.probability = probability;
+        this.blockProvider = blockProvider;
+        this.directions = directions;
     }
 
     @Override
-    public void place(TreeDecorator.Context p_397655_) {
-        RandomSource randomsource = p_397655_.random();
+    public void place(final TreeDecorator.Context context) {
+        RandomSource random = context.random();
 
-        for (BlockPos blockpos : Util.shuffledCopy(p_397655_.logs(), randomsource)) {
-            Direction direction = Util.getRandom(this.directions, randomsource);
-            BlockPos blockpos1 = blockpos.relative(direction);
-            if (randomsource.nextFloat() <= this.probability && p_397655_.isAir(blockpos1)) {
-                p_397655_.setBlock(blockpos1, this.blockProvider.getState(randomsource, blockpos1));
+        for (BlockPos logsPos : Util.shuffledCopy(context.logs(), random)) {
+            Direction direction = Util.getRandom(this.directions, random);
+            BlockPos placementPos = logsPos.relative(direction);
+            if (random.nextFloat() <= this.probability && context.isAir(placementPos)) {
+                context.setBlock(placementPos, this.blockProvider.getState(context.level(), random, placementPos));
             }
         }
     }

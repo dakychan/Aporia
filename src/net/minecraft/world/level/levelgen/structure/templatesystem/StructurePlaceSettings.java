@@ -25,58 +25,58 @@ public class StructurePlaceSettings {
     private boolean finalizeEntities;
 
     public StructurePlaceSettings copy() {
-        StructurePlaceSettings structureplacesettings = new StructurePlaceSettings();
-        structureplacesettings.mirror = this.mirror;
-        structureplacesettings.rotation = this.rotation;
-        structureplacesettings.rotationPivot = this.rotationPivot;
-        structureplacesettings.ignoreEntities = this.ignoreEntities;
-        structureplacesettings.boundingBox = this.boundingBox;
-        structureplacesettings.liquidSettings = this.liquidSettings;
-        structureplacesettings.random = this.random;
-        structureplacesettings.palette = this.palette;
-        structureplacesettings.processors.addAll(this.processors);
-        structureplacesettings.knownShape = this.knownShape;
-        structureplacesettings.finalizeEntities = this.finalizeEntities;
-        return structureplacesettings;
+        StructurePlaceSettings setting = new StructurePlaceSettings();
+        setting.mirror = this.mirror;
+        setting.rotation = this.rotation;
+        setting.rotationPivot = this.rotationPivot;
+        setting.ignoreEntities = this.ignoreEntities;
+        setting.boundingBox = this.boundingBox;
+        setting.liquidSettings = this.liquidSettings;
+        setting.random = this.random;
+        setting.palette = this.palette;
+        setting.processors.addAll(this.processors);
+        setting.knownShape = this.knownShape;
+        setting.finalizeEntities = this.finalizeEntities;
+        return setting;
     }
 
-    public StructurePlaceSettings setMirror(Mirror p_74378_) {
-        this.mirror = p_74378_;
+    public StructurePlaceSettings setMirror(final Mirror mirror) {
+        this.mirror = mirror;
         return this;
     }
 
-    public StructurePlaceSettings setRotation(Rotation p_74380_) {
-        this.rotation = p_74380_;
+    public StructurePlaceSettings setRotation(final Rotation rotation) {
+        this.rotation = rotation;
         return this;
     }
 
-    public StructurePlaceSettings setRotationPivot(BlockPos p_74386_) {
-        this.rotationPivot = p_74386_;
+    public StructurePlaceSettings setRotationPivot(final BlockPos rotationPivot) {
+        this.rotationPivot = rotationPivot;
         return this;
     }
 
-    public StructurePlaceSettings setIgnoreEntities(boolean p_74393_) {
-        this.ignoreEntities = p_74393_;
+    public StructurePlaceSettings setIgnoreEntities(final boolean ignoreEntities) {
+        this.ignoreEntities = ignoreEntities;
         return this;
     }
 
-    public StructurePlaceSettings setBoundingBox(BoundingBox p_74382_) {
-        this.boundingBox = p_74382_;
+    public StructurePlaceSettings setBoundingBox(final BoundingBox boundingBox) {
+        this.boundingBox = boundingBox;
         return this;
     }
 
-    public StructurePlaceSettings setRandom(@Nullable RandomSource p_230325_) {
-        this.random = p_230325_;
+    public StructurePlaceSettings setRandom(final @Nullable RandomSource random) {
+        this.random = random;
         return this;
     }
 
-    public StructurePlaceSettings setLiquidSettings(LiquidSettings p_343019_) {
-        this.liquidSettings = p_343019_;
+    public StructurePlaceSettings setLiquidSettings(final LiquidSettings liquidSettings) {
+        this.liquidSettings = liquidSettings;
         return this;
     }
 
-    public StructurePlaceSettings setKnownShape(boolean p_74403_) {
-        this.knownShape = p_74403_;
+    public StructurePlaceSettings setKnownShape(final boolean knownShape) {
+        this.knownShape = knownShape;
         return this;
     }
 
@@ -85,13 +85,13 @@ public class StructurePlaceSettings {
         return this;
     }
 
-    public StructurePlaceSettings addProcessor(StructureProcessor p_74384_) {
-        this.processors.add(p_74384_);
+    public StructurePlaceSettings addProcessor(final StructureProcessor processor) {
+        this.processors.add(processor);
         return this;
     }
 
-    public StructurePlaceSettings popProcessor(StructureProcessor p_74398_) {
-        this.processors.remove(p_74398_);
+    public StructurePlaceSettings popProcessor(final StructureProcessor processor) {
+        this.processors.remove(processor);
         return this;
     }
 
@@ -107,11 +107,11 @@ public class StructurePlaceSettings {
         return this.rotationPivot;
     }
 
-    public RandomSource getRandom(@Nullable BlockPos p_230327_) {
+    public RandomSource getRandom(final @Nullable BlockPos pos) {
         if (this.random != null) {
             return this.random;
         } else {
-            return p_230327_ == null ? RandomSource.create(Util.getMillis()) : RandomSource.create(Mth.getSeed(p_230327_));
+            return pos == null ? RandomSource.create(Util.getMillis()) : RandomSource.create(Mth.getSeed(pos));
         }
     }
 
@@ -135,17 +135,17 @@ public class StructurePlaceSettings {
         return this.liquidSettings == LiquidSettings.APPLY_WATERLOGGING;
     }
 
-    public StructureTemplate.Palette getRandomPalette(List<StructureTemplate.Palette> p_74388_, @Nullable BlockPos p_74389_) {
-        int i = p_74388_.size();
-        if (i == 0) {
+    public StructureTemplate.Palette getRandomPalette(final List<StructureTemplate.Palette> palettes, final @Nullable BlockPos pos) {
+        int paletteSize = palettes.size();
+        if (paletteSize == 0) {
             throw new IllegalStateException("No palettes");
         } else {
-            return p_74388_.get(this.getRandom(p_74389_).nextInt(i));
+            return palettes.get(this.getRandom(pos).nextInt(paletteSize));
         }
     }
 
-    public StructurePlaceSettings setFinalizeEntities(boolean p_74406_) {
-        this.finalizeEntities = p_74406_;
+    public StructurePlaceSettings setFinalizeEntities(final boolean finalizeEntities) {
+        this.finalizeEntities = finalizeEntities;
         return this;
     }
 

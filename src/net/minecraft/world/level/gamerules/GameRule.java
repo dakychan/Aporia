@@ -24,23 +24,23 @@ public final class GameRule<T> implements FeatureElement {
     private final FeatureFlagSet requiredFeatures;
 
     public GameRule(
-        GameRuleCategory p_453014_,
-        GameRuleType p_457146_,
-        ArgumentType<T> p_459513_,
-        GameRules.VisitorCaller<T> p_458863_,
-        Codec<T> p_453195_,
-        ToIntFunction<T> p_454698_,
-        T p_460979_,
-        FeatureFlagSet p_451008_
+        final GameRuleCategory category,
+        final GameRuleType gameRuleType,
+        final ArgumentType<T> argument,
+        final GameRules.VisitorCaller<T> visitorCaller,
+        final Codec<T> valueCodec,
+        final ToIntFunction<T> commandResultFunction,
+        final T defaultValue,
+        final FeatureFlagSet requiredFeatures
     ) {
-        this.category = p_453014_;
-        this.gameRuleType = p_457146_;
-        this.argument = p_459513_;
-        this.visitorCaller = p_458863_;
-        this.valueCodec = p_453195_;
-        this.commandResultFunction = p_454698_;
-        this.defaultValue = p_460979_;
-        this.requiredFeatures = p_451008_;
+        this.category = category;
+        this.gameRuleType = gameRuleType;
+        this.argument = argument;
+        this.visitorCaller = visitorCaller;
+        this.valueCodec = valueCodec;
+        this.commandResultFunction = commandResultFunction;
+        this.defaultValue = defaultValue;
+        this.requiredFeatures = requiredFeatures;
     }
 
     @Override
@@ -56,20 +56,24 @@ public final class GameRule<T> implements FeatureElement {
         return Objects.requireNonNull(BuiltInRegistries.GAME_RULE.getKey(this));
     }
 
+    public Identifier getIdentifierWithFallback() {
+        return Objects.requireNonNullElse(BuiltInRegistries.GAME_RULE.getKey(this), Identifier.withDefaultNamespace("unregistered_sadface"));
+    }
+
     public String getDescriptionId() {
         return Util.makeDescriptionId("gamerule", this.getIdentifier());
     }
 
-    public String serialize(T p_455121_) {
-        return p_455121_.toString();
+    public String serialize(final T value) {
+        return value.toString();
     }
 
-    public DataResult<T> deserialize(String p_454648_) {
+    public DataResult<T> deserialize(final String value) {
         try {
-            StringReader stringreader = new StringReader(p_454648_);
-            T t = this.argument.parse(stringreader);
-            return stringreader.canRead() ? DataResult.error(() -> "Failed to deserialize; trailing characters", t) : DataResult.success(t);
-        } catch (CommandSyntaxException commandsyntaxexception) {
+            StringReader reader = new StringReader(value);
+            T result = this.argument.parse(reader);
+            return reader.canRead() ? DataResult.error(() -> "Failed to deserialize; trailing characters", result) : DataResult.success(result);
+        } catch (CommandSyntaxException ignored) {
             return DataResult.error(() -> "Failed to deserialize");
         }
     }
@@ -78,12 +82,12 @@ public final class GameRule<T> implements FeatureElement {
         return (Class<T>)this.defaultValue.getClass();
     }
 
-    public void callVisitor(GameRuleTypeVisitor p_458312_) {
-        this.visitorCaller.call(p_458312_, this);
+    public void callVisitor(final GameRuleTypeVisitor visitor) {
+        this.visitorCaller.call(visitor, this);
     }
 
-    public int getCommandResult(T p_453961_) {
-        return this.commandResultFunction.applyAsInt(p_453961_);
+    public int getCommandResult(final T value) {
+        return this.commandResultFunction.applyAsInt(value);
     }
 
     public GameRuleCategory category() {

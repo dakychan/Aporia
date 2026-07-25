@@ -8,18 +8,15 @@ import java.time.Instant;
 import java.util.UUID;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.reporting.NameReportScreen;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class NameReport extends Report {
     private final String reportedName;
 
-    NameReport(UUID p_300103_, Instant p_297358_, UUID p_301007_, String p_301332_) {
-        super(p_300103_, p_297358_, p_301007_);
-        this.reportedName = p_301332_;
+    private NameReport(final UUID reportId, final Instant createdAt, final UUID reportedProfileId, final String reportedName) {
+        super(reportId, createdAt, reportedProfileId);
+        this.reportedName = reportedName;
     }
 
     public String getReportedName() {
@@ -27,25 +24,24 @@ public class NameReport extends Report {
     }
 
     public NameReport copy() {
-        NameReport namereport = new NameReport(this.reportId, this.createdAt, this.reportedProfileId, this.reportedName);
-        namereport.comments = this.comments;
-        namereport.attested = this.attested;
-        return namereport;
+        NameReport result = new NameReport(this.reportId, this.createdAt, this.reportedProfileId, this.reportedName);
+        result.comments = this.comments;
+        result.attested = this.attested;
+        return result;
     }
 
     @Override
-    public Screen createScreen(Screen p_300004_, ReportingContext p_297616_) {
-        return new NameReportScreen(p_300004_, p_297616_, this);
+    public Screen createScreen(final Screen lastScreen, final ReportingContext context) {
+        return new NameReportScreen(lastScreen, context, this);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder extends Report.Builder<NameReport> {
-        public Builder(NameReport p_297219_, AbuseReportLimits p_298998_) {
-            super(p_297219_, p_298998_);
+        public static class Builder extends Report.Builder<NameReport> {
+        public Builder(final NameReport report, final AbuseReportLimits limits) {
+            super(report, limits);
         }
 
-        public Builder(UUID p_298683_, String p_299992_, AbuseReportLimits p_299650_) {
-            super(new NameReport(UUID.randomUUID(), Instant.now(), p_298683_, p_299992_), p_299650_);
+        public Builder(final UUID reportedProfileId, final String reportedName, final AbuseReportLimits limits) {
+            super(new NameReport(UUID.randomUUID(), Instant.now(), reportedProfileId, reportedName), limits);
         }
 
         @Override
@@ -59,15 +55,15 @@ public class NameReport extends Report {
         }
 
         @Override
-        public Either<Report.Result, Report.CannotBuildReason> build(ReportingContext p_299061_) {
-            Report.CannotBuildReason report$cannotbuildreason = this.checkBuildable();
-            if (report$cannotbuildreason != null) {
-                return Either.right(report$cannotbuildreason);
-            } else {
-                ReportedEntity reportedentity = new ReportedEntity(this.report.reportedProfileId);
-                AbuseReport abusereport = AbuseReport.name(this.report.comments, reportedentity, this.report.createdAt);
-                return Either.left(new Report.Result(this.report.reportId, ReportType.USERNAME, abusereport));
+        public Either<Report.Result, Report.CannotBuildReason> build(final ReportingContext reportingContext) {
+            Report.CannotBuildReason error = this.checkBuildable();
+            if (error != null) {
+                return Either.right(error);
             }
+
+            ReportedEntity reportedEntity = new ReportedEntity(this.report.reportedProfileId);
+            AbuseReport abuseReport = AbuseReport.name(this.report.comments, reportedEntity, this.report.createdAt);
+            return Either.left(new Report.Result(this.report.reportId, ReportType.USERNAME, abuseReport));
         }
     }
 }

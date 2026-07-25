@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.List;
 import java.util.stream.Stream;
@@ -17,31 +16,23 @@ public record WritableBookContent(List<Filterable<String>> pages) implements Boo
     private static final Codec<Filterable<String>> PAGE_CODEC = Filterable.codec(Codec.string(0, 1024));
     public static final Codec<List<Filterable<String>>> PAGES_CODEC = PAGE_CODEC.sizeLimitedListOf(100);
     public static final Codec<WritableBookContent> CODEC = RecordCodecBuilder.create(
-        p_327725_ -> p_327725_.group(PAGES_CODEC.optionalFieldOf("pages", List.of()).forGetter(WritableBookContent::pages))
-            .apply(p_327725_, WritableBookContent::new)
+        i -> i.group(PAGES_CODEC.optionalFieldOf("pages", List.of()).forGetter(WritableBookContent::pages)).apply(i, WritableBookContent::new)
     );
     public static final StreamCodec<ByteBuf, WritableBookContent> STREAM_CODEC = Filterable.streamCodec(ByteBufCodecs.stringUtf8(1024))
         .apply(ByteBufCodecs.list(100))
         .map(WritableBookContent::new, WritableBookContent::pages);
 
-    public WritableBookContent(List<Filterable<String>> pages) {
+    public WritableBookContent {
         if (pages.size() > 100) {
             throw new IllegalArgumentException("Got " + pages.size() + " pages, but maximum is 100");
-        } else {
-            this.pages = pages;
         }
     }
 
-    public Stream<String> getPages(boolean p_333617_) {
-        return this.pages.stream().map(p_334234_ -> p_334234_.get(p_333617_));
+    public Stream<String> getPages(final boolean filterEnabled) {
+        return this.pages.stream().map(page -> page.get(filterEnabled));
     }
 
-    public WritableBookContent withReplacedPages(List<Filterable<String>> p_334830_) {
-        return new WritableBookContent(p_334830_);
-    }
-
-    @Override
-    public List<Filterable<String>> pages() {
-        return this.pages;
+    public WritableBookContent withReplacedPages(final List<Filterable<String>> newPages) {
+        return new WritableBookContent(newPages);
     }
 }

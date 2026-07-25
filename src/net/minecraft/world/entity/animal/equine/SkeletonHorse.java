@@ -15,6 +15,7 @@ import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -32,15 +33,15 @@ public class SkeletonHorse extends AbstractHorse {
     private static final int TRAP_MAX_LIFE = 18000;
     private static final boolean DEFAULT_IS_TRAP = false;
     private static final int DEFAULT_TRAP_TIME = 0;
-    private static final EntityDimensions BABY_DIMENSIONS = EntityType.SKELETON_HORSE
+    private static final EntityDimensions BABY_DIMENSIONS = EntityTypes.SKELETON_HORSE
         .getDimensions()
-        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityType.SKELETON_HORSE.getHeight() - 0.03125F, 0.0F))
-        .scale(0.5F);
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, EntityTypes.SKELETON_HORSE.getHeight() - 0.25F, 0.0F))
+        .scale(0.7F);
     private boolean isTrap = false;
     private int trapTime = 0;
 
-    public SkeletonHorse(EntityType<? extends SkeletonHorse> p_455299_, Level p_457668_) {
-        super(p_455299_, p_457668_);
+    public SkeletonHorse(final EntityType<? extends SkeletonHorse> type, final Level level) {
+        super(type, level);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -48,16 +49,16 @@ public class SkeletonHorse extends AbstractHorse {
     }
 
     public static boolean checkSkeletonHorseSpawnRules(
-        EntityType<? extends Animal> p_457544_, LevelAccessor p_453324_, EntitySpawnReason p_456279_, BlockPos p_452689_, RandomSource p_453523_
+        final EntityType<? extends Animal> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return !EntitySpawnReason.isSpawner(p_456279_)
-            ? Animal.checkAnimalSpawnRules(p_457544_, p_453324_, p_456279_, p_452689_, p_453523_)
-            : EntitySpawnReason.ignoresLightRequirements(p_456279_) || isBrightEnoughToSpawn(p_453324_, p_452689_);
+        return !EntitySpawnReason.isSpawner(spawnReason)
+            ? Animal.checkAnimalSpawnRules(type, level, spawnReason, pos, random)
+            : EntitySpawnReason.ignoresLightRequirements(spawnReason) || isBrightEnoughToSpawn(level, pos);
     }
 
     @Override
-    protected void randomizeAttributes(RandomSource p_459150_) {
-        this.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(generateJumpStrength(p_459150_::nextDouble));
+    protected void randomizeAttributes(final RandomSource random) {
+        this.getAttribute(Attributes.JUMP_STRENGTH).setBaseValue(generateJumpStrength(random::nextDouble));
     }
 
     @Override
@@ -75,7 +76,7 @@ public class SkeletonHorse extends AbstractHorse {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_454066_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.SKELETON_HORSE_HURT;
     }
 
@@ -100,11 +101,11 @@ public class SkeletonHorse extends AbstractHorse {
     }
 
     @Override
-    protected void playSwimSound(float p_457105_) {
+    protected void playSwimSound(final float volume) {
         if (this.onGround()) {
             super.playSwimSound(0.3F);
         } else {
-            super.playSwimSound(Math.min(0.1F, p_457105_ * 25.0F));
+            super.playSwimSound(Math.min(0.1F, volume * 25.0F));
         }
     }
 
@@ -118,30 +119,30 @@ public class SkeletonHorse extends AbstractHorse {
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_450802_) {
-        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(p_450802_);
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
     @Override
     public void aiStep() {
         super.aiStep();
-        if (this.isTrap() && this.trapTime++ >= 18000) {
+        if (!this.isPersistenceRequired() && this.isTrap() && this.trapTime++ >= 18000) {
             this.discard();
         }
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_458576_) {
-        super.addAdditionalSaveData(p_458576_);
-        p_458576_.putBoolean("SkeletonTrap", this.isTrap());
-        p_458576_.putInt("SkeletonTrapTime", this.trapTime);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("SkeletonTrap", this.isTrap());
+        output.putInt("SkeletonTrapTime", this.trapTime);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_457163_) {
-        super.readAdditionalSaveData(p_457163_);
-        this.setTrap(p_457163_.getBooleanOr("SkeletonTrap", false));
-        this.trapTime = p_457163_.getIntOr("SkeletonTrapTime", 0);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setTrap(input.getBooleanOr("SkeletonTrap", false));
+        this.trapTime = input.getIntOr("SkeletonTrapTime", 0);
     }
 
     @Override
@@ -153,10 +154,10 @@ public class SkeletonHorse extends AbstractHorse {
         return this.isTrap;
     }
 
-    public void setTrap(boolean p_451433_) {
-        if (p_451433_ != this.isTrap) {
-            this.isTrap = p_451433_;
-            if (p_451433_) {
+    public void setTrap(final boolean trap) {
+        if (trap != this.isTrap) {
+            this.isTrap = trap;
+            if (trap) {
                 this.goalSelector.addGoal(1, this.skeletonTrapGoal);
             } else {
                 this.goalSelector.removeGoal(this.skeletonTrapGoal);
@@ -165,17 +166,22 @@ public class SkeletonHorse extends AbstractHorse {
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_455079_, AgeableMob p_460645_) {
-        return EntityType.SKELETON_HORSE.create(p_455079_, EntitySpawnReason.BREEDING);
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.SKELETON_HORSE.create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_460625_, InteractionHand p_458563_) {
-        return (InteractionResult)(!this.isTamed() ? InteractionResult.PASS : super.mobInteract(p_460625_, p_458563_));
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        return !this.isTamed() ? InteractionResult.PASS : super.mobInteract(player, hand);
     }
 
     @Override
-    public boolean canUseSlot(EquipmentSlot p_450363_) {
+    public boolean canUseSlot(final EquipmentSlot slot) {
         return true;
+    }
+
+    @Override
+    public boolean canAgeUp() {
+        return false;
     }
 }

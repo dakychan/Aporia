@@ -25,7 +25,7 @@ import net.minecraft.client.renderer.entity.layers.SpinAttackEffectLayer;
 import net.minecraft.client.renderer.entity.layers.WingsLayer;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.resources.Identifier;
@@ -44,267 +44,262 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.item.SwingAnimationType;
 import net.minecraft.world.item.component.SwingAnimation;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class AvatarRenderer<AvatarlikeEntity extends Avatar & ClientAvatarEntity>
     extends LivingEntityRenderer<AvatarlikeEntity, AvatarRenderState, PlayerModel> {
-    public AvatarRenderer(EntityRendererProvider.Context p_426442_, boolean p_428946_) {
-        super(p_426442_, new PlayerModel(p_426442_.bakeLayer(p_428946_ ? ModelLayers.PLAYER_SLIM : ModelLayers.PLAYER), p_428946_), 0.5F);
+    public AvatarRenderer(final EntityRendererProvider.Context context, final boolean slimSteve) {
+        super(context, new PlayerModel(context.bakeLayer(slimSteve ? ModelLayers.PLAYER_SLIM : ModelLayers.PLAYER), slimSteve), 0.5F);
         this.addLayer(
             new HumanoidArmorLayer<>(
                 this,
                 ArmorModelSet.bake(
-                    p_428946_ ? ModelLayers.PLAYER_SLIM_ARMOR : ModelLayers.PLAYER_ARMOR, p_426442_.getModelSet(), p_448353_ -> new PlayerModel(p_448353_, p_428946_)
+                    slimSteve ? ModelLayers.PLAYER_SLIM_ARMOR : ModelLayers.PLAYER_ARMOR, context.getModelSet(), part -> new PlayerModel(part, slimSteve)
                 ),
-                p_426442_.getEquipmentRenderer()
+                context.getEquipmentRenderer()
             )
         );
         this.addLayer(new PlayerItemInHandLayer<>(this));
-        this.addLayer(new ArrowLayer<>(this, p_426442_));
-        this.addLayer(new Deadmau5EarsLayer(this, p_426442_.getModelSet()));
-        this.addLayer(new CapeLayer(this, p_426442_.getModelSet(), p_426442_.getEquipmentAssets()));
-        this.addLayer(new CustomHeadLayer<>(this, p_426442_.getModelSet(), p_426442_.getPlayerSkinRenderCache()));
-        this.addLayer(new WingsLayer<>(this, p_426442_.getModelSet(), p_426442_.getEquipmentRenderer()));
-        this.addLayer(new ParrotOnShoulderLayer(this, p_426442_.getModelSet()));
-        this.addLayer(new SpinAttackEffectLayer(this, p_426442_.getModelSet()));
-        this.addLayer(new BeeStingerLayer<>(this, p_426442_));
+        this.addLayer(new ArrowLayer<>(this, context));
+        this.addLayer(new Deadmau5EarsLayer(this, context.getModelSet()));
+        this.addLayer(new CapeLayer(this, context.getModelSet(), context.getEquipmentAssets()));
+        this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getPlayerSkinRenderCache()));
+        this.addLayer(new WingsLayer<>(this, context.getModelSet(), context.getEquipmentRenderer()));
+        this.addLayer(new ParrotOnShoulderLayer(this, context.getModelSet()));
+        this.addLayer(new SpinAttackEffectLayer(this, context.getModelSet()));
+        this.addLayer(new BeeStingerLayer<>(this, context));
     }
 
-    protected boolean shouldRenderLayers(AvatarRenderState p_431592_) {
-        return !p_431592_.isSpectator;
+    protected boolean shouldRenderLayers(final AvatarRenderState state) {
+        return !state.isSpectator;
     }
 
-    public Vec3 getRenderOffset(AvatarRenderState p_428717_) {
-        Vec3 vec3 = super.getRenderOffset(p_428717_);
-        return p_428717_.isCrouching ? vec3.add(0.0, p_428717_.scale * -2.0F / 16.0, 0.0) : vec3;
+    public Vec3 getRenderOffset(final AvatarRenderState state) {
+        Vec3 offset = super.getRenderOffset(state);
+        return state.isCrouching ? offset.add(0.0, state.scale * -2.0F / 16.0, 0.0) : offset;
     }
 
-    private static HumanoidModel.ArmPose getArmPose(Avatar p_424150_, HumanoidArm p_426932_) {
-        ItemStack itemstack = p_424150_.getItemInHand(InteractionHand.MAIN_HAND);
-        ItemStack itemstack1 = p_424150_.getItemInHand(InteractionHand.OFF_HAND);
-        HumanoidModel.ArmPose humanoidmodel$armpose = getArmPose(p_424150_, itemstack, InteractionHand.MAIN_HAND);
-        HumanoidModel.ArmPose humanoidmodel$armpose1 = getArmPose(p_424150_, itemstack1, InteractionHand.OFF_HAND);
-        if (humanoidmodel$armpose.isTwoHanded()) {
-            humanoidmodel$armpose1 = itemstack1.isEmpty() ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
+    private static HumanoidModel.ArmPose getArmPose(final Avatar avatar, final HumanoidArm arm) {
+        ItemStack mainHandItem = avatar.getItemInHand(InteractionHand.MAIN_HAND);
+        ItemStack offHandItem = avatar.getItemInHand(InteractionHand.OFF_HAND);
+        HumanoidModel.ArmPose mainHandPose = getArmPose(avatar, mainHandItem, InteractionHand.MAIN_HAND);
+        HumanoidModel.ArmPose offHandPose = getArmPose(avatar, offHandItem, InteractionHand.OFF_HAND);
+        if (mainHandPose.isTwoHanded()) {
+            offHandPose = offHandItem.isEmpty() ? HumanoidModel.ArmPose.EMPTY : HumanoidModel.ArmPose.ITEM;
         }
 
-        return p_424150_.getMainArm() == p_426932_ ? humanoidmodel$armpose : humanoidmodel$armpose1;
+        return avatar.getMainArm() == arm ? mainHandPose : offHandPose;
     }
 
-    private static HumanoidModel.ArmPose getArmPose(Avatar p_422497_, ItemStack p_429700_, InteractionHand p_430481_) {
-        if (p_429700_.isEmpty()) {
+    private static HumanoidModel.ArmPose getArmPose(final Avatar avatar, final ItemStack itemInHand, final InteractionHand hand) {
+        if (itemInHand.isEmpty()) {
             return HumanoidModel.ArmPose.EMPTY;
-        } else if (!p_422497_.swinging && p_429700_.is(Items.CROSSBOW) && CrossbowItem.isCharged(p_429700_)) {
+        }
+
+        if (!avatar.swinging && itemInHand.is(Items.CROSSBOW) && CrossbowItem.isCharged(itemInHand)) {
             return HumanoidModel.ArmPose.CROSSBOW_HOLD;
-        } else {
-            if (p_422497_.getUsedItemHand() == p_430481_ && p_422497_.getUseItemRemainingTicks() > 0) {
-                ItemUseAnimation itemuseanimation = p_429700_.getUseAnimation();
-                if (itemuseanimation == ItemUseAnimation.BLOCK) {
-                    return HumanoidModel.ArmPose.BLOCK;
-                }
+        }
 
-                if (itemuseanimation == ItemUseAnimation.BOW) {
-                    return HumanoidModel.ArmPose.BOW_AND_ARROW;
-                }
-
-                if (itemuseanimation == ItemUseAnimation.TRIDENT) {
-                    return HumanoidModel.ArmPose.THROW_TRIDENT;
-                }
-
-                if (itemuseanimation == ItemUseAnimation.CROSSBOW) {
-                    return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
-                }
-
-                if (itemuseanimation == ItemUseAnimation.SPYGLASS) {
-                    return HumanoidModel.ArmPose.SPYGLASS;
-                }
-
-                if (itemuseanimation == ItemUseAnimation.TOOT_HORN) {
-                    return HumanoidModel.ArmPose.TOOT_HORN;
-                }
-
-                if (itemuseanimation == ItemUseAnimation.BRUSH) {
-                    return HumanoidModel.ArmPose.BRUSH;
-                }
-
-                if (itemuseanimation == ItemUseAnimation.SPEAR) {
-                    return HumanoidModel.ArmPose.SPEAR;
-                }
+        if (avatar.getUsedItemHand() == hand && avatar.getUseItemRemainingTicks() > 0) {
+            ItemUseAnimation anim = itemInHand.getUseAnimation();
+            if (anim == ItemUseAnimation.BLOCK) {
+                return HumanoidModel.ArmPose.BLOCK;
             }
 
-            SwingAnimation swinganimation = p_429700_.get(DataComponents.SWING_ANIMATION);
-            if (swinganimation != null && swinganimation.type() == SwingAnimationType.STAB && p_422497_.swinging) {
+            if (anim == ItemUseAnimation.BOW) {
+                return HumanoidModel.ArmPose.BOW_AND_ARROW;
+            }
+
+            if (anim == ItemUseAnimation.TRIDENT) {
+                return HumanoidModel.ArmPose.THROW_TRIDENT;
+            }
+
+            if (anim == ItemUseAnimation.CROSSBOW) {
+                return HumanoidModel.ArmPose.CROSSBOW_CHARGE;
+            }
+
+            if (anim == ItemUseAnimation.SPYGLASS) {
+                return HumanoidModel.ArmPose.SPYGLASS;
+            }
+
+            if (anim == ItemUseAnimation.TOOT_HORN) {
+                return HumanoidModel.ArmPose.TOOT_HORN;
+            }
+
+            if (anim == ItemUseAnimation.BRUSH) {
+                return HumanoidModel.ArmPose.BRUSH;
+            }
+
+            if (anim == ItemUseAnimation.SPEAR) {
                 return HumanoidModel.ArmPose.SPEAR;
-            } else {
-                return p_429700_.is(ItemTags.SPEARS) ? HumanoidModel.ArmPose.SPEAR : HumanoidModel.ArmPose.ITEM;
             }
         }
-    }
 
-    public Identifier getTextureLocation(AvatarRenderState p_458757_) {
-        return p_458757_.skin.body().texturePath();
-    }
-
-    protected void scale(AvatarRenderState p_428748_, PoseStack p_431286_) {
-        float f = 0.9375F;
-        p_431286_.scale(0.9375F, 0.9375F, 0.9375F);
-    }
-
-    protected void submitNameTag(AvatarRenderState p_425306_, PoseStack p_423892_, SubmitNodeCollector p_428344_, CameraRenderState p_426061_) {
-        p_423892_.pushPose();
-        int i = p_425306_.showExtraEars ? -10 : 0;
-        if (p_425306_.scoreText != null) {
-            p_428344_.submitNameTag(
-                p_423892_, p_425306_.nameTagAttachment, i, p_425306_.scoreText, !p_425306_.isDiscrete, p_425306_.lightCoords, p_425306_.distanceToCameraSq, p_426061_
-            );
-            p_423892_.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
+        SwingAnimation attack = itemInHand.get(DataComponents.SWING_ANIMATION);
+        if (attack != null && attack.type() == SwingAnimationType.STAB && avatar.swinging) {
+            return HumanoidModel.ArmPose.SPEAR;
+        } else {
+            return itemInHand.is(ItemTags.SPEARS) ? HumanoidModel.ArmPose.SPEAR : HumanoidModel.ArmPose.ITEM;
         }
+    }
 
-        if (p_425306_.nameTag != null) {
-            p_428344_.submitNameTag(
-                p_423892_, p_425306_.nameTagAttachment, i, p_425306_.nameTag, !p_425306_.isDiscrete, p_425306_.lightCoords, p_425306_.distanceToCameraSq, p_426061_
-            );
-        }
+    public Identifier getTextureLocation(final AvatarRenderState state) {
+        return state.skin.body().texturePath();
+    }
 
-        p_423892_.popPose();
+    protected void scale(final AvatarRenderState state, final PoseStack poseStack) {
+        float s = 0.9375F;
+        poseStack.scale(0.9375F, 0.9375F, 0.9375F);
+    }
+
+    protected void submitNameDisplay(
+        final AvatarRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
+    ) {
+        poseStack.pushPose();
+        int offset = state.showExtraEars ? -10 : 0;
+        this.submitNameDisplay(state, poseStack, submitNodeCollector, camera, offset);
+        poseStack.popPose();
     }
 
     public AvatarRenderState createRenderState() {
         return new AvatarRenderState();
     }
 
-    public void extractRenderState(AvatarlikeEntity p_431243_, AvatarRenderState p_426303_, float p_430950_) {
-        super.extractRenderState(p_431243_, p_426303_, p_430950_);
-        HumanoidMobRenderer.extractHumanoidRenderState(p_431243_, p_426303_, p_430950_, this.itemModelResolver);
-        p_426303_.leftArmPose = getArmPose(p_431243_, HumanoidArm.LEFT);
-        p_426303_.rightArmPose = getArmPose(p_431243_, HumanoidArm.RIGHT);
-        p_426303_.skin = p_431243_.getSkin();
-        p_426303_.arrowCount = p_431243_.getArrowCount();
-        p_426303_.stingerCount = p_431243_.getStingerCount();
-        p_426303_.isSpectator = p_431243_.isSpectator();
-        p_426303_.showHat = p_431243_.isModelPartShown(PlayerModelPart.HAT);
-        p_426303_.showJacket = p_431243_.isModelPartShown(PlayerModelPart.JACKET);
-        p_426303_.showLeftPants = p_431243_.isModelPartShown(PlayerModelPart.LEFT_PANTS_LEG);
-        p_426303_.showRightPants = p_431243_.isModelPartShown(PlayerModelPart.RIGHT_PANTS_LEG);
-        p_426303_.showLeftSleeve = p_431243_.isModelPartShown(PlayerModelPart.LEFT_SLEEVE);
-        p_426303_.showRightSleeve = p_431243_.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE);
-        p_426303_.showCape = p_431243_.isModelPartShown(PlayerModelPart.CAPE);
-        this.extractFlightData(p_431243_, p_426303_, p_430950_);
-        this.extractCapeState(p_431243_, p_426303_, p_430950_);
-        if (p_426303_.distanceToCameraSq < 100.0) {
-            p_426303_.scoreText = p_431243_.belowNameDisplay();
+    public void extractRenderState(final AvatarlikeEntity entity, final AvatarRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, partialTicks, this.itemModelResolver);
+        state.leftArmPose = getArmPose(entity, HumanoidArm.LEFT);
+        state.rightArmPose = getArmPose(entity, HumanoidArm.RIGHT);
+        state.skin = entity.getSkin();
+        state.arrowCount = entity.getArrowCount();
+        state.stingerCount = entity.getStingerCount();
+        state.isSpectator = entity.isSpectator();
+        state.showHat = entity.isModelPartShown(PlayerModelPart.HAT);
+        state.showJacket = entity.isModelPartShown(PlayerModelPart.JACKET);
+        state.showLeftPants = entity.isModelPartShown(PlayerModelPart.LEFT_PANTS_LEG);
+        state.showRightPants = entity.isModelPartShown(PlayerModelPart.RIGHT_PANTS_LEG);
+        state.showLeftSleeve = entity.isModelPartShown(PlayerModelPart.LEFT_SLEEVE);
+        state.showRightSleeve = entity.isModelPartShown(PlayerModelPart.RIGHT_SLEEVE);
+        state.showCape = entity.isModelPartShown(PlayerModelPart.CAPE);
+        this.extractFlightData(entity, state, partialTicks);
+        this.extractCapeState(entity, state, partialTicks);
+        state.parrotOnLeftShoulder = entity.getParrotVariantOnShoulder(true);
+        state.parrotOnRightShoulder = entity.getParrotVariantOnShoulder(false);
+        state.id = entity.getId();
+        state.showExtraEars = entity.showExtraEars();
+        state.heldOnHead.clear();
+        if (state.isUsingItem) {
+            ItemStack useItem = entity.getItemInHand(state.useItemHand);
+            if (useItem.is(Items.SPYGLASS)) {
+                this.itemModelResolver.updateForLiving(state.heldOnHead, useItem, ItemDisplayContext.HEAD, entity);
+            }
+        }
+    }
+
+    protected boolean shouldShowName(final AvatarlikeEntity entity, final double distanceToCameraSq) {
+        return super.shouldShowName(entity, distanceToCameraSq)
+            && (entity.shouldShowName() || entity.hasCustomName() && entity == this.entityRenderDispatcher.crosshairPickEntity);
+    }
+
+    private void extractFlightData(final AvatarlikeEntity entity, final AvatarRenderState state, final float partialTicks) {
+        state.fallFlyingTimeInTicks = entity.getFallFlyingTicks() + partialTicks;
+        Vec3 lookAngle = entity.getViewVector(partialTicks);
+        Vec3 movement = entity.avatarState().deltaMovementOnPreviousTick().lerp(entity.getDeltaMovement(), partialTicks);
+        if (movement.horizontalDistanceSqr() > 1.0E-5F && lookAngle.horizontalDistanceSqr() > 1.0E-5F) {
+            state.shouldApplyFlyingYRot = true;
+            double dot = movement.horizontal().normalize().dot(lookAngle.horizontal().normalize());
+            double sign = movement.x * lookAngle.z - movement.z * lookAngle.x;
+            state.flyingYRot = (float)(Math.signum(sign) * Math.acos(Math.min(1.0, Math.abs(dot))));
         } else {
-            p_426303_.scoreText = null;
-        }
-
-        p_426303_.parrotOnLeftShoulder = p_431243_.getParrotVariantOnShoulder(true);
-        p_426303_.parrotOnRightShoulder = p_431243_.getParrotVariantOnShoulder(false);
-        p_426303_.id = p_431243_.getId();
-        p_426303_.showExtraEars = p_431243_.showExtraEars();
-        p_426303_.heldOnHead.clear();
-        if (p_426303_.isUsingItem) {
-            ItemStack itemstack = p_431243_.getItemInHand(p_426303_.useItemHand);
-            if (itemstack.is(Items.SPYGLASS)) {
-                this.itemModelResolver.updateForLiving(p_426303_.heldOnHead, itemstack, ItemDisplayContext.HEAD, p_431243_);
-            }
+            state.shouldApplyFlyingYRot = false;
+            state.flyingYRot = 0.0F;
         }
     }
 
-    protected boolean shouldShowName(AvatarlikeEntity p_429595_, double p_429961_) {
-        return super.shouldShowName(p_429595_, p_429961_) && (p_429595_.shouldShowName() || p_429595_.hasCustomName() && p_429595_ == this.entityRenderDispatcher.crosshairPickEntity);
+    private void extractCapeState(final AvatarlikeEntity entity, final AvatarRenderState state, final float partialTicks) {
+        ClientAvatarState clientState = entity.avatarState();
+        double deltaX = clientState.getInterpolatedCloakX(partialTicks) - Mth.lerp(partialTicks, entity.xo, entity.getX());
+        double deltaY = clientState.getInterpolatedCloakY(partialTicks) - Mth.lerp(partialTicks, entity.yo, entity.getY());
+        double deltaZ = clientState.getInterpolatedCloakZ(partialTicks) - Mth.lerp(partialTicks, entity.zo, entity.getZ());
+        float yBodyRot = Mth.rotLerp(partialTicks, entity.yBodyRotO, entity.yBodyRot);
+        double forwardX = Mth.sin(yBodyRot * (float) (Math.PI / 180.0));
+        double forwardZ = -Mth.cos(yBodyRot * (float) (Math.PI / 180.0));
+        state.capeFlap = (float)deltaY * 10.0F;
+        state.capeFlap = Mth.clamp(state.capeFlap, -6.0F, 32.0F);
+        state.capeLean = (float)(deltaX * forwardX + deltaZ * forwardZ) * 100.0F;
+        state.capeLean = state.capeLean * (1.0F - state.fallFlyingScale());
+        state.capeLean = Mth.clamp(state.capeLean, 0.0F, 150.0F);
+        state.capeLean2 = (float)(deltaX * forwardZ - deltaZ * forwardX) * 100.0F;
+        state.capeLean2 = Mth.clamp(state.capeLean2, -20.0F, 20.0F);
+        float pow = clientState.getInterpolatedBob(partialTicks);
+        float walkDistance = clientState.getInterpolatedWalkDistance(partialTicks);
+        state.capeFlap = state.capeFlap + Mth.sin(walkDistance * 6.0F) * 32.0F * pow;
     }
 
-    private void extractFlightData(AvatarlikeEntity p_422452_, AvatarRenderState p_427860_, float p_431214_) {
-        p_427860_.fallFlyingTimeInTicks = p_422452_.getFallFlyingTicks() + p_431214_;
-        Vec3 vec3 = p_422452_.getViewVector(p_431214_);
-        Vec3 vec31 = p_422452_.avatarState().deltaMovementOnPreviousTick().lerp(p_422452_.getDeltaMovement(), p_431214_);
-        if (vec31.horizontalDistanceSqr() > 1.0E-5F && vec3.horizontalDistanceSqr() > 1.0E-5F) {
-            p_427860_.shouldApplyFlyingYRot = true;
-            double d0 = vec31.horizontal().normalize().dot(vec3.horizontal().normalize());
-            double d1 = vec31.x * vec3.z - vec31.z * vec3.x;
-            p_427860_.flyingYRot = (float)(Math.signum(d1) * Math.acos(Math.min(1.0, Math.abs(d0))));
-        } else {
-            p_427860_.shouldApplyFlyingYRot = false;
-            p_427860_.flyingYRot = 0.0F;
-        }
+    public void renderRightHand(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final Identifier skinTexture, final boolean hasSleeve
+    ) {
+        this.renderHand(poseStack, submitNodeCollector, lightCoords, skinTexture, this.model.rightArm, hasSleeve);
     }
 
-    private void extractCapeState(AvatarlikeEntity p_429924_, AvatarRenderState p_431661_, float p_429067_) {
-        ClientAvatarState clientavatarstate = p_429924_.avatarState();
-        double d0 = clientavatarstate.getInterpolatedCloakX(p_429067_) - Mth.lerp(p_429067_, p_429924_.xo, p_429924_.getX());
-        double d1 = clientavatarstate.getInterpolatedCloakY(p_429067_) - Mth.lerp(p_429067_, p_429924_.yo, p_429924_.getY());
-        double d2 = clientavatarstate.getInterpolatedCloakZ(p_429067_) - Mth.lerp(p_429067_, p_429924_.zo, p_429924_.getZ());
-        float f = Mth.rotLerp(p_429067_, p_429924_.yBodyRotO, p_429924_.yBodyRot);
-        double d3 = Mth.sin(f * (float) (Math.PI / 180.0));
-        double d4 = -Mth.cos(f * (float) (Math.PI / 180.0));
-        p_431661_.capeFlap = (float)d1 * 10.0F;
-        p_431661_.capeFlap = Mth.clamp(p_431661_.capeFlap, -6.0F, 32.0F);
-        p_431661_.capeLean = (float)(d0 * d3 + d2 * d4) * 100.0F;
-        p_431661_.capeLean = p_431661_.capeLean * (1.0F - p_431661_.fallFlyingScale());
-        p_431661_.capeLean = Mth.clamp(p_431661_.capeLean, 0.0F, 150.0F);
-        p_431661_.capeLean2 = (float)(d0 * d4 - d2 * d3) * 100.0F;
-        p_431661_.capeLean2 = Mth.clamp(p_431661_.capeLean2, -20.0F, 20.0F);
-        float f1 = clientavatarstate.getInterpolatedBob(p_429067_);
-        float f2 = clientavatarstate.getInterpolatedWalkDistance(p_429067_);
-        p_431661_.capeFlap = p_431661_.capeFlap + Mth.sin(f2 * 6.0F) * 32.0F * f1;
+    public void renderLeftHand(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final Identifier skinTexture, final boolean hasSleeve
+    ) {
+        this.renderHand(poseStack, submitNodeCollector, lightCoords, skinTexture, this.model.leftArm, hasSleeve);
     }
 
-    public void renderRightHand(PoseStack p_428282_, SubmitNodeCollector p_424928_, int p_427204_, Identifier p_450403_, boolean p_431039_) {
-        this.renderHand(p_428282_, p_424928_, p_427204_, p_450403_, this.model.rightArm, p_431039_);
+    private void renderHand(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final Identifier skinTexture,
+        final ModelPart arm,
+        final boolean hasSleeve
+    ) {
+        PlayerModel model = this.getModel();
+        arm.resetPose();
+        arm.visible = true;
+        model.leftSleeve.visible = hasSleeve;
+        model.rightSleeve.visible = hasSleeve;
+        model.leftArm.zRot = -0.1F;
+        model.rightArm.zRot = 0.1F;
+        submitNodeCollector.submitModelPart(arm, poseStack, RenderTypes.entityTranslucent(skinTexture), lightCoords, OverlayTexture.NO_OVERLAY, null);
     }
 
-    public void renderLeftHand(PoseStack p_424615_, SubmitNodeCollector p_425532_, int p_427068_, Identifier p_458705_, boolean p_423290_) {
-        this.renderHand(p_424615_, p_425532_, p_427068_, p_458705_, this.model.leftArm, p_423290_);
-    }
-
-    private void renderHand(PoseStack p_428166_, SubmitNodeCollector p_424874_, int p_425901_, Identifier p_452067_, ModelPart p_423467_, boolean p_423600_) {
-        PlayerModel playermodel = this.getModel();
-        p_423467_.resetPose();
-        p_423467_.visible = true;
-        playermodel.leftSleeve.visible = p_423600_;
-        playermodel.rightSleeve.visible = p_423600_;
-        playermodel.leftArm.zRot = -0.1F;
-        playermodel.rightArm.zRot = 0.1F;
-        p_424874_.submitModelPart(p_423467_, p_428166_, RenderTypes.entityTranslucent(p_452067_), p_425901_, OverlayTexture.NO_OVERLAY, null);
-    }
-
-    protected void setupRotations(AvatarRenderState p_431675_, PoseStack p_424697_, float p_430322_, float p_430544_) {
-        float f = p_431675_.swimAmount;
-        float f1 = p_431675_.xRot;
-        if (p_431675_.isFallFlying) {
-            super.setupRotations(p_431675_, p_424697_, p_430322_, p_430544_);
-            float f2 = p_431675_.fallFlyingScale();
-            if (!p_431675_.isAutoSpinAttack) {
-                p_424697_.mulPose(Axis.XP.rotationDegrees(f2 * (-90.0F - f1)));
+    protected void setupRotations(final AvatarRenderState state, final PoseStack poseStack, final float bodyRot, final float entityScale) {
+        float swimAmount = state.swimAmount;
+        float xRot = state.xRot;
+        if (state.isFallFlying) {
+            super.setupRotations(state, poseStack, bodyRot, entityScale);
+            float scale = state.fallFlyingScale();
+            if (!state.isAutoSpinAttack) {
+                poseStack.mulPose(Axis.XP.rotationDegrees(scale * (-90.0F - xRot)));
             }
 
-            if (p_431675_.shouldApplyFlyingYRot) {
-                p_424697_.mulPose(Axis.YP.rotation(p_431675_.flyingYRot));
+            if (state.shouldApplyFlyingYRot) {
+                poseStack.mulPose(Axis.YP.rotation(state.flyingYRot));
             }
-        } else if (f > 0.0F) {
-            super.setupRotations(p_431675_, p_424697_, p_430322_, p_430544_);
-            float f4 = p_431675_.isInWater ? -90.0F - f1 : -90.0F;
-            float f3 = Mth.lerp(f, 0.0F, f4);
-            p_424697_.mulPose(Axis.XP.rotationDegrees(f3));
-            if (p_431675_.isVisuallySwimming) {
-                p_424697_.translate(0.0F, -1.0F, 0.3F);
+        } else if (swimAmount > 0.0F) {
+            super.setupRotations(state, poseStack, bodyRot, entityScale);
+            float targetXRot = state.isInWater ? -90.0F - xRot : -90.0F;
+            float xAngle = Mth.lerp(swimAmount, 0.0F, targetXRot);
+            poseStack.mulPose(Axis.XP.rotationDegrees(xAngle));
+            if (state.isVisuallySwimming) {
+                poseStack.translate(0.0F, -1.0F, 0.3F);
             }
         } else {
-            super.setupRotations(p_431675_, p_424697_, p_430322_, p_430544_);
+            super.setupRotations(state, poseStack, bodyRot, entityScale);
         }
     }
 
-    public boolean isEntityUpsideDown(AvatarlikeEntity p_425515_) {
-        if (p_425515_.isModelPartShown(PlayerModelPart.CAPE)) {
-            return p_425515_ instanceof Player player ? isPlayerUpsideDown(player) : super.isEntityUpsideDown(p_425515_);
+    public boolean isEntityUpsideDown(final AvatarlikeEntity mob) {
+        if (mob.isModelPartShown(PlayerModelPart.CAPE)) {
+            return mob instanceof Player player ? isPlayerUpsideDown(player) : super.isEntityUpsideDown(mob);
         } else {
             return false;
         }
     }
 
-    public static boolean isPlayerUpsideDown(Player p_424650_) {
-        return isUpsideDownName(p_424650_.getGameProfile().name());
+    public static boolean isPlayerUpsideDown(final Player player) {
+        return isUpsideDownName(player.getGameProfile().name());
     }
 }

@@ -2,10 +2,11 @@
 
 ## 📋 Project Overview
 
-**Aporia** — современный чит-клиент для Minecraft 1.21.11+ на NeoForge.
+**Aporia** — современный чит-клиент для Minecraft 1.21.11+ на MCP (Mod Coder Pack).
 Модульная архитектура, GPU-рендеринг через Blaze3D (OpenGL 4.5+), прямая сборка `javac` (без Gradle/Maven), Java 26+.
 
-- **Entry point:** `src/so/aporia/Aporia.kt` — `object Aporia : ResourceManagerReloadListener`
+- **Entry point:** `src/mcp/client/Start.java` — запуск через `net.minecraft.client.main.Main.main()`
+- **Main class:** `src/so/aporia/Aporia.kt` — `object Aporia : ResourceManagerReloadListener`
 - **Модули:** 40+ штук, 6 категорий (COMBAT, MOVE, VISUAL, PLAYER, WORLD, MISC)
 - **События:** 11 типов событий + StateMachine engine
 - **Ротации:** 8 режимов (Smooth, Snap, HVH, Matrix, Vulcan, Grim, NCP, Intave)
@@ -45,58 +46,22 @@ AntiCheats/
 ├── Vulcant_old-master/                # Maven
 │   └── src/main/java/
 │
-├── com/cinemamod/mcef/               # Cinema mod CEF
-└── org/cef/                           # Chromium Embedded Framework
+├── com/                               # Доп. библиотеки для анализа
+└── org/                               # Доп. библиотеки для анализа
 ```
 
 ---
 
-## 🎨 shaders/core — Custom GLSL Shaders
+## 🎨 Shaders — Custom GLSL Shaders
 
-32 своих шейдера (16 .fsh + 16 .vsh) в `D:\Aporia\shaders\core\`.
-Резильвятся через `FilesManager.ROOT` (`~/.apr/`):
+32 своих шейдера (16 .fsh + 16 .vsh).
+Шейдеры загружаются через **AssetsManager** удалённо — качаются с `https://gitlab.com/protect3ed/files-for-aporia/-/raw/main/aporia.apr`
+и кешируются в `~/.apr/.assets/aporia/shaders/core/`.
 
-### Fragment Shaders (.fsh)
-
-| Файл | Назначение |
-|------|-----------|
-| `aporia.fsh` | Основной — SDF rounded box, blur texture sampling |
-| `blit.fsh` | Passthrough blit (InputTexture → fragColor) |
-| `blur.fsh` | Gaussian blur (5-tap, strength, direction, saturation) |
-| `entity_glow.fsh` | Glow outline для энтити (сейчас solid red) |
-| `image.fsh` | Rounded rect image (SDF, border, corner radius) |
-| `kawase_down.fsh` | Kawase blur down-sample (4-pixel hardware blend) |
-| `kawase_up.fsh` | Kawase blur up-sample (restore resolution) |
-| `logo.fsh` | Логотип с пульсацией (`sin(time * 2.0)`) |
-| `mainmenu.fsh` | Главное меню — procedural noise/hash анимация |
-| `msdf.fsh` | MSDF font rendering с outline |
-| `player_blur.fsh` | Блюр игрока (Gaussian weights H/V) |
-| `player_outline.fsh` | Простой outline (vertex color passthrough) |
-| `postprocess.fsh` | Пост-обработка (saturation: grayscale → boosted) |
-| `render3d.fsh` | 3D diffuse lighting (ambient + directional) |
-| `render3d_mega.fsh` | Advanced 3D: SDF primitives, glow, rim, Fresnel |
-| `rounded_rect.fsh` | Rounded rect SDF (circle/box, borders, multi-mode) |
-
-### Vertex Shaders (.vsh)
-
-| Файл | Назначение |
-|------|-----------|
-| `aporia.vsh` | Standart MVP + UV/color/screen pos |
-| `blit.vsh` | Minimal passthrough |
-| `blur.vsh` | Pass-through for blur |
-| `entity_glow.vsh` | Fresnel-based edge detection |
-| `image.vsh` | Standart image rendering |
-| `kawase_down.vsh` | Pass-through |
-| `kawase_up.vsh` | Pass-through |
-| `logo.vsh` | Projection transform |
-| `mainmenu.vsh` | Full-screen quad |
-| `msdf.vsh` | Glyph batching + rotation + atlas coords |
-| `player_blur.vsh` | Player blur + dynamic transforms + screen UV |
-| `player_outline.vsh` | Color passthrough |
-| `postprocess.vsh` | Full-screen quad |
-| `render3d.vsh` | MVP + normal transform |
-| `render3d_mega.vsh` | Draw params (mode/shape/color/panel uniforms) |
-| `rounded_rect.vsh` | Standart rounded rect |
+| Тип | Шейдеры |
+|-----|---------|
+| **Fragment (.fsh)** | `aporia`, `blit`, `blur`, `entity_glow`, `image`, `kawase_down`, `kawase_up`, `logo`, `mainmenu`, `msdf`, `player_blur`, `player_outline`, `postprocess`, `render3d`, `render3d_mega`, `rounded_rect` |
+| **Vertex (.vsh)** | `aporia`, `blit`, `blur`, `entity_glow`, `image`, `kawase_down`, `kawase_up`, `logo`, `mainmenu`, `msdf`, `player_blur`, `player_outline`, `postprocess`, `render3d`, `render3d_mega`, `rounded_rect` |
 
 ### entity_glow.json
 Программный биндинг: `aporia:core/entity_glow`
@@ -150,6 +115,8 @@ src/
 ├── com/
 │   ├── aporia/blaze3d/              # Blaze3D расширения
 │   ├── ferra13671/discordipc/       # Discord IPC библиотека
+│   ├── github/lunatrius/            # Litematica/Schematica API
+│   ├── viaversion/viafabricplus/    # ViaFabricPlus (100+ файлов: протоколы, миксины, экраны)
 │   └── mojang/blaze3d/              # Стоковый Blaze3D API
 │   │   ├── audio/ buffers/ font/ framegraph/ opengl/
 │   │   ├── pipeline/ platform/ preprocessor/
@@ -206,8 +173,7 @@ src/
                 ├── core/            # AporiaRenderer, BlurRenderer, PipelineSnippet...
                 ├── font/            # FontAtlas, FontRenderer, FontPipeline, Glyph
                 ├── render3d/AporiaRenderer3D.java
-                ├── theme/ThemeManager.java
-                └── ui/              # ChatScreen, ClickGuiScreen (1112 строк), QuestManager
+                └── ui/              # ChatScreen, ClickGuiScreen (1112 строк), QuestManager, ThemeManagerModule
 ```
 
 ### Module Implementations (40+ модулей)
@@ -283,7 +249,7 @@ Generic engine для стейт-машин на Kotlin.
 | `logger` | `Logger` |
 | `fonts` | `Aporia.FONTS` |
 | `locale` | `LocaleManager.INSTANCE` |
-| `theme` | `ThemeManager.INSTANCE.active()` |
+| `theme` | `ThemeManagerModule.activeTheme()` |
 | `files` | `FilesManager` |
 | `os` | `OsManager` |
 | `bus` | `EventBus` |
@@ -305,13 +271,19 @@ Generic engine для стейт-машин на Kotlin.
 
 ## ⚙️ Build
 
-```bash
-javac -d build -sourcepath src --release 26 -encoding UTF-8 -cp "libs/*.jar" \
-  -processorpath "libs/lombok.jar" \
-  -J-Xmx4g $(find src -name "*.java")
+Сборка через `completion.ps1`:
+
+1. **Компиляция:** `kotlin-compiler.jar` (K2) для `.kt` + `javac` для `.java` (инкрементально)
+2. **Мерж:** распаковка всех `libs/*.jar` в общую директорию
+3. **Пакет:** создание fat-jar `Aporia.jar` + `Aporia.zip` + `Aporia_RELEASE.zip`
+
+```powershell
+.\completion.ps1 build     # Build + Zip
+.\completion.ps1 run       # Run (dev)
+.\completion.ps1 menu      # Интерактивное меню
 ```
 
-**Output:** `sborka/Aporia.jar` (обфусцированный) + `sborka/Aporia.zip`
+**Output:** `sborka/Aporia.jar` + `sborka/Aporia.mcp.jar` + `sborka/Aporia.zip`
 
 ---
 

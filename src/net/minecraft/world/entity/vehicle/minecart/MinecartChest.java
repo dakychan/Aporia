@@ -19,10 +19,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.ChestBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
+import net.minecraft.world.phys.Vec3;
 
 public class MinecartChest extends AbstractMinecartContainer {
-    public MinecartChest(EntityType<? extends MinecartChest> p_452861_, Level p_453439_) {
-        super(p_452861_, p_453439_);
+    public MinecartChest(final EntityType<? extends MinecartChest> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -51,23 +52,23 @@ public class MinecartChest extends AbstractMinecartContainer {
     }
 
     @Override
-    public AbstractContainerMenu createMenu(int p_459831_, Inventory p_457694_) {
-        return ChestMenu.threeRows(p_459831_, p_457694_, this);
+    public AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return ChestMenu.threeRows(containerId, inventory, this);
     }
 
     @Override
-    public void stopOpen(ContainerUser p_460992_) {
-        this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(p_460992_.getLivingEntity()));
+    public void stopOpen(final ContainerUser containerUser) {
+        this.level().gameEvent(GameEvent.CONTAINER_CLOSE, this.position(), GameEvent.Context.of(containerUser.getLivingEntity()));
     }
 
     @Override
-    public InteractionResult interact(Player p_451742_, InteractionHand p_453847_) {
-        InteractionResult interactionresult = this.interactWithContainerVehicle(p_451742_);
-        if (interactionresult.consumesAction() && p_451742_.level() instanceof ServerLevel serverlevel) {
-            this.gameEvent(GameEvent.CONTAINER_OPEN, p_451742_);
-            PiglinAi.angerNearbyPiglins(serverlevel, p_451742_, true);
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
+        InteractionResult result = this.interactWithContainerVehicle(player);
+        if (result.consumesAction() && player.level() instanceof ServerLevel serverLevel) {
+            this.gameEvent(GameEvent.CONTAINER_OPEN, player);
+            PiglinAi.angerNearbyPiglins(serverLevel, player, true);
         }
 
-        return interactionresult;
+        return result;
     }
 }

@@ -8,18 +8,15 @@ public class Xoroshiro128PlusPlus {
     private long seedLo;
     private long seedHi;
     public static final Codec<Xoroshiro128PlusPlus> CODEC = Codec.LONG_STREAM
-        .comapFlatMap(
-            p_449976_ -> Util.fixedSize(p_449976_, 2).map(p_287742_ -> new Xoroshiro128PlusPlus(p_287742_[0], p_287742_[1])),
-            p_287687_ -> LongStream.of(p_287687_.seedLo, p_287687_.seedHi)
-        );
+        .comapFlatMap(seed -> Util.fixedSize(seed, 2).map(longs -> new Xoroshiro128PlusPlus(longs[0], longs[1])), r -> LongStream.of(r.seedLo, r.seedHi));
 
-    public Xoroshiro128PlusPlus(RandomSupport.Seed128bit p_190095_) {
-        this(p_190095_.seedLo(), p_190095_.seedHi());
+    public Xoroshiro128PlusPlus(final RandomSupport.Seed128bit seed) {
+        this(seed.seedLo(), seed.seedHi());
     }
 
-    public Xoroshiro128PlusPlus(long p_190092_, long p_190093_) {
-        this.seedLo = p_190092_;
-        this.seedHi = p_190093_;
+    public Xoroshiro128PlusPlus(final long seedLo, final long seedHi) {
+        this.seedLo = seedLo;
+        this.seedHi = seedHi;
         if ((this.seedLo | this.seedHi) == 0L) {
             this.seedLo = -7046029254386353131L;
             this.seedHi = 7640891576956012809L;
@@ -27,12 +24,12 @@ public class Xoroshiro128PlusPlus {
     }
 
     public long nextLong() {
-        long i = this.seedLo;
-        long j = this.seedHi;
-        long k = Long.rotateLeft(i + j, 17) + i;
-        j ^= i;
-        this.seedLo = Long.rotateLeft(i, 49) ^ j ^ j << 21;
-        this.seedHi = Long.rotateLeft(j, 28);
-        return k;
+        long s0 = this.seedLo;
+        long s1 = this.seedHi;
+        long result = Long.rotateLeft(s0 + s1, 17) + s0;
+        s1 ^= s0;
+        this.seedLo = Long.rotateLeft(s0, 49) ^ s1 ^ s1 << 21;
+        this.seedHi = Long.rotateLeft(s1, 28);
+        return result;
     }
 }

@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import net.minecraft.server.packs.PackResources;
@@ -17,83 +18,81 @@ import net.minecraft.world.flag.FeatureFlagSet;
 import org.jspecify.annotations.Nullable;
 
 public class PackRepository {
-    private final List<RepositorySource> sources;
+    private final Set<RepositorySource> sources;
     private Map<String, Pack> available = ImmutableMap.of();
     private List<Pack> selected = ImmutableList.of();
 
-    public PackRepository(RepositorySource... p_251886_) {
-        this.sources = Lists.newArrayList(p_251886_);
+    public PackRepository(final RepositorySource... sources) {
+        this.sources = ImmutableSet.copyOf(sources);
     }
 
-    public static String displayPackList(Collection<Pack> p_331712_) {
-        return p_331712_.stream()
-            .map(p_326476_ -> p_326476_.getId() + (p_326476_.getCompatibility().isCompatible() ? "" : " (incompatible)"))
-            .collect(Collectors.joining(", "));
+    public static String displayPackList(final Collection<Pack> packs) {
+        return packs.stream().map(pack -> pack.getId() + (pack.getCompatibility().isCompatible() ? "" : " (incompatible)")).collect(Collectors.joining(", "));
     }
 
     public void reload() {
-        List<String> list = this.selected.stream().map(Pack::getId).collect(ImmutableList.toImmutableList());
+        List<String> currentlySelectedNames = this.selected.stream().map(Pack::getId).collect(ImmutableList.toImmutableList());
         this.available = this.discoverAvailable();
-        this.selected = this.rebuildSelected(list);
+        this.selected = this.rebuildSelected(currentlySelectedNames);
     }
 
     private Map<String, Pack> discoverAvailable() {
-        Map<String, Pack> map = Maps.newTreeMap();
+        Map<String, Pack> discovered = Maps.newTreeMap();
 
-        for (RepositorySource repositorysource : this.sources) {
-            repositorysource.loadPacks(p_143903_ -> map.put(p_143903_.getId(), p_143903_));
+        for (RepositorySource source : this.sources) {
+            source.loadPacks(pack -> discovered.put(pack.getId(), pack));
         }
 
-        return ImmutableMap.copyOf(map);
+        return ImmutableMap.copyOf(discovered);
     }
 
     public boolean isAbleToClearAnyPack() {
-        List<Pack> list = this.rebuildSelected(List.of());
-        return !this.selected.equals(list);
+        List<Pack> newSelected = this.rebuildSelected(List.of());
+        return !this.selected.equals(newSelected);
     }
 
-    public void setSelected(Collection<String> p_10510_) {
-        this.selected = this.rebuildSelected(p_10510_);
+    public void setSelected(final Collection<String> packs) {
+        this.selected = this.rebuildSelected(packs);
     }
 
-    public boolean addPack(String p_276042_) {
-        Pack pack = this.available.get(p_276042_);
+    public boolean addPack(final String packId) {
+        Pack pack = this.available.get(packId);
         if (pack != null && !this.selected.contains(pack)) {
-            List<Pack> list = Lists.newArrayList(this.selected);
-            list.add(pack);
-            this.selected = list;
+            List<Pack> selectedCopy = Lists.newArrayList(this.selected);
+            selectedCopy.add(pack);
+            this.selected = selectedCopy;
             return true;
         } else {
             return false;
         }
     }
 
-    public boolean removePack(String p_276065_) {
-        Pack pack = this.available.get(p_276065_);
+    public boolean removePack(final String packId) {
+        Pack pack = this.available.get(packId);
         if (pack != null && this.selected.contains(pack)) {
-            List<Pack> list = Lists.newArrayList(this.selected);
-            list.remove(pack);
-            this.selected = list;
+            List<Pack> selectedCopy = Lists.newArrayList(this.selected);
+            selectedCopy.remove(pack);
+            this.selected = selectedCopy;
             return true;
         } else {
             return false;
         }
     }
 
-    private List<Pack> rebuildSelected(Collection<String> p_10518_) {
-        List<Pack> list = this.getAvailablePacks(p_10518_).collect(Util.toMutableList());
+    private List<Pack> rebuildSelected(final Collection<String> selectedNames) {
+        List<Pack> selectedAndPresent = this.getAvailablePacks(selectedNames).collect(Util.toMutableList());
 
         for (Pack pack : this.available.values()) {
-            if (pack.isRequired() && !list.contains(pack)) {
-                pack.getDefaultPosition().insert(list, pack, Pack::selectionConfig, false);
+            if (pack.isRequired() && !selectedAndPresent.contains(pack)) {
+                pack.getDefaultPosition().insert(selectedAndPresent, pack, Pack::selectionConfig, false);
             }
         }
 
-        return ImmutableList.copyOf(list);
+        return ImmutableList.copyOf(selectedAndPresent);
     }
 
-    private Stream<Pack> getAvailablePacks(Collection<String> p_10521_) {
-        return p_10521_.stream().map(this.available::get).filter(Objects::nonNull);
+    private Stream<Pack> getAvailablePacks(final Collection<String> ids) {
+        return ids.stream().map(this.available::get).filter(Objects::nonNull);
     }
 
     public Collection<String> getAvailableIds() {
@@ -116,19 +115,15 @@ public class PackRepository {
         return this.selected;
     }
 
-    public @Nullable Pack getPack(String p_10508_) {
-        return this.available.get(p_10508_);
+    public @Nullable Pack getPack(final String id) {
+        return this.available.get(id);
     }
 
-    public boolean isAvailable(String p_10516_) {
-        return this.available.containsKey(p_10516_);
+    public boolean isAvailable(final String id) {
+        return this.available.containsKey(id);
     }
 
     public List<PackResources> openAllSelected() {
         return this.selected.stream().map(Pack::open).collect(ImmutableList.toImmutableList());
-    }
-
-    public void addSource(RepositorySource source) {
-        this.sources.add(source);
     }
 }

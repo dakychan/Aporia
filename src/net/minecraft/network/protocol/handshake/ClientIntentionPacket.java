@@ -12,22 +12,18 @@ public record ClientIntentionPacket(int protocolVersion, String hostName, int po
     private static final int MAX_HOST_LENGTH = 255;
 
     @Deprecated
-    public ClientIntentionPacket(int protocolVersion, String hostName, int port, ClientIntent intention) {
-        this.protocolVersion = protocolVersion;
-        this.hostName = hostName;
-        this.port = port;
-        this.intention = intention;
+    public ClientIntentionPacket {
     }
 
-    private ClientIntentionPacket(FriendlyByteBuf p_179801_) {
-        this(p_179801_.readVarInt(), p_179801_.readUtf(255), p_179801_.readUnsignedShort(), ClientIntent.byId(p_179801_.readVarInt()));
+    private ClientIntentionPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt(), input.readUtf(255), input.readUnsignedShort(), ClientIntent.byId(input.readVarInt()));
     }
 
-    private void write(FriendlyByteBuf p_134737_) {
-        p_134737_.writeVarInt(this.protocolVersion);
-        p_134737_.writeUtf(this.hostName);
-        p_134737_.writeShort(this.port);
-        p_134737_.writeVarInt(this.intention.id());
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.protocolVersion);
+        output.writeUtf(this.hostName);
+        output.writeShort(this.port);
+        output.writeVarInt(this.intention.id());
     }
 
     @Override
@@ -35,8 +31,8 @@ public record ClientIntentionPacket(int protocolVersion, String hostName, int po
         return HandshakePacketTypes.CLIENT_INTENTION;
     }
 
-    public void handle(ServerHandshakePacketListener p_134734_) {
-        p_134734_.handleIntention(this);
+    public void handle(final ServerHandshakePacketListener listener) {
+        listener.handleIntention(this);
     }
 
     @Override

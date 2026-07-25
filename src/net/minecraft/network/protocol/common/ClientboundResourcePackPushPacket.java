@@ -28,15 +28,9 @@ public record ClientboundResourcePackPushPacket(UUID id, String url, String hash
         ClientboundResourcePackPushPacket::new
     );
 
-    public ClientboundResourcePackPushPacket(UUID id, String url, String hash, boolean required, Optional<Component> prompt) {
+    public ClientboundResourcePackPushPacket {
         if (hash.length() > 40) {
             throw new IllegalArgumentException("Hash is too long (max 40, was " + hash.length() + ")");
-        } else {
-            this.id = id;
-            this.url = url;
-            this.hash = hash;
-            this.required = required;
-            this.prompt = prompt;
         }
     }
 
@@ -45,7 +39,7 @@ public record ClientboundResourcePackPushPacket(UUID id, String url, String hash
         return CommonPacketTypes.CLIENTBOUND_RESOURCE_PACK_PUSH;
     }
 
-    public void handle(ClientCommonPacketListener p_312649_) {
-        p_312649_.handleResourcePackPush(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleResourcePackPush(this);
     }
 }

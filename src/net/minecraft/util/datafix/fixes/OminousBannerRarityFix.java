@@ -9,53 +9,65 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.TaggedChoice.TaggedChoiceType;
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Dynamic;
 import net.minecraft.util.datafix.LegacyComponentDataFixUtils;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class OminousBannerRarityFix extends DataFix {
-    public OminousBannerRarityFix(Schema p_362925_) {
-        super(p_362925_, false);
+    public OminousBannerRarityFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.BLOCK_ENTITY);
-        Type<?> type1 = this.getInputSchema().getType(References.ITEM_STACK);
-        TaggedChoiceType<?> taggedchoicetype = this.getInputSchema().findChoiceType(References.BLOCK_ENTITY);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("components");
-        OpticFinder<?> opticfinder2 = type1.findField("components");
-        OpticFinder<?> opticfinder3 = opticfinder1.type().findField("minecraft:item_name");
-        OpticFinder<Pair<String, String>> opticfinder4 = DSL.typeFinder((Type<Pair<String, String>>)this.getInputSchema().getType(References.TEXT_COMPONENT));
-        return TypeRewriteRule.seq(this.fixTypeEverywhereTyped("Ominous Banner block entity common rarity to uncommon rarity fix", type, p_390330_ -> {
-            Object object = p_390330_.get(taggedchoicetype.finder()).getFirst();
-            return object.equals("minecraft:banner") ? this.fix(p_390330_, opticfinder1, opticfinder3, opticfinder4) : p_390330_;
-        }), this.fixTypeEverywhereTyped("Ominous Banner item stack common rarity to uncommon rarity fix", type1, p_390324_ -> {
-            String s = p_390324_.getOptional(opticfinder).map(Pair::getSecond).orElse("");
-            return s.equals("minecraft:white_banner") ? this.fix(p_390324_, opticfinder2, opticfinder3, opticfinder4) : p_390324_;
+        Type<?> blockEntityType = this.getInputSchema().getType(References.BLOCK_ENTITY);
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        TaggedChoiceType<?> blockEntityIdFinder = this.getInputSchema().findChoiceType(References.BLOCK_ENTITY);
+        OpticFinder<Pair<String, String>> itemStackIdFinder = DSL.fieldFinder(
+            "id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString())
+        );
+        OpticFinder<?> blockEntityComponentsFieldFinder = blockEntityType.findField("components");
+        OpticFinder<?> itemStackComponentsFieldFinder = itemStackType.findField("components");
+        OpticFinder<?> itemNameFinder = blockEntityComponentsFieldFinder.type().findField("minecraft:item_name");
+        OpticFinder<Pair<String, String>> textComponentFinder = DSL.typeFinder(
+            (Type<Pair<String, String>>)this.getInputSchema().getType(References.TEXT_COMPONENT)
+        );
+        return TypeRewriteRule.seq(this.fixTypeEverywhereTyped("Ominous Banner block entity common rarity to uncommon rarity fix", blockEntityType, input -> {
+            Object blockEntityId = input.get(blockEntityIdFinder.finder()).getFirst();
+            return blockEntityId.equals("minecraft:banner") ? this.fix(input, blockEntityComponentsFieldFinder, itemNameFinder, textComponentFinder) : input;
+        }), this.fixTypeEverywhereTyped("Ominous Banner item stack common rarity to uncommon rarity fix", itemStackType, input -> {
+            String itemStackId = input.getOptional(itemStackIdFinder).map(Pair::getSecond).orElse("");
+            return itemStackId.equals("minecraft:white_banner") ? this.fix(input, itemStackComponentsFieldFinder, itemNameFinder, textComponentFinder) : input;
         }));
     }
 
-    private Typed<?> fix(Typed<?> p_362105_, OpticFinder<?> p_363836_, OpticFinder<?> p_396185_, OpticFinder<Pair<String, String>> p_392457_) {
-        return p_362105_.updateTyped(
-            p_363836_,
-            p_390319_ -> {
-                boolean flag = p_390319_.getOptionalTyped(p_396185_)
-                    .flatMap(p_390332_ -> p_390332_.getOptional(p_392457_))
+    private Typed<?> fix(
+        final Typed<?> input,
+        final OpticFinder<?> componentsFieldFinder,
+        final OpticFinder<?> itemNameFinder,
+        final OpticFinder<Pair<String, String>> textComponentFinder
+    ) {
+        return input.updateTyped(
+            componentsFieldFinder,
+            components -> {
+                boolean isOminousBanner = components.getOptionalTyped(itemNameFinder)
+                    .flatMap(itemName -> itemName.getOptional(textComponentFinder))
                     .map(Pair::getSecond)
                     .flatMap(LegacyComponentDataFixUtils::extractTranslationString)
-                    .filter(p_368287_ -> p_368287_.equals("block.minecraft.ominous_banner"))
+                    .filter(e -> e.equals("block.minecraft.ominous_banner"))
                     .isPresent();
-                return flag
-                    ? p_390319_.updateTyped(
-                            p_396185_,
-                            p_390316_ -> p_390316_.set(
-                                p_392457_, Pair.of(References.TEXT_COMPONENT.typeName(), LegacyComponentDataFixUtils.createTranslatableComponentJson("block.minecraft.ominous_banner"))
+                return isOminousBanner
+                    ? components.updateTyped(
+                            itemNameFinder,
+                            itemName -> itemName.set(
+                                textComponentFinder,
+                                Pair.of(
+                                    References.TEXT_COMPONENT.typeName(),
+                                    LegacyComponentDataFixUtils.createTranslatableComponentJson("block.minecraft.ominous_banner")
+                                )
                             )
                         )
-                        .update(DSL.remainderFinder(), p_390325_ -> p_390325_.set("minecraft:rarity", p_390325_.createString("uncommon")))
-                    : p_390319_;
+                        .update(DSL.remainderFinder(), remainder -> remainder.set("minecraft:rarity", remainder.createString("uncommon")))
+                    : components;
             }
         );
     }

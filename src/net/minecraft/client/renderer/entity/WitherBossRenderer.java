@@ -9,47 +9,44 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.boss.wither.WitherBoss;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class WitherBossRenderer extends MobRenderer<WitherBoss, WitherRenderState, WitherBossModel> {
     private static final Identifier WITHER_INVULNERABLE_LOCATION = Identifier.withDefaultNamespace("textures/entity/wither/wither_invulnerable.png");
     private static final Identifier WITHER_LOCATION = Identifier.withDefaultNamespace("textures/entity/wither/wither.png");
 
-    public WitherBossRenderer(EntityRendererProvider.Context p_174445_) {
-        super(p_174445_, new WitherBossModel(p_174445_.bakeLayer(ModelLayers.WITHER)), 1.0F);
-        this.addLayer(new WitherArmorLayer(this, p_174445_.getModelSet()));
+    public WitherBossRenderer(final EntityRendererProvider.Context context) {
+        super(context, new WitherBossModel(context.bakeLayer(ModelLayers.WITHER)), 1.0F);
+        this.addLayer(new WitherArmorLayer(this, context.getModelSet()));
     }
 
-    protected int getBlockLightLevel(WitherBoss p_116443_, BlockPos p_116444_) {
+    protected int getBlockLightLevel(final WitherBoss entity, final BlockPos blockPos) {
         return 15;
     }
 
-    public Identifier getTextureLocation(WitherRenderState p_368277_) {
-        int i = Mth.floor(p_368277_.invulnerableTicks);
-        return i > 0 && (i > 80 || i / 5 % 2 != 1) ? WITHER_INVULNERABLE_LOCATION : WITHER_LOCATION;
+    public Identifier getTextureLocation(final WitherRenderState state) {
+        int invulnerableTicks = Mth.floor(state.invulnerableTicks);
+        return invulnerableTicks > 0 && (invulnerableTicks > 80 || invulnerableTicks / 5 % 2 != 1) ? WITHER_INVULNERABLE_LOCATION : WITHER_LOCATION;
     }
 
     public WitherRenderState createRenderState() {
         return new WitherRenderState();
     }
 
-    protected void scale(WitherRenderState p_370233_, PoseStack p_116434_) {
-        float f = 2.0F;
-        if (p_370233_.invulnerableTicks > 0.0F) {
-            f -= p_370233_.invulnerableTicks / 220.0F * 0.5F;
+    protected void scale(final WitherRenderState state, final PoseStack poseStack) {
+        float scale = 2.0F;
+        if (state.invulnerableTicks > 0.0F) {
+            scale -= state.invulnerableTicks / 220.0F * 0.5F;
         }
 
-        p_116434_.scale(f, f, f);
+        poseStack.scale(scale, scale, scale);
     }
 
-    public void extractRenderState(WitherBoss p_369559_, WitherRenderState p_363159_, float p_363731_) {
-        super.extractRenderState(p_369559_, p_363159_, p_363731_);
-        int i = p_369559_.getInvulnerableTicks();
-        p_363159_.invulnerableTicks = i > 0 ? i - p_363731_ : 0.0F;
-        System.arraycopy(p_369559_.getHeadXRots(), 0, p_363159_.xHeadRots, 0, p_363159_.xHeadRots.length);
-        System.arraycopy(p_369559_.getHeadYRots(), 0, p_363159_.yHeadRots, 0, p_363159_.yHeadRots.length);
-        p_363159_.isPowered = p_369559_.isPowered();
+    public void extractRenderState(final WitherBoss entity, final WitherRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        int invulnerableTicks = entity.getInvulnerableTicks();
+        state.invulnerableTicks = invulnerableTicks > 0 ? invulnerableTicks - partialTicks : 0.0F;
+        System.arraycopy(entity.getHeadXRots(), 0, state.xHeadRots, 0, state.xHeadRots.length);
+        System.arraycopy(entity.getHeadYRots(), 0, state.yHeadRots, 0, state.yHeadRots.length);
+        state.isPowered = entity.isPowered();
     }
 }

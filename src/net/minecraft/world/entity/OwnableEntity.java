@@ -15,21 +15,21 @@ public interface OwnableEntity {
     }
 
     default @Nullable LivingEntity getRootOwner() {
-        Set<Object> set = new ObjectArraySet<>();
-        LivingEntity livingentity = this.getOwner();
-        set.add(this);
+        Set<Object> seen = new ObjectArraySet<>();
+        LivingEntity owner = this.getOwner();
+        seen.add(this);
 
-        while (livingentity instanceof OwnableEntity) {
-            OwnableEntity ownableentity = (OwnableEntity)livingentity;
-            LivingEntity livingentity1 = ownableentity.getOwner();
-            if (set.contains(livingentity1)) {
+        while (owner instanceof OwnableEntity) {
+            OwnableEntity ownableOwner = (OwnableEntity)owner;
+            LivingEntity ownersOwner = ownableOwner.getOwner();
+            if (seen.contains(ownersOwner)) {
                 return null;
             }
 
-            set.add(livingentity);
-            livingentity = ownableentity.getOwner();
+            seen.add(owner);
+            owner = ownableOwner.getOwner();
         }
 
-        return livingentity;
+        return owner;
     }
 }

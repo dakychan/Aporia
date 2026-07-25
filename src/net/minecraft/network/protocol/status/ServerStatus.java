@@ -3,7 +3,6 @@ package net.minecraft.network.protocol.status;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -23,56 +22,55 @@ public record ServerStatus(
     boolean enforcesSecureChat
 ) {
     public static final Codec<ServerStatus> CODEC = RecordCodecBuilder.create(
-        p_326135_ -> p_326135_.group(
+        i -> i.group(
                 ComponentSerialization.CODEC.lenientOptionalFieldOf("description", CommonComponents.EMPTY).forGetter(ServerStatus::description),
                 ServerStatus.Players.CODEC.lenientOptionalFieldOf("players").forGetter(ServerStatus::players),
                 ServerStatus.Version.CODEC.lenientOptionalFieldOf("version").forGetter(ServerStatus::version),
                 ServerStatus.Favicon.CODEC.lenientOptionalFieldOf("favicon").forGetter(ServerStatus::favicon),
                 Codec.BOOL.lenientOptionalFieldOf("enforcesSecureChat", false).forGetter(ServerStatus::enforcesSecureChat)
             )
-            .apply(p_326135_, ServerStatus::new)
+            .apply(i, ServerStatus::new)
     );
 
     public record Favicon(byte[] iconBytes) {
         private static final String PREFIX = "data:image/png;base64,";
-        public static final Codec<ServerStatus.Favicon> CODEC = Codec.STRING.comapFlatMap(p_274795_ -> {
-            if (!p_274795_.startsWith("data:image/png;base64,")) {
+        public static final Codec<ServerStatus.Favicon> CODEC = Codec.STRING.comapFlatMap(string -> {
+            if (!string.startsWith("data:image/png;base64,")) {
                 return DataResult.error(() -> "Unknown format");
-            } else {
-                try {
-                    String s = p_274795_.substring("data:image/png;base64,".length()).replaceAll("\n", "");
-                    byte[] abyte = Base64.getDecoder().decode(s.getBytes(StandardCharsets.UTF_8));
-                    return DataResult.success(new ServerStatus.Favicon(abyte));
-                } catch (IllegalArgumentException illegalargumentexception) {
-                    return DataResult.error(() -> "Malformed base64 server icon");
-                }
             }
-        }, p_273258_ -> "data:image/png;base64," + new String(Base64.getEncoder().encode(p_273258_.iconBytes), StandardCharsets.UTF_8));
+
+            try {
+                String base64 = string.substring("data:image/png;base64,".length()).replaceAll("\n", "");
+                byte[] iconBytes = Base64.getDecoder().decode(base64.getBytes(StandardCharsets.UTF_8));
+                return DataResult.success(new ServerStatus.Favicon(iconBytes));
+            } catch (IllegalArgumentException e) {
+                return DataResult.error(() -> "Malformed base64 server icon");
+            }
+        }, favicon -> "data:image/png;base64," + new String(Base64.getEncoder().encode(favicon.iconBytes), StandardCharsets.UTF_8));
     }
 
     public record Players(int max, int online, List<NameAndId> sample) {
         public static final Codec<ServerStatus.Players> CODEC = RecordCodecBuilder.create(
-            p_421256_ -> p_421256_.group(
+            i -> i.group(
                     Codec.INT.fieldOf("max").forGetter(ServerStatus.Players::max),
                     Codec.INT.fieldOf("online").forGetter(ServerStatus.Players::online),
                     NameAndId.CODEC.listOf().lenientOptionalFieldOf("sample", List.of()).forGetter(ServerStatus.Players::sample)
                 )
-                .apply(p_421256_, ServerStatus.Players::new)
+                .apply(i, ServerStatus.Players::new)
         );
     }
 
     public record Version(String name, int protocol) {
         public static final Codec<ServerStatus.Version> CODEC = RecordCodecBuilder.create(
-            p_273157_ -> p_273157_.group(
-                    Codec.STRING.fieldOf("name").forGetter(ServerStatus.Version::name),
-                    Codec.INT.fieldOf("protocol").forGetter(ServerStatus.Version::protocol)
+            i -> i.group(
+                    Codec.STRING.fieldOf("name").forGetter(ServerStatus.Version::name), Codec.INT.fieldOf("protocol").forGetter(ServerStatus.Version::protocol)
                 )
-                .apply(p_273157_, ServerStatus.Version::new)
+                .apply(i, ServerStatus.Version::new)
         );
 
         public static ServerStatus.Version current() {
-            WorldVersion worldversion = SharedConstants.getCurrentVersion();
-            return new ServerStatus.Version(worldversion.name(), worldversion.protocolVersion());
+            WorldVersion version = SharedConstants.getCurrentVersion();
+            return new ServerStatus.Version(version.name(), version.protocolVersion());
         }
     }
 }

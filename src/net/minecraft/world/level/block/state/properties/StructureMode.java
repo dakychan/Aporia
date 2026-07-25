@@ -16,9 +16,9 @@ public enum StructureMode implements StringRepresentable {
     private final String name;
     private final Component displayName;
 
-    private StructureMode(final String p_61809_) {
-        this.name = p_61809_;
-        this.displayName = Component.translatable("structure_block.mode_info." + p_61809_);
+    StructureMode(final String name) {
+        this.name = name;
+        this.displayName = Component.translatable("structure_block.mode_info." + name);
     }
 
     @Override

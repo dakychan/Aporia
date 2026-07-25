@@ -10,96 +10,96 @@ public class ChestMenu extends AbstractContainerMenu {
     private final Container container;
     private final int containerRows;
 
-    private ChestMenu(MenuType<?> p_39224_, int p_39225_, Inventory p_39226_, int p_39227_) {
-        this(p_39224_, p_39225_, p_39226_, new SimpleContainer(9 * p_39227_), p_39227_);
+    private ChestMenu(final MenuType<?> menuType, final int containerId, final Inventory inventory, final int rows) {
+        this(menuType, containerId, inventory, new SimpleContainer(9 * rows), rows);
     }
 
-    public static ChestMenu oneRow(int p_39235_, Inventory p_39236_) {
-        return new ChestMenu(MenuType.GENERIC_9x1, p_39235_, p_39236_, 1);
+    public static ChestMenu oneRow(final int containerId, final Inventory inventory) {
+        return new ChestMenu(MenuType.GENERIC_9x1, containerId, inventory, 1);
     }
 
-    public static ChestMenu twoRows(int p_39244_, Inventory p_39245_) {
-        return new ChestMenu(MenuType.GENERIC_9x2, p_39244_, p_39245_, 2);
+    public static ChestMenu twoRows(final int containerId, final Inventory inventory) {
+        return new ChestMenu(MenuType.GENERIC_9x2, containerId, inventory, 2);
     }
 
-    public static ChestMenu threeRows(int p_39256_, Inventory p_39257_) {
-        return new ChestMenu(MenuType.GENERIC_9x3, p_39256_, p_39257_, 3);
+    public static ChestMenu threeRows(final int containerId, final Inventory inventory) {
+        return new ChestMenu(MenuType.GENERIC_9x3, containerId, inventory, 3);
     }
 
-    public static ChestMenu fourRows(int p_39259_, Inventory p_39260_) {
-        return new ChestMenu(MenuType.GENERIC_9x4, p_39259_, p_39260_, 4);
+    public static ChestMenu fourRows(final int containerId, final Inventory inventory) {
+        return new ChestMenu(MenuType.GENERIC_9x4, containerId, inventory, 4);
     }
 
-    public static ChestMenu fiveRows(int p_39263_, Inventory p_39264_) {
-        return new ChestMenu(MenuType.GENERIC_9x5, p_39263_, p_39264_, 5);
+    public static ChestMenu fiveRows(final int containerId, final Inventory inventory) {
+        return new ChestMenu(MenuType.GENERIC_9x5, containerId, inventory, 5);
     }
 
-    public static ChestMenu sixRows(int p_39267_, Inventory p_39268_) {
-        return new ChestMenu(MenuType.GENERIC_9x6, p_39267_, p_39268_, 6);
+    public static ChestMenu sixRows(final int containerId, final Inventory inventory) {
+        return new ChestMenu(MenuType.GENERIC_9x6, containerId, inventory, 6);
     }
 
-    public static ChestMenu threeRows(int p_39238_, Inventory p_39239_, Container p_39240_) {
-        return new ChestMenu(MenuType.GENERIC_9x3, p_39238_, p_39239_, p_39240_, 3);
+    public static ChestMenu threeRows(final int containerId, final Inventory inventory, final Container container) {
+        return new ChestMenu(MenuType.GENERIC_9x3, containerId, inventory, container, 3);
     }
 
-    public static ChestMenu sixRows(int p_39247_, Inventory p_39248_, Container p_39249_) {
-        return new ChestMenu(MenuType.GENERIC_9x6, p_39247_, p_39248_, p_39249_, 6);
+    public static ChestMenu sixRows(final int containerId, final Inventory inventory, final Container container) {
+        return new ChestMenu(MenuType.GENERIC_9x6, containerId, inventory, container, 6);
     }
 
-    public ChestMenu(MenuType<?> p_39229_, int p_39230_, Inventory p_39231_, Container p_39232_, int p_39233_) {
-        super(p_39229_, p_39230_);
-        checkContainerSize(p_39232_, p_39233_ * 9);
-        this.container = p_39232_;
-        this.containerRows = p_39233_;
-        p_39232_.startOpen(p_39231_.player);
-        int i = 18;
-        this.addChestGrid(p_39232_, 8, 18);
-        int j = 18 + this.containerRows * 18 + 13;
-        this.addStandardInventorySlots(p_39231_, 8, j);
+    public ChestMenu(final MenuType<?> menuType, final int containerId, final Inventory inventory, final Container container, final int rows) {
+        super(menuType, containerId);
+        checkContainerSize(container, rows * 9);
+        this.container = container;
+        this.containerRows = rows;
+        container.startOpen(inventory.player);
+        int chestGridTop = 18;
+        this.addChestGrid(container, 8, 18);
+        int inventoryTop = 18 + this.containerRows * 18 + 13;
+        this.addStandardInventorySlots(inventory, 8, inventoryTop);
     }
 
-    private void addChestGrid(Container p_364722_, int p_368076_, int p_363773_) {
-        for (int i = 0; i < this.containerRows; i++) {
-            for (int j = 0; j < 9; j++) {
-                this.addSlot(new Slot(p_364722_, j + i * 9, p_368076_ + j * 18, p_363773_ + i * 18));
+    private void addChestGrid(final Container container, final int left, final int top) {
+        for (int y = 0; y < this.containerRows; y++) {
+            for (int x = 0; x < 9; x++) {
+                this.addSlot(new Slot(container, x + y * 9, left + x * 18, top + y * 18));
             }
         }
     }
 
     @Override
-    public boolean stillValid(Player p_39242_) {
-        return this.container.stillValid(p_39242_);
+    public boolean stillValid(final Player player) {
+        return this.container.stillValid(player);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_39253_, int p_39254_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_39254_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_39254_ < this.containerRows * 9) {
-                if (!this.moveItemStackTo(itemstack1, this.containerRows * 9, this.slots.size(), true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex < this.containerRows * 9) {
+                if (!this.moveItemStackTo(stack, this.containerRows * 9, this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 0, this.containerRows * 9, false)) {
+            } else if (!this.moveItemStackTo(stack, 0, this.containerRows * 9, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
         }
 
-        return itemstack;
+        return clicked;
     }
 
     @Override
-    public void removed(Player p_39251_) {
-        super.removed(p_39251_);
-        this.container.stopOpen(p_39251_);
+    public void removed(final Player player) {
+        super.removed(player);
+        this.container.stopOpen(player);
     }
 
     public Container getContainer() {

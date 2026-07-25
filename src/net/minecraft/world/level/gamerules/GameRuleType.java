@@ -8,8 +8,8 @@ public enum GameRuleType implements StringRepresentable {
 
     private final String name;
 
-    private GameRuleType(final String p_453359_) {
-        this.name = p_453359_;
+    GameRuleType(final String name) {
+        this.name = name;
     }
 
     @Override

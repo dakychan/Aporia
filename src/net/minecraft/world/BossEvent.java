@@ -16,11 +16,11 @@ public abstract class BossEvent {
     protected boolean playBossMusic;
     protected boolean createWorldFog;
 
-    public BossEvent(UUID p_18849_, Component p_18850_, BossEvent.BossBarColor p_18851_, BossEvent.BossBarOverlay p_18852_) {
-        this.id = p_18849_;
-        this.name = p_18850_;
-        this.color = p_18851_;
-        this.overlay = p_18852_;
+    public BossEvent(final UUID id, final Component name, final BossEvent.BossBarColor color, final BossEvent.BossBarOverlay overlay) {
+        this.id = id;
+        this.name = name;
+        this.color = color;
+        this.overlay = overlay;
         this.progress = 1.0F;
     }
 
@@ -32,40 +32,40 @@ public abstract class BossEvent {
         return this.name;
     }
 
-    public void setName(Component p_18856_) {
-        this.name = p_18856_;
+    public void setName(final Component name) {
+        this.name = name;
     }
 
     public float getProgress() {
         return this.progress;
     }
 
-    public void setProgress(float p_146639_) {
-        this.progress = p_146639_;
+    public void setProgress(final float progress) {
+        this.progress = progress;
     }
 
     public BossEvent.BossBarColor getColor() {
         return this.color;
     }
 
-    public void setColor(BossEvent.BossBarColor p_18854_) {
-        this.color = p_18854_;
+    public void setColor(final BossEvent.BossBarColor color) {
+        this.color = color;
     }
 
     public BossEvent.BossBarOverlay getOverlay() {
         return this.overlay;
     }
 
-    public void setOverlay(BossEvent.BossBarOverlay p_18855_) {
-        this.overlay = p_18855_;
+    public void setOverlay(final BossEvent.BossBarOverlay overlay) {
+        this.overlay = overlay;
     }
 
     public boolean shouldDarkenScreen() {
         return this.darkenScreen;
     }
 
-    public BossEvent setDarkenScreen(boolean p_18857_) {
-        this.darkenScreen = p_18857_;
+    public BossEvent setDarkenScreen(final boolean darkenScreen) {
+        this.darkenScreen = darkenScreen;
         return this;
     }
 
@@ -73,13 +73,13 @@ public abstract class BossEvent {
         return this.playBossMusic;
     }
 
-    public BossEvent setPlayBossMusic(boolean p_18858_) {
-        this.playBossMusic = p_18858_;
+    public BossEvent setPlayBossMusic(final boolean playBossMusic) {
+        this.playBossMusic = playBossMusic;
         return this;
     }
 
-    public BossEvent setCreateWorldFog(boolean p_18859_) {
-        this.createWorldFog = p_18859_;
+    public BossEvent setCreateWorldFog(final boolean createWorldFog) {
+        this.createWorldFog = createWorldFog;
         return this;
     }
 
@@ -87,7 +87,7 @@ public abstract class BossEvent {
         return this.createWorldFog;
     }
 
-    public static enum BossBarColor implements StringRepresentable {
+    public enum BossBarColor implements StringRepresentable {
         PINK("pink", ChatFormatting.RED),
         BLUE("blue", ChatFormatting.BLUE),
         RED("red", ChatFormatting.DARK_RED),
@@ -100,9 +100,9 @@ public abstract class BossEvent {
         private final String name;
         private final ChatFormatting formatting;
 
-        private BossBarColor(final String p_18881_, final ChatFormatting p_18882_) {
-            this.name = p_18881_;
-            this.formatting = p_18882_;
+        BossBarColor(final String name, final ChatFormatting formatting) {
+            this.name = name;
+            this.formatting = formatting;
         }
 
         public ChatFormatting getFormatting() {
@@ -119,7 +119,7 @@ public abstract class BossEvent {
         }
     }
 
-    public static enum BossBarOverlay implements StringRepresentable {
+    public enum BossBarOverlay implements StringRepresentable {
         PROGRESS("progress"),
         NOTCHED_6("notched_6"),
         NOTCHED_10("notched_10"),
@@ -129,8 +129,8 @@ public abstract class BossEvent {
         public static final Codec<BossEvent.BossBarOverlay> CODEC = StringRepresentable.fromEnum(BossEvent.BossBarOverlay::values);
         private final String name;
 
-        private BossBarOverlay(final String p_18901_) {
-            this.name = p_18901_;
+        BossBarOverlay(final String name) {
+            this.name = name;
         }
 
         public String getName() {

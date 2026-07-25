@@ -22,10 +22,10 @@ public class ChunkTaskDispatcher implements ChunkHolder.LevelChangeListener, Aut
     private final PriorityConsecutiveExecutor dispatcher;
     protected boolean sleeping;
 
-    public ChunkTaskDispatcher(TaskScheduler<Runnable> p_361144_, Executor p_369214_) {
-        this.queue = new ChunkTaskPriorityQueue(p_361144_.name() + "_queue");
-        this.executor = p_361144_;
-        this.dispatcher = new PriorityConsecutiveExecutor(4, p_369214_, "dispatcher");
+    public ChunkTaskDispatcher(final TaskScheduler<Runnable> executor, final Executor dispatcherExecutor) {
+        this.queue = new ChunkTaskPriorityQueue(executor.name() + "_queue");
+        this.executor = executor;
+        this.dispatcher = new PriorityConsecutiveExecutor(4, dispatcherExecutor, "dispatcher");
         this.sleeping = true;
     }
 
@@ -34,39 +34,39 @@ public class ChunkTaskDispatcher implements ChunkHolder.LevelChangeListener, Aut
     }
 
     @Override
-    public void onLevelChange(ChunkPos p_368881_, IntSupplier p_362965_, int p_369655_, IntConsumer p_365320_) {
+    public void onLevelChange(final ChunkPos pos, final IntSupplier oldLevel, final int newLevel, final IntConsumer setQueueLevel) {
         this.dispatcher.schedule(new StrictQueue.RunnableWithPriority(0, () -> {
-            int i = p_362965_.getAsInt();
+            int oldTicketLevel = oldLevel.getAsInt();
             if (SharedConstants.DEBUG_VERBOSE_SERVER_EVENTS) {
-                LOGGER.debug("RES {} {} -> {}", p_368881_, i, p_369655_);
+                LOGGER.debug("RES {} {} -> {}", pos, oldTicketLevel, newLevel);
             }
 
-            this.queue.resortChunkTasks(i, p_368881_, p_369655_);
-            p_365320_.accept(p_369655_);
+            this.queue.resortChunkTasks(oldTicketLevel, pos, newLevel);
+            setQueueLevel.accept(newLevel);
         }));
     }
 
-    public void release(long p_369489_, Runnable p_365183_, boolean p_369881_) {
+    public void release(final long pos, final Runnable whenReleased, final boolean clearQueue) {
         this.dispatcher.schedule(new StrictQueue.RunnableWithPriority(1, () -> {
-            this.queue.release(p_369489_, p_369881_);
-            this.onRelease(p_369489_);
+            this.queue.release(pos, clearQueue);
+            this.onRelease(pos);
             if (this.sleeping) {
                 this.sleeping = false;
                 this.pollTask();
             }
 
-            p_365183_.run();
+            whenReleased.run();
         }));
     }
 
-    public void submit(Runnable p_364984_, long p_364993_, IntSupplier p_367388_) {
+    public void submit(final Runnable task, final long pos, final IntSupplier level) {
         this.dispatcher.schedule(new StrictQueue.RunnableWithPriority(2, () -> {
-            int i = p_367388_.getAsInt();
+            int ticketLevel = level.getAsInt();
             if (SharedConstants.DEBUG_VERBOSE_SERVER_EVENTS) {
-                LOGGER.debug("SUB {} {} {} {}", new ChunkPos(p_364993_), i, this.executor, this.queue);
+                LOGGER.debug("SUB {} {} {} {}", ChunkPos.unpack(pos), ticketLevel, this.executor, this.queue);
             }
 
-            this.queue.submit(p_364984_, p_364993_, i);
+            this.queue.submit(task, pos, ticketLevel);
             if (this.sleeping) {
                 this.sleeping = false;
                 this.pollTask();
@@ -76,23 +76,23 @@ public class ChunkTaskDispatcher implements ChunkHolder.LevelChangeListener, Aut
 
     protected void pollTask() {
         this.dispatcher.schedule(new StrictQueue.RunnableWithPriority(3, () -> {
-            ChunkTaskPriorityQueue.TasksForChunk chunktaskpriorityqueue$tasksforchunk = this.popTasks();
-            if (chunktaskpriorityqueue$tasksforchunk == null) {
+            ChunkTaskPriorityQueue.TasksForChunk tasksForChunk = this.popTasks();
+            if (tasksForChunk == null) {
                 this.sleeping = true;
             } else {
-                this.scheduleForExecution(chunktaskpriorityqueue$tasksforchunk);
+                this.scheduleForExecution(tasksForChunk);
             }
         }));
     }
 
-    protected void scheduleForExecution(ChunkTaskPriorityQueue.TasksForChunk p_361766_) {
-        CompletableFuture.allOf(p_361766_.tasks().stream().map(p_363376_ -> this.executor.scheduleWithResult(p_366925_ -> {
-            p_363376_.run();
-            p_366925_.complete(Unit.INSTANCE);
-        })).toArray(CompletableFuture[]::new)).thenAccept(p_367735_ -> this.pollTask());
+    protected void scheduleForExecution(final ChunkTaskPriorityQueue.TasksForChunk tasksForChunk) {
+        CompletableFuture.allOf(tasksForChunk.tasks().stream().map(message -> this.executor.scheduleWithResult(future -> {
+            message.run();
+            future.complete(Unit.INSTANCE);
+        })).toArray(CompletableFuture[]::new)).thenAccept(r -> this.pollTask());
     }
 
-    protected void onRelease(long p_362676_) {
+    protected void onRelease(final long key) {
     }
 
     protected ChunkTaskPriorityQueue.@Nullable TasksForChunk popTasks() {

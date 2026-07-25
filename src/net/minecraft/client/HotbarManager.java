@@ -11,11 +11,8 @@ import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.datafix.DataFixTypes;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class HotbarManager {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final int NUM_HOTBAR_GROUPS = 9;
@@ -24,9 +21,9 @@ public class HotbarManager {
     private final Hotbar[] hotbars = new Hotbar[9];
     private boolean loaded;
 
-    public HotbarManager(Path p_311778_, DataFixer p_90804_) {
-        this.optionsFile = p_311778_.resolve("hotbar.nbt");
-        this.fixerUpper = p_90804_;
+    public HotbarManager(final Path workingDirectory, final DataFixer fixerUpper) {
+        this.optionsFile = workingDirectory.resolve("hotbar.nbt");
+        this.fixerUpper = fixerUpper;
 
         for (int i = 0; i < 9; i++) {
             this.hotbars[i] = new Hotbar();
@@ -35,47 +32,47 @@ public class HotbarManager {
 
     private void load() {
         try {
-            CompoundTag compoundtag = NbtIo.read(this.optionsFile);
-            if (compoundtag == null) {
+            CompoundTag tag = NbtIo.read(this.optionsFile);
+            if (tag == null) {
                 return;
             }
 
-            int i = NbtUtils.getDataVersion(compoundtag, 1343);
-            compoundtag = DataFixTypes.HOTBAR.updateToCurrentVersion(this.fixerUpper, compoundtag, i);
+            int version = NbtUtils.getDataVersion(tag, 1343);
+            tag = DataFixTypes.HOTBAR.updateToCurrentVersion(this.fixerUpper, tag, version);
 
-            for (int j = 0; j < 9; j++) {
-                this.hotbars[j] = Hotbar.CODEC
-                    .parse(NbtOps.INSTANCE, compoundtag.get(String.valueOf(j)))
-                    .resultOrPartial(p_329426_ -> LOGGER.warn("Failed to parse hotbar: {}", p_329426_))
+            for (int i = 0; i < 9; i++) {
+                this.hotbars[i] = Hotbar.CODEC
+                    .parse(NbtOps.INSTANCE, tag.get(String.valueOf(i)))
+                    .resultOrPartial(error -> LOGGER.warn("Failed to parse hotbar: {}", error))
                     .orElseGet(Hotbar::new);
             }
-        } catch (Exception exception) {
-            LOGGER.error("Failed to load creative mode options", (Throwable)exception);
+        } catch (Exception e) {
+            LOGGER.error("Failed to load creative mode options", e);
         }
     }
 
     public void save() {
         try {
-            CompoundTag compoundtag = NbtUtils.addCurrentDataVersion(new CompoundTag());
+            CompoundTag tag = NbtUtils.addCurrentDataVersion(new CompoundTag());
 
             for (int i = 0; i < 9; i++) {
                 Hotbar hotbar = this.get(i);
-                DataResult<Tag> dataresult = Hotbar.CODEC.encodeStart(NbtOps.INSTANCE, hotbar);
-                compoundtag.put(String.valueOf(i), dataresult.getOrThrow());
+                DataResult<Tag> result = Hotbar.CODEC.encodeStart(NbtOps.INSTANCE, hotbar);
+                tag.put(String.valueOf(i), result.getOrThrow());
             }
 
-            NbtIo.write(compoundtag, this.optionsFile);
-        } catch (Exception exception) {
-            LOGGER.error("Failed to save creative mode options", (Throwable)exception);
+            NbtIo.write(tag, this.optionsFile);
+        } catch (Exception e) {
+            LOGGER.error("Failed to save creative mode options", e);
         }
     }
 
-    public Hotbar get(int p_90807_) {
+    public Hotbar get(final int id) {
         if (!this.loaded) {
             this.load();
             this.loaded = true;
         }
 
-        return this.hotbars[p_90807_];
+        return this.hotbars[id];
     }
 }

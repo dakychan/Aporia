@@ -3,20 +3,19 @@ package net.minecraft.world.level.levelgen.feature.featuresize;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.OptionalInt;
 
 public class ThreeLayersFeatureSize extends FeatureSize {
     public static final MapCodec<ThreeLayersFeatureSize> CODEC = RecordCodecBuilder.mapCodec(
-        p_68326_ -> p_68326_.group(
-                Codec.intRange(0, 80).fieldOf("limit").orElse(1).forGetter(p_161335_ -> p_161335_.limit),
-                Codec.intRange(0, 80).fieldOf("upper_limit").orElse(1).forGetter(p_161333_ -> p_161333_.upperLimit),
-                Codec.intRange(0, 16).fieldOf("lower_size").orElse(0).forGetter(p_161331_ -> p_161331_.lowerSize),
-                Codec.intRange(0, 16).fieldOf("middle_size").orElse(1).forGetter(p_161329_ -> p_161329_.middleSize),
-                Codec.intRange(0, 16).fieldOf("upper_size").orElse(1).forGetter(p_161327_ -> p_161327_.upperSize),
+        i -> i.group(
+                Codec.intRange(0, 80).optionalFieldOf("limit", 1).forGetter(s -> s.limit),
+                Codec.intRange(0, 80).optionalFieldOf("upper_limit", 1).forGetter(s -> s.upperLimit),
+                Codec.intRange(0, 16).optionalFieldOf("lower_size", 0).forGetter(s -> s.lowerSize),
+                Codec.intRange(0, 16).optionalFieldOf("middle_size", 1).forGetter(s -> s.middleSize),
+                Codec.intRange(0, 16).optionalFieldOf("upper_size", 1).forGetter(s -> s.upperSize),
                 minClippedHeightCodec()
             )
-            .apply(p_68326_, ThreeLayersFeatureSize::new)
+            .apply(i, ThreeLayersFeatureSize::new)
     );
     private final int limit;
     private final int upperLimit;
@@ -24,13 +23,15 @@ public class ThreeLayersFeatureSize extends FeatureSize {
     private final int middleSize;
     private final int upperSize;
 
-    public ThreeLayersFeatureSize(int p_68314_, int p_68315_, int p_68316_, int p_68317_, int p_68318_, OptionalInt p_68319_) {
-        super(p_68319_);
-        this.limit = p_68314_;
-        this.upperLimit = p_68315_;
-        this.lowerSize = p_68316_;
-        this.middleSize = p_68317_;
-        this.upperSize = p_68318_;
+    public ThreeLayersFeatureSize(
+        final int limit, final int upperLimit, final int lowerSize, final int middleSize, final int upperSize, final OptionalInt minClippedHeight
+    ) {
+        super(minClippedHeight);
+        this.limit = limit;
+        this.upperLimit = upperLimit;
+        this.lowerSize = lowerSize;
+        this.middleSize = middleSize;
+        this.upperSize = upperSize;
     }
 
     @Override
@@ -39,11 +40,11 @@ public class ThreeLayersFeatureSize extends FeatureSize {
     }
 
     @Override
-    public int getSizeAtHeight(int p_68321_, int p_68322_) {
-        if (p_68322_ < this.limit) {
+    public int getSizeAtHeight(final int treeHeight, final int yo) {
+        if (yo < this.limit) {
             return this.lowerSize;
         } else {
-            return p_68322_ >= p_68321_ - this.upperLimit ? this.upperSize : this.middleSize;
+            return yo >= treeHeight - this.upperLimit ? this.upperSize : this.middleSize;
         }
     }
 }

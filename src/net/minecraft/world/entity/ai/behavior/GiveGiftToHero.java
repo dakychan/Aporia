@@ -13,7 +13,6 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootTable;
 
@@ -42,7 +41,7 @@ public class GiveGiftToHero extends Behavior<Villager> {
     private boolean giftGivenDuringThisRun;
     private long timeSinceStart;
 
-    public GiveGiftToHero(int p_22992_) {
+    public GiveGiftToHero(final int timeout) {
         super(
             ImmutableMap.of(
                 MemoryModuleType.WALK_TARGET,
@@ -54,12 +53,12 @@ public class GiveGiftToHero extends Behavior<Villager> {
                 MemoryModuleType.NEAREST_VISIBLE_PLAYER,
                 MemoryStatus.VALUE_PRESENT
             ),
-            p_22992_
+            timeout
         );
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_23003_, Villager p_454124_) {
-        if (!this.isHeroVisible(p_454124_)) {
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Villager body) {
+        if (!this.isHeroVisible(body)) {
             return false;
         } else if (this.timeUntilNextGift > 0) {
             this.timeUntilNextGift--;
@@ -69,70 +68,70 @@ public class GiveGiftToHero extends Behavior<Villager> {
         }
     }
 
-    protected void start(ServerLevel p_23006_, Villager p_453367_, long p_23008_) {
+    protected void start(final ServerLevel level, final Villager body, final long timestamp) {
         this.giftGivenDuringThisRun = false;
-        this.timeSinceStart = p_23008_;
-        Player player = this.getNearestTargetableHero(p_453367_).get();
-        p_453367_.getBrain().setMemory(MemoryModuleType.INTERACTION_TARGET, player);
-        BehaviorUtils.lookAtEntity(p_453367_, player);
+        this.timeSinceStart = timestamp;
+        Player player = this.getNearestTargetableHero(body).get();
+        body.getBrain().setMemory(MemoryModuleType.INTERACTION_TARGET, player);
+        BehaviorUtils.lookAtEntity(body, player);
     }
 
-    protected boolean canStillUse(ServerLevel p_23026_, Villager p_454970_, long p_23028_) {
-        return this.isHeroVisible(p_454970_) && !this.giftGivenDuringThisRun;
+    protected boolean canStillUse(final ServerLevel level, final Villager body, final long timestamp) {
+        return this.isHeroVisible(body) && !this.giftGivenDuringThisRun;
     }
 
-    protected void tick(ServerLevel p_23036_, Villager p_458481_, long p_23038_) {
-        Player player = this.getNearestTargetableHero(p_458481_).get();
-        BehaviorUtils.lookAtEntity(p_458481_, player);
-        if (this.isWithinThrowingDistance(p_458481_, player)) {
-            if (p_23038_ - this.timeSinceStart > 20L) {
-                this.throwGift(p_23036_, p_458481_, player);
+    protected void tick(final ServerLevel level, final Villager villager, final long timestamp) {
+        Player player = this.getNearestTargetableHero(villager).get();
+        BehaviorUtils.lookAtEntity(villager, player);
+        if (this.isWithinThrowingDistance(villager, player)) {
+            if (timestamp - this.timeSinceStart > 20L) {
+                this.throwGift(level, villager, player);
                 this.giftGivenDuringThisRun = true;
             }
         } else {
-            BehaviorUtils.setWalkAndLookTargetMemories(p_458481_, player, 0.5F, 5);
+            BehaviorUtils.setWalkAndLookTargetMemories(villager, player, 0.5F, 5);
         }
     }
 
-    protected void stop(ServerLevel p_23046_, Villager p_453448_, long p_23048_) {
-        this.timeUntilNextGift = calculateTimeUntilNextGift(p_23046_);
-        p_453448_.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
-        p_453448_.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
-        p_453448_.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
+    protected void stop(final ServerLevel level, final Villager body, final long timestamp) {
+        this.timeUntilNextGift = calculateTimeUntilNextGift(level);
+        body.getBrain().eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        body.getBrain().eraseMemory(MemoryModuleType.WALK_TARGET);
+        body.getBrain().eraseMemory(MemoryModuleType.LOOK_TARGET);
     }
 
-    private void throwGift(ServerLevel p_361224_, Villager p_460045_, LivingEntity p_23013_) {
-        p_460045_.dropFromGiftLootTable(p_361224_, getLootTableToThrow(p_460045_), (p_449467_, p_449468_) -> BehaviorUtils.throwItem(p_460045_, p_449468_, p_23013_.position()));
+    private void throwGift(final ServerLevel level, final Villager villager, final LivingEntity target) {
+        villager.dropFromGiftLootTable(level, getLootTableToThrow(villager), (l, itemStack) -> BehaviorUtils.throwItem(villager, itemStack, target.position()));
     }
 
-    private static ResourceKey<LootTable> getLootTableToThrow(Villager p_460392_) {
-        if (p_460392_.isBaby()) {
+    private static ResourceKey<LootTable> getLootTableToThrow(final Villager villager) {
+        if (villager.isBaby()) {
             return BuiltInLootTables.BABY_VILLAGER_GIFT;
-        } else {
-            Optional<ResourceKey<VillagerProfession>> optional = p_460392_.getVillagerData().profession().unwrapKey();
-            return optional.isEmpty() ? BuiltInLootTables.UNEMPLOYED_GIFT : GIFTS.getOrDefault(optional.get(), BuiltInLootTables.UNEMPLOYED_GIFT);
         }
+
+        Optional<ResourceKey<VillagerProfession>> profession = villager.getVillagerData().profession().unwrapKey();
+        return profession.isEmpty() ? BuiltInLootTables.UNEMPLOYED_GIFT : GIFTS.getOrDefault(profession.get(), BuiltInLootTables.UNEMPLOYED_GIFT);
     }
 
-    private boolean isHeroVisible(Villager p_458700_) {
-        return this.getNearestTargetableHero(p_458700_).isPresent();
+    private boolean isHeroVisible(final Villager body) {
+        return this.getNearestTargetableHero(body).isPresent();
     }
 
-    private Optional<Player> getNearestTargetableHero(Villager p_457458_) {
-        return p_457458_.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_PLAYER).filter(this::isHero);
+    private Optional<Player> getNearestTargetableHero(final Villager body) {
+        return body.getBrain().getMemory(MemoryModuleType.NEAREST_VISIBLE_PLAYER).filter(this::isHero);
     }
 
-    private boolean isHero(Player p_23018_) {
-        return p_23018_.hasEffect(MobEffects.HERO_OF_THE_VILLAGE);
+    private boolean isHero(final Player player) {
+        return player.hasEffect(MobEffects.HERO_OF_THE_VILLAGE);
     }
 
-    private boolean isWithinThrowingDistance(Villager p_456641_, Player p_23016_) {
-        BlockPos blockpos = p_23016_.blockPosition();
-        BlockPos blockpos1 = p_456641_.blockPosition();
-        return blockpos1.closerThan(blockpos, 5.0);
+    private boolean isWithinThrowingDistance(final Villager villager, final Player player) {
+        BlockPos playerPos = player.blockPosition();
+        BlockPos villagerPos = villager.blockPosition();
+        return villagerPos.closerThan(playerPos, 5.0);
     }
 
-    private static int calculateTimeUntilNextGift(ServerLevel p_22994_) {
-        return 600 + p_22994_.random.nextInt(6001);
+    private static int calculateTimeUntilNextGift(final ServerLevel level) {
+        return 600 + level.getRandom().nextInt(6001);
     }
 }

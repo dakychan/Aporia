@@ -8,7 +8,7 @@ import net.minecraft.world.level.biome.Biome;
 
 public class BiomeFilter extends PlacementFilter {
     private static final BiomeFilter INSTANCE = new BiomeFilter();
-    public static MapCodec<BiomeFilter> CODEC = MapCodec.unit(() -> INSTANCE);
+    public static final MapCodec<BiomeFilter> CODEC = MapCodec.unit(() -> INSTANCE);
 
     private BiomeFilter() {
     }
@@ -18,11 +18,11 @@ public class BiomeFilter extends PlacementFilter {
     }
 
     @Override
-    protected boolean shouldPlace(PlacementContext p_226317_, RandomSource p_226318_, BlockPos p_226319_) {
-        PlacedFeature placedfeature = p_226317_.topFeature()
+    protected boolean shouldPlace(final PlacementContext context, final RandomSource random, final BlockPos origin) {
+        PlacedFeature feature = context.topFeature()
             .orElseThrow(() -> new IllegalStateException("Tried to biome check an unregistered feature, or a feature that should not restrict the biome"));
-        Holder<Biome> holder = p_226317_.getLevel().getBiome(p_226319_);
-        return p_226317_.generator().getBiomeGenerationSettings(holder).hasFeature(placedfeature);
+        Holder<Biome> biome = context.getLevel().getBiome(origin);
+        return context.generator().getBiomeGenerationSettings(biome).hasFeature(feature);
     }
 
     @Override

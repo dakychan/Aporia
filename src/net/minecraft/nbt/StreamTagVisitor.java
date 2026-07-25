@@ -3,46 +3,46 @@ package net.minecraft.nbt;
 public interface StreamTagVisitor {
     StreamTagVisitor.ValueResult visitEnd();
 
-    StreamTagVisitor.ValueResult visit(String p_197525_);
+    StreamTagVisitor.ValueResult visit(final String value);
 
-    StreamTagVisitor.ValueResult visit(byte p_197520_);
+    StreamTagVisitor.ValueResult visit(final byte value);
 
-    StreamTagVisitor.ValueResult visit(short p_197531_);
+    StreamTagVisitor.ValueResult visit(final short value);
 
-    StreamTagVisitor.ValueResult visit(int p_197523_);
+    StreamTagVisitor.ValueResult visit(final int value);
 
-    StreamTagVisitor.ValueResult visit(long p_197524_);
+    StreamTagVisitor.ValueResult visit(final long value);
 
-    StreamTagVisitor.ValueResult visit(float p_197522_);
+    StreamTagVisitor.ValueResult visit(final float value);
 
-    StreamTagVisitor.ValueResult visit(double p_197521_);
+    StreamTagVisitor.ValueResult visit(final double value);
 
-    StreamTagVisitor.ValueResult visit(byte[] p_197532_);
+    StreamTagVisitor.ValueResult visit(final byte[] value);
 
-    StreamTagVisitor.ValueResult visit(int[] p_197533_);
+    StreamTagVisitor.ValueResult visit(final int[] value);
 
-    StreamTagVisitor.ValueResult visit(long[] p_197534_);
+    StreamTagVisitor.ValueResult visit(final long[] value);
 
-    StreamTagVisitor.ValueResult visitList(TagType<?> p_197527_, int p_197528_);
+    StreamTagVisitor.ValueResult visitList(final TagType<?> elementType, final int size);
 
-    StreamTagVisitor.EntryResult visitEntry(TagType<?> p_197526_);
+    StreamTagVisitor.EntryResult visitEntry(final TagType<?> type);
 
-    StreamTagVisitor.EntryResult visitEntry(TagType<?> p_197529_, String p_197530_);
+    StreamTagVisitor.EntryResult visitEntry(final TagType<?> type, final String id);
 
-    StreamTagVisitor.EntryResult visitElement(TagType<?> p_197536_, int p_197537_);
+    StreamTagVisitor.EntryResult visitElement(final TagType<?> type, final int index);
 
     StreamTagVisitor.ValueResult visitContainerEnd();
 
-    StreamTagVisitor.ValueResult visitRootEntry(TagType<?> p_197535_);
+    StreamTagVisitor.ValueResult visitRootEntry(final TagType<?> type);
 
-    public static enum EntryResult {
+    enum EntryResult {
         ENTER,
         SKIP,
         BREAK,
         HALT;
     }
 
-    public static enum ValueResult {
+    enum ValueResult {
         CONTINUE,
         BREAK,
         HALT;

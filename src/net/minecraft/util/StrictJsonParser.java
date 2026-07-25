@@ -13,24 +13,24 @@ import java.io.Reader;
 import java.io.StringReader;
 
 public class StrictJsonParser {
-    public static JsonElement parse(Reader p_407190_) throws JsonIOException, JsonSyntaxException {
+    public static JsonElement parse(final Reader reader) throws JsonIOException, JsonSyntaxException {
         try {
-            JsonReader jsonreader = new JsonReader(p_407190_);
-            jsonreader.setStrictness(Strictness.STRICT);
-            JsonElement jsonelement = JsonParser.parseReader(jsonreader);
-            if (!jsonelement.isJsonNull() && jsonreader.peek() != JsonToken.END_DOCUMENT) {
+            JsonReader jsonReader = new JsonReader(reader);
+            jsonReader.setStrictness(Strictness.STRICT);
+            JsonElement element = JsonParser.parseReader(jsonReader);
+            if (!element.isJsonNull() && jsonReader.peek() != JsonToken.END_DOCUMENT) {
                 throw new JsonSyntaxException("Did not consume the entire document.");
             } else {
-                return jsonelement;
+                return element;
             }
-        } catch (NumberFormatException | MalformedJsonException malformedjsonexception) {
-            throw new JsonSyntaxException(malformedjsonexception);
-        } catch (IOException ioexception) {
-            throw new JsonIOException(ioexception);
+        } catch (MalformedJsonException | NumberFormatException e) {
+            throw new JsonSyntaxException(e);
+        } catch (IOException e) {
+            throw new JsonIOException(e);
         }
     }
 
-    public static JsonElement parse(String p_407752_) throws JsonSyntaxException {
-        return parse(new StringReader(p_407752_));
+    public static JsonElement parse(final String json) throws JsonSyntaxException {
+        return parse(new StringReader(json));
     }
 }

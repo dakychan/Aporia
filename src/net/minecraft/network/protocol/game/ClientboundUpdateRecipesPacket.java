@@ -28,7 +28,7 @@ public record ClientboundUpdateRecipesPacket(
         return GamePacketTypes.CLIENTBOUND_UPDATE_RECIPES;
     }
 
-    public void handle(ClientGamePacketListener p_133641_) {
-        p_133641_.handleUpdateRecipes(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleUpdateRecipes(this);
     }
 }

@@ -16,6 +16,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.BrewingStandBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -41,66 +42,68 @@ public class BrewingStandBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public BrewingStandBlock(BlockBehaviour.Properties p_50909_) {
-        super(p_50909_);
+    public BrewingStandBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(HAS_BOTTLE[0], false).setValue(HAS_BOTTLE[1], false).setValue(HAS_BOTTLE[2], false));
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_152698_, BlockState p_152699_) {
-        return new BrewingStandBlockEntity(p_152698_, p_152699_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new BrewingStandBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_152694_, BlockState p_152695_, BlockEntityType<T> p_152696_) {
-        return p_152694_.isClientSide() ? null : createTickerHelper(p_152696_, BlockEntityType.BREWING_STAND, BrewingStandBlockEntity::serverTick);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return level.isClientSide() ? null : createTickerHelper(type, BlockEntityTypes.BREWING_STAND, BrewingStandBlockEntity::serverTick);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_50952_, BlockGetter p_50953_, BlockPos p_50954_, CollisionContext p_50955_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_50930_, Level p_50931_, BlockPos p_50932_, Player p_50933_, BlockHitResult p_50935_) {
-        if (!p_50931_.isClientSide() && p_50931_.getBlockEntity(p_50932_) instanceof BrewingStandBlockEntity brewingstandblockentity) {
-            p_50933_.openMenu(brewingstandblockentity);
-            p_50933_.awardStat(Stats.INTERACT_WITH_BREWINGSTAND);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BrewingStandBlockEntity brewingStandBlockEntity) {
+            player.openMenu(brewingStandBlockEntity);
+            player.awardStat(Stats.INTERACT_WITH_BREWINGSTAND);
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void animateTick(BlockState p_220883_, Level p_220884_, BlockPos p_220885_, RandomSource p_220886_) {
-        double d0 = p_220885_.getX() + 0.4 + p_220886_.nextFloat() * 0.2;
-        double d1 = p_220885_.getY() + 0.7 + p_220886_.nextFloat() * 0.3;
-        double d2 = p_220885_.getZ() + 0.4 + p_220886_.nextFloat() * 0.2;
-        p_220884_.addParticle(ParticleTypes.SMOKE, d0, d1, d2, 0.0, 0.0, 0.0);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        double x = pos.getX() + 0.4 + random.nextFloat() * 0.2;
+        double y = pos.getY() + 0.7 + random.nextFloat() * 0.3;
+        double z = pos.getZ() + 0.4 + random.nextFloat() * 0.2;
+        level.addParticle(ParticleTypes.SMOKE, x, y, z, 0.0, 0.0, 0.0);
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_398016_, ServerLevel p_396719_, BlockPos p_395296_, boolean p_397171_) {
-        Containers.updateNeighboursAfterDestroy(p_398016_, p_396719_, p_395296_);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        Containers.updateNeighboursAfterDestroy(state, level, pos);
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_50919_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_50926_, Level p_50927_, BlockPos p_50928_, Direction p_430988_) {
-        return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(p_50927_.getBlockEntity(p_50928_));
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(pos));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_50948_) {
-        p_50948_.add(HAS_BOTTLE[0], HAS_BOTTLE[1], HAS_BOTTLE[2]);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(HAS_BOTTLE[0], HAS_BOTTLE[1], HAS_BOTTLE[2]);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_50921_, PathComputationType p_50924_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

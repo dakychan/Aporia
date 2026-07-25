@@ -3,7 +3,6 @@ package net.minecraft.client.resources.language;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.mojang.logging.LogUtils;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,12 +15,9 @@ import net.minecraft.locale.Language;
 import net.minecraft.server.packs.PackResources;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class LanguageManager implements ResourceManagerReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final LanguageInfo DEFAULT_LANGUAGE = new LanguageInfo("US", "English", false);
@@ -29,48 +25,47 @@ public class LanguageManager implements ResourceManagerReloadListener {
     private String currentCode;
     private final Consumer<ClientLanguage> reloadCallback;
 
-    public LanguageManager(String p_118971_, Consumer<ClientLanguage> p_342376_) {
-        this.currentCode = p_118971_;
-        this.reloadCallback = p_342376_;
+    public LanguageManager(final String languageCode, final Consumer<ClientLanguage> reloadCallback) {
+        this.currentCode = languageCode;
+        this.reloadCallback = reloadCallback;
     }
 
-    private static Map<String, LanguageInfo> extractLanguages(Stream<PackResources> p_118982_) {
-        Map<String, LanguageInfo> map = Maps.newHashMap();
-        p_118982_.forEach(p_374687_ -> {
+    private static Map<String, LanguageInfo> extractLanguages(final Stream<PackResources> resourcePacks) {
+        Map<String, LanguageInfo> result = Maps.newHashMap();
+        resourcePacks.forEach(resourcePack -> {
             try {
-                LanguageMetadataSection languagemetadatasection = p_374687_.getMetadataSection(LanguageMetadataSection.TYPE);
-                if (languagemetadatasection != null) {
-                    languagemetadatasection.languages().forEach(map::putIfAbsent);
+                LanguageMetadataSection languageMetadataSection = resourcePack.getMetadataSection(LanguageMetadataSection.TYPE);
+                if (languageMetadataSection != null) {
+                    languageMetadataSection.languages().forEach(result::putIfAbsent);
                 }
-            } catch (IOException | RuntimeException runtimeexception) {
-                LOGGER.warn("Unable to parse language metadata section of resourcepack: {}", p_374687_.packId(), runtimeexception);
+            } catch (Exception e) {
+                LOGGER.warn("Unable to parse language metadata section of resourcepack: {}", resourcePack.packId(), e);
             }
         });
-        return ImmutableMap.copyOf(map);
+        return ImmutableMap.copyOf(result);
     }
 
     @Override
-    public void onResourceManagerReload(ResourceManager p_118973_) {
-        this.languages = extractLanguages(p_118973_.listPacks());
-        List<String> list = new ArrayList<>(2);
-        boolean flag = DEFAULT_LANGUAGE.bidirectional();
-        list.add("en_us");
+    public void onResourceManagerReload(final ResourceManager resourceManager) {
+        this.languages = extractLanguages(resourceManager.listPacks());
+        List<String> languageStack = new ArrayList<>(2);
+        boolean defaultRightToLeft = DEFAULT_LANGUAGE.bidirectional();
+        languageStack.add("en_us");
         if (!this.currentCode.equals("en_us")) {
-            LanguageInfo languageinfo = this.languages.get(this.currentCode);
-            if (languageinfo != null) {
-                list.add(this.currentCode);
-                flag = languageinfo.bidirectional();
+            LanguageInfo currentLanguage = this.languages.get(this.currentCode);
+            if (currentLanguage != null) {
+                languageStack.add(this.currentCode);
+                defaultRightToLeft = currentLanguage.bidirectional();
             }
         }
 
-        ClientLanguage clientlanguage = ClientLanguage.loadFrom(p_118973_, list, flag);
-        I18n.setLanguage(clientlanguage);
-        Language.inject(clientlanguage);
-        this.reloadCallback.accept(clientlanguage);
+        ClientLanguage locale = ClientLanguage.loadFrom(resourceManager, languageStack, defaultRightToLeft);
+        Language.inject(locale);
+        this.reloadCallback.accept(locale);
     }
 
-    public void setSelected(String p_265224_) {
-        this.currentCode = p_265224_;
+    public void setSelected(final String code) {
+        this.currentCode = code;
     }
 
     public String getSelected() {
@@ -81,7 +76,7 @@ public class LanguageManager implements ResourceManagerReloadListener {
         return new TreeMap<>(this.languages);
     }
 
-    public @Nullable LanguageInfo getLanguage(String p_118977_) {
-        return this.languages.get(p_118977_);
+    public @Nullable LanguageInfo getLanguage(final String code) {
+        return this.languages.get(code);
     }
 }

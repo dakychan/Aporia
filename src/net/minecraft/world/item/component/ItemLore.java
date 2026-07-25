@@ -26,25 +26,24 @@ public record ItemLore(List<Component> lines, List<Component> styledLines) imple
         .apply(ByteBufCodecs.list(256))
         .map(ItemLore::new, ItemLore::lines);
 
-    public ItemLore(List<Component> p_330285_) {
-        this(p_330285_, Lists.transform(p_330285_, p_449819_ -> ComponentUtils.mergeStyles(p_449819_, LORE_STYLE)));
+    public ItemLore(final List<Component> lines) {
+        this(lines, Lists.transform(lines, component -> ComponentUtils.mergeStyles(component, LORE_STYLE)));
     }
 
-    public ItemLore(List<Component> lines, List<Component> styledLines) {
+    public ItemLore {
         if (lines.size() > 256) {
             throw new IllegalArgumentException("Got " + lines.size() + " lines, but maximum is 256");
-        } else {
-            this.lines = lines;
-            this.styledLines = styledLines;
         }
     }
 
-    public ItemLore withLineAdded(Component p_328621_) {
-        return new ItemLore(Util.copyAndAdd(this.lines, p_328621_));
+    public ItemLore withLineAdded(final Component component) {
+        return new ItemLore(Util.copyAndAdd(this.lines, component));
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_329761_, Consumer<Component> p_332607_, TooltipFlag p_328590_, DataComponentGetter p_397979_) {
-        this.styledLines.forEach(p_332607_);
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        this.styledLines.forEach(consumer);
     }
 }

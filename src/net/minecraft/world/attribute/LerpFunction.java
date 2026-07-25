@@ -4,28 +4,34 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 
 public interface LerpFunction<T> {
+    LerpFunction<?> CONSTANT = ofStep(1.0F);
+
     static LerpFunction<Float> ofFloat() {
         return Mth::lerp;
     }
 
-    static LerpFunction<Float> ofDegrees(float p_453410_) {
-        return (p_457545_, p_451932_, p_457337_) -> {
-            float f = Mth.wrapDegrees(p_457337_ - p_451932_);
-            return Math.abs(f) >= p_453410_ ? p_457337_ : p_451932_ + p_457545_ * f;
+    static LerpFunction<Integer> ofInteger() {
+        return Mth::lerpInt;
+    }
+
+    static LerpFunction<Float> ofDegrees(final float maxDelta) {
+        return (alpha, from, to) -> {
+            float delta = Mth.wrapDegrees(to - from);
+            return Math.abs(delta) >= maxDelta ? to : from + alpha * delta;
         };
     }
 
     static <T> LerpFunction<T> ofConstant() {
-        return (p_453262_, p_451500_, p_459969_) -> p_451500_;
+        return (LerpFunction<T>)CONSTANT;
     }
 
-    static <T> LerpFunction<T> ofStep(float p_458669_) {
-        return (p_459552_, p_456464_, p_457325_) -> p_459552_ >= p_458669_ ? p_457325_ : p_456464_;
+    static <T> LerpFunction<T> ofStep(final float threshold) {
+        return (alpha, from, to) -> alpha >= threshold ? to : from;
     }
 
     static LerpFunction<Integer> ofColor() {
         return ARGB::srgbLerp;
     }
 
-    T apply(float p_457745_, T p_456680_, T p_453315_);
+    T apply(float alpha, T from, T to);
 }

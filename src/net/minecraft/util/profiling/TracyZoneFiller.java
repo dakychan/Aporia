@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
 import net.minecraft.util.profiling.metrics.MetricCategory;
 import org.slf4j.Logger;
@@ -30,39 +29,39 @@ public class TracyZoneFiller implements ProfilerFiller {
 
     @Override
     public void endTick() {
-        for (TracyZoneFiller.PlotAndValue tracyzonefiller$plotandvalue : this.plots.values()) {
-            tracyzonefiller$plotandvalue.set(0);
+        for (TracyZoneFiller.PlotAndValue plotAndValue : this.plots.values()) {
+            plotAndValue.set(0);
         }
     }
 
     @Override
-    public void push(String p_364548_) {
-        String s = "";
-        String s1 = "";
-        int i = 0;
+    public void push(final String name) {
+        String function = "";
+        String file = "";
+        int line = 0;
         if (SharedConstants.IS_RUNNING_IN_IDE) {
-            Optional<StackFrame> optional = STACK_WALKER.walk(
-                p_361443_ -> p_361443_.filter(
-                        p_366989_ -> p_366989_.getDeclaringClass() != TracyZoneFiller.class
-                            && p_366989_.getDeclaringClass() != ProfilerFiller.CombinedProfileFiller.class
+            Optional<StackFrame> result = STACK_WALKER.walk(
+                s -> s.filter(
+                        framex -> framex.getDeclaringClass() != TracyZoneFiller.class
+                            && framex.getDeclaringClass() != ProfilerFiller.CombinedProfileFiller.class
                     )
                     .findFirst()
             );
-            if (optional.isPresent()) {
-                StackFrame stackframe = optional.get();
-                s = stackframe.getMethodName();
-                s1 = stackframe.getFileName();
-                i = stackframe.getLineNumber();
+            if (result.isPresent()) {
+                StackFrame frame = result.get();
+                function = frame.getMethodName();
+                file = frame.getFileName();
+                line = frame.getLineNumber();
             }
         }
 
-        com.mojang.jtracy.Zone zone = TracyClient.beginZone(p_364548_, s, s1, i);
+        com.mojang.jtracy.Zone zone = TracyClient.beginZone(name, function, file, line);
         this.activeZones.add(zone);
     }
 
     @Override
-    public void push(Supplier<String> p_367014_) {
-        this.push(p_367014_.get());
+    public void push(final Supplier<String> name) {
+        this.push(name.get());
     }
 
     @Override
@@ -76,29 +75,29 @@ public class TracyZoneFiller implements ProfilerFiller {
     }
 
     @Override
-    public void popPush(String p_362480_) {
+    public void popPush(final String name) {
         this.pop();
-        this.push(p_362480_);
+        this.push(name);
     }
 
     @Override
-    public void popPush(Supplier<String> p_368969_) {
+    public void popPush(final Supplier<String> name) {
         this.pop();
-        this.push(p_368969_.get());
+        this.push(name.get());
     }
 
     @Override
-    public void markForCharting(MetricCategory p_360953_) {
+    public void markForCharting(final MetricCategory category) {
     }
 
     @Override
-    public void incrementCounter(String p_362137_, int p_362577_) {
-        this.plots.computeIfAbsent(p_362137_, p_367016_ -> new TracyZoneFiller.PlotAndValue(this.name + " " + p_362137_)).add(p_362577_);
+    public void incrementCounter(final String name, final int amount) {
+        this.plots.computeIfAbsent(name, s -> new TracyZoneFiller.PlotAndValue(this.name + " " + name)).add(amount);
     }
 
     @Override
-    public void incrementCounter(Supplier<String> p_362628_, int p_368047_) {
-        this.incrementCounter(p_362628_.get(), p_368047_);
+    public void incrementCounter(final Supplier<String> name, final int amount) {
+        this.incrementCounter(name.get(), amount);
     }
 
     private com.mojang.jtracy.Zone activeZone() {
@@ -106,36 +105,36 @@ public class TracyZoneFiller implements ProfilerFiller {
     }
 
     @Override
-    public void addZoneText(String p_362912_) {
-        this.activeZone().addText(p_362912_);
+    public void addZoneText(final String text) {
+        this.activeZone().addText(text);
     }
 
     @Override
-    public void addZoneValue(long p_366154_) {
-        this.activeZone().addValue(p_366154_);
+    public void addZoneValue(final long value) {
+        this.activeZone().addValue(value);
     }
 
     @Override
-    public void setZoneColor(int p_363144_) {
-        this.activeZone().setColor(p_363144_);
+    public void setZoneColor(final int color) {
+        this.activeZone().setColor(color);
     }
 
-    static final class PlotAndValue {
+    private static final class PlotAndValue {
         private final Plot plot;
         private int value;
 
-        PlotAndValue(String p_366532_) {
-            this.plot = TracyClient.createPlot(p_366532_);
+        private PlotAndValue(final String name) {
+            this.plot = TracyClient.createPlot(name);
             this.value = 0;
         }
 
-        void set(int p_362550_) {
-            this.value = p_362550_;
-            this.plot.setValue(p_362550_);
+        public void set(final int value) {
+            this.value = value;
+            this.plot.setValue(value);
         }
 
-        void add(int p_365380_) {
-            this.set(this.value + p_365380_);
+        public void add(final int amount) {
+            this.set(this.value + amount);
         }
     }
 }

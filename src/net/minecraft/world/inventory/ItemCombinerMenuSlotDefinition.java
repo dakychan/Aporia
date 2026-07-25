@@ -9,10 +9,12 @@ public class ItemCombinerMenuSlotDefinition {
     private final List<ItemCombinerMenuSlotDefinition.SlotDefinition> slots;
     private final ItemCombinerMenuSlotDefinition.SlotDefinition resultSlot;
 
-    ItemCombinerMenuSlotDefinition(List<ItemCombinerMenuSlotDefinition.SlotDefinition> p_266947_, ItemCombinerMenuSlotDefinition.SlotDefinition p_266715_) {
-        if (!p_266947_.isEmpty() && !p_266715_.equals(ItemCombinerMenuSlotDefinition.SlotDefinition.EMPTY)) {
-            this.slots = p_266947_;
-            this.resultSlot = p_266715_;
+    private ItemCombinerMenuSlotDefinition(
+        final List<ItemCombinerMenuSlotDefinition.SlotDefinition> inputSlots, final ItemCombinerMenuSlotDefinition.SlotDefinition resultSlot
+    ) {
+        if (!inputSlots.isEmpty() && !resultSlot.equals(ItemCombinerMenuSlotDefinition.SlotDefinition.EMPTY)) {
+            this.slots = inputSlots;
+            this.resultSlot = resultSlot;
         } else {
             throw new IllegalArgumentException("Need to define both inputSlots and resultSlot");
         }
@@ -22,8 +24,8 @@ public class ItemCombinerMenuSlotDefinition {
         return new ItemCombinerMenuSlotDefinition.Builder();
     }
 
-    public ItemCombinerMenuSlotDefinition.SlotDefinition getSlot(int p_266907_) {
-        return this.slots.get(p_266907_);
+    public ItemCombinerMenuSlotDefinition.SlotDefinition getSlot(final int index) {
+        return this.slots.get(index);
     }
 
     public ItemCombinerMenuSlotDefinition.SlotDefinition getResultSlot() {
@@ -46,27 +48,29 @@ public class ItemCombinerMenuSlotDefinition {
         private final List<ItemCombinerMenuSlotDefinition.SlotDefinition> inputSlots = new ArrayList<>();
         private ItemCombinerMenuSlotDefinition.SlotDefinition resultSlot = ItemCombinerMenuSlotDefinition.SlotDefinition.EMPTY;
 
-        public ItemCombinerMenuSlotDefinition.Builder withSlot(int p_267315_, int p_267028_, int p_266815_, Predicate<ItemStack> p_267120_) {
-            this.inputSlots.add(new ItemCombinerMenuSlotDefinition.SlotDefinition(p_267315_, p_267028_, p_266815_, p_267120_));
+        public ItemCombinerMenuSlotDefinition.Builder withSlot(
+            final int slotIndex, final int xPlacement, final int yPlacement, final Predicate<ItemStack> mayPlace
+        ) {
+            this.inputSlots.add(new ItemCombinerMenuSlotDefinition.SlotDefinition(slotIndex, xPlacement, yPlacement, mayPlace));
             return this;
         }
 
-        public ItemCombinerMenuSlotDefinition.Builder withResultSlot(int p_267180_, int p_267130_, int p_266910_) {
-            this.resultSlot = new ItemCombinerMenuSlotDefinition.SlotDefinition(p_267180_, p_267130_, p_266910_, p_266825_ -> false);
+        public ItemCombinerMenuSlotDefinition.Builder withResultSlot(final int slotIndex, final int xPlacement, final int yPlacement) {
+            this.resultSlot = new ItemCombinerMenuSlotDefinition.SlotDefinition(slotIndex, xPlacement, yPlacement, itemStack -> false);
             return this;
         }
 
         public ItemCombinerMenuSlotDefinition build() {
-            int i = this.inputSlots.size();
+            int inputCount = this.inputSlots.size();
 
-            for (int j = 0; j < i; j++) {
-                ItemCombinerMenuSlotDefinition.SlotDefinition itemcombinermenuslotdefinition$slotdefinition = this.inputSlots.get(j);
-                if (itemcombinermenuslotdefinition$slotdefinition.slotIndex != j) {
+            for (int i = 0; i < inputCount; i++) {
+                ItemCombinerMenuSlotDefinition.SlotDefinition inputDefinition = this.inputSlots.get(i);
+                if (inputDefinition.slotIndex != i) {
                     throw new IllegalArgumentException("Expected input slots to have continous indexes");
                 }
             }
 
-            if (this.resultSlot.slotIndex != i) {
+            if (this.resultSlot.slotIndex != inputCount) {
                 throw new IllegalArgumentException("Expected result slot index to follow last input slot");
             } else {
                 return new ItemCombinerMenuSlotDefinition(this.inputSlots, this.resultSlot);
@@ -75,6 +79,6 @@ public class ItemCombinerMenuSlotDefinition {
     }
 
     public record SlotDefinition(int slotIndex, int x, int y, Predicate<ItemStack> mayPlace) {
-        static final ItemCombinerMenuSlotDefinition.SlotDefinition EMPTY = new ItemCombinerMenuSlotDefinition.SlotDefinition(0, 0, 0, p_267109_ -> true);
+        private static final ItemCombinerMenuSlotDefinition.SlotDefinition EMPTY = new ItemCombinerMenuSlotDefinition.SlotDefinition(0, 0, 0, itemStack -> true);
     }
 }

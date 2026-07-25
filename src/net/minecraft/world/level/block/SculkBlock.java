@@ -20,69 +20,76 @@ public class SculkBlock extends DropExperienceBlock implements SculkBehaviour {
         return CODEC;
     }
 
-    public SculkBlock(BlockBehaviour.Properties p_222063_) {
-        super(ConstantInt.of(1), p_222063_);
+    public SculkBlock(final BlockBehaviour.Properties properties) {
+        super(ConstantInt.of(1), properties);
     }
 
     @Override
     public int attemptUseCharge(
-        SculkSpreader.ChargeCursor p_222073_, LevelAccessor p_222074_, BlockPos p_222075_, RandomSource p_222076_, SculkSpreader p_222077_, boolean p_222078_
+        final SculkSpreader.ChargeCursor cursor,
+        final LevelAccessor level,
+        final BlockPos originPos,
+        final RandomSource random,
+        final SculkSpreader spreader,
+        final boolean spreadVein
     ) {
-        int i = p_222073_.getCharge();
-        if (i != 0 && p_222076_.nextInt(p_222077_.chargeDecayRate()) == 0) {
-            BlockPos blockpos = p_222073_.getPos();
-            boolean flag = blockpos.closerThan(p_222075_, p_222077_.noGrowthRadius());
-            if (!flag && canPlaceGrowth(p_222074_, blockpos)) {
-                int j = p_222077_.growthSpawnCost();
-                if (p_222076_.nextInt(j) < i) {
-                    BlockPos blockpos1 = blockpos.above();
-                    BlockState blockstate = this.getRandomGrowthState(p_222074_, blockpos1, p_222076_, p_222077_.isWorldGeneration());
-                    p_222074_.setBlock(blockpos1, blockstate, 3);
-                    p_222074_.playSound(null, blockpos, blockstate.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
+        int charge = cursor.getCharge();
+        if (charge != 0 && random.nextInt(spreader.chargeDecayRate()) == 0) {
+            BlockPos chargePos = cursor.getPos();
+            boolean isCloseToCatalyst = chargePos.closerThan(originPos, spreader.noGrowthRadius());
+            if (!isCloseToCatalyst && canPlaceGrowth(level, chargePos)) {
+                int xpPerGrowthSpawn = spreader.growthSpawnCost();
+                if (random.nextInt(xpPerGrowthSpawn) < charge) {
+                    BlockPos growthPlacement = chargePos.above();
+                    BlockState growthState = this.getRandomGrowthState(level, growthPlacement, random, spreader.isWorldGeneration());
+                    level.setBlock(growthPlacement, growthState, 3);
+                    level.playSound(null, chargePos, growthState.getSoundType().getPlaceSound(), SoundSource.BLOCKS, 1.0F, 1.0F);
                 }
 
-                return Math.max(0, i - j);
+                return Math.max(0, charge - xpPerGrowthSpawn);
             } else {
-                return p_222076_.nextInt(p_222077_.additionalDecayRate()) != 0 ? i : i - (flag ? 1 : getDecayPenalty(p_222077_, blockpos, p_222075_, i));
+                return random.nextInt(spreader.additionalDecayRate()) != 0
+                    ? charge
+                    : charge - (isCloseToCatalyst ? 1 : getDecayPenalty(spreader, chargePos, originPos, charge));
             }
         } else {
-            return i;
+            return charge;
         }
     }
 
-    private static int getDecayPenalty(SculkSpreader p_222080_, BlockPos p_222081_, BlockPos p_222082_, int p_222083_) {
-        int i = p_222080_.noGrowthRadius();
-        float f = Mth.square((float)Math.sqrt(p_222081_.distSqr(p_222082_)) - i);
-        int j = Mth.square(24 - i);
-        float f1 = Math.min(1.0F, f / j);
-        return Math.max(1, (int)(p_222083_ * f1 * 0.5F));
+    private static int getDecayPenalty(final SculkSpreader spreader, final BlockPos pos, final BlockPos originPos, final int charge) {
+        int noGrowthRadius = spreader.noGrowthRadius();
+        float outerDistanceSquared = Mth.square((float)Math.sqrt(pos.distSqr(originPos)) - noGrowthRadius);
+        int maxReachSquared = Mth.square(24 - noGrowthRadius);
+        float distanceFactor = Math.min(1.0F, outerDistanceSquared / maxReachSquared);
+        return Math.max(1, (int)(charge * distanceFactor * 0.5F));
     }
 
-    private BlockState getRandomGrowthState(LevelAccessor p_222068_, BlockPos p_222069_, RandomSource p_222070_, boolean p_222071_) {
-        BlockState blockstate;
-        if (p_222070_.nextInt(11) == 0) {
-            blockstate = Blocks.SCULK_SHRIEKER.defaultBlockState().setValue(SculkShriekerBlock.CAN_SUMMON, p_222071_);
+    private BlockState getRandomGrowthState(final LevelAccessor level, final BlockPos pos, final RandomSource random, final boolean isWorldGen) {
+        BlockState state;
+        if (random.nextInt(11) == 0) {
+            state = Blocks.SCULK_SHRIEKER.defaultBlockState().setValue(SculkShriekerBlock.CAN_SUMMON, isWorldGen);
         } else {
-            blockstate = Blocks.SCULK_SENSOR.defaultBlockState();
+            state = Blocks.SCULK_SENSOR.defaultBlockState();
         }
 
-        return blockstate.hasProperty(BlockStateProperties.WATERLOGGED) && !p_222068_.getFluidState(p_222069_).isEmpty()
-            ? blockstate.setValue(BlockStateProperties.WATERLOGGED, true)
-            : blockstate;
+        return state.hasProperty(BlockStateProperties.WATERLOGGED) && !level.getFluidState(pos).isEmpty()
+            ? state.setValue(BlockStateProperties.WATERLOGGED, true)
+            : state;
     }
 
-    private static boolean canPlaceGrowth(LevelAccessor p_222065_, BlockPos p_222066_) {
-        BlockState blockstate = p_222065_.getBlockState(p_222066_.above());
-        if (blockstate.isAir() || blockstate.is(Blocks.WATER) && blockstate.getFluidState().is(Fluids.WATER)) {
-            int i = 0;
+    private static boolean canPlaceGrowth(final LevelAccessor level, final BlockPos pos) {
+        BlockState stateAbove = level.getBlockState(pos.above());
+        if (stateAbove.isAir() || stateAbove.is(Blocks.WATER) && stateAbove.getFluidState().is(Fluids.WATER)) {
+            int growthCount = 0;
 
-            for (BlockPos blockpos : BlockPos.betweenClosed(p_222066_.offset(-4, 0, -4), p_222066_.offset(4, 2, 4))) {
-                BlockState blockstate1 = p_222065_.getBlockState(blockpos);
-                if (blockstate1.is(Blocks.SCULK_SENSOR) || blockstate1.is(Blocks.SCULK_SHRIEKER)) {
-                    i++;
+            for (BlockPos blockPos : BlockPos.betweenClosed(pos.offset(-4, 0, -4), pos.offset(4, 2, 4))) {
+                BlockState state = level.getBlockState(blockPos);
+                if (state.is(Blocks.SCULK_SENSOR) || state.is(Blocks.SCULK_SHRIEKER)) {
+                    growthCount++;
                 }
 
-                if (i > 2) {
+                if (growthCount > 2) {
                     return false;
                 }
             }

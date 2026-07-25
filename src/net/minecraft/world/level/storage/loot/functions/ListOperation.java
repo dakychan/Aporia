@@ -7,7 +7,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -18,30 +17,28 @@ import org.slf4j.Logger;
 public interface ListOperation {
     MapCodec<ListOperation> UNLIMITED_CODEC = codec(Integer.MAX_VALUE);
 
-    static MapCodec<ListOperation> codec(int p_334114_) {
-        return ListOperation.Type.CODEC
-            .<ListOperation>dispatchMap("mode", ListOperation::mode, p_328481_ -> p_328481_.mapCodec)
-            .validate(p_336261_ -> {
-                if (p_336261_ instanceof ListOperation.ReplaceSection listoperation$replacesection && listoperation$replacesection.size().isPresent()) {
-                    int i = listoperation$replacesection.size().get();
-                    if (i > p_334114_) {
-                        return DataResult.error(() -> "Size value too large: " + i + ", max size is " + p_334114_);
-                    }
+    static MapCodec<ListOperation> codec(final int maxSize) {
+        return ListOperation.Type.CODEC.<ListOperation>dispatchMap("mode", ListOperation::mode, e -> e.mapCodec).validate(op -> {
+            if (op instanceof ListOperation.ReplaceSection section && section.size().isPresent()) {
+                int size = section.size().get();
+                if (size > maxSize) {
+                    return DataResult.error(() -> "Size value too large: " + size + ", max size is " + maxSize);
                 }
+            }
 
-                return DataResult.success(p_336261_);
-            });
+            return DataResult.success(op);
+        });
     }
 
     ListOperation.Type mode();
 
-    default <T> List<T> apply(List<T> p_334598_, List<T> p_335380_) {
-        return this.apply(p_334598_, p_335380_, Integer.MAX_VALUE);
+    default <T> List<T> apply(final List<T> original, final List<T> replacement) {
+        return this.apply(original, replacement, Integer.MAX_VALUE);
     }
 
-    <T> List<T> apply(List<T> p_329737_, List<T> p_327893_, int p_332636_);
+    <T> List<T> apply(List<T> original, List<T> replacement, int maxSize);
 
-    public static class Append implements ListOperation {
+    class Append implements ListOperation {
         private static final Logger LOGGER = LogUtils.getLogger();
         public static final ListOperation.Append INSTANCE = new ListOperation.Append();
         public static final MapCodec<ListOperation.Append> MAP_CODEC = MapCodec.unit(() -> INSTANCE);
@@ -55,21 +52,20 @@ public interface ListOperation {
         }
 
         @Override
-        public <T> List<T> apply(List<T> p_330728_, List<T> p_331859_, int p_335288_) {
-            if (p_330728_.size() + p_331859_.size() > p_335288_) {
+        public <T> List<T> apply(final List<T> original, final List<T> replacement, final int maxSize) {
+            if (original.size() + replacement.size() > maxSize) {
                 LOGGER.error("Contents overflow in section append");
-                return p_330728_;
+                return original;
             } else {
-                return Stream.concat(p_330728_.stream(), p_331859_.stream()).toList();
+                return Stream.concat(original.stream(), replacement.stream()).toList();
             }
         }
     }
 
-    public record Insert(int offset) implements ListOperation {
+    record Insert(int offset) implements ListOperation {
         private static final Logger LOGGER = LogUtils.getLogger();
         public static final MapCodec<ListOperation.Insert> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_329650_ -> p_329650_.group(ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("offset", 0).forGetter(ListOperation.Insert::offset))
-                .apply(p_329650_, ListOperation.Insert::new)
+            i -> i.group(ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("offset", 0).forGetter(ListOperation.Insert::offset)).apply(i, ListOperation.Insert::new)
         );
 
         @Override
@@ -78,25 +74,25 @@ public interface ListOperation {
         }
 
         @Override
-        public <T> List<T> apply(List<T> p_336295_, List<T> p_330545_, int p_335268_) {
-            int i = p_336295_.size();
-            if (this.offset > i) {
+        public <T> List<T> apply(final List<T> original, final List<T> replacement, final int maxSize) {
+            int originalSize = original.size();
+            if (this.offset > originalSize) {
                 LOGGER.error("Cannot insert when offset is out of bounds");
-                return p_336295_;
-            } else if (i + p_330545_.size() > p_335268_) {
+                return original;
+            } else if (originalSize + replacement.size() > maxSize) {
                 LOGGER.error("Contents overflow in section insertion");
-                return p_336295_;
+                return original;
             } else {
-                Builder<T> builder = ImmutableList.builder();
-                builder.addAll(p_336295_.subList(0, this.offset));
-                builder.addAll(p_330545_);
-                builder.addAll(p_336295_.subList(this.offset, i));
-                return builder.build();
+                Builder<T> newList = ImmutableList.builder();
+                newList.addAll(original.subList(0, this.offset));
+                newList.addAll(replacement);
+                newList.addAll(original.subList(this.offset, originalSize));
+                return newList.build();
             }
         }
     }
 
-    public static class ReplaceAll implements ListOperation {
+    class ReplaceAll implements ListOperation {
         public static final ListOperation.ReplaceAll INSTANCE = new ListOperation.ReplaceAll();
         public static final MapCodec<ListOperation.ReplaceAll> MAP_CODEC = MapCodec.unit(() -> INSTANCE);
 
@@ -109,23 +105,23 @@ public interface ListOperation {
         }
 
         @Override
-        public <T> List<T> apply(List<T> p_333557_, List<T> p_331455_, int p_335044_) {
-            return p_331455_;
+        public <T> List<T> apply(final List<T> original, final List<T> replacement, final int maxSize) {
+            return replacement;
         }
     }
 
-    public record ReplaceSection(int offset, Optional<Integer> size) implements ListOperation {
+    record ReplaceSection(int offset, Optional<Integer> size) implements ListOperation {
         private static final Logger LOGGER = LogUtils.getLogger();
         public static final MapCodec<ListOperation.ReplaceSection> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_332380_ -> p_332380_.group(
+            i -> i.group(
                     ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("offset", 0).forGetter(ListOperation.ReplaceSection::offset),
                     ExtraCodecs.NON_NEGATIVE_INT.optionalFieldOf("size").forGetter(ListOperation.ReplaceSection::size)
                 )
-                .apply(p_332380_, ListOperation.ReplaceSection::new)
+                .apply(i, ListOperation.ReplaceSection::new)
         );
 
-        public ReplaceSection(int p_335251_) {
-            this(p_335251_, Optional.empty());
+        public ReplaceSection(final int offset) {
+            this(offset, Optional.empty());
         }
 
         @Override
@@ -134,48 +130,48 @@ public interface ListOperation {
         }
 
         @Override
-        public <T> List<T> apply(List<T> p_336048_, List<T> p_331104_, int p_333303_) {
-            int i = p_336048_.size();
-            if (this.offset > i) {
+        public <T> List<T> apply(final List<T> original, final List<T> replacement, final int maxSize) {
+            int originalSize = original.size();
+            if (this.offset > originalSize) {
                 LOGGER.error("Cannot replace when offset is out of bounds");
-                return p_336048_;
-            } else {
-                Builder<T> builder = ImmutableList.builder();
-                builder.addAll(p_336048_.subList(0, this.offset));
-                builder.addAll(p_331104_);
-                int j = this.offset + this.size.orElse(p_331104_.size());
-                if (j < i) {
-                    builder.addAll(p_336048_.subList(j, i));
-                }
+                return original;
+            }
 
-                List<T> list = builder.build();
-                if (list.size() > p_333303_) {
-                    LOGGER.error("Contents overflow in section replacement");
-                    return p_336048_;
-                } else {
-                    return list;
-                }
+            Builder<T> newList = ImmutableList.builder();
+            newList.addAll(original.subList(0, this.offset));
+            newList.addAll(replacement);
+            int resumeIndex = this.offset + this.size.orElse(replacement.size());
+            if (resumeIndex < originalSize) {
+                newList.addAll(original.subList(resumeIndex, originalSize));
+            }
+
+            List<T> result = newList.build();
+            if (result.size() > maxSize) {
+                LOGGER.error("Contents overflow in section replacement");
+                return original;
+            } else {
+                return result;
             }
         }
     }
 
-    public record StandAlone<T>(List<T> value, ListOperation operation) {
-        public static <T> Codec<ListOperation.StandAlone<T>> codec(Codec<T> p_333263_, int p_334839_) {
+    record StandAlone<T>(List<T> value, ListOperation operation) {
+        public static <T> Codec<ListOperation.StandAlone<T>> codec(final Codec<T> valueCodec, final int maxSize) {
             return RecordCodecBuilder.create(
-                p_334562_ -> p_334562_.group(
-                        p_333263_.sizeLimitedListOf(p_334839_).fieldOf("values").forGetter(p_331378_ -> p_331378_.value),
-                        ListOperation.codec(p_334839_).forGetter(p_330703_ -> p_330703_.operation)
+                i -> i.group(
+                        valueCodec.sizeLimitedListOf(maxSize).fieldOf("values").forGetter(f -> f.value),
+                        ListOperation.codec(maxSize).forGetter(f -> f.operation)
                     )
-                    .apply(p_334562_, ListOperation.StandAlone::new)
+                    .apply(i, ListOperation.StandAlone::new)
             );
         }
 
-        public List<T> apply(List<T> p_334156_) {
-            return this.operation.apply(p_334156_, this.value);
+        public List<T> apply(final List<T> input) {
+            return this.operation.apply(input, this.value);
         }
     }
 
-    public static enum Type implements StringRepresentable {
+    enum Type implements StringRepresentable {
         REPLACE_ALL("replace_all", ListOperation.ReplaceAll.MAP_CODEC),
         REPLACE_SECTION("replace_section", ListOperation.ReplaceSection.MAP_CODEC),
         INSERT("insert", ListOperation.Insert.MAP_CODEC),
@@ -183,11 +179,11 @@ public interface ListOperation {
 
         public static final Codec<ListOperation.Type> CODEC = StringRepresentable.fromEnum(ListOperation.Type::values);
         private final String id;
-        final MapCodec<? extends ListOperation> mapCodec;
+        private final MapCodec<? extends ListOperation> mapCodec;
 
-        private Type(final String p_332297_, final MapCodec<? extends ListOperation> p_336238_) {
-            this.id = p_332297_;
-            this.mapCodec = p_336238_;
+        Type(final String id, final MapCodec<? extends ListOperation> mapCodec) {
+            this.id = id;
+            this.mapCodec = mapCodec;
         }
 
         public MapCodec<? extends ListOperation> mapCodec() {

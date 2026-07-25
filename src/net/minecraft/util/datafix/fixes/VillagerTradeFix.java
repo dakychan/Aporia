@@ -13,28 +13,26 @@ import java.util.function.Function;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class VillagerTradeFix extends DataFix {
-    public VillagerTradeFix(Schema p_17116_) {
-        super(p_17116_, false);
+    public VillagerTradeFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.VILLAGER_TRADE);
-        OpticFinder<?> opticfinder = type.findField("buy");
-        OpticFinder<?> opticfinder1 = type.findField("buyB");
-        OpticFinder<?> opticfinder2 = type.findField("sell");
-        OpticFinder<Pair<String, String>> opticfinder3 = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        Function<Typed<?>, Typed<?>> function = p_17150_ -> this.updateItemStack(opticfinder3, p_17150_);
+        Type<?> recipeType = this.getInputSchema().getType(References.VILLAGER_TRADE);
+        OpticFinder<?> buyFinder = recipeType.findField("buy");
+        OpticFinder<?> buyBFinder = recipeType.findField("buyB");
+        OpticFinder<?> sellFinder = recipeType.findField("sell");
+        OpticFinder<Pair<String, String>> idF = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        Function<Typed<?>, Typed<?>> itemStackUpdater = itemStack -> this.updateItemStack(idF, itemStack);
         return this.fixTypeEverywhereTyped(
             "Villager trade fix",
-            type,
-            p_145788_ -> p_145788_.updateTyped(opticfinder, function).updateTyped(opticfinder1, function).updateTyped(opticfinder2, function)
+            recipeType,
+            recipe -> recipe.updateTyped(buyFinder, itemStackUpdater).updateTyped(buyBFinder, itemStackUpdater).updateTyped(sellFinder, itemStackUpdater)
         );
     }
 
-    private Typed<?> updateItemStack(OpticFinder<Pair<String, String>> p_17134_, Typed<?> p_17135_) {
-        return p_17135_.update(
-            p_17134_, p_17145_ -> p_17145_.mapSecond(p_145790_ -> Objects.equals(p_145790_, "minecraft:carved_pumpkin") ? "minecraft:pumpkin" : p_145790_)
-        );
+    private Typed<?> updateItemStack(final OpticFinder<Pair<String, String>> idF, final Typed<?> itemStack) {
+        return itemStack.update(idF, pair -> pair.mapSecond(name -> Objects.equals(name, "minecraft:carved_pumpkin") ? "minecraft:pumpkin" : name));
     }
 }

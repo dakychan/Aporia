@@ -1,12 +1,26 @@
 package net.minecraft.world.item.crafting;
 
+import com.mojang.serialization.MapCodec;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
 
 public class CampfireCookingRecipe extends AbstractCookingRecipe {
-    public CampfireCookingRecipe(String p_250140_, CookingBookCategory p_251808_, Ingredient p_249826_, ItemStack p_251839_, float p_251432_, int p_251471_) {
-        super(p_250140_, p_251808_, p_249826_, p_251839_, p_251432_, p_251471_);
+    public static final MapCodec<CampfireCookingRecipe> MAP_CODEC = cookingMapCodec(CampfireCookingRecipe::new, 100);
+    public static final StreamCodec<RegistryFriendlyByteBuf, CampfireCookingRecipe> STREAM_CODEC = cookingStreamCodec(CampfireCookingRecipe::new);
+    public static final RecipeSerializer<CampfireCookingRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+
+    public CampfireCookingRecipe(
+        final Recipe.CommonInfo commonInfo,
+        final AbstractCookingRecipe.CookingBookInfo bookInfo,
+        final Ingredient ingredient,
+        final ItemStackTemplate result,
+        final float experience,
+        final int cookingTime
+    ) {
+        super(commonInfo, bookInfo, ingredient, result, experience, cookingTime);
     }
 
     @Override
@@ -16,7 +30,7 @@ public class CampfireCookingRecipe extends AbstractCookingRecipe {
 
     @Override
     public RecipeSerializer<CampfireCookingRecipe> getSerializer() {
-        return RecipeSerializer.CAMPFIRE_COOKING_RECIPE;
+        return SERIALIZER;
     }
 
     @Override

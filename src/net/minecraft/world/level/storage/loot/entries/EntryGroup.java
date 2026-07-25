@@ -3,39 +3,37 @@ package net.minecraft.world.level.storage.loot.entries;
 import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
-import java.util.function.Consumer;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class EntryGroup extends CompositeEntryBase {
-    public static final MapCodec<EntryGroup> CODEC = createCodec(EntryGroup::new);
+    public static final MapCodec<EntryGroup> MAP_CODEC = createCodec(EntryGroup::new);
 
-    EntryGroup(List<LootPoolEntryContainer> p_300347_, List<LootItemCondition> p_300424_) {
-        super(p_300347_, p_300424_);
+    public EntryGroup(final List<LootPoolEntryContainer> children, final List<LootItemCondition> conditions) {
+        super(children, conditions);
     }
 
     @Override
-    public LootPoolEntryType getType() {
-        return LootPoolEntries.GROUP;
+    public MapCodec<EntryGroup> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    protected ComposableEntryContainer compose(List<? extends ComposableEntryContainer> p_300505_) {
-        return switch (p_300505_.size()) {
+    protected ComposableEntryContainer compose(final List<? extends ComposableEntryContainer> entries) {
+        return switch (entries.size()) {
             case 0 -> ALWAYS_TRUE;
-            case 1 -> (ComposableEntryContainer)p_300505_.get(0);
+            case 1 -> (ComposableEntryContainer)entries.get(0);
             case 2 -> {
-                ComposableEntryContainer composableentrycontainer = p_300505_.get(0);
-                ComposableEntryContainer composableentrycontainer1 = p_300505_.get(1);
-                yield (p_79556_, p_79557_) -> {
-                    composableentrycontainer.expand(p_79556_, p_79557_);
-                    composableentrycontainer1.expand(p_79556_, p_79557_);
+                ComposableEntryContainer first = entries.get(0);
+                ComposableEntryContainer second = entries.get(1);
+                yield (context, output) -> {
+                    first.expand(context, output);
+                    second.expand(context, output);
                     return true;
                 };
             }
-            default -> (p_297026_, p_297027_) -> {
-                for (ComposableEntryContainer composableentrycontainer2 : p_300505_) {
-                    composableentrycontainer2.expand(p_297026_, p_297027_);
+            default -> (context, output) -> {
+                for (ComposableEntryContainer entry : entries) {
+                    entry.expand(context, output);
                 }
 
                 return true;
@@ -43,16 +41,16 @@ public class EntryGroup extends CompositeEntryBase {
         };
     }
 
-    public static EntryGroup.Builder list(LootPoolEntryContainer.Builder<?>... p_165138_) {
-        return new EntryGroup.Builder(p_165138_);
+    public static EntryGroup.Builder list(final LootPoolEntryContainer.Builder<?>... entries) {
+        return new EntryGroup.Builder(entries);
     }
 
     public static class Builder extends LootPoolEntryContainer.Builder<EntryGroup.Builder> {
         private final ImmutableList.Builder<LootPoolEntryContainer> entries = ImmutableList.builder();
 
-        public Builder(LootPoolEntryContainer.Builder<?>... p_165141_) {
-            for (LootPoolEntryContainer.Builder<?> builder : p_165141_) {
-                this.entries.add(builder.build());
+        public Builder(final LootPoolEntryContainer.Builder<?>... entries) {
+            for (LootPoolEntryContainer.Builder<?> entry : entries) {
+                this.entries.add(entry.build());
             }
         }
 
@@ -61,8 +59,8 @@ public class EntryGroup extends CompositeEntryBase {
         }
 
         @Override
-        public EntryGroup.Builder append(LootPoolEntryContainer.Builder<?> p_165145_) {
-            this.entries.add(p_165145_.build());
+        public EntryGroup.Builder append(final LootPoolEntryContainer.Builder<?> other) {
+            this.entries.add(other.build());
             return this;
         }
 

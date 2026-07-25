@@ -43,158 +43,157 @@ public class UpgradeData {
     public static final UpgradeData EMPTY = new UpgradeData(EmptyBlockGetter.INSTANCE);
     private static final String TAG_INDICES = "Indices";
     private static final Direction8[] DIRECTIONS = Direction8.values();
-    private static final Codec<List<SavedTick<Block>>> BLOCK_TICKS_CODEC = SavedTick.codec(BuiltInRegistries.BLOCK.byNameCodec().orElse(Blocks.AIR))
-        .listOf();
-    private static final Codec<List<SavedTick<Fluid>>> FLUID_TICKS_CODEC = SavedTick.codec(BuiltInRegistries.FLUID.byNameCodec().orElse(Fluids.EMPTY))
-        .listOf();
+    private static final Codec<List<SavedTick<Block>>> BLOCK_TICKS_CODEC = SavedTick.codec(BuiltInRegistries.BLOCK.byNameCodec().orElse(Blocks.AIR)).listOf();
+    private static final Codec<List<SavedTick<Fluid>>> FLUID_TICKS_CODEC = SavedTick.codec(BuiltInRegistries.FLUID.byNameCodec().orElse(Fluids.EMPTY)).listOf();
     private final EnumSet<Direction8> sides = EnumSet.noneOf(Direction8.class);
     private final List<SavedTick<Block>> neighborBlockTicks = Lists.newArrayList();
     private final List<SavedTick<Fluid>> neighborFluidTicks = Lists.newArrayList();
     private final int[][] index;
-    static final Map<Block, UpgradeData.BlockFixer> MAP = new IdentityHashMap<>();
-    static final Set<UpgradeData.BlockFixer> CHUNKY_FIXERS = Sets.newHashSet();
+    private static final Map<Block, UpgradeData.BlockFixer> MAP = new IdentityHashMap<>();
+    private static final Set<UpgradeData.BlockFixer> CHUNKY_FIXERS = Sets.newHashSet();
 
-    private UpgradeData(LevelHeightAccessor p_156506_) {
-        this.index = new int[p_156506_.getSectionsCount()][];
+    private UpgradeData(final LevelHeightAccessor levelHeightAccessor) {
+        this.index = new int[levelHeightAccessor.getSectionsCount()][];
     }
 
-    public UpgradeData(CompoundTag p_156508_, LevelHeightAccessor p_156509_) {
-        this(p_156509_);
-        p_156508_.getCompound("Indices").ifPresent(p_391007_ -> {
-            for (int j = 0; j < this.index.length; j++) {
-                this.index[j] = p_391007_.getIntArray(String.valueOf(j)).orElse(null);
+    public UpgradeData(final CompoundTag tag, final LevelHeightAccessor levelHeightAccessor) {
+        this(levelHeightAccessor);
+        tag.getCompound("Indices").ifPresent(indicesTag -> {
+            for (int i = 0; i < this.index.length; i++) {
+                this.index[i] = indicesTag.getIntArray(String.valueOf(i)).orElse(null);
             }
         });
-        int i = p_156508_.getIntOr("Sides", 0);
+        int sideInt = tag.getIntOr("Sides", 0);
 
         for (Direction8 direction8 : Direction8.values()) {
-            if ((i & 1 << direction8.ordinal()) != 0) {
+            if ((sideInt & 1 << direction8.ordinal()) != 0) {
                 this.sides.add(direction8);
             }
         }
 
-        p_156508_.read("neighbor_block_ticks", BLOCK_TICKS_CODEC).ifPresent(this.neighborBlockTicks::addAll);
-        p_156508_.read("neighbor_fluid_ticks", FLUID_TICKS_CODEC).ifPresent(this.neighborFluidTicks::addAll);
+        tag.read("neighbor_block_ticks", BLOCK_TICKS_CODEC).ifPresent(this.neighborBlockTicks::addAll);
+        tag.read("neighbor_fluid_ticks", FLUID_TICKS_CODEC).ifPresent(this.neighborFluidTicks::addAll);
     }
 
-    private UpgradeData(UpgradeData p_360816_) {
-        this.sides.addAll(p_360816_.sides);
-        this.neighborBlockTicks.addAll(p_360816_.neighborBlockTicks);
-        this.neighborFluidTicks.addAll(p_360816_.neighborFluidTicks);
-        this.index = new int[p_360816_.index.length][];
+    private UpgradeData(final UpgradeData source) {
+        this.sides.addAll(source.sides);
+        this.neighborBlockTicks.addAll(source.neighborBlockTicks);
+        this.neighborFluidTicks.addAll(source.neighborFluidTicks);
+        this.index = new int[source.index.length][];
 
-        for (int i = 0; i < p_360816_.index.length; i++) {
-            int[] aint = p_360816_.index[i];
-            this.index[i] = aint != null ? IntArrays.copy(aint) : null;
+        for (int i = 0; i < source.index.length; i++) {
+            int[] indices = source.index[i];
+            this.index[i] = indices != null ? IntArrays.copy(indices) : null;
         }
     }
 
-    public void upgrade(LevelChunk p_63342_) {
-        this.upgradeInside(p_63342_);
+    public void upgrade(final LevelChunk chunk) {
+        this.upgradeInside(chunk);
 
         for (Direction8 direction8 : DIRECTIONS) {
-            upgradeSides(p_63342_, direction8);
+            upgradeSides(chunk, direction8);
         }
 
-        Level level = p_63342_.getLevel();
-        this.neighborBlockTicks.forEach(p_208142_ -> {
-            Block block = p_208142_.type() == Blocks.AIR ? level.getBlockState(p_208142_.pos()).getBlock() : p_208142_.type();
-            level.scheduleTick(p_208142_.pos(), block, p_208142_.delay(), p_208142_.priority());
+        Level level = chunk.getLevel();
+        this.neighborBlockTicks.forEach(tick -> {
+            Block type = tick.type() == Blocks.AIR ? level.getBlockState(tick.pos()).getBlock() : tick.type();
+            level.scheduleTick(tick.pos(), type, tick.delay(), tick.priority());
         });
-        this.neighborFluidTicks.forEach(p_208125_ -> {
-            Fluid fluid = p_208125_.type() == Fluids.EMPTY ? level.getFluidState(p_208125_.pos()).getType() : p_208125_.type();
-            level.scheduleTick(p_208125_.pos(), fluid, p_208125_.delay(), p_208125_.priority());
+        this.neighborFluidTicks.forEach(tick -> {
+            Fluid type = tick.type() == Fluids.EMPTY ? level.getFluidState(tick.pos()).getType() : tick.type();
+            level.scheduleTick(tick.pos(), type, tick.delay(), tick.priority());
         });
-        CHUNKY_FIXERS.forEach(p_208122_ -> p_208122_.processChunk(level));
+        CHUNKY_FIXERS.forEach(fixer -> fixer.processChunk(level));
     }
 
-    private static void upgradeSides(LevelChunk p_63344_, Direction8 p_63345_) {
-        Level level = p_63344_.getLevel();
-        if (p_63344_.getUpgradeData().sides.remove(p_63345_)) {
-            Set<Direction> set = p_63345_.getDirections();
-            int i = 0;
-            int j = 15;
-            boolean flag = set.contains(Direction.EAST);
-            boolean flag1 = set.contains(Direction.WEST);
-            boolean flag2 = set.contains(Direction.SOUTH);
-            boolean flag3 = set.contains(Direction.NORTH);
-            boolean flag4 = set.size() == 1;
-            ChunkPos chunkpos = p_63344_.getPos();
-            int k = chunkpos.getMinBlockX() + (!flag4 || !flag3 && !flag2 ? (flag1 ? 0 : 15) : 1);
-            int l = chunkpos.getMinBlockX() + (!flag4 || !flag3 && !flag2 ? (flag1 ? 0 : 15) : 14);
-            int i1 = chunkpos.getMinBlockZ() + (!flag4 || !flag && !flag1 ? (flag3 ? 0 : 15) : 1);
-            int j1 = chunkpos.getMinBlockZ() + (!flag4 || !flag && !flag1 ? (flag3 ? 0 : 15) : 14);
-            Direction[] adirection = Direction.values();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    private static void upgradeSides(final LevelChunk chunk, final Direction8 direction8) {
+        Level level = chunk.getLevel();
+        if (chunk.getUpgradeData().sides.remove(direction8)) {
+            Set<Direction> directions = direction8.getDirections();
+            int min = 0;
+            int max = 15;
+            boolean east = directions.contains(Direction.EAST);
+            boolean west = directions.contains(Direction.WEST);
+            boolean south = directions.contains(Direction.SOUTH);
+            boolean north = directions.contains(Direction.NORTH);
+            boolean singular = directions.size() == 1;
+            ChunkPos chunkPos = chunk.getPos();
+            int minX = chunkPos.getMinBlockX() + (!singular || !north && !south ? (west ? 0 : 15) : 1);
+            int maxX = chunkPos.getMinBlockX() + (!singular || !north && !south ? (west ? 0 : 15) : 14);
+            int minZ = chunkPos.getMinBlockZ() + (!singular || !east && !west ? (north ? 0 : 15) : 1);
+            int maxZ = chunkPos.getMinBlockZ() + (!singular || !east && !west ? (north ? 0 : 15) : 14);
+            Direction[] updateDirections = Direction.values();
+            BlockPos.MutableBlockPos neighbourPos = new BlockPos.MutableBlockPos();
 
-            for (BlockPos blockpos : BlockPos.betweenClosed(k, level.getMinY(), i1, l, level.getMaxY(), j1)) {
-                BlockState blockstate = level.getBlockState(blockpos);
-                BlockState blockstate1 = blockstate;
+            for (BlockPos pos : BlockPos.betweenClosed(minX, level.getMinY(), minZ, maxX, level.getMaxY(), maxZ)) {
+                BlockState state = level.getBlockState(pos);
+                BlockState newState = state;
 
-                for (Direction direction : adirection) {
-                    blockpos$mutableblockpos.setWithOffset(blockpos, direction);
-                    blockstate1 = updateState(blockstate1, direction, level, blockpos, blockpos$mutableblockpos);
+                for (Direction direction : updateDirections) {
+                    neighbourPos.setWithOffset(pos, direction);
+                    newState = updateState(newState, direction, level, pos, neighbourPos);
                 }
 
-                Block.updateOrDestroy(blockstate, blockstate1, level, blockpos, 18);
+                Block.updateOrDestroy(state, newState, level, pos, 18);
             }
         }
     }
 
-    private static BlockState updateState(BlockState p_63336_, Direction p_63337_, LevelAccessor p_63338_, BlockPos p_63339_, BlockPos p_63340_) {
-        return MAP.getOrDefault(p_63336_.getBlock(), UpgradeData.BlockFixers.DEFAULT)
-            .updateShape(p_63336_, p_63337_, p_63338_.getBlockState(p_63340_), p_63338_, p_63339_, p_63340_);
+    private static BlockState updateState(
+        final BlockState state, final Direction direction, final LevelAccessor level, final BlockPos pos, final BlockPos neighbourPos
+    ) {
+        return MAP.getOrDefault(state.getBlock(), UpgradeData.BlockFixers.DEFAULT)
+            .updateShape(state, direction, level.getBlockState(neighbourPos), level, pos, neighbourPos);
     }
 
-    private void upgradeInside(LevelChunk p_63348_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos1 = new BlockPos.MutableBlockPos();
-        ChunkPos chunkpos = p_63348_.getPos();
-        LevelAccessor levelaccessor = p_63348_.getLevel();
+    private void upgradeInside(final LevelChunk chunk) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos neighbourPos = new BlockPos.MutableBlockPos();
+        ChunkPos chunkPos = chunk.getPos();
+        LevelAccessor level = chunk.getLevel();
 
-        for (int i = 0; i < this.index.length; i++) {
-            LevelChunkSection levelchunksection = p_63348_.getSection(i);
-            int[] aint = this.index[i];
-            this.index[i] = null;
-            if (aint != null && aint.length > 0) {
-                Direction[] adirection = Direction.values();
-                PalettedContainer<BlockState> palettedcontainer = levelchunksection.getStates();
-                int j = p_63348_.getSectionYFromSectionIndex(i);
-                int k = SectionPos.sectionToBlockCoord(j);
+        for (int sectionIndex = 0; sectionIndex < this.index.length; sectionIndex++) {
+            LevelChunkSection chunkSection = chunk.getSection(sectionIndex);
+            int[] upgradeIndex = this.index[sectionIndex];
+            this.index[sectionIndex] = null;
+            if (upgradeIndex != null && upgradeIndex.length > 0) {
+                Direction[] directions = Direction.values();
+                PalettedContainer<BlockState> states = chunkSection.getStates();
+                int sectionY = chunk.getSectionYFromSectionIndex(sectionIndex);
+                int bottomYInSection = SectionPos.sectionToBlockCoord(sectionY);
 
-                for (int l : aint) {
-                    int i1 = l & 15;
-                    int j1 = l >> 8 & 15;
-                    int k1 = l >> 4 & 15;
-                    blockpos$mutableblockpos.set(chunkpos.getMinBlockX() + i1, k + j1, chunkpos.getMinBlockZ() + k1);
-                    BlockState blockstate = palettedcontainer.get(l);
-                    BlockState blockstate1 = blockstate;
+                for (int coordinate : upgradeIndex) {
+                    int x = coordinate & 15;
+                    int y = coordinate >> 8 & 15;
+                    int z = coordinate >> 4 & 15;
+                    pos.set(chunkPos.getMinBlockX() + x, bottomYInSection + y, chunkPos.getMinBlockZ() + z);
+                    BlockState state = states.get(coordinate);
+                    BlockState newState = state;
 
-                    for (Direction direction : adirection) {
-                        blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, direction);
-                        if (SectionPos.blockToSectionCoord(blockpos$mutableblockpos.getX()) == chunkpos.x
-                            && SectionPos.blockToSectionCoord(blockpos$mutableblockpos.getZ()) == chunkpos.z) {
-                            blockstate1 = updateState(blockstate1, direction, levelaccessor, blockpos$mutableblockpos, blockpos$mutableblockpos1);
+                    for (Direction direction : directions) {
+                        neighbourPos.setWithOffset(pos, direction);
+                        if (SectionPos.blockToSectionCoord(pos.getX()) == chunkPos.x() && SectionPos.blockToSectionCoord(pos.getZ()) == chunkPos.z()) {
+                            newState = updateState(newState, direction, level, pos, neighbourPos);
                         }
                     }
 
-                    Block.updateOrDestroy(blockstate, blockstate1, levelaccessor, blockpos$mutableblockpos, 18);
+                    Block.updateOrDestroy(state, newState, level, pos, 18);
                 }
             }
         }
 
-        for (int l1 = 0; l1 < this.index.length; l1++) {
-            if (this.index[l1] != null) {
-                LOGGER.warn("Discarding update data for section {} for chunk ({} {})", levelaccessor.getSectionYFromSectionIndex(l1), chunkpos.x, chunkpos.z);
+        for (int i = 0; i < this.index.length; i++) {
+            if (this.index[i] != null) {
+                LOGGER.warn("Discarding update data for section {} for chunk ({} {})", level.getSectionYFromSectionIndex(i), chunkPos.x(), chunkPos.z());
             }
 
-            this.index[l1] = null;
+            this.index[i] = null;
         }
     }
 
     public boolean isEmpty() {
-        for (int[] aint : this.index) {
-            if (aint != null) {
+        for (int[] ints : this.index) {
+            if (ints != null) {
                 return false;
             }
         }
@@ -203,36 +202,36 @@ public class UpgradeData {
     }
 
     public CompoundTag write() {
-        CompoundTag compoundtag = new CompoundTag();
-        CompoundTag compoundtag1 = new CompoundTag();
+        CompoundTag tag = new CompoundTag();
+        CompoundTag indicesTag = new CompoundTag();
 
         for (int i = 0; i < this.index.length; i++) {
-            String s = String.valueOf(i);
+            String key = String.valueOf(i);
             if (this.index[i] != null && this.index[i].length != 0) {
-                compoundtag1.putIntArray(s, this.index[i]);
+                indicesTag.putIntArray(key, this.index[i]);
             }
         }
 
-        if (!compoundtag1.isEmpty()) {
-            compoundtag.put("Indices", compoundtag1);
+        if (!indicesTag.isEmpty()) {
+            tag.put("Indices", indicesTag);
         }
 
-        int j = 0;
+        int sides = 0;
 
-        for (Direction8 direction8 : this.sides) {
-            j |= 1 << direction8.ordinal();
+        for (Direction8 side : this.sides) {
+            sides |= 1 << side.ordinal();
         }
 
-        compoundtag.putByte("Sides", (byte)j);
+        tag.putByte("Sides", (byte)sides);
         if (!this.neighborBlockTicks.isEmpty()) {
-            compoundtag.store("neighbor_block_ticks", BLOCK_TICKS_CODEC, this.neighborBlockTicks);
+            tag.store("neighbor_block_ticks", BLOCK_TICKS_CODEC, this.neighborBlockTicks);
         }
 
         if (!this.neighborFluidTicks.isEmpty()) {
-            compoundtag.store("neighbor_fluid_ticks", FLUID_TICKS_CODEC, this.neighborFluidTicks);
+            tag.store("neighbor_fluid_ticks", FLUID_TICKS_CODEC, this.neighborFluidTicks);
         }
 
-        return compoundtag;
+        return tag;
     }
 
     public UpgradeData copy() {
@@ -240,32 +239,39 @@ public class UpgradeData {
     }
 
     public interface BlockFixer {
-        BlockState updateShape(BlockState p_63352_, Direction p_63353_, BlockState p_63354_, LevelAccessor p_63355_, BlockPos p_63356_, BlockPos p_63357_);
+        BlockState updateShape(
+            final BlockState state,
+            final Direction direction,
+            final BlockState neighbour,
+            final LevelAccessor level,
+            final BlockPos pos,
+            final BlockPos neighbourPos
+        );
 
-        default void processChunk(LevelAccessor p_63351_) {
+        default void processChunk(final LevelAccessor level) {
         }
     }
 
-    static enum BlockFixers implements UpgradeData.BlockFixer {
+    private enum BlockFixers implements UpgradeData.BlockFixer {
         BLACKLIST(
             Blocks.OBSERVER,
             Blocks.NETHER_PORTAL,
-            Blocks.WHITE_CONCRETE_POWDER,
-            Blocks.ORANGE_CONCRETE_POWDER,
-            Blocks.MAGENTA_CONCRETE_POWDER,
-            Blocks.LIGHT_BLUE_CONCRETE_POWDER,
-            Blocks.YELLOW_CONCRETE_POWDER,
-            Blocks.LIME_CONCRETE_POWDER,
-            Blocks.PINK_CONCRETE_POWDER,
-            Blocks.GRAY_CONCRETE_POWDER,
-            Blocks.LIGHT_GRAY_CONCRETE_POWDER,
-            Blocks.CYAN_CONCRETE_POWDER,
-            Blocks.PURPLE_CONCRETE_POWDER,
-            Blocks.BLUE_CONCRETE_POWDER,
-            Blocks.BROWN_CONCRETE_POWDER,
-            Blocks.GREEN_CONCRETE_POWDER,
-            Blocks.RED_CONCRETE_POWDER,
-            Blocks.BLACK_CONCRETE_POWDER,
+            Blocks.CONCRETE_POWDER.white(),
+            Blocks.CONCRETE_POWDER.orange(),
+            Blocks.CONCRETE_POWDER.magenta(),
+            Blocks.CONCRETE_POWDER.lightBlue(),
+            Blocks.CONCRETE_POWDER.yellow(),
+            Blocks.CONCRETE_POWDER.lime(),
+            Blocks.CONCRETE_POWDER.pink(),
+            Blocks.CONCRETE_POWDER.gray(),
+            Blocks.CONCRETE_POWDER.lightGray(),
+            Blocks.CONCRETE_POWDER.cyan(),
+            Blocks.CONCRETE_POWDER.purple(),
+            Blocks.CONCRETE_POWDER.blue(),
+            Blocks.CONCRETE_POWDER.brown(),
+            Blocks.CONCRETE_POWDER.green(),
+            Blocks.CONCRETE_POWDER.red(),
+            Blocks.CONCRETE_POWDER.black(),
             Blocks.ANVIL,
             Blocks.CHIPPED_ANVIL,
             Blocks.DAMAGED_ANVIL,
@@ -305,90 +311,122 @@ public class UpgradeData {
         ) {
             @Override
             public BlockState updateShape(
-                BlockState p_63394_, Direction p_63395_, BlockState p_63396_, LevelAccessor p_63397_, BlockPos p_63398_, BlockPos p_63399_
+                final BlockState state,
+                final Direction direction,
+                final BlockState neighbour,
+                final LevelAccessor level,
+                final BlockPos pos,
+                final BlockPos neighbourPos
             ) {
-                return p_63394_;
+                return state;
             }
         },
         DEFAULT {
             @Override
             public BlockState updateShape(
-                BlockState p_63405_, Direction p_63406_, BlockState p_63407_, LevelAccessor p_63408_, BlockPos p_63409_, BlockPos p_63410_
+                final BlockState state,
+                final Direction direction,
+                final BlockState neighbour,
+                final LevelAccessor level,
+                final BlockPos pos,
+                final BlockPos neighbourPos
             ) {
-                return p_63405_.updateShape(p_63408_, p_63408_, p_63409_, p_63406_, p_63410_, p_63408_.getBlockState(p_63410_), p_63408_.getRandom());
+                return state.updateShape(level, level, pos, direction, neighbourPos, level.getBlockState(neighbourPos), level.getRandom());
             }
         },
         CHEST(Blocks.CHEST, Blocks.TRAPPED_CHEST) {
             @Override
             public BlockState updateShape(
-                BlockState p_63416_, Direction p_63417_, BlockState p_63418_, LevelAccessor p_63419_, BlockPos p_63420_, BlockPos p_63421_
+                final BlockState state,
+                final Direction direction,
+                final BlockState neighbour,
+                final LevelAccessor level,
+                final BlockPos pos,
+                final BlockPos neighbourPos
             ) {
-                if (p_63418_.is(p_63416_.getBlock())
-                    && p_63417_.getAxis().isHorizontal()
-                    && p_63416_.getValue(ChestBlock.TYPE) == ChestType.SINGLE
-                    && p_63418_.getValue(ChestBlock.TYPE) == ChestType.SINGLE) {
-                    Direction direction = p_63416_.getValue(ChestBlock.FACING);
-                    if (p_63417_.getAxis() != direction.getAxis() && direction == p_63418_.getValue(ChestBlock.FACING)) {
-                        ChestType chesttype = p_63417_ == direction.getClockWise() ? ChestType.LEFT : ChestType.RIGHT;
-                        p_63419_.setBlock(p_63421_, p_63418_.setValue(ChestBlock.TYPE, chesttype.getOpposite()), 18);
-                        if (direction == Direction.NORTH || direction == Direction.EAST) {
-                            BlockEntity blockentity = p_63419_.getBlockEntity(p_63420_);
-                            BlockEntity blockentity1 = p_63419_.getBlockEntity(p_63421_);
-                            if (blockentity instanceof ChestBlockEntity && blockentity1 instanceof ChestBlockEntity) {
-                                ChestBlockEntity.swapContents((ChestBlockEntity)blockentity, (ChestBlockEntity)blockentity1);
+                if (neighbour.is(state.getBlock())
+                    && direction.getAxis().isHorizontal()
+                    && state.getValue(ChestBlock.TYPE) == ChestType.SINGLE
+                    && neighbour.getValue(ChestBlock.TYPE) == ChestType.SINGLE) {
+                    Direction facing = state.getValue(ChestBlock.FACING);
+                    if (direction.getAxis() != facing.getAxis() && facing == neighbour.getValue(ChestBlock.FACING)) {
+                        ChestType newType = direction == facing.getClockWise() ? ChestType.LEFT : ChestType.RIGHT;
+                        level.setBlock(neighbourPos, neighbour.setValue(ChestBlock.TYPE, newType.getOpposite()), 18);
+                        if (facing == Direction.NORTH || facing == Direction.EAST) {
+                            BlockEntity one = level.getBlockEntity(pos);
+                            BlockEntity two = level.getBlockEntity(neighbourPos);
+                            if (one instanceof ChestBlockEntity firstChestBlockEntity && two instanceof ChestBlockEntity secondChestBlockEntity) {
+                                ChestBlockEntity.swapContents(firstChestBlockEntity, secondChestBlockEntity);
                             }
                         }
 
-                        return p_63416_.setValue(ChestBlock.TYPE, chesttype);
+                        return state.setValue(ChestBlock.TYPE, newType);
                     }
                 }
 
-                return p_63416_;
+                return state;
             }
         },
-        LEAVES(true, Blocks.ACACIA_LEAVES, Blocks.CHERRY_LEAVES, Blocks.BIRCH_LEAVES, Blocks.PALE_OAK_LEAVES, Blocks.DARK_OAK_LEAVES, Blocks.JUNGLE_LEAVES, Blocks.OAK_LEAVES, Blocks.SPRUCE_LEAVES) {
+        LEAVES(
+            true,
+            Blocks.ACACIA_LEAVES,
+            Blocks.CHERRY_LEAVES,
+            Blocks.BIRCH_LEAVES,
+            Blocks.PALE_OAK_LEAVES,
+            Blocks.DARK_OAK_LEAVES,
+            Blocks.JUNGLE_LEAVES,
+            Blocks.OAK_LEAVES,
+            Blocks.SPRUCE_LEAVES
+        ) {
             private final ThreadLocal<List<ObjectSet<BlockPos>>> queue = ThreadLocal.withInitial(() -> Lists.newArrayListWithCapacity(7));
 
             @Override
             public BlockState updateShape(
-                BlockState p_63432_, Direction p_63433_, BlockState p_63434_, LevelAccessor p_63435_, BlockPos p_63436_, BlockPos p_63437_
+                final BlockState state,
+                final Direction direction,
+                final BlockState neighbour,
+                final LevelAccessor level,
+                final BlockPos pos,
+                final BlockPos neighbourPos
             ) {
-                BlockState blockstate = p_63432_.updateShape(p_63435_, p_63435_, p_63436_, p_63433_, p_63437_, p_63435_.getBlockState(p_63437_), p_63435_.getRandom());
-                if (p_63432_ != blockstate) {
-                    int i = blockstate.getValue(BlockStateProperties.DISTANCE);
-                    List<ObjectSet<BlockPos>> list = this.queue.get();
-                    if (list.isEmpty()) {
-                        for (int j = 0; j < 7; j++) {
-                            list.add(new ObjectOpenHashSet<>());
+                BlockState newState = state.updateShape(level, level, pos, direction, neighbourPos, level.getBlockState(neighbourPos), level.getRandom());
+                if (state != newState) {
+                    int distance = newState.getValue(BlockStateProperties.DISTANCE);
+                    List<ObjectSet<BlockPos>> queue = this.queue.get();
+                    if (queue.isEmpty()) {
+                        for (int i = 0; i < 7; i++) {
+                            queue.add(new ObjectOpenHashSet<>());
                         }
                     }
 
-                    list.get(i).add(p_63436_.immutable());
+                    queue.get(distance).add(pos.immutable());
                 }
 
-                return p_63432_;
+                return state;
             }
 
             @Override
-            public void processChunk(LevelAccessor p_63430_) {
-                BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-                List<ObjectSet<BlockPos>> list = this.queue.get();
+            public void processChunk(final LevelAccessor level) {
+                BlockPos.MutableBlockPos neighborPos = new BlockPos.MutableBlockPos();
+                List<ObjectSet<BlockPos>> queue = this.queue.get();
 
-                for (int i = 2; i < list.size(); i++) {
-                    int j = i - 1;
-                    ObjectSet<BlockPos> objectset = list.get(j);
-                    ObjectSet<BlockPos> objectset1 = list.get(i);
+                for (int neighborDistance = 2; neighborDistance < queue.size(); neighborDistance++) {
+                    int currentDistance = neighborDistance - 1;
+                    ObjectSet<BlockPos> set = queue.get(currentDistance);
+                    ObjectSet<BlockPos> newSet = queue.get(neighborDistance);
 
-                    for (BlockPos blockpos : objectset) {
-                        BlockState blockstate = p_63430_.getBlockState(blockpos);
-                        if (blockstate.getValue(BlockStateProperties.DISTANCE) >= j) {
-                            p_63430_.setBlock(blockpos, blockstate.setValue(BlockStateProperties.DISTANCE, j), 18);
-                            if (i != 7) {
+                    for (BlockPos pos : set) {
+                        BlockState state = level.getBlockState(pos);
+                        if (state.getValue(BlockStateProperties.DISTANCE) >= currentDistance) {
+                            level.setBlock(pos, state.setValue(BlockStateProperties.DISTANCE, currentDistance), 18);
+                            if (neighborDistance != 7) {
                                 for (Direction direction : DIRECTIONS) {
-                                    blockpos$mutableblockpos.setWithOffset(blockpos, direction);
-                                    BlockState blockstate1 = p_63430_.getBlockState(blockpos$mutableblockpos);
-                                    if (blockstate1.hasProperty(BlockStateProperties.DISTANCE) && blockstate.getValue(BlockStateProperties.DISTANCE) > i) {
-                                        objectset1.add(blockpos$mutableblockpos.immutable());
+                                    neighborPos.setWithOffset(pos, direction);
+                                    BlockState neighbor = level.getBlockState(neighborPos);
+                                    if (neighbor.hasProperty(BlockStateProperties.DISTANCE) && state.getValue(BlockStateProperties.DISTANCE) > neighborDistance
+                                        )
+                                     {
+                                        newSet.add(neighborPos.immutable());
                                     }
                                 }
                             }
@@ -396,39 +434,44 @@ public class UpgradeData {
                     }
                 }
 
-                list.clear();
+                queue.clear();
             }
         },
         STEM_BLOCK(Blocks.MELON_STEM, Blocks.PUMPKIN_STEM) {
             @Override
             public BlockState updateShape(
-                BlockState p_63443_, Direction p_63444_, BlockState p_63445_, LevelAccessor p_63446_, BlockPos p_63447_, BlockPos p_63448_
+                final BlockState state,
+                final Direction direction,
+                final BlockState neighbour,
+                final LevelAccessor level,
+                final BlockPos pos,
+                final BlockPos neighbourPos
             ) {
-                if (p_63443_.getValue(StemBlock.AGE) == 7) {
-                    Block block = p_63443_.is(Blocks.PUMPKIN_STEM) ? Blocks.PUMPKIN : Blocks.MELON;
-                    if (p_63445_.is(block)) {
-                        return (p_63443_.is(Blocks.PUMPKIN_STEM) ? Blocks.ATTACHED_PUMPKIN_STEM : Blocks.ATTACHED_MELON_STEM)
+                if (state.getValue(StemBlock.AGE) == 7) {
+                    Block fruit = state.is(Blocks.PUMPKIN_STEM) ? Blocks.PUMPKIN : Blocks.MELON;
+                    if (neighbour.is(fruit)) {
+                        return (state.is(Blocks.PUMPKIN_STEM) ? Blocks.ATTACHED_PUMPKIN_STEM : Blocks.ATTACHED_MELON_STEM)
                             .defaultBlockState()
-                            .setValue(HorizontalDirectionalBlock.FACING, p_63444_);
+                            .setValue(HorizontalDirectionalBlock.FACING, direction);
                     }
                 }
 
-                return p_63443_;
+                return state;
             }
         };
 
         public static final Direction[] DIRECTIONS = Direction.values();
 
-        BlockFixers(final Block... p_63380_) {
-            this(false, p_63380_);
+        BlockFixers(final Block... blocks) {
+            this(false, blocks);
         }
 
-        BlockFixers(final boolean p_63369_, final Block... p_63370_) {
-            for (Block block : p_63370_) {
+        BlockFixers(final boolean chunky, final Block... blocks) {
+            for (Block block : blocks) {
                 UpgradeData.MAP.put(block, this);
             }
 
-            if (p_63369_) {
+            if (chunky) {
                 UpgradeData.CHUNKY_FIXERS.add(this);
             }
         }

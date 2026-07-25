@@ -15,27 +15,29 @@ import org.jspecify.annotations.Nullable;
 public class TestInstanceBlock extends BaseEntityBlock implements GameMasterBlock {
     public static final MapCodec<TestInstanceBlock> CODEC = simpleCodec(TestInstanceBlock::new);
 
-    public TestInstanceBlock(BlockBehaviour.Properties p_391747_) {
-        super(p_391747_);
+    public TestInstanceBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_392576_, BlockState p_397359_) {
-        return new TestInstanceBlockEntity(p_392576_, p_397359_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new TestInstanceBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_391894_, Level p_393283_, BlockPos p_395877_, Player p_396004_, BlockHitResult p_397949_) {
-        if (p_393283_.getBlockEntity(p_395877_) instanceof TestInstanceBlockEntity testinstanceblockentity) {
-            if (!p_396004_.canUseGameMasterBlocks()) {
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (level.getBlockEntity(pos) instanceof TestInstanceBlockEntity testInstance) {
+            if (!player.canUseGameMasterBlocks()) {
                 return InteractionResult.PASS;
-            } else {
-                if (p_396004_.level().isClientSide()) {
-                    p_396004_.openTestInstanceBlock(testinstanceblockentity);
-                }
-
-                return InteractionResult.SUCCESS;
             }
+
+            if (player.level().isClientSide()) {
+                player.openTestInstanceBlock(testInstance);
+            }
+
+            return InteractionResult.SUCCESS;
         } else {
             return InteractionResult.PASS;
         }

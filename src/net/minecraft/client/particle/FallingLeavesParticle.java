@@ -5,10 +5,7 @@ import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class FallingLeavesParticle extends SingleQuadParticle {
     private static final float ACCELERATION_SCALE = 0.0025F;
     private static final int INITIAL_LIFETIME = 300;
@@ -23,33 +20,33 @@ public class FallingLeavesParticle extends SingleQuadParticle {
     private final double swirlPeriod;
 
     protected FallingLeavesParticle(
-        ClientLevel p_377646_,
-        double p_377442_,
-        double p_376050_,
-        double p_377918_,
-        TextureAtlasSprite p_426530_,
-        float p_378651_,
-        float p_376838_,
-        boolean p_378490_,
-        boolean p_376930_,
-        float p_376718_,
-        float p_378174_
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final TextureAtlasSprite sprite,
+        final float fallAcceleration,
+        final float sideAcceleration,
+        final boolean swirl,
+        final boolean flowAway,
+        final float scale,
+        final float startVelocity
     ) {
-        super(p_377646_, p_377442_, p_376050_, p_377918_, p_426530_);
-        this.windBig = p_376838_;
-        this.swirl = p_378490_;
-        this.flowAway = p_376930_;
+        super(level, x, y, z, sprite);
+        this.windBig = sideAcceleration;
+        this.swirl = swirl;
+        this.flowAway = flowAway;
         this.lifetime = 300;
-        this.gravity = p_378651_ * 1.2F * 0.0025F;
-        float f = p_376718_ * (this.random.nextBoolean() ? 0.05F : 0.075F);
-        this.quadSize = f;
-        this.setSize(f, f);
+        this.gravity = fallAcceleration * 1.2F * 0.0025F;
+        float size = scale * (this.random.nextBoolean() ? 0.05F : 0.075F);
+        this.quadSize = size;
+        this.setSize(size, size);
         this.friction = 1.0F;
-        this.yd = -p_378174_;
-        float f1 = this.random.nextFloat();
-        this.xaFlowScale = Math.cos(Math.toRadians(f1 * 60.0F)) * this.windBig;
-        this.zaFlowScale = Math.sin(Math.toRadians(f1 * 60.0F)) * this.windBig;
-        this.swirlPeriod = Math.toRadians(1000.0F + f1 * 3000.0F);
+        this.yd = -startVelocity;
+        float particleRandom = this.random.nextFloat();
+        this.xaFlowScale = Math.cos(Math.toRadians(particleRandom * 60.0F)) * this.windBig;
+        this.zaFlowScale = Math.sin(Math.toRadians(particleRandom * 60.0F)) * this.windBig;
+        this.swirlPeriod = Math.toRadians(1000.0F + particleRandom * 3000.0F);
     }
 
     @Override
@@ -67,22 +64,22 @@ public class FallingLeavesParticle extends SingleQuadParticle {
         }
 
         if (!this.removed) {
-            float f = 300 - this.lifetime;
-            float f1 = Math.min(f / 300.0F, 1.0F);
-            double d0 = 0.0;
-            double d1 = 0.0;
+            float aliveTicks = 300 - this.lifetime;
+            float relativeAge = Math.min(aliveTicks / 300.0F, 1.0F);
+            double xa = 0.0;
+            double za = 0.0;
             if (this.flowAway) {
-                d0 += this.xaFlowScale * Math.pow(f1, 1.25);
-                d1 += this.zaFlowScale * Math.pow(f1, 1.25);
+                xa += this.xaFlowScale * Math.pow(relativeAge, 1.25);
+                za += this.zaFlowScale * Math.pow(relativeAge, 1.25);
             }
 
             if (this.swirl) {
-                d0 += f1 * Math.cos(f1 * this.swirlPeriod) * this.windBig;
-                d1 += f1 * Math.sin(f1 * this.swirlPeriod) * this.windBig;
+                xa += relativeAge * Math.cos(relativeAge * this.swirlPeriod) * this.windBig;
+                za += relativeAge * Math.sin(relativeAge * this.swirlPeriod) * this.windBig;
             }
 
-            this.xd += d0 * 0.0025F;
-            this.zd += d1 * 0.0025F;
+            this.xd += xa * 0.0025F;
+            this.zd += za * 0.0025F;
             this.yd = this.yd - this.gravity;
             this.rotSpeed = this.rotSpeed + this.spinAcceleration / 20.0F;
             this.oRoll = this.roll;
@@ -100,80 +97,71 @@ public class FallingLeavesParticle extends SingleQuadParticle {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class CherryProvider implements ParticleProvider<SimpleParticleType> {
+        public static class CherryProvider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprites;
 
-        public CherryProvider(SpriteSet p_376778_) {
-            this.sprites = p_376778_;
+        public CherryProvider(final SpriteSet sprites) {
+            this.sprites = sprites;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_429629_,
-            ClientLevel p_375913_,
-            double p_375714_,
-            double p_376515_,
-            double p_376801_,
-            double p_378662_,
-            double p_376463_,
-            double p_377178_,
-            RandomSource p_428467_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new FallingLeavesParticle(
-                p_375913_, p_375714_, p_376515_, p_376801_, this.sprites.get(p_428467_), 0.25F, 2.0F, false, true, 1.0F, 0.0F
-            );
+            return new FallingLeavesParticle(level, x, y, z, this.sprites.get(random), 0.25F, 2.0F, false, true, 1.0F, 0.0F);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class PaleOakProvider implements ParticleProvider<SimpleParticleType> {
+        public static class PaleOakProvider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprites;
 
-        public PaleOakProvider(SpriteSet p_378488_) {
-            this.sprites = p_378488_;
+        public PaleOakProvider(final SpriteSet sprites) {
+            this.sprites = sprites;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_423653_,
-            ClientLevel p_377367_,
-            double p_378534_,
-            double p_375460_,
-            double p_376536_,
-            double p_377840_,
-            double p_375925_,
-            double p_378165_,
-            RandomSource p_427922_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new FallingLeavesParticle(
-                p_377367_, p_378534_, p_375460_, p_376536_, this.sprites.get(p_427922_), 0.07F, 10.0F, true, false, 2.0F, 0.021F
-            );
+            return new FallingLeavesParticle(level, x, y, z, this.sprites.get(random), 0.07F, 10.0F, true, false, 2.0F, 0.021F);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class TintedLeavesProvider implements ParticleProvider<ColorParticleOption> {
+        public static class TintedLeavesProvider implements ParticleProvider<ColorParticleOption> {
         private final SpriteSet sprites;
 
-        public TintedLeavesProvider(SpriteSet p_394361_) {
-            this.sprites = p_394361_;
+        public TintedLeavesProvider(final SpriteSet sprites) {
+            this.sprites = sprites;
         }
 
         public Particle createParticle(
-            ColorParticleOption p_391473_,
-            ClientLevel p_391175_,
-            double p_394602_,
-            double p_394318_,
-            double p_392484_,
-            double p_391926_,
-            double p_393741_,
-            double p_395481_,
-            RandomSource p_429124_
+            final ColorParticleOption options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            FallingLeavesParticle fallingleavesparticle = new FallingLeavesParticle(
-                p_391175_, p_394602_, p_394318_, p_392484_, this.sprites.get(p_429124_), 0.07F, 10.0F, true, false, 2.0F, 0.021F
-            );
-            fallingleavesparticle.setColor(p_391473_.getRed(), p_391473_.getGreen(), p_391473_.getBlue());
-            return fallingleavesparticle;
+            FallingLeavesParticle particle = new FallingLeavesParticle(level, x, y, z, this.sprites.get(random), 0.07F, 10.0F, true, false, 2.0F, 0.021F);
+            particle.setColor(options.getRed(), options.getGreen(), options.getBlue());
+            return particle;
         }
     }
 }

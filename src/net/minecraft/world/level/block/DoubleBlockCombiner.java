@@ -12,94 +12,96 @@ import net.minecraft.world.level.block.state.properties.Property;
 
 public class DoubleBlockCombiner {
     public static <S extends BlockEntity> DoubleBlockCombiner.NeighborCombineResult<S> combineWithNeigbour(
-        BlockEntityType<S> p_52823_,
-        Function<BlockState, DoubleBlockCombiner.BlockType> p_52824_,
-        Function<BlockState, Direction> p_52825_,
-        Property<Direction> p_366105_,
-        BlockState p_52827_,
-        LevelAccessor p_52828_,
-        BlockPos p_52829_,
-        BiPredicate<LevelAccessor, BlockPos> p_52830_
+        final BlockEntityType<S> entityType,
+        final Function<BlockState, DoubleBlockCombiner.BlockType> typeResolver,
+        final Function<BlockState, Direction> connectionResolver,
+        final Property<Direction> facingProperty,
+        final BlockState state,
+        final LevelAccessor level,
+        final BlockPos pos,
+        final BiPredicate<LevelAccessor, BlockPos> blockedChecker
     ) {
-        S s = p_52823_.getBlockEntity(p_52828_, p_52829_);
-        if (s == null) {
+        S blockEntity = entityType.getBlockEntity(level, pos);
+        if (blockEntity == null) {
             return DoubleBlockCombiner.Combiner::acceptNone;
-        } else if (p_52830_.test(p_52828_, p_52829_)) {
-            return DoubleBlockCombiner.Combiner::acceptNone;
-        } else {
-            DoubleBlockCombiner.BlockType doubleblockcombiner$blocktype = p_52824_.apply(p_52827_);
-            boolean flag = doubleblockcombiner$blocktype == DoubleBlockCombiner.BlockType.SINGLE;
-            boolean flag1 = doubleblockcombiner$blocktype == DoubleBlockCombiner.BlockType.FIRST;
-            if (flag) {
-                return new DoubleBlockCombiner.NeighborCombineResult.Single<>(s);
-            } else {
-                BlockPos blockpos = p_52829_.relative(p_52825_.apply(p_52827_));
-                BlockState blockstate = p_52828_.getBlockState(blockpos);
-                if (blockstate.is(p_52827_.getBlock())) {
-                    DoubleBlockCombiner.BlockType doubleblockcombiner$blocktype1 = p_52824_.apply(blockstate);
-                    if (doubleblockcombiner$blocktype1 != DoubleBlockCombiner.BlockType.SINGLE
-                        && doubleblockcombiner$blocktype != doubleblockcombiner$blocktype1
-                        && blockstate.getValue(p_366105_) == p_52827_.getValue(p_366105_)) {
-                        if (p_52830_.test(p_52828_, blockpos)) {
-                            return DoubleBlockCombiner.Combiner::acceptNone;
-                        }
+        }
 
-                        S s1 = p_52823_.getBlockEntity(p_52828_, blockpos);
-                        if (s1 != null) {
-                            S s2 = flag1 ? s : s1;
-                            S s3 = flag1 ? s1 : s;
-                            return new DoubleBlockCombiner.NeighborCombineResult.Double<>(s2, s3);
-                        }
-                    }
+        if (blockedChecker.test(level, pos)) {
+            return DoubleBlockCombiner.Combiner::acceptNone;
+        }
+
+        DoubleBlockCombiner.BlockType type = typeResolver.apply(state);
+        boolean single = type == DoubleBlockCombiner.BlockType.SINGLE;
+        boolean isFirst = type == DoubleBlockCombiner.BlockType.FIRST;
+        if (single) {
+            return new DoubleBlockCombiner.NeighborCombineResult.Single<>(blockEntity);
+        }
+
+        BlockPos neighborPos = pos.relative(connectionResolver.apply(state));
+        BlockState neighbourState = level.getBlockState(neighborPos);
+        if (neighbourState.is(state.getBlock())) {
+            DoubleBlockCombiner.BlockType neighbourType = typeResolver.apply(neighbourState);
+            if (neighbourType != DoubleBlockCombiner.BlockType.SINGLE
+                && type != neighbourType
+                && neighbourState.getValue(facingProperty) == state.getValue(facingProperty)) {
+                if (blockedChecker.test(level, neighborPos)) {
+                    return DoubleBlockCombiner.Combiner::acceptNone;
                 }
 
-                return new DoubleBlockCombiner.NeighborCombineResult.Single<>(s);
+                S neighbour = entityType.getBlockEntity(level, neighborPos);
+                if (neighbour != null) {
+                    S first = isFirst ? blockEntity : neighbour;
+                    S second = isFirst ? neighbour : blockEntity;
+                    return new DoubleBlockCombiner.NeighborCombineResult.Double<>(first, second);
+                }
             }
         }
+
+        return new DoubleBlockCombiner.NeighborCombineResult.Single<>(blockEntity);
     }
 
-    public static enum BlockType {
+    public enum BlockType {
         SINGLE,
         FIRST,
         SECOND;
     }
 
     public interface Combiner<S, T> {
-        T acceptDouble(S p_52843_, S p_52844_);
+        T acceptDouble(S first, S second);
 
-        T acceptSingle(S p_52842_);
+        T acceptSingle(S single);
 
         T acceptNone();
     }
 
     public interface NeighborCombineResult<S> {
-        <T> T apply(DoubleBlockCombiner.Combiner<? super S, T> p_52845_);
+        <T> T apply(DoubleBlockCombiner.Combiner<? super S, T> callback);
 
-        public static final class Double<S> implements DoubleBlockCombiner.NeighborCombineResult<S> {
+        final class Double<S> implements DoubleBlockCombiner.NeighborCombineResult<S> {
             private final S first;
             private final S second;
 
-            public Double(S p_52849_, S p_52850_) {
-                this.first = p_52849_;
-                this.second = p_52850_;
+            public Double(final S first, final S second) {
+                this.first = first;
+                this.second = second;
             }
 
             @Override
-            public <T> T apply(DoubleBlockCombiner.Combiner<? super S, T> p_52852_) {
-                return p_52852_.acceptDouble(this.first, this.second);
+            public <T> T apply(final DoubleBlockCombiner.Combiner<? super S, T> callback) {
+                return callback.acceptDouble(this.first, this.second);
             }
         }
 
-        public static final class Single<S> implements DoubleBlockCombiner.NeighborCombineResult<S> {
+        final class Single<S> implements DoubleBlockCombiner.NeighborCombineResult<S> {
             private final S single;
 
-            public Single(S p_52855_) {
-                this.single = p_52855_;
+            public Single(final S single) {
+                this.single = single;
             }
 
             @Override
-            public <T> T apply(DoubleBlockCombiner.Combiner<? super S, T> p_52857_) {
-                return p_52857_.acceptSingle(this.single);
+            public <T> T apply(final DoubleBlockCombiner.Combiner<? super S, T> callback) {
+                return callback.acceptSingle(this.single);
             }
         }
     }

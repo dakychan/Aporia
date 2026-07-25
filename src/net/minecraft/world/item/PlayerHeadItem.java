@@ -7,15 +7,15 @@ import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.Block;
 
 public class PlayerHeadItem extends StandingAndWallBlockItem {
-    public PlayerHeadItem(Block p_42971_, Block p_42972_, Item.Properties p_42973_) {
-        super(p_42971_, p_42972_, Direction.DOWN, p_42973_);
+    public PlayerHeadItem(final Block block, final Block wallBlock, final Item.Properties properties) {
+        super(block, wallBlock, Direction.DOWN, properties);
     }
 
     @Override
-    public Component getName(ItemStack p_42977_) {
-        ResolvableProfile resolvableprofile = p_42977_.get(DataComponents.PROFILE);
-        return (Component)(resolvableprofile != null && resolvableprofile.name().isPresent()
-            ? Component.translatable(this.descriptionId + ".named", resolvableprofile.name().get())
-            : super.getName(p_42977_));
+    public Component getName(final ItemStack itemStack) {
+        ResolvableProfile profile = itemStack.get(DataComponents.PROFILE);
+        return profile != null && profile.name().isPresent()
+            ? Component.translatable(this.descriptionId + ".named", profile.name().get())
+            : super.getName(itemStack);
     }
 }

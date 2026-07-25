@@ -1,52 +1,78 @@
 package net.minecraft.client.renderer.entity;
 
+import com.google.common.collect.Maps;
+import java.util.Map;
+import net.minecraft.client.model.animal.rabbit.AdultRabbitModel;
+import net.minecraft.client.model.animal.rabbit.BabyRabbitModel;
 import net.minecraft.client.model.animal.rabbit.RabbitModel;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.state.RabbitRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.rabbit.Rabbit;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class RabbitRenderer extends AgeableMobRenderer<Rabbit, RabbitRenderState, RabbitModel> {
-    private static final Identifier RABBIT_BROWN_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/brown.png");
-    private static final Identifier RABBIT_WHITE_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/white.png");
-    private static final Identifier RABBIT_BLACK_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/black.png");
-    private static final Identifier RABBIT_GOLD_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/gold.png");
-    private static final Identifier RABBIT_SALT_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/salt.png");
-    private static final Identifier RABBIT_WHITE_SPLOTCHED_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/white_splotched.png");
-    private static final Identifier RABBIT_TOAST_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/toast.png");
-    private static final Identifier RABBIT_EVIL_LOCATION = Identifier.withDefaultNamespace("textures/entity/rabbit/caerbannog.png");
+    private static final Identifier TOAST = Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_toast.png");
+    private static final Identifier TOAST_BABY = Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_toast_baby.png");
+    private static final Map<Rabbit.Variant, Identifier> RABBIT_LOCATIONS = Maps.newEnumMap(
+        Map.of(
+            Rabbit.Variant.BROWN,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_brown.png"),
+            Rabbit.Variant.WHITE_SPLOTCHED,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_white_splotched.png"),
+            Rabbit.Variant.EVIL,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_caerbannog.png"),
+            Rabbit.Variant.WHITE,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_white.png"),
+            Rabbit.Variant.GOLD,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_gold.png"),
+            Rabbit.Variant.BLACK,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_black.png"),
+            Rabbit.Variant.SALT,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_salt.png")
+        )
+    );
+    private static final Map<Rabbit.Variant, Identifier> BABY_RABBIT_LOCATIONS = Maps.newEnumMap(
+        Map.of(
+            Rabbit.Variant.BROWN,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_brown_baby.png"),
+            Rabbit.Variant.WHITE_SPLOTCHED,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_white_splotched_baby.png"),
+            Rabbit.Variant.EVIL,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_caerbannog_baby.png"),
+            Rabbit.Variant.WHITE,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_white_baby.png"),
+            Rabbit.Variant.GOLD,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_gold_baby.png"),
+            Rabbit.Variant.BLACK,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_black_baby.png"),
+            Rabbit.Variant.SALT,
+            Identifier.withDefaultNamespace("textures/entity/rabbit/rabbit_salt_baby.png")
+        )
+    );
 
-    public RabbitRenderer(EntityRendererProvider.Context p_174360_) {
-        super(p_174360_, new RabbitModel(p_174360_.bakeLayer(ModelLayers.RABBIT)), new RabbitModel(p_174360_.bakeLayer(ModelLayers.RABBIT_BABY)), 0.3F);
+    public RabbitRenderer(final EntityRendererProvider.Context context) {
+        super(context, new AdultRabbitModel(context.bakeLayer(ModelLayers.RABBIT)), new BabyRabbitModel(context.bakeLayer(ModelLayers.RABBIT_BABY)), 0.3F);
     }
 
-    public Identifier getTextureLocation(RabbitRenderState p_362493_) {
-        if (p_362493_.isToast) {
-            return RABBIT_TOAST_LOCATION;
-        } else {
-            return switch (p_362493_.variant) {
-                case BROWN -> RABBIT_BROWN_LOCATION;
-                case WHITE -> RABBIT_WHITE_LOCATION;
-                case BLACK -> RABBIT_BLACK_LOCATION;
-                case GOLD -> RABBIT_GOLD_LOCATION;
-                case SALT -> RABBIT_SALT_LOCATION;
-                case WHITE_SPLOTCHED -> RABBIT_WHITE_SPLOTCHED_LOCATION;
-                case EVIL -> RABBIT_EVIL_LOCATION;
-            };
+    public Identifier getTextureLocation(final RabbitRenderState state) {
+        if (state.isToast) {
+            return state.isBaby ? TOAST_BABY : TOAST;
         }
+
+        Map<Rabbit.Variant, Identifier> locations = state.isBaby ? BABY_RABBIT_LOCATIONS : RABBIT_LOCATIONS;
+        return locations.get(state.variant);
     }
 
     public RabbitRenderState createRenderState() {
         return new RabbitRenderState();
     }
 
-    public void extractRenderState(Rabbit p_457237_, RabbitRenderState p_365846_, float p_365965_) {
-        super.extractRenderState(p_457237_, p_365846_, p_365965_);
-        p_365846_.jumpCompletion = p_457237_.getJumpCompletion(p_365965_);
-        p_365846_.isToast = checkMagicName(p_457237_, "Toast");
-        p_365846_.variant = p_457237_.getVariant();
+    public void extractRenderState(final Rabbit entity, final RabbitRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.jumpCompletion = entity.getJumpCompletion(partialTicks);
+        state.isToast = checkMagicName(entity, "Toast");
+        state.variant = entity.getVariant();
+        state.hopAnimationState.copyFrom(entity.hopAnimationState);
+        state.idleHeadTiltAnimationState.copyFrom(entity.idleHeadTiltAnimationState);
     }
 }

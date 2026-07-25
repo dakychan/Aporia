@@ -38,102 +38,109 @@ public class CactusBlock extends Block {
         return CODEC;
     }
 
-    protected CactusBlock(BlockBehaviour.Properties p_51136_) {
-        super(p_51136_);
+    protected CactusBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0));
     }
 
     @Override
-    protected void tick(BlockState p_220908_, ServerLevel p_220909_, BlockPos p_220910_, RandomSource p_220911_) {
-        if (!p_220908_.canSurvive(p_220909_, p_220910_)) {
-            p_220909_.destroyBlock(p_220910_, true);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!state.canSurvive(level, pos)) {
+            level.destroyBlock(pos, true);
         }
     }
 
     @Override
-    protected void randomTick(BlockState p_220913_, ServerLevel p_220914_, BlockPos p_220915_, RandomSource p_220916_) {
-        BlockPos blockpos = p_220915_.above();
-        if (p_220914_.isEmptyBlock(blockpos)) {
-            int i = 1;
-            int j = p_220913_.getValue(AGE);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        BlockPos above = pos.above();
+        if (level.isEmptyBlock(above)) {
+            int height = 1;
+            int age = state.getValue(AGE);
 
-            while (p_220914_.getBlockState(p_220915_.below(i)).is(this)) {
-                if (++i == 3 && j == 15) {
+            while (level.getBlockState(pos.below(height)).is(this)) {
+                if (++height == 3 && age == 15) {
                     return;
                 }
             }
 
-            if (j == 8 && this.canSurvive(this.defaultBlockState(), p_220914_, p_220915_.above())) {
-                double d0 = i >= 3 ? 0.25 : 0.1;
-                if (p_220916_.nextDouble() <= d0) {
-                    p_220914_.setBlockAndUpdate(blockpos, Blocks.CACTUS_FLOWER.defaultBlockState());
+            if (age == 8 && this.canSurvive(this.defaultBlockState(), level, pos.above())) {
+                double chanceToGrowFlower = height >= 3 ? 0.25 : 0.1;
+                if (random.nextDouble() <= chanceToGrowFlower) {
+                    level.setBlockAndUpdate(above, Blocks.CACTUS_FLOWER.defaultBlockState());
                 }
-            } else if (j == 15 && i < 3) {
-                p_220914_.setBlockAndUpdate(blockpos, this.defaultBlockState());
-                BlockState blockstate = p_220913_.setValue(AGE, 0);
-                p_220914_.setBlock(p_220915_, blockstate, 260);
-                p_220914_.neighborChanged(blockstate, blockpos, this, null, false);
+            } else if (age == 15 && height < 3) {
+                level.setBlockAndUpdate(above, this.defaultBlockState());
+                BlockState aboveBlock = state.setValue(AGE, 0);
+                level.setBlock(pos, aboveBlock, 260);
+                level.neighborChanged(aboveBlock, above, this, null, false);
             }
 
-            if (j < 15) {
-                p_220914_.setBlock(p_220915_, p_220913_.setValue(AGE, j + 1), 260);
+            if (age < 15) {
+                level.setBlock(pos, state.setValue(AGE, age + 1), 260);
             }
         }
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_51176_, BlockGetter p_51177_, BlockPos p_51178_, CollisionContext p_51179_) {
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE_COLLISION;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_51171_, BlockGetter p_51172_, BlockPos p_51173_, CollisionContext p_51174_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_51157_,
-        LevelReader p_368068_,
-        ScheduledTickAccess p_362750_,
-        BlockPos p_51161_,
-        Direction p_51158_,
-        BlockPos p_51162_,
-        BlockState p_51159_,
-        RandomSource p_362850_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!p_51157_.canSurvive(p_368068_, p_51161_)) {
-            p_362750_.scheduleTick(p_51161_, this, 1);
+        if (!state.canSurvive(level, pos)) {
+            ticks.scheduleTick(pos, this, 1);
         }
 
-        return super.updateShape(p_51157_, p_368068_, p_362750_, p_51161_, p_51158_, p_51162_, p_51159_, p_362850_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_51153_, LevelReader p_51154_, BlockPos p_51155_) {
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
-            BlockState blockstate = p_51154_.getBlockState(p_51155_.relative(direction));
-            if (blockstate.isSolid() || p_51154_.getFluidState(p_51155_.relative(direction)).is(FluidTags.LAVA)) {
+            BlockState neighbor = level.getBlockState(pos.relative(direction));
+            if (neighbor.isSolid() || level.getFluidState(pos.relative(direction)).is(FluidTags.LAVA)) {
                 return false;
             }
         }
 
-        BlockState blockstate1 = p_51154_.getBlockState(p_51155_.below());
-        return (blockstate1.is(Blocks.CACTUS) || blockstate1.is(BlockTags.SAND)) && !p_51154_.getBlockState(p_51155_.above()).liquid();
+        BlockState belowState = level.getBlockState(pos.below());
+        return (belowState.is(this) || belowState.is(BlockTags.SUPPORTS_CACTUS)) && !level.getBlockState(pos.above()).liquid();
     }
 
     @Override
-    protected void entityInside(BlockState p_51148_, Level p_51149_, BlockPos p_51150_, Entity p_51151_, InsideBlockEffectApplier p_393274_, boolean p_432042_) {
-        p_51151_.hurt(p_51149_.damageSources().cactus(), 1.0F);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        entity.hurt(level.damageSources().cactus(), 1.0F);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51164_) {
-        p_51164_.add(AGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(AGE);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_51143_, PathComputationType p_51146_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

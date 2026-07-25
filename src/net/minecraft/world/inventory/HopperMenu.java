@@ -10,56 +10,56 @@ public class HopperMenu extends AbstractContainerMenu {
     public static final int CONTAINER_SIZE = 5;
     private final Container hopper;
 
-    public HopperMenu(int p_39640_, Inventory p_39641_) {
-        this(p_39640_, p_39641_, new SimpleContainer(5));
+    public HopperMenu(final int containerId, final Inventory inventory) {
+        this(containerId, inventory, new SimpleContainer(5));
     }
 
-    public HopperMenu(int p_39643_, Inventory p_39644_, Container p_39645_) {
-        super(MenuType.HOPPER, p_39643_);
-        this.hopper = p_39645_;
-        checkContainerSize(p_39645_, 5);
-        p_39645_.startOpen(p_39644_.player);
+    public HopperMenu(final int containerId, final Inventory inventory, final Container hopper) {
+        super(MenuType.HOPPER, containerId);
+        this.hopper = hopper;
+        checkContainerSize(hopper, 5);
+        hopper.startOpen(inventory.player);
 
-        for (int i = 0; i < 5; i++) {
-            this.addSlot(new Slot(p_39645_, i, 44 + i * 18, 20));
+        for (int x = 0; x < 5; x++) {
+            this.addSlot(new Slot(hopper, x, 44 + x * 18, 20));
         }
 
-        this.addStandardInventorySlots(p_39644_, 8, 51);
+        this.addStandardInventorySlots(inventory, 8, 51);
     }
 
     @Override
-    public boolean stillValid(Player p_39647_) {
-        return this.hopper.stillValid(p_39647_);
+    public boolean stillValid(final Player player) {
+        return this.hopper.stillValid(player);
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_39651_, int p_39652_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_39652_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_39652_ < this.hopper.getContainerSize()) {
-                if (!this.moveItemStackTo(itemstack1, this.hopper.getContainerSize(), this.slots.size(), true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex < this.hopper.getContainerSize()) {
+                if (!this.moveItemStackTo(stack, this.hopper.getContainerSize(), this.slots.size(), true)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 0, this.hopper.getContainerSize(), false)) {
+            } else if (!this.moveItemStackTo(stack, 0, this.hopper.getContainerSize(), false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
         }
 
-        return itemstack;
+        return clicked;
     }
 
     @Override
-    public void removed(Player p_39649_) {
-        super.removed(p_39649_);
-        this.hopper.stopOpen(p_39649_);
+    public void removed(final Player player) {
+        super.removed(player);
+        this.hopper.stopOpen(player);
     }
 }

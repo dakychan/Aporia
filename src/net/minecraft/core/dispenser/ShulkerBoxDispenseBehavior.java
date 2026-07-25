@@ -4,7 +4,6 @@ import com.mojang.logging.LogUtils;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.DirectionalPlaceContext;
 import net.minecraft.world.level.block.DispenserBlock;
@@ -14,23 +13,20 @@ public class ShulkerBoxDispenseBehavior extends OptionalDispenseItemBehavior {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
-    protected ItemStack execute(BlockSource p_123587_, ItemStack p_123588_) {
+    protected ItemStack execute(final BlockSource source, final ItemStack dispensed) {
         this.setSuccess(false);
-        Item item = p_123588_.getItem();
-        if (item instanceof BlockItem) {
-            Direction direction = p_123587_.state().getValue(DispenserBlock.FACING);
-            BlockPos blockpos = p_123587_.pos().relative(direction);
-            Direction direction1 = p_123587_.level().isEmptyBlock(blockpos.below()) ? direction : Direction.UP;
+        if (dispensed.getItem() instanceof BlockItem blockItem) {
+            Direction facing = source.state().getValue(DispenserBlock.FACING);
+            BlockPos relativePos = source.pos().relative(facing);
+            Direction clickedFace = source.level().isEmptyBlock(relativePos.below()) ? facing : Direction.UP;
 
             try {
-                this.setSuccess(
-                    ((BlockItem)item).place(new DirectionalPlaceContext(p_123587_.level(), blockpos, direction, p_123588_, direction1)).consumesAction()
-                );
-            } catch (Exception exception) {
-                LOGGER.error("Error trying to place shulker box at {}", blockpos, exception);
+                this.setSuccess(blockItem.place(new DirectionalPlaceContext(source.level(), relativePos, facing, dispensed, clickedFace)).consumesAction());
+            } catch (Exception e) {
+                LOGGER.error("Error trying to place shulker box at {}", relativePos, e);
             }
         }
 
-        return p_123588_;
+        return dispensed;
     }
 }

@@ -1,23 +1,18 @@
 package net.minecraft.client.input;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record MouseButtonEvent(double x, double y, MouseButtonInfo buttonInfo) implements InputWithModifiers {
     @Override
     public int input() {
         return this.button();
     }
 
-    @MouseButtonInfo.MouseButton
-    public int button() {
+    public @MouseButtonInfo.MouseButton int button() {
         return this.buttonInfo().button();
     }
 
-    @InputWithModifiers.Modifiers
     @Override
-    public int modifiers() {
+    public @InputWithModifiers.Modifiers int modifiers() {
         return this.buttonInfo().modifiers();
     }
 }

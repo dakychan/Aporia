@@ -6,27 +6,24 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BubbleParticle extends SingleQuadParticle {
-    BubbleParticle(
-        ClientLevel p_105773_,
-        double p_105774_,
-        double p_105775_,
-        double p_105776_,
-        double p_105777_,
-        double p_105778_,
-        double p_105779_,
-        TextureAtlasSprite p_428509_
+    private BubbleParticle(
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xa,
+        final double ya,
+        final double za,
+        final TextureAtlasSprite sprite
     ) {
-        super(p_105773_, p_105774_, p_105775_, p_105776_, p_428509_);
+        super(level, x, y, z, sprite);
         this.setSize(0.02F, 0.02F);
         this.quadSize = this.quadSize * (this.random.nextFloat() * 0.6F + 0.2F);
-        this.xd = p_105777_ * 0.2F + (this.random.nextFloat() * 2.0F - 1.0F) * 0.02F;
-        this.yd = p_105778_ * 0.2F + (this.random.nextFloat() * 2.0F - 1.0F) * 0.02F;
-        this.zd = p_105779_ * 0.2F + (this.random.nextFloat() * 2.0F - 1.0F) * 0.02F;
+        this.xd = xa * 0.2F + (this.random.nextFloat() * 2.0F - 1.0F) * 0.02F;
+        this.yd = ya * 0.2F + (this.random.nextFloat() * 2.0F - 1.0F) * 0.02F;
+        this.zd = za * 0.2F + (this.random.nextFloat() * 2.0F - 1.0F) * 0.02F;
         this.lifetime = (int)(8.0 / (this.random.nextFloat() * 0.8 + 0.2));
     }
 
@@ -54,26 +51,25 @@ public class BubbleParticle extends SingleQuadParticle {
         return SingleQuadParticle.Layer.OPAQUE;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider implements ParticleProvider<SimpleParticleType> {
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public Provider(SpriteSet p_105793_) {
-            this.sprite = p_105793_;
+        public Provider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_429804_,
-            ClientLevel p_105796_,
-            double p_105797_,
-            double p_105798_,
-            double p_105799_,
-            double p_105800_,
-            double p_105801_,
-            double p_105802_,
-            RandomSource p_431259_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new BubbleParticle(p_105796_, p_105797_, p_105798_, p_105799_, p_105800_, p_105801_, p_105802_, this.sprite.get(p_431259_));
+            return new BubbleParticle(level, x, y, z, xAux, yAux, zAux, this.sprite.get(random));
         }
     }
 }

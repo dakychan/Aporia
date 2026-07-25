@@ -3,7 +3,6 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.DSL.TypeReference;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
@@ -18,13 +17,19 @@ public class AddFieldFix extends DataFix {
     private final String[] path;
     private final Function<Dynamic<?>, Dynamic<?>> fieldGenerator;
 
-    public AddFieldFix(Schema p_424069_, TypeReference p_424274_, String p_424135_, Function<Dynamic<?>, Dynamic<?>> p_428082_, String... p_425569_) {
-        super(p_424069_, false);
-        this.name = "Adding field `" + p_424135_ + "` to type `" + p_424274_.typeName().toLowerCase(Locale.ROOT) + "`";
-        this.type = p_424274_;
-        this.fieldName = p_424135_;
-        this.path = p_425569_;
-        this.fieldGenerator = p_428082_;
+    public AddFieldFix(
+        final Schema outputSchema,
+        final TypeReference type,
+        final String fieldName,
+        final Function<Dynamic<?>, Dynamic<?>> fieldGenerator,
+        final String... path
+    ) {
+        super(outputSchema, false);
+        this.name = "Adding field `" + fieldName + "` to type `" + type.typeName().toLowerCase(Locale.ROOT) + "`";
+        this.type = type;
+        this.fieldName = fieldName;
+        this.path = path;
+        this.fieldGenerator = fieldGenerator;
     }
 
     @Override
@@ -33,16 +38,16 @@ public class AddFieldFix extends DataFix {
             this.name,
             this.getInputSchema().getType(this.type),
             this.getOutputSchema().getType(this.type),
-            p_430625_ -> p_430625_.update(DSL.remainderFinder(), p_431277_ -> this.addField(p_431277_, 0))
+            input -> input.update(DSL.remainderFinder(), dynamic -> this.addField(dynamic, 0))
         );
     }
 
-    private Dynamic<?> addField(Dynamic<?> p_429854_, int p_422386_) {
-        if (p_422386_ >= this.path.length) {
-            return p_429854_.set(this.fieldName, this.fieldGenerator.apply(p_429854_));
-        } else {
-            Optional<? extends Dynamic<?>> optional = p_429854_.get(this.path[p_422386_]).result();
-            return optional.isEmpty() ? p_429854_ : this.addField((Dynamic<?>)optional.get(), p_422386_ + 1);
+    private Dynamic<?> addField(final Dynamic<?> dynamic, final int pathIndex) {
+        if (pathIndex >= this.path.length) {
+            return dynamic.set(this.fieldName, this.fieldGenerator.apply(dynamic));
         }
+
+        Optional<? extends Dynamic<?>> field = dynamic.get(this.path[pathIndex]).result();
+        return field.isEmpty() ? dynamic : this.addField((Dynamic<?>)field.get(), pathIndex + 1);
     }
 }

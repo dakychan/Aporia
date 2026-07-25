@@ -13,20 +13,20 @@ public class DragonChargePlayerPhase extends AbstractDragonPhaseInstance {
     private @Nullable Vec3 targetLocation;
     private int timeSinceCharge;
 
-    public DragonChargePlayerPhase(EnderDragon p_31206_) {
-        super(p_31206_);
+    public DragonChargePlayerPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
-    public void doServerTick(ServerLevel p_369998_) {
+    public void doServerTick(final ServerLevel level) {
         if (this.targetLocation == null) {
             LOGGER.warn("Aborting charge player as no target was set.");
             this.dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
         } else if (this.timeSinceCharge > 0 && this.timeSinceCharge++ >= 10) {
             this.dragon.getPhaseManager().setPhase(EnderDragonPhase.HOLDING_PATTERN);
         } else {
-            double d0 = this.targetLocation.distanceToSqr(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
-            if (d0 < 100.0 || d0 > 22500.0 || this.dragon.horizontalCollision || this.dragon.verticalCollision) {
+            double distToTarget = this.targetLocation.distanceToSqr(this.dragon.getX(), this.dragon.getY(), this.dragon.getZ());
+            if (distToTarget < 100.0 || distToTarget > 22500.0 || this.dragon.horizontalCollision || this.dragon.verticalCollision) {
                 this.timeSinceCharge++;
             }
         }
@@ -38,8 +38,8 @@ public class DragonChargePlayerPhase extends AbstractDragonPhaseInstance {
         this.timeSinceCharge = 0;
     }
 
-    public void setTarget(Vec3 p_31208_) {
-        this.targetLocation = p_31208_;
+    public void setTarget(final Vec3 target) {
+        this.targetLocation = target;
     }
 
     @Override

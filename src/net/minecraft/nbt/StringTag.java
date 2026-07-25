@@ -8,25 +8,25 @@ import java.util.Optional;
 public record StringTag(String value) implements PrimitiveTag {
     private static final int SELF_SIZE_IN_BYTES = 36;
     public static final TagType<StringTag> TYPE = new TagType.VariableSize<StringTag>() {
-        public StringTag load(DataInput p_129315_, NbtAccounter p_129317_) throws IOException {
-            return StringTag.valueOf(readAccounted(p_129315_, p_129317_));
+        public StringTag load(final DataInput input, final NbtAccounter accounter) throws IOException {
+            return StringTag.valueOf(readAccounted(input, accounter));
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197570_, StreamTagVisitor p_197571_, NbtAccounter p_301725_) throws IOException {
-            return p_197571_.visit(readAccounted(p_197570_, p_301725_));
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            return output.visit(readAccounted(input, accounter));
         }
 
-        private static String readAccounted(DataInput p_301750_, NbtAccounter p_301732_) throws IOException {
-            p_301732_.accountBytes(36L);
-            String s = p_301750_.readUTF();
-            p_301732_.accountBytes(2L, s.length());
-            return s;
+        private static String readAccounted(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(36L);
+            String data = input.readUTF();
+            accounter.accountBytes(2L, data.length());
+            return data;
         }
 
         @Override
-        public void skip(DataInput p_197568_, NbtAccounter p_301752_) throws IOException {
-            StringTag.skipString(p_197568_);
+        public void skip(final DataInput input, final NbtAccounter accounter) throws IOException {
+            StringTag.skipString(input);
         }
 
         @Override
@@ -46,21 +46,20 @@ public record StringTag(String value) implements PrimitiveTag {
     private static final char NOT_SET = '\u0000';
 
     @Deprecated(forRemoval = true)
-    public StringTag(String value) {
-        this.value = value;
+    public StringTag {
     }
 
-    public static void skipString(DataInput p_197564_) throws IOException {
-        p_197564_.skipBytes(p_197564_.readUnsignedShort());
+    public static void skipString(final DataInput input) throws IOException {
+        input.skipBytes(input.readUnsignedShort());
     }
 
-    public static StringTag valueOf(String p_129298_) {
-        return p_129298_.isEmpty() ? EMPTY : new StringTag(p_129298_);
+    public static StringTag valueOf(final String data) {
+        return data.isEmpty() ? EMPTY : new StringTag(data);
     }
 
     @Override
-    public void write(DataOutput p_129296_) throws IOException {
-        p_129296_.writeUTF(this.value);
+    public void write(final DataOutput output) throws IOException {
+        output.writeUTF(this.value);
     }
 
     @Override
@@ -80,9 +79,9 @@ public record StringTag(String value) implements PrimitiveTag {
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitString(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitString(this);
+        return visitor.build();
     }
 
     public StringTag copy() {
@@ -95,84 +94,84 @@ public record StringTag(String value) implements PrimitiveTag {
     }
 
     @Override
-    public void accept(TagVisitor p_178154_) {
-        p_178154_.visitString(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitString(this);
     }
 
-    public static String quoteAndEscape(String p_129304_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        quoteAndEscape(p_129304_, stringbuilder);
-        return stringbuilder.toString();
+    public static String quoteAndEscape(final String input) {
+        StringBuilder result = new StringBuilder();
+        quoteAndEscape(input, result);
+        return result.toString();
     }
 
-    public static void quoteAndEscape(String p_395036_, StringBuilder p_397484_) {
-        int i = p_397484_.length();
-        p_397484_.append(' ');
-        char c0 = 0;
+    public static void quoteAndEscape(final String input, final StringBuilder result) {
+        int quoteMarkIndex = result.length();
+        result.append(' ');
+        char quote = 0;
 
-        for (int j = 0; j < p_395036_.length(); j++) {
-            char c1 = p_395036_.charAt(j);
-            if (c1 == '\\') {
-                p_397484_.append("\\\\");
-            } else if (c1 != '"' && c1 != '\'') {
-                String s = SnbtGrammar.escapeControlCharacters(c1);
-                if (s != null) {
-                    p_397484_.append('\\');
-                    p_397484_.append(s);
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c == '\\') {
+                result.append("\\\\");
+            } else if (c != '"' && c != '\'') {
+                String escaped = SnbtGrammar.escapeControlCharacters(c);
+                if (escaped != null) {
+                    result.append('\\');
+                    result.append(escaped);
                 } else {
-                    p_397484_.append(c1);
+                    result.append(c);
                 }
             } else {
-                if (c0 == 0) {
-                    c0 = (char)(c1 == '"' ? 39 : 34);
+                if (quote == 0) {
+                    quote = (char)(c == '"' ? 39 : 34);
                 }
 
-                if (c0 == c1) {
-                    p_397484_.append('\\');
+                if (quote == c) {
+                    result.append('\\');
                 }
 
-                p_397484_.append(c1);
+                result.append(c);
             }
         }
 
-        if (c0 == 0) {
-            c0 = '"';
+        if (quote == 0) {
+            quote = '"';
         }
 
-        p_397484_.setCharAt(i, c0);
-        p_397484_.append(c0);
+        result.setCharAt(quoteMarkIndex, quote);
+        result.append(quote);
     }
 
-    public static String escapeWithoutQuotes(String p_409290_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        escapeWithoutQuotes(p_409290_, stringbuilder);
-        return stringbuilder.toString();
+    public static String escapeWithoutQuotes(final String input) {
+        StringBuilder result = new StringBuilder();
+        escapeWithoutQuotes(input, result);
+        return result.toString();
     }
 
-    public static void escapeWithoutQuotes(String p_409263_, StringBuilder p_408506_) {
-        for (int i = 0; i < p_409263_.length(); i++) {
-            char c0 = p_409263_.charAt(i);
-            switch (c0) {
+    public static void escapeWithoutQuotes(final String input, final StringBuilder result) {
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            switch (c) {
                 case '"':
                 case '\'':
                 case '\\':
-                    p_408506_.append('\\');
-                    p_408506_.append(c0);
+                    result.append('\\');
+                    result.append(c);
                     break;
                 default:
-                    String s = SnbtGrammar.escapeControlCharacters(c0);
-                    if (s != null) {
-                        p_408506_.append('\\');
-                        p_408506_.append(s);
+                    String escaped = SnbtGrammar.escapeControlCharacters(c);
+                    if (escaped != null) {
+                        result.append('\\');
+                        result.append(escaped);
                     } else {
-                        p_408506_.append(c0);
+                        result.append(c);
                     }
             }
         }
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197566_) {
-        return p_197566_.visit(this.value);
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
+        return visitor.visit(this.value);
     }
 }

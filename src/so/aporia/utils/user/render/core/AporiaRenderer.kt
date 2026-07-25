@@ -1,9 +1,14 @@
 package so.aporia.utils.user.render.core
 
+import com.mojang.blaze3d.IndexType
+import com.mojang.blaze3d.PrimitiveTopology
 import com.mojang.blaze3d.buffers.GpuBuffer
+import com.mojang.blaze3d.pipeline.BindGroupLayout
 import com.mojang.blaze3d.pipeline.BlendFunction
+import com.mojang.blaze3d.pipeline.ColorTargetState
+import com.mojang.blaze3d.pipeline.DepthStencilState
 import com.mojang.blaze3d.pipeline.RenderPipeline
-import com.mojang.blaze3d.platform.DepthTestFunction
+import com.mojang.blaze3d.platform.CompareOp
 import com.mojang.blaze3d.shaders.UniformType
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.GpuTextureView
@@ -12,7 +17,10 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat
 import com.mojang.blaze3d.vertex.VertexFormat
 import net.minecraft.client.Minecraft
 import net.minecraft.resources.Identifier
+import net.minecraft.world.phys.Vec3
 import so.aporia.Aporia
+import so.aporia.utils.user.render.render3d.AporiaRenderer3D
+import so.aporia.utils.user.whois.WhoIs
 import so.aporia.utils.user.logger.Logger
 import org.joml.Matrix4f
 import java.io.InputStream
@@ -20,7 +28,9 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.file.Path
 import java.util.OptionalDouble
-import java.util.OptionalInt
+import com.mojang.blaze3d.vertex.ByteBufferBuilder
+import org.joml.Vector4fc
+import java.util.Optional
 
 object AporiaRenderer {
 
@@ -31,6 +41,7 @@ object AporiaRenderer {
     // ── 3D projection matrices (set by GameRenderer) ──
     @JvmField var worldProjMatrix = Matrix4f()
     @JvmField var worldViewMatrix = Matrix4f()
+    @JvmField var savedCameraPos: Vec3? = null
 
     // ── Entity glow ──
     private var entityGlowPipeline: RenderPipeline? = null
@@ -53,7 +64,30 @@ object AporiaRenderer {
 
     // ── Depth sorting ──
     fun depth(z: Float) { shapes.depth(z) }
-    fun flush() { shapes.flush() }
+
+    // ── Flush hooks (set by subsystems during init) ──
+    var fontFlush: Runnable? = null
+
+    fun flush() {
+        shapes.flush()
+        pixels.flush()
+        fontFlush?.run()
+    }
+
+    fun close() {
+        shapes.close()
+        pixels.close()
+        BlurRenderer.close()
+        AporiaRenderer3D.INSTANCE.cleanup()
+        so.aporia.utils.files.impl.ConfigFile.stopAutoSave()
+        WhoIs.shutdown()
+        Aporia.FONTS.close()
+        entityGlowVBO?.close(); entityGlowVBO = null
+        entityGlowMVP?.close(); entityGlowMVP = null
+        entityGlowParams?.close(); entityGlowParams = null
+        entityGlowIBO?.close(); entityGlowIBO = null
+        fontFlush = null
+    }
 
     // ── Init ──
 
@@ -67,12 +101,12 @@ object AporiaRenderer {
             .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/entity_glow"))
             .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/entity_glow"))
             .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/entity_glow"))
-            .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-            .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
-            .withVertexFormat(DefaultVertexFormat.NEW_ENTITY, VertexFormat.Mode.TRIANGLES)
-            .withBlend(BlendFunction.TRANSLUCENT)
-            .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-            .withDepthWrite(false).withCull(false).build()
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER).build())
+            .withBindGroupLayout(BindGroupLayout.builder().withUniform("DrawParams", UniformType.UNIFORM_BUFFER).build())
+            .withVertexBinding(0, DefaultVertexFormat.ENTITY).withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+            .withColorTargetState(ColorTargetState(BlendFunction.TRANSLUCENT))
+            .withDepthStencilState(DepthStencilState(CompareOp.ALWAYS_PASS, false))
+            .withCull(false).build()
 
         entityGlowVBO = device.createBuffer({ -> "aporia:entity_glow_vbo" },
             GpuBuffer.USAGE_VERTEX or GpuBuffer.USAGE_COPY_DST, 262144L)
@@ -155,7 +189,7 @@ object AporiaRenderer {
     ) {
         if (entityGlowPipeline == null) { Logger.warn("entityGlowPipeline is null"); return }
         val bb = com.mojang.blaze3d.vertex.ByteBufferBuilder(262144)
-        val buf = BufferBuilder(bb, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY)
+        val buf = BufferBuilder(bb, PrimitiveTopology.QUADS, DefaultVertexFormat.ENTITY)
         model.renderToBuffer(poseStack, buf, packedLight, packedOverlay, -1)
         val mesh = buf.build() ?: run { bb.close(); return }
         val totalBytes = mesh.vertexBuffer().remaining()
@@ -174,15 +208,15 @@ object AporiaRenderer {
     ) {
         val pipeline = entityGlowPipeline ?: run { Logger.warn("drawPlayerGlowSubmit: pipeline null"); return }
         val mc2 = Minecraft.getInstance()
-        val colorView = mc2.mainRenderTarget.colorTextureView ?: return
-        val depthView = mc2.mainRenderTarget.depthTextureView
+        val colorView = mc2.gameRenderer.mainRenderTarget().colorTextureView ?: return
+        val depthView = mc2.gameRenderer.mainRenderTarget().depthTextureView
         if (vertexCount == 0) { Logger.warn("drawPlayerGlowSubmit: vertexCount=0, skipping"); return }
 
         if (scratchVertex.capacity() < vertexData.size)
             scratchVertex = ByteBuffer.allocateDirect(vertexData.size).order(ByteOrder.nativeOrder())
         scratchVertex.clear(); scratchVertex.put(vertexData); scratchVertex.flip()
 
-        val camPos = mc2.gameRenderer.mainCamera.position()
+        val camPos = mc2.gameRenderer.mainCamera().position()
         val mv = Matrix4f(worldViewMatrix)
         mv.translate(-camPos.x.toFloat(), -camPos.y.toFloat(), -camPos.z.toFloat())
         scratchMVP.clear()
@@ -215,14 +249,14 @@ object AporiaRenderer {
         encoder.writeToBuffer(entityGlowParams!!.slice(), scratchParams)
         encoder.writeToBuffer(entityGlowIBO!!.slice(), scratchIndexData)
 
-        val pass = encoder.createRenderPass({ -> "aporia:entity_glow" }, colorView, OptionalInt.empty(), depthView, OptionalDouble.empty())
+        val pass = encoder.createRenderPass({ -> "aporia:entity_glow" }, colorView, Optional.empty<Vector4fc>(), depthView, OptionalDouble.empty())
         pass.use {
             it.setPipeline(pipeline)
             it.setUniform("ModelViewProj", entityGlowMVP!!.slice())
             it.setUniform("DrawParams", entityGlowParams!!.slice())
-            it.setVertexBuffer(0, entityGlowVBO!!)
-            it.setIndexBuffer(entityGlowIBO!!, VertexFormat.IndexType.SHORT)
-            it.drawIndexed(0, 0, indexCount, 0)
+            it.setVertexBuffer(0, entityGlowVBO!!.slice(0L, entityGlowVBO!!.size()))
+            it.setIndexBuffer(entityGlowIBO!!, IndexType.SHORT)
+            it.drawIndexed(indexCount, 1, 0, 0, 0)
         }
     }
 
@@ -232,10 +266,10 @@ object AporiaRenderer {
     ) {
         val pipeline = entityGlowPipeline ?: run { Logger.warn("drawTestQuad: pipeline null"); return }
         val mc2 = Minecraft.getInstance()
-        val colorView = mc2.mainRenderTarget.colorTextureView ?: return
-        val depthView = mc2.mainRenderTarget.depthTextureView
+        val colorView = mc2.gameRenderer.mainRenderTarget().colorTextureView ?: return
+        val depthView = mc2.gameRenderer.mainRenderTarget().depthTextureView
 
-        val stride = DefaultVertexFormat.NEW_ENTITY.vertexSize
+        val stride = DefaultVertexFormat.ENTITY.vertexSize
         val vCount = 4; val iCount = 6
 
         scratchVertex.clear()
@@ -281,14 +315,14 @@ object AporiaRenderer {
         encoder.writeToBuffer(entityGlowParams!!.slice(), scratchParams)
         encoder.writeToBuffer(entityGlowIBO!!.slice(), scratchIndexData)
 
-        val pass = encoder.createRenderPass({ -> "aporia:test_quad" }, colorView, OptionalInt.empty(), depthView, OptionalDouble.empty())
+        val pass = encoder.createRenderPass({ -> "aporia:test_quad" }, colorView, Optional.empty<Vector4fc>(), depthView, OptionalDouble.empty())
         pass.use {
             it.setPipeline(pipeline)
             it.setUniform("ModelViewProj", entityGlowMVP!!.slice())
             it.setUniform("DrawParams", entityGlowParams!!.slice())
-            it.setVertexBuffer(0, entityGlowVBO!!)
-            it.setIndexBuffer(entityGlowIBO!!, VertexFormat.IndexType.SHORT)
-            it.drawIndexed(0, 0, iCount, 0)
+            it.setVertexBuffer(0, entityGlowVBO!!.slice(0L, entityGlowVBO!!.size()))
+            it.setIndexBuffer(entityGlowIBO!!, IndexType.SHORT)
+            it.drawIndexed(iCount, 1, 0, 0, 0)
         }
     }
 }

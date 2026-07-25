@@ -20,64 +20,61 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.StrictJsonParser;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class SpriteSourceList {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final FileToIdConverter ATLAS_INFO_CONVERTER = new FileToIdConverter("atlases", ".json");
     private final List<SpriteSource> sources;
 
-    private SpriteSourceList(List<SpriteSource> p_297576_) {
-        this.sources = p_297576_;
+    private SpriteSourceList(final List<SpriteSource> sources) {
+        this.sources = sources;
     }
 
-    public List<SpriteSource.Loader> list(ResourceManager p_298985_) {
-        final Map<Identifier, SpriteSource.DiscardableLoader> map = new HashMap<>();
-        SpriteSource.Output spritesource$output = new SpriteSource.Output() {
+    public List<SpriteSource.Loader> list(final ResourceManager resourceManager) {
+        final Map<Identifier, SpriteSource.DiscardableLoader> sprites = new HashMap<>();
+        SpriteSource.Output output = new SpriteSource.Output() {
             @Override
-            public void add(Identifier p_455897_, SpriteSource.DiscardableLoader p_455073_) {
-                SpriteSource.DiscardableLoader spritesource$discardableloader = map.put(p_455897_, p_455073_);
-                if (spritesource$discardableloader != null) {
-                    spritesource$discardableloader.discard();
+            public void add(final Identifier id, final SpriteSource.DiscardableLoader sprite) {
+                SpriteSource.DiscardableLoader previous = sprites.put(id, sprite);
+                if (previous != null) {
+                    previous.discard();
                 }
             }
 
             @Override
-            public void removeAll(Predicate<Identifier> p_299726_) {
-                Iterator<Entry<Identifier, SpriteSource.DiscardableLoader>> iterator = map.entrySet().iterator();
+            public void removeAll(final Predicate<Identifier> predicate) {
+                Iterator<Entry<Identifier, SpriteSource.DiscardableLoader>> it = sprites.entrySet().iterator();
 
-                while (iterator.hasNext()) {
-                    Entry<Identifier, SpriteSource.DiscardableLoader> entry = iterator.next();
-                    if (p_299726_.test(entry.getKey())) {
+                while (it.hasNext()) {
+                    Entry<Identifier, SpriteSource.DiscardableLoader> entry = it.next();
+                    if (predicate.test(entry.getKey())) {
                         entry.getValue().discard();
-                        iterator.remove();
+                        it.remove();
                     }
                 }
             }
         };
-        this.sources.forEach(p_299872_ -> p_299872_.run(p_298985_, spritesource$output));
-        Builder<SpriteSource.Loader> builder = ImmutableList.builder();
-        builder.add(p_299121_ -> MissingTextureAtlasSprite.create());
-        builder.addAll(map.values());
-        return builder.build();
+        this.sources.forEach(s -> s.run(resourceManager, output));
+        Builder<SpriteSource.Loader> result = ImmutableList.builder();
+        result.add(loader -> MissingTextureAtlasSprite.create());
+        result.addAll(sprites.values());
+        return result.build();
     }
 
-    public static SpriteSourceList load(ResourceManager p_300689_, Identifier p_451225_) {
-        Identifier identifier = ATLAS_INFO_CONVERTER.idToFile(p_451225_);
-        List<SpriteSource> list = new ArrayList<>();
+    public static SpriteSourceList load(final ResourceManager resourceManager, final Identifier atlasId) {
+        Identifier resourceId = ATLAS_INFO_CONVERTER.idToFile(atlasId);
+        List<SpriteSource> loaders = new ArrayList<>();
 
-        for (Resource resource : p_300689_.getResourceStack(identifier)) {
-            try (BufferedReader bufferedreader = resource.openAsReader()) {
-                Dynamic<JsonElement> dynamic = new Dynamic<>(JsonOps.INSTANCE, StrictJsonParser.parse(bufferedreader));
-                list.addAll(SpriteSources.FILE_CODEC.parse(dynamic).getOrThrow());
-            } catch (Exception exception) {
-                LOGGER.error("Failed to parse atlas definition {} in pack {}", identifier, resource.sourcePackId(), exception);
+        for (Resource entry : resourceManager.getResourceStack(resourceId)) {
+            try (BufferedReader reader = entry.openAsReader()) {
+                Dynamic<JsonElement> contents = new Dynamic<>(JsonOps.INSTANCE, StrictJsonParser.parse(reader));
+                loaders.addAll(SpriteSources.FILE_CODEC.parse(contents).getOrThrow());
+            } catch (Exception e) {
+                LOGGER.error("Failed to parse atlas definition {} in pack {}", resourceId, entry.sourcePackId(), e);
             }
         }
 
-        return new SpriteSourceList(list);
+        return new SpriteSourceList(loaders);
     }
 }

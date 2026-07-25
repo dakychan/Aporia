@@ -1,43 +1,29 @@
 package net.minecraft.util.debugchart;
 
-import com.viaversion.viafabricplus.injection.access.base.ILocalSampleLogger;
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
-
-public class LocalSampleLogger extends AbstractSampleLogger implements SampleStorage, ILocalSampleLogger {
+public class LocalSampleLogger extends AbstractSampleLogger implements SampleStorage {
     public static final int CAPACITY = 240;
     private final long[][] samples;
     private int start;
     private int size;
-    private ProtocolVersion viaFabricPlus$forcedVersion;
 
-    public LocalSampleLogger(int p_334158_) {
-        this(p_334158_, new long[p_334158_]);
+    public LocalSampleLogger(final int dimensions) {
+        this(dimensions, new long[dimensions]);
     }
 
-    public LocalSampleLogger(int p_330975_, long[] p_333573_) {
-        super(p_330975_, p_333573_);
-        this.samples = new long[240][p_330975_];
+    public LocalSampleLogger(final int dimensions, final long[] defaults) {
+        super(dimensions, defaults);
+        this.samples = new long[240][dimensions];
     }
 
     @Override
     protected void useSample() {
-        int i = this.wrapIndex(this.start + this.size);
-        System.arraycopy(this.sample, 0, this.samples[i], 0, this.sample.length);
+        int nextIndex = this.wrapIndex(this.start + this.size);
+        System.arraycopy(this.sample, 0, this.samples[nextIndex], 0, this.sample.length);
         if (this.size < 240) {
             this.size++;
         } else {
             this.start = this.wrapIndex(this.start + 1);
         }
-    }
-
-    @Override
-    public ProtocolVersion viaFabricPlus$getForcedVersion() {
-        return this.viaFabricPlus$forcedVersion;
-    }
-
-    @Override
-    public void viaFabricPlus$setForcedVersion(ProtocolVersion version) {
-        this.viaFabricPlus$forcedVersion = version;
     }
 
     @Override
@@ -51,26 +37,26 @@ public class LocalSampleLogger extends AbstractSampleLogger implements SampleSto
     }
 
     @Override
-    public long get(int p_334223_) {
-        return this.get(p_334223_, 0);
+    public long get(final int index) {
+        return this.get(index, 0);
     }
 
     @Override
-    public long get(int p_335582_, int p_331656_) {
-        if (p_335582_ >= 0 && p_335582_ < this.size) {
-            long[] along = this.samples[this.wrapIndex(this.start + p_335582_)];
-            if (p_331656_ >= 0 && p_331656_ < along.length) {
-                return along[p_331656_];
+    public long get(final int index, final int dimension) {
+        if (index >= 0 && index < this.size) {
+            long[] sampleArray = this.samples[this.wrapIndex(this.start + index)];
+            if (dimension >= 0 && dimension < sampleArray.length) {
+                return sampleArray[dimension];
             } else {
-                throw new IndexOutOfBoundsException(p_331656_ + " out of bounds for dimensions " + along.length);
+                throw new IndexOutOfBoundsException(dimension + " out of bounds for dimensions " + sampleArray.length);
             }
         } else {
-            throw new IndexOutOfBoundsException(p_335582_ + " out of bounds for length " + this.size);
+            throw new IndexOutOfBoundsException(index + " out of bounds for length " + this.size);
         }
     }
 
-    private int wrapIndex(int p_330672_) {
-        return p_330672_ % 240;
+    private int wrapIndex(final int index) {
+        return index % 240;
     }
 
     @Override

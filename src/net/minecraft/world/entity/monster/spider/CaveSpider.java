@@ -18,8 +18,8 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class CaveSpider extends Spider {
-    public CaveSpider(EntityType<? extends CaveSpider> p_451551_, Level p_458214_) {
-        super(p_451551_, p_458214_);
+    public CaveSpider(final EntityType<? extends CaveSpider> type, final Level level) {
+        super(type, level);
     }
 
     public static AttributeSupplier.Builder createCaveSpider() {
@@ -27,18 +27,18 @@ public class CaveSpider extends Spider {
     }
 
     @Override
-    public boolean doHurtTarget(ServerLevel p_455476_, Entity p_451211_) {
-        if (super.doHurtTarget(p_455476_, p_451211_)) {
-            if (p_451211_ instanceof LivingEntity) {
-                int i = 0;
+    public boolean doHurtTarget(final ServerLevel level, final Entity target) {
+        if (super.doHurtTarget(level, target)) {
+            if (target instanceof LivingEntity livingEntity) {
+                int poisonTime = 0;
                 if (this.level().getDifficulty() == Difficulty.NORMAL) {
-                    i = 7;
+                    poisonTime = 7;
                 } else if (this.level().getDifficulty() == Difficulty.HARD) {
-                    i = 15;
+                    poisonTime = 15;
                 }
 
-                if (i > 0) {
-                    ((LivingEntity)p_451211_).addEffect(new MobEffectInstance(MobEffects.POISON, i * 20, 0), this);
+                if (poisonTime > 0) {
+                    livingEntity.addEffect(new MobEffectInstance(MobEffects.POISON, poisonTime * 20, 0), this);
                 }
             }
 
@@ -50,13 +50,13 @@ public class CaveSpider extends Spider {
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_450688_, DifficultyInstance p_457285_, EntitySpawnReason p_459808_, @Nullable SpawnGroupData p_454546_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
-        return p_454546_;
+        return groupData;
     }
 
     @Override
-    public Vec3 getVehicleAttachmentPoint(Entity p_457535_) {
-        return p_457535_.getBbWidth() <= this.getBbWidth() ? new Vec3(0.0, 0.21875 * this.getScale(), 0.0) : super.getVehicleAttachmentPoint(p_457535_);
+    public Vec3 getVehicleAttachmentPoint(final Entity vehicle) {
+        return vehicle.getBbWidth() <= this.getBbWidth() ? new Vec3(0.0, 0.21875 * this.getScale(), 0.0) : super.getVehicleAttachmentPoint(vehicle);
     }
 }

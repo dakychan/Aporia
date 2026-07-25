@@ -12,32 +12,31 @@ import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 
 public class FilterMask {
-    public static final Codec<FilterMask> CODEC = StringRepresentable.fromEnum(FilterMask.Type::values)
-        .dispatch(FilterMask::type, FilterMask.Type::codec);
+    public static final Codec<FilterMask> CODEC = StringRepresentable.fromEnum(FilterMask.Type::values).dispatch(FilterMask::type, FilterMask.Type::codec);
     public static final FilterMask FULLY_FILTERED = new FilterMask(new BitSet(0), FilterMask.Type.FULLY_FILTERED);
     public static final FilterMask PASS_THROUGH = new FilterMask(new BitSet(0), FilterMask.Type.PASS_THROUGH);
     public static final Style FILTERED_STYLE = Style.EMPTY
         .withColor(ChatFormatting.DARK_GRAY)
         .withHoverEvent(new HoverEvent.ShowText(Component.translatable("chat.filtered")));
-    static final MapCodec<FilterMask> PASS_THROUGH_CODEC = MapCodec.unit(PASS_THROUGH);
-    static final MapCodec<FilterMask> FULLY_FILTERED_CODEC = MapCodec.unit(FULLY_FILTERED);
-    static final MapCodec<FilterMask> PARTIALLY_FILTERED_CODEC = ExtraCodecs.BIT_SET.xmap(FilterMask::new, FilterMask::mask).fieldOf("value");
+    private static final MapCodec<FilterMask> PASS_THROUGH_CODEC = MapCodec.unit(PASS_THROUGH);
+    private static final MapCodec<FilterMask> FULLY_FILTERED_CODEC = MapCodec.unit(FULLY_FILTERED);
+    private static final MapCodec<FilterMask> PARTIALLY_FILTERED_CODEC = ExtraCodecs.BIT_SET.xmap(FilterMask::new, FilterMask::mask).fieldOf("value");
     private static final char HASH = '#';
     private final BitSet mask;
     private final FilterMask.Type type;
 
-    private FilterMask(BitSet p_243243_, FilterMask.Type p_243249_) {
-        this.mask = p_243243_;
-        this.type = p_243249_;
+    private FilterMask(final BitSet mask, final FilterMask.Type type) {
+        this.mask = mask;
+        this.type = type;
     }
 
-    private FilterMask(BitSet p_253780_) {
-        this.mask = p_253780_;
+    private FilterMask(final BitSet mask) {
+        this.mask = mask;
         this.type = FilterMask.Type.PARTIALLY_FILTERED;
     }
 
-    public FilterMask(int p_243210_) {
-        this(new BitSet(p_243210_), FilterMask.Type.PARTIALLY_FILTERED);
+    public FilterMask(final int length) {
+        this(new BitSet(length), FilterMask.Type.PARTIALLY_FILTERED);
     }
 
     private FilterMask.Type type() {
@@ -48,69 +47,69 @@ public class FilterMask {
         return this.mask;
     }
 
-    public static FilterMask read(FriendlyByteBuf p_243205_) {
-        FilterMask.Type filtermask$type = p_243205_.readEnum(FilterMask.Type.class);
+    public static FilterMask read(final FriendlyByteBuf input) {
+        FilterMask.Type type = input.readEnum(FilterMask.Type.class);
 
-        return switch (filtermask$type) {
+        return switch (type) {
             case PASS_THROUGH -> PASS_THROUGH;
             case FULLY_FILTERED -> FULLY_FILTERED;
-            case PARTIALLY_FILTERED -> new FilterMask(p_243205_.readBitSet(), FilterMask.Type.PARTIALLY_FILTERED);
+            case PARTIALLY_FILTERED -> new FilterMask(input.readBitSet(), FilterMask.Type.PARTIALLY_FILTERED);
         };
     }
 
-    public static void write(FriendlyByteBuf p_243308_, FilterMask p_243231_) {
-        p_243308_.writeEnum(p_243231_.type);
-        if (p_243231_.type == FilterMask.Type.PARTIALLY_FILTERED) {
-            p_243308_.writeBitSet(p_243231_.mask);
+    public static void write(final FriendlyByteBuf output, final FilterMask mask) {
+        output.writeEnum(mask.type);
+        if (mask.type == FilterMask.Type.PARTIALLY_FILTERED) {
+            output.writeBitSet(mask.mask);
         }
     }
 
-    public void setFiltered(int p_243202_) {
-        this.mask.set(p_243202_);
+    public void setFiltered(final int index) {
+        this.mask.set(index);
     }
 
-    public @Nullable String apply(String p_243317_) {
+    public @Nullable String apply(final String text) {
         return switch (this.type) {
-            case PASS_THROUGH -> p_243317_;
+            case PASS_THROUGH -> text;
             case FULLY_FILTERED -> null;
             case PARTIALLY_FILTERED -> {
-                char[] achar = p_243317_.toCharArray();
+                char[] chars = text.toCharArray();
 
-                for (int i = 0; i < achar.length && i < this.mask.length(); i++) {
+                for (int i = 0; i < chars.length && i < this.mask.length(); i++) {
                     if (this.mask.get(i)) {
-                        achar[i] = '#';
+                        chars[i] = '#';
                     }
                 }
 
-                yield new String(achar);
+                yield new String(chars);
             }
         };
     }
 
-    public @Nullable Component applyWithFormatting(String p_251709_) {
+    public @Nullable Component applyWithFormatting(final String text) {
         return switch (this.type) {
-            case PASS_THROUGH -> Component.literal(p_251709_);
+            case PASS_THROUGH -> Component.literal(text);
             case FULLY_FILTERED -> null;
             case PARTIALLY_FILTERED -> {
-                MutableComponent mutablecomponent = Component.empty();
-                int i = 0;
-                boolean flag = this.mask.get(0);
+                MutableComponent result = Component.empty();
+                int previousIndex = 0;
+                boolean filtered = this.mask.get(0);
 
                 while (true) {
-                    int j = flag ? this.mask.nextClearBit(i) : this.mask.nextSetBit(i);
-                    j = j < 0 ? p_251709_.length() : j;
-                    if (j == i) {
-                        yield mutablecomponent;
+                    int nextIndex = filtered ? this.mask.nextClearBit(previousIndex) : this.mask.nextSetBit(previousIndex);
+                    nextIndex = nextIndex < 0 ? text.length() : nextIndex;
+                    if (nextIndex == previousIndex) {
+                        yield result;
                     }
 
-                    if (flag) {
-                        mutablecomponent.append(Component.literal(StringUtils.repeat('#', j - i)).withStyle(FILTERED_STYLE));
+                    if (filtered) {
+                        result.append(Component.literal(StringUtils.repeat('#', nextIndex - previousIndex)).withStyle(FILTERED_STYLE));
                     } else {
-                        mutablecomponent.append(p_251709_.substring(i, j));
+                        result.append(text.substring(previousIndex, nextIndex));
                     }
 
-                    flag = !flag;
-                    i = j;
+                    filtered = !filtered;
+                    previousIndex = nextIndex;
                 }
             }
         };
@@ -125,12 +124,12 @@ public class FilterMask {
     }
 
     @Override
-    public boolean equals(Object p_254275_) {
-        if (this == p_254275_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
-        } else if (p_254275_ != null && this.getClass() == p_254275_.getClass()) {
-            FilterMask filtermask = (FilterMask)p_254275_;
-            return this.mask.equals(filtermask.mask) && this.type == filtermask.type;
+        } else if (o != null && this.getClass() == o.getClass()) {
+            FilterMask that = (FilterMask)o;
+            return this.mask.equals(that.mask) && this.type == that.type;
         } else {
             return false;
         }
@@ -138,11 +137,11 @@ public class FilterMask {
 
     @Override
     public int hashCode() {
-        int i = this.mask.hashCode();
-        return 31 * i + this.type.hashCode();
+        int result = this.mask.hashCode();
+        return 31 * result + this.type.hashCode();
     }
 
-    static enum Type implements StringRepresentable {
+    private enum Type implements StringRepresentable {
         PASS_THROUGH("pass_through", () -> FilterMask.PASS_THROUGH_CODEC),
         FULLY_FILTERED("fully_filtered", () -> FilterMask.FULLY_FILTERED_CODEC),
         PARTIALLY_FILTERED("partially_filtered", () -> FilterMask.PARTIALLY_FILTERED_CODEC);
@@ -150,9 +149,9 @@ public class FilterMask {
         private final String serializedName;
         private final Supplier<MapCodec<FilterMask>> codec;
 
-        private Type(final String p_253679_, final Supplier<MapCodec<FilterMask>> p_253988_) {
-            this.serializedName = p_253679_;
-            this.codec = p_253988_;
+        Type(final String serializedName, final Supplier<MapCodec<FilterMask>> codec) {
+            this.serializedName = serializedName;
+            this.codec = codec;
         }
 
         @Override

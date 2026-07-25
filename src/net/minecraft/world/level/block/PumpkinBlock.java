@@ -7,6 +7,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.stats.Stats;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -28,47 +29,48 @@ public class PumpkinBlock extends Block {
         return CODEC;
     }
 
-    protected PumpkinBlock(BlockBehaviour.Properties p_55284_) {
-        super(p_55284_);
+    protected PumpkinBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_330568_, BlockState p_330263_, Level p_327756_, BlockPos p_328675_, Player p_334049_, InteractionHand p_331851_, BlockHitResult p_329008_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (!p_330568_.is(Items.SHEARS)) {
-            return super.useItemOn(p_330568_, p_330263_, p_327756_, p_328675_, p_334049_, p_331851_, p_329008_);
-        } else if (p_327756_ instanceof ServerLevel serverlevel) {
-            Direction direction = p_329008_.getDirection();
-            Direction direction1 = direction.getAxis() == Direction.Axis.Y ? p_334049_.getDirection().getOpposite() : direction;
+        if (!itemStack.is(Items.SHEARS)) {
+            return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
+        } else if (level instanceof ServerLevel serverLevel) {
+            Direction clickedDirection = hitResult.getDirection();
+            Direction direction = clickedDirection.getAxis() == Direction.Axis.Y ? player.getDirection().getOpposite() : clickedDirection;
             dropFromBlockInteractLootTable(
-                serverlevel,
+                serverLevel,
                 BuiltInLootTables.CARVE_PUMPKIN,
-                p_330263_,
-                p_327756_.getBlockEntity(p_328675_),
-                p_330568_,
-                p_334049_,
-                (p_430451_, p_429051_) -> {
-                    ItemEntity itementity = new ItemEntity(
-                        p_327756_,
-                        p_328675_.getX() + 0.5 + direction1.getStepX() * 0.65,
-                        p_328675_.getY() + 0.1,
-                        p_328675_.getZ() + 0.5 + direction1.getStepZ() * 0.65,
-                        p_429051_
+                state,
+                level.getBlockEntity(pos),
+                itemStack,
+                player,
+                (ignored, pumpkinSeeds) -> {
+                    ItemEntity entity = new ItemEntity(
+                        level, pos.getX() + 0.5 + direction.getStepX() * 0.65, pos.getY() + 0.1, pos.getZ() + 0.5 + direction.getStepZ() * 0.65, pumpkinSeeds
                     );
-                    itementity.setDeltaMovement(
-                        0.05 * direction1.getStepX() + p_327756_.random.nextDouble() * 0.02,
-                        0.05,
-                        0.05 * direction1.getStepZ() + p_327756_.random.nextDouble() * 0.02
+                    RandomSource random = level.getRandom();
+                    entity.setDeltaMovement(
+                        0.05 * direction.getStepX() + random.nextDouble() * 0.02, 0.05, 0.05 * direction.getStepZ() + random.nextDouble() * 0.02
                     );
-                    p_327756_.addFreshEntity(itementity);
+                    level.addFreshEntity(entity);
                 }
             );
-            p_327756_.playSound(null, p_328675_, SoundEvents.PUMPKIN_CARVE, SoundSource.BLOCKS, 1.0F, 1.0F);
-            p_327756_.setBlock(p_328675_, Blocks.CARVED_PUMPKIN.defaultBlockState().setValue(CarvedPumpkinBlock.FACING, direction1), 11);
-            p_330568_.hurtAndBreak(1, p_334049_, p_331851_.asEquipmentSlot());
-            p_327756_.gameEvent(p_334049_, GameEvent.SHEAR, p_328675_);
-            p_334049_.awardStat(Stats.ITEM_USED.get(Items.SHEARS));
+            level.playSound(null, pos, SoundEvents.PUMPKIN_CARVE, SoundSource.BLOCKS, 1.0F, 1.0F);
+            level.setBlock(pos, Blocks.CARVED_PUMPKIN.defaultBlockState().setValue(CarvedPumpkinBlock.FACING, direction), 11);
+            itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
+            level.gameEvent(player, GameEvent.SHEAR, pos);
+            player.awardStat(Stats.ITEM_USED.get(Items.SHEARS));
             return InteractionResult.SUCCESS;
         } else {
             return InteractionResult.SUCCESS;

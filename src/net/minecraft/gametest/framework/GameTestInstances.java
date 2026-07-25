@@ -10,19 +10,19 @@ import net.minecraft.resources.ResourceKey;
 public interface GameTestInstances {
     ResourceKey<GameTestInstance> ALWAYS_PASS = create("always_pass");
 
-    static void bootstrap(BootstrapContext<GameTestInstance> p_393955_) {
-        HolderGetter<Consumer<GameTestHelper>> holdergetter = p_393955_.lookup(Registries.TEST_FUNCTION);
-        HolderGetter<TestEnvironmentDefinition> holdergetter1 = p_393955_.lookup(Registries.TEST_ENVIRONMENT);
-        p_393955_.register(
+    static void bootstrap(final BootstrapContext<GameTestInstance> context) {
+        HolderGetter<Consumer<GameTestHelper>> functions = context.lookup(Registries.TEST_FUNCTION);
+        HolderGetter<TestEnvironmentDefinition<?>> batches = context.lookup(Registries.TEST_ENVIRONMENT);
+        context.register(
             ALWAYS_PASS,
             new FunctionGameTestInstance(
                 BuiltinTestFunctions.ALWAYS_PASS,
-                new TestData<>(holdergetter1.getOrThrow(GameTestEnvironments.DEFAULT_KEY), Identifier.withDefaultNamespace("empty"), 1, 1, false)
+                new TestData<>(batches.getOrThrow(GameTestEnvironments.DEFAULT_KEY), Identifier.withDefaultNamespace("empty"), 1, 1, false)
             )
         );
     }
 
-    private static ResourceKey<GameTestInstance> create(String p_395470_) {
-        return ResourceKey.create(Registries.TEST_INSTANCE, Identifier.withDefaultNamespace(p_395470_));
+    private static ResourceKey<GameTestInstance> create(final String id) {
+        return ResourceKey.create(Registries.TEST_INSTANCE, Identifier.withDefaultNamespace(id));
     }
 }

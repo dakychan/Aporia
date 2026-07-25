@@ -1,72 +1,88 @@
 package net.minecraft.world.item.crafting;
 
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 
 public class BannerDuplicateRecipe extends CustomRecipe {
-    public BannerDuplicateRecipe(CraftingBookCategory p_250373_) {
-        super(p_250373_);
+    public static final MapCodec<BannerDuplicateRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(Ingredient.CODEC.fieldOf("banner").forGetter(o -> o.banner), ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result))
+            .apply(i, BannerDuplicateRecipe::new)
+    );
+    public static final StreamCodec<RegistryFriendlyByteBuf, BannerDuplicateRecipe> STREAM_CODEC = StreamCodec.composite(
+        Ingredient.CONTENTS_STREAM_CODEC, o -> o.banner, ItemStackTemplate.STREAM_CODEC, o -> o.result, BannerDuplicateRecipe::new
+    );
+    public static final RecipeSerializer<BannerDuplicateRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    private final Ingredient banner;
+    private final ItemStackTemplate result;
+
+    public BannerDuplicateRecipe(final Ingredient banner, final ItemStackTemplate result) {
+        this.banner = banner;
+        this.result = result;
     }
 
-    public boolean matches(CraftingInput p_344586_, Level p_43786_) {
-        if (p_344586_.ingredientCount() != 2) {
+    public boolean matches(final CraftingInput input, final Level level) {
+        if (input.ingredientCount() != 2) {
             return false;
-        } else {
-            DyeColor dyecolor = null;
-            boolean flag = false;
-            boolean flag1 = false;
+        }
 
-            for (int i = 0; i < p_344586_.size(); i++) {
-                ItemStack itemstack = p_344586_.getItem(i);
-                if (!itemstack.isEmpty()) {
-                    if (!(itemstack.getItem() instanceof BannerItem banneritem)) {
+        DyeColor color = null;
+        boolean hasTarget = false;
+        boolean hasSource = false;
+
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                if (!this.banner.test(itemStack) || !(itemStack.getItem() instanceof BannerItem banner)) {
+                    return false;
+                }
+
+                if (color == null) {
+                    color = banner.getColor();
+                } else if (color != banner.getColor()) {
+                    return false;
+                }
+
+                int patternCount = itemStack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers().size();
+                if (patternCount > 6) {
+                    return false;
+                }
+
+                if (patternCount > 0) {
+                    if (hasSource) {
                         return false;
                     }
 
-                    if (dyecolor == null) {
-                        dyecolor = banneritem.getColor();
-                    } else if (dyecolor != banneritem.getColor()) {
+                    hasSource = true;
+                } else {
+                    if (hasTarget) {
                         return false;
                     }
 
-                    int j = itemstack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers().size();
-                    if (j > 6) {
-                        return false;
-                    }
-
-                    if (j > 0) {
-                        if (flag1) {
-                            return false;
-                        }
-
-                        flag1 = true;
-                    } else {
-                        if (flag) {
-                            return false;
-                        }
-
-                        flag = true;
-                    }
+                    hasTarget = true;
                 }
             }
-
-            return flag1 && flag;
         }
+
+        return hasSource && hasTarget;
     }
 
-    public ItemStack assemble(CraftingInput p_344878_, HolderLookup.Provider p_333234_) {
-        for (int i = 0; i < p_344878_.size(); i++) {
-            ItemStack itemstack = p_344878_.getItem(i);
-            if (!itemstack.isEmpty()) {
-                int j = itemstack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers().size();
-                if (j > 0 && j <= 6) {
-                    return itemstack.copyWithCount(1);
+    public ItemStack assemble(final CraftingInput input) {
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                int patternCount = itemStack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers().size();
+                if (patternCount > 0 && patternCount <= 6) {
+                    return TransmuteRecipe.createWithOriginalComponents(this.result, itemStack);
                 }
             }
         }
@@ -75,26 +91,26 @@ public class BannerDuplicateRecipe extends CustomRecipe {
     }
 
     @Override
-    public NonNullList<ItemStack> getRemainingItems(CraftingInput p_342084_) {
-        NonNullList<ItemStack> nonnulllist = NonNullList.withSize(p_342084_.size(), ItemStack.EMPTY);
+    public NonNullList<ItemStack> getRemainingItems(final CraftingInput input) {
+        NonNullList<ItemStack> result = NonNullList.withSize(input.size(), ItemStack.EMPTY);
 
-        for (int i = 0; i < nonnulllist.size(); i++) {
-            ItemStack itemstack = p_342084_.getItem(i);
-            if (!itemstack.isEmpty()) {
-                ItemStack itemstack1 = itemstack.getItem().getCraftingRemainder();
-                if (!itemstack1.isEmpty()) {
-                    nonnulllist.set(i, itemstack1);
-                } else if (!itemstack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers().isEmpty()) {
-                    nonnulllist.set(i, itemstack.copyWithCount(1));
+        for (int slot = 0; slot < result.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                ItemStackTemplate remainder = itemStack.getItem().getCraftingRemainder();
+                if (remainder != null) {
+                    result.set(slot, remainder.create());
+                } else if (!itemStack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY).layers().isEmpty()) {
+                    result.set(slot, itemStack.copyWithCount(1));
                 }
             }
         }
 
-        return nonnulllist;
+        return result;
     }
 
     @Override
     public RecipeSerializer<BannerDuplicateRecipe> getSerializer() {
-        return RecipeSerializer.BANNER_DUPLICATE;
+        return SERIALIZER;
     }
 }

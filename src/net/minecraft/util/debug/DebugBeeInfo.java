@@ -20,7 +20,7 @@ public record DebugBeeInfo(Optional<BlockPos> hivePos, Optional<BlockPos> flower
         DebugBeeInfo::new
     );
 
-    public boolean hasHive(BlockPos p_428512_) {
-        return this.hivePos.isPresent() && p_428512_.equals(this.hivePos.get());
+    public boolean hasHive(final BlockPos hivePos) {
+        return this.hivePos.isPresent() && hivePos.equals(this.hivePos.get());
     }
 }

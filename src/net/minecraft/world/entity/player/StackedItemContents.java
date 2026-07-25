@@ -11,48 +11,52 @@ import org.jspecify.annotations.Nullable;
 public class StackedItemContents {
     private final StackedContents<Holder<Item>> raw = new StackedContents<>();
 
-    public void accountSimpleStack(ItemStack p_364422_) {
-        if (Inventory.isUsableForCrafting(p_364422_)) {
-            this.accountStack(p_364422_);
+    public void accountSimpleStack(final ItemStack itemStack) {
+        if (Inventory.isUsableForCrafting(itemStack)) {
+            this.accountStack(itemStack);
         }
     }
 
-    public void accountStack(ItemStack p_367488_) {
-        this.accountStack(p_367488_, p_367488_.getMaxStackSize());
+    public void accountStack(final ItemStack itemStack) {
+        this.accountStack(itemStack, itemStack.getMaxStackSize());
     }
 
-    public void accountStack(ItemStack p_363064_, int p_362894_) {
-        if (!p_363064_.isEmpty()) {
-            int i = Math.min(p_362894_, p_363064_.getCount());
-            this.raw.account(p_363064_.getItemHolder(), i);
+    public void accountStack(final ItemStack itemStack, final int maxCount) {
+        if (!itemStack.isEmpty()) {
+            int count = Math.min(maxCount, itemStack.getCount());
+            this.raw.account(itemStack.typeHolder(), count);
         }
     }
 
-    public boolean canCraft(Recipe<?> p_366312_, StackedContents.@Nullable Output<Holder<Item>> p_369339_) {
-        return this.canCraft(p_366312_, 1, p_369339_);
+    public boolean canCraft(final Recipe<?> recipe, final StackedContents.@Nullable Output<Holder<Item>> output) {
+        return this.canCraft(recipe, 1, output);
     }
 
-    public boolean canCraft(Recipe<?> p_365279_, int p_366048_, StackedContents.@Nullable Output<Holder<Item>> p_369851_) {
-        PlacementInfo placementinfo = p_365279_.placementInfo();
-        return placementinfo.isImpossibleToPlace() ? false : this.canCraft(placementinfo.ingredients(), p_366048_, p_369851_);
+    public boolean canCraft(final Recipe<?> recipe, final int amount, final StackedContents.@Nullable Output<Holder<Item>> output) {
+        PlacementInfo placementInfo = recipe.placementInfo();
+        return placementInfo.isImpossibleToPlace() ? false : this.canCraft(placementInfo.ingredients(), amount, output);
     }
 
-    public boolean canCraft(List<? extends StackedContents.IngredientInfo<Holder<Item>>> p_366143_, StackedContents.@Nullable Output<Holder<Item>> p_370013_) {
-        return this.canCraft(p_366143_, 1, p_370013_);
+    public boolean canCraft(
+        final List<? extends StackedContents.IngredientInfo<Holder<Item>>> contents, final StackedContents.@Nullable Output<Holder<Item>> output
+    ) {
+        return this.canCraft(contents, 1, output);
     }
 
     private boolean canCraft(
-        List<? extends StackedContents.IngredientInfo<Holder<Item>>> p_366198_, int p_367643_, StackedContents.@Nullable Output<Holder<Item>> p_366621_
+        final List<? extends StackedContents.IngredientInfo<Holder<Item>>> contents,
+        final int amount,
+        final StackedContents.@Nullable Output<Holder<Item>> output
     ) {
-        return this.raw.tryPick(p_366198_, p_367643_, p_366621_);
+        return this.raw.tryPick(contents, amount, output);
     }
 
-    public int getBiggestCraftableStack(Recipe<?> p_369356_, StackedContents.@Nullable Output<Holder<Item>> p_368498_) {
-        return this.getBiggestCraftableStack(p_369356_, Integer.MAX_VALUE, p_368498_);
+    public int getBiggestCraftableStack(final Recipe<?> recipe, final StackedContents.@Nullable Output<Holder<Item>> output) {
+        return this.getBiggestCraftableStack(recipe, Integer.MAX_VALUE, output);
     }
 
-    public int getBiggestCraftableStack(Recipe<?> p_366627_, int p_361474_, StackedContents.@Nullable Output<Holder<Item>> p_366799_) {
-        return this.raw.tryPickAll(p_366627_.placementInfo().ingredients(), p_361474_, p_366799_);
+    public int getBiggestCraftableStack(final Recipe<?> recipe, final int maxSize, final StackedContents.@Nullable Output<Holder<Item>> output) {
+        return this.raw.tryPickAll(recipe.placementInfo().ingredients(), maxSize, output);
     }
 
     public void clear() {

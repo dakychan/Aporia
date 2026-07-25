@@ -8,8 +8,8 @@ import net.minecraft.world.entity.PathfinderMob;
 public class TryFindWaterGoal extends Goal {
     private final PathfinderMob mob;
 
-    public TryFindWaterGoal(PathfinderMob p_25964_) {
-        this.mob = p_25964_;
+    public TryFindWaterGoal(final PathfinderMob mob) {
+        this.mob = mob;
     }
 
     @Override
@@ -19,9 +19,9 @@ public class TryFindWaterGoal extends Goal {
 
     @Override
     public void start() {
-        BlockPos blockpos = null;
+        BlockPos waterPos = null;
 
-        for (BlockPos blockpos1 : BlockPos.betweenClosed(
+        for (BlockPos pos : BlockPos.betweenClosed(
             Mth.floor(this.mob.getX() - 2.0),
             Mth.floor(this.mob.getY() - 2.0),
             Mth.floor(this.mob.getZ() - 2.0),
@@ -29,14 +29,14 @@ public class TryFindWaterGoal extends Goal {
             this.mob.getBlockY(),
             Mth.floor(this.mob.getZ() + 2.0)
         )) {
-            if (this.mob.level().getFluidState(blockpos1).is(FluidTags.WATER)) {
-                blockpos = blockpos1;
+            if (this.mob.level().getFluidState(pos).is(FluidTags.WATER)) {
+                waterPos = pos;
                 break;
             }
         }
 
-        if (blockpos != null) {
-            this.mob.getMoveControl().setWantedPosition(blockpos.getX(), blockpos.getY(), blockpos.getZ(), 1.0);
+        if (waterPos != null) {
+            this.mob.getMoveControl().setWantedPosition(waterPos.getX(), waterPos.getY(), waterPos.getZ(), 1.0);
         }
     }
 }

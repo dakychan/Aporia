@@ -1,8 +1,9 @@
 package net.minecraft.world.entity;
 
 import java.util.Optional;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -11,11 +12,14 @@ import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.ai.goal.PanicGoal;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.LeavesBlock;
 import net.minecraft.world.level.block.state.BlockState;
@@ -39,34 +43,34 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
     );
     private boolean orderedToSit = false;
 
-    protected TamableAnimal(EntityType<? extends TamableAnimal> p_21803_, Level p_21804_) {
-        super(p_21803_, p_21804_);
+    protected TamableAnimal(final EntityType<? extends TamableAnimal> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_329630_) {
-        super.defineSynchedData(p_329630_);
-        p_329630_.define(DATA_FLAGS_ID, (byte)0);
-        p_329630_.define(DATA_OWNERUUID_ID, Optional.empty());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_FLAGS_ID, (byte)0);
+        entityData.define(DATA_OWNERUUID_ID, Optional.empty());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408525_) {
-        super.addAdditionalSaveData(p_408525_);
-        EntityReference<LivingEntity> entityreference = this.getOwnerReference();
-        EntityReference.store(entityreference, p_408525_, "Owner");
-        p_408525_.putBoolean("Sitting", this.orderedToSit);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        EntityReference<LivingEntity> owner = this.getOwnerReference();
+        EntityReference.store(owner, output, "Owner");
+        output.putBoolean("Sitting", this.orderedToSit);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_409982_) {
-        super.readAdditionalSaveData(p_409982_);
-        EntityReference<LivingEntity> entityreference = EntityReference.readWithOldOwnerConversion(p_409982_, "Owner", this.level());
-        if (entityreference != null) {
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        EntityReference<LivingEntity> owner = EntityReference.readWithOldOwnerConversion(input, "Owner", this.level());
+        if (owner != null) {
             try {
-                this.entityData.set(DATA_OWNERUUID_ID, Optional.of(entityreference));
+                this.entityData.set(DATA_OWNERUUID_ID, Optional.of(owner));
                 this.setTame(true, false);
-            } catch (Throwable throwable) {
+            } catch (Throwable ignored) {
                 this.setTame(false, true);
             }
         } else {
@@ -74,7 +78,7 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
             this.setTame(false, true);
         }
 
-        this.orderedToSit = p_409982_.getBooleanOr("Sitting", false);
+        this.orderedToSit = input.getBooleanOr("Sitting", false);
         this.setInSittingPose(this.orderedToSit);
     }
 
@@ -83,28 +87,28 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
         return true;
     }
 
-    protected void spawnTamingParticles(boolean p_21835_) {
-        ParticleOptions particleoptions = ParticleTypes.HEART;
-        if (!p_21835_) {
-            particleoptions = ParticleTypes.SMOKE;
+    protected void spawnTamingParticles(final boolean success) {
+        ParticleOptions particle = ParticleTypes.HEART;
+        if (!success) {
+            particle = ParticleTypes.SMOKE;
         }
 
         for (int i = 0; i < 7; i++) {
-            double d0 = this.random.nextGaussian() * 0.02;
-            double d1 = this.random.nextGaussian() * 0.02;
-            double d2 = this.random.nextGaussian() * 0.02;
-            this.level().addParticle(particleoptions, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), d0, d1, d2);
+            double xa = this.random.nextGaussian() * 0.02;
+            double ya = this.random.nextGaussian() * 0.02;
+            double za = this.random.nextGaussian() * 0.02;
+            this.level().addParticle(particle, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), xa, ya, za);
         }
     }
 
     @Override
-    public void handleEntityEvent(byte p_21807_) {
-        if (p_21807_ == 7) {
+    public void handleEntityEvent(final byte id) {
+        if (id == 7) {
             this.spawnTamingParticles(true);
-        } else if (p_21807_ == 6) {
+        } else if (id == 6) {
             this.spawnTamingParticles(false);
         } else {
-            super.handleEntityEvent(p_21807_);
+            super.handleEntityEvent(id);
         }
     }
 
@@ -112,15 +116,15 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
         return (this.entityData.get(DATA_FLAGS_ID) & 4) != 0;
     }
 
-    public void setTame(boolean p_21836_, boolean p_332364_) {
-        byte b0 = this.entityData.get(DATA_FLAGS_ID);
-        if (p_21836_) {
-            this.entityData.set(DATA_FLAGS_ID, (byte)(b0 | 4));
+    public void setTame(final boolean isTame, final boolean includeSideEffects) {
+        byte current = this.entityData.get(DATA_FLAGS_ID);
+        if (isTame) {
+            this.entityData.set(DATA_FLAGS_ID, (byte)(current | 4));
         } else {
-            this.entityData.set(DATA_FLAGS_ID, (byte)(b0 & -5));
+            this.entityData.set(DATA_FLAGS_ID, (byte)(current & -5));
         }
 
-        if (p_332364_) {
+        if (includeSideEffects) {
             this.applyTamingSideEffects();
         }
     }
@@ -128,16 +132,23 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
     protected void applyTamingSideEffects() {
     }
 
+    protected void feed(final Player player, final InteractionHand hand, final ItemStack itemStack, final float healingFactor, final float defaultHeal) {
+        FoodProperties foodProperties = itemStack.get(DataComponents.FOOD);
+        this.usePlayerItem(player, hand, itemStack);
+        this.heal(foodProperties != null ? healingFactor * foodProperties.nutrition() : defaultHeal);
+        this.playEatingSound();
+    }
+
     public boolean isInSittingPose() {
         return (this.entityData.get(DATA_FLAGS_ID) & 1) != 0;
     }
 
-    public void setInSittingPose(boolean p_21838_) {
-        byte b0 = this.entityData.get(DATA_FLAGS_ID);
-        if (p_21838_) {
-            this.entityData.set(DATA_FLAGS_ID, (byte)(b0 | 1));
+    public void setInSittingPose(final boolean value) {
+        byte current = this.entityData.get(DATA_FLAGS_ID);
+        if (value) {
+            this.entityData.set(DATA_FLAGS_ID, (byte)(current | 1));
         } else {
-            this.entityData.set(DATA_FLAGS_ID, (byte)(b0 & -2));
+            this.entityData.set(DATA_FLAGS_ID, (byte)(current & -2));
         }
     }
 
@@ -146,135 +157,135 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
         return this.entityData.get(DATA_OWNERUUID_ID).orElse(null);
     }
 
-    public void setOwner(@Nullable LivingEntity p_392796_) {
-        this.entityData.set(DATA_OWNERUUID_ID, Optional.ofNullable(p_392796_).map(EntityReference::of));
+    public void setOwner(final @Nullable LivingEntity owner) {
+        this.entityData.set(DATA_OWNERUUID_ID, Optional.ofNullable(owner).map(EntityReference::of));
     }
 
-    public void setOwnerReference(@Nullable EntityReference<LivingEntity> p_393669_) {
-        this.entityData.set(DATA_OWNERUUID_ID, Optional.ofNullable(p_393669_));
+    public void setOwnerReference(final @Nullable EntityReference<LivingEntity> owner) {
+        this.entityData.set(DATA_OWNERUUID_ID, Optional.ofNullable(owner));
     }
 
-    public void tame(Player p_21829_) {
+    public void tame(final Player player) {
         this.setTame(true, true);
-        this.setOwner(p_21829_);
-        if (p_21829_ instanceof ServerPlayer serverplayer) {
-            CriteriaTriggers.TAME_ANIMAL.trigger(serverplayer, this);
+        this.setOwner(player);
+        if (player instanceof ServerPlayer serverPlayer) {
+            CriteriaTriggers.TAME_ANIMAL.trigger(serverPlayer, this);
         }
     }
 
     @Override
-    public boolean canAttack(LivingEntity p_21822_) {
-        return this.isOwnedBy(p_21822_) ? false : super.canAttack(p_21822_);
+    public boolean canAttack(final LivingEntity target) {
+        return this.isOwnedBy(target) ? false : super.canAttack(target);
     }
 
-    public boolean isOwnedBy(LivingEntity p_21831_) {
-        return p_21831_ == this.getOwner();
+    public boolean isOwnedBy(final LivingEntity entity) {
+        return entity == this.getOwner();
     }
 
-    public boolean wantsToAttack(LivingEntity p_21810_, LivingEntity p_21811_) {
+    public boolean wantsToAttack(final LivingEntity target, final LivingEntity owner) {
         return true;
     }
 
     @Override
     public @Nullable PlayerTeam getTeam() {
-        PlayerTeam playerteam = super.getTeam();
-        if (playerteam != null) {
-            return playerteam;
-        } else {
-            if (this.isTame()) {
-                LivingEntity livingentity = this.getRootOwner();
-                if (livingentity != null) {
-                    return livingentity.getTeam();
-                }
-            }
-
-            return null;
+        PlayerTeam ownTeam = super.getTeam();
+        if (ownTeam != null) {
+            return ownTeam;
         }
+
+        if (this.isTame()) {
+            LivingEntity owner = this.getRootOwner();
+            if (owner != null) {
+                return owner.getTeam();
+            }
+        }
+
+        return null;
     }
 
     @Override
-    protected boolean considersEntityAsAlly(Entity p_361057_) {
+    protected boolean considersEntityAsAlly(final Entity other) {
         if (this.isTame()) {
-            LivingEntity livingentity = this.getRootOwner();
-            if (p_361057_ == livingentity) {
+            LivingEntity owner = this.getRootOwner();
+            if (other == owner) {
                 return true;
             }
 
-            if (livingentity != null) {
-                return livingentity.considersEntityAsAlly(p_361057_);
+            if (owner != null) {
+                return owner.considersEntityAsAlly(other);
             }
         }
 
-        return super.considersEntityAsAlly(p_361057_);
+        return super.considersEntityAsAlly(other);
     }
 
     @Override
-    public void die(DamageSource p_21809_) {
-        if (this.level() instanceof ServerLevel serverlevel
-            && serverlevel.getGameRules().get(GameRules.SHOW_DEATH_MESSAGES)
-            && this.getOwner() instanceof ServerPlayer serverplayer) {
-            serverplayer.sendSystemMessage(this.getCombatTracker().getDeathMessage());
+    public void die(final DamageSource source) {
+        if (this.level() instanceof ServerLevel serverLevel
+            && serverLevel.getGameRules().get(GameRules.SHOW_DEATH_MESSAGES)
+            && this.getOwner() instanceof ServerPlayer serverPlayer) {
+            serverPlayer.sendSystemMessage(this.getCombatTracker().getDeathMessage());
         }
 
-        super.die(p_21809_);
+        super.die(source);
     }
 
     public boolean isOrderedToSit() {
         return this.orderedToSit;
     }
 
-    public void setOrderedToSit(boolean p_21840_) {
-        this.orderedToSit = p_21840_;
+    public void setOrderedToSit(final boolean orderedToSit) {
+        this.orderedToSit = orderedToSit;
     }
 
     public void tryToTeleportToOwner() {
-        LivingEntity livingentity = this.getOwner();
-        if (livingentity != null) {
-            this.teleportToAroundBlockPos(livingentity.blockPosition());
+        LivingEntity owner = this.getOwner();
+        if (owner != null) {
+            this.teleportToAroundBlockPos(owner.blockPosition());
         }
     }
 
     public boolean shouldTryTeleportToOwner() {
-        LivingEntity livingentity = this.getOwner();
-        return livingentity != null && this.distanceToSqr(this.getOwner()) >= 144.0;
+        LivingEntity owner = this.getOwner();
+        return owner != null && this.distanceToSqr(this.getOwner()) >= 144.0;
     }
 
-    private void teleportToAroundBlockPos(BlockPos p_342611_) {
-        for (int i = 0; i < 10; i++) {
-            int j = this.random.nextIntBetweenInclusive(-3, 3);
-            int k = this.random.nextIntBetweenInclusive(-3, 3);
-            if (Math.abs(j) >= 2 || Math.abs(k) >= 2) {
-                int l = this.random.nextIntBetweenInclusive(-1, 1);
-                if (this.maybeTeleportTo(p_342611_.getX() + j, p_342611_.getY() + l, p_342611_.getZ() + k)) {
+    private void teleportToAroundBlockPos(final BlockPos targetPos) {
+        for (int attempt = 0; attempt < 10; attempt++) {
+            int xd = this.random.nextIntBetweenInclusive(-3, 3);
+            int zd = this.random.nextIntBetweenInclusive(-3, 3);
+            if (Math.abs(xd) >= 2 || Math.abs(zd) >= 2) {
+                int yd = this.random.nextIntBetweenInclusive(-1, 1);
+                if (this.maybeTeleportTo(targetPos.getX() + xd, targetPos.getY() + yd, targetPos.getZ() + zd)) {
                     return;
                 }
             }
         }
     }
 
-    private boolean maybeTeleportTo(int p_344380_, int p_344602_, int p_344979_) {
-        if (!this.canTeleportTo(new BlockPos(p_344380_, p_344602_, p_344979_))) {
+    private boolean maybeTeleportTo(final int x, final int y, final int z) {
+        if (!this.canTeleportTo(new BlockPos(x, y, z))) {
             return false;
-        } else {
-            this.snapTo(p_344380_ + 0.5, p_344602_, p_344979_ + 0.5, this.getYRot(), this.getXRot());
-            this.navigation.stop();
-            return true;
         }
+
+        this.snapTo(x + 0.5, y, z + 0.5, this.getYRot(), this.getXRot());
+        this.navigation.stop();
+        return true;
     }
 
-    private boolean canTeleportTo(BlockPos p_342572_) {
-        PathType pathtype = WalkNodeEvaluator.getPathTypeStatic(this, p_342572_);
-        if (pathtype != PathType.WALKABLE) {
+    private boolean canTeleportTo(final BlockPos pos) {
+        PathType pathType = WalkNodeEvaluator.getPathTypeStatic(this, pos);
+        if (pathType != PathType.WALKABLE) {
             return false;
-        } else {
-            BlockState blockstate = this.level().getBlockState(p_342572_.below());
-            if (!this.canFlyToOwner() && blockstate.getBlock() instanceof LeavesBlock) {
-                return false;
-            } else {
-                BlockPos blockpos = p_342572_.subtract(this.blockPosition());
-                return this.level().noCollision(this, this.getBoundingBox().move(blockpos));
-            }
         }
+
+        BlockState blockStateBelow = this.level().getBlockState(pos.below());
+        if (!this.canFlyToOwner() && blockStateBelow.getBlock() instanceof LeavesBlock) {
+            return false;
+        }
+
+        BlockPos delta = pos.subtract(this.blockPosition());
+        return this.level().noCollision(this, this.getBoundingBox().move(delta));
     }
 
     public final boolean unableToMoveToOwner() {
@@ -286,12 +297,12 @@ public abstract class TamableAnimal extends Animal implements OwnableEntity {
     }
 
     public class TamableAnimalPanicGoal extends PanicGoal {
-        public TamableAnimalPanicGoal(final double p_344198_, final TagKey<DamageType> p_343270_) {
-            super(TamableAnimal.this, p_344198_, p_343270_);
+        public TamableAnimalPanicGoal(final double speedModifier, final TagKey<DamageType> panicCausingDamageTypes) {
+            super(TamableAnimal.this, speedModifier, panicCausingDamageTypes);
         }
 
-        public TamableAnimalPanicGoal(final double p_344164_) {
-            super(TamableAnimal.this, p_344164_);
+        public TamableAnimalPanicGoal(final double speedModifier) {
+            super(TamableAnimal.this, speedModifier);
         }
 
         @Override

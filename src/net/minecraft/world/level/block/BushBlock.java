@@ -21,27 +21,27 @@ public class BushBlock extends VegetationBlock implements BonemealableBlock {
         return CODEC;
     }
 
-    protected BushBlock(BlockBehaviour.Properties p_51021_) {
-        super(p_51021_);
+    protected BushBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_395143_, BlockGetter p_397492_, BlockPos p_393430_, CollisionContext p_397643_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_392634_, BlockPos p_396036_, BlockState p_395891_) {
-        return BonemealableBlock.hasSpreadableNeighbourPos(p_392634_, p_396036_, p_395891_);
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return BonemealableBlock.hasSpreadableNeighbourPos(level, pos, state);
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_395941_, RandomSource p_397459_, BlockPos p_396412_, BlockState p_394635_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_391278_, RandomSource p_394044_, BlockPos p_393939_, BlockState p_395840_) {
-        BonemealableBlock.findSpreadableNeighbourPos(p_391278_, p_393939_, p_395840_).ifPresent(p_405678_ -> p_391278_.setBlockAndUpdate(p_405678_, this.defaultBlockState()));
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        BonemealableBlock.findSpreadableNeighbourPos(level, pos, state).ifPresent(blockPos -> level.setBlockAndUpdate(blockPos, this.defaultBlockState()));
     }
 }

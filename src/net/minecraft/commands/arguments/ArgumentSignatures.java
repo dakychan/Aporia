@@ -13,35 +13,35 @@ public record ArgumentSignatures(List<ArgumentSignatures.Entry> entries) {
     private static final int MAX_ARGUMENT_COUNT = 8;
     private static final int MAX_ARGUMENT_NAME_LENGTH = 16;
 
-    public ArgumentSignatures(FriendlyByteBuf p_231052_) {
-        this(p_231052_.<Entry, List<Entry>>readCollection(FriendlyByteBuf.limitValue(ArrayList::new, 8), ArgumentSignatures.Entry::new));
+    public ArgumentSignatures(final FriendlyByteBuf input) {
+        this(input.<Entry, List<Entry>>readCollection(FriendlyByteBuf.limitValue(ArrayList::new, 8), ArgumentSignatures.Entry::new));
     }
 
-    public void write(FriendlyByteBuf p_231062_) {
-        p_231062_.writeCollection(this.entries, (p_241214_, p_241215_) -> p_241215_.write(p_241214_));
+    public void write(final FriendlyByteBuf output) {
+        output.writeCollection(this.entries, (out, entry) -> entry.write(out));
     }
 
-    public static ArgumentSignatures signCommand(SignableCommand<?> p_251621_, ArgumentSignatures.Signer p_248653_) {
-        List<ArgumentSignatures.Entry> list = p_251621_.arguments().stream().map(p_247962_ -> {
-            MessageSignature messagesignature = p_248653_.sign(p_247962_.value());
-            return messagesignature != null ? new ArgumentSignatures.Entry(p_247962_.name(), messagesignature) : null;
+    public static ArgumentSignatures signCommand(final SignableCommand<?> command, final ArgumentSignatures.Signer signer) {
+        List<ArgumentSignatures.Entry> entries = command.arguments().stream().map(argument -> {
+            MessageSignature signature = signer.sign(argument.value());
+            return signature != null ? new ArgumentSignatures.Entry(argument.name(), signature) : null;
         }).filter(Objects::nonNull).toList();
-        return new ArgumentSignatures(list);
+        return new ArgumentSignatures(entries);
     }
 
     public record Entry(String name, MessageSignature signature) {
-        public Entry(FriendlyByteBuf p_241305_) {
-            this(p_241305_.readUtf(16), MessageSignature.read(p_241305_));
+        public Entry(final FriendlyByteBuf input) {
+            this(input.readUtf(16), MessageSignature.read(input));
         }
 
-        public void write(FriendlyByteBuf p_241403_) {
-            p_241403_.writeUtf(this.name, 16);
-            MessageSignature.write(p_241403_, this.signature);
+        public void write(final FriendlyByteBuf output) {
+            output.writeUtf(this.name, 16);
+            MessageSignature.write(output, this.signature);
         }
     }
 
     @FunctionalInterface
     public interface Signer {
-        @Nullable MessageSignature sign(String p_241389_);
+        @Nullable MessageSignature sign(String content);
     }
 }

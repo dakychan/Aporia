@@ -13,37 +13,34 @@ import net.minecraft.client.renderer.entity.layers.WingsLayer;
 import net.minecraft.client.renderer.entity.state.ArmorStandRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.decoration.ArmorStand;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ArmorStandRenderer extends LivingEntityRenderer<ArmorStand, ArmorStandRenderState, ArmorStandArmorModel> {
-    public static final Identifier DEFAULT_SKIN_LOCATION = Identifier.withDefaultNamespace("textures/entity/armorstand/wood.png");
+    public static final Identifier DEFAULT_SKIN_LOCATION = Identifier.withDefaultNamespace("textures/entity/armorstand/armorstand.png");
     private final ArmorStandArmorModel bigModel = this.getModel();
     private final ArmorStandArmorModel smallModel;
 
-    public ArmorStandRenderer(EntityRendererProvider.Context p_173915_) {
-        super(p_173915_, new ArmorStandModel(p_173915_.bakeLayer(ModelLayers.ARMOR_STAND)), 0.0F);
-        this.smallModel = new ArmorStandModel(p_173915_.bakeLayer(ModelLayers.ARMOR_STAND_SMALL));
+    public ArmorStandRenderer(final EntityRendererProvider.Context context) {
+        super(context, new ArmorStandModel(context.bakeLayer(ModelLayers.ARMOR_STAND)), 0.0F);
+        this.smallModel = new ArmorStandModel(context.bakeLayer(ModelLayers.ARMOR_STAND_SMALL));
         this.addLayer(
             new HumanoidArmorLayer<>(
                 this,
-                ArmorModelSet.bake(ModelLayers.ARMOR_STAND_ARMOR, p_173915_.getModelSet(), ArmorStandArmorModel::new),
-                ArmorModelSet.bake(ModelLayers.ARMOR_STAND_SMALL_ARMOR, p_173915_.getModelSet(), ArmorStandArmorModel::new),
-                p_173915_.getEquipmentRenderer()
+                ArmorModelSet.bake(ModelLayers.ARMOR_STAND_ARMOR, context.getModelSet(), ArmorStandArmorModel::new),
+                ArmorModelSet.bake(ModelLayers.ARMOR_STAND_SMALL_ARMOR, context.getModelSet(), ArmorStandArmorModel::new),
+                context.getEquipmentRenderer()
             )
         );
         this.addLayer(new ItemInHandLayer<>(this));
-        this.addLayer(new WingsLayer<>(this, p_173915_.getModelSet(), p_173915_.getEquipmentRenderer()));
-        this.addLayer(new CustomHeadLayer<>(this, p_173915_.getModelSet(), p_173915_.getPlayerSkinRenderCache()));
+        this.addLayer(new WingsLayer<>(this, context.getModelSet(), context.getEquipmentRenderer()));
+        this.addLayer(new CustomHeadLayer<>(this, context.getModelSet(), context.getPlayerSkinRenderCache()));
     }
 
-    public Identifier getTextureLocation(ArmorStandRenderState p_361116_) {
+    public Identifier getTextureLocation(final ArmorStandRenderState state) {
         return DEFAULT_SKIN_LOCATION;
     }
 
@@ -51,48 +48,52 @@ public class ArmorStandRenderer extends LivingEntityRenderer<ArmorStand, ArmorSt
         return new ArmorStandRenderState();
     }
 
-    public void extractRenderState(ArmorStand p_364068_, ArmorStandRenderState p_361680_, float p_369387_) {
-        super.extractRenderState(p_364068_, p_361680_, p_369387_);
-        HumanoidMobRenderer.extractHumanoidRenderState(p_364068_, p_361680_, p_369387_, this.itemModelResolver);
-        p_361680_.yRot = Mth.rotLerp(p_369387_, p_364068_.yRotO, p_364068_.getYRot());
-        p_361680_.isMarker = p_364068_.isMarker();
-        p_361680_.isSmall = p_364068_.isSmall();
-        p_361680_.showArms = p_364068_.showArms();
-        p_361680_.showBasePlate = p_364068_.showBasePlate();
-        p_361680_.bodyPose = p_364068_.getBodyPose();
-        p_361680_.headPose = p_364068_.getHeadPose();
-        p_361680_.leftArmPose = p_364068_.getLeftArmPose();
-        p_361680_.rightArmPose = p_364068_.getRightArmPose();
-        p_361680_.leftLegPose = p_364068_.getLeftLegPose();
-        p_361680_.rightLegPose = p_364068_.getRightLegPose();
-        p_361680_.wiggle = (float)(p_364068_.level().getGameTime() - p_364068_.lastHit) + p_369387_;
+    public void extractRenderState(final ArmorStand entity, final ArmorStandRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        HumanoidMobRenderer.extractHumanoidRenderState(entity, state, partialTicks, this.itemModelResolver);
+        state.yRot = Mth.rotLerp(partialTicks, entity.yRotO, entity.getYRot());
+        state.isMarker = entity.isMarker();
+        state.isSmall = entity.isSmall();
+        state.showArms = entity.showArms();
+        state.showBasePlate = entity.showBasePlate();
+        state.bodyPose = entity.getBodyPose();
+        state.headPose = entity.getHeadPose();
+        state.leftArmPose = entity.getLeftArmPose();
+        state.rightArmPose = entity.getRightArmPose();
+        state.leftLegPose = entity.getLeftLegPose();
+        state.rightLegPose = entity.getRightLegPose();
+        state.wiggle = (float)(entity.level().getGameTime() - entity.lastHit) + partialTicks;
     }
 
-    public void submit(ArmorStandRenderState p_430115_, PoseStack p_430877_, SubmitNodeCollector p_431083_, CameraRenderState p_429593_) {
-        this.model = p_430115_.isSmall ? this.smallModel : this.bigModel;
-        super.submit(p_430115_, p_430877_, p_431083_, p_429593_);
+    public void submit(
+        final ArmorStandRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
+    ) {
+        this.model = state.isSmall ? this.smallModel : this.bigModel;
+        super.submit(state, poseStack, submitNodeCollector, camera);
     }
 
-    protected void setupRotations(ArmorStandRenderState p_365303_, PoseStack p_113788_, float p_113789_, float p_113790_) {
-        p_113788_.mulPose(Axis.YP.rotationDegrees(180.0F - p_113789_));
-        if (p_365303_.wiggle < 5.0F) {
-            p_113788_.mulPose(Axis.YP.rotationDegrees(Mth.sin(p_365303_.wiggle / 1.5F * (float) Math.PI) * 3.0F));
+    protected void setupRotations(final ArmorStandRenderState state, final PoseStack poseStack, final float bodyRot, final float entityScale) {
+        poseStack.mulPose(Axis.YP.rotationDegrees(180.0F - bodyRot));
+        if (state.wiggle < 5.0F) {
+            poseStack.mulPose(Axis.YP.rotationDegrees(Mth.sin(state.wiggle / 1.5F * (float) Math.PI) * 3.0F));
         }
     }
 
-    protected boolean shouldShowName(ArmorStand p_363344_, double p_365520_) {
-        return p_363344_.isCustomNameVisible();
+    protected boolean shouldShowName(final ArmorStand entity, final double distanceToCameraSq) {
+        return entity.isCustomNameVisible();
     }
 
-    protected @Nullable RenderType getRenderType(ArmorStandRenderState p_451197_, boolean p_113794_, boolean p_113795_, boolean p_113796_) {
-        if (!p_451197_.isMarker) {
-            return super.getRenderType(p_451197_, p_113794_, p_113795_, p_113796_);
+    protected @Nullable RenderType getRenderType(
+        final ArmorStandRenderState state, final boolean isBodyVisible, final boolean forceTransparent, final boolean appearGlowing
+    ) {
+        if (!state.isMarker) {
+            return super.getRenderType(state, isBodyVisible, forceTransparent, appearGlowing);
         } else {
-            Identifier identifier = this.getTextureLocation(p_451197_);
-            if (p_113795_) {
-                return RenderTypes.entityTranslucent(identifier, false);
+            Identifier texture = this.getTextureLocation(state);
+            if (forceTransparent) {
+                return RenderTypes.entityTranslucent(texture, false);
             } else {
-                return p_113794_ ? RenderTypes.entityCutoutNoCull(identifier, false) : null;
+                return isBodyVisible ? RenderTypes.entityCutout(texture, false) : null;
             }
         }
     }

@@ -3,10 +3,9 @@ package net.minecraft.world.level.storage.loot.providers.number;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
-import java.util.Set;
-import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.providers.score.ContextScoreboardNameProvider;
 import net.minecraft.world.level.storage.loot.providers.score.ScoreboardNameProvider;
 import net.minecraft.world.level.storage.loot.providers.score.ScoreboardNameProviders;
@@ -16,47 +15,48 @@ import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
 
 public record ScoreboardValue(ScoreboardNameProvider target, String score, float scale) implements NumberProvider {
-    public static final MapCodec<ScoreboardValue> CODEC = RecordCodecBuilder.mapCodec(
-        p_297867_ -> p_297867_.group(
+    public static final MapCodec<ScoreboardValue> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
                 ScoreboardNameProviders.CODEC.fieldOf("target").forGetter(ScoreboardValue::target),
                 Codec.STRING.fieldOf("score").forGetter(ScoreboardValue::score),
-                Codec.FLOAT.fieldOf("scale").orElse(1.0F).forGetter(ScoreboardValue::scale)
+                Codec.FLOAT.optionalFieldOf("scale", 1.0F).forGetter(ScoreboardValue::scale)
             )
-            .apply(p_297867_, ScoreboardValue::new)
+            .apply(i, ScoreboardValue::new)
     );
 
     @Override
-    public LootNumberProviderType getType() {
-        return NumberProviders.SCORE;
+    public MapCodec<ScoreboardValue> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    public Set<ContextKey<?>> getReferencedContextParams() {
-        return this.target.getReferencedContextParams();
+    public void validate(final ValidationContext context) {
+        NumberProvider.super.validate(context);
+        Validatable.validate(context, "target", this.target);
     }
 
-    public static ScoreboardValue fromScoreboard(LootContext.EntityTarget p_165750_, String p_165751_) {
-        return fromScoreboard(p_165750_, p_165751_, 1.0F);
+    public static ScoreboardValue fromScoreboard(final LootContext.EntityTarget entityTarget, final String score) {
+        return fromScoreboard(entityTarget, score, 1.0F);
     }
 
-    public static ScoreboardValue fromScoreboard(LootContext.EntityTarget p_165753_, String p_165754_, float p_165755_) {
-        return new ScoreboardValue(ContextScoreboardNameProvider.forTarget(p_165753_), p_165754_, p_165755_);
+    public static ScoreboardValue fromScoreboard(final LootContext.EntityTarget entityTarget, final String score, final float scale) {
+        return new ScoreboardValue(ContextScoreboardNameProvider.forTarget(entityTarget), score, scale);
     }
 
     @Override
-    public float getFloat(LootContext p_165758_) {
-        ScoreHolder scoreholder = this.target.getScoreHolder(p_165758_);
-        if (scoreholder == null) {
+    public float getFloat(final LootContext context) {
+        ScoreHolder scoreHolder = this.target.getScoreHolder(context);
+        if (scoreHolder == null) {
             return 0.0F;
-        } else {
-            Scoreboard scoreboard = p_165758_.getLevel().getScoreboard();
-            Objective objective = scoreboard.getObjective(this.score);
-            if (objective == null) {
-                return 0.0F;
-            } else {
-                ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(scoreholder, objective);
-                return readonlyscoreinfo == null ? 0.0F : readonlyscoreinfo.value() * this.scale;
-            }
         }
+
+        Scoreboard scoreboard = context.getLevel().getScoreboard();
+        Objective objective = scoreboard.getObjective(this.score);
+        if (objective == null) {
+            return 0.0F;
+        }
+
+        ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(scoreHolder, objective);
+        return scoreInfo == null ? 0.0F : scoreInfo.value() * this.scale;
     }
 }

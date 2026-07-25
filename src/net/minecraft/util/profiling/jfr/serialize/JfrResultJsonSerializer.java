@@ -44,244 +44,237 @@ public class JfrResultJsonSerializer {
     private static final String DURATION_NANOS_TOTAL = "durationNanosTotal";
     private static final String TOTAL_BYTES = "totalBytes";
     private static final String COUNT_PER_SECOND = "countPerSecond";
-    final Gson gson = new GsonBuilder().setPrettyPrinting().setLongSerializationPolicy(LongSerializationPolicy.DEFAULT).create();
+    private final Gson gson = new GsonBuilder().setPrettyPrinting().setLongSerializationPolicy(LongSerializationPolicy.DEFAULT).create();
 
-    private static void serializePacketId(PacketIdentification p_335435_, JsonObject p_331788_) {
-        p_331788_.addProperty("protocolId", p_335435_.protocolId());
-        p_331788_.addProperty("packetId", p_335435_.packetId());
+    private static void serializePacketId(final PacketIdentification identifier, final JsonObject output) {
+        output.addProperty("protocolId", identifier.protocolId());
+        output.addProperty("packetId", identifier.packetId());
     }
 
-    private static void serializeChunkId(ChunkIdentification p_332094_, JsonObject p_330415_) {
-        p_330415_.addProperty("level", p_332094_.level());
-        p_330415_.addProperty("dimension", p_332094_.dimension());
-        p_330415_.addProperty("x", p_332094_.x());
-        p_330415_.addProperty("z", p_332094_.z());
+    private static void serializeChunkId(final ChunkIdentification identifier, final JsonObject output) {
+        output.addProperty("level", identifier.level());
+        output.addProperty("dimension", identifier.dimension());
+        output.addProperty("x", identifier.x());
+        output.addProperty("z", identifier.z());
     }
 
-    public String format(JfrStatsResult p_185536_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.addProperty("startedEpoch", p_185536_.recordingStarted().toEpochMilli());
-        jsonobject.addProperty("endedEpoch", p_185536_.recordingEnded().toEpochMilli());
-        jsonobject.addProperty("durationMs", p_185536_.recordingDuration().toMillis());
-        Duration duration = p_185536_.worldCreationDuration();
-        if (duration != null) {
-            jsonobject.addProperty("worldGenDurationMs", duration.toMillis());
+    public String format(final JfrStatsResult jfrStats) {
+        JsonObject root = new JsonObject();
+        root.addProperty("startedEpoch", jfrStats.recordingStarted().toEpochMilli());
+        root.addProperty("endedEpoch", jfrStats.recordingEnded().toEpochMilli());
+        root.addProperty("durationMs", jfrStats.recordingDuration().toMillis());
+        Duration worldCreationDuration = jfrStats.worldCreationDuration();
+        if (worldCreationDuration != null) {
+            root.addProperty("worldGenDurationMs", worldCreationDuration.toMillis());
         }
 
-        jsonobject.add("heap", this.heap(p_185536_.heapSummary()));
-        jsonobject.add("cpuPercent", this.cpu(p_185536_.cpuLoadStats()));
-        jsonobject.add("network", this.network(p_185536_));
-        jsonobject.add("fileIO", this.fileIO(p_185536_));
-        jsonobject.add("fps", this.fps(p_185536_.fps()));
-        jsonobject.add("serverTick", this.serverTicks(p_185536_.serverTickTimes()));
-        jsonobject.add("threadAllocation", this.threadAllocations(p_185536_.threadAllocationSummary()));
-        jsonobject.add("chunkGen", this.chunkGen(p_185536_.chunkGenSummary()));
-        jsonobject.add("structureGen", this.structureGen(p_185536_.structureGenStats()));
-        return this.gson.toJson((JsonElement)jsonobject);
+        root.add("heap", this.heap(jfrStats.heapSummary()));
+        root.add("cpuPercent", this.cpu(jfrStats.cpuLoadStats()));
+        root.add("network", this.network(jfrStats));
+        root.add("fileIO", this.fileIO(jfrStats));
+        root.add("fps", this.fps(jfrStats.fps()));
+        root.add("serverTick", this.serverTicks(jfrStats.serverTickTimes()));
+        root.add("threadAllocation", this.threadAllocations(jfrStats.threadAllocationSummary()));
+        root.add("chunkGen", this.chunkGen(jfrStats.chunkGenSummary()));
+        root.add("structureGen", this.structureGen(jfrStats.structureGenStats()));
+        return this.gson.toJson(root);
     }
 
-    private JsonElement heap(GcHeapStat.Summary p_185542_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.addProperty("allocationRateBytesPerSecond", p_185542_.allocationRateBytesPerSecond());
-        jsonobject.addProperty("gcCount", p_185542_.totalGCs());
-        jsonobject.addProperty("gcOverHeadPercent", p_185542_.gcOverHead());
-        jsonobject.addProperty("gcTotalDurationMs", p_185542_.gcTotalDuration().toMillis());
-        return jsonobject;
+    private JsonElement heap(final GcHeapStat.Summary heapSummary) {
+        JsonObject json = new JsonObject();
+        json.addProperty("allocationRateBytesPerSecond", heapSummary.allocationRateBytesPerSecond());
+        json.addProperty("gcCount", heapSummary.totalGCs());
+        json.addProperty("gcOverHeadPercent", heapSummary.gcOverHead());
+        json.addProperty("gcTotalDurationMs", heapSummary.gcTotalDuration().toMillis());
+        return json;
     }
 
-    private JsonElement structureGen(List<StructureGenStat> p_375433_) {
-        JsonObject jsonobject = new JsonObject();
-        Optional<TimedStatSummary<StructureGenStat>> optional = TimedStatSummary.summary(p_375433_);
-        if (optional.isEmpty()) {
-            return jsonobject;
-        } else {
-            TimedStatSummary<StructureGenStat> timedstatsummary = optional.get();
-            JsonArray jsonarray = new JsonArray();
-            jsonobject.add("structure", jsonarray);
-            p_375433_.stream()
-                .collect(Collectors.groupingBy(StructureGenStat::structureName))
-                .forEach(
-                    (p_449369_, p_449370_) -> {
-                        Optional<TimedStatSummary<StructureGenStat>> optional1 = TimedStatSummary.summary((List<StructureGenStat>)p_449370_);
-                        if (!optional1.isEmpty()) {
-                            TimedStatSummary<StructureGenStat> timedstatsummary1 = optional1.get();
-                            JsonObject jsonobject1 = new JsonObject();
-                            jsonarray.add(jsonobject1);
-                            jsonobject1.addProperty("name", p_449369_);
-                            jsonobject1.addProperty("count", timedstatsummary1.count());
-                            jsonobject1.addProperty("durationNanosTotal", timedstatsummary1.totalDuration().toNanos());
-                            jsonobject1.addProperty("durationNanosAvg", timedstatsummary1.totalDuration().toNanos() / timedstatsummary1.count());
-                            JsonObject jsonobject2 = Util.make(new JsonObject(), p_374916_ -> jsonobject1.add("durationNanosPercentiles", p_374916_));
-                            timedstatsummary1.percentilesNanos().forEach((p_449364_, p_449365_) -> jsonobject2.addProperty("p" + p_449364_, p_449365_));
-                            Function<StructureGenStat, JsonElement> function = p_374920_ -> {
-                                JsonObject jsonobject3 = new JsonObject();
-                                jsonobject3.addProperty("durationNanos", p_374920_.duration().toNanos());
-                                jsonobject3.addProperty("chunkPosX", p_374920_.chunkPos().x);
-                                jsonobject3.addProperty("chunkPosZ", p_374920_.chunkPos().z);
-                                jsonobject3.addProperty("structureName", p_374920_.structureName());
-                                jsonobject3.addProperty("level", p_374920_.level());
-                                jsonobject3.addProperty("success", p_374920_.success());
-                                return jsonobject3;
-                            };
-                            jsonobject.add("fastest", function.apply(timedstatsummary.fastest()));
-                            jsonobject.add("slowest", function.apply(timedstatsummary.slowest()));
-                            jsonobject.add(
-                                "secondSlowest",
-                                (JsonElement)(timedstatsummary.secondSlowest() != null ? function.apply(timedstatsummary.secondSlowest()) : JsonNull.INSTANCE)
-                            );
-                        }
-                    }
-                );
-            return jsonobject;
+    private JsonElement structureGen(final List<StructureGenStat> structureGenStats) {
+        JsonObject root = new JsonObject();
+        Optional<TimedStatSummary<StructureGenStat>> optionalSummary = TimedStatSummary.summary(structureGenStats);
+        if (optionalSummary.isEmpty()) {
+            return root;
         }
-    }
 
-    private JsonElement chunkGen(List<Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>>> p_185573_) {
-        JsonObject jsonobject = new JsonObject();
-        if (p_185573_.isEmpty()) {
-            return jsonobject;
-        } else {
-            jsonobject.addProperty("durationNanosTotal", p_185573_.stream().mapToDouble(p_185567_ -> p_185567_.getSecond().totalDuration().toNanos()).sum());
-            JsonArray jsonarray = Util.make(new JsonArray(), p_185558_ -> jsonobject.add("status", p_185558_));
-
-            for (Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>> pair : p_185573_) {
-                TimedStatSummary<ChunkGenStat> timedstatsummary = pair.getSecond();
-                JsonObject jsonobject1 = Util.make(new JsonObject(), jsonarray::add);
-                jsonobject1.addProperty("state", pair.getFirst().toString());
-                jsonobject1.addProperty("count", timedstatsummary.count());
-                jsonobject1.addProperty("durationNanosTotal", timedstatsummary.totalDuration().toNanos());
-                jsonobject1.addProperty("durationNanosAvg", timedstatsummary.totalDuration().toNanos() / timedstatsummary.count());
-                JsonObject jsonobject2 = Util.make(new JsonObject(), p_185561_ -> jsonobject1.add("durationNanosPercentiles", p_185561_));
-                timedstatsummary.percentilesNanos().forEach((p_185584_, p_185585_) -> jsonobject2.addProperty("p" + p_185584_, p_185585_));
-                Function<ChunkGenStat, JsonElement> function = p_185538_ -> {
-                    JsonObject jsonobject3 = new JsonObject();
-                    jsonobject3.addProperty("durationNanos", p_185538_.duration().toNanos());
-                    jsonobject3.addProperty("level", p_185538_.level());
-                    jsonobject3.addProperty("chunkPosX", p_185538_.chunkPos().x);
-                    jsonobject3.addProperty("chunkPosZ", p_185538_.chunkPos().z);
-                    jsonobject3.addProperty("worldPosX", p_185538_.worldPos().x());
-                    jsonobject3.addProperty("worldPosZ", p_185538_.worldPos().z());
-                    return jsonobject3;
+        TimedStatSummary<StructureGenStat> summary = optionalSummary.get();
+        JsonArray structureJsonArray = new JsonArray();
+        root.add("structure", structureJsonArray);
+        structureGenStats.stream().collect(Collectors.groupingBy(StructureGenStat::structureName)).forEach((structureName, timedStat) -> {
+            Optional<TimedStatSummary<StructureGenStat>> optionalStatSummary = TimedStatSummary.summary((List<StructureGenStat>)timedStat);
+            if (!optionalStatSummary.isEmpty()) {
+                TimedStatSummary<StructureGenStat> statSummary = optionalStatSummary.get();
+                JsonObject structureJson = new JsonObject();
+                structureJsonArray.add(structureJson);
+                structureJson.addProperty("name", structureName);
+                structureJson.addProperty("count", statSummary.count());
+                structureJson.addProperty("durationNanosTotal", statSummary.totalDuration().toNanos());
+                structureJson.addProperty("durationNanosAvg", statSummary.totalDuration().toNanos() / statSummary.count());
+                JsonObject percentiles = Util.make(new JsonObject(), self -> structureJson.add("durationNanosPercentiles", self));
+                statSummary.percentilesNanos().forEach((percentile, v) -> percentiles.addProperty("p" + percentile, v));
+                Function<StructureGenStat, JsonElement> structureGenStatJsonGenerator = structureGen -> {
+                    JsonObject result = new JsonObject();
+                    result.addProperty("durationNanos", structureGen.duration().toNanos());
+                    result.addProperty("chunkPosX", structureGen.chunkPos().x());
+                    result.addProperty("chunkPosZ", structureGen.chunkPos().z());
+                    result.addProperty("structureName", structureGen.structureName());
+                    result.addProperty("level", structureGen.level());
+                    result.addProperty("success", structureGen.success());
+                    return result;
                 };
-                jsonobject1.add("fastest", function.apply(timedstatsummary.fastest()));
-                jsonobject1.add("slowest", function.apply(timedstatsummary.slowest()));
-                jsonobject1.add(
-                    "secondSlowest", (JsonElement)(timedstatsummary.secondSlowest() != null ? function.apply(timedstatsummary.secondSlowest()) : JsonNull.INSTANCE)
-                );
+                root.add("fastest", structureGenStatJsonGenerator.apply(summary.fastest()));
+                root.add("slowest", structureGenStatJsonGenerator.apply(summary.slowest()));
+                root.add("secondSlowest", summary.secondSlowest() != null ? structureGenStatJsonGenerator.apply(summary.secondSlowest()) : JsonNull.INSTANCE);
             }
-
-            return jsonobject;
-        }
+        });
+        return root;
     }
 
-    private JsonElement threadAllocations(ThreadAllocationStat.Summary p_185546_) {
-        JsonArray jsonarray = new JsonArray();
-        p_185546_.allocationsPerSecondByThread().forEach((p_449361_, p_449362_) -> jsonarray.add(Util.make(new JsonObject(), p_185571_ -> {
-            p_185571_.addProperty("thread", p_449361_);
-            p_185571_.addProperty("bytesPerSecond", p_449362_);
+    private JsonElement chunkGen(final List<Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>>> chunkGenSummary) {
+        JsonObject json = new JsonObject();
+        if (chunkGenSummary.isEmpty()) {
+            return json;
+        }
+
+        json.addProperty("durationNanosTotal", chunkGenSummary.stream().mapToDouble(it -> it.getSecond().totalDuration().toNanos()).sum());
+        JsonArray chunkJsonArray = Util.make(new JsonArray(), self -> json.add("status", self));
+
+        for (Pair<ChunkStatus, TimedStatSummary<ChunkGenStat>> summaryByStatus : chunkGenSummary) {
+            TimedStatSummary<ChunkGenStat> chunkStat = summaryByStatus.getSecond();
+            JsonObject chunkStatusJson = Util.make(new JsonObject(), chunkJsonArray::add);
+            chunkStatusJson.addProperty("state", summaryByStatus.getFirst().toString());
+            chunkStatusJson.addProperty("count", chunkStat.count());
+            chunkStatusJson.addProperty("durationNanosTotal", chunkStat.totalDuration().toNanos());
+            chunkStatusJson.addProperty("durationNanosAvg", chunkStat.totalDuration().toNanos() / chunkStat.count());
+            JsonObject percentiles = Util.make(new JsonObject(), self -> chunkStatusJson.add("durationNanosPercentiles", self));
+            chunkStat.percentilesNanos().forEach((percentile, value) -> percentiles.addProperty("p" + percentile, value));
+            Function<ChunkGenStat, JsonElement> chunkGenStatJsonGenerator = chunk -> {
+                JsonObject chunkGenStatJson = new JsonObject();
+                chunkGenStatJson.addProperty("durationNanos", chunk.duration().toNanos());
+                chunkGenStatJson.addProperty("level", chunk.level());
+                chunkGenStatJson.addProperty("chunkPosX", chunk.chunkPos().x());
+                chunkGenStatJson.addProperty("chunkPosZ", chunk.chunkPos().z());
+                chunkGenStatJson.addProperty("worldPosX", chunk.worldPos().x());
+                chunkGenStatJson.addProperty("worldPosZ", chunk.worldPos().z());
+                return chunkGenStatJson;
+            };
+            chunkStatusJson.add("fastest", chunkGenStatJsonGenerator.apply(chunkStat.fastest()));
+            chunkStatusJson.add("slowest", chunkGenStatJsonGenerator.apply(chunkStat.slowest()));
+            chunkStatusJson.add(
+                "secondSlowest", chunkStat.secondSlowest() != null ? chunkGenStatJsonGenerator.apply(chunkStat.secondSlowest()) : JsonNull.INSTANCE
+            );
+        }
+
+        return json;
+    }
+
+    private JsonElement threadAllocations(final ThreadAllocationStat.Summary threadAllocationSummary) {
+        JsonArray threads = new JsonArray();
+        threadAllocationSummary.allocationsPerSecondByThread().forEach((threadName, bytesPerSecond) -> threads.add(Util.make(new JsonObject(), json -> {
+            json.addProperty("thread", threadName);
+            json.addProperty("bytesPerSecond", bytesPerSecond);
         })));
-        return jsonarray;
+        return threads;
     }
 
-    private JsonElement serverTicks(List<TickTimeStat> p_185587_) {
-        if (p_185587_.isEmpty()) {
+    private JsonElement serverTicks(final List<TickTimeStat> tickTimeStats) {
+        if (tickTimeStats.isEmpty()) {
             return JsonNull.INSTANCE;
-        } else {
-            JsonObject jsonobject = new JsonObject();
-            double[] adouble = p_185587_.stream().mapToDouble(p_185548_ -> p_185548_.currentAverage().toNanos() / 1000000.0).toArray();
-            DoubleSummaryStatistics doublesummarystatistics = DoubleStream.of(adouble).summaryStatistics();
-            jsonobject.addProperty("minMs", doublesummarystatistics.getMin());
-            jsonobject.addProperty("averageMs", doublesummarystatistics.getAverage());
-            jsonobject.addProperty("maxMs", doublesummarystatistics.getMax());
-            Map<Integer, Double> map = Percentiles.evaluate(adouble);
-            map.forEach((p_374918_, p_374919_) -> jsonobject.addProperty("p" + p_374918_, p_374919_));
-            return jsonobject;
         }
+
+        JsonObject json = new JsonObject();
+        double[] tickTimesMs = tickTimeStats.stream().mapToDouble(tickTimeStat -> tickTimeStat.currentAverage().toNanos() / 1000000.0).toArray();
+        DoubleSummaryStatistics summary = DoubleStream.of(tickTimesMs).summaryStatistics();
+        json.addProperty("minMs", summary.getMin());
+        json.addProperty("averageMs", summary.getAverage());
+        json.addProperty("maxMs", summary.getMax());
+        Map<Integer, Double> percentiles = Percentiles.evaluate(tickTimesMs);
+        percentiles.forEach((percentile, value) -> json.addProperty("p" + percentile, value));
+        return json;
     }
 
-    private JsonElement fps(List<FpsStat> p_453713_) {
-        if (p_453713_.isEmpty()) {
+    private JsonElement fps(final List<FpsStat> fpsStats) {
+        if (fpsStats.isEmpty()) {
             return JsonNull.INSTANCE;
-        } else {
-            JsonObject jsonobject = new JsonObject();
-            int[] aint = p_453713_.stream().mapToInt(FpsStat::fps).toArray();
-            IntSummaryStatistics intsummarystatistics = IntStream.of(aint).summaryStatistics();
-            jsonobject.addProperty("minFPS", intsummarystatistics.getMin());
-            jsonobject.addProperty("averageFPS", intsummarystatistics.getAverage());
-            jsonobject.addProperty("maxFPS", intsummarystatistics.getMax());
-            Map<Integer, Double> map = Percentiles.evaluate(aint);
-            map.forEach((p_185564_, p_185565_) -> jsonobject.addProperty("p" + p_185564_, p_185565_));
-            return jsonobject;
         }
+
+        JsonObject json = new JsonObject();
+        int[] fps = fpsStats.stream().mapToInt(FpsStat::fps).toArray();
+        IntSummaryStatistics summary = IntStream.of(fps).summaryStatistics();
+        json.addProperty("minFPS", summary.getMin());
+        json.addProperty("averageFPS", summary.getAverage());
+        json.addProperty("maxFPS", summary.getMax());
+        Map<Integer, Double> percentiles = Percentiles.evaluate(fps);
+        percentiles.forEach((percentile, value) -> json.addProperty("p" + percentile, value));
+        return json;
     }
 
-    private JsonElement fileIO(JfrStatsResult p_185578_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.add("write", this.fileIoSummary(p_185578_.fileWrites()));
-        jsonobject.add("read", this.fileIoSummary(p_185578_.fileReads()));
-        jsonobject.add("chunksRead", this.ioSummary(p_185578_.readChunks(), JfrResultJsonSerializer::serializeChunkId));
-        jsonobject.add("chunksWritten", this.ioSummary(p_185578_.writtenChunks(), JfrResultJsonSerializer::serializeChunkId));
-        return jsonobject;
+    private JsonElement fileIO(final JfrStatsResult jfrStats) {
+        JsonObject json = new JsonObject();
+        json.add("write", this.fileIoSummary(jfrStats.fileWrites()));
+        json.add("read", this.fileIoSummary(jfrStats.fileReads()));
+        json.add("chunksRead", this.ioSummary(jfrStats.readChunks(), JfrResultJsonSerializer::serializeChunkId));
+        json.add("chunksWritten", this.ioSummary(jfrStats.writtenChunks(), JfrResultJsonSerializer::serializeChunkId));
+        return json;
     }
 
-    private JsonElement fileIoSummary(FileIOStat.Summary p_185540_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.addProperty("totalBytes", p_185540_.totalBytes());
-        jsonobject.addProperty("count", p_185540_.counts());
-        jsonobject.addProperty("bytesPerSecond", p_185540_.bytesPerSecond());
-        jsonobject.addProperty("countPerSecond", p_185540_.countsPerSecond());
-        JsonArray jsonarray = new JsonArray();
-        jsonobject.add("topContributors", jsonarray);
-        p_185540_.topTenContributorsByTotalBytes().forEach(p_185581_ -> {
-            JsonObject jsonobject1 = new JsonObject();
-            jsonarray.add(jsonobject1);
-            jsonobject1.addProperty("path", p_185581_.getFirst());
-            jsonobject1.addProperty("totalBytes", p_185581_.getSecond());
+    private JsonElement fileIoSummary(final FileIOStat.Summary io) {
+        JsonObject json = new JsonObject();
+        json.addProperty("totalBytes", io.totalBytes());
+        json.addProperty("count", io.counts());
+        json.addProperty("bytesPerSecond", io.bytesPerSecond());
+        json.addProperty("countPerSecond", io.countsPerSecond());
+        JsonArray topContributors = new JsonArray();
+        json.add("topContributors", topContributors);
+        io.topTenContributorsByTotalBytes().forEach(contributor -> {
+            JsonObject contributorJson = new JsonObject();
+            topContributors.add(contributorJson);
+            contributorJson.addProperty("path", contributor.getFirst());
+            contributorJson.addProperty("totalBytes", contributor.getSecond());
         });
-        return jsonobject;
+        return json;
     }
 
-    private JsonElement network(JfrStatsResult p_185589_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.add("sent", this.ioSummary(p_185589_.sentPacketsSummary(), JfrResultJsonSerializer::serializePacketId));
-        jsonobject.add("received", this.ioSummary(p_185589_.receivedPacketsSummary(), JfrResultJsonSerializer::serializePacketId));
-        return jsonobject;
+    private JsonElement network(final JfrStatsResult jfrStats) {
+        JsonObject json = new JsonObject();
+        json.add("sent", this.ioSummary(jfrStats.sentPacketsSummary(), JfrResultJsonSerializer::serializePacketId));
+        json.add("received", this.ioSummary(jfrStats.receivedPacketsSummary(), JfrResultJsonSerializer::serializePacketId));
+        return json;
     }
 
-    private <T> JsonElement ioSummary(IoSummary<T> p_333759_, BiConsumer<T, JsonObject> p_328845_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.addProperty("totalBytes", p_333759_.getTotalSize());
-        jsonobject.addProperty("count", p_333759_.getTotalCount());
-        jsonobject.addProperty("bytesPerSecond", p_333759_.getSizePerSecond());
-        jsonobject.addProperty("countPerSecond", p_333759_.getCountsPerSecond());
-        JsonArray jsonarray = new JsonArray();
-        jsonobject.add("topContributors", jsonarray);
-        p_333759_.largestSizeContributors().forEach(p_326733_ -> {
-            JsonObject jsonobject1 = new JsonObject();
-            jsonarray.add(jsonobject1);
-            T t = p_326733_.getFirst();
-            IoSummary.CountAndSize iosummary$countandsize = p_326733_.getSecond();
-            p_328845_.accept(t, jsonobject1);
-            jsonobject1.addProperty("totalBytes", iosummary$countandsize.totalSize());
-            jsonobject1.addProperty("count", iosummary$countandsize.totalCount());
-            jsonobject1.addProperty("averageSize", iosummary$countandsize.averageSize());
+    private <T> JsonElement ioSummary(final IoSummary<T> summary, final BiConsumer<T, JsonObject> elementWriter) {
+        JsonObject json = new JsonObject();
+        json.addProperty("totalBytes", summary.getTotalSize());
+        json.addProperty("count", summary.getTotalCount());
+        json.addProperty("bytesPerSecond", summary.getSizePerSecond());
+        json.addProperty("countPerSecond", summary.getCountsPerSecond());
+        JsonArray topContributors = new JsonArray();
+        json.add("topContributors", topContributors);
+        summary.largestSizeContributors().forEach(contributor -> {
+            JsonObject contributorJson = new JsonObject();
+            topContributors.add(contributorJson);
+            T identifier = contributor.getFirst();
+            IoSummary.CountAndSize countAndSize = contributor.getSecond();
+            elementWriter.accept(identifier, contributorJson);
+            contributorJson.addProperty("totalBytes", countAndSize.totalSize());
+            contributorJson.addProperty("count", countAndSize.totalCount());
+            contributorJson.addProperty("averageSize", countAndSize.averageSize());
         });
-        return jsonobject;
+        return json;
     }
 
-    private JsonElement cpu(List<CpuLoadStat> p_185591_) {
-        JsonObject jsonobject = new JsonObject();
-        BiFunction<List<CpuLoadStat>, ToDoubleFunction<CpuLoadStat>, JsonObject> bifunction = (p_185575_, p_185576_) -> {
-            JsonObject jsonobject1 = new JsonObject();
-            DoubleSummaryStatistics doublesummarystatistics = p_185575_.stream().mapToDouble(p_185576_).summaryStatistics();
-            jsonobject1.addProperty("min", doublesummarystatistics.getMin());
-            jsonobject1.addProperty("average", doublesummarystatistics.getAverage());
-            jsonobject1.addProperty("max", doublesummarystatistics.getMax());
-            return jsonobject1;
+    private JsonElement cpu(final List<CpuLoadStat> cpuStats) {
+        JsonObject json = new JsonObject();
+        BiFunction<List<CpuLoadStat>, ToDoubleFunction<CpuLoadStat>, JsonObject> transformer = (cpuLoadStats, extractor) -> {
+            JsonObject jsonGroup = new JsonObject();
+            DoubleSummaryStatistics stats = cpuLoadStats.stream().mapToDouble(extractor).summaryStatistics();
+            jsonGroup.addProperty("min", stats.getMin());
+            jsonGroup.addProperty("average", stats.getAverage());
+            jsonGroup.addProperty("max", stats.getMax());
+            return jsonGroup;
         };
-        jsonobject.add("jvm", bifunction.apply(p_185591_, CpuLoadStat::jvm));
-        jsonobject.add("userJvm", bifunction.apply(p_185591_, CpuLoadStat::userJvm));
-        jsonobject.add("system", bifunction.apply(p_185591_, CpuLoadStat::system));
-        return jsonobject;
+        json.add("jvm", transformer.apply(cpuStats, CpuLoadStat::jvm));
+        json.add("userJvm", transformer.apply(cpuStats, CpuLoadStat::userJvm));
+        json.add("system", transformer.apply(cpuStats, CpuLoadStat::system));
+        return json;
     }
 }

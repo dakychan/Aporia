@@ -6,7 +6,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.io.IOException;
 import java.net.Proxy;
 import java.net.URL;
@@ -37,69 +36,64 @@ public class DownloadQueue implements AutoCloseable {
     private final JsonEventLog<DownloadQueue.LogEntry> eventLog;
     private final ConsecutiveExecutor tasks = new ConsecutiveExecutor(Util.nonCriticalIoPool(), "download-queue");
 
-    public DownloadQueue(Path p_311573_) throws IOException {
-        this.cacheDir = p_311573_;
-        FileUtil.createDirectoriesSafe(p_311573_);
-        this.eventLog = JsonEventLog.open(DownloadQueue.LogEntry.CODEC, p_311573_.resolve("log.json"));
-        DownloadCacheCleaner.vacuumCacheDir(p_311573_, 20);
+    public DownloadQueue(final Path cacheDir) throws IOException {
+        this.cacheDir = cacheDir;
+        FileUtil.createDirectoriesSafe(cacheDir);
+        this.eventLog = JsonEventLog.open(DownloadQueue.LogEntry.CODEC, cacheDir.resolve("log.json"));
+        DownloadCacheCleaner.vacuumCacheDir(cacheDir, 20);
     }
 
-    private DownloadQueue.BatchResult runDownload(DownloadQueue.BatchConfig p_312964_, Map<UUID, DownloadQueue.DownloadRequest> p_311709_) {
-        DownloadQueue.BatchResult downloadqueue$batchresult = new DownloadQueue.BatchResult();
-        p_311709_.forEach(
-            (p_311290_, p_311466_) -> {
-                Path path = this.cacheDir.resolve(p_311290_.toString());
-                Path path1 = null;
+    private DownloadQueue.BatchResult runDownload(final DownloadQueue.BatchConfig config, final Map<UUID, DownloadQueue.DownloadRequest> requests) {
+        DownloadQueue.BatchResult result = new DownloadQueue.BatchResult();
+        requests.forEach(
+            (id, request) -> {
+                Path targetDir = this.cacheDir.resolve(id.toString());
+                Path downloadedFile = null;
 
                 try {
-                    path1 = HttpUtil.downloadFile(
-                        path,
-                        p_311466_.url,
-                        p_312964_.headers,
-                        p_312964_.hashFunction,
-                        p_311466_.hash,
-                        p_312964_.maxSize,
-                        p_312964_.proxy,
-                        p_312964_.listener
+                    downloadedFile = HttpUtil.downloadFile(
+                        targetDir, request.url, config.headers, config.hashFunction, request.hash, config.maxSize, config.proxy, config.listener
                     );
-                    downloadqueue$batchresult.downloaded.put(p_311290_, path1);
-                } catch (Exception exception1) {
-                    LOGGER.error("Failed to download {}", p_311466_.url, exception1);
-                    downloadqueue$batchresult.failed.add(p_311290_);
+                    result.downloaded.put(id, downloadedFile);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to download {}", request.url, e);
+                    result.failed.add(id);
                 }
 
                 try {
                     this.eventLog
                         .write(
                             new DownloadQueue.LogEntry(
-                                p_311290_,
-                                p_311466_.url.toString(),
+                                id,
+                                request.url.toString(),
                                 Instant.now(),
-                                Optional.ofNullable(p_311466_.hash).map(HashCode::toString),
-                                path1 != null ? this.getFileInfo(path1) : Either.left("download_failed")
+                                Optional.ofNullable(request.hash).map(HashCode::toString),
+                                downloadedFile != null ? this.getFileInfo(downloadedFile) : Either.left("download_failed")
                             )
                         );
-                } catch (Exception exception) {
-                    LOGGER.error("Failed to log download of {}", p_311466_.url, exception);
+                } catch (Exception e) {
+                    LOGGER.error("Failed to log download of {}", request.url, e);
                 }
             }
         );
-        return downloadqueue$batchresult;
+        return result;
     }
 
-    private Either<String, DownloadQueue.FileInfoEntry> getFileInfo(Path p_310185_) {
+    private Either<String, DownloadQueue.FileInfoEntry> getFileInfo(final Path downloadedFile) {
         try {
-            long i = Files.size(p_310185_);
-            Path path = this.cacheDir.relativize(p_310185_);
-            return Either.right(new DownloadQueue.FileInfoEntry(path.toString(), i));
-        } catch (IOException ioexception) {
-            LOGGER.error("Failed to get file size of {}", p_310185_, ioexception);
+            long size = Files.size(downloadedFile);
+            Path relativePath = this.cacheDir.relativize(downloadedFile);
+            return Either.right(new DownloadQueue.FileInfoEntry(relativePath.toString(), size));
+        } catch (IOException e) {
+            LOGGER.error("Failed to get file size of {}", downloadedFile, e);
             return Either.left("no_access");
         }
     }
 
-    public CompletableFuture<DownloadQueue.BatchResult> downloadBatch(DownloadQueue.BatchConfig p_312532_, Map<UUID, DownloadQueue.DownloadRequest> p_312658_) {
-        return CompletableFuture.supplyAsync(() -> this.runDownload(p_312532_, p_312658_), this.tasks::schedule);
+    public CompletableFuture<DownloadQueue.BatchResult> downloadBatch(
+        final DownloadQueue.BatchConfig config, final Map<UUID, DownloadQueue.DownloadRequest> requests
+    ) {
+        return CompletableFuture.supplyAsync(() -> this.runDownload(config, requests), this.tasks::schedule);
     }
 
     @Override
@@ -108,9 +102,7 @@ public class DownloadQueue implements AutoCloseable {
         this.eventLog.close();
     }
 
-    public record BatchConfig(
-        HashFunction hashFunction, int maxSize, Map<String, String> headers, Proxy proxy, HttpUtil.DownloadProgressListener listener
-    ) {
+    public record BatchConfig(HashFunction hashFunction, int maxSize, Map<String, String> headers, Proxy proxy, HttpUtil.DownloadProgressListener listener) {
     }
 
     public record BatchResult(Map<UUID, Path> downloaded, Set<UUID> failed) {
@@ -122,19 +114,19 @@ public class DownloadQueue implements AutoCloseable {
     public record DownloadRequest(URL url, @Nullable HashCode hash) {
     }
 
-    record FileInfoEntry(String name, long size) {
+    private record FileInfoEntry(String name, long size) {
         public static final Codec<DownloadQueue.FileInfoEntry> CODEC = RecordCodecBuilder.create(
-            p_311514_ -> p_311514_.group(
+            i -> i.group(
                     Codec.STRING.fieldOf("name").forGetter(DownloadQueue.FileInfoEntry::name),
                     Codec.LONG.fieldOf("size").forGetter(DownloadQueue.FileInfoEntry::size)
                 )
-                .apply(p_311514_, DownloadQueue.FileInfoEntry::new)
+                .apply(i, DownloadQueue.FileInfoEntry::new)
         );
     }
 
-    record LogEntry(UUID id, String url, Instant time, Optional<String> hash, Either<String, DownloadQueue.FileInfoEntry> errorOrFileInfo) {
+    private record LogEntry(UUID id, String url, Instant time, Optional<String> hash, Either<String, DownloadQueue.FileInfoEntry> errorOrFileInfo) {
         public static final Codec<DownloadQueue.LogEntry> CODEC = RecordCodecBuilder.create(
-            p_310865_ -> p_310865_.group(
+            i -> i.group(
                     UUIDUtil.STRING_CODEC.fieldOf("id").forGetter(DownloadQueue.LogEntry::id),
                     Codec.STRING.fieldOf("url").forGetter(DownloadQueue.LogEntry::url),
                     ExtraCodecs.INSTANT_ISO8601.fieldOf("time").forGetter(DownloadQueue.LogEntry::time),
@@ -142,7 +134,7 @@ public class DownloadQueue implements AutoCloseable {
                     Codec.mapEither(Codec.STRING.fieldOf("error"), DownloadQueue.FileInfoEntry.CODEC.fieldOf("file"))
                         .forGetter(DownloadQueue.LogEntry::errorOrFileInfo)
                 )
-                .apply(p_310865_, DownloadQueue.LogEntry::new)
+                .apply(i, DownloadQueue.LogEntry::new)
         );
     }
 }

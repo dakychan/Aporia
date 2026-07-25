@@ -1,10 +1,7 @@
 package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class SimpleAnimatedParticle extends SingleQuadParticle {
     protected final SpriteSet sprites;
     private float fadeR;
@@ -12,25 +9,25 @@ public abstract class SimpleAnimatedParticle extends SingleQuadParticle {
     private float fadeB;
     private boolean hasFade;
 
-    protected SimpleAnimatedParticle(ClientLevel p_107647_, double p_107648_, double p_107649_, double p_107650_, SpriteSet p_107651_, float p_107652_) {
-        super(p_107647_, p_107648_, p_107649_, p_107650_, p_107651_.first());
+    protected SimpleAnimatedParticle(final ClientLevel level, final double x, final double y, final double z, final SpriteSet sprites, final float gravity) {
+        super(level, x, y, z, sprites.first());
         this.friction = 0.91F;
-        this.gravity = p_107652_;
-        this.sprites = p_107651_;
+        this.gravity = gravity;
+        this.sprites = sprites;
     }
 
-    public void setColor(int p_107658_) {
-        float f = ((p_107658_ & 0xFF0000) >> 16) / 255.0F;
-        float f1 = ((p_107658_ & 0xFF00) >> 8) / 255.0F;
-        float f2 = ((p_107658_ & 0xFF) >> 0) / 255.0F;
-        float f3 = 1.0F;
-        this.setColor(f * 1.0F, f1 * 1.0F, f2 * 1.0F);
+    public void setColor(final int rgb) {
+        float r = ((rgb & 0xFF0000) >> 16) / 255.0F;
+        float g = ((rgb & 0xFF00) >> 8) / 255.0F;
+        float b = ((rgb & 0xFF) >> 0) / 255.0F;
+        float scale = 1.0F;
+        this.setColor(r * 1.0F, g * 1.0F, b * 1.0F);
     }
 
-    public void setFadeColor(int p_107660_) {
-        this.fadeR = ((p_107660_ & 0xFF0000) >> 16) / 255.0F;
-        this.fadeG = ((p_107660_ & 0xFF00) >> 8) / 255.0F;
-        this.fadeB = ((p_107660_ & 0xFF) >> 0) / 255.0F;
+    public void setFadeColor(final int rgb) {
+        this.fadeR = ((rgb & 0xFF0000) >> 16) / 255.0F;
+        this.fadeG = ((rgb & 0xFF00) >> 8) / 255.0F;
+        this.fadeB = ((rgb & 0xFF) >> 0) / 255.0F;
         this.hasFade = true;
     }
 
@@ -54,7 +51,7 @@ public abstract class SimpleAnimatedParticle extends SingleQuadParticle {
     }
 
     @Override
-    public int getLightColor(float p_107655_) {
+    public int getLightCoords(final float a) {
         return 15728880;
     }
 }

@@ -16,48 +16,48 @@ public class SummaryReporter {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Runnable onDeregistration;
 
-    protected SummaryReporter(Runnable p_185398_) {
-        this.onDeregistration = p_185398_;
+    protected SummaryReporter(final Runnable onDeregistration) {
+        this.onDeregistration = onDeregistration;
     }
 
-    public void recordingStopped(@Nullable Path p_185401_) {
-        if (p_185401_ != null) {
+    public void recordingStopped(final @Nullable Path result) {
+        if (result != null) {
             this.onDeregistration.run();
-            infoWithFallback(() -> "Dumped flight recorder profiling to " + p_185401_);
+            infoWithFallback(() -> "Dumped flight recorder profiling to " + result);
 
-            JfrStatsResult jfrstatsresult;
+            JfrStatsResult statsResult;
             try {
-                jfrstatsresult = JfrStatsParser.parse(p_185401_);
-            } catch (Throwable throwable1) {
-                warnWithFallback(() -> "Failed to parse JFR recording", throwable1);
+                statsResult = JfrStatsParser.parse(result);
+            } catch (Throwable t) {
+                warnWithFallback(() -> "Failed to parse JFR recording", t);
                 return;
             }
 
             try {
-                infoWithFallback(jfrstatsresult::asJson);
-                Path path = p_185401_.resolveSibling("jfr-report-" + StringUtils.substringBefore(p_185401_.getFileName().toString(), ".jfr") + ".json");
-                Files.writeString(path, jfrstatsresult.asJson(), StandardOpenOption.CREATE);
-                infoWithFallback(() -> "Dumped recording summary to " + path);
-            } catch (Throwable throwable) {
-                warnWithFallback(() -> "Failed to output JFR report", throwable);
+                infoWithFallback(statsResult::asJson);
+                Path jsonReport = result.resolveSibling("jfr-report-" + StringUtils.substringBefore(result.getFileName().toString(), ".jfr") + ".json");
+                Files.writeString(jsonReport, statsResult.asJson(), StandardOpenOption.CREATE);
+                infoWithFallback(() -> "Dumped recording summary to " + jsonReport);
+            } catch (Throwable t) {
+                warnWithFallback(() -> "Failed to output JFR report", t);
             }
         }
     }
 
-    private static void infoWithFallback(Supplier<String> p_201933_) {
+    private static void infoWithFallback(final Supplier<String> message) {
         if (LogUtils.isLoggerActive()) {
-            LOGGER.info(p_201933_.get());
+            LOGGER.info(message.get());
         } else {
-            Bootstrap.realStdoutPrintln(p_201933_.get());
+            Bootstrap.realStdoutPrintln(message.get());
         }
     }
 
-    private static void warnWithFallback(Supplier<String> p_201935_, Throwable p_201936_) {
+    private static void warnWithFallback(final Supplier<String> message, final Throwable t) {
         if (LogUtils.isLoggerActive()) {
-            LOGGER.warn(p_201935_.get(), p_201936_);
+            LOGGER.warn(message.get(), t);
         } else {
-            Bootstrap.realStdoutPrintln(p_201935_.get());
-            p_201936_.printStackTrace(Bootstrap.STDOUT);
+            Bootstrap.realStdoutPrintln(message.get());
+            t.printStackTrace(Bootstrap.STDOUT);
         }
     }
 }

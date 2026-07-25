@@ -8,76 +8,76 @@ import java.util.function.IntFunction;
 import java.util.function.ToIntFunction;
 
 public class ByIdMap {
-    private static <T> IntFunction<T> createMap(ToIntFunction<T> p_263047_, T[] p_263043_) {
-        if (p_263043_.length == 0) {
+    private static <T> IntFunction<T> createMap(final ToIntFunction<T> idGetter, final T[] values) {
+        if (values.length == 0) {
             throw new IllegalArgumentException("Empty value list");
-        } else {
-            Int2ObjectMap<T> int2objectmap = new Int2ObjectOpenHashMap<>();
-
-            for (T t : p_263043_) {
-                int i = p_263047_.applyAsInt(t);
-                T t1 = int2objectmap.put(i, t);
-                if (t1 != null) {
-                    throw new IllegalArgumentException("Duplicate entry on id " + i + ": current=" + t + ", previous=" + t1);
-                }
-            }
-
-            return int2objectmap;
         }
+
+        Int2ObjectMap<T> result = new Int2ObjectOpenHashMap<>();
+
+        for (T value : values) {
+            int id = idGetter.applyAsInt(value);
+            T previous = result.put(id, value);
+            if (previous != null) {
+                throw new IllegalArgumentException("Duplicate entry on id " + id + ": current=" + value + ", previous=" + previous);
+            }
+        }
+
+        return result;
     }
 
-    public static <T> IntFunction<T> sparse(ToIntFunction<T> p_262952_, T[] p_263085_, T p_262981_) {
-        IntFunction<T> intfunction = createMap(p_262952_, p_263085_);
-        return p_262932_ -> Objects.requireNonNullElse(intfunction.apply(p_262932_), p_262981_);
+    public static <T> IntFunction<T> sparse(final ToIntFunction<T> idGetter, final T[] values, final T _default) {
+        IntFunction<T> idToObject = createMap(idGetter, values);
+        return id -> Objects.requireNonNullElse(idToObject.apply(id), _default);
     }
 
-    private static <T> T[] createSortedArray(ToIntFunction<T> p_262976_, T[] p_263053_) {
-        int i = p_263053_.length;
-        if (i == 0) {
+    private static <T> T[] createSortedArray(final ToIntFunction<T> idGetter, final T[] values) {
+        int length = values.length;
+        if (length == 0) {
             throw new IllegalArgumentException("Empty value list");
-        } else {
-            T[] at = (T[])p_263053_.clone();
-            Arrays.fill(at, null);
-
-            for (T t : p_263053_) {
-                int j = p_262976_.applyAsInt(t);
-                if (j < 0 || j >= i) {
-                    throw new IllegalArgumentException("Values are not continous, found index " + j + " for value " + t);
-                }
-
-                T t1 = at[j];
-                if (t1 != null) {
-                    throw new IllegalArgumentException("Duplicate entry on id " + j + ": current=" + t + ", previous=" + t1);
-                }
-
-                at[j] = t;
-            }
-
-            for (int k = 0; k < i; k++) {
-                if (at[k] == null) {
-                    throw new IllegalArgumentException("Missing value at index: " + k);
-                }
-            }
-
-            return at;
         }
+
+        T[] result = (T[])values.clone();
+        Arrays.fill(result, null);
+
+        for (T value : values) {
+            int id = idGetter.applyAsInt(value);
+            if (id < 0 || id >= length) {
+                throw new IllegalArgumentException("Values are not continous, found index " + id + " for value " + value);
+            }
+
+            T previous = result[id];
+            if (previous != null) {
+                throw new IllegalArgumentException("Duplicate entry on id " + id + ": current=" + value + ", previous=" + previous);
+            }
+
+            result[id] = value;
+        }
+
+        for (int i = 0; i < length; i++) {
+            if (result[i] == null) {
+                throw new IllegalArgumentException("Missing value at index: " + i);
+            }
+        }
+
+        return result;
     }
 
-    public static <T> IntFunction<T> continuous(ToIntFunction<T> p_263112_, T[] p_262975_, ByIdMap.OutOfBoundsStrategy p_263075_) {
-        T[] at = createSortedArray(p_263112_, p_262975_);
-        int i = at.length;
+    public static <T> IntFunction<T> continuous(final ToIntFunction<T> idGetter, final T[] values, final ByIdMap.OutOfBoundsStrategy strategy) {
+        T[] sortedValues = createSortedArray(idGetter, values);
+        int length = sortedValues.length;
 
-        return switch (p_263075_) {
+        return switch (strategy) {
             case ZERO -> {
-                T t = at[0];
-                yield p_262927_ -> p_262927_ >= 0 && p_262927_ < i ? at[p_262927_] : t;
+                T zeroValue = sortedValues[0];
+                yield id -> id >= 0 && id < length ? sortedValues[id] : zeroValue;
             }
-            case WRAP -> p_262977_ -> at[Mth.positiveModulo(p_262977_, i)];
-            case CLAMP -> p_263013_ -> at[Mth.clamp(p_263013_, 0, i - 1)];
+            case WRAP -> id -> sortedValues[Mth.positiveModulo(id, length)];
+            case CLAMP -> id -> sortedValues[Mth.clamp(id, 0, length - 1)];
         };
     }
 
-    public static enum OutOfBoundsStrategy {
+    public enum OutOfBoundsStrategy {
         ZERO,
         WRAP,
         CLAMP;

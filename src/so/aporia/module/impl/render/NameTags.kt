@@ -2,13 +2,12 @@ package so.aporia.module.impl.render
 
 import so.aporia.utils.imports.*
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import so.aporia.utils.user.render.core.AporiaRenderer
 import net.minecraft.util.Mth
 import net.minecraft.world.entity.EquipmentSlot
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.ItemStack
-import org.joml.Matrix4f
 import org.joml.Vector4f
 import so.aporia.module.Category
 import so.aporia.module.Module
@@ -36,6 +35,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
     private val flashMap = mutableMapOf<UUID, FlashState>()
     private val prevHealthMap = mutableMapOf<UUID, Float>()
     private val smoothPositions = mutableMapOf<UUID, SmoothPos>()
+    private val filteredPos = mutableMapOf<UUID, FilterState>()
 
     val showSelf = BooleanSetting("Self", "Show own name tag", false)
     val showEnchants = BooleanSetting("Enchantments", "Show key enchantments", true)
@@ -45,8 +45,9 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         .value("Both", "Main Hand", "Off Hand", "None")
         .selected("Both")
     val scale = SliderSetting("Scale", "Tag scale", 1.0, 0.3, 2.0, 0.1)
+    val smoothMovement = BooleanSetting("Smooth", "Smooth tag movement (spring interpolation)", true)
 
-    override val settings = listOf(showSelf, showEnchants, showHealth, showArmor, showItem, scale)
+    override val settings = listOf(showSelf, showEnchants, showHealth, showArmor, showItem, scale, smoothMovement)
 
     override fun onEnable() {
         active = true
@@ -59,6 +60,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         flashMap.clear()
         prevHealthMap.clear()
         smoothPositions.clear()
+        filteredPos.clear()
     }
 
     @EventHandler
@@ -87,8 +89,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         }
     }
 
-    private val vp = Matrix4f()
-    private val clip = Vector4f()
+    private val viewClip = Vector4f()
 
     private fun shouldRender(entity: Player): Boolean {
         if (entity.name.string.isBlank()) return false
@@ -119,8 +120,7 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         val gfx = e.graphics
         val pt = e.partialTick
 
-        vp.set(AporiaRenderer.worldProjMatrix).mul(AporiaRenderer.worldViewMatrix)
-        val camPos = mc.gameRenderer.mainCamera.position()
+        val camPos = AporiaRenderer.savedCameraPos ?: mc.gameRenderer.mainCamera().position()
 
         val sw = mc.window.guiScaledWidth
         val sh = mc.window.guiScaledHeight
@@ -268,19 +268,39 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         val pz = Mth.lerp(pt.toDouble(), entity.zo, entity.z).toFloat() - camPos.z.toFloat()
         val distScale = maxOf(0.5, 1.0 - dist / 64.0).toFloat()
         val s = scale.getFloat() * distScale
-        val headY = py + entity.bbHeight + 0.15f
-        val sx = projectX(vp, px, headY, pz, mc)
-        val sy = projectY(vp, px, headY, pz, mc)
+        val headY = py + entity.eyeHeight + 0.15f
+        val sx = projectX(px, headY, pz)
+        val sy = projectY(px, headY, pz)
         if (sx.isNaN() || sy.isNaN()) return null
         if (sx < -300 || sx > sw + 300 || sy < -300 || sy > sh + 300) return null
 
-        // Smooth position using spring
-        val uuid = entity.uuid
-        val smooth = smoothPositions.getOrPut(uuid) { SmoothPos(sx, sy) }
-        smooth.update(sx, sy)
+        val finalX: Float
+        val finalY: Float
+        if (smoothMovement.isEnabled) {
+            val uuid = entity.uuid
+            val smooth = smoothPositions.getOrPut(uuid) { SmoothPos(sx, sy) }
+            smooth.update(sx, sy)
+            finalX = smooth.sx
+            finalY = smooth.sy
+        } else {
+            val uuid = entity.uuid
+            val now = System.currentTimeMillis()
+            val state = filteredPos.getOrPut(uuid) { FilterState(sx, sy, now) }
+            val dt = ((now - state.lastTime).coerceIn(1L, 200L) / 1000f)
+            state.lastTime = now
+            val speed = 25f
+            val decay = Math.exp((-dt * speed).toDouble()).toFloat()
+            val alpha = 1f - decay
+            val fx = sx * alpha + state.x * decay
+            val fy = sy * alpha + state.y * decay
+            state.x = fx
+            state.y = fy
+            finalX = fx
+            finalY = fy
+        }
 
         val totalW = getTotalWidth(entity, s); val totalH = getTotalHeight(entity, s)
-        return FiveFold(s, smooth.sx - totalW / 2f, smooth.sy - totalH, totalW, totalH)
+        return FiveFold(s, finalX - totalW / 2f, finalY - totalH, totalW, totalH)
     }
 
     private data class FiveFold(val s: Float, val left: Float, val top: Float, val totalW: Float, val totalH: Float)
@@ -373,18 +393,28 @@ class NameTags : Module("NameTags", Category.VISUAL) {
         return h
     }
 
-    private fun projectX(vp: Matrix4f, x: Float, y: Float, z: Float, mc: Minecraft): Float {
-        clip.set(x, y, z, 1.0f).mul(vp)
-        if (clip.w <= 0) return Float.NaN
-        val ndcX = clip.x / clip.w
+    private fun projectX(x: Float, y: Float, z: Float): Float {
+        viewClip.set(x, y, z, 1.0f)
+        AporiaRenderer.worldViewMatrix.transform(viewClip)
+        AporiaRenderer.worldProjMatrix.transform(viewClip)
+        if (viewClip.w <= 0) return Float.NaN
+        val ndcX = viewClip.x / viewClip.w
         return (ndcX * 0.5f + 0.5f) * mc.window.guiScaledWidth
     }
 
-    private fun projectY(vp: Matrix4f, x: Float, y: Float, z: Float, mc: Minecraft): Float {
-        clip.set(x, y, z, 1.0f).mul(vp)
-        if (clip.w <= 0) return Float.NaN
-        val ndcY = clip.y / clip.w
+    private fun projectY(x: Float, y: Float, z: Float): Float {
+        viewClip.set(x, y, z, 1.0f)
+        AporiaRenderer.worldViewMatrix.transform(viewClip)
+        AporiaRenderer.worldProjMatrix.transform(viewClip)
+        if (viewClip.w <= 0) return Float.NaN
+        val ndcY = viewClip.y / viewClip.w
         return (1.0f - (ndcY * 0.5f + 0.5f)) * mc.window.guiScaledHeight
+    }
+
+    private class FilterState(x: Float, y: Float, lastTime: Long) {
+        var x = x
+        var y = y
+        var lastTime = lastTime
     }
 
     private class FlashState {

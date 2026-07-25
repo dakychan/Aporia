@@ -16,64 +16,61 @@ public final class RegistryFileCodec<E> implements Codec<Holder<E>> {
     private final Codec<E> elementCodec;
     private final boolean allowInline;
 
-    public static <E> RegistryFileCodec<E> create(ResourceKey<? extends Registry<E>> p_135590_, Codec<E> p_135591_) {
-        return create(p_135590_, p_135591_, true);
+    public static <E> RegistryFileCodec<E> create(final ResourceKey<? extends Registry<E>> registryKey, final Codec<E> elementCodec) {
+        return create(registryKey, elementCodec, true);
     }
 
-    public static <E> RegistryFileCodec<E> create(ResourceKey<? extends Registry<E>> p_135593_, Codec<E> p_135594_, boolean p_135595_) {
-        return new RegistryFileCodec<>(p_135593_, p_135594_, p_135595_);
+    public static <E> RegistryFileCodec<E> create(final ResourceKey<? extends Registry<E>> registryKey, final Codec<E> elementCodec, final boolean allowInline) {
+        return new RegistryFileCodec<>(registryKey, elementCodec, allowInline);
     }
 
-    private RegistryFileCodec(ResourceKey<? extends Registry<E>> p_135574_, Codec<E> p_135575_, boolean p_135576_) {
-        this.registryKey = p_135574_;
-        this.elementCodec = p_135575_;
-        this.allowInline = p_135576_;
+    private RegistryFileCodec(final ResourceKey<? extends Registry<E>> registryKey, final Codec<E> elementCodec, final boolean allowInline) {
+        this.registryKey = registryKey;
+        this.elementCodec = elementCodec;
+        this.allowInline = allowInline;
     }
 
-    public <T> DataResult<T> encode(Holder<E> p_206716_, DynamicOps<T> p_206717_, T p_206718_) {
-        if (p_206717_ instanceof RegistryOps<?> registryops) {
-            Optional<HolderOwner<E>> optional = registryops.owner(this.registryKey);
-            if (optional.isPresent()) {
-                if (!p_206716_.canSerializeIn(optional.get())) {
-                    return DataResult.error(() -> "Element " + p_206716_ + " is not valid in current registry set");
+    public <T> DataResult<T> encode(final Holder<E> input, final DynamicOps<T> ops, final T prefix) {
+        if (ops instanceof RegistryOps<?> registryOps) {
+            Optional<HolderOwner<E>> maybeOwner = registryOps.owner(this.registryKey);
+            if (maybeOwner.isPresent()) {
+                if (!input.canSerializeIn(maybeOwner.get())) {
+                    return DataResult.error(() -> "Element " + input + " is not valid in current registry set");
                 }
 
-                return p_206716_.unwrap()
-                    .map(
-                        p_448796_ -> Identifier.CODEC.encode(p_448796_.identifier(), p_206717_, p_206718_),
-                        p_206710_ -> this.elementCodec.encode((E)p_206710_, p_206717_, p_206718_)
-                    );
+                return input.unwrap()
+                    .map(id -> Identifier.CODEC.encode(id.identifier(), ops, prefix), value -> this.elementCodec.encode((E)value, ops, prefix));
             }
         }
 
-        return this.elementCodec.encode(p_206716_.value(), p_206717_, p_206718_);
+        return this.elementCodec.encode(input.value(), ops, prefix);
     }
 
     @Override
-    public <T> DataResult<Pair<Holder<E>, T>> decode(DynamicOps<T> p_135608_, T p_135609_) {
-        if (p_135608_ instanceof RegistryOps<?> registryops) {
-            Optional<HolderGetter<E>> optional = registryops.getter(this.registryKey);
-            if (optional.isEmpty()) {
+    public <T> DataResult<Pair<Holder<E>, T>> decode(final DynamicOps<T> ops, final T input) {
+        if (ops instanceof RegistryOps<?> registryOps) {
+            Optional<HolderGetter<E>> maybeLookup = registryOps.getter(this.registryKey);
+            if (maybeLookup.isEmpty()) {
                 return DataResult.error(() -> "Registry does not exist: " + this.registryKey);
-            } else {
-                HolderGetter<E> holdergetter = optional.get();
-                DataResult<Pair<Identifier, T>> dataresult = Identifier.CODEC.decode(p_135608_, p_135609_);
-                if (dataresult.result().isEmpty()) {
-                    return !this.allowInline
-                        ? DataResult.error(() -> "Inline definitions not allowed here")
-                        : this.elementCodec.decode(p_135608_, p_135609_).map(p_206720_ -> p_206720_.mapFirst(Holder::direct));
-                } else {
-                    Pair<Identifier, T> pair = dataresult.result().get();
-                    ResourceKey<E> resourcekey = ResourceKey.create(this.registryKey, pair.getFirst());
-                    return holdergetter.get(resourcekey)
-                        .map(DataResult::success)
-                        .orElseGet(() -> DataResult.error(() -> "Failed to get element " + resourcekey))
-                        .<Pair<Holder<E>, T>>map(p_255658_ -> Pair.of(p_255658_, pair.getSecond()))
-                        .setLifecycle(Lifecycle.stable());
-                }
             }
+
+            HolderGetter<E> lookup = maybeLookup.get();
+            DataResult<Pair<Identifier, T>> decoded = Identifier.CODEC.decode(ops, input);
+            if (decoded.result().isEmpty()) {
+                return !this.allowInline
+                    ? DataResult.error(() -> "Inline definitions not allowed here")
+                    : this.elementCodec.decode(ops, input).map(p -> p.mapFirst(Holder::direct));
+            }
+
+            Pair<Identifier, T> pair = decoded.result().get();
+            ResourceKey<E> elementKey = ResourceKey.create(this.registryKey, pair.getFirst());
+            return lookup.get(elementKey)
+                .map(DataResult::success)
+                .orElseGet(() -> DataResult.error(() -> "Failed to get element " + elementKey))
+                .<Pair<Holder<E>, T>>map(h -> Pair.of(h, pair.getSecond()))
+                .setLifecycle(Lifecycle.stable());
         } else {
-            return this.elementCodec.decode(p_135608_, p_135609_).map(p_214212_ -> p_214212_.mapFirst(Holder::direct));
+            return this.elementCodec.decode(ops, input).map(p -> p.mapFirst(Holder::direct));
         }
     }
 

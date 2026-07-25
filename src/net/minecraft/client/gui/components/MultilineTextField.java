@@ -11,11 +11,8 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.Mth;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class MultilineTextField {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final int NO_LIMIT = Integer.MAX_VALUE;
@@ -29,12 +26,12 @@ public class MultilineTextField {
     private int characterLimit = Integer.MAX_VALUE;
     private int lineLimit = Integer.MAX_VALUE;
     private final int width;
-    private Consumer<String> valueListener = p_239235_ -> {};
+    private Consumer<String> valueListener = s -> {};
     private Runnable cursorListener = () -> {};
 
-    public MultilineTextField(Font p_239611_, int p_239612_) {
-        this.font = p_239611_;
-        this.width = p_239612_;
+    public MultilineTextField(final Font font, final int width) {
+        this.font = font;
+        this.width = width;
         this.setValue("");
     }
 
@@ -42,20 +39,20 @@ public class MultilineTextField {
         return this.characterLimit;
     }
 
-    public void setCharacterLimit(int p_240163_) {
-        if (p_240163_ < 0) {
+    public void setCharacterLimit(final int characterLimit) {
+        if (characterLimit < 0) {
             throw new IllegalArgumentException("Character limit cannot be negative");
-        } else {
-            this.characterLimit = p_240163_;
         }
+
+        this.characterLimit = characterLimit;
     }
 
-    public void setLineLimit(int p_407026_) {
-        if (p_407026_ < 0) {
+    public void setLineLimit(final int lineLimit) {
+        if (lineLimit < 0) {
             throw new IllegalArgumentException("Character limit cannot be negative");
-        } else {
-            this.lineLimit = p_407026_;
         }
+
+        this.lineLimit = lineLimit;
     }
 
     public boolean hasCharacterLimit() {
@@ -66,22 +63,22 @@ public class MultilineTextField {
         return this.lineLimit != Integer.MAX_VALUE;
     }
 
-    public void setValueListener(Consumer<String> p_239920_) {
-        this.valueListener = p_239920_;
+    public void setValueListener(final Consumer<String> valueListener) {
+        this.valueListener = valueListener;
     }
 
-    public void setCursorListener(Runnable p_239258_) {
-        this.cursorListener = p_239258_;
+    public void setCursorListener(final Runnable cursorListener) {
+        this.cursorListener = cursorListener;
     }
 
-    public void setValue(String p_239678_) {
-        this.setValue(p_239678_, false);
+    public void setValue(final String value) {
+        this.setValue(value, false);
     }
 
-    public void setValue(String p_407212_, boolean p_408427_) {
-        String s = this.truncateFullText(p_407212_);
-        if (p_408427_ || !this.overflowsLineLimit(s)) {
-            this.value = s;
+    public void setValue(final String value, final boolean allowOverflowLineLimit) {
+        String newValue = this.truncateFullText(value);
+        if (allowOverflowLineLimit || !this.overflowsLineLimit(newValue)) {
+            this.value = newValue;
             this.cursor = this.value.length();
             this.selectCursor = this.cursor;
             this.onValueChange();
@@ -92,25 +89,23 @@ public class MultilineTextField {
         return this.value;
     }
 
-    public void insertText(String p_240016_) {
-        if (!p_240016_.isEmpty() || this.hasSelection()) {
-            String s = this.truncateInsertionText(StringUtil.filterText(p_240016_, true));
-            MultilineTextField.StringView multilinetextfield$stringview = this.getSelected();
-            String s1 = new StringBuilder(this.value)
-                .replace(multilinetextfield$stringview.beginIndex, multilinetextfield$stringview.endIndex, s)
-                .toString();
-            if (!this.overflowsLineLimit(s1)) {
-                this.value = s1;
-                this.cursor = multilinetextfield$stringview.beginIndex + s.length();
+    public void insertText(final String input) {
+        if (!input.isEmpty() || this.hasSelection()) {
+            String text = this.truncateInsertionText(StringUtil.filterText(input, true));
+            MultilineTextField.StringView selected = this.getSelected();
+            String newValue = new StringBuilder(this.value).replace(selected.beginIndex, selected.endIndex, text).toString();
+            if (!this.overflowsLineLimit(newValue)) {
+                this.value = newValue;
+                this.cursor = selected.beginIndex + text.length();
                 this.selectCursor = this.cursor;
                 this.onValueChange();
             }
         }
     }
 
-    public void deleteText(int p_239475_) {
+    public void deleteText(final int dir) {
         if (!this.hasSelection()) {
-            this.selectCursor = Mth.clamp(this.cursor + p_239475_, 0, this.value.length());
+            this.selectCursor = Mth.clamp(this.cursor + dir, 0, this.value.length());
         }
 
         this.insertText("");
@@ -120,8 +115,8 @@ public class MultilineTextField {
         return this.cursor;
     }
 
-    public void setSelecting(boolean p_239951_) {
-        this.selecting = p_239951_;
+    public void setSelecting(final boolean selecting) {
+        this.selecting = selecting;
     }
 
     public MultilineTextField.StringView getSelected() {
@@ -134,8 +129,8 @@ public class MultilineTextField {
 
     public int getLineAtCursor() {
         for (int i = 0; i < this.displayLines.size(); i++) {
-            MultilineTextField.StringView multilinetextfield$stringview = this.displayLines.get(i);
-            if (this.cursor >= multilinetextfield$stringview.beginIndex && this.cursor <= multilinetextfield$stringview.endIndex) {
+            MultilineTextField.StringView view = this.displayLines.get(i);
+            if (this.cursor >= view.beginIndex && this.cursor <= view.endIndex) {
                 return i;
             }
         }
@@ -143,20 +138,20 @@ public class MultilineTextField {
         return -1;
     }
 
-    public MultilineTextField.StringView getLineView(int p_239145_) {
-        return this.displayLines.get(Mth.clamp(p_239145_, 0, this.displayLines.size() - 1));
+    public MultilineTextField.StringView getLineView(final int lineIndex) {
+        return this.displayLines.get(Mth.clamp(lineIndex, 0, this.displayLines.size() - 1));
     }
 
-    public void seekCursor(Whence p_239798_, int p_239799_) {
-        switch (p_239798_) {
+    public void seekCursor(final Whence whence, final int cursor) {
+        switch (whence) {
             case ABSOLUTE:
-                this.cursor = p_239799_;
+                this.cursor = cursor;
                 break;
             case RELATIVE:
-                this.cursor += p_239799_;
+                this.cursor += cursor;
                 break;
             case END:
-                this.cursor = this.value.length() + p_239799_;
+                this.cursor = this.value.length() + cursor;
         }
 
         this.cursor = Mth.clamp(this.cursor, 0, this.value.length());
@@ -166,127 +161,131 @@ public class MultilineTextField {
         }
     }
 
-    public void seekCursorLine(int p_239394_) {
-        if (p_239394_ != 0) {
-            int i = this.font.width(this.value.substring(this.getCursorLineView().beginIndex, this.cursor)) + 2;
-            MultilineTextField.StringView multilinetextfield$stringview = this.getCursorLineView(p_239394_);
-            int j = this.font
-                .plainSubstrByWidth(this.value.substring(multilinetextfield$stringview.beginIndex, multilinetextfield$stringview.endIndex), i)
-                .length();
-            this.seekCursor(Whence.ABSOLUTE, multilinetextfield$stringview.beginIndex + j);
+    public void seekCursorLine(final int lineOffset) {
+        if (lineOffset != 0) {
+            int oldCursorLeft = this.font.width(this.value.substring(this.getCursorLineView().beginIndex, this.cursor)) + 2;
+            MultilineTextField.StringView lineView = this.getCursorLineView(lineOffset);
+            int newCursor = this.font.plainSubstrByWidth(this.value.substring(lineView.beginIndex, lineView.endIndex), oldCursorLeft).length();
+            this.seekCursor(Whence.ABSOLUTE, lineView.beginIndex + newCursor);
         }
     }
 
-    public void seekCursorToPoint(double p_239579_, double p_239580_) {
-        int i = Mth.floor(p_239579_);
-        int j = Mth.floor(p_239580_ / 9.0);
-        MultilineTextField.StringView multilinetextfield$stringview = this.displayLines.get(Mth.clamp(j, 0, this.displayLines.size() - 1));
-        int k = this.font.plainSubstrByWidth(this.value.substring(multilinetextfield$stringview.beginIndex, multilinetextfield$stringview.endIndex), i).length();
-        this.seekCursor(Whence.ABSOLUTE, multilinetextfield$stringview.beginIndex + k);
+    public void seekCursorToPoint(final double x, final double y) {
+        int left = Mth.floor(x);
+        int top = Mth.floor(y / 9.0);
+        MultilineTextField.StringView lineView = this.displayLines.get(Mth.clamp(top, 0, this.displayLines.size() - 1));
+        int clickedColumn = this.font.plainSubstrByWidth(this.value.substring(lineView.beginIndex, lineView.endIndex), left).length();
+        this.seekCursor(Whence.ABSOLUTE, lineView.beginIndex + clickedColumn);
     }
 
     public void selectWordAtCursor() {
-        MultilineTextField.StringView multilinetextfield$stringview = this.getPreviousWord();
-        this.seekCursor(Whence.ABSOLUTE, multilinetextfield$stringview.beginIndex);
+        MultilineTextField.StringView wordView = this.getPreviousWord();
+        this.seekCursor(Whence.ABSOLUTE, wordView.beginIndex);
         this.setSelecting(true);
-        this.seekCursor(Whence.ABSOLUTE, multilinetextfield$stringview.endIndex);
+        this.seekCursor(Whence.ABSOLUTE, wordView.endIndex);
     }
 
-    public boolean keyPressed(KeyEvent p_425216_) {
-        this.selecting = p_425216_.hasShiftDown();
-        if (p_425216_.isSelectAll()) {
+    public boolean keyPressed(final KeyEvent event) {
+        this.selecting = event.hasShiftDown();
+        if (event.isSelectAll()) {
             this.cursor = this.value.length();
             this.selectCursor = 0;
             return true;
-        } else if (p_425216_.isCopy()) {
+        }
+
+        if (event.isCopy()) {
             Minecraft.getInstance().keyboardHandler.setClipboard(this.getSelectedText());
             return true;
-        } else if (p_425216_.isPaste()) {
+        }
+
+        if (event.isPaste()) {
             this.insertText(Minecraft.getInstance().keyboardHandler.getClipboard());
             return true;
-        } else if (p_425216_.isCut()) {
+        }
+
+        if (event.isCut()) {
             Minecraft.getInstance().keyboardHandler.setClipboard(this.getSelectedText());
             this.insertText("");
             return true;
-        } else {
-            switch (p_425216_.key()) {
-                case 257:
-                case 335:
-                    this.insertText("\n");
-                    return true;
-                case 259:
-                    if (p_425216_.hasControlDownWithQuirk()) {
-                        MultilineTextField.StringView multilinetextfield$stringview3 = this.getPreviousWord();
-                        this.deleteText(multilinetextfield$stringview3.beginIndex - this.cursor);
-                    } else {
-                        this.deleteText(-1);
-                    }
+        }
 
-                    return true;
-                case 261:
-                    if (p_425216_.hasControlDownWithQuirk()) {
-                        MultilineTextField.StringView multilinetextfield$stringview2 = this.getNextWord();
-                        this.deleteText(multilinetextfield$stringview2.beginIndex - this.cursor);
-                    } else {
-                        this.deleteText(1);
-                    }
+        switch (event.key()) {
+            case 257:
+            case 335:
+                this.insertText("\n");
+                return true;
+            case 259:
+                if (event.hasControlDownWithQuirk()) {
+                    MultilineTextField.StringView wordView = this.getPreviousWord();
+                    this.deleteText(wordView.beginIndex - this.cursor);
+                } else {
+                    this.deleteText(-1);
+                }
 
-                    return true;
-                case 262:
-                    if (p_425216_.hasControlDownWithQuirk()) {
-                        MultilineTextField.StringView multilinetextfield$stringview1 = this.getNextWord();
-                        this.seekCursor(Whence.ABSOLUTE, multilinetextfield$stringview1.beginIndex);
-                    } else {
-                        this.seekCursor(Whence.RELATIVE, 1);
-                    }
+                return true;
+            case 261:
+                if (event.hasControlDownWithQuirk()) {
+                    MultilineTextField.StringView wordView = this.getNextWord();
+                    this.deleteText(wordView.beginIndex - this.cursor);
+                } else {
+                    this.deleteText(1);
+                }
 
-                    return true;
-                case 263:
-                    if (p_425216_.hasControlDownWithQuirk()) {
-                        MultilineTextField.StringView multilinetextfield$stringview = this.getPreviousWord();
-                        this.seekCursor(Whence.ABSOLUTE, multilinetextfield$stringview.beginIndex);
-                    } else {
-                        this.seekCursor(Whence.RELATIVE, -1);
-                    }
+                return true;
+            case 262:
+                if (event.hasControlDownWithQuirk()) {
+                    MultilineTextField.StringView wordView = this.getNextWord();
+                    this.seekCursor(Whence.ABSOLUTE, wordView.beginIndex);
+                } else {
+                    this.seekCursor(Whence.RELATIVE, 1);
+                }
 
-                    return true;
-                case 264:
-                    if (!p_425216_.hasControlDownWithQuirk()) {
-                        this.seekCursorLine(1);
-                    }
+                return true;
+            case 263:
+                if (event.hasControlDownWithQuirk()) {
+                    MultilineTextField.StringView wordView = this.getPreviousWord();
+                    this.seekCursor(Whence.ABSOLUTE, wordView.beginIndex);
+                } else {
+                    this.seekCursor(Whence.RELATIVE, -1);
+                }
 
-                    return true;
-                case 265:
-                    if (!p_425216_.hasControlDownWithQuirk()) {
-                        this.seekCursorLine(-1);
-                    }
+                return true;
+            case 264:
+                if (!event.hasControlDownWithQuirk()) {
+                    this.seekCursorLine(1);
+                }
 
-                    return true;
-                case 266:
+                return true;
+            case 265:
+                if (!event.hasControlDownWithQuirk()) {
+                    this.seekCursorLine(-1);
+                }
+
+                return true;
+            case 266:
+                this.seekCursor(Whence.ABSOLUTE, 0);
+                return true;
+            case 267:
+                this.seekCursor(Whence.END, 0);
+                return true;
+            case 268:
+                if (event.hasControlDownWithQuirk()) {
                     this.seekCursor(Whence.ABSOLUTE, 0);
-                    return true;
-                case 267:
+                } else {
+                    this.seekCursor(Whence.ABSOLUTE, this.getCursorLineView().beginIndex);
+                }
+
+                return true;
+            case 269:
+                if (event.hasControlDownWithQuirk()) {
                     this.seekCursor(Whence.END, 0);
-                    return true;
-                case 268:
-                    if (p_425216_.hasControlDownWithQuirk()) {
-                        this.seekCursor(Whence.ABSOLUTE, 0);
-                    } else {
-                        this.seekCursor(Whence.ABSOLUTE, this.getCursorLineView().beginIndex);
-                    }
+                } else {
+                    this.seekCursor(Whence.ABSOLUTE, this.getCursorLineView().endIndex);
+                }
 
-                    return true;
-                case 269:
-                    if (p_425216_.hasControlDownWithQuirk()) {
-                        this.seekCursor(Whence.END, 0);
-                    } else {
-                        this.seekCursor(Whence.ABSOLUTE, this.getCursorLineView().endIndex);
-                    }
-
-                    return true;
-                default:
-                    return false;
-            }
+                return true;
+            default:
+                return false;
         }
     }
 
@@ -300,21 +299,21 @@ public class MultilineTextField {
 
     @VisibleForTesting
     public String getSelectedText() {
-        MultilineTextField.StringView multilinetextfield$stringview = this.getSelected();
-        return this.value.substring(multilinetextfield$stringview.beginIndex, multilinetextfield$stringview.endIndex);
+        MultilineTextField.StringView selected = this.getSelected();
+        return this.value.substring(selected.beginIndex, selected.endIndex);
     }
 
     private MultilineTextField.StringView getCursorLineView() {
         return this.getCursorLineView(0);
     }
 
-    private MultilineTextField.StringView getCursorLineView(int p_239855_) {
-        int i = this.getLineAtCursor();
-        if (i < 0) {
+    private MultilineTextField.StringView getCursorLineView(final int lineOffset) {
+        int lineIndex = this.getLineAtCursor();
+        if (lineIndex < 0) {
             LOGGER.error("Cursor is not within text (cursor = {}, length = {})", this.cursor, this.value.length());
             return this.displayLines.getLast();
         } else {
-            return this.displayLines.get(Mth.clamp(i + p_239855_, 0, this.displayLines.size() - 1));
+            return this.displayLines.get(Mth.clamp(lineIndex + lineOffset, 0, this.displayLines.size() - 1));
         }
     }
 
@@ -322,48 +321,48 @@ public class MultilineTextField {
     public MultilineTextField.StringView getPreviousWord() {
         if (this.value.isEmpty()) {
             return MultilineTextField.StringView.EMPTY;
-        } else {
-            int i = Mth.clamp(this.cursor, 0, this.value.length() - 1);
-
-            while (i > 0 && Character.isWhitespace(this.value.charAt(i - 1))) {
-                i--;
-            }
-
-            while (i > 0 && !Character.isWhitespace(this.value.charAt(i - 1))) {
-                i--;
-            }
-
-            return new MultilineTextField.StringView(i, this.getWordEndPosition(i));
         }
+
+        int startPosition = Mth.clamp(this.cursor, 0, this.value.length() - 1);
+
+        while (startPosition > 0 && Character.isWhitespace(this.value.charAt(startPosition - 1))) {
+            startPosition--;
+        }
+
+        while (startPosition > 0 && !Character.isWhitespace(this.value.charAt(startPosition - 1))) {
+            startPosition--;
+        }
+
+        return new MultilineTextField.StringView(startPosition, this.getWordEndPosition(startPosition));
     }
 
     @VisibleForTesting
     public MultilineTextField.StringView getNextWord() {
         if (this.value.isEmpty()) {
             return MultilineTextField.StringView.EMPTY;
-        } else {
-            int i = Mth.clamp(this.cursor, 0, this.value.length() - 1);
-
-            while (i < this.value.length() && !Character.isWhitespace(this.value.charAt(i))) {
-                i++;
-            }
-
-            while (i < this.value.length() && Character.isWhitespace(this.value.charAt(i))) {
-                i++;
-            }
-
-            return new MultilineTextField.StringView(i, this.getWordEndPosition(i));
         }
+
+        int startPosition = Mth.clamp(this.cursor, 0, this.value.length() - 1);
+
+        while (startPosition < this.value.length() && !Character.isWhitespace(this.value.charAt(startPosition))) {
+            startPosition++;
+        }
+
+        while (startPosition < this.value.length() && Character.isWhitespace(this.value.charAt(startPosition))) {
+            startPosition++;
+        }
+
+        return new MultilineTextField.StringView(startPosition, this.getWordEndPosition(startPosition));
     }
 
-    private int getWordEndPosition(int p_240093_) {
-        int i = p_240093_;
+    private int getWordEndPosition(final int from) {
+        int end = from;
 
-        while (i < this.value.length() && !Character.isWhitespace(this.value.charAt(i))) {
-            i++;
+        while (end < this.value.length() && !Character.isWhitespace(this.value.charAt(end))) {
+            end++;
         }
 
-        return i;
+        return end;
     }
 
     private void onValueChange() {
@@ -380,11 +379,7 @@ public class MultilineTextField {
             this.font
                 .getSplitter()
                 .splitLines(
-                    this.value,
-                    this.width,
-                    Style.EMPTY,
-                    false,
-                    (p_239846_, p_239847_, p_239848_) -> this.displayLines.add(new MultilineTextField.StringView(p_239847_, p_239848_))
+                    this.value, this.width, Style.EMPTY, false, (style, start, end) -> this.displayLines.add(new MultilineTextField.StringView(start, end))
                 );
             if (this.value.charAt(this.value.length() - 1) == '\n') {
                 this.displayLines.add(new MultilineTextField.StringView(this.value.length(), this.value.length()));
@@ -392,28 +387,26 @@ public class MultilineTextField {
         }
     }
 
-    private String truncateFullText(String p_239843_) {
-        return this.hasCharacterLimit() ? StringUtil.truncateStringIfNecessary(p_239843_, this.characterLimit, false) : p_239843_;
+    private String truncateFullText(final String input) {
+        return this.hasCharacterLimit() ? StringUtil.truncateStringIfNecessary(input, this.characterLimit, false) : input;
     }
 
-    private String truncateInsertionText(String p_239418_) {
-        String s = p_239418_;
+    private String truncateInsertionText(final String input) {
+        String truncatedInput = input;
         if (this.hasCharacterLimit()) {
-            int i = this.characterLimit - this.value.length();
-            s = StringUtil.truncateStringIfNecessary(p_239418_, i, false);
+            int remainingCharacters = this.characterLimit - this.value.length();
+            truncatedInput = StringUtil.truncateStringIfNecessary(input, remainingCharacters, false);
         }
 
-        return s;
+        return truncatedInput;
     }
 
-    private boolean overflowsLineLimit(String p_407017_) {
+    private boolean overflowsLineLimit(final String newValue) {
         return this.hasLineLimit()
-            && this.font.getSplitter().splitLines(p_407017_, this.width, Style.EMPTY).size() + (StringUtil.endsWithNewLine(p_407017_) ? 1 : 0)
-                > this.lineLimit;
+            && this.font.getSplitter().splitLines(newValue, this.width, Style.EMPTY).size() + (StringUtil.endsWithNewLine(newValue) ? 1 : 0) > this.lineLimit;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    protected record StringView(int beginIndex, int endIndex) {
-        static final MultilineTextField.StringView EMPTY = new MultilineTextField.StringView(0, 0);
+        protected record StringView(int beginIndex, int endIndex) {
+        private static final MultilineTextField.StringView EMPTY = new MultilineTextField.StringView(0, 0);
     }
 }

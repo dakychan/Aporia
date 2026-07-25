@@ -3,13 +3,13 @@ package net.minecraft.world.level.block;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.tags.TagKey;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -26,81 +26,90 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class AttachedStemBlock extends VegetationBlock {
     public static final MapCodec<AttachedStemBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422035_ -> p_422035_.group(
-                ResourceKey.codec(Registries.BLOCK).fieldOf("fruit").forGetter(p_309932_ -> p_309932_.fruit),
-                ResourceKey.codec(Registries.BLOCK).fieldOf("stem").forGetter(p_312475_ -> p_312475_.stem),
-                ResourceKey.codec(Registries.ITEM).fieldOf("seed").forGetter(p_312517_ -> p_312517_.seed),
+        i -> i.group(
+                ResourceKey.codec(Registries.BLOCK).fieldOf("fruit").forGetter(b -> b.fruit),
+                ResourceKey.codec(Registries.BLOCK).fieldOf("stem").forGetter(b -> b.stem),
+                ResourceKey.codec(Registries.ITEM).fieldOf("seed").forGetter(b -> b.seed),
+                TagKey.codec(Registries.BLOCK).fieldOf("support_blocks").forGetter(b -> b.supportBlocks),
                 propertiesCodec()
             )
-            .apply(p_422035_, AttachedStemBlock::new)
+            .apply(i, AttachedStemBlock::new)
     );
     public static final EnumProperty<Direction> FACING = HorizontalDirectionalBlock.FACING;
     private static final Map<Direction, VoxelShape> SHAPES = Shapes.rotateHorizontal(Block.boxZ(4.0, 0.0, 10.0, 0.0, 10.0));
     private final ResourceKey<Block> fruit;
     private final ResourceKey<Block> stem;
     private final ResourceKey<Item> seed;
+    private final TagKey<Block> supportBlocks;
 
     @Override
     public MapCodec<AttachedStemBlock> codec() {
         return CODEC;
     }
 
-    protected AttachedStemBlock(ResourceKey<Block> p_309773_, ResourceKey<Block> p_312687_, ResourceKey<Item> p_310792_, BlockBehaviour.Properties p_152062_) {
-        super(p_152062_);
+    protected AttachedStemBlock(
+        final ResourceKey<Block> stem,
+        final ResourceKey<Block> fruit,
+        final ResourceKey<Item> seed,
+        final TagKey<Block> supportBlocks,
+        final BlockBehaviour.Properties properties
+    ) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH));
-        this.stem = p_309773_;
-        this.fruit = p_312687_;
-        this.seed = p_310792_;
+        this.stem = stem;
+        this.fruit = fruit;
+        this.seed = seed;
+        this.supportBlocks = supportBlocks;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_48858_, BlockGetter p_48859_, BlockPos p_48860_, CollisionContext p_48861_) {
-        return SHAPES.get(p_48858_.getValue(FACING));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES.get(state.getValue(FACING));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_48848_,
-        LevelReader p_367502_,
-        ScheduledTickAccess p_364814_,
-        BlockPos p_48852_,
-        Direction p_48849_,
-        BlockPos p_48853_,
-        BlockState p_48850_,
-        RandomSource p_368116_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!p_48850_.is(this.fruit) && p_48849_ == p_48848_.getValue(FACING)) {
-            Optional<Block> optional = p_367502_.registryAccess().lookupOrThrow(Registries.BLOCK).getOptional(this.stem);
-            if (optional.isPresent()) {
-                return optional.get().defaultBlockState().trySetValue(StemBlock.AGE, 7);
+        if (!neighbourState.is(this.fruit) && directionToNeighbour == state.getValue(FACING)) {
+            Optional<Block> stem = level.registryAccess().lookupOrThrow(Registries.BLOCK).getOptional(this.stem);
+            if (stem.isPresent()) {
+                return stem.get().defaultBlockState().trySetValue(StemBlock.AGE, 7);
             }
         }
 
-        return super.updateShape(p_48848_, p_367502_, p_364814_, p_48852_, p_48849_, p_48853_, p_48850_, p_368116_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean mayPlaceOn(BlockState p_48863_, BlockGetter p_48864_, BlockPos p_48865_) {
-        return p_48863_.is(Blocks.FARMLAND);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.is(this.supportBlocks);
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_313034_, BlockPos p_48839_, BlockState p_48840_, boolean p_376802_) {
-        return new ItemStack(DataFixUtils.orElse(p_313034_.registryAccess().lookupOrThrow(Registries.ITEM).getOptional(this.seed), this));
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
+        return new ItemStack(DataFixUtils.orElse(level.registryAccess().lookupOrThrow(Registries.ITEM).getOptional(this.seed), this));
     }
 
     @Override
-    protected BlockState rotate(BlockState p_48845_, Rotation p_48846_) {
-        return p_48845_.setValue(FACING, p_48846_.rotate(p_48845_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_48842_, Mirror p_48843_) {
-        return p_48842_.rotate(p_48843_.getRotation(p_48842_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_48855_) {
-        p_48855_.add(FACING);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
     }
 }

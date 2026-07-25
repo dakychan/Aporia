@@ -7,18 +7,15 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ColdCowModel extends CowModel {
-    public ColdCowModel(ModelPart p_461034_) {
-        super(p_461034_);
+    public ColdCowModel(final ModelPart root) {
+        super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = createBaseCowModel();
-        meshdefinition.getRoot()
+        MeshDefinition mesh = createBaseCowModel();
+        mesh.getRoot()
             .addOrReplaceChild(
                 "body",
                 CubeListBuilder.create()
@@ -30,7 +27,7 @@ public class ColdCowModel extends CowModel {
                     .addBox(-2.0F, 2.0F, -8.0F, 4.0F, 6.0F, 1.0F),
                 PartPose.offsetAndRotation(0.0F, 5.0F, 2.0F, (float) (Math.PI / 2), 0.0F, 0.0F)
             );
-        PartDefinition partdefinition = meshdefinition.getRoot()
+        PartDefinition head = mesh.getRoot()
             .addOrReplaceChild(
                 "head",
                 CubeListBuilder.create()
@@ -40,16 +37,16 @@ public class ColdCowModel extends CowModel {
                     .addBox(-3.0F, 1.0F, -7.0F, 6.0F, 3.0F, 1.0F),
                 PartPose.offset(0.0F, 4.0F, -8.0F)
             );
-        partdefinition.addOrReplaceChild(
+        head.addOrReplaceChild(
             "right_horn",
             CubeListBuilder.create().texOffs(0, 40).addBox(-1.5F, -4.5F, -0.5F, 2.0F, 6.0F, 2.0F),
             PartPose.offsetAndRotation(-4.5F, -2.5F, -3.5F, 1.5708F, 0.0F, 0.0F)
         );
-        partdefinition.addOrReplaceChild(
+        head.addOrReplaceChild(
             "left_horn",
             CubeListBuilder.create().texOffs(0, 32).addBox(-1.5F, -3.0F, -0.5F, 2.0F, 6.0F, 2.0F),
             PartPose.offsetAndRotation(5.5F, -2.5F, -5.0F, 1.5708F, 0.0F, 0.0F)
         );
-        return LayerDefinition.create(meshdefinition, 64, 64);
+        return LayerDefinition.create(mesh, 64, 64);
     }
 }

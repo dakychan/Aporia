@@ -9,25 +9,27 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V4307 extends NamespacedSchema {
-    public V4307(int p_394198_, Schema p_393601_) {
-        super(p_394198_, p_393601_);
+    public V4307(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
-    public static SequencedMap<String, Supplier<TypeTemplate>> components(Schema p_392155_) {
-        SequencedMap<String, Supplier<TypeTemplate>> sequencedmap = V4059.components(p_392155_);
-        sequencedmap.put("minecraft:can_place_on", () -> adventureModePredicate(p_392155_));
-        sequencedmap.put("minecraft:can_break", () -> adventureModePredicate(p_392155_));
-        return sequencedmap;
+    public static SequencedMap<String, Supplier<TypeTemplate>> components(final Schema schema) {
+        SequencedMap<String, Supplier<TypeTemplate>> components = V4059.components(schema);
+        components.put("minecraft:can_place_on", () -> adventureModePredicate(schema));
+        components.put("minecraft:can_break", () -> adventureModePredicate(schema));
+        return components;
     }
 
-    private static TypeTemplate adventureModePredicate(Schema p_394845_) {
-        TypeTemplate typetemplate = DSL.optionalFields("blocks", DSL.or(References.BLOCK_NAME.in(p_394845_), DSL.list(References.BLOCK_NAME.in(p_394845_))));
-        return DSL.or(typetemplate, DSL.list(typetemplate));
+    private static TypeTemplate adventureModePredicate(final Schema schema) {
+        TypeTemplate predicate = DSL.optionalFields("blocks", DSL.or(References.BLOCK_NAME.in(schema), DSL.list(References.BLOCK_NAME.in(schema))));
+        return DSL.or(predicate, DSL.list(predicate));
     }
 
     @Override
-    public void registerTypes(Schema p_395189_, Map<String, Supplier<TypeTemplate>> p_393725_, Map<String, Supplier<TypeTemplate>> p_391596_) {
-        super.registerTypes(p_395189_, p_393725_, p_391596_);
-        p_395189_.registerType(true, References.DATA_COMPONENTS, () -> DSL.optionalFieldsLazy(components(p_395189_)));
+    public void registerTypes(
+        final Schema schema, final Map<String, Supplier<TypeTemplate>> entityTypes, final Map<String, Supplier<TypeTemplate>> blockEntityTypes
+    ) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        schema.registerType(true, References.DATA_COMPONENTS, () -> DSL.optionalFieldsLazy(components(schema)));
     }
 }

@@ -3,7 +3,6 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.function.IntFunction;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -44,10 +43,8 @@ import org.jspecify.annotations.Nullable;
 
 public class CopperGolemStatueBlock extends BaseEntityBlock implements SimpleWaterloggedBlock {
     public static final MapCodec<CopperGolemStatueBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_424761_ -> p_424761_.group(
-                WeatheringCopper.WeatherState.CODEC.fieldOf("weathering_state").forGetter(CopperGolemStatueBlock::getWeatheringState), propertiesCodec()
-            )
-            .apply(p_424761_, CopperGolemStatueBlock::new)
+        i -> i.group(WeatheringCopper.WeatherState.CODEC.fieldOf("weathering_state").forGetter(CopperGolemStatueBlock::getWeatheringState), propertiesCodec())
+            .apply(i, CopperGolemStatueBlock::new)
     );
     public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final EnumProperty<CopperGolemStatueBlock.Pose> POSE = BlockStateProperties.COPPER_GOLEM_POSE;
@@ -60,36 +57,40 @@ public class CopperGolemStatueBlock extends BaseEntityBlock implements SimpleWat
         return CODEC;
     }
 
-    public CopperGolemStatueBlock(WeatheringCopper.WeatherState p_429713_, BlockBehaviour.Properties p_426193_) {
-        super(p_426193_);
-        this.weatheringState = p_429713_;
-        this.registerDefaultState(this.defaultBlockState().setValue(FACING, Direction.NORTH).setValue(POSE, CopperGolemStatueBlock.Pose.STANDING).setValue(WATERLOGGED, false));
+    public CopperGolemStatueBlock(final WeatheringCopper.WeatherState weatherState, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.weatheringState = weatherState;
+        this.registerDefaultState(
+            this.defaultBlockState().setValue(FACING, Direction.NORTH).setValue(POSE, CopperGolemStatueBlock.Pose.STANDING).setValue(WATERLOGGED, false)
+        );
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_429573_) {
-        super.createBlockStateDefinition(p_429573_);
-        p_429573_.add(FACING, POSE, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(FACING, POSE, WATERLOGGED);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_425305_) {
-        FluidState fluidstate = p_425305_.getLevel().getFluidState(p_425305_.getClickedPos());
-        return this.defaultBlockState().setValue(FACING, p_425305_.getHorizontalDirection().getOpposite()).setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        return this.defaultBlockState()
+            .setValue(FACING, context.getHorizontalDirection().getOpposite())
+            .setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
     }
 
     @Override
-    protected BlockState rotate(BlockState p_426141_, Rotation p_430230_) {
-        return p_426141_.setValue(FACING, p_430230_.rotate(p_426141_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_424860_, Mirror p_428564_) {
-        return p_424860_.rotate(p_428564_.getRotation(p_424860_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_431473_, BlockGetter p_423539_, BlockPos p_426613_, CollisionContext p_430572_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
@@ -99,83 +100,89 @@ public class CopperGolemStatueBlock extends BaseEntityBlock implements SimpleWat
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_429817_, BlockState p_427867_, Level p_431353_, BlockPos p_423862_, Player p_423611_, InteractionHand p_425206_, BlockHitResult p_424242_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (p_429817_.is(ItemTags.AXES)) {
+        if (itemStack.is(ItemTags.AXES)) {
             return InteractionResult.PASS;
-        } else {
-            this.updatePose(p_431353_, p_427867_, p_423862_, p_423611_);
-            return InteractionResult.SUCCESS;
         }
+
+        this.updatePose(level, state, pos, player);
+        return InteractionResult.SUCCESS;
     }
 
-    void updatePose(Level p_430461_, BlockState p_422442_, BlockPos p_424918_, Player p_431272_) {
-        p_430461_.playSound(null, p_424918_, SoundEvents.COPPER_GOLEM_BECOME_STATUE, SoundSource.BLOCKS);
-        p_430461_.setBlock(p_424918_, p_422442_.setValue(POSE, p_422442_.getValue(POSE).getNextPose()), 3);
-        p_430461_.gameEvent(p_431272_, GameEvent.BLOCK_CHANGE, p_424918_);
-    }
-
-    @Override
-    protected boolean isPathfindable(BlockState p_428257_, PathComputationType p_428347_) {
-        return p_428347_ == PathComputationType.WATER && p_428257_.getFluidState().is(FluidTags.WATER);
-    }
-
-    @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_429618_, BlockState p_425641_) {
-        return new CopperGolemStatueBlockEntity(p_429618_, p_425641_);
+    protected void updatePose(final Level level, final BlockState state, final BlockPos pos, final Player player) {
+        level.playSound(null, pos, SoundEvents.COPPER_GOLEM_BECOME_STATUE, SoundSource.BLOCKS);
+        level.setBlock(pos, state.setValue(POSE, state.getValue(POSE).getNextPose()), 3);
+        level.gameEvent(player, GameEvent.BLOCK_CHANGE, pos);
     }
 
     @Override
-    public boolean shouldChangedStateKeepBlockEntity(BlockState p_424048_) {
-        return p_424048_.is(BlockTags.COPPER_GOLEM_STATUES);
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
+        return type == PathComputationType.WATER && state.getFluidState().is(FluidTags.WATER);
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_431445_) {
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new CopperGolemStatueBlockEntity(worldPosition, blockState);
+    }
+
+    @Override
+    public boolean shouldChangedStateKeepBlockEntity(final BlockState oldState) {
+        return oldState.is(BlockTags.COPPER_GOLEM_STATUES);
+    }
+
+    @Override
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_430439_, Level p_423233_, BlockPos p_427299_, Direction p_422568_) {
-        return p_430439_.getValue(POSE).ordinal() + 1;
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return state.getValue(POSE).ordinal() + 1;
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_430732_, BlockPos p_428180_, BlockState p_429456_, boolean p_428930_) {
-        return p_430732_.getBlockEntity(p_428180_) instanceof CopperGolemStatueBlockEntity coppergolemstatueblockentity
-            ? coppergolemstatueblockentity.getItem(this.asItem().getDefaultInstance(), p_429456_.getValue(POSE))
-            : super.getCloneItemStack(p_430732_, p_428180_, p_429456_, p_428930_);
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
+        return level.getBlockEntity(pos) instanceof CopperGolemStatueBlockEntity entity
+            ? entity.getItem(this.asItem().getDefaultInstance(), state.getValue(POSE))
+            : super.getCloneItemStack(level, pos, state, includeData);
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_423766_, ServerLevel p_423214_, BlockPos p_429218_, boolean p_423964_) {
-        p_423214_.updateNeighbourForOutputSignal(p_429218_, p_423766_.getBlock());
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        level.updateNeighbourForOutputSignal(pos, state.getBlock());
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_422841_) {
-        return p_422841_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_422841_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_429586_,
-        LevelReader p_429646_,
-        ScheduledTickAccess p_425760_,
-        BlockPos p_424733_,
-        Direction p_425600_,
-        BlockPos p_431588_,
-        BlockState p_430838_,
-        RandomSource p_425690_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_429586_.getValue(WATERLOGGED)) {
-            p_425760_.scheduleTick(p_424733_, Fluids.WATER, Fluids.WATER.getTickDelay(p_429646_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_429586_, p_429646_, p_425760_, p_424733_, p_425600_, p_431588_, p_430838_, p_425690_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
-    public static enum Pose implements StringRepresentable {
+    public enum Pose implements StringRepresentable {
         STANDING("standing"),
         SITTING("sitting"),
         RUNNING("running"),
@@ -185,8 +192,8 @@ public class CopperGolemStatueBlock extends BaseEntityBlock implements SimpleWat
         public static final Codec<CopperGolemStatueBlock.Pose> CODEC = StringRepresentable.fromEnum(CopperGolemStatueBlock.Pose::values);
         private final String name;
 
-        private Pose(final String p_426055_) {
-            this.name = p_426055_;
+        Pose(final String name) {
+            this.name = name;
         }
 
         @Override

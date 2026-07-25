@@ -11,17 +11,17 @@ public record ClientboundHurtAnimationPacket(int id, float yaw) implements Packe
         ClientboundHurtAnimationPacket::write, ClientboundHurtAnimationPacket::new
     );
 
-    public ClientboundHurtAnimationPacket(LivingEntity p_265293_) {
-        this(p_265293_.getId(), p_265293_.getHurtDir());
+    public ClientboundHurtAnimationPacket(final LivingEntity entity) {
+        this(entity.getId(), entity.getHurtDir());
     }
 
-    private ClientboundHurtAnimationPacket(FriendlyByteBuf p_265181_) {
-        this(p_265181_.readVarInt(), p_265181_.readFloat());
+    private ClientboundHurtAnimationPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt(), input.readFloat());
     }
 
-    private void write(FriendlyByteBuf p_265156_) {
-        p_265156_.writeVarInt(this.id);
-        p_265156_.writeFloat(this.yaw);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.id);
+        output.writeFloat(this.yaw);
     }
 
     @Override
@@ -29,7 +29,7 @@ public record ClientboundHurtAnimationPacket(int id, float yaw) implements Packe
         return GamePacketTypes.CLIENTBOUND_HURT_ANIMATION;
     }
 
-    public void handle(ClientGamePacketListener p_265654_) {
-        p_265654_.handleHurtAnimation(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleHurtAnimation(this);
     }
 }

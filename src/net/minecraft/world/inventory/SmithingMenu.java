@@ -2,7 +2,6 @@ package net.minecraft.world.inventory;
 
 import java.util.List;
 import java.util.Optional;
-import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
@@ -34,48 +33,48 @@ public class SmithingMenu extends ItemCombinerMenu {
     private final RecipePropertySet additionItemTest;
     private final DataSlot hasRecipeError = DataSlot.standalone();
 
-    public SmithingMenu(int p_40245_, Inventory p_40246_) {
-        this(p_40245_, p_40246_, ContainerLevelAccess.NULL);
+    public SmithingMenu(final int containerId, final Inventory inventory) {
+        this(containerId, inventory, ContainerLevelAccess.NULL);
     }
 
-    public SmithingMenu(int p_40248_, Inventory p_40249_, ContainerLevelAccess p_40250_) {
-        this(p_40248_, p_40249_, p_40250_, p_40249_.player.level());
+    public SmithingMenu(final int containerId, final Inventory inventory, final ContainerLevelAccess access) {
+        this(containerId, inventory, access, inventory.player.level());
     }
 
-    private SmithingMenu(int p_363834_, Inventory p_362239_, ContainerLevelAccess p_362692_, Level p_363616_) {
-        super(MenuType.SMITHING, p_363834_, p_362239_, p_362692_, createInputSlotDefinitions(p_363616_.recipeAccess()));
-        this.level = p_363616_;
-        this.baseItemTest = p_363616_.recipeAccess().propertySet(RecipePropertySet.SMITHING_BASE);
-        this.templateItemTest = p_363616_.recipeAccess().propertySet(RecipePropertySet.SMITHING_TEMPLATE);
-        this.additionItemTest = p_363616_.recipeAccess().propertySet(RecipePropertySet.SMITHING_ADDITION);
+    private SmithingMenu(final int containerId, final Inventory inventory, final ContainerLevelAccess access, final Level level) {
+        super(MenuType.SMITHING, containerId, inventory, access, createInputSlotDefinitions(level.recipeAccess()));
+        this.level = level;
+        this.baseItemTest = level.recipeAccess().propertySet(RecipePropertySet.SMITHING_BASE);
+        this.templateItemTest = level.recipeAccess().propertySet(RecipePropertySet.SMITHING_TEMPLATE);
+        this.additionItemTest = level.recipeAccess().propertySet(RecipePropertySet.SMITHING_ADDITION);
         this.addDataSlot(this.hasRecipeError).set(0);
     }
 
-    private static ItemCombinerMenuSlotDefinition createInputSlotDefinitions(RecipeAccess p_363220_) {
-        RecipePropertySet recipepropertyset = p_363220_.propertySet(RecipePropertySet.SMITHING_BASE);
-        RecipePropertySet recipepropertyset1 = p_363220_.propertySet(RecipePropertySet.SMITHING_TEMPLATE);
-        RecipePropertySet recipepropertyset2 = p_363220_.propertySet(RecipePropertySet.SMITHING_ADDITION);
+    private static ItemCombinerMenuSlotDefinition createInputSlotDefinitions(final RecipeAccess recipes) {
+        RecipePropertySet baseItemTest = recipes.propertySet(RecipePropertySet.SMITHING_BASE);
+        RecipePropertySet templateItemTest = recipes.propertySet(RecipePropertySet.SMITHING_TEMPLATE);
+        RecipePropertySet additionItemTest = recipes.propertySet(RecipePropertySet.SMITHING_ADDITION);
         return ItemCombinerMenuSlotDefinition.create()
-            .withSlot(0, 8, 48, recipepropertyset1::test)
-            .withSlot(1, 26, 48, recipepropertyset::test)
-            .withSlot(2, 44, 48, recipepropertyset2::test)
+            .withSlot(0, 8, 48, templateItemTest::test)
+            .withSlot(1, 26, 48, baseItemTest::test)
+            .withSlot(2, 44, 48, additionItemTest::test)
             .withResultSlot(3, 98, 48)
             .build();
     }
 
     @Override
-    protected boolean isValidBlock(BlockState p_40266_) {
-        return p_40266_.is(Blocks.SMITHING_TABLE);
+    protected boolean isValidBlock(final BlockState state) {
+        return state.is(Blocks.SMITHING_TABLE);
     }
 
     @Override
-    protected void onTake(Player p_150663_, ItemStack p_150664_) {
-        p_150664_.onCraftedBy(p_150663_, p_150664_.getCount());
-        this.resultSlots.awardUsedRecipes(p_150663_, this.getRelevantItems());
+    protected void onTake(final Player player, final ItemStack carried) {
+        carried.onCraftedBy(player, carried.getCount());
+        this.resultSlots.awardUsedRecipes(player, this.getRelevantItems());
         this.shrinkStackInSlot(0);
         this.shrinkStackInSlot(1);
         this.shrinkStackInSlot(2);
-        this.access.execute((p_40263_, p_40264_) -> p_40263_.levelEvent(1044, p_40264_, 0));
+        this.access.execute((level, pos) -> level.levelEvent(1044, pos, 0));
     }
 
     private List<ItemStack> getRelevantItems() {
@@ -86,37 +85,40 @@ public class SmithingMenu extends ItemCombinerMenu {
         return new SmithingRecipeInput(this.inputSlots.getItem(0), this.inputSlots.getItem(1), this.inputSlots.getItem(2));
     }
 
-    private void shrinkStackInSlot(int p_40271_) {
-        ItemStack itemstack = this.inputSlots.getItem(p_40271_);
-        if (!itemstack.isEmpty()) {
-            itemstack.shrink(1);
-            this.inputSlots.setItem(p_40271_, itemstack);
+    private void shrinkStackInSlot(final int slot) {
+        ItemStack stack = this.inputSlots.getItem(slot);
+        if (!stack.isEmpty()) {
+            stack.shrink(1);
+            this.inputSlots.setItem(slot, stack);
         }
     }
 
     @Override
-    public void slotsChanged(Container p_369195_) {
-        super.slotsChanged(p_369195_);
+    public void slotsChanged(final Container container) {
+        super.slotsChanged(container);
         if (this.level instanceof ServerLevel) {
-            boolean flag = this.getSlot(0).hasItem() && this.getSlot(1).hasItem() && this.getSlot(2).hasItem() && !this.getSlot(this.getResultSlot()).hasItem();
-            this.hasRecipeError.set(flag ? 1 : 0);
+            boolean hasRecipeError = this.getSlot(0).hasItem()
+                && this.getSlot(1).hasItem()
+                && this.getSlot(2).hasItem()
+                && !this.getSlot(this.getResultSlot()).hasItem();
+            this.hasRecipeError.set(hasRecipeError ? 1 : 0);
         }
     }
 
     @Override
     public void createResult() {
-        SmithingRecipeInput smithingrecipeinput = this.createRecipeInput();
-        Optional<RecipeHolder<SmithingRecipe>> optional;
-        if (this.level instanceof ServerLevel serverlevel) {
-            optional = serverlevel.recipeAccess().getRecipeFor(RecipeType.SMITHING, smithingrecipeinput, serverlevel);
+        SmithingRecipeInput input = this.createRecipeInput();
+        Optional<RecipeHolder<SmithingRecipe>> foundRecipe;
+        if (this.level instanceof ServerLevel serverLevel) {
+            foundRecipe = serverLevel.recipeAccess().getRecipeFor(RecipeType.SMITHING, input, serverLevel);
         } else {
-            optional = Optional.empty();
+            foundRecipe = Optional.empty();
         }
 
-        optional.ifPresentOrElse(p_359375_ -> {
-            ItemStack itemstack = p_359375_.value().assemble(smithingrecipeinput, this.level.registryAccess());
-            this.resultSlots.setRecipeUsed((RecipeHolder<?>)p_359375_);
-            this.resultSlots.setItem(0, itemstack);
+        foundRecipe.ifPresentOrElse(recipe -> {
+            ItemStack result = recipe.value().assemble(input);
+            this.resultSlots.setRecipeUsed((RecipeHolder<?>)recipe);
+            this.resultSlots.setItem(0, result);
         }, () -> {
             this.resultSlots.setRecipeUsed(null);
             this.resultSlots.setItem(0, ItemStack.EMPTY);
@@ -124,18 +126,16 @@ public class SmithingMenu extends ItemCombinerMenu {
     }
 
     @Override
-    public boolean canTakeItemForPickAll(ItemStack p_40257_, Slot p_40258_) {
-        return p_40258_.container != this.resultSlots && super.canTakeItemForPickAll(p_40257_, p_40258_);
+    public boolean canTakeItemForPickAll(final ItemStack carried, final Slot target) {
+        return target.container != this.resultSlots && super.canTakeItemForPickAll(carried, target);
     }
 
     @Override
-    public boolean canMoveIntoInputSlots(ItemStack p_266846_) {
-        if (this.templateItemTest.test(p_266846_) && !this.getSlot(0).hasItem()) {
+    public boolean canMoveIntoInputSlots(final ItemStack stack) {
+        if (this.templateItemTest.test(stack) && !this.getSlot(0).hasItem()) {
             return true;
         } else {
-            return this.baseItemTest.test(p_266846_) && !this.getSlot(1).hasItem()
-                ? true
-                : this.additionItemTest.test(p_266846_) && !this.getSlot(2).hasItem();
+            return this.baseItemTest.test(stack) && !this.getSlot(1).hasItem() ? true : this.additionItemTest.test(stack) && !this.getSlot(2).hasItem();
         }
     }
 

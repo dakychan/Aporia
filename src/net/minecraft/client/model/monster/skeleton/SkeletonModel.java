@@ -13,45 +13,38 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.SkeletonRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.HumanoidArm;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SkeletonModel<S extends SkeletonRenderState> extends HumanoidModel<S> {
-    public SkeletonModel(ModelPart p_452957_) {
-        super(p_452957_);
+    public SkeletonModel(final ModelPart root) {
+        super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        createDefaultSkeletonMesh(partdefinition);
-        return LayerDefinition.create(meshdefinition, 64, 32);
+        MeshDefinition mesh = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
+        PartDefinition root = mesh.getRoot();
+        createDefaultSkeletonMesh(root);
+        return LayerDefinition.create(mesh, 64, 32);
     }
 
-    protected static void createDefaultSkeletonMesh(PartDefinition p_459656_) {
-        p_459656_.addOrReplaceChild(
+    protected static void createDefaultSkeletonMesh(final PartDefinition root) {
+        root.addOrReplaceChild(
             "right_arm", CubeListBuilder.create().texOffs(40, 16).addBox(-1.0F, -2.0F, -1.0F, 2.0F, 12.0F, 2.0F), PartPose.offset(-5.0F, 2.0F, 0.0F)
         );
-        p_459656_.addOrReplaceChild(
-            "left_arm",
-            CubeListBuilder.create().texOffs(40, 16).mirror().addBox(-1.0F, -2.0F, -1.0F, 2.0F, 12.0F, 2.0F),
-            PartPose.offset(5.0F, 2.0F, 0.0F)
+        root.addOrReplaceChild(
+            "left_arm", CubeListBuilder.create().texOffs(40, 16).mirror().addBox(-1.0F, -2.0F, -1.0F, 2.0F, 12.0F, 2.0F), PartPose.offset(5.0F, 2.0F, 0.0F)
         );
-        p_459656_.addOrReplaceChild(
+        root.addOrReplaceChild(
             "right_leg", CubeListBuilder.create().texOffs(0, 16).addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F), PartPose.offset(-2.0F, 12.0F, 0.0F)
         );
-        p_459656_.addOrReplaceChild(
-            "left_leg",
-            CubeListBuilder.create().texOffs(0, 16).mirror().addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F),
-            PartPose.offset(2.0F, 12.0F, 0.0F)
+        root.addOrReplaceChild(
+            "left_leg", CubeListBuilder.create().texOffs(0, 16).mirror().addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F), PartPose.offset(2.0F, 12.0F, 0.0F)
         );
     }
 
     public static LayerDefinition createSingleModelDualBodyLayer() {
         MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        partdefinition.addOrReplaceChild(
+        PartDefinition root = meshdefinition.getRoot();
+        root.addOrReplaceChild(
             "body",
             CubeListBuilder.create()
                 .texOffs(16, 16)
@@ -62,7 +55,7 @@ public class SkeletonModel<S extends SkeletonRenderState> extends HumanoidModel<
                 .addBox(-4.0F, 0.0F, -2.0F, 8.0F, 12.0F, 4.0F, new CubeDeformation(0.025F)),
             PartPose.offset(0.0F, 0.0F, 0.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
                 "head",
                 CubeListBuilder.create()
                     .texOffs(0, 0)
@@ -72,7 +65,7 @@ public class SkeletonModel<S extends SkeletonRenderState> extends HumanoidModel<
                 PartPose.offset(0.0F, 0.0F, 0.0F)
             )
             .addOrReplaceChild("hat", CubeListBuilder.create(), PartPose.ZERO);
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "right_arm",
             CubeListBuilder.create()
                 .texOffs(40, 16)
@@ -81,7 +74,7 @@ public class SkeletonModel<S extends SkeletonRenderState> extends HumanoidModel<
                 .addBox(-1.55F, -2.025F, -1.5F, 3.0F, 12.0F, 3.0F),
             PartPose.offset(-5.5F, 2.0F, 0.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "left_arm",
             CubeListBuilder.create()
                 .texOffs(56, 16)
@@ -90,51 +83,43 @@ public class SkeletonModel<S extends SkeletonRenderState> extends HumanoidModel<
                 .addBox(-1.45F, -2.025F, -1.5F, 3.0F, 12.0F, 3.0F),
             PartPose.offset(5.5F, 2.0F, 0.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "right_leg",
-            CubeListBuilder.create()
-                .texOffs(0, 16)
-                .addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F)
-                .texOffs(0, 49)
-                .addBox(-1.5F, -0.0F, -1.5F, 3.0F, 12.0F, 3.0F),
+            CubeListBuilder.create().texOffs(0, 16).addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F).texOffs(0, 49).addBox(-1.5F, -0.0F, -1.5F, 3.0F, 12.0F, 3.0F),
             PartPose.offset(-2.0F, 12.0F, 0.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "left_leg",
-            CubeListBuilder.create()
-                .texOffs(0, 16)
-                .addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F)
-                .texOffs(4, 49)
-                .addBox(-1.5F, 0.0F, -1.5F, 3.0F, 12.0F, 3.0F),
+            CubeListBuilder.create().texOffs(0, 16).addBox(-1.0F, 0.0F, -1.0F, 2.0F, 12.0F, 2.0F).texOffs(4, 49).addBox(-1.5F, 0.0F, -1.5F, 3.0F, 12.0F, 3.0F),
             PartPose.offset(2.0F, 12.0F, 0.0F)
         );
         return LayerDefinition.create(meshdefinition, 64, 64);
     }
 
-    public void setupAnim(S p_454348_) {
-        super.setupAnim(p_454348_);
-        if (p_454348_.isAggressive && !p_454348_.isHoldingBow) {
-            float f = p_454348_.attackTime;
-            float f1 = Mth.sin(f * (float) Math.PI);
-            float f2 = Mth.sin((1.0F - (1.0F - f) * (1.0F - f)) * (float) Math.PI);
+    public void setupAnim(final S state) {
+        super.setupAnim(state);
+        if (state.isAggressive && !state.isHoldingBow) {
+            float attackTime = state.attackTime;
+            float attack2 = Mth.sin(attackTime * (float) Math.PI);
+            float attack = Mth.sin((1.0F - (1.0F - attackTime) * (1.0F - attackTime)) * (float) Math.PI);
             this.rightArm.zRot = 0.0F;
             this.leftArm.zRot = 0.0F;
-            this.rightArm.yRot = -(0.1F - f1 * 0.6F);
-            this.leftArm.yRot = 0.1F - f1 * 0.6F;
+            this.rightArm.yRot = -(0.1F - attack2 * 0.6F);
+            this.leftArm.yRot = 0.1F - attack2 * 0.6F;
             this.rightArm.xRot = (float) (-Math.PI / 2);
             this.leftArm.xRot = (float) (-Math.PI / 2);
-            this.rightArm.xRot -= f1 * 1.2F - f2 * 0.4F;
-            this.leftArm.xRot -= f1 * 1.2F - f2 * 0.4F;
-            AnimationUtils.bobArms(this.rightArm, this.leftArm, p_454348_.ageInTicks);
+            this.rightArm.xRot -= attack2 * 1.2F - attack * 0.4F;
+            this.leftArm.xRot -= attack2 * 1.2F - attack * 0.4F;
+            AnimationUtils.bobArms(this.rightArm, this.leftArm, state.ageInTicks);
         }
     }
 
-    public void translateToHand(SkeletonRenderState p_452101_, HumanoidArm p_456516_, PoseStack p_460084_) {
-        this.root().translateAndRotate(p_460084_);
-        float f = p_456516_ == HumanoidArm.RIGHT ? 1.0F : -1.0F;
-        ModelPart modelpart = this.getArm(p_456516_);
-        modelpart.x += f;
-        modelpart.translateAndRotate(p_460084_);
-        modelpart.x -= f;
+    public void translateToHand(final SkeletonRenderState state, final HumanoidArm arm, final PoseStack poseStack) {
+        this.root().translateAndRotate(poseStack);
+        float offset = arm == HumanoidArm.RIGHT ? 1.0F : -1.0F;
+        ModelPart part = this.getArm(arm);
+        part.x += offset;
+        part.translateAndRotate(poseStack);
+        part.x -= offset;
     }
 }

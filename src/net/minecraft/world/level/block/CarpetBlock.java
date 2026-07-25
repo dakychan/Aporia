@@ -21,33 +21,33 @@ public class CarpetBlock extends Block {
         return CODEC;
     }
 
-    public CarpetBlock(BlockBehaviour.Properties p_152915_) {
-        super(p_152915_);
+    public CarpetBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_152917_, BlockGetter p_152918_, BlockPos p_152919_, CollisionContext p_152920_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_152926_,
-        LevelReader p_367863_,
-        ScheduledTickAccess p_362101_,
-        BlockPos p_152930_,
-        Direction p_152927_,
-        BlockPos p_152931_,
-        BlockState p_152928_,
-        RandomSource p_362637_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return !p_152926_.canSurvive(p_367863_, p_152930_)
+        return !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_152926_, p_367863_, p_362101_, p_152930_, p_152927_, p_152931_, p_152928_, p_362637_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_152922_, LevelReader p_152923_, BlockPos p_152924_) {
-        return !p_152923_.isEmptyBlock(p_152924_.below());
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return !level.isEmptyBlock(pos.below());
     }
 }

@@ -12,14 +12,25 @@ import net.minecraft.world.item.component.TooltipDisplay;
 public class SmithingTemplateItem extends Item {
     private static final ChatFormatting TITLE_FORMAT = ChatFormatting.GRAY;
     private static final ChatFormatting DESCRIPTION_FORMAT = ChatFormatting.BLUE;
-    private static final Component INGREDIENTS_TITLE = Component.translatable(Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.ingredients")))
+    private static final Component INGREDIENTS_TITLE = Component.translatable(
+            Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.ingredients"))
+        )
         .withStyle(TITLE_FORMAT);
-    private static final Component APPLIES_TO_TITLE = Component.translatable(Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.applies_to")))
+    private static final Component APPLIES_TO_TITLE = Component.translatable(
+            Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.applies_to"))
+        )
         .withStyle(TITLE_FORMAT);
-    private static final Component SMITHING_TEMPLATE_SUFFIX = Component.translatable(Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template"))).withStyle(TITLE_FORMAT);
-    private static final Component ARMOR_TRIM_APPLIES_TO = Component.translatable(Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.armor_trim.applies_to")))
+    private static final Component SMITHING_TEMPLATE_SUFFIX = Component.translatable(
+            Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template"))
+        )
+        .withStyle(TITLE_FORMAT);
+    private static final Component ARMOR_TRIM_APPLIES_TO = Component.translatable(
+            Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.armor_trim.applies_to"))
+        )
         .withStyle(DESCRIPTION_FORMAT);
-    private static final Component ARMOR_TRIM_INGREDIENTS = Component.translatable(Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.armor_trim.ingredients")))
+    private static final Component ARMOR_TRIM_INGREDIENTS = Component.translatable(
+            Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.armor_trim.ingredients"))
+        )
         .withStyle(DESCRIPTION_FORMAT);
     private static final Component ARMOR_TRIM_BASE_SLOT_DESCRIPTION = Component.translatable(
         Util.makeDescriptionId("item", Identifier.withDefaultNamespace("smithing_template.armor_trim.base_slot_description"))
@@ -67,29 +78,45 @@ public class SmithingTemplateItem extends Item {
     private final List<Identifier> additionalSlotEmptyIcons;
 
     public SmithingTemplateItem(
-        Component p_266834_,
-        Component p_267043_,
-        Component p_267048_,
-        Component p_267278_,
-        List<Identifier> p_266755_,
-        List<Identifier> p_267060_,
-        Item.Properties p_362295_
+        final Component appliesTo,
+        final Component ingredients,
+        final Component baseSlotDescription,
+        final Component additionsSlotDescription,
+        final List<Identifier> baseSlotEmptyIcons,
+        final List<Identifier> additionalSlotEmptyIcons,
+        final Item.Properties properties
     ) {
-        super(p_362295_);
-        this.appliesTo = p_266834_;
-        this.ingredients = p_267043_;
-        this.baseSlotDescription = p_267048_;
-        this.additionsSlotDescription = p_267278_;
-        this.baseSlotEmptyIcons = p_266755_;
-        this.additionalSlotEmptyIcons = p_267060_;
+        super(properties);
+        this.appliesTo = appliesTo;
+        this.ingredients = ingredients;
+        this.baseSlotDescription = baseSlotDescription;
+        this.additionsSlotDescription = additionsSlotDescription;
+        this.baseSlotEmptyIcons = baseSlotEmptyIcons;
+        this.additionalSlotEmptyIcons = additionalSlotEmptyIcons;
     }
 
-    public static SmithingTemplateItem createArmorTrimTemplate(Item.Properties p_366947_) {
-        return new SmithingTemplateItem(ARMOR_TRIM_APPLIES_TO, ARMOR_TRIM_INGREDIENTS, ARMOR_TRIM_BASE_SLOT_DESCRIPTION, ARMOR_TRIM_ADDITIONS_SLOT_DESCRIPTION, createTrimmableArmorIconList(), createTrimmableMaterialIconList(), p_366947_);
+    public static SmithingTemplateItem createArmorTrimTemplate(final Item.Properties properties) {
+        return new SmithingTemplateItem(
+            ARMOR_TRIM_APPLIES_TO,
+            ARMOR_TRIM_INGREDIENTS,
+            ARMOR_TRIM_BASE_SLOT_DESCRIPTION,
+            ARMOR_TRIM_ADDITIONS_SLOT_DESCRIPTION,
+            createTrimmableArmorIconList(),
+            createTrimmableMaterialIconList(),
+            properties
+        );
     }
 
-    public static SmithingTemplateItem createNetheriteUpgradeTemplate(Item.Properties p_368215_) {
-        return new SmithingTemplateItem(NETHERITE_UPGRADE_APPLIES_TO, NETHERITE_UPGRADE_INGREDIENTS, NETHERITE_UPGRADE_BASE_SLOT_DESCRIPTION, NETHERITE_UPGRADE_ADDITIONS_SLOT_DESCRIPTION, createNetheriteUpgradeIconList(), createNetheriteUpgradeMaterialList(), p_368215_);
+    public static SmithingTemplateItem createNetheriteUpgradeTemplate(final Item.Properties properties) {
+        return new SmithingTemplateItem(
+            NETHERITE_UPGRADE_APPLIES_TO,
+            NETHERITE_UPGRADE_INGREDIENTS,
+            NETHERITE_UPGRADE_BASE_SLOT_DESCRIPTION,
+            NETHERITE_UPGRADE_ADDITIONS_SLOT_DESCRIPTION,
+            createNetheriteUpgradeIconList(),
+            createNetheriteUpgradeMaterialList(),
+            properties
+        );
     }
 
     private static List<Identifier> createTrimmableArmorIconList() {
@@ -97,11 +124,31 @@ public class SmithingTemplateItem extends Item {
     }
 
     private static List<Identifier> createTrimmableMaterialIconList() {
-        return List.of(EMPTY_SLOT_INGOT, EMPTY_SLOT_REDSTONE_DUST, EMPTY_SLOT_LAPIS_LAZULI, EMPTY_SLOT_QUARTZ, EMPTY_SLOT_DIAMOND, EMPTY_SLOT_EMERALD, EMPTY_SLOT_AMETHYST_SHARD);
+        return List.of(
+            EMPTY_SLOT_INGOT,
+            EMPTY_SLOT_REDSTONE_DUST,
+            EMPTY_SLOT_LAPIS_LAZULI,
+            EMPTY_SLOT_QUARTZ,
+            EMPTY_SLOT_DIAMOND,
+            EMPTY_SLOT_EMERALD,
+            EMPTY_SLOT_AMETHYST_SHARD
+        );
     }
 
     private static List<Identifier> createNetheriteUpgradeIconList() {
-        return List.of(EMPTY_SLOT_HELMET, EMPTY_SLOT_SWORD, EMPTY_SLOT_CHESTPLATE, EMPTY_SLOT_PICKAXE, EMPTY_SLOT_LEGGINGS, EMPTY_SLOT_AXE, EMPTY_SLOT_BOOTS, EMPTY_SLOT_HOE, EMPTY_SLOT_SHOVEL, EMPTY_SLOT_NAUTILUS_ARMOR, EMPTY_SLOT_SPEAR);
+        return List.of(
+            EMPTY_SLOT_HELMET,
+            EMPTY_SLOT_SWORD,
+            EMPTY_SLOT_CHESTPLATE,
+            EMPTY_SLOT_PICKAXE,
+            EMPTY_SLOT_LEGGINGS,
+            EMPTY_SLOT_AXE,
+            EMPTY_SLOT_BOOTS,
+            EMPTY_SLOT_HOE,
+            EMPTY_SLOT_SHOVEL,
+            EMPTY_SLOT_NAUTILUS_ARMOR,
+            EMPTY_SLOT_SPEAR
+        );
     }
 
     private static List<Identifier> createNetheriteUpgradeMaterialList() {
@@ -109,13 +156,19 @@ public class SmithingTemplateItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack p_267313_, Item.TooltipContext p_331023_, TooltipDisplay p_393075_, Consumer<Component> p_394742_, TooltipFlag p_266857_) {
-        p_394742_.accept(SMITHING_TEMPLATE_SUFFIX);
-        p_394742_.accept(CommonComponents.EMPTY);
-        p_394742_.accept(APPLIES_TO_TITLE);
-        p_394742_.accept(CommonComponents.space().append(this.appliesTo));
-        p_394742_.accept(INGREDIENTS_TITLE);
-        p_394742_.accept(CommonComponents.space().append(this.ingredients));
+    public void appendHoverText(
+        final ItemStack itemStack,
+        final Item.TooltipContext context,
+        final TooltipDisplay display,
+        final Consumer<Component> builder,
+        final TooltipFlag tooltipFlag
+    ) {
+        builder.accept(SMITHING_TEMPLATE_SUFFIX);
+        builder.accept(CommonComponents.EMPTY);
+        builder.accept(APPLIES_TO_TITLE);
+        builder.accept(CommonComponents.space().append(this.appliesTo));
+        builder.accept(INGREDIENTS_TITLE);
+        builder.accept(CommonComponents.space().append(this.ingredients));
     }
 
     public Component getBaseSlotDescription() {

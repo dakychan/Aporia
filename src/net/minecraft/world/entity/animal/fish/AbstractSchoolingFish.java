@@ -15,8 +15,8 @@ public abstract class AbstractSchoolingFish extends AbstractFish {
     private @Nullable AbstractSchoolingFish leader;
     private int schoolSize = 1;
 
-    public AbstractSchoolingFish(EntityType<? extends AbstractSchoolingFish> p_451362_, Level p_460849_) {
-        super(p_451362_, p_460849_);
+    public AbstractSchoolingFish(final EntityType<? extends AbstractSchoolingFish> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -43,10 +43,10 @@ public abstract class AbstractSchoolingFish extends AbstractFish {
         return this.leader != null && this.leader.isAlive();
     }
 
-    public AbstractSchoolingFish startFollowing(AbstractSchoolingFish p_456314_) {
-        this.leader = p_456314_;
-        p_456314_.addFollower();
-        return p_456314_;
+    public AbstractSchoolingFish startFollowing(final AbstractSchoolingFish leader) {
+        this.leader = leader;
+        leader.addFollower();
+        return leader;
     }
 
     public void stopFollowing() {
@@ -69,10 +69,10 @@ public abstract class AbstractSchoolingFish extends AbstractFish {
     @Override
     public void tick() {
         super.tick();
-        if (this.hasFollowers() && this.level().random.nextInt(200) == 1) {
-            List<? extends AbstractFish> list = this.level()
+        if (this.hasFollowers() && this.level().getRandom().nextInt(200) == 1) {
+            List<? extends AbstractFish> neighbors = this.level()
                 .getEntitiesOfClass((Class<? extends AbstractFish>)this.getClass(), this.getBoundingBox().inflate(8.0, 8.0, 8.0));
-            if (list.size() <= 1) {
+            if (neighbors.size() <= 1) {
                 this.schoolSize = 1;
             }
         }
@@ -92,29 +92,31 @@ public abstract class AbstractSchoolingFish extends AbstractFish {
         }
     }
 
-    public void addFollowers(Stream<? extends AbstractSchoolingFish> p_454221_) {
-        p_454221_.limit(this.getMaxSchoolSize() - this.schoolSize).filter(p_456074_ -> p_456074_ != this).forEach(p_455573_ -> p_455573_.startFollowing(this));
+    public void addFollowers(final Stream<? extends AbstractSchoolingFish> abstractSchoolingFishStream) {
+        abstractSchoolingFishStream.limit(this.getMaxSchoolSize() - this.schoolSize)
+            .filter(f -> f != this)
+            .forEach(otherFish -> otherFish.startFollowing(this));
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_459930_, DifficultyInstance p_451364_, EntitySpawnReason p_457602_, @Nullable SpawnGroupData p_451076_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        super.finalizeSpawn(p_459930_, p_451364_, p_457602_, p_451076_);
-        if (p_451076_ == null) {
-            p_451076_ = new AbstractSchoolingFish.SchoolSpawnGroupData(this);
+        super.finalizeSpawn(level, difficulty, spawnReason, groupData);
+        if (groupData == null) {
+            groupData = new AbstractSchoolingFish.SchoolSpawnGroupData(this);
         } else {
-            this.startFollowing(((AbstractSchoolingFish.SchoolSpawnGroupData)p_451076_).leader);
+            this.startFollowing(((AbstractSchoolingFish.SchoolSpawnGroupData)groupData).leader);
         }
 
-        return p_451076_;
+        return groupData;
     }
 
     public static class SchoolSpawnGroupData implements SpawnGroupData {
         public final AbstractSchoolingFish leader;
 
-        public SchoolSpawnGroupData(AbstractSchoolingFish p_454082_) {
-            this.leader = p_454082_;
+        public SchoolSpawnGroupData(final AbstractSchoolingFish leader) {
+            this.leader = leader;
         }
     }
 }

@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.VisibleForDebug;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.sensing.Sensor;
 
@@ -17,45 +18,50 @@ public class NearestVisibleLivingEntities {
 
     private NearestVisibleLivingEntities() {
         this.nearbyEntities = List.of();
-        this.lineOfSightTest = p_186122_ -> false;
+        this.lineOfSightTest = ignored -> false;
     }
 
-    public NearestVisibleLivingEntities(ServerLevel p_362315_, LivingEntity p_186104_, List<LivingEntity> p_186105_) {
-        this.nearbyEntities = p_186105_;
-        Object2BooleanOpenHashMap<LivingEntity> object2booleanopenhashmap = new Object2BooleanOpenHashMap<>(p_186105_.size());
-        Predicate<LivingEntity> predicate = p_359098_ -> Sensor.isEntityTargetable(p_362315_, p_186104_, p_359098_);
-        this.lineOfSightTest = p_186115_ -> object2booleanopenhashmap.computeIfAbsent(p_186115_, predicate);
+    public NearestVisibleLivingEntities(final ServerLevel level, final LivingEntity body, final List<LivingEntity> livingEntities) {
+        this.nearbyEntities = livingEntities;
+        Object2BooleanOpenHashMap<LivingEntity> cache = new Object2BooleanOpenHashMap<>(livingEntities.size());
+        Predicate<LivingEntity> targetTest = targetEntity -> Sensor.isEntityTargetable(level, body, targetEntity);
+        this.lineOfSightTest = otherEntity -> cache.computeIfAbsent(otherEntity, targetTest);
     }
 
     public static NearestVisibleLivingEntities empty() {
         return EMPTY;
     }
 
-    public Optional<LivingEntity> findClosest(Predicate<LivingEntity> p_186117_) {
-        for (LivingEntity livingentity : this.nearbyEntities) {
-            if (p_186117_.test(livingentity) && this.lineOfSightTest.test(livingentity)) {
-                return Optional.of(livingentity);
+    @VisibleForDebug
+    public List<LivingEntity> nearbyEntities() {
+        return this.nearbyEntities;
+    }
+
+    public Optional<LivingEntity> findClosest(final Predicate<LivingEntity> filter) {
+        for (LivingEntity nearbyEntity : this.nearbyEntities) {
+            if (filter.test(nearbyEntity) && this.lineOfSightTest.test(nearbyEntity)) {
+                return Optional.of(nearbyEntity);
             }
         }
 
         return Optional.empty();
     }
 
-    public Iterable<LivingEntity> findAll(Predicate<LivingEntity> p_186124_) {
-        return Iterables.filter(this.nearbyEntities, p_186127_ -> p_186124_.test(p_186127_) && this.lineOfSightTest.test(p_186127_));
+    public Iterable<LivingEntity> findAll(final Predicate<LivingEntity> filter) {
+        return Iterables.filter(this.nearbyEntities, entity -> filter.test(entity) && this.lineOfSightTest.test(entity));
     }
 
-    public Stream<LivingEntity> find(Predicate<LivingEntity> p_186129_) {
-        return this.nearbyEntities.stream().filter(p_186120_ -> p_186129_.test(p_186120_) && this.lineOfSightTest.test(p_186120_));
+    public Stream<LivingEntity> find(final Predicate<LivingEntity> filter) {
+        return this.nearbyEntities.stream().filter(entity -> filter.test(entity) && this.lineOfSightTest.test(entity));
     }
 
-    public boolean contains(LivingEntity p_186108_) {
-        return this.nearbyEntities.contains(p_186108_) && this.lineOfSightTest.test(p_186108_);
+    public boolean contains(final LivingEntity targetEntity) {
+        return this.nearbyEntities.contains(targetEntity) && this.lineOfSightTest.test(targetEntity);
     }
 
-    public boolean contains(Predicate<LivingEntity> p_186131_) {
-        for (LivingEntity livingentity : this.nearbyEntities) {
-            if (p_186131_.test(livingentity) && this.lineOfSightTest.test(livingentity)) {
+    public boolean contains(final Predicate<LivingEntity> filter) {
+        for (LivingEntity nearbyEntity : this.nearbyEntities) {
+            if (filter.test(nearbyEntity) && this.lineOfSightTest.test(nearbyEntity)) {
                 return true;
             }
         }

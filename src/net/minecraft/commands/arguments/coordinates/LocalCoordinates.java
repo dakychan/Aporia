@@ -10,14 +10,13 @@ public record LocalCoordinates(double left, double up, double forwards) implemen
     public static final char PREFIX_LOCAL_COORDINATE = '^';
 
     @Override
-    public Vec3 getPosition(CommandSourceStack p_119912_) {
-        Vec3 vec3 = p_119912_.getAnchor().apply(p_119912_);
-        return Vec3.applyLocalCoordinatesToRotation(p_119912_.getRotation(), new Vec3(this.left, this.up, this.forwards))
-            .add(vec3.x, vec3.y, vec3.z);
+    public Vec3 getPosition(final CommandSourceStack sender) {
+        Vec3 source = sender.getAnchor().apply(sender);
+        return Vec3.applyLocalCoordinatesToRotation(sender.getRotation(), new Vec3(this.left, this.up, this.forwards)).add(source.x, source.y, source.z);
     }
 
     @Override
-    public Vec2 getRotation(CommandSourceStack p_119915_) {
+    public Vec2 getRotation(final CommandSourceStack sender) {
         return Vec2.ZERO;
     }
 
@@ -36,35 +35,35 @@ public record LocalCoordinates(double left, double up, double forwards) implemen
         return true;
     }
 
-    public static LocalCoordinates parse(StringReader p_119907_) throws CommandSyntaxException {
-        int i = p_119907_.getCursor();
-        double d0 = readDouble(p_119907_, i);
-        if (p_119907_.canRead() && p_119907_.peek() == ' ') {
-            p_119907_.skip();
-            double d1 = readDouble(p_119907_, i);
-            if (p_119907_.canRead() && p_119907_.peek() == ' ') {
-                p_119907_.skip();
-                double d2 = readDouble(p_119907_, i);
-                return new LocalCoordinates(d0, d1, d2);
+    public static LocalCoordinates parse(final StringReader reader) throws CommandSyntaxException {
+        int start = reader.getCursor();
+        double left = readDouble(reader, start);
+        if (reader.canRead() && reader.peek() == ' ') {
+            reader.skip();
+            double up = readDouble(reader, start);
+            if (reader.canRead() && reader.peek() == ' ') {
+                reader.skip();
+                double forwards = readDouble(reader, start);
+                return new LocalCoordinates(left, up, forwards);
             } else {
-                p_119907_.setCursor(i);
-                throw Vec3Argument.ERROR_NOT_COMPLETE.createWithContext(p_119907_);
+                reader.setCursor(start);
+                throw Vec3Argument.ERROR_NOT_COMPLETE.createWithContext(reader);
             }
         } else {
-            p_119907_.setCursor(i);
-            throw Vec3Argument.ERROR_NOT_COMPLETE.createWithContext(p_119907_);
+            reader.setCursor(start);
+            throw Vec3Argument.ERROR_NOT_COMPLETE.createWithContext(reader);
         }
     }
 
-    private static double readDouble(StringReader p_119909_, int p_119910_) throws CommandSyntaxException {
-        if (!p_119909_.canRead()) {
-            throw WorldCoordinate.ERROR_EXPECTED_DOUBLE.createWithContext(p_119909_);
-        } else if (p_119909_.peek() != '^') {
-            p_119909_.setCursor(p_119910_);
-            throw Vec3Argument.ERROR_MIXED_TYPE.createWithContext(p_119909_);
+    private static double readDouble(final StringReader reader, final int start) throws CommandSyntaxException {
+        if (!reader.canRead()) {
+            throw WorldCoordinate.ERROR_EXPECTED_DOUBLE.createWithContext(reader);
+        } else if (reader.peek() != '^') {
+            reader.setCursor(start);
+            throw Vec3Argument.ERROR_MIXED_TYPE.createWithContext(reader);
         } else {
-            p_119909_.skip();
-            return p_119909_.canRead() && p_119909_.peek() != ' ' ? p_119909_.readDouble() : 0.0;
+            reader.skip();
+            return reader.canRead() && reader.peek() != ' ' ? reader.readDouble() : 0.0;
         }
     }
 }

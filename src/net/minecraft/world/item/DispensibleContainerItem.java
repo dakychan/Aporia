@@ -7,8 +7,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import org.jspecify.annotations.Nullable;
 
 public interface DispensibleContainerItem {
-    default void checkExtraContent(@Nullable LivingEntity p_391486_, Level p_150818_, ItemStack p_150819_, BlockPos p_150820_) {
+    default void checkExtraContent(final @Nullable LivingEntity user, final Level level, final ItemStack itemStack, final BlockPos pos) {
     }
 
-    boolean emptyContents(@Nullable LivingEntity p_396492_, Level p_150822_, BlockPos p_150823_, @Nullable BlockHitResult p_150824_);
+    boolean emptyContents(final @Nullable LivingEntity user, final Level level, final BlockPos pos, final @Nullable BlockHitResult hitResult);
 }

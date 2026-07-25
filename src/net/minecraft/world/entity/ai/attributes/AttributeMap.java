@@ -19,14 +19,14 @@ public class AttributeMap {
     private final Set<AttributeInstance> attributesToUpdate = new ObjectOpenHashSet<>();
     private final AttributeSupplier supplier;
 
-    public AttributeMap(AttributeSupplier p_22144_) {
-        this.supplier = p_22144_;
+    public AttributeMap(final AttributeSupplier supplier) {
+        this.supplier = supplier;
     }
 
-    private void onAttributeModified(AttributeInstance p_22158_) {
-        this.attributesToUpdate.add(p_22158_);
-        if (p_22158_.getAttribute().value().isClientSyncable()) {
-            this.attributesToSync.add(p_22158_);
+    private void onAttributeModified(final AttributeInstance attributeInstance) {
+        this.attributesToUpdate.add(attributeInstance);
+        if (attributeInstance.getAttribute().value().isClientSyncable()) {
+            this.attributesToSync.add(attributeInstance);
         }
     }
 
@@ -39,111 +39,111 @@ public class AttributeMap {
     }
 
     public Collection<AttributeInstance> getSyncableAttributes() {
-        return this.attributes.values().stream().filter(p_326797_ -> p_326797_.getAttribute().value().isClientSyncable()).collect(Collectors.toList());
+        return this.attributes.values().stream().filter(instance -> instance.getAttribute().value().isClientSyncable()).collect(Collectors.toList());
     }
 
-    public @Nullable AttributeInstance getInstance(Holder<Attribute> p_250010_) {
-        return this.attributes.computeIfAbsent(p_250010_, p_326793_ -> this.supplier.createInstance(this::onAttributeModified, (Holder<Attribute>)p_326793_));
+    public @Nullable AttributeInstance getInstance(final Holder<Attribute> attribute) {
+        return this.attributes.computeIfAbsent(attribute, key -> this.supplier.createInstance(this::onAttributeModified, (Holder<Attribute>)key));
     }
 
-    public boolean hasAttribute(Holder<Attribute> p_248893_) {
-        return this.attributes.get(p_248893_) != null || this.supplier.hasAttribute(p_248893_);
+    public boolean hasAttribute(final Holder<Attribute> attribute) {
+        return this.attributes.get(attribute) != null || this.supplier.hasAttribute(attribute);
     }
 
-    public boolean hasModifier(Holder<Attribute> p_250299_, Identifier p_452126_) {
-        AttributeInstance attributeinstance = this.attributes.get(p_250299_);
-        return attributeinstance != null ? attributeinstance.getModifier(p_452126_) != null : this.supplier.hasModifier(p_250299_, p_452126_);
+    public boolean hasModifier(final Holder<Attribute> attribute, final Identifier id) {
+        AttributeInstance attributeInstance = this.attributes.get(attribute);
+        return attributeInstance != null ? attributeInstance.getModifier(id) != null : this.supplier.hasModifier(attribute, id);
     }
 
-    public double getValue(Holder<Attribute> p_328238_) {
-        AttributeInstance attributeinstance = this.attributes.get(p_328238_);
-        return attributeinstance != null ? attributeinstance.getValue() : this.supplier.getValue(p_328238_);
+    public double getValue(final Holder<Attribute> attribute) {
+        AttributeInstance ownAttribute = this.attributes.get(attribute);
+        return ownAttribute != null ? ownAttribute.getValue() : this.supplier.getValue(attribute);
     }
 
-    public double getBaseValue(Holder<Attribute> p_329417_) {
-        AttributeInstance attributeinstance = this.attributes.get(p_329417_);
-        return attributeinstance != null ? attributeinstance.getBaseValue() : this.supplier.getBaseValue(p_329417_);
+    public double getBaseValue(final Holder<Attribute> attribute) {
+        AttributeInstance ownAttribute = this.attributes.get(attribute);
+        return ownAttribute != null ? ownAttribute.getBaseValue() : this.supplier.getBaseValue(attribute);
     }
 
-    public double getModifierValue(Holder<Attribute> p_251534_, Identifier p_450518_) {
-        AttributeInstance attributeinstance = this.attributes.get(p_251534_);
-        return attributeinstance != null ? attributeinstance.getModifier(p_450518_).amount() : this.supplier.getModifierValue(p_251534_, p_450518_);
+    public double getModifierValue(final Holder<Attribute> attribute, final Identifier id) {
+        AttributeInstance attributeInstance = this.attributes.get(attribute);
+        return attributeInstance != null ? attributeInstance.getModifier(id).amount() : this.supplier.getModifierValue(attribute, id);
     }
 
-    public void addTransientAttributeModifiers(Multimap<Holder<Attribute>, AttributeModifier> p_342579_) {
-        p_342579_.forEach((p_449439_, p_449440_) -> {
-            AttributeInstance attributeinstance = this.getInstance((Holder<Attribute>)p_449439_);
-            if (attributeinstance != null) {
-                attributeinstance.removeModifier(p_449440_.id());
-                attributeinstance.addTransientModifier(p_449440_);
+    public void addTransientAttributeModifiers(final Multimap<Holder<Attribute>, AttributeModifier> modifiers) {
+        modifiers.forEach((attribute, attributeModifier) -> {
+            AttributeInstance instance = this.getInstance((Holder<Attribute>)attribute);
+            if (instance != null) {
+                instance.removeModifier(attributeModifier.id());
+                instance.addTransientModifier(attributeModifier);
             }
         });
     }
 
-    public void removeAttributeModifiers(Multimap<Holder<Attribute>, AttributeModifier> p_342034_) {
-        p_342034_.asMap().forEach((p_341283_, p_341284_) -> {
-            AttributeInstance attributeinstance = this.attributes.get(p_341283_);
-            if (attributeinstance != null) {
-                p_341284_.forEach(p_449442_ -> attributeinstance.removeModifier(p_449442_.id()));
+    public void removeAttributeModifiers(final Multimap<Holder<Attribute>, AttributeModifier> modifiers) {
+        modifiers.asMap().forEach((attribute, attributeModifiers) -> {
+            AttributeInstance instance = this.attributes.get(attribute);
+            if (instance != null) {
+                attributeModifiers.forEach(attributeModifier -> instance.removeModifier(attributeModifier.id()));
             }
         });
     }
 
-    public void assignAllValues(AttributeMap p_22160_) {
-        p_22160_.attributes.values().forEach(p_326796_ -> {
-            AttributeInstance attributeinstance = this.getInstance(p_326796_.getAttribute());
-            if (attributeinstance != null) {
-                attributeinstance.replaceFrom(p_326796_);
+    public void assignAllValues(final AttributeMap other) {
+        other.attributes.values().forEach(otherInstance -> {
+            AttributeInstance selfInstance = this.getInstance(otherInstance.getAttribute());
+            if (selfInstance != null) {
+                selfInstance.replaceFrom(otherInstance);
             }
         });
     }
 
-    public void assignBaseValues(AttributeMap p_344183_) {
-        p_344183_.attributes.values().forEach(p_341285_ -> {
-            AttributeInstance attributeinstance = this.getInstance(p_341285_.getAttribute());
-            if (attributeinstance != null) {
-                attributeinstance.setBaseValue(p_341285_.getBaseValue());
+    public void assignBaseValues(final AttributeMap other) {
+        other.attributes.values().forEach(otherInstance -> {
+            AttributeInstance selfInstance = this.getInstance(otherInstance.getAttribute());
+            if (selfInstance != null) {
+                selfInstance.setBaseValue(otherInstance.getBaseValue());
             }
         });
     }
 
-    public void assignPermanentModifiers(AttributeMap p_365307_) {
-        p_365307_.attributes.values().forEach(p_358913_ -> {
-            AttributeInstance attributeinstance = this.getInstance(p_358913_.getAttribute());
-            if (attributeinstance != null) {
-                attributeinstance.addPermanentModifiers(p_358913_.getPermanentModifiers());
+    public void assignPermanentModifiers(final AttributeMap other) {
+        other.attributes.values().forEach(otherInstance -> {
+            AttributeInstance selfInstance = this.getInstance(otherInstance.getAttribute());
+            if (selfInstance != null) {
+                selfInstance.addPermanentModifiers(otherInstance.getPermanentModifiers());
             }
         });
     }
 
-    public boolean resetBaseValue(Holder<Attribute> p_377122_) {
-        if (!this.supplier.hasAttribute(p_377122_)) {
+    public boolean resetBaseValue(final Holder<Attribute> attribute) {
+        if (!this.supplier.hasAttribute(attribute)) {
             return false;
-        } else {
-            AttributeInstance attributeinstance = this.attributes.get(p_377122_);
-            if (attributeinstance != null) {
-                attributeinstance.setBaseValue(this.supplier.getBaseValue(p_377122_));
-            }
-
-            return true;
         }
+
+        AttributeInstance instance = this.attributes.get(attribute);
+        if (instance != null) {
+            instance.setBaseValue(this.supplier.getBaseValue(attribute));
+        }
+
+        return true;
     }
 
     public List<AttributeInstance.Packed> pack() {
-        List<AttributeInstance.Packed> list = new ArrayList<>(this.attributes.values().size());
+        List<AttributeInstance.Packed> result = new ArrayList<>(this.attributes.values().size());
 
-        for (AttributeInstance attributeinstance : this.attributes.values()) {
-            list.add(attributeinstance.pack());
+        for (AttributeInstance attribute : this.attributes.values()) {
+            result.add(attribute.pack());
         }
 
-        return list;
+        return result;
     }
 
-    public void apply(List<AttributeInstance.Packed> p_409870_) {
-        for (AttributeInstance.Packed attributeinstance$packed : p_409870_) {
-            AttributeInstance attributeinstance = this.getInstance(attributeinstance$packed.attribute());
-            if (attributeinstance != null) {
-                attributeinstance.apply(attributeinstance$packed);
+    public void apply(final List<AttributeInstance.Packed> packedAttributes) {
+        for (AttributeInstance.Packed packedAttribute : packedAttributes) {
+            AttributeInstance instance = this.getInstance(packedAttribute.attribute());
+            if (instance != null) {
+                instance.apply(packedAttribute);
             }
         }
     }

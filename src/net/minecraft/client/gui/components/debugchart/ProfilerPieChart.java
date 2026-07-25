@@ -2,111 +2,147 @@ package net.minecraft.client.gui.components.debugchart;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.profiling.ProfileResults;
 import net.minecraft.util.profiling.ResultField;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ProfilerPieChart {
     public static final int RADIUS = 105;
     public static final int PIE_CHART_THICKNESS = 10;
+    private static final DecimalFormat PERCENTAGE_FORMAT = new DecimalFormat("##0.00", DecimalFormatSymbols.getInstance(Locale.ROOT));
     private static final int MARGIN = 5;
+    private static final int WIDTH = 260;
+    private static final int SUBSEQUENT_LINES_INDENT = 10;
     private final Font font;
     private @Nullable ProfileResults profilerPieChartResults;
     private String profilerTreePath = "root";
     private int bottomOffset = 0;
 
-    public ProfilerPieChart(Font p_366678_) {
-        this.font = p_366678_;
+    public ProfilerPieChart(final Font font) {
+        this.font = font;
     }
 
-    public void setPieChartResults(@Nullable ProfileResults p_369896_) {
-        this.profilerPieChartResults = p_369896_;
+    public void setPieChartResults(final @Nullable ProfileResults results) {
+        this.profilerPieChartResults = results;
     }
 
-    public void setBottomOffset(int p_366528_) {
-        this.bottomOffset = p_366528_;
+    public void setBottomOffset(final int bottomOffset) {
+        this.bottomOffset = bottomOffset;
     }
 
-    public void render(GuiGraphics p_365682_) {
+    public void extractRenderState(final GuiGraphicsExtractor graphics) {
         if (this.profilerPieChartResults != null) {
             List<ResultField> list = this.profilerPieChartResults.getTimes(this.profilerTreePath);
-            ResultField resultfield = list.removeFirst();
-            int i = p_365682_.guiWidth() - 105 - 10;
-            int j = i - 105;
-            int k = i + 105;
-            int l = list.size() * 9;
-            int i1 = p_365682_.guiHeight() - this.bottomOffset - 5;
-            int j1 = i1 - l;
-            int k1 = 62;
-            int l1 = j1 - 62 - 5;
-            p_365682_.fill(j - 5, l1 - 62 - 5, k + 5, i1 + 5, -1873784752);
-            p_365682_.submitProfilerChartRenderState(list, j, l1 - 62 + 10, k, l1 + 62);
-            DecimalFormat decimalformat = new DecimalFormat("##0.00", DecimalFormatSymbols.getInstance(Locale.ROOT));
-            String s = ProfileResults.demanglePath(resultfield.name);
-            String s1 = "";
-            if (!"unspecified".equals(s)) {
-                s1 = s1 + "[0] ";
+            ResultField currentNode = list.removeFirst();
+            int chartCenterX = graphics.guiWidth() - 130 - 10;
+            int left = chartCenterX - 130;
+            int right = chartCenterX + 130;
+            int textUnderChartHeight = list.size() * 9;
+            int bottom = graphics.guiHeight() - this.bottomOffset - 5;
+            int textStartY = bottom - textUnderChartHeight;
+            int chartHalfSizeY = 62;
+            int chartCenterY = textStartY - 62 - 5;
+            String globalPercentage = PERCENTAGE_FORMAT.format(currentNode.globalPercentage) + "%";
+            int globalPercentageWidth = this.font.width(globalPercentage);
+            int zeroPrefixWidth = this.font.width("[0] ");
+            int topTextMaxWidth = right - globalPercentageWidth - 5 - left - zeroPrefixWidth;
+            String currentNodeName = ProfileResults.demanglePath(currentNode.name);
+            List<String> currentNodeNameLines = this.splitNodeName(currentNodeName, topTextMaxWidth, topTextMaxWidth - 10);
+            int currentNodeNameTop = chartCenterY - 62 - (currentNodeNameLines.size() - 1) * 9;
+            graphics.fill(left - 5, currentNodeNameTop - 5, right + 5, bottom + 5, -1873784752);
+            graphics.profilerChart(list, left, chartCenterY - 62 + 10, right, chartCenterY + 62);
+            String firstLineText = "";
+            if (!"unspecified".equals(currentNodeName) && !"root".equals(currentNodeName)) {
+                firstLineText = firstLineText + "[0] ";
             }
 
-            if (s.isEmpty()) {
-                s1 = s1 + "ROOT ";
-            } else {
-                s1 = s1 + s + " ";
+            firstLineText = firstLineText + currentNodeNameLines.getFirst();
+            int col = -1;
+            graphics.text(this.font, firstLineText, left, currentNodeNameTop, -1);
+
+            for (int i = 1; i < currentNodeNameLines.size(); i++) {
+                graphics.text(this.font, currentNodeNameLines.get(i), left + 10 + zeroPrefixWidth, currentNodeNameTop + i * 9, -1);
             }
 
-            int i2 = -1;
-            int j2 = l1 - 62;
-            p_365682_.drawString(this.font, s1, j, j2, -1);
-            s1 = decimalformat.format(resultfield.globalPercentage) + "%";
-            p_365682_.drawString(this.font, s1, k - this.font.width(s1), j2, -1);
+            graphics.text(this.font, globalPercentage, right - globalPercentageWidth, currentNodeNameTop, -1);
 
-            for (int k2 = 0; k2 < list.size(); k2++) {
-                ResultField resultfield1 = list.get(k2);
-                StringBuilder stringbuilder = new StringBuilder();
-                if ("unspecified".equals(resultfield1.name)) {
-                    stringbuilder.append("[?] ");
+            for (int i = 0; i < list.size(); i++) {
+                ResultField result = list.get(i);
+                StringBuilder string = new StringBuilder();
+                if ("unspecified".equals(result.name)) {
+                    string.append("[?] ");
                 } else {
-                    stringbuilder.append("[").append(k2 + 1).append("] ");
+                    string.append("[").append(i + 1).append("] ");
                 }
 
-                String s2 = stringbuilder.append(resultfield1.name).toString();
-                int l2 = j1 + k2 * 9;
-                p_365682_.drawString(this.font, s2, j, l2, resultfield1.getColor());
-                s2 = decimalformat.format(resultfield1.percentage) + "%";
-                p_365682_.drawString(this.font, s2, k - 50 - this.font.width(s2), l2, resultfield1.getColor());
-                s2 = decimalformat.format(resultfield1.globalPercentage) + "%";
-                p_365682_.drawString(this.font, s2, k - this.font.width(s2), l2, resultfield1.getColor());
+                String msg = string.append(result.name).toString();
+                int textY = textStartY + i * 9;
+                graphics.text(this.font, msg, left, textY, result.getColor());
+                msg = PERCENTAGE_FORMAT.format(result.percentage) + "%";
+                graphics.text(this.font, msg, right - 50 - this.font.width(msg), textY, result.getColor());
+                msg = PERCENTAGE_FORMAT.format(result.globalPercentage) + "%";
+                graphics.text(this.font, msg, right - this.font.width(msg), textY, result.getColor());
             }
         }
     }
 
-    public void profilerPieChartKeyPress(int p_361685_) {
+    private List<String> splitNodeName(final String nodeName, final int firstLineMaxWidth, final int maxWidth) {
+        String[] nodeNameSplit = nodeName.split("\\.");
+        List<String> lines = new ArrayList<>();
+        String currentLine = "";
+        int nameIndex = 0;
+
+        while (nameIndex < nodeNameSplit.length) {
+            String currentName = nodeNameSplit[nameIndex];
+            String currentNameWithPeriod = (nameIndex != 0 ? "." : "") + currentName;
+            String newLine = currentLine + currentNameWithPeriod;
+            int newWidth = this.font.width(newLine);
+            if (newWidth > (!lines.isEmpty() ? maxWidth : firstLineMaxWidth)) {
+                if (currentLine.isEmpty()) {
+                    lines.add(currentNameWithPeriod);
+                    nameIndex++;
+                } else {
+                    lines.add(currentLine);
+                    currentLine = "";
+                }
+            } else {
+                currentLine = newLine;
+                nameIndex++;
+            }
+        }
+
+        if (!currentLine.isEmpty()) {
+            lines.add(currentLine);
+        }
+
+        return lines;
+    }
+
+    public void profilerPieChartKeyPress(int key) {
         if (this.profilerPieChartResults != null) {
             List<ResultField> list = this.profilerPieChartResults.getTimes(this.profilerTreePath);
             if (!list.isEmpty()) {
-                ResultField resultfield = list.remove(0);
-                if (p_361685_ == 0) {
-                    if (!resultfield.name.isEmpty()) {
-                        int i = this.profilerTreePath.lastIndexOf(30);
-                        if (i >= 0) {
-                            this.profilerTreePath = this.profilerTreePath.substring(0, i);
+                ResultField node = list.remove(0);
+                if (key == 0) {
+                    if (!node.name.isEmpty()) {
+                        int pos = this.profilerTreePath.lastIndexOf(30);
+                        if (pos >= 0) {
+                            this.profilerTreePath = this.profilerTreePath.substring(0, pos);
                         }
                     }
                 } else {
-                    p_361685_--;
-                    if (p_361685_ < list.size() && !"unspecified".equals(list.get(p_361685_).name)) {
+                    key--;
+                    if (key < list.size() && !"unspecified".equals(list.get(key).name)) {
                         if (!this.profilerTreePath.isEmpty()) {
                             this.profilerTreePath = this.profilerTreePath + "\u001e";
                         }
 
-                        this.profilerTreePath = this.profilerTreePath + list.get(p_361685_).name;
+                        this.profilerTreePath = this.profilerTreePath + list.get(key).name;
                     }
                 }
             }

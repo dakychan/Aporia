@@ -2,12 +2,11 @@ package net.minecraft.core.component.predicates;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import java.util.function.Predicate;
-import net.minecraft.advancements.criterion.CollectionPredicate;
-import net.minecraft.advancements.criterion.MinMaxBounds;
-import net.minecraft.advancements.criterion.SingleComponentItemPredicate;
+import net.minecraft.advancements.predicates.CollectionPredicate;
+import net.minecraft.advancements.predicates.MinMaxBounds;
+import net.minecraft.advancements.predicates.SingleComponentItemPredicate;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.component.DataComponentType;
@@ -22,14 +21,14 @@ import net.minecraft.world.item.component.ItemAttributeModifiers;
 public record AttributeModifiersPredicate(Optional<CollectionPredicate<ItemAttributeModifiers.Entry, AttributeModifiersPredicate.EntryPredicate>> modifiers)
     implements SingleComponentItemPredicate<ItemAttributeModifiers> {
     public static final Codec<AttributeModifiersPredicate> CODEC = RecordCodecBuilder.create(
-        p_448610_ -> p_448610_.group(
+        i -> i.group(
                 CollectionPredicate.<ItemAttributeModifiers.Entry, AttributeModifiersPredicate.EntryPredicate>codec(
                         AttributeModifiersPredicate.EntryPredicate.CODEC
                     )
                     .optionalFieldOf("modifiers")
                     .forGetter(AttributeModifiersPredicate::modifiers)
             )
-            .apply(p_448610_, AttributeModifiersPredicate::new)
+            .apply(i, AttributeModifiersPredicate::new)
     );
 
     @Override
@@ -37,8 +36,8 @@ public record AttributeModifiersPredicate(Optional<CollectionPredicate<ItemAttri
         return DataComponents.ATTRIBUTE_MODIFIERS;
     }
 
-    public boolean matches(ItemAttributeModifiers p_396692_) {
-        return !this.modifiers.isPresent() || this.modifiers.get().test(p_396692_.modifiers());
+    public boolean matches(final ItemAttributeModifiers value) {
+        return !this.modifiers.isPresent() || this.modifiers.get().test(value.modifiers());
     }
 
     public record EntryPredicate(
@@ -49,7 +48,7 @@ public record AttributeModifiersPredicate(Optional<CollectionPredicate<ItemAttri
         Optional<EquipmentSlotGroup> slot
     ) implements Predicate<ItemAttributeModifiers.Entry> {
         public static final Codec<AttributeModifiersPredicate.EntryPredicate> CODEC = RecordCodecBuilder.create(
-            p_448611_ -> p_448611_.group(
+            i -> i.group(
                     RegistryCodecs.homogeneousList(Registries.ATTRIBUTE)
                         .optionalFieldOf("attribute")
                         .forGetter(AttributeModifiersPredicate.EntryPredicate::attribute),
@@ -60,20 +59,20 @@ public record AttributeModifiersPredicate(Optional<CollectionPredicate<ItemAttri
                     AttributeModifier.Operation.CODEC.optionalFieldOf("operation").forGetter(AttributeModifiersPredicate.EntryPredicate::operation),
                     EquipmentSlotGroup.CODEC.optionalFieldOf("slot").forGetter(AttributeModifiersPredicate.EntryPredicate::slot)
                 )
-                .apply(p_448611_, AttributeModifiersPredicate.EntryPredicate::new)
+                .apply(i, AttributeModifiersPredicate.EntryPredicate::new)
         );
 
-        public boolean test(ItemAttributeModifiers.Entry p_396480_) {
-            if (this.attribute.isPresent() && !this.attribute.get().contains(p_396480_.attribute())) {
+        public boolean test(final ItemAttributeModifiers.Entry value) {
+            if (this.attribute.isPresent() && !this.attribute.get().contains(value.attribute())) {
                 return false;
-            } else if (this.id.isPresent() && !this.id.get().equals(p_396480_.modifier().id())) {
+            } else if (this.id.isPresent() && !this.id.get().equals(value.modifier().id())) {
                 return false;
-            } else if (!this.amount.matches(p_396480_.modifier().amount())) {
+            } else if (!this.amount.matches(value.modifier().amount())) {
                 return false;
             } else {
-                return this.operation.isPresent() && this.operation.get() != p_396480_.modifier().operation()
+                return this.operation.isPresent() && this.operation.get() != value.modifier().operation()
                     ? false
-                    : !this.slot.isPresent() || this.slot.get() == p_396480_.slot();
+                    : !this.slot.isPresent() || this.slot.get() == value.slot();
             }
         }
     }

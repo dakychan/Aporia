@@ -1,33 +1,32 @@
 package net.minecraft.client.renderer.special;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.client.renderer.SubmitNodeCollector;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface NoDataSpecialModelRenderer extends SpecialModelRenderer<Void> {
-    default @Nullable Void extractArgument(ItemStack p_376871_) {
+    default @Nullable Void extractArgument(final ItemStack stack) {
         return null;
     }
 
     default void submit(
-        @Nullable Void p_428540_,
-        ItemDisplayContext p_431397_,
-        PoseStack p_428811_,
-        SubmitNodeCollector p_426965_,
-        int p_427481_,
-        int p_429969_,
-        boolean p_425861_,
-        int p_431885_
+        final @Nullable Void argument,
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final int overlayCoords,
+        final boolean hasFoil,
+        final int outlineColor
     ) {
-        this.submit(p_431397_, p_428811_, p_426965_, p_427481_, p_429969_, p_425861_, p_431885_);
+        this.submit(poseStack, submitNodeCollector, lightCoords, overlayCoords, hasFoil, outlineColor);
     }
 
-    void submit(
-        ItemDisplayContext p_376384_, PoseStack p_377457_, SubmitNodeCollector p_431666_, int p_375653_, int p_376500_, boolean p_376690_, int p_431904_
-    );
+    void submit(PoseStack poseStack, SubmitNodeCollector submitNodeCollector, int lightCoords, int overlayCoords, boolean hasFoil, final int outlineColor);
+
+        interface Unbaked extends SpecialModelRenderer.Unbaked<Void> {
+        @Override
+        MapCodec<? extends NoDataSpecialModelRenderer.Unbaked> type();
+    }
 }

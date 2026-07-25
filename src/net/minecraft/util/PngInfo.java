@@ -14,45 +14,51 @@ public record PngInfo(int width, int height) {
     private static final int IHDR_TYPE = 1229472850;
     private static final int IHDR_SIZE = 13;
 
-    public static PngInfo fromStream(InputStream p_301756_) throws IOException {
-        DataInputStream datainputstream = new DataInputStream(p_301756_);
-        long i = datainputstream.readLong();
-        if (i != -8552249625308161526L) {
-            throw new IOException("Bad PNG Signature: " + FORMAT.toHexDigits(i));
-        } else {
-            int j = datainputstream.readInt();
-            if (j != 13) {
-                throw new IOException("Bad length for IHDR chunk: " + j);
-            } else {
-                int k = datainputstream.readInt();
-                if (k != 1229472850) {
-                    throw new IOException("Bad type for IHDR chunk: " + FORMAT.toHexDigits(k));
-                } else {
-                    int l = datainputstream.readInt();
-                    int i1 = datainputstream.readInt();
-                    return new PngInfo(l, i1);
-                }
-            }
+    public static PngInfo fromStream(final InputStream inputStream) throws IOException {
+        DataInputStream stream = new DataInputStream(inputStream);
+        long magic = stream.readLong();
+        if (magic != -8552249625308161526L) {
+            throw new IOException("Bad PNG Signature: " + FORMAT.toHexDigits(magic));
         }
+
+        int headerSize = stream.readInt();
+        if (headerSize != 13) {
+            throw new IOException("Bad length for IHDR chunk: " + headerSize);
+        }
+
+        int headerType = stream.readInt();
+        if (headerType != 1229472850) {
+            throw new IOException("Bad type for IHDR chunk: " + FORMAT.toHexDigits(headerType));
+        }
+
+        int width = stream.readInt();
+        int height = stream.readInt();
+        return new PngInfo(width, height);
     }
 
-    public static PngInfo fromBytes(byte[] p_301719_) throws IOException {
-        return fromStream(new ByteArrayInputStream(p_301719_));
+    public static PngInfo fromBytes(final byte[] bytes) throws IOException {
+        return fromStream(new ByteArrayInputStream(bytes));
     }
 
-    public static void validateHeader(ByteBuffer p_311156_) throws IOException {
-        ByteOrder byteorder = p_311156_.order();
-        p_311156_.order(ByteOrder.BIG_ENDIAN);
-        if (p_311156_.limit() < 16) {
+    public static void validateHeader(final ByteBuffer buffer) throws IOException {
+        ByteOrder order = buffer.order();
+        buffer.order(ByteOrder.BIG_ENDIAN);
+        if (buffer.limit() < 16) {
             throw new IOException("PNG header missing");
-        } else if (p_311156_.getLong(0) != -8552249625308161526L) {
-            throw new IOException("Bad PNG Signature");
-        } else if (p_311156_.getInt(8) != 13) {
-            throw new IOException("Bad length for IHDR chunk!");
-        } else if (p_311156_.getInt(12) != 1229472850) {
-            throw new IOException("Bad type for IHDR chunk!");
-        } else {
-            p_311156_.order(byteorder);
         }
+
+        if (buffer.getLong(0) != -8552249625308161526L) {
+            throw new IOException("Bad PNG Signature");
+        }
+
+        if (buffer.getInt(8) != 13) {
+            throw new IOException("Bad length for IHDR chunk!");
+        }
+
+        if (buffer.getInt(12) != 1229472850) {
+            throw new IOException("Bad type for IHDR chunk!");
+        }
+
+        buffer.order(order);
     }
 }

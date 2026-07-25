@@ -1,10 +1,7 @@
 package net.minecraft.client.gui.font;
 
 import net.minecraft.network.chat.Style;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record EmptyArea(float x, float y, float advance, float ascent, float height, Style style) implements ActiveArea {
     public static final float DEFAULT_HEIGHT = 9.0F;
     public static final float DEFAULT_ASCENT = 7.0F;
@@ -27,10 +24,5 @@ public record EmptyArea(float x, float y, float advance, float ascent, float hei
     @Override
     public float activeBottom() {
         return this.activeTop() + this.height;
-    }
-
-    @Override
-    public Style style() {
-        return this.style;
     }
 }

@@ -3,32 +3,31 @@ package net.minecraft.server.level;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Util;
 
 public class Ticket {
     public static final MapCodec<Ticket> CODEC = RecordCodecBuilder.mapCodec(
-        p_392519_ -> p_392519_.group(
+        i -> i.group(
                 BuiltInRegistries.TICKET_TYPE.byNameCodec().fieldOf("type").forGetter(Ticket::getType),
                 ExtraCodecs.NON_NEGATIVE_INT.fieldOf("level").forGetter(Ticket::getTicketLevel),
-                Codec.LONG.optionalFieldOf("ticks_left", 0L).forGetter(p_391632_ -> p_391632_.ticksLeft)
+                Codec.LONG.optionalFieldOf("ticks_left", 0L).forGetter(t -> t.ticksLeft)
             )
-            .apply(p_392519_, Ticket::new)
+            .apply(i, Ticket::new)
     );
     private final TicketType type;
     private final int ticketLevel;
     private long ticksLeft;
 
-    public Ticket(TicketType p_9425_, int p_9426_) {
-        this(p_9425_, p_9426_, p_9425_.timeout());
+    public Ticket(final TicketType type, final int ticketLevel) {
+        this(type, ticketLevel, type.timeout());
     }
 
-    private Ticket(TicketType p_392802_, int p_394500_, long p_395875_) {
-        this.type = p_392802_;
-        this.ticketLevel = p_394500_;
-        this.ticksLeft = p_395875_;
+    private Ticket(final TicketType type, final int ticketLevel, final long ticksLeft) {
+        this.type = type;
+        this.ticketLevel = ticketLevel;
+        this.ticksLeft = ticksLeft;
     }
 
     @Override

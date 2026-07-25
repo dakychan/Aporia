@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import java.util.Collection;
@@ -24,26 +23,28 @@ import org.jspecify.annotations.Nullable;
 
 public class EffectCommands {
     private static final SimpleCommandExceptionType ERROR_GIVE_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.effect.give.failed"));
-    private static final SimpleCommandExceptionType ERROR_CLEAR_EVERYTHING_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.effect.clear.everything.failed"));
-    private static final SimpleCommandExceptionType ERROR_CLEAR_SPECIFIC_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.effect.clear.specific.failed"));
+    private static final SimpleCommandExceptionType ERROR_CLEAR_EVERYTHING_FAILED = new SimpleCommandExceptionType(
+        Component.translatable("commands.effect.clear.everything.failed")
+    );
+    private static final SimpleCommandExceptionType ERROR_CLEAR_SPECIFIC_FAILED = new SimpleCommandExceptionType(
+        Component.translatable("commands.effect.clear.specific.failed")
+    );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_136954_, CommandBuildContext p_251610_) {
-        p_136954_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        dispatcher.register(
             Commands.literal("effect")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
                     Commands.literal("clear")
-                        .executes(p_136984_ -> clearEffects(p_136984_.getSource(), ImmutableList.of(p_136984_.getSource().getEntityOrException())))
+                        .executes(c -> clearEffects(c.getSource(), ImmutableList.of(c.getSource().getEntityOrException())))
                         .then(
                             Commands.argument("targets", EntityArgument.entities())
-                                .executes(p_136982_ -> clearEffects(p_136982_.getSource(), EntityArgument.getEntities(p_136982_, "targets")))
+                                .executes(c -> clearEffects(c.getSource(), EntityArgument.getEntities(c, "targets")))
                                 .then(
-                                    Commands.argument("effect", ResourceArgument.resource(p_251610_, Registries.MOB_EFFECT))
+                                    Commands.argument("effect", ResourceArgument.resource(context, Registries.MOB_EFFECT))
                                         .executes(
-                                            p_248126_ -> clearEffect(
-                                                p_248126_.getSource(),
-                                                EntityArgument.getEntities(p_248126_, "targets"),
-                                                ResourceArgument.getMobEffect(p_248126_, "effect")
+                                            c -> clearEffect(
+                                                c.getSource(), EntityArgument.getEntities(c, "targets"), ResourceArgument.getMobEffect(c, "effect")
                                             )
                                         )
                                 )
@@ -54,12 +55,12 @@ public class EffectCommands {
                         .then(
                             Commands.argument("targets", EntityArgument.entities())
                                 .then(
-                                    Commands.argument("effect", ResourceArgument.resource(p_251610_, Registries.MOB_EFFECT))
+                                    Commands.argument("effect", ResourceArgument.resource(context, Registries.MOB_EFFECT))
                                         .executes(
-                                            p_248127_ -> giveEffect(
-                                                p_248127_.getSource(),
-                                                EntityArgument.getEntities(p_248127_, "targets"),
-                                                ResourceArgument.getMobEffect(p_248127_, "effect"),
+                                            c -> giveEffect(
+                                                c.getSource(),
+                                                EntityArgument.getEntities(c, "targets"),
+                                                ResourceArgument.getMobEffect(c, "effect"),
                                                 null,
                                                 0,
                                                 true
@@ -68,11 +69,11 @@ public class EffectCommands {
                                         .then(
                                             Commands.argument("seconds", IntegerArgumentType.integer(1, 1000000))
                                                 .executes(
-                                                    p_248124_ -> giveEffect(
-                                                        p_248124_.getSource(),
-                                                        EntityArgument.getEntities(p_248124_, "targets"),
-                                                        ResourceArgument.getMobEffect(p_248124_, "effect"),
-                                                        IntegerArgumentType.getInteger(p_248124_, "seconds"),
+                                                    c -> giveEffect(
+                                                        c.getSource(),
+                                                        EntityArgument.getEntities(c, "targets"),
+                                                        ResourceArgument.getMobEffect(c, "effect"),
+                                                        IntegerArgumentType.getInteger(c, "seconds"),
                                                         0,
                                                         true
                                                     )
@@ -80,25 +81,25 @@ public class EffectCommands {
                                                 .then(
                                                     Commands.argument("amplifier", IntegerArgumentType.integer(0, 255))
                                                         .executes(
-                                                            p_248123_ -> giveEffect(
-                                                                p_248123_.getSource(),
-                                                                EntityArgument.getEntities(p_248123_, "targets"),
-                                                                ResourceArgument.getMobEffect(p_248123_, "effect"),
-                                                                IntegerArgumentType.getInteger(p_248123_, "seconds"),
-                                                                IntegerArgumentType.getInteger(p_248123_, "amplifier"),
+                                                            c -> giveEffect(
+                                                                c.getSource(),
+                                                                EntityArgument.getEntities(c, "targets"),
+                                                                ResourceArgument.getMobEffect(c, "effect"),
+                                                                IntegerArgumentType.getInteger(c, "seconds"),
+                                                                IntegerArgumentType.getInteger(c, "amplifier"),
                                                                 true
                                                             )
                                                         )
                                                         .then(
                                                             Commands.argument("hideParticles", BoolArgumentType.bool())
                                                                 .executes(
-                                                                    p_248125_ -> giveEffect(
-                                                                        p_248125_.getSource(),
-                                                                        EntityArgument.getEntities(p_248125_, "targets"),
-                                                                        ResourceArgument.getMobEffect(p_248125_, "effect"),
-                                                                        IntegerArgumentType.getInteger(p_248125_, "seconds"),
-                                                                        IntegerArgumentType.getInteger(p_248125_, "amplifier"),
-                                                                        !BoolArgumentType.getBool(p_248125_, "hideParticles")
+                                                                    c -> giveEffect(
+                                                                        c.getSource(),
+                                                                        EntityArgument.getEntities(c, "targets"),
+                                                                        ResourceArgument.getMobEffect(c, "effect"),
+                                                                        IntegerArgumentType.getInteger(c, "seconds"),
+                                                                        IntegerArgumentType.getInteger(c, "amplifier"),
+                                                                        !BoolArgumentType.getBool(c, "hideParticles")
                                                                     )
                                                                 )
                                                         )
@@ -107,10 +108,10 @@ public class EffectCommands {
                                         .then(
                                             Commands.literal("infinite")
                                                 .executes(
-                                                    p_267907_ -> giveEffect(
-                                                        p_267907_.getSource(),
-                                                        EntityArgument.getEntities(p_267907_, "targets"),
-                                                        ResourceArgument.getMobEffect(p_267907_, "effect"),
+                                                    c -> giveEffect(
+                                                        c.getSource(),
+                                                        EntityArgument.getEntities(c, "targets"),
+                                                        ResourceArgument.getMobEffect(c, "effect"),
                                                         -1,
                                                         0,
                                                         true
@@ -119,25 +120,25 @@ public class EffectCommands {
                                                 .then(
                                                     Commands.argument("amplifier", IntegerArgumentType.integer(0, 255))
                                                         .executes(
-                                                            p_267908_ -> giveEffect(
-                                                                p_267908_.getSource(),
-                                                                EntityArgument.getEntities(p_267908_, "targets"),
-                                                                ResourceArgument.getMobEffect(p_267908_, "effect"),
+                                                            c -> giveEffect(
+                                                                c.getSource(),
+                                                                EntityArgument.getEntities(c, "targets"),
+                                                                ResourceArgument.getMobEffect(c, "effect"),
                                                                 -1,
-                                                                IntegerArgumentType.getInteger(p_267908_, "amplifier"),
+                                                                IntegerArgumentType.getInteger(c, "amplifier"),
                                                                 true
                                                             )
                                                         )
                                                         .then(
                                                             Commands.argument("hideParticles", BoolArgumentType.bool())
                                                                 .executes(
-                                                                    p_267909_ -> giveEffect(
-                                                                        p_267909_.getSource(),
-                                                                        EntityArgument.getEntities(p_267909_, "targets"),
-                                                                        ResourceArgument.getMobEffect(p_267909_, "effect"),
+                                                                    c -> giveEffect(
+                                                                        c.getSource(),
+                                                                        EntityArgument.getEntities(c, "targets"),
+                                                                        ResourceArgument.getMobEffect(c, "effect"),
                                                                         -1,
-                                                                        IntegerArgumentType.getInteger(p_267909_, "amplifier"),
-                                                                        !BoolArgumentType.getBool(p_267909_, "hideParticles")
+                                                                        IntegerArgumentType.getInteger(c, "amplifier"),
+                                                                        !BoolArgumentType.getBool(c, "hideParticles")
                                                                     )
                                                                 )
                                                         )
@@ -150,99 +151,108 @@ public class EffectCommands {
     }
 
     private static int giveEffect(
-        CommandSourceStack p_250553_,
-        Collection<? extends Entity> p_250411_,
-        Holder<MobEffect> p_249495_,
-        @Nullable Integer p_249652_,
-        int p_251498_,
-        boolean p_249944_
+        final CommandSourceStack source,
+        final Collection<? extends Entity> entities,
+        final Holder<MobEffect> effectHolder,
+        final @Nullable Integer seconds,
+        final int amplifier,
+        final boolean particles
     ) throws CommandSyntaxException {
-        MobEffect mobeffect = p_249495_.value();
-        int i = 0;
-        int j;
-        if (p_249652_ != null) {
-            if (mobeffect.isInstantenous()) {
-                j = p_249652_;
-            } else if (p_249652_ == -1) {
-                j = -1;
+        MobEffect effect = effectHolder.value();
+        int count = 0;
+        int duration;
+        if (seconds != null) {
+            if (effect.isInstantaneous()) {
+                duration = seconds;
+            } else if (seconds == -1) {
+                duration = -1;
             } else {
-                j = p_249652_ * 20;
+                duration = seconds * 20;
             }
-        } else if (mobeffect.isInstantenous()) {
-            j = 1;
+        } else if (effect.isInstantaneous()) {
+            duration = 1;
         } else {
-            j = 600;
+            duration = 600;
         }
 
-        for (Entity entity : p_250411_) {
-            if (entity instanceof LivingEntity) {
-                MobEffectInstance mobeffectinstance = new MobEffectInstance(p_249495_, j, p_251498_, false, p_249944_);
-                if (((LivingEntity)entity).addEffect(mobeffectinstance, p_250553_.getEntity())) {
-                    i++;
+        for (Entity entity : entities) {
+            if (entity instanceof LivingEntity livingEntity) {
+                MobEffectInstance instance = new MobEffectInstance(effectHolder, duration, amplifier, false, particles);
+                if (livingEntity.addEffect(instance, source.getEntity())) {
+                    count++;
                 }
             }
         }
 
-        if (i == 0) {
+        if (count == 0) {
             throw ERROR_GIVE_FAILED.create();
-        } else {
-            if (p_250411_.size() == 1) {
-                p_250553_.sendSuccess(
-                    () -> Component.translatable("commands.effect.give.success.single", mobeffect.getDisplayName(), p_250411_.iterator().next().getDisplayName(), j / 20), true
-                );
-            } else {
-                p_250553_.sendSuccess(() -> Component.translatable("commands.effect.give.success.multiple", mobeffect.getDisplayName(), p_250411_.size(), j / 20), true);
-            }
-
-            return i;
         }
+
+        if (entities.size() == 1) {
+            source.sendSuccess(
+                () -> Component.translatable(
+                    "commands.effect.give.success.single", effect.getDisplayName(), entities.iterator().next().getDisplayName(), duration / 20
+                ),
+                true
+            );
+        } else {
+            source.sendSuccess(
+                () -> Component.translatable("commands.effect.give.success.multiple", effect.getDisplayName(), entities.size(), duration / 20), true
+            );
+        }
+
+        return count;
     }
 
-    private static int clearEffects(CommandSourceStack p_136960_, Collection<? extends Entity> p_136961_) throws CommandSyntaxException {
-        int i = 0;
+    private static int clearEffects(final CommandSourceStack source, final Collection<? extends Entity> entities) throws CommandSyntaxException {
+        int count = 0;
 
-        for (Entity entity : p_136961_) {
-            if (entity instanceof LivingEntity && ((LivingEntity)entity).removeAllEffects()) {
-                i++;
+        for (Entity entity : entities) {
+            if (entity instanceof LivingEntity livingEntity && livingEntity.removeAllEffects()) {
+                count++;
             }
         }
 
-        if (i == 0) {
+        if (count == 0) {
             throw ERROR_CLEAR_EVERYTHING_FAILED.create();
-        } else {
-            if (p_136961_.size() == 1) {
-                p_136960_.sendSuccess(() -> Component.translatable("commands.effect.clear.everything.success.single", p_136961_.iterator().next().getDisplayName()), true);
-            } else {
-                p_136960_.sendSuccess(() -> Component.translatable("commands.effect.clear.everything.success.multiple", p_136961_.size()), true);
-            }
-
-            return i;
         }
+
+        if (entities.size() == 1) {
+            source.sendSuccess(
+                () -> Component.translatable("commands.effect.clear.everything.success.single", entities.iterator().next().getDisplayName()), true
+            );
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.effect.clear.everything.success.multiple", entities.size()), true);
+        }
+
+        return count;
     }
 
-    private static int clearEffect(CommandSourceStack p_250069_, Collection<? extends Entity> p_248561_, Holder<MobEffect> p_249198_) throws CommandSyntaxException {
-        MobEffect mobeffect = p_249198_.value();
-        int i = 0;
+    private static int clearEffect(final CommandSourceStack source, final Collection<? extends Entity> entities, final Holder<MobEffect> effectHolder) throws CommandSyntaxException {
+        MobEffect effect = effectHolder.value();
+        int count = 0;
 
-        for (Entity entity : p_248561_) {
-            if (entity instanceof LivingEntity && ((LivingEntity)entity).removeEffect(p_249198_)) {
-                i++;
+        for (Entity entity : entities) {
+            if (entity instanceof LivingEntity livingEntity && livingEntity.removeEffect(effectHolder)) {
+                count++;
             }
         }
 
-        if (i == 0) {
+        if (count == 0) {
             throw ERROR_CLEAR_SPECIFIC_FAILED.create();
-        } else {
-            if (p_248561_.size() == 1) {
-                p_250069_.sendSuccess(
-                    () -> Component.translatable("commands.effect.clear.specific.success.single", mobeffect.getDisplayName(), p_248561_.iterator().next().getDisplayName()),
-                    true
-                );
-            } else {
-                p_250069_.sendSuccess(() -> Component.translatable("commands.effect.clear.specific.success.multiple", mobeffect.getDisplayName(), p_248561_.size()), true);
-            }
-
-            return i;
         }
+
+        if (entities.size() == 1) {
+            source.sendSuccess(
+                () -> Component.translatable(
+                    "commands.effect.clear.specific.success.single", effect.getDisplayName(), entities.iterator().next().getDisplayName()
+                ),
+                true
+            );
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.effect.clear.specific.success.multiple", effect.getDisplayName(), entities.size()), true);
+        }
+
+        return count;
     }
 }

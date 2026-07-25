@@ -6,13 +6,10 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.SimpleParticleType;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class WaterDropParticle extends SingleQuadParticle {
-    protected WaterDropParticle(ClientLevel p_108484_, double p_108485_, double p_108486_, double p_108487_, TextureAtlasSprite p_428471_) {
-        super(p_108484_, p_108485_, p_108486_, p_108487_, 0.0, 0.0, 0.0, p_428471_);
+    protected WaterDropParticle(final ClientLevel level, final double x, final double y, final double z, final TextureAtlasSprite sprite) {
+        super(level, x, y, z, 0.0, 0.0, 0.0, sprite);
         this.xd *= 0.3F;
         this.yd = this.random.nextFloat() * 0.2F + 0.1F;
         this.zd *= 0.3F;
@@ -48,40 +45,36 @@ public class WaterDropParticle extends SingleQuadParticle {
                 this.zd *= 0.7F;
             }
 
-            BlockPos blockpos = BlockPos.containing(this.x, this.y, this.z);
-            double d0 = Math.max(
-                this.level
-                    .getBlockState(blockpos)
-                    .getCollisionShape(this.level, blockpos)
-                    .max(Direction.Axis.Y, this.x - blockpos.getX(), this.z - blockpos.getZ()),
-                (double)this.level.getFluidState(blockpos).getHeight(this.level, blockpos)
+            BlockPos pos = BlockPos.containing(this.x, this.y, this.z);
+            double offset = Math.max(
+                this.level.getBlockState(pos).getCollisionShape(this.level, pos).max(Direction.Axis.Y, this.x - pos.getX(), this.z - pos.getZ()),
+                this.level.getFluidState(pos).getHeight(this.level, pos)
             );
-            if (d0 > 0.0 && this.y < blockpos.getY() + d0) {
+            if (offset > 0.0 && this.y < pos.getY() + offset) {
                 this.remove();
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider implements ParticleProvider<SimpleParticleType> {
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public Provider(SpriteSet p_108492_) {
-            this.sprite = p_108492_;
+        public Provider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_108503_,
-            ClientLevel p_108504_,
-            double p_108505_,
-            double p_108506_,
-            double p_108507_,
-            double p_108508_,
-            double p_108509_,
-            double p_108510_,
-            RandomSource p_429432_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new WaterDropParticle(p_108504_, p_108505_, p_108506_, p_108507_, this.sprite.get(p_429432_));
+            return new WaterDropParticle(level, x, y, z, this.sprite.get(random));
         }
     }
 }

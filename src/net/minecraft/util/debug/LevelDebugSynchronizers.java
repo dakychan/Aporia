@@ -30,12 +30,12 @@ public class LevelDebugSynchronizers {
     private boolean sleeping = true;
     private Set<DebugSubscription<?>> enabledSubscriptions = Set.of();
 
-    public LevelDebugSynchronizers(ServerLevel p_427157_) {
-        this.level = p_427157_;
+    public LevelDebugSynchronizers(final ServerLevel level) {
+        this.level = level;
 
-        for (DebugSubscription<?> debugsubscription : BuiltInRegistries.DEBUG_SUBSCRIPTION) {
-            if (debugsubscription.valueStreamCodec() != null) {
-                this.sourceSynchronizers.put(debugsubscription, new TrackingDebugSynchronizer.SourceSynchronizer<>(debugsubscription));
+        for (DebugSubscription<?> subscription : BuiltInRegistries.DEBUG_SUBSCRIPTION) {
+            if (subscription.valueStreamCodec() != null) {
+                this.sourceSynchronizers.put(subscription, new TrackingDebugSynchronizer.SourceSynchronizer<>(subscription));
             }
         }
 
@@ -44,14 +44,14 @@ public class LevelDebugSynchronizers {
         this.allSynchronizers.add(this.villageSectionSynchronizer);
     }
 
-    public void tick(ServerDebugSubscribers p_422875_) {
-        this.enabledSubscriptions = p_422875_.enabledSubscriptions();
-        boolean flag = this.enabledSubscriptions.isEmpty();
-        if (this.sleeping != flag) {
-            this.sleeping = flag;
-            if (flag) {
-                for (TrackingDebugSynchronizer<?> trackingdebugsynchronizer : this.allSynchronizers) {
-                    trackingdebugsynchronizer.clear();
+    public void tick(final ServerDebugSubscribers serverSubscribers) {
+        this.enabledSubscriptions = serverSubscribers.enabledSubscriptions();
+        boolean shouldSleep = this.enabledSubscriptions.isEmpty();
+        if (this.sleeping != shouldSleep) {
+            this.sleeping = shouldSleep;
+            if (shouldSleep) {
+                for (TrackingDebugSynchronizer<?> synchronizer : this.allSynchronizers) {
+                    synchronizer.clear();
                 }
             } else {
                 this.wakeUp();
@@ -59,167 +59,171 @@ public class LevelDebugSynchronizers {
         }
 
         if (!this.sleeping) {
-            for (TrackingDebugSynchronizer<?> trackingdebugsynchronizer1 : this.allSynchronizers) {
-                trackingdebugsynchronizer1.tick(this.level);
+            for (TrackingDebugSynchronizer<?> synchronizer : this.allSynchronizers) {
+                synchronizer.tick(this.level);
             }
         }
     }
 
     private void wakeUp() {
-        ChunkMap chunkmap = this.level.getChunkSource().chunkMap;
-        chunkmap.forEachReadyToSendChunk(this::registerChunk);
+        ChunkMap chunkMap = this.level.getChunkSource().chunkMap;
+        chunkMap.forEachReadyToSendChunk(this::registerChunk);
 
         for (Entity entity : this.level.getAllEntities()) {
-            if (chunkmap.isTrackedByAnyPlayer(entity)) {
+            if (chunkMap.isTrackedByAnyPlayer(entity)) {
                 this.registerEntity(entity);
             }
         }
     }
 
-    <T> TrackingDebugSynchronizer.SourceSynchronizer<T> getSourceSynchronizer(DebugSubscription<T> p_431480_) {
-        return (TrackingDebugSynchronizer.SourceSynchronizer<T>)this.sourceSynchronizers.get(p_431480_);
+    private <T> TrackingDebugSynchronizer.SourceSynchronizer<T> getSourceSynchronizer(final DebugSubscription<T> subscription) {
+        return (TrackingDebugSynchronizer.SourceSynchronizer<T>)this.sourceSynchronizers.get(subscription);
     }
 
-    public void registerChunk(final LevelChunk p_429135_) {
+    public void registerChunk(final LevelChunk chunk) {
         if (!this.sleeping) {
-            p_429135_.registerDebugValues(this.level, new DebugValueSource.Registration() {
+            chunk.registerDebugValues(this.level, new DebugValueSource.Registration() {
                 @Override
-                public <T> void register(DebugSubscription<T> p_425516_, DebugValueSource.ValueGetter<T> p_431120_) {
-                    LevelDebugSynchronizers.this.getSourceSynchronizer(p_425516_).registerChunk(p_429135_.getPos(), p_431120_);
+                public <T> void register(final DebugSubscription<T> subscription, final DebugValueSource.ValueGetter<T> getter) {
+                    LevelDebugSynchronizers.this.getSourceSynchronizer(subscription).registerChunk(chunk.getPos(), getter);
                 }
             });
-            p_429135_.getBlockEntities().values().forEach(this::registerBlockEntity);
+            chunk.getBlockEntities().values().forEach(this::registerBlockEntity);
         }
     }
 
-    public void dropChunk(ChunkPos p_424400_) {
+    public void dropChunk(final ChunkPos chunkPos) {
         if (!this.sleeping) {
-            for (TrackingDebugSynchronizer.SourceSynchronizer<?> sourcesynchronizer : this.sourceSynchronizers.values()) {
-                sourcesynchronizer.dropChunk(p_424400_);
+            for (TrackingDebugSynchronizer.SourceSynchronizer<?> synchronizer : this.sourceSynchronizers.values()) {
+                synchronizer.dropChunk(chunkPos);
             }
         }
     }
 
-    public void registerBlockEntity(final BlockEntity p_427726_) {
+    public void registerBlockEntity(final BlockEntity blockEntity) {
         if (!this.sleeping) {
-            p_427726_.registerDebugValues(this.level, new DebugValueSource.Registration() {
+            blockEntity.registerDebugValues(this.level, new DebugValueSource.Registration() {
                 @Override
-                public <T> void register(DebugSubscription<T> p_426999_, DebugValueSource.ValueGetter<T> p_422782_) {
-                    LevelDebugSynchronizers.this.getSourceSynchronizer(p_426999_).registerBlockEntity(p_427726_.getBlockPos(), p_422782_);
-                }
-            });
-        }
-    }
-
-    public void dropBlockEntity(BlockPos p_426214_) {
-        if (!this.sleeping) {
-            for (TrackingDebugSynchronizer.SourceSynchronizer<?> sourcesynchronizer : this.sourceSynchronizers.values()) {
-                sourcesynchronizer.dropBlockEntity(this.level, p_426214_);
-            }
-        }
-    }
-
-    public void registerEntity(final Entity p_427845_) {
-        if (!this.sleeping) {
-            p_427845_.registerDebugValues(this.level, new DebugValueSource.Registration() {
-                @Override
-                public <T> void register(DebugSubscription<T> p_428326_, DebugValueSource.ValueGetter<T> p_426977_) {
-                    LevelDebugSynchronizers.this.getSourceSynchronizer(p_428326_).registerEntity(p_427845_.getUUID(), p_426977_);
+                public <T> void register(final DebugSubscription<T> subscription, final DebugValueSource.ValueGetter<T> getter) {
+                    LevelDebugSynchronizers.this.getSourceSynchronizer(subscription).registerBlockEntity(blockEntity.getBlockPos(), getter);
                 }
             });
         }
     }
 
-    public void dropEntity(Entity p_429158_) {
+    public void dropBlockEntity(final BlockPos blockPos) {
         if (!this.sleeping) {
-            for (TrackingDebugSynchronizer.SourceSynchronizer<?> sourcesynchronizer : this.sourceSynchronizers.values()) {
-                sourcesynchronizer.dropEntity(p_429158_);
+            for (TrackingDebugSynchronizer.SourceSynchronizer<?> synchronizer : this.sourceSynchronizers.values()) {
+                synchronizer.dropBlockEntity(this.level, blockPos);
             }
         }
     }
 
-    public void startTrackingChunk(ServerPlayer p_424823_, ChunkPos p_430934_) {
+    public void registerEntity(final Entity entity) {
         if (!this.sleeping) {
-            for (TrackingDebugSynchronizer<?> trackingdebugsynchronizer : this.allSynchronizers) {
-                trackingdebugsynchronizer.startTrackingChunk(p_424823_, p_430934_);
+            entity.registerDebugValues(this.level, new DebugValueSource.Registration() {
+                @Override
+                public <T> void register(final DebugSubscription<T> subscription, final DebugValueSource.ValueGetter<T> getter) {
+                    LevelDebugSynchronizers.this.getSourceSynchronizer(subscription).registerEntity(entity.getUUID(), getter);
+                }
+            });
+        }
+    }
+
+    public void dropEntity(final Entity entity) {
+        if (!this.sleeping) {
+            for (TrackingDebugSynchronizer.SourceSynchronizer<?> synchronizer : this.sourceSynchronizers.values()) {
+                synchronizer.dropEntity(entity);
             }
         }
     }
 
-    public void startTrackingEntity(ServerPlayer p_428156_, Entity p_430378_) {
+    public void startTrackingChunk(final ServerPlayer player, final ChunkPos chunkPos) {
         if (!this.sleeping) {
-            for (TrackingDebugSynchronizer<?> trackingdebugsynchronizer : this.allSynchronizers) {
-                trackingdebugsynchronizer.startTrackingEntity(p_428156_, p_430378_);
+            for (TrackingDebugSynchronizer<?> synchronizer : this.allSynchronizers) {
+                synchronizer.startTrackingChunk(player, chunkPos);
             }
         }
     }
 
-    public void registerPoi(PoiRecord p_425813_) {
+    public void startTrackingEntity(final ServerPlayer player, final Entity entity) {
         if (!this.sleeping) {
-            this.poiSynchronizer.onPoiAdded(this.level, p_425813_);
-            this.villageSectionSynchronizer.onPoiAdded(this.level, p_425813_);
-        }
-    }
-
-    public void updatePoi(BlockPos p_423441_) {
-        if (!this.sleeping) {
-            this.poiSynchronizer.onPoiTicketCountChanged(this.level, p_423441_);
-        }
-    }
-
-    public void dropPoi(BlockPos p_422957_) {
-        if (!this.sleeping) {
-            this.poiSynchronizer.onPoiRemoved(this.level, p_422957_);
-            this.villageSectionSynchronizer.onPoiRemoved(this.level, p_422957_);
-        }
-    }
-
-    public boolean hasAnySubscriberFor(DebugSubscription<?> p_430072_) {
-        return this.enabledSubscriptions.contains(p_430072_);
-    }
-
-    public <T> void sendBlockValue(BlockPos p_423274_, DebugSubscription<T> p_426435_, T p_431487_) {
-        if (this.hasAnySubscriberFor(p_426435_)) {
-            this.broadcastToTracking(new ChunkPos(p_423274_), p_426435_, new ClientboundDebugBlockValuePacket(p_423274_, p_426435_.packUpdate(p_431487_)));
-        }
-    }
-
-    public <T> void clearBlockValue(BlockPos p_424825_, DebugSubscription<T> p_429421_) {
-        if (this.hasAnySubscriberFor(p_429421_)) {
-            this.broadcastToTracking(new ChunkPos(p_424825_), p_429421_, new ClientboundDebugBlockValuePacket(p_424825_, p_429421_.emptyUpdate()));
-        }
-    }
-
-    public <T> void sendEntityValue(Entity p_426501_, DebugSubscription<T> p_423915_, T p_430715_) {
-        if (this.hasAnySubscriberFor(p_423915_)) {
-            this.broadcastToTracking(p_426501_, p_423915_, new ClientboundDebugEntityValuePacket(p_426501_.getId(), p_423915_.packUpdate(p_430715_)));
-        }
-    }
-
-    public <T> void clearEntityValue(Entity p_427122_, DebugSubscription<T> p_427818_) {
-        if (this.hasAnySubscriberFor(p_427818_)) {
-            this.broadcastToTracking(p_427122_, p_427818_, new ClientboundDebugEntityValuePacket(p_427122_.getId(), p_427818_.emptyUpdate()));
-        }
-    }
-
-    public <T> void broadcastEventToTracking(BlockPos p_427757_, DebugSubscription<T> p_430643_, T p_427412_) {
-        if (this.hasAnySubscriberFor(p_430643_)) {
-            this.broadcastToTracking(new ChunkPos(p_427757_), p_430643_, new ClientboundDebugEventPacket(p_430643_.packEvent(p_427412_)));
-        }
-    }
-
-    private void broadcastToTracking(ChunkPos p_425512_, DebugSubscription<?> p_427501_, Packet<? super ClientGamePacketListener> p_429328_) {
-        ChunkMap chunkmap = this.level.getChunkSource().chunkMap;
-
-        for (ServerPlayer serverplayer : chunkmap.getPlayers(p_425512_, false)) {
-            if (serverplayer.debugSubscriptions().contains(p_427501_)) {
-                serverplayer.connection.send(p_429328_);
+            for (TrackingDebugSynchronizer<?> synchronizer : this.allSynchronizers) {
+                synchronizer.startTrackingEntity(player, entity);
             }
         }
     }
 
-    private void broadcastToTracking(Entity p_423477_, DebugSubscription<?> p_427592_, Packet<? super ClientGamePacketListener> p_428714_) {
-        ChunkMap chunkmap = this.level.getChunkSource().chunkMap;
-        chunkmap.sendToTrackingPlayersFiltered(p_423477_, p_428714_, p_428009_ -> p_428009_.debugSubscriptions().contains(p_427592_));
+    public void registerPoi(final PoiRecord poi) {
+        if (!this.sleeping) {
+            this.poiSynchronizer.onPoiAdded(this.level, poi);
+            this.villageSectionSynchronizer.onPoiAdded(this.level, poi);
+        }
+    }
+
+    public void updatePoi(final BlockPos pos) {
+        if (!this.sleeping) {
+            this.poiSynchronizer.onPoiTicketCountChanged(this.level, pos);
+        }
+    }
+
+    public void dropPoi(final BlockPos pos) {
+        if (!this.sleeping) {
+            this.poiSynchronizer.onPoiRemoved(this.level, pos);
+            this.villageSectionSynchronizer.onPoiRemoved(this.level, pos);
+        }
+    }
+
+    public boolean hasAnySubscriberFor(final DebugSubscription<?> subscription) {
+        return this.enabledSubscriptions.contains(subscription);
+    }
+
+    public <T> void sendBlockValue(final BlockPos blockPos, final DebugSubscription<T> subscription, final T value) {
+        if (this.hasAnySubscriberFor(subscription)) {
+            this.broadcastToTracking(
+                ChunkPos.containing(blockPos), subscription, new ClientboundDebugBlockValuePacket(blockPos, subscription.packUpdate(value))
+            );
+        }
+    }
+
+    public <T> void clearBlockValue(final BlockPos blockPos, final DebugSubscription<T> subscription) {
+        if (this.hasAnySubscriberFor(subscription)) {
+            this.broadcastToTracking(ChunkPos.containing(blockPos), subscription, new ClientboundDebugBlockValuePacket(blockPos, subscription.emptyUpdate()));
+        }
+    }
+
+    public <T> void sendEntityValue(final Entity entity, final DebugSubscription<T> subscription, final T value) {
+        if (this.hasAnySubscriberFor(subscription)) {
+            this.broadcastToTracking(entity, subscription, new ClientboundDebugEntityValuePacket(entity.getId(), subscription.packUpdate(value)));
+        }
+    }
+
+    public <T> void clearEntityValue(final Entity entity, final DebugSubscription<T> subscription) {
+        if (this.hasAnySubscriberFor(subscription)) {
+            this.broadcastToTracking(entity, subscription, new ClientboundDebugEntityValuePacket(entity.getId(), subscription.emptyUpdate()));
+        }
+    }
+
+    public <T> void broadcastEventToTracking(final BlockPos blockPos, final DebugSubscription<T> subscription, final T value) {
+        if (this.hasAnySubscriberFor(subscription)) {
+            this.broadcastToTracking(ChunkPos.containing(blockPos), subscription, new ClientboundDebugEventPacket(subscription.packEvent(value)));
+        }
+    }
+
+    private void broadcastToTracking(
+        final ChunkPos trackedChunk, final DebugSubscription<?> subscription, final Packet<? super ClientGamePacketListener> packet
+    ) {
+        ChunkMap chunkMap = this.level.getChunkSource().chunkMap;
+
+        for (ServerPlayer player : chunkMap.getPlayers(trackedChunk, false)) {
+            if (player.debugSubscriptions().contains(subscription)) {
+                player.connection.send(packet);
+            }
+        }
+    }
+
+    private void broadcastToTracking(final Entity trackedEntity, final DebugSubscription<?> subscription, final Packet<? super ClientGamePacketListener> packet) {
+        ChunkMap chunkMap = this.level.getChunkSource().chunkMap;
+        chunkMap.sendToTrackingPlayersFiltered(trackedEntity, packet, player -> player.debugSubscriptions().contains(subscription));
     }
 }

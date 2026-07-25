@@ -8,7 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSelectionList;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -21,9 +21,8 @@ import net.minecraft.client.gui.components.WidgetSprites;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.components.tabs.GridLayoutTab;
 import net.minecraft.client.gui.components.tabs.LoadingTab;
-import net.minecraft.client.gui.components.tabs.Tab;
+import net.minecraft.client.gui.components.tabs.MenuTabBar;
 import net.minecraft.client.gui.components.tabs.TabManager;
-import net.minecraft.client.gui.components.tabs.TabNavigationBar;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -47,56 +46,51 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class StatsScreen extends Screen {
     private static final Component TITLE = Component.translatable("gui.stats");
-    static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
-    static final Identifier HEADER_SPRITE = Identifier.withDefaultNamespace("statistics/header");
-    static final Identifier SORT_UP_SPRITE = Identifier.withDefaultNamespace("statistics/sort_up");
-    static final Identifier SORT_DOWN_SPRITE = Identifier.withDefaultNamespace("statistics/sort_down");
+    private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
+    private static final Identifier HEADER_SPRITE = Identifier.withDefaultNamespace("statistics/header");
+    private static final Identifier SORT_UP_SPRITE = Identifier.withDefaultNamespace("statistics/sort_up");
+    private static final Identifier SORT_DOWN_SPRITE = Identifier.withDefaultNamespace("statistics/sort_down");
     private static final Component PENDING_TEXT = Component.translatable("multiplayer.downloadingStats");
-    static final Component NO_VALUE_DISPLAY = Component.translatable("stats.none");
+    private static final Component NO_VALUE_DISPLAY = Component.translatable("stats.none");
     private static final Component GENERAL_BUTTON = Component.translatable("stat.generalButton");
     private static final Component ITEMS_BUTTON = Component.translatable("stat.itemsButton");
     private static final Component MOBS_BUTTON = Component.translatable("stat.mobsButton");
     protected final Screen lastScreen;
     private static final int LIST_WIDTH = 280;
-    final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
-    private final TabManager tabManager = new TabManager(p_325374_ -> {
-        AbstractWidget abstractwidget = this.addRenderableWidget(p_325374_);
-    }, p_420749_ -> this.removeWidget(p_420749_));
-    private @Nullable TabNavigationBar tabNavigationBar;
-    final StatsCounter stats;
+    private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this);
+    private final TabManager tabManager = new TabManager(x$0 -> this.addRenderableWidget(x$0), x$0 -> this.removeWidget(x$0));
+    private @Nullable MenuTabBar tabNavigationBar;
+    private final StatsCounter stats;
     private boolean isLoading = true;
 
-    public StatsScreen(Screen p_96906_, StatsCounter p_96907_) {
+    public StatsScreen(final Screen lastScreen, final StatsCounter stats) {
         super(TITLE);
-        this.lastScreen = p_96906_;
-        this.stats = p_96907_;
+        this.lastScreen = lastScreen;
+        this.stats = stats;
     }
 
     @Override
     protected void init() {
-        Component component = PENDING_TEXT;
-        this.tabNavigationBar = TabNavigationBar.builder(this.tabManager, this.width)
+        Component loadingTitle = PENDING_TEXT;
+        this.tabNavigationBar = MenuTabBar.builder(this.tabManager, this.width)
             .addTabs(
-                new LoadingTab(this.getFont(), GENERAL_BUTTON, component),
-                new LoadingTab(this.getFont(), ITEMS_BUTTON, component),
-                new LoadingTab(this.getFont(), MOBS_BUTTON, component)
+                new LoadingTab(this.getFont(), GENERAL_BUTTON, loadingTitle),
+                new LoadingTab(this.getFont(), ITEMS_BUTTON, loadingTitle),
+                new LoadingTab(this.getFont(), MOBS_BUTTON, loadingTitle)
             )
             .build();
         this.addRenderableWidget(this.tabNavigationBar);
-        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, p_325372_ -> this.onClose()).width(200).build());
+        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).width(200).build());
         this.tabNavigationBar.setTabActiveState(0, true);
         this.tabNavigationBar.setTabActiveState(1, false);
         this.tabNavigationBar.setTabActiveState(2, false);
-        this.layout.visitWidgets(p_420747_ -> {
-            p_420747_.setTabOrderGroup(1);
-            this.addRenderableWidget(p_420747_);
+        this.layout.visitWidgets(button -> {
+            button.setTabOrderGroup(1);
+            this.addRenderableWidget(button);
         });
         this.tabNavigationBar.selectTab(0, false);
         this.repositionElements();
@@ -109,7 +103,7 @@ public class StatsScreen extends Screen {
                 this.removeWidget(this.tabNavigationBar);
             }
 
-            this.tabNavigationBar = TabNavigationBar.builder(this.tabManager, this.width)
+            this.tabNavigationBar = MenuTabBar.builder(this.tabManager, this.width)
                 .addTabs(
                     new StatsScreen.StatisticsTab(GENERAL_BUTTON, new StatsScreen.GeneralStatisticsList(this.minecraft)),
                     new StatsScreen.StatisticsTab(ITEMS_BUTTON, new StatsScreen.ItemStatisticsList(this.minecraft)),
@@ -126,15 +120,14 @@ public class StatsScreen extends Screen {
         }
     }
 
-    private void setTabActiveStateAndTooltip(int p_427790_) {
+    private void setTabActiveStateAndTooltip(final int index) {
         if (this.tabNavigationBar != null) {
-            boolean flag = this.tabNavigationBar.getTabs().get(p_427790_) instanceof StatsScreen.StatisticsTab statsscreen$statisticstab
-                && !statsscreen$statisticstab.list.children().isEmpty();
-            this.tabNavigationBar.setTabActiveState(p_427790_, flag);
-            if (flag) {
-                this.tabNavigationBar.setTabTooltip(p_427790_, null);
+            boolean active = this.tabNavigationBar.getTabs().get(index) instanceof StatsScreen.StatisticsTab statsTab && !statsTab.list.children().isEmpty();
+            this.tabNavigationBar.setTabActiveState(index, active);
+            if (active) {
+                this.tabNavigationBar.setTabTooltip(index, null);
             } else {
-                this.tabNavigationBar.setTabTooltip(p_427790_, Tooltip.create(Component.translatable("gui.stats.none_found")));
+                this.tabNavigationBar.setTabTooltip(index, Tooltip.create(Component.translatable("gui.stats.none_found")));
             }
         }
     }
@@ -142,51 +135,51 @@ public class StatsScreen extends Screen {
     @Override
     protected void repositionElements() {
         if (this.tabNavigationBar != null) {
-            this.tabNavigationBar.setWidth(this.width);
-            this.tabNavigationBar.arrangeElements();
-            int i = this.tabNavigationBar.getRectangle().bottom();
-            ScreenRectangle screenrectangle = new ScreenRectangle(0, i, this.width, this.height - this.layout.getFooterHeight() - i);
-            this.tabNavigationBar.getTabs().forEach(p_420746_ -> p_420746_.visitChildren(p_420744_ -> p_420744_.setHeight(screenrectangle.height())));
-            this.tabManager.setTabArea(screenrectangle);
-            this.layout.setHeaderHeight(i);
+            this.tabNavigationBar.arrangeElements(this.width);
+            int tabAreaTop = this.tabNavigationBar.getRectangle().bottom();
+            ScreenRectangle tabArea = new ScreenRectangle(0, tabAreaTop, this.width, this.height - this.layout.getFooterHeight() - tabAreaTop);
+            this.tabNavigationBar.getTabs().forEach(tab -> tab.visitChildren(child -> child.setHeight(tabArea.height())));
+            this.tabManager.setTabArea(tabArea);
+            this.layout.setHeaderHeight(tabAreaTop);
             this.layout.arrangeElements();
         }
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_426028_) {
-        return this.tabNavigationBar != null && this.tabNavigationBar.keyPressed(p_426028_) ? true : super.keyPressed(p_426028_);
+    public boolean keyPressed(final KeyEvent event) {
+        return this.tabNavigationBar != null && this.tabNavigationBar.keyPressed(event) ? true : super.keyPressed(event);
     }
 
     @Override
-    public void render(GuiGraphics p_430813_, int p_428532_, int p_431744_, float p_425341_) {
-        super.render(p_430813_, p_428532_, p_431744_, p_425341_);
-        p_430813_.blit(RenderPipelines.GUI_TEXTURED, Screen.FOOTER_SEPARATOR, 0, this.height - this.layout.getFooterHeight(), 0.0F, 0.0F, this.width, 2, 32, 2);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int xm, final int ym, final float a) {
+        super.extractRenderState(graphics, xm, ym, a);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, Screen.FOOTER_SEPARATOR, 0, this.height - this.layout.getFooterHeight(), 0.0F, 0.0F, this.width, 2, 32, 2);
     }
 
     @Override
-    protected void renderMenuBackground(GuiGraphics p_427978_) {
-        p_427978_.blit(RenderPipelines.GUI_TEXTURED, CreateWorldScreen.TAB_HEADER_BACKGROUND, 0, 0, 0.0F, 0.0F, this.width, this.layout.getHeaderHeight(), 16, 16);
-        this.renderMenuBackground(p_427978_, 0, this.layout.getHeaderHeight(), this.width, this.height);
+    protected void extractMenuBackground(final GuiGraphicsExtractor graphics) {
+        graphics.blit(
+            RenderPipelines.GUI_TEXTURED, CreateWorldScreen.TAB_HEADER_BACKGROUND, 0, 0, 0.0F, 0.0F, this.width, this.layout.getHeaderHeight(), 16, 16
+        );
+        this.extractMenuBackground(graphics, 0, this.layout.getHeaderHeight(), this.width, this.height);
     }
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
-    static String getTranslationKey(Stat<Identifier> p_96947_) {
-        return "stat." + p_96947_.getValue().toString().replace(':', '.');
+    private static String getTranslationKey(final Stat<Identifier> stat) {
+        return "stat." + stat.getValue().toString().replace(':', '.');
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class GeneralStatisticsList extends ObjectSelectionList<StatsScreen.GeneralStatisticsList.Entry> {
-        public GeneralStatisticsList(final Minecraft p_96995_) {
-            super(p_96995_, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 14);
-            ObjectArrayList<Stat<Identifier>> objectarraylist = new ObjectArrayList<>(Stats.CUSTOM.iterator());
-            objectarraylist.sort(Comparator.comparing(p_96997_ -> I18n.get(StatsScreen.getTranslationKey((Stat<Identifier>)p_96997_))));
+        private class GeneralStatisticsList extends ObjectSelectionList<StatsScreen.GeneralStatisticsList.Entry> {
+        public GeneralStatisticsList(final Minecraft minecraft) {
+            super(minecraft, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 14);
+            ObjectArrayList<Stat<Identifier>> stats = new ObjectArrayList<>(Stats.CUSTOM.iterator());
+            stats.sort(Comparator.comparing(k -> I18n.get(StatsScreen.getTranslationKey((Stat<Identifier>)k))));
 
-            for (Stat<Identifier> stat : objectarraylist) {
+            for (Stat<Identifier> stat : stats) {
                 this.addEntry(new StatsScreen.GeneralStatisticsList.Entry(stat));
             }
         }
@@ -197,21 +190,20 @@ public class StatsScreen extends Screen {
         }
 
         @Override
-        protected void renderListBackground(GuiGraphics p_427114_) {
+        protected void extractListBackground(final GuiGraphicsExtractor graphics) {
         }
 
         @Override
-        protected void renderListSeparators(GuiGraphics p_427813_) {
+        protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
         }
 
-        @OnlyIn(Dist.CLIENT)
-        class Entry extends ObjectSelectionList.Entry<StatsScreen.GeneralStatisticsList.Entry> {
+                private class Entry extends ObjectSelectionList.Entry<StatsScreen.GeneralStatisticsList.Entry> {
             private final Stat<Identifier> stat;
             private final Component statDisplay;
 
-            Entry(final Stat<Identifier> p_97005_) {
-                this.stat = p_97005_;
-                this.statDisplay = Component.translatable(StatsScreen.getTranslationKey(p_97005_));
+            private Entry(final Stat<Identifier> stat) {
+                this.stat = stat;
+                this.statDisplay = Component.translatable(StatsScreen.getTranslationKey(stat));
             }
 
             private String getValueText() {
@@ -219,13 +211,13 @@ public class StatsScreen extends Screen {
             }
 
             @Override
-            public void renderContent(GuiGraphics p_429392_, int p_427216_, int p_427606_, boolean p_426771_, float p_427846_) {
-                int i = this.getContentYMiddle() - 9 / 2;
-                int j = GeneralStatisticsList.this.children().indexOf(this);
-                int k = j % 2 == 0 ? -1 : -4539718;
-                p_429392_.drawString(StatsScreen.this.font, this.statDisplay, this.getContentX() + 2, i, k);
-                String s = this.getValueText();
-                p_429392_.drawString(StatsScreen.this.font, s, this.getContentRight() - StatsScreen.this.font.width(s) - 4, i, k);
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+                int y = this.getContentYMiddle() - 9 / 2;
+                int index = GeneralStatisticsList.this.children().indexOf(this);
+                int color = index % 2 == 0 ? -1 : -4539718;
+                graphics.text(StatsScreen.this.font, this.statDisplay, this.getContentX() + 2, y, color);
+                String msg = this.getValueText();
+                graphics.text(StatsScreen.this.font, msg, this.getContentRight() - StatsScreen.this.font.width(msg) - 4, y, color);
             }
 
             @Override
@@ -237,8 +229,7 @@ public class StatsScreen extends Screen {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class ItemStatisticsList extends ContainerObjectSelectionList<StatsScreen.ItemStatisticsList.Entry> {
+        private class ItemStatisticsList extends ContainerObjectSelectionList<StatsScreen.ItemStatisticsList.Entry> {
         private static final int SLOT_BG_SIZE = 18;
         private static final int SLOT_STAT_HEIGHT = 22;
         private static final int SLOT_BG_Y = 1;
@@ -251,57 +242,57 @@ public class StatsScreen extends Screen {
         protected @Nullable StatType<?> sortColumn;
         protected int sortOrder;
 
-        public ItemStatisticsList(final Minecraft p_97032_) {
-            super(p_97032_, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 22);
+        public ItemStatisticsList(final Minecraft minecraft) {
+            super(minecraft, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 22);
             this.blockColumns = Lists.newArrayList();
             this.blockColumns.add(Stats.BLOCK_MINED);
             this.itemColumns = Lists.newArrayList(Stats.ITEM_BROKEN, Stats.ITEM_CRAFTED, Stats.ITEM_USED, Stats.ITEM_PICKED_UP, Stats.ITEM_DROPPED);
-            Set<Item> set = Sets.newIdentityHashSet();
+            Set<Item> items = Sets.newIdentityHashSet();
 
             for (Item item : BuiltInRegistries.ITEM) {
-                boolean flag = false;
+                boolean addToList = false;
 
-                for (StatType<Item> stattype : this.itemColumns) {
-                    if (stattype.contains(item) && StatsScreen.this.stats.getValue(stattype.get(item)) > 0) {
-                        flag = true;
+                for (StatType<Item> type : this.itemColumns) {
+                    if (type.contains(item) && StatsScreen.this.stats.getValue(type.get(item)) > 0) {
+                        addToList = true;
                     }
                 }
 
-                if (flag) {
-                    set.add(item);
+                if (addToList) {
+                    items.add(item);
                 }
             }
 
             for (Block block : BuiltInRegistries.BLOCK) {
-                boolean flag1 = false;
+                boolean addToList = false;
 
-                for (StatType<Block> stattype1 : this.blockColumns) {
-                    if (stattype1.contains(block) && StatsScreen.this.stats.getValue(stattype1.get(block)) > 0) {
-                        flag1 = true;
+                for (StatType<Block> type : this.blockColumns) {
+                    if (type.contains(block) && StatsScreen.this.stats.getValue(type.get(block)) > 0) {
+                        addToList = true;
                     }
                 }
 
-                if (flag1) {
-                    set.add(block.asItem());
+                if (addToList) {
+                    items.add(block.asItem());
                 }
             }
 
-            set.remove(Items.AIR);
-            if (!set.isEmpty()) {
+            items.remove(Items.AIR);
+            if (!items.isEmpty()) {
                 this.addEntry(new StatsScreen.ItemStatisticsList.HeaderEntry());
 
-                for (Item item1 : set) {
-                    this.addEntry(new StatsScreen.ItemStatisticsList.ItemRow(item1));
+                for (Item item : items) {
+                    this.addEntry(new StatsScreen.ItemStatisticsList.ItemRow(item));
                 }
             }
         }
 
         @Override
-        protected void renderListBackground(GuiGraphics p_426711_) {
+        protected void extractListBackground(final GuiGraphicsExtractor graphics) {
         }
 
-        int getColumnX(int p_329609_) {
-            return 75 + 40 * p_329609_;
+        private int getColumnX(final int col) {
+            return 75 + 40 * col;
         }
 
         @Override
@@ -309,23 +300,23 @@ public class StatsScreen extends Screen {
             return 280;
         }
 
-        StatType<?> getColumn(int p_97034_) {
-            return p_97034_ < this.blockColumns.size() ? this.blockColumns.get(p_97034_) : this.itemColumns.get(p_97034_ - this.blockColumns.size());
+        private StatType<?> getColumn(final int i) {
+            return i < this.blockColumns.size() ? this.blockColumns.get(i) : this.itemColumns.get(i - this.blockColumns.size());
         }
 
-        int getColumnIndex(StatType<?> p_97059_) {
-            int i = this.blockColumns.indexOf(p_97059_);
+        private int getColumnIndex(final StatType<?> column) {
+            int i = this.blockColumns.indexOf(column);
             if (i >= 0) {
                 return i;
-            } else {
-                int j = this.itemColumns.indexOf(p_97059_);
-                return j >= 0 ? j + this.blockColumns.size() : -1;
             }
+
+            int j = this.itemColumns.indexOf(column);
+            return j >= 0 ? j + this.blockColumns.size() : -1;
         }
 
-        protected void sortByColumn(StatType<?> p_97039_) {
-            if (p_97039_ != this.sortColumn) {
-                this.sortColumn = p_97039_;
+        protected void sortByColumn(final StatType<?> column) {
+            if (column != this.sortColumn) {
+                this.sortColumn = column;
                 this.sortOrder = -1;
             } else if (this.sortOrder == -1) {
                 this.sortOrder = 1;
@@ -337,36 +328,34 @@ public class StatsScreen extends Screen {
             this.sortItems(this.itemStatSorter);
         }
 
-        protected void sortItems(Comparator<StatsScreen.ItemStatisticsList.ItemRow> p_430805_) {
-            List<StatsScreen.ItemStatisticsList.ItemRow> list = this.getItemRows();
-            list.sort(p_430805_);
+        protected void sortItems(final Comparator<StatsScreen.ItemStatisticsList.ItemRow> comparator) {
+            List<StatsScreen.ItemStatisticsList.ItemRow> itemRows = this.getItemRows();
+            itemRows.sort(comparator);
             this.clearEntriesExcept(this.children().getFirst());
 
-            for (StatsScreen.ItemStatisticsList.ItemRow statsscreen$itemstatisticslist$itemrow : list) {
-                this.addEntry(statsscreen$itemstatisticslist$itemrow);
+            for (StatsScreen.ItemStatisticsList.ItemRow newChild : itemRows) {
+                this.addEntry(newChild);
             }
         }
 
         private List<StatsScreen.ItemStatisticsList.ItemRow> getItemRows() {
-            List<StatsScreen.ItemStatisticsList.ItemRow> list = new ArrayList<>();
-            this.children().forEach(p_428629_ -> {
-                if (p_428629_ instanceof StatsScreen.ItemStatisticsList.ItemRow statsscreen$itemstatisticslist$itemrow) {
-                    list.add(statsscreen$itemstatisticslist$itemrow);
+            List<StatsScreen.ItemStatisticsList.ItemRow> itemRows = new ArrayList<>();
+            this.children().forEach(entry -> {
+                if (entry instanceof StatsScreen.ItemStatisticsList.ItemRow itemRow) {
+                    itemRows.add(itemRow);
                 }
             });
-            return list;
+            return itemRows;
         }
 
         @Override
-        protected void renderListSeparators(GuiGraphics p_428163_) {
+        protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
         }
 
-        @OnlyIn(Dist.CLIENT)
-        abstract static class Entry extends ContainerObjectSelectionList.Entry<StatsScreen.ItemStatisticsList.Entry> {
+                private abstract static class Entry extends ContainerObjectSelectionList.Entry<StatsScreen.ItemStatisticsList.Entry> {
         }
 
-        @OnlyIn(Dist.CLIENT)
-        class HeaderEntry extends StatsScreen.ItemStatisticsList.Entry {
+                private class HeaderEntry extends StatsScreen.ItemStatisticsList.Entry {
             private static final Identifier BLOCK_MINED_SPRITE = Identifier.withDefaultNamespace("statistics/block_mined");
             private static final Identifier ITEM_BROKEN_SPRITE = Identifier.withDefaultNamespace("statistics/item_broken");
             private static final Identifier ITEM_CRAFTED_SPRITE = Identifier.withDefaultNamespace("statistics/item_crafted");
@@ -381,7 +370,7 @@ public class StatsScreen extends Screen {
             private final StatsScreen.ItemStatisticsList.HeaderEntry.StatSortButton itemDropped;
             private final List<AbstractWidget> children = new ArrayList<>();
 
-            HeaderEntry() {
+            private HeaderEntry() {
                 this.blockMined = new StatsScreen.ItemStatisticsList.HeaderEntry.StatSortButton(0, BLOCK_MINED_SPRITE);
                 this.itemBroken = new StatsScreen.ItemStatisticsList.HeaderEntry.StatSortButton(1, ITEM_BROKEN_SPRITE);
                 this.itemCrafted = new StatsScreen.ItemStatisticsList.HeaderEntry.StatSortButton(2, ITEM_CRAFTED_SPRITE);
@@ -392,23 +381,23 @@ public class StatsScreen extends Screen {
             }
 
             @Override
-            public void renderContent(GuiGraphics p_427361_, int p_427610_, int p_424788_, boolean p_422515_, float p_431410_) {
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
                 this.blockMined.setPosition(this.getContentX() + ItemStatisticsList.this.getColumnX(0) - 18, this.getContentY() + 1);
-                this.blockMined.render(p_427361_, p_427610_, p_424788_, p_431410_);
+                this.blockMined.extractRenderState(graphics, mouseX, mouseY, a);
                 this.itemBroken.setPosition(this.getContentX() + ItemStatisticsList.this.getColumnX(1) - 18, this.getContentY() + 1);
-                this.itemBroken.render(p_427361_, p_427610_, p_424788_, p_431410_);
+                this.itemBroken.extractRenderState(graphics, mouseX, mouseY, a);
                 this.itemCrafted.setPosition(this.getContentX() + ItemStatisticsList.this.getColumnX(2) - 18, this.getContentY() + 1);
-                this.itemCrafted.render(p_427361_, p_427610_, p_424788_, p_431410_);
+                this.itemCrafted.extractRenderState(graphics, mouseX, mouseY, a);
                 this.itemUsed.setPosition(this.getContentX() + ItemStatisticsList.this.getColumnX(3) - 18, this.getContentY() + 1);
-                this.itemUsed.render(p_427361_, p_427610_, p_424788_, p_431410_);
+                this.itemUsed.extractRenderState(graphics, mouseX, mouseY, a);
                 this.itemPickedUp.setPosition(this.getContentX() + ItemStatisticsList.this.getColumnX(4) - 18, this.getContentY() + 1);
-                this.itemPickedUp.render(p_427361_, p_427610_, p_424788_, p_431410_);
+                this.itemPickedUp.extractRenderState(graphics, mouseX, mouseY, a);
                 this.itemDropped.setPosition(this.getContentX() + ItemStatisticsList.this.getColumnX(5) - 18, this.getContentY() + 1);
-                this.itemDropped.render(p_427361_, p_427610_, p_424788_, p_431410_);
+                this.itemDropped.extractRenderState(graphics, mouseX, mouseY, a);
                 if (ItemStatisticsList.this.sortColumn != null) {
-                    int i = ItemStatisticsList.this.getColumnX(ItemStatisticsList.this.getColumnIndex(ItemStatisticsList.this.sortColumn)) - 36;
-                    Identifier identifier = ItemStatisticsList.this.sortOrder == 1 ? StatsScreen.SORT_UP_SPRITE : StatsScreen.SORT_DOWN_SPRITE;
-                    p_427361_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, this.getContentX() + i, this.getContentY() + 1, 18, 18);
+                    int offset = ItemStatisticsList.this.getColumnX(ItemStatisticsList.this.getColumnIndex(ItemStatisticsList.this.sortColumn)) - 36;
+                    Identifier sprite = ItemStatisticsList.this.sortOrder == 1 ? StatsScreen.SORT_UP_SPRITE : StatsScreen.SORT_DOWN_SPRITE;
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, this.getContentX() + offset, this.getContentY() + 1, 18, 18);
                 }
             }
 
@@ -422,39 +411,37 @@ public class StatsScreen extends Screen {
                 return this.children;
             }
 
-            @OnlyIn(Dist.CLIENT)
-            class StatSortButton extends ImageButton {
+                        private class StatSortButton extends ImageButton {
                 private final Identifier sprite;
 
-                StatSortButton(final int p_429613_, final Identifier p_454378_) {
+                private StatSortButton(final int column, final Identifier sprite) {
                     super(
                         18,
                         18,
                         new WidgetSprites(StatsScreen.HEADER_SPRITE, StatsScreen.SLOT_SPRITE),
-                        p_427562_ -> ItemStatisticsList.this.sortByColumn(ItemStatisticsList.this.getColumn(p_429613_)),
-                        ItemStatisticsList.this.getColumn(p_429613_).getDisplayName()
+                        button -> ItemStatisticsList.this.sortByColumn(ItemStatisticsList.this.getColumn(column)),
+                        ItemStatisticsList.this.getColumn(column).getDisplayName()
                     );
-                    this.sprite = p_454378_;
+                    this.sprite = sprite;
                     this.setTooltip(Tooltip.create(this.getMessage()));
                 }
 
                 @Override
-                public void renderContents(GuiGraphics p_457750_, int p_452558_, int p_459984_, float p_457335_) {
-                    Identifier identifier = this.sprites.get(this.isActive(), this.isHoveredOrFocused());
-                    p_457750_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, this.getX(), this.getY(), this.width, this.height);
-                    p_457750_.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, this.getX(), this.getY(), this.width, this.height);
+                public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+                    Identifier background = this.sprites.get(this.isActive(), this.isHoveredOrFocused());
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, background, this.getX(), this.getY(), this.width, this.height);
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, this.getX(), this.getY(), this.width, this.height);
                 }
             }
         }
 
-        @OnlyIn(Dist.CLIENT)
-        class ItemRow extends StatsScreen.ItemStatisticsList.Entry {
+                private class ItemRow extends StatsScreen.ItemStatisticsList.Entry {
             private final Item item;
             private final StatsScreen.ItemStatisticsList.ItemRow.ItemRowWidget itemRowWidget;
 
-            ItemRow(final Item p_169517_) {
-                this.item = p_169517_;
-                this.itemRowWidget = new StatsScreen.ItemStatisticsList.ItemRow.ItemRowWidget(p_169517_.getDefaultInstance());
+            private ItemRow(final Item item) {
+                this.item = item;
+                this.itemRowWidget = new StatsScreen.ItemStatisticsList.ItemRow.ItemRowWidget(item.getDefaultInstance());
             }
 
             protected Item getItem() {
@@ -462,41 +449,39 @@ public class StatsScreen extends Screen {
             }
 
             @Override
-            public void renderContent(GuiGraphics p_427201_, int p_428041_, int p_427141_, boolean p_430845_, float p_430595_) {
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
                 this.itemRowWidget.setPosition(this.getContentX(), this.getContentY());
-                this.itemRowWidget.render(p_427201_, p_428041_, p_427141_, p_430595_);
-                StatsScreen.ItemStatisticsList statsscreen$itemstatisticslist = ItemStatisticsList.this;
-                int i = statsscreen$itemstatisticslist.children().indexOf(this);
+                this.itemRowWidget.extractRenderState(graphics, mouseX, mouseY, a);
+                StatsScreen.ItemStatisticsList itemStatsList = ItemStatisticsList.this;
+                int index = itemStatsList.children().indexOf(this);
 
-                for (int j = 0; j < statsscreen$itemstatisticslist.blockColumns.size(); j++) {
+                for (int col = 0; col < itemStatsList.blockColumns.size(); col++) {
                     Stat<Block> stat;
-                    if (this.item instanceof BlockItem blockitem) {
-                        stat = statsscreen$itemstatisticslist.blockColumns.get(j).get(blockitem.getBlock());
+                    if (this.item instanceof BlockItem blockItem) {
+                        stat = itemStatsList.blockColumns.get(col).get(blockItem.getBlock());
                     } else {
                         stat = null;
                     }
 
-                    this.renderStat(p_427201_, stat, this.getContentX() + ItemStatisticsList.this.getColumnX(j), this.getContentYMiddle() - 9 / 2, i % 2 == 0);
+                    this.extractStat(
+                        graphics, stat, this.getContentX() + ItemStatisticsList.this.getColumnX(col), this.getContentYMiddle() - 9 / 2, index % 2 == 0
+                    );
                 }
 
-                for (int k = 0; k < statsscreen$itemstatisticslist.itemColumns.size(); k++) {
-                    this.renderStat(
-                        p_427201_,
-                        statsscreen$itemstatisticslist.itemColumns.get(k).get(this.item),
-                        this.getContentX() + ItemStatisticsList.this.getColumnX(k + statsscreen$itemstatisticslist.blockColumns.size()),
+                for (int col = 0; col < itemStatsList.itemColumns.size(); col++) {
+                    this.extractStat(
+                        graphics,
+                        itemStatsList.itemColumns.get(col).get(this.item),
+                        this.getContentX() + ItemStatisticsList.this.getColumnX(col + itemStatsList.blockColumns.size()),
                         this.getContentYMiddle() - 9 / 2,
-                        i % 2 == 0
+                        index % 2 == 0
                     );
                 }
             }
 
-            protected void renderStat(GuiGraphics p_282544_, @Nullable Stat<?> p_97093_, int p_97094_, int p_97095_, boolean p_97096_) {
-                Component component = (Component)(p_97093_ == null
-                    ? StatsScreen.NO_VALUE_DISPLAY
-                    : Component.literal(p_97093_.format(StatsScreen.this.stats.getValue(p_97093_))));
-                p_282544_.drawString(
-                    StatsScreen.this.font, component, p_97094_ - StatsScreen.this.font.width(component), p_97095_, p_97096_ ? -1 : -4539718
-                );
+            protected void extractStat(final GuiGraphicsExtractor graphics, final @Nullable Stat<?> stat, final int x, final int y, final boolean shaded) {
+                Component msg = stat == null ? StatsScreen.NO_VALUE_DISPLAY : Component.literal(stat.format(StatsScreen.this.stats.getValue(stat)));
+                graphics.text(StatsScreen.this.font, msg, x - StatsScreen.this.font.width(msg), y, shaded ? -1 : -4539718);
             }
 
             @Override
@@ -509,61 +494,59 @@ public class StatsScreen extends Screen {
                 return List.of(this.itemRowWidget);
             }
 
-            @OnlyIn(Dist.CLIENT)
-            class ItemRowWidget extends ItemDisplayWidget {
-                ItemRowWidget(final ItemStack p_430329_) {
-                    super(ItemStatisticsList.this.minecraft, 1, 1, 18, 18, p_430329_.getHoverName(), p_430329_, false, true);
+                        private class ItemRowWidget extends ItemDisplayWidget {
+                private ItemRowWidget(final ItemStack itemStack) {
+                    super(ItemStatisticsList.this.minecraft, 1, 1, 18, 18, itemStack.getHoverName(), itemStack, false, true);
                 }
 
                 @Override
-                protected void renderWidget(GuiGraphics p_425656_, int p_425685_, int p_429154_, float p_431497_) {
-                    p_425656_.blitSprite(RenderPipelines.GUI_TEXTURED, StatsScreen.SLOT_SPRITE, ItemRow.this.getContentX(), ItemRow.this.getContentY(), 18, 18);
-                    super.renderWidget(p_425656_, p_425685_, p_429154_, p_431497_);
+                protected void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, StatsScreen.SLOT_SPRITE, ItemRow.this.getContentX(), ItemRow.this.getContentY(), 18, 18);
+                    super.extractWidgetRenderState(graphics, mouseX, mouseY, a);
                 }
 
                 @Override
-                protected void renderTooltip(GuiGraphics p_428931_, int p_429864_, int p_431067_) {
-                    super.renderTooltip(p_428931_, ItemRow.this.getContentX() + 18, ItemRow.this.getContentY() + 18);
+                protected void extractTooltip(final GuiGraphicsExtractor graphics, final int x, final int y) {
+                    super.extractTooltip(graphics, ItemRow.this.getContentX() + 18, ItemRow.this.getContentY() + 18);
                 }
             }
         }
 
-        @OnlyIn(Dist.CLIENT)
-        class ItemRowComparator implements Comparator<StatsScreen.ItemStatisticsList.ItemRow> {
-            public int compare(StatsScreen.ItemStatisticsList.ItemRow p_169524_, StatsScreen.ItemStatisticsList.ItemRow p_169525_) {
-                Item item = p_169524_.getItem();
-                Item item1 = p_169525_.getItem();
-                int i;
-                int j;
+                private class ItemRowComparator implements Comparator<StatsScreen.ItemStatisticsList.ItemRow> {
+            public int compare(final StatsScreen.ItemStatisticsList.ItemRow one, final StatsScreen.ItemStatisticsList.ItemRow two) {
+                Item item1 = one.getItem();
+                Item item2 = two.getItem();
+                int key1;
+                int key2;
                 if (ItemStatisticsList.this.sortColumn == null) {
-                    i = 0;
-                    j = 0;
+                    key1 = 0;
+                    key2 = 0;
                 } else if (ItemStatisticsList.this.blockColumns.contains(ItemStatisticsList.this.sortColumn)) {
-                    StatType<Block> stattype = (StatType<Block>)ItemStatisticsList.this.sortColumn;
-                    i = item instanceof BlockItem ? StatsScreen.this.stats.getValue(stattype, ((BlockItem)item).getBlock()) : -1;
-                    j = item1 instanceof BlockItem ? StatsScreen.this.stats.getValue(stattype, ((BlockItem)item1).getBlock()) : -1;
+                    StatType<Block> type = (StatType<Block>)ItemStatisticsList.this.sortColumn;
+                    key1 = item1 instanceof BlockItem blockItem ? StatsScreen.this.stats.getValue(type, blockItem.getBlock()) : -1;
+                    key2 = item2 instanceof BlockItem blockItem ? StatsScreen.this.stats.getValue(type, blockItem.getBlock()) : -1;
                 } else {
-                    StatType<Item> stattype1 = (StatType<Item>)ItemStatisticsList.this.sortColumn;
-                    i = StatsScreen.this.stats.getValue(stattype1, item);
-                    j = StatsScreen.this.stats.getValue(stattype1, item1);
+                    StatType<Item> type = (StatType<Item>)ItemStatisticsList.this.sortColumn;
+                    key1 = StatsScreen.this.stats.getValue(type, item1);
+                    key2 = StatsScreen.this.stats.getValue(type, item2);
                 }
 
-                return i == j
-                    ? ItemStatisticsList.this.sortOrder * Integer.compare(Item.getId(item), Item.getId(item1))
-                    : ItemStatisticsList.this.sortOrder * Integer.compare(i, j);
+                return key1 == key2
+                    ? ItemStatisticsList.this.sortOrder * Integer.compare(Item.getId(item1), Item.getId(item2))
+                    : ItemStatisticsList.this.sortOrder * Integer.compare(key1, key2);
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class MobsStatisticsList extends ObjectSelectionList<StatsScreen.MobsStatisticsList.MobRow> {
-        public MobsStatisticsList(final Minecraft p_97100_) {
-            super(p_97100_, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 9 * 4);
+        private class MobsStatisticsList extends ObjectSelectionList<StatsScreen.MobsStatisticsList.MobRow> {
+        public MobsStatisticsList(final Minecraft minecraft) {
+            super(minecraft, StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), 33, 9 * 4);
 
-            for (EntityType<?> entitytype : BuiltInRegistries.ENTITY_TYPE) {
-                if (StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED.get(entitytype)) > 0
-                    || StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED_BY.get(entitytype)) > 0) {
-                    this.addEntry(new StatsScreen.MobsStatisticsList.MobRow(entitytype));
+            for (EntityType<?> type : BuiltInRegistries.ENTITY_TYPE) {
+                if (StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED.get(type)) > 0 || StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED_BY.get(type)) > 0
+                    )
+                 {
+                    this.addEntry(new StatsScreen.MobsStatisticsList.MobRow(type));
                 }
             }
         }
@@ -574,49 +557,46 @@ public class StatsScreen extends Screen {
         }
 
         @Override
-        protected void renderListBackground(GuiGraphics p_422959_) {
+        protected void extractListBackground(final GuiGraphicsExtractor graphics) {
         }
 
         @Override
-        protected void renderListSeparators(GuiGraphics p_427958_) {
+        protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
         }
 
-        @OnlyIn(Dist.CLIENT)
-        class MobRow extends ObjectSelectionList.Entry<StatsScreen.MobsStatisticsList.MobRow> {
+                private class MobRow extends ObjectSelectionList.Entry<StatsScreen.MobsStatisticsList.MobRow> {
             private final Component mobName;
             private final Component kills;
             private final Component killedBy;
             private final boolean hasKills;
             private final boolean wasKilledBy;
 
-            public MobRow(final EntityType<?> p_97112_) {
-                this.mobName = p_97112_.getDescription();
-                int i = StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED.get(p_97112_));
-                if (i == 0) {
+            public MobRow(final EntityType<?> type) {
+                this.mobName = type.getDescription();
+                int kills = StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED.get(type));
+                if (kills == 0) {
                     this.kills = Component.translatable("stat_type.minecraft.killed.none", this.mobName);
                     this.hasKills = false;
                 } else {
-                    this.kills = Component.translatable("stat_type.minecraft.killed", i, this.mobName);
+                    this.kills = Component.translatable("stat_type.minecraft.killed", kills, this.mobName);
                     this.hasKills = true;
                 }
 
-                int j = StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED_BY.get(p_97112_));
-                if (j == 0) {
+                int killedBy = StatsScreen.this.stats.getValue(Stats.ENTITY_KILLED_BY.get(type));
+                if (killedBy == 0) {
                     this.killedBy = Component.translatable("stat_type.minecraft.killed_by.none", this.mobName);
                     this.wasKilledBy = false;
                 } else {
-                    this.killedBy = Component.translatable("stat_type.minecraft.killed_by", this.mobName, j);
+                    this.killedBy = Component.translatable("stat_type.minecraft.killed_by", this.mobName, killedBy);
                     this.wasKilledBy = true;
                 }
             }
 
             @Override
-            public void renderContent(GuiGraphics p_283265_, int p_97115_, int p_97116_, boolean p_97122_, float p_97123_) {
-                p_283265_.drawString(StatsScreen.this.font, this.mobName, this.getContentX() + 2, this.getContentY() + 1, -1);
-                p_283265_.drawString(
-                    StatsScreen.this.font, this.kills, this.getContentX() + 2 + 10, this.getContentY() + 1 + 9, this.hasKills ? -4539718 : -8355712
-                );
-                p_283265_.drawString(
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+                graphics.text(StatsScreen.this.font, this.mobName, this.getContentX() + 2, this.getContentY() + 1, -1);
+                graphics.text(StatsScreen.this.font, this.kills, this.getContentX() + 2 + 10, this.getContentY() + 1 + 9, this.hasKills ? -4539718 : -8355712);
+                graphics.text(
                     StatsScreen.this.font, this.killedBy, this.getContentX() + 2 + 10, this.getContentY() + 1 + 9 * 2, this.wasKilledBy ? -4539718 : -8355712
                 );
             }
@@ -628,20 +608,19 @@ public class StatsScreen extends Screen {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class StatisticsTab extends GridLayoutTab {
+        private class StatisticsTab extends GridLayoutTab {
         protected final AbstractSelectionList<?> list;
 
-        public StatisticsTab(final Component p_428143_, final AbstractSelectionList<?> p_431543_) {
-            super(p_428143_);
-            this.layout.addChild(p_431543_, 1, 1);
-            this.list = p_431543_;
+        public StatisticsTab(final Component title, final AbstractSelectionList<?> list) {
+            super(title);
+            this.layout.addChild(list, 1, 1);
+            this.list = list;
         }
 
         @Override
-        public void doLayout(ScreenRectangle p_425944_) {
+        public void doLayout(final ScreenRectangle screenRectangle) {
             this.list.updateSizeAndPosition(StatsScreen.this.width, StatsScreen.this.layout.getContentHeight(), StatsScreen.this.layout.getHeaderHeight());
-            super.doLayout(p_425944_);
+            super.doLayout(screenRectangle);
         }
     }
 }

@@ -14,19 +14,18 @@ public enum PlayerModelType implements StringRepresentable {
     WIDE("wide", "default");
 
     public static final Codec<PlayerModelType> CODEC = StringRepresentable.fromEnum(PlayerModelType::values);
-    private static final Function<String, PlayerModelType> NAME_LOOKUP = StringRepresentable.createNameLookup(values(), p_423456_ -> p_423456_.legacyServicesId);
-    public static final StreamCodec<ByteBuf, PlayerModelType> STREAM_CODEC = ByteBufCodecs.BOOL
-        .map(p_430703_ -> p_430703_ ? SLIM : WIDE, p_425170_ -> p_425170_ == SLIM);
+    private static final Function<String, PlayerModelType> NAME_LOOKUP = StringRepresentable.createNameLookup(values(), e -> e.legacyServicesId);
+    public static final StreamCodec<ByteBuf, PlayerModelType> STREAM_CODEC = ByteBufCodecs.BOOL.map(slim -> slim ? SLIM : WIDE, type -> type == SLIM);
     private final String id;
     private final String legacyServicesId;
 
-    private PlayerModelType(final String p_425525_, final String p_428224_) {
-        this.id = p_425525_;
-        this.legacyServicesId = p_428224_;
+    PlayerModelType(final String id, final String legacyServicesId) {
+        this.id = id;
+        this.legacyServicesId = legacyServicesId;
     }
 
-    public static PlayerModelType byLegacyServicesName(@Nullable String p_427693_) {
-        return Objects.requireNonNullElse(NAME_LOOKUP.apply(p_427693_), WIDE);
+    public static PlayerModelType byLegacyServicesName(final @Nullable String name) {
+        return Objects.requireNonNullElse(NAME_LOOKUP.apply(name), WIDE);
     }
 
     @Override

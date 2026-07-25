@@ -8,20 +8,18 @@ public interface BoundingBoxRenderable {
 
     BoundingBoxRenderable.RenderableBox getRenderableBox();
 
-    public static enum Mode {
+    enum Mode {
         NONE,
         BOX,
         BOX_AND_INVISIBLE_BLOCKS;
     }
 
-    public record RenderableBox(BlockPos localPos, Vec3i size) {
-        public static BoundingBoxRenderable.RenderableBox fromCorners(int p_397818_, int p_393600_, int p_393481_, int p_394705_, int p_392453_, int p_392682_) {
-            int i = Math.min(p_397818_, p_394705_);
-            int j = Math.min(p_393600_, p_392453_);
-            int k = Math.min(p_393481_, p_392682_);
-            return new BoundingBoxRenderable.RenderableBox(
-                new BlockPos(i, j, k), new Vec3i(Math.max(p_397818_, p_394705_) - i, Math.max(p_393600_, p_392453_) - j, Math.max(p_393481_, p_392682_) - k)
-            );
+    record RenderableBox(BlockPos localPos, Vec3i size) {
+        public static BoundingBoxRenderable.RenderableBox fromCorners(final int x1, final int y1, final int z1, final int x2, final int y2, final int z2) {
+            int x = Math.min(x1, x2);
+            int y = Math.min(y1, y2);
+            int z = Math.min(z1, z2);
+            return new BoundingBoxRenderable.RenderableBox(new BlockPos(x, y, z), new Vec3i(Math.max(x1, x2) - x, Math.max(y1, y2) - y, Math.max(z1, z2) - z));
         }
     }
 }

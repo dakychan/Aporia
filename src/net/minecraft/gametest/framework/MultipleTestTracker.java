@@ -17,37 +17,37 @@ public class MultipleTestTracker {
     public MultipleTestTracker() {
     }
 
-    public MultipleTestTracker(Collection<GameTestInfo> p_127802_) {
-        this.tests.addAll(p_127802_);
+    public MultipleTestTracker(final Collection<GameTestInfo> tests) {
+        this.tests.addAll(tests);
     }
 
-    public void addTestToTrack(GameTestInfo p_127810_) {
-        this.tests.add(p_127810_);
-        this.listeners.forEach(p_127810_::addListener);
+    public void addTestToTrack(final GameTestInfo testInfo) {
+        this.tests.add(testInfo);
+        this.listeners.forEach(testInfo::addListener);
     }
 
-    public void addListener(GameTestListener p_127812_) {
-        this.listeners.add(p_127812_);
-        this.tests.forEach(p_127815_ -> p_127815_.addListener(p_127812_));
+    public void addListener(final GameTestListener listener) {
+        this.listeners.add(listener);
+        this.tests.forEach(testInfo -> testInfo.addListener(listener));
     }
 
-    public void addFailureListener(final Consumer<GameTestInfo> p_127808_) {
+    public void addFailureListener(final Consumer<GameTestInfo> listener) {
         this.addListener(new GameTestListener() {
             @Override
-            public void testStructureLoaded(GameTestInfo p_127830_) {
+            public void testStructureLoaded(final GameTestInfo testInfo) {
             }
 
             @Override
-            public void testPassed(GameTestInfo p_331591_, GameTestRunner p_333054_) {
+            public void testPassed(final GameTestInfo testInfo, final GameTestRunner runner) {
             }
 
             @Override
-            public void testFailed(GameTestInfo p_127832_, GameTestRunner p_329601_) {
-                p_127808_.accept(p_127832_);
+            public void testFailed(final GameTestInfo testInfo, final GameTestRunner runner) {
+                listener.accept(testInfo);
             }
 
             @Override
-            public void testAddedForRerun(GameTestInfo p_177685_, GameTestInfo p_331155_, GameTestRunner p_328103_) {
+            public void testAddedForRerun(final GameTestInfo original, final GameTestInfo copy, final GameTestRunner runner) {
             }
         });
     }
@@ -89,21 +89,21 @@ public class MultipleTestTracker {
     }
 
     public String getProgressBar() {
-        StringBuffer stringbuffer = new StringBuffer();
-        stringbuffer.append('[');
-        this.tests.forEach(p_127806_ -> {
-            if (!p_127806_.hasStarted()) {
-                stringbuffer.append(' ');
-            } else if (p_127806_.hasSucceeded()) {
-                stringbuffer.append('+');
-            } else if (p_127806_.hasFailed()) {
-                stringbuffer.append((char)(p_127806_.isRequired() ? 'X' : 'x'));
+        StringBuffer buf = new StringBuffer();
+        buf.append('[');
+        this.tests.forEach(test -> {
+            if (!test.hasStarted()) {
+                buf.append(' ');
+            } else if (test.hasSucceeded()) {
+                buf.append('+');
+            } else if (test.hasFailed()) {
+                buf.append((char)(test.isRequired() ? 'X' : 'x'));
             } else {
-                stringbuffer.append('_');
+                buf.append('_');
             }
         });
-        stringbuffer.append(']');
-        return stringbuffer.toString();
+        buf.append(']');
+        return buf.toString();
     }
 
     @Override
@@ -111,7 +111,7 @@ public class MultipleTestTracker {
         return this.getProgressBar();
     }
 
-    public void remove(GameTestInfo p_333633_) {
-        this.tests.remove(p_333633_);
+    public void remove(final GameTestInfo testInfo) {
+        this.tests.remove(testInfo);
     }
 }

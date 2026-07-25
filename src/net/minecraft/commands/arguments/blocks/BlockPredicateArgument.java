@@ -31,33 +31,33 @@ public class BlockPredicateArgument implements ArgumentType<BlockPredicateArgume
     private static final Collection<String> EXAMPLES = Arrays.asList("stone", "minecraft:stone", "stone[foo=bar]", "#stone", "#stone[foo=bar]{baz=nbt}");
     private final HolderLookup<Block> blocks;
 
-    public BlockPredicateArgument(CommandBuildContext p_234626_) {
-        this.blocks = p_234626_.lookupOrThrow(Registries.BLOCK);
+    public BlockPredicateArgument(final CommandBuildContext context) {
+        this.blocks = context.lookupOrThrow(Registries.BLOCK);
     }
 
-    public static BlockPredicateArgument blockPredicate(CommandBuildContext p_234628_) {
-        return new BlockPredicateArgument(p_234628_);
+    public static BlockPredicateArgument blockPredicate(final CommandBuildContext context) {
+        return new BlockPredicateArgument(context);
     }
 
-    public BlockPredicateArgument.Result parse(StringReader p_115572_) throws CommandSyntaxException {
-        return parse(this.blocks, p_115572_);
+    public BlockPredicateArgument.Result parse(final StringReader reader) throws CommandSyntaxException {
+        return parse(this.blocks, reader);
     }
 
-    public static BlockPredicateArgument.Result parse(HolderLookup<Block> p_234634_, StringReader p_234635_) throws CommandSyntaxException {
-        return BlockStateParser.parseForTesting(p_234634_, p_234635_, true)
+    public static BlockPredicateArgument.Result parse(final HolderLookup<Block> blocks, final StringReader reader) throws CommandSyntaxException {
+        return BlockStateParser.parseForTesting(blocks, reader, true)
             .map(
-                p_234630_ -> new BlockPredicateArgument.BlockPredicate(p_234630_.blockState(), p_234630_.properties().keySet(), p_234630_.nbt()),
-                p_234632_ -> new BlockPredicateArgument.TagPredicate(p_234632_.tag(), p_234632_.vagueProperties(), p_234632_.nbt())
+                block -> new BlockPredicateArgument.BlockPredicate(block.blockState(), block.properties().keySet(), block.nbt()),
+                tag -> new BlockPredicateArgument.TagPredicate(tag.tag(), tag.vagueProperties(), tag.nbt())
             );
     }
 
-    public static Predicate<BlockInWorld> getBlockPredicate(CommandContext<CommandSourceStack> p_115574_, String p_115575_) throws CommandSyntaxException {
-        return p_115574_.getArgument(p_115575_, BlockPredicateArgument.Result.class);
+    public static Predicate<BlockInWorld> getBlockPredicate(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return context.getArgument(name, BlockPredicateArgument.Result.class);
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_115587_, SuggestionsBuilder p_115588_) {
-        return BlockStateParser.fillSuggestions(this.blocks, p_115588_, true, true);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return BlockStateParser.fillSuggestions(this.blocks, builder, true, true);
     }
 
     @Override
@@ -65,35 +65,35 @@ public class BlockPredicateArgument implements ArgumentType<BlockPredicateArgume
         return EXAMPLES;
     }
 
-    static class BlockPredicate implements BlockPredicateArgument.Result {
+    private static class BlockPredicate implements BlockPredicateArgument.Result {
         private final BlockState state;
         private final Set<Property<?>> properties;
         private final @Nullable CompoundTag nbt;
 
-        public BlockPredicate(BlockState p_115595_, Set<Property<?>> p_115596_, @Nullable CompoundTag p_115597_) {
-            this.state = p_115595_;
-            this.properties = p_115596_;
-            this.nbt = p_115597_;
+        public BlockPredicate(final BlockState state, final Set<Property<?>> properties, final @Nullable CompoundTag nbt) {
+            this.state = state;
+            this.properties = properties;
+            this.nbt = nbt;
         }
 
-        public boolean test(BlockInWorld p_115599_) {
-            BlockState blockstate = p_115599_.getState();
-            if (!blockstate.is(this.state.getBlock())) {
+        public boolean test(final BlockInWorld blockInWorld) {
+            BlockState state = blockInWorld.getState();
+            if (!state.is(this.state.getBlock())) {
                 return false;
-            } else {
-                for (Property<?> property : this.properties) {
-                    if (blockstate.getValue(property) != this.state.getValue(property)) {
-                        return false;
-                    }
-                }
+            }
 
-                if (this.nbt == null) {
-                    return true;
-                } else {
-                    BlockEntity blockentity = p_115599_.getEntity();
-                    return blockentity != null && NbtUtils.compareNbt(this.nbt, blockentity.saveWithFullMetadata(p_115599_.getLevel().registryAccess()), true);
+            for (Property<?> property : this.properties) {
+                if (state.getValue(property) != this.state.getValue(property)) {
+                    return false;
                 }
             }
+
+            if (this.nbt == null) {
+                return true;
+            }
+
+            BlockEntity entity = blockInWorld.getEntity();
+            return entity != null && NbtUtils.compareNbt(this.nbt, entity.saveWithFullMetadata(blockInWorld.getLevel().registryAccess()), true);
         }
 
         @Override
@@ -106,45 +106,45 @@ public class BlockPredicateArgument implements ArgumentType<BlockPredicateArgume
         boolean requiresNbt();
     }
 
-    static class TagPredicate implements BlockPredicateArgument.Result {
+    private static class TagPredicate implements BlockPredicateArgument.Result {
         private final HolderSet<Block> tag;
         private final @Nullable CompoundTag nbt;
         private final Map<String, String> vagueProperties;
 
-        TagPredicate(HolderSet<Block> p_234637_, Map<String, String> p_234638_, @Nullable CompoundTag p_234639_) {
-            this.tag = p_234637_;
-            this.vagueProperties = p_234638_;
-            this.nbt = p_234639_;
+        private TagPredicate(final HolderSet<Block> tag, final Map<String, String> vagueProperties, final @Nullable CompoundTag nbt) {
+            this.tag = tag;
+            this.vagueProperties = vagueProperties;
+            this.nbt = nbt;
         }
 
-        public boolean test(BlockInWorld p_115617_) {
-            BlockState blockstate = p_115617_.getState();
-            if (!blockstate.is(this.tag)) {
+        public boolean test(final BlockInWorld blockInWorld) {
+            BlockState state = blockInWorld.getState();
+            if (!state.is(this.tag)) {
                 return false;
-            } else {
-                for (Entry<String, String> entry : this.vagueProperties.entrySet()) {
-                    Property<?> property = blockstate.getBlock().getStateDefinition().getProperty(entry.getKey());
-                    if (property == null) {
-                        return false;
-                    }
+            }
 
-                    Comparable<?> comparable = (Comparable<?>)property.getValue(entry.getValue()).orElse(null);
-                    if (comparable == null) {
-                        return false;
-                    }
-
-                    if (blockstate.getValue(property) != comparable) {
-                        return false;
-                    }
+            for (Entry<String, String> entry : this.vagueProperties.entrySet()) {
+                Property<?> property = state.getBlock().getStateDefinition().getProperty(entry.getKey());
+                if (property == null) {
+                    return false;
                 }
 
-                if (this.nbt == null) {
-                    return true;
-                } else {
-                    BlockEntity blockentity = p_115617_.getEntity();
-                    return blockentity != null && NbtUtils.compareNbt(this.nbt, blockentity.saveWithFullMetadata(p_115617_.getLevel().registryAccess()), true);
+                Comparable<?> value = (Comparable<?>)property.getValue(entry.getValue()).orElse(null);
+                if (value == null) {
+                    return false;
+                }
+
+                if (state.getValue(property) != value) {
+                    return false;
                 }
             }
+
+            if (this.nbt == null) {
+                return true;
+            }
+
+            BlockEntity entity = blockInWorld.getEntity();
+            return entity != null && NbtUtils.compareNbt(this.nbt, entity.saveWithFullMetadata(blockInWorld.getLevel().registryAccess()), true);
         }
 
         @Override

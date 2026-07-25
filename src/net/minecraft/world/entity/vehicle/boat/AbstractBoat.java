@@ -35,7 +35,7 @@ import net.minecraft.world.entity.vehicle.VehicleEntity;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.WaterlilyBlock;
+import net.minecraft.world.level.block.LilyPadBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.material.FluidState;
@@ -79,17 +79,17 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
     private Leashable.@Nullable LeashData leashData;
     private final Supplier<Item> dropItem;
 
-    public AbstractBoat(EntityType<? extends AbstractBoat> p_450919_, Level p_452768_, Supplier<Item> p_460538_) {
-        super(p_450919_, p_452768_);
-        this.dropItem = p_460538_;
+    public AbstractBoat(final EntityType<? extends AbstractBoat> type, final Level level, final Supplier<Item> dropItem) {
+        super(type, level);
+        this.dropItem = dropItem;
         this.blocksBuilding = true;
     }
 
-    public void setInitialPos(double p_452810_, double p_456699_, double p_453412_) {
-        this.setPos(p_452810_, p_456699_, p_453412_);
-        this.xo = p_452810_;
-        this.yo = p_456699_;
-        this.zo = p_453412_;
+    public void setInitialPos(final double x, final double y, final double z) {
+        this.setPos(x, y, z);
+        this.xo = x;
+        this.yo = y;
+        this.zo = z;
     }
 
     @Override
@@ -98,24 +98,24 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_455059_) {
-        super.defineSynchedData(p_455059_);
-        p_455059_.define(DATA_ID_PADDLE_LEFT, false);
-        p_455059_.define(DATA_ID_PADDLE_RIGHT, false);
-        p_455059_.define(DATA_ID_BUBBLE_TIME, 0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_ID_PADDLE_LEFT, false);
+        entityData.define(DATA_ID_PADDLE_RIGHT, false);
+        entityData.define(DATA_ID_BUBBLE_TIME, 0);
     }
 
     @Override
-    public boolean canCollideWith(Entity p_453313_) {
-        return canVehicleCollide(this, p_453313_);
+    public boolean canCollideWith(final Entity entity) {
+        return canVehicleCollide(this, entity);
     }
 
-    public static boolean canVehicleCollide(Entity p_459042_, Entity p_456609_) {
-        return (p_456609_.canBeCollidedWith(p_459042_) || p_456609_.isPushable()) && !p_459042_.isPassengerOfSameVehicle(p_456609_);
+    public static boolean canVehicleCollide(final Entity vehicle, final Entity entity) {
+        return (entity.canBeCollidedWith(vehicle) || entity.isPushable()) && !vehicle.isPassengerOfSameVehicle(entity);
     }
 
     @Override
-    public boolean canBeCollidedWith(@Nullable Entity p_451403_) {
+    public boolean canBeCollidedWith(final @Nullable Entity other) {
         return true;
     }
 
@@ -125,36 +125,36 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
     }
 
     @Override
-    public Vec3 getRelativePortalPosition(Direction.Axis p_456474_, BlockUtil.FoundRectangle p_450575_) {
-        return LivingEntity.resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(p_456474_, p_450575_));
+    public Vec3 getRelativePortalPosition(final Direction.Axis axis, final BlockUtil.FoundRectangle portalArea) {
+        return LivingEntity.resetForwardDirectionOfRelativePortalPosition(super.getRelativePortalPosition(axis, portalArea));
     }
 
-    protected abstract double rideHeight(EntityDimensions p_457889_);
+    protected abstract double rideHeight(final EntityDimensions dimensions);
 
     @Override
-    protected Vec3 getPassengerAttachmentPoint(Entity p_451853_, EntityDimensions p_454754_, float p_460410_) {
-        float f = this.getSinglePassengerXOffset();
+    protected Vec3 getPassengerAttachmentPoint(final Entity passenger, final EntityDimensions dimensions, final float scale) {
+        float offset = this.getSinglePassengerXOffset();
         if (this.getPassengers().size() > 1) {
-            int i = this.getPassengers().indexOf(p_451853_);
-            if (i == 0) {
-                f = 0.2F;
+            int index = this.getPassengers().indexOf(passenger);
+            if (index == 0) {
+                offset = 0.2F;
             } else {
-                f = -0.6F;
+                offset = -0.6F;
             }
 
-            if (p_451853_ instanceof Animal) {
-                f += 0.2F;
+            if (passenger instanceof Animal) {
+                offset += 0.2F;
             }
         }
 
-        return new Vec3(0.0, this.rideHeight(p_454754_), f).yRot(-this.getYRot() * (float) (Math.PI / 180.0));
+        return new Vec3(0.0, this.rideHeight(dimensions), offset).yRot(-this.getYRot() * (float) (Math.PI / 180.0));
     }
 
     @Override
-    public void onAboveBubbleColumn(boolean p_457900_, BlockPos p_455067_) {
+    public void onAboveBubbleColumn(final boolean dragDown, final BlockPos pos) {
         if (this.level() instanceof ServerLevel) {
             this.isAboveBubbleColumn = true;
-            this.bubbleColumnDirectionIsDown = p_457900_;
+            this.bubbleColumnDirectionIsDown = dragDown;
             if (this.getBubbleTime() == 0) {
                 this.setBubbleTime(60);
             }
@@ -167,31 +167,25 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
                 );
             this.level()
                 .addParticle(
-                    ParticleTypes.SPLASH,
-                    this.getX() + this.random.nextFloat(),
-                    this.getY() + 0.7,
-                    this.getZ() + this.random.nextFloat(),
-                    0.0,
-                    0.0,
-                    0.0
+                    ParticleTypes.SPLASH, this.getX() + this.random.nextFloat(), this.getY() + 0.7, this.getZ() + this.random.nextFloat(), 0.0, 0.0, 0.0
                 );
             this.gameEvent(GameEvent.SPLASH, this.getControllingPassenger());
         }
     }
 
     @Override
-    public void push(Entity p_458910_) {
-        if (p_458910_ instanceof AbstractBoat) {
-            if (p_458910_.getBoundingBox().minY < this.getBoundingBox().maxY) {
-                super.push(p_458910_);
+    public void push(final Entity entity) {
+        if (entity instanceof AbstractBoat) {
+            if (entity.getBoundingBox().minY < this.getBoundingBox().maxY) {
+                super.push(entity);
             }
-        } else if (p_458910_.getBoundingBox().minY <= this.getBoundingBox().minY) {
-            super.push(p_458910_);
+        } else if (entity.getBoundingBox().minY <= this.getBoundingBox().minY) {
+            super.push(entity);
         }
     }
 
     @Override
-    public void animateHurt(float p_456243_) {
+    public void animateHurt(final float yaw) {
         this.setHurtDir(-this.getHurtDir());
         this.setHurtTime(10);
         this.setDamage(this.getDamage() * 11.0F);
@@ -261,18 +255,18 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
                 if (!this.isSilent()
                     && this.paddlePositions[i] % (float) (Math.PI * 2) <= (float) (Math.PI / 4)
                     && (this.paddlePositions[i] + (float) (Math.PI / 8)) % (float) (Math.PI * 2) >= (float) (Math.PI / 4)) {
-                    SoundEvent soundevent = this.getPaddleSound();
-                    if (soundevent != null) {
-                        Vec3 vec3 = this.getViewVector(1.0F);
-                        double d0 = i == 1 ? -vec3.z : vec3.z;
-                        double d1 = i == 1 ? vec3.x : -vec3.x;
+                    SoundEvent sound = this.getPaddleSound();
+                    if (sound != null) {
+                        Vec3 viewVector = this.getViewVector(1.0F);
+                        double dx = i == 1 ? -viewVector.z : viewVector.z;
+                        double dz = i == 1 ? viewVector.x : -viewVector.x;
                         this.level()
                             .playSound(
                                 null,
-                                this.getX() + d0,
+                                this.getX() + dx,
                                 this.getY(),
-                                this.getZ() + d1,
-                                soundevent,
+                                this.getZ() + dz,
+                                sound,
                                 this.getSoundSource(),
                                 1.0F,
                                 0.8F + 0.4F * this.random.nextFloat()
@@ -286,18 +280,18 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
             }
         }
 
-        List<Entity> list = this.level().getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
-        if (!list.isEmpty()) {
-            boolean flag = !this.level().isClientSide() && !(this.getControllingPassenger() instanceof Player);
+        List<Entity> entities = this.level().getEntities(this, this.getBoundingBox().inflate(0.2F, -0.01F, 0.2F), EntitySelector.pushableBy(this));
+        if (!entities.isEmpty()) {
+            boolean addNewPassengers = !this.level().isClientSide() && !(this.getControllingPassenger() instanceof Player);
 
-            for (Entity entity : list) {
+            for (Entity entity : entities) {
                 if (!entity.hasPassenger(this)) {
-                    if (flag
+                    if (addNewPassengers
                         && this.getPassengers().size() < this.getMaxPassengers()
                         && !entity.isPassenger()
                         && this.hasEnoughSpaceFor(entity)
                         && entity instanceof LivingEntity
-                        && !entity.getType().is(EntityTypeTags.CANNOT_BE_PUSHED_ONTO_BOATS)) {
+                        && !entity.is(EntityTypeTags.CANNOT_BE_PUSHED_ONTO_BOATS)) {
                         entity.startRiding(this);
                     } else {
                         this.push(entity);
@@ -309,8 +303,8 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
 
     private void tickBubbleColumn() {
         if (this.level().isClientSide()) {
-            int i = this.getBubbleTime();
-            if (i > 0) {
+            int clientBubbleTime = this.getBubbleTime();
+            if (clientBubbleTime > 0) {
                 this.bubbleMultiplier += 0.05F;
             } else {
                 this.bubbleMultiplier -= 0.1F;
@@ -324,18 +318,18 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
                 this.setBubbleTime(0);
             }
 
-            int k = this.getBubbleTime();
-            if (k > 0) {
-                this.setBubbleTime(--k);
-                int j = 60 - k - 1;
-                if (j > 0 && k == 0) {
+            int bubbleTime = this.getBubbleTime();
+            if (bubbleTime > 0) {
+                this.setBubbleTime(--bubbleTime);
+                int diff = 60 - bubbleTime - 1;
+                if (diff > 0 && bubbleTime == 0) {
                     this.setBubbleTime(0);
-                    Vec3 vec3 = this.getDeltaMovement();
+                    Vec3 movement = this.getDeltaMovement();
                     if (this.bubbleColumnDirectionIsDown) {
-                        this.setDeltaMovement(vec3.add(0.0, -0.7, 0.0));
+                        this.setDeltaMovement(movement.add(0.0, -0.7, 0.0));
                         this.ejectPassengers();
                     } else {
-                        this.setDeltaMovement(vec3.x, this.hasPassenger(p_451718_ -> p_451718_ instanceof Player) ? 2.7 : 0.6, vec3.z);
+                        this.setDeltaMovement(movement.x, this.hasPassenger(e -> e instanceof Player) ? 2.7 : 0.6, movement.z);
                     }
                 }
 
@@ -352,13 +346,13 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
         };
     }
 
-    public void setPaddleState(boolean p_458569_, boolean p_456124_) {
-        this.entityData.set(DATA_ID_PADDLE_LEFT, p_458569_);
-        this.entityData.set(DATA_ID_PADDLE_RIGHT, p_456124_);
+    public void setPaddleState(final boolean left, final boolean right) {
+        this.entityData.set(DATA_ID_PADDLE_LEFT, left);
+        this.entityData.set(DATA_ID_PADDLE_RIGHT, right);
     }
 
-    public float getRowingTime(int p_450642_, float p_450632_) {
-        return this.getPaddleState(p_450642_) ? Mth.clampedLerp(p_450632_, this.paddlePositions[p_450642_] - (float) (Math.PI / 8), this.paddlePositions[p_450642_]) : 0.0F;
+    public float getRowingTime(final int side, final float a) {
+        return this.getPaddleState(side) ? Mth.clampedLerp(a, this.paddlePositions[side] - (float) (Math.PI / 8), this.paddlePositions[side]) : 0.0F;
     }
 
     @Override
@@ -367,8 +361,8 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
     }
 
     @Override
-    public void setLeashData(Leashable.@Nullable LeashData p_460362_) {
-        this.leashData = p_460362_;
+    public void setLeashData(final Leashable.@Nullable LeashData leashData) {
+        this.leashData = leashData;
     }
 
     @Override
@@ -387,16 +381,16 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
     }
 
     private AbstractBoat.Status getStatus() {
-        AbstractBoat.Status abstractboat$status = this.isUnderwater();
-        if (abstractboat$status != null) {
+        AbstractBoat.Status waterStatus = this.isUnderwater();
+        if (waterStatus != null) {
             this.waterLevel = this.getBoundingBox().maxY;
-            return abstractboat$status;
+            return waterStatus;
         } else if (this.checkInWater()) {
             return AbstractBoat.Status.IN_WATER;
         } else {
-            float f = this.getGroundFriction();
-            if (f > 0.0F) {
-                this.landFriction = f;
+            float friction = this.getGroundFriction();
+            if (friction > 0.0F) {
+                this.landFriction = friction;
                 return AbstractBoat.Status.ON_LAND;
             } else {
                 return AbstractBoat.Status.IN_AIR;
@@ -406,70 +400,66 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
 
     public float getWaterLevelAbove() {
         AABB aabb = this.getBoundingBox();
-        int i = Mth.floor(aabb.minX);
-        int j = Mth.ceil(aabb.maxX);
-        int k = Mth.floor(aabb.maxY);
-        int l = Mth.ceil(aabb.maxY - this.lastYd);
-        int i1 = Mth.floor(aabb.minZ);
-        int j1 = Mth.ceil(aabb.maxZ);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        int minX = Mth.floor(aabb.minX);
+        int maxX = Mth.ceil(aabb.maxX);
+        int minY = Mth.floor(aabb.maxY);
+        int maxY = Mth.ceil(aabb.maxY - this.lastYd);
+        int minZ = Mth.floor(aabb.minZ);
+        int maxZ = Mth.ceil(aabb.maxZ);
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
         label39:
-        for (int k1 = k; k1 < l; k1++) {
-            float f = 0.0F;
+        for (int y = minY; y < maxY; y++) {
+            float blockHeight = 0.0F;
 
-            for (int l1 = i; l1 < j; l1++) {
-                for (int i2 = i1; i2 < j1; i2++) {
-                    blockpos$mutableblockpos.set(l1, k1, i2);
-                    FluidState fluidstate = this.level().getFluidState(blockpos$mutableblockpos);
-                    if (fluidstate.is(FluidTags.WATER)) {
-                        f = Math.max(f, fluidstate.getHeight(this.level(), blockpos$mutableblockpos));
+            for (int x = minX; x < maxX; x++) {
+                for (int z = minZ; z < maxZ; z++) {
+                    pos.set(x, y, z);
+                    FluidState fluidState = this.level().getFluidState(pos);
+                    if (fluidState.is(FluidTags.WATER)) {
+                        blockHeight = Math.max(blockHeight, fluidState.getHeight(this.level(), pos));
                     }
 
-                    if (f >= 1.0F) {
+                    if (blockHeight >= 1.0F) {
                         continue label39;
                     }
                 }
             }
 
-            if (f < 1.0F) {
-                return blockpos$mutableblockpos.getY() + f;
+            if (blockHeight < 1.0F) {
+                return pos.getY() + blockHeight;
             }
         }
 
-        return l + 1;
+        return maxY + 1;
     }
 
     public float getGroundFriction() {
-        AABB aabb = this.getBoundingBox();
-        AABB aabb1 = new AABB(aabb.minX, aabb.minY - 0.001, aabb.minZ, aabb.maxX, aabb.minY, aabb.maxZ);
-        int i = Mth.floor(aabb1.minX) - 1;
-        int j = Mth.ceil(aabb1.maxX) + 1;
-        int k = Mth.floor(aabb1.minY) - 1;
-        int l = Mth.ceil(aabb1.maxY) + 1;
-        int i1 = Mth.floor(aabb1.minZ) - 1;
-        int j1 = Mth.ceil(aabb1.maxZ) + 1;
-        VoxelShape voxelshape = Shapes.create(aabb1);
-        float f = 0.0F;
-        int k1 = 0;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        AABB bb = this.getBoundingBox();
+        AABB box = new AABB(bb.minX, bb.minY - 0.001, bb.minZ, bb.maxX, bb.minY, bb.maxZ);
+        int x0 = Mth.floor(box.minX) - 1;
+        int x1 = Mth.ceil(box.maxX) + 1;
+        int y0 = Mth.floor(box.minY) - 1;
+        int y1 = Mth.ceil(box.maxY) + 1;
+        int z0 = Mth.floor(box.minZ) - 1;
+        int z1 = Mth.ceil(box.maxZ) + 1;
+        VoxelShape boatShape = Shapes.create(box);
+        float friction = 0.0F;
+        int count = 0;
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
 
-        for (int l1 = i; l1 < j; l1++) {
-            for (int i2 = i1; i2 < j1; i2++) {
-                int j2 = (l1 != i && l1 != j - 1 ? 0 : 1) + (i2 != i1 && i2 != j1 - 1 ? 0 : 1);
-                if (j2 != 2) {
-                    for (int k2 = k; k2 < l; k2++) {
-                        if (j2 <= 0 || k2 != k && k2 != l - 1) {
-                            blockpos$mutableblockpos.set(l1, k2, i2);
-                            BlockState blockstate = this.level().getBlockState(blockpos$mutableblockpos);
-                            if (!(blockstate.getBlock() instanceof WaterlilyBlock)
-                                && Shapes.joinIsNotEmpty(
-                                    blockstate.getCollisionShape(this.level(), blockpos$mutableblockpos).move(blockpos$mutableblockpos),
-                                    voxelshape,
-                                    BooleanOp.AND
-                                )) {
-                                f += blockstate.getBlock().getFriction();
-                                k1++;
+        for (int x = x0; x < x1; x++) {
+            for (int z = z0; z < z1; z++) {
+                int edges = (x != x0 && x != x1 - 1 ? 0 : 1) + (z != z0 && z != z1 - 1 ? 0 : 1);
+                if (edges != 2) {
+                    for (int y = y0; y < y1; y++) {
+                        if (edges <= 0 || y != y0 && y != y1 - 1) {
+                            blockPos.set(x, y, z);
+                            BlockState blockState = this.level().getBlockState(blockPos);
+                            if (!(blockState.getBlock() instanceof LilyPadBlock)
+                                && Shapes.joinIsNotEmpty(blockState.getCollisionShape(this.level(), blockPos).move(blockPos), boatShape, BooleanOp.AND)) {
+                                friction += blockState.getBlock().getFriction();
+                                count++;
                             }
                         }
                     }
@@ -477,68 +467,67 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
             }
         }
 
-        return f / k1;
+        return friction / count;
     }
 
     private boolean checkInWater() {
-        AABB aabb = this.getBoundingBox();
-        int i = Mth.floor(aabb.minX);
-        int j = Mth.ceil(aabb.maxX);
-        int k = Mth.floor(aabb.minY);
-        int l = Mth.ceil(aabb.minY + 0.001);
-        int i1 = Mth.floor(aabb.minZ);
-        int j1 = Mth.ceil(aabb.maxZ);
-        boolean flag = false;
+        AABB bb = this.getBoundingBox();
+        int minX = Mth.floor(bb.minX);
+        int maxX = Mth.ceil(bb.maxX);
+        int minY = Mth.floor(bb.minY);
+        int maxY = Mth.ceil(bb.minY + 0.001);
+        int minZ = Mth.floor(bb.minZ);
+        int maxZ = Mth.ceil(bb.maxZ);
+        boolean inWater = false;
         this.waterLevel = -Double.MAX_VALUE;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (int k1 = i; k1 < j; k1++) {
-            for (int l1 = k; l1 < l; l1++) {
-                for (int i2 = i1; i2 < j1; i2++) {
-                    blockpos$mutableblockpos.set(k1, l1, i2);
-                    FluidState fluidstate = this.level().getFluidState(blockpos$mutableblockpos);
-                    if (fluidstate.is(FluidTags.WATER)) {
-                        float f = l1 + fluidstate.getHeight(this.level(), blockpos$mutableblockpos);
-                        this.waterLevel = Math.max((double)f, this.waterLevel);
-                        flag |= aabb.minY < f;
+        for (int x = minX; x < maxX; x++) {
+            for (int y = minY; y < maxY; y++) {
+                for (int z = minZ; z < maxZ; z++) {
+                    pos.set(x, y, z);
+                    FluidState fluidState = this.level().getFluidState(pos);
+                    if (fluidState.is(FluidTags.WATER)) {
+                        float height = y + fluidState.getHeight(this.level(), pos);
+                        this.waterLevel = Math.max(height, this.waterLevel);
+                        inWater |= bb.minY < height;
                     }
                 }
             }
         }
 
-        return flag;
+        return inWater;
     }
 
     private AbstractBoat.@Nullable Status isUnderwater() {
         AABB aabb = this.getBoundingBox();
-        double d0 = aabb.maxY + 0.001;
-        int i = Mth.floor(aabb.minX);
-        int j = Mth.ceil(aabb.maxX);
-        int k = Mth.floor(aabb.maxY);
-        int l = Mth.ceil(d0);
-        int i1 = Mth.floor(aabb.minZ);
-        int j1 = Mth.ceil(aabb.maxZ);
-        boolean flag = false;
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        double maxY = aabb.maxY + 0.001;
+        int x0 = Mth.floor(aabb.minX);
+        int x1 = Mth.ceil(aabb.maxX);
+        int y0 = Mth.floor(aabb.maxY);
+        int y1 = Mth.ceil(maxY);
+        int z0 = Mth.floor(aabb.minZ);
+        int z1 = Mth.ceil(aabb.maxZ);
+        boolean underWater = false;
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (int k1 = i; k1 < j; k1++) {
-            for (int l1 = k; l1 < l; l1++) {
-                for (int i2 = i1; i2 < j1; i2++) {
-                    blockpos$mutableblockpos.set(k1, l1, i2);
-                    FluidState fluidstate = this.level().getFluidState(blockpos$mutableblockpos);
-                    if (fluidstate.is(FluidTags.WATER)
-                        && d0 < blockpos$mutableblockpos.getY() + fluidstate.getHeight(this.level(), blockpos$mutableblockpos)) {
-                        if (!fluidstate.isSource()) {
+        for (int x = x0; x < x1; x++) {
+            for (int y = y0; y < y1; y++) {
+                for (int z = z0; z < z1; z++) {
+                    pos.set(x, y, z);
+                    FluidState fluidState = this.level().getFluidState(pos);
+                    if (fluidState.is(FluidTags.WATER) && maxY < pos.getY() + fluidState.getHeight(this.level(), pos)) {
+                        if (!fluidState.isSource()) {
                             return AbstractBoat.Status.UNDER_FLOWING_WATER;
                         }
 
-                        flag = true;
+                        underWater = true;
                     }
                 }
             }
         }
 
-        return flag ? AbstractBoat.Status.UNDER_WATER : null;
+        return underWater ? AbstractBoat.Status.UNDER_WATER : null;
     }
 
     @Override
@@ -547,14 +536,14 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
     }
 
     private void floatBoat() {
-        double d0 = -this.getGravity();
-        double d1 = 0.0;
-        float f = 0.05F;
+        double vspeed = -this.getGravity();
+        double buoyancy = 0.0;
+        float invFriction = 0.05F;
         if (this.oldStatus == AbstractBoat.Status.IN_AIR && this.status != AbstractBoat.Status.IN_AIR && this.status != AbstractBoat.Status.ON_LAND) {
             this.waterLevel = this.getY(1.0);
-            double d2 = this.getWaterLevelAbove() - this.getBbHeight() + 0.101;
-            if (this.level().noCollision(this, this.getBoundingBox().move(0.0, d2 - this.getY(), 0.0))) {
-                this.setPos(this.getX(), d2, this.getZ());
+            double targetY = this.getWaterLevelAbove() - this.getBbHeight() + 0.101;
+            if (this.level().noCollision(this, this.getBoundingBox().move(0.0, targetY - this.getY(), 0.0))) {
+                this.setPos(this.getX(), targetY, this.getZ());
                 this.setDeltaMovement(this.getDeltaMovement().multiply(1.0, 0.0, 1.0));
                 this.lastYd = 0.0;
             }
@@ -562,36 +551,41 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
             this.status = AbstractBoat.Status.IN_WATER;
         } else {
             if (this.status == AbstractBoat.Status.IN_WATER) {
-                d1 = (this.waterLevel - this.getY()) / this.getBbHeight();
-                f = 0.9F;
+                buoyancy = (this.waterLevel - this.getY()) / this.getBbHeight();
+                invFriction = 0.9F;
             } else if (this.status == AbstractBoat.Status.UNDER_FLOWING_WATER) {
-                d0 = -7.0E-4;
-                f = 0.9F;
+                vspeed = -7.0E-4;
+                invFriction = 0.9F;
             } else if (this.status == AbstractBoat.Status.UNDER_WATER) {
-                d1 = 0.01F;
-                f = 0.45F;
+                buoyancy = 0.01F;
+                invFriction = 0.45F;
             } else if (this.status == AbstractBoat.Status.IN_AIR) {
-                f = 0.9F;
+                invFriction = 0.9F;
             } else if (this.status == AbstractBoat.Status.ON_LAND) {
-                f = this.landFriction;
+                invFriction = this.landFriction;
                 if (this.getControllingPassenger() instanceof Player) {
                     this.landFriction /= 2.0F;
                 }
             }
 
-            Vec3 vec3 = this.getDeltaMovement();
-            this.setDeltaMovement(vec3.x * f, vec3.y + d0, vec3.z * f);
-            this.deltaRotation *= f;
-            if (d1 > 0.0) {
-                Vec3 vec31 = this.getDeltaMovement();
-                this.setDeltaMovement(vec31.x, (vec31.y + d1 * (this.getDefaultGravity() / 0.65)) * 0.75, vec31.z);
+            Vec3 movement = this.getDeltaMovement();
+            this.setDeltaMovement(movement.x * invFriction, movement.y + vspeed, movement.z * invFriction);
+            this.deltaRotation *= invFriction;
+            if (buoyancy > 0.0) {
+                Vec3 deltaMovement = this.getDeltaMovement();
+                this.setDeltaMovement(deltaMovement.x, (deltaMovement.y + buoyancy * (this.getDefaultGravity() / 0.65)) * 0.75, deltaMovement.z);
             }
         }
     }
 
+    @Override
+    protected float getAirDrag() {
+        return 1.0F;
+    }
+
     private void controlBoat() {
         if (this.isVehicle()) {
-            float f = 0.0F;
+            float acceleration = 0.0F;
             if (this.inputLeft) {
                 this.deltaRotation--;
             }
@@ -601,22 +595,24 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
             }
 
             if (this.inputRight != this.inputLeft && !this.inputUp && !this.inputDown) {
-                f += 0.005F;
+                acceleration += 0.005F;
             }
 
             this.setYRot(this.getYRot() + this.deltaRotation);
             if (this.inputUp) {
-                f += 0.04F;
+                acceleration += 0.04F;
             }
 
             if (this.inputDown) {
-                f -= 0.005F;
+                acceleration -= 0.005F;
             }
 
             this.setDeltaMovement(
                 this.getDeltaMovement()
                     .add(
-                        Mth.sin(-this.getYRot() * (float) (Math.PI / 180.0)) * f, 0.0, Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)) * f
+                        Mth.sin(-this.getYRot() * (float) (Math.PI / 180.0)) * acceleration,
+                        0.0,
+                        Mth.cos(this.getYRot() * (float) (Math.PI / 180.0)) * acceleration
                     )
             );
             this.setPaddleState(this.inputRight && !this.inputLeft || this.inputUp, this.inputLeft && !this.inputRight || this.inputUp);
@@ -627,132 +623,132 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
         return 0.0F;
     }
 
-    public boolean hasEnoughSpaceFor(Entity p_454516_) {
-        return p_454516_.getBbWidth() < this.getBbWidth();
+    public boolean hasEnoughSpaceFor(final Entity entity) {
+        return entity.getBbWidth() < this.getBbWidth();
     }
 
     @Override
-    protected void positionRider(Entity p_453643_, Entity.MoveFunction p_457698_) {
-        super.positionRider(p_453643_, p_457698_);
-        if (!p_453643_.getType().is(EntityTypeTags.CAN_TURN_IN_BOATS)) {
-            p_453643_.setYRot(p_453643_.getYRot() + this.deltaRotation);
-            p_453643_.setYHeadRot(p_453643_.getYHeadRot() + this.deltaRotation);
-            this.clampRotation(p_453643_);
-            if (p_453643_ instanceof Animal && this.getPassengers().size() == this.getMaxPassengers()) {
-                int i = p_453643_.getId() % 2 == 0 ? 90 : 270;
-                p_453643_.setYBodyRot(((Animal)p_453643_).yBodyRot + i);
-                p_453643_.setYHeadRot(p_453643_.getYHeadRot() + i);
+    protected void positionRider(final Entity passenger, final Entity.MoveFunction moveFunction) {
+        super.positionRider(passenger, moveFunction);
+        if (!passenger.is(EntityTypeTags.CAN_TURN_IN_BOATS)) {
+            passenger.setYRot(passenger.getYRot() + this.deltaRotation);
+            passenger.setYHeadRot(passenger.getYHeadRot() + this.deltaRotation);
+            this.clampRotation(passenger);
+            if (passenger instanceof Animal animal && this.getPassengers().size() == this.getMaxPassengers()) {
+                int rotationOffset = passenger.getId() % 2 == 0 ? 90 : 270;
+                passenger.setYBodyRot(animal.yBodyRot + rotationOffset);
+                passenger.setYHeadRot(passenger.getYHeadRot() + rotationOffset);
             }
         }
     }
 
     @Override
-    public Vec3 getDismountLocationForPassenger(LivingEntity p_450621_) {
-        Vec3 vec3 = getCollisionHorizontalEscapeVector(this.getBbWidth() * Mth.SQRT_OF_TWO, p_450621_.getBbWidth(), p_450621_.getYRot());
-        double d0 = this.getX() + vec3.x;
-        double d1 = this.getZ() + vec3.z;
-        BlockPos blockpos = BlockPos.containing(d0, this.getBoundingBox().maxY, d1);
-        BlockPos blockpos1 = blockpos.below();
-        if (!this.level().isWaterAt(blockpos1)) {
-            List<Vec3> list = Lists.newArrayList();
-            double d2 = this.level().getBlockFloorHeight(blockpos);
-            if (DismountHelper.isBlockFloorValid(d2)) {
-                list.add(new Vec3(d0, blockpos.getY() + d2, d1));
+    public Vec3 getDismountLocationForPassenger(final LivingEntity passenger) {
+        Vec3 direction = getCollisionHorizontalEscapeVector(this.getBbWidth() * Mth.SQRT_OF_TWO, passenger.getBbWidth(), passenger.getYRot());
+        double targetX = this.getX() + direction.x;
+        double targetZ = this.getZ() + direction.z;
+        BlockPos targetBlockPos = BlockPos.containing(targetX, this.getBoundingBox().maxY, targetZ);
+        BlockPos belowBlockPos = targetBlockPos.below();
+        if (!this.level().isWaterAt(belowBlockPos)) {
+            List<Vec3> targets = Lists.newArrayList();
+            double targetFloor = this.level().getBlockFloorHeight(targetBlockPos);
+            if (DismountHelper.isBlockFloorValid(targetFloor)) {
+                targets.add(new Vec3(targetX, targetBlockPos.getY() + targetFloor, targetZ));
             }
 
-            double d3 = this.level().getBlockFloorHeight(blockpos1);
-            if (DismountHelper.isBlockFloorValid(d3)) {
-                list.add(new Vec3(d0, blockpos1.getY() + d3, d1));
+            double belowFloor = this.level().getBlockFloorHeight(belowBlockPos);
+            if (DismountHelper.isBlockFloorValid(belowFloor)) {
+                targets.add(new Vec3(targetX, belowBlockPos.getY() + belowFloor, targetZ));
             }
 
-            for (Pose pose : p_450621_.getDismountPoses()) {
-                for (Vec3 vec31 : list) {
-                    if (DismountHelper.canDismountTo(this.level(), vec31, p_450621_, pose)) {
-                        p_450621_.setPose(pose);
-                        return vec31;
+            for (Pose dismountPose : passenger.getDismountPoses()) {
+                for (Vec3 target : targets) {
+                    if (DismountHelper.canDismountTo(this.level(), target, passenger, dismountPose)) {
+                        passenger.setPose(dismountPose);
+                        return target;
                     }
                 }
             }
         }
 
-        return super.getDismountLocationForPassenger(p_450621_);
+        return super.getDismountLocationForPassenger(passenger);
     }
 
-    protected void clampRotation(Entity p_457621_) {
-        p_457621_.setYBodyRot(this.getYRot());
-        float f = Mth.wrapDegrees(p_457621_.getYRot() - this.getYRot());
-        float f1 = Mth.clamp(f, -105.0F, 105.0F);
-        p_457621_.yRotO += f1 - f;
-        p_457621_.setYRot(p_457621_.getYRot() + f1 - f);
-        p_457621_.setYHeadRot(p_457621_.getYRot());
-    }
-
-    @Override
-    public void onPassengerTurned(Entity p_455062_) {
-        this.clampRotation(p_455062_);
+    protected void clampRotation(final Entity passenger) {
+        passenger.setYBodyRot(this.getYRot());
+        float delta = Mth.wrapDegrees(passenger.getYRot() - this.getYRot());
+        float targetDelta = Mth.clamp(delta, -105.0F, 105.0F);
+        passenger.yRotO += targetDelta - delta;
+        passenger.setYRot(passenger.getYRot() + targetDelta - delta);
+        passenger.setYHeadRot(passenger.getYRot());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_460103_) {
-        this.writeLeashData(p_460103_, this.leashData);
+    public void onPassengerTurned(final Entity passenger) {
+        this.clampRotation(passenger);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_459892_) {
-        this.readLeashData(p_459892_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        this.writeLeashData(output, this.leashData);
     }
 
     @Override
-    public InteractionResult interact(Player p_460818_, InteractionHand p_455281_) {
-        InteractionResult interactionresult = super.interact(p_460818_, p_455281_);
-        if (interactionresult != InteractionResult.PASS) {
-            return interactionresult;
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.readLeashData(input);
+    }
+
+    @Override
+    public InteractionResult interact(final Player player, final InteractionHand hand, final Vec3 location) {
+        InteractionResult superInteraction = super.interact(player, hand, location);
+        if (superInteraction != InteractionResult.PASS) {
+            return superInteraction;
         } else {
-            return (InteractionResult)(p_460818_.isSecondaryUseActive() || !(this.outOfControlTicks < 60.0F) || !this.level().isClientSide() && !p_460818_.startRiding(this)
+            return player.isSecondaryUseActive() || !(this.outOfControlTicks < 60.0F) || !this.level().isClientSide() && !player.startRiding(this)
                 ? InteractionResult.PASS
-                : InteractionResult.SUCCESS);
+                : InteractionResult.SUCCESS;
         }
     }
 
     @Override
-    public void remove(Entity.RemovalReason p_453060_) {
-        if (!this.level().isClientSide() && p_453060_.shouldDestroy() && this.isLeashed()) {
+    public void remove(final Entity.RemovalReason reason) {
+        if (!this.level().isClientSide() && reason.shouldDestroy() && this.isLeashed()) {
             this.dropLeash();
         }
 
-        super.remove(p_453060_);
+        super.remove(reason);
     }
 
     @Override
-    protected void checkFallDamage(double p_456661_, boolean p_455047_, BlockState p_456253_, BlockPos p_451590_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
         this.lastYd = this.getDeltaMovement().y;
         if (!this.isPassenger()) {
-            if (p_455047_) {
+            if (onGround) {
                 this.resetFallDistance();
-            } else if (!this.level().getFluidState(this.blockPosition().below()).is(FluidTags.WATER) && p_456661_ < 0.0) {
-                this.fallDistance -= (float)p_456661_;
+            } else if (!this.level().getFluidState(this.blockPosition().below()).is(FluidTags.WATER) && ya < 0.0) {
+                this.fallDistance -= (float)ya;
             }
         }
     }
 
-    public boolean getPaddleState(int p_456796_) {
-        return this.entityData.get(p_456796_ == 0 ? DATA_ID_PADDLE_LEFT : DATA_ID_PADDLE_RIGHT) && this.getControllingPassenger() != null;
+    public boolean getPaddleState(final int side) {
+        return this.entityData.get(side == 0 ? DATA_ID_PADDLE_LEFT : DATA_ID_PADDLE_RIGHT) && this.getControllingPassenger() != null;
     }
 
-    private void setBubbleTime(int p_459395_) {
-        this.entityData.set(DATA_ID_BUBBLE_TIME, p_459395_);
+    private void setBubbleTime(final int val) {
+        this.entityData.set(DATA_ID_BUBBLE_TIME, val);
     }
 
     private int getBubbleTime() {
         return this.entityData.get(DATA_ID_BUBBLE_TIME);
     }
 
-    public float getBubbleAngle(float p_459743_) {
-        return Mth.lerp(p_459743_, this.bubbleAngleO, this.bubbleAngle);
+    public float getBubbleAngle(final float a) {
+        return Mth.lerp(a, this.bubbleAngleO, this.bubbleAngle);
     }
 
     @Override
-    protected boolean canAddPassenger(Entity p_457043_) {
+    protected boolean canAddPassenger(final Entity passenger) {
         return this.getPassengers().size() < this.getMaxPassengers() && !this.isEyeInFluid(FluidTags.WATER);
     }
 
@@ -762,14 +758,14 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
 
     @Override
     public @Nullable LivingEntity getControllingPassenger() {
-        return this.getFirstPassenger() instanceof LivingEntity livingentity ? livingentity : super.getControllingPassenger();
+        return this.getFirstPassenger() instanceof LivingEntity passenger ? passenger : super.getControllingPassenger();
     }
 
-    public void setInput(boolean p_457838_, boolean p_459201_, boolean p_459275_, boolean p_457123_) {
-        this.inputLeft = p_457838_;
-        this.inputRight = p_459201_;
-        this.inputUp = p_459275_;
-        this.inputDown = p_457123_;
+    public void setInput(final boolean left, final boolean right, final boolean up, final boolean down) {
+        this.inputLeft = left;
+        this.inputRight = right;
+        this.inputUp = up;
+        this.inputDown = down;
     }
 
     @Override
@@ -787,7 +783,22 @@ public abstract class AbstractBoat extends VehicleEntity implements Leashable {
         return new ItemStack(this.dropItem.get());
     }
 
-    public static enum Status {
+    @Override
+    protected @Nullable AABB modifyPassengerFluidInteractionBox(final AABB passengerBox) {
+        if (this.isUnderWater()) {
+            return passengerBox;
+        }
+
+        AABB boatBox = this.getBoundingBox();
+        if (boatBox.maxY >= passengerBox.maxY) {
+            return null;
+        }
+
+        double minY = Math.max(passengerBox.minY, boatBox.maxY);
+        return new AABB(passengerBox.minX, minY, passengerBox.minZ, passengerBox.maxX, passengerBox.maxY, passengerBox.maxZ);
+    }
+
+    public enum Status {
         IN_WATER,
         UNDER_WATER,
         UNDER_FLOWING_WATER,

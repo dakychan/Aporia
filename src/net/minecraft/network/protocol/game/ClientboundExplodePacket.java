@@ -46,7 +46,7 @@ public record ClientboundExplodePacket(
         return GamePacketTypes.CLIENTBOUND_EXPLODE;
     }
 
-    public void handle(ClientGamePacketListener p_132126_) {
-        p_132126_.handleExplosion(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleExplosion(this);
     }
 }

@@ -1,7 +1,6 @@
 package net.minecraft.server.network;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.viaversion.viafabricplus.injection.access.base.bedrock.IEventLoopGroupHolder;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandlerFactory;
@@ -24,7 +23,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import java.util.concurrent.ThreadFactory;
 import org.jspecify.annotations.Nullable;
 
-public abstract class EventLoopGroupHolder implements IEventLoopGroupHolder {
+public abstract class EventLoopGroupHolder {
     private static final EventLoopGroupHolder NIO = new EventLoopGroupHolder("NIO", NioSocketChannel.class, NioServerSocketChannel.class) {
         @Override
         protected IoHandlerFactory ioHandlerFactory() {
@@ -53,10 +52,9 @@ public abstract class EventLoopGroupHolder implements IEventLoopGroupHolder {
     private final Class<? extends Channel> channelCls;
     private final Class<? extends ServerChannel> serverChannelCls;
     private volatile @Nullable EventLoopGroup group;
-    private boolean viaFabricPlus$connecting = false;
 
-    public static EventLoopGroupHolder remote(boolean p_453425_) {
-        if (p_453425_) {
+    public static EventLoopGroupHolder remote(final boolean allowNativeTransport) {
+        if (allowNativeTransport) {
             if (KQueue.isAvailable()) {
                 return KQUEUE;
             }
@@ -73,10 +71,10 @@ public abstract class EventLoopGroupHolder implements IEventLoopGroupHolder {
         return LOCAL;
     }
 
-    EventLoopGroupHolder(String p_451976_, Class<? extends Channel> p_460581_, Class<? extends ServerChannel> p_455144_) {
-        this.type = p_451976_;
-        this.channelCls = p_460581_;
-        this.serverChannelCls = p_455144_;
+    private EventLoopGroupHolder(final String type, final Class<? extends Channel> channelCls, final Class<? extends ServerChannel> serverChannelCls) {
+        this.type = type;
+        this.channelCls = channelCls;
+        this.serverChannelCls = serverChannelCls;
     }
 
     private ThreadFactory createThreadFactory() {
@@ -90,18 +88,18 @@ public abstract class EventLoopGroupHolder implements IEventLoopGroupHolder {
     }
 
     public EventLoopGroup eventLoopGroup() {
-        EventLoopGroup eventloopgroup = this.group;
-        if (eventloopgroup == null) {
+        EventLoopGroup result = this.group;
+        if (result == null) {
             synchronized (this) {
-                eventloopgroup = this.group;
-                if (eventloopgroup == null) {
-                    eventloopgroup = this.createEventLoopGroup();
-                    this.group = eventloopgroup;
+                result = this.group;
+                if (result == null) {
+                    result = this.createEventLoopGroup();
+                    this.group = result;
                 }
             }
         }
 
-        return eventloopgroup;
+        return result;
     }
 
     public Class<? extends Channel> channelCls() {
@@ -110,15 +108,5 @@ public abstract class EventLoopGroupHolder implements IEventLoopGroupHolder {
 
     public Class<? extends ServerChannel> serverChannelCls() {
         return this.serverChannelCls;
-    }
-
-    @Override
-    public boolean viaFabricPlus$isConnecting() {
-        return this.viaFabricPlus$connecting;
-    }
-
-    @Override
-    public void viaFabricPlus$setConnecting(final boolean connecting) {
-        this.viaFabricPlus$connecting = connecting;
     }
 }

@@ -18,13 +18,13 @@ public class SwimNodeEvaluator extends NodeEvaluator {
     private final boolean allowBreaching;
     private final Long2ObjectMap<PathType> pathTypesByPosCache = new Long2ObjectOpenHashMap<>();
 
-    public SwimNodeEvaluator(boolean p_77457_) {
-        this.allowBreaching = p_77457_;
+    public SwimNodeEvaluator(final boolean allowBreaching) {
+        this.allowBreaching = allowBreaching;
     }
 
     @Override
-    public void prepare(PathNavigationRegion p_192959_, Mob p_192960_) {
-        super.prepare(p_192959_, p_192960_);
+    public void prepare(final PathNavigationRegion level, final Mob entity) {
+        super.prepare(level, entity);
         this.pathTypesByPosCache.clear();
     }
 
@@ -37,106 +37,100 @@ public class SwimNodeEvaluator extends NodeEvaluator {
     @Override
     public Node getStart() {
         return this.getNode(
-            Mth.floor(this.mob.getBoundingBox().minX),
-            Mth.floor(this.mob.getBoundingBox().minY + 0.5),
-            Mth.floor(this.mob.getBoundingBox().minZ)
+            Mth.floor(this.mob.getBoundingBox().minX), Mth.floor(this.mob.getBoundingBox().minY + 0.5), Mth.floor(this.mob.getBoundingBox().minZ)
         );
     }
 
     @Override
-    public Target getTarget(double p_331212_, double p_329065_, double p_336263_) {
-        return this.getTargetNodeAt(p_331212_, p_329065_, p_336263_);
+    public Target getTarget(final double x, final double y, final double z) {
+        return this.getTargetNodeAt(x, y, z);
     }
 
     @Override
-    public int getNeighbors(Node[] p_77483_, Node p_77484_) {
-        int i = 0;
-        Map<Direction, Node> map = Maps.newEnumMap(Direction.class);
+    public int getNeighbors(final Node[] neighbors, final Node pos) {
+        int count = 0;
+        Map<Direction, Node> nodes = Maps.newEnumMap(Direction.class);
 
         for (Direction direction : Direction.values()) {
-            Node node = this.findAcceptedNode(
-                p_77484_.x + direction.getStepX(), p_77484_.y + direction.getStepY(), p_77484_.z + direction.getStepZ()
-            );
-            map.put(direction, node);
+            Node node = this.findAcceptedNode(pos.x + direction.getStepX(), pos.y + direction.getStepY(), pos.z + direction.getStepZ());
+            nodes.put(direction, node);
             if (this.isNodeValid(node)) {
-                p_77483_[i++] = node;
+                neighbors[count++] = node;
             }
         }
 
-        for (Direction direction1 : Direction.Plane.HORIZONTAL) {
-            Direction direction2 = direction1.getClockWise();
-            if (hasMalus(map.get(direction1)) && hasMalus(map.get(direction2))) {
-                Node node1 = this.findAcceptedNode(
-                    p_77484_.x + direction1.getStepX() + direction2.getStepX(),
-                    p_77484_.y,
-                    p_77484_.z + direction1.getStepZ() + direction2.getStepZ()
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            Direction secondDirection = direction.getClockWise();
+            if (hasMalus(nodes.get(direction)) && hasMalus(nodes.get(secondDirection))) {
+                Node diagonalNode = this.findAcceptedNode(
+                    pos.x + direction.getStepX() + secondDirection.getStepX(), pos.y, pos.z + direction.getStepZ() + secondDirection.getStepZ()
                 );
-                if (this.isNodeValid(node1)) {
-                    p_77483_[i++] = node1;
+                if (this.isNodeValid(diagonalNode)) {
+                    neighbors[count++] = diagonalNode;
                 }
             }
         }
 
-        return i;
+        return count;
     }
 
-    protected boolean isNodeValid(@Nullable Node p_192962_) {
-        return p_192962_ != null && !p_192962_.closed;
+    protected boolean isNodeValid(final @Nullable Node node) {
+        return node != null && !node.closed;
     }
 
-    private static boolean hasMalus(@Nullable Node p_328144_) {
-        return p_328144_ != null && p_328144_.costMalus >= 0.0F;
+    private static boolean hasMalus(final @Nullable Node node) {
+        return node != null && node.costMalus >= 0.0F;
     }
 
-    protected @Nullable Node findAcceptedNode(int p_263032_, int p_263066_, int p_263105_) {
-        Node node = null;
-        PathType pathtype = this.getCachedBlockType(p_263032_, p_263066_, p_263105_);
-        if (this.allowBreaching && pathtype == PathType.BREACH || pathtype == PathType.WATER) {
-            float f = this.mob.getPathfindingMalus(pathtype);
-            if (f >= 0.0F) {
-                node = this.getNode(p_263032_, p_263066_, p_263105_);
-                node.type = pathtype;
-                node.costMalus = Math.max(node.costMalus, f);
-                if (this.currentContext.level().getFluidState(new BlockPos(p_263032_, p_263066_, p_263105_)).isEmpty()) {
-                    node.costMalus += 8.0F;
+    protected @Nullable Node findAcceptedNode(final int x, final int y, final int z) {
+        Node best = null;
+        PathType pathType = this.getCachedBlockType(x, y, z);
+        if (this.allowBreaching && pathType == PathType.BREACH || pathType == PathType.WATER) {
+            float pathCost = this.mob.getPathfindingMalus(pathType);
+            if (pathCost >= 0.0F) {
+                best = this.getNode(x, y, z);
+                best.type = pathType;
+                best.costMalus = Math.max(best.costMalus, pathCost);
+                if (this.currentContext.level().getFluidState(new BlockPos(x, y, z)).isEmpty()) {
+                    best.costMalus += 8.0F;
                 }
             }
         }
 
-        return node;
+        return best;
     }
 
-    protected PathType getCachedBlockType(int p_192968_, int p_192969_, int p_192970_) {
-        return this.pathTypesByPosCache
-            .computeIfAbsent(BlockPos.asLong(p_192968_, p_192969_, p_192970_), p_327515_ -> this.getPathType(this.currentContext, p_192968_, p_192969_, p_192970_));
-    }
-
-    @Override
-    public PathType getPathType(PathfindingContext p_333668_, int p_333001_, int p_328513_, int p_333109_) {
-        return this.getPathTypeOfMob(p_333668_, p_333001_, p_328513_, p_333109_, this.mob);
+    protected PathType getCachedBlockType(final int x, final int y, final int z) {
+        return this.pathTypesByPosCache.computeIfAbsent(BlockPos.asLong(x, y, z), k -> this.getPathType(this.currentContext, x, y, z));
     }
 
     @Override
-    public PathType getPathTypeOfMob(PathfindingContext p_327815_, int p_334955_, int p_333227_, int p_331057_, Mob p_333533_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public PathType getPathType(final PathfindingContext context, final int x, final int y, final int z) {
+        return this.getPathTypeOfMob(context, x, y, z, this.mob);
+    }
 
-        for (int i = p_334955_; i < p_334955_ + this.entityWidth; i++) {
-            for (int j = p_333227_; j < p_333227_ + this.entityHeight; j++) {
-                for (int k = p_331057_; k < p_331057_ + this.entityDepth; k++) {
-                    BlockState blockstate = p_327815_.getBlockState(blockpos$mutableblockpos.set(i, j, k));
-                    FluidState fluidstate = blockstate.getFluidState();
-                    if (fluidstate.isEmpty() && blockstate.isPathfindable(PathComputationType.WATER) && blockstate.isAir()) {
+    @Override
+    public PathType getPathTypeOfMob(final PathfindingContext context, final int x, final int y, final int z, final Mob mob) {
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+
+        for (int xx = x; xx < x + this.entityWidth; xx++) {
+            for (int yy = y; yy < y + this.entityHeight; yy++) {
+                for (int zz = z; zz < z + this.entityDepth; zz++) {
+                    BlockState blockState = context.getBlockState(pos.set(xx, yy, zz));
+                    FluidState fluidState = blockState.getFluidState();
+                    BlockState belowState = context.getBlockState(pos.below());
+                    if (fluidState.isEmpty() && belowState.isPathfindable(PathComputationType.WATER) && blockState.isAir()) {
                         return PathType.BREACH;
                     }
 
-                    if (!fluidstate.is(FluidTags.WATER)) {
+                    if (!fluidState.is(FluidTags.WATER)) {
                         return PathType.BLOCKED;
                     }
                 }
             }
         }
 
-        BlockState blockstate1 = p_327815_.getBlockState(blockpos$mutableblockpos);
-        return blockstate1.isPathfindable(PathComputationType.WATER) ? PathType.WATER : PathType.BLOCKED;
+        BlockState blockState = context.getBlockState(pos);
+        return blockState.isPathfindable(PathComputationType.WATER) ? PathType.WATER : PathType.BLOCKED;
     }
 }

@@ -1,10 +1,8 @@
 package net.minecraft.world.scores;
 
 import java.util.function.IntFunction;
-import net.minecraft.ChatFormatting;
 import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
-import org.jspecify.annotations.Nullable;
 
 public enum DisplaySlot implements StringRepresentable {
     LIST(0, "list"),
@@ -32,9 +30,9 @@ public enum DisplaySlot implements StringRepresentable {
     private final int id;
     private final String name;
 
-    private DisplaySlot(final int p_299274_, final String p_299536_) {
-        this.id = p_299274_;
-        this.name = p_299536_;
+    DisplaySlot(final int id, final String name) {
+        this.id = id;
+        this.name = name;
     }
 
     public int id() {
@@ -44,27 +42,5 @@ public enum DisplaySlot implements StringRepresentable {
     @Override
     public String getSerializedName() {
         return this.name;
-    }
-
-    public static @Nullable DisplaySlot teamColorToSlot(ChatFormatting p_298500_) {
-        return switch (p_298500_) {
-            case BLACK -> TEAM_BLACK;
-            case DARK_BLUE -> TEAM_DARK_BLUE;
-            case DARK_GREEN -> TEAM_DARK_GREEN;
-            case DARK_AQUA -> TEAM_DARK_AQUA;
-            case DARK_RED -> TEAM_DARK_RED;
-            case DARK_PURPLE -> TEAM_DARK_PURPLE;
-            case GOLD -> TEAM_GOLD;
-            case GRAY -> TEAM_GRAY;
-            case DARK_GRAY -> TEAM_DARK_GRAY;
-            case BLUE -> TEAM_BLUE;
-            case GREEN -> TEAM_GREEN;
-            case AQUA -> TEAM_AQUA;
-            case RED -> TEAM_RED;
-            case LIGHT_PURPLE -> TEAM_LIGHT_PURPLE;
-            case YELLOW -> TEAM_YELLOW;
-            case WHITE -> TEAM_WHITE;
-            case BOLD, ITALIC, UNDERLINE, RESET, OBFUSCATED, STRIKETHROUGH -> null;
-        };
     }
 }

@@ -1,40 +1,61 @@
 package net.minecraft.client.renderer.entity;
 
 import com.google.common.collect.Maps;
-import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.client.model.animal.cow.BabyCowModel;
 import net.minecraft.client.model.animal.cow.CowModel;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.layers.MushroomCowMushroomLayer;
 import net.minecraft.client.renderer.entity.state.MushroomCowRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.world.entity.animal.cow.MushroomCow;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class MushroomCowRenderer extends AgeableMobRenderer<MushroomCow, MushroomCowRenderState, CowModel> {
-    private static final Map<MushroomCow.Variant, Identifier> TEXTURES = Util.make(Maps.newHashMap(), p_448328_ -> {
-        p_448328_.put(MushroomCow.Variant.BROWN, Identifier.withDefaultNamespace("textures/entity/cow/brown_mooshroom.png"));
-        p_448328_.put(MushroomCow.Variant.RED, Identifier.withDefaultNamespace("textures/entity/cow/red_mooshroom.png"));
-    });
+    public static final BlockDisplayContext BLOCK_DISPLAY_CONTEXT = BlockDisplayContext.create();
+    private static final Map<MushroomCow.Variant, MushroomCowRenderer.MushroomCowTexture> TEXTURES = Util.make(
+        Maps.newHashMap(),
+        map -> {
+            map.put(
+                MushroomCow.Variant.BROWN,
+                new MushroomCowRenderer.MushroomCowTexture(
+                    Identifier.withDefaultNamespace("textures/entity/cow/mooshroom_brown.png"),
+                    Identifier.withDefaultNamespace("textures/entity/cow/mooshroom_brown_baby.png")
+                )
+            );
+            map.put(
+                MushroomCow.Variant.RED,
+                new MushroomCowRenderer.MushroomCowTexture(
+                    Identifier.withDefaultNamespace("textures/entity/cow/mooshroom_red.png"),
+                    Identifier.withDefaultNamespace("textures/entity/cow/mooshroom_red_baby.png")
+                )
+            );
+        }
+    );
+    private final BlockModelResolver blockModelResolver;
 
-    public MushroomCowRenderer(EntityRendererProvider.Context p_174324_) {
-        super(p_174324_, new CowModel(p_174324_.bakeLayer(ModelLayers.MOOSHROOM)), new CowModel(p_174324_.bakeLayer(ModelLayers.MOOSHROOM_BABY)), 0.7F);
-        this.addLayer(new MushroomCowMushroomLayer(this, p_174324_.getBlockRenderDispatcher()));
+    public MushroomCowRenderer(final EntityRendererProvider.Context context) {
+        super(context, new CowModel(context.bakeLayer(ModelLayers.MOOSHROOM)), new BabyCowModel(context.bakeLayer(ModelLayers.MOOSHROOM_BABY)), 0.7F);
+        this.blockModelResolver = context.getBlockModelResolver();
+        this.addLayer(new MushroomCowMushroomLayer(this));
     }
 
-    public Identifier getTextureLocation(MushroomCowRenderState p_365464_) {
-        return TEXTURES.get(p_365464_.variant);
+    public Identifier getTextureLocation(final MushroomCowRenderState state) {
+        return state.isBaby ? TEXTURES.get(state.variant).baby : TEXTURES.get(state.variant).adult;
     }
 
     public MushroomCowRenderState createRenderState() {
         return new MushroomCowRenderState();
     }
 
-    public void extractRenderState(MushroomCow p_458883_, MushroomCowRenderState p_366405_, float p_362405_) {
-        super.extractRenderState(p_458883_, p_366405_, p_362405_);
-        p_366405_.variant = p_458883_.getVariant();
+    public void extractRenderState(final MushroomCow entity, final MushroomCowRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.variant = entity.getVariant();
+        this.blockModelResolver.update(state.mushroomModel, state.variant.getBlockState(), BLOCK_DISPLAY_CONTEXT);
+    }
+
+        private record MushroomCowTexture(Identifier adult, Identifier baby) {
     }
 }

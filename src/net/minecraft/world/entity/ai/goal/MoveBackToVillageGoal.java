@@ -13,25 +13,25 @@ public class MoveBackToVillageGoal extends RandomStrollGoal {
     private static final int MAX_XZ_DIST = 10;
     private static final int MAX_Y_DIST = 7;
 
-    public MoveBackToVillageGoal(PathfinderMob p_25568_, double p_25569_, boolean p_25570_) {
-        super(p_25568_, p_25569_, 10, p_25570_);
+    public MoveBackToVillageGoal(final PathfinderMob mob, final double speedModifier, final boolean checkNoActionTime) {
+        super(mob, speedModifier, 10, checkNoActionTime);
     }
 
     @Override
     public boolean canUse() {
-        ServerLevel serverlevel = (ServerLevel)this.mob.level();
-        BlockPos blockpos = this.mob.blockPosition();
-        return serverlevel.isVillage(blockpos) ? false : super.canUse();
+        ServerLevel level = (ServerLevel)this.mob.level();
+        BlockPos pos = this.mob.blockPosition();
+        return level.isVillage(pos) ? false : super.canUse();
     }
 
     @Override
     protected @Nullable Vec3 getPosition() {
-        ServerLevel serverlevel = (ServerLevel)this.mob.level();
-        BlockPos blockpos = this.mob.blockPosition();
-        SectionPos sectionpos = SectionPos.of(blockpos);
-        SectionPos sectionpos1 = BehaviorUtils.findSectionClosestToVillage(serverlevel, sectionpos, 2);
-        return sectionpos1 != sectionpos
-            ? DefaultRandomPos.getPosTowards(this.mob, 10, 7, Vec3.atBottomCenterOf(sectionpos1.center()), (float) (Math.PI / 2))
+        ServerLevel level = (ServerLevel)this.mob.level();
+        BlockPos pos = this.mob.blockPosition();
+        SectionPos sectionPos = SectionPos.of(pos);
+        SectionPos optimalSectionPos = BehaviorUtils.findSectionClosestToVillage(level, sectionPos, 2);
+        return optimalSectionPos != sectionPos
+            ? DefaultRandomPos.getPosTowards(this.mob, 10, 7, Vec3.atBottomCenterOf(optimalSectionPos.center()), (float) (Math.PI / 2))
             : null;
     }
 }

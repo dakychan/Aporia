@@ -1,312 +1,365 @@
 package net.minecraft.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.Model;
-import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.block.BlockModelRenderState;
 import net.minecraft.client.renderer.block.MovingBlockRenderState;
-import net.minecraft.client.renderer.block.model.BakedQuad;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.feature.BlockModelFeatureRenderer;
 import net.minecraft.client.renderer.feature.CustomFeatureRenderer;
+import net.minecraft.client.renderer.feature.FlameFeatureRenderer;
+import net.minecraft.client.renderer.feature.GizmoFeatureRenderer;
+import net.minecraft.client.renderer.feature.ItemFeatureRenderer;
+import net.minecraft.client.renderer.feature.LeashFeatureRenderer;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.feature.ModelPartFeatureRenderer;
+import net.minecraft.client.renderer.feature.MovingBlockFeatureRenderer;
 import net.minecraft.client.renderer.feature.NameTagFeatureRenderer;
+import net.minecraft.client.renderer.feature.QuadParticleFeatureRenderer;
+import net.minecraft.client.renderer.feature.ShadowFeatureRenderer;
+import net.minecraft.client.renderer.feature.ShapeOutlineFeatureRenderer;
+import net.minecraft.client.renderer.feature.TextFeatureRenderer;
+import net.minecraft.client.renderer.feature.phase.FeatureRenderPhase;
+import net.minecraft.client.renderer.feature.phase.SimpleFeatureRenderPhase;
+import net.minecraft.client.renderer.feature.phase.TranslucentFeatureRenderPhase;
+import net.minecraft.client.renderer.gizmos.DrawableGizmoPrimitives;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.resources.model.ModelBakery;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.ARGB;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class SubmitNodeCollection implements OrderedSubmitNodeCollector {
-    private final List<SubmitNodeStorage.ShadowSubmit> shadowSubmits = new ArrayList<>();
-    private final List<SubmitNodeStorage.FlameSubmit> flameSubmits = new ArrayList<>();
-    private final NameTagFeatureRenderer.Storage nameTagSubmits = new NameTagFeatureRenderer.Storage();
-    private final List<SubmitNodeStorage.TextSubmit> textSubmits = new ArrayList<>();
-    private final List<SubmitNodeStorage.LeashSubmit> leashSubmits = new ArrayList<>();
-    private final List<SubmitNodeStorage.BlockSubmit> blockSubmits = new ArrayList<>();
-    private final List<SubmitNodeStorage.MovingBlockSubmit> movingBlockSubmits = new ArrayList<>();
-    private final List<SubmitNodeStorage.BlockModelSubmit> blockModelSubmits = new ArrayList<>();
-    private final List<SubmitNodeStorage.ItemSubmit> itemSubmits = new ArrayList<>();
-    private final List<SubmitNodeCollector.ParticleGroupRenderer> particleGroupRenderers = new ArrayList<>();
-    private final ModelFeatureRenderer.Storage modelSubmits = new ModelFeatureRenderer.Storage();
-    private final ModelPartFeatureRenderer.Storage modelPartSubmits = new ModelPartFeatureRenderer.Storage();
-    private final CustomFeatureRenderer.Storage customGeometrySubmits = new CustomFeatureRenderer.Storage();
-    private final SubmitNodeStorage submitNodeStorage;
-    private boolean wasUsed = false;
-
-    public SubmitNodeCollection(SubmitNodeStorage p_430945_) {
-        this.submitNodeStorage = p_430945_;
-    }
+    public final SimpleFeatureRenderPhase solid = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase shadows = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase nameTags = new SimpleFeatureRenderPhase();
+    public final TranslucentFeatureRenderPhase seeThroughNameTags = new TranslucentFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase texts = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase shapeOutlines = new SimpleFeatureRenderPhase();
+    public final TranslucentFeatureRenderPhase translucentBlocksAndItems = new TranslucentFeatureRenderPhase();
+    public final TranslucentFeatureRenderPhase translucentModels = new TranslucentFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase translucentCustomGeometry = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase gizmos = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase breakingOverlay = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase waterMask = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase afterTerrain = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase alwaysOnTop = new SimpleFeatureRenderPhase();
+    public final SimpleFeatureRenderPhase outline = new SimpleFeatureRenderPhase();
+    private final List<FeatureRenderPhase<?>> allPhases = List.of(
+        this.solid,
+        this.shadows,
+        this.nameTags,
+        this.seeThroughNameTags,
+        this.texts,
+        this.shapeOutlines,
+        this.translucentBlocksAndItems,
+        this.translucentModels,
+        this.translucentCustomGeometry,
+        this.gizmos,
+        this.breakingOverlay,
+        this.waterMask,
+        this.afterTerrain,
+        this.alwaysOnTop,
+        this.outline
+    );
 
     @Override
-    public void submitShadow(PoseStack p_429767_, float p_422683_, List<EntityRenderState.ShadowPiece> p_426531_) {
-        this.wasUsed = true;
-        PoseStack.Pose posestack$pose = p_429767_.last();
-        this.shadowSubmits.add(new SubmitNodeStorage.ShadowSubmit(new Matrix4f(posestack$pose.pose()), p_422683_, p_426531_));
+    public void submitShadow(final PoseStack poseStack, final float radius, final List<EntityRenderState.ShadowPiece> pieces) {
+        PoseStack.Pose pose = poseStack.last();
+        this.shadows.submit(new ShadowFeatureRenderer.Submit(new Matrix4f(pose.pose()), radius, pieces));
     }
 
     @Override
     public void submitNameTag(
-        PoseStack p_424812_,
-        @Nullable Vec3 p_430465_,
-        int p_430931_,
-        Component p_427694_,
-        boolean p_429006_,
-        int p_426243_,
-        double p_426713_,
-        CameraRenderState p_427678_
+        final PoseStack poseStack,
+        final @Nullable Vec3 nameTagAttachment,
+        final int offset,
+        final Component name,
+        final boolean seeThrough,
+        final int lightCoords,
+        final CameraRenderState camera
     ) {
-        this.wasUsed = true;
-        this.nameTagSubmits.add(p_424812_, p_430465_, p_430931_, p_427694_, p_429006_, p_426243_, p_426713_, p_427678_);
+        if (nameTagAttachment != null) {
+            Minecraft minecraft = Minecraft.getInstance();
+            poseStack.pushPose();
+            poseStack.translate(nameTagAttachment.x, nameTagAttachment.y + 0.5, nameTagAttachment.z);
+            poseStack.mulPose(camera.orientation);
+            poseStack.scale(0.025F, -0.025F, 0.025F);
+            Matrix4f pose = new Matrix4f(poseStack.last().pose());
+            float x = -minecraft.font.width(name) / 2.0F;
+            int backgroundColor = ARGB.color(minecraft.gameRenderer.gameRenderState().optionsRenderState.getBackgroundOpacity(0.25F), -16777216);
+            if (seeThrough) {
+                this.nameTags
+                    .submit(
+                        new NameTagFeatureRenderer.Submit(
+                            pose, x, offset, name, LightCoordsUtil.lightCoordsWithEmission(lightCoords, 2), -1, 0, Font.DisplayMode.NORMAL
+                        )
+                    );
+                this.seeThroughNameTags
+                    .submit(new NameTagFeatureRenderer.Submit(pose, x, offset, name, lightCoords, -2130706433, backgroundColor, Font.DisplayMode.SEE_THROUGH));
+            } else {
+                this.nameTags
+                    .submit(new NameTagFeatureRenderer.Submit(pose, x, offset, name, lightCoords, -2130706433, backgroundColor, Font.DisplayMode.NORMAL));
+            }
+
+            poseStack.popPose();
+        }
     }
 
     @Override
     public void submitText(
-        PoseStack p_428541_,
-        float p_428691_,
-        float p_425752_,
-        FormattedCharSequence p_430334_,
-        boolean p_422404_,
-        Font.DisplayMode p_424005_,
-        int p_429126_,
-        int p_426500_,
-        int p_423149_,
-        int p_427742_
+        final PoseStack poseStack,
+        final float x,
+        final float y,
+        final FormattedCharSequence string,
+        final boolean dropShadow,
+        final Font.DisplayMode displayMode,
+        final int lightCoords,
+        final int color,
+        final int backgroundColor,
+        final int outlineColor
     ) {
-        this.wasUsed = true;
-        this.textSubmits
-            .add(
-                new SubmitNodeStorage.TextSubmit(
-                    new Matrix4f(p_428541_.last().pose()),
-                    p_428691_,
-                    p_425752_,
-                    p_430334_,
-                    p_422404_,
-                    p_424005_,
-                    p_429126_,
-                    p_426500_,
-                    p_423149_,
-                    p_427742_
+        this.texts
+            .submit(
+                new TextFeatureRenderer.Submit(
+                    new Matrix4f(poseStack.last().pose()), x, y, string, dropShadow, displayMode, lightCoords, color, backgroundColor, outlineColor
                 )
             );
     }
 
     @Override
-    public void submitFlame(PoseStack p_426622_, EntityRenderState p_428524_, Quaternionf p_429669_) {
-        this.wasUsed = true;
-        this.flameSubmits.add(new SubmitNodeStorage.FlameSubmit(p_426622_.last().copy(), p_428524_, p_429669_));
+    public void submitFlame(final PoseStack poseStack, final EntityRenderState renderState, final Quaternionf rotation) {
+        this.solid.submit(new FlameFeatureRenderer.Submit(poseStack.last().copy(), renderState, rotation));
     }
 
     @Override
-    public void submitLeash(PoseStack p_422891_, EntityRenderState.LeashState p_425552_) {
-        this.wasUsed = true;
-        this.leashSubmits.add(new SubmitNodeStorage.LeashSubmit(new Matrix4f(p_422891_.last().pose()), p_425552_));
+    public void submitLeash(final PoseStack poseStack, final EntityRenderState.LeashState leashState) {
+        this.solid.submit(new LeashFeatureRenderer.Submit(new Matrix4f(poseStack.last().pose()), leashState));
     }
 
     @Override
     public <S> void submitModel(
-        Model<? super S> p_427484_,
-        S p_422625_,
-        PoseStack p_424450_,
-        RenderType p_452018_,
-        int p_426738_,
-        int p_424372_,
-        int p_423869_,
-        @Nullable TextureAtlasSprite p_423183_,
-        int p_426567_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_424580_
+        final Model<? super S> model,
+        final S state,
+        final PoseStack poseStack,
+        final RenderType renderType,
+        final int lightCoords,
+        final int overlayCoords,
+        final int tintedColor,
+        final @Nullable TextureAtlasSprite sprite,
+        final int outlineColor,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay crumblingOverlay
     ) {
-        this.wasUsed = true;
-        SubmitNodeStorage.ModelSubmit<S> modelsubmit = new SubmitNodeStorage.ModelSubmit<>(
-            p_424450_.last().copy(), p_427484_, p_422625_, p_426738_, p_424372_, p_423869_, p_423183_, p_426567_, p_424580_
-        );
-        this.modelSubmits.add(p_452018_, modelsubmit);
-    }
-
-    @Override
-    public void submitModelPart(
-        ModelPart p_424958_,
-        PoseStack p_427414_,
-        RenderType p_460361_,
-        int p_428290_,
-        int p_426659_,
-        @Nullable TextureAtlasSprite p_430957_,
-        boolean p_423376_,
-        boolean p_422462_,
-        int p_425817_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_430912_,
-        int p_431872_
-    ) {
-        this.wasUsed = true;
-        this.modelPartSubmits
-            .add(
-                p_460361_,
-                new SubmitNodeStorage.ModelPartSubmit(
-                    p_427414_.last().copy(), p_424958_, p_428290_, p_426659_, p_430957_, p_423376_, p_422462_, p_425817_, p_430912_, p_431872_
-                )
+        PoseStack.Pose pose = poseStack.last().copy();
+        if (!renderType.isOutline()) {
+            ModelFeatureRenderer.Submit<S> submit = new ModelFeatureRenderer.Submit<>(
+                renderType, pose, model, state, lightCoords, overlayCoords, tintedColor, sprite, null
             );
+            if (renderType == RenderTypes.waterMask()) {
+                this.waterMask.submit(submit);
+            } else if (renderType.hasBlending()) {
+                this.translucentModels.submit(submit);
+            } else {
+                this.solid.submit(submit);
+            }
+        }
+
+        if (outlineColor != 0) {
+            RenderType outlineRenderType = getOutlineRenderType(renderType);
+            if (outlineRenderType != null) {
+                this.outline
+                    .submit(
+                        new ModelFeatureRenderer.Submit<>(
+                            outlineRenderType, pose, model, state, 15728880, OverlayTexture.NO_OVERLAY, outlineColor, sprite, null
+                        )
+                    );
+            }
+        }
+
+        if (crumblingOverlay != null && renderType.affectsCrumbling()) {
+            RenderType crumblingRenderType = ModelBakery.DESTROY_TYPES.get(crumblingOverlay.progress());
+            this.breakingOverlay
+                .submit(
+                    new ModelFeatureRenderer.Submit<>(
+                        crumblingRenderType, pose, model, state, lightCoords, overlayCoords, tintedColor, null, crumblingOverlay.cameraPose()
+                    )
+                );
+        }
     }
 
     @Override
-    public void submitBlock(PoseStack p_431098_, BlockState p_427916_, int p_424531_, int p_423181_, int p_423712_) {
-        this.wasUsed = true;
-        this.blockSubmits.add(new SubmitNodeStorage.BlockSubmit(p_431098_.last().copy(), p_427916_, p_424531_, p_423181_, p_423712_));
-        Minecraft.getInstance()
-            .getModelManager()
-            .specialBlockModelRenderer()
-            .renderByBlock(p_427916_.getBlock(), ItemDisplayContext.NONE, p_431098_, this.submitNodeStorage, p_424531_, p_423181_, p_423712_);
-    }
+    public void submitMovingBlock(final PoseStack poseStack, final MovingBlockRenderState movingBlockRenderState, final int outlineColor) {
+        MovingBlockFeatureRenderer.Submit submit = new MovingBlockFeatureRenderer.Submit(new Matrix4f(poseStack.last().pose()), movingBlockRenderState, 0);
+        BlockStateModel model = Minecraft.getInstance().getModelManager().getBlockStateModelSet().get(movingBlockRenderState.blockState);
+        if (model.hasMaterialFlag(1)) {
+            this.translucentBlocksAndItems.submit(submit);
+        } else {
+            this.solid.submit(submit);
+        }
 
-    @Override
-    public void submitMovingBlock(PoseStack p_426301_, MovingBlockRenderState p_423997_) {
-        this.wasUsed = true;
-        this.movingBlockSubmits.add(new SubmitNodeStorage.MovingBlockSubmit(new Matrix4f(p_426301_.last().pose()), p_423997_));
+        if (outlineColor != 0) {
+            this.outline.submit(new MovingBlockFeatureRenderer.Submit(new Matrix4f(poseStack.last().pose()), movingBlockRenderState, outlineColor));
+        }
     }
 
     @Override
     public void submitBlockModel(
-        PoseStack p_426724_,
-        RenderType p_457003_,
-        BlockStateModel p_430042_,
-        float p_426641_,
-        float p_429457_,
-        float p_423466_,
-        int p_422478_,
-        int p_423902_,
-        int p_424810_
+        final PoseStack poseStack,
+        final RenderType renderType,
+        final List<BlockStateModelPart> modelParts,
+        final int[] tintLayers,
+        final int lightCoords,
+        final int overlayCoords,
+        final int outlineColor
     ) {
-        this.wasUsed = true;
-        this.blockModelSubmits
-            .add(
-                new SubmitNodeStorage.BlockModelSubmit(
-                    p_426724_.last().copy(), p_457003_, p_430042_, p_426641_, p_429457_, p_423466_, p_422478_, p_423902_, p_424810_
+        PoseStack.Pose pose = poseStack.last().copy();
+        if (!renderType.isOutline()) {
+            BlockModelFeatureRenderer.Submit submit = new BlockModelFeatureRenderer.Submit(
+                pose, renderType, modelParts, tintLayers, lightCoords, overlayCoords, -1, null
+            );
+            if (renderType.hasBlending()) {
+                this.translucentBlocksAndItems.submit(submit);
+            } else {
+                this.solid.submit(submit);
+            }
+        }
+
+        if (outlineColor != 0) {
+            RenderType outlineRenderType = getOutlineRenderType(renderType);
+            if (outlineRenderType != null) {
+                this.outline
+                    .submit(
+                        new BlockModelFeatureRenderer.Submit(
+                            pose, outlineRenderType, modelParts, BlockModelRenderState.EMPTY_TINTS, 15728880, OverlayTexture.NO_OVERLAY, outlineColor, null
+                        )
+                    );
+            }
+        }
+    }
+
+    private static @Nullable RenderType getOutlineRenderType(final RenderType renderType) {
+        if (renderType.isOutline()) {
+            return renderType;
+        } else {
+            return renderType.outline().isPresent() ? renderType.outline().get() : null;
+        }
+    }
+
+    @Override
+    public void submitBreakingBlockModel(final PoseStack poseStack, final List<BlockStateModelPart> parts, final int progress) {
+        PoseStack.Pose pose = poseStack.last().copy();
+        this.breakingOverlay
+            .submit(
+                new BlockModelFeatureRenderer.Submit(
+                    pose,
+                    ModelBakery.DESTROY_TYPES.get(progress),
+                    List.copyOf(parts),
+                    BlockModelRenderState.EMPTY_TINTS,
+                    15728880,
+                    OverlayTexture.NO_OVERLAY,
+                    0,
+                    pose
                 )
             );
+    }
+
+    @Override
+    public void submitShapeOutline(
+        final PoseStack poseStack, final VoxelShape shape, final RenderType renderType, final int color, final float width, final boolean afterTerrain
+    ) {
+        ShapeOutlineFeatureRenderer.Submit submit = new ShapeOutlineFeatureRenderer.Submit(poseStack.last().copy(), shape, renderType, color, width);
+        if (afterTerrain) {
+            this.afterTerrain.submit(submit);
+        } else {
+            this.shapeOutlines.submit(submit);
+        }
     }
 
     @Override
     public void submitItem(
-        PoseStack p_427089_,
-        ItemDisplayContext p_422921_,
-        int p_425776_,
-        int p_428806_,
-        int p_431657_,
-        int[] p_426729_,
-        List<BakedQuad> p_425892_,
-        RenderType p_452253_,
-        ItemStackRenderState.FoilType p_428652_
+        final PoseStack poseStack,
+        final ItemDisplayContext displayContext,
+        final int lightCoords,
+        final int overlayCoords,
+        final int outlineColor,
+        final int[] tintLayers,
+        final List<BakedQuad> quads,
+        final ItemStackRenderState.FoilType foilType
     ) {
-        this.wasUsed = true;
-        this.itemSubmits
-            .add(
-                new SubmitNodeStorage.ItemSubmit(
-                    p_427089_.last().copy(), p_422921_, p_425776_, p_428806_, p_431657_, p_426729_, p_425892_, p_452253_, p_428652_
-                )
-            );
+        PoseStack.Pose pose = poseStack.last().copy();
+        ItemFeatureRenderer.Submit submit = new ItemFeatureRenderer.Submit(pose, displayContext, lightCoords, overlayCoords, 0, tintLayers, quads, foilType);
+        if (submit.hasTranslucency()) {
+            this.translucentBlocksAndItems.submit(submit);
+        } else {
+            this.solid.submit(submit);
+        }
+
+        if (outlineColor != 0) {
+            this.outline
+                .submit(
+                    new ItemFeatureRenderer.Submit(
+                        pose,
+                        displayContext,
+                        15728880,
+                        OverlayTexture.NO_OVERLAY,
+                        outlineColor,
+                        ItemStackRenderState.LayerRenderState.EMPTY_TINTS,
+                        quads,
+                        ItemStackRenderState.FoilType.NONE
+                    )
+                );
+        }
     }
 
     @Override
-    public void submitCustomGeometry(PoseStack p_431589_, RenderType p_450823_, SubmitNodeCollector.CustomGeometryRenderer p_431193_) {
-        this.wasUsed = true;
-        this.customGeometrySubmits.add(p_431589_, p_450823_, p_431193_);
+    public void submitCustomGeometry(
+        final PoseStack poseStack, final RenderType renderType, final SubmitNodeCollector.CustomGeometryRenderer customGeometryRenderer
+    ) {
+        CustomFeatureRenderer.Submit submit = new CustomFeatureRenderer.Submit(poseStack.last().copy(), renderType, customGeometryRenderer);
+        if (renderType.isOutline()) {
+            this.outline.submit(submit);
+        } else if (renderType.hasBlending()) {
+            this.translucentCustomGeometry.submit(submit);
+        } else {
+            this.solid.submit(submit);
+        }
     }
 
     @Override
-    public void submitParticleGroup(SubmitNodeCollector.ParticleGroupRenderer p_430700_) {
-        this.wasUsed = true;
-        this.particleGroupRenderers.add(p_430700_);
+    public void submitQuadParticleGroup(final QuadParticleRenderState particles) {
+        this.solid.submit(new QuadParticleFeatureRenderer.Submit(particles, false));
+        this.afterTerrain.submit(new QuadParticleFeatureRenderer.Submit(particles, true));
     }
 
-    public List<SubmitNodeStorage.ShadowSubmit> getShadowSubmits() {
-        return this.shadowSubmits;
+    @Override
+    public void submitGizmoPrimitives(final DrawableGizmoPrimitives.Group group, final CameraRenderState camera, final boolean onTop) {
+        GizmoFeatureRenderer.Submit submit = new GizmoFeatureRenderer.Submit(group, camera);
+        if (onTop) {
+            this.alwaysOnTop.submit(submit);
+        } else {
+            this.gizmos.submit(submit);
+        }
     }
 
-    public List<SubmitNodeStorage.FlameSubmit> getFlameSubmits() {
-        return this.flameSubmits;
-    }
-
-    public NameTagFeatureRenderer.Storage getNameTagSubmits() {
-        return this.nameTagSubmits;
-    }
-
-    public List<SubmitNodeStorage.TextSubmit> getTextSubmits() {
-        return this.textSubmits;
-    }
-
-    public List<SubmitNodeStorage.LeashSubmit> getLeashSubmits() {
-        return this.leashSubmits;
-    }
-
-    public List<SubmitNodeStorage.BlockSubmit> getBlockSubmits() {
-        return this.blockSubmits;
-    }
-
-    public List<SubmitNodeStorage.MovingBlockSubmit> getMovingBlockSubmits() {
-        return this.movingBlockSubmits;
-    }
-
-    public List<SubmitNodeStorage.BlockModelSubmit> getBlockModelSubmits() {
-        return this.blockModelSubmits;
-    }
-
-    public ModelPartFeatureRenderer.Storage getModelPartSubmits() {
-        return this.modelPartSubmits;
-    }
-
-    public List<SubmitNodeStorage.ItemSubmit> getItemSubmits() {
-        return this.itemSubmits;
-    }
-
-    public List<SubmitNodeCollector.ParticleGroupRenderer> getParticleGroupRenderers() {
-        return this.particleGroupRenderers;
-    }
-
-    public ModelFeatureRenderer.Storage getModelSubmits() {
-        return this.modelSubmits;
-    }
-
-    public CustomFeatureRenderer.Storage getCustomGeometrySubmits() {
-        return this.customGeometrySubmits;
-    }
-
-    public boolean wasUsed() {
-        return this.wasUsed;
-    }
-
-    public void clear() {
-        this.shadowSubmits.clear();
-        this.flameSubmits.clear();
-        this.nameTagSubmits.clear();
-        this.textSubmits.clear();
-        this.leashSubmits.clear();
-        this.blockSubmits.clear();
-        this.movingBlockSubmits.clear();
-        this.blockModelSubmits.clear();
-        this.itemSubmits.clear();
-        this.particleGroupRenderers.clear();
-        this.modelSubmits.clear();
-        this.customGeometrySubmits.clear();
-        this.modelPartSubmits.clear();
-    }
-
-    public void endFrame() {
-        this.modelSubmits.endFrame();
-        this.modelPartSubmits.endFrame();
-        this.customGeometrySubmits.endFrame();
-        this.wasUsed = false;
+    public List<FeatureRenderPhase<?>> allPhases() {
+        return this.allPhases;
     }
 }

@@ -1,18 +1,13 @@
 package net.minecraft.client.gui.screens.dialog;
 
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class WaitingForResponseScreen extends Screen {
     private static final Component TITLE = Component.translatable("gui.waitingForResponse.title");
     private static final Component[] BUTTON_LABELS = new Component[]{
@@ -30,11 +25,11 @@ public class WaitingForResponseScreen extends Screen {
     private final Button closeButton;
     private int ticks;
 
-    public WaitingForResponseScreen(@Nullable Screen p_408605_) {
+    public WaitingForResponseScreen(final @Nullable Screen nextScreen) {
         super(TITLE);
-        this.previousScreen = p_408605_;
+        this.previousScreen = nextScreen;
         this.layout = new HeaderAndFooterLayout(this, 33, 0);
-        this.closeButton = Button.builder(CommonComponents.GUI_BACK, p_408052_ -> this.onClose()).width(200).build();
+        this.closeButton = Button.builder(CommonComponents.GUI_BACK, button -> this.onClose()).width(200).build();
     }
 
     @Override
@@ -44,9 +39,7 @@ public class WaitingForResponseScreen extends Screen {
         this.layout.addToContents(this.closeButton);
         this.closeButton.visible = false;
         this.closeButton.active = false;
-        this.layout.visitWidgets(p_410294_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_410294_);
-        });
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
     }
 
@@ -60,10 +53,10 @@ public class WaitingForResponseScreen extends Screen {
     public void tick() {
         super.tick();
         if (!this.closeButton.active) {
-            int i = this.ticks++ / 20;
-            this.closeButton.visible = i >= 1;
-            this.closeButton.setMessage(BUTTON_LABELS[i]);
-            if (i == 5) {
+            int secondsVisible = this.ticks++ / 20;
+            this.closeButton.visible = secondsVisible >= 1;
+            this.closeButton.setMessage(BUTTON_LABELS[secondsVisible]);
+            if (secondsVisible == 5) {
                 this.closeButton.active = true;
                 this.triggerImmediateNarration(true);
             }
@@ -82,7 +75,7 @@ public class WaitingForResponseScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.previousScreen);
+        this.minecraft.gui.setScreen(this.previousScreen);
     }
 
     public @Nullable Screen previousScreen() {

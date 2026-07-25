@@ -3,24 +3,18 @@ package net.minecraft.client.gui.render.pip;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.render.state.pip.GuiBannerResultRenderState;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.SubmitNodeStorage;
+import net.minecraft.client.renderer.Sheets;
+import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.BannerRenderer;
-import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
+import net.minecraft.client.renderer.state.gui.pip.GuiBannerResultRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.MaterialSet;
-import net.minecraft.client.resources.model.ModelBakery;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
 
-@OnlyIn(Dist.CLIENT)
 public class GuiBannerResultRenderer extends PictureInPictureRenderer<GuiBannerResultRenderState> {
-    private final MaterialSet materials;
+    private final SpriteGetter sprites;
 
-    public GuiBannerResultRenderer(MultiBufferSource.BufferSource p_410401_, MaterialSet p_424745_) {
-        super(p_410401_);
-        this.materials = p_424745_;
+    public GuiBannerResultRenderer(final SpriteGetter sprites) {
+        this.sprites = sprites;
     }
 
     @Override
@@ -28,28 +22,23 @@ public class GuiBannerResultRenderer extends PictureInPictureRenderer<GuiBannerR
         return GuiBannerResultRenderState.class;
     }
 
-    protected void renderToTexture(GuiBannerResultRenderState p_407898_, PoseStack p_406360_) {
-        Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
-        p_406360_.translate(0.0F, 0.25F, 0.0F);
-        FeatureRenderDispatcher featurerenderdispatcher = Minecraft.getInstance().gameRenderer.getFeatureRenderDispatcher();
-        SubmitNodeStorage submitnodestorage = featurerenderdispatcher.getSubmitNodeStorage();
+    protected void renderToTexture(final GuiBannerResultRenderState renderState, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector) {
+        Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_FLAT);
+        poseStack.translate(0.0F, 0.25F, 0.0F);
+        submitNodeCollector.submitModel(renderState.flag(), 0.0F, poseStack, 15728880, OverlayTexture.NO_OVERLAY, -1, Sheets.BANNER_BASE, this.sprites, 0, null);
         BannerRenderer.submitPatterns(
-            this.materials,
-            p_406360_,
-            submitnodestorage,
+            this.sprites,
+            poseStack,
+            submitNodeCollector,
             15728880,
             OverlayTexture.NO_OVERLAY,
-            p_407898_.flag(),
+            renderState.flag(),
             0.0F,
-            ModelBakery.BANNER_BASE,
             true,
-            p_407898_.baseColor(),
-            p_407898_.resultBannerPatterns(),
-            false,
-            null,
-            0
+            renderState.baseColor(),
+            renderState.resultBannerPatterns(),
+            null
         );
-        featurerenderdispatcher.renderAllFeatures();
     }
 
     @Override

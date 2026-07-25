@@ -22,20 +22,20 @@ import net.minecraft.world.level.Level;
 
 public class DimensionArgument implements ArgumentType<Identifier> {
     private static final Collection<String> EXAMPLES = Stream.of(Level.OVERWORLD, Level.NETHER)
-        .map(p_448480_ -> p_448480_.identifier().toString())
+        .map(key -> key.identifier().toString())
         .collect(Collectors.toList());
     private static final DynamicCommandExceptionType ERROR_INVALID_VALUE = new DynamicCommandExceptionType(
-        p_308347_ -> Component.translatableEscape("argument.dimension.invalid", p_308347_)
+        value -> Component.translatableEscape("argument.dimension.invalid", value)
     );
 
-    public Identifier parse(StringReader p_88807_) throws CommandSyntaxException {
-        return Identifier.read(p_88807_);
+    public Identifier parse(final StringReader reader) throws CommandSyntaxException {
+        return Identifier.read(reader);
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_88817_, SuggestionsBuilder p_88818_) {
-        return p_88817_.getSource() instanceof SharedSuggestionProvider
-            ? SharedSuggestionProvider.suggestResource(((SharedSuggestionProvider)p_88817_.getSource()).levels().stream().map(ResourceKey::identifier), p_88818_)
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return context.getSource() instanceof SharedSuggestionProvider
+            ? SharedSuggestionProvider.suggestResource(((SharedSuggestionProvider)context.getSource()).levels().stream().map(ResourceKey::identifier), builder)
             : Suggestions.empty();
     }
 
@@ -48,14 +48,14 @@ public class DimensionArgument implements ArgumentType<Identifier> {
         return new DimensionArgument();
     }
 
-    public static ServerLevel getDimension(CommandContext<CommandSourceStack> p_88809_, String p_88810_) throws CommandSyntaxException {
-        Identifier identifier = p_88809_.getArgument(p_88810_, Identifier.class);
-        ResourceKey<Level> resourcekey = ResourceKey.create(Registries.DIMENSION, identifier);
-        ServerLevel serverlevel = p_88809_.getSource().getServer().getLevel(resourcekey);
-        if (serverlevel == null) {
-            throw ERROR_INVALID_VALUE.create(identifier);
+    public static ServerLevel getDimension(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        Identifier location = context.getArgument(name, Identifier.class);
+        ResourceKey<Level> key = ResourceKey.create(Registries.DIMENSION, location);
+        ServerLevel level = context.getSource().getServer().getLevel(key);
+        if (level == null) {
+            throw ERROR_INVALID_VALUE.create(location);
         } else {
-            return serverlevel;
+            return level;
         }
     }
 }

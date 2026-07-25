@@ -7,52 +7,50 @@ import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.phys.AABB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class Octree {
     private final Octree.Branch root;
-    final BlockPos cameraSectionCenter;
+    private final BlockPos cameraSectionCenter;
 
-    public Octree(SectionPos p_370029_, int p_366086_, int p_369498_, int p_361013_) {
-        int i = p_366086_ * 2 + 1;
-        int j = Mth.smallestEncompassingPowerOfTwo(i);
-        int k = p_366086_ * 16;
-        BlockPos blockpos = p_370029_.origin();
-        this.cameraSectionCenter = p_370029_.center();
-        int l = blockpos.getX() - k;
-        int i1 = l + j * 16 - 1;
-        int j1 = j >= p_369498_ ? p_361013_ : blockpos.getY() - k;
-        int k1 = j1 + j * 16 - 1;
-        int l1 = blockpos.getZ() - k;
-        int i2 = l1 + j * 16 - 1;
-        this.root = new Octree.Branch(new BoundingBox(l, j1, l1, i1, k1, i2));
+    public Octree(final SectionPos cameraSection, final int renderDistance, final int sectionsPerChunk, final int minBlockY) {
+        int visibleAreaDiameterInSections = renderDistance * 2 + 1;
+        int boundingBoxSizeInSections = Mth.smallestEncompassingPowerOfTwo(visibleAreaDiameterInSections);
+        int distanceToBBEdgeInBlocks = renderDistance * 16;
+        BlockPos cameraSectionOrigin = cameraSection.origin();
+        this.cameraSectionCenter = cameraSection.center();
+        int minX = cameraSectionOrigin.getX() - distanceToBBEdgeInBlocks;
+        int maxX = minX + boundingBoxSizeInSections * 16 - 1;
+        int minY = boundingBoxSizeInSections >= sectionsPerChunk ? minBlockY : cameraSectionOrigin.getY() - distanceToBBEdgeInBlocks;
+        int maxY = minY + boundingBoxSizeInSections * 16 - 1;
+        int minZ = cameraSectionOrigin.getZ() - distanceToBBEdgeInBlocks;
+        int maxZ = minZ + boundingBoxSizeInSections * 16 - 1;
+        this.root = new Octree.Branch(new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ));
     }
 
-    public boolean add(SectionRenderDispatcher.RenderSection p_369314_) {
-        return this.root.add(p_369314_);
+    public boolean add(final SectionRenderDispatcher.RenderSection section) {
+        return this.root.add(section);
     }
 
-    public void visitNodes(Octree.OctreeVisitor p_364694_, Frustum p_368650_, int p_366939_) {
-        this.root.visitNodes(p_364694_, false, p_368650_, 0, p_366939_, true);
+    public void visitNodes(final Octree.OctreeVisitor visitor, final Frustum frustum, final int closeDistance) {
+        this.root.visitNodes(visitor, false, frustum, 0, closeDistance, true);
     }
 
-    boolean isClose(double p_361646_, double p_363586_, double p_364484_, double p_366426_, double p_367659_, double p_363335_, int p_370074_) {
-        int i = this.cameraSectionCenter.getX();
-        int j = this.cameraSectionCenter.getY();
-        int k = this.cameraSectionCenter.getZ();
-        return i > p_361646_ - p_370074_
-            && i < p_366426_ + p_370074_
-            && j > p_363586_ - p_370074_
-            && j < p_367659_ + p_370074_
-            && k > p_364484_ - p_370074_
-            && k < p_363335_ + p_370074_;
+    private boolean isClose(
+        final double minX, final double minY, final double minZ, final double maxX, final double maxY, final double maxZ, final int closeDistance
+    ) {
+        int cameraX = this.cameraSectionCenter.getX();
+        int cameraY = this.cameraSectionCenter.getY();
+        int cameraZ = this.cameraSectionCenter.getZ();
+        return cameraX > minX - closeDistance
+            && cameraX < maxX + closeDistance
+            && cameraY > minY - closeDistance
+            && cameraY < maxY + closeDistance
+            && cameraZ > minZ - closeDistance
+            && cameraZ < maxZ + closeDistance;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static enum AxisSorting {
+        private enum AxisSorting {
         XYZ(4, 2, 1),
         XZY(4, 1, 2),
         YXZ(2, 4, 1),
@@ -60,29 +58,28 @@ public class Octree {
         ZXY(2, 1, 4),
         ZYX(1, 2, 4);
 
-        final int xShift;
-        final int yShift;
-        final int zShift;
+        private final int xShift;
+        private final int yShift;
+        private final int zShift;
 
-        private AxisSorting(final int p_369508_, final int p_365211_, final int p_368387_) {
-            this.xShift = p_369508_;
-            this.yShift = p_365211_;
-            this.zShift = p_368387_;
+        AxisSorting(final int xShift, final int yShift, final int zShift) {
+            this.xShift = xShift;
+            this.yShift = yShift;
+            this.zShift = zShift;
         }
 
-        public static Octree.AxisSorting getAxisSorting(int p_362893_, int p_361700_, int p_362465_) {
-            if (p_362893_ > p_361700_ && p_362893_ > p_362465_) {
-                return p_361700_ > p_362465_ ? XYZ : XZY;
-            } else if (p_361700_ > p_362893_ && p_361700_ > p_362465_) {
-                return p_362893_ > p_362465_ ? YXZ : YZX;
+        public static Octree.AxisSorting getAxisSorting(final int absXDiff, final int absYDiff, final int absZDiff) {
+            if (absXDiff > absYDiff && absXDiff > absZDiff) {
+                return absYDiff > absZDiff ? XYZ : XZY;
+            } else if (absYDiff > absXDiff && absYDiff > absZDiff) {
+                return absXDiff > absZDiff ? YXZ : YZX;
             } else {
-                return p_362893_ > p_361700_ ? ZXY : ZYX;
+                return absXDiff > absYDiff ? ZXY : ZYX;
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class Branch implements Octree.Node {
+        private class Branch implements Octree.Node {
         private final Octree.@Nullable Node[] nodes = new Octree.Node[8];
         private final BoundingBox boundingBox;
         private final int bbCenterX;
@@ -93,110 +90,114 @@ public class Octree {
         private final boolean cameraYDiffNegative;
         private final boolean cameraZDiffNegative;
 
-        public Branch(final BoundingBox p_369054_) {
-            this.boundingBox = p_369054_;
+        public Branch(final BoundingBox boundingBox) {
+            this.boundingBox = boundingBox;
             this.bbCenterX = this.boundingBox.minX() + this.boundingBox.getXSpan() / 2;
             this.bbCenterY = this.boundingBox.minY() + this.boundingBox.getYSpan() / 2;
             this.bbCenterZ = this.boundingBox.minZ() + this.boundingBox.getZSpan() / 2;
-            int i = Octree.this.cameraSectionCenter.getX() - this.bbCenterX;
-            int j = Octree.this.cameraSectionCenter.getY() - this.bbCenterY;
-            int k = Octree.this.cameraSectionCenter.getZ() - this.bbCenterZ;
-            this.sorting = Octree.AxisSorting.getAxisSorting(Math.abs(i), Math.abs(j), Math.abs(k));
-            this.cameraXDiffNegative = i < 0;
-            this.cameraYDiffNegative = j < 0;
-            this.cameraZDiffNegative = k < 0;
+            int cameraXDiff = Octree.this.cameraSectionCenter.getX() - this.bbCenterX;
+            int cameraYDiff = Octree.this.cameraSectionCenter.getY() - this.bbCenterY;
+            int cameraZDiff = Octree.this.cameraSectionCenter.getZ() - this.bbCenterZ;
+            this.sorting = Octree.AxisSorting.getAxisSorting(Math.abs(cameraXDiff), Math.abs(cameraYDiff), Math.abs(cameraZDiff));
+            this.cameraXDiffNegative = cameraXDiff < 0;
+            this.cameraYDiffNegative = cameraYDiff < 0;
+            this.cameraZDiffNegative = cameraZDiff < 0;
         }
 
-        public boolean add(SectionRenderDispatcher.RenderSection p_366103_) {
-            long i = p_366103_.getSectionNode();
-            boolean flag = SectionPos.sectionToBlockCoord(SectionPos.x(i)) - this.bbCenterX < 0;
-            boolean flag1 = SectionPos.sectionToBlockCoord(SectionPos.y(i)) - this.bbCenterY < 0;
-            boolean flag2 = SectionPos.sectionToBlockCoord(SectionPos.z(i)) - this.bbCenterZ < 0;
-            boolean flag3 = flag != this.cameraXDiffNegative;
-            boolean flag4 = flag1 != this.cameraYDiffNegative;
-            boolean flag5 = flag2 != this.cameraZDiffNegative;
-            int j = getNodeIndex(this.sorting, flag3, flag4, flag5);
+        public boolean add(final SectionRenderDispatcher.RenderSection section) {
+            long sectionNode = section.getSectionNode();
+            boolean sectionXDiffNegative = SectionPos.sectionToBlockCoord(SectionPos.x(sectionNode)) - this.bbCenterX < 0;
+            boolean sectionYDiffNegative = SectionPos.sectionToBlockCoord(SectionPos.y(sectionNode)) - this.bbCenterY < 0;
+            boolean sectionZDiffNegative = SectionPos.sectionToBlockCoord(SectionPos.z(sectionNode)) - this.bbCenterZ < 0;
+            boolean xDiffsOppositeSides = sectionXDiffNegative != this.cameraXDiffNegative;
+            boolean yDiffsOppositeSides = sectionYDiffNegative != this.cameraYDiffNegative;
+            boolean zDiffsOppositeSides = sectionZDiffNegative != this.cameraZDiffNegative;
+            int nodeIndex = getNodeIndex(this.sorting, xDiffsOppositeSides, yDiffsOppositeSides, zDiffsOppositeSides);
             if (this.areChildrenLeaves()) {
-                boolean flag6 = this.nodes[j] != null;
-                this.nodes[j] = Octree.this.new Leaf(p_366103_);
-                return !flag6;
-            } else if (this.nodes[j] != null) {
-                Octree.Branch octree$branch1 = (Octree.Branch)this.nodes[j];
-                return octree$branch1.add(p_366103_);
+                boolean alreadyExisted = this.nodes[nodeIndex] != null;
+                this.nodes[nodeIndex] = Octree.this.new Leaf(section);
+                return !alreadyExisted;
+            } else if (this.nodes[nodeIndex] != null) {
+                Octree.Branch branch = (Octree.Branch)this.nodes[nodeIndex];
+                return branch.add(section);
             } else {
-                BoundingBox boundingbox = this.createChildBoundingBox(flag, flag1, flag2);
-                Octree.Branch octree$branch = Octree.this.new Branch(boundingbox);
-                this.nodes[j] = octree$branch;
-                return octree$branch.add(p_366103_);
+                BoundingBox childBoundingBox = this.createChildBoundingBox(sectionXDiffNegative, sectionYDiffNegative, sectionZDiffNegative);
+                Octree.Branch branch = Octree.this.new Branch(childBoundingBox);
+                this.nodes[nodeIndex] = branch;
+                return branch.add(section);
             }
         }
 
-        private static int getNodeIndex(Octree.AxisSorting p_362519_, boolean p_363738_, boolean p_363441_, boolean p_360792_) {
-            int i = 0;
-            if (p_363738_) {
-                i += p_362519_.xShift;
+        private static int getNodeIndex(
+            final Octree.AxisSorting sorting, final boolean xDiffsOppositeSides, final boolean yDiffsOppositeSides, final boolean zDiffsOppositeSides
+        ) {
+            int index = 0;
+            if (xDiffsOppositeSides) {
+                index += sorting.xShift;
             }
 
-            if (p_363441_) {
-                i += p_362519_.yShift;
+            if (yDiffsOppositeSides) {
+                index += sorting.yShift;
             }
 
-            if (p_360792_) {
-                i += p_362519_.zShift;
+            if (zDiffsOppositeSides) {
+                index += sorting.zShift;
             }
 
-            return i;
+            return index;
         }
 
         private boolean areChildrenLeaves() {
             return this.boundingBox.getXSpan() == 32;
         }
 
-        private BoundingBox createChildBoundingBox(boolean p_364452_, boolean p_368731_, boolean p_366789_) {
-            int i;
-            int j;
-            if (p_364452_) {
-                i = this.boundingBox.minX();
-                j = this.bbCenterX - 1;
+        private BoundingBox createChildBoundingBox(final boolean sectionXDiffNegative, final boolean sectionYDiffNegative, final boolean sectionZDiffNegative) {
+            int minX;
+            int maxX;
+            if (sectionXDiffNegative) {
+                minX = this.boundingBox.minX();
+                maxX = this.bbCenterX - 1;
             } else {
-                i = this.bbCenterX;
-                j = this.boundingBox.maxX();
+                minX = this.bbCenterX;
+                maxX = this.boundingBox.maxX();
             }
 
-            int k;
-            int l;
-            if (p_368731_) {
-                k = this.boundingBox.minY();
-                l = this.bbCenterY - 1;
+            int minY;
+            int maxY;
+            if (sectionYDiffNegative) {
+                minY = this.boundingBox.minY();
+                maxY = this.bbCenterY - 1;
             } else {
-                k = this.bbCenterY;
-                l = this.boundingBox.maxY();
+                minY = this.bbCenterY;
+                maxY = this.boundingBox.maxY();
             }
 
-            int i1;
-            int j1;
-            if (p_366789_) {
-                i1 = this.boundingBox.minZ();
-                j1 = this.bbCenterZ - 1;
+            int minZ;
+            int maxZ;
+            if (sectionZDiffNegative) {
+                minZ = this.boundingBox.minZ();
+                maxZ = this.bbCenterZ - 1;
             } else {
-                i1 = this.bbCenterZ;
-                j1 = this.boundingBox.maxZ();
+                minZ = this.bbCenterZ;
+                maxZ = this.boundingBox.maxZ();
             }
 
-            return new BoundingBox(i, k, i1, j, l, j1);
+            return new BoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
         }
 
         @Override
-        public void visitNodes(Octree.OctreeVisitor p_369870_, boolean p_363049_, Frustum p_363949_, int p_363158_, int p_368250_, boolean p_369443_) {
-            boolean flag = p_363049_;
-            if (!p_363049_) {
-                int i = p_363949_.cubeInFrustum(this.boundingBox);
-                p_363049_ = i == -2;
-                flag = i == -2 || i == -1;
+        public void visitNodes(
+            final Octree.OctreeVisitor visitor, boolean skipFrustumCheck, final Frustum frustum, final int depth, final int closeDistance, boolean isClose
+        ) {
+            boolean isVisible = skipFrustumCheck;
+            if (!skipFrustumCheck) {
+                int checkResult = frustum.cubeInFrustum(this.boundingBox);
+                skipFrustumCheck = checkResult == -2;
+                isVisible = checkResult == -2 || checkResult == -1;
             }
 
-            if (flag) {
-                p_369443_ = p_369443_
+            if (isVisible) {
+                isClose = isClose
                     && Octree.this.isClose(
                         this.boundingBox.minX(),
                         this.boundingBox.minY(),
@@ -204,13 +205,13 @@ public class Octree {
                         this.boundingBox.maxX(),
                         this.boundingBox.maxY(),
                         this.boundingBox.maxZ(),
-                        p_368250_
+                        closeDistance
                     );
-                p_369870_.visit(this, p_363049_, p_363158_, p_369443_);
+                visitor.visit(this, skipFrustumCheck, depth, isClose);
 
-                for (Octree.Node octree$node : this.nodes) {
-                    if (octree$node != null) {
-                        octree$node.visitNodes(p_369870_, p_363049_, p_363949_, p_363158_ + 1, p_368250_, p_369443_);
+                for (Octree.Node node : this.nodes) {
+                    if (node != null) {
+                        node.visitNodes(visitor, skipFrustumCheck, frustum, depth + 1, closeDistance, isClose);
                     }
                 }
             }
@@ -234,21 +235,29 @@ public class Octree {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    final class Leaf implements Octree.Node {
+        private final class Leaf implements Octree.Node {
         private final SectionRenderDispatcher.RenderSection section;
 
-        Leaf(final SectionRenderDispatcher.RenderSection p_368561_) {
-            this.section = p_368561_;
+        private Leaf(final SectionRenderDispatcher.RenderSection section) {
+            this.section = section;
         }
 
         @Override
-        public void visitNodes(Octree.OctreeVisitor p_366276_, boolean p_365424_, Frustum p_366156_, int p_361139_, int p_366518_, boolean p_368604_) {
-            AABB aabb = this.section.getBoundingBox();
-            if (p_365424_ || p_366156_.isVisible(this.getSection().getBoundingBox())) {
-                p_368604_ = p_368604_
-                    && Octree.this.isClose(aabb.minX, aabb.minY, aabb.minZ, aabb.maxX, aabb.maxY, aabb.maxZ, p_366518_);
-                p_366276_.visit(this, p_365424_, p_361139_, p_368604_);
+        public void visitNodes(
+            final Octree.OctreeVisitor visitor,
+            final boolean skipFrustumCheck,
+            final Frustum frustum,
+            final int depth,
+            final int closeDistance,
+            boolean isClose
+        ) {
+            AABB boundingBox = this.section.getBoundingBox();
+            if (skipFrustumCheck || frustum.isVisible(this.getSection().getBoundingBox())) {
+                isClose = isClose
+                    && Octree.this.isClose(
+                        boundingBox.minX, boundingBox.minY, boundingBox.minZ, boundingBox.maxX, boundingBox.maxY, boundingBox.maxZ, closeDistance
+                    );
+                visitor.visit(this, skipFrustumCheck, depth, isClose);
             }
         }
 
@@ -263,9 +272,8 @@ public class Octree {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Node {
-        void visitNodes(Octree.OctreeVisitor p_362009_, boolean p_361730_, Frustum p_366227_, int p_362990_, int p_361345_, boolean p_361185_);
+        public interface Node {
+        void visitNodes(Octree.OctreeVisitor visitor, boolean skipFrustumCheck, Frustum frustum, int depth, final int closeDistance, boolean isClose);
 
         SectionRenderDispatcher.@Nullable RenderSection getSection();
 
@@ -273,8 +281,7 @@ public class Octree {
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface OctreeVisitor {
-        void visit(Octree.Node p_368363_, boolean p_369407_, int p_360941_, boolean p_364507_);
+        public interface OctreeVisitor {
+        void visit(final Octree.Node node, final boolean fullyVisible, int depth, boolean isClose);
     }
 }

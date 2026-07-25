@@ -3,5 +3,5 @@ package net.minecraft.network.protocol.ping;
 import net.minecraft.network.PacketListener;
 
 public interface ClientPongPacketListener extends PacketListener {
-    void handlePongResponse(ClientboundPongResponsePacket p_329136_);
+    void handlePongResponse(ClientboundPongResponsePacket packet);
 }

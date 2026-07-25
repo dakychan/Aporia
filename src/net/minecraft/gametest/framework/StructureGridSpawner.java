@@ -20,20 +20,20 @@ public class StructureGridSpawner implements GameTestRunner.StructureSpawner {
     private float maxX = -1.0F;
     private final Collection<GameTestInfo> testInLastBatch = new ArrayList<>();
 
-    public StructureGridSpawner(BlockPos p_329915_, int p_328380_, boolean p_342481_) {
-        this.testsPerRow = p_328380_;
-        this.nextTestNorthWestCorner = p_329915_.mutable();
+    public StructureGridSpawner(final BlockPos firstTestNorthWestCorner, final int testsPerRow, final boolean clearOnBatch) {
+        this.testsPerRow = testsPerRow;
+        this.nextTestNorthWestCorner = firstTestNorthWestCorner.mutable();
         this.rowBounds = new AABB(this.nextTestNorthWestCorner);
-        this.firstTestNorthWestCorner = p_329915_;
-        this.clearOnBatch = p_342481_;
+        this.firstTestNorthWestCorner = firstTestNorthWestCorner;
+        this.clearOnBatch = clearOnBatch;
     }
 
     @Override
-    public void onBatchStart(ServerLevel p_345035_) {
+    public void onBatchStart(final ServerLevel level) {
         if (this.clearOnBatch) {
-            this.testInLastBatch.forEach(p_389785_ -> {
-                BoundingBox boundingbox = p_389785_.getTestInstanceBlockEntity().getStructureBoundingBox();
-                StructureUtils.clearSpaceForStructure(boundingbox, p_345035_);
+            this.testInLastBatch.forEach(info -> {
+                BoundingBox boundingBox = info.getTestInstanceBlockEntity().getTestBoundingBox();
+                StructureUtils.clearSpaceForStructure(boundingBox, level);
             });
             this.testInLastBatch.clear();
             this.rowBounds = new AABB(this.firstTestNorthWestCorner);
@@ -42,30 +42,30 @@ public class StructureGridSpawner implements GameTestRunner.StructureSpawner {
     }
 
     @Override
-    public Optional<GameTestInfo> spawnStructure(GameTestInfo p_335013_) {
-        BlockPos blockpos = new BlockPos(this.nextTestNorthWestCorner);
-        p_335013_.setTestBlockPos(blockpos);
-        GameTestInfo gametestinfo = p_335013_.prepareTestStructure();
-        if (gametestinfo == null) {
+    public Optional<GameTestInfo> spawnStructure(final GameTestInfo testInfo) {
+        BlockPos northWestCorner = new BlockPos(this.nextTestNorthWestCorner);
+        testInfo.setTestBlockPos(northWestCorner);
+        GameTestInfo infoWithStructure = testInfo.prepareTestStructure();
+        if (infoWithStructure == null) {
             return Optional.empty();
-        } else {
-            gametestinfo.startExecution(1);
-            AABB aabb = p_335013_.getTestInstanceBlockEntity().getStructureBounds();
-            this.rowBounds = this.rowBounds.minmax(aabb);
-            this.nextTestNorthWestCorner.move((int)aabb.getXsize() + 5, 0, 0);
-            if (this.nextTestNorthWestCorner.getX() > this.maxX) {
-                this.maxX = this.nextTestNorthWestCorner.getX();
-            }
-
-            if (++this.currentRowCount >= this.testsPerRow) {
-                this.currentRowCount = 0;
-                this.nextTestNorthWestCorner.move(0, 0, (int)this.rowBounds.getZsize() + 6);
-                this.nextTestNorthWestCorner.setX(this.firstTestNorthWestCorner.getX());
-                this.rowBounds = new AABB(this.nextTestNorthWestCorner);
-            }
-
-            this.testInLastBatch.add(p_335013_);
-            return Optional.of(p_335013_);
         }
+
+        infoWithStructure.startExecution(1);
+        AABB structureBounds = testInfo.getTestInstanceBlockEntity().getTestBounds();
+        this.rowBounds = this.rowBounds.minmax(structureBounds);
+        this.nextTestNorthWestCorner.move((int)structureBounds.getXsize() + 5, 0, 0);
+        if (this.nextTestNorthWestCorner.getX() > this.maxX) {
+            this.maxX = this.nextTestNorthWestCorner.getX();
+        }
+
+        if (++this.currentRowCount >= this.testsPerRow) {
+            this.currentRowCount = 0;
+            this.nextTestNorthWestCorner.move(0, 0, (int)this.rowBounds.getZsize() + 6);
+            this.nextTestNorthWestCorner.setX(this.firstTestNorthWestCorner.getX());
+            this.rowBounds = new AABB(this.nextTestNorthWestCorner);
+        }
+
+        this.testInLastBatch.add(testInfo);
+        return Optional.of(testInfo);
     }
 }

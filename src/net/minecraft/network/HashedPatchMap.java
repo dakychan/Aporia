@@ -22,34 +22,36 @@ public record HashedPatchMap(Map<DataComponentType<?>, Integer> addedComponents,
         HashedPatchMap::new
     );
 
-    public static HashedPatchMap create(DataComponentPatch p_395245_, HashedPatchMap.HashGenerator p_394297_) {
-        DataComponentPatch.SplitResult datacomponentpatch$splitresult = p_395245_.split();
-        Map<DataComponentType<?>, Integer> map = new IdentityHashMap<>(datacomponentpatch$splitresult.added().size());
-        datacomponentpatch$splitresult.added().forEach(p_391854_ -> map.put(p_391854_.type(), p_394297_.apply((TypedDataComponent<?>)p_391854_)));
-        return new HashedPatchMap(map, datacomponentpatch$splitresult.removed());
+    public static HashedPatchMap create(final DataComponentPatch patch, final HashedPatchMap.HashGenerator hasher) {
+        DataComponentPatch.SplitResult split = patch.split();
+        Map<DataComponentType<?>, Integer> setComponentHashes = new IdentityHashMap<>(split.added().size());
+        split.added().forEach(e -> setComponentHashes.put(e.type(), hasher.apply((TypedDataComponent<?>)e)));
+        return new HashedPatchMap(setComponentHashes, split.removed());
     }
 
-    public boolean matches(DataComponentPatch p_391660_, HashedPatchMap.HashGenerator p_396564_) {
-        DataComponentPatch.SplitResult datacomponentpatch$splitresult = p_391660_.split();
-        if (!datacomponentpatch$splitresult.removed().equals(this.removedComponents)) {
+    public boolean matches(final DataComponentPatch patch, final HashedPatchMap.HashGenerator hasher) {
+        DataComponentPatch.SplitResult split = patch.split();
+        if (!split.removed().equals(this.removedComponents)) {
             return false;
-        } else if (this.addedComponents.size() != datacomponentpatch$splitresult.added().size()) {
-            return false;
-        } else {
-            for (TypedDataComponent<?> typeddatacomponent : datacomponentpatch$splitresult.added()) {
-                Integer integer = this.addedComponents.get(typeddatacomponent.type());
-                if (integer == null) {
-                    return false;
-                }
+        }
 
-                Integer integer1 = p_396564_.apply(typeddatacomponent);
-                if (!integer1.equals(integer)) {
-                    return false;
-                }
+        if (this.addedComponents.size() != split.added().size()) {
+            return false;
+        }
+
+        for (TypedDataComponent<?> typedDataComponent : split.added()) {
+            Integer expectedHash = this.addedComponents.get(typedDataComponent.type());
+            if (expectedHash == null) {
+                return false;
             }
 
-            return true;
+            Integer actualHash = hasher.apply(typedDataComponent);
+            if (!actualHash.equals(expectedHash)) {
+                return false;
+            }
         }
+
+        return true;
     }
 
     @FunctionalInterface

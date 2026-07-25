@@ -9,17 +9,17 @@ public class SleepStatus {
     private int activePlayers;
     private int sleepingPlayers;
 
-    public boolean areEnoughSleeping(int p_144003_) {
-        return this.sleepingPlayers >= this.sleepersNeeded(p_144003_);
+    public boolean areEnoughSleeping(final int sleepPercentageNeeded) {
+        return this.sleepingPlayers >= this.sleepersNeeded(sleepPercentageNeeded);
     }
 
-    public boolean areEnoughDeepSleeping(int p_144005_, List<ServerPlayer> p_144006_) {
-        int i = (int)p_144006_.stream().filter(Player::isSleepingLongEnough).count();
-        return i >= this.sleepersNeeded(p_144005_);
+    public boolean areEnoughDeepSleeping(final int sleepPercentageNeeded, final List<ServerPlayer> players) {
+        int deepSleepers = (int)players.stream().filter(Player::isSleepingLongEnough).count();
+        return deepSleepers >= this.sleepersNeeded(sleepPercentageNeeded);
     }
 
-    public int sleepersNeeded(int p_144011_) {
-        return Math.max(1, Mth.ceil(this.activePlayers * p_144011_ / 100.0F));
+    public int sleepersNeeded(final int sleepPercentageNeeded) {
+        return Math.max(1, Mth.ceil(this.activePlayers * sleepPercentageNeeded / 100.0F));
     }
 
     public void removeAllSleepers() {
@@ -30,21 +30,21 @@ public class SleepStatus {
         return this.sleepingPlayers;
     }
 
-    public boolean update(List<ServerPlayer> p_144008_) {
-        int i = this.activePlayers;
-        int j = this.sleepingPlayers;
+    public boolean update(final List<ServerPlayer> players) {
+        int oldActivePlayers = this.activePlayers;
+        int oldSleepingPlayers = this.sleepingPlayers;
         this.activePlayers = 0;
         this.sleepingPlayers = 0;
 
-        for (ServerPlayer serverplayer : p_144008_) {
-            if (!serverplayer.isSpectator()) {
+        for (ServerPlayer player : players) {
+            if (!player.isSpectator()) {
                 this.activePlayers++;
-                if (serverplayer.isSleeping()) {
+                if (player.isSleeping()) {
                     this.sleepingPlayers++;
                 }
             }
         }
 
-        return (j > 0 || this.sleepingPlayers > 0) && (i != this.activePlayers || j != this.sleepingPlayers);
+        return (oldSleepingPlayers > 0 || this.sleepingPlayers > 0) && (oldActivePlayers != this.activePlayers || oldSleepingPlayers != this.sleepingPlayers);
     }
 }

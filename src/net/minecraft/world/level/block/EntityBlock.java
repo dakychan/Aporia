@@ -11,13 +11,13 @@ import net.minecraft.world.level.gameevent.GameEventListener;
 import org.jspecify.annotations.Nullable;
 
 public interface EntityBlock {
-    @Nullable BlockEntity newBlockEntity(BlockPos p_153215_, BlockState p_153216_);
+    @Nullable BlockEntity newBlockEntity(BlockPos worldPosition, BlockState blockState);
 
-    default <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_153212_, BlockState p_153213_, BlockEntityType<T> p_153214_) {
+    default <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
         return null;
     }
 
-    default <T extends BlockEntity> @Nullable GameEventListener getListener(ServerLevel p_221121_, T p_221122_) {
-        return p_221122_ instanceof GameEventListener.Provider<?> provider ? provider.getListener() : null;
+    default <T extends BlockEntity> @Nullable GameEventListener getListener(final ServerLevel level, final T blockEntity) {
+        return blockEntity instanceof GameEventListener.Provider<?> provider ? provider.getListener() : null;
     }
 }

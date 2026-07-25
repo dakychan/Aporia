@@ -2,18 +2,17 @@ package net.minecraft.world.item.enchantment.effects;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.enchantment.LevelBasedValue;
 
 public record SetValue(LevelBasedValue value) implements EnchantmentValueEffect {
     public static final MapCodec<SetValue> CODEC = RecordCodecBuilder.mapCodec(
-        p_344143_ -> p_344143_.group(LevelBasedValue.CODEC.fieldOf("value").forGetter(SetValue::value)).apply(p_344143_, SetValue::new)
+        i -> i.group(LevelBasedValue.CODEC.fieldOf("value").forGetter(SetValue::value)).apply(i, SetValue::new)
     );
 
     @Override
-    public float process(int p_343689_, RandomSource p_343573_, float p_342308_) {
-        return this.value.calculate(p_343689_);
+    public float process(final int enchantmentLevel, final RandomSource random, final float inputValue) {
+        return this.value.calculate(enchantmentLevel);
     }
 
     @Override

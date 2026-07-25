@@ -8,10 +8,12 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Relative;
 import net.minecraft.world.entity.monster.Endermite;
@@ -31,12 +33,12 @@ import org.jspecify.annotations.Nullable;
 public class ThrownEnderpearl extends ThrowableItemProjectile {
     private long ticketTimer = 0L;
 
-    public ThrownEnderpearl(EntityType<? extends ThrownEnderpearl> p_451775_, Level p_454048_) {
-        super(p_451775_, p_454048_);
+    public ThrownEnderpearl(final EntityType<? extends ThrownEnderpearl> type, final Level level) {
+        super(type, level);
     }
 
-    public ThrownEnderpearl(Level p_460742_, LivingEntity p_458699_, ItemStack p_460872_) {
-        super(EntityType.ENDER_PEARL, p_458699_, p_460742_, p_460872_);
+    public ThrownEnderpearl(final Level level, final LivingEntity mob, final ItemStack itemStack) {
+        super(EntityTypes.ENDER_PEARL, mob, level, itemStack);
     }
 
     @Override
@@ -45,45 +47,43 @@ public class ThrownEnderpearl extends ThrowableItemProjectile {
     }
 
     @Override
-    protected void setOwner(@Nullable EntityReference<Entity> p_452724_) {
+    protected void setOwner(final @Nullable EntityReference<Entity> owner) {
         this.deregisterFromCurrentOwner();
-        super.setOwner(p_452724_);
+        super.setOwner(owner);
         this.registerToCurrentOwner();
     }
 
     private void deregisterFromCurrentOwner() {
-        if (this.getOwner() instanceof ServerPlayer serverplayer) {
-            serverplayer.deregisterEnderPearl(this);
+        if (this.getOwner() instanceof ServerPlayer serverPlayer) {
+            serverPlayer.deregisterEnderPearl(this);
         }
     }
 
     private void registerToCurrentOwner() {
-        if (this.getOwner() instanceof ServerPlayer serverplayer) {
-            serverplayer.registerEnderPearl(this);
+        if (this.getOwner() instanceof ServerPlayer serverPlayer) {
+            serverPlayer.registerEnderPearl(this);
         }
     }
 
     @Override
     public @Nullable Entity getOwner() {
-        return this.owner != null && this.level() instanceof ServerLevel serverlevel
-            ? this.owner.getEntity(serverlevel, Entity.class)
-            : super.getOwner();
+        return this.owner != null && this.level() instanceof ServerLevel serverLevel ? this.owner.getEntity(serverLevel, Entity.class) : super.getOwner();
     }
 
-    private static @Nullable Entity findOwnerIncludingDeadPlayer(ServerLevel p_460869_, UUID p_460652_) {
-        Entity entity = p_460869_.getEntityInAnyDimension(p_460652_);
-        return (Entity)(entity != null ? entity : p_460869_.getServer().getPlayerList().getPlayer(p_460652_));
-    }
-
-    @Override
-    protected void onHitEntity(EntityHitResult p_454744_) {
-        super.onHitEntity(p_454744_);
-        p_454744_.getEntity().hurt(this.damageSources().thrown(this, this.getOwner()), 0.0F);
+    private static @Nullable Entity findOwnerIncludingDeadPlayer(final ServerLevel serverLevel, final UUID uuid) {
+        Entity owner = serverLevel.getEntityInAnyDimension(uuid);
+        return owner != null ? owner : serverLevel.getServer().getPlayerList().getPlayer(uuid);
     }
 
     @Override
-    protected void onHit(HitResult p_451483_) {
-        super.onHit(p_451483_);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        super.onHitEntity(hitResult);
+        hitResult.getEntity().hurt(this.damageSources().thrown(this, this.getOwner()), 0.0F);
+    }
+
+    @Override
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
 
         for (int i = 0; i < 32; i++) {
             this.level()
@@ -98,52 +98,50 @@ public class ThrownEnderpearl extends ThrowableItemProjectile {
                 );
         }
 
-        if (this.level() instanceof ServerLevel serverlevel && !this.isRemoved()) {
-            Entity entity = this.getOwner();
-            if (entity != null && isAllowedToTeleportOwner(entity, serverlevel)) {
-                Vec3 vec3 = this.oldPosition();
-                if (entity instanceof ServerPlayer serverplayer) {
-                    if (serverplayer.connection.isAcceptingMessages()) {
-                        if (this.random.nextFloat() < 0.05F && serverlevel.isSpawningMonsters()) {
-                            Endermite endermite = EntityType.ENDERMITE.create(serverlevel, EntitySpawnReason.TRIGGERED);
+        if (this.level() instanceof ServerLevel level && !this.isRemoved()) {
+            Entity owner = this.getOwner();
+            if (owner != null && isAllowedToTeleportOwner(owner, level)) {
+                Vec3 teleportPos = this.oldPosition();
+                if (owner instanceof ServerPlayer player) {
+                    if (player.connection.isAcceptingMessages()) {
+                        if (this.random.nextFloat() < 0.05F && level.isSpawningMonsters() && level.getLevelData().getDifficulty() != Difficulty.PEACEFUL) {
+                            Endermite endermite = EntityTypes.ENDERMITE.create(level, EntitySpawnReason.TRIGGERED);
                             if (endermite != null) {
-                                endermite.snapTo(entity.getX(), entity.getY(), entity.getZ(), entity.getYRot(), entity.getXRot());
-                                serverlevel.addFreshEntity(endermite);
+                                endermite.snapTo(owner.getX(), owner.getY(), owner.getZ(), owner.getYRot(), owner.getXRot());
+                                level.addFreshEntity(endermite);
                             }
                         }
 
                         if (this.isOnPortalCooldown()) {
-                            entity.setPortalCooldown();
+                            owner.setPortalCooldown();
                         }
 
-                        ServerPlayer serverplayer1 = serverplayer.teleport(
+                        ServerPlayer newOwner = player.teleport(
                             new TeleportTransition(
-                                serverlevel,
-                                vec3,
-                                Vec3.ZERO,
-                                0.0F,
-                                0.0F,
-                                Relative.union(Relative.ROTATION, Relative.DELTA),
-                                TeleportTransition.DO_NOTHING
+                                level, teleportPos, Vec3.ZERO, 0.0F, 0.0F, Relative.union(Relative.ROTATION, Relative.DELTA), TeleportTransition.DO_NOTHING
                             )
                         );
-                        if (serverplayer1 != null) {
-                            serverplayer1.resetFallDistance();
-                            serverplayer1.resetCurrentImpulseContext();
-                            serverplayer1.hurtServer(serverplayer.level(), this.damageSources().enderPearl(), 5.0F);
+                        if (newOwner != null) {
+                            newOwner.resetFallDistance();
+                            newOwner.resetCurrentImpulseContext();
+                            newOwner.hurtServer(player.level(), this.damageSources().enderPearl(), 5.0F);
                         }
 
-                        this.playSound(serverlevel, vec3);
+                        this.playSound(level, teleportPos);
                     }
                 } else {
-                    Entity entity1 = entity.teleport(
-                        new TeleportTransition(serverlevel, vec3, entity.getDeltaMovement(), entity.getYRot(), entity.getXRot(), TeleportTransition.DO_NOTHING)
+                    Entity newOwner = owner.teleport(
+                        new TeleportTransition(level, teleportPos, owner.getDeltaMovement(), owner.getYRot(), owner.getXRot(), TeleportTransition.DO_NOTHING)
                     );
-                    if (entity1 != null) {
-                        entity1.resetFallDistance();
+                    if (newOwner != null) {
+                        newOwner.resetFallDistance();
                     }
 
-                    this.playSound(serverlevel, vec3);
+                    if (newOwner instanceof LivingEntity livingEntity) {
+                        livingEntity.resetCurrentImpulseContext();
+                    }
+
+                    this.playSound(level, teleportPos);
                 }
 
                 this.discard();
@@ -153,34 +151,38 @@ public class ThrownEnderpearl extends ThrowableItemProjectile {
         }
     }
 
-    private static boolean isAllowedToTeleportOwner(Entity p_455145_, Level p_450595_) {
-        if (p_455145_.level().dimension() == p_450595_.dimension()) {
-            return !(p_455145_ instanceof LivingEntity livingentity) ? p_455145_.isAlive() : livingentity.isAlive() && !livingentity.isSleeping();
+    private static boolean isAllowedToTeleportOwner(final Entity owner, final Level newLevel) {
+        if (owner.level().dimension() == newLevel.dimension()) {
+            return !(owner instanceof LivingEntity livingOwner) ? owner.isAlive() : livingOwner.isAlive() && !livingOwner.isSleeping();
         } else {
-            return p_455145_.canUsePortal(true);
+            return owner.canUsePortal(true);
         }
     }
 
     @Override
     public void tick() {
-        if (this.level() instanceof ServerLevel serverlevel) {
-            int j = SectionPos.blockToSectionCoord(this.position().x());
-            int $$3 = SectionPos.blockToSectionCoord(this.position().z());
-            Entity entity = this.owner != null ? findOwnerIncludingDeadPlayer(serverlevel, this.owner.getUUID()) : null;
-            if (entity instanceof ServerPlayer serverplayer
-                && !entity.isAlive()
-                && !serverplayer.wonGame
-                && serverplayer.level().getGameRules().get(GameRules.ENDER_PEARLS_VANISH_ON_DEATH)) {
+        if (this.level() instanceof ServerLevel serverLevel) {
+            int var7 = SectionPos.blockToSectionCoord(this.position().x());
+            int previousChunkZ = SectionPos.blockToSectionCoord(this.position().z());
+            Entity owner = this.owner != null ? findOwnerIncludingDeadPlayer(serverLevel, this.owner.getUUID()) : null;
+            if (owner instanceof ServerPlayer serverPlayer
+                && !owner.isAlive()
+                && !serverPlayer.wonGame
+                && serverPlayer.level().getGameRules().get(GameRules.ENDER_PEARLS_VANISH_ON_DEATH)) {
                 this.discard();
             } else {
                 super.tick();
             }
 
             if (this.isAlive()) {
-                BlockPos blockpos = BlockPos.containing(this.position());
-                if ((--this.ticketTimer <= 0L || j != SectionPos.blockToSectionCoord(blockpos.getX()) || $$3 != SectionPos.blockToSectionCoord(blockpos.getZ()))
-                    && entity instanceof ServerPlayer serverplayer1) {
-                    this.ticketTimer = serverplayer1.registerAndUpdateEnderPearlTicket(this);
+                BlockPos currentPos = BlockPos.containing(this.position());
+                if ((
+                        --this.ticketTimer <= 0L
+                            || var7 != SectionPos.blockToSectionCoord(currentPos.getX())
+                            || previousChunkZ != SectionPos.blockToSectionCoord(currentPos.getZ())
+                    )
+                    && owner instanceof ServerPlayer serverPlayer) {
+                    this.ticketTimer = serverPlayer.registerAndUpdateEnderPearlTicket(this);
                 }
             }
         } else {
@@ -188,51 +190,51 @@ public class ThrownEnderpearl extends ThrowableItemProjectile {
         }
     }
 
-    private void playSound(Level p_453382_, Vec3 p_453690_) {
-        p_453382_.playSound(null, p_453690_.x, p_453690_.y, p_453690_.z, SoundEvents.PLAYER_TELEPORT, SoundSource.PLAYERS);
+    private void playSound(final Level level, final Vec3 position) {
+        level.playSound(null, position.x, position.y, position.z, SoundEvents.PLAYER_TELEPORT, SoundSource.PLAYERS);
     }
 
     @Override
-    public @Nullable Entity teleport(TeleportTransition p_454458_) {
-        Entity entity = super.teleport(p_454458_);
-        if (entity != null) {
-            entity.placePortalTicket(BlockPos.containing(entity.position()));
+    public @Nullable Entity teleport(final TeleportTransition transition) {
+        Entity newEntity = super.teleport(transition);
+        if (newEntity != null) {
+            newEntity.placePortalTicket(BlockPos.containing(newEntity.position()));
         }
 
-        return entity;
+        return newEntity;
     }
 
     @Override
-    public boolean canTeleport(Level p_450310_, Level p_450589_) {
-        return p_450310_.dimension() == Level.END && p_450589_.dimension() == Level.OVERWORLD && this.getOwner() instanceof ServerPlayer serverplayer
-            ? super.canTeleport(p_450310_, p_450589_) && serverplayer.seenCredits
-            : super.canTeleport(p_450310_, p_450589_);
+    public boolean canTeleport(final Level from, final Level to) {
+        return from.dimension() == Level.END && to.dimension() == Level.OVERWORLD && this.getOwner() instanceof ServerPlayer player
+            ? super.canTeleport(from, to) && player.seenCredits
+            : super.canTeleport(from, to);
     }
 
     @Override
-    protected void onInsideBlock(BlockState p_453185_) {
-        super.onInsideBlock(p_453185_);
-        if (p_453185_.is(Blocks.END_GATEWAY) && this.getOwner() instanceof ServerPlayer serverplayer) {
-            serverplayer.onInsideBlock(p_453185_);
+    protected void onInsideBlock(final BlockState state) {
+        super.onInsideBlock(state);
+        if (state.is(Blocks.END_GATEWAY) && this.getOwner() instanceof ServerPlayer player) {
+            player.onInsideBlock(state);
         }
     }
 
     @Override
-    public void onRemoval(Entity.RemovalReason p_460801_) {
-        if (p_460801_ != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
+    public void onRemoval(final Entity.RemovalReason reason) {
+        if (reason != Entity.RemovalReason.UNLOADED_WITH_PLAYER) {
             this.deregisterFromCurrentOwner();
         }
 
-        super.onRemoval(p_460801_);
+        super.onRemoval(reason);
     }
 
     @Override
-    public void onAboveBubbleColumn(boolean p_455548_, BlockPos p_460769_) {
-        Entity.handleOnAboveBubbleColumn(this, p_455548_, p_460769_);
+    public void onAboveBubbleColumn(final boolean dragDown, final BlockPos pos) {
+        Entity.handleOnAboveBubbleColumn(this, dragDown, pos);
     }
 
     @Override
-    public void onInsideBubbleColumn(boolean p_455880_) {
-        Entity.handleOnInsideBubbleColumn(this, p_455880_);
+    public void onInsideBubbleColumn(final boolean dragDown) {
+        Entity.handleOnInsideBubbleColumn(this, dragDown);
     }
 }

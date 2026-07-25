@@ -6,27 +6,27 @@ import com.mojang.serialization.Dynamic;
 import java.util.Objects;
 
 public class EntityCatSplitFix extends SimpleEntityRenameFix {
-    public EntityCatSplitFix(Schema p_15384_, boolean p_15385_) {
-        super("EntityCatSplitFix", p_15384_, p_15385_);
+    public EntityCatSplitFix(final Schema outputSchema, final boolean changesType) {
+        super("EntityCatSplitFix", outputSchema, changesType);
     }
 
     @Override
-    protected Pair<String, Dynamic<?>> getNewNameAndTag(String p_15387_, Dynamic<?> p_15388_) {
-        if (Objects.equals("minecraft:ocelot", p_15387_)) {
-            int i = p_15388_.get("CatType").asInt(0);
-            if (i == 0) {
-                String s = p_15388_.get("Owner").asString("");
-                String s1 = p_15388_.get("OwnerUUID").asString("");
-                if (!s.isEmpty() || !s1.isEmpty()) {
-                    p_15388_.set("Trusting", p_15388_.createBoolean(true));
+    protected Pair<String, Dynamic<?>> getNewNameAndTag(final String name, Dynamic<?> tag) {
+        if (Objects.equals("minecraft:ocelot", name)) {
+            int type = tag.get("CatType").asInt(0);
+            if (type == 0) {
+                String ownerName = tag.get("Owner").asString("");
+                String ownerUUID = tag.get("OwnerUUID").asString("");
+                if (!ownerName.isEmpty() || !ownerUUID.isEmpty()) {
+                    tag.set("Trusting", tag.createBoolean(true));
                 }
-            } else if (i > 0 && i < 4) {
-                p_15388_ = p_15388_.set("CatType", p_15388_.createInt(i));
-                p_15388_ = p_15388_.set("OwnerUUID", p_15388_.createString(p_15388_.get("OwnerUUID").asString("")));
-                return Pair.of("minecraft:cat", p_15388_);
+            } else if (type > 0 && type < 4) {
+                tag = tag.set("CatType", tag.createInt(type));
+                tag = tag.set("OwnerUUID", tag.createString(tag.get("OwnerUUID").asString("")));
+                return Pair.of("minecraft:cat", tag);
             }
         }
 
-        return Pair.of(p_15387_, p_15388_);
+        return Pair.of(name, tag);
     }
 }

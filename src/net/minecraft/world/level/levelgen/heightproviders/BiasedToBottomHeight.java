@@ -4,7 +4,6 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.levelgen.VerticalAnchor;
 import net.minecraft.world.level.levelgen.WorldGenerationContext;
@@ -12,38 +11,38 @@ import org.slf4j.Logger;
 
 public class BiasedToBottomHeight extends HeightProvider {
     public static final MapCodec<BiasedToBottomHeight> CODEC = RecordCodecBuilder.mapCodec(
-        p_161930_ -> p_161930_.group(
-                VerticalAnchor.CODEC.fieldOf("min_inclusive").forGetter(p_161943_ -> p_161943_.minInclusive),
-                VerticalAnchor.CODEC.fieldOf("max_inclusive").forGetter(p_161941_ -> p_161941_.maxInclusive),
-                Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("inner", 1).forGetter(p_161936_ -> p_161936_.inner)
+        i -> i.group(
+                VerticalAnchor.CODEC.fieldOf("min_inclusive").forGetter(u -> u.minInclusive),
+                VerticalAnchor.CODEC.fieldOf("max_inclusive").forGetter(u -> u.maxInclusive),
+                Codec.intRange(1, Integer.MAX_VALUE).optionalFieldOf("inner", 1).forGetter(u -> u.inner)
             )
-            .apply(p_161930_, BiasedToBottomHeight::new)
+            .apply(i, BiasedToBottomHeight::new)
     );
     private static final Logger LOGGER = LogUtils.getLogger();
     private final VerticalAnchor minInclusive;
     private final VerticalAnchor maxInclusive;
     private final int inner;
 
-    private BiasedToBottomHeight(VerticalAnchor p_161925_, VerticalAnchor p_161926_, int p_161927_) {
-        this.minInclusive = p_161925_;
-        this.maxInclusive = p_161926_;
-        this.inner = p_161927_;
+    private BiasedToBottomHeight(final VerticalAnchor minInclusive, final VerticalAnchor maxInclusive, final int inner) {
+        this.minInclusive = minInclusive;
+        this.maxInclusive = maxInclusive;
+        this.inner = inner;
     }
 
-    public static BiasedToBottomHeight of(VerticalAnchor p_161932_, VerticalAnchor p_161933_, int p_161934_) {
-        return new BiasedToBottomHeight(p_161932_, p_161933_, p_161934_);
+    public static BiasedToBottomHeight of(final VerticalAnchor minInclusive, final VerticalAnchor maxInclusive, final int offset) {
+        return new BiasedToBottomHeight(minInclusive, maxInclusive, offset);
     }
 
     @Override
-    public int sample(RandomSource p_226297_, WorldGenerationContext p_226298_) {
-        int i = this.minInclusive.resolveY(p_226298_);
-        int j = this.maxInclusive.resolveY(p_226298_);
-        if (j - i - this.inner + 1 <= 0) {
+    public int sample(final RandomSource random, final WorldGenerationContext context) {
+        int min = this.minInclusive.resolveY(context);
+        int max = this.maxInclusive.resolveY(context);
+        if (max - min - this.inner + 1 <= 0) {
             LOGGER.warn("Empty height range: {}", this);
-            return i;
+            return min;
         } else {
-            int k = p_226297_.nextInt(j - i - this.inner + 1);
-            return p_226297_.nextInt(k + this.inner) + i;
+            int limit = random.nextInt(max - min - this.inner + 1);
+            return random.nextInt(limit + this.inner) + min;
         }
     }
 

@@ -10,14 +10,12 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 import jdk.jfr.Period;
 import jdk.jfr.StackTrace;
-import net.minecraft.obfuscate.DontObfuscate;
 
 @Name("minecraft.NetworkSummary")
 @Label("Network Summary")
 @Category({"Minecraft", "Network"})
 @StackTrace(false)
 @Period("10 s")
-@DontObfuscate
 public class NetworkSummaryEvent extends Event {
     public static final String EVENT_NAME = "minecraft.NetworkSummary";
     public static final EventType TYPE = EventType.getEventType(NetworkSummaryEvent.class);
@@ -39,8 +37,8 @@ public class NetworkSummaryEvent extends Event {
     @Label("Received Packets")
     public int receivedPackets;
 
-    public NetworkSummaryEvent(String p_195562_) {
-        this.remoteAddress = p_195562_;
+    public NetworkSummaryEvent(final String remoteAddress) {
+        this.remoteAddress = remoteAddress;
     }
 
     public static final class Fields {
@@ -61,19 +59,19 @@ public class NetworkSummaryEvent extends Event {
         private final AtomicInteger receivedPackets = new AtomicInteger();
         private final NetworkSummaryEvent event;
 
-        public SumAggregation(String p_195575_) {
-            this.event = new NetworkSummaryEvent(p_195575_);
+        public SumAggregation(final String remoteAddress) {
+            this.event = new NetworkSummaryEvent(remoteAddress);
             this.event.begin();
         }
 
-        public void trackSentPacket(int p_195578_) {
+        public void trackSentPacket(final int size) {
             this.sentPackets.incrementAndGet();
-            this.sentBytes.addAndGet(p_195578_);
+            this.sentBytes.addAndGet(size);
         }
 
-        public void trackReceivedPacket(int p_195580_) {
+        public void trackReceivedPacket(final int size) {
             this.receivedPackets.incrementAndGet();
-            this.receivedBytes.addAndGet(p_195580_);
+            this.receivedBytes.addAndGet(size);
         }
 
         public void commitEvent() {

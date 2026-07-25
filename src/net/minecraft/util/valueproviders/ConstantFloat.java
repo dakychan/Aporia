@@ -2,43 +2,37 @@ package net.minecraft.util.valueproviders;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.util.RandomSource;
 
-public class ConstantFloat extends FloatProvider {
+public record ConstantFloat(float value) implements FloatProvider {
     public static final ConstantFloat ZERO = new ConstantFloat(0.0F);
-    public static final MapCodec<ConstantFloat> CODEC = Codec.FLOAT.fieldOf("value").xmap(ConstantFloat::of, ConstantFloat::getValue);
-    private final float value;
+    public static final MapCodec<ConstantFloat> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(Codec.FLOAT.fieldOf("value").forGetter(ConstantFloat::value)).apply(i, ConstantFloat::of)
+    );
 
-    public static ConstantFloat of(float p_146459_) {
-        return p_146459_ == 0.0F ? ZERO : new ConstantFloat(p_146459_);
+    public static ConstantFloat of(final float value) {
+        return value == 0.0F ? ZERO : new ConstantFloat(value);
     }
 
-    private ConstantFloat(float p_146456_) {
-        this.value = p_146456_;
-    }
-
-    public float getValue() {
+    @Override
+    public float sample(final RandomSource random) {
         return this.value;
     }
 
     @Override
-    public float sample(RandomSource p_216852_) {
+    public float min() {
         return this.value;
     }
 
     @Override
-    public float getMinValue() {
+    public float max() {
         return this.value;
     }
 
     @Override
-    public float getMaxValue() {
-        return this.value;
-    }
-
-    @Override
-    public FloatProviderType<?> getType() {
-        return FloatProviderType.CONSTANT;
+    public MapCodec<ConstantFloat> codec() {
+        return MAP_CODEC;
     }
 
     @Override

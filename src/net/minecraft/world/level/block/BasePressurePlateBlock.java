@@ -28,17 +28,17 @@ public abstract class BasePressurePlateBlock extends Block {
     protected static final AABB TOUCH_AABB = Block.column(14.0, 0.0, 4.0).toAabbs().getFirst();
     protected final BlockSetType type;
 
-    protected BasePressurePlateBlock(BlockBehaviour.Properties p_273450_, BlockSetType p_273402_) {
-        super(p_273450_.sound(p_273402_.soundType()));
-        this.type = p_273402_;
+    protected BasePressurePlateBlock(final BlockBehaviour.Properties properties, final BlockSetType type) {
+        super(properties.sound(type.soundType()));
+        this.type = type;
     }
 
     @Override
     protected abstract MapCodec<? extends BasePressurePlateBlock> codec();
 
     @Override
-    protected VoxelShape getShape(BlockState p_49341_, BlockGetter p_49342_, BlockPos p_49343_, CollisionContext p_49344_) {
-        return this.getSignalForState(p_49341_) > 0 ? SHAPE_PRESSED : SHAPE;
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.getSignalForState(state) > 0 ? SHAPE_PRESSED : SHAPE;
     }
 
     protected int getPressedTime() {
@@ -46,108 +46,115 @@ public abstract class BasePressurePlateBlock extends Block {
     }
 
     @Override
-    public boolean isPossibleToRespawnInThis(BlockState p_279155_) {
+    public boolean isPossibleToRespawnInThis(final BlockState state) {
         return true;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_49329_,
-        LevelReader p_366632_,
-        ScheduledTickAccess p_363595_,
-        BlockPos p_49333_,
-        Direction p_49330_,
-        BlockPos p_49334_,
-        BlockState p_49331_,
-        RandomSource p_370163_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_49330_ == Direction.DOWN && !p_49329_.canSurvive(p_366632_, p_49333_)
+        return directionToNeighbour == Direction.DOWN && !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_49329_, p_366632_, p_363595_, p_49333_, p_49330_, p_49334_, p_49331_, p_370163_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_49325_, LevelReader p_49326_, BlockPos p_49327_) {
-        BlockPos blockpos = p_49327_.below();
-        return canSupportRigidBlock(p_49326_, blockpos) || canSupportCenter(p_49326_, blockpos, Direction.UP);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockPos below = pos.below();
+        return canSupportRigidBlock(level, below) || canSupportCenter(level, below, Direction.UP);
     }
 
     @Override
-    protected void tick(BlockState p_220768_, ServerLevel p_220769_, BlockPos p_220770_, RandomSource p_220771_) {
-        int i = this.getSignalForState(p_220768_);
-        if (i > 0) {
-            this.checkPressed(null, p_220769_, p_220770_, p_220768_, i);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        int signal = this.getSignalForState(state);
+        if (signal > 0) {
+            this.checkPressed(null, level, pos, state, signal);
         }
     }
 
     @Override
-    protected void entityInside(BlockState p_49314_, Level p_49315_, BlockPos p_49316_, Entity p_49317_, InsideBlockEffectApplier p_395804_, boolean p_432050_) {
-        if (!p_49315_.isClientSide()) {
-            int i = this.getSignalForState(p_49314_);
-            if (i == 0) {
-                this.checkPressed(p_49317_, p_49315_, p_49316_, p_49314_, i);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (!level.isClientSide()) {
+            int signal = this.getSignalForState(state);
+            if (signal == 0) {
+                this.checkPressed(entity, level, pos, state, signal);
             }
         }
     }
 
-    private void checkPressed(@Nullable Entity p_152144_, Level p_152145_, BlockPos p_152146_, BlockState p_152147_, int p_152148_) {
-        int i = this.getSignalStrength(p_152145_, p_152146_);
-        boolean flag = p_152148_ > 0;
-        boolean flag1 = i > 0;
-        if (p_152148_ != i) {
-            BlockState blockstate = this.setSignalForState(p_152147_, i);
-            p_152145_.setBlock(p_152146_, blockstate, 2);
-            this.updateNeighbours(p_152145_, p_152146_);
-            p_152145_.setBlocksDirty(p_152146_, p_152147_, blockstate);
+    private void checkPressed(final @Nullable Entity sourceEntity, final Level level, final BlockPos pos, final BlockState state, final int oldSignal) {
+        int signal = this.getSignalStrength(level, pos);
+        boolean wasPressed = oldSignal > 0;
+        boolean isPressed = signal > 0;
+        if (oldSignal != signal) {
+            BlockState newState = this.setSignalForState(state, signal);
+            level.setBlock(pos, newState, 2);
+            this.updateNeighbours(level, pos);
+            level.setBlocksDirty(pos, state, newState);
         }
 
-        if (!flag1 && flag) {
-            p_152145_.playSound(null, p_152146_, this.type.pressurePlateClickOff(), SoundSource.BLOCKS);
-            p_152145_.gameEvent(p_152144_, GameEvent.BLOCK_DEACTIVATE, p_152146_);
-        } else if (flag1 && !flag) {
-            p_152145_.playSound(null, p_152146_, this.type.pressurePlateClickOn(), SoundSource.BLOCKS);
-            p_152145_.gameEvent(p_152144_, GameEvent.BLOCK_ACTIVATE, p_152146_);
+        if (!isPressed && wasPressed) {
+            level.playSound(null, pos, this.type.pressurePlateClickOff(), SoundSource.BLOCKS);
+            level.gameEvent(sourceEntity, GameEvent.BLOCK_DEACTIVATE, pos);
+        } else if (isPressed && !wasPressed) {
+            level.playSound(null, pos, this.type.pressurePlateClickOn(), SoundSource.BLOCKS);
+            level.gameEvent(sourceEntity, GameEvent.BLOCK_ACTIVATE, pos);
         }
 
-        if (flag1) {
-            p_152145_.scheduleTick(new BlockPos(p_152146_), this, this.getPressedTime());
+        if (isPressed) {
+            level.scheduleTick(new BlockPos(pos), this, this.getPressedTime());
         }
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_393640_, ServerLevel p_396048_, BlockPos p_394765_, boolean p_397293_) {
-        if (!p_397293_ && this.getSignalForState(p_393640_) > 0) {
-            this.updateNeighbours(p_396048_, p_394765_);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        if (!movedByPiston && this.getSignalForState(state) > 0) {
+            this.updateNeighbours(level, pos);
         }
     }
 
-    protected void updateNeighbours(Level p_49292_, BlockPos p_49293_) {
-        p_49292_.updateNeighborsAt(p_49293_, this);
-        p_49292_.updateNeighborsAt(p_49293_.below(), this);
+    protected void updateNeighbours(final Level level, final BlockPos pos) {
+        level.updateNeighborsAt(pos, this);
+        level.updateNeighborsAt(pos.below(), this);
     }
 
     @Override
-    protected int getSignal(BlockState p_49309_, BlockGetter p_49310_, BlockPos p_49311_, Direction p_49312_) {
-        return this.getSignalForState(p_49309_);
+    protected int getDirectSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return direction == Direction.UP ? this.getSignalForState(state) : 0;
     }
 
     @Override
-    protected int getDirectSignal(BlockState p_49346_, BlockGetter p_49347_, BlockPos p_49348_, Direction p_49349_) {
-        return p_49349_ == Direction.UP ? this.getSignalForState(p_49346_) : 0;
-    }
-
-    @Override
-    protected boolean isSignalSource(BlockState p_49351_) {
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
-    protected static int getEntityCount(Level p_289656_, AABB p_289647_, Class<? extends Entity> p_289686_) {
-        return p_289656_.getEntitiesOfClass(p_289686_, p_289647_, EntitySelector.NO_SPECTATORS.and(p_289691_ -> !p_289691_.isIgnoringBlockTriggers())).size();
+    @Override
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return this.getSignalForState(state);
     }
 
-    protected abstract int getSignalStrength(Level p_49336_, BlockPos p_49337_);
+    protected static int getEntityCount(final Level level, final AABB entityDetectionBox, final Class<? extends Entity> entityClass) {
+        return level.getEntitiesOfClass(entityClass, entityDetectionBox, EntitySelector.NO_SPECTATORS.and(e -> !e.isIgnoringBlockTriggers())).size();
+    }
 
-    protected abstract int getSignalForState(BlockState p_49354_);
+    protected abstract int getSignalStrength(Level level, BlockPos pos);
 
-    protected abstract BlockState setSignalForState(BlockState p_49301_, int p_49302_);
+    protected abstract int getSignalForState(BlockState state);
+
+    protected abstract BlockState setSignalForState(BlockState state, int signal);
 }

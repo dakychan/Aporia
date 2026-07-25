@@ -23,7 +23,7 @@ public record ServerboundPlaceRecipePacket(int containerId, RecipeDisplayId reci
         return GamePacketTypes.SERVERBOUND_PLACE_RECIPE;
     }
 
-    public void handle(ServerGamePacketListener p_134248_) {
-        p_134248_.handlePlaceRecipe(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePlaceRecipe(this);
     }
 }

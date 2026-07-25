@@ -15,30 +15,30 @@ public class LongJumpMidJump extends Behavior<Mob> {
     private final UniformInt timeBetweenLongJumps;
     private final SoundEvent landingSound;
 
-    public LongJumpMidJump(UniformInt p_147596_, SoundEvent p_147597_) {
+    public LongJumpMidJump(final UniformInt timeBetweenLongJumps, final SoundEvent landingSound) {
         super(ImmutableMap.of(MemoryModuleType.LOOK_TARGET, MemoryStatus.REGISTERED, MemoryModuleType.LONG_JUMP_MID_JUMP, MemoryStatus.VALUE_PRESENT), 100);
-        this.timeBetweenLongJumps = p_147596_;
-        this.landingSound = p_147597_;
+        this.timeBetweenLongJumps = timeBetweenLongJumps;
+        this.landingSound = landingSound;
     }
 
-    protected boolean canStillUse(ServerLevel p_147603_, Mob p_147604_, long p_147605_) {
-        return !p_147604_.onGround();
+    protected boolean canStillUse(final ServerLevel level, final Mob body, final long timestamp) {
+        return !body.onGround();
     }
 
-    protected void start(ServerLevel p_147611_, Mob p_147612_, long p_147613_) {
-        p_147612_.setDiscardFriction(true);
-        p_147612_.setPose(Pose.LONG_JUMPING);
+    protected void start(final ServerLevel level, final Mob body, final long timestamp) {
+        body.setDiscardFriction(true);
+        body.setPose(Pose.LONG_JUMPING);
     }
 
-    protected void stop(ServerLevel p_147619_, Mob p_147620_, long p_147621_) {
-        if (p_147620_.onGround()) {
-            p_147620_.setDeltaMovement(p_147620_.getDeltaMovement().multiply(0.1F, 1.0, 0.1F));
-            p_147619_.playSound(null, p_147620_, this.landingSound, SoundSource.NEUTRAL, 2.0F, 1.0F);
+    protected void stop(final ServerLevel level, final Mob body, final long timestamp) {
+        if (body.onGround()) {
+            body.setDeltaMovement(body.getDeltaMovement().multiply(0.1F, 1.0, 0.1F));
+            level.playSound(null, body, this.landingSound, SoundSource.NEUTRAL, 2.0F, 1.0F);
         }
 
-        p_147620_.setDiscardFriction(false);
-        p_147620_.setPose(Pose.STANDING);
-        p_147620_.getBrain().eraseMemory(MemoryModuleType.LONG_JUMP_MID_JUMP);
-        p_147620_.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(p_147619_.random));
+        body.setDiscardFriction(false);
+        body.setPose(Pose.STANDING);
+        body.getBrain().eraseMemory(MemoryModuleType.LONG_JUMP_MID_JUMP);
+        body.getBrain().setMemory(MemoryModuleType.LONG_JUMP_COOLDOWN_TICKS, this.timeBetweenLongJumps.sample(level.getRandom()));
     }
 }

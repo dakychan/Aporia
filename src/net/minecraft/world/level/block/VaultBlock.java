@@ -13,6 +13,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.vault.VaultBlockEntity;
 import net.minecraft.world.level.block.entity.vault.VaultState;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -36,30 +37,29 @@ public class VaultBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public VaultBlock(BlockBehaviour.Properties p_332394_) {
-        super(p_332394_);
+    public VaultBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(STATE, VaultState.INACTIVE).setValue(OMINOUS, false));
     }
 
     @Override
     public InteractionResult useItemOn(
-        ItemStack p_330793_, BlockState p_331776_, Level p_335228_, BlockPos p_334682_, Player p_334435_, InteractionHand p_332576_, BlockHitResult p_328969_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (!p_330793_.isEmpty() && p_331776_.getValue(STATE) == VaultState.ACTIVE) {
-            if (p_335228_ instanceof ServerLevel serverlevel) {
-                if (!(serverlevel.getBlockEntity(p_334682_) instanceof VaultBlockEntity vaultblockentity)) {
+        if (!itemStack.isEmpty() && state.getValue(STATE) == VaultState.ACTIVE) {
+            if (level instanceof ServerLevel serverLevel) {
+                if (!(serverLevel.getBlockEntity(pos) instanceof VaultBlockEntity vault)) {
                     return InteractionResult.TRY_WITH_EMPTY_HAND;
                 }
 
                 VaultBlockEntity.Server.tryInsertKey(
-                    serverlevel,
-                    p_334682_,
-                    p_331776_,
-                    vaultblockentity.getConfig(),
-                    vaultblockentity.getServerData(),
-                    vaultblockentity.getSharedData(),
-                    p_334435_,
-                    p_330793_
+                    serverLevel, pos, state, vault.getConfig(), vault.getServerData(), vault.getSharedData(), player, itemStack
                 );
             }
 
@@ -70,46 +70,44 @@ public class VaultBlock extends BaseEntityBlock {
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_330778_, BlockState p_329139_) {
-        return new VaultBlockEntity(p_330778_, p_329139_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos pos, final BlockState state) {
+        return new VaultBlockEntity(pos, state);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_334106_) {
-        p_334106_.add(FACING, STATE, OMINOUS);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, STATE, OMINOUS);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_328167_, BlockState p_334496_, BlockEntityType<T> p_335892_) {
-        return p_328167_ instanceof ServerLevel serverlevel
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return level instanceof ServerLevel serverLevel
             ? createTickerHelper(
-                p_335892_,
-                BlockEntityType.VAULT,
-                (p_333393_, p_329496_, p_334876_, p_335304_) -> VaultBlockEntity.Server.tick(
-                    serverlevel, p_329496_, p_334876_, p_335304_.getConfig(), p_335304_.getServerData(), p_335304_.getSharedData()
+                type,
+                BlockEntityTypes.VAULT,
+                (innerLevel, pos, state, entity) -> VaultBlockEntity.Server.tick(
+                    serverLevel, pos, state, entity.getConfig(), entity.getServerData(), entity.getSharedData()
                 )
             )
             : createTickerHelper(
-                p_335892_,
-                BlockEntityType.VAULT,
-                (p_329262_, p_332751_, p_331862_, p_336114_) -> VaultBlockEntity.Client.tick(
-                    p_329262_, p_332751_, p_331862_, p_336114_.getClientData(), p_336114_.getSharedData()
-                )
+                type,
+                BlockEntityTypes.VAULT,
+                (innerLevel, pos, state, entity) -> VaultBlockEntity.Client.tick(innerLevel, pos, state, entity.getClientData(), entity.getSharedData())
             );
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_328081_) {
-        return this.defaultBlockState().setValue(FACING, p_328081_.getHorizontalDirection().getOpposite());
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return this.defaultBlockState().setValue(FACING, context.getHorizontalDirection().getOpposite());
     }
 
     @Override
-    public BlockState rotate(BlockState p_333257_, Rotation p_329014_) {
-        return p_333257_.setValue(FACING, p_329014_.rotate(p_333257_.getValue(FACING)));
+    public BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState p_330957_, Mirror p_329929_) {
-        return p_330957_.rotate(p_329929_.getRotation(p_330957_.getValue(FACING)));
+    public BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 }

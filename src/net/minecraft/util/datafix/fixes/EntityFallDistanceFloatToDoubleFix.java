@@ -6,14 +6,13 @@ import com.mojang.datafixers.TypeRewriteRule;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.DSL.TypeReference;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class EntityFallDistanceFloatToDoubleFix extends DataFix {
     private final TypeReference type;
 
-    public EntityFallDistanceFloatToDoubleFix(Schema p_393177_, TypeReference p_396299_) {
-        super(p_393177_, false);
-        this.type = p_396299_;
+    public EntityFallDistanceFloatToDoubleFix(final Schema outputSchema, final TypeReference type) {
+        super(outputSchema, false);
+        this.type = type;
     }
 
     @Override
@@ -25,10 +24,10 @@ public class EntityFallDistanceFloatToDoubleFix extends DataFix {
         );
     }
 
-    private static Typed<?> fixEntity(Typed<?> p_393056_) {
-        return p_393056_.update(
+    private static Typed<?> fixEntity(final Typed<?> entity) {
+        return entity.update(
             DSL.remainderFinder(),
-            p_392978_ -> p_392978_.renameAndFixField("FallDistance", "fall_distance", p_393317_ -> p_393317_.createDouble(p_393317_.asFloat(0.0F)))
+            remainder -> remainder.renameAndFixField("FallDistance", "fall_distance", fallDistance -> fallDistance.createDouble(fallDistance.asFloat(0.0F)))
         );
     }
 }

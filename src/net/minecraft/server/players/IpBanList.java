@@ -7,46 +7,46 @@ import net.minecraft.server.notifications.NotificationService;
 import org.jspecify.annotations.Nullable;
 
 public class IpBanList extends StoredUserList<String, IpBanListEntry> {
-    public IpBanList(File p_11036_, NotificationService p_422825_) {
-        super(p_11036_, p_422825_);
+    public IpBanList(final File file, final NotificationService notificationService) {
+        super(file, notificationService);
     }
 
     @Override
-    protected StoredUserEntry<String> createEntry(JsonObject p_11038_) {
-        return new IpBanListEntry(p_11038_);
+    protected StoredUserEntry<String> createEntry(final JsonObject object) {
+        return new IpBanListEntry(object);
     }
 
-    public boolean isBanned(SocketAddress p_11042_) {
-        String s = this.getIpFromAddress(p_11042_);
-        return this.contains(s);
+    public boolean isBanned(final SocketAddress address) {
+        String ip = this.getIpFromAddress(address);
+        return this.contains(ip);
     }
 
-    public boolean isBanned(String p_11040_) {
-        return this.contains(p_11040_);
+    public boolean isBanned(final String ip) {
+        return this.contains(ip);
     }
 
-    public @Nullable IpBanListEntry get(SocketAddress p_11044_) {
-        String s = this.getIpFromAddress(p_11044_);
-        return this.get(s);
+    public @Nullable IpBanListEntry get(final SocketAddress address) {
+        String ip = this.getIpFromAddress(address);
+        return this.get(ip);
     }
 
-    private String getIpFromAddress(SocketAddress p_11046_) {
-        String s = p_11046_.toString();
-        if (s.contains("/")) {
-            s = s.substring(s.indexOf(47) + 1);
+    private String getIpFromAddress(final SocketAddress address) {
+        String ip = address.toString();
+        if (ip.contains("/")) {
+            ip = ip.substring(ip.indexOf(47) + 1);
         }
 
-        if (s.contains(":")) {
-            s = s.substring(0, s.indexOf(58));
+        if (ip.contains(":")) {
+            ip = ip.substring(0, ip.indexOf(58));
         }
 
-        return s;
+        return ip;
     }
 
-    public boolean add(IpBanListEntry p_425579_) {
-        if (super.add(p_425579_)) {
-            if (p_425579_.getUser() != null) {
-                this.notificationService.ipBanned(p_425579_);
+    public boolean add(final IpBanListEntry infos) {
+        if (super.add(infos)) {
+            if (infos.getUser() != null) {
+                this.notificationService.ipBanned(infos);
             }
 
             return true;
@@ -55,9 +55,9 @@ public class IpBanList extends StoredUserList<String, IpBanListEntry> {
         }
     }
 
-    public boolean remove(String p_430248_) {
-        if (super.remove(p_430248_)) {
-            this.notificationService.ipUnbanned(p_430248_);
+    public boolean remove(final String ip) {
+        if (super.remove(ip)) {
+            this.notificationService.ipUnbanned(ip);
             return true;
         } else {
             return false;
@@ -66,9 +66,9 @@ public class IpBanList extends StoredUserList<String, IpBanListEntry> {
 
     @Override
     public void clear() {
-        for (IpBanListEntry ipbanlistentry : this.getEntries()) {
-            if (ipbanlistentry.getUser() != null) {
-                this.notificationService.ipUnbanned(ipbanlistentry.getUser());
+        for (IpBanListEntry user : this.getEntries()) {
+            if (user.getUser() != null) {
+                this.notificationService.ipUnbanned(user.getUser());
             }
         }
 

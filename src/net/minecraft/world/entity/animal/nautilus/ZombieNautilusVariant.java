@@ -2,7 +2,6 @@ package net.minecraft.world.entity.animal.nautilus;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -20,25 +19,27 @@ import net.minecraft.world.entity.variant.SpawnPrioritySelectors;
 public record ZombieNautilusVariant(ModelAndTexture<ZombieNautilusVariant.ModelType> modelAndTexture, SpawnPrioritySelectors spawnConditions)
     implements PriorityProvider<SpawnContext, SpawnCondition> {
     public static final Codec<ZombieNautilusVariant> DIRECT_CODEC = RecordCodecBuilder.create(
-        p_460259_ -> p_460259_.group(
+        i -> i.group(
                 ModelAndTexture.codec(ZombieNautilusVariant.ModelType.CODEC, ZombieNautilusVariant.ModelType.NORMAL)
                     .forGetter(ZombieNautilusVariant::modelAndTexture),
                 SpawnPrioritySelectors.CODEC.fieldOf("spawn_conditions").forGetter(ZombieNautilusVariant::spawnConditions)
             )
-            .apply(p_460259_, ZombieNautilusVariant::new)
+            .apply(i, ZombieNautilusVariant::new)
     );
     public static final Codec<ZombieNautilusVariant> NETWORK_CODEC = RecordCodecBuilder.create(
-        p_459336_ -> p_459336_.group(
+        i -> i.group(
                 ModelAndTexture.codec(ZombieNautilusVariant.ModelType.CODEC, ZombieNautilusVariant.ModelType.NORMAL)
                     .forGetter(ZombieNautilusVariant::modelAndTexture)
             )
-            .apply(p_459336_, ZombieNautilusVariant::new)
+            .apply(i, ZombieNautilusVariant::new)
     );
     public static final Codec<Holder<ZombieNautilusVariant>> CODEC = RegistryFixedCodec.create(Registries.ZOMBIE_NAUTILUS_VARIANT);
-    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<ZombieNautilusVariant>> STREAM_CODEC = ByteBufCodecs.holderRegistry(Registries.ZOMBIE_NAUTILUS_VARIANT);
+    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<ZombieNautilusVariant>> STREAM_CODEC = ByteBufCodecs.holderRegistry(
+        Registries.ZOMBIE_NAUTILUS_VARIANT
+    );
 
-    private ZombieNautilusVariant(ModelAndTexture<ZombieNautilusVariant.ModelType> p_457910_) {
-        this(p_457910_, SpawnPrioritySelectors.EMPTY);
+    private ZombieNautilusVariant(final ModelAndTexture<ZombieNautilusVariant.ModelType> assetInfo) {
+        this(assetInfo, SpawnPrioritySelectors.EMPTY);
     }
 
     @Override
@@ -46,15 +47,15 @@ public record ZombieNautilusVariant(ModelAndTexture<ZombieNautilusVariant.ModelT
         return this.spawnConditions.selectors();
     }
 
-    public static enum ModelType implements StringRepresentable {
+    public enum ModelType implements StringRepresentable {
         NORMAL("normal"),
         WARM("warm");
 
         public static final Codec<ZombieNautilusVariant.ModelType> CODEC = StringRepresentable.fromEnum(ZombieNautilusVariant.ModelType::values);
         private final String name;
 
-        private ModelType(final String p_450876_) {
-            this.name = p_450876_;
+        ModelType(final String name) {
+            this.name = name;
         }
 
         @Override

@@ -1,36 +1,30 @@
 package net.minecraft.client.resources.model;
 
-import net.minecraft.client.renderer.block.model.BlockModelPart;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelPart;
+import net.minecraft.client.resources.model.geometry.BakedQuad;
+import net.minecraft.client.resources.model.sprite.MaterialBaker;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Vector3f;
 import org.joml.Vector3fc;
 
-@OnlyIn(Dist.CLIENT)
 public interface ModelBaker {
-    ResolvedModel getModel(Identifier p_456994_);
+    ResolvedModel getModel(Identifier location);
 
-    BlockModelPart missingBlockModelPart();
+    BlockStateModelPart missingBlockModelPart();
 
-    SpriteGetter sprites();
+    MaterialBaker materials();
 
-    ModelBaker.PartCache parts();
+    ModelBaker.Interner interner();
 
-    <T> T compute(ModelBaker.SharedOperationKey<T> p_395456_);
+    <T> T compute(ModelBaker.SharedOperationKey<T> key);
 
-    @OnlyIn(Dist.CLIENT)
-    public interface PartCache {
-        default Vector3fc vector(float p_452065_, float p_451254_, float p_452365_) {
-            return this.vector(new Vector3f(p_452065_, p_451254_, p_452365_));
-        }
+        interface Interner {
+        Vector3fc vector(Vector3fc vector);
 
-        Vector3fc vector(Vector3fc p_460548_);
+        BakedQuad.MaterialInfo materialInfo(BakedQuad.MaterialInfo material);
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface SharedOperationKey<T> {
-        T compute(ModelBaker p_393089_);
+        interface SharedOperationKey<T> {
+        T compute(ModelBaker modelBakery);
     }
 }

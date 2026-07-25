@@ -13,33 +13,32 @@ public interface InventoryCarrier {
 
     SimpleContainer getInventory();
 
-    static void pickUpItem(ServerLevel p_361504_, Mob p_219612_, InventoryCarrier p_219613_, ItemEntity p_219614_) {
-        ItemStack itemstack = p_219614_.getItem();
-        if (p_219612_.wantsToPickUp(p_361504_, itemstack)) {
-            SimpleContainer simplecontainer = p_219613_.getInventory();
-            boolean flag = simplecontainer.canAddItem(itemstack);
-            if (!flag) {
+    static void pickUpItem(final ServerLevel level, final Mob mob, final InventoryCarrier inventoryCarrier, final ItemEntity itemEntity) {
+        ItemStack itemStack = itemEntity.getItem();
+        if (mob.wantsToPickUp(level, itemStack)) {
+            SimpleContainer inventory = inventoryCarrier.getInventory();
+            boolean hasSpace = inventory.canAddItem(itemStack);
+            if (!hasSpace) {
                 return;
             }
 
-            p_219612_.onItemPickup(p_219614_);
-            int i = itemstack.getCount();
-            ItemStack itemstack1 = simplecontainer.addItem(itemstack);
-            p_219612_.take(p_219614_, i - itemstack1.getCount());
-            if (itemstack1.isEmpty()) {
-                p_219614_.discard();
+            mob.onItemPickup(itemEntity);
+            int count = itemStack.getCount();
+            ItemStack remainder = inventory.addItem(itemStack);
+            mob.take(itemEntity, count - remainder.getCount());
+            if (remainder.isEmpty()) {
+                itemEntity.discard();
             } else {
-                itemstack.setCount(itemstack1.getCount());
+                itemStack.setCount(remainder.getCount());
             }
         }
     }
 
-    default void readInventoryFromTag(ValueInput p_406226_) {
-        p_406226_.list("Inventory", ItemStack.CODEC)
-            .ifPresent(p_405544_ -> this.getInventory().fromItemList((ValueInput.TypedInputList<ItemStack>)p_405544_));
+    default void readInventoryFromTag(final ValueInput input) {
+        input.list("Inventory", ItemStack.CODEC).ifPresent(list -> this.getInventory().fromItemList((ValueInput.TypedInputList<ItemStack>)list));
     }
 
-    default void writeInventoryToTag(ValueOutput p_409377_) {
-        this.getInventory().storeAsItemList(p_409377_.list("Inventory", ItemStack.CODEC));
+    default void writeInventoryToTag(final ValueOutput output) {
+        this.getInventory().storeAsItemList(output.list("Inventory", ItemStack.CODEC));
     }
 }

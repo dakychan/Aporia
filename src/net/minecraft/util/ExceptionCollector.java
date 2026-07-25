@@ -5,11 +5,11 @@ import org.jspecify.annotations.Nullable;
 public class ExceptionCollector<T extends Throwable> {
     private @Nullable T result;
 
-    public void add(T p_13654_) {
+    public void add(final T throwable) {
         if (this.result == null) {
-            this.result = p_13654_;
+            this.result = throwable;
         } else {
-            this.result.addSuppressed(p_13654_);
+            this.result.addSuppressed(throwable);
         }
     }
 

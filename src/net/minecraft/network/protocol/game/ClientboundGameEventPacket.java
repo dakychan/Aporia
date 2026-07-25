@@ -33,19 +33,19 @@ public class ClientboundGameEventPacket implements Packet<ClientGamePacketListen
     private final ClientboundGameEventPacket.Type event;
     private final float param;
 
-    public ClientboundGameEventPacket(ClientboundGameEventPacket.Type p_132170_, float p_132171_) {
-        this.event = p_132170_;
-        this.param = p_132171_;
+    public ClientboundGameEventPacket(final ClientboundGameEventPacket.Type event, final float param) {
+        this.event = event;
+        this.param = param;
     }
 
-    private ClientboundGameEventPacket(FriendlyByteBuf p_178865_) {
-        this.event = ClientboundGameEventPacket.Type.TYPES.get(p_178865_.readUnsignedByte());
-        this.param = p_178865_.readFloat();
+    private ClientboundGameEventPacket(final FriendlyByteBuf input) {
+        this.event = ClientboundGameEventPacket.Type.TYPES.get(input.readUnsignedByte());
+        this.param = input.readFloat();
     }
 
-    private void write(FriendlyByteBuf p_132180_) {
-        p_132180_.writeByte(this.event.id);
-        p_132180_.writeFloat(this.param);
+    private void write(final FriendlyByteBuf output) {
+        output.writeByte(this.event.id);
+        output.writeFloat(this.param);
     }
 
     @Override
@@ -53,8 +53,8 @@ public class ClientboundGameEventPacket implements Packet<ClientGamePacketListen
         return GamePacketTypes.CLIENTBOUND_GAME_EVENT;
     }
 
-    public void handle(ClientGamePacketListener p_132177_) {
-        p_132177_.handleGameEvent(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleGameEvent(this);
     }
 
     public ClientboundGameEventPacket.Type getEvent() {
@@ -66,12 +66,12 @@ public class ClientboundGameEventPacket implements Packet<ClientGamePacketListen
     }
 
     public static class Type {
-        static final Int2ObjectMap<ClientboundGameEventPacket.Type> TYPES = new Int2ObjectOpenHashMap<>();
-        final int id;
+        private static final Int2ObjectMap<ClientboundGameEventPacket.Type> TYPES = new Int2ObjectOpenHashMap<>();
+        private final int id;
 
-        public Type(int p_132186_) {
-            this.id = p_132186_;
-            TYPES.put(p_132186_, this);
+        public Type(final int id) {
+            this.id = id;
+            TYPES.put(id, this);
         }
     }
 }

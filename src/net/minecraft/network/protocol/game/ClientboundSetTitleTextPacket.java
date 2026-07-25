@@ -17,7 +17,7 @@ public record ClientboundSetTitleTextPacket(Component text) implements Packet<Cl
         return GamePacketTypes.CLIENTBOUND_SET_TITLE_TEXT;
     }
 
-    public void handle(ClientGamePacketListener p_179398_) {
-        p_179398_.setTitleText(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.setTitleText(this);
     }
 }

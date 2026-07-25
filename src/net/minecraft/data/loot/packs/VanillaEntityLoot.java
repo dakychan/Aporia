@@ -1,13 +1,13 @@
 package net.minecraft.data.loot.packs;
 
-import net.minecraft.advancements.criterion.DamageSourcePredicate;
-import net.minecraft.advancements.criterion.EntityFlagsPredicate;
-import net.minecraft.advancements.criterion.EntityPredicate;
-import net.minecraft.advancements.criterion.EntityTypePredicate;
-import net.minecraft.advancements.criterion.MinMaxBounds;
-import net.minecraft.advancements.criterion.RaiderPredicate;
-import net.minecraft.advancements.criterion.SlimePredicate;
-import net.minecraft.advancements.criterion.TagPredicate;
+import net.minecraft.advancements.predicates.DamageSourcePredicate;
+import net.minecraft.advancements.predicates.MinMaxBounds;
+import net.minecraft.advancements.predicates.TagPredicate;
+import net.minecraft.advancements.predicates.entity.CubeMobPredicate;
+import net.minecraft.advancements.predicates.entity.EntityFlagsPredicate;
+import net.minecraft.advancements.predicates.entity.EntityPredicate;
+import net.minecraft.advancements.predicates.entity.EntityTypePredicate;
+import net.minecraft.advancements.predicates.entity.RaiderPredicate;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -16,14 +16,14 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.animal.frog.FrogVariant;
 import net.minecraft.world.entity.animal.frog.FrogVariants;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
-import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.ColorCollection;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.LootPool;
@@ -46,22 +46,22 @@ import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public class VanillaEntityLoot extends EntityLootSubProvider {
-    public VanillaEntityLoot(HolderLookup.Provider p_343072_) {
-        super(FeatureFlags.REGISTRY.allFlags(), p_343072_);
+    public VanillaEntityLoot(final HolderLookup.Provider registries) {
+        super(FeatureFlags.REGISTRY.allFlags(), registries);
     }
 
     @Override
     public void generate() {
-        HolderGetter<EntityType<?>> holdergetter = this.registries.lookupOrThrow(Registries.ENTITY_TYPE);
-        HolderGetter<FrogVariant> holdergetter1 = this.registries.lookupOrThrow(Registries.FROG_VARIANT);
-        this.add(EntityType.ALLAY, LootTable.lootTable());
-        this.add(EntityType.ARMADILLO, LootTable.lootTable());
-        this.add(EntityType.ARMOR_STAND, LootTable.lootTable());
-        this.add(EntityType.AXOLOTL, LootTable.lootTable());
-        this.add(EntityType.BAT, LootTable.lootTable());
-        this.add(EntityType.BEE, LootTable.lootTable());
+        HolderGetter<EntityType<?>> entityTypes = this.registries.lookupOrThrow(Registries.ENTITY_TYPE);
+        HolderGetter<FrogVariant> frogVariants = this.registries.lookupOrThrow(Registries.FROG_VARIANT);
+        this.add(EntityTypes.ALLAY, LootTable.lootTable());
+        this.add(EntityTypes.ARMADILLO, LootTable.lootTable());
+        this.add(EntityTypes.ARMOR_STAND, LootTable.lootTable());
+        this.add(EntityTypes.AXOLOTL, LootTable.lootTable());
+        this.add(EntityTypes.BAT, LootTable.lootTable());
+        this.add(EntityTypes.BEE, LootTable.lootTable());
         this.add(
-            EntityType.BLAZE,
+            EntityTypes.BLAZE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -75,7 +75,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.BOGGED,
+            EntityTypes.BOGGED,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -108,7 +108,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.CAT,
+            EntityTypes.CAT,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -116,9 +116,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .add(LootItem.lootTableItem(Items.STRING).apply(SetItemCountFunction.setCount(UniformGenerator.between(0.0F, 2.0F))))
                 )
         );
-        this.add(EntityType.CAMEL, LootTable.lootTable());
+        this.add(EntityTypes.CAMEL, LootTable.lootTable());
         this.add(
-            EntityType.CAMEL_HUSK,
+            EntityTypes.CAMEL_HUSK,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -131,7 +131,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.CAVE_SPIDER,
+            EntityTypes.CAVE_SPIDER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -154,7 +154,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.CHICKEN,
+            EntityTypes.CHICKEN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -176,7 +176,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.COD,
+            EntityTypes.COD,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -191,7 +191,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.COPPER_GOLEM,
+            EntityTypes.COPPER_GOLEM,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -204,7 +204,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.COW,
+            EntityTypes.COW,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -227,7 +227,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.CREEPER,
+            EntityTypes.CREEPER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -243,13 +243,13 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .add(TagEntry.expandTag(ItemTags.CREEPER_DROP_MUSIC_DISCS))
                         .when(
                             LootItemEntityPropertyCondition.hasProperties(
-                                LootContext.EntityTarget.ATTACKER, EntityPredicate.Builder.entity().of(holdergetter, EntityTypeTags.SKELETONS)
+                                LootContext.EntityTarget.ATTACKER, EntityPredicate.Builder.entity().of(entityTypes, EntityTypeTags.SKELETONS)
                             )
                         )
                 )
         );
         this.add(
-            EntityType.DOLPHIN,
+            EntityTypes.DOLPHIN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -263,7 +263,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.DONKEY,
+            EntityTypes.DONKEY,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -276,7 +276,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.DROWNED,
+            EntityTypes.DROWNED,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -295,10 +295,10 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .when(LootItemRandomChanceWithEnchantedBonusCondition.randomChanceAndLootingBoost(this.registries, 0.11F, 0.02F))
                 )
         );
-        this.add(EntityType.ELDER_GUARDIAN, this.elderGuardianLootTable());
-        this.add(EntityType.ENDER_DRAGON, LootTable.lootTable());
+        this.add(EntityTypes.ELDER_GUARDIAN, this.elderGuardianLootTable());
+        this.add(EntityTypes.ENDER_DRAGON, LootTable.lootTable());
         this.add(
-            EntityType.ENDERMAN,
+            EntityTypes.ENDERMAN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -310,9 +310,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                 )
         );
-        this.add(EntityType.ENDERMITE, LootTable.lootTable());
+        this.add(EntityTypes.ENDERMITE, LootTable.lootTable());
         this.add(
-            EntityType.EVOKER,
+            EntityTypes.EVOKER,
             LootTable.lootTable()
                 .withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.TOTEM_OF_UNDYING)))
                 .withPool(
@@ -327,7 +327,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.BREEZE,
+            EntityTypes.BREEZE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -340,10 +340,10 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .when(LootItemKilledByPlayerCondition.killedByPlayer())
                 )
         );
-        this.add(EntityType.FOX, LootTable.lootTable());
-        this.add(EntityType.FROG, LootTable.lootTable());
+        this.add(EntityTypes.FOX, LootTable.lootTable());
+        this.add(EntityTypes.FROG, LootTable.lootTable());
         this.add(
-            EntityType.GHAST,
+            EntityTypes.GHAST,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -372,16 +372,16 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                             DamageSourceCondition.hasDamageSource(
                                 DamageSourcePredicate.Builder.damageType()
                                     .tag(TagPredicate.is(DamageTypeTags.IS_PROJECTILE))
-                                    .direct(EntityPredicate.Builder.entity().of(holdergetter, EntityType.FIREBALL))
+                                    .direct(EntityPredicate.Builder.entity().of(entityTypes, EntityTypes.FIREBALL))
                             )
                         )
                         .when(LootItemKilledByPlayerCondition.killedByPlayer())
                 )
         );
-        this.add(EntityType.HAPPY_GHAST, LootTable.lootTable());
-        this.add(EntityType.GIANT, LootTable.lootTable());
+        this.add(EntityTypes.HAPPY_GHAST, LootTable.lootTable());
+        this.add(EntityTypes.GIANT, LootTable.lootTable());
         this.add(
-            EntityType.GLOW_SQUID,
+            EntityTypes.GLOW_SQUID,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -393,9 +393,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                 )
         );
-        this.add(EntityType.GOAT, LootTable.lootTable());
+        this.add(EntityTypes.GOAT, LootTable.lootTable());
         this.add(
-            EntityType.GUARDIAN,
+            EntityTypes.GUARDIAN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -431,7 +431,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.HORSE,
+            EntityTypes.HORSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -444,7 +444,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.HUSK,
+            EntityTypes.HUSK,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -466,10 +466,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                                     LootItemEntityPropertyCondition.hasProperties(
                                         LootContext.EntityTarget.THIS,
                                         EntityPredicate.Builder.entity()
-                                            .vehicle(
-                                                EntityPredicate.Builder.entity()
-                                                    .entityType(EntityTypePredicate.of(holdergetter, EntityType.CAMEL_HUSK))
-                                            )
+                                            .vehicle(EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypes.CAMEL_HUSK)))
                                             .build()
                                     )
                                 )
@@ -486,7 +483,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.RAVAGER,
+            EntityTypes.RAVAGER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -494,9 +491,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .add(LootItem.lootTableItem(Items.SADDLE).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                 )
         );
-        this.add(EntityType.ILLUSIONER, LootTable.lootTable());
+        this.add(EntityTypes.ILLUSIONER, LootTable.lootTable());
         this.add(
-            EntityType.IRON_GOLEM,
+            EntityTypes.IRON_GOLEM,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -510,7 +507,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.LLAMA,
+            EntityTypes.LLAMA,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -523,7 +520,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.MAGMA_CUBE,
+            EntityTypes.MAGMA_CUBE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -532,34 +529,35 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                             LootItem.lootTableItem(Items.MAGMA_CREAM)
                                 .apply(SetItemCountFunction.setCount(UniformGenerator.between(-2.0F, 1.0F)))
                                 .apply(EnchantedCountIncreaseFunction.lootingMultiplier(this.registries, UniformGenerator.between(0.0F, 1.0F)))
-                                .when(this.killedByFrog(holdergetter).invert())
+                                .when(this.killedByFrog(entityTypes).invert())
                                 .when(
                                     LootItemEntityPropertyCondition.hasProperties(
                                         LootContext.EntityTarget.THIS,
-                                        EntityPredicate.Builder.entity().subPredicate(SlimePredicate.sized(MinMaxBounds.Ints.atLeast(2)))
+                                        EntityPredicate.Builder.entity().cubeMob(CubeMobPredicate.sized(MinMaxBounds.Ints.atLeast(2)))
                                     )
                                 )
                         )
                         .add(
                             LootItem.lootTableItem(Items.PEARLESCENT_FROGLIGHT)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
-                                .when(this.killedByFrogVariant(holdergetter, holdergetter1, FrogVariants.WARM))
+                                .when(this.killedByFrogVariant(entityTypes, frogVariants, FrogVariants.WARM))
                         )
                         .add(
                             LootItem.lootTableItem(Items.VERDANT_FROGLIGHT)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
-                                .when(this.killedByFrogVariant(holdergetter, holdergetter1, FrogVariants.COLD))
+                                .when(this.killedByFrogVariant(entityTypes, frogVariants, FrogVariants.COLD))
                         )
                         .add(
                             LootItem.lootTableItem(Items.OCHRE_FROGLIGHT)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
-                                .when(this.killedByFrogVariant(holdergetter, holdergetter1, FrogVariants.TEMPERATE))
+                                .when(this.killedByFrogVariant(entityTypes, frogVariants, FrogVariants.TEMPERATE))
                         )
                 )
         );
-        this.add(EntityType.MANNEQUIN, LootTable.lootTable());
+        this.add(EntityTypes.SULFUR_CUBE, LootTable.lootTable());
+        this.add(EntityTypes.MANNEQUIN, LootTable.lootTable());
         this.add(
-            EntityType.MULE,
+            EntityTypes.MULE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -572,7 +570,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.MOOSHROOM,
+            EntityTypes.MOOSHROOM,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -595,7 +593,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.NAUTILUS,
+            EntityTypes.NAUTILUS,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -605,9 +603,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .when(LootItemRandomChanceWithEnchantedBonusCondition.randomChanceAndLootingBoost(this.registries, 0.05F, 0.01F))
                 )
         );
-        this.add(EntityType.OCELOT, LootTable.lootTable());
+        this.add(EntityTypes.OCELOT, LootTable.lootTable());
         this.add(
-            EntityType.PANDA,
+            EntityTypes.PANDA,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -616,7 +614,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.PARROT,
+            EntityTypes.PARROT,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -629,7 +627,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.PHANTOM,
+            EntityTypes.PHANTOM,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -643,7 +641,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.PIG,
+            EntityTypes.PIG,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -657,7 +655,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.PILLAGER,
+            EntityTypes.PILLAGER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -669,14 +667,14 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                         .when(
                             LootItemEntityPropertyCondition.hasProperties(
-                                LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().subPredicate(RaiderPredicate.CAPTAIN_WITHOUT_RAID)
+                                LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().raider(RaiderPredicate.CAPTAIN_WITHOUT_RAID)
                             )
                         )
                 )
         );
-        this.add(EntityType.PLAYER, LootTable.lootTable());
+        this.add(EntityTypes.PLAYER, LootTable.lootTable());
         this.add(
-            EntityType.POLAR_BEAR,
+            EntityTypes.POLAR_BEAR,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -697,7 +695,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.PUFFERFISH,
+            EntityTypes.PUFFERFISH,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -712,7 +710,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.RABBIT,
+            EntityTypes.RABBIT,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -742,7 +740,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.SALMON,
+            EntityTypes.SALMON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -757,7 +755,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.SHEEP,
+            EntityTypes.SHEEP,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -769,18 +767,15 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                                 .apply(EnchantedCountIncreaseFunction.lootingMultiplier(this.registries, UniformGenerator.between(0.0F, 1.0F)))
                         )
                 )
-                .withPool(createSheepDispatchPool(BuiltInLootTables.SHEEP_BY_DYE))
+                .withPool(createSheepDispatchPool(BuiltInLootTables.SHEEP))
         );
-        LootData.WOOL_ITEM_BY_DYE
-            .forEach(
-                (p_363717_, p_369106_) -> this.add(
-                    EntityType.SHEEP,
-                    BuiltInLootTables.SHEEP_BY_DYE.get(p_363717_),
-                    LootTable.lootTable().withPool(LootPool.lootPool().add(LootItem.lootTableItem(p_369106_)))
-                )
-            );
+        ColorCollection.zipApply(
+            BuiltInLootTables.SHEEP,
+            Blocks.WOOL,
+            (sheep, wool) -> this.add(EntityTypes.SHEEP, sheep, LootTable.lootTable().withPool(LootPool.lootPool().add(LootItem.lootTableItem(wool))))
+        );
         this.add(
-            EntityType.SHULKER,
+            EntityTypes.SHULKER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -789,9 +784,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .when(LootItemRandomChanceWithEnchantedBonusCondition.randomChanceAndLootingBoost(this.registries, 0.5F, 0.0625F))
                 )
         );
-        this.add(EntityType.SILVERFISH, LootTable.lootTable());
+        this.add(EntityTypes.SILVERFISH, LootTable.lootTable());
         this.add(
-            EntityType.SKELETON,
+            EntityTypes.SKELETON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -813,7 +808,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.SKELETON_HORSE,
+            EntityTypes.SKELETON_HORSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -826,7 +821,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.SLIME,
+            EntityTypes.SLIME,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -835,24 +830,23 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                             LootItem.lootTableItem(Items.SLIME_BALL)
                                 .apply(SetItemCountFunction.setCount(UniformGenerator.between(0.0F, 2.0F)))
                                 .apply(EnchantedCountIncreaseFunction.lootingMultiplier(this.registries, UniformGenerator.between(0.0F, 1.0F)))
-                                .when(this.killedByFrog(holdergetter).invert())
+                                .when(this.killedByFrog(entityTypes).invert())
                         )
                         .add(
                             LootItem.lootTableItem(Items.SLIME_BALL)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
-                                .when(this.killedByFrog(holdergetter))
+                                .when(this.killedByFrog(entityTypes))
                         )
                         .when(
                             LootItemEntityPropertyCondition.hasProperties(
-                                LootContext.EntityTarget.THIS,
-                                EntityPredicate.Builder.entity().subPredicate(SlimePredicate.sized(MinMaxBounds.Ints.exactly(1)))
+                                LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().cubeMob(CubeMobPredicate.sized(MinMaxBounds.Ints.exactly(1)))
                             )
                         )
                 )
         );
-        this.add(EntityType.SNIFFER, LootTable.lootTable());
+        this.add(EntityTypes.SNIFFER, LootTable.lootTable());
         this.add(
-            EntityType.SNOW_GOLEM,
+            EntityTypes.SNOW_GOLEM,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -861,7 +855,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.SPIDER,
+            EntityTypes.SPIDER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -884,7 +878,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.SQUID,
+            EntityTypes.SQUID,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -897,7 +891,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.STRAY,
+            EntityTypes.STRAY,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -930,7 +924,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.PARCHED,
+            EntityTypes.PARCHED,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -963,7 +957,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.STRIDER,
+            EntityTypes.STRIDER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -975,9 +969,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                 )
         );
-        this.add(EntityType.TADPOLE, LootTable.lootTable());
+        this.add(EntityTypes.TADPOLE, LootTable.lootTable());
         this.add(
-            EntityType.TRADER_LLAMA,
+            EntityTypes.TRADER_LLAMA,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -990,7 +984,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.TROPICAL_FISH,
+            EntityTypes.TROPICAL_FISH,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1005,7 +999,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.TURTLE,
+            EntityTypes.TURTLE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1022,21 +1016,19 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(LootItem.lootTableItem(Items.BOWL))
                         .when(
-                            DamageSourceCondition.hasDamageSource(
-                                DamageSourcePredicate.Builder.damageType().tag(TagPredicate.is(DamageTypeTags.IS_LIGHTNING))
-                            )
+                            DamageSourceCondition.hasDamageSource(DamageSourcePredicate.Builder.damageType().tag(TagPredicate.is(DamageTypeTags.IS_LIGHTNING)))
                         )
                 )
         );
-        this.add(EntityType.VEX, LootTable.lootTable());
-        this.add(EntityType.VILLAGER, LootTable.lootTable());
+        this.add(EntityTypes.VEX, LootTable.lootTable());
+        this.add(EntityTypes.VILLAGER, LootTable.lootTable());
         this.add(
-            EntityType.WARDEN,
+            EntityTypes.WARDEN,
             LootTable.lootTable().withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.SCULK_CATALYST)))
         );
-        this.add(EntityType.WANDERING_TRADER, LootTable.lootTable());
+        this.add(EntityTypes.WANDERING_TRADER, LootTable.lootTable());
         this.add(
-            EntityType.VINDICATOR,
+            EntityTypes.VINDICATOR,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1050,7 +1042,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.WITCH,
+            EntityTypes.WITCH,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1097,9 +1089,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                 )
         );
-        this.add(EntityType.WITHER, LootTable.lootTable());
+        this.add(EntityTypes.WITHER, LootTable.lootTable());
         this.add(
-            EntityType.WITHER_SKELETON,
+            EntityTypes.WITHER_SKELETON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1127,9 +1119,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         .when(LootItemRandomChanceWithEnchantedBonusCondition.randomChanceAndLootingBoost(this.registries, 0.025F, 0.01F))
                 )
         );
-        this.add(EntityType.WOLF, LootTable.lootTable());
+        this.add(EntityTypes.WOLF, LootTable.lootTable());
         this.add(
-            EntityType.ZOGLIN,
+            EntityTypes.ZOGLIN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1141,9 +1133,9 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                 )
         );
-        this.add(EntityType.CREAKING, LootTable.lootTable());
+        this.add(EntityTypes.CREAKING, LootTable.lootTable());
         this.add(
-            EntityType.ZOMBIE,
+            EntityTypes.ZOMBIE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1165,9 +1157,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                                     LootItemEntityPropertyCondition.hasProperties(
                                         LootContext.EntityTarget.THIS,
                                         EntityPredicate.Builder.entity()
-                                            .vehicle(
-                                                EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(holdergetter, EntityType.ZOMBIE_HORSE))
-                                            )
+                                            .vehicle(EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypes.ZOMBIE_HORSE)))
                                             .build()
                                     )
                                 )
@@ -1191,13 +1181,13 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                                 LootContext.EntityTarget.THIS,
                                 EntityPredicate.Builder.entity()
                                     .flags(EntityFlagsPredicate.Builder.flags().setIsBaby(true))
-                                    .vehicle(EntityPredicate.Builder.entity().of(holdergetter, EntityType.CHICKEN))
+                                    .vehicle(EntityPredicate.Builder.entity().of(entityTypes, EntityTypes.CHICKEN))
                             )
                         )
                 )
         );
         this.add(
-            EntityType.ZOMBIE_HORSE,
+            EntityTypes.ZOMBIE_HORSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1210,7 +1200,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.ZOMBIE_NAUTILUS,
+            EntityTypes.ZOMBIE_NAUTILUS,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1224,7 +1214,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.ZOMBIFIED_PIGLIN,
+            EntityTypes.ZOMBIFIED_PIGLIN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1253,7 +1243,7 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                 )
         );
         this.add(
-            EntityType.HOGLIN,
+            EntityTypes.HOGLIN,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
@@ -1275,10 +1265,10 @@ public class VanillaEntityLoot extends EntityLootSubProvider {
                         )
                 )
         );
-        this.add(EntityType.PIGLIN, LootTable.lootTable());
-        this.add(EntityType.PIGLIN_BRUTE, LootTable.lootTable());
+        this.add(EntityTypes.PIGLIN, LootTable.lootTable());
+        this.add(EntityTypes.PIGLIN_BRUTE, LootTable.lootTable());
         this.add(
-            EntityType.ZOMBIE_VILLAGER,
+            EntityTypes.ZOMBIE_VILLAGER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()

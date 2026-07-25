@@ -15,35 +15,32 @@ import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
-@OnlyIn(Dist.CLIENT)
 public class AtlasGlyphProvider {
-    static final GlyphInfo GLYPH_INFO = GlyphInfo.simple(8.0F);
-    final TextureAtlas atlas;
-    final GlyphRenderTypes renderTypes;
+    private static final GlyphInfo GLYPH_INFO = GlyphInfo.simple(8.0F);
+    private final TextureAtlas atlas;
+    private final GlyphRenderTypes renderTypes;
     private final GlyphSource missingWrapper;
     private final Map<Identifier, GlyphSource> wrapperCache = new HashMap<>();
     private final Function<Identifier, GlyphSource> spriteResolver;
 
-    public AtlasGlyphProvider(TextureAtlas p_423776_) {
-        this.atlas = p_423776_;
-        this.renderTypes = GlyphRenderTypes.createForColorTexture(p_423776_.location());
-        TextureAtlasSprite textureatlassprite = p_423776_.missingSprite();
-        this.missingWrapper = this.createSprite(textureatlassprite);
-        this.spriteResolver = p_447983_ -> {
-            TextureAtlasSprite textureatlassprite1 = p_423776_.getSprite(p_447983_);
-            return textureatlassprite1 == textureatlassprite ? this.missingWrapper : this.createSprite(textureatlassprite1);
+    public AtlasGlyphProvider(final TextureAtlas atlas) {
+        this.atlas = atlas;
+        this.renderTypes = GlyphRenderTypes.createForColorTexture(atlas.location());
+        TextureAtlasSprite missingSprite = atlas.missingSprite();
+        this.missingWrapper = this.createSprite(missingSprite);
+        this.spriteResolver = id -> {
+            TextureAtlasSprite sprite = atlas.getSprite(id);
+            return sprite == missingSprite ? this.missingWrapper : this.createSprite(sprite);
         };
     }
 
-    public GlyphSource sourceForSprite(Identifier p_460421_) {
-        return this.wrapperCache.computeIfAbsent(p_460421_, this.spriteResolver);
+    public GlyphSource sourceForSprite(final Identifier spriteId) {
+        return this.wrapperCache.computeIfAbsent(spriteId, this.spriteResolver);
     }
 
-    private GlyphSource createSprite(final TextureAtlasSprite p_430930_) {
+    private GlyphSource createSprite(final TextureAtlasSprite sprite) {
         return new SingleSpriteSource(
             new BakedGlyph() {
                 @Override
@@ -53,26 +50,25 @@ public class AtlasGlyphProvider {
 
                 @Override
                 public TextRenderable.Styled createGlyph(
-                    float p_422755_, float p_422593_, int p_429125_, int p_428352_, Style p_425631_, float p_426190_, float p_429163_
+                    final float x, final float y, final int color, final int shadowColor, final Style style, final float boldOffset, final float shadowOffset
                 ) {
                     return new AtlasGlyphProvider.Instance(
                         AtlasGlyphProvider.this.renderTypes,
                         AtlasGlyphProvider.this.atlas.getTextureView(),
-                        p_430930_,
-                        p_422755_,
-                        p_422593_,
-                        p_429125_,
-                        p_428352_,
-                        p_429163_,
-                        p_425631_
+                        sprite,
+                        x,
+                        y,
+                        color,
+                        shadowColor,
+                        shadowOffset,
+                        style
                     );
                 }
             }
         );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Instance(
+        private record Instance(
         GlyphRenderTypes renderTypes,
         GpuTextureView textureView,
         TextureAtlasSprite sprite,
@@ -84,72 +80,33 @@ public class AtlasGlyphProvider {
         Style style
     ) implements PlainTextRenderable {
         @Override
-        public void renderSprite(Matrix4f p_425478_, VertexConsumer p_429855_, int p_428090_, float p_429012_, float p_431372_, float p_430727_, int p_424820_) {
-            float f = p_429012_ + this.left();
-            float f1 = p_429012_ + this.right();
-            float f2 = p_431372_ + this.top();
-            float f3 = p_431372_ + this.bottom();
-            p_429855_.addVertex(p_425478_, f, f2, p_430727_)
-                .setUv(this.sprite.getU0(), this.sprite.getV0())
-                .setColor(p_424820_)
-                .setLight(p_428090_);
-            p_429855_.addVertex(p_425478_, f, f3, p_430727_)
-                .setUv(this.sprite.getU0(), this.sprite.getV1())
-                .setColor(p_424820_)
-                .setLight(p_428090_);
-            p_429855_.addVertex(p_425478_, f1, f3, p_430727_)
-                .setUv(this.sprite.getU1(), this.sprite.getV1())
-                .setColor(p_424820_)
-                .setLight(p_428090_);
-            p_429855_.addVertex(p_425478_, f1, f2, p_430727_)
-                .setUv(this.sprite.getU1(), this.sprite.getV0())
-                .setColor(p_424820_)
-                .setLight(p_428090_);
+        public void renderSprite(
+            final Matrix4fc pose,
+            final VertexConsumer buffer,
+            final int packedLightCoords,
+            final float offsetX,
+            final float offsetY,
+            final float z,
+            final int color
+        ) {
+            float x0 = offsetX + this.left();
+            float x1 = offsetX + this.right();
+            float y0 = offsetY + this.top();
+            float y1 = offsetY + this.bottom();
+            buffer.addVertex(pose, x0, y0, z).setUv(this.sprite.getU0(), this.sprite.getV0()).setColor(color).setLight(packedLightCoords);
+            buffer.addVertex(pose, x0, y1, z).setUv(this.sprite.getU0(), this.sprite.getV1()).setColor(color).setLight(packedLightCoords);
+            buffer.addVertex(pose, x1, y1, z).setUv(this.sprite.getU1(), this.sprite.getV1()).setColor(color).setLight(packedLightCoords);
+            buffer.addVertex(pose, x1, y0, z).setUv(this.sprite.getU1(), this.sprite.getV0()).setColor(color).setLight(packedLightCoords);
         }
 
         @Override
-        public RenderType renderType(Font.DisplayMode p_429668_) {
-            return this.renderTypes.select(p_429668_);
+        public RenderType renderType(final Font.DisplayMode displayMode) {
+            return this.renderTypes.select(displayMode);
         }
 
         @Override
         public RenderPipeline guiPipeline() {
             return this.renderTypes.guiPipeline();
-        }
-
-        @Override
-        public GpuTextureView textureView() {
-            return this.textureView;
-        }
-
-        @Override
-        public float x() {
-            return this.x;
-        }
-
-        @Override
-        public float y() {
-            return this.y;
-        }
-
-        @Override
-        public int color() {
-            return this.color;
-        }
-
-        @Override
-        public int shadowColor() {
-            return this.shadowColor;
-        }
-
-        @Override
-        public float shadowOffset() {
-            return this.shadowOffset;
-        }
-
-        @Override
-        public Style style() {
-            return this.style;
         }
     }
 }

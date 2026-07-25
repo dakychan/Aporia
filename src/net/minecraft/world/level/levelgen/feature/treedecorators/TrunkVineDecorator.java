@@ -15,34 +15,34 @@ public class TrunkVineDecorator extends TreeDecorator {
     }
 
     @Override
-    public void place(TreeDecorator.Context p_226077_) {
-        RandomSource randomsource = p_226077_.random();
-        p_226077_.logs().forEach(p_226075_ -> {
-            if (randomsource.nextInt(3) > 0) {
-                BlockPos blockpos = p_226075_.west();
-                if (p_226077_.isAir(blockpos)) {
-                    p_226077_.placeVine(blockpos, VineBlock.EAST);
+    public void place(final TreeDecorator.Context context) {
+        RandomSource random = context.random();
+        context.logs().forEach(pos -> {
+            if (random.nextInt(3) > 0) {
+                BlockPos west = pos.west();
+                if (context.isAir(west)) {
+                    context.placeVine(west, VineBlock.EAST);
                 }
             }
 
-            if (randomsource.nextInt(3) > 0) {
-                BlockPos blockpos1 = p_226075_.east();
-                if (p_226077_.isAir(blockpos1)) {
-                    p_226077_.placeVine(blockpos1, VineBlock.WEST);
+            if (random.nextInt(3) > 0) {
+                BlockPos east = pos.east();
+                if (context.isAir(east)) {
+                    context.placeVine(east, VineBlock.WEST);
                 }
             }
 
-            if (randomsource.nextInt(3) > 0) {
-                BlockPos blockpos2 = p_226075_.north();
-                if (p_226077_.isAir(blockpos2)) {
-                    p_226077_.placeVine(blockpos2, VineBlock.SOUTH);
+            if (random.nextInt(3) > 0) {
+                BlockPos north = pos.north();
+                if (context.isAir(north)) {
+                    context.placeVine(north, VineBlock.SOUTH);
                 }
             }
 
-            if (randomsource.nextInt(3) > 0) {
-                BlockPos blockpos3 = p_226075_.south();
-                if (p_226077_.isAir(blockpos3)) {
-                    p_226077_.placeVine(blockpos3, VineBlock.NORTH);
+            if (random.nextInt(3) > 0) {
+                BlockPos south = pos.south();
+                if (context.isAir(south)) {
+                    context.placeVine(south, VineBlock.NORTH);
                 }
             }
         });

@@ -18,7 +18,7 @@ public record ClearAllStatusEffectsConsumeEffect() implements ConsumeEffect {
     }
 
     @Override
-    public boolean apply(Level p_363706_, ItemStack p_370006_, LivingEntity p_369212_) {
-        return p_369212_.removeAllEffects();
+    public boolean apply(final Level level, final ItemStack stack, final LivingEntity user) {
+        return user.removeAllEffects();
     }
 }

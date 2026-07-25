@@ -10,6 +10,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.projectile.ItemSupplier;
 import net.minecraft.world.entity.projectile.hurtingprojectile.AbstractHurtingProjectile;
@@ -31,68 +32,61 @@ public abstract class AbstractWindCharge extends AbstractHurtingProjectile imple
     );
     public static final double JUMP_SCALE = 0.25;
 
-    public AbstractWindCharge(EntityType<? extends AbstractWindCharge> p_453074_, Level p_459786_) {
-        super(p_453074_, p_459786_);
+    public AbstractWindCharge(final EntityType<? extends AbstractWindCharge> type, final Level level) {
+        super(type, level);
         this.accelerationPower = 0.0;
     }
 
     public AbstractWindCharge(
-        EntityType<? extends AbstractWindCharge> p_451453_, Level p_456231_, Entity p_456583_, double p_457773_, double p_458724_, double p_455563_
+        final EntityType<? extends AbstractWindCharge> type, final Level level, final Entity owner, final double x, final double y, final double z
     ) {
-        super(p_451453_, p_457773_, p_458724_, p_455563_, p_456231_);
-        this.setOwner(p_456583_);
+        super(type, x, y, z, level);
+        this.setOwner(owner);
         this.accelerationPower = 0.0;
     }
 
-    AbstractWindCharge(
-        EntityType<? extends AbstractWindCharge> p_454144_, double p_460954_, double p_451354_, double p_451778_, Vec3 p_458042_, Level p_454501_
+    protected AbstractWindCharge(
+        final EntityType<? extends AbstractWindCharge> type, final double x, final double y, final double z, final Vec3 direction, final Level level
     ) {
-        super(p_454144_, p_460954_, p_451354_, p_451778_, p_458042_, p_454501_);
+        super(type, x, y, z, direction, level);
         this.accelerationPower = 0.0;
     }
 
     @Override
-    protected AABB makeBoundingBox(Vec3 p_454399_) {
-        float f = this.getType().getDimensions().width() / 2.0F;
-        float f1 = this.getType().getDimensions().height();
-        float f2 = 0.15F;
-        return new AABB(
-            p_454399_.x - f,
-            p_454399_.y - 0.15F,
-            p_454399_.z - f,
-            p_454399_.x + f,
-            p_454399_.y - 0.15F + f1,
-            p_454399_.z + f
-        );
+    protected AABB makeBoundingBox(final Vec3 position) {
+        float width = this.getType().getDimensions().width() / 2.0F;
+        float height = this.getType().getDimensions().height();
+        float offset = 0.15F;
+        return new AABB(position.x - width, position.y - 0.15F, position.z - width, position.x + width, position.y - 0.15F + height, position.z + width);
     }
 
     @Override
-    public boolean canCollideWith(Entity p_457460_) {
-        return p_457460_ instanceof AbstractWindCharge ? false : super.canCollideWith(p_457460_);
+    public boolean canCollideWith(final Entity entity) {
+        return entity instanceof AbstractWindCharge ? false : super.canCollideWith(entity);
     }
 
     @Override
-    protected boolean canHitEntity(Entity p_457557_) {
-        if (p_457557_ instanceof AbstractWindCharge) {
+    protected boolean canHitEntity(final Entity entity) {
+        if (entity instanceof AbstractWindCharge) {
             return false;
         } else {
-            return p_457557_.getType() == EntityType.END_CRYSTAL ? false : super.canHitEntity(p_457557_);
+            return entity.is(EntityTypes.END_CRYSTAL) ? false : super.canHitEntity(entity);
         }
     }
 
     @Override
-    protected void onHitEntity(EntityHitResult p_452643_) {
-        super.onHitEntity(p_452643_);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            LivingEntity livingentity2 = this.getOwner() instanceof LivingEntity livingentity ? livingentity : null;
-            Entity entity = p_452643_.getEntity();
-            if (livingentity2 != null) {
-                livingentity2.setLastHurtMob(entity);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        super.onHitEntity(hitResult);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            LivingEntity owner = this.getOwner() instanceof LivingEntity entity ? entity : null;
+            Entity entity = hitResult.getEntity();
+            if (owner != null) {
+                owner.setLastHurtMob(entity);
             }
 
-            DamageSource damagesource = this.damageSources().windCharge(this, livingentity2);
-            if (entity.hurtServer(serverlevel, damagesource, 1.0F) && entity instanceof LivingEntity livingentity1) {
-                EnchantmentHelper.doPostAttackEffects(serverlevel, livingentity1, damagesource);
+            DamageSource source = this.damageSources().windCharge(this, owner);
+            if (entity.hurtServer(serverLevel, source, 1.0F) && entity instanceof LivingEntity mob) {
+                EnchantmentHelper.doPostAttackEffects(serverLevel, mob, source);
             }
 
             this.explode(this.position());
@@ -100,26 +94,26 @@ public abstract class AbstractWindCharge extends AbstractHurtingProjectile imple
     }
 
     @Override
-    public void push(double p_454959_, double p_454422_, double p_457808_) {
+    public void push(final double xa, final double ya, final double za) {
     }
 
-    protected abstract void explode(Vec3 p_451878_);
+    protected abstract void explode(final Vec3 position);
 
     @Override
-    protected void onHitBlock(BlockHitResult p_453843_) {
-        super.onHitBlock(p_453843_);
+    protected void onHitBlock(final BlockHitResult hitResult) {
+        super.onHitBlock(hitResult);
         if (!this.level().isClientSide()) {
-            Vec3i vec3i = p_453843_.getDirection().getUnitVec3i();
-            Vec3 vec3 = Vec3.atLowerCornerOf(vec3i).multiply(0.25, 0.25, 0.25);
-            Vec3 vec31 = p_453843_.getLocation().add(vec3);
-            this.explode(vec31);
+            Vec3i collisionNormal = hitResult.getDirection().getUnitVec3i();
+            Vec3 scaledNormal = Vec3.atLowerCornerOf(collisionNormal).multiply(0.25, 0.25, 0.25);
+            Vec3 explosionPos = hitResult.getLocation().add(scaledNormal);
+            this.explode(explosionPos);
             this.discard();
         }
     }
 
     @Override
-    protected void onHit(HitResult p_454402_) {
-        super.onHit(p_454402_);
+    protected void onHit(final HitResult hitResult) {
+        super.onHit(hitResult);
         if (!this.level().isClientSide()) {
             this.discard();
         }

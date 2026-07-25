@@ -5,43 +5,43 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 public interface LevelLoadListener {
-    static LevelLoadListener compose(final LevelLoadListener p_429594_, final LevelLoadListener p_431373_) {
+    static LevelLoadListener compose(final LevelLoadListener first, final LevelLoadListener second) {
         return new LevelLoadListener() {
             @Override
-            public void start(LevelLoadListener.Stage p_426534_, int p_425447_) {
-                p_429594_.start(p_426534_, p_425447_);
-                p_431373_.start(p_426534_, p_425447_);
+            public void start(final LevelLoadListener.Stage stage, final int totalChunks) {
+                first.start(stage, totalChunks);
+                second.start(stage, totalChunks);
             }
 
             @Override
-            public void update(LevelLoadListener.Stage p_430353_, int p_430736_, int p_423071_) {
-                p_429594_.update(p_430353_, p_430736_, p_423071_);
-                p_431373_.update(p_430353_, p_430736_, p_423071_);
+            public void update(final LevelLoadListener.Stage stage, final int currentChunks, final int totalChunks) {
+                first.update(stage, currentChunks, totalChunks);
+                second.update(stage, currentChunks, totalChunks);
             }
 
             @Override
-            public void finish(LevelLoadListener.Stage p_425779_) {
-                p_429594_.finish(p_425779_);
-                p_431373_.finish(p_425779_);
+            public void finish(final LevelLoadListener.Stage stage) {
+                first.finish(stage);
+                second.finish(stage);
             }
 
             @Override
-            public void updateFocus(ResourceKey<Level> p_431068_, ChunkPos p_430648_) {
-                p_429594_.updateFocus(p_431068_, p_430648_);
-                p_431373_.updateFocus(p_431068_, p_430648_);
+            public void updateFocus(final ResourceKey<Level> dimension, final ChunkPos chunkPos) {
+                first.updateFocus(dimension, chunkPos);
+                second.updateFocus(dimension, chunkPos);
             }
         };
     }
 
-    void start(LevelLoadListener.Stage p_426163_, int p_429286_);
+    void start(LevelLoadListener.Stage stage, int totalChunks);
 
-    void update(LevelLoadListener.Stage p_429099_, int p_428116_, int p_424708_);
+    void update(LevelLoadListener.Stage stage, int currentChunks, int totalChunks);
 
-    void finish(LevelLoadListener.Stage p_423578_);
+    void finish(LevelLoadListener.Stage stage);
 
-    void updateFocus(ResourceKey<Level> p_425177_, ChunkPos p_427331_);
+    void updateFocus(ResourceKey<Level> dimension, ChunkPos chunkPos);
 
-    public static enum Stage {
+    enum Stage {
         START_SERVER,
         PREPARE_GLOBAL_SPAWN,
         LOAD_INITIAL_CHUNKS,

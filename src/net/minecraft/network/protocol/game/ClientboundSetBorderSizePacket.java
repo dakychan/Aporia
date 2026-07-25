@@ -12,16 +12,16 @@ public class ClientboundSetBorderSizePacket implements Packet<ClientGamePacketLi
     );
     private final double size;
 
-    public ClientboundSetBorderSizePacket(WorldBorder p_179243_) {
-        this.size = p_179243_.getLerpTarget();
+    public ClientboundSetBorderSizePacket(final WorldBorder border) {
+        this.size = border.getLerpTarget();
     }
 
-    private ClientboundSetBorderSizePacket(FriendlyByteBuf p_179245_) {
-        this.size = p_179245_.readDouble();
+    private ClientboundSetBorderSizePacket(final FriendlyByteBuf input) {
+        this.size = input.readDouble();
     }
 
-    private void write(FriendlyByteBuf p_179247_) {
-        p_179247_.writeDouble(this.size);
+    private void write(final FriendlyByteBuf output) {
+        output.writeDouble(this.size);
     }
 
     @Override
@@ -29,8 +29,8 @@ public class ClientboundSetBorderSizePacket implements Packet<ClientGamePacketLi
         return GamePacketTypes.CLIENTBOUND_SET_BORDER_SIZE;
     }
 
-    public void handle(ClientGamePacketListener p_179251_) {
-        p_179251_.handleSetBorderSize(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetBorderSize(this);
     }
 
     public double getSize() {

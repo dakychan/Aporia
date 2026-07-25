@@ -23,7 +23,12 @@ public class ClientboundLightUpdatePacketData {
     private final List<byte[]> skyUpdates;
     private final List<byte[]> blockUpdates;
 
-    public ClientboundLightUpdatePacketData(ChunkPos p_285385_, LevelLightEngine p_285143_, @Nullable BitSet p_285253_, @Nullable BitSet p_285051_) {
+    public ClientboundLightUpdatePacketData(
+        final ChunkPos chunkPos,
+        final LevelLightEngine lightEngine,
+        final @Nullable BitSet skyChangedLightSectionFilter,
+        final @Nullable BitSet blockChangedLightSectionFilter
+    ) {
         this.skyYMask = new BitSet();
         this.blockYMask = new BitSet();
         this.emptySkyYMask = new BitSet();
@@ -31,45 +36,51 @@ public class ClientboundLightUpdatePacketData {
         this.skyUpdates = Lists.newArrayList();
         this.blockUpdates = Lists.newArrayList();
 
-        for (int i = 0; i < p_285143_.getLightSectionCount(); i++) {
-            if (p_285253_ == null || p_285253_.get(i)) {
-                this.prepareSectionData(p_285385_, p_285143_, LightLayer.SKY, i, this.skyYMask, this.emptySkyYMask, this.skyUpdates);
+        for (int sectionIndex = 0; sectionIndex < lightEngine.getLightSectionCount(); sectionIndex++) {
+            if (skyChangedLightSectionFilter == null || skyChangedLightSectionFilter.get(sectionIndex)) {
+                this.prepareSectionData(chunkPos, lightEngine, LightLayer.SKY, sectionIndex, this.skyYMask, this.emptySkyYMask, this.skyUpdates);
             }
 
-            if (p_285051_ == null || p_285051_.get(i)) {
-                this.prepareSectionData(p_285385_, p_285143_, LightLayer.BLOCK, i, this.blockYMask, this.emptyBlockYMask, this.blockUpdates);
+            if (blockChangedLightSectionFilter == null || blockChangedLightSectionFilter.get(sectionIndex)) {
+                this.prepareSectionData(chunkPos, lightEngine, LightLayer.BLOCK, sectionIndex, this.blockYMask, this.emptyBlockYMask, this.blockUpdates);
             }
         }
     }
 
-    public ClientboundLightUpdatePacketData(FriendlyByteBuf p_195737_, int p_195738_, int p_195739_) {
-        this.skyYMask = p_195737_.readBitSet();
-        this.blockYMask = p_195737_.readBitSet();
-        this.emptySkyYMask = p_195737_.readBitSet();
-        this.emptyBlockYMask = p_195737_.readBitSet();
-        this.skyUpdates = p_195737_.readList(DATA_LAYER_STREAM_CODEC);
-        this.blockUpdates = p_195737_.readList(DATA_LAYER_STREAM_CODEC);
+    public ClientboundLightUpdatePacketData(final FriendlyByteBuf input, final int x, final int z) {
+        this.skyYMask = input.readBitSet();
+        this.blockYMask = input.readBitSet();
+        this.emptySkyYMask = input.readBitSet();
+        this.emptyBlockYMask = input.readBitSet();
+        this.skyUpdates = input.readList(DATA_LAYER_STREAM_CODEC);
+        this.blockUpdates = input.readList(DATA_LAYER_STREAM_CODEC);
     }
 
-    public void write(FriendlyByteBuf p_195750_) {
-        p_195750_.writeBitSet(this.skyYMask);
-        p_195750_.writeBitSet(this.blockYMask);
-        p_195750_.writeBitSet(this.emptySkyYMask);
-        p_195750_.writeBitSet(this.emptyBlockYMask);
-        p_195750_.writeCollection(this.skyUpdates, DATA_LAYER_STREAM_CODEC);
-        p_195750_.writeCollection(this.blockUpdates, DATA_LAYER_STREAM_CODEC);
+    public void write(final FriendlyByteBuf output) {
+        output.writeBitSet(this.skyYMask);
+        output.writeBitSet(this.blockYMask);
+        output.writeBitSet(this.emptySkyYMask);
+        output.writeBitSet(this.emptyBlockYMask);
+        output.writeCollection(this.skyUpdates, DATA_LAYER_STREAM_CODEC);
+        output.writeCollection(this.blockUpdates, DATA_LAYER_STREAM_CODEC);
     }
 
     private void prepareSectionData(
-        ChunkPos p_195742_, LevelLightEngine p_195743_, LightLayer p_195744_, int p_195745_, BitSet p_195746_, BitSet p_195747_, List<byte[]> p_195748_
+        final ChunkPos pos,
+        final LevelLightEngine lightEngine,
+        final LightLayer layer,
+        final int sectionIndex,
+        final BitSet mask,
+        final BitSet emptyMask,
+        final List<byte[]> updates
     ) {
-        DataLayer datalayer = p_195743_.getLayerListener(p_195744_).getDataLayerData(SectionPos.of(p_195742_, p_195743_.getMinLightSection() + p_195745_));
-        if (datalayer != null) {
-            if (datalayer.isEmpty()) {
-                p_195747_.set(p_195745_);
+        DataLayer data = lightEngine.getLayerListener(layer).getDataLayerData(SectionPos.of(pos, lightEngine.getMinLightSection() + sectionIndex));
+        if (data != null) {
+            if (data.isEmpty()) {
+                emptyMask.set(sectionIndex);
             } else {
-                p_195746_.set(p_195745_);
-                p_195748_.add(datalayer.copy().getData());
+                mask.set(sectionIndex);
+                updates.add(data.copy().getData());
             }
         }
     }

@@ -14,7 +14,7 @@ public record ServerboundClientTickEndPacket() implements Packet<ServerGamePacke
         return GamePacketTypes.SERVERBOUND_CLIENT_TICK_END;
     }
 
-    public void handle(ServerGamePacketListener p_361876_) {
-        p_361876_.handleClientTickEnd(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleClientTickEnd(this);
     }
 }

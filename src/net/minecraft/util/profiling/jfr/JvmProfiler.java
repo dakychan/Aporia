@@ -18,11 +18,11 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public interface JvmProfiler {
-    JvmProfiler INSTANCE = (JvmProfiler)(Runtime.class.getModule().getLayer().findModule("jdk.jfr").isPresent() && FlightRecorder.isAvailable()
+    JvmProfiler INSTANCE = Runtime.class.getModule().getLayer().findModule("jdk.jfr").isPresent() && FlightRecorder.isAvailable()
         ? JfrProfiler.getInstance()
-        : new JvmProfiler.NoOpProfiler());
+        : new JvmProfiler.NoOpProfiler();
 
-    boolean start(Environment p_185347_);
+    boolean start(Environment environment);
 
     Path stop();
 
@@ -30,30 +30,30 @@ public interface JvmProfiler {
 
     boolean isAvailable();
 
-    void onServerTick(float p_185342_);
+    void onServerTick(float averageTickTime);
 
-    void onClientTick(int p_452199_);
+    void onClientTick(int fps);
 
-    void onPacketReceived(ConnectionProtocol p_298929_, PacketType<?> p_334193_, SocketAddress p_185345_, int p_185343_);
+    void onPacketReceived(final ConnectionProtocol protocol, final PacketType<?> packetId, final SocketAddress remoteAddress, final int readableBytes);
 
-    void onPacketSent(ConnectionProtocol p_298320_, PacketType<?> p_328486_, SocketAddress p_185353_, int p_185351_);
+    void onPacketSent(final ConnectionProtocol protocol, final PacketType<?> packetId, final SocketAddress remoteAddress, final int writtenBytes);
 
-    void onRegionFileRead(RegionStorageInfo p_330485_, ChunkPos p_331201_, RegionFileVersion p_333173_, int p_330872_);
+    void onRegionFileRead(RegionStorageInfo info, ChunkPos pos, RegionFileVersion version, int readBytes);
 
-    void onRegionFileWrite(RegionStorageInfo p_330562_, ChunkPos p_334903_, RegionFileVersion p_331257_, int p_327730_);
+    void onRegionFileWrite(RegionStorageInfo info, ChunkPos pos, RegionFileVersion version, int writtenBytes);
 
     @Nullable ProfiledDuration onWorldLoadedStarted();
 
-    @Nullable ProfiledDuration onChunkGenerate(ChunkPos p_185348_, ResourceKey<Level> p_185349_, String p_185350_);
+    @Nullable ProfiledDuration onChunkGenerate(ChunkPos pos, ResourceKey<Level> dimension, String name);
 
-    @Nullable ProfiledDuration onStructureGenerate(ChunkPos p_377018_, ResourceKey<Level> p_376171_, Holder<Structure> p_376314_);
+    @Nullable ProfiledDuration onStructureGenerate(ChunkPos sourceChunkPos, ResourceKey<Level> dimension, Holder<Structure> structure);
 
-    public static class NoOpProfiler implements JvmProfiler {
+    class NoOpProfiler implements JvmProfiler {
         private static final Logger LOGGER = LogUtils.getLogger();
-        static final ProfiledDuration noOpCommit = p_378711_ -> {};
+        private static final ProfiledDuration NO_OP_COMMIT = ignored -> {};
 
         @Override
-        public boolean start(Environment p_185368_) {
+        public boolean start(final Environment environment) {
             LOGGER.warn("Attempted to start Flight Recorder, but it's not supported on this JVM");
             return false;
         }
@@ -74,42 +74,44 @@ public interface JvmProfiler {
         }
 
         @Override
-        public void onPacketReceived(ConnectionProtocol p_298045_, PacketType<?> p_329330_, SocketAddress p_185365_, int p_185363_) {
+        public void onPacketReceived(
+            final ConnectionProtocol protocol, final PacketType<?> packetId, final SocketAddress remoteAddress, final int readableBytes
+        ) {
         }
 
         @Override
-        public void onPacketSent(ConnectionProtocol p_297220_, PacketType<?> p_336281_, SocketAddress p_185377_, int p_185375_) {
+        public void onPacketSent(final ConnectionProtocol protocol, final PacketType<?> packetId, final SocketAddress remoteAddress, final int writtenBytes) {
         }
 
         @Override
-        public void onRegionFileRead(RegionStorageInfo p_328378_, ChunkPos p_330600_, RegionFileVersion p_329437_, int p_328234_) {
+        public void onRegionFileRead(final RegionStorageInfo info, final ChunkPos pos, final RegionFileVersion version, final int readBytes) {
         }
 
         @Override
-        public void onRegionFileWrite(RegionStorageInfo p_335465_, ChunkPos p_330839_, RegionFileVersion p_333005_, int p_328862_) {
+        public void onRegionFileWrite(final RegionStorageInfo info, final ChunkPos pos, final RegionFileVersion version, final int writtenBytes) {
         }
 
         @Override
-        public void onServerTick(float p_185361_) {
+        public void onServerTick(final float averageTickTime) {
         }
 
         @Override
-        public void onClientTick(int p_453159_) {
+        public void onClientTick(final int fps) {
         }
 
         @Override
         public ProfiledDuration onWorldLoadedStarted() {
-            return noOpCommit;
+            return NO_OP_COMMIT;
         }
 
         @Override
-        public @Nullable ProfiledDuration onChunkGenerate(ChunkPos p_185370_, ResourceKey<Level> p_185371_, String p_185372_) {
+        public @Nullable ProfiledDuration onChunkGenerate(final ChunkPos pos, final ResourceKey<Level> dimension, final String name) {
             return null;
         }
 
         @Override
-        public ProfiledDuration onStructureGenerate(ChunkPos p_375412_, ResourceKey<Level> p_377426_, Holder<Structure> p_376385_) {
-            return noOpCommit;
+        public ProfiledDuration onStructureGenerate(final ChunkPos sourceChunkPos, final ResourceKey<Level> dimension, final Holder<Structure> structure) {
+            return NO_OP_COMMIT;
         }
     }
 }

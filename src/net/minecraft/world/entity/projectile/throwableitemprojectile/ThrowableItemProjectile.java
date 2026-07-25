@@ -14,26 +14,30 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 public abstract class ThrowableItemProjectile extends ThrowableProjectile implements ItemSupplier {
-    private static final EntityDataAccessor<ItemStack> DATA_ITEM_STACK = SynchedEntityData.defineId(ThrowableItemProjectile.class, EntityDataSerializers.ITEM_STACK);
+    private static final EntityDataAccessor<ItemStack> DATA_ITEM_STACK = SynchedEntityData.defineId(
+        ThrowableItemProjectile.class, EntityDataSerializers.ITEM_STACK
+    );
 
-    public ThrowableItemProjectile(EntityType<? extends ThrowableItemProjectile> p_453788_, Level p_454624_) {
-        super(p_453788_, p_454624_);
+    public ThrowableItemProjectile(final EntityType<? extends ThrowableItemProjectile> type, final Level level) {
+        super(type, level);
     }
 
     public ThrowableItemProjectile(
-        EntityType<? extends ThrowableItemProjectile> p_455172_, double p_459678_, double p_458459_, double p_456224_, Level p_460643_, ItemStack p_450579_
+        final EntityType<? extends ThrowableItemProjectile> type, final double x, final double y, final double z, final Level level, final ItemStack itemStack
     ) {
-        super(p_455172_, p_459678_, p_458459_, p_456224_, p_460643_);
-        this.setItem(p_450579_);
+        super(type, x, y, z, level);
+        this.setItem(itemStack);
     }
 
-    public ThrowableItemProjectile(EntityType<? extends ThrowableItemProjectile> p_460374_, LivingEntity p_455900_, Level p_454434_, ItemStack p_455736_) {
-        this(p_460374_, p_455900_.getX(), p_455900_.getEyeY() - 0.1F, p_455900_.getZ(), p_454434_, p_455736_);
-        this.setOwner(p_455900_);
+    public ThrowableItemProjectile(
+        final EntityType<? extends ThrowableItemProjectile> type, final LivingEntity owner, final Level level, final ItemStack itemStack
+    ) {
+        this(type, owner.getX(), owner.getEyeY() - 0.1F, owner.getZ(), level, itemStack);
+        this.setOwner(owner);
     }
 
-    public void setItem(ItemStack p_453937_) {
-        this.getEntityData().set(DATA_ITEM_STACK, p_453937_.copyWithCount(1));
+    public void setItem(final ItemStack source) {
+        this.getEntityData().set(DATA_ITEM_STACK, source.copyWithCount(1));
     }
 
     protected abstract Item getDefaultItem();
@@ -44,19 +48,19 @@ public abstract class ThrowableItemProjectile extends ThrowableProjectile implem
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_454750_) {
-        p_454750_.define(DATA_ITEM_STACK, new ItemStack(this.getDefaultItem()));
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_ITEM_STACK, new ItemStack(this.getDefaultItem()));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_460760_) {
-        super.addAdditionalSaveData(p_460760_);
-        p_460760_.store("Item", ItemStack.CODEC, this.getItem());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Item", ItemStack.CODEC, this.getItem());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_453133_) {
-        super.readAdditionalSaveData(p_453133_);
-        this.setItem(p_453133_.read("Item", ItemStack.CODEC).orElseGet(() -> new ItemStack(this.getDefaultItem())));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setItem(input.read("Item", ItemStack.CODEC).orElseGet(() -> new ItemStack(this.getDefaultItem())));
     }
 }

@@ -1,6 +1,6 @@
 package so.aporia.module.impl.render.hud
 import so.aporia.utils.imports.*
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.LivingEntity
 import net.minecraft.world.entity.player.Player
@@ -31,7 +31,7 @@ object TargetHud {
     val C_BAR_BG = colorUtil.rgba(0, 0, 0, 100)
 
     @JvmStatic
-    fun render(gfx: GuiGraphics) {
+    fun render(gfx: GuiGraphicsExtractor) {
         if (mc.player == null || mc.level == null) return
 
         val target = resolveTarget() ?: return

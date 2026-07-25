@@ -36,78 +36,82 @@ public class PlacementUtils {
     public static final PlacementModifier RANGE_10_10 = HeightRangePlacement.uniform(VerticalAnchor.aboveBottom(10), VerticalAnchor.belowTop(10));
     public static final PlacementModifier RANGE_8_8 = HeightRangePlacement.uniform(VerticalAnchor.aboveBottom(8), VerticalAnchor.belowTop(8));
     public static final PlacementModifier RANGE_4_4 = HeightRangePlacement.uniform(VerticalAnchor.aboveBottom(4), VerticalAnchor.belowTop(4));
-    public static final PlacementModifier RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT = HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.absolute(256));
+    public static final PlacementModifier RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT = HeightRangePlacement.uniform(
+        VerticalAnchor.bottom(), VerticalAnchor.absolute(256)
+    );
 
-    public static void bootstrap(BootstrapContext<PlacedFeature> p_333757_) {
-        AquaticPlacements.bootstrap(p_333757_);
-        CavePlacements.bootstrap(p_333757_);
-        EndPlacements.bootstrap(p_333757_);
-        MiscOverworldPlacements.bootstrap(p_333757_);
-        NetherPlacements.bootstrap(p_333757_);
-        OrePlacements.bootstrap(p_333757_);
-        TreePlacements.bootstrap(p_333757_);
-        VegetationPlacements.bootstrap(p_333757_);
-        VillagePlacements.bootstrap(p_333757_);
+    public static void bootstrap(final BootstrapContext<PlacedFeature> context) {
+        AquaticPlacements.bootstrap(context);
+        CavePlacements.bootstrap(context);
+        EndPlacements.bootstrap(context);
+        MiscOverworldPlacements.bootstrap(context);
+        NetherPlacements.bootstrap(context);
+        OrePlacements.bootstrap(context);
+        TreePlacements.bootstrap(context);
+        VegetationPlacements.bootstrap(context);
+        VillagePlacements.bootstrap(context);
     }
 
-    public static ResourceKey<PlacedFeature> createKey(String p_256293_) {
-        return ResourceKey.create(Registries.PLACED_FEATURE, Identifier.withDefaultNamespace(p_256293_));
-    }
-
-    public static void register(
-        BootstrapContext<PlacedFeature> p_334230_,
-        ResourceKey<PlacedFeature> p_255820_,
-        Holder<ConfiguredFeature<?, ?>> p_255813_,
-        List<PlacementModifier> p_256042_
-    ) {
-        p_334230_.register(p_255820_, new PlacedFeature(p_255813_, List.copyOf(p_256042_)));
+    public static ResourceKey<PlacedFeature> createKey(final String name) {
+        return ResourceKey.create(Registries.PLACED_FEATURE, Identifier.withDefaultNamespace(name));
     }
 
     public static void register(
-        BootstrapContext<PlacedFeature> p_334879_,
-        ResourceKey<PlacedFeature> p_256614_,
-        Holder<ConfiguredFeature<?, ?>> p_255855_,
-        PlacementModifier... p_256413_
+        final BootstrapContext<PlacedFeature> context,
+        final ResourceKey<PlacedFeature> id,
+        final Holder<ConfiguredFeature<?, ?>> feature,
+        final List<PlacementModifier> placementModifiers
     ) {
-        register(p_334879_, p_256614_, p_255855_, List.of(p_256413_));
+        context.register(id, new PlacedFeature(feature, List.copyOf(placementModifiers)));
     }
 
-    public static PlacementModifier countExtra(int p_195365_, float p_195366_, int p_195367_) {
-        float f = 1.0F / p_195366_;
-        if (Math.abs(f - (int)f) > 1.0E-5F) {
+    public static void register(
+        final BootstrapContext<PlacedFeature> context,
+        final ResourceKey<PlacedFeature> id,
+        final Holder<ConfiguredFeature<?, ?>> feature,
+        final PlacementModifier... placementModifiers
+    ) {
+        register(context, id, feature, List.of(placementModifiers));
+    }
+
+    public static PlacementModifier countExtra(final int count, final float chance, final int extra) {
+        float weight = 1.0F / chance;
+        if (Math.abs(weight - (int)weight) > 1.0E-5F) {
             throw new IllegalStateException("Chance data cannot be represented as list weight");
-        } else {
-            WeightedList<IntProvider> weightedlist = WeightedList.<IntProvider>builder()
-                .add(ConstantInt.of(p_195365_), (int)f - 1)
-                .add(ConstantInt.of(p_195365_ + p_195367_), 1)
-                .build();
-            return CountPlacement.of(new WeightedListInt(weightedlist));
         }
+
+        WeightedList<IntProvider> distribution = WeightedList.<IntProvider>builder()
+            .add(ConstantInt.of(count), (int)weight - 1)
+            .add(ConstantInt.of(count + extra), 1)
+            .build();
+        return CountPlacement.of(new WeightedListInt(distribution));
     }
 
     public static PlacementFilter isEmpty() {
         return BlockPredicateFilter.forPredicate(BlockPredicate.ONLY_IN_AIR_PREDICATE);
     }
 
-    public static BlockPredicateFilter filteredByBlockSurvival(Block p_206494_) {
-        return BlockPredicateFilter.forPredicate(BlockPredicate.wouldSurvive(p_206494_.defaultBlockState(), BlockPos.ZERO));
+    public static BlockPredicateFilter filteredByBlockSurvival(final Block block) {
+        return BlockPredicateFilter.forPredicate(BlockPredicate.wouldSurvive(block.defaultBlockState(), BlockPos.ZERO));
     }
 
-    public static Holder<PlacedFeature> inlinePlaced(Holder<ConfiguredFeature<?, ?>> p_206507_, PlacementModifier... p_206508_) {
-        return Holder.direct(new PlacedFeature(p_206507_, List.of(p_206508_)));
+    public static Holder<PlacedFeature> inlinePlaced(final Holder<ConfiguredFeature<?, ?>> configuredFeature, final PlacementModifier... placedFeatures) {
+        return Holder.direct(new PlacedFeature(configuredFeature, List.of(placedFeatures)));
     }
 
     public static <FC extends FeatureConfiguration, F extends Feature<FC>> Holder<PlacedFeature> inlinePlaced(
-        F p_206503_, FC p_206504_, PlacementModifier... p_206505_
+        final F feature, final FC config, final PlacementModifier... placedFeatures
     ) {
-        return inlinePlaced(Holder.direct(new ConfiguredFeature(p_206503_, p_206504_)), p_206505_);
+        return inlinePlaced(Holder.direct(new ConfiguredFeature(feature, config)), placedFeatures);
     }
 
-    public static <FC extends FeatureConfiguration, F extends Feature<FC>> Holder<PlacedFeature> onlyWhenEmpty(F p_206496_, FC p_206497_) {
-        return filtered(p_206496_, p_206497_, BlockPredicate.ONLY_IN_AIR_PREDICATE);
+    public static <FC extends FeatureConfiguration, F extends Feature<FC>> Holder<PlacedFeature> onlyWhenEmpty(final F feature, final FC config) {
+        return filtered(feature, config, BlockPredicate.ONLY_IN_AIR_PREDICATE);
     }
 
-    public static <FC extends FeatureConfiguration, F extends Feature<FC>> Holder<PlacedFeature> filtered(F p_206499_, FC p_206500_, BlockPredicate p_206501_) {
-        return inlinePlaced(p_206499_, p_206500_, BlockPredicateFilter.forPredicate(p_206501_));
+    public static <FC extends FeatureConfiguration, F extends Feature<FC>> Holder<PlacedFeature> filtered(
+        final F feature, final FC config, final BlockPredicate predicate
+    ) {
+        return inlinePlaced(feature, config, BlockPredicateFilter.forPredicate(predicate));
     }
 }

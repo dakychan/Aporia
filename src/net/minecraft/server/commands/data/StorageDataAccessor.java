@@ -3,7 +3,6 @@ package net.minecraft.server.commands.data;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.Locale;
 import java.util.function.Function;
 import net.minecraft.commands.CommandSourceStack;
@@ -19,41 +18,38 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.storage.CommandStorage;
 
 public class StorageDataAccessor implements DataAccessor {
-    static final SuggestionProvider<CommandSourceStack> SUGGEST_STORAGE = (p_139547_, p_139548_) -> SharedSuggestionProvider.suggestResource(
-        getGlobalTags(p_139547_).keys(), p_139548_
-    );
-    public static final Function<String, DataCommands.DataProvider> PROVIDER = p_139554_ -> new DataCommands.DataProvider() {
+    private static final SuggestionProvider<CommandSourceStack> SUGGEST_STORAGE = (c, p) -> SharedSuggestionProvider.suggestResource(getGlobalTags(c).keys(), p);
+    public static final Function<String, DataCommands.DataProvider> PROVIDER = arg -> new DataCommands.DataProvider() {
         @Override
-        public DataAccessor access(CommandContext<CommandSourceStack> p_139570_) {
-            return new StorageDataAccessor(StorageDataAccessor.getGlobalTags(p_139570_), IdentifierArgument.getId(p_139570_, p_139554_));
+        public DataAccessor access(final CommandContext<CommandSourceStack> context) {
+            return new StorageDataAccessor(StorageDataAccessor.getGlobalTags(context), IdentifierArgument.getId(context, arg));
         }
 
         @Override
         public ArgumentBuilder<CommandSourceStack, ?> wrap(
-            ArgumentBuilder<CommandSourceStack, ?> p_139567_,
-            Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> p_139568_
+            final ArgumentBuilder<CommandSourceStack, ?> parent,
+            final Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> function
         ) {
-            return p_139567_.then(
-                Commands.literal("storage")
-                    .then(p_139568_.apply(Commands.argument(p_139554_, IdentifierArgument.id()).suggests(StorageDataAccessor.SUGGEST_STORAGE)))
+            return parent.then(
+                Commands.literal("storage").then(function.apply(Commands.argument(arg, IdentifierArgument.id()).suggests(StorageDataAccessor.SUGGEST_STORAGE)))
             );
         }
     };
     private final CommandStorage storage;
     private final Identifier id;
 
-    static CommandStorage getGlobalTags(CommandContext<CommandSourceStack> p_139561_) {
-        return p_139561_.getSource().getServer().getCommandStorage();
+    private static CommandStorage getGlobalTags(final CommandContext<CommandSourceStack> context) {
+        return context.getSource().getServer().getCommandStorage();
     }
 
-    StorageDataAccessor(CommandStorage p_139537_, Identifier p_459932_) {
-        this.storage = p_139537_;
-        this.id = p_459932_;
+    private StorageDataAccessor(final CommandStorage storage, final Identifier id) {
+        this.storage = storage;
+        this.id = id;
     }
 
     @Override
-    public void setData(CompoundTag p_139556_) {
-        this.storage.set(this.id, p_139556_);
+    public void setData(final CompoundTag tag) {
+        this.storage.set(this.id, tag);
     }
 
     @Override
@@ -67,14 +63,14 @@ public class StorageDataAccessor implements DataAccessor {
     }
 
     @Override
-    public Component getPrintSuccess(Tag p_139558_) {
-        return Component.translatable("commands.data.storage.query", Component.translationArg(this.id), NbtUtils.toPrettyComponent(p_139558_));
+    public Component getPrintSuccess(final Tag data) {
+        return Component.translatable("commands.data.storage.query", Component.translationArg(this.id), NbtUtils.toPrettyComponent(data));
     }
 
     @Override
-    public Component getPrintSuccess(NbtPathArgument.NbtPath p_139550_, double p_139551_, int p_139552_) {
+    public Component getPrintSuccess(final NbtPathArgument.NbtPath path, final double scale, final int value) {
         return Component.translatable(
-            "commands.data.storage.get", p_139550_.asString(), Component.translationArg(this.id), String.format(Locale.ROOT, "%.2f", p_139551_), p_139552_
+            "commands.data.storage.get", path.asString(), Component.translationArg(this.id), String.format(Locale.ROOT, "%.2f", scale), value
         );
     }
 }

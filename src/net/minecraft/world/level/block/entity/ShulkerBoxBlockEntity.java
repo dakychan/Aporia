@@ -49,21 +49,21 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
     private float progressOld;
     private final @Nullable DyeColor color;
 
-    public ShulkerBoxBlockEntity(@Nullable DyeColor p_155666_, BlockPos p_155667_, BlockState p_155668_) {
-        super(BlockEntityType.SHULKER_BOX, p_155667_, p_155668_);
-        this.color = p_155666_;
+    public ShulkerBoxBlockEntity(final @Nullable DyeColor color, final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.SHULKER_BOX, worldPosition, blockState);
+        this.color = color;
     }
 
-    public ShulkerBoxBlockEntity(BlockPos p_155670_, BlockState p_155671_) {
-        super(BlockEntityType.SHULKER_BOX, p_155670_, p_155671_);
-        this.color = p_155671_.getBlock() instanceof ShulkerBoxBlock shulkerboxblock ? shulkerboxblock.getColor() : null;
+    public ShulkerBoxBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.SHULKER_BOX, worldPosition, blockState);
+        this.color = blockState.getBlock() instanceof ShulkerBoxBlock shulkerBoxBlock ? shulkerBoxBlock.getColor() : null;
     }
 
-    public static void tick(Level p_155673_, BlockPos p_155674_, BlockState p_155675_, ShulkerBoxBlockEntity p_155676_) {
-        p_155676_.updateAnimation(p_155673_, p_155674_, p_155675_);
+    public static void tick(final Level level, final BlockPos pos, final BlockState state, final ShulkerBoxBlockEntity entity) {
+        entity.updateAnimation(level, pos, state);
     }
 
-    private void updateAnimation(Level p_155680_, BlockPos p_155681_, BlockState p_155682_) {
+    private void updateAnimation(final Level level, final BlockPos pos, final BlockState blockState) {
         this.progressOld = this.progress;
         switch (this.animationStatus) {
             case CLOSED:
@@ -72,16 +72,16 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
             case OPENING:
                 this.progress += 0.1F;
                 if (this.progressOld == 0.0F) {
-                    doNeighborUpdates(p_155680_, p_155681_, p_155682_);
+                    doNeighborUpdates(level, pos, blockState);
                 }
 
                 if (this.progress >= 1.0F) {
                     this.animationStatus = ShulkerBoxBlockEntity.AnimationStatus.OPENED;
                     this.progress = 1.0F;
-                    doNeighborUpdates(p_155680_, p_155681_, p_155682_);
+                    doNeighborUpdates(level, pos, blockState);
                 }
 
-                this.moveCollidedEntities(p_155680_, p_155681_, p_155682_);
+                this.moveCollidedEntities(level, pos, blockState);
                 break;
             case OPENED:
                 this.progress = 1.0F;
@@ -89,13 +89,13 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
             case CLOSING:
                 this.progress -= 0.1F;
                 if (this.progressOld == 1.0F) {
-                    doNeighborUpdates(p_155680_, p_155681_, p_155682_);
+                    doNeighborUpdates(level, pos, blockState);
                 }
 
                 if (this.progress <= 0.0F) {
                     this.animationStatus = ShulkerBoxBlockEntity.AnimationStatus.CLOSED;
                     this.progress = 0.0F;
-                    doNeighborUpdates(p_155680_, p_155681_, p_155682_);
+                    doNeighborUpdates(level, pos, blockState);
                 }
         }
     }
@@ -104,18 +104,18 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
         return this.animationStatus;
     }
 
-    public AABB getBoundingBox(BlockState p_59667_) {
-        Vec3 vec3 = new Vec3(0.5, 0.0, 0.5);
-        return Shulker.getProgressAabb(1.0F, p_59667_.getValue(ShulkerBoxBlock.FACING), 0.5F * this.getProgress(1.0F), vec3);
+    public AABB getBoundingBox(final BlockState state) {
+        Vec3 bottomCenter = new Vec3(0.5, 0.0, 0.5);
+        return Shulker.getProgressAabb(1.0F, state.getValue(ShulkerBoxBlock.FACING), 0.5F * this.getProgress(1.0F), bottomCenter);
     }
 
-    private void moveCollidedEntities(Level p_155684_, BlockPos p_155685_, BlockState p_155686_) {
-        if (p_155686_.getBlock() instanceof ShulkerBoxBlock) {
-            Direction direction = p_155686_.getValue(ShulkerBoxBlock.FACING);
-            AABB aabb = Shulker.getProgressDeltaAabb(1.0F, direction, this.progressOld, this.progress, p_155685_.getBottomCenter());
-            List<Entity> list = p_155684_.getEntities(null, aabb);
-            if (!list.isEmpty()) {
-                for (Entity entity : list) {
+    private void moveCollidedEntities(final Level level, final BlockPos pos, final BlockState state) {
+        if (state.getBlock() instanceof ShulkerBoxBlock) {
+            Direction direction = state.getValue(ShulkerBoxBlock.FACING);
+            AABB aabb = Shulker.getProgressDeltaAabb(1.0F, direction, this.progressOld, this.progress, Vec3.atBottomCenterOf(pos));
+            List<Entity> entities = level.getEntities(null, aabb);
+            if (!entities.isEmpty()) {
+                for (Entity entity : entities) {
                     if (entity.getPistonPushReaction() != PushReaction.IGNORE) {
                         entity.move(
                             MoverType.SHULKER_BOX,
@@ -137,35 +137,35 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
     }
 
     @Override
-    public boolean triggerEvent(int p_59678_, int p_59679_) {
-        if (p_59678_ == 1) {
-            this.openCount = p_59679_;
-            if (p_59679_ == 0) {
+    public boolean triggerEvent(final int b0, final int b1) {
+        if (b0 == 1) {
+            this.openCount = b1;
+            if (b1 == 0) {
                 this.animationStatus = ShulkerBoxBlockEntity.AnimationStatus.CLOSING;
             }
 
-            if (p_59679_ == 1) {
+            if (b1 == 1) {
                 this.animationStatus = ShulkerBoxBlockEntity.AnimationStatus.OPENING;
             }
 
             return true;
         } else {
-            return super.triggerEvent(p_59678_, p_59679_);
+            return super.triggerEvent(b0, b1);
         }
     }
 
-    private static void doNeighborUpdates(Level p_155688_, BlockPos p_155689_, BlockState p_155690_) {
-        p_155690_.updateNeighbourShapes(p_155688_, p_155689_, 3);
-        p_155688_.updateNeighborsAt(p_155689_, p_155690_.getBlock());
+    private static void doNeighborUpdates(final Level level, final BlockPos pos, final BlockState blockState) {
+        blockState.updateNeighbourShapes(level, pos, 3);
+        level.updateNeighborsAt(pos, blockState.getBlock());
     }
 
     @Override
-    public void preRemoveSideEffects(BlockPos p_394542_, BlockState p_391727_) {
+    public void preRemoveSideEffects(final BlockPos pos, final BlockState state) {
     }
 
     @Override
-    public void startOpen(ContainerUser p_423201_) {
-        if (!this.remove && !p_423201_.getLivingEntity().isSpectator()) {
+    public void startOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
             if (this.openCount < 0) {
                 this.openCount = 0;
             }
@@ -173,20 +173,26 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
             this.openCount++;
             this.level.blockEvent(this.worldPosition, this.getBlockState().getBlock(), 1, this.openCount);
             if (this.openCount == 1) {
-                this.level.gameEvent(p_423201_.getLivingEntity(), GameEvent.CONTAINER_OPEN, this.worldPosition);
-                this.level.playSound(null, this.worldPosition, SoundEvents.SHULKER_BOX_OPEN, SoundSource.BLOCKS, 0.5F, this.level.random.nextFloat() * 0.1F + 0.9F);
+                this.level.gameEvent(containerUser.getLivingEntity(), GameEvent.CONTAINER_OPEN, this.worldPosition);
+                this.level
+                    .playSound(
+                        null, this.worldPosition, SoundEvents.SHULKER_BOX_OPEN, SoundSource.BLOCKS, 0.5F, this.level.getRandom().nextFloat() * 0.1F + 0.9F
+                    );
             }
         }
     }
 
     @Override
-    public void stopOpen(ContainerUser p_429383_) {
-        if (!this.remove && !p_429383_.getLivingEntity().isSpectator()) {
+    public void stopOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
             this.openCount--;
             this.level.blockEvent(this.worldPosition, this.getBlockState().getBlock(), 1, this.openCount);
             if (this.openCount <= 0) {
-                this.level.gameEvent(p_429383_.getLivingEntity(), GameEvent.CONTAINER_CLOSE, this.worldPosition);
-                this.level.playSound(null, this.worldPosition, SoundEvents.SHULKER_BOX_CLOSE, SoundSource.BLOCKS, 0.5F, this.level.random.nextFloat() * 0.1F + 0.9F);
+                this.level.gameEvent(containerUser.getLivingEntity(), GameEvent.CONTAINER_CLOSE, this.worldPosition);
+                this.level
+                    .playSound(
+                        null, this.worldPosition, SoundEvents.SHULKER_BOX_CLOSE, SoundSource.BLOCKS, 0.5F, this.level.getRandom().nextFloat() * 0.1F + 0.9F
+                    );
             }
         }
     }
@@ -197,23 +203,23 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_407419_) {
-        super.loadAdditional(p_407419_);
-        this.loadFromTag(p_407419_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.loadFromTag(input);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_408177_) {
-        super.saveAdditional(p_408177_);
-        if (!this.trySaveLootTable(p_408177_)) {
-            ContainerHelper.saveAllItems(p_408177_, this.itemStacks, false);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        if (!this.trySaveLootTable(output)) {
+            ContainerHelper.saveAllItems(output, this.itemStacks, false);
         }
     }
 
-    public void loadFromTag(ValueInput p_410262_) {
+    public void loadFromTag(final ValueInput input) {
         this.itemStacks = NonNullList.withSize(this.getContainerSize(), ItemStack.EMPTY);
-        if (!this.tryLoadLootTable(p_410262_)) {
-            ContainerHelper.loadAllItems(p_410262_, this.itemStacks);
+        if (!this.tryLoadLootTable(input)) {
+            ContainerHelper.loadAllItems(input, this.itemStacks);
         }
     }
 
@@ -223,27 +229,27 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
     }
 
     @Override
-    protected void setItems(NonNullList<ItemStack> p_59674_) {
-        this.itemStacks = p_59674_;
+    protected void setItems(final NonNullList<ItemStack> items) {
+        this.itemStacks = items;
     }
 
     @Override
-    public int[] getSlotsForFace(Direction p_59672_) {
+    public int[] getSlotsForFace(final Direction direction) {
         return SLOTS;
     }
 
     @Override
-    public boolean canPlaceItemThroughFace(int p_59663_, ItemStack p_59664_, @Nullable Direction p_59665_) {
-        return !(Block.byItem(p_59664_.getItem()) instanceof ShulkerBoxBlock);
+    public boolean canPlaceItemThroughFace(final int slot, final ItemStack itemStack, final @Nullable Direction direction) {
+        return !(Block.byItem(itemStack.getItem()) instanceof ShulkerBoxBlock);
     }
 
     @Override
-    public boolean canTakeItemThroughFace(int p_59682_, ItemStack p_59683_, Direction p_59684_) {
+    public boolean canTakeItemThroughFace(final int slot, final ItemStack itemStack, final Direction direction) {
         return true;
     }
 
-    public float getProgress(float p_59658_) {
-        return Mth.lerp(p_59658_, this.progressOld, this.progress);
+    public float getProgress(final float a) {
+        return Mth.lerp(a, this.progressOld, this.progress);
     }
 
     public @Nullable DyeColor getColor() {
@@ -251,15 +257,15 @@ public class ShulkerBoxBlockEntity extends RandomizableContainerBlockEntity impl
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int p_59660_, Inventory p_59661_) {
-        return new ShulkerBoxMenu(p_59660_, p_59661_, this);
+    protected AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return new ShulkerBoxMenu(containerId, inventory, this);
     }
 
     public boolean isClosed() {
         return this.animationStatus == ShulkerBoxBlockEntity.AnimationStatus.CLOSED;
     }
 
-    public static enum AnimationStatus {
+    public enum AnimationStatus {
         CLOSED,
         OPENING,
         OPENED,

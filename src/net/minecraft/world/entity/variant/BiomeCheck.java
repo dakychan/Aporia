@@ -2,7 +2,6 @@ package net.minecraft.world.entity.variant;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.Registries;
@@ -10,12 +9,11 @@ import net.minecraft.world.level.biome.Biome;
 
 public record BiomeCheck(HolderSet<Biome> requiredBiomes) implements SpawnCondition {
     public static final MapCodec<BiomeCheck> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_392898_ -> p_392898_.group(RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("biomes").forGetter(BiomeCheck::requiredBiomes))
-            .apply(p_392898_, BiomeCheck::new)
+        i -> i.group(RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("biomes").forGetter(BiomeCheck::requiredBiomes)).apply(i, BiomeCheck::new)
     );
 
-    public boolean test(SpawnContext p_397261_) {
-        return this.requiredBiomes.contains(p_397261_.biome());
+    public boolean test(final SpawnContext context) {
+        return this.requiredBiomes.contains(context.biome());
     }
 
     @Override

@@ -61,8 +61,8 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     private static final int SLOT_OFFSET = 300;
     private final SimpleContainer inventory = new SimpleContainer(5);
 
-    public Pillager(EntityType<? extends Pillager> p_460359_, Level p_459618_) {
-        super(p_460359_, p_459618_);
+    public Pillager(final EntityType<? extends Pillager> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -90,14 +90,14 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_450299_) {
-        super.defineSynchedData(p_450299_);
-        p_450299_.define(IS_CHARGING_CROSSBOW, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(IS_CHARGING_CROSSBOW, false);
     }
 
     @Override
-    public boolean canUseNonMeleeWeapon(ItemStack p_455634_) {
-        return p_455634_.getItem() == Items.CROSSBOW;
+    public boolean canUseNonMeleeWeapon(final ItemStack item) {
+        return item.getItem() == Items.CROSSBOW;
     }
 
     public boolean isChargingCrossbow() {
@@ -105,8 +105,8 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     }
 
     @Override
-    public void setChargingCrossbow(boolean p_450617_) {
-        this.entityData.set(IS_CHARGING_CROSSBOW, p_450617_);
+    public void setChargingCrossbow(final boolean isCharging) {
+        this.entityData.set(IS_CHARGING_CROSSBOW, isCharging);
     }
 
     @Override
@@ -120,9 +120,9 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_451320_) {
-        super.addAdditionalSaveData(p_451320_);
-        this.writeInventoryToTag(p_451320_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        this.writeInventoryToTag(output);
     }
 
     @Override
@@ -137,14 +137,14 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458054_) {
-        super.readAdditionalSaveData(p_458054_);
-        this.readInventoryFromTag(p_458054_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.readInventoryFromTag(input);
         this.setCanPickUpLoot(true);
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos p_456039_, LevelReader p_454769_) {
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
         return 0.0F;
     }
 
@@ -155,26 +155,28 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_459679_, DifficultyInstance p_453120_, EntitySpawnReason p_452725_, @Nullable SpawnGroupData p_451802_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
-        RandomSource randomsource = p_459679_.getRandom();
-        this.populateDefaultEquipmentSlots(randomsource, p_453120_);
-        this.populateDefaultEquipmentEnchantments(p_459679_, randomsource, p_453120_);
-        return super.finalizeSpawn(p_459679_, p_453120_, p_452725_, p_451802_);
+        RandomSource random = level.getRandom();
+        this.populateDefaultEquipmentSlots(random, difficulty);
+        this.populateDefaultEquipmentEnchantments(level, random, difficulty);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
-    protected void populateDefaultEquipmentSlots(RandomSource p_454603_, DifficultyInstance p_451969_) {
+    protected void populateDefaultEquipmentSlots(final RandomSource random, final DifficultyInstance difficulty) {
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.CROSSBOW));
     }
 
     @Override
-    protected void enchantSpawnedWeapon(ServerLevelAccessor p_452382_, RandomSource p_450159_, DifficultyInstance p_453919_) {
-        super.enchantSpawnedWeapon(p_452382_, p_450159_, p_453919_);
-        if (p_450159_.nextInt(300) == 0) {
-            ItemStack itemstack = this.getMainHandItem();
-            if (itemstack.is(Items.CROSSBOW)) {
-                EnchantmentHelper.enchantItemFromProvider(itemstack, p_452382_.registryAccess(), VanillaEnchantmentProviders.PILLAGER_SPAWN_CROSSBOW, p_453919_, p_450159_);
+    protected void enchantSpawnedWeapon(final ServerLevelAccessor level, final RandomSource random, final DifficultyInstance difficulty) {
+        super.enchantSpawnedWeapon(level, random, difficulty);
+        if (random.nextInt(300) == 0) {
+            ItemStack weapon = this.getMainHandItem();
+            if (weapon.is(Items.CROSSBOW)) {
+                EnchantmentHelper.enchantItemFromProvider(
+                    weapon, level.registryAccess(), VanillaEnchantmentProviders.PILLAGER_SPAWN_CROSSBOW, difficulty, random
+                );
             }
         }
     }
@@ -190,12 +192,12 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_456626_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.PILLAGER_HURT;
     }
 
     @Override
-    public void performRangedAttack(LivingEntity p_451038_, float p_460531_) {
+    public void performRangedAttack(final LivingEntity target, final float power) {
         this.performCrossbowAttack(this, 1.6F);
     }
 
@@ -205,49 +207,51 @@ public class Pillager extends AbstractIllager implements CrossbowAttackMob, Inve
     }
 
     @Override
-    protected void pickUpItem(ServerLevel p_451687_, ItemEntity p_453416_) {
-        ItemStack itemstack = p_453416_.getItem();
-        if (itemstack.getItem() instanceof BannerItem) {
-            super.pickUpItem(p_451687_, p_453416_);
-        } else if (this.wantsItem(itemstack)) {
-            this.onItemPickup(p_453416_);
-            ItemStack itemstack1 = this.inventory.addItem(itemstack);
-            if (itemstack1.isEmpty()) {
-                p_453416_.discard();
+    protected void pickUpItem(final ServerLevel level, final ItemEntity entity) {
+        ItemStack itemStack = entity.getItem();
+        if (itemStack.getItem() instanceof BannerItem) {
+            super.pickUpItem(level, entity);
+        } else if (this.wantsItem(itemStack)) {
+            this.onItemPickup(entity);
+            ItemStack remainder = this.inventory.addItem(itemStack);
+            if (remainder.isEmpty()) {
+                entity.discard();
             } else {
-                itemstack.setCount(itemstack1.getCount());
+                itemStack.setCount(remainder.getCount());
             }
         }
     }
 
-    private boolean wantsItem(ItemStack p_455962_) {
-        return this.hasActiveRaid() && p_455962_.is(Items.WHITE_BANNER);
+    private boolean wantsItem(final ItemStack itemStack) {
+        return this.hasActiveRaid() && itemStack.is(Items.BANNER.white());
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_452816_) {
-        int i = p_452816_ - 300;
-        return i >= 0 && i < this.inventory.getContainerSize() ? this.inventory.getSlot(i) : super.getSlot(p_452816_);
+    public @Nullable SlotAccess getSlot(final int slot) {
+        int inventorySlot = slot - 300;
+        return inventorySlot >= 0 && inventorySlot < this.inventory.getContainerSize() ? this.inventory.getSlot(inventorySlot) : super.getSlot(slot);
     }
 
     @Override
-    public void applyRaidBuffs(ServerLevel p_450394_, int p_450630_, boolean p_452286_) {
+    public void applyRaidBuffs(final ServerLevel level, final int wave, final boolean isCaptain) {
         Raid raid = this.getCurrentRaid();
-        boolean flag = this.random.nextFloat() <= raid.getEnchantOdds();
-        if (flag) {
-            ItemStack itemstack = new ItemStack(Items.CROSSBOW);
-            ResourceKey<EnchantmentProvider> resourcekey;
-            if (p_450630_ > raid.getNumGroups(Difficulty.NORMAL)) {
-                resourcekey = VanillaEnchantmentProviders.RAID_PILLAGER_POST_WAVE_5;
-            } else if (p_450630_ > raid.getNumGroups(Difficulty.EASY)) {
-                resourcekey = VanillaEnchantmentProviders.RAID_PILLAGER_POST_WAVE_3;
+        boolean shouldEnchant = this.random.nextFloat() <= raid.getEnchantOdds();
+        if (shouldEnchant) {
+            ItemStack crossbow = new ItemStack(Items.CROSSBOW);
+            ResourceKey<EnchantmentProvider> provider;
+            if (wave > raid.getNumGroups(Difficulty.NORMAL)) {
+                provider = VanillaEnchantmentProviders.RAID_PILLAGER_POST_WAVE_5;
+            } else if (wave > raid.getNumGroups(Difficulty.EASY)) {
+                provider = VanillaEnchantmentProviders.RAID_PILLAGER_POST_WAVE_3;
             } else {
-                resourcekey = null;
+                provider = null;
             }
 
-            if (resourcekey != null) {
-                EnchantmentHelper.enchantItemFromProvider(itemstack, p_450394_.registryAccess(), resourcekey, p_450394_.getCurrentDifficultyAt(this.blockPosition()), this.getRandom());
-                this.setItemSlot(EquipmentSlot.MAINHAND, itemstack);
+            if (provider != null) {
+                EnchantmentHelper.enchantItemFromProvider(
+                    crossbow, level.registryAccess(), provider, level.getCurrentDifficultyAt(this.blockPosition()), this.getRandom()
+                );
+                this.setItemSlot(EquipmentSlot.MAINHAND, crossbow);
             }
         }
     }

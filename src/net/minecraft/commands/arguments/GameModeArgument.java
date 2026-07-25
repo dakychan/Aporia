@@ -21,23 +21,23 @@ public class GameModeArgument implements ArgumentType<GameType> {
     private static final Collection<String> EXAMPLES = Stream.of(GameType.SURVIVAL, GameType.CREATIVE).map(GameType::getName).collect(Collectors.toList());
     private static final GameType[] VALUES = GameType.values();
     private static final DynamicCommandExceptionType ERROR_INVALID = new DynamicCommandExceptionType(
-        p_308349_ -> Component.translatableEscape("argument.gamemode.invalid", p_308349_)
+        value -> Component.translatableEscape("argument.gamemode.invalid", value)
     );
 
-    public GameType parse(StringReader p_260111_) throws CommandSyntaxException {
-        String s = p_260111_.readUnquotedString();
-        GameType gametype = GameType.byName(s, null);
-        if (gametype == null) {
-            throw ERROR_INVALID.createWithContext(p_260111_, s);
+    public GameType parse(final StringReader reader) throws CommandSyntaxException {
+        String gameTypeString = reader.readUnquotedString();
+        GameType gameType = GameType.byName(gameTypeString, null);
+        if (gameType == null) {
+            throw ERROR_INVALID.createWithContext(reader, gameTypeString);
         } else {
-            return gametype;
+            return gameType;
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_259767_, SuggestionsBuilder p_259515_) {
-        return p_259767_.getSource() instanceof SharedSuggestionProvider
-            ? SharedSuggestionProvider.suggest(Arrays.stream(VALUES).map(GameType::getName), p_259515_)
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return context.getSource() instanceof SharedSuggestionProvider
+            ? SharedSuggestionProvider.suggest(Arrays.stream(VALUES).map(GameType::getName), builder)
             : Suggestions.empty();
     }
 
@@ -50,7 +50,7 @@ public class GameModeArgument implements ArgumentType<GameType> {
         return new GameModeArgument();
     }
 
-    public static GameType getGameMode(CommandContext<CommandSourceStack> p_259927_, String p_260246_) throws CommandSyntaxException {
-        return p_259927_.getArgument(p_260246_, GameType.class);
+    public static GameType getGameMode(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return context.getArgument(name, GameType.class);
     }
 }

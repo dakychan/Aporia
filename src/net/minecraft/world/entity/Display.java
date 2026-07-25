@@ -11,6 +11,7 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.ResolutionContext;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -40,11 +41,17 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public abstract class Display extends Entity {
-    static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     public static final int NO_BRIGHTNESS_OVERRIDE = -1;
-    private static final EntityDataAccessor<Integer> DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID = SynchedEntityData.defineId(Display.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID = SynchedEntityData.defineId(Display.class, EntityDataSerializers.INT);
-    private static final EntityDataAccessor<Integer> DATA_POS_ROT_INTERPOLATION_DURATION_ID = SynchedEntityData.defineId(Display.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID = SynchedEntityData.defineId(
+        Display.class, EntityDataSerializers.INT
+    );
+    private static final EntityDataAccessor<Integer> DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID = SynchedEntityData.defineId(
+        Display.class, EntityDataSerializers.INT
+    );
+    private static final EntityDataAccessor<Integer> DATA_POS_ROT_INTERPOLATION_DURATION_ID = SynchedEntityData.defineId(
+        Display.class, EntityDataSerializers.INT
+    );
     private static final EntityDataAccessor<Vector3fc> DATA_TRANSLATION_ID = SynchedEntityData.defineId(Display.class, EntityDataSerializers.VECTOR3);
     private static final EntityDataAccessor<Vector3fc> DATA_SCALE_ID = SynchedEntityData.defineId(Display.class, EntityDataSerializers.VECTOR3);
     private static final EntityDataAccessor<Quaternionfc> DATA_LEFT_ROTATION_ID = SynchedEntityData.defineId(Display.class, EntityDataSerializers.QUATERNION);
@@ -99,61 +106,61 @@ public abstract class Display extends Entity {
     private Display.@Nullable RenderState renderState;
     private final InterpolationHandler interpolation = new InterpolationHandler(this, 0);
 
-    public Display(EntityType<?> p_270360_, Level p_270280_) {
-        super(p_270360_, p_270280_);
+    public Display(final EntityType<?> type, final Level level) {
+        super(type, level);
         this.noPhysics = true;
         this.cullingBoundingBox = this.getBoundingBox();
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_270275_) {
-        super.onSyncedDataUpdated(p_270275_);
-        if (DATA_HEIGHT_ID.equals(p_270275_) || DATA_WIDTH_ID.equals(p_270275_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (DATA_HEIGHT_ID.equals(accessor) || DATA_WIDTH_ID.equals(accessor)) {
             this.updateCulling();
         }
 
-        if (DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID.equals(p_270275_)) {
+        if (DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID.equals(accessor)) {
             this.updateStartTick = true;
         }
 
-        if (DATA_POS_ROT_INTERPOLATION_DURATION_ID.equals(p_270275_)) {
+        if (DATA_POS_ROT_INTERPOLATION_DURATION_ID.equals(accessor)) {
             this.interpolation.setInterpolationLength(this.getPosRotInterpolationDuration());
         }
 
-        if (DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID.equals(p_270275_)) {
+        if (DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID.equals(accessor)) {
             this.updateInterpolationDuration = true;
         }
 
-        if (RENDER_STATE_IDS.contains(p_270275_.id())) {
+        if (RENDER_STATE_IDS.contains(accessor.id())) {
             this.updateRenderState = true;
         }
     }
 
     @Override
-    public final boolean hurtServer(ServerLevel p_365251_, DamageSource p_369787_, float p_367342_) {
+    public final boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         return false;
     }
 
-    private static Transformation createTransformation(SynchedEntityData p_270278_) {
-        Vector3fc vector3fc = p_270278_.get(DATA_TRANSLATION_ID);
-        Quaternionfc quaternionfc = p_270278_.get(DATA_LEFT_ROTATION_ID);
-        Vector3fc vector3fc1 = p_270278_.get(DATA_SCALE_ID);
-        Quaternionfc quaternionfc1 = p_270278_.get(DATA_RIGHT_ROTATION_ID);
-        return new Transformation(vector3fc, quaternionfc, vector3fc1, quaternionfc1);
+    private static Transformation createTransformation(final SynchedEntityData entityData) {
+        Vector3fc translation = entityData.get(DATA_TRANSLATION_ID);
+        Quaternionfc leftRotation = entityData.get(DATA_LEFT_ROTATION_ID);
+        Vector3fc scale = entityData.get(DATA_SCALE_ID);
+        Quaternionfc rightRotation = entityData.get(DATA_RIGHT_ROTATION_ID);
+        return new Transformation(translation, leftRotation, scale, rightRotation);
     }
 
     @Override
     public void tick() {
-        Entity entity = this.getVehicle();
-        if (entity != null && entity.isRemoved()) {
+        Entity vehicle = this.getVehicle();
+        if (vehicle != null && vehicle.isRemoved()) {
             this.stopRiding();
         }
 
         if (this.level().isClientSide()) {
             if (this.updateStartTick) {
                 this.updateStartTick = false;
-                int i = this.getTransformationInterpolationDelay();
-                this.interpolationStartClientTick = this.tickCount + i;
+                int interpolationStartDelta = this.getTransformationInterpolationDelay();
+                this.interpolationStartClientTick = this.tickCount + interpolationStartDelta;
             }
 
             if (this.updateInterpolationDuration) {
@@ -163,14 +170,14 @@ public abstract class Display extends Entity {
 
             if (this.updateRenderState) {
                 this.updateRenderState = false;
-                boolean flag = this.interpolationDuration != 0;
-                if (flag && this.renderState != null) {
+                boolean shouldInterpolate = this.interpolationDuration != 0;
+                if (shouldInterpolate && this.renderState != null) {
                     this.renderState = this.createInterpolatedRenderState(this.renderState, this.lastProgress);
                 } else {
                     this.renderState = this.createFreshRenderState();
                 }
 
-                this.updateRenderSubState(flag, this.lastProgress);
+                this.updateRenderSubState(shouldInterpolate, this.lastProgress);
             }
 
             this.interpolation.interpolate();
@@ -182,64 +189,64 @@ public abstract class Display extends Entity {
         return this.interpolation;
     }
 
-    protected abstract void updateRenderSubState(boolean p_277603_, float p_277810_);
+    protected abstract void updateRenderSubState(boolean shouldInterpolate, float progress);
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_327982_) {
-        p_327982_.define(DATA_POS_ROT_INTERPOLATION_DURATION_ID, 0);
-        p_327982_.define(DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID, 0);
-        p_327982_.define(DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID, 0);
-        p_327982_.define(DATA_TRANSLATION_ID, new Vector3f());
-        p_327982_.define(DATA_SCALE_ID, new Vector3f(1.0F, 1.0F, 1.0F));
-        p_327982_.define(DATA_RIGHT_ROTATION_ID, new Quaternionf());
-        p_327982_.define(DATA_LEFT_ROTATION_ID, new Quaternionf());
-        p_327982_.define(DATA_BILLBOARD_RENDER_CONSTRAINTS_ID, Display.BillboardConstraints.FIXED.getId());
-        p_327982_.define(DATA_BRIGHTNESS_OVERRIDE_ID, -1);
-        p_327982_.define(DATA_VIEW_RANGE_ID, 1.0F);
-        p_327982_.define(DATA_SHADOW_RADIUS_ID, 0.0F);
-        p_327982_.define(DATA_SHADOW_STRENGTH_ID, 1.0F);
-        p_327982_.define(DATA_WIDTH_ID, 0.0F);
-        p_327982_.define(DATA_HEIGHT_ID, 0.0F);
-        p_327982_.define(DATA_GLOW_COLOR_OVERRIDE_ID, -1);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_POS_ROT_INTERPOLATION_DURATION_ID, 0);
+        entityData.define(DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID, 0);
+        entityData.define(DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID, 0);
+        entityData.define(DATA_TRANSLATION_ID, new Vector3f());
+        entityData.define(DATA_SCALE_ID, new Vector3f(1.0F, 1.0F, 1.0F));
+        entityData.define(DATA_RIGHT_ROTATION_ID, new Quaternionf());
+        entityData.define(DATA_LEFT_ROTATION_ID, new Quaternionf());
+        entityData.define(DATA_BILLBOARD_RENDER_CONSTRAINTS_ID, Display.BillboardConstraints.FIXED.getId());
+        entityData.define(DATA_BRIGHTNESS_OVERRIDE_ID, -1);
+        entityData.define(DATA_VIEW_RANGE_ID, 1.0F);
+        entityData.define(DATA_SHADOW_RADIUS_ID, 0.0F);
+        entityData.define(DATA_SHADOW_STRENGTH_ID, 1.0F);
+        entityData.define(DATA_WIDTH_ID, 0.0F);
+        entityData.define(DATA_HEIGHT_ID, 0.0F);
+        entityData.define(DATA_GLOW_COLOR_OVERRIDE_ID, -1);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_410276_) {
-        this.setTransformation(p_410276_.read("transformation", Transformation.EXTENDED_CODEC).orElse(Transformation.identity()));
-        this.setTransformationInterpolationDuration(p_410276_.getIntOr("interpolation_duration", 0));
-        this.setTransformationInterpolationDelay(p_410276_.getIntOr("start_interpolation", 0));
-        int i = p_410276_.getIntOr("teleport_duration", 0);
-        this.setPosRotInterpolationDuration(Mth.clamp(i, 0, 59));
-        this.setBillboardConstraints(p_410276_.read("billboard", Display.BillboardConstraints.CODEC).orElse(Display.BillboardConstraints.FIXED));
-        this.setViewRange(p_410276_.getFloatOr("view_range", 1.0F));
-        this.setShadowRadius(p_410276_.getFloatOr("shadow_radius", 0.0F));
-        this.setShadowStrength(p_410276_.getFloatOr("shadow_strength", 1.0F));
-        this.setWidth(p_410276_.getFloatOr("width", 0.0F));
-        this.setHeight(p_410276_.getFloatOr("height", 0.0F));
-        this.setGlowColorOverride(p_410276_.getIntOr("glow_color_override", -1));
-        this.setBrightnessOverride(p_410276_.read("brightness", Brightness.CODEC).orElse(null));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.setTransformation(input.read("transformation", Transformation.EXTENDED_CODEC).orElse(Transformation.IDENTITY));
+        this.setTransformationInterpolationDuration(input.getIntOr("interpolation_duration", 0));
+        this.setTransformationInterpolationDelay(input.getIntOr("start_interpolation", 0));
+        int teleportDuration = input.getIntOr("teleport_duration", 0);
+        this.setPosRotInterpolationDuration(Mth.clamp(teleportDuration, 0, 59));
+        this.setBillboardConstraints(input.read("billboard", Display.BillboardConstraints.CODEC).orElse(Display.BillboardConstraints.FIXED));
+        this.setViewRange(input.getFloatOr("view_range", 1.0F));
+        this.setShadowRadius(input.getFloatOr("shadow_radius", 0.0F));
+        this.setShadowStrength(input.getFloatOr("shadow_strength", 1.0F));
+        this.setWidth(input.getFloatOr("width", 0.0F));
+        this.setHeight(input.getFloatOr("height", 0.0F));
+        this.setGlowColorOverride(input.getIntOr("glow_color_override", -1));
+        this.setBrightnessOverride(input.read("brightness", Brightness.CODEC).orElse(null));
     }
 
-    private void setTransformation(Transformation p_270186_) {
-        this.entityData.set(DATA_TRANSLATION_ID, p_270186_.getTranslation());
-        this.entityData.set(DATA_LEFT_ROTATION_ID, p_270186_.getLeftRotation());
-        this.entityData.set(DATA_SCALE_ID, p_270186_.getScale());
-        this.entityData.set(DATA_RIGHT_ROTATION_ID, p_270186_.getRightRotation());
+    private void setTransformation(final Transformation transformation) {
+        this.entityData.set(DATA_TRANSLATION_ID, transformation.translation());
+        this.entityData.set(DATA_LEFT_ROTATION_ID, transformation.leftRotation());
+        this.entityData.set(DATA_SCALE_ID, transformation.scale());
+        this.entityData.set(DATA_RIGHT_ROTATION_ID, transformation.rightRotation());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408094_) {
-        p_408094_.store("transformation", Transformation.EXTENDED_CODEC, createTransformation(this.entityData));
-        p_408094_.store("billboard", Display.BillboardConstraints.CODEC, this.getBillboardConstraints());
-        p_408094_.putInt("interpolation_duration", this.getTransformationInterpolationDuration());
-        p_408094_.putInt("teleport_duration", this.getPosRotInterpolationDuration());
-        p_408094_.putFloat("view_range", this.getViewRange());
-        p_408094_.putFloat("shadow_radius", this.getShadowRadius());
-        p_408094_.putFloat("shadow_strength", this.getShadowStrength());
-        p_408094_.putFloat("width", this.getWidth());
-        p_408094_.putFloat("height", this.getHeight());
-        p_408094_.putInt("glow_color_override", this.getGlowColorOverride());
-        p_408094_.storeNullable("brightness", Brightness.CODEC, this.getBrightnessOverride());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.store("transformation", Transformation.EXTENDED_CODEC, createTransformation(this.entityData));
+        output.store("billboard", Display.BillboardConstraints.CODEC, this.getBillboardConstraints());
+        output.putInt("interpolation_duration", this.getTransformationInterpolationDuration());
+        output.putInt("teleport_duration", this.getPosRotInterpolationDuration());
+        output.putFloat("view_range", this.getViewRange());
+        output.putFloat("shadow_radius", this.getShadowRadius());
+        output.putFloat("shadow_strength", this.getShadowStrength());
+        output.putFloat("width", this.getWidth());
+        output.putFloat("height", this.getHeight());
+        output.putInt("glow_color_override", this.getGlowColorOverride());
+        output.storeNullable("brightness", Brightness.CODEC, this.getBrightnessOverride());
     }
 
     public AABB getBoundingBoxForCulling() {
@@ -264,106 +271,106 @@ public abstract class Display extends Entity {
         return this.renderState;
     }
 
-    private void setTransformationInterpolationDuration(int p_297488_) {
-        this.entityData.set(DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID, p_297488_);
+    private void setTransformationInterpolationDuration(final int duration) {
+        this.entityData.set(DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID, duration);
     }
 
     private int getTransformationInterpolationDuration() {
         return this.entityData.get(DATA_TRANSFORMATION_INTERPOLATION_DURATION_ID);
     }
 
-    private void setTransformationInterpolationDelay(int p_300640_) {
-        this.entityData.set(DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID, p_300640_, true);
+    private void setTransformationInterpolationDelay(final int ticks) {
+        this.entityData.set(DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID, ticks, true);
     }
 
     private int getTransformationInterpolationDelay() {
         return this.entityData.get(DATA_TRANSFORMATION_INTERPOLATION_START_DELTA_TICKS_ID);
     }
 
-    private void setPosRotInterpolationDuration(int p_300107_) {
-        this.entityData.set(DATA_POS_ROT_INTERPOLATION_DURATION_ID, p_300107_);
+    private void setPosRotInterpolationDuration(final int duration) {
+        this.entityData.set(DATA_POS_ROT_INTERPOLATION_DURATION_ID, duration);
     }
 
     private int getPosRotInterpolationDuration() {
         return this.entityData.get(DATA_POS_ROT_INTERPOLATION_DURATION_ID);
     }
 
-    private void setBillboardConstraints(Display.BillboardConstraints p_270345_) {
-        this.entityData.set(DATA_BILLBOARD_RENDER_CONSTRAINTS_ID, p_270345_.getId());
+    private void setBillboardConstraints(final Display.BillboardConstraints constraints) {
+        this.entityData.set(DATA_BILLBOARD_RENDER_CONSTRAINTS_ID, constraints.getId());
     }
 
     private Display.BillboardConstraints getBillboardConstraints() {
         return Display.BillboardConstraints.BY_ID.apply(this.entityData.get(DATA_BILLBOARD_RENDER_CONSTRAINTS_ID));
     }
 
-    private void setBrightnessOverride(@Nullable Brightness p_270461_) {
-        this.entityData.set(DATA_BRIGHTNESS_OVERRIDE_ID, p_270461_ != null ? p_270461_.pack() : -1);
+    private void setBrightnessOverride(final @Nullable Brightness brightness) {
+        this.entityData.set(DATA_BRIGHTNESS_OVERRIDE_ID, brightness != null ? brightness.pack() : -1);
     }
 
     private @Nullable Brightness getBrightnessOverride() {
-        int i = this.entityData.get(DATA_BRIGHTNESS_OVERRIDE_ID);
-        return i != -1 ? Brightness.unpack(i) : null;
+        int value = this.entityData.get(DATA_BRIGHTNESS_OVERRIDE_ID);
+        return value != -1 ? Brightness.unpack(value) : null;
     }
 
     private int getPackedBrightnessOverride() {
         return this.entityData.get(DATA_BRIGHTNESS_OVERRIDE_ID);
     }
 
-    private void setViewRange(float p_270907_) {
-        this.entityData.set(DATA_VIEW_RANGE_ID, p_270907_);
+    private void setViewRange(final float range) {
+        this.entityData.set(DATA_VIEW_RANGE_ID, range);
     }
 
     private float getViewRange() {
         return this.entityData.get(DATA_VIEW_RANGE_ID);
     }
 
-    private void setShadowRadius(float p_270122_) {
-        this.entityData.set(DATA_SHADOW_RADIUS_ID, p_270122_);
+    private void setShadowRadius(final float size) {
+        this.entityData.set(DATA_SHADOW_RADIUS_ID, size);
     }
 
     private float getShadowRadius() {
         return this.entityData.get(DATA_SHADOW_RADIUS_ID);
     }
 
-    private void setShadowStrength(float p_270866_) {
-        this.entityData.set(DATA_SHADOW_STRENGTH_ID, p_270866_);
+    private void setShadowStrength(final float strength) {
+        this.entityData.set(DATA_SHADOW_STRENGTH_ID, strength);
     }
 
     private float getShadowStrength() {
         return this.entityData.get(DATA_SHADOW_STRENGTH_ID);
     }
 
-    private void setWidth(float p_270741_) {
-        this.entityData.set(DATA_WIDTH_ID, p_270741_);
+    private void setWidth(final float width) {
+        this.entityData.set(DATA_WIDTH_ID, width);
     }
 
     private float getWidth() {
         return this.entityData.get(DATA_WIDTH_ID);
     }
 
-    private void setHeight(float p_270716_) {
-        this.entityData.set(DATA_HEIGHT_ID, p_270716_);
+    private void setHeight(final float width) {
+        this.entityData.set(DATA_HEIGHT_ID, width);
     }
 
     private int getGlowColorOverride() {
         return this.entityData.get(DATA_GLOW_COLOR_OVERRIDE_ID);
     }
 
-    private void setGlowColorOverride(int p_270784_) {
-        this.entityData.set(DATA_GLOW_COLOR_OVERRIDE_ID, p_270784_);
+    private void setGlowColorOverride(final int value) {
+        this.entityData.set(DATA_GLOW_COLOR_OVERRIDE_ID, value);
     }
 
-    public float calculateInterpolationProgress(float p_272675_) {
-        int i = this.interpolationDuration;
-        if (i <= 0) {
+    public float calculateInterpolationProgress(final float partialTickTime) {
+        int duration = this.interpolationDuration;
+        if (duration <= 0) {
             return 1.0F;
-        } else {
-            float f = (float)(this.tickCount - this.interpolationStartClientTick);
-            float f1 = f + p_272675_;
-            float f2 = Mth.clamp(Mth.inverseLerp(f1, 0.0F, i), 0.0F, 1.0F);
-            this.lastProgress = f2;
-            return f2;
         }
+
+        float ticksSinceUpdate = (float)(this.tickCount - this.interpolationStartClientTick);
+        float partialTicksSinceLastUpdate = ticksSinceUpdate + partialTickTime;
+        float result = Mth.clamp(Mth.inverseLerp(partialTicksSinceLastUpdate, 0.0F, duration), 0.0F, 1.0F);
+        this.lastProgress = result;
+        return result;
     }
 
     private float getHeight() {
@@ -371,31 +378,31 @@ public abstract class Display extends Entity {
     }
 
     @Override
-    public void setPos(double p_270091_, double p_270983_, double p_270419_) {
-        super.setPos(p_270091_, p_270983_, p_270419_);
+    public void setPos(final double x, final double y, final double z) {
+        super.setPos(x, y, z);
         this.updateCulling();
     }
 
     private void updateCulling() {
-        float f = this.getWidth();
-        float f1 = this.getHeight();
-        this.noCulling = f == 0.0F || f1 == 0.0F;
-        float f2 = f / 2.0F;
-        double d0 = this.getX();
-        double d1 = this.getY();
-        double d2 = this.getZ();
-        this.cullingBoundingBox = new AABB(d0 - f2, d1, d2 - f2, d0 + f2, d1 + f1, d2 + f2);
+        float width = this.getWidth();
+        float height = this.getHeight();
+        this.noCulling = width == 0.0F || height == 0.0F;
+        float w = width / 2.0F;
+        double x = this.getX();
+        double y = this.getY();
+        double z = this.getZ();
+        this.cullingBoundingBox = new AABB(x - w, y, z - w, x + w, y + height, z + w);
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_270991_) {
-        return p_270991_ < Mth.square(this.getViewRange() * 64.0 * getViewScale());
+    public boolean shouldRenderAtSqrDistance(final double distanceSqr) {
+        return distanceSqr < Mth.square(this.getViewRange() * 64.0 * getViewScale());
     }
 
     @Override
     public int getTeamColor() {
-        int i = this.getGlowColorOverride();
-        return i != -1 ? i : super.getTeamColor();
+        int glowColorOverride = this.getGlowColorOverride();
+        return glowColorOverride != -1 ? glowColorOverride : super.getTeamColor();
     }
 
     private Display.RenderState createFreshRenderState() {
@@ -409,21 +416,21 @@ public abstract class Display extends Entity {
         );
     }
 
-    private Display.RenderState createInterpolatedRenderState(Display.RenderState p_277365_, float p_277948_) {
-        Transformation transformation = p_277365_.transformation.get(p_277948_);
-        float f = p_277365_.shadowRadius.get(p_277948_);
-        float f1 = p_277365_.shadowStrength.get(p_277948_);
+    private Display.RenderState createInterpolatedRenderState(final Display.RenderState previousState, final float progress) {
+        Transformation currentTransform = previousState.transformation.get(progress);
+        float currentShadowRadius = previousState.shadowRadius.get(progress);
+        float currentShadowStrength = previousState.shadowStrength.get(progress);
         return new Display.RenderState(
-            new Display.TransformationInterpolator(transformation, createTransformation(this.entityData)),
+            new Display.TransformationInterpolator(currentTransform, createTransformation(this.entityData)),
             this.getBillboardConstraints(),
             this.getPackedBrightnessOverride(),
-            new Display.LinearFloatInterpolator(f, this.getShadowRadius()),
-            new Display.LinearFloatInterpolator(f1, this.getShadowStrength()),
+            new Display.LinearFloatInterpolator(currentShadowRadius, this.getShadowRadius()),
+            new Display.LinearFloatInterpolator(currentShadowStrength, this.getShadowStrength()),
             this.getGlowColorOverride()
         );
     }
 
-    public static enum BillboardConstraints implements StringRepresentable {
+    public enum BillboardConstraints implements StringRepresentable {
         FIXED((byte)0, "fixed"),
         VERTICAL((byte)1, "vertical"),
         HORIZONTAL((byte)2, "horizontal"),
@@ -436,9 +443,9 @@ public abstract class Display extends Entity {
         private final byte id;
         private final String name;
 
-        private BillboardConstraints(final byte p_270785_, final String p_270544_) {
-            this.name = p_270544_;
-            this.id = p_270785_;
+        BillboardConstraints(final byte id, final String name) {
+            this.name = name;
+            this.id = id;
         }
 
         @Override
@@ -446,30 +453,32 @@ public abstract class Display extends Entity {
             return this.name;
         }
 
-        byte getId() {
+        private byte getId() {
             return this.id;
         }
     }
 
     public static class BlockDisplay extends Display {
         public static final String TAG_BLOCK_STATE = "block_state";
-        private static final EntityDataAccessor<BlockState> DATA_BLOCK_STATE_ID = SynchedEntityData.defineId(Display.BlockDisplay.class, EntityDataSerializers.BLOCK_STATE);
+        private static final EntityDataAccessor<BlockState> DATA_BLOCK_STATE_ID = SynchedEntityData.defineId(
+            Display.BlockDisplay.class, EntityDataSerializers.BLOCK_STATE
+        );
         private Display.BlockDisplay.@Nullable BlockRenderState blockRenderState;
 
-        public BlockDisplay(EntityType<?> p_271022_, Level p_270442_) {
-            super(p_271022_, p_270442_);
+        public BlockDisplay(final EntityType<?> type, final Level level) {
+            super(type, level);
         }
 
         @Override
-        protected void defineSynchedData(SynchedEntityData.Builder p_329731_) {
-            super.defineSynchedData(p_329731_);
-            p_329731_.define(DATA_BLOCK_STATE_ID, Blocks.AIR.defaultBlockState());
+        protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+            super.defineSynchedData(entityData);
+            entityData.define(DATA_BLOCK_STATE_ID, Blocks.AIR.defaultBlockState());
         }
 
         @Override
-        public void onSyncedDataUpdated(EntityDataAccessor<?> p_277476_) {
-            super.onSyncedDataUpdated(p_277476_);
-            if (p_277476_.equals(DATA_BLOCK_STATE_ID)) {
+        public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+            super.onSyncedDataUpdated(accessor);
+            if (accessor.equals(DATA_BLOCK_STATE_ID)) {
                 this.updateRenderState = true;
             }
         }
@@ -478,20 +487,20 @@ public abstract class Display extends Entity {
             return this.entityData.get(DATA_BLOCK_STATE_ID);
         }
 
-        private void setBlockState(BlockState p_270267_) {
-            this.entityData.set(DATA_BLOCK_STATE_ID, p_270267_);
+        private void setBlockState(final BlockState blockState) {
+            this.entityData.set(DATA_BLOCK_STATE_ID, blockState);
         }
 
         @Override
-        protected void readAdditionalSaveData(ValueInput p_410067_) {
-            super.readAdditionalSaveData(p_410067_);
-            this.setBlockState(p_410067_.read("block_state", BlockState.CODEC).orElse(Blocks.AIR.defaultBlockState()));
+        protected void readAdditionalSaveData(final ValueInput input) {
+            super.readAdditionalSaveData(input);
+            this.setBlockState(input.read("block_state", BlockState.CODEC).orElse(Blocks.AIR.defaultBlockState()));
         }
 
         @Override
-        protected void addAdditionalSaveData(ValueOutput p_407521_) {
-            super.addAdditionalSaveData(p_407521_);
-            p_407521_.store("block_state", BlockState.CODEC, this.getBlockState());
+        protected void addAdditionalSaveData(final ValueOutput output) {
+            super.addAdditionalSaveData(output);
+            output.store("block_state", BlockState.CODEC, this.getBlockState());
         }
 
         public Display.BlockDisplay.@Nullable BlockRenderState blockRenderState() {
@@ -499,7 +508,7 @@ public abstract class Display extends Entity {
         }
 
         @Override
-        protected void updateRenderSubState(boolean p_277802_, float p_277688_) {
+        protected void updateRenderSubState(final boolean shouldInterpolate, final float progress) {
             this.blockRenderState = new Display.BlockDisplay.BlockRenderState(this.getBlockState());
         }
 
@@ -507,63 +516,65 @@ public abstract class Display extends Entity {
         }
     }
 
-    record ColorInterpolator(int previous, int current) implements Display.IntInterpolator {
+    private record ColorInterpolator(int previous, int current) implements Display.IntInterpolator {
         @Override
-        public int get(float p_278012_) {
-            return ARGB.srgbLerp(p_278012_, this.previous, this.current);
+        public int get(final float progress) {
+            return ARGB.srgbLerp(progress, this.previous, this.current);
         }
     }
 
     @FunctionalInterface
     public interface FloatInterpolator {
-        static Display.FloatInterpolator constant(float p_277894_) {
-            return p_278040_ -> p_277894_;
+        static Display.FloatInterpolator constant(final float value) {
+            return progress -> value;
         }
 
-        float get(float p_270330_);
+        float get(final float progress);
     }
 
     @FunctionalInterface
     public interface GenericInterpolator<T> {
-        static <T> Display.GenericInterpolator<T> constant(T p_277718_) {
-            return p_277907_ -> p_277718_;
+        static <T> Display.GenericInterpolator<T> constant(final T value) {
+            return progress -> value;
         }
 
-        T get(float p_270270_);
+        T get(final float progress);
     }
 
     @FunctionalInterface
     public interface IntInterpolator {
-        static Display.IntInterpolator constant(int p_277348_) {
-            return p_277356_ -> p_277348_;
+        static Display.IntInterpolator constant(final int value) {
+            return progress -> value;
         }
 
-        int get(float p_270183_);
+        int get(final float progress);
     }
 
     public static class ItemDisplay extends Display {
         private static final String TAG_ITEM = "item";
         private static final String TAG_ITEM_DISPLAY = "item_display";
-        private static final EntityDataAccessor<ItemStack> DATA_ITEM_STACK_ID = SynchedEntityData.defineId(Display.ItemDisplay.class, EntityDataSerializers.ITEM_STACK);
+        private static final EntityDataAccessor<ItemStack> DATA_ITEM_STACK_ID = SynchedEntityData.defineId(
+            Display.ItemDisplay.class, EntityDataSerializers.ITEM_STACK
+        );
         private static final EntityDataAccessor<Byte> DATA_ITEM_DISPLAY_ID = SynchedEntityData.defineId(Display.ItemDisplay.class, EntityDataSerializers.BYTE);
         private final SlotAccess slot = SlotAccess.of(this::getItemStack, this::setItemStack);
         private Display.ItemDisplay.@Nullable ItemRenderState itemRenderState;
 
-        public ItemDisplay(EntityType<?> p_270104_, Level p_270735_) {
-            super(p_270104_, p_270735_);
+        public ItemDisplay(final EntityType<?> type, final Level level) {
+            super(type, level);
         }
 
         @Override
-        protected void defineSynchedData(SynchedEntityData.Builder p_332308_) {
-            super.defineSynchedData(p_332308_);
-            p_332308_.define(DATA_ITEM_STACK_ID, ItemStack.EMPTY);
-            p_332308_.define(DATA_ITEM_DISPLAY_ID, ItemDisplayContext.NONE.getId());
+        protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+            super.defineSynchedData(entityData);
+            entityData.define(DATA_ITEM_STACK_ID, ItemStack.EMPTY);
+            entityData.define(DATA_ITEM_DISPLAY_ID, ItemDisplayContext.NONE.getId());
         }
 
         @Override
-        public void onSyncedDataUpdated(EntityDataAccessor<?> p_277793_) {
-            super.onSyncedDataUpdated(p_277793_);
-            if (DATA_ITEM_STACK_ID.equals(p_277793_) || DATA_ITEM_DISPLAY_ID.equals(p_277793_)) {
+        public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+            super.onSyncedDataUpdated(accessor);
+            if (DATA_ITEM_STACK_ID.equals(accessor) || DATA_ITEM_DISPLAY_ID.equals(accessor)) {
                 this.updateRenderState = true;
             }
         }
@@ -572,12 +583,12 @@ public abstract class Display extends Entity {
             return this.entityData.get(DATA_ITEM_STACK_ID);
         }
 
-        private void setItemStack(ItemStack p_270310_) {
-            this.entityData.set(DATA_ITEM_STACK_ID, p_270310_);
+        private void setItemStack(final ItemStack item) {
+            this.entityData.set(DATA_ITEM_STACK_ID, item);
         }
 
-        private void setItemTransform(ItemDisplayContext p_270370_) {
-            this.entityData.set(DATA_ITEM_DISPLAY_ID, p_270370_.getId());
+        private void setItemTransform(final ItemDisplayContext transform) {
+            this.entityData.set(DATA_ITEM_DISPLAY_ID, transform.getId());
         }
 
         private ItemDisplayContext getItemTransform() {
@@ -585,26 +596,26 @@ public abstract class Display extends Entity {
         }
 
         @Override
-        protected void readAdditionalSaveData(ValueInput p_407587_) {
-            super.readAdditionalSaveData(p_407587_);
-            this.setItemStack(p_407587_.read("item", ItemStack.CODEC).orElse(ItemStack.EMPTY));
-            this.setItemTransform(p_407587_.read("item_display", ItemDisplayContext.CODEC).orElse(ItemDisplayContext.NONE));
+        protected void readAdditionalSaveData(final ValueInput input) {
+            super.readAdditionalSaveData(input);
+            this.setItemStack(input.read("item", ItemStack.CODEC).orElse(ItemStack.EMPTY));
+            this.setItemTransform(input.read("item_display", ItemDisplayContext.CODEC).orElse(ItemDisplayContext.NONE));
         }
 
         @Override
-        protected void addAdditionalSaveData(ValueOutput p_409899_) {
-            super.addAdditionalSaveData(p_409899_);
-            ItemStack itemstack = this.getItemStack();
-            if (!itemstack.isEmpty()) {
-                p_409899_.store("item", ItemStack.CODEC, itemstack);
+        protected void addAdditionalSaveData(final ValueOutput output) {
+            super.addAdditionalSaveData(output);
+            ItemStack itemStack = this.getItemStack();
+            if (!itemStack.isEmpty()) {
+                output.store("item", ItemStack.CODEC, itemStack);
             }
 
-            p_409899_.store("item_display", ItemDisplayContext.CODEC, this.getItemTransform());
+            output.store("item_display", ItemDisplayContext.CODEC, this.getItemTransform());
         }
 
         @Override
-        public @Nullable SlotAccess getSlot(int p_270599_) {
-            return p_270599_ == 0 ? this.slot : null;
+        public @Nullable SlotAccess getSlot(final int slot) {
+            return slot == 0 ? this.slot : null;
         }
 
         public Display.ItemDisplay.@Nullable ItemRenderState itemRenderState() {
@@ -612,27 +623,25 @@ public abstract class Display extends Entity {
         }
 
         @Override
-        protected void updateRenderSubState(boolean p_277976_, float p_277708_) {
-            ItemStack itemstack = this.getItemStack();
-            itemstack.setEntityRepresentation(this);
-            this.itemRenderState = new Display.ItemDisplay.ItemRenderState(itemstack, this.getItemTransform());
+        protected void updateRenderSubState(final boolean shouldInterpolate, final float progress) {
+            this.itemRenderState = new Display.ItemDisplay.ItemRenderState(this.getItemStack(), this.getItemTransform());
         }
 
         public record ItemRenderState(ItemStack itemStack, ItemDisplayContext itemTransform) {
         }
     }
 
-    record LinearFloatInterpolator(float previous, float current) implements Display.FloatInterpolator {
+    private record LinearFloatInterpolator(float previous, float current) implements Display.FloatInterpolator {
         @Override
-        public float get(float p_277511_) {
-            return Mth.lerp(p_277511_, this.previous, this.current);
+        public float get(final float progress) {
+            return Mth.lerp(progress, this.previous, this.current);
         }
     }
 
-    record LinearIntInterpolator(int previous, int current) implements Display.IntInterpolator {
+    private record LinearIntInterpolator(int previous, int current) implements Display.IntInterpolator {
         @Override
-        public int get(float p_277960_) {
-            return Mth.lerpInt(p_277960_, this.previous, this.current);
+        public int get(final float progress) {
+            return Mth.lerpInt(progress, this.previous, this.current);
         }
     }
 
@@ -665,7 +674,9 @@ public abstract class Display extends Entity {
         private static final int INITIAL_LINE_WIDTH = 200;
         private static final EntityDataAccessor<Component> DATA_TEXT_ID = SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.COMPONENT);
         private static final EntityDataAccessor<Integer> DATA_LINE_WIDTH_ID = SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.INT);
-        private static final EntityDataAccessor<Integer> DATA_BACKGROUND_COLOR_ID = SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.INT);
+        private static final EntityDataAccessor<Integer> DATA_BACKGROUND_COLOR_ID = SynchedEntityData.defineId(
+            Display.TextDisplay.class, EntityDataSerializers.INT
+        );
         private static final EntityDataAccessor<Byte> DATA_TEXT_OPACITY_ID = SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.BYTE);
         private static final EntityDataAccessor<Byte> DATA_STYLE_FLAGS_ID = SynchedEntityData.defineId(Display.TextDisplay.class, EntityDataSerializers.BYTE);
         private static final IntSet TEXT_RENDER_STATE_IDS = IntSet.of(
@@ -674,24 +685,24 @@ public abstract class Display extends Entity {
         private Display.TextDisplay.@Nullable CachedInfo clientDisplayCache;
         private Display.TextDisplay.@Nullable TextRenderState textRenderState;
 
-        public TextDisplay(EntityType<?> p_270708_, Level p_270736_) {
-            super(p_270708_, p_270736_);
+        public TextDisplay(final EntityType<?> type, final Level level) {
+            super(type, level);
         }
 
         @Override
-        protected void defineSynchedData(SynchedEntityData.Builder p_330653_) {
-            super.defineSynchedData(p_330653_);
-            p_330653_.define(DATA_TEXT_ID, Component.empty());
-            p_330653_.define(DATA_LINE_WIDTH_ID, 200);
-            p_330653_.define(DATA_BACKGROUND_COLOR_ID, 1073741824);
-            p_330653_.define(DATA_TEXT_OPACITY_ID, (byte)-1);
-            p_330653_.define(DATA_STYLE_FLAGS_ID, (byte)0);
+        protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+            super.defineSynchedData(entityData);
+            entityData.define(DATA_TEXT_ID, Component.empty());
+            entityData.define(DATA_LINE_WIDTH_ID, 200);
+            entityData.define(DATA_BACKGROUND_COLOR_ID, 1073741824);
+            entityData.define(DATA_TEXT_OPACITY_ID, (byte)-1);
+            entityData.define(DATA_STYLE_FLAGS_ID, (byte)0);
         }
 
         @Override
-        public void onSyncedDataUpdated(EntityDataAccessor<?> p_270797_) {
-            super.onSyncedDataUpdated(p_270797_);
-            if (TEXT_RENDER_STATE_IDS.contains(p_270797_.id())) {
+        public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+            super.onSyncedDataUpdated(accessor);
+            if (TEXT_RENDER_STATE_IDS.contains(accessor.id())) {
                 this.updateRenderState = true;
             }
         }
@@ -700,103 +711,104 @@ public abstract class Display extends Entity {
             return this.entityData.get(DATA_TEXT_ID);
         }
 
-        private void setText(Component p_270902_) {
-            this.entityData.set(DATA_TEXT_ID, p_270902_);
+        private void setText(final Component text) {
+            this.entityData.set(DATA_TEXT_ID, text);
         }
 
         private int getLineWidth() {
             return this.entityData.get(DATA_LINE_WIDTH_ID);
         }
 
-        private void setLineWidth(int p_270545_) {
-            this.entityData.set(DATA_LINE_WIDTH_ID, p_270545_);
+        private void setLineWidth(final int width) {
+            this.entityData.set(DATA_LINE_WIDTH_ID, width);
         }
 
         private byte getTextOpacity() {
             return this.entityData.get(DATA_TEXT_OPACITY_ID);
         }
 
-        private void setTextOpacity(byte p_270583_) {
-            this.entityData.set(DATA_TEXT_OPACITY_ID, p_270583_);
+        private void setTextOpacity(final byte opacity) {
+            this.entityData.set(DATA_TEXT_OPACITY_ID, opacity);
         }
 
         private int getBackgroundColor() {
             return this.entityData.get(DATA_BACKGROUND_COLOR_ID);
         }
 
-        private void setBackgroundColor(int p_270241_) {
-            this.entityData.set(DATA_BACKGROUND_COLOR_ID, p_270241_);
+        private void setBackgroundColor(final int color) {
+            this.entityData.set(DATA_BACKGROUND_COLOR_ID, color);
         }
 
         private byte getFlags() {
             return this.entityData.get(DATA_STYLE_FLAGS_ID);
         }
 
-        private void setFlags(byte p_270855_) {
-            this.entityData.set(DATA_STYLE_FLAGS_ID, p_270855_);
+        private void setFlags(final byte flags) {
+            this.entityData.set(DATA_STYLE_FLAGS_ID, flags);
         }
 
-        private static byte loadFlag(byte p_270219_, ValueInput p_406850_, String p_270958_, byte p_270701_) {
-            return p_406850_.getBooleanOr(p_270958_, false) ? (byte)(p_270219_ | p_270701_) : p_270219_;
+        private static byte loadFlag(final byte flags, final ValueInput input, final String id, final byte mask) {
+            return input.getBooleanOr(id, false) ? (byte)(flags | mask) : flags;
         }
 
         @Override
-        protected void readAdditionalSaveData(ValueInput p_410340_) {
-            super.readAdditionalSaveData(p_410340_);
-            this.setLineWidth(p_410340_.getIntOr("line_width", 200));
-            this.setTextOpacity(p_410340_.getByteOr("text_opacity", (byte)-1));
-            this.setBackgroundColor(p_410340_.getIntOr("background", 1073741824));
-            byte b0 = loadFlag((byte)0, p_410340_, "shadow", (byte)1);
-            b0 = loadFlag(b0, p_410340_, "see_through", (byte)2);
-            b0 = loadFlag(b0, p_410340_, "default_background", (byte)4);
-            Optional<Display.TextDisplay.Align> optional = p_410340_.read("alignment", Display.TextDisplay.Align.CODEC);
-            if (optional.isPresent()) {
-                b0 = switch ((Display.TextDisplay.Align)optional.get()) {
-                    case CENTER -> b0;
-                    case LEFT -> (byte)(b0 | 8);
-                    case RIGHT -> (byte)(b0 | 16);
+        protected void readAdditionalSaveData(final ValueInput input) {
+            super.readAdditionalSaveData(input);
+            this.setLineWidth(input.getIntOr("line_width", 200));
+            this.setTextOpacity(input.getByteOr("text_opacity", (byte)-1));
+            this.setBackgroundColor(input.getIntOr("background", 1073741824));
+            byte flags = loadFlag((byte)0, input, "shadow", (byte)1);
+            flags = loadFlag(flags, input, "see_through", (byte)2);
+            flags = loadFlag(flags, input, "default_background", (byte)4);
+            Optional<Display.TextDisplay.Align> alignment = input.read("alignment", Display.TextDisplay.Align.CODEC);
+            if (alignment.isPresent()) {
+                flags = switch ((Display.TextDisplay.Align)alignment.get()) {
+                    case CENTER -> flags;
+                    case LEFT -> (byte)(flags | 8);
+                    case RIGHT -> (byte)(flags | 16);
                 };
             }
 
-            this.setFlags(b0);
-            Optional<Component> optional1 = p_410340_.read("text", ComponentSerialization.CODEC);
-            if (optional1.isPresent()) {
+            this.setFlags(flags);
+            Optional<Component> text = input.read("text", ComponentSerialization.CODEC);
+            if (text.isPresent()) {
                 try {
-                    if (this.level() instanceof ServerLevel serverlevel) {
-                        CommandSourceStack commandsourcestack = this.createCommandSourceStackForNameResolution(serverlevel).withPermission(LevelBasedPermissionSet.GAMEMASTER);
-                        Component component = ComponentUtils.updateForEntity(commandsourcestack, optional1.get(), this, 0);
-                        this.setText(component);
+                    if (this.level() instanceof ServerLevel serverLevel) {
+                        CommandSourceStack context = this.createCommandSourceStackForNameResolution(serverLevel)
+                            .withPermission(LevelBasedPermissionSet.GAMEMASTER);
+                        Component resolvedText = ComponentUtils.resolve(ResolutionContext.create(context), text.get());
+                        this.setText(resolvedText);
                     } else {
                         this.setText(Component.empty());
                     }
-                } catch (Exception exception) {
-                    Display.LOGGER.warn("Failed to parse display entity text {}", optional1, exception);
+                } catch (Exception e) {
+                    Display.LOGGER.warn("Failed to parse display entity text {}", text, e);
                 }
             }
         }
 
-        private static void storeFlag(byte p_270879_, ValueOutput p_409381_, String p_270294_, byte p_270853_) {
-            p_409381_.putBoolean(p_270294_, (p_270879_ & p_270853_) != 0);
+        private static void storeFlag(final byte flags, final ValueOutput output, final String id, final byte mask) {
+            output.putBoolean(id, (flags & mask) != 0);
         }
 
         @Override
-        protected void addAdditionalSaveData(ValueOutput p_405890_) {
-            super.addAdditionalSaveData(p_405890_);
-            p_405890_.store("text", ComponentSerialization.CODEC, this.getText());
-            p_405890_.putInt("line_width", this.getLineWidth());
-            p_405890_.putInt("background", this.getBackgroundColor());
-            p_405890_.putByte("text_opacity", this.getTextOpacity());
-            byte b0 = this.getFlags();
-            storeFlag(b0, p_405890_, "shadow", (byte)1);
-            storeFlag(b0, p_405890_, "see_through", (byte)2);
-            storeFlag(b0, p_405890_, "default_background", (byte)4);
-            p_405890_.store("alignment", Display.TextDisplay.Align.CODEC, getAlign(b0));
+        protected void addAdditionalSaveData(final ValueOutput output) {
+            super.addAdditionalSaveData(output);
+            output.store("text", ComponentSerialization.CODEC, this.getText());
+            output.putInt("line_width", this.getLineWidth());
+            output.putInt("background", this.getBackgroundColor());
+            output.putByte("text_opacity", this.getTextOpacity());
+            byte flags = this.getFlags();
+            storeFlag(flags, output, "shadow", (byte)1);
+            storeFlag(flags, output, "see_through", (byte)2);
+            storeFlag(flags, output, "default_background", (byte)4);
+            output.store("alignment", Display.TextDisplay.Align.CODEC, getAlign(flags));
         }
 
         @Override
-        protected void updateRenderSubState(boolean p_277565_, float p_277967_) {
-            if (p_277565_ && this.textRenderState != null) {
-                this.textRenderState = this.createInterpolatedTextRenderState(this.textRenderState, p_277967_);
+        protected void updateRenderSubState(final boolean shouldInterpolate, final float progress) {
+            if (shouldInterpolate && this.textRenderState != null) {
+                this.textRenderState = this.createInterpolatedTextRenderState(this.textRenderState, progress);
             } else {
                 this.textRenderState = this.createFreshTextRenderState();
             }
@@ -818,22 +830,22 @@ public abstract class Display extends Entity {
             );
         }
 
-        private Display.TextDisplay.TextRenderState createInterpolatedTextRenderState(Display.TextDisplay.TextRenderState p_278000_, float p_277646_) {
-            int i = p_278000_.backgroundColor.get(p_277646_);
-            int j = p_278000_.textOpacity.get(p_277646_);
+        private Display.TextDisplay.TextRenderState createInterpolatedTextRenderState(final Display.TextDisplay.TextRenderState previous, final float progress) {
+            int currentBackground = previous.backgroundColor.get(progress);
+            int currentOpacity = previous.textOpacity.get(progress);
             return new Display.TextDisplay.TextRenderState(
                 this.getText(),
                 this.getLineWidth(),
-                new Display.LinearIntInterpolator(j, this.getTextOpacity()),
-                new Display.ColorInterpolator(i, this.getBackgroundColor()),
+                new Display.LinearIntInterpolator(currentOpacity, this.getTextOpacity()),
+                new Display.ColorInterpolator(currentBackground, this.getBackgroundColor()),
                 this.getFlags()
             );
         }
 
-        public Display.TextDisplay.CachedInfo cacheDisplay(Display.TextDisplay.LineSplitter p_270682_) {
+        public Display.TextDisplay.CachedInfo cacheDisplay(final Display.TextDisplay.LineSplitter splitter) {
             if (this.clientDisplayCache == null) {
                 if (this.textRenderState != null) {
-                    this.clientDisplayCache = p_270682_.split(this.textRenderState.text(), this.textRenderState.lineWidth());
+                    this.clientDisplayCache = splitter.split(this.textRenderState.text(), this.textRenderState.lineWidth());
                 } else {
                     this.clientDisplayCache = new Display.TextDisplay.CachedInfo(List.of(), 0);
                 }
@@ -842,15 +854,15 @@ public abstract class Display extends Entity {
             return this.clientDisplayCache;
         }
 
-        public static Display.TextDisplay.Align getAlign(byte p_270911_) {
-            if ((p_270911_ & 8) != 0) {
+        public static Display.TextDisplay.Align getAlign(final byte flags) {
+            if ((flags & 8) != 0) {
                 return Display.TextDisplay.Align.LEFT;
             } else {
-                return (p_270911_ & 16) != 0 ? Display.TextDisplay.Align.RIGHT : Display.TextDisplay.Align.CENTER;
+                return (flags & 16) != 0 ? Display.TextDisplay.Align.RIGHT : Display.TextDisplay.Align.CENTER;
             }
         }
 
-        public static enum Align implements StringRepresentable {
+        public enum Align implements StringRepresentable {
             CENTER("center"),
             LEFT("left"),
             RIGHT("right");
@@ -858,8 +870,8 @@ public abstract class Display extends Entity {
             public static final Codec<Display.TextDisplay.Align> CODEC = StringRepresentable.fromEnum(Display.TextDisplay.Align::values);
             private final String name;
 
-            private Align(final String p_270554_) {
-                this.name = p_270554_;
+            Align(final String name) {
+                this.name = name;
             }
 
             @Override
@@ -876,16 +888,16 @@ public abstract class Display extends Entity {
 
         @FunctionalInterface
         public interface LineSplitter {
-            Display.TextDisplay.CachedInfo split(Component p_270086_, int p_270526_);
+            Display.TextDisplay.CachedInfo split(Component input, int width);
         }
 
         public record TextRenderState(Component text, int lineWidth, Display.IntInterpolator textOpacity, Display.IntInterpolator backgroundColor, byte flags) {
         }
     }
 
-    record TransformationInterpolator(Transformation previous, Transformation current) implements Display.GenericInterpolator<Transformation> {
-        public Transformation get(float p_278027_) {
-            return p_278027_ >= 1.0 ? this.current : this.previous.slerp(this.current, p_278027_);
+    private record TransformationInterpolator(Transformation previous, Transformation current) implements Display.GenericInterpolator<Transformation> {
+        public Transformation get(final float progress) {
+            return progress >= 1.0 ? this.current : this.previous.slerp(this.current, progress);
         }
     }
 }

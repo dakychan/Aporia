@@ -3,10 +3,7 @@ package net.minecraft.client;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum InactivityFpsLimit implements StringRepresentable {
     MINIMIZED("minimized", "options.inactivityFpsLimit.minimized"),
     AFK("afk", "options.inactivityFpsLimit.afk");
@@ -15,9 +12,9 @@ public enum InactivityFpsLimit implements StringRepresentable {
     private final String serializedName;
     private final Component caption;
 
-    private InactivityFpsLimit(final String p_363713_, final String p_363219_) {
-        this.serializedName = p_363713_;
-        this.caption = Component.translatable(p_363219_);
+    InactivityFpsLimit(final String serializedName, final String key) {
+        this.serializedName = serializedName;
+        this.caption = Component.translatable(key);
     }
 
     public Component caption() {

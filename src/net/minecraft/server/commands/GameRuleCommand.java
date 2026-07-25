@@ -12,40 +12,37 @@ import net.minecraft.world.level.gamerules.GameRuleTypeVisitor;
 import net.minecraft.world.level.gamerules.GameRules;
 
 public class GameRuleCommand {
-    public static void register(CommandDispatcher<CommandSourceStack> p_137745_, CommandBuildContext p_368575_) {
-        final LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("gamerule")
-            .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS));
-        new GameRules(p_368575_.enabledFeatures())
-            .visitGameRuleTypes(
-                new GameRuleTypeVisitor() {
-                    @Override
-                    public <T> void visit(GameRule<T> p_457702_) {
-                        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder1 = Commands.literal(p_457702_.id());
-                        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder2 = Commands.literal(p_457702_.getIdentifier().toString());
-                        literalargumentbuilder.then(GameRuleCommand.buildRuleArguments(p_457702_, literalargumentbuilder1))
-                            .then(GameRuleCommand.buildRuleArguments(p_457702_, literalargumentbuilder2));
-                    }
-                }
-            );
-        p_137745_.register(literalargumentbuilder);
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        final LiteralArgumentBuilder<CommandSourceStack> base = Commands.literal("gamerule").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS));
+        new GameRules(context.enabledFeatures()).visitGameRuleTypes(new GameRuleTypeVisitor() {
+            @Override
+            public <T> void visit(final GameRule<T> gameRule) {
+                LiteralArgumentBuilder<CommandSourceStack> unqualified = Commands.literal(gameRule.id());
+                LiteralArgumentBuilder<CommandSourceStack> qualified = Commands.literal(gameRule.getIdentifier().toString());
+                base.then(GameRuleCommand.buildRuleArguments(gameRule, unqualified)).then(GameRuleCommand.buildRuleArguments(gameRule, qualified));
+            }
+        });
+        dispatcher.register(base);
     }
 
-    static <T> LiteralArgumentBuilder<CommandSourceStack> buildRuleArguments(GameRule<T> p_457531_, LiteralArgumentBuilder<CommandSourceStack> p_458298_) {
-        return p_458298_.executes(p_448952_ -> queryRule(p_448952_.getSource(), p_457531_))
-            .then(Commands.argument("value", p_457531_.argument()).executes(p_448948_ -> setRule(p_448948_, p_457531_)));
+    private static <T> LiteralArgumentBuilder<CommandSourceStack> buildRuleArguments(
+        final GameRule<T> gameRule, final LiteralArgumentBuilder<CommandSourceStack> ruleLiteral
+    ) {
+        return ruleLiteral.executes(c -> queryRule(c.getSource(), gameRule))
+            .then(Commands.argument("value", gameRule.argument()).executes(c -> setRule(c, gameRule)));
     }
 
-    private static <T> int setRule(CommandContext<CommandSourceStack> p_137755_, GameRule<T> p_458900_) {
-        CommandSourceStack commandsourcestack = p_137755_.getSource();
-        T t = p_137755_.getArgument("value", p_458900_.valueClass());
-        commandsourcestack.getLevel().getGameRules().set(p_458900_, t, p_137755_.getSource().getServer());
-        commandsourcestack.sendSuccess(() -> Component.translatable("commands.gamerule.set", p_458900_.id(), p_458900_.serialize(t)), true);
-        return p_458900_.getCommandResult(t);
+    private static <T> int setRule(final CommandContext<CommandSourceStack> context, final GameRule<T> gameRule) {
+        CommandSourceStack source = context.getSource();
+        T value = context.getArgument("value", gameRule.valueClass());
+        source.getLevel().getGameRules().set(gameRule, value, context.getSource().getServer());
+        source.sendSuccess(() -> Component.translatable("commands.gamerule.set", gameRule.id(), gameRule.serialize(value)), true);
+        return gameRule.getCommandResult(value);
     }
 
-    private static <T> int queryRule(CommandSourceStack p_137758_, GameRule<T> p_455211_) {
-        T t = p_137758_.getLevel().getGameRules().get(p_455211_);
-        p_137758_.sendSuccess(() -> Component.translatable("commands.gamerule.query", p_455211_.id(), p_455211_.serialize(t)), false);
-        return p_455211_.getCommandResult(t);
+    private static <T> int queryRule(final CommandSourceStack source, final GameRule<T> gameRule) {
+        T value = source.getLevel().getGameRules().get(gameRule);
+        source.sendSuccess(() -> Component.translatable("commands.gamerule.query", gameRule.id(), gameRule.serialize(value)), false);
+        return gameRule.getCommandResult(value);
     }
 }

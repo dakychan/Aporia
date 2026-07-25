@@ -12,18 +12,14 @@ import net.minecraft.server.jsonrpc.methods.DiscoveryService;
 public class JsonRpcApiSchema implements DataProvider {
     private final Path path;
 
-    public JsonRpcApiSchema(PackOutput p_430103_) {
-        this.path = p_430103_.getOutputFolder(PackOutput.Target.REPORTS).resolve("json-rpc-api-schema.json");
+    public JsonRpcApiSchema(final PackOutput packOutput) {
+        this.path = packOutput.getOutputFolder(PackOutput.Target.REPORTS).resolve("json-rpc-api-schema.json");
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_429106_) {
-        DiscoveryService.DiscoverResponse discoveryservice$discoverresponse = DiscoveryService.discover(Schema.getSchemaRegistry());
-        return DataProvider.saveStable(
-            p_429106_,
-            DiscoveryService.DiscoverResponse.CODEC.codec().encodeStart(JsonOps.INSTANCE, discoveryservice$discoverresponse).getOrThrow(),
-            this.path
-        );
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        DiscoveryService.DiscoverResponse discover = DiscoveryService.discover(Schema.getSchemaRegistry());
+        return DataProvider.saveStable(cache, DiscoveryService.DiscoverResponse.CODEC.codec().encodeStart(JsonOps.INSTANCE, discover).getOrThrow(), this.path);
     }
 
     @Override

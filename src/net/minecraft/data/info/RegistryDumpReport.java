@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.DefaultedRegistry;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
@@ -16,39 +15,37 @@ import net.minecraft.resources.Identifier;
 public class RegistryDumpReport implements DataProvider {
     private final PackOutput output;
 
-    public RegistryDumpReport(PackOutput p_249862_) {
-        this.output = p_249862_;
+    public RegistryDumpReport(final PackOutput output) {
+        this.output = output;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_253743_) {
-        JsonObject jsonobject = new JsonObject();
-        BuiltInRegistries.REGISTRY
-            .listElements()
-            .forEach(p_448672_ -> jsonobject.add(p_448672_.key().identifier().toString(), dumpRegistry((Registry<?>)p_448672_.value())));
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        JsonObject root = new JsonObject();
+        BuiltInRegistries.REGISTRY.listElements().forEach(e -> root.add(e.key().identifier().toString(), dumpRegistry((Registry<?>)e.value())));
         Path path = this.output.getOutputFolder(PackOutput.Target.REPORTS).resolve("registries.json");
-        return DataProvider.saveStable(p_253743_, jsonobject, path);
+        return DataProvider.saveStable(cache, root, path);
     }
 
-    private static <T> JsonElement dumpRegistry(Registry<T> p_124059_) {
-        JsonObject jsonobject = new JsonObject();
-        if (p_124059_ instanceof DefaultedRegistry) {
-            Identifier identifier = ((DefaultedRegistry)p_124059_).getDefaultKey();
-            jsonobject.addProperty("default", identifier.toString());
+    private static <T> JsonElement dumpRegistry(final Registry<T> registry) {
+        JsonObject result = new JsonObject();
+        if (registry instanceof DefaultedRegistry) {
+            Identifier defaultKey = ((DefaultedRegistry)registry).getDefaultKey();
+            result.addProperty("default", defaultKey.toString());
         }
 
-        int i = ((Registry)BuiltInRegistries.REGISTRY).getId(p_124059_);
-        jsonobject.addProperty("protocol_id", i);
-        JsonObject jsonobject1 = new JsonObject();
-        p_124059_.listElements().forEach(p_448675_ -> {
-            T t = p_448675_.value();
-            int j = p_124059_.getId(t);
-            JsonObject jsonobject2 = new JsonObject();
-            jsonobject2.addProperty("protocol_id", j);
-            jsonobject1.add(p_448675_.key().identifier().toString(), jsonobject2);
+        int registryId = ((Registry)BuiltInRegistries.REGISTRY).getId(registry);
+        result.addProperty("protocol_id", registryId);
+        JsonObject entries = new JsonObject();
+        registry.listElements().forEach(holder -> {
+            T value = holder.value();
+            int protocolId = registry.getId(value);
+            JsonObject entry = new JsonObject();
+            entry.addProperty("protocol_id", protocolId);
+            entries.add(holder.key().identifier().toString(), entry);
         });
-        jsonobject.add("entries", jsonobject1);
-        return jsonobject;
+        result.add("entries", entries);
+        return result;
     }
 
     @Override

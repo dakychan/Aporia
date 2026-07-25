@@ -1,6 +1,5 @@
 package net.minecraft.world.entity.monster.creaking;
 
-import com.mojang.serialization.Dynamic;
 import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
@@ -31,6 +30,7 @@ import net.minecraft.world.entity.ai.control.MoveControl;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
@@ -57,6 +57,9 @@ public class Creaking extends Monster {
     private static final EntityDataAccessor<Boolean> IS_ACTIVE = SynchedEntityData.defineId(Creaking.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> IS_TEARING_DOWN = SynchedEntityData.defineId(Creaking.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Optional<BlockPos>> HOME_POS = SynchedEntityData.defineId(Creaking.class, EntityDataSerializers.OPTIONAL_BLOCK_POS);
+    private static final Brain.Provider<Creaking> BRAIN_PROVIDER = Brain.provider(
+        List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS), CreakingAi::getActivities
+    );
     private static final int ATTACK_ANIMATION_DURATION = 15;
     private static final int MAX_HEALTH = 1;
     private static final float ATTACK_DAMAGE = 3.0F;
@@ -79,23 +82,23 @@ public class Creaking extends Monster {
     private int nextFlickerTime;
     private int playerStuckCounter;
 
-    public Creaking(EntityType<? extends Creaking> p_368209_, Level p_365865_) {
-        super(p_368209_, p_365865_);
+    public Creaking(final EntityType<? extends Creaking> type, final Level level) {
+        super(type, level);
         this.lookControl = new Creaking.CreakingLookControl(this);
-        this.moveControl = new Creaking.CreakingMoveControl(this);
+        this.moveControl = new Creaking.CreakingMoveControl<>(this);
         this.jumpControl = new Creaking.CreakingJumpControl(this);
-        GroundPathNavigation groundpathnavigation = (GroundPathNavigation)this.getNavigation();
-        groundpathnavigation.setCanFloat(true);
+        GroundPathNavigation navigation = (GroundPathNavigation)this.getNavigation();
+        navigation.setCanFloat(true);
         this.xpReward = 0;
     }
 
-    public void setTransient(BlockPos p_376073_) {
-        this.setHomePos(p_376073_);
-        this.setPathfindingMalus(PathType.DAMAGE_OTHER, 8.0F);
+    public void setTransient(final BlockPos pos) {
+        this.setHomePos(pos);
+        this.setPathfindingMalus(PathType.DAMAGING, 8.0F);
         this.setPathfindingMalus(PathType.POWDER_SNOW, 8.0F);
         this.setPathfindingMalus(PathType.LAVA, 8.0F);
-        this.setPathfindingMalus(PathType.DAMAGE_FIRE, 0.0F);
-        this.setPathfindingMalus(PathType.DANGER_FIRE, 0.0F);
+        this.setPathfindingMalus(PathType.FIRE, 0.0F);
+        this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, 0.0F);
     }
 
     public boolean isHeartBound() {
@@ -108,22 +111,17 @@ public class Creaking extends Monster {
     }
 
     @Override
-    protected Brain.Provider<Creaking> brainProvider() {
-        return CreakingAi.brainProvider();
+    protected Brain<Creaking> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
     @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_363322_) {
-        return CreakingAi.makeBrain(this, this.brainProvider().makeBrain(p_363322_));
-    }
-
-    @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_364477_) {
-        super.defineSynchedData(p_364477_);
-        p_364477_.define(CAN_MOVE, true);
-        p_364477_.define(IS_ACTIVE, false);
-        p_364477_.define(IS_TEARING_DOWN, false);
-        p_364477_.define(HOME_POS, Optional.empty());
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(CAN_MOVE, true);
+        entityData.define(IS_ACTIVE, false);
+        entityData.define(IS_TEARING_DOWN, false);
+        entityData.define(HOME_POS, Optional.empty());
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -140,48 +138,52 @@ public class Creaking extends Monster {
     }
 
     @Override
-    public boolean doHurtTarget(ServerLevel p_363767_, Entity p_362044_) {
-        if (!(p_362044_ instanceof LivingEntity)) {
+    public boolean doHurtTarget(final ServerLevel level, final Entity target) {
+        if (!(target instanceof LivingEntity)) {
             return false;
-        } else {
-            this.attackAnimationRemainingTicks = 15;
-            this.level().broadcastEntityEvent(this, (byte)4);
-            return super.doHurtTarget(p_363767_, p_362044_);
         }
+
+        this.attackAnimationRemainingTicks = 15;
+        this.level().broadcastEntityEvent(this, (byte)4);
+        return super.doHurtTarget(level, target);
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_375862_, DamageSource p_377615_, float p_376232_) {
-        BlockPos blockpos = this.getHomePos();
-        if (blockpos == null || p_377615_.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
-            return super.hurtServer(p_375862_, p_377615_, p_376232_);
-        } else if (!this.isInvulnerableTo(p_375862_, p_377615_) && this.invulnerabilityAnimationRemainingTicks <= 0 && !this.isDeadOrDying()) {
-            Player player = this.blameSourceForDamage(p_377615_);
-            Entity entity = p_377615_.getDirectEntity();
-            if (!(entity instanceof LivingEntity) && !(entity instanceof Projectile) && player == null) {
-                return false;
-            } else {
-                this.invulnerabilityAnimationRemainingTicks = 8;
-                this.level().broadcastEntityEvent(this, (byte)66);
-                this.gameEvent(GameEvent.ENTITY_ACTION);
-                if (this.level().getBlockEntity(blockpos) instanceof CreakingHeartBlockEntity creakingheartblockentity && creakingheartblockentity.isProtector(this)) {
-                    if (player != null) {
-                        creakingheartblockentity.creakingHurt();
-                    }
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        BlockPos homePos = this.getHomePos();
+        if (homePos == null || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return super.hurtServer(level, source, damage);
+        }
 
-                    this.playHurtSound(p_377615_);
+        if (!this.isInvulnerableTo(level, source) && this.invulnerabilityAnimationRemainingTicks <= 0 && !this.isDeadOrDying()) {
+            Player responsiblePlayer = this.blameSourceForDamage(source);
+            Entity directEntity = source.getDirectEntity();
+            if (!(directEntity instanceof LivingEntity) && !(directEntity instanceof Projectile) && responsiblePlayer == null) {
+                return false;
+            }
+
+            this.invulnerabilityAnimationRemainingTicks = 8;
+            this.level().broadcastEntityEvent(this, (byte)66);
+            this.gameEvent(GameEvent.ENTITY_ACTION);
+            if (this.level().getBlockEntity(homePos) instanceof CreakingHeartBlockEntity creakingHeartBlockEntity && creakingHeartBlockEntity.isProtector(this)
+                )
+             {
+                if (responsiblePlayer != null) {
+                    creakingHeartBlockEntity.creakingHurt();
                 }
 
-                return true;
+                this.playHurtSound(source);
             }
+
+            return true;
         } else {
             return false;
         }
     }
 
-    public Player blameSourceForDamage(DamageSource p_375908_) {
-        this.resolveMobResponsibleForDamage(p_375908_);
-        return this.resolvePlayerResponsibleForDamage(p_375908_);
+    public Player blameSourceForDamage(final DamageSource source) {
+        this.resolveMobResponsibleForDamage(source);
+        return this.resolvePlayerResponsibleForDamage(source);
     }
 
     @Override
@@ -190,9 +192,9 @@ public class Creaking extends Monster {
     }
 
     @Override
-    public void push(double p_376827_, double p_376076_, double p_377600_) {
+    public void push(final double xa, final double ya, final double za) {
         if (this.canMove()) {
-            super.push(p_376827_, p_376076_, p_377600_);
+            super.push(xa, ya, za);
         }
     }
 
@@ -202,11 +204,11 @@ public class Creaking extends Monster {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_365221_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("creakingBrain");
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("creakingBrain");
         this.getBrain().tick((ServerLevel)this.level(), this);
-        profilerfiller.pop();
+        profiler.pop();
         CreakingAi.updateActivity(this);
     }
 
@@ -221,11 +223,11 @@ public class Creaking extends Monster {
         }
 
         if (!this.level().isClientSide()) {
-            boolean flag = this.entityData.get(CAN_MOVE);
-            boolean flag1 = this.checkCanMove();
-            if (flag1 != flag) {
+            boolean canMove = this.entityData.get(CAN_MOVE);
+            boolean nowCanMove = this.checkCanMove();
+            if (nowCanMove != canMove) {
                 this.gameEvent(GameEvent.ENTITY_ACTION);
-                if (flag1) {
+                if (nowCanMove) {
                     this.makeSound(SoundEvents.CREAKING_UNFREEZE);
                 } else {
                     this.stopInPlace();
@@ -233,7 +235,7 @@ public class Creaking extends Monster {
                 }
             }
 
-            this.entityData.set(CAN_MOVE, flag1);
+            this.entityData.set(CAN_MOVE, nowCanMove);
         }
 
         super.aiStep();
@@ -242,11 +244,11 @@ public class Creaking extends Monster {
     @Override
     public void tick() {
         if (!this.level().isClientSide()) {
-            BlockPos blockpos = this.getHomePos();
-            if (blockpos != null) {
-                boolean flag = this.level().getBlockEntity(blockpos) instanceof CreakingHeartBlockEntity creakingheartblockentity
-                    && creakingheartblockentity.isProtector(this);
-                if (!flag) {
+            BlockPos homePos = this.getHomePos();
+            if (homePos != null) {
+                boolean hasProtectionFromCreakingHeart = this.level().getBlockEntity(homePos) instanceof CreakingHeartBlockEntity creakingHeartBlockEntity
+                    && creakingHeartBlockEntity.isProtector(this);
+                if (!hasProtectionFromCreakingHeart) {
                     this.setHealth(0.0F);
                 }
             }
@@ -272,9 +274,9 @@ public class Creaking extends Monster {
     }
 
     @Override
-    protected void updateWalkAnimation(float p_377533_) {
-        float f = Math.min(p_377533_ * 25.0F, 3.0F);
-        this.walkAnimation.update(f, 0.4F, 1.0F);
+    protected void updateWalkAnimation(final float distance) {
+        float targetSpeed = Math.min(distance * 25.0F, 3.0F);
+        this.walkAnimation.update(targetSpeed, 0.4F, 1.0F);
     }
 
     private void setupAnimationStates() {
@@ -284,32 +286,34 @@ public class Creaking extends Monster {
     }
 
     public void tearDown() {
-        if (this.level() instanceof ServerLevel serverlevel) {
-            AABB aabb = this.getBoundingBox();
-            Vec3 vec3 = aabb.getCenter();
-            double d0 = aabb.getXsize() * 0.3;
-            double d1 = aabb.getYsize() * 0.3;
-            double d2 = aabb.getZsize() * 0.3;
-            serverlevel.sendParticles(
+        if (this.level() instanceof ServerLevel serverLevel) {
+            AABB box = this.getBoundingBox();
+            Vec3 center = box.getCenter();
+            double xSpread = box.getXsize() * 0.3;
+            double ySpread = box.getYsize() * 0.3;
+            double zSpread = box.getZsize() * 0.3;
+            serverLevel.sendParticles(
                 new BlockParticleOption(ParticleTypes.BLOCK_CRUMBLE, Blocks.PALE_OAK_WOOD.defaultBlockState()),
-                vec3.x,
-                vec3.y,
-                vec3.z,
+                center.x,
+                center.y,
+                center.z,
                 100,
-                d0,
-                d1,
-                d2,
+                xSpread,
+                ySpread,
+                zSpread,
                 0.0
             );
-            serverlevel.sendParticles(
-                new BlockParticleOption(ParticleTypes.BLOCK_CRUMBLE, Blocks.CREAKING_HEART.defaultBlockState().setValue(CreakingHeartBlock.STATE, CreakingHeartState.AWAKE)),
-                vec3.x,
-                vec3.y,
-                vec3.z,
+            serverLevel.sendParticles(
+                new BlockParticleOption(
+                    ParticleTypes.BLOCK_CRUMBLE, Blocks.CREAKING_HEART.defaultBlockState().setValue(CreakingHeartBlock.STATE, CreakingHeartState.AWAKE)
+                ),
+                center.x,
+                center.y,
+                center.z,
                 10,
-                d0,
-                d1,
-                d2,
+                xSpread,
+                ySpread,
+                zSpread,
                 0.0
             );
         }
@@ -318,22 +322,22 @@ public class Creaking extends Monster {
         this.remove(Entity.RemovalReason.DISCARDED);
     }
 
-    public void creakingDeathEffects(DamageSource p_377960_) {
-        this.blameSourceForDamage(p_377960_);
-        this.die(p_377960_);
+    public void creakingDeathEffects(final DamageSource source) {
+        this.blameSourceForDamage(source);
+        this.die(source);
         this.makeSound(SoundEvents.CREAKING_TWITCH);
     }
 
     @Override
-    public void handleEntityEvent(byte p_369330_) {
-        if (p_369330_ == 66) {
+    public void handleEntityEvent(final byte id) {
+        if (id == 66) {
             this.invulnerabilityAnimationRemainingTicks = 8;
             this.playHurtSound(this.damageSources().generic());
-        } else if (p_369330_ == 4) {
+        } else if (id == 4) {
             this.attackAnimationRemainingTicks = 15;
             this.playAttackSound();
         } else {
-            super.handleEntityEvent(p_369330_);
+            super.handleEntityEvent(id);
         }
     }
 
@@ -343,49 +347,49 @@ public class Creaking extends Monster {
     }
 
     @Override
-    public boolean canUsePortal(boolean p_375539_) {
-        return !this.isHeartBound() && super.canUsePortal(p_375539_);
+    public boolean canUsePortal(final boolean ignorePassenger) {
+        return !this.isHeartBound() && super.canUsePortal(ignorePassenger);
     }
 
     @Override
-    protected PathNavigation createNavigation(Level p_378684_) {
-        return new Creaking.CreakingPathNavigation(this, p_378684_);
+    protected PathNavigation createNavigation(final Level level) {
+        return new Creaking.CreakingPathNavigation(this, level);
     }
 
     public boolean playerIsStuckInYou() {
-        List<Player> list = this.brain.getMemory(MemoryModuleType.NEAREST_PLAYERS).orElse(List.of());
-        if (list.isEmpty()) {
-            this.playerStuckCounter = 0;
-            return false;
-        } else {
-            AABB aabb = this.getBoundingBox();
-
-            for (Player player : list) {
-                if (aabb.contains(player.getEyePosition())) {
-                    this.playerStuckCounter++;
-                    return this.playerStuckCounter > 4;
-                }
-            }
-
+        List<Player> players = this.brain.getMemory(MemoryModuleType.NEAREST_PLAYERS).orElse(List.of());
+        if (players.isEmpty()) {
             this.playerStuckCounter = 0;
             return false;
         }
+
+        AABB ownBox = this.getBoundingBox();
+
+        for (Player player : players) {
+            if (ownBox.contains(player.getEyePosition())) {
+                this.playerStuckCounter++;
+                return this.playerStuckCounter > 4;
+            }
+        }
+
+        this.playerStuckCounter = 0;
+        return false;
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_408192_) {
-        super.readAdditionalSaveData(p_408192_);
-        p_408192_.read("home_pos", BlockPos.CODEC).ifPresent(this::setTransient);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        input.read("home_pos", BlockPos.CODEC).ifPresent(this::setTransient);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408692_) {
-        super.addAdditionalSaveData(p_408692_);
-        p_408692_.storeNullable("home_pos", BlockPos.CODEC, this.getHomePos());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.storeNullable("home_pos", BlockPos.CODEC, this.getHomePos());
     }
 
-    public void setHomePos(BlockPos p_376376_) {
-        this.entityData.set(HOME_POS, Optional.of(p_376376_));
+    public void setHomePos(final BlockPos pos) {
+        this.entityData.set(HOME_POS, Optional.of(pos));
     }
 
     public @Nullable BlockPos getHomePos() {
@@ -406,7 +410,8 @@ public class Creaking extends Monster {
 
     public void checkEyeBlink() {
         if (this.deathTime > this.nextFlickerTime) {
-            this.nextFlickerTime = this.deathTime + this.getRandom().nextIntBetweenInclusive(this.eyesGlowing ? 2 : this.deathTime / 4, this.eyesGlowing ? 8 : this.deathTime / 2);
+            this.nextFlickerTime = this.deathTime
+                + this.getRandom().nextIntBetweenInclusive(this.eyesGlowing ? 2 : this.deathTime / 4, this.eyesGlowing ? 8 : this.deathTime / 2);
             this.eyesGlowing = !this.eyesGlowing;
         }
     }
@@ -422,8 +427,8 @@ public class Creaking extends Monster {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_368268_) {
-        return this.isHeartBound() ? SoundEvents.CREAKING_SWAY : super.getHurtSound(p_368268_);
+    protected SoundEvent getHurtSound(final DamageSource source) {
+        return this.isHeartBound() ? SoundEvents.CREAKING_SWAY : super.getHurtSound(source);
     }
 
     @Override
@@ -432,7 +437,7 @@ public class Creaking extends Monster {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_367090_, BlockState p_366342_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.CREAKING_STEP, 0.15F, 1.0F);
     }
 
@@ -442,32 +447,32 @@ public class Creaking extends Monster {
     }
 
     @Override
-    public void knockback(double p_364942_, double p_368513_, double p_364343_) {
+    public void knockback(final double power, final double xd, final double zd, final DamageSource source, final float damage) {
         if (this.canMove()) {
-            super.knockback(p_364942_, p_368513_, p_364343_);
+            super.knockback(power, xd, zd, source, damage);
         }
     }
 
     public boolean checkCanMove() {
-        List<Player> list = this.brain.getMemory(MemoryModuleType.NEAREST_PLAYERS).orElse(List.of());
-        boolean flag = this.isActive();
-        if (list.isEmpty()) {
-            if (flag) {
+        List<Player> players = this.brain.getMemory(MemoryModuleType.NEAREST_PLAYERS).orElse(List.of());
+        boolean active = this.isActive();
+        if (players.isEmpty()) {
+            if (active) {
                 this.deactivate();
             }
 
             return true;
         } else {
-            boolean flag1 = false;
+            boolean hasPotentialTarget = false;
 
-            for (Player player : list) {
+            for (Player player : players) {
                 if (this.canAttack(player) && !this.isAlliedTo(player)) {
-                    flag1 = true;
-                    if ((!flag || LivingEntity.PLAYER_NOT_WEARING_DISGUISE_ITEM.test(player))
+                    hasPotentialTarget = true;
+                    if ((!active || LivingEntity.PLAYER_NOT_WEARING_DISGUISE_ITEM.test(player))
                         && this.isLookingAtMe(
                             player, 0.5, false, true, this.getEyeY(), this.getY() + 0.5 * this.getScale(), (this.getEyeY() + this.getY()) / 2.0
                         )) {
-                        if (flag) {
+                        if (active) {
                             return false;
                         }
 
@@ -479,7 +484,7 @@ public class Creaking extends Monster {
                 }
             }
 
-            if (!flag1 && flag) {
+            if (!hasPotentialTarget && active) {
                 this.deactivate();
             }
 
@@ -487,8 +492,8 @@ public class Creaking extends Monster {
         }
     }
 
-    public void activate(Player p_376101_) {
-        this.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, p_376101_);
+    public void activate(final Player player) {
+        this.getBrain().setMemory(MemoryModuleType.ATTACK_TARGET, player);
         this.gameEvent(GameEvent.ENTITY_ACTION);
         this.makeSound(SoundEvents.CREAKING_ACTIVATE);
         this.setIsActive(true);
@@ -501,8 +506,8 @@ public class Creaking extends Monster {
         this.setIsActive(false);
     }
 
-    public void setIsActive(boolean p_366535_) {
-        this.entityData.set(IS_ACTIVE, p_366535_);
+    public void setIsActive(final boolean active) {
+        this.entityData.set(IS_ACTIVE, active);
     }
 
     public boolean isActive() {
@@ -510,13 +515,13 @@ public class Creaking extends Monster {
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos p_368461_, LevelReader p_365406_) {
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
         return 0.0F;
     }
 
-    class CreakingBodyRotationControl extends BodyRotationControl {
-        public CreakingBodyRotationControl(final Creaking p_364588_) {
-            super(p_364588_);
+    private class CreakingBodyRotationControl extends BodyRotationControl {
+        public CreakingBodyRotationControl(final Creaking creaking) {
+            super(creaking);
         }
 
         @Override
@@ -527,9 +532,9 @@ public class Creaking extends Monster {
         }
     }
 
-    class CreakingJumpControl extends JumpControl {
-        public CreakingJumpControl(final Creaking p_368023_) {
-            super(p_368023_);
+    private class CreakingJumpControl extends JumpControl {
+        public CreakingJumpControl(final Creaking creaking) {
+            super(creaking);
         }
 
         @Override
@@ -542,9 +547,9 @@ public class Creaking extends Monster {
         }
     }
 
-    class CreakingLookControl extends LookControl {
-        public CreakingLookControl(final Creaking p_367583_) {
-            super(p_367583_);
+    private class CreakingLookControl extends LookControl {
+        public CreakingLookControl(final Creaking creaking) {
+            super(creaking);
         }
 
         @Override
@@ -555,22 +560,22 @@ public class Creaking extends Monster {
         }
     }
 
-    class CreakingMoveControl extends MoveControl {
-        public CreakingMoveControl(final Creaking p_365109_) {
-            super(p_365109_);
+    private static class CreakingMoveControl<T extends Creaking> extends MoveControl<T> {
+        public CreakingMoveControl(final T creaking) {
+            super(creaking);
         }
 
         @Override
         public void tick() {
-            if (Creaking.this.canMove()) {
+            if (this.mob.canMove()) {
                 super.tick();
             }
         }
     }
 
-    class CreakingPathNavigation extends GroundPathNavigation {
-        CreakingPathNavigation(final Creaking p_377680_, final Level p_375587_) {
-            super(p_377680_, p_375587_);
+    private class CreakingPathNavigation extends GroundPathNavigation {
+        public CreakingPathNavigation(final Creaking mob, final Level level) {
+            super(mob, level);
         }
 
         @Override
@@ -581,27 +586,25 @@ public class Creaking extends Monster {
         }
 
         @Override
-        protected PathFinder createPathFinder(int p_378313_) {
+        protected PathFinder createPathFinder(final int maxVisitedNodes) {
             this.nodeEvaluator = Creaking.this.new HomeNodeEvaluator();
             this.nodeEvaluator.setCanPassDoors(true);
-            return new PathFinder(this.nodeEvaluator, p_378313_);
+            return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
         }
     }
 
-    class HomeNodeEvaluator extends WalkNodeEvaluator {
+    private class HomeNodeEvaluator extends WalkNodeEvaluator {
         private static final int MAX_DISTANCE_TO_HOME_SQ = 1024;
 
         @Override
-        public PathType getPathType(PathfindingContext p_377585_, int p_378027_, int p_378555_, int p_378341_) {
-            BlockPos blockpos = Creaking.this.getHomePos();
-            if (blockpos == null) {
-                return super.getPathType(p_377585_, p_378027_, p_378555_, p_378341_);
-            } else {
-                double d0 = blockpos.distSqr(new Vec3i(p_378027_, p_378555_, p_378341_));
-                return d0 > 1024.0 && d0 >= blockpos.distSqr(p_377585_.mobPosition())
-                    ? PathType.BLOCKED
-                    : super.getPathType(p_377585_, p_378027_, p_378555_, p_378341_);
+        public PathType getPathType(final PathfindingContext context, final int x, final int y, final int z) {
+            BlockPos homePos = Creaking.this.getHomePos();
+            if (homePos == null) {
+                return super.getPathType(context, x, y, z);
             }
+
+            double homeDistance = homePos.distSqr(new Vec3i(x, y, z));
+            return homeDistance > 1024.0 && homeDistance >= homePos.distSqr(context.mobPosition()) ? PathType.BLOCKED : super.getPathType(context, x, y, z);
         }
     }
 }

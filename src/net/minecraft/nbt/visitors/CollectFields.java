@@ -14,57 +14,59 @@ public class CollectFields extends CollectToTag {
     private final Set<TagType<?>> wantedTypes;
     private final Deque<FieldTree> stack = new ArrayDeque<>();
 
-    public CollectFields(FieldSelector... p_202496_) {
-        this.fieldsToGetCount = p_202496_.length;
-        Builder<TagType<?>> builder = ImmutableSet.builder();
-        FieldTree fieldtree = FieldTree.createRoot();
+    public CollectFields(final FieldSelector... wantedFields) {
+        this.fieldsToGetCount = wantedFields.length;
+        Builder<TagType<?>> wantedTypes = ImmutableSet.builder();
+        FieldTree rootFrame = FieldTree.createRoot();
 
-        for (FieldSelector fieldselector : p_202496_) {
-            fieldtree.addEntry(fieldselector);
-            builder.add(fieldselector.type());
+        for (FieldSelector wantedField : wantedFields) {
+            rootFrame.addEntry(wantedField);
+            wantedTypes.add(wantedField.type());
         }
 
-        this.stack.push(fieldtree);
-        builder.add(CompoundTag.TYPE);
-        this.wantedTypes = builder.build();
+        this.stack.push(rootFrame);
+        wantedTypes.add(CompoundTag.TYPE);
+        this.wantedTypes = wantedTypes.build();
     }
 
     @Override
-    public StreamTagVisitor.ValueResult visitRootEntry(TagType<?> p_197614_) {
-        return p_197614_ != CompoundTag.TYPE ? StreamTagVisitor.ValueResult.HALT : super.visitRootEntry(p_197614_);
+    public StreamTagVisitor.ValueResult visitRootEntry(final TagType<?> type) {
+        return type != CompoundTag.TYPE ? StreamTagVisitor.ValueResult.HALT : super.visitRootEntry(type);
     }
 
     @Override
-    public StreamTagVisitor.EntryResult visitEntry(TagType<?> p_197608_) {
-        FieldTree fieldtree = this.stack.element();
-        if (this.depth() > fieldtree.depth()) {
-            return super.visitEntry(p_197608_);
+    public StreamTagVisitor.EntryResult visitEntry(final TagType<?> type) {
+        FieldTree currentFrame = this.stack.element();
+        if (this.depth() > currentFrame.depth()) {
+            return super.visitEntry(type);
         } else if (this.fieldsToGetCount <= 0) {
             return StreamTagVisitor.EntryResult.BREAK;
         } else {
-            return !this.wantedTypes.contains(p_197608_) ? StreamTagVisitor.EntryResult.SKIP : super.visitEntry(p_197608_);
+            return !this.wantedTypes.contains(type) ? StreamTagVisitor.EntryResult.SKIP : super.visitEntry(type);
         }
     }
 
     @Override
-    public StreamTagVisitor.EntryResult visitEntry(TagType<?> p_197610_, String p_197611_) {
-        FieldTree fieldtree = this.stack.element();
-        if (this.depth() > fieldtree.depth()) {
-            return super.visitEntry(p_197610_, p_197611_);
-        } else if (fieldtree.selectedFields().remove(p_197611_, p_197610_)) {
-            this.fieldsToGetCount--;
-            return super.visitEntry(p_197610_, p_197611_);
-        } else {
-            if (p_197610_ == CompoundTag.TYPE) {
-                FieldTree fieldtree1 = fieldtree.fieldsToRecurse().get(p_197611_);
-                if (fieldtree1 != null) {
-                    this.stack.push(fieldtree1);
-                    return super.visitEntry(p_197610_, p_197611_);
-                }
-            }
-
-            return StreamTagVisitor.EntryResult.SKIP;
+    public StreamTagVisitor.EntryResult visitEntry(final TagType<?> type, final String id) {
+        FieldTree currentFrame = this.stack.element();
+        if (this.depth() > currentFrame.depth()) {
+            return super.visitEntry(type, id);
         }
+
+        if (currentFrame.selectedFields().remove(id, type)) {
+            this.fieldsToGetCount--;
+            return super.visitEntry(type, id);
+        }
+
+        if (type == CompoundTag.TYPE) {
+            FieldTree newFrame = currentFrame.fieldsToRecurse().get(id);
+            if (newFrame != null) {
+                this.stack.push(newFrame);
+                return super.visitEntry(type, id);
+            }
+        }
+
+        return StreamTagVisitor.EntryResult.SKIP;
     }
 
     @Override

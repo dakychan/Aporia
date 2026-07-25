@@ -10,11 +10,11 @@ import net.minecraft.server.players.ServerOpListEntry;
 public interface MinecraftOperatorListService {
     Collection<ServerOpListEntry> getEntries();
 
-    void op(NameAndId p_424317_, Optional<PermissionLevel> p_428225_, Optional<Boolean> p_428440_, ClientInfo p_428353_);
+    void op(NameAndId nameAndId, Optional<PermissionLevel> permissionLevel, Optional<Boolean> canBypassPlayerLimit, ClientInfo clientInfo);
 
-    void op(NameAndId p_424987_, ClientInfo p_427350_);
+    void op(NameAndId nameAndId, ClientInfo clientInfo);
 
-    void deop(NameAndId p_431385_, ClientInfo p_429454_);
+    void deop(NameAndId nameAndId, ClientInfo clientInfo);
 
-    void clear(ClientInfo p_425545_);
+    void clear(ClientInfo clientInfo);
 }

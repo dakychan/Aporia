@@ -6,8 +6,10 @@ import java.util.HashSet;
 import java.util.Set;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.SectionPos;
+import net.minecraft.core.TypedInstance;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.core.component.DataComponentPatch;
@@ -36,7 +38,7 @@ import net.minecraft.world.level.storage.ValueOutput;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public abstract class BlockEntity implements DebugValueSource {
+public abstract class BlockEntity implements DebugValueSource, TypedInstance<BlockEntityType<?>> {
     private static final Codec<BlockEntityType<?>> TYPE_CODEC = BuiltInRegistries.BLOCK_ENTITY_TYPE.byNameCodec();
     private static final Logger LOGGER = LogUtils.getLogger();
     private final BlockEntityType<?> type;
@@ -46,158 +48,144 @@ public abstract class BlockEntity implements DebugValueSource {
     private BlockState blockState;
     private DataComponentMap components = DataComponentMap.EMPTY;
 
-    public BlockEntity(BlockEntityType<?> p_155228_, BlockPos p_155229_, BlockState p_155230_) {
-        this.type = p_155228_;
-        this.worldPosition = p_155229_.immutable();
-        this.validateBlockState(p_155230_);
-        this.blockState = p_155230_;
+    public BlockEntity(final BlockEntityType<?> type, final BlockPos worldPosition, final BlockState blockState) {
+        this.type = type;
+        this.worldPosition = worldPosition.immutable();
+        this.validateBlockState(blockState);
+        this.blockState = blockState;
     }
 
-    private void validateBlockState(BlockState p_345558_) {
-        if (!this.isValidBlockState(p_345558_)) {
-            throw new IllegalStateException("Invalid block entity " + this.getNameForReporting() + " state at " + this.worldPosition + ", got " + p_345558_);
+    private void validateBlockState(final BlockState blockState) {
+        if (!this.isValidBlockState(blockState)) {
+            throw new IllegalStateException("Invalid block entity " + this.getNameForReporting() + " state at " + this.worldPosition + ", got " + blockState);
         }
     }
 
-    public boolean isValidBlockState(BlockState p_345570_) {
-        return this.type.isValid(p_345570_);
+    public boolean isValidBlockState(final BlockState blockState) {
+        return this.type.isValid(blockState);
     }
 
-    public static BlockPos getPosFromTag(ChunkPos p_396083_, CompoundTag p_187473_) {
-        int i = p_187473_.getIntOr("x", 0);
-        int j = p_187473_.getIntOr("y", 0);
-        int k = p_187473_.getIntOr("z", 0);
-        int l = SectionPos.blockToSectionCoord(i);
-        int i1 = SectionPos.blockToSectionCoord(k);
-        if (l != p_396083_.x || i1 != p_396083_.z) {
-            LOGGER.warn("Block entity {} found in a wrong chunk, expected position from chunk {}", p_187473_, p_396083_);
-            i = p_396083_.getBlockX(SectionPos.sectionRelative(i));
-            k = p_396083_.getBlockZ(SectionPos.sectionRelative(k));
+    public static BlockPos getPosFromTag(final ChunkPos base, final CompoundTag entityTag) {
+        int x = entityTag.getIntOr("x", 0);
+        int y = entityTag.getIntOr("y", 0);
+        int z = entityTag.getIntOr("z", 0);
+        int sectionX = SectionPos.blockToSectionCoord(x);
+        int sectionZ = SectionPos.blockToSectionCoord(z);
+        if (sectionX != base.x() || sectionZ != base.z()) {
+            LOGGER.warn("Block entity {} found in a wrong chunk, expected position from chunk {}", entityTag, base);
+            x = base.getBlockX(SectionPos.sectionRelative(x));
+            z = base.getBlockZ(SectionPos.sectionRelative(z));
         }
 
-        return new BlockPos(i, j, k);
+        return new BlockPos(x, y, z);
     }
 
     public @Nullable Level getLevel() {
         return this.level;
     }
 
-    public void setLevel(Level p_155231_) {
-        this.level = p_155231_;
+    public void setLevel(final Level level) {
+        this.level = level;
     }
 
     public boolean hasLevel() {
         return this.level != null;
     }
 
-    protected void loadAdditional(ValueInput p_409136_) {
+    protected void loadAdditional(final ValueInput input) {
     }
 
-    public final void loadWithComponents(ValueInput p_409893_) {
-        this.loadAdditional(p_409893_);
-        this.components = p_409893_.read("components", DataComponentMap.CODEC).orElse(DataComponentMap.EMPTY);
+    public final void loadWithComponents(final ValueInput input) {
+        this.loadAdditional(input);
+        this.components = input.read("components", DataComponentMap.CODEC).orElse(DataComponentMap.EMPTY);
     }
 
-    public final void loadCustomOnly(ValueInput p_408306_) {
-        this.loadAdditional(p_408306_);
+    public final void loadCustomOnly(final ValueInput input) {
+        this.loadAdditional(input);
     }
 
-    protected void saveAdditional(ValueOutput p_407573_) {
+    protected void saveAdditional(final ValueOutput output) {
     }
 
-    public final CompoundTag saveWithFullMetadata(HolderLookup.Provider p_331193_) {
-        CompoundTag compoundtag;
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_331193_);
-            this.saveWithFullMetadata(tagvalueoutput);
-            compoundtag = tagvalueoutput.buildResult();
+    public final CompoundTag saveWithFullMetadata(final HolderLookup.Provider registries) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, registries);
+            this.saveWithFullMetadata(output);
+            return output.buildResult();
         }
-
-        return compoundtag;
     }
 
-    public void saveWithFullMetadata(ValueOutput p_406851_) {
-        this.saveWithoutMetadata(p_406851_);
-        this.saveMetadata(p_406851_);
+    public void saveWithFullMetadata(final ValueOutput output) {
+        this.saveWithoutMetadata(output);
+        this.saveMetadata(output);
     }
 
-    public void saveWithId(ValueOutput p_406411_) {
-        this.saveWithoutMetadata(p_406411_);
-        this.saveId(p_406411_);
+    public void saveWithId(final ValueOutput output) {
+        this.saveWithoutMetadata(output);
+        this.saveId(output);
     }
 
-    public final CompoundTag saveWithoutMetadata(HolderLookup.Provider p_332372_) {
-        CompoundTag compoundtag;
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_332372_);
-            this.saveWithoutMetadata(tagvalueoutput);
-            compoundtag = tagvalueoutput.buildResult();
+    public final CompoundTag saveWithoutMetadata(final HolderLookup.Provider registries) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, registries);
+            this.saveWithoutMetadata(output);
+            return output.buildResult();
         }
-
-        return compoundtag;
     }
 
-    public void saveWithoutMetadata(ValueOutput p_406453_) {
-        this.saveAdditional(p_406453_);
-        p_406453_.store("components", DataComponentMap.CODEC, this.components);
+    public void saveWithoutMetadata(final ValueOutput output) {
+        this.saveAdditional(output);
+        output.store("components", DataComponentMap.CODEC, this.components);
     }
 
-    public final CompoundTag saveCustomOnly(HolderLookup.Provider p_333091_) {
-        CompoundTag compoundtag;
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_333091_);
-            this.saveCustomOnly(tagvalueoutput);
-            compoundtag = tagvalueoutput.buildResult();
+    public final CompoundTag saveCustomOnly(final HolderLookup.Provider registries) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, registries);
+            this.saveCustomOnly(output);
+            return output.buildResult();
         }
-
-        return compoundtag;
     }
 
-    public void saveCustomOnly(ValueOutput p_406911_) {
-        this.saveAdditional(p_406911_);
+    public void saveCustomOnly(final ValueOutput output) {
+        this.saveAdditional(output);
     }
 
-    private void saveId(ValueOutput p_409674_) {
-        addEntityType(p_409674_, this.getType());
+    private void saveId(final ValueOutput output) {
+        addEntityType(output, this.getType());
     }
 
-    public static void addEntityType(ValueOutput p_409334_, BlockEntityType<?> p_187470_) {
-        p_409334_.store("id", TYPE_CODEC, p_187470_);
+    public static void addEntityType(final ValueOutput output, final BlockEntityType<?> type) {
+        output.store("id", TYPE_CODEC, type);
     }
 
-    public void saveMetadata(ValueOutput p_410055_) {
-        this.saveId(p_410055_);
-        p_410055_.putInt("x", this.worldPosition.getX());
-        p_410055_.putInt("y", this.worldPosition.getY());
-        p_410055_.putInt("z", this.worldPosition.getZ());
+    private void saveMetadata(final ValueOutput output) {
+        this.saveId(output);
+        output.putInt("x", this.worldPosition.getX());
+        output.putInt("y", this.worldPosition.getY());
+        output.putInt("z", this.worldPosition.getZ());
     }
 
-    public static @Nullable BlockEntity loadStatic(BlockPos p_155242_, BlockState p_155243_, CompoundTag p_155244_, HolderLookup.Provider p_336084_) {
-        BlockEntityType<?> blockentitytype = p_155244_.read("id", TYPE_CODEC).orElse(null);
-        if (blockentitytype == null) {
-            LOGGER.error("Skipping block entity with invalid type: {}", p_155244_.get("id"));
+    public static @Nullable BlockEntity loadStatic(final BlockPos pos, final BlockState state, final CompoundTag tag, final HolderLookup.Provider registries) {
+        BlockEntityType<?> type = tag.read("id", TYPE_CODEC).orElse(null);
+        if (type == null) {
+            LOGGER.error("Skipping block entity with invalid type: {}", tag.get("id"));
             return null;
-        } else {
-            BlockEntity blockentity;
-            try {
-                blockentity = blockentitytype.create(p_155242_, p_155243_);
-            } catch (Throwable throwable2) {
-                LOGGER.error("Failed to create block entity {} for block {} at position {} ", blockentitytype, p_155242_, p_155243_, throwable2);
-                return null;
-            }
+        }
 
-            try {
-                BlockEntity blockentity1;
-                try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(blockentity.problemPath(), LOGGER)) {
-                    blockentity.loadWithComponents(TagValueInput.create(problemreporter$scopedcollector, p_336084_, p_155244_));
-                    blockentity1 = blockentity;
-                }
+        BlockEntity entity;
+        try {
+            entity = type.create(pos, state);
+        } catch (Throwable t) {
+            LOGGER.error("Failed to create block entity {} for block {} at position {} ", type, pos, state, t);
+            return null;
+        }
 
-                return blockentity1;
-            } catch (Throwable throwable1) {
-                LOGGER.error("Failed to load data for block entity {} for block {} at position {}", blockentitytype, p_155242_, p_155243_, throwable1);
-                return null;
-            }
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(entity.problemPath(), LOGGER)) {
+            entity.loadWithComponents(TagValueInput.create(reporter, registries, tag));
+            return entity;
+        } catch (Throwable t) {
+            LOGGER.error("Failed to load data for block entity {} for block {} at position {}", type, pos, state, t);
+            return null;
         }
     }
 
@@ -207,10 +195,10 @@ public abstract class BlockEntity implements DebugValueSource {
         }
     }
 
-    protected static void setChanged(Level p_155233_, BlockPos p_155234_, BlockState p_155235_) {
-        p_155233_.blockEntityChanged(p_155234_);
-        if (!p_155235_.isAir()) {
-            p_155233_.updateNeighbourForOutputSignal(p_155234_, p_155235_.getBlock());
+    protected static void setChanged(final Level level, final BlockPos worldPosition, final BlockState blockState) {
+        level.blockEntityChanged(worldPosition);
+        if (!blockState.isAir()) {
+            level.updateNeighbourForOutputSignal(worldPosition, blockState.getBlock());
         }
     }
 
@@ -226,7 +214,7 @@ public abstract class BlockEntity implements DebugValueSource {
         return null;
     }
 
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_329179_) {
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
         return new CompoundTag();
     }
 
@@ -242,94 +230,99 @@ public abstract class BlockEntity implements DebugValueSource {
         this.remove = false;
     }
 
-    public void preRemoveSideEffects(BlockPos p_397404_, BlockState p_395805_) {
+    public void preRemoveSideEffects(final BlockPos pos, final BlockState state) {
         if (this instanceof Container container && this.level != null) {
-            Containers.dropContents(this.level, p_397404_, container);
+            Containers.dropContents(this.level, pos, container);
         }
     }
 
-    public boolean triggerEvent(int p_58889_, int p_58890_) {
+    public boolean triggerEvent(final int b0, final int b1) {
         return false;
     }
 
-    public void fillCrashReportCategory(CrashReportCategory p_58887_) {
-        p_58887_.setDetail("Name", this::getNameForReporting);
-        p_58887_.setDetail("Cached block", this.getBlockState()::toString);
+    public void fillCrashReportCategory(final CrashReportCategory category) {
+        category.setDetail("Name", this::getNameForReporting);
+        category.setDetail("Cached block", this.getBlockState()::toString);
         if (this.level == null) {
-            p_58887_.setDetail("Block location", () -> this.worldPosition + " (world missing)");
+            category.setDetail("Block location", () -> this.worldPosition + " (world missing)");
         } else {
-            p_58887_.setDetail("Actual block", this.level.getBlockState(this.worldPosition)::toString);
-            CrashReportCategory.populateBlockLocationDetails(p_58887_, this.level, this.worldPosition);
+            category.setDetail("Actual block", this.level.getBlockState(this.worldPosition)::toString);
+            CrashReportCategory.populateBlockLocationDetails(category, this.level, this.worldPosition);
         }
     }
 
     public String getNameForReporting() {
-        return BuiltInRegistries.BLOCK_ENTITY_TYPE.getKey(this.getType()) + " // " + this.getClass().getCanonicalName();
+        return this.typeHolder().getRegisteredName() + " // " + this.getClass().getCanonicalName();
     }
 
     public BlockEntityType<?> getType() {
         return this.type;
     }
 
+    @Override
+    public Holder<BlockEntityType<?>> typeHolder() {
+        return this.type.builtInRegistryHolder();
+    }
+
     @Deprecated
-    public void setBlockState(BlockState p_155251_) {
-        this.validateBlockState(p_155251_);
-        this.blockState = p_155251_;
+    public void setBlockState(final BlockState blockState) {
+        this.validateBlockState(blockState);
+        this.blockState = blockState;
     }
 
-    protected void applyImplicitComponents(DataComponentGetter p_391290_) {
+    protected void applyImplicitComponents(final DataComponentGetter components) {
     }
 
-    public final void applyComponentsFromItemStack(ItemStack p_328941_) {
-        this.applyComponents(p_328941_.getPrototype(), p_328941_.getComponentsPatch());
+    public final void applyComponentsFromItemStack(final ItemStack stack) {
+        this.applyComponents(stack.getPrototype(), stack.getComponentsPatch());
     }
 
-    public final void applyComponents(DataComponentMap p_335232_, DataComponentPatch p_331646_) {
-        final Set<DataComponentType<?>> set = new HashSet<>();
-        set.add(DataComponents.BLOCK_ENTITY_DATA);
-        set.add(DataComponents.BLOCK_STATE);
-        final DataComponentMap datacomponentmap = PatchedDataComponentMap.fromPatch(p_335232_, p_331646_);
+    public final void applyComponents(final DataComponentMap prototype, final DataComponentPatch patch) {
+        final Set<DataComponentType<?>> implicitComponents = new HashSet<>();
+        implicitComponents.add(DataComponents.BLOCK_ENTITY_DATA);
+        implicitComponents.add(DataComponents.BLOCK_STATE);
+        final DataComponentMap fullView = PatchedDataComponentMap.fromPatch(prototype, patch);
         this.applyImplicitComponents(new DataComponentGetter() {
             @Override
-            public <T> @Nullable T get(DataComponentType<? extends T> p_335233_) {
-                set.add(p_335233_);
-                return datacomponentmap.get(p_335233_);
+            public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+                implicitComponents.add(type);
+                return fullView.get(type);
             }
 
             @Override
-            public <T> T getOrDefault(DataComponentType<? extends T> p_334887_, T p_333244_) {
-                set.add(p_334887_);
-                return datacomponentmap.getOrDefault(p_334887_, p_333244_);
+            public <T> T getOrDefault(final DataComponentType<? extends T> type, final T defaultValue) {
+                implicitComponents.add(type);
+                return fullView.getOrDefault(type, defaultValue);
             }
         });
-        DataComponentPatch datacomponentpatch = p_331646_.forget(set::contains);
-        this.components = datacomponentpatch.split().added();
+        DataComponentPatch newPatch = patch.forget(implicitComponents::contains);
+        this.components = newPatch.split().added();
     }
 
-    protected void collectImplicitComponents(DataComponentMap.Builder p_328216_) {
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
     }
 
     @Deprecated
-    public void removeComponentsFromTag(ValueOutput p_408661_) {
+    public void removeComponentsFromTag(final ValueOutput output) {
     }
 
     public final DataComponentMap collectComponents() {
-        DataComponentMap.Builder datacomponentmap$builder = DataComponentMap.builder();
-        datacomponentmap$builder.addAll(this.components);
-        this.collectImplicitComponents(datacomponentmap$builder);
-        return datacomponentmap$builder.build();
+        DataComponentMap.Builder result = DataComponentMap.builder();
+        result.addAll(this.components);
+        this.collectImplicitComponents(result);
+        return result.build();
     }
 
     public DataComponentMap components() {
         return this.components;
     }
 
-    public void setComponents(DataComponentMap p_335672_) {
-        this.components = p_335672_;
+    public void setComponents(final DataComponentMap components) {
+        this.components = components;
     }
 
-    public static @Nullable Component parseCustomNameSafe(ValueInput p_408442_, String p_410488_) {
-        return p_408442_.read(p_410488_, ComponentSerialization.CODEC).orElse(null);
+    public static @Nullable Component parseCustomNameSafe(final ValueInput input, final String name) {
+        return input.read(name, ComponentSerialization.CODEC).orElse(null);
     }
 
     public ProblemReporter.PathElement problemPath() {
@@ -337,10 +330,10 @@ public abstract class BlockEntity implements DebugValueSource {
     }
 
     @Override
-    public void registerDebugValues(ServerLevel p_427460_, DebugValueSource.Registration p_424498_) {
+    public void registerDebugValues(final ServerLevel level, final DebugValueSource.Registration registration) {
     }
 
-    record BlockEntityPathElement(BlockEntity blockEntity) implements ProblemReporter.PathElement {
+    private record BlockEntityPathElement(BlockEntity blockEntity) implements ProblemReporter.PathElement {
         @Override
         public String get() {
             return this.blockEntity.getNameForReporting() + "@" + this.blockEntity.getBlockPos();

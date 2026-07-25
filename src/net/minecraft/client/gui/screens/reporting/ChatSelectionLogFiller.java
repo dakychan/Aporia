@@ -10,11 +10,8 @@ import net.minecraft.client.multiplayer.chat.report.ReportingContext;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.network.chat.SignedMessageLink;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ChatSelectionLogFiller {
     private final ChatLog log;
     private final ChatReportContextBuilder contextBuilder;
@@ -24,61 +21,60 @@ public class ChatSelectionLogFiller {
     private int missedCount;
     private @Nullable PlayerChatMessage lastMessage;
 
-    public ChatSelectionLogFiller(ReportingContext p_251076_, Predicate<LoggedChatMessage.Player> p_250367_) {
-        this.log = p_251076_.chatLog();
-        this.contextBuilder = new ChatReportContextBuilder(p_251076_.sender().reportLimits().leadingContextMessageCount());
-        this.canReport = p_250367_;
+    public ChatSelectionLogFiller(final ReportingContext reportingContext, final Predicate<LoggedChatMessage.Player> canReport) {
+        this.log = reportingContext.chatLog();
+        this.contextBuilder = new ChatReportContextBuilder(reportingContext.sender().reportLimits().leadingContextMessageCount());
+        this.canReport = canReport;
         this.eventId = this.log.end();
     }
 
-    public void fillNextPage(int p_239016_, ChatSelectionLogFiller.Output p_239017_) {
-        int i = 0;
+    public void fillNextPage(final int pageSize, final ChatSelectionLogFiller.Output output) {
+        int count = 0;
 
-        while (i < p_239016_) {
-            LoggedChatEvent loggedchatevent = this.log.lookup(this.eventId);
-            if (loggedchatevent == null) {
+        while (count < pageSize) {
+            LoggedChatEvent event = this.log.lookup(this.eventId);
+            if (event == null) {
                 break;
             }
 
-            int j = this.eventId--;
-            if (loggedchatevent instanceof LoggedChatMessage.Player loggedchatmessage$player && !loggedchatmessage$player.message().equals(this.lastMessage)) {
-                if (this.acceptMessage(p_239017_, loggedchatmessage$player)) {
+            int eventId = this.eventId--;
+            if (event instanceof LoggedChatMessage.Player message && !message.message().equals(this.lastMessage)) {
+                if (this.acceptMessage(output, message)) {
                     if (this.missedCount > 0) {
-                        p_239017_.acceptDivider(Component.translatable("gui.chatSelection.fold", this.missedCount));
+                        output.acceptDivider(Component.translatable("gui.chatSelection.fold", this.missedCount));
                         this.missedCount = 0;
                     }
 
-                    p_239017_.acceptMessage(j, loggedchatmessage$player);
-                    i++;
+                    output.acceptMessage(eventId, message);
+                    count++;
                 } else {
                     this.missedCount++;
                 }
 
-                this.lastMessage = loggedchatmessage$player.message();
+                this.lastMessage = message.message();
             }
         }
     }
 
-    private boolean acceptMessage(ChatSelectionLogFiller.Output p_254300_, LoggedChatMessage.Player p_253803_) {
-        PlayerChatMessage playerchatmessage = p_253803_.message();
-        boolean flag = this.contextBuilder.acceptContext(playerchatmessage);
-        if (this.canReport.test(p_253803_)) {
-            this.contextBuilder.trackContext(playerchatmessage);
-            if (this.previousLink != null && !this.previousLink.isDescendantOf(playerchatmessage.link())) {
-                p_254300_.acceptDivider(Component.translatable("gui.chatSelection.join", p_253803_.profile().name()).withStyle(ChatFormatting.YELLOW));
+    private boolean acceptMessage(final ChatSelectionLogFiller.Output output, final LoggedChatMessage.Player event) {
+        PlayerChatMessage message = event.message();
+        boolean context = this.contextBuilder.acceptContext(message);
+        if (this.canReport.test(event)) {
+            this.contextBuilder.trackContext(message);
+            if (this.previousLink != null && !this.previousLink.isDescendantOf(message.link())) {
+                output.acceptDivider(Component.translatable("gui.chatSelection.join", event.profile().name()).withStyle(ChatFormatting.YELLOW));
             }
 
-            this.previousLink = playerchatmessage.link();
+            this.previousLink = message.link();
             return true;
         } else {
-            return flag;
+            return context;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Output {
-        void acceptMessage(int p_239762_, LoggedChatMessage.Player p_251438_);
+        public interface Output {
+        void acceptMessage(int id, LoggedChatMessage.Player message);
 
-        void acceptDivider(Component p_239557_);
+        void acceptDivider(Component text);
     }
 }

@@ -11,7 +11,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.ContainerEventHandler;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
@@ -26,11 +26,9 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.util.Mth;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entry<E>> extends AbstractContainerWidget {
     private static final Identifier MENU_LIST_BACKGROUND = Identifier.withDefaultNamespace("textures/gui/menu_list_background.png");
     private static final Identifier INWORLD_MENU_LIST_BACKGROUND = Identifier.withDefaultNamespace("textures/gui/inworld_menu_list_background.png");
@@ -42,23 +40,23 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
     private @Nullable E selected;
     private @Nullable E hovered;
 
-    public AbstractSelectionList(Minecraft p_93404_, int p_93405_, int p_93406_, int p_93407_, int p_93408_) {
-        super(0, p_93407_, p_93405_, p_93406_, CommonComponents.EMPTY);
-        this.minecraft = p_93404_;
-        this.defaultEntryHeight = p_93408_;
+    public AbstractSelectionList(final Minecraft minecraft, final int width, final int height, final int y, final int defaultEntryHeight) {
+        super(0, y, width, height, CommonComponents.EMPTY, AbstractScrollArea.defaultSettings(defaultEntryHeight / 2));
+        this.minecraft = minecraft;
+        this.defaultEntryHeight = defaultEntryHeight;
     }
 
     public @Nullable E getSelected() {
         return this.selected;
     }
 
-    public void setSelected(@Nullable E p_93462_) {
-        this.selected = p_93462_;
-        if (p_93462_ != null) {
-            boolean flag = p_93462_.getContentY() < this.getY();
-            boolean flag1 = p_93462_.getContentBottom() > this.getBottom();
-            if (this.minecraft.getLastInputType().isKeyboard() || flag || flag1) {
-                this.scrollToEntry(p_93462_);
+    public void setSelected(final @Nullable E selected) {
+        this.selected = selected;
+        if (selected != null) {
+            boolean topClipped = selected.getContentY() < this.getY();
+            boolean bottomClipped = selected.getContentBottom() > this.getBottom();
+            if (this.minecraft.getLastInputType().isKeyboard() || topClipped || bottomClipped) {
+                this.scrollToEntry(selected);
             }
         }
     }
@@ -72,15 +70,15 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         return Collections.unmodifiableList(this.children);
     }
 
-    protected void sort(Comparator<E> p_430158_) {
-        this.children.sort(p_430158_);
+    protected void sort(final Comparator<E> comparator) {
+        this.children.sort(comparator);
         this.repositionEntries();
     }
 
-    protected void swap(int p_424339_, int p_425931_) {
-        Collections.swap(this.children, p_424339_, p_425931_);
+    protected void swap(final int firstIndex, final int secondIndex) {
+        Collections.swap(this.children, firstIndex, secondIndex);
         this.repositionEntries();
-        this.scrollToEntry(this.children.get(p_425931_));
+        this.scrollToEntry(this.children.get(secondIndex));
     }
 
     protected void clearEntries() {
@@ -88,18 +86,18 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         this.selected = null;
     }
 
-    protected void clearEntriesExcept(E p_430434_) {
-        this.children.removeIf(p_420703_ -> p_420703_ != p_430434_);
-        if (this.selected != p_430434_) {
+    protected void clearEntriesExcept(final E exception) {
+        this.children.removeIf(entry -> entry != exception);
+        if (this.selected != exception) {
             this.setSelected(null);
         }
     }
 
-    public void replaceEntries(Collection<E> p_93470_) {
+    public void replaceEntries(final Collection<E> newChildren) {
         this.clearEntries();
 
-        for (E e : p_93470_) {
-            this.addEntry(e);
+        for (E newChild : newChildren) {
+            this.addEntry(newChild);
         }
     }
 
@@ -108,55 +106,55 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
     }
 
     public int getNextY() {
-        int i = this.getFirstEntryY() - (int)this.scrollAmount();
+        int y = this.getFirstEntryY() - (int)this.scrollAmount();
 
-        for (E e : this.children) {
-            i += e.getHeight();
+        for (E child : this.children) {
+            y += child.getHeight();
         }
 
-        return i;
+        return y;
     }
 
-    protected int addEntry(E p_93487_) {
-        return this.addEntry(p_93487_, this.defaultEntryHeight);
+    protected int addEntry(final E entry) {
+        return this.addEntry(entry, this.defaultEntryHeight);
     }
 
-    protected int addEntry(E p_430130_, int p_430091_) {
-        p_430130_.setX(this.getRowLeft());
-        p_430130_.setWidth(this.getRowWidth());
-        p_430130_.setY(this.getNextY());
-        p_430130_.setHeight(p_430091_);
-        this.children.add(p_430130_);
+    protected int addEntry(final E entry, final int height) {
+        entry.setX(this.getRowLeft());
+        entry.setWidth(this.getRowWidth());
+        entry.setY(this.getNextY());
+        entry.setHeight(height);
+        this.children.add(entry);
         return this.children.size() - 1;
     }
 
-    protected void addEntryToTop(E p_239858_) {
-        this.addEntryToTop(p_239858_, this.defaultEntryHeight);
+    protected void addEntryToTop(final E entry) {
+        this.addEntryToTop(entry, this.defaultEntryHeight);
     }
 
-    protected void addEntryToTop(E p_425294_, int p_431108_) {
-        double d0 = this.maxScrollAmount() - this.scrollAmount();
-        p_425294_.setHeight(p_431108_);
-        this.children.addFirst(p_425294_);
+    protected void addEntryToTop(final E entry, final int height) {
+        double scrollFromBottom = this.maxScrollAmount() - this.scrollAmount();
+        entry.setHeight(height);
+        this.children.addFirst(entry);
         this.repositionEntries();
-        this.setScrollAmount(this.maxScrollAmount() - d0);
+        this.setScrollAmount(this.maxScrollAmount() - scrollFromBottom);
     }
 
     private void repositionEntries() {
-        int i = this.getFirstEntryY() - (int)this.scrollAmount();
+        int y = this.getFirstEntryY() - (int)this.scrollAmount();
 
-        for (E e : this.children) {
-            e.setY(i);
-            i += e.getHeight();
-            e.setX(this.getRowLeft());
-            e.setWidth(this.getRowWidth());
+        for (E child : this.children) {
+            child.setY(y);
+            y += child.getHeight();
+            child.setX(this.getRowLeft());
+            child.setWidth(this.getRowWidth());
         }
     }
 
-    protected void removeEntryFromTop(E p_239046_) {
-        double d0 = this.maxScrollAmount() - this.scrollAmount();
-        this.removeEntry(p_239046_);
-        this.setScrollAmount(this.maxScrollAmount() - d0);
+    protected void removeEntryFromTop(final E entry) {
+        double scrollFromBottom = this.maxScrollAmount() - this.scrollAmount();
+        this.removeEntry(entry);
+        this.setScrollAmount(this.maxScrollAmount() - scrollFromBottom);
     }
 
     protected int getItemCount() {
@@ -167,27 +165,27 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         return true;
     }
 
-    protected final @Nullable E getEntryAtPosition(double p_93413_, double p_93414_) {
-        for (E e : this.children) {
-            if (e.isMouseOver(p_93413_, p_93414_)) {
-                return e;
+    protected final @Nullable E getEntryAtPosition(final double posX, final double posY) {
+        for (E child : this.children) {
+            if (child.isMouseOver(posX, posY)) {
+                return child;
             }
         }
 
         return null;
     }
 
-    public void updateSize(int p_336225_, HeaderAndFooterLayout p_331081_) {
-        this.updateSizeAndPosition(p_336225_, p_331081_.getContentHeight(), p_331081_.getHeaderHeight());
+    public void updateSize(final int width, final HeaderAndFooterLayout layout) {
+        this.updateSizeAndPosition(width, layout.getContentHeight(), layout.getHeaderHeight());
     }
 
-    public void updateSizeAndPosition(int p_334988_, int p_333730_, int p_328806_) {
-        this.updateSizeAndPosition(p_334988_, p_333730_, 0, p_328806_);
+    public void updateSizeAndPosition(final int width, final int height, final int y) {
+        this.updateSizeAndPosition(width, height, 0, y);
     }
 
-    public void updateSizeAndPosition(int p_429081_, int p_430079_, int p_426198_, int p_428192_) {
-        this.setSize(p_429081_, p_430079_);
-        this.setPosition(p_426198_, p_428192_);
+    public void updateSizeAndPosition(final int width, final int height, final int x, final int y) {
+        this.setSize(width, height);
+        this.setPosition(x, y);
         this.repositionEntries();
         if (this.getSelected() != null) {
             this.scrollToEntry(this.getSelected());
@@ -198,38 +196,38 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
 
     @Override
     protected int contentHeight() {
-        int i = 0;
+        int totalHeight = 0;
 
-        for (E e : this.children) {
-            i += e.getHeight();
+        for (E child : this.children) {
+            totalHeight += child.getHeight();
         }
 
-        return i + 4;
+        return totalHeight + 4;
     }
 
     @Override
-    public void renderWidget(GuiGraphics p_282708_, int p_283242_, int p_282891_, float p_283683_) {
-        this.hovered = this.isMouseOver(p_283242_, p_282891_) ? this.getEntryAtPosition(p_283242_, p_282891_) : null;
-        this.renderListBackground(p_282708_);
-        this.enableScissor(p_282708_);
-        this.renderListItems(p_282708_, p_283242_, p_282891_, p_283683_);
-        p_282708_.disableScissor();
-        this.renderListSeparators(p_282708_);
-        this.renderScrollbar(p_282708_, p_283242_, p_282891_);
+    public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        this.hovered = this.isMouseOver(mouseX, mouseY) ? this.getEntryAtPosition(mouseX, mouseY) : null;
+        this.extractListBackground(graphics);
+        this.enableScissor(graphics);
+        this.extractListItems(graphics, mouseX, mouseY, a);
+        graphics.disableScissor();
+        this.extractListSeparators(graphics);
+        this.extractScrollbar(graphics, mouseX, mouseY);
     }
 
-    protected void renderListSeparators(GuiGraphics p_331270_) {
-        Identifier identifier = this.minecraft.level == null ? Screen.HEADER_SEPARATOR : Screen.INWORLD_HEADER_SEPARATOR;
-        Identifier identifier1 = this.minecraft.level == null ? Screen.FOOTER_SEPARATOR : Screen.INWORLD_FOOTER_SEPARATOR;
-        p_331270_.blit(RenderPipelines.GUI_TEXTURED, identifier, this.getX(), this.getY() - 2, 0.0F, 0.0F, this.getWidth(), 2, 32, 2);
-        p_331270_.blit(RenderPipelines.GUI_TEXTURED, identifier1, this.getX(), this.getBottom(), 0.0F, 0.0F, this.getWidth(), 2, 32, 2);
+    protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
+        Identifier headerSeparator = this.minecraft.level == null ? Screen.HEADER_SEPARATOR : Screen.INWORLD_HEADER_SEPARATOR;
+        Identifier footerSeparator = this.minecraft.level == null ? Screen.FOOTER_SEPARATOR : Screen.INWORLD_FOOTER_SEPARATOR;
+        graphics.blit(RenderPipelines.GUI_TEXTURED, headerSeparator, this.getX(), this.getY() - 2, 0.0F, 0.0F, this.getWidth(), 2, 32, 2);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, footerSeparator, this.getX(), this.getBottom(), 0.0F, 0.0F, this.getWidth(), 2, 32, 2);
     }
 
-    protected void renderListBackground(GuiGraphics p_333412_) {
-        Identifier identifier = this.minecraft.level == null ? MENU_LIST_BACKGROUND : INWORLD_MENU_LIST_BACKGROUND;
-        p_333412_.blit(
+    protected void extractListBackground(final GuiGraphicsExtractor graphics) {
+        Identifier menuListBackground = this.minecraft.level == null ? MENU_LIST_BACKGROUND : INWORLD_MENU_LIST_BACKGROUND;
+        graphics.blit(
             RenderPipelines.GUI_TEXTURED,
-            identifier,
+            menuListBackground,
             this.getX(),
             this.getY(),
             this.getRight(),
@@ -241,111 +239,103 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         );
     }
 
-    protected void enableScissor(GuiGraphics p_282811_) {
-        p_282811_.enableScissor(this.getX(), this.getY(), this.getRight(), this.getBottom());
+    protected void enableScissor(final GuiGraphicsExtractor graphics) {
+        graphics.enableScissor(
+            Mth.clamp(this.getX(), 0, graphics.guiWidth()),
+            Mth.clamp(this.getY(), 0, graphics.guiHeight()),
+            Mth.clamp(this.getRight(), 0, graphics.guiWidth()),
+            Mth.clamp(this.getBottom(), 0, graphics.guiHeight())
+        );
     }
 
-    protected void scrollToEntry(E p_429571_) {
-        int i = p_429571_.getY() - this.getY() - 2;
-        if (i < 0) {
-            this.scroll(i);
+    protected void scrollToEntry(final E entry) {
+        int topDelta = entry.getY() - this.getY() - 2;
+        if (topDelta < 0) {
+            this.scroll(topDelta);
         }
 
-        int j = this.getBottom() - p_429571_.getY() - p_429571_.getHeight() - 2;
-        if (j < 0) {
-            this.scroll(-j);
+        int bottomDelta = this.getBottom() - entry.getY() - entry.getHeight() - 2;
+        if (bottomDelta < 0) {
+            this.scroll(-bottomDelta);
         }
     }
 
-    protected void centerScrollOn(E p_93495_) {
-        int i = 0;
+    protected void centerScrollOn(final E entry) {
+        int y = 0;
 
-        for (E e : this.children) {
-            if (e == p_93495_) {
-                i += e.getHeight() / 2;
+        for (E child : this.children) {
+            if (child == entry) {
+                y += child.getHeight() / 2;
                 break;
             }
 
-            i += e.getHeight();
+            y += child.getHeight();
         }
 
-        this.setScrollAmount(i - this.height / 2.0);
+        this.setScrollAmount(y - this.height / 2.0);
     }
 
-    private void scroll(int p_93430_) {
-        this.setScrollAmount(this.scrollAmount() + p_93430_);
+    private void scroll(final int amount) {
+        this.setScrollAmount(this.scrollAmount() + amount);
     }
 
     @Override
-    public void setScrollAmount(double p_429779_) {
-        super.setScrollAmount(p_429779_);
+    public void setScrollAmount(final double scrollAmount) {
+        super.setScrollAmount(scrollAmount);
         this.repositionEntries();
     }
 
     @Override
-    protected double scrollRate() {
-        return this.defaultEntryHeight / 2.0;
-    }
-
-    @Override
     protected int scrollBarX() {
-        return this.getRowRight() + 6 + 2;
+        return this.getRowRight() + this.scrollbarWidth() + 2;
     }
 
     @Override
-    public Optional<GuiEventListener> getChildAt(double p_376745_, double p_377088_) {
-        return Optional.ofNullable(this.getEntryAtPosition(p_376745_, p_377088_));
+    public Optional<GuiEventListener> getChildAt(final double x, final double y) {
+        return Optional.ofNullable(this.getEntryAtPosition(x, y));
     }
 
     @Override
-    public void setFocused(boolean p_428475_) {
-        super.setFocused(p_428475_);
-        if (!p_428475_) {
-            this.setFocused(null);
+    public void setFocused(final @Nullable GuiEventListener focused) {
+        E oldFocus = this.getFocused();
+        if (oldFocus != focused && oldFocus instanceof ContainerEventHandler oldFocusContainer) {
+            oldFocusContainer.setFocused(null);
+        }
+
+        super.setFocused(focused);
+        int index = this.children.indexOf(focused);
+        if (index >= 0) {
+            E magicallyCastEntry = this.children.get(index);
+            this.setSelected(magicallyCastEntry);
         }
     }
 
-    @Override
-    public void setFocused(@Nullable GuiEventListener p_265738_) {
-        E e = this.getFocused();
-        if (e != p_265738_ && e instanceof ContainerEventHandler containereventhandler) {
-            containereventhandler.setFocused(null);
-        }
-
-        super.setFocused(p_265738_);
-        int i = this.children.indexOf(p_265738_);
-        if (i >= 0) {
-            E e1 = this.children.get(i);
-            this.setSelected(e1);
-        }
+    protected @Nullable E nextEntry(final ScreenDirection dir) {
+        return this.nextEntry(dir, entry -> true);
     }
 
-    protected @Nullable E nextEntry(ScreenDirection p_265160_) {
-        return this.nextEntry(p_265160_, p_93510_ -> true);
+    protected @Nullable E nextEntry(final ScreenDirection dir, final Predicate<E> canSelect) {
+        return this.nextEntry(dir, canSelect, this.getSelected());
     }
 
-    protected @Nullable E nextEntry(ScreenDirection p_265210_, Predicate<E> p_265604_) {
-        return this.nextEntry(p_265210_, p_265604_, this.getSelected());
-    }
-
-    protected @Nullable E nextEntry(ScreenDirection p_265159_, Predicate<E> p_265109_, @Nullable E p_265379_) {
-        int i = switch (p_265159_) {
+    protected @Nullable E nextEntry(final ScreenDirection dir, final Predicate<E> canSelect, final @Nullable E startEntry) {
+        int delta = switch (dir) {
             case RIGHT, LEFT -> 0;
             case UP -> -1;
             case DOWN -> 1;
         };
-        if (!this.children().isEmpty() && i != 0) {
-            int j;
-            if (p_265379_ == null) {
-                j = i > 0 ? 0 : this.children().size() - 1;
+        if (!this.children().isEmpty() && delta != 0) {
+            int index;
+            if (startEntry == null) {
+                index = delta > 0 ? 0 : this.children().size() - 1;
             } else {
-                j = this.children().indexOf(p_265379_) + i;
+                index = this.children().indexOf(startEntry) + delta;
             }
 
-            for (int k = j; k >= 0 && k < this.children.size(); k += i) {
-                E e = this.children().get(k);
-                if (p_265109_.test(e)) {
-                    return e;
+            for (int i = index; i >= 0 && i < this.children.size(); i += delta) {
+                E selected = this.children().get(i);
+                if (canSelect.test(selected)) {
+                    return selected;
                 }
             }
         }
@@ -353,30 +343,30 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         return null;
     }
 
-    protected void renderListItems(GuiGraphics p_282079_, int p_239229_, int p_239230_, float p_239231_) {
-        for (E e : this.children) {
-            if (e.getY() + e.getHeight() >= this.getY() && e.getY() <= this.getBottom()) {
-                this.renderItem(p_282079_, p_239229_, p_239230_, p_239231_, e);
+    protected void extractListItems(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        for (E child : this.children) {
+            if (child.getY() + child.getHeight() >= this.getY() && child.getY() <= this.getBottom()) {
+                this.extractItem(graphics, mouseX, mouseY, a, child);
             }
         }
     }
 
-    protected void renderItem(GuiGraphics p_282205_, int p_238966_, int p_238967_, float p_238968_, E p_423748_) {
-        if (this.entriesCanBeSelected() && this.getSelected() == p_423748_) {
-            int i = this.isFocused() ? -1 : -8355712;
-            this.renderSelection(p_282205_, p_423748_, i);
+    protected void extractItem(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a, final E entry) {
+        if (this.entriesCanBeSelected() && this.getSelected() == entry) {
+            int outlineColor = this.isFocused() ? -1 : -8355712;
+            this.extractSelection(graphics, entry, outlineColor);
         }
 
-        p_423748_.renderContent(p_282205_, p_238966_, p_238967_, Objects.equals(this.hovered, p_423748_), p_238968_);
+        entry.extractContent(graphics, mouseX, mouseY, Objects.equals(this.hovered, entry), a);
     }
 
-    protected void renderSelection(GuiGraphics p_283589_, E p_427454_, int p_240142_) {
-        int i = p_427454_.getX();
-        int j = p_427454_.getY();
-        int k = i + p_427454_.getWidth();
-        int l = j + p_427454_.getHeight();
-        p_283589_.fill(i, j, k, l, p_240142_);
-        p_283589_.fill(i + 1, j + 1, k - 1, l - 1, -16777216);
+    protected void extractSelection(final GuiGraphicsExtractor graphics, final E entry, final int outlineColor) {
+        int outlineX0 = entry.getX();
+        int outlineY0 = entry.getY();
+        int outlineX1 = outlineX0 + entry.getWidth();
+        int outlineY1 = outlineY0 + entry.getHeight();
+        graphics.fill(outlineX0, outlineY0, outlineX1, outlineY1, outlineColor);
+        graphics.fill(outlineX0 + 1, outlineY0 + 1, outlineX1 - 1, outlineY1 - 1, -16777216);
     }
 
     public int getRowLeft() {
@@ -387,13 +377,13 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         return this.getRowLeft() + this.getRowWidth();
     }
 
-    public int getRowTop(int p_93512_) {
-        return this.children.get(p_93512_).getY();
+    public int getRowTop(final int row) {
+        return this.children.get(row).getY();
     }
 
-    public int getRowBottom(int p_93486_) {
-        E e = this.children.get(p_93486_);
-        return e.getY() + e.getHeight();
+    public int getRowBottom(final int row) {
+        E child = this.children.get(row);
+        return child.getY() + child.getHeight();
     }
 
     public int getRowWidth() {
@@ -409,15 +399,15 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         }
     }
 
-    protected void removeEntries(List<E> p_427733_) {
-        p_427733_.forEach(this::removeEntry);
+    protected void removeEntries(final List<E> entries) {
+        entries.forEach(this::removeEntry);
     }
 
-    protected void removeEntry(E p_93503_) {
-        boolean flag = this.children.remove(p_93503_);
-        if (flag) {
+    protected void removeEntry(final E entry) {
+        boolean removed = this.children.remove(entry);
+        if (removed) {
             this.repositionEntries();
-            if (p_93503_ == this.getSelected()) {
+            if (entry == this.getSelected()) {
                 this.setSelected(null);
             }
         }
@@ -427,32 +417,31 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         return this.hovered;
     }
 
-    void bindEntryToSelf(AbstractSelectionList.Entry<E> p_93506_) {
-        p_93506_.list = this;
+    private void bindEntryToSelf(final AbstractSelectionList.Entry<E> entry) {
+        entry.list = this;
     }
 
-    protected void narrateListElementPosition(NarrationElementOutput p_168791_, E p_168792_) {
-        List<E> list = this.children();
-        if (list.size() > 1) {
-            int i = list.indexOf(p_168792_);
-            if (i != -1) {
-                p_168791_.add(NarratedElementType.POSITION, Component.translatable("narrator.position.list", i + 1, list.size()));
+    protected void narrateListElementPosition(final NarrationElementOutput output, final E element) {
+        List<E> children = this.children();
+        if (children.size() > 1) {
+            int index = children.indexOf(element);
+            if (index != -1) {
+                output.add(NarratedElementType.POSITION, Component.translatable("narrator.position.list", index + 1, children.size()));
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    protected abstract static class Entry<E extends AbstractSelectionList.Entry<E>> implements GuiEventListener, LayoutElement {
+        protected abstract static class Entry<E extends AbstractSelectionList.Entry<E>> implements LayoutElement, GuiEventListener {
         public static final int CONTENT_PADDING = 2;
         private int x = 0;
         private int y = 0;
         private int width = 0;
         private int height;
         @Deprecated
-        AbstractSelectionList<E> list;
+        private AbstractSelectionList<E> list;
 
         @Override
-        public void setFocused(boolean p_265302_) {
+        public void setFocused(final boolean focused) {
         }
 
         @Override
@@ -460,29 +449,29 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
             return this.list.getFocused() == this;
         }
 
-        public abstract void renderContent(GuiGraphics p_283112_, int p_93524_, int p_93525_, boolean p_93531_, float p_93532_);
+        public abstract void extractContent(final GuiGraphicsExtractor graphics, int mouseX, int mouseY, boolean hovered, float a);
 
         @Override
-        public boolean isMouseOver(double p_93537_, double p_93538_) {
-            return this.getRectangle().containsPoint((int)p_93537_, (int)p_93538_);
-        }
-
-        @Override
-        public void setX(int p_426014_) {
-            this.x = p_426014_;
+        public boolean isMouseOver(final double mx, final double my) {
+            return this.getRectangle().containsPoint((int)mx, (int)my);
         }
 
         @Override
-        public void setY(int p_427849_) {
-            this.y = p_427849_;
+        public void setX(final int x) {
+            this.x = x;
         }
 
-        public void setWidth(int p_431442_) {
-            this.width = p_431442_;
+        @Override
+        public void setY(final int y) {
+            this.y = y;
         }
 
-        public void setHeight(int p_431103_) {
-            this.height = p_431103_;
+        public void setWidth(final int width) {
+            this.width = width;
+        }
+
+        public void setHeight(final int height) {
+            this.height = height;
         }
 
         public int getContentX() {
@@ -538,7 +527,7 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         }
 
         @Override
-        public void visitWidgets(Consumer<AbstractWidget> p_422685_) {
+        public void visitWidgets(final Consumer<AbstractWidget> widgetVisitor) {
         }
 
         @Override
@@ -547,12 +536,11 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class TrackedList extends AbstractList<E> {
+        private class TrackedList extends AbstractList<E> {
         private final List<E> delegate = Lists.newArrayList();
 
-        public E get(int p_93557_) {
-            return this.delegate.get(p_93557_);
+        public E get(final int index) {
+            return this.delegate.get(index);
         }
 
         @Override
@@ -560,19 +548,19 @@ public abstract class AbstractSelectionList<E extends AbstractSelectionList.Entr
             return this.delegate.size();
         }
 
-        public E set(int p_93559_, E p_93560_) {
-            E e = this.delegate.set(p_93559_, p_93560_);
-            AbstractSelectionList.this.bindEntryToSelf(p_93560_);
-            return e;
+        public E set(final int index, final E element) {
+            E entry = this.delegate.set(index, element);
+            AbstractSelectionList.this.bindEntryToSelf(element);
+            return entry;
         }
 
-        public void add(int p_93567_, E p_93568_) {
-            this.delegate.add(p_93567_, p_93568_);
-            AbstractSelectionList.this.bindEntryToSelf(p_93568_);
+        public void add(final int index, final E element) {
+            this.delegate.add(index, element);
+            AbstractSelectionList.this.bindEntryToSelf(element);
         }
 
-        public E remove(int p_93565_) {
-            return this.delegate.remove(p_93565_);
+        public E remove(final int index) {
+            return this.delegate.remove(index);
         }
     }
 }

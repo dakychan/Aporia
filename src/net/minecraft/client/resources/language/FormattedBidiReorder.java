@@ -9,31 +9,28 @@ import java.util.List;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.SubStringSource;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class FormattedBidiReorder {
-    public static FormattedCharSequence reorder(FormattedText p_118932_, boolean p_118933_) {
-        SubStringSource substringsource = SubStringSource.create(p_118932_, UCharacter::getMirror, FormattedBidiReorder::shape);
-        Bidi bidi = new Bidi(substringsource.getPlainText(), p_118933_ ? 127 : 126);
+    public static FormattedCharSequence reorder(final FormattedText text, final boolean defaultRightToLeft) {
+        SubStringSource source = SubStringSource.create(text, UCharacter::getMirror, FormattedBidiReorder::shape);
+        Bidi bidi = new Bidi(source.getPlainText(), defaultRightToLeft ? 127 : 126);
         bidi.setReorderingMode(0);
-        List<FormattedCharSequence> list = Lists.newArrayList();
-        int i = bidi.countRuns();
+        List<FormattedCharSequence> result = Lists.newArrayList();
+        int runCount = bidi.countRuns();
 
-        for (int j = 0; j < i; j++) {
-            BidiRun bidirun = bidi.getVisualRun(j);
-            list.addAll(substringsource.substring(bidirun.getStart(), bidirun.getLength(), bidirun.isOddRun()));
+        for (int i = 0; i < runCount; i++) {
+            BidiRun run = bidi.getVisualRun(i);
+            result.addAll(source.substring(run.getStart(), run.getLength(), run.isOddRun()));
         }
 
-        return FormattedCharSequence.composite(list);
+        return FormattedCharSequence.composite(result);
     }
 
-    private static String shape(String p_118930_) {
+    private static String shape(final String text) {
         try {
-            return new ArabicShaping(8).shape(p_118930_);
-        } catch (Exception exception) {
-            return p_118930_;
+            return new ArabicShaping(8).shape(text);
+        } catch (Exception e) {
+            return text;
         }
     }
 }

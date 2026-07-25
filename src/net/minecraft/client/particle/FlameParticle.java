@@ -3,24 +3,21 @@ package net.minecraft.client.particle;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
-import net.minecraft.util.Mth;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class FlameParticle extends RisingParticle {
-    FlameParticle(
-        ClientLevel p_106800_,
-        double p_106801_,
-        double p_106802_,
-        double p_106803_,
-        double p_106804_,
-        double p_106805_,
-        double p_106806_,
-        TextureAtlasSprite p_430216_
+    private FlameParticle(
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xd,
+        final double yd,
+        final double zd,
+        final TextureAtlasSprite sprite
     ) {
-        super(p_106800_, p_106801_, p_106802_, p_106803_, p_106804_, p_106805_, p_106806_, p_430216_);
+        super(level, x, y, z, xd, yd, zd, sprite);
     }
 
     @Override
@@ -29,79 +26,65 @@ public class FlameParticle extends RisingParticle {
     }
 
     @Override
-    public void move(double p_106817_, double p_106818_, double p_106819_) {
-        this.setBoundingBox(this.getBoundingBox().move(p_106817_, p_106818_, p_106819_));
+    public void move(final double xa, final double ya, final double za) {
+        this.setBoundingBox(this.getBoundingBox().move(xa, ya, za));
         this.setLocationFromBoundingbox();
     }
 
     @Override
-    public float getQuadSize(float p_106824_) {
-        float f = (this.age + p_106824_) / this.lifetime;
-        return this.quadSize * (1.0F - f * f * 0.5F);
+    public float getQuadSize(final float a) {
+        float s = (this.age + a) / this.lifetime;
+        return this.quadSize * (1.0F - s * s * 0.5F);
     }
 
     @Override
-    public int getLightColor(float p_106821_) {
-        float f = (this.age + p_106821_) / this.lifetime;
-        f = Mth.clamp(f, 0.0F, 1.0F);
-        int i = super.getLightColor(p_106821_);
-        int j = i & 0xFF;
-        int k = i >> 16 & 0xFF;
-        j += (int)(f * 15.0F * 16.0F);
-        if (j > 240) {
-            j = 240;
-        }
-
-        return j | k << 16;
+    public int getLightCoords(final float a) {
+        return LightCoordsUtil.addSmoothBlockEmission(super.getLightCoords(a), (this.age + a) / this.lifetime);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider implements ParticleProvider<SimpleParticleType> {
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public Provider(SpriteSet p_106827_) {
-            this.sprite = p_106827_;
+        public Provider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_106838_,
-            ClientLevel p_106839_,
-            double p_106840_,
-            double p_106841_,
-            double p_106842_,
-            double p_106843_,
-            double p_106844_,
-            double p_106845_,
-            RandomSource p_424029_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new FlameParticle(p_106839_, p_106840_, p_106841_, p_106842_, p_106843_, p_106844_, p_106845_, this.sprite.get(p_424029_));
+            return new FlameParticle(level, x, y, z, xAux, yAux, zAux, this.sprite.get(random));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class SmallFlameProvider implements ParticleProvider<SimpleParticleType> {
+        public static class SmallFlameProvider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public SmallFlameProvider(SpriteSet p_172113_) {
-            this.sprite = p_172113_;
+        public SmallFlameProvider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_172124_,
-            ClientLevel p_172125_,
-            double p_172126_,
-            double p_172127_,
-            double p_172128_,
-            double p_172129_,
-            double p_172130_,
-            double p_172131_,
-            RandomSource p_430427_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            FlameParticle flameparticle = new FlameParticle(
-                p_172125_, p_172126_, p_172127_, p_172128_, p_172129_, p_172130_, p_172131_, this.sprite.get(p_430427_)
-            );
-            flameparticle.scale(0.5F);
-            return flameparticle;
+            FlameParticle particle = new FlameParticle(level, x, y, z, xAux, yAux, zAux, this.sprite.get(random));
+            particle.scale(0.5F);
+            return particle;
         }
     }
 }

@@ -15,20 +15,20 @@ public enum JsonRPCErrors {
     private final int errorCode;
     private final String message;
 
-    private JsonRPCErrors(final int p_424602_, final String p_422906_) {
-        this.errorCode = p_424602_;
-        this.message = p_422906_;
+    JsonRPCErrors(final int errorCode, final String message) {
+        this.errorCode = errorCode;
+        this.message = message;
     }
 
-    public JsonObject createWithUnknownId(@Nullable String p_430166_) {
-        return JsonRPCUtils.createError(JsonNull.INSTANCE, this.message, this.errorCode, p_430166_);
+    public JsonObject createWithUnknownId(final @Nullable String data) {
+        return JsonRPCUtils.createError(JsonNull.INSTANCE, this.message, this.errorCode, data);
     }
 
-    public JsonObject createWithoutData(JsonElement p_424440_) {
-        return JsonRPCUtils.createError(p_424440_, this.message, this.errorCode, null);
+    public JsonObject createWithoutData(final JsonElement id) {
+        return JsonRPCUtils.createError(id, this.message, this.errorCode, null);
     }
 
-    public JsonObject create(JsonElement p_427984_, String p_430106_) {
-        return JsonRPCUtils.createError(p_427984_, this.message, this.errorCode, p_430106_);
+    public JsonObject create(final JsonElement id, final String data) {
+        return JsonRPCUtils.createError(id, this.message, this.errorCode, data);
     }
 }

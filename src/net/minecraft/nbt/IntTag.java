@@ -7,18 +7,18 @@ import java.io.IOException;
 public record IntTag(int value) implements NumericTag {
     private static final int SELF_SIZE_IN_BYTES = 12;
     public static final TagType<IntTag> TYPE = new TagType.StaticSize<IntTag>() {
-        public IntTag load(DataInput p_128708_, NbtAccounter p_128710_) throws IOException {
-            return IntTag.valueOf(readAccounted(p_128708_, p_128710_));
+        public IntTag load(final DataInput input, final NbtAccounter accounter) throws IOException {
+            return IntTag.valueOf(readAccounted(input, accounter));
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197483_, StreamTagVisitor p_197484_, NbtAccounter p_301753_) throws IOException {
-            return p_197484_.visit(readAccounted(p_197483_, p_301753_));
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            return output.visit(readAccounted(input, accounter));
         }
 
-        private static int readAccounted(DataInput p_301711_, NbtAccounter p_301714_) throws IOException {
-            p_301714_.accountBytes(12L);
-            return p_301711_.readInt();
+        private static int readAccounted(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(12L);
+            return input.readInt();
         }
 
         @Override
@@ -38,17 +38,16 @@ public record IntTag(int value) implements NumericTag {
     };
 
     @Deprecated(forRemoval = true)
-    public IntTag(int value) {
-        this.value = value;
+    public IntTag {
     }
 
-    public static IntTag valueOf(int p_128680_) {
-        return p_128680_ >= -128 && p_128680_ <= 1024 ? IntTag.Cache.cache[p_128680_ - -128] : new IntTag(p_128680_);
+    public static IntTag valueOf(final int i) {
+        return i >= -128 && i <= 1024 ? IntTag.Cache.cache[i - -128] : new IntTag(i);
     }
 
     @Override
-    public void write(DataOutput p_128682_) throws IOException {
-        p_128682_.writeInt(this.value);
+    public void write(final DataOutput output) throws IOException {
+        output.writeInt(this.value);
     }
 
     @Override
@@ -71,8 +70,8 @@ public record IntTag(int value) implements NumericTag {
     }
 
     @Override
-    public void accept(TagVisitor p_177984_) {
-        p_177984_.visitInt(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitInt(this);
     }
 
     @Override
@@ -111,24 +110,21 @@ public record IntTag(int value) implements NumericTag {
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197481_) {
-        return p_197481_.visit(this.value);
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
+        return visitor.visit(this.value);
     }
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitInt(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitInt(this);
+        return visitor.build();
     }
 
-    static class Cache {
+    private static class Cache {
         private static final int HIGH = 1024;
         private static final int LOW = -128;
-        static final IntTag[] cache = new IntTag[1153];
-
-        private Cache() {
-        }
+        private static final IntTag[] cache = new IntTag[1153];
 
         static {
             for (int i = 0; i < cache.length; i++) {

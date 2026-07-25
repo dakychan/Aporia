@@ -10,13 +10,13 @@ public class FastBufferedInputStream extends InputStream {
     private int limit;
     private int position;
 
-    public FastBufferedInputStream(InputStream p_196566_) {
-        this(p_196566_, 8192);
+    public FastBufferedInputStream(final InputStream in) {
+        this(in, 8192);
     }
 
-    public FastBufferedInputStream(InputStream p_196568_, int p_196569_) {
-        this.in = p_196568_;
-        this.buffer = new byte[p_196569_];
+    public FastBufferedInputStream(final InputStream in, final int bufferSize) {
+        this.in = in;
+        this.buffer = new byte[bufferSize];
     }
 
     @Override
@@ -32,46 +32,46 @@ public class FastBufferedInputStream extends InputStream {
     }
 
     @Override
-    public int read(byte[] p_196576_, int p_196577_, int p_196578_) throws IOException {
-        int i = this.bytesInBuffer();
-        if (i <= 0) {
-            if (p_196578_ >= this.buffer.length) {
-                return this.in.read(p_196576_, p_196577_, p_196578_);
+    public int read(final byte[] output, final int offset, int length) throws IOException {
+        int availableInBuffer = this.bytesInBuffer();
+        if (availableInBuffer <= 0) {
+            if (length >= this.buffer.length) {
+                return this.in.read(output, offset, length);
             }
 
             this.fill();
-            i = this.bytesInBuffer();
-            if (i <= 0) {
+            availableInBuffer = this.bytesInBuffer();
+            if (availableInBuffer <= 0) {
                 return -1;
             }
         }
 
-        if (p_196578_ > i) {
-            p_196578_ = i;
+        if (length > availableInBuffer) {
+            length = availableInBuffer;
         }
 
-        System.arraycopy(this.buffer, this.position, p_196576_, p_196577_, p_196578_);
-        this.position += p_196578_;
-        return p_196578_;
+        System.arraycopy(this.buffer, this.position, output, offset, length);
+        this.position += length;
+        return length;
     }
 
     @Override
-    public long skip(long p_196580_) throws IOException {
-        if (p_196580_ <= 0L) {
+    public long skip(long count) throws IOException {
+        if (count <= 0L) {
             return 0L;
-        } else {
-            long i = this.bytesInBuffer();
-            if (i <= 0L) {
-                return this.in.skip(p_196580_);
-            } else {
-                if (p_196580_ > i) {
-                    p_196580_ = i;
-                }
-
-                this.position = (int)(this.position + p_196580_);
-                return p_196580_;
-            }
         }
+
+        long availableInBuffer = this.bytesInBuffer();
+        if (availableInBuffer <= 0L) {
+            return this.in.skip(count);
+        }
+
+        if (count > availableInBuffer) {
+            count = availableInBuffer;
+        }
+
+        this.position = (int)(this.position + count);
+        return count;
     }
 
     @Override
@@ -91,9 +91,9 @@ public class FastBufferedInputStream extends InputStream {
     private void fill() throws IOException {
         this.limit = 0;
         this.position = 0;
-        int i = this.in.read(this.buffer, 0, this.buffer.length);
-        if (i > 0) {
-            this.limit = i;
+        int actuallyRead = this.in.read(this.buffer, 0, this.buffer.length);
+        if (actuallyRead > 0) {
+            this.limit = actuallyRead;
         }
     }
 }

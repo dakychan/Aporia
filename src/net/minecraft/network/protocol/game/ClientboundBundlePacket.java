@@ -5,8 +5,8 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.PacketType;
 
 public class ClientboundBundlePacket extends BundlePacket<ClientGamePacketListener> {
-    public ClientboundBundlePacket(Iterable<Packet<? super ClientGamePacketListener>> p_265231_) {
-        super(p_265231_);
+    public ClientboundBundlePacket(final Iterable<Packet<? super ClientGamePacketListener>> packets) {
+        super(packets);
     }
 
     @Override
@@ -14,7 +14,7 @@ public class ClientboundBundlePacket extends BundlePacket<ClientGamePacketListen
         return GamePacketTypes.CLIENTBOUND_BUNDLE;
     }
 
-    public void handle(ClientGamePacketListener p_265490_) {
-        p_265490_.handleBundlePacket(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleBundlePacket(this);
     }
 }

@@ -8,17 +8,17 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V702 extends Schema {
-    public V702(int p_18007_, Schema p_18008_) {
-        super(p_18007_, p_18008_);
+    public V702(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_18016_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_18016_);
-        p_18016_.register(
-            map, "ZombieVillager", p_390404_ -> DSL.optionalFields("Offers", DSL.optionalFields("Recipes", DSL.list(References.VILLAGER_TRADE.in(p_18016_))))
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        schema.register(
+            map, "ZombieVillager", name -> DSL.optionalFields("Offers", DSL.optionalFields("Recipes", DSL.list(References.VILLAGER_TRADE.in(schema))))
         );
-        p_18016_.registerSimple(map, "Husk");
+        schema.registerSimple(map, "Husk");
         return map;
     }
 }

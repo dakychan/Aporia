@@ -1,4 +1,4 @@
-﻿param(
+param(
     [string]$Mode = "menu"
 )
 
@@ -11,7 +11,8 @@ $MERGE = Join-Path $SBORKA "merge"
 $CACHE = Join-Path $SBORKA ".build_cache"
 $HASH_FILE = Join-Path $CACHE "hashes.json"
 $LIB_HASH_FILE = Join-Path $CACHE "lib_hashes.json"
-$KOTLINC = "D:\moved\kotlin-master\dist\kotlinc\lib\kotlin-compiler.jar"
+$KOTLINC_BAT = "D:\moved\kotlin-master\dist\kotlinc\bin\kotlinc.bat"
+$KOTLINC_JAR = "D:\moved\kotlin-master\dist\kotlinc\lib\kotlin-compiler.jar"
 $TLAUNCHER_JSON = "$env:USERPROFILE\AppData\Roaming\.tlauncher\legacy\Minecraft\game\versions\Aporia\Aporia.json"
 
 $CP = $null
@@ -57,49 +58,83 @@ function Invoke-Compile {
         $json.psobject.properties | ForEach-Object { $cached[$_.Name] = $_.Value }
     }
 
-    $changed = $false
-    if ($cached.Count -ne $current.Count) { $changed = $true }
-    else {
-        foreach ($k in $current.Keys) {
-            if (-not $cached.ContainsKey($k) -or $cached[$k] -ne $current[$k]) { $changed = $true; break }
+    # Find changed, removed, added files
+    $changedKt = @()
+    $changedJava = @()
+    $removedKt = @()
+    foreach ($k in $cached.Keys) {
+        if (-not $current.ContainsKey($k)) {
+            if ($k -like "*.kt") { $removedKt += $k }
         }
     }
+    foreach ($k in $current.Keys) {
+        if (-not $cached.ContainsKey($k) -or $cached[$k] -ne $current[$k]) {
+            if ($k -like "*.kt") { $changedKt += $k } else { $changedJava += $k }
+        }
+    }
+    $ktChanged = ($changedKt.Count -gt 0) -or ($removedKt.Count -gt 0)
+    $javaChanged = $changedJava.Count -gt 0
 
-    if (-not $changed) {
-        Write-Host "[CACHED] 0 изменений — скип компиляции" -ForegroundColor Green
+    if (-not $ktChanged -and -not $javaChanged) {
+        Write-Host "[CACHED] 0 changes - skip" -ForegroundColor Green
         return $false
     }
 
-    Write-Host "=== КОМПИЛЯЦИЯ ===" -ForegroundColor Cyan
-
-    # Clean classes but keep dir
-    Remove-Item -Recurse -Force "$CLASSES\*" -ErrorAction SilentlyContinue
-
     $cp = Get-CP
 
-    $ktTime = Measure-Command {
-        Write-Host "[K2] Kotlin..." -NoNewline -ForegroundColor Yellow
-        & java -Xmx4g -jar $KOTLINC -classpath "$cp" "$SRC" -d "$CLASSES" -jvm-target 26 -java-parameters 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            & java -Xmx4g -jar $KOTLINC -classpath "$cp" "$SRC" -d "$CLASSES" -jvm-target 26 -java-parameters
-            Write-Host " FAIL" -ForegroundColor Red; exit 1
-        }
-        Write-Host " OK" -ForegroundColor Green
-    }
-    Write-Host "  K2: $($ktTime.TotalSeconds.ToString('0.0'))s"
+    # --- Kotlin incremental ---
+    if ($ktChanged) {
+        Write-Host "=== KOTLIN ($($changedKt.Count) changed, $($removedKt.Count) removed) ===" -ForegroundColor Cyan
 
-    $javaFiles = Get-ChildItem -Path $SRC -Recurse -Filter "*.java"
-    if ($javaFiles.Count -gt 0) {
+        # Remove only stale .class for changed/removed .kt files
+        $changedKt + $removedKt | ForEach-Object { Remove-ClassFiles $_ }
+
+        $ktTime = Measure-Command {
+            Write-Host "[K2] Kotlin..." -NoNewline -ForegroundColor Yellow
+            $preloader = "D:\moved\kotlin-master\dist\kotlinc\lib\kotlin-preloader.jar"
+            $compiler = "D:\moved\kotlin-master\dist\kotlinc\lib\kotlin-compiler.jar"
+            & java -Xmx4g -cp $preloader org.jetbrains.kotlin.preloading.Preloader -cp "$compiler" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -classpath "$cp" -d "$CLASSES" -jvm-target 26 -java-parameters -Xafter-compile "$SRC" 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                & java -Xmx4g -cp $preloader org.jetbrains.kotlin.preloading.Preloader -cp "$compiler" org.jetbrains.kotlin.cli.jvm.K2JVMCompiler -classpath "$cp" -d "$CLASSES" -jvm-target 26 -java-parameters -Xafter-compile "$SRC"
+                Write-Host " FAIL" -ForegroundColor Red; exit 1
+            }
+            Write-Host " OK" -ForegroundColor Green
+        }
+        Write-Host "  K2: $($ktTime.TotalSeconds.ToString('0.0'))s"
+    }
+
+    # --- Java incremental ---
+    if ($javaChanged) {
+        Write-Host "=== JAVA ($($changedJava.Count) files) ===" -ForegroundColor Cyan
+
         $javacTime = Measure-Command {
-            Write-Host "[Javac] Java..." -NoNewline -ForegroundColor Yellow
-            $srcList = Join-Path $SBORKA "sources.txt"
-            $javaFiles.FullName | Set-Content $srcList -Force
+            # Remove stale .class for changed java files
+            $changedJava | ForEach-Object { Remove-ClassFiles $_ }
+
+            Write-Host "[Javac] Java (incr)..." -NoNewline -ForegroundColor Yellow
+            $srcList = Join-Path $SBORKA "sources_inc.txt"
+            $changedPaths = $changedJava | ForEach-Object { Join-Path $SRC $_ }
+            $changedPaths | Set-Content $srcList -Force
             $javacArgs = @("-d", "$CLASSES", "-sourcepath", "$SRC", "--release", "26", "-encoding", "UTF-8", "-cp", "$cp;$CLASSES", "-processorpath", "$LIBS\lombok.jar", "-J-Xmx4g", "@$srcList")
             & javac @javacArgs 2>&1 | Out-Null
             if ($LASTEXITCODE -ne 0) {
-                & javac @javacArgs
-                Remove-Item $srcList -Force -ErrorAction SilentlyContinue
-                Write-Host " FAIL" -ForegroundColor Red; exit 1
+                # Fallback: full java recompile
+                Write-Host " incr FAIL, full..." -NoNewline -ForegroundColor Yellow
+                $javaFiles = Get-ChildItem -Path $SRC -Recurse -Filter "*.java"
+                if ($ktChanged) {
+                    # Only remove stale Java .class files, keep ALL Kotlin classes
+                    foreach ($jf in $javaFiles) {
+                        $classFile = $jf.FullName.Replace($SRC, $CLASSES).Replace('.java', '.class')
+                        if (Test-Path $classFile) { Remove-Item $classFile -Force -ErrorAction SilentlyContinue }
+                    }
+                }
+                $javaFiles.FullName | Set-Content $srcList -Force
+                & javac @javacArgs 2>&1 | Out-Null
+                if ($LASTEXITCODE -ne 0) {
+                    & javac @javacArgs
+                    Remove-Item $srcList -Force -ErrorAction SilentlyContinue
+                    Write-Host " FAIL" -ForegroundColor Red; exit 1
+                }
             }
             Remove-Item $srcList -Force -ErrorAction SilentlyContinue
             Write-Host " OK" -ForegroundColor Green
@@ -107,18 +142,37 @@ function Invoke-Compile {
         Write-Host "  Javac: $($javacTime.TotalSeconds.ToString('0.0'))s"
     }
 
+    # --- Bytecode obfuscation (after both Kotlin + Java) ---
+    if ($ktChanged -or $javaChanged) {
+        Write-Host "=== OBFUSCATE ===" -ForegroundColor Cyan
+        $obfTime = Measure-Command {
+            Write-Host "[Obf] Bytecode..." -NoNewline -ForegroundColor Yellow
+            & java -Xmx2g -cp "$KOTLINC_JAR" org.jetbrains.kotlin.cli.jvm.compiler.BytecodeObfuscator "$CLASSES" 2>&1 | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host " FAIL" -ForegroundColor Red
+            } else {
+                Write-Host " OK" -ForegroundColor Green
+            }
+        }
+        Write-Host "  Obf: $($obfTime.TotalSeconds.ToString('0.0'))s"
+    }
+
     # Save updated hashes
     $current | ConvertTo-Json -Compress | Set-Content $HASH_FILE -Force
-    Write-Host "=== КОМПИЛЯЦИЯ ГОТОВА ===" -ForegroundColor Cyan
+    Write-Host "=== COMPILATION DONE ===" -ForegroundColor Cyan
     return $true
 }
 
 function Invoke-Merge {
     $rebuildMerge = $false
     if (Test-Path $LIB_HASH_FILE) {
-        $jsonLib = Get-Content $LIB_HASH_FILE -Raw | ConvertFrom-Json
-    $cachedLib = @{}
-    $jsonLib.psobject.properties | ForEach-Object { $cachedLib[$_.Name] = $_.Value }
+        $cachedLib = @{}
+        try {
+            $jsonLib = Get-Content $LIB_HASH_FILE -Raw | ConvertFrom-Json
+            if ($jsonLib -ne $null) {
+                $jsonLib.psobject.properties | ForEach-Object { $cachedLib[$_.Name] = $_.Value }
+            }
+        } catch {}
         $currentLib = Get-FileHashes $LIBS "*.jar"
         if ($cachedLib.Count -ne $currentLib.Count) { $rebuildMerge = $true }
         else {
@@ -129,11 +183,11 @@ function Invoke-Merge {
     } else { $rebuildMerge = $true }
 
     if ((-not $rebuildMerge) -and (Test-Path $MERGE) -and (Test-Path "$MERGE\so")) {
-        Write-Host "[CACHED] Libs без изменений — мердж скип" -ForegroundColor Green
+        Write-Host "[CACHED] Libs no changes - merge skip" -ForegroundColor Green
         return
     }
 
-    Write-Host "[Merge] Распаковка libs..." -ForegroundColor Yellow
+    Write-Host "[Merge] Unpacking libs..." -ForegroundColor Yellow
     New-Item -ItemType Directory -Path $MERGE -Force | Out-Null
     Remove-Item -Recurse -Force "$MERGE\*" -ErrorAction SilentlyContinue
 
@@ -152,21 +206,22 @@ function Invoke-Merge {
 function Invoke-BuildZip {
     Invoke-Merge
 
-    Write-Host "[Copy] Classes + ресурсы..." -ForegroundColor Yellow
+    Write-Host "[Copy] Classes + resources..." -ForegroundColor Yellow
     robocopy $CLASSES $MERGE /E /R:0 /W:0 | Out-Null
 
-    @("data", "mediaplayerinfo") | ForEach-Object {
+    @("mediaplayerinfo") | ForEach-Object {
         $p = Join-Path $SRC $_
         if (Test-Path $p) { robocopy $p (Join-Path $MERGE $_) /E /R:0 /W:0 | Out-Null }
     }
 
+    $excludeAssets = @("skins", "objects")
     if (Test-Path "$SRC\assets") {
-        Get-ChildItem -Path "$SRC\assets" -Directory | ForEach-Object {
+        Get-ChildItem -Path "$SRC\assets" -Directory | Where-Object { $_.Name -notin $excludeAssets } | ForEach-Object {
             robocopy $_.FullName "$MERGE\assets\$($_.Name)" /E /R:0 /W:0 | Out-Null
         }
     }
 
-    Write-Host "[META-INF] Чистка..." -ForegroundColor Yellow
+    Write-Host "[META-INF] Cleanup..." -ForegroundColor Yellow
     if (Test-Path "$SRC\META-INF\MANIFEST.MF") { Copy-Item "$SRC\META-INF\MANIFEST.MF" "$SBORKA\_manifest_backup.MF" -Force -ErrorAction SilentlyContinue }
     if (Test-Path "$MERGE\META-INF") {
         $metaServices = Join-Path $SBORKA "_meta_services"
@@ -206,7 +261,7 @@ function Invoke-BuildZip {
 
     $size = (Get-Item $zipFile).Length
     $sizeMB = [math]::Round($size / 1MB, 2)
-    Write-Host "[OK] Aporia.zip — ${sizeMB}MB" -ForegroundColor Green
+    Write-Host "[OK] Aporia.zip - ${sizeMB}MB" -ForegroundColor Green
 
     if ($size -gt 1MB) {
         $releaseZip = Join-Path $SBORKA "Aporia_RELEASE.zip"
@@ -221,10 +276,15 @@ function Invoke-Run {
     Invoke-Merge
     robocopy $CLASSES $MERGE /E /R:0 /W:0 | Out-Null
 
+    $runDir = Join-Path $ROOT "run"
+    New-Item -ItemType Directory -Path $runDir -Force | Out-Null
+
     $cp = Get-CP
     $runCp = "$MERGE;$cp;$SRC"
-    Write-Host "=== ЗАПУСК ===" -ForegroundColor Cyan
+    Write-Host "=== RUN ===" -ForegroundColor Cyan
+    Push-Location $runDir
     & java -Xmx4g -Xms2g -cp $runCp mcp.client.Start --username protect3ed
+    Pop-Location
 }
 
 function Show-Menu {

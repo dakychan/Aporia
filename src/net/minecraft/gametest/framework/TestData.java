@@ -3,7 +3,6 @@ package net.minecraft.gametest.framework;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.function.Function;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
@@ -20,10 +19,11 @@ public record TestData<EnvironmentType>(
     boolean manualOnly,
     int maxAttempts,
     int requiredSuccesses,
-    boolean skyAccess
+    boolean skyAccess,
+    int padding
 ) {
-    public static final MapCodec<TestData<Holder<TestEnvironmentDefinition>>> CODEC = RecordCodecBuilder.mapCodec(
-        p_394785_ -> p_394785_.group(
+    public static final MapCodec<TestData<Holder<TestEnvironmentDefinition<?>>>> CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
                 TestEnvironmentDefinition.CODEC.fieldOf("environment").forGetter(TestData::environment),
                 Identifier.CODEC.fieldOf("structure").forGetter(TestData::structure),
                 ExtraCodecs.POSITIVE_INT.fieldOf("max_ticks").forGetter(TestData::maxTicks),
@@ -33,22 +33,30 @@ public record TestData<EnvironmentType>(
                 Codec.BOOL.optionalFieldOf("manual_only", false).forGetter(TestData::manualOnly),
                 ExtraCodecs.POSITIVE_INT.optionalFieldOf("max_attempts", 1).forGetter(TestData::maxAttempts),
                 ExtraCodecs.POSITIVE_INT.optionalFieldOf("required_successes", 1).forGetter(TestData::requiredSuccesses),
-                Codec.BOOL.optionalFieldOf("sky_access", false).forGetter(TestData::skyAccess)
+                Codec.BOOL.optionalFieldOf("sky_access", false).forGetter(TestData::skyAccess),
+                ExtraCodecs.intRange(0, 128).optionalFieldOf("padding", 0).forGetter(TestData::padding)
             )
-            .apply(p_394785_, TestData::new)
+            .apply(i, TestData::new)
     );
 
-    public TestData(EnvironmentType p_396364_, Identifier p_460492_, int p_393105_, int p_392620_, boolean p_397080_, Rotation p_397957_) {
-        this(p_396364_, p_460492_, p_393105_, p_392620_, p_397080_, p_397957_, false, 1, 1, false);
+    public TestData(
+        final EnvironmentType environment,
+        final Identifier structure,
+        final int maxTicks,
+        final int setupTicks,
+        final boolean required,
+        final Rotation rotation
+    ) {
+        this(environment, structure, maxTicks, setupTicks, required, rotation, false, 1, 1, false, 0);
     }
 
-    public TestData(EnvironmentType p_395932_, Identifier p_450438_, int p_396112_, int p_397698_, boolean p_392962_) {
-        this(p_395932_, p_450438_, p_396112_, p_397698_, p_392962_, Rotation.NONE);
+    public TestData(final EnvironmentType environment, final Identifier structure, final int maxTicks, final int setupTicks, final boolean required) {
+        this(environment, structure, maxTicks, setupTicks, required, Rotation.NONE);
     }
 
-    public <T> TestData<T> map(Function<EnvironmentType, T> p_396192_) {
+    public <T> TestData<T> map(final Function<EnvironmentType, T> mapper) {
         return new TestData<>(
-            p_396192_.apply(this.environment),
+            mapper.apply(this.environment),
             this.structure,
             this.maxTicks,
             this.setupTicks,
@@ -57,7 +65,8 @@ public record TestData<EnvironmentType>(
             this.manualOnly,
             this.maxAttempts,
             this.requiredSuccesses,
-            this.skyAccess
+            this.skyAccess,
+            this.padding
         );
     }
 }

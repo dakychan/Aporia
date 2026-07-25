@@ -2,24 +2,22 @@ package net.minecraft.world.level.levelgen.feature.foliageplacers;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class SpruceFoliagePlacer extends FoliagePlacer {
     public static final MapCodec<SpruceFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
-        p_68735_ -> foliagePlacerParts(p_68735_)
-            .and(IntProvider.codec(0, 24).fieldOf("trunk_height").forGetter(p_161553_ -> p_161553_.trunkHeight))
-            .apply(p_68735_, SpruceFoliagePlacer::new)
+        i -> foliagePlacerParts(i).and(IntProviders.codec(0, 24).fieldOf("trunk_height").forGetter(p -> p.trunkHeight)).apply(i, SpruceFoliagePlacer::new)
     );
     private final IntProvider trunkHeight;
 
-    public SpruceFoliagePlacer(IntProvider p_161539_, IntProvider p_161540_, IntProvider p_161541_) {
-        super(p_161539_, p_161540_);
-        this.trunkHeight = p_161541_;
+    public SpruceFoliagePlacer(final IntProvider radius, final IntProvider offset, final IntProvider trunkHeight) {
+        super(radius, offset);
+        this.trunkHeight = trunkHeight;
     }
 
     @Override
@@ -29,40 +27,40 @@ public class SpruceFoliagePlacer extends FoliagePlacer {
 
     @Override
     protected void createFoliage(
-        LevelSimulatedReader p_225744_,
-        FoliagePlacer.FoliageSetter p_273256_,
-        RandomSource p_225746_,
-        TreeConfiguration p_225747_,
-        int p_225748_,
-        FoliagePlacer.FoliageAttachment p_225749_,
-        int p_225750_,
-        int p_225751_,
-        int p_225752_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius,
+        final int offset
     ) {
-        BlockPos blockpos = p_225749_.pos();
-        int i = p_225746_.nextInt(2);
-        int j = 1;
-        int k = 0;
+        BlockPos foliagePos = foliageAttachment.pos();
+        int currentRadius = random.nextInt(2);
+        int maxRadius = 1;
+        int minRadius = 0;
 
-        for (int l = p_225752_; l >= -p_225750_; l--) {
-            this.placeLeavesRow(p_225744_, p_273256_, p_225746_, p_225747_, blockpos, i, l, p_225749_.doubleTrunk());
-            if (i >= j) {
-                i = k;
-                k = 1;
-                j = Math.min(j + 1, p_225751_ + p_225749_.radiusOffset());
+        for (int yo = offset; yo >= -foliageHeight; yo--) {
+            this.placeLeavesRow(level, foliageSetter, random, config, foliagePos, currentRadius, yo, foliageAttachment.doubleTrunk());
+            if (currentRadius >= maxRadius) {
+                currentRadius = minRadius;
+                minRadius = 1;
+                maxRadius = Math.min(maxRadius + 1, leafRadius + foliageAttachment.radiusOffset());
             } else {
-                i++;
+                currentRadius++;
             }
         }
     }
 
     @Override
-    public int foliageHeight(RandomSource p_225740_, int p_225741_, TreeConfiguration p_225742_) {
-        return Math.max(4, p_225741_ - this.trunkHeight.sample(p_225740_));
+    public int foliageHeight(final RandomSource random, final int treeHeight, final TreeConfiguration config) {
+        return Math.max(4, treeHeight - this.trunkHeight.sample(random));
     }
 
     @Override
-    protected boolean shouldSkipLocation(RandomSource p_225733_, int p_225734_, int p_225735_, int p_225736_, int p_225737_, boolean p_225738_) {
-        return p_225734_ == p_225737_ && p_225736_ == p_225737_ && p_225737_ > 0;
+    protected boolean shouldSkipLocation(final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk) {
+        return dx == currentRadius && dz == currentRadius && currentRadius > 0;
     }
 }

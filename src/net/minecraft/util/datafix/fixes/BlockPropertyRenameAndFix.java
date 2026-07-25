@@ -10,21 +10,30 @@ public class BlockPropertyRenameAndFix extends AbstractBlockPropertyFix {
     private final String newPropertyName;
     private final UnaryOperator<String> valueFixer;
 
-    public BlockPropertyRenameAndFix(Schema p_394707_, String p_391943_, String p_392530_, String p_391480_, String p_392149_, UnaryOperator<String> p_395499_) {
-        super(p_394707_, p_391943_);
-        this.blockId = p_392530_;
-        this.oldPropertyName = p_391480_;
-        this.newPropertyName = p_392149_;
-        this.valueFixer = p_395499_;
+    public BlockPropertyRenameAndFix(
+        final Schema outputSchema,
+        final String name,
+        final String blockId,
+        final String oldPropertyName,
+        final String newPropertyName,
+        final UnaryOperator<String> valueFixer
+    ) {
+        super(outputSchema, name);
+        this.blockId = blockId;
+        this.oldPropertyName = oldPropertyName;
+        this.newPropertyName = newPropertyName;
+        this.valueFixer = valueFixer;
     }
 
     @Override
-    protected boolean shouldFix(String p_397317_) {
-        return p_397317_.equals(this.blockId);
+    protected boolean shouldFix(final String blockId) {
+        return blockId.equals(this.blockId);
     }
 
     @Override
-    protected <T> Dynamic<T> fixProperties(String p_396643_, Dynamic<T> p_397950_) {
-        return p_397950_.renameAndFixField(this.oldPropertyName, this.newPropertyName, p_392508_ -> p_392508_.createString(this.valueFixer.apply(p_392508_.asString(""))));
+    protected <T> Dynamic<T> fixProperties(final String blockId, final Dynamic<T> properties) {
+        return properties.renameAndFixField(
+            this.oldPropertyName, this.newPropertyName, dynamic -> dynamic.createString(this.valueFixer.apply(dynamic.asString("")))
+        );
     }
 }

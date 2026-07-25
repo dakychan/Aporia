@@ -29,8 +29,8 @@ import net.minecraft.world.level.pathfinder.PathType;
 import org.jspecify.annotations.Nullable;
 
 public class WitherSkeleton extends AbstractSkeleton {
-    public WitherSkeleton(EntityType<? extends WitherSkeleton> p_459870_, Level p_458620_) {
-        super(p_459870_, p_458620_);
+    public WitherSkeleton(final EntityType<? extends WitherSkeleton> type, final Level level) {
+        super(type, level);
         this.setPathfindingMalus(PathType.LAVA, 8.0F);
     }
 
@@ -46,7 +46,7 @@ public class WitherSkeleton extends AbstractSkeleton {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_450452_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.WITHER_SKELETON_HURT;
     }
 
@@ -56,7 +56,7 @@ public class WitherSkeleton extends AbstractSkeleton {
     }
 
     @Override
-    SoundEvent getStepSound() {
+    protected SoundEvent getStepSound() {
         return SoundEvents.WITHER_SKELETON_STEP;
     }
 
@@ -66,51 +66,51 @@ public class WitherSkeleton extends AbstractSkeleton {
     }
 
     @Override
-    public boolean canHoldItem(ItemStack p_456052_) {
-        return !p_456052_.is(ItemTags.WITHER_SKELETON_DISLIKED_WEAPONS) && super.canHoldItem(p_456052_);
+    public boolean canHoldItem(final ItemStack itemStack) {
+        return !itemStack.is(ItemTags.WITHER_SKELETON_DISLIKED_WEAPONS) && super.canHoldItem(itemStack);
     }
 
     @Override
-    protected void populateDefaultEquipmentSlots(RandomSource p_453758_, DifficultyInstance p_454460_) {
+    protected void populateDefaultEquipmentSlots(final RandomSource random, final DifficultyInstance difficulty) {
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SWORD));
     }
 
     @Override
-    protected void populateDefaultEquipmentEnchantments(ServerLevelAccessor p_459769_, RandomSource p_459468_, DifficultyInstance p_459597_) {
+    protected void populateDefaultEquipmentEnchantments(final ServerLevelAccessor level, final RandomSource random, final DifficultyInstance localDifficulty) {
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_454816_, DifficultyInstance p_458720_, EntitySpawnReason p_450710_, @Nullable SpawnGroupData p_451122_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
-        SpawnGroupData spawngroupdata = super.finalizeSpawn(p_454816_, p_458720_, p_450710_, p_451122_);
+        SpawnGroupData spawnGroupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
         this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(4.0);
         this.reassessWeaponGoal();
-        return spawngroupdata;
+        return spawnGroupData;
     }
 
     @Override
-    public boolean doHurtTarget(ServerLevel p_450977_, Entity p_450859_) {
-        if (!super.doHurtTarget(p_450977_, p_450859_)) {
+    public boolean doHurtTarget(final ServerLevel level, final Entity target) {
+        if (!super.doHurtTarget(level, target)) {
             return false;
-        } else {
-            if (p_450859_ instanceof LivingEntity) {
-                ((LivingEntity)p_450859_).addEffect(new MobEffectInstance(MobEffects.WITHER, 200), this);
-            }
-
-            return true;
         }
+
+        if (target instanceof LivingEntity livingEntity) {
+            livingEntity.addEffect(new MobEffectInstance(MobEffects.WITHER, 200), this);
+        }
+
+        return true;
     }
 
     @Override
-    protected AbstractArrow getArrow(ItemStack p_450780_, float p_459667_, @Nullable ItemStack p_455683_) {
-        AbstractArrow abstractarrow = super.getArrow(p_450780_, p_459667_, p_455683_);
-        abstractarrow.igniteForSeconds(100.0F);
-        return abstractarrow;
+    protected AbstractArrow getArrow(final ItemStack projectile, final float power, final @Nullable ItemStack firingWeapon) {
+        AbstractArrow arrow = super.getArrow(projectile, power, firingWeapon);
+        arrow.igniteForSeconds(100.0F);
+        return arrow;
     }
 
     @Override
-    public boolean canBeAffected(MobEffectInstance p_459773_) {
-        return p_459773_.is(MobEffects.WITHER) ? false : super.canBeAffected(p_459773_);
+    public boolean canBeAffected(final MobEffectInstance newEffect) {
+        return newEffect.is(MobEffects.WITHER) ? false : super.canBeAffected(newEffect);
     }
 }

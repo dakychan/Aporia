@@ -15,11 +15,11 @@ public interface ItemOwner {
         return null;
     }
 
-    static ItemOwner offsetFromOwner(ItemOwner p_422983_, Vec3 p_429994_) {
-        return new ItemOwner.OffsetFromOwner(p_422983_, p_429994_);
+    static ItemOwner offsetFromOwner(final ItemOwner owner, final Vec3 offset) {
+        return new ItemOwner.OffsetFromOwner(owner, offset);
     }
 
-    public record OffsetFromOwner(ItemOwner owner, Vec3 offset) implements ItemOwner {
+    record OffsetFromOwner(ItemOwner owner, Vec3 offset) implements ItemOwner {
         @Override
         public Level level() {
             return this.owner.level();

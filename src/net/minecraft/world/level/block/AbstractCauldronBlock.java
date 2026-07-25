@@ -28,9 +28,9 @@ public abstract class AbstractCauldronBlock extends Block {
     private static final VoxelShape SHAPE_INSIDE = Block.column(12.0, 4.0, 16.0);
     protected static final VoxelShape SHAPE = Util.make(
         () -> {
-            int i = 4;
-            int j = 3;
-            int k = 2;
+            int legWidth = 4;
+            int legHeight = 3;
+            int legThickness = 2;
             return Shapes.join(
                 Shapes.block(),
                 Shapes.or(Block.column(16.0, 8.0, 0.0, 3.0), Block.column(8.0, 16.0, 0.0, 3.0), Block.column(12.0, 0.0, 3.0), SHAPE_INSIDE),
@@ -38,65 +38,71 @@ public abstract class AbstractCauldronBlock extends Block {
             );
         }
     );
-    protected final CauldronInteraction.InteractionMap interactions;
+    protected final CauldronInteraction.Dispatcher interactions;
 
     @Override
     protected abstract MapCodec<? extends AbstractCauldronBlock> codec();
 
-    public AbstractCauldronBlock(BlockBehaviour.Properties p_151946_, CauldronInteraction.InteractionMap p_312076_) {
-        super(p_151946_);
-        this.interactions = p_312076_;
+    public AbstractCauldronBlock(final BlockBehaviour.Properties properties, final CauldronInteraction.Dispatcher interactions) {
+        super(properties);
+        this.interactions = interactions;
     }
 
-    protected double getContentHeight(BlockState p_151948_) {
+    protected double getContentHeight(final BlockState state) {
         return 0.0;
     }
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_332320_, BlockState p_328545_, Level p_336157_, BlockPos p_336208_, Player p_329973_, InteractionHand p_331424_, BlockHitResult p_333720_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        CauldronInteraction cauldroninteraction = this.interactions.map().get(p_332320_.getItem());
-        return cauldroninteraction.interact(p_328545_, p_336157_, p_336208_, p_329973_, p_331424_, p_332320_);
+        CauldronInteraction behavior = this.interactions.get(itemStack);
+        return behavior.interact(state, level, pos, player, hand, itemStack);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_151964_, BlockGetter p_151965_, BlockPos p_151966_, CollisionContext p_151967_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected VoxelShape getInteractionShape(BlockState p_151955_, BlockGetter p_151956_, BlockPos p_151957_) {
+    protected VoxelShape getInteractionShape(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return SHAPE_INSIDE;
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_151986_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_151959_, PathComputationType p_151962_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 
-    public abstract boolean isFull(BlockState p_151984_);
+    public abstract boolean isFull(final BlockState state);
 
     @Override
-    protected void tick(BlockState p_220702_, ServerLevel p_220703_, BlockPos p_220704_, RandomSource p_220705_) {
-        BlockPos blockpos = PointedDripstoneBlock.findStalactiteTipAboveCauldron(p_220703_, p_220704_);
-        if (blockpos != null) {
-            Fluid fluid = PointedDripstoneBlock.getCauldronFillFluidType(p_220703_, blockpos);
+    protected void tick(final BlockState cauldronState, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        BlockPos stalactitePos = PointedDripstoneBlock.findStalactiteTipAboveCauldron(level, pos);
+        if (stalactitePos != null) {
+            Fluid fluid = PointedDripstoneBlock.getCauldronFillFluidType(level, stalactitePos);
             if (fluid != Fluids.EMPTY && this.canReceiveStalactiteDrip(fluid)) {
-                this.receiveStalactiteDrip(p_220702_, p_220703_, p_220704_, fluid);
+                this.receiveStalactiteDrip(cauldronState, level, pos, fluid);
             }
         }
     }
 
-    protected boolean canReceiveStalactiteDrip(Fluid p_151983_) {
+    protected boolean canReceiveStalactiteDrip(final Fluid fluid) {
         return false;
     }
 
-    protected void receiveStalactiteDrip(BlockState p_151975_, Level p_151976_, BlockPos p_151977_, Fluid p_151978_) {
+    protected void receiveStalactiteDrip(final BlockState state, final Level level, final BlockPos pos, final Fluid fluid) {
     }
 }

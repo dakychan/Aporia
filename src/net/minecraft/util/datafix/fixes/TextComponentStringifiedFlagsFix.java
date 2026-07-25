@@ -7,27 +7,26 @@ import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import java.util.Optional;
 
 public class TextComponentStringifiedFlagsFix extends DataFix {
-    public TextComponentStringifiedFlagsFix(Schema p_396784_) {
-        super(p_396784_, false);
+    public TextComponentStringifiedFlagsFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<Pair<String, Either<?, Pair<?, Pair<?, Pair<?, Dynamic<?>>>>>>> type = (Type<Pair<String, Either<?, Pair<?, Pair<?, Pair<?, Dynamic<?>>>>>>>)this.getInputSchema()
+        Type<Pair<String, Either<?, Pair<?, Pair<?, Pair<?, Dynamic<?>>>>>>> textComponentType = (Type<Pair<String, Either<?, Pair<?, Pair<?, Pair<?, Dynamic<?>>>>>>>)this.getInputSchema()
             .getType(References.TEXT_COMPONENT);
         return this.fixTypeEverywhere(
             "TextComponentStringyFlagsFix",
-            type,
-            p_394433_ -> p_394628_ -> p_394628_.mapSecond(
-                p_394878_ -> p_394878_.mapRight(
-                    p_392497_ -> p_392497_.mapSecond(
-                        p_395199_ -> p_395199_.mapSecond(
-                            p_391281_ -> p_391281_.mapSecond(
-                                p_392850_ -> p_392850_.update("bold", TextComponentStringifiedFlagsFix::stringToBool)
+            textComponentType,
+            ops -> named -> named.mapSecond(
+                e1 -> e1.mapRight(
+                    p2 -> p2.mapSecond(
+                        p3 -> p3.mapSecond(
+                            p4 -> p4.mapSecond(
+                                remainder -> remainder.update("bold", TextComponentStringifiedFlagsFix::stringToBool)
                                     .update("italic", TextComponentStringifiedFlagsFix::stringToBool)
                                     .update("underlined", TextComponentStringifiedFlagsFix::stringToBool)
                                     .update("strikethrough", TextComponentStringifiedFlagsFix::stringToBool)
@@ -40,8 +39,8 @@ public class TextComponentStringifiedFlagsFix extends DataFix {
         );
     }
 
-    private static <T> Dynamic<T> stringToBool(Dynamic<T> p_395938_) {
-        Optional<String> optional = p_395938_.asString().result();
-        return optional.isPresent() ? p_395938_.createBoolean(Boolean.parseBoolean(optional.get())) : p_395938_;
+    private static <T> Dynamic<T> stringToBool(final Dynamic<T> input) {
+        Optional<String> string = input.asString().result();
+        return string.isPresent() ? input.createBoolean(Boolean.parseBoolean(string.get())) : input;
     }
 }

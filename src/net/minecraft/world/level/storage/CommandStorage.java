@@ -2,10 +2,8 @@ package net.minecraft.world.level.storage;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Stream;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
@@ -16,94 +14,90 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 import org.jspecify.annotations.Nullable;
 
 public class CommandStorage {
-    private static final String ID_PREFIX = "command_storage_";
+    private static final String COMMAND_STORAGE = "command_storage";
     private final Map<String, CommandStorage.Container> namespaces = new HashMap<>();
-    private final DimensionDataStorage storage;
+    private final SavedDataStorage savedDataStorage;
 
-    public CommandStorage(DimensionDataStorage p_78035_) {
-        this.storage = p_78035_;
+    public CommandStorage(final SavedDataStorage savedDataStorage) {
+        this.savedDataStorage = savedDataStorage;
     }
 
-    public CompoundTag get(Identifier p_460728_) {
-        CommandStorage.Container commandstorage$container = this.getContainer(p_460728_.getNamespace());
-        return commandstorage$container != null ? commandstorage$container.get(p_460728_.getPath()) : new CompoundTag();
+    public CompoundTag get(final Identifier id) {
+        CommandStorage.Container container = this.getContainer(id.getNamespace());
+        return container != null ? container.get(id.getPath()) : new CompoundTag();
     }
 
-    private CommandStorage.@Nullable Container getContainer(String p_393886_) {
-        CommandStorage.Container commandstorage$container = this.namespaces.get(p_393886_);
-        if (commandstorage$container != null) {
-            return commandstorage$container;
-        } else {
-            CommandStorage.Container commandstorage$container1 = this.storage.get(CommandStorage.Container.type(p_393886_));
-            if (commandstorage$container1 != null) {
-                this.namespaces.put(p_393886_, commandstorage$container1);
-            }
-
-            return commandstorage$container1;
+    private CommandStorage.@Nullable Container getContainer(final String namespace) {
+        CommandStorage.Container container = this.namespaces.get(namespace);
+        if (container != null) {
+            return container;
         }
-    }
 
-    private CommandStorage.Container getOrCreateContainer(String p_393897_) {
-        CommandStorage.Container commandstorage$container = this.namespaces.get(p_393897_);
-        if (commandstorage$container != null) {
-            return commandstorage$container;
-        } else {
-            CommandStorage.Container commandstorage$container1 = this.storage.computeIfAbsent(CommandStorage.Container.type(p_393897_));
-            this.namespaces.put(p_393897_, commandstorage$container1);
-            return commandstorage$container1;
+        CommandStorage.Container newContainer = this.savedDataStorage.get(CommandStorage.Container.type(namespace));
+        if (newContainer != null) {
+            this.namespaces.put(namespace, newContainer);
         }
+
+        return newContainer;
     }
 
-    public void set(Identifier p_453940_, CompoundTag p_78048_) {
-        this.getOrCreateContainer(p_453940_.getNamespace()).put(p_453940_.getPath(), p_78048_);
+    private CommandStorage.Container getOrCreateContainer(final String namespace) {
+        CommandStorage.Container container = this.namespaces.get(namespace);
+        if (container != null) {
+            return container;
+        }
+
+        CommandStorage.Container newContainer = this.savedDataStorage.computeIfAbsent(CommandStorage.Container.type(namespace));
+        this.namespaces.put(namespace, newContainer);
+        return newContainer;
+    }
+
+    public void set(final Identifier id, final CompoundTag contents) {
+        this.getOrCreateContainer(id.getNamespace()).put(id.getPath(), contents);
     }
 
     public Stream<Identifier> keys() {
-        return this.namespaces.entrySet().stream().flatMap(p_164841_ -> p_164841_.getValue().getKeys(p_164841_.getKey()));
+        return this.namespaces.entrySet().stream().flatMap(e -> e.getValue().getKeys(e.getKey()));
     }
 
-    static String createId(String p_78038_) {
-        return "command_storage_" + p_78038_;
-    }
-
-    static class Container extends SavedData {
+    private static class Container extends SavedData {
         public static final Codec<CommandStorage.Container> CODEC = RecordCodecBuilder.create(
-            p_391107_ -> p_391107_.group(
-                    Codec.unboundedMap(ExtraCodecs.RESOURCE_PATH_CODEC, CompoundTag.CODEC).fieldOf("contents").forGetter(p_391108_ -> p_391108_.storage)
-                )
-                .apply(p_391107_, CommandStorage.Container::new)
+            i -> i.group(Codec.unboundedMap(ExtraCodecs.RESOURCE_PATH_CODEC, CompoundTag.CODEC).fieldOf("contents").forGetter(container -> container.storage))
+                .apply(i, CommandStorage.Container::new)
         );
         private final Map<String, CompoundTag> storage;
 
-        private Container(Map<String, CompoundTag> p_397341_) {
-            this.storage = new HashMap<>(p_397341_);
+        private Container(final Map<String, CompoundTag> storage) {
+            this.storage = new HashMap<>(storage);
         }
 
         private Container() {
             this(new HashMap<>());
         }
 
-        public static SavedDataType<CommandStorage.Container> type(String p_393598_) {
-            return new SavedDataType<>(CommandStorage.createId(p_393598_), CommandStorage.Container::new, CODEC, DataFixTypes.SAVED_DATA_COMMAND_STORAGE);
+        public static SavedDataType<CommandStorage.Container> type(final String namespace) {
+            return new SavedDataType<>(
+                Identifier.fromNamespaceAndPath(namespace, "command_storage"), CommandStorage.Container::new, CODEC, DataFixTypes.SAVED_DATA_COMMAND_STORAGE
+            );
         }
 
-        public CompoundTag get(String p_78059_) {
-            CompoundTag compoundtag = this.storage.get(p_78059_);
-            return compoundtag != null ? compoundtag : new CompoundTag();
+        public CompoundTag get(final String id) {
+            CompoundTag result = this.storage.get(id);
+            return result != null ? result : new CompoundTag();
         }
 
-        public void put(String p_78064_, CompoundTag p_78065_) {
-            if (p_78065_.isEmpty()) {
-                this.storage.remove(p_78064_);
+        public void put(final String id, final CompoundTag contents) {
+            if (contents.isEmpty()) {
+                this.storage.remove(id);
             } else {
-                this.storage.put(p_78064_, p_78065_);
+                this.storage.put(id, contents);
             }
 
             this.setDirty();
         }
 
-        public Stream<Identifier> getKeys(String p_78073_) {
-            return this.storage.keySet().stream().map(p_450061_ -> Identifier.fromNamespaceAndPath(p_78073_, p_450061_));
+        public Stream<Identifier> getKeys(final String namespace) {
+            return this.storage.keySet().stream().map(p -> Identifier.fromNamespaceAndPath(namespace, p));
         }
     }
 }

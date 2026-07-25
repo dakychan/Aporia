@@ -30,39 +30,41 @@ public record PotDecorations(Optional<Item> back, Optional<Item> left, Optional<
         .apply(ByteBufCodecs.list(4))
         .map(PotDecorations::new, PotDecorations::ordered);
 
-    private PotDecorations(List<Item> p_331996_) {
-        this(getItem(p_331996_, 0), getItem(p_331996_, 1), getItem(p_331996_, 2), getItem(p_331996_, 3));
+    private PotDecorations(final List<Item> items) {
+        this(getItem(items, 0), getItem(items, 1), getItem(items, 2), getItem(items, 3));
     }
 
-    public PotDecorations(Item p_335624_, Item p_333843_, Item p_334423_, Item p_332271_) {
-        this(List.of(p_335624_, p_333843_, p_334423_, p_332271_));
+    public PotDecorations(final Item back, final Item left, final Item right, final Item front) {
+        this(List.of(back, left, right, front));
     }
 
-    private static Optional<Item> getItem(List<Item> p_329359_, int p_331055_) {
-        if (p_331055_ >= p_329359_.size()) {
+    private static Optional<Item> getItem(final List<Item> sherds, final int i) {
+        if (i >= sherds.size()) {
             return Optional.empty();
-        } else {
-            Item item = p_329359_.get(p_331055_);
-            return item == Items.BRICK ? Optional.empty() : Optional.of(item);
         }
+
+        Item item = sherds.get(i);
+        return item == Items.BRICK ? Optional.empty() : Optional.of(item);
     }
 
     public List<Item> ordered() {
-        return Stream.of(this.back, this.left, this.right, this.front).map(p_330456_ -> p_330456_.orElse(Items.BRICK)).toList();
+        return Stream.of(this.back, this.left, this.right, this.front).map(item -> item.orElse(Items.BRICK)).toList();
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_396913_, Consumer<Component> p_396999_, TooltipFlag p_393266_, DataComponentGetter p_394963_) {
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
         if (!this.equals(EMPTY)) {
-            p_396999_.accept(CommonComponents.EMPTY);
-            addSideDetailsToTooltip(p_396999_, this.front);
-            addSideDetailsToTooltip(p_396999_, this.left);
-            addSideDetailsToTooltip(p_396999_, this.right);
-            addSideDetailsToTooltip(p_396999_, this.back);
+            consumer.accept(CommonComponents.EMPTY);
+            addSideDetailsToTooltip(consumer, this.front);
+            addSideDetailsToTooltip(consumer, this.left);
+            addSideDetailsToTooltip(consumer, this.right);
+            addSideDetailsToTooltip(consumer, this.back);
         }
     }
 
-    private static void addSideDetailsToTooltip(Consumer<Component> p_396489_, Optional<Item> p_391827_) {
-        p_396489_.accept(new ItemStack(p_391827_.orElse(Items.BRICK), 1).getHoverName().plainCopy().withStyle(ChatFormatting.GRAY));
+    private static void addSideDetailsToTooltip(final Consumer<Component> consumer, final Optional<Item> side) {
+        consumer.accept(new ItemStack(side.orElse(Items.BRICK), 1).getHoverName().plainCopy().withStyle(ChatFormatting.GRAY));
     }
 }

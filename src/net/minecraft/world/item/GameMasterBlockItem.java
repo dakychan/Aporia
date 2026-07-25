@@ -7,13 +7,13 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
 public class GameMasterBlockItem extends BlockItem {
-    public GameMasterBlockItem(Block p_41318_, Item.Properties p_41319_) {
-        super(p_41318_, p_41319_);
+    public GameMasterBlockItem(final Block block, final Item.Properties properties) {
+        super(block, properties);
     }
 
     @Override
-    protected @Nullable BlockState getPlacementState(BlockPlaceContext p_41321_) {
-        Player player = p_41321_.getPlayer();
-        return player != null && !player.canUseGameMasterBlocks() ? null : super.getPlacementState(p_41321_);
+    protected @Nullable BlockState getPlacementState(final BlockPlaceContext context) {
+        Player player = context.getPlayer();
+        return player != null && !player.canUseGameMasterBlocks() ? null : super.getPlacementState(context);
     }
 }

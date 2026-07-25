@@ -14,59 +14,56 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class ClientLanguage extends Language {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Map<String, String> storage;
     private final boolean defaultRightToLeft;
 
-    private ClientLanguage(Map<String, String> p_118914_, boolean p_118915_) {
-        this.storage = p_118914_;
-        this.defaultRightToLeft = p_118915_;
+    private ClientLanguage(final Map<String, String> storage, final boolean defaultRightToLeft) {
+        this.storage = storage;
+        this.defaultRightToLeft = defaultRightToLeft;
     }
 
-    public static ClientLanguage loadFrom(ResourceManager p_265765_, List<String> p_265743_, boolean p_265470_) {
-        Map<String, String> map = new HashMap<>();
+    public static ClientLanguage loadFrom(final ResourceManager resourceManager, final List<String> languageStack, final boolean defaultRightToLeft) {
+        Map<String, String> translations = new HashMap<>();
 
-        for (String s : p_265743_) {
-            String s1 = String.format(Locale.ROOT, "lang/%s.json", s);
+        for (String languageCode : languageStack) {
+            String path = String.format(Locale.ROOT, "lang/%s.json", languageCode);
 
-            for (String s2 : p_265765_.getNamespaces()) {
+            for (String namespace : resourceManager.getNamespaces()) {
                 try {
-                    Identifier identifier = Identifier.fromNamespaceAndPath(s2, s1);
-                    appendFrom(s, p_265765_.getResourceStack(identifier), map);
-                } catch (Exception exception) {
-                    LOGGER.warn("Skipped language file: {}:{} ({})", s2, s1, exception.toString());
+                    Identifier location = Identifier.fromNamespaceAndPath(namespace, path);
+                    appendFrom(languageCode, resourceManager.getResourceStack(location), translations);
+                } catch (Exception e) {
+                    LOGGER.warn("Skipped language file: {}:{} ({})", namespace, path, e.toString());
                 }
             }
         }
 
-        DeprecatedTranslationsInfo.loadFromDefaultResource().applyToMap(map);
-        return new ClientLanguage(Map.copyOf(map), p_265470_);
+        DeprecatedTranslationsInfo.loadFromDefaultResource().applyToMap(translations);
+        return new ClientLanguage(Map.copyOf(translations), defaultRightToLeft);
     }
 
-    private static void appendFrom(String p_235036_, List<Resource> p_235037_, Map<String, String> p_235038_) {
-        for (Resource resource : p_235037_) {
-            try (InputStream inputstream = resource.open()) {
-                Language.loadFromJson(inputstream, p_235038_::put);
-            } catch (IOException ioexception) {
-                LOGGER.warn("Failed to load translations for {} from pack {}", p_235036_, resource.sourcePackId(), ioexception);
+    private static void appendFrom(final String languageCode, final List<Resource> resources, final Map<String, String> translations) {
+        for (Resource resource : resources) {
+            try (InputStream inputStream = resource.open()) {
+                Language.loadFromJson(inputStream, translations::put);
+            } catch (IOException e) {
+                LOGGER.warn("Failed to load translations for {} from pack {}", languageCode, resource.sourcePackId(), e);
             }
         }
     }
 
     @Override
-    public String getOrDefault(String p_118920_, String p_265273_) {
-        return this.storage.getOrDefault(p_118920_, p_265273_);
+    public String getOrDefault(final String key, final String defaultValue) {
+        return this.storage.getOrDefault(key, defaultValue);
     }
 
     @Override
-    public boolean has(String p_118928_) {
-        return this.storage.containsKey(p_118928_);
+    public boolean has(final String key) {
+        return this.storage.containsKey(key);
     }
 
     @Override
@@ -75,7 +72,7 @@ public class ClientLanguage extends Language {
     }
 
     @Override
-    public FormattedCharSequence getVisualOrder(FormattedText p_118925_) {
-        return FormattedBidiReorder.reorder(p_118925_, this.defaultRightToLeft);
+    public FormattedCharSequence getVisualOrder(final FormattedText logicalOrderText) {
+        return FormattedBidiReorder.reorder(logicalOrderText, this.defaultRightToLeft);
     }
 }

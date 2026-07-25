@@ -8,10 +8,7 @@ import java.util.Set;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class VisGraph {
     private static final int SIZE_IN_BITS = 4;
     private static final int LEN = 16;
@@ -26,16 +23,16 @@ public class VisGraph {
     private static final int INVALID_INDEX = -1;
     private static final Direction[] DIRECTIONS = Direction.values();
     private final BitSet bitSet = new BitSet(4096);
-    private static final int[] INDEX_OF_EDGES = Util.make(new int[1352], p_112974_ -> {
-        int i = 0;
-        int j = 15;
-        int k = 0;
+    private static final int[] INDEX_OF_EDGES = Util.make(new int[1352], map -> {
+        int min = 0;
+        int max = 15;
+        int index = 0;
 
-        for (int l = 0; l < 16; l++) {
-            for (int i1 = 0; i1 < 16; i1++) {
-                for (int j1 = 0; j1 < 16; j1++) {
-                    if (l == 0 || l == 15 || i1 == 0 || i1 == 15 || j1 == 0 || j1 == 15) {
-                        p_112974_[k++] = getIndex(l, i1, j1);
+        for (int x = 0; x < 16; x++) {
+            for (int y = 0; y < 16; y++) {
+                for (int z = 0; z < 16; z++) {
+                    if (x == 0 || x == 15 || y == 0 || y == 15 || z == 0 || z == 15) {
+                        map[index++] = getIndex(x, y, z);
                     }
                 }
             }
@@ -43,121 +40,89 @@ public class VisGraph {
     });
     private int empty = 4096;
 
-    public void setOpaque(BlockPos p_112972_) {
-        this.bitSet.set(getIndex(p_112972_), true);
+    public void setOpaque(final BlockPos pos) {
+        this.bitSet.set(getIndex(pos), true);
         this.empty--;
     }
 
-    private static int getIndex(BlockPos p_112976_) {
-        return getIndex(p_112976_.getX() & 15, p_112976_.getY() & 15, p_112976_.getZ() & 15);
+    private static int getIndex(final BlockPos pos) {
+        return getIndex(pos.getX() & 15, pos.getY() & 15, pos.getZ() & 15);
     }
 
-    private static int getIndex(int p_112962_, int p_112963_, int p_112964_) {
-        return p_112962_ << 0 | p_112963_ << 8 | p_112964_ << 4;
+    private static int getIndex(final int x, final int y, final int z) {
+        return x << 0 | y << 8 | z << 4;
     }
 
     public VisibilitySet resolve() {
-        VisibilitySet visibilityset = new VisibilitySet();
+        VisibilitySet visibilitySet = new VisibilitySet();
         if (4096 - this.empty < 256) {
-            visibilityset.setAll(true);
+            visibilitySet.setAll(true);
         } else if (this.empty == 0) {
-            visibilityset.setAll(false);
+            visibilitySet.setAll(false);
         } else {
             for (int i : INDEX_OF_EDGES) {
                 if (!this.bitSet.get(i)) {
-                    visibilityset.add(this.floodFill(i));
+                    visibilitySet.add(this.floodFill(i));
                 }
             }
         }
 
-        return visibilityset;
+        return visibilitySet;
     }
 
-    private Set<Direction> floodFill(int p_112960_) {
-        Set<Direction> set = EnumSet.noneOf(Direction.class);
-        IntPriorityQueue intpriorityqueue = new IntArrayFIFOQueue();
-        intpriorityqueue.enqueue(p_112960_);
-        this.bitSet.set(p_112960_, true);
+    private Set<Direction> floodFill(final int startIndex) {
+        Set<Direction> edges = EnumSet.noneOf(Direction.class);
+        IntPriorityQueue queue = new IntArrayFIFOQueue();
+        queue.enqueue(startIndex);
+        this.bitSet.set(startIndex, true);
 
-        while (!intpriorityqueue.isEmpty()) {
-            int i = intpriorityqueue.dequeueInt();
-            this.addEdges(i, set);
+        while (!queue.isEmpty()) {
+            int index = queue.dequeueInt();
+            this.addEdges(index, edges);
 
             for (Direction direction : DIRECTIONS) {
-                int j = this.getNeighborIndexAtFace(i, direction);
-                if (j >= 0 && !this.bitSet.get(j)) {
-                    this.bitSet.set(j, true);
-                    intpriorityqueue.enqueue(j);
+                int neighborIndex = this.getNeighborIndexAtFace(index, direction);
+                if (neighborIndex >= 0 && !this.bitSet.get(neighborIndex)) {
+                    this.bitSet.set(neighborIndex, true);
+                    queue.enqueue(neighborIndex);
                 }
             }
         }
 
-        return set;
+        return edges;
     }
 
-    private void addEdges(int p_112969_, Set<Direction> p_112970_) {
-        int i = p_112969_ >> 0 & 15;
-        if (i == 0) {
-            p_112970_.add(Direction.WEST);
-        } else if (i == 15) {
-            p_112970_.add(Direction.EAST);
+    private void addEdges(final int index, final Set<Direction> edges) {
+        int x = index >> 0 & 15;
+        if (x == 0) {
+            edges.add(Direction.WEST);
+        } else if (x == 15) {
+            edges.add(Direction.EAST);
         }
 
-        int j = p_112969_ >> 8 & 15;
-        if (j == 0) {
-            p_112970_.add(Direction.DOWN);
-        } else if (j == 15) {
-            p_112970_.add(Direction.UP);
+        int y = index >> 8 & 15;
+        if (y == 0) {
+            edges.add(Direction.DOWN);
+        } else if (y == 15) {
+            edges.add(Direction.UP);
         }
 
-        int k = p_112969_ >> 4 & 15;
-        if (k == 0) {
-            p_112970_.add(Direction.NORTH);
-        } else if (k == 15) {
-            p_112970_.add(Direction.SOUTH);
+        int z = index >> 4 & 15;
+        if (z == 0) {
+            edges.add(Direction.NORTH);
+        } else if (z == 15) {
+            edges.add(Direction.SOUTH);
         }
     }
 
-    private int getNeighborIndexAtFace(int p_112966_, Direction p_112967_) {
-        switch (p_112967_) {
-            case DOWN:
-                if ((p_112966_ >> 8 & 15) == 0) {
-                    return -1;
-                }
-
-                return p_112966_ - DY;
-            case UP:
-                if ((p_112966_ >> 8 & 15) == 15) {
-                    return -1;
-                }
-
-                return p_112966_ + DY;
-            case NORTH:
-                if ((p_112966_ >> 4 & 15) == 0) {
-                    return -1;
-                }
-
-                return p_112966_ - DZ;
-            case SOUTH:
-                if ((p_112966_ >> 4 & 15) == 15) {
-                    return -1;
-                }
-
-                return p_112966_ + DZ;
-            case WEST:
-                if ((p_112966_ >> 0 & 15) == 0) {
-                    return -1;
-                }
-
-                return p_112966_ - DX;
-            case EAST:
-                if ((p_112966_ >> 0 & 15) == 15) {
-                    return -1;
-                }
-
-                return p_112966_ + DX;
-            default:
-                return -1;
-        }
+    private int getNeighborIndexAtFace(final int index, final Direction direction) {
+        return switch (direction) {
+            case DOWN -> (index >> 8 & 15) == 0 ? -1 : index - DY;
+            case UP -> (index >> 8 & 15) == 15 ? -1 : index + DY;
+            case NORTH -> (index >> 4 & 15) == 0 ? -1 : index - DZ;
+            case SOUTH -> (index >> 4 & 15) == 15 ? -1 : index + DZ;
+            case WEST -> (index >> 0 & 15) == 0 ? -1 : index - DX;
+            case EAST -> (index >> 0 & 15) == 15 ? -1 : index + DX;
+        };
     }
 }

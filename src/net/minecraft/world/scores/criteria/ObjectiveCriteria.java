@@ -4,21 +4,23 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import net.minecraft.ChatFormatting;
+import java.util.function.Function;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.stats.StatType;
 import net.minecraft.util.StringRepresentable;
+import net.minecraft.world.scores.TeamColor;
 
 public class ObjectiveCriteria {
     private static final Map<String, ObjectiveCriteria> CUSTOM_CRITERIA = Maps.newHashMap();
     private static final Map<String, ObjectiveCriteria> CRITERIA_CACHE = Maps.newHashMap();
     public static final Codec<ObjectiveCriteria> CODEC = Codec.STRING
         .comapFlatMap(
-            p_391156_ -> byName(p_391156_).map(DataResult::success).orElse(DataResult.error(() -> "No scoreboard criteria with name: " + p_391156_)),
+            name -> byName(name).map(DataResult::success).orElse(DataResult.error(() -> "No scoreboard criteria with name: " + name)),
             ObjectiveCriteria::getName
         );
     public static final ObjectiveCriteria DUMMY = registerCustom("dummy");
@@ -32,87 +34,64 @@ public class ObjectiveCriteria {
     public static final ObjectiveCriteria ARMOR = registerCustom("armor", true, ObjectiveCriteria.RenderType.INTEGER);
     public static final ObjectiveCriteria EXPERIENCE = registerCustom("xp", true, ObjectiveCriteria.RenderType.INTEGER);
     public static final ObjectiveCriteria LEVEL = registerCustom("level", true, ObjectiveCriteria.RenderType.INTEGER);
-    public static final ObjectiveCriteria[] TEAM_KILL = new ObjectiveCriteria[]{
-        registerCustom("teamkill." + ChatFormatting.BLACK.getName()),
-        registerCustom("teamkill." + ChatFormatting.DARK_BLUE.getName()),
-        registerCustom("teamkill." + ChatFormatting.DARK_GREEN.getName()),
-        registerCustom("teamkill." + ChatFormatting.DARK_AQUA.getName()),
-        registerCustom("teamkill." + ChatFormatting.DARK_RED.getName()),
-        registerCustom("teamkill." + ChatFormatting.DARK_PURPLE.getName()),
-        registerCustom("teamkill." + ChatFormatting.GOLD.getName()),
-        registerCustom("teamkill." + ChatFormatting.GRAY.getName()),
-        registerCustom("teamkill." + ChatFormatting.DARK_GRAY.getName()),
-        registerCustom("teamkill." + ChatFormatting.BLUE.getName()),
-        registerCustom("teamkill." + ChatFormatting.GREEN.getName()),
-        registerCustom("teamkill." + ChatFormatting.AQUA.getName()),
-        registerCustom("teamkill." + ChatFormatting.RED.getName()),
-        registerCustom("teamkill." + ChatFormatting.LIGHT_PURPLE.getName()),
-        registerCustom("teamkill." + ChatFormatting.YELLOW.getName()),
-        registerCustom("teamkill." + ChatFormatting.WHITE.getName())
-    };
-    public static final ObjectiveCriteria[] KILLED_BY_TEAM = new ObjectiveCriteria[]{
-        registerCustom("killedByTeam." + ChatFormatting.BLACK.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.DARK_BLUE.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.DARK_GREEN.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.DARK_AQUA.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.DARK_RED.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.DARK_PURPLE.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.GOLD.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.GRAY.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.DARK_GRAY.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.BLUE.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.GREEN.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.AQUA.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.RED.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.LIGHT_PURPLE.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.YELLOW.getName()),
-        registerCustom("killedByTeam." + ChatFormatting.WHITE.getName())
-    };
+    public static final Map<TeamColor, ObjectiveCriteria> TEAM_KILL = registerForEveryTeamColor(format -> "teamkill." + format.getSerializedName());
+    public static final Map<TeamColor, ObjectiveCriteria> KILLED_BY_TEAM = registerForEveryTeamColor(format -> "killedByTeam." + format.getSerializedName());
     private final String name;
     private final boolean readOnly;
     private final ObjectiveCriteria.RenderType renderType;
 
-    private static ObjectiveCriteria registerCustom(String p_166110_, boolean p_166111_, ObjectiveCriteria.RenderType p_166112_) {
-        ObjectiveCriteria objectivecriteria = new ObjectiveCriteria(p_166110_, p_166111_, p_166112_);
-        CUSTOM_CRITERIA.put(p_166110_, objectivecriteria);
-        return objectivecriteria;
+    private static Map<TeamColor, ObjectiveCriteria> registerForEveryTeamColor(final Function<TeamColor, String> idFactory) {
+        Map<TeamColor, ObjectiveCriteria> result = new EnumMap<>(TeamColor.class);
+
+        for (TeamColor value : TeamColor.values()) {
+            String id = idFactory.apply(value);
+            result.put(value, registerCustom(id));
+        }
+
+        return result;
     }
 
-    private static ObjectiveCriteria registerCustom(String p_166114_) {
-        return registerCustom(p_166114_, false, ObjectiveCriteria.RenderType.INTEGER);
+    private static ObjectiveCriteria registerCustom(final String name, final boolean readOnly, final ObjectiveCriteria.RenderType renderType) {
+        ObjectiveCriteria result = new ObjectiveCriteria(name, readOnly, renderType);
+        CUSTOM_CRITERIA.put(name, result);
+        return result;
     }
 
-    protected ObjectiveCriteria(String p_83606_) {
-        this(p_83606_, false, ObjectiveCriteria.RenderType.INTEGER);
+    private static ObjectiveCriteria registerCustom(final String name) {
+        return registerCustom(name, false, ObjectiveCriteria.RenderType.INTEGER);
     }
 
-    protected ObjectiveCriteria(String p_83608_, boolean p_83609_, ObjectiveCriteria.RenderType p_83610_) {
-        this.name = p_83608_;
-        this.readOnly = p_83609_;
-        this.renderType = p_83610_;
-        CRITERIA_CACHE.put(p_83608_, this);
+    protected ObjectiveCriteria(final String name) {
+        this(name, false, ObjectiveCriteria.RenderType.INTEGER);
+    }
+
+    protected ObjectiveCriteria(final String name, final boolean readOnly, final ObjectiveCriteria.RenderType renderType) {
+        this.name = name;
+        this.readOnly = readOnly;
+        this.renderType = renderType;
+        CRITERIA_CACHE.put(name, this);
     }
 
     public static Set<String> getCustomCriteriaNames() {
         return ImmutableSet.copyOf(CUSTOM_CRITERIA.keySet());
     }
 
-    public static Optional<ObjectiveCriteria> byName(String p_83615_) {
-        ObjectiveCriteria objectivecriteria = CRITERIA_CACHE.get(p_83615_);
-        if (objectivecriteria != null) {
-            return Optional.of(objectivecriteria);
-        } else {
-            int i = p_83615_.indexOf(58);
-            return i < 0
-                ? Optional.empty()
-                : BuiltInRegistries.STAT_TYPE
-                    .getOptional(Identifier.bySeparator(p_83615_.substring(0, i), '.'))
-                    .flatMap(p_450139_ -> getStat((StatType<?>)p_450139_, Identifier.bySeparator(p_83615_.substring(i + 1), '.')));
+    public static Optional<ObjectiveCriteria> byName(final String name) {
+        ObjectiveCriteria value = CRITERIA_CACHE.get(name);
+        if (value != null) {
+            return Optional.of(value);
         }
+
+        int colonPos = name.indexOf(58);
+        return colonPos < 0
+            ? Optional.empty()
+            : BuiltInRegistries.STAT_TYPE
+                .getOptional(Identifier.bySeparator(name.substring(0, colonPos), '.'))
+                .flatMap(statType -> getStat((StatType<?>)statType, Identifier.bySeparator(name.substring(colonPos + 1), '.')));
     }
 
-    private static <T> Optional<ObjectiveCriteria> getStat(StatType<T> p_83612_, Identifier p_459563_) {
-        return p_83612_.getRegistry().getOptional(p_459563_).map(p_83612_::get);
+    private static <T> Optional<ObjectiveCriteria> getStat(final StatType<T> statType, final Identifier key) {
+        return statType.getRegistry().getOptional(key).map(statType::get);
     }
 
     public String getName() {
@@ -127,7 +106,7 @@ public class ObjectiveCriteria {
         return this.renderType;
     }
 
-    public static enum RenderType implements StringRepresentable {
+    public enum RenderType implements StringRepresentable {
         INTEGER("integer"),
         HEARTS("hearts");
 
@@ -136,8 +115,8 @@ public class ObjectiveCriteria {
             ObjectiveCriteria.RenderType::values
         );
 
-        private RenderType(final String p_83632_) {
-            this.id = p_83632_;
+        RenderType(final String id) {
+            this.id = id;
         }
 
         public String getId() {
@@ -149,8 +128,8 @@ public class ObjectiveCriteria {
             return this.id;
         }
 
-        public static ObjectiveCriteria.RenderType byId(String p_83635_) {
-            return CODEC.byName(p_83635_, INTEGER);
+        public static ObjectiveCriteria.RenderType byId(final String key) {
+            return CODEC.byName(key, INTEGER);
         }
     }
 }

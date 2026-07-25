@@ -13,19 +13,19 @@ public class ClientboundOpenSignEditorPacket implements Packet<ClientGamePacketL
     private final BlockPos pos;
     private final boolean isFrontText;
 
-    public ClientboundOpenSignEditorPacket(BlockPos p_277843_, boolean p_277748_) {
-        this.pos = p_277843_;
-        this.isFrontText = p_277748_;
+    public ClientboundOpenSignEditorPacket(final BlockPos pos, final boolean isFrontText) {
+        this.pos = pos;
+        this.isFrontText = isFrontText;
     }
 
-    private ClientboundOpenSignEditorPacket(FriendlyByteBuf p_179013_) {
-        this.pos = p_179013_.readBlockPos();
-        this.isFrontText = p_179013_.readBoolean();
+    private ClientboundOpenSignEditorPacket(final FriendlyByteBuf input) {
+        this.pos = input.readBlockPos();
+        this.isFrontText = input.readBoolean();
     }
 
-    private void write(FriendlyByteBuf p_132642_) {
-        p_132642_.writeBlockPos(this.pos);
-        p_132642_.writeBoolean(this.isFrontText);
+    private void write(final FriendlyByteBuf output) {
+        output.writeBlockPos(this.pos);
+        output.writeBoolean(this.isFrontText);
     }
 
     @Override
@@ -33,8 +33,8 @@ public class ClientboundOpenSignEditorPacket implements Packet<ClientGamePacketL
         return GamePacketTypes.CLIENTBOUND_OPEN_SIGN_EDITOR;
     }
 
-    public void handle(ClientGamePacketListener p_132639_) {
-        p_132639_.handleOpenSignEditor(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleOpenSignEditor(this);
     }
 
     public BlockPos getPos() {

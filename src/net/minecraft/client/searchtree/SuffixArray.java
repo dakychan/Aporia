@@ -13,11 +13,8 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class SuffixArray<T> {
     private static final boolean DEBUG_COMPARISONS = Boolean.parseBoolean(System.getProperty("SuffixArray.printComparisons", "false"));
     private static final boolean DEBUG_ARRAY = Boolean.parseBoolean(System.getProperty("SuffixArray.printArray", "false"));
@@ -31,78 +28,76 @@ public class SuffixArray<T> {
     private IntList offsets = new IntArrayList();
     private int maxStringLength;
 
-    public void add(T p_119971_, String p_119972_) {
-        this.maxStringLength = Math.max(this.maxStringLength, p_119972_.length());
-        int i = this.list.size();
-        this.list.add(p_119971_);
+    public void add(final T t, final String text) {
+        this.maxStringLength = Math.max(this.maxStringLength, text.length());
+        int index = this.list.size();
+        this.list.add(t);
         this.wordStarts.add(this.chars.size());
 
-        for (int j = 0; j < p_119972_.length(); j++) {
-            this.suffixToT.add(i);
-            this.offsets.add(j);
-            this.chars.add(p_119972_.charAt(j));
+        for (int i = 0; i < text.length(); i++) {
+            this.suffixToT.add(index);
+            this.offsets.add(i);
+            this.chars.add(text.charAt(i));
         }
 
-        this.suffixToT.add(i);
-        this.offsets.add(p_119972_.length());
+        this.suffixToT.add(index);
+        this.offsets.add(text.length());
         this.chars.add(-1);
     }
 
     public void generate() {
-        int i = this.chars.size();
-        int[] aint = new int[i];
-        int[] aint1 = new int[i];
-        int[] aint2 = new int[i];
-        int[] aint3 = new int[i];
-        IntComparator intcomparator = (p_194458_, p_194459_) -> aint1[p_194458_] == aint1[p_194459_]
-            ? Integer.compare(aint2[p_194458_], aint2[p_194459_])
-            : Integer.compare(aint1[p_194458_], aint1[p_194459_]);
-        Swapper swapper = (p_194464_, p_194465_) -> {
-            if (p_194464_ != p_194465_) {
-                int i2 = aint1[p_194464_];
-                aint1[p_194464_] = aint1[p_194465_];
-                aint1[p_194465_] = i2;
-                i2 = aint2[p_194464_];
-                aint2[p_194464_] = aint2[p_194465_];
-                aint2[p_194465_] = i2;
-                i2 = aint3[p_194464_];
-                aint3[p_194464_] = aint3[p_194465_];
-                aint3[p_194465_] = i2;
+        int charCount = this.chars.size();
+        int[] positions = new int[charCount];
+        int[] lefts = new int[charCount];
+        int[] rights = new int[charCount];
+        int[] reverse = new int[charCount];
+        IntComparator comparator = (a, b) -> lefts[a] == lefts[b] ? Integer.compare(rights[a], rights[b]) : Integer.compare(lefts[a], lefts[b]);
+        Swapper swapper = (a, b) -> {
+            if (a != b) {
+                int tmp = lefts[a];
+                lefts[a] = lefts[b];
+                lefts[b] = tmp;
+                tmp = rights[a];
+                rights[a] = rights[b];
+                rights[b] = tmp;
+                tmp = reverse[a];
+                reverse[a] = reverse[b];
+                reverse[b] = tmp;
             }
         };
 
-        for (int j = 0; j < i; j++) {
-            aint[j] = this.chars.getInt(j);
+        for (int i = 0; i < charCount; i++) {
+            positions[i] = this.chars.getInt(i);
         }
 
-        int k1 = 1;
+        int count = 1;
 
-        for (int k = Math.min(i, this.maxStringLength); k1 * 2 < k; k1 *= 2) {
-            for (int l = 0; l < i; aint3[l] = l++) {
-                aint1[l] = aint[l];
-                aint2[l] = l + k1 < i ? aint[l + k1] : -2;
+        for (int max = Math.min(charCount, this.maxStringLength); count * 2 < max; count *= 2) {
+            for (int i = 0; i < charCount; reverse[i] = i++) {
+                lefts[i] = positions[i];
+                rights[i] = i + count < charCount ? positions[i + count] : -2;
             }
 
-            Arrays.quickSort(0, i, intcomparator, swapper);
+            Arrays.quickSort(0, charCount, comparator, swapper);
 
-            for (int l1 = 0; l1 < i; l1++) {
-                if (l1 > 0 && aint1[l1] == aint1[l1 - 1] && aint2[l1] == aint2[l1 - 1]) {
-                    aint[aint3[l1]] = aint[aint3[l1 - 1]];
+            for (int i = 0; i < charCount; i++) {
+                if (i > 0 && lefts[i] == lefts[i - 1] && rights[i] == rights[i - 1]) {
+                    positions[reverse[i]] = positions[reverse[i - 1]];
                 } else {
-                    aint[aint3[l1]] = l1;
+                    positions[reverse[i]] = i;
                 }
             }
         }
 
-        IntList intlist1 = this.suffixToT;
-        IntList intlist = this.offsets;
-        this.suffixToT = new IntArrayList(intlist1.size());
-        this.offsets = new IntArrayList(intlist.size());
+        IntList oldSuffixToT = this.suffixToT;
+        IntList oldOffsets = this.offsets;
+        this.suffixToT = new IntArrayList(oldSuffixToT.size());
+        this.offsets = new IntArrayList(oldOffsets.size());
 
-        for (int i1 = 0; i1 < i; i1++) {
-            int j1 = aint3[i1];
-            this.suffixToT.add(intlist1.getInt(j1));
-            this.offsets.add(intlist.getInt(j1));
+        for (int i = 0; i < charCount; i++) {
+            int index = reverse[i];
+            this.suffixToT.add(oldSuffixToT.getInt(index));
+            this.offsets.add(oldOffsets.getInt(index));
         }
 
         if (DEBUG_ARRAY) {
@@ -118,44 +113,44 @@ public class SuffixArray<T> {
         LOGGER.debug("");
     }
 
-    private String getString(int p_119969_) {
-        int i = this.offsets.getInt(p_119969_);
-        int j = this.wordStarts.getInt(this.suffixToT.getInt(p_119969_));
-        StringBuilder stringbuilder = new StringBuilder();
+    private String getString(final int i) {
+        int start = this.offsets.getInt(i);
+        int offset = this.wordStarts.getInt(this.suffixToT.getInt(i));
+        StringBuilder builder = new StringBuilder();
 
-        for (int k = 0; j + k < this.chars.size(); k++) {
-            if (k == i) {
-                stringbuilder.append('^');
+        for (int j = 0; offset + j < this.chars.size(); j++) {
+            if (j == start) {
+                builder.append('^');
             }
 
-            int l = this.chars.getInt(j + k);
-            if (l == -1) {
+            int p = this.chars.getInt(offset + j);
+            if (p == -1) {
                 break;
             }
 
-            stringbuilder.append((char)l);
+            builder.append((char)p);
         }
 
-        return stringbuilder.toString();
+        return builder.toString();
     }
 
-    private int compare(String p_119976_, int p_119977_) {
-        int i = this.wordStarts.getInt(this.suffixToT.getInt(p_119977_));
-        int j = this.offsets.getInt(p_119977_);
+    private int compare(final String text, final int index) {
+        int start = this.wordStarts.getInt(this.suffixToT.getInt(index));
+        int offset = this.offsets.getInt(index);
 
-        for (int k = 0; k < p_119976_.length(); k++) {
-            int l = this.chars.getInt(i + j + k);
-            if (l == -1) {
+        for (int i = 0; i < text.length(); i++) {
+            int p = this.chars.getInt(start + offset + i);
+            if (p == -1) {
                 return 1;
             }
 
-            char c0 = p_119976_.charAt(k);
-            char c1 = (char)l;
-            if (c0 < c1) {
+            char c = text.charAt(i);
+            char c2 = (char)p;
+            if (c < c2) {
                 return -1;
             }
 
-            if (c0 > c1) {
+            if (c > c2) {
                 return 1;
             }
         }
@@ -163,59 +158,59 @@ public class SuffixArray<T> {
         return 0;
     }
 
-    public List<T> search(String p_119974_) {
-        int i = this.suffixToT.size();
-        int j = 0;
-        int k = i;
+    public List<T> search(final String text) {
+        int suffixCount = this.suffixToT.size();
+        int low = 0;
+        int high = suffixCount;
 
-        while (j < k) {
-            int l = j + (k - j) / 2;
-            int i1 = this.compare(p_119974_, l);
+        while (low < high) {
+            int mid = low + (high - low) / 2;
+            int c = this.compare(text, mid);
             if (DEBUG_COMPARISONS) {
-                LOGGER.debug("comparing lower \"{}\" with {} \"{}\": {}", p_119974_, l, this.getString(l), i1);
+                LOGGER.debug("comparing lower \"{}\" with {} \"{}\": {}", text, mid, this.getString(mid), c);
             }
 
-            if (i1 > 0) {
-                j = l + 1;
+            if (c > 0) {
+                low = mid + 1;
             } else {
-                k = l;
+                high = mid;
             }
         }
 
-        if (j >= 0 && j < i) {
-            int i2 = j;
-            k = i;
+        if (low >= 0 && low < suffixCount) {
+            int lowerBound = low;
+            high = suffixCount;
 
-            while (j < k) {
-                int j2 = j + (k - j) / 2;
-                int j1 = this.compare(p_119974_, j2);
+            while (low < high) {
+                int mid = low + (high - low) / 2;
+                int c = this.compare(text, mid);
                 if (DEBUG_COMPARISONS) {
-                    LOGGER.debug("comparing upper \"{}\" with {} \"{}\": {}", p_119974_, j2, this.getString(j2), j1);
+                    LOGGER.debug("comparing upper \"{}\" with {} \"{}\": {}", text, mid, this.getString(mid), c);
                 }
 
-                if (j1 >= 0) {
-                    j = j2 + 1;
+                if (c >= 0) {
+                    low = mid + 1;
                 } else {
-                    k = j2;
+                    high = mid;
                 }
             }
 
-            int k2 = j;
-            IntSet intset = new IntOpenHashSet();
+            int upperBound = low;
+            IntSet matches = new IntOpenHashSet();
 
-            for (int k1 = i2; k1 < k2; k1++) {
-                intset.add(this.suffixToT.getInt(k1));
+            for (int i = lowerBound; i < upperBound; i++) {
+                matches.add(this.suffixToT.getInt(i));
             }
 
-            int[] aint = intset.toIntArray();
-            java.util.Arrays.sort(aint);
-            Set<T> set = Sets.newLinkedHashSet();
+            int[] ints = matches.toIntArray();
+            java.util.Arrays.sort(ints);
+            Set<T> result = Sets.newLinkedHashSet();
 
-            for (int l1 : aint) {
-                set.add(this.list.get(l1));
+            for (int t : ints) {
+                result.add(this.list.get(t));
             }
 
-            return Lists.newArrayList(set);
+            return Lists.newArrayList(result);
         } else {
             return Collections.emptyList();
         }

@@ -4,61 +4,58 @@ import java.util.BitSet;
 import java.util.Locale;
 import java.util.Set;
 import net.minecraft.core.Direction;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class VisibilitySet {
     private static final int FACINGS = Direction.values().length;
     private final BitSet data = new BitSet(FACINGS * FACINGS);
 
-    public void add(Set<Direction> p_112991_) {
-        for (Direction direction : p_112991_) {
-            for (Direction direction1 : p_112991_) {
-                this.set(direction, direction1, true);
+    public void add(final Set<Direction> directions) {
+        for (Direction direction1 : directions) {
+            for (Direction direction2 : directions) {
+                this.set(direction1, direction2, true);
             }
         }
     }
 
-    public void set(Direction p_112987_, Direction p_112988_, boolean p_112989_) {
-        this.data.set(p_112987_.ordinal() + p_112988_.ordinal() * FACINGS, p_112989_);
-        this.data.set(p_112988_.ordinal() + p_112987_.ordinal() * FACINGS, p_112989_);
+    public void set(final Direction direction1, final Direction direction2, final boolean value) {
+        this.data.set(direction1.ordinal() + direction2.ordinal() * FACINGS, value);
+        this.data.set(direction2.ordinal() + direction1.ordinal() * FACINGS, value);
     }
 
-    public void setAll(boolean p_112993_) {
-        this.data.set(0, this.data.size(), p_112993_);
+    public void setAll(final boolean visible) {
+        this.data.set(0, this.data.size(), visible);
     }
 
-    public boolean visibilityBetween(Direction p_112984_, Direction p_112985_) {
-        return this.data.get(p_112984_.ordinal() + p_112985_.ordinal() * FACINGS);
+    public boolean visibilityBetween(final Direction direction1, final Direction direction2) {
+        return this.data.get(direction1.ordinal() + direction2.ordinal() * FACINGS);
     }
 
     @Override
     public String toString() {
-        StringBuilder stringbuilder = new StringBuilder();
-        stringbuilder.append(' ');
+        StringBuilder builder = new StringBuilder();
+        builder.append(' ');
 
         for (Direction direction : Direction.values()) {
-            stringbuilder.append(' ').append(direction.toString().toUpperCase(Locale.ROOT).charAt(0));
+            builder.append(' ').append(direction.toString().toUpperCase(Locale.ROOT).charAt(0));
         }
 
-        stringbuilder.append('\n');
+        builder.append('\n');
 
-        for (Direction direction2 : Direction.values()) {
-            stringbuilder.append(direction2.toString().toUpperCase(Locale.ROOT).charAt(0));
+        for (Direction direction1 : Direction.values()) {
+            builder.append(direction1.toString().toUpperCase(Locale.ROOT).charAt(0));
 
-            for (Direction direction1 : Direction.values()) {
-                if (direction2 == direction1) {
-                    stringbuilder.append("  ");
+            for (Direction direction2 : Direction.values()) {
+                if (direction1 == direction2) {
+                    builder.append("  ");
                 } else {
-                    boolean flag = this.visibilityBetween(direction2, direction1);
-                    stringbuilder.append(' ').append((char)(flag ? 'Y' : 'n'));
+                    boolean ok = this.visibilityBetween(direction1, direction2);
+                    builder.append(' ').append((char)(ok ? 'Y' : 'n'));
                 }
             }
 
-            stringbuilder.append('\n');
+            builder.append('\n');
         }
 
-        return stringbuilder.toString();
+        return builder.toString();
     }
 }

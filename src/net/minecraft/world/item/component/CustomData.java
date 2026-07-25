@@ -14,44 +14,44 @@ import net.minecraft.world.item.ItemStack;
 public final class CustomData {
     public static final CustomData EMPTY = new CustomData(new CompoundTag());
     public static final Codec<CompoundTag> COMPOUND_TAG_CODEC = Codec.withAlternative(CompoundTag.CODEC, TagParser.FLATTENED_CODEC);
-    public static final Codec<CustomData> CODEC = COMPOUND_TAG_CODEC.xmap(CustomData::new, p_327962_ -> p_327962_.tag);
+    public static final Codec<CustomData> CODEC = COMPOUND_TAG_CODEC.xmap(CustomData::new, data -> data.tag);
     @Deprecated
-    public static final StreamCodec<ByteBuf, CustomData> STREAM_CODEC = ByteBufCodecs.COMPOUND_TAG.map(CustomData::new, p_329964_ -> p_329964_.tag);
+    public static final StreamCodec<ByteBuf, CustomData> STREAM_CODEC = ByteBufCodecs.COMPOUND_TAG.map(CustomData::new, data -> data.tag);
     private final CompoundTag tag;
 
-    private CustomData(CompoundTag p_331981_) {
-        this.tag = p_331981_;
+    private CustomData(final CompoundTag tag) {
+        this.tag = tag;
     }
 
-    public static CustomData of(CompoundTag p_334177_) {
-        return new CustomData(p_334177_.copy());
+    public static CustomData of(final CompoundTag tag) {
+        return new CustomData(tag.copy());
     }
 
-    public boolean matchedBy(CompoundTag p_328523_) {
-        return NbtUtils.compareNbt(p_328523_, this.tag, true);
+    public boolean matchedBy(final CompoundTag expectedTag) {
+        return NbtUtils.compareNbt(expectedTag, this.tag, true);
     }
 
-    public static void update(DataComponentType<CustomData> p_336008_, ItemStack p_335562_, Consumer<CompoundTag> p_332401_) {
-        CustomData customdata = p_335562_.getOrDefault(p_336008_, EMPTY).update(p_332401_);
-        if (customdata.tag.isEmpty()) {
-            p_335562_.remove(p_336008_);
+    public static void update(final DataComponentType<CustomData> component, final ItemStack itemStack, final Consumer<CompoundTag> consumer) {
+        CustomData newData = itemStack.getOrDefault(component, EMPTY).update(consumer);
+        if (newData.tag.isEmpty()) {
+            itemStack.remove(component);
         } else {
-            p_335562_.set(p_336008_, customdata);
+            itemStack.set(component, newData);
         }
     }
 
-    public static void set(DataComponentType<CustomData> p_327973_, ItemStack p_332195_, CompoundTag p_330130_) {
-        if (!p_330130_.isEmpty()) {
-            p_332195_.set(p_327973_, of(p_330130_));
+    public static void set(final DataComponentType<CustomData> component, final ItemStack itemStack, final CompoundTag tag) {
+        if (!tag.isEmpty()) {
+            itemStack.set(component, of(tag));
         } else {
-            p_332195_.remove(p_327973_);
+            itemStack.remove(component);
         }
     }
 
-    public CustomData update(Consumer<CompoundTag> p_336344_) {
-        CompoundTag compoundtag = this.tag.copy();
-        p_336344_.accept(compoundtag);
-        return new CustomData(compoundtag);
+    public CustomData update(final Consumer<CompoundTag> consumer) {
+        CompoundTag newTag = this.tag.copy();
+        consumer.accept(newTag);
+        return new CustomData(newTag);
     }
 
     public boolean isEmpty() {
@@ -63,11 +63,11 @@ public final class CustomData {
     }
 
     @Override
-    public boolean equals(Object p_335284_) {
-        if (p_335284_ == this) {
+    public boolean equals(final Object obj) {
+        if (obj == this) {
             return true;
         } else {
-            return p_335284_ instanceof CustomData customdata ? this.tag.equals(customdata.tag) : false;
+            return obj instanceof CustomData customData ? this.tag.equals(customData.tag) : false;
         }
     }
 

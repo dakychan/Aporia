@@ -51,12 +51,11 @@ public class ComposterBlock extends Block implements WorldlyContainerHolder {
     private static final int HOLE_WIDTH = 12;
     private static final VoxelShape[] SHAPES = Util.make(
         () -> {
-            VoxelShape[] avoxelshape = Block.boxes(
-                8,
-                p_390931_ -> Shapes.join(Shapes.block(), Block.column(12.0, Math.clamp((long)(1 + p_390931_ * 2), 2, 16), 16.0), BooleanOp.ONLY_FIRST)
+            VoxelShape[] shapes = Block.boxes(
+                8, level -> Shapes.join(Shapes.block(), Block.column(12.0, Math.clamp(1 + level * 2, 2, 16), 16.0), BooleanOp.ONLY_FIRST)
             );
-            avoxelshape[8] = avoxelshape[7];
-            return avoxelshape;
+            shapes[8] = shapes[7];
+            return shapes;
         }
     );
 
@@ -67,11 +66,11 @@ public class ComposterBlock extends Block implements WorldlyContainerHolder {
 
     public static void bootStrap() {
         COMPOSTABLES.defaultReturnValue(-1.0F);
-        float f = 0.3F;
-        float f1 = 0.5F;
-        float f2 = 0.65F;
-        float f3 = 0.85F;
-        float f4 = 1.0F;
+        float low = 0.3F;
+        float lowMid = 0.5F;
+        float mid = 0.65F;
+        float midHigh = 0.85F;
+        float high = 1.0F;
         add(0.3F, Items.JUNGLE_LEAVES);
         add(0.3F, Items.OAK_LEAVES);
         add(0.3F, Items.SPRUCE_LEAVES);
@@ -189,211 +188,223 @@ public class ComposterBlock extends Block implements WorldlyContainerHolder {
         add(1.0F, Items.PUMPKIN_PIE);
     }
 
-    private static void add(float p_51921_, ItemLike p_51922_) {
-        COMPOSTABLES.put(p_51922_.asItem(), p_51921_);
+    private static void add(final float value, final ItemLike item) {
+        COMPOSTABLES.put(item.asItem(), value);
     }
 
-    public ComposterBlock(BlockBehaviour.Properties p_51919_) {
-        super(p_51919_);
+    public ComposterBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(LEVEL, 0));
     }
 
-    public static void handleFill(Level p_51924_, BlockPos p_51925_, boolean p_51926_) {
-        BlockState blockstate = p_51924_.getBlockState(p_51925_);
-        p_51924_.playLocalSound(p_51925_, p_51926_ ? SoundEvents.COMPOSTER_FILL_SUCCESS : SoundEvents.COMPOSTER_FILL, SoundSource.BLOCKS, 1.0F, 1.0F, false);
-        double d0 = blockstate.getShape(p_51924_, p_51925_).max(Direction.Axis.Y, 0.5, 0.5) + 0.03125;
-        double d1 = 2.0;
-        double d2 = 0.1875;
-        double d3 = 0.625;
-        RandomSource randomsource = p_51924_.getRandom();
+    public static void handleFill(final Level level, final BlockPos pos, final boolean success) {
+        BlockState state = level.getBlockState(pos);
+        level.playLocalSound(pos, success ? SoundEvents.COMPOSTER_FILL_SUCCESS : SoundEvents.COMPOSTER_FILL, SoundSource.BLOCKS, 1.0F, 1.0F, false);
+        double centerHeight = state.getShape(level, pos).max(Direction.Axis.Y, 0.5, 0.5) + 0.03125;
+        double sideOffsetPixels = 2.0;
+        double sideOffset = 0.1875;
+        double width = 0.625;
+        RandomSource random = level.getRandom();
 
         for (int i = 0; i < 10; i++) {
-            double d4 = randomsource.nextGaussian() * 0.02;
-            double d5 = randomsource.nextGaussian() * 0.02;
-            double d6 = randomsource.nextGaussian() * 0.02;
-            p_51924_.addParticle(
+            double xa = random.nextGaussian() * 0.02;
+            double ya = random.nextGaussian() * 0.02;
+            double za = random.nextGaussian() * 0.02;
+            level.addParticle(
                 ParticleTypes.COMPOSTER,
-                p_51925_.getX() + 0.1875 + 0.625 * randomsource.nextFloat(),
-                p_51925_.getY() + d0 + randomsource.nextFloat() * (1.0 - d0),
-                p_51925_.getZ() + 0.1875 + 0.625 * randomsource.nextFloat(),
-                d4,
-                d5,
-                d6
+                pos.getX() + 0.1875 + 0.625 * random.nextFloat(),
+                pos.getY() + centerHeight + random.nextFloat() * (1.0 - centerHeight),
+                pos.getZ() + 0.1875 + 0.625 * random.nextFloat(),
+                xa,
+                ya,
+                za
             );
         }
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_51973_, BlockGetter p_51974_, BlockPos p_51975_, CollisionContext p_51976_) {
-        return SHAPES[p_51973_.getValue(LEVEL)];
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES[state.getValue(LEVEL)];
     }
 
     @Override
-    protected VoxelShape getInteractionShape(BlockState p_51969_, BlockGetter p_51970_, BlockPos p_51971_) {
+    protected VoxelShape getInteractionShape(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return Shapes.block();
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_51990_, BlockGetter p_51991_, BlockPos p_51992_, CollisionContext p_51993_) {
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPES[0];
     }
 
     @Override
-    protected void onPlace(BlockState p_51978_, Level p_51979_, BlockPos p_51980_, BlockState p_51981_, boolean p_51982_) {
-        if (p_51978_.getValue(LEVEL) == 7) {
-            p_51979_.scheduleTick(p_51980_, p_51978_.getBlock(), 20);
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        if (state.getValue(LEVEL) == 7) {
+            level.scheduleTick(pos, state.getBlock(), 20);
         }
     }
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_336075_, BlockState p_334681_, Level p_333427_, BlockPos p_334604_, Player p_334719_, InteractionHand p_335310_, BlockHitResult p_332770_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        int i = p_334681_.getValue(LEVEL);
-        if (i < 8 && COMPOSTABLES.containsKey(p_336075_.getItem())) {
-            if (i < 7 && !p_333427_.isClientSide()) {
-                BlockState blockstate = addItem(p_334719_, p_334681_, p_333427_, p_334604_, p_336075_);
-                p_333427_.levelEvent(1500, p_334604_, p_334681_ != blockstate ? 1 : 0);
-                p_334719_.awardStat(Stats.ITEM_USED.get(p_336075_.getItem()));
-                p_336075_.consume(1, p_334719_);
+        int fillLevel = state.getValue(LEVEL);
+        if (fillLevel < 8 && COMPOSTABLES.containsKey(itemStack.getItem())) {
+            if (fillLevel < 7 && !level.isClientSide()) {
+                BlockState newState = addItem(player, state, level, pos, itemStack);
+                level.levelEvent(1500, pos, state != newState ? 1 : 0);
+                player.awardStat(Stats.ITEM_USED.get(itemStack.getItem()));
+                itemStack.consume(1, player);
             }
 
             return InteractionResult.SUCCESS;
         } else {
-            return super.useItemOn(p_336075_, p_334681_, p_333427_, p_334604_, p_334719_, p_335310_, p_332770_);
+            return super.useItemOn(itemStack, state, level, pos, player, hand, hitResult);
         }
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_328272_, Level p_327852_, BlockPos p_336294_, Player p_330986_, BlockHitResult p_332650_) {
-        int i = p_328272_.getValue(LEVEL);
-        if (i == 8) {
-            extractProduce(p_330986_, p_328272_, p_327852_, p_336294_);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        int fillLevel = state.getValue(LEVEL);
+        if (fillLevel == 8) {
+            extractProduce(player, state, level, pos);
             return InteractionResult.SUCCESS;
         } else {
             return InteractionResult.PASS;
         }
     }
 
-    public static BlockState insertItem(Entity p_270919_, BlockState p_270087_, ServerLevel p_270284_, ItemStack p_270253_, BlockPos p_270678_) {
-        int i = p_270087_.getValue(LEVEL);
-        if (i < 7 && COMPOSTABLES.containsKey(p_270253_.getItem())) {
-            BlockState blockstate = addItem(p_270919_, p_270087_, p_270284_, p_270678_, p_270253_);
-            p_270253_.shrink(1);
-            return blockstate;
+    public static BlockState insertItem(
+        final Entity sourceEntity, final BlockState state, final ServerLevel level, final ItemStack itemStack, final BlockPos pos
+    ) {
+        int fillLevel = state.getValue(LEVEL);
+        if (fillLevel < 7 && COMPOSTABLES.containsKey(itemStack.getItem())) {
+            BlockState newState = addItem(sourceEntity, state, level, pos, itemStack);
+            itemStack.shrink(1);
+            return newState;
         } else {
-            return p_270087_;
+            return state;
         }
     }
 
-    public static BlockState extractProduce(Entity p_270467_, BlockState p_51999_, Level p_52000_, BlockPos p_52001_) {
-        if (!p_52000_.isClientSide()) {
-            Vec3 vec3 = Vec3.atLowerCornerWithOffset(p_52001_, 0.5, 1.01, 0.5).offsetRandomXZ(p_52000_.random, 0.7F);
-            ItemEntity itementity = new ItemEntity(p_52000_, vec3.x(), vec3.y(), vec3.z(), new ItemStack(Items.BONE_MEAL));
-            itementity.setDefaultPickUpDelay();
-            p_52000_.addFreshEntity(itementity);
+    public static BlockState extractProduce(final Entity sourceEntity, final BlockState state, final Level level, final BlockPos pos) {
+        if (!level.isClientSide()) {
+            Vec3 itemPos = Vec3.atLowerCornerWithOffset(pos, 0.5, 1.01, 0.5).offsetRandomXZ(level.getRandom(), 0.7F);
+            ItemEntity entity = new ItemEntity(level, itemPos.x(), itemPos.y(), itemPos.z(), new ItemStack(Items.BONE_MEAL));
+            entity.setDefaultPickUpDelay();
+            level.addFreshEntity(entity);
         }
 
-        BlockState blockstate = empty(p_270467_, p_51999_, p_52000_, p_52001_);
-        p_52000_.playSound(null, p_52001_, SoundEvents.COMPOSTER_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
-        return blockstate;
+        BlockState emptyState = empty(sourceEntity, state, level, pos);
+        level.playSound(null, pos, SoundEvents.COMPOSTER_EMPTY, SoundSource.BLOCKS, 1.0F, 1.0F);
+        return emptyState;
     }
 
-    static BlockState empty(@Nullable Entity p_270236_, BlockState p_270873_, LevelAccessor p_270963_, BlockPos p_270211_) {
-        BlockState blockstate = p_270873_.setValue(LEVEL, 0);
-        p_270963_.setBlock(p_270211_, blockstate, 3);
-        p_270963_.gameEvent(GameEvent.BLOCK_CHANGE, p_270211_, GameEvent.Context.of(p_270236_, blockstate));
-        return blockstate;
+    private static BlockState empty(final @Nullable Entity sourceEntity, final BlockState state, final LevelAccessor level, final BlockPos pos) {
+        BlockState newState = state.setValue(LEVEL, 0);
+        level.setBlock(pos, newState, 3);
+        level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(sourceEntity, newState));
+        return newState;
     }
 
-    static BlockState addItem(@Nullable Entity p_270464_, BlockState p_270603_, LevelAccessor p_270151_, BlockPos p_270547_, ItemStack p_270354_) {
-        int i = p_270603_.getValue(LEVEL);
-        float f = COMPOSTABLES.getFloat(p_270354_.getItem());
-        if ((i != 0 || !(f > 0.0F)) && !(p_270151_.getRandom().nextDouble() < f)) {
-            return p_270603_;
-        } else {
-            int j = i + 1;
-            BlockState blockstate = p_270603_.setValue(LEVEL, j);
-            p_270151_.setBlock(p_270547_, blockstate, 3);
-            p_270151_.gameEvent(GameEvent.BLOCK_CHANGE, p_270547_, GameEvent.Context.of(p_270464_, blockstate));
-            if (j == 7) {
-                p_270151_.scheduleTick(p_270547_, p_270603_.getBlock(), 20);
-            }
+    private static BlockState addItem(
+        final @Nullable Entity sourceEntity, final BlockState state, final LevelAccessor level, final BlockPos pos, final ItemStack itemStack
+    ) {
+        int fillLevel = state.getValue(LEVEL);
+        float chance = COMPOSTABLES.getFloat(itemStack.getItem());
+        if ((fillLevel != 0 || !(chance > 0.0F)) && !(level.getRandom().nextDouble() < chance)) {
+            return state;
+        }
 
-            return blockstate;
+        int newLevel = fillLevel + 1;
+        BlockState newState = state.setValue(LEVEL, newLevel);
+        level.setBlock(pos, newState, 3);
+        level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(sourceEntity, newState));
+        if (newLevel == 7) {
+            level.scheduleTick(pos, state.getBlock(), 20);
+        }
+
+        return newState;
+    }
+
+    @Override
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(LEVEL) == 7) {
+            level.setBlock(pos, state.cycle(LEVEL), 3);
+            level.playSound(null, pos, SoundEvents.COMPOSTER_READY, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
     }
 
     @Override
-    protected void tick(BlockState p_221015_, ServerLevel p_221016_, BlockPos p_221017_, RandomSource p_221018_) {
-        if (p_221015_.getValue(LEVEL) == 7) {
-            p_221016_.setBlock(p_221017_, p_221015_.cycle(LEVEL), 3);
-            p_221016_.playSound(null, p_221017_, SoundEvents.COMPOSTER_READY, SoundSource.BLOCKS, 1.0F, 1.0F);
-        }
-    }
-
-    @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_51928_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_51945_, Level p_51946_, BlockPos p_51947_, Direction p_424843_) {
-        return p_51945_.getValue(LEVEL);
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return state.getValue(LEVEL);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51965_) {
-        p_51965_.add(LEVEL);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(LEVEL);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_51940_, PathComputationType p_51943_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 
     @Override
-    public WorldlyContainer getContainer(BlockState p_51956_, LevelAccessor p_51957_, BlockPos p_51958_) {
-        int i = p_51956_.getValue(LEVEL);
-        if (i == 8) {
-            return new ComposterBlock.OutputContainer(p_51956_, p_51957_, p_51958_, new ItemStack(Items.BONE_MEAL));
+    public WorldlyContainer getContainer(final BlockState state, final LevelAccessor level, final BlockPos pos) {
+        int contentLevel = state.getValue(LEVEL);
+        if (contentLevel == 8) {
+            return new ComposterBlock.OutputContainer(state, level, pos, new ItemStack(Items.BONE_MEAL));
         } else {
-            return (WorldlyContainer)(i < 7 ? new ComposterBlock.InputContainer(p_51956_, p_51957_, p_51958_) : new ComposterBlock.EmptyContainer());
+            return contentLevel < 7 ? new ComposterBlock.InputContainer(state, level, pos) : new ComposterBlock.EmptyContainer();
         }
     }
 
-    static class EmptyContainer extends SimpleContainer implements WorldlyContainer {
+    private static class EmptyContainer extends SimpleContainer implements WorldlyContainer {
         public EmptyContainer() {
             super(0);
         }
 
         @Override
-        public int[] getSlotsForFace(Direction p_52012_) {
+        public int[] getSlotsForFace(final Direction direction) {
             return new int[0];
         }
 
         @Override
-        public boolean canPlaceItemThroughFace(int p_52008_, ItemStack p_52009_, @Nullable Direction p_52010_) {
+        public boolean canPlaceItemThroughFace(final int slot, final ItemStack itemStack, final @Nullable Direction direction) {
             return false;
         }
 
         @Override
-        public boolean canTakeItemThroughFace(int p_52014_, ItemStack p_52015_, Direction p_52016_) {
+        public boolean canTakeItemThroughFace(final int slot, final ItemStack itemStack, final Direction direction) {
             return false;
         }
     }
 
-    static class InputContainer extends SimpleContainer implements WorldlyContainer {
+    private static class InputContainer extends SimpleContainer implements WorldlyContainer {
         private final BlockState state;
         private final LevelAccessor level;
         private final BlockPos pos;
         private boolean changed;
 
-        public InputContainer(BlockState p_52022_, LevelAccessor p_52023_, BlockPos p_52024_) {
+        public InputContainer(final BlockState state, final LevelAccessor level, final BlockPos pos) {
             super(1);
-            this.state = p_52022_;
-            this.level = p_52023_;
-            this.pos = p_52024_;
+            this.state = state;
+            this.level = level;
+            this.pos = pos;
         }
 
         @Override
@@ -402,43 +413,43 @@ public class ComposterBlock extends Block implements WorldlyContainerHolder {
         }
 
         @Override
-        public int[] getSlotsForFace(Direction p_52032_) {
-            return p_52032_ == Direction.UP ? new int[]{0} : new int[0];
+        public int[] getSlotsForFace(final Direction direction) {
+            return direction == Direction.UP ? new int[]{0} : new int[0];
         }
 
         @Override
-        public boolean canPlaceItemThroughFace(int p_52028_, ItemStack p_52029_, @Nullable Direction p_52030_) {
-            return !this.changed && p_52030_ == Direction.UP && ComposterBlock.COMPOSTABLES.containsKey(p_52029_.getItem());
+        public boolean canPlaceItemThroughFace(final int slot, final ItemStack itemStack, final @Nullable Direction direction) {
+            return !this.changed && direction == Direction.UP && ComposterBlock.COMPOSTABLES.containsKey(itemStack.getItem());
         }
 
         @Override
-        public boolean canTakeItemThroughFace(int p_52034_, ItemStack p_52035_, Direction p_52036_) {
+        public boolean canTakeItemThroughFace(final int slot, final ItemStack itemStack, final Direction direction) {
             return false;
         }
 
         @Override
         public void setChanged() {
-            ItemStack itemstack = this.getItem(0);
-            if (!itemstack.isEmpty()) {
+            ItemStack contents = this.getItem(0);
+            if (!contents.isEmpty()) {
                 this.changed = true;
-                BlockState blockstate = ComposterBlock.addItem(null, this.state, this.level, this.pos, itemstack);
-                this.level.levelEvent(1500, this.pos, blockstate != this.state ? 1 : 0);
+                BlockState newState = ComposterBlock.addItem(null, this.state, this.level, this.pos, contents);
+                this.level.levelEvent(1500, this.pos, newState != this.state ? 1 : 0);
                 this.removeItemNoUpdate(0);
             }
         }
     }
 
-    static class OutputContainer extends SimpleContainer implements WorldlyContainer {
+    private static class OutputContainer extends SimpleContainer implements WorldlyContainer {
         private final BlockState state;
         private final LevelAccessor level;
         private final BlockPos pos;
         private boolean changed;
 
-        public OutputContainer(BlockState p_52042_, LevelAccessor p_52043_, BlockPos p_52044_, ItemStack p_52045_) {
-            super(p_52045_);
-            this.state = p_52042_;
-            this.level = p_52043_;
-            this.pos = p_52044_;
+        public OutputContainer(final BlockState state, final LevelAccessor level, final BlockPos pos, final ItemStack contents) {
+            super(contents);
+            this.state = state;
+            this.level = level;
+            this.pos = pos;
         }
 
         @Override
@@ -447,18 +458,18 @@ public class ComposterBlock extends Block implements WorldlyContainerHolder {
         }
 
         @Override
-        public int[] getSlotsForFace(Direction p_52053_) {
-            return p_52053_ == Direction.DOWN ? new int[]{0} : new int[0];
+        public int[] getSlotsForFace(final Direction direction) {
+            return direction == Direction.DOWN ? new int[]{0} : new int[0];
         }
 
         @Override
-        public boolean canPlaceItemThroughFace(int p_52049_, ItemStack p_52050_, @Nullable Direction p_52051_) {
+        public boolean canPlaceItemThroughFace(final int slot, final ItemStack itemStack, final @Nullable Direction direction) {
             return false;
         }
 
         @Override
-        public boolean canTakeItemThroughFace(int p_52055_, ItemStack p_52056_, Direction p_52057_) {
-            return !this.changed && p_52057_ == Direction.DOWN && p_52056_.is(Items.BONE_MEAL);
+        public boolean canTakeItemThroughFace(final int slot, final ItemStack itemStack, final Direction direction) {
+            return !this.changed && direction == Direction.DOWN && itemStack.is(Items.BONE_MEAL);
         }
 
         @Override

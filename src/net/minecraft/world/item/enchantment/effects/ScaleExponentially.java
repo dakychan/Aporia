@@ -2,22 +2,21 @@ package net.minecraft.world.item.enchantment.effects;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.enchantment.LevelBasedValue;
 
 public record ScaleExponentially(LevelBasedValue base, LevelBasedValue exponent) implements EnchantmentValueEffect {
     public static final MapCodec<ScaleExponentially> CODEC = RecordCodecBuilder.mapCodec(
-        p_453029_ -> p_453029_.group(
+        i -> i.group(
                 LevelBasedValue.CODEC.fieldOf("base").forGetter(ScaleExponentially::base),
                 LevelBasedValue.CODEC.fieldOf("exponent").forGetter(ScaleExponentially::exponent)
             )
-            .apply(p_453029_, ScaleExponentially::new)
+            .apply(i, ScaleExponentially::new)
     );
 
     @Override
-    public float process(int p_451954_, RandomSource p_456903_, float p_457398_) {
-        return (float)(p_457398_ * Math.pow(this.base.calculate(p_451954_), this.exponent.calculate(p_451954_)));
+    public float process(final int level, final RandomSource random, final float inputValue) {
+        return (float)(inputValue * Math.pow(this.base.calculate(level), this.exponent.calculate(level)));
     }
 
     @Override

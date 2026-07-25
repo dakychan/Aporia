@@ -34,33 +34,33 @@ public class Roar extends Behavior<Warden> {
         );
     }
 
-    protected void start(ServerLevel p_217580_, Warden p_217581_, long p_217582_) {
-        Brain<Warden> brain = p_217581_.getBrain();
+    protected void start(final ServerLevel level, final Warden body, final long timestamp) {
+        Brain<Warden> brain = body.getBrain();
         brain.setMemoryWithExpiry(MemoryModuleType.ROAR_SOUND_DELAY, Unit.INSTANCE, 25L);
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
-        LivingEntity livingentity = p_217581_.getBrain().getMemory(MemoryModuleType.ROAR_TARGET).get();
-        BehaviorUtils.lookAtEntity(p_217581_, livingentity);
-        p_217581_.setPose(Pose.ROARING);
-        p_217581_.increaseAngerAt(livingentity, 20, false);
+        LivingEntity target = body.getBrain().getMemory(MemoryModuleType.ROAR_TARGET).get();
+        BehaviorUtils.lookAtEntity(body, target);
+        body.setPose(Pose.ROARING);
+        body.increaseAngerAt(target, 20, false);
     }
 
-    protected boolean canStillUse(ServerLevel p_217588_, Warden p_217589_, long p_217590_) {
+    protected boolean canStillUse(final ServerLevel level, final Warden body, final long timestamp) {
         return true;
     }
 
-    protected void tick(ServerLevel p_217596_, Warden p_217597_, long p_217598_) {
-        if (!p_217597_.getBrain().hasMemoryValue(MemoryModuleType.ROAR_SOUND_DELAY) && !p_217597_.getBrain().hasMemoryValue(MemoryModuleType.ROAR_SOUND_COOLDOWN)) {
-            p_217597_.getBrain().setMemoryWithExpiry(MemoryModuleType.ROAR_SOUND_COOLDOWN, Unit.INSTANCE, WardenAi.ROAR_DURATION - 25);
-            p_217597_.playSound(SoundEvents.WARDEN_ROAR, 3.0F, 1.0F);
+    protected void tick(final ServerLevel level, final Warden body, final long timestamp) {
+        if (!body.getBrain().hasMemoryValue(MemoryModuleType.ROAR_SOUND_DELAY) && !body.getBrain().hasMemoryValue(MemoryModuleType.ROAR_SOUND_COOLDOWN)) {
+            body.getBrain().setMemoryWithExpiry(MemoryModuleType.ROAR_SOUND_COOLDOWN, Unit.INSTANCE, WardenAi.ROAR_DURATION - 25);
+            body.playSound(SoundEvents.WARDEN_ROAR, 3.0F, 1.0F);
         }
     }
 
-    protected void stop(ServerLevel p_217604_, Warden p_217605_, long p_217606_) {
-        if (p_217605_.hasPose(Pose.ROARING)) {
-            p_217605_.setPose(Pose.STANDING);
+    protected void stop(final ServerLevel level, final Warden body, final long timestamp) {
+        if (body.hasPose(Pose.ROARING)) {
+            body.setPose(Pose.STANDING);
         }
 
-        p_217605_.getBrain().getMemory(MemoryModuleType.ROAR_TARGET).ifPresent(p_217605_::setAttackTarget);
-        p_217605_.getBrain().eraseMemory(MemoryModuleType.ROAR_TARGET);
+        body.getBrain().getMemory(MemoryModuleType.ROAR_TARGET).ifPresent(body::setAttackTarget);
+        body.getBrain().eraseMemory(MemoryModuleType.ROAR_TARGET);
     }
 }

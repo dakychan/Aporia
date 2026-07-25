@@ -17,27 +17,27 @@ public class RootedDirtBlock extends Block implements BonemealableBlock {
         return CODEC;
     }
 
-    public RootedDirtBlock(BlockBehaviour.Properties p_154359_) {
-        super(p_154359_);
+    public RootedDirtBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_256100_, BlockPos p_255943_, BlockState p_255655_) {
-        return p_256100_.getBlockState(p_255943_.below()).isAir();
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return level.getBlockState(pos.below()).isAir() && level.isInsideBuildHeight(pos.below());
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_221979_, RandomSource p_221980_, BlockPos p_221981_, BlockState p_221982_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_221974_, RandomSource p_221975_, BlockPos p_221976_, BlockState p_221977_) {
-        p_221974_.setBlockAndUpdate(p_221976_.below(), Blocks.HANGING_ROOTS.defaultBlockState());
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        level.setBlockAndUpdate(pos.below(), Blocks.HANGING_ROOTS.defaultBlockState());
     }
 
     @Override
-    public BlockPos getParticlePos(BlockPos p_335934_) {
-        return p_335934_.below();
+    public BlockPos getParticlePos(final BlockPos blockPos) {
+        return blockPos.below();
     }
 }

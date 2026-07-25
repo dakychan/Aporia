@@ -8,13 +8,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.LongSupplier;
 import java.util.stream.Stream;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.clock.ClockManager;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeManager;
@@ -26,68 +26,72 @@ import org.jspecify.annotations.Nullable;
 public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
     private final Map<EnvironmentAttribute<?>, EnvironmentAttributeSystem.ValueSampler<?>> attributeSamplers = new Reference2ObjectOpenHashMap<>();
 
-    EnvironmentAttributeSystem(Map<EnvironmentAttribute<?>, List<EnvironmentAttributeLayer<?>>> p_451818_) {
-        p_451818_.forEach(
-            (p_452769_, p_461073_) -> this.attributeSamplers
+    private EnvironmentAttributeSystem(final Map<EnvironmentAttribute<?>, List<EnvironmentAttributeLayer<?>>> layersByAttribute) {
+        layersByAttribute.forEach(
+            (attribute, layers) -> this.attributeSamplers
                 .put(
-                    (EnvironmentAttribute<?>)p_452769_,
-                    this.bakeLayerSampler((EnvironmentAttribute<?>)p_452769_, (List<? extends EnvironmentAttributeLayer<?>>)p_461073_)
+                    (EnvironmentAttribute<?>)attribute,
+                    this.bakeLayerSampler((EnvironmentAttribute<?>)attribute, (List<? extends EnvironmentAttributeLayer<?>>)layers)
                 )
         );
     }
 
     private <Value> EnvironmentAttributeSystem.ValueSampler<Value> bakeLayerSampler(
-        EnvironmentAttribute<Value> p_451977_, List<? extends EnvironmentAttributeLayer<?>> p_459413_
+        final EnvironmentAttribute<Value> attribute, final List<? extends EnvironmentAttributeLayer<?>> untypedLayers
     ) {
-        List<EnvironmentAttributeLayer<Value>> list = new ArrayList<>((Collection<? extends EnvironmentAttributeLayer<Value>>)p_459413_);
-        Value value = p_451977_.defaultValue();
+        List<EnvironmentAttributeLayer<Value>> layers = new ArrayList<>((Collection<? extends EnvironmentAttributeLayer<Value>>)untypedLayers);
+        Value constantBaseValue = attribute.defaultValue();
 
-        while (!list.isEmpty()) {
-            if (!(list.getFirst() instanceof EnvironmentAttributeLayer.Constant<Value> constant)) {
+        while (!layers.isEmpty()) {
+            if (!(layers.getFirst() instanceof EnvironmentAttributeLayer.Constant<Value> constantLayer)) {
                 break;
             }
 
-            value = constant.applyConstant(value);
-            list.removeFirst();
+            constantBaseValue = constantLayer.applyConstant(constantBaseValue);
+            layers.removeFirst();
         }
 
-        boolean flag = list.stream().anyMatch(p_451340_ -> p_451340_ instanceof EnvironmentAttributeLayer.Positional);
-        return new EnvironmentAttributeSystem.ValueSampler<>(p_451977_, value, List.copyOf(list), flag);
+        boolean isAffectedByPosition = layers.stream().anyMatch(layer -> layer instanceof EnvironmentAttributeLayer.Positional);
+        return new EnvironmentAttributeSystem.ValueSampler<>(attribute, constantBaseValue, List.copyOf(layers), isAffectedByPosition);
     }
 
     public static EnvironmentAttributeSystem.Builder builder() {
         return new EnvironmentAttributeSystem.Builder();
     }
 
-    static void addDefaultLayers(EnvironmentAttributeSystem.Builder p_456444_, Level p_456488_) {
-        RegistryAccess registryaccess = p_456488_.registryAccess();
-        BiomeManager biomemanager = p_456488_.getBiomeManager();
-        LongSupplier longsupplier = p_456488_::getDayTime;
-        addDimensionLayer(p_456444_, p_456488_.dimensionType());
-        addBiomeLayer(p_456444_, registryaccess.lookupOrThrow(Registries.BIOME), biomemanager);
-        p_456488_.dimensionType().timelines().forEach(p_455567_ -> p_456444_.addTimelineLayer((Holder<Timeline>)p_455567_, longsupplier));
-        if (p_456488_.canHaveWeather()) {
-            WeatherAttributes.addBuiltinLayers(p_456444_, WeatherAttributes.WeatherAccess.from(p_456488_));
+    private static void addDefaultLayers(final EnvironmentAttributeSystem.Builder builder, final Level level) {
+        RegistryAccess registries = level.registryAccess();
+        BiomeManager biomeManager = level.getBiomeManager();
+        ClockManager clockManager = level.clockManager();
+        addDimensionLayer(builder, level.dimensionType());
+        addBiomeLayer(builder, registries.lookupOrThrow(Registries.BIOME), biomeManager);
+        level.dimensionType().timelines().forEach(timeline -> builder.addTimelineLayer((Holder<Timeline>)timeline, clockManager));
+        if (level.canHaveWeather()) {
+            WeatherAttributes.addBuiltinLayers(builder, WeatherAttributes.WeatherAccess.from(level));
         }
     }
 
-    private static void addDimensionLayer(EnvironmentAttributeSystem.Builder p_452692_, DimensionType p_454150_) {
-        p_452692_.addConstantLayer(p_454150_.attributes());
+    private static void addDimensionLayer(final EnvironmentAttributeSystem.Builder builder, final DimensionType dimensionType) {
+        builder.addConstantLayer(dimensionType.attributes());
     }
 
-    private static void addBiomeLayer(EnvironmentAttributeSystem.Builder p_455842_, HolderLookup<Biome> p_457508_, BiomeManager p_454942_) {
-        Stream<EnvironmentAttribute<?>> stream = p_457508_.listElements().flatMap(p_459075_ -> p_459075_.value().getAttributes().keySet().stream()).distinct();
-        stream.forEach(p_452625_ -> addBiomeLayerForAttribute(p_455842_, (EnvironmentAttribute<?>)p_452625_, p_454942_));
+    private static void addBiomeLayer(final EnvironmentAttributeSystem.Builder builder, final HolderLookup<Biome> biomes, final BiomeManager biomeManager) {
+        Stream<EnvironmentAttribute<?>> attributesProvidedByBiomes = biomes.listElements()
+            .flatMap(biome -> biome.value().getAttributes().keySet().stream())
+            .distinct();
+        attributesProvidedByBiomes.forEach(attribute -> addBiomeLayerForAttribute(builder, (EnvironmentAttribute<?>)attribute, biomeManager));
     }
 
-    private static <Value> void addBiomeLayerForAttribute(EnvironmentAttributeSystem.Builder p_457459_, EnvironmentAttribute<Value> p_457763_, BiomeManager p_450401_) {
-        p_457459_.addPositionalLayer(p_457763_, (p_450899_, p_452302_, p_460237_) -> {
-            if (p_460237_ != null && p_457763_.isSpatiallyInterpolated()) {
-                return p_460237_.applyAttributeLayer(p_457763_, p_450899_);
-            } else {
-                Holder<Biome> holder = p_450401_.getNoiseBiomeAtPosition(p_452302_.x, p_452302_.y, p_452302_.z);
-                return holder.value().getAttributes().applyModifier(p_457763_, p_450899_);
+    private static <Value> void addBiomeLayerForAttribute(
+        final EnvironmentAttributeSystem.Builder builder, final EnvironmentAttribute<Value> attribute, final BiomeManager biomeManager
+    ) {
+        builder.addPositionalLayer(attribute, (baseValue, pos, biomeWeights) -> {
+            if (biomeWeights != null && attribute.isSpatiallyInterpolated()) {
+                return biomeWeights.applyAttributeLayer(attribute, baseValue);
             }
+
+            Holder<Biome> biome = biomeManager.getNoiseBiomeAtPosition(pos.x, pos.y, pos.z);
+            return biome.value().getAttributes().applyModifier(attribute, baseValue);
         });
     }
 
@@ -95,95 +99,103 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
         this.attributeSamplers.values().forEach(EnvironmentAttributeSystem.ValueSampler::invalidateTickCache);
     }
 
-    private <Value> EnvironmentAttributeSystem.@Nullable ValueSampler<Value> getValueSampler(EnvironmentAttribute<Value> p_457192_) {
-        return (EnvironmentAttributeSystem.ValueSampler<Value>)this.attributeSamplers.get(p_457192_);
+    private <Value> EnvironmentAttributeSystem.@Nullable ValueSampler<Value> getValueSampler(final EnvironmentAttribute<Value> attribute) {
+        return (EnvironmentAttributeSystem.ValueSampler<Value>)this.attributeSamplers.get(attribute);
     }
 
     @Override
-    public <Value> Value getDimensionValue(EnvironmentAttribute<Value> p_455078_) {
-        if (SharedConstants.IS_RUNNING_IN_IDE && p_455078_.isPositional()) {
-            throw new IllegalStateException("Position must always be provided for positional attribute " + p_455078_);
-        } else {
-            EnvironmentAttributeSystem.ValueSampler<Value> valuesampler = this.getValueSampler(p_455078_);
-            return valuesampler == null ? p_455078_.defaultValue() : valuesampler.getDimensionValue();
+    public <Value> Value getDimensionValue(final EnvironmentAttribute<Value> attribute) {
+        if (SharedConstants.IS_RUNNING_IN_IDE && attribute.isPositional()) {
+            throw new IllegalStateException("Position must always be provided for positional attribute " + attribute);
         }
+
+        EnvironmentAttributeSystem.ValueSampler<Value> sampler = this.getValueSampler(attribute);
+        return sampler == null ? attribute.defaultValue() : sampler.getDimensionValue();
     }
 
     @Override
-    public <Value> Value getValue(EnvironmentAttribute<Value> p_451155_, Vec3 p_450338_, @Nullable SpatialAttributeInterpolator p_455239_) {
-        EnvironmentAttributeSystem.ValueSampler<Value> valuesampler = this.getValueSampler(p_451155_);
-        return valuesampler == null ? p_451155_.defaultValue() : valuesampler.getValue(p_450338_, p_455239_);
+    public <Value> Value getValue(final EnvironmentAttribute<Value> attribute, final Vec3 pos, final @Nullable SpatialAttributeInterpolator biomeInterpolator) {
+        EnvironmentAttributeSystem.ValueSampler<Value> sampler = this.getValueSampler(attribute);
+        return sampler == null ? attribute.defaultValue() : sampler.getValue(pos, biomeInterpolator);
     }
 
     @VisibleForTesting
-    <Value> Value getConstantBaseValue(EnvironmentAttribute<Value> p_450600_) {
-        EnvironmentAttributeSystem.ValueSampler<Value> valuesampler = this.getValueSampler(p_450600_);
-        return valuesampler != null ? valuesampler.baseValue : p_450600_.defaultValue();
+    <Value> Value getConstantBaseValue(final EnvironmentAttribute<Value> attribute) {
+        EnvironmentAttributeSystem.ValueSampler<Value> sampler = this.getValueSampler(attribute);
+        return sampler != null ? sampler.baseValue : attribute.defaultValue();
     }
 
     @VisibleForTesting
-    boolean isAffectedByPosition(EnvironmentAttribute<?> p_450445_) {
-        EnvironmentAttributeSystem.ValueSampler<?> valuesampler = this.getValueSampler(p_450445_);
-        return valuesampler != null && valuesampler.isAffectedByPosition;
+    boolean isAffectedByPosition(final EnvironmentAttribute<?> attribute) {
+        EnvironmentAttributeSystem.ValueSampler<?> sampler = this.getValueSampler(attribute);
+        return sampler != null && sampler.isAffectedByPosition;
     }
 
     public static class Builder {
         private final Map<EnvironmentAttribute<?>, List<EnvironmentAttributeLayer<?>>> layersByAttribute = new HashMap<>();
 
-        Builder() {
+        private Builder() {
         }
 
-        public EnvironmentAttributeSystem.Builder addDefaultLayers(Level p_461065_) {
-            EnvironmentAttributeSystem.addDefaultLayers(this, p_461065_);
+        public EnvironmentAttributeSystem.Builder addDefaultLayers(final Level level) {
+            EnvironmentAttributeSystem.addDefaultLayers(this, level);
             return this;
         }
 
-        public EnvironmentAttributeSystem.Builder addConstantLayer(EnvironmentAttributeMap p_460339_) {
-            for (EnvironmentAttribute<?> environmentattribute : p_460339_.keySet()) {
-                this.addConstantEntry(environmentattribute, p_460339_);
+        public EnvironmentAttributeSystem.Builder addConstantLayer(final EnvironmentAttributeMap attributeMap) {
+            for (EnvironmentAttribute<?> attribute : attributeMap.keySet()) {
+                this.addConstantEntry(attribute, attributeMap);
             }
 
             return this;
         }
 
-        private <Value> EnvironmentAttributeSystem.Builder addConstantEntry(EnvironmentAttribute<Value> p_450586_, EnvironmentAttributeMap p_451685_) {
-            EnvironmentAttributeMap.Entry<Value, ?> entry = p_451685_.get(p_450586_);
+        private <Value> EnvironmentAttributeSystem.Builder addConstantEntry(
+            final EnvironmentAttribute<Value> attribute, final EnvironmentAttributeMap attributeMap
+        ) {
+            EnvironmentAttributeMap.Entry<Value, ?> entry = attributeMap.get(attribute);
             if (entry == null) {
-                throw new IllegalArgumentException("Missing attribute " + p_450586_);
+                throw new IllegalArgumentException("Missing attribute " + attribute);
             } else {
-                return this.addConstantLayer(p_450586_, entry::applyModifier);
+                return this.addConstantLayer(attribute, entry::applyModifier);
             }
         }
 
-        public <Value> EnvironmentAttributeSystem.Builder addConstantLayer(EnvironmentAttribute<Value> p_460232_, EnvironmentAttributeLayer.Constant<Value> p_459474_) {
-            return this.addLayer(p_460232_, p_459474_);
+        public <Value> EnvironmentAttributeSystem.Builder addConstantLayer(
+            final EnvironmentAttribute<Value> attribute, final EnvironmentAttributeLayer.Constant<Value> layer
+        ) {
+            return this.addLayer(attribute, layer);
         }
 
-        public <Value> EnvironmentAttributeSystem.Builder addTimeBasedLayer(EnvironmentAttribute<Value> p_451227_, EnvironmentAttributeLayer.TimeBased<Value> p_459337_) {
-            return this.addLayer(p_451227_, p_459337_);
+        public <Value> EnvironmentAttributeSystem.Builder addTimeBasedLayer(
+            final EnvironmentAttribute<Value> attribute, final EnvironmentAttributeLayer.TimeBased<Value> layer
+        ) {
+            return this.addLayer(attribute, layer);
         }
 
         public <Value> EnvironmentAttributeSystem.Builder addPositionalLayer(
-            EnvironmentAttribute<Value> p_461044_, EnvironmentAttributeLayer.Positional<Value> p_453019_
+            final EnvironmentAttribute<Value> attribute, final EnvironmentAttributeLayer.Positional<Value> layer
         ) {
-            return this.addLayer(p_461044_, p_453019_);
+            return this.addLayer(attribute, layer);
         }
 
-        private <Value> EnvironmentAttributeSystem.Builder addLayer(EnvironmentAttribute<Value> p_450723_, EnvironmentAttributeLayer<Value> p_455018_) {
-            this.layersByAttribute.computeIfAbsent(p_450723_, p_457972_ -> new ArrayList<>()).add(p_455018_);
+        private <Value> EnvironmentAttributeSystem.Builder addLayer(final EnvironmentAttribute<Value> attribute, final EnvironmentAttributeLayer<Value> layer) {
+            this.layersByAttribute.computeIfAbsent(attribute, t -> new ArrayList<>()).add(layer);
             return this;
         }
 
-        public EnvironmentAttributeSystem.Builder addTimelineLayer(Holder<Timeline> p_456574_, LongSupplier p_450733_) {
-            for (EnvironmentAttribute<?> environmentattribute : p_456574_.value().attributes()) {
-                this.addTimelineLayerForAttribute(p_456574_, environmentattribute, p_450733_);
+        public EnvironmentAttributeSystem.Builder addTimelineLayer(final Holder<Timeline> timeline, final ClockManager clockManager) {
+            for (EnvironmentAttribute<?> attribute : timeline.value().attributes()) {
+                this.addTimelineLayerForAttribute(timeline, attribute, clockManager);
             }
 
             return this;
         }
 
-        private <Value> void addTimelineLayerForAttribute(Holder<Timeline> p_453110_, EnvironmentAttribute<Value> p_458332_, LongSupplier p_454508_) {
-            this.addTimeBasedLayer(p_458332_, p_453110_.value().createTrackSampler(p_458332_, p_454508_));
+        private <Value> void addTimelineLayerForAttribute(
+            final Holder<Timeline> timeline, final EnvironmentAttribute<Value> attribute, final ClockManager clockManager
+        ) {
+            this.addTimeBasedLayer(attribute, timeline.value().createTrackSampler(attribute, clockManager));
         }
 
         public EnvironmentAttributeSystem build() {
@@ -191,19 +203,24 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
         }
     }
 
-    static class ValueSampler<Value> {
+    private static class ValueSampler<Value> {
         private final EnvironmentAttribute<Value> attribute;
-        final Value baseValue;
+        private final Value baseValue;
         private final List<EnvironmentAttributeLayer<Value>> layers;
-        final boolean isAffectedByPosition;
+        private final boolean isAffectedByPosition;
         private @Nullable Value cachedTickValue;
         private int cacheTickId;
 
-        ValueSampler(EnvironmentAttribute<Value> p_459989_, Value p_450371_, List<EnvironmentAttributeLayer<Value>> p_453087_, boolean p_459058_) {
-            this.attribute = p_459989_;
-            this.baseValue = p_450371_;
-            this.layers = p_453087_;
-            this.isAffectedByPosition = p_459058_;
+        private ValueSampler(
+            final EnvironmentAttribute<Value> attribute,
+            final Value baseValue,
+            final List<EnvironmentAttributeLayer<Value>> layers,
+            final boolean isAffectedByPosition
+        ) {
+            this.attribute = attribute;
+            this.baseValue = baseValue;
+            this.layers = layers;
+            this.isAffectedByPosition = isAffectedByPosition;
         }
 
         public void invalidateTickCache() {
@@ -214,47 +231,47 @@ public class EnvironmentAttributeSystem implements EnvironmentAttributeReader {
         public Value getDimensionValue() {
             if (this.cachedTickValue != null) {
                 return this.cachedTickValue;
-            } else {
-                Value value = this.computeValueNotPositional();
-                this.cachedTickValue = value;
-                return value;
             }
+
+            Value result = this.computeValueNotPositional();
+            this.cachedTickValue = result;
+            return result;
         }
 
-        public Value getValue(Vec3 p_459610_, @Nullable SpatialAttributeInterpolator p_453795_) {
-            return !this.isAffectedByPosition ? this.getDimensionValue() : this.computeValuePositional(p_459610_, p_453795_);
+        public Value getValue(final Vec3 pos, final @Nullable SpatialAttributeInterpolator biomeInterpolator) {
+            return !this.isAffectedByPosition ? this.getDimensionValue() : this.computeValuePositional(pos, biomeInterpolator);
         }
 
-        private Value computeValuePositional(Vec3 p_456420_, @Nullable SpatialAttributeInterpolator p_455257_) {
-            Value value = this.baseValue;
+        private Value computeValuePositional(final Vec3 pos, final @Nullable SpatialAttributeInterpolator biomeInterpolator) {
+            Value result = this.baseValue;
 
-            for (EnvironmentAttributeLayer<Value> environmentattributelayer : this.layers) {
-                value = (Value)(switch (environmentattributelayer) {
-                    case EnvironmentAttributeLayer.Constant<Value> constant -> (Object)constant.applyConstant(value);
-                    case EnvironmentAttributeLayer.TimeBased<Value> timebased -> (Object)timebased.applyTimeBased(value, this.cacheTickId);
-                    case EnvironmentAttributeLayer.Positional<Value> positional -> (Object)positional.applyPositional(
-                        value, Objects.requireNonNull(p_456420_), p_455257_
+            for (EnvironmentAttributeLayer<Value> layer : this.layers) {
+                result = (Value)(switch (layer) {
+                    case EnvironmentAttributeLayer.Constant<Value> constantLayer -> constantLayer.applyConstant(result);
+                    case EnvironmentAttributeLayer.TimeBased<Value> timeBasedLayer -> timeBasedLayer.applyTimeBased(result, this.cacheTickId);
+                    case EnvironmentAttributeLayer.Positional<Value> positionalLayer -> positionalLayer.applyPositional(
+                        result, Objects.requireNonNull(pos), biomeInterpolator
                     );
                     default -> throw new MatchException(null, null);
                 });
             }
 
-            return this.attribute.sanitizeValue(value);
+            return this.attribute.sanitizeValue(result);
         }
 
         private Value computeValueNotPositional() {
-            Value value = this.baseValue;
+            Value result = this.baseValue;
 
-            for (EnvironmentAttributeLayer<Value> environmentattributelayer : this.layers) {
-                value = (Value)(switch (environmentattributelayer) {
-                    case EnvironmentAttributeLayer.Constant<Value> constant -> (Object)constant.applyConstant(value);
-                    case EnvironmentAttributeLayer.TimeBased<Value> timebased -> (Object)timebased.applyTimeBased(value, this.cacheTickId);
-                    case EnvironmentAttributeLayer.Positional<Value> positional -> (Object)value;
+            for (EnvironmentAttributeLayer<Value> layer : this.layers) {
+                result = (Value)(switch (layer) {
+                    case EnvironmentAttributeLayer.Constant<Value> constantLayer -> constantLayer.applyConstant(result);
+                    case EnvironmentAttributeLayer.TimeBased<Value> timeBasedLayer -> timeBasedLayer.applyTimeBased(result, this.cacheTickId);
+                    case EnvironmentAttributeLayer.Positional<Value> ignored -> result;
                     default -> throw new MatchException(null, null);
                 });
             }
 
-            return this.attribute.sanitizeValue(value);
+            return this.attribute.sanitizeValue(result);
         }
     }
 }

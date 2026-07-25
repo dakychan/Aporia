@@ -13,56 +13,51 @@ import net.minecraft.server.players.UserWhiteListEntry;
 import net.minecraft.util.Util;
 
 public class AllowlistService {
-    public static List<PlayerDto> get(MinecraftApi p_425475_) {
-        return p_425475_.allowListService()
-            .getEntries()
-            .stream()
-            .filter(p_428452_ -> p_428452_.getUser() != null)
-            .map(p_426478_ -> PlayerDto.from(p_426478_.getUser()))
-            .toList();
+    public static List<PlayerDto> get(final MinecraftApi minecraftApi) {
+        return minecraftApi.allowListService().getEntries().stream().filter(p -> p.getUser() != null).map(u -> PlayerDto.from(u.getUser())).toList();
     }
 
-    public static List<PlayerDto> add(MinecraftApi p_428263_, List<PlayerDto> p_424131_, ClientInfo p_425388_) {
-        List<CompletableFuture<Optional<NameAndId>>> list = p_424131_.stream()
-            .map(p_427140_ -> p_428263_.playerListService().getUser(p_427140_.id(), p_427140_.name()))
+    public static List<PlayerDto> add(final MinecraftApi minecraftApi, final List<PlayerDto> playerDtos, final ClientInfo clientInfo) {
+        List<CompletableFuture<Optional<NameAndId>>> fetch = playerDtos.stream()
+            .map(playerDto -> minecraftApi.playerListService().getUser(playerDto.id(), playerDto.name()))
             .toList();
 
-        for (Optional<NameAndId> optional : Util.sequence(list).join()) {
-            optional.ifPresent(p_429557_ -> p_428263_.allowListService().add(new UserWhiteListEntry(p_429557_), p_425388_));
+        for (Optional<NameAndId> user : Util.sequence(fetch).join()) {
+            user.ifPresent(nameAndId -> minecraftApi.allowListService().add(new UserWhiteListEntry(nameAndId), clientInfo));
         }
 
-        return get(p_428263_);
+        return get(minecraftApi);
     }
 
-    public static List<PlayerDto> clear(MinecraftApi p_426057_, ClientInfo p_424778_) {
-        p_426057_.allowListService().clear(p_424778_);
-        return get(p_426057_);
+    public static List<PlayerDto> clear(final MinecraftApi minecraftApi, final ClientInfo clientInfo) {
+        minecraftApi.allowListService().clear(clientInfo);
+        return get(minecraftApi);
     }
 
-    public static List<PlayerDto> remove(MinecraftApi p_427599_, List<PlayerDto> p_424061_, ClientInfo p_422763_) {
-        List<CompletableFuture<Optional<NameAndId>>> list = p_424061_.stream()
-            .map(p_424930_ -> p_427599_.playerListService().getUser(p_424930_.id(), p_424930_.name()))
+    public static List<PlayerDto> remove(final MinecraftApi minecraftApi, final List<PlayerDto> playerDtos, final ClientInfo clientInfo) {
+        List<CompletableFuture<Optional<NameAndId>>> fetch = playerDtos.stream()
+            .map(playerDto -> minecraftApi.playerListService().getUser(playerDto.id(), playerDto.name()))
             .toList();
 
-        for (Optional<NameAndId> optional : Util.sequence(list).join()) {
-            optional.ifPresent(p_427892_ -> p_427599_.allowListService().remove(p_427892_, p_422763_));
+        for (Optional<NameAndId> user : Util.sequence(fetch).join()) {
+            user.ifPresent(nameAndId -> minecraftApi.allowListService().remove(nameAndId, clientInfo));
         }
 
-        p_427599_.allowListService().kickUnlistedPlayers(p_422763_);
-        return get(p_427599_);
+        minecraftApi.allowListService().kickUnlistedPlayers(clientInfo);
+        return get(minecraftApi);
     }
 
-    public static List<PlayerDto> set(MinecraftApi p_427686_, List<PlayerDto> p_428218_, ClientInfo p_430443_) {
-        List<CompletableFuture<Optional<NameAndId>>> list = p_428218_.stream()
-            .map(p_428589_ -> p_427686_.playerListService().getUser(p_428589_.id(), p_428589_.name()))
+    public static List<PlayerDto> set(final MinecraftApi minecraftApi, final List<PlayerDto> playerDtos, final ClientInfo clientInfo) {
+        List<CompletableFuture<Optional<NameAndId>>> fetch = playerDtos.stream()
+            .map(playerDto -> minecraftApi.playerListService().getUser(playerDto.id(), playerDto.name()))
             .toList();
-        Set<NameAndId> set = Util.sequence(list).join().stream().flatMap(Optional::stream).collect(Collectors.toSet());
-        Set<NameAndId> set1 = p_427686_.allowListService().getEntries().stream().map(StoredUserEntry::getUser).collect(Collectors.toSet());
-        set1.stream().filter(p_424178_ -> !set.contains(p_424178_)).forEach(p_427298_ -> p_427686_.allowListService().remove(p_427298_, p_430443_));
-        set.stream()
-            .filter(p_429556_ -> !set1.contains(p_429556_))
-            .forEach(p_422687_ -> p_427686_.allowListService().add(new UserWhiteListEntry(p_422687_), p_430443_));
-        p_427686_.allowListService().kickUnlistedPlayers(p_430443_);
-        return get(p_427686_);
+        Set<NameAndId> finalAllowList = Util.sequence(fetch).join().stream().flatMap(Optional::stream).collect(Collectors.toSet());
+        Set<NameAndId> currentAllowList = minecraftApi.allowListService().getEntries().stream().map(StoredUserEntry::getUser).collect(Collectors.toSet());
+        currentAllowList.stream().filter(user -> !finalAllowList.contains(user)).forEach(user -> minecraftApi.allowListService().remove(user, clientInfo));
+        finalAllowList.stream()
+            .filter(user -> !currentAllowList.contains(user))
+            .forEach(user -> minecraftApi.allowListService().add(new UserWhiteListEntry(user), clientInfo));
+        minecraftApi.allowListService().kickUnlistedPlayers(clientInfo);
+        return get(minecraftApi);
     }
 }

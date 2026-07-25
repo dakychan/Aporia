@@ -7,11 +7,11 @@ import org.jspecify.annotations.Nullable;
 
 public record MaterialRuleList(NoiseChunk.BlockStateFiller[] materialRuleList) implements NoiseChunk.BlockStateFiller {
     @Override
-    public @Nullable BlockState calculate(DensityFunction.FunctionContext p_209815_) {
-        for (NoiseChunk.BlockStateFiller noisechunk$blockstatefiller : this.materialRuleList) {
-            BlockState blockstate = noisechunk$blockstatefiller.calculate(p_209815_);
-            if (blockstate != null) {
-                return blockstate;
+    public @Nullable BlockState calculate(final DensityFunction.FunctionContext context) {
+        for (NoiseChunk.BlockStateFiller rule : this.materialRuleList) {
+            BlockState state = rule.calculate(context);
+            if (state != null) {
+                return state;
             }
         }
 

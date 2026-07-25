@@ -12,7 +12,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.DispenserBlockEntity;
 import net.minecraft.world.level.block.entity.DropperBlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
@@ -30,49 +30,49 @@ public class DropperBlock extends DispenserBlock {
         return CODEC;
     }
 
-    public DropperBlock(BlockBehaviour.Properties p_52942_) {
-        super(p_52942_);
+    public DropperBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected DispenseItemBehavior getDispenseMethod(Level p_331221_, ItemStack p_52947_) {
+    protected DispenseItemBehavior getDispenseMethod(final Level level, final ItemStack itemStack) {
         return DISPENSE_BEHAVIOUR;
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153179_, BlockState p_153180_) {
-        return new DropperBlockEntity(p_153179_, p_153180_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new DropperBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    protected void dispenseFrom(ServerLevel p_52944_, BlockState p_301813_, BlockPos p_52945_) {
-        DispenserBlockEntity dispenserblockentity = p_52944_.getBlockEntity(p_52945_, BlockEntityType.DROPPER).orElse(null);
-        if (dispenserblockentity == null) {
-            LOGGER.warn("Ignoring dispensing attempt for Dropper without matching block entity at {}", p_52945_);
+    protected void dispenseFrom(final ServerLevel level, final BlockState state, final BlockPos pos) {
+        DispenserBlockEntity blockEntity = level.getBlockEntity(pos, BlockEntityTypes.DROPPER).orElse(null);
+        if (blockEntity == null) {
+            LOGGER.warn("Ignoring dispensing attempt for Dropper without matching block entity at {}", pos);
         } else {
-            BlockSource blocksource = new BlockSource(p_52944_, p_52945_, p_301813_, dispenserblockentity);
-            int i = dispenserblockentity.getRandomSlot(p_52944_.random);
-            if (i < 0) {
-                p_52944_.levelEvent(1001, p_52945_, 0);
+            BlockSource source = new BlockSource(level, pos, state, blockEntity);
+            int slot = blockEntity.getRandomSlot(level.getRandom());
+            if (slot < 0) {
+                level.levelEvent(1001, pos, 0);
             } else {
-                ItemStack itemstack = dispenserblockentity.getItem(i);
-                if (!itemstack.isEmpty()) {
-                    Direction direction = p_52944_.getBlockState(p_52945_).getValue(FACING);
-                    Container container = HopperBlockEntity.getContainerAt(p_52944_, p_52945_.relative(direction));
-                    ItemStack itemstack1;
-                    if (container == null) {
-                        itemstack1 = DISPENSE_BEHAVIOUR.dispense(blocksource, itemstack);
+                ItemStack itemStack = blockEntity.getItem(slot);
+                if (!itemStack.isEmpty()) {
+                    Direction direction = level.getBlockState(pos).getValue(FACING);
+                    Container into = HopperBlockEntity.getContainerAt(level, pos.relative(direction));
+                    ItemStack remaining;
+                    if (into == null) {
+                        remaining = DISPENSE_BEHAVIOUR.dispense(source, itemStack);
                     } else {
-                        itemstack1 = HopperBlockEntity.addItem(dispenserblockentity, container, itemstack.copyWithCount(1), direction.getOpposite());
-                        if (itemstack1.isEmpty()) {
-                            itemstack1 = itemstack.copy();
-                            itemstack1.shrink(1);
+                        remaining = HopperBlockEntity.addItem(blockEntity, into, itemStack.copyWithCount(1), direction.getOpposite());
+                        if (remaining.isEmpty()) {
+                            remaining = itemStack.copy();
+                            remaining.shrink(1);
                         } else {
-                            itemstack1 = itemstack.copy();
+                            remaining = itemStack.copy();
                         }
                     }
 
-                    dispenserblockentity.setItem(i, itemstack1);
+                    blockEntity.setItem(slot, remaining);
                 }
             }
         }

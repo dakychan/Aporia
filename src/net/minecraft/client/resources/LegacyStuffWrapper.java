@@ -5,21 +5,15 @@ import java.io.IOException;
 import java.io.InputStream;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LegacyStuffWrapper {
     @Deprecated
-    public static int[] getPixels(ResourceManager p_118727_, Identifier p_458530_) throws IOException {
-        int[] aint;
+    public static int[] getPixels(final ResourceManager resourceManager, final Identifier location) throws IOException {
         try (
-            InputStream inputstream = p_118727_.open(p_458530_);
-            NativeImage nativeimage = NativeImage.read(inputstream);
+            InputStream resource = resourceManager.open(location);
+            NativeImage image = NativeImage.read(resource);
         ) {
-            aint = nativeimage.makePixelArray();
+            return image.makePixelArray();
         }
-
-        return aint;
     }
 }

@@ -7,7 +7,6 @@ import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SmithingMenu;
@@ -25,22 +24,24 @@ public class SmithingTableBlock extends CraftingTableBlock {
         return CODEC;
     }
 
-    protected SmithingTableBlock(BlockBehaviour.Properties p_56420_) {
-        super(p_56420_);
+    protected SmithingTableBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected MenuProvider getMenuProvider(BlockState p_56435_, Level p_56436_, BlockPos p_56437_) {
+    protected MenuProvider getMenuProvider(final BlockState state, final Level level, final BlockPos pos) {
         return new SimpleMenuProvider(
-            (p_277304_, p_277305_, p_277306_) -> new SmithingMenu(p_277304_, p_277305_, ContainerLevelAccess.create(p_56436_, p_56437_)), CONTAINER_TITLE
+            (containerId, inventory, player) -> new SmithingMenu(containerId, inventory, ContainerLevelAccess.create(level, pos)), CONTAINER_TITLE
         );
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_56428_, Level p_56429_, BlockPos p_56430_, Player p_56431_, BlockHitResult p_56433_) {
-        if (!p_56429_.isClientSide()) {
-            p_56431_.openMenu(p_56428_.getMenuProvider(p_56429_, p_56430_));
-            p_56431_.awardStat(Stats.INTERACT_WITH_SMITHING_TABLE);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide()) {
+            player.openMenu(state.getMenuProvider(level, pos));
+            player.awardStat(Stats.INTERACT_WITH_SMITHING_TABLE);
         }
 
         return InteractionResult.SUCCESS;

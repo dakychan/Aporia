@@ -19,33 +19,33 @@ public class Stopwatches extends SavedData {
         .codec()
         .xmap(Stopwatches::unpack, Stopwatches::pack);
     public static final SavedDataType<Stopwatches> TYPE = new SavedDataType<>(
-        "stopwatches", Stopwatches::new, CODEC, DataFixTypes.SAVED_DATA_STOPWATCHES
+        Identifier.withDefaultNamespace("stopwatches"), Stopwatches::new, CODEC, DataFixTypes.SAVED_DATA_STOPWATCHES
     );
     private final Map<Identifier, Stopwatch> stopwatches = new Object2ObjectOpenHashMap<>();
 
     private Stopwatches() {
     }
 
-    private static Stopwatches unpack(Map<Identifier, Long> p_452456_) {
-        Stopwatches stopwatches = new Stopwatches();
-        long i = currentTime();
-        p_452456_.forEach((p_457369_, p_459721_) -> stopwatches.stopwatches.put(p_457369_, new Stopwatch(i, p_459721_)));
-        return stopwatches;
+    private static Stopwatches unpack(final Map<Identifier, Long> stopwatches) {
+        Stopwatches result = new Stopwatches();
+        long currentTime = currentTime();
+        stopwatches.forEach((id, accumulatedElapsedTime) -> result.stopwatches.put(id, new Stopwatch(currentTime, accumulatedElapsedTime)));
+        return result;
     }
 
     private Map<Identifier, Long> pack() {
-        long i = currentTime();
-        Map<Identifier, Long> map = new TreeMap<>();
-        this.stopwatches.forEach((p_452902_, p_460078_) -> map.put(p_452902_, p_460078_.elapsedMilliseconds(i)));
-        return map;
+        long currentTime = currentTime();
+        Map<Identifier, Long> result = new TreeMap<>();
+        this.stopwatches.forEach((id, stopwatch) -> result.put(id, stopwatch.elapsedMilliseconds(currentTime)));
+        return result;
     }
 
-    public @Nullable Stopwatch get(Identifier p_460321_) {
-        return this.stopwatches.get(p_460321_);
+    public @Nullable Stopwatch get(final Identifier id) {
+        return this.stopwatches.get(id);
     }
 
-    public boolean add(Identifier p_460107_, Stopwatch p_450666_) {
-        if (this.stopwatches.putIfAbsent(p_460107_, p_450666_) == null) {
+    public boolean add(final Identifier id, final Stopwatch stopwatch) {
+        if (this.stopwatches.putIfAbsent(id, stopwatch) == null) {
             this.setDirty();
             return true;
         } else {
@@ -53,8 +53,8 @@ public class Stopwatches extends SavedData {
         }
     }
 
-    public boolean update(Identifier p_458161_, UnaryOperator<Stopwatch> p_451099_) {
-        if (this.stopwatches.computeIfPresent(p_458161_, (p_456454_, p_451493_) -> p_451099_.apply(p_451493_)) != null) {
+    public boolean update(final Identifier id, final UnaryOperator<Stopwatch> update) {
+        if (this.stopwatches.computeIfPresent(id, (key, value) -> update.apply(value)) != null) {
             this.setDirty();
             return true;
         } else {
@@ -62,13 +62,13 @@ public class Stopwatches extends SavedData {
         }
     }
 
-    public boolean remove(Identifier p_450904_) {
-        boolean flag = this.stopwatches.remove(p_450904_) != null;
-        if (flag) {
+    public boolean remove(final Identifier id) {
+        boolean removed = this.stopwatches.remove(id) != null;
+        if (removed) {
             this.setDirty();
         }
 
-        return flag;
+        return removed;
     }
 
     @Override

@@ -11,18 +11,18 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilde
 public class BuriedTreasureStructure extends Structure {
     public static final MapCodec<BuriedTreasureStructure> CODEC = simpleCodec(BuriedTreasureStructure::new);
 
-    public BuriedTreasureStructure(Structure.StructureSettings p_227385_) {
-        super(p_227385_);
+    public BuriedTreasureStructure(final Structure.StructureSettings settings) {
+        super(settings);
     }
 
     @Override
-    public Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext p_227387_) {
-        return onTopOfChunkCenter(p_227387_, Heightmap.Types.OCEAN_FLOOR_WG, p_227390_ -> generatePieces(p_227390_, p_227387_));
+    public Optional<Structure.GenerationStub> findGenerationPoint(final Structure.GenerationContext context) {
+        return onTopOfChunkCenter(context, Heightmap.Types.OCEAN_FLOOR_WG, builder -> generatePieces(builder, context));
     }
 
-    private static void generatePieces(StructurePiecesBuilder p_227392_, Structure.GenerationContext p_227393_) {
-        BlockPos blockpos = new BlockPos(p_227393_.chunkPos().getBlockX(9), 90, p_227393_.chunkPos().getBlockZ(9));
-        p_227392_.addPiece(new BuriedTreasurePieces.BuriedTreasurePiece(blockpos));
+    private static void generatePieces(final StructurePiecesBuilder builder, final Structure.GenerationContext context) {
+        BlockPos offset = new BlockPos(context.chunkPos().getBlockX(9), 90, context.chunkPos().getBlockZ(9));
+        builder.addPiece(new BuriedTreasurePieces.BuriedTreasurePiece(offset));
     }
 
     @Override

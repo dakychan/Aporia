@@ -12,10 +12,10 @@ public record PlayerScoreEntry(String owner, int value, @Nullable Component disp
     }
 
     public Component ownerName() {
-        return (Component)(this.display != null ? this.display : Component.literal(this.owner()));
+        return this.display != null ? this.display : Component.literal(this.owner());
     }
 
-    public MutableComponent formatValue(NumberFormat p_312365_) {
-        return Objects.requireNonNullElse(this.numberFormatOverride, p_312365_).format(this.value);
+    public MutableComponent formatValue(final NumberFormat _default) {
+        return Objects.requireNonNullElse(this.numberFormatOverride, _default).format(this.value);
     }
 }

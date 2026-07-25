@@ -31,37 +31,37 @@ public class MerchantMenu extends AbstractContainerMenu {
     private boolean showProgressBar;
     private boolean canRestock;
 
-    public MerchantMenu(int p_40033_, Inventory p_40034_) {
-        this(p_40033_, p_40034_, new ClientSideMerchant(p_40034_.player));
+    public MerchantMenu(final int containerId, final Inventory inventory) {
+        this(containerId, inventory, new ClientSideMerchant(inventory.player));
     }
 
-    public MerchantMenu(int p_40036_, Inventory p_40037_, Merchant p_40038_) {
-        super(MenuType.MERCHANT, p_40036_);
-        this.trader = p_40038_;
-        this.tradeContainer = new MerchantContainer(p_40038_);
+    public MerchantMenu(final int containerId, final Inventory inventory, final Merchant merchant) {
+        super(MenuType.MERCHANT, containerId);
+        this.trader = merchant;
+        this.tradeContainer = new MerchantContainer(merchant);
         this.addSlot(new Slot(this.tradeContainer, 0, 136, 37));
         this.addSlot(new Slot(this.tradeContainer, 1, 162, 37));
-        this.addSlot(new MerchantResultSlot(p_40037_.player, p_40038_, this.tradeContainer, 2, 220, 37));
-        this.addStandardInventorySlots(p_40037_, 108, 84);
+        this.addSlot(new MerchantResultSlot(inventory.player, merchant, this.tradeContainer, 2, 220, 37));
+        this.addStandardInventorySlots(inventory, 108, 84);
     }
 
-    public void setShowProgressBar(boolean p_40049_) {
-        this.showProgressBar = p_40049_;
+    public void setShowProgressBar(final boolean show) {
+        this.showProgressBar = show;
     }
 
     @Override
-    public void slotsChanged(Container p_40040_) {
+    public void slotsChanged(final Container container) {
         this.tradeContainer.updateSellItem();
-        super.slotsChanged(p_40040_);
+        super.slotsChanged(container);
     }
 
-    public void setSelectionHint(int p_40064_) {
-        this.tradeContainer.setSelectionHint(p_40064_);
+    public void setSelectionHint(final int hint) {
+        this.tradeContainer.setSelectionHint(hint);
     }
 
     @Override
-    public boolean stillValid(Player p_40042_) {
-        return this.trader.stillValid(p_40042_);
+    public boolean stillValid(final Player player) {
+        return this.trader.stillValid(player);
     }
 
     public int getTraderXp() {
@@ -72,20 +72,20 @@ public class MerchantMenu extends AbstractContainerMenu {
         return this.tradeContainer.getFutureXp();
     }
 
-    public void setXp(int p_40067_) {
-        this.trader.overrideXp(p_40067_);
+    public void setXp(final int xp) {
+        this.trader.overrideXp(xp);
     }
 
     public int getTraderLevel() {
         return this.merchantLevel;
     }
 
-    public void setMerchantLevel(int p_40070_) {
-        this.merchantLevel = p_40070_;
+    public void setMerchantLevel(final int level) {
+        this.merchantLevel = level;
     }
 
-    public void setCanRestock(boolean p_40059_) {
-        this.canRestock = p_40059_;
+    public void setCanRestock(final boolean canRestock) {
+        this.canRestock = canRestock;
     }
 
     public boolean canRestock() {
@@ -93,121 +93,122 @@ public class MerchantMenu extends AbstractContainerMenu {
     }
 
     @Override
-    public boolean canTakeItemForPickAll(ItemStack p_40044_, Slot p_40045_) {
+    public boolean canTakeItemForPickAll(final ItemStack carried, final Slot target) {
         return false;
     }
 
     @Override
-    public ItemStack quickMoveStack(Player p_40053_, int p_40054_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        Slot slot = this.slots.get(p_40054_);
+    public ItemStack quickMoveStack(final Player player, final int slotIndex) {
+        ItemStack clicked = ItemStack.EMPTY;
+        Slot slot = this.slots.get(slotIndex);
         if (slot != null && slot.hasItem()) {
-            ItemStack itemstack1 = slot.getItem();
-            itemstack = itemstack1.copy();
-            if (p_40054_ == 2) {
-                if (!this.moveItemStackTo(itemstack1, 3, 39, true)) {
+            ItemStack stack = slot.getItem();
+            clicked = stack.copy();
+            if (slotIndex == 2) {
+                if (!this.moveItemStackTo(stack, 3, 39, true)) {
                     return ItemStack.EMPTY;
                 }
 
-                slot.onQuickCraft(itemstack1, itemstack);
+                slot.onQuickCraft(stack, clicked);
                 this.playTradeSound();
-            } else if (p_40054_ != 0 && p_40054_ != 1) {
-                if (p_40054_ >= 3 && p_40054_ < 30) {
-                    if (!this.moveItemStackTo(itemstack1, 30, 39, false)) {
+            } else if (slotIndex != 0 && slotIndex != 1) {
+                if (slotIndex >= 3 && slotIndex < 30) {
+                    if (!this.moveItemStackTo(stack, 30, 39, false)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (p_40054_ >= 30 && p_40054_ < 39 && !this.moveItemStackTo(itemstack1, 3, 30, false)) {
+                } else if (slotIndex >= 30 && slotIndex < 39 && !this.moveItemStackTo(stack, 3, 30, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(itemstack1, 3, 39, false)) {
+            } else if (!this.moveItemStackTo(stack, 3, 39, false)) {
                 return ItemStack.EMPTY;
             }
 
-            if (itemstack1.isEmpty()) {
+            if (stack.isEmpty()) {
                 slot.setByPlayer(ItemStack.EMPTY);
             } else {
                 slot.setChanged();
             }
 
-            if (itemstack1.getCount() == itemstack.getCount()) {
+            if (stack.getCount() == clicked.getCount()) {
                 return ItemStack.EMPTY;
             }
 
-            slot.onTake(p_40053_, itemstack1);
+            slot.onTake(player, stack);
         }
 
-        return itemstack;
+        return clicked;
     }
 
     private void playTradeSound() {
         if (!this.trader.isClientSide()) {
             Entity entity = (Entity)this.trader;
-            entity.level().playLocalSound(entity.getX(), entity.getY(), entity.getZ(), this.trader.getNotifyTradeSound(), SoundSource.NEUTRAL, 1.0F, 1.0F, false);
+            entity.level()
+                .playLocalSound(entity.getX(), entity.getY(), entity.getZ(), this.trader.getNotifyTradeSound(), SoundSource.NEUTRAL, 1.0F, 1.0F, false);
         }
     }
 
     @Override
-    public void removed(Player p_40051_) {
-        super.removed(p_40051_);
+    public void removed(final Player player) {
+        super.removed(player);
         this.trader.setTradingPlayer(null);
         if (!this.trader.isClientSide()) {
-            if (!p_40051_.isAlive() || p_40051_ instanceof ServerPlayer && ((ServerPlayer)p_40051_).hasDisconnected()) {
-                ItemStack itemstack = this.tradeContainer.removeItemNoUpdate(0);
-                if (!itemstack.isEmpty()) {
-                    p_40051_.drop(itemstack, false);
+            if (!player.isAlive() || player instanceof ServerPlayer serverPlayer && serverPlayer.hasDisconnected()) {
+                ItemStack itemStack = this.tradeContainer.removeItemNoUpdate(0);
+                if (!itemStack.isEmpty()) {
+                    player.drop(itemStack, false);
                 }
 
-                itemstack = this.tradeContainer.removeItemNoUpdate(1);
-                if (!itemstack.isEmpty()) {
-                    p_40051_.drop(itemstack, false);
+                itemStack = this.tradeContainer.removeItemNoUpdate(1);
+                if (!itemStack.isEmpty()) {
+                    player.drop(itemStack, false);
                 }
-            } else if (p_40051_ instanceof ServerPlayer) {
-                p_40051_.getInventory().placeItemBackInInventory(this.tradeContainer.removeItemNoUpdate(0));
-                p_40051_.getInventory().placeItemBackInInventory(this.tradeContainer.removeItemNoUpdate(1));
+            } else if (player instanceof ServerPlayer) {
+                player.getInventory().placeItemBackInInventory(this.tradeContainer.removeItemNoUpdate(0));
+                player.getInventory().placeItemBackInInventory(this.tradeContainer.removeItemNoUpdate(1));
             }
         }
     }
 
-    public void tryMoveItems(int p_40073_) {
-        if (p_40073_ >= 0 && this.getOffers().size() > p_40073_) {
-            ItemStack itemstack = this.tradeContainer.getItem(0);
-            if (!itemstack.isEmpty()) {
-                if (!this.moveItemStackTo(itemstack, 3, 39, true)) {
+    public void tryMoveItems(final int newTradeIndex) {
+        if (newTradeIndex >= 0 && this.getOffers().size() > newTradeIndex) {
+            ItemStack oldCostA = this.tradeContainer.getItem(0);
+            if (!oldCostA.isEmpty()) {
+                if (!this.moveItemStackTo(oldCostA, 3, 39, true)) {
                     return;
                 }
 
-                this.tradeContainer.setItem(0, itemstack);
+                this.tradeContainer.setItem(0, oldCostA);
             }
 
-            ItemStack itemstack1 = this.tradeContainer.getItem(1);
-            if (!itemstack1.isEmpty()) {
-                if (!this.moveItemStackTo(itemstack1, 3, 39, true)) {
+            ItemStack oldCostB = this.tradeContainer.getItem(1);
+            if (!oldCostB.isEmpty()) {
+                if (!this.moveItemStackTo(oldCostB, 3, 39, true)) {
                     return;
                 }
 
-                this.tradeContainer.setItem(1, itemstack1);
+                this.tradeContainer.setItem(1, oldCostB);
             }
 
             if (this.tradeContainer.getItem(0).isEmpty() && this.tradeContainer.getItem(1).isEmpty()) {
-                MerchantOffer merchantoffer = this.getOffers().get(p_40073_);
-                this.moveFromInventoryToPaymentSlot(0, merchantoffer.getItemCostA());
-                merchantoffer.getItemCostB().ifPresent(p_332192_ -> this.moveFromInventoryToPaymentSlot(1, p_332192_));
+                MerchantOffer merchantOffer = this.getOffers().get(newTradeIndex);
+                this.moveFromInventoryToPaymentSlot(0, merchantOffer.getItemCostA());
+                merchantOffer.getItemCostB().ifPresent(costB -> this.moveFromInventoryToPaymentSlot(1, costB));
             }
         }
     }
 
-    private void moveFromInventoryToPaymentSlot(int p_40061_, ItemCost p_332037_) {
+    private void moveFromInventoryToPaymentSlot(final int paymentSlot, final ItemCost cost) {
         for (int i = 3; i < 39; i++) {
-            ItemStack itemstack = this.slots.get(i).getItem();
-            if (!itemstack.isEmpty() && p_332037_.test(itemstack)) {
-                ItemStack itemstack1 = this.tradeContainer.getItem(p_40061_);
-                if (itemstack1.isEmpty() || ItemStack.isSameItemSameComponents(itemstack, itemstack1)) {
-                    int j = itemstack.getMaxStackSize();
-                    int k = Math.min(j - itemstack1.getCount(), itemstack.getCount());
-                    ItemStack itemstack2 = itemstack.copyWithCount(itemstack1.getCount() + k);
-                    itemstack.shrink(k);
-                    this.tradeContainer.setItem(p_40061_, itemstack2);
-                    if (itemstack2.getCount() >= j) {
+            ItemStack inventoryItem = this.slots.get(i).getItem();
+            if (!inventoryItem.isEmpty() && cost.test(inventoryItem)) {
+                ItemStack currentPaymentItem = this.tradeContainer.getItem(paymentSlot);
+                if (currentPaymentItem.isEmpty() || ItemStack.isSameItemSameComponents(inventoryItem, currentPaymentItem)) {
+                    int maxStackSize = inventoryItem.getMaxStackSize();
+                    int moveCount = Math.min(maxStackSize - currentPaymentItem.getCount(), inventoryItem.getCount());
+                    ItemStack newPaymentItem = inventoryItem.copyWithCount(currentPaymentItem.getCount() + moveCount);
+                    inventoryItem.shrink(moveCount);
+                    this.tradeContainer.setItem(paymentSlot, newPaymentItem);
+                    if (newPaymentItem.getCount() >= maxStackSize) {
                         break;
                     }
                 }
@@ -215,8 +216,8 @@ public class MerchantMenu extends AbstractContainerMenu {
         }
     }
 
-    public void setOffers(MerchantOffers p_40047_) {
-        this.trader.overrideOffers(p_40047_);
+    public void setOffers(final MerchantOffers offers) {
+        this.trader.overrideOffers(offers);
     }
 
     public MerchantOffers getOffers() {

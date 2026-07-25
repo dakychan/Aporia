@@ -17,7 +17,7 @@ public class MemoryReserve {
                 System.gc();
                 System.gc();
                 System.gc();
-            } catch (Throwable throwable) {
+            } catch (Throwable var1) {
             }
         }
     }

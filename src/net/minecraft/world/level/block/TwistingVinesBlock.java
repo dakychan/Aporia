@@ -16,13 +16,13 @@ public class TwistingVinesBlock extends GrowingPlantHeadBlock {
         return CODEC;
     }
 
-    public TwistingVinesBlock(BlockBehaviour.Properties p_154864_) {
-        super(p_154864_, Direction.UP, SHAPE, false, 0.1);
+    public TwistingVinesBlock(final BlockBehaviour.Properties properties) {
+        super(properties, Direction.UP, SHAPE, false, 0.1);
     }
 
     @Override
-    protected int getBlocksToGrowWhenBonemealed(RandomSource p_222649_) {
-        return NetherVines.getBlocksToGrowWhenBonemealed(p_222649_);
+    protected int getBlocksToGrowWhenBonemealed(final RandomSource random) {
+        return NetherVines.getBlocksToGrowWhenBonemealed(random);
     }
 
     @Override
@@ -31,7 +31,7 @@ public class TwistingVinesBlock extends GrowingPlantHeadBlock {
     }
 
     @Override
-    protected boolean canGrowInto(BlockState p_154869_) {
-        return NetherVines.isValidGrowthState(p_154869_);
+    protected boolean canGrowInto(final BlockState state) {
+        return NetherVines.isValidGrowthState(state);
     }
 }

@@ -9,11 +9,11 @@ public record SpawnPrioritySelectors(List<PriorityProvider.Selector<SpawnContext
         .listOf()
         .xmap(SpawnPrioritySelectors::new, SpawnPrioritySelectors::selectors);
 
-    public static SpawnPrioritySelectors single(SpawnCondition p_395363_, int p_397597_) {
-        return new SpawnPrioritySelectors(PriorityProvider.single(p_395363_, p_397597_));
+    public static SpawnPrioritySelectors single(final SpawnCondition condition, final int priority) {
+        return new SpawnPrioritySelectors(PriorityProvider.single(condition, priority));
     }
 
-    public static SpawnPrioritySelectors fallback(int p_392663_) {
-        return new SpawnPrioritySelectors(PriorityProvider.alwaysTrue(p_392663_));
+    public static SpawnPrioritySelectors fallback(final int priority) {
+        return new SpawnPrioritySelectors(PriorityProvider.alwaysTrue(priority));
     }
 }

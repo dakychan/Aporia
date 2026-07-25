@@ -1,34 +1,20 @@
 package net.minecraft.client.renderer.entity.state;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record HitboxRenderState(
-    double x0,
-    double y0,
-    double z0,
-    double x1,
-    double y1,
-    double z1,
-    float offsetX,
-    float offsetY,
-    float offsetZ,
-    float red,
-    float green,
-    float blue
+    double x0, double y0, double z0, double x1, double y1, double z1, float offsetX, float offsetY, float offsetZ, float red, float green, float blue
 ) {
     public HitboxRenderState(
-        double p_393222_,
-        double p_394687_,
-        double p_397408_,
-        double p_392101_,
-        double p_394320_,
-        double p_391299_,
-        float p_395263_,
-        float p_397203_,
-        float p_391960_
+        final double x0,
+        final double y0,
+        final double z0,
+        final double x1,
+        final double y1,
+        final double z1,
+        final float red,
+        final float green,
+        final float blue
     ) {
-        this(p_393222_, p_394687_, p_397408_, p_392101_, p_394320_, p_391299_, 0.0F, 0.0F, 0.0F, p_395263_, p_397203_, p_391960_);
+        this(x0, y0, z0, x1, y1, z1, 0.0F, 0.0F, 0.0F, red, green, blue);
     }
 }

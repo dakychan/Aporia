@@ -21,7 +21,7 @@ public record ClientboundPlaceGhostRecipePacket(int containerId, RecipeDisplay r
         return GamePacketTypes.CLIENTBOUND_PLACE_GHOST_RECIPE;
     }
 
-    public void handle(ClientGamePacketListener p_132654_) {
-        p_132654_.handlePlaceRecipe(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handlePlaceRecipe(this);
     }
 }

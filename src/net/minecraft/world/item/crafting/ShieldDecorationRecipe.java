@@ -1,83 +1,110 @@
 package net.minecraft.world.item.crafting;
 
-import net.minecraft.core.HolderLookup;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.BannerItem;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
 
 public class ShieldDecorationRecipe extends CustomRecipe {
-    public ShieldDecorationRecipe(CraftingBookCategory p_251065_) {
-        super(p_251065_);
+    public static final MapCodec<ShieldDecorationRecipe> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
+                Ingredient.CODEC.fieldOf("banner").forGetter(o -> o.banner),
+                Ingredient.CODEC.fieldOf("target").forGetter(o -> o.target),
+                ItemStackTemplate.CODEC.fieldOf("result").forGetter(o -> o.result)
+            )
+            .apply(i, ShieldDecorationRecipe::new)
+    );
+    public static final StreamCodec<RegistryFriendlyByteBuf, ShieldDecorationRecipe> STREAM_CODEC = StreamCodec.composite(
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.banner,
+        Ingredient.CONTENTS_STREAM_CODEC,
+        o -> o.target,
+        ItemStackTemplate.STREAM_CODEC,
+        o -> o.result,
+        ShieldDecorationRecipe::new
+    );
+    public static final RecipeSerializer<ShieldDecorationRecipe> SERIALIZER = new RecipeSerializer<>(MAP_CODEC, STREAM_CODEC);
+    private final Ingredient banner;
+    private final Ingredient target;
+    private final ItemStackTemplate result;
+
+    public ShieldDecorationRecipe(final Ingredient banner, final Ingredient target, final ItemStackTemplate result) {
+        this.banner = banner;
+        this.target = target;
+        this.result = result;
     }
 
-    public boolean matches(CraftingInput p_342277_, Level p_44309_) {
-        if (p_342277_.ingredientCount() != 2) {
+    public boolean matches(final CraftingInput input, final Level level) {
+        if (input.ingredientCount() != 2) {
             return false;
-        } else {
-            boolean flag = false;
-            boolean flag1 = false;
+        }
 
-            for (int i = 0; i < p_342277_.size(); i++) {
-                ItemStack itemstack = p_342277_.getItem(i);
-                if (!itemstack.isEmpty()) {
-                    if (itemstack.getItem() instanceof BannerItem) {
-                        if (flag1) {
-                            return false;
-                        }
+        boolean hasClearTarget = false;
+        boolean hasPatternBanner = false;
 
-                        flag1 = true;
-                    } else {
-                        if (!itemstack.is(Items.SHIELD)) {
-                            return false;
-                        }
-
-                        if (flag) {
-                            return false;
-                        }
-
-                        BannerPatternLayers bannerpatternlayers = itemstack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
-                        if (!bannerpatternlayers.layers().isEmpty()) {
-                            return false;
-                        }
-
-                        flag = true;
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                if (this.banner.test(itemStack) && itemStack.getItem() instanceof BannerItem) {
+                    if (hasPatternBanner) {
+                        return false;
                     }
+
+                    hasPatternBanner = true;
+                } else {
+                    if (!this.target.test(itemStack)) {
+                        return false;
+                    }
+
+                    if (hasClearTarget) {
+                        return false;
+                    }
+
+                    BannerPatternLayers patterns = itemStack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+                    if (!patterns.layers().isEmpty()) {
+                        return false;
+                    }
+
+                    hasClearTarget = true;
                 }
             }
-
-            return flag && flag1;
         }
+
+        return hasClearTarget && hasPatternBanner;
     }
 
-    public ItemStack assemble(CraftingInput p_342063_, HolderLookup.Provider p_330479_) {
-        ItemStack itemstack = ItemStack.EMPTY;
-        ItemStack itemstack1 = ItemStack.EMPTY;
+    public ItemStack assemble(final CraftingInput input) {
+        BannerPatternLayers patterns = null;
+        DyeColor baseColor = DyeColor.WHITE;
+        ItemStack target = ItemStack.EMPTY;
 
-        for (int i = 0; i < p_342063_.size(); i++) {
-            ItemStack itemstack2 = p_342063_.getItem(i);
-            if (!itemstack2.isEmpty()) {
-                if (itemstack2.getItem() instanceof BannerItem) {
-                    itemstack = itemstack2;
-                } else if (itemstack2.is(Items.SHIELD)) {
-                    itemstack1 = itemstack2.copy();
+        for (int slot = 0; slot < input.size(); slot++) {
+            ItemStack itemStack = input.getItem(slot);
+            if (!itemStack.isEmpty()) {
+                if (this.banner.test(itemStack) && itemStack.getItem() instanceof BannerItem bannerItem) {
+                    patterns = itemStack.get(DataComponents.BANNER_PATTERNS);
+                    baseColor = bannerItem.getColor();
+                } else if (this.target.test(itemStack)) {
+                    target = itemStack;
                 }
             }
         }
 
-        if (itemstack1.isEmpty()) {
-            return itemstack1;
-        } else {
-            itemstack1.set(DataComponents.BANNER_PATTERNS, itemstack.get(DataComponents.BANNER_PATTERNS));
-            itemstack1.set(DataComponents.BASE_COLOR, ((BannerItem)itemstack.getItem()).getColor());
-            return itemstack1;
-        }
+        ItemStack result = TransmuteRecipe.createWithOriginalComponents(this.result, target);
+        result.set(DataComponents.BANNER_PATTERNS, patterns);
+        result.set(DataComponents.BASE_COLOR, baseColor);
+        return result;
     }
 
     @Override
     public RecipeSerializer<ShieldDecorationRecipe> getSerializer() {
-        return RecipeSerializer.SHIELD_DECORATION;
+        return SERIALIZER;
     }
 }

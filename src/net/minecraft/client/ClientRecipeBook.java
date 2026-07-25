@@ -19,23 +19,20 @@ import net.minecraft.world.item.crafting.ExtendedRecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.display.RecipeDisplayEntry;
 import net.minecraft.world.item.crafting.display.RecipeDisplayId;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ClientRecipeBook extends RecipeBook {
     private final Map<RecipeDisplayId, RecipeDisplayEntry> known = new HashMap<>();
     private final Set<RecipeDisplayId> highlight = new HashSet<>();
     private Map<ExtendedRecipeBookCategory, List<RecipeCollection>> collectionsByTab = Map.of();
     private List<RecipeCollection> allCollections = List.of();
 
-    public void add(RecipeDisplayEntry p_367545_) {
-        this.known.put(p_367545_.id(), p_367545_);
+    public void add(final RecipeDisplayEntry display) {
+        this.known.put(display.id(), display);
     }
 
-    public void remove(RecipeDisplayId p_365017_) {
-        this.known.remove(p_365017_);
-        this.highlight.remove(p_365017_);
+    public void remove(final RecipeDisplayId id) {
+        this.known.remove(id);
+        this.highlight.remove(id);
     }
 
     public void clear() {
@@ -43,71 +40,71 @@ public class ClientRecipeBook extends RecipeBook {
         this.highlight.clear();
     }
 
-    public boolean willHighlight(RecipeDisplayId p_364304_) {
-        return this.highlight.contains(p_364304_);
+    public boolean willHighlight(final RecipeDisplayId recipe) {
+        return this.highlight.contains(recipe);
     }
 
-    public void removeHighlight(RecipeDisplayId p_365808_) {
-        this.highlight.remove(p_365808_);
+    public void removeHighlight(final RecipeDisplayId id) {
+        this.highlight.remove(id);
     }
 
-    public void addHighlight(RecipeDisplayId p_364710_) {
-        this.highlight.add(p_364710_);
+    public void addHighlight(final RecipeDisplayId id) {
+        this.highlight.add(id);
     }
 
     public void rebuildCollections() {
-        Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> map = categorizeAndGroupRecipes(this.known.values());
-        Map<ExtendedRecipeBookCategory, List<RecipeCollection>> map1 = new HashMap<>();
-        Builder<RecipeCollection> builder = ImmutableList.builder();
-        map.forEach(
-            (p_357635_, p_357636_) -> map1.put(
-                p_357635_, p_357636_.stream().map(RecipeCollection::new).peek(builder::add).collect(ImmutableList.toImmutableList())
+        Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> recipeListsByCategory = categorizeAndGroupRecipes(this.known.values());
+        Map<ExtendedRecipeBookCategory, List<RecipeCollection>> byCategory = new HashMap<>();
+        Builder<RecipeCollection> all = ImmutableList.builder();
+        recipeListsByCategory.forEach(
+            (category, categoryRecipes) -> byCategory.put(
+                category, categoryRecipes.stream().map(RecipeCollection::new).peek(all::add).collect(ImmutableList.toImmutableList())
             )
         );
 
-        for (SearchRecipeBookCategory searchrecipebookcategory : SearchRecipeBookCategory.values()) {
-            map1.put(
-                searchrecipebookcategory,
-                searchrecipebookcategory.includedCategories()
+        for (SearchRecipeBookCategory searchCategory : SearchRecipeBookCategory.values()) {
+            byCategory.put(
+                searchCategory,
+                searchCategory.includedCategories()
                     .stream()
-                    .flatMap(p_357639_ -> map1.getOrDefault(p_357639_, List.of()).stream())
+                    .flatMap(subCategory -> byCategory.getOrDefault(subCategory, List.of()).stream())
                     .collect(ImmutableList.toImmutableList())
             );
         }
 
-        this.collectionsByTab = Map.copyOf(map1);
-        this.allCollections = builder.build();
+        this.collectionsByTab = Map.copyOf(byCategory);
+        this.allCollections = all.build();
     }
 
-    private static Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> categorizeAndGroupRecipes(Iterable<RecipeDisplayEntry> p_90643_) {
-        Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> map = new HashMap<>();
-        Table<RecipeBookCategory, Integer, List<RecipeDisplayEntry>> table = HashBasedTable.create();
+    private static Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> categorizeAndGroupRecipes(final Iterable<RecipeDisplayEntry> recipes) {
+        Map<RecipeBookCategory, List<List<RecipeDisplayEntry>>> result = new HashMap<>();
+        Table<RecipeBookCategory, Integer, List<RecipeDisplayEntry>> multiItemGroups = HashBasedTable.create();
 
-        for (RecipeDisplayEntry recipedisplayentry : p_90643_) {
-            RecipeBookCategory recipebookcategory = recipedisplayentry.category();
-            OptionalInt optionalint = recipedisplayentry.group();
-            if (optionalint.isEmpty()) {
-                map.computeIfAbsent(recipebookcategory, p_357637_ -> new ArrayList<>()).add(List.of(recipedisplayentry));
+        for (RecipeDisplayEntry entry : recipes) {
+            RecipeBookCategory category = entry.category();
+            OptionalInt groupId = entry.group();
+            if (groupId.isEmpty()) {
+                result.computeIfAbsent(category, key -> new ArrayList<>()).add(List.of(entry));
             } else {
-                List<RecipeDisplayEntry> list = table.get(recipebookcategory, optionalint.getAsInt());
-                if (list == null) {
-                    list = new ArrayList<>();
-                    table.put(recipebookcategory, optionalint.getAsInt(), list);
-                    map.computeIfAbsent(recipebookcategory, p_357640_ -> new ArrayList<>()).add(list);
+                List<RecipeDisplayEntry> groupRecipes = multiItemGroups.get(category, groupId.getAsInt());
+                if (groupRecipes == null) {
+                    groupRecipes = new ArrayList<>();
+                    multiItemGroups.put(category, groupId.getAsInt(), groupRecipes);
+                    result.computeIfAbsent(category, key -> new ArrayList<>()).add(groupRecipes);
                 }
 
-                list.add(recipedisplayentry);
+                groupRecipes.add(entry);
             }
         }
 
-        return map;
+        return result;
     }
 
     public List<RecipeCollection> getCollections() {
         return this.allCollections;
     }
 
-    public List<RecipeCollection> getCollection(ExtendedRecipeBookCategory p_362967_) {
-        return this.collectionsByTab.getOrDefault(p_362967_, Collections.emptyList());
+    public List<RecipeCollection> getCollection(final ExtendedRecipeBookCategory category) {
+        return this.collectionsByTab.getOrDefault(category, Collections.emptyList());
     }
 }

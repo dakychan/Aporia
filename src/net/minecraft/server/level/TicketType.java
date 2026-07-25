@@ -24,8 +24,8 @@ public record TicketType(long timeout, @TicketType.Flags int flags) {
     public static final TicketType ENDER_PEARL = register("ender_pearl", 40L, 14);
     public static final TicketType UNKNOWN = register("unknown", 1L, 18);
 
-    private static TicketType register(String p_395985_, long p_395702_, @TicketType.Flags int p_426031_) {
-        return Registry.register(BuiltInRegistries.TICKET_TYPE, p_395985_, new TicketType(p_395702_, p_426031_));
+    private static TicketType register(final String name, final long timeout, final @TicketType.Flags int flags) {
+        return Registry.register(BuiltInRegistries.TICKET_TYPE, name, new TicketType(timeout, flags));
     }
 
     public boolean persist() {
@@ -53,7 +53,7 @@ public record TicketType(long timeout, @TicketType.Flags int flags) {
     }
 
     @Retention(RetentionPolicy.CLASS)
-    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
+    @Target(ElementType.TYPE_USE)
     public @interface Flags {
     }
 }

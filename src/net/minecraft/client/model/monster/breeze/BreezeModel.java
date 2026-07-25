@@ -13,10 +13,7 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.BreezeRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BreezeModel extends EntityModel<BreezeRenderState> {
     private static final float WIND_TOP_SPEED = 0.6F;
     private static final float WIND_MIDDLE_SPEED = 0.8F;
@@ -35,44 +32,44 @@ public class BreezeModel extends EntityModel<BreezeRenderState> {
     private final KeyframeAnimation inhaleAnimation;
     private final KeyframeAnimation jumpAnimation;
 
-    public BreezeModel(ModelPart p_455857_) {
-        super(p_455857_, RenderTypes::entityTranslucent);
-        this.wind = p_455857_.getChild("wind_body");
+    public BreezeModel(final ModelPart root) {
+        super(root, RenderTypes::entityTranslucent);
+        this.wind = root.getChild("wind_body");
         this.windBottom = this.wind.getChild("wind_bottom");
         this.windMid = this.windBottom.getChild("wind_mid");
         this.windTop = this.windMid.getChild("wind_top");
-        this.head = p_455857_.getChild("body").getChild("head");
+        this.head = root.getChild("body").getChild("head");
         this.eyes = this.head.getChild("eyes");
-        this.rods = p_455857_.getChild("body").getChild("rods");
-        this.idleAnimation = BreezeAnimation.IDLE.bake(p_455857_);
-        this.shootAnimation = BreezeAnimation.SHOOT.bake(p_455857_);
-        this.slideAnimation = BreezeAnimation.SLIDE.bake(p_455857_);
-        this.slideBackAnimation = BreezeAnimation.SLIDE_BACK.bake(p_455857_);
-        this.inhaleAnimation = BreezeAnimation.INHALE.bake(p_455857_);
-        this.jumpAnimation = BreezeAnimation.JUMP.bake(p_455857_);
+        this.rods = root.getChild("body").getChild("rods");
+        this.idleAnimation = BreezeAnimation.IDLE.bake(root);
+        this.shootAnimation = BreezeAnimation.SHOOT.bake(root);
+        this.slideAnimation = BreezeAnimation.SLIDE.bake(root);
+        this.slideBackAnimation = BreezeAnimation.SLIDE_BACK.bake(root);
+        this.inhaleAnimation = BreezeAnimation.INHALE.bake(root);
+        this.jumpAnimation = BreezeAnimation.JUMP.bake(root);
     }
 
     private static MeshDefinition createBaseMesh() {
         MeshDefinition meshdefinition = new MeshDefinition();
         PartDefinition partdefinition = meshdefinition.getRoot();
-        PartDefinition partdefinition1 = partdefinition.addOrReplaceChild("body", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
-        PartDefinition partdefinition2 = partdefinition1.addOrReplaceChild("rods", CubeListBuilder.create(), PartPose.offset(0.0F, 8.0F, 0.0F));
-        partdefinition2.addOrReplaceChild(
+        PartDefinition body = partdefinition.addOrReplaceChild("body", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition rods = body.addOrReplaceChild("rods", CubeListBuilder.create(), PartPose.offset(0.0F, 8.0F, 0.0F));
+        rods.addOrReplaceChild(
             "rod_1",
             CubeListBuilder.create().texOffs(0, 17).addBox(-1.0F, 0.0F, -3.0F, 2.0F, 8.0F, 2.0F, new CubeDeformation(0.0F)),
             PartPose.offsetAndRotation(2.5981F, -3.0F, 1.5F, -2.7489F, -1.0472F, 3.1416F)
         );
-        partdefinition2.addOrReplaceChild(
+        rods.addOrReplaceChild(
             "rod_2",
             CubeListBuilder.create().texOffs(0, 17).addBox(-1.0F, 0.0F, -3.0F, 2.0F, 8.0F, 2.0F, new CubeDeformation(0.0F)),
             PartPose.offsetAndRotation(-2.5981F, -3.0F, 1.5F, -2.7489F, 1.0472F, 3.1416F)
         );
-        partdefinition2.addOrReplaceChild(
+        rods.addOrReplaceChild(
             "rod_3",
             CubeListBuilder.create().texOffs(0, 17).addBox(-1.0F, 0.0F, -3.0F, 2.0F, 8.0F, 2.0F, new CubeDeformation(0.0F)),
             PartPose.offsetAndRotation(0.0F, -3.0F, -3.0F, 0.3927F, 0.0F, 0.0F)
         );
-        PartDefinition partdefinition3 = partdefinition1.addOrReplaceChild(
+        PartDefinition head = body.addOrReplaceChild(
             "head",
             CubeListBuilder.create()
                 .texOffs(4, 24)
@@ -81,7 +78,7 @@ public class BreezeModel extends EntityModel<BreezeRenderState> {
                 .addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, new CubeDeformation(0.0F)),
             PartPose.offset(0.0F, 4.0F, 0.0F)
         );
-        partdefinition3.addOrReplaceChild(
+        head.addOrReplaceChild(
             "eyes",
             CubeListBuilder.create()
                 .texOffs(4, 24)
@@ -90,13 +87,13 @@ public class BreezeModel extends EntityModel<BreezeRenderState> {
                 .addBox(-4.0F, -8.0F, -4.0F, 8.0F, 8.0F, 8.0F, new CubeDeformation(0.0F)),
             PartPose.offset(0.0F, 0.0F, 0.0F)
         );
-        PartDefinition partdefinition4 = partdefinition.addOrReplaceChild("wind_body", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
-        PartDefinition partdefinition5 = partdefinition4.addOrReplaceChild(
+        PartDefinition windBody = partdefinition.addOrReplaceChild("wind_body", CubeListBuilder.create(), PartPose.offset(0.0F, 0.0F, 0.0F));
+        PartDefinition windBottom = windBody.addOrReplaceChild(
             "wind_bottom",
             CubeListBuilder.create().texOffs(1, 83).addBox(-2.5F, -7.0F, -2.5F, 5.0F, 7.0F, 5.0F, new CubeDeformation(0.0F)),
             PartPose.offset(0.0F, 24.0F, 0.0F)
         );
-        PartDefinition partdefinition6 = partdefinition5.addOrReplaceChild(
+        PartDefinition windMid = windBottom.addOrReplaceChild(
             "wind_mid",
             CubeListBuilder.create()
                 .texOffs(74, 28)
@@ -107,7 +104,7 @@ public class BreezeModel extends EntityModel<BreezeRenderState> {
                 .addBox(-2.5F, -6.0F, -2.5F, 5.0F, 6.0F, 5.0F, new CubeDeformation(0.0F)),
             PartPose.offset(0.0F, -7.0F, 0.0F)
         );
-        partdefinition6.addOrReplaceChild(
+        windMid.addOrReplaceChild(
             "wind_top",
             CubeListBuilder.create()
                 .texOffs(0, 0)
@@ -122,31 +119,31 @@ public class BreezeModel extends EntityModel<BreezeRenderState> {
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = createBaseMesh();
-        meshdefinition.getRoot().retainPartsAndChildren(Set.of("head", "rods"));
-        return LayerDefinition.create(meshdefinition, 32, 32);
+        MeshDefinition mesh = createBaseMesh();
+        mesh.getRoot().retainPartsAndChildren(Set.of("head", "rods"));
+        return LayerDefinition.create(mesh, 32, 32);
     }
 
     public static LayerDefinition createWindLayer() {
-        MeshDefinition meshdefinition = createBaseMesh();
-        meshdefinition.getRoot().retainPartsAndChildren(Set.of("wind_body"));
-        return LayerDefinition.create(meshdefinition, 128, 128);
+        MeshDefinition mesh = createBaseMesh();
+        mesh.getRoot().retainPartsAndChildren(Set.of("wind_body"));
+        return LayerDefinition.create(mesh, 128, 128);
     }
 
     public static LayerDefinition createEyesLayer() {
-        MeshDefinition meshdefinition = createBaseMesh();
-        meshdefinition.getRoot().retainPartsAndChildren(Set.of("eyes"));
-        return LayerDefinition.create(meshdefinition, 32, 32);
+        MeshDefinition mesh = createBaseMesh();
+        mesh.getRoot().retainPartsAndChildren(Set.of("eyes"));
+        return LayerDefinition.create(mesh, 32, 32);
     }
 
-    public void setupAnim(BreezeRenderState p_458789_) {
-        super.setupAnim(p_458789_);
-        this.idleAnimation.apply(p_458789_.idle, p_458789_.ageInTicks);
-        this.shootAnimation.apply(p_458789_.shoot, p_458789_.ageInTicks);
-        this.slideAnimation.apply(p_458789_.slide, p_458789_.ageInTicks);
-        this.slideBackAnimation.apply(p_458789_.slideBack, p_458789_.ageInTicks);
-        this.inhaleAnimation.apply(p_458789_.inhale, p_458789_.ageInTicks);
-        this.jumpAnimation.apply(p_458789_.longJump, p_458789_.ageInTicks);
+    public void setupAnim(final BreezeRenderState state) {
+        super.setupAnim(state);
+        this.idleAnimation.apply(state.idle, state.ageInTicks);
+        this.shootAnimation.apply(state.shoot, state.ageInTicks);
+        this.slideAnimation.apply(state.slide, state.ageInTicks);
+        this.slideBackAnimation.apply(state.slideBack, state.ageInTicks);
+        this.inhaleAnimation.apply(state.inhale, state.ageInTicks);
+        this.jumpAnimation.apply(state.longJump, state.ageInTicks);
     }
 
     public ModelPart head() {

@@ -25,6 +25,7 @@ import net.minecraft.world.level.block.entity.BellBlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
@@ -49,7 +50,9 @@ public class BellBlock extends BaseEntityBlock {
     private static final VoxelShape BELL_SHAPE = Shapes.or(Block.column(6.0, 6.0, 13.0), Block.column(8.0, 4.0, 6.0));
     private static final VoxelShape SHAPE_CEILING = Shapes.or(BELL_SHAPE, Block.column(2.0, 13.0, 16.0));
     private static final Map<Direction.Axis, VoxelShape> SHAPE_FLOOR = Shapes.rotateHorizontalAxis(Block.cube(16.0, 16.0, 8.0));
-    private static final Map<Direction.Axis, VoxelShape> SHAPE_DOUBLE_WALL = Shapes.rotateHorizontalAxis(Shapes.or(BELL_SHAPE, Block.column(2.0, 16.0, 13.0, 15.0)));
+    private static final Map<Direction.Axis, VoxelShape> SHAPE_DOUBLE_WALL = Shapes.rotateHorizontalAxis(
+        Shapes.or(BELL_SHAPE, Block.column(2.0, 16.0, 13.0, 15.0))
+    );
     private static final Map<Direction, VoxelShape> SHAPE_SINGLE_WALL = Shapes.rotateHorizontal(Shapes.or(BELL_SHAPE, Block.boxZ(2.0, 13.0, 15.0, 0.0, 13.0)));
     public static final int EVENT_BELL_RING = 1;
 
@@ -58,42 +61,50 @@ public class BellBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public BellBlock(BlockBehaviour.Properties p_49696_) {
-        super(p_49696_);
-        this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(ATTACHMENT, BellAttachType.FLOOR).setValue(POWERED, false));
+    public BellBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.registerDefaultState(
+            this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(ATTACHMENT, BellAttachType.FLOOR).setValue(POWERED, false)
+        );
     }
 
     @Override
-    protected void neighborChanged(BlockState p_49729_, Level p_49730_, BlockPos p_49731_, Block p_49732_, @Nullable Orientation p_365293_, boolean p_49734_) {
-        boolean flag = p_49730_.hasNeighborSignal(p_49731_);
-        if (flag != p_49729_.getValue(POWERED)) {
-            if (flag) {
-                this.attemptToRing(p_49730_, p_49731_, null);
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        boolean signal = level.hasNeighborSignal(pos);
+        if (signal != state.getValue(POWERED)) {
+            if (signal) {
+                this.attemptToRing(level, pos, null);
             }
 
-            p_49730_.setBlock(p_49731_, p_49729_.setValue(POWERED, flag), 3);
+            level.setBlock(pos, state.setValue(POWERED, signal), 3);
         }
     }
 
     @Override
-    protected void onProjectileHit(Level p_49708_, BlockState p_49709_, BlockHitResult p_49710_, Projectile p_49711_) {
-        Player player = p_49711_.getOwner() instanceof Player player1 ? player1 : null;
-        this.onHit(p_49708_, p_49709_, p_49710_, player, true);
+    protected void onProjectileHit(final Level level, final BlockState state, final BlockHitResult hitResult, final Projectile projectile) {
+        Player playerOwner = projectile.getOwner() instanceof Player player ? player : null;
+        this.onHit(level, state, hitResult, playerOwner, true);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_49722_, Level p_49723_, BlockPos p_49724_, Player p_49725_, BlockHitResult p_49727_) {
-        return (InteractionResult)(this.onHit(p_49723_, p_49722_, p_49727_, p_49725_, true) ? InteractionResult.SUCCESS : InteractionResult.PASS);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        return this.onHit(level, state, hitResult, player, true) ? InteractionResult.SUCCESS : InteractionResult.PASS;
     }
 
-    public boolean onHit(Level p_49702_, BlockState p_49703_, BlockHitResult p_49704_, @Nullable Player p_49705_, boolean p_49706_) {
-        Direction direction = p_49704_.getDirection();
-        BlockPos blockpos = p_49704_.getBlockPos();
-        boolean flag = !p_49706_ || this.isProperHit(p_49703_, direction, p_49704_.getLocation().y - blockpos.getY());
-        if (flag) {
-            boolean flag1 = this.attemptToRing(p_49705_, p_49702_, blockpos, direction);
-            if (flag1 && p_49705_ != null) {
-                p_49705_.awardStat(Stats.BELL_RING);
+    public boolean onHit(
+        final Level level, final BlockState state, final BlockHitResult hitResult, final @Nullable Player player, final boolean requireHitFromCorrectSide
+    ) {
+        Direction direction = hitResult.getDirection();
+        BlockPos blockPos = hitResult.getBlockPos();
+        boolean properHit = !requireHitFromCorrectSide || this.isProperHit(state, direction, hitResult.getLocation().y - blockPos.getY());
+        if (properHit) {
+            boolean didRing = this.attemptToRing(player, level, blockPos, direction);
+            if (didRing && player != null) {
+                player.awardStat(Stats.BELL_RING);
             }
 
             return true;
@@ -102,98 +113,93 @@ public class BellBlock extends BaseEntityBlock {
         }
     }
 
-    private boolean isProperHit(BlockState p_49740_, Direction p_49741_, double p_49742_) {
-        if (p_49741_.getAxis() != Direction.Axis.Y && !(p_49742_ > 0.8124F)) {
-            Direction direction = p_49740_.getValue(FACING);
-            BellAttachType bellattachtype = p_49740_.getValue(ATTACHMENT);
-            switch (bellattachtype) {
-                case FLOOR:
-                    return direction.getAxis() == p_49741_.getAxis();
-                case SINGLE_WALL:
-                case DOUBLE_WALL:
-                    return direction.getAxis() != p_49741_.getAxis();
-                case CEILING:
-                    return true;
-                default:
-                    return false;
-            }
+    private boolean isProperHit(final BlockState state, final Direction clickedDirection, final double clickY) {
+        if (clickedDirection.getAxis() != Direction.Axis.Y && !(clickY > 0.8124F)) {
+            Direction facing = state.getValue(FACING);
+            BellAttachType attachType = state.getValue(ATTACHMENT);
+
+            return switch (attachType) {
+                case FLOOR -> facing.getAxis() == clickedDirection.getAxis();
+                case SINGLE_WALL, DOUBLE_WALL -> facing.getAxis() != clickedDirection.getAxis();
+                case CEILING -> true;
+                default -> false;
+            };
         } else {
             return false;
         }
     }
 
-    public boolean attemptToRing(Level p_49713_, BlockPos p_49714_, @Nullable Direction p_49715_) {
-        return this.attemptToRing(null, p_49713_, p_49714_, p_49715_);
+    public boolean attemptToRing(final Level level, final BlockPos pos, final @Nullable Direction direction) {
+        return this.attemptToRing(null, level, pos, direction);
     }
 
-    public boolean attemptToRing(@Nullable Entity p_152189_, Level p_152190_, BlockPos p_152191_, @Nullable Direction p_152192_) {
-        BlockEntity blockentity = p_152190_.getBlockEntity(p_152191_);
-        if (!p_152190_.isClientSide() && blockentity instanceof BellBlockEntity) {
-            if (p_152192_ == null) {
-                p_152192_ = p_152190_.getBlockState(p_152191_).getValue(FACING);
+    public boolean attemptToRing(final @Nullable Entity ringingEntity, final Level level, final BlockPos pos, @Nullable Direction direction) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof BellBlockEntity bellBlockEntity) {
+            if (direction == null) {
+                direction = level.getBlockState(pos).getValue(FACING);
             }
 
-            ((BellBlockEntity)blockentity).onHit(p_152192_);
-            p_152190_.playSound(null, p_152191_, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2.0F, 1.0F);
-            p_152190_.gameEvent(p_152189_, GameEvent.BLOCK_CHANGE, p_152191_);
+            bellBlockEntity.onHit(direction);
+            level.playSound(null, pos, SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2.0F, 1.0F);
+            level.gameEvent(ringingEntity, GameEvent.BLOCK_CHANGE, pos);
             return true;
         } else {
             return false;
         }
     }
 
-    private VoxelShape getVoxelShape(BlockState p_49767_) {
-        Direction direction = p_49767_.getValue(FACING);
+    private VoxelShape getVoxelShape(final BlockState state) {
+        Direction facing = state.getValue(FACING);
 
-        return switch ((BellAttachType)p_49767_.getValue(ATTACHMENT)) {
-            case FLOOR -> (VoxelShape)SHAPE_FLOOR.get(direction.getAxis());
-            case SINGLE_WALL -> (VoxelShape)SHAPE_SINGLE_WALL.get(direction);
-            case DOUBLE_WALL -> (VoxelShape)SHAPE_DOUBLE_WALL.get(direction.getAxis());
+        return switch ((BellAttachType)state.getValue(ATTACHMENT)) {
+            case FLOOR -> (VoxelShape)SHAPE_FLOOR.get(facing.getAxis());
+            case SINGLE_WALL -> (VoxelShape)SHAPE_SINGLE_WALL.get(facing);
+            case DOUBLE_WALL -> (VoxelShape)SHAPE_DOUBLE_WALL.get(facing.getAxis());
             case CEILING -> SHAPE_CEILING;
         };
     }
 
     @Override
-    protected VoxelShape getCollisionShape(BlockState p_49760_, BlockGetter p_49761_, BlockPos p_49762_, CollisionContext p_49763_) {
-        return this.getVoxelShape(p_49760_);
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.getVoxelShape(state);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_49755_, BlockGetter p_49756_, BlockPos p_49757_, CollisionContext p_49758_) {
-        return this.getVoxelShape(p_49755_);
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.getVoxelShape(state);
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_49698_) {
-        Direction direction = p_49698_.getClickedFace();
-        BlockPos blockpos = p_49698_.getClickedPos();
-        Level level = p_49698_.getLevel();
-        Direction.Axis direction$axis = direction.getAxis();
-        if (direction$axis == Direction.Axis.Y) {
-            BlockState blockstate = this.defaultBlockState()
-                .setValue(ATTACHMENT, direction == Direction.DOWN ? BellAttachType.CEILING : BellAttachType.FLOOR)
-                .setValue(FACING, p_49698_.getHorizontalDirection());
-            if (blockstate.canSurvive(p_49698_.getLevel(), blockpos)) {
-                return blockstate;
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        Direction clickedFace = context.getClickedFace();
+        BlockPos pos = context.getClickedPos();
+        Level level = context.getLevel();
+        Direction.Axis axis = clickedFace.getAxis();
+        if (axis == Direction.Axis.Y) {
+            BlockState state = this.defaultBlockState()
+                .setValue(ATTACHMENT, clickedFace == Direction.DOWN ? BellAttachType.CEILING : BellAttachType.FLOOR)
+                .setValue(FACING, context.getHorizontalDirection());
+            if (state.canSurvive(context.getLevel(), pos)) {
+                return state;
             }
         } else {
-            boolean flag = direction$axis == Direction.Axis.X
-                    && level.getBlockState(blockpos.west()).isFaceSturdy(level, blockpos.west(), Direction.EAST)
-                    && level.getBlockState(blockpos.east()).isFaceSturdy(level, blockpos.east(), Direction.WEST)
-                || direction$axis == Direction.Axis.Z
-                    && level.getBlockState(blockpos.north()).isFaceSturdy(level, blockpos.north(), Direction.SOUTH)
-                    && level.getBlockState(blockpos.south()).isFaceSturdy(level, blockpos.south(), Direction.NORTH);
-            BlockState blockstate1 = this.defaultBlockState()
-                .setValue(FACING, direction.getOpposite())
-                .setValue(ATTACHMENT, flag ? BellAttachType.DOUBLE_WALL : BellAttachType.SINGLE_WALL);
-            if (blockstate1.canSurvive(p_49698_.getLevel(), p_49698_.getClickedPos())) {
-                return blockstate1;
+            boolean doubleAttached = axis == Direction.Axis.X
+                    && level.getBlockState(pos.west()).isFaceSturdy(level, pos.west(), Direction.EAST)
+                    && level.getBlockState(pos.east()).isFaceSturdy(level, pos.east(), Direction.WEST)
+                || axis == Direction.Axis.Z
+                    && level.getBlockState(pos.north()).isFaceSturdy(level, pos.north(), Direction.SOUTH)
+                    && level.getBlockState(pos.south()).isFaceSturdy(level, pos.south(), Direction.NORTH);
+            BlockState state = this.defaultBlockState()
+                .setValue(FACING, clickedFace.getOpposite())
+                .setValue(ATTACHMENT, doubleAttached ? BellAttachType.DOUBLE_WALL : BellAttachType.SINGLE_WALL);
+            if (state.canSurvive(context.getLevel(), context.getClickedPos())) {
+                return state;
             }
 
-            boolean flag1 = level.getBlockState(blockpos.below()).isFaceSturdy(level, blockpos.below(), Direction.UP);
-            blockstate1 = blockstate1.setValue(ATTACHMENT, flag1 ? BellAttachType.FLOOR : BellAttachType.CEILING);
-            if (blockstate1.canSurvive(p_49698_.getLevel(), p_49698_.getClickedPos())) {
-                return blockstate1;
+            boolean canAttachBelow = level.getBlockState(pos.below()).isFaceSturdy(level, pos.below(), Direction.UP);
+            state = state.setValue(ATTACHMENT, canAttachBelow ? BellAttachType.FLOOR : BellAttachType.CEILING);
+            if (state.canSurvive(context.getLevel(), context.getClickedPos())) {
+                return state;
             }
         }
 
@@ -201,92 +207,91 @@ public class BellBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected void onExplosionHit(BlockState p_311155_, ServerLevel p_370069_, BlockPos p_311109_, Explosion p_312563_, BiConsumer<ItemStack, BlockPos> p_311850_) {
-        if (p_312563_.canTriggerBlocks()) {
-            this.attemptToRing(p_370069_, p_311109_, null);
+    protected void onExplosionHit(
+        final BlockState state, final ServerLevel level, final BlockPos pos, final Explosion explosion, final BiConsumer<ItemStack, BlockPos> onHit
+    ) {
+        if (explosion.canTriggerBlocks()) {
+            this.attemptToRing(level, pos, null);
         }
 
-        super.onExplosionHit(p_311155_, p_370069_, p_311109_, p_312563_, p_311850_);
+        super.onExplosionHit(state, level, pos, explosion, onHit);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_49744_,
-        LevelReader p_361159_,
-        ScheduledTickAccess p_361050_,
-        BlockPos p_49748_,
-        Direction p_49745_,
-        BlockPos p_49749_,
-        BlockState p_49746_,
-        RandomSource p_362217_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        BellAttachType bellattachtype = p_49744_.getValue(ATTACHMENT);
-        Direction direction = getConnectedDirection(p_49744_).getOpposite();
-        if (direction == p_49745_ && !p_49744_.canSurvive(p_361159_, p_49748_) && bellattachtype != BellAttachType.DOUBLE_WALL) {
+        BellAttachType attachment = state.getValue(ATTACHMENT);
+        Direction connectedDirection = getConnectedDirection(state).getOpposite();
+        if (connectedDirection == directionToNeighbour && !state.canSurvive(level, pos) && attachment != BellAttachType.DOUBLE_WALL) {
             return Blocks.AIR.defaultBlockState();
-        } else {
-            if (p_49745_.getAxis() == p_49744_.getValue(FACING).getAxis()) {
-                if (bellattachtype == BellAttachType.DOUBLE_WALL && !p_49746_.isFaceSturdy(p_361159_, p_49749_, p_49745_)) {
-                    return p_49744_.setValue(ATTACHMENT, BellAttachType.SINGLE_WALL).setValue(FACING, p_49745_.getOpposite());
-                }
+        }
 
-                if (bellattachtype == BellAttachType.SINGLE_WALL
-                    && direction.getOpposite() == p_49745_
-                    && p_49746_.isFaceSturdy(p_361159_, p_49749_, p_49744_.getValue(FACING))) {
-                    return p_49744_.setValue(ATTACHMENT, BellAttachType.DOUBLE_WALL);
-                }
+        if (directionToNeighbour.getAxis() == state.getValue(FACING).getAxis()) {
+            if (attachment == BellAttachType.DOUBLE_WALL && !neighbourState.isFaceSturdy(level, neighbourPos, directionToNeighbour)) {
+                return state.setValue(ATTACHMENT, BellAttachType.SINGLE_WALL).setValue(FACING, directionToNeighbour.getOpposite());
             }
 
-            return super.updateShape(p_49744_, p_361159_, p_361050_, p_49748_, p_49745_, p_49749_, p_49746_, p_362217_);
+            if (attachment == BellAttachType.SINGLE_WALL
+                && connectedDirection.getOpposite() == directionToNeighbour
+                && neighbourState.isFaceSturdy(level, neighbourPos, state.getValue(FACING))) {
+                return state.setValue(ATTACHMENT, BellAttachType.DOUBLE_WALL);
+            }
         }
+
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_49736_, LevelReader p_49737_, BlockPos p_49738_) {
-        Direction direction = getConnectedDirection(p_49736_).getOpposite();
-        return direction == Direction.UP
-            ? Block.canSupportCenter(p_49737_, p_49738_.above(), Direction.DOWN)
-            : FaceAttachedHorizontalDirectionalBlock.canAttach(p_49737_, p_49738_, direction);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        Direction connectionDir = getConnectedDirection(state).getOpposite();
+        return connectionDir == Direction.UP
+            ? Block.canSupportCenter(level, pos.above(), Direction.DOWN)
+            : FaceAttachedHorizontalDirectionalBlock.canAttach(level, pos, connectionDir);
     }
 
-    private static Direction getConnectedDirection(BlockState p_49769_) {
-        switch ((BellAttachType)p_49769_.getValue(ATTACHMENT)) {
-            case FLOOR:
-                return Direction.UP;
-            case CEILING:
-                return Direction.DOWN;
-            default:
-                return p_49769_.getValue(FACING).getOpposite();
-        }
+    private static Direction getConnectedDirection(final BlockState state) {
+        return switch ((BellAttachType)state.getValue(ATTACHMENT)) {
+            case FLOOR -> Direction.UP;
+            case CEILING -> Direction.DOWN;
+            default -> state.getValue(FACING).getOpposite();
+        };
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_49751_) {
-        p_49751_.add(FACING, ATTACHMENT, POWERED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, ATTACHMENT, POWERED);
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_152198_, BlockState p_152199_) {
-        return new BellBlockEntity(p_152198_, p_152199_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new BellBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_152194_, BlockState p_152195_, BlockEntityType<T> p_152196_) {
-        return createTickerHelper(p_152196_, BlockEntityType.BELL, p_152194_.isClientSide() ? BellBlockEntity::clientTick : BellBlockEntity::serverTick);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return createTickerHelper(type, BlockEntityTypes.BELL, level.isClientSide() ? BellBlockEntity::clientTick : BellBlockEntity::serverTick);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_49717_, PathComputationType p_49720_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 
     @Override
-    public BlockState rotate(BlockState p_311584_, Rotation p_311968_) {
-        return p_311584_.setValue(FACING, p_311968_.rotate(p_311584_.getValue(FACING)));
+    public BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    public BlockState mirror(BlockState p_311443_, Mirror p_309746_) {
-        return p_311443_.rotate(p_309746_.getRotation(p_311443_.getValue(FACING)));
+    public BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 }

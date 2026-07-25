@@ -15,10 +15,10 @@ public class BlockInWorld {
     private @Nullable BlockEntity entity;
     private boolean cachedEntity;
 
-    public BlockInWorld(LevelReader p_61165_, BlockPos p_61166_, boolean p_61167_) {
-        this.level = p_61165_;
-        this.pos = p_61166_.immutable();
-        this.loadChunks = p_61167_;
+    public BlockInWorld(final LevelReader level, final BlockPos pos, final boolean loadChunks) {
+        this.level = level;
+        this.pos = pos.immutable();
+        this.loadChunks = loadChunks;
     }
 
     public BlockState getState() {
@@ -46,7 +46,7 @@ public class BlockInWorld {
         return this.pos;
     }
 
-    public static Predicate<@Nullable BlockInWorld> hasState(Predicate<BlockState> p_61170_) {
-        return p_61173_ -> p_61173_ != null && p_61170_.test(p_61173_.getState());
+    public static Predicate<@Nullable BlockInWorld> hasState(final Predicate<BlockState> predicate) {
+        return input -> input != null && predicate.test(input.getState());
     }
 }

@@ -8,28 +8,30 @@ import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.server.dialog.ActionButton;
 import net.minecraft.server.dialog.ButtonListDialog;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class ButtonListDialogScreen<T extends ButtonListDialog> extends DialogScreen<T> {
     public static final int FOOTER_MARGIN = 5;
 
-    public ButtonListDialogScreen(@Nullable Screen p_409584_, T p_408340_, DialogConnectionAccess p_409908_) {
-        super(p_409584_, p_408340_, p_409908_);
+    public ButtonListDialogScreen(final @Nullable Screen previousScreen, final T dialog, final DialogConnectionAccess connectionAccess) {
+        super(previousScreen, dialog, connectionAccess);
     }
 
-    protected void populateBodyElements(LinearLayout p_409222_, DialogControlSet p_406243_, T p_410633_, DialogConnectionAccess p_410375_) {
-        super.populateBodyElements(p_409222_, p_406243_, p_410633_, p_410375_);
-        List<Button> list = this.createListActions(p_410633_, p_410375_).map(p_409395_ -> p_406243_.createActionButton(p_409395_).build()).toList();
-        p_409222_.addChild(packControlsIntoColumns(list, p_410633_.columns()));
+    protected void populateBodyElements(
+        final LinearLayout layout, final DialogControlSet controlSet, final T dialog, final DialogConnectionAccess connectionAccess
+    ) {
+        super.populateBodyElements(layout, controlSet, dialog, connectionAccess);
+        List<Button> buttons = this.createListActions(dialog, connectionAccess).map(d -> controlSet.createActionButton(d).build()).toList();
+        layout.addChild(packControlsIntoColumns(buttons, dialog.columns()));
     }
 
-    protected abstract Stream<ActionButton> createListActions(T p_409747_, DialogConnectionAccess p_409956_);
+    protected abstract Stream<ActionButton> createListActions(T dialog, DialogConnectionAccess connectionAccess);
 
-    protected void updateHeaderAndFooter(HeaderAndFooterLayout p_407882_, DialogControlSet p_406703_, T p_406170_, DialogConnectionAccess p_409416_) {
-        super.updateHeaderAndFooter(p_407882_, p_406703_, p_406170_, p_409416_);
-        p_406170_.exitAction().ifPresentOrElse(p_409054_ -> p_407882_.addToFooter(p_406703_.createActionButton(p_409054_).build()), () -> p_407882_.setFooterHeight(5));
+    protected void updateHeaderAndFooter(
+        final HeaderAndFooterLayout layout, final DialogControlSet controlSet, final T dialog, final DialogConnectionAccess connectionAccess
+    ) {
+        super.updateHeaderAndFooter(layout, controlSet, dialog, connectionAccess);
+        dialog.exitAction()
+            .ifPresentOrElse(exitButton -> layout.addToFooter(controlSet.createActionButton(exitButton).build()), () -> layout.setFooterHeight(5));
     }
 }

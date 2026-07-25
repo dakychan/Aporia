@@ -1,20 +1,17 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.DispenserMenu;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DispenserScreen extends AbstractContainerScreen<DispenserMenu> {
     private static final Identifier CONTAINER_LOCATION = Identifier.withDefaultNamespace("textures/gui/container/dispenser.png");
 
-    public DispenserScreen(DispenserMenu p_98685_, Inventory p_98686_, Component p_98687_) {
-        super(p_98685_, p_98686_, p_98687_);
+    public DispenserScreen(final DispenserMenu menu, final Inventory inventory, final Component title) {
+        super(menu, inventory, title);
     }
 
     @Override
@@ -24,15 +21,10 @@ public class DispenserScreen extends AbstractContainerScreen<DispenserMenu> {
     }
 
     @Override
-    public void render(GuiGraphics p_283282_, int p_282467_, int p_282129_, float p_281965_) {
-        super.render(p_283282_, p_282467_, p_282129_, p_281965_);
-        this.renderTooltip(p_283282_, p_282467_, p_282129_);
-    }
-
-    @Override
-    protected void renderBg(GuiGraphics p_283137_, float p_282476_, int p_281600_, int p_283194_) {
-        int i = (this.width - this.imageWidth) / 2;
-        int j = (this.height - this.imageHeight) / 2;
-        p_283137_.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_LOCATION, i, j, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractBackground(graphics, mouseX, mouseY, a);
+        int xo = (this.width - this.imageWidth) / 2;
+        int yo = (this.height - this.imageHeight) / 2;
+        graphics.blit(RenderPipelines.GUI_TEXTURED, CONTAINER_LOCATION, xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
     }
 }

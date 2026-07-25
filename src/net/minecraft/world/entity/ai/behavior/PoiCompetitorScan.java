@@ -4,10 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.Holder;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.villager.Villager;
@@ -16,21 +14,21 @@ import net.minecraft.world.entity.npc.villager.VillagerProfession;
 public class PoiCompetitorScan {
     public static BehaviorControl<Villager> create() {
         return BehaviorBuilder.create(
-            p_258576_ -> p_258576_.group(p_258576_.present(MemoryModuleType.JOB_SITE), p_258576_.present(MemoryModuleType.NEAREST_LIVING_ENTITIES))
+            i -> i.group(i.present(MemoryModuleType.JOB_SITE), i.present(MemoryModuleType.NEAREST_LIVING_ENTITIES))
                 .apply(
-                    p_258576_,
-                    (p_258590_, p_258591_) -> (p_258580_, p_454576_, p_258582_) -> {
-                        GlobalPos globalpos = p_258576_.get(p_258590_);
-                        p_258580_.getPoiManager()
-                            .getType(globalpos.pos())
+                    i,
+                    (jobSite, nearestEntities) -> (level, body, timestamp) -> {
+                        GlobalPos pos = i.get(jobSite);
+                        level.getPoiManager()
+                            .getType(pos.pos())
                             .ifPresent(
-                                p_258588_ -> p_258576_.<List<LivingEntity>>get(p_258591_)
+                                poiType -> i.<List<LivingEntity>>get(nearestEntities)
                                     .stream()
-                                    .filter(p_449525_ -> p_449525_ instanceof Villager && p_449525_ != p_454576_)
-                                    .map(p_449526_ -> (Villager)p_449526_)
+                                    .filter(v -> v instanceof Villager && v != body)
+                                    .map(v -> (Villager)v)
                                     .filter(LivingEntity::isAlive)
-                                    .filter(p_449523_ -> competesForSameJobsite(globalpos, p_258588_, p_449523_))
-                                    .reduce(p_454576_, PoiCompetitorScan::selectWinner)
+                                    .filter(nearbyVillager -> competesForSameJobsite(pos, poiType, nearbyVillager))
+                                    .reduce(body, PoiCompetitorScan::selectWinner)
                             );
                         return true;
                     }
@@ -38,27 +36,27 @@ public class PoiCompetitorScan {
         );
     }
 
-    private static Villager selectWinner(Villager p_455706_, Villager p_460508_) {
-        Villager villager;
-        Villager villager1;
-        if (p_455706_.getVillagerXp() > p_460508_.getVillagerXp()) {
-            villager = p_455706_;
-            villager1 = p_460508_;
+    private static Villager selectWinner(final Villager first, final Villager second) {
+        Villager winner;
+        Villager loser;
+        if (first.getVillagerXp() > second.getVillagerXp()) {
+            winner = first;
+            loser = second;
         } else {
-            villager = p_460508_;
-            villager1 = p_455706_;
+            winner = second;
+            loser = first;
         }
 
-        villager1.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
-        return villager;
+        loser.getBrain().eraseMemory(MemoryModuleType.JOB_SITE);
+        return winner;
     }
 
-    private static boolean competesForSameJobsite(GlobalPos p_217330_, Holder<PoiType> p_217331_, Villager p_460689_) {
-        Optional<GlobalPos> optional = p_460689_.getBrain().getMemory(MemoryModuleType.JOB_SITE);
-        return optional.isPresent() && p_217330_.equals(optional.get()) && hasMatchingProfession(p_217331_, p_460689_.getVillagerData().profession());
+    private static boolean competesForSameJobsite(final GlobalPos pos, final Holder<PoiType> poiType, final Villager nearbyVillager) {
+        Optional<GlobalPos> jobSite = nearbyVillager.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+        return jobSite.isPresent() && pos.equals(jobSite.get()) && hasMatchingProfession(poiType, nearbyVillager.getVillagerData().profession());
     }
 
-    private static boolean hasMatchingProfession(Holder<PoiType> p_217334_, Holder<VillagerProfession> p_394408_) {
-        return p_394408_.value().heldJobSite().test(p_217334_);
+    private static boolean hasMatchingProfession(final Holder<PoiType> poiType, final Holder<VillagerProfession> profession) {
+        return profession.value().heldJobSite().test(poiType);
     }
 }

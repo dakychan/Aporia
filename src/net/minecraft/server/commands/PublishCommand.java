@@ -3,7 +3,6 @@ package net.minecraft.server.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -13,44 +12,43 @@ import net.minecraft.commands.arguments.GameModeArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.HttpUtil;
 import net.minecraft.world.level.GameType;
 import org.jspecify.annotations.Nullable;
 
 public class PublishCommand {
     private static final SimpleCommandExceptionType ERROR_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.publish.failed"));
-    private static final DynamicCommandExceptionType ERROR_ALREADY_PUBLISHED = new DynamicCommandExceptionType(
-        p_308792_ -> Component.translatableEscape("commands.publish.alreadyPublished", p_308792_)
+    private static final DynamicCommandExceptionType ERROR_ALREADY_PUBLISHED_LAN = new DynamicCommandExceptionType(
+        port -> Component.translatableEscape("commands.publish.alreadyPublished.lan", port)
     );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_138185_) {
-        p_138185_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("publish")
                 .requires(Commands.hasPermission(Commands.LEVEL_OWNERS))
-                .executes(p_258235_ -> publish(p_258235_.getSource(), HttpUtil.getAvailablePort(), false, null))
+                .executes(c -> publish(c.getSource(), HttpUtil.getAvailablePort(), false, null))
                 .then(
                     Commands.argument("allowCommands", BoolArgumentType.bool())
-                        .executes(
-                            p_258236_ -> publish(p_258236_.getSource(), HttpUtil.getAvailablePort(), BoolArgumentType.getBool(p_258236_, "allowCommands"), null)
-                        )
+                        .executes(c -> publish(c.getSource(), HttpUtil.getAvailablePort(), BoolArgumentType.getBool(c, "allowCommands"), null))
                         .then(
                             Commands.argument("gamemode", GameModeArgument.gameMode())
                                 .executes(
-                                    p_258237_ -> publish(
-                                        p_258237_.getSource(),
+                                    c -> publish(
+                                        c.getSource(),
                                         HttpUtil.getAvailablePort(),
-                                        BoolArgumentType.getBool(p_258237_, "allowCommands"),
-                                        GameModeArgument.getGameMode(p_258237_, "gamemode")
+                                        BoolArgumentType.getBool(c, "allowCommands"),
+                                        GameModeArgument.getGameMode(c, "gamemode")
                                     )
                                 )
                                 .then(
                                     Commands.argument("port", IntegerArgumentType.integer(0, 65535))
                                         .executes(
-                                            p_258238_ -> publish(
-                                                p_258238_.getSource(),
-                                                IntegerArgumentType.getInteger(p_258238_, "port"),
-                                                BoolArgumentType.getBool(p_258238_, "allowCommands"),
-                                                GameModeArgument.getGameMode(p_258238_, "gamemode")
+                                            c -> publish(
+                                                c.getSource(),
+                                                IntegerArgumentType.getInteger(c, "port"),
+                                                BoolArgumentType.getBool(c, "allowCommands"),
+                                                GameModeArgument.getGameMode(c, "gamemode")
                                             )
                                         )
                                 )
@@ -59,19 +57,22 @@ public class PublishCommand {
         );
     }
 
-    private static int publish(CommandSourceStack p_260117_, int p_259411_, boolean p_260137_, @Nullable GameType p_259145_) throws CommandSyntaxException {
-        if (p_260117_.getServer().isPublished()) {
-            throw ERROR_ALREADY_PUBLISHED.create(p_260117_.getServer().getPort());
-        } else if (!p_260117_.getServer().publishServer(p_259145_, p_260137_, p_259411_)) {
-            throw ERROR_FAILED.create();
-        } else {
-            p_260117_.sendSuccess(() -> getSuccessMessage(p_259411_), true);
-            return p_259411_;
+    private static int publish(final CommandSourceStack source, final int port, final boolean allowCommands, final @Nullable GameType type) throws CommandSyntaxException {
+        MinecraftServer server = source.getServer();
+        if (server.isPublished() && server.getPort() > -1) {
+            throw ERROR_ALREADY_PUBLISHED_LAN.create(server.getPort());
         }
+
+        if (!server.publishServer(MinecraftServer.MultiplayerScope.LAN, type, allowCommands, port)) {
+            throw ERROR_FAILED.create();
+        }
+
+        source.sendSuccess(() -> getSuccessMessage(port), true);
+        return port;
     }
 
-    public static MutableComponent getSuccessMessage(int p_259532_) {
-        Component component = ComponentUtils.copyOnClickText(String.valueOf(p_259532_));
-        return Component.translatable("commands.publish.started", component);
+    public static MutableComponent getSuccessMessage(final int port) {
+        Component portText = ComponentUtils.copyOnClickText(String.valueOf(port));
+        return Component.translatable("commands.publish.started.lan", portText);
     }
 }

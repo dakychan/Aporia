@@ -11,31 +11,40 @@ import net.minecraft.world.item.enchantment.EnchantedItemInUse;
 import net.minecraft.world.phys.Vec3;
 
 public interface EnchantmentEntityEffect extends EnchantmentLocationBasedEffect {
-    Codec<EnchantmentEntityEffect> CODEC = BuiltInRegistries.ENCHANTMENT_ENTITY_EFFECT_TYPE.byNameCodec().dispatch(EnchantmentEntityEffect::codec, Function.identity());
+    Codec<EnchantmentEntityEffect> CODEC = BuiltInRegistries.ENCHANTMENT_ENTITY_EFFECT_TYPE
+        .byNameCodec()
+        .dispatch(EnchantmentEntityEffect::codec, Function.identity());
 
-    static MapCodec<? extends EnchantmentEntityEffect> bootstrap(Registry<MapCodec<? extends EnchantmentEntityEffect>> p_342629_) {
-        Registry.register(p_342629_, "all_of", AllOf.EntityEffects.CODEC);
-        Registry.register(p_342629_, "apply_mob_effect", ApplyMobEffect.CODEC);
-        Registry.register(p_342629_, "change_item_damage", ChangeItemDamage.CODEC);
-        Registry.register(p_342629_, "damage_entity", DamageEntity.CODEC);
-        Registry.register(p_342629_, "explode", ExplodeEffect.CODEC);
-        Registry.register(p_342629_, "ignite", Ignite.CODEC);
-        Registry.register(p_342629_, "apply_impulse", ApplyEntityImpulse.CODEC);
-        Registry.register(p_342629_, "apply_exhaustion", ApplyExhaustion.CODEC);
-        Registry.register(p_342629_, "play_sound", PlaySoundEffect.CODEC);
-        Registry.register(p_342629_, "replace_block", ReplaceBlock.CODEC);
-        Registry.register(p_342629_, "replace_disk", ReplaceDisk.CODEC);
-        Registry.register(p_342629_, "run_function", RunFunction.CODEC);
-        Registry.register(p_342629_, "set_block_properties", SetBlockProperties.CODEC);
-        Registry.register(p_342629_, "spawn_particles", SpawnParticlesEffect.CODEC);
-        return Registry.register(p_342629_, "summon_entity", SummonEntityEffect.CODEC);
+    static MapCodec<? extends EnchantmentEntityEffect> bootstrap(final Registry<MapCodec<? extends EnchantmentEntityEffect>> registry) {
+        Registry.register(registry, "all_of", AllOf.EntityEffects.CODEC);
+        Registry.register(registry, "apply_mob_effect", ApplyMobEffect.CODEC);
+        Registry.register(registry, "change_item_damage", ChangeItemDamage.CODEC);
+        Registry.register(registry, "damage_entity", DamageEntity.CODEC);
+        Registry.register(registry, "explode", ExplodeEffect.CODEC);
+        Registry.register(registry, "ignite", Ignite.CODEC);
+        Registry.register(registry, "apply_impulse", ApplyEntityImpulse.CODEC);
+        Registry.register(registry, "apply_exhaustion", ApplyExhaustion.CODEC);
+        Registry.register(registry, "play_sound", PlaySoundEffect.CODEC);
+        Registry.register(registry, "replace_block", ReplaceBlock.CODEC);
+        Registry.register(registry, "replace_disk", ReplaceDisk.CODEC);
+        Registry.register(registry, "run_function", RunFunction.CODEC);
+        Registry.register(registry, "set_block_properties", SetBlockProperties.CODEC);
+        Registry.register(registry, "spawn_particles", SpawnParticlesEffect.CODEC);
+        return Registry.register(registry, "summon_entity", SummonEntityEffect.CODEC);
     }
 
-    void apply(ServerLevel p_342783_, int p_345287_, EnchantedItemInUse p_343696_, Entity p_343545_, Vec3 p_342660_);
+    void apply(ServerLevel serverLevel, int enchantmentLevel, EnchantedItemInUse item, Entity entity, Vec3 position);
 
     @Override
-    default void onChangedBlock(ServerLevel p_344398_, int p_343126_, EnchantedItemInUse p_344258_, Entity p_344833_, Vec3 p_344089_, boolean p_343329_) {
-        this.apply(p_344398_, p_343126_, p_344258_, p_344833_, p_344089_);
+    default void onChangedBlock(
+        final ServerLevel serverLevel,
+        final int enchantmentLevel,
+        final EnchantedItemInUse item,
+        final Entity entity,
+        final Vec3 position,
+        final boolean becameActive
+    ) {
+        this.apply(serverLevel, enchantmentLevel, item, entity, position);
     }
 
     @Override

@@ -20,16 +20,16 @@ public interface ContainerComponentManipulators {
             return DataComponents.CONTAINER;
         }
 
-        public Stream<ItemStack> getContents(ItemContainerContents p_327822_) {
-            return p_327822_.stream();
+        public Stream<ItemStack> getContents(final ItemContainerContents component) {
+            return component.allItemsCopyStream();
         }
 
         public ItemContainerContents empty() {
             return ItemContainerContents.EMPTY;
         }
 
-        public ItemContainerContents setContents(ItemContainerContents p_332953_, Stream<ItemStack> p_328345_) {
-            return ItemContainerContents.fromItems(p_328345_.toList());
+        public ItemContainerContents setContents(final ItemContainerContents component, final Stream<ItemStack> newContents) {
+            return ItemContainerContents.fromItems(newContents.toList());
         }
     };
     ContainerComponentManipulator<BundleContents> BUNDLE_CONTENTS = new ContainerComponentManipulator<BundleContents>() {
@@ -42,14 +42,14 @@ public interface ContainerComponentManipulators {
             return BundleContents.EMPTY;
         }
 
-        public Stream<ItemStack> getContents(BundleContents p_330782_) {
-            return p_330782_.itemCopyStream();
+        public Stream<ItemStack> getContents(final BundleContents component) {
+            return component.itemCopyStream();
         }
 
-        public BundleContents setContents(BundleContents p_331239_, Stream<ItemStack> p_331370_) {
-            BundleContents.Mutable bundlecontents$mutable = new BundleContents.Mutable(p_331239_).clearItems();
-            p_331370_.forEach(bundlecontents$mutable::tryInsert);
-            return bundlecontents$mutable.toImmutable();
+        public BundleContents setContents(final BundleContents component, final Stream<ItemStack> newContents) {
+            BundleContents.Mutable builder = new BundleContents.Mutable(component).clearItems();
+            newContents.forEach(builder::tryInsert);
+            return builder.toImmutable();
         }
     };
     ContainerComponentManipulator<ChargedProjectiles> CHARGED_PROJECTILES = new ContainerComponentManipulator<ChargedProjectiles>() {
@@ -62,18 +62,18 @@ public interface ContainerComponentManipulators {
             return ChargedProjectiles.EMPTY;
         }
 
-        public Stream<ItemStack> getContents(ChargedProjectiles p_328278_) {
-            return p_328278_.getItems().stream();
+        public Stream<ItemStack> getContents(final ChargedProjectiles component) {
+            return component.itemCopies().stream();
         }
 
-        public ChargedProjectiles setContents(ChargedProjectiles p_329938_, Stream<ItemStack> p_330328_) {
-            return ChargedProjectiles.of(p_330328_.toList());
+        public ChargedProjectiles setContents(final ChargedProjectiles component, final Stream<ItemStack> newContents) {
+            return ChargedProjectiles.ofNonEmpty(newContents.filter(s -> !s.isEmpty()).toList());
         }
     };
     Map<DataComponentType<?>, ContainerComponentManipulator<?>> ALL_MANIPULATORS = Stream.of(CONTAINER, BUNDLE_CONTENTS, CHARGED_PROJECTILES)
-        .collect(Collectors.toMap(ContainerComponentManipulator::type, p_329998_ -> (ContainerComponentManipulator<?>)p_329998_));
-    Codec<ContainerComponentManipulator<?>> CODEC = BuiltInRegistries.DATA_COMPONENT_TYPE.byNameCodec().comapFlatMap(p_328982_ -> {
-        ContainerComponentManipulator<?> containercomponentmanipulator = ALL_MANIPULATORS.get(p_328982_);
-        return containercomponentmanipulator != null ? DataResult.success(containercomponentmanipulator) : DataResult.error(() -> "No items in component");
+        .collect(Collectors.toMap(ContainerComponentManipulator::type, e -> (ContainerComponentManipulator<?>)e));
+    Codec<ContainerComponentManipulator<?>> CODEC = BuiltInRegistries.DATA_COMPONENT_TYPE.byNameCodec().comapFlatMap(type -> {
+        ContainerComponentManipulator<?> manipulator = ALL_MANIPULATORS.get(type);
+        return manipulator != null ? DataResult.success(manipulator) : DataResult.error(() -> "No items in component");
     }, ContainerComponentManipulator::type);
 }

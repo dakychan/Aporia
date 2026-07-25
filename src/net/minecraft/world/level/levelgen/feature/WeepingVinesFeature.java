@@ -15,108 +15,103 @@ import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConf
 public class WeepingVinesFeature extends Feature<NoneFeatureConfiguration> {
     private static final Direction[] DIRECTIONS = Direction.values();
 
-    public WeepingVinesFeature(Codec<NoneFeatureConfiguration> p_67375_) {
-        super(p_67375_);
+    public WeepingVinesFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_160661_) {
-        WorldGenLevel worldgenlevel = p_160661_.level();
-        BlockPos blockpos = p_160661_.origin();
-        RandomSource randomsource = p_160661_.random();
-        if (!worldgenlevel.isEmptyBlock(blockpos)) {
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        RandomSource random = context.random();
+        if (!level.isEmptyBlock(origin)) {
             return false;
-        } else {
-            BlockState blockstate = worldgenlevel.getBlockState(blockpos.above());
-            if (!blockstate.is(Blocks.NETHERRACK) && !blockstate.is(Blocks.NETHER_WART_BLOCK)) {
-                return false;
-            } else {
-                this.placeRoofNetherWart(worldgenlevel, randomsource, blockpos);
-                this.placeRoofWeepingVines(worldgenlevel, randomsource, blockpos);
-                return true;
-            }
         }
+
+        BlockState stateAbove = level.getBlockState(origin.above());
+        if (!stateAbove.is(Blocks.NETHERRACK) && !stateAbove.is(Blocks.NETHER_WART_BLOCK)) {
+            return false;
+        }
+
+        this.placeRoofNetherWart(level, random, origin);
+        this.placeRoofWeepingVines(level, random, origin);
+        return true;
     }
 
-    private void placeRoofNetherWart(LevelAccessor p_225360_, RandomSource p_225361_, BlockPos p_225362_) {
-        p_225360_.setBlock(p_225362_, Blocks.NETHER_WART_BLOCK.defaultBlockState(), 2);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos1 = new BlockPos.MutableBlockPos();
+    private void placeRoofNetherWart(final LevelAccessor level, final RandomSource random, final BlockPos origin) {
+        level.setBlock(origin, Blocks.NETHER_WART_BLOCK.defaultBlockState(), 2);
+        BlockPos.MutableBlockPos placePos = new BlockPos.MutableBlockPos();
+        BlockPos.MutableBlockPos neighbourPos = new BlockPos.MutableBlockPos();
 
         for (int i = 0; i < 200; i++) {
-            blockpos$mutableblockpos.setWithOffset(
-                p_225362_,
-                p_225361_.nextInt(6) - p_225361_.nextInt(6),
-                p_225361_.nextInt(2) - p_225361_.nextInt(5),
-                p_225361_.nextInt(6) - p_225361_.nextInt(6)
-            );
-            if (p_225360_.isEmptyBlock(blockpos$mutableblockpos)) {
-                int j = 0;
+            placePos.setWithOffset(origin, random.nextInt(6) - random.nextInt(6), random.nextInt(2) - random.nextInt(5), random.nextInt(6) - random.nextInt(6));
+            if (level.isEmptyBlock(placePos)) {
+                int neighbours = 0;
 
                 for (Direction direction : DIRECTIONS) {
-                    BlockState blockstate = p_225360_.getBlockState(blockpos$mutableblockpos1.setWithOffset(blockpos$mutableblockpos, direction));
-                    if (blockstate.is(Blocks.NETHERRACK) || blockstate.is(Blocks.NETHER_WART_BLOCK)) {
-                        j++;
+                    BlockState neighbourBlockState = level.getBlockState(neighbourPos.setWithOffset(placePos, direction));
+                    if (neighbourBlockState.is(Blocks.NETHERRACK) || neighbourBlockState.is(Blocks.NETHER_WART_BLOCK)) {
+                        neighbours++;
                     }
 
-                    if (j > 1) {
+                    if (neighbours > 1) {
                         break;
                     }
                 }
 
-                if (j == 1) {
-                    p_225360_.setBlock(blockpos$mutableblockpos, Blocks.NETHER_WART_BLOCK.defaultBlockState(), 2);
+                if (neighbours == 1) {
+                    level.setBlock(placePos, Blocks.NETHER_WART_BLOCK.defaultBlockState(), 2);
                 }
             }
         }
     }
 
-    private void placeRoofWeepingVines(LevelAccessor p_225364_, RandomSource p_225365_, BlockPos p_225366_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    private void placeRoofWeepingVines(final LevelAccessor level, final RandomSource random, final BlockPos origin) {
+        BlockPos.MutableBlockPos placePos = new BlockPos.MutableBlockPos();
 
         for (int i = 0; i < 100; i++) {
-            blockpos$mutableblockpos.setWithOffset(
-                p_225366_,
-                p_225365_.nextInt(8) - p_225365_.nextInt(8),
-                p_225365_.nextInt(2) - p_225365_.nextInt(7),
-                p_225365_.nextInt(8) - p_225365_.nextInt(8)
-            );
-            if (p_225364_.isEmptyBlock(blockpos$mutableblockpos)) {
-                BlockState blockstate = p_225364_.getBlockState(blockpos$mutableblockpos.above());
-                if (blockstate.is(Blocks.NETHERRACK) || blockstate.is(Blocks.NETHER_WART_BLOCK)) {
-                    int j = Mth.nextInt(p_225365_, 1, 8);
-                    if (p_225365_.nextInt(6) == 0) {
-                        j *= 2;
+            placePos.setWithOffset(origin, random.nextInt(8) - random.nextInt(8), random.nextInt(2) - random.nextInt(7), random.nextInt(8) - random.nextInt(8));
+            if (level.isEmptyBlock(placePos)) {
+                BlockState stateAbove = level.getBlockState(placePos.above());
+                if (stateAbove.is(Blocks.NETHERRACK) || stateAbove.is(Blocks.NETHER_WART_BLOCK)) {
+                    int vineHeight = Mth.nextInt(random, 1, 8);
+                    if (random.nextInt(6) == 0) {
+                        vineHeight *= 2;
                     }
 
-                    if (p_225365_.nextInt(5) == 0) {
-                        j = 1;
+                    if (random.nextInt(5) == 0) {
+                        vineHeight = 1;
                     }
 
-                    int k = 17;
-                    int l = 25;
-                    placeWeepingVinesColumn(p_225364_, p_225365_, blockpos$mutableblockpos, j, 17, 25);
+                    int minVineAge = 17;
+                    int maxVineAge = 25;
+                    placeWeepingVinesColumn(level, random, placePos, vineHeight, 17, 25);
                 }
             }
         }
     }
 
     public static void placeWeepingVinesColumn(
-        LevelAccessor p_225353_, RandomSource p_225354_, BlockPos.MutableBlockPos p_225355_, int p_225356_, int p_225357_, int p_225358_
+        final LevelAccessor level,
+        final RandomSource random,
+        final BlockPos.MutableBlockPos placePos,
+        final int totalHeight,
+        final int minAge,
+        final int naxAge
     ) {
-        for (int i = 0; i <= p_225356_; i++) {
-            if (p_225353_.isEmptyBlock(p_225355_)) {
-                if (i == p_225356_ || !p_225353_.isEmptyBlock(p_225355_.below())) {
-                    p_225353_.setBlock(
-                        p_225355_, Blocks.WEEPING_VINES.defaultBlockState().setValue(GrowingPlantHeadBlock.AGE, Mth.nextInt(p_225354_, p_225357_, p_225358_)), 2
+        for (int height = 0; height <= totalHeight; height++) {
+            if (level.isEmptyBlock(placePos)) {
+                if (height == totalHeight || !level.isEmptyBlock(placePos.below())) {
+                    level.setBlock(
+                        placePos, Blocks.WEEPING_VINES.defaultBlockState().setValue(GrowingPlantHeadBlock.AGE, Mth.nextInt(random, minAge, naxAge)), 2
                     );
                     break;
                 }
 
-                p_225353_.setBlock(p_225355_, Blocks.WEEPING_VINES_PLANT.defaultBlockState(), 2);
+                level.setBlock(placePos, Blocks.WEEPING_VINES_PLANT.defaultBlockState(), 2);
             }
 
-            p_225355_.move(Direction.DOWN);
+            placePos.move(Direction.DOWN);
         }
     }
 }

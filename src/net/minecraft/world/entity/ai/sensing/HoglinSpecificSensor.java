@@ -28,36 +28,35 @@ public class HoglinSpecificSensor extends Sensor<Hoglin> {
         );
     }
 
-    protected void doTick(ServerLevel p_26659_, Hoglin p_26660_) {
-        Brain<?> brain = p_26660_.getBrain();
-        brain.setMemory(MemoryModuleType.NEAREST_REPELLENT, this.findNearestRepellent(p_26659_, p_26660_));
-        Optional<Piglin> optional = Optional.empty();
-        int i = 0;
-        List<Hoglin> list = Lists.newArrayList();
-        NearestVisibleLivingEntities nearestvisiblelivingentities = brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES).orElse(NearestVisibleLivingEntities.empty());
+    protected void doTick(final ServerLevel level, final Hoglin body) {
+        Brain<?> brain = body.getBrain();
+        brain.setMemory(MemoryModuleType.NEAREST_REPELLENT, this.findNearestRepellent(level, body));
+        Optional<Piglin> adultPiglin = Optional.empty();
+        int adultPiglinCount = 0;
+        List<Hoglin> adultHoglins = Lists.newArrayList();
+        NearestVisibleLivingEntities visibleLivingEntities = brain.getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
+            .orElse(NearestVisibleLivingEntities.empty());
 
-        for (LivingEntity livingentity : nearestvisiblelivingentities.findAll(
-            p_186150_ -> !p_186150_.isBaby() && (p_186150_ instanceof Piglin || p_186150_ instanceof Hoglin)
-        )) {
-            if (livingentity instanceof Piglin piglin) {
-                i++;
-                if (optional.isEmpty()) {
-                    optional = Optional.of(piglin);
+        for (LivingEntity entity : visibleLivingEntities.findAll(entityx -> !entityx.isBaby() && (entityx instanceof Piglin || entityx instanceof Hoglin))) {
+            if (entity instanceof Piglin piglin) {
+                adultPiglinCount++;
+                if (adultPiglin.isEmpty()) {
+                    adultPiglin = Optional.of(piglin);
                 }
             }
 
-            if (livingentity instanceof Hoglin hoglin) {
-                list.add(hoglin);
+            if (entity instanceof Hoglin hoglin) {
+                adultHoglins.add(hoglin);
             }
         }
 
-        brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLIN, optional);
-        brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS, list);
-        brain.setMemory(MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT, i);
-        brain.setMemory(MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT, list.size());
+        brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLIN, adultPiglin);
+        brain.setMemory(MemoryModuleType.NEAREST_VISIBLE_ADULT_HOGLINS, adultHoglins);
+        brain.setMemory(MemoryModuleType.VISIBLE_ADULT_PIGLIN_COUNT, adultPiglinCount);
+        brain.setMemory(MemoryModuleType.VISIBLE_ADULT_HOGLIN_COUNT, adultHoglins.size());
     }
 
-    private Optional<BlockPos> findNearestRepellent(ServerLevel p_26665_, Hoglin p_26666_) {
-        return BlockPos.findClosestMatch(p_26666_.blockPosition(), 8, 4, p_186148_ -> p_26665_.getBlockState(p_186148_).is(BlockTags.HOGLIN_REPELLENTS));
+    private Optional<BlockPos> findNearestRepellent(final ServerLevel level, final Hoglin body) {
+        return BlockPos.findClosestMatch(body.blockPosition(), 8, 4, pos -> level.getBlockState(pos).is(BlockTags.HOGLIN_REPELLENTS));
     }
 }

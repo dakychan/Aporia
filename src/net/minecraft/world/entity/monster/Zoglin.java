@@ -1,9 +1,8 @@
 package net.minecraft.world.entity.monster;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -18,10 +17,17 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.ai.ActivityData;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -53,6 +59,9 @@ import org.jspecify.annotations.Nullable;
 
 public class Zoglin extends Monster implements HoglinBase {
     private static final EntityDataAccessor<Boolean> DATA_BABY_ID = SynchedEntityData.defineId(Zoglin.class, EntityDataSerializers.BOOLEAN);
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.75F, 0.85F)
+        .withEyeHeight(0.625F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, 0.875F, 0.0F));
     private static final int MAX_HEALTH = 40;
     private static final int ATTACK_KNOCKBACK = 1;
     private static final float KNOCKBACK_RESISTANCE = 0.6F;
@@ -65,54 +74,34 @@ public class Zoglin extends Monster implements HoglinBase {
     private static final float SPEED_MULTIPLIER_WHEN_IDLING = 0.4F;
     private static final boolean DEFAULT_BABY = false;
     private int attackAnimationRemainingTicks;
-    protected static final ImmutableList<? extends SensorType<? extends Sensor<? super Zoglin>>> SENSOR_TYPES = ImmutableList.of(
-        SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS
-    );
-    protected static final ImmutableList<? extends MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-        MemoryModuleType.NEAREST_LIVING_ENTITIES,
-        MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-        MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-        MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-        MemoryModuleType.LOOK_TARGET,
-        MemoryModuleType.WALK_TARGET,
-        MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-        MemoryModuleType.PATH,
-        MemoryModuleType.ATTACK_TARGET,
-        MemoryModuleType.ATTACK_COOLING_DOWN
+    private static final Brain.Provider<Zoglin> BRAIN_PROVIDER = Brain.provider(
+        List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS), var0 -> getActivities()
     );
 
-    public Zoglin(EntityType<? extends Zoglin> p_34204_, Level p_34205_) {
-        super(p_34204_, p_34205_);
+    public Zoglin(final EntityType<? extends Zoglin> type, final Level level) {
+        super(type, level);
         this.xpReward = 5;
     }
 
     @Override
-    protected Brain.Provider<Zoglin> brainProvider() {
-        return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
+    protected Brain<Zoglin> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
-    @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_34221_) {
-        Brain<Zoglin> brain = this.brainProvider().makeBrain(p_34221_);
-        initCoreActivity(brain);
-        initIdleActivity(brain);
-        initFightActivity(brain);
-        brain.setCoreActivities(ImmutableSet.of(Activity.CORE));
-        brain.setDefaultActivity(Activity.IDLE);
-        brain.useDefaultActivity();
-        return brain;
+    protected static List<ActivityData<Zoglin>> getActivities() {
+        return List.of(initCoreActivity(), initIdleActivity(), initFightActivity());
     }
 
-    private static void initCoreActivity(Brain<Zoglin> p_34217_) {
-        p_34217_.addActivity(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
+    private static ActivityData<Zoglin> initCoreActivity() {
+        return ActivityData.create(Activity.CORE, 0, ImmutableList.of(new LookAtTargetSink(45, 90), new MoveToTargetSink()));
     }
 
-    private static void initIdleActivity(Brain<Zoglin> p_34229_) {
-        p_34229_.addActivity(
+    private static ActivityData<Zoglin> initIdleActivity() {
+        return ActivityData.<Zoglin>create(
             Activity.IDLE,
             10,
             ImmutableList.of(
-                StartAttacking.create((p_364948_, p_368246_) -> p_368246_.findNearestValidAttackTarget(p_364948_)),
+                StartAttacking.create(Zoglin::findNearestValidAttackTarget),
                 SetEntityLookTargetSometimes.create(8.0F, UniformInt.of(30, 60)),
                 new RunOne<>(
                     ImmutableList.of(
@@ -123,8 +112,13 @@ public class Zoglin extends Monster implements HoglinBase {
         );
     }
 
-    private static void initFightActivity(Brain<Zoglin> p_34237_) {
-        p_34237_.addActivityAndRemoveMemoryWhenStopped(
+    @Override
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+    }
+
+    private static ActivityData<Zoglin> initFightActivity() {
+        return ActivityData.<Zoglin>create(
             Activity.FIGHT,
             10,
             ImmutableList.of(
@@ -137,41 +131,36 @@ public class Zoglin extends Monster implements HoglinBase {
         );
     }
 
-    private Optional<? extends LivingEntity> findNearestValidAttackTarget(ServerLevel p_363321_) {
-        return this.getBrain()
+    private static Optional<? extends LivingEntity> findNearestValidAttackTarget(final ServerLevel level, final Mob mob) {
+        return mob.getBrain()
             .getMemory(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
             .orElse(NearestVisibleLivingEntities.empty())
-            .findClosest(p_365722_ -> this.isTargetable(p_363321_, p_365722_));
-    }
-
-    private boolean isTargetable(ServerLevel p_362768_, LivingEntity p_34253_) {
-        EntityType<?> entitytype = p_34253_.getType();
-        return entitytype != EntityType.ZOGLIN && entitytype != EntityType.CREEPER && Sensor.isEntityAttackable(p_362768_, this, p_34253_);
+            .findClosest(target -> !target.is(EntityTypes.ZOGLIN) && !target.is(EntityTypes.CREEPER) && Sensor.isEntityAttackable(level, mob, target));
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_332153_) {
-        super.defineSynchedData(p_332153_);
-        p_332153_.define(DATA_BABY_ID, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_BABY_ID, false);
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_34225_) {
-        super.onSyncedDataUpdated(p_34225_);
-        if (DATA_BABY_ID.equals(p_34225_)) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (DATA_BABY_ID.equals(accessor)) {
             this.refreshDimensions();
         }
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_370134_, DifficultyInstance p_367985_, EntitySpawnReason p_369650_, @Nullable SpawnGroupData p_362880_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
-        if (p_370134_.getRandom().nextFloat() < 0.2F) {
+        if (level.getRandom().nextFloat() < 0.2F) {
             this.setBaby(true);
         }
 
-        return super.finalizeSpawn(p_370134_, p_367985_, p_369650_, p_362880_);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -188,12 +177,12 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    public boolean doHurtTarget(ServerLevel p_366973_, Entity p_34207_) {
-        if (p_34207_ instanceof LivingEntity livingentity) {
+    public boolean doHurtTarget(final ServerLevel level, final Entity target) {
+        if (target instanceof LivingEntity entity) {
             this.attackAnimationRemainingTicks = 10;
-            p_366973_.broadcastEntityEvent(this, (byte)4);
+            level.broadcastEntityEvent(this, (byte)4);
             this.makeSound(SoundEvents.ZOGLIN_ATTACK);
-            return HoglinBase.hurtAndThrowTarget(p_366973_, this, livingentity);
+            return HoglinBase.hurtAndThrowTarget(level, this, entity);
         } else {
             return false;
         }
@@ -205,29 +194,29 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    protected void blockedByItem(LivingEntity p_34246_) {
+    protected void blockedByItem(final LivingEntity defender, final DamageSource source, final float damage) {
         if (!this.isBaby()) {
-            HoglinBase.throwTarget(this, p_34246_);
+            HoglinBase.throwTarget(this, defender);
         }
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_369200_, DamageSource p_368778_, float p_370202_) {
-        boolean flag = super.hurtServer(p_369200_, p_368778_, p_370202_);
-        if (flag && p_368778_.getEntity() instanceof LivingEntity livingentity) {
-            if (this.canAttack(livingentity) && !BehaviorUtils.isOtherTargetMuchFurtherAwayThanCurrentAttackTarget(this, livingentity, 4.0)) {
-                this.setAttackTarget(livingentity);
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        boolean wasHurt = super.hurtServer(level, source, damage);
+        if (wasHurt && source.getEntity() instanceof LivingEntity attacker) {
+            if (this.canAttack(attacker) && !BehaviorUtils.isOtherTargetMuchFurtherAwayThanCurrentAttackTarget(this, attacker, 4.0)) {
+                this.setAttackTarget(attacker);
             }
 
             return true;
         } else {
-            return flag;
+            return wasHurt;
         }
     }
 
-    private void setAttackTarget(LivingEntity p_34255_) {
+    private void setAttackTarget(final LivingEntity target) {
         this.brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
-        this.brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, p_34255_, 200L);
+        this.brain.setMemoryWithExpiry(MemoryModuleType.ATTACK_TARGET, target, 200L);
     }
 
     @Override
@@ -236,10 +225,10 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     protected void updateActivity() {
-        Activity activity = this.brain.getActiveNonCoreActivity().orElse(null);
+        Activity oldActivity = this.brain.getActiveNonCoreActivity().orElse(null);
         this.brain.setActiveActivityToFirstValid(ImmutableList.of(Activity.FIGHT, Activity.IDLE));
-        Activity activity1 = this.brain.getActiveNonCoreActivity().orElse(null);
-        if (activity1 == Activity.FIGHT && activity != Activity.FIGHT) {
+        Activity newActivity = this.brain.getActiveNonCoreActivity().orElse(null);
+        if (newActivity == Activity.FIGHT && oldActivity != Activity.FIGHT) {
             this.playAngrySound();
         }
 
@@ -247,18 +236,18 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_363122_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("zoglinBrain");
-        this.getBrain().tick(p_363122_, this);
-        profilerfiller.pop();
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("zoglinBrain");
+        this.getBrain().tick(level, this);
+        profiler.pop();
         this.updateActivity();
     }
 
     @Override
-    public void setBaby(boolean p_34227_) {
-        this.getEntityData().set(DATA_BABY_ID, p_34227_);
-        if (!this.level().isClientSide() && p_34227_) {
+    public void setBaby(final boolean baby) {
+        this.getEntityData().set(DATA_BABY_ID, baby);
+        if (!this.level().isClientSide() && baby) {
             this.getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(0.5);
         }
     }
@@ -278,12 +267,12 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    public void handleEntityEvent(byte p_34212_) {
-        if (p_34212_ == 4) {
+    public void handleEntityEvent(final byte id) {
+        if (id == 4) {
             this.attackAnimationRemainingTicks = 10;
             this.makeSound(SoundEvents.ZOGLIN_ATTACK);
         } else {
-            super.handleEntityEvent(p_34212_);
+            super.handleEntityEvent(id);
         }
     }
 
@@ -302,7 +291,7 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_34244_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.ZOGLIN_HURT;
     }
 
@@ -312,7 +301,7 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_34231_, BlockState p_34232_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.ZOGLIN_STEP, 0.15F, 1.0F);
     }
 
@@ -326,14 +315,14 @@ public class Zoglin extends Monster implements HoglinBase {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_409877_) {
-        super.addAdditionalSaveData(p_409877_);
-        p_409877_.putBoolean("IsBaby", this.isBaby());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("IsBaby", this.isBaby());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_410476_) {
-        super.readAdditionalSaveData(p_410476_);
-        this.setBaby(p_410476_.getBooleanOr("IsBaby", false));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setBaby(input.getBooleanOr("IsBaby", false));
     }
 }

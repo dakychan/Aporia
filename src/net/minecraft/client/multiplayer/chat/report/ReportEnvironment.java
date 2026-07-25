@@ -7,26 +7,23 @@ import com.mojang.realmsclient.dto.RealmsServer;
 import java.util.Locale;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public record ReportEnvironment(String clientVersion, ReportEnvironment.@Nullable Server server) {
     public static ReportEnvironment local() {
         return create(null);
     }
 
-    public static ReportEnvironment thirdParty(String p_238999_) {
-        return create(new ReportEnvironment.Server.ThirdParty(p_238999_));
+    public static ReportEnvironment thirdParty(final String ip) {
+        return create(new ReportEnvironment.Server.ThirdParty(ip));
     }
 
-    public static ReportEnvironment realm(RealmsServer p_239765_) {
-        return create(new ReportEnvironment.Server.Realm(p_239765_));
+    public static ReportEnvironment realm(final RealmsServer realm) {
+        return create(new ReportEnvironment.Server.Realm(realm));
     }
 
-    public static ReportEnvironment create(ReportEnvironment.@Nullable Server p_239956_) {
-        return new ReportEnvironment(getClientVersion(), p_239956_);
+    public static ReportEnvironment create(final ReportEnvironment.@Nullable Server server) {
+        return new ReportEnvironment(getClientVersion(), server);
     }
 
     public ClientInfo clientInfo() {
@@ -34,38 +31,31 @@ public record ReportEnvironment(String clientVersion, ReportEnvironment.@Nullabl
     }
 
     public @Nullable ThirdPartyServerInfo thirdPartyServerInfo() {
-        return this.server instanceof ReportEnvironment.Server.ThirdParty reportenvironment$server$thirdparty
-            ? new ThirdPartyServerInfo(reportenvironment$server$thirdparty.ip)
-            : null;
+        return this.server instanceof ReportEnvironment.Server.ThirdParty thirdParty ? new ThirdPartyServerInfo(thirdParty.ip) : null;
     }
 
     public @Nullable RealmInfo realmInfo() {
-        return this.server instanceof ReportEnvironment.Server.Realm reportenvironment$server$realm
-            ? new RealmInfo(String.valueOf(reportenvironment$server$realm.realmId()), reportenvironment$server$realm.slotId())
-            : null;
+        return this.server instanceof ReportEnvironment.Server.Realm realm ? new RealmInfo(String.valueOf(realm.realmId()), realm.slotId()) : null;
     }
 
     private static String getClientVersion() {
-        StringBuilder stringbuilder = new StringBuilder();
-        stringbuilder.append(SharedConstants.getCurrentVersion().id());
+        StringBuilder version = new StringBuilder();
+        version.append(SharedConstants.getCurrentVersion().id());
         if (Minecraft.checkModStatus().shouldReportAsModified()) {
-            stringbuilder.append(" (modded)");
+            version.append(" (modded)");
         }
 
-        return stringbuilder.toString();
+        return version.toString();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Server {
-        @OnlyIn(Dist.CLIENT)
-        public record Realm(long realmId, int slotId) implements ReportEnvironment.Server {
-            public Realm(RealmsServer p_239068_) {
-                this(p_239068_.id, p_239068_.activeSlot);
+        public interface Server {
+                record Realm(long realmId, int slotId) implements ReportEnvironment.Server {
+            public Realm(final RealmsServer realm) {
+                this(realm.id, realm.activeSlot);
             }
         }
 
-        @OnlyIn(Dist.CLIENT)
-        public record ThirdParty(String ip) implements ReportEnvironment.Server {
+                record ThirdParty(String ip) implements ReportEnvironment.Server {
         }
     }
 }

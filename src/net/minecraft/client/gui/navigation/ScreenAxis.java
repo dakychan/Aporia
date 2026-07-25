@@ -1,9 +1,6 @@
 package net.minecraft.client.gui.navigation;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum ScreenAxis {
     HORIZONTAL,
     VERTICAL;
@@ -29,7 +26,7 @@ public enum ScreenAxis {
         };
     }
 
-    public ScreenDirection getDirection(boolean p_265698_) {
-        return p_265698_ ? this.getPositive() : this.getNegative();
+    public ScreenDirection getDirection(final boolean positive) {
+        return positive ? this.getPositive() : this.getNegative();
     }
 }

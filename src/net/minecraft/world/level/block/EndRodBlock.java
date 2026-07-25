@@ -19,42 +19,42 @@ public class EndRodBlock extends RodBlock {
         return CODEC;
     }
 
-    protected EndRodBlock(BlockBehaviour.Properties p_53085_) {
-        super(p_53085_);
+    protected EndRodBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.UP));
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_53087_) {
-        Direction direction = p_53087_.getClickedFace();
-        BlockState blockstate = p_53087_.getLevel().getBlockState(p_53087_.getClickedPos().relative(direction.getOpposite()));
-        return blockstate.is(this) && blockstate.getValue(FACING) == direction
-            ? this.defaultBlockState().setValue(FACING, direction.getOpposite())
-            : this.defaultBlockState().setValue(FACING, direction);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        Direction clickedFace = context.getClickedFace();
+        BlockState blockState = context.getLevel().getBlockState(context.getClickedPos().relative(clickedFace.getOpposite()));
+        return blockState.is(this) && blockState.getValue(FACING) == clickedFace
+            ? this.defaultBlockState().setValue(FACING, clickedFace.getOpposite())
+            : this.defaultBlockState().setValue(FACING, clickedFace);
     }
 
     @Override
-    public void animateTick(BlockState p_221107_, Level p_221108_, BlockPos p_221109_, RandomSource p_221110_) {
-        Direction direction = p_221107_.getValue(FACING);
-        double d0 = p_221109_.getX() + 0.55 - p_221110_.nextFloat() * 0.1F;
-        double d1 = p_221109_.getY() + 0.55 - p_221110_.nextFloat() * 0.1F;
-        double d2 = p_221109_.getZ() + 0.55 - p_221110_.nextFloat() * 0.1F;
-        double d3 = 0.4F - (p_221110_.nextFloat() + p_221110_.nextFloat()) * 0.4F;
-        if (p_221110_.nextInt(5) == 0) {
-            p_221108_.addParticle(
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        Direction direction = state.getValue(FACING);
+        double x = pos.getX() + 0.55 - random.nextFloat() * 0.1F;
+        double y = pos.getY() + 0.55 - random.nextFloat() * 0.1F;
+        double z = pos.getZ() + 0.55 - random.nextFloat() * 0.1F;
+        double r = 0.4F - (random.nextFloat() + random.nextFloat()) * 0.4F;
+        if (random.nextInt(5) == 0) {
+            level.addParticle(
                 ParticleTypes.END_ROD,
-                d0 + direction.getStepX() * d3,
-                d1 + direction.getStepY() * d3,
-                d2 + direction.getStepZ() * d3,
-                p_221110_.nextGaussian() * 0.005,
-                p_221110_.nextGaussian() * 0.005,
-                p_221110_.nextGaussian() * 0.005
+                x + direction.getStepX() * r,
+                y + direction.getStepY() * r,
+                z + direction.getStepZ() * r,
+                random.nextGaussian() * 0.005,
+                random.nextGaussian() * 0.005,
+                random.nextGaussian() * 0.005
             );
         }
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_53105_) {
-        p_53105_.add(FACING);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING);
     }
 }

@@ -11,16 +11,16 @@ public class LegacyProtocolUtils {
     public static final int DISCONNECT_PACKET_ID = 255;
     public static final int FAKE_PROTOCOL_VERSION = 127;
 
-    public static void writeLegacyString(ByteBuf p_301020_, String p_300839_) {
-        p_301020_.writeShort(p_300839_.length());
-        p_301020_.writeCharSequence(p_300839_, StandardCharsets.UTF_16BE);
+    public static void writeLegacyString(final ByteBuf toSend, final String str) {
+        toSend.writeShort(str.length());
+        toSend.writeCharSequence(str, StandardCharsets.UTF_16BE);
     }
 
-    public static String readLegacyString(ByteBuf p_297756_) {
-        int i = p_297756_.readShort();
-        int j = i * 2;
-        String s = p_297756_.toString(p_297756_.readerIndex(), j, StandardCharsets.UTF_16BE);
-        p_297756_.skipBytes(j);
-        return s;
+    public static String readLegacyString(final ByteBuf msg) {
+        int charCount = msg.readShort();
+        int byteCount = charCount * 2;
+        String str = msg.toString(msg.readerIndex(), byteCount, StandardCharsets.UTF_16BE);
+        msg.skipBytes(byteCount);
+        return str;
     }
 }

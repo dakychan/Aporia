@@ -22,6 +22,7 @@ public class CommonLinks {
     public static final URI SUSPENSION_HELP = URI.create("https://aka.ms/mcjavamoderation");
     public static final URI BLOCKING_HELP = URI.create("https://aka.ms/javablocking");
     public static final URI SYMLINK_HELP = URI.create("https://aka.ms/MinecraftSymLinks");
+    public static final URI PRIVACY_AND_ONLINE_SETTINGS = URI.create("https://aka.ms/MinecraftJavaXboxPrivacyAndSafety");
     public static final URI START_REALMS_TRIAL = URI.create("https://aka.ms/startjavarealmstrial");
     public static final URI BUY_REALMS = URI.create("https://aka.ms/BuyJavaRealms");
     public static final URI REALMS_TERMS = URI.create("https://aka.ms/MinecraftRealmsTerms");
@@ -30,15 +31,15 @@ public class CommonLinks {
     public static final String INTENTIONAL_GAME_DESIGN_BUG_ID = "MCPE-28723";
     public static final URI INTENTIONAL_GAME_DESIGN_BUG = URI.create("https://bugs.mojang.com/browse/MCPE-28723");
 
-    public static String extendRealms(@Nullable String p_276321_, UUID p_301276_, boolean p_276266_) {
-        return p_276321_ == null
+    public static String extendRealms(final @Nullable String subscriptionId, final UUID profileId, final boolean trial) {
+        return subscriptionId == null
             ? "https://aka.ms/ExtendJavaRealms"
-            : extendRealms(p_276321_, p_301276_) + "&ref=" + (p_276266_ ? "expiredTrial" : "expiredRealm");
+            : extendRealms(subscriptionId, profileId) + "&ref=" + (trial ? "expiredTrial" : "expiredRealm");
     }
 
-    public static String extendRealms(@Nullable String p_276318_, UUID p_301122_) {
-        return p_276318_ == null
+    public static String extendRealms(final @Nullable String subscriptionId, final UUID profileId) {
+        return subscriptionId == null
             ? "https://aka.ms/ExtendJavaRealms"
-            : "https://aka.ms/ExtendJavaRealms?subscriptionId=" + p_276318_ + "&profileId=" + UndashedUuid.toString(p_301122_);
+            : "https://aka.ms/ExtendJavaRealms?subscriptionId=" + subscriptionId + "&profileId=" + UndashedUuid.toString(profileId);
     }
 }

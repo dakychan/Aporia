@@ -9,20 +9,20 @@ public class OcelotAttackGoal extends Goal {
     private LivingEntity target;
     private int attackTime;
 
-    public OcelotAttackGoal(Mob p_25658_) {
-        this.mob = p_25658_;
+    public OcelotAttackGoal(final Mob mob) {
+        this.mob = mob;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
     }
 
     @Override
     public boolean canUse() {
-        LivingEntity livingentity = this.mob.getTarget();
-        if (livingentity == null) {
+        LivingEntity bestTarget = this.mob.getTarget();
+        if (bestTarget == null) {
             return false;
-        } else {
-            this.target = livingentity;
-            return true;
         }
+
+        this.target = bestTarget;
+        return true;
     }
 
     @Override
@@ -48,18 +48,18 @@ public class OcelotAttackGoal extends Goal {
     @Override
     public void tick() {
         this.mob.getLookControl().setLookAt(this.target, 30.0F, 30.0F);
-        double d0 = this.mob.getBbWidth() * 2.0F * (this.mob.getBbWidth() * 2.0F);
-        double d1 = this.mob.distanceToSqr(this.target.getX(), this.target.getY(), this.target.getZ());
-        double d2 = 0.8;
-        if (d1 > d0 && d1 < 16.0) {
-            d2 = 1.33;
-        } else if (d1 < 225.0) {
-            d2 = 0.6;
+        double meleeRadiusSqr = this.mob.getBbWidth() * 2.0F * (this.mob.getBbWidth() * 2.0F);
+        double distSqr = this.mob.distanceToSqr(this.target.getX(), this.target.getY(), this.target.getZ());
+        double speedModifier = 0.8;
+        if (distSqr > meleeRadiusSqr && distSqr < 16.0) {
+            speedModifier = 1.33;
+        } else if (distSqr < 225.0) {
+            speedModifier = 0.6;
         }
 
-        this.mob.getNavigation().moveTo(this.target, d2);
+        this.mob.getNavigation().moveTo(this.target, speedModifier);
         this.attackTime = Math.max(this.attackTime - 1, 0);
-        if (!(d1 > d0)) {
+        if (!(distSqr > meleeRadiusSqr)) {
             if (this.attackTime <= 0) {
                 this.attackTime = 20;
                 this.mob.doHurtTarget(getServerLevel(this.mob), this.target);

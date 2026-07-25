@@ -3,7 +3,6 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.TrailParticleOption;
@@ -28,8 +27,7 @@ import net.minecraft.world.phys.Vec3;
 
 public class EyeblossomBlock extends FlowerBlock {
     public static final MapCodec<EyeblossomBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422108_ -> p_422108_.group(Codec.BOOL.fieldOf("open").forGetter(p_378496_ -> p_378496_.type.open), propertiesCodec())
-            .apply(p_422108_, EyeblossomBlock::new)
+        i -> i.group(Codec.BOOL.fieldOf("open").forGetter(e -> e.type.open), propertiesCodec()).apply(i, EyeblossomBlock::new)
     );
     private static final int EYEBLOSSOM_XZ_RANGE = 3;
     private static final int EYEBLOSSOM_Y_RANGE = 2;
@@ -40,73 +38,78 @@ public class EyeblossomBlock extends FlowerBlock {
         return CODEC;
     }
 
-    public EyeblossomBlock(EyeblossomBlock.Type p_377758_, BlockBehaviour.Properties p_377813_) {
-        super(p_377758_.effect, p_377758_.effectDuration, p_377813_);
-        this.type = p_377758_;
+    public EyeblossomBlock(final EyeblossomBlock.Type type, final BlockBehaviour.Properties properties) {
+        super(type.effect, type.effectDuration, properties);
+        this.type = type;
     }
 
-    public EyeblossomBlock(boolean p_377179_, BlockBehaviour.Properties p_375538_) {
-        super(EyeblossomBlock.Type.fromBoolean(p_377179_).effect, EyeblossomBlock.Type.fromBoolean(p_377179_).effectDuration, p_375538_);
-        this.type = EyeblossomBlock.Type.fromBoolean(p_377179_);
+    public EyeblossomBlock(final boolean open, final BlockBehaviour.Properties properties) {
+        super(EyeblossomBlock.Type.fromBoolean(open).effect, EyeblossomBlock.Type.fromBoolean(open).effectDuration, properties);
+        this.type = EyeblossomBlock.Type.fromBoolean(open);
     }
 
     @Override
-    public void animateTick(BlockState p_378124_, Level p_378091_, BlockPos p_377687_, RandomSource p_377934_) {
-        if (this.type.emitSounds() && p_377934_.nextInt(700) == 0) {
-            BlockState blockstate = p_378091_.getBlockState(p_377687_.below());
-            if (blockstate.is(Blocks.PALE_MOSS_BLOCK)) {
-                p_378091_.playLocalSound(
-                    p_377687_.getX(), p_377687_.getY(), p_377687_.getZ(), SoundEvents.EYEBLOSSOM_IDLE, SoundSource.AMBIENT, 1.0F, 1.0F, false
-                );
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (this.type.emitSounds() && random.nextInt(700) == 0) {
+            BlockState below = level.getBlockState(pos.below());
+            if (below.is(Blocks.PALE_MOSS_BLOCK)) {
+                level.playLocalSound(pos.getX(), pos.getY(), pos.getZ(), SoundEvents.EYEBLOSSOM_IDLE, SoundSource.AMBIENT, 1.0F, 1.0F, false);
             }
         }
     }
 
     @Override
-    protected void randomTick(BlockState p_377061_, ServerLevel p_376852_, BlockPos p_376526_, RandomSource p_377682_) {
-        if (this.tryChangingState(p_377061_, p_376852_, p_376526_, p_377682_)) {
-            p_376852_.playSound(null, p_376526_, this.type.transform().longSwitchSound, SoundSource.BLOCKS, 1.0F, 1.0F);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (this.tryChangingState(state, level, pos, random)) {
+            level.playSound(null, pos, this.type.transform().longSwitchSound, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
 
-        super.randomTick(p_377061_, p_376852_, p_376526_, p_377682_);
+        super.randomTick(state, level, pos, random);
     }
 
     @Override
-    protected void tick(BlockState p_378472_, ServerLevel p_377898_, BlockPos p_376262_, RandomSource p_378553_) {
-        if (this.tryChangingState(p_378472_, p_377898_, p_376262_, p_378553_)) {
-            p_377898_.playSound(null, p_376262_, this.type.transform().shortSwitchSound, SoundSource.BLOCKS, 1.0F, 1.0F);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (this.tryChangingState(state, level, pos, random)) {
+            level.playSound(null, pos, this.type.transform().shortSwitchSound, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
 
-        super.tick(p_378472_, p_377898_, p_376262_, p_378553_);
+        super.tick(state, level, pos, random);
     }
 
-    private boolean tryChangingState(BlockState p_378680_, ServerLevel p_377734_, BlockPos p_375393_, RandomSource p_375792_) {
-        boolean flag = p_377734_.environmentAttributes().getValue(EnvironmentAttributes.EYEBLOSSOM_OPEN, p_375393_).toBoolean(this.type.open);
-        if (flag == this.type.open) {
+    private boolean tryChangingState(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        boolean shouldBeOpen = level.environmentAttributes().getValue(EnvironmentAttributes.EYEBLOSSOM_OPEN, pos).toBoolean(this.type.open);
+        if (shouldBeOpen == this.type.open) {
             return false;
-        } else {
-            EyeblossomBlock.Type eyeblossomblock$type = this.type.transform();
-            p_377734_.setBlock(p_375393_, eyeblossomblock$type.state(), 3);
-            p_377734_.gameEvent(GameEvent.BLOCK_CHANGE, p_375393_, GameEvent.Context.of(p_378680_));
-            eyeblossomblock$type.spawnTransformParticle(p_377734_, p_375393_, p_375792_);
-            BlockPos.betweenClosed(p_375393_.offset(-3, -2, -3), p_375393_.offset(3, 2, 3)).forEach(p_377124_ -> {
-                BlockState blockstate = p_377734_.getBlockState(p_377124_);
-                if (blockstate == p_378680_) {
-                    double d0 = Math.sqrt(p_375393_.distSqr(p_377124_));
-                    int i = p_375792_.nextIntBetweenInclusive((int)(d0 * 5.0), (int)(d0 * 10.0));
-                    p_377734_.scheduleTick(p_377124_, p_378680_.getBlock(), i);
-                }
-            });
-            return true;
         }
+
+        EyeblossomBlock.Type newType = this.type.transform();
+        level.setBlock(pos, newType.state(), 3);
+        level.gameEvent(GameEvent.BLOCK_CHANGE, pos, GameEvent.Context.of(state));
+        newType.spawnTransformParticle(level, pos, random);
+        BlockPos.betweenClosed(pos.offset(-3, -2, -3), pos.offset(3, 2, 3)).forEach(nearby -> {
+            BlockState nearbyState = level.getBlockState(nearby);
+            if (nearbyState == state) {
+                double distance = Math.sqrt(pos.distSqr(nearby));
+                int delay = random.nextIntBetweenInclusive((int)(distance * 5.0), (int)(distance * 10.0));
+                level.scheduleTick(nearby, state.getBlock(), delay);
+            }
+        });
+        return true;
     }
 
     @Override
-    protected void entityInside(BlockState p_375775_, Level p_376791_, BlockPos p_376904_, Entity p_376719_, InsideBlockEffectApplier p_391726_, boolean p_432037_) {
-        if (!p_376791_.isClientSide()
-            && p_376791_.getDifficulty() != Difficulty.PEACEFUL
-            && p_376719_ instanceof Bee bee
-            && Bee.attractsBees(p_375775_)
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (!level.isClientSide()
+            && level.getDifficulty() != Difficulty.PEACEFUL
+            && entity instanceof Bee bee
+            && Bee.attractsBees(state)
             && !bee.hasEffect(MobEffects.POISON)) {
             bee.addEffect(this.getBeeInteractionEffect());
         }
@@ -117,31 +120,31 @@ public class EyeblossomBlock extends FlowerBlock {
         return new MobEffectInstance(MobEffects.POISON, 25);
     }
 
-    public static enum Type {
+    public enum Type {
         OPEN(true, MobEffects.BLINDNESS, 11.0F, SoundEvents.EYEBLOSSOM_OPEN_LONG, SoundEvents.EYEBLOSSOM_OPEN, 16545810),
         CLOSED(false, MobEffects.NAUSEA, 7.0F, SoundEvents.EYEBLOSSOM_CLOSE_LONG, SoundEvents.EYEBLOSSOM_CLOSE, 6250335);
 
-        final boolean open;
-        final Holder<MobEffect> effect;
-        final float effectDuration;
-        final SoundEvent longSwitchSound;
-        final SoundEvent shortSwitchSound;
+        private final boolean open;
+        private final Holder<MobEffect> effect;
+        private final float effectDuration;
+        private final SoundEvent longSwitchSound;
+        private final SoundEvent shortSwitchSound;
         private final int particleColor;
 
-        private Type(
-            final boolean p_378579_,
-            final Holder<MobEffect> p_376708_,
-            final float p_377657_,
-            final SoundEvent p_376837_,
-            final SoundEvent p_378282_,
-            final int p_375732_
+        Type(
+            final boolean open,
+            final Holder<MobEffect> effect,
+            final float duration,
+            final SoundEvent longSwitchSound,
+            final SoundEvent shortSwitchSound,
+            final int particleColor
         ) {
-            this.open = p_378579_;
-            this.effect = p_376708_;
-            this.effectDuration = p_377657_;
-            this.longSwitchSound = p_376837_;
-            this.shortSwitchSound = p_378282_;
-            this.particleColor = p_375732_;
+            this.open = open;
+            this.effect = effect;
+            this.effectDuration = duration;
+            this.longSwitchSound = longSwitchSound;
+            this.shortSwitchSound = shortSwitchSound;
+            this.particleColor = particleColor;
         }
 
         public Block block() {
@@ -160,17 +163,17 @@ public class EyeblossomBlock extends FlowerBlock {
             return this.open;
         }
 
-        public static EyeblossomBlock.Type fromBoolean(boolean p_376282_) {
-            return p_376282_ ? OPEN : CLOSED;
+        public static EyeblossomBlock.Type fromBoolean(final boolean open) {
+            return open ? OPEN : CLOSED;
         }
 
-        public void spawnTransformParticle(ServerLevel p_377776_, BlockPos p_378624_, RandomSource p_375699_) {
-            Vec3 vec3 = p_378624_.getCenter();
-            double d0 = 0.5 + p_375699_.nextDouble();
-            Vec3 vec31 = new Vec3(p_375699_.nextDouble() - 0.5, p_375699_.nextDouble() + 1.0, p_375699_.nextDouble() - 0.5);
-            Vec3 vec32 = vec3.add(vec31.scale(d0));
-            TrailParticleOption trailparticleoption = new TrailParticleOption(vec32, this.particleColor, (int)(20.0 * d0));
-            p_377776_.sendParticles(trailparticleoption, vec3.x, vec3.y, vec3.z, 1, 0.0, 0.0, 0.0, 0.0);
+        public void spawnTransformParticle(final ServerLevel level, final BlockPos pos, final RandomSource random) {
+            Vec3 start = Vec3.atCenterOf(pos);
+            double lifetime = 0.5 + random.nextDouble();
+            Vec3 velocity = new Vec3(random.nextDouble() - 0.5, random.nextDouble() + 1.0, random.nextDouble() - 0.5);
+            Vec3 target = start.add(velocity.scale(lifetime));
+            TrailParticleOption particle = new TrailParticleOption(target, this.particleColor, (int)(20.0 * lifetime));
+            level.sendParticles(particle, start.x, start.y, start.z, 1, 0.0, 0.0, 0.0, 0.0);
         }
 
         public SoundEvent longSwitchSound() {

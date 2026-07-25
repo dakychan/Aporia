@@ -6,6 +6,8 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import io.netty.buffer.ByteBuf;
+import java.nio.file.Path;
+import java.util.Locale;
 import java.util.function.UnaryOperator;
 import net.minecraft.IdentifierException;
 import net.minecraft.network.chat.Component;
@@ -14,85 +16,84 @@ import net.minecraft.network.codec.StreamCodec;
 import org.jspecify.annotations.Nullable;
 
 public final class Identifier implements Comparable<Identifier> {
-    public static final Codec<Identifier> CODEC = Codec.STRING.comapFlatMap(Identifier::read, Identifier::toString).stable();
+    public static final Codec<Identifier> CODEC = Codec.STRING.<Identifier>comapFlatMap(Identifier::read, Identifier::toString).stable();
     public static final StreamCodec<ByteBuf, Identifier> STREAM_CODEC = ByteBufCodecs.STRING_UTF8.map(Identifier::parse, Identifier::toString);
     public static final SimpleCommandExceptionType ERROR_INVALID = new SimpleCommandExceptionType(Component.translatable("argument.id.invalid"));
     public static final char NAMESPACE_SEPARATOR = ':';
     public static final String DEFAULT_NAMESPACE = "minecraft";
     public static final String REALMS_NAMESPACE = "realms";
+    public static final String ALLOWED_NAMESPACE_CHARACTERS = "[a-z0-9_.-]";
     private final String namespace;
     private final String path;
 
-    private Identifier(String p_453419_, String p_457561_) {
-        assert isValidNamespace(p_453419_);
-
-        assert isValidPath(p_457561_);
-
-        this.namespace = p_453419_;
-        this.path = p_457561_;
+    private Identifier(final String namespace, final String path) {
+        assert isValidNamespace(namespace);
+        assert isValidPath(path);
+        this.namespace = namespace;
+        this.path = path;
     }
 
-    private static Identifier createUntrusted(String p_458386_, String p_455185_) {
-        return new Identifier(assertValidNamespace(p_458386_, p_455185_), assertValidPath(p_458386_, p_455185_));
+    private static Identifier createUntrusted(final String namespace, final String path) {
+        return new Identifier(assertValidNamespace(namespace, path), assertValidPath(namespace, path));
     }
 
-    public static Identifier fromNamespaceAndPath(String p_453591_, String p_452050_) {
-        return createUntrusted(p_453591_, p_452050_);
+    public static Identifier fromNamespaceAndPath(final String namespace, final String path) {
+        return createUntrusted(namespace, path);
     }
 
-    public static Identifier parse(String p_450672_) {
-        return bySeparator(p_450672_, ':');
+    public static Identifier parse(final String identifier) {
+        return bySeparator(identifier, ':');
     }
 
-    public static Identifier withDefaultNamespace(String p_450610_) {
-        return new Identifier("minecraft", assertValidPath("minecraft", p_450610_));
+    public static Identifier withDefaultNamespace(final String path) {
+        return new Identifier("minecraft", assertValidPath("minecraft", path));
     }
 
-    public static @Nullable Identifier tryParse(String p_456562_) {
-        return tryBySeparator(p_456562_, ':');
+    public static @Nullable Identifier tryParse(final String identifier) {
+        return tryBySeparator(identifier, ':');
     }
 
-    public static @Nullable Identifier tryBuild(String p_458111_, String p_455894_) {
-        return isValidNamespace(p_458111_) && isValidPath(p_455894_) ? new Identifier(p_458111_, p_455894_) : null;
+    public static @Nullable Identifier tryBuild(final String namespace, final String path) {
+        return isValidNamespace(namespace) && isValidPath(path) ? new Identifier(namespace, path) : null;
     }
 
-    public static Identifier bySeparator(String p_450597_, char p_457881_) {
-        int i = p_450597_.indexOf(p_457881_);
-        if (i >= 0) {
-            String s = p_450597_.substring(i + 1);
-            if (i != 0) {
-                String s1 = p_450597_.substring(0, i);
-                return createUntrusted(s1, s);
+    public static Identifier bySeparator(final String identifier, final char separator) {
+        int separatorIndex = identifier.indexOf(separator);
+        if (separatorIndex >= 0) {
+            String path = identifier.substring(separatorIndex + 1);
+            if (separatorIndex != 0) {
+                String namespace = identifier.substring(0, separatorIndex);
+                return createUntrusted(namespace, path);
             } else {
-                return withDefaultNamespace(s);
+                return withDefaultNamespace(path);
             }
         } else {
-            return withDefaultNamespace(p_450597_);
+            return withDefaultNamespace(identifier);
         }
     }
 
-    public static @Nullable Identifier tryBySeparator(String p_458139_, char p_459073_) {
-        int i = p_458139_.indexOf(p_459073_);
-        if (i >= 0) {
-            String s = p_458139_.substring(i + 1);
-            if (!isValidPath(s)) {
+    public static @Nullable Identifier tryBySeparator(final String identifier, final char separator) {
+        int separatorIndex = identifier.indexOf(separator);
+        if (separatorIndex >= 0) {
+            String path = identifier.substring(separatorIndex + 1);
+            if (!isValidPath(path)) {
                 return null;
-            } else if (i != 0) {
-                String s1 = p_458139_.substring(0, i);
-                return isValidNamespace(s1) ? new Identifier(s1, s) : null;
+            } else if (separatorIndex != 0) {
+                String namespace = identifier.substring(0, separatorIndex);
+                return isValidNamespace(namespace) ? new Identifier(namespace, path) : null;
             } else {
-                return new Identifier("minecraft", s);
+                return new Identifier("minecraft", path);
             }
         } else {
-            return isValidPath(p_458139_) ? new Identifier("minecraft", p_458139_) : null;
+            return isValidPath(identifier) ? new Identifier("minecraft", identifier) : null;
         }
     }
 
-    public static DataResult<Identifier> read(String p_460941_) {
+    public static DataResult<Identifier> read(final String input) {
         try {
-            return DataResult.success(parse(p_460941_));
-        } catch (IdentifierException identifierexception) {
-            return DataResult.error(() -> "Not a valid resource location: " + p_460941_ + " " + identifierexception.getMessage());
+            return DataResult.success(parse(input));
+        } catch (IdentifierException e) {
+            return DataResult.error(() -> "Not a valid resource location: " + input + " " + e.getMessage());
         }
     }
 
@@ -104,20 +105,20 @@ public final class Identifier implements Comparable<Identifier> {
         return this.namespace;
     }
 
-    public Identifier withPath(String p_458392_) {
-        return new Identifier(this.namespace, assertValidPath(this.namespace, p_458392_));
+    public Identifier withPath(final String newPath) {
+        return new Identifier(this.namespace, assertValidPath(this.namespace, newPath));
     }
 
-    public Identifier withPath(UnaryOperator<String> p_460135_) {
-        return this.withPath(p_460135_.apply(this.path));
+    public Identifier withPath(final UnaryOperator<String> modifier) {
+        return this.withPath(modifier.apply(this.path));
     }
 
-    public Identifier withPrefix(String p_455609_) {
-        return this.withPath(p_455609_ + this.path);
+    public Identifier withPrefix(final String prefix) {
+        return this.withPath(prefix + this.path);
     }
 
-    public Identifier withSuffix(String p_460571_) {
-        return this.withPath(this.path + p_460571_);
+    public Identifier withSuffix(final String suffix) {
+        return this.withPath(this.path + suffix);
     }
 
     @Override
@@ -126,13 +127,11 @@ public final class Identifier implements Comparable<Identifier> {
     }
 
     @Override
-    public boolean equals(Object p_458291_) {
-        if (this == p_458291_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
         } else {
-            return !(p_458291_ instanceof Identifier identifier)
-                ? false
-                : this.namespace.equals(identifier.namespace) && this.path.equals(identifier.path);
+            return !(o instanceof Identifier that) ? false : this.namespace.equals(that.namespace) && this.path.equals(that.path);
         }
     }
 
@@ -141,13 +140,26 @@ public final class Identifier implements Comparable<Identifier> {
         return 31 * this.namespace.hashCode() + this.path.hashCode();
     }
 
-    public int compareTo(Identifier p_452748_) {
-        int i = this.path.compareTo(p_452748_.path);
-        if (i == 0) {
-            i = this.namespace.compareTo(p_452748_.namespace);
+    public int compareTo(final Identifier o) {
+        int result = this.path.compareTo(o.path);
+        if (result == 0) {
+            result = this.namespace.compareTo(o.namespace);
         }
 
-        return i;
+        return result;
+    }
+
+    public Path resolveAgainst(final Path root) {
+        Path resultingPath = root.resolve(this.getNamespace(), this.getPath());
+        Path normalizedPath = resultingPath.normalize();
+        Path normalizedRoot = root.normalize();
+        if (!normalizedPath.startsWith(normalizedRoot)) {
+            throw new IllegalStateException(
+                String.format(Locale.ROOT, "Identifier \"%s\" tried to access path \"%s\" from root \"%s\"", this, normalizedPath, normalizedRoot)
+            );
+        } else {
+            return resultingPath;
+        }
     }
 
     public String toDebugFileName() {
@@ -166,64 +178,58 @@ public final class Identifier implements Comparable<Identifier> {
         return this.namespace.equals("minecraft") ? this.path : this.toString();
     }
 
-    public String toLanguageKey(String p_451530_) {
-        return p_451530_ + "." + this.toLanguageKey();
+    public String toLanguageKey(final String prefix) {
+        return prefix + "." + this.toLanguageKey();
     }
 
-    public String toLanguageKey(String p_458514_, String p_455994_) {
-        return p_458514_ + "." + this.toLanguageKey() + "." + p_455994_;
+    public String toLanguageKey(final String prefix, final String suffix) {
+        return prefix + "." + this.toLanguageKey() + "." + suffix;
     }
 
-    private static String readGreedy(StringReader p_458656_) {
-        int i = p_458656_.getCursor();
+    private static String readGreedy(final StringReader reader) {
+        int start = reader.getCursor();
 
-        while (p_458656_.canRead() && isAllowedInIdentifier(p_458656_.peek())) {
-            p_458656_.skip();
+        while (reader.canRead() && isAllowedInIdentifier(reader.peek())) {
+            reader.skip();
         }
 
-        return p_458656_.getString().substring(i, p_458656_.getCursor());
+        return reader.getString().substring(start, reader.getCursor());
     }
 
-    public static Identifier read(StringReader p_458258_) throws CommandSyntaxException {
-        int i = p_458258_.getCursor();
-        String s = readGreedy(p_458258_);
+    public static Identifier read(final StringReader reader) throws CommandSyntaxException {
+        int start = reader.getCursor();
+        String raw = readGreedy(reader);
 
         try {
-            return parse(s);
-        } catch (IdentifierException identifierexception) {
-            p_458258_.setCursor(i);
-            throw ERROR_INVALID.createWithContext(p_458258_);
+            return parse(raw);
+        } catch (IdentifierException ex) {
+            reader.setCursor(start);
+            throw ERROR_INVALID.createWithContext(reader);
         }
     }
 
-    public static Identifier readNonEmpty(StringReader p_450362_) throws CommandSyntaxException {
-        int i = p_450362_.getCursor();
-        String s = readGreedy(p_450362_);
-        if (s.isEmpty()) {
-            throw ERROR_INVALID.createWithContext(p_450362_);
-        } else {
-            try {
-                return parse(s);
-            } catch (IdentifierException identifierexception) {
-                p_450362_.setCursor(i);
-                throw ERROR_INVALID.createWithContext(p_450362_);
-            }
+    public static Identifier readNonEmpty(final StringReader reader) throws CommandSyntaxException {
+        int start = reader.getCursor();
+        String raw = readGreedy(reader);
+        if (raw.isEmpty()) {
+            throw ERROR_INVALID.createWithContext(reader);
+        }
+
+        try {
+            return parse(raw);
+        } catch (IdentifierException ex) {
+            reader.setCursor(start);
+            throw ERROR_INVALID.createWithContext(reader);
         }
     }
 
-    public static boolean isAllowedInIdentifier(char p_453350_) {
-        return p_453350_ >= '0' && p_453350_ <= '9'
-            || p_453350_ >= 'a' && p_453350_ <= 'z'
-            || p_453350_ == '_'
-            || p_453350_ == ':'
-            || p_453350_ == '/'
-            || p_453350_ == '.'
-            || p_453350_ == '-';
+    public static boolean isAllowedInIdentifier(final char c) {
+        return c >= '0' && c <= '9' || c >= 'a' && c <= 'z' || c == '_' || c == ':' || c == '/' || c == '.' || c == '-';
     }
 
-    public static boolean isValidPath(String p_450971_) {
-        for (int i = 0; i < p_450971_.length(); i++) {
-            if (!validPathChar(p_450971_.charAt(i))) {
+    public static boolean isValidPath(final String path) {
+        for (int i = 0; i < path.length(); i++) {
+            if (!validPathChar(path.charAt(i))) {
                 return false;
             }
         }
@@ -231,9 +237,13 @@ public final class Identifier implements Comparable<Identifier> {
         return true;
     }
 
-    public static boolean isValidNamespace(String p_457130_) {
-        for (int i = 0; i < p_457130_.length(); i++) {
-            if (!validNamespaceChar(p_457130_.charAt(i))) {
+    public static boolean isValidNamespace(final String namespace) {
+        if (namespace.equals("..")) {
+            return false;
+        }
+
+        for (int i = 0; i < namespace.length(); i++) {
+            if (!validNamespaceChar(namespace.charAt(i))) {
                 return false;
             }
         }
@@ -241,32 +251,27 @@ public final class Identifier implements Comparable<Identifier> {
         return true;
     }
 
-    private static String assertValidNamespace(String p_457507_, String p_451506_) {
-        if (!isValidNamespace(p_457507_)) {
-            throw new IdentifierException("Non [a-z0-9_.-] character in namespace of location: " + p_457507_ + ":" + p_451506_);
+    private static String assertValidNamespace(final String namespace, final String path) {
+        if (!isValidNamespace(namespace)) {
+            throw new IdentifierException("Non [a-z0-9_.-] character in namespace of identifier: " + namespace + ":" + path);
         } else {
-            return p_457507_;
+            return namespace;
         }
     }
 
-    public static boolean validPathChar(char p_458266_) {
-        return p_458266_ == '_'
-            || p_458266_ == '-'
-            || p_458266_ >= 'a' && p_458266_ <= 'z'
-            || p_458266_ >= '0' && p_458266_ <= '9'
-            || p_458266_ == '/'
-            || p_458266_ == '.';
+    public static boolean validPathChar(final char c) {
+        return c == '_' || c == '-' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '/' || c == '.';
     }
 
-    private static boolean validNamespaceChar(char p_454742_) {
-        return p_454742_ == '_' || p_454742_ == '-' || p_454742_ >= 'a' && p_454742_ <= 'z' || p_454742_ >= '0' && p_454742_ <= '9' || p_454742_ == '.';
+    private static boolean validNamespaceChar(final char c) {
+        return c == '_' || c == '-' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '.';
     }
 
-    private static String assertValidPath(String p_450153_, String p_458379_) {
-        if (!isValidPath(p_458379_)) {
-            throw new IdentifierException("Non [a-z0-9/._-] character in path of location: " + p_450153_ + ":" + p_458379_);
+    private static String assertValidPath(final String namespace, final String path) {
+        if (!isValidPath(path)) {
+            throw new IdentifierException("Non [a-z0-9/._-] character in path of location: " + namespace + ":" + path);
         } else {
-            return p_458379_;
+            return path;
         }
     }
 }

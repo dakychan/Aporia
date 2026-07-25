@@ -10,28 +10,26 @@ import net.minecraft.world.level.levelgen.feature.configurations.OreConfiguratio
 public class ScatteredOreFeature extends Feature<OreConfiguration> {
     private static final int MAX_DIST_FROM_ORIGIN = 7;
 
-    ScatteredOreFeature(Codec<OreConfiguration> p_160304_) {
-        super(p_160304_);
+    public ScatteredOreFeature(final Codec<OreConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<OreConfiguration> p_160306_) {
-        WorldGenLevel worldgenlevel = p_160306_.level();
-        RandomSource randomsource = p_160306_.random();
-        OreConfiguration oreconfiguration = p_160306_.config();
-        BlockPos blockpos = p_160306_.origin();
-        int i = randomsource.nextInt(oreconfiguration.size + 1);
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    public boolean place(final FeaturePlaceContext<OreConfiguration> context) {
+        WorldGenLevel level = context.level();
+        RandomSource random = context.random();
+        OreConfiguration config = context.config();
+        BlockPos origin = context.origin();
+        int numberOfTries = random.nextInt(config.size + 1);
+        BlockPos.MutableBlockPos targetPos = new BlockPos.MutableBlockPos();
 
-        for (int j = 0; j < i; j++) {
-            this.offsetTargetPos(blockpos$mutableblockpos, randomsource, blockpos, Math.min(j, 7));
-            BlockState blockstate = worldgenlevel.getBlockState(blockpos$mutableblockpos);
+        for (int i = 0; i < numberOfTries; i++) {
+            this.offsetTargetPos(targetPos, random, origin, Math.min(i, 7));
+            BlockState blockState = level.getBlockState(targetPos);
 
-            for (OreConfiguration.TargetBlockState oreconfiguration$targetblockstate : oreconfiguration.targetStates) {
-                if (OreFeature.canPlaceOre(
-                    blockstate, worldgenlevel::getBlockState, randomsource, oreconfiguration, oreconfiguration$targetblockstate, blockpos$mutableblockpos
-                )) {
-                    worldgenlevel.setBlock(blockpos$mutableblockpos, oreconfiguration$targetblockstate.state, 2);
+            for (OreConfiguration.TargetBlockState targetState : config.targetStates) {
+                if (OreFeature.canPlaceOre(blockState, level::getBlockState, random, config, targetState, targetPos)) {
+                    level.setBlock(targetPos, targetState.state, 2);
                     break;
                 }
             }
@@ -40,14 +38,16 @@ public class ScatteredOreFeature extends Feature<OreConfiguration> {
         return true;
     }
 
-    private void offsetTargetPos(BlockPos.MutableBlockPos p_225232_, RandomSource p_225233_, BlockPos p_225234_, int p_225235_) {
-        int i = this.getRandomPlacementInOneAxisRelativeToOrigin(p_225233_, p_225235_);
-        int j = this.getRandomPlacementInOneAxisRelativeToOrigin(p_225233_, p_225235_);
-        int k = this.getRandomPlacementInOneAxisRelativeToOrigin(p_225233_, p_225235_);
-        p_225232_.setWithOffset(p_225234_, i, j, k);
+    private void offsetTargetPos(
+        final BlockPos.MutableBlockPos targetPos, final RandomSource random, final BlockPos origin, final int maxDistFromOriginForThisTry
+    ) {
+        int xd = this.getRandomPlacementInOneAxisRelativeToOrigin(random, maxDistFromOriginForThisTry);
+        int yd = this.getRandomPlacementInOneAxisRelativeToOrigin(random, maxDistFromOriginForThisTry);
+        int zd = this.getRandomPlacementInOneAxisRelativeToOrigin(random, maxDistFromOriginForThisTry);
+        targetPos.setWithOffset(origin, xd, yd, zd);
     }
 
-    private int getRandomPlacementInOneAxisRelativeToOrigin(RandomSource p_225229_, int p_225230_) {
-        return Math.round((p_225229_.nextFloat() - p_225229_.nextFloat()) * p_225230_);
+    private int getRandomPlacementInOneAxisRelativeToOrigin(final RandomSource random, final int maxDistanceFromOrigin) {
+        return Math.round((random.nextFloat() - random.nextFloat()) * maxDistanceFromOrigin);
     }
 }

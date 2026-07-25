@@ -12,9 +12,9 @@ public interface ReloadInstance {
     }
 
     default void checkExceptions() {
-        CompletableFuture<?> completablefuture = this.done();
-        if (completablefuture.isCompletedExceptionally()) {
-            completablefuture.join();
+        CompletableFuture<?> done = this.done();
+        if (done.isCompletedExceptionally()) {
+            done.join();
         }
     }
 }

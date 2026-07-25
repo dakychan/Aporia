@@ -141,44 +141,46 @@ public class V704 extends Schema {
     });
     protected static final HookFunction ADD_NAMES = new HookFunction() {
         @Override
-        public <T> T apply(DynamicOps<T> p_18070_, T p_18071_) {
-            return V99.addNames(new Dynamic<>(p_18070_, p_18071_), V704.ITEM_TO_BLOCKENTITY, V99.ITEM_TO_ENTITY);
+        public <T> T apply(final DynamicOps<T> ops, final T value) {
+            return V99.addNames(new Dynamic<>(ops, value), V704.ITEM_TO_BLOCKENTITY, V99.ITEM_TO_ENTITY);
         }
     };
 
-    public V704(int p_18036_, Schema p_18037_) {
-        super(p_18036_, p_18037_);
+    public V704(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Type<?> getChoiceType(TypeReference p_18060_, String p_18061_) {
-        return Objects.equals(p_18060_.typeName(), References.BLOCK_ENTITY.typeName())
-            ? super.getChoiceType(p_18060_, NamespacedSchema.ensureNamespaced(p_18061_))
-            : super.getChoiceType(p_18060_, p_18061_);
+    public Type<?> getChoiceType(final TypeReference type, final String choiceName) {
+        return Objects.equals(type.typeName(), References.BLOCK_ENTITY.typeName())
+            ? super.getChoiceType(type, NamespacedSchema.ensureNamespaced(choiceName))
+            : super.getChoiceType(type, choiceName);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema p_18063_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(p_18063_);
+    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(schema);
         BlockEntityIdFix.ID_MAP
-            .forEach(
-                (p_390413_, p_390414_) -> map.put(p_390414_, Objects.requireNonNull(map.remove(p_390413_), () -> "Didn't find " + p_390413_ + " in schema"))
-            );
+            .forEach((oldId, newId) -> map.put(newId, Objects.requireNonNull(map.remove(oldId), () -> "Didn't find " + oldId + " in schema")));
         return map;
     }
 
     @Override
-    public void registerTypes(Schema p_18065_, Map<String, Supplier<TypeTemplate>> p_18066_, Map<String, Supplier<TypeTemplate>> p_18067_) {
-        super.registerTypes(p_18065_, p_18066_, p_18067_);
-        p_18065_.registerType(
+    public void registerTypes(
+        final Schema schema, final Map<String, Supplier<TypeTemplate>> entityTypes, final Map<String, Supplier<TypeTemplate>> blockEntityTypes
+    ) {
+        super.registerTypes(schema, entityTypes, blockEntityTypes);
+        schema.registerType(
             true,
             References.BLOCK_ENTITY,
-            () -> DSL.optionalFields("components", References.DATA_COMPONENTS.in(p_18065_), DSL.taggedChoiceLazy("id", NamespacedSchema.namespacedString(), p_18067_))
+            () -> DSL.optionalFields(
+                "components", References.DATA_COMPONENTS.in(schema), DSL.taggedChoiceLazy("id", NamespacedSchema.namespacedString(), blockEntityTypes)
+            )
         );
-        p_18065_.registerType(
+        schema.registerType(
             true,
             References.ITEM_STACK,
-            () -> DSL.hook(DSL.optionalFields("id", References.ITEM_NAME.in(p_18065_), "tag", V99.itemStackTag(p_18065_)), ADD_NAMES, HookFunction.IDENTITY)
+            () -> DSL.hook(DSL.optionalFields("id", References.ITEM_NAME.in(schema), "tag", V99.itemStackTag(schema)), ADD_NAMES, HookFunction.IDENTITY)
         );
     }
 }

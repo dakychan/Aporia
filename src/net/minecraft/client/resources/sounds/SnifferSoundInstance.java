@@ -3,18 +3,15 @@ package net.minecraft.client.resources.sounds;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.animal.sniffer.Sniffer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SnifferSoundInstance extends AbstractTickableSoundInstance {
     private static final float VOLUME = 1.0F;
     private static final float PITCH = 1.0F;
     private final Sniffer sniffer;
 
-    public SnifferSoundInstance(Sniffer p_273565_) {
+    public SnifferSoundInstance(final Sniffer sniffer) {
         super(SoundEvents.SNIFFER_DIGGING, SoundSource.NEUTRAL, SoundInstance.createUnseededRandom());
-        this.sniffer = p_273565_;
+        this.sniffer = sniffer;
         this.attenuation = SoundInstance.Attenuation.LINEAR;
         this.looping = false;
         this.delay = 0;

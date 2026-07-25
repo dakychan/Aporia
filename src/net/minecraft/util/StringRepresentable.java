@@ -20,36 +20,38 @@ public interface StringRepresentable {
 
     String getSerializedName();
 
-    static <E extends Enum<E> & StringRepresentable> StringRepresentable.EnumCodec<E> fromEnum(Supplier<E[]> p_216440_) {
-        return fromEnumWithMapping(p_216440_, p_312201_ -> p_312201_);
+    static <E extends Enum<E> & StringRepresentable> StringRepresentable.EnumCodec<E> fromEnum(final Supplier<E[]> values) {
+        return fromEnumWithMapping(values, s -> s);
     }
 
-    static <E extends Enum<E> & StringRepresentable> StringRepresentable.EnumCodec<E> fromEnumWithMapping(Supplier<E[]> p_275615_, Function<String, String> p_275259_) {
-        E[] ae = (E[])p_275615_.get();
-        Function<String, E> function = createNameLookup(ae, p_421540_ -> p_275259_.apply(p_421540_.getSerializedName()));
-        return new StringRepresentable.EnumCodec<>(ae, function);
+    static <E extends Enum<E> & StringRepresentable> StringRepresentable.EnumCodec<E> fromEnumWithMapping(
+        final Supplier<E[]> values, final Function<String, String> converter
+    ) {
+        E[] valueArray = (E[])values.get();
+        Function<String, E> lookupFunction = createNameLookup(valueArray, e -> converter.apply(e.getSerializedName()));
+        return new StringRepresentable.EnumCodec<>(valueArray, lookupFunction);
     }
 
-    static <T extends StringRepresentable> Codec<T> fromValues(Supplier<T[]> p_311788_) {
-        T[] at = (T[])p_311788_.get();
-        Function<String, T> function = createNameLookup(at);
-        ToIntFunction<T> tointfunction = Util.createIndexLookup(Arrays.asList(at));
-        return new StringRepresentable.StringRepresentableCodec<>(at, function, tointfunction);
+    static <T extends StringRepresentable> Codec<T> fromValues(final Supplier<T[]> values) {
+        T[] valueArray = (T[])values.get();
+        Function<String, T> lookupFunction = createNameLookup(valueArray);
+        ToIntFunction<T> indexLookup = Util.createIndexLookup(Arrays.asList(valueArray));
+        return new StringRepresentable.StringRepresentableCodec<>(valueArray, lookupFunction, indexLookup);
     }
 
-    static <T extends StringRepresentable> Function<String, @Nullable T> createNameLookup(T[] p_430289_) {
-        return createNameLookup(p_430289_, StringRepresentable::getSerializedName);
+    static <T extends StringRepresentable> Function<String, @Nullable T> createNameLookup(final T[] valueArray) {
+        return createNameLookup(valueArray, StringRepresentable::getSerializedName);
     }
 
-    static <T> Function<String, @Nullable T> createNameLookup(T[] p_424390_, Function<T, String> p_313109_) {
-        if (p_424390_.length > 16) {
-            Map<String, T> map = Arrays.<T>stream(p_424390_).collect(Collectors.toMap(p_313109_, p_426400_ -> (T)p_426400_));
-            return map::get;
+    static <T> Function<String, @Nullable T> createNameLookup(final T[] valueArray, final Function<T, String> converter) {
+        if (valueArray.length > 16) {
+            Map<String, T> byName = Arrays.<T>stream(valueArray).collect(Collectors.toMap(converter, d -> (T)d));
+            return byName::get;
         } else {
-            return p_421543_ -> {
-                for (T t : p_424390_) {
-                    if (p_313109_.apply(t).equals(p_421543_)) {
-                        return t;
+            return id -> {
+                for (T value : valueArray) {
+                    if (converter.apply(value).equals(id)) {
+                        return value;
                     }
                 }
 
@@ -58,53 +60,53 @@ public interface StringRepresentable {
         }
     }
 
-    static Keyable keys(final StringRepresentable[] p_14358_) {
+    static Keyable keys(final StringRepresentable[] values) {
         return new Keyable() {
             @Override
-            public <T> Stream<T> keys(DynamicOps<T> p_184758_) {
-                return Arrays.stream(p_14358_).map(StringRepresentable::getSerializedName).map(p_184758_::createString);
+            public <T> Stream<T> keys(final DynamicOps<T> ops) {
+                return Arrays.stream(values).map(StringRepresentable::getSerializedName).map(ops::createString);
             }
         };
     }
 
-    public static class EnumCodec<E extends Enum<E> & StringRepresentable> extends StringRepresentable.StringRepresentableCodec<E> {
+    class EnumCodec<E extends Enum<E> & StringRepresentable> extends StringRepresentable.StringRepresentableCodec<E> {
         private final Function<String, @Nullable E> resolver;
 
-        public EnumCodec(E[] p_216447_, Function<String, E> p_216448_) {
-            super(p_216447_, p_216448_, p_216454_ -> p_216454_.ordinal());
-            this.resolver = p_216448_;
+        public EnumCodec(final E[] valueArray, final Function<String, E> nameResolver) {
+            super(valueArray, nameResolver, rec$ -> rec$.ordinal());
+            this.resolver = nameResolver;
         }
 
-        public @Nullable E byName(String p_216456_) {
-            return this.resolver.apply(p_216456_);
+        public @Nullable E byName(final String name) {
+            return this.resolver.apply(name);
         }
 
-        public E byName(String p_263077_, E p_263115_) {
-            return Objects.requireNonNullElse(this.byName(p_263077_), p_263115_);
+        public E byName(final String name, final E _default) {
+            return Objects.requireNonNullElse(this.byName(name), _default);
         }
 
-        public E byName(String p_367164_, Supplier<? extends E> p_363447_) {
-            return Objects.requireNonNullElseGet(this.byName(p_367164_), p_363447_);
+        public E byName(final String name, final Supplier<? extends E> defaultSupplier) {
+            return Objects.requireNonNullElseGet(this.byName(name), defaultSupplier);
         }
     }
 
-    public static class StringRepresentableCodec<S extends StringRepresentable> implements Codec<S> {
+    class StringRepresentableCodec<S extends StringRepresentable> implements Codec<S> {
         private final Codec<S> codec;
 
-        public StringRepresentableCodec(S[] p_309730_, Function<String, @Nullable S> p_311107_, ToIntFunction<S> p_312549_) {
+        public StringRepresentableCodec(final S[] valueArray, final Function<String, @Nullable S> nameResolver, final ToIntFunction<S> idResolver) {
             this.codec = ExtraCodecs.orCompressed(
-                Codec.stringResolver(StringRepresentable::getSerializedName, p_311107_),
-                ExtraCodecs.idResolverCodec(p_312549_, p_312747_ -> p_312747_ >= 0 && p_312747_ < p_309730_.length ? p_309730_[p_312747_] : null, -1)
+                Codec.stringResolver(StringRepresentable::getSerializedName, nameResolver),
+                ExtraCodecs.idResolverCodec(idResolver, i -> i >= 0 && i < valueArray.length ? valueArray[i] : null, -1)
             );
         }
 
         @Override
-        public <T> DataResult<Pair<S, T>> decode(DynamicOps<T> p_310491_, T p_312317_) {
-            return this.codec.decode(p_310491_, p_312317_);
+        public <T> DataResult<Pair<S, T>> decode(final DynamicOps<T> ops, final T input) {
+            return this.codec.decode(ops, input);
         }
 
-        public <T> DataResult<T> encode(S p_312413_, DynamicOps<T> p_310685_, T p_312430_) {
-            return this.codec.encode(p_312413_, p_310685_, p_312430_);
+        public <T> DataResult<T> encode(final S input, final DynamicOps<T> ops, final T prefix) {
+            return this.codec.encode(input, ops, prefix);
         }
     }
 }

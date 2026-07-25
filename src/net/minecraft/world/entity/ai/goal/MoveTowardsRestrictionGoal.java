@@ -12,9 +12,9 @@ public class MoveTowardsRestrictionGoal extends Goal {
     private double wantedZ;
     private final double speedModifier;
 
-    public MoveTowardsRestrictionGoal(PathfinderMob p_25633_, double p_25634_) {
-        this.mob = p_25633_;
-        this.speedModifier = p_25634_;
+    public MoveTowardsRestrictionGoal(final PathfinderMob mob, final double moveSpeedModifier) {
+        this.mob = mob;
+        this.speedModifier = moveSpeedModifier;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
@@ -22,17 +22,17 @@ public class MoveTowardsRestrictionGoal extends Goal {
     public boolean canUse() {
         if (this.mob.isWithinHome()) {
             return false;
-        } else {
-            Vec3 vec3 = DefaultRandomPos.getPosTowards(this.mob, 16, 7, Vec3.atBottomCenterOf(this.mob.getHomePosition()), (float) (Math.PI / 2));
-            if (vec3 == null) {
-                return false;
-            } else {
-                this.wantedX = vec3.x;
-                this.wantedY = vec3.y;
-                this.wantedZ = vec3.z;
-                return true;
-            }
         }
+
+        Vec3 pos = DefaultRandomPos.getPosTowards(this.mob, 16, 7, Vec3.atBottomCenterOf(this.mob.getHomePosition()), (float) (Math.PI / 2));
+        if (pos == null) {
+            return false;
+        }
+
+        this.wantedX = pos.x;
+        this.wantedY = pos.y;
+        this.wantedZ = pos.z;
+        return true;
     }
 
     @Override

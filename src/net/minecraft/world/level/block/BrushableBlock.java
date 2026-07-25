@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.BlockParticleOption;
@@ -28,13 +27,13 @@ import org.jspecify.annotations.Nullable;
 
 public class BrushableBlock extends BaseEntityBlock implements Fallable {
     public static final MapCodec<BrushableBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422076_ -> p_422076_.group(
+        i -> i.group(
                 BuiltInRegistries.BLOCK.byNameCodec().fieldOf("turns_into").forGetter(BrushableBlock::getTurnsInto),
                 BuiltInRegistries.SOUND_EVENT.byNameCodec().fieldOf("brush_sound").forGetter(BrushableBlock::getBrushSound),
                 BuiltInRegistries.SOUND_EVENT.byNameCodec().fieldOf("brush_completed_sound").forGetter(BrushableBlock::getBrushCompletedSound),
                 propertiesCodec()
             )
-            .apply(p_422076_, BrushableBlock::new)
+            .apply(i, BrushableBlock::new)
     );
     private static final IntegerProperty DUSTED = BlockStateProperties.DUSTED;
     public static final int TICK_DELAY = 2;
@@ -47,74 +46,74 @@ public class BrushableBlock extends BaseEntityBlock implements Fallable {
         return CODEC;
     }
 
-    public BrushableBlock(Block p_277629_, SoundEvent p_278060_, SoundEvent p_277352_, BlockBehaviour.Properties p_277373_) {
-        super(p_277373_);
-        this.turnsInto = p_277629_;
-        this.brushSound = p_278060_;
-        this.brushCompletedSound = p_277352_;
+    public BrushableBlock(final Block turnsInto, final SoundEvent brushSound, final SoundEvent brushCompletedSound, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.turnsInto = turnsInto;
+        this.brushSound = brushSound;
+        this.brushCompletedSound = brushCompletedSound;
         this.registerDefaultState(this.stateDefinition.any().setValue(DUSTED, 0));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_277623_) {
-        p_277623_.add(DUSTED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(DUSTED);
     }
 
     @Override
-    public void onPlace(BlockState p_277817_, Level p_277984_, BlockPos p_277869_, BlockState p_277926_, boolean p_277736_) {
-        p_277984_.scheduleTick(p_277869_, this, 2);
+    public void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        level.scheduleTick(pos, this, 2);
     }
 
     @Override
     public BlockState updateShape(
-        BlockState p_277801_,
-        LevelReader p_365867_,
-        ScheduledTickAccess p_367791_,
-        BlockPos p_278111_,
-        Direction p_277455_,
-        BlockPos p_277904_,
-        BlockState p_277832_,
-        RandomSource p_364049_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        p_367791_.scheduleTick(p_278111_, this, 2);
-        return super.updateShape(p_277801_, p_365867_, p_367791_, p_278111_, p_277455_, p_277904_, p_277832_, p_364049_);
+        ticks.scheduleTick(pos, this, 2);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public void tick(BlockState p_277544_, ServerLevel p_277779_, BlockPos p_278019_, RandomSource p_277471_) {
-        if (p_277779_.getBlockEntity(p_278019_) instanceof BrushableBlockEntity brushableblockentity) {
-            brushableblockentity.checkReset(p_277779_);
+    public void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (level.getBlockEntity(pos) instanceof BrushableBlockEntity brushableBlockEntity) {
+            brushableBlockEntity.checkReset(level);
         }
 
-        if (FallingBlock.isFree(p_277779_.getBlockState(p_278019_.below())) && p_278019_.getY() >= p_277779_.getMinY()) {
-            FallingBlockEntity fallingblockentity = FallingBlockEntity.fall(p_277779_, p_278019_, p_277544_);
-            fallingblockentity.disableDrop();
+        if (FallingBlock.isFree(level.getBlockState(pos.below())) && pos.getY() >= level.getMinY()) {
+            FallingBlockEntity entity = FallingBlockEntity.fall(level, pos, state);
+            entity.disableDrop();
         }
     }
 
     @Override
-    public void onBrokenAfterFall(Level p_278097_, BlockPos p_277734_, FallingBlockEntity p_277539_) {
-        Vec3 vec3 = p_277539_.getBoundingBox().getCenter();
-        p_278097_.levelEvent(2001, BlockPos.containing(vec3), Block.getId(p_277539_.getBlockState()));
-        p_278097_.gameEvent(p_277539_, GameEvent.BLOCK_DESTROY, vec3);
+    public void onBrokenAfterFall(final Level level, final BlockPos pos, final FallingBlockEntity entity) {
+        Vec3 centerOfEntity = entity.getBoundingBox().getCenter();
+        level.levelEvent(2001, BlockPos.containing(centerOfEntity), Block.getId(entity.getBlockState()));
+        level.gameEvent(entity, GameEvent.BLOCK_DESTROY, centerOfEntity);
     }
 
     @Override
-    public void animateTick(BlockState p_277390_, Level p_277525_, BlockPos p_278107_, RandomSource p_277574_) {
-        if (p_277574_.nextInt(16) == 0) {
-            BlockPos blockpos = p_278107_.below();
-            if (FallingBlock.isFree(p_277525_.getBlockState(blockpos))) {
-                double d0 = p_278107_.getX() + p_277574_.nextDouble();
-                double d1 = p_278107_.getY() - 0.05;
-                double d2 = p_278107_.getZ() + p_277574_.nextDouble();
-                p_277525_.addParticle(new BlockParticleOption(ParticleTypes.FALLING_DUST, p_277390_), d0, d1, d2, 0.0, 0.0, 0.0);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (random.nextInt(16) == 0) {
+            BlockPos below = pos.below();
+            if (FallingBlock.isFree(level.getBlockState(below))) {
+                double xx = pos.getX() + random.nextDouble();
+                double yy = pos.getY() - 0.05;
+                double zz = pos.getZ() + random.nextDouble();
+                level.addParticle(new BlockParticleOption(ParticleTypes.FALLING_DUST, state), xx, yy, zz, 0.0, 0.0, 0.0);
             }
         }
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_277683_, BlockState p_277381_) {
-        return new BrushableBlockEntity(p_277683_, p_277381_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new BrushableBlockEntity(worldPosition, blockState);
     }
 
     public Block getTurnsInto() {

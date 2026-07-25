@@ -12,42 +12,42 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 public interface CommandArgumentParser<T> {
-    T parseForCommands(StringReader p_392884_) throws CommandSyntaxException;
+    T parseForCommands(StringReader reader) throws CommandSyntaxException;
 
-    CompletableFuture<Suggestions> parseForSuggestions(SuggestionsBuilder p_396468_);
+    CompletableFuture<Suggestions> parseForSuggestions(SuggestionsBuilder suggestionsBuilder);
 
-    default <S> CommandArgumentParser<S> mapResult(final Function<T, S> p_397761_) {
+    default <S> CommandArgumentParser<S> mapResult(final Function<T, S> mapper) {
         return new CommandArgumentParser<S>() {
             @Override
-            public S parseForCommands(StringReader p_393564_) throws CommandSyntaxException {
-                return p_397761_.apply((T)CommandArgumentParser.this.parseForCommands(p_393564_));
+            public S parseForCommands(final StringReader reader) throws CommandSyntaxException {
+                return mapper.apply((T)CommandArgumentParser.this.parseForCommands(reader));
             }
 
             @Override
-            public CompletableFuture<Suggestions> parseForSuggestions(SuggestionsBuilder p_395812_) {
-                return CommandArgumentParser.this.parseForSuggestions(p_395812_);
+            public CompletableFuture<Suggestions> parseForSuggestions(final SuggestionsBuilder suggestionsBuilder) {
+                return CommandArgumentParser.this.parseForSuggestions(suggestionsBuilder);
             }
         };
     }
 
     default <T, O> CommandArgumentParser<T> withCodec(
-        final DynamicOps<O> p_396478_, final CommandArgumentParser<O> p_394585_, final Codec<T> p_394654_, final DynamicCommandExceptionType p_391576_
+        final DynamicOps<O> ops, final CommandArgumentParser<O> valueParser, final Codec<T> codec, final DynamicCommandExceptionType exceptionType
     ) {
         return new CommandArgumentParser<T>() {
             @Override
-            public T parseForCommands(StringReader p_391748_) throws CommandSyntaxException {
-                int i = p_391748_.getCursor();
-                O o = p_394585_.parseForCommands(p_391748_);
-                DataResult<T> dataresult = p_394654_.parse(p_396478_, o);
-                return dataresult.getOrThrow(p_394070_ -> {
-                    p_391748_.setCursor(i);
-                    return p_391576_.createWithContext(p_391748_, p_394070_);
+            public T parseForCommands(final StringReader reader) throws CommandSyntaxException {
+                int cursor = reader.getCursor();
+                O tag = valueParser.parseForCommands(reader);
+                DataResult<T> result = codec.parse(ops, tag);
+                return result.getOrThrow(message -> {
+                    reader.setCursor(cursor);
+                    return exceptionType.createWithContext(reader, message);
                 });
             }
 
             @Override
-            public CompletableFuture<Suggestions> parseForSuggestions(SuggestionsBuilder p_393320_) {
-                return CommandArgumentParser.this.parseForSuggestions(p_393320_);
+            public CompletableFuture<Suggestions> parseForSuggestions(final SuggestionsBuilder suggestionsBuilder) {
+                return CommandArgumentParser.this.parseForSuggestions(suggestionsBuilder);
             }
         };
     }

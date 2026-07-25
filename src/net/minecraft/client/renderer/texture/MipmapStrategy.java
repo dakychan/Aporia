@@ -2,10 +2,7 @@ package net.minecraft.client.renderer.texture;
 
 import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum MipmapStrategy implements StringRepresentable {
     AUTO("auto"),
     MEAN("mean"),
@@ -16,8 +13,8 @@ public enum MipmapStrategy implements StringRepresentable {
     public static final Codec<MipmapStrategy> CODEC = StringRepresentable.fromValues(MipmapStrategy::values);
     private final String name;
 
-    private MipmapStrategy(final String p_453696_) {
-        this.name = p_453696_;
+    MipmapStrategy(final String name) {
+        this.name = name;
     }
 
     @Override

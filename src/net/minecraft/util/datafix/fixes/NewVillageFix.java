@@ -5,7 +5,6 @@ import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.CompoundList.CompoundListType;
@@ -18,68 +17,60 @@ import java.util.stream.Collectors;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class NewVillageFix extends DataFix {
-    public NewVillageFix(Schema p_16476_, boolean p_16477_) {
-        super(p_16476_, p_16477_);
+    public NewVillageFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        CompoundListType<String, ?> compoundlisttype = DSL.compoundList(DSL.string(), this.getInputSchema().getType(References.STRUCTURE_FEATURE));
-        OpticFinder<? extends List<? extends Pair<String, ?>>> opticfinder = compoundlisttype.finder();
-        return this.cap(compoundlisttype);
+        CompoundListType<String, ?> startsType = DSL.compoundList(DSL.string(), this.getInputSchema().getType(References.STRUCTURE_FEATURE));
+        OpticFinder<? extends List<? extends Pair<String, ?>>> finder = startsType.finder();
+        return this.cap(startsType);
     }
 
-    private <SF> TypeRewriteRule cap(CompoundListType<String, SF> p_16499_) {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        Type<?> type1 = this.getInputSchema().getType(References.STRUCTURE_FEATURE);
-        OpticFinder<?> opticfinder = type.findField("Level");
-        OpticFinder<?> opticfinder1 = opticfinder.type().findField("Structures");
-        OpticFinder<?> opticfinder2 = opticfinder1.type().findField("Starts");
-        OpticFinder<List<Pair<String, SF>>> opticfinder3 = p_16499_.finder();
+    private <SF> TypeRewriteRule cap(final CompoundListType<String, SF> startsType) {
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        Type<?> structureType = this.getInputSchema().getType(References.STRUCTURE_FEATURE);
+        OpticFinder<?> levelFinder = chunkType.findField("Level");
+        OpticFinder<?> structuresFinder = levelFinder.type().findField("Structures");
+        OpticFinder<?> startsFinder = structuresFinder.type().findField("Starts");
+        OpticFinder<List<Pair<String, SF>>> listFinder = startsType.finder();
         return TypeRewriteRule.seq(
             this.fixTypeEverywhereTyped(
                 "NewVillageFix",
-                type,
-                p_16483_ -> p_16483_.updateTyped(
-                    opticfinder,
-                    p_145526_ -> p_145526_.updateTyped(
-                        opticfinder1,
-                        p_145530_ -> p_145530_.updateTyped(
-                                opticfinder2,
-                                p_145533_ -> p_145533_.update(
-                                    opticfinder3,
-                                    p_145544_ -> p_145544_.stream()
-                                        .filter(p_145546_ -> !Objects.equals(p_145546_.getFirst(), "Village"))
-                                        .map(p_145535_ -> p_145535_.mapFirst(p_145542_ -> p_145542_.equals("New_Village") ? "Village" : p_145542_))
+                chunkType,
+                input -> input.updateTyped(
+                    levelFinder,
+                    level -> level.updateTyped(
+                        structuresFinder,
+                        structures -> structures.updateTyped(
+                                startsFinder,
+                                starts -> starts.update(
+                                    listFinder,
+                                    list -> list.stream()
+                                        .filter(pair -> !Objects.equals(pair.getFirst(), "Village"))
+                                        .map(pair -> pair.mapFirst(name -> name.equals("New_Village") ? "Village" : name))
                                         .collect(Collectors.toList())
                                 )
                             )
-                            .update(
-                                DSL.remainderFinder(),
-                                p_145550_ -> p_145550_.update(
-                                    "References",
-                                    p_145552_ -> {
-                                        Optional<? extends Dynamic<?>> optional = p_145552_.get("New_Village").result();
-                                        return DataFixUtils.orElse(
-                                                optional.map(p_145540_ -> p_145552_.remove("New_Village").set("Village", (Dynamic<?>)p_145540_)), p_145552_
-                                            )
-                                            .remove("Village");
-                                    }
-                                )
-                            )
+                            .update(DSL.remainderFinder(), tag -> tag.update("References", references -> {
+                                Optional<? extends Dynamic<?>> village = references.get("New_Village").result();
+                                return DataFixUtils.orElse(village.map(v -> references.remove("New_Village").set("Village", (Dynamic<?>)v)), references)
+                                    .remove("Village");
+                            }))
                     )
                 )
             ),
             this.fixTypeEverywhereTyped(
                 "NewVillageStartFix",
-                type1,
-                p_16497_ -> p_16497_.update(
+                structureType,
+                input -> input.update(
                     DSL.remainderFinder(),
-                    p_145537_ -> p_145537_.update(
+                    tag -> tag.update(
                         "id",
-                        p_145548_ -> Objects.equals(NamespacedSchema.ensureNamespaced(p_145548_.asString("")), "minecraft:new_village")
-                            ? p_145548_.createString("minecraft:village")
-                            : p_145548_
+                        id -> Objects.equals(NamespacedSchema.ensureNamespaced(id.asString("")), "minecraft:new_village")
+                            ? id.createString("minecraft:village")
+                            : id
                     )
                 )
             )

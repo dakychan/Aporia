@@ -10,6 +10,7 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.decoration.GlowItemFrame;
 import net.minecraft.world.entity.decoration.HangingEntity;
 import net.minecraft.world.entity.decoration.ItemFrame;
@@ -25,70 +26,76 @@ public class HangingEntityItem extends Item {
     private static final Component TOOLTIP_RANDOM_VARIANT = Component.translatable("painting.random").withStyle(ChatFormatting.GRAY);
     private final EntityType<? extends HangingEntity> type;
 
-    public HangingEntityItem(EntityType<? extends HangingEntity> p_41324_, Item.Properties p_41325_) {
-        super(p_41325_);
-        this.type = p_41324_;
+    public HangingEntityItem(final EntityType<? extends HangingEntity> type, final Item.Properties properties) {
+        super(properties);
+        this.type = type;
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_41331_) {
-        BlockPos blockpos = p_41331_.getClickedPos();
-        Direction direction = p_41331_.getClickedFace();
-        BlockPos blockpos1 = blockpos.relative(direction);
-        Player player = p_41331_.getPlayer();
-        ItemStack itemstack = p_41331_.getItemInHand();
-        if (player != null && !this.mayPlace(player, direction, itemstack, blockpos1)) {
+    public InteractionResult useOn(final UseOnContext context) {
+        BlockPos pos = context.getClickedPos();
+        Direction clickedFace = context.getClickedFace();
+        BlockPos blockPos = pos.relative(clickedFace);
+        Player player = context.getPlayer();
+        ItemStack itemInHand = context.getItemInHand();
+        if (player != null && !this.mayPlace(player, clickedFace, itemInHand, blockPos)) {
             return InteractionResult.FAIL;
-        } else {
-            Level level = p_41331_.getLevel();
-            HangingEntity hangingentity;
-            if (this.type == EntityType.PAINTING) {
-                Optional<Painting> optional = Painting.create(level, blockpos1, direction);
-                if (optional.isEmpty()) {
-                    return InteractionResult.CONSUME;
-                }
+        }
 
-                hangingentity = optional.get();
-            } else if (this.type == EntityType.ITEM_FRAME) {
-                hangingentity = new ItemFrame(level, blockpos1, direction);
-            } else {
-                if (this.type != EntityType.GLOW_ITEM_FRAME) {
-                    return InteractionResult.SUCCESS;
-                }
-
-                hangingentity = new GlowItemFrame(level, blockpos1, direction);
-            }
-
-            EntityType.<HangingEntity>createDefaultStackConfig(level, itemstack, player).accept(hangingentity);
-            if (hangingentity.survives()) {
-                if (!level.isClientSide()) {
-                    hangingentity.playPlacementSound();
-                    level.gameEvent(player, GameEvent.ENTITY_PLACE, hangingentity.position());
-                    level.addFreshEntity(hangingentity);
-                }
-
-                itemstack.shrink(1);
-                return InteractionResult.SUCCESS;
-            } else {
+        Level level = context.getLevel();
+        HangingEntity entity;
+        if (this.type == EntityTypes.PAINTING) {
+            Optional<Painting> painting = Painting.create(level, blockPos, clickedFace);
+            if (painting.isEmpty()) {
                 return InteractionResult.CONSUME;
             }
+
+            entity = painting.get();
+        } else if (this.type == EntityTypes.ITEM_FRAME) {
+            entity = new ItemFrame(level, blockPos, clickedFace);
+        } else {
+            if (this.type != EntityTypes.GLOW_ITEM_FRAME) {
+                return InteractionResult.SUCCESS;
+            }
+
+            entity = new GlowItemFrame(level, blockPos, clickedFace);
+        }
+
+        EntityType.<HangingEntity>createDefaultStackConfig(level, itemInHand, player).apply(entity);
+        if (entity.survives()) {
+            if (!level.isClientSide()) {
+                entity.playPlacementSound();
+                level.gameEvent(player, GameEvent.ENTITY_PLACE, entity.position());
+                level.addFreshEntity(entity);
+            }
+
+            itemInHand.shrink(1);
+            return InteractionResult.SUCCESS;
+        } else {
+            return InteractionResult.CONSUME;
         }
     }
 
-    protected boolean mayPlace(Player p_41326_, Direction p_41327_, ItemStack p_41328_, BlockPos p_41329_) {
-        return !p_41327_.getAxis().isVertical() && p_41326_.mayUseItemAt(p_41329_, p_41327_, p_41328_);
+    protected boolean mayPlace(final Player player, final Direction direction, final ItemStack itemStack, final BlockPos blockPos) {
+        return !direction.getAxis().isVertical() && player.mayUseItemAt(blockPos, direction, itemStack);
     }
 
     @Override
-    public void appendHoverText(ItemStack p_270235_, Item.TooltipContext p_336046_, TooltipDisplay p_394274_, Consumer<Component> p_392825_, TooltipFlag p_270170_) {
-        if (this.type == EntityType.PAINTING && p_394274_.shows(DataComponents.PAINTING_VARIANT)) {
-            Holder<PaintingVariant> holder = p_270235_.get(DataComponents.PAINTING_VARIANT);
-            if (holder != null) {
-                holder.value().title().ifPresent(p_392825_);
-                holder.value().author().ifPresent(p_392825_);
-                p_392825_.accept(Component.translatable("painting.dimensions", holder.value().width(), holder.value().height()));
-            } else if (p_270170_.isCreative()) {
-                p_392825_.accept(TOOLTIP_RANDOM_VARIANT);
+    public void appendHoverText(
+        final ItemStack itemStack,
+        final Item.TooltipContext context,
+        final TooltipDisplay display,
+        final Consumer<Component> builder,
+        final TooltipFlag tooltipFlag
+    ) {
+        if (this.type == EntityTypes.PAINTING && display.shows(DataComponents.PAINTING_VARIANT)) {
+            Holder<PaintingVariant> variant = itemStack.get(DataComponents.PAINTING_VARIANT);
+            if (variant != null) {
+                variant.value().title().ifPresent(builder);
+                variant.value().author().ifPresent(builder);
+                builder.accept(Component.translatable("painting.dimensions", variant.value().width(), variant.value().height()));
+            } else if (tooltipFlag.isCreative()) {
+                builder.accept(TOOLTIP_RANDOM_VARIANT);
             }
         }
     }

@@ -6,44 +6,44 @@ import java.util.function.Supplier;
 import org.jspecify.annotations.Nullable;
 
 public interface ChunkResult<T> {
-    static <T> ChunkResult<T> of(T p_333970_) {
-        return new ChunkResult.Success<>(p_333970_);
+    static <T> ChunkResult<T> of(final T value) {
+        return new ChunkResult.Success<>(value);
     }
 
-    static <T> ChunkResult<T> error(String p_331314_) {
-        return error(() -> p_331314_);
+    static <T> ChunkResult<T> error(final String error) {
+        return error(() -> error);
     }
 
-    static <T> ChunkResult<T> error(Supplier<String> p_331628_) {
-        return new ChunkResult.Fail<>(p_331628_);
+    static <T> ChunkResult<T> error(final Supplier<String> errorSupplier) {
+        return new ChunkResult.Fail<>(errorSupplier);
     }
 
     boolean isSuccess();
 
-    @Nullable T orElse(@Nullable T p_329164_);
+    @Nullable T orElse(@Nullable T orElse);
 
-    static <R> @Nullable R orElse(ChunkResult<? extends R> p_331028_, @Nullable R p_331551_) {
-        R r = (R)p_331028_.orElse(null);
-        return r != null ? r : p_331551_;
+    static <R> @Nullable R orElse(final ChunkResult<? extends R> chunkResult, final @Nullable R orElse) {
+        R result = (R)chunkResult.orElse(null);
+        return result != null ? result : orElse;
     }
 
     @Nullable String getError();
 
-    ChunkResult<T> ifSuccess(Consumer<T> p_334389_);
+    ChunkResult<T> ifSuccess(Consumer<T> consumer);
 
-    <R> ChunkResult<R> map(Function<T, R> p_334390_);
+    <R> ChunkResult<R> map(Function<T, R> map);
 
-    <E extends Throwable> T orElseThrow(Supplier<E> p_330106_) throws E;
+    <E extends Throwable> T orElseThrow(Supplier<E> exceptionSupplier) throws E;
 
-    public record Fail<T>(Supplier<String> error) implements ChunkResult<T> {
+    record Fail<T>(Supplier<String> error) implements ChunkResult<T> {
         @Override
         public boolean isSuccess() {
             return false;
         }
 
         @Override
-        public @Nullable T orElse(@Nullable T p_330895_) {
-            return p_330895_;
+        public @Nullable T orElse(final @Nullable T orElse) {
+            return orElse;
         }
 
         @Override
@@ -52,29 +52,29 @@ public interface ChunkResult<T> {
         }
 
         @Override
-        public ChunkResult<T> ifSuccess(Consumer<T> p_331855_) {
+        public ChunkResult<T> ifSuccess(final Consumer<T> consumer) {
             return this;
         }
 
         @Override
-        public <R> ChunkResult<R> map(Function<T, R> p_333275_) {
+        public <R> ChunkResult<R> map(final Function<T, R> map) {
             return new ChunkResult.Fail(this.error);
         }
 
         @Override
-        public <E extends Throwable> T orElseThrow(Supplier<E> p_331734_) throws E {
-            throw p_331734_.get();
+        public <E extends Throwable> T orElseThrow(final Supplier<E> exceptionSupplier) throws E {
+            throw exceptionSupplier.get();
         }
     }
 
-    public record Success<T>(T value) implements ChunkResult<T> {
+    record Success<T>(T value) implements ChunkResult<T> {
         @Override
         public boolean isSuccess() {
             return true;
         }
 
         @Override
-        public T orElse(@Nullable T p_332434_) {
+        public T orElse(final @Nullable T orElse) {
             return this.value;
         }
 
@@ -84,18 +84,18 @@ public interface ChunkResult<T> {
         }
 
         @Override
-        public ChunkResult<T> ifSuccess(Consumer<T> p_328048_) {
-            p_328048_.accept(this.value);
+        public ChunkResult<T> ifSuccess(final Consumer<T> consumer) {
+            consumer.accept(this.value);
             return this;
         }
 
         @Override
-        public <R> ChunkResult<R> map(Function<T, R> p_331436_) {
-            return new ChunkResult.Success<>(p_331436_.apply(this.value));
+        public <R> ChunkResult<R> map(final Function<T, R> map) {
+            return new ChunkResult.Success<>(map.apply(this.value));
         }
 
         @Override
-        public <E extends Throwable> T orElseThrow(Supplier<E> p_335933_) throws E {
+        public <E extends Throwable> T orElseThrow(final Supplier<E> exceptionSupplier) throws E {
             return this.value;
         }
     }

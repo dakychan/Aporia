@@ -20,16 +20,13 @@ import com.mojang.blaze3d.textures.GpuTextureView;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.OptionalInt;
 import java.util.Map.Entry;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.lwjgl.system.MemoryStack;
 
-@OnlyIn(Dist.CLIENT)
 public class PostPass implements AutoCloseable {
     private static final int UBO_SIZE_PER_SAMPLER = new Std140SizeCalculator().putVec2().get();
     private final String name;
@@ -39,199 +36,173 @@ public class PostPass implements AutoCloseable {
     private final MappableRingBuffer infoUbo;
     private final List<PostPass.Input> inputs;
 
-    public PostPass(RenderPipeline p_395322_, Identifier p_450426_, Map<String, List<UniformValue>> p_410093_, List<PostPass.Input> p_361905_) {
-        this.pipeline = p_395322_;
-        this.name = p_395322_.getLocation().toString();
-        this.outputTargetId = p_450426_;
-        this.inputs = p_361905_;
+    public PostPass(
+        final RenderPipeline pipeline, final Identifier outputTargetId, final Map<String, List<UniformValue>> uniformGroups, final List<PostPass.Input> inputs
+    ) {
+        this.pipeline = pipeline;
+        this.name = pipeline.getLocation().toString();
+        this.outputTargetId = outputTargetId;
+        this.inputs = inputs;
 
-        for (Entry<String, List<UniformValue>> entry : p_410093_.entrySet()) {
-            List<UniformValue> list = entry.getValue();
-            if (!list.isEmpty()) {
-                Std140SizeCalculator std140sizecalculator = new Std140SizeCalculator();
+        for (Entry<String, List<UniformValue>> uniformGroup : uniformGroups.entrySet()) {
+            List<UniformValue> uniforms = uniformGroup.getValue();
+            if (!uniforms.isEmpty()) {
+                Std140SizeCalculator calculator = new Std140SizeCalculator();
 
-                for (UniformValue uniformvalue : list) {
-                    uniformvalue.addSize(std140sizecalculator);
+                for (UniformValue uniform : uniforms) {
+                    uniform.addSize(calculator);
                 }
 
-                int i = std140sizecalculator.get();
+                int size = calculator.get();
 
-                try (MemoryStack memorystack = MemoryStack.stackPush()) {
-                    Std140Builder std140builder = Std140Builder.onStack(memorystack, i);
+                try (MemoryStack stack = MemoryStack.stackPush()) {
+                    Std140Builder builder = Std140Builder.onStack(stack, size);
 
-                    for (UniformValue uniformvalue1 : list) {
-                        uniformvalue1.writeTo(std140builder);
+                    for (UniformValue uniform : uniforms) {
+                        uniform.writeTo(builder);
                     }
 
                     this.customUniforms
-                        .put(entry.getKey(), RenderSystem.getDevice().createBuffer(() -> this.name + " / " + entry.getKey(), 128, std140builder.get()));
+                        .put(uniformGroup.getKey(), RenderSystem.getDevice().createBuffer(() -> this.name + " / " + uniformGroup.getKey(), 128, builder.get()));
                 }
             }
         }
 
-        this.infoUbo = new MappableRingBuffer(() -> this.name + " SamplerInfo", 130, (p_361905_.size() + 1) * UBO_SIZE_PER_SAMPLER);
+        this.infoUbo = new MappableRingBuffer(() -> this.name + " SamplerInfo", 130, (inputs.size() + 1) * UBO_SIZE_PER_SAMPLER);
     }
 
-    public void addToFrame(FrameGraphBuilder p_369714_, Map<Identifier, ResourceHandle<RenderTarget>> p_365909_, GpuBufferSlice p_406688_) {
-        FramePass framepass = p_369714_.addPass(this.name);
+    public void addToFrame(final FrameGraphBuilder frame, final Map<Identifier, ResourceHandle<RenderTarget>> targets, final GpuBufferSlice shaderOrthoMatrix) {
+        FramePass pass = frame.addPass(this.name);
 
-        for (PostPass.Input postpass$input : this.inputs) {
-            postpass$input.addToPass(framepass, p_365909_);
+        for (PostPass.Input input : this.inputs) {
+            input.addToPass(pass, targets);
         }
 
-        ResourceHandle<RenderTarget> resourcehandle = p_365909_.computeIfPresent(
-            this.outputTargetId, (p_453255_, p_363433_) -> framepass.readsAndWrites((ResourceHandle<RenderTarget>)p_363433_)
+        ResourceHandle<RenderTarget> outputHandle = targets.computeIfPresent(
+            this.outputTargetId, (id, handle) -> pass.readsAndWrites((ResourceHandle<RenderTarget>)handle)
         );
-        if (resourcehandle == null) {
+        if (outputHandle == null) {
             throw new IllegalStateException("Missing handle for target " + this.outputTargetId);
-        } else {
-            framepass.executes(
-                () -> {
-                    RenderTarget rendertarget = resourcehandle.get();
-                    RenderSystem.backupProjectionMatrix();
-                    RenderSystem.setProjectionMatrix(p_406688_, ProjectionType.ORTHOGRAPHIC);
-                    CommandEncoder commandencoder = RenderSystem.getDevice().createCommandEncoder();
-                    SamplerCache samplercache = RenderSystem.getSamplerCache();
-                    List<PostPass.InputTexture> list = this.inputs
-                        .stream()
-                        .map(
-                            p_448187_ -> new PostPass.InputTexture(
-                                p_448187_.samplerName(),
-                                p_448187_.texture(p_365909_),
-                                samplercache.getClampToEdge(p_448187_.bilinear() ? FilterMode.LINEAR : FilterMode.NEAREST)
-                            )
+        }
+
+        pass.executes(
+            () -> {
+                RenderTarget outputTarget = outputHandle.get();
+                RenderSystem.backupProjectionMatrix();
+                RenderSystem.setProjectionMatrix(shaderOrthoMatrix, ProjectionType.ORTHOGRAPHIC);
+                CommandEncoder commandEncoder = RenderSystem.getDevice().createCommandEncoder();
+                SamplerCache samplerCache = RenderSystem.getSamplerCache();
+                List<PostPass.InputTexture> inputTextures = this.inputs
+                    .stream()
+                    .map(
+                        i -> new PostPass.InputTexture(
+                            i.samplerName(), i.texture(targets), samplerCache.getClampToEdge(i.bilinear() ? FilterMode.LINEAR : FilterMode.NEAREST)
                         )
-                        .toList();
+                    )
+                    .toList();
 
-                    try (GpuBuffer.MappedView gpubuffer$mappedview = commandencoder.mapBuffer(this.infoUbo.currentBuffer(), false, true)) {
-                        Std140Builder std140builder = Std140Builder.intoBuffer(gpubuffer$mappedview.data());
-                        std140builder.putVec2(rendertarget.width, rendertarget.height);
+                try (GpuBufferSlice.MappedView view = this.infoUbo.currentBuffer().map(false, true)) {
+                    Std140Builder builder = Std140Builder.intoBuffer(view.data());
+                    builder.putVec2(outputTarget.width, outputTarget.height);
 
-                        for (PostPass.InputTexture postpass$inputtexture : list) {
-                            std140builder.putVec2(postpass$inputtexture.view.getWidth(0), postpass$inputtexture.view.getHeight(0));
-                        }
-                    }
-
-                    try (RenderPass renderpass = commandencoder.createRenderPass(
-                            () -> "Post pass " + this.name,
-                            rendertarget.getColorTextureView(),
-                            OptionalInt.empty(),
-                            rendertarget.useDepth ? rendertarget.getDepthTextureView() : null,
-                            OptionalDouble.empty()
-                        )) {
-                        renderpass.setPipeline(this.pipeline);
-                        RenderSystem.bindDefaultUniforms(renderpass);
-                        renderpass.setUniform("SamplerInfo", this.infoUbo.currentBuffer());
-
-                        for (Entry<String, GpuBuffer> entry : this.customUniforms.entrySet()) {
-                            renderpass.setUniform(entry.getKey(), entry.getValue());
-                        }
-
-                        for (PostPass.InputTexture postpass$inputtexture1 : list) {
-                            renderpass.bindTexture(
-                                postpass$inputtexture1.samplerName() + "Sampler", postpass$inputtexture1.view(), postpass$inputtexture1.sampler()
-                            );
-                        }
-
-                        renderpass.draw(0, 3);
-                    }
-
-                    this.infoUbo.rotate();
-                    RenderSystem.restoreProjectionMatrix();
-
-                    for (PostPass.Input postpass$input1 : this.inputs) {
-                        postpass$input1.cleanup(p_365909_);
+                    for (PostPass.InputTexture inputxxx : inputTextures) {
+                        builder.putVec2(inputxxx.view.getWidth(0), inputxxx.view.getHeight(0));
                     }
                 }
-            );
-        }
+
+                try (RenderPass renderPass = commandEncoder.createRenderPass(
+                        () -> "Post pass " + this.name,
+                        outputTarget.getColorTextureView(),
+                        Optional.empty(),
+                        outputTarget.useDepth ? outputTarget.getDepthTextureView() : null,
+                        OptionalDouble.empty()
+                    )) {
+                    renderPass.setPipeline(this.pipeline);
+                    RenderSystem.bindDefaultUniforms(renderPass);
+                    renderPass.setUniform("SamplerInfo", this.infoUbo.currentBuffer());
+
+                    for (Entry<String, GpuBuffer> entry : this.customUniforms.entrySet()) {
+                        renderPass.setUniform(entry.getKey(), entry.getValue());
+                    }
+
+                    for (PostPass.InputTexture inputx : inputTextures) {
+                        renderPass.bindTexture(inputx.samplerName() + "Sampler", inputx.view(), inputx.sampler());
+                    }
+
+                    renderPass.draw(3, 1, 0, 0);
+                }
+
+                this.infoUbo.rotate();
+                RenderSystem.restoreProjectionMatrix();
+
+                for (PostPass.Input inputxx : this.inputs) {
+                    inputxx.cleanup(targets);
+                }
+            }
+        );
     }
 
     @Override
     public void close() {
-        for (GpuBuffer gpubuffer : this.customUniforms.values()) {
-            gpubuffer.close();
+        for (GpuBuffer buffer : this.customUniforms.values()) {
+            buffer.close();
         }
 
         this.infoUbo.close();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Input {
-        void addToPass(FramePass p_362856_, Map<Identifier, ResourceHandle<RenderTarget>> p_367378_);
+        public interface Input {
+        void addToPass(FramePass pass, Map<Identifier, ResourceHandle<RenderTarget>> targets);
 
-        default void cleanup(Map<Identifier, ResourceHandle<RenderTarget>> p_366914_) {
+        default void cleanup(final Map<Identifier, ResourceHandle<RenderTarget>> targets) {
         }
 
-        GpuTextureView texture(Map<Identifier, ResourceHandle<RenderTarget>> p_366076_);
+        GpuTextureView texture(final Map<Identifier, ResourceHandle<RenderTarget>> targets);
 
         String samplerName();
 
         boolean bilinear();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record InputTexture(String samplerName, GpuTextureView view, GpuSampler sampler) {
+        private record InputTexture(String samplerName, GpuTextureView view, GpuSampler sampler) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record TargetInput(String samplerName, Identifier targetId, boolean depthBuffer, boolean bilinear) implements PostPass.Input {
-        private ResourceHandle<RenderTarget> getHandle(Map<Identifier, ResourceHandle<RenderTarget>> p_369908_) {
-            ResourceHandle<RenderTarget> resourcehandle = p_369908_.get(this.targetId);
-            if (resourcehandle == null) {
+        public record TargetInput(String samplerName, Identifier targetId, boolean depthBuffer, boolean bilinear) implements PostPass.Input {
+        private ResourceHandle<RenderTarget> getHandle(final Map<Identifier, ResourceHandle<RenderTarget>> targets) {
+            ResourceHandle<RenderTarget> handle = targets.get(this.targetId);
+            if (handle == null) {
                 throw new IllegalStateException("Missing handle for target " + this.targetId);
             } else {
-                return resourcehandle;
+                return handle;
             }
         }
 
         @Override
-        public void addToPass(FramePass p_369983_, Map<Identifier, ResourceHandle<RenderTarget>> p_369342_) {
-            p_369983_.reads(this.getHandle(p_369342_));
+        public void addToPass(final FramePass pass, final Map<Identifier, ResourceHandle<RenderTarget>> targets) {
+            pass.reads(this.getHandle(targets));
         }
 
         @Override
-        public GpuTextureView texture(Map<Identifier, ResourceHandle<RenderTarget>> p_363476_) {
-            ResourceHandle<RenderTarget> resourcehandle = this.getHandle(p_363476_);
-            RenderTarget rendertarget = resourcehandle.get();
-            GpuTextureView gputextureview = this.depthBuffer ? rendertarget.getDepthTextureView() : rendertarget.getColorTextureView();
-            if (gputextureview == null) {
+        public GpuTextureView texture(final Map<Identifier, ResourceHandle<RenderTarget>> targets) {
+            ResourceHandle<RenderTarget> handle = this.getHandle(targets);
+            RenderTarget target = handle.get();
+            GpuTextureView textureView = this.depthBuffer ? target.getDepthTextureView() : target.getColorTextureView();
+            if (textureView == null) {
                 throw new IllegalStateException("Missing " + (this.depthBuffer ? "depth" : "color") + "texture for target " + this.targetId);
             } else {
-                return gputextureview;
+                return textureView;
             }
-        }
-
-        @Override
-        public String samplerName() {
-            return this.samplerName;
-        }
-
-        @Override
-        public boolean bilinear() {
-            return this.bilinear;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record TextureInput(String samplerName, AbstractTexture texture, int width, int height, boolean bilinear) implements PostPass.Input {
+        public record TextureInput(String samplerName, AbstractTexture texture, int width, int height, boolean bilinear) implements PostPass.Input {
         @Override
-        public void addToPass(FramePass p_364568_, Map<Identifier, ResourceHandle<RenderTarget>> p_370060_) {
+        public void addToPass(final FramePass pass, final Map<Identifier, ResourceHandle<RenderTarget>> targets) {
         }
 
         @Override
-        public GpuTextureView texture(Map<Identifier, ResourceHandle<RenderTarget>> p_408443_) {
+        public GpuTextureView texture(final Map<Identifier, ResourceHandle<RenderTarget>> targets) {
             return this.texture.getTextureView();
-        }
-
-        @Override
-        public boolean bilinear() {
-            return this.bilinear;
-        }
-
-        @Override
-        public String samplerName() {
-            return this.samplerName;
         }
     }
 }

@@ -14,123 +14,124 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class BlockUtil {
     public static BlockUtil.FoundRectangle getLargestRectangleAround(
-        BlockPos p_459757_, Direction.Axis p_456113_, int p_451396_, Direction.Axis p_456886_, int p_460200_, Predicate<BlockPos> p_453433_
+        final BlockPos center, final Direction.Axis axis1, final int limit1, final Direction.Axis axis2, final int limit2, final Predicate<BlockPos> test
     ) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_459757_.mutable();
-        Direction direction = Direction.get(Direction.AxisDirection.NEGATIVE, p_456113_);
-        Direction direction1 = direction.getOpposite();
-        Direction direction2 = Direction.get(Direction.AxisDirection.NEGATIVE, p_456886_);
-        Direction direction3 = direction2.getOpposite();
-        int i = getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_), direction, p_451396_);
-        int j = getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_), direction1, p_451396_);
-        int k = i;
-        BlockUtil.IntBounds[] ablockutil$intbounds = new BlockUtil.IntBounds[i + 1 + j];
-        ablockutil$intbounds[i] = new BlockUtil.IntBounds(
-            getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_), direction2, p_460200_),
-            getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_), direction3, p_460200_)
+        BlockPos.MutableBlockPos pos = center.mutable();
+        Direction negativeDirection1 = Direction.get(Direction.AxisDirection.NEGATIVE, axis1);
+        Direction positiveDirection1 = negativeDirection1.getOpposite();
+        Direction negativeDirection2 = Direction.get(Direction.AxisDirection.NEGATIVE, axis2);
+        Direction positiveDirection2 = negativeDirection2.getOpposite();
+        int negativeDelta1 = getLimit(test, pos.set(center), negativeDirection1, limit1);
+        int positiveDelta1 = getLimit(test, pos.set(center), positiveDirection1, limit1);
+        int centerIndex1 = negativeDelta1;
+        BlockUtil.IntBounds[] boundsByAxis1 = new BlockUtil.IntBounds[centerIndex1 + 1 + positiveDelta1];
+        boundsByAxis1[centerIndex1] = new BlockUtil.IntBounds(
+            getLimit(test, pos.set(center), negativeDirection2, limit2), getLimit(test, pos.set(center), positiveDirection2, limit2)
         );
-        int l = ablockutil$intbounds[i].min;
+        int centerIndex2 = boundsByAxis1[centerIndex1].min;
 
-        for (int i1 = 1; i1 <= i; i1++) {
-            BlockUtil.IntBounds blockutil$intbounds = ablockutil$intbounds[k - (i1 - 1)];
-            ablockutil$intbounds[k - i1] = new BlockUtil.IntBounds(
-                getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_).move(direction, i1), direction2, blockutil$intbounds.min),
-                getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_).move(direction, i1), direction3, blockutil$intbounds.max)
+        for (int i = 1; i <= negativeDelta1; i++) {
+            BlockUtil.IntBounds lastBounds = boundsByAxis1[centerIndex1 - (i - 1)];
+            boundsByAxis1[centerIndex1 - i] = new BlockUtil.IntBounds(
+                getLimit(test, pos.set(center).move(negativeDirection1, i), negativeDirection2, lastBounds.min),
+                getLimit(test, pos.set(center).move(negativeDirection1, i), positiveDirection2, lastBounds.max)
             );
         }
 
-        for (int l2 = 1; l2 <= j; l2++) {
-            BlockUtil.IntBounds blockutil$intbounds2 = ablockutil$intbounds[k + l2 - 1];
-            ablockutil$intbounds[k + l2] = new BlockUtil.IntBounds(
-                getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_).move(direction1, l2), direction2, blockutil$intbounds2.min),
-                getLimit(p_453433_, blockpos$mutableblockpos.set(p_459757_).move(direction1, l2), direction3, blockutil$intbounds2.max)
+        for (int i = 1; i <= positiveDelta1; i++) {
+            BlockUtil.IntBounds lastBounds = boundsByAxis1[centerIndex1 + i - 1];
+            boundsByAxis1[centerIndex1 + i] = new BlockUtil.IntBounds(
+                getLimit(test, pos.set(center).move(positiveDirection1, i), negativeDirection2, lastBounds.min),
+                getLimit(test, pos.set(center).move(positiveDirection1, i), positiveDirection2, lastBounds.max)
             );
         }
 
-        int i3 = 0;
-        int j3 = 0;
-        int j1 = 0;
-        int k1 = 0;
-        int[] aint = new int[ablockutil$intbounds.length];
+        int minAxis1 = 0;
+        int minAxis2 = 0;
+        int sizeAxis1 = 0;
+        int sizeAxis2 = 0;
+        int[] columns = new int[boundsByAxis1.length];
 
-        for (int l1 = l; l1 >= 0; l1--) {
-            for (int i2 = 0; i2 < ablockutil$intbounds.length; i2++) {
-                BlockUtil.IntBounds blockutil$intbounds1 = ablockutil$intbounds[i2];
-                int j2 = l - blockutil$intbounds1.min;
-                int k2 = l + blockutil$intbounds1.max;
-                aint[i2] = l1 >= j2 && l1 <= k2 ? k2 + 1 - l1 : 0;
+        for (int i2 = centerIndex2; i2 >= 0; i2--) {
+            for (int i1 = 0; i1 < boundsByAxis1.length; i1++) {
+                BlockUtil.IntBounds bounds2 = boundsByAxis1[i1];
+                int min2 = centerIndex2 - bounds2.min;
+                int max2 = centerIndex2 + bounds2.max;
+                columns[i1] = i2 >= min2 && i2 <= max2 ? max2 + 1 - i2 : 0;
             }
 
-            Pair<BlockUtil.IntBounds, Integer> pair = getMaxRectangleLocation(aint);
-            BlockUtil.IntBounds blockutil$intbounds3 = pair.getFirst();
-            int k3 = 1 + blockutil$intbounds3.max - blockutil$intbounds3.min;
-            int l3 = pair.getSecond();
-            if (k3 * l3 > j1 * k1) {
-                i3 = blockutil$intbounds3.min;
-                j3 = l1;
-                j1 = k3;
-                k1 = l3;
+            Pair<BlockUtil.IntBounds, Integer> rectangle = getMaxRectangleLocation(columns);
+            BlockUtil.IntBounds boundsAxis1 = rectangle.getFirst();
+            int newSizeAxis1 = 1 + boundsAxis1.max - boundsAxis1.min;
+            int newSizeAxis2 = rectangle.getSecond();
+            if (newSizeAxis1 * newSizeAxis2 > sizeAxis1 * sizeAxis2) {
+                minAxis1 = boundsAxis1.min;
+                minAxis2 = i2;
+                sizeAxis1 = newSizeAxis1;
+                sizeAxis2 = newSizeAxis2;
             }
         }
 
-        return new BlockUtil.FoundRectangle(p_459757_.relative(p_456113_, i3 - k).relative(p_456886_, j3 - l), j1, k1);
+        return new BlockUtil.FoundRectangle(center.relative(axis1, minAxis1 - centerIndex1).relative(axis2, minAxis2 - centerIndex2), sizeAxis1, sizeAxis2);
     }
 
-    private static int getLimit(Predicate<BlockPos> p_457445_, BlockPos.MutableBlockPos p_450784_, Direction p_450316_, int p_455129_) {
-        int i = 0;
+    private static int getLimit(final Predicate<BlockPos> test, final BlockPos.MutableBlockPos pos, final Direction direction, final int limit) {
+        int max = 0;
 
-        while (i < p_455129_ && p_457445_.test(p_450784_.move(p_450316_))) {
-            i++;
+        while (max < limit && test.test(pos.move(direction))) {
+            max++;
         }
 
-        return i;
+        return max;
     }
 
     @VisibleForTesting
-    static Pair<BlockUtil.IntBounds, Integer> getMaxRectangleLocation(int[] p_453856_) {
-        int i = 0;
-        int j = 0;
-        int k = 0;
-        IntStack intstack = new IntArrayList();
-        intstack.push(0);
+    static Pair<BlockUtil.IntBounds, Integer> getMaxRectangleLocation(final int[] columns) {
+        int maxStart = 0;
+        int maxEnd = 0;
+        int maxHeight = 0;
+        IntStack stack = new IntArrayList();
+        stack.push(0);
 
-        for (int l = 1; l <= p_453856_.length; l++) {
-            int i1 = l == p_453856_.length ? 0 : p_453856_[l];
+        for (int column = 1; column <= columns.length; column++) {
+            int height = column == columns.length ? 0 : columns[column];
 
-            while (!intstack.isEmpty()) {
-                int j1 = p_453856_[intstack.topInt()];
-                if (i1 >= j1) {
-                    intstack.push(l);
+            while (!stack.isEmpty()) {
+                int stackHeight = columns[stack.topInt()];
+                if (height >= stackHeight) {
+                    stack.push(column);
                     break;
                 }
 
-                intstack.popInt();
-                int k1 = intstack.isEmpty() ? 0 : intstack.topInt() + 1;
-                if (j1 * (l - k1) > k * (j - i)) {
-                    j = l;
-                    i = k1;
-                    k = j1;
+                stack.popInt();
+                int start = stack.isEmpty() ? 0 : stack.topInt() + 1;
+                if (stackHeight * (column - start) > maxHeight * (maxEnd - maxStart)) {
+                    maxEnd = column;
+                    maxStart = start;
+                    maxHeight = stackHeight;
                 }
             }
 
-            if (intstack.isEmpty()) {
-                intstack.push(l);
+            if (stack.isEmpty()) {
+                stack.push(column);
             }
         }
 
-        return new Pair<>(new BlockUtil.IntBounds(i, j - 1), k);
+        return new Pair<>(new BlockUtil.IntBounds(maxStart, maxEnd - 1), maxHeight);
     }
 
-    public static Optional<BlockPos> getTopConnectedBlock(BlockGetter p_458445_, BlockPos p_455334_, Block p_455198_, Direction p_456998_, Block p_450895_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = p_455334_.mutable();
+    public static Optional<BlockPos> getTopConnectedBlock(
+        final BlockGetter level, final BlockPos pos, final Block bodyBlock, final Direction growthDirection, final Block headBlock
+    ) {
+        BlockPos.MutableBlockPos forwardPos = pos.mutable();
 
-        BlockState blockstate;
+        BlockState forwardState;
         do {
-            blockpos$mutableblockpos.move(p_456998_);
-            blockstate = p_458445_.getBlockState(blockpos$mutableblockpos);
-        } while (blockstate.is(p_455198_));
+            forwardPos.move(growthDirection);
+            forwardState = level.getBlockState(forwardPos);
+        } while (forwardState.is(bodyBlock));
 
-        return blockstate.is(p_450895_) ? Optional.of(blockpos$mutableblockpos) : Optional.empty();
+        return forwardState.is(headBlock) ? Optional.of(forwardPos) : Optional.empty();
     }
 
     public static class FoundRectangle {
@@ -138,10 +139,10 @@ public class BlockUtil {
         public final int axis1Size;
         public final int axis2Size;
 
-        public FoundRectangle(BlockPos p_450199_, int p_456591_, int p_457620_) {
-            this.minCorner = p_450199_;
-            this.axis1Size = p_456591_;
-            this.axis2Size = p_457620_;
+        public FoundRectangle(final BlockPos minCorner, final int axis1Size, final int axis2Size) {
+            this.minCorner = minCorner;
+            this.axis1Size = axis1Size;
+            this.axis2Size = axis2Size;
         }
     }
 
@@ -149,9 +150,9 @@ public class BlockUtil {
         public final int min;
         public final int max;
 
-        public IntBounds(int p_454946_, int p_457180_) {
-            this.min = p_454946_;
-            this.max = p_457180_;
+        public IntBounds(final int min, final int max) {
+            this.min = min;
+            this.max = max;
         }
 
         @Override

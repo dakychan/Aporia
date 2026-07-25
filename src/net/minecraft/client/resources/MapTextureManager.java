@@ -9,44 +9,41 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.saveddata.maps.MapId;
 import net.minecraft.world.level.saveddata.maps.MapItemSavedData;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class MapTextureManager implements AutoCloseable {
     private final Int2ObjectMap<MapTextureManager.MapInstance> maps = new Int2ObjectOpenHashMap<>();
-    final TextureManager textureManager;
+    private final TextureManager textureManager;
 
-    public MapTextureManager(TextureManager p_362721_) {
-        this.textureManager = p_362721_;
+    public MapTextureManager(final TextureManager textureManager) {
+        this.textureManager = textureManager;
     }
 
-    public void update(MapId p_368009_, MapItemSavedData p_365364_) {
-        this.getOrCreateMapInstance(p_368009_, p_365364_).forceUpload();
+    public void update(final MapId id, final MapItemSavedData data) {
+        this.getOrCreateMapInstance(id, data).forceUpload();
     }
 
-    public Identifier prepareMapTexture(MapId p_361877_, MapItemSavedData p_361499_) {
-        MapTextureManager.MapInstance maptexturemanager$mapinstance = this.getOrCreateMapInstance(p_361877_, p_361499_);
-        maptexturemanager$mapinstance.updateTextureIfNeeded();
-        return maptexturemanager$mapinstance.location;
+    public Identifier prepareMapTexture(final MapId id, final MapItemSavedData data) {
+        MapTextureManager.MapInstance mapInstance = this.getOrCreateMapInstance(id, data);
+        mapInstance.updateTextureIfNeeded();
+        return mapInstance.location;
     }
 
     public void resetData() {
-        for (MapTextureManager.MapInstance maptexturemanager$mapinstance : this.maps.values()) {
-            maptexturemanager$mapinstance.close();
+        for (MapTextureManager.MapInstance mapInstance : this.maps.values()) {
+            mapInstance.close();
         }
 
         this.maps.clear();
     }
 
-    private MapTextureManager.MapInstance getOrCreateMapInstance(MapId p_370051_, MapItemSavedData p_367972_) {
-        return this.maps.compute(p_370051_.id(), (p_366926_, p_369937_) -> {
-            if (p_369937_ == null) {
-                return new MapTextureManager.MapInstance(p_366926_, p_367972_);
-            } else {
-                p_369937_.replaceMapData(p_367972_);
-                return (MapTextureManager.MapInstance)p_369937_;
+    private MapTextureManager.MapInstance getOrCreateMapInstance(final MapId id, final MapItemSavedData data) {
+        return this.maps.compute(id.id(), (k, instance) -> {
+            if (instance == null) {
+                return new MapTextureManager.MapInstance(k, data);
             }
+
+            instance.replaceMapData(data);
+            return (MapTextureManager.MapInstance)instance;
         });
     }
 
@@ -55,39 +52,37 @@ public class MapTextureManager implements AutoCloseable {
         this.resetData();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class MapInstance implements AutoCloseable {
+        private class MapInstance implements AutoCloseable {
         private MapItemSavedData data;
         private final DynamicTexture texture;
         private boolean requiresUpload = true;
-        final Identifier location;
+        private final Identifier location;
 
-        MapInstance(final int p_361202_, final MapItemSavedData p_361755_) {
-            this.data = p_361755_;
-            this.texture = new DynamicTexture(() -> "Map " + p_361202_, 128, 128, true);
-            this.location = Identifier.withDefaultNamespace("map/" + p_361202_);
+        private MapInstance(final int id, final MapItemSavedData data) {
+            this.data = data;
+            this.texture = new DynamicTexture(() -> "Map " + id, 128, 128, true);
+            this.location = Identifier.withDefaultNamespace("map/" + id);
             MapTextureManager.this.textureManager.register(this.location, this.texture);
         }
 
-        void replaceMapData(MapItemSavedData p_369715_) {
-            boolean flag = this.data != p_369715_;
-            this.data = p_369715_;
-            this.requiresUpload |= flag;
+        private void replaceMapData(final MapItemSavedData data) {
+            boolean dataChanged = this.data != data;
+            this.data = data;
+            this.requiresUpload |= dataChanged;
         }
 
         public void forceUpload() {
             this.requiresUpload = true;
         }
 
-        void updateTextureIfNeeded() {
+        private void updateTextureIfNeeded() {
             if (this.requiresUpload) {
-                NativeImage nativeimage = this.texture.getPixels();
-                if (nativeimage != null) {
-                    for (int i = 0; i < 128; i++) {
-                        for (int j = 0; j < 128; j++) {
-                            int k = j + i * 128;
-                            nativeimage.setPixel(j, i, MapColor.getColorFromPackedId(this.data.colors[k]));
-                        }
+                NativeImage pixels = this.texture.getPixels();
+
+                for (int y = 0; y < 128; y++) {
+                    for (int x = 0; x < 128; x++) {
+                        int i = x + y * 128;
+                        pixels.setPixel(x, y, MapColor.getColorFromPackedId(this.data.colors[i]));
                     }
                 }
 

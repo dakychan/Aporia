@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.ReferenceLinkedOpenHashSet;
 import it.unimi.dsi.fastutil.objects.ReferenceSortedSets;
 import java.util.List;
@@ -17,11 +16,11 @@ public record TooltipDisplay(boolean hideTooltip, SequencedSet<DataComponentType
         .listOf()
         .xmap(ReferenceLinkedOpenHashSet::new, List::copyOf);
     public static final Codec<TooltipDisplay> CODEC = RecordCodecBuilder.create(
-        p_397434_ -> p_397434_.group(
+        i -> i.group(
                 Codec.BOOL.optionalFieldOf("hide_tooltip", false).forGetter(TooltipDisplay::hideTooltip),
                 COMPONENT_SET_CODEC.optionalFieldOf("hidden_components", ReferenceSortedSets.emptySet()).forGetter(TooltipDisplay::hiddenComponents)
             )
-            .apply(p_397434_, TooltipDisplay::new)
+            .apply(i, TooltipDisplay::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, TooltipDisplay> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.BOOL,
@@ -32,22 +31,22 @@ public record TooltipDisplay(boolean hideTooltip, SequencedSet<DataComponentType
     );
     public static final TooltipDisplay DEFAULT = new TooltipDisplay(false, ReferenceSortedSets.emptySet());
 
-    public TooltipDisplay withHidden(DataComponentType<?> p_397345_, boolean p_396287_) {
-        if (this.hiddenComponents.contains(p_397345_) == p_396287_) {
+    public TooltipDisplay withHidden(final DataComponentType<?> component, final boolean hidden) {
+        if (this.hiddenComponents.contains(component) == hidden) {
             return this;
-        } else {
-            SequencedSet<DataComponentType<?>> sequencedset = new ReferenceLinkedOpenHashSet<>(this.hiddenComponents);
-            if (p_396287_) {
-                sequencedset.add(p_397345_);
-            } else {
-                sequencedset.remove(p_397345_);
-            }
-
-            return new TooltipDisplay(this.hideTooltip, sequencedset);
         }
+
+        SequencedSet<DataComponentType<?>> newHiddenComponents = new ReferenceLinkedOpenHashSet<>(this.hiddenComponents);
+        if (hidden) {
+            newHiddenComponents.add(component);
+        } else {
+            newHiddenComponents.remove(component);
+        }
+
+        return new TooltipDisplay(this.hideTooltip, newHiddenComponents);
     }
 
-    public boolean shows(DataComponentType<?> p_397305_) {
-        return !this.hideTooltip && !this.hiddenComponents.contains(p_397305_);
+    public boolean shows(final DataComponentType<?> component) {
+        return !this.hideTooltip && !this.hiddenComponents.contains(component);
     }
 }

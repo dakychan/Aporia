@@ -5,7 +5,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 import java.util.Set;
@@ -28,8 +27,8 @@ public class WallPropertyFix extends DataFix {
         "minecraft:stone_brick_wall"
     );
 
-    public WallPropertyFix(Schema p_17154_, boolean p_17155_) {
-        super(p_17154_, p_17155_);
+    public WallPropertyFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
@@ -37,27 +36,25 @@ public class WallPropertyFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "WallPropertyFix",
             this.getInputSchema().getType(References.BLOCK_STATE),
-            p_17157_ -> p_17157_.update(DSL.remainderFinder(), WallPropertyFix::upgradeBlockStateTag)
+            input -> input.update(DSL.remainderFinder(), WallPropertyFix::upgradeBlockStateTag)
         );
     }
 
-    private static String mapProperty(String p_17164_) {
-        return "true".equals(p_17164_) ? "low" : "none";
+    private static String mapProperty(final String value) {
+        return "true".equals(value) ? "low" : "none";
     }
 
-    private static <T> Dynamic<T> fixWallProperty(Dynamic<T> p_17161_, String p_17162_) {
-        return p_17161_.update(
-            p_17162_, p_326661_ -> DataFixUtils.orElse(p_326661_.asString().result().map(WallPropertyFix::mapProperty).map(p_326661_::createString), p_326661_)
-        );
+    private static <T> Dynamic<T> fixWallProperty(final Dynamic<T> state, final String property) {
+        return state.update(property, value -> DataFixUtils.orElse(value.asString().result().map(WallPropertyFix::mapProperty).map(value::createString), value));
     }
 
-    private static <T> Dynamic<T> upgradeBlockStateTag(Dynamic<T> p_17159_) {
-        boolean flag = p_17159_.get("Name").asString().result().filter(WALL_BLOCKS::contains).isPresent();
-        return !flag ? p_17159_ : p_17159_.update("Properties", p_17166_ -> {
-            Dynamic<?> dynamic = fixWallProperty(p_17166_, "east");
-            dynamic = fixWallProperty(dynamic, "west");
-            dynamic = fixWallProperty(dynamic, "north");
-            return fixWallProperty(dynamic, "south");
+    private static <T> Dynamic<T> upgradeBlockStateTag(final Dynamic<T> state) {
+        boolean isWall = state.get("Name").asString().result().filter(WALL_BLOCKS::contains).isPresent();
+        return !isWall ? state : state.update("Properties", properties -> {
+            Dynamic<?> newState = fixWallProperty(properties, "east");
+            newState = fixWallProperty(newState, "west");
+            newState = fixWallProperty(newState, "north");
+            return fixWallProperty(newState, "south");
         });
     }
 }

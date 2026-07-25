@@ -8,7 +8,7 @@ public interface GizmoCollector {
         }
 
         @Override
-        public GizmoProperties persistForMillis(int p_459235_) {
+        public GizmoProperties persistForMillis(final int milliseconds) {
             return this;
         }
 
@@ -17,7 +17,7 @@ public interface GizmoCollector {
             return this;
         }
     };
-    GizmoCollector NOOP = p_452891_ -> IGNORED;
+    GizmoCollector NOOP = gizmo -> IGNORED;
 
-    GizmoProperties add(Gizmo p_454765_);
+    GizmoProperties add(final Gizmo gizmo);
 }

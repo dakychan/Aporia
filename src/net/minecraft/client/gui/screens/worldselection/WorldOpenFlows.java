@@ -2,12 +2,14 @@ package net.minecraft.client.gui.screens.worldselection;
 
 import com.mojang.datafixers.util.Pair;
 import com.mojang.logging.LogUtils;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.Lifecycle;
 import it.unimi.dsi.fastutil.booleans.BooleanConsumer;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -22,6 +24,7 @@ import net.minecraft.client.gui.screens.AlertScreen;
 import net.minecraft.client.gui.screens.BackupConfirmScreen;
 import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.DatapackLoadFailureScreen;
+import net.minecraft.client.gui.screens.FileFixerAbortedScreen;
 import net.minecraft.client.gui.screens.GenericMessageScreen;
 import net.minecraft.client.gui.screens.NoticeWithLinkScreen;
 import net.minecraft.client.gui.screens.RecoverWorldDataScreen;
@@ -34,6 +37,7 @@ import net.minecraft.core.MappedRegistry;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.NbtException;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.ReportedNbtException;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
@@ -48,11 +52,21 @@ import net.minecraft.server.packs.resources.CloseableResourceManager;
 import net.minecraft.server.permissions.LevelBasedPermissionSet;
 import net.minecraft.util.MemoryReserve;
 import net.minecraft.util.Util;
+import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.util.datafix.DataFixers;
+import net.minecraft.util.filefix.AbortedFileFixException;
+import net.minecraft.util.filefix.CanceledFileFixException;
+import net.minecraft.util.filefix.FailedCleanupFileFixException;
+import net.minecraft.util.filefix.FileFixException;
+import net.minecraft.util.filefix.virtualfilesystem.exception.CowFSSymlinkException;
+import net.minecraft.util.worldupdate.UpgradeProgress;
 import net.minecraft.world.level.LevelSettings;
 import net.minecraft.world.level.WorldDataConfiguration;
 import net.minecraft.world.level.dimension.LevelStem;
 import net.minecraft.world.level.gamerules.GameRuleMap;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.levelgen.WorldDimensions;
+import net.minecraft.world.level.levelgen.WorldGenSettings;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.storage.LevelDataAndDimensions;
 import net.minecraft.world.level.storage.LevelResource;
@@ -61,296 +75,443 @@ import net.minecraft.world.level.storage.LevelSummary;
 import net.minecraft.world.level.storage.PrimaryLevelData;
 import net.minecraft.world.level.storage.WorldData;
 import net.minecraft.world.level.validation.ContentValidationException;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class WorldOpenFlows {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final UUID WORLD_PACK_ID = UUID.fromString("640a6a92-b6cb-48a0-b391-831586500359");
     private final Minecraft minecraft;
     private final LevelStorageSource levelSource;
 
-    public WorldOpenFlows(Minecraft p_233093_, LevelStorageSource p_233094_) {
-        this.minecraft = p_233093_;
-        this.levelSource = p_233094_;
+    public WorldOpenFlows(final Minecraft minecraft, final LevelStorageSource levelSource) {
+        this.minecraft = minecraft;
+        this.levelSource = levelSource;
     }
 
     public void createFreshLevel(
-        String p_233158_, LevelSettings p_233159_, WorldOptions p_249243_, Function<HolderLookup.Provider, WorldDimensions> p_249252_, Screen p_310233_
+        final String levelId,
+        final LevelSettings levelSettings,
+        final WorldOptions options,
+        final Function<HolderLookup.Provider, WorldDimensions> dimensionsProvider,
+        final Screen parentScreen
     ) {
         this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.data_read")));
-        LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.createWorldAccess(p_233158_);
-        if (levelstoragesource$levelstorageaccess != null) {
-            PackRepository packrepository = ServerPacksSource.createPackRepository(levelstoragesource$levelstorageaccess);
-            WorldDataConfiguration worlddataconfiguration = p_233159_.getDataConfiguration();
+        LevelStorageSource.LevelStorageAccess levelSourceAccess = this.createWorldAccess(levelId);
+        if (levelSourceAccess != null) {
+            PackRepository packRepository = ServerPacksSource.createPackRepository(levelSourceAccess);
+            WorldDataConfiguration dataConfiguration = levelSettings.dataConfiguration();
 
             try {
-                WorldLoader.PackConfig worldloader$packconfig = new WorldLoader.PackConfig(packrepository, worlddataconfiguration, false, false);
-                WorldStem worldstem = this.loadWorldDataBlocking(
-                    worldloader$packconfig,
-                    p_389327_ -> {
-                        WorldDimensions.Complete worlddimensions$complete = p_249252_.apply(p_389327_.datapackWorldgen())
-                            .bake(p_389327_.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM));
+                WorldLoader.PackConfig packConfig = new WorldLoader.PackConfig(packRepository, dataConfiguration, false, false);
+                WorldStem worldStem = this.loadWorldDataBlocking(
+                    packConfig,
+                    context -> {
+                        WorldDimensions dimensions = dimensionsProvider.apply(context.datapackWorldgen());
+                        WorldDimensions.Complete completeDimensions = dimensions.bake(context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM));
                         return new WorldLoader.DataLoadOutput<>(
-                            new PrimaryLevelData(p_233159_, p_249243_, worlddimensions$complete.specialWorldProperty(), worlddimensions$complete.lifecycle()),
-                            worlddimensions$complete.dimensionsRegistryAccess()
+                            new LevelDataAndDimensions.WorldDataAndGenSettings(
+                                new PrimaryLevelData(levelSettings, completeDimensions.specialWorldProperty(), completeDimensions.lifecycle()),
+                                new WorldGenSettings(options, dimensions)
+                            ),
+                            completeDimensions.dimensionsRegistryAccess()
                         );
                     },
                     WorldStem::new
                 );
-                this.minecraft.doWorldLoad(levelstoragesource$levelstorageaccess, packrepository, worldstem, true);
-            } catch (Exception exception) {
-                LOGGER.warn("Failed to load datapacks, can't proceed with server load", (Throwable)exception);
-                levelstoragesource$levelstorageaccess.safeClose();
-                this.minecraft.setScreen(p_310233_);
+                this.minecraft.doWorldLoad(levelSourceAccess, packRepository, worldStem, Optional.empty(), true);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to load datapacks, can't proceed with server load", e);
+                levelSourceAccess.safeClose();
+                this.minecraft.gui.setScreen(parentScreen);
             }
         }
     }
 
-    private LevelStorageSource.@Nullable LevelStorageAccess createWorldAccess(String p_233156_) {
+    private LevelStorageSource.@Nullable LevelStorageAccess createWorldAccess(final String levelId) {
         try {
-            return this.levelSource.validateAndCreateAccess(p_233156_);
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to read level {} data", p_233156_, ioexception);
-            SystemToast.onWorldAccessFailure(this.minecraft, p_233156_);
-            this.minecraft.setScreen(null);
+            return this.levelSource.validateAndCreateAccess(levelId);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to read level {} data", levelId, e);
+            SystemToast.onWorldAccessFailure(this.minecraft, levelId);
+            this.minecraft.gui.setScreen(null);
             return null;
-        } catch (ContentValidationException contentvalidationexception) {
-            LOGGER.warn("{}", contentvalidationexception.getMessage());
-            this.minecraft.setScreen(NoticeWithLinkScreen.createWorldSymlinkWarningScreen(() -> this.minecraft.setScreen(null)));
+        } catch (ContentValidationException e) {
+            LOGGER.warn("{}", e.getMessage());
+            this.minecraft.gui.setScreen(NoticeWithLinkScreen.createWorldSymlinkWarningScreen(() -> this.minecraft.gui.setScreen(null)));
             return null;
         }
     }
 
     public void createLevelFromExistingSettings(
-        LevelStorageSource.LevelStorageAccess p_250919_,
-        ReloadableServerResources p_248897_,
-        LayeredRegistryAccess<RegistryLayer> p_250801_,
-        WorldData p_251654_
+        final LevelStorageSource.LevelStorageAccess levelSourceAccess,
+        final ReloadableServerResources serverResources,
+        final LayeredRegistryAccess<RegistryLayer> registryAccess,
+        final LevelDataAndDimensions.WorldDataAndGenSettings worldDataAndGenSettings,
+        final Optional<GameRules> gameRules
     ) {
-        PackRepository packrepository = ServerPacksSource.createPackRepository(p_250919_);
-        CloseableResourceManager closeableresourcemanager = new WorldLoader.PackConfig(packrepository, p_251654_.getDataConfiguration(), false, false)
+        PackRepository packRepository = ServerPacksSource.createPackRepository(levelSourceAccess);
+        CloseableResourceManager resourceManager = new WorldLoader.PackConfig(
+                packRepository, worldDataAndGenSettings.data().getDataConfiguration(), false, false
+            )
             .createResourceManager()
             .getSecond();
-        this.minecraft.doWorldLoad(p_250919_, packrepository, new WorldStem(closeableresourcemanager, p_248897_, p_250801_, p_251654_), true);
+        this.minecraft
+            .doWorldLoad(
+                levelSourceAccess, packRepository, new WorldStem(resourceManager, serverResources, registryAccess, worldDataAndGenSettings), gameRules, true
+            );
     }
 
-    public WorldStem loadWorldStem(Dynamic<?> p_312184_, boolean p_233124_, PackRepository p_233125_) throws Exception {
-        WorldLoader.PackConfig worldloader$packconfig = LevelStorageSource.getPackConfig(p_312184_, p_233125_, p_233124_);
-        return this.loadWorldDataBlocking(worldloader$packconfig, p_389329_ -> {
-            Registry<LevelStem> registry = p_389329_.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
-            LevelDataAndDimensions leveldataanddimensions = LevelStorageSource.getLevelDataAndDimensions(p_312184_, p_389329_.dataConfiguration(), registry, p_389329_.datapackWorldgen());
-            return new WorldLoader.DataLoadOutput<>(leveldataanddimensions.worldData(), leveldataanddimensions.dimensions().dimensionsRegistryAccess());
-        }, WorldStem::new);
+    public WorldStem loadWorldStem(
+        final LevelStorageSource.LevelStorageAccess worldAccess, final Dynamic<?> levelDataTag, final boolean safeMode, final PackRepository packRepository
+    ) throws Exception {
+        WorldLoader.PackConfig packConfig = LevelStorageSource.getPackConfig(levelDataTag, packRepository, safeMode);
+        return this.loadWorldDataBlocking(
+            packConfig,
+            context -> {
+                Registry<LevelStem> datapackDimensions = context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
+                LevelDataAndDimensions data = LevelStorageSource.getLevelDataAndDimensions(
+                    worldAccess, levelDataTag, context.dataConfiguration(), datapackDimensions, context.datapackWorldgen()
+                );
+                return new WorldLoader.DataLoadOutput<>(data.worldDataAndGenSettings(), data.dimensions().dimensionsRegistryAccess());
+            },
+            WorldStem::new
+        );
     }
 
-    public Pair<LevelSettings, WorldCreationContext> recreateWorldData(LevelStorageSource.LevelStorageAccess p_249540_) throws Exception {
-        PackRepository packrepository = ServerPacksSource.createPackRepository(p_249540_);
-        Dynamic<?> dynamic = p_249540_.getDataTag();
-        WorldLoader.PackConfig worldloader$packconfig = LevelStorageSource.getPackConfig(dynamic, packrepository, false);
-
-        @OnlyIn(Dist.CLIENT)
-        record Data(LevelSettings levelSettings, WorldOptions options, Registry<LevelStem> existingDimensions) {
+    public Pair<LevelSettings, WorldCreationContext> recreateWorldData(final LevelStorageSource.LevelStorageAccess levelSourceAccess) throws Exception {
+        PackRepository packRepository = ServerPacksSource.createPackRepository(levelSourceAccess);
+        Dynamic<?> unfixedDataTag = levelSourceAccess.getUnfixedDataTag(false);
+        int dataVersion = NbtUtils.getDataVersion(unfixedDataTag);
+        if (DataFixers.getFileFixer().requiresFileFixing(dataVersion)) {
+            throw new IllegalStateException("Can't recreate world before file fixing; shouldn't be able to get here");
         }
 
-        return this.<Data, Pair<LevelSettings, WorldCreationContext>>loadWorldDataBlocking(
-            worldloader$packconfig,
-            p_357766_ -> {
-                Registry<LevelStem> registry = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
-                LevelDataAndDimensions leveldataanddimensions = LevelStorageSource.getLevelDataAndDimensions(dynamic, p_357766_.dataConfiguration(), registry, p_357766_.datapackWorldgen());
+        Dynamic<?> levelDataTag = DataFixTypes.LEVEL.updateToCurrentVersion(DataFixers.getDataFixer(), unfixedDataTag, dataVersion);
+        WorldLoader.PackConfig packConfig = LevelStorageSource.getPackConfig(levelDataTag, packRepository, false);
+
+                record Data(LevelSettings levelSettings, WorldOptions options, Registry<LevelStem> existingDimensions) {
+        }
+
+        return this.loadWorldDataBlocking(
+            packConfig,
+            context -> {
+                Registry<LevelStem> noDatapackDimensions = new MappedRegistry<>(Registries.LEVEL_STEM, Lifecycle.stable()).freeze();
+                LevelDataAndDimensions existingData = LevelStorageSource.getLevelDataAndDimensions(
+                    levelSourceAccess, levelDataTag, context.dataConfiguration(), noDatapackDimensions, context.datapackWorldgen()
+                );
                 return new WorldLoader.DataLoadOutput<>(
                     new Data(
-                        leveldataanddimensions.worldData().getLevelSettings(),
-                        leveldataanddimensions.worldData().worldGenOptions(),
-                        leveldataanddimensions.dimensions().dimensions()
+                        existingData.worldDataAndGenSettings().data().getLevelSettings(),
+                        existingData.worldDataAndGenSettings().genSettings().options(),
+                        existingData.dimensions().dimensions()
                     ),
-                    p_357766_.datapackDimensions()
+                    context.datapackDimensions()
                 );
             },
-            (p_448107_, p_448108_, p_448109_, p_448110_) -> {
-                p_448107_.close();
-                InitialWorldCreationOptions initialworldcreationoptions = new InitialWorldCreationOptions(
-                    WorldCreationUiState.SelectedGameMode.SURVIVAL, GameRuleMap.of(), null
+            (resources, managers, registries, loadedData) -> {
+                resources.close();
+                DataResult<GameRuleMap> existingGameRules = LevelStorageSource.readExistingSavedData(
+                    levelSourceAccess, registries.compositeAccess(), GameRuleMap.TYPE
+                );
+                existingGameRules.ifError(e -> LOGGER.error("Failed to parse existing game rules: {}", e.message()));
+                InitialWorldCreationOptions initialWorldCreationOptions = new InitialWorldCreationOptions(
+                    WorldCreationUiState.SelectedGameMode.SURVIVAL, existingGameRules.result().orElse(GameRuleMap.of()), null
                 );
                 return Pair.of(
-                    p_448110_.levelSettings,
+                    loadedData.levelSettings,
                     new WorldCreationContext(
-                        p_448110_.options,
-                        new WorldDimensions(p_448110_.existingDimensions),
-                        p_448109_,
-                        p_448108_,
-                        p_448110_.levelSettings.getDataConfiguration(),
-                        initialworldcreationoptions
+                        loadedData.options,
+                        new WorldDimensions(loadedData.existingDimensions),
+                        registries,
+                        managers,
+                        loadedData.levelSettings.dataConfiguration(),
+                        initialWorldCreationOptions
                     )
                 );
             }
         );
     }
 
-    private <D, R> R loadWorldDataBlocking(WorldLoader.PackConfig p_250997_, WorldLoader.WorldDataSupplier<D> p_251759_, WorldLoader.ResultFactory<D, R> p_249635_) throws Exception {
-        WorldLoader.InitConfig worldloader$initconfig = new WorldLoader.InitConfig(
-            p_250997_, Commands.CommandSelection.INTEGRATED, LevelBasedPermissionSet.GAMEMASTER
-        );
-        CompletableFuture<R> completablefuture = WorldLoader.load(worldloader$initconfig, p_251759_, p_249635_, Util.backgroundExecutor(), this.minecraft);
-        this.minecraft.managedBlock(completablefuture::isDone);
-        return completablefuture.get();
+    private <D, R> R loadWorldDataBlocking(
+        final WorldLoader.PackConfig packConfig,
+        final WorldLoader.WorldDataSupplier<D> worldDataGetter,
+        final WorldLoader.ResultFactory<D, R> worldDataSupplier
+    ) throws Exception {
+        long start = Util.getMillis();
+        WorldLoader.InitConfig config = new WorldLoader.InitConfig(packConfig, Commands.CommandSelection.INTEGRATED, LevelBasedPermissionSet.GAMEMASTER);
+        CompletableFuture<R> resourceLoad = WorldLoader.load(config, worldDataGetter, worldDataSupplier, Util.backgroundExecutor(), this.minecraft);
+        this.minecraft.managedBlock(resourceLoad::isDone);
+        long end = Util.getMillis();
+        LOGGER.debug("World resource load blocked for {} ms", end - start);
+        return resourceLoad.get();
     }
 
-    private void askForBackup(LevelStorageSource.LevelStorageAccess p_312560_, boolean p_233143_, Runnable p_233144_, Runnable p_312163_) {
-        Component component;
-        Component component1;
-        if (p_233143_) {
-            component = Component.translatable("selectWorld.backupQuestion.customized");
-            component1 = Component.translatable("selectWorld.backupWarning.customized");
+    private void askForBackup(
+        final LevelStorageSource.LevelStorageAccess levelAccess, final boolean oldCustomized, final Runnable proceedCallback, final Runnable cancelCallback
+    ) {
+        Component backupQuestion;
+        Component backupWarning;
+        if (oldCustomized) {
+            backupQuestion = Component.translatable("selectWorld.backupQuestion.customized");
+            backupWarning = Component.translatable("selectWorld.backupWarning.customized");
         } else {
-            component = Component.translatable("selectWorld.backupQuestion.experimental");
-            component1 = Component.translatable("selectWorld.backupWarning.experimental");
+            backupQuestion = Component.translatable("selectWorld.backupQuestion.experimental");
+            backupWarning = Component.translatable("selectWorld.backupWarning.experimental");
         }
 
-        this.minecraft.setScreen(new BackupConfirmScreen(p_312163_, (p_308273_, p_308274_) -> {
-            if (p_308273_) {
-                EditWorldScreen.makeBackupAndShowToast(p_312560_);
-            }
-
-            p_233144_.run();
-        }, component, component1, false));
+        this.minecraft
+            .gui
+            .setScreen(
+                new BackupConfirmScreen(
+                    cancelCallback,
+                    (backup, eraseCache) -> EditWorldScreen.conditionallyMakeBackupAndShowToast(backup, levelAccess)
+                        .thenAcceptAsync(var1x -> proceedCallback.run(), this.minecraft),
+                    backupQuestion,
+                    backupWarning,
+                    false
+                )
+            );
     }
 
-    public static void confirmWorldCreation(Minecraft p_270593_, CreateWorldScreen p_270733_, Lifecycle p_270539_, Runnable p_270158_, boolean p_270709_) {
-        BooleanConsumer booleanconsumer = p_233154_ -> {
-            if (p_233154_) {
-                p_270158_.run();
+    public static void confirmWorldCreation(
+        final Minecraft minecraft, final CreateWorldScreen parent, final Lifecycle lifecycle, final Runnable task, final boolean skipWarning
+    ) {
+        BooleanConsumer callback = confirmed -> {
+            if (confirmed) {
+                task.run();
             } else {
-                p_270593_.setScreen(p_270733_);
+                minecraft.gui.setScreen(parent);
             }
         };
-        if (p_270709_ || p_270539_ == Lifecycle.stable()) {
-            p_270158_.run();
-        } else if (p_270539_ == Lifecycle.experimental()) {
-            p_270593_.setScreen(
-                new ConfirmScreen(
-                    booleanconsumer,
-                    Component.translatable("selectWorld.warning.experimental.title"),
-                    Component.translatable("selectWorld.warning.experimental.question")
-                )
-            );
-        } else {
-            p_270593_.setScreen(
-                new ConfirmScreen(
-                    booleanconsumer,
-                    Component.translatable("selectWorld.warning.deprecated.title"),
-                    Component.translatable("selectWorld.warning.deprecated.question")
-                )
-            );
-        }
-    }
-
-    public void openWorld(String p_332907_, Runnable p_332472_) {
-        this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.data_read")));
-        LevelStorageSource.LevelStorageAccess levelstoragesource$levelstorageaccess = this.createWorldAccess(p_332907_);
-        if (levelstoragesource$levelstorageaccess != null) {
-            this.openWorldLoadLevelData(levelstoragesource$levelstorageaccess, p_332472_);
-        }
-    }
-
-    private void openWorldLoadLevelData(LevelStorageSource.LevelStorageAccess p_330142_, Runnable p_335478_) {
-        this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.data_read")));
-
-        Dynamic<?> dynamic;
-        LevelSummary levelsummary;
-        try {
-            dynamic = p_330142_.getDataTag();
-            levelsummary = p_330142_.getSummary(dynamic);
-        } catch (NbtException | ReportedNbtException | IOException ioexception) {
-            this.minecraft.setScreen(new RecoverWorldDataScreen(this.minecraft, p_325454_ -> {
-                if (p_325454_) {
-                    this.openWorldLoadLevelData(p_330142_, p_335478_);
-                } else {
-                    p_330142_.safeClose();
-                    p_335478_.run();
-                }
-            }, p_330142_));
-            return;
-        } catch (OutOfMemoryError outofmemoryerror1) {
-            MemoryReserve.release();
-            String s = "Ran out of memory trying to read level data of world folder \"" + p_330142_.getLevelId() + "\"";
-            LOGGER.error(LogUtils.FATAL_MARKER, s);
-            OutOfMemoryError outofmemoryerror = new OutOfMemoryError("Ran out of memory reading level data");
-            outofmemoryerror.initCause(outofmemoryerror1);
-            CrashReport crashreport = CrashReport.forThrowable(outofmemoryerror, s);
-            CrashReportCategory crashreportcategory = crashreport.addCategory("World details");
-            crashreportcategory.setDetail("World folder", p_330142_.getLevelId());
-            throw new ReportedException(crashreport);
-        }
-
-        this.openWorldCheckVersionCompatibility(p_330142_, levelsummary, dynamic, p_335478_);
-    }
-
-    private void openWorldCheckVersionCompatibility(LevelStorageSource.LevelStorageAccess p_335405_, LevelSummary p_331961_, Dynamic<?> p_333467_, Runnable p_328023_) {
-        if (!p_331961_.isCompatible()) {
-            p_335405_.safeClose();
-            this.minecraft
+        if (skipWarning || lifecycle == Lifecycle.stable()) {
+            task.run();
+        } else if (lifecycle == Lifecycle.experimental()) {
+            minecraft.gui
                 .setScreen(
-                    new AlertScreen(
-                        p_328023_,
-                        Component.translatable("selectWorld.incompatible.title").withColor(-65536),
-                        Component.translatable("selectWorld.incompatible.description", p_331961_.getWorldVersionName())
+                    new ConfirmScreen(
+                        callback,
+                        Component.translatable("selectWorld.warning.experimental.title"),
+                        Component.translatable("selectWorld.warning.experimental.question")
                     )
                 );
         } else {
-            LevelSummary.BackupStatus levelsummary$backupstatus = p_331961_.backupStatus();
-            if (levelsummary$backupstatus.shouldBackup()) {
-                String s = "selectWorld.backupQuestion." + levelsummary$backupstatus.getTranslationKey();
-                String s1 = "selectWorld.backupWarning." + levelsummary$backupstatus.getTranslationKey();
-                MutableComponent mutablecomponent = Component.translatable(s);
-                if (levelsummary$backupstatus.isSevere()) {
-                    mutablecomponent.withColor(-2142128);
+            minecraft.gui
+                .setScreen(
+                    new ConfirmScreen(
+                        callback,
+                        Component.translatable("selectWorld.warning.deprecated.title"),
+                        Component.translatable("selectWorld.warning.deprecated.question")
+                    )
+                );
+        }
+    }
+
+    public void openWorld(final String levelId, final Runnable onCancel) {
+        this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.data_read")));
+        LevelStorageSource.LevelStorageAccess worldAccess = this.createWorldAccess(levelId);
+        if (worldAccess != null) {
+            this.openWorldLoadLevelData(worldAccess, onCancel);
+        }
+    }
+
+    private void openWorldLoadLevelData(final LevelStorageSource.LevelStorageAccess worldAccess, final Runnable onCancel) {
+        this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.data_read")));
+
+        Dynamic<?> levelDataTag;
+        LevelSummary summary;
+        try {
+            levelDataTag = worldAccess.getUnfixedDataTag(false);
+            summary = worldAccess.fixAndGetSummaryFromTag(levelDataTag);
+        } catch (IOException | NbtException | ReportedNbtException e) {
+            this.minecraft.gui.setScreen(new RecoverWorldDataScreen(this.minecraft, success -> {
+                if (success) {
+                    this.openWorldLoadLevelData(worldAccess, onCancel);
+                } else {
+                    worldAccess.safeClose();
+                    onCancel.run();
+                }
+            }, worldAccess));
+            return;
+        } catch (OutOfMemoryError e) {
+            MemoryReserve.release();
+            String detailedMessage = "Ran out of memory trying to read level data of world folder \"" + worldAccess.getLevelId() + "\"";
+            LOGGER.error(LogUtils.FATAL_MARKER, detailedMessage);
+            OutOfMemoryError detailedException = new OutOfMemoryError("Ran out of memory reading level data");
+            detailedException.initCause(e);
+            CrashReport crashReport = CrashReport.forThrowable(detailedException, detailedMessage);
+            CrashReportCategory worldDetails = crashReport.addCategory("World details");
+            worldDetails.setDetail("World folder", worldAccess.getLevelId());
+            throw new ReportedException(crashReport);
+        }
+
+        this.openWorldCheckVersionCompatibility(worldAccess, summary, levelDataTag, onCancel);
+    }
+
+    private void openWorldCheckVersionCompatibility(
+        final LevelStorageSource.LevelStorageAccess worldAccess, final LevelSummary summary, final Dynamic<?> levelDataTag, final Runnable onCancel
+    ) {
+        if (!summary.isCompatible()) {
+            worldAccess.safeClose();
+            this.minecraft
+                .gui
+                .setScreen(
+                    new AlertScreen(
+                        onCancel,
+                        Component.translatable("selectWorld.incompatible.title").withColor(-65536),
+                        Component.translatable("selectWorld.incompatible.description", summary.getWorldVersionName())
+                    )
+                );
+        } else {
+            LevelSummary.BackupStatus backupStatus = summary.backupStatus();
+            if (backupStatus.shouldBackup()) {
+                String questionKey = "selectWorld.backupQuestion." + backupStatus.getTranslationKey();
+                String warningKey = "selectWorld.backupWarning." + backupStatus.getTranslationKey();
+                MutableComponent backupQuestion = Component.translatable(questionKey);
+                if (backupStatus.isSevere()) {
+                    backupQuestion.withColor(-2142128);
                 }
 
-                Component component = Component.translatable(s1, p_331961_.getWorldVersionName(), SharedConstants.getCurrentVersion().name());
-                this.minecraft.setScreen(new BackupConfirmScreen(() -> {
-                    p_335405_.safeClose();
-                    p_328023_.run();
-                }, (p_325458_, p_325459_) -> {
-                    if (p_325458_) {
-                        EditWorldScreen.makeBackupAndShowToast(p_335405_);
-                    }
-
-                    this.openWorldLoadLevelStem(p_335405_, p_333467_, false, p_328023_);
-                }, mutablecomponent, component, false));
+                Component backupWarning = Component.translatable(warningKey, summary.getWorldVersionName(), SharedConstants.getCurrentVersion().name());
+                this.minecraft.gui.setScreen(new BackupConfirmScreen(() -> {
+                    worldAccess.safeClose();
+                    onCancel.run();
+                }, (backup, eraseCache) -> this.createBackupAndOpenWorld(worldAccess, levelDataTag, onCancel, backup), backupQuestion, backupWarning, false));
             } else {
-                this.openWorldLoadLevelStem(p_335405_, p_333467_, false, p_328023_);
+                this.upgradeAndOpenWorld(worldAccess, levelDataTag, onCancel);
             }
         }
     }
 
-    private void openWorldLoadLevelStem(LevelStorageSource.LevelStorageAccess p_333651_, Dynamic<?> p_332568_, boolean p_334192_, Runnable p_332843_) {
-        this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.resource_load")));
-        PackRepository packrepository = ServerPacksSource.createPackRepository(p_333651_);
+    private void createBackupAndOpenWorld(
+        final LevelStorageSource.LevelStorageAccess levelAccess, final Dynamic<?> levelDataTag, final Runnable onCancel, final boolean backup
+    ) {
+        EditWorldScreen.conditionallyMakeBackupAndShowToast(backup, levelAccess)
+            .thenAcceptAsync(var4 -> this.upgradeAndOpenWorld(levelAccess, levelDataTag, onCancel), this.minecraft);
+    }
 
-        WorldStem worldstem;
-        try {
-            worldstem = this.loadWorldStem(p_332568_, p_334192_, packrepository);
+    private void upgradeAndOpenWorld(final LevelStorageSource.LevelStorageAccess worldAccess, final Dynamic<?> levelDataTag, final Runnable onCancel) {
+        Runnable cleanup = () -> {
+            worldAccess.safeClose();
+            onCancel.run();
+        };
+        int dataVersion = NbtUtils.getDataVersion(levelDataTag);
+        boolean requiresFileFixing = DataFixers.getFileFixer().requiresFileFixing(dataVersion);
+        UpgradeProgress upgradeProgress = new UpgradeProgress();
+        if (requiresFileFixing) {
+            FileFixerProgressScreen progressScreen = new FileFixerProgressScreen(upgradeProgress);
+            this.minecraft.setScreenAndShow(progressScreen);
+        }
 
-            for (LevelStem levelstem : worldstem.registries().compositeAccess().lookupOrThrow(Registries.LEVEL_STEM)) {
-                levelstem.generator().validate();
+        Util.backgroundExecutor().execute(() -> {
+            Dynamic<?> levelDataTagFixed = this.tryFileFixAndReportErrors(worldAccess, levelDataTag, upgradeProgress, cleanup);
+            if (levelDataTagFixed != null) {
+                this.minecraft.execute(() -> {
+                    if (requiresFileFixing) {
+                        ConfirmScreen loadConfirmScreen = new ConfirmScreen(result -> {
+                            if (result) {
+                                this.openWorldLoadLevelStem(worldAccess, levelDataTagFixed, false, onCancel);
+                            } else {
+                                cleanup.run();
+                            }
+                        }, Component.translatable("upgradeWorld.done"), Component.translatable("upgradeWorld.joinNow"));
+                        this.minecraft.setScreenAndShow(loadConfirmScreen);
+                    } else {
+                        this.openWorldLoadLevelStem(worldAccess, levelDataTagFixed, false, onCancel);
+                    }
+                });
             }
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to load level data or datapacks, can't proceed with server load", (Throwable)exception);
-            if (!p_334192_) {
-                this.minecraft.setScreen(new DatapackLoadFailureScreen(() -> {
-                    p_333651_.safeClose();
-                    p_332843_.run();
-                }, () -> this.openWorldLoadLevelStem(p_333651_, p_332568_, true, p_332843_)));
+        });
+    }
+
+    private @Nullable Dynamic<?> tryFileFixAndReportErrors(
+        final LevelStorageSource.LevelStorageAccess worldAccess, final Dynamic<?> levelDataTag, final UpgradeProgress upgradeProgress, final Runnable cleanup
+    ) {
+        try {
+            return DataFixers.getFileFixer().fix(worldAccess, levelDataTag, upgradeProgress);
+        } catch (CanceledFileFixException e) {
+            this.minecraft
+                .execute(
+                    () -> this.minecraft
+                        .setScreenAndShow(
+                            new AlertScreen(
+                                cleanup,
+                                Component.translatable("upgradeWorld.canceled.title"),
+                                Component.translatable("upgradeWorld.canceled.message"),
+                                CommonComponents.GUI_OK,
+                                true
+                            )
+                        )
+                );
+            return null;
+        } catch (AbortedFileFixException e) {
+            this.minecraft
+                .execute(
+                    () -> {
+                        if (e.getCause() instanceof CowFSSymlinkException) {
+                            this.minecraft
+                                .setScreenAndShow(
+                                    new AlertScreen(
+                                        cleanup, Component.translatable("upgradeWorld.symlink.title"), Component.translatable("upgradeWorld.symlink.message")
+                                    )
+                                );
+                        } else {
+                            this.minecraft.setScreenAndShow(new FileFixerAbortedScreen(cleanup, Component.translatable("upgradeWorld.aborted.message")));
+                        }
+                    }
+                );
+            return null;
+        } catch (FailedCleanupFileFixException e) {
+            this.minecraft
+                .execute(
+                    () -> this.minecraft
+                        .setScreenAndShow(
+                            new AlertScreen(
+                                cleanup,
+                                Component.translatable("upgradeWorld.failed_cleanup.title"),
+                                Component.translatable("upgradeWorld.failed_cleanup.message", Component.literal(e.newWorldFolderName()).withColor(-8355712))
+                            )
+                        )
+                );
+            return null;
+        } catch (FileFixException e) {
+            this.minecraft.delayCrash(e.makeReportedException().getReport());
+            return null;
+        } catch (Exception e) {
+            LOGGER.error("Failed to upgrade the file structure of the world.", e);
+            CrashReport report = CrashReport.forThrowable(e, "Failed to update file structure");
+            this.minecraft.delayCrash(report);
+            return null;
+        }
+    }
+
+    private void openWorldLoadLevelStem(
+        final LevelStorageSource.LevelStorageAccess worldAccess, final Dynamic<?> levelDataTag, final boolean safeMode, final Runnable onCancel
+    ) {
+        this.minecraft.setScreenAndShow(new GenericMessageScreen(Component.translatable("selectWorld.resource_load")));
+        PackRepository packRepository = ServerPacksSource.createPackRepository(worldAccess);
+
+        WorldStem worldStem;
+        try {
+            worldStem = this.loadWorldStem(worldAccess, levelDataTag, safeMode, packRepository);
+
+            for (LevelStem levelStem : worldStem.registries().compositeAccess().lookupOrThrow(Registries.LEVEL_STEM)) {
+                levelStem.generator().validate();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to load level data or datapacks, can't proceed with server load", e);
+            if (!safeMode) {
+                this.minecraft.gui.setScreen(new DatapackLoadFailureScreen(() -> {
+                    worldAccess.safeClose();
+                    onCancel.run();
+                }, () -> this.openWorldLoadLevelStem(worldAccess, levelDataTag, true, onCancel)));
             } else {
-                p_333651_.safeClose();
+                worldAccess.safeClose();
                 this.minecraft
+                    .gui
                     .setScreen(
                         new AlertScreen(
-                            p_332843_,
+                            onCancel,
                             Component.translatable("datapackFailure.safeMode.failed.title"),
                             Component.translatable("datapackFailure.safeMode.failed.description"),
                             CommonComponents.GUI_BACK,
@@ -362,100 +523,109 @@ public class WorldOpenFlows {
             return;
         }
 
-        this.openWorldCheckWorldStemCompatibility(p_333651_, worldstem, packrepository, p_332843_);
+        this.openWorldCheckWorldStemCompatibility(worldAccess, worldStem, packRepository, onCancel);
     }
 
-    private void openWorldCheckWorldStemCompatibility(LevelStorageSource.LevelStorageAccess p_329946_, WorldStem p_331923_, PackRepository p_329592_, Runnable p_331882_) {
-        WorldData worlddata = p_331923_.worldData();
-        boolean flag = worlddata.worldGenOptions().isOldCustomizedWorld();
-        boolean flag1 = worlddata.worldGenSettingsLifecycle() != Lifecycle.stable();
-        if (!flag && !flag1) {
-            this.openWorldLoadBundledResourcePack(p_329946_, p_331923_, p_329592_, p_331882_);
+    private void openWorldCheckWorldStemCompatibility(
+        final LevelStorageSource.LevelStorageAccess worldAccess, final WorldStem worldStem, final PackRepository packRepository, final Runnable onCancel
+    ) {
+        LevelDataAndDimensions.WorldDataAndGenSettings worldDataAndGenSettings = worldStem.worldDataAndGenSettings();
+        WorldData data = worldDataAndGenSettings.data();
+        boolean oldCustomized = worldDataAndGenSettings.genSettings().options().isOldCustomizedWorld();
+        boolean unstable = data.worldGenSettingsLifecycle() != Lifecycle.stable();
+        if (!oldCustomized && !unstable) {
+            this.openWorldLoadBundledResourcePack(worldAccess, worldStem, packRepository, onCancel);
         } else {
-            this.askForBackup(p_329946_, flag, () -> this.openWorldLoadBundledResourcePack(p_329946_, p_331923_, p_329592_, p_331882_), () -> {
-                p_331923_.close();
-                p_329946_.safeClose();
-                p_331882_.run();
-            });
+            this.askForBackup(
+                worldAccess, oldCustomized, () -> this.openWorldLoadBundledResourcePack(worldAccess, worldStem, packRepository, onCancel), () -> {
+                    worldStem.close();
+                    worldAccess.safeClose();
+                    onCancel.run();
+                }
+            );
         }
     }
 
-    private void openWorldLoadBundledResourcePack(LevelStorageSource.LevelStorageAccess p_332203_, WorldStem p_333813_, PackRepository p_328830_, Runnable p_331357_) {
-        DownloadedPackSource downloadedpacksource = this.minecraft.getDownloadedPackSource();
-        this.loadBundledResourcePack(downloadedpacksource, p_332203_).thenApply(p_233177_ -> true).exceptionallyComposeAsync(p_233183_ -> {
-            LOGGER.warn("Failed to load pack: ", p_233183_);
+    private void openWorldLoadBundledResourcePack(
+        final LevelStorageSource.LevelStorageAccess worldAccess, final WorldStem worldStem, final PackRepository packRepository, final Runnable onCancel
+    ) {
+        DownloadedPackSource packSource = this.minecraft.getDownloadedPackSource();
+        this.loadBundledResourcePack(packSource, worldAccess).thenApply(unused -> true).exceptionallyComposeAsync(t -> {
+            LOGGER.warn("Failed to load pack: ", t);
             return this.promptBundledPackLoadFailure();
-        }, this.minecraft).thenAcceptAsync(p_325451_ -> {
-            if (p_325451_) {
-                this.openWorldCheckDiskSpace(p_332203_, p_333813_, downloadedpacksource, p_328830_, p_331357_);
+        }, this.minecraft).thenAcceptAsync(result -> {
+            if (result) {
+                this.openWorldCheckDiskSpace(worldAccess, worldStem, packSource, packRepository, onCancel);
             } else {
-                downloadedpacksource.popAll();
-                p_333813_.close();
-                p_332203_.safeClose();
-                p_331357_.run();
+                packSource.popAll();
+                worldStem.close();
+                worldAccess.safeClose();
+                onCancel.run();
             }
-        }, this.minecraft).exceptionally(p_233175_ -> {
-            this.minecraft.delayCrash(CrashReport.forThrowable(p_233175_, "Load world"));
+        }, this.minecraft).exceptionally(e -> {
+            this.minecraft.delayCrash(CrashReport.forThrowable(e, "Load world"));
             return null;
         });
     }
 
     private void openWorldCheckDiskSpace(
-        LevelStorageSource.LevelStorageAccess p_332115_, WorldStem p_329606_, DownloadedPackSource p_331698_, PackRepository p_334521_, Runnable p_330770_
+        final LevelStorageSource.LevelStorageAccess worldAccess,
+        final WorldStem worldStem,
+        final DownloadedPackSource packSource,
+        final PackRepository packRepository,
+        final Runnable onCancel
     ) {
-        if (p_332115_.checkForLowDiskSpace()) {
-            this.minecraft
-                .setScreen(
-                    new ConfirmScreen(
-                        p_325469_ -> {
-                            if (p_325469_) {
-                                this.openWorldDoLoad(p_332115_, p_329606_, p_334521_);
-                            } else {
-                                p_331698_.popAll();
-                                p_329606_.close();
-                                p_332115_.safeClose();
-                                p_330770_.run();
-                            }
-                        },
-                        Component.translatable("selectWorld.warning.lowDiskSpace.title").withStyle(ChatFormatting.RED),
-                        Component.translatable("selectWorld.warning.lowDiskSpace.description"),
-                        CommonComponents.GUI_CONTINUE,
-                        CommonComponents.GUI_BACK
-                    )
-                );
+        if (worldAccess.checkForLowDiskSpace()) {
+            Screen screen = new ConfirmScreen(
+                skip -> {
+                    if (skip) {
+                        this.openWorldDoLoad(worldAccess, worldStem, packRepository);
+                    } else {
+                        packSource.popAll();
+                        worldStem.close();
+                        worldAccess.safeClose();
+                        onCancel.run();
+                    }
+                },
+                Component.translatable("selectWorld.warning.lowDiskSpace.title").withStyle(ChatFormatting.RED),
+                Component.translatable("selectWorld.warning.lowDiskSpace.description"),
+                CommonComponents.GUI_CONTINUE,
+                CommonComponents.GUI_BACK
+            );
+            this.minecraft.gui.setScreen(screen);
         } else {
-            this.openWorldDoLoad(p_332115_, p_329606_, p_334521_);
+            this.openWorldDoLoad(worldAccess, worldStem, packRepository);
         }
     }
 
-    private void openWorldDoLoad(LevelStorageSource.LevelStorageAccess p_329495_, WorldStem p_329186_, PackRepository p_331916_) {
-        this.minecraft.doWorldLoad(p_329495_, p_331916_, p_329186_, false);
+    private void openWorldDoLoad(final LevelStorageSource.LevelStorageAccess worldAccess, final WorldStem worldStem, final PackRepository packRepository) {
+        this.minecraft.doWorldLoad(worldAccess, packRepository, worldStem, Optional.empty(), false);
     }
 
-    private CompletableFuture<Void> loadBundledResourcePack(DownloadedPackSource p_312230_, LevelStorageSource.LevelStorageAccess p_310544_) {
-        Path path = p_310544_.getLevelPath(LevelResource.MAP_RESOURCE_FILE);
-        if (Files.exists(path) && !Files.isDirectory(path)) {
-            p_312230_.configureForLocalWorld();
-            CompletableFuture<Void> completablefuture = p_312230_.waitForPackFeedback(WORLD_PACK_ID);
-            p_312230_.pushLocalPack(WORLD_PACK_ID, path);
-            return completablefuture;
+    private CompletableFuture<Void> loadBundledResourcePack(
+        final DownloadedPackSource packSource, final LevelStorageSource.LevelStorageAccess levelSourceAccess
+    ) {
+        Path mapResourceFile = levelSourceAccess.getLevelPath(LevelResource.MAP_RESOURCE_FILE);
+        if (Files.exists(mapResourceFile) && !Files.isDirectory(mapResourceFile)) {
+            packSource.configureForLocalWorld();
+            CompletableFuture<Void> result = packSource.waitForPackFeedback(WORLD_PACK_ID);
+            packSource.pushLocalPack(WORLD_PACK_ID, mapResourceFile);
+            return result;
         } else {
             return CompletableFuture.completedFuture(null);
         }
     }
 
     private CompletableFuture<Boolean> promptBundledPackLoadFailure() {
-        CompletableFuture<Boolean> completablefuture = new CompletableFuture<>();
-        this.minecraft
-            .setScreen(
-                new ConfirmScreen(
-                    completablefuture::complete,
-                    Component.translatable("multiplayer.texturePrompt.failure.line1"),
-                    Component.translatable("multiplayer.texturePrompt.failure.line2"),
-                    CommonComponents.GUI_PROCEED,
-                    CommonComponents.GUI_CANCEL
-                )
-            );
-        return completablefuture;
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+        Screen screen = new ConfirmScreen(
+            result::complete,
+            Component.translatable("multiplayer.texturePrompt.failure.line1"),
+            Component.translatable("multiplayer.texturePrompt.failure.line2"),
+            CommonComponents.GUI_PROCEED,
+            CommonComponents.GUI_CANCEL
+        );
+        this.minecraft.gui.setScreen(screen);
+        return result;
     }
 }

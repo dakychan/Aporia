@@ -10,7 +10,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.datafixers.util.Unit;
 import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import com.mojang.serialization.JavaOps;
 import com.mojang.serialization.JsonOps;
 import java.util.List;
@@ -20,74 +19,78 @@ import net.minecraft.util.GsonHelper;
 import net.minecraft.util.Util;
 
 public class LegacyHoverEventFix extends DataFix {
-    public LegacyHoverEventFix(Schema p_393665_) {
-        super(p_393665_, false);
+    public LegacyHoverEventFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<? extends Pair<String, ?>> type = (Type<? extends Pair<String, ?>>)this.getInputSchema().getType(References.TEXT_COMPONENT).findFieldType("hoverEvent");
-        return this.createFixer(this.getInputSchema().getTypeRaw(References.TEXT_COMPONENT), type);
+        Type<? extends Pair<String, ?>> hoverEventType = (Type<? extends Pair<String, ?>>)this.getInputSchema()
+            .getType(References.TEXT_COMPONENT)
+            .findFieldType("hoverEvent");
+        return this.createFixer(this.getInputSchema().getTypeRaw(References.TEXT_COMPONENT), hoverEventType);
     }
 
-    private <C, H extends Pair<String, ?>> TypeRewriteRule createFixer(Type<C> p_397270_, Type<H> p_394348_) {
-        Type<Pair<String, Either<Either<String, List<C>>, Pair<Either<List<C>, Unit>, Pair<Either<C, Unit>, Pair<Either<H, Unit>, Dynamic<?>>>>>>> type = DSL.named(
+    private <C, H extends Pair<String, ?>> TypeRewriteRule createFixer(final Type<C> rawTextComponentType, final Type<H> hoverEventType) {
+        Type<Pair<String, Either<Either<String, List<C>>, Pair<Either<List<C>, Unit>, Pair<Either<C, Unit>, Pair<Either<H, Unit>, Dynamic<?>>>>>>> textComponentType = DSL.named(
             References.TEXT_COMPONENT.typeName(),
             DSL.or(
-                DSL.or(DSL.string(), DSL.list(p_397270_)),
+                DSL.or(DSL.string(), DSL.list(rawTextComponentType)),
                 DSL.and(
-                    DSL.optional(DSL.field("extra", DSL.list(p_397270_))),
-                    DSL.optional(DSL.field("separator", p_397270_)),
-                    DSL.optional(DSL.field("hoverEvent", p_394348_)),
+                    DSL.optional(DSL.field("extra", DSL.list(rawTextComponentType))),
+                    DSL.optional(DSL.field("separator", rawTextComponentType)),
+                    DSL.optional(DSL.field("hoverEvent", hoverEventType)),
                     DSL.remainderType()
                 )
             )
         );
-        if (!type.equals(this.getInputSchema().getType(References.TEXT_COMPONENT))) {
+        if (!textComponentType.equals(this.getInputSchema().getType(References.TEXT_COMPONENT))) {
             throw new IllegalStateException(
-                "Text component type did not match, expected " + type + " but got " + this.getInputSchema().getType(References.TEXT_COMPONENT)
+                "Text component type did not match, expected " + textComponentType + " but got " + this.getInputSchema().getType(References.TEXT_COMPONENT)
             );
         } else {
             return this.fixTypeEverywhere(
                 "LegacyHoverEventFix",
-                type,
-                p_394382_ -> p_395778_ -> p_395778_.mapSecond(
-                    p_391228_ -> p_391228_.mapRight(p_395158_ -> p_395158_.mapSecond(p_395579_ -> p_395579_.mapSecond(p_395788_ -> {
-                        Dynamic<?> dynamic = p_395788_.getSecond();
-                        Optional<? extends Dynamic<?>> optional = dynamic.get("hoverEvent").result();
-                        if (optional.isEmpty()) {
-                            return p_395788_;
-                        } else {
-                            Optional<? extends Dynamic<?>> optional1 = optional.get().get("value").result();
-                            if (optional1.isEmpty()) {
-                                return p_395788_;
-                            } else {
-                                String s = p_395788_.getFirst().left().map(Pair::getFirst).orElse("");
-                                H h = this.fixHoverEvent(p_394348_, s, (Dynamic<?>)optional.get());
-                                return p_395788_.mapFirst(p_391455_ -> Either.left(h));
+                textComponentType,
+                ops -> named -> named.mapSecond(
+                    simpleOrFull -> simpleOrFull.mapRight(
+                        full -> full.mapSecond(separatorHoverRemainder -> separatorHoverRemainder.mapSecond(hoverAndRemainder -> {
+                            Dynamic<?> remainder = hoverAndRemainder.getSecond();
+                            Optional<? extends Dynamic<?>> hoverEvent = remainder.get("hoverEvent").result();
+                            if (hoverEvent.isEmpty()) {
+                                return hoverAndRemainder;
                             }
-                        }
-                    })))
+
+                            Optional<? extends Dynamic<?>> legacyHoverValue = hoverEvent.get().get("value").result();
+                            if (legacyHoverValue.isEmpty()) {
+                                return hoverAndRemainder;
+                            }
+
+                            String hoverAction = hoverAndRemainder.getFirst().left().map(Pair::getFirst).orElse("");
+                            H newHoverEvent = this.fixHoverEvent(hoverEventType, hoverAction, (Dynamic<?>)hoverEvent.get());
+                            return hoverAndRemainder.mapFirst(ignored -> Either.left(newHoverEvent));
+                        }))
+                    )
                 )
             );
         }
     }
 
-    private <H> H fixHoverEvent(Type<H> p_393466_, String p_396088_, Dynamic<?> p_392996_) {
-        return "show_text".equals(p_396088_) ? fixShowTextHover(p_393466_, p_392996_) : createPlaceholderHover(p_393466_, p_392996_);
+    private <H> H fixHoverEvent(final Type<H> hoverEventType, final String action, final Dynamic<?> oldHoverEvent) {
+        return "show_text".equals(action) ? fixShowTextHover(hoverEventType, oldHoverEvent) : createPlaceholderHover(hoverEventType, oldHoverEvent);
     }
 
-    private static <H> H fixShowTextHover(Type<H> p_395847_, Dynamic<?> p_393935_) {
-        Dynamic<?> dynamic = p_393935_.renameField("value", "contents");
-        return Util.readTypedOrThrow(p_395847_, dynamic).getValue();
+    private static <H> H fixShowTextHover(final Type<H> hoverEventType, final Dynamic<?> oldHoverEvent) {
+        Dynamic<?> newHoverEvent = oldHoverEvent.renameField("value", "contents");
+        return Util.readTypedOrThrow(hoverEventType, newHoverEvent).getValue();
     }
 
-    private static <H> H createPlaceholderHover(Type<H> p_394355_, Dynamic<?> p_393524_) {
-        JsonElement jsonelement = p_393524_.convert(JsonOps.INSTANCE).getValue();
-        Dynamic<?> dynamic = new Dynamic<>(
+    private static <H> H createPlaceholderHover(final Type<H> hoverEventType, final Dynamic<?> oldHoverEvent) {
+        JsonElement oldJson = oldHoverEvent.convert(JsonOps.INSTANCE).getValue();
+        Dynamic<?> placeholderHoverEvent = new Dynamic<>(
             JavaOps.INSTANCE,
-            Map.of("action", "show_text", "contents", Map.<String, String>of("text", "Legacy hoverEvent: " + GsonHelper.toStableString(jsonelement)))
+            Map.of("action", "show_text", "contents", Map.<String, String>of("text", "Legacy hoverEvent: " + GsonHelper.toStableString(oldJson)))
         );
-        return Util.readTypedOrThrow(p_394355_, dynamic).getValue();
+        return Util.readTypedOrThrow(hoverEventType, placeholderHoverEvent).getValue();
     }
 }

@@ -4,98 +4,95 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record ShaderDefines(Map<String, String> values, Set<String> flags) {
     public static final ShaderDefines EMPTY = new ShaderDefines(Map.of(), Set.of());
     public static final Codec<ShaderDefines> CODEC = RecordCodecBuilder.create(
-        p_369294_ -> p_369294_.group(
+        i -> i.group(
                 Codec.unboundedMap(Codec.STRING, Codec.STRING).optionalFieldOf("values", Map.of()).forGetter(ShaderDefines::values),
                 Codec.STRING.listOf().xmap(Set::copyOf, List::copyOf).optionalFieldOf("flags", Set.of()).forGetter(ShaderDefines::flags)
             )
-            .apply(p_369294_, ShaderDefines::new)
+            .apply(i, ShaderDefines::new)
     );
 
     public static ShaderDefines.Builder builder() {
         return new ShaderDefines.Builder();
     }
 
-    public ShaderDefines withOverrides(ShaderDefines p_361942_) {
+    public ShaderDefines withOverrides(final ShaderDefines defines) {
         if (this.isEmpty()) {
-            return p_361942_;
-        } else if (p_361942_.isEmpty()) {
-            return this;
-        } else {
-            ImmutableMap.Builder<String, String> builder = ImmutableMap.builderWithExpectedSize(this.values.size() + p_361942_.values.size());
-            builder.putAll(this.values);
-            builder.putAll(p_361942_.values);
-            ImmutableSet.Builder<String> builder1 = ImmutableSet.builderWithExpectedSize(this.flags.size() + p_361942_.flags.size());
-            builder1.addAll(this.flags);
-            builder1.addAll(p_361942_.flags);
-            return new ShaderDefines(builder.buildKeepingLast(), builder1.build());
+            return defines;
         }
+
+        if (defines.isEmpty()) {
+            return this;
+        }
+
+        ImmutableMap.Builder<String, String> newValues = ImmutableMap.builderWithExpectedSize(this.values.size() + defines.values.size());
+        newValues.putAll(this.values);
+        newValues.putAll(defines.values);
+        ImmutableSet.Builder<String> newFlags = ImmutableSet.builderWithExpectedSize(this.flags.size() + defines.flags.size());
+        newFlags.addAll(this.flags);
+        newFlags.addAll(defines.flags);
+        return new ShaderDefines(newValues.buildKeepingLast(), newFlags.build());
     }
 
     public String asSourceDirectives() {
-        StringBuilder stringbuilder = new StringBuilder();
+        StringBuilder directives = new StringBuilder();
 
         for (Entry<String, String> entry : this.values.entrySet()) {
-            String s = entry.getKey();
-            String s1 = entry.getValue();
-            stringbuilder.append("#define ").append(s).append(" ").append(s1).append('\n');
+            String key = entry.getKey();
+            String value = entry.getValue();
+            directives.append("#define ").append(key).append(" ").append(value).append('\n');
         }
 
-        for (String s2 : this.flags) {
-            stringbuilder.append("#define ").append(s2).append('\n');
+        for (String flag : this.flags) {
+            directives.append("#define ").append(flag).append('\n');
         }
 
-        return stringbuilder.toString();
+        return directives.toString();
     }
 
     public boolean isEmpty() {
         return this.values.isEmpty() && this.flags.isEmpty();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder {
+        public static class Builder {
         private final ImmutableMap.Builder<String, String> values = ImmutableMap.builder();
         private final ImmutableSet.Builder<String> flags = ImmutableSet.builder();
 
-        Builder() {
+        private Builder() {
         }
 
-        public ShaderDefines.Builder define(String p_360918_, String p_368570_) {
-            if (p_368570_.isBlank()) {
+        public ShaderDefines.Builder define(final String key, final String value) {
+            if (value.isBlank()) {
                 throw new IllegalArgumentException("Cannot define empty string");
-            } else {
-                this.values.put(p_360918_, escapeNewLines(p_368570_));
-                return this;
             }
-        }
 
-        private static String escapeNewLines(String p_363744_) {
-            return p_363744_.replaceAll("\n", "\\\\\n");
-        }
-
-        public ShaderDefines.Builder define(String p_363194_, float p_365800_) {
-            this.values.put(p_363194_, String.valueOf(p_365800_));
+            this.values.put(key, escapeNewLines(value));
             return this;
         }
 
-        public ShaderDefines.Builder define(String p_395500_, int p_397721_) {
-            this.values.put(p_395500_, String.valueOf(p_397721_));
+        private static String escapeNewLines(final String value) {
+            return value.replaceAll("\n", "\\\\\n");
+        }
+
+        public ShaderDefines.Builder define(final String key, final float value) {
+            this.values.put(key, String.valueOf(value));
             return this;
         }
 
-        public ShaderDefines.Builder define(String p_367054_) {
-            this.flags.add(p_367054_);
+        public ShaderDefines.Builder define(final String key, final int value) {
+            this.values.put(key, String.valueOf(value));
+            return this;
+        }
+
+        public ShaderDefines.Builder define(final String key) {
+            this.flags.add(key);
             return this;
         }
 

@@ -8,7 +8,7 @@ public interface TooltipFlag {
 
     boolean isCreative();
 
-    public record Default(boolean advanced, boolean creative) implements TooltipFlag {
+    record Default(boolean advanced, boolean creative) implements TooltipFlag {
         @Override
         public boolean isAdvanced() {
             return this.advanced;

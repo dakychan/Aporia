@@ -3,7 +3,6 @@ package net.minecraft.world.level.levelgen.structure.templatesystem;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderSet;
@@ -14,47 +13,47 @@ import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
 import org.jspecify.annotations.Nullable;
 
-public class BlockRotProcessor extends StructureProcessor {
-    public static final MapCodec<BlockRotProcessor> CODEC = RecordCodecBuilder.mapCodec(
-        p_259016_ -> p_259016_.group(
-                RegistryCodecs.homogeneousList(Registries.BLOCK).optionalFieldOf("rottable_blocks").forGetter(p_230291_ -> p_230291_.rottableBlocks),
-                Codec.floatRange(0.0F, 1.0F).fieldOf("integrity").forGetter(p_230289_ -> p_230289_.integrity)
+public class BlockRotProcessor implements StructureProcessor {
+    public static final MapCodec<BlockRotProcessor> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
+                RegistryCodecs.homogeneousList(Registries.BLOCK).optionalFieldOf("rottable_blocks").forGetter(t -> t.rottableBlocks),
+                Codec.floatRange(0.0F, 1.0F).fieldOf("integrity").forGetter(t -> t.integrity)
             )
-            .apply(p_259016_, BlockRotProcessor::new)
+            .apply(i, BlockRotProcessor::new)
     );
     private final Optional<HolderSet<Block>> rottableBlocks;
     private final float integrity;
 
-    public BlockRotProcessor(HolderSet<Block> p_255622_, float p_256468_) {
-        this(Optional.of(p_255622_), p_256468_);
+    public BlockRotProcessor(final HolderSet<Block> tag, final float integrity) {
+        this(Optional.of(tag), integrity);
     }
 
-    public BlockRotProcessor(float p_74078_) {
-        this(Optional.empty(), p_74078_);
+    public BlockRotProcessor(final float integrity) {
+        this(Optional.empty(), integrity);
     }
 
-    private BlockRotProcessor(Optional<HolderSet<Block>> p_230284_, float p_230285_) {
-        this.integrity = p_230285_;
-        this.rottableBlocks = p_230284_;
+    private BlockRotProcessor(final Optional<HolderSet<Block>> blockTagKey, final float integrity) {
+        this.integrity = integrity;
+        this.rottableBlocks = blockTagKey;
     }
 
     @Override
     public StructureTemplate.@Nullable StructureBlockInfo processBlock(
-        LevelReader p_74081_,
-        BlockPos p_74082_,
-        BlockPos p_74083_,
-        StructureTemplate.StructureBlockInfo p_74084_,
-        StructureTemplate.StructureBlockInfo p_74085_,
-        StructurePlaceSettings p_74086_
+        final LevelReader level,
+        final BlockPos targetPosition,
+        final BlockPos referencePos,
+        final BlockPos templateRelativePos,
+        final StructureTemplate.StructureBlockInfo processedBlockInfo,
+        final StructurePlaceSettings settings
     ) {
-        RandomSource randomsource = p_74086_.getRandom(p_74085_.pos());
-        return (!this.rottableBlocks.isPresent() || p_74084_.state().is(this.rottableBlocks.get())) && !(randomsource.nextFloat() <= this.integrity)
+        RandomSource random = settings.getRandom(processedBlockInfo.pos());
+        return (!this.rottableBlocks.isPresent() || processedBlockInfo.state().is(this.rottableBlocks.get())) && !(random.nextFloat() <= this.integrity)
             ? null
-            : p_74085_;
+            : processedBlockInfo;
     }
 
     @Override
-    protected StructureProcessorType<?> getType() {
-        return StructureProcessorType.BLOCK_ROT;
+    public MapCodec<BlockRotProcessor> codec() {
+        return MAP_CODEC;
     }
 }

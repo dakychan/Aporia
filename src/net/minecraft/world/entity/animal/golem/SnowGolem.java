@@ -42,13 +42,13 @@ import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
-public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackMob {
+public class SnowGolem extends AbstractGolem implements RangedAttackMob, Shearable {
     private static final EntityDataAccessor<Byte> DATA_PUMPKIN_ID = SynchedEntityData.defineId(SnowGolem.class, EntityDataSerializers.BYTE);
     private static final byte PUMPKIN_FLAG = 16;
     private static final boolean DEFAULT_PUMPKIN = true;
 
-    public SnowGolem(EntityType<? extends SnowGolem> p_455193_, Level p_460841_) {
-        super(p_455193_, p_460841_);
+    public SnowGolem(final EntityType<? extends SnowGolem> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -57,7 +57,7 @@ public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackM
         this.goalSelector.addGoal(2, new WaterAvoidingRandomStrollGoal(this, 1.0, 1.0000001E-5F));
         this.goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (p_459742_, p_452021_) -> p_459742_ instanceof Enemy));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Mob.class, 10, true, false, (target, level) -> target instanceof Enemy));
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -65,21 +65,21 @@ public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackM
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_453552_) {
-        super.defineSynchedData(p_453552_);
-        p_453552_.define(DATA_PUMPKIN_ID, (byte)16);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_PUMPKIN_ID, (byte)16);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_453870_) {
-        super.addAdditionalSaveData(p_453870_);
-        p_453870_.putBoolean("Pumpkin", this.hasPumpkin());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putBoolean("Pumpkin", this.hasPumpkin());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_452467_) {
-        super.readAdditionalSaveData(p_452467_);
-        this.setPumpkin(p_452467_.getBooleanOr("Pumpkin", true));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setPumpkin(input.getBooleanOr("Pumpkin", true));
     }
 
     @Override
@@ -90,43 +90,43 @@ public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackM
     @Override
     public void aiStep() {
         super.aiStep();
-        if (this.level() instanceof ServerLevel serverlevel) {
-            if (serverlevel.environmentAttributes().getValue(EnvironmentAttributes.SNOW_GOLEM_MELTS, this.position())) {
-                this.hurtServer(serverlevel, this.damageSources().onFire(), 1.0F);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            if (serverLevel.environmentAttributes().getValue(EnvironmentAttributes.SNOW_GOLEM_MELTS, this.position())) {
+                this.hurtServer(serverLevel, this.damageSources().onFire(), 1.0F);
             }
 
-            if (!serverlevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
+            if (!serverLevel.getGameRules().get(GameRules.MOB_GRIEFING)) {
                 return;
             }
 
-            BlockState blockstate = Blocks.SNOW.defaultBlockState();
+            BlockState snow = Blocks.SNOW.defaultBlockState();
 
             for (int i = 0; i < 4; i++) {
-                int j = Mth.floor(this.getX() + (i % 2 * 2 - 1) * 0.25F);
-                int k = Mth.floor(this.getY());
-                int l = Mth.floor(this.getZ() + (i / 2 % 2 * 2 - 1) * 0.25F);
-                BlockPos blockpos = new BlockPos(j, k, l);
-                if (this.level().getBlockState(blockpos).isAir() && blockstate.canSurvive(this.level(), blockpos)) {
-                    this.level().setBlockAndUpdate(blockpos, blockstate);
-                    this.level().gameEvent(GameEvent.BLOCK_PLACE, blockpos, GameEvent.Context.of(this, blockstate));
+                int xx = Mth.floor(this.getX() + (i % 2 * 2 - 1) * 0.25F);
+                int yy = Mth.floor(this.getY());
+                int zz = Mth.floor(this.getZ() + (i / 2 % 2 * 2 - 1) * 0.25F);
+                BlockPos snowPos = new BlockPos(xx, yy, zz);
+                if (this.level().getBlockState(snowPos).isAir() && snow.canSurvive(this.level(), snowPos)) {
+                    this.level().setBlockAndUpdate(snowPos, snow);
+                    this.level().gameEvent(GameEvent.BLOCK_PLACE, snowPos, GameEvent.Context.of(this, snow));
                 }
             }
         }
     }
 
     @Override
-    public void performRangedAttack(LivingEntity p_459857_, float p_457402_) {
-        double d0 = p_459857_.getX() - this.getX();
-        double d1 = p_459857_.getEyeY() - 1.1F;
-        double d2 = p_459857_.getZ() - this.getZ();
-        double d3 = Math.sqrt(d0 * d0 + d2 * d2) * 0.2F;
-        if (this.level() instanceof ServerLevel serverlevel) {
-            ItemStack itemstack = new ItemStack(Items.SNOWBALL);
+    public void performRangedAttack(final LivingEntity target, final float power) {
+        double xd = target.getX() - this.getX();
+        double yd = target.getEyeY() - 1.1F;
+        double zd = target.getZ() - this.getZ();
+        double yo = Math.sqrt(xd * xd + zd * zd) * 0.2F;
+        if (this.level() instanceof ServerLevel serverLevel) {
+            ItemStack itemStack = new ItemStack(Items.SNOWBALL);
             Projectile.spawnProjectile(
-                new Snowball(serverlevel, this, itemstack),
-                serverlevel,
-                itemstack,
-                p_456363_ -> p_456363_.shoot(d0, d1 + d3 - p_456363_.getY(), d2, 1.6F, 12.0F)
+                new Snowball(serverLevel, this, itemStack),
+                serverLevel,
+                itemStack,
+                projectile -> projectile.shoot(xd, yd + yo - projectile.getY(), zd, 1.6F, 12.0F)
             );
         }
 
@@ -134,13 +134,13 @@ public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackM
     }
 
     @Override
-    protected InteractionResult mobInteract(Player p_458095_, InteractionHand p_457948_) {
-        ItemStack itemstack = p_458095_.getItemInHand(p_457948_);
-        if (itemstack.is(Items.SHEARS) && this.readyForShearing()) {
-            if (this.level() instanceof ServerLevel serverlevel) {
-                this.shear(serverlevel, SoundSource.PLAYERS, itemstack);
-                this.gameEvent(GameEvent.SHEAR, p_458095_);
-                itemstack.hurtAndBreak(1, p_458095_, p_457948_.asEquipmentSlot());
+    protected InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (itemStack.is(Items.SHEARS) && this.readyForShearing()) {
+            if (this.level() instanceof ServerLevel level) {
+                this.shear(level, SoundSource.PLAYERS, itemStack);
+                this.gameEvent(GameEvent.SHEAR, player);
+                itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
             }
 
             return InteractionResult.SUCCESS;
@@ -150,27 +150,27 @@ public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackM
     }
 
     @Override
-    public void shear(ServerLevel p_455102_, SoundSource p_453971_, ItemStack p_456270_) {
-        p_455102_.playSound(null, this, SoundEvents.SNOW_GOLEM_SHEAR, p_453971_, 1.0F, 1.0F);
+    public void shear(final ServerLevel level, final SoundSource soundSource, final ItemStack tool) {
+        level.playSound(null, this, SoundEvents.SNOW_GOLEM_SHEAR, soundSource, 1.0F, 1.0F);
         this.setPumpkin(false);
-        this.dropFromShearingLootTable(p_455102_, BuiltInLootTables.SHEAR_SNOW_GOLEM, p_456270_, (p_454848_, p_457672_) -> this.spawnAtLocation(p_454848_, p_457672_, this.getEyeHeight()));
+        this.dropFromShearingLootTable(level, BuiltInLootTables.SHEAR_SNOW_GOLEM, tool, (l, drop) -> this.spawnAtLocation(l, drop, this.getEyeHeight()));
     }
 
     @Override
     public boolean readyForShearing() {
-        return this.isAlive() && this.hasPumpkin();
+        return this.hasPumpkin();
     }
 
     public boolean hasPumpkin() {
         return (this.entityData.get(DATA_PUMPKIN_ID) & 16) != 0;
     }
 
-    public void setPumpkin(boolean p_455627_) {
-        byte b0 = this.entityData.get(DATA_PUMPKIN_ID);
-        if (p_455627_) {
-            this.entityData.set(DATA_PUMPKIN_ID, (byte)(b0 | 16));
+    public void setPumpkin(final boolean pumpkin) {
+        byte current = this.entityData.get(DATA_PUMPKIN_ID);
+        if (pumpkin) {
+            this.entityData.set(DATA_PUMPKIN_ID, (byte)(current | 16));
         } else {
-            this.entityData.set(DATA_PUMPKIN_ID, (byte)(b0 & -17));
+            this.entityData.set(DATA_PUMPKIN_ID, (byte)(current & -17));
         }
     }
 
@@ -180,7 +180,7 @@ public class SnowGolem extends AbstractGolem implements Shearable, RangedAttackM
     }
 
     @Override
-    protected @Nullable SoundEvent getHurtSound(DamageSource p_459394_) {
+    protected @Nullable SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.SNOW_GOLEM_HURT;
     }
 

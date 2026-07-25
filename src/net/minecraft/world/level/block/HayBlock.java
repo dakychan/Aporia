@@ -16,13 +16,13 @@ public class HayBlock extends RotatedPillarBlock {
         return CODEC;
     }
 
-    public HayBlock(BlockBehaviour.Properties p_53976_) {
-        super(p_53976_);
+    public HayBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(AXIS, Direction.Axis.Y));
     }
 
     @Override
-    public void fallOn(Level p_153362_, BlockState p_153363_, BlockPos p_153364_, Entity p_153365_, double p_396854_) {
-        p_153365_.causeFallDamage(p_396854_, 0.2F, p_153362_.damageSources().fall());
+    public void fallOn(final Level level, final BlockState state, final BlockPos pos, final Entity entity, final double fallDistance) {
+        entity.causeFallDamage(fallDistance, 0.2F, level.damageSources().fall());
     }
 }

@@ -21,7 +21,7 @@ public record ClientboundShowDialogPacket(Holder<Dialog> dialog) implements Pack
         return CommonPacketTypes.CLIENTBOUND_SHOW_DIALOG;
     }
 
-    public void handle(ClientCommonPacketListener p_409505_) {
-        p_409505_.handleShowDialog(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleShowDialog(this);
     }
 }

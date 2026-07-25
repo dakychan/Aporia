@@ -10,7 +10,6 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.EnchantmentMenu;
@@ -19,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.EnchantingTableBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -31,7 +31,7 @@ import org.jspecify.annotations.Nullable;
 public class EnchantingTableBlock extends BaseEntityBlock {
     public static final MapCodec<EnchantingTableBlock> CODEC = simpleCodec(EnchantingTableBlock::new);
     public static final List<BlockPos> BOOKSHELF_OFFSETS = BlockPos.betweenClosedStream(-2, 0, -2, 2, 1, 2)
-        .filter(p_328998_ -> Math.abs(p_328998_.getX()) == 2 || Math.abs(p_328998_.getZ()) == 2)
+        .filter(pos -> Math.abs(pos.getX()) == 2 || Math.abs(pos.getZ()) == 2)
         .map(BlockPos::immutable)
         .toList();
     private static final VoxelShape SHAPE = Block.column(16.0, 0.0, 12.0);
@@ -41,69 +41,71 @@ public class EnchantingTableBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    protected EnchantingTableBlock(BlockBehaviour.Properties p_333403_) {
-        super(p_333403_);
+    protected EnchantingTableBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
-    public static boolean isValidBookShelf(Level p_328191_, BlockPos p_328702_, BlockPos p_336071_) {
-        return p_328191_.getBlockState(p_328702_.offset(p_336071_)).is(BlockTags.ENCHANTMENT_POWER_PROVIDER)
-            && p_328191_.getBlockState(p_328702_.offset(p_336071_.getX() / 2, p_336071_.getY(), p_336071_.getZ() / 2)).is(BlockTags.ENCHANTMENT_POWER_TRANSMITTER);
+    public static boolean isValidBookShelf(final Level level, final BlockPos pos, final BlockPos offset) {
+        return level.getBlockState(pos.offset(offset)).is(BlockTags.ENCHANTMENT_POWER_PROVIDER)
+            && level.getBlockState(pos.offset(offset.getX() / 2, offset.getY(), offset.getZ() / 2)).is(BlockTags.ENCHANTMENT_POWER_TRANSMITTER);
     }
 
     @Override
-    protected boolean useShapeForLightOcclusion(BlockState p_329621_) {
+    protected boolean useShapeForLightOcclusion(final BlockState state) {
         return true;
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_329467_, BlockGetter p_330223_, BlockPos p_327750_, CollisionContext p_332344_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public void animateTick(BlockState p_334651_, Level p_328070_, BlockPos p_335832_, RandomSource p_335180_) {
-        super.animateTick(p_334651_, p_328070_, p_335832_, p_335180_);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        super.animateTick(state, level, pos, random);
 
-        for (BlockPos blockpos : BOOKSHELF_OFFSETS) {
-            if (p_335180_.nextInt(16) == 0 && isValidBookShelf(p_328070_, p_335832_, blockpos)) {
-                p_328070_.addParticle(
+        for (BlockPos offset : BOOKSHELF_OFFSETS) {
+            if (random.nextInt(16) == 0 && isValidBookShelf(level, pos, offset)) {
+                level.addParticle(
                     ParticleTypes.ENCHANT,
-                    p_335832_.getX() + 0.5,
-                    p_335832_.getY() + 2.0,
-                    p_335832_.getZ() + 0.5,
-                    blockpos.getX() + p_335180_.nextFloat() - 0.5,
-                    blockpos.getY() - p_335180_.nextFloat() - 1.0F,
-                    blockpos.getZ() + p_335180_.nextFloat() - 0.5
+                    pos.getX() + 0.5,
+                    pos.getY() + 2.0,
+                    pos.getZ() + 0.5,
+                    offset.getX() + random.nextFloat() - 0.5,
+                    offset.getY() - random.nextFloat() - 1.0F,
+                    offset.getZ() + random.nextFloat() - 0.5
                 );
             }
         }
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_329775_, BlockState p_330999_) {
-        return new EnchantingTableBlockEntity(p_329775_, p_330999_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new EnchantingTableBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_335666_, BlockState p_330579_, BlockEntityType<T> p_332523_) {
-        return p_335666_.isClientSide() ? createTickerHelper(p_332523_, BlockEntityType.ENCHANTING_TABLE, EnchantingTableBlockEntity::bookAnimationTick) : null;
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return level.isClientSide() ? createTickerHelper(type, BlockEntityTypes.ENCHANTING_TABLE, EnchantingTableBlockEntity::bookAnimationTick) : null;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_335615_, Level p_335039_, BlockPos p_331142_, Player p_334809_, BlockHitResult p_334503_) {
-        if (!p_335039_.isClientSide()) {
-            p_334809_.openMenu(p_335615_.getMenuProvider(p_335039_, p_331142_));
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide()) {
+            player.openMenu(state.getMenuProvider(level, pos));
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected @Nullable MenuProvider getMenuProvider(BlockState p_335872_, Level p_334298_, BlockPos p_336351_) {
-        if (p_334298_.getBlockEntity(p_336351_) instanceof EnchantingTableBlockEntity enchantingtableblockentity) {
-            Component component = enchantingtableblockentity.getDisplayName();
+    protected @Nullable MenuProvider getMenuProvider(final BlockState state, final Level level, final BlockPos pos) {
+        if (level.getBlockEntity(pos) instanceof EnchantingTableBlockEntity enchantingTable) {
+            Component title = enchantingTable.getDisplayName();
             return new SimpleMenuProvider(
-                (p_328554_, p_332165_, p_330050_) -> new EnchantmentMenu(p_328554_, p_332165_, ContainerLevelAccess.create(p_334298_, p_336351_)), component
+                (containerId, inventory, player) -> new EnchantmentMenu(containerId, inventory, ContainerLevelAccess.create(level, pos)), title
             );
         } else {
             return null;
@@ -111,7 +113,7 @@ public class EnchantingTableBlock extends BaseEntityBlock {
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_335176_, PathComputationType p_334574_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

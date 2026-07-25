@@ -8,19 +8,16 @@ import net.minecraft.client.renderer.entity.layers.PhantomEyesLayer;
 import net.minecraft.client.renderer.entity.state.PhantomRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Phantom;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class PhantomRenderer extends MobRenderer<Phantom, PhantomRenderState, PhantomModel> {
-    private static final Identifier PHANTOM_LOCATION = Identifier.withDefaultNamespace("textures/entity/phantom.png");
+    private static final Identifier PHANTOM_LOCATION = Identifier.withDefaultNamespace("textures/entity/phantom/phantom.png");
 
-    public PhantomRenderer(EntityRendererProvider.Context p_174338_) {
-        super(p_174338_, new PhantomModel(p_174338_.bakeLayer(ModelLayers.PHANTOM)), 0.75F);
+    public PhantomRenderer(final EntityRendererProvider.Context context) {
+        super(context, new PhantomModel(context.bakeLayer(ModelLayers.PHANTOM)), 0.75F);
         this.addLayer(new PhantomEyesLayer(this));
     }
 
-    public Identifier getTextureLocation(PhantomRenderState p_361615_) {
+    public Identifier getTextureLocation(final PhantomRenderState state) {
         return PHANTOM_LOCATION;
     }
 
@@ -28,20 +25,20 @@ public class PhantomRenderer extends MobRenderer<Phantom, PhantomRenderState, Ph
         return new PhantomRenderState();
     }
 
-    public void extractRenderState(Phantom p_368777_, PhantomRenderState p_368842_, float p_361022_) {
-        super.extractRenderState(p_368777_, p_368842_, p_361022_);
-        p_368842_.flapTime = p_368777_.getUniqueFlapTickOffset() + p_368842_.ageInTicks;
-        p_368842_.size = p_368777_.getPhantomSize();
+    public void extractRenderState(final Phantom entity, final PhantomRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.flapTime = entity.getUniqueFlapTickOffset() + state.ageInTicks;
+        state.size = entity.getPhantomSize();
     }
 
-    protected void scale(PhantomRenderState p_362754_, PoseStack p_115670_) {
-        float f = 1.0F + 0.15F * p_362754_.size;
-        p_115670_.scale(f, f, f);
-        p_115670_.translate(0.0F, 1.3125F, 0.1875F);
+    protected void scale(final PhantomRenderState state, final PoseStack poseStack) {
+        float scale = 1.0F + 0.15F * state.size;
+        poseStack.scale(scale, scale, scale);
+        poseStack.translate(0.0F, 1.3125F, 0.1875F);
     }
 
-    protected void setupRotations(PhantomRenderState p_368093_, PoseStack p_115674_, float p_115675_, float p_115676_) {
-        super.setupRotations(p_368093_, p_115674_, p_115675_, p_115676_);
-        p_115674_.mulPose(Axis.XP.rotationDegrees(p_368093_.xRot));
+    protected void setupRotations(final PhantomRenderState state, final PoseStack poseStack, final float bodyRot, final float entityScale) {
+        super.setupRotations(state, poseStack, bodyRot, entityScale);
+        poseStack.mulPose(Axis.XP.rotationDegrees(state.xRot));
     }
 }

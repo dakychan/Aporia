@@ -7,12 +7,13 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class Mule extends AbstractChestedHorse {
-    public Mule(EntityType<? extends Mule> p_456904_, Level p_457181_) {
-        super(p_456904_, p_457181_);
+    public Mule(final EntityType<? extends Mule> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -36,7 +37,7 @@ public class Mule extends AbstractChestedHorse {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_459613_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.MULE_HURT;
     }
 
@@ -51,7 +52,7 @@ public class Mule extends AbstractChestedHorse {
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_453097_, AgeableMob p_452915_) {
-        return EntityType.MULE.create(p_453097_, EntitySpawnReason.BREEDING);
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.MULE.create(level, EntitySpawnReason.BREEDING);
     }
 }

@@ -7,13 +7,12 @@ import org.jspecify.annotations.Nullable;
 
 public class ItemStackLinkedSet {
     private static final Strategy<? super ItemStack> TYPE_AND_TAG = new Strategy<ItemStack>() {
-        public int hashCode(@Nullable ItemStack p_251266_) {
-            return ItemStack.hashItemAndComponents(p_251266_);
+        public int hashCode(final @Nullable ItemStack item) {
+            return ItemStack.hashItemAndComponents(item);
         }
 
-        public boolean equals(@Nullable ItemStack p_250623_, @Nullable ItemStack p_251135_) {
-            return p_250623_ == p_251135_
-                || p_250623_ != null && p_251135_ != null && p_250623_.isEmpty() == p_251135_.isEmpty() && ItemStack.isSameItemSameComponents(p_250623_, p_251135_);
+        public boolean equals(final @Nullable ItemStack a, final @Nullable ItemStack b) {
+            return a == b || a != null && b != null && a.isEmpty() == b.isEmpty() && ItemStack.isSameItemSameComponents(a, b);
         }
     };
 

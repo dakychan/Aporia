@@ -3,32 +3,29 @@ package net.minecraft.client.sounds;
 import it.unimi.dsi.fastutil.floats.FloatConsumer;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface FloatSampleSource extends FiniteAudioStream {
     int EXPECTED_MAX_FRAME_SIZE = 8192;
 
-    boolean readChunk(FloatConsumer p_328436_) throws IOException;
+    boolean readChunk(FloatConsumer output) throws IOException;
 
     @Override
-    default ByteBuffer read(int p_332929_) throws IOException {
-        ChunkedSampleByteBuf chunkedsamplebytebuf = new ChunkedSampleByteBuf(p_332929_ + 8192);
+    default ByteBuffer read(final int expectedSize) throws IOException {
+        ChunkedSampleByteBuf output = new ChunkedSampleByteBuf(expectedSize + 8192);
 
-        while (this.readChunk(chunkedsamplebytebuf) && chunkedsamplebytebuf.size() < p_332929_) {
+        while (this.readChunk(output) && output.size() < expectedSize) {
         }
 
-        return chunkedsamplebytebuf.get();
+        return output.get();
     }
 
     @Override
     default ByteBuffer readAll() throws IOException {
-        ChunkedSampleByteBuf chunkedsamplebytebuf = new ChunkedSampleByteBuf(16384);
+        ChunkedSampleByteBuf output = new ChunkedSampleByteBuf(16384);
 
-        while (this.readChunk(chunkedsamplebytebuf)) {
+        while (this.readChunk(output)) {
         }
 
-        return chunkedsamplebytebuf.get();
+        return output.get();
     }
 }

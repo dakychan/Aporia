@@ -1,7 +1,6 @@
 package net.minecraft.world.entity.monster.piglin;
 
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
@@ -20,7 +19,6 @@ import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.item.ItemStack;
@@ -35,33 +33,20 @@ public class PiglinBrute extends AbstractPiglin {
     private static final float MOVEMENT_SPEED_WHEN_FIGHTING = 0.35F;
     private static final int ATTACK_DAMAGE = 7;
     private static final double TARGETING_RANGE = 12.0;
-    protected static final ImmutableList<SensorType<? extends Sensor<? super PiglinBrute>>> SENSOR_TYPES = ImmutableList.of(
-        SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.NEAREST_ITEMS, SensorType.HURT_BY, SensorType.PIGLIN_BRUTE_SPECIFIC_SENSOR
-    );
-    protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-        MemoryModuleType.LOOK_TARGET,
-        MemoryModuleType.DOORS_TO_CLOSE,
-        MemoryModuleType.NEAREST_LIVING_ENTITIES,
-        MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-        MemoryModuleType.NEAREST_VISIBLE_PLAYER,
-        MemoryModuleType.NEAREST_VISIBLE_ATTACKABLE_PLAYER,
-        MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS,
-        MemoryModuleType.NEARBY_ADULT_PIGLINS,
-        MemoryModuleType.HURT_BY,
-        MemoryModuleType.HURT_BY_ENTITY,
-        MemoryModuleType.WALK_TARGET,
-        MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-        MemoryModuleType.ATTACK_TARGET,
-        MemoryModuleType.ATTACK_COOLING_DOWN,
-        MemoryModuleType.INTERACTION_TARGET,
-        MemoryModuleType.PATH,
-        MemoryModuleType.ANGRY_AT,
-        MemoryModuleType.NEAREST_VISIBLE_NEMESIS,
-        MemoryModuleType.HOME
+    public static final Brain.Provider<PiglinBrute> BRAIN_PROVIDER = Brain.<PiglinBrute>provider(
+        List.of(MemoryModuleType.NEAREST_VISIBLE_ADULT_PIGLINS),
+        List.of(
+            SensorType.NEAREST_LIVING_ENTITIES,
+            SensorType.NEAREST_PLAYERS,
+            SensorType.NEAREST_ITEMS,
+            SensorType.HURT_BY,
+            SensorType.PIGLIN_BRUTE_SPECIFIC_SENSOR
+        ),
+        PiglinBruteAi::getActivities
     );
 
-    public PiglinBrute(EntityType<? extends PiglinBrute> p_35048_, Level p_35049_) {
-        super(p_35048_, p_35049_);
+    public PiglinBrute(final EntityType<? extends PiglinBrute> type, final Level level) {
+        super(type, level);
         this.xpReward = 20;
     }
 
@@ -75,26 +60,21 @@ public class PiglinBrute extends AbstractPiglin {
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_35058_, DifficultyInstance p_35059_, EntitySpawnReason p_368605_, @Nullable SpawnGroupData p_35061_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
         PiglinBruteAi.initMemories(this);
-        this.populateDefaultEquipmentSlots(p_35058_.getRandom(), p_35059_);
-        return super.finalizeSpawn(p_35058_, p_35059_, p_368605_, p_35061_);
+        this.populateDefaultEquipmentSlots(level.getRandom(), difficulty);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
-    protected void populateDefaultEquipmentSlots(RandomSource p_219209_, DifficultyInstance p_219210_) {
+    protected void populateDefaultEquipmentSlots(final RandomSource random, final DifficultyInstance difficulty) {
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.GOLDEN_AXE));
     }
 
     @Override
-    protected Brain.Provider<PiglinBrute> brainProvider() {
-        return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-    }
-
-    @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_35064_) {
-        return PiglinBruteAi.makeBrain(this, this.brainProvider().makeBrain(p_35064_));
+    protected Brain<PiglinBrute> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
     @Override
@@ -108,19 +88,19 @@ public class PiglinBrute extends AbstractPiglin {
     }
 
     @Override
-    public boolean wantsToPickUp(ServerLevel p_362289_, ItemStack p_35078_) {
-        return p_35078_.is(Items.GOLDEN_AXE) ? super.wantsToPickUp(p_362289_, p_35078_) : false;
+    public boolean wantsToPickUp(final ServerLevel level, final ItemStack itemStack) {
+        return itemStack.is(Items.GOLDEN_AXE) ? super.wantsToPickUp(level, itemStack) : false;
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_368941_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("piglinBruteBrain");
-        this.getBrain().tick(p_368941_, this);
-        profilerfiller.pop();
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("piglinBruteBrain");
+        this.getBrain().tick(level, this);
+        profiler.pop();
         PiglinBruteAi.updateActivity(this);
         PiglinBruteAi.maybePlayActivitySound(this);
-        super.customServerAiStep(p_368941_);
+        super.customServerAiStep(level);
     }
 
     @Override
@@ -129,13 +109,13 @@ public class PiglinBrute extends AbstractPiglin {
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_369105_, DamageSource p_363308_, float p_366796_) {
-        boolean flag = super.hurtServer(p_369105_, p_363308_, p_366796_);
-        if (flag && p_363308_.getEntity() instanceof LivingEntity livingentity) {
-            PiglinBruteAi.wasHurtBy(p_369105_, this, livingentity);
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        boolean wasHurt = super.hurtServer(level, source, damage);
+        if (wasHurt && source.getEntity() instanceof LivingEntity sourceEntity) {
+            PiglinBruteAi.wasHurtBy(level, this, sourceEntity);
         }
 
-        return flag;
+        return wasHurt;
     }
 
     @Override
@@ -144,7 +124,7 @@ public class PiglinBrute extends AbstractPiglin {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_35072_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.PIGLIN_BRUTE_HURT;
     }
 
@@ -154,7 +134,7 @@ public class PiglinBrute extends AbstractPiglin {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_35066_, BlockState p_35067_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.PIGLIN_BRUTE_STEP, 0.15F, 1.0F);
     }
 

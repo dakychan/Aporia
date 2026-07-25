@@ -9,49 +9,62 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.datafix.DataFixTypes;
+import net.minecraft.world.level.saveddata.SavedData;
+import net.minecraft.world.level.saveddata.SavedDataType;
 import org.jspecify.annotations.Nullable;
 
-public final class GameRuleMap {
+public final class GameRuleMap extends SavedData {
     public static final Codec<GameRuleMap> CODEC = Codec.<GameRule<?>, Object>dispatchedMap(BuiltInRegistries.GAME_RULE.byNameCodec(), GameRule::valueCodec)
         .xmap(GameRuleMap::ofTrusted, GameRuleMap::map);
+    public static final SavedDataType<GameRuleMap> TYPE = new SavedDataType<>(
+        Identifier.withDefaultNamespace("game_rules"), GameRuleMap::of, CODEC, DataFixTypes.SAVED_DATA_GAME_RULES
+    );
     private final Reference2ObjectMap<GameRule<?>, Object> map;
 
-    GameRuleMap(Reference2ObjectMap<GameRule<?>, Object> p_457749_) {
-        this.map = p_457749_;
+    private GameRuleMap(final Reference2ObjectMap<GameRule<?>, Object> map) {
+        this.map = map;
     }
 
-    private static GameRuleMap ofTrusted(Map<GameRule<?>, Object> p_452999_) {
-        return new GameRuleMap(new Reference2ObjectOpenHashMap<>(p_452999_));
+    private static GameRuleMap ofTrusted(final Map<GameRule<?>, Object> map) {
+        return new GameRuleMap(new Reference2ObjectOpenHashMap<>(map));
     }
 
     public static GameRuleMap of() {
         return new GameRuleMap(new Reference2ObjectOpenHashMap<>());
     }
 
-    public static GameRuleMap of(Stream<GameRule<?>> p_455066_) {
-        Reference2ObjectOpenHashMap<GameRule<?>, Object> reference2objectopenhashmap = new Reference2ObjectOpenHashMap<>();
-        p_455066_.forEach(p_457994_ -> reference2objectopenhashmap.put((GameRule<?>)p_457994_, p_457994_.defaultValue()));
-        return new GameRuleMap(reference2objectopenhashmap);
+    public static GameRuleMap of(final Stream<GameRule<?>> gameRuleTypeStream) {
+        Reference2ObjectOpenHashMap<GameRule<?>, Object> map = new Reference2ObjectOpenHashMap<>();
+        gameRuleTypeStream.forEach(gameRule -> map.put((GameRule<?>)gameRule, gameRule.defaultValue()));
+        return new GameRuleMap(map);
     }
 
-    public static GameRuleMap copyOf(GameRuleMap p_450450_) {
-        return new GameRuleMap(new Reference2ObjectOpenHashMap<>(p_450450_.map));
+    public static GameRuleMap copyOf(final GameRuleMap gameRuleMap) {
+        return new GameRuleMap(new Reference2ObjectOpenHashMap<>(gameRuleMap.map));
     }
 
-    public boolean has(GameRule<?> p_450351_) {
-        return this.map.containsKey(p_450351_);
+    public boolean has(final GameRule<?> gameRule) {
+        return this.map.containsKey(gameRule);
     }
 
-    public <T> @Nullable T get(GameRule<T> p_459632_) {
-        return (T)this.map.get(p_459632_);
+    public <T> @Nullable T get(final GameRule<T> gameRule) {
+        return (T)this.map.get(gameRule);
     }
 
-    public <T> void set(GameRule<T> p_458714_, T p_451593_) {
-        this.map.put(p_458714_, p_451593_);
+    public <T> void set(final GameRule<T> gameRule, final T value) {
+        this.setDirty();
+        this.map.put(gameRule, value);
     }
 
-    public <T> @Nullable T remove(GameRule<T> p_452000_) {
-        return (T)this.map.remove(p_452000_);
+    public <T> void reset(final GameRule<T> gameRule) {
+        this.set(gameRule, gameRule.defaultValue());
+    }
+
+    public <T> @Nullable T remove(final GameRule<T> gameRule) {
+        this.setDirty();
+        return (T)this.map.remove(gameRule);
     }
 
     public Set<GameRule<?>> keySet() {
@@ -67,22 +80,22 @@ public final class GameRuleMap {
         return this.map.toString();
     }
 
-    public GameRuleMap withOther(GameRuleMap p_459512_) {
-        GameRuleMap gamerulemap = copyOf(this);
-        gamerulemap.setFromIf(p_459512_, p_452520_ -> true);
-        return gamerulemap;
+    public GameRuleMap withOther(final GameRuleMap other) {
+        GameRuleMap result = copyOf(this);
+        result.setFromIf(other, r -> true);
+        return result;
     }
 
-    public void setFromIf(GameRuleMap p_456541_, Predicate<GameRule<?>> p_451766_) {
-        for (GameRule<?> gamerule : p_456541_.keySet()) {
-            if (p_451766_.test(gamerule)) {
-                setGameRule(p_456541_, gamerule, this);
+    public void setFromIf(final GameRuleMap other, final Predicate<GameRule<?>> predicate) {
+        for (GameRule<?> gameRule : other.keySet()) {
+            if (predicate.test(gameRule)) {
+                setGameRule(other, gameRule, this);
             }
         }
     }
 
-    private static <T> void setGameRule(GameRuleMap p_457384_, GameRule<T> p_459809_, GameRuleMap p_455366_) {
-        p_455366_.set(p_459809_, Objects.requireNonNull(p_457384_.get(p_459809_)));
+    private static <T> void setGameRule(final GameRuleMap other, final GameRule<T> gameRule, final GameRuleMap result) {
+        result.set(gameRule, Objects.requireNonNull(other.get(gameRule)));
     }
 
     private Reference2ObjectMap<GameRule<?>, Object> map() {
@@ -90,12 +103,12 @@ public final class GameRuleMap {
     }
 
     @Override
-    public boolean equals(Object p_455638_) {
-        if (p_455638_ == this) {
+    public boolean equals(final Object obj) {
+        if (obj == this) {
             return true;
-        } else if (p_455638_ != null && p_455638_.getClass() == this.getClass()) {
-            GameRuleMap gamerulemap = (GameRuleMap)p_455638_;
-            return Objects.equals(this.map, gamerulemap.map);
+        } else if (obj != null && obj.getClass() == this.getClass()) {
+            GameRuleMap that = (GameRuleMap)obj;
+            return Objects.equals(this.map, that.map);
         } else {
             return false;
         }
@@ -107,10 +120,10 @@ public final class GameRuleMap {
     }
 
     public static class Builder {
-        final Reference2ObjectMap<GameRule<?>, Object> map = new Reference2ObjectOpenHashMap<>();
+        private final Reference2ObjectMap<GameRule<?>, Object> map = new Reference2ObjectOpenHashMap<>();
 
-        public <T> GameRuleMap.Builder set(GameRule<T> p_458474_, T p_454932_) {
-            this.map.put(p_458474_, p_454932_);
+        public <T> GameRuleMap.Builder set(final GameRule<T> gameRule, final T value) {
+            this.map.put(gameRule, value);
             return this;
         }
 

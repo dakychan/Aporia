@@ -6,11 +6,8 @@ import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.SampledFloat;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class Sound implements Weighted<Sound> {
     public static final FileToIdConverter SOUND_LISTER = new FileToIdConverter("sounds", ".ogg");
     private final Identifier location;
@@ -23,23 +20,23 @@ public class Sound implements Weighted<Sound> {
     private final int attenuationDistance;
 
     public Sound(
-        Identifier p_452483_,
-        SampledFloat p_235135_,
-        SampledFloat p_235136_,
-        int p_235137_,
-        Sound.Type p_235138_,
-        boolean p_235139_,
-        boolean p_235140_,
-        int p_235141_
+        final Identifier location,
+        final SampledFloat volume,
+        final SampledFloat pitch,
+        final int weight,
+        final Sound.Type type,
+        final boolean stream,
+        final boolean preload,
+        final int attenuationDistance
     ) {
-        this.location = p_452483_;
-        this.volume = p_235135_;
-        this.pitch = p_235136_;
-        this.weight = p_235137_;
-        this.type = p_235138_;
-        this.stream = p_235139_;
-        this.preload = p_235140_;
-        this.attenuationDistance = p_235141_;
+        this.location = location;
+        this.volume = volume;
+        this.pitch = pitch;
+        this.weight = weight;
+        this.type = type;
+        this.stream = stream;
+        this.preload = preload;
+        this.attenuationDistance = attenuationDistance;
     }
 
     public Identifier getLocation() {
@@ -63,14 +60,14 @@ public class Sound implements Weighted<Sound> {
         return this.weight;
     }
 
-    public Sound getSound(RandomSource p_235143_) {
+    public Sound getSound(final RandomSource random) {
         return this;
     }
 
     @Override
-    public void preloadIfRequired(SoundEngine p_119789_) {
+    public void preloadIfRequired(final SoundEngine soundEngine) {
         if (this.preload) {
-            p_119789_.requestPreload(this);
+            soundEngine.requestPreload(this);
         }
     }
 
@@ -95,21 +92,20 @@ public class Sound implements Weighted<Sound> {
         return "Sound[" + this.location + "]";
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Type {
+        public enum Type {
         FILE("file"),
         SOUND_EVENT("event");
 
         private final String name;
 
-        private Type(final String p_119809_) {
-            this.name = p_119809_;
+        Type(final String name) {
+            this.name = name;
         }
 
-        public static Sound.@Nullable Type getByName(String p_119811_) {
-            for (Sound.Type sound$type : values()) {
-                if (sound$type.name.equals(p_119811_)) {
-                    return sound$type;
+        public static Sound.@Nullable Type getByName(final String name) {
+            for (Sound.Type type : values()) {
+                if (type.name.equals(name)) {
+                    return type;
                 }
             }
 

@@ -14,111 +14,111 @@ public class StringTagVisitor implements TagVisitor {
     }
 
     @Override
-    public void visitString(StringTag p_178186_) {
-        this.builder.append(StringTag.quoteAndEscape(p_178186_.value()));
+    public void visitString(final StringTag tag) {
+        this.builder.append(StringTag.quoteAndEscape(tag.value()));
     }
 
     @Override
-    public void visitByte(ByteTag p_178164_) {
-        this.builder.append(p_178164_.value()).append('b');
+    public void visitByte(final ByteTag tag) {
+        this.builder.append(tag.value()).append('b');
     }
 
     @Override
-    public void visitShort(ShortTag p_178184_) {
-        this.builder.append(p_178184_.value()).append('s');
+    public void visitShort(final ShortTag tag) {
+        this.builder.append(tag.value()).append('s');
     }
 
     @Override
-    public void visitInt(IntTag p_178176_) {
-        this.builder.append(p_178176_.value());
+    public void visitInt(final IntTag tag) {
+        this.builder.append(tag.value());
     }
 
     @Override
-    public void visitLong(LongTag p_178182_) {
-        this.builder.append(p_178182_.value()).append('L');
+    public void visitLong(final LongTag tag) {
+        this.builder.append(tag.value()).append('L');
     }
 
     @Override
-    public void visitFloat(FloatTag p_178172_) {
-        this.builder.append(p_178172_.value()).append('f');
+    public void visitFloat(final FloatTag tag) {
+        this.builder.append(tag.value()).append('f');
     }
 
     @Override
-    public void visitDouble(DoubleTag p_178168_) {
-        this.builder.append(p_178168_.value()).append('d');
+    public void visitDouble(final DoubleTag tag) {
+        this.builder.append(tag.value()).append('d');
     }
 
     @Override
-    public void visitByteArray(ByteArrayTag p_178162_) {
+    public void visitByteArray(final ByteArrayTag tag) {
         this.builder.append("[B;");
-        byte[] abyte = p_178162_.getAsByteArray();
+        byte[] data = tag.getAsByteArray();
 
-        for (int i = 0; i < abyte.length; i++) {
+        for (int i = 0; i < data.length; i++) {
             if (i != 0) {
                 this.builder.append(',');
             }
 
-            this.builder.append(abyte[i]).append('B');
+            this.builder.append(data[i]).append('B');
         }
 
         this.builder.append(']');
     }
 
     @Override
-    public void visitIntArray(IntArrayTag p_178174_) {
+    public void visitIntArray(final IntArrayTag tag) {
         this.builder.append("[I;");
-        int[] aint = p_178174_.getAsIntArray();
+        int[] data = tag.getAsIntArray();
 
-        for (int i = 0; i < aint.length; i++) {
+        for (int i = 0; i < data.length; i++) {
             if (i != 0) {
                 this.builder.append(',');
             }
 
-            this.builder.append(aint[i]);
+            this.builder.append(data[i]);
         }
 
         this.builder.append(']');
     }
 
     @Override
-    public void visitLongArray(LongArrayTag p_178180_) {
+    public void visitLongArray(final LongArrayTag tag) {
         this.builder.append("[L;");
-        long[] along = p_178180_.getAsLongArray();
+        long[] data = tag.getAsLongArray();
 
-        for (int i = 0; i < along.length; i++) {
+        for (int i = 0; i < data.length; i++) {
             if (i != 0) {
                 this.builder.append(',');
             }
 
-            this.builder.append(along[i]).append('L');
+            this.builder.append(data[i]).append('L');
         }
 
         this.builder.append(']');
     }
 
     @Override
-    public void visitList(ListTag p_178178_) {
+    public void visitList(final ListTag tag) {
         this.builder.append('[');
 
-        for (int i = 0; i < p_178178_.size(); i++) {
+        for (int i = 0; i < tag.size(); i++) {
             if (i != 0) {
                 this.builder.append(',');
             }
 
-            p_178178_.get(i).accept(this);
+            tag.get(i).accept(this);
         }
 
         this.builder.append(']');
     }
 
     @Override
-    public void visitCompound(CompoundTag p_178166_) {
+    public void visitCompound(final CompoundTag tag) {
         this.builder.append('{');
-        List<Entry<String, Tag>> list = new ArrayList<>(p_178166_.entrySet());
-        list.sort(Entry.comparingByKey());
+        List<Entry<String, Tag>> entries = new ArrayList<>(tag.entrySet());
+        entries.sort(Entry.comparingByKey());
 
-        for (int i = 0; i < list.size(); i++) {
-            Entry<String, Tag> entry = list.get(i);
+        for (int i = 0; i < entries.size(); i++) {
+            Entry<String, Tag> entry = entries.get(i);
             if (i != 0) {
                 this.builder.append(',');
             }
@@ -131,16 +131,16 @@ public class StringTagVisitor implements TagVisitor {
         this.builder.append('}');
     }
 
-    private void handleKeyEscape(String p_398005_) {
-        if (!p_398005_.equalsIgnoreCase("true") && !p_398005_.equalsIgnoreCase("false") && UNQUOTED_KEY_MATCH.matcher(p_398005_).matches()) {
-            this.builder.append(p_398005_);
+    private void handleKeyEscape(final String input) {
+        if (!input.equalsIgnoreCase("true") && !input.equalsIgnoreCase("false") && UNQUOTED_KEY_MATCH.matcher(input).matches()) {
+            this.builder.append(input);
         } else {
-            StringTag.quoteAndEscape(p_398005_, this.builder);
+            StringTag.quoteAndEscape(input, this.builder);
         }
     }
 
     @Override
-    public void visitEnd(EndTag p_178170_) {
+    public void visitEnd(final EndTag tag) {
         this.builder.append("END");
     }
 }

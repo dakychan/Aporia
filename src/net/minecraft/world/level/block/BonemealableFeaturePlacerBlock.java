@@ -2,10 +2,7 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -18,8 +15,8 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 
 public class BonemealableFeaturePlacerBlock extends Block implements BonemealableBlock {
     public static final MapCodec<BonemealableFeaturePlacerBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422075_ -> p_422075_.group(ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(p_368616_ -> p_368616_.feature), propertiesCodec())
-            .apply(p_422075_, BonemealableFeaturePlacerBlock::new)
+        i -> i.group(ResourceKey.codec(Registries.CONFIGURED_FEATURE).fieldOf("feature").forGetter(b -> b.feature), propertiesCodec())
+            .apply(i, BonemealableFeaturePlacerBlock::new)
     );
     private final ResourceKey<ConfiguredFeature<?, ?>> feature;
 
@@ -28,27 +25,27 @@ public class BonemealableFeaturePlacerBlock extends Block implements Bonemealabl
         return CODEC;
     }
 
-    public BonemealableFeaturePlacerBlock(ResourceKey<ConfiguredFeature<?, ?>> p_364303_, BlockBehaviour.Properties p_364734_) {
-        super(p_364734_);
-        this.feature = p_364303_;
+    public BonemealableFeaturePlacerBlock(final ResourceKey<ConfiguredFeature<?, ?>> feature, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.feature = feature;
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_368682_, BlockPos p_367106_, BlockState p_363602_) {
-        return p_368682_.getBlockState(p_367106_.above()).isAir();
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return level.getBlockState(pos.above()).isAir();
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_364715_, RandomSource p_368684_, BlockPos p_368440_, BlockState p_362347_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_366209_, RandomSource p_363050_, BlockPos p_367656_, BlockState p_368138_) {
-        p_366209_.registryAccess()
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        level.registryAccess()
             .lookup(Registries.CONFIGURED_FEATURE)
-            .flatMap(p_363008_ -> p_363008_.get(this.feature))
-            .ifPresent(p_369259_ -> p_369259_.value().place(p_366209_, p_366209_.getChunkSource().getGenerator(), p_363050_, p_367656_.above()));
+            .flatMap(registry -> registry.get(this.feature))
+            .ifPresent(mossPatch -> mossPatch.value().place(level, level.getChunkSource().getGenerator(), random, pos.above()));
     }
 
     @Override

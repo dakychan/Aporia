@@ -10,8 +10,8 @@ import net.minecraft.world.entity.raid.Raider;
 import net.minecraft.world.level.Level;
 
 public abstract class AbstractIllager extends Raider {
-    protected AbstractIllager(EntityType<? extends AbstractIllager> p_458606_, Level p_460243_) {
-        super(p_458606_, p_460243_);
+    protected AbstractIllager(final EntityType<? extends AbstractIllager> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -24,20 +24,20 @@ public abstract class AbstractIllager extends Raider {
     }
 
     @Override
-    public boolean canAttack(LivingEntity p_460879_) {
-        return p_460879_ instanceof AbstractVillager && p_460879_.isBaby() ? false : super.canAttack(p_460879_);
+    public boolean canAttack(final LivingEntity target) {
+        return target instanceof AbstractVillager && target.isBaby() ? false : super.canAttack(target);
     }
 
     @Override
-    protected boolean considersEntityAsAlly(Entity p_450873_) {
-        if (super.considersEntityAsAlly(p_450873_)) {
+    protected boolean considersEntityAsAlly(final Entity other) {
+        if (super.considersEntityAsAlly(other)) {
             return true;
         } else {
-            return !p_450873_.getType().is(EntityTypeTags.ILLAGER_FRIENDS) ? false : this.getTeam() == null && p_450873_.getTeam() == null;
+            return !other.is(EntityTypeTags.ILLAGER_FRIENDS) ? false : this.getTeam() == null && other.getTeam() == null;
         }
     }
 
-    public static enum IllagerArmPose {
+    public enum IllagerArmPose {
         CROSSED,
         ATTACKING,
         SPELLCASTING,
@@ -49,8 +49,8 @@ public abstract class AbstractIllager extends Raider {
     }
 
     protected class RaiderOpenDoorGoal extends OpenDoorGoal {
-        public RaiderOpenDoorGoal(final Raider p_452917_) {
-            super(p_452917_, false);
+        public RaiderOpenDoorGoal(final Raider raider) {
+            super(raider, false);
         }
 
         @Override

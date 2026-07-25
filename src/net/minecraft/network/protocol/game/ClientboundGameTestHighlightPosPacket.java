@@ -20,7 +20,7 @@ public record ClientboundGameTestHighlightPosPacket(BlockPos absolutePos, BlockP
         return GamePacketTypes.CLIENTBOUND_GAME_TEST_HIGHLIGHT_POS;
     }
 
-    public void handle(ClientGamePacketListener p_427499_) {
-        p_427499_.handleGameTestHighlightPos(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleGameTestHighlightPos(this);
     }
 }

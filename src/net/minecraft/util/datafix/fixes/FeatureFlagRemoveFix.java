@@ -4,7 +4,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 import java.util.ArrayList;
@@ -12,46 +11,43 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class FeatureFlagRemoveFix extends DataFix {
     private final String name;
     private final Set<String> flagsToRemove;
 
-    public FeatureFlagRemoveFix(Schema p_277930_, String p_277628_, Set<String> p_277886_) {
-        super(p_277930_, false);
-        this.name = p_277628_;
-        this.flagsToRemove = p_277886_;
+    public FeatureFlagRemoveFix(final Schema outputSchema, final String name, final Set<String> flagsToRemove) {
+        super(outputSchema, false);
+        this.name = name;
+        this.flagsToRemove = flagsToRemove;
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
         return this.fixTypeEverywhereTyped(
-            this.name, this.getInputSchema().getType(References.LIGHTWEIGHT_LEVEL), p_277407_ -> p_277407_.update(DSL.remainderFinder(), this::fixTag)
+            this.name, this.getInputSchema().getType(References.LIGHTWEIGHT_LEVEL), input -> input.update(DSL.remainderFinder(), this::fixTag)
         );
     }
 
-    private <T> Dynamic<T> fixTag(Dynamic<T> p_277583_) {
-        List<Dynamic<T>> list = p_277583_.get("removed_features").asStream().collect(Collectors.toCollection(ArrayList::new));
-        Dynamic<T> dynamic = p_277583_.update(
-            "enabled_features", p_326589_ -> DataFixUtils.orElse(p_326589_.asStreamOpt().result().map(p_277400_ -> p_277400_.filter(p_326586_ -> {
-                Optional<String> optional = p_326586_.asString().result();
-                if (optional.isEmpty()) {
-                    return true;
-                } else {
-                    boolean flag = this.flagsToRemove.contains(optional.get());
-                    if (flag) {
-                        list.add(p_277583_.createString(optional.get()));
-                    }
+    private <T> Dynamic<T> fixTag(final Dynamic<T> tag) {
+        List<Dynamic<T>> inactiveFeatures = tag.get("removed_features").asStream().collect(Collectors.toCollection(ArrayList::new));
+        Dynamic<T> result = tag.update("enabled_features", features -> DataFixUtils.orElse(features.asStreamOpt().result().map(s -> s.filter(feature -> {
+            Optional<String> asString = feature.asString().result();
+            if (asString.isEmpty()) {
+                return true;
+            }
 
-                    return !flag;
-                }
-            })).map(p_277583_::createList), p_326589_)
-        );
-        if (!list.isEmpty()) {
-            dynamic = dynamic.set("removed_features", p_277583_.createList(list.stream()));
+            boolean shouldRemove = this.flagsToRemove.contains(asString.get());
+            if (shouldRemove) {
+                inactiveFeatures.add(tag.createString(asString.get()));
+            }
+
+            return !shouldRemove;
+        })).map(tag::createList), features));
+        if (!inactiveFeatures.isEmpty()) {
+            result = result.set("removed_features", tag.createList(inactiveFeatures.stream()));
         }
 
-        return dynamic;
+        return result;
     }
 }

@@ -5,16 +5,16 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.WorldGenLevel;
 
-class AnyOfPredicate extends CombiningPredicate {
+public class AnyOfPredicate extends CombiningPredicate {
     public static final MapCodec<AnyOfPredicate> CODEC = codec(AnyOfPredicate::new);
 
-    public AnyOfPredicate(List<BlockPredicate> p_190384_) {
-        super(p_190384_);
+    public AnyOfPredicate(final List<BlockPredicate> predicates) {
+        super(predicates);
     }
 
-    public boolean test(WorldGenLevel p_190387_, BlockPos p_190388_) {
-        for (BlockPredicate blockpredicate : this.predicates) {
-            if (blockpredicate.test(p_190387_, p_190388_)) {
+    public boolean test(final WorldGenLevel level, final BlockPos origin) {
+        for (BlockPredicate predicate : this.predicates) {
+            if (predicate.test(level, origin)) {
                 return true;
             }
         }

@@ -19,34 +19,36 @@ import net.minecraft.world.inventory.SlotRanges;
 
 public class SlotArgument implements ArgumentType<Integer> {
     private static final Collection<String> EXAMPLES = Arrays.asList("container.5", "weapon");
-    private static final DynamicCommandExceptionType ERROR_UNKNOWN_SLOT = new DynamicCommandExceptionType(p_308386_ -> Component.translatableEscape("slot.unknown", p_308386_));
+    private static final DynamicCommandExceptionType ERROR_UNKNOWN_SLOT = new DynamicCommandExceptionType(
+        id -> Component.translatableEscape("slot.unknown", id)
+    );
     private static final DynamicCommandExceptionType ERROR_ONLY_SINGLE_SLOT_ALLOWED = new DynamicCommandExceptionType(
-        p_325606_ -> Component.translatableEscape("slot.only_single_allowed", p_325606_)
+        id -> Component.translatableEscape("slot.only_single_allowed", id)
     );
 
     public static SlotArgument slot() {
         return new SlotArgument();
     }
 
-    public static int getSlot(CommandContext<CommandSourceStack> p_111280_, String p_111281_) {
-        return p_111280_.getArgument(p_111281_, Integer.class);
+    public static int getSlot(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Integer.class);
     }
 
-    public Integer parse(StringReader p_111278_) throws CommandSyntaxException {
-        String s = ParserUtils.readWhile(p_111278_, p_325605_ -> p_325605_ != ' ');
-        SlotRange slotrange = SlotRanges.nameToIds(s);
-        if (slotrange == null) {
-            throw ERROR_UNKNOWN_SLOT.createWithContext(p_111278_, s);
-        } else if (slotrange.size() != 1) {
-            throw ERROR_ONLY_SINGLE_SLOT_ALLOWED.createWithContext(p_111278_, s);
+    public Integer parse(final StringReader reader) throws CommandSyntaxException {
+        String name = ParserUtils.readWhile(reader, c -> c != ' ');
+        SlotRange result = SlotRanges.nameToIds(name);
+        if (result == null) {
+            throw ERROR_UNKNOWN_SLOT.createWithContext(reader, name);
+        } else if (result.size() != 1) {
+            throw ERROR_ONLY_SINGLE_SLOT_ALLOWED.createWithContext(reader, name);
         } else {
-            return slotrange.slots().getInt(0);
+            return result.slots().getInt(0);
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_111288_, SuggestionsBuilder p_111289_) {
-        return SharedSuggestionProvider.suggest(SlotRanges.singleSlotNames(), p_111289_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> contextBuilder, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(SlotRanges.singleSlotNames(), builder);
     }
 
     @Override

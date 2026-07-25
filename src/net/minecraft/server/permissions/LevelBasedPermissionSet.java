@@ -11,25 +11,25 @@ public interface LevelBasedPermissionSet extends PermissionSet {
     PermissionLevel level();
 
     @Override
-    default boolean hasPermission(Permission p_452231_) {
-        if (p_452231_ instanceof Permission.HasCommandLevel permission$hascommandlevel) {
-            return this.level().isEqualOrHigherThan(permission$hascommandlevel.level());
+    default boolean hasPermission(final Permission permission) {
+        if (permission instanceof Permission.HasCommandLevel levelCheck) {
+            return this.level().isEqualOrHigherThan(levelCheck.level());
         } else {
-            return p_452231_.equals(Permissions.COMMANDS_ENTITY_SELECTORS) ? this.level().isEqualOrHigherThan(PermissionLevel.GAMEMASTERS) : false;
+            return permission.equals(Permissions.COMMANDS_ENTITY_SELECTORS) ? this.level().isEqualOrHigherThan(PermissionLevel.GAMEMASTERS) : false;
         }
     }
 
     @Override
-    default PermissionSet union(PermissionSet p_457355_) {
-        if (p_457355_ instanceof LevelBasedPermissionSet levelbasedpermissionset) {
-            return this.level().isEqualOrHigherThan(levelbasedpermissionset.level()) ? levelbasedpermissionset : this;
+    default PermissionSet union(final PermissionSet other) {
+        if (other instanceof LevelBasedPermissionSet otherSet) {
+            return this.level().isEqualOrHigherThan(otherSet.level()) ? otherSet : this;
         } else {
-            return PermissionSet.super.union(p_457355_);
+            return PermissionSet.super.union(other);
         }
     }
 
-    static LevelBasedPermissionSet forLevel(PermissionLevel p_450467_) {
-        return switch (p_450467_) {
+    static LevelBasedPermissionSet forLevel(final PermissionLevel level) {
+        return switch (level) {
             case ALL -> ALL;
             case MODERATORS -> MODERATOR;
             case GAMEMASTERS -> GAMEMASTER;
@@ -38,16 +38,16 @@ public interface LevelBasedPermissionSet extends PermissionSet {
         };
     }
 
-    private static LevelBasedPermissionSet create(final PermissionLevel p_453715_) {
+    private static LevelBasedPermissionSet create(final PermissionLevel level) {
         return new LevelBasedPermissionSet() {
             @Override
             public PermissionLevel level() {
-                return p_453715_;
+                return level;
             }
 
             @Override
             public String toString() {
-                return "permission level: " + p_453715_.name();
+                return "permission level: " + level.name();
             }
         };
     }

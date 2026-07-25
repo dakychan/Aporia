@@ -5,17 +5,14 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.animal.nautilus.AbstractNautilus;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.NautilusInventoryMenu;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class NautilusInventoryScreen extends AbstractMountInventoryScreen<NautilusInventoryMenu> {
     private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
     private static final Identifier NAUTILUS_INVENTORY_LOCATION = Identifier.withDefaultNamespace("textures/gui/container/nautilus.png");
 
-    public NautilusInventoryScreen(NautilusInventoryMenu p_454001_, Inventory p_452034_, AbstractNautilus p_451060_, int p_455777_) {
-        super(p_454001_, p_452034_, p_451060_.getDisplayName(), p_455777_, p_451060_);
+    public NautilusInventoryScreen(final NautilusInventoryMenu menu, final Inventory inventory, final AbstractNautilus nautilus, final int inventoryColumns) {
+        super(menu, inventory, nautilus.getDisplayName(), inventoryColumns, nautilus);
     }
 
     @Override

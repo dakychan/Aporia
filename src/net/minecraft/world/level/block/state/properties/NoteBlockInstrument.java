@@ -22,6 +22,10 @@ public enum NoteBlockInstrument implements StringRepresentable {
     BIT("bit", SoundEvents.NOTE_BLOCK_BIT, NoteBlockInstrument.Type.BASE_BLOCK),
     BANJO("banjo", SoundEvents.NOTE_BLOCK_BANJO, NoteBlockInstrument.Type.BASE_BLOCK),
     PLING("pling", SoundEvents.NOTE_BLOCK_PLING, NoteBlockInstrument.Type.BASE_BLOCK),
+    TRUMPET("trumpet", SoundEvents.NOTE_BLOCK_TRUMPET, NoteBlockInstrument.Type.BASE_BLOCK),
+    TRUMPET_EXPOSED("trumpet_exposed", SoundEvents.NOTE_BLOCK_TRUMPET_EXPOSED, NoteBlockInstrument.Type.BASE_BLOCK),
+    TRUMPET_OXIDIZED("trumpet_oxidized", SoundEvents.NOTE_BLOCK_TRUMPET_OXIDIZED, NoteBlockInstrument.Type.BASE_BLOCK),
+    TRUMPET_WEATHERED("trumpet_weathered", SoundEvents.NOTE_BLOCK_TRUMPET_WEATHERED, NoteBlockInstrument.Type.BASE_BLOCK),
     ZOMBIE("zombie", SoundEvents.NOTE_BLOCK_IMITATE_ZOMBIE, NoteBlockInstrument.Type.MOB_HEAD),
     SKELETON("skeleton", SoundEvents.NOTE_BLOCK_IMITATE_SKELETON, NoteBlockInstrument.Type.MOB_HEAD),
     CREEPER("creeper", SoundEvents.NOTE_BLOCK_IMITATE_CREEPER, NoteBlockInstrument.Type.MOB_HEAD),
@@ -34,10 +38,10 @@ public enum NoteBlockInstrument implements StringRepresentable {
     private final Holder<SoundEvent> soundEvent;
     private final NoteBlockInstrument.Type type;
 
-    private NoteBlockInstrument(final String p_263425_, final Holder<SoundEvent> p_263341_, final NoteBlockInstrument.Type p_263322_) {
-        this.name = p_263425_;
-        this.soundEvent = p_263341_;
-        this.type = p_263322_;
+    NoteBlockInstrument(final String name, final Holder<SoundEvent> soundEvent, final NoteBlockInstrument.Type type) {
+        this.name = name;
+        this.soundEvent = soundEvent;
+        this.type = type;
     }
 
     @Override
@@ -61,7 +65,7 @@ public enum NoteBlockInstrument implements StringRepresentable {
         return this.type != NoteBlockInstrument.Type.BASE_BLOCK;
     }
 
-    static enum Type {
+    private enum Type {
         BASE_BLOCK,
         MOB_HEAD,
         CUSTOM;

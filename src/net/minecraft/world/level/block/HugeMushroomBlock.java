@@ -29,8 +29,8 @@ public class HugeMushroomBlock extends Block {
         return CODEC;
     }
 
-    public HugeMushroomBlock(BlockBehaviour.Properties p_54136_) {
-        super(p_54136_);
+    public HugeMushroomBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(
             this.stateDefinition
                 .any()
@@ -44,56 +44,56 @@ public class HugeMushroomBlock extends Block {
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_54138_) {
-        BlockGetter blockgetter = p_54138_.getLevel();
-        BlockPos blockpos = p_54138_.getClickedPos();
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockGetter level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
         return this.defaultBlockState()
-            .setValue(DOWN, !blockgetter.getBlockState(blockpos.below()).is(this))
-            .setValue(UP, !blockgetter.getBlockState(blockpos.above()).is(this))
-            .setValue(NORTH, !blockgetter.getBlockState(blockpos.north()).is(this))
-            .setValue(EAST, !blockgetter.getBlockState(blockpos.east()).is(this))
-            .setValue(SOUTH, !blockgetter.getBlockState(blockpos.south()).is(this))
-            .setValue(WEST, !blockgetter.getBlockState(blockpos.west()).is(this));
+            .setValue(DOWN, !level.getBlockState(pos.below()).is(this))
+            .setValue(UP, !level.getBlockState(pos.above()).is(this))
+            .setValue(NORTH, !level.getBlockState(pos.north()).is(this))
+            .setValue(EAST, !level.getBlockState(pos.east()).is(this))
+            .setValue(SOUTH, !level.getBlockState(pos.south()).is(this))
+            .setValue(WEST, !level.getBlockState(pos.west()).is(this));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_54146_,
-        LevelReader p_369980_,
-        ScheduledTickAccess p_367294_,
-        BlockPos p_54150_,
-        Direction p_54147_,
-        BlockPos p_54151_,
-        BlockState p_54148_,
-        RandomSource p_362691_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_54148_.is(this)
-            ? p_54146_.setValue(PROPERTY_BY_DIRECTION.get(p_54147_), false)
-            : super.updateShape(p_54146_, p_369980_, p_367294_, p_54150_, p_54147_, p_54151_, p_54148_, p_362691_);
+        return neighbourState.is(this)
+            ? state.setValue(PROPERTY_BY_DIRECTION.get(directionToNeighbour), false)
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected BlockState rotate(BlockState p_54143_, Rotation p_54144_) {
-        return p_54143_.setValue(PROPERTY_BY_DIRECTION.get(p_54144_.rotate(Direction.NORTH)), p_54143_.getValue(NORTH))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54144_.rotate(Direction.SOUTH)), p_54143_.getValue(SOUTH))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54144_.rotate(Direction.EAST)), p_54143_.getValue(EAST))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54144_.rotate(Direction.WEST)), p_54143_.getValue(WEST))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54144_.rotate(Direction.UP)), p_54143_.getValue(UP))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54144_.rotate(Direction.DOWN)), p_54143_.getValue(DOWN));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(PROPERTY_BY_DIRECTION.get(rotation.rotate(Direction.NORTH)), state.getValue(NORTH))
+            .setValue(PROPERTY_BY_DIRECTION.get(rotation.rotate(Direction.SOUTH)), state.getValue(SOUTH))
+            .setValue(PROPERTY_BY_DIRECTION.get(rotation.rotate(Direction.EAST)), state.getValue(EAST))
+            .setValue(PROPERTY_BY_DIRECTION.get(rotation.rotate(Direction.WEST)), state.getValue(WEST))
+            .setValue(PROPERTY_BY_DIRECTION.get(rotation.rotate(Direction.UP)), state.getValue(UP))
+            .setValue(PROPERTY_BY_DIRECTION.get(rotation.rotate(Direction.DOWN)), state.getValue(DOWN));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_54140_, Mirror p_54141_) {
-        return p_54140_.setValue(PROPERTY_BY_DIRECTION.get(p_54141_.mirror(Direction.NORTH)), p_54140_.getValue(NORTH))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54141_.mirror(Direction.SOUTH)), p_54140_.getValue(SOUTH))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54141_.mirror(Direction.EAST)), p_54140_.getValue(EAST))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54141_.mirror(Direction.WEST)), p_54140_.getValue(WEST))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54141_.mirror(Direction.UP)), p_54140_.getValue(UP))
-            .setValue(PROPERTY_BY_DIRECTION.get(p_54141_.mirror(Direction.DOWN)), p_54140_.getValue(DOWN));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.setValue(PROPERTY_BY_DIRECTION.get(mirror.mirror(Direction.NORTH)), state.getValue(NORTH))
+            .setValue(PROPERTY_BY_DIRECTION.get(mirror.mirror(Direction.SOUTH)), state.getValue(SOUTH))
+            .setValue(PROPERTY_BY_DIRECTION.get(mirror.mirror(Direction.EAST)), state.getValue(EAST))
+            .setValue(PROPERTY_BY_DIRECTION.get(mirror.mirror(Direction.WEST)), state.getValue(WEST))
+            .setValue(PROPERTY_BY_DIRECTION.get(mirror.mirror(Direction.UP)), state.getValue(UP))
+            .setValue(PROPERTY_BY_DIRECTION.get(mirror.mirror(Direction.DOWN)), state.getValue(DOWN));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_54153_) {
-        p_54153_.add(UP, DOWN, NORTH, EAST, SOUTH, WEST);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(UP, DOWN, NORTH, EAST, SOUTH, WEST);
     }
 }

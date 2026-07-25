@@ -24,26 +24,26 @@ public abstract class BlockAttachedEntity extends Entity {
     private int checkInterval;
     protected BlockPos pos;
 
-    protected BlockAttachedEntity(EntityType<? extends BlockAttachedEntity> p_342082_, Level p_342394_) {
-        super(p_342082_, p_342394_);
+    protected BlockAttachedEntity(final EntityType<? extends BlockAttachedEntity> type, final Level level) {
+        super(type, level);
     }
 
-    protected BlockAttachedEntity(EntityType<? extends BlockAttachedEntity> p_343768_, Level p_343896_, BlockPos p_344928_) {
-        this(p_343768_, p_343896_);
-        this.pos = p_344928_;
+    protected BlockAttachedEntity(final EntityType<? extends BlockAttachedEntity> type, final Level level, final BlockPos pos) {
+        this(type, level);
+        this.pos = pos;
     }
 
     protected abstract void recalculateBoundingBox();
 
     @Override
     public void tick() {
-        if (this.level() instanceof ServerLevel serverlevel) {
+        if (this.level() instanceof ServerLevel level) {
             this.checkBelowWorld();
             if (this.checkInterval++ == 100) {
                 this.checkInterval = 0;
                 if (!this.isRemoved() && !this.survives()) {
                     this.discard();
-                    this.dropItem(serverlevel, null);
+                    this.dropItem(level, null);
                 }
             }
         }
@@ -57,8 +57,8 @@ public abstract class BlockAttachedEntity extends Entity {
     }
 
     @Override
-    public boolean skipAttackInteraction(Entity p_342897_) {
-        if (p_342897_ instanceof Player player) {
+    public boolean skipAttackInteraction(final Entity source) {
+        if (source instanceof Player player) {
             return !this.level().mayInteract(player, this.pos) ? true : this.hurtOrSimulate(this.damageSources().playerAttack(player), 0.0F);
         } else {
             return false;
@@ -66,71 +66,71 @@ public abstract class BlockAttachedEntity extends Entity {
     }
 
     @Override
-    public boolean hurtClient(DamageSource p_364173_) {
-        return !this.isInvulnerableToBase(p_364173_);
+    public boolean hurtClient(final DamageSource source) {
+        return !this.isInvulnerableToBase(source);
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_365107_, DamageSource p_362614_, float p_362901_) {
-        if (this.isInvulnerableToBase(p_362614_)) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        if (this.isInvulnerableToBase(source)) {
             return false;
-        } else if (!p_365107_.getGameRules().get(GameRules.MOB_GRIEFING) && p_362614_.getEntity() instanceof Mob) {
+        }
+
+        if (!level.getGameRules().get(GameRules.MOB_GRIEFING) && source.getEntity() instanceof Mob) {
             return false;
-        } else {
-            if (!this.isRemoved()) {
-                this.kill(p_365107_);
-                this.markHurt();
-                this.dropItem(p_365107_, p_362614_.getEntity());
-            }
+        }
 
+        if (!this.isRemoved()) {
+            this.kill(level);
+            this.markHurt();
+            this.dropItem(level, source.getEntity());
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean ignoreExplosion(final Explosion explosion) {
+        Entity directEntity = explosion.getDirectSourceEntity();
+        if (directEntity != null && directEntity.isInWater()) {
             return true;
-        }
-    }
-
-    @Override
-    public boolean ignoreExplosion(Explosion p_363332_) {
-        Entity entity = p_363332_.getDirectSourceEntity();
-        if (entity != null && entity.isInWater()) {
-            return true;
         } else {
-            return p_363332_.shouldAffectBlocklikeEntities() ? super.ignoreExplosion(p_363332_) : true;
+            return explosion.shouldAffectBlocklikeEntities() ? super.ignoreExplosion(explosion) : true;
         }
     }
 
     @Override
-    public void move(MoverType p_344908_, Vec3 p_344746_) {
-        if (this.level() instanceof ServerLevel serverlevel && !this.isRemoved() && p_344746_.lengthSqr() > 0.0) {
-            this.kill(serverlevel);
-            this.dropItem(serverlevel, null);
+    public void move(final MoverType moverType, final Vec3 delta) {
+        if (this.level() instanceof ServerLevel level && !this.isRemoved() && delta.lengthSqr() > 0.0) {
+            this.kill(level);
+            this.dropItem(level, null);
         }
     }
 
     @Override
-    public void push(double p_342878_, double p_342443_, double p_343763_) {
-        if (this.level() instanceof ServerLevel serverlevel
-            && !this.isRemoved()
-            && p_342878_ * p_342878_ + p_342443_ * p_342443_ + p_343763_ * p_343763_ > 0.0) {
-            this.kill(serverlevel);
-            this.dropItem(serverlevel, null);
+    public void push(final double xa, final double ya, final double za) {
+        if (this.level() instanceof ServerLevel level && !this.isRemoved() && xa * xa + ya * ya + za * za > 0.0) {
+            this.kill(level);
+            this.dropItem(level, null);
         }
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408202_) {
-        p_408202_.store("block_pos", BlockPos.CODEC, this.getPos());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.store("block_pos", BlockPos.CODEC, this.getPos());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_409785_) {
-        BlockPos blockpos = p_409785_.read("block_pos", BlockPos.CODEC).orElse(null);
-        if (blockpos != null && blockpos.closerThan(this.blockPosition(), 16.0)) {
-            this.pos = blockpos;
+    protected void readAdditionalSaveData(final ValueInput input) {
+        BlockPos storedPos = input.read("block_pos", BlockPos.CODEC).orElse(null);
+        if (storedPos != null && storedPos.closerThan(this.blockPosition(), 16.0)) {
+            this.pos = storedPos;
         } else {
-            LOGGER.error("Block-attached entity at invalid position: {}", blockpos);
+            LOGGER.error("Block-attached entity at invalid position: {}", storedPos);
         }
     }
 
-    public abstract void dropItem(ServerLevel p_361705_, @Nullable Entity p_342668_);
+    public abstract void dropItem(ServerLevel level, @Nullable Entity causedBy);
 
     @Override
     protected boolean repositionEntityAfterLoad() {
@@ -138,8 +138,8 @@ public abstract class BlockAttachedEntity extends Entity {
     }
 
     @Override
-    public void setPos(double p_342922_, double p_342992_, double p_343897_) {
-        this.pos = BlockPos.containing(p_342922_, p_342992_, p_343897_);
+    public void setPos(final double x, final double y, final double z) {
+        this.pos = BlockPos.containing(x, y, z);
         this.recalculateBoundingBox();
         this.needsSync = true;
     }
@@ -149,7 +149,7 @@ public abstract class BlockAttachedEntity extends Entity {
     }
 
     @Override
-    public void thunderHit(ServerLevel p_343731_, LightningBolt p_343666_) {
+    public void thunderHit(final ServerLevel level, final LightningBolt lightningBolt) {
     }
 
     @Override

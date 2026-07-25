@@ -13,94 +13,94 @@ import io.netty.util.ReferenceCountUtil;
 import net.minecraft.network.protocol.Packet;
 
 public class UnconfiguredPipelineHandler {
-    public static <T extends PacketListener> UnconfiguredPipelineHandler.InboundConfigurationTask setupInboundProtocol(ProtocolInfo<T> p_335707_) {
-        return setupInboundHandler(new PacketDecoder<>(p_335707_));
+    public static <T extends PacketListener> UnconfiguredPipelineHandler.InboundConfigurationTask setupInboundProtocol(final ProtocolInfo<T> protocolInfo) {
+        return setupInboundHandler(new PacketDecoder<>(protocolInfo));
     }
 
-    private static UnconfiguredPipelineHandler.InboundConfigurationTask setupInboundHandler(ChannelInboundHandler p_333903_) {
-        return p_331657_ -> {
-            p_331657_.pipeline().replace(p_331657_.name(), "decoder", p_333903_);
-            p_331657_.channel().config().setAutoRead(true);
+    private static UnconfiguredPipelineHandler.InboundConfigurationTask setupInboundHandler(final ChannelInboundHandler newHandler) {
+        return ctx -> {
+            ctx.pipeline().replace(ctx.name(), "decoder", newHandler);
+            ctx.channel().config().setAutoRead(true);
         };
     }
 
-    public static <T extends PacketListener> UnconfiguredPipelineHandler.OutboundConfigurationTask setupOutboundProtocol(ProtocolInfo<T> p_332375_) {
-        return setupOutboundHandler(new PacketEncoder<>(p_332375_));
+    public static <T extends PacketListener> UnconfiguredPipelineHandler.OutboundConfigurationTask setupOutboundProtocol(final ProtocolInfo<T> codecData) {
+        return setupOutboundHandler(new PacketEncoder<>(codecData));
     }
 
-    private static UnconfiguredPipelineHandler.OutboundConfigurationTask setupOutboundHandler(ChannelOutboundHandler p_327845_) {
-        return p_329768_ -> p_329768_.pipeline().replace(p_329768_.name(), "encoder", p_327845_);
+    private static UnconfiguredPipelineHandler.OutboundConfigurationTask setupOutboundHandler(final ChannelOutboundHandler newHandler) {
+        return ctx -> ctx.pipeline().replace(ctx.name(), "encoder", newHandler);
     }
 
     public static class Inbound extends ChannelDuplexHandler {
         @Override
-        public void channelRead(ChannelHandlerContext p_333162_, Object p_330291_) {
-            if (!(p_330291_ instanceof ByteBuf) && !(p_330291_ instanceof Packet)) {
-                p_333162_.fireChannelRead(p_330291_);
+        public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
+            if (!(msg instanceof ByteBuf) && !(msg instanceof Packet)) {
+                ctx.fireChannelRead(msg);
             } else {
-                ReferenceCountUtil.release(p_330291_);
-                throw new DecoderException("Pipeline has no inbound protocol configured, can't process packet " + p_330291_);
+                ReferenceCountUtil.release(msg);
+                throw new DecoderException("Pipeline has no inbound protocol configured, can't process packet " + msg);
             }
         }
 
         @Override
-        public void write(ChannelHandlerContext p_335998_, Object p_335040_, ChannelPromise p_328870_) throws Exception {
-            if (p_335040_ instanceof UnconfiguredPipelineHandler.InboundConfigurationTask unconfiguredpipelinehandler$inboundconfigurationtask) {
+        public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
+            if (msg instanceof UnconfiguredPipelineHandler.InboundConfigurationTask configurationTask) {
                 try {
-                    unconfiguredpipelinehandler$inboundconfigurationtask.run(p_335998_);
+                    configurationTask.run(ctx);
                 } finally {
-                    ReferenceCountUtil.release(p_335040_);
+                    ReferenceCountUtil.release(msg);
                 }
 
-                p_328870_.setSuccess();
+                promise.setSuccess();
             } else {
-                p_335998_.write(p_335040_, p_328870_);
+                ctx.write(msg, promise);
             }
         }
     }
 
     @FunctionalInterface
     public interface InboundConfigurationTask {
-        void run(ChannelHandlerContext p_333167_);
+        void run(ChannelHandlerContext ctx);
 
-        default UnconfiguredPipelineHandler.InboundConfigurationTask andThen(UnconfiguredPipelineHandler.InboundConfigurationTask p_332325_) {
-            return p_334974_ -> {
-                this.run(p_334974_);
-                p_332325_.run(p_334974_);
+        default UnconfiguredPipelineHandler.InboundConfigurationTask andThen(final UnconfiguredPipelineHandler.InboundConfigurationTask otherTask) {
+            return ctx -> {
+                this.run(ctx);
+                otherTask.run(ctx);
             };
         }
     }
 
     public static class Outbound extends ChannelOutboundHandlerAdapter {
         @Override
-        public void write(ChannelHandlerContext p_331750_, Object p_329073_, ChannelPromise p_329104_) throws Exception {
-            if (p_329073_ instanceof Packet) {
-                ReferenceCountUtil.release(p_329073_);
-                throw new EncoderException("Pipeline has no outbound protocol configured, can't process packet " + p_329073_);
-            } else {
-                if (p_329073_ instanceof UnconfiguredPipelineHandler.OutboundConfigurationTask unconfiguredpipelinehandler$outboundconfigurationtask) {
-                    try {
-                        unconfiguredpipelinehandler$outboundconfigurationtask.run(p_331750_);
-                    } finally {
-                        ReferenceCountUtil.release(p_329073_);
-                    }
+        public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) throws Exception {
+            if (msg instanceof Packet) {
+                ReferenceCountUtil.release(msg);
+                throw new EncoderException("Pipeline has no outbound protocol configured, can't process packet " + msg);
+            }
 
-                    p_329104_.setSuccess();
-                } else {
-                    p_331750_.write(p_329073_, p_329104_);
+            if (msg instanceof UnconfiguredPipelineHandler.OutboundConfigurationTask configurationTask) {
+                try {
+                    configurationTask.run(ctx);
+                } finally {
+                    ReferenceCountUtil.release(msg);
                 }
+
+                promise.setSuccess();
+            } else {
+                ctx.write(msg, promise);
             }
         }
     }
 
     @FunctionalInterface
     public interface OutboundConfigurationTask {
-        void run(ChannelHandlerContext p_330432_);
+        void run(ChannelHandlerContext ctx);
 
-        default UnconfiguredPipelineHandler.OutboundConfigurationTask andThen(UnconfiguredPipelineHandler.OutboundConfigurationTask p_334721_) {
-            return p_334875_ -> {
-                this.run(p_334875_);
-                p_334721_.run(p_334875_);
+        default UnconfiguredPipelineHandler.OutboundConfigurationTask andThen(final UnconfiguredPipelineHandler.OutboundConfigurationTask otherTask) {
+            return ctx -> {
+                this.run(ctx);
+                otherTask.run(ctx);
             };
         }
     }

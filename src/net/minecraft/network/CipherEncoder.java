@@ -8,11 +8,11 @@ import javax.crypto.Cipher;
 public class CipherEncoder extends MessageToByteEncoder<ByteBuf> {
     private final CipherBase cipher;
 
-    public CipherEncoder(Cipher p_129425_) {
-        this.cipher = new CipherBase(p_129425_);
+    public CipherEncoder(final Cipher cipher) {
+        this.cipher = new CipherBase(cipher);
     }
 
-    protected void encode(ChannelHandlerContext p_129427_, ByteBuf p_129428_, ByteBuf p_129429_) throws Exception {
-        this.cipher.encipher(p_129428_, p_129429_);
+    protected void encode(final ChannelHandlerContext ctx, final ByteBuf msg, final ByteBuf out) throws Exception {
+        this.cipher.encipher(msg, out);
     }
 }

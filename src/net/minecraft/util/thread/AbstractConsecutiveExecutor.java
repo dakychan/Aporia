@@ -13,17 +13,17 @@ import net.minecraft.util.profiling.metrics.MetricsRegistry;
 import net.minecraft.util.profiling.metrics.ProfilerMeasured;
 import org.slf4j.Logger;
 
-public abstract class AbstractConsecutiveExecutor<T extends Runnable> implements ProfilerMeasured, TaskScheduler<T>, Runnable {
+public abstract class AbstractConsecutiveExecutor<T extends Runnable> implements Runnable, TaskScheduler<T>, ProfilerMeasured {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final AtomicReference<AbstractConsecutiveExecutor.Status> status = new AtomicReference<>(AbstractConsecutiveExecutor.Status.SLEEPING);
     private final StrictQueue<T> queue;
     private final Executor executor;
     private final String name;
 
-    public AbstractConsecutiveExecutor(StrictQueue<T> p_363900_, Executor p_367154_, String p_369151_) {
-        this.executor = p_367154_;
-        this.queue = p_363900_;
-        this.name = p_369151_;
+    public AbstractConsecutiveExecutor(final StrictQueue<T> queue, final Executor executor, final String name) {
+        this.executor = executor;
+        this.queue = queue;
+        this.name = name;
         MetricsRegistry.INSTANCE.add(this);
     }
 
@@ -39,15 +39,15 @@ public abstract class AbstractConsecutiveExecutor<T extends Runnable> implements
     private boolean pollTask() {
         if (!this.isRunning()) {
             return false;
-        } else {
-            Runnable runnable = this.queue.pop();
-            if (runnable == null) {
-                return false;
-            } else {
-                Util.runNamed(runnable, this.name);
-                return true;
-            }
         }
+
+        Runnable runnable = this.queue.pop();
+        if (runnable == null) {
+            return false;
+        }
+
+        Util.runNamed(runnable, this.name);
+        return true;
     }
 
     @Override
@@ -71,8 +71,8 @@ public abstract class AbstractConsecutiveExecutor<T extends Runnable> implements
     }
 
     @Override
-    public void schedule(T p_364361_) {
-        this.queue.push(p_364361_);
+    public void schedule(final T task) {
+        this.queue.push(task);
         this.registerForExecution();
     }
 
@@ -80,11 +80,11 @@ public abstract class AbstractConsecutiveExecutor<T extends Runnable> implements
         if (this.canBeScheduled() && this.setRunning()) {
             try {
                 this.executor.execute(this);
-            } catch (RejectedExecutionException rejectedexecutionexception1) {
+            } catch (RejectedExecutionException e) {
                 try {
                     this.executor.execute(this);
-                } catch (RejectedExecutionException rejectedexecutionexception) {
-                    LOGGER.error("Could not schedule ConsecutiveExecutor", (Throwable)rejectedexecutionexception);
+                } catch (RejectedExecutionException e2) {
+                    LOGGER.error("Could not schedule ConsecutiveExecutor", e2);
                 }
             }
         }
@@ -129,7 +129,7 @@ public abstract class AbstractConsecutiveExecutor<T extends Runnable> implements
         return this.status.get() == AbstractConsecutiveExecutor.Status.CLOSED;
     }
 
-    static enum Status {
+    private enum Status {
         SLEEPING,
         RUNNING,
         CLOSED;

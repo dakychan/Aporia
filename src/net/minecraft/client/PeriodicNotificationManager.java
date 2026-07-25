@@ -6,7 +6,6 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.Object2BooleanFunction;
 import java.io.Reader;
 import java.util.Collection;
@@ -26,25 +25,22 @@ import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.util.StrictJsonParser;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class PeriodicNotificationManager
     extends SimplePreparableReloadListener<Map<String, List<PeriodicNotificationManager.Notification>>>
     implements AutoCloseable {
     private static final Codec<Map<String, List<PeriodicNotificationManager.Notification>>> CODEC = Codec.unboundedMap(
         Codec.STRING,
         RecordCodecBuilder.<PeriodicNotificationManager.Notification>create(
-                p_205303_ -> p_205303_.group(
+                i -> i.group(
                         Codec.LONG.optionalFieldOf("delay", 0L).forGetter(PeriodicNotificationManager.Notification::delay),
                         Codec.LONG.fieldOf("period").forGetter(PeriodicNotificationManager.Notification::period),
                         Codec.STRING.fieldOf("title").forGetter(PeriodicNotificationManager.Notification::title),
                         Codec.STRING.fieldOf("message").forGetter(PeriodicNotificationManager.Notification::message)
                     )
-                    .apply(p_205303_, PeriodicNotificationManager.Notification::new)
+                    .apply(i, PeriodicNotificationManager.Notification::new)
             )
             .listOf()
     );
@@ -54,51 +50,48 @@ public class PeriodicNotificationManager
     private @Nullable Timer timer;
     private PeriodicNotificationManager.@Nullable NotificationTask notificationTask;
 
-    public PeriodicNotificationManager(Identifier p_450174_, Object2BooleanFunction<String> p_205294_) {
-        this.notifications = p_450174_;
-        this.selector = p_205294_;
+    public PeriodicNotificationManager(final Identifier notifications, final Object2BooleanFunction<String> selector) {
+        this.notifications = notifications;
+        this.selector = selector;
     }
 
-    protected Map<String, List<PeriodicNotificationManager.Notification>> prepare(ResourceManager p_205300_, ProfilerFiller p_205301_) {
-        try {
-            Map map;
-            try (Reader reader = p_205300_.openAsReader(this.notifications)) {
-                map = CODEC.parse(JsonOps.INSTANCE, StrictJsonParser.parse(reader)).result().orElseThrow();
-            }
-
-            return map;
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to load {}", this.notifications, exception);
+    protected Map<String, List<PeriodicNotificationManager.Notification>> prepare(final ResourceManager manager, final ProfilerFiller profiler) {
+        try (Reader reader = manager.openAsReader(this.notifications)) {
+            return CODEC.parse(JsonOps.INSTANCE, StrictJsonParser.parse(reader)).result().orElseThrow();
+        } catch (Exception e) {
+            LOGGER.warn("Failed to load {}", this.notifications, e);
             return ImmutableMap.of();
         }
     }
 
-    protected void apply(Map<String, List<PeriodicNotificationManager.Notification>> p_205318_, ResourceManager p_205319_, ProfilerFiller p_205320_) {
-        List<PeriodicNotificationManager.Notification> list = p_205318_.entrySet()
+    protected void apply(
+        final Map<String, List<PeriodicNotificationManager.Notification>> preparations, final ResourceManager manager, final ProfilerFiller profiler
+    ) {
+        List<PeriodicNotificationManager.Notification> notifications = preparations.entrySet()
             .stream()
-            .filter(p_205316_ -> this.selector.apply(p_205316_.getKey()))
+            .filter(e -> this.selector.apply(e.getKey()))
             .map(Entry::getValue)
             .flatMap(Collection::stream)
             .collect(Collectors.toList());
-        if (list.isEmpty()) {
+        if (notifications.isEmpty()) {
             this.stopTimer();
-        } else if (list.stream().anyMatch(p_205326_ -> p_205326_.period == 0L)) {
+        } else if (notifications.stream().anyMatch(n -> n.period == 0L)) {
             Util.logAndPauseIfInIde("A periodic notification in " + this.notifications + " has a period of zero minutes");
             this.stopTimer();
         } else {
-            long i = this.calculateInitialDelay(list);
-            long j = this.calculateOptimalPeriod(list, i);
+            long delay = this.calculateInitialDelay(notifications);
+            long period = this.calculateOptimalPeriod(notifications, delay);
             if (this.timer == null) {
                 this.timer = new Timer();
             }
 
             if (this.notificationTask == null) {
-                this.notificationTask = new PeriodicNotificationManager.NotificationTask(list, i, j);
+                this.notificationTask = new PeriodicNotificationManager.NotificationTask(notifications, delay, period);
             } else {
-                this.notificationTask = this.notificationTask.reset(list, j);
+                this.notificationTask = this.notificationTask.reset(notifications, period);
             }
 
-            this.timer.scheduleAtFixedRate(this.notificationTask, TimeUnit.MINUTES.toMillis(i), TimeUnit.MINUTES.toMillis(j));
+            this.timer.scheduleAtFixedRate(this.notificationTask, TimeUnit.MINUTES.toMillis(delay), TimeUnit.MINUTES.toMillis(period));
         }
     }
 
@@ -113,62 +106,54 @@ public class PeriodicNotificationManager
         }
     }
 
-    private long calculateOptimalPeriod(List<PeriodicNotificationManager.Notification> p_205313_, long p_205314_) {
-        return p_205313_.stream().mapToLong(p_205298_ -> {
-            long i = p_205298_.delay - p_205314_;
-            return LongMath.gcd(i, p_205298_.period);
+    private long calculateOptimalPeriod(final List<PeriodicNotificationManager.Notification> notifications, final long initialDelay) {
+        return notifications.stream().mapToLong(c -> {
+            long delayPeriods = c.delay - initialDelay;
+            return LongMath.gcd(delayPeriods, c.period);
         }).reduce(LongMath::gcd).orElseThrow(() -> new IllegalStateException("Empty notifications from: " + this.notifications));
     }
 
-    private long calculateInitialDelay(List<PeriodicNotificationManager.Notification> p_205311_) {
-        return p_205311_.stream().mapToLong(p_205305_ -> p_205305_.delay).min().orElse(0L);
+    private long calculateInitialDelay(final List<PeriodicNotificationManager.Notification> notifications) {
+        return notifications.stream().mapToLong(c -> c.delay).min().orElse(0L);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Notification(long delay, long period, String title, String message) {
-        public Notification(final long delay, final long period, final String title, final String message) {
-            this.delay = delay != 0L ? delay : period;
-            this.period = period;
-            this.title = title;
-            this.message = message;
-        }
+        public record Notification(long delay, long period, String title, String message) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class NotificationTask extends TimerTask {
+        private static class NotificationTask extends TimerTask {
         private final Minecraft minecraft = Minecraft.getInstance();
         private final List<PeriodicNotificationManager.Notification> notifications;
         private final long period;
         private final AtomicLong elapsed;
 
-        public NotificationTask(List<PeriodicNotificationManager.Notification> p_205350_, long p_205351_, long p_205352_) {
-            this.notifications = p_205350_;
-            this.period = p_205352_;
-            this.elapsed = new AtomicLong(p_205351_);
+        public NotificationTask(final List<PeriodicNotificationManager.Notification> notifications, final long elapsed, final long period) {
+            this.notifications = notifications;
+            this.period = period;
+            this.elapsed = new AtomicLong(elapsed);
         }
 
-        public PeriodicNotificationManager.NotificationTask reset(List<PeriodicNotificationManager.Notification> p_205357_, long p_205358_) {
+        public PeriodicNotificationManager.NotificationTask reset(final List<PeriodicNotificationManager.Notification> notifications, final long period) {
             this.cancel();
-            return new PeriodicNotificationManager.NotificationTask(p_205357_, this.elapsed.get(), p_205358_);
+            return new PeriodicNotificationManager.NotificationTask(notifications, this.elapsed.get(), period);
         }
 
         @Override
         public void run() {
-            long i = this.elapsed.getAndAdd(this.period);
-            long j = this.elapsed.get();
+            long currentMinute = this.elapsed.getAndAdd(this.period);
+            long nextMinute = this.elapsed.get();
 
-            for (PeriodicNotificationManager.Notification periodicnotificationmanager$notification : this.notifications) {
-                if (i >= periodicnotificationmanager$notification.delay) {
-                    long k = i / periodicnotificationmanager$notification.period;
-                    long l = j / periodicnotificationmanager$notification.period;
-                    if (k != l) {
+            for (PeriodicNotificationManager.Notification notification : this.notifications) {
+                if (currentMinute >= notification.delay) {
+                    long elapsedPeriods = currentMinute / notification.period;
+                    long currentPeriods = nextMinute / notification.period;
+                    if (elapsedPeriods != currentPeriods) {
                         this.minecraft
                             .execute(
                                 () -> SystemToast.add(
-                                    Minecraft.getInstance().getToastManager(),
+                                    Minecraft.getInstance().gui.toastManager(),
                                     SystemToast.SystemToastId.PERIODIC_NOTIFICATION,
-                                    Component.translatable(periodicnotificationmanager$notification.title, k),
-                                    Component.translatable(periodicnotificationmanager$notification.message, k)
+                                    Component.translatable(notification.title, elapsedPeriods),
+                                    Component.translatable(notification.message, elapsedPeriods)
                                 )
                             );
                         return;

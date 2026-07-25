@@ -9,49 +9,49 @@ import net.minecraft.world.level.block.state.BlockState;
 public interface ChangeOverTimeBlock<T extends Enum<T>> {
     int SCAN_DISTANCE = 4;
 
-    Optional<BlockState> getNext(BlockState p_153040_);
+    Optional<BlockState> getNext(BlockState state);
 
     float getChanceModifier();
 
-    default void changeOverTime(BlockState p_311790_, ServerLevel p_309416_, BlockPos p_310092_, RandomSource p_310572_) {
-        float f = 0.05688889F;
-        if (p_310572_.nextFloat() < 0.05688889F) {
-            this.getNextState(p_311790_, p_309416_, p_310092_, p_310572_).ifPresent(p_405685_ -> p_309416_.setBlockAndUpdate(p_310092_, p_405685_));
+    default void changeOverTime(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        float eachBlockOncePerDayChance = 0.05688889F;
+        if (random.nextFloat() < 0.05688889F) {
+            this.getNextState(state, level, pos, random).ifPresent(weatheredState -> level.setBlockAndUpdate(pos, weatheredState));
         }
     }
 
     T getAge();
 
-    default Optional<BlockState> getNextState(BlockState p_311503_, ServerLevel p_311331_, BlockPos p_309459_, RandomSource p_312041_) {
-        int i = this.getAge().ordinal();
-        int j = 0;
-        int k = 0;
+    default Optional<BlockState> getNextState(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        int ownAge = this.getAge().ordinal();
+        int sameAgeCount = 0;
+        int olderCount = 0;
 
-        for (BlockPos blockpos : BlockPos.withinManhattan(p_309459_, 4, 4, 4)) {
-            int l = blockpos.distManhattan(p_309459_);
-            if (l > 4) {
+        for (BlockPos blockPos : BlockPos.withinManhattan(pos, 4, 4, 4)) {
+            int manhattanDistance = blockPos.distManhattan(pos);
+            if (manhattanDistance > 4) {
                 break;
             }
 
-            if (!blockpos.equals(p_309459_) && p_311331_.getBlockState(blockpos).getBlock() instanceof ChangeOverTimeBlock<?> changeovertimeblock) {
-                Enum<?> oenum = changeovertimeblock.getAge();
-                if (this.getAge().getClass() == oenum.getClass()) {
-                    int i1 = oenum.ordinal();
-                    if (i1 < i) {
+            if (!blockPos.equals(pos) && level.getBlockState(blockPos).getBlock() instanceof ChangeOverTimeBlock<?> neighborBlock) {
+                Enum<?> neighborAge = neighborBlock.getAge();
+                if (this.getAge().getClass() == neighborAge.getClass()) {
+                    int foundAge = neighborAge.ordinal();
+                    if (foundAge < ownAge) {
                         return Optional.empty();
                     }
 
-                    if (i1 > i) {
-                        k++;
+                    if (foundAge > ownAge) {
+                        olderCount++;
                     } else {
-                        j++;
+                        sameAgeCount++;
                     }
                 }
             }
         }
 
-        float f = (float)(k + 1) / (k + j + 1);
-        float f1 = f * f * this.getChanceModifier();
-        return p_312041_.nextFloat() < f1 ? this.getNext(p_311503_) : Optional.empty();
+        float chance = (float)(olderCount + 1) / (olderCount + sameAgeCount + 1);
+        float actualChance = chance * chance * this.getChanceModifier();
+        return random.nextFloat() < actualChance ? this.getNext(state) : Optional.empty();
     }
 }

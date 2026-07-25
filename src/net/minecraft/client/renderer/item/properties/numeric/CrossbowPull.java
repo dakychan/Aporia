@@ -6,25 +6,24 @@ import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.CrossbowItem;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CrossbowPull implements RangeSelectItemModelProperty {
     public static final MapCodec<CrossbowPull> MAP_CODEC = MapCodec.unit(new CrossbowPull());
 
     @Override
-    public float get(ItemStack p_376874_, @Nullable ClientLevel p_377083_, @Nullable ItemOwner p_424014_, int p_377235_) {
-        LivingEntity livingentity = p_424014_ == null ? null : p_424014_.asLivingEntity();
-        if (livingentity == null) {
+    public float get(final ItemStack itemStack, final @Nullable ClientLevel level, final @Nullable ItemOwner owner, final int seed) {
+        LivingEntity entity = owner == null ? null : owner.asLivingEntity();
+        if (entity == null) {
             return 0.0F;
-        } else if (CrossbowItem.isCharged(p_376874_)) {
-            return 0.0F;
-        } else {
-            int i = CrossbowItem.getChargeDuration(p_376874_, livingentity);
-            return (float)UseDuration.useDuration(p_376874_, livingentity) / i;
         }
+
+        if (CrossbowItem.isCharged(itemStack)) {
+            return 0.0F;
+        }
+
+        int chargeDuration = CrossbowItem.getChargeDuration(itemStack, entity);
+        return (float)UseDuration.useDuration(itemStack, entity) / chargeDuration;
     }
 
     @Override

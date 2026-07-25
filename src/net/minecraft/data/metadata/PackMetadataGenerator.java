@@ -22,24 +22,20 @@ public class PackMetadataGenerator implements DataProvider {
     private final PackOutput output;
     private final Map<String, Supplier<JsonElement>> elements = new HashMap<>();
 
-    public PackMetadataGenerator(PackOutput p_254070_) {
-        this.output = p_254070_;
+    public PackMetadataGenerator(final PackOutput output) {
+        this.output = output;
     }
 
-    public <T> PackMetadataGenerator add(MetadataSectionType<T> p_252067_, T p_249511_) {
-        this.elements
-            .put(
-                p_252067_.name(),
-                () -> p_252067_.codec().encodeStart(JsonOps.INSTANCE, p_249511_).getOrThrow(IllegalArgumentException::new).getAsJsonObject()
-            );
+    public <T> PackMetadataGenerator add(final MetadataSectionType<T> type, final T value) {
+        this.elements.put(type.name(), () -> type.codec().encodeStart(JsonOps.INSTANCE, value).getOrThrow(IllegalArgumentException::new).getAsJsonObject());
         return this;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_254137_) {
-        JsonObject jsonobject = new JsonObject();
-        this.elements.forEach((p_249290_, p_251317_) -> jsonobject.add(p_249290_, p_251317_.get()));
-        return DataProvider.saveStable(p_254137_, jsonobject, this.output.getOutputFolder().resolve("pack.mcmeta"));
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        JsonObject result = new JsonObject();
+        this.elements.forEach((id, data) -> result.add(id, data.get()));
+        return DataProvider.saveStable(cache, result, this.output.getOutputFolder().resolve("pack.mcmeta"));
     }
 
     @Override
@@ -47,12 +43,12 @@ public class PackMetadataGenerator implements DataProvider {
         return "Pack Metadata";
     }
 
-    public static PackMetadataGenerator forFeaturePack(PackOutput p_256281_, Component p_255661_) {
-        return new PackMetadataGenerator(p_256281_)
-            .add(PackMetadataSection.SERVER_TYPE, new PackMetadataSection(p_255661_, DetectedVersion.BUILT_IN.packVersion(PackType.SERVER_DATA).minorRange()));
+    public static PackMetadataGenerator forFeaturePack(final PackOutput output, final Component description) {
+        return new PackMetadataGenerator(output)
+            .add(PackMetadataSection.SERVER_TYPE, new PackMetadataSection(description, DetectedVersion.BUILT_IN.packVersion(PackType.SERVER_DATA).minorRange()));
     }
 
-    public static PackMetadataGenerator forFeaturePack(PackOutput p_253903_, Component p_254497_, FeatureFlagSet p_253848_) {
-        return forFeaturePack(p_253903_, p_254497_).add(FeatureFlagsMetadataSection.TYPE, new FeatureFlagsMetadataSection(p_253848_));
+    public static PackMetadataGenerator forFeaturePack(final PackOutput output, final Component description, final FeatureFlagSet flags) {
+        return forFeaturePack(output, description).add(FeatureFlagsMetadataSection.TYPE, new FeatureFlagsMetadataSection(flags));
     }
 }

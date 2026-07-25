@@ -9,49 +9,44 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SpinAttackEffectModel extends EntityModel<AvatarRenderState> {
     private static final int BOX_COUNT = 2;
     private final ModelPart[] boxes = new ModelPart[2];
 
-    public SpinAttackEffectModel(ModelPart p_452209_) {
-        super(p_452209_);
+    public SpinAttackEffectModel(final ModelPart root) {
+        super(root);
 
         for (int i = 0; i < 2; i++) {
-            this.boxes[i] = p_452209_.getChild(boxName(i));
+            this.boxes[i] = root.getChild(boxName(i));
         }
     }
 
-    private static String boxName(int p_451157_) {
-        return "box" + p_451157_;
+    private static String boxName(final int i) {
+        return "box" + i;
     }
 
     public static LayerDefinition createLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
 
         for (int i = 0; i < 2; i++) {
-            float f = -3.2F + 9.6F * (i + 1);
-            float f1 = 0.75F * (i + 1);
-            partdefinition.addOrReplaceChild(
-                boxName(i),
-                CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F + f, -8.0F, 16.0F, 32.0F, 16.0F),
-                PartPose.ZERO.withScale(f1)
+            float yOffset = -3.2F + 9.6F * (i + 1);
+            float scale = 0.75F * (i + 1);
+            root.addOrReplaceChild(
+                boxName(i), CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F + yOffset, -8.0F, 16.0F, 32.0F, 16.0F), PartPose.ZERO.withScale(scale)
             );
         }
 
-        return LayerDefinition.create(meshdefinition, 64, 64);
+        return LayerDefinition.create(mesh, 64, 64);
     }
 
-    public void setupAnim(AvatarRenderState p_450298_) {
-        super.setupAnim(p_450298_);
+    public void setupAnim(final AvatarRenderState state) {
+        super.setupAnim(state);
 
         for (int i = 0; i < this.boxes.length; i++) {
-            float f = p_450298_.ageInTicks * -(45 + (i + 1) * 5);
-            this.boxes[i].yRot = Mth.wrapDegrees(f) * (float) (Math.PI / 180.0);
+            float angle = state.ageInTicks * -(45 + (i + 1) * 5);
+            this.boxes[i].yRot = Mth.wrapDegrees(angle) * (float) (Math.PI / 180.0);
         }
     }
 }

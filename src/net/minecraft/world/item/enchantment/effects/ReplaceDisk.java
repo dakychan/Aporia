@@ -2,7 +2,6 @@ package net.minecraft.world.item.enchantment.effects;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
@@ -27,7 +26,7 @@ public record ReplaceDisk(
     Optional<Holder<GameEvent>> triggerGameEvent
 ) implements EnchantmentEntityEffect {
     public static final MapCodec<ReplaceDisk> CODEC = RecordCodecBuilder.mapCodec(
-        p_345029_ -> p_345029_.group(
+        i -> i.group(
                 LevelBasedValue.CODEC.fieldOf("radius").forGetter(ReplaceDisk::radius),
                 LevelBasedValue.CODEC.fieldOf("height").forGetter(ReplaceDisk::height),
                 Vec3i.CODEC.optionalFieldOf("offset", Vec3i.ZERO).forGetter(ReplaceDisk::offset),
@@ -35,21 +34,21 @@ public record ReplaceDisk(
                 BlockStateProvider.CODEC.fieldOf("block_state").forGetter(ReplaceDisk::blockState),
                 GameEvent.CODEC.optionalFieldOf("trigger_game_event").forGetter(ReplaceDisk::triggerGameEvent)
             )
-            .apply(p_345029_, ReplaceDisk::new)
+            .apply(i, ReplaceDisk::new)
     );
 
     @Override
-    public void apply(ServerLevel p_343394_, int p_343207_, EnchantedItemInUse p_342691_, Entity p_343742_, Vec3 p_342913_) {
-        BlockPos blockpos = BlockPos.containing(p_342913_).offset(this.offset);
-        RandomSource randomsource = p_343742_.getRandom();
-        int i = (int)this.radius.calculate(p_343207_);
-        int j = (int)this.height.calculate(p_343207_);
+    public void apply(final ServerLevel serverLevel, final int enchantmentLevel, final EnchantedItemInUse item, final Entity entity, final Vec3 position) {
+        BlockPos centerBlock = BlockPos.containing(position).offset(this.offset);
+        RandomSource random = entity.getRandom();
+        int dist = (int)this.radius.calculate(enchantmentLevel);
+        int height = (int)this.height.calculate(enchantmentLevel);
 
-        for (BlockPos blockpos1 : BlockPos.betweenClosed(blockpos.offset(-i, 0, -i), blockpos.offset(i, Math.min(j - 1, 0), i))) {
-            if (blockpos1.distToCenterSqr(p_342913_.x(), blockpos1.getY() + 0.5, p_342913_.z()) < Mth.square(i)
-                && this.predicate.map(p_343365_ -> p_343365_.test(p_343394_, blockpos1)).orElse(true)
-                && p_343394_.setBlockAndUpdate(blockpos1, this.blockState.getState(randomsource, blockpos1))) {
-                this.triggerGameEvent.ifPresent(p_344749_ -> p_343394_.gameEvent(p_343742_, (Holder<GameEvent>)p_344749_, blockpos1));
+        for (BlockPos pos : BlockPos.betweenClosed(centerBlock.offset(-dist, 0, -dist), centerBlock.offset(dist, Math.min(height - 1, 0), dist))) {
+            if (pos.distToCenterSqr(position.x(), pos.getY() + 0.5, position.z()) < Mth.square(dist)
+                && this.predicate.map(p -> p.test(serverLevel, pos)).orElse(true)
+                && serverLevel.setBlockAndUpdate(pos, this.blockState.getState(serverLevel, random, pos))) {
+                this.triggerGameEvent.ifPresent(event -> serverLevel.gameEvent(entity, (Holder<GameEvent>)event, pos));
             }
         }
     }

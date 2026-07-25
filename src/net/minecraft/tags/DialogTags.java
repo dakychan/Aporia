@@ -11,7 +11,7 @@ public class DialogTags {
     private DialogTags() {
     }
 
-    private static TagKey<Dialog> create(String p_410551_) {
-        return TagKey.create(Registries.DIALOG, Identifier.withDefaultNamespace(p_410551_));
+    private static TagKey<Dialog> create(final String name) {
+        return TagKey.create(Registries.DIALOG, Identifier.withDefaultNamespace(name));
     }
 }

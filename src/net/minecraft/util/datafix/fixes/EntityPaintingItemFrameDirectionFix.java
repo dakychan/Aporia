@@ -4,7 +4,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
@@ -12,55 +11,51 @@ import com.mojang.serialization.Dynamic;
 public class EntityPaintingItemFrameDirectionFix extends DataFix {
     private static final int[][] DIRECTIONS = new int[][]{{0, 0, 1}, {-1, 0, 0}, {0, 0, -1}, {1, 0, 0}};
 
-    public EntityPaintingItemFrameDirectionFix(Schema p_15499_, boolean p_15500_) {
-        super(p_15499_, p_15500_);
+    public EntityPaintingItemFrameDirectionFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
-    private Dynamic<?> doFix(Dynamic<?> p_15510_, boolean p_15511_, boolean p_15512_) {
-        if ((p_15511_ || p_15512_) && p_15510_.get("Facing").asNumber().result().isEmpty()) {
-            int i;
-            if (p_15510_.get("Direction").asNumber().result().isPresent()) {
-                i = p_15510_.get("Direction").asByte((byte)0) % DIRECTIONS.length;
-                int[] aint = DIRECTIONS[i];
-                p_15510_ = p_15510_.set("TileX", p_15510_.createInt(p_15510_.get("TileX").asInt(0) + aint[0]));
-                p_15510_ = p_15510_.set("TileY", p_15510_.createInt(p_15510_.get("TileY").asInt(0) + aint[1]));
-                p_15510_ = p_15510_.set("TileZ", p_15510_.createInt(p_15510_.get("TileZ").asInt(0) + aint[2]));
-                p_15510_ = p_15510_.remove("Direction");
-                if (p_15512_ && p_15510_.get("ItemRotation").asNumber().result().isPresent()) {
-                    p_15510_ = p_15510_.set("ItemRotation", p_15510_.createByte((byte)(p_15510_.get("ItemRotation").asByte((byte)0) * 2)));
+    private Dynamic<?> doFix(Dynamic<?> input, final boolean isPainting, final boolean isItemFrame) {
+        if ((isPainting || isItemFrame) && input.get("Facing").asNumber().result().isEmpty()) {
+            int direction;
+            if (input.get("Direction").asNumber().result().isPresent()) {
+                direction = input.get("Direction").asByte((byte)0) % DIRECTIONS.length;
+                int[] steps = DIRECTIONS[direction];
+                input = input.set("TileX", input.createInt(input.get("TileX").asInt(0) + steps[0]));
+                input = input.set("TileY", input.createInt(input.get("TileY").asInt(0) + steps[1]));
+                input = input.set("TileZ", input.createInt(input.get("TileZ").asInt(0) + steps[2]));
+                input = input.remove("Direction");
+                if (isItemFrame && input.get("ItemRotation").asNumber().result().isPresent()) {
+                    input = input.set("ItemRotation", input.createByte((byte)(input.get("ItemRotation").asByte((byte)0) * 2)));
                 }
             } else {
-                i = p_15510_.get("Dir").asByte((byte)0) % DIRECTIONS.length;
-                p_15510_ = p_15510_.remove("Dir");
+                direction = input.get("Dir").asByte((byte)0) % DIRECTIONS.length;
+                input = input.remove("Dir");
             }
 
-            p_15510_ = p_15510_.set("Facing", p_15510_.createByte((byte)i));
+            input = input.set("Facing", input.createByte((byte)direction));
         }
 
-        return p_15510_;
+        return input;
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getChoiceType(References.ENTITY, "Painting");
-        OpticFinder<?> opticfinder = DSL.namedChoice("Painting", type);
-        Type<?> type1 = this.getInputSchema().getChoiceType(References.ENTITY, "ItemFrame");
-        OpticFinder<?> opticfinder1 = DSL.namedChoice("ItemFrame", type1);
-        Type<?> type2 = this.getInputSchema().getType(References.ENTITY);
-        TypeRewriteRule typerewriterule = this.fixTypeEverywhereTyped(
+        Type<?> paintingType = this.getInputSchema().getChoiceType(References.ENTITY, "Painting");
+        OpticFinder<?> paintingF = DSL.namedChoice("Painting", paintingType);
+        Type<?> itemFrameType = this.getInputSchema().getChoiceType(References.ENTITY, "ItemFrame");
+        OpticFinder<?> itemFrameF = DSL.namedChoice("ItemFrame", itemFrameType);
+        Type<?> entityType = this.getInputSchema().getType(References.ENTITY);
+        TypeRewriteRule paintingRule = this.fixTypeEverywhereTyped(
             "EntityPaintingFix",
-            type2,
-            p_15516_ -> p_15516_.updateTyped(
-                opticfinder, type, p_145300_ -> p_145300_.update(DSL.remainderFinder(), p_145302_ -> this.doFix(p_145302_, true, false))
-            )
+            entityType,
+            input -> input.updateTyped(paintingF, paintingType, entity -> entity.update(DSL.remainderFinder(), tag -> this.doFix(tag, true, false)))
         );
-        TypeRewriteRule typerewriterule1 = this.fixTypeEverywhereTyped(
+        TypeRewriteRule itemFrameRule = this.fixTypeEverywhereTyped(
             "EntityItemFrameFix",
-            type2,
-            p_15504_ -> p_15504_.updateTyped(
-                opticfinder1, type1, p_145296_ -> p_145296_.update(DSL.remainderFinder(), p_145298_ -> this.doFix(p_145298_, false, true))
-            )
+            entityType,
+            input -> input.updateTyped(itemFrameF, itemFrameType, entity -> entity.update(DSL.remainderFinder(), tag -> this.doFix(tag, false, true)))
         );
-        return TypeRewriteRule.seq(typerewriterule, typerewriterule1);
+        return TypeRewriteRule.seq(paintingRule, itemFrameRule);
     }
 }

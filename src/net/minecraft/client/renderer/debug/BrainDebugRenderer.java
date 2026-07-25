@@ -16,11 +16,8 @@ import net.minecraft.util.debug.DebugBrainDump;
 import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.entity.Entity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class BrainDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
     private static final boolean SHOW_NAME_FOR_ALL = true;
     private static final boolean SHOW_PROFESSION_FOR_ALL = false;
@@ -51,112 +48,114 @@ public class BrainDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
     private final Minecraft minecraft;
     private @Nullable UUID lastLookedAtUuid;
 
-    public BrainDebugRenderer(Minecraft p_113200_) {
-        this.minecraft = p_113200_;
+    public BrainDebugRenderer(final Minecraft minecraft) {
+        this.minecraft = minecraft;
     }
 
     @Override
-    public void emitGizmos(double p_450694_, double p_460754_, double p_452264_, DebugValueAccess p_453206_, Frustum p_453092_, float p_455955_) {
-        this.doRender(p_453206_);
+    public void emitGizmos(
+        final double camX, final double camY, final double camZ, final DebugValueAccess debugValues, final Frustum frustum, final float partialTicks
+    ) {
+        this.doRender(debugValues);
         if (!this.minecraft.player.isSpectator()) {
             this.updateLastLookedAtUuid();
         }
     }
 
-    private void doRender(DebugValueAccess p_430807_) {
-        p_430807_.forEachEntity(DebugSubscriptions.BRAINS, (p_448237_, p_448238_) -> {
-            if (this.minecraft.player.closerThan(p_448237_, 30.0)) {
-                this.renderBrainInfo(p_448237_, p_448238_);
+    private void doRender(final DebugValueAccess debugValues) {
+        debugValues.forEachEntity(DebugSubscriptions.BRAINS, (entity, brainDump) -> {
+            if (this.minecraft.player.closerThan(entity, 30.0)) {
+                this.renderBrainInfo(entity, brainDump);
             }
         });
     }
 
-    private void renderBrainInfo(Entity p_428259_, DebugBrainDump p_422492_) {
-        boolean flag = this.isMobSelected(p_428259_);
-        int i = 0;
-        Gizmos.billboardTextOverMob(p_428259_, i, p_422492_.name(), -1, 0.48F);
-        i++;
-        if (flag) {
-            Gizmos.billboardTextOverMob(p_428259_, i, p_422492_.profession() + " " + p_422492_.xp() + " xp", -1, 0.32F);
-            i++;
+    private void renderBrainInfo(final Entity entity, final DebugBrainDump brainDump) {
+        boolean selected = this.isMobSelected(entity);
+        int row = 0;
+        Gizmos.billboardTextOverMob(entity, row, brainDump.name(), -1, 0.48F);
+        row++;
+        if (selected) {
+            Gizmos.billboardTextOverMob(entity, row, brainDump.profession() + " " + brainDump.xp() + " xp", -1, 0.32F);
+            row++;
         }
 
-        if (flag) {
-            int j = p_422492_.health() < p_422492_.maxHealth() ? -23296 : -1;
+        if (selected) {
+            int color = brainDump.health() < brainDump.maxHealth() ? -23296 : -1;
             Gizmos.billboardTextOverMob(
-                p_428259_,
-                i,
-                "health: " + String.format(Locale.ROOT, "%.1f", p_422492_.health()) + " / " + String.format(Locale.ROOT, "%.1f", p_422492_.maxHealth()),
-                j,
+                entity,
+                row,
+                "health: " + String.format(Locale.ROOT, "%.1f", brainDump.health()) + " / " + String.format(Locale.ROOT, "%.1f", brainDump.maxHealth()),
+                color,
                 0.32F
             );
-            i++;
+            row++;
         }
 
-        if (flag && !p_422492_.inventory().equals("")) {
-            Gizmos.billboardTextOverMob(p_428259_, i, p_422492_.inventory(), -98404, 0.32F);
-            i++;
+        if (selected && !brainDump.inventory().equals("")) {
+            Gizmos.billboardTextOverMob(entity, row, brainDump.inventory(), -98404, 0.32F);
+            row++;
         }
 
-        if (flag) {
-            for (String s : p_422492_.behaviors()) {
-                Gizmos.billboardTextOverMob(p_428259_, i, s, -16711681, 0.32F);
-                i++;
+        if (selected) {
+            for (String goal : brainDump.behaviors()) {
+                Gizmos.billboardTextOverMob(entity, row, goal, -16711681, 0.32F);
+                row++;
             }
         }
 
-        if (flag) {
-            for (String s1 : p_422492_.activities()) {
-                Gizmos.billboardTextOverMob(p_428259_, i, s1, -16711936, 0.32F);
-                i++;
+        if (selected) {
+            for (String activity : brainDump.activities()) {
+                Gizmos.billboardTextOverMob(entity, row, activity, -16711936, 0.32F);
+                row++;
             }
         }
 
-        if (p_422492_.wantsGolem()) {
-            Gizmos.billboardTextOverMob(p_428259_, i, "Wants Golem", -23296, 0.32F);
-            i++;
+        if (brainDump.wantsGolem()) {
+            Gizmos.billboardTextOverMob(entity, row, "Wants Golem", -23296, 0.32F);
+            row++;
         }
 
-        if (flag && p_422492_.angerLevel() != -1) {
-            Gizmos.billboardTextOverMob(p_428259_, i, "Anger Level: " + p_422492_.angerLevel(), -98404, 0.32F);
-            i++;
+        if (selected && brainDump.angerLevel() != -1) {
+            Gizmos.billboardTextOverMob(entity, row, "Anger Level: " + brainDump.angerLevel(), -98404, 0.32F);
+            row++;
         }
 
-        if (flag) {
-            for (String s2 : p_422492_.gossips()) {
-                if (s2.startsWith(p_422492_.name())) {
-                    Gizmos.billboardTextOverMob(p_428259_, i, s2, -1, 0.32F);
+        if (selected) {
+            for (String gossip : brainDump.gossips()) {
+                if (gossip.startsWith(brainDump.name())) {
+                    Gizmos.billboardTextOverMob(entity, row, gossip, -1, 0.32F);
                 } else {
-                    Gizmos.billboardTextOverMob(p_428259_, i, s2, -23296, 0.32F);
+                    Gizmos.billboardTextOverMob(entity, row, gossip, -23296, 0.32F);
                 }
 
-                i++;
+                row++;
             }
         }
 
-        if (flag) {
-            for (String s3 : Lists.reverse(p_422492_.memories())) {
-                Gizmos.billboardTextOverMob(p_428259_, i, s3, -3355444, 0.32F);
-                i++;
+        if (selected) {
+            for (String memory : Lists.reverse(brainDump.memories())) {
+                Gizmos.billboardTextOverMob(entity, row, memory, -3355444, 0.32F);
+                row++;
             }
         }
     }
 
-    private boolean isMobSelected(Entity p_429708_) {
-        return Objects.equals(this.lastLookedAtUuid, p_429708_.getUUID());
+    private boolean isMobSelected(final Entity entity) {
+        return Objects.equals(this.lastLookedAtUuid, entity.getUUID());
     }
 
-    public Map<BlockPos, List<String>> getGhostPois(DebugValueAccess p_429188_) {
-        Map<BlockPos, List<String>> map = Maps.newHashMap();
-        p_429188_.forEachEntity(DebugSubscriptions.BRAINS, (p_420958_, p_420959_) -> {
-            for (BlockPos blockpos : Iterables.concat(p_420959_.pois(), p_420959_.potentialPois())) {
-                map.computeIfAbsent(blockpos, p_113292_ -> Lists.newArrayList()).add(p_420959_.name());
+    public Map<BlockPos, List<String>> getGhostPois(final DebugValueAccess debugValues) {
+        Map<BlockPos, List<String>> ghostPois = Maps.newHashMap();
+        debugValues.forEachEntity(DebugSubscriptions.BRAINS, (entity, brainDump) -> {
+            for (BlockPos poiPos : Iterables.concat(brainDump.pois(), brainDump.potentialPois())) {
+                ghostPois.computeIfAbsent(poiPos, k -> Lists.newArrayList()).add(brainDump.name());
             }
         });
-        return map;
+        return ghostPois;
     }
 
     private void updateLastLookedAtUuid() {
-        DebugRenderer.getTargetedEntity(this.minecraft.getCameraEntity(), 8).ifPresent(p_113212_ -> this.lastLookedAtUuid = p_113212_.getUUID());
+        DebugRenderer.getTargetedEntity(this.minecraft.getCameraEntity(), 8).ifPresent(entity -> this.lastLookedAtUuid = entity.getUUID());
     }
 }

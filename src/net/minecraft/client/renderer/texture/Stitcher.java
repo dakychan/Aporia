@@ -6,15 +6,12 @@ import java.util.Comparator;
 import java.util.List;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class Stitcher<T extends Stitcher.Entry> {
-    private static final Comparator<Stitcher.Holder<?>> HOLDER_COMPARATOR = Comparator.<Stitcher.Holder<?>, Integer>comparing(p_118201_ -> -p_118201_.height)
-        .thenComparing(p_118199_ -> -p_118199_.width)
-        .thenComparing(p_448389_ -> p_448389_.entry.name());
+    private static final Comparator<Stitcher.Holder<?>> HOLDER_COMPARATOR = Comparator.<Stitcher.Holder<?>, Integer>comparing(h -> -h.height)
+        .thenComparing(h -> -h.width)
+        .thenComparing(h -> h.entry.name());
     private final int mipLevel;
     private final List<Stitcher.Holder<T>> texturesToBeStitched = new ArrayList<>();
     private final List<Stitcher.Region<T>> storage = new ArrayList<>();
@@ -24,11 +21,11 @@ public class Stitcher<T extends Stitcher.Entry> {
     private final int maxHeight;
     private final int padding;
 
-    public Stitcher(int p_118171_, int p_118172_, int p_118173_, int p_459323_) {
-        this.mipLevel = p_118173_;
-        this.maxWidth = p_118171_;
-        this.maxHeight = p_118172_;
-        this.padding = 1 << p_118173_ << Mth.clamp(p_459323_ - 1, 0, 4);
+    public Stitcher(final int maxWidth, final int maxHeight, final int mipLevel, final int anisotropyBit) {
+        this.mipLevel = mipLevel;
+        this.maxWidth = maxWidth;
+        this.maxHeight = maxHeight;
+        this.padding = 1 << mipLevel << Mth.clamp(anisotropyBit - 1, 0, 4);
     }
 
     public int getWidth() {
@@ -39,86 +36,85 @@ public class Stitcher<T extends Stitcher.Entry> {
         return this.storageY;
     }
 
-    public void registerSprite(T p_249253_) {
+    public void registerSprite(final T entry) {
         Stitcher.Holder<T> holder = new Stitcher.Holder<>(
-            p_249253_,
-            smallestFittingMinTexel(p_249253_.width() + this.padding * 2, this.mipLevel),
-            smallestFittingMinTexel(p_249253_.height() + this.padding * 2, this.mipLevel)
+            entry,
+            smallestFittingMinTexel(entry.width() + this.padding * 2, this.mipLevel),
+            smallestFittingMinTexel(entry.height() + this.padding * 2, this.mipLevel)
         );
         this.texturesToBeStitched.add(holder);
     }
 
     public void stitch() {
-        List<Stitcher.Holder<T>> list = new ArrayList<>(this.texturesToBeStitched);
-        list.sort(HOLDER_COMPARATOR);
+        List<Stitcher.Holder<T>> holders = new ArrayList<>(this.texturesToBeStitched);
+        holders.sort(HOLDER_COMPARATOR);
 
-        for (Stitcher.Holder<T> holder : list) {
+        for (Stitcher.Holder<T> holder : holders) {
             if (!this.addToStorage(holder)) {
-                throw new StitcherException(holder.entry, list.stream().map(p_247946_ -> p_247946_.entry).collect(ImmutableList.toImmutableList()));
+                throw new StitcherException(holder.entry, holders.stream().map(h -> h.entry).collect(ImmutableList.toImmutableList()));
             }
         }
     }
 
-    public void gatherSprites(Stitcher.SpriteLoader<T> p_118181_) {
-        for (Stitcher.Region<T> region : this.storage) {
-            region.walk(p_118181_, this.padding);
+    public void gatherSprites(final Stitcher.SpriteLoader<T> loader) {
+        for (Stitcher.Region<T> topRegion : this.storage) {
+            topRegion.walk(loader, this.padding);
         }
     }
 
-    private static int smallestFittingMinTexel(int p_118189_, int p_118190_) {
-        return (p_118189_ >> p_118190_) + ((p_118189_ & (1 << p_118190_) - 1) == 0 ? 0 : 1) << p_118190_;
+    private static int smallestFittingMinTexel(final int input, final int maxMipLevel) {
+        return (input >> maxMipLevel) + ((input & (1 << maxMipLevel) - 1) == 0 ? 0 : 1) << maxMipLevel;
     }
 
-    private boolean addToStorage(Stitcher.Holder<T> p_118179_) {
+    private boolean addToStorage(final Stitcher.Holder<T> holder) {
         for (Stitcher.Region<T> region : this.storage) {
-            if (region.add(p_118179_)) {
+            if (region.add(holder)) {
                 return true;
             }
         }
 
-        return this.expand(p_118179_);
+        return this.expand(holder);
     }
 
-    private boolean expand(Stitcher.Holder<T> p_118192_) {
-        int i = Mth.smallestEncompassingPowerOfTwo(this.storageX);
-        int j = Mth.smallestEncompassingPowerOfTwo(this.storageY);
-        int k = Mth.smallestEncompassingPowerOfTwo(this.storageX + p_118192_.width);
-        int l = Mth.smallestEncompassingPowerOfTwo(this.storageY + p_118192_.height);
-        boolean flag1 = k <= this.maxWidth;
-        boolean flag2 = l <= this.maxHeight;
-        if (!flag1 && !flag2) {
+    private boolean expand(final Stitcher.Holder<T> holder) {
+        int xCurrentSize = Mth.smallestEncompassingPowerOfTwo(this.storageX);
+        int yCurrentSize = Mth.smallestEncompassingPowerOfTwo(this.storageY);
+        int xNewSize = Mth.smallestEncompassingPowerOfTwo(this.storageX + holder.width);
+        int yNewSize = Mth.smallestEncompassingPowerOfTwo(this.storageY + holder.height);
+        boolean xCanGrow = xNewSize <= this.maxWidth;
+        boolean yCanGrow = yNewSize <= this.maxHeight;
+        if (!xCanGrow && !yCanGrow) {
             return false;
-        } else {
-            boolean flag3 = flag1 && i != k;
-            boolean flag4 = flag2 && j != l;
-            boolean flag;
-            if (flag3 ^ flag4) {
-                flag = flag3;
-            } else {
-                flag = flag1 && i <= j;
-            }
-
-            Stitcher.Region<T> region;
-            if (flag) {
-                if (this.storageY == 0) {
-                    this.storageY = l;
-                }
-
-                region = new Stitcher.Region<>(this.storageX, 0, k - this.storageX, this.storageY);
-                this.storageX = k;
-            } else {
-                region = new Stitcher.Region<>(0, this.storageY, this.storageX, l - this.storageY);
-                this.storageY = l;
-            }
-
-            region.add(p_118192_);
-            this.storage.add(region);
-            return true;
         }
+
+        boolean xWillGrow = xCanGrow && xCurrentSize != xNewSize;
+        boolean yWillGrow = yCanGrow && yCurrentSize != yNewSize;
+        boolean growOnX;
+        if (xWillGrow ^ yWillGrow) {
+            growOnX = xWillGrow;
+        } else {
+            growOnX = xCanGrow && xCurrentSize <= yCurrentSize;
+        }
+
+        Stitcher.Region<T> slot;
+        if (growOnX) {
+            if (this.storageY == 0) {
+                this.storageY = yNewSize;
+            }
+
+            slot = new Stitcher.Region<>(this.storageX, 0, xNewSize - this.storageX, this.storageY);
+            this.storageX = xNewSize;
+        } else {
+            slot = new Stitcher.Region<>(0, this.storageY, this.storageX, yNewSize - this.storageY);
+            this.storageY = yNewSize;
+        }
+
+        slot.add(holder);
+        this.storage.add(slot);
+        return true;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Entry {
+        public interface Entry {
         int width();
 
         int height();
@@ -126,12 +122,10 @@ public class Stitcher<T extends Stitcher.Entry> {
         Identifier name();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Holder<T extends Stitcher.Entry>(T entry, int width, int height) {
+        private record Holder<T extends Stitcher.Entry>(T entry, int width, int height) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Region<T extends Stitcher.Entry> {
+        public static class Region<T extends Stitcher.Entry> {
         private final int originX;
         private final int originY;
         private final int width;
@@ -139,11 +133,11 @@ public class Stitcher<T extends Stitcher.Entry> {
         private @Nullable List<Stitcher.Region<T>> subSlots;
         private Stitcher.@Nullable Holder<T> holder;
 
-        public Region(int p_118216_, int p_118217_, int p_118218_, int p_118219_) {
-            this.originX = p_118216_;
-            this.originY = p_118217_;
-            this.width = p_118218_;
-            this.height = p_118219_;
+        public Region(final int originX, final int originY, final int width, final int height) {
+            this.originX = originX;
+            this.originY = originY;
+            this.width = width;
+            this.height = height;
         }
 
         public int getX() {
@@ -154,59 +148,59 @@ public class Stitcher<T extends Stitcher.Entry> {
             return this.originY;
         }
 
-        public boolean add(Stitcher.Holder<T> p_118222_) {
+        public boolean add(final Stitcher.Holder<T> holder) {
             if (this.holder != null) {
                 return false;
-            } else {
-                int i = p_118222_.width;
-                int j = p_118222_.height;
-                if (i <= this.width && j <= this.height) {
-                    if (i == this.width && j == this.height) {
-                        this.holder = p_118222_;
-                        return true;
-                    } else {
-                        if (this.subSlots == null) {
-                            this.subSlots = new ArrayList<>(1);
-                            this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY, i, j));
-                            int k = this.width - i;
-                            int l = this.height - j;
-                            if (l > 0 && k > 0) {
-                                int i1 = Math.max(this.height, k);
-                                int j1 = Math.max(this.width, l);
-                                if (i1 >= j1) {
-                                    this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY + j, i, l));
-                                    this.subSlots.add(new Stitcher.Region<>(this.originX + i, this.originY, k, this.height));
-                                } else {
-                                    this.subSlots.add(new Stitcher.Region<>(this.originX + i, this.originY, k, j));
-                                    this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY + j, this.width, l));
-                                }
-                            } else if (k == 0) {
-                                this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY + j, i, l));
-                            } else if (l == 0) {
-                                this.subSlots.add(new Stitcher.Region<>(this.originX + i, this.originY, k, j));
-                            }
-                        }
+            }
 
-                        for (Stitcher.Region<T> region : this.subSlots) {
-                            if (region.add(p_118222_)) {
-                                return true;
-                            }
-                        }
-
-                        return false;
-                    }
-                } else {
-                    return false;
+            int textureWidth = holder.width;
+            int textureHeight = holder.height;
+            if (textureWidth <= this.width && textureHeight <= this.height) {
+                if (textureWidth == this.width && textureHeight == this.height) {
+                    this.holder = holder;
+                    return true;
                 }
+
+                if (this.subSlots == null) {
+                    this.subSlots = new ArrayList<>(1);
+                    this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY, textureWidth, textureHeight));
+                    int spareWidth = this.width - textureWidth;
+                    int spareHeight = this.height - textureHeight;
+                    if (spareHeight > 0 && spareWidth > 0) {
+                        int right = Math.max(this.height, spareWidth);
+                        int bottom = Math.max(this.width, spareHeight);
+                        if (right >= bottom) {
+                            this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY + textureHeight, textureWidth, spareHeight));
+                            this.subSlots.add(new Stitcher.Region<>(this.originX + textureWidth, this.originY, spareWidth, this.height));
+                        } else {
+                            this.subSlots.add(new Stitcher.Region<>(this.originX + textureWidth, this.originY, spareWidth, textureHeight));
+                            this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY + textureHeight, this.width, spareHeight));
+                        }
+                    } else if (spareWidth == 0) {
+                        this.subSlots.add(new Stitcher.Region<>(this.originX, this.originY + textureHeight, textureWidth, spareHeight));
+                    } else if (spareHeight == 0) {
+                        this.subSlots.add(new Stitcher.Region<>(this.originX + textureWidth, this.originY, spareWidth, textureHeight));
+                    }
+                }
+
+                for (Stitcher.Region<T> subSlot : this.subSlots) {
+                    if (subSlot.add(holder)) {
+                        return true;
+                    }
+                }
+
+                return false;
+            } else {
+                return false;
             }
         }
 
-        public void walk(Stitcher.SpriteLoader<T> p_250195_, int p_452707_) {
+        public void walk(final Stitcher.SpriteLoader<T> output, final int padding) {
             if (this.holder != null) {
-                p_250195_.load(this.holder.entry, this.getX(), this.getY(), p_452707_);
+                output.load(this.holder.entry, this.getX(), this.getY(), padding);
             } else if (this.subSlots != null) {
-                for (Stitcher.Region<T> region : this.subSlots) {
-                    region.walk(p_250195_, p_452707_);
+                for (Stitcher.Region<T> subSlot : this.subSlots) {
+                    subSlot.walk(output, padding);
                 }
             }
         }
@@ -229,8 +223,7 @@ public class Stitcher<T extends Stitcher.Entry> {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface SpriteLoader<T extends Stitcher.Entry> {
-        void load(T p_249434_, int p_118230_, int p_118231_, int p_454862_);
+        public interface SpriteLoader<T extends Stitcher.Entry> {
+        void load(T entry, int x, int z, int padding);
     }
 }

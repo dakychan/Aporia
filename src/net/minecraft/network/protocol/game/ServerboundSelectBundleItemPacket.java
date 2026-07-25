@@ -10,16 +10,16 @@ public record ServerboundSelectBundleItemPacket(int slotId, int selectedItemInde
         ServerboundSelectBundleItemPacket::write, ServerboundSelectBundleItemPacket::new
     );
 
-    private ServerboundSelectBundleItemPacket(FriendlyByteBuf p_361056_) {
-        this(p_361056_.readVarInt(), p_361056_.readVarInt());
+    private ServerboundSelectBundleItemPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt(), input.readVarInt());
         if (this.selectedItemIndex < 0 && this.selectedItemIndex != -1) {
             throw new IllegalArgumentException("Invalid selectedItemIndex: " + this.selectedItemIndex);
         }
     }
 
-    private void write(FriendlyByteBuf p_364570_) {
-        p_364570_.writeVarInt(this.slotId);
-        p_364570_.writeVarInt(this.selectedItemIndex);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.slotId);
+        output.writeVarInt(this.selectedItemIndex);
     }
 
     @Override
@@ -27,7 +27,7 @@ public record ServerboundSelectBundleItemPacket(int slotId, int selectedItemInde
         return GamePacketTypes.SERVERBOUND_BUNDLE_ITEM_SELECTED;
     }
 
-    public void handle(ServerGamePacketListener p_361569_) {
-        p_361569_.handleBundleItemSelectedPacket(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleBundleItemSelectedPacket(this);
     }
 }

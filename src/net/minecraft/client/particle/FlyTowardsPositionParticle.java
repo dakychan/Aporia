@@ -2,14 +2,12 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.state.QuadParticleRenderState;
+import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class FlyTowardsPositionParticle extends SingleQuadParticle {
     private final double xStart;
     private final double yStart;
@@ -17,52 +15,52 @@ public class FlyTowardsPositionParticle extends SingleQuadParticle {
     private final boolean isGlowing;
     private final Particle.LifetimeAlpha lifetimeAlpha;
 
-    FlyTowardsPositionParticle(
-        ClientLevel p_335275_,
-        double p_329537_,
-        double p_335588_,
-        double p_335971_,
-        double p_331161_,
-        double p_331135_,
-        double p_331015_,
-        TextureAtlasSprite p_430181_
+    private FlyTowardsPositionParticle(
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xd,
+        final double yd,
+        final double zd,
+        final TextureAtlasSprite sprite
     ) {
-        this(p_335275_, p_329537_, p_335588_, p_335971_, p_331161_, p_331135_, p_331015_, false, Particle.LifetimeAlpha.ALWAYS_OPAQUE, p_430181_);
+        this(level, x, y, z, xd, yd, zd, false, Particle.LifetimeAlpha.ALWAYS_OPAQUE, sprite);
     }
 
-    FlyTowardsPositionParticle(
-        ClientLevel p_333327_,
-        double p_328158_,
-        double p_336092_,
-        double p_331009_,
-        double p_335556_,
-        double p_328514_,
-        double p_331083_,
-        boolean p_424592_,
-        Particle.LifetimeAlpha p_424049_,
-        TextureAtlasSprite p_425400_
+    private FlyTowardsPositionParticle(
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xd,
+        final double yd,
+        final double zd,
+        final boolean isGlowing,
+        final Particle.LifetimeAlpha lifetimeAlpha,
+        final TextureAtlasSprite sprite
     ) {
-        super(p_333327_, p_328158_, p_336092_, p_331009_, p_425400_);
-        this.isGlowing = p_424592_;
-        this.lifetimeAlpha = p_424049_;
-        this.setAlpha(p_424049_.startAlpha());
-        this.xd = p_335556_;
-        this.yd = p_328514_;
-        this.zd = p_331083_;
-        this.xStart = p_328158_;
-        this.yStart = p_336092_;
-        this.zStart = p_331009_;
-        this.xo = p_328158_ + p_335556_;
-        this.yo = p_336092_ + p_328514_;
-        this.zo = p_331009_ + p_331083_;
+        super(level, x, y, z, sprite);
+        this.isGlowing = isGlowing;
+        this.lifetimeAlpha = lifetimeAlpha;
+        this.setAlpha(lifetimeAlpha.startAlpha());
+        this.xd = xd;
+        this.yd = yd;
+        this.zd = zd;
+        this.xStart = x;
+        this.yStart = y;
+        this.zStart = z;
+        this.xo = x + xd;
+        this.yo = y + yd;
+        this.zo = z + zd;
         this.x = this.xo;
         this.y = this.yo;
         this.z = this.zo;
         this.quadSize = 0.1F * (this.random.nextFloat() * 0.5F + 0.2F);
-        float f = this.random.nextFloat() * 0.6F + 0.4F;
-        this.rCol = 0.9F * f;
-        this.gCol = 0.9F * f;
-        this.bCol = f;
+        float br = this.random.nextFloat() * 0.6F + 0.4F;
+        this.rCol = 0.9F * br;
+        this.gCol = 0.9F * br;
+        this.bCol = br;
         this.hasPhysics = false;
         this.lifetime = (int)(this.random.nextFloat() * 10.0F) + 30;
     }
@@ -73,29 +71,21 @@ public class FlyTowardsPositionParticle extends SingleQuadParticle {
     }
 
     @Override
-    public void move(double p_335599_, double p_330355_, double p_329221_) {
-        this.setBoundingBox(this.getBoundingBox().move(p_335599_, p_330355_, p_329221_));
+    public void move(final double xa, final double ya, final double za) {
+        this.setBoundingBox(this.getBoundingBox().move(xa, ya, za));
         this.setLocationFromBoundingbox();
     }
 
     @Override
-    public int getLightColor(float p_334485_) {
+    public int getLightCoords(final float a) {
         if (this.isGlowing) {
-            return 240;
-        } else {
-            int i = super.getLightColor(p_334485_);
-            float f = (float)this.age / this.lifetime;
-            f *= f;
-            f *= f;
-            int j = i & 0xFF;
-            int k = i >> 16 & 0xFF;
-            k += (int)(f * 15.0F * 16.0F);
-            if (k > 240) {
-                k = 240;
-            }
-
-            return j | k << 16;
+            return LightCoordsUtil.withBlock(super.getLightCoords(a), 15);
         }
+
+        float brightness = (float)this.age / this.lifetime;
+        brightness *= brightness;
+        brightness *= brightness;
+        return LightCoordsUtil.addSmoothBlockEmission(super.getLightCoords(a), brightness);
     }
 
     @Override
@@ -106,106 +96,90 @@ public class FlyTowardsPositionParticle extends SingleQuadParticle {
         if (this.age++ >= this.lifetime) {
             this.remove();
         } else {
-            float f = (float)this.age / this.lifetime;
-            f = 1.0F - f;
-            float f1 = 1.0F - f;
-            f1 *= f1;
-            f1 *= f1;
-            this.x = this.xStart + this.xd * f;
-            this.y = this.yStart + this.yd * f - f1 * 1.2F;
-            this.z = this.zStart + this.zd * f;
+            float pos = (float)this.age / this.lifetime;
+            pos = 1.0F - pos;
+            float pp = 1.0F - pos;
+            pp *= pp;
+            pp *= pp;
+            this.x = this.xStart + this.xd * pos;
+            this.y = this.yStart + this.yd * pos - pp * 1.2F;
+            this.z = this.zStart + this.zd * pos;
         }
     }
 
     @Override
-    public void extract(QuadParticleRenderState p_431207_, Camera p_427296_, float p_428014_) {
-        this.setAlpha(this.lifetimeAlpha.currentAlphaForAge(this.age, this.lifetime, p_428014_));
-        super.extract(p_431207_, p_427296_, p_428014_);
+    public void extract(final QuadParticleRenderState particleTypeRenderState, final Camera camera, final float partialTickTime) {
+        this.setAlpha(this.lifetimeAlpha.currentAlphaForAge(this.age, this.lifetime, partialTickTime));
+        super.extract(particleTypeRenderState, camera, partialTickTime);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class EnchantProvider implements ParticleProvider<SimpleParticleType> {
+        public static class EnchantProvider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public EnchantProvider(SpriteSet p_333845_) {
-            this.sprite = p_333845_;
+        public EnchantProvider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_330246_,
-            ClientLevel p_334642_,
-            double p_331946_,
-            double p_331936_,
-            double p_330331_,
-            double p_330075_,
-            double p_332423_,
-            double p_336053_,
-            RandomSource p_425401_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new FlyTowardsPositionParticle(
-                p_334642_, p_331946_, p_331936_, p_330331_, p_330075_, p_332423_, p_336053_, this.sprite.get(p_425401_)
-            );
+            return new FlyTowardsPositionParticle(level, x, y, z, xAux, yAux, zAux, this.sprite.get(random));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class NautilusProvider implements ParticleProvider<SimpleParticleType> {
+        public static class NautilusProvider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public NautilusProvider(SpriteSet p_331980_) {
-            this.sprite = p_331980_;
+        public NautilusProvider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_327773_,
-            ClientLevel p_332234_,
-            double p_328567_,
-            double p_328371_,
-            double p_328714_,
-            double p_333049_,
-            double p_332373_,
-            double p_331353_,
-            RandomSource p_430237_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new FlyTowardsPositionParticle(
-                p_332234_, p_328567_, p_328371_, p_328714_, p_333049_, p_332373_, p_331353_, this.sprite.get(p_430237_)
-            );
+            return new FlyTowardsPositionParticle(level, x, y, z, xAux, yAux, zAux, this.sprite.get(random));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class VaultConnectionProvider implements ParticleProvider<SimpleParticleType> {
+        public static class VaultConnectionProvider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprite;
 
-        public VaultConnectionProvider(SpriteSet p_329375_) {
-            this.sprite = p_329375_;
+        public VaultConnectionProvider(final SpriteSet sprite) {
+            this.sprite = sprite;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_328352_,
-            ClientLevel p_333387_,
-            double p_328138_,
-            double p_329009_,
-            double p_334265_,
-            double p_336214_,
-            double p_330704_,
-            double p_328353_,
-            RandomSource p_423609_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            FlyTowardsPositionParticle flytowardspositionparticle = new FlyTowardsPositionParticle(
-                p_333387_,
-                p_328138_,
-                p_329009_,
-                p_334265_,
-                p_336214_,
-                p_330704_,
-                p_328353_,
-                true,
-                new Particle.LifetimeAlpha(0.0F, 0.6F, 0.25F, 1.0F),
-                this.sprite.get(p_423609_)
+            FlyTowardsPositionParticle particle = new FlyTowardsPositionParticle(
+                level, x, y, z, xAux, yAux, zAux, true, new Particle.LifetimeAlpha(0.0F, 0.6F, 0.25F, 1.0F), this.sprite.get(random)
             );
-            flytowardspositionparticle.scale(1.5F);
-            return flytowardspositionparticle;
+            particle.scale(1.5F);
+            return particle;
         }
     }
 }

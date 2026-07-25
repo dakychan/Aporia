@@ -4,5 +4,5 @@ import net.minecraft.world.entity.player.StackedItemContents;
 
 @FunctionalInterface
 public interface StackedContentsCompatible {
-    void fillStackedContents(StackedItemContents p_367229_);
+    void fillStackedContents(StackedItemContents contents);
 }

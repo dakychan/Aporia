@@ -32,7 +32,7 @@ public interface SharedSuggestionProvider extends PermissionSetSupplier {
 
     Collection<String> getOnlinePlayerNames();
 
-    default Collection<String> getCustomTabSugggestions() {
+    default Collection<String> getCustomTabSuggestions() {
         return this.getOnlinePlayerNames();
     }
 
@@ -44,7 +44,7 @@ public interface SharedSuggestionProvider extends PermissionSetSupplier {
 
     Stream<Identifier> getAvailableSounds();
 
-    CompletableFuture<Suggestions> customSuggestion(CommandContext<?> p_212334_);
+    CompletableFuture<Suggestions> customSuggestion(CommandContext<?> context);
 
     default Collection<SharedSuggestionProvider.TextCoordinates> getRelevantCoordinates() {
         return Collections.singleton(SharedSuggestionProvider.TextCoordinates.DEFAULT_GLOBAL);
@@ -60,228 +60,230 @@ public interface SharedSuggestionProvider extends PermissionSetSupplier {
 
     FeatureFlagSet enabledFeatures();
 
-    default void suggestRegistryElements(HolderLookup<?> p_408634_, SharedSuggestionProvider.ElementSuggestionType p_212337_, SuggestionsBuilder p_212338_) {
-        if (p_212337_.shouldSuggestTags()) {
-            suggestResource(p_408634_.listTagIds().map(TagKey::location), p_212338_, "#");
+    default void suggestRegistryElements(
+        final HolderLookup<?> registry, final SharedSuggestionProvider.ElementSuggestionType elements, final SuggestionsBuilder builder
+    ) {
+        if (elements.shouldSuggestTags()) {
+            suggestResource(registry.listTagIds().map(TagKey::location), builder, "#");
         }
 
-        if (p_212337_.shouldSuggestElements()) {
-            suggestResource(p_408634_.listElementIds().map(ResourceKey::identifier), p_212338_);
+        if (elements.shouldSuggestElements()) {
+            suggestResource(registry.listElementIds().map(ResourceKey::identifier), builder);
         }
     }
 
     static <S> CompletableFuture<Suggestions> listSuggestions(
-        CommandContext<S> p_410537_,
-        SuggestionsBuilder p_406393_,
-        ResourceKey<? extends Registry<?>> p_405883_,
-        SharedSuggestionProvider.ElementSuggestionType p_409995_
+        final CommandContext<S> context,
+        final SuggestionsBuilder builder,
+        final ResourceKey<? extends Registry<?>> registryKey,
+        final SharedSuggestionProvider.ElementSuggestionType type
     ) {
-        return p_410537_.getSource() instanceof SharedSuggestionProvider sharedsuggestionprovider
-            ? sharedsuggestionprovider.suggestRegistryElements(p_405883_, p_409995_, p_406393_, p_410537_)
-            : p_406393_.buildFuture();
+        return context.getSource() instanceof SharedSuggestionProvider suggestionProvider
+            ? suggestionProvider.suggestRegistryElements(registryKey, type, builder, context)
+            : builder.buildFuture();
     }
 
     CompletableFuture<Suggestions> suggestRegistryElements(
-        ResourceKey<? extends Registry<?>> p_212339_,
-        SharedSuggestionProvider.ElementSuggestionType p_212340_,
-        SuggestionsBuilder p_212341_,
-        CommandContext<?> p_212342_
+        final ResourceKey<? extends Registry<?>> key,
+        final SharedSuggestionProvider.ElementSuggestionType elements,
+        final SuggestionsBuilder builder,
+        final CommandContext<?> context
     );
 
-    static <T> void filterResources(Iterable<T> p_82945_, String p_82946_, Function<T, Identifier> p_82947_, Consumer<T> p_82948_) {
-        boolean flag = p_82946_.indexOf(58) > -1;
+    static <T> void filterResources(final Iterable<T> values, final String contents, final Function<T, Identifier> converter, final Consumer<T> consumer) {
+        boolean hasNamespace = contents.indexOf(58) > -1;
 
-        for (T t : p_82945_) {
-            Identifier identifier = p_82947_.apply(t);
-            if (flag) {
-                String s = identifier.toString();
-                if (matchesSubStr(p_82946_, s)) {
-                    p_82948_.accept(t);
+        for (T value : values) {
+            Identifier id = converter.apply(value);
+            if (hasNamespace) {
+                String name = id.toString();
+                if (matchesSubStr(contents, name)) {
+                    consumer.accept(value);
                 }
-            } else if (matchesSubStr(p_82946_, identifier.getNamespace()) || matchesSubStr(p_82946_, identifier.getPath())) {
-                p_82948_.accept(t);
+            } else if (matchesSubStr(contents, id.getNamespace()) || matchesSubStr(contents, id.getPath())) {
+                consumer.accept(value);
             }
         }
     }
 
-    static <T> void filterResources(Iterable<T> p_82939_, String p_82940_, String p_82941_, Function<T, Identifier> p_82942_, Consumer<T> p_82943_) {
-        if (p_82940_.isEmpty()) {
-            p_82939_.forEach(p_82943_);
+    static <T> void filterResources(
+        final Iterable<T> values, final String contents, final String prefix, final Function<T, Identifier> converter, final Consumer<T> consumer
+    ) {
+        if (contents.isEmpty()) {
+            values.forEach(consumer);
         } else {
-            String s = Strings.commonPrefix(p_82940_, p_82941_);
-            if (!s.isEmpty()) {
-                String s1 = p_82940_.substring(s.length());
-                filterResources(p_82939_, s1, p_82942_, p_82943_);
+            String commonPrefix = Strings.commonPrefix(contents, prefix);
+            if (!commonPrefix.isEmpty()) {
+                String strippedContents = contents.substring(commonPrefix.length());
+                filterResources(values, strippedContents, converter, consumer);
             }
         }
     }
 
-    static CompletableFuture<Suggestions> suggestResource(Iterable<Identifier> p_82930_, SuggestionsBuilder p_82931_, String p_82932_) {
-        String s = p_82931_.getRemaining().toLowerCase(Locale.ROOT);
-        filterResources(p_82930_, s, p_82932_, p_454542_ -> p_454542_, p_460626_ -> p_82931_.suggest(p_82932_ + p_460626_));
-        return p_82931_.buildFuture();
+    static CompletableFuture<Suggestions> suggestResource(final Iterable<Identifier> values, final SuggestionsBuilder builder, final String prefix) {
+        String contents = builder.getRemaining().toLowerCase(Locale.ROOT);
+        filterResources(values, contents, prefix, t -> t, v -> builder.suggest(prefix + v));
+        return builder.buildFuture();
     }
 
-    static CompletableFuture<Suggestions> suggestResource(Stream<Identifier> p_205107_, SuggestionsBuilder p_205108_, String p_205109_) {
-        return suggestResource(p_205107_::iterator, p_205108_, p_205109_);
+    static CompletableFuture<Suggestions> suggestResource(final Stream<Identifier> values, final SuggestionsBuilder builder, final String prefix) {
+        return suggestResource(values::iterator, builder, prefix);
     }
 
-    static CompletableFuture<Suggestions> suggestResource(Iterable<Identifier> p_82927_, SuggestionsBuilder p_82928_) {
-        String s = p_82928_.getRemaining().toLowerCase(Locale.ROOT);
-        filterResources(p_82927_, s, p_460955_ -> p_460955_, p_448475_ -> p_82928_.suggest(p_448475_.toString()));
-        return p_82928_.buildFuture();
-    }
-
-    static <T> CompletableFuture<Suggestions> suggestResource(
-        Iterable<T> p_82934_, SuggestionsBuilder p_82935_, Function<T, Identifier> p_82936_, Function<T, Message> p_82937_
-    ) {
-        String s = p_82935_.getRemaining().toLowerCase(Locale.ROOT);
-        filterResources(p_82934_, s, p_82936_, p_448479_ -> p_82935_.suggest(p_82936_.apply(p_448479_).toString(), p_82937_.apply(p_448479_)));
-        return p_82935_.buildFuture();
-    }
-
-    static CompletableFuture<Suggestions> suggestResource(Stream<Identifier> p_82958_, SuggestionsBuilder p_82959_) {
-        return suggestResource(p_82958_::iterator, p_82959_);
+    static CompletableFuture<Suggestions> suggestResource(final Iterable<Identifier> values, final SuggestionsBuilder builder) {
+        String contents = builder.getRemaining().toLowerCase(Locale.ROOT);
+        filterResources(values, contents, t -> t, v -> builder.suggest(v.toString()));
+        return builder.buildFuture();
     }
 
     static <T> CompletableFuture<Suggestions> suggestResource(
-        Stream<T> p_82961_, SuggestionsBuilder p_82962_, Function<T, Identifier> p_82963_, Function<T, Message> p_82964_
+        final Iterable<T> values, final SuggestionsBuilder builder, final Function<T, Identifier> id, final Function<T, Message> tooltip
     ) {
-        return suggestResource(p_82961_::iterator, p_82962_, p_82963_, p_82964_);
+        String contents = builder.getRemaining().toLowerCase(Locale.ROOT);
+        filterResources(values, contents, id, v -> builder.suggest(id.apply(v).toString(), tooltip.apply(v)));
+        return builder.buildFuture();
+    }
+
+    static CompletableFuture<Suggestions> suggestResource(final Stream<Identifier> values, final SuggestionsBuilder builder) {
+        return suggestResource(values::iterator, builder);
+    }
+
+    static <T> CompletableFuture<Suggestions> suggestResource(
+        final Stream<T> values, final SuggestionsBuilder builder, final Function<T, Identifier> id, final Function<T, Message> tooltip
+    ) {
+        return suggestResource(values::iterator, builder, id, tooltip);
     }
 
     static CompletableFuture<Suggestions> suggestCoordinates(
-        String p_82953_, Collection<SharedSuggestionProvider.TextCoordinates> p_82954_, SuggestionsBuilder p_82955_, Predicate<String> p_82956_
+        final String currentInput,
+        final Collection<SharedSuggestionProvider.TextCoordinates> allSuggestions,
+        final SuggestionsBuilder builder,
+        final Predicate<String> validator
     ) {
-        List<String> list = Lists.newArrayList();
-        if (Strings.isNullOrEmpty(p_82953_)) {
-            for (SharedSuggestionProvider.TextCoordinates sharedsuggestionprovider$textcoordinates : p_82954_) {
-                String s = sharedsuggestionprovider$textcoordinates.x
-                    + " "
-                    + sharedsuggestionprovider$textcoordinates.y
-                    + " "
-                    + sharedsuggestionprovider$textcoordinates.z;
-                if (p_82956_.test(s)) {
-                    list.add(sharedsuggestionprovider$textcoordinates.x);
-                    list.add(sharedsuggestionprovider$textcoordinates.x + " " + sharedsuggestionprovider$textcoordinates.y);
-                    list.add(s);
+        List<String> result = Lists.newArrayList();
+        if (Strings.isNullOrEmpty(currentInput)) {
+            for (SharedSuggestionProvider.TextCoordinates coordinate : allSuggestions) {
+                String fullValue = coordinate.x + " " + coordinate.y + " " + coordinate.z;
+                if (validator.test(fullValue)) {
+                    result.add(coordinate.x);
+                    result.add(coordinate.x + " " + coordinate.y);
+                    result.add(fullValue);
                 }
             }
         } else {
-            String[] astring = p_82953_.split(" ");
-            if (astring.length == 1) {
-                for (SharedSuggestionProvider.TextCoordinates sharedsuggestionprovider$textcoordinates1 : p_82954_) {
-                    String s1 = astring[0]
-                        + " "
-                        + sharedsuggestionprovider$textcoordinates1.y
-                        + " "
-                        + sharedsuggestionprovider$textcoordinates1.z;
-                    if (p_82956_.test(s1)) {
-                        list.add(astring[0] + " " + sharedsuggestionprovider$textcoordinates1.y);
-                        list.add(s1);
+            String[] fields = currentInput.split(" ");
+            if (fields.length == 1) {
+                for (SharedSuggestionProvider.TextCoordinates coordinate : allSuggestions) {
+                    String fullValue = fields[0] + " " + coordinate.y + " " + coordinate.z;
+                    if (validator.test(fullValue)) {
+                        result.add(fields[0] + " " + coordinate.y);
+                        result.add(fullValue);
                     }
                 }
-            } else if (astring.length == 2) {
-                for (SharedSuggestionProvider.TextCoordinates sharedsuggestionprovider$textcoordinates2 : p_82954_) {
-                    String s2 = astring[0] + " " + astring[1] + " " + sharedsuggestionprovider$textcoordinates2.z;
-                    if (p_82956_.test(s2)) {
-                        list.add(s2);
+            } else if (fields.length == 2) {
+                for (SharedSuggestionProvider.TextCoordinates coordinate : allSuggestions) {
+                    String fullValue = fields[0] + " " + fields[1] + " " + coordinate.z;
+                    if (validator.test(fullValue)) {
+                        result.add(fullValue);
                     }
                 }
             }
         }
 
-        return suggest(list, p_82955_);
+        return suggest(result, builder);
     }
 
     static CompletableFuture<Suggestions> suggest2DCoordinates(
-        String p_82977_, Collection<SharedSuggestionProvider.TextCoordinates> p_82978_, SuggestionsBuilder p_82979_, Predicate<String> p_82980_
+        final String currentInput,
+        final Collection<SharedSuggestionProvider.TextCoordinates> allSuggestions,
+        final SuggestionsBuilder builder,
+        final Predicate<String> validator
     ) {
-        List<String> list = Lists.newArrayList();
-        if (Strings.isNullOrEmpty(p_82977_)) {
-            for (SharedSuggestionProvider.TextCoordinates sharedsuggestionprovider$textcoordinates : p_82978_) {
-                String s = sharedsuggestionprovider$textcoordinates.x + " " + sharedsuggestionprovider$textcoordinates.z;
-                if (p_82980_.test(s)) {
-                    list.add(sharedsuggestionprovider$textcoordinates.x);
-                    list.add(s);
+        List<String> result = Lists.newArrayList();
+        if (Strings.isNullOrEmpty(currentInput)) {
+            for (SharedSuggestionProvider.TextCoordinates coordinate : allSuggestions) {
+                String fullValue = coordinate.x + " " + coordinate.z;
+                if (validator.test(fullValue)) {
+                    result.add(coordinate.x);
+                    result.add(fullValue);
                 }
             }
         } else {
-            String[] astring = p_82977_.split(" ");
-            if (astring.length == 1) {
-                for (SharedSuggestionProvider.TextCoordinates sharedsuggestionprovider$textcoordinates1 : p_82978_) {
-                    String s1 = astring[0] + " " + sharedsuggestionprovider$textcoordinates1.z;
-                    if (p_82980_.test(s1)) {
-                        list.add(s1);
+            String[] fields = currentInput.split(" ");
+            if (fields.length == 1) {
+                for (SharedSuggestionProvider.TextCoordinates coordinate : allSuggestions) {
+                    String fullValue = fields[0] + " " + coordinate.z;
+                    if (validator.test(fullValue)) {
+                        result.add(fullValue);
                     }
                 }
             }
         }
 
-        return suggest(list, p_82979_);
+        return suggest(result, builder);
     }
 
-    static CompletableFuture<Suggestions> suggest(Iterable<String> p_82971_, SuggestionsBuilder p_82972_) {
-        String s = p_82972_.getRemaining().toLowerCase(Locale.ROOT);
+    static CompletableFuture<Suggestions> suggest(final Iterable<String> values, final SuggestionsBuilder builder) {
+        String lowerPrefix = builder.getRemaining().toLowerCase(Locale.ROOT);
 
-        for (String s1 : p_82971_) {
-            if (matchesSubStr(s, s1.toLowerCase(Locale.ROOT))) {
-                p_82972_.suggest(s1);
+        for (String name : values) {
+            if (matchesSubStr(lowerPrefix, name.toLowerCase(Locale.ROOT))) {
+                builder.suggest(name);
             }
         }
 
-        return p_82972_.buildFuture();
+        return builder.buildFuture();
     }
 
-    static CompletableFuture<Suggestions> suggest(Stream<String> p_82982_, SuggestionsBuilder p_82983_) {
-        String s = p_82983_.getRemaining().toLowerCase(Locale.ROOT);
-        p_82982_.filter(p_82975_ -> matchesSubStr(s, p_82975_.toLowerCase(Locale.ROOT))).forEach(p_82983_::suggest);
-        return p_82983_.buildFuture();
+    static CompletableFuture<Suggestions> suggest(final Stream<String> values, final SuggestionsBuilder builder) {
+        String lowerPrefix = builder.getRemaining().toLowerCase(Locale.ROOT);
+        values.filter(v -> matchesSubStr(lowerPrefix, v.toLowerCase(Locale.ROOT))).forEach(builder::suggest);
+        return builder.buildFuture();
     }
 
-    static CompletableFuture<Suggestions> suggest(String[] p_82968_, SuggestionsBuilder p_82969_) {
-        String s = p_82969_.getRemaining().toLowerCase(Locale.ROOT);
+    static CompletableFuture<Suggestions> suggest(final String[] values, final SuggestionsBuilder builder) {
+        String lowerPrefix = builder.getRemaining().toLowerCase(Locale.ROOT);
 
-        for (String s1 : p_82968_) {
-            if (matchesSubStr(s, s1.toLowerCase(Locale.ROOT))) {
-                p_82969_.suggest(s1);
+        for (String name : values) {
+            if (matchesSubStr(lowerPrefix, name.toLowerCase(Locale.ROOT))) {
+                builder.suggest(name);
             }
         }
 
-        return p_82969_.buildFuture();
+        return builder.buildFuture();
     }
 
     static <T> CompletableFuture<Suggestions> suggest(
-        Iterable<T> p_165917_, SuggestionsBuilder p_165918_, Function<T, String> p_165919_, Function<T, Message> p_165920_
+        final Iterable<T> values, final SuggestionsBuilder builder, final Function<T, String> toString, final Function<T, Message> tooltip
     ) {
-        String s = p_165918_.getRemaining().toLowerCase(Locale.ROOT);
+        String lowerPrefix = builder.getRemaining().toLowerCase(Locale.ROOT);
 
-        for (T t : p_165917_) {
-            String s1 = p_165919_.apply(t);
-            if (matchesSubStr(s, s1.toLowerCase(Locale.ROOT))) {
-                p_165918_.suggest(s1, p_165920_.apply(t));
+        for (T value : values) {
+            String name = toString.apply(value);
+            if (matchesSubStr(lowerPrefix, name.toLowerCase(Locale.ROOT))) {
+                builder.suggest(name, tooltip.apply(value));
             }
         }
 
-        return p_165918_.buildFuture();
+        return builder.buildFuture();
     }
 
-    static boolean matchesSubStr(String p_82950_, String p_82951_) {
-        int i = 0;
+    static boolean matchesSubStr(final String pattern, final String input) {
+        int index = 0;
 
-        while (!p_82951_.startsWith(p_82950_, i)) {
-            int j = MATCH_SPLITTER.indexIn(p_82951_, i);
-            if (j < 0) {
+        while (!input.startsWith(pattern, index)) {
+            int indexOfSplitter = MATCH_SPLITTER.indexIn(input, index);
+            if (indexOfSplitter < 0) {
                 return false;
             }
 
-            i = j + 1;
+            index = indexOfSplitter + 1;
         }
 
         return true;
     }
 
-    public static enum ElementSuggestionType {
+    enum ElementSuggestionType {
         TAGS,
         ELEMENTS,
         ALL;
@@ -295,17 +297,17 @@ public interface SharedSuggestionProvider extends PermissionSetSupplier {
         }
     }
 
-    public static class TextCoordinates {
+    class TextCoordinates {
         public static final SharedSuggestionProvider.TextCoordinates DEFAULT_LOCAL = new SharedSuggestionProvider.TextCoordinates("^", "^", "^");
         public static final SharedSuggestionProvider.TextCoordinates DEFAULT_GLOBAL = new SharedSuggestionProvider.TextCoordinates("~", "~", "~");
         public final String x;
         public final String y;
         public final String z;
 
-        public TextCoordinates(String p_82994_, String p_82995_, String p_82996_) {
-            this.x = p_82994_;
-            this.y = p_82995_;
-            this.z = p_82996_;
+        public TextCoordinates(final String x, final String y, final String z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
         }
     }
 }

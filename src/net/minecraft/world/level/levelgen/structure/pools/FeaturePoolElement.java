@@ -2,7 +2,6 @@ package net.minecraft.world.level.levelgen.structure.pools;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -28,40 +27,41 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 public class FeaturePoolElement extends StructurePoolElement {
     public static final MapCodec<FeaturePoolElement> CODEC = RecordCodecBuilder.mapCodec(
-        p_391068_ -> p_391068_.group(PlacedFeature.CODEC.fieldOf("feature").forGetter(p_210215_ -> p_210215_.feature), projectionCodec())
-            .apply(p_391068_, FeaturePoolElement::new)
+        i -> i.group(PlacedFeature.CODEC.fieldOf("feature").forGetter(e -> e.feature), projectionCodec()).apply(i, FeaturePoolElement::new)
     );
     private static final Identifier DEFAULT_JIGSAW_NAME = Identifier.withDefaultNamespace("bottom");
     private final Holder<PlacedFeature> feature;
     private final CompoundTag defaultJigsawNBT;
 
-    protected FeaturePoolElement(Holder<PlacedFeature> p_210209_, StructureTemplatePool.Projection p_210210_) {
-        super(p_210210_);
-        this.feature = p_210209_;
+    protected FeaturePoolElement(final Holder<PlacedFeature> feature, final StructureTemplatePool.Projection projection) {
+        super(projection);
+        this.feature = feature;
         this.defaultJigsawNBT = this.fillDefaultJigsawNBT();
     }
 
     private CompoundTag fillDefaultJigsawNBT() {
-        CompoundTag compoundtag = new CompoundTag();
-        compoundtag.store("name", Identifier.CODEC, DEFAULT_JIGSAW_NAME);
-        compoundtag.putString("final_state", "minecraft:air");
-        compoundtag.store("pool", JigsawBlockEntity.POOL_CODEC, Pools.EMPTY);
-        compoundtag.store("target", Identifier.CODEC, JigsawBlockEntity.EMPTY_ID);
-        compoundtag.store("joint", JigsawBlockEntity.JointType.CODEC, JigsawBlockEntity.JointType.ROLLABLE);
-        return compoundtag;
+        CompoundTag tag = new CompoundTag();
+        tag.store("name", Identifier.CODEC, DEFAULT_JIGSAW_NAME);
+        tag.putString("final_state", "minecraft:air");
+        tag.store("pool", JigsawBlockEntity.POOL_CODEC, Pools.EMPTY);
+        tag.store("target", Identifier.CODEC, JigsawBlockEntity.EMPTY_ID);
+        tag.store("joint", JigsawBlockEntity.JointType.CODEC, JigsawBlockEntity.JointType.ROLLABLE);
+        return tag;
     }
 
     @Override
-    public Vec3i getSize(StructureTemplateManager p_227192_, Rotation p_227193_) {
+    public Vec3i getSize(final StructureTemplateManager structureTemplateManager, final Rotation rotation) {
         return Vec3i.ZERO;
     }
 
     @Override
-    public List<StructureTemplate.JigsawBlockInfo> getShuffledJigsawBlocks(StructureTemplateManager p_227199_, BlockPos p_227200_, Rotation p_227201_, RandomSource p_227202_) {
+    public List<StructureTemplate.JigsawBlockInfo> getShuffledJigsawBlocks(
+        final StructureTemplateManager structureTemplateManager, final BlockPos position, final Rotation rotation, final RandomSource random
+    ) {
         return List.of(
             StructureTemplate.JigsawBlockInfo.of(
                 new StructureTemplate.StructureBlockInfo(
-                    p_227200_,
+                    position,
                     Blocks.JIGSAW.defaultBlockState().setValue(JigsawBlock.ORIENTATION, FrontAndTop.fromFrontAndTop(Direction.DOWN, Direction.SOUTH)),
                     this.defaultJigsawNBT
                 )
@@ -70,33 +70,28 @@ public class FeaturePoolElement extends StructurePoolElement {
     }
 
     @Override
-    public BoundingBox getBoundingBox(StructureTemplateManager p_227195_, BlockPos p_227196_, Rotation p_227197_) {
-        Vec3i vec3i = this.getSize(p_227195_, p_227197_);
+    public BoundingBox getBoundingBox(final StructureTemplateManager structureTemplateManager, final BlockPos position, final Rotation rotation) {
+        Vec3i size = this.getSize(structureTemplateManager, rotation);
         return new BoundingBox(
-            p_227196_.getX(),
-            p_227196_.getY(),
-            p_227196_.getZ(),
-            p_227196_.getX() + vec3i.getX(),
-            p_227196_.getY() + vec3i.getY(),
-            p_227196_.getZ() + vec3i.getZ()
+            position.getX(), position.getY(), position.getZ(), position.getX() + size.getX(), position.getY() + size.getY(), position.getZ() + size.getZ()
         );
     }
 
     @Override
     public boolean place(
-        StructureTemplateManager p_227181_,
-        WorldGenLevel p_227182_,
-        StructureManager p_227183_,
-        ChunkGenerator p_227184_,
-        BlockPos p_227185_,
-        BlockPos p_227186_,
-        Rotation p_227187_,
-        BoundingBox p_227188_,
-        RandomSource p_227189_,
-        LiquidSettings p_344422_,
-        boolean p_227190_
+        final StructureTemplateManager structureTemplateManager,
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final BlockPos position,
+        final BlockPos referencePos,
+        final Rotation rotation,
+        final BoundingBox chunkBB,
+        final RandomSource random,
+        final LiquidSettings liquidSettings,
+        final boolean keepJigsaws
     ) {
-        return this.feature.value().place(p_227182_, p_227184_, p_227189_, p_227185_);
+        return this.feature.value().place(level, generator, random, position);
     }
 
     @Override

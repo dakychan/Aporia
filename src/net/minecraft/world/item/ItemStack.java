@@ -7,7 +7,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.DataResult.Error;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.EncoderException;
 import java.util.List;
@@ -17,14 +16,11 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
-import java.util.stream.Stream;
 import net.minecraft.ChatFormatting;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponentGetter;
 import net.minecraft.core.component.DataComponentHolder;
@@ -41,14 +37,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.network.chat.Style;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.Stats;
-import net.minecraft.tags.TagKey;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.Mth;
 import net.minecraft.util.NullOps;
@@ -65,13 +59,14 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.SlotAccess;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
-import net.minecraft.world.entity.decoration.ItemFrame;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.ClickAction;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
+import net.minecraft.world.item.component.BundleContents;
+import net.minecraft.world.item.component.ChargedProjectiles;
 import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.item.component.DamageResistant;
 import net.minecraft.world.item.component.ItemAttributeModifiers;
@@ -104,7 +99,7 @@ import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public final class ItemStack implements DataComponentHolder {
+public final class ItemStack implements DataComponentHolder, ItemInstance {
     private static final List<Component> OP_NBT_WARNING = List.of(
         Component.translatable("item.op_warning.line1").withStyle(ChatFormatting.RED, ChatFormatting.BOLD),
         Component.translatable("item.op_warning.line2").withStyle(ChatFormatting.RED),
@@ -114,115 +109,104 @@ public final class ItemStack implements DataComponentHolder {
     private static final Component INTANGIBLE_TOOLTIP = Component.translatable("item.intangible").withStyle(ChatFormatting.GRAY);
     public static final MapCodec<ItemStack> MAP_CODEC = MapCodec.recursive(
         "ItemStack",
-        p_390809_ -> RecordCodecBuilder.mapCodec(
-            p_359412_ -> p_359412_.group(
-                    Item.CODEC.fieldOf("id").forGetter(ItemStack::getItemHolder),
-                    ExtraCodecs.intRange(1, 99).fieldOf("count").orElse(1).forGetter(ItemStack::getCount),
-                    DataComponentPatch.CODEC
-                        .optionalFieldOf("components", DataComponentPatch.EMPTY)
-                        .forGetter(p_327171_ -> p_327171_.components.asPatch())
+        subCodec -> RecordCodecBuilder.mapCodec(
+            i -> i.group(
+                    Item.CODEC_WITH_BOUND_COMPONENTS.fieldOf("id").forGetter(ItemStack::typeHolder),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(ExtraCodecs.intRange(1, 99), "count", 1).forGetter(ItemStack::getCount),
+                    DataComponentPatch.CODEC.optionalFieldOf("components", DataComponentPatch.EMPTY).forGetter(s -> s.components.asPatch())
                 )
-                .apply(p_359412_, ItemStack::new)
+                .apply(i, ItemStack::new)
         )
     );
     public static final Codec<ItemStack> CODEC = Codec.lazyInitialized(MAP_CODEC::codec);
-    public static final Codec<ItemStack> SINGLE_ITEM_CODEC = Codec.lazyInitialized(
-        () -> RecordCodecBuilder.create(
-            p_359410_ -> p_359410_.group(
-                    Item.CODEC.fieldOf("id").forGetter(ItemStack::getItemHolder),
-                    DataComponentPatch.CODEC
-                        .optionalFieldOf("components", DataComponentPatch.EMPTY)
-                        .forGetter(p_327155_ -> p_327155_.components.asPatch())
-                )
-                .apply(p_359410_, (p_327172_, p_327173_) -> new ItemStack(p_327172_, 1, p_327173_))
-        )
-    );
-    public static final Codec<ItemStack> STRICT_CODEC = CODEC.validate(ItemStack::validateStrict);
-    public static final Codec<ItemStack> STRICT_SINGLE_ITEM_CODEC = SINGLE_ITEM_CODEC.validate(ItemStack::validateStrict);
     public static final Codec<ItemStack> OPTIONAL_CODEC = ExtraCodecs.optionalEmptyMap(CODEC)
-        .xmap(p_327153_ -> p_327153_.orElse(ItemStack.EMPTY), p_327154_ -> p_327154_.isEmpty() ? Optional.empty() : Optional.of(p_327154_));
-    public static final Codec<ItemStack> SIMPLE_ITEM_CODEC = Item.CODEC.xmap(ItemStack::new, ItemStack::getItemHolder);
+        .xmap(itemStack -> itemStack.orElse(ItemStack.EMPTY), itemStack -> itemStack.isEmpty() ? Optional.empty() : Optional.of(itemStack));
     public static final StreamCodec<RegistryFriendlyByteBuf, ItemStack> OPTIONAL_STREAM_CODEC = createOptionalStreamCodec(DataComponentPatch.STREAM_CODEC);
-    public static final StreamCodec<RegistryFriendlyByteBuf, ItemStack> OPTIONAL_UNTRUSTED_STREAM_CODEC = createOptionalStreamCodec(DataComponentPatch.DELIMITED_STREAM_CODEC);
+    public static final StreamCodec<RegistryFriendlyByteBuf, ItemStack> OPTIONAL_UNTRUSTED_STREAM_CODEC = createOptionalStreamCodec(
+        DataComponentPatch.DELIMITED_STREAM_CODEC
+    );
     public static final StreamCodec<RegistryFriendlyByteBuf, ItemStack> STREAM_CODEC = new StreamCodec<RegistryFriendlyByteBuf, ItemStack>() {
-        public ItemStack decode(RegistryFriendlyByteBuf p_327992_) {
-            ItemStack itemstack = ItemStack.OPTIONAL_STREAM_CODEC.decode(p_327992_);
-            if (itemstack.isEmpty()) {
+        public ItemStack decode(final RegistryFriendlyByteBuf input) {
+            ItemStack itemStack = ItemStack.OPTIONAL_STREAM_CODEC.decode(input);
+            if (itemStack.isEmpty()) {
                 throw new DecoderException("Empty ItemStack not allowed");
             } else {
-                return itemstack;
+                return itemStack;
             }
         }
 
-        public void encode(RegistryFriendlyByteBuf p_331904_, ItemStack p_328866_) {
-            if (p_328866_.isEmpty()) {
+        public void encode(final RegistryFriendlyByteBuf output, final ItemStack itemStack) {
+            if (itemStack.isEmpty()) {
                 throw new EncoderException("Empty ItemStack not allowed");
-            } else {
-                ItemStack.OPTIONAL_STREAM_CODEC.encode(p_331904_, p_328866_);
             }
+
+            ItemStack.OPTIONAL_STREAM_CODEC.encode(output, itemStack);
         }
     };
-    public static final StreamCodec<RegistryFriendlyByteBuf, List<ItemStack>> OPTIONAL_LIST_STREAM_CODEC = OPTIONAL_STREAM_CODEC.apply(ByteBufCodecs.collection(NonNullList::createWithCapacity));
+    public static final StreamCodec<RegistryFriendlyByteBuf, List<ItemStack>> OPTIONAL_LIST_STREAM_CODEC = OPTIONAL_STREAM_CODEC.apply(
+        ByteBufCodecs.collection(NonNullList::createWithCapacity)
+    );
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final ItemStack EMPTY = new ItemStack((Void)null);
     private static final Component DISABLED_ITEM_TOOLTIP = Component.translatable("item.disabled").withStyle(ChatFormatting.RED);
     private int count;
     private int popTime;
     @Deprecated
-    private final @Nullable Item item;
-    final PatchedDataComponentMap components;
-    private @Nullable Entity entityRepresentation;
+    private final @Nullable Holder<Item> item;
+    private final PatchedDataComponentMap components;
 
-    public static DataResult<ItemStack> validateStrict(ItemStack p_332181_) {
-        DataResult<Unit> dataresult = validateComponents(p_332181_.getComponents());
-        if (dataresult.isError()) {
-            return dataresult.map(p_327165_ -> p_332181_);
+    public static DataResult<ItemStack> validateStrict(final ItemStack itemStack) {
+        DataResult<?> result = validateComponents(itemStack.getComponents());
+        if (result.isError()) {
+            return result.map(unit -> itemStack);
         } else {
-            return p_332181_.getCount() > p_332181_.getMaxStackSize()
-                ? DataResult.error(() -> "Item stack with stack size of " + p_332181_.getCount() + " was larger than maximum: " + p_332181_.getMaxStackSize())
-                : DataResult.success(p_332181_);
+            return itemStack.getCount() > itemStack.getMaxStackSize()
+                ? DataResult.error(() -> "Item stack with stack size of " + itemStack.getCount() + " was larger than maximum: " + itemStack.getMaxStackSize())
+                : DataResult.success(itemStack);
         }
     }
 
-    private static StreamCodec<RegistryFriendlyByteBuf, ItemStack> createOptionalStreamCodec(final StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> p_393485_) {
+    private static StreamCodec<RegistryFriendlyByteBuf, ItemStack> createOptionalStreamCodec(
+        final StreamCodec<RegistryFriendlyByteBuf, DataComponentPatch> patchCodec
+    ) {
         return new StreamCodec<RegistryFriendlyByteBuf, ItemStack>() {
-            public ItemStack decode(RegistryFriendlyByteBuf p_328393_) {
-                int i = p_328393_.readVarInt();
-                if (i <= 0) {
+            public ItemStack decode(final RegistryFriendlyByteBuf input) {
+                int count = input.readVarInt();
+                if (count <= 0) {
                     return ItemStack.EMPTY;
-                } else {
-                    Holder<Item> holder = Item.STREAM_CODEC.decode(p_328393_);
-                    DataComponentPatch datacomponentpatch = p_393485_.decode(p_328393_);
-                    return new ItemStack(holder, i, datacomponentpatch);
                 }
+
+                Holder<Item> item = Item.STREAM_CODEC.decode(input);
+                DataComponentPatch patch = patchCodec.decode(input);
+                return new ItemStack(item, count, patch);
             }
 
-            public void encode(RegistryFriendlyByteBuf p_332266_, ItemStack p_335702_) {
-                if (p_335702_.isEmpty()) {
-                    p_332266_.writeVarInt(0);
+            public void encode(final RegistryFriendlyByteBuf output, final ItemStack itemStack) {
+                if (itemStack.isEmpty()) {
+                    output.writeVarInt(0);
                 } else {
-                    p_332266_.writeVarInt(p_335702_.getCount());
-                    Item.STREAM_CODEC.encode(p_332266_, p_335702_.getItemHolder());
-                    p_393485_.encode(p_332266_, p_335702_.components.asPatch());
+                    output.writeVarInt(itemStack.getCount());
+                    Item.STREAM_CODEC.encode(output, itemStack.typeHolder());
+                    patchCodec.encode(output, itemStack.components.asPatch());
                 }
             }
         };
     }
 
-    public static StreamCodec<RegistryFriendlyByteBuf, ItemStack> validatedStreamCodec(final StreamCodec<RegistryFriendlyByteBuf, ItemStack> p_332790_) {
+    public static StreamCodec<RegistryFriendlyByteBuf, ItemStack> validatedStreamCodec(final StreamCodec<RegistryFriendlyByteBuf, ItemStack> codec) {
         return new StreamCodec<RegistryFriendlyByteBuf, ItemStack>() {
-            public ItemStack decode(RegistryFriendlyByteBuf p_330762_) {
-                ItemStack itemstack = p_332790_.decode(p_330762_);
-                if (!itemstack.isEmpty()) {
-                    RegistryOps<Unit> registryops = p_330762_.registryAccess().createSerializationContext(NullOps.INSTANCE);
-                    ItemStack.CODEC.encodeStart(registryops, itemstack).getOrThrow(DecoderException::new);
+            public ItemStack decode(final RegistryFriendlyByteBuf input) {
+                ItemStack itemStack = codec.decode(input);
+                if (!itemStack.isEmpty()) {
+                    RegistryOps<Unit> ops = input.registryAccess().createSerializationContext(NullOps.INSTANCE);
+                    ItemStack.CODEC.encodeStart(ops, itemStack).getOrThrow(DecoderException::new);
                 }
 
-                return itemstack;
+                return itemStack;
             }
 
-            public void encode(RegistryFriendlyByteBuf p_336131_, ItemStack p_329943_) {
-                p_332790_.encode(p_336131_, p_329943_);
+            public void encode(final RegistryFriendlyByteBuf output, final ItemStack value) {
+                codec.encode(output, value);
             }
         };
     }
@@ -233,11 +217,11 @@ public final class ItemStack implements DataComponentHolder {
 
     @Override
     public DataComponentMap getComponents() {
-        return (DataComponentMap)(!this.isEmpty() ? this.components : DataComponentMap.EMPTY);
+        return !this.isEmpty() ? this.components : DataComponentMap.EMPTY;
     }
 
     public DataComponentMap getPrototype() {
-        return !this.isEmpty() ? this.getItem().components() : DataComponentMap.EMPTY;
+        return !this.isEmpty() ? this.typeHolder().components() : DataComponentMap.EMPTY;
     }
 
     public DataComponentPatch getComponentsPatch() {
@@ -248,173 +232,181 @@ public final class ItemStack implements DataComponentHolder {
         return !this.isEmpty() ? this.components.toImmutableMap() : DataComponentMap.EMPTY;
     }
 
-    public boolean hasNonDefault(DataComponentType<?> p_377204_) {
-        return !this.isEmpty() && this.components.hasNonDefault(p_377204_);
+    public boolean hasNonDefault(final DataComponentType<?> type) {
+        return !this.isEmpty() && this.components.hasNonDefault(type);
     }
 
-    public ItemStack(ItemLike p_41599_) {
-        this(p_41599_, 1);
+    public ItemStack(final ItemLike item, final int count) {
+        this(item.asItem().builtInRegistryHolder(), count);
     }
 
-    public ItemStack(Holder<Item> p_204116_) {
-        this(p_204116_.value(), 1);
+    public ItemStack(final ItemLike item) {
+        this(item.asItem().builtInRegistryHolder(), 1);
     }
 
-    public ItemStack(Holder<Item> p_310702_, int p_41605_, DataComponentPatch p_328221_) {
-        this(p_310702_.value(), p_41605_, PatchedDataComponentMap.fromPatch(p_310702_.value().components(), p_328221_));
+    public ItemStack(final Holder<Item> item, final int count) {
+        this(item, count, new PatchedDataComponentMap(item.components()));
     }
 
-    public ItemStack(Holder<Item> p_220155_, int p_220156_) {
-        this(p_220155_.value(), p_220156_);
+    public ItemStack(final Holder<Item> item) {
+        this(item, 1);
     }
 
-    public ItemStack(ItemLike p_41601_, int p_41602_) {
-        this(p_41601_, p_41602_, new PatchedDataComponentMap(p_41601_.asItem().components()));
+    public ItemStack(final Holder<Item> item, final int count, final DataComponentPatch components) {
+        this(item, count, PatchedDataComponentMap.fromPatch(item.components(), components));
     }
 
-    private ItemStack(ItemLike p_331826_, int p_332766_, PatchedDataComponentMap p_333722_) {
-        this.item = p_331826_.asItem();
-        this.count = p_332766_;
-        this.components = p_333722_;
+    private ItemStack(final Holder<Item> item, final int count, final PatchedDataComponentMap components) {
+        this.item = item;
+        this.count = count;
+        this.components = components;
     }
 
-    private ItemStack(@Nullable Void p_282703_) {
+    private ItemStack(final @Nullable Void nullMarker) {
         this.item = null;
         this.components = new PatchedDataComponentMap(DataComponentMap.EMPTY);
     }
 
-    public static DataResult<Unit> validateComponents(DataComponentMap p_336343_) {
-        if (p_336343_.has(DataComponents.MAX_DAMAGE) && p_336343_.getOrDefault(DataComponents.MAX_STACK_SIZE, 1) > 1) {
+    private static DataResult<?> validateComponents(final DataComponentMap components) {
+        if (components.has(DataComponents.MAX_DAMAGE) && components.getOrDefault(DataComponents.MAX_STACK_SIZE, 1) > 1) {
             return DataResult.error(() -> "Item cannot be both damageable and stackable");
-        } else {
-            ItemContainerContents itemcontainercontents = p_336343_.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY);
+        }
 
-            for (ItemStack itemstack : itemcontainercontents.nonEmptyItems()) {
-                int i = itemstack.getCount();
-                int j = itemstack.getMaxStackSize();
-                if (i > j) {
-                    return DataResult.error(() -> "Item stack with count of " + i + " was larger than maximum: " + j);
-                }
+        ItemContainerContents container = components.get(DataComponents.CONTAINER);
+        if (container != null) {
+            DataResult<?> validationContents = validateContainedItemSizes(container.nonEmptyItems());
+            if (validationContents.isError()) {
+                return validationContents;
+            }
+        }
+
+        BundleContents bundle = components.get(DataComponents.BUNDLE_CONTENTS);
+        if (bundle != null) {
+            DataResult<?> validationResult = validateContainedItemSizes(bundle.items());
+            if (validationResult.isError()) {
+                return validationResult;
             }
 
-            return DataResult.success(Unit.INSTANCE);
+            validationResult = bundle.weight();
+            if (validationResult.isError()) {
+                return validationResult;
+            }
         }
+
+        ChargedProjectiles chargedProjectiles = components.get(DataComponents.CHARGED_PROJECTILES);
+        if (chargedProjectiles != null) {
+            DataResult<?> validationResult = validateContainedItemSizes(chargedProjectiles.items());
+            if (validationResult.isError()) {
+                return validationResult;
+            }
+        }
+
+        return DataResult.success(Unit.INSTANCE);
+    }
+
+    private static DataResult<?> validateContainedItemSizes(final Iterable<? extends ItemInstance> items) {
+        for (ItemInstance item : items) {
+            int itemCount = item.count();
+            int maxStackSize = item.getMaxStackSize();
+            if (itemCount > maxStackSize) {
+                return DataResult.error(() -> "Item stack with count of " + itemCount + " was larger than maximum: " + maxStackSize);
+            }
+        }
+
+        return DataResult.success(Unit.INSTANCE);
     }
 
     public boolean isEmpty() {
-        return this == EMPTY || this.item == Items.AIR || this.count <= 0;
+        return this == EMPTY || this.item.value() == Items.AIR || this.count <= 0;
     }
 
-    public boolean isItemEnabled(FeatureFlagSet p_250869_) {
-        return this.isEmpty() || this.getItem().isEnabled(p_250869_);
+    public boolean isItemEnabled(final FeatureFlagSet enabledFeatures) {
+        return this.isEmpty() || this.getItem().isEnabled(enabledFeatures);
     }
 
-    public ItemStack split(int p_41621_) {
-        int i = Math.min(p_41621_, this.getCount());
-        ItemStack itemstack = this.copyWithCount(i);
-        this.shrink(i);
-        return itemstack;
+    public ItemStack split(final int amount) {
+        int realAmount = Math.min(amount, this.getCount());
+        ItemStack result = this.copyWithCount(realAmount);
+        this.shrink(realAmount);
+        return result;
     }
 
     public ItemStack copyAndClear() {
         if (this.isEmpty()) {
             return EMPTY;
-        } else {
-            ItemStack itemstack = this.copy();
-            this.setCount(0);
-            return itemstack;
         }
+
+        ItemStack result = this.copy();
+        this.setCount(0);
+        return result;
     }
 
     public Item getItem() {
-        return this.isEmpty() ? Items.AIR : this.item;
+        return this.typeHolder().value();
     }
 
-    public Holder<Item> getItemHolder() {
-        return this.getItem().builtInRegistryHolder();
+    @Override
+    public Holder<Item> typeHolder() {
+        return this.isEmpty() ? Items.AIR.builtInRegistryHolder() : this.item;
     }
 
-    public boolean is(TagKey<Item> p_204118_) {
-        return this.getItem().builtInRegistryHolder().is(p_204118_);
+    public boolean is(final Predicate<Holder<Item>> item) {
+        return item.test(this.typeHolder());
     }
 
-    public boolean is(Item p_150931_) {
-        return this.getItem() == p_150931_;
-    }
-
-    public boolean is(Predicate<Holder<Item>> p_220168_) {
-        return p_220168_.test(this.getItem().builtInRegistryHolder());
-    }
-
-    public boolean is(Holder<Item> p_220166_) {
-        return this.getItem().builtInRegistryHolder() == p_220166_;
-    }
-
-    public boolean is(HolderSet<Item> p_299078_) {
-        return p_299078_.contains(this.getItemHolder());
-    }
-
-    public Stream<TagKey<Item>> getTags() {
-        return this.getItem().builtInRegistryHolder().tags();
-    }
-
-    public InteractionResult useOn(UseOnContext p_41662_) {
-        Player player = p_41662_.getPlayer();
-        BlockPos blockpos = p_41662_.getClickedPos();
-        if (player != null && !player.getAbilities().mayBuild && !this.canPlaceOnBlockInAdventureMode(new BlockInWorld(p_41662_.getLevel(), blockpos, false))) {
+    public InteractionResult useOn(final UseOnContext context) {
+        Player player = context.getPlayer();
+        BlockPos pos = context.getClickedPos();
+        if (player != null && !player.getAbilities().mayBuild && !this.canPlaceOnBlockInAdventureMode(new BlockInWorld(context.getLevel(), pos, false))) {
             return InteractionResult.PASS;
-        } else {
-            Item item = this.getItem();
-            InteractionResult interactionresult = item.useOn(p_41662_);
-            if (player != null && interactionresult instanceof InteractionResult.Success interactionresult$success && interactionresult$success.wasItemInteraction()) {
-                player.awardStat(Stats.ITEM_USED.get(item));
-            }
-
-            return interactionresult;
         }
+
+        Item usedItem = this.getItem();
+        InteractionResult result = usedItem.useOn(context);
+        if (player != null && result instanceof InteractionResult.Success success && success.wasItemInteraction()) {
+            player.awardStat(Stats.ITEM_USED.get(usedItem));
+        }
+
+        return result;
     }
 
-    public float getDestroySpeed(BlockState p_41692_) {
-        return this.getItem().getDestroySpeed(this, p_41692_);
+    public float getDestroySpeed(final BlockState state) {
+        return this.getItem().getDestroySpeed(this, state);
     }
 
-    public InteractionResult use(Level p_41683_, Player p_41684_, InteractionHand p_41685_) {
-        ItemStack itemstack = this.copy();
-        boolean flag = this.getUseDuration(p_41684_) <= 0;
-        InteractionResult interactionresult = this.getItem().use(p_41683_, p_41684_, p_41685_);
-        return (InteractionResult)(flag && interactionresult instanceof InteractionResult.Success interactionresult$success
-            ? interactionresult$success.heldItemTransformedTo(
-                interactionresult$success.heldItemTransformedTo() == null
-                    ? this.applyAfterUseComponentSideEffects(p_41684_, itemstack)
-                    : interactionresult$success.heldItemTransformedTo().applyAfterUseComponentSideEffects(p_41684_, itemstack)
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack stackBeforeUse = this.copy();
+        boolean isInstantlyUsed = this.getUseDuration(player) <= 0;
+        InteractionResult result = this.getItem().use(level, player, hand);
+        return isInstantlyUsed && result instanceof InteractionResult.Success success
+            ? success.heldItemTransformedTo(
+                success.heldItemTransformedTo() == null
+                    ? this.applyAfterUseComponentSideEffects(player, stackBeforeUse)
+                    : success.heldItemTransformedTo().applyAfterUseComponentSideEffects(player, stackBeforeUse)
             )
-            : interactionresult);
+            : result;
     }
 
-    public ItemStack finishUsingItem(Level p_41672_, LivingEntity p_41673_) {
-        ItemStack itemstack = this.copy();
-        ItemStack itemstack1 = this.getItem().finishUsingItem(this, p_41672_, p_41673_);
-        return itemstack1.applyAfterUseComponentSideEffects(p_41673_, itemstack);
+    public ItemStack finishUsingItem(final Level level, final LivingEntity livingEntity) {
+        ItemStack stackBeforeUse = this.copy();
+        ItemStack result = this.getItem().finishUsingItem(this, level, livingEntity);
+        return result.applyAfterUseComponentSideEffects(livingEntity, stackBeforeUse);
     }
 
-    private ItemStack applyAfterUseComponentSideEffects(LivingEntity p_367870_, ItemStack p_361647_) {
-        UseRemainder useremainder = p_361647_.get(DataComponents.USE_REMAINDER);
-        UseCooldown usecooldown = p_361647_.get(DataComponents.USE_COOLDOWN);
-        int i = p_361647_.getCount();
-        ItemStack itemstack = this;
-        if (useremainder != null) {
-            itemstack = useremainder.convertIntoRemainder(this, i, p_367870_.hasInfiniteMaterials(), p_367870_::handleExtraItemsCreatedOnUse);
+    private ItemStack applyAfterUseComponentSideEffects(final LivingEntity user, final ItemStack stackBeforeUsing) {
+        UseRemainder useRemainder = stackBeforeUsing.get(DataComponents.USE_REMAINDER);
+        UseCooldown useCooldown = stackBeforeUsing.get(DataComponents.USE_COOLDOWN);
+        int stackCountBeforeUsing = stackBeforeUsing.getCount();
+        ItemStack result = this;
+        if (useRemainder != null) {
+            result = useRemainder.convertIntoRemainder(result, stackCountBeforeUsing, user.hasInfiniteMaterials(), user::handleExtraItemsCreatedOnUse);
         }
 
-        if (usecooldown != null) {
-            usecooldown.apply(p_361647_, p_367870_);
+        if (useCooldown != null) {
+            useCooldown.apply(stackBeforeUsing, user);
         }
 
-        return itemstack;
-    }
-
-    public int getMaxStackSize() {
-        return this.getOrDefault(DataComponents.MAX_STACK_SIZE, 1);
+        return result;
     }
 
     public boolean isStackable() {
@@ -433,8 +425,8 @@ public final class ItemStack implements DataComponentHolder {
         return Mth.clamp(this.getOrDefault(DataComponents.DAMAGE, 0), 0, this.getMaxDamage());
     }
 
-    public void setDamageValue(int p_41722_) {
-        this.set(DataComponents.DAMAGE, Mth.clamp(p_41722_, 0, this.getMaxDamage()));
+    public void setDamageValue(final int value) {
+        this.set(DataComponents.DAMAGE, Mth.clamp(value, 0, this.getMaxDamage()));
     }
 
     public int getMaxDamage() {
@@ -449,72 +441,69 @@ public final class ItemStack implements DataComponentHolder {
         return this.isDamageableItem() && this.getDamageValue() >= this.getMaxDamage() - 1;
     }
 
-    public void hurtAndBreak(int p_220158_, ServerLevel p_342197_, @Nullable ServerPlayer p_220160_, Consumer<Item> p_343361_) {
-        int i = this.processDurabilityChange(p_220158_, p_342197_, p_220160_);
-        if (i != 0) {
-            this.applyDamage(this.getDamageValue() + i, p_220160_, p_343361_);
+    public void hurtAndBreak(final int amount, final ServerLevel level, final @Nullable ServerPlayer player, final Consumer<Item> onBreak) {
+        int newAmount = this.processDurabilityChange(amount, level, player);
+        if (newAmount != 0) {
+            this.applyDamage(this.getDamageValue() + newAmount, player, onBreak);
         }
     }
 
-    private int processDurabilityChange(int p_362423_, ServerLevel p_364910_, @Nullable ServerPlayer p_365570_) {
+    private int processDurabilityChange(final int amount, final ServerLevel level, final @Nullable ServerPlayer player) {
         if (!this.isDamageableItem()) {
             return 0;
-        } else if (p_365570_ != null && p_365570_.hasInfiniteMaterials()) {
+        } else if (player != null && player.hasInfiniteMaterials()) {
             return 0;
         } else {
-            return p_362423_ > 0 ? EnchantmentHelper.processDurabilityChange(p_364910_, this, p_362423_) : p_362423_;
+            return amount > 0 ? EnchantmentHelper.processDurabilityChange(level, this, amount) : amount;
         }
     }
 
-    private void applyDamage(int p_365629_, @Nullable ServerPlayer p_367167_, Consumer<Item> p_364849_) {
-        if (p_367167_ != null) {
-            CriteriaTriggers.ITEM_DURABILITY_CHANGED.trigger(p_367167_, this, p_365629_);
+    private void applyDamage(final int newDamage, final @Nullable ServerPlayer player, final Consumer<Item> onBreak) {
+        if (player != null) {
+            CriteriaTriggers.ITEM_DURABILITY_CHANGED.trigger(player, this, newDamage);
         }
 
-        this.setDamageValue(p_365629_);
+        this.setDamageValue(newDamage);
         if (this.isBroken()) {
             Item item = this.getItem();
             this.shrink(1);
-            p_364849_.accept(item);
+            onBreak.accept(item);
         }
     }
 
-    public void hurtWithoutBreaking(int p_363289_, Player p_369700_) {
-        if (p_369700_ instanceof ServerPlayer serverplayer) {
-            int i = this.processDurabilityChange(p_363289_, serverplayer.level(), serverplayer);
-            if (i == 0) {
+    public void hurtWithoutBreaking(final int amount, final Player player) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            int newAmount = this.processDurabilityChange(amount, serverPlayer.level(), serverPlayer);
+            if (newAmount == 0) {
                 return;
             }
 
-            int j = Math.min(this.getDamageValue() + i, this.getMaxDamage() - 1);
-            this.applyDamage(j, serverplayer, p_359411_ -> {});
+            int newDamage = Math.min(this.getDamageValue() + newAmount, this.getMaxDamage() - 1);
+            this.applyDamage(newDamage, serverPlayer, i -> {});
         }
     }
 
-    public void hurtAndBreak(int p_407155_, LivingEntity p_406974_, InteractionHand p_410631_) {
-        this.hurtAndBreak(p_407155_, p_406974_, p_410631_.asEquipmentSlot());
+    public void hurtAndBreak(final int amount, final LivingEntity owner, final InteractionHand hand) {
+        this.hurtAndBreak(amount, owner, hand.asEquipmentSlot());
     }
 
-    public void hurtAndBreak(int p_41623_, LivingEntity p_41624_, EquipmentSlot p_335324_) {
-        if (p_41624_.level() instanceof ServerLevel serverlevel) {
+    public void hurtAndBreak(final int amount, final LivingEntity owner, final EquipmentSlot slot) {
+        if (owner.level() instanceof ServerLevel serverLevel) {
             this.hurtAndBreak(
-                p_41623_,
-                serverlevel,
-                p_41624_ instanceof ServerPlayer serverplayer ? serverplayer : null,
-                p_341563_ -> p_41624_.onEquippedItemBroken(p_341563_, p_335324_)
+                amount, serverLevel, owner instanceof ServerPlayer player ? player : null, brokenItem -> owner.onEquippedItemBroken(brokenItem, slot)
             );
         }
     }
 
-    public ItemStack hurtAndConvertOnBreak(int p_343792_, ItemLike p_344647_, LivingEntity p_342270_, EquipmentSlot p_345347_) {
-        this.hurtAndBreak(p_343792_, p_342270_, p_345347_);
+    public ItemStack hurtAndConvertOnBreak(final int amount, final ItemLike newItem, final LivingEntity owner, final EquipmentSlot slot) {
+        this.hurtAndBreak(amount, owner, slot);
         if (this.isEmpty()) {
-            ItemStack itemstack = this.transmuteCopyIgnoreEmpty(p_344647_, 1);
-            if (itemstack.isDamageableItem()) {
-                itemstack.setDamageValue(0);
+            ItemStack replacement = this.transmuteCopyIgnoreEmpty(newItem, 1);
+            if (replacement.isDamageableItem()) {
+                replacement.setDamageValue(0);
             }
 
-            return itemstack;
+            return replacement;
         } else {
             return this;
         }
@@ -532,20 +521,22 @@ public final class ItemStack implements DataComponentHolder {
         return this.getItem().getBarColor(this);
     }
 
-    public boolean overrideStackedOnOther(Slot p_150927_, ClickAction p_150928_, Player p_150929_) {
-        return this.getItem().overrideStackedOnOther(this, p_150927_, p_150928_, p_150929_);
+    public boolean overrideStackedOnOther(final Slot slot, final ClickAction clickAction, final Player player) {
+        return this.getItem().overrideStackedOnOther(this, slot, clickAction, player);
     }
 
-    public boolean overrideOtherStackedOnMe(ItemStack p_150933_, Slot p_150934_, ClickAction p_150935_, Player p_150936_, SlotAccess p_150937_) {
-        return this.getItem().overrideOtherStackedOnMe(this, p_150933_, p_150934_, p_150935_, p_150936_, p_150937_);
+    public boolean overrideOtherStackedOnMe(
+        final ItemStack other, final Slot slot, final ClickAction clickAction, final Player player, final SlotAccess carriedItem
+    ) {
+        return this.getItem().overrideOtherStackedOnMe(this, other, slot, clickAction, player, carriedItem);
     }
 
-    public boolean hurtEnemy(LivingEntity p_41641_, LivingEntity p_366644_) {
-        Item item = this.getItem();
-        item.hurtEnemy(this, p_41641_, p_366644_);
+    public boolean hurtEnemy(final LivingEntity mob, final LivingEntity attacker) {
+        Item usedItem = this.getItem();
+        usedItem.hurtEnemy(this, mob, attacker);
         if (this.has(DataComponents.WEAPON)) {
-            if (p_366644_ instanceof Player player) {
-                player.awardStat(Stats.ITEM_USED.get(item));
+            if (attacker instanceof Player player) {
+                player.awardStat(Stats.ITEM_USED.get(usedItem));
             }
 
             return true;
@@ -554,155 +545,163 @@ public final class ItemStack implements DataComponentHolder {
         }
     }
 
-    public void postHurtEnemy(LivingEntity p_343236_, LivingEntity p_363977_) {
-        this.getItem().postHurtEnemy(this, p_343236_, p_363977_);
+    public void postHurtEnemy(final LivingEntity mob, final LivingEntity attacker) {
+        this.getItem().postHurtEnemy(this, mob, attacker);
         Weapon weapon = this.get(DataComponents.WEAPON);
         if (weapon != null) {
-            this.hurtAndBreak(weapon.itemDamagePerAttack(), p_363977_, EquipmentSlot.MAINHAND);
+            this.hurtAndBreak(weapon.itemDamagePerAttack(), attacker, EquipmentSlot.MAINHAND);
         }
     }
 
-    public void mineBlock(Level p_41687_, BlockState p_41688_, BlockPos p_41689_, Player p_41690_) {
-        Item item = this.getItem();
-        if (item.mineBlock(this, p_41687_, p_41688_, p_41689_, p_41690_)) {
-            p_41690_.awardStat(Stats.ITEM_USED.get(item));
+    public void mineBlock(final Level level, final BlockState state, final BlockPos pos, final Player owner) {
+        Item usedItem = this.getItem();
+        if (usedItem.mineBlock(this, level, state, pos, owner)) {
+            owner.awardStat(Stats.ITEM_USED.get(usedItem));
         }
     }
 
-    public boolean isCorrectToolForDrops(BlockState p_41736_) {
-        return this.getItem().isCorrectToolForDrops(this, p_41736_);
+    public boolean isCorrectToolForDrops(final BlockState state) {
+        return this.getItem().isCorrectToolForDrops(this, state);
     }
 
-    public InteractionResult interactLivingEntity(Player p_41648_, LivingEntity p_41649_, InteractionHand p_41650_) {
+    public InteractionResult interactLivingEntity(final Player player, final LivingEntity target, final InteractionHand hand) {
         Equippable equippable = this.get(DataComponents.EQUIPPABLE);
         if (equippable != null && equippable.equipOnInteract()) {
-            InteractionResult interactionresult = equippable.equipOnTarget(p_41648_, p_41649_, this);
-            if (interactionresult != InteractionResult.PASS) {
-                return interactionresult;
+            InteractionResult result = equippable.equipOnTarget(player, target, this);
+            if (result != InteractionResult.PASS) {
+                return result;
             }
         }
 
-        return this.getItem().interactLivingEntity(this, p_41648_, p_41649_, p_41650_);
+        return this.getItem().interactLivingEntity(this, player, target, hand);
     }
 
     public ItemStack copy() {
         if (this.isEmpty()) {
             return EMPTY;
-        } else {
-            ItemStack itemstack = new ItemStack(this.getItem(), this.count, this.components.copy());
-            itemstack.setPopTime(this.getPopTime());
-            return itemstack;
         }
+
+        ItemStack copy = new ItemStack(this.typeHolder(), this.count, this.components.copy());
+        copy.setPopTime(this.getPopTime());
+        return copy;
     }
 
-    public ItemStack copyWithCount(int p_256354_) {
+    public ItemStack copyWithCount(final int count) {
         if (this.isEmpty()) {
             return EMPTY;
-        } else {
-            ItemStack itemstack = this.copy();
-            itemstack.setCount(p_256354_);
-            return itemstack;
         }
+
+        ItemStack copy = this.copy();
+        copy.setCount(count);
+        return copy;
     }
 
-    public ItemStack transmuteCopy(ItemLike p_345281_) {
-        return this.transmuteCopy(p_345281_, this.getCount());
+    public ItemStack transmuteCopy(final ItemLike newItem) {
+        return this.transmuteCopy(newItem, this.getCount());
     }
 
-    public ItemStack transmuteCopy(ItemLike p_334328_, int p_334821_) {
-        return this.isEmpty() ? EMPTY : this.transmuteCopyIgnoreEmpty(p_334328_, p_334821_);
+    public ItemStack transmuteCopy(final ItemLike newItem, final int newCount) {
+        return this.isEmpty() ? EMPTY : this.transmuteCopyIgnoreEmpty(newItem, newCount);
     }
 
-    private ItemStack transmuteCopyIgnoreEmpty(ItemLike p_332114_, int p_333334_) {
-        return new ItemStack(p_332114_.asItem().builtInRegistryHolder(), p_333334_, this.components.asPatch());
+    private ItemStack transmuteCopyIgnoreEmpty(final ItemLike newItem, final int newCount) {
+        return new ItemStack(newItem.asItem().builtInRegistryHolder(), newCount, this.components.asPatch());
     }
 
-    public static boolean matches(ItemStack p_41729_, ItemStack p_41730_) {
-        if (p_41729_ == p_41730_) {
+    public static boolean matches(final ItemStack a, final ItemStack b) {
+        if (a == b) {
             return true;
         } else {
-            return p_41729_.getCount() != p_41730_.getCount() ? false : isSameItemSameComponents(p_41729_, p_41730_);
+            return a.getCount() != b.getCount() ? false : isSameItemSameComponents(a, b);
         }
     }
 
     @Deprecated
-    public static boolean listMatches(List<ItemStack> p_335471_, List<ItemStack> p_334624_) {
-        if (p_335471_.size() != p_334624_.size()) {
+    public static boolean listMatches(final List<ItemStack> left, final List<ItemStack> right) {
+        if (left.size() != right.size()) {
+            return false;
+        }
+
+        for (int i = 0; i < left.size(); i++) {
+            if (!matches(left.get(i), right.get(i))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public static boolean isSameItem(final ItemStack a, final ItemStack b) {
+        return a.is(b.getItem());
+    }
+
+    public static boolean isSameItemSameComponents(final ItemStack a, final ItemStack b) {
+        if (!a.is(b.getItem())) {
             return false;
         } else {
-            for (int i = 0; i < p_335471_.size(); i++) {
-                if (!matches(p_335471_.get(i), p_334624_.get(i))) {
-                    return false;
-                }
+            return a.isEmpty() && b.isEmpty() ? true : Objects.equals(a.components, b.components);
+        }
+    }
+
+    public static boolean matchesIgnoringComponents(final ItemStack a, final ItemStack b, final Predicate<DataComponentType<?>> ignoredPredicate) {
+        if (a == b) {
+            return true;
+        }
+
+        if (a.getCount() != b.getCount()) {
+            return false;
+        }
+
+        if (!a.is(b.getItem())) {
+            return false;
+        }
+
+        if (a.isEmpty() && b.isEmpty()) {
+            return true;
+        }
+
+        if (a.components.size() != b.components.size()) {
+            return false;
+        }
+
+        for (DataComponentType<?> type : a.components.keySet()) {
+            Object componentA = a.components.get(type);
+            Object componentB = b.components.get(type);
+            if (componentA == null || componentB == null) {
+                return false;
             }
 
-            return true;
-        }
-    }
-
-    public static boolean isSameItem(ItemStack p_287761_, ItemStack p_287676_) {
-        return p_287761_.is(p_287676_.getItem());
-    }
-
-    public static boolean isSameItemSameComponents(ItemStack p_334397_, ItemStack p_331609_) {
-        if (!p_334397_.is(p_331609_.getItem())) {
-            return false;
-        } else {
-            return p_334397_.isEmpty() && p_331609_.isEmpty() ? true : Objects.equals(p_334397_.components, p_331609_.components);
-        }
-    }
-
-    public static boolean matchesIgnoringComponents(ItemStack p_460667_, ItemStack p_457382_, Predicate<DataComponentType<?>> p_453488_) {
-        if (p_460667_ == p_457382_) {
-            return true;
-        } else if (p_460667_.getCount() != p_457382_.getCount()) {
-            return false;
-        } else if (!p_460667_.is(p_457382_.getItem())) {
-            return false;
-        } else if (p_460667_.isEmpty() && p_457382_.isEmpty()) {
-            return true;
-        } else if (p_460667_.components.size() != p_457382_.components.size()) {
-            return false;
-        } else {
-            for (DataComponentType<?> datacomponenttype : p_460667_.components.keySet()) {
-                Object object = p_460667_.components.get(datacomponenttype);
-                Object object1 = p_457382_.components.get(datacomponenttype);
-                if (object == null || object1 == null) {
-                    return false;
-                }
-
-                if (!Objects.equals(object, object1) && !p_453488_.test(datacomponenttype)) {
-                    return false;
-                }
+            if (!Objects.equals(componentA, componentB) && !ignoredPredicate.test(type)) {
+                return false;
             }
-
-            return true;
         }
+
+        return true;
     }
 
-    public static MapCodec<ItemStack> lenientOptionalFieldOf(String p_336149_) {
-        return CODEC.lenientOptionalFieldOf(p_336149_)
-            .xmap(p_327174_ -> p_327174_.orElse(EMPTY), p_327162_ -> p_327162_.isEmpty() ? Optional.empty() : Optional.of(p_327162_));
+    public static MapCodec<ItemStack> lenientOptionalFieldOf(final String name) {
+        return CODEC.lenientOptionalFieldOf(name)
+            .xmap(itemStack -> itemStack.orElse(EMPTY), itemStack -> itemStack.isEmpty() ? Optional.empty() : Optional.of(itemStack));
     }
 
-    public static int hashItemAndComponents(@Nullable ItemStack p_334004_) {
-        if (p_334004_ != null) {
-            int i = 31 + p_334004_.getItem().hashCode();
-            return 31 * i + p_334004_.getComponents().hashCode();
+    public static int hashItemAndComponents(final @Nullable ItemStack item) {
+        if (item != null) {
+            int result = 31 + item.getItem().hashCode();
+            return 31 * result + item.getComponents().hashCode();
         } else {
             return 0;
         }
     }
 
     @Deprecated
-    public static int hashStackList(List<ItemStack> p_333449_) {
-        int i = 0;
+    public static int hashStackList(final List<ItemStack> items) {
+        int result = 0;
 
-        for (ItemStack itemstack : p_333449_) {
-            i = i * 31 + hashItemAndComponents(itemstack);
+        for (ItemStack item : items) {
+            result = result * 31 + hashItemAndComponents(item);
         }
 
-        return i;
+        return result;
     }
 
     @Override
@@ -710,47 +709,47 @@ public final class ItemStack implements DataComponentHolder {
         return this.getCount() + " " + this.getItem();
     }
 
-    public void inventoryTick(Level p_41667_, Entity p_41668_, @Nullable EquipmentSlot p_391620_) {
+    public void inventoryTick(final Level level, final Entity owner, final @Nullable EquipmentSlot slot) {
         if (this.popTime > 0) {
             this.popTime--;
         }
 
-        if (p_41667_ instanceof ServerLevel serverlevel) {
-            this.getItem().inventoryTick(this, serverlevel, p_41668_, p_391620_);
+        if (level instanceof ServerLevel serverLevel) {
+            this.getItem().inventoryTick(this, serverLevel, owner, slot);
         }
     }
 
-    public void onCraftedBy(Player p_41680_, int p_41681_) {
-        p_41680_.awardStat(Stats.ITEM_CRAFTED.get(this.getItem()), p_41681_);
-        this.getItem().onCraftedBy(this, p_41680_);
+    public void onCraftedBy(final Player player, final int craftCount) {
+        player.awardStat(Stats.ITEM_CRAFTED.get(this.getItem()), craftCount);
+        this.getItem().onCraftedBy(this, player);
     }
 
-    public void onCraftedBySystem(Level p_311164_) {
-        this.getItem().onCraftedPostProcess(this, p_311164_);
+    public void onCraftedBySystem(final Level level) {
+        this.getItem().onCraftedPostProcess(this, level);
     }
 
-    public int getUseDuration(LivingEntity p_343439_) {
-        return this.getItem().getUseDuration(this, p_343439_);
+    public int getUseDuration(final LivingEntity user) {
+        return this.getItem().getUseDuration(this, user);
     }
 
     public ItemUseAnimation getUseAnimation() {
         return this.getItem().getUseAnimation(this);
     }
 
-    public void releaseUsing(Level p_41675_, LivingEntity p_41676_, int p_41677_) {
-        ItemStack itemstack = this.copy();
-        if (this.getItem().releaseUsing(this, p_41675_, p_41676_, p_41677_)) {
-            ItemStack itemstack1 = this.applyAfterUseComponentSideEffects(p_41676_, itemstack);
-            if (itemstack1 != this) {
-                p_41676_.setItemInHand(p_41676_.getUsedItemHand(), itemstack1);
+    public void releaseUsing(final Level level, final LivingEntity entity, final int remainingTime) {
+        ItemStack stackBeforeUsing = this.copy();
+        if (this.getItem().releaseUsing(this, level, entity, remainingTime)) {
+            ItemStack withSideEffects = this.applyAfterUseComponentSideEffects(entity, stackBeforeUsing);
+            if (withSideEffects != this) {
+                entity.setItemInHand(entity.getUsedItemHand(), withSideEffects);
             }
         }
     }
 
-    public void causeUseVibration(Entity p_460083_, Holder.Reference<GameEvent> p_460931_) {
-        UseEffects useeffects = this.get(DataComponents.USE_EFFECTS);
-        if (useeffects != null && useeffects.interactVibrations()) {
-            p_460083_.gameEvent(p_460931_);
+    public void causeUseVibration(final Entity causer, final Holder.Reference<GameEvent> event) {
+        UseEffects useEffects = this.get(DataComponents.USE_EFFECTS);
+        if (useEffects != null && useEffects.interactVibrations()) {
+            causer.gameEvent(event);
         }
     }
 
@@ -758,69 +757,69 @@ public final class ItemStack implements DataComponentHolder {
         return this.getItem().useOnRelease(this);
     }
 
-    public <T> @Nullable T set(DataComponentType<T> p_332666_, @Nullable T p_335655_) {
-        return this.components.set(p_332666_, p_335655_);
+    public <T> @Nullable T set(final DataComponentType<T> type, final @Nullable T value) {
+        return this.components.set(type, value);
     }
 
-    public <T> @Nullable T set(TypedDataComponent<T> p_425166_) {
-        return this.components.set(p_425166_);
+    public <T> @Nullable T set(final TypedDataComponent<T> value) {
+        return this.components.set(value);
     }
 
-    public <T> void copyFrom(DataComponentType<T> p_391623_, DataComponentGetter p_394516_) {
-        this.set(p_391623_, p_394516_.get(p_391623_));
+    public <T> void copyFrom(final DataComponentType<T> type, final DataComponentGetter source) {
+        this.set(type, source.get(type));
     }
 
-    public <T, U> @Nullable T update(DataComponentType<T> p_331418_, T p_327708_, U p_332086_, BiFunction<T, U, T> p_329834_) {
-        return this.set(p_331418_, p_329834_.apply(this.getOrDefault(p_331418_, p_327708_), p_332086_));
+    public <T, U> @Nullable T update(final DataComponentType<T> type, final T defaultValue, final U value, final BiFunction<T, U, T> combiner) {
+        return this.set(type, combiner.apply(this.getOrDefault(type, defaultValue), value));
     }
 
-    public <T> @Nullable T update(DataComponentType<T> p_329905_, T p_329705_, UnaryOperator<T> p_335114_) {
-        T t = this.getOrDefault(p_329905_, p_329705_);
-        return this.set(p_329905_, p_335114_.apply(t));
+    public <T> @Nullable T update(final DataComponentType<T> type, final T defaultValue, final UnaryOperator<T> function) {
+        T value = this.getOrDefault(type, defaultValue);
+        return this.set(type, function.apply(value));
     }
 
-    public <T> @Nullable T remove(DataComponentType<? extends T> p_333259_) {
-        return this.components.remove(p_333259_);
+    public <T> @Nullable T remove(final DataComponentType<? extends T> type) {
+        return this.components.remove(type);
     }
 
-    public void applyComponentsAndValidate(DataComponentPatch p_336111_) {
-        DataComponentPatch datacomponentpatch = this.components.asPatch();
-        this.components.applyPatch(p_336111_);
-        Optional<Error<ItemStack>> optional = validateStrict(this).error();
-        if (optional.isPresent()) {
-            LOGGER.error("Failed to apply component patch '{}' to item: '{}'", p_336111_, optional.get().message());
-            this.components.restorePatch(datacomponentpatch);
+    public void applyComponentsAndValidate(final DataComponentPatch patch) {
+        DataComponentPatch oldPatch = this.components.asPatch();
+        this.components.applyPatch(patch);
+        Optional<Error<ItemStack>> validationError = validateStrict(this).error();
+        if (validationError.isPresent()) {
+            LOGGER.error("Failed to apply component patch '{}' to item: '{}'", patch, validationError.get().message());
+            this.components.restorePatch(oldPatch);
         }
     }
 
-    public void applyComponents(DataComponentPatch p_328534_) {
-        this.components.applyPatch(p_328534_);
+    public void applyComponents(final DataComponentPatch patch) {
+        this.components.applyPatch(patch);
     }
 
-    public void applyComponents(DataComponentMap p_335208_) {
-        this.components.setAll(p_335208_);
+    public void applyComponents(final DataComponentMap components) {
+        this.components.setAll(components);
     }
 
     public Component getHoverName() {
-        Component component = this.getCustomName();
-        return component != null ? component : this.getItemName();
+        Component customName = this.getCustomName();
+        return customName != null ? customName : this.getItemName();
     }
 
     public @Nullable Component getCustomName() {
-        Component component = this.get(DataComponents.CUSTOM_NAME);
-        if (component != null) {
-            return component;
-        } else {
-            WrittenBookContent writtenbookcontent = this.get(DataComponents.WRITTEN_BOOK_CONTENT);
-            if (writtenbookcontent != null) {
-                String s = writtenbookcontent.title().raw();
-                if (!StringUtil.isBlank(s)) {
-                    return Component.literal(s);
-                }
-            }
-
-            return null;
+        Component customName = this.get(DataComponents.CUSTOM_NAME);
+        if (customName != null) {
+            return customName;
         }
+
+        WrittenBookContent content = this.get(DataComponents.WRITTEN_BOOK_CONTENT);
+        if (content != null) {
+            String title = content.title().raw();
+            if (!StringUtil.isBlank(title)) {
+                return Component.literal(title);
+            }
+        }
+
+        return null;
     }
 
     public Component getItemName() {
@@ -828,127 +827,138 @@ public final class ItemStack implements DataComponentHolder {
     }
 
     public Component getStyledHoverName() {
-        MutableComponent mutablecomponent = Component.empty().append(this.getHoverName()).withStyle(this.getRarity().color());
+        MutableComponent hoverName = Component.empty().append(this.getHoverName()).withStyle(this.getRarity().color());
         if (this.has(DataComponents.CUSTOM_NAME)) {
-            mutablecomponent.withStyle(ChatFormatting.ITALIC);
+            hoverName.withStyle(ChatFormatting.ITALIC);
         }
 
-        return mutablecomponent;
+        return hoverName;
     }
 
     public <T extends TooltipProvider> void addToTooltip(
-        DataComponentType<T> p_331934_, Item.TooltipContext p_333562_, TooltipDisplay p_397538_, Consumer<Component> p_334534_, TooltipFlag p_333715_
+        final DataComponentType<T> type,
+        final Item.TooltipContext context,
+        final TooltipDisplay display,
+        final Consumer<Component> consumer,
+        final TooltipFlag flag
     ) {
-        T t = (T)this.get(p_331934_);
-        if (t != null && p_397538_.shows(p_331934_)) {
-            t.addToTooltip(p_333562_, p_334534_, p_333715_, this.components);
+        T component = (T)this.get(type);
+        if (component != null && display.shows(type)) {
+            component.addToTooltip(context, consumer, flag, this.components);
         }
     }
 
-    public List<Component> getTooltipLines(Item.TooltipContext p_331329_, @Nullable Player p_41652_, TooltipFlag p_41653_) {
-        TooltipDisplay tooltipdisplay = this.getOrDefault(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT);
-        if (!p_41653_.isCreative() && tooltipdisplay.hideTooltip()) {
-            boolean flag = this.getItem().shouldPrintOpWarning(this, p_41652_);
-            return flag ? OP_NBT_WARNING : List.of();
+    public List<Component> getTooltipLines(final Item.TooltipContext context, final @Nullable Player player, final TooltipFlag tooltipFlag) {
+        TooltipDisplay display = this.getOrDefault(DataComponents.TOOLTIP_DISPLAY, TooltipDisplay.DEFAULT);
+        if (!tooltipFlag.isCreative() && display.hideTooltip()) {
+            boolean shouldPrintOpWarning = this.getItem().shouldPrintOpWarning(this, player);
+            return shouldPrintOpWarning ? OP_NBT_WARNING : List.of();
         } else {
-            List<Component> list = Lists.newArrayList();
-            list.add(this.getStyledHoverName());
-            this.addDetailsToTooltip(p_331329_, tooltipdisplay, p_41652_, p_41653_, list::add);
-            return list;
+            List<Component> lines = Lists.newArrayList();
+            lines.add(this.getStyledHoverName());
+            this.addDetailsToTooltip(context, display, player, tooltipFlag, lines::add);
+            return lines;
         }
     }
 
     public void addDetailsToTooltip(
-        Item.TooltipContext p_396953_, TooltipDisplay p_394554_, @Nullable Player p_393346_, TooltipFlag p_392044_, Consumer<Component> p_396200_
+        final Item.TooltipContext context,
+        final TooltipDisplay display,
+        final @Nullable Player player,
+        final TooltipFlag tooltipFlag,
+        final Consumer<Component> builder
     ) {
-        this.getItem().appendHoverText(this, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.TROPICAL_FISH_PATTERN, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.INSTRUMENT, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.MAP_ID, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.BEES, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.CONTAINER_LOOT, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.CONTAINER, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.BANNER_PATTERNS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.POT_DECORATIONS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.WRITTEN_BOOK_CONTENT, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.CHARGED_PROJECTILES, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.FIREWORKS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.FIREWORK_EXPLOSION, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.POTION_CONTENTS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.JUKEBOX_PLAYABLE, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.TRIM, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.STORED_ENCHANTMENTS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.ENCHANTMENTS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.DYED_COLOR, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.PROFILE, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.LORE, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addAttributeTooltips(p_396200_, p_394554_, p_393346_);
-        this.addUnitComponentToTooltip(DataComponents.INTANGIBLE_PROJECTILE, INTANGIBLE_TOOLTIP, p_394554_, p_396200_);
-        this.addUnitComponentToTooltip(DataComponents.UNBREAKABLE, UNBREAKABLE_TOOLTIP, p_394554_, p_396200_);
-        this.addToTooltip(DataComponents.OMINOUS_BOTTLE_AMPLIFIER, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.SUSPICIOUS_STEW_EFFECTS, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.BLOCK_STATE, p_396953_, p_394554_, p_396200_, p_392044_);
-        this.addToTooltip(DataComponents.ENTITY_DATA, p_396953_, p_394554_, p_396200_, p_392044_);
-        if ((this.is(Items.SPAWNER) || this.is(Items.TRIAL_SPAWNER)) && p_394554_.shows(DataComponents.BLOCK_ENTITY_DATA)) {
-            TypedEntityData<BlockEntityType<?>> typedentitydata = this.get(DataComponents.BLOCK_ENTITY_DATA);
-            Spawner.appendHoverText(typedentitydata, p_396200_, "SpawnData");
+        this.getItem().appendHoverText(this, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.TROPICAL_FISH_PATTERN, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.INSTRUMENT, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.MAP_ID, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.BEES, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.CONTAINER_LOOT, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.CONTAINER, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.BANNER_PATTERNS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.POT_DECORATIONS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.WRITTEN_BOOK_CONTENT, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.CHARGED_PROJECTILES, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.FIREWORKS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.FIREWORK_EXPLOSION, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.POTION_CONTENTS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.JUKEBOX_PLAYABLE, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.TRIM, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.STORED_ENCHANTMENTS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.ENCHANTMENTS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.DYED_COLOR, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.PROFILE, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.LORE, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.SULFUR_CUBE_CONTENT, context, display, builder, tooltipFlag);
+        this.addAttributeTooltips(builder, display, player);
+        this.addUnitComponentToTooltip(DataComponents.INTANGIBLE_PROJECTILE, INTANGIBLE_TOOLTIP, display, builder);
+        this.addUnitComponentToTooltip(DataComponents.UNBREAKABLE, UNBREAKABLE_TOOLTIP, display, builder);
+        this.addToTooltip(DataComponents.OMINOUS_BOTTLE_AMPLIFIER, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.SUSPICIOUS_STEW_EFFECTS, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.BLOCK_STATE, context, display, builder, tooltipFlag);
+        this.addToTooltip(DataComponents.ENTITY_DATA, context, display, builder, tooltipFlag);
+        if ((this.is(Items.SPAWNER) || this.is(Items.TRIAL_SPAWNER)) && display.shows(DataComponents.BLOCK_ENTITY_DATA)) {
+            TypedEntityData<BlockEntityType<?>> blockEntityData = this.get(DataComponents.BLOCK_ENTITY_DATA);
+            Spawner.appendHoverText(blockEntityData, builder, "SpawnData");
         }
 
-        AdventureModePredicate adventuremodepredicate1 = this.get(DataComponents.CAN_BREAK);
-        if (adventuremodepredicate1 != null && p_394554_.shows(DataComponents.CAN_BREAK)) {
-            p_396200_.accept(CommonComponents.EMPTY);
-            p_396200_.accept(AdventureModePredicate.CAN_BREAK_HEADER);
-            adventuremodepredicate1.addToTooltip(p_396200_);
+        AdventureModePredicate canBreak = this.get(DataComponents.CAN_BREAK);
+        if (canBreak != null && display.shows(DataComponents.CAN_BREAK)) {
+            builder.accept(CommonComponents.EMPTY);
+            builder.accept(AdventureModePredicate.CAN_BREAK_HEADER);
+            canBreak.addToTooltip(builder);
         }
 
-        AdventureModePredicate adventuremodepredicate = this.get(DataComponents.CAN_PLACE_ON);
-        if (adventuremodepredicate != null && p_394554_.shows(DataComponents.CAN_PLACE_ON)) {
-            p_396200_.accept(CommonComponents.EMPTY);
-            p_396200_.accept(AdventureModePredicate.CAN_PLACE_HEADER);
-            adventuremodepredicate.addToTooltip(p_396200_);
+        AdventureModePredicate canPlaceOn = this.get(DataComponents.CAN_PLACE_ON);
+        if (canPlaceOn != null && display.shows(DataComponents.CAN_PLACE_ON)) {
+            builder.accept(CommonComponents.EMPTY);
+            builder.accept(AdventureModePredicate.CAN_PLACE_HEADER);
+            canPlaceOn.addToTooltip(builder);
         }
 
-        if (p_392044_.isAdvanced()) {
-            if (this.isDamaged() && p_394554_.shows(DataComponents.DAMAGE)) {
-                p_396200_.accept(Component.translatable("item.durability", this.getMaxDamage() - this.getDamageValue(), this.getMaxDamage()));
+        if (tooltipFlag.isAdvanced()) {
+            if (this.isDamaged() && display.shows(DataComponents.DAMAGE)) {
+                builder.accept(Component.translatable("item.durability", this.getMaxDamage() - this.getDamageValue(), this.getMaxDamage()));
             }
 
-            p_396200_.accept(Component.literal(BuiltInRegistries.ITEM.getKey(this.getItem()).toString()).withStyle(ChatFormatting.DARK_GRAY));
-            int i = this.components.size();
-            if (i > 0) {
-                p_396200_.accept(Component.translatable("item.components", i).withStyle(ChatFormatting.DARK_GRAY));
+            builder.accept(Component.literal(BuiltInRegistries.ITEM.getKey(this.getItem()).toString()).withStyle(ChatFormatting.DARK_GRAY));
+            int count = this.components.size();
+            if (count > 0) {
+                builder.accept(Component.translatable("item.components", count).withStyle(ChatFormatting.DARK_GRAY));
             }
         }
 
-        if (p_393346_ != null && !this.getItem().isEnabled(p_393346_.level().enabledFeatures())) {
-            p_396200_.accept(DISABLED_ITEM_TOOLTIP);
+        if (player != null && !this.getItem().isEnabled(player.level().enabledFeatures())) {
+            builder.accept(DISABLED_ITEM_TOOLTIP);
         }
 
-        boolean flag = this.getItem().shouldPrintOpWarning(this, p_393346_);
-        if (flag) {
-            OP_NBT_WARNING.forEach(p_396200_);
+        boolean shouldPrintOpWarning = this.getItem().shouldPrintOpWarning(this, player);
+        if (shouldPrintOpWarning) {
+            OP_NBT_WARNING.forEach(builder);
         }
     }
 
-    private void addUnitComponentToTooltip(DataComponentType<?> p_450330_, Component p_454467_, TooltipDisplay p_450569_, Consumer<Component> p_456121_) {
-        if (this.has(p_450330_) && p_450569_.shows(p_450330_)) {
-            p_456121_.accept(p_454467_);
+    private void addUnitComponentToTooltip(
+        final DataComponentType<?> dataComponentType, final Component component, final TooltipDisplay display, final Consumer<Component> builder
+    ) {
+        if (this.has(dataComponentType) && display.shows(dataComponentType)) {
+            builder.accept(component);
         }
     }
 
-    private void addAttributeTooltips(Consumer<Component> p_333346_, TooltipDisplay p_391795_, @Nullable Player p_332769_) {
-        if (p_391795_.shows(DataComponents.ATTRIBUTE_MODIFIERS)) {
-            for (EquipmentSlotGroup equipmentslotgroup : EquipmentSlotGroup.values()) {
-                MutableBoolean mutableboolean = new MutableBoolean(true);
-                this.forEachModifier(equipmentslotgroup, (p_405609_, p_405610_, p_405611_) -> {
-                    if (p_405611_ != ItemAttributeModifiers.Display.hidden()) {
-                        if (mutableboolean.isTrue()) {
-                            p_333346_.accept(CommonComponents.EMPTY);
-                            p_333346_.accept(Component.translatable("item.modifiers." + equipmentslotgroup.getSerializedName()).withStyle(ChatFormatting.GRAY));
-                            mutableboolean.setFalse();
+    private void addAttributeTooltips(final Consumer<Component> consumer, final TooltipDisplay display, final @Nullable Player player) {
+        if (display.shows(DataComponents.ATTRIBUTE_MODIFIERS)) {
+            for (EquipmentSlotGroup slot : EquipmentSlotGroup.values()) {
+                MutableBoolean first = new MutableBoolean(true);
+                this.forEachModifier(slot, (attribute, modifier, tooltip) -> {
+                    if (tooltip != ItemAttributeModifiers.Display.hidden()) {
+                        if (first.isTrue()) {
+                            consumer.accept(CommonComponents.EMPTY);
+                            consumer.accept(Component.translatable("item.modifiers." + slot.getSerializedName()).withStyle(ChatFormatting.GRAY));
+                            first.setFalse();
                         }
 
-                        p_405611_.apply(p_333346_, p_332769_, p_405609_, p_405610_);
+                        tooltip.apply(consumer, player, attribute, modifier);
                     }
                 });
             }
@@ -956,34 +966,34 @@ public final class ItemStack implements DataComponentHolder {
     }
 
     public boolean hasFoil() {
-        Boolean obool = this.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
-        return obool != null ? obool : this.getItem().isFoil(this);
+        Boolean enchantmentGlintOverride = this.get(DataComponents.ENCHANTMENT_GLINT_OVERRIDE);
+        return enchantmentGlintOverride != null ? enchantmentGlintOverride : this.getItem().isFoil(this);
     }
 
     public Rarity getRarity() {
-        Rarity rarity = this.getOrDefault(DataComponents.RARITY, Rarity.COMMON);
+        Rarity baseRarity = this.getOrDefault(DataComponents.RARITY, Rarity.COMMON);
         if (!this.isEnchanted()) {
-            return rarity;
-        } else {
-            return switch (rarity) {
-                case COMMON, UNCOMMON -> Rarity.RARE;
-                case RARE -> Rarity.EPIC;
-                default -> rarity;
-            };
+            return baseRarity;
         }
+
+        return switch (baseRarity) {
+            case COMMON, UNCOMMON -> Rarity.RARE;
+            case RARE -> Rarity.EPIC;
+            default -> baseRarity;
+        };
     }
 
     public boolean isEnchantable() {
         if (!this.has(DataComponents.ENCHANTABLE)) {
             return false;
-        } else {
-            ItemEnchantments itemenchantments = this.get(DataComponents.ENCHANTMENTS);
-            return itemenchantments != null && itemenchantments.isEmpty();
         }
+
+        ItemEnchantments enchantments = this.get(DataComponents.ENCHANTMENTS);
+        return enchantments != null && enchantments.isEmpty();
     }
 
-    public void enchant(Holder<Enchantment> p_342791_, int p_41665_) {
-        EnchantmentHelper.updateEnchantments(this, p_341557_ -> p_341557_.upgrade(p_342791_, p_41665_));
+    public void enchant(final Holder<Enchantment> enchantment, final int level) {
+        EnchantmentHelper.updateEnchantments(this, enchantments -> enchantments.upgrade(enchantment, level));
     }
 
     public boolean isEnchanted() {
@@ -994,145 +1004,129 @@ public final class ItemStack implements DataComponentHolder {
         return this.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
     }
 
-    public boolean isFramed() {
-        return this.entityRepresentation instanceof ItemFrame;
+    public void forEachModifier(final EquipmentSlotGroup slot, final TriConsumer<Holder<Attribute>, AttributeModifier, ItemAttributeModifiers.Display> consumer) {
+        ItemAttributeModifiers modifiers = this.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        modifiers.forEach(slot, consumer);
+        EnchantmentHelper.forEachModifier(this, slot, (a, b) -> consumer.accept(a, b, ItemAttributeModifiers.Display.attributeModifiers()));
     }
 
-    public void setEntityRepresentation(@Nullable Entity p_41637_) {
-        if (!this.isEmpty()) {
-            this.entityRepresentation = p_41637_;
-        }
-    }
-
-    public @Nullable ItemFrame getFrame() {
-        return this.entityRepresentation instanceof ItemFrame ? (ItemFrame)this.getEntityRepresentation() : null;
-    }
-
-    public @Nullable Entity getEntityRepresentation() {
-        return !this.isEmpty() ? this.entityRepresentation : null;
-    }
-
-    public void forEachModifier(EquipmentSlotGroup p_344758_, TriConsumer<Holder<Attribute>, AttributeModifier, ItemAttributeModifiers.Display> p_409084_) {
-        ItemAttributeModifiers itemattributemodifiers = this.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
-        itemattributemodifiers.forEach(p_344758_, p_409084_);
-        EnchantmentHelper.forEachModifier(
-            this, p_344758_, (p_405603_, p_405604_) -> p_409084_.accept(p_405603_, p_405604_, ItemAttributeModifiers.Display.attributeModifiers())
-        );
-    }
-
-    public void forEachModifier(EquipmentSlot p_331036_, BiConsumer<Holder<Attribute>, AttributeModifier> p_334430_) {
-        ItemAttributeModifiers itemattributemodifiers = this.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
-        itemattributemodifiers.forEach(p_331036_, p_334430_);
-        EnchantmentHelper.forEachModifier(this, p_331036_, p_334430_);
+    public void forEachModifier(final EquipmentSlot slot, final BiConsumer<Holder<Attribute>, AttributeModifier> consumer) {
+        ItemAttributeModifiers modifiers = this.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY);
+        modifiers.forEach(slot, consumer);
+        EnchantmentHelper.forEachModifier(this, slot, consumer);
     }
 
     public Component getDisplayName() {
-        MutableComponent mutablecomponent = Component.empty().append(this.getHoverName());
+        MutableComponent hoverName = Component.empty().append(this.getHoverName());
         if (this.has(DataComponents.CUSTOM_NAME)) {
-            mutablecomponent.withStyle(ChatFormatting.ITALIC);
+            hoverName.withStyle(ChatFormatting.ITALIC);
         }
 
-        MutableComponent mutablecomponent1 = ComponentUtils.wrapInSquareBrackets(mutablecomponent);
+        MutableComponent result = ComponentUtils.wrapInSquareBrackets(hoverName);
         if (!this.isEmpty()) {
-            mutablecomponent1.withStyle(this.getRarity().color()).withStyle(p_390810_ -> p_390810_.withHoverEvent(new HoverEvent.ShowItem(this)));
+            result.withStyle(this.getRarity().color()).withStyle(s -> s.withHoverEvent(new HoverEvent.ShowItem(ItemStackTemplate.fromNonEmptyStack(this))));
         }
 
-        return mutablecomponent1;
+        return result;
     }
 
     public SwingAnimation getSwingAnimation() {
         return this.getOrDefault(DataComponents.SWING_ANIMATION, SwingAnimation.DEFAULT);
     }
 
-    public boolean canPlaceOnBlockInAdventureMode(BlockInWorld p_331134_) {
-        AdventureModePredicate adventuremodepredicate = this.get(DataComponents.CAN_PLACE_ON);
-        return adventuremodepredicate != null && adventuremodepredicate.test(p_331134_);
+    public boolean canPlaceOnBlockInAdventureMode(final BlockInWorld blockInWorld) {
+        AdventureModePredicate canPlaceOn = this.get(DataComponents.CAN_PLACE_ON);
+        return canPlaceOn != null && canPlaceOn.test(blockInWorld);
     }
 
-    public boolean canBreakBlockInAdventureMode(BlockInWorld p_333133_) {
-        AdventureModePredicate adventuremodepredicate = this.get(DataComponents.CAN_BREAK);
-        return adventuremodepredicate != null && adventuremodepredicate.test(p_333133_);
+    public boolean canBreakBlockInAdventureMode(final BlockInWorld blockInWorld) {
+        AdventureModePredicate canBreak = this.get(DataComponents.CAN_BREAK);
+        return canBreak != null && canBreak.test(blockInWorld);
     }
 
     public int getPopTime() {
         return this.popTime;
     }
 
-    public void setPopTime(int p_41755_) {
-        this.popTime = p_41755_;
+    public void setPopTime(final int popTime) {
+        this.popTime = popTime;
     }
 
     public int getCount() {
         return this.isEmpty() ? 0 : this.count;
     }
 
-    public void setCount(int p_41765_) {
-        this.count = p_41765_;
+    @Override
+    public int count() {
+        return this.getCount();
     }
 
-    public void limitSize(int p_328100_) {
-        if (!this.isEmpty() && this.getCount() > p_328100_) {
-            this.setCount(p_328100_);
+    public void setCount(final int count) {
+        this.count = count;
+    }
+
+    public void limitSize(final int maxStackSize) {
+        if (!this.isEmpty() && this.getCount() > maxStackSize) {
+            this.setCount(maxStackSize);
         }
     }
 
-    public void grow(int p_41770_) {
-        this.setCount(this.getCount() + p_41770_);
+    public void grow(final int amount) {
+        this.setCount(this.getCount() + amount);
     }
 
-    public void shrink(int p_41775_) {
-        this.grow(-p_41775_);
+    public void shrink(final int amount) {
+        this.grow(-amount);
     }
 
-    public void consume(int p_329683_, @Nullable LivingEntity p_334302_) {
-        if (p_334302_ == null || !p_334302_.hasInfiniteMaterials()) {
-            this.shrink(p_329683_);
+    public void consume(final int amount, final @Nullable LivingEntity owner) {
+        if (owner == null || !owner.hasInfiniteMaterials()) {
+            this.shrink(amount);
         }
     }
 
-    public ItemStack consumeAndReturn(int p_343693_, @Nullable LivingEntity p_344112_) {
-        ItemStack itemstack = this.copyWithCount(p_343693_);
-        this.consume(p_343693_, p_344112_);
-        return itemstack;
+    public ItemStack consumeAndReturn(final int amount, final @Nullable LivingEntity owner) {
+        ItemStack split = this.copyWithCount(amount);
+        this.consume(amount, owner);
+        return split;
     }
 
-    public void onUseTick(Level p_41732_, LivingEntity p_41733_, int p_41734_) {
+    public void onUseTick(final Level level, final LivingEntity livingEntity, final int ticksRemaining) {
         Consumable consumable = this.get(DataComponents.CONSUMABLE);
-        if (consumable != null && consumable.shouldEmitParticlesAndSounds(p_41734_)) {
-            consumable.emitParticlesAndSounds(p_41733_.getRandom(), p_41733_, this, 5);
+        if (consumable != null && consumable.shouldEmitParticlesAndSounds(ticksRemaining)) {
+            consumable.emitParticlesAndSounds(livingEntity.getRandom(), livingEntity, this, 5);
         }
 
-        KineticWeapon kineticweapon = this.get(DataComponents.KINETIC_WEAPON);
-        if (kineticweapon != null && !p_41732_.isClientSide()) {
-            kineticweapon.damageEntities(this, p_41734_, p_41733_, p_41733_.getUsedItemHand().asEquipmentSlot());
+        KineticWeapon kineticWeapon = this.get(DataComponents.KINETIC_WEAPON);
+        if (kineticWeapon != null && !level.isClientSide()) {
+            kineticWeapon.damageEntities(this, ticksRemaining, livingEntity, livingEntity.getUsedItemHand().asEquipmentSlot());
         } else {
-            this.getItem().onUseTick(p_41732_, p_41733_, this, p_41734_);
+            this.getItem().onUseTick(level, livingEntity, this, ticksRemaining);
         }
     }
 
-    public void onDestroyed(ItemEntity p_150925_) {
-        this.getItem().onDestroyed(p_150925_);
+    public void onDestroyed(final ItemEntity itemEntity) {
+        this.getItem().onDestroyed(itemEntity);
     }
 
-    public boolean canBeHurtBy(DamageSource p_334859_) {
-        DamageResistant damageresistant = this.get(DataComponents.DAMAGE_RESISTANT);
-        return damageresistant == null || !damageresistant.isResistantTo(p_334859_);
+    public boolean canBeHurtBy(final DamageSource source) {
+        DamageResistant damageResistant = this.get(DataComponents.DAMAGE_RESISTANT);
+        return damageResistant == null || !damageResistant.isResistantTo(source);
     }
 
-    public boolean isValidRepairItem(ItemStack p_368140_) {
+    public boolean isValidRepairItem(final ItemStack repairItem) {
         Repairable repairable = this.get(DataComponents.REPAIRABLE);
-        return repairable != null && repairable.isValidRepairItem(p_368140_);
+        return repairable != null && repairable.isValidRepairItem(repairItem);
     }
 
-    public boolean canDestroyBlock(BlockState p_394125_, Level p_391865_, BlockPos p_396538_, Player p_395561_) {
-        return this.getItem().canDestroyBlock(this, p_394125_, p_391865_, p_396538_, p_395561_);
+    public boolean canDestroyBlock(final BlockState state, final Level level, final BlockPos pos, final Player player) {
+        return this.getItem().canDestroyBlock(this, state, level, pos, player);
     }
 
-    public DamageSource getDamageSource(LivingEntity p_460155_, Supplier<DamageSource> p_451611_) {
+    public DamageSource getDamageSource(final LivingEntity attacker) {
         return Optional.ofNullable(this.get(DataComponents.DAMAGE_TYPE))
-            .flatMap(p_449798_ -> p_449798_.unwrap(p_460155_.registryAccess()))
-            .map(p_449795_ -> new DamageSource((Holder<DamageType>)p_449795_, p_460155_))
-            .or(() -> Optional.ofNullable(this.getItem().getItemDamageSource(p_460155_)))
-            .orElseGet(p_451611_);
+            .map(type -> new DamageSource((Holder<DamageType>)type, attacker))
+            .or(() -> Optional.ofNullable(this.getItem().getItemDamageSource(attacker)))
+            .orElseGet(attacker::createDamageSource);
     }
 }

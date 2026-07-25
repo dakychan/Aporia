@@ -4,11 +4,11 @@ import io.netty.handler.codec.EncoderException;
 import net.minecraft.network.codec.IdDispatchCodec;
 
 public class SkipPacketEncoderException extends EncoderException implements IdDispatchCodec.DontDecorateException, SkipPacketException {
-    public SkipPacketEncoderException(String p_396598_) {
-        super(p_396598_);
+    public SkipPacketEncoderException(final String message) {
+        super(message);
     }
 
-    public SkipPacketEncoderException(Throwable p_393577_) {
-        super(p_393577_);
+    public SkipPacketEncoderException(final Throwable cause) {
+        super(cause);
     }
 }

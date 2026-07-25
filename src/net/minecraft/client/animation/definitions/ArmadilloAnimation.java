@@ -4,10 +4,7 @@ import net.minecraft.client.animation.AnimationChannel;
 import net.minecraft.client.animation.AnimationDefinition;
 import net.minecraft.client.animation.Keyframe;
 import net.minecraft.client.animation.KeyframeAnimations;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ArmadilloAnimation {
     public static final AnimationDefinition ARMADILLO_ROLL_UP = AnimationDefinition.Builder.withLength(0.5F)
         .addAnimation(
@@ -378,15 +375,13 @@ public class ArmadilloAnimation {
         .addAnimation(
             "right_hind_leg",
             new AnimationChannel(
-                AnimationChannel.Targets.POSITION,
-                new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 3.0F, -2.0F), AnimationChannel.Interpolations.LINEAR)
+                AnimationChannel.Targets.POSITION, new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 3.0F, -2.0F), AnimationChannel.Interpolations.LINEAR)
             )
         )
         .addAnimation(
             "left_hind_leg",
             new AnimationChannel(
-                AnimationChannel.Targets.POSITION,
-                new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 3.0F, -2.0F), AnimationChannel.Interpolations.LINEAR)
+                AnimationChannel.Targets.POSITION, new Keyframe(0.0F, KeyframeAnimations.posVec(0.0F, 3.0F, -2.0F), AnimationChannel.Interpolations.LINEAR)
             )
         )
         .addAnimation(

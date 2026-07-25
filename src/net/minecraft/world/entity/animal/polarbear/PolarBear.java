@@ -18,14 +18,16 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
 import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.NeutralMob;
-import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -62,18 +64,21 @@ public class PolarBear extends Animal implements NeutralMob {
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private long persistentAngerEndTime;
     private @Nullable EntityReference<LivingEntity> persistentAngerTarget;
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.7F, 0.7F)
+        .withEyeHeight(0.34375F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, 0.625F, 0.0F));
 
-    public PolarBear(EntityType<? extends PolarBear> p_460088_, Level p_458919_) {
-        super(p_460088_, p_458919_);
+    public PolarBear(final EntityType<? extends PolarBear> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_456683_, AgeableMob p_454291_) {
-        return EntityType.POLAR_BEAR.create(p_456683_, EntitySpawnReason.BREEDING);
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        return EntityTypes.POLAR_BEAR.create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
-    public boolean isFood(ItemStack p_451357_) {
+    public boolean isFood(final ItemStack itemStack) {
         return false;
     }
 
@@ -82,7 +87,7 @@ public class PolarBear extends Animal implements NeutralMob {
         super.registerGoals();
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new PolarBear.PolarBearMeleeAttackGoal());
-        this.goalSelector.addGoal(1, new PanicGoal(this, 2.0, p_454228_ -> p_454228_.isBaby() ? DamageTypeTags.PANIC_CAUSES : DamageTypeTags.PANIC_ENVIRONMENTAL_CAUSES));
+        this.goalSelector.addGoal(1, new PanicGoal(this, 2.0, bear -> bear.isBaby() ? DamageTypeTags.PANIC_CAUSES : DamageTypeTags.PANIC_ENVIRONMENTAL_CAUSES));
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.25));
         this.goalSelector.addGoal(5, new RandomStrollGoal(this, 1.0));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
@@ -90,7 +95,7 @@ public class PolarBear extends Animal implements NeutralMob {
         this.targetSelector.addGoal(1, new PolarBear.PolarBearHurtByTargetGoal());
         this.targetSelector.addGoal(2, new PolarBear.PolarBearAttackPlayersGoal());
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, this::isAngryAt));
-        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Fox.class, 10, true, true, null));
+        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Fox.class, 10, true, true, (target, level) -> !this.isBaby()));
         this.targetSelector.addGoal(5, new ResetUniversalAngerTargetGoal<>(this, false));
     }
 
@@ -103,24 +108,24 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     public static boolean checkPolarBearSpawnRules(
-        EntityType<PolarBear> p_459130_, LevelAccessor p_454859_, EntitySpawnReason p_456846_, BlockPos p_456836_, RandomSource p_460547_
+        final EntityType<PolarBear> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        Holder<Biome> holder = p_454859_.getBiome(p_456836_);
-        return !holder.is(BiomeTags.POLAR_BEARS_SPAWN_ON_ALTERNATE_BLOCKS)
-            ? checkAnimalSpawnRules(p_459130_, p_454859_, p_456846_, p_456836_, p_460547_)
-            : isBrightEnoughToSpawn(p_454859_, p_456836_) && p_454859_.getBlockState(p_456836_.below()).is(BlockTags.POLAR_BEARS_SPAWNABLE_ON_ALTERNATE);
+        Holder<Biome> biome = level.getBiome(pos);
+        return !biome.is(BiomeTags.POLAR_BEARS_SPAWN_ON_ALTERNATE_BLOCKS)
+            ? checkAnimalSpawnRules(type, level, spawnReason, pos, random)
+            : isBrightEnoughToSpawn(level, pos) && level.getBlockState(pos.below()).is(BlockTags.POLAR_BEARS_SPAWNABLE_ON_ALTERNATE);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_452343_) {
-        super.readAdditionalSaveData(p_452343_);
-        this.readPersistentAngerSaveData(this.level(), p_452343_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.readPersistentAngerSaveData(this.level(), input);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_459631_) {
-        super.addAdditionalSaveData(p_459631_);
-        this.addPersistentAngerSaveData(p_459631_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        this.addPersistentAngerSaveData(output);
     }
 
     @Override
@@ -129,8 +134,8 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    public void setPersistentAngerEndTime(long p_450441_) {
-        this.persistentAngerEndTime = p_450441_;
+    public void setPersistentAngerEndTime(final long endTime) {
+        this.persistentAngerEndTime = endTime;
     }
 
     @Override
@@ -139,8 +144,8 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> p_452912_) {
-        this.persistentAngerTarget = p_452912_;
+    public void setPersistentAngerTarget(final @Nullable EntityReference<LivingEntity> persistentAngerTarget) {
+        this.persistentAngerTarget = persistentAngerTarget;
     }
 
     @Override
@@ -154,7 +159,7 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_452944_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.POLAR_BEAR_HURT;
     }
 
@@ -164,7 +169,7 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_451348_, BlockState p_458577_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.POLAR_BEAR_STEP, 0.15F, 1.0F);
     }
 
@@ -176,9 +181,9 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_455170_) {
-        super.defineSynchedData(p_455170_);
-        p_455170_.define(DATA_STANDING_ID, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_STANDING_ID, false);
     }
 
     @Override
@@ -207,13 +212,14 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    public EntityDimensions getDefaultDimensions(Pose p_451292_) {
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        EntityDimensions dimension = this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
         if (this.clientSideStandAnimation > 0.0F) {
-            float f = this.clientSideStandAnimation / 6.0F;
-            float f1 = 1.0F + f;
-            return super.getDefaultDimensions(p_451292_).scale(1.0F, f1);
+            float standFactor = this.clientSideStandAnimation / 6.0F;
+            float heightScaleFactor = 1.0F + standFactor;
+            return dimension.scale(1.0F, heightScaleFactor);
         } else {
-            return super.getDefaultDimensions(p_451292_);
+            return dimension;
         }
     }
 
@@ -221,12 +227,12 @@ public class PolarBear extends Animal implements NeutralMob {
         return this.entityData.get(DATA_STANDING_ID);
     }
 
-    public void setStanding(boolean p_454411_) {
-        this.entityData.set(DATA_STANDING_ID, p_454411_);
+    public void setStanding(final boolean value) {
+        this.entityData.set(DATA_STANDING_ID, value);
     }
 
-    public float getStandingAnimationScale(float p_457661_) {
-        return Mth.lerp(p_457661_, this.clientSideStandAnimationO, this.clientSideStandAnimation) / 6.0F;
+    public float getStandingAnimationScale(final float a) {
+        return Mth.lerp(a, this.clientSideStandAnimationO, this.clientSideStandAnimation) / 6.0F;
     }
 
     @Override
@@ -235,15 +241,17 @@ public class PolarBear extends Animal implements NeutralMob {
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor p_453975_, DifficultyInstance p_453574_, EntitySpawnReason p_457280_, @Nullable SpawnGroupData p_451947_) {
-        if (p_451947_ == null) {
-            p_451947_ = new AgeableMob.AgeableMobGroupData(1.0F);
+    public SpawnGroupData finalizeSpawn(
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
+    ) {
+        if (groupData == null) {
+            groupData = new AgeableMob.AgeableMobGroupData(1.0F);
         }
 
-        return super.finalizeSpawn(p_453975_, p_453574_, p_457280_, p_451947_);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
-    class PolarBearAttackPlayersGoal extends NearestAttackableTargetGoal<Player> {
+    private class PolarBearAttackPlayersGoal extends NearestAttackableTargetGoal<Player> {
         public PolarBearAttackPlayersGoal() {
             super(PolarBear.this, Player.class, 20, true, true, null);
         }
@@ -252,17 +260,17 @@ public class PolarBear extends Animal implements NeutralMob {
         public boolean canUse() {
             if (PolarBear.this.isBaby()) {
                 return false;
-            } else {
-                if (super.canUse()) {
-                    for (PolarBear polarbear : PolarBear.this.level().getEntitiesOfClass(PolarBear.class, PolarBear.this.getBoundingBox().inflate(8.0, 4.0, 8.0))) {
-                        if (polarbear.isBaby()) {
-                            return true;
-                        }
+            }
+
+            if (super.canUse()) {
+                for (PolarBear bear : PolarBear.this.level().getEntitiesOfClass(PolarBear.class, PolarBear.this.getBoundingBox().inflate(8.0, 4.0, 8.0))) {
+                    if (bear.isBaby()) {
+                        return true;
                     }
                 }
-
-                return false;
             }
+
+            return false;
         }
 
         @Override
@@ -271,7 +279,7 @@ public class PolarBear extends Animal implements NeutralMob {
         }
     }
 
-    class PolarBearHurtByTargetGoal extends HurtByTargetGoal {
+    private class PolarBearHurtByTargetGoal extends HurtByTargetGoal {
         public PolarBearHurtByTargetGoal() {
             super(PolarBear.this);
         }
@@ -286,25 +294,25 @@ public class PolarBear extends Animal implements NeutralMob {
         }
 
         @Override
-        protected void alertOther(Mob p_456033_, LivingEntity p_450188_) {
-            if (p_456033_ instanceof PolarBear && !p_456033_.isBaby()) {
-                super.alertOther(p_456033_, p_450188_);
+        protected void alertOther(final Mob other, final LivingEntity hurtByMob) {
+            if (other instanceof PolarBear && !other.isBaby()) {
+                super.alertOther(other, hurtByMob);
             }
         }
     }
 
-    class PolarBearMeleeAttackGoal extends MeleeAttackGoal {
+    private class PolarBearMeleeAttackGoal extends MeleeAttackGoal {
         public PolarBearMeleeAttackGoal() {
             super(PolarBear.this, 1.25, true);
         }
 
         @Override
-        protected void checkAndPerformAttack(LivingEntity p_450628_) {
-            if (this.canPerformAttack(p_450628_)) {
+        protected void checkAndPerformAttack(final LivingEntity target) {
+            if (this.canPerformAttack(target)) {
                 this.resetAttackCooldown();
-                this.mob.doHurtTarget(getServerLevel(this.mob), p_450628_);
+                this.mob.doHurtTarget(getServerLevel(this.mob), target);
                 PolarBear.this.setStanding(false);
-            } else if (this.mob.distanceToSqr(p_450628_) < (p_450628_.getBbWidth() + 3.0F) * (p_450628_.getBbWidth() + 3.0F)) {
+            } else if (this.mob.distanceToSqr(target) < (target.getBbWidth() + 3.0F) * (target.getBbWidth() + 3.0F)) {
                 if (this.isTimeToAttack()) {
                     PolarBear.this.setStanding(false);
                     this.resetAttackCooldown();

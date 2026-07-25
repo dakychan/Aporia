@@ -59,18 +59,30 @@ public interface AttributeModifier<Subject, Argument> {
         AttributeModifier.OperationId.BLEND_TO_GRAY,
         ColorModifier.BLEND_TO_GRAY
     );
+    Map<AttributeModifier.OperationId, AttributeModifier<Integer, ?>> INTEGER_LIBRARY = Map.of(
+        AttributeModifier.OperationId.ADD,
+        IntegerModifier.ADD,
+        AttributeModifier.OperationId.SUBTRACT,
+        IntegerModifier.SUBTRACT,
+        AttributeModifier.OperationId.MULTIPLY,
+        IntegerModifier.MULTIPLY,
+        AttributeModifier.OperationId.MINIMUM,
+        IntegerModifier.MINIMUM,
+        AttributeModifier.OperationId.MAXIMUM,
+        IntegerModifier.MAXIMUM
+    );
 
     static <Value> AttributeModifier<Value, Value> override() {
         return (AttributeModifier<Value, Value>)AttributeModifier.OverrideModifier.INSTANCE;
     }
 
-    Subject apply(Subject p_461027_, Argument p_457001_);
+    Subject apply(Subject subject, Argument argument);
 
-    Codec<Argument> argumentCodec(EnvironmentAttribute<Subject> p_453234_);
+    Codec<Argument> argumentCodec(EnvironmentAttribute<Subject> attribute);
 
-    LerpFunction<Argument> argumentKeyframeLerp(EnvironmentAttribute<Subject> p_457128_);
+    LerpFunction<Argument> argumentKeyframeLerp(EnvironmentAttribute<Subject> attribute);
 
-    public static enum OperationId implements StringRepresentable {
+    enum OperationId implements StringRepresentable {
         OVERRIDE("override"),
         ALPHA_BLEND("alpha_blend"),
         ADD("add"),
@@ -89,8 +101,8 @@ public interface AttributeModifier<Subject, Argument> {
         public static final Codec<AttributeModifier.OperationId> CODEC = StringRepresentable.fromEnum(AttributeModifier.OperationId::values);
         private final String name;
 
-        private OperationId(final String p_453082_) {
-            this.name = p_453082_;
+        OperationId(final String name) {
+            this.name = name;
         }
 
         @Override
@@ -99,22 +111,22 @@ public interface AttributeModifier<Subject, Argument> {
         }
     }
 
-    public record OverrideModifier<Value>() implements AttributeModifier<Value, Value> {
-        static final AttributeModifier.OverrideModifier<?> INSTANCE = new AttributeModifier.OverrideModifier();
+    record OverrideModifier<Value>() implements AttributeModifier<Value, Value> {
+        private static final AttributeModifier.OverrideModifier<?> INSTANCE = new AttributeModifier.OverrideModifier();
 
         @Override
-        public Value apply(Value p_457804_, Value p_457336_) {
-            return p_457336_;
+        public Value apply(final Value subject, final Value argument) {
+            return argument;
         }
 
         @Override
-        public Codec<Value> argumentCodec(EnvironmentAttribute<Value> p_455930_) {
-            return p_455930_.valueCodec();
+        public Codec<Value> argumentCodec(final EnvironmentAttribute<Value> attribute) {
+            return attribute.valueCodec();
         }
 
         @Override
-        public LerpFunction<Value> argumentKeyframeLerp(EnvironmentAttribute<Value> p_457657_) {
-            return p_457657_.type().keyframeLerp();
+        public LerpFunction<Value> argumentKeyframeLerp(final EnvironmentAttribute<Value> attribute) {
+            return attribute.type().keyframeLerp();
         }
     }
 }

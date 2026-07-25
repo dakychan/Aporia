@@ -4,15 +4,13 @@ import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.MapCodec;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class AlternativesEntry extends CompositeEntryBase {
-    public static final MapCodec<AlternativesEntry> CODEC = createCodec(AlternativesEntry::new);
+    public static final MapCodec<AlternativesEntry> MAP_CODEC = createCodec(AlternativesEntry::new);
     public static final ProblemReporter.Problem UNREACHABLE_PROBLEM = new ProblemReporter.Problem() {
         @Override
         public String description() {
@@ -20,24 +18,24 @@ public class AlternativesEntry extends CompositeEntryBase {
         }
     };
 
-    AlternativesEntry(List<LootPoolEntryContainer> p_299703_, List<LootItemCondition> p_299222_) {
-        super(p_299703_, p_299222_);
+    public AlternativesEntry(final List<LootPoolEntryContainer> children, final List<LootItemCondition> conditions) {
+        super(children, conditions);
     }
 
     @Override
-    public LootPoolEntryType getType() {
-        return LootPoolEntries.ALTERNATIVES;
+    public MapCodec<AlternativesEntry> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    protected ComposableEntryContainer compose(List<? extends ComposableEntryContainer> p_298385_) {
-        return switch (p_298385_.size()) {
+    protected ComposableEntryContainer compose(final List<? extends ComposableEntryContainer> entries) {
+        return switch (entries.size()) {
             case 0 -> ALWAYS_FALSE;
-            case 1 -> (ComposableEntryContainer)p_298385_.get(0);
-            case 2 -> p_298385_.get(0).or(p_298385_.get(1));
-            default -> (p_297016_, p_297017_) -> {
-                for (ComposableEntryContainer composableentrycontainer : p_298385_) {
-                    if (composableentrycontainer.expand(p_297016_, p_297017_)) {
+            case 1 -> (ComposableEntryContainer)entries.get(0);
+            case 2 -> entries.get(0).or(entries.get(1));
+            default -> (context, output) -> {
+                for (ComposableEntryContainer entry : entries) {
+                    if (entry.expand(context, output)) {
                         return true;
                     }
                 }
@@ -48,30 +46,30 @@ public class AlternativesEntry extends CompositeEntryBase {
     }
 
     @Override
-    public void validate(ValidationContext p_79388_) {
-        super.validate(p_79388_);
+    public void validate(final ValidationContext context) {
+        super.validate(context);
 
         for (int i = 0; i < this.children.size() - 1; i++) {
             if (this.children.get(i).conditions.isEmpty()) {
-                p_79388_.reportProblem(UNREACHABLE_PROBLEM);
+                context.reportProblem(UNREACHABLE_PROBLEM);
             }
         }
     }
 
-    public static AlternativesEntry.Builder alternatives(LootPoolEntryContainer.Builder<?>... p_79396_) {
-        return new AlternativesEntry.Builder(p_79396_);
+    public static AlternativesEntry.Builder alternatives(final LootPoolEntryContainer.Builder<?>... entries) {
+        return new AlternativesEntry.Builder(entries);
     }
 
-    public static <E> AlternativesEntry.Builder alternatives(Collection<E> p_230934_, Function<E, LootPoolEntryContainer.Builder<?>> p_230935_) {
-        return new AlternativesEntry.Builder(p_230934_.stream().map(p_230935_::apply).toArray(LootPoolEntryContainer.Builder[]::new));
+    public static <E> AlternativesEntry.Builder alternatives(final Collection<E> items, final Function<E, LootPoolEntryContainer.Builder<?>> provider) {
+        return new AlternativesEntry.Builder(items.stream().map(provider::apply).toArray(LootPoolEntryContainer.Builder[]::new));
     }
 
     public static class Builder extends LootPoolEntryContainer.Builder<AlternativesEntry.Builder> {
         private final ImmutableList.Builder<LootPoolEntryContainer> entries = ImmutableList.builder();
 
-        public Builder(LootPoolEntryContainer.Builder<?>... p_79399_) {
-            for (LootPoolEntryContainer.Builder<?> builder : p_79399_) {
-                this.entries.add(builder.build());
+        public Builder(final LootPoolEntryContainer.Builder<?>... entries) {
+            for (LootPoolEntryContainer.Builder<?> entry : entries) {
+                this.entries.add(entry.build());
             }
         }
 
@@ -80,8 +78,8 @@ public class AlternativesEntry extends CompositeEntryBase {
         }
 
         @Override
-        public AlternativesEntry.Builder otherwise(LootPoolEntryContainer.Builder<?> p_79402_) {
-            this.entries.add(p_79402_.build());
+        public AlternativesEntry.Builder otherwise(final LootPoolEntryContainer.Builder<?> other) {
+            this.entries.add(other.build());
             return this;
         }
 

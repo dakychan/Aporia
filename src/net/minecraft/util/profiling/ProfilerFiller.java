@@ -10,64 +10,64 @@ public interface ProfilerFiller {
 
     void endTick();
 
-    void push(String p_18581_);
+    void push(String name);
 
-    void push(Supplier<String> p_18582_);
+    void push(Supplier<String> name);
 
     void pop();
 
-    void popPush(String p_18583_);
+    void popPush(String name);
 
-    void popPush(Supplier<String> p_18584_);
+    void popPush(Supplier<String> name);
 
-    default void addZoneText(String p_363858_) {
+    default void addZoneText(final String text) {
     }
 
-    default void addZoneValue(long p_366219_) {
+    default void addZoneValue(final long value) {
     }
 
-    default void setZoneColor(int p_364754_) {
+    default void setZoneColor(final int color) {
     }
 
-    default Zone zone(String p_361931_) {
-        this.push(p_361931_);
+    default Zone zone(final String name) {
+        this.push(name);
         return new Zone(this);
     }
 
-    default Zone zone(Supplier<String> p_366899_) {
-        this.push(p_366899_);
+    default Zone zone(final Supplier<String> name) {
+        this.push(name);
         return new Zone(this);
     }
 
-    void markForCharting(MetricCategory p_145959_);
+    void markForCharting(MetricCategory category);
 
-    default void incrementCounter(String p_18585_) {
-        this.incrementCounter(p_18585_, 1);
+    default void incrementCounter(final String name) {
+        this.incrementCounter(name, 1);
     }
 
-    void incrementCounter(String p_185258_, int p_185259_);
+    void incrementCounter(String name, int amount);
 
-    default void incrementCounter(Supplier<String> p_18586_) {
-        this.incrementCounter(p_18586_, 1);
+    default void incrementCounter(final Supplier<String> name) {
+        this.incrementCounter(name, 1);
     }
 
-    void incrementCounter(Supplier<String> p_185260_, int p_185261_);
+    void incrementCounter(Supplier<String> name, int amount);
 
-    static ProfilerFiller combine(ProfilerFiller p_369473_, ProfilerFiller p_362839_) {
-        if (p_369473_ == InactiveProfiler.INSTANCE) {
-            return p_362839_;
+    static ProfilerFiller combine(final ProfilerFiller first, final ProfilerFiller second) {
+        if (first == InactiveProfiler.INSTANCE) {
+            return second;
         } else {
-            return (ProfilerFiller)(p_362839_ == InactiveProfiler.INSTANCE ? p_369473_ : new ProfilerFiller.CombinedProfileFiller(p_369473_, p_362839_));
+            return second == InactiveProfiler.INSTANCE ? first : new ProfilerFiller.CombinedProfileFiller(first, second);
         }
     }
 
-    public static class CombinedProfileFiller implements ProfilerFiller {
+    class CombinedProfileFiller implements ProfilerFiller {
         private final ProfilerFiller first;
         private final ProfilerFiller second;
 
-        public CombinedProfileFiller(ProfilerFiller p_361593_, ProfilerFiller p_363992_) {
-            this.first = p_361593_;
-            this.second = p_363992_;
+        public CombinedProfileFiller(final ProfilerFiller first, final ProfilerFiller second) {
+            this.first = first;
+            this.second = second;
         }
 
         @Override
@@ -83,21 +83,21 @@ public interface ProfilerFiller {
         }
 
         @Override
-        public void push(String p_363352_) {
-            this.first.push(p_363352_);
-            this.second.push(p_363352_);
+        public void push(final String name) {
+            this.first.push(name);
+            this.second.push(name);
         }
 
         @Override
-        public void push(Supplier<String> p_361348_) {
-            this.first.push(p_361348_);
-            this.second.push(p_361348_);
+        public void push(final Supplier<String> name) {
+            this.first.push(name);
+            this.second.push(name);
         }
 
         @Override
-        public void markForCharting(MetricCategory p_365312_) {
-            this.first.markForCharting(p_365312_);
-            this.second.markForCharting(p_365312_);
+        public void markForCharting(final MetricCategory category) {
+            this.first.markForCharting(category);
+            this.second.markForCharting(category);
         }
 
         @Override
@@ -107,45 +107,45 @@ public interface ProfilerFiller {
         }
 
         @Override
-        public void popPush(String p_364738_) {
-            this.first.popPush(p_364738_);
-            this.second.popPush(p_364738_);
+        public void popPush(final String name) {
+            this.first.popPush(name);
+            this.second.popPush(name);
         }
 
         @Override
-        public void popPush(Supplier<String> p_361184_) {
-            this.first.popPush(p_361184_);
-            this.second.popPush(p_361184_);
+        public void popPush(final Supplier<String> name) {
+            this.first.popPush(name);
+            this.second.popPush(name);
         }
 
         @Override
-        public void incrementCounter(String p_368612_, int p_365761_) {
-            this.first.incrementCounter(p_368612_, p_365761_);
-            this.second.incrementCounter(p_368612_, p_365761_);
+        public void incrementCounter(final String name, final int amount) {
+            this.first.incrementCounter(name, amount);
+            this.second.incrementCounter(name, amount);
         }
 
         @Override
-        public void incrementCounter(Supplier<String> p_365250_, int p_365517_) {
-            this.first.incrementCounter(p_365250_, p_365517_);
-            this.second.incrementCounter(p_365250_, p_365517_);
+        public void incrementCounter(final Supplier<String> name, final int amount) {
+            this.first.incrementCounter(name, amount);
+            this.second.incrementCounter(name, amount);
         }
 
         @Override
-        public void addZoneText(String p_369699_) {
-            this.first.addZoneText(p_369699_);
-            this.second.addZoneText(p_369699_);
+        public void addZoneText(final String text) {
+            this.first.addZoneText(text);
+            this.second.addZoneText(text);
         }
 
         @Override
-        public void addZoneValue(long p_362373_) {
-            this.first.addZoneValue(p_362373_);
-            this.second.addZoneValue(p_362373_);
+        public void addZoneValue(final long value) {
+            this.first.addZoneValue(value);
+            this.second.addZoneValue(value);
         }
 
         @Override
-        public void setZoneColor(int p_365533_) {
-            this.first.setZoneColor(p_365533_);
-            this.second.setZoneColor(p_365533_);
+        public void setZoneColor(final int color) {
+            this.first.setZoneColor(color);
+            this.second.setZoneColor(color);
         }
     }
 }

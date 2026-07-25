@@ -1,14 +1,11 @@
 package net.minecraft.client.gui.components;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LogoRenderer {
     public static final Identifier MINECRAFT_LOGO = Identifier.withDefaultNamespace("textures/gui/title/minecraft.png");
     public static final Identifier EASTER_EGG_LOGO = Identifier.withDefaultNamespace("textures/gui/title/minceraft.png");
@@ -23,25 +20,27 @@ public class LogoRenderer {
     private static final int EDITION_TEXTURE_HEIGHT = 16;
     public static final int DEFAULT_HEIGHT_OFFSET = 30;
     private static final int EDITION_LOGO_OVERLAP = 7;
-    private final boolean showEasterEgg = RandomSource.create().nextFloat() < 1.0E-4;
+    private final boolean showEasterEgg = RandomSource.createThreadLocalInstance().nextFloat() < 1.0E-4;
     private final boolean keepLogoThroughFade;
 
-    public LogoRenderer(boolean p_265300_) {
-        this.keepLogoThroughFade = p_265300_;
+    public LogoRenderer(final boolean keepLogoThroughFade) {
+        this.keepLogoThroughFade = keepLogoThroughFade;
     }
 
-    public void renderLogo(GuiGraphics p_282217_, int p_283270_, float p_282051_) {
-        this.renderLogo(p_282217_, p_283270_, p_282051_, 30);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int width, final float alpha) {
+        this.extractRenderState(graphics, width, alpha, 30);
     }
 
-    public void renderLogo(GuiGraphics p_281856_, int p_281512_, float p_281290_, int p_282296_) {
-        int i = p_281512_ / 2 - 128;
-        float f = this.keepLogoThroughFade ? 1.0F : p_281290_;
-        int j = ARGB.white(f);
-        p_281856_.blit(RenderPipelines.GUI_TEXTURED, this.showEasterEgg ? EASTER_EGG_LOGO : MINECRAFT_LOGO, i, p_282296_, 0.0F, 0.0F, 256, 44, 256, 64, j);
-        int k = p_281512_ / 2 - 64;
-        int l = p_282296_ + 44 - 7;
-        p_281856_.blit(RenderPipelines.GUI_TEXTURED, MINECRAFT_EDITION, k, l, 0.0F, 0.0F, 128, 14, 128, 16, j);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int width, final float alpha, final int heightOffset) {
+        int logoX = width / 2 - 128;
+        float effectiveAlpha = this.keepLogoThroughFade ? 1.0F : alpha;
+        int color = ARGB.white(effectiveAlpha);
+        graphics.blit(
+            RenderPipelines.GUI_TEXTURED, this.showEasterEgg ? EASTER_EGG_LOGO : MINECRAFT_LOGO, logoX, heightOffset, 0.0F, 0.0F, 256, 44, 256, 64, color
+        );
+        int editionX = width / 2 - 64;
+        int y = heightOffset + 44 - 7;
+        graphics.blit(RenderPipelines.GUI_TEXTURED, MINECRAFT_EDITION, editionX, y, 0.0F, 0.0F, 128, 14, 128, 16, color);
     }
 
     public boolean keepLogoThroughFade() {

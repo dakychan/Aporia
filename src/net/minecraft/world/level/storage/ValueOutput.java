@@ -5,48 +5,48 @@ import com.mojang.serialization.MapCodec;
 import org.jspecify.annotations.Nullable;
 
 public interface ValueOutput {
-    <T> void store(String p_406559_, Codec<T> p_410310_, T p_409569_);
+    <T> void store(String name, Codec<T> codec, T value);
 
-    <T> void storeNullable(String p_406385_, Codec<T> p_408165_, @Nullable T p_407725_);
+    <T> void storeNullable(String name, Codec<T> codec, @Nullable T value);
 
     @Deprecated
-    <T> void store(MapCodec<T> p_410307_, T p_410068_);
+    <T> void store(MapCodec<T> codec, T value);
 
-    void putBoolean(String p_409636_, boolean p_406905_);
+    void putBoolean(String name, boolean value);
 
-    void putByte(String p_407145_, byte p_406118_);
+    void putByte(String name, byte value);
 
-    void putShort(String p_409710_, short p_407656_);
+    void putShort(String name, short value);
 
-    void putInt(String p_408708_, int p_406617_);
+    void putInt(String name, int value);
 
-    void putLong(String p_407557_, long p_408874_);
+    void putLong(String name, long value);
 
-    void putFloat(String p_410219_, float p_408821_);
+    void putFloat(String name, float value);
 
-    void putDouble(String p_408742_, double p_410497_);
+    void putDouble(String name, double value);
 
-    void putString(String p_407659_, String p_407753_);
+    void putString(String name, String value);
 
-    void putIntArray(String p_407318_, int[] p_410462_);
+    void putIntArray(String name, int[] value);
 
-    ValueOutput child(String p_407220_);
+    ValueOutput child(String name);
 
-    ValueOutput.ValueOutputList childrenList(String p_409163_);
+    ValueOutput.ValueOutputList childrenList(String name);
 
-    <T> ValueOutput.TypedOutputList<T> list(String p_410506_, Codec<T> p_407980_);
+    <T> ValueOutput.TypedOutputList<T> list(String name, Codec<T> codec);
 
-    void discard(String p_408615_);
+    void discard(String name);
 
     boolean isEmpty();
 
-    public interface TypedOutputList<T> {
-        void add(T p_408164_);
+    interface TypedOutputList<T> {
+        void add(T value);
 
         boolean isEmpty();
     }
 
-    public interface ValueOutputList {
+    interface ValueOutputList {
         ValueOutput addChild();
 
         void discardLast();

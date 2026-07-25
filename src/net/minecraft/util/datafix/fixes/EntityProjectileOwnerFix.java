@@ -12,61 +12,63 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 public class EntityProjectileOwnerFix extends DataFix {
-    public EntityProjectileOwnerFix(Schema p_15558_) {
-        super(p_15558_, false);
+    public EntityProjectileOwnerFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Schema schema = this.getInputSchema();
-        return this.fixTypeEverywhereTyped("EntityProjectileOwner", schema.getType(References.ENTITY), this::updateProjectiles);
+        Schema inputSchema = this.getInputSchema();
+        return this.fixTypeEverywhereTyped("EntityProjectileOwner", inputSchema.getType(References.ENTITY), this::updateProjectiles);
     }
 
-    private Typed<?> updateProjectiles(Typed<?> p_15563_) {
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:egg", this::updateOwnerThrowable);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:ender_pearl", this::updateOwnerThrowable);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:experience_bottle", this::updateOwnerThrowable);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:snowball", this::updateOwnerThrowable);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:potion", this::updateOwnerThrowable);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:llama_spit", this::updateOwnerLlamaSpit);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:arrow", this::updateOwnerArrow);
-        p_15563_ = this.updateEntity(p_15563_, "minecraft:spectral_arrow", this::updateOwnerArrow);
-        return this.updateEntity(p_15563_, "minecraft:trident", this::updateOwnerArrow);
+    private Typed<?> updateProjectiles(Typed<?> input) {
+        input = this.updateEntity(input, "minecraft:egg", this::updateOwnerThrowable);
+        input = this.updateEntity(input, "minecraft:ender_pearl", this::updateOwnerThrowable);
+        input = this.updateEntity(input, "minecraft:experience_bottle", this::updateOwnerThrowable);
+        input = this.updateEntity(input, "minecraft:snowball", this::updateOwnerThrowable);
+        input = this.updateEntity(input, "minecraft:potion", this::updateOwnerThrowable);
+        input = this.updateEntity(input, "minecraft:llama_spit", this::updateOwnerLlamaSpit);
+        input = this.updateEntity(input, "minecraft:arrow", this::updateOwnerArrow);
+        input = this.updateEntity(input, "minecraft:spectral_arrow", this::updateOwnerArrow);
+        return this.updateEntity(input, "minecraft:trident", this::updateOwnerArrow);
     }
 
-    private Dynamic<?> updateOwnerArrow(Dynamic<?> p_15569_) {
-        long i = p_15569_.get("OwnerUUIDMost").asLong(0L);
-        long j = p_15569_.get("OwnerUUIDLeast").asLong(0L);
-        return this.setUUID(p_15569_, i, j).remove("OwnerUUIDMost").remove("OwnerUUIDLeast");
+    private Dynamic<?> updateOwnerArrow(final Dynamic<?> tag) {
+        long mostSignificantBits = tag.get("OwnerUUIDMost").asLong(0L);
+        long leastSignificantBits = tag.get("OwnerUUIDLeast").asLong(0L);
+        return this.setUUID(tag, mostSignificantBits, leastSignificantBits).remove("OwnerUUIDMost").remove("OwnerUUIDLeast");
     }
 
-    private Dynamic<?> updateOwnerLlamaSpit(Dynamic<?> p_15578_) {
-        OptionalDynamic<?> optionaldynamic = p_15578_.get("Owner");
-        long i = optionaldynamic.get("OwnerUUIDMost").asLong(0L);
-        long j = optionaldynamic.get("OwnerUUIDLeast").asLong(0L);
-        return this.setUUID(p_15578_, i, j).remove("Owner");
+    private Dynamic<?> updateOwnerLlamaSpit(final Dynamic<?> tag) {
+        OptionalDynamic<?> owner = tag.get("Owner");
+        long mostSignificantBits = owner.get("OwnerUUIDMost").asLong(0L);
+        long leastSignificantBits = owner.get("OwnerUUIDLeast").asLong(0L);
+        return this.setUUID(tag, mostSignificantBits, leastSignificantBits).remove("Owner");
     }
 
-    private Dynamic<?> updateOwnerThrowable(Dynamic<?> p_15582_) {
-        String s = "owner";
-        OptionalDynamic<?> optionaldynamic = p_15582_.get("owner");
-        long i = optionaldynamic.get("M").asLong(0L);
-        long j = optionaldynamic.get("L").asLong(0L);
-        return this.setUUID(p_15582_, i, j).remove("owner");
+    private Dynamic<?> updateOwnerThrowable(final Dynamic<?> tag) {
+        String ownerKey = "owner";
+        OptionalDynamic<?> owner = tag.get("owner");
+        long mostSignificantBits = owner.get("M").asLong(0L);
+        long leastSignificantBits = owner.get("L").asLong(0L);
+        return this.setUUID(tag, mostSignificantBits, leastSignificantBits).remove("owner");
     }
 
-    private Dynamic<?> setUUID(Dynamic<?> p_15571_, long p_15572_, long p_15573_) {
-        String s = "OwnerUUID";
-        return p_15572_ != 0L && p_15573_ != 0L ? p_15571_.set("OwnerUUID", p_15571_.createIntList(Arrays.stream(createUUIDArray(p_15572_, p_15573_)))) : p_15571_;
+    private Dynamic<?> setUUID(final Dynamic<?> tag, final long mostSignificantBits, final long leastSignificantBits) {
+        String name = "OwnerUUID";
+        return mostSignificantBits != 0L && leastSignificantBits != 0L
+            ? tag.set("OwnerUUID", tag.createIntList(Arrays.stream(createUUIDArray(mostSignificantBits, leastSignificantBits))))
+            : tag;
     }
 
-    private static int[] createUUIDArray(long p_15560_, long p_15561_) {
-        return new int[]{(int)(p_15560_ >> 32), (int)p_15560_, (int)(p_15561_ >> 32), (int)p_15561_};
+    private static int[] createUUIDArray(final long mostSignificantBits, final long leastSignificantBits) {
+        return new int[]{(int)(mostSignificantBits >> 32), (int)mostSignificantBits, (int)(leastSignificantBits >> 32), (int)leastSignificantBits};
     }
 
-    private Typed<?> updateEntity(Typed<?> p_15565_, String p_15566_, Function<Dynamic<?>, Dynamic<?>> p_15567_) {
-        Type<?> type = this.getInputSchema().getChoiceType(References.ENTITY, p_15566_);
-        Type<?> type1 = this.getOutputSchema().getChoiceType(References.ENTITY, p_15566_);
-        return p_15565_.updateTyped(DSL.namedChoice(p_15566_, type), type1, p_15576_ -> p_15576_.update(DSL.remainderFinder(), p_15567_));
+    private Typed<?> updateEntity(final Typed<?> input, final String name, final Function<Dynamic<?>, Dynamic<?>> function) {
+        Type<?> oldType = this.getInputSchema().getChoiceType(References.ENTITY, name);
+        Type<?> newType = this.getOutputSchema().getChoiceType(References.ENTITY, name);
+        return input.updateTyped(DSL.namedChoice(name, oldType), newType, entity -> entity.update(DSL.remainderFinder(), function));
     }
 }

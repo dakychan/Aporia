@@ -5,84 +5,83 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.state.LightningBoltRenderState;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LightningBolt;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Matrix4f;
+import org.joml.Matrix4fc;
 
-@OnlyIn(Dist.CLIENT)
 public class LightningBoltRenderer extends EntityRenderer<LightningBolt, LightningBoltRenderState> {
-    public LightningBoltRenderer(EntityRendererProvider.Context p_174286_) {
-        super(p_174286_);
+    public LightningBoltRenderer(final EntityRendererProvider.Context context) {
+        super(context);
     }
 
-    public void submit(LightningBoltRenderState p_431298_, PoseStack p_429365_, SubmitNodeCollector p_430011_, CameraRenderState p_431399_) {
-        float[] afloat = new float[8];
-        float[] afloat1 = new float[8];
-        float f = 0.0F;
-        float f1 = 0.0F;
-        RandomSource randomsource = RandomSource.create(p_431298_.seed);
+    public void submit(
+        final LightningBoltRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
+    ) {
+        float[] xOffs = new float[8];
+        float[] zOffs = new float[8];
+        float xOff = 0.0F;
+        float zOff = 0.0F;
+        RandomSource random = RandomSource.createThreadLocalInstance(state.seed);
 
-        for (int i = 7; i >= 0; i--) {
-            afloat[i] = f;
-            afloat1[i] = f1;
-            f += randomsource.nextInt(11) - 5;
-            f1 += randomsource.nextInt(11) - 5;
+        for (int h = 7; h >= 0; h--) {
+            xOffs[h] = xOff;
+            zOffs[h] = zOff;
+            xOff += random.nextInt(11) - 5;
+            zOff += random.nextInt(11) - 5;
         }
 
-        float f2 = f;
-        float f3 = f1;
-        p_430011_.submitCustomGeometry(p_429365_, RenderTypes.lightning(), (p_425207_, p_426933_) -> {
-            Matrix4f matrix4f = p_425207_.pose();
+        float finalXOff = xOff;
+        float finalZOff = zOff;
+        submitNodeCollector.submitCustomGeometry(poseStack, RenderTypes.lightning(), (pose, buffer) -> {
+            Matrix4fc poseMatrix = pose.pose();
 
-            for (int j = 0; j < 4; j++) {
-                RandomSource randomsource1 = RandomSource.create(p_431298_.seed);
+            for (int r = 0; r < 4; r++) {
+                RandomSource randomx = RandomSource.createThreadLocalInstance(state.seed);
 
-                for (int k = 0; k < 3; k++) {
-                    int l = 7;
-                    int i1 = 0;
-                    if (k > 0) {
-                        l = 7 - k;
+                for (int p = 0; p < 3; p++) {
+                    int hs = 7;
+                    int ht = 0;
+                    if (p > 0) {
+                        hs = 7 - p;
                     }
 
-                    if (k > 0) {
-                        i1 = l - 2;
+                    if (p > 0) {
+                        ht = hs - 2;
                     }
 
-                    float f4 = afloat[l] - f2;
-                    float f5 = afloat1[l] - f3;
+                    float xo0 = xOffs[hs] - finalXOff;
+                    float zo0 = zOffs[hs] - finalZOff;
 
-                    for (int j1 = l; j1 >= i1; j1--) {
-                        float f6 = f4;
-                        float f7 = f5;
-                        if (k == 0) {
-                            f4 += randomsource1.nextInt(11) - 5;
-                            f5 += randomsource1.nextInt(11) - 5;
+                    for (int h = hs; h >= ht; h--) {
+                        float xo1 = xo0;
+                        float zo1 = zo0;
+                        if (p == 0) {
+                            xo0 += randomx.nextInt(11) - 5;
+                            zo0 += randomx.nextInt(11) - 5;
                         } else {
-                            f4 += randomsource1.nextInt(31) - 15;
-                            f5 += randomsource1.nextInt(31) - 15;
+                            xo0 += randomx.nextInt(31) - 15;
+                            zo0 += randomx.nextInt(31) - 15;
                         }
 
-                        float f8 = 0.5F;
-                        float f9 = 0.45F;
-                        float f10 = 0.45F;
-                        float f11 = 0.5F;
-                        float f12 = 0.1F + j * 0.2F;
-                        if (k == 0) {
-                            f12 *= j1 * 0.1F + 1.0F;
+                        float br = 0.5F;
+                        float boltRed = 0.45F;
+                        float boltGreen = 0.45F;
+                        float boltBlue = 0.5F;
+                        float rr1 = 0.1F + r * 0.2F;
+                        if (p == 0) {
+                            rr1 *= h * 0.1F + 1.0F;
                         }
 
-                        float f13 = 0.1F + j * 0.2F;
-                        if (k == 0) {
-                            f13 *= (j1 - 1.0F) * 0.1F + 1.0F;
+                        float rr2 = 0.1F + r * 0.2F;
+                        if (p == 0) {
+                            rr2 *= (h - 1.0F) * 0.1F + 1.0F;
                         }
 
-                        quad(matrix4f, p_426933_, f4, f5, j1, f6, f7, 0.45F, 0.45F, 0.5F, f12, f13, false, false, true, false);
-                        quad(matrix4f, p_426933_, f4, f5, j1, f6, f7, 0.45F, 0.45F, 0.5F, f12, f13, true, false, true, true);
-                        quad(matrix4f, p_426933_, f4, f5, j1, f6, f7, 0.45F, 0.45F, 0.5F, f12, f13, true, true, false, true);
-                        quad(matrix4f, p_426933_, f4, f5, j1, f6, f7, 0.45F, 0.45F, 0.5F, f12, f13, false, true, false, false);
+                        quad(poseMatrix, buffer, xo0, zo0, h, xo1, zo1, 0.45F, 0.45F, 0.5F, rr1, rr2, false, false, true, false);
+                        quad(poseMatrix, buffer, xo0, zo0, h, xo1, zo1, 0.45F, 0.45F, 0.5F, rr1, rr2, true, false, true, true);
+                        quad(poseMatrix, buffer, xo0, zo0, h, xo1, zo1, 0.45F, 0.45F, 0.5F, rr1, rr2, true, true, false, true);
+                        quad(poseMatrix, buffer, xo0, zo0, h, xo1, zo1, 0.45F, 0.45F, 0.5F, rr1, rr2, false, true, false, false);
                     }
                 }
             }
@@ -90,43 +89,39 @@ public class LightningBoltRenderer extends EntityRenderer<LightningBolt, Lightni
     }
 
     private static void quad(
-        Matrix4f p_253966_,
-        VertexConsumer p_115274_,
-        float p_115275_,
-        float p_115276_,
-        int p_115277_,
-        float p_115278_,
-        float p_115279_,
-        float p_115280_,
-        float p_115281_,
-        float p_115282_,
-        float p_115283_,
-        float p_115284_,
-        boolean p_115285_,
-        boolean p_115286_,
-        boolean p_115287_,
-        boolean p_115288_
+        final Matrix4fc pose,
+        final VertexConsumer buffer,
+        final float xo0,
+        final float zo0,
+        final int h,
+        final float xo1,
+        final float zo1,
+        final float boltRed,
+        final float boltGreen,
+        final float boltBlue,
+        final float rr1,
+        final float rr2,
+        final boolean px1,
+        final boolean pz1,
+        final boolean px2,
+        final boolean pz2
     ) {
-        p_115274_.addVertex(p_253966_, p_115275_ + (p_115285_ ? p_115284_ : -p_115284_), p_115277_ * 16, p_115276_ + (p_115286_ ? p_115284_ : -p_115284_))
-            .setColor(p_115280_, p_115281_, p_115282_, 0.3F);
-        p_115274_.addVertex(p_253966_, p_115278_ + (p_115285_ ? p_115283_ : -p_115283_), (p_115277_ + 1) * 16, p_115279_ + (p_115286_ ? p_115283_ : -p_115283_))
-            .setColor(p_115280_, p_115281_, p_115282_, 0.3F);
-        p_115274_.addVertex(p_253966_, p_115278_ + (p_115287_ ? p_115283_ : -p_115283_), (p_115277_ + 1) * 16, p_115279_ + (p_115288_ ? p_115283_ : -p_115283_))
-            .setColor(p_115280_, p_115281_, p_115282_, 0.3F);
-        p_115274_.addVertex(p_253966_, p_115275_ + (p_115287_ ? p_115284_ : -p_115284_), p_115277_ * 16, p_115276_ + (p_115288_ ? p_115284_ : -p_115284_))
-            .setColor(p_115280_, p_115281_, p_115282_, 0.3F);
+        buffer.addVertex(pose, xo0 + (px1 ? rr2 : -rr2), h * 16, zo0 + (pz1 ? rr2 : -rr2)).setColor(boltRed, boltGreen, boltBlue, 0.3F);
+        buffer.addVertex(pose, xo1 + (px1 ? rr1 : -rr1), (h + 1) * 16, zo1 + (pz1 ? rr1 : -rr1)).setColor(boltRed, boltGreen, boltBlue, 0.3F);
+        buffer.addVertex(pose, xo1 + (px2 ? rr1 : -rr1), (h + 1) * 16, zo1 + (pz2 ? rr1 : -rr1)).setColor(boltRed, boltGreen, boltBlue, 0.3F);
+        buffer.addVertex(pose, xo0 + (px2 ? rr2 : -rr2), h * 16, zo0 + (pz2 ? rr2 : -rr2)).setColor(boltRed, boltGreen, boltBlue, 0.3F);
     }
 
     public LightningBoltRenderState createRenderState() {
         return new LightningBoltRenderState();
     }
 
-    public void extractRenderState(LightningBolt p_364798_, LightningBoltRenderState p_367959_, float p_369027_) {
-        super.extractRenderState(p_364798_, p_367959_, p_369027_);
-        p_367959_.seed = p_364798_.seed;
+    public void extractRenderState(final LightningBolt entity, final LightningBoltRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.seed = entity.seed;
     }
 
-    protected boolean affectedByCulling(LightningBolt p_365522_) {
+    protected boolean affectedByCulling(final LightningBolt entity) {
         return false;
     }
 }

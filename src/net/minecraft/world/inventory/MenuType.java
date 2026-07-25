@@ -26,7 +26,7 @@ public class MenuType<T extends AbstractContainerMenu> implements FeatureElement
     public static final MenuType<FurnaceMenu> FURNACE = register("furnace", FurnaceMenu::new);
     public static final MenuType<GrindstoneMenu> GRINDSTONE = register("grindstone", GrindstoneMenu::new);
     public static final MenuType<HopperMenu> HOPPER = register("hopper", HopperMenu::new);
-    public static final MenuType<LecternMenu> LECTERN = register("lectern", (p_39992_, p_39993_) -> new LecternMenu(p_39992_));
+    public static final MenuType<LecternMenu> LECTERN = register("lectern", (containerId, inventory) -> new LecternMenu(containerId));
     public static final MenuType<LoomMenu> LOOM = register("loom", LoomMenu::new);
     public static final MenuType<MerchantMenu> MERCHANT = register("merchant", MerchantMenu::new);
     public static final MenuType<ShulkerBoxMenu> SHULKER_BOX = register("shulker_box", ShulkerBoxMenu::new);
@@ -37,21 +37,23 @@ public class MenuType<T extends AbstractContainerMenu> implements FeatureElement
     private final FeatureFlagSet requiredFeatures;
     private final MenuType.MenuSupplier<T> constructor;
 
-    private static <T extends AbstractContainerMenu> MenuType<T> register(String p_39989_, MenuType.MenuSupplier<T> p_39990_) {
-        return Registry.register(BuiltInRegistries.MENU, p_39989_, new MenuType<>(p_39990_, FeatureFlags.VANILLA_SET));
+    private static <T extends AbstractContainerMenu> MenuType<T> register(final String name, final MenuType.MenuSupplier<T> constructor) {
+        return Registry.register(BuiltInRegistries.MENU, name, new MenuType<>(constructor, FeatureFlags.VANILLA_SET));
     }
 
-    private static <T extends AbstractContainerMenu> MenuType<T> register(String p_267295_, MenuType.MenuSupplier<T> p_266945_, FeatureFlag... p_267055_) {
-        return Registry.register(BuiltInRegistries.MENU, p_267295_, new MenuType<>(p_266945_, FeatureFlags.REGISTRY.subset(p_267055_)));
+    private static <T extends AbstractContainerMenu> MenuType<T> register(
+        final String name, final MenuType.MenuSupplier<T> constructor, final FeatureFlag... flags
+    ) {
+        return Registry.register(BuiltInRegistries.MENU, name, new MenuType<>(constructor, FeatureFlags.REGISTRY.subset(flags)));
     }
 
-    private MenuType(MenuType.MenuSupplier<T> p_267054_, FeatureFlagSet p_266909_) {
-        this.constructor = p_267054_;
-        this.requiredFeatures = p_266909_;
+    private MenuType(final MenuType.MenuSupplier<T> constructor, final FeatureFlagSet requiredFeatures) {
+        this.constructor = constructor;
+        this.requiredFeatures = requiredFeatures;
     }
 
-    public T create(int p_39986_, Inventory p_39987_) {
-        return this.constructor.create(p_39986_, p_39987_);
+    public T create(final int containerId, final Inventory inventory) {
+        return this.constructor.create(containerId, inventory);
     }
 
     @Override
@@ -59,7 +61,7 @@ public class MenuType<T extends AbstractContainerMenu> implements FeatureElement
         return this.requiredFeatures;
     }
 
-    interface MenuSupplier<T extends AbstractContainerMenu> {
-        T create(int p_39995_, Inventory p_39996_);
+    private interface MenuSupplier<T extends AbstractContainerMenu> {
+        T create(int containerId, Inventory inventory);
     }
 }

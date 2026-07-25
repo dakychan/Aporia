@@ -8,11 +8,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 public interface ContainerSingleItem extends Container {
     ItemStack getTheItem();
 
-    default ItemStack splitTheItem(int p_312245_) {
-        return this.getTheItem().split(p_312245_);
+    default ItemStack splitTheItem(final int count) {
+        return this.getTheItem().split(count);
     }
 
-    void setTheItem(ItemStack p_310917_);
+    void setTheItem(final ItemStack itemStack);
 
     default ItemStack removeTheItem() {
         return this.splitTheItem(this.getMaxStackSize());
@@ -34,33 +34,33 @@ public interface ContainerSingleItem extends Container {
     }
 
     @Override
-    default ItemStack removeItemNoUpdate(int p_273409_) {
-        return this.removeItem(p_273409_, this.getMaxStackSize());
+    default ItemStack removeItemNoUpdate(final int slot) {
+        return this.removeItem(slot, this.getMaxStackSize());
     }
 
     @Override
-    default ItemStack getItem(int p_309780_) {
-        return p_309780_ == 0 ? this.getTheItem() : ItemStack.EMPTY;
+    default ItemStack getItem(final int slot) {
+        return slot == 0 ? this.getTheItem() : ItemStack.EMPTY;
     }
 
     @Override
-    default ItemStack removeItem(int p_313221_, int p_309913_) {
-        return p_313221_ != 0 ? ItemStack.EMPTY : this.splitTheItem(p_309913_);
+    default ItemStack removeItem(final int slot, final int count) {
+        return slot != 0 ? ItemStack.EMPTY : this.splitTheItem(count);
     }
 
     @Override
-    default void setItem(int p_312121_, ItemStack p_312812_) {
-        if (p_312121_ == 0) {
-            this.setTheItem(p_312812_);
+    default void setItem(final int slot, final ItemStack itemStack) {
+        if (slot == 0) {
+            this.setTheItem(itemStack);
         }
     }
 
-    public interface BlockContainerSingleItem extends ContainerSingleItem {
+    interface BlockContainerSingleItem extends ContainerSingleItem {
         BlockEntity getContainerBlockEntity();
 
         @Override
-        default boolean stillValid(Player p_335018_) {
-            return Container.stillValidBlockEntity(this.getContainerBlockEntity(), p_335018_);
+        default boolean stillValid(final Player player) {
+            return Container.stillValidBlockEntity(this.getContainerBlockEntity(), player);
         }
     }
 }

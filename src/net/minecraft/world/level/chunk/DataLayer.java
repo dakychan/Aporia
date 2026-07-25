@@ -17,70 +17,70 @@ public class DataLayer {
         this(0);
     }
 
-    public DataLayer(int p_62554_) {
-        this.defaultValue = p_62554_;
+    public DataLayer(final int defaultValue) {
+        this.defaultValue = defaultValue;
     }
 
-    public DataLayer(byte[] p_62556_) {
-        this.data = p_62556_;
+    public DataLayer(final byte[] data) {
+        this.data = data;
         this.defaultValue = 0;
-        if (p_62556_.length != 2048) {
-            throw (IllegalArgumentException)Util.pauseInIde(new IllegalArgumentException("DataLayer should be 2048 bytes not: " + p_62556_.length));
+        if (data.length != 2048) {
+            throw (IllegalArgumentException)Util.pauseInIde(new IllegalArgumentException("DataLayer should be 2048 bytes not: " + data.length));
         }
     }
 
-    public int get(int p_62561_, int p_62562_, int p_62563_) {
-        return this.get(getIndex(p_62561_, p_62562_, p_62563_));
+    public int get(final int x, final int y, final int z) {
+        return this.get(getIndex(x, y, z));
     }
 
-    public void set(int p_62565_, int p_62566_, int p_62567_, int p_62568_) {
-        this.set(getIndex(p_62565_, p_62566_, p_62567_), p_62568_);
+    public void set(final int x, final int y, final int z, final int val) {
+        this.set(getIndex(x, y, z), val);
     }
 
-    private static int getIndex(int p_62572_, int p_62573_, int p_62574_) {
-        return p_62573_ << 8 | p_62574_ << 4 | p_62572_;
+    private static int getIndex(final int x, final int y, final int z) {
+        return y << 8 | z << 4 | x;
     }
 
-    private int get(int p_62571_) {
+    private int get(final int index) {
         if (this.data == null) {
             return this.defaultValue;
-        } else {
-            int i = getByteIndex(p_62571_);
-            int j = getNibbleIndex(p_62571_);
-            return this.data[i] >> 4 * j & 15;
         }
+
+        int position = getByteIndex(index);
+        int nibble = getNibbleIndex(index);
+        return this.data[position] >> 4 * nibble & 15;
     }
 
-    private void set(int p_62558_, int p_62559_) {
-        byte[] abyte = this.getData();
-        int i = getByteIndex(p_62558_);
-        int j = getNibbleIndex(p_62558_);
-        int k = ~(15 << 4 * j);
-        int l = (p_62559_ & 15) << 4 * j;
-        abyte[i] = (byte)(abyte[i] & k | l);
+    private void set(final int index, final int val) {
+        byte[] data = this.getData();
+        int position = getByteIndex(index);
+        int nibble = getNibbleIndex(index);
+        int mask = ~(15 << 4 * nibble);
+        int valueToSet = (val & 15) << 4 * nibble;
+        data[position] = (byte)(data[position] & mask | valueToSet);
     }
 
-    private static int getNibbleIndex(int p_182482_) {
-        return p_182482_ & 1;
+    private static int getNibbleIndex(final int index) {
+        return index & 1;
     }
 
-    private static int getByteIndex(int p_62579_) {
-        return p_62579_ >> 1;
+    private static int getByteIndex(final int position) {
+        return position >> 1;
     }
 
-    public void fill(int p_285142_) {
-        this.defaultValue = p_285142_;
+    public void fill(final int value) {
+        this.defaultValue = value;
         this.data = null;
     }
 
-    private static byte packFilled(int p_282176_) {
-        byte b0 = (byte)p_282176_;
+    private static byte packFilled(final int value) {
+        byte packed = (byte)value;
 
         for (int i = 4; i < 8; i += 4) {
-            b0 = (byte)(b0 | p_282176_ << i);
+            packed = (byte)(packed | value << i);
         }
 
-        return b0;
+        return packed;
     }
 
     public byte[] getData() {
@@ -100,42 +100,42 @@ public class DataLayer {
 
     @Override
     public String toString() {
-        StringBuilder stringbuilder = new StringBuilder();
+        StringBuilder builder = new StringBuilder();
 
         for (int i = 0; i < 4096; i++) {
-            stringbuilder.append(Integer.toHexString(this.get(i)));
+            builder.append(Integer.toHexString(this.get(i)));
             if ((i & 15) == 15) {
-                stringbuilder.append("\n");
+                builder.append("\n");
             }
 
             if ((i & 0xFF) == 255) {
-                stringbuilder.append("\n");
+                builder.append("\n");
             }
         }
 
-        return stringbuilder.toString();
+        return builder.toString();
     }
 
     @VisibleForDebug
-    public String layerToString(int p_156342_) {
-        StringBuilder stringbuilder = new StringBuilder();
+    public String layerToString(final int layer) {
+        StringBuilder builder = new StringBuilder();
 
         for (int i = 0; i < 256; i++) {
-            stringbuilder.append(Integer.toHexString(this.get(i)));
+            builder.append(Integer.toHexString(this.get(i)));
             if ((i & 15) == 15) {
-                stringbuilder.append("\n");
+                builder.append("\n");
             }
         }
 
-        return stringbuilder.toString();
+        return builder.toString();
     }
 
     public boolean isDefinitelyHomogenous() {
         return this.data == null;
     }
 
-    public boolean isDefinitelyFilledWith(int p_281763_) {
-        return this.data == null && this.defaultValue == p_281763_;
+    public boolean isDefinitelyFilledWith(final int value) {
+        return this.data == null && this.defaultValue == value;
     }
 
     public boolean isEmpty() {

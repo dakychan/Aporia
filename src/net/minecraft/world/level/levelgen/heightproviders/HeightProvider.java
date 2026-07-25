@@ -12,11 +12,11 @@ public abstract class HeightProvider {
         VerticalAnchor.CODEC, BuiltInRegistries.HEIGHT_PROVIDER_TYPE.byNameCodec().dispatch(HeightProvider::getType, HeightProviderType::codec)
     );
     public static final Codec<HeightProvider> CODEC = CONSTANT_OR_DISPATCH_CODEC.xmap(
-        p_161974_ -> p_161974_.map(ConstantHeight::of, p_161980_ -> (HeightProvider)p_161980_),
-        p_161976_ -> p_161976_.getType() == HeightProviderType.CONSTANT ? Either.left(((ConstantHeight)p_161976_).getValue()) : Either.right(p_161976_)
+        either -> either.map(ConstantHeight::of, f -> (HeightProvider)f),
+        f -> f.getType() == HeightProviderType.CONSTANT ? Either.left(((ConstantHeight)f).getValue()) : Either.right(f)
     );
 
-    public abstract int sample(RandomSource p_226302_, WorldGenerationContext p_226303_);
+    public abstract int sample(final RandomSource random, final WorldGenerationContext heightAccessor);
 
     public abstract HeightProviderType<?> getType();
 }

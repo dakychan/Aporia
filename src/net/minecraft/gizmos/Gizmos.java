@@ -8,105 +8,105 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Gizmos {
-    static final ThreadLocal<@Nullable GizmoCollector> collector = new ThreadLocal<>();
+    private static final ThreadLocal<@Nullable GizmoCollector> collector = new ThreadLocal<>();
 
     private Gizmos() {
     }
 
-    public static Gizmos.TemporaryCollection withCollector(GizmoCollector p_454878_) {
-        Gizmos.TemporaryCollection gizmos$temporarycollection = new Gizmos.TemporaryCollection();
-        collector.set(p_454878_);
-        return gizmos$temporarycollection;
+    public static Gizmos.TemporaryCollection withCollector(final GizmoCollector collector) {
+        Gizmos.TemporaryCollection result = new Gizmos.TemporaryCollection();
+        Gizmos.collector.set(collector);
+        return result;
     }
 
-    public static GizmoProperties addGizmo(Gizmo p_457177_) {
-        GizmoCollector gizmocollector = collector.get();
-        if (gizmocollector == null) {
+    public static GizmoProperties addGizmo(final Gizmo gizmo) {
+        GizmoCollector collector = Gizmos.collector.get();
+        if (collector == null) {
             throw new IllegalStateException("Gizmos cannot be created here! No GizmoCollector has been registered.");
         } else {
-            return gizmocollector.add(p_457177_);
+            return collector.add(gizmo);
         }
     }
 
-    public static GizmoProperties cuboid(AABB p_451857_, GizmoStyle p_460588_) {
-        return cuboid(p_451857_, p_460588_, false);
+    public static GizmoProperties cuboid(final AABB aabb, final GizmoStyle style) {
+        return cuboid(aabb, style, false);
     }
 
-    public static GizmoProperties cuboid(AABB p_457172_, GizmoStyle p_460845_, boolean p_457779_) {
-        return addGizmo(new CuboidGizmo(p_457172_, p_460845_, p_457779_));
+    public static GizmoProperties cuboid(final AABB aabb, final GizmoStyle style, final boolean coloredCorner) {
+        return addGizmo(new CuboidGizmo(aabb, style, coloredCorner));
     }
 
-    public static GizmoProperties cuboid(BlockPos p_456071_, GizmoStyle p_459276_) {
-        return cuboid(new AABB(p_456071_), p_459276_);
+    public static GizmoProperties cuboid(final BlockPos blockPos, final GizmoStyle style) {
+        return cuboid(new AABB(blockPos), style);
     }
 
-    public static GizmoProperties cuboid(BlockPos p_455687_, float p_451188_, GizmoStyle p_454073_) {
-        return cuboid(new AABB(p_455687_).inflate(p_451188_), p_454073_);
+    public static GizmoProperties cuboid(final BlockPos blockPos, final float padding, final GizmoStyle style) {
+        return cuboid(new AABB(blockPos).inflate(padding), style);
     }
 
-    public static GizmoProperties circle(Vec3 p_459325_, float p_452362_, GizmoStyle p_450168_) {
-        return addGizmo(new CircleGizmo(p_459325_, p_452362_, p_450168_));
+    public static GizmoProperties circle(final Vec3 pos, final float radius, final GizmoStyle style) {
+        return addGizmo(new CircleGizmo(pos, radius, style));
     }
 
-    public static GizmoProperties line(Vec3 p_453752_, Vec3 p_451524_, int p_456604_) {
-        return addGizmo(new LineGizmo(p_453752_, p_451524_, p_456604_, 3.0F));
+    public static GizmoProperties line(final Vec3 start, final Vec3 end, final int argb) {
+        return addGizmo(new LineGizmo(start, end, argb, 3.0F));
     }
 
-    public static GizmoProperties line(Vec3 p_453265_, Vec3 p_456948_, int p_453753_, float p_451070_) {
-        return addGizmo(new LineGizmo(p_453265_, p_456948_, p_453753_, p_451070_));
+    public static GizmoProperties line(final Vec3 start, final Vec3 end, final int argb, final float width) {
+        return addGizmo(new LineGizmo(start, end, argb, width));
     }
 
-    public static GizmoProperties arrow(Vec3 p_451107_, Vec3 p_456373_, int p_459978_) {
-        return addGizmo(new ArrowGizmo(p_451107_, p_456373_, p_459978_, 2.5F));
+    public static GizmoProperties arrow(final Vec3 start, final Vec3 end, final int argb) {
+        return addGizmo(new ArrowGizmo(start, end, argb, 2.5F));
     }
 
-    public static GizmoProperties arrow(Vec3 p_459996_, Vec3 p_453999_, int p_459012_, float p_459851_) {
-        return addGizmo(new ArrowGizmo(p_459996_, p_453999_, p_459012_, p_459851_));
+    public static GizmoProperties arrow(final Vec3 start, final Vec3 end, final int argb, final float width) {
+        return addGizmo(new ArrowGizmo(start, end, argb, width));
     }
 
-    public static GizmoProperties rect(Vec3 p_453807_, Vec3 p_456875_, Direction p_451147_, GizmoStyle p_452421_) {
-        return addGizmo(RectGizmo.fromCuboidFace(p_453807_, p_456875_, p_451147_, p_452421_));
+    public static GizmoProperties rect(final Vec3 cuboidCornerA, final Vec3 cuboidCornerB, final Direction face, final GizmoStyle style) {
+        return addGizmo(RectGizmo.fromCuboidFace(cuboidCornerA, cuboidCornerB, face, style));
     }
 
-    public static GizmoProperties rect(Vec3 p_458723_, Vec3 p_451764_, Vec3 p_455555_, Vec3 p_456457_, GizmoStyle p_459290_) {
-        return addGizmo(new RectGizmo(p_458723_, p_451764_, p_455555_, p_456457_, p_459290_));
+    public static GizmoProperties rect(final Vec3 cornerA, final Vec3 cornerB, final Vec3 cornerC, final Vec3 cornerD, final GizmoStyle style) {
+        return addGizmo(new RectGizmo(cornerA, cornerB, cornerC, cornerD, style));
     }
 
-    public static GizmoProperties point(Vec3 p_452529_, int p_451077_, float p_460274_) {
-        return addGizmo(new PointGizmo(p_452529_, p_451077_, p_460274_));
+    public static GizmoProperties point(final Vec3 position, final int argb, final float size) {
+        return addGizmo(new PointGizmo(position, argb, size));
     }
 
-    public static GizmoProperties billboardTextOverBlock(String p_451263_, BlockPos p_452159_, int p_457853_, int p_454364_, float p_458034_) {
-        double d0 = 1.3;
-        double d1 = 0.2;
-        GizmoProperties gizmoproperties = billboardText(
-            p_451263_, Vec3.atLowerCornerWithOffset(p_452159_, 0.5, 1.3 + p_457853_ * 0.2, 0.5), TextGizmo.Style.forColorAndCentered(p_454364_).withScale(p_458034_)
+    public static GizmoProperties billboardTextOverBlock(final String text, final BlockPos pos, final int row, final int color, final float scale) {
+        double firstRowStartPosition = 1.3;
+        double rowHeight = 0.2;
+        GizmoProperties properties = billboardText(
+            text, Vec3.atLowerCornerWithOffset(pos, 0.5, 1.3 + row * 0.2, 0.5), TextGizmo.Style.forColorAndCentered(color).withScale(scale)
         );
-        gizmoproperties.setAlwaysOnTop();
-        return gizmoproperties;
+        properties.setAlwaysOnTop();
+        return properties;
     }
 
-    public static GizmoProperties billboardTextOverMob(Entity p_458337_, int p_452655_, String p_458969_, int p_458245_, float p_458947_) {
-        double d0 = 2.4;
-        double d1 = 0.25;
-        double d2 = p_458337_.getBlockX() + 0.5;
-        double d3 = p_458337_.getY() + 2.4 + p_452655_ * 0.25;
-        double d4 = p_458337_.getBlockZ() + 0.5;
-        float f = 0.5F;
-        GizmoProperties gizmoproperties = billboardText(p_458969_, new Vec3(d2, d3, d4), TextGizmo.Style.forColor(p_458245_).withScale(p_458947_).withLeftAlignment(0.5F));
-        gizmoproperties.setAlwaysOnTop();
-        return gizmoproperties;
+    public static GizmoProperties billboardTextOverMob(final Entity entity, final int row, final String text, final int color, final float scale) {
+        double firstRowStartPosition = 2.4;
+        double rowHeight = 0.25;
+        double x = entity.getBlockX() + 0.5;
+        double y = entity.getY() + 2.4 + row * 0.25;
+        double z = entity.getBlockZ() + 0.5;
+        float textAdjustLeft = 0.5F;
+        GizmoProperties properties = billboardText(text, new Vec3(x, y, z), TextGizmo.Style.forColor(color).withScale(scale).withLeftAlignment(0.5F));
+        properties.setAlwaysOnTop();
+        return properties;
     }
 
-    public static GizmoProperties billboardText(String p_460075_, Vec3 p_450827_, TextGizmo.Style p_459248_) {
-        return addGizmo(new TextGizmo(p_450827_, p_460075_, p_459248_));
+    public static GizmoProperties billboardText(final String name, final Vec3 pos, final TextGizmo.Style style) {
+        return addGizmo(new TextGizmo(pos, name, style));
     }
 
     public static class TemporaryCollection implements AutoCloseable {
         private final @Nullable GizmoCollector old = Gizmos.collector.get();
         private boolean closed;
 
-        TemporaryCollection() {
+        private TemporaryCollection() {
         }
 
         @Override

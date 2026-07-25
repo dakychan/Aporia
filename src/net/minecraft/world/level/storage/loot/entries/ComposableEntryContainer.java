@@ -5,19 +5,19 @@ import java.util.function.Consumer;
 import net.minecraft.world.level.storage.loot.LootContext;
 
 @FunctionalInterface
-interface ComposableEntryContainer {
-    ComposableEntryContainer ALWAYS_FALSE = (p_79418_, p_79419_) -> false;
-    ComposableEntryContainer ALWAYS_TRUE = (p_79409_, p_79410_) -> true;
+public interface ComposableEntryContainer {
+    ComposableEntryContainer ALWAYS_FALSE = (context, output) -> false;
+    ComposableEntryContainer ALWAYS_TRUE = (context, output) -> true;
 
-    boolean expand(LootContext p_79426_, Consumer<LootPoolEntry> p_79427_);
+    boolean expand(final LootContext context, final Consumer<LootPoolEntry> output);
 
-    default ComposableEntryContainer and(ComposableEntryContainer p_79412_) {
-        Objects.requireNonNull(p_79412_);
-        return (p_79424_, p_79425_) -> this.expand(p_79424_, p_79425_) && p_79412_.expand(p_79424_, p_79425_);
+    default ComposableEntryContainer and(final ComposableEntryContainer other) {
+        Objects.requireNonNull(other);
+        return (context, output) -> this.expand(context, output) && other.expand(context, output);
     }
 
-    default ComposableEntryContainer or(ComposableEntryContainer p_79421_) {
-        Objects.requireNonNull(p_79421_);
-        return (p_79415_, p_79416_) -> this.expand(p_79415_, p_79416_) || p_79421_.expand(p_79415_, p_79416_);
+    default ComposableEntryContainer or(final ComposableEntryContainer other) {
+        Objects.requireNonNull(other);
+        return (context, output) -> this.expand(context, output) || other.expand(context, output);
     }
 }

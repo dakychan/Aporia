@@ -8,7 +8,6 @@ import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Pair;
-import com.mojang.serialization.Dynamic;
 import com.mojang.serialization.OptionalDynamic;
 import java.util.Optional;
 import java.util.Set;
@@ -32,45 +31,52 @@ public class ItemStackCustomNameToOverrideComponentFix extends DataFix {
         "filled_map.village_taiga"
     );
 
-    public ItemStackCustomNameToOverrideComponentFix(Schema p_328761_) {
-        super(p_328761_, false);
+    public ItemStackCustomNameToOverrideComponentFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     public final TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("components");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idFinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<?> componentsFinder = itemStackType.findField("components");
         return this.fixTypeEverywhereTyped(
             "ItemStack custom_name to item_name component fix",
-            type,
-            p_328527_ -> {
-                Optional<Pair<String, String>> optional = p_328527_.getOptional(opticfinder);
-                Optional<String> optional1 = optional.map(Pair::getSecond);
-                if (optional1.filter(p_329654_ -> p_329654_.equals("minecraft:white_banner")).isPresent()) {
-                    return p_328527_.updateTyped(opticfinder1, ItemStackCustomNameToOverrideComponentFix::fixBanner);
+            itemStackType,
+            input -> {
+                Optional<Pair<String, String>> id = input.getOptional(idFinder);
+                Optional<String> maybeId = id.map(Pair::getSecond);
+                if (maybeId.filter(s -> s.equals("minecraft:white_banner")).isPresent()) {
+                    return input.updateTyped(componentsFinder, ItemStackCustomNameToOverrideComponentFix::fixBanner);
                 } else {
-                    return optional1.filter(p_336047_ -> p_336047_.equals("minecraft:filled_map")).isPresent()
-                        ? p_328527_.updateTyped(opticfinder1, ItemStackCustomNameToOverrideComponentFix::fixMap)
-                        : p_328527_;
+                    return maybeId.filter(s -> s.equals("minecraft:filled_map")).isPresent()
+                        ? input.updateTyped(componentsFinder, ItemStackCustomNameToOverrideComponentFix::fixMap)
+                        : input;
                 }
             }
         );
     }
 
-    private static <T> Typed<T> fixMap(Typed<T> p_395350_) {
-        return fixCustomName(p_395350_, MAP_NAMES::contains);
+    private static <T> Typed<T> fixMap(final Typed<T> value) {
+        return fixCustomName(value, MAP_NAMES::contains);
     }
 
-    private static <T> Typed<T> fixBanner(Typed<T> p_396624_) {
-        return fixCustomName(p_396624_, p_329571_ -> p_329571_.equals("block.minecraft.ominous_banner"));
+    private static <T> Typed<T> fixBanner(final Typed<T> value) {
+        return fixCustomName(value, e -> e.equals("block.minecraft.ominous_banner"));
     }
 
-    private static <T> Typed<T> fixCustomName(Typed<T> p_392021_, Predicate<String> p_334171_) {
-        return Util.writeAndReadTypedOrThrow(p_392021_, p_392021_.getType(), p_390289_ -> {
-            OptionalDynamic<?> optionaldynamic = p_390289_.get("minecraft:custom_name");
-            Optional<String> optional = optionaldynamic.asString().result().flatMap(LegacyComponentDataFixUtils::extractTranslationString).filter(p_334171_);
-            return optional.isPresent() ? p_390289_.renameField("minecraft:custom_name", "minecraft:item_name") : p_390289_;
-        });
+    private static <T> Typed<T> fixCustomName(final Typed<T> typed, final Predicate<String> expectedTranslationKey) {
+        return Util.writeAndReadTypedOrThrow(
+            typed,
+            typed.getType(),
+            value -> {
+                OptionalDynamic<?> customNameTag = value.get("minecraft:custom_name");
+                Optional<String> hasCorrectTranslationKey = customNameTag.asString()
+                    .result()
+                    .flatMap(LegacyComponentDataFixUtils::extractTranslationString)
+                    .filter(expectedTranslationKey);
+                return hasCorrectTranslationKey.isPresent() ? value.renameField("minecraft:custom_name", "minecraft:item_name") : value;
+            }
+        );
     }
 }

@@ -3,6 +3,7 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.LivingEntity;
@@ -27,13 +28,13 @@ public class KelpBlock extends GrowingPlantHeadBlock implements LiquidBlockConta
         return CODEC;
     }
 
-    protected KelpBlock(BlockBehaviour.Properties p_54300_) {
-        super(p_54300_, Direction.UP, SHAPE, true, 0.14);
+    protected KelpBlock(final BlockBehaviour.Properties properties) {
+        super(properties, Direction.UP, SHAPE, true, 0.14);
     }
 
     @Override
-    protected boolean canGrowInto(BlockState p_54321_) {
-        return p_54321_.is(Blocks.WATER);
+    protected boolean canGrowInto(final BlockState state) {
+        return state.is(Blocks.WATER);
     }
 
     @Override
@@ -42,33 +43,33 @@ public class KelpBlock extends GrowingPlantHeadBlock implements LiquidBlockConta
     }
 
     @Override
-    protected boolean canAttachTo(BlockState p_153455_) {
-        return !p_153455_.is(Blocks.MAGMA_BLOCK);
+    protected boolean canAttachTo(final BlockState state) {
+        return !state.is(BlockTags.CANNOT_SUPPORT_KELP);
     }
 
     @Override
-    public boolean canPlaceLiquid(@Nullable LivingEntity p_397626_, BlockGetter p_54304_, BlockPos p_54305_, BlockState p_54306_, Fluid p_54307_) {
+    public boolean canPlaceLiquid(final @Nullable LivingEntity user, final BlockGetter level, final BlockPos pos, final BlockState state, final Fluid type) {
         return false;
     }
 
     @Override
-    public boolean placeLiquid(LevelAccessor p_54309_, BlockPos p_54310_, BlockState p_54311_, FluidState p_54312_) {
+    public boolean placeLiquid(final LevelAccessor level, final BlockPos pos, final BlockState state, final FluidState fluidState) {
         return false;
     }
 
     @Override
-    protected int getBlocksToGrowWhenBonemealed(RandomSource p_221366_) {
+    protected int getBlocksToGrowWhenBonemealed(final RandomSource random) {
         return 1;
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_54302_) {
-        FluidState fluidstate = p_54302_.getLevel().getFluidState(p_54302_.getClickedPos());
-        return fluidstate.is(FluidTags.WATER) && fluidstate.getAmount() == 8 ? super.getStateForPlacement(p_54302_) : null;
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState fluidState = context.getLevel().getFluidState(context.getClickedPos());
+        return fluidState.is(FluidTags.WATER) && fluidState.isFull() ? super.getStateForPlacement(context) : null;
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_54319_) {
+    protected FluidState getFluidState(final BlockState state) {
         return Fluids.WATER.getSource(false);
     }
 }

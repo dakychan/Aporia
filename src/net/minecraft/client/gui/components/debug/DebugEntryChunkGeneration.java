@@ -14,34 +14,45 @@ import net.minecraft.world.level.biome.Climate;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.RandomState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugEntryChunkGeneration implements DebugScreenEntry {
     private static final Identifier GROUP = Identifier.withDefaultNamespace("chunk_generation");
+    private final List<String> result = new ArrayList<>();
+    private @Nullable BlockPos lastPos = null;
 
     @Override
-    public void display(DebugScreenDisplayer p_430411_, @Nullable Level p_426967_, @Nullable LevelChunk p_429967_, @Nullable LevelChunk p_423873_) {
+    public void display(
+        final DebugScreenDisplayer displayer,
+        final @Nullable Level serverOrClientLevel,
+        final @Nullable LevelChunk clientChunk,
+        final @Nullable LevelChunk serverChunk
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
         Entity entity = minecraft.getCameraEntity();
-        ServerLevel serverlevel = p_426967_ instanceof ServerLevel ? (ServerLevel)p_426967_ : null;
-        if (entity != null && serverlevel != null) {
-            BlockPos blockpos = entity.blockPosition();
-            ServerChunkCache serverchunkcache = serverlevel.getChunkSource();
-            List<String> list = new ArrayList<>();
-            ChunkGenerator chunkgenerator = serverchunkcache.getGenerator();
-            RandomState randomstate = serverchunkcache.randomState();
-            chunkgenerator.addDebugScreenInfo(list, randomstate, blockpos);
-            Climate.Sampler climate$sampler = randomstate.sampler();
-            BiomeSource biomesource = chunkgenerator.getBiomeSource();
-            biomesource.addDebugInfo(list, blockpos, climate$sampler);
-            if (p_423873_ != null && p_423873_.isOldNoiseGeneration()) {
-                list.add("Blending: Old");
+        ServerLevel serverLevel = serverOrClientLevel instanceof ServerLevel level ? level : null;
+        if (entity != null && serverLevel != null) {
+            BlockPos feetPos = entity.blockPosition();
+            if (!feetPos.equals(this.lastPos)) {
+                this.update(serverChunk, feetPos, serverLevel);
             }
 
-            p_430411_.addToGroup(GROUP, list);
+            displayer.addToGroup(GROUP, this.result);
+        }
+    }
+
+    private void update(final @Nullable LevelChunk serverChunk, final BlockPos feetPos, final ServerLevel serverLevel) {
+        this.result.clear();
+        this.lastPos = feetPos;
+        ServerChunkCache chunkSource = serverLevel.getChunkSource();
+        ChunkGenerator generator = chunkSource.getGenerator();
+        RandomState randomState = chunkSource.randomState();
+        generator.addDebugScreenInfo(this.result, randomState, feetPos);
+        Climate.Sampler sampler = randomState.sampler();
+        BiomeSource biomeSource = generator.getBiomeSource();
+        biomeSource.addDebugInfo(this.result, feetPos, sampler);
+        if (serverChunk != null && serverChunk.isOldNoiseGeneration()) {
+            this.result.add("Blending: Old");
         }
     }
 }

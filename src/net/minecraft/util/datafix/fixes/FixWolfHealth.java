@@ -3,7 +3,6 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 
@@ -11,39 +10,39 @@ public class FixWolfHealth extends NamedEntityFix {
     private static final String WOLF_ID = "minecraft:wolf";
     private static final String WOLF_HEALTH = "minecraft:generic.max_health";
 
-    public FixWolfHealth(Schema p_394005_) {
-        super(p_394005_, false, "FixWolfHealth", References.ENTITY, "minecraft:wolf");
+    public FixWolfHealth(final Schema outputSchema) {
+        super(outputSchema, false, "FixWolfHealth", References.ENTITY, "minecraft:wolf");
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_396983_) {
-        return p_396983_.update(
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(
             DSL.remainderFinder(),
-            p_394363_ -> {
-                MutableBoolean mutableboolean = new MutableBoolean(false);
-                p_394363_ = p_394363_.update(
+            dynamic -> {
+                MutableBoolean healthAdjusted = new MutableBoolean(false);
+                dynamic = dynamic.update(
                     "Attributes",
-                    p_395655_ -> p_395655_.createList(
-                        p_395655_.asStream()
+                    attributes -> attributes.createList(
+                        attributes.asStream()
                             .map(
-                                p_395771_ -> "minecraft:generic.max_health".equals(NamespacedSchema.ensureNamespaced(p_395771_.get("Name").asString("")))
-                                    ? p_395771_.update("Base", p_394759_ -> {
-                                        if (p_394759_.asDouble(0.0) == 20.0) {
-                                            mutableboolean.setTrue();
-                                            return p_394759_.createDouble(40.0);
+                                attribute -> "minecraft:generic.max_health".equals(NamespacedSchema.ensureNamespaced(attribute.get("Name").asString("")))
+                                    ? attribute.update("Base", base -> {
+                                        if (base.asDouble(0.0) == 20.0) {
+                                            healthAdjusted.setTrue();
+                                            return base.createDouble(40.0);
                                         } else {
-                                            return p_394759_;
+                                            return base;
                                         }
                                     })
-                                    : p_395771_
+                                    : attribute
                             )
                     )
                 );
-                if (mutableboolean.isTrue()) {
-                    p_394363_ = p_394363_.update("Health", p_397851_ -> p_397851_.createFloat(p_397851_.asFloat(0.0F) * 2.0F));
+                if (healthAdjusted.isTrue()) {
+                    dynamic = dynamic.update("Health", health -> health.createFloat(health.asFloat(0.0F) * 2.0F));
                 }
 
-                return p_394363_;
+                return dynamic;
             }
         );
     }

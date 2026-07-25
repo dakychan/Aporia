@@ -14,43 +14,43 @@ import org.jspecify.annotations.Nullable;
 public abstract class PackDetector<T> {
     private final DirectoryValidator validator;
 
-    protected PackDetector(DirectoryValidator p_300595_) {
-        this.validator = p_300595_;
+    protected PackDetector(final DirectoryValidator validator) {
+        this.validator = validator;
     }
 
-    public @Nullable T detectPackResources(Path p_298083_, List<ForbiddenSymlinkInfo> p_297322_) throws IOException {
-        Path path = p_298083_;
+    public @Nullable T detectPackResources(final Path content, final List<ForbiddenSymlinkInfo> issues) throws IOException {
+        Path targetContext = content;
 
-        BasicFileAttributes basicfileattributes;
+        BasicFileAttributes attributes;
         try {
-            basicfileattributes = Files.readAttributes(p_298083_, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
-        } catch (NoSuchFileException nosuchfileexception) {
+            attributes = Files.readAttributes(content, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+        } catch (NoSuchFileException e) {
             return null;
         }
 
-        if (basicfileattributes.isSymbolicLink()) {
-            this.validator.validateSymlink(p_298083_, p_297322_);
-            if (!p_297322_.isEmpty()) {
+        if (attributes.isSymbolicLink()) {
+            this.validator.validateSymlink(content, issues);
+            if (!issues.isEmpty()) {
                 return null;
             }
 
-            path = Files.readSymbolicLink(p_298083_);
-            basicfileattributes = Files.readAttributes(path, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
+            targetContext = Files.readSymbolicLink(content);
+            attributes = Files.readAttributes(targetContext, BasicFileAttributes.class, LinkOption.NOFOLLOW_LINKS);
         }
 
-        if (basicfileattributes.isDirectory()) {
-            this.validator.validateKnownDirectory(path, p_297322_);
-            if (!p_297322_.isEmpty()) {
+        if (attributes.isDirectory()) {
+            this.validator.validateKnownDirectory(targetContext, issues);
+            if (!issues.isEmpty()) {
                 return null;
             } else {
-                return !Files.isRegularFile(path.resolve("pack.mcmeta")) ? null : this.createDirectoryPack(path);
+                return !Files.isRegularFile(targetContext.resolve("pack.mcmeta")) ? null : this.createDirectoryPack(targetContext);
             }
         } else {
-            return basicfileattributes.isRegularFile() && path.getFileName().toString().endsWith(".zip") ? this.createZipPack(path) : null;
+            return attributes.isRegularFile() && targetContext.getFileName().toString().endsWith(".zip") ? this.createZipPack(targetContext) : null;
         }
     }
 
-    protected abstract @Nullable T createZipPack(Path p_297649_) throws IOException;
+    protected abstract @Nullable T createZipPack(final Path content) throws IOException;
 
-    protected abstract @Nullable T createDirectoryPack(Path p_298942_) throws IOException;
+    protected abstract @Nullable T createDirectoryPack(final Path content) throws IOException;
 }

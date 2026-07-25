@@ -9,10 +9,11 @@ public enum EnchantmentTarget implements StringRepresentable {
     VICTIM("victim");
 
     public static final Codec<EnchantmentTarget> CODEC = StringRepresentable.fromEnum(EnchantmentTarget::values);
+    public static final Codec<EnchantmentTarget> NON_DAMAGE_CODEC = StringRepresentable.fromEnum(() -> new EnchantmentTarget[]{ATTACKER, VICTIM});
     private final String id;
 
-    private EnchantmentTarget(final String p_344608_) {
-        this.id = p_344608_;
+    EnchantmentTarget(final String id) {
+        this.id = id;
     }
 
     @Override

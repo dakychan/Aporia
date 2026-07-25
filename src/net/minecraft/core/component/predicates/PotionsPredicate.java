@@ -2,7 +2,7 @@ package net.minecraft.core.component.predicates;
 
 import com.mojang.serialization.Codec;
 import java.util.Optional;
-import net.minecraft.advancements.criterion.SingleComponentItemPredicate;
+import net.minecraft.advancements.predicates.SingleComponentItemPredicate;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.RegistryCodecs;
@@ -21,12 +21,12 @@ public record PotionsPredicate(HolderSet<Potion> potions) implements SingleCompo
         return DataComponents.POTION_CONTENTS;
     }
 
-    public boolean matches(PotionContents p_391208_) {
-        Optional<Holder<Potion>> optional = p_391208_.potion();
-        return !optional.isEmpty() && this.potions.contains(optional.get());
+    public boolean matches(final PotionContents potionContents) {
+        Optional<Holder<Potion>> potion = potionContents.potion();
+        return !potion.isEmpty() && this.potions.contains(potion.get());
     }
 
-    public static DataComponentPredicate potions(HolderSet<Potion> p_394576_) {
-        return new PotionsPredicate(p_394576_);
+    public static DataComponentPredicate potions(final HolderSet<Potion> potions) {
+        return new PotionsPredicate(potions);
     }
 }

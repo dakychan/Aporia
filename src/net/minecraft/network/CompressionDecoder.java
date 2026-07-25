@@ -16,73 +16,76 @@ public class CompressionDecoder extends ByteToMessageDecoder {
     private int threshold;
     private boolean validateDecompressed;
 
-    public CompressionDecoder(int p_182675_, boolean p_182676_) {
-        this.threshold = p_182675_;
-        this.validateDecompressed = p_182676_;
+    public CompressionDecoder(final int threshold, final boolean validateDecompressed) {
+        this.threshold = threshold;
+        this.validateDecompressed = validateDecompressed;
         this.inflater = new Inflater();
     }
 
     @Override
-    protected void decode(ChannelHandlerContext p_129441_, ByteBuf p_129442_, List<Object> p_129443_) throws Exception {
-        int i = VarInt.read(p_129442_);
-        if (i == 0) {
-            p_129443_.add(p_129442_.readBytes(p_129442_.readableBytes()));
+    protected void decode(final ChannelHandlerContext ctx, final ByteBuf in, final List<Object> out) throws Exception {
+        int uncompressedLength = VarInt.read(in);
+        if (uncompressedLength == 0) {
+            out.add(in.readBytes(in.readableBytes()));
         } else {
             if (this.validateDecompressed) {
-                if (i < this.threshold) {
-                    throw new DecoderException("Badly compressed packet - size of " + i + " is below server threshold of " + this.threshold);
+                if (uncompressedLength < this.threshold) {
+                    throw new DecoderException("Badly compressed packet - size of " + uncompressedLength + " is below server threshold of " + this.threshold);
                 }
 
-                if (i > 8388608) {
-                    throw new DecoderException("Badly compressed packet - size of " + i + " is larger than protocol maximum of 8388608");
+                if (uncompressedLength > 8388608) {
+                    throw new DecoderException("Badly compressed packet - size of " + uncompressedLength + " is larger than protocol maximum of 8388608");
                 }
             }
 
-            this.setupInflaterInput(p_129442_);
-            ByteBuf bytebuf = this.inflate(p_129441_, i);
+            this.setupInflaterInput(in);
+            ByteBuf output = this.inflate(ctx, uncompressedLength);
             this.inflater.reset();
-            p_129443_.add(bytebuf);
+            out.add(output);
         }
     }
 
-    private void setupInflaterInput(ByteBuf p_299798_) {
-        ByteBuffer bytebuffer;
-        if (p_299798_.nioBufferCount() > 0) {
-            bytebuffer = p_299798_.nioBuffer();
-            p_299798_.skipBytes(p_299798_.readableBytes());
+    private void setupInflaterInput(final ByteBuf in) {
+        ByteBuffer input;
+        if (in.nioBufferCount() > 0) {
+            input = in.nioBuffer();
+            in.skipBytes(in.readableBytes());
         } else {
-            bytebuffer = ByteBuffer.allocateDirect(p_299798_.readableBytes());
-            p_299798_.readBytes(bytebuffer);
-            bytebuffer.flip();
+            input = ByteBuffer.allocateDirect(in.readableBytes());
+            in.readBytes(input);
+            input.flip();
         }
 
-        this.inflater.setInput(bytebuffer);
+        this.inflater.setInput(input);
     }
 
-    private ByteBuf inflate(ChannelHandlerContext p_300050_, int p_298909_) throws DataFormatException {
-        ByteBuf bytebuf = p_300050_.alloc().directBuffer(p_298909_);
+    private ByteBuf inflate(final ChannelHandlerContext ctx, final int uncompressedLength) throws DataFormatException {
+        ByteBuf output = ctx.alloc().directBuffer(uncompressedLength);
 
         try {
-            ByteBuffer bytebuffer = bytebuf.internalNioBuffer(0, p_298909_);
-            int i = bytebuffer.position();
-            this.inflater.inflate(bytebuffer);
-            int j = bytebuffer.position() - i;
-            if (j != p_298909_) {
+            ByteBuffer nioBuffer = output.internalNioBuffer(0, uncompressedLength);
+            int pos = nioBuffer.position();
+            this.inflater.inflate(nioBuffer);
+            int actualUncompressedLength = nioBuffer.position() - pos;
+            if (actualUncompressedLength != uncompressedLength) {
                 throw new DecoderException(
-                    "Badly compressed packet - actual length of uncompressed payload " + j + " is does not match declared size " + p_298909_
+                    "Badly compressed packet - actual length of uncompressed payload "
+                        + actualUncompressedLength
+                        + " is does not match declared size "
+                        + uncompressedLength
                 );
-            } else {
-                bytebuf.writerIndex(bytebuf.writerIndex() + j);
-                return bytebuf;
             }
-        } catch (Exception exception) {
-            bytebuf.release();
-            throw exception;
+
+            output.writerIndex(output.writerIndex() + actualUncompressedLength);
+            return output;
+        } catch (Exception e) {
+            output.release();
+            throw e;
         }
     }
 
-    public void setThreshold(int p_182678_, boolean p_182679_) {
-        this.threshold = p_182678_;
-        this.validateDecompressed = p_182679_;
+    public void setThreshold(final int threshold, final boolean validateDecompressed) {
+        this.threshold = threshold;
+        this.validateDecompressed = validateDecompressed;
     }
 }

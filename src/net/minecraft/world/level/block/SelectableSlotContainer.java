@@ -14,38 +14,38 @@ public interface SelectableSlotContainer {
 
     int getColumns();
 
-    default OptionalInt getHitSlot(BlockHitResult p_427349_, Direction p_422483_) {
-        return getRelativeHitCoordinatesForBlockFace(p_427349_, p_422483_).map(p_427292_ -> {
-            int i = getSection(1.0F - p_427292_.y, this.getRows());
-            int j = getSection(p_427292_.x, this.getColumns());
-            return OptionalInt.of(j + i * this.getColumns());
+    default OptionalInt getHitSlot(final BlockHitResult hitResult, final Direction blockFacing) {
+        return getRelativeHitCoordinatesForBlockFace(hitResult, blockFacing).map(hitCoords -> {
+            int row = getSection(1.0F - hitCoords.y, this.getRows());
+            int column = getSection(hitCoords.x, this.getColumns());
+            return OptionalInt.of(column + row * this.getColumns());
         }).orElseGet(OptionalInt::empty);
     }
 
-    private static Optional<Vec2> getRelativeHitCoordinatesForBlockFace(BlockHitResult p_429515_, Direction p_424579_) {
-        Direction direction = p_429515_.getDirection();
-        if (p_424579_ != direction) {
+    private static Optional<Vec2> getRelativeHitCoordinatesForBlockFace(final BlockHitResult hitResult, final Direction blockFacing) {
+        Direction hitDirection = hitResult.getDirection();
+        if (blockFacing != hitDirection) {
             return Optional.empty();
-        } else {
-            BlockPos blockpos = p_429515_.getBlockPos().relative(direction);
-            Vec3 vec3 = p_429515_.getLocation().subtract(blockpos.getX(), blockpos.getY(), blockpos.getZ());
-            double d0 = vec3.x();
-            double d1 = vec3.y();
-            double d2 = vec3.z();
-
-            return switch (direction) {
-                case NORTH -> Optional.of(new Vec2((float)(1.0 - d0), (float)d1));
-                case SOUTH -> Optional.of(new Vec2((float)d0, (float)d1));
-                case WEST -> Optional.of(new Vec2((float)d2, (float)d1));
-                case EAST -> Optional.of(new Vec2((float)(1.0 - d2), (float)d1));
-                case DOWN, UP -> Optional.empty();
-            };
         }
+
+        BlockPos hitBlockPos = hitResult.getBlockPos().relative(hitDirection);
+        Vec3 relativeHit = hitResult.getLocation().subtract(hitBlockPos.getX(), hitBlockPos.getY(), hitBlockPos.getZ());
+        double relativeX = relativeHit.x();
+        double relativeY = relativeHit.y();
+        double relativeZ = relativeHit.z();
+
+        return switch (hitDirection) {
+            case NORTH -> Optional.of(new Vec2((float)(1.0 - relativeX), (float)relativeY));
+            case SOUTH -> Optional.of(new Vec2((float)relativeX, (float)relativeY));
+            case WEST -> Optional.of(new Vec2((float)relativeZ, (float)relativeY));
+            case EAST -> Optional.of(new Vec2((float)(1.0 - relativeZ), (float)relativeY));
+            case DOWN, UP -> Optional.empty();
+        };
     }
 
-    private static int getSection(float p_429140_, int p_431400_) {
-        float f = p_429140_ * 16.0F;
-        float f1 = 16.0F / p_431400_;
-        return Mth.clamp(Mth.floor(f / f1), 0, p_431400_ - 1);
+    private static int getSection(final float relativeCoordinate, final int maxSections) {
+        float targetedPixel = relativeCoordinate * 16.0F;
+        float sectionSize = 16.0F / maxSections;
+        return Mth.clamp(Mth.floor(targetedPixel / sectionSize), 0, maxSections - 1);
     }
 }

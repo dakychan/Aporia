@@ -2,59 +2,56 @@ package net.minecraft.world.entity.ai.behavior;
 
 import java.util.Optional;
 import java.util.function.Predicate;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 
 public class InteractWith {
     public static <T extends LivingEntity> BehaviorControl<LivingEntity> of(
-        EntityType<? extends T> p_259703_, int p_260224_, MemoryModuleType<T> p_259995_, float p_259991_, int p_259933_
+        final EntityType<? extends T> type,
+        final int interactionRange,
+        final MemoryModuleType<T> interactionTarget,
+        final float speedModifier,
+        final int stopDistance
     ) {
-        return of(p_259703_, p_260224_, p_23287_ -> true, p_23285_ -> true, p_259995_, p_259991_, p_259933_);
+        return of(type, interactionRange, mob -> true, mob -> true, interactionTarget, speedModifier, stopDistance);
     }
 
     public static <E extends LivingEntity, T extends LivingEntity> BehaviorControl<E> of(
-        EntityType<? extends T> p_259366_,
-        int p_259564_,
-        Predicate<E> p_259570_,
-        Predicate<T> p_260254_,
-        MemoryModuleType<T> p_260229_,
-        float p_259369_,
-        int p_259065_
+        final EntityType<? extends T> type,
+        final int interactionRange,
+        final Predicate<E> selfFilter,
+        final Predicate<T> targetFilter,
+        final MemoryModuleType<T> interactionTarget,
+        final float speedModifier,
+        final int stopDistance
     ) {
-        int i = p_259564_ * p_259564_;
-        Predicate<LivingEntity> predicate = p_449480_ -> p_259366_.equals(p_449480_.getType()) && p_260254_.test((T)p_449480_);
+        int interactionRangeSqr = interactionRange * interactionRange;
+        Predicate<LivingEntity> isTargetValid = mob -> mob.is(type) && targetFilter.test((T)mob);
         return BehaviorBuilder.create(
-            p_258426_ -> p_258426_.group(
-                    p_258426_.registered(p_260229_),
-                    p_258426_.registered(MemoryModuleType.LOOK_TARGET),
-                    p_258426_.absent(MemoryModuleType.WALK_TARGET),
-                    p_258426_.present(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
+            i -> i.group(
+                    i.registered(interactionTarget),
+                    i.registered(MemoryModuleType.LOOK_TARGET),
+                    i.absent(MemoryModuleType.WALK_TARGET),
+                    i.present(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
                 )
-                .apply(
-                    p_258426_,
-                    (p_258439_, p_258440_, p_258441_, p_258442_) -> (p_258413_, p_258414_, p_258415_) -> {
-                        NearestVisibleLivingEntities nearestvisiblelivingentities = p_258426_.get(p_258442_);
-                        if (p_259570_.test(p_258414_) && nearestvisiblelivingentities.contains(predicate)) {
-                            Optional<LivingEntity> optional = nearestvisiblelivingentities.findClosest(
-                                p_326832_ -> p_326832_.distanceToSqr(p_258414_) <= i && predicate.test(p_326832_)
-                            );
-                            optional.ifPresent(p_258432_ -> {
-                                p_258439_.set((T)p_258432_);
-                                p_258440_.set(new EntityTracker(p_258432_, true));
-                                p_258441_.set(new WalkTarget(new EntityTracker(p_258432_, false), p_259369_, p_259065_));
-                            });
-                            return true;
-                        } else {
-                            return false;
-                        }
+                .apply(i, (target, lookTarget, walkTarget, nearestEntities) -> (level, body, timestamp) -> {
+                    NearestVisibleLivingEntities entities = i.get(nearestEntities);
+                    if (selfFilter.test(body) && entities.contains(isTargetValid)) {
+                        Optional<LivingEntity> closest = entities.findClosest(mob -> mob.distanceToSqr(body) <= interactionRangeSqr && isTargetValid.test(mob));
+                        closest.ifPresent(mob -> {
+                            target.set((T)mob);
+                            lookTarget.set(new EntityTracker(mob, true));
+                            walkTarget.set(new WalkTarget(new EntityTracker(mob, false), speedModifier, stopDistance));
+                        });
+                        return true;
+                    } else {
+                        return false;
                     }
-                )
+                })
         );
     }
 }

@@ -9,9 +9,9 @@ import net.minecraft.world.level.storage.loot.BuiltInLootTables;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 
 public class VanillaLootTableProvider {
-    public static LootTableProvider create(PackOutput p_250807_, CompletableFuture<HolderLookup.Provider> p_330840_) {
+    public static LootTableProvider create(final PackOutput output, final CompletableFuture<HolderLookup.Provider> registries) {
         return new LootTableProvider(
-            p_250807_,
+            output,
             BuiltInLootTables.all(),
             List.of(
                 new LootTableProvider.SubProviderEntry(VanillaFishingLoot::new, LootContextParamSets.FISHING),
@@ -27,7 +27,7 @@ public class VanillaLootTableProvider {
                 new LootTableProvider.SubProviderEntry(VanillaBlockInteractLoot::new, LootContextParamSets.BLOCK_INTERACT),
                 new LootTableProvider.SubProviderEntry(VanillaChargedCreeperExplosionLoot::new, LootContextParamSets.ENTITY)
             ),
-            p_330840_
+            registries
         );
     }
 }

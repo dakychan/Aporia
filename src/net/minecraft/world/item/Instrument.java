@@ -2,7 +2,6 @@ package net.minecraft.world.item;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -16,13 +15,13 @@ import net.minecraft.util.ExtraCodecs;
 
 public record Instrument(Holder<SoundEvent> soundEvent, float useDuration, float range, Component description) {
     public static final Codec<Instrument> DIRECT_CODEC = RecordCodecBuilder.create(
-        p_359408_ -> p_359408_.group(
+        i -> i.group(
                 SoundEvent.CODEC.fieldOf("sound_event").forGetter(Instrument::soundEvent),
                 ExtraCodecs.POSITIVE_FLOAT.fieldOf("use_duration").forGetter(Instrument::useDuration),
                 ExtraCodecs.POSITIVE_FLOAT.fieldOf("range").forGetter(Instrument::range),
                 ComponentSerialization.CODEC.fieldOf("description").forGetter(Instrument::description)
             )
-            .apply(p_359408_, Instrument::new)
+            .apply(i, Instrument::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, Instrument> DIRECT_STREAM_CODEC = StreamCodec.composite(
         SoundEvent.STREAM_CODEC,

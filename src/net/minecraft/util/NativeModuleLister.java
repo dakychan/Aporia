@@ -34,133 +34,118 @@ public class NativeModuleLister {
     public static List<NativeModuleLister.NativeModuleInfo> listModules() {
         if (!Platform.isWindows()) {
             return ImmutableList.of();
-        } else {
-            int i = Kernel32.INSTANCE.GetCurrentProcessId();
-            Builder<NativeModuleLister.NativeModuleInfo> builder = ImmutableList.builder();
-
-            for (MODULEENTRY32W moduleentry32w : Kernel32Util.getModules(i)) {
-                String s = moduleentry32w.szModule();
-                Optional<NativeModuleLister.NativeModuleVersion> optional = tryGetVersion(moduleentry32w.szExePath());
-                builder.add(new NativeModuleLister.NativeModuleInfo(s, optional));
-            }
-
-            return builder.build();
         }
+
+        int selfHandle = Kernel32.INSTANCE.GetCurrentProcessId();
+        Builder<NativeModuleLister.NativeModuleInfo> result = ImmutableList.builder();
+
+        for (MODULEENTRY32W module : Kernel32Util.getModules(selfHandle)) {
+            String name = module.szModule();
+            Optional<NativeModuleLister.NativeModuleVersion> versionInfo = tryGetModuleVersion(module.szExePath());
+            result.add(new NativeModuleLister.NativeModuleInfo(name, versionInfo));
+        }
+
+        return result.build();
     }
 
-    private static Optional<NativeModuleLister.NativeModuleVersion> tryGetVersion(String p_184674_) {
+    public static Optional<NativeModuleLister.NativeModuleVersion> tryGetModuleVersion(final String path) {
+        if (!Platform.isWindows()) {
+            return Optional.empty();
+        }
+
         try {
-            IntByReference intbyreference = new IntByReference();
-            int i = Version.INSTANCE.GetFileVersionInfoSize(p_184674_, intbyreference);
-            if (i == 0) {
-                int i1 = Native.getLastError();
-                if (i1 != 1813 && i1 != 1812) {
-                    throw new Win32Exception(i1);
+            IntByReference dwDummy = new IntByReference();
+            int versionLength = Version.INSTANCE.GetFileVersionInfoSize(path, dwDummy);
+            if (versionLength == 0) {
+                int lastError = Native.getLastError();
+                if (lastError != 1813 && lastError != 1812) {
+                    throw new Win32Exception(lastError);
                 } else {
                     return Optional.empty();
                 }
             } else {
-                Pointer pointer = new Memory(i);
-                if (!Version.INSTANCE.GetFileVersionInfo(p_184674_, 0, i, pointer)) {
+                Pointer lpData = new Memory(versionLength);
+                if (!Version.INSTANCE.GetFileVersionInfo(path, 0, versionLength, lpData)) {
                     throw new Win32Exception(Native.getLastError());
-                } else {
-                    IntByReference intbyreference1 = new IntByReference();
-                    Pointer pointer1 = queryVersionValue(pointer, "\\VarFileInfo\\Translation", intbyreference1);
-                    int[] aint = pointer1.getIntArray(0L, intbyreference1.getValue() / 4);
-                    OptionalInt optionalint = findLangAndCodepage(aint);
-                    if (optionalint.isEmpty()) {
-                        return Optional.empty();
-                    } else {
-                        int j = optionalint.getAsInt();
-                        int k = j & 65535;
-                        int l = (j & -65536) >> 16;
-                        String s = queryVersionString(pointer, langTableKey("FileDescription", k, l), intbyreference1);
-                        String s1 = queryVersionString(pointer, langTableKey("CompanyName", k, l), intbyreference1);
-                        String s2 = queryVersionString(pointer, langTableKey("FileVersion", k, l), intbyreference1);
-                        return Optional.of(new NativeModuleLister.NativeModuleVersion(s, s2, s1));
-                    }
                 }
+
+                IntByReference size = new IntByReference();
+                Pointer translationsBuffer = queryVersionValue(lpData, "\\VarFileInfo\\Translation", size);
+                int[] langsAndCodepages = translationsBuffer.getIntArray(0L, size.getValue() / 4);
+                OptionalInt maybeLangAndCodepage = findLangAndCodepage(langsAndCodepages);
+                if (maybeLangAndCodepage.isEmpty()) {
+                    return Optional.empty();
+                }
+
+                int langAndCodepage = maybeLangAndCodepage.getAsInt();
+                int lang = langAndCodepage & 65535;
+                int codepage = (langAndCodepage & -65536) >> 16;
+                String description = queryVersionString(lpData, langTableKey("FileDescription", lang, codepage), size);
+                String companyName = queryVersionString(lpData, langTableKey("CompanyName", lang, codepage), size);
+                String fileVersion = queryVersionString(lpData, langTableKey("FileVersion", lang, codepage), size);
+                return Optional.of(new NativeModuleLister.NativeModuleVersion(description, fileVersion, companyName));
             }
-        } catch (Exception exception) {
-            LOGGER.info("Failed to find module info for {}", p_184674_, exception);
+        } catch (Exception e) {
+            LOGGER.info("Failed to find module info for {}", path, e);
             return Optional.empty();
         }
     }
 
-    private static String langTableKey(String p_184676_, int p_184677_, int p_184678_) {
-        return String.format(Locale.ROOT, "\\StringFileInfo\\%04x%04x\\%s", p_184677_, p_184678_, p_184676_);
+    private static String langTableKey(final String key, final int lang, final int codepage) {
+        return String.format(Locale.ROOT, "\\StringFileInfo\\%04x%04x\\%s", lang, codepage, key);
     }
 
-    private static OptionalInt findLangAndCodepage(int[] p_184682_) {
-        OptionalInt optionalint = OptionalInt.empty();
+    private static OptionalInt findLangAndCodepage(final int[] langsAndCodepages) {
+        OptionalInt bestSoFar = OptionalInt.empty();
 
-        for (int i : p_184682_) {
-            if ((i & -65536) == 78643200 && (i & 65535) == 1033) {
-                return OptionalInt.of(i);
+        for (int langAndCodepage : langsAndCodepages) {
+            if ((langAndCodepage & -65536) == 78643200 && (langAndCodepage & 65535) == 1033) {
+                return OptionalInt.of(langAndCodepage);
             }
 
-            optionalint = OptionalInt.of(i);
+            bestSoFar = OptionalInt.of(langAndCodepage);
         }
 
-        return optionalint;
+        return bestSoFar;
     }
 
-    private static Pointer queryVersionValue(Pointer p_184670_, String p_184671_, IntByReference p_184672_) {
-        PointerByReference pointerbyreference = new PointerByReference();
-        if (!Version.INSTANCE.VerQueryValue(p_184670_, p_184671_, pointerbyreference, p_184672_)) {
-            throw new UnsupportedOperationException("Can't get version value " + p_184671_);
+    private static Pointer queryVersionValue(final Pointer lpData, final String key, final IntByReference outSize) {
+        PointerByReference lplpBuffer = new PointerByReference();
+        if (!Version.INSTANCE.VerQueryValue(lpData, key, lplpBuffer, outSize)) {
+            throw new UnsupportedOperationException("Can't get version value " + key);
         } else {
-            return pointerbyreference.getValue();
+            return lplpBuffer.getValue();
         }
     }
 
-    private static String queryVersionString(Pointer p_184687_, String p_184688_, IntByReference p_184689_) {
+    private static String queryVersionString(final Pointer lpData, final String key, final IntByReference outSize) {
         try {
-            Pointer pointer = queryVersionValue(p_184687_, p_184688_, p_184689_);
-            byte[] abyte = pointer.getByteArray(0L, (p_184689_.getValue() - 1) * 2);
-            return new String(abyte, StandardCharsets.UTF_16LE);
-        } catch (Exception exception) {
+            Pointer ptr = queryVersionValue(lpData, key, outSize);
+            byte[] result = ptr.getByteArray(0L, (outSize.getValue() - 1) * 2);
+            return sanitize(new String(result, StandardCharsets.UTF_16LE));
+        } catch (Exception e) {
             return "";
         }
     }
 
-    public static void addCrashSection(CrashReportCategory p_184680_) {
-        p_184680_.setDetail(
-            "Modules",
-            () -> listModules()
-                .stream()
-                .sorted(Comparator.comparing(p_184685_ -> p_184685_.name))
-                .map(p_326534_ -> "\n\t\t" + p_326534_)
-                .collect(Collectors.joining())
+    private static String sanitize(final String input) {
+        return Util.CONTROL_CHARACTER_ESCAPER.escape(input);
+    }
+
+    public static void addCrashSection(final CrashReportCategory category) {
+        category.setDetail(
+            "Modules", () -> listModules().stream().sorted(Comparator.comparing(module -> module.name)).map(e -> "\n\t\t" + e).collect(Collectors.joining())
         );
     }
 
-    public static class NativeModuleInfo {
-        public final String name;
-        public final Optional<NativeModuleLister.NativeModuleVersion> version;
-
-        public NativeModuleInfo(String p_184693_, Optional<NativeModuleLister.NativeModuleVersion> p_184694_) {
-            this.name = p_184693_;
-            this.version = p_184694_;
-        }
-
+    public record NativeModuleInfo(String name, Optional<NativeModuleLister.NativeModuleVersion> version) {
         @Override
         public String toString() {
-            return this.version.<String>map(p_326535_ -> this.name + ":" + p_326535_).orElse(this.name);
+            return this.version.<String>map(v -> this.name + ":" + v).orElse(this.name);
         }
     }
 
-    public static class NativeModuleVersion {
-        public final String description;
-        public final String version;
-        public final String company;
-
-        public NativeModuleVersion(String p_184702_, String p_184703_, String p_184704_) {
-            this.description = p_184702_;
-            this.version = p_184703_;
-            this.company = p_184704_;
-        }
-
+    public record NativeModuleVersion(String description, String version, String company) {
         @Override
         public String toString() {
             return this.description + ":" + this.version + ":" + this.company;

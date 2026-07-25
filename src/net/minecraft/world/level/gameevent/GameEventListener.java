@@ -9,18 +9,18 @@ public interface GameEventListener {
 
     int getListenerRadius();
 
-    boolean handleGameEvent(ServerLevel p_223757_, Holder<GameEvent> p_332132_, GameEvent.Context p_249681_, Vec3 p_251048_);
+    boolean handleGameEvent(ServerLevel level, Holder<GameEvent> event, GameEvent.Context context, Vec3 sourcePosition);
 
     default GameEventListener.DeliveryMode getDeliveryMode() {
         return GameEventListener.DeliveryMode.UNSPECIFIED;
     }
 
-    public static enum DeliveryMode {
+    enum DeliveryMode {
         UNSPECIFIED,
         BY_DISTANCE;
     }
 
-    public interface Provider<T extends GameEventListener> {
+    interface Provider<T extends GameEventListener> {
         T getListener();
     }
 }

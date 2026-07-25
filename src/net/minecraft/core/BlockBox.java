@@ -8,13 +8,13 @@ import net.minecraft.world.phys.AABB;
 
 public record BlockBox(BlockPos min, BlockPos max) implements Iterable<BlockPos> {
     public static final StreamCodec<ByteBuf, BlockBox> STREAM_CODEC = new StreamCodec<ByteBuf, BlockBox>() {
-        public BlockBox decode(ByteBuf p_328358_) {
-            return new BlockBox(FriendlyByteBuf.readBlockPos(p_328358_), FriendlyByteBuf.readBlockPos(p_328358_));
+        public BlockBox decode(final ByteBuf input) {
+            return new BlockBox(FriendlyByteBuf.readBlockPos(input), FriendlyByteBuf.readBlockPos(input));
         }
 
-        public void encode(ByteBuf p_335006_, BlockBox p_331887_) {
-            FriendlyByteBuf.writeBlockPos(p_335006_, p_331887_.min());
-            FriendlyByteBuf.writeBlockPos(p_335006_, p_331887_.max());
+        public void encode(final ByteBuf output, final BlockBox value) {
+            FriendlyByteBuf.writeBlockPos(output, value.min());
+            FriendlyByteBuf.writeBlockPos(output, value.max());
         }
     };
 
@@ -23,29 +23,29 @@ public record BlockBox(BlockPos min, BlockPos max) implements Iterable<BlockPos>
         this.max = BlockPos.max(min, max);
     }
 
-    public static BlockBox of(BlockPos p_333581_) {
-        return new BlockBox(p_333581_, p_333581_);
+    public static BlockBox of(final BlockPos pos) {
+        return new BlockBox(pos, pos);
     }
 
-    public static BlockBox of(BlockPos p_333861_, BlockPos p_330004_) {
-        return new BlockBox(p_333861_, p_330004_);
+    public static BlockBox of(final BlockPos a, final BlockPos b) {
+        return new BlockBox(a, b);
     }
 
-    public BlockBox include(BlockPos p_330504_) {
-        return new BlockBox(BlockPos.min(this.min, p_330504_), BlockPos.max(this.max, p_330504_));
+    public BlockBox include(final BlockPos pos) {
+        return new BlockBox(BlockPos.min(this.min, pos), BlockPos.max(this.max, pos));
     }
 
     public boolean isBlock() {
         return this.min.equals(this.max);
     }
 
-    public boolean contains(BlockPos p_327940_) {
-        return p_327940_.getX() >= this.min.getX()
-            && p_327940_.getY() >= this.min.getY()
-            && p_327940_.getZ() >= this.min.getZ()
-            && p_327940_.getX() <= this.max.getX()
-            && p_327940_.getY() <= this.max.getY()
-            && p_327940_.getZ() <= this.max.getZ();
+    public boolean contains(final BlockPos pos) {
+        return pos.getX() >= this.min.getX()
+            && pos.getY() >= this.min.getY()
+            && pos.getZ() >= this.min.getZ()
+            && pos.getX() <= this.max.getX()
+            && pos.getY() <= this.max.getY()
+            && pos.getZ() <= this.max.getZ();
     }
 
     public AABB aabb() {
@@ -69,21 +69,21 @@ public record BlockBox(BlockPos min, BlockPos max) implements Iterable<BlockPos>
         return this.max.getZ() - this.min.getZ() + 1;
     }
 
-    public BlockBox extend(Direction p_336349_, int p_329831_) {
-        if (p_329831_ == 0) {
+    public BlockBox extend(final Direction direction, final int amount) {
+        if (amount == 0) {
             return this;
         } else {
-            return p_336349_.getAxisDirection() == Direction.AxisDirection.POSITIVE
-                ? of(this.min, BlockPos.max(this.min, this.max.relative(p_336349_, p_329831_)))
-                : of(BlockPos.min(this.min.relative(p_336349_, p_329831_), this.max), this.max);
+            return direction.getAxisDirection() == Direction.AxisDirection.POSITIVE
+                ? of(this.min, BlockPos.max(this.min, this.max.relative(direction, amount)))
+                : of(BlockPos.min(this.min.relative(direction, amount), this.max), this.max);
         }
     }
 
-    public BlockBox move(Direction p_335445_, int p_328653_) {
-        return p_328653_ == 0 ? this : new BlockBox(this.min.relative(p_335445_, p_328653_), this.max.relative(p_335445_, p_328653_));
+    public BlockBox move(final Direction direction, final int amount) {
+        return amount == 0 ? this : new BlockBox(this.min.relative(direction, amount), this.max.relative(direction, amount));
     }
 
-    public BlockBox offset(Vec3i p_327763_) {
-        return new BlockBox(this.min.offset(p_327763_), this.max.offset(p_327763_));
+    public BlockBox offset(final Vec3i offset) {
+        return new BlockBox(this.min.offset(offset), this.max.offset(offset));
     }
 }

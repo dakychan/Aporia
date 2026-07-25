@@ -1,7 +1,7 @@
 package net.minecraft.client.gui.screens.inventory;
 
 import net.minecraft.client.GameNarrator;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.CycleButton;
@@ -13,10 +13,7 @@ import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.level.BaseCommandBlock;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractCommandBlockEditScreen extends Screen {
     private static final Component SET_COMMAND_LABEL = Component.translatable("advMode.setCommand");
     private static final Component COMMAND_LABEL = Component.translatable("advMode.command");
@@ -26,7 +23,7 @@ public abstract class AbstractCommandBlockEditScreen extends Screen {
     protected Button doneButton;
     protected Button cancelButton;
     protected CycleButton<Boolean> outputButton;
-    CommandSuggestions commandSuggestions;
+    private CommandSuggestions commandSuggestions;
 
     public AbstractCommandBlockEditScreen() {
         super(GameNarrator.NO_TITLE);
@@ -39,13 +36,13 @@ public abstract class AbstractCommandBlockEditScreen extends Screen {
         }
     }
 
-    abstract BaseCommandBlock getCommandBlock();
+    protected abstract BaseCommandBlock getCommandBlock();
 
-    abstract int getPreviousY();
+    protected abstract int getPreviousY();
 
     @Override
     protected void init() {
-        boolean flag = this.getCommandBlock().isTrackOutput();
+        boolean trackOutput = this.getCommandBlock().isTrackOutput();
         this.commandEdit = new EditBox(this.font, this.width / 2 - 150, 50, 300, 20, Component.translatable("advMode.command")) {
             @Override
             protected MutableComponent createNarrationMessage() {
@@ -61,29 +58,25 @@ public abstract class AbstractCommandBlockEditScreen extends Screen {
         this.previousEdit.setValue("-");
         this.addWidget(this.previousEdit);
         this.outputButton = this.addRenderableWidget(
-            CycleButton.booleanBuilder(Component.literal("O"), Component.literal("X"), flag)
+            CycleButton.booleanBuilder(Component.literal("O"), Component.literal("X"), trackOutput)
                 .displayOnlyValue()
-                .create(this.width / 2 + 150 - 20, this.getPreviousY(), 20, 20, Component.translatable("advMode.trackOutput"), (p_169596_, p_169597_) -> {
-                    BaseCommandBlock basecommandblock = this.getCommandBlock();
-                    basecommandblock.setTrackOutput(p_169597_);
-                    this.updatePreviousOutput(p_169597_);
+                .create(this.width / 2 + 150 - 20, this.getPreviousY(), 20, 20, Component.translatable("advMode.trackOutput"), (button, value) -> {
+                    BaseCommandBlock commandBlock = this.getCommandBlock();
+                    commandBlock.setTrackOutput(value);
+                    this.updatePreviousOutput(value);
                 })
         );
         this.addExtraControls();
         this.doneButton = this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_DONE, p_97691_ -> this.onDone())
-                .bounds(this.width / 2 - 4 - 150, this.height / 4 + 120 + 12, 150, 20)
-                .build()
+            Button.builder(CommonComponents.GUI_DONE, button -> this.onDone()).bounds(this.width / 2 - 4 - 150, this.height / 4 + 120 + 12, 150, 20).build()
         );
         this.cancelButton = this.addRenderableWidget(
-            Button.builder(CommonComponents.GUI_CANCEL, p_420755_ -> this.onClose())
-                .bounds(this.width / 2 + 4, this.height / 4 + 120 + 12, 150, 20)
-                .build()
+            Button.builder(CommonComponents.GUI_CANCEL, button -> this.onClose()).bounds(this.width / 2 + 4, this.height / 4 + 120 + 12, 150, 20).build()
         );
         this.commandSuggestions = new CommandSuggestions(this.minecraft, this, this.commandEdit, this.font, true, true, 0, 7, false, Integer.MIN_VALUE);
         this.commandSuggestions.setAllowSuggestions(true);
         this.commandSuggestions.updateCommandInfo();
-        this.updatePreviousOutput(flag);
+        this.updatePreviousOutput(trackOutput);
     }
 
     protected void addExtraControls() {
@@ -100,30 +93,30 @@ public abstract class AbstractCommandBlockEditScreen extends Screen {
     }
 
     @Override
-    public void resize(int p_97678_, int p_97679_) {
-        String s = this.commandEdit.getValue();
-        this.init(p_97678_, p_97679_);
-        this.commandEdit.setValue(s);
+    public void resize(final int width, final int height) {
+        String oldText = this.commandEdit.getValue();
+        this.init(width, height);
+        this.commandEdit.setValue(oldText);
         this.commandSuggestions.updateCommandInfo();
     }
 
-    protected void updatePreviousOutput(boolean p_169599_) {
-        this.previousEdit.setValue(p_169599_ ? this.getCommandBlock().getLastOutput().getString() : "-");
+    protected void updatePreviousOutput(final boolean isTracking) {
+        this.previousEdit.setValue(isTracking ? this.getCommandBlock().getLastOutput().getString() : "-");
     }
 
     protected void onDone() {
         this.populateAndSendPacket();
-        BaseCommandBlock basecommandblock = this.getCommandBlock();
-        if (!basecommandblock.isTrackOutput()) {
-            basecommandblock.setLastOutput(null);
+        BaseCommandBlock commandBlock = this.getCommandBlock();
+        if (!commandBlock.isTrackOutput()) {
+            commandBlock.setLastOutput(null);
         }
 
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
     protected abstract void populateAndSendPacket();
 
-    private void onEdited(String p_97689_) {
+    private void onEdited(final String value) {
         this.commandSuggestions.updateCommandInfo();
     }
 
@@ -133,12 +126,12 @@ public abstract class AbstractCommandBlockEditScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_431601_) {
-        if (this.commandSuggestions.keyPressed(p_431601_)) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (this.commandSuggestions.keyPressed(event)) {
             return true;
-        } else if (super.keyPressed(p_431601_)) {
+        } else if (super.keyPressed(event)) {
             return true;
-        } else if (p_431601_.isConfirmation()) {
+        } else if (event.isConfirmation()) {
             this.onDone();
             return true;
         } else {
@@ -147,28 +140,28 @@ public abstract class AbstractCommandBlockEditScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double p_97659_, double p_97660_, double p_97661_, double p_299742_) {
-        return this.commandSuggestions.mouseScrolled(p_299742_) ? true : super.mouseScrolled(p_97659_, p_97660_, p_97661_, p_299742_);
+    public boolean mouseScrolled(final double x, final double y, final double scrollX, final double scrollY) {
+        return this.commandSuggestions.mouseScrolled(scrollY) ? true : super.mouseScrolled(x, y, scrollX, scrollY);
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_424709_, boolean p_427904_) {
-        return this.commandSuggestions.mouseClicked(p_424709_) ? true : super.mouseClicked(p_424709_, p_427904_);
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+        return this.commandSuggestions.mouseClicked(event) ? true : super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public void render(GuiGraphics p_283074_, int p_97673_, int p_97674_, float p_97675_) {
-        super.render(p_283074_, p_97673_, p_97674_, p_97675_);
-        p_283074_.drawCenteredString(this.font, SET_COMMAND_LABEL, this.width / 2, 20, -1);
-        p_283074_.drawString(this.font, COMMAND_LABEL, this.width / 2 - 150 + 1, 40, -6250336);
-        this.commandEdit.render(p_283074_, p_97673_, p_97674_, p_97675_);
-        int i = 75;
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        graphics.centeredText(this.font, SET_COMMAND_LABEL, this.width / 2, 20, -1);
+        graphics.text(this.font, COMMAND_LABEL, this.width / 2 - 150 + 1, 40, -6250336);
+        this.commandEdit.extractRenderState(graphics, mouseX, mouseY, a);
+        int y = 75;
         if (!this.previousEdit.getValue().isEmpty()) {
-            i += 5 * 9 + 1 + this.getPreviousY() - 135;
-            p_283074_.drawString(this.font, PREVIOUS_OUTPUT_LABEL, this.width / 2 - 150 + 1, i + 4, -6250336);
-            this.previousEdit.render(p_283074_, p_97673_, p_97674_, p_97675_);
+            y += 5 * 9 + 1 + this.getPreviousY() - 135;
+            graphics.text(this.font, PREVIOUS_OUTPUT_LABEL, this.width / 2 - 150 + 1, y + 4, -6250336);
+            this.previousEdit.extractRenderState(graphics, mouseX, mouseY, a);
         }
 
-        this.commandSuggestions.render(p_283074_, p_97673_, p_97674_);
+        this.commandSuggestions.extractRenderState(graphics, mouseX, mouseY);
     }
 }

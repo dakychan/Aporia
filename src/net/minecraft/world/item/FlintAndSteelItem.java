@@ -1,6 +1,6 @@
 package net.minecraft.world.item;
 
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -18,27 +18,27 @@ import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.gameevent.GameEvent;
 
 public class FlintAndSteelItem extends Item {
-    public FlintAndSteelItem(Item.Properties p_41295_) {
-        super(p_41295_);
+    public FlintAndSteelItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult useOn(UseOnContext p_41297_) {
-        Player player = p_41297_.getPlayer();
-        Level level = p_41297_.getLevel();
-        BlockPos blockpos = p_41297_.getClickedPos();
-        BlockState blockstate = level.getBlockState(blockpos);
-        if (!CampfireBlock.canLight(blockstate) && !CandleBlock.canLight(blockstate) && !CandleCakeBlock.canLight(blockstate)) {
-            BlockPos blockpos1 = blockpos.relative(p_41297_.getClickedFace());
-            if (BaseFireBlock.canBePlacedAt(level, blockpos1, p_41297_.getHorizontalDirection())) {
-                level.playSound(player, blockpos1, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.4F + 0.8F);
-                BlockState blockstate1 = BaseFireBlock.getState(level, blockpos1);
-                level.setBlock(blockpos1, blockstate1, 11);
-                level.gameEvent(player, GameEvent.BLOCK_PLACE, blockpos);
-                ItemStack itemstack = p_41297_.getItemInHand();
-                if (player instanceof ServerPlayer) {
-                    CriteriaTriggers.PLACED_BLOCK.trigger((ServerPlayer)player, blockpos1, itemstack);
-                    itemstack.hurtAndBreak(1, player, p_41297_.getHand().asEquipmentSlot());
+    public InteractionResult useOn(final UseOnContext context) {
+        Player player = context.getPlayer();
+        Level level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        BlockState state = level.getBlockState(pos);
+        if (!CampfireBlock.canLight(state) && !CandleBlock.canLight(state) && !CandleCakeBlock.canLight(state)) {
+            BlockPos relativePos = pos.relative(context.getClickedFace());
+            if (BaseFireBlock.canBePlacedAt(level, relativePos, context.getHorizontalDirection())) {
+                level.playSound(player, relativePos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.4F + 0.8F);
+                BlockState fireState = BaseFireBlock.getState(level, relativePos);
+                level.setBlock(relativePos, fireState, 11);
+                level.gameEvent(player, GameEvent.BLOCK_PLACE, pos);
+                ItemStack itemStack = context.getItemInHand();
+                if (player instanceof ServerPlayer serverPlayer) {
+                    CriteriaTriggers.PLACED_BLOCK.trigger(serverPlayer, relativePos, itemStack);
+                    itemStack.hurtAndBreak(1, player, context.getHand().asEquipmentSlot());
                 }
 
                 return InteractionResult.SUCCESS;
@@ -46,11 +46,11 @@ public class FlintAndSteelItem extends Item {
                 return InteractionResult.FAIL;
             }
         } else {
-            level.playSound(player, blockpos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.4F + 0.8F);
-            level.setBlock(blockpos, blockstate.setValue(BlockStateProperties.LIT, true), 11);
-            level.gameEvent(player, GameEvent.BLOCK_CHANGE, blockpos);
+            level.playSound(player, pos, SoundEvents.FLINTANDSTEEL_USE, SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.4F + 0.8F);
+            level.setBlock(pos, state.setValue(BlockStateProperties.LIT, true), 11);
+            level.gameEvent(player, GameEvent.BLOCK_CHANGE, pos);
             if (player != null) {
-                p_41297_.getItemInHand().hurtAndBreak(1, player, p_41297_.getHand().asEquipmentSlot());
+                context.getItemInHand().hurtAndBreak(1, player, context.getHand().asEquipmentSlot());
             }
 
             return InteractionResult.SUCCESS;

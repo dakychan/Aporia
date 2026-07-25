@@ -46,53 +46,53 @@ public class TripWireHookBlock extends Block {
         return CODEC;
     }
 
-    public TripWireHookBlock(BlockBehaviour.Properties p_57676_) {
-        super(p_57676_);
+    public TripWireHookBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false).setValue(ATTACHED, false));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57740_, BlockGetter p_57741_, BlockPos p_57742_, CollisionContext p_57743_) {
-        return SHAPES.get(p_57740_.getValue(FACING));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES.get(state.getValue(FACING));
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_57721_, LevelReader p_57722_, BlockPos p_57723_) {
-        Direction direction = p_57721_.getValue(FACING);
-        BlockPos blockpos = p_57723_.relative(direction.getOpposite());
-        BlockState blockstate = p_57722_.getBlockState(blockpos);
-        return direction.getAxis().isHorizontal() && blockstate.isFaceSturdy(p_57722_, blockpos, direction);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        Direction direction = state.getValue(FACING);
+        BlockPos relative = pos.relative(direction.getOpposite());
+        BlockState blockState = level.getBlockState(relative);
+        return direction.getAxis().isHorizontal() && blockState.isFaceSturdy(level, relative, direction);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_57731_,
-        LevelReader p_368766_,
-        ScheduledTickAccess p_365650_,
-        BlockPos p_57735_,
-        Direction p_57732_,
-        BlockPos p_57736_,
-        BlockState p_57733_,
-        RandomSource p_361546_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_57732_.getOpposite() == p_57731_.getValue(FACING) && !p_57731_.canSurvive(p_368766_, p_57735_)
+        return directionToNeighbour.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_57731_, p_368766_, p_365650_, p_57735_, p_57732_, p_57736_, p_57733_, p_361546_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_57678_) {
-        BlockState blockstate = this.defaultBlockState().setValue(POWERED, false).setValue(ATTACHED, false);
-        LevelReader levelreader = p_57678_.getLevel();
-        BlockPos blockpos = p_57678_.getClickedPos();
-        Direction[] adirection = p_57678_.getNearestLookingDirections();
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = this.defaultBlockState().setValue(POWERED, false).setValue(ATTACHED, false);
+        LevelReader level = context.getLevel();
+        BlockPos pos = context.getClickedPos();
+        Direction[] directions = context.getNearestLookingDirections();
 
-        for (Direction direction : adirection) {
+        for (Direction direction : directions) {
             if (direction.getAxis().isHorizontal()) {
-                Direction direction1 = direction.getOpposite();
-                blockstate = blockstate.setValue(FACING, direction1);
-                if (blockstate.canSurvive(levelreader, blockpos)) {
-                    return blockstate;
+                Direction facing = direction.getOpposite();
+                state = state.setValue(FACING, facing);
+                if (state.canSurvive(level, pos)) {
+                    return state;
                 }
             }
         }
@@ -101,80 +101,91 @@ public class TripWireHookBlock extends Block {
     }
 
     @Override
-    public void setPlacedBy(Level p_57680_, BlockPos p_57681_, BlockState p_57682_, @Nullable LivingEntity p_57683_, ItemStack p_57684_) {
-        calculateState(p_57680_, p_57681_, p_57682_, false, false, -1, null);
+    public void setPlacedBy(final Level level, final BlockPos pos, final BlockState state, final @Nullable LivingEntity by, final ItemStack itemStack) {
+        calculateState(level, pos, state, false, false, -1, null);
     }
 
     public static void calculateState(
-        Level p_57686_, BlockPos p_57687_, BlockState p_57688_, boolean p_57689_, boolean p_57690_, int p_57691_, @Nullable BlockState p_57692_
+        final Level level,
+        final BlockPos pos,
+        final BlockState state,
+        final boolean isBeingDestroyed,
+        final boolean canUpdate,
+        final int wireSource,
+        final @Nullable BlockState wireSourceState
     ) {
-        Optional<Direction> optional = p_57688_.getOptionalValue(FACING);
-        if (optional.isPresent()) {
-            Direction direction = optional.get();
-            boolean flag = p_57688_.getOptionalValue(ATTACHED).orElse(false);
-            boolean flag1 = p_57688_.getOptionalValue(POWERED).orElse(false);
-            Block block = p_57688_.getBlock();
-            boolean flag2 = !p_57689_;
-            boolean flag3 = false;
-            int i = 0;
-            BlockState[] ablockstate = new BlockState[42];
+        Optional<Direction> facingOptional = state.getOptionalValue(FACING);
+        if (facingOptional.isPresent()) {
+            Direction direction = facingOptional.get();
+            boolean wasAttached = state.getOptionalValue(ATTACHED).orElse(false);
+            boolean wasPowered = state.getOptionalValue(POWERED).orElse(false);
+            Block block = state.getBlock();
+            boolean attached = !isBeingDestroyed;
+            boolean powered = false;
+            int receiverPos = 0;
+            BlockState[] wireStates = new BlockState[42];
 
-            for (int j = 1; j < 42; j++) {
-                BlockPos blockpos = p_57687_.relative(direction, j);
-                BlockState blockstate = p_57686_.getBlockState(blockpos);
-                if (blockstate.is(Blocks.TRIPWIRE_HOOK)) {
-                    if (blockstate.getValue(FACING) == direction.getOpposite()) {
-                        i = j;
+            for (int i = 1; i < 42; i++) {
+                BlockPos testPos = pos.relative(direction, i);
+                BlockState wireState = level.getBlockState(testPos);
+                if (wireState.is(Blocks.TRIPWIRE_HOOK)) {
+                    if (wireState.getValue(FACING) == direction.getOpposite()) {
+                        receiverPos = i;
                     }
                     break;
                 }
 
-                if (!blockstate.is(Blocks.TRIPWIRE) && j != p_57691_) {
-                    ablockstate[j] = null;
-                    flag2 = false;
+                if (!wireState.is(Blocks.TRIPWIRE) && i != wireSource) {
+                    wireStates[i] = null;
+                    attached = false;
                 } else {
-                    if (j == p_57691_) {
-                        blockstate = MoreObjects.firstNonNull(p_57692_, blockstate);
+                    if (i == wireSource) {
+                        wireState = MoreObjects.firstNonNull(wireSourceState, wireState);
                     }
 
-                    boolean flag4 = !blockstate.getValue(TripWireBlock.DISARMED);
-                    boolean flag5 = blockstate.getValue(TripWireBlock.POWERED);
-                    flag3 |= flag4 && flag5;
-                    ablockstate[j] = blockstate;
-                    if (j == p_57691_) {
-                        p_57686_.scheduleTick(p_57687_, block, 10);
-                        flag2 &= flag4;
+                    boolean wireArmed = !wireState.getValue(TripWireBlock.DISARMED);
+                    boolean wirePowered = wireState.getValue(TripWireBlock.POWERED);
+                    powered |= wireArmed && wirePowered;
+                    wireStates[i] = wireState;
+                    if (i == wireSource) {
+                        level.scheduleTick(pos, block, 10);
+                        attached &= wireArmed;
                     }
                 }
             }
 
-            flag2 &= i > 1;
-            flag3 &= flag2;
-            BlockState blockstate1 = block.defaultBlockState().trySetValue(ATTACHED, flag2).trySetValue(POWERED, flag3);
-            if (i > 0) {
-                BlockPos blockpos1 = p_57687_.relative(direction, i);
-                Direction direction1 = direction.getOpposite();
-                p_57686_.setBlock(blockpos1, blockstate1.setValue(FACING, direction1), 3);
-                notifyNeighbors(block, p_57686_, blockpos1, direction1);
-                emitState(p_57686_, blockpos1, flag2, flag3, flag, flag1);
+            attached &= receiverPos > 1;
+            powered &= attached;
+            BlockState newState = block.defaultBlockState().trySetValue(ATTACHED, attached).trySetValue(POWERED, powered);
+            if (receiverPos > 0) {
+                BlockPos testPos = pos.relative(direction, receiverPos);
+                Direction opposite = direction.getOpposite();
+                level.setBlock(testPos, newState.setValue(FACING, opposite), 3);
+                notifyNeighbors(block, level, testPos, opposite);
+                if (!level.getBlockState(pos).is(Blocks.TRIPWIRE_HOOK)) {
+                    onRemoved(newState, level, pos);
+                    return;
+                }
+
+                emitState(level, testPos, attached, powered, wasAttached, wasPowered);
             }
 
-            emitState(p_57686_, p_57687_, flag2, flag3, flag, flag1);
-            if (!p_57689_) {
-                p_57686_.setBlock(p_57687_, blockstate1.setValue(FACING, direction), 3);
-                if (p_57690_) {
-                    notifyNeighbors(block, p_57686_, p_57687_, direction);
+            emitState(level, pos, attached, powered, wasAttached, wasPowered);
+            if (!isBeingDestroyed) {
+                level.setBlock(pos, newState.setValue(FACING, direction), 3);
+                if (canUpdate) {
+                    notifyNeighbors(block, level, pos, direction);
                 }
             }
 
-            if (flag != flag2) {
-                for (int k = 1; k < i; k++) {
-                    BlockPos blockpos2 = p_57687_.relative(direction, k);
-                    BlockState blockstate2 = ablockstate[k];
-                    if (blockstate2 != null) {
-                        BlockState blockstate3 = p_57686_.getBlockState(blockpos2);
-                        if (blockstate3.is(Blocks.TRIPWIRE) || blockstate3.is(Blocks.TRIPWIRE_HOOK)) {
-                            p_57686_.setBlock(blockpos2, blockstate2.trySetValue(ATTACHED, flag2), 3);
+            if (wasAttached != attached) {
+                for (int i = 1; i < receiverPos; i++) {
+                    BlockPos testPos = pos.relative(direction, i);
+                    BlockState wireData = wireStates[i];
+                    if (wireData != null) {
+                        BlockState testPosState = level.getBlockState(testPos);
+                        if (testPosState.is(Blocks.TRIPWIRE) || testPosState.is(Blocks.TRIPWIRE_HOOK)) {
+                            level.setBlock(testPos, wireData.trySetValue(ATTACHED, attached), 3);
                         }
                     }
                 }
@@ -183,79 +194,85 @@ public class TripWireHookBlock extends Block {
     }
 
     @Override
-    protected void tick(BlockState p_222610_, ServerLevel p_222611_, BlockPos p_222612_, RandomSource p_222613_) {
-        calculateState(p_222611_, p_222612_, p_222610_, false, true, -1, null);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        calculateState(level, pos, state, false, true, -1, null);
     }
 
-    private static void emitState(Level p_222603_, BlockPos p_222604_, boolean p_222605_, boolean p_222606_, boolean p_222607_, boolean p_222608_) {
-        if (p_222606_ && !p_222608_) {
-            p_222603_.playSound(null, p_222604_, SoundEvents.TRIPWIRE_CLICK_ON, SoundSource.BLOCKS, 0.4F, 0.6F);
-            p_222603_.gameEvent(null, GameEvent.BLOCK_ACTIVATE, p_222604_);
-        } else if (!p_222606_ && p_222608_) {
-            p_222603_.playSound(null, p_222604_, SoundEvents.TRIPWIRE_CLICK_OFF, SoundSource.BLOCKS, 0.4F, 0.5F);
-            p_222603_.gameEvent(null, GameEvent.BLOCK_DEACTIVATE, p_222604_);
-        } else if (p_222605_ && !p_222607_) {
-            p_222603_.playSound(null, p_222604_, SoundEvents.TRIPWIRE_ATTACH, SoundSource.BLOCKS, 0.4F, 0.7F);
-            p_222603_.gameEvent(null, GameEvent.BLOCK_ATTACH, p_222604_);
-        } else if (!p_222605_ && p_222607_) {
-            p_222603_.playSound(null, p_222604_, SoundEvents.TRIPWIRE_DETACH, SoundSource.BLOCKS, 0.4F, 1.2F / (p_222603_.random.nextFloat() * 0.2F + 0.9F));
-            p_222603_.gameEvent(null, GameEvent.BLOCK_DETACH, p_222604_);
+    private static void emitState(
+        final Level level, final BlockPos pos, final boolean attached, final boolean powered, final boolean wasAttached, final boolean wasPowered
+    ) {
+        if (powered && !wasPowered) {
+            level.playSound(null, pos, SoundEvents.TRIPWIRE_CLICK_ON, SoundSource.BLOCKS, 0.4F, 0.6F);
+            level.gameEvent(null, GameEvent.BLOCK_ACTIVATE, pos);
+        } else if (!powered && wasPowered) {
+            level.playSound(null, pos, SoundEvents.TRIPWIRE_CLICK_OFF, SoundSource.BLOCKS, 0.4F, 0.5F);
+            level.gameEvent(null, GameEvent.BLOCK_DEACTIVATE, pos);
+        } else if (attached && !wasAttached) {
+            level.playSound(null, pos, SoundEvents.TRIPWIRE_ATTACH, SoundSource.BLOCKS, 0.4F, 0.7F);
+            level.gameEvent(null, GameEvent.BLOCK_ATTACH, pos);
+        } else if (!attached && wasAttached) {
+            level.playSound(null, pos, SoundEvents.TRIPWIRE_DETACH, SoundSource.BLOCKS, 0.4F, 1.2F / (level.getRandom().nextFloat() * 0.2F + 0.9F));
+            level.gameEvent(null, GameEvent.BLOCK_DETACH, pos);
         }
     }
 
-    private static void notifyNeighbors(Block p_312237_, Level p_57694_, BlockPos p_57695_, Direction p_57696_) {
-        Direction direction = p_57696_.getOpposite();
-        Orientation orientation = ExperimentalRedstoneUtils.initialOrientation(p_57694_, direction, Direction.UP);
-        p_57694_.updateNeighborsAt(p_57695_, p_312237_, orientation);
-        p_57694_.updateNeighborsAt(p_57695_.relative(direction), p_312237_, orientation);
+    private static void notifyNeighbors(final Block block, final Level level, final BlockPos pos, final Direction direction) {
+        Direction front = direction.getOpposite();
+        Orientation orientation = ExperimentalRedstoneUtils.initialOrientation(level, front, Direction.UP);
+        level.updateNeighborsAt(pos, block, orientation);
+        level.updateNeighborsAt(pos.relative(front), block, orientation);
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_394362_, ServerLevel p_392228_, BlockPos p_392478_, boolean p_391414_) {
-        if (!p_391414_) {
-            boolean flag = p_394362_.getValue(ATTACHED);
-            boolean flag1 = p_394362_.getValue(POWERED);
-            if (flag || flag1) {
-                calculateState(p_392228_, p_392478_, p_394362_, true, false, -1, null);
-            }
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        if (!movedByPiston) {
+            onRemoved(state, level, pos);
+        }
+    }
 
-            if (flag1) {
-                notifyNeighbors(this, p_392228_, p_392478_, p_394362_.getValue(FACING));
-            }
+    private static void onRemoved(final BlockState state, final Level level, final BlockPos pos) {
+        boolean attached = state.getValue(ATTACHED);
+        boolean powered = state.getValue(POWERED);
+        if (attached || powered) {
+            calculateState(level, pos, state, true, false, -1, null);
+        }
+
+        if (powered) {
+            notifyNeighbors(state.getBlock(), level, pos, state.getValue(FACING));
         }
     }
 
     @Override
-    protected int getSignal(BlockState p_57710_, BlockGetter p_57711_, BlockPos p_57712_, Direction p_57713_) {
-        return p_57710_.getValue(POWERED) ? 15 : 0;
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.getValue(POWERED) ? 15 : 0;
     }
 
     @Override
-    protected int getDirectSignal(BlockState p_57745_, BlockGetter p_57746_, BlockPos p_57747_, Direction p_57748_) {
-        if (!p_57745_.getValue(POWERED)) {
+    protected int getDirectSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        if (!state.getValue(POWERED)) {
             return 0;
         } else {
-            return p_57745_.getValue(FACING) == p_57748_ ? 15 : 0;
+            return state.getValue(FACING) == direction ? 15 : 0;
         }
     }
 
     @Override
-    protected boolean isSignalSource(BlockState p_57750_) {
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
     @Override
-    protected BlockState rotate(BlockState p_57728_, Rotation p_57729_) {
-        return p_57728_.setValue(FACING, p_57729_.rotate(p_57728_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_57725_, Mirror p_57726_) {
-        return p_57725_.rotate(p_57726_.getRotation(p_57725_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57738_) {
-        p_57738_.add(FACING, POWERED, ATTACHED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, POWERED, ATTACHED);
     }
 }

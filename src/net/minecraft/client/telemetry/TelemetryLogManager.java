@@ -10,12 +10,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import net.minecraft.util.Util;
 import net.minecraft.util.eventlog.EventLogDirectory;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class TelemetryLogManager implements AutoCloseable {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String RAW_EXTENSION = ".json";
@@ -23,18 +20,18 @@ public class TelemetryLogManager implements AutoCloseable {
     private final EventLogDirectory directory;
     private @Nullable CompletableFuture<Optional<TelemetryEventLog>> sessionLog;
 
-    private TelemetryLogManager(EventLogDirectory p_261728_) {
-        this.directory = p_261728_;
+    private TelemetryLogManager(final EventLogDirectory directory) {
+        this.directory = directory;
     }
 
-    public static CompletableFuture<Optional<TelemetryLogManager>> open(Path p_262078_) {
+    public static CompletableFuture<Optional<TelemetryLogManager>> open(final Path root) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                EventLogDirectory eventlogdirectory = EventLogDirectory.open(p_262078_, ".json");
-                eventlogdirectory.listFiles().prune(LocalDate.now(Clock.systemDefaultZone()), 7).compressAll();
-                return Optional.of(new TelemetryLogManager(eventlogdirectory));
-            } catch (Exception exception) {
-                LOGGER.error("Failed to create telemetry log manager", (Throwable)exception);
+                EventLogDirectory directory = EventLogDirectory.open(root, ".json");
+                directory.listFiles().prune(LocalDate.now(Clock.systemDefaultZone()), 7).compressAll();
+                return Optional.of(new TelemetryLogManager(directory));
+            } catch (Exception e) {
+                LOGGER.error("Failed to create telemetry log manager", e);
                 return Optional.empty();
             }
         }, Util.backgroundExecutor());
@@ -44,23 +41,23 @@ public class TelemetryLogManager implements AutoCloseable {
         if (this.sessionLog == null) {
             this.sessionLog = CompletableFuture.supplyAsync(() -> {
                 try {
-                    EventLogDirectory.RawFile eventlogdirectory$rawfile = this.directory.createNewFile(LocalDate.now(Clock.systemDefaultZone()));
-                    FileChannel filechannel = eventlogdirectory$rawfile.openChannel();
-                    return Optional.of(new TelemetryEventLog(filechannel, Util.backgroundExecutor()));
-                } catch (IOException ioexception) {
-                    LOGGER.error("Failed to open channel for telemetry event log", (Throwable)ioexception);
+                    EventLogDirectory.RawFile file = this.directory.createNewFile(LocalDate.now(Clock.systemDefaultZone()));
+                    FileChannel channel = file.openChannel();
+                    return Optional.of(new TelemetryEventLog(channel, Util.backgroundExecutor()));
+                } catch (IOException e) {
+                    LOGGER.error("Failed to open channel for telemetry event log", e);
                     return Optional.empty();
                 }
             }, Util.backgroundExecutor());
         }
 
-        return this.sessionLog.thenApply(p_262106_ -> p_262106_.map(TelemetryEventLog::logger));
+        return this.sessionLog.thenApply(log -> log.map(TelemetryEventLog::logger));
     }
 
     @Override
     public void close() {
         if (this.sessionLog != null) {
-            this.sessionLog.thenAccept(p_261871_ -> p_261871_.ifPresent(TelemetryEventLog::close));
+            this.sessionLog.thenAccept(log -> log.ifPresent(TelemetryEventLog::close));
         }
     }
 }

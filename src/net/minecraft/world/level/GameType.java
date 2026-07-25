@@ -31,11 +31,11 @@ public enum GameType implements StringRepresentable {
     private final Component shortName;
     private final Component longName;
 
-    private GameType(final int p_46390_, final String p_46391_) {
-        this.id = p_46390_;
-        this.name = p_46391_;
-        this.shortName = Component.translatable("selectWorld.gameMode." + p_46391_);
-        this.longName = Component.translatable("gameMode." + p_46391_);
+    GameType(final int id, final String name) {
+        this.id = id;
+        this.name = name;
+        this.shortName = Component.translatable("selectWorld.gameMode." + name);
+        this.longName = Component.translatable("gameMode." + name);
     }
 
     public int getId() {
@@ -59,24 +59,24 @@ public enum GameType implements StringRepresentable {
         return this.shortName;
     }
 
-    public void updatePlayerAbilities(Abilities p_46399_) {
+    public void updatePlayerAbilities(final Abilities abilities) {
         if (this == CREATIVE) {
-            p_46399_.mayfly = true;
-            p_46399_.instabuild = true;
-            p_46399_.invulnerable = true;
+            abilities.mayfly = true;
+            abilities.instabuild = true;
+            abilities.invulnerable = true;
         } else if (this == SPECTATOR) {
-            p_46399_.mayfly = true;
-            p_46399_.instabuild = false;
-            p_46399_.invulnerable = true;
-            p_46399_.flying = true;
+            abilities.mayfly = true;
+            abilities.instabuild = false;
+            abilities.invulnerable = true;
+            abilities.flying = true;
         } else {
-            p_46399_.mayfly = false;
-            p_46399_.instabuild = false;
-            p_46399_.invulnerable = false;
-            p_46399_.flying = false;
+            abilities.mayfly = false;
+            abilities.instabuild = false;
+            abilities.invulnerable = false;
+            abilities.flying = false;
         }
 
-        p_46399_.mayBuild = !this.isBlockPlacingRestricted();
+        abilities.mayBuild = !this.isBlockPlacingRestricted();
     }
 
     public boolean isBlockPlacingRestricted() {
@@ -91,29 +91,29 @@ public enum GameType implements StringRepresentable {
         return this == SURVIVAL || this == ADVENTURE;
     }
 
-    public static GameType byId(int p_46394_) {
-        return BY_ID.apply(p_46394_);
+    public static GameType byId(final int id) {
+        return BY_ID.apply(id);
     }
 
-    public static GameType byName(String p_46401_) {
-        return byName(p_46401_, SURVIVAL);
+    public static GameType byName(final String name) {
+        return byName(name, SURVIVAL);
     }
 
     @Contract("_,!null->!null;_,null->_")
-    public static @Nullable GameType byName(String p_46403_, @Nullable GameType p_46404_) {
-        GameType gametype = CODEC.byName(p_46403_);
-        return gametype != null ? gametype : p_46404_;
+    public static @Nullable GameType byName(final String name, final @Nullable GameType defaultMode) {
+        GameType result = CODEC.byName(name);
+        return result != null ? result : defaultMode;
     }
 
-    public static int getNullableId(@Nullable GameType p_151496_) {
-        return p_151496_ != null ? p_151496_.id : -1;
+    public static int getNullableId(final @Nullable GameType gameType) {
+        return gameType != null ? gameType.id : -1;
     }
 
-    public static @Nullable GameType byNullableId(int p_151498_) {
-        return p_151498_ == -1 ? null : byId(p_151498_);
+    public static @Nullable GameType byNullableId(final int id) {
+        return id == -1 ? null : byId(id);
     }
 
-    public static boolean isValidId(int p_363661_) {
-        return Arrays.stream(values()).anyMatch(p_365366_ -> p_365366_.id == p_363661_);
+    public static boolean isValidId(final int id) {
+        return Arrays.stream(values()).anyMatch(gameType -> gameType.id == id);
     }
 }

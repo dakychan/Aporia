@@ -20,30 +20,25 @@ public class ClientboundUpdateAttributesPacket implements Packet<ClientGamePacke
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundUpdateAttributesPacket> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT,
         ClientboundUpdateAttributesPacket::getEntityId,
-        ClientboundUpdateAttributesPacket.AttributeSnapshot.STREAM_CODEC.apply(ByteBufCodecs.list()),
+        ClientboundUpdateAttributesPacket.AttributeSnapshot.STREAM_CODEC.apply(ByteBufCodecs.list(128)),
         ClientboundUpdateAttributesPacket::getValues,
         ClientboundUpdateAttributesPacket::new
     );
     private final int entityId;
     private final List<ClientboundUpdateAttributesPacket.AttributeSnapshot> attributes;
 
-    public ClientboundUpdateAttributesPacket(int p_133580_, Collection<AttributeInstance> p_133581_) {
-        this.entityId = p_133580_;
+    public ClientboundUpdateAttributesPacket(final int entityId, final Collection<AttributeInstance> values) {
+        this.entityId = entityId;
         this.attributes = Lists.newArrayList();
 
-        for (AttributeInstance attributeinstance : p_133581_) {
-            this.attributes
-                .add(
-                    new ClientboundUpdateAttributesPacket.AttributeSnapshot(
-                        attributeinstance.getAttribute(), attributeinstance.getBaseValue(), attributeinstance.getModifiers()
-                    )
-                );
+        for (AttributeInstance value : values) {
+            this.attributes.add(new ClientboundUpdateAttributesPacket.AttributeSnapshot(value.getAttribute(), value.getBaseValue(), value.getModifiers()));
         }
     }
 
-    private ClientboundUpdateAttributesPacket(int p_332663_, List<ClientboundUpdateAttributesPacket.AttributeSnapshot> p_327701_) {
-        this.entityId = p_332663_;
-        this.attributes = p_327701_;
+    private ClientboundUpdateAttributesPacket(final int entityId, final List<ClientboundUpdateAttributesPacket.AttributeSnapshot> attributes) {
+        this.entityId = entityId;
+        this.attributes = attributes;
     }
 
     @Override
@@ -51,8 +46,8 @@ public class ClientboundUpdateAttributesPacket implements Packet<ClientGamePacke
         return GamePacketTypes.CLIENTBOUND_UPDATE_ATTRIBUTES;
     }
 
-    public void handle(ClientGamePacketListener p_133587_) {
-        p_133587_.handleUpdateAttributes(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleUpdateAttributes(this);
     }
 
     public int getEntityId() {

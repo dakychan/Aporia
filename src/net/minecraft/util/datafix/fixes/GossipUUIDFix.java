@@ -5,29 +5,24 @@ import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
-import java.util.stream.Stream;
 
 public class GossipUUIDFix extends NamedEntityFix {
-    public GossipUUIDFix(Schema p_15878_, String p_15879_) {
-        super(p_15878_, false, "Gossip for for " + p_15879_, References.ENTITY, p_15879_);
+    public GossipUUIDFix(final Schema outputSchema, final String entityName) {
+        super(outputSchema, false, "Gossip for for " + entityName, References.ENTITY, entityName);
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_15881_) {
-        return p_15881_.update(
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(
             DSL.remainderFinder(),
-            p_15883_ -> p_15883_.update(
+            tag -> tag.update(
                 "Gossips",
-                p_326594_ -> DataFixUtils.orElse(
-                    p_326594_.asStreamOpt()
+                gossips -> DataFixUtils.orElse(
+                    gossips.asStreamOpt()
                         .result()
-                        .map(
-                            p_145374_ -> p_145374_.map(
-                                p_145378_ -> AbstractUUIDFix.replaceUUIDLeastMost((Dynamic<?>)p_145378_, "Target", "Target").orElse((Dynamic<?>)p_145378_)
-                            )
-                        )
-                        .map(p_326594_::createList),
-                    p_326594_
+                        .map(s -> s.map(gossip -> AbstractUUIDFix.replaceUUIDLeastMost((Dynamic<?>)gossip, "Target", "Target").orElse((Dynamic<?>)gossip)))
+                        .map(gossips::createList),
+                    gossips
                 )
             )
         );

@@ -4,25 +4,28 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.animal.golem.IronGolemModel;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.layers.IronGolemCrackinessLayer;
 import net.minecraft.client.renderer.entity.layers.IronGolemFlowerLayer;
 import net.minecraft.client.renderer.entity.state.IronGolemRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.golem.IronGolem;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.level.block.Blocks;
 
-@OnlyIn(Dist.CLIENT)
 public class IronGolemRenderer extends MobRenderer<IronGolem, IronGolemRenderState, IronGolemModel> {
+    public static final BlockDisplayContext BLOCK_DISPLAY_CONTEXT = BlockDisplayContext.create();
     private static final Identifier GOLEM_LOCATION = Identifier.withDefaultNamespace("textures/entity/iron_golem/iron_golem.png");
+    private final BlockModelResolver blockModelResolver;
 
-    public IronGolemRenderer(EntityRendererProvider.Context p_174188_) {
-        super(p_174188_, new IronGolemModel(p_174188_.bakeLayer(ModelLayers.IRON_GOLEM)), 0.7F);
+    public IronGolemRenderer(final EntityRendererProvider.Context context) {
+        super(context, new IronGolemModel(context.bakeLayer(ModelLayers.IRON_GOLEM)), 0.7F);
+        this.blockModelResolver = context.getBlockModelResolver();
         this.addLayer(new IronGolemCrackinessLayer(this));
         this.addLayer(new IronGolemFlowerLayer(this));
     }
 
-    public Identifier getTextureLocation(IronGolemRenderState p_459654_) {
+    public Identifier getTextureLocation(final IronGolemRenderState state) {
         return GOLEM_LOCATION;
     }
 
@@ -30,20 +33,26 @@ public class IronGolemRenderer extends MobRenderer<IronGolem, IronGolemRenderSta
         return new IronGolemRenderState();
     }
 
-    public void extractRenderState(IronGolem p_458283_, IronGolemRenderState p_363683_, float p_363302_) {
-        super.extractRenderState(p_458283_, p_363683_, p_363302_);
-        p_363683_.attackTicksRemaining = p_458283_.getAttackAnimationTick() > 0.0F ? p_458283_.getAttackAnimationTick() - p_363302_ : 0.0F;
-        p_363683_.offerFlowerTick = p_458283_.getOfferFlowerTick();
-        p_363683_.crackiness = p_458283_.getCrackiness();
+    public void extractRenderState(final IronGolem entity, final IronGolemRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.attackTicksRemaining = entity.getAttackAnimationTick() > 0.0F ? entity.getAttackAnimationTick() - partialTicks : 0.0F;
+        state.offerFlowerTick = entity.getOfferFlowerTick();
+        if (state.offerFlowerTick > 0) {
+            this.blockModelResolver.update(state.flowerBlock, Blocks.POPPY.defaultBlockState(), BLOCK_DISPLAY_CONTEXT);
+        } else {
+            state.flowerBlock.clear();
+        }
+
+        state.crackiness = entity.getCrackiness();
     }
 
-    protected void setupRotations(IronGolemRenderState p_366774_, PoseStack p_115015_, float p_115016_, float p_115017_) {
-        super.setupRotations(p_366774_, p_115015_, p_115016_, p_115017_);
-        if (!(p_366774_.walkAnimationSpeed < 0.01)) {
-            float f = 13.0F;
-            float f1 = p_366774_.walkAnimationPos + 6.0F;
-            float f2 = (Math.abs(f1 % 13.0F - 6.5F) - 3.25F) / 3.25F;
-            p_115015_.mulPose(Axis.ZP.rotationDegrees(6.5F * f2));
+    protected void setupRotations(final IronGolemRenderState state, final PoseStack poseStack, final float bodyRot, final float entityScale) {
+        super.setupRotations(state, poseStack, bodyRot, entityScale);
+        if (!(state.walkAnimationSpeed < 0.01)) {
+            float p = 13.0F;
+            float wp = state.walkAnimationPos + 6.0F;
+            float triangleWave = (Math.abs(wp % 13.0F - 6.5F) - 3.25F) / 3.25F;
+            poseStack.mulPose(Axis.ZP.rotationDegrees(6.5F * triangleWave));
         }
     }
 }

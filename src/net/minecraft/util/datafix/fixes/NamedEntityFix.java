@@ -13,23 +13,23 @@ public abstract class NamedEntityFix extends DataFix {
     protected final String entityName;
     protected final TypeReference type;
 
-    public NamedEntityFix(Schema p_16465_, boolean p_16466_, String p_16467_, TypeReference p_16468_, String p_16469_) {
-        super(p_16465_, p_16466_);
-        this.name = p_16467_;
-        this.type = p_16468_;
-        this.entityName = p_16469_;
+    public NamedEntityFix(final Schema outputSchema, final boolean changesType, final String name, final TypeReference type, final String entityName) {
+        super(outputSchema, changesType);
+        this.name = name;
+        this.type = type;
+        this.entityName = entityName;
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        OpticFinder<?> opticfinder = DSL.namedChoice(this.entityName, this.getInputSchema().getChoiceType(this.type, this.entityName));
+        OpticFinder<?> entityF = DSL.namedChoice(this.entityName, this.getInputSchema().getChoiceType(this.type, this.entityName));
         return this.fixTypeEverywhereTyped(
             this.name,
             this.getInputSchema().getType(this.type),
             this.getOutputSchema().getType(this.type),
-            p_16472_ -> p_16472_.updateTyped(opticfinder, this.getOutputSchema().getChoiceType(this.type, this.entityName), this::fix)
+            input -> input.updateTyped(entityF, this.getOutputSchema().getChoiceType(this.type, this.entityName), this::fix)
         );
     }
 
-    protected abstract Typed<?> fix(Typed<?> p_16473_);
+    protected abstract Typed<?> fix(final Typed<?> entity);
 }

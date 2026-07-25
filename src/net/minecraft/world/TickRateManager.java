@@ -12,8 +12,8 @@ public class TickRateManager {
     protected boolean runGameElements = true;
     protected boolean isFrozen = false;
 
-    public void setTickRate(float p_312754_) {
-        this.tickrate = Math.max(p_312754_, 1.0F);
+    public void setTickRate(final float rate) {
+        this.tickrate = Math.max(rate, 1.0F);
         this.nanosecondsPerTick = (long)((double)TimeUtil.NANOSECONDS_PER_SECOND / this.tickrate);
     }
 
@@ -37,16 +37,16 @@ public class TickRateManager {
         return this.frozenTicksToRun > 0;
     }
 
-    public void setFrozenTicksToRun(int p_312047_) {
-        this.frozenTicksToRun = p_312047_;
+    public void setFrozenTicksToRun(final int timeout) {
+        this.frozenTicksToRun = timeout;
     }
 
     public int frozenTicksToRun() {
         return this.frozenTicksToRun;
     }
 
-    public void setFrozen(boolean p_312988_) {
-        this.isFrozen = p_312988_;
+    public void setFrozen(final boolean state) {
+        this.isFrozen = state;
     }
 
     public boolean isFrozen() {
@@ -60,7 +60,7 @@ public class TickRateManager {
         }
     }
 
-    public boolean isEntityFrozen(Entity p_311574_) {
-        return !this.runsNormally() && !(p_311574_ instanceof Player) && p_311574_.countPlayerPassengers() <= 0;
+    public boolean isEntityFrozen(final Entity entity) {
+        return !this.runsNormally() && !(entity instanceof Player) && entity.countPlayerPassengers() <= 0;
     }
 }

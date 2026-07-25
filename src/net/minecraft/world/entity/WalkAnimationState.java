@@ -8,15 +8,15 @@ public class WalkAnimationState {
     private float position;
     private float positionScale = 1.0F;
 
-    public void setSpeed(float p_268265_) {
-        this.speed = p_268265_;
+    public void setSpeed(final float speed) {
+        this.speed = speed;
     }
 
-    public void update(float p_267993_, float p_267967_, float p_362382_) {
+    public void update(final float targetSpeed, final float factor, final float positionScale) {
         this.speedOld = this.speed;
-        this.speed = this.speed + (p_267993_ - this.speed) * p_267967_;
+        this.speed = this.speed + (targetSpeed - this.speed) * factor;
         this.position = this.position + this.speed;
-        this.positionScale = p_362382_;
+        this.positionScale = positionScale;
     }
 
     public void stop() {
@@ -29,16 +29,16 @@ public class WalkAnimationState {
         return this.speed;
     }
 
-    public float speed(float p_268054_) {
-        return Math.min(Mth.lerp(p_268054_, this.speedOld, this.speed), 1.0F);
+    public float speed(final float partialTicks) {
+        return Math.min(Mth.lerp(partialTicks, this.speedOld, this.speed), 1.0F);
     }
 
     public float position() {
         return this.position * this.positionScale;
     }
 
-    public float position(float p_268007_) {
-        return (this.position - this.speed * (1.0F - p_268007_)) * this.positionScale;
+    public float position(final float partialTicks) {
+        return (this.position - this.speed * (1.0F - partialTicks)) * this.positionScale;
     }
 
     public boolean isMoving() {

@@ -9,32 +9,38 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.DyeColor;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class WolfCollarLayer extends RenderLayer<WolfRenderState, WolfModel> {
     private static final Identifier WOLF_COLLAR_LOCATION = Identifier.withDefaultNamespace("textures/entity/wolf/wolf_collar.png");
+    private static final Identifier WOLF_BABY_COLLAR_LOCATION = Identifier.withDefaultNamespace("textures/entity/wolf/wolf_collar_baby.png");
 
-    public WolfCollarLayer(RenderLayerParent<WolfRenderState, WolfModel> p_117707_) {
-        super(p_117707_);
+    public WolfCollarLayer(final RenderLayerParent<WolfRenderState, WolfModel> renderer) {
+        super(renderer);
     }
 
-    public void submit(PoseStack p_430602_, SubmitNodeCollector p_430277_, int p_431658_, WolfRenderState p_430543_, float p_429085_, float p_425979_) {
-        DyeColor dyecolor = p_430543_.collarColor;
-        if (dyecolor != null && !p_430543_.isInvisible) {
-            int i = dyecolor.getTextureDiffuseColor();
-            p_430277_.order(1)
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final WolfRenderState state,
+        final float yRot,
+        final float xRot
+    ) {
+        DyeColor collarColor = state.collarColor;
+        if (collarColor != null && !state.isInvisible) {
+            int color = collarColor.getTextureDiffuseColor();
+            Identifier collarLocation = state.isBaby ? WOLF_BABY_COLLAR_LOCATION : WOLF_COLLAR_LOCATION;
+            submitNodeCollector.order(1)
                 .submitModel(
                     this.getParentModel(),
-                    p_430543_,
-                    p_430602_,
-                    RenderTypes.entityCutoutNoCull(WOLF_COLLAR_LOCATION),
-                    p_431658_,
+                    state,
+                    poseStack,
+                    RenderTypes.entityCutout(collarLocation),
+                    lightCoords,
                     OverlayTexture.NO_OVERLAY,
-                    i,
+                    color,
                     null,
-                    p_430543_.outlineColor,
+                    state.outlineColor,
                     null
                 );
         }

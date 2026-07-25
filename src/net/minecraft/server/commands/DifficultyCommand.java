@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import net.minecraft.commands.CommandSourceStack;
@@ -12,32 +11,32 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Difficulty;
 
 public class DifficultyCommand {
-    private static final DynamicCommandExceptionType ERROR_ALREADY_DIFFICULT = new DynamicCommandExceptionType(
-        p_308648_ -> Component.translatableEscape("commands.difficulty.failure", p_308648_)
+    private static final DynamicCommandExceptionType ERROR_ALREADY_SAME_DIFFICULTY = new DynamicCommandExceptionType(
+        difficulty -> Component.translatableEscape("commands.difficulty.failure", difficulty)
     );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_136939_) {
-        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("difficulty");
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        LiteralArgumentBuilder<CommandSourceStack> command = Commands.literal("difficulty");
 
         for (Difficulty difficulty : Difficulty.values()) {
-            literalargumentbuilder.then(Commands.literal(difficulty.getKey()).executes(p_136937_ -> setDifficulty(p_136937_.getSource(), difficulty)));
+            command.then(Commands.literal(difficulty.getSerializedName()).executes(c -> setDifficulty(c.getSource(), difficulty)));
         }
 
-        p_136939_.register(literalargumentbuilder.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(p_448903_ -> {
-            Difficulty difficulty1 = p_448903_.getSource().getLevel().getDifficulty();
-            p_448903_.getSource().sendSuccess(() -> Component.translatable("commands.difficulty.query", difficulty1.getDisplayName()), false);
-            return difficulty1.getId();
+        dispatcher.register(command.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS)).executes(c -> {
+            Difficulty difficultyx = c.getSource().getLevel().getDifficulty();
+            c.getSource().sendSuccess(() -> Component.translatable("commands.difficulty.query", difficultyx.getDisplayName()), false);
+            return difficultyx.getId();
         }));
     }
 
-    public static int setDifficulty(CommandSourceStack p_136945_, Difficulty p_136946_) throws CommandSyntaxException {
-        MinecraftServer minecraftserver = p_136945_.getServer();
-        if (minecraftserver.getWorldData().getDifficulty() == p_136946_) {
-            throw ERROR_ALREADY_DIFFICULT.create(p_136946_.getKey());
-        } else {
-            minecraftserver.setDifficulty(p_136946_, true);
-            p_136945_.sendSuccess(() -> Component.translatable("commands.difficulty.success", p_136946_.getDisplayName()), true);
-            return 0;
+    public static int setDifficulty(final CommandSourceStack source, final Difficulty difficulty) throws CommandSyntaxException {
+        MinecraftServer server = source.getServer();
+        if (server.getWorldData().getDifficulty() == difficulty) {
+            throw ERROR_ALREADY_SAME_DIFFICULTY.create(difficulty.getDisplayName());
         }
+
+        server.setDifficulty(difficulty, true);
+        source.sendSuccess(() -> Component.translatable("commands.difficulty.success", difficulty.getDisplayName()), true);
+        return 0;
     }
 }

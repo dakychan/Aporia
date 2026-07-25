@@ -1,17 +1,17 @@
 package net.minecraft.world.level.border;
 
 public interface BorderChangeListener {
-    void onSetSize(WorldBorder p_427796_, double p_430257_);
+    void onSetSize(WorldBorder border, double newSize);
 
-    void onLerpSize(WorldBorder p_427113_, double p_427031_, double p_431742_, long p_424057_, long p_460376_);
+    void onLerpSize(WorldBorder border, double fromSize, double targetSize, long ticks, long gameTime);
 
-    void onSetCenter(WorldBorder p_423195_, double p_427988_, double p_427130_);
+    void onSetCenter(WorldBorder border, double x, double z);
 
-    void onSetWarningTime(WorldBorder p_426976_, int p_430636_);
+    void onSetWarningTime(WorldBorder border, int time);
 
-    void onSetWarningBlocks(WorldBorder p_422341_, int p_429953_);
+    void onSetWarningBlocks(WorldBorder border, int blocks);
 
-    void onSetDamagePerBlock(WorldBorder p_423255_, double p_424357_);
+    void onSetDamagePerBlock(WorldBorder border, double damagePerBlock);
 
-    void onSetSafeZone(WorldBorder p_422460_, double p_427259_);
+    void onSetSafeZone(WorldBorder border, double safeZone);
 }

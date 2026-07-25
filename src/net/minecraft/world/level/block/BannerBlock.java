@@ -1,13 +1,12 @@
 package net.minecraft.world.level.block;
 
-import com.google.common.collect.Maps;
+import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
-import java.util.Map;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
+import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
@@ -24,11 +23,9 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class BannerBlock extends AbstractBannerBlock {
     public static final MapCodec<BannerBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422036_ -> p_422036_.group(DyeColor.CODEC.fieldOf("color").forGetter(AbstractBannerBlock::getColor), propertiesCodec())
-            .apply(p_422036_, BannerBlock::new)
+        i -> i.group(DyeColor.CODEC.fieldOf("color").forGetter(AbstractBannerBlock::getColor), propertiesCodec()).apply(i, BannerBlock::new)
     );
     public static final IntegerProperty ROTATION = BlockStateProperties.ROTATION_16;
-    private static final Map<DyeColor, Block> BY_COLOR = Maps.newHashMap();
     private static final VoxelShape SHAPE = Block.column(8.0, 0.0, 16.0);
 
     @Override
@@ -36,59 +33,71 @@ public class BannerBlock extends AbstractBannerBlock {
         return CODEC;
     }
 
-    public BannerBlock(DyeColor p_49012_, BlockBehaviour.Properties p_49013_) {
-        super(p_49012_, p_49013_);
-        this.registerDefaultState(this.stateDefinition.any().setValue(ROTATION, 0));
-        BY_COLOR.put(p_49012_, this);
+    public BannerBlock(final DyeColor color, final BlockBehaviour.Properties properties) {
+        super(color, properties);
+        this.registerDefaultState(this.stateDefinition.any().setValue(ROTATION, 8));
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_49019_, LevelReader p_49020_, BlockPos p_49021_) {
-        return p_49020_.getBlockState(p_49021_.below()).isSolid();
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return level.getBlockState(pos.below()).isSolid();
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_49038_, BlockGetter p_49039_, BlockPos p_49040_, CollisionContext p_49041_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_49017_) {
-        return this.defaultBlockState().setValue(ROTATION, RotationSegment.convertToSegment(p_49017_.getRotation() + 180.0F));
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return this.defaultBlockState().setValue(ROTATION, RotationSegment.convertToSegment(context.getRotation() + 180.0F));
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_49029_,
-        LevelReader p_361162_,
-        ScheduledTickAccess p_368795_,
-        BlockPos p_49033_,
-        Direction p_49030_,
-        BlockPos p_49034_,
-        BlockState p_49031_,
-        RandomSource p_365337_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_49030_ == Direction.DOWN && !p_49029_.canSurvive(p_361162_, p_49033_)
+        return directionToNeighbour == Direction.DOWN && !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_49029_, p_361162_, p_368795_, p_49033_, p_49030_, p_49034_, p_49031_, p_365337_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected BlockState rotate(BlockState p_49026_, Rotation p_49027_) {
-        return p_49026_.setValue(ROTATION, p_49027_.rotate(p_49026_.getValue(ROTATION), 16));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(ROTATION, rotation.rotate(state.getValue(ROTATION), 16));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_49023_, Mirror p_49024_) {
-        return p_49023_.setValue(ROTATION, p_49024_.mirror(p_49023_.getValue(ROTATION), 16));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.setValue(ROTATION, mirror.mirror(state.getValue(ROTATION), 16));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_49036_) {
-        p_49036_.add(ROTATION);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(ROTATION);
     }
 
-    public static Block byColor(DyeColor p_49015_) {
-        return BY_COLOR.getOrDefault(p_49015_, Blocks.WHITE_BANNER);
+    public enum AttachmentType implements StringRepresentable {
+        WALL("wall"),
+        GROUND("ground");
+
+        public static final Codec<BannerBlock.AttachmentType> CODEC = StringRepresentable.fromEnum(BannerBlock.AttachmentType::values);
+        private final String name;
+
+        AttachmentType(final String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getSerializedName() {
+            return this.name;
+        }
     }
 }

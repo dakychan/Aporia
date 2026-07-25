@@ -21,11 +21,11 @@ public enum EntitySpawnReason {
     LOAD,
     DIMENSION_TRAVEL;
 
-    public static boolean isSpawner(EntitySpawnReason p_370217_) {
-        return p_370217_ == SPAWNER || p_370217_ == TRIAL_SPAWNER;
+    public static boolean isSpawner(final EntitySpawnReason reason) {
+        return reason == SPAWNER || reason == TRIAL_SPAWNER;
     }
 
-    public static boolean ignoresLightRequirements(EntitySpawnReason p_370141_) {
-        return p_370141_ == TRIAL_SPAWNER;
+    public static boolean ignoresLightRequirements(final EntitySpawnReason reason) {
+        return reason == TRIAL_SPAWNER;
     }
 }

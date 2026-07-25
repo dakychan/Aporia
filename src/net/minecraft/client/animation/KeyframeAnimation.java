@@ -7,89 +7,85 @@ import java.util.function.Function;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.AnimationState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3f;
 
-@OnlyIn(Dist.CLIENT)
 public class KeyframeAnimation {
     private final AnimationDefinition definition;
     private final List<KeyframeAnimation.Entry> entries;
 
-    private KeyframeAnimation(AnimationDefinition p_409549_, List<KeyframeAnimation.Entry> p_405859_) {
-        this.definition = p_409549_;
-        this.entries = p_405859_;
+    private KeyframeAnimation(final AnimationDefinition definition, final List<KeyframeAnimation.Entry> entries) {
+        this.definition = definition;
+        this.entries = entries;
     }
 
-    static KeyframeAnimation bake(ModelPart p_407622_, AnimationDefinition p_407507_) {
-        List<KeyframeAnimation.Entry> list = new ArrayList<>();
-        Function<String, ModelPart> function = p_407622_.createPartLookup();
+    static KeyframeAnimation bake(final ModelPart root, final AnimationDefinition definition) {
+        List<KeyframeAnimation.Entry> entries = new ArrayList<>();
+        Function<String, ModelPart> partLookup = root.createPartLookup();
 
-        for (Map.Entry<String, List<AnimationChannel>> entry : p_407507_.boneAnimations().entrySet()) {
-            String s = entry.getKey();
-            List<AnimationChannel> list1 = entry.getValue();
-            ModelPart modelpart = function.apply(s);
-            if (modelpart == null) {
-                throw new IllegalArgumentException("Cannot animate " + s + ", which does not exist in model");
+        for (Map.Entry<String, List<AnimationChannel>> entry : definition.boneAnimations().entrySet()) {
+            String partName = entry.getKey();
+            List<AnimationChannel> channels = entry.getValue();
+            ModelPart part = partLookup.apply(partName);
+            if (part == null) {
+                throw new IllegalArgumentException("Cannot animate " + partName + ", which does not exist in model");
             }
 
-            for (AnimationChannel animationchannel : list1) {
-                list.add(new KeyframeAnimation.Entry(modelpart, animationchannel.target(), animationchannel.keyframes()));
+            for (AnimationChannel channel : channels) {
+                entries.add(new KeyframeAnimation.Entry(part, channel.target(), channel.keyframes()));
             }
         }
 
-        return new KeyframeAnimation(p_407507_, List.copyOf(list));
+        return new KeyframeAnimation(definition, List.copyOf(entries));
     }
 
     public void applyStatic() {
         this.apply(0L, 1.0F);
     }
 
-    public void applyWalk(float p_407973_, float p_405934_, float p_406901_, float p_408620_) {
-        long i = (long)(p_407973_ * 50.0F * p_406901_);
-        float f = Math.min(p_405934_ * p_408620_, 1.0F);
-        this.apply(i, f);
+    public void applyWalk(final float animationPos, final float animationSpeed, final float speedFactor, final float scaleFactor) {
+        long time = (long)(animationPos * 50.0F * speedFactor);
+        float scale = Math.min(animationSpeed * scaleFactor, 1.0F);
+        this.apply(time, scale);
     }
 
-    public void apply(AnimationState p_409774_, float p_405945_) {
-        this.apply(p_409774_, p_405945_, 1.0F);
+    public void apply(final AnimationState animationState, final float currentTime) {
+        this.apply(animationState, currentTime, 1.0F);
     }
 
-    public void apply(AnimationState p_406283_, float p_408260_, float p_409294_) {
-        p_406283_.ifStarted(p_408975_ -> this.apply((long)((float)p_408975_.getTimeInMillis(p_408260_) * p_409294_), 1.0F));
+    public void apply(final AnimationState animationState, final float currentTime, final float speedFactor) {
+        animationState.ifStarted(state -> this.apply((long)((float)state.getTimeInMillis(currentTime) * speedFactor), 1.0F));
     }
 
-    public void apply(long p_409599_, float p_408046_) {
-        float f = this.getElapsedSeconds(p_409599_);
-        Vector3f vector3f = new Vector3f();
+    public void apply(final long millisSinceStart, final float targetScale) {
+        float secondsSinceStart = this.getElapsedSeconds(millisSinceStart);
+        Vector3f scratchVector = new Vector3f();
 
-        for (KeyframeAnimation.Entry keyframeanimation$entry : this.entries) {
-            keyframeanimation$entry.apply(f, p_408046_, vector3f);
+        for (KeyframeAnimation.Entry entry : this.entries) {
+            entry.apply(secondsSinceStart, targetScale, scratchVector);
         }
     }
 
-    private float getElapsedSeconds(long p_410209_) {
-        float f = (float)p_410209_ / 1000.0F;
-        return this.definition.looping() ? f % this.definition.lengthInSeconds() : f;
+    private float getElapsedSeconds(final long millisSinceStart) {
+        float secondsSinceStart = (float)millisSinceStart / 1000.0F;
+        return this.definition.looping() ? secondsSinceStart % this.definition.lengthInSeconds() : secondsSinceStart;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Entry(ModelPart part, AnimationChannel.Target target, Keyframe[] keyframes) {
-        public void apply(float p_409122_, float p_408445_, Vector3f p_410397_) {
-            int i = Math.max(0, Mth.binarySearch(0, this.keyframes.length, p_406117_ -> p_409122_ <= this.keyframes[p_406117_].timestamp()) - 1);
-            int j = Math.min(this.keyframes.length - 1, i + 1);
-            Keyframe keyframe = this.keyframes[i];
-            Keyframe keyframe1 = this.keyframes[j];
-            float f = p_409122_ - keyframe.timestamp();
-            float f1;
-            if (j != i) {
-                f1 = Mth.clamp(f / (keyframe1.timestamp() - keyframe.timestamp()), 0.0F, 1.0F);
+        private record Entry(ModelPart part, AnimationChannel.Target target, Keyframe[] keyframes) {
+        public void apply(final float secondsSinceStart, final float targetScale, final Vector3f scratchVector) {
+            int prev = Math.max(0, Mth.binarySearch(0, this.keyframes.length, i -> secondsSinceStart <= this.keyframes[i].timestamp()) - 1);
+            int next = Math.min(this.keyframes.length - 1, prev + 1);
+            Keyframe previousFrame = this.keyframes[prev];
+            Keyframe nextFrame = this.keyframes[next];
+            float keyframeTimeDelta = secondsSinceStart - previousFrame.timestamp();
+            float lerpAlpha;
+            if (next != prev) {
+                lerpAlpha = Mth.clamp(keyframeTimeDelta / (nextFrame.timestamp() - previousFrame.timestamp()), 0.0F, 1.0F);
             } else {
-                f1 = 0.0F;
+                lerpAlpha = 0.0F;
             }
 
-            keyframe1.interpolation().apply(p_410397_, f1, this.keyframes, i, j, p_408445_);
-            this.target.apply(this.part, p_410397_);
+            nextFrame.interpolation().apply(scratchVector, lerpAlpha, this.keyframes, prev, next, targetScale);
+            this.target.apply(this.part, scratchVector);
         }
     }
 }

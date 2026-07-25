@@ -15,47 +15,47 @@ public class NonNullList<E> extends AbstractList<E> {
         return new NonNullList<>(Lists.newArrayList(), null);
     }
 
-    public static <E> NonNullList<E> createWithCapacity(int p_182648_) {
-        return new NonNullList<>(Lists.newArrayListWithCapacity(p_182648_), null);
+    public static <E> NonNullList<E> createWithCapacity(final int capacity) {
+        return new NonNullList<>(Lists.newArrayListWithCapacity(capacity), null);
     }
 
-    public static <E> NonNullList<E> withSize(int p_122781_, E p_122782_) {
-        Objects.requireNonNull(p_122782_);
-        Object[] aobject = new Object[p_122781_];
-        Arrays.fill(aobject, p_122782_);
-        return new NonNullList<>(Arrays.asList((E[])aobject), p_122782_);
+    public static <E> NonNullList<E> withSize(final int size, final E defaultValue) {
+        Objects.requireNonNull(defaultValue);
+        Object[] objects = new Object[size];
+        Arrays.fill(objects, defaultValue);
+        return new NonNullList<>(Arrays.asList((E[])objects), defaultValue);
     }
 
     @SafeVarargs
-    public static <E> NonNullList<E> of(E p_122784_, E... p_122785_) {
-        return new NonNullList<>(Arrays.asList(p_122785_), p_122784_);
+    public static <E> NonNullList<E> of(final E defaultValue, final E... values) {
+        return new NonNullList<>(Arrays.asList(values), defaultValue);
     }
 
-    protected NonNullList(List<E> p_122777_, @Nullable E p_122778_) {
-        this.list = p_122777_;
-        this.defaultValue = p_122778_;
-    }
-
-    @Override
-    public E get(int p_122791_) {
-        return this.list.get(p_122791_);
+    protected NonNullList(final List<E> list, final @Nullable E defaultValue) {
+        this.list = list;
+        this.defaultValue = defaultValue;
     }
 
     @Override
-    public E set(int p_122795_, E p_122796_) {
-        Objects.requireNonNull(p_122796_);
-        return this.list.set(p_122795_, p_122796_);
+    public E get(final int index) {
+        return this.list.get(index);
     }
 
     @Override
-    public void add(int p_122787_, E p_122788_) {
-        Objects.requireNonNull(p_122788_);
-        this.list.add(p_122787_, p_122788_);
+    public E set(final int index, final E element) {
+        Objects.requireNonNull(element);
+        return this.list.set(index, element);
     }
 
     @Override
-    public E remove(int p_122793_) {
-        return this.list.remove(p_122793_);
+    public void add(final int index, final E element) {
+        Objects.requireNonNull(element);
+        this.list.add(index, element);
+    }
+
+    @Override
+    public E remove(final int index) {
+        return this.list.remove(index);
     }
 
     @Override

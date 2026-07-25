@@ -2,28 +2,25 @@ package net.minecraft.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.state.BrushableBlockRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.item.ItemModelResolver;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.level.block.entity.BrushableBlockEntity;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class BrushableBlockRenderer implements BlockEntityRenderer<BrushableBlockEntity, BrushableBlockRenderState> {
     private final ItemModelResolver itemModelResolver;
 
-    public BrushableBlockRenderer(BlockEntityRendererProvider.Context p_277899_) {
-        this.itemModelResolver = p_277899_.itemModelResolver();
+    public BrushableBlockRenderer(final BlockEntityRendererProvider.Context context) {
+        this.itemModelResolver = context.itemModelResolver();
     }
 
     public BrushableBlockRenderState createRenderState() {
@@ -31,62 +28,67 @@ public class BrushableBlockRenderer implements BlockEntityRenderer<BrushableBloc
     }
 
     public void extractRenderState(
-        BrushableBlockEntity p_428685_,
-        BrushableBlockRenderState p_424043_,
-        float p_424275_,
-        Vec3 p_426205_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_424438_
+        final BrushableBlockEntity blockEntity,
+        final BrushableBlockRenderState state,
+        final float partialTicks,
+        final Vec3 cameraPosition,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
     ) {
-        BlockEntityRenderer.super.extractRenderState(p_428685_, p_424043_, p_424275_, p_426205_, p_424438_);
-        p_424043_.hitDirection = p_428685_.getHitDirection();
-        p_424043_.dustProgress = p_428685_.getBlockState().getValue(BlockStateProperties.DUSTED);
-        if (p_428685_.getLevel() != null && p_428685_.getHitDirection() != null) {
-            p_424043_.lightCoords = LevelRenderer.getLightColor(
-                LevelRenderer.BrightnessGetter.DEFAULT, p_428685_.getLevel(), p_428685_.getBlockState(), p_428685_.getBlockPos().relative(p_428685_.getHitDirection())
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
+        state.hitDirection = blockEntity.getHitDirection();
+        state.dustProgress = blockEntity.getBlockState().getValue(BlockStateProperties.DUSTED);
+        if (blockEntity.getLevel() != null && blockEntity.getHitDirection() != null) {
+            state.lightCoords = LightCoordsUtil.getLightCoords(
+                LightCoordsUtil.BrightnessGetter.DEFAULT,
+                blockEntity.getLevel(),
+                blockEntity.getBlockState(),
+                blockEntity.getBlockPos().relative(blockEntity.getHitDirection())
             );
         }
 
-        this.itemModelResolver.updateForTopItem(p_424043_.itemState, p_428685_.getItem(), ItemDisplayContext.FIXED, p_428685_.getLevel(), null, 0);
+        this.itemModelResolver.updateForTopItem(state.itemState, blockEntity.getItem(), ItemDisplayContext.FIXED, blockEntity.getLevel(), null, 0);
     }
 
-    public void submit(BrushableBlockRenderState p_422561_, PoseStack p_427617_, SubmitNodeCollector p_426677_, CameraRenderState p_423249_) {
-        if (p_422561_.dustProgress > 0 && p_422561_.hitDirection != null && !p_422561_.itemState.isEmpty()) {
-            p_427617_.pushPose();
-            p_427617_.translate(0.0F, 0.5F, 0.0F);
-            float[] afloat = this.translations(p_422561_.hitDirection, p_422561_.dustProgress);
-            p_427617_.translate(afloat[0], afloat[1], afloat[2]);
-            p_427617_.mulPose(Axis.YP.rotationDegrees(75.0F));
-            boolean flag = p_422561_.hitDirection == Direction.EAST || p_422561_.hitDirection == Direction.WEST;
-            p_427617_.mulPose(Axis.YP.rotationDegrees((flag ? 90 : 0) + 11));
-            p_427617_.scale(0.5F, 0.5F, 0.5F);
-            p_422561_.itemState.submit(p_427617_, p_426677_, p_422561_.lightCoords, OverlayTexture.NO_OVERLAY, 0);
-            p_427617_.popPose();
+    public void submit(
+        final BrushableBlockRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
+    ) {
+        if (state.dustProgress > 0 && state.hitDirection != null && !state.itemState.isEmpty()) {
+            poseStack.pushPose();
+            poseStack.translate(0.0F, 0.5F, 0.0F);
+            float[] translations = this.translations(state.hitDirection, state.dustProgress);
+            poseStack.translate(translations[0], translations[1], translations[2]);
+            poseStack.mulPose(Axis.YP.rotationDegrees(75.0F));
+            boolean eastWest = state.hitDirection == Direction.EAST || state.hitDirection == Direction.WEST;
+            poseStack.mulPose(Axis.YP.rotationDegrees((eastWest ? 90 : 0) + 11));
+            poseStack.scale(0.5F, 0.5F, 0.5F);
+            state.itemState.submit(poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, 0);
+            poseStack.popPose();
         }
     }
 
-    private float[] translations(Direction p_278030_, int p_277997_) {
-        float[] afloat = new float[]{0.5F, 0.0F, 0.5F};
-        float f = p_277997_ / 10.0F * 0.75F;
-        switch (p_278030_) {
+    private float[] translations(final Direction direction, final int completionState) {
+        float[] xyzTranslations = new float[]{0.5F, 0.0F, 0.5F};
+        float completionOffset = completionState / 10.0F * 0.75F;
+        switch (direction) {
             case EAST:
-                afloat[0] = 0.73F + f;
+                xyzTranslations[0] = 0.73F + completionOffset;
                 break;
             case WEST:
-                afloat[0] = 0.25F - f;
+                xyzTranslations[0] = 0.25F - completionOffset;
                 break;
             case UP:
-                afloat[1] = 0.25F + f;
+                xyzTranslations[1] = 0.25F + completionOffset;
                 break;
             case DOWN:
-                afloat[1] = -0.23F - f;
+                xyzTranslations[1] = -0.23F - completionOffset;
                 break;
             case NORTH:
-                afloat[2] = 0.25F - f;
+                xyzTranslations[2] = 0.25F - completionOffset;
                 break;
             case SOUTH:
-                afloat[2] = 0.73F + f;
+                xyzTranslations[2] = 0.73F + completionOffset;
         }
 
-        return afloat;
+        return xyzTranslations;
     }
 }

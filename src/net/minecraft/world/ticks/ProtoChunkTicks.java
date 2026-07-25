@@ -6,25 +6,25 @@ import java.util.List;
 import java.util.Set;
 import net.minecraft.core.BlockPos;
 
-public class ProtoChunkTicks<T> implements SerializableTickContainer<T>, TickContainerAccess<T> {
+public class ProtoChunkTicks<T> implements TickContainerAccess<T>, SerializableTickContainer<T> {
     private final List<SavedTick<T>> ticks = Lists.newArrayList();
     private final Set<SavedTick<?>> ticksPerPosition = new ObjectOpenCustomHashSet<>(SavedTick.UNIQUE_TICK_HASH);
 
     @Override
-    public void schedule(ScheduledTick<T> p_193298_) {
-        SavedTick<T> savedtick = new SavedTick<>(p_193298_.type(), p_193298_.pos(), 0, p_193298_.priority());
-        this.schedule(savedtick);
+    public void schedule(final ScheduledTick<T> tick) {
+        SavedTick<T> newTick = new SavedTick<>(tick.type(), tick.pos(), 0, tick.priority());
+        this.schedule(newTick);
     }
 
-    private void schedule(SavedTick<T> p_193296_) {
-        if (this.ticksPerPosition.add(p_193296_)) {
-            this.ticks.add(p_193296_);
+    private void schedule(final SavedTick<T> newTick) {
+        if (this.ticksPerPosition.add(newTick)) {
+            this.ticks.add(newTick);
         }
     }
 
     @Override
-    public boolean hasScheduledTick(BlockPos p_193300_, T p_193301_) {
-        return this.ticksPerPosition.contains(SavedTick.probe(p_193301_, p_193300_));
+    public boolean hasScheduledTick(final BlockPos pos, final T type) {
+        return this.ticksPerPosition.contains(SavedTick.probe(type, pos));
     }
 
     @Override
@@ -33,7 +33,7 @@ public class ProtoChunkTicks<T> implements SerializableTickContainer<T>, TickCon
     }
 
     @Override
-    public List<SavedTick<T>> pack(long p_364150_) {
+    public List<SavedTick<T>> pack(final long currentTick) {
         return this.ticks;
     }
 
@@ -41,9 +41,9 @@ public class ProtoChunkTicks<T> implements SerializableTickContainer<T>, TickCon
         return List.copyOf(this.ticks);
     }
 
-    public static <T> ProtoChunkTicks<T> load(List<SavedTick<T>> p_370194_) {
-        ProtoChunkTicks<T> protochunkticks = new ProtoChunkTicks<>();
-        p_370194_.forEach(protochunkticks::schedule);
-        return protochunkticks;
+    public static <T> ProtoChunkTicks<T> load(final List<SavedTick<T>> ticks) {
+        ProtoChunkTicks<T> result = new ProtoChunkTicks<>();
+        ticks.forEach(result::schedule);
+        return result;
     }
 }

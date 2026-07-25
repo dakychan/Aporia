@@ -17,31 +17,31 @@ public class DefendVillageTargetGoal extends TargetGoal {
     private @Nullable LivingEntity potentialTarget;
     private final TargetingConditions attackTargeting = TargetingConditions.forCombat().range(64.0);
 
-    public DefendVillageTargetGoal(IronGolem p_452431_) {
-        super(p_452431_, false, true);
-        this.golem = p_452431_;
+    public DefendVillageTargetGoal(final IronGolem golem) {
+        super(golem, false, true);
+        this.golem = golem;
         this.setFlags(EnumSet.of(Goal.Flag.TARGET));
     }
 
     @Override
     public boolean canUse() {
-        AABB aabb = this.golem.getBoundingBox().inflate(10.0, 8.0, 10.0);
-        ServerLevel serverlevel = getServerLevel(this.golem);
-        List<? extends LivingEntity> list = serverlevel.getNearbyEntities(Villager.class, this.attackTargeting, this.golem, aabb);
-        List<Player> list1 = serverlevel.getNearbyPlayers(this.attackTargeting, this.golem, aabb);
+        AABB grow = this.golem.getBoundingBox().inflate(10.0, 8.0, 10.0);
+        ServerLevel level = getServerLevel(this.golem);
+        List<? extends LivingEntity> villagers = level.getNearbyEntities(Villager.class, this.attackTargeting, this.golem, grow);
+        List<Player> players = level.getNearbyPlayers(this.attackTargeting, this.golem, grow);
 
-        for (LivingEntity livingentity : list) {
-            Villager villager = (Villager)livingentity;
+        for (LivingEntity livingEntity : villagers) {
+            Villager villager = (Villager)livingEntity;
 
-            for (Player player : list1) {
-                int i = villager.getPlayerReputation(player);
-                if (i <= -100) {
+            for (Player player : players) {
+                int reputation = villager.getPlayerReputation(player);
+                if (reputation <= -100) {
                     this.potentialTarget = player;
                 }
             }
         }
 
-        return this.potentialTarget == null ? false : !(this.potentialTarget instanceof Player player1 && (player1.isSpectator() || player1.isCreative()));
+        return this.potentialTarget == null ? false : !(this.potentialTarget instanceof Player player && (player.isSpectator() || player.isCreative()));
     }
 
     @Override

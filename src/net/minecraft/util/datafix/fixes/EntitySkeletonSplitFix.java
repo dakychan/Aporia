@@ -6,21 +6,21 @@ import com.mojang.serialization.Dynamic;
 import java.util.Objects;
 
 public class EntitySkeletonSplitFix extends SimpleEntityRenameFix {
-    public EntitySkeletonSplitFix(Schema p_15688_, boolean p_15689_) {
-        super("EntitySkeletonSplitFix", p_15688_, p_15689_);
+    public EntitySkeletonSplitFix(final Schema outputSchema, final boolean changesType) {
+        super("EntitySkeletonSplitFix", outputSchema, changesType);
     }
 
     @Override
-    protected Pair<String, Dynamic<?>> getNewNameAndTag(String p_15691_, Dynamic<?> p_15692_) {
-        if (Objects.equals(p_15691_, "Skeleton")) {
-            int i = p_15692_.get("SkeletonType").asInt(0);
-            if (i == 1) {
-                p_15691_ = "WitherSkeleton";
-            } else if (i == 2) {
-                p_15691_ = "Stray";
+    protected Pair<String, Dynamic<?>> getNewNameAndTag(String name, final Dynamic<?> tag) {
+        if (Objects.equals(name, "Skeleton")) {
+            int type = tag.get("SkeletonType").asInt(0);
+            if (type == 1) {
+                name = "WitherSkeleton";
+            } else if (type == 2) {
+                name = "Stray";
             }
         }
 
-        return Pair.of(p_15691_, p_15692_);
+        return Pair.of(name, tag);
     }
 }

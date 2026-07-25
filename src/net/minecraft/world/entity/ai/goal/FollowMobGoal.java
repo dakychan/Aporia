@@ -22,26 +22,26 @@ public class FollowMobGoal extends Goal {
     private float oldWaterCost;
     private final float areaSize;
 
-    public FollowMobGoal(Mob p_25271_, double p_25272_, float p_25273_, float p_25274_) {
-        this.mob = p_25271_;
-        this.followPredicate = p_449600_ -> p_25271_.getClass() != p_449600_.getClass();
-        this.speedModifier = p_25272_;
-        this.navigation = p_25271_.getNavigation();
-        this.stopDistance = p_25273_;
-        this.areaSize = p_25274_;
+    public FollowMobGoal(final Mob mob, final double speedModifier, final float stopDistance, final float areaSize) {
+        this.mob = mob;
+        this.followPredicate = input -> mob.getClass() != input.getClass();
+        this.speedModifier = speedModifier;
+        this.navigation = mob.getNavigation();
+        this.stopDistance = stopDistance;
+        this.areaSize = areaSize;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        if (!(p_25271_.getNavigation() instanceof GroundPathNavigation) && !(p_25271_.getNavigation() instanceof FlyingPathNavigation)) {
+        if (!(mob.getNavigation() instanceof GroundPathNavigation) && !(mob.getNavigation() instanceof FlyingPathNavigation)) {
             throw new IllegalArgumentException("Unsupported mob type for FollowMobGoal");
         }
     }
 
     @Override
     public boolean canUse() {
-        List<Mob> list = this.mob.level().getEntitiesOfClass(Mob.class, this.mob.getBoundingBox().inflate(this.areaSize), this.followPredicate);
-        if (!list.isEmpty()) {
-            for (Mob mob : list) {
-                if (!mob.isInvisible()) {
-                    this.followingMob = mob;
+        List<Mob> mobs = this.mob.level().getEntitiesOfClass(Mob.class, this.mob.getBoundingBox().inflate(this.areaSize), this.followPredicate);
+        if (!mobs.isEmpty()) {
+            for (Mob mobInList : mobs) {
+                if (!mobInList.isInvisible()) {
+                    this.followingMob = mobInList;
                     return true;
                 }
             }
@@ -75,22 +75,22 @@ public class FollowMobGoal extends Goal {
             this.mob.getLookControl().setLookAt(this.followingMob, 10.0F, this.mob.getMaxHeadXRot());
             if (--this.timeToRecalcPath <= 0) {
                 this.timeToRecalcPath = this.adjustedTickDelay(10);
-                double d0 = this.mob.getX() - this.followingMob.getX();
-                double d1 = this.mob.getY() - this.followingMob.getY();
-                double d2 = this.mob.getZ() - this.followingMob.getZ();
-                double d3 = d0 * d0 + d1 * d1 + d2 * d2;
-                if (!(d3 <= this.stopDistance * this.stopDistance)) {
+                double xxd = this.mob.getX() - this.followingMob.getX();
+                double yyd = this.mob.getY() - this.followingMob.getY();
+                double zzd = this.mob.getZ() - this.followingMob.getZ();
+                double distSqr = xxd * xxd + yyd * yyd + zzd * zzd;
+                if (!(distSqr <= this.stopDistance * this.stopDistance)) {
                     this.navigation.moveTo(this.followingMob, this.speedModifier);
                 } else {
                     this.navigation.stop();
-                    LookControl lookcontrol = this.followingMob.getLookControl();
-                    if (d3 <= this.stopDistance
-                        || lookcontrol.getWantedX() == this.mob.getX()
-                            && lookcontrol.getWantedY() == this.mob.getY()
-                            && lookcontrol.getWantedZ() == this.mob.getZ()) {
-                        double d4 = this.followingMob.getX() - this.mob.getX();
-                        double d5 = this.followingMob.getZ() - this.mob.getZ();
-                        this.navigation.moveTo(this.mob.getX() - d4, this.mob.getY(), this.mob.getZ() - d5, this.speedModifier);
+                    LookControl lookControl = this.followingMob.getLookControl();
+                    if (distSqr <= this.stopDistance
+                        || lookControl.getWantedX() == this.mob.getX()
+                            && lookControl.getWantedY() == this.mob.getY()
+                            && lookControl.getWantedZ() == this.mob.getZ()) {
+                        double deltaX = this.followingMob.getX() - this.mob.getX();
+                        double deltaZ = this.followingMob.getZ() - this.mob.getZ();
+                        this.navigation.moveTo(this.mob.getX() - deltaX, this.mob.getY(), this.mob.getZ() - deltaZ, this.speedModifier);
                     }
                 }
             }

@@ -2,26 +2,25 @@ package net.minecraft.world.level.storage.loot.functions;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 public class DiscardItem extends LootItemConditionalFunction {
-    public static final MapCodec<DiscardItem> CODEC = RecordCodecBuilder.mapCodec(p_458987_ -> commonFields(p_458987_).apply(p_458987_, DiscardItem::new));
+    public static final MapCodec<DiscardItem> MAP_CODEC = RecordCodecBuilder.mapCodec(i -> commonFields(i).apply(i, DiscardItem::new));
 
-    protected DiscardItem(List<LootItemCondition> p_450473_) {
-        super(p_450473_);
+    protected DiscardItem(final List<LootItemCondition> predicates) {
+        super(predicates);
     }
 
     @Override
-    public LootItemFunctionType<DiscardItem> getType() {
-        return LootItemFunctions.DISCARD;
+    public MapCodec<DiscardItem> codec() {
+        return MAP_CODEC;
     }
 
     @Override
-    protected ItemStack run(ItemStack p_460147_, LootContext p_458480_) {
+    protected ItemStack run(final ItemStack itemStack, final LootContext context) {
         return ItemStack.EMPTY;
     }
 

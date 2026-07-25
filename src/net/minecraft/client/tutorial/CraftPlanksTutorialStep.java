@@ -11,11 +11,8 @@ import net.minecraft.tags.ItemTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CraftPlanksTutorialStep implements TutorialStepInstance {
     private static final int HINT_DELAY = 1200;
     private static final Component CRAFT_TITLE = Component.translatable("tutorial.craft_planks.title");
@@ -24,8 +21,8 @@ public class CraftPlanksTutorialStep implements TutorialStepInstance {
     private @Nullable TutorialToast toast;
     private int timeWaiting;
 
-    public CraftPlanksTutorialStep(Tutorial p_120467_) {
-        this.tutorial = p_120467_;
+    public CraftPlanksTutorialStep(final Tutorial tutorial) {
+        this.tutorial = tutorial;
     }
 
     @Override
@@ -36,14 +33,14 @@ public class CraftPlanksTutorialStep implements TutorialStepInstance {
         } else {
             Minecraft minecraft = this.tutorial.getMinecraft();
             if (this.timeWaiting == 1) {
-                LocalPlayer localplayer = minecraft.player;
-                if (localplayer != null) {
-                    if (localplayer.getInventory().contains(ItemTags.PLANKS)) {
+                LocalPlayer player = minecraft.player;
+                if (player != null) {
+                    if (player.getInventory().contains(ItemTags.PLANKS)) {
                         this.tutorial.setStep(TutorialSteps.NONE);
                         return;
                     }
 
-                    if (hasCraftedPlanksPreviously(localplayer, ItemTags.PLANKS)) {
+                    if (hasCraftedPlanksPreviously(player, ItemTags.PLANKS)) {
                         this.tutorial.setStep(TutorialSteps.NONE);
                         return;
                     }
@@ -52,7 +49,7 @@ public class CraftPlanksTutorialStep implements TutorialStepInstance {
 
             if (this.timeWaiting >= 1200 && this.toast == null) {
                 this.toast = new TutorialToast(minecraft.font, TutorialToast.Icons.WOODEN_PLANKS, CRAFT_TITLE, CRAFT_DESCRIPTION, false);
-                minecraft.getToastManager().addToast(this.toast);
+                minecraft.gui.toastManager().addToast(this.toast);
             }
         }
     }
@@ -66,15 +63,15 @@ public class CraftPlanksTutorialStep implements TutorialStepInstance {
     }
 
     @Override
-    public void onGetItem(ItemStack p_120470_) {
-        if (p_120470_.is(ItemTags.PLANKS)) {
+    public void onGetItem(final ItemStack itemStack) {
+        if (itemStack.is(ItemTags.PLANKS)) {
             this.tutorial.setStep(TutorialSteps.NONE);
         }
     }
 
-    public static boolean hasCraftedPlanksPreviously(LocalPlayer p_205663_, TagKey<Item> p_205664_) {
-        for (Holder<Item> holder : BuiltInRegistries.ITEM.getTagOrEmpty(p_205664_)) {
-            if (p_205663_.getStats().getValue(Stats.ITEM_CRAFTED.get(holder.value())) > 0) {
+    public static boolean hasCraftedPlanksPreviously(final LocalPlayer player, final TagKey<Item> tag) {
+        for (Holder<Item> item : BuiltInRegistries.ITEM.getTagOrEmpty(tag)) {
+            if (player.getStats().getValue(Stats.ITEM_CRAFTED.get(item.value())) > 0) {
                 return true;
             }
         }

@@ -6,10 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface TutorialStepInstance {
     default void clear() {
     }
@@ -17,21 +14,21 @@ public interface TutorialStepInstance {
     default void tick() {
     }
 
-    default void onInput(ClientInput p_368094_) {
+    default void onInput(final ClientInput input) {
     }
 
-    default void onMouse(double p_120614_, double p_120615_) {
+    default void onMouse(final double xd, final double yd) {
     }
 
-    default void onLookAt(ClientLevel p_120617_, HitResult p_120618_) {
+    default void onLookAt(final ClientLevel level, final HitResult hit) {
     }
 
-    default void onDestroyBlock(ClientLevel p_120619_, BlockPos p_120620_, BlockState p_120621_, float p_120622_) {
+    default void onDestroyBlock(final ClientLevel level, final BlockPos pos, final BlockState state, final float percent) {
     }
 
     default void onOpenInventory() {
     }
 
-    default void onGetItem(ItemStack p_120616_) {
+    default void onGetItem(final ItemStack itemStack) {
     }
 }

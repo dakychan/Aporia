@@ -17,12 +17,12 @@ public class BaseCoralFanBlock extends BaseCoralPlantTypeBlock {
         return CODEC;
     }
 
-    protected BaseCoralFanBlock(BlockBehaviour.Properties p_49106_) {
-        super(p_49106_);
+    protected BaseCoralFanBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_49108_, BlockGetter p_49109_, BlockPos p_49110_, CollisionContext p_49111_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 }

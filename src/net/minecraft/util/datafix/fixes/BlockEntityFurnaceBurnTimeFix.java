@@ -6,19 +6,19 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 
 public class BlockEntityFurnaceBurnTimeFix extends NamedEntityFix {
-    public BlockEntityFurnaceBurnTimeFix(Schema p_377710_, String p_378570_) {
-        super(p_377710_, false, "BlockEntityFurnaceBurnTimeFix" + p_378570_, References.BLOCK_ENTITY, p_378570_);
+    public BlockEntityFurnaceBurnTimeFix(final Schema outputSchema, final String entityType) {
+        super(outputSchema, false, "BlockEntityFurnaceBurnTimeFix" + entityType, References.BLOCK_ENTITY, entityType);
     }
 
-    public Dynamic<?> fixBurnTime(Dynamic<?> p_376491_) {
-        p_376491_ = p_376491_.renameField("CookTime", "cooking_time_spent");
-        p_376491_ = p_376491_.renameField("CookTimeTotal", "cooking_total_time");
-        p_376491_ = p_376491_.renameField("BurnTime", "lit_time_remaining");
-        return p_376491_.setFieldIfPresent("lit_total_time", p_376491_.get("lit_time_remaining").result());
+    public Dynamic<?> fixBurnTime(Dynamic<?> data) {
+        data = data.renameField("CookTime", "cooking_time_spent");
+        data = data.renameField("CookTimeTotal", "cooking_total_time");
+        data = data.renameField("BurnTime", "lit_time_remaining");
+        return data.setFieldIfPresent("lit_total_time", data.get("lit_time_remaining").result());
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_376974_) {
-        return p_376974_.update(DSL.remainderFinder(), this::fixBurnTime);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), this::fixBurnTime);
     }
 }

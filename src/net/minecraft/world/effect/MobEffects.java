@@ -7,7 +7,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 
@@ -16,22 +15,30 @@ public class MobEffects {
     public static final Holder<MobEffect> SPEED = register(
         "speed",
         new MobEffect(MobEffectCategory.BENEFICIAL, 3402751)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, Identifier.withDefaultNamespace("effect.speed"), 0.2F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(
+                Attributes.MOVEMENT_SPEED, Identifier.withDefaultNamespace("effect.speed"), 0.2F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+            )
     );
     public static final Holder<MobEffect> SLOWNESS = register(
         "slowness",
         new MobEffect(MobEffectCategory.HARMFUL, 9154528)
-            .addAttributeModifier(Attributes.MOVEMENT_SPEED, Identifier.withDefaultNamespace("effect.slowness"), -0.15F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(
+                Attributes.MOVEMENT_SPEED, Identifier.withDefaultNamespace("effect.slowness"), -0.15F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+            )
     );
     public static final Holder<MobEffect> HASTE = register(
         "haste",
         new MobEffect(MobEffectCategory.BENEFICIAL, 14270531)
-            .addAttributeModifier(Attributes.ATTACK_SPEED, Identifier.withDefaultNamespace("effect.haste"), 0.1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(
+                Attributes.ATTACK_SPEED, Identifier.withDefaultNamespace("effect.haste"), 0.1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+            )
     );
     public static final Holder<MobEffect> MINING_FATIGUE = register(
         "mining_fatigue",
         new MobEffect(MobEffectCategory.HARMFUL, 4866583)
-            .addAttributeModifier(Attributes.ATTACK_SPEED, Identifier.withDefaultNamespace("effect.mining_fatigue"), -0.1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(
+                Attributes.ATTACK_SPEED, Identifier.withDefaultNamespace("effect.mining_fatigue"), -0.1F, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+            )
     );
     public static final Holder<MobEffect> STRENGTH = register(
         "strength",
@@ -43,7 +50,9 @@ public class MobEffects {
     public static final Holder<MobEffect> JUMP_BOOST = register(
         "jump_boost",
         new MobEffect(MobEffectCategory.BENEFICIAL, 16646020)
-            .addAttributeModifier(Attributes.SAFE_FALL_DISTANCE, Identifier.withDefaultNamespace("effect.jump_boost"), 1.0, AttributeModifier.Operation.ADD_VALUE)
+            .addAttributeModifier(
+                Attributes.SAFE_FALL_DISTANCE, Identifier.withDefaultNamespace("effect.jump_boost"), 1.0, AttributeModifier.Operation.ADD_VALUE
+            )
     );
     public static final Holder<MobEffect> NAUSEA = register("nausea", new MobEffect(MobEffectCategory.HARMFUL, 5578058).setBlendDuration(150, 20, 60));
     public static final Holder<MobEffect> REGENERATION = register("regeneration", new RegenerationMobEffect(MobEffectCategory.BENEFICIAL, 13458603));
@@ -53,7 +62,12 @@ public class MobEffects {
     public static final Holder<MobEffect> INVISIBILITY = register(
         "invisibility",
         new MobEffect(MobEffectCategory.BENEFICIAL, 16185078)
-            .addAttributeModifier(Attributes.WAYPOINT_TRANSMIT_RANGE, Identifier.withDefaultNamespace("effect.waypoint_transmit_range_hide"), -1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)
+            .addAttributeModifier(
+                Attributes.WAYPOINT_TRANSMIT_RANGE,
+                Identifier.withDefaultNamespace("effect.waypoint_transmit_range_hide"),
+                -1.0,
+                AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL
+            )
     );
     public static final Holder<MobEffect> BLINDNESS = register("blindness", new MobEffect(MobEffectCategory.HARMFUL, 2039587));
     public static final Holder<MobEffect> NIGHT_VISION = register("night_vision", new MobEffect(MobEffectCategory.BENEFICIAL, 12779366));
@@ -104,19 +118,19 @@ public class MobEffects {
     );
     public static final Holder<MobEffect> WIND_CHARGED = register("wind_charged", new WindChargedMobEffect(MobEffectCategory.HARMFUL, 12438015));
     public static final Holder<MobEffect> WEAVING = register(
-        "weaving", new WeavingMobEffect(MobEffectCategory.HARMFUL, 7891290, p_326758_ -> Mth.randomBetweenInclusive(p_326758_, 2, 3))
+        "weaving", new WeavingMobEffect(MobEffectCategory.HARMFUL, 7891290, random -> Mth.randomBetweenInclusive(random, 2, 3))
     );
-    public static final Holder<MobEffect> OOZING = register("oozing", new OozingMobEffect(MobEffectCategory.HARMFUL, 10092451, p_326759_ -> 2));
+    public static final Holder<MobEffect> OOZING = register("oozing", new OozingMobEffect(MobEffectCategory.HARMFUL, 10092451, random -> 2));
     public static final Holder<MobEffect> INFESTED = register(
-        "infested", new InfestedMobEffect(MobEffectCategory.HARMFUL, 9214860, 0.1F, p_326757_ -> Mth.randomBetweenInclusive(p_326757_, 1, 2))
+        "infested", new InfestedMobEffect(MobEffectCategory.HARMFUL, 9214860, 0.1F, random -> Mth.randomBetweenInclusive(random, 1, 2))
     );
     public static final Holder<MobEffect> BREATH_OF_THE_NAUTILUS = register("breath_of_the_nautilus", new MobEffect(MobEffectCategory.BENEFICIAL, 65518));
 
-    private static Holder<MobEffect> register(String p_19625_, MobEffect p_19626_) {
-        return Registry.registerForHolder(BuiltInRegistries.MOB_EFFECT, Identifier.withDefaultNamespace(p_19625_), p_19626_);
+    private static Holder<MobEffect> register(final String name, final MobEffect mobEffect) {
+        return Registry.registerForHolder(BuiltInRegistries.MOB_EFFECT, Identifier.withDefaultNamespace(name), mobEffect);
     }
 
-    public static Holder<MobEffect> bootstrap(Registry<MobEffect> p_328044_) {
+    public static Holder<MobEffect> bootstrap(final Registry<MobEffect> registry) {
         return SPEED;
     }
 }

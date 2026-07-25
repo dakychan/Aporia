@@ -6,11 +6,11 @@ public class BlockDestructionProgress implements Comparable<BlockDestructionProg
     private final int id;
     private final BlockPos pos;
     private int progress;
-    private int updatedRenderTick;
+    private long updatedRenderTick;
 
-    public BlockDestructionProgress(int p_139979_, BlockPos p_139980_) {
-        this.id = p_139979_;
-        this.pos = p_139980_;
+    public BlockDestructionProgress(final int id, final BlockPos pos) {
+        this.id = id;
+        this.pos = pos;
     }
 
     public int getId() {
@@ -21,33 +21,33 @@ public class BlockDestructionProgress implements Comparable<BlockDestructionProg
         return this.pos;
     }
 
-    public void setProgress(int p_139982_) {
-        if (p_139982_ > 10) {
-            p_139982_ = 10;
+    public void setProgress(int progress) {
+        if (progress > 10) {
+            progress = 10;
         }
 
-        this.progress = p_139982_;
+        this.progress = progress;
     }
 
     public int getProgress() {
         return this.progress;
     }
 
-    public void updateTick(int p_139987_) {
-        this.updatedRenderTick = p_139987_;
+    public void updateTick(final long tick) {
+        this.updatedRenderTick = tick;
     }
 
-    public int getUpdatedRenderTick() {
+    public long getUpdatedRenderTick() {
         return this.updatedRenderTick;
     }
 
     @Override
-    public boolean equals(Object p_139993_) {
-        if (this == p_139993_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
-        } else if (p_139993_ != null && this.getClass() == p_139993_.getClass()) {
-            BlockDestructionProgress blockdestructionprogress = (BlockDestructionProgress)p_139993_;
-            return this.id == blockdestructionprogress.id;
+        } else if (o != null && this.getClass() == o.getClass()) {
+            BlockDestructionProgress that = (BlockDestructionProgress)o;
+            return this.id == that.id;
         } else {
             return false;
         }
@@ -58,9 +58,7 @@ public class BlockDestructionProgress implements Comparable<BlockDestructionProg
         return Integer.hashCode(this.id);
     }
 
-    public int compareTo(BlockDestructionProgress p_139984_) {
-        return this.progress != p_139984_.progress
-            ? Integer.compare(this.progress, p_139984_.progress)
-            : Integer.compare(this.id, p_139984_.id);
+    public int compareTo(final BlockDestructionProgress o) {
+        return this.progress != o.progress ? Integer.compare(this.progress, o.progress) : Integer.compare(this.id, o.id);
     }
 }

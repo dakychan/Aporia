@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -20,8 +19,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class SaplingBlock extends VegetationBlock implements BonemealableBlock {
     public static final MapCodec<SaplingBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422122_ -> p_422122_.group(TreeGrower.CODEC.fieldOf("tree").forGetter(p_310598_ -> p_310598_.treeGrower), propertiesCodec())
-            .apply(p_422122_, SaplingBlock::new)
+        i -> i.group(TreeGrower.CODEC.fieldOf("tree").forGetter(b -> b.treeGrower), propertiesCodec()).apply(i, SaplingBlock::new)
     );
     public static final IntegerProperty STAGE = BlockStateProperties.STAGE;
     private static final VoxelShape SHAPE = Block.column(12.0, 0.0, 12.0);
@@ -32,49 +30,54 @@ public class SaplingBlock extends VegetationBlock implements BonemealableBlock {
         return CODEC;
     }
 
-    protected SaplingBlock(TreeGrower p_311256_, BlockBehaviour.Properties p_55979_) {
-        super(p_55979_);
-        this.treeGrower = p_311256_;
+    protected SaplingBlock(final TreeGrower treeGrower, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.treeGrower = treeGrower;
         this.registerDefaultState(this.stateDefinition.any().setValue(STAGE, 0));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_56008_, BlockGetter p_56009_, BlockPos p_56010_, CollisionContext p_56011_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected void randomTick(BlockState p_222011_, ServerLevel p_222012_, BlockPos p_222013_, RandomSource p_222014_) {
-        if (p_222012_.getMaxLocalRawBrightness(p_222013_.above()) >= 9 && p_222014_.nextInt(7) == 0) {
-            this.advanceTree(p_222012_, p_222013_, p_222011_, p_222014_);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (level.getMaxLocalRawBrightness(pos.above()) >= 9 && random.nextInt(7) == 0) {
+            this.advanceTree(level, pos, state, random);
         }
     }
 
-    public void advanceTree(ServerLevel p_222001_, BlockPos p_222002_, BlockState p_222003_, RandomSource p_222004_) {
-        if (p_222003_.getValue(STAGE) == 0) {
-            p_222001_.setBlock(p_222002_, p_222003_.cycle(STAGE), 260);
+    public void advanceTree(final ServerLevel level, final BlockPos pos, final BlockState state, final RandomSource random) {
+        if (state.getValue(STAGE) == 0) {
+            level.setBlock(pos, state.cycle(STAGE), 260);
         } else {
-            this.treeGrower.growTree(p_222001_, p_222001_.getChunkSource().getGenerator(), p_222002_, p_222003_, p_222004_);
+            this.treeGrower.growTree(level, level.getChunkSource().getGenerator(), pos, state, random);
         }
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_256124_, BlockPos p_55992_, BlockState p_55993_) {
-        return true;
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        if (level instanceof ServerLevel serverLevel) {
+            int heightOffset = this.treeGrower.getMinimumHeight(serverLevel).orElse(0);
+            return level.isInsideBuildHeight(pos.above(heightOffset));
+        } else {
+            return false;
+        }
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_222006_, RandomSource p_222007_, BlockPos p_222008_, BlockState p_222009_) {
-        return p_222006_.random.nextFloat() < 0.45;
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        return level.getRandom().nextFloat() < 0.45;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_221996_, RandomSource p_221997_, BlockPos p_221998_, BlockState p_221999_) {
-        this.advanceTree(p_221996_, p_221998_, p_221999_, p_221997_);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        this.advanceTree(level, pos, state, random);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_56001_) {
-        p_56001_.add(STAGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(STAGE);
     }
 }

@@ -1,12 +1,12 @@
 package net.minecraft.world.level.gamerules;
 
 public interface GameRuleTypeVisitor {
-    default <T> void visit(GameRule<T> p_454918_) {
+    default <T> void visit(final GameRule<T> gameRule) {
     }
 
-    default void visitBoolean(GameRule<Boolean> p_457388_) {
+    default void visitBoolean(final GameRule<Boolean> gameRule) {
     }
 
-    default void visitInteger(GameRule<Integer> p_456365_) {
+    default void visitInteger(final GameRule<Integer> gameRule) {
     }
 }

@@ -2,7 +2,6 @@ package net.minecraft.client.color.item;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.ints.IntList;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.component.DataComponents;
@@ -11,14 +10,11 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.FireworkExplosion;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public record Firework(int defaultColor) implements ItemTintSource {
     public static final MapCodec<Firework> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_375678_ -> p_375678_.group(ExtraCodecs.RGB_COLOR_CODEC.fieldOf("default").forGetter(Firework::defaultColor)).apply(p_375678_, Firework::new)
+        i -> i.group(ExtraCodecs.RGB_COLOR_CODEC.fieldOf("default").forGetter(Firework::defaultColor)).apply(i, Firework::new)
     );
 
     public Firework() {
@@ -26,28 +22,30 @@ public record Firework(int defaultColor) implements ItemTintSource {
     }
 
     @Override
-    public int calculate(ItemStack p_378616_, @Nullable ClientLevel p_375586_, @Nullable LivingEntity p_376697_) {
-        FireworkExplosion fireworkexplosion = p_378616_.get(DataComponents.FIREWORK_EXPLOSION);
-        IntList intlist = fireworkexplosion != null ? fireworkexplosion.colors() : IntList.of();
-        int i = intlist.size();
-        if (i == 0) {
+    public int calculate(final ItemStack itemStack, final @Nullable ClientLevel level, final @Nullable LivingEntity owner) {
+        FireworkExplosion explosion = itemStack.get(DataComponents.FIREWORK_EXPLOSION);
+        IntList explosionColors = explosion != null ? explosion.colors() : IntList.of();
+        int colorCount = explosionColors.size();
+        if (colorCount == 0) {
             return this.defaultColor;
-        } else if (i == 1) {
-            return ARGB.opaque(intlist.getInt(0));
-        } else {
-            int j = 0;
-            int k = 0;
-            int l = 0;
-
-            for (int i1 = 0; i1 < i; i1++) {
-                int j1 = intlist.getInt(i1);
-                j += ARGB.red(j1);
-                k += ARGB.green(j1);
-                l += ARGB.blue(j1);
-            }
-
-            return ARGB.color(j / i, k / i, l / i);
         }
+
+        if (colorCount == 1) {
+            return ARGB.opaque(explosionColors.getInt(0));
+        }
+
+        int totalRed = 0;
+        int totalGreen = 0;
+        int totalBlue = 0;
+
+        for (int i = 0; i < colorCount; i++) {
+            int color = explosionColors.getInt(i);
+            totalRed += ARGB.red(color);
+            totalGreen += ARGB.green(color);
+            totalBlue += ARGB.blue(color);
+        }
+
+        return ARGB.color(totalRed / colorCount, totalGreen / colorCount, totalBlue / colorCount);
     }
 
     @Override

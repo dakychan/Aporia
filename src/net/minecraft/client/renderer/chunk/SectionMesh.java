@@ -1,16 +1,14 @@
 package net.minecraft.client.renderer.chunk;
 
+import com.mojang.blaze3d.IndexType;
 import java.util.Collections;
 import java.util.List;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface SectionMesh extends AutoCloseable {
-    default boolean isDifferentPointOfView(TranslucencyPointOfView p_406250_) {
+    default boolean isDifferentPointOfView(final TranslucencyPointOfView pointOfView) {
         return false;
     }
 
@@ -22,7 +20,7 @@ public interface SectionMesh extends AutoCloseable {
         return false;
     }
 
-    default boolean isEmpty(ChunkSectionLayer p_410400_) {
+    default boolean isEmpty(final ChunkSectionLayer layer) {
         return true;
     }
 
@@ -30,13 +28,16 @@ public interface SectionMesh extends AutoCloseable {
         return Collections.emptyList();
     }
 
-    boolean facesCanSeeEachother(Direction p_407864_, Direction p_408147_);
+    boolean facesCanSeeEachother(Direction direction1, Direction direction2);
 
-    default @Nullable SectionBuffers getBuffers(ChunkSectionLayer p_409041_) {
+    default SectionMesh.@Nullable SectionDraw getSectionDraw(final ChunkSectionLayer layer) {
         return null;
     }
 
     @Override
     default void close() {
+    }
+
+        record SectionDraw(int indexCount, IndexType indexType, boolean hasCustomIndexBuffer) {
     }
 }

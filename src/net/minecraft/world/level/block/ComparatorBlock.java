@@ -37,166 +37,165 @@ public class ComparatorBlock extends DiodeBlock implements EntityBlock {
         return CODEC;
     }
 
-    public ComparatorBlock(BlockBehaviour.Properties p_51857_) {
-        super(p_51857_);
+    public ComparatorBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false).setValue(MODE, ComparatorMode.COMPARE));
     }
 
     @Override
-    protected int getDelay(BlockState p_51912_) {
+    protected int getDelay(final BlockState state) {
         return 2;
     }
 
     @Override
     public BlockState updateShape(
-        BlockState p_298756_,
-        LevelReader p_361531_,
-        ScheduledTickAccess p_368115_,
-        BlockPos p_299729_,
-        Direction p_300136_,
-        BlockPos p_297639_,
-        BlockState p_299304_,
-        RandomSource p_368851_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_300136_ == Direction.DOWN && !this.canSurviveOn(p_361531_, p_297639_, p_299304_)
+        return directionToNeighbour == Direction.DOWN && !this.canSurviveOn(level, neighbourPos, neighbourState)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_298756_, p_361531_, p_368115_, p_299729_, p_300136_, p_297639_, p_299304_, p_368851_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected int getOutputSignal(BlockGetter p_51892_, BlockPos p_51893_, BlockState p_51894_) {
-        BlockEntity blockentity = p_51892_.getBlockEntity(p_51893_);
-        return blockentity instanceof ComparatorBlockEntity ? ((ComparatorBlockEntity)blockentity).getOutputSignal() : 0;
+    protected int getOutputSignal(final BlockGetter level, final BlockPos pos, final BlockState state) {
+        return level.getBlockEntity(pos) instanceof ComparatorBlockEntity comparatorBlockEntity ? comparatorBlockEntity.getOutputSignal() : 0;
     }
 
-    private int calculateOutputSignal(Level p_51904_, BlockPos p_51905_, BlockState p_51906_) {
-        int i = this.getInputSignal(p_51904_, p_51905_, p_51906_);
-        if (i == 0) {
+    private int calculateOutputSignal(final Level level, final BlockPos pos, final BlockState state) {
+        int inputSignal = this.getInputSignal(level, pos, state);
+        if (inputSignal == 0) {
             return 0;
         } else {
-            int j = this.getAlternateSignal(p_51904_, p_51905_, p_51906_);
-            if (j > i) {
+            int alternateSignal = this.getAlternateSignal(level, pos, state);
+            if (alternateSignal > inputSignal) {
                 return 0;
             } else {
-                return p_51906_.getValue(MODE) == ComparatorMode.SUBTRACT ? i - j : i;
+                return state.getValue(MODE) == ComparatorMode.SUBTRACT ? inputSignal - alternateSignal : inputSignal;
             }
         }
     }
 
     @Override
-    protected boolean shouldTurnOn(Level p_51861_, BlockPos p_51862_, BlockState p_51863_) {
-        int i = this.getInputSignal(p_51861_, p_51862_, p_51863_);
-        if (i == 0) {
+    protected boolean shouldTurnOn(final Level level, final BlockPos pos, final BlockState state) {
+        int input = this.getInputSignal(level, pos, state);
+        if (input == 0) {
             return false;
-        } else {
-            int j = this.getAlternateSignal(p_51861_, p_51862_, p_51863_);
-            return i > j ? true : i == j && p_51863_.getValue(MODE) == ComparatorMode.COMPARE;
         }
+
+        int sideInput = this.getAlternateSignal(level, pos, state);
+        return input > sideInput ? true : input == sideInput && state.getValue(MODE) == ComparatorMode.COMPARE;
     }
 
     @Override
-    protected int getInputSignal(Level p_51896_, BlockPos p_51897_, BlockState p_51898_) {
-        int i = super.getInputSignal(p_51896_, p_51897_, p_51898_);
-        Direction direction = p_51898_.getValue(FACING);
-        BlockPos blockpos = p_51897_.relative(direction);
-        BlockState blockstate = p_51896_.getBlockState(blockpos);
-        if (blockstate.hasAnalogOutputSignal()) {
-            i = blockstate.getAnalogOutputSignal(p_51896_, blockpos, direction.getOpposite());
-        } else if (i < 15 && blockstate.isRedstoneConductor(p_51896_, blockpos)) {
-            blockpos = blockpos.relative(direction);
-            blockstate = p_51896_.getBlockState(blockpos);
-            ItemFrame itemframe = this.getItemFrame(p_51896_, direction, blockpos);
-            int j = Math.max(
-                itemframe == null ? Integer.MIN_VALUE : itemframe.getAnalogOutput(),
-                blockstate.hasAnalogOutputSignal() ? blockstate.getAnalogOutputSignal(p_51896_, blockpos, direction.getOpposite()) : Integer.MIN_VALUE
+    protected int getInputSignal(final Level level, final BlockPos pos, final BlockState state) {
+        int resultSignal = super.getInputSignal(level, pos, state);
+        Direction direction = state.getValue(FACING);
+        BlockPos targetPos = pos.relative(direction);
+        BlockState targetState = level.getBlockState(targetPos);
+        if (targetState.hasAnalogOutputSignal()) {
+            resultSignal = targetState.getAnalogOutputSignal(level, targetPos, direction.getOpposite());
+        } else if (resultSignal < 15 && targetState.isRedstoneConductor(level, targetPos)) {
+            targetPos = targetPos.relative(direction);
+            targetState = level.getBlockState(targetPos);
+            ItemFrame itemFrame = this.getItemFrame(level, direction, targetPos);
+            int itemFrameOrBlockSignal = Math.max(
+                itemFrame == null ? Integer.MIN_VALUE : itemFrame.getAnalogOutput(),
+                targetState.hasAnalogOutputSignal() ? targetState.getAnalogOutputSignal(level, targetPos, direction.getOpposite()) : Integer.MIN_VALUE
             );
-            if (j != Integer.MIN_VALUE) {
-                i = j;
+            if (itemFrameOrBlockSignal != Integer.MIN_VALUE) {
+                resultSignal = itemFrameOrBlockSignal;
             }
         }
 
-        return i;
+        return resultSignal;
     }
 
-    private @Nullable ItemFrame getItemFrame(Level p_51865_, Direction p_51866_, BlockPos p_51867_) {
-        List<ItemFrame> list = p_51865_.getEntitiesOfClass(
+    private @Nullable ItemFrame getItemFrame(final Level level, final Direction direction, final BlockPos tPos) {
+        List<ItemFrame> itemFrames = level.getEntitiesOfClass(
             ItemFrame.class,
-            new AABB(
-                p_51867_.getX(), p_51867_.getY(), p_51867_.getZ(), p_51867_.getX() + 1, p_51867_.getY() + 1, p_51867_.getZ() + 1
-            ),
-            p_449893_ -> p_449893_.getDirection() == p_51866_
+            new AABB(tPos.getX(), tPos.getY(), tPos.getZ(), tPos.getX() + 1, tPos.getY() + 1, tPos.getZ() + 1),
+            entity -> entity.getDirection() == direction
         );
-        return list.size() == 1 ? list.get(0) : null;
+        return itemFrames.size() == 1 ? itemFrames.get(0) : null;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_51880_, Level p_51881_, BlockPos p_51882_, Player p_51883_, BlockHitResult p_51885_) {
-        if (!p_51883_.getAbilities().mayBuild) {
+    protected InteractionResult useWithoutItem(BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult) {
+        if (!player.getAbilities().mayBuild) {
             return InteractionResult.PASS;
-        } else {
-            p_51880_ = p_51880_.cycle(MODE);
-            float f = p_51880_.getValue(MODE) == ComparatorMode.SUBTRACT ? 0.55F : 0.5F;
-            p_51881_.playSound(p_51883_, p_51882_, SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 0.3F, f);
-            p_51881_.setBlock(p_51882_, p_51880_, 2);
-            this.refreshOutputState(p_51881_, p_51882_, p_51880_);
-            return InteractionResult.SUCCESS;
         }
+
+        state = state.cycle(MODE);
+        float pitch = state.getValue(MODE) == ComparatorMode.SUBTRACT ? 0.55F : 0.5F;
+        level.playSound(player, pos, SoundEvents.COMPARATOR_CLICK, SoundSource.BLOCKS, 0.3F, pitch);
+        level.setBlock(pos, state, 2);
+        if (level.getBlockState(pos).is(this)) {
+            this.refreshOutputState(level, pos, state);
+        }
+
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected void checkTickOnNeighbor(Level p_51900_, BlockPos p_51901_, BlockState p_51902_) {
-        if (!p_51900_.getBlockTicks().willTickThisTick(p_51901_, this)) {
-            int i = this.calculateOutputSignal(p_51900_, p_51901_, p_51902_);
-            BlockEntity blockentity = p_51900_.getBlockEntity(p_51901_);
-            int j = blockentity instanceof ComparatorBlockEntity ? ((ComparatorBlockEntity)blockentity).getOutputSignal() : 0;
-            if (i != j || p_51902_.getValue(POWERED) != this.shouldTurnOn(p_51900_, p_51901_, p_51902_)) {
-                TickPriority tickpriority = this.shouldPrioritize(p_51900_, p_51901_, p_51902_) ? TickPriority.HIGH : TickPriority.NORMAL;
-                p_51900_.scheduleTick(p_51901_, this, 2, tickpriority);
+    protected void checkTickOnNeighbor(final Level level, final BlockPos pos, final BlockState state) {
+        if (!level.getBlockTicks().willTickThisTick(pos, this)) {
+            int outputValue = this.calculateOutputSignal(level, pos, state);
+            int oldValue = level.getBlockEntity(pos) instanceof ComparatorBlockEntity comparatorBlockEntity ? comparatorBlockEntity.getOutputSignal() : 0;
+            if (outputValue != oldValue || state.getValue(POWERED) != this.shouldTurnOn(level, pos, state)) {
+                TickPriority priority = this.shouldPrioritize(level, pos, state) ? TickPriority.HIGH : TickPriority.NORMAL;
+                level.scheduleTick(pos, this, 2, priority);
             }
         }
     }
 
-    private void refreshOutputState(Level p_51908_, BlockPos p_51909_, BlockState p_51910_) {
-        int i = this.calculateOutputSignal(p_51908_, p_51909_, p_51910_);
-        BlockEntity blockentity = p_51908_.getBlockEntity(p_51909_);
-        int j = 0;
-        if (blockentity instanceof ComparatorBlockEntity comparatorblockentity) {
-            j = comparatorblockentity.getOutputSignal();
-            comparatorblockentity.setOutputSignal(i);
+    private void refreshOutputState(final Level level, final BlockPos pos, final BlockState state) {
+        int outputValue = this.calculateOutputSignal(level, pos, state);
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        int oldValue = 0;
+        if (blockEntity instanceof ComparatorBlockEntity comparatorBlockEntity) {
+            oldValue = comparatorBlockEntity.getOutputSignal();
+            comparatorBlockEntity.setOutputSignal(outputValue);
         }
 
-        if (j != i || p_51910_.getValue(MODE) == ComparatorMode.COMPARE) {
-            boolean flag1 = this.shouldTurnOn(p_51908_, p_51909_, p_51910_);
-            boolean flag = p_51910_.getValue(POWERED);
-            if (flag && !flag1) {
-                p_51908_.setBlock(p_51909_, p_51910_.setValue(POWERED, false), 2);
-            } else if (!flag && flag1) {
-                p_51908_.setBlock(p_51909_, p_51910_.setValue(POWERED, true), 2);
+        if (oldValue != outputValue || state.getValue(MODE) == ComparatorMode.COMPARE) {
+            boolean sourceOn = this.shouldTurnOn(level, pos, state);
+            boolean isOn = state.getValue(POWERED);
+            if (isOn && !sourceOn) {
+                level.setBlock(pos, state.setValue(POWERED, false), 2);
+            } else if (!isOn && sourceOn) {
+                level.setBlock(pos, state.setValue(POWERED, true), 2);
             }
 
-            this.updateNeighborsInFront(p_51908_, p_51909_, p_51910_);
+            this.updateNeighborsInFront(level, pos, state);
         }
     }
 
     @Override
-    protected void tick(BlockState p_221010_, ServerLevel p_221011_, BlockPos p_221012_, RandomSource p_221013_) {
-        this.refreshOutputState(p_221011_, p_221012_, p_221010_);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        this.refreshOutputState(level, pos, state);
     }
 
     @Override
-    protected boolean triggerEvent(BlockState p_51874_, Level p_51875_, BlockPos p_51876_, int p_51877_, int p_51878_) {
-        super.triggerEvent(p_51874_, p_51875_, p_51876_, p_51877_, p_51878_);
-        BlockEntity blockentity = p_51875_.getBlockEntity(p_51876_);
-        return blockentity != null && blockentity.triggerEvent(p_51877_, p_51878_);
+    protected boolean triggerEvent(final BlockState state, final Level level, final BlockPos pos, final int b0, final int b1) {
+        super.triggerEvent(state, level, pos, b0, b1);
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        return blockEntity != null && blockEntity.triggerEvent(b0, b1);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153086_, BlockState p_153087_) {
-        return new ComparatorBlockEntity(p_153086_, p_153087_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new ComparatorBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_51887_) {
-        p_51887_.add(FACING, MODE, POWERED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, MODE, POWERED);
     }
 }

@@ -16,6 +16,7 @@ import net.minecraft.world.level.entity.EntityAccess;
 public class SectionPos extends Vec3i {
     public static final int SECTION_BITS = 4;
     public static final int SECTION_SIZE = 16;
+    public static final int SECTION_BLOCK_COUNT = 4096;
     public static final int SECTION_MASK = 15;
     public static final int SECTION_HALF_SIZE = 8;
     public static final int SECTION_MAX_INDEX = 15;
@@ -33,115 +34,115 @@ public class SectionPos extends Vec3i {
     private static final int RELATIVE_Z_SHIFT = 4;
     public static final StreamCodec<ByteBuf, SectionPos> STREAM_CODEC = ByteBufCodecs.LONG.map(SectionPos::of, SectionPos::asLong);
 
-    SectionPos(int p_123162_, int p_123163_, int p_123164_) {
-        super(p_123162_, p_123163_, p_123164_);
+    private SectionPos(final int x, final int y, final int z) {
+        super(x, y, z);
     }
 
-    public static SectionPos of(int p_123174_, int p_123175_, int p_123176_) {
-        return new SectionPos(p_123174_, p_123175_, p_123176_);
+    public static SectionPos of(final int x, final int y, final int z) {
+        return new SectionPos(x, y, z);
     }
 
-    public static SectionPos of(BlockPos p_123200_) {
-        return new SectionPos(blockToSectionCoord(p_123200_.getX()), blockToSectionCoord(p_123200_.getY()), blockToSectionCoord(p_123200_.getZ()));
+    public static SectionPos of(final BlockPos pos) {
+        return new SectionPos(blockToSectionCoord(pos.getX()), blockToSectionCoord(pos.getY()), blockToSectionCoord(pos.getZ()));
     }
 
-    public static SectionPos of(ChunkPos p_123197_, int p_123198_) {
-        return new SectionPos(p_123197_.x, p_123198_, p_123197_.z);
+    public static SectionPos of(final ChunkPos pos, final int sectionY) {
+        return new SectionPos(pos.x(), sectionY, pos.z());
     }
 
-    public static SectionPos of(EntityAccess p_235862_) {
-        return of(p_235862_.blockPosition());
+    public static SectionPos of(final EntityAccess entity) {
+        return of(entity.blockPosition());
     }
 
-    public static SectionPos of(Position p_235864_) {
-        return new SectionPos(blockToSectionCoord(p_235864_.x()), blockToSectionCoord(p_235864_.y()), blockToSectionCoord(p_235864_.z()));
+    public static SectionPos of(final Position pos) {
+        return new SectionPos(blockToSectionCoord(pos.x()), blockToSectionCoord(pos.y()), blockToSectionCoord(pos.z()));
     }
 
-    public static SectionPos of(long p_123185_) {
-        return new SectionPos(x(p_123185_), y(p_123185_), z(p_123185_));
+    public static SectionPos of(final long sectionNode) {
+        return new SectionPos(x(sectionNode), y(sectionNode), z(sectionNode));
     }
 
-    public static SectionPos bottomOf(ChunkAccess p_175563_) {
-        return of(p_175563_.getPos(), p_175563_.getMinSectionY());
+    public static SectionPos bottomOf(final ChunkAccess chunk) {
+        return of(chunk.getPos(), chunk.getMinSectionY());
     }
 
-    public static long offset(long p_123192_, Direction p_123193_) {
-        return offset(p_123192_, p_123193_.getStepX(), p_123193_.getStepY(), p_123193_.getStepZ());
+    public static long offset(final long sectionNode, final Direction offset) {
+        return offset(sectionNode, offset.getStepX(), offset.getStepY(), offset.getStepZ());
     }
 
-    public static long offset(long p_123187_, int p_123188_, int p_123189_, int p_123190_) {
-        return asLong(x(p_123187_) + p_123188_, y(p_123187_) + p_123189_, z(p_123187_) + p_123190_);
+    public static long offset(final long sectionNode, final int stepX, final int stepY, final int stepZ) {
+        return asLong(x(sectionNode) + stepX, y(sectionNode) + stepY, z(sectionNode) + stepZ);
     }
 
-    public static int posToSectionCoord(double p_175553_) {
-        return blockToSectionCoord(Mth.floor(p_175553_));
+    public static int posToSectionCoord(final double pos) {
+        return blockToSectionCoord(Mth.floor(pos));
     }
 
-    public static int blockToSectionCoord(int p_123172_) {
-        return p_123172_ >> 4;
+    public static int blockToSectionCoord(final int blockCoord) {
+        return blockCoord >> 4;
     }
 
-    public static int blockToSectionCoord(double p_235866_) {
-        return Mth.floor(p_235866_) >> 4;
+    public static int blockToSectionCoord(final double coord) {
+        return Mth.floor(coord) >> 4;
     }
 
-    public static int sectionRelative(int p_123208_) {
-        return p_123208_ & 15;
+    public static int sectionRelative(final int blockCoord) {
+        return blockCoord & 15;
     }
 
-    public static short sectionRelativePos(BlockPos p_123219_) {
-        int i = sectionRelative(p_123219_.getX());
-        int j = sectionRelative(p_123219_.getY());
-        int k = sectionRelative(p_123219_.getZ());
-        return (short)(i << 8 | k << 4 | j << 0);
+    public static short sectionRelativePos(final BlockPos pos) {
+        int x = sectionRelative(pos.getX());
+        int y = sectionRelative(pos.getY());
+        int z = sectionRelative(pos.getZ());
+        return (short)(x << 8 | z << 4 | y << 0);
     }
 
-    public static int sectionRelativeX(short p_123205_) {
-        return p_123205_ >>> 8 & 15;
+    public static int sectionRelativeX(final short relative) {
+        return relative >>> 8 & 15;
     }
 
-    public static int sectionRelativeY(short p_123221_) {
-        return p_123221_ >>> 0 & 15;
+    public static int sectionRelativeY(final short relative) {
+        return relative >>> 0 & 15;
     }
 
-    public static int sectionRelativeZ(short p_123228_) {
-        return p_123228_ >>> 4 & 15;
+    public static int sectionRelativeZ(final short relative) {
+        return relative >>> 4 & 15;
     }
 
-    public int relativeToBlockX(short p_123233_) {
-        return this.minBlockX() + sectionRelativeX(p_123233_);
+    public int relativeToBlockX(final short relative) {
+        return this.minBlockX() + sectionRelativeX(relative);
     }
 
-    public int relativeToBlockY(short p_123238_) {
-        return this.minBlockY() + sectionRelativeY(p_123238_);
+    public int relativeToBlockY(final short relative) {
+        return this.minBlockY() + sectionRelativeY(relative);
     }
 
-    public int relativeToBlockZ(short p_123243_) {
-        return this.minBlockZ() + sectionRelativeZ(p_123243_);
+    public int relativeToBlockZ(final short relative) {
+        return this.minBlockZ() + sectionRelativeZ(relative);
     }
 
-    public BlockPos relativeToBlockPos(short p_123246_) {
-        return new BlockPos(this.relativeToBlockX(p_123246_), this.relativeToBlockY(p_123246_), this.relativeToBlockZ(p_123246_));
+    public BlockPos relativeToBlockPos(final short relative) {
+        return new BlockPos(this.relativeToBlockX(relative), this.relativeToBlockY(relative), this.relativeToBlockZ(relative));
     }
 
-    public static int sectionToBlockCoord(int p_123224_) {
-        return p_123224_ << 4;
+    public static int sectionToBlockCoord(final int sectionCoord) {
+        return sectionCoord << 4;
     }
 
-    public static int sectionToBlockCoord(int p_175555_, int p_175556_) {
-        return sectionToBlockCoord(p_175555_) + p_175556_;
+    public static int sectionToBlockCoord(final int sectionCoord, final int offset) {
+        return sectionToBlockCoord(sectionCoord) + offset;
     }
 
-    public static int x(long p_123214_) {
-        return (int)(p_123214_ << 0 >> 42);
+    public static int x(final long sectionNode) {
+        return (int)(sectionNode << 0 >> 42);
     }
 
-    public static int y(long p_123226_) {
-        return (int)(p_123226_ << 44 >> 44);
+    public static int y(final long sectionNode) {
+        return (int)(sectionNode << 44 >> 44);
     }
 
-    public static int z(long p_123231_) {
-        return (int)(p_123231_ << 22 >> 42);
+    public static int z(final long sectionNode) {
+        return (int)(sectionNode << 22 >> 42);
     }
 
     public int x() {
@@ -180,20 +181,22 @@ public class SectionPos extends Vec3i {
         return sectionToBlockCoord(this.z(), 15);
     }
 
-    public static long blockToSection(long p_123236_) {
-        return asLong(blockToSectionCoord(BlockPos.getX(p_123236_)), blockToSectionCoord(BlockPos.getY(p_123236_)), blockToSectionCoord(BlockPos.getZ(p_123236_)));
+    public static long blockToSection(final long blockNode) {
+        return asLong(
+            blockToSectionCoord(BlockPos.getX(blockNode)), blockToSectionCoord(BlockPos.getY(blockNode)), blockToSectionCoord(BlockPos.getZ(blockNode))
+        );
     }
 
-    public static long getZeroNode(int p_285381_, int p_285068_) {
-        return getZeroNode(asLong(p_285381_, 0, p_285068_));
+    public static long getZeroNode(final int x, final int z) {
+        return getZeroNode(asLong(x, 0, z));
     }
 
-    public static long getZeroNode(long p_123241_) {
-        return p_123241_ & -1048576L;
+    public static long getZeroNode(final long sectionNode) {
+        return sectionNode & -1048576L;
     }
 
-    public static long sectionToChunk(long p_392286_) {
-        return ChunkPos.asLong(x(p_392286_), z(p_392286_));
+    public static long sectionToChunk(final long sectionNode) {
+        return ChunkPos.pack(x(sectionNode), z(sectionNode));
     }
 
     public BlockPos origin() {
@@ -201,7 +204,7 @@ public class SectionPos extends Vec3i {
     }
 
     public BlockPos center() {
-        int i = 8;
+        int delta = 8;
         return this.origin().offset(8, 8, 8);
     }
 
@@ -209,86 +212,80 @@ public class SectionPos extends Vec3i {
         return new ChunkPos(this.x(), this.z());
     }
 
-    public static long asLong(BlockPos p_175569_) {
-        return asLong(blockToSectionCoord(p_175569_.getX()), blockToSectionCoord(p_175569_.getY()), blockToSectionCoord(p_175569_.getZ()));
+    public static long asLong(final BlockPos pos) {
+        return asLong(blockToSectionCoord(pos.getX()), blockToSectionCoord(pos.getY()), blockToSectionCoord(pos.getZ()));
     }
 
-    public static long asLong(int p_123210_, int p_123211_, int p_123212_) {
-        long i = 0L;
-        i |= (p_123210_ & 4194303L) << 42;
-        i |= (p_123211_ & 1048575L) << 0;
-        return i | (p_123212_ & 4194303L) << 20;
+    public static long asLong(final int x, final int y, final int z) {
+        long node = 0L;
+        node |= (x & 4194303L) << 42;
+        node |= (y & 1048575L) << 0;
+        return node | (z & 4194303L) << 20;
     }
 
     public long asLong() {
         return asLong(this.x(), this.y(), this.z());
     }
 
-    public SectionPos offset(int p_175571_, int p_175572_, int p_175573_) {
-        return p_175571_ == 0 && p_175572_ == 0 && p_175573_ == 0
-            ? this
-            : new SectionPos(this.x() + p_175571_, this.y() + p_175572_, this.z() + p_175573_);
+    public SectionPos offset(final int x, final int y, final int z) {
+        return x == 0 && y == 0 && z == 0 ? this : new SectionPos(this.x() + x, this.y() + y, this.z() + z);
     }
 
     public Stream<BlockPos> blocksInside() {
         return BlockPos.betweenClosedStream(this.minBlockX(), this.minBlockY(), this.minBlockZ(), this.maxBlockX(), this.maxBlockY(), this.maxBlockZ());
     }
 
-    public static Stream<SectionPos> cube(SectionPos p_123202_, int p_123203_) {
-        int i = p_123202_.x();
-        int j = p_123202_.y();
-        int k = p_123202_.z();
-        return betweenClosedStream(i - p_123203_, j - p_123203_, k - p_123203_, i + p_123203_, j + p_123203_, k + p_123203_);
+    public static Stream<SectionPos> cube(final SectionPos center, final int radius) {
+        int x = center.x();
+        int y = center.y();
+        int z = center.z();
+        return betweenClosedStream(x - radius, y - radius, z - radius, x + radius, y + radius, z + radius);
     }
 
-    public static Stream<SectionPos> aroundChunk(ChunkPos p_175558_, int p_175559_, int p_175560_, int p_175561_) {
-        int i = p_175558_.x;
-        int j = p_175558_.z;
-        return betweenClosedStream(i - p_175559_, p_175560_, j - p_175559_, i + p_175559_, p_175561_, j + p_175559_);
+    public static Stream<SectionPos> aroundChunk(final ChunkPos center, final int radius, final int minSection, final int maxSection) {
+        int x = center.x();
+        int z = center.z();
+        return betweenClosedStream(x - radius, minSection, z - radius, x + radius, maxSection, z + radius);
     }
 
-    public static Stream<SectionPos> betweenClosedStream(
-        final int p_123178_, final int p_123179_, final int p_123180_, final int p_123181_, final int p_123182_, final int p_123183_
-    ) {
-        return StreamSupport.stream(
-            new AbstractSpliterator<SectionPos>((p_123181_ - p_123178_ + 1) * (p_123182_ - p_123179_ + 1) * (p_123183_ - p_123180_ + 1), 64) {
-                final Cursor3D cursor = new Cursor3D(p_123178_, p_123179_, p_123180_, p_123181_, p_123182_, p_123183_);
+    public static Stream<SectionPos> betweenClosedStream(final int minX, final int minY, final int minZ, final int maxX, final int maxY, final int maxZ) {
+        return StreamSupport.stream(new AbstractSpliterator<SectionPos>((maxX - minX + 1) * (maxY - minY + 1) * (maxZ - minZ + 1), 64) {
+            private final Cursor3D cursor = new Cursor3D(minX, minY, minZ, maxX, maxY, maxZ);
 
-                @Override
-                public boolean tryAdvance(Consumer<? super SectionPos> p_123271_) {
-                    if (this.cursor.advance()) {
-                        p_123271_.accept(new SectionPos(this.cursor.nextX(), this.cursor.nextY(), this.cursor.nextZ()));
-                        return true;
-                    } else {
-                        return false;
-                    }
+            @Override
+            public boolean tryAdvance(final Consumer<? super SectionPos> action) {
+                if (this.cursor.advance()) {
+                    action.accept(new SectionPos(this.cursor.nextX(), this.cursor.nextY(), this.cursor.nextZ()));
+                    return true;
+                } else {
+                    return false;
                 }
-            }, false
-        );
+            }
+        }, false);
     }
 
-    public static void aroundAndAtBlockPos(BlockPos p_194643_, LongConsumer p_194644_) {
-        aroundAndAtBlockPos(p_194643_.getX(), p_194643_.getY(), p_194643_.getZ(), p_194644_);
+    public static void aroundAndAtBlockPos(final BlockPos blockPos, final LongConsumer sectionConsumer) {
+        aroundAndAtBlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ(), sectionConsumer);
     }
 
-    public static void aroundAndAtBlockPos(long p_194640_, LongConsumer p_194641_) {
-        aroundAndAtBlockPos(BlockPos.getX(p_194640_), BlockPos.getY(p_194640_), BlockPos.getZ(p_194640_), p_194641_);
+    public static void aroundAndAtBlockPos(final long blockPos, final LongConsumer sectionConsumer) {
+        aroundAndAtBlockPos(BlockPos.getX(blockPos), BlockPos.getY(blockPos), BlockPos.getZ(blockPos), sectionConsumer);
     }
 
-    public static void aroundAndAtBlockPos(int p_194635_, int p_194636_, int p_194637_, LongConsumer p_194638_) {
-        int i = blockToSectionCoord(p_194635_ - 1);
-        int j = blockToSectionCoord(p_194635_ + 1);
-        int k = blockToSectionCoord(p_194636_ - 1);
-        int l = blockToSectionCoord(p_194636_ + 1);
-        int i1 = blockToSectionCoord(p_194637_ - 1);
-        int j1 = blockToSectionCoord(p_194637_ + 1);
-        if (i == j && k == l && i1 == j1) {
-            p_194638_.accept(asLong(i, k, i1));
+    public static void aroundAndAtBlockPos(final int blockX, final int blockY, final int blockZ, final LongConsumer sectionConsumer) {
+        int minSectionX = blockToSectionCoord(blockX - 1);
+        int maxSectionX = blockToSectionCoord(blockX + 1);
+        int minSectionY = blockToSectionCoord(blockY - 1);
+        int maxSectionY = blockToSectionCoord(blockY + 1);
+        int minSectionZ = blockToSectionCoord(blockZ - 1);
+        int maxSectionZ = blockToSectionCoord(blockZ + 1);
+        if (minSectionX == maxSectionX && minSectionY == maxSectionY && minSectionZ == maxSectionZ) {
+            sectionConsumer.accept(asLong(minSectionX, minSectionY, minSectionZ));
         } else {
-            for (int k1 = i; k1 <= j; k1++) {
-                for (int l1 = k; l1 <= l; l1++) {
-                    for (int i2 = i1; i2 <= j1; i2++) {
-                        p_194638_.accept(asLong(k1, l1, i2));
+            for (int sectionX = minSectionX; sectionX <= maxSectionX; sectionX++) {
+                for (int sectionY = minSectionY; sectionY <= maxSectionY; sectionY++) {
+                    for (int sectionZ = minSectionZ; sectionZ <= maxSectionZ; sectionZ++) {
+                        sectionConsumer.accept(asLong(sectionX, sectionY, sectionZ));
                     }
                 }
             }

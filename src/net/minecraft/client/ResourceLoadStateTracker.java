@@ -8,35 +8,32 @@ import java.util.List;
 import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.server.packs.PackResources;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class ResourceLoadStateTracker {
     private static final Logger LOGGER = LogUtils.getLogger();
     private ResourceLoadStateTracker.@Nullable ReloadState reloadState;
     private int reloadCount;
 
-    public void startReload(ResourceLoadStateTracker.ReloadReason p_168558_, List<PackResources> p_168559_) {
+    public void startReload(final ResourceLoadStateTracker.ReloadReason reloadReason, final List<PackResources> packs) {
         this.reloadCount++;
         if (this.reloadState != null && !this.reloadState.finished) {
             LOGGER.warn("Reload already ongoing, replacing");
         }
 
         this.reloadState = new ResourceLoadStateTracker.ReloadState(
-            p_168558_, p_168559_.stream().map(PackResources::packId).collect(ImmutableList.toImmutableList())
+            reloadReason, packs.stream().map(PackResources::packId).collect(ImmutableList.toImmutableList())
         );
     }
 
-    public void startRecovery(Throwable p_168561_) {
+    public void startRecovery(final Throwable reason) {
         if (this.reloadState == null) {
             LOGGER.warn("Trying to signal reload recovery, but nothing was started");
             this.reloadState = new ResourceLoadStateTracker.ReloadState(ResourceLoadStateTracker.ReloadReason.UNKNOWN, ImmutableList.of());
         }
 
-        this.reloadState.recoveryReloadInfo = new ResourceLoadStateTracker.RecoveryInfo(p_168561_);
+        this.reloadState.recoveryReloadInfo = new ResourceLoadStateTracker.RecoveryInfo(reason);
     }
 
     public void finishReload() {
@@ -47,63 +44,60 @@ public class ResourceLoadStateTracker {
         }
     }
 
-    public void fillCrashReport(CrashReport p_168563_) {
-        CrashReportCategory crashreportcategory = p_168563_.addCategory("Last reload");
-        crashreportcategory.setDetail("Reload number", this.reloadCount);
+    public void fillCrashReport(final CrashReport report) {
+        CrashReportCategory category = report.addCategory("Last reload");
+        category.setDetail("Reload number", this.reloadCount);
         if (this.reloadState != null) {
-            this.reloadState.fillCrashInfo(crashreportcategory);
+            this.reloadState.fillCrashInfo(category);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class RecoveryInfo {
+        private static class RecoveryInfo {
         private final Throwable error;
 
-        RecoveryInfo(Throwable p_168566_) {
-            this.error = p_168566_;
+        private RecoveryInfo(final Throwable error) {
+            this.error = error;
         }
 
-        public void fillCrashInfo(CrashReportCategory p_168569_) {
-            p_168569_.setDetail("Recovery", "Yes");
-            p_168569_.setDetail("Recovery reason", () -> {
-                StringWriter stringwriter = new StringWriter();
-                this.error.printStackTrace(new PrintWriter(stringwriter));
-                return stringwriter.toString();
+        public void fillCrashInfo(final CrashReportCategory category) {
+            category.setDetail("Recovery", "Yes");
+            category.setDetail("Recovery reason", () -> {
+                StringWriter writer = new StringWriter();
+                this.error.printStackTrace(new PrintWriter(writer));
+                return writer.toString();
             });
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum ReloadReason {
+        public enum ReloadReason {
         INITIAL("initial"),
         MANUAL("manual"),
         UNKNOWN("unknown");
 
-        final String name;
+        private final String name;
 
-        private ReloadReason(final String p_168579_) {
-            this.name = p_168579_;
+        ReloadReason(final String name) {
+            this.name = name;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class ReloadState {
+        private static class ReloadState {
         private final ResourceLoadStateTracker.ReloadReason reloadReason;
         private final List<String> packs;
-        ResourceLoadStateTracker.@Nullable RecoveryInfo recoveryReloadInfo;
-        boolean finished;
+        private ResourceLoadStateTracker.@Nullable RecoveryInfo recoveryReloadInfo;
+        private boolean finished;
 
-        ReloadState(ResourceLoadStateTracker.ReloadReason p_168589_, List<String> p_168590_) {
-            this.reloadReason = p_168589_;
-            this.packs = p_168590_;
+        private ReloadState(final ResourceLoadStateTracker.ReloadReason reloadReason, final List<String> packs) {
+            this.reloadReason = reloadReason;
+            this.packs = packs;
         }
 
-        public void fillCrashInfo(CrashReportCategory p_168593_) {
-            p_168593_.setDetail("Reload reason", this.reloadReason.name);
-            p_168593_.setDetail("Finished", this.finished ? "Yes" : "No");
-            p_168593_.setDetail("Packs", () -> String.join(", ", this.packs));
+        public void fillCrashInfo(final CrashReportCategory category) {
+            category.setDetail("Reload reason", this.reloadReason.name);
+            category.setDetail("Finished", this.finished ? "Yes" : "No");
+            category.setDetail("Packs", () -> String.join(", ", this.packs));
             if (this.recoveryReloadInfo != null) {
-                this.recoveryReloadInfo.fillCrashInfo(p_168593_);
+                this.recoveryReloadInfo.fillCrashInfo(category);
             }
         }
     }

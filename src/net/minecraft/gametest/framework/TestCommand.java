@@ -50,7 +50,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
-import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.TestInstanceBlockEntity;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.BlockHitResult;
@@ -67,201 +67,202 @@ public class TestCommand {
     private static final int DEFAULT_X_SIZE = 5;
     private static final int DEFAULT_Y_SIZE = 5;
     private static final int DEFAULT_Z_SIZE = 5;
-    private static final SimpleCommandExceptionType CLEAR_NO_TESTS = new SimpleCommandExceptionType(Component.translatable("commands.test.clear.error.no_tests"));
-    private static final SimpleCommandExceptionType RESET_NO_TESTS = new SimpleCommandExceptionType(Component.translatable("commands.test.reset.error.no_tests"));
+    private static final SimpleCommandExceptionType CLEAR_NO_TESTS = new SimpleCommandExceptionType(
+        Component.translatable("commands.test.clear.error.no_tests")
+    );
+    private static final SimpleCommandExceptionType RESET_NO_TESTS = new SimpleCommandExceptionType(
+        Component.translatable("commands.test.reset.error.no_tests")
+    );
     private static final SimpleCommandExceptionType TEST_INSTANCE_COULD_NOT_BE_FOUND = new SimpleCommandExceptionType(
         Component.translatable("commands.test.error.test_instance_not_found")
     );
-    private static final SimpleCommandExceptionType NO_STRUCTURES_TO_EXPORT = new SimpleCommandExceptionType(Component.literal("Could not find any structures to export"));
-    private static final SimpleCommandExceptionType NO_TEST_INSTANCES = new SimpleCommandExceptionType(Component.translatable("commands.test.error.no_test_instances"));
+    private static final SimpleCommandExceptionType NO_STRUCTURES_TO_EXPORT = new SimpleCommandExceptionType(
+        Component.literal("Could not find any structures to export")
+    );
+    private static final SimpleCommandExceptionType NO_TEST_INSTANCES = new SimpleCommandExceptionType(
+        Component.translatable("commands.test.error.no_test_instances")
+    );
     private static final Dynamic3CommandExceptionType NO_TEST_CONTAINING = new Dynamic3CommandExceptionType(
-        (p_389834_, p_389835_, p_389836_) -> Component.translatableEscape("commands.test.error.no_test_containing_pos", p_389834_, p_389835_, p_389836_)
+        (x, y, z) -> Component.translatableEscape("commands.test.error.no_test_containing_pos", x, y, z)
     );
     private static final DynamicCommandExceptionType TOO_LARGE = new DynamicCommandExceptionType(
-        p_389800_ -> Component.translatableEscape("commands.test.error.too_large", p_389800_)
+        size -> Component.translatableEscape("commands.test.error.too_large", size)
     );
 
-    private static int reset(TestFinder p_397105_) throws CommandSyntaxException {
+    private static int reset(final TestFinder finder) throws CommandSyntaxException {
         stopTests();
-        int i = toGameTestInfos(p_397105_.source(), RetryOptions.noRetries(), p_397105_)
-            .map(p_389815_ -> resetGameTestInfo(p_397105_.source(), p_389815_))
-            .toList()
-            .size();
-        if (i == 0) {
+        int count = toGameTestInfos(finder.source(), RetryOptions.noRetries(), finder).map(info -> resetGameTestInfo(finder.source(), info)).toList().size();
+        if (count == 0) {
             throw CLEAR_NO_TESTS.create();
-        } else {
-            p_397105_.source().sendSuccess(() -> Component.translatable("commands.test.reset.success", i), true);
-            return i;
         }
+
+        finder.source().sendSuccess(() -> Component.translatable("commands.test.reset.success", count), true);
+        return count;
     }
 
-    private static int clear(TestFinder p_395438_) throws CommandSyntaxException {
+    private static int clear(final TestFinder finder) throws CommandSyntaxException {
         stopTests();
-        CommandSourceStack commandsourcestack = p_395438_.source();
-        ServerLevel serverlevel = commandsourcestack.getLevel();
-        List<TestInstanceBlockEntity> list = p_395438_.findTestPos()
-            .flatMap(p_389831_ -> serverlevel.getBlockEntity(p_389831_, BlockEntityType.TEST_INSTANCE_BLOCK).stream())
+        CommandSourceStack source = finder.source();
+        ServerLevel level = source.getLevel();
+        List<TestInstanceBlockEntity> tests = finder.findTestPos()
+            .flatMap(pos -> level.getBlockEntity(pos, BlockEntityTypes.TEST_INSTANCE_BLOCK).stream())
             .toList();
 
-        for (TestInstanceBlockEntity testinstanceblockentity : list) {
-            StructureUtils.clearSpaceForStructure(testinstanceblockentity.getStructureBoundingBox(), serverlevel);
-            testinstanceblockentity.removeBarriers();
-            serverlevel.destroyBlock(testinstanceblockentity.getBlockPos(), false);
+        for (TestInstanceBlockEntity testInstanceBlockEntity : tests) {
+            StructureUtils.clearSpaceForStructure(testInstanceBlockEntity.getTestBoundingBox(), level);
+            testInstanceBlockEntity.removeBarriers();
+            level.destroyBlock(testInstanceBlockEntity.getBlockPos(), false);
         }
 
-        if (list.isEmpty()) {
+        if (tests.isEmpty()) {
             throw CLEAR_NO_TESTS.create();
-        } else {
-            commandsourcestack.sendSuccess(() -> Component.translatable("commands.test.clear.success", list.size()), true);
-            return list.size();
         }
+
+        source.sendSuccess(() -> Component.translatable("commands.test.clear.success", tests.size()), true);
+        return tests.size();
     }
 
-    private static int export(TestFinder p_393674_) throws CommandSyntaxException {
-        CommandSourceStack commandsourcestack = p_393674_.source();
-        ServerLevel serverlevel = commandsourcestack.getLevel();
-        int i = 0;
-        boolean flag = true;
+    private static int export(final TestFinder finder) throws CommandSyntaxException {
+        CommandSourceStack source = finder.source();
+        ServerLevel level = source.getLevel();
+        int count = 0;
+        boolean allGood = true;
 
-        for (Iterator<BlockPos> iterator = p_393674_.findTestPos().iterator(); iterator.hasNext(); i++) {
-            BlockPos blockpos = iterator.next();
-            if (!(serverlevel.getBlockEntity(blockpos) instanceof TestInstanceBlockEntity testinstanceblockentity)) {
+        for (Iterator<BlockPos> iterator = finder.findTestPos().iterator(); iterator.hasNext(); count++) {
+            BlockPos pos = iterator.next();
+            if (!(level.getBlockEntity(pos) instanceof TestInstanceBlockEntity blockEntity)) {
                 throw TEST_INSTANCE_COULD_NOT_BE_FOUND.create();
             }
 
-            if (!testinstanceblockentity.exportTest(commandsourcestack::sendSystemMessage)) {
-                flag = false;
+            if (!blockEntity.exportTest(source::sendSystemMessage)) {
+                allGood = false;
             }
         }
 
-        if (i == 0) {
+        if (count == 0) {
             throw NO_STRUCTURES_TO_EXPORT.create();
-        } else {
-            String s = "Exported " + i + " structures";
-            p_393674_.source().sendSuccess(() -> Component.literal(s), true);
-            return flag ? 0 : 1;
         }
+
+        String message = "Exported " + count + " structures";
+        finder.source().sendSuccess(() -> Component.literal(message), true);
+        return allGood ? 0 : 1;
     }
 
-    private static int verify(TestFinder p_394697_) {
+    private static int verify(final TestFinder finder) {
         stopTests();
-        CommandSourceStack commandsourcestack = p_394697_.source();
-        ServerLevel serverlevel = commandsourcestack.getLevel();
-        BlockPos blockpos = createTestPositionAround(commandsourcestack);
-        Collection<GameTestInfo> collection = Stream.concat(
-                toGameTestInfos(commandsourcestack, RetryOptions.noRetries(), p_394697_), toGameTestInfo(commandsourcestack, RetryOptions.noRetries(), p_394697_, 0)
+        CommandSourceStack source = finder.source();
+        ServerLevel level = source.getLevel();
+        BlockPos testPos = createTestPositionAround(source);
+        Collection<GameTestInfo> infos = Stream.concat(
+                toGameTestInfos(source, RetryOptions.noRetries(), finder), toGameTestInfo(source, RetryOptions.noRetries(), finder, 0)
             )
             .toList();
         FailedTestTracker.forgetFailedTests();
-        Collection<GameTestBatch> collection1 = new ArrayList<>();
+        Collection<GameTestBatch> batches = new ArrayList<>();
 
-        for (GameTestInfo gametestinfo : collection) {
+        for (GameTestInfo info : infos) {
             for (Rotation rotation : Rotation.values()) {
-                Collection<GameTestInfo> collection2 = new ArrayList<>();
+                Collection<GameTestInfo> transformedInfos = new ArrayList<>();
 
                 for (int i = 0; i < 100; i++) {
-                    GameTestInfo gametestinfo1 = new GameTestInfo(gametestinfo.getTestHolder(), rotation, serverlevel, new RetryOptions(1, true));
-                    gametestinfo1.setTestBlockPos(gametestinfo.getTestBlockPos());
-                    collection2.add(gametestinfo1);
+                    GameTestInfo copyInfo = new GameTestInfo(info.getTestHolder(), rotation, level, new RetryOptions(1, true));
+                    copyInfo.setTestBlockPos(info.getTestBlockPos());
+                    transformedInfos.add(copyInfo);
                 }
 
-                GameTestBatch gametestbatch = GameTestBatchFactory.toGameTestBatch(collection2, gametestinfo.getTest().batch(), rotation.ordinal());
-                collection1.add(gametestbatch);
+                GameTestBatch batch = GameTestBatchFactory.toGameTestBatch(transformedInfos, info.getTest().batch(), rotation.ordinal());
+                batches.add(batch);
             }
         }
 
-        StructureGridSpawner structuregridspawner = new StructureGridSpawner(blockpos, 10, true);
-        GameTestRunner gametestrunner = GameTestRunner.Builder.fromBatches(collection1, serverlevel)
+        StructureGridSpawner spawner = new StructureGridSpawner(testPos, 10, true);
+        GameTestRunner runner = GameTestRunner.Builder.fromBatches(batches, level)
             .batcher(GameTestBatchFactory.fromGameTestInfo(100))
-            .newStructureSpawner(structuregridspawner)
-            .existingStructureSpawner(structuregridspawner)
+            .newStructureSpawner(spawner)
+            .existingStructureSpawner(spawner)
             .haltOnError()
             .clearBetweenBatches()
             .build();
-        return trackAndStartRunner(commandsourcestack, gametestrunner);
+        return trackAndStartRunner(source, runner);
     }
 
-    private static int run(TestFinder p_396663_, RetryOptions p_394304_, int p_391302_, int p_395268_) {
+    private static int run(final TestFinder finder, final RetryOptions retryOptions, final int extraRotationSteps, final int testsPerRow) {
         stopTests();
-        CommandSourceStack commandsourcestack = p_396663_.source();
-        ServerLevel serverlevel = commandsourcestack.getLevel();
-        BlockPos blockpos = createTestPositionAround(commandsourcestack);
-        Collection<GameTestInfo> collection = Stream.concat(
-                toGameTestInfos(commandsourcestack, p_394304_, p_396663_), toGameTestInfo(commandsourcestack, p_394304_, p_396663_, p_391302_)
+        CommandSourceStack source = finder.source();
+        ServerLevel level = source.getLevel();
+        BlockPos testPos = createTestPositionAround(source);
+        Collection<GameTestInfo> infos = Stream.concat(
+                toGameTestInfos(source, retryOptions, finder), toGameTestInfo(source, retryOptions, finder, extraRotationSteps)
             )
             .toList();
-        if (collection.isEmpty()) {
-            commandsourcestack.sendSuccess(() -> Component.translatable("commands.test.no_tests"), false);
+        if (infos.isEmpty()) {
+            source.sendSuccess(() -> Component.translatable("commands.test.no_tests"), false);
             return 0;
         } else {
             FailedTestTracker.forgetFailedTests();
-            commandsourcestack.sendSuccess(() -> Component.translatable("commands.test.run.running", collection.size()), false);
-            GameTestRunner gametestrunner = GameTestRunner.Builder.fromInfo(collection, serverlevel)
-                .newStructureSpawner(new StructureGridSpawner(blockpos, p_395268_, false))
+            source.sendSuccess(() -> Component.translatable("commands.test.run.running", infos.size()), false);
+            GameTestRunner runner = GameTestRunner.Builder.fromInfo(infos, level)
+                .newStructureSpawner(new StructureGridSpawner(testPos, testsPerRow, false))
                 .build();
-            return trackAndStartRunner(commandsourcestack, gametestrunner);
+            return trackAndStartRunner(source, runner);
         }
     }
 
-    private static int locate(TestFinder p_392659_) throws CommandSyntaxException {
-        p_392659_.source().sendSystemMessage(Component.translatable("commands.test.locate.started"));
-        MutableInt mutableint = new MutableInt(0);
-        BlockPos blockpos = BlockPos.containing(p_392659_.source().getPosition());
-        p_392659_.findTestPos()
+    private static int locate(final TestFinder finder) throws CommandSyntaxException {
+        finder.source().sendSystemMessage(Component.translatable("commands.test.locate.started"));
+        MutableInt structuresFound = new MutableInt(0);
+        BlockPos sourcePos = BlockPos.containing(finder.source().getPosition());
+        finder.findTestPos()
             .forEach(
-                p_389808_ -> {
-                    if (p_392659_.source().getLevel().getBlockEntity(p_389808_) instanceof TestInstanceBlockEntity testinstanceblockentity) {
-                        Direction direction = testinstanceblockentity.getRotation().rotate(Direction.NORTH);
-                        BlockPos $$8 = testinstanceblockentity.getBlockPos().relative(direction, 2);
-                        int $$9 = (int)direction.getOpposite().toYRot();
-                        String $$10 = String.format(Locale.ROOT, "/tp @s %d %d %d %d 0", $$8.getX(), $$8.getY(), $$8.getZ(), $$9);
-                        int $$11 = blockpos.getX() - p_389808_.getX();
-                        int $$12 = blockpos.getZ() - p_389808_.getZ();
-                        int $$13 = Mth.floor(Mth.sqrt($$11 * $$11 + $$12 * $$12));
-                        MutableComponent $$14 = ComponentUtils.wrapInSquareBrackets(
-                                Component.translatable("chat.coordinates", p_389808_.getX(), p_389808_.getY(), p_389808_.getZ())
+                structurePos -> {
+                    if (finder.source().getLevel().getBlockEntity(structurePos) instanceof TestInstanceBlockEntity testBlock) {
+                        Direction var13 = testBlock.getRotation().rotate(Direction.NORTH);
+                        BlockPos telportPosition = testBlock.getBlockPos().relative(var13, 2);
+                        int teleportYRot = (int)var13.getOpposite().toYRot();
+                        String tpCommand = String.format(
+                            Locale.ROOT, "/tp @s %d %d %d %d 0", telportPosition.getX(), telportPosition.getY(), telportPosition.getZ(), teleportYRot
+                        );
+                        int dx = sourcePos.getX() - structurePos.getX();
+                        int dz = sourcePos.getZ() - structurePos.getZ();
+                        int distance = Mth.floor(Mth.sqrt(dx * dx + dz * dz));
+                        MutableComponent coordinates = ComponentUtils.wrapInSquareBrackets(
+                                Component.translatable("chat.coordinates", structurePos.getX(), structurePos.getY(), structurePos.getZ())
                             )
                             .withStyle(
-                                p_389833_ -> p_389833_.withColor(ChatFormatting.GREEN)
-                                    .withClickEvent(new ClickEvent.SuggestCommand($$10))
+                                s -> s.withColor(ChatFormatting.GREEN)
+                                    .withClickEvent(new ClickEvent.SuggestCommand(tpCommand))
                                     .withHoverEvent(new HoverEvent.ShowText(Component.translatable("chat.coordinates.tooltip")))
                             );
-                        p_392659_.source().sendSuccess(() -> Component.translatable("commands.test.locate.found", $$14, $$13), false);
-                        mutableint.increment();
+                        finder.source().sendSuccess(() -> Component.translatable("commands.test.locate.found", coordinates, distance), false);
+                        structuresFound.increment();
                     }
                 }
             );
-        int i = mutableint.intValue();
-        if (i == 0) {
+        int structures = structuresFound.intValue();
+        if (structures == 0) {
             throw NO_TEST_INSTANCES.create();
-        } else {
-            p_392659_.source().sendSuccess(() -> Component.translatable("commands.test.locate.done", i), true);
-            return i;
         }
+
+        finder.source().sendSuccess(() -> Component.translatable("commands.test.locate.done", structures), true);
+        return structures;
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> runWithRetryOptions(
-        ArgumentBuilder<CommandSourceStack, ?> p_331571_,
-        InCommandFunction<CommandContext<CommandSourceStack>, TestFinder> p_395261_,
-        Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> p_335923_
+        final ArgumentBuilder<CommandSourceStack, ?> runArgument,
+        final InCommandFunction<CommandContext<CommandSourceStack>, TestFinder> finder,
+        final Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> then
     ) {
-        return p_331571_.executes(p_389857_ -> run(p_395261_.apply(p_389857_), RetryOptions.noRetries(), 0, 8))
+        return runArgument.executes(c -> run(finder.apply(c), RetryOptions.noRetries(), 0, 8))
             .then(
                 Commands.argument("numberOfTimes", IntegerArgumentType.integer(0))
-                    .executes(
-                        p_389822_ -> run(
-                            p_395261_.apply(p_389822_), new RetryOptions(IntegerArgumentType.getInteger(p_389822_, "numberOfTimes"), false), 0, 8
-                        )
-                    )
+                    .executes(c -> run(finder.apply(c), new RetryOptions(IntegerArgumentType.getInteger(c, "numberOfTimes"), false), 0, 8))
                     .then(
-                        p_335923_.apply(
+                        then.apply(
                             Commands.argument("untilFailed", BoolArgumentType.bool())
                                 .executes(
-                                    p_389810_ -> run(
-                                        p_395261_.apply(p_389810_),
-                                        new RetryOptions(
-                                            IntegerArgumentType.getInteger(p_389810_, "numberOfTimes"), BoolArgumentType.getBool(p_389810_, "untilFailed")
-                                        ),
+                                    c -> run(
+                                        finder.apply(c),
+                                        new RetryOptions(IntegerArgumentType.getInteger(c, "numberOfTimes"), BoolArgumentType.getBool(c, "untilFailed")),
                                         0,
                                         8
                                     )
@@ -272,37 +273,35 @@ public class TestCommand {
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> runWithRetryOptions(
-        ArgumentBuilder<CommandSourceStack, ?> p_335642_, InCommandFunction<CommandContext<CommandSourceStack>, TestFinder> p_396652_
+        final ArgumentBuilder<CommandSourceStack, ?> runArgument, final InCommandFunction<CommandContext<CommandSourceStack>, TestFinder> finder
     ) {
-        return runWithRetryOptions(p_335642_, p_396652_, p_325997_ -> p_325997_);
+        return runWithRetryOptions(runArgument, finder, a -> a);
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> runWithRetryOptionsAndBuildInfo(
-        ArgumentBuilder<CommandSourceStack, ?> p_328748_, InCommandFunction<CommandContext<CommandSourceStack>, TestFinder> p_395005_
+        final ArgumentBuilder<CommandSourceStack, ?> runArgument, final InCommandFunction<CommandContext<CommandSourceStack>, TestFinder> finder
     ) {
         return runWithRetryOptions(
-            p_328748_,
-            p_395005_,
-            p_325993_ -> p_325993_.then(
+            runArgument,
+            finder,
+            then -> then.then(
                 Commands.argument("rotationSteps", IntegerArgumentType.integer())
                     .executes(
-                        p_389839_ -> run(
-                            p_395005_.apply(p_389839_),
-                            new RetryOptions(IntegerArgumentType.getInteger(p_389839_, "numberOfTimes"), BoolArgumentType.getBool(p_389839_, "untilFailed")),
-                            IntegerArgumentType.getInteger(p_389839_, "rotationSteps"),
+                        c -> run(
+                            finder.apply(c),
+                            new RetryOptions(IntegerArgumentType.getInteger(c, "numberOfTimes"), BoolArgumentType.getBool(c, "untilFailed")),
+                            IntegerArgumentType.getInteger(c, "rotationSteps"),
                             8
                         )
                     )
                     .then(
                         Commands.argument("testsPerRow", IntegerArgumentType.integer())
                             .executes(
-                                p_389844_ -> run(
-                                    p_395005_.apply(p_389844_),
-                                    new RetryOptions(
-                                        IntegerArgumentType.getInteger(p_389844_, "numberOfTimes"), BoolArgumentType.getBool(p_389844_, "untilFailed")
-                                    ),
-                                    IntegerArgumentType.getInteger(p_389844_, "rotationSteps"),
-                                    IntegerArgumentType.getInteger(p_389844_, "testsPerRow")
+                                c -> run(
+                                    finder.apply(c),
+                                    new RetryOptions(IntegerArgumentType.getInteger(c, "numberOfTimes"), BoolArgumentType.getBool(c, "untilFailed")),
+                                    IntegerArgumentType.getInteger(c, "rotationSteps"),
+                                    IntegerArgumentType.getInteger(c, "testsPerRow")
                                 )
                             )
                     )
@@ -310,29 +309,29 @@ public class TestCommand {
         );
     }
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_395323_, CommandBuildContext p_393183_) {
-        ArgumentBuilder<CommandSourceStack, ?> argumentbuilder = runWithRetryOptionsAndBuildInfo(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        ArgumentBuilder<CommandSourceStack, ?> runFailedWithRequiredTestsFlag = runWithRetryOptionsAndBuildInfo(
             Commands.argument("onlyRequiredTests", BoolArgumentType.bool()),
-            p_389854_ -> TestFinder.builder().failedTests(p_389854_, BoolArgumentType.getBool(p_389854_, "onlyRequiredTests"))
+            c -> TestFinder.builder().failedTests(c, BoolArgumentType.getBool(c, "onlyRequiredTests"))
         );
-        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("test")
+        LiteralArgumentBuilder<CommandSourceStack> testCommand = Commands.literal("test")
             .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
             .then(
                 Commands.literal("run")
                     .then(
                         runWithRetryOptionsAndBuildInfo(
-                            Commands.argument("tests", ResourceSelectorArgument.resourceSelector(p_393183_, Registries.TEST_INSTANCE)),
-                            p_405078_ -> TestFinder.builder().byResourceSelection(p_405078_, ResourceSelectorArgument.getSelectedResources(p_405078_, "tests"))
+                            Commands.argument("tests", ResourceSelectorArgument.resourceSelector(context, Registries.TEST_INSTANCE)),
+                            c -> TestFinder.builder().byResourceSelection(c, ResourceSelectorArgument.getSelectedResources(c, "tests"))
                         )
                     )
             )
             .then(
                 Commands.literal("runmultiple")
                     .then(
-                        Commands.argument("tests", ResourceSelectorArgument.resourceSelector(p_393183_, Registries.TEST_INSTANCE))
+                        Commands.argument("tests", ResourceSelectorArgument.resourceSelector(context, Registries.TEST_INSTANCE))
                             .executes(
-                                p_405077_ -> run(
-                                    TestFinder.builder().byResourceSelection(p_405077_, ResourceSelectorArgument.getSelectedResources(p_405077_, "tests")),
+                                c -> run(
+                                    TestFinder.builder().byResourceSelection(c, ResourceSelectorArgument.getSelectedResources(c, "tests")),
                                     RetryOptions.noRetries(),
                                     0,
                                     8
@@ -341,10 +340,10 @@ public class TestCommand {
                             .then(
                                 Commands.argument("amount", IntegerArgumentType.integer())
                                     .executes(
-                                        p_405080_ -> run(
+                                        c -> run(
                                             TestFinder.builder()
-                                                .createMultipleCopies(IntegerArgumentType.getInteger(p_405080_, "amount"))
-                                                .byResourceSelection(p_405080_, ResourceSelectorArgument.getSelectedResources(p_405080_, "tests")),
+                                                .createMultipleCopies(IntegerArgumentType.getInteger(c, "amount"))
+                                                .byResourceSelection(c, ResourceSelectorArgument.getSelectedResources(c, "tests")),
                                             RetryOptions.noRetries(),
                                             0,
                                             8
@@ -356,66 +355,55 @@ public class TestCommand {
             .then(runWithRetryOptions(Commands.literal("runthese"), TestFinder.builder()::allNearby))
             .then(runWithRetryOptions(Commands.literal("runclosest"), TestFinder.builder()::nearest))
             .then(runWithRetryOptions(Commands.literal("runthat"), TestFinder.builder()::lookedAt))
-            .then(runWithRetryOptionsAndBuildInfo(Commands.literal("runfailed").then(argumentbuilder), TestFinder.builder()::failedTests))
+            .then(runWithRetryOptionsAndBuildInfo(Commands.literal("runfailed").then(runFailedWithRequiredTestsFlag), TestFinder.builder()::failedTests))
             .then(
                 Commands.literal("verify")
                     .then(
-                        Commands.argument("tests", ResourceSelectorArgument.resourceSelector(p_393183_, Registries.TEST_INSTANCE))
-                            .executes(
-                                p_405079_ -> verify(TestFinder.builder().byResourceSelection(p_405079_, ResourceSelectorArgument.getSelectedResources(p_405079_, "tests")))
-                            )
+                        Commands.argument("tests", ResourceSelectorArgument.resourceSelector(context, Registries.TEST_INSTANCE))
+                            .executes(c -> verify(TestFinder.builder().byResourceSelection(c, ResourceSelectorArgument.getSelectedResources(c, "tests"))))
                     )
             )
             .then(
                 Commands.literal("locate")
                     .then(
-                        Commands.argument("tests", ResourceSelectorArgument.resourceSelector(p_393183_, Registries.TEST_INSTANCE))
-                            .executes(
-                                p_405076_ -> locate(TestFinder.builder().byResourceSelection(p_405076_, ResourceSelectorArgument.getSelectedResources(p_405076_, "tests")))
-                            )
+                        Commands.argument("tests", ResourceSelectorArgument.resourceSelector(context, Registries.TEST_INSTANCE))
+                            .executes(c -> locate(TestFinder.builder().byResourceSelection(c, ResourceSelectorArgument.getSelectedResources(c, "tests"))))
                     )
             )
-            .then(Commands.literal("resetclosest").executes(p_389837_ -> reset(TestFinder.builder().nearest(p_389837_))))
-            .then(Commands.literal("resetthese").executes(p_389842_ -> reset(TestFinder.builder().allNearby(p_389842_))))
-            .then(Commands.literal("resetthat").executes(p_389840_ -> reset(TestFinder.builder().lookedAt(p_389840_))))
-            .then(Commands.literal("clearthat").executes(p_389813_ -> clear(TestFinder.builder().lookedAt(p_389813_))))
-            .then(Commands.literal("clearthese").executes(p_389845_ -> clear(TestFinder.builder().allNearby(p_389845_))))
+            .then(Commands.literal("resetclosest").executes(c -> reset(TestFinder.builder().nearest(c))))
+            .then(Commands.literal("resetthese").executes(c -> reset(TestFinder.builder().allNearby(c))))
+            .then(Commands.literal("resetthat").executes(c -> reset(TestFinder.builder().lookedAt(c))))
+            .then(Commands.literal("clearthat").executes(c -> clear(TestFinder.builder().lookedAt(c))))
+            .then(Commands.literal("clearthese").executes(c -> clear(TestFinder.builder().allNearby(c))))
             .then(
                 Commands.literal("clearall")
-                    .executes(p_389796_ -> clear(TestFinder.builder().radius(p_389796_, 250)))
+                    .executes(c -> clear(TestFinder.builder().radius(c, 250)))
                     .then(
                         Commands.argument("radius", IntegerArgumentType.integer())
-                            .executes(
-                                p_389820_ -> clear(
-                                    TestFinder.builder().radius(p_389820_, Mth.clamp(IntegerArgumentType.getInteger(p_389820_, "radius"), 0, 1024))
-                                )
-                            )
+                            .executes(c -> clear(TestFinder.builder().radius(c, Mth.clamp(IntegerArgumentType.getInteger(c, "radius"), 0, 1024))))
                     )
             )
-            .then(Commands.literal("stop").executes(p_326006_ -> stopTests()))
+            .then(Commands.literal("stop").executes(c -> stopTests()))
             .then(
                 Commands.literal("pos")
-                    .executes(p_128023_ -> showPos(p_128023_.getSource(), "pos"))
-                    .then(
-                        Commands.argument("var", StringArgumentType.word())
-                            .executes(p_128021_ -> showPos(p_128021_.getSource(), StringArgumentType.getString(p_128021_, "var")))
-                    )
+                    .executes(c -> showPos(c.getSource(), "pos"))
+                    .then(Commands.argument("var", StringArgumentType.word()).executes(c -> showPos(c.getSource(), StringArgumentType.getString(c, "var"))))
             )
             .then(
                 Commands.literal("create")
                     .then(
                         Commands.argument("id", IdentifierArgument.id())
                             .suggests(TestCommand::suggestTestFunction)
-                            .executes(p_448759_ -> createNewStructure(p_448759_.getSource(), IdentifierArgument.getId(p_448759_, "id"), 5, 5, 5))
+                            .executes(c -> createNewStructure(c.getSource(), IdentifierArgument.getId(c, "id"), 5, 5, 5))
                             .then(
                                 Commands.argument("width", IntegerArgumentType.integer())
                                     .executes(
-                                        p_448758_ -> createNewStructure(
-                                            p_448758_.getSource(),
-                                            IdentifierArgument.getId(p_448758_, "id"),
-                                            IntegerArgumentType.getInteger(p_448758_, "width"),
-                                            IntegerArgumentType.getInteger(p_448758_, "width"),
-                                            IntegerArgumentType.getInteger(p_448758_, "width")
+                                        c -> createNewStructure(
+                                            c.getSource(),
+                                            IdentifierArgument.getId(c, "id"),
+                                            IntegerArgumentType.getInteger(c, "width"),
+                                            IntegerArgumentType.getInteger(c, "width"),
+                                            IntegerArgumentType.getInteger(c, "width")
                                         )
                                     )
                                     .then(
@@ -423,12 +411,12 @@ public class TestCommand {
                                             .then(
                                                 Commands.argument("depth", IntegerArgumentType.integer())
                                                     .executes(
-                                                        p_448757_ -> createNewStructure(
-                                                            p_448757_.getSource(),
-                                                            IdentifierArgument.getId(p_448757_, "id"),
-                                                            IntegerArgumentType.getInteger(p_448757_, "width"),
-                                                            IntegerArgumentType.getInteger(p_448757_, "height"),
-                                                            IntegerArgumentType.getInteger(p_448757_, "depth")
+                                                        c -> createNewStructure(
+                                                            c.getSource(),
+                                                            IdentifierArgument.getId(c, "id"),
+                                                            IntegerArgumentType.getInteger(c, "width"),
+                                                            IntegerArgumentType.getInteger(c, "height"),
+                                                            IntegerArgumentType.getInteger(c, "depth")
                                                         )
                                                     )
                                             )
@@ -437,112 +425,118 @@ public class TestCommand {
                     )
             );
         if (SharedConstants.IS_RUNNING_IN_IDE) {
-            literalargumentbuilder = literalargumentbuilder.then(
+            testCommand = testCommand.then(
                     Commands.literal("export")
                         .then(
-                            Commands.argument("test", ResourceArgument.resource(p_393183_, Registries.TEST_INSTANCE))
-                                .executes(p_389829_ -> exportTestStructure(p_389829_.getSource(), ResourceArgument.getResource(p_389829_, "test", Registries.TEST_INSTANCE)))
+                            Commands.argument("test", ResourceArgument.resource(context, Registries.TEST_INSTANCE))
+                                .executes(c -> exportTestStructure(c.getSource(), ResourceArgument.getResource(c, "test", Registries.TEST_INSTANCE)))
                         )
                 )
-                .then(Commands.literal("exportclosest").executes(p_389846_ -> export(TestFinder.builder().nearest(p_389846_))))
-                .then(Commands.literal("exportthese").executes(p_389818_ -> export(TestFinder.builder().allNearby(p_389818_))))
-                .then(Commands.literal("exportthat").executes(p_389802_ -> export(TestFinder.builder().lookedAt(p_389802_))));
+                .then(Commands.literal("exportclosest").executes(c -> export(TestFinder.builder().nearest(c))))
+                .then(Commands.literal("exportthese").executes(c -> export(TestFinder.builder().allNearby(c))))
+                .then(Commands.literal("exportthat").executes(c -> export(TestFinder.builder().lookedAt(c))));
         }
 
-        p_395323_.register(literalargumentbuilder);
+        dispatcher.register(testCommand);
     }
 
-    public static CompletableFuture<Suggestions> suggestTestFunction(CommandContext<CommandSourceStack> p_392312_, SuggestionsBuilder p_393345_) {
-        Stream<String> stream = p_392312_.getSource().registryAccess().lookupOrThrow(Registries.TEST_FUNCTION).listElements().map(Holder::getRegisteredName);
-        return SharedSuggestionProvider.suggest(stream, p_393345_);
+    public static CompletableFuture<Suggestions> suggestTestFunction(final CommandContext<CommandSourceStack> context, final SuggestionsBuilder builder) {
+        Stream<String> testNamesStream = context.getSource()
+            .registryAccess()
+            .lookupOrThrow(Registries.TEST_FUNCTION)
+            .listElements()
+            .map(Holder::getRegisteredName);
+        return SharedSuggestionProvider.suggest(testNamesStream, builder);
     }
 
-    private static int resetGameTestInfo(CommandSourceStack p_394479_, GameTestInfo p_331593_) {
-        TestInstanceBlockEntity testinstanceblockentity = p_331593_.getTestInstanceBlockEntity();
-        testinstanceblockentity.resetTest(p_394479_::sendSystemMessage);
+    private static int resetGameTestInfo(final CommandSourceStack source, final GameTestInfo testInfo) {
+        TestInstanceBlockEntity blockEntity = testInfo.getTestInstanceBlockEntity();
+        blockEntity.resetTest(source::sendSystemMessage);
         return 1;
     }
 
-    private static Stream<GameTestInfo> toGameTestInfos(CommandSourceStack p_329247_, RetryOptions p_336246_, TestPosFinder p_392271_) {
-        return p_392271_.findTestPos().map(p_389850_ -> createGameTestInfo(p_389850_, p_329247_, p_336246_)).flatMap(Optional::stream);
+    private static Stream<GameTestInfo> toGameTestInfos(final CommandSourceStack source, final RetryOptions retryOptions, final TestPosFinder finder) {
+        return finder.findTestPos().map(pos -> createGameTestInfo(pos, source, retryOptions)).flatMap(Optional::stream);
     }
 
-    private static Stream<GameTestInfo> toGameTestInfo(CommandSourceStack p_330917_, RetryOptions p_332428_, TestInstanceFinder p_393793_, int p_327985_) {
-        return p_393793_.findTests()
-            .filter(p_448761_ -> verifyStructureExists(p_330917_, p_448761_.value().structure()))
+    private static Stream<GameTestInfo> toGameTestInfo(
+        final CommandSourceStack source, final RetryOptions retryOptions, final TestInstanceFinder finder, final int rotationSteps
+    ) {
+        return finder.findTests()
+            .filter(test -> verifyStructureExists(source, test.value().structure()))
             .map(
-                p_389828_ -> new GameTestInfo(
-                    (Holder.Reference<GameTestInstance>)p_389828_, StructureUtils.getRotationForRotationSteps(p_327985_), p_330917_.getLevel(), p_332428_
+                test -> new GameTestInfo(
+                    (Holder.Reference<GameTestInstance>)test, StructureUtils.getRotationForRotationSteps(rotationSteps), source.getLevel(), retryOptions
                 )
             );
     }
 
-    private static Optional<GameTestInfo> createGameTestInfo(BlockPos p_332856_, CommandSourceStack p_393532_, RetryOptions p_330368_) {
-        ServerLevel serverlevel = p_393532_.getLevel();
-        if (serverlevel.getBlockEntity(p_332856_) instanceof TestInstanceBlockEntity testinstanceblockentity) {
-            Optional<Holder.Reference<GameTestInstance>> optional = testinstanceblockentity.test()
-                .flatMap(p_393532_.registryAccess().lookupOrThrow(Registries.TEST_INSTANCE)::get);
-            if (optional.isEmpty()) {
-                p_393532_.sendFailure(Component.translatable("commands.test.error.non_existant_test", testinstanceblockentity.getTestName()));
+    private static Optional<GameTestInfo> createGameTestInfo(final BlockPos testBlockPos, final CommandSourceStack source, final RetryOptions retryOptions) {
+        ServerLevel level = source.getLevel();
+        if (level.getBlockEntity(testBlockPos) instanceof TestInstanceBlockEntity blockEntity) {
+            Optional<Holder.Reference<GameTestInstance>> maybeTest = blockEntity.test()
+                .flatMap(source.registryAccess().lookupOrThrow(Registries.TEST_INSTANCE)::get);
+            if (maybeTest.isEmpty()) {
+                source.sendFailure(Component.translatable("commands.test.error.non_existant_test", blockEntity.getTestName()));
                 return Optional.empty();
             } else {
-                Holder.Reference<GameTestInstance> reference = optional.get();
-                GameTestInfo gametestinfo = new GameTestInfo(reference, testinstanceblockentity.getRotation(), serverlevel, p_330368_);
-                gametestinfo.setTestBlockPos(p_332856_);
-                return !verifyStructureExists(p_393532_, gametestinfo.getStructure()) ? Optional.empty() : Optional.of(gametestinfo);
+                Holder.Reference<GameTestInstance> test = maybeTest.get();
+                GameTestInfo testInfo = new GameTestInfo(test, blockEntity.getRotation(), level, retryOptions);
+                testInfo.setTestBlockPos(testBlockPos);
+                return !verifyStructureExists(source, testInfo.getStructure()) ? Optional.empty() : Optional.of(testInfo);
             }
         } else {
-            p_393532_.sendFailure(
-                Component.translatable("commands.test.error.test_instance_not_found.position", p_332856_.getX(), p_332856_.getY(), p_332856_.getZ())
+            source.sendFailure(
+                Component.translatable("commands.test.error.test_instance_not_found.position", testBlockPos.getX(), testBlockPos.getY(), testBlockPos.getZ())
             );
             return Optional.empty();
         }
     }
 
-    private static int createNewStructure(CommandSourceStack p_127968_, Identifier p_457791_, int p_127970_, int p_127971_, int p_127972_) throws CommandSyntaxException {
-        if (p_127970_ <= 48 && p_127971_ <= 48 && p_127972_ <= 48) {
-            ServerLevel serverlevel = p_127968_.getLevel();
-            BlockPos blockpos = createTestPositionAround(p_127968_);
-            TestInstanceBlockEntity testinstanceblockentity = StructureUtils.createNewEmptyTest(
-                p_457791_, blockpos, new Vec3i(p_127970_, p_127971_, p_127972_), Rotation.NONE, serverlevel
-            );
-            BlockPos blockpos1 = testinstanceblockentity.getStructurePos();
-            BlockPos blockpos2 = blockpos1.offset(p_127970_ - 1, 0, p_127972_ - 1);
-            BlockPos.betweenClosedStream(blockpos1, blockpos2).forEach(p_405082_ -> serverlevel.setBlockAndUpdate(p_405082_, Blocks.BEDROCK.defaultBlockState()));
-            p_127968_.sendSuccess(() -> Component.translatable("commands.test.create.success", testinstanceblockentity.getTestName()), true);
+    private static int createNewStructure(final CommandSourceStack source, final Identifier id, final int xSize, final int ySize, final int zSize) throws CommandSyntaxException {
+        if (xSize <= 48 && ySize <= 48 && zSize <= 48) {
+            ServerLevel level = source.getLevel();
+            BlockPos testPos = createTestPositionAround(source);
+            TestInstanceBlockEntity test = StructureUtils.createNewEmptyTest(id, testPos, new Vec3i(xSize, ySize, zSize), Rotation.NONE, level);
+            BlockPos low = test.getStructurePos();
+            BlockPos high = low.offset(xSize - 1, 0, zSize - 1);
+            BlockPos.betweenClosedStream(low, high).forEach(blockPos -> level.setBlockAndUpdate(blockPos, Blocks.BEDROCK.defaultBlockState()));
+            source.sendSuccess(() -> Component.translatable("commands.test.create.success", test.getTestName()), true);
             return 1;
         } else {
             throw TOO_LARGE.create(48);
         }
     }
 
-    private static int showPos(CommandSourceStack p_127960_, String p_127961_) throws CommandSyntaxException {
-        ServerPlayer serverplayer = p_127960_.getPlayerOrException();
-        BlockHitResult blockhitresult = (BlockHitResult)serverplayer.pick(10.0, 1.0F, false);
-        BlockPos blockpos = blockhitresult.getBlockPos();
-        ServerLevel serverlevel = p_127960_.getLevel();
-        Optional<BlockPos> optional = StructureUtils.findTestContainingPos(blockpos, 15, serverlevel);
-        if (optional.isEmpty()) {
-            optional = StructureUtils.findTestContainingPos(blockpos, 250, serverlevel);
+    private static int showPos(final CommandSourceStack source, final String varName) throws CommandSyntaxException {
+        ServerPlayer player = source.getPlayerOrException();
+        BlockHitResult pick = (BlockHitResult)player.pick(10.0, 1.0F, false);
+        BlockPos targetPosAbsolute = pick.getBlockPos();
+        ServerLevel level = source.getLevel();
+        Optional<BlockPos> testBlockPos = StructureUtils.findTestContainingPos(targetPosAbsolute, 15, level);
+        if (testBlockPos.isEmpty()) {
+            testBlockPos = StructureUtils.findTestContainingPos(targetPosAbsolute, 250, level);
         }
 
-        if (optional.isEmpty()) {
-            throw NO_TEST_CONTAINING.create(blockpos.getX(), blockpos.getY(), blockpos.getZ());
-        } else if (serverlevel.getBlockEntity(optional.get()) instanceof TestInstanceBlockEntity testinstanceblockentity) {
-            BlockPos blockpos2 = testinstanceblockentity.getStructurePos();
-            BlockPos blockpos1 = blockpos.subtract(blockpos2);
-            String $$11 = blockpos1.getX() + ", " + blockpos1.getY() + ", " + blockpos1.getZ();
-            String $$12 = testinstanceblockentity.getTestName().getString();
-            MutableComponent $$13 = Component.translatable("commands.test.coordinates", blockpos1.getX(), blockpos1.getY(), blockpos1.getZ())
+        if (testBlockPos.isEmpty()) {
+            throw NO_TEST_CONTAINING.create(targetPosAbsolute.getX(), targetPosAbsolute.getY(), targetPosAbsolute.getZ());
+        } else if (level.getBlockEntity(testBlockPos.get()) instanceof TestInstanceBlockEntity testBlockEntity) {
+            BlockPos var13 = testBlockEntity.getStructurePos();
+            BlockPos targetPosRelative = targetPosAbsolute.subtract(var13);
+            String targetPosDescription = targetPosRelative.getX() + ", " + targetPosRelative.getY() + ", " + targetPosRelative.getZ();
+            String testName = testBlockEntity.getTestName().getString();
+            MutableComponent coords = Component.translatable(
+                    "commands.test.coordinates", targetPosRelative.getX(), targetPosRelative.getY(), targetPosRelative.getZ()
+                )
                 .setStyle(
                     Style.EMPTY
                         .withBold(true)
                         .withColor(ChatFormatting.GREEN)
                         .withHoverEvent(new HoverEvent.ShowText(Component.translatable("commands.test.coordinates.copy")))
-                        .withClickEvent(new ClickEvent.CopyToClipboard("final BlockPos " + p_127961_ + " = new BlockPos(" + $$11 + ");"))
+                        .withClickEvent(new ClickEvent.CopyToClipboard("final BlockPos " + varName + " = new BlockPos(" + targetPosDescription + ");"))
                 );
-            p_127960_.sendSuccess(() -> Component.translatable("commands.test.relative_position", $$12, $$13), false);
-            serverplayer.connection.send(new ClientboundGameTestHighlightPosPacket(blockpos, blockpos1));
+            source.sendSuccess(() -> Component.translatable("commands.test.relative_position", testName, coords), false);
+            player.connection.send(new ClientboundGameTestHighlightPosPacket(targetPosAbsolute, targetPosRelative));
             return 1;
         } else {
             throw TEST_INSTANCE_COULD_NOT_BE_FOUND.create();
@@ -554,68 +548,69 @@ public class TestCommand {
         return 1;
     }
 
-    public static int trackAndStartRunner(CommandSourceStack p_333535_, GameTestRunner p_333430_) {
-        p_333430_.addListener(new TestCommand.TestBatchSummaryDisplayer(p_333535_));
-        MultipleTestTracker multipletesttracker = new MultipleTestTracker(p_333430_.getTestInfos());
-        multipletesttracker.addListener(new TestCommand.TestSummaryDisplayer(p_333535_, multipletesttracker));
-        multipletesttracker.addFailureListener(p_389841_ -> FailedTestTracker.rememberFailedTest(p_389841_.getTestHolder()));
-        p_333430_.start();
+    public static int trackAndStartRunner(final CommandSourceStack source, final GameTestRunner runner) {
+        runner.addListener(new TestCommand.TestBatchSummaryDisplayer(source));
+        MultipleTestTracker tracker = new MultipleTestTracker(runner.getTestInfos());
+        tracker.addListener(new TestCommand.TestSummaryDisplayer(source, tracker));
+        tracker.addFailureListener(testInfo -> FailedTestTracker.rememberFailedTest(testInfo.getTestHolder()));
+        runner.start();
         return 1;
     }
 
-    private static int exportTestStructure(CommandSourceStack p_128011_, Holder<GameTestInstance> p_392480_) {
-        return !TestInstanceBlockEntity.export(p_128011_.getLevel(), p_392480_.value().structure(), p_128011_::sendSystemMessage) ? 0 : 1;
+    private static int exportTestStructure(final CommandSourceStack source, final Holder<GameTestInstance> test) {
+        return !TestInstanceBlockEntity.export(source.getLevel(), test.value().structure(), source::sendSystemMessage) ? 0 : 1;
     }
 
-    private static boolean verifyStructureExists(CommandSourceStack p_395581_, Identifier p_456651_) {
-        if (p_395581_.getLevel().getStructureManager().get(p_456651_).isEmpty()) {
-            p_395581_.sendFailure(Component.translatable("commands.test.error.structure_not_found", Component.translationArg(p_456651_)));
+    private static boolean verifyStructureExists(final CommandSourceStack source, final Identifier structure) {
+        if (source.getLevel().getStructureManager().get(structure).isEmpty()) {
+            source.sendFailure(Component.translatable("commands.test.error.structure_not_found", Component.translationArg(structure)));
             return false;
         } else {
             return true;
         }
     }
 
-    private static BlockPos createTestPositionAround(CommandSourceStack p_313084_) {
-        BlockPos blockpos = BlockPos.containing(p_313084_.getPosition());
-        int i = p_313084_.getLevel().getHeightmapPos(Heightmap.Types.WORLD_SURFACE, blockpos).getY();
-        return new BlockPos(blockpos.getX(), i, blockpos.getZ() + 3);
+    private static BlockPos createTestPositionAround(final CommandSourceStack source) {
+        BlockPos playerPos = BlockPos.containing(source.getPosition());
+        int surfaceY = source.getLevel().getHeightmapPos(Heightmap.Types.WORLD_SURFACE, playerPos).getY();
+        return new BlockPos(playerPos.getX(), surfaceY, playerPos.getZ() + 3);
     }
 
-    record TestBatchSummaryDisplayer(CommandSourceStack source) implements GameTestBatchListener {
+    private record TestBatchSummaryDisplayer(CommandSourceStack source) implements GameTestBatchListener {
         @Override
-        public void testBatchStarting(GameTestBatch p_327831_) {
-            this.source.sendSuccess(() -> Component.translatable("commands.test.batch.starting", p_327831_.environment().getRegisteredName(), p_327831_.index()), true);
+        public void testBatchStarting(final GameTestBatch batch) {
+            this.source.sendSuccess(() -> Component.translatable("commands.test.batch.starting", batch.environment().getRegisteredName(), batch.index()), true);
         }
 
         @Override
-        public void testBatchFinished(GameTestBatch p_335734_) {
+        public void testBatchFinished(final GameTestBatch batch) {
         }
     }
 
     public record TestSummaryDisplayer(CommandSourceStack source, MultipleTestTracker tracker) implements GameTestListener {
         @Override
-        public void testStructureLoaded(GameTestInfo p_128064_) {
+        public void testStructureLoaded(final GameTestInfo testInfo) {
         }
 
         @Override
-        public void testPassed(GameTestInfo p_177797_, GameTestRunner p_333026_) {
+        public void testPassed(final GameTestInfo testInfo, final GameTestRunner runner) {
             this.showTestSummaryIfAllDone();
         }
 
         @Override
-        public void testFailed(GameTestInfo p_128066_, GameTestRunner p_333809_) {
+        public void testFailed(final GameTestInfo testInfo, final GameTestRunner runner) {
             this.showTestSummaryIfAllDone();
         }
 
         @Override
-        public void testAddedForRerun(GameTestInfo p_328539_, GameTestInfo p_335500_, GameTestRunner p_328503_) {
-            this.tracker.addTestToTrack(p_335500_);
+        public void testAddedForRerun(final GameTestInfo original, final GameTestInfo copy, final GameTestRunner runner) {
+            this.tracker.addTestToTrack(copy);
         }
 
         private void showTestSummaryIfAllDone() {
             if (this.tracker.isDone()) {
-                this.source.sendSuccess(() -> Component.translatable("commands.test.summary", this.tracker.getTotalCount()).withStyle(ChatFormatting.WHITE), true);
+                this.source
+                    .sendSuccess(() -> Component.translatable("commands.test.summary", this.tracker.getTotalCount()).withStyle(ChatFormatting.WHITE), true);
                 if (this.tracker.hasFailedRequired()) {
                     this.source.sendFailure(Component.translatable("commands.test.summary.failed", this.tracker.getFailedRequiredCount()));
                 } else {

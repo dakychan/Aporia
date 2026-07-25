@@ -19,29 +19,29 @@ import net.minecraft.world.scores.Scoreboard;
 public class ObjectiveArgument implements ArgumentType<String> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "*", "012");
     private static final DynamicCommandExceptionType ERROR_OBJECTIVE_NOT_FOUND = new DynamicCommandExceptionType(
-        p_308353_ -> Component.translatableEscape("arguments.objective.notFound", p_308353_)
+        name -> Component.translatableEscape("arguments.objective.notFound", name)
     );
     private static final DynamicCommandExceptionType ERROR_OBJECTIVE_READ_ONLY = new DynamicCommandExceptionType(
-        p_308354_ -> Component.translatableEscape("arguments.objective.readonly", p_308354_)
+        name -> Component.translatableEscape("arguments.objective.readonly", name)
     );
 
     public static ObjectiveArgument objective() {
         return new ObjectiveArgument();
     }
 
-    public static Objective getObjective(CommandContext<CommandSourceStack> p_101961_, String p_101962_) throws CommandSyntaxException {
-        String s = p_101961_.getArgument(p_101962_, String.class);
-        Scoreboard scoreboard = p_101961_.getSource().getServer().getScoreboard();
-        Objective objective = scoreboard.getObjective(s);
+    public static Objective getObjective(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        String id = context.getArgument(name, String.class);
+        Scoreboard scoreboard = context.getSource().getServer().getScoreboard();
+        Objective objective = scoreboard.getObjective(id);
         if (objective == null) {
-            throw ERROR_OBJECTIVE_NOT_FOUND.create(s);
+            throw ERROR_OBJECTIVE_NOT_FOUND.create(id);
         } else {
             return objective;
         }
     }
 
-    public static Objective getWritableObjective(CommandContext<CommandSourceStack> p_101966_, String p_101967_) throws CommandSyntaxException {
-        Objective objective = getObjective(p_101966_, p_101967_);
+    public static Objective getWritableObjective(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        Objective objective = getObjective(context, name);
         if (objective.getCriteria().isReadOnly()) {
             throw ERROR_OBJECTIVE_READ_ONLY.create(objective.getName());
         } else {
@@ -49,17 +49,17 @@ public class ObjectiveArgument implements ArgumentType<String> {
         }
     }
 
-    public String parse(StringReader p_101959_) throws CommandSyntaxException {
-        return p_101959_.readUnquotedString();
+    public String parse(final StringReader reader) throws CommandSyntaxException {
+        return reader.readUnquotedString();
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_101974_, SuggestionsBuilder p_101975_) {
-        S s = p_101974_.getSource();
-        if (s instanceof CommandSourceStack commandsourcestack) {
-            return SharedSuggestionProvider.suggest(commandsourcestack.getServer().getScoreboard().getObjectiveNames(), p_101975_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        S rawSource = context.getSource();
+        if (rawSource instanceof CommandSourceStack source) {
+            return SharedSuggestionProvider.suggest(source.getServer().getScoreboard().getObjectiveNames(), builder);
         } else {
-            return s instanceof SharedSuggestionProvider sharedsuggestionprovider ? sharedsuggestionprovider.customSuggestion(p_101974_) : Suggestions.empty();
+            return rawSource instanceof SharedSuggestionProvider source ? source.customSuggestion(context) : Suggestions.empty();
         }
     }
 

@@ -16,16 +16,18 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.function.Function;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-import net.minecraft.client.renderer.block.model.TextureSlots;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.block.dispatch.BlockModelRotation;
+import net.minecraft.client.renderer.block.dispatch.ModelState;
+import net.minecraft.client.resources.model.cuboid.ItemTransforms;
+import net.minecraft.client.resources.model.cuboid.MissingCuboidModel;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class ModelDiscovery {
     private static final Logger LOGGER = LogUtils.getLogger();
     private final Object2ObjectMap<Identifier, ModelDiscovery.ModelWrapper> modelWrappers = new Object2ObjectOpenHashMap<>();
@@ -34,51 +36,51 @@ public class ModelDiscovery {
     private final ResolvableModel.Resolver resolver;
     private final Queue<ModelDiscovery.ModelWrapper> parentDiscoveryQueue = new ArrayDeque<>();
 
-    public ModelDiscovery(Map<Identifier, UnbakedModel> p_362964_, UnbakedModel p_367385_) {
-        this.missingModel = new ModelDiscovery.ModelWrapper(MissingBlockModel.LOCATION, p_367385_, true);
-        this.modelWrappers.put(MissingBlockModel.LOCATION, this.missingModel);
-        this.uncachedResolver = p_448446_ -> {
-            Identifier identifier = (Identifier)p_448446_;
-            UnbakedModel unbakedmodel = p_362964_.get(identifier);
-            if (unbakedmodel == null) {
-                LOGGER.warn("Missing block model: {}", identifier);
+    public ModelDiscovery(final Map<Identifier, UnbakedModel> unbakedModels, final UnbakedModel missingUnbakedModel) {
+        this.missingModel = new ModelDiscovery.ModelWrapper(MissingCuboidModel.LOCATION, missingUnbakedModel, true);
+        this.modelWrappers.put(MissingCuboidModel.LOCATION, this.missingModel);
+        this.uncachedResolver = rawId -> {
+            Identifier id = (Identifier)rawId;
+            UnbakedModel rawModel = unbakedModels.get(id);
+            if (rawModel == null) {
+                LOGGER.warn("Missing block model: {}", id);
                 return this.missingModel;
             } else {
-                return this.createAndQueueWrapper(identifier, unbakedmodel);
+                return this.createAndQueueWrapper(id, rawModel);
             }
         };
         this.resolver = this::getOrCreateModel;
     }
 
-    private static boolean isRoot(UnbakedModel p_394200_) {
-        return p_394200_.parent() == null;
+    private static boolean isRoot(final UnbakedModel model) {
+        return model.parent() == null;
     }
 
-    private ModelDiscovery.ModelWrapper getOrCreateModel(Identifier p_453016_) {
-        return this.modelWrappers.computeIfAbsent(p_453016_, this.uncachedResolver);
+    private ModelDiscovery.ModelWrapper getOrCreateModel(final Identifier id) {
+        return this.modelWrappers.computeIfAbsent(id, this.uncachedResolver);
     }
 
-    private ModelDiscovery.ModelWrapper createAndQueueWrapper(Identifier p_459979_, UnbakedModel p_391978_) {
-        boolean flag = isRoot(p_391978_);
-        ModelDiscovery.ModelWrapper modeldiscovery$modelwrapper = new ModelDiscovery.ModelWrapper(p_459979_, p_391978_, flag);
-        if (!flag) {
-            this.parentDiscoveryQueue.add(modeldiscovery$modelwrapper);
+    private ModelDiscovery.ModelWrapper createAndQueueWrapper(final Identifier id, final UnbakedModel rawModel) {
+        boolean isRoot = isRoot(rawModel);
+        ModelDiscovery.ModelWrapper result = new ModelDiscovery.ModelWrapper(id, rawModel, isRoot);
+        if (!isRoot) {
+            this.parentDiscoveryQueue.add(result);
         }
 
-        return modeldiscovery$modelwrapper;
+        return result;
     }
 
-    public void addRoot(ResolvableModel p_376215_) {
-        p_376215_.resolveDependencies(this.resolver);
+    public void addRoot(final ResolvableModel model) {
+        model.resolveDependencies(this.resolver);
     }
 
-    public void addSpecialModel(Identifier p_460236_, UnbakedModel p_391360_) {
-        if (!isRoot(p_391360_)) {
-            LOGGER.warn("Trying to add non-root special model {}, ignoring", p_460236_);
+    public void addSpecialModel(final Identifier id, final UnbakedModel model) {
+        if (!isRoot(model)) {
+            LOGGER.warn("Trying to add non-root special model {}, ignoring", id);
         } else {
-            ModelDiscovery.ModelWrapper modeldiscovery$modelwrapper = this.modelWrappers.put(p_460236_, this.createAndQueueWrapper(p_460236_, p_391360_));
-            if (modeldiscovery$modelwrapper != null) {
-                LOGGER.warn("Duplicate special model {}", p_460236_);
+            ModelDiscovery.ModelWrapper previous = this.modelWrappers.put(id, this.createAndQueueWrapper(id, model));
+            if (previous != null) {
+                LOGGER.warn("Duplicate special model {}", id);
             }
         }
     }
@@ -88,78 +90,77 @@ public class ModelDiscovery {
     }
 
     public Map<Identifier, ResolvedModel> resolve() {
-        List<ModelDiscovery.ModelWrapper> list = new ArrayList<>();
-        this.discoverDependencies(list);
-        propagateValidity(list);
-        Builder<Identifier, ResolvedModel> builder = ImmutableMap.builder();
-        this.modelWrappers.forEach((p_460758_, p_389606_) -> {
-            if (p_389606_.valid) {
-                builder.put(p_460758_, p_389606_);
+        List<ModelDiscovery.ModelWrapper> toValidate = new ArrayList<>();
+        this.discoverDependencies(toValidate);
+        propagateValidity(toValidate);
+        Builder<Identifier, ResolvedModel> result = ImmutableMap.builder();
+        this.modelWrappers.forEach((location, model) -> {
+            if (model.valid) {
+                result.put(location, model);
             } else {
-                LOGGER.warn("Model {} ignored due to cyclic dependency", p_460758_);
+                LOGGER.warn("Model {} ignored due to cyclic dependency", location);
             }
         });
-        return builder.build();
+        return result.build();
     }
 
-    private void discoverDependencies(List<ModelDiscovery.ModelWrapper> p_396534_) {
-        ModelDiscovery.ModelWrapper modeldiscovery$modelwrapper;
-        while ((modeldiscovery$modelwrapper = this.parentDiscoveryQueue.poll()) != null) {
-            Identifier identifier = Objects.requireNonNull(modeldiscovery$modelwrapper.wrapped.parent());
-            ModelDiscovery.ModelWrapper modeldiscovery$modelwrapper1 = this.getOrCreateModel(identifier);
-            modeldiscovery$modelwrapper.parent = modeldiscovery$modelwrapper1;
-            if (modeldiscovery$modelwrapper1.valid) {
-                modeldiscovery$modelwrapper.valid = true;
+    private void discoverDependencies(final List<ModelDiscovery.ModelWrapper> toValidate) {
+        ModelDiscovery.ModelWrapper current;
+        while ((current = this.parentDiscoveryQueue.poll()) != null) {
+            Identifier parentLocation = Objects.requireNonNull(current.wrapped.parent());
+            ModelDiscovery.ModelWrapper parent = this.getOrCreateModel(parentLocation);
+            current.parent = parent;
+            if (parent.valid) {
+                current.valid = true;
             } else {
-                p_396534_.add(modeldiscovery$modelwrapper);
+                toValidate.add(current);
             }
         }
     }
 
-    private static void propagateValidity(List<ModelDiscovery.ModelWrapper> p_394425_) {
-        boolean flag = true;
+    private static void propagateValidity(final List<ModelDiscovery.ModelWrapper> toValidate) {
+        boolean progressed = true;
 
-        while (flag) {
-            flag = false;
-            Iterator<ModelDiscovery.ModelWrapper> iterator = p_394425_.iterator();
+        while (progressed) {
+            progressed = false;
+            Iterator<ModelDiscovery.ModelWrapper> iterator = toValidate.iterator();
 
             while (iterator.hasNext()) {
-                ModelDiscovery.ModelWrapper modeldiscovery$modelwrapper = iterator.next();
-                if (Objects.requireNonNull(modeldiscovery$modelwrapper.parent).valid) {
-                    modeldiscovery$modelwrapper.valid = true;
+                ModelDiscovery.ModelWrapper model = iterator.next();
+                if (Objects.requireNonNull(model.parent).valid) {
+                    model.valid = true;
                     iterator.remove();
-                    flag = true;
+                    progressed = true;
                 }
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class ModelWrapper implements ResolvedModel {
+        private static class ModelWrapper implements ResolvedModel {
         private static final ModelDiscovery.Slot<Boolean> KEY_AMBIENT_OCCLUSION = slot(0);
         private static final ModelDiscovery.Slot<UnbakedModel.GuiLight> KEY_GUI_LIGHT = slot(1);
         private static final ModelDiscovery.Slot<UnbakedGeometry> KEY_GEOMETRY = slot(2);
         private static final ModelDiscovery.Slot<ItemTransforms> KEY_TRANSFORMS = slot(3);
         private static final ModelDiscovery.Slot<TextureSlots> KEY_TEXTURE_SLOTS = slot(4);
-        private static final ModelDiscovery.Slot<TextureAtlasSprite> KEY_PARTICLE_SPRITE = slot(5);
+        private static final ModelDiscovery.Slot<Material.Baked> KEY_PARTICLE_SPRITE = slot(5);
         private static final ModelDiscovery.Slot<QuadCollection> KEY_DEFAULT_GEOMETRY = slot(6);
         private static final int SLOT_COUNT = 7;
         private final Identifier id;
-        boolean valid;
-        ModelDiscovery.@Nullable ModelWrapper parent;
-        final UnbakedModel wrapped;
+        private boolean valid;
+        private ModelDiscovery.@Nullable ModelWrapper parent;
+        private final UnbakedModel wrapped;
         private final AtomicReferenceArray<@Nullable Object> fixedSlots = new AtomicReferenceArray<>(7);
         private final Map<ModelState, QuadCollection> modelBakeCache = new ConcurrentHashMap<>();
 
-        private static <T> ModelDiscovery.Slot<T> slot(int p_392332_) {
-            Objects.checkIndex(p_392332_, 7);
-            return new ModelDiscovery.Slot<>(p_392332_);
+        private static <T> ModelDiscovery.Slot<T> slot(final int index) {
+            Objects.checkIndex(index, 7);
+            return new ModelDiscovery.Slot<>(index);
         }
 
-        ModelWrapper(Identifier p_454615_, UnbakedModel p_394055_, boolean p_397832_) {
-            this.id = p_454615_;
-            this.wrapped = p_394055_;
-            this.valid = p_397832_;
+        private ModelWrapper(final Identifier id, final UnbakedModel wrapped, final boolean valid) {
+            this.id = id;
+            this.wrapped = wrapped;
+            this.valid = valid;
         }
 
         @Override
@@ -177,18 +178,18 @@ public class ModelDiscovery {
             return this.id.toString();
         }
 
-        private <T> @Nullable T getSlot(ModelDiscovery.Slot<T> p_394981_) {
-            return (T)this.fixedSlots.get(p_394981_.index);
+        private <T> @Nullable T getSlot(final ModelDiscovery.Slot<T> key) {
+            return (T)this.fixedSlots.get(key.index);
         }
 
-        private <T> T updateSlot(ModelDiscovery.Slot<T> p_391987_, T p_391757_) {
-            T t = (T)this.fixedSlots.compareAndExchange(p_391987_.index, null, p_391757_);
-            return t == null ? p_391757_ : t;
+        private <T> T updateSlot(final ModelDiscovery.Slot<T> key, final T value) {
+            T currentValue = (T)this.fixedSlots.compareAndExchange(key.index, null, value);
+            return currentValue == null ? value : currentValue;
         }
 
-        private <T> T getSimpleProperty(ModelDiscovery.Slot<T> p_397608_, Function<ResolvedModel, T> p_393296_) {
-            T t = this.getSlot(p_397608_);
-            return t != null ? t : this.updateSlot(p_397608_, p_393296_.apply(this));
+        private <T> T getSimpleProperty(final ModelDiscovery.Slot<T> key, final Function<ResolvedModel, T> getter) {
+            T result = this.getSlot(key);
+            return result != null ? result : this.updateSlot(key, getter.apply(this));
         }
 
         @Override
@@ -217,28 +218,25 @@ public class ModelDiscovery {
         }
 
         @Override
-        public TextureAtlasSprite resolveParticleSprite(TextureSlots p_396706_, ModelBaker p_393999_) {
-            TextureAtlasSprite textureatlassprite = this.getSlot(KEY_PARTICLE_SPRITE);
-            return textureatlassprite != null ? textureatlassprite : this.updateSlot(KEY_PARTICLE_SPRITE, ResolvedModel.resolveParticleSprite(p_396706_, p_393999_, this));
+        public Material.Baked resolveParticleMaterial(final TextureSlots textureSlots, final ModelBaker baker) {
+            Material.Baked result = this.getSlot(KEY_PARTICLE_SPRITE);
+            return result != null ? result : this.updateSlot(KEY_PARTICLE_SPRITE, ResolvedModel.resolveParticleMaterial(textureSlots, baker, this));
         }
 
-        private QuadCollection bakeDefaultState(TextureSlots p_392267_, ModelBaker p_393576_, ModelState p_391972_) {
-            QuadCollection quadcollection = this.getSlot(KEY_DEFAULT_GEOMETRY);
-            return quadcollection != null ? quadcollection : this.updateSlot(KEY_DEFAULT_GEOMETRY, this.getTopGeometry().bake(p_392267_, p_393576_, p_391972_, this));
+        private QuadCollection bakeDefaultState(final TextureSlots textureSlots, final ModelBaker baker, final ModelState state) {
+            QuadCollection result = this.getSlot(KEY_DEFAULT_GEOMETRY);
+            return result != null ? result : this.updateSlot(KEY_DEFAULT_GEOMETRY, this.getTopGeometry().bake(textureSlots, baker, state, this));
         }
 
         @Override
-        public QuadCollection bakeTopGeometry(TextureSlots p_396404_, ModelBaker p_391625_, ModelState p_396681_) {
-            return p_396681_ == BlockModelRotation.IDENTITY
-                ? this.bakeDefaultState(p_396404_, p_391625_, p_396681_)
-                : this.modelBakeCache.computeIfAbsent(p_396681_, p_394933_ -> {
-                    UnbakedGeometry unbakedgeometry = this.getTopGeometry();
-                    return unbakedgeometry.bake(p_396404_, p_391625_, p_394933_, this);
-                });
+        public QuadCollection bakeTopGeometry(final TextureSlots textureSlots, final ModelBaker baker, final ModelState state) {
+            return state == BlockModelRotation.IDENTITY ? this.bakeDefaultState(textureSlots, baker, state) : this.modelBakeCache.computeIfAbsent(state, s -> {
+                UnbakedGeometry topGeometry = this.getTopGeometry();
+                return topGeometry.bake(textureSlots, baker, s, this);
+            });
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Slot<T>(int index) {
+        private record Slot<T>(int index) {
     }
 }

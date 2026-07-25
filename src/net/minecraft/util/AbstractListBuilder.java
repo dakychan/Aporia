@@ -6,12 +6,12 @@ import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.ListBuilder;
 import java.util.function.UnaryOperator;
 
-abstract class AbstractListBuilder<T, B> implements ListBuilder<T> {
+public abstract class AbstractListBuilder<T, B> implements ListBuilder<T> {
     private final DynamicOps<T> ops;
     protected DataResult<B> builder = DataResult.success(this.initBuilder(), Lifecycle.stable());
 
-    protected AbstractListBuilder(DynamicOps<T> p_393370_) {
-        this.ops = p_393370_;
+    protected AbstractListBuilder(final DynamicOps<T> ops) {
+        this.ops = ops;
     }
 
     @Override
@@ -21,38 +21,38 @@ abstract class AbstractListBuilder<T, B> implements ListBuilder<T> {
 
     protected abstract B initBuilder();
 
-    protected abstract B append(B p_397540_, T p_392540_);
+    protected abstract B append(B builder, T value);
 
-    protected abstract DataResult<T> build(B p_393055_, T p_392422_);
+    protected abstract DataResult<T> build(B builder, T prefix);
 
     @Override
-    public ListBuilder<T> add(T p_392714_) {
-        this.builder = this.builder.map(p_397872_ -> this.append((B)p_397872_, p_392714_));
+    public ListBuilder<T> add(final T value) {
+        this.builder = this.builder.map(b -> this.append((B)b, value));
         return this;
     }
 
     @Override
-    public ListBuilder<T> add(DataResult<T> p_395150_) {
-        this.builder = this.builder.apply2stable(this::append, p_395150_);
+    public ListBuilder<T> add(final DataResult<T> value) {
+        this.builder = this.builder.apply2stable(this::append, value);
         return this;
     }
 
     @Override
-    public ListBuilder<T> withErrorsFrom(DataResult<?> p_392818_) {
-        this.builder = this.builder.flatMap(p_394538_ -> p_392818_.map(p_395945_ -> p_394538_));
+    public ListBuilder<T> withErrorsFrom(final DataResult<?> result) {
+        this.builder = this.builder.flatMap(r -> result.map(v -> r));
         return this;
     }
 
     @Override
-    public ListBuilder<T> mapError(UnaryOperator<String> p_393579_) {
-        this.builder = this.builder.mapError(p_393579_);
+    public ListBuilder<T> mapError(final UnaryOperator<String> onError) {
+        this.builder = this.builder.mapError(onError);
         return this;
     }
 
     @Override
-    public DataResult<T> build(T p_394777_) {
-        DataResult<T> dataresult = this.builder.flatMap(p_397770_ -> this.build((B)p_397770_, p_394777_));
+    public DataResult<T> build(final T prefix) {
+        DataResult<T> result = this.builder.flatMap(b -> this.build((B)b, prefix));
         this.builder = DataResult.success(this.initBuilder(), Lifecycle.stable());
-        return dataresult;
+        return result;
     }
 }

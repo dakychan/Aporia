@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -13,32 +12,33 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
 import net.minecraft.util.valueproviders.UniformInt;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.RotatedPillarBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacer;
 
 public class CherryTrunkPlacer extends TrunkPlacer {
-    private static final Codec<UniformInt> BRANCH_START_CODEC = UniformInt.CODEC
+    private static final Codec<UniformInt> BRANCH_START_CODEC = UniformInt.MAP_CODEC
         .codec()
         .validate(
-            p_275181_ -> p_275181_.getMaxValue() - p_275181_.getMinValue() < 1
+            u -> u.maxInclusive() - u.minInclusive() < 1
                 ? DataResult.error(() -> "Need at least 2 blocks variation for the branch starts to fit both branches")
-                : DataResult.success(p_275181_)
+                : DataResult.success(u)
         );
     public static final MapCodec<CherryTrunkPlacer> CODEC = RecordCodecBuilder.mapCodec(
-        p_327472_ -> trunkPlacerParts(p_327472_)
+        i -> trunkPlacerParts(i)
             .and(
-                p_327472_.group(
-                    IntProvider.codec(1, 3).fieldOf("branch_count").forGetter(p_272644_ -> p_272644_.branchCount),
-                    IntProvider.codec(2, 16).fieldOf("branch_horizontal_length").forGetter(p_273612_ -> p_273612_.branchHorizontalLength),
-                    IntProvider.validateCodec(-16, 0, BRANCH_START_CODEC).fieldOf("branch_start_offset_from_top").forGetter(p_272705_ -> p_272705_.branchStartOffsetFromTop),
-                    IntProvider.codec(-16, 16).fieldOf("branch_end_offset_from_top").forGetter(p_273633_ -> p_273633_.branchEndOffsetFromTop)
+                i.group(
+                    IntProviders.codec(1, 3).fieldOf("branch_count").forGetter(t -> t.branchCount),
+                    IntProviders.codec(2, 16).fieldOf("branch_horizontal_length").forGetter(t -> t.branchHorizontalLength),
+                    IntProviders.validateCodec(-16, 0, BRANCH_START_CODEC).fieldOf("branch_start_offset_from_top").forGetter(t -> t.branchStartOffsetFromTop),
+                    IntProviders.codec(-16, 16).fieldOf("branch_end_offset_from_top").forGetter(t -> t.branchEndOffsetFromTop)
                 )
             )
-            .apply(p_327472_, CherryTrunkPlacer::new)
+            .apply(i, CherryTrunkPlacer::new)
     );
     private final IntProvider branchCount;
     private final IntProvider branchHorizontalLength;
@@ -47,14 +47,20 @@ public class CherryTrunkPlacer extends TrunkPlacer {
     private final IntProvider branchEndOffsetFromTop;
 
     public CherryTrunkPlacer(
-        int p_273281_, int p_273327_, int p_272619_, IntProvider p_272873_, IntProvider p_272789_, UniformInt p_272917_, IntProvider p_272948_
+        final int baseHeight,
+        final int heightRandA,
+        final int heightRandB,
+        final IntProvider branchCount,
+        final IntProvider branchHorizontalLength,
+        final UniformInt branchStartOffsetFromTop,
+        final IntProvider branchEndOffsetFromTop
     ) {
-        super(p_273281_, p_273327_, p_272619_);
-        this.branchCount = p_272873_;
-        this.branchHorizontalLength = p_272789_;
-        this.branchStartOffsetFromTop = p_272917_;
-        this.secondBranchStartOffsetFromTop = UniformInt.of(p_272917_.getMinValue(), p_272917_.getMaxValue() - 1);
-        this.branchEndOffsetFromTop = p_272948_;
+        super(baseHeight, heightRandA, heightRandB);
+        this.branchCount = branchCount;
+        this.branchHorizontalLength = branchHorizontalLength;
+        this.branchStartOffsetFromTop = branchStartOffsetFromTop;
+        this.secondBranchStartOffsetFromTop = UniformInt.of(branchStartOffsetFromTop.minInclusive(), branchStartOffsetFromTop.maxInclusive() - 1);
+        this.branchEndOffsetFromTop = branchEndOffsetFromTop;
     }
 
     @Override
@@ -64,92 +70,116 @@ public class CherryTrunkPlacer extends TrunkPlacer {
 
     @Override
     public List<FoliagePlacer.FoliageAttachment> placeTrunk(
-        LevelSimulatedReader p_272827_,
-        BiConsumer<BlockPos, BlockState> p_272650_,
-        RandomSource p_272993_,
-        int p_272990_,
-        BlockPos p_273471_,
-        TreeConfiguration p_273355_
+        final WorldGenLevel level,
+        final BiConsumer<BlockPos, BlockState> trunkSetter,
+        final RandomSource random,
+        final int treeHeight,
+        final BlockPos origin,
+        final TreeConfiguration config
     ) {
-        setDirtAt(p_272827_, p_272650_, p_272993_, p_273471_.below(), p_273355_);
-        int i = Math.max(0, p_272990_ - 1 + this.branchStartOffsetFromTop.sample(p_272993_));
-        int j = Math.max(0, p_272990_ - 1 + this.secondBranchStartOffsetFromTop.sample(p_272993_));
-        if (j >= i) {
-            j++;
+        placeBelowTrunkBlock(level, trunkSetter, random, origin.below(), config);
+        int firstBranchOffsetFromOrigin = Math.max(0, treeHeight - 1 + this.branchStartOffsetFromTop.sample(random));
+        int secondBranchOffsetFromOrigin = Math.max(0, treeHeight - 1 + this.secondBranchStartOffsetFromTop.sample(random));
+        if (secondBranchOffsetFromOrigin >= firstBranchOffsetFromOrigin) {
+            secondBranchOffsetFromOrigin++;
         }
 
-        int k = this.branchCount.sample(p_272993_);
-        boolean flag = k == 3;
-        boolean flag1 = k >= 2;
-        int l;
-        if (flag) {
-            l = p_272990_;
-        } else if (flag1) {
-            l = Math.max(i, j) + 1;
+        int branchCount = this.branchCount.sample(random);
+        boolean hasMiddleBranch = branchCount == 3;
+        boolean hasBothSideBranches = branchCount >= 2;
+        int trunkHeight;
+        if (hasMiddleBranch) {
+            trunkHeight = treeHeight;
+        } else if (hasBothSideBranches) {
+            trunkHeight = Math.max(firstBranchOffsetFromOrigin, secondBranchOffsetFromOrigin) + 1;
         } else {
-            l = i + 1;
+            trunkHeight = firstBranchOffsetFromOrigin + 1;
         }
 
-        for (int i1 = 0; i1 < l; i1++) {
-            this.placeLog(p_272827_, p_272650_, p_272993_, p_273471_.above(i1), p_273355_);
+        for (int y = 0; y < trunkHeight; y++) {
+            this.placeLog(level, trunkSetter, random, origin.above(y), config);
         }
 
-        List<FoliagePlacer.FoliageAttachment> list = new ArrayList<>();
-        if (flag) {
-            list.add(new FoliagePlacer.FoliageAttachment(p_273471_.above(l), 0, false));
+        List<FoliagePlacer.FoliageAttachment> attachments = new ArrayList<>();
+        if (hasMiddleBranch) {
+            attachments.add(new FoliagePlacer.FoliageAttachment(origin.above(trunkHeight), 0, false));
         }
 
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(p_272993_);
-        Function<BlockState, BlockState> function = p_360615_ -> p_360615_.trySetValue(RotatedPillarBlock.AXIS, direction.getAxis());
-        list.add(this.generateBranch(p_272827_, p_272650_, p_272993_, p_272990_, p_273471_, p_273355_, function, direction, i, i < l - 1, blockpos$mutableblockpos));
-        if (flag1) {
-            list.add(
+        BlockPos.MutableBlockPos logPos = new BlockPos.MutableBlockPos();
+        Direction treeDirection = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+        Function<BlockState, BlockState> sidewaysStateModifier = state -> state.trySetValue(RotatedPillarBlock.AXIS, treeDirection.getAxis());
+        attachments.add(
+            this.generateBranch(
+                level,
+                trunkSetter,
+                random,
+                treeHeight,
+                origin,
+                config,
+                sidewaysStateModifier,
+                treeDirection,
+                firstBranchOffsetFromOrigin,
+                firstBranchOffsetFromOrigin < trunkHeight - 1,
+                logPos
+            )
+        );
+        if (hasBothSideBranches) {
+            attachments.add(
                 this.generateBranch(
-                    p_272827_, p_272650_, p_272993_, p_272990_, p_273471_, p_273355_, function, direction.getOpposite(), j, j < l - 1, blockpos$mutableblockpos
+                    level,
+                    trunkSetter,
+                    random,
+                    treeHeight,
+                    origin,
+                    config,
+                    sidewaysStateModifier,
+                    treeDirection.getOpposite(),
+                    secondBranchOffsetFromOrigin,
+                    secondBranchOffsetFromOrigin < trunkHeight - 1,
+                    logPos
                 )
             );
         }
 
-        return list;
+        return attachments;
     }
 
     private FoliagePlacer.FoliageAttachment generateBranch(
-        LevelSimulatedReader p_272736_,
-        BiConsumer<BlockPos, BlockState> p_273092_,
-        RandomSource p_273449_,
-        int p_272659_,
-        BlockPos p_273743_,
-        TreeConfiguration p_273027_,
-        Function<BlockState, BlockState> p_273558_,
-        Direction p_273712_,
-        int p_272980_,
-        boolean p_272719_,
-        BlockPos.MutableBlockPos p_273496_
+        final WorldGenLevel level,
+        final BiConsumer<BlockPos, BlockState> trunkSetter,
+        final RandomSource random,
+        final int treeHeight,
+        final BlockPos origin,
+        final TreeConfiguration config,
+        final Function<BlockState, BlockState> sidewaysStateModifier,
+        final Direction branchDirection,
+        final int offsetFromOrigin,
+        final boolean middleContinuesUpwards,
+        final BlockPos.MutableBlockPos logPos
     ) {
-        p_273496_.set(p_273743_).move(Direction.UP, p_272980_);
-        int i = p_272659_ - 1 + this.branchEndOffsetFromTop.sample(p_273449_);
-        boolean flag = p_272719_ || i < p_272980_;
-        int j = this.branchHorizontalLength.sample(p_273449_) + (flag ? 1 : 0);
-        BlockPos blockpos = p_273743_.relative(p_273712_, j).above(i);
-        int k = flag ? 2 : 1;
+        logPos.set(origin).move(Direction.UP, offsetFromOrigin);
+        int branchEndPosOffsetFromOrigin = treeHeight - 1 + this.branchEndOffsetFromTop.sample(random);
+        boolean extendBranchAwayFromTrunk = middleContinuesUpwards || branchEndPosOffsetFromOrigin < offsetFromOrigin;
+        int distanceToTrunk = this.branchHorizontalLength.sample(random) + (extendBranchAwayFromTrunk ? 1 : 0);
+        BlockPos branchEndPos = origin.relative(branchDirection, distanceToTrunk).above(branchEndPosOffsetFromOrigin);
+        int stepsHorizontally = extendBranchAwayFromTrunk ? 2 : 1;
 
-        for (int l = 0; l < k; l++) {
-            this.placeLog(p_272736_, p_273092_, p_273449_, p_273496_.move(p_273712_), p_273027_, p_273558_);
+        for (int i = 0; i < stepsHorizontally; i++) {
+            this.placeLog(level, trunkSetter, random, logPos.move(branchDirection), config, sidewaysStateModifier);
         }
 
-        Direction direction = blockpos.getY() > p_273496_.getY() ? Direction.UP : Direction.DOWN;
+        Direction verticalDirection = branchEndPos.getY() > logPos.getY() ? Direction.UP : Direction.DOWN;
 
         while (true) {
-            int i1 = p_273496_.distManhattan(blockpos);
-            if (i1 == 0) {
-                return new FoliagePlacer.FoliageAttachment(blockpos.above(), 0, false);
+            int distance = logPos.distManhattan(branchEndPos);
+            if (distance == 0) {
+                return new FoliagePlacer.FoliageAttachment(branchEndPos.above(), 0, false);
             }
 
-            float f = (float)Math.abs(blockpos.getY() - p_273496_.getY()) / i1;
-            boolean flag1 = p_273449_.nextFloat() < f;
-            p_273496_.move(flag1 ? direction : p_273712_);
-            this.placeLog(p_272736_, p_273092_, p_273449_, p_273496_, p_273027_, flag1 ? Function.identity() : p_273558_);
+            float chanceToGrowVertically = (float)Math.abs(branchEndPos.getY() - logPos.getY()) / distance;
+            boolean growVertically = random.nextFloat() < chanceToGrowVertically;
+            logPos.move(growVertically ? verticalDirection : branchDirection);
+            this.placeLog(level, trunkSetter, random, logPos, config, growVertically ? Function.identity() : sidewaysStateModifier);
         }
     }
 }

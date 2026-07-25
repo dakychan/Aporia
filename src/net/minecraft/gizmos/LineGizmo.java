@@ -7,7 +7,7 @@ public record LineGizmo(Vec3 start, Vec3 end, int color, float width) implements
     public static final float DEFAULT_WIDTH = 3.0F;
 
     @Override
-    public void emit(GizmoPrimitives p_455924_, float p_452251_) {
-        p_455924_.addLine(this.start, this.end, ARGB.multiplyAlpha(this.color, p_452251_), this.width);
+    public void emit(final GizmoPrimitives primitives, final float alphaMultiplier) {
+        primitives.addLine(this.start, this.end, ARGB.multiplyAlpha(this.color, alphaMultiplier), this.width);
     }
 }

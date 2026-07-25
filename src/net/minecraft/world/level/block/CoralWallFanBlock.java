@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
@@ -16,7 +15,7 @@ import net.minecraft.world.level.material.Fluids;
 
 public class CoralWallFanBlock extends BaseCoralWallFanBlock {
     public static final MapCodec<CoralWallFanBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422105_ -> p_422105_.group(CoralBlock.DEAD_CORAL_FIELD.forGetter(p_311712_ -> p_311712_.deadBlock), propertiesCodec()).apply(p_422105_, CoralWallFanBlock::new)
+        i -> i.group(CoralBlock.DEAD_CORAL_FIELD.forGetter(b -> b.deadBlock), propertiesCodec()).apply(i, CoralWallFanBlock::new)
     );
     private final Block deadBlock;
 
@@ -25,43 +24,43 @@ public class CoralWallFanBlock extends BaseCoralWallFanBlock {
         return CODEC;
     }
 
-    protected CoralWallFanBlock(Block p_52202_, BlockBehaviour.Properties p_52203_) {
-        super(p_52203_);
-        this.deadBlock = p_52202_;
+    protected CoralWallFanBlock(final Block deadBlock, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.deadBlock = deadBlock;
     }
 
     @Override
-    protected void onPlace(BlockState p_52217_, Level p_52218_, BlockPos p_52219_, BlockState p_52220_, boolean p_52221_) {
-        this.tryScheduleDieTick(p_52217_, p_52218_, p_52218_, p_52218_.random, p_52219_);
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        this.tryScheduleDieTick(state, level, level, level.getRandom(), pos);
     }
 
     @Override
-    protected void tick(BlockState p_221035_, ServerLevel p_221036_, BlockPos p_221037_, RandomSource p_221038_) {
-        if (!scanForWater(p_221035_, p_221036_, p_221037_)) {
-            p_221036_.setBlock(p_221037_, this.deadBlock.defaultBlockState().setValue(WATERLOGGED, false).setValue(FACING, p_221035_.getValue(FACING)), 2);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!scanForWater(state, level, pos)) {
+            level.setBlock(pos, this.deadBlock.defaultBlockState().setValue(WATERLOGGED, false).setValue(FACING, state.getValue(FACING)), 2);
         }
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_52210_,
-        LevelReader p_367217_,
-        ScheduledTickAccess p_362720_,
-        BlockPos p_52214_,
-        Direction p_52211_,
-        BlockPos p_52215_,
-        BlockState p_52212_,
-        RandomSource p_364592_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_52211_.getOpposite() == p_52210_.getValue(FACING) && !p_52210_.canSurvive(p_367217_, p_52214_)) {
+        if (directionToNeighbour.getOpposite() == state.getValue(FACING) && !state.canSurvive(level, pos)) {
             return Blocks.AIR.defaultBlockState();
-        } else {
-            if (p_52210_.getValue(WATERLOGGED)) {
-                p_362720_.scheduleTick(p_52214_, Fluids.WATER, Fluids.WATER.getTickDelay(p_367217_));
-            }
-
-            this.tryScheduleDieTick(p_52210_, p_367217_, p_362720_, p_364592_, p_52214_);
-            return super.updateShape(p_52210_, p_367217_, p_362720_, p_52214_, p_52211_, p_52215_, p_52212_, p_364592_);
         }
+
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+
+        this.tryScheduleDieTick(state, level, ticks, random, pos);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 }

@@ -4,9 +4,7 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class OptionsGraphicsModeSplitFix extends DataFix {
     private final String newFieldName;
@@ -14,12 +12,14 @@ public class OptionsGraphicsModeSplitFix extends DataFix {
     private final String valueIfFancy;
     private final String valueIfFabulous;
 
-    public OptionsGraphicsModeSplitFix(Schema p_452599_, String p_459191_, String p_456526_, String p_458400_, String p_453865_) {
-        super(p_452599_, true);
-        this.newFieldName = p_459191_;
-        this.valueIfFast = p_456526_;
-        this.valueIfFancy = p_458400_;
-        this.valueIfFabulous = p_453865_;
+    public OptionsGraphicsModeSplitFix(
+        final Schema outputSchema, final String newFieldName, final String valueIfFast, final String valueIfFancy, final String valueIfFabulous
+    ) {
+        super(outputSchema, true);
+        this.newFieldName = newFieldName;
+        this.valueIfFast = valueIfFast;
+        this.valueIfFancy = valueIfFancy;
+        this.valueIfFabulous = valueIfFabulous;
     }
 
     @Override
@@ -27,21 +27,18 @@ public class OptionsGraphicsModeSplitFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "graphicsMode split to " + this.newFieldName,
             this.getInputSchema().getType(References.OPTIONS),
-            p_455613_ -> p_455613_.update(
+            input -> input.update(
                 DSL.remainderFinder(),
-                p_452604_ -> DataFixUtils.orElseGet(
-                    p_452604_.get("graphicsMode")
-                        .asString()
-                        .map(p_453500_ -> p_452604_.set(this.newFieldName, p_452604_.createString(this.getValue(p_453500_))))
-                        .result(),
-                    () -> p_452604_.set(this.newFieldName, p_452604_.createString(this.valueIfFancy))
+                tag -> DataFixUtils.orElseGet(
+                    tag.get("graphicsMode").asString().map(mode -> tag.set(this.newFieldName, tag.createString(this.getValue(mode)))).result(),
+                    () -> tag.set(this.newFieldName, tag.createString(this.valueIfFancy))
                 )
             )
         );
     }
 
-    private String getValue(String p_456527_) {
-        return switch (p_456527_) {
+    private String getValue(final String mode) {
+        return switch (mode) {
             case "2" -> this.valueIfFabulous;
             case "0" -> this.valueIfFast;
             default -> this.valueIfFancy;

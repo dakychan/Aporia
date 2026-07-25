@@ -7,12 +7,12 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 
 public class Raft extends AbstractBoat {
-    public Raft(EntityType<? extends Raft> p_453161_, Level p_451278_, Supplier<Item> p_458638_) {
-        super(p_453161_, p_451278_, p_458638_);
+    public Raft(final EntityType<? extends Raft> type, final Level level, final Supplier<Item> dropItem) {
+        super(type, level, dropItem);
     }
 
     @Override
-    protected double rideHeight(EntityDimensions p_459805_) {
-        return p_459805_.height() * 0.8888889F;
+    protected double rideHeight(final EntityDimensions dimensions) {
+        return dimensions.height() * 0.8888889F;
     }
 }

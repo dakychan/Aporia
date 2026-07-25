@@ -7,25 +7,25 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jspecify.annotations.Nullable;
 
 public interface LevelWriter {
-    boolean setBlock(BlockPos p_46947_, BlockState p_46948_, @Block.UpdateFlags int p_46949_, int p_46950_);
+    boolean setBlock(BlockPos pos, BlockState blockState, @Block.UpdateFlags int updateFlags, int updateLimit);
 
-    default boolean setBlock(BlockPos p_46944_, BlockState p_46945_, @Block.UpdateFlags int p_46946_) {
-        return this.setBlock(p_46944_, p_46945_, p_46946_, 512);
+    default boolean setBlock(final BlockPos pos, final BlockState blockState, final @Block.UpdateFlags int updateFlags) {
+        return this.setBlock(pos, blockState, updateFlags, 512);
     }
 
-    boolean removeBlock(BlockPos p_46951_, boolean p_46952_);
+    boolean removeBlock(BlockPos pos, boolean movedByPiston);
 
-    default boolean destroyBlock(BlockPos p_46962_, boolean p_46963_) {
-        return this.destroyBlock(p_46962_, p_46963_, null);
+    default boolean destroyBlock(final BlockPos pos, final boolean dropResources) {
+        return this.destroyBlock(pos, dropResources, null);
     }
 
-    default boolean destroyBlock(BlockPos p_46954_, boolean p_46955_, @Nullable Entity p_46956_) {
-        return this.destroyBlock(p_46954_, p_46955_, p_46956_, 512);
+    default boolean destroyBlock(final BlockPos pos, final boolean dropResources, final @Nullable Entity breaker) {
+        return this.destroyBlock(pos, dropResources, breaker, 512);
     }
 
-    boolean destroyBlock(BlockPos p_46957_, boolean p_46958_, @Nullable Entity p_46959_, int p_46960_);
+    boolean destroyBlock(BlockPos pos, boolean dropResources, @Nullable Entity breaker, int updateLimit);
 
-    default boolean addFreshEntity(Entity p_46964_) {
+    default boolean addFreshEntity(final Entity entity) {
         return false;
     }
 }

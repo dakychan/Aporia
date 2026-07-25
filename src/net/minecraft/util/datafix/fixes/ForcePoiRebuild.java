@@ -7,25 +7,24 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import java.util.Objects;
 
 public class ForcePoiRebuild extends DataFix {
-    public ForcePoiRebuild(Schema p_15821_, boolean p_15822_) {
-        super(p_15821_, p_15822_);
+    public ForcePoiRebuild(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<Pair<String, Dynamic<?>>> type = DSL.named(References.POI_CHUNK.typeName(), DSL.remainderType());
-        if (!Objects.equals(type, this.getInputSchema().getType(References.POI_CHUNK))) {
+        Type<Pair<String, Dynamic<?>>> poiChunkType = DSL.named(References.POI_CHUNK.typeName(), DSL.remainderType());
+        if (!Objects.equals(poiChunkType, this.getInputSchema().getType(References.POI_CHUNK))) {
             throw new IllegalStateException("Poi type is not what was expected.");
         } else {
-            return this.fixTypeEverywhere("POI rebuild", type, p_15828_ -> p_145354_ -> p_145354_.mapSecond(ForcePoiRebuild::cap));
+            return this.fixTypeEverywhere("POI rebuild", poiChunkType, ops -> input -> input.mapSecond(ForcePoiRebuild::cap));
         }
     }
 
-    private static <T> Dynamic<T> cap(Dynamic<T> p_15826_) {
-        return p_15826_.update("Sections", p_15832_ -> p_15832_.updateMapValues(p_145352_ -> p_145352_.mapSecond(p_145356_ -> p_145356_.remove("Valid"))));
+    private static <T> Dynamic<T> cap(final Dynamic<T> input) {
+        return input.update("Sections", sections -> sections.updateMapValues(entry -> entry.mapSecond(section -> section.remove("Valid"))));
     }
 }

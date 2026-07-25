@@ -3,10 +3,7 @@ package net.minecraft.client.multiplayer.chat.report;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum ReportReason {
     I_WANT_TO_REPORT_THEM("i_want_to_report_them"),
     HATE_SPEECH("hate_speech"),
@@ -24,11 +21,11 @@ public enum ReportReason {
     private final Component title;
     private final Component description;
 
-    private ReportReason(final String p_273339_) {
-        this.backendName = p_273339_.toUpperCase(Locale.ROOT);
-        String s = "gui.abuseReport.reason." + p_273339_;
-        this.title = Component.translatable(s);
-        this.description = Component.translatable(s + ".description");
+    ReportReason(final String name) {
+        this.backendName = name.toUpperCase(Locale.ROOT);
+        String translationKey = "gui.abuseReport.reason." + name;
+        this.title = Component.translatable(translationKey);
+        this.description = Component.translatable(translationKey + ".description");
     }
 
     public String backendName() {
@@ -43,8 +40,8 @@ public enum ReportReason {
         return this.description;
     }
 
-    public static List<ReportReason> getIncompatibleCategories(ReportType p_369639_) {
-        return switch (p_369639_) {
+    public static List<ReportReason> getIncompatibleCategories(final ReportType reportType) {
+        return switch (reportType) {
             case CHAT -> List.of(SEXUALLY_INAPPROPRIATE);
             case SKIN -> List.of(IMMINENT_HARM, DEFAMATION_IMPERSONATION_FALSE_INFORMATION);
             default -> List.of();

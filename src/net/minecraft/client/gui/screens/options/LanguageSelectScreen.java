@@ -2,17 +2,15 @@ package net.minecraft.client.gui.screens.options;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.SortedMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.layouts.LinearLayout;
-import net.minecraft.client.gui.screens.AccessibilityOnboardingScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -20,36 +18,33 @@ import net.minecraft.client.resources.language.LanguageInfo;
 import net.minecraft.client.resources.language.LanguageManager;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class LanguageSelectScreen extends OptionsSubScreen {
     private static final Component WARNING_LABEL = Component.translatable("options.languageAccuracyWarning").withColor(-4539718);
     private static final int FOOTER_HEIGHT = 53;
     private static final Component SEARCH_HINT = Component.translatable("gui.language.search").withStyle(EditBox.SEARCH_HINT_STYLE);
     private static final int SEARCH_BOX_HEIGHT = 15;
-    final LanguageManager languageManager;
+    private final LanguageManager languageManager;
     private LanguageSelectScreen.@Nullable LanguageSelectionList languageSelectionList;
     private @Nullable EditBox search;
 
-    public LanguageSelectScreen(Screen p_344210_, Options p_342264_, LanguageManager p_343432_) {
-        super(p_344210_, p_342264_, Component.translatable("options.language.title"));
-        this.languageManager = p_343432_;
+    public LanguageSelectScreen(final Screen lastScreen, final Options options, final LanguageManager languageManager) {
+        super(lastScreen, options, Component.translatable("options.language.title"));
+        this.languageManager = languageManager;
         this.layout.setFooterHeight(53);
     }
 
     @Override
     protected void addTitle() {
-        LinearLayout linearlayout = this.layout.addToHeader(LinearLayout.vertical().spacing(4));
-        linearlayout.defaultCellSetting().alignHorizontallyCenter();
-        linearlayout.addChild(new StringWidget(this.title, this.font));
-        this.search = linearlayout.addChild(new EditBox(this.font, 0, 0, 200, 15, Component.empty()));
+        LinearLayout header = this.layout.addToHeader(LinearLayout.vertical().spacing(4));
+        header.defaultCellSetting().alignHorizontallyCenter();
+        header.addChild(new StringWidget(this.title, this.font));
+        this.search = header.addChild(new EditBox(this.font, 0, 0, 200, 15, Component.empty()));
         this.search.setHint(SEARCH_HINT);
-        this.search.setResponder(p_448058_ -> {
+        this.search.setResponder(string -> {
             if (this.languageSelectionList != null) {
-                this.languageSelectionList.filterEntries(p_448058_);
+                this.languageSelectionList.filterEntries(string);
             }
         });
         this.layout.setHeaderHeight((int)(12.0 + 9.0 + 15.0));
@@ -75,14 +70,14 @@ public class LanguageSelectScreen extends OptionsSubScreen {
 
     @Override
     protected void addFooter() {
-        LinearLayout linearlayout = this.layout.addToFooter(LinearLayout.vertical()).spacing(8);
-        linearlayout.defaultCellSetting().alignHorizontallyCenter();
-        linearlayout.addChild(new StringWidget(WARNING_LABEL, this.font));
-        LinearLayout linearlayout1 = linearlayout.addChild(LinearLayout.horizontal().spacing(8));
-        linearlayout1.addChild(
-            Button.builder(Component.translatable("options.font"), p_343010_ -> this.minecraft.setScreen(new FontOptionsScreen(this, this.options))).build()
+        LinearLayout footer = this.layout.addToFooter(LinearLayout.vertical()).spacing(8);
+        footer.defaultCellSetting().alignHorizontallyCenter();
+        footer.addChild(new StringWidget(WARNING_LABEL, this.font));
+        LinearLayout bottomButtons = footer.addChild(LinearLayout.horizontal().spacing(8));
+        bottomButtons.addChild(
+            Button.builder(Component.translatable("options.font"), var1x -> this.minecraft.gui.setScreen(new FontOptionsScreen(this, this.options))).build()
         );
-        linearlayout1.addChild(Button.builder(CommonComponents.GUI_DONE, p_343186_ -> this.onDone()).build());
+        bottomButtons.addChild(Button.builder(CommonComponents.GUI_DONE, button -> this.onDone()).build());
     }
 
     @Override
@@ -93,58 +88,47 @@ public class LanguageSelectScreen extends OptionsSubScreen {
         }
     }
 
-    void onDone() {
-        if (this.languageSelectionList != null
-            && this.languageSelectionList.getSelected() instanceof LanguageSelectScreen.LanguageSelectionList.Entry languageselectscreen$languageselectionlist$entry
-            && !languageselectscreen$languageselectionlist$entry.code.equals(this.languageManager.getSelected())) {
-            this.languageManager.setSelected(languageselectscreen$languageselectionlist$entry.code);
-            this.options.languageCode = languageselectscreen$languageselectionlist$entry.code;
-            this.minecraft.reloadResourcePacks();
+    private void onDone() {
+        if (this.languageSelectionList != null && this.languageSelectionList.getSelected() != null) {
+            LanguageSelectScreen.LanguageSelectionList.Entry selectedEntry = this.languageSelectionList.getSelected();
+            if (!selectedEntry.code.equals(this.languageManager.getSelected())) {
+                this.languageManager.setSelected(selectedEntry.code);
+                this.options.languageCode = selectedEntry.code;
+                this.minecraft.reloadResourcePacks();
+            }
         }
 
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
-    @Override
-    protected boolean panoramaShouldSpin() {
-        return !(this.lastScreen instanceof AccessibilityOnboardingScreen);
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    class LanguageSelectionList extends ObjectSelectionList<LanguageSelectScreen.LanguageSelectionList.Entry> {
-        public LanguageSelectionList(final Minecraft p_343433_) {
-            super(p_343433_, LanguageSelectScreen.this.width, LanguageSelectScreen.this.height - 33 - 53, 33, 18);
-            String s = LanguageSelectScreen.this.languageManager.getSelected();
-            LanguageSelectScreen.this.languageManager
-                .getLanguages()
-                .forEach(
-                    (p_420767_, p_420768_) -> {
-                        LanguageSelectScreen.LanguageSelectionList.Entry languageselectscreen$languageselectionlist$entry = new LanguageSelectScreen.LanguageSelectionList.Entry(
-                            p_420767_, p_420768_
-                        );
-                        this.addEntry(languageselectscreen$languageselectionlist$entry);
-                        if (s.equals(p_420767_)) {
-                            this.setSelected(languageselectscreen$languageselectionlist$entry);
-                        }
-                    }
-                );
+        private class LanguageSelectionList extends ObjectSelectionList<LanguageSelectScreen.LanguageSelectionList.Entry> {
+        public LanguageSelectionList(final Minecraft minecraft) {
+            super(minecraft, LanguageSelectScreen.this.width, LanguageSelectScreen.this.height - 33 - 53, 33, 18);
+            String selectedLanguage = LanguageSelectScreen.this.languageManager.getSelected();
+            LanguageSelectScreen.this.languageManager.getLanguages().forEach((code, info) -> {
+                LanguageSelectScreen.LanguageSelectionList.Entry entry = new LanguageSelectScreen.LanguageSelectionList.Entry(code, info);
+                this.addEntry(entry);
+                if (selectedLanguage.equals(code)) {
+                    this.setSelected(entry);
+                }
+            });
             if (this.getSelected() != null) {
                 this.centerScrollOn(this.getSelected());
             }
         }
 
-        void filterEntries(String p_454395_) {
-            SortedMap<String, LanguageInfo> sortedmap = LanguageSelectScreen.this.languageManager.getLanguages();
-            List<LanguageSelectScreen.LanguageSelectionList.Entry> list = sortedmap.entrySet()
+        private void filterEntries(final String filter) {
+            SortedMap<String, LanguageInfo> languages = LanguageSelectScreen.this.languageManager.getLanguages();
+            List<LanguageSelectScreen.LanguageSelectionList.Entry> filteredEntries = languages.entrySet()
                 .stream()
                 .filter(
-                    p_448061_ -> p_454395_.isEmpty()
-                        || p_448061_.getValue().name().toLowerCase(Locale.ROOT).contains(p_454395_.toLowerCase(Locale.ROOT))
-                        || p_448061_.getValue().region().toLowerCase(Locale.ROOT).contains(p_454395_.toLowerCase(Locale.ROOT))
+                    entry -> filter.isEmpty()
+                        || entry.getValue().name().toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT))
+                        || entry.getValue().region().toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT))
                 )
-                .map(p_448059_ -> new LanguageSelectScreen.LanguageSelectionList.Entry(p_448059_.getKey(), p_448059_.getValue()))
+                .map(entry -> new LanguageSelectScreen.LanguageSelectionList.Entry(entry.getKey(), entry.getValue()))
                 .toList();
-            this.replaceEntries(list);
+            this.replaceEntries(filteredEntries);
             this.refreshScrollAmount();
         }
 
@@ -153,40 +137,39 @@ public class LanguageSelectScreen extends OptionsSubScreen {
             return super.getRowWidth() + 50;
         }
 
-        @OnlyIn(Dist.CLIENT)
-        public class Entry extends ObjectSelectionList.Entry<LanguageSelectScreen.LanguageSelectionList.Entry> {
-            final String code;
+                public class Entry extends ObjectSelectionList.Entry<LanguageSelectScreen.LanguageSelectionList.Entry> {
+            private final String code;
             private final Component language;
 
-            public Entry(final String p_344457_, final LanguageInfo p_342261_) {
-                this.code = p_344457_;
-                this.language = p_342261_.toComponent();
+            public Entry(final String code, final LanguageInfo language) {
+                this.code = code;
+                this.language = language.toComponent();
             }
 
             @Override
-            public void renderContent(GuiGraphics p_425929_, int p_424166_, int p_423552_, boolean p_425863_, float p_431522_) {
-                p_425929_.drawCenteredString(LanguageSelectScreen.this.font, this.language, LanguageSelectionList.this.width / 2, this.getContentYMiddle() - 9 / 2, -1);
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+                graphics.centeredText(LanguageSelectScreen.this.font, this.language, LanguageSelectionList.this.width / 2, this.getContentYMiddle() - 9 / 2, -1);
             }
 
             @Override
-            public boolean keyPressed(KeyEvent p_427001_) {
-                if (p_427001_.isSelection()) {
+            public boolean keyPressed(final KeyEvent event) {
+                if (event.isSelection()) {
                     this.select();
                     LanguageSelectScreen.this.onDone();
                     return true;
                 } else {
-                    return super.keyPressed(p_427001_);
+                    return super.keyPressed(event);
                 }
             }
 
             @Override
-            public boolean mouseClicked(MouseButtonEvent p_424489_, boolean p_425896_) {
+            public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
                 this.select();
-                if (p_425896_) {
+                if (doubleClick) {
                     LanguageSelectScreen.this.onDone();
                 }
 
-                return super.mouseClicked(p_424489_, p_425896_);
+                return super.mouseClicked(event, doubleClick);
             }
 
             private void select() {

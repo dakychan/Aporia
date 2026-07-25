@@ -2,42 +2,40 @@ package net.minecraft.client.particle;
 
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.particles.SimpleParticleType;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class TrialSpawnerDetectionParticle extends SingleQuadParticle {
     private final SpriteSet sprites;
     private static final int BASE_LIFETIME = 8;
 
     protected TrialSpawnerDetectionParticle(
-        ClientLevel p_310929_,
-        double p_311438_,
-        double p_312516_,
-        double p_312471_,
-        double p_311930_,
-        double p_310570_,
-        double p_311049_,
-        float p_311264_,
-        SpriteSet p_313038_
+        final ClientLevel level,
+        final double x,
+        final double y,
+        final double z,
+        final double xa,
+        final double ya,
+        final double za,
+        final float scale,
+        final SpriteSet sprites
     ) {
-        super(p_310929_, p_311438_, p_312516_, p_312471_, 0.0, 0.0, 0.0, p_313038_.first());
-        this.sprites = p_313038_;
+        super(level, x, y, z, 0.0, 0.0, 0.0, sprites.first());
+        this.sprites = sprites;
         this.friction = 0.96F;
         this.gravity = -0.1F;
         this.speedUpWhenYMotionIsBlocked = true;
         this.xd *= 0.0;
         this.yd *= 0.9;
         this.zd *= 0.0;
-        this.xd += p_311930_;
-        this.yd += p_310570_;
-        this.zd += p_311049_;
-        this.quadSize *= 0.75F * p_311264_;
-        this.lifetime = (int)(8.0F / Mth.randomBetween(this.random, 0.5F, 1.0F) * p_311264_);
+        this.xd += xa;
+        this.yd += ya;
+        this.zd += za;
+        this.quadSize *= 0.75F * scale;
+        this.lifetime = (int)(8.0F / Mth.randomBetween(this.random, 0.5F, 1.0F) * scale);
         this.lifetime = Math.max(this.lifetime, 1);
-        this.setSpriteFromAge(p_313038_);
+        this.setSpriteFromAge(sprites);
         this.hasPhysics = true;
     }
 
@@ -47,8 +45,8 @@ public class TrialSpawnerDetectionParticle extends SingleQuadParticle {
     }
 
     @Override
-    public int getLightColor(float p_312792_) {
-        return 240;
+    public int getLightCoords(final float a) {
+        return LightCoordsUtil.withBlock(super.getLightCoords(a), 15);
     }
 
     @Override
@@ -63,30 +61,29 @@ public class TrialSpawnerDetectionParticle extends SingleQuadParticle {
     }
 
     @Override
-    public float getQuadSize(float p_313241_) {
-        return this.quadSize * Mth.clamp((this.age + p_313241_) / this.lifetime * 32.0F, 0.0F, 1.0F);
+    public float getQuadSize(final float a) {
+        return this.quadSize * Mth.clamp((this.age + a) / this.lifetime * 32.0F, 0.0F, 1.0F);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Provider implements ParticleProvider<SimpleParticleType> {
+        public static class Provider implements ParticleProvider<SimpleParticleType> {
         private final SpriteSet sprites;
 
-        public Provider(SpriteSet p_311649_) {
-            this.sprites = p_311649_;
+        public Provider(final SpriteSet sprites) {
+            this.sprites = sprites;
         }
 
         public Particle createParticle(
-            SimpleParticleType p_312519_,
-            ClientLevel p_310081_,
-            double p_312198_,
-            double p_312389_,
-            double p_310385_,
-            double p_312116_,
-            double p_312285_,
-            double p_312651_,
-            RandomSource p_430992_
+            final SimpleParticleType options,
+            final ClientLevel level,
+            final double x,
+            final double y,
+            final double z,
+            final double xAux,
+            final double yAux,
+            final double zAux,
+            final RandomSource random
         ) {
-            return new TrialSpawnerDetectionParticle(p_310081_, p_312198_, p_312389_, p_310385_, p_312116_, p_312285_, p_312651_, 1.5F, this.sprites);
+            return new TrialSpawnerDetectionParticle(level, x, y, z, xAux, yAux, zAux, 1.5F, this.sprites);
         }
     }
 }

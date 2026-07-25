@@ -12,15 +12,15 @@ import net.minecraft.server.packs.PackResources;
 public interface ResourceManager extends ResourceProvider {
     Set<String> getNamespaces();
 
-    List<Resource> getResourceStack(Identifier p_457222_);
+    List<Resource> getResourceStack(Identifier location);
 
-    Map<Identifier, Resource> listResources(String p_215563_, Predicate<Identifier> p_215564_);
+    Map<Identifier, Resource> listResources(String directory, Predicate<Identifier> filter);
 
-    Map<Identifier, List<Resource>> listResourceStacks(String p_215565_, Predicate<Identifier> p_215566_);
+    Map<Identifier, List<Resource>> listResourceStacks(String directory, Predicate<Identifier> filter);
 
     Stream<PackResources> listPacks();
 
-    public static enum Empty implements ResourceManager {
+    enum Empty implements ResourceManager {
         INSTANCE;
 
         @Override
@@ -29,22 +29,22 @@ public interface ResourceManager extends ResourceProvider {
         }
 
         @Override
-        public Optional<Resource> getResource(Identifier p_452908_) {
+        public Optional<Resource> getResource(final Identifier location) {
             return Optional.empty();
         }
 
         @Override
-        public List<Resource> getResourceStack(Identifier p_456425_) {
+        public List<Resource> getResourceStack(final Identifier location) {
             return List.of();
         }
 
         @Override
-        public Map<Identifier, Resource> listResources(String p_215570_, Predicate<Identifier> p_215571_) {
+        public Map<Identifier, Resource> listResources(final String directory, final Predicate<Identifier> filter) {
             return Map.of();
         }
 
         @Override
-        public Map<Identifier, List<Resource>> listResourceStacks(String p_215573_, Predicate<Identifier> p_215574_) {
+        public Map<Identifier, List<Resource>> listResourceStacks(final String directory, final Predicate<Identifier> filter) {
             return Map.of();
         }
 

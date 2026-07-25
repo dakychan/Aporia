@@ -19,31 +19,35 @@ public class FollowOwnerGoal extends Goal {
     private final float startDistance;
     private float oldWaterCost;
 
-    public FollowOwnerGoal(TamableAnimal p_25294_, double p_25295_, float p_25296_, float p_25297_) {
-        this.tamable = p_25294_;
-        this.speedModifier = p_25295_;
-        this.navigation = p_25294_.getNavigation();
-        this.startDistance = p_25296_;
-        this.stopDistance = p_25297_;
+    public FollowOwnerGoal(final TamableAnimal tamable, final double speedModifier, final float startDistance, final float stopDistance) {
+        this.tamable = tamable;
+        this.speedModifier = speedModifier;
+        this.navigation = tamable.getNavigation();
+        this.startDistance = startDistance;
+        this.stopDistance = stopDistance;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.LOOK));
-        if (!(p_25294_.getNavigation() instanceof GroundPathNavigation) && !(p_25294_.getNavigation() instanceof FlyingPathNavigation)) {
+        if (!(tamable.getNavigation() instanceof GroundPathNavigation) && !(tamable.getNavigation() instanceof FlyingPathNavigation)) {
             throw new IllegalArgumentException("Unsupported mob type for FollowOwnerGoal");
         }
     }
 
     @Override
     public boolean canUse() {
-        LivingEntity livingentity = this.tamable.getOwner();
-        if (livingentity == null) {
+        LivingEntity owner = this.tamable.getOwner();
+        if (owner == null) {
             return false;
-        } else if (this.tamable.unableToMoveToOwner()) {
-            return false;
-        } else if (this.tamable.distanceToSqr(livingentity) < this.startDistance * this.startDistance) {
-            return false;
-        } else {
-            this.owner = livingentity;
-            return true;
         }
+
+        if (this.tamable.unableToMoveToOwner()) {
+            return false;
+        }
+
+        if (this.tamable.distanceToSqr(owner) < this.startDistance * this.startDistance) {
+            return false;
+        }
+
+        this.owner = owner;
+        return true;
     }
 
     @Override
@@ -71,14 +75,14 @@ public class FollowOwnerGoal extends Goal {
 
     @Override
     public void tick() {
-        boolean flag = this.tamable.shouldTryTeleportToOwner();
-        if (!flag) {
+        boolean isOwnerFarAway = this.tamable.shouldTryTeleportToOwner();
+        if (!isOwnerFarAway) {
             this.tamable.getLookControl().setLookAt(this.owner, 10.0F, this.tamable.getMaxHeadXRot());
         }
 
         if (--this.timeToRecalcPath <= 0) {
             this.timeToRecalcPath = this.adjustedTickDelay(10);
-            if (flag) {
+            if (isOwnerFarAway) {
                 this.tamable.tryToTeleportToOwner();
             } else {
                 this.navigation.moveTo(this.owner, this.speedModifier);

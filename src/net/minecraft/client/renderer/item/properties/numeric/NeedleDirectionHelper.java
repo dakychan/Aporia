@@ -4,45 +4,38 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class NeedleDirectionHelper {
     private final boolean wobble;
 
-    protected NeedleDirectionHelper(boolean p_376496_) {
-        this.wobble = p_376496_;
+    protected NeedleDirectionHelper(final boolean wobble) {
+        this.wobble = wobble;
     }
 
-    public float get(ItemStack p_377286_, @Nullable ClientLevel p_378790_, @Nullable ItemOwner p_431484_, int p_375400_) {
-        if (p_431484_ == null) {
-            p_431484_ = p_377286_.getEntityRepresentation();
-        }
-
-        if (p_431484_ == null) {
+    public float get(final ItemStack itemStack, @Nullable ClientLevel clientLevel, final @Nullable ItemOwner owner, final int seed) {
+        if (owner == null) {
             return 0.0F;
-        } else {
-            if (p_378790_ == null && p_431484_.level() instanceof ClientLevel clientlevel) {
-                p_378790_ = clientlevel;
-            }
-
-            return p_378790_ == null ? 0.0F : this.calculate(p_377286_, p_378790_, p_375400_, p_431484_);
         }
+
+        if (clientLevel == null && owner.level() instanceof ClientLevel level) {
+            clientLevel = level;
+        }
+
+        return clientLevel == null ? 0.0F : this.calculate(itemStack, clientLevel, seed, owner);
     }
 
-    protected abstract float calculate(ItemStack p_378355_, ClientLevel p_377407_, int p_377397_, ItemOwner p_422598_);
+    protected abstract float calculate(final ItemStack itemStack, final ClientLevel level, final int seed, final ItemOwner owner);
 
     protected boolean wobble() {
         return this.wobble;
     }
 
-    protected NeedleDirectionHelper.Wobbler newWobbler(float p_376684_) {
-        return this.wobble ? standardWobbler(p_376684_) : nonWobbler();
+    protected NeedleDirectionHelper.Wobbler newWobbler(final float factor) {
+        return this.wobble ? standardWobbler(factor) : nonWobbler();
     }
 
-    public static NeedleDirectionHelper.Wobbler standardWobbler(final float p_376618_) {
+    public static NeedleDirectionHelper.Wobbler standardWobbler(final float factor) {
         return new NeedleDirectionHelper.Wobbler() {
             private float rotation;
             private float deltaRotation;
@@ -54,16 +47,16 @@ public abstract class NeedleDirectionHelper {
             }
 
             @Override
-            public boolean shouldUpdate(long p_378605_) {
-                return this.lastUpdateTick != p_378605_;
+            public boolean shouldUpdate(final long tick) {
+                return this.lastUpdateTick != tick;
             }
 
             @Override
-            public void update(long p_378620_, float p_377269_) {
-                this.lastUpdateTick = p_378620_;
-                float f = Mth.positiveModulo(p_377269_ - this.rotation + 0.5F, 1.0F) - 0.5F;
-                this.deltaRotation += f * 0.1F;
-                this.deltaRotation = this.deltaRotation * p_376618_;
+            public void update(final long tick, final float targetRotation) {
+                this.lastUpdateTick = tick;
+                float tempDeltaRotation = Mth.positiveModulo(targetRotation - this.rotation + 0.5F, 1.0F) - 0.5F;
+                this.deltaRotation += tempDeltaRotation * 0.1F;
+                this.deltaRotation = this.deltaRotation * factor;
                 this.rotation = Mth.positiveModulo(this.rotation + this.deltaRotation, 1.0F);
             }
         };
@@ -79,23 +72,22 @@ public abstract class NeedleDirectionHelper {
             }
 
             @Override
-            public boolean shouldUpdate(long p_377058_) {
+            public boolean shouldUpdate(final long tick) {
                 return true;
             }
 
             @Override
-            public void update(long p_377475_, float p_376108_) {
-                this.targetValue = p_376108_;
+            public void update(final long tick, final float targetRotation) {
+                this.targetValue = targetRotation;
             }
         };
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Wobbler {
+        public interface Wobbler {
         float rotation();
 
-        boolean shouldUpdate(long p_378139_);
+        boolean shouldUpdate(long tick);
 
-        void update(long p_377073_, float p_376320_);
+        void update(long tick, float targetRotation);
     }
 }

@@ -3,18 +3,17 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class EntitySalmonSizeFix extends NamedEntityFix {
-    public EntitySalmonSizeFix(Schema p_370267_) {
-        super(p_370267_, false, "EntitySalmonSizeFix", References.ENTITY, "minecraft:salmon");
+    public EntitySalmonSizeFix(final Schema outputSchema) {
+        super(outputSchema, false, "EntitySalmonSizeFix", References.ENTITY, "minecraft:salmon");
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_370268_) {
-        return p_370268_.update(DSL.remainderFinder(), p_370266_ -> {
-            String s = p_370266_.get("type").asString("medium");
-            return s.equals("large") ? p_370266_ : p_370266_.set("type", p_370266_.createString("medium"));
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), tag -> {
+            String type = tag.get("type").asString("medium");
+            return type.equals("large") ? tag : tag.set("type", tag.createString("medium"));
         });
     }
 }

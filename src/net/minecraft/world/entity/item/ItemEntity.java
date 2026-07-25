@@ -18,6 +18,7 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.SlotAccess;
@@ -42,7 +43,7 @@ public class ItemEntity extends Entity implements TraceableEntity {
     private static final int LIFETIME = 6000;
     private static final int INFINITE_PICKUP_DELAY = 32767;
     private static final int INFINITE_LIFETIME = -32768;
-    private static final int DEFAULT_HEALTH = 5;
+    public static final int DEFAULT_HEALTH = 5;
     private static final short DEFAULT_AGE = 0;
     private static final short DEFAULT_PICKUP_DELAY = 0;
     private int age = 0;
@@ -52,22 +53,32 @@ public class ItemEntity extends Entity implements TraceableEntity {
     private @Nullable UUID target;
     public final float bobOffs = this.random.nextFloat() * (float) Math.PI * 2.0F;
 
-    public ItemEntity(EntityType<? extends ItemEntity> p_31991_, Level p_31992_) {
-        super(p_31991_, p_31992_);
+    public ItemEntity(final EntityType<? extends ItemEntity> type, final Level level) {
+        super(type, level);
         this.setYRot(this.random.nextFloat() * 360.0F);
     }
 
-    public ItemEntity(Level p_32001_, double p_32002_, double p_32003_, double p_32004_, ItemStack p_32005_) {
-        this(p_32001_, p_32002_, p_32003_, p_32004_, p_32005_, p_32001_.random.nextDouble() * 0.2 - 0.1, 0.2, p_32001_.random.nextDouble() * 0.2 - 0.1);
+    public ItemEntity(final Level level, final double x, final double y, final double z, final ItemStack itemStack) {
+        this(EntityTypes.ITEM, level);
+        this.setPos(x, y, z);
+        this.setItem(itemStack);
+        this.setDeltaMovement(this.random.nextDouble() * 0.2 - 0.1, 0.2, this.random.nextDouble() * 0.2 - 0.1);
     }
 
     public ItemEntity(
-        Level p_149663_, double p_149664_, double p_149665_, double p_149666_, ItemStack p_149667_, double p_149668_, double p_149669_, double p_149670_
+        final Level level,
+        final double x,
+        final double y,
+        final double z,
+        final ItemStack itemStack,
+        final double deltaX,
+        final double deltaY,
+        final double deltaZ
     ) {
-        this(EntityType.ITEM, p_149663_);
-        this.setPos(p_149664_, p_149665_, p_149666_);
-        this.setDeltaMovement(p_149668_, p_149669_, p_149670_);
-        this.setItem(p_149667_);
+        this(EntityTypes.ITEM, level);
+        this.setPos(x, y, z);
+        this.setItem(itemStack);
+        this.setDeltaMovement(deltaX, deltaY, deltaZ);
     }
 
     @Override
@@ -81,10 +92,10 @@ public class ItemEntity extends Entity implements TraceableEntity {
     }
 
     @Override
-    public void restoreFrom(Entity p_309647_) {
-        super.restoreFrom(p_309647_);
-        if (p_309647_ instanceof ItemEntity itementity) {
-            this.thrower = itementity.thrower;
+    public void restoreFrom(final Entity oldEntity) {
+        super.restoreFrom(oldEntity);
+        if (oldEntity instanceof ItemEntity item) {
+            this.thrower = item.thrower;
         }
     }
 
@@ -94,8 +105,8 @@ public class ItemEntity extends Entity implements TraceableEntity {
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_332164_) {
-        p_332164_.define(DATA_ITEM, ItemStack.EMPTY);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_ITEM, ItemStack.EMPTY);
     }
 
     @Override
@@ -116,7 +127,7 @@ public class ItemEntity extends Entity implements TraceableEntity {
             this.xo = this.getX();
             this.yo = this.getY();
             this.zo = this.getZ();
-            Vec3 vec3 = this.getDeltaMovement();
+            Vec3 oldMovement = this.getDeltaMovement();
             if (this.isInWater() && this.getFluidHeight(FluidTags.WATER) > 0.1F) {
                 this.setUnderwaterMovement();
             } else if (this.isInLava() && this.getFluidHeight(FluidTags.LAVA) > 0.1F) {
@@ -134,28 +145,31 @@ public class ItemEntity extends Entity implements TraceableEntity {
                 }
             }
 
-            if (!this.onGround() || this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5F || (this.tickCount + this.getId()) % 4 == 0) {
+            if (this.onGround() && !(this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-5F) && (this.tickCount + this.getId()) % 4 != 0) {
+                this.applyEffectsFromBlocksForLastMovements();
+            } else {
                 this.move(MoverType.SELF, this.getDeltaMovement());
                 this.applyEffectsFromBlocks();
-                float f = 0.98F;
+                float airDrag = this.getAirDrag();
+                float groundFriction = airDrag;
                 if (this.onGround()) {
-                    f = this.level().getBlockState(this.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction() * 0.98F;
+                    groundFriction *= this.level().getBlockState(this.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction();
                 }
 
-                this.setDeltaMovement(this.getDeltaMovement().multiply(f, 0.98, f));
+                this.setDeltaMovement(this.getDeltaMovement().multiply(groundFriction, airDrag, groundFriction));
                 if (this.onGround()) {
-                    Vec3 vec31 = this.getDeltaMovement();
-                    if (vec31.y < 0.0) {
-                        this.setDeltaMovement(vec31.multiply(1.0, -0.5, 1.0));
+                    Vec3 movement = this.getDeltaMovement();
+                    if (movement.y < 0.0) {
+                        this.setDeltaMovement(movement.multiply(1.0, -0.5, 1.0));
                     }
                 }
             }
 
-            boolean flag = Mth.floor(this.xo) != Mth.floor(this.getX())
+            boolean moved = Mth.floor(this.xo) != Mth.floor(this.getX())
                 || Mth.floor(this.yo) != Mth.floor(this.getY())
                 || Mth.floor(this.zo) != Mth.floor(this.getZ());
-            int i = flag ? 2 : 40;
-            if (this.tickCount % i == 0 && !this.level().isClientSide() && this.isMergable()) {
+            int rate = moved ? 2 : 40;
+            if (this.tickCount % rate == 0 && !this.level().isClientSide() && this.isMergable()) {
                 this.mergeWithNeighbours();
             }
 
@@ -163,10 +177,10 @@ public class ItemEntity extends Entity implements TraceableEntity {
                 this.age++;
             }
 
-            this.needsSync = this.needsSync | this.updateInWaterStateAndDoFluidPushing();
+            this.needsSync = this.needsSync | this.updateFluidInteraction();
             if (!this.level().isClientSide()) {
-                double d0 = this.getDeltaMovement().subtract(vec3).lengthSqr();
-                if (d0 > 0.01) {
+                double value = this.getDeltaMovement().subtract(oldMovement).lengthSqr();
+                if (value > 0.01) {
                     this.needsSync = true;
                 }
             }
@@ -190,17 +204,17 @@ public class ItemEntity extends Entity implements TraceableEntity {
         this.setFluidMovement(0.95F);
     }
 
-    private void setFluidMovement(double p_360732_) {
-        Vec3 vec3 = this.getDeltaMovement();
-        this.setDeltaMovement(vec3.x * p_360732_, vec3.y + (vec3.y < 0.06F ? 5.0E-4F : 0.0F), vec3.z * p_360732_);
+    private void setFluidMovement(final double multiplier) {
+        Vec3 movement = this.getDeltaMovement();
+        this.setDeltaMovement(movement.x * multiplier, movement.y + (movement.y < 0.06F ? 5.0E-4F : 0.0F), movement.z * multiplier);
     }
 
     private void mergeWithNeighbours() {
         if (this.isMergable()) {
-            for (ItemEntity itementity : this.level()
-                .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(0.5, 0.0, 0.5), p_186268_ -> p_186268_ != this && p_186268_.isMergable())) {
-                if (itementity.isMergable()) {
-                    this.tryToMerge(itementity);
+            for (ItemEntity entity : this.level()
+                .getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(0.5, 0.0, 0.5), other -> other != this && other.isMergable())) {
+                if (entity.isMergable()) {
+                    this.tryToMerge(entity);
                     if (this.isRemoved()) {
                         break;
                     }
@@ -210,44 +224,46 @@ public class ItemEntity extends Entity implements TraceableEntity {
     }
 
     private boolean isMergable() {
-        ItemStack itemstack = this.getItem();
-        return this.isAlive() && this.pickupDelay != 32767 && this.age != -32768 && this.age < 6000 && itemstack.getCount() < itemstack.getMaxStackSize();
+        ItemStack item = this.getItem();
+        return this.isAlive() && this.pickupDelay != 32767 && this.age != -32768 && this.age < 6000 && item.getCount() < item.getMaxStackSize();
     }
 
-    private void tryToMerge(ItemEntity p_32016_) {
-        ItemStack itemstack = this.getItem();
-        ItemStack itemstack1 = p_32016_.getItem();
-        if (Objects.equals(this.target, p_32016_.target) && areMergable(itemstack, itemstack1)) {
-            if (itemstack1.getCount() < itemstack.getCount()) {
-                merge(this, itemstack, p_32016_, itemstack1);
+    private void tryToMerge(final ItemEntity other) {
+        ItemStack thisItemStack = this.getItem();
+        ItemStack otherItemStack = other.getItem();
+        if (Objects.equals(this.target, other.target) && areMergable(thisItemStack, otherItemStack)) {
+            if (otherItemStack.getCount() < thisItemStack.getCount()) {
+                merge(this, thisItemStack, other, otherItemStack);
             } else {
-                merge(p_32016_, itemstack1, this, itemstack);
+                merge(other, otherItemStack, this, thisItemStack);
             }
         }
     }
 
-    public static boolean areMergable(ItemStack p_32027_, ItemStack p_32028_) {
-        return p_32028_.getCount() + p_32027_.getCount() > p_32028_.getMaxStackSize() ? false : ItemStack.isSameItemSameComponents(p_32027_, p_32028_);
+    public static boolean areMergable(final ItemStack thisItemStack, final ItemStack otherItemStack) {
+        return otherItemStack.getCount() + thisItemStack.getCount() > otherItemStack.getMaxStackSize()
+            ? false
+            : ItemStack.isSameItemSameComponents(thisItemStack, otherItemStack);
     }
 
-    public static ItemStack merge(ItemStack p_32030_, ItemStack p_32031_, int p_32032_) {
-        int i = Math.min(Math.min(p_32030_.getMaxStackSize(), p_32032_) - p_32030_.getCount(), p_32031_.getCount());
-        ItemStack itemstack = p_32030_.copyWithCount(p_32030_.getCount() + i);
-        p_32031_.shrink(i);
-        return itemstack;
+    public static ItemStack merge(final ItemStack toStack, final ItemStack fromStack, final int maxCount) {
+        int delta = Math.min(Math.min(toStack.getMaxStackSize(), maxCount) - toStack.getCount(), fromStack.getCount());
+        ItemStack newToStack = toStack.copyWithCount(toStack.getCount() + delta);
+        fromStack.shrink(delta);
+        return newToStack;
     }
 
-    private static void merge(ItemEntity p_32023_, ItemStack p_32024_, ItemStack p_32025_) {
-        ItemStack itemstack = merge(p_32024_, p_32025_, 64);
-        p_32023_.setItem(itemstack);
+    private static void merge(final ItemEntity toItem, final ItemStack toStack, final ItemStack fromStack) {
+        ItemStack newToStack = merge(toStack, fromStack, 64);
+        toItem.setItem(newToStack);
     }
 
-    private static void merge(ItemEntity p_32018_, ItemStack p_32019_, ItemEntity p_32020_, ItemStack p_32021_) {
-        merge(p_32018_, p_32019_, p_32021_);
-        p_32018_.pickupDelay = Math.max(p_32018_.pickupDelay, p_32020_.pickupDelay);
-        p_32018_.age = Math.min(p_32018_.age, p_32020_.age);
-        if (p_32021_.isEmpty()) {
-            p_32020_.discard();
+    private static void merge(final ItemEntity toItem, final ItemStack toStack, final ItemEntity fromItem, final ItemStack fromStack) {
+        merge(toItem, toStack, fromStack);
+        toItem.pickupDelay = Math.max(toItem.pickupDelay, fromItem.pickupDelay);
+        toItem.age = Math.min(toItem.age, fromItem.age);
+        if (fromStack.isEmpty()) {
+            fromItem.discard();
         }
     }
 
@@ -262,84 +278,88 @@ public class ItemEntity extends Entity implements TraceableEntity {
     }
 
     @Override
-    public final boolean hurtClient(DamageSource p_366723_) {
-        return this.isInvulnerableToBase(p_366723_) ? false : this.getItem().canBeHurtBy(p_366723_);
+    public final boolean hurtClient(final DamageSource source) {
+        return this.isInvulnerableToBase(source) ? false : this.getItem().canBeHurtBy(source);
     }
 
     @Override
-    public final boolean hurtServer(ServerLevel p_362991_, DamageSource p_364841_, float p_362683_) {
-        if (this.isInvulnerableToBase(p_364841_)) {
+    public final boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        if (this.isInvulnerableToBase(source)) {
             return false;
-        } else if (!p_362991_.getGameRules().get(GameRules.MOB_GRIEFING) && p_364841_.getEntity() instanceof Mob) {
-            return false;
-        } else if (!this.getItem().canBeHurtBy(p_364841_)) {
-            return false;
-        } else {
-            this.markHurt();
-            this.health = (int)(this.health - p_362683_);
-            this.gameEvent(GameEvent.ENTITY_DAMAGE, p_364841_.getEntity());
-            if (this.health <= 0) {
-                this.getItem().onDestroyed(this);
-                this.discard();
-            }
-
-            return true;
         }
+
+        if (!level.getGameRules().get(GameRules.MOB_GRIEFING) && source.getEntity() instanceof Mob) {
+            return false;
+        }
+
+        if (!this.getItem().canBeHurtBy(source)) {
+            return false;
+        }
+
+        this.markHurt();
+        this.health = (int)(this.health - damage);
+        this.gameEvent(GameEvent.ENTITY_DAMAGE, source.getEntity());
+        if (this.health <= 0) {
+            this.getItem().onDestroyed(this);
+            this.discard();
+        }
+
+        return true;
     }
 
     @Override
-    public boolean ignoreExplosion(Explosion p_369761_) {
-        return p_369761_.shouldAffectBlocklikeEntities() ? super.ignoreExplosion(p_369761_) : true;
+    public boolean ignoreExplosion(final Explosion explosion) {
+        return explosion.shouldAffectBlocklikeEntities() ? super.ignoreExplosion(explosion) : true;
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408006_) {
-        p_408006_.putShort("Health", (short)this.health);
-        p_408006_.putShort("Age", (short)this.age);
-        p_408006_.putShort("PickupDelay", (short)this.pickupDelay);
-        EntityReference.store(this.thrower, p_408006_, "Thrower");
-        p_408006_.storeNullable("Owner", UUIDUtil.CODEC, this.target);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        output.putShort("Health", (short)this.health);
+        output.putShort("Age", (short)this.age);
+        output.putShort("PickupDelay", (short)this.pickupDelay);
+        EntityReference.store(this.thrower, output, "Thrower");
+        output.storeNullable("Owner", UUIDUtil.CODEC, this.target);
         if (!this.getItem().isEmpty()) {
-            p_408006_.store("Item", ItemStack.CODEC, this.getItem());
+            output.store("Item", ItemStack.CODEC, this.getItem());
         }
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_408031_) {
-        this.health = p_408031_.getShortOr("Health", (short)5);
-        this.age = p_408031_.getShortOr("Age", (short)0);
-        this.pickupDelay = p_408031_.getShortOr("PickupDelay", (short)0);
-        this.target = p_408031_.read("Owner", UUIDUtil.CODEC).orElse(null);
-        this.thrower = EntityReference.read(p_408031_, "Thrower");
-        this.setItem(p_408031_.read("Item", ItemStack.CODEC).orElse(ItemStack.EMPTY));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        this.health = input.getShortOr("Health", (short)5);
+        this.age = input.getShortOr("Age", (short)0);
+        this.pickupDelay = input.getShortOr("PickupDelay", (short)0);
+        this.target = input.read("Owner", UUIDUtil.CODEC).orElse(null);
+        this.thrower = EntityReference.read(input, "Thrower");
+        this.setItem(input.read("Item", ItemStack.CODEC).orElse(ItemStack.EMPTY));
         if (this.getItem().isEmpty()) {
             this.discard();
         }
     }
 
     @Override
-    public void playerTouch(Player p_32040_) {
+    public void playerTouch(final Player player) {
         if (!this.level().isClientSide()) {
-            ItemStack itemstack = this.getItem();
-            Item item = itemstack.getItem();
-            int i = itemstack.getCount();
-            if (this.pickupDelay == 0 && (this.target == null || this.target.equals(p_32040_.getUUID())) && p_32040_.getInventory().add(itemstack)) {
-                p_32040_.take(this, i);
-                if (itemstack.isEmpty()) {
+            ItemStack itemStack = this.getItem();
+            Item item = itemStack.getItem();
+            int orgCount = itemStack.getCount();
+            if (this.pickupDelay == 0 && (this.target == null || this.target.equals(player.getUUID())) && player.getInventory().add(itemStack)) {
+                player.take(this, orgCount);
+                if (itemStack.isEmpty()) {
                     this.discard();
-                    itemstack.setCount(i);
+                    itemStack.setCount(orgCount);
                 }
 
-                p_32040_.awardStat(Stats.ITEM_PICKED_UP.get(item), i);
-                p_32040_.onItemPickup(this);
+                player.awardStat(Stats.ITEM_PICKED_UP.get(item), orgCount);
+                player.onItemPickup(this);
             }
         }
     }
 
     @Override
     public Component getName() {
-        Component component = this.getCustomName();
-        return component != null ? component : this.getItem().getItemName();
+        Component name = this.getCustomName();
+        return name != null ? name : this.getItem().getItemName();
     }
 
     @Override
@@ -348,10 +368,10 @@ public class ItemEntity extends Entity implements TraceableEntity {
     }
 
     @Override
-    public @Nullable Entity teleport(TeleportTransition p_365554_) {
-        Entity entity = super.teleport(p_365554_);
-        if (!this.level().isClientSide() && entity instanceof ItemEntity itementity) {
-            itementity.mergeWithNeighbours();
+    public @Nullable Entity teleport(final TeleportTransition transition) {
+        Entity entity = super.teleport(transition);
+        if (!this.level().isClientSide() && entity instanceof ItemEntity item) {
+            item.mergeWithNeighbours();
         }
 
         return entity;
@@ -361,24 +381,16 @@ public class ItemEntity extends Entity implements TraceableEntity {
         return this.getEntityData().get(DATA_ITEM);
     }
 
-    public void setItem(ItemStack p_32046_) {
-        this.getEntityData().set(DATA_ITEM, p_32046_);
+    public void setItem(final ItemStack itemStack) {
+        this.getEntityData().set(DATA_ITEM, itemStack);
     }
 
-    @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_32036_) {
-        super.onSyncedDataUpdated(p_32036_);
-        if (DATA_ITEM.equals(p_32036_)) {
-            this.getItem().setEntityRepresentation(this);
-        }
+    public void setTarget(final @Nullable UUID target) {
+        this.target = target;
     }
 
-    public void setTarget(@Nullable UUID p_266724_) {
-        this.target = p_266724_;
-    }
-
-    public void setThrower(Entity p_310166_) {
-        this.thrower = EntityReference.of(p_310166_);
+    public void setThrower(final Entity thrower) {
+        this.thrower = EntityReference.of(thrower);
     }
 
     public int getAge() {
@@ -397,8 +409,8 @@ public class ItemEntity extends Entity implements TraceableEntity {
         this.pickupDelay = 32767;
     }
 
-    public void setPickUpDelay(int p_32011_) {
-        this.pickupDelay = p_32011_;
+    public void setPickUpDelay(final int ticks) {
+        this.pickupDelay = ticks;
     }
 
     public boolean hasPickUpDelay() {
@@ -418,8 +430,8 @@ public class ItemEntity extends Entity implements TraceableEntity {
         this.age = 5999;
     }
 
-    public static float getSpin(float p_32009_, float p_369793_) {
-        return p_32009_ / 20.0F + p_369793_;
+    public static float getSpin(final float ageInTicks, final float bobOffset) {
+        return ageInTicks / 20.0F + bobOffset;
     }
 
     @Override
@@ -433,7 +445,7 @@ public class ItemEntity extends Entity implements TraceableEntity {
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_329686_) {
-        return p_329686_ == 0 ? SlotAccess.of(this::getItem, this::setItem) : super.getSlot(p_329686_);
+    public @Nullable SlotAccess getSlot(final int slot) {
+        return slot == 0 ? SlotAccess.of(this::getItem, this::setItem) : super.getSlot(slot);
     }
 }

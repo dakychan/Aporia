@@ -17,10 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, TelemetryProperty.Exporter<T> exporter) {
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.from(ZoneOffset.UTC));
     public static final TelemetryProperty<String> USER_ID = string("user_id", "userId");
@@ -31,26 +28,27 @@ public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, 
     public static final TelemetryProperty<String> PLATFORM = string("platform", "platform");
     public static final TelemetryProperty<Boolean> CLIENT_MODDED = bool("client_modded", "clientModded");
     public static final TelemetryProperty<String> LAUNCHER_NAME = string("launcher_name", "launcherName");
+    public static final TelemetryProperty<String> BACKEND_NAME = string("backend_name", "backendName");
+    public static final TelemetryProperty<String> BACKEND_FAILURE_MESSAGE = string("backend_failure_message", "backendFailureMessage");
+    public static final TelemetryProperty<String> BACKEND_FAILURE_REASON = string("backend_failure_reason", "backendFailureReason");
+    public static final TelemetryProperty<String> BACKEND_FAILURE_MISSING_CAPABILITIES = string(
+        "backend_failure_missing_capabilities", "backendFailureMissingCapabilities"
+    );
     public static final TelemetryProperty<UUID> WORLD_SESSION_ID = uuid("world_session_id", "worldSessionId");
+    public static final TelemetryProperty<UUID> SERVER_SESSION_ID = uuid("server_session_id", "GlobalMultiplayerCorrelationId");
     public static final TelemetryProperty<Boolean> SERVER_MODDED = bool("server_modded", "serverModded");
     public static final TelemetryProperty<TelemetryProperty.ServerType> SERVER_TYPE = create(
-        "server_type",
-        "serverType",
-        TelemetryProperty.ServerType.CODEC,
-        (p_261518_, p_262138_, p_262085_) -> p_261518_.addProperty(p_262138_, p_262085_.getSerializedName())
+        "server_type", "serverType", TelemetryProperty.ServerType.CODEC, (output, key, value) -> output.addProperty(key, value.getSerializedName())
     );
     public static final TelemetryProperty<Boolean> OPT_IN = bool("opt_in", "isOptional");
     public static final TelemetryProperty<Instant> EVENT_TIMESTAMP_UTC = create(
         "event_timestamp_utc",
         "eventTimestampUtc",
         ExtraCodecs.INSTANT_ISO8601,
-        (p_261517_, p_261626_, p_261868_) -> p_261517_.addProperty(p_261626_, TIMESTAMP_FORMATTER.format(p_261868_))
+        (output, key, value) -> output.addProperty(key, TIMESTAMP_FORMATTER.format(value))
     );
     public static final TelemetryProperty<TelemetryProperty.GameMode> GAME_MODE = create(
-        "game_mode",
-        "playerGameMode",
-        TelemetryProperty.GameMode.CODEC,
-        (p_261849_, p_262092_, p_261574_) -> p_261849_.addProperty(p_262092_, p_261574_.id())
+        "game_mode", "playerGameMode", TelemetryProperty.GameMode.CODEC, (output, key, value) -> output.addProperty(key, value.id())
     );
     public static final TelemetryProperty<String> REALMS_MAP_CONTENT = string("realms_map_content", "realmsMapContent");
     public static final TelemetryProperty<Integer> SECONDS_SINCE_LOAD = integer("seconds_since_load", "secondsSinceLoad");
@@ -63,63 +61,64 @@ public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, 
     public static final TelemetryProperty<Integer> DEDICATED_MEMORY_KB = integer("dedicated_memory_kb", "dedicatedMemoryKb");
     public static final TelemetryProperty<Integer> WORLD_LOAD_TIME_MS = integer("world_load_time_ms", "worldLoadTimeMs");
     public static final TelemetryProperty<Boolean> NEW_WORLD = bool("new_world", "newWorld");
-    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_TOTAL_TIME_MS = gameLoadMeasurement("load_time_total_time_ms", "loadTimeTotalTimeMs");
-    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_PRE_WINDOW_MS = gameLoadMeasurement("load_time_pre_window_ms", "loadTimePreWindowMs");
-    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_BOOTSTRAP_MS = gameLoadMeasurement("load_time_bootstrap_ms", "loadTimeBootstrapMs");
-    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_LOADING_OVERLAY_MS = gameLoadMeasurement("load_time_loading_overlay_ms", "loadTimeLoadingOverlayMs");
+    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_TOTAL_TIME_MS = gameLoadMeasurement(
+        "load_time_total_time_ms", "loadTimeTotalTimeMs"
+    );
+    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_PRE_WINDOW_MS = gameLoadMeasurement(
+        "load_time_pre_window_ms", "loadTimePreWindowMs"
+    );
+    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_BOOTSTRAP_MS = gameLoadMeasurement(
+        "load_time_bootstrap_ms", "loadTimeBootstrapMs"
+    );
+    public static final TelemetryProperty<GameLoadTimesEvent.Measurement> LOAD_TIME_LOADING_OVERLAY_MS = gameLoadMeasurement(
+        "load_time_loading_overlay_ms", "loadTimeLoadingOverlayMs"
+    );
     public static final TelemetryProperty<String> ADVANCEMENT_ID = string("advancement_id", "advancementId");
     public static final TelemetryProperty<Long> ADVANCEMENT_GAME_TIME = makeLong("advancement_game_time", "advancementGameTime");
 
-    public static <T> TelemetryProperty<T> create(String p_262052_, String p_261851_, Codec<T> p_261617_, TelemetryProperty.Exporter<T> p_261478_) {
-        return new TelemetryProperty<>(p_262052_, p_261851_, p_261617_, p_261478_);
+    public static <T> TelemetryProperty<T> create(final String id, final String exportKey, final Codec<T> codec, final TelemetryProperty.Exporter<T> exporter) {
+        return new TelemetryProperty<>(id, exportKey, codec, exporter);
     }
 
-    public static TelemetryProperty<Boolean> bool(String p_261605_, String p_262064_) {
-        return create(p_261605_, p_262064_, Codec.BOOL, TelemetryPropertyContainer::addProperty);
+    public static TelemetryProperty<Boolean> bool(final String id, final String exportKey) {
+        return create(id, exportKey, Codec.BOOL, TelemetryPropertyContainer::addProperty);
     }
 
-    public static TelemetryProperty<String> string(String p_261570_, String p_261611_) {
-        return create(p_261570_, p_261611_, Codec.STRING, TelemetryPropertyContainer::addProperty);
+    public static TelemetryProperty<String> string(final String id, final String exportKey) {
+        return create(id, exportKey, Codec.STRING, TelemetryPropertyContainer::addProperty);
     }
 
-    public static TelemetryProperty<Integer> integer(String p_262077_, String p_261580_) {
-        return create(p_262077_, p_261580_, Codec.INT, TelemetryPropertyContainer::addProperty);
+    public static TelemetryProperty<Integer> integer(final String id, final String exportKey) {
+        return create(id, exportKey, Codec.INT, TelemetryPropertyContainer::addProperty);
     }
 
-    public static TelemetryProperty<Long> makeLong(String p_286489_, String p_286616_) {
-        return create(p_286489_, p_286616_, Codec.LONG, TelemetryPropertyContainer::addProperty);
+    public static TelemetryProperty<Long> makeLong(final String id, final String exportKey) {
+        return create(id, exportKey, Codec.LONG, TelemetryPropertyContainer::addProperty);
     }
 
-    public static TelemetryProperty<UUID> uuid(String p_261558_, String p_261707_) {
-        return create(p_261558_, p_261707_, UUIDUtil.STRING_CODEC, (p_261704_, p_261590_, p_261975_) -> p_261704_.addProperty(p_261590_, p_261975_.toString()));
+    public static TelemetryProperty<UUID> uuid(final String id, final String exportKey) {
+        return create(id, exportKey, UUIDUtil.STRING_CODEC, (output, key, value) -> output.addProperty(key, value.toString()));
     }
 
-    public static TelemetryProperty<GameLoadTimesEvent.Measurement> gameLoadMeasurement(String p_286636_, String p_286769_) {
+    public static TelemetryProperty<GameLoadTimesEvent.Measurement> gameLoadMeasurement(final String id, final String exportKey) {
+        return create(id, exportKey, GameLoadTimesEvent.Measurement.CODEC, (output, key, value) -> output.addProperty(key, value.millis()));
+    }
+
+    public static TelemetryProperty<LongList> longSamples(final String id, final String exportKey) {
         return create(
-            p_286636_,
-            p_286769_,
-            GameLoadTimesEvent.Measurement.CODEC,
-            (p_286179_, p_286180_, p_286181_) -> p_286179_.addProperty(p_286180_, p_286181_.millis())
-        );
-    }
-
-    public static TelemetryProperty<LongList> longSamples(String p_262055_, String p_261726_) {
-        return create(
-            p_262055_,
-            p_261726_,
+            id,
+            exportKey,
             Codec.LONG.listOf().xmap(LongArrayList::new, Function.identity()),
-            (p_261674_, p_262049_, p_262118_) -> p_261674_.addProperty(
-                p_262049_, p_262118_.longStream().mapToObj(String::valueOf).collect(Collectors.joining(";"))
-            )
+            (output, key, value) -> output.addProperty(key, value.longStream().mapToObj(String::valueOf).collect(Collectors.joining(";")))
         );
     }
 
-    public void export(TelemetryPropertyMap p_262111_, TelemetryPropertyContainer p_262082_) {
-        T t = p_262111_.get(this);
-        if (t != null) {
-            this.exporter.apply(p_262082_, this.exportKey, t);
+    public void export(final TelemetryPropertyMap input, final TelemetryPropertyContainer output) {
+        T value = input.get(this);
+        if (value != null) {
+            this.exporter.apply(output, this.exportKey, value);
         } else {
-            p_262082_.addNullProperty(this.exportKey);
+            output.addNullProperty(this.exportKey);
         }
     }
 
@@ -132,13 +131,11 @@ public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, 
         return "TelemetryProperty[" + this.id + "]";
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Exporter<T> {
-        void apply(TelemetryPropertyContainer p_261934_, String p_261962_, T p_262012_);
+        public interface Exporter<T> {
+        void apply(TelemetryPropertyContainer output, String key, T value);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum GameMode implements StringRepresentable {
+        public enum GameMode implements StringRepresentable {
         SURVIVAL("survival", 0),
         CREATIVE("creative", 1),
         ADVENTURE("adventure", 2),
@@ -149,9 +146,9 @@ public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, 
         private final String key;
         private final int id;
 
-        private GameMode(final String p_261661_, final int p_261545_) {
-            this.key = p_261661_;
-            this.id = p_261545_;
+        GameMode(final String key, final int id) {
+            this.key = key;
+            this.id = id;
         }
 
         public int id() {
@@ -164,8 +161,7 @@ public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, 
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum ServerType implements StringRepresentable {
+        public enum ServerType implements StringRepresentable {
         REALM("realm"),
         LOCAL("local"),
         OTHER("server");
@@ -173,8 +169,8 @@ public record TelemetryProperty<T>(String id, String exportKey, Codec<T> codec, 
         public static final Codec<TelemetryProperty.ServerType> CODEC = StringRepresentable.fromEnum(TelemetryProperty.ServerType::values);
         private final String key;
 
-        private ServerType(final String p_261499_) {
-            this.key = p_261499_;
+        ServerType(final String key) {
+            this.key = key;
         }
 
         @Override

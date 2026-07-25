@@ -9,8 +9,10 @@ public class NearestHealableRaiderTargetGoal<T extends LivingEntity> extends Nea
     private static final int DEFAULT_COOLDOWN = 200;
     private int cooldown = 0;
 
-    public NearestHealableRaiderTargetGoal(Raider p_26087_, Class<T> p_26088_, boolean p_26089_, TargetingConditions.@Nullable Selector p_364216_) {
-        super(p_26087_, p_26088_, 500, p_26089_, false, p_364216_);
+    public NearestHealableRaiderTargetGoal(
+        final Raider raider, final Class<T> targetType, final boolean mustSee, final TargetingConditions.@Nullable Selector subselector
+    ) {
+        super(raider, targetType, 500, mustSee, false, subselector);
     }
 
     public int getCooldown() {
@@ -25,12 +27,14 @@ public class NearestHealableRaiderTargetGoal<T extends LivingEntity> extends Nea
     public boolean canUse() {
         if (this.cooldown > 0 || !this.mob.getRandom().nextBoolean()) {
             return false;
-        } else if (!((Raider)this.mob).hasActiveRaid()) {
-            return false;
-        } else {
-            this.findTarget();
-            return this.target != null;
         }
+
+        if (!((Raider)this.mob).hasActiveRaid()) {
+            return false;
+        }
+
+        this.findTarget();
+        return this.target != null;
     }
 
     @Override

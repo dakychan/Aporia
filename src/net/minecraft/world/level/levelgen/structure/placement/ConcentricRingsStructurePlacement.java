@@ -20,7 +20,7 @@ import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 
 public class ConcentricRingsStructurePlacement extends StructurePlacement {
     public static final MapCodec<ConcentricRingsStructurePlacement> CODEC = RecordCodecBuilder.mapCodec(
-        p_204960_ -> codec(p_204960_).apply(p_204960_, ConcentricRingsStructurePlacement::new)
+        i -> codec(i).apply(i, ConcentricRingsStructurePlacement::new)
     );
     private final int distance;
     private final int spread;
@@ -28,40 +28,40 @@ public class ConcentricRingsStructurePlacement extends StructurePlacement {
     private final HolderSet<Biome> preferredBiomes;
 
     private static P9<Mu<ConcentricRingsStructurePlacement>, Vec3i, StructurePlacement.FrequencyReductionMethod, Float, Integer, Optional<StructurePlacement.ExclusionZone>, Integer, Integer, Integer, HolderSet<Biome>> codec(
-        Instance<ConcentricRingsStructurePlacement> p_226997_
+        final Instance<ConcentricRingsStructurePlacement> i
     ) {
-        P5<Mu<ConcentricRingsStructurePlacement>, Vec3i, StructurePlacement.FrequencyReductionMethod, Float, Integer, Optional<StructurePlacement.ExclusionZone>> p5 = placementCodec(
-            p_226997_
+        P5<Mu<ConcentricRingsStructurePlacement>, Vec3i, StructurePlacement.FrequencyReductionMethod, Float, Integer, Optional<StructurePlacement.ExclusionZone>> placement = placementCodec(
+            i
         );
-        P4<Mu<ConcentricRingsStructurePlacement>, Integer, Integer, Integer, HolderSet<Biome>> p4 = p_226997_.group(
+        P4<Mu<ConcentricRingsStructurePlacement>, Integer, Integer, Integer, HolderSet<Biome>> rings = i.group(
             Codec.intRange(0, 1023).fieldOf("distance").forGetter(ConcentricRingsStructurePlacement::distance),
             Codec.intRange(0, 1023).fieldOf("spread").forGetter(ConcentricRingsStructurePlacement::spread),
             Codec.intRange(1, 4095).fieldOf("count").forGetter(ConcentricRingsStructurePlacement::count),
             RegistryCodecs.homogeneousList(Registries.BIOME).fieldOf("preferred_biomes").forGetter(ConcentricRingsStructurePlacement::preferredBiomes)
         );
-        return new P9<>(p5.t1(), p5.t2(), p5.t3(), p5.t4(), p5.t5(), p4.t1(), p4.t2(), p4.t3(), p4.t4());
+        return new P9<>(placement.t1(), placement.t2(), placement.t3(), placement.t4(), placement.t5(), rings.t1(), rings.t2(), rings.t3(), rings.t4());
     }
 
     public ConcentricRingsStructurePlacement(
-        Vec3i p_226981_,
-        StructurePlacement.FrequencyReductionMethod p_226982_,
-        float p_226983_,
-        int p_226984_,
-        Optional<StructurePlacement.ExclusionZone> p_226985_,
-        int p_226986_,
-        int p_226987_,
-        int p_226988_,
-        HolderSet<Biome> p_226989_
+        final Vec3i locateOffset,
+        final StructurePlacement.FrequencyReductionMethod frequencyReductionMethod,
+        final float frequency,
+        final int salt,
+        final Optional<StructurePlacement.ExclusionZone> exclusionZone,
+        final int distance,
+        final int spread,
+        final int count,
+        final HolderSet<Biome> preferredBiomes
     ) {
-        super(p_226981_, p_226982_, p_226983_, p_226984_, p_226985_);
-        this.distance = p_226986_;
-        this.spread = p_226987_;
-        this.count = p_226988_;
-        this.preferredBiomes = p_226989_;
+        super(locateOffset, frequencyReductionMethod, frequency, salt, exclusionZone);
+        this.distance = distance;
+        this.spread = spread;
+        this.count = count;
+        this.preferredBiomes = preferredBiomes;
     }
 
-    public ConcentricRingsStructurePlacement(int p_226976_, int p_226977_, int p_226978_, HolderSet<Biome> p_226979_) {
-        this(Vec3i.ZERO, StructurePlacement.FrequencyReductionMethod.DEFAULT, 1.0F, 0, Optional.empty(), p_226976_, p_226977_, p_226978_, p_226979_);
+    public ConcentricRingsStructurePlacement(final int distance, final int spread, final int count, final HolderSet<Biome> preferredBiomes) {
+        this(Vec3i.ZERO, StructurePlacement.FrequencyReductionMethod.DEFAULT, 1.0F, 0, Optional.empty(), distance, spread, count, preferredBiomes);
     }
 
     public int distance() {
@@ -81,9 +81,9 @@ public class ConcentricRingsStructurePlacement extends StructurePlacement {
     }
 
     @Override
-    protected boolean isPlacementChunk(ChunkGeneratorStructureState p_256631_, int p_256202_, int p_255915_) {
-        List<ChunkPos> list = p_256631_.getRingPositionsFor(this);
-        return list == null ? false : list.contains(new ChunkPos(p_256202_, p_255915_));
+    protected boolean isPlacementChunk(final ChunkGeneratorStructureState generatorState, final int sourceX, final int sourceZ) {
+        List<ChunkPos> positions = generatorState.getRingPositionsFor(this);
+        return positions == null ? false : positions.contains(new ChunkPos(sourceX, sourceZ));
     }
 
     @Override

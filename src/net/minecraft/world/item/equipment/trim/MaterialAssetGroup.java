@@ -4,7 +4,6 @@ import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Map;
@@ -19,13 +18,13 @@ import net.minecraft.world.item.equipment.EquipmentAssets;
 public record MaterialAssetGroup(MaterialAssetGroup.AssetInfo base, Map<ResourceKey<EquipmentAsset>, MaterialAssetGroup.AssetInfo> overrides) {
     public static final String SEPARATOR = "_";
     public static final MapCodec<MaterialAssetGroup> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_394675_ -> p_394675_.group(
+        i -> i.group(
                 MaterialAssetGroup.AssetInfo.CODEC.fieldOf("asset_name").forGetter(MaterialAssetGroup::base),
                 Codec.unboundedMap(ResourceKey.codec(EquipmentAssets.ROOT_ID), MaterialAssetGroup.AssetInfo.CODEC)
                     .optionalFieldOf("override_armor_assets", Map.of())
                     .forGetter(MaterialAssetGroup::overrides)
             )
-            .apply(p_394675_, MaterialAssetGroup::new)
+            .apply(i, MaterialAssetGroup::new)
     );
     public static final StreamCodec<ByteBuf, MaterialAssetGroup> STREAM_CODEC = StreamCodec.composite(
         MaterialAssetGroup.AssetInfo.STREAM_CODEC,
@@ -46,18 +45,16 @@ public record MaterialAssetGroup(MaterialAssetGroup.AssetInfo base, Map<Resource
     public static final MaterialAssetGroup AMETHYST = create("amethyst");
     public static final MaterialAssetGroup RESIN = create("resin");
 
-    public static MaterialAssetGroup create(String p_392294_) {
-        return new MaterialAssetGroup(new MaterialAssetGroup.AssetInfo(p_392294_), Map.of());
+    public static MaterialAssetGroup create(final String base) {
+        return new MaterialAssetGroup(new MaterialAssetGroup.AssetInfo(base), Map.of());
     }
 
-    public static MaterialAssetGroup create(String p_397849_, Map<ResourceKey<EquipmentAsset>, String> p_394898_) {
-        return new MaterialAssetGroup(
-            new MaterialAssetGroup.AssetInfo(p_397849_), Map.copyOf(Maps.transformValues(p_394898_, MaterialAssetGroup.AssetInfo::new))
-        );
+    public static MaterialAssetGroup create(final String base, final Map<ResourceKey<EquipmentAsset>, String> overrides) {
+        return new MaterialAssetGroup(new MaterialAssetGroup.AssetInfo(base), Map.copyOf(Maps.transformValues(overrides, MaterialAssetGroup.AssetInfo::new)));
     }
 
-    public MaterialAssetGroup.AssetInfo assetId(ResourceKey<EquipmentAsset> p_397174_) {
-        return this.overrides.getOrDefault(p_397174_, this.base);
+    public MaterialAssetGroup.AssetInfo assetId(final ResourceKey<EquipmentAsset> equipmentAssetId) {
+        return this.overrides.getOrDefault(equipmentAssetId, this.base);
     }
 
     public record AssetInfo(String suffix) {
@@ -66,11 +63,9 @@ public record MaterialAssetGroup(MaterialAssetGroup.AssetInfo base, Map<Resource
         public static final StreamCodec<ByteBuf, MaterialAssetGroup.AssetInfo> STREAM_CODEC = ByteBufCodecs.STRING_UTF8
             .map(MaterialAssetGroup.AssetInfo::new, MaterialAssetGroup.AssetInfo::suffix);
 
-        public AssetInfo(String suffix) {
+        public AssetInfo {
             if (!Identifier.isValidPath(suffix)) {
                 throw new IllegalArgumentException("Invalid string to use as a resource path element: " + suffix);
-            } else {
-                this.suffix = suffix;
             }
         }
     }

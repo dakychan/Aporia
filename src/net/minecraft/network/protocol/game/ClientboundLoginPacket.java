@@ -22,40 +22,43 @@ public record ClientboundLoginPacket(
     boolean showDeathScreen,
     boolean doLimitedCrafting,
     CommonPlayerSpawnInfo commonPlayerSpawnInfo,
+    boolean onlineMode,
     boolean enforcesSecureChat
 ) implements Packet<ClientGamePacketListener> {
     public static final StreamCodec<RegistryFriendlyByteBuf, ClientboundLoginPacket> STREAM_CODEC = Packet.codec(
         ClientboundLoginPacket::write, ClientboundLoginPacket::new
     );
 
-    private ClientboundLoginPacket(RegistryFriendlyByteBuf p_333088_) {
+    private ClientboundLoginPacket(final RegistryFriendlyByteBuf input) {
         this(
-            p_333088_.readInt(),
-            p_333088_.readBoolean(),
-            p_333088_.readCollection(Sets::newHashSetWithExpectedSize, p_258210_ -> p_258210_.readResourceKey(Registries.DIMENSION)),
-            p_333088_.readVarInt(),
-            p_333088_.readVarInt(),
-            p_333088_.readVarInt(),
-            p_333088_.readBoolean(),
-            p_333088_.readBoolean(),
-            p_333088_.readBoolean(),
-            new CommonPlayerSpawnInfo(p_333088_),
-            p_333088_.readBoolean()
+            input.readInt(),
+            input.readBoolean(),
+            input.readCollection(Sets::newHashSetWithExpectedSize, buf -> buf.readResourceKey(Registries.DIMENSION)),
+            input.readVarInt(),
+            input.readVarInt(),
+            input.readVarInt(),
+            input.readBoolean(),
+            input.readBoolean(),
+            input.readBoolean(),
+            new CommonPlayerSpawnInfo(input),
+            input.readBoolean(),
+            input.readBoolean()
         );
     }
 
-    private void write(RegistryFriendlyByteBuf p_329645_) {
-        p_329645_.writeInt(this.playerId);
-        p_329645_.writeBoolean(this.hardcore);
-        p_329645_.writeCollection(this.levels, FriendlyByteBuf::writeResourceKey);
-        p_329645_.writeVarInt(this.maxPlayers);
-        p_329645_.writeVarInt(this.chunkRadius);
-        p_329645_.writeVarInt(this.simulationDistance);
-        p_329645_.writeBoolean(this.reducedDebugInfo);
-        p_329645_.writeBoolean(this.showDeathScreen);
-        p_329645_.writeBoolean(this.doLimitedCrafting);
-        this.commonPlayerSpawnInfo.write(p_329645_);
-        p_329645_.writeBoolean(this.enforcesSecureChat);
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeInt(this.playerId);
+        output.writeBoolean(this.hardcore);
+        output.writeCollection(this.levels, FriendlyByteBuf::writeResourceKey);
+        output.writeVarInt(this.maxPlayers);
+        output.writeVarInt(this.chunkRadius);
+        output.writeVarInt(this.simulationDistance);
+        output.writeBoolean(this.reducedDebugInfo);
+        output.writeBoolean(this.showDeathScreen);
+        output.writeBoolean(this.doLimitedCrafting);
+        this.commonPlayerSpawnInfo.write(output);
+        output.writeBoolean(this.onlineMode);
+        output.writeBoolean(this.enforcesSecureChat);
     }
 
     @Override
@@ -63,7 +66,7 @@ public record ClientboundLoginPacket(
         return GamePacketTypes.CLIENTBOUND_LOGIN;
     }
 
-    public void handle(ClientGamePacketListener p_132397_) {
-        p_132397_.handleLogin(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleLogin(this);
     }
 }

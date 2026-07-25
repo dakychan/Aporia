@@ -6,8 +6,8 @@ public enum PacketFlow {
 
     private final String id;
 
-    private PacketFlow(final String p_330878_) {
-        this.id = p_330878_;
+    PacketFlow(final String id) {
+        this.id = id;
     }
 
     public PacketFlow getOpposite() {

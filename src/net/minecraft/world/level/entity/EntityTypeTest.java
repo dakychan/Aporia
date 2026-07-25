@@ -3,35 +3,35 @@ package net.minecraft.world.level.entity;
 import org.jspecify.annotations.Nullable;
 
 public interface EntityTypeTest<B, T extends B> {
-    static <B, T extends B> EntityTypeTest<B, T> forClass(final Class<T> p_156917_) {
+    static <B, T extends B> EntityTypeTest<B, T> forClass(final Class<T> cls) {
         return new EntityTypeTest<B, T>() {
             @Override
-            public @Nullable T tryCast(B p_156924_) {
-                return (T)(p_156917_.isInstance(p_156924_) ? p_156924_ : null);
+            public @Nullable T tryCast(final B entity) {
+                return (T)(cls.isInstance(entity) ? entity : null);
             }
 
             @Override
             public Class<? extends B> getBaseClass() {
-                return p_156917_;
+                return cls;
             }
         };
     }
 
-    static <B, T extends B> EntityTypeTest<B, T> forExactClass(final Class<T> p_310060_) {
+    static <B, T extends B> EntityTypeTest<B, T> forExactClass(final Class<T> cls) {
         return new EntityTypeTest<B, T>() {
             @Override
-            public @Nullable T tryCast(B p_309868_) {
-                return (T)(p_310060_.equals(p_309868_.getClass()) ? p_309868_ : null);
+            public @Nullable T tryCast(final B entity) {
+                return (T)(cls.equals(entity.getClass()) ? entity : null);
             }
 
             @Override
             public Class<? extends B> getBaseClass() {
-                return p_310060_;
+                return cls;
             }
         };
     }
 
-    @Nullable T tryCast(B p_156918_);
+    @Nullable T tryCast(B entity);
 
     Class<? extends B> getBaseClass();
 }

@@ -24,13 +24,13 @@ public class Carvers {
     public static final ResourceKey<ConfiguredWorldCarver<?>> CANYON = createKey("canyon");
     public static final ResourceKey<ConfiguredWorldCarver<?>> NETHER_CAVE = createKey("nether_cave");
 
-    private static ResourceKey<ConfiguredWorldCarver<?>> createKey(String p_256085_) {
-        return ResourceKey.create(Registries.CONFIGURED_CARVER, Identifier.withDefaultNamespace(p_256085_));
+    private static ResourceKey<ConfiguredWorldCarver<?>> createKey(final String name) {
+        return ResourceKey.create(Registries.CONFIGURED_CARVER, Identifier.withDefaultNamespace(name));
     }
 
-    public static void bootstrap(BootstrapContext<ConfiguredWorldCarver<?>> p_334235_) {
-        HolderGetter<Block> holdergetter = p_334235_.lookup(Registries.BLOCK);
-        p_334235_.register(
+    public static void bootstrap(final BootstrapContext<ConfiguredWorldCarver<?>> context) {
+        HolderGetter<Block> blocks = context.lookup(Registries.BLOCK);
+        context.register(
             CAVE,
             WorldCarver.CAVE
                 .configured(
@@ -40,14 +40,14 @@ public class Carvers {
                         UniformFloat.of(0.1F, 0.9F),
                         VerticalAnchor.aboveBottom(8),
                         CarverDebugSettings.of(false, Blocks.CRIMSON_BUTTON.defaultBlockState()),
-                        holdergetter.getOrThrow(BlockTags.OVERWORLD_CARVER_REPLACEABLES),
+                        blocks.getOrThrow(BlockTags.OVERWORLD_CARVER_REPLACEABLES),
                         UniformFloat.of(0.7F, 1.4F),
                         UniformFloat.of(0.8F, 1.3F),
                         UniformFloat.of(-1.0F, -0.4F)
                     )
                 )
         );
-        p_334235_.register(
+        context.register(
             CAVE_EXTRA_UNDERGROUND,
             WorldCarver.CAVE
                 .configured(
@@ -57,14 +57,14 @@ public class Carvers {
                         UniformFloat.of(0.1F, 0.9F),
                         VerticalAnchor.aboveBottom(8),
                         CarverDebugSettings.of(false, Blocks.OAK_BUTTON.defaultBlockState()),
-                        holdergetter.getOrThrow(BlockTags.OVERWORLD_CARVER_REPLACEABLES),
+                        blocks.getOrThrow(BlockTags.OVERWORLD_CARVER_REPLACEABLES),
                         UniformFloat.of(0.7F, 1.4F),
                         UniformFloat.of(0.8F, 1.3F),
                         UniformFloat.of(-1.0F, -0.4F)
                     )
                 )
         );
-        p_334235_.register(
+        context.register(
             CANYON,
             WorldCarver.CANYON
                 .configured(
@@ -74,7 +74,7 @@ public class Carvers {
                         ConstantFloat.of(3.0F),
                         VerticalAnchor.aboveBottom(8),
                         CarverDebugSettings.of(false, Blocks.WARPED_BUTTON.defaultBlockState()),
-                        holdergetter.getOrThrow(BlockTags.OVERWORLD_CARVER_REPLACEABLES),
+                        blocks.getOrThrow(BlockTags.OVERWORLD_CARVER_REPLACEABLES),
                         UniformFloat.of(-0.125F, 0.125F),
                         new CanyonCarverConfiguration.CanyonShapeConfiguration(
                             UniformFloat.of(0.75F, 1.0F), TrapezoidFloat.of(0.0F, 6.0F, 2.0F), 3, UniformFloat.of(0.75F, 1.0F), 1.0F, 0.0F
@@ -82,7 +82,7 @@ public class Carvers {
                     )
                 )
         );
-        p_334235_.register(
+        context.register(
             NETHER_CAVE,
             WorldCarver.NETHER_CAVE
                 .configured(
@@ -91,7 +91,7 @@ public class Carvers {
                         UniformHeight.of(VerticalAnchor.absolute(0), VerticalAnchor.belowTop(1)),
                         ConstantFloat.of(0.5F),
                         VerticalAnchor.aboveBottom(10),
-                        holdergetter.getOrThrow(BlockTags.NETHER_CARVER_REPLACEABLES),
+                        blocks.getOrThrow(BlockTags.NETHER_CARVER_REPLACEABLES),
                         ConstantFloat.of(1.0F),
                         ConstantFloat.of(1.0F),
                         ConstantFloat.of(-0.7F)

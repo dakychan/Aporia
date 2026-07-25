@@ -25,11 +25,11 @@ public record ClientboundMoveMinecartPacket(int entityId, List<NewMinecartBehavi
         return GamePacketTypes.CLIENTBOUND_MOVE_MINECART_ALONG_TRACK;
     }
 
-    public void handle(ClientGamePacketListener p_366622_) {
-        p_366622_.handleMinecartAlongTrack(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleMinecartAlongTrack(this);
     }
 
-    public @Nullable Entity getEntity(Level p_361971_) {
-        return p_361971_.getEntity(this.entityId);
+    public @Nullable Entity getEntity(final Level level) {
+        return level.getEntity(this.entityId);
     }
 }

@@ -2,6 +2,7 @@ package net.minecraft.client.renderer.entity;
 
 import com.google.common.collect.Maps;
 import java.util.Map;
+import net.minecraft.client.model.animal.equine.BabyHorseModel;
 import net.minecraft.client.model.animal.equine.EquineSaddleModel;
 import net.minecraft.client.model.animal.equine.HorseModel;
 import net.minecraft.client.model.geom.ModelLayers;
@@ -12,69 +13,91 @@ import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.equine.Horse;
 import net.minecraft.world.entity.animal.equine.Variant;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public final class HorseRenderer extends AbstractHorseRenderer<Horse, HorseRenderState, HorseModel> {
-    private static final Map<Variant, Identifier> LOCATION_BY_VARIANT = Maps.newEnumMap(
+    private static final Map<Variant, HorseRenderer.HorseTextures> LOCATION_BY_VARIANT = Maps.newEnumMap(
         Map.of(
             Variant.WHITE,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_white.png"),
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_white.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_white_baby.png")
+            ),
             Variant.CREAMY,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_creamy.png"),
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_creamy.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_creamy_baby.png")
+            ),
             Variant.CHESTNUT,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_chestnut.png"),
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_chestnut.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_chestnut_baby.png")
+            ),
             Variant.BROWN,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_brown.png"),
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_brown.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_brown_baby.png")
+            ),
             Variant.BLACK,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_black.png"),
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_black.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_black_baby.png")
+            ),
             Variant.GRAY,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_gray.png"),
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_gray.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_gray_baby.png")
+            ),
             Variant.DARK_BROWN,
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_darkbrown.png")
+            new HorseRenderer.HorseTextures(
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_darkbrown.png"),
+                Identifier.withDefaultNamespace("textures/entity/horse/horse_darkbrown_baby.png")
+            )
         )
     );
 
-    public HorseRenderer(EntityRendererProvider.Context p_174167_) {
-        super(p_174167_, new HorseModel(p_174167_.bakeLayer(ModelLayers.HORSE)), new HorseModel(p_174167_.bakeLayer(ModelLayers.HORSE_BABY)));
+    public HorseRenderer(final EntityRendererProvider.Context context) {
+        super(context, new HorseModel(context.bakeLayer(ModelLayers.HORSE)), new BabyHorseModel(context.bakeLayer(ModelLayers.HORSE_BABY)));
         this.addLayer(new HorseMarkingLayer(this));
         this.addLayer(
             new SimpleEquipmentLayer<>(
                 this,
-                p_174167_.getEquipmentRenderer(),
+                context.getEquipmentRenderer(),
                 EquipmentClientInfo.LayerType.HORSE_BODY,
-                p_389515_ -> p_389515_.bodyArmorItem,
-                new HorseModel(p_174167_.bakeLayer(ModelLayers.HORSE_ARMOR)),
-                new HorseModel(p_174167_.bakeLayer(ModelLayers.HORSE_BABY_ARMOR)),
+                state -> state.bodyArmorItem,
+                new HorseModel(context.bakeLayer(ModelLayers.HORSE_ARMOR)),
+                null,
                 2
             )
         );
         this.addLayer(
             new SimpleEquipmentLayer<>(
                 this,
-                p_174167_.getEquipmentRenderer(),
+                context.getEquipmentRenderer(),
                 EquipmentClientInfo.LayerType.HORSE_SADDLE,
-                p_389516_ -> p_389516_.saddle,
-                new EquineSaddleModel(p_174167_.bakeLayer(ModelLayers.HORSE_SADDLE)),
-                new EquineSaddleModel(p_174167_.bakeLayer(ModelLayers.HORSE_BABY_SADDLE)),
+                state -> state.saddle,
+                new EquineSaddleModel(context.bakeLayer(ModelLayers.HORSE_SADDLE)),
+                null,
                 2
             )
         );
     }
 
-    public Identifier getTextureLocation(HorseRenderState p_456331_) {
-        return LOCATION_BY_VARIANT.get(p_456331_.variant);
+    public Identifier getTextureLocation(final HorseRenderState state) {
+        HorseRenderer.HorseTextures variant = LOCATION_BY_VARIANT.get(state.variant);
+        return state.isBaby ? variant.baby : variant.adult;
     }
 
     public HorseRenderState createRenderState() {
         return new HorseRenderState();
     }
 
-    public void extractRenderState(Horse p_452059_, HorseRenderState p_458870_, float p_367677_) {
-        super.extractRenderState(p_452059_, p_458870_, p_367677_);
-        p_458870_.variant = p_452059_.getVariant();
-        p_458870_.markings = p_452059_.getMarkings();
-        p_458870_.bodyArmorItem = p_452059_.getBodyArmorItem().copy();
+    public void extractRenderState(final Horse entity, final HorseRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.variant = entity.getVariant();
+        state.markings = entity.getMarkings();
+        state.bodyArmorItem = entity.getBodyArmorItem().copy();
+    }
+
+        private record HorseTextures(Identifier adult, Identifier baby) {
     }
 }

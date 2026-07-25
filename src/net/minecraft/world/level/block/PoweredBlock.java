@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -15,17 +14,17 @@ public class PoweredBlock extends Block {
         return CODEC;
     }
 
-    public PoweredBlock(BlockBehaviour.Properties p_55206_) {
-        super(p_55206_);
+    public PoweredBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected boolean isSignalSource(BlockState p_55213_) {
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getSignal(BlockState p_55208_, BlockGetter p_55209_, BlockPos p_55210_, Direction p_55211_) {
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
         return 15;
     }
 }

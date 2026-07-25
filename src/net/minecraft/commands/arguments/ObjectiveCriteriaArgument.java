@@ -23,7 +23,7 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 public class ObjectiveCriteriaArgument implements ArgumentType<ObjectiveCriteria> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo.bar.baz", "minecraft:foo");
     public static final DynamicCommandExceptionType ERROR_INVALID_VALUE = new DynamicCommandExceptionType(
-        p_308355_ -> Component.translatableEscape("argument.criteria.invalid", p_308355_)
+        value -> Component.translatableEscape("argument.criteria.invalid", value)
     );
 
     private ObjectiveCriteriaArgument() {
@@ -33,40 +33,40 @@ public class ObjectiveCriteriaArgument implements ArgumentType<ObjectiveCriteria
         return new ObjectiveCriteriaArgument();
     }
 
-    public static ObjectiveCriteria getCriteria(CommandContext<CommandSourceStack> p_102566_, String p_102567_) {
-        return p_102566_.getArgument(p_102567_, ObjectiveCriteria.class);
+    public static ObjectiveCriteria getCriteria(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, ObjectiveCriteria.class);
     }
 
-    public ObjectiveCriteria parse(StringReader p_102560_) throws CommandSyntaxException {
-        int i = p_102560_.getCursor();
+    public ObjectiveCriteria parse(final StringReader reader) throws CommandSyntaxException {
+        int start = reader.getCursor();
 
-        while (p_102560_.canRead() && p_102560_.peek() != ' ') {
-            p_102560_.skip();
+        while (reader.canRead() && reader.peek() != ' ') {
+            reader.skip();
         }
 
-        String s = p_102560_.getString().substring(i, p_102560_.getCursor());
-        return ObjectiveCriteria.byName(s).orElseThrow(() -> {
-            p_102560_.setCursor(i);
-            return ERROR_INVALID_VALUE.createWithContext(p_102560_, s);
+        String id = reader.getString().substring(start, reader.getCursor());
+        return ObjectiveCriteria.byName(id).orElseThrow(() -> {
+            reader.setCursor(start);
+            return ERROR_INVALID_VALUE.createWithContext(reader, id);
         });
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_102572_, SuggestionsBuilder p_102573_) {
-        List<String> list = Lists.newArrayList(ObjectiveCriteria.getCustomCriteriaNames());
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        List<String> ids = Lists.newArrayList(ObjectiveCriteria.getCustomCriteriaNames());
 
-        for (StatType<?> stattype : BuiltInRegistries.STAT_TYPE) {
-            for (Object object : stattype.getRegistry()) {
-                String s = this.getName(stattype, object);
-                list.add(s);
+        for (StatType<?> type : BuiltInRegistries.STAT_TYPE) {
+            for (Object value : type.getRegistry()) {
+                String name = this.getName(type, value);
+                ids.add(name);
             }
         }
 
-        return SharedSuggestionProvider.suggest(list, p_102573_);
+        return SharedSuggestionProvider.suggest(ids, builder);
     }
 
-    public <T> String getName(StatType<T> p_102557_, Object p_102558_) {
-        return Stat.buildName(p_102557_, (T)p_102558_);
+    public <T> String getName(final StatType<T> type, final Object value) {
+        return Stat.buildName(type, (T)value);
     }
 
     @Override

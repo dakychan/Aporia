@@ -4,14 +4,14 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.ObjectUtils;
 
 public record ModCheck(ModCheck.Confidence confidence, String description) {
-    public static ModCheck identify(String p_184601_, Supplier<String> p_184602_, String p_184603_, Class<?> p_184604_) {
-        String s = p_184602_.get();
-        if (!p_184601_.equals(s)) {
-            return new ModCheck(ModCheck.Confidence.DEFINITELY, p_184603_ + " brand changed to '" + s + "'");
+    public static ModCheck identify(final String expectedBrand, final Supplier<String> actualBrand, final String component, final Class<?> canaryClass) {
+        String mod = actualBrand.get();
+        if (!expectedBrand.equals(mod)) {
+            return new ModCheck(ModCheck.Confidence.DEFINITELY, component + " brand changed to '" + mod + "'");
         } else {
-            return p_184604_.getSigners() == null
-                ? new ModCheck(ModCheck.Confidence.VERY_LIKELY, p_184603_ + " jar signature invalidated")
-                : new ModCheck(ModCheck.Confidence.PROBABLY_NOT, p_184603_ + " jar signature and brand is untouched");
+            return canaryClass.getSigners() == null
+                ? new ModCheck(ModCheck.Confidence.VERY_LIKELY, component + " jar signature invalidated")
+                : new ModCheck(ModCheck.Confidence.PROBABLY_NOT, component + " jar signature and brand is untouched");
         }
     }
 
@@ -19,25 +19,25 @@ public record ModCheck(ModCheck.Confidence confidence, String description) {
         return this.confidence.shouldReportAsModified;
     }
 
-    public ModCheck merge(ModCheck p_184599_) {
-        return new ModCheck(ObjectUtils.max(this.confidence, p_184599_.confidence), this.description + "; " + p_184599_.description);
+    public ModCheck merge(final ModCheck other) {
+        return new ModCheck(ObjectUtils.max(this.confidence, other.confidence), this.description + "; " + other.description);
     }
 
     public String fullDescription() {
         return this.confidence.description + " " + this.description;
     }
 
-    public static enum Confidence {
+    public enum Confidence {
         PROBABLY_NOT("Probably not.", false),
         VERY_LIKELY("Very likely;", true),
         DEFINITELY("Definitely;", true);
 
-        final String description;
-        final boolean shouldReportAsModified;
+        private final String description;
+        private final boolean shouldReportAsModified;
 
-        private Confidence(final String p_184622_, final boolean p_184623_) {
-            this.description = p_184622_;
-            this.shouldReportAsModified = p_184623_;
+        Confidence(final String description, final boolean shouldReportAsModified) {
+            this.description = description;
+            this.shouldReportAsModified = shouldReportAsModified;
         }
     }
 }

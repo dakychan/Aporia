@@ -5,33 +5,30 @@ import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportedException;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.culling.Frustum;
-import net.minecraft.client.renderer.state.ParticleGroupRenderState;
-import net.minecraft.client.renderer.state.QuadParticleRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.renderer.state.level.ParticleGroupRenderState;
+import net.minecraft.client.renderer.state.level.QuadParticleRenderState;
 
-@OnlyIn(Dist.CLIENT)
 public class QuadParticleGroup extends ParticleGroup<SingleQuadParticle> {
     private final ParticleRenderType particleType;
-    final QuadParticleRenderState particleTypeRenderState = new QuadParticleRenderState();
+    private final QuadParticleRenderState particleTypeRenderState = new QuadParticleRenderState();
 
-    public QuadParticleGroup(ParticleEngine p_422302_, ParticleRenderType p_427417_) {
-        super(p_422302_);
-        this.particleType = p_427417_;
+    public QuadParticleGroup(final ParticleEngine engine, final ParticleRenderType particleType) {
+        super(engine);
+        this.particleType = particleType;
     }
 
     @Override
-    public ParticleGroupRenderState extractRenderState(Frustum p_426251_, Camera p_431723_, float p_428753_) {
-        for (SingleQuadParticle singlequadparticle : this.particles) {
-            if (p_426251_.pointInFrustum(singlequadparticle.x, singlequadparticle.y, singlequadparticle.z)) {
+    public ParticleGroupRenderState extractRenderState(final Frustum frustum, final Camera camera, final float partialTickTime) {
+        for (SingleQuadParticle particle : this.particles) {
+            if (frustum.pointInFrustum(particle.x, particle.y, particle.z)) {
                 try {
-                    singlequadparticle.extract(this.particleTypeRenderState, p_431723_, p_428753_);
+                    particle.extract(this.particleTypeRenderState, camera, partialTickTime);
                 } catch (Throwable throwable) {
-                    CrashReport crashreport = CrashReport.forThrowable(throwable, "Rendering Particle");
-                    CrashReportCategory crashreportcategory = crashreport.addCategory("Particle being rendered");
-                    crashreportcategory.setDetail("Particle", singlequadparticle::toString);
-                    crashreportcategory.setDetail("Particle Type", this.particleType::toString);
-                    throw new ReportedException(crashreport);
+                    CrashReport report = CrashReport.forThrowable(throwable, "Rendering Particle");
+                    CrashReportCategory category = report.addCategory("Particle being rendered");
+                    category.setDetail("Particle", particle::toString);
+                    category.setDetail("Particle Type", this.particleType::toString);
+                    throw new ReportedException(report);
                 }
             }
         }

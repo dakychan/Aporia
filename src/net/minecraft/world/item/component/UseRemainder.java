@@ -4,48 +4,39 @@ import com.mojang.serialization.Codec;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
-public record UseRemainder(ItemStack convertInto) {
-    public static final Codec<UseRemainder> CODEC = ItemStack.CODEC.xmap(UseRemainder::new, UseRemainder::convertInto);
+public record UseRemainder(ItemStackTemplate convertInto) {
+    public static final Codec<UseRemainder> CODEC = ItemStackTemplate.CODEC.xmap(UseRemainder::new, UseRemainder::convertInto);
     public static final StreamCodec<RegistryFriendlyByteBuf, UseRemainder> STREAM_CODEC = StreamCodec.composite(
-        ItemStack.STREAM_CODEC, UseRemainder::convertInto, UseRemainder::new
+        ItemStackTemplate.STREAM_CODEC, UseRemainder::convertInto, UseRemainder::new
     );
 
-    public ItemStack convertIntoRemainder(ItemStack p_361599_, int p_362849_, boolean p_365138_, UseRemainder.OnExtraCreatedRemainder p_363866_) {
-        if (p_365138_) {
-            return p_361599_;
-        } else if (p_361599_.getCount() >= p_362849_) {
-            return p_361599_;
-        } else {
-            ItemStack itemstack = this.convertInto.copy();
-            if (p_361599_.isEmpty()) {
-                return itemstack;
-            } else {
-                p_363866_.apply(itemstack);
-                return p_361599_;
-            }
+    public ItemStack convertIntoRemainder(
+        final ItemStack usedStack,
+        final int stackCountBeforeUsing,
+        final boolean hasInfiniteMaterials,
+        final UseRemainder.OnExtraCreatedRemainder onExtraCreatedRemainder
+    ) {
+        if (hasInfiniteMaterials) {
+            return usedStack;
         }
-    }
 
-    @Override
-    public boolean equals(Object p_361701_) {
-        if (this == p_361701_) {
-            return true;
-        } else if (p_361701_ != null && this.getClass() == p_361701_.getClass()) {
-            UseRemainder useremainder = (UseRemainder)p_361701_;
-            return ItemStack.matches(this.convertInto, useremainder.convertInto);
-        } else {
-            return false;
+        if (usedStack.getCount() >= stackCountBeforeUsing) {
+            return usedStack;
         }
-    }
 
-    @Override
-    public int hashCode() {
-        return ItemStack.hashItemAndComponents(this.convertInto);
+        ItemStack remainderStack = this.convertInto.create();
+        if (usedStack.isEmpty()) {
+            return remainderStack;
+        }
+
+        onExtraCreatedRemainder.apply(remainderStack);
+        return usedStack;
     }
 
     @FunctionalInterface
     public interface OnExtraCreatedRemainder {
-        void apply(ItemStack p_369045_);
+        void apply(final ItemStack extraCreatedRemainder);
     }
 }

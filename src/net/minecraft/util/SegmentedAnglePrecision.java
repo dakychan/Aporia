@@ -8,53 +8,55 @@ public class SegmentedAnglePrecision {
     private final float degreeToAngle;
     private final float angleToDegree;
 
-    public SegmentedAnglePrecision(int p_265275_) {
-        if (p_265275_ < 2) {
+    public SegmentedAnglePrecision(final int bitPrecision) {
+        if (bitPrecision < 2) {
             throw new IllegalArgumentException("Precision cannot be less than 2 bits");
-        } else if (p_265275_ > 30) {
+        }
+
+        if (bitPrecision > 30) {
             throw new IllegalArgumentException("Precision cannot be greater than 30 bits");
-        } else {
-            int i = 1 << p_265275_;
-            this.mask = i - 1;
-            this.precision = p_265275_;
-            this.degreeToAngle = i / 360.0F;
-            this.angleToDegree = 360.0F / i;
         }
+
+        int twoPi = 1 << bitPrecision;
+        this.mask = twoPi - 1;
+        this.precision = bitPrecision;
+        this.degreeToAngle = twoPi / 360.0F;
+        this.angleToDegree = 360.0F / twoPi;
     }
 
-    public boolean isSameAxis(int p_265505_, int p_265708_) {
-        int i = this.getMask() >> 1;
-        return (p_265505_ & i) == (p_265708_ & i);
+    public boolean isSameAxis(final int binaryAngleA, final int binaryAngleB) {
+        int semicircleMask = this.getMask() >> 1;
+        return (binaryAngleA & semicircleMask) == (binaryAngleB & semicircleMask);
     }
 
-    public int fromDirection(Direction p_265731_) {
-        if (p_265731_.getAxis().isVertical()) {
+    public int fromDirection(final Direction direction) {
+        if (direction.getAxis().isVertical()) {
             return 0;
-        } else {
-            int i = p_265731_.get2DDataValue();
-            return i << this.precision - 2;
         }
+
+        int segmentedAngle2bit = direction.get2DDataValue();
+        return segmentedAngle2bit << this.precision - 2;
     }
 
-    public int fromDegreesWithTurns(float p_265346_) {
-        return Math.round(p_265346_ * this.degreeToAngle);
+    public int fromDegreesWithTurns(final float degrees) {
+        return Math.round(degrees * this.degreeToAngle);
     }
 
-    public int fromDegrees(float p_265688_) {
-        return this.normalize(this.fromDegreesWithTurns(p_265688_));
+    public int fromDegrees(final float degrees) {
+        return this.normalize(this.fromDegreesWithTurns(degrees));
     }
 
-    public float toDegreesWithTurns(int p_265278_) {
-        return p_265278_ * this.angleToDegree;
+    public float toDegreesWithTurns(final int binaryAngle) {
+        return binaryAngle * this.angleToDegree;
     }
 
-    public float toDegrees(int p_265623_) {
-        float f = this.toDegreesWithTurns(this.normalize(p_265623_));
-        return f >= 180.0F ? f - 360.0F : f;
+    public float toDegrees(final int binaryAngle) {
+        float degrees = this.toDegreesWithTurns(this.normalize(binaryAngle));
+        return degrees >= 180.0F ? degrees - 360.0F : degrees;
     }
 
-    public int normalize(int p_265542_) {
-        return p_265542_ & this.mask;
+    public int normalize(final int binaryAngle) {
+        return binaryAngle & this.mask;
     }
 
     public int getMask() {

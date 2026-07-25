@@ -13,29 +13,29 @@ public interface PacketListener {
 
     ConnectionProtocol protocol();
 
-    void onDisconnect(DisconnectionDetails p_343684_);
+    void onDisconnect(DisconnectionDetails details);
 
-    default void onPacketError(Packet p_330857_, Exception p_328275_) throws ReportedException {
-        throw PacketUtils.makeReportedException(p_328275_, p_330857_, this);
+    default void onPacketError(final Packet packet, final Exception cause) throws ReportedException {
+        throw PacketUtils.makeReportedException(cause, packet, this);
     }
 
-    default DisconnectionDetails createDisconnectionInfo(Component p_342542_, Throwable p_342140_) {
-        return new DisconnectionDetails(p_342542_);
+    default DisconnectionDetails createDisconnectionInfo(final Component reason, final Throwable cause) {
+        return new DisconnectionDetails(reason);
     }
 
     boolean isAcceptingMessages();
 
-    default boolean shouldHandleMessage(Packet<?> p_299735_) {
+    default boolean shouldHandleMessage(final Packet<?> packet) {
         return this.isAcceptingMessages();
     }
 
-    default void fillCrashReport(CrashReport p_311292_) {
-        CrashReportCategory crashreportcategory = p_311292_.addCategory("Connection");
-        crashreportcategory.setDetail("Protocol", () -> this.protocol().id());
-        crashreportcategory.setDetail("Flow", () -> this.flow().toString());
-        this.fillListenerSpecificCrashDetails(p_311292_, crashreportcategory);
+    default void fillCrashReport(final CrashReport crashReport) {
+        CrashReportCategory connection = crashReport.addCategory("Connection");
+        connection.setDetail("Protocol", () -> this.protocol().id());
+        connection.setDetail("Flow", () -> this.flow().toString());
+        this.fillListenerSpecificCrashDetails(crashReport, connection);
     }
 
-    default void fillListenerSpecificCrashDetails(CrashReport p_343455_, CrashReportCategory p_310872_) {
+    default void fillListenerSpecificCrashDetails(final CrashReport report, final CrashReportCategory connectionDetails) {
     }
 }

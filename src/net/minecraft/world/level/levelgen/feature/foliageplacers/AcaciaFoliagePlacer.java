@@ -2,20 +2,17 @@ package net.minecraft.world.level.levelgen.feature.foliageplacers;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
-import net.minecraft.world.level.LevelSimulatedReader;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 
 public class AcaciaFoliagePlacer extends FoliagePlacer {
-    public static final MapCodec<AcaciaFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(
-        p_68380_ -> foliagePlacerParts(p_68380_).apply(p_68380_, AcaciaFoliagePlacer::new)
-    );
+    public static final MapCodec<AcaciaFoliagePlacer> CODEC = RecordCodecBuilder.mapCodec(i -> foliagePlacerParts(i).apply(i, AcaciaFoliagePlacer::new));
 
-    public AcaciaFoliagePlacer(IntProvider p_161343_, IntProvider p_161344_) {
-        super(p_161343_, p_161344_);
+    public AcaciaFoliagePlacer(final IntProvider radius, final IntProvider offset) {
+        super(radius, offset);
     }
 
     @Override
@@ -25,32 +22,30 @@ public class AcaciaFoliagePlacer extends FoliagePlacer {
 
     @Override
     protected void createFoliage(
-        LevelSimulatedReader p_225499_,
-        FoliagePlacer.FoliageSetter p_273746_,
-        RandomSource p_225501_,
-        TreeConfiguration p_225502_,
-        int p_225503_,
-        FoliagePlacer.FoliageAttachment p_225504_,
-        int p_225505_,
-        int p_225506_,
-        int p_225507_
+        final WorldGenLevel level,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final RandomSource random,
+        final TreeConfiguration config,
+        final int treeHeight,
+        final FoliagePlacer.FoliageAttachment foliageAttachment,
+        final int foliageHeight,
+        final int leafRadius,
+        final int offset
     ) {
-        boolean flag = p_225504_.doubleTrunk();
-        BlockPos blockpos = p_225504_.pos().above(p_225507_);
-        this.placeLeavesRow(p_225499_, p_273746_, p_225501_, p_225502_, blockpos, p_225506_ + p_225504_.radiusOffset(), -1 - p_225505_, flag);
-        this.placeLeavesRow(p_225499_, p_273746_, p_225501_, p_225502_, blockpos, p_225506_ - 1, -p_225505_, flag);
-        this.placeLeavesRow(p_225499_, p_273746_, p_225501_, p_225502_, blockpos, p_225506_ + p_225504_.radiusOffset() - 1, 0, flag);
+        boolean doubleTrunk = foliageAttachment.doubleTrunk();
+        BlockPos foliagePos = foliageAttachment.pos().above(offset);
+        this.placeLeavesRow(level, foliageSetter, random, config, foliagePos, leafRadius + foliageAttachment.radiusOffset(), -1 - foliageHeight, doubleTrunk);
+        this.placeLeavesRow(level, foliageSetter, random, config, foliagePos, leafRadius - 1, -foliageHeight, doubleTrunk);
+        this.placeLeavesRow(level, foliageSetter, random, config, foliagePos, leafRadius + foliageAttachment.radiusOffset() - 1, 0, doubleTrunk);
     }
 
     @Override
-    public int foliageHeight(RandomSource p_225495_, int p_225496_, TreeConfiguration p_225497_) {
+    public int foliageHeight(final RandomSource random, final int treeHeight, final TreeConfiguration config) {
         return 0;
     }
 
     @Override
-    protected boolean shouldSkipLocation(RandomSource p_225488_, int p_225489_, int p_225490_, int p_225491_, int p_225492_, boolean p_225493_) {
-        return p_225490_ == 0
-            ? (p_225489_ > 1 || p_225491_ > 1) && p_225489_ != 0 && p_225491_ != 0
-            : p_225489_ == p_225492_ && p_225491_ == p_225492_ && p_225492_ > 0;
+    protected boolean shouldSkipLocation(final RandomSource random, final int dx, final int y, final int dz, final int currentRadius, final boolean doubleTrunk) {
+        return y == 0 ? (dx > 1 || dz > 1) && dx != 0 && dz != 0 : dx == currentRadius && dz == currentRadius && currentRadius > 0;
     }
 }

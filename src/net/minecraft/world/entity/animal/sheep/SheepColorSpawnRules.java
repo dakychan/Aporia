@@ -42,33 +42,33 @@ public class SheepColorSpawnRules {
         )
     );
 
-    private static SheepColorSpawnRules.SheepColorProvider commonColors(DyeColor p_392935_) {
-        return weighted(builder().add(single(p_392935_), 499).add(single(DyeColor.PINK), 1).build());
+    private static SheepColorSpawnRules.SheepColorProvider commonColors(final DyeColor defaultColor) {
+        return weighted(builder().add(single(defaultColor), 499).add(single(DyeColor.PINK), 1).build());
     }
 
-    public static DyeColor getSheepColor(Holder<Biome> p_397560_, RandomSource p_397669_) {
-        SheepColorSpawnRules.SheepColorSpawnConfiguration sheepcolorspawnrules$sheepcolorspawnconfiguration = getSheepColorConfiguration(p_397560_);
-        return sheepcolorspawnrules$sheepcolorspawnconfiguration.colors().get(p_397669_);
+    public static DyeColor getSheepColor(final Holder<Biome> biome, final RandomSource random) {
+        SheepColorSpawnRules.SheepColorSpawnConfiguration sheepColorConfiguration = getSheepColorConfiguration(biome);
+        return sheepColorConfiguration.colors().get(random);
     }
 
-    private static SheepColorSpawnRules.SheepColorSpawnConfiguration getSheepColorConfiguration(Holder<Biome> p_397141_) {
-        if (p_397141_.is(BiomeTags.SPAWNS_WARM_VARIANT_FARM_ANIMALS)) {
+    private static SheepColorSpawnRules.SheepColorSpawnConfiguration getSheepColorConfiguration(final Holder<Biome> biome) {
+        if (biome.is(BiomeTags.SPAWNS_WARM_VARIANT_FARM_ANIMALS)) {
             return WARM_SPAWN_CONFIGURATION;
         } else {
-            return p_397141_.is(BiomeTags.SPAWNS_COLD_VARIANT_FARM_ANIMALS) ? COLD_SPAWN_CONFIGURATION : TEMPERATE_SPAWN_CONFIGURATION;
+            return biome.is(BiomeTags.SPAWNS_COLD_VARIANT_FARM_ANIMALS) ? COLD_SPAWN_CONFIGURATION : TEMPERATE_SPAWN_CONFIGURATION;
         }
     }
 
-    private static SheepColorSpawnRules.SheepColorProvider weighted(WeightedList<SheepColorSpawnRules.SheepColorProvider> p_391917_) {
-        if (p_391917_.isEmpty()) {
+    private static SheepColorSpawnRules.SheepColorProvider weighted(final WeightedList<SheepColorSpawnRules.SheepColorProvider> elements) {
+        if (elements.isEmpty()) {
             throw new IllegalArgumentException("List must be non-empty");
         } else {
-            return p_396158_ -> p_391917_.getRandomOrThrow(p_396158_).get(p_396158_);
+            return random -> elements.getRandomOrThrow(random).get(random);
         }
     }
 
-    private static SheepColorSpawnRules.SheepColorProvider single(DyeColor p_397733_) {
-        return p_394954_ -> p_397733_;
+    private static SheepColorSpawnRules.SheepColorProvider single(final DyeColor color) {
+        return random -> color;
     }
 
     private static WeightedList.Builder<SheepColorSpawnRules.SheepColorProvider> builder() {
@@ -76,10 +76,10 @@ public class SheepColorSpawnRules {
     }
 
     @FunctionalInterface
-    interface SheepColorProvider {
-        DyeColor get(RandomSource p_393097_);
+    private interface SheepColorProvider {
+        DyeColor get(RandomSource random);
     }
 
-    record SheepColorSpawnConfiguration(SheepColorSpawnRules.SheepColorProvider colors) {
+    private record SheepColorSpawnConfiguration(SheepColorSpawnRules.SheepColorProvider colors) {
     }
 }

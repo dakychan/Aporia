@@ -3,15 +3,18 @@ package net.minecraft.world.item.enchantment;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Function;
-import net.minecraft.advancements.criterion.DamageSourcePredicate;
-import net.minecraft.advancements.criterion.EntityFlagsPredicate;
-import net.minecraft.advancements.criterion.EntityPredicate;
-import net.minecraft.advancements.criterion.EntityTypePredicate;
-import net.minecraft.advancements.criterion.ItemPredicate;
-import net.minecraft.advancements.criterion.LocationPredicate;
-import net.minecraft.advancements.criterion.MinMaxBounds;
-import net.minecraft.advancements.criterion.MovementPredicate;
-import net.minecraft.advancements.criterion.TagPredicate;
+import net.minecraft.advancements.predicates.DamageSourcePredicate;
+import net.minecraft.advancements.predicates.FoodPredicate;
+import net.minecraft.advancements.predicates.GameTypePredicate;
+import net.minecraft.advancements.predicates.ItemPredicate;
+import net.minecraft.advancements.predicates.LocationPredicate;
+import net.minecraft.advancements.predicates.MinMaxBounds;
+import net.minecraft.advancements.predicates.TagPredicate;
+import net.minecraft.advancements.predicates.entity.EntityFlagsPredicate;
+import net.minecraft.advancements.predicates.entity.EntityPredicate;
+import net.minecraft.advancements.predicates.entity.EntityTypePredicate;
+import net.minecraft.advancements.predicates.entity.MovementPredicate;
+import net.minecraft.advancements.predicates.entity.PlayerPredicate;
 import net.minecraft.core.HolderGetter;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Vec3i;
@@ -26,6 +29,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.tags.EntityTypeTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.util.Mth;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.util.valueproviders.ConstantFloat;
 import net.minecraft.util.valueproviders.UniformFloat;
@@ -33,6 +37,7 @@ import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlotGroup;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -57,6 +62,7 @@ import net.minecraft.world.item.enchantment.effects.ReplaceDisk;
 import net.minecraft.world.item.enchantment.effects.SetValue;
 import net.minecraft.world.item.enchantment.effects.SpawnParticlesEffect;
 import net.minecraft.world.item.enchantment.effects.SummonEntityEffect;
+import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -123,18 +129,18 @@ public class Enchantments {
     public static final ResourceKey<Enchantment> MENDING = key("mending");
     public static final ResourceKey<Enchantment> VANISHING_CURSE = key("vanishing_curse");
 
-    public static void bootstrap(BootstrapContext<Enchantment> p_343249_) {
-        HolderGetter<DamageType> holdergetter = p_343249_.lookup(Registries.DAMAGE_TYPE);
-        HolderGetter<Enchantment> holdergetter1 = p_343249_.lookup(Registries.ENCHANTMENT);
-        HolderGetter<Item> holdergetter2 = p_343249_.lookup(Registries.ITEM);
-        HolderGetter<Block> holdergetter3 = p_343249_.lookup(Registries.BLOCK);
-        HolderGetter<EntityType<?>> holdergetter4 = p_343249_.lookup(Registries.ENTITY_TYPE);
+    public static void bootstrap(final BootstrapContext<Enchantment> context) {
+        HolderGetter<DamageType> damageTypes = context.lookup(Registries.DAMAGE_TYPE);
+        HolderGetter<Enchantment> enchantments = context.lookup(Registries.ENCHANTMENT);
+        HolderGetter<Item> items = context.lookup(Registries.ITEM);
+        HolderGetter<Block> blocks = context.lookup(Registries.BLOCK);
+        HolderGetter<EntityType<?>> entityTypes = context.lookup(Registries.ENTITY_TYPE);
         register(
-            p_343249_,
+            context,
             PROTECTION,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
                         10,
                         4,
                         Enchantment.dynamicCost(1, 11),
@@ -143,19 +149,21 @@ public class Enchantments {
                         EquipmentSlotGroup.ARMOR
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE_PROTECTION,
                     new AddValue(LevelBasedValue.perLevel(1.0F)),
-                    DamageSourceCondition.hasDamageSource(DamageSourcePredicate.Builder.damageType().tag(TagPredicate.isNot(DamageTypeTags.BYPASSES_INVULNERABILITY)))
+                    DamageSourceCondition.hasDamageSource(
+                        DamageSourcePredicate.Builder.damageType().tag(TagPredicate.isNot(DamageTypeTags.BYPASSES_INVULNERABILITY))
+                    )
                 )
         );
         register(
-            p_343249_,
+            context,
             FIRE_PROTECTION,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
                         5,
                         4,
                         Enchantment.dynamicCost(10, 8),
@@ -164,7 +172,7 @@ public class Enchantments {
                         EquipmentSlotGroup.ARMOR
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE_PROTECTION,
                     new AddValue(LevelBasedValue.perLevel(2.0F)),
@@ -187,11 +195,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             FEATHER_FALLING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
                         5,
                         4,
                         Enchantment.dynamicCost(5, 6),
@@ -211,11 +219,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             BLAST_PROTECTION,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
                         2,
                         4,
                         Enchantment.dynamicCost(5, 8),
@@ -224,7 +232,7 @@ public class Enchantments {
                         EquipmentSlotGroup.ARMOR
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE_PROTECTION,
                     new AddValue(LevelBasedValue.perLevel(2.0F)),
@@ -245,11 +253,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             PROJECTILE_PROTECTION,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
                         5,
                         4,
                         Enchantment.dynamicCost(3, 6),
@@ -258,7 +266,7 @@ public class Enchantments {
                         EquipmentSlotGroup.ARMOR
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.ARMOR_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE_PROTECTION,
                     new AddValue(LevelBasedValue.perLevel(2.0F)),
@@ -270,11 +278,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             RESPIRATION,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.HEAD_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.HEAD_ARMOR_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(10, 10),
@@ -294,11 +302,17 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             AQUA_AFFINITY,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.HEAD_ARMOR_ENCHANTABLE), 2, 1, Enchantment.constantCost(1), Enchantment.constantCost(41), 4, EquipmentSlotGroup.HEAD
+                        items.getOrThrow(ItemTags.HEAD_ARMOR_ENCHANTABLE),
+                        2,
+                        1,
+                        Enchantment.constantCost(1),
+                        Enchantment.constantCost(41),
+                        4,
+                        EquipmentSlotGroup.HEAD
                     )
                 )
                 .withEffect(
@@ -312,12 +326,12 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             THORNS,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
-                        holdergetter2.getOrThrow(ItemTags.CHEST_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.CHEST_ARMOR_ENCHANTABLE),
                         1,
                         3,
                         Enchantment.dynamicCost(10, 20),
@@ -331,18 +345,18 @@ public class Enchantments {
                     EnchantmentTarget.VICTIM,
                     EnchantmentTarget.ATTACKER,
                     AllOf.entityEffects(
-                        new DamageEntity(LevelBasedValue.constant(1.0F), LevelBasedValue.constant(5.0F), holdergetter.getOrThrow(DamageTypes.THORNS)),
+                        new DamageEntity(LevelBasedValue.constant(1.0F), LevelBasedValue.constant(5.0F), damageTypes.getOrThrow(DamageTypes.THORNS)),
                         new ChangeItemDamage(LevelBasedValue.constant(2.0F))
                     ),
                     LootItemRandomChanceCondition.randomChance(EnchantmentLevelProvider.forEnchantmentLevel(LevelBasedValue.perLevel(0.15F)))
                 )
         );
         register(
-            p_343249_,
+            context,
             DEPTH_STRIDER,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(10, 10),
@@ -351,7 +365,7 @@ public class Enchantments {
                         EquipmentSlotGroup.FEET
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.BOOTS_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.BOOTS_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.ATTRIBUTES,
                     new EnchantmentAttributeEffect(
@@ -363,11 +377,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             FROST_WALKER,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
                         2,
                         2,
                         Enchantment.dynamicCost(10, 10),
@@ -376,7 +390,7 @@ public class Enchantments {
                         EquipmentSlotGroup.FEET
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.BOOTS_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.BOOTS_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE_IMMUNITY,
                     DamageImmunity.INSTANCE,
@@ -405,8 +419,7 @@ public class Enchantments {
                     ),
                     AllOfCondition.allOf(
                         LootItemEntityPropertyCondition.hasProperties(
-                            LootContext.EntityTarget.THIS,
-                            EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setOnGround(true))
+                            LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setOnGround(true))
                         ),
                         InvertedLootItemCondition.invert(
                             LootItemEntityPropertyCondition.hasProperties(
@@ -417,24 +430,30 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             BINDING_CURSE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.EQUIPPABLE_ENCHANTABLE), 1, 1, Enchantment.constantCost(25), Enchantment.constantCost(50), 8, EquipmentSlotGroup.ARMOR
+                        items.getOrThrow(ItemTags.EQUIPPABLE_ENCHANTABLE),
+                        1,
+                        1,
+                        Enchantment.constantCost(25),
+                        Enchantment.constantCost(50),
+                        8,
+                        EquipmentSlotGroup.ARMOR
                     )
                 )
                 .withEffect(EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)
         );
-        EntityPredicate.Builder entitypredicate$builder = EntityPredicate.Builder.entity()
+        EntityPredicate.Builder soulSpeedEffectCondition = EntityPredicate.Builder.entity()
             .periodicTick(5)
             .flags(EntityFlagsPredicate.Builder.flags().setIsFlying(false).setOnGround(true))
             .moving(MovementPredicate.horizontalSpeed(MinMaxBounds.Doubles.atLeast(1.0E-5F)))
             .movementAffectedBy(
                 LocationPredicate.Builder.location()
-                    .setBlock(net.minecraft.advancements.criterion.BlockPredicate.Builder.block().of(holdergetter3, BlockTags.SOUL_SPEED_BLOCKS))
+                    .setBlock(net.minecraft.advancements.predicates.BlockPredicate.Builder.block().of(blocks, BlockTags.SOUL_SPEED_BLOCKS))
             );
-        AllOfCondition.Builder allofcondition$builder = AllOfCondition.allOf(
+        AllOfCondition.Builder soulSpeedMovementCondition = AllOfCondition.allOf(
             InvertedLootItemCondition.invert(
                 LootItemEntityPropertyCondition.hasProperties(
                     LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().vehicle(EntityPredicate.Builder.entity())
@@ -452,10 +471,7 @@ public class Enchantments {
                             EntityPredicate.Builder.entity()
                                 .movementAffectedBy(
                                     LocationPredicate.Builder.location()
-                                        .setBlock(
-                                            net.minecraft.advancements.criterion.BlockPredicate.Builder.block()
-                                                .of(holdergetter3, BlockTags.SOUL_SPEED_BLOCKS)
-                                        )
+                                        .setBlock(net.minecraft.advancements.predicates.BlockPredicate.Builder.block().of(blocks, BlockTags.SOUL_SPEED_BLOCKS))
                                 )
                         ),
                         LootItemEntityPropertyCondition.hasProperties(
@@ -471,9 +487,7 @@ public class Enchantments {
                         EntityPredicate.Builder.entity()
                             .movementAffectedBy(
                                 LocationPredicate.Builder.location()
-                                    .setBlock(
-                                        net.minecraft.advancements.criterion.BlockPredicate.Builder.block().of(holdergetter3, BlockTags.SOUL_SPEED_BLOCKS)
-                                    )
+                                    .setBlock(net.minecraft.advancements.predicates.BlockPredicate.Builder.block().of(blocks, BlockTags.SOUL_SPEED_BLOCKS))
                             )
                             .flags(EntityFlagsPredicate.Builder.flags().setIsFlying(false))
                     )
@@ -481,11 +495,11 @@ public class Enchantments {
             )
         );
         register(
-            p_343249_,
+            context,
             SOUL_SPEED,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FOOT_ARMOR_ENCHANTABLE),
                         1,
                         3,
                         Enchantment.dynamicCost(10, 10),
@@ -510,7 +524,7 @@ public class Enchantments {
                             AttributeModifier.Operation.ADD_VALUE
                         )
                     ),
-                    allofcondition$builder
+                    soulSpeedMovementCondition
                 )
                 .withEffect(
                     EnchantmentEffectComponents.LOCATION_CHANGED,
@@ -523,10 +537,7 @@ public class Enchantments {
                                 .flags(EntityFlagsPredicate.Builder.flags().setOnGround(true))
                                 .movementAffectedBy(
                                     LocationPredicate.Builder.location()
-                                        .setBlock(
-                                            net.minecraft.advancements.criterion.BlockPredicate.Builder.block()
-                                                .of(holdergetter3, BlockTags.SOUL_SPEED_BLOCKS)
-                                        )
+                                        .setBlock(net.minecraft.advancements.predicates.BlockPredicate.Builder.block().of(blocks, BlockTags.SOUL_SPEED_BLOCKS))
                                 )
                         )
                     )
@@ -541,23 +552,23 @@ public class Enchantments {
                         SpawnParticlesEffect.fixedVelocity(ConstantFloat.of(0.1F)),
                         ConstantFloat.of(1.0F)
                     ),
-                    LootItemEntityPropertyCondition.hasProperties(LootContext.EntityTarget.THIS, entitypredicate$builder)
+                    LootItemEntityPropertyCondition.hasProperties(LootContext.EntityTarget.THIS, soulSpeedEffectCondition)
                 )
                 .withEffect(
                     EnchantmentEffectComponents.TICK,
                     new PlaySoundEffect(List.of(SoundEvents.SOUL_ESCAPE), ConstantFloat.of(0.6F), UniformFloat.of(0.6F, 1.0F)),
                     AllOfCondition.allOf(
                         LootItemRandomChanceCondition.randomChance(0.35F),
-                        LootItemEntityPropertyCondition.hasProperties(LootContext.EntityTarget.THIS, entitypredicate$builder)
+                        LootItemEntityPropertyCondition.hasProperties(LootContext.EntityTarget.THIS, soulSpeedEffectCondition)
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             SWIFT_SNEAK,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.LEG_ARMOR_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.LEG_ARMOR_ENCHANTABLE),
                         1,
                         3,
                         Enchantment.dynamicCost(25, 25),
@@ -577,12 +588,12 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             SHARPNESS,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.SHARP_WEAPON_ENCHANTABLE),
-                        holdergetter2.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.SHARP_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
                         10,
                         5,
                         Enchantment.dynamicCost(1, 11),
@@ -591,16 +602,16 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
                 .withEffect(EnchantmentEffectComponents.DAMAGE, new AddValue(LevelBasedValue.perLevel(1.0F, 0.5F)))
         );
         register(
-            p_343249_,
+            context,
             SMITE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.WEAPON_ENCHANTABLE),
-                        holdergetter2.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
                         5,
                         5,
                         Enchantment.dynamicCost(5, 8),
@@ -609,23 +620,23 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE,
                     new AddValue(LevelBasedValue.perLevel(2.5F)),
                     LootItemEntityPropertyCondition.hasProperties(
                         LootContext.EntityTarget.THIS,
-                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(holdergetter4, EntityTypeTags.SENSITIVE_TO_SMITE))
+                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypeTags.SENSITIVE_TO_SMITE))
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             BANE_OF_ARTHROPODS,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.WEAPON_ENCHANTABLE),
-                        holdergetter2.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
                         5,
                         5,
                         Enchantment.dynamicCost(5, 8),
@@ -634,13 +645,13 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE,
                     new AddValue(LevelBasedValue.perLevel(2.5F)),
                     LootItemEntityPropertyCondition.hasProperties(
                         LootContext.EntityTarget.THIS,
-                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(holdergetter4, EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS))
+                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS))
                     )
                 )
                 .withEffect(
@@ -656,17 +667,17 @@ public class Enchantments {
                     ),
                     LootItemEntityPropertyCondition.hasProperties(
                             LootContext.EntityTarget.THIS,
-                            EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(holdergetter4, EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS))
+                            EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypeTags.SENSITIVE_TO_BANE_OF_ARTHROPODS))
                         )
                         .and(DamageSourceCondition.hasDamageSource(DamageSourcePredicate.Builder.damageType().isDirect(true)))
                 )
         );
         register(
-            p_343249_,
+            context,
             KNOCKBACK,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
                         5,
                         2,
                         Enchantment.dynamicCost(5, 20),
@@ -678,12 +689,12 @@ public class Enchantments {
                 .withEffect(EnchantmentEffectComponents.KNOCKBACK, new AddValue(LevelBasedValue.perLevel(1.0F)))
         );
         register(
-            p_343249_,
+            context,
             FIRE_ASPECT,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FIRE_ASPECT_ENCHANTABLE),
-                        holdergetter2.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FIRE_ASPECT_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
                         2,
                         2,
                         Enchantment.dynamicCost(10, 20),
@@ -701,11 +712,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             LOOTING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MELEE_WEAPON_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(15, 9),
@@ -720,17 +731,16 @@ public class Enchantments {
                     EnchantmentTarget.VICTIM,
                     new AddValue(LevelBasedValue.perLevel(0.01F)),
                     LootItemEntityPropertyCondition.hasProperties(
-                        LootContext.EntityTarget.ATTACKER,
-                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(holdergetter4, EntityType.PLAYER))
+                        LootContext.EntityTarget.ATTACKER, EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypes.PLAYER))
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             SWEEPING_EDGE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.SWEEPING_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.SWEEPING_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(5, 9),
@@ -750,11 +760,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             EFFICIENCY,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MINING_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MINING_ENCHANTABLE),
                         10,
                         5,
                         Enchantment.dynamicCost(1, 10),
@@ -774,41 +784,53 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             SILK_TOUCH,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MINING_LOOT_ENCHANTABLE), 1, 1, Enchantment.constantCost(15), Enchantment.constantCost(65), 8, EquipmentSlotGroup.MAINHAND
+                        items.getOrThrow(ItemTags.MINING_LOOT_ENCHANTABLE),
+                        1,
+                        1,
+                        Enchantment.constantCost(15),
+                        Enchantment.constantCost(65),
+                        8,
+                        EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.MINING_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.MINING_EXCLUSIVE))
                 .withEffect(EnchantmentEffectComponents.BLOCK_EXPERIENCE, new SetValue(LevelBasedValue.constant(0.0F)))
         );
         register(
-            p_343249_,
+            context,
             UNBREAKING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.DURABILITY_ENCHANTABLE), 5, 3, Enchantment.dynamicCost(5, 8), Enchantment.dynamicCost(55, 8), 2, EquipmentSlotGroup.ANY
+                        items.getOrThrow(ItemTags.DURABILITY_ENCHANTABLE),
+                        5,
+                        3,
+                        Enchantment.dynamicCost(5, 8),
+                        Enchantment.dynamicCost(55, 8),
+                        2,
+                        EquipmentSlotGroup.ANY
                     )
                 )
                 .withEffect(
                     EnchantmentEffectComponents.ITEM_DAMAGE,
                     new RemoveBinomial(new LevelBasedValue.Fraction(LevelBasedValue.perLevel(2.0F), LevelBasedValue.perLevel(10.0F, 5.0F))),
-                    MatchTool.toolMatches(ItemPredicate.Builder.item().of(holdergetter2, ItemTags.ARMOR_ENCHANTABLE))
+                    MatchTool.toolMatches(ItemPredicate.Builder.item().of(items, ItemTags.ARMOR_ENCHANTABLE))
                 )
                 .withEffect(
                     EnchantmentEffectComponents.ITEM_DAMAGE,
                     new RemoveBinomial(new LevelBasedValue.Fraction(LevelBasedValue.perLevel(1.0F), LevelBasedValue.perLevel(2.0F, 1.0F))),
-                    InvertedLootItemCondition.invert(MatchTool.toolMatches(ItemPredicate.Builder.item().of(holdergetter2, ItemTags.ARMOR_ENCHANTABLE)))
+                    InvertedLootItemCondition.invert(MatchTool.toolMatches(ItemPredicate.Builder.item().of(items, ItemTags.ARMOR_ENCHANTABLE)))
                 )
         );
         register(
-            p_343249_,
+            context,
             FORTUNE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MINING_LOOT_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MINING_LOOT_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(15, 9),
@@ -817,14 +839,14 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.MINING_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.MINING_EXCLUSIVE))
         );
         register(
-            p_343249_,
+            context,
             POWER,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.BOW_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.BOW_ENCHANTABLE),
                         10,
                         5,
                         Enchantment.dynamicCost(1, 10),
@@ -837,17 +859,16 @@ public class Enchantments {
                     EnchantmentEffectComponents.DAMAGE,
                     new AddValue(LevelBasedValue.perLevel(1.0F, 0.5F)),
                     LootItemEntityPropertyCondition.hasProperties(
-                        LootContext.EntityTarget.DIRECT_ATTACKER,
-                        EntityPredicate.Builder.entity().of(holdergetter4, EntityTypeTags.ARROWS).build()
+                        LootContext.EntityTarget.DIRECT_ATTACKER, EntityPredicate.Builder.entity().of(entityTypes, EntityTypeTags.ARROWS).build()
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             PUNCH,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.BOW_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.BOW_ENCHANTABLE),
                         2,
                         2,
                         Enchantment.dynamicCost(12, 20),
@@ -860,42 +881,53 @@ public class Enchantments {
                     EnchantmentEffectComponents.KNOCKBACK,
                     new AddValue(LevelBasedValue.perLevel(1.0F)),
                     LootItemEntityPropertyCondition.hasProperties(
-                        LootContext.EntityTarget.DIRECT_ATTACKER,
-                        EntityPredicate.Builder.entity().of(holdergetter4, EntityTypeTags.ARROWS).build()
+                        LootContext.EntityTarget.DIRECT_ATTACKER, EntityPredicate.Builder.entity().of(entityTypes, EntityTypeTags.ARROWS).build()
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             FLAME,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.BOW_ENCHANTABLE), 2, 1, Enchantment.constantCost(20), Enchantment.constantCost(50), 4, EquipmentSlotGroup.MAINHAND
+                        items.getOrThrow(ItemTags.BOW_ENCHANTABLE),
+                        2,
+                        1,
+                        Enchantment.constantCost(20),
+                        Enchantment.constantCost(50),
+                        4,
+                        EquipmentSlotGroup.MAINHAND
                     )
                 )
                 .withEffect(EnchantmentEffectComponents.PROJECTILE_SPAWNED, new Ignite(LevelBasedValue.constant(100.0F)))
         );
         register(
-            p_343249_,
+            context,
             INFINITY,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.BOW_ENCHANTABLE), 1, 1, Enchantment.constantCost(20), Enchantment.constantCost(50), 8, EquipmentSlotGroup.MAINHAND
+                        items.getOrThrow(ItemTags.BOW_ENCHANTABLE),
+                        1,
+                        1,
+                        Enchantment.constantCost(20),
+                        Enchantment.constantCost(50),
+                        8,
+                        EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.BOW_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.BOW_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.AMMO_USE,
                     new SetValue(LevelBasedValue.constant(0.0F)),
-                    MatchTool.toolMatches(ItemPredicate.Builder.item().of(holdergetter2, Items.ARROW))
+                    MatchTool.toolMatches(ItemPredicate.Builder.item().of(items, Items.ARROW))
                 )
         );
         register(
-            p_343249_,
+            context,
             LUCK_OF_THE_SEA,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FISHING_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FISHING_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(15, 9),
@@ -907,11 +939,11 @@ public class Enchantments {
                 .withEffect(EnchantmentEffectComponents.FISHING_LUCK_BONUS, new AddValue(LevelBasedValue.perLevel(1.0F)))
         );
         register(
-            p_343249_,
+            context,
             LURE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.FISHING_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.FISHING_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(15, 9),
@@ -923,11 +955,11 @@ public class Enchantments {
                 .withEffect(EnchantmentEffectComponents.FISHING_TIME_REDUCTION, new AddValue(LevelBasedValue.perLevel(5.0F)))
         );
         register(
-            p_343249_,
+            context,
             LOYALTY,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE),
                         5,
                         3,
                         Enchantment.dynamicCost(12, 7),
@@ -939,11 +971,11 @@ public class Enchantments {
                 .withEffect(EnchantmentEffectComponents.TRIDENT_RETURN_ACCELERATION, new AddValue(LevelBasedValue.perLevel(1.0F)))
         );
         register(
-            p_343249_,
+            context,
             IMPALING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE),
                         2,
                         5,
                         Enchantment.dynamicCost(1, 8),
@@ -952,34 +984,43 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
                 .withEffect(
                     EnchantmentEffectComponents.DAMAGE,
                     new AddValue(LevelBasedValue.perLevel(2.5F)),
                     LootItemEntityPropertyCondition.hasProperties(
                         LootContext.EntityTarget.THIS,
-                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(holdergetter4, EntityTypeTags.SENSITIVE_TO_IMPALING)).build()
+                        EntityPredicate.Builder.entity().entityType(EntityTypePredicate.of(entityTypes, EntityTypeTags.SENSITIVE_TO_IMPALING)).build()
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             RIPTIDE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE), 2, 3, Enchantment.dynamicCost(17, 7), Enchantment.constantCost(50), 4, EquipmentSlotGroup.HAND
+                        items.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE),
+                        2,
+                        3,
+                        Enchantment.dynamicCost(17, 7),
+                        Enchantment.constantCost(50),
+                        4,
+                        EquipmentSlotGroup.HAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.RIPTIDE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.RIPTIDE_EXCLUSIVE))
                 .withSpecialEffect(EnchantmentEffectComponents.TRIDENT_SPIN_ATTACK_STRENGTH, new AddValue(LevelBasedValue.perLevel(1.5F, 0.75F)))
-                .withSpecialEffect(EnchantmentEffectComponents.TRIDENT_SOUND, List.of(SoundEvents.TRIDENT_RIPTIDE_1, SoundEvents.TRIDENT_RIPTIDE_2, SoundEvents.TRIDENT_RIPTIDE_3))
+                .withSpecialEffect(
+                    EnchantmentEffectComponents.TRIDENT_SOUND,
+                    List.of(SoundEvents.TRIDENT_RIPTIDE_1, SoundEvents.TRIDENT_RIPTIDE_2, SoundEvents.TRIDENT_RIPTIDE_3)
+                )
         );
         register(
-            p_343249_,
+            context,
             LUNGE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.LUNGE_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.LUNGE_ENCHANTABLE),
                         5,
                         3,
                         Enchantment.dynamicCost(5, 8),
@@ -995,9 +1036,7 @@ public class Enchantments {
                         new ApplyExhaustion(LevelBasedValue.perLevel(4.0F)),
                         new ApplyEntityImpulse(new Vec3(0.0, 0.0, 1.0), new Vec3(1.0, 0.0, 1.0), LevelBasedValue.perLevel(0.458F)),
                         new PlaySoundEffect(
-                            List.of(SoundEvents.LUNGE_1, SoundEvents.LUNGE_2, SoundEvents.LUNGE_3),
-                            ConstantFloat.of(1.0F),
-                            ConstantFloat.of(1.0F)
+                            List.of(SoundEvents.LUNGE_1, SoundEvents.LUNGE_2, SoundEvents.LUNGE_3), ConstantFloat.of(1.0F), ConstantFloat.of(1.0F)
                         )
                     ),
                     AllOfCondition.allOf(
@@ -1007,22 +1046,47 @@ public class Enchantments {
                             )
                         ),
                         LootItemEntityPropertyCondition.hasProperties(
-                            LootContext.EntityTarget.THIS,
-                            EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setIsFallFlying(false))
+                            LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setIsFallFlying(false))
                         ),
                         LootItemEntityPropertyCondition.hasProperties(
-                            LootContext.EntityTarget.THIS,
-                            EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setIsInWater(false))
+                            LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().flags(EntityFlagsPredicate.Builder.flags().setIsInWater(false))
+                        ),
+                        AnyOfCondition.anyOf(
+                            InvertedLootItemCondition.invert(
+                                LootItemEntityPropertyCondition.hasProperties(
+                                    LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().player(PlayerPredicate.Builder.player().build())
+                                )
+                            ),
+                            LootItemEntityPropertyCondition.hasProperties(
+                                LootContext.EntityTarget.THIS,
+                                EntityPredicate.Builder.entity()
+                                    .player(PlayerPredicate.Builder.player().setGameType(GameTypePredicate.of(GameType.CREATIVE)).build())
+                            ),
+                            LootItemEntityPropertyCondition.hasProperties(
+                                LootContext.EntityTarget.THIS,
+                                EntityPredicate.Builder.entity()
+                                    .player(
+                                        PlayerPredicate.Builder.player()
+                                            .setFood(FoodPredicate.Builder.food().withLevel(MinMaxBounds.Ints.atLeast(Mth.floor(6.0F) + 1)).build())
+                                            .build()
+                                    )
+                            )
                         )
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             CHANNELING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE), 1, 1, Enchantment.constantCost(25), Enchantment.constantCost(50), 8, EquipmentSlotGroup.MAINHAND
+                        items.getOrThrow(ItemTags.TRIDENT_ENCHANTABLE),
+                        1,
+                        1,
+                        Enchantment.constantCost(25),
+                        Enchantment.constantCost(50),
+                        8,
+                        EquipmentSlotGroup.MAINHAND
                     )
                 )
                 .withEffect(
@@ -1030,7 +1094,7 @@ public class Enchantments {
                     EnchantmentTarget.ATTACKER,
                     EnchantmentTarget.VICTIM,
                     AllOf.entityEffects(
-                        new SummonEntityEffect(HolderSet.direct(EntityType.LIGHTNING_BOLT.builtInRegistryHolder()), false),
+                        new SummonEntityEffect(HolderSet.direct(EntityTypes.LIGHTNING_BOLT.builtInRegistryHolder()), false),
                         new PlaySoundEffect(List.of(SoundEvents.TRIDENT_THUNDER), ConstantFloat.of(5.0F), ConstantFloat.of(1.0F))
                     ),
                     AllOfCondition.allOf(
@@ -1039,49 +1103,53 @@ public class Enchantments {
                             LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().located(LocationPredicate.Builder.location().setCanSeeSky(true))
                         ),
                         LootItemEntityPropertyCondition.hasProperties(
-                            LootContext.EntityTarget.DIRECT_ATTACKER, EntityPredicate.Builder.entity().of(holdergetter4, EntityType.TRIDENT)
+                            LootContext.EntityTarget.DIRECT_ATTACKER, EntityPredicate.Builder.entity().of(entityTypes, EntityTypes.TRIDENT)
                         )
                     )
                 )
                 .withEffect(
                     EnchantmentEffectComponents.HIT_BLOCK,
                     AllOf.entityEffects(
-                        new SummonEntityEffect(HolderSet.direct(EntityType.LIGHTNING_BOLT.builtInRegistryHolder()), false),
+                        new SummonEntityEffect(HolderSet.direct(EntityTypes.LIGHTNING_BOLT.builtInRegistryHolder()), false),
                         new PlaySoundEffect(List.of(SoundEvents.TRIDENT_THUNDER), ConstantFloat.of(5.0F), ConstantFloat.of(1.0F))
                     ),
                     AllOfCondition.allOf(
                         WeatherCheck.weather().setThundering(true),
                         LootItemEntityPropertyCondition.hasProperties(
-                            LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().of(holdergetter4, EntityType.TRIDENT)
+                            LootContext.EntityTarget.THIS, EntityPredicate.Builder.entity().of(entityTypes, EntityTypes.TRIDENT)
                         ),
                         LocationCheck.checkLocation(
                             LocationPredicate.Builder.location()
                                 .setCanSeeSky(true)
-                                .setBlock(
-                                    net.minecraft.advancements.criterion.BlockPredicate.Builder.block().of(holdergetter3, BlockTags.LIGHTNING_RODS)
-                                )
+                                .setBlock(net.minecraft.advancements.predicates.BlockPredicate.Builder.block().of(blocks, BlockTags.LIGHTNING_RODS))
                         )
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             MULTISHOT,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.CROSSBOW_ENCHANTABLE), 2, 1, Enchantment.constantCost(20), Enchantment.constantCost(50), 4, EquipmentSlotGroup.MAINHAND
+                        items.getOrThrow(ItemTags.CROSSBOW_ENCHANTABLE),
+                        2,
+                        1,
+                        Enchantment.constantCost(20),
+                        Enchantment.constantCost(50),
+                        4,
+                        EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.CROSSBOW_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.CROSSBOW_EXCLUSIVE))
                 .withEffect(EnchantmentEffectComponents.PROJECTILE_COUNT, new AddValue(LevelBasedValue.perLevel(2.0F)))
                 .withEffect(EnchantmentEffectComponents.PROJECTILE_SPREAD, new AddValue(LevelBasedValue.perLevel(10.0F)))
         );
         register(
-            p_343249_,
+            context,
             QUICK_CHARGE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.CROSSBOW_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.CROSSBOW_ENCHANTABLE),
                         5,
                         3,
                         Enchantment.dynamicCost(12, 20),
@@ -1095,18 +1163,24 @@ public class Enchantments {
                 .withSpecialEffect(
                     EnchantmentEffectComponents.CROSSBOW_CHARGING_SOUNDS,
                     List.of(
-                        new CrossbowItem.ChargingSounds(Optional.of(SoundEvents.CROSSBOW_QUICK_CHARGE_1), Optional.empty(), Optional.of(SoundEvents.CROSSBOW_LOADING_END)),
-                        new CrossbowItem.ChargingSounds(Optional.of(SoundEvents.CROSSBOW_QUICK_CHARGE_2), Optional.empty(), Optional.of(SoundEvents.CROSSBOW_LOADING_END)),
-                        new CrossbowItem.ChargingSounds(Optional.of(SoundEvents.CROSSBOW_QUICK_CHARGE_3), Optional.empty(), Optional.of(SoundEvents.CROSSBOW_LOADING_END))
+                        new CrossbowItem.ChargingSounds(
+                            Optional.of(SoundEvents.CROSSBOW_QUICK_CHARGE_1), Optional.empty(), Optional.of(SoundEvents.CROSSBOW_LOADING_END)
+                        ),
+                        new CrossbowItem.ChargingSounds(
+                            Optional.of(SoundEvents.CROSSBOW_QUICK_CHARGE_2), Optional.empty(), Optional.of(SoundEvents.CROSSBOW_LOADING_END)
+                        ),
+                        new CrossbowItem.ChargingSounds(
+                            Optional.of(SoundEvents.CROSSBOW_QUICK_CHARGE_3), Optional.empty(), Optional.of(SoundEvents.CROSSBOW_LOADING_END)
+                        )
                     )
                 )
         );
         register(
-            p_343249_,
+            context,
             PIERCING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.CROSSBOW_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.CROSSBOW_ENCHANTABLE),
                         10,
                         4,
                         Enchantment.dynamicCost(1, 10),
@@ -1115,15 +1189,15 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.CROSSBOW_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.CROSSBOW_EXCLUSIVE))
                 .withEffect(EnchantmentEffectComponents.PROJECTILE_PIERCING, new AddValue(LevelBasedValue.perLevel(1.0F)))
         );
         register(
-            p_343249_,
+            context,
             DENSITY,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MACE_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MACE_ENCHANTABLE),
                         5,
                         5,
                         Enchantment.dynamicCost(5, 8),
@@ -1132,15 +1206,15 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
                 .withEffect(EnchantmentEffectComponents.SMASH_DAMAGE_PER_FALLEN_BLOCK, new AddValue(LevelBasedValue.perLevel(0.5F)))
         );
         register(
-            p_343249_,
+            context,
             BREACH,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MACE_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MACE_ENCHANTABLE),
                         2,
                         4,
                         Enchantment.dynamicCost(15, 9),
@@ -1149,15 +1223,15 @@ public class Enchantments {
                         EquipmentSlotGroup.MAINHAND
                     )
                 )
-                .exclusiveWith(holdergetter1.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
+                .exclusiveWith(enchantments.getOrThrow(EnchantmentTags.DAMAGE_EXCLUSIVE))
                 .withEffect(EnchantmentEffectComponents.ARMOR_EFFECTIVENESS, new AddValue(LevelBasedValue.perLevel(-0.15F)))
         );
         register(
-            p_343249_,
+            context,
             WIND_BURST,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.MACE_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.MACE_ENCHANTABLE),
                         2,
                         3,
                         Enchantment.dynamicCost(15, 9),
@@ -1174,7 +1248,7 @@ public class Enchantments {
                         false,
                         Optional.empty(),
                         Optional.of(LevelBasedValue.lookup(List.of(1.2F, 1.75F, 2.2F), LevelBasedValue.perLevel(1.5F, 0.35F))),
-                        holdergetter3.get(BlockTags.BLOCKS_WIND_CHARGE_EXPLOSIONS).map(Function.identity()),
+                        blocks.get(BlockTags.BLOCKS_WIND_CHARGE_EXPLOSIONS).map(Function.identity()),
                         Vec3.ZERO,
                         LevelBasedValue.constant(3.5F),
                         false,
@@ -1193,11 +1267,11 @@ public class Enchantments {
                 )
         );
         register(
-            p_343249_,
+            context,
             MENDING,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.DURABILITY_ENCHANTABLE),
+                        items.getOrThrow(ItemTags.DURABILITY_ENCHANTABLE),
                         2,
                         1,
                         Enchantment.dynamicCost(25, 25),
@@ -1209,22 +1283,28 @@ public class Enchantments {
                 .withEffect(EnchantmentEffectComponents.REPAIR_WITH_XP, new MultiplyValue(LevelBasedValue.constant(2.0F)))
         );
         register(
-            p_343249_,
+            context,
             VANISHING_CURSE,
             Enchantment.enchantment(
                     Enchantment.definition(
-                        holdergetter2.getOrThrow(ItemTags.VANISHING_ENCHANTABLE), 1, 1, Enchantment.constantCost(25), Enchantment.constantCost(50), 8, EquipmentSlotGroup.ANY
+                        items.getOrThrow(ItemTags.VANISHING_ENCHANTABLE),
+                        1,
+                        1,
+                        Enchantment.constantCost(25),
+                        Enchantment.constantCost(50),
+                        8,
+                        EquipmentSlotGroup.ANY
                     )
                 )
                 .withEffect(EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP)
         );
     }
 
-    private static void register(BootstrapContext<Enchantment> p_345097_, ResourceKey<Enchantment> p_342560_, Enchantment.Builder p_344763_) {
-        p_345097_.register(p_342560_, p_344763_.build(p_342560_.identifier()));
+    private static void register(final BootstrapContext<Enchantment> context, final ResourceKey<Enchantment> key, final Enchantment.Builder builder) {
+        context.register(key, builder.build(key.identifier()));
     }
 
-    private static ResourceKey<Enchantment> key(String p_344280_) {
-        return ResourceKey.create(Registries.ENCHANTMENT, Identifier.withDefaultNamespace(p_344280_));
+    private static ResourceKey<Enchantment> key(final String id) {
+        return ResourceKey.create(Registries.ENCHANTMENT, Identifier.withDefaultNamespace(id));
     }
 }

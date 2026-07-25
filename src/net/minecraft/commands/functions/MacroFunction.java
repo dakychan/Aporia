@@ -29,7 +29,7 @@ import org.jspecify.annotations.Nullable;
 
 public class MacroFunction<T extends ExecutionCommandSource<T>> implements CommandFunction<T> {
     private static final DecimalFormat DECIMAL_FORMAT = Util.make(
-        new DecimalFormat("#", DecimalFormatSymbols.getInstance(Locale.ROOT)), p_448554_ -> p_448554_.setMaximumFractionDigits(15)
+        new DecimalFormat("#", DecimalFormatSymbols.getInstance(Locale.ROOT)), format -> format.setMaximumFractionDigits(15)
     );
     private static final int MAX_CACHE_ENTRIES = 8;
     private final List<String> parameters;
@@ -37,10 +37,10 @@ public class MacroFunction<T extends ExecutionCommandSource<T>> implements Comma
     private final Identifier id;
     private final List<MacroFunction.Entry<T>> entries;
 
-    public MacroFunction(Identifier p_451420_, List<MacroFunction.Entry<T>> p_310862_, List<String> p_310686_) {
-        this.id = p_451420_;
-        this.entries = p_310862_;
-        this.parameters = p_310686_;
+    public MacroFunction(final Identifier id, final List<MacroFunction.Entry<T>> entries, final List<String> parameters) {
+        this.id = id;
+        this.entries = entries;
+        this.parameters = parameters;
     }
 
     @Override
@@ -49,71 +49,71 @@ public class MacroFunction<T extends ExecutionCommandSource<T>> implements Comma
     }
 
     @Override
-    public InstantiatedFunction<T> instantiate(@Nullable CompoundTag p_309697_, CommandDispatcher<T> p_309980_) throws FunctionInstantiationException {
-        if (p_309697_ == null) {
+    public InstantiatedFunction<T> instantiate(final @Nullable CompoundTag arguments, final CommandDispatcher<T> dispatcher) throws FunctionInstantiationException {
+        if (arguments == null) {
             throw new FunctionInstantiationException(Component.translatable("commands.function.error.missing_arguments", Component.translationArg(this.id())));
-        } else {
-            List<String> list = new ArrayList<>(this.parameters.size());
-
-            for (String s : this.parameters) {
-                Tag tag = p_309697_.get(s);
-                if (tag == null) {
-                    throw new FunctionInstantiationException(
-                        Component.translatable("commands.function.error.missing_argument", Component.translationArg(this.id()), s)
-                    );
-                }
-
-                list.add(stringify(tag));
-            }
-
-            InstantiatedFunction<T> instantiatedfunction = this.cache.getAndMoveToLast(list);
-            if (instantiatedfunction != null) {
-                return instantiatedfunction;
-            } else {
-                if (this.cache.size() >= 8) {
-                    this.cache.removeFirst();
-                }
-
-                InstantiatedFunction<T> instantiatedfunction1 = this.substituteAndParse(this.parameters, list, p_309980_);
-                this.cache.put(list, instantiatedfunction1);
-                return instantiatedfunction1;
-            }
         }
+
+        List<String> parameterValues = new ArrayList<>(this.parameters.size());
+
+        for (String argument : this.parameters) {
+            Tag argumentValue = arguments.get(argument);
+            if (argumentValue == null) {
+                throw new FunctionInstantiationException(
+                    Component.translatable("commands.function.error.missing_argument", Component.translationArg(this.id()), argument)
+                );
+            }
+
+            parameterValues.add(stringify(argumentValue));
+        }
+
+        InstantiatedFunction<T> cachedFunction = this.cache.getAndMoveToLast(parameterValues);
+        if (cachedFunction != null) {
+            return cachedFunction;
+        }
+
+        if (this.cache.size() >= 8) {
+            this.cache.removeFirst();
+        }
+
+        InstantiatedFunction<T> function = this.substituteAndParse(this.parameters, parameterValues, dispatcher);
+        this.cache.put(parameterValues, function);
+        return function;
     }
 
-    private static String stringify(Tag p_313061_) {
-        return switch (p_313061_) {
-            case FloatTag(float f) -> DECIMAL_FORMAT.format(f);
-            case DoubleTag(double d0) -> DECIMAL_FORMAT.format(d0);
-            case ByteTag(byte b0) -> String.valueOf((int)b0);
-            case ShortTag(short short1) -> String.valueOf((int)short1);
-            case LongTag(long i) -> String.valueOf(i);
-            case StringTag(String s) -> s;
-            default -> p_313061_.toString();
+    private static String stringify(final Tag tag) {
+        return switch (tag) {
+            case FloatTag(float value) -> DECIMAL_FORMAT.format(value);
+            case DoubleTag(double value) -> DECIMAL_FORMAT.format(value);
+            case ByteTag(byte value) -> String.valueOf(value);
+            case ShortTag(short value) -> String.valueOf(value);
+            case LongTag(long value) -> String.valueOf(value);
+            case StringTag(String value) -> value;
+            default -> tag.toString();
         };
     }
 
-    private static void lookupValues(List<String> p_313206_, IntList p_310595_, List<String> p_310258_) {
-        p_310258_.clear();
-        p_310595_.forEach(p_312583_ -> p_310258_.add(p_313206_.get(p_312583_)));
+    private static void lookupValues(final List<String> values, final IntList indicesToSelect, final List<String> selectedValuesOutput) {
+        selectedValuesOutput.clear();
+        indicesToSelect.forEach(index -> selectedValuesOutput.add(values.get(index)));
     }
 
-    private InstantiatedFunction<T> substituteAndParse(List<String> p_312865_, List<String> p_312778_, CommandDispatcher<T> p_311234_) throws FunctionInstantiationException {
-        List<UnboundEntryAction<T>> list = new ArrayList<>(this.entries.size());
-        List<String> list1 = new ArrayList<>(p_312778_.size());
+    private InstantiatedFunction<T> substituteAndParse(final List<String> keys, final List<String> values, final CommandDispatcher<T> dispatcher) throws FunctionInstantiationException {
+        List<UnboundEntryAction<T>> newEntries = new ArrayList<>(this.entries.size());
+        List<String> entryArguments = new ArrayList<>(values.size());
 
         for (MacroFunction.Entry<T> entry : this.entries) {
-            lookupValues(p_312778_, entry.parameters(), list1);
-            list.add(entry.instantiate(list1, p_311234_, this.id));
+            lookupValues(values, entry.parameters(), entryArguments);
+            newEntries.add(entry.instantiate(entryArguments, dispatcher, this.id));
         }
 
-        return new PlainTextFunction<>(this.id().withPath(p_312634_ -> p_312634_ + "/" + p_312865_.hashCode()), list);
+        return new PlainTextFunction<>(this.id().withPath(id -> id + "/" + keys.hashCode()), newEntries);
     }
 
     interface Entry<T> {
         IntList parameters();
 
-        UnboundEntryAction<T> instantiate(List<String> p_312452_, CommandDispatcher<T> p_313016_, Identifier p_457806_) throws FunctionInstantiationException;
+        UnboundEntryAction<T> instantiate(List<String> substitutions, CommandDispatcher<T> dispatcher, Identifier funtionId) throws FunctionInstantiationException;
     }
 
     static class MacroEntry<T extends ExecutionCommandSource<T>> implements MacroFunction.Entry<T> {
@@ -121,10 +121,10 @@ public class MacroFunction<T extends ExecutionCommandSource<T>> implements Comma
         private final IntList parameters;
         private final T compilationContext;
 
-        public MacroEntry(StringTemplate p_309563_, IntList p_312180_, T p_336169_) {
-            this.template = p_309563_;
-            this.parameters = p_312180_;
-            this.compilationContext = p_336169_;
+        public MacroEntry(final StringTemplate template, final IntList parameters, final T compilationContext) {
+            this.template = template;
+            this.parameters = parameters;
+            this.compilationContext = compilationContext;
         }
 
         @Override
@@ -133,14 +133,14 @@ public class MacroFunction<T extends ExecutionCommandSource<T>> implements Comma
         }
 
         @Override
-        public UnboundEntryAction<T> instantiate(List<String> p_312101_, CommandDispatcher<T> p_309379_, Identifier p_460211_) throws FunctionInstantiationException {
-            String s = this.template.substitute(p_312101_);
+        public UnboundEntryAction<T> instantiate(final List<String> substitutions, final CommandDispatcher<T> dispatcher, final Identifier functionId) throws FunctionInstantiationException {
+            String command = this.template.substitute(substitutions);
 
             try {
-                return CommandFunction.parseCommand(p_309379_, this.compilationContext, new StringReader(s));
-            } catch (CommandSyntaxException commandsyntaxexception) {
+                return CommandFunction.parseCommand(dispatcher, this.compilationContext, new StringReader(command));
+            } catch (CommandSyntaxException e) {
                 throw new FunctionInstantiationException(
-                    Component.translatable("commands.function.error.parse", Component.translationArg(p_460211_), s, commandsyntaxexception.getMessage())
+                    Component.translatable("commands.function.error.parse", Component.translationArg(functionId), command, e.getMessage())
                 );
             }
         }
@@ -149,8 +149,8 @@ public class MacroFunction<T extends ExecutionCommandSource<T>> implements Comma
     static class PlainTextEntry<T> implements MacroFunction.Entry<T> {
         private final UnboundEntryAction<T> compiledAction;
 
-        public PlainTextEntry(UnboundEntryAction<T> p_309648_) {
-            this.compiledAction = p_309648_;
+        public PlainTextEntry(final UnboundEntryAction<T> compiledAction) {
+            this.compiledAction = compiledAction;
         }
 
         @Override
@@ -159,7 +159,7 @@ public class MacroFunction<T extends ExecutionCommandSource<T>> implements Comma
         }
 
         @Override
-        public UnboundEntryAction<T> instantiate(List<String> p_311533_, CommandDispatcher<T> p_311835_, Identifier p_453694_) {
+        public UnboundEntryAction<T> instantiate(final List<String> substitutions, final CommandDispatcher<T> dispatcher, final Identifier functionId) {
             return this.compiledAction;
         }
     }

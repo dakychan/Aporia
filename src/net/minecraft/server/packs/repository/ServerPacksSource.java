@@ -6,7 +6,6 @@ import java.util.Optional;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.server.packs.BuiltInMetadata;
 import net.minecraft.server.packs.FeatureFlagsMetadataSection;
 import net.minecraft.server.packs.PackLocationInfo;
 import net.minecraft.server.packs.PackResources;
@@ -15,6 +14,7 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.VanillaPackResources;
 import net.minecraft.server.packs.VanillaPackResourcesBuilder;
 import net.minecraft.server.packs.metadata.pack.PackMetadataSection;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.storage.LevelStorageSource;
@@ -26,7 +26,7 @@ public class ServerPacksSource extends BuiltInPackSource {
         Component.translatable("dataPack.vanilla.description"), SharedConstants.getCurrentVersion().packVersion(PackType.SERVER_DATA).minorRange()
     );
     private static final FeatureFlagsMetadataSection FEATURE_FLAGS_METADATA_SECTION = new FeatureFlagsMetadataSection(FeatureFlags.DEFAULT_FLAGS);
-    private static final BuiltInMetadata BUILT_IN_METADATA = BuiltInMetadata.of(
+    private static final ResourceMetadata BUILT_IN_METADATA = ResourceMetadata.of(
         PackMetadataSection.SERVER_TYPE, VERSION_METADATA_SECTION, FeatureFlagsMetadataSection.TYPE, FEATURE_FLAGS_METADATA_SECTION
     );
     private static final PackLocationInfo VANILLA_PACK_INFO = new PackLocationInfo(
@@ -36,43 +36,48 @@ public class ServerPacksSource extends BuiltInPackSource {
     private static final PackSelectionConfig FEATURE_SELECTION_CONFIG = new PackSelectionConfig(false, Pack.Position.TOP, false);
     private static final Identifier PACKS_DIR = Identifier.withDefaultNamespace("datapacks");
 
-    public ServerPacksSource(DirectoryValidator p_300750_) {
-        super(PackType.SERVER_DATA, createVanillaPackSource(), PACKS_DIR, p_300750_);
+    public ServerPacksSource(final DirectoryValidator validator) {
+        super(PackType.SERVER_DATA, createVanillaPackSource(), PACKS_DIR, validator);
     }
 
-    private static PackLocationInfo createBuiltInPackLocation(String p_330867_, Component p_330785_) {
-        return new PackLocationInfo(p_330867_, p_330785_, PackSource.FEATURE, Optional.of(KnownPack.vanilla(p_330867_)));
+    private static PackLocationInfo createBuiltInPackLocation(final String id, final Component title) {
+        return new PackLocationInfo(id, title, PackSource.FEATURE, Optional.of(KnownPack.vanilla(id)));
     }
 
     @VisibleForTesting
     public static VanillaPackResources createVanillaPackSource() {
-        return new VanillaPackResourcesBuilder().setMetadata(BUILT_IN_METADATA).exposeNamespace("minecraft").applyDevelopmentConfig().pushJarResources().build(VANILLA_PACK_INFO);
+        return new VanillaPackResourcesBuilder()
+            .setMetadata(BUILT_IN_METADATA)
+            .exposeNamespace("minecraft")
+            .applyDevelopmentConfig()
+            .pushJarResources()
+            .build(VANILLA_PACK_INFO);
     }
 
     @Override
-    protected Component getPackTitle(String p_249692_) {
-        return Component.literal(p_249692_);
+    protected Component getPackTitle(final String id) {
+        return Component.literal(id);
     }
 
     @Override
-    protected @Nullable Pack createVanillaPack(PackResources p_250283_) {
-        return Pack.readMetaAndCreate(VANILLA_PACK_INFO, fixedResources(p_250283_), PackType.SERVER_DATA, VANILLA_SELECTION_CONFIG);
+    protected @Nullable Pack createVanillaPack(final PackResources resources) {
+        return Pack.readMetaAndCreate(VANILLA_PACK_INFO, fixedResources(resources), PackType.SERVER_DATA, VANILLA_SELECTION_CONFIG);
     }
 
     @Override
-    protected @Nullable Pack createBuiltinPack(String p_250596_, Pack.ResourcesSupplier p_249625_, Component p_249043_) {
-        return Pack.readMetaAndCreate(createBuiltInPackLocation(p_250596_, p_249043_), p_249625_, PackType.SERVER_DATA, FEATURE_SELECTION_CONFIG);
+    protected @Nullable Pack createBuiltinPack(final String id, final Pack.ResourcesSupplier resources, final Component name) {
+        return Pack.readMetaAndCreate(createBuiltInPackLocation(id, name), resources, PackType.SERVER_DATA, FEATURE_SELECTION_CONFIG);
     }
 
-    public static PackRepository createPackRepository(Path p_251569_, DirectoryValidator p_300268_) {
-        return new PackRepository(new ServerPacksSource(p_300268_), new FolderRepositorySource(p_251569_, PackType.SERVER_DATA, PackSource.WORLD, p_300268_));
+    public static PackRepository createPackRepository(final Path datapackDir, final DirectoryValidator validator) {
+        return new PackRepository(new ServerPacksSource(validator), new FolderRepositorySource(datapackDir, PackType.SERVER_DATA, PackSource.WORLD, validator));
     }
 
     public static PackRepository createVanillaTrustedRepository() {
-        return new PackRepository(new ServerPacksSource(new DirectoryValidator(p_296600_ -> true)));
+        return new PackRepository(new ServerPacksSource(new DirectoryValidator(path -> true)));
     }
 
-    public static PackRepository createPackRepository(LevelStorageSource.LevelStorageAccess p_250213_) {
-        return createPackRepository(p_250213_.getLevelPath(LevelResource.DATAPACK_DIR), p_250213_.parent().getWorldDirValidator());
+    public static PackRepository createPackRepository(final LevelStorageSource.LevelStorageAccess levelSourceAccess) {
+        return createPackRepository(levelSourceAccess.getLevelPath(LevelResource.DATAPACK_DIR), levelSourceAccess.parent().getWorldDirValidator());
     }
 }

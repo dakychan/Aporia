@@ -22,6 +22,7 @@ public record GameEvent(int notificationRadius) {
     public static final Holder.Reference<GameEvent> BLOCK_DETACH = register("block_detach");
     public static final Holder.Reference<GameEvent> BLOCK_OPEN = register("block_open");
     public static final Holder.Reference<GameEvent> BLOCK_PLACE = register("block_place");
+    public static final Holder.Reference<GameEvent> BOUNCE = register("bounce");
     public static final Holder.Reference<GameEvent> CONTAINER_CLOSE = register("container_close");
     public static final Holder.Reference<GameEvent> CONTAINER_OPEN = register("container_open");
     public static final Holder.Reference<GameEvent> DRINK = register("drink");
@@ -76,29 +77,29 @@ public record GameEvent(int notificationRadius) {
     public static final int DEFAULT_NOTIFICATION_RADIUS = 16;
     public static final Codec<Holder<GameEvent>> CODEC = RegistryFixedCodec.create(Registries.GAME_EVENT);
 
-    public static Holder<GameEvent> bootstrap(Registry<GameEvent> p_336256_) {
+    public static Holder<GameEvent> bootstrap(final Registry<GameEvent> registry) {
         return BLOCK_ACTIVATE;
     }
 
-    private static Holder.Reference<GameEvent> register(String p_157823_) {
-        return register(p_157823_, 16);
+    private static Holder.Reference<GameEvent> register(final String name) {
+        return register(name, 16);
     }
 
-    private static Holder.Reference<GameEvent> register(String p_157825_, int p_157826_) {
-        return Registry.registerForHolder(BuiltInRegistries.GAME_EVENT, Identifier.withDefaultNamespace(p_157825_), new GameEvent(p_157826_));
+    private static Holder.Reference<GameEvent> register(final String name, final int notificationRadius) {
+        return Registry.registerForHolder(BuiltInRegistries.GAME_EVENT, Identifier.withDefaultNamespace(name), new GameEvent(notificationRadius));
     }
 
     public record Context(@Nullable Entity sourceEntity, @Nullable BlockState affectedState) {
-        public static GameEvent.Context of(@Nullable Entity p_223718_) {
-            return new GameEvent.Context(p_223718_, null);
+        public static GameEvent.Context of(final @Nullable Entity sourceEntity) {
+            return new GameEvent.Context(sourceEntity, null);
         }
 
-        public static GameEvent.Context of(@Nullable BlockState p_223723_) {
-            return new GameEvent.Context(null, p_223723_);
+        public static GameEvent.Context of(final @Nullable BlockState state) {
+            return new GameEvent.Context(null, state);
         }
 
-        public static GameEvent.Context of(@Nullable Entity p_223720_, @Nullable BlockState p_223721_) {
-            return new GameEvent.Context(p_223720_, p_223721_);
+        public static GameEvent.Context of(final @Nullable Entity sourceEntity, final @Nullable BlockState state) {
+            return new GameEvent.Context(sourceEntity, state);
         }
     }
 
@@ -109,16 +110,18 @@ public record GameEvent(int notificationRadius) {
         private final GameEventListener recipient;
         private final double distanceToRecipient;
 
-        public ListenerInfo(Holder<GameEvent> p_334906_, Vec3 p_249118_, GameEvent.Context p_251196_, GameEventListener p_251701_, Vec3 p_248854_) {
-            this.gameEvent = p_334906_;
-            this.source = p_249118_;
-            this.context = p_251196_;
-            this.recipient = p_251701_;
-            this.distanceToRecipient = p_249118_.distanceToSqr(p_248854_);
+        public ListenerInfo(
+            final Holder<GameEvent> gameEvent, final Vec3 source, final GameEvent.Context context, final GameEventListener recipient, final Vec3 recipientPos
+        ) {
+            this.gameEvent = gameEvent;
+            this.source = source;
+            this.context = context;
+            this.recipient = recipient;
+            this.distanceToRecipient = source.distanceToSqr(recipientPos);
         }
 
-        public int compareTo(GameEvent.ListenerInfo p_249631_) {
-            return Double.compare(this.distanceToRecipient, p_249631_.distanceToRecipient);
+        public int compareTo(final GameEvent.ListenerInfo other) {
+            return Double.compare(this.distanceToRecipient, other.distanceToRecipient);
         }
 
         public Holder<GameEvent> gameEvent() {

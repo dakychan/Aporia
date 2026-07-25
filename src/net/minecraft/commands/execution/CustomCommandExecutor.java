@@ -8,29 +8,29 @@ import net.minecraft.commands.ExecutionCommandSource;
 import org.jspecify.annotations.Nullable;
 
 public interface CustomCommandExecutor<T> {
-    void run(T p_310884_, ContextChain<T> p_312906_, ChainModifiers p_310837_, ExecutionControl<T> p_310586_);
+    void run(T sender, ContextChain<T> currentStep, ChainModifiers modifiers, ExecutionControl<T> output);
 
-    public interface CommandAdapter<T> extends Command<T>, CustomCommandExecutor<T> {
+    interface CommandAdapter<T> extends CustomCommandExecutor<T>, Command<T> {
         @Override
-        default int run(CommandContext<T> p_309955_) throws CommandSyntaxException {
+        default int run(final CommandContext<T> context) throws CommandSyntaxException {
             throw new UnsupportedOperationException("This function should not run");
         }
     }
 
-    public abstract static class WithErrorHandling<T extends ExecutionCommandSource<T>> implements CustomCommandExecutor<T> {
-        public final void run(T p_310241_, ContextChain<T> p_311766_, ChainModifiers p_310779_, ExecutionControl<T> p_309382_) {
+    abstract class WithErrorHandling<T extends ExecutionCommandSource<T>> implements CustomCommandExecutor<T> {
+        public final void run(final T sender, final ContextChain<T> currentStep, final ChainModifiers modifiers, final ExecutionControl<T> output) {
             try {
-                this.runGuarded(p_310241_, p_311766_, p_310779_, p_309382_);
-            } catch (CommandSyntaxException commandsyntaxexception) {
-                this.onError(commandsyntaxexception, p_310241_, p_310779_, p_309382_.tracer());
-                p_310241_.callback().onFailure();
+                this.runGuarded(sender, currentStep, modifiers, output);
+            } catch (CommandSyntaxException e) {
+                this.onError(e, sender, modifiers, output.tracer());
+                sender.callback().onFailure();
             }
         }
 
-        protected void onError(CommandSyntaxException p_313040_, T p_312743_, ChainModifiers p_309642_, @Nullable TraceCallbacks p_309545_) {
-            p_312743_.handleError(p_313040_, p_309642_.isForked(), p_309545_);
+        protected void onError(final CommandSyntaxException e, final T sender, final ChainModifiers modifiers, final @Nullable TraceCallbacks tracer) {
+            sender.handleError(e, modifiers.isForked(), tracer);
         }
 
-        protected abstract void runGuarded(T p_311664_, ContextChain<T> p_312225_, ChainModifiers p_309888_, ExecutionControl<T> p_313051_) throws CommandSyntaxException;
+        protected abstract void runGuarded(T sender, ContextChain<T> currentStep, ChainModifiers modifiers, ExecutionControl<T> output) throws CommandSyntaxException;
     }
 }

@@ -5,10 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundSetCommandBlockPacket;
 import net.minecraft.world.level.BaseCommandBlock;
 import net.minecraft.world.level.block.entity.CommandBlockEntity;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class CommandBlockEditScreen extends AbstractCommandBlockEditScreen {
     private final CommandBlockEntity autoCommandBlock;
     private CycleButton<CommandBlockEntity.Mode> modeButton;
@@ -18,17 +15,17 @@ public class CommandBlockEditScreen extends AbstractCommandBlockEditScreen {
     private boolean conditional;
     private boolean autoexec;
 
-    public CommandBlockEditScreen(CommandBlockEntity p_98382_) {
-        this.autoCommandBlock = p_98382_;
+    public CommandBlockEditScreen(final CommandBlockEntity commandBlock) {
+        this.autoCommandBlock = commandBlock;
     }
 
     @Override
-    BaseCommandBlock getCommandBlock() {
+    protected BaseCommandBlock getCommandBlock() {
         return this.autoCommandBlock.getCommandBlock();
     }
 
     @Override
-    int getPreviousY() {
+    protected int getPreviousY() {
         return 135;
     }
 
@@ -41,8 +38,8 @@ public class CommandBlockEditScreen extends AbstractCommandBlockEditScreen {
     @Override
     protected void addExtraControls() {
         this.modeButton = this.addRenderableWidget(
-            CycleButton.<CommandBlockEntity.Mode>builder(p_325380_ -> {
-                    return switch (p_325380_) {
+            CycleButton.<CommandBlockEntity.Mode>builder(mode -> {
+                    return switch (mode) {
                         case SEQUENCE -> Component.translatable("advMode.mode.sequence");
                         case AUTO -> Component.translatable("advMode.mode.auto");
                         case REDSTONE -> Component.translatable("advMode.mode.redstone");
@@ -50,50 +47,50 @@ public class CommandBlockEditScreen extends AbstractCommandBlockEditScreen {
                 }, this.mode)
                 .withValues(CommandBlockEntity.Mode.values())
                 .displayOnlyValue()
-                .create(
-                    this.width / 2 - 50 - 100 - 4, 165, 100, 20, Component.translatable("advMode.mode"), (p_169721_, p_169722_) -> this.mode = p_169722_
-                )
+                .create(this.width / 2 - 50 - 100 - 4, 165, 100, 20, Component.translatable("advMode.mode"), (button, value) -> this.mode = value)
         );
         this.conditionalButton = this.addRenderableWidget(
-            CycleButton.booleanBuilder(Component.translatable("advMode.mode.conditional"), Component.translatable("advMode.mode.unconditional"), this.conditional)
+            CycleButton.booleanBuilder(
+                    Component.translatable("advMode.mode.conditional"), Component.translatable("advMode.mode.unconditional"), this.conditional
+                )
                 .displayOnlyValue()
-                .create(this.width / 2 - 50, 165, 100, 20, Component.translatable("advMode.type"), (p_169727_, p_169728_) -> this.conditional = p_169728_)
+                .create(this.width / 2 - 50, 165, 100, 20, Component.translatable("advMode.type"), (button, value) -> this.conditional = value)
         );
         this.autoexecButton = this.addRenderableWidget(
-            CycleButton.booleanBuilder(Component.translatable("advMode.mode.autoexec.bat"), Component.translatable("advMode.mode.redstoneTriggered"), this.autoexec)
-                .displayOnlyValue()
-                .create(
-                    this.width / 2 + 50 + 4, 165, 100, 20, Component.translatable("advMode.triggering"), (p_169724_, p_169725_) -> this.autoexec = p_169725_
+            CycleButton.booleanBuilder(
+                    Component.translatable("advMode.mode.autoexec.bat"), Component.translatable("advMode.mode.redstoneTriggered"), this.autoexec
                 )
+                .displayOnlyValue()
+                .create(this.width / 2 + 50 + 4, 165, 100, 20, Component.translatable("advMode.triggering"), (button, value) -> this.autoexec = value)
         );
     }
 
-    private void enableControls(boolean p_169730_) {
-        this.doneButton.active = p_169730_;
-        this.outputButton.active = p_169730_;
-        this.modeButton.active = p_169730_;
-        this.conditionalButton.active = p_169730_;
-        this.autoexecButton.active = p_169730_;
+    private void enableControls(final boolean state) {
+        this.doneButton.active = state;
+        this.outputButton.active = state;
+        this.modeButton.active = state;
+        this.conditionalButton.active = state;
+        this.autoexecButton.active = state;
     }
 
     public void updateGui() {
-        BaseCommandBlock basecommandblock = this.autoCommandBlock.getCommandBlock();
-        this.commandEdit.setValue(basecommandblock.getCommand());
-        boolean flag = basecommandblock.isTrackOutput();
+        BaseCommandBlock commandBlock = this.autoCommandBlock.getCommandBlock();
+        this.commandEdit.setValue(commandBlock.getCommand());
+        boolean trackOutput = commandBlock.isTrackOutput();
         this.mode = this.autoCommandBlock.getMode();
         this.conditional = this.autoCommandBlock.isConditional();
         this.autoexec = this.autoCommandBlock.isAutomatic();
-        this.outputButton.setValue(flag);
+        this.outputButton.setValue(trackOutput);
         this.modeButton.setValue(this.mode);
         this.conditionalButton.setValue(this.conditional);
         this.autoexecButton.setValue(this.autoexec);
-        this.updatePreviousOutput(flag);
+        this.updatePreviousOutput(trackOutput);
         this.enableControls(true);
     }
 
     @Override
-    public void resize(int p_98387_, int p_98388_) {
-        super.resize(p_98387_, p_98388_);
+    public void resize(final int width, final int height) {
+        super.resize(width, height);
         this.enableControls(true);
     }
 
@@ -103,7 +100,12 @@ public class CommandBlockEditScreen extends AbstractCommandBlockEditScreen {
             .getConnection()
             .send(
                 new ServerboundSetCommandBlockPacket(
-                    this.autoCommandBlock.getBlockPos(), this.commandEdit.getValue(), this.mode, this.autoCommandBlock.getCommandBlock().isTrackOutput(), this.conditional, this.autoexec
+                    this.autoCommandBlock.getBlockPos(),
+                    this.commandEdit.getValue(),
+                    this.mode,
+                    this.autoCommandBlock.getCommandBlock().isTrackOutput(),
+                    this.conditional,
+                    this.autoexec
                 )
             );
     }

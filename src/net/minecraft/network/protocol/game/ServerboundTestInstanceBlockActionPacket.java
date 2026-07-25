@@ -16,9 +16,8 @@ import net.minecraft.util.ByIdMap;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.entity.TestInstanceBlockEntity;
 
-public record ServerboundTestInstanceBlockActionPacket(
-    BlockPos pos, ServerboundTestInstanceBlockActionPacket.Action action, TestInstanceBlockEntity.Data data
-) implements Packet<ServerGamePacketListener> {
+public record ServerboundTestInstanceBlockActionPacket(BlockPos pos, ServerboundTestInstanceBlockActionPacket.Action action, TestInstanceBlockEntity.Data data)
+    implements Packet<ServerGamePacketListener> {
     public static final StreamCodec<RegistryFriendlyByteBuf, ServerboundTestInstanceBlockActionPacket> STREAM_CODEC = StreamCodec.composite(
         BlockPos.STREAM_CODEC,
         ServerboundTestInstanceBlockActionPacket::pos,
@@ -30,18 +29,14 @@ public record ServerboundTestInstanceBlockActionPacket(
     );
 
     public ServerboundTestInstanceBlockActionPacket(
-        BlockPos p_391315_,
-        ServerboundTestInstanceBlockActionPacket.Action p_392848_,
-        Optional<ResourceKey<GameTestInstance>> p_393624_,
-        Vec3i p_391405_,
-        Rotation p_395308_,
-        boolean p_396033_
+        final BlockPos pos,
+        final ServerboundTestInstanceBlockActionPacket.Action action,
+        final Optional<ResourceKey<GameTestInstance>> test,
+        final Vec3i size,
+        final Rotation rotation,
+        final boolean ignoreEntities
     ) {
-        this(
-            p_391315_,
-            p_392848_,
-            new TestInstanceBlockEntity.Data(p_393624_, p_391405_, p_395308_, p_396033_, TestInstanceBlockEntity.Status.CLEARED, Optional.empty())
-        );
+        this(pos, action, new TestInstanceBlockEntity.Data(test, size, rotation, ignoreEntities, TestInstanceBlockEntity.Status.CLEARED, Optional.empty()));
     }
 
     @Override
@@ -49,11 +44,11 @@ public record ServerboundTestInstanceBlockActionPacket(
         return GamePacketTypes.SERVERBOUND_TEST_INSTANCE_BLOCK_ACTION;
     }
 
-    public void handle(ServerGamePacketListener p_397453_) {
-        p_397453_.handleTestInstanceBlockAction(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleTestInstanceBlockAction(this);
     }
 
-    public static enum Action {
+    public enum Action {
         INIT(0),
         QUERY(1),
         SET(2),
@@ -63,15 +58,13 @@ public record ServerboundTestInstanceBlockActionPacket(
         RUN(6);
 
         private static final IntFunction<ServerboundTestInstanceBlockActionPacket.Action> BY_ID = ByIdMap.continuous(
-            p_395495_ -> p_395495_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
+            e -> e.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
         );
-        public static final StreamCodec<ByteBuf, ServerboundTestInstanceBlockActionPacket.Action> STREAM_CODEC = ByteBufCodecs.idMapper(
-            BY_ID, p_391553_ -> p_391553_.id
-        );
+        public static final StreamCodec<ByteBuf, ServerboundTestInstanceBlockActionPacket.Action> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, e -> e.id);
         private final int id;
 
-        private Action(final int p_397304_) {
-            this.id = p_397304_;
+        Action(final int id) {
+            this.id = id;
         }
     }
 }

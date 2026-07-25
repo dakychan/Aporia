@@ -2,26 +2,23 @@ package net.minecraft.client.gui.layouts;
 
 import java.util.function.Consumer;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LinearLayout implements Layout {
     private final GridLayout wrapped;
     private final LinearLayout.Orientation orientation;
     private int nextChildIndex = 0;
 
-    private LinearLayout(LinearLayout.Orientation p_265341_) {
-        this(0, 0, p_265341_);
+    private LinearLayout(final LinearLayout.Orientation orientation) {
+        this(0, 0, orientation);
     }
 
-    public LinearLayout(int p_265093_, int p_265502_, LinearLayout.Orientation p_265112_) {
-        this.wrapped = new GridLayout(p_265093_, p_265502_);
-        this.orientation = p_265112_;
+    public LinearLayout(final int x, final int y, final LinearLayout.Orientation orientation) {
+        this.wrapped = new GridLayout(x, y);
+        this.orientation = orientation;
     }
 
-    public LinearLayout spacing(int p_298391_) {
-        this.orientation.setSpacing(this.wrapped, p_298391_);
+    public LinearLayout spacing(final int spacing) {
+        this.orientation.setSpacing(this.wrapped, spacing);
         return this;
     }
 
@@ -33,21 +30,27 @@ public class LinearLayout implements Layout {
         return this.wrapped.defaultCellSetting();
     }
 
-    public <T extends LayoutElement> T addChild(T p_265475_, LayoutSettings p_265684_) {
-        return this.orientation.addChild(this.wrapped, p_265475_, this.nextChildIndex++, p_265684_);
+    public <T extends LayoutElement> T addChild(final T child, final LayoutSettings cellSettings) {
+        return this.orientation.addChild(this.wrapped, child, this.nextChildIndex++, cellSettings);
     }
 
-    public <T extends LayoutElement> T addChild(T p_265140_) {
-        return this.addChild(p_265140_, this.newCellSettings());
+    public <T extends LayoutElement> T addChild(final T child) {
+        return this.addChild(child, this.newCellSettings());
     }
 
-    public <T extends LayoutElement> T addChild(T p_300762_, Consumer<LayoutSettings> p_300497_) {
-        return this.orientation.addChild(this.wrapped, p_300762_, this.nextChildIndex++, Util.make(this.newCellSettings(), p_300497_));
+    public <T extends LayoutElement> T addChild(final T child, final Consumer<LayoutSettings> layoutSettingsAdjustments) {
+        return this.orientation.addChild(this.wrapped, child, this.nextChildIndex++, Util.make(this.newCellSettings(), layoutSettingsAdjustments));
     }
 
     @Override
-    public void visitChildren(Consumer<LayoutElement> p_265508_) {
-        this.wrapped.visitChildren(p_265508_);
+    public void visitChildren(final Consumer<LayoutElement> layoutElementVisitor) {
+        this.wrapped.visitChildren(layoutElementVisitor);
+    }
+
+    @Override
+    public void removeChildren() {
+        this.wrapped.removeChildren();
+        this.nextChildIndex = 0;
     }
 
     @Override
@@ -66,13 +69,13 @@ public class LinearLayout implements Layout {
     }
 
     @Override
-    public void setX(int p_297321_) {
-        this.wrapped.setX(p_297321_);
+    public void setX(final int x) {
+        this.wrapped.setX(x);
     }
 
     @Override
-    public void setY(int p_299381_) {
-        this.wrapped.setY(p_299381_);
+    public void setY(final int y) {
+        this.wrapped.setY(y);
     }
 
     @Override
@@ -93,25 +96,24 @@ public class LinearLayout implements Layout {
         return new LinearLayout(LinearLayout.Orientation.HORIZONTAL);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Orientation {
+        public enum Orientation {
         HORIZONTAL,
         VERTICAL;
 
-        void setSpacing(GridLayout p_299858_, int p_299775_) {
+        private void setSpacing(final GridLayout gridLayout, final int spacing) {
             switch (this) {
                 case HORIZONTAL:
-                    p_299858_.columnSpacing(p_299775_);
+                    gridLayout.columnSpacing(spacing);
                     break;
                 case VERTICAL:
-                    p_299858_.rowSpacing(p_299775_);
+                    gridLayout.rowSpacing(spacing);
             }
         }
 
-        public <T extends LayoutElement> T addChild(GridLayout p_298633_, T p_297548_, int p_300692_, LayoutSettings p_298693_) {
+        public <T extends LayoutElement> T addChild(final GridLayout gridLayout, final T child, final int index, final LayoutSettings cellSettings) {
             return (T)(switch (this) {
-                case HORIZONTAL -> (LayoutElement)p_298633_.addChild(p_297548_, 0, p_300692_, p_298693_);
-                case VERTICAL -> (LayoutElement)p_298633_.addChild(p_297548_, p_300692_, 0, p_298693_);
+                case HORIZONTAL -> gridLayout.addChild(child, 0, index, cellSettings);
+                case VERTICAL -> gridLayout.addChild(child, index, 0, cellSettings);
             });
         }
     }

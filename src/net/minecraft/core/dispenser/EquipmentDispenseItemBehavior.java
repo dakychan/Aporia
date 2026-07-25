@@ -13,26 +13,26 @@ public class EquipmentDispenseItemBehavior extends DefaultDispenseItemBehavior {
     public static final EquipmentDispenseItemBehavior INSTANCE = new EquipmentDispenseItemBehavior();
 
     @Override
-    protected ItemStack execute(BlockSource p_361136_, ItemStack p_365597_) {
-        return dispenseEquipment(p_361136_, p_365597_) ? p_365597_ : super.execute(p_361136_, p_365597_);
+    protected ItemStack execute(final BlockSource source, final ItemStack dispensed) {
+        return dispenseEquipment(source, dispensed) ? dispensed : super.execute(source, dispensed);
     }
 
-    public static boolean dispenseEquipment(BlockSource p_366555_, ItemStack p_367321_) {
-        BlockPos blockpos = p_366555_.pos().relative(p_366555_.state().getValue(DispenserBlock.FACING));
-        List<LivingEntity> list = p_366555_.level().getEntitiesOfClass(LivingEntity.class, new AABB(blockpos), p_368089_ -> p_368089_.canEquipWithDispenser(p_367321_));
-        if (list.isEmpty()) {
+    public static boolean dispenseEquipment(final BlockSource source, final ItemStack dispensed) {
+        BlockPos pos = source.pos().relative(source.state().getValue(DispenserBlock.FACING));
+        List<LivingEntity> entities = source.level().getEntitiesOfClass(LivingEntity.class, new AABB(pos), entity -> entity.canEquipWithDispenser(dispensed));
+        if (entities.isEmpty()) {
             return false;
-        } else {
-            LivingEntity livingentity = list.getFirst();
-            EquipmentSlot equipmentslot = livingentity.getEquipmentSlotForItem(p_367321_);
-            ItemStack itemstack = p_367321_.split(1);
-            livingentity.setItemSlot(equipmentslot, itemstack);
-            if (livingentity instanceof Mob mob) {
-                mob.setGuaranteedDrop(equipmentslot);
-                mob.setPersistenceRequired();
-            }
-
-            return true;
         }
+
+        LivingEntity target = entities.getFirst();
+        EquipmentSlot slot = target.getEquipmentSlotForItem(dispensed);
+        ItemStack equip = dispensed.split(1);
+        target.setItemSlot(slot, equip);
+        if (target instanceof Mob targetMob) {
+            targetMob.setGuaranteedDrop(slot);
+            targetMob.setPersistenceRequired();
+        }
+
+        return true;
     }
 }

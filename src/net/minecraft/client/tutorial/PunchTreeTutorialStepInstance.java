@@ -10,11 +10,8 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class PunchTreeTutorialStepInstance implements TutorialStepInstance {
     private static final int HINT_DELAY = 600;
     private static final Component TITLE = Component.translatable("tutorial.punch_tree.title");
@@ -24,8 +21,8 @@ public class PunchTreeTutorialStepInstance implements TutorialStepInstance {
     private int timeWaiting;
     private int resetCount;
 
-    public PunchTreeTutorialStepInstance(Tutorial p_120549_) {
-        this.tutorial = p_120549_;
+    public PunchTreeTutorialStepInstance(final Tutorial tutorial) {
+        this.tutorial = tutorial;
     }
 
     @Override
@@ -36,14 +33,14 @@ public class PunchTreeTutorialStepInstance implements TutorialStepInstance {
         } else {
             Minecraft minecraft = this.tutorial.getMinecraft();
             if (this.timeWaiting == 1) {
-                LocalPlayer localplayer = minecraft.player;
-                if (localplayer != null) {
-                    if (localplayer.getInventory().contains(ItemTags.LOGS)) {
+                LocalPlayer player = minecraft.player;
+                if (player != null) {
+                    if (player.getInventory().contains(ItemTags.LOGS)) {
                         this.tutorial.setStep(TutorialSteps.CRAFT_PLANKS);
                         return;
                     }
 
-                    if (FindTreeTutorialStepInstance.hasPunchedTreesPreviously(localplayer)) {
+                    if (FindTreeTutorialStepInstance.hasPunchedTreesPreviously(player)) {
                         this.tutorial.setStep(TutorialSteps.CRAFT_PLANKS);
                         return;
                     }
@@ -52,7 +49,7 @@ public class PunchTreeTutorialStepInstance implements TutorialStepInstance {
 
             if ((this.timeWaiting >= 600 || this.resetCount > 3) && this.toast == null) {
                 this.toast = new TutorialToast(minecraft.font, TutorialToast.Icons.TREE, TITLE, DESCRIPTION, true);
-                minecraft.getToastManager().addToast(this.toast);
+                minecraft.gui.toastManager().addToast(this.toast);
             }
         }
     }
@@ -66,26 +63,26 @@ public class PunchTreeTutorialStepInstance implements TutorialStepInstance {
     }
 
     @Override
-    public void onDestroyBlock(ClientLevel p_120554_, BlockPos p_120555_, BlockState p_120556_, float p_120557_) {
-        boolean flag = p_120556_.is(BlockTags.LOGS);
-        if (flag && p_120557_ > 0.0F) {
+    public void onDestroyBlock(final ClientLevel level, final BlockPos pos, final BlockState state, final float percent) {
+        boolean isLogBlock = state.is(BlockTags.LOGS);
+        if (isLogBlock && percent > 0.0F) {
             if (this.toast != null) {
-                this.toast.updateProgress(p_120557_);
+                this.toast.updateProgress(percent);
             }
 
-            if (p_120557_ >= 1.0F) {
+            if (percent >= 1.0F) {
                 this.tutorial.setStep(TutorialSteps.OPEN_INVENTORY);
             }
         } else if (this.toast != null) {
             this.toast.updateProgress(0.0F);
-        } else if (flag) {
+        } else if (isLogBlock) {
             this.resetCount++;
         }
     }
 
     @Override
-    public void onGetItem(ItemStack p_120552_) {
-        if (p_120552_.is(ItemTags.LOGS)) {
+    public void onGetItem(final ItemStack itemStack) {
+        if (itemStack.is(ItemTags.LOGS)) {
             this.tutorial.setStep(TutorialSteps.CRAFT_PLANKS);
         }
     }

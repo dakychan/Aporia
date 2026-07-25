@@ -10,25 +10,25 @@ import net.minecraft.world.entity.projectile.hurtingprojectile.windcharge.Abstra
 import net.minecraft.world.level.Level;
 
 class WindChargedMobEffect extends MobEffect {
-    protected WindChargedMobEffect(MobEffectCategory p_332863_, int p_333215_) {
-        super(p_332863_, p_333215_, ParticleTypes.SMALL_GUST);
+    protected WindChargedMobEffect(final MobEffectCategory category, final int color) {
+        super(category, color, ParticleTypes.SMALL_GUST);
     }
 
     @Override
-    public void onMobRemoved(ServerLevel p_365553_, LivingEntity p_333151_, int p_331087_, Entity.RemovalReason p_335248_) {
-        if (p_335248_ == Entity.RemovalReason.KILLED) {
-            double d0 = p_333151_.getX();
-            double d1 = p_333151_.getY() + p_333151_.getBbHeight() / 2.0F;
-            double d2 = p_333151_.getZ();
-            float f = 3.0F + p_333151_.getRandom().nextFloat() * 2.0F;
-            p_365553_.explode(
-                p_333151_,
+    public void onMobRemoved(final ServerLevel level, final LivingEntity mob, final int amplifier, final Entity.RemovalReason reason) {
+        if (reason == Entity.RemovalReason.KILLED) {
+            double x = mob.getX();
+            double y = mob.getY() + mob.getBbHeight() / 2.0F;
+            double z = mob.getZ();
+            float gustStrength = 3.0F + mob.getRandom().nextFloat() * 2.0F;
+            level.explode(
+                mob,
                 null,
                 AbstractWindCharge.EXPLOSION_DAMAGE_CALCULATOR,
-                d0,
-                d1,
-                d2,
-                f,
+                x,
+                y,
+                z,
+                gustStrength,
                 false,
                 Level.ExplosionInteraction.TRIGGER,
                 ParticleTypes.GUST_EMITTER_SMALL,

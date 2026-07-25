@@ -73,64 +73,66 @@ public class AttributeModifierIdFix extends DataFix {
         "minecraft:reinforcement_caller_charge"
     );
 
-    public AttributeModifierIdFix(Schema p_345485_) {
-        super(p_345485_, false);
+    public AttributeModifierIdFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<?> opticfinder = type.findField("components");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<?> componentsFinder = itemStackType.findField("components");
         return TypeRewriteRule.seq(
             this.fixTypeEverywhereTyped(
                 "AttributeIdFix (ItemStack)",
-                type,
-                p_342896_ -> p_342896_.updateTyped(opticfinder, p_345143_ -> p_345143_.update(DSL.remainderFinder(), AttributeModifierIdFix::fixItemStackComponents))
+                itemStackType,
+                itemStack -> itemStack.updateTyped(
+                    componentsFinder, components -> components.update(DSL.remainderFinder(), AttributeModifierIdFix::fixItemStackComponents)
+                )
             ),
             this.fixTypeEverywhereTyped("AttributeIdFix (Entity)", this.getInputSchema().getType(References.ENTITY), AttributeModifierIdFix::fixEntity),
             this.fixTypeEverywhereTyped("AttributeIdFix (Player)", this.getInputSchema().getType(References.PLAYER), AttributeModifierIdFix::fixEntity)
         );
     }
 
-    private static Stream<Dynamic<?>> fixModifiersTypeWrapper(Stream<?> p_343594_) {
-        return fixModifiers((Stream<Dynamic<?>>)p_343594_);
+    private static Stream<Dynamic<?>> fixModifiersTypeWrapper(final Stream<?> modifiers) {
+        return fixModifiers((Stream<Dynamic<?>>)modifiers);
     }
 
-    private static Stream<Dynamic<?>> fixModifiers(Stream<Dynamic<?>> p_345064_) {
-        Map<String, Dynamic<?>> map = new Object2ObjectArrayMap<>();
-        p_345064_.forEach(p_345302_ -> {
-            UUID uuid = uuidFromIntArray(p_345302_.get("uuid").asIntStream().toArray());
-            String s = p_345302_.get("name").asString("");
-            String s1 = uuid != null ? ID_MAP.get(uuid) : null;
-            String s2 = NAME_MAP.get(s);
-            if (s1 != null) {
-                p_345302_ = p_345302_.set("id", p_345302_.createString(s1));
-                map.put(s1, p_345302_.remove("uuid").remove("name"));
-            } else if (s2 != null) {
-                Dynamic<?> dynamic = map.get(s2);
-                if (dynamic == null) {
-                    p_345302_ = p_345302_.set("id", p_345302_.createString(s2));
-                    map.put(s2, p_345302_.remove("uuid").remove("name"));
+    private static Stream<Dynamic<?>> fixModifiers(final Stream<Dynamic<?>> modifiers) {
+        Map<String, Dynamic<?>> converted = new Object2ObjectArrayMap<>();
+        modifiers.forEach(modifier -> {
+            UUID uuid = uuidFromIntArray(modifier.get("uuid").asIntStream().toArray());
+            String name = modifier.get("name").asString("");
+            String idFromUUID = uuid != null ? ID_MAP.get(uuid) : null;
+            String idFromName = NAME_MAP.get(name);
+            if (idFromUUID != null) {
+                modifier = modifier.set("id", modifier.createString(idFromUUID));
+                converted.put(idFromUUID, modifier.remove("uuid").remove("name"));
+            } else if (idFromName != null) {
+                Dynamic<?> preExisting = converted.get(idFromName);
+                if (preExisting == null) {
+                    modifier = modifier.set("id", modifier.createString(idFromName));
+                    converted.put(idFromName, modifier.remove("uuid").remove("name"));
                 } else {
-                    double d0 = dynamic.get("amount").asDouble(0.0);
-                    double d1 = p_345302_.get("amount").asDouble(0.0);
-                    map.put(s2, dynamic.set("amount", p_345302_.createDouble(d0 + d1)));
+                    double amount = preExisting.get("amount").asDouble(0.0);
+                    double added = modifier.get("amount").asDouble(0.0);
+                    converted.put(idFromName, preExisting.set("amount", modifier.createDouble(amount + added)));
                 }
             } else {
-                String s3 = "minecraft:" + (uuid != null ? uuid.toString().toLowerCase(Locale.ROOT) : "unknown");
-                p_345302_ = p_345302_.set("id", p_345302_.createString(s3));
-                map.put(s3, p_345302_.remove("uuid").remove("name"));
+                String id = "minecraft:" + (uuid != null ? uuid.toString().toLowerCase(Locale.ROOT) : "unknown");
+                modifier = modifier.set("id", modifier.createString(id));
+                converted.put(id, modifier.remove("uuid").remove("name"));
             }
         });
-        return map.values().stream();
+        return converted.values().stream();
     }
 
-    private static Dynamic<?> convertModifierForEntity(Dynamic<?> p_342220_) {
-        return p_342220_.renameField("UUID", "uuid")
+    private static Dynamic<?> convertModifierForEntity(final Dynamic<?> modifier) {
+        return modifier.renameField("UUID", "uuid")
             .renameField("Name", "name")
             .renameField("Amount", "amount")
-            .renameAndFixField("Operation", "operation", p_343070_ -> {
-                return p_343070_.createString(switch (p_343070_.asInt(0)) {
+            .renameAndFixField("Operation", "operation", operation -> {
+                return operation.createString(switch (operation.asInt(0)) {
                     case 0 -> "add_value";
                     case 1 -> "add_multiplied_base";
                     case 2 -> "add_multiplied_total";
@@ -139,49 +141,49 @@ public class AttributeModifierIdFix extends DataFix {
             });
     }
 
-    private static Dynamic<?> fixItemStackComponents(Dynamic<?> p_344331_) {
-        return p_344331_.update(
+    private static Dynamic<?> fixItemStackComponents(final Dynamic<?> components) {
+        return components.update(
             "minecraft:attribute_modifiers",
-            p_345459_ -> p_345459_.update(
+            attributeModifiers -> attributeModifiers.update(
                 "modifiers",
-                p_343229_ -> DataFixUtils.orElse(p_343229_.asStreamOpt().result().map(AttributeModifierIdFix::fixModifiersTypeWrapper).map(p_343229_::createList), p_343229_)
+                modifiers -> DataFixUtils.orElse(
+                    modifiers.asStreamOpt().result().map(AttributeModifierIdFix::fixModifiersTypeWrapper).map(modifiers::createList), modifiers
+                )
             )
         );
     }
 
-    private static Dynamic<?> fixAttribute(Dynamic<?> p_343414_) {
-        return p_343414_.renameField("Name", "id")
+    private static Dynamic<?> fixAttribute(final Dynamic<?> attribute) {
+        return attribute.renameField("Name", "id")
             .renameField("Base", "base")
             .renameAndFixField(
                 "Modifiers",
                 "modifiers",
-                p_342564_ -> DataFixUtils.orElse(
-                    p_342564_.asStreamOpt()
+                modifiers -> DataFixUtils.orElse(
+                    modifiers.asStreamOpt()
                         .result()
-                        .map(p_343824_ -> p_343824_.map(AttributeModifierIdFix::convertModifierForEntity))
+                        .map(s -> s.map(AttributeModifierIdFix::convertModifierForEntity))
                         .map(AttributeModifierIdFix::fixModifiersTypeWrapper)
-                        .map(p_343414_::createList),
-                    p_342564_
+                        .map(attribute::createList),
+                    modifiers
                 )
             );
     }
 
-    private static Typed<?> fixEntity(Typed<?> p_342192_) {
-        return p_342192_.update(
+    private static Typed<?> fixEntity(final Typed<?> entity) {
+        return entity.update(
             DSL.remainderFinder(),
-            p_344980_ -> p_344980_.renameAndFixField(
+            tag -> tag.renameAndFixField(
                 "Attributes",
                 "attributes",
-                p_343037_ -> DataFixUtils.orElse(
-                    p_343037_.asStreamOpt().result().map(p_344307_ -> p_344307_.map(AttributeModifierIdFix::fixAttribute)).map(p_343037_::createList), p_343037_
+                attributeList -> DataFixUtils.orElse(
+                    attributeList.asStreamOpt().result().map(s -> s.map(AttributeModifierIdFix::fixAttribute)).map(attributeList::createList), attributeList
                 )
             )
         );
     }
 
-    public static @Nullable UUID uuidFromIntArray(int[] p_342854_) {
-        return p_342854_.length != 4
-            ? null
-            : new UUID((long)p_342854_[0] << 32 | p_342854_[1] & 4294967295L, (long)p_342854_[2] << 32 | p_342854_[3] & 4294967295L);
+    public static @Nullable UUID uuidFromIntArray(final int[] intArray) {
+        return intArray.length != 4 ? null : new UUID((long)intArray[0] << 32 | intArray[1] & 4294967295L, (long)intArray[2] << 32 | intArray[3] & 4294967295L);
     }
 }

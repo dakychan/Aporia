@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.RandomAccess;
 import org.jspecify.annotations.Nullable;
 
-public interface ListAndDeque<T> extends Serializable, Cloneable, Deque<T>, List<T>, RandomAccess {
+public interface ListAndDeque<T> extends List<T>, RandomAccess, Cloneable, Serializable, Deque<T> {
     ListAndDeque<T> reversed();
 
     @Override
@@ -16,10 +16,10 @@ public interface ListAndDeque<T> extends Serializable, Cloneable, Deque<T>, List
     T getLast();
 
     @Override
-    void addFirst(T p_327861_);
+    void addFirst(T t);
 
     @Override
-    void addLast(T p_334720_);
+    void addLast(T t);
 
     @Override
     T removeFirst();
@@ -28,8 +28,8 @@ public interface ListAndDeque<T> extends Serializable, Cloneable, Deque<T>, List
     T removeLast();
 
     @Override
-    default boolean offer(T p_331775_) {
-        return this.offerLast(p_331775_);
+    default boolean offer(final T value) {
+        return this.offerLast(value);
     }
 
     @Override
@@ -53,8 +53,8 @@ public interface ListAndDeque<T> extends Serializable, Cloneable, Deque<T>, List
     }
 
     @Override
-    default void push(T p_327786_) {
-        this.addFirst(p_327786_);
+    default void push(final T value) {
+        this.addFirst(value);
     }
 
     @Override

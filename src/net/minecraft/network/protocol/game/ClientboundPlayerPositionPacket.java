@@ -9,8 +9,7 @@ import net.minecraft.network.protocol.PacketType;
 import net.minecraft.world.entity.PositionMoveRotation;
 import net.minecraft.world.entity.Relative;
 
-public record ClientboundPlayerPositionPacket(int id, PositionMoveRotation change, Set<Relative> relatives)
-    implements Packet<ClientGamePacketListener> {
+public record ClientboundPlayerPositionPacket(int id, PositionMoveRotation change, Set<Relative> relatives) implements Packet<ClientGamePacketListener> {
     public static final StreamCodec<FriendlyByteBuf, ClientboundPlayerPositionPacket> STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT,
         ClientboundPlayerPositionPacket::id,
@@ -21,8 +20,8 @@ public record ClientboundPlayerPositionPacket(int id, PositionMoveRotation chang
         ClientboundPlayerPositionPacket::new
     );
 
-    public static ClientboundPlayerPositionPacket of(int p_366169_, PositionMoveRotation p_369222_, Set<Relative> p_365305_) {
-        return new ClientboundPlayerPositionPacket(p_366169_, p_369222_, p_365305_);
+    public static ClientboundPlayerPositionPacket of(final int id, final PositionMoveRotation values, final Set<Relative> relatives) {
+        return new ClientboundPlayerPositionPacket(id, values, relatives);
     }
 
     @Override
@@ -30,7 +29,7 @@ public record ClientboundPlayerPositionPacket(int id, PositionMoveRotation chang
         return GamePacketTypes.CLIENTBOUND_PLAYER_POSITION;
     }
 
-    public void handle(ClientGamePacketListener p_132817_) {
-        p_132817_.handleMovePlayer(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleMovePlayer(this);
     }
 }

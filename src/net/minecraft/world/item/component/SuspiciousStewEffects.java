@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -32,37 +31,39 @@ public record SuspiciousStewEffects(List<SuspiciousStewEffects.Entry> effects) i
         .apply(ByteBufCodecs.list())
         .map(SuspiciousStewEffects::new, SuspiciousStewEffects::effects);
 
-    public SuspiciousStewEffects withEffectAdded(SuspiciousStewEffects.Entry p_330002_) {
-        return new SuspiciousStewEffects(Util.copyAndAdd(this.effects, p_330002_));
+    public SuspiciousStewEffects withEffectAdded(final SuspiciousStewEffects.Entry entry) {
+        return new SuspiciousStewEffects(Util.copyAndAdd(this.effects, entry));
     }
 
     @Override
-    public void onConsume(Level p_365472_, LivingEntity p_363953_, ItemStack p_360994_, Consumable p_366812_) {
-        for (SuspiciousStewEffects.Entry suspicioussteweffects$entry : this.effects) {
-            p_363953_.addEffect(suspicioussteweffects$entry.createEffectInstance());
+    public void onConsume(final Level level, final LivingEntity user, final ItemStack stack, final Consumable consumable) {
+        for (SuspiciousStewEffects.Entry effect : this.effects) {
+            user.addEffect(effect.createEffectInstance());
         }
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_365951_, Consumer<Component> p_367764_, TooltipFlag p_362463_, DataComponentGetter p_395045_) {
-        if (p_362463_.isCreative()) {
-            List<MobEffectInstance> list = new ArrayList<>();
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        if (flag.isCreative()) {
+            List<MobEffectInstance> effectInstances = new ArrayList<>();
 
-            for (SuspiciousStewEffects.Entry suspicioussteweffects$entry : this.effects) {
-                list.add(suspicioussteweffects$entry.createEffectInstance());
+            for (SuspiciousStewEffects.Entry effect : this.effects) {
+                effectInstances.add(effect.createEffectInstance());
             }
 
-            PotionContents.addPotionTooltip(list, p_367764_, 1.0F, p_365951_.tickRate());
+            PotionContents.addPotionTooltip(effectInstances, consumer, 1.0F, context.tickRate());
         }
     }
 
     public record Entry(Holder<MobEffect> effect, int duration) {
         public static final Codec<SuspiciousStewEffects.Entry> CODEC = RecordCodecBuilder.create(
-            p_341579_ -> p_341579_.group(
+            i -> i.group(
                     MobEffect.CODEC.fieldOf("id").forGetter(SuspiciousStewEffects.Entry::effect),
                     Codec.INT.lenientOptionalFieldOf("duration", 160).forGetter(SuspiciousStewEffects.Entry::duration)
                 )
-                .apply(p_341579_, SuspiciousStewEffects.Entry::new)
+                .apply(i, SuspiciousStewEffects.Entry::new)
         );
         public static final StreamCodec<RegistryFriendlyByteBuf, SuspiciousStewEffects.Entry> STREAM_CODEC = StreamCodec.composite(
             MobEffect.STREAM_CODEC,

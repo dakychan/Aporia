@@ -22,44 +22,49 @@ public class ServerboundSetCommandBlockPacket implements Packet<ServerGamePacket
     private final CommandBlockEntity.Mode mode;
 
     public ServerboundSetCommandBlockPacket(
-        BlockPos p_134509_, String p_134510_, CommandBlockEntity.Mode p_134511_, boolean p_134512_, boolean p_134513_, boolean p_134514_
+        final BlockPos pos,
+        final String command,
+        final CommandBlockEntity.Mode mode,
+        final boolean trackOutput,
+        final boolean conditional,
+        final boolean automatic
     ) {
-        this.pos = p_134509_;
-        this.command = p_134510_;
-        this.trackOutput = p_134512_;
-        this.conditional = p_134513_;
-        this.automatic = p_134514_;
-        this.mode = p_134511_;
+        this.pos = pos;
+        this.command = command;
+        this.trackOutput = trackOutput;
+        this.conditional = conditional;
+        this.automatic = automatic;
+        this.mode = mode;
     }
 
-    private ServerboundSetCommandBlockPacket(FriendlyByteBuf p_179756_) {
-        this.pos = p_179756_.readBlockPos();
-        this.command = p_179756_.readUtf();
-        this.mode = p_179756_.readEnum(CommandBlockEntity.Mode.class);
-        int i = p_179756_.readByte();
-        this.trackOutput = (i & 1) != 0;
-        this.conditional = (i & 2) != 0;
-        this.automatic = (i & 4) != 0;
+    private ServerboundSetCommandBlockPacket(final FriendlyByteBuf input) {
+        this.pos = input.readBlockPos();
+        this.command = input.readUtf();
+        this.mode = input.readEnum(CommandBlockEntity.Mode.class);
+        int flags = input.readByte();
+        this.trackOutput = (flags & 1) != 0;
+        this.conditional = (flags & 2) != 0;
+        this.automatic = (flags & 4) != 0;
     }
 
-    private void write(FriendlyByteBuf p_134523_) {
-        p_134523_.writeBlockPos(this.pos);
-        p_134523_.writeUtf(this.command);
-        p_134523_.writeEnum(this.mode);
-        int i = 0;
+    private void write(final FriendlyByteBuf output) {
+        output.writeBlockPos(this.pos);
+        output.writeUtf(this.command);
+        output.writeEnum(this.mode);
+        int flags = 0;
         if (this.trackOutput) {
-            i |= 1;
+            flags |= 1;
         }
 
         if (this.conditional) {
-            i |= 2;
+            flags |= 2;
         }
 
         if (this.automatic) {
-            i |= 4;
+            flags |= 4;
         }
 
-        p_134523_.writeByte(i);
+        output.writeByte(flags);
     }
 
     @Override
@@ -67,8 +72,8 @@ public class ServerboundSetCommandBlockPacket implements Packet<ServerGamePacket
         return GamePacketTypes.SERVERBOUND_SET_COMMAND_BLOCK;
     }
 
-    public void handle(ServerGamePacketListener p_134520_) {
-        p_134520_.handleSetCommandBlock(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetCommandBlock(this);
     }
 
     public BlockPos getPos() {

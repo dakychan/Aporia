@@ -14,22 +14,22 @@ public class ServerboundJigsawGeneratePacket implements Packet<ServerGamePacketL
     private final int levels;
     private final boolean keepJigsaws;
 
-    public ServerboundJigsawGeneratePacket(BlockPos p_134078_, int p_134079_, boolean p_134080_) {
-        this.pos = p_134078_;
-        this.levels = p_134079_;
-        this.keepJigsaws = p_134080_;
+    public ServerboundJigsawGeneratePacket(final BlockPos blockPos, final int levels, final boolean keepJigsaws) {
+        this.pos = blockPos;
+        this.levels = levels;
+        this.keepJigsaws = keepJigsaws;
     }
 
-    private ServerboundJigsawGeneratePacket(FriendlyByteBuf p_179669_) {
-        this.pos = p_179669_.readBlockPos();
-        this.levels = p_179669_.readVarInt();
-        this.keepJigsaws = p_179669_.readBoolean();
+    private ServerboundJigsawGeneratePacket(final FriendlyByteBuf input) {
+        this.pos = input.readBlockPos();
+        this.levels = input.readVarInt();
+        this.keepJigsaws = input.readBoolean();
     }
 
-    private void write(FriendlyByteBuf p_134089_) {
-        p_134089_.writeBlockPos(this.pos);
-        p_134089_.writeVarInt(this.levels);
-        p_134089_.writeBoolean(this.keepJigsaws);
+    private void write(final FriendlyByteBuf output) {
+        output.writeBlockPos(this.pos);
+        output.writeVarInt(this.levels);
+        output.writeBoolean(this.keepJigsaws);
     }
 
     @Override
@@ -37,8 +37,8 @@ public class ServerboundJigsawGeneratePacket implements Packet<ServerGamePacketL
         return GamePacketTypes.SERVERBOUND_JIGSAW_GENERATE;
     }
 
-    public void handle(ServerGamePacketListener p_134086_) {
-        p_134086_.handleJigsawGenerate(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleJigsawGenerate(this);
     }
 
     public BlockPos getPos() {

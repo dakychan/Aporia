@@ -10,13 +10,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CocoaBlock;
 
 public class CocoaDecorator extends TreeDecorator {
-    public static final MapCodec<CocoaDecorator> CODEC = Codec.floatRange(0.0F, 1.0F)
-        .fieldOf("probability")
-        .xmap(CocoaDecorator::new, p_69989_ -> p_69989_.probability);
+    public static final MapCodec<CocoaDecorator> CODEC = Codec.floatRange(0.0F, 1.0F).fieldOf("probability").xmap(CocoaDecorator::new, d -> d.probability);
     private final float probability;
 
-    public CocoaDecorator(float p_69976_) {
-        this.probability = p_69976_;
+    public CocoaDecorator(final float probability) {
+        this.probability = probability;
     }
 
     @Override
@@ -25,27 +23,24 @@ public class CocoaDecorator extends TreeDecorator {
     }
 
     @Override
-    public void place(TreeDecorator.Context p_226028_) {
-        RandomSource randomsource = p_226028_.random();
-        if (!(randomsource.nextFloat() >= this.probability)) {
-            List<BlockPos> list = p_226028_.logs();
-            if (!list.isEmpty()) {
-                int i = list.getFirst().getY();
-                list.stream()
-                    .filter(p_69980_ -> p_69980_.getY() - i <= 2)
+    public void place(final TreeDecorator.Context context) {
+        RandomSource random = context.random();
+        if (!(random.nextFloat() >= this.probability)) {
+            List<BlockPos> logs = context.logs();
+            if (!logs.isEmpty()) {
+                int treeY = logs.getFirst().getY();
+                logs.stream()
+                    .filter(pos -> pos.getY() - treeY <= 2)
                     .forEach(
-                        p_226026_ -> {
+                        pos -> {
                             for (Direction direction : Direction.Plane.HORIZONTAL) {
-                                if (randomsource.nextFloat() <= 0.25F) {
-                                    Direction direction1 = direction.getOpposite();
-                                    BlockPos blockpos = p_226026_.offset(direction1.getStepX(), 0, direction1.getStepZ());
-                                    if (p_226028_.isAir(blockpos)) {
-                                        p_226028_.setBlock(
-                                            blockpos,
-                                            Blocks.COCOA
-                                                .defaultBlockState()
-                                                .setValue(CocoaBlock.AGE, randomsource.nextInt(3))
-                                                .setValue(CocoaBlock.FACING, direction)
+                                if (random.nextFloat() <= 0.25F) {
+                                    Direction opposite = direction.getOpposite();
+                                    BlockPos cocoaPos = pos.offset(opposite.getStepX(), 0, opposite.getStepZ());
+                                    if (context.isAir(cocoaPos)) {
+                                        context.setBlock(
+                                            cocoaPos,
+                                            Blocks.COCOA.defaultBlockState().setValue(CocoaBlock.AGE, random.nextInt(3)).setValue(CocoaBlock.FACING, direction)
                                         );
                                     }
                                 }

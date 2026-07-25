@@ -76,25 +76,21 @@ public class DebugEntityNameGenerator {
         "Fist"
     };
 
-    public static String getEntityName(Entity p_179487_) {
-        if (p_179487_ instanceof Player) {
-            return p_179487_.getPlainTextName();
-        } else {
-            Component component = p_179487_.getCustomName();
-            return component != null ? component.getString() : getEntityName(p_179487_.getUUID());
+    public static String getEntityName(final Entity entity) {
+        if (entity instanceof Player) {
+            return entity.getPlainTextName();
         }
+
+        Component customName = entity.getCustomName();
+        return customName != null ? customName.getString() : getEntityName(entity.getUUID());
     }
 
-    public static String getEntityName(UUID p_133669_) {
-        RandomSource randomsource = getRandom(p_133669_);
-        return getRandomString(randomsource, NAMES_FIRST_PART) + getRandomString(randomsource, NAMES_SECOND_PART);
+    public static String getEntityName(final UUID uuid) {
+        RandomSource random = RandomSource.createThreadLocalInstance(uuid.hashCode() >> 2);
+        return getRandomString(random, NAMES_FIRST_PART) + getRandomString(random, NAMES_SECOND_PART);
     }
 
-    private static String getRandomString(RandomSource p_237881_, String[] p_237882_) {
-        return Util.getRandom(p_237882_, p_237881_);
-    }
-
-    private static RandomSource getRandom(UUID p_237884_) {
-        return RandomSource.create(p_237884_.hashCode() >> 2);
+    private static String getRandomString(final RandomSource random, final String[] names) {
+        return Util.getRandom(names, random);
     }
 }

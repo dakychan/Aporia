@@ -28,30 +28,30 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-public class ShelfBlockEntity extends BlockEntity implements ItemOwner, ListBackedContainer {
+public class ShelfBlockEntity extends BlockEntity implements ListBackedContainer, ItemOwner {
     public static final int MAX_ITEMS = 3;
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String ALIGN_ITEMS_TO_BOTTOM_TAG = "align_items_to_bottom";
     private final NonNullList<ItemStack> items = NonNullList.withSize(3, ItemStack.EMPTY);
     private boolean alignItemsToBottom;
 
-    public ShelfBlockEntity(BlockPos p_430844_, BlockState p_425392_) {
-        super(BlockEntityType.SHELF, p_430844_, p_425392_);
+    public ShelfBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.SHELF, worldPosition, blockState);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_425078_) {
-        super.loadAdditional(p_425078_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
         this.items.clear();
-        ContainerHelper.loadAllItems(p_425078_, this.items);
-        this.alignItemsToBottom = p_425078_.getBooleanOr("align_items_to_bottom", false);
+        ContainerHelper.loadAllItems(input, this.items);
+        this.alignItemsToBottom = input.getBooleanOr("align_items_to_bottom", false);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_428556_) {
-        super.saveAdditional(p_428556_);
-        ContainerHelper.saveAllItems(p_428556_, this.items, true);
-        p_428556_.putBoolean("align_items_to_bottom", this.alignItemsToBottom);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, this.items, true);
+        output.putBoolean("align_items_to_bottom", this.alignItemsToBottom);
     }
 
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
@@ -59,16 +59,13 @@ public class ShelfBlockEntity extends BlockEntity implements ItemOwner, ListBack
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_423146_) {
-        CompoundTag compoundtag;
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
-            TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_423146_);
-            ContainerHelper.saveAllItems(tagvalueoutput, this.items, true);
-            tagvalueoutput.putBoolean("align_items_to_bottom", this.alignItemsToBottom);
-            compoundtag = tagvalueoutput.buildResult();
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.problemPath(), LOGGER)) {
+            TagValueOutput output = TagValueOutput.createWithContext(reporter, registries);
+            ContainerHelper.saveAllItems(output, this.items, true);
+            output.putBoolean("align_items_to_bottom", this.alignItemsToBottom);
+            return output.buildResult();
         }
-
-        return compoundtag;
     }
 
     @Override
@@ -77,21 +74,21 @@ public class ShelfBlockEntity extends BlockEntity implements ItemOwner, ListBack
     }
 
     @Override
-    public boolean stillValid(Player p_429368_) {
-        return Container.stillValidBlockEntity(this, p_429368_);
+    public boolean stillValid(final Player player) {
+        return Container.stillValidBlockEntity(this, player);
     }
 
-    public ItemStack swapItemNoUpdate(int p_429914_, ItemStack p_428003_) {
-        ItemStack itemstack = this.removeItemNoUpdate(p_429914_);
-        this.setItemNoUpdate(p_429914_, p_428003_);
-        return itemstack;
+    public ItemStack swapItemNoUpdate(final int slot, final ItemStack heldItemStack) {
+        ItemStack retrievedItem = this.removeItemNoUpdate(slot);
+        this.setItemNoUpdate(slot, heldItemStack);
+        return retrievedItem;
     }
 
-    public void setChanged(Holder.@Nullable Reference<GameEvent> p_425942_) {
+    public void setChanged(final Holder.@Nullable Reference<GameEvent> event) {
         super.setChanged();
         if (this.level != null) {
-            if (p_425942_ != null) {
-                this.level.gameEvent(p_425942_, this.worldPosition, GameEvent.Context.of(this.getBlockState()));
+            if (event != null) {
+                this.level.gameEvent(event, this.worldPosition, GameEvent.Context.of(this.getBlockState()));
             }
 
             this.getLevel().sendBlockUpdated(this.getBlockPos(), this.getBlockState(), this.getBlockState(), 3);
@@ -104,20 +101,20 @@ public class ShelfBlockEntity extends BlockEntity implements ItemOwner, ListBack
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_426426_) {
-        super.applyImplicitComponents(p_426426_);
-        p_426426_.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(this.items);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        components.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(this.items);
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_426984_) {
-        super.collectImplicitComponents(p_426984_);
-        p_426984_.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(this.items));
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(this.items));
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_424412_) {
-        p_424412_.discard("Items");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        output.discard("Items");
     }
 
     @Override
@@ -127,7 +124,7 @@ public class ShelfBlockEntity extends BlockEntity implements ItemOwner, ListBack
 
     @Override
     public Vec3 position() {
-        return this.getBlockPos().getCenter();
+        return Vec3.atCenterOf(this.getBlockPos());
     }
 
     @Override

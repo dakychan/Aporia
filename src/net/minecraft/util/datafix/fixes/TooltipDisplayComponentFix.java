@@ -38,59 +38,68 @@ public class TooltipDisplayComponentFix extends DataFix {
         "minecraft:written_book_content"
     );
 
-    public TooltipDisplayComponentFix(Schema p_394369_) {
-        super(p_394369_, true);
+    public TooltipDisplayComponentFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.DATA_COMPONENTS);
-        Type<?> type1 = this.getOutputSchema().getType(References.DATA_COMPONENTS);
-        OpticFinder<?> opticfinder = type.findField("minecraft:can_place_on");
-        OpticFinder<?> opticfinder1 = type.findField("minecraft:can_break");
-        Type<?> type2 = type1.findFieldType("minecraft:can_place_on");
-        Type<?> type3 = type1.findFieldType("minecraft:can_break");
+        Type<?> componentsType = this.getInputSchema().getType(References.DATA_COMPONENTS);
+        Type<?> newComponentsType = this.getOutputSchema().getType(References.DATA_COMPONENTS);
+        OpticFinder<?> canPlaceOnFinder = componentsType.findField("minecraft:can_place_on");
+        OpticFinder<?> canBreakFinder = componentsType.findField("minecraft:can_break");
+        Type<?> newCanPlaceOnType = newComponentsType.findFieldType("minecraft:can_place_on");
+        Type<?> newCanBreakType = newComponentsType.findFieldType("minecraft:can_break");
         return this.fixTypeEverywhereTyped(
-            "TooltipDisplayComponentFix", type, type1, p_396988_ -> fix(p_396988_, opticfinder, opticfinder1, type2, type3)
+            "TooltipDisplayComponentFix",
+            componentsType,
+            newComponentsType,
+            typed -> fix(typed, canPlaceOnFinder, canBreakFinder, newCanPlaceOnType, newCanBreakType)
         );
     }
 
-    private static Typed<?> fix(Typed<?> p_391754_, OpticFinder<?> p_396640_, OpticFinder<?> p_395831_, Type<?> p_393016_, Type<?> p_394371_) {
-        Set<String> set = new HashSet<>();
-        p_391754_ = fixAdventureModePredicate(p_391754_, p_396640_, p_393016_, "minecraft:can_place_on", set);
-        p_391754_ = fixAdventureModePredicate(p_391754_, p_395831_, p_394371_, "minecraft:can_break", set);
-        return p_391754_.update(
+    private static Typed<?> fix(
+        Typed<?> typed,
+        final OpticFinder<?> canPlaceOnFinder,
+        final OpticFinder<?> canBreakFinder,
+        final Type<?> newCanPlaceOnType,
+        final Type<?> newCanBreakType
+    ) {
+        Set<String> hiddenTooltips = new HashSet<>();
+        typed = fixAdventureModePredicate(typed, canPlaceOnFinder, newCanPlaceOnType, "minecraft:can_place_on", hiddenTooltips);
+        typed = fixAdventureModePredicate(typed, canBreakFinder, newCanBreakType, "minecraft:can_break", hiddenTooltips);
+        return typed.update(
             DSL.remainderFinder(),
-            p_405253_ -> {
-                p_405253_ = fixSimpleComponent(p_405253_, "minecraft:trim", set);
-                p_405253_ = fixSimpleComponent(p_405253_, "minecraft:unbreakable", set);
-                p_405253_ = fixComponentAndUnwrap(p_405253_, "minecraft:dyed_color", "rgb", set);
-                p_405253_ = fixComponentAndUnwrap(p_405253_, "minecraft:attribute_modifiers", "modifiers", set);
-                p_405253_ = fixComponentAndUnwrap(p_405253_, "minecraft:enchantments", "levels", set);
-                p_405253_ = fixComponentAndUnwrap(p_405253_, "minecraft:stored_enchantments", "levels", set);
-                p_405253_ = fixComponentAndUnwrap(p_405253_, "minecraft:jukebox_playable", "song", set);
-                boolean flag = p_405253_.get("minecraft:hide_tooltip").result().isPresent();
-                p_405253_ = p_405253_.remove("minecraft:hide_tooltip");
-                boolean flag1 = p_405253_.get("minecraft:hide_additional_tooltip").result().isPresent();
-                p_405253_ = p_405253_.remove("minecraft:hide_additional_tooltip");
-                if (flag1) {
-                    for (String s : CONVERTED_ADDITIONAL_TOOLTIP_TYPES) {
-                        if (p_405253_.get(s).result().isPresent()) {
-                            set.add(s);
+            remainder -> {
+                remainder = fixSimpleComponent(remainder, "minecraft:trim", hiddenTooltips);
+                remainder = fixSimpleComponent(remainder, "minecraft:unbreakable", hiddenTooltips);
+                remainder = fixComponentAndUnwrap(remainder, "minecraft:dyed_color", "rgb", hiddenTooltips);
+                remainder = fixComponentAndUnwrap(remainder, "minecraft:attribute_modifiers", "modifiers", hiddenTooltips);
+                remainder = fixComponentAndUnwrap(remainder, "minecraft:enchantments", "levels", hiddenTooltips);
+                remainder = fixComponentAndUnwrap(remainder, "minecraft:stored_enchantments", "levels", hiddenTooltips);
+                remainder = fixComponentAndUnwrap(remainder, "minecraft:jukebox_playable", "song", hiddenTooltips);
+                boolean hideTooltip = remainder.get("minecraft:hide_tooltip").result().isPresent();
+                remainder = remainder.remove("minecraft:hide_tooltip");
+                boolean hideAdditionalTooltip = remainder.get("minecraft:hide_additional_tooltip").result().isPresent();
+                remainder = remainder.remove("minecraft:hide_additional_tooltip");
+                if (hideAdditionalTooltip) {
+                    for (String componentId : CONVERTED_ADDITIONAL_TOOLTIP_TYPES) {
+                        if (remainder.get(componentId).result().isPresent()) {
+                            hiddenTooltips.add(componentId);
                         }
                     }
                 }
 
-                return set.isEmpty() && !flag
-                    ? p_405253_
-                    : p_405253_.set(
+                return hiddenTooltips.isEmpty() && !hideTooltip
+                    ? remainder
+                    : remainder.set(
                         "minecraft:tooltip_display",
-                        p_405253_.createMap(
+                        remainder.createMap(
                             Map.of(
-                                p_405253_.createString("hide_tooltip"),
-                                p_405253_.createBoolean(flag),
-                                p_405253_.createString("hidden_components"),
-                                p_405253_.createList(set.stream().map(p_405253_::createString))
+                                remainder.createString("hide_tooltip"),
+                                remainder.createBoolean(hideTooltip),
+                                remainder.createString("hidden_components"),
+                                remainder.createList(hiddenTooltips.stream().map(remainder::createString))
                             )
                         )
                     );
@@ -98,38 +107,44 @@ public class TooltipDisplayComponentFix extends DataFix {
         );
     }
 
-    private static Dynamic<?> fixSimpleComponent(Dynamic<?> p_397935_, String p_396961_, Set<String> p_396362_) {
-        return fixRemainderComponent(p_397935_, p_396961_, p_396362_, UnaryOperator.identity());
+    private static Dynamic<?> fixSimpleComponent(final Dynamic<?> remainder, final String componentId, final Set<String> hiddenTooltips) {
+        return fixRemainderComponent(remainder, componentId, hiddenTooltips, UnaryOperator.identity());
     }
 
-    private static Dynamic<?> fixComponentAndUnwrap(Dynamic<?> p_393468_, String p_391976_, String p_391872_, Set<String> p_393150_) {
-        return fixRemainderComponent(p_393468_, p_391976_, p_393150_, p_394957_ -> DataFixUtils.orElse(p_394957_.get(p_391872_).result(), p_394957_));
+    private static Dynamic<?> fixComponentAndUnwrap(
+        final Dynamic<?> remainder, final String componentId, final String fieldName, final Set<String> hiddenTooltips
+    ) {
+        return fixRemainderComponent(remainder, componentId, hiddenTooltips, component -> DataFixUtils.orElse(component.get(fieldName).result(), component));
     }
 
-    private static Dynamic<?> fixRemainderComponent(Dynamic<?> p_397445_, String p_395650_, Set<String> p_392691_, UnaryOperator<Dynamic<?>> p_397967_) {
-        return p_397445_.update(p_395650_, p_391205_ -> {
-            boolean flag = p_391205_.get("show_in_tooltip").asBoolean(true);
-            if (!flag) {
-                p_392691_.add(p_395650_);
+    private static Dynamic<?> fixRemainderComponent(
+        final Dynamic<?> remainder, final String componentId, final Set<String> hiddenTooltips, final UnaryOperator<Dynamic<?>> fixer
+    ) {
+        return remainder.update(componentId, component -> {
+            boolean showInTooltip = component.get("show_in_tooltip").asBoolean(true);
+            if (!showInTooltip) {
+                hiddenTooltips.add(componentId);
             }
 
-            return p_397967_.apply(p_391205_.remove("show_in_tooltip"));
+            return fixer.apply(component.remove("show_in_tooltip"));
         });
     }
 
-    private static Typed<?> fixAdventureModePredicate(Typed<?> p_391898_, OpticFinder<?> p_393084_, Type<?> p_392260_, String p_391537_, Set<String> p_395645_) {
-        return p_391898_.updateTyped(p_393084_, p_392260_, p_449328_ -> Util.writeAndReadTypedOrThrow(p_449328_, p_392260_, p_397322_ -> {
-            OptionalDynamic<?> optionaldynamic = p_397322_.get("predicates");
-            if (optionaldynamic.result().isEmpty()) {
-                return p_397322_;
-            } else {
-                boolean flag = p_397322_.get("show_in_tooltip").asBoolean(true);
-                if (!flag) {
-                    p_395645_.add(p_391537_);
-                }
-
-                return optionaldynamic.result().get();
+    private static Typed<?> fixAdventureModePredicate(
+        final Typed<?> typedComponents, final OpticFinder<?> componentFinder, final Type<?> newType, final String componentId, final Set<String> hiddenTooltips
+    ) {
+        return typedComponents.updateTyped(componentFinder, newType, typedComponent -> Util.writeAndReadTypedOrThrow(typedComponent, newType, component -> {
+            OptionalDynamic<?> predicates = component.get("predicates");
+            if (predicates.result().isEmpty()) {
+                return component;
             }
+
+            boolean showInTooltip = component.get("show_in_tooltip").asBoolean(true);
+            if (!showInTooltip) {
+                hiddenTooltips.add(componentId);
+            }
+
+            return predicates.result().get();
         }));
     }
 }

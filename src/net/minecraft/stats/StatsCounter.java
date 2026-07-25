@@ -12,20 +12,20 @@ public class StatsCounter {
         this.stats.defaultReturnValue(0);
     }
 
-    public void increment(Player p_13024_, Stat<?> p_13025_, int p_13026_) {
-        int i = (int)Math.min((long)this.getValue(p_13025_) + p_13026_, 2147483647L);
-        this.setValue(p_13024_, p_13025_, i);
+    public void increment(final Player player, final Stat<?> stat, final int count) {
+        int result = (int)Math.min((long)this.getValue(stat) + count, 2147483647L);
+        this.setValue(player, stat, result);
     }
 
-    public void setValue(Player p_13020_, Stat<?> p_13021_, int p_13022_) {
-        this.stats.put(p_13021_, p_13022_);
+    public void setValue(final Player player, final Stat<?> stat, final int count) {
+        this.stats.put(stat, count);
     }
 
-    public <T> int getValue(StatType<T> p_13018_, T p_13019_) {
-        return p_13018_.contains(p_13019_) ? this.getValue(p_13018_.get(p_13019_)) : 0;
+    public <T> int getValue(final StatType<T> type, final T key) {
+        return type.contains(key) ? this.getValue(type.get(key)) : 0;
     }
 
-    public int getValue(Stat<?> p_13016_) {
-        return this.stats.getInt(p_13016_);
+    public int getValue(final Stat<?> stat) {
+        return this.stats.getInt(stat);
     }
 }

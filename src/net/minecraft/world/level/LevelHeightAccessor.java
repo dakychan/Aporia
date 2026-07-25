@@ -24,40 +24,44 @@ public interface LevelHeightAccessor {
         return SectionPos.blockToSectionCoord(this.getMaxY());
     }
 
-    default boolean isInsideBuildHeight(int p_362913_) {
-        return p_362913_ >= this.getMinY() && p_362913_ <= this.getMaxY();
+    default boolean isInsideBuildHeight(final BlockPos pos) {
+        return this.isInsideBuildHeight(pos.getY());
     }
 
-    default boolean isOutsideBuildHeight(BlockPos p_151571_) {
-        return this.isOutsideBuildHeight(p_151571_.getY());
+    default boolean isInsideBuildHeight(final int blockY) {
+        return blockY >= this.getMinY() && blockY <= this.getMaxY();
     }
 
-    default boolean isOutsideBuildHeight(int p_151563_) {
-        return p_151563_ < this.getMinY() || p_151563_ > this.getMaxY();
+    default boolean isOutsideBuildHeight(final BlockPos pos) {
+        return this.isOutsideBuildHeight(pos.getY());
     }
 
-    default int getSectionIndex(int p_151565_) {
-        return this.getSectionIndexFromSectionY(SectionPos.blockToSectionCoord(p_151565_));
+    default boolean isOutsideBuildHeight(final int blockY) {
+        return blockY < this.getMinY() || blockY > this.getMaxY();
     }
 
-    default int getSectionIndexFromSectionY(int p_151567_) {
-        return p_151567_ - this.getMinSectionY();
+    default int getSectionIndex(final int blockY) {
+        return this.getSectionIndexFromSectionY(SectionPos.blockToSectionCoord(blockY));
     }
 
-    default int getSectionYFromSectionIndex(int p_151569_) {
-        return p_151569_ + this.getMinSectionY();
+    default int getSectionIndexFromSectionY(final int sectionY) {
+        return sectionY - this.getMinSectionY();
     }
 
-    static LevelHeightAccessor create(final int p_186488_, final int p_186489_) {
+    default int getSectionYFromSectionIndex(final int sectionIndex) {
+        return sectionIndex + this.getMinSectionY();
+    }
+
+    static LevelHeightAccessor create(final int minY, final int height) {
         return new LevelHeightAccessor() {
             @Override
             public int getHeight() {
-                return p_186489_;
+                return height;
             }
 
             @Override
             public int getMinY() {
-                return p_186488_;
+                return minY;
             }
         };
     }

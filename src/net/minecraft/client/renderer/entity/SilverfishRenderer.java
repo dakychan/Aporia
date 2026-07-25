@@ -5,15 +5,12 @@ import net.minecraft.client.model.monster.silverfish.SilverfishModel;
 import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.Silverfish;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SilverfishRenderer extends MobRenderer<Silverfish, LivingEntityRenderState, SilverfishModel> {
-    private static final Identifier SILVERFISH_LOCATION = Identifier.withDefaultNamespace("textures/entity/silverfish.png");
+    private static final Identifier SILVERFISH_LOCATION = Identifier.withDefaultNamespace("textures/entity/silverfish/silverfish.png");
 
-    public SilverfishRenderer(EntityRendererProvider.Context p_174378_) {
-        super(p_174378_, new SilverfishModel(p_174378_.bakeLayer(ModelLayers.SILVERFISH)), 0.3F);
+    public SilverfishRenderer(final EntityRendererProvider.Context context) {
+        super(context, new SilverfishModel(context.bakeLayer(ModelLayers.SILVERFISH)), 0.3F);
     }
 
     @Override
@@ -22,7 +19,7 @@ public class SilverfishRenderer extends MobRenderer<Silverfish, LivingEntityRend
     }
 
     @Override
-    public Identifier getTextureLocation(LivingEntityRenderState p_367083_) {
+    public Identifier getTextureLocation(final LivingEntityRenderState state) {
         return SILVERFISH_LOCATION;
     }
 

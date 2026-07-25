@@ -14,38 +14,38 @@ public abstract class GenericThread implements Runnable {
     protected final String name;
     protected @Nullable Thread thread;
 
-    protected GenericThread(String p_11522_) {
-        this.name = p_11522_;
+    protected GenericThread(final String name) {
+        this.name = name;
     }
 
     public synchronized boolean start() {
         if (this.running) {
             return true;
-        } else {
-            this.running = true;
-            this.thread = new Thread(this, this.name + " #" + UNIQUE_THREAD_ID.incrementAndGet());
-            this.thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandlerWithName(LOGGER));
-            this.thread.start();
-            LOGGER.info("Thread {} started", this.name);
-            return true;
         }
+
+        this.running = true;
+        this.thread = new Thread(this, this.name + " #" + UNIQUE_THREAD_ID.incrementAndGet());
+        this.thread.setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandlerWithName(LOGGER));
+        this.thread.start();
+        LOGGER.info("Thread {} started", this.name);
+        return true;
     }
 
     public synchronized void stop() {
         this.running = false;
         if (null != this.thread) {
-            int i = 0;
+            int waited = 0;
 
             while (this.thread.isAlive()) {
                 try {
                     this.thread.join(1000L);
-                    if (++i >= 5) {
-                        LOGGER.warn("Waited {} seconds attempting force stop!", i);
+                    if (++waited >= 5) {
+                        LOGGER.warn("Waited {} seconds attempting force stop!", waited);
                     } else if (this.thread.isAlive()) {
-                        LOGGER.warn("Thread {} ({}) failed to exit after {} second(s)", this, this.thread.getState(), i, new Exception("Stack:"));
+                        LOGGER.warn("Thread {} ({}) failed to exit after {} second(s)", this, this.thread.getState(), waited, new Exception("Stack:"));
                         this.thread.interrupt();
                     }
-                } catch (InterruptedException interruptedexception) {
+                } catch (InterruptedException var3) {
                 }
             }
 

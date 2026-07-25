@@ -18,6 +18,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.JukeboxBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -36,24 +37,26 @@ public class JukeboxBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    protected JukeboxBlock(BlockBehaviour.Properties p_54257_) {
-        super(p_54257_);
+    protected JukeboxBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(HAS_RECORD, false));
     }
 
     @Override
-    public void setPlacedBy(Level p_54264_, BlockPos p_54265_, BlockState p_54266_, @Nullable LivingEntity p_54267_, ItemStack p_54268_) {
-        super.setPlacedBy(p_54264_, p_54265_, p_54266_, p_54267_, p_54268_);
-        TypedEntityData<BlockEntityType<?>> typedentitydata = p_54268_.get(DataComponents.BLOCK_ENTITY_DATA);
-        if (typedentitydata != null && typedentitydata.contains("RecordItem")) {
-            p_54264_.setBlock(p_54265_, p_54266_.setValue(HAS_RECORD, true), 2);
+    public void setPlacedBy(final Level level, final BlockPos pos, final BlockState state, final @Nullable LivingEntity by, final ItemStack itemStack) {
+        super.setPlacedBy(level, pos, state, by, itemStack);
+        TypedEntityData<BlockEntityType<?>> blockEntityData = itemStack.get(DataComponents.BLOCK_ENTITY_DATA);
+        if (blockEntityData != null && blockEntityData.contains("RecordItem")) {
+            level.setBlock(pos, state.setValue(HAS_RECORD, true), 2);
         }
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_54281_, Level p_54282_, BlockPos p_54283_, Player p_54284_, BlockHitResult p_54286_) {
-        if (p_54281_.getValue(HAS_RECORD) && p_54282_.getBlockEntity(p_54283_) instanceof JukeboxBlockEntity jukeboxblockentity) {
-            jukeboxblockentity.popOutTheItem();
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (state.getValue(HAS_RECORD) && level.getBlockEntity(pos) instanceof JukeboxBlockEntity jukebox) {
+            jukebox.popOutTheItem();
             return InteractionResult.SUCCESS;
         } else {
             return InteractionResult.PASS;
@@ -62,54 +65,60 @@ public class JukeboxBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_345342_, BlockState p_343906_, Level p_342356_, BlockPos p_342905_, Player p_343973_, InteractionHand p_345093_, BlockHitResult p_345506_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (p_343906_.getValue(HAS_RECORD)) {
+        if (state.getValue(HAS_RECORD)) {
             return InteractionResult.TRY_WITH_EMPTY_HAND;
-        } else {
-            ItemStack itemstack = p_343973_.getItemInHand(p_345093_);
-            InteractionResult interactionresult = JukeboxPlayable.tryInsertIntoJukebox(p_342356_, p_342905_, itemstack, p_343973_);
-            return (InteractionResult)(!interactionresult.consumesAction() ? InteractionResult.TRY_WITH_EMPTY_HAND : interactionresult);
         }
+
+        ItemStack toInsert = player.getItemInHand(hand);
+        InteractionResult result = JukeboxPlayable.tryInsertIntoJukebox(level, pos, toInsert, player);
+        return !result.consumesAction() ? InteractionResult.TRY_WITH_EMPTY_HAND : result;
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_392618_, ServerLevel p_394416_, BlockPos p_394064_, boolean p_391409_) {
-        Containers.updateNeighboursAfterDestroy(p_392618_, p_394416_, p_394064_);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        Containers.updateNeighboursAfterDestroy(state, level, pos);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153451_, BlockState p_153452_) {
-        return new JukeboxBlockEntity(p_153451_, p_153452_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new JukeboxBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public boolean isSignalSource(BlockState p_273404_) {
+    public boolean isSignalSource(final BlockState state) {
         return true;
     }
 
     @Override
-    public int getSignal(BlockState p_272942_, BlockGetter p_273232_, BlockPos p_273524_, Direction p_272902_) {
-        return p_273232_.getBlockEntity(p_273524_) instanceof JukeboxBlockEntity jukeboxblockentity && jukeboxblockentity.getSongPlayer().isPlaying() ? 15 : 0;
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof JukeboxBlockEntity jukebox && jukebox.getSongPlayer().isPlaying() ? 15 : 0;
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_54275_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_54277_, Level p_54278_, BlockPos p_54279_, Direction p_426670_) {
-        return p_54278_.getBlockEntity(p_54279_) instanceof JukeboxBlockEntity jukeboxblockentity ? jukeboxblockentity.getComparatorOutput() : 0;
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return level.getBlockEntity(pos) instanceof JukeboxBlockEntity jukebox ? jukebox.getComparatorOutput() : 0;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_54294_) {
-        p_54294_.add(HAS_RECORD);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(HAS_RECORD);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_239682_, BlockState p_239683_, BlockEntityType<T> p_239684_) {
-        return p_239683_.getValue(HAS_RECORD) ? createTickerHelper(p_239684_, BlockEntityType.JUKEBOX, JukeboxBlockEntity::tick) : null;
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return blockState.getValue(HAS_RECORD) ? createTickerHelper(type, BlockEntityTypes.JUKEBOX, JukeboxBlockEntity::tick) : null;
     }
 }

@@ -31,27 +31,29 @@ public class DamageSource {
         return this.causingEntity == this.directEntity;
     }
 
-    private DamageSource(Holder<DamageType> p_270906_, @Nullable Entity p_270796_, @Nullable Entity p_270459_, @Nullable Vec3 p_270623_) {
-        this.type = p_270906_;
-        this.causingEntity = p_270459_;
-        this.directEntity = p_270796_;
-        this.damageSourcePosition = p_270623_;
+    private DamageSource(
+        final Holder<DamageType> type, final @Nullable Entity directEntity, final @Nullable Entity causingEntity, final @Nullable Vec3 damageSourcePosition
+    ) {
+        this.type = type;
+        this.causingEntity = causingEntity;
+        this.directEntity = directEntity;
+        this.damageSourcePosition = damageSourcePosition;
     }
 
-    public DamageSource(Holder<DamageType> p_270818_, @Nullable Entity p_270162_, @Nullable Entity p_270115_) {
-        this(p_270818_, p_270162_, p_270115_, null);
+    public DamageSource(final Holder<DamageType> type, final @Nullable Entity directEntity, final @Nullable Entity causingEntity) {
+        this(type, directEntity, causingEntity, null);
     }
 
-    public DamageSource(Holder<DamageType> p_270690_, Vec3 p_270579_) {
-        this(p_270690_, null, null, p_270579_);
+    public DamageSource(final Holder<DamageType> type, final Vec3 damageSourcePosition) {
+        this(type, null, null, damageSourcePosition);
     }
 
-    public DamageSource(Holder<DamageType> p_270811_, @Nullable Entity p_270660_) {
-        this(p_270811_, p_270660_, p_270660_);
+    public DamageSource(final Holder<DamageType> type, final @Nullable Entity causingEntity) {
+        this(type, causingEntity, causingEntity);
     }
 
-    public DamageSource(Holder<DamageType> p_270475_) {
-        this(p_270475_, null, null, null);
+    public DamageSource(final Holder<DamageType> type) {
+        this(type, null, null, null);
     }
 
     public @Nullable Entity getDirectEntity() {
@@ -66,18 +68,20 @@ public class DamageSource {
         return this.directEntity != null ? this.directEntity.getWeaponItem() : null;
     }
 
-    public Component getLocalizedDeathMessage(LivingEntity p_19343_) {
-        String s = "death.attack." + this.type().msgId();
+    public Component getLocalizedDeathMessage(final LivingEntity victim) {
+        String deathMsg = "death.attack." + this.type().msgId();
         if (this.causingEntity == null && this.directEntity == null) {
-            LivingEntity livingentity1 = p_19343_.getKillCredit();
-            String s1 = s + ".player";
-            return livingentity1 != null ? Component.translatable(s1, p_19343_.getDisplayName(), livingentity1.getDisplayName()) : Component.translatable(s, p_19343_.getDisplayName());
+            LivingEntity source = victim.getKillCredit();
+            String playerMsg = deathMsg + ".player";
+            return source != null
+                ? Component.translatable(playerMsg, victim.getDisplayName(), source.getDisplayName())
+                : Component.translatable(deathMsg, victim.getDisplayName());
         } else {
-            Component component = this.causingEntity == null ? this.directEntity.getDisplayName() : this.causingEntity.getDisplayName();
-            ItemStack itemstack = this.causingEntity instanceof LivingEntity livingentity ? livingentity.getMainHandItem() : ItemStack.EMPTY;
-            return !itemstack.isEmpty() && itemstack.has(DataComponents.CUSTOM_NAME)
-                ? Component.translatable(s + ".item", p_19343_.getDisplayName(), component, itemstack.getDisplayName())
-                : Component.translatable(s, p_19343_.getDisplayName(), component);
+            Component name = this.causingEntity == null ? this.directEntity.getDisplayName() : this.causingEntity.getDisplayName();
+            ItemStack held = this.causingEntity instanceof LivingEntity livingEntity ? livingEntity.getMainHandItem() : ItemStack.EMPTY;
+            return !held.isEmpty() && held.has(DataComponents.CUSTOM_NAME)
+                ? Component.translatable(deathMsg + ".item", victim.getDisplayName(), name, held.getDisplayName())
+                : Component.translatable(deathMsg, victim.getDisplayName(), name);
         }
     }
 
@@ -109,12 +113,12 @@ public class DamageSource {
         return this.damageSourcePosition;
     }
 
-    public boolean is(TagKey<DamageType> p_270890_) {
-        return this.type.is(p_270890_);
+    public boolean is(final TagKey<DamageType> tag) {
+        return this.type.is(tag);
     }
 
-    public boolean is(ResourceKey<DamageType> p_276108_) {
-        return this.type.is(p_276108_);
+    public boolean is(final ResourceKey<DamageType> typeKey) {
+        return this.type.is(typeKey);
     }
 
     public DamageType type() {

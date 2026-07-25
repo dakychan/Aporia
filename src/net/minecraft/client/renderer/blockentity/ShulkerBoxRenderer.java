@@ -1,6 +1,8 @@
 package net.minecraft.client.renderer.blockentity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Transformation;
+import java.util.Map;
 import java.util.function.Consumer;
 import net.minecraft.client.model.Model;
 import net.minecraft.client.model.geom.EntityModelSet;
@@ -12,36 +14,36 @@ import net.minecraft.client.renderer.blockentity.state.ShulkerBoxRenderState;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.client.resources.model.Material;
-import net.minecraft.client.resources.model.MaterialSet;
+import net.minecraft.client.resources.model.sprite.SpriteGetter;
+import net.minecraft.client.resources.model.sprite.SpriteId;
 import net.minecraft.core.Direction;
+import net.minecraft.util.Util;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.level.block.ShulkerBoxBlock;
 import net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Matrix4f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class ShulkerBoxRenderer implements BlockEntityRenderer<ShulkerBoxBlockEntity, ShulkerBoxRenderState> {
-    private final MaterialSet materials;
+    private static final Map<Direction, Transformation> TRANSFORMATIONS = Util.makeEnumMap(Direction.class, ShulkerBoxRenderer::createModelTransform);
+    private final SpriteGetter sprites;
     private final ShulkerBoxRenderer.ShulkerBoxModel model;
 
-    public ShulkerBoxRenderer(BlockEntityRendererProvider.Context p_173626_) {
-        this(p_173626_.entityModelSet(), p_173626_.materials());
+    public ShulkerBoxRenderer(final BlockEntityRendererProvider.Context context) {
+        this(context.entityModelSet(), context.sprites());
     }
 
-    public ShulkerBoxRenderer(SpecialModelRenderer.BakingContext p_431042_) {
-        this(p_431042_.entityModelSet(), p_431042_.materials());
+    public ShulkerBoxRenderer(final SpecialModelRenderer.BakingContext context) {
+        this(context.entityModelSet(), context.sprites());
     }
 
-    public ShulkerBoxRenderer(EntityModelSet p_376600_, MaterialSet p_423394_) {
-        this.materials = p_423394_;
-        this.model = new ShulkerBoxRenderer.ShulkerBoxModel(p_376600_.bakeLayer(ModelLayers.SHULKER_BOX));
+    public ShulkerBoxRenderer(final EntityModelSet context, final SpriteGetter sprites) {
+        this.sprites = sprites;
+        this.model = new ShulkerBoxRenderer.ShulkerBoxModel(context.bakeLayer(ModelLayers.SHULKER_BOX));
     }
 
     public ShulkerBoxRenderState createRenderState() {
@@ -49,89 +51,99 @@ public class ShulkerBoxRenderer implements BlockEntityRenderer<ShulkerBoxBlockEn
     }
 
     public void extractRenderState(
-        ShulkerBoxBlockEntity p_431300_,
-        ShulkerBoxRenderState p_430156_,
-        float p_428608_,
-        Vec3 p_428519_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_427339_
+        final ShulkerBoxBlockEntity blockEntity,
+        final ShulkerBoxRenderState state,
+        final float partialTicks,
+        final Vec3 cameraPosition,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
     ) {
-        BlockEntityRenderer.super.extractRenderState(p_431300_, p_430156_, p_428608_, p_428519_, p_427339_);
-        p_430156_.direction = p_431300_.getBlockState().getValueOrElse(ShulkerBoxBlock.FACING, Direction.UP);
-        p_430156_.color = p_431300_.getColor();
-        p_430156_.progress = p_431300_.getProgress(p_428608_);
-    }
-
-    public void submit(ShulkerBoxRenderState p_431388_, PoseStack p_424095_, SubmitNodeCollector p_426300_, CameraRenderState p_431212_) {
-        DyeColor dyecolor = p_431388_.color;
-        Material material;
-        if (dyecolor == null) {
-            material = Sheets.DEFAULT_SHULKER_TEXTURE_LOCATION;
-        } else {
-            material = Sheets.getShulkerBoxMaterial(dyecolor);
-        }
-
-        this.submit(
-            p_424095_, p_426300_, p_431388_.lightCoords, OverlayTexture.NO_OVERLAY, p_431388_.direction, p_431388_.progress, p_431388_.breakProgress, material, 0
-        );
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
+        state.direction = blockEntity.getBlockState().getValueOrElse(ShulkerBoxBlock.FACING, Direction.UP);
+        state.color = blockEntity.getColor();
+        state.progress = blockEntity.getProgress(partialTicks);
     }
 
     public void submit(
-        PoseStack p_431720_,
-        SubmitNodeCollector p_425728_,
-        int p_426517_,
-        int p_423154_,
-        Direction p_426689_,
-        float p_422352_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_428745_,
-        Material p_429415_,
-        int p_431891_
+        final ShulkerBoxRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera
     ) {
-        p_431720_.pushPose();
-        this.prepareModel(p_431720_, p_426689_, p_422352_);
-        p_425728_.submitModel(
-            this.model,
-            p_422352_,
-            p_431720_,
-            p_429415_.renderType(this.model::renderType),
-            p_426517_,
-            p_423154_,
-            -1,
-            this.materials.get(p_429415_),
-            p_431891_,
-            p_428745_
-        );
-        p_431720_.popPose();
-    }
-
-    private void prepareModel(PoseStack p_406885_, Direction p_410653_, float p_409643_) {
-        p_406885_.translate(0.5F, 0.5F, 0.5F);
-        float f = 0.9995F;
-        p_406885_.scale(0.9995F, 0.9995F, 0.9995F);
-        p_406885_.mulPose(p_410653_.getRotation());
-        p_406885_.scale(1.0F, -1.0F, -1.0F);
-        p_406885_.translate(0.0F, -1.0F, 0.0F);
-        this.model.setupAnim(p_409643_);
-    }
-
-    public void getExtents(Direction p_407911_, float p_410036_, Consumer<Vector3fc> p_460516_) {
-        PoseStack posestack = new PoseStack();
-        this.prepareModel(posestack, p_407911_, p_410036_);
-        this.model.root().getExtentsForGui(posestack, p_460516_);
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    static class ShulkerBoxModel extends Model<Float> {
-        private final ModelPart lid;
-
-        public ShulkerBoxModel(ModelPart p_366433_) {
-            super(p_366433_, RenderTypes::entityCutoutNoCull);
-            this.lid = p_366433_.getChild("lid");
+        DyeColor color = state.color;
+        SpriteId sprite;
+        if (color == null) {
+            sprite = Sheets.DEFAULT_SHULKER_TEXTURE_LOCATION;
+        } else {
+            sprite = Sheets.getShulkerBoxSprite(color);
         }
 
-        public void setupAnim(Float p_429906_) {
-            super.setupAnim(p_429906_);
-            this.lid.setPos(0.0F, 24.0F - p_429906_ * 0.5F * 16.0F, 0.0F);
-            this.lid.yRot = 270.0F * p_429906_ * (float) (Math.PI / 180.0);
+        this.submit(
+            poseStack, submitNodeCollector, state.lightCoords, OverlayTexture.NO_OVERLAY, state.direction, state.progress, state.breakProgress, sprite, 0
+        );
+    }
+
+    private void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final int overlayCoords,
+        final Direction direction,
+        final float progress,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress,
+        final SpriteId sprite,
+        final int outlineColor
+    ) {
+        poseStack.pushPose();
+        poseStack.mulPose(modelTransform(direction));
+        this.submit(poseStack, submitNodeCollector, lightCoords, overlayCoords, progress, breakProgress, sprite, outlineColor);
+        poseStack.popPose();
+    }
+
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final int overlayCoords,
+        final float progress,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress,
+        final SpriteId sprite,
+        final int outlineColor
+    ) {
+        this.model.setupAnim(progress);
+        submitNodeCollector.submitModel(this.model, progress, poseStack, lightCoords, overlayCoords, -1, sprite, this.sprites, outlineColor, breakProgress);
+    }
+
+    private static Transformation createModelTransform(final Direction direction) {
+        float scale = 0.9995F;
+        return new Transformation(
+            new Matrix4f()
+                .translation(0.5F, 0.5F, 0.5F)
+                .scale(0.9995F, 0.9995F, 0.9995F)
+                .rotate(direction.getRotation())
+                .scale(1.0F, -1.0F, -1.0F)
+                .translate(0.0F, -1.0F, 0.0F)
+        );
+    }
+
+    public static Transformation modelTransform(final Direction direction) {
+        return TRANSFORMATIONS.get(direction);
+    }
+
+    public void getExtents(final float progress, final Consumer<Vector3fc> output) {
+        PoseStack poseStack = new PoseStack();
+        this.model.setupAnim(progress);
+        this.model.root().getExtentsForGui(poseStack, output);
+    }
+
+        private static class ShulkerBoxModel extends Model<Float> {
+        private final ModelPart lid;
+
+        public ShulkerBoxModel(final ModelPart root) {
+            super(root, RenderTypes::entityCutout);
+            this.lid = root.getChild("lid");
+        }
+
+        public void setupAnim(final Float progress) {
+            super.setupAnim(progress);
+            this.lid.setPos(0.0F, 24.0F - progress * 0.5F * 16.0F, 0.0F);
+            this.lid.yRot = 270.0F * progress * (float) (Math.PI / 180.0);
         }
     }
 }

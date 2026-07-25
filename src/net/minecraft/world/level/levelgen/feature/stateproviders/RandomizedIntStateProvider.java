@@ -3,12 +3,13 @@ package net.minecraft.world.level.levelgen.feature.stateproviders;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Collection;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.valueproviders.IntProvider;
+import net.minecraft.util.valueproviders.IntProviders;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.block.state.properties.Property;
@@ -16,36 +17,36 @@ import org.jspecify.annotations.Nullable;
 
 public class RandomizedIntStateProvider extends BlockStateProvider {
     public static final MapCodec<RandomizedIntStateProvider> CODEC = RecordCodecBuilder.mapCodec(
-        p_161576_ -> p_161576_.group(
-                BlockStateProvider.CODEC.fieldOf("source").forGetter(p_161592_ -> p_161592_.source),
-                Codec.STRING.fieldOf("property").forGetter(p_161590_ -> p_161590_.propertyName),
-                IntProvider.CODEC.fieldOf("values").forGetter(p_161578_ -> p_161578_.values)
+        i -> i.group(
+                BlockStateProvider.CODEC.fieldOf("source").forGetter(c -> c.source),
+                Codec.STRING.fieldOf("property").forGetter(c -> c.propertyName),
+                IntProviders.CODEC.fieldOf("values").forGetter(c -> c.values)
             )
-            .apply(p_161576_, RandomizedIntStateProvider::new)
+            .apply(i, RandomizedIntStateProvider::new)
     );
     private final BlockStateProvider source;
     private final String propertyName;
     private @Nullable IntegerProperty property;
     private final IntProvider values;
 
-    public RandomizedIntStateProvider(BlockStateProvider p_161562_, IntegerProperty p_161563_, IntProvider p_161564_) {
-        this.source = p_161562_;
-        this.property = p_161563_;
-        this.propertyName = p_161563_.getName();
-        this.values = p_161564_;
-        Collection<Integer> collection = p_161563_.getPossibleValues();
+    public RandomizedIntStateProvider(final BlockStateProvider source, final IntegerProperty property, final IntProvider values) {
+        this.source = source;
+        this.property = property;
+        this.propertyName = property.getName();
+        this.values = values;
+        Collection<Integer> possibleValues = property.getPossibleValues();
 
-        for (int i = p_161564_.getMinValue(); i <= p_161564_.getMaxValue(); i++) {
-            if (!collection.contains(i)) {
-                throw new IllegalArgumentException("Property value out of range: " + p_161563_.getName() + ": " + i);
+        for (int i = values.minInclusive(); i <= values.maxInclusive(); i++) {
+            if (!possibleValues.contains(i)) {
+                throw new IllegalArgumentException("Property value out of range: " + property.getName() + ": " + i);
             }
         }
     }
 
-    public RandomizedIntStateProvider(BlockStateProvider p_161566_, String p_161567_, IntProvider p_161568_) {
-        this.source = p_161566_;
-        this.propertyName = p_161567_;
-        this.values = p_161568_;
+    public RandomizedIntStateProvider(final BlockStateProvider source, final String propertyName, final IntProvider values) {
+        this.source = source;
+        this.propertyName = propertyName;
+        this.values = values;
     }
 
     @Override
@@ -54,27 +55,27 @@ public class RandomizedIntStateProvider extends BlockStateProvider {
     }
 
     @Override
-    public BlockState getState(RandomSource p_225919_, BlockPos p_225920_) {
-        BlockState blockstate = this.source.getState(p_225919_, p_225920_);
-        if (this.property == null || !blockstate.hasProperty(this.property)) {
-            IntegerProperty integerproperty = findProperty(blockstate, this.propertyName);
-            if (integerproperty == null) {
-                return blockstate;
+    public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
+        BlockState unmodifiedState = this.source.getState(level, random, pos);
+        if (this.property == null || !unmodifiedState.hasProperty(this.property)) {
+            IntegerProperty property = findProperty(unmodifiedState, this.propertyName);
+            if (property == null) {
+                return unmodifiedState;
             }
 
-            this.property = integerproperty;
+            this.property = property;
         }
 
-        return blockstate.setValue(this.property, this.values.sample(p_225919_));
+        return unmodifiedState.setValue(this.property, this.values.sample(random));
     }
 
-    private static @Nullable IntegerProperty findProperty(BlockState p_161571_, String p_161572_) {
-        Collection<Property<?>> collection = p_161571_.getProperties();
-        Optional<IntegerProperty> optional = collection.stream()
-            .filter(p_161583_ -> p_161583_.getName().equals(p_161572_))
-            .filter(p_161588_ -> p_161588_ instanceof IntegerProperty)
-            .map(p_161574_ -> (IntegerProperty)p_161574_)
+    private static @Nullable IntegerProperty findProperty(final BlockState source, final String propertyName) {
+        Collection<Property<?>> properties = source.getProperties();
+        Optional<IntegerProperty> found = properties.stream()
+            .filter(p -> p.getName().equals(propertyName))
+            .filter(p -> p instanceof IntegerProperty)
+            .map(p -> (IntegerProperty)p)
             .findAny();
-        return optional.orElse(null);
+        return found.orElse(null);
     }
 }

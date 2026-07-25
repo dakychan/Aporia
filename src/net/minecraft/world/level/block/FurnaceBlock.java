@@ -14,6 +14,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.FurnaceBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -27,48 +28,48 @@ public class FurnaceBlock extends AbstractFurnaceBlock {
         return CODEC;
     }
 
-    protected FurnaceBlock(BlockBehaviour.Properties p_53627_) {
-        super(p_53627_);
+    protected FurnaceBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153277_, BlockState p_153278_) {
-        return new FurnaceBlockEntity(p_153277_, p_153278_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new FurnaceBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_153273_, BlockState p_153274_, BlockEntityType<T> p_153275_) {
-        return createFurnaceTicker(p_153273_, p_153275_, BlockEntityType.FURNACE);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return createFurnaceTicker(level, type, BlockEntityTypes.FURNACE);
     }
 
     @Override
-    protected void openContainer(Level p_53631_, BlockPos p_53632_, Player p_53633_) {
-        BlockEntity blockentity = p_53631_.getBlockEntity(p_53632_);
-        if (blockentity instanceof FurnaceBlockEntity) {
-            p_53633_.openMenu((MenuProvider)blockentity);
-            p_53633_.awardStat(Stats.INTERACT_WITH_FURNACE);
+    protected void openContainer(final Level level, final BlockPos pos, final Player player) {
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (blockEntity instanceof FurnaceBlockEntity) {
+            player.openMenu((MenuProvider)blockEntity);
+            player.awardStat(Stats.INTERACT_WITH_FURNACE);
         }
     }
 
     @Override
-    public void animateTick(BlockState p_221253_, Level p_221254_, BlockPos p_221255_, RandomSource p_221256_) {
-        if (p_221253_.getValue(LIT)) {
-            double d0 = p_221255_.getX() + 0.5;
-            double d1 = p_221255_.getY();
-            double d2 = p_221255_.getZ() + 0.5;
-            if (p_221256_.nextDouble() < 0.1) {
-                p_221254_.playLocalSound(d0, d1, d2, SoundEvents.FURNACE_FIRE_CRACKLE, SoundSource.BLOCKS, 1.0F, 1.0F, false);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(LIT)) {
+            double x = pos.getX() + 0.5;
+            double y = pos.getY();
+            double z = pos.getZ() + 0.5;
+            if (random.nextDouble() < 0.1) {
+                level.playLocalSound(x, y, z, SoundEvents.FURNACE_FIRE_CRACKLE, SoundSource.BLOCKS, 1.0F, 1.0F, false);
             }
 
-            Direction direction = p_221253_.getValue(FACING);
-            Direction.Axis direction$axis = direction.getAxis();
-            double d3 = 0.52;
-            double d4 = p_221256_.nextDouble() * 0.6 - 0.3;
-            double d5 = direction$axis == Direction.Axis.X ? direction.getStepX() * 0.52 : d4;
-            double d6 = p_221256_.nextDouble() * 6.0 / 16.0;
-            double d7 = direction$axis == Direction.Axis.Z ? direction.getStepZ() * 0.52 : d4;
-            p_221254_.addParticle(ParticleTypes.SMOKE, d0 + d5, d1 + d6, d2 + d7, 0.0, 0.0, 0.0);
-            p_221254_.addParticle(ParticleTypes.FLAME, d0 + d5, d1 + d6, d2 + d7, 0.0, 0.0, 0.0);
+            Direction direction = state.getValue(FACING);
+            Direction.Axis axis = direction.getAxis();
+            double r = 0.52;
+            double ss = random.nextDouble() * 0.6 - 0.3;
+            double dx = axis == Direction.Axis.X ? direction.getStepX() * 0.52 : ss;
+            double dy = random.nextDouble() * 6.0 / 16.0;
+            double dz = axis == Direction.Axis.Z ? direction.getStepZ() * 0.52 : ss;
+            level.addParticle(ParticleTypes.SMOKE, x + dx, y + dy, z + dz, 0.0, 0.0, 0.0);
+            level.addParticle(ParticleTypes.FLAME, x + dx, y + dy, z + dz, 0.0, 0.0, 0.0);
         }
     }
 }

@@ -1,35 +1,18 @@
 package net.minecraft.world.level.storage;
 
 import java.util.Locale;
-import java.util.Optional;
-import java.util.UUID;
 import net.minecraft.CrashReportCategory;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.LevelHeightAccessor;
-import net.minecraft.world.level.border.WorldBorder;
-import net.minecraft.world.level.gamerules.GameRules;
-import net.minecraft.world.level.timers.TimerQueue;
-import org.jspecify.annotations.Nullable;
 
 public interface ServerLevelData extends WritableLevelData {
     String getLevelName();
 
-    void setThundering(boolean p_78623_);
-
-    int getRainTime();
-
-    void setRainTime(int p_78627_);
-
-    void setThunderTime(int p_78626_);
-
-    int getThunderTime();
-
     @Override
-    default void fillCrashReportCategory(CrashReportCategory p_164976_, LevelHeightAccessor p_164977_) {
-        WritableLevelData.super.fillCrashReportCategory(p_164976_, p_164977_);
-        p_164976_.setDetail("Level name", this::getLevelName);
-        p_164976_.setDetail(
+    default void fillCrashReportCategory(final CrashReportCategory category, final LevelHeightAccessor levelHeightAccessor) {
+        WritableLevelData.super.fillCrashReportCategory(category, levelHeightAccessor);
+        category.setDetail("Level name", this::getLevelName);
+        category.setDetail(
             "Level game mode",
             () -> String.format(
                 Locale.ROOT,
@@ -40,51 +23,19 @@ public interface ServerLevelData extends WritableLevelData {
                 this.isAllowCommands()
             )
         );
-        p_164976_.setDetail(
-            "Level weather",
-            () -> String.format(
-                Locale.ROOT, "Rain time: %d (now: %b), thunder time: %d (now: %b)", this.getRainTime(), this.isRaining(), this.getThunderTime(), this.isThundering()
-            )
-        );
     }
-
-    int getClearWeatherTime();
-
-    void setClearWeatherTime(int p_78616_);
-
-    int getWanderingTraderSpawnDelay();
-
-    void setWanderingTraderSpawnDelay(int p_78628_);
-
-    int getWanderingTraderSpawnChance();
-
-    void setWanderingTraderSpawnChance(int p_78629_);
-
-    @Nullable UUID getWanderingTraderId();
-
-    void setWanderingTraderId(UUID p_78620_);
 
     GameType getGameType();
 
-    @Deprecated
-    Optional<WorldBorder.Settings> getLegacyWorldBorderSettings();
-
-    @Deprecated
-    void setLegacyWorldBorderSettings(Optional<WorldBorder.Settings> p_422502_);
-
     boolean isInitialized();
 
-    void setInitialized(boolean p_78625_);
+    void setInitialized(boolean initialized);
 
     boolean isAllowCommands();
 
-    void setGameType(GameType p_78618_);
+    void setAllowCommands(boolean allowCommands);
 
-    TimerQueue<MinecraftServer> getScheduledEvents();
+    void setGameType(GameType gameType);
 
-    void setGameTime(long p_78617_);
-
-    void setDayTime(long p_78624_);
-
-    GameRules getGameRules();
+    void setGameTime(final long time);
 }

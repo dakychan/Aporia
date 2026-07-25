@@ -19,21 +19,21 @@ import net.minecraft.world.level.block.Blocks;
 import org.jspecify.annotations.Nullable;
 
 public class Stray extends AbstractSkeleton {
-    public Stray(EntityType<? extends Stray> p_455263_, Level p_458013_) {
-        super(p_455263_, p_458013_);
+    public Stray(final EntityType<? extends Stray> type, final Level level) {
+        super(type, level);
     }
 
     public static boolean checkStraySpawnRules(
-        EntityType<Stray> p_456984_, ServerLevelAccessor p_453955_, EntitySpawnReason p_460530_, BlockPos p_453169_, RandomSource p_460177_
+        final EntityType<Stray> type, final ServerLevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        BlockPos blockpos = p_453169_;
+        BlockPos checkSkyPos = pos;
 
         do {
-            blockpos = blockpos.above();
-        } while (p_453955_.getBlockState(blockpos).is(Blocks.POWDER_SNOW));
+            checkSkyPos = checkSkyPos.above();
+        } while (level.getBlockState(checkSkyPos).is(Blocks.POWDER_SNOW));
 
-        return Monster.checkMonsterSpawnRules(p_456984_, p_453955_, p_460530_, p_453169_, p_460177_)
-            && (EntitySpawnReason.isSpawner(p_460530_) || p_453955_.canSeeSky(blockpos.below()));
+        return Monster.checkMonsterSpawnRules(type, level, spawnReason, pos, random)
+            && (EntitySpawnReason.isSpawner(spawnReason) || level.canSeeSky(checkSkyPos.below()));
     }
 
     @Override
@@ -42,7 +42,7 @@ public class Stray extends AbstractSkeleton {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_456165_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.STRAY_HURT;
     }
 
@@ -52,17 +52,17 @@ public class Stray extends AbstractSkeleton {
     }
 
     @Override
-    SoundEvent getStepSound() {
+    protected SoundEvent getStepSound() {
         return SoundEvents.STRAY_STEP;
     }
 
     @Override
-    protected AbstractArrow getArrow(ItemStack p_452268_, float p_452804_, @Nullable ItemStack p_459386_) {
-        AbstractArrow abstractarrow = super.getArrow(p_452268_, p_452804_, p_459386_);
-        if (abstractarrow instanceof Arrow) {
-            ((Arrow)abstractarrow).addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 600));
+    protected AbstractArrow getArrow(final ItemStack projectile, final float power, final @Nullable ItemStack firingWeapon) {
+        AbstractArrow arrow = super.getArrow(projectile, power, firingWeapon);
+        if (arrow instanceof Arrow arrow2) {
+            arrow2.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 600));
         }
 
-        return abstractarrow;
+        return arrow;
     }
 }

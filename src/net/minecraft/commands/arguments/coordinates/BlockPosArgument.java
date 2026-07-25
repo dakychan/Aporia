@@ -29,54 +29,54 @@ public class BlockPosArgument implements ArgumentType<Coordinates> {
         return new BlockPosArgument();
     }
 
-    public static BlockPos getLoadedBlockPos(CommandContext<CommandSourceStack> p_118243_, String p_118244_) throws CommandSyntaxException {
-        ServerLevel serverlevel = p_118243_.getSource().getLevel();
-        return getLoadedBlockPos(p_118243_, serverlevel, p_118244_);
+    public static BlockPos getLoadedBlockPos(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        ServerLevel level = context.getSource().getLevel();
+        return getLoadedBlockPos(context, level, name);
     }
 
-    public static BlockPos getLoadedBlockPos(CommandContext<CommandSourceStack> p_265283_, ServerLevel p_265219_, String p_265677_) throws CommandSyntaxException {
-        BlockPos blockpos = getBlockPos(p_265283_, p_265677_);
-        if (!p_265219_.hasChunkAt(blockpos)) {
+    public static BlockPos getLoadedBlockPos(final CommandContext<CommandSourceStack> context, final ServerLevel level, final String name) throws CommandSyntaxException {
+        BlockPos pos = getBlockPos(context, name);
+        if (!level.hasChunkAt(pos)) {
             throw ERROR_NOT_LOADED.create();
-        } else if (!p_265219_.isInWorldBounds(blockpos)) {
+        } else if (!level.isInWorldBounds(pos)) {
             throw ERROR_OUT_OF_WORLD.create();
         } else {
-            return blockpos;
+            return pos;
         }
     }
 
-    public static BlockPos getBlockPos(CommandContext<CommandSourceStack> p_265651_, String p_265039_) {
-        return p_265651_.getArgument(p_265039_, Coordinates.class).getBlockPos(p_265651_.getSource());
+    public static BlockPos getBlockPos(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Coordinates.class).getBlockPos(context.getSource());
     }
 
-    public static BlockPos getSpawnablePos(CommandContext<CommandSourceStack> p_174396_, String p_174397_) throws CommandSyntaxException {
-        BlockPos blockpos = getBlockPos(p_174396_, p_174397_);
-        if (!Level.isInSpawnableBounds(blockpos)) {
+    public static BlockPos getSpawnablePos(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        BlockPos pos = getBlockPos(context, name);
+        if (!Level.isInSpawnableBounds(pos)) {
             throw ERROR_OUT_OF_BOUNDS.create();
         } else {
-            return blockpos;
+            return pos;
         }
     }
 
-    public Coordinates parse(StringReader p_118241_) throws CommandSyntaxException {
-        return (Coordinates)(p_118241_.canRead() && p_118241_.peek() == '^' ? LocalCoordinates.parse(p_118241_) : WorldCoordinates.parseInt(p_118241_));
+    public Coordinates parse(final StringReader reader) throws CommandSyntaxException {
+        return reader.canRead() && reader.peek() == '^' ? LocalCoordinates.parse(reader) : WorldCoordinates.parseInt(reader);
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_118250_, SuggestionsBuilder p_118251_) {
-        if (!(p_118250_.getSource() instanceof SharedSuggestionProvider)) {
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        if (!(context.getSource() instanceof SharedSuggestionProvider)) {
             return Suggestions.empty();
-        } else {
-            String s = p_118251_.getRemaining();
-            Collection<SharedSuggestionProvider.TextCoordinates> collection;
-            if (!s.isEmpty() && s.charAt(0) == '^') {
-                collection = Collections.singleton(SharedSuggestionProvider.TextCoordinates.DEFAULT_LOCAL);
-            } else {
-                collection = ((SharedSuggestionProvider)p_118250_.getSource()).getRelevantCoordinates();
-            }
-
-            return SharedSuggestionProvider.suggestCoordinates(s, collection, p_118251_, Commands.createValidator(this::parse));
         }
+
+        String remainder = builder.getRemaining();
+        Collection<SharedSuggestionProvider.TextCoordinates> suggestedCoordinates;
+        if (!remainder.isEmpty() && remainder.charAt(0) == '^') {
+            suggestedCoordinates = Collections.singleton(SharedSuggestionProvider.TextCoordinates.DEFAULT_LOCAL);
+        } else {
+            suggestedCoordinates = ((SharedSuggestionProvider)context.getSource()).getRelevantCoordinates();
+        }
+
+        return SharedSuggestionProvider.suggestCoordinates(remainder, suggestedCoordinates, builder, Commands.createValidator(this::parse));
     }
 
     @Override

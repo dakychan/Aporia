@@ -1,36 +1,34 @@
 package net.minecraft.world.entity.ai.behavior;
 
 import java.util.Optional;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.NearestVisibleLivingEntities;
 
 public class SetLookAndInteract {
-    public static BehaviorControl<LivingEntity> create(EntityType<?> p_259642_, int p_259805_) {
-        int i = p_259805_ * p_259805_;
+    public static BehaviorControl<LivingEntity> create(final EntityType<?> type, final int interactionRange) {
+        int interactionRangeSqr = interactionRange * interactionRange;
         return BehaviorBuilder.create(
-            p_258685_ -> p_258685_.group(
-                    p_258685_.registered(MemoryModuleType.LOOK_TARGET),
-                    p_258685_.absent(MemoryModuleType.INTERACTION_TARGET),
-                    p_258685_.present(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
+            i -> i.group(
+                    i.registered(MemoryModuleType.LOOK_TARGET),
+                    i.absent(MemoryModuleType.INTERACTION_TARGET),
+                    i.present(MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES)
                 )
                 .apply(
-                    p_258685_,
-                    (p_258680_, p_258681_, p_258682_) -> (p_258670_, p_258671_, p_258672_) -> {
-                        Optional<LivingEntity> optional = p_258685_.<NearestVisibleLivingEntities>get(p_258682_)
-                            .findClosest(p_449557_ -> p_449557_.distanceToSqr(p_258671_) <= i && p_259642_.equals(p_449557_.getType()));
-                        if (optional.isEmpty()) {
+                    i,
+                    (lookTarget, interactionTarget, nearestEntities) -> (level, body, timestamp) -> {
+                        Optional<LivingEntity> closest = i.<NearestVisibleLivingEntities>get(nearestEntities)
+                            .findClosest(e -> e.distanceToSqr(body) <= interactionRangeSqr && e.is(type));
+                        if (closest.isEmpty()) {
                             return false;
-                        } else {
-                            LivingEntity livingentity = optional.get();
-                            p_258681_.set(livingentity);
-                            p_258680_.set(new EntityTracker(livingentity, true));
-                            return true;
                         }
+
+                        LivingEntity closestEntity = closest.get();
+                        interactionTarget.set(closestEntity);
+                        lookTarget.set(new EntityTracker(closestEntity, true));
+                        return true;
                     }
                 )
         );

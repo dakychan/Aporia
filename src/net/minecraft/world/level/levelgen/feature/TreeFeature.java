@@ -24,7 +24,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.levelgen.feature.configurations.TreeConfiguration;
 import net.minecraft.world.level.levelgen.feature.foliageplacers.FoliagePlacer;
-import net.minecraft.world.level.levelgen.feature.rootplacers.RootPlacer;
 import net.minecraft.world.level.levelgen.feature.treedecorators.TreeDecorator;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
@@ -32,56 +31,59 @@ import net.minecraft.world.phys.shapes.BitSetDiscreteVoxelShape;
 import net.minecraft.world.phys.shapes.DiscreteVoxelShape;
 
 public class TreeFeature extends Feature<TreeConfiguration> {
-    @Block.UpdateFlags
-    private static final int BLOCK_UPDATE_FLAGS = 19;
+    private static final @Block.UpdateFlags int BLOCK_UPDATE_FLAGS = 19;
 
-    public TreeFeature(Codec<TreeConfiguration> p_67201_) {
-        super(p_67201_);
+    public TreeFeature(final Codec<TreeConfiguration> codec) {
+        super(codec);
     }
 
-    public static boolean isVine(LevelSimulatedReader p_67278_, BlockPos p_67279_) {
-        return p_67278_.isStateAtPosition(p_67279_, p_225299_ -> p_225299_.is(Blocks.VINE));
+    public static boolean isVine(final LevelSimulatedReader level, final BlockPos pos) {
+        return level.isStateAtPosition(pos, state -> state.is(Blocks.VINE));
     }
 
-    public static boolean isAirOrLeaves(LevelSimulatedReader p_67268_, BlockPos p_67269_) {
-        return p_67268_.isStateAtPosition(p_67269_, p_360610_ -> p_360610_.isAir() || p_360610_.is(BlockTags.LEAVES));
+    public static boolean isAirOrLeaves(final LevelSimulatedReader level, final BlockPos pos) {
+        return level.isStateAtPosition(pos, state -> state.isAir() || state.is(BlockTags.LEAVES));
     }
 
-    private static void setBlockKnownShape(LevelWriter p_67257_, BlockPos p_67258_, BlockState p_67259_) {
-        p_67257_.setBlock(p_67258_, p_67259_, 19);
+    private static void setBlockKnownShape(final LevelWriter level, final BlockPos pos, final BlockState blockState) {
+        level.setBlock(pos, blockState, 19);
     }
 
-    public static boolean validTreePos(LevelSimulatedReader p_67273_, BlockPos p_67274_) {
-        return p_67273_.isStateAtPosition(p_67274_, p_360611_ -> p_360611_.isAir() || p_360611_.is(BlockTags.REPLACEABLE_BY_TREES));
+    public static boolean validTreePos(final LevelSimulatedReader level, final BlockPos pos) {
+        return level.isStateAtPosition(pos, state -> state.isAir() || state.is(BlockTags.REPLACEABLE_BY_TREES));
     }
 
     private boolean doPlace(
-        WorldGenLevel p_225258_,
-        RandomSource p_225259_,
-        BlockPos p_225260_,
-        BiConsumer<BlockPos, BlockState> p_225261_,
-        BiConsumer<BlockPos, BlockState> p_225262_,
-        FoliagePlacer.FoliageSetter p_273670_,
-        TreeConfiguration p_225264_
+        final WorldGenLevel level,
+        final RandomSource random,
+        final BlockPos origin,
+        final BiConsumer<BlockPos, BlockState> rootSetter,
+        final BiConsumer<BlockPos, BlockState> trunkSetter,
+        final FoliagePlacer.FoliageSetter foliageSetter,
+        final TreeConfiguration config
     ) {
-        int i = p_225264_.trunkPlacer.getTreeHeight(p_225259_);
-        int j = p_225264_.foliagePlacer.foliageHeight(p_225259_, i, p_225264_);
-        int k = i - j;
-        int l = p_225264_.foliagePlacer.foliageRadius(p_225259_, k);
-        BlockPos blockpos = p_225264_.rootPlacer.<BlockPos>map(p_225286_ -> p_225286_.getTrunkOrigin(p_225260_, p_225259_)).orElse(p_225260_);
-        int i1 = Math.min(p_225260_.getY(), blockpos.getY());
-        int j1 = Math.max(p_225260_.getY(), blockpos.getY()) + i + 1;
-        if (i1 >= p_225258_.getMinY() + 1 && j1 <= p_225258_.getMaxY() + 1) {
-            OptionalInt optionalint = p_225264_.minimumSize.minClippedHeight();
-            int k1 = this.getMaxFreeTreeHeight(p_225258_, i, blockpos, p_225264_);
-            if (k1 >= i || !optionalint.isEmpty() && k1 >= optionalint.getAsInt()) {
-                if (p_225264_.rootPlacer.isPresent() && !p_225264_.rootPlacer.get().placeRoots(p_225258_, p_225261_, p_225259_, p_225260_, blockpos, p_225264_)) {
+        int treeHeight = config.trunkPlacer.getTreeHeight(random);
+        int foliageHeight = config.foliagePlacer.foliageHeight(random, treeHeight, config);
+        int trunkHeight = treeHeight - foliageHeight;
+        int leafRadius = config.foliagePlacer.foliageRadius(random, trunkHeight);
+        BlockPos trunkOrigin = config.rootPlacer.<BlockPos>map(rootPlacer -> rootPlacer.getTrunkOrigin(origin, random)).orElse(origin);
+        int minY = Math.min(origin.getY(), trunkOrigin.getY());
+        int maxY = Math.max(origin.getY(), trunkOrigin.getY()) + treeHeight + 1;
+        if (minY >= level.getMinY() + 1 && maxY <= level.getMaxY() + 1) {
+            OptionalInt minClippedHeight = config.minimumSize.minClippedHeight();
+            int clippedTreeHeight = this.getMaxFreeTreeHeight(level, treeHeight, trunkOrigin, config);
+            if (clippedTreeHeight >= treeHeight || !minClippedHeight.isEmpty() && clippedTreeHeight >= minClippedHeight.getAsInt()) {
+                if (config.rootPlacer.isPresent() && !config.rootPlacer.get().placeRoots(level, rootSetter, random, origin, trunkOrigin, config)) {
                     return false;
-                } else {
-                    List<FoliagePlacer.FoliageAttachment> list = p_225264_.trunkPlacer.placeTrunk(p_225258_, p_225262_, p_225259_, k1, blockpos, p_225264_);
-                    list.forEach(p_272582_ -> p_225264_.foliagePlacer.createFoliage(p_225258_, p_273670_, p_225259_, p_225264_, k1, p_272582_, j, l));
-                    return true;
                 }
+
+                List<FoliagePlacer.FoliageAttachment> foliageAttachments = config.trunkPlacer
+                    .placeTrunk(level, trunkSetter, random, clippedTreeHeight, trunkOrigin, config);
+                foliageAttachments.forEach(
+                    foliageAttachment -> config.foliagePlacer
+                        .createFoliage(level, foliageSetter, random, config, clippedTreeHeight, foliageAttachment, foliageHeight, leafRadius)
+                );
+                return true;
             } else {
                 return false;
             }
@@ -90,74 +92,74 @@ public class TreeFeature extends Feature<TreeConfiguration> {
         }
     }
 
-    private int getMaxFreeTreeHeight(LevelSimulatedReader p_67216_, int p_67217_, BlockPos p_67218_, TreeConfiguration p_67219_) {
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    private int getMaxFreeTreeHeight(final WorldGenLevel level, final int maxTreeHeight, final BlockPos treePos, final TreeConfiguration config) {
+        BlockPos.MutableBlockPos blockPos = new BlockPos.MutableBlockPos();
 
-        for (int i = 0; i <= p_67217_ + 1; i++) {
-            int j = p_67219_.minimumSize.getSizeAtHeight(p_67217_, i);
+        for (int y = 0; y <= maxTreeHeight + 1; y++) {
+            int r = config.minimumSize.getSizeAtHeight(maxTreeHeight, y);
 
-            for (int k = -j; k <= j; k++) {
-                for (int l = -j; l <= j; l++) {
-                    blockpos$mutableblockpos.setWithOffset(p_67218_, k, i, l);
-                    if (!p_67219_.trunkPlacer.isFree(p_67216_, blockpos$mutableblockpos) || !p_67219_.ignoreVines && isVine(p_67216_, blockpos$mutableblockpos)) {
-                        return i - 2;
+            for (int x = -r; x <= r; x++) {
+                for (int z = -r; z <= r; z++) {
+                    blockPos.setWithOffset(treePos, x, y, z);
+                    if (!config.trunkPlacer.isFree(level, blockPos) || !config.ignoreVines && isVine(level, blockPos)) {
+                        return y - 2;
                     }
                 }
             }
         }
 
-        return p_67217_;
+        return maxTreeHeight;
     }
 
     @Override
-    protected void setBlock(LevelWriter p_67221_, BlockPos p_67222_, BlockState p_67223_) {
-        setBlockKnownShape(p_67221_, p_67222_, p_67223_);
+    protected void setBlock(final LevelWriter level, final BlockPos pos, final BlockState blockState) {
+        setBlockKnownShape(level, pos, blockState);
     }
 
     @Override
-    public final boolean place(FeaturePlaceContext<TreeConfiguration> p_160530_) {
-        final WorldGenLevel worldgenlevel = p_160530_.level();
-        RandomSource randomsource = p_160530_.random();
-        BlockPos blockpos = p_160530_.origin();
-        TreeConfiguration treeconfiguration = p_160530_.config();
-        Set<BlockPos> set = Sets.newHashSet();
-        Set<BlockPos> set1 = Sets.newHashSet();
-        final Set<BlockPos> set2 = Sets.newHashSet();
-        Set<BlockPos> set3 = Sets.newHashSet();
-        BiConsumer<BlockPos, BlockState> biconsumer = (p_160555_, p_160556_) -> {
-            set.add(p_160555_.immutable());
-            worldgenlevel.setBlock(p_160555_, p_160556_, 19);
+    public final boolean place(final FeaturePlaceContext<TreeConfiguration> context) {
+        final WorldGenLevel level = context.level();
+        RandomSource random = context.random();
+        BlockPos origin = context.origin();
+        TreeConfiguration config = context.config();
+        Set<BlockPos> rootPositions = Sets.newHashSet();
+        Set<BlockPos> trunks = Sets.newHashSet();
+        final Set<BlockPos> foliage = Sets.newHashSet();
+        Set<BlockPos> decorations = Sets.newHashSet();
+        BiConsumer<BlockPos, BlockState> rootSetter = (pos, state) -> {
+            rootPositions.add(pos.immutable());
+            level.setBlock(pos, state, 19);
         };
-        BiConsumer<BlockPos, BlockState> biconsumer1 = (p_160548_, p_160549_) -> {
-            set1.add(p_160548_.immutable());
-            worldgenlevel.setBlock(p_160548_, p_160549_, 19);
+        BiConsumer<BlockPos, BlockState> trunkSetter = (pos, state) -> {
+            trunks.add(pos.immutable());
+            level.setBlock(pos, state, 19);
         };
-        FoliagePlacer.FoliageSetter foliageplacer$foliagesetter = new FoliagePlacer.FoliageSetter() {
+        FoliagePlacer.FoliageSetter foliageSetter = new FoliagePlacer.FoliageSetter() {
             @Override
-            public void set(BlockPos p_272825_, BlockState p_273311_) {
-                set2.add(p_272825_.immutable());
-                worldgenlevel.setBlock(p_272825_, p_273311_, 19);
+            public void set(final BlockPos pos, final BlockState state) {
+                foliage.add(pos.immutable());
+                level.setBlock(pos, state, 19);
             }
 
             @Override
-            public boolean isSet(BlockPos p_272999_) {
-                return set2.contains(p_272999_);
+            public boolean isSet(final BlockPos pos) {
+                return foliage.contains(pos);
             }
         };
-        BiConsumer<BlockPos, BlockState> biconsumer2 = (p_160543_, p_160544_) -> {
-            set3.add(p_160543_.immutable());
-            worldgenlevel.setBlock(p_160543_, p_160544_, 19);
+        BiConsumer<BlockPos, BlockState> decorationSetter = (pos, state) -> {
+            decorations.add(pos.immutable());
+            level.setBlock(pos, state, 19);
         };
-        boolean flag = this.doPlace(worldgenlevel, randomsource, blockpos, biconsumer, biconsumer1, foliageplacer$foliagesetter, treeconfiguration);
-        if (flag && (!set1.isEmpty() || !set2.isEmpty())) {
-            if (!treeconfiguration.decorators.isEmpty()) {
-                TreeDecorator.Context treedecorator$context = new TreeDecorator.Context(worldgenlevel, biconsumer2, randomsource, set1, set2, set);
-                treeconfiguration.decorators.forEach(p_225282_ -> p_225282_.place(treedecorator$context));
+        boolean result = this.doPlace(level, random, origin, rootSetter, trunkSetter, foliageSetter, config);
+        if (result && (!trunks.isEmpty() || !foliage.isEmpty())) {
+            if (!config.decorators.isEmpty()) {
+                TreeDecorator.Context decoratorContext = new TreeDecorator.Context(level, decorationSetter, random, trunks, foliage, rootPositions);
+                config.decorators.forEach(decorator -> decorator.place(decoratorContext));
             }
 
-            return BoundingBox.encapsulatingPositions(Iterables.concat(set, set1, set2, set3)).map(p_225270_ -> {
-                DiscreteVoxelShape discretevoxelshape = updateLeaves(worldgenlevel, p_225270_, set1, set3, set);
-                StructureTemplate.updateShapeAtEdge(worldgenlevel, 3, discretevoxelshape, p_225270_.minX(), p_225270_.minY(), p_225270_.minZ());
+            return BoundingBox.encapsulatingPositions(Iterables.concat(rootPositions, trunks, foliage, decorations)).map(bounds -> {
+                DiscreteVoxelShape shape = updateLeaves(level, bounds, trunks, decorations, rootPositions);
+                StructureTemplate.updateShapeAtEdge(level, 3, shape, bounds.minX(), bounds.minY(), bounds.minZ());
                 return true;
             }).orElse(false);
         } else {
@@ -166,63 +168,57 @@ public class TreeFeature extends Feature<TreeConfiguration> {
     }
 
     private static DiscreteVoxelShape updateLeaves(
-        LevelAccessor p_225252_, BoundingBox p_225253_, Set<BlockPos> p_225254_, Set<BlockPos> p_225255_, Set<BlockPos> p_225256_
+        final LevelAccessor level, final BoundingBox bounds, final Set<BlockPos> logs, final Set<BlockPos> decorationSet, final Set<BlockPos> rootPositions
     ) {
-        DiscreteVoxelShape discretevoxelshape = new BitSetDiscreteVoxelShape(p_225253_.getXSpan(), p_225253_.getYSpan(), p_225253_.getZSpan());
-        int i = 7;
-        List<Set<BlockPos>> list = Lists.newArrayList();
+        DiscreteVoxelShape shape = new BitSetDiscreteVoxelShape(bounds.getXSpan(), bounds.getYSpan(), bounds.getZSpan());
+        int maxDistance = 7;
+        List<Set<BlockPos>> toCheck = Lists.newArrayList();
 
-        for (int j = 0; j < 7; j++) {
-            list.add(Sets.newHashSet());
+        for (int i = 0; i < 7; i++) {
+            toCheck.add(Sets.newHashSet());
         }
 
-        for (BlockPos blockpos : Lists.newArrayList(Sets.union(p_225255_, p_225256_))) {
-            if (p_225253_.isInside(blockpos)) {
-                discretevoxelshape.fill(
-                    blockpos.getX() - p_225253_.minX(), blockpos.getY() - p_225253_.minY(), blockpos.getZ() - p_225253_.minZ()
-                );
+        for (BlockPos pos : Lists.newArrayList(Sets.union(decorationSet, rootPositions))) {
+            if (bounds.isInside(pos)) {
+                shape.fill(pos.getX() - bounds.minX(), pos.getY() - bounds.minY(), pos.getZ() - bounds.minZ());
             }
         }
 
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-        int k1 = 0;
-        list.get(0).addAll(p_225254_);
+        BlockPos.MutableBlockPos neighborPos = new BlockPos.MutableBlockPos();
+        int smallestDistance = 0;
+        toCheck.get(0).addAll(logs);
 
         while (true) {
-            while (k1 >= 7 || !list.get(k1).isEmpty()) {
-                if (k1 >= 7) {
-                    return discretevoxelshape;
+            while (smallestDistance >= 7 || !toCheck.get(smallestDistance).isEmpty()) {
+                if (smallestDistance >= 7) {
+                    return shape;
                 }
 
-                Iterator<BlockPos> iterator = list.get(k1).iterator();
-                BlockPos blockpos1 = iterator.next();
+                Iterator<BlockPos> iterator = toCheck.get(smallestDistance).iterator();
+                BlockPos pos = iterator.next();
                 iterator.remove();
-                if (p_225253_.isInside(blockpos1)) {
-                    if (k1 != 0) {
-                        BlockState blockstate = p_225252_.getBlockState(blockpos1);
-                        setBlockKnownShape(p_225252_, blockpos1, blockstate.setValue(BlockStateProperties.DISTANCE, k1));
+                if (bounds.isInside(pos)) {
+                    if (smallestDistance != 0) {
+                        BlockState state = level.getBlockState(pos);
+                        setBlockKnownShape(level, pos, state.setValue(BlockStateProperties.DISTANCE, smallestDistance));
                     }
 
-                    discretevoxelshape.fill(
-                        blockpos1.getX() - p_225253_.minX(),
-                        blockpos1.getY() - p_225253_.minY(),
-                        blockpos1.getZ() - p_225253_.minZ()
-                    );
+                    shape.fill(pos.getX() - bounds.minX(), pos.getY() - bounds.minY(), pos.getZ() - bounds.minZ());
 
                     for (Direction direction : Direction.values()) {
-                        blockpos$mutableblockpos.setWithOffset(blockpos1, direction);
-                        if (p_225253_.isInside(blockpos$mutableblockpos)) {
-                            int k = blockpos$mutableblockpos.getX() - p_225253_.minX();
-                            int l = blockpos$mutableblockpos.getY() - p_225253_.minY();
-                            int i1 = blockpos$mutableblockpos.getZ() - p_225253_.minZ();
-                            if (!discretevoxelshape.isFull(k, l, i1)) {
-                                BlockState blockstate1 = p_225252_.getBlockState(blockpos$mutableblockpos);
-                                OptionalInt optionalint = LeavesBlock.getOptionalDistanceAt(blockstate1);
-                                if (!optionalint.isEmpty()) {
-                                    int j1 = Math.min(optionalint.getAsInt(), k1 + 1);
-                                    if (j1 < 7) {
-                                        list.get(j1).add(blockpos$mutableblockpos.immutable());
-                                        k1 = Math.min(k1, j1);
+                        neighborPos.setWithOffset(pos, direction);
+                        if (bounds.isInside(neighborPos)) {
+                            int xInShape = neighborPos.getX() - bounds.minX();
+                            int yInShape = neighborPos.getY() - bounds.minY();
+                            int zinShape = neighborPos.getZ() - bounds.minZ();
+                            if (!shape.isFull(xInShape, yInShape, zinShape)) {
+                                BlockState currentState = level.getBlockState(neighborPos);
+                                OptionalInt distance = LeavesBlock.getOptionalDistanceAt(currentState);
+                                if (!distance.isEmpty()) {
+                                    int newDistance = Math.min(distance.getAsInt(), smallestDistance + 1);
+                                    if (newDistance < 7) {
+                                        toCheck.get(newDistance).add(neighborPos.immutable());
+                                        smallestDistance = Math.min(smallestDistance, newDistance);
                                     }
                                 }
                             }
@@ -231,23 +227,23 @@ public class TreeFeature extends Feature<TreeConfiguration> {
                 }
             }
 
-            k1++;
+            smallestDistance++;
         }
     }
 
-    public static List<BlockPos> getLowestTrunkOrRootOfTree(TreeDecorator.Context p_393099_) {
-        List<BlockPos> list = Lists.newArrayList();
-        List<BlockPos> list1 = p_393099_.roots();
-        List<BlockPos> list2 = p_393099_.logs();
-        if (list1.isEmpty()) {
-            list.addAll(list2);
-        } else if (!list2.isEmpty() && list1.get(0).getY() == list2.get(0).getY()) {
-            list.addAll(list2);
-            list.addAll(list1);
+    public static List<BlockPos> getLowestTrunkOrRootOfTree(final TreeDecorator.Context context) {
+        List<BlockPos> blockPositions = Lists.newArrayList();
+        List<BlockPos> roots = context.roots();
+        List<BlockPos> logs = context.logs();
+        if (roots.isEmpty()) {
+            blockPositions.addAll(logs);
+        } else if (!logs.isEmpty() && roots.get(0).getY() == logs.get(0).getY()) {
+            blockPositions.addAll(logs);
+            blockPositions.addAll(roots);
         } else {
-            list.addAll(list1);
+            blockPositions.addAll(roots);
         }
 
-        return list;
+        return blockPositions;
     }
 }

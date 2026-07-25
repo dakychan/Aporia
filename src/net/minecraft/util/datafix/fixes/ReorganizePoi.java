@@ -9,40 +9,39 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
 public class ReorganizePoi extends DataFix {
-    public ReorganizePoi(Schema p_16853_, boolean p_16854_) {
-        super(p_16853_, p_16854_);
+    public ReorganizePoi(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<Pair<String, Dynamic<?>>> type = DSL.named(References.POI_CHUNK.typeName(), DSL.remainderType());
-        if (!Objects.equals(type, this.getInputSchema().getType(References.POI_CHUNK))) {
+        Type<Pair<String, Dynamic<?>>> poiChunkType = DSL.named(References.POI_CHUNK.typeName(), DSL.remainderType());
+        if (!Objects.equals(poiChunkType, this.getInputSchema().getType(References.POI_CHUNK))) {
             throw new IllegalStateException("Poi type is not what was expected.");
         } else {
-            return this.fixTypeEverywhere("POI reorganization", type, p_16860_ -> p_145640_ -> p_145640_.mapSecond(ReorganizePoi::cap));
+            return this.fixTypeEverywhere("POI reorganization", poiChunkType, ops -> input -> input.mapSecond(ReorganizePoi::cap));
         }
     }
 
-    private static <T> Dynamic<T> cap(Dynamic<T> p_16858_) {
-        Map<Dynamic<T>, Dynamic<T>> map = Maps.newHashMap();
+    private static <T> Dynamic<T> cap(Dynamic<T> input) {
+        Map<Dynamic<T>, Dynamic<T>> sections = Maps.newHashMap();
 
         for (int i = 0; i < 16; i++) {
-            String s = String.valueOf(i);
-            Optional<Dynamic<T>> optional = p_16858_.get(s).result();
-            if (optional.isPresent()) {
-                Dynamic<T> dynamic = optional.get();
-                Dynamic<T> dynamic1 = p_16858_.createMap(ImmutableMap.of(p_16858_.createString("Records"), dynamic));
-                map.put(p_16858_.createString(Integer.toString(i)), dynamic1);
-                p_16858_ = p_16858_.remove(s);
+            String key = String.valueOf(i);
+            Optional<Dynamic<T>> section = input.get(key).result();
+            if (section.isPresent()) {
+                Dynamic<T> sectionRecords = section.get();
+                Dynamic<T> newSection = input.createMap(ImmutableMap.of(input.createString("Records"), sectionRecords));
+                sections.put(input.createString(Integer.toString(i)), newSection);
+                input = input.remove(key);
             }
         }
 
-        return p_16858_.set("Sections", p_16858_.createMap(map));
+        return input.set("Sections", input.createMap(sections));
     }
 }

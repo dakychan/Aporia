@@ -1,11 +1,11 @@
 package net.minecraft.world.level.chunk;
 
 public interface PaletteResize<T> {
-    int onResize(int p_63066_, T p_63067_);
+    int onResize(int bits, T lastAddedValue);
 
     static <T> PaletteResize<T> noResizeExpected() {
-        return (p_431054_, p_427407_) -> {
-            throw new IllegalArgumentException("Unexpected palette resize, bits = " + p_431054_ + ", added value = " + p_427407_);
+        return (bits, lastAddedValue) -> {
+            throw new IllegalArgumentException("Unexpected palette resize, bits = " + bits + ", added value = " + lastAddedValue);
         };
     }
 }

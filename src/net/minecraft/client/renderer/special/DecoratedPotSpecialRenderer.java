@@ -7,46 +7,41 @@ import java.util.function.Consumer;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.DecoratedPotRenderer;
 import net.minecraft.core.component.DataComponents;
-import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.PotDecorations;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDecorations> {
     private final DecoratedPotRenderer decoratedPotRenderer;
 
-    public DecoratedPotSpecialRenderer(DecoratedPotRenderer p_377806_) {
-        this.decoratedPotRenderer = p_377806_;
+    public DecoratedPotSpecialRenderer(final DecoratedPotRenderer decoratedPotRenderer) {
+        this.decoratedPotRenderer = decoratedPotRenderer;
     }
 
-    public @Nullable PotDecorations extractArgument(ItemStack p_375578_) {
-        return p_375578_.get(DataComponents.POT_DECORATIONS);
+    public @Nullable PotDecorations extractArgument(final ItemStack stack) {
+        return stack.get(DataComponents.POT_DECORATIONS);
     }
 
     public void submit(
-        @Nullable PotDecorations p_428984_,
-        ItemDisplayContext p_432000_,
-        PoseStack p_432001_,
-        SubmitNodeCollector p_432002_,
-        int p_432003_,
-        int p_432004_,
-        boolean p_432005_,
-        int p_431867_
+        final @Nullable PotDecorations decorations,
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final int overlayCoords,
+        final boolean hasFoil,
+        final int outlineColor
     ) {
-        this.decoratedPotRenderer.submit(p_432001_, p_432002_, p_432003_, p_432004_, Objects.requireNonNullElse(p_428984_, PotDecorations.EMPTY), p_431867_);
+        this.decoratedPotRenderer
+            .submit(poseStack, submitNodeCollector, lightCoords, overlayCoords, Objects.requireNonNullElse(decorations, PotDecorations.EMPTY), outlineColor);
     }
 
     @Override
-    public void getExtents(Consumer<Vector3fc> p_455215_) {
-        this.decoratedPotRenderer.getExtents(p_455215_);
+    public void getExtents(final Consumer<Vector3fc> output) {
+        this.decoratedPotRenderer.getExtents(output);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Unbaked() implements SpecialModelRenderer.Unbaked {
+        public record Unbaked() implements SpecialModelRenderer.Unbaked<PotDecorations> {
         public static final MapCodec<DecoratedPotSpecialRenderer.Unbaked> MAP_CODEC = MapCodec.unit(new DecoratedPotSpecialRenderer.Unbaked());
 
         @Override
@@ -54,9 +49,8 @@ public class DecoratedPotSpecialRenderer implements SpecialModelRenderer<PotDeco
             return MAP_CODEC;
         }
 
-        @Override
-        public SpecialModelRenderer<?> bake(SpecialModelRenderer.BakingContext p_428106_) {
-            return new DecoratedPotSpecialRenderer(new DecoratedPotRenderer(p_428106_));
+        public DecoratedPotSpecialRenderer bake(final SpecialModelRenderer.BakingContext context) {
+            return new DecoratedPotSpecialRenderer(new DecoratedPotRenderer(context));
         }
     }
 }

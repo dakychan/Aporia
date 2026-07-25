@@ -16,34 +16,34 @@ public class DirectoryLock implements AutoCloseable {
     private final FileLock lock;
     private static final ByteBuffer DUMMY;
 
-    public static DirectoryLock create(Path p_13641_) throws IOException {
-        Path path = p_13641_.resolve("session.lock");
-        FileUtil.createDirectoriesSafe(p_13641_);
-        FileChannel filechannel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+    public static DirectoryLock create(final Path dir) throws IOException {
+        Path lockPath = dir.resolve("session.lock");
+        FileUtil.createDirectoriesSafe(dir);
+        FileChannel lockFile = FileChannel.open(lockPath, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
 
         try {
-            filechannel.write(DUMMY.duplicate());
-            filechannel.force(true);
-            FileLock filelock = filechannel.tryLock();
-            if (filelock == null) {
-                throw DirectoryLock.LockException.alreadyLocked(path);
+            lockFile.write(DUMMY.duplicate());
+            lockFile.force(true);
+            FileLock lock = lockFile.tryLock();
+            if (lock == null) {
+                throw DirectoryLock.LockException.alreadyLocked(lockPath);
             } else {
-                return new DirectoryLock(filechannel, filelock);
+                return new DirectoryLock(lockFile, lock);
             }
-        } catch (IOException ioexception1) {
+        } catch (IOException e) {
             try {
-                filechannel.close();
-            } catch (IOException ioexception) {
-                ioexception1.addSuppressed(ioexception);
+                lockFile.close();
+            } catch (IOException nested) {
+                e.addSuppressed(nested);
             }
 
-            throw ioexception1;
+            throw e;
         }
     }
 
-    private DirectoryLock(FileChannel p_13637_, FileLock p_13638_) {
-        this.lockFile = p_13637_;
-        this.lock = p_13638_;
+    private DirectoryLock(final FileChannel lockFile, final FileLock lock) {
+        this.lockFile = lockFile;
+        this.lock = lock;
     }
 
     @Override
@@ -63,40 +63,35 @@ public class DirectoryLock implements AutoCloseable {
         return this.lock.isValid();
     }
 
-    public static boolean isLocked(Path p_13643_) throws IOException {
-        Path path = p_13643_.resolve("session.lock");
+    public static boolean isLocked(final Path dir) throws IOException {
+        Path lockPath = dir.resolve("session.lock");
 
-        try {
-            boolean flag;
-            try (
-                FileChannel filechannel = FileChannel.open(path, StandardOpenOption.WRITE);
-                FileLock filelock = filechannel.tryLock();
-            ) {
-                flag = filelock == null;
-            }
-
-            return flag;
-        } catch (AccessDeniedException accessdeniedexception) {
+        try (
+            FileChannel lockFile = FileChannel.open(lockPath, StandardOpenOption.WRITE);
+            FileLock maybeLock = lockFile.tryLock();
+        ) {
+            return maybeLock == null;
+        } catch (AccessDeniedException e) {
             return true;
-        } catch (NoSuchFileException nosuchfileexception) {
+        } catch (NoSuchFileException e) {
             return false;
         }
     }
 
     static {
-        byte[] abyte = "\u2603".getBytes(StandardCharsets.UTF_8);
-        DUMMY = ByteBuffer.allocateDirect(abyte.length);
-        DUMMY.put(abyte);
+        byte[] chars = "\u2603".getBytes(StandardCharsets.UTF_8);
+        DUMMY = ByteBuffer.allocateDirect(chars.length);
+        DUMMY.put(chars);
         DUMMY.flip();
     }
 
     public static class LockException extends IOException {
-        private LockException(Path p_13646_, String p_13647_) {
-            super(p_13646_.toAbsolutePath() + ": " + p_13647_);
+        private LockException(final Path path, final String message) {
+            super(path.toAbsolutePath() + ": " + message);
         }
 
-        public static DirectoryLock.LockException alreadyLocked(Path p_13649_) {
-            return new DirectoryLock.LockException(p_13649_, "already locked (possibly by other Minecraft instance?)");
+        public static DirectoryLock.LockException alreadyLocked(final Path path) {
+            return new DirectoryLock.LockException(path, "already locked (possibly by other Minecraft instance?)");
         }
     }
 }

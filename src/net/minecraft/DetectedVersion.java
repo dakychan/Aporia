@@ -19,54 +19,42 @@ public class DetectedVersion {
     private static final Logger LOGGER = LogUtils.getLogger();
     public static final WorldVersion BUILT_IN = createBuiltIn(UUID.randomUUID().toString().replaceAll("-", ""), "Development Version");
 
-    public static WorldVersion createBuiltIn(String p_428778_, String p_429892_) {
-        return createBuiltIn(p_428778_, p_429892_, true);
+    public static WorldVersion createBuiltIn(final String id, final String name) {
+        return createBuiltIn(id, name, true);
     }
 
-    public static WorldVersion createBuiltIn(String p_425498_, String p_428529_, boolean p_429114_) {
+    public static WorldVersion createBuiltIn(final String id, final String name, final boolean stable) {
         return new WorldVersion.Simple(
-            p_425498_,
-            p_428529_,
-            new DataVersion(4671, "main"),
-            SharedConstants.getProtocolVersion(),
-            PackFormat.of(75, 0),
-            PackFormat.of(94, 1),
-            new Date(),
-            p_429114_
+            id, name, new DataVersion(4903, "main"), SharedConstants.getProtocolVersion(), PackFormat.of(88, 0), PackFormat.of(107, 1), new Date(), stable
         );
     }
 
-    private static WorldVersion createFromJson(JsonObject p_405818_) {
-        JsonObject jsonobject = GsonHelper.getAsJsonObject(p_405818_, "pack_version");
+    private static WorldVersion createFromJson(final JsonObject root) {
+        JsonObject packVersion = GsonHelper.getAsJsonObject(root, "pack_version");
         return new WorldVersion.Simple(
-            GsonHelper.getAsString(p_405818_, "id"),
-            GsonHelper.getAsString(p_405818_, "name"),
-            new DataVersion(GsonHelper.getAsInt(p_405818_, "world_version"), GsonHelper.getAsString(p_405818_, "series_id", "main")),
-            GsonHelper.getAsInt(p_405818_, "protocol_version"),
-            PackFormat.of(GsonHelper.getAsInt(jsonobject, "resource_major"), GsonHelper.getAsInt(jsonobject, "resource_minor")),
-            PackFormat.of(GsonHelper.getAsInt(jsonobject, "data_major"), GsonHelper.getAsInt(jsonobject, "data_minor")),
-            Date.from(ZonedDateTime.parse(GsonHelper.getAsString(p_405818_, "build_time")).toInstant()),
-            GsonHelper.getAsBoolean(p_405818_, "stable")
+            GsonHelper.getAsString(root, "id"),
+            GsonHelper.getAsString(root, "name"),
+            new DataVersion(GsonHelper.getAsInt(root, "world_version"), GsonHelper.getAsString(root, "series_id", "main")),
+            GsonHelper.getAsInt(root, "protocol_version"),
+            PackFormat.of(GsonHelper.getAsInt(packVersion, "resource_major"), GsonHelper.getAsInt(packVersion, "resource_minor")),
+            PackFormat.of(GsonHelper.getAsInt(packVersion, "data_major"), GsonHelper.getAsInt(packVersion, "data_minor")),
+            Date.from(ZonedDateTime.parse(GsonHelper.getAsString(root, "build_time")).toInstant()),
+            GsonHelper.getAsBoolean(root, "stable")
         );
     }
 
     public static WorldVersion tryDetectVersion() {
-        try {
-            WorldVersion worldversion;
-            try (InputStream inputstream = DetectedVersion.class.getResourceAsStream("/version.json")) {
-                if (inputstream == null) {
-                    LOGGER.warn("Missing version information!");
-                    return BUILT_IN;
-                }
-
-                try (InputStreamReader inputstreamreader = new InputStreamReader(inputstream, StandardCharsets.UTF_8)) {
-                    worldversion = createFromJson(GsonHelper.parse(inputstreamreader));
-                }
+        try (InputStream stream = DetectedVersion.class.getResourceAsStream("/version.json")) {
+            if (stream == null) {
+                LOGGER.warn("Missing version information!");
+                return BUILT_IN;
             }
 
-            return worldversion;
-        } catch (JsonParseException | IOException ioexception) {
-            throw new IllegalStateException("Game version information is corrupt", ioexception);
+            try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                return createFromJson(GsonHelper.parse(reader));
+            }
+        } catch (IOException | JsonParseException e) {
+            throw new IllegalStateException("Game version information is corrupt", e);
         }
     }
 }

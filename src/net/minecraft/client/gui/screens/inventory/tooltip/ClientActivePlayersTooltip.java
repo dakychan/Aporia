@@ -2,57 +2,53 @@ package net.minecraft.client.gui.screens.inventory.tooltip;
 
 import java.util.List;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ClientActivePlayersTooltip implements ClientTooltipComponent {
     private static final int SKIN_SIZE = 10;
     private static final int PADDING = 2;
     private final List<PlayerSkinRenderCache.RenderInfo> activePlayers;
 
-    public ClientActivePlayersTooltip(ClientActivePlayersTooltip.ActivePlayersTooltip p_344514_) {
-        this.activePlayers = p_344514_.profiles();
+    public ClientActivePlayersTooltip(final ClientActivePlayersTooltip.ActivePlayersTooltip activePlayersTooltip) {
+        this.activePlayers = activePlayersTooltip.profiles();
     }
 
     @Override
-    public int getHeight(Font p_367830_) {
+    public int getHeight(final Font font) {
         return this.activePlayers.size() * 12 + 2;
     }
 
-    private static String getName(PlayerSkinRenderCache.RenderInfo p_429323_) {
-        return p_429323_.gameProfile().name();
+    private static String getName(final PlayerSkinRenderCache.RenderInfo activePlayer) {
+        return activePlayer.gameProfile().name();
     }
 
     @Override
-    public int getWidth(Font p_345139_) {
-        int i = 0;
+    public int getWidth(final Font font) {
+        int widest = 0;
 
-        for (PlayerSkinRenderCache.RenderInfo playerskinrendercache$renderinfo : this.activePlayers) {
-            int j = p_345139_.width(getName(playerskinrendercache$renderinfo));
-            if (j > i) {
-                i = j;
+        for (PlayerSkinRenderCache.RenderInfo activePlayer : this.activePlayers) {
+            int width = font.width(getName(activePlayer));
+            if (width > widest) {
+                widest = width;
             }
         }
 
-        return i + 10 + 6;
+        return widest + 10 + 6;
     }
 
     @Override
-    public void renderImage(Font p_342274_, int p_345290_, int p_342557_, int p_361924_, int p_360967_, GuiGraphics p_345309_) {
+    public void extractImage(final Font font, final int x, final int y, final int w, final int h, final GuiGraphicsExtractor graphics) {
         for (int i = 0; i < this.activePlayers.size(); i++) {
-            PlayerSkinRenderCache.RenderInfo playerskinrendercache$renderinfo = this.activePlayers.get(i);
-            int j = p_342557_ + 2 + i * 12;
-            PlayerFaceRenderer.draw(p_345309_, playerskinrendercache$renderinfo.playerSkin(), p_345290_ + 2, j, 10);
-            p_345309_.drawString(p_342274_, getName(playerskinrendercache$renderinfo), p_345290_ + 10 + 4, j + 2, -1);
+            PlayerSkinRenderCache.RenderInfo activePlayer = this.activePlayers.get(i);
+            int y1 = y + 2 + i * 12;
+            PlayerFaceExtractor.extractRenderState(graphics, activePlayer.playerSkin(), x + 2, y1, 10);
+            graphics.text(font, getName(activePlayer), x + 10 + 4, y1 + 2, -1);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record ActivePlayersTooltip(List<PlayerSkinRenderCache.RenderInfo> profiles) implements TooltipComponent {
+        public record ActivePlayersTooltip(List<PlayerSkinRenderCache.RenderInfo> profiles) implements TooltipComponent {
     }
 }

@@ -14,34 +14,34 @@ public class Slot {
     public final int x;
     public final int y;
 
-    public Slot(Container p_40223_, int p_40224_, int p_40225_, int p_40226_) {
-        this.container = p_40223_;
-        this.slot = p_40224_;
-        this.x = p_40225_;
-        this.y = p_40226_;
+    public Slot(final Container container, final int slot, final int x, final int y) {
+        this.container = container;
+        this.slot = slot;
+        this.x = x;
+        this.y = y;
     }
 
-    public void onQuickCraft(ItemStack p_40235_, ItemStack p_40236_) {
-        int i = p_40236_.getCount() - p_40235_.getCount();
-        if (i > 0) {
-            this.onQuickCraft(p_40236_, i);
+    public void onQuickCraft(final ItemStack picked, final ItemStack original) {
+        int count = original.getCount() - picked.getCount();
+        if (count > 0) {
+            this.onQuickCraft(original, count);
         }
     }
 
-    protected void onQuickCraft(ItemStack p_40232_, int p_40233_) {
+    protected void onQuickCraft(final ItemStack picked, final int count) {
     }
 
-    protected void onSwapCraft(int p_40237_) {
+    protected void onSwapCraft(final int count) {
     }
 
-    protected void checkTakeAchievements(ItemStack p_40239_) {
+    protected void checkTakeAchievements(final ItemStack carried) {
     }
 
-    public void onTake(Player p_150645_, ItemStack p_150646_) {
+    public void onTake(final Player player, final ItemStack carried) {
         this.setChanged();
     }
 
-    public boolean mayPlace(ItemStack p_40231_) {
+    public boolean mayPlace(final ItemStack itemStack) {
         return true;
     }
 
@@ -53,16 +53,16 @@ public class Slot {
         return !this.getItem().isEmpty();
     }
 
-    public void setByPlayer(ItemStack p_270152_) {
-        this.setByPlayer(p_270152_, this.getItem());
+    public void setByPlayer(final ItemStack itemStack) {
+        this.setByPlayer(itemStack, this.getItem());
     }
 
-    public void setByPlayer(ItemStack p_299954_, ItemStack p_301385_) {
-        this.set(p_299954_);
+    public void setByPlayer(final ItemStack itemStack, final ItemStack previous) {
+        this.set(itemStack);
     }
 
-    public void set(ItemStack p_40240_) {
-        this.container.setItem(this.slot, p_40240_);
+    public void set(final ItemStack itemStack) {
+        this.container.setItem(this.slot, itemStack);
         this.setChanged();
     }
 
@@ -74,19 +74,19 @@ public class Slot {
         return this.container.getMaxStackSize();
     }
 
-    public int getMaxStackSize(ItemStack p_40238_) {
-        return Math.min(this.getMaxStackSize(), p_40238_.getMaxStackSize());
+    public int getMaxStackSize(final ItemStack itemStack) {
+        return Math.min(this.getMaxStackSize(), itemStack.getMaxStackSize());
     }
 
     public @Nullable Identifier getNoItemIcon() {
         return null;
     }
 
-    public ItemStack remove(int p_40227_) {
-        return this.container.removeItem(this.slot, p_40227_);
+    public ItemStack remove(final int amount) {
+        return this.container.removeItem(this.slot, amount);
     }
 
-    public boolean mayPickup(Player p_40228_) {
+    public boolean mayPickup(final Player player) {
         return true;
     }
 
@@ -94,60 +94,67 @@ public class Slot {
         return true;
     }
 
-    public Optional<ItemStack> tryRemove(int p_150642_, int p_150643_, Player p_150644_) {
-        if (!this.mayPickup(p_150644_)) {
+    public Optional<ItemStack> tryRemove(int amount, final int maxAmount, final Player player) {
+        if (!this.mayPickup(player)) {
             return Optional.empty();
-        } else if (!this.allowModification(p_150644_) && p_150643_ < this.getItem().getCount()) {
-            return Optional.empty();
-        } else {
-            p_150642_ = Math.min(p_150642_, p_150643_);
-            ItemStack itemstack = this.remove(p_150642_);
-            if (itemstack.isEmpty()) {
-                return Optional.empty();
-            } else {
-                if (this.getItem().isEmpty()) {
-                    this.setByPlayer(ItemStack.EMPTY, itemstack);
-                }
+        }
 
-                return Optional.of(itemstack);
+        if (!this.allowModification(player) && maxAmount < this.getItem().getCount()) {
+            return Optional.empty();
+        }
+
+        amount = Math.min(amount, maxAmount);
+        ItemStack result = this.remove(amount);
+        if (result.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (this.getItem().isEmpty()) {
+            this.setByPlayer(ItemStack.EMPTY, result);
+        }
+
+        return Optional.of(result);
+    }
+
+    public ItemStack safeTake(final int amount, final int maxAmount, final Player player) {
+        Optional<ItemStack> result = this.tryRemove(amount, maxAmount, player);
+        result.ifPresent(item -> this.onTake(player, item));
+        return result.orElse(ItemStack.EMPTY);
+    }
+
+    public ItemStack safeClone(final Player player) {
+        ItemStack item = this.getItem();
+        return item.copyWithCount(item.getMaxStackSize());
+    }
+
+    public ItemStack safeInsert(final ItemStack stack) {
+        return this.safeInsert(stack, stack.getCount());
+    }
+
+    public ItemStack safeInsert(final ItemStack inputStack, final int inputAmount) {
+        if (!inputStack.isEmpty() && this.mayPlace(inputStack)) {
+            ItemStack slotStack = this.getItem();
+            int transferableItemCount = Math.min(Math.min(inputAmount, inputStack.getCount()), this.getMaxStackSize(inputStack) - slotStack.getCount());
+            if (transferableItemCount <= 0) {
+                return inputStack;
             }
+
+            if (slotStack.isEmpty()) {
+                this.setByPlayer(inputStack.split(transferableItemCount));
+            } else if (ItemStack.isSameItemSameComponents(slotStack, inputStack)) {
+                inputStack.shrink(transferableItemCount);
+                slotStack.grow(transferableItemCount);
+                this.setByPlayer(slotStack);
+            }
+
+            return inputStack;
+        } else {
+            return inputStack;
         }
     }
 
-    public ItemStack safeTake(int p_150648_, int p_150649_, Player p_150650_) {
-        Optional<ItemStack> optional = this.tryRemove(p_150648_, p_150649_, p_150650_);
-        optional.ifPresent(p_150655_ -> this.onTake(p_150650_, p_150655_));
-        return optional.orElse(ItemStack.EMPTY);
-    }
-
-    public ItemStack safeInsert(ItemStack p_150660_) {
-        return this.safeInsert(p_150660_, p_150660_.getCount());
-    }
-
-    public ItemStack safeInsert(ItemStack p_150657_, int p_150658_) {
-        if (!p_150657_.isEmpty() && this.mayPlace(p_150657_)) {
-            ItemStack itemstack = this.getItem();
-            int i = Math.min(Math.min(p_150658_, p_150657_.getCount()), this.getMaxStackSize(p_150657_) - itemstack.getCount());
-            if (i <= 0) {
-                return p_150657_;
-            } else {
-                if (itemstack.isEmpty()) {
-                    this.setByPlayer(p_150657_.split(i));
-                } else if (ItemStack.isSameItemSameComponents(itemstack, p_150657_)) {
-                    p_150657_.shrink(i);
-                    itemstack.grow(i);
-                    this.setByPlayer(itemstack);
-                }
-
-                return p_150657_;
-            }
-        } else {
-            return p_150657_;
-        }
-    }
-
-    public boolean allowModification(Player p_150652_) {
-        return this.mayPickup(p_150652_) && this.mayPlace(this.getItem());
+    public boolean allowModification(final Player player) {
+        return this.mayPickup(player) && this.mayPlace(this.getItem());
     }
 
     public int getContainerSlot() {

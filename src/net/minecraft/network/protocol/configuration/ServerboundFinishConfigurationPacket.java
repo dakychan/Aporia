@@ -17,8 +17,8 @@ public class ServerboundFinishConfigurationPacket implements Packet<ServerConfig
         return ConfigurationPacketTypes.SERVERBOUND_FINISH_CONFIGURATION;
     }
 
-    public void handle(ServerConfigurationPacketListener p_299852_) {
-        p_299852_.handleConfigurationFinished(this);
+    public void handle(final ServerConfigurationPacketListener listener) {
+        listener.handleConfigurationFinished(this);
     }
 
     @Override

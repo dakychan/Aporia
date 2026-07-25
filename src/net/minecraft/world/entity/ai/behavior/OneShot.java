@@ -13,8 +13,8 @@ public abstract class OneShot<E extends LivingEntity> implements BehaviorControl
     }
 
     @Override
-    public final boolean tryStart(ServerLevel p_260083_, E p_259643_, long p_259226_) {
-        if (this.trigger(p_260083_, p_259643_, p_259226_)) {
+    public final boolean tryStart(final ServerLevel level, final E body, final long timestamp) {
+        if (this.trigger(level, body, timestamp)) {
             this.status = Behavior.Status.RUNNING;
             return true;
         } else {
@@ -23,12 +23,12 @@ public abstract class OneShot<E extends LivingEntity> implements BehaviorControl
     }
 
     @Override
-    public final void tickOrStop(ServerLevel p_259112_, E p_259594_, long p_259046_) {
-        this.doStop(p_259112_, p_259594_, p_259046_);
+    public final void tickOrStop(final ServerLevel level, final E body, final long timestamp) {
+        this.doStop(level, body, timestamp);
     }
 
     @Override
-    public final void doStop(ServerLevel p_260215_, E p_259970_, long p_260273_) {
+    public final void doStop(final ServerLevel level, final E body, final long timestamp) {
         this.status = Behavior.Status.STOPPED;
     }
 

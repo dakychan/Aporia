@@ -2,62 +2,29 @@ package net.minecraft.world.entity.ai.memory;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
-import net.minecraft.util.VisibleForDebug;
 
-public class ExpirableValue<T> {
-    private final T value;
-    private long timeToLive;
-
-    public ExpirableValue(T p_26299_, long p_26300_) {
-        this.value = p_26299_;
-        this.timeToLive = p_26300_;
+public record ExpirableValue<T>(T value, Optional<Long> timeToLive) {
+    public static <T> ExpirableValue<T> of(final T value) {
+        return new ExpirableValue<>(value, Optional.empty());
     }
 
-    public void tick() {
-        if (this.canExpire()) {
-            this.timeToLive--;
-        }
-    }
-
-    public static <T> ExpirableValue<T> of(T p_26310_) {
-        return new ExpirableValue<>(p_26310_, Long.MAX_VALUE);
-    }
-
-    public static <T> ExpirableValue<T> of(T p_26312_, long p_26313_) {
-        return new ExpirableValue<>(p_26312_, p_26313_);
-    }
-
-    public long getTimeToLive() {
-        return this.timeToLive;
-    }
-
-    public T getValue() {
-        return this.value;
-    }
-
-    public boolean hasExpired() {
-        return this.timeToLive <= 0L;
+    public static <T> ExpirableValue<T> of(final T value, final long ticksUntilExpiry) {
+        return new ExpirableValue<>(value, Optional.of(ticksUntilExpiry));
     }
 
     @Override
     public String toString() {
-        return this.value + (this.canExpire() ? " (ttl: " + this.timeToLive + ")" : "");
+        return this.value + (this.timeToLive.isPresent() ? " (ttl: " + this.timeToLive.get() + ")" : "");
     }
 
-    @VisibleForDebug
-    public boolean canExpire() {
-        return this.timeToLive != Long.MAX_VALUE;
-    }
-
-    public static <T> Codec<ExpirableValue<T>> codec(Codec<T> p_26305_) {
+    public static <T> Codec<ExpirableValue<T>> codec(final Codec<T> valueCodec) {
         return RecordCodecBuilder.create(
-            p_326931_ -> p_326931_.group(
-                    p_26305_.fieldOf("value").forGetter(p_148193_ -> p_148193_.value),
-                    Codec.LONG.lenientOptionalFieldOf("ttl").forGetter(p_148187_ -> p_148187_.canExpire() ? Optional.of(p_148187_.timeToLive) : Optional.empty())
+            i -> i.group(
+                    valueCodec.fieldOf("value").forGetter(ExpirableValue::value),
+                    Codec.LONG.lenientOptionalFieldOf("ttl").forGetter(ExpirableValue::timeToLive)
                 )
-                .apply(p_326931_, (p_148189_, p_148190_) -> new ExpirableValue<>(p_148189_, p_148190_.orElse(Long.MAX_VALUE)))
+                .apply(i, ExpirableValue::new)
         );
     }
 }

@@ -9,29 +9,29 @@ import net.minecraft.world.level.Level;
 public interface ContainerLevelAccess {
     ContainerLevelAccess NULL = new ContainerLevelAccess() {
         @Override
-        public <T> Optional<T> evaluate(BiFunction<Level, BlockPos, T> p_39304_) {
+        public <T> Optional<T> evaluate(final BiFunction<Level, BlockPos, T> action) {
             return Optional.empty();
         }
     };
 
-    static ContainerLevelAccess create(final Level p_39290_, final BlockPos p_39291_) {
+    static ContainerLevelAccess create(final Level level, final BlockPos pos) {
         return new ContainerLevelAccess() {
             @Override
-            public <T> Optional<T> evaluate(BiFunction<Level, BlockPos, T> p_39311_) {
-                return Optional.of(p_39311_.apply(p_39290_, p_39291_));
+            public <T> Optional<T> evaluate(final BiFunction<Level, BlockPos, T> action) {
+                return Optional.of(action.apply(level, pos));
             }
         };
     }
 
-    <T> Optional<T> evaluate(BiFunction<Level, BlockPos, T> p_39298_);
+    <T> Optional<T> evaluate(BiFunction<Level, BlockPos, T> action);
 
-    default <T> T evaluate(BiFunction<Level, BlockPos, T> p_39300_, T p_39301_) {
-        return this.evaluate(p_39300_).orElse(p_39301_);
+    default <T> T evaluate(final BiFunction<Level, BlockPos, T> action, final T defaultValue) {
+        return this.evaluate(action).orElse(defaultValue);
     }
 
-    default void execute(BiConsumer<Level, BlockPos> p_39293_) {
-        this.evaluate((p_39296_, p_39297_) -> {
-            p_39293_.accept(p_39296_, p_39297_);
+    default void execute(final BiConsumer<Level, BlockPos> action) {
+        this.evaluate((level, pos) -> {
+            action.accept(level, pos);
             return Optional.empty();
         });
     }

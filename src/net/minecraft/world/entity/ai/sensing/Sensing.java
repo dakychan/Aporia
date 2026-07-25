@@ -12,8 +12,8 @@ public class Sensing {
     private final IntSet seen = new IntOpenHashSet();
     private final IntSet unseen = new IntOpenHashSet();
 
-    public Sensing(Mob p_26788_) {
-        this.mob = p_26788_;
+    public Sensing(final Mob mob) {
+        this.mob = mob;
     }
 
     public void tick() {
@@ -21,24 +21,26 @@ public class Sensing {
         this.unseen.clear();
     }
 
-    public boolean hasLineOfSight(Entity p_148307_) {
-        int i = p_148307_.getId();
-        if (this.seen.contains(i)) {
+    public boolean hasLineOfSight(final Entity target) {
+        int targetId = target.getId();
+        if (this.seen.contains(targetId)) {
             return true;
-        } else if (this.unseen.contains(i)) {
-            return false;
-        } else {
-            ProfilerFiller profilerfiller = Profiler.get();
-            profilerfiller.push("hasLineOfSight");
-            boolean flag = this.mob.hasLineOfSight(p_148307_);
-            profilerfiller.pop();
-            if (flag) {
-                this.seen.add(i);
-            } else {
-                this.unseen.add(i);
-            }
-
-            return flag;
         }
+
+        if (this.unseen.contains(targetId)) {
+            return false;
+        }
+
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("hasLineOfSight");
+        boolean hasLineOfSight = this.mob.hasLineOfSight(target);
+        profiler.pop();
+        if (hasLineOfSight) {
+            this.seen.add(targetId);
+        } else {
+            this.unseen.add(targetId);
+        }
+
+        return hasLineOfSight;
     }
 }

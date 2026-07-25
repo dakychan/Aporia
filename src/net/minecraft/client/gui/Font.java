@@ -4,7 +4,6 @@ import com.ibm.icu.text.ArabicShaping;
 import com.ibm.icu.text.ArabicShapingException;
 import com.ibm.icu.text.Bidi;
 import com.mojang.blaze3d.font.GlyphInfo;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.StringSplitter;
@@ -13,9 +12,7 @@ import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.client.gui.font.glyphs.EffectGlyph;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.locale.Language;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.network.chat.FormattedText;
 import net.minecraft.network.chat.Style;
@@ -26,12 +23,8 @@ import net.minecraft.util.FormattedCharSink;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StringDecomposer;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.joml.Matrix4f;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class Font {
     private static final float EFFECT_DEPTH = 0.01F;
     private static final float OVER_EFFECT_DEPTH = 0.01F;
@@ -39,182 +32,124 @@ public class Font {
     public static final float SHADOW_DEPTH = 0.03F;
     public final int lineHeight = 9;
     private final RandomSource random = RandomSource.create();
-    final Font.Provider provider;
+    private final Font.Provider provider;
     private final StringSplitter splitter;
 
-    public Font(Font.Provider p_430972_) {
-        this.provider = p_430972_;
-        this.splitter = new StringSplitter(
-            (p_420690_, p_420691_) -> this.getGlyphSource(p_420691_.getFont()).getGlyph(p_420690_).info().getAdvance(p_420691_.isBold())
-        );
+    public Font(final Font.Provider provider) {
+        this.provider = provider;
+        this.splitter = new StringSplitter((codepoint, style) -> this.getGlyphSource(style.getFont()).getGlyph(codepoint).info().getAdvance(style.isBold()));
     }
 
-    private GlyphSource getGlyphSource(FontDescription p_431437_) {
-        return this.provider.glyphs(p_431437_);
+    private GlyphSource getGlyphSource(final FontDescription fontLocation) {
+        return this.provider.glyphs(fontLocation);
     }
 
-    public String bidirectionalShaping(String p_92802_) {
+    public String bidirectionalShaping(final String text) {
         try {
-            Bidi bidi = new Bidi(new ArabicShaping(8).shape(p_92802_), 127);
+            Bidi bidi = new Bidi(new ArabicShaping(8).shape(text), 127);
             bidi.setReorderingMode(0);
             return bidi.writeReordered(2);
-        } catch (ArabicShapingException arabicshapingexception) {
-            return p_92802_;
+        } catch (ArabicShapingException var3) {
+            return text;
         }
     }
 
-    public void drawInBatch(
-        String p_272751_,
-        float p_272661_,
-        float p_273129_,
-        int p_273272_,
-        boolean p_273209_,
-        Matrix4f p_272940_,
-        MultiBufferSource p_273017_,
-        Font.DisplayMode p_272608_,
-        int p_273365_,
-        int p_272755_
-    ) {
-        Font.PreparedText font$preparedtext = this.prepareText(p_272751_, p_272661_, p_273129_, p_273272_, p_273209_, p_273365_);
-        font$preparedtext.visit(Font.GlyphVisitor.forMultiBufferSource(p_273017_, p_272940_, p_272608_, p_272755_));
-    }
+    public Font.PreparedText prepare8xTextOutline(final FormattedCharSequence str, final float x, final float y, final int outlineColor) {
+        Font.PreparedTextBuilder outlineOutput = new Font.PreparedTextBuilder(0.0F, 0.0F, outlineColor, false, false);
 
-    public void drawInBatch(
-        Component p_409939_,
-        float p_273006_,
-        float p_273254_,
-        int p_273375_,
-        boolean p_273674_,
-        Matrix4f p_273525_,
-        MultiBufferSource p_272624_,
-        Font.DisplayMode p_273418_,
-        int p_273330_,
-        int p_272981_
-    ) {
-        Font.PreparedText font$preparedtext = this.prepareText(p_409939_.getVisualOrderText(), p_273006_, p_273254_, p_273375_, p_273674_, false, p_273330_);
-        font$preparedtext.visit(Font.GlyphVisitor.forMultiBufferSource(p_272624_, p_273525_, p_273418_, p_272981_));
-    }
-
-    public void drawInBatch(
-        FormattedCharSequence p_407439_,
-        float p_272811_,
-        float p_272610_,
-        int p_273422_,
-        boolean p_273016_,
-        Matrix4f p_273443_,
-        MultiBufferSource p_273387_,
-        Font.DisplayMode p_273551_,
-        int p_272706_,
-        int p_273114_
-    ) {
-        Font.PreparedText font$preparedtext = this.prepareText(p_407439_, p_272811_, p_272610_, p_273422_, p_273016_, false, p_272706_);
-        font$preparedtext.visit(Font.GlyphVisitor.forMultiBufferSource(p_273387_, p_273443_, p_273551_, p_273114_));
-    }
-
-    public void drawInBatch8xOutline(
-        FormattedCharSequence p_168646_,
-        float p_168647_,
-        float p_168648_,
-        int p_168649_,
-        int p_168650_,
-        Matrix4f p_254170_,
-        MultiBufferSource p_168652_,
-        int p_168653_
-    ) {
-        Font.PreparedTextBuilder font$preparedtextbuilder = new Font.PreparedTextBuilder(0.0F, 0.0F, p_168650_, false, false);
-
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                if (i != 0 || j != 0) {
-                    float[] afloat = new float[]{p_168647_};
-                    int k = i;
-                    int l = j;
-                    p_168646_.accept((p_420698_, p_420699_, p_420700_) -> {
-                        boolean flag = p_420699_.isBold();
-                        BakedGlyph bakedglyph = this.getGlyph(p_420700_, p_420699_);
-                        font$preparedtextbuilder.x = afloat[0] + k * bakedglyph.info().getShadowOffset();
-                        font$preparedtextbuilder.y = p_168648_ + l * bakedglyph.info().getShadowOffset();
-                        afloat[0] += bakedglyph.info().getAdvance(flag);
-                        return font$preparedtextbuilder.accept(p_420698_, p_420699_.withColor(p_168650_), bakedglyph);
+        for (int xo = -1; xo <= 1; xo++) {
+            for (int yo = -1; yo <= 1; yo++) {
+                if (xo != 0 || yo != 0) {
+                    float[] startX = new float[]{x};
+                    int finalXo = xo;
+                    int finalYo = yo;
+                    str.accept((position, style, codepoint) -> {
+                        boolean bold = style.isBold();
+                        BakedGlyph glyph = this.getGlyph(codepoint, style);
+                        outlineOutput.x = startX[0] + finalXo * glyph.info().getShadowOffset();
+                        outlineOutput.y = y + finalYo * glyph.info().getShadowOffset();
+                        startX[0] += glyph.info().getAdvance(bold);
+                        return outlineOutput.accept(position, style.withColor(outlineColor), glyph);
                     });
                 }
             }
         }
 
-        Font.GlyphVisitor font$glyphvisitor = Font.GlyphVisitor.forMultiBufferSource(p_168652_, p_254170_, Font.DisplayMode.NORMAL, p_168653_);
-
-        for (TextRenderable.Styled textrenderable$styled : font$preparedtextbuilder.glyphs) {
-            font$glyphvisitor.acceptGlyph(textrenderable$styled);
-        }
-
-        Font.PreparedTextBuilder font$preparedtextbuilder1 = new Font.PreparedTextBuilder(p_168647_, p_168648_, p_168649_, false, true);
-        p_168646_.accept(font$preparedtextbuilder1);
-        font$preparedtextbuilder1.visit(Font.GlyphVisitor.forMultiBufferSource(p_168652_, p_254170_, Font.DisplayMode.POLYGON_OFFSET, p_168653_));
+        outlineOutput.discardEffects();
+        return outlineOutput;
     }
 
-    BakedGlyph getGlyph(int p_427433_, Style p_426471_) {
-        GlyphSource glyphsource = this.getGlyphSource(p_426471_.getFont());
-        BakedGlyph bakedglyph = glyphsource.getGlyph(p_427433_);
-        if (p_426471_.isObfuscated() && p_427433_ != 32) {
-            int i = Mth.ceil(bakedglyph.info().getAdvance(false));
-            bakedglyph = glyphsource.getRandomGlyph(this.random, i);
+    private BakedGlyph getGlyph(final int codepoint, final Style style) {
+        GlyphSource glyphSource = this.getGlyphSource(style.getFont());
+        BakedGlyph glyph = glyphSource.getGlyph(codepoint);
+        if (style.isObfuscated() && codepoint != 32) {
+            int targetWidth = Mth.ceil(glyph.info().getAdvance(false));
+            glyph = glyphSource.getRandomGlyph(this.random, targetWidth);
         }
 
-        return bakedglyph;
-    }
-
-    public Font.PreparedText prepareText(String p_409763_, float p_405856_, float p_406377_, int p_406829_, boolean p_408402_, int p_406561_) {
-        if (this.isBidirectional()) {
-            p_409763_ = this.bidirectionalShaping(p_409763_);
-        }
-
-        Font.PreparedTextBuilder font$preparedtextbuilder = new Font.PreparedTextBuilder(p_405856_, p_406377_, p_406829_, p_406561_, p_408402_, false);
-        StringDecomposer.iterateFormatted(p_409763_, Style.EMPTY, font$preparedtextbuilder);
-        return font$preparedtextbuilder;
+        return glyph;
     }
 
     public Font.PreparedText prepareText(
-        FormattedCharSequence p_406646_, float p_410379_, float p_409318_, int p_410317_, boolean p_406084_, boolean p_454438_, int p_406668_
+        String text, final float x, final float y, final int originalColor, final boolean drawShadow, final int backgroundColor
     ) {
-        Font.PreparedTextBuilder font$preparedtextbuilder = new Font.PreparedTextBuilder(p_410379_, p_409318_, p_410317_, p_406668_, p_406084_, p_454438_);
-        p_406646_.accept(font$preparedtextbuilder);
-        return font$preparedtextbuilder;
+        if (this.isBidirectional()) {
+            text = this.bidirectionalShaping(text);
+        }
+
+        Font.PreparedTextBuilder output = new Font.PreparedTextBuilder(x, y, originalColor, backgroundColor, drawShadow, false);
+        StringDecomposer.iterateFormatted(text, Style.EMPTY, output);
+        return output;
     }
 
-    public int width(String p_92896_) {
-        return Mth.ceil(this.splitter.stringWidth(p_92896_));
+    public Font.PreparedText prepareText(
+        final FormattedCharSequence text,
+        final float x,
+        final float y,
+        final int originalColor,
+        final boolean drawShadow,
+        final boolean includeEmpty,
+        final int backgroundColor
+    ) {
+        Font.PreparedTextBuilder builder = new Font.PreparedTextBuilder(x, y, originalColor, backgroundColor, drawShadow, includeEmpty);
+        text.accept(builder);
+        return builder;
     }
 
-    public int width(FormattedText p_92853_) {
-        return Mth.ceil(this.splitter.stringWidth(p_92853_));
+    public int width(final String str) {
+        return Mth.ceil(this.splitter.stringWidth(str));
     }
 
-    public int width(FormattedCharSequence p_92725_) {
-        return Mth.ceil(this.splitter.stringWidth(p_92725_));
+    public int width(final FormattedText text) {
+        return Mth.ceil(this.splitter.stringWidth(text));
     }
 
-    public String plainSubstrByWidth(String p_92838_, int p_92839_, boolean p_92840_) {
-        return p_92840_ ? this.splitter.plainTailByWidth(p_92838_, p_92839_, Style.EMPTY) : this.splitter.plainHeadByWidth(p_92838_, p_92839_, Style.EMPTY);
+    public int width(final FormattedCharSequence text) {
+        return Mth.ceil(this.splitter.stringWidth(text));
     }
 
-    public String plainSubstrByWidth(String p_92835_, int p_92836_) {
-        return this.splitter.plainHeadByWidth(p_92835_, p_92836_, Style.EMPTY);
+    public String plainSubstrByWidth(final String str, final int width, final boolean reverse) {
+        return reverse ? this.splitter.plainTailByWidth(str, width, Style.EMPTY) : this.splitter.plainHeadByWidth(str, width, Style.EMPTY);
     }
 
-    public FormattedText substrByWidth(FormattedText p_92855_, int p_92856_) {
-        return this.splitter.headByWidth(p_92855_, p_92856_, Style.EMPTY);
+    public String plainSubstrByWidth(final String str, final int width) {
+        return this.splitter.plainHeadByWidth(str, width, Style.EMPTY);
     }
 
-    public int wordWrapHeight(FormattedText p_239134_, int p_239135_) {
-        return 9 * this.splitter.splitLines(p_239134_, p_239135_, Style.EMPTY).size();
+    public FormattedText substrByWidth(final FormattedText text, final int width) {
+        return this.splitter.headByWidth(text, width, Style.EMPTY);
     }
 
-    public List<FormattedCharSequence> split(FormattedText p_92924_, int p_92925_) {
-        return Language.getInstance().getVisualOrder(this.splitter.splitLines(p_92924_, p_92925_, Style.EMPTY));
+    public int wordWrapHeight(final FormattedText input, final int textWidth) {
+        return 9 * this.splitter.splitLines(input, textWidth, Style.EMPTY).size();
     }
 
-    public List<FormattedText> splitIgnoringLanguage(FormattedText p_407108_, int p_408991_) {
-        return this.splitter.splitLines(p_407108_, p_408991_, Style.EMPTY);
+    public List<FormattedCharSequence> split(final FormattedText input, final int maxWidth) {
+        return Language.getInstance().getVisualOrder(this.splitter.splitLines(input, maxWidth, Style.EMPTY));
+    }
+
+    public List<FormattedText> splitIgnoringLanguage(final FormattedText input, final int maxWidth) {
+        return this.splitter.splitLines(input, maxWidth, Style.EMPTY);
     }
 
     public boolean isBidirectional() {
@@ -225,59 +160,41 @@ public class Font {
         return this.splitter;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum DisplayMode {
+        public enum DisplayMode {
         NORMAL,
         SEE_THROUGH,
         POLYGON_OFFSET;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface GlyphVisitor {
-        static Font.GlyphVisitor forMultiBufferSource(final MultiBufferSource p_409617_, final Matrix4f p_408497_, final Font.DisplayMode p_409313_, final int p_408611_) {
-            return new Font.GlyphVisitor() {
-                @Override
-                public void acceptGlyph(TextRenderable.Styled p_460976_) {
-                    this.render(p_460976_);
-                }
-
-                @Override
-                public void acceptEffect(TextRenderable p_431653_) {
-                    this.render(p_431653_);
-                }
-
-                private void render(TextRenderable p_423344_) {
-                    VertexConsumer vertexconsumer = p_409617_.getBuffer(p_423344_.renderType(p_409313_));
-                    p_423344_.render(p_408497_, vertexconsumer, p_408611_, false);
-                }
-            };
+        public interface GlyphVisitor {
+        default void acceptGlyph(final TextRenderable.Styled glyph) {
+            this.acceptRenderable(glyph);
         }
 
-        default void acceptGlyph(TextRenderable.Styled p_452010_) {
+        default void acceptEffect(final TextRenderable effect) {
+            this.acceptRenderable(effect);
         }
 
-        default void acceptEffect(TextRenderable p_430311_) {
+        default void acceptRenderable(final TextRenderable renderable) {
         }
 
-        default void acceptEmptyArea(EmptyArea p_455806_) {
+        default void acceptEmptyArea(final EmptyArea empty) {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface PreparedText {
-        void visit(Font.GlyphVisitor p_406444_);
+        public interface PreparedText {
+        void visit(Font.GlyphVisitor visitor);
 
         @Nullable ScreenRectangle bounds();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class PreparedTextBuilder implements FormattedCharSink, Font.PreparedText {
+        private class PreparedTextBuilder implements Font.PreparedText, FormattedCharSink {
         private final boolean drawShadow;
         private final int color;
         private final int backgroundColor;
         private final boolean includeEmpty;
-        float x;
-        float y;
+        private float x;
+        private float y;
         private float left = Float.MAX_VALUE;
         private float top = Float.MAX_VALUE;
         private float right = -Float.MAX_VALUE;
@@ -286,168 +203,179 @@ public class Font {
         private float backgroundTop = Float.MAX_VALUE;
         private float backgroundRight = -Float.MAX_VALUE;
         private float backgroundBottom = -Float.MAX_VALUE;
-        final List<TextRenderable.Styled> glyphs = new ArrayList<>();
+        private final List<TextRenderable.Styled> glyphs = new ArrayList<>();
         private @Nullable List<TextRenderable> effects;
         private @Nullable List<EmptyArea> emptyAreas;
 
-        public PreparedTextBuilder(final float p_407746_, final float p_410668_, final int p_408037_, final boolean p_406887_, final boolean p_457700_) {
-            this(p_407746_, p_410668_, p_408037_, 0, p_406887_, p_457700_);
+        public PreparedTextBuilder(final float x, final float y, final int color, final boolean drawShadow, final boolean includeEmpty) {
+            this(x, y, color, 0, drawShadow, includeEmpty);
         }
 
         public PreparedTextBuilder(
-            final float p_408474_, final float p_405862_, final int p_406916_, final int p_407483_, final boolean p_410641_, final boolean p_456735_
+            final float x, final float y, final int color, final int backgroundColor, final boolean drawShadow, final boolean includeEmpty
         ) {
-            this.x = p_408474_;
-            this.y = p_405862_;
-            this.drawShadow = p_410641_;
-            this.color = p_406916_;
-            this.backgroundColor = p_407483_;
-            this.includeEmpty = p_456735_;
-            this.markBackground(p_408474_, p_405862_, 0.0F);
+            this.x = x;
+            this.y = y;
+            this.drawShadow = drawShadow;
+            this.color = color;
+            this.backgroundColor = backgroundColor;
+            this.includeEmpty = includeEmpty;
+            this.markBackground(x, y, 0.0F);
         }
 
-        private void markSize(float p_408328_, float p_410584_, float p_407096_, float p_407028_) {
-            this.left = Math.min(this.left, p_408328_);
-            this.top = Math.min(this.top, p_410584_);
-            this.right = Math.max(this.right, p_407096_);
-            this.bottom = Math.max(this.bottom, p_407028_);
+        private void markSize(final float left, final float top, final float right, final float bottom) {
+            this.left = Math.min(this.left, left);
+            this.top = Math.min(this.top, top);
+            this.right = Math.max(this.right, right);
+            this.bottom = Math.max(this.bottom, bottom);
         }
 
-        private void markBackground(float p_407445_, float p_408838_, float p_406374_) {
+        private void markBackground(final float x, final float y, final float advance) {
             if (ARGB.alpha(this.backgroundColor) != 0) {
-                this.backgroundLeft = Math.min(this.backgroundLeft, p_407445_ - 1.0F);
-                this.backgroundTop = Math.min(this.backgroundTop, p_408838_ - 1.0F);
-                this.backgroundRight = Math.max(this.backgroundRight, p_407445_ + p_406374_);
-                this.backgroundBottom = Math.max(this.backgroundBottom, p_408838_ + 9.0F);
+                this.backgroundLeft = Math.min(this.backgroundLeft, x - 1.0F);
+                this.backgroundTop = Math.min(this.backgroundTop, y - 1.0F);
+                this.backgroundRight = Math.max(this.backgroundRight, x + advance);
+                this.backgroundBottom = Math.max(this.backgroundBottom, y + 9.0F);
                 this.markSize(this.backgroundLeft, this.backgroundTop, this.backgroundRight, this.backgroundBottom);
             }
         }
 
-        private void addGlyph(TextRenderable.Styled p_455499_) {
-            this.glyphs.add(p_455499_);
-            this.markSize(p_455499_.left(), p_455499_.top(), p_455499_.right(), p_455499_.bottom());
+        private void addGlyph(final TextRenderable.Styled instance) {
+            this.glyphs.add(instance);
+            this.markSize(instance.left(), instance.top(), instance.right(), instance.bottom());
         }
 
-        private void addEffect(TextRenderable p_430927_) {
+        private void addEffect(final TextRenderable effect) {
             if (this.effects == null) {
                 this.effects = new ArrayList<>();
             }
 
-            this.effects.add(p_430927_);
-            this.markSize(p_430927_.left(), p_430927_.top(), p_430927_.right(), p_430927_.bottom());
+            this.effects.add(effect);
+            this.markSize(effect.left(), effect.top(), effect.right(), effect.bottom());
         }
 
-        private void addEmptyGlyph(EmptyArea p_457914_) {
+        private void addEmptyGlyph(final EmptyArea empty) {
             if (this.emptyAreas == null) {
                 this.emptyAreas = new ArrayList<>();
             }
 
-            this.emptyAreas.add(p_457914_);
+            this.emptyAreas.add(empty);
         }
 
         @Override
-        public boolean accept(int p_408106_, Style p_408632_, int p_410483_) {
-            BakedGlyph bakedglyph = Font.this.getGlyph(p_410483_, p_408632_);
-            return this.accept(p_408106_, p_408632_, bakedglyph);
+        public boolean accept(final int position, final Style style, final int c) {
+            BakedGlyph glyph = Font.this.getGlyph(c, style);
+            return this.accept(position, style, glyph);
         }
 
-        public boolean accept(int p_422572_, Style p_423260_, BakedGlyph p_426975_) {
-            GlyphInfo glyphinfo = p_426975_.info();
-            boolean flag = p_423260_.isBold();
-            TextColor textcolor = p_423260_.getColor();
-            int i = this.getTextColor(textcolor);
-            int j = this.getShadowColor(p_423260_, i);
-            float f = glyphinfo.getAdvance(flag);
-            float f1 = p_422572_ == 0 ? this.x - 1.0F : this.x;
-            float f2 = glyphinfo.getShadowOffset();
-            float f3 = flag ? glyphinfo.getBoldOffset() : 0.0F;
-            TextRenderable.Styled textrenderable$styled = p_426975_.createGlyph(this.x, this.y, i, j, p_423260_, f3, f2);
-            if (textrenderable$styled != null) {
-                this.addGlyph(textrenderable$styled);
+        public boolean accept(final int position, final Style style, final BakedGlyph glyph) {
+            GlyphInfo glyphInfo = glyph.info();
+            boolean bold = style.isBold();
+            TextColor styleColor = style.getColor();
+            int textColor = this.getTextColor(styleColor);
+            int shadowColor = this.getShadowColor(style, textColor);
+            float advance = glyphInfo.getAdvance(bold);
+            float effectX0 = position == 0 ? this.x - 1.0F : this.x;
+            float shadowOffset = glyphInfo.getShadowOffset();
+            float boldOffset = bold ? glyphInfo.getBoldOffset() : 0.0F;
+            TextRenderable.Styled instance = glyph.createGlyph(this.x, this.y, textColor, shadowColor, style, boldOffset, shadowOffset);
+            if (instance != null) {
+                this.addGlyph(instance);
             } else if (this.includeEmpty) {
-                this.addEmptyGlyph(new EmptyArea(this.x, this.y, f, 7.0F, 9.0F, p_423260_));
+                this.addEmptyGlyph(new EmptyArea(this.x, this.y, advance, 7.0F, 9.0F, style));
             }
 
-            this.markBackground(this.x, this.y, f);
-            if (p_423260_.isStrikethrough()) {
+            this.markBackground(this.x, this.y, advance);
+            if (style.isStrikethrough()) {
                 this.addEffect(
-                    Font.this.provider.effect().createEffect(f1, this.y + 4.5F - 1.0F, this.x + f, this.y + 4.5F, 0.01F, i, j, f2)
+                    Font.this.provider
+                        .effect()
+                        .createEffect(effectX0, this.y + 4.5F - 1.0F, this.x + advance, this.y + 4.5F, 0.01F, textColor, shadowColor, shadowOffset)
                 );
             }
 
-            if (p_423260_.isUnderlined()) {
+            if (style.isUnderlined()) {
                 this.addEffect(
-                    Font.this.provider.effect().createEffect(f1, this.y + 9.0F - 1.0F, this.x + f, this.y + 9.0F, 0.01F, i, j, f2)
+                    Font.this.provider
+                        .effect()
+                        .createEffect(effectX0, this.y + 9.0F - 1.0F, this.x + advance, this.y + 9.0F, 0.01F, textColor, shadowColor, shadowOffset)
                 );
             }
 
-            this.x += f;
+            this.x += advance;
             return true;
         }
 
         @Override
-        public void visit(Font.GlyphVisitor p_407346_) {
+        public void visit(final Font.GlyphVisitor visitor) {
             if (ARGB.alpha(this.backgroundColor) != 0) {
-                p_407346_.acceptEffect(
-                    Font.this.provider.effect().createEffect(this.backgroundLeft, this.backgroundTop, this.backgroundRight, this.backgroundBottom, -0.01F, this.backgroundColor, 0, 0.0F)
+                visitor.acceptEffect(
+                    Font.this.provider
+                        .effect()
+                        .createEffect(
+                            this.backgroundLeft, this.backgroundTop, this.backgroundRight, this.backgroundBottom, -0.01F, this.backgroundColor, 0, 0.0F
+                        )
                 );
             }
 
-            for (TextRenderable.Styled textrenderable$styled : this.glyphs) {
-                p_407346_.acceptGlyph(textrenderable$styled);
+            for (TextRenderable.Styled glyph : this.glyphs) {
+                visitor.acceptGlyph(glyph);
             }
 
             if (this.effects != null) {
-                for (TextRenderable textrenderable : this.effects) {
-                    p_407346_.acceptEffect(textrenderable);
+                for (TextRenderable effect : this.effects) {
+                    visitor.acceptEffect(effect);
                 }
             }
 
             if (this.emptyAreas != null) {
-                for (EmptyArea emptyarea : this.emptyAreas) {
-                    p_407346_.acceptEmptyArea(emptyarea);
+                for (EmptyArea emptyArea : this.emptyAreas) {
+                    visitor.acceptEmptyArea(emptyArea);
                 }
             }
         }
 
-        private int getTextColor(@Nullable TextColor p_407859_) {
-            if (p_407859_ != null) {
-                int i = ARGB.alpha(this.color);
-                int j = p_407859_.getValue();
-                return ARGB.color(i, j);
+        public void discardEffects() {
+            this.effects = null;
+        }
+
+        private int getTextColor(final @Nullable TextColor textColor) {
+            if (textColor != null) {
+                int alpha = ARGB.alpha(this.color);
+                int rgb = textColor.getValue();
+                return ARGB.color(alpha, rgb);
             } else {
                 return this.color;
             }
         }
 
-        private int getShadowColor(Style p_408920_, int p_408082_) {
-            Integer integer = p_408920_.getShadowColor();
-            if (integer != null) {
-                float f = ARGB.alphaFloat(p_408082_);
-                float f1 = ARGB.alphaFloat(integer);
-                return f != 1.0F ? ARGB.color(ARGB.as8BitChannel(f * f1), integer) : integer;
+        private int getShadowColor(final Style style, final int textColor) {
+            Integer shadow = style.getShadowColor();
+            if (shadow != null) {
+                float textAlpha = ARGB.alphaFloat(textColor);
+                float shadowAlpha = ARGB.alphaFloat(shadow);
+                return textAlpha != 1.0F ? ARGB.color(ARGB.as8BitChannel(textAlpha * shadowAlpha), shadow) : shadow;
             } else {
-                return this.drawShadow ? ARGB.scaleRGB(p_408082_, 0.25F) : 0;
+                return this.drawShadow ? ARGB.scaleRGB(textColor, 0.25F) : 0;
             }
         }
 
         @Override
         public @Nullable ScreenRectangle bounds() {
             if (!(this.left >= this.right) && !(this.top >= this.bottom)) {
-                int i = Mth.floor(this.left);
-                int j = Mth.floor(this.top);
-                int k = Mth.ceil(this.right);
-                int l = Mth.ceil(this.bottom);
-                return new ScreenRectangle(i, j, k - i, l - j);
+                int left = Mth.floor(this.left);
+                int top = Mth.floor(this.top);
+                int right = Mth.ceil(this.right);
+                int bottom = Mth.ceil(this.bottom);
+                return new ScreenRectangle(left, top, right - left, bottom - top);
             } else {
                 return null;
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Provider {
-        GlyphSource glyphs(FontDescription p_429760_);
+        public interface Provider {
+        GlyphSource glyphs(FontDescription font);
 
         EffectGlyph effect();
     }

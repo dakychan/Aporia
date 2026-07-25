@@ -7,18 +7,18 @@ import java.io.IOException;
 public record LongTag(long value) implements NumericTag {
     private static final int SELF_SIZE_IN_BYTES = 16;
     public static final TagType<LongTag> TYPE = new TagType.StaticSize<LongTag>() {
-        public LongTag load(DataInput p_128911_, NbtAccounter p_128913_) throws IOException {
-            return LongTag.valueOf(readAccounted(p_128911_, p_128913_));
+        public LongTag load(final DataInput input, final NbtAccounter accounter) throws IOException {
+            return LongTag.valueOf(readAccounted(input, accounter));
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197506_, StreamTagVisitor p_197507_, NbtAccounter p_301736_) throws IOException {
-            return p_197507_.visit(readAccounted(p_197506_, p_301736_));
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            return output.visit(readAccounted(input, accounter));
         }
 
-        private static long readAccounted(DataInput p_301733_, NbtAccounter p_301774_) throws IOException {
-            p_301774_.accountBytes(16L);
-            return p_301733_.readLong();
+        private static long readAccounted(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(16L);
+            return input.readLong();
         }
 
         @Override
@@ -38,17 +38,16 @@ public record LongTag(long value) implements NumericTag {
     };
 
     @Deprecated(forRemoval = true)
-    public LongTag(long value) {
-        this.value = value;
+    public LongTag {
     }
 
-    public static LongTag valueOf(long p_128883_) {
-        return p_128883_ >= -128L && p_128883_ <= 1024L ? LongTag.Cache.cache[(int)p_128883_ - -128] : new LongTag(p_128883_);
+    public static LongTag valueOf(final long i) {
+        return i >= -128L && i <= 1024L ? LongTag.Cache.cache[(int)i - -128] : new LongTag(i);
     }
 
     @Override
-    public void write(DataOutput p_128885_) throws IOException {
-        p_128885_.writeLong(this.value);
+    public void write(final DataOutput output) throws IOException {
+        output.writeLong(this.value);
     }
 
     @Override
@@ -71,8 +70,8 @@ public record LongTag(long value) implements NumericTag {
     }
 
     @Override
-    public void accept(TagVisitor p_177998_) {
-        p_177998_.visitLong(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitLong(this);
     }
 
     @Override
@@ -111,24 +110,21 @@ public record LongTag(long value) implements NumericTag {
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197504_) {
-        return p_197504_.visit(this.value);
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
+        return visitor.visit(this.value);
     }
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitLong(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitLong(this);
+        return visitor.build();
     }
 
-    static class Cache {
+    private static class Cache {
         private static final int HIGH = 1024;
         private static final int LOW = -128;
-        static final LongTag[] cache = new LongTag[1153];
-
-        private Cache() {
-        }
+        private static final LongTag[] cache = new LongTag[1153];
 
         static {
             for (int i = 0; i < cache.length; i++) {

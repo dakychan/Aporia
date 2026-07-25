@@ -5,23 +5,20 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.blockentity.state.SpawnerRenderState;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
 import net.minecraft.client.renderer.feature.ModelFeatureRenderer;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.TrialSpawnerBlockEntity;
 import net.minecraft.world.level.block.entity.trialspawner.TrialSpawner;
 import net.minecraft.world.level.block.entity.trialspawner.TrialSpawnerStateData;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class TrialSpawnerRenderer implements BlockEntityRenderer<TrialSpawnerBlockEntity, SpawnerRenderState> {
     private final EntityRenderDispatcher entityRenderer;
 
-    public TrialSpawnerRenderer(BlockEntityRendererProvider.Context p_311333_) {
-        this.entityRenderer = p_311333_.entityRenderer();
+    public TrialSpawnerRenderer(final BlockEntityRendererProvider.Context context) {
+        this.entityRenderer = context.entityRenderer();
     }
 
     public SpawnerRenderState createRenderState() {
@@ -29,39 +26,44 @@ public class TrialSpawnerRenderer implements BlockEntityRenderer<TrialSpawnerBlo
     }
 
     public void extractRenderState(
-        TrialSpawnerBlockEntity p_424929_,
-        SpawnerRenderState p_430977_,
-        float p_424952_,
-        Vec3 p_426405_,
-        ModelFeatureRenderer.@Nullable CrumblingOverlay p_423619_
+        final TrialSpawnerBlockEntity blockEntity,
+        final SpawnerRenderState state,
+        final float partialTicks,
+        final Vec3 cameraPosition,
+        final ModelFeatureRenderer.@Nullable CrumblingOverlay breakProgress
     ) {
-        BlockEntityRenderer.super.extractRenderState(p_424929_, p_430977_, p_424952_, p_426405_, p_423619_);
-        if (p_424929_.getLevel() != null) {
-            TrialSpawner trialspawner = p_424929_.getTrialSpawner();
-            TrialSpawnerStateData trialspawnerstatedata = trialspawner.getStateData();
-            Entity entity = trialspawnerstatedata.getOrCreateDisplayEntity(trialspawner, p_424929_.getLevel(), trialspawner.getState());
-            extractSpawnerData(p_430977_, p_424952_, entity, this.entityRenderer, trialspawnerstatedata.getOSpin(), trialspawnerstatedata.getSpin());
+        BlockEntityRenderer.super.extractRenderState(blockEntity, state, partialTicks, cameraPosition, breakProgress);
+        if (blockEntity.getLevel() != null) {
+            TrialSpawner spawner = blockEntity.getTrialSpawner();
+            TrialSpawnerStateData data = spawner.getStateData();
+            Entity displayEntity = data.getOrCreateDisplayEntity(spawner, blockEntity.getLevel(), spawner.getState());
+            extractSpawnerData(state, partialTicks, displayEntity, this.entityRenderer, data.getOSpin(), data.getSpin());
         }
     }
 
-    static void extractSpawnerData(
-        SpawnerRenderState p_430658_, float p_423837_, @Nullable Entity p_429987_, EntityRenderDispatcher p_426080_, double p_424568_, double p_423202_
+    public static void extractSpawnerData(
+        final SpawnerRenderState state,
+        final float partialTicks,
+        final @Nullable Entity displayEntity,
+        final EntityRenderDispatcher entityRenderer,
+        final double oSpin,
+        final double spin
     ) {
-        if (p_429987_ != null) {
-            p_430658_.displayEntity = p_426080_.extractEntity(p_429987_, p_423837_);
-            p_430658_.displayEntity.lightCoords = p_430658_.lightCoords;
-            p_430658_.spin = (float)Mth.lerp(p_423837_, p_424568_, p_423202_) * 10.0F;
-            p_430658_.scale = 0.53125F;
-            float f = Math.max(p_429987_.getBbWidth(), p_429987_.getBbHeight());
-            if (f > 1.0) {
-                p_430658_.scale /= f;
+        if (displayEntity != null) {
+            state.displayEntity = entityRenderer.extractEntity(displayEntity, partialTicks);
+            state.displayEntity.lightCoords = state.lightCoords;
+            state.spin = (float)Mth.lerp(partialTicks, oSpin, spin) * 10.0F;
+            state.scale = 0.53125F;
+            float maxLength = Math.max(displayEntity.getBbWidth(), displayEntity.getBbHeight());
+            if (maxLength > 1.0) {
+                state.scale /= maxLength;
             }
         }
     }
 
-    public void submit(SpawnerRenderState p_428741_, PoseStack p_424539_, SubmitNodeCollector p_427723_, CameraRenderState p_430794_) {
-        if (p_428741_.displayEntity != null) {
-            SpawnerRenderer.submitEntityInSpawner(p_424539_, p_427723_, p_428741_.displayEntity, this.entityRenderer, p_428741_.spin, p_428741_.scale, p_430794_);
+    public void submit(final SpawnerRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+        if (state.displayEntity != null) {
+            SpawnerRenderer.submitEntityInSpawner(poseStack, submitNodeCollector, state.displayEntity, this.entityRenderer, state.spin, state.scale, camera);
         }
     }
 }

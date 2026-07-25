@@ -11,13 +11,13 @@ public class JsonRpcLogger {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final String PREFIX = "RPC Connection #{}: ";
 
-    public void log(ClientInfo p_428112_, String p_423252_, Object... p_429537_) {
-        if (p_429537_.length == 0) {
-            LOGGER.info("RPC Connection #{}: " + p_423252_, p_428112_.connectionId());
+    public void log(final ClientInfo clientInfo, final String message, final Object... args) {
+        if (args.length == 0) {
+            LOGGER.info("RPC Connection #{}: " + message, clientInfo.connectionId());
         } else {
-            List<Object> list = new ArrayList<>(Arrays.asList(p_429537_));
-            list.addFirst(p_428112_.connectionId());
-            LOGGER.info("RPC Connection #{}: " + p_423252_, list.toArray());
+            List<Object> list = new ArrayList<>(Arrays.asList(args));
+            list.addFirst(clientInfo.connectionId());
+            LOGGER.info("RPC Connection #{}: " + message, list.toArray());
         }
     }
 }

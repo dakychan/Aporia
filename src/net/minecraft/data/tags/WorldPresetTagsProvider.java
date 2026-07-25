@@ -8,13 +8,13 @@ import net.minecraft.tags.WorldPresetTags;
 import net.minecraft.world.level.levelgen.presets.WorldPreset;
 import net.minecraft.world.level.levelgen.presets.WorldPresets;
 
-public class WorldPresetTagsProvider extends KeyTagProvider<WorldPreset> {
-    public WorldPresetTagsProvider(PackOutput p_255701_, CompletableFuture<HolderLookup.Provider> p_255974_) {
-        super(p_255701_, Registries.WORLD_PRESET, p_255974_);
+public class WorldPresetTagsProvider extends TagsProvider<WorldPreset> {
+    public WorldPresetTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.WORLD_PRESET, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_255734_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(WorldPresetTags.NORMAL)
             .add(WorldPresets.NORMAL)
             .add(WorldPresets.FLAT)

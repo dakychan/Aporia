@@ -6,15 +6,15 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 public class ReferenceUtil {
-    public static final Codec<URI> REFERENCE_CODEC = Codec.STRING.comapFlatMap(p_423824_ -> {
+    public static final Codec<URI> REFERENCE_CODEC = Codec.STRING.comapFlatMap(string -> {
         try {
-            return DataResult.success(new URI(p_423824_));
-        } catch (URISyntaxException urisyntaxexception) {
-            return DataResult.error(urisyntaxexception::getMessage);
+            return DataResult.success(new URI(string));
+        } catch (URISyntaxException e) {
+            return DataResult.error(e::getMessage);
         }
     }, URI::toString);
 
-    public static URI createLocalReference(String p_428071_) {
-        return URI.create("#/components/schemas/" + p_428071_);
+    public static URI createLocalReference(final String typeId) {
+        return URI.create("#/components/schemas/" + typeId);
     }
 }

@@ -18,11 +18,8 @@ import net.minecraft.client.resources.SkinManager;
 import net.minecraft.server.players.ProfileResolver;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.component.ResolvableProfile;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class PlayerSkinRenderCache {
     public static final RenderType DEFAULT_PLAYER_SKIN_RENDER_TYPE = playerSkinRenderType(DefaultPlayerSkin.getDefaultSkin());
     public static final Duration CACHE_DURATION = Duration.ofMinutes(5L);
@@ -30,15 +27,13 @@ public class PlayerSkinRenderCache {
         .expireAfterAccess(CACHE_DURATION)
         .build(
             new CacheLoader<ResolvableProfile, CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>>>() {
-                public CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>> load(ResolvableProfile p_430024_) {
-                    return p_430024_.resolveProfile(PlayerSkinRenderCache.this.profileResolver)
+                public CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>> load(final ResolvableProfile profile) {
+                    return profile.resolveProfile(PlayerSkinRenderCache.this.profileResolver)
                         .thenCompose(
-                            p_426899_ -> PlayerSkinRenderCache.this.skinManager
-                                .get(p_426899_)
+                            resolvedProfile -> PlayerSkinRenderCache.this.skinManager
+                                .get(resolvedProfile)
                                 .thenApply(
-                                    p_431654_ -> p_431654_.map(
-                                        p_430211_ -> PlayerSkinRenderCache.this.new RenderInfo(p_426899_, p_430211_, p_430024_.skinPatch())
-                                    )
+                                    playerSkin -> playerSkin.map(skin -> PlayerSkinRenderCache.this.new RenderInfo(resolvedProfile, skin, profile.skinPatch()))
                                 )
                         );
                 }
@@ -47,57 +42,56 @@ public class PlayerSkinRenderCache {
     private final LoadingCache<ResolvableProfile, PlayerSkinRenderCache.RenderInfo> defaultSkinCache = CacheBuilder.newBuilder()
         .expireAfterAccess(CACHE_DURATION)
         .build(new CacheLoader<ResolvableProfile, PlayerSkinRenderCache.RenderInfo>() {
-            public PlayerSkinRenderCache.RenderInfo load(ResolvableProfile p_431156_) {
-                GameProfile gameprofile = p_431156_.partialProfile();
-                return PlayerSkinRenderCache.this.new RenderInfo(gameprofile, DefaultPlayerSkin.get(gameprofile), p_431156_.skinPatch());
+            public PlayerSkinRenderCache.RenderInfo load(final ResolvableProfile profile) {
+                GameProfile temporaryProfile = profile.partialProfile();
+                return PlayerSkinRenderCache.this.new RenderInfo(temporaryProfile, DefaultPlayerSkin.get(temporaryProfile), profile.skinPatch());
             }
         });
-    final TextureManager textureManager;
-    final SkinManager skinManager;
-    final ProfileResolver profileResolver;
+    private final TextureManager textureManager;
+    private final SkinManager skinManager;
+    private final ProfileResolver profileResolver;
 
-    public PlayerSkinRenderCache(TextureManager p_428881_, SkinManager p_423920_, ProfileResolver p_428966_) {
-        this.textureManager = p_428881_;
-        this.skinManager = p_423920_;
-        this.profileResolver = p_428966_;
+    public PlayerSkinRenderCache(final TextureManager textureManager, final SkinManager skinManager, final ProfileResolver profileResolver) {
+        this.textureManager = textureManager;
+        this.skinManager = skinManager;
+        this.profileResolver = profileResolver;
     }
 
-    public PlayerSkinRenderCache.RenderInfo getOrDefault(ResolvableProfile p_429009_) {
-        PlayerSkinRenderCache.RenderInfo playerskinrendercache$renderinfo = this.lookup(p_429009_).getNow(Optional.empty()).orElse(null);
-        return playerskinrendercache$renderinfo != null ? playerskinrendercache$renderinfo : this.defaultSkinCache.getUnchecked(p_429009_);
+    public PlayerSkinRenderCache.RenderInfo getOrDefault(final ResolvableProfile profile) {
+        PlayerSkinRenderCache.RenderInfo result = this.lookup(profile).getNow(Optional.empty()).orElse(null);
+        return result != null ? result : this.defaultSkinCache.getUnchecked(profile);
     }
 
-    public Supplier<PlayerSkinRenderCache.RenderInfo> createLookup(ResolvableProfile p_426843_) {
-        PlayerSkinRenderCache.RenderInfo playerskinrendercache$renderinfo = this.defaultSkinCache.getUnchecked(p_426843_);
-        CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>> completablefuture = this.renderInfoCache.getUnchecked(p_426843_);
-        Optional<PlayerSkinRenderCache.RenderInfo> optional = completablefuture.getNow(null);
-        if (optional != null) {
-            PlayerSkinRenderCache.RenderInfo playerskinrendercache$renderinfo1 = optional.orElse(playerskinrendercache$renderinfo);
-            return () -> playerskinrendercache$renderinfo1;
+    public Supplier<PlayerSkinRenderCache.RenderInfo> createLookup(final ResolvableProfile profile) {
+        PlayerSkinRenderCache.RenderInfo defaultForProfile = this.defaultSkinCache.getUnchecked(profile);
+        CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>> future = this.renderInfoCache.getUnchecked(profile);
+        Optional<PlayerSkinRenderCache.RenderInfo> currentValue = future.getNow(null);
+        if (currentValue != null) {
+            PlayerSkinRenderCache.RenderInfo finalValue = currentValue.orElse(defaultForProfile);
+            return () -> finalValue;
         } else {
-            return () -> completablefuture.getNow(Optional.empty()).orElse(playerskinrendercache$renderinfo);
+            return () -> future.getNow(Optional.empty()).orElse(defaultForProfile);
         }
     }
 
-    public CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>> lookup(ResolvableProfile p_423443_) {
-        return this.renderInfoCache.getUnchecked(p_423443_);
+    public CompletableFuture<Optional<PlayerSkinRenderCache.RenderInfo>> lookup(final ResolvableProfile profile) {
+        return this.renderInfoCache.getUnchecked(profile);
     }
 
-    static RenderType playerSkinRenderType(PlayerSkin p_427081_) {
-        return SkullBlockRenderer.getPlayerSkinRenderType(p_427081_.body().texturePath());
+    private static RenderType playerSkinRenderType(final PlayerSkin playerSkin) {
+        return SkullBlockRenderer.getPlayerSkinRenderType(playerSkin.body().texturePath());
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public final class RenderInfo {
+        public final class RenderInfo {
         private final GameProfile gameProfile;
         private final PlayerSkin playerSkin;
         private @Nullable RenderType itemRenderType;
         private @Nullable GpuTextureView textureView;
         private @Nullable GlyphRenderTypes glyphRenderTypes;
 
-        public RenderInfo(final GameProfile p_431023_, final PlayerSkin p_427018_, final PlayerSkin.Patch p_426255_) {
-            this.gameProfile = p_431023_;
-            this.playerSkin = p_427018_.with(p_426255_);
+        public RenderInfo(final GameProfile gameProfile, final PlayerSkin playerSkin, final PlayerSkin.Patch patch) {
+            this.gameProfile = gameProfile;
+            this.playerSkin = playerSkin.with(patch);
         }
 
         public GameProfile gameProfile() {
@@ -133,18 +127,16 @@ public class PlayerSkinRenderCache {
         }
 
         @Override
-        public boolean equals(Object p_431172_) {
-            return this == p_431172_
-                || p_431172_ instanceof PlayerSkinRenderCache.RenderInfo playerskinrendercache$renderinfo
-                    && this.gameProfile.equals(playerskinrendercache$renderinfo.gameProfile)
-                    && this.playerSkin.equals(playerskinrendercache$renderinfo.playerSkin);
+        public boolean equals(final Object o) {
+            return this == o
+                || o instanceof PlayerSkinRenderCache.RenderInfo that && this.gameProfile.equals(that.gameProfile) && this.playerSkin.equals(that.playerSkin);
         }
 
         @Override
         public int hashCode() {
-            int i = 1;
-            i = 31 * i + this.gameProfile.hashCode();
-            return 31 * i + this.playerSkin.hashCode();
+            int result = 1;
+            result = 31 * result + this.gameProfile.hashCode();
+            return 31 * result + this.playerSkin.hashCode();
         }
     }
 }

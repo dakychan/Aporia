@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
@@ -20,7 +20,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -47,10 +46,12 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Nameable, BeaconBeamOwner {
     private static final int MAX_LEVELS = 4;
+    private static final int LEVELS_NEEDED_FOR_SECONDARY = 4;
     public static final List<List<Holder<MobEffect>>> BEACON_EFFECTS = List.of(
         List.of(MobEffects.SPEED, MobEffects.HASTE),
         List.of(MobEffects.RESISTANCE, MobEffects.JUMP_BOOST),
@@ -66,18 +67,18 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
     private static final Component DEFAULT_NAME = Component.translatable("container.beacon");
     private static final String TAG_PRIMARY = "primary_effect";
     private static final String TAG_SECONDARY = "secondary_effect";
-    List<BeaconBeamOwner.Section> beamSections = new ArrayList<>();
+    private List<BeaconBeamOwner.Section> beamSections = new ArrayList<>();
     private List<BeaconBeamOwner.Section> checkingBeamSections = new ArrayList<>();
-    int levels;
+    private int levels;
     private int lastCheckY;
-    @Nullable Holder<MobEffect> primaryPower;
-    @Nullable Holder<MobEffect> secondaryPower;
+    private @Nullable Holder<MobEffect> primaryPower;
+    private @Nullable Holder<MobEffect> secondaryPower;
     private @Nullable Component name;
     private LockCode lockKey = LockCode.NO_LOCK;
     private final ContainerData dataAccess = new ContainerData() {
         @Override
-        public int get(int p_58711_) {
-            return switch (p_58711_) {
+        public int get(final int dataId) {
+            return switch (dataId) {
                 case 0 -> BeaconBlockEntity.this.levels;
                 case 1 -> BeaconMenu.encodeEffect(BeaconBlockEntity.this.primaryPower);
                 case 2 -> BeaconMenu.encodeEffect(BeaconBlockEntity.this.secondaryPower);
@@ -86,20 +87,20 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
         }
 
         @Override
-        public void set(int p_58713_, int p_58714_) {
-            switch (p_58713_) {
+        public void set(final int dataId, final int value) {
+            switch (dataId) {
                 case 0:
-                    BeaconBlockEntity.this.levels = p_58714_;
+                    BeaconBlockEntity.this.levels = value;
                     break;
                 case 1:
                     if (!BeaconBlockEntity.this.level.isClientSide() && !BeaconBlockEntity.this.beamSections.isEmpty()) {
                         BeaconBlockEntity.playSound(BeaconBlockEntity.this.level, BeaconBlockEntity.this.worldPosition, SoundEvents.BEACON_POWER_SELECT);
                     }
 
-                    BeaconBlockEntity.this.primaryPower = BeaconBlockEntity.filterEffect(BeaconMenu.decodeEffect(p_58714_));
+                    BeaconBlockEntity.this.primaryPower = BeaconBlockEntity.filterEffect(BeaconMenu.decodeEffect(value));
                     break;
                 case 2:
-                    BeaconBlockEntity.this.secondaryPower = BeaconBlockEntity.filterEffect(BeaconMenu.decodeEffect(p_58714_));
+                    BeaconBlockEntity.this.secondaryPower = BeaconBlockEntity.filterEffect(BeaconMenu.decodeEffect(value));
             }
         }
 
@@ -109,116 +110,118 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
         }
     };
 
-    static @Nullable Holder<MobEffect> filterEffect(@Nullable Holder<MobEffect> p_330198_) {
-        return VALID_EFFECTS.contains(p_330198_) ? p_330198_ : null;
+    private static @Nullable Holder<MobEffect> filterEffect(final @Nullable Holder<MobEffect> effect) {
+        return VALID_EFFECTS.contains(effect) ? effect : null;
     }
 
-    public BeaconBlockEntity(BlockPos p_155088_, BlockState p_155089_) {
-        super(BlockEntityType.BEACON, p_155088_, p_155089_);
+    public BeaconBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.BEACON, worldPosition, blockState);
     }
 
-    public static void tick(Level p_155108_, BlockPos p_155109_, BlockState p_155110_, BeaconBlockEntity p_155111_) {
-        int i = p_155109_.getX();
-        int j = p_155109_.getY();
-        int k = p_155109_.getZ();
-        BlockPos blockpos;
-        if (p_155111_.lastCheckY < j) {
-            blockpos = p_155109_;
-            p_155111_.checkingBeamSections = Lists.newArrayList();
-            p_155111_.lastCheckY = p_155109_.getY() - 1;
+    public static void tick(final Level level, final BlockPos pos, final BlockState selfState, final BeaconBlockEntity entity) {
+        int x = pos.getX();
+        int y = pos.getY();
+        int z = pos.getZ();
+        BlockPos checkPos;
+        if (entity.lastCheckY < y) {
+            checkPos = pos;
+            entity.checkingBeamSections = Lists.newArrayList();
+            entity.lastCheckY = checkPos.getY() - 1;
         } else {
-            blockpos = new BlockPos(i, p_155111_.lastCheckY + 1, k);
+            checkPos = new BlockPos(x, entity.lastCheckY + 1, z);
         }
 
-        BeaconBeamOwner.Section beaconbeamowner$section = p_155111_.checkingBeamSections.isEmpty() ? null : p_155111_.checkingBeamSections.get(p_155111_.checkingBeamSections.size() - 1);
-        int l = p_155108_.getHeight(Heightmap.Types.WORLD_SURFACE, i, k);
+        BeaconBeamOwner.Section lastBeamSection = entity.checkingBeamSections.isEmpty()
+            ? null
+            : entity.checkingBeamSections.get(entity.checkingBeamSections.size() - 1);
+        int lastSetBlock = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
 
-        for (int i1 = 0; i1 < 10 && blockpos.getY() <= l; i1++) {
-            BlockState blockstate = p_155108_.getBlockState(blockpos);
-            if (blockstate.getBlock() instanceof BeaconBeamBlock beaconbeamblock) {
-                int j1 = beaconbeamblock.getColor().getTextureDiffuseColor();
-                if (p_155111_.checkingBeamSections.size() <= 1) {
-                    beaconbeamowner$section = new BeaconBeamOwner.Section(j1);
-                    p_155111_.checkingBeamSections.add(beaconbeamowner$section);
-                } else if (beaconbeamowner$section != null) {
-                    if (j1 == beaconbeamowner$section.getColor()) {
-                        beaconbeamowner$section.increaseHeight();
+        for (int i = 0; i < 10 && checkPos.getY() <= lastSetBlock; i++) {
+            BlockState state = level.getBlockState(checkPos);
+            if (state.getBlock() instanceof BeaconBeamBlock beaconBeamBlock) {
+                int color = beaconBeamBlock.getColor().getTextureDiffuseColor();
+                if (entity.checkingBeamSections.size() <= 1) {
+                    lastBeamSection = new BeaconBeamOwner.Section(color);
+                    entity.checkingBeamSections.add(lastBeamSection);
+                } else if (lastBeamSection != null) {
+                    if (color == lastBeamSection.getColor()) {
+                        lastBeamSection.increaseHeight();
                     } else {
-                        beaconbeamowner$section = new BeaconBeamOwner.Section(ARGB.average(beaconbeamowner$section.getColor(), j1));
-                        p_155111_.checkingBeamSections.add(beaconbeamowner$section);
+                        lastBeamSection = new BeaconBeamOwner.Section(ARGB.average(lastBeamSection.getColor(), color));
+                        entity.checkingBeamSections.add(lastBeamSection);
                     }
                 }
             } else {
-                if (beaconbeamowner$section == null || blockstate.getLightBlock() >= 15 && !blockstate.is(Blocks.BEDROCK)) {
-                    p_155111_.checkingBeamSections.clear();
-                    p_155111_.lastCheckY = l;
+                if (lastBeamSection == null || state.getLightDampening() >= 15 && !state.is(Blocks.BEDROCK)) {
+                    entity.checkingBeamSections.clear();
+                    entity.lastCheckY = lastSetBlock;
                     break;
                 }
 
-                beaconbeamowner$section.increaseHeight();
+                lastBeamSection.increaseHeight();
             }
 
-            blockpos = blockpos.above();
-            p_155111_.lastCheckY++;
+            checkPos = checkPos.above();
+            entity.lastCheckY++;
         }
 
-        int k1 = p_155111_.levels;
-        if (p_155108_.getGameTime() % 80L == 0L) {
-            if (!p_155111_.beamSections.isEmpty()) {
-                p_155111_.levels = updateBase(p_155108_, i, j, k);
+        int previousLevels = entity.levels;
+        if (level.getGameTime() % 80L == 0L) {
+            if (!entity.beamSections.isEmpty()) {
+                entity.levels = updateBase(level, x, y, z);
             }
 
-            if (p_155111_.levels > 0 && !p_155111_.beamSections.isEmpty()) {
-                applyEffects(p_155108_, p_155109_, p_155111_.levels, p_155111_.primaryPower, p_155111_.secondaryPower);
-                playSound(p_155108_, p_155109_, SoundEvents.BEACON_AMBIENT);
+            if (entity.levels > 0 && !entity.beamSections.isEmpty()) {
+                applyEffects(level, pos, entity.levels, entity.primaryPower, entity.secondaryPower);
+                playSound(level, pos, SoundEvents.BEACON_AMBIENT);
             }
         }
 
-        if (p_155111_.lastCheckY >= l) {
-            p_155111_.lastCheckY = p_155108_.getMinY() - 1;
-            boolean flag = k1 > 0;
-            p_155111_.beamSections = p_155111_.checkingBeamSections;
-            if (!p_155108_.isClientSide()) {
-                boolean flag1 = p_155111_.levels > 0;
-                if (!flag && flag1) {
-                    playSound(p_155108_, p_155109_, SoundEvents.BEACON_ACTIVATE);
+        if (entity.lastCheckY >= lastSetBlock) {
+            entity.lastCheckY = level.getMinY() - 1;
+            boolean wasActive = previousLevels > 0;
+            entity.beamSections = entity.checkingBeamSections;
+            if (!level.isClientSide()) {
+                boolean isActive = entity.levels > 0;
+                if (!wasActive && isActive) {
+                    playSound(level, pos, SoundEvents.BEACON_ACTIVATE);
 
-                    for (ServerPlayer serverplayer : p_155108_.getEntitiesOfClass(ServerPlayer.class, new AABB(i, j, k, i, j - 4, k).inflate(10.0, 5.0, 10.0))) {
-                        CriteriaTriggers.CONSTRUCT_BEACON.trigger(serverplayer, p_155111_.levels);
+                    for (ServerPlayer player : level.getEntitiesOfClass(ServerPlayer.class, new AABB(x, y, z, x, y - 4, z).inflate(10.0, 5.0, 10.0))) {
+                        CriteriaTriggers.CONSTRUCT_BEACON.trigger(player, entity.levels);
                     }
-                } else if (flag && !flag1) {
-                    playSound(p_155108_, p_155109_, SoundEvents.BEACON_DEACTIVATE);
+                } else if (wasActive && !isActive) {
+                    playSound(level, pos, SoundEvents.BEACON_DEACTIVATE);
                 }
             }
         }
     }
 
-    private static int updateBase(Level p_155093_, int p_155094_, int p_155095_, int p_155096_) {
-        int i = 0;
+    private static int updateBase(final Level level, final int x, final int y, final int z) {
+        int levels = 0;
 
-        for (int j = 1; j <= 4; i = j++) {
-            int k = p_155095_ - j;
-            if (k < p_155093_.getMinY()) {
+        for (int step = 1; step <= 4; levels = step++) {
+            int ly = y - step;
+            if (ly < level.getMinY()) {
                 break;
             }
 
-            boolean flag = true;
+            boolean isOk = true;
 
-            for (int l = p_155094_ - j; l <= p_155094_ + j && flag; l++) {
-                for (int i1 = p_155096_ - j; i1 <= p_155096_ + j; i1++) {
-                    if (!p_155093_.getBlockState(new BlockPos(l, k, i1)).is(BlockTags.BEACON_BASE_BLOCKS)) {
-                        flag = false;
+            for (int lx = x - step; lx <= x + step && isOk; lx++) {
+                for (int lz = z - step; lz <= z + step; lz++) {
+                    if (!level.getBlockState(new BlockPos(lx, ly, lz)).is(BlockTags.BEACON_BASE_BLOCKS)) {
+                        isOk = false;
                         break;
                     }
                 }
             }
 
-            if (!flag) {
+            if (!isOk) {
                 break;
             }
         }
 
-        return i;
+        return levels;
     }
 
     @Override
@@ -227,39 +230,72 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
         super.setRemoved();
     }
 
+    public static boolean validateEffects(final @Nullable Holder<MobEffect> primary, final @Nullable Holder<MobEffect> secondary, final int levels) {
+        if (secondary != null && levels < 4) {
+            return false;
+        } else {
+            int primaryLevel = getRequiredLevelsFor(primary);
+            int secondaryLevel = getRequiredLevelsFor(secondary);
+            if (primaryLevel > levels || secondaryLevel > levels) {
+                return false;
+            } else {
+                return primaryLevel >= 4 ? false : secondaryLevel == 0 || secondaryLevel >= 4 || primary.equals(secondary);
+            }
+        }
+    }
+
+    private static int getRequiredLevelsFor(final @Nullable Holder<MobEffect> effect) {
+        if (effect == null) {
+            return 0;
+        }
+
+        for (int i = 0; i < BEACON_EFFECTS.size(); i++) {
+            List<Holder<MobEffect>> effectsForLevel = BEACON_EFFECTS.get(i);
+            if (effectsForLevel.contains(effect)) {
+                return i + 1;
+            }
+        }
+
+        return Integer.MAX_VALUE;
+    }
+
     private static void applyEffects(
-        Level p_155098_, BlockPos p_155099_, int p_155100_, @Nullable Holder<MobEffect> p_329363_, @Nullable Holder<MobEffect> p_332048_
+        final Level level,
+        final BlockPos worldPosition,
+        final int levels,
+        final @Nullable Holder<MobEffect> primaryPower,
+        final @Nullable Holder<MobEffect> secondaryPower
     ) {
-        if (!p_155098_.isClientSide() && p_329363_ != null) {
-            double d0 = p_155100_ * 10 + 10;
-            int i = 0;
-            if (p_155100_ >= 4 && Objects.equals(p_329363_, p_332048_)) {
-                i = 1;
+        if (!level.isClientSide() && primaryPower != null) {
+            double range = levels * 10 + 10;
+            int baseAmp = 0;
+            if (levels >= 4 && Objects.equals(primaryPower, secondaryPower)) {
+                baseAmp = 1;
             }
 
-            int j = (9 + p_155100_ * 2) * 20;
-            AABB aabb = new AABB(p_155099_).inflate(d0).expandTowards(0.0, p_155098_.getHeight(), 0.0);
-            List<Player> list = p_155098_.getEntitiesOfClass(Player.class, aabb);
+            int durationTicks = (9 + levels * 2) * 20;
+            AABB bb = new AABB(worldPosition).inflate(range).expandTowards(0.0, level.getHeight(), 0.0);
+            List<Player> players = level.getEntitiesOfClass(Player.class, bb);
 
-            for (Player player : list) {
-                player.addEffect(new MobEffectInstance(p_329363_, j, i, true, true));
+            for (Player player : players) {
+                player.addEffect(new MobEffectInstance(primaryPower, durationTicks, baseAmp, true, true));
             }
 
-            if (p_155100_ >= 4 && !Objects.equals(p_329363_, p_332048_) && p_332048_ != null) {
-                for (Player player1 : list) {
-                    player1.addEffect(new MobEffectInstance(p_332048_, j, 0, true, true));
+            if (levels >= 4 && !Objects.equals(primaryPower, secondaryPower) && secondaryPower != null) {
+                for (Player player : players) {
+                    player.addEffect(new MobEffectInstance(secondaryPower, durationTicks, 0, true, true));
                 }
             }
         }
     }
 
-    public static void playSound(Level p_155104_, BlockPos p_155105_, SoundEvent p_155106_) {
-        p_155104_.playSound(null, p_155105_, p_155106_, SoundSource.BLOCKS, 1.0F, 1.0F);
+    public static void playSound(final Level level, final BlockPos worldPosition, final SoundEvent event) {
+        level.playSound(null, worldPosition, event, SoundSource.BLOCKS, 1.0F, 1.0F);
     }
 
     @Override
     public List<BeaconBeamOwner.Section> getBeamSections() {
-        return (List<BeaconBeamOwner.Section>)(this.levels == 0 ? ImmutableList.of() : this.beamSections);
+        return this.levels == 0 ? ImmutableList.of() : this.beamSections;
     }
 
     public ClientboundBlockEntityDataPacket getUpdatePacket() {
@@ -267,41 +303,41 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_333588_) {
-        return this.saveCustomOnly(p_333588_);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
-    private static void storeEffect(ValueOutput p_407172_, String p_297212_, @Nullable Holder<MobEffect> p_329692_) {
-        if (p_329692_ != null) {
-            p_329692_.unwrapKey().ifPresent(p_449910_ -> p_407172_.putString(p_297212_, p_449910_.identifier().toString()));
+    private static void storeEffect(final ValueOutput output, final String field, final @Nullable Holder<MobEffect> effect) {
+        if (effect != null) {
+            effect.unwrapKey().ifPresent(key -> output.putString(field, key.identifier().toString()));
         }
     }
 
-    private static @Nullable Holder<MobEffect> loadEffect(ValueInput p_406136_, String p_301201_) {
-        return p_406136_.read(p_301201_, BuiltInRegistries.MOB_EFFECT.holderByNameCodec()).filter(VALID_EFFECTS::contains).orElse(null);
+    private static @Nullable Holder<MobEffect> loadEffect(final ValueInput input, final String field) {
+        return input.read(field, BuiltInRegistries.MOB_EFFECT.holderByNameCodec()).filter(VALID_EFFECTS::contains).orElse(null);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_410687_) {
-        super.loadAdditional(p_410687_);
-        this.primaryPower = loadEffect(p_410687_, "primary_effect");
-        this.secondaryPower = loadEffect(p_410687_, "secondary_effect");
-        this.name = parseCustomNameSafe(p_410687_, "CustomName");
-        this.lockKey = LockCode.fromTag(p_410687_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.primaryPower = loadEffect(input, "primary_effect");
+        this.secondaryPower = loadEffect(input, "secondary_effect");
+        this.name = parseCustomNameSafe(input, "CustomName");
+        this.lockKey = LockCode.fromTag(input);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_410479_) {
-        super.saveAdditional(p_410479_);
-        storeEffect(p_410479_, "primary_effect", this.primaryPower);
-        storeEffect(p_410479_, "secondary_effect", this.secondaryPower);
-        p_410479_.putInt("Levels", this.levels);
-        p_410479_.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
-        this.lockKey.addToTag(p_410479_);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        storeEffect(output, "primary_effect", this.primaryPower);
+        storeEffect(output, "secondary_effect", this.secondaryPower);
+        output.putInt("Levels", this.levels);
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
+        this.lockKey.addToTag(output);
     }
 
-    public void setCustomName(@Nullable Component p_58682_) {
-        this.name = p_58682_;
+    public void setCustomName(final @Nullable Component name) {
+        this.name = name;
     }
 
     @Override
@@ -310,13 +346,13 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
     }
 
     @Override
-    public @Nullable AbstractContainerMenu createMenu(int p_58696_, Inventory p_58697_, Player p_58698_) {
-        if (this.lockKey.canUnlock(p_58698_)) {
-            return new BeaconMenu(p_58696_, p_58697_, this.dataAccess, ContainerLevelAccess.create(this.level, this.getBlockPos()));
-        } else {
-            BaseContainerBlockEntity.sendChestLockedNotifications(this.getBlockPos().getCenter(), p_58698_, this.getDisplayName());
-            return null;
+    public @Nullable AbstractContainerMenu createMenu(final int containerId, final Inventory inventory, final Player player) {
+        if (this.lockKey.canUnlock(player)) {
+            return new BeaconMenu(containerId, inventory, this.dataAccess, ContainerLevelAccess.create(this.level, this.getBlockPos()));
         }
+
+        BaseContainerBlockEntity.sendChestLockedNotifications(Vec3.atCenterOf(this.getBlockPos()), player, this.getDisplayName());
+        return null;
     }
 
     @Override
@@ -330,30 +366,30 @@ public class BeaconBlockEntity extends BlockEntity implements MenuProvider, Name
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_396481_) {
-        super.applyImplicitComponents(p_396481_);
-        this.name = p_396481_.get(DataComponents.CUSTOM_NAME);
-        this.lockKey = p_396481_.getOrDefault(DataComponents.LOCK, LockCode.NO_LOCK);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        this.name = components.get(DataComponents.CUSTOM_NAME);
+        this.lockKey = components.getOrDefault(DataComponents.LOCK, LockCode.NO_LOCK);
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_329382_) {
-        super.collectImplicitComponents(p_329382_);
-        p_329382_.set(DataComponents.CUSTOM_NAME, this.name);
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CUSTOM_NAME, this.name);
         if (!this.lockKey.equals(LockCode.NO_LOCK)) {
-            p_329382_.set(DataComponents.LOCK, this.lockKey);
+            components.set(DataComponents.LOCK, this.lockKey);
         }
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_408927_) {
-        p_408927_.discard("CustomName");
-        p_408927_.discard("lock");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        output.discard("CustomName");
+        output.discard("lock");
     }
 
     @Override
-    public void setLevel(Level p_155091_) {
-        super.setLevel(p_155091_);
-        this.lastCheckY = p_155091_.getMinY() - 1;
+    public void setLevel(final Level level) {
+        super.setLevel(level);
+        this.lastCheckY = level.getMinY() - 1;
     }
 }

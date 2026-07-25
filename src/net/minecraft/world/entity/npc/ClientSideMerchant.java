@@ -14,8 +14,8 @@ public class ClientSideMerchant implements Merchant {
     private MerchantOffers offers = new MerchantOffers();
     private int xp;
 
-    public ClientSideMerchant(Player p_35344_) {
-        this.source = p_35344_;
+    public ClientSideMerchant(final Player source) {
+        this.source = source;
     }
 
     @Override
@@ -24,7 +24,7 @@ public class ClientSideMerchant implements Merchant {
     }
 
     @Override
-    public void setTradingPlayer(@Nullable Player p_35356_) {
+    public void setTradingPlayer(final @Nullable Player player) {
     }
 
     @Override
@@ -33,17 +33,17 @@ public class ClientSideMerchant implements Merchant {
     }
 
     @Override
-    public void overrideOffers(MerchantOffers p_35348_) {
-        this.offers = p_35348_;
+    public void overrideOffers(final MerchantOffers offers) {
+        this.offers = offers;
     }
 
     @Override
-    public void notifyTrade(MerchantOffer p_35346_) {
-        p_35346_.increaseUses();
+    public void notifyTrade(final MerchantOffer offer) {
+        offer.increaseUses();
     }
 
     @Override
-    public void notifyTradeUpdated(ItemStack p_35358_) {
+    public void notifyTradeUpdated(final ItemStack itemStack) {
     }
 
     @Override
@@ -52,8 +52,8 @@ public class ClientSideMerchant implements Merchant {
     }
 
     @Override
-    public boolean stillValid(Player p_377376_) {
-        return this.source == p_377376_;
+    public boolean stillValid(final Player player) {
+        return this.source == player;
     }
 
     @Override
@@ -62,8 +62,8 @@ public class ClientSideMerchant implements Merchant {
     }
 
     @Override
-    public void overrideXp(int p_35360_) {
-        this.xp = p_35360_;
+    public void overrideXp(final int xp) {
+        this.xp = xp;
     }
 
     @Override

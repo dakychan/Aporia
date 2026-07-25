@@ -12,13 +12,13 @@ public interface EntityAccess extends UniquelyIdentifyable {
 
     AABB getBoundingBox();
 
-    void setLevelCallback(EntityInLevelCallback p_156797_);
+    void setLevelCallback(EntityInLevelCallback callback);
 
     Stream<? extends EntityAccess> getSelfAndPassengers();
 
     Stream<? extends EntityAccess> getPassengersAndSelf();
 
-    void setRemoved(Entity.RemovalReason p_156798_);
+    void setRemoved(Entity.RemovalReason removalReason);
 
     boolean shouldBeSaved();
 

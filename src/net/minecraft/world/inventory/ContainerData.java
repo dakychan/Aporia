@@ -1,9 +1,9 @@
 package net.minecraft.world.inventory;
 
 public interface ContainerData {
-    int get(int p_39284_);
+    int get(final int dataId);
 
-    void set(int p_39285_, int p_39286_);
+    void set(final int dataId, final int value);
 
     int getCount();
 }

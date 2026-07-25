@@ -13,32 +13,37 @@ public class PacketEncoder<T extends PacketListener> extends MessageToByteEncode
     private static final Logger LOGGER = LogUtils.getLogger();
     private final ProtocolInfo<T> protocolInfo;
 
-    public PacketEncoder(ProtocolInfo<T> p_327768_) {
-        this.protocolInfo = p_327768_;
+    public PacketEncoder(final ProtocolInfo<T> protocolInfo) {
+        this.protocolInfo = protocolInfo;
     }
 
-    protected void encode(ChannelHandlerContext p_130545_, Packet<T> p_130546_, ByteBuf p_130547_) throws Exception {
-        PacketType<? extends Packet<? super T>> packettype = p_130546_.type();
+    protected void encode(final ChannelHandlerContext ctx, final Packet<T> packet, final ByteBuf output) throws Exception {
+        PacketType<? extends Packet<? super T>> packetId = packet.type();
 
         try {
-            this.protocolInfo.codec().encode(p_130547_, p_130546_);
-            int i = p_130547_.readableBytes();
+            this.protocolInfo.codec().encode(output, packet);
+            int writtenBytes = output.readableBytes();
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug(
-                    Connection.PACKET_SENT_MARKER, "OUT: [{}:{}] {} -> {} bytes", this.protocolInfo.id().id(), packettype, p_130546_.getClass().getName(), i
+                    Connection.PACKET_SENT_MARKER,
+                    "OUT: [{}:{}] {} -> {} bytes",
+                    this.protocolInfo.id().id(),
+                    packetId,
+                    packet.getClass().getName(),
+                    writtenBytes
                 );
             }
 
-            JvmProfiler.INSTANCE.onPacketSent(this.protocolInfo.id(), packettype, p_130545_.channel().remoteAddress(), i);
-        } catch (Throwable throwable) {
-            LOGGER.error("Error sending packet {}", packettype, throwable);
-            if (p_130546_.isSkippable()) {
-                throw new SkipPacketEncoderException(throwable);
+            JvmProfiler.INSTANCE.onPacketSent(this.protocolInfo.id(), packetId, ctx.channel().remoteAddress(), writtenBytes);
+        } catch (Throwable t) {
+            LOGGER.error("Error sending packet {}", packetId, t);
+            if (packet.isSkippable()) {
+                throw new SkipPacketEncoderException(t);
             }
 
-            throw throwable;
+            throw t;
         } finally {
-            ProtocolSwapHandler.handleOutboundTerminalPacket(p_130545_, p_130546_);
+            ProtocolSwapHandler.handleOutboundTerminalPacket(ctx, packet);
         }
     }
 }

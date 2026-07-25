@@ -4,7 +4,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
@@ -13,23 +12,23 @@ import java.util.Optional;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class BedItemColorFix extends DataFix {
-    public BedItemColorFix(Schema p_14720_, boolean p_14721_) {
-        super(p_14720_, p_14721_);
+    public BedItemColorFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        return this.fixTypeEverywhereTyped("BedItemColorFix", this.getInputSchema().getType(References.ITEM_STACK), p_14724_ -> {
-            Optional<Pair<String, String>> optional = p_14724_.getOptional(opticfinder);
-            if (optional.isPresent() && Objects.equals(optional.get().getSecond(), "minecraft:bed")) {
-                Dynamic<?> dynamic = p_14724_.get(DSL.remainderFinder());
-                if (dynamic.get("Damage").asInt(0) == 0) {
-                    return p_14724_.set(DSL.remainderFinder(), dynamic.set("Damage", dynamic.createShort((short)14)));
+        OpticFinder<Pair<String, String>> idF = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        return this.fixTypeEverywhereTyped("BedItemColorFix", this.getInputSchema().getType(References.ITEM_STACK), input -> {
+            Optional<Pair<String, String>> idOpt = input.getOptional(idF);
+            if (idOpt.isPresent() && Objects.equals(idOpt.get().getSecond(), "minecraft:bed")) {
+                Dynamic<?> tag = input.get(DSL.remainderFinder());
+                if (tag.get("Damage").asInt(0) == 0) {
+                    return input.set(DSL.remainderFinder(), tag.set("Damage", tag.createShort((short)14)));
                 }
             }
 
-            return p_14724_;
+            return input;
         });
     }
 }

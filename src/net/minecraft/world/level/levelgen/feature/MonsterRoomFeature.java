@@ -10,6 +10,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.SpawnerBlockEntity;
@@ -21,105 +22,104 @@ import org.slf4j.Logger;
 
 public class MonsterRoomFeature extends Feature<NoneFeatureConfiguration> {
     private static final Logger LOGGER = LogUtils.getLogger();
-    private static final EntityType<?>[] MOBS = new EntityType[]{EntityType.SKELETON, EntityType.ZOMBIE, EntityType.ZOMBIE, EntityType.SPIDER};
+    private static final EntityType<?>[] MOBS = new EntityType[]{EntityTypes.SKELETON, EntityTypes.ZOMBIE, EntityTypes.ZOMBIE, EntityTypes.SPIDER};
     private static final BlockState AIR = Blocks.CAVE_AIR.defaultBlockState();
 
-    public MonsterRoomFeature(Codec<NoneFeatureConfiguration> p_66345_) {
-        super(p_66345_);
+    public MonsterRoomFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_160066_) {
-        Predicate<BlockState> predicate = Feature.isReplaceable(BlockTags.FEATURES_CANNOT_REPLACE);
-        BlockPos blockpos = p_160066_.origin();
-        RandomSource randomsource = p_160066_.random();
-        WorldGenLevel worldgenlevel = p_160066_.level();
-        int i = 3;
-        int j = randomsource.nextInt(2) + 2;
-        int k = -j - 1;
-        int l = j + 1;
-        int i1 = -1;
-        int j1 = 4;
-        int k1 = randomsource.nextInt(2) + 2;
-        int l1 = -k1 - 1;
-        int i2 = k1 + 1;
-        int j2 = 0;
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        Predicate<BlockState> replaceableTag = Feature.isReplaceable(BlockTags.FEATURES_CANNOT_REPLACE);
+        BlockPos origin = context.origin();
+        RandomSource random = context.random();
+        WorldGenLevel level = context.level();
+        int hr = 3;
+        int xr = random.nextInt(2) + 2;
+        int minX = -xr - 1;
+        int maxX = xr + 1;
+        int minY = -1;
+        int maxY = 4;
+        int zr = random.nextInt(2) + 2;
+        int minZ = -zr - 1;
+        int maxZ = zr + 1;
+        int holeCount = 0;
 
-        for (int k2 = k; k2 <= l; k2++) {
-            for (int l2 = -1; l2 <= 4; l2++) {
-                for (int i3 = l1; i3 <= i2; i3++) {
-                    BlockPos blockpos1 = blockpos.offset(k2, l2, i3);
-                    boolean flag = worldgenlevel.getBlockState(blockpos1).isSolid();
-                    if (l2 == -1 && !flag) {
+        for (int dx = minX; dx <= maxX; dx++) {
+            for (int dy = -1; dy <= 4; dy++) {
+                for (int dz = minZ; dz <= maxZ; dz++) {
+                    BlockPos holePos = origin.offset(dx, dy, dz);
+                    boolean solid = level.getBlockState(holePos).isSolid();
+                    if (dy == -1 && !solid) {
                         return false;
                     }
 
-                    if (l2 == 4 && !flag) {
+                    if (dy == 4 && !solid) {
                         return false;
                     }
 
-                    if ((k2 == k || k2 == l || i3 == l1 || i3 == i2)
-                        && l2 == 0
-                        && worldgenlevel.isEmptyBlock(blockpos1)
-                        && worldgenlevel.isEmptyBlock(blockpos1.above())) {
-                        j2++;
+                    if ((dx == minX || dx == maxX || dz == minZ || dz == maxZ) && dy == 0 && level.isEmptyBlock(holePos) && level.isEmptyBlock(holePos.above())
+                        )
+                     {
+                        holeCount++;
                     }
                 }
             }
         }
 
-        if (j2 >= 1 && j2 <= 5) {
-            for (int k3 = k; k3 <= l; k3++) {
-                for (int i4 = 3; i4 >= -1; i4--) {
-                    for (int k4 = l1; k4 <= i2; k4++) {
-                        BlockPos blockpos3 = blockpos.offset(k3, i4, k4);
-                        BlockState blockstate = worldgenlevel.getBlockState(blockpos3);
-                        if (k3 == k || i4 == -1 || k4 == l1 || k3 == l || i4 == 4 || k4 == i2) {
-                            if (blockpos3.getY() >= worldgenlevel.getMinY() && !worldgenlevel.getBlockState(blockpos3.below()).isSolid()) {
-                                worldgenlevel.setBlock(blockpos3, AIR, 2);
-                            } else if (blockstate.isSolid() && !blockstate.is(Blocks.CHEST)) {
-                                if (i4 == -1 && randomsource.nextInt(4) != 0) {
-                                    this.safeSetBlock(worldgenlevel, blockpos3, Blocks.MOSSY_COBBLESTONE.defaultBlockState(), predicate);
+        if (holeCount >= 1 && holeCount <= 5) {
+            for (int dx = minX; dx <= maxX; dx++) {
+                for (int dy = 3; dy >= -1; dy--) {
+                    for (int dz = minZ; dz <= maxZ; dz++) {
+                        BlockPos wallBlock = origin.offset(dx, dy, dz);
+                        BlockState wallState = level.getBlockState(wallBlock);
+                        if (dx == minX || dy == -1 || dz == minZ || dx == maxX || dy == 4 || dz == maxZ) {
+                            if (wallBlock.getY() >= level.getMinY() && !level.getBlockState(wallBlock.below()).isSolid()) {
+                                level.setBlock(wallBlock, AIR, 2);
+                            } else if (wallState.isSolid() && !wallState.is(Blocks.CHEST)) {
+                                if (dy == -1 && random.nextInt(4) != 0) {
+                                    this.safeSetBlock(level, wallBlock, Blocks.MOSSY_COBBLESTONE.defaultBlockState(), replaceableTag);
                                 } else {
-                                    this.safeSetBlock(worldgenlevel, blockpos3, Blocks.COBBLESTONE.defaultBlockState(), predicate);
+                                    this.safeSetBlock(level, wallBlock, Blocks.COBBLESTONE.defaultBlockState(), replaceableTag);
                                 }
                             }
-                        } else if (!blockstate.is(Blocks.CHEST) && !blockstate.is(Blocks.SPAWNER)) {
-                            this.safeSetBlock(worldgenlevel, blockpos3, AIR, predicate);
+                        } else if (!wallState.is(Blocks.CHEST) && !wallState.is(Blocks.SPAWNER)) {
+                            this.safeSetBlock(level, wallBlock, AIR, replaceableTag);
                         }
                     }
                 }
             }
 
-            for (int l3 = 0; l3 < 2; l3++) {
-                for (int j4 = 0; j4 < 3; j4++) {
-                    int l4 = blockpos.getX() + randomsource.nextInt(j * 2 + 1) - j;
-                    int i5 = blockpos.getY();
-                    int j5 = blockpos.getZ() + randomsource.nextInt(k1 * 2 + 1) - k1;
-                    BlockPos blockpos2 = new BlockPos(l4, i5, j5);
-                    if (worldgenlevel.isEmptyBlock(blockpos2)) {
-                        int j3 = 0;
+            for (int cc = 0; cc < 2; cc++) {
+                for (int i = 0; i < 3; i++) {
+                    int xc = origin.getX() + random.nextInt(xr * 2 + 1) - xr;
+                    int yc = origin.getY();
+                    int zc = origin.getZ() + random.nextInt(zr * 2 + 1) - zr;
+                    BlockPos chestPos = new BlockPos(xc, yc, zc);
+                    if (level.isEmptyBlock(chestPos)) {
+                        int wallCount = 0;
 
                         for (Direction direction : Direction.Plane.HORIZONTAL) {
-                            if (worldgenlevel.getBlockState(blockpos2.relative(direction)).isSolid()) {
-                                j3++;
+                            if (level.getBlockState(chestPos.relative(direction)).isSolid()) {
+                                wallCount++;
                             }
                         }
 
-                        if (j3 == 1) {
-                            this.safeSetBlock(worldgenlevel, blockpos2, StructurePiece.reorient(worldgenlevel, blockpos2, Blocks.CHEST.defaultBlockState()), predicate);
-                            RandomizableContainer.setBlockEntityLootTable(worldgenlevel, randomsource, blockpos2, BuiltInLootTables.SIMPLE_DUNGEON);
+                        if (wallCount == 1) {
+                            this.safeSetBlock(level, chestPos, StructurePiece.reorient(level, chestPos, Blocks.CHEST.defaultBlockState()), replaceableTag);
+                            RandomizableContainer.setBlockEntityLootTable(level, random, chestPos, BuiltInLootTables.SIMPLE_DUNGEON);
                             break;
                         }
                     }
                 }
             }
 
-            this.safeSetBlock(worldgenlevel, blockpos, Blocks.SPAWNER.defaultBlockState(), predicate);
-            if (worldgenlevel.getBlockEntity(blockpos) instanceof SpawnerBlockEntity spawnerblockentity) {
-                spawnerblockentity.setEntityId(this.randomEntityId(randomsource), randomsource);
+            this.safeSetBlock(level, origin, Blocks.SPAWNER.defaultBlockState(), replaceableTag);
+            if (level.getBlockEntity(origin) instanceof SpawnerBlockEntity spawner) {
+                spawner.setEntityId(this.randomEntityId(random), random);
             } else {
-                LOGGER.error("Failed to fetch mob spawner entity at ({}, {}, {})", blockpos.getX(), blockpos.getY(), blockpos.getZ());
+                LOGGER.error("Failed to fetch mob spawner entity at ({}, {}, {})", origin.getX(), origin.getY(), origin.getZ());
             }
 
             return true;
@@ -128,7 +128,7 @@ public class MonsterRoomFeature extends Feature<NoneFeatureConfiguration> {
         }
     }
 
-    private EntityType<?> randomEntityId(RandomSource p_225154_) {
-        return Util.getRandom(MOBS, p_225154_);
+    private EntityType<?> randomEntityId(final RandomSource random) {
+        return Util.getRandom(MOBS, random);
     }
 }

@@ -9,33 +9,31 @@ import net.minecraft.gizmos.TextGizmo;
 import net.minecraft.util.debug.DebugGoalInfo;
 import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class GoalSelectorDebugRenderer implements DebugRenderer.SimpleDebugRenderer {
     private static final int MAX_RENDER_DIST = 160;
     private final Minecraft minecraft;
 
-    public GoalSelectorDebugRenderer(Minecraft p_113546_) {
-        this.minecraft = p_113546_;
+    public GoalSelectorDebugRenderer(final Minecraft minecraft) {
+        this.minecraft = minecraft;
     }
 
     @Override
-    public void emitGizmos(double p_455320_, double p_459189_, double p_460977_, DebugValueAccess p_455810_, Frustum p_451428_, float p_457276_) {
-        Camera camera = this.minecraft.gameRenderer.getMainCamera();
-        BlockPos blockpos = BlockPos.containing(camera.position().x, 0.0, camera.position().z);
-        p_455810_.forEachEntity(DebugSubscriptions.GOAL_SELECTORS, (p_448260_, p_448261_) -> {
-            if (blockpos.closerThan(p_448260_.blockPosition(), 160.0)) {
-                for (int i = 0; i < p_448261_.goals().size(); i++) {
-                    DebugGoalInfo.DebugGoal debuggoalinfo$debuggoal = p_448261_.goals().get(i);
-                    double d0 = p_448260_.getBlockX() + 0.5;
-                    double d1 = p_448260_.getY() + 2.0 + i * 0.25;
-                    double d2 = p_448260_.getBlockZ() + 0.5;
-                    int j = debuggoalinfo$debuggoal.isRunning() ? -16711936 : -3355444;
-                    Gizmos.billboardText(debuggoalinfo$debuggoal.name(), new Vec3(d0, d1, d2), TextGizmo.Style.forColorAndCentered(j));
+    public void emitGizmos(
+        final double camX, final double camY, final double camZ, final DebugValueAccess debugValues, final Frustum frustum, final float partialTicks
+    ) {
+        Camera camera = this.minecraft.gameRenderer.mainCamera();
+        BlockPos playerPos = BlockPos.containing(camera.position().x, 0.0, camera.position().z);
+        debugValues.forEachEntity(DebugSubscriptions.GOAL_SELECTORS, (entity, goalInfo) -> {
+            if (playerPos.closerThan(entity.blockPosition(), 160.0)) {
+                for (int i = 0; i < goalInfo.goals().size(); i++) {
+                    DebugGoalInfo.DebugGoal goal = goalInfo.goals().get(i);
+                    double x = entity.getBlockX() + 0.5;
+                    double y = entity.getY() + 2.0 + i * 0.25;
+                    double z = entity.getBlockZ() + 0.5;
+                    int color = goal.isRunning() ? -16711936 : -3355444;
+                    Gizmos.billboardText(goal.name(), new Vec3(x, y, z), TextGizmo.Style.forColorAndCentered(color));
                 }
             }
         });

@@ -30,18 +30,18 @@ public class CombatTracker {
     private boolean inCombat;
     private boolean takingDamage;
 
-    public CombatTracker(LivingEntity p_19285_) {
-        this.mob = p_19285_;
+    public CombatTracker(final LivingEntity mob) {
+        this.mob = mob;
     }
 
-    public void recordDamage(DamageSource p_289533_, float p_289559_) {
+    public void recordDamage(final DamageSource source, final float damage) {
         this.recheckStatus();
-        FallLocation falllocation = FallLocation.getCurrentFallLocation(this.mob);
-        CombatEntry combatentry = new CombatEntry(p_289533_, p_289559_, falllocation, (float)this.mob.fallDistance);
-        this.entries.add(combatentry);
+        FallLocation fallLocation = FallLocation.getCurrentFallLocation(this.mob);
+        CombatEntry entry = new CombatEntry(source, damage, fallLocation, (float)this.mob.fallDistance);
+        this.entries.add(entry);
         this.lastDamageTime = this.mob.tickCount;
         this.takingDamage = true;
-        if (!this.inCombat && this.mob.isAlive() && shouldEnterCombat(p_289533_)) {
+        if (!this.inCombat && this.mob.isAlive() && shouldEnterCombat(source)) {
             this.inCombat = true;
             this.combatStartTime = this.mob.tickCount;
             this.combatEndTime = this.combatStartTime;
@@ -49,92 +49,94 @@ public class CombatTracker {
         }
     }
 
-    private static boolean shouldEnterCombat(DamageSource p_289554_) {
-        return p_289554_.getEntity() instanceof LivingEntity;
+    private static boolean shouldEnterCombat(final DamageSource source) {
+        return source.getEntity() instanceof LivingEntity;
     }
 
-    private Component getMessageForAssistedFall(Entity p_289547_, Component p_289532_, String p_289555_, String p_289548_) {
-        ItemStack itemstack = p_289547_ instanceof LivingEntity livingentity ? livingentity.getMainHandItem() : ItemStack.EMPTY;
-        return !itemstack.isEmpty() && itemstack.has(DataComponents.CUSTOM_NAME)
-            ? Component.translatable(p_289555_, this.mob.getDisplayName(), p_289532_, itemstack.getDisplayName())
-            : Component.translatable(p_289548_, this.mob.getDisplayName(), p_289532_);
+    private Component getMessageForAssistedFall(
+        final Entity attackerEntity, final Component attackerName, final String messageWithItem, final String messageWithoutItem
+    ) {
+        ItemStack attackerItem = attackerEntity instanceof LivingEntity livingEntity ? livingEntity.getMainHandItem() : ItemStack.EMPTY;
+        return !attackerItem.isEmpty() && attackerItem.has(DataComponents.CUSTOM_NAME)
+            ? Component.translatable(messageWithItem, this.mob.getDisplayName(), attackerName, attackerItem.getDisplayName())
+            : Component.translatable(messageWithoutItem, this.mob.getDisplayName(), attackerName);
     }
 
-    private Component getFallMessage(CombatEntry p_289570_, @Nullable Entity p_289561_) {
-        DamageSource damagesource = p_289570_.source();
-        if (!damagesource.is(DamageTypeTags.IS_FALL) && !damagesource.is(DamageTypeTags.ALWAYS_MOST_SIGNIFICANT_FALL)) {
-            Component component1 = getDisplayName(p_289561_);
-            Entity entity = damagesource.getEntity();
-            Component component = getDisplayName(entity);
-            if (component != null && !component.equals(component1)) {
-                return this.getMessageForAssistedFall(entity, component, "death.fell.assist.item", "death.fell.assist");
+    private Component getFallMessage(final CombatEntry knockOffEntry, final @Nullable Entity killingEntity) {
+        DamageSource knockOffSource = knockOffEntry.source();
+        if (!knockOffSource.is(DamageTypeTags.IS_FALL) && !knockOffSource.is(DamageTypeTags.ALWAYS_MOST_SIGNIFICANT_FALL)) {
+            Component killerName = getDisplayName(killingEntity);
+            Entity attackerEntity = knockOffSource.getEntity();
+            Component attackerName = getDisplayName(attackerEntity);
+            if (attackerName != null && !attackerName.equals(killerName)) {
+                return this.getMessageForAssistedFall(attackerEntity, attackerName, "death.fell.assist.item", "death.fell.assist");
             } else {
-                return (Component)(component1 != null
-                    ? this.getMessageForAssistedFall(p_289561_, component1, "death.fell.finish.item", "death.fell.finish")
-                    : Component.translatable("death.fell.killer", this.mob.getDisplayName()));
+                return killerName != null
+                    ? this.getMessageForAssistedFall(killingEntity, killerName, "death.fell.finish.item", "death.fell.finish")
+                    : Component.translatable("death.fell.killer", this.mob.getDisplayName());
             }
         } else {
-            FallLocation falllocation = Objects.requireNonNullElse(p_289570_.fallLocation(), FallLocation.GENERIC);
-            return Component.translatable(falllocation.languageKey(), this.mob.getDisplayName());
+            FallLocation fallLocation = Objects.requireNonNullElse(knockOffEntry.fallLocation(), FallLocation.GENERIC);
+            return Component.translatable(fallLocation.languageKey(), this.mob.getDisplayName());
         }
     }
 
-    private static @Nullable Component getDisplayName(@Nullable Entity p_289557_) {
-        return p_289557_ == null ? null : p_289557_.getDisplayName();
+    private static @Nullable Component getDisplayName(final @Nullable Entity entity) {
+        return entity == null ? null : entity.getDisplayName();
     }
 
     public Component getDeathMessage() {
         if (this.entries.isEmpty()) {
             return Component.translatable("death.attack.generic", this.mob.getDisplayName());
         } else {
-            CombatEntry combatentry = this.entries.get(this.entries.size() - 1);
-            DamageSource damagesource = combatentry.source();
-            CombatEntry combatentry1 = this.getMostSignificantFall();
-            DeathMessageType deathmessagetype = damagesource.type().deathMessageType();
-            if (deathmessagetype == DeathMessageType.FALL_VARIANTS && combatentry1 != null) {
-                return this.getFallMessage(combatentry1, damagesource.getEntity());
-            } else if (deathmessagetype == DeathMessageType.INTENTIONAL_GAME_DESIGN) {
-                String s = "death.attack." + damagesource.getMsgId();
-                Component component = ComponentUtils.wrapInSquareBrackets(Component.translatable(s + ".link")).withStyle(INTENTIONAL_GAME_DESIGN_STYLE);
-                return Component.translatable(s + ".message", this.mob.getDisplayName(), component);
+            CombatEntry killingBlow = this.entries.get(this.entries.size() - 1);
+            DamageSource killingSource = killingBlow.source();
+            CombatEntry knockOffEntry = this.getMostSignificantFall();
+            DeathMessageType messageType = killingSource.type().deathMessageType();
+            if (messageType == DeathMessageType.FALL_VARIANTS && knockOffEntry != null) {
+                return this.getFallMessage(knockOffEntry, killingSource.getEntity());
+            } else if (messageType == DeathMessageType.INTENTIONAL_GAME_DESIGN) {
+                String deathMsg = "death.attack." + killingSource.getMsgId();
+                Component link = ComponentUtils.wrapInSquareBrackets(Component.translatable(deathMsg + ".link")).withStyle(INTENTIONAL_GAME_DESIGN_STYLE);
+                return Component.translatable(deathMsg + ".message", this.mob.getDisplayName(), link);
             } else {
-                return damagesource.getLocalizedDeathMessage(this.mob);
+                return killingSource.getLocalizedDeathMessage(this.mob);
             }
         }
     }
 
     private @Nullable CombatEntry getMostSignificantFall() {
-        CombatEntry combatentry = null;
-        CombatEntry combatentry1 = null;
-        float f = 0.0F;
-        float f1 = 0.0F;
+        CombatEntry result = null;
+        CombatEntry alternative = null;
+        float altDamage = 0.0F;
+        float bestFall = 0.0F;
 
         for (int i = 0; i < this.entries.size(); i++) {
-            CombatEntry combatentry2 = this.entries.get(i);
-            CombatEntry combatentry3 = i > 0 ? this.entries.get(i - 1) : null;
-            DamageSource damagesource = combatentry2.source();
-            boolean flag = damagesource.is(DamageTypeTags.ALWAYS_MOST_SIGNIFICANT_FALL);
-            float f2 = flag ? Float.MAX_VALUE : combatentry2.fallDistance();
-            if ((damagesource.is(DamageTypeTags.IS_FALL) || flag) && f2 > 0.0F && (combatentry == null || f2 > f1)) {
+            CombatEntry entry = this.entries.get(i);
+            CombatEntry previous = i > 0 ? this.entries.get(i - 1) : null;
+            DamageSource source = entry.source();
+            boolean isFakeFall = source.is(DamageTypeTags.ALWAYS_MOST_SIGNIFICANT_FALL);
+            float fallDistance = isFakeFall ? Float.MAX_VALUE : entry.fallDistance();
+            if ((source.is(DamageTypeTags.IS_FALL) || isFakeFall) && fallDistance > 0.0F && (result == null || fallDistance > bestFall)) {
                 if (i > 0) {
-                    combatentry = combatentry3;
+                    result = previous;
                 } else {
-                    combatentry = combatentry2;
+                    result = entry;
                 }
 
-                f1 = f2;
+                bestFall = fallDistance;
             }
 
-            if (combatentry2.fallLocation() != null && (combatentry1 == null || combatentry2.damage() > f)) {
-                combatentry1 = combatentry2;
-                f = combatentry2.damage();
+            if (entry.fallLocation() != null && (alternative == null || entry.damage() > altDamage)) {
+                alternative = entry;
+                altDamage = entry.damage();
             }
         }
 
-        if (f1 > 5.0F && combatentry != null) {
-            return combatentry;
+        if (bestFall > 5.0F && result != null) {
+            return result;
         } else {
-            return f > 5.0F && combatentry1 != null ? combatentry1 : null;
+            return altDamage > 5.0F && alternative != null ? alternative : null;
         }
     }
 
@@ -143,13 +145,13 @@ public class CombatTracker {
     }
 
     public void recheckStatus() {
-        int i = this.inCombat ? 300 : 100;
-        if (this.takingDamage && (!this.mob.isAlive() || this.mob.tickCount - this.lastDamageTime > i)) {
-            boolean flag = this.inCombat;
+        int reset = this.inCombat ? 300 : 100;
+        if (this.takingDamage && (!this.mob.isAlive() || this.mob.tickCount - this.lastDamageTime > reset)) {
+            boolean wasInCombat = this.inCombat;
             this.takingDamage = false;
             this.inCombat = false;
             this.combatEndTime = this.mob.tickCount;
-            if (flag) {
+            if (wasInCombat) {
                 this.mob.onLeaveCombat();
             }
 

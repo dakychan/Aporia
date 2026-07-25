@@ -23,7 +23,11 @@ import net.minecraft.CrashReport;
 import net.minecraft.CrashReportCategory;
 import net.minecraft.ReportType;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.*;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.dialog.DialogConnectionAccess;
 import net.minecraft.client.gui.screens.dialog.DialogScreen;
 import net.minecraft.client.gui.screens.dialog.DialogScreens;
@@ -67,12 +71,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.ServerLinks;
 import net.minecraft.server.dialog.Dialog;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class ClientCommonPacketListenerImpl implements ClientCommonPacketListener {
     private static final Component GENERIC_DISCONNECT_MESSAGE = Component.translatable("disconnect.lost");
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -90,18 +91,18 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
     protected final Map<UUID, PlayerInfo> seenPlayers;
     protected boolean seenInsecureChatWarning;
 
-    protected ClientCommonPacketListenerImpl(Minecraft p_300051_, Connection p_300688_, CommonListenerCookie p_300429_) {
-        this.minecraft = p_300051_;
-        this.connection = p_300688_;
-        this.serverData = p_300429_.serverData();
-        this.serverBrand = p_300429_.serverBrand();
-        this.telemetryManager = p_300429_.telemetryManager();
-        this.postDisconnectScreen = p_300429_.postDisconnectScreen();
-        this.serverCookies = p_300429_.serverCookies();
-        this.customReportDetails = p_300429_.customReportDetails();
-        this.serverLinks = p_300429_.serverLinks();
-        this.seenPlayers = new HashMap<>(p_300429_.seenPlayers());
-        this.seenInsecureChatWarning = p_300429_.seenInsecureChatWarning();
+    protected ClientCommonPacketListenerImpl(final Minecraft minecraft, final Connection connection, final CommonListenerCookie cookie) {
+        this.minecraft = minecraft;
+        this.connection = connection;
+        this.serverData = cookie.serverData();
+        this.serverBrand = cookie.serverBrand();
+        this.telemetryManager = cookie.telemetryManager();
+        this.postDisconnectScreen = cookie.postDisconnectScreen();
+        this.serverCookies = cookie.serverCookies();
+        this.customReportDetails = cookie.customReportDetails();
+        this.serverLinks = cookie.serverLinks();
+        this.seenPlayers = new HashMap<>(cookie.seenPlayers());
+        this.seenInsecureChatWarning = cookie.seenInsecureChatWarning();
     }
 
     public ServerLinks serverLinks() {
@@ -109,312 +110,310 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
     }
 
     @Override
-    public void onPacketError(Packet p_333124_, Exception p_332903_) {
-        LOGGER.error("Failed to handle packet {}, disconnecting", p_333124_, p_332903_);
-        Optional<Path> optional = this.storeDisconnectionReport(p_333124_, p_332903_);
-        Optional<URI> optional1 = this.serverLinks.findKnownType(ServerLinks.KnownLinkType.BUG_REPORT).map(ServerLinks.Entry::link);
-        this.connection.disconnect(new DisconnectionDetails(Component.translatable("disconnect.packetError"), optional, optional1));
+    public void onPacketError(final Packet packet, final Exception cause) {
+        LOGGER.error("Failed to handle packet {}, disconnecting", packet, cause);
+        Optional<Path> report = this.storeDisconnectionReport(packet, cause);
+        Optional<URI> bugReportLink = this.serverLinks.findKnownType(ServerLinks.KnownLinkType.BUG_REPORT).map(ServerLinks.Entry::link);
+        this.connection.disconnect(new DisconnectionDetails(Component.translatable("disconnect.packetError"), report, bugReportLink));
     }
 
     @Override
-    public DisconnectionDetails createDisconnectionInfo(Component p_342124_, Throwable p_344768_) {
-        Optional<Path> optional = this.storeDisconnectionReport(null, p_344768_);
-        Optional<URI> optional1 = this.serverLinks.findKnownType(ServerLinks.KnownLinkType.BUG_REPORT).map(ServerLinks.Entry::link);
-        return new DisconnectionDetails(p_342124_, optional, optional1);
+    public DisconnectionDetails createDisconnectionInfo(final Component reason, final Throwable cause) {
+        Optional<Path> report = this.storeDisconnectionReport(null, cause);
+        Optional<URI> bugReportUrl = this.serverLinks.findKnownType(ServerLinks.KnownLinkType.BUG_REPORT).map(ServerLinks.Entry::link);
+        return new DisconnectionDetails(reason, report, bugReportUrl);
     }
 
-    private Optional<Path> storeDisconnectionReport(@Nullable Packet p_344412_, Throwable p_344707_) {
-        CrashReport crashreport = CrashReport.forThrowable(p_344707_, "Packet handling error");
-        PacketUtils.fillCrashReport(crashreport, this, p_344412_);
-        Path path = this.minecraft.gameDirectory.toPath().resolve("debug");
-        Path path1 = path.resolve("disconnect-" + Util.getFilenameFormattedDateTime() + "-client.txt");
-        Optional<ServerLinks.Entry> optional = this.serverLinks.findKnownType(ServerLinks.KnownLinkType.BUG_REPORT);
-        List<String> list = optional.<List<String>>map(p_340889_ -> List.of("Server bug reporting link: " + p_340889_.link())).orElse(List.of());
-        return crashreport.saveToFile(path1, ReportType.NETWORK_PROTOCOL_ERROR, list) ? Optional.of(path1) : Optional.empty();
+    private Optional<Path> storeDisconnectionReport(final @Nullable Packet packet, final Throwable cause) {
+        CrashReport report = CrashReport.forThrowable(cause, "Packet handling error");
+        PacketUtils.fillCrashReport(report, this, packet);
+        Path debugDir = this.minecraft.gameDirectory.toPath().resolve("debug");
+        Path reportFile = debugDir.resolve("disconnect-" + Util.getFilenameFormattedDateTime() + "-client.txt");
+        Optional<ServerLinks.Entry> bugReportLink = this.serverLinks.findKnownType(ServerLinks.KnownLinkType.BUG_REPORT);
+        List<String> extraComments = bugReportLink.<List<String>>map(link -> List.of("Server bug reporting link: " + link.link())).orElse(List.of());
+        return report.saveToFile(reportFile, ReportType.NETWORK_PROTOCOL_ERROR, extraComments) ? Optional.of(reportFile) : Optional.empty();
     }
 
     @Override
-    public boolean shouldHandleMessage(Packet<?> p_332498_) {
-        return ClientCommonPacketListener.super.shouldHandleMessage(p_332498_)
+    public boolean shouldHandleMessage(final Packet<?> packet) {
+        return ClientCommonPacketListener.super.shouldHandleMessage(packet)
             ? true
-            : this.isTransferring && (p_332498_ instanceof ClientboundStoreCookiePacket || p_332498_ instanceof ClientboundTransferPacket);
+            : this.isTransferring && (packet instanceof ClientboundStoreCookiePacket || packet instanceof ClientboundTransferPacket);
     }
 
     @Override
-    public void handleKeepAlive(ClientboundKeepAlivePacket p_301155_) {
-        this.sendWhen(new ServerboundKeepAlivePacket(p_301155_.getId()), () -> !RenderSystem.isFrozenAtPollEvents(), Duration.ofMinutes(1L));
+    public void handleKeepAlive(final ClientboundKeepAlivePacket packet) {
+        this.sendWhen(new ServerboundKeepAlivePacket(packet.getId()), () -> !RenderSystem.isFrozenAtPollEvents(), Duration.ofMinutes(1L));
     }
 
     @Override
-    public void handlePing(ClientboundPingPacket p_300922_) {
-        PacketUtils.ensureRunningOnSameThread(p_300922_, this, this.minecraft.packetProcessor());
-        this.send(new ServerboundPongPacket(p_300922_.getId()));
+    public void handlePing(final ClientboundPingPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        this.send(new ServerboundPongPacket(packet.getId()));
     }
 
     @Override
-    public void handleCustomPayload(ClientboundCustomPayloadPacket p_298103_) {
-        CustomPacketPayload custompacketpayload = p_298103_.payload();
-        if (!(custompacketpayload instanceof DiscardedPayload)) {
-            PacketUtils.ensureRunningOnSameThread(p_298103_, this, this.minecraft.packetProcessor());
-            if (custompacketpayload instanceof BrandPayload brandpayload) {
-                this.serverBrand = brandpayload.brand();
-                this.telemetryManager.onServerBrandReceived(brandpayload.brand());
+    public void handleCustomPayload(final ClientboundCustomPayloadPacket packet) {
+        CustomPacketPayload payload = packet.payload();
+        if (!(payload instanceof DiscardedPayload)) {
+            PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+            if (payload instanceof BrandPayload brand) {
+                this.serverBrand = brand.brand();
+                this.telemetryManager.onServerBrandReceived(brand.brand());
             } else {
-                this.handleCustomPayload(custompacketpayload);
+                this.handleCustomPayload(payload);
             }
         }
     }
 
-    protected abstract void handleCustomPayload(CustomPacketPayload p_297976_);
+    protected abstract void handleCustomPayload(CustomPacketPayload payload);
 
     @Override
-    public void handleResourcePackPush(ClientboundResourcePackPushPacket p_310071_) {
-        PacketUtils.ensureRunningOnSameThread(p_310071_, this, this.minecraft.packetProcessor());
-        UUID uuid = p_310071_.id();
-        URL url = parseResourcePackUrl(p_310071_.url());
+    public void handleResourcePackPush(final ClientboundResourcePackPushPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        UUID packId = packet.id();
+        URL url = parseResourcePackUrl(packet.url());
         if (url == null) {
-            this.connection.send(new ServerboundResourcePackPacket(uuid, ServerboundResourcePackPacket.Action.INVALID_URL));
+            this.connection.send(new ServerboundResourcePackPacket(packId, ServerboundResourcePackPacket.Action.INVALID_URL));
         } else {
-            String s = p_310071_.hash();
-            boolean flag = p_310071_.required();
-            ServerData.ServerPackStatus serverdata$serverpackstatus = this.serverData != null ? this.serverData.getResourcePackStatus() : ServerData.ServerPackStatus.PROMPT;
-            if (serverdata$serverpackstatus != ServerData.ServerPackStatus.PROMPT
-                && (!flag || serverdata$serverpackstatus != ServerData.ServerPackStatus.DISABLED)) {
-                this.minecraft.getDownloadedPackSource().pushPack(uuid, url, s);
+            String hash = packet.hash();
+            boolean required = packet.required();
+            ServerData.ServerPackStatus serverPackStatus = this.serverData != null
+                ? this.serverData.getResourcePackStatus()
+                : ServerData.ServerPackStatus.PROMPT;
+            if (serverPackStatus != ServerData.ServerPackStatus.PROMPT && (!required || serverPackStatus != ServerData.ServerPackStatus.DISABLED)) {
+                this.minecraft.getDownloadedPackSource().pushPack(packId, url, hash);
             } else {
-                this.minecraft.setScreen(this.addOrUpdatePackPrompt(uuid, url, s, flag, p_310071_.prompt().orElse(null)));
+                this.minecraft.gui.setScreen(this.addOrUpdatePackPrompt(packId, url, hash, required, packet.prompt().orElse(null)));
             }
         }
     }
 
     @Override
-    public void handleResourcePackPop(ClientboundResourcePackPopPacket p_311803_) {
-        PacketUtils.ensureRunningOnSameThread(p_311803_, this, this.minecraft.packetProcessor());
-        p_311803_.id().ifPresentOrElse(p_308277_ -> this.minecraft.getDownloadedPackSource().popPack(p_308277_), () -> this.minecraft.getDownloadedPackSource().popAll());
+    public void handleResourcePackPop(final ClientboundResourcePackPopPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        packet.id().ifPresentOrElse(id -> this.minecraft.getDownloadedPackSource().popPack(id), () -> this.minecraft.getDownloadedPackSource().popAll());
     }
 
-    static Component preparePackPrompt(Component p_299226_, @Nullable Component p_298885_) {
-        return (Component)(p_298885_ == null ? p_299226_ : Component.translatable("multiplayer.texturePrompt.serverPrompt", p_299226_, p_298885_));
+    private static Component preparePackPrompt(final Component header, final @Nullable Component prompt) {
+        return prompt == null ? header : Component.translatable("multiplayer.texturePrompt.serverPrompt", header, prompt);
     }
 
-    private static @Nullable URL parseResourcePackUrl(String p_298850_) {
+    private static @Nullable URL parseResourcePackUrl(final String urlString) {
         try {
-            URL url = new URL(p_298850_);
-            String s = url.getProtocol();
-            return !"http".equals(s) && !"https".equals(s) ? null : url;
-        } catch (MalformedURLException malformedurlexception) {
+            URL url = new URL(urlString);
+            String protocol = url.getProtocol();
+            return !"http".equals(protocol) && !"https".equals(protocol) ? null : url;
+        } catch (MalformedURLException e) {
             return null;
         }
     }
 
     @Override
-    public void handleRequestCookie(ClientboundCookieRequestPacket p_328943_) {
-        PacketUtils.ensureRunningOnSameThread(p_328943_, this, this.minecraft.packetProcessor());
-        this.connection.send(new ServerboundCookieResponsePacket(p_328943_.key(), this.serverCookies.get(p_328943_.key())));
+    public void handleRequestCookie(final ClientboundCookieRequestPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        this.connection.send(new ServerboundCookieResponsePacket(packet.key(), this.serverCookies.get(packet.key())));
     }
 
     @Override
-    public void handleStoreCookie(ClientboundStoreCookiePacket p_333290_) {
-        PacketUtils.ensureRunningOnSameThread(p_333290_, this, this.minecraft.packetProcessor());
-        this.serverCookies.put(p_333290_.key(), p_333290_.payload());
+    public void handleStoreCookie(final ClientboundStoreCookiePacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        this.serverCookies.put(packet.key(), packet.payload());
     }
 
     @Override
-    public void handleCustomReportDetails(ClientboundCustomReportDetailsPacket p_342751_) {
-        PacketUtils.ensureRunningOnSameThread(p_342751_, this, this.minecraft.packetProcessor());
-        this.customReportDetails = p_342751_.details();
+    public void handleCustomReportDetails(final ClientboundCustomReportDetailsPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        this.customReportDetails = packet.details();
     }
 
     @Override
-    public void handleServerLinks(ClientboundServerLinksPacket p_342144_) {
-        PacketUtils.ensureRunningOnSameThread(p_342144_, this, this.minecraft.packetProcessor());
-        List<ServerLinks.UntrustedEntry> list = p_342144_.links();
-        Builder<ServerLinks.Entry> builder = ImmutableList.builderWithExpectedSize(list.size());
+    public void handleServerLinks(final ClientboundServerLinksPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        List<ServerLinks.UntrustedEntry> untrustedEntries = packet.links();
+        Builder<ServerLinks.Entry> trustedEntries = ImmutableList.builderWithExpectedSize(untrustedEntries.size());
 
-        for (ServerLinks.UntrustedEntry serverlinks$untrustedentry : list) {
+        for (ServerLinks.UntrustedEntry entry : untrustedEntries) {
             try {
-                URI uri = Util.parseAndValidateUntrustedUri(serverlinks$untrustedentry.link());
-                builder.add(new ServerLinks.Entry(serverlinks$untrustedentry.type(), uri));
-            } catch (Exception exception) {
-                LOGGER.warn(
-                    "Received invalid link for type {}:{}", serverlinks$untrustedentry.type(), serverlinks$untrustedentry.link(), exception
-                );
+                URI parsedLink = Util.parseAndValidateUntrustedUri(entry.link());
+                trustedEntries.add(new ServerLinks.Entry(entry.type(), parsedLink));
+            } catch (Exception e) {
+                LOGGER.warn("Received invalid link for type {}:{}", entry.type(), entry.link(), e);
             }
         }
 
-        this.serverLinks = new ServerLinks(builder.build());
+        this.serverLinks = new ServerLinks(trustedEntries.build());
     }
 
     @Override
-    public void handleShowDialog(ClientboundShowDialogPacket p_408457_) {
-        PacketUtils.ensureRunningOnSameThread(p_408457_, this, this.minecraft.packetProcessor());
-        this.showDialog(p_408457_.dialog(), this.minecraft.screen);
+    public void handleShowDialog(final ClientboundShowDialogPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
+        this.showDialog(packet.dialog(), this.minecraft.gui.screen());
     }
 
     protected abstract DialogConnectionAccess createDialogAccess();
 
-    public void showDialog(Holder<Dialog> p_407215_, @Nullable Screen p_410225_) {
-        this.showDialog(p_407215_, this.createDialogAccess(), p_410225_);
+    public void showDialog(final Holder<Dialog> dialog, final @Nullable Screen activeScreen) {
+        this.showDialog(dialog, this.createDialogAccess(), activeScreen);
     }
 
-    protected void showDialog(Holder<Dialog> p_410358_, DialogConnectionAccess p_406365_, @Nullable Screen p_410568_) {
-        if (p_410568_ instanceof DialogScreen.WarningScreen dialogscreen$warningscreen) {
-            Screen screen2 = dialogscreen$warningscreen.returnScreen();
-            Screen screen3 = screen2 instanceof DialogScreen<?> dialogscreen1 ? dialogscreen1.previousScreen() : screen2;
-            DialogScreen<?> dialogscreen2 = DialogScreens.createFromData(p_410358_.value(), screen3, p_406365_);
-            if (dialogscreen2 != null) {
-                dialogscreen$warningscreen.updateReturnScreen(dialogscreen2);
+    protected void showDialog(final Holder<Dialog> dialog, final DialogConnectionAccess connectionAccess, final @Nullable Screen activeScreen) {
+        if (activeScreen instanceof DialogScreen.WarningScreen existingWarningScreen) {
+            Screen hiddenScreen = existingWarningScreen.returnScreen();
+            Screen previousScreen = hiddenScreen instanceof DialogScreen<?> hiddenDialog ? hiddenDialog.previousScreen() : hiddenScreen;
+            DialogScreen<?> newDialogScreen = DialogScreens.createFromData(dialog.value(), previousScreen, connectionAccess);
+            if (newDialogScreen != null) {
+                existingWarningScreen.updateReturnScreen(newDialogScreen);
             } else {
-                LOGGER.warn("Failed to show dialog for data {}", p_410358_);
+                LOGGER.warn("Failed to show dialog for data {}", dialog);
             }
         } else {
-            Screen screen;
-            if (p_410568_ instanceof DialogScreen<?> dialogscreen) {
-                screen = dialogscreen.previousScreen();
-            } else if (p_410568_ instanceof WaitingForResponseScreen waitingforresponsescreen) {
-                screen = waitingforresponsescreen.previousScreen();
+            Screen previousScreen;
+            if (activeScreen instanceof DialogScreen<?> existingDialog) {
+                previousScreen = existingDialog.previousScreen();
+            } else if (activeScreen instanceof WaitingForResponseScreen waitScreen) {
+                previousScreen = waitScreen.previousScreen();
             } else {
-                screen = p_410568_;
+                previousScreen = activeScreen;
             }
 
-            Screen screen1 = DialogScreens.createFromData(p_410358_.value(), screen, p_406365_);
-            if (screen1 != null) {
-                this.minecraft.setScreen(screen1);
+            Screen screen = DialogScreens.createFromData(dialog.value(), previousScreen, connectionAccess);
+            if (screen != null) {
+                this.minecraft.gui.setScreen(screen);
             } else {
-                LOGGER.warn("Failed to show dialog for data {}", p_410358_);
+                LOGGER.warn("Failed to show dialog for data {}", dialog);
             }
         }
     }
 
     @Override
-    public void handleClearDialog(ClientboundClearDialogPacket p_407378_) {
-        PacketUtils.ensureRunningOnSameThread(p_407378_, this, this.minecraft.packetProcessor());
+    public void handleClearDialog(final ClientboundClearDialogPacket packet) {
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
         this.clearDialog();
     }
 
     public void clearDialog() {
-        if (this.minecraft.screen instanceof DialogScreen.WarningScreen dialogscreen$warningscreen) {
-            if (dialogscreen$warningscreen.returnScreen() instanceof DialogScreen<?> dialogscreen1) {
-                dialogscreen$warningscreen.updateReturnScreen(dialogscreen1.previousScreen());
+        if (this.minecraft.gui.screen() instanceof DialogScreen.WarningScreen existingWarningScreen) {
+            if (existingWarningScreen.returnScreen() instanceof DialogScreen<?> dialogScreen) {
+                existingWarningScreen.updateReturnScreen(dialogScreen.previousScreen());
             }
-        } else if (this.minecraft.screen instanceof DialogScreen<?> dialogscreen) {
-            this.minecraft.setScreen(dialogscreen.previousScreen());
+        } else if (this.minecraft.gui.screen() instanceof DialogScreen<?> dialog) {
+            this.minecraft.gui.setScreen(dialog.previousScreen());
         }
     }
 
     @Override
-    public void handleTransfer(ClientboundTransferPacket p_332424_) {
+    public void handleTransfer(final ClientboundTransferPacket packet) {
         this.isTransferring = true;
-        PacketUtils.ensureRunningOnSameThread(p_332424_, this, this.minecraft.packetProcessor());
+        PacketUtils.ensureRunningOnSameThread(packet, this, this.minecraft.packetProcessor());
         if (this.serverData == null) {
             throw new IllegalStateException("Cannot transfer to server from singleplayer");
-        } else {
-            this.connection.disconnect(Component.translatable("disconnect.transfer"));
-            this.connection.setReadOnly();
-            this.connection.handleDisconnection();
-            ServerAddress serveraddress = new ServerAddress(p_332424_.host(), p_332424_.port());
-            ConnectScreen.startConnecting(
-                Objects.requireNonNullElseGet(this.postDisconnectScreen, TitleScreen::new),
-                this.minecraft,
-                serveraddress,
-                this.serverData,
-                false,
-                new TransferState(this.serverCookies, this.seenPlayers, this.seenInsecureChatWarning)
-            );
         }
+
+        this.connection.disconnect(Component.translatable("disconnect.transfer"));
+        this.connection.setReadOnly();
+        this.connection.handleDisconnection();
+        ServerAddress address = new ServerAddress(packet.host(), packet.port());
+        ConnectScreen.startConnecting(
+            Objects.requireNonNullElseGet(this.postDisconnectScreen, () -> new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen()),
+            this.minecraft,
+            address,
+            this.serverData,
+            false,
+            new TransferState(this.serverCookies, this.seenPlayers, this.seenInsecureChatWarning)
+        );
     }
 
     @Override
-    public void handleDisconnect(ClientboundDisconnectPacket p_298016_) {
-        this.connection.disconnect(p_298016_.reason());
+    public void handleDisconnect(final ClientboundDisconnectPacket packet) {
+        this.connection.disconnect(packet.reason());
     }
 
     protected void sendDeferredPackets() {
         Iterator<ClientCommonPacketListenerImpl.DeferredPacket> iterator = this.deferredPackets.iterator();
 
         while (iterator.hasNext()) {
-            ClientCommonPacketListenerImpl.DeferredPacket clientcommonpacketlistenerimpl$deferredpacket = iterator.next();
-            if (clientcommonpacketlistenerimpl$deferredpacket.sendCondition().getAsBoolean()) {
-                this.send(clientcommonpacketlistenerimpl$deferredpacket.packet);
+            ClientCommonPacketListenerImpl.DeferredPacket deferredPacket = iterator.next();
+            if (deferredPacket.sendCondition().getAsBoolean()) {
+                this.send(deferredPacket.packet);
                 iterator.remove();
-            } else if (clientcommonpacketlistenerimpl$deferredpacket.expirationTime() <= Util.getMillis()) {
+            } else if (deferredPacket.expirationTime() <= Util.getMillis()) {
                 iterator.remove();
             }
         }
     }
 
-    public void send(Packet<?> p_300175_) {
-        this.connection.send(p_300175_);
+    public void send(final Packet<?> packet) {
+        this.connection.send(packet);
     }
 
     @Override
-    public void onDisconnect(DisconnectionDetails p_344141_) {
+    public void onDisconnect(final DisconnectionDetails details) {
         this.telemetryManager.onDisconnect();
-        this.minecraft.disconnect(this.createDisconnectScreen(p_344141_), this.isTransferring);
-        LOGGER.warn("Client disconnected with reason: {}", p_344141_.reason().getString());
+        this.minecraft.disconnect(this.createDisconnectScreen(details), this.isTransferring);
+        LOGGER.warn("Client disconnected with reason: {}", details.reason().getString());
     }
 
     @Override
-    public void fillListenerSpecificCrashDetails(CrashReport p_342520_, CrashReportCategory p_309761_) {
-        p_309761_.setDetail("Is Local", () -> String.valueOf(this.connection.isMemoryConnection()));
-        p_309761_.setDetail("Server type", () -> this.serverData != null ? this.serverData.type().toString() : "<none>");
-        p_309761_.setDetail("Server brand", () -> this.serverBrand);
+    public void fillListenerSpecificCrashDetails(final CrashReport report, final CrashReportCategory connectionDetails) {
+        connectionDetails.setDetail("Is Local", () -> String.valueOf(this.connection.isMemoryConnection()));
+        connectionDetails.setDetail("Server type", () -> this.serverData != null ? this.serverData.type().toString() : "<none>");
+        connectionDetails.setDetail("Server brand", () -> this.serverBrand);
         if (!this.customReportDetails.isEmpty()) {
-            CrashReportCategory crashreportcategory = p_342520_.addCategory("Custom Server Details");
-            this.customReportDetails.forEach(crashreportcategory::setDetail);
+            CrashReportCategory serverDetailsCategory = report.addCategory("Custom Server Details");
+            this.customReportDetails.forEach(serverDetailsCategory::setDetail);
         }
     }
 
-    protected Screen createDisconnectScreen(DisconnectionDetails p_342895_) {
-        Screen screen = Objects.requireNonNullElseGet(
+    protected Screen createDisconnectScreen(final DisconnectionDetails details) {
+        Screen callbackScreen = Objects.requireNonNullElseGet(
             this.postDisconnectScreen, () -> (Screen)(this.serverData != null ? new JoinMultiplayerScreen(new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen()) : new so.aporia.utils.user.render.ui.mainmenu.AporiaMainMenuScreen())
         );
         return this.serverData != null && this.serverData.isRealm()
-            ? new DisconnectedScreen(screen, GENERIC_DISCONNECT_MESSAGE, p_342895_, CommonComponents.GUI_BACK)
-            : new DisconnectedScreen(screen, GENERIC_DISCONNECT_MESSAGE, p_342895_);
+            ? new DisconnectedScreen(callbackScreen, GENERIC_DISCONNECT_MESSAGE, details, CommonComponents.GUI_BACK)
+            : new DisconnectedScreen(callbackScreen, GENERIC_DISCONNECT_MESSAGE, details);
     }
 
     public @Nullable String serverBrand() {
         return this.serverBrand;
     }
 
-    private void sendWhen(Packet<? extends ServerboundPacketListener> p_300852_, BooleanSupplier p_299754_, Duration p_299011_) {
-        if (p_299754_.getAsBoolean()) {
-            this.send(p_300852_);
+    private void sendWhen(final Packet<? extends ServerboundPacketListener> packet, final BooleanSupplier condition, final Duration expireAfterDuration) {
+        if (condition.getAsBoolean()) {
+            this.send(packet);
         } else {
-            this.deferredPackets.add(new ClientCommonPacketListenerImpl.DeferredPacket(p_300852_, p_299754_, Util.getMillis() + p_299011_.toMillis()));
+            this.deferredPackets.add(new ClientCommonPacketListenerImpl.DeferredPacket(packet, condition, Util.getMillis() + expireAfterDuration.toMillis()));
         }
     }
 
-    private Screen addOrUpdatePackPrompt(UUID p_313077_, URL p_312880_, String p_309420_, boolean p_312218_, @Nullable Component p_309535_) {
-        Screen screen = this.minecraft.screen;
-        return screen instanceof ClientCommonPacketListenerImpl.PackConfirmScreen clientcommonpacketlistenerimpl$packconfirmscreen
-            ? clientcommonpacketlistenerimpl$packconfirmscreen.update(this.minecraft, p_313077_, p_312880_, p_309420_, p_312218_, p_309535_)
+    private Screen addOrUpdatePackPrompt(final UUID packId, final URL url, final String hash, final boolean required, final @Nullable Component prompt) {
+        Screen currentScreen = this.minecraft.gui.screen();
+        return currentScreen instanceof ClientCommonPacketListenerImpl.PackConfirmScreen promptScreen
+            ? promptScreen.update(this.minecraft, packId, url, hash, required, prompt)
             : new ClientCommonPacketListenerImpl.PackConfirmScreen(
                 this.minecraft,
-                screen,
-                List.of(new ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest(p_313077_, p_312880_, p_309420_)),
-                p_312218_,
-                p_309535_
+                currentScreen,
+                List.of(new ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest(packId, url, hash)),
+                required,
+                prompt
             );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    protected abstract class CommonDialogAccess implements DialogConnectionAccess {
+        protected abstract class CommonDialogAccess implements DialogConnectionAccess {
         @Override
-        public void disconnect(Component p_426149_) {
-            ClientCommonPacketListenerImpl.this.connection.disconnect(p_426149_);
+        public void disconnect(final Component message) {
+            ClientCommonPacketListenerImpl.this.connection.disconnect(message);
             ClientCommonPacketListenerImpl.this.connection.handleDisconnection();
         }
 
         @Override
-        public void openDialog(Holder<Dialog> p_428127_, @Nullable Screen p_428248_) {
-            ClientCommonPacketListenerImpl.this.showDialog(p_428127_, this, p_428248_);
+        public void openDialog(final Holder<Dialog> dialog, final @Nullable Screen activeScreen) {
+            ClientCommonPacketListenerImpl.this.showDialog(dialog, this, activeScreen);
         }
 
         @Override
-        public void sendCustomAction(Identifier p_458088_, Optional<Tag> p_425632_) {
-            ClientCommonPacketListenerImpl.this.send(new ServerboundCustomClickActionPacket(p_458088_, p_425632_));
+        public void sendCustomAction(final Identifier id, final Optional<Tag> payload) {
+            ClientCommonPacketListenerImpl.this.send(new ServerboundCustomClickActionPacket(id, payload));
         }
 
         @Override
@@ -423,81 +422,74 @@ public abstract class ClientCommonPacketListenerImpl implements ClientCommonPack
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record DeferredPacket(Packet<? extends ServerboundPacketListener> packet, BooleanSupplier sendCondition, long expirationTime) {
+        private record DeferredPacket(Packet<? extends ServerboundPacketListener> packet, BooleanSupplier sendCondition, long expirationTime) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class PackConfirmScreen extends ConfirmScreen {
+        private class PackConfirmScreen extends ConfirmScreen {
         private final List<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest> requests;
         private final @Nullable Screen parentScreen;
 
-        PackConfirmScreen(
-            final @Nullable Minecraft p_309743_,
-            final Screen p_312679_,
-            final List<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest> p_312458_,
-            final @Nullable boolean p_313140_,
-            final Component p_312901_
+        private PackConfirmScreen(
+            final Minecraft minecraft,
+            final @Nullable Screen parentScreen,
+            final List<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest> requests,
+            final boolean required,
+            final @Nullable Component prompt
         ) {
             super(
-                p_309396_ -> {
-                    p_309743_.setScreen(p_312679_);
-                    DownloadedPackSource downloadedpacksource = p_309743_.getDownloadedPackSource();
-                    if (p_309396_) {
+                result -> {
+                    minecraft.gui.setScreen(parentScreen);
+                    DownloadedPackSource packSource = minecraft.getDownloadedPackSource();
+                    if (result) {
                         if (ClientCommonPacketListenerImpl.this.serverData != null) {
                             ClientCommonPacketListenerImpl.this.serverData.setResourcePackStatus(ServerData.ServerPackStatus.ENABLED);
                         }
 
-                        downloadedpacksource.allowServerPacks();
+                        packSource.allowServerPacks();
                     } else {
-                        downloadedpacksource.rejectServerPacks();
-                        if (p_313140_) {
+                        packSource.rejectServerPacks();
+                        if (required) {
                             ClientCommonPacketListenerImpl.this.connection.disconnect(Component.translatable("multiplayer.requiredTexturePrompt.disconnect"));
                         } else if (ClientCommonPacketListenerImpl.this.serverData != null) {
                             ClientCommonPacketListenerImpl.this.serverData.setResourcePackStatus(ServerData.ServerPackStatus.DISABLED);
                         }
                     }
 
-                    for (ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest clientcommonpacketlistenerimpl$packconfirmscreen$pendingrequest : p_312458_) {
-                        downloadedpacksource.pushPack(
-                            clientcommonpacketlistenerimpl$packconfirmscreen$pendingrequest.id,
-                            clientcommonpacketlistenerimpl$packconfirmscreen$pendingrequest.url,
-                            clientcommonpacketlistenerimpl$packconfirmscreen$pendingrequest.hash
-                        );
+                    for (ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest request : requests) {
+                        packSource.pushPack(request.id, request.url, request.hash);
                     }
 
                     if (ClientCommonPacketListenerImpl.this.serverData != null) {
                         ServerList.saveSingleServer(ClientCommonPacketListenerImpl.this.serverData);
                     }
                 },
-                p_313140_ ? Component.translatable("multiplayer.requiredTexturePrompt.line1") : Component.translatable("multiplayer.texturePrompt.line1"),
+                required ? Component.translatable("multiplayer.requiredTexturePrompt.line1") : Component.translatable("multiplayer.texturePrompt.line1"),
                 ClientCommonPacketListenerImpl.preparePackPrompt(
-                    p_313140_
+                    required
                         ? Component.translatable("multiplayer.requiredTexturePrompt.line2").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)
                         : Component.translatable("multiplayer.texturePrompt.line2"),
-                    p_312901_
+                    prompt
                 ),
-                p_313140_ ? CommonComponents.GUI_PROCEED : CommonComponents.GUI_YES,
-                p_313140_ ? CommonComponents.GUI_DISCONNECT : CommonComponents.GUI_NO
+                required ? CommonComponents.GUI_PROCEED : CommonComponents.GUI_YES,
+                required ? CommonComponents.GUI_DISCONNECT : CommonComponents.GUI_NO
             );
-            this.requests = p_312458_;
-            this.parentScreen = p_312679_;
+            this.requests = requests;
+            this.parentScreen = parentScreen;
         }
 
         public ClientCommonPacketListenerImpl.PackConfirmScreen update(
-            Minecraft p_312486_, UUID p_311436_, URL p_309404_, String p_312909_, boolean p_312985_, @Nullable Component p_309496_
+            final Minecraft minecraft, final UUID id, final URL url, final String hash, final boolean required, final @Nullable Component prompt
         ) {
-            List<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest> list = ImmutableList.<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest>builderWithExpectedSize(
+            List<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest> extendedRequests = ImmutableList.<ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest>builderWithExpectedSize(
                     this.requests.size() + 1
                 )
                 .addAll(this.requests)
-                .add(new ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest(p_311436_, p_309404_, p_312909_))
+                .add(new ClientCommonPacketListenerImpl.PackConfirmScreen.PendingRequest(id, url, hash))
                 .build();
-            return ClientCommonPacketListenerImpl.this.new PackConfirmScreen(p_312486_, this.parentScreen, list, p_312985_, p_309496_);
+            return ClientCommonPacketListenerImpl.this.new PackConfirmScreen(minecraft, this.parentScreen, extendedRequests, required, prompt);
         }
 
-        @OnlyIn(Dist.CLIENT)
-        record PendingRequest(UUID id, URL url, String hash) {
+                private record PendingRequest(UUID id, URL url, String hash) {
         }
     }
 }

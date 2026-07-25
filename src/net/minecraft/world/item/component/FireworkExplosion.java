@@ -2,7 +2,6 @@ package net.minecraft.world.item.component;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
@@ -27,14 +26,14 @@ public record FireworkExplosion(FireworkExplosion.Shape shape, IntList colors, I
     public static final FireworkExplosion DEFAULT = new FireworkExplosion(FireworkExplosion.Shape.SMALL_BALL, IntList.of(), IntList.of(), false, false);
     public static final Codec<IntList> COLOR_LIST_CODEC = Codec.INT.listOf().xmap(IntArrayList::new, ArrayList::new);
     public static final Codec<FireworkExplosion> CODEC = RecordCodecBuilder.create(
-        p_332691_ -> p_332691_.group(
+        i -> i.group(
                 FireworkExplosion.Shape.CODEC.fieldOf("shape").forGetter(FireworkExplosion::shape),
                 COLOR_LIST_CODEC.optionalFieldOf("colors", IntList.of()).forGetter(FireworkExplosion::colors),
                 COLOR_LIST_CODEC.optionalFieldOf("fade_colors", IntList.of()).forGetter(FireworkExplosion::fadeColors),
                 Codec.BOOL.optionalFieldOf("has_trail", false).forGetter(FireworkExplosion::hasTrail),
                 Codec.BOOL.optionalFieldOf("has_twinkle", false).forGetter(FireworkExplosion::hasTwinkle)
             )
-            .apply(p_332691_, FireworkExplosion::new)
+            .apply(i, FireworkExplosion::new)
     );
     private static final StreamCodec<ByteBuf, IntList> COLOR_LIST_STREAM_CODEC = ByteBufCodecs.INT
         .apply(ByteBufCodecs.list())
@@ -55,18 +54,20 @@ public record FireworkExplosion(FireworkExplosion.Shape shape, IntList colors, I
     private static final Component CUSTOM_COLOR_NAME = Component.translatable("item.minecraft.firework_star.custom_color");
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_328877_, Consumer<Component> p_333224_, TooltipFlag p_335960_, DataComponentGetter p_395813_) {
-        p_333224_.accept(this.shape.getName().withStyle(ChatFormatting.GRAY));
-        this.addAdditionalTooltip(p_333224_);
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        consumer.accept(this.shape.getName().withStyle(ChatFormatting.GRAY));
+        this.addAdditionalTooltip(consumer);
     }
 
-    public void addAdditionalTooltip(Consumer<Component> p_331797_) {
+    public void addAdditionalTooltip(final Consumer<Component> consumer) {
         if (!this.colors.isEmpty()) {
-            p_331797_.accept(appendColors(Component.empty().withStyle(ChatFormatting.GRAY), this.colors));
+            consumer.accept(appendColors(Component.empty().withStyle(ChatFormatting.GRAY), this.colors));
         }
 
         if (!this.fadeColors.isEmpty()) {
-            p_331797_.accept(
+            consumer.accept(
                 appendColors(
                     Component.translatable("item.minecraft.firework_star.fade_to").append(CommonComponents.SPACE).withStyle(ChatFormatting.GRAY),
                     this.fadeColors
@@ -75,36 +76,36 @@ public record FireworkExplosion(FireworkExplosion.Shape shape, IntList colors, I
         }
 
         if (this.hasTrail) {
-            p_331797_.accept(Component.translatable("item.minecraft.firework_star.trail").withStyle(ChatFormatting.GRAY));
+            consumer.accept(Component.translatable("item.minecraft.firework_star.trail").withStyle(ChatFormatting.GRAY));
         }
 
         if (this.hasTwinkle) {
-            p_331797_.accept(Component.translatable("item.minecraft.firework_star.flicker").withStyle(ChatFormatting.GRAY));
+            consumer.accept(Component.translatable("item.minecraft.firework_star.flicker").withStyle(ChatFormatting.GRAY));
         }
     }
 
-    private static Component appendColors(MutableComponent p_333538_, IntList p_333652_) {
-        for (int i = 0; i < p_333652_.size(); i++) {
+    private static Component appendColors(final MutableComponent builder, final IntList colors) {
+        for (int i = 0; i < colors.size(); i++) {
             if (i > 0) {
-                p_333538_.append(", ");
+                builder.append(", ");
             }
 
-            p_333538_.append(getColorName(p_333652_.getInt(i)));
+            builder.append(getColorName(colors.getInt(i)));
         }
 
-        return p_333538_;
+        return builder;
     }
 
-    private static Component getColorName(int p_333961_) {
-        DyeColor dyecolor = DyeColor.byFireworkColor(p_333961_);
-        return (Component)(dyecolor == null ? CUSTOM_COLOR_NAME : Component.translatable("item.minecraft.firework_star." + dyecolor.getName()));
+    private static Component getColorName(final int colorIndex) {
+        DyeColor color = DyeColor.byFireworkColor(colorIndex);
+        return color == null ? CUSTOM_COLOR_NAME : Component.translatable("item.minecraft.firework_star." + color.getName());
     }
 
-    public FireworkExplosion withFadeColors(IntList p_330299_) {
-        return new FireworkExplosion(this.shape, this.colors, new IntArrayList(p_330299_), this.hasTrail, this.hasTwinkle);
+    public FireworkExplosion withFadeColors(final IntList fadeColors) {
+        return new FireworkExplosion(this.shape, this.colors, new IntArrayList(fadeColors), this.hasTrail, this.hasTwinkle);
     }
 
-    public static enum Shape implements StringRepresentable {
+    public enum Shape implements StringRepresentable {
         SMALL_BALL(0, "small_ball"),
         LARGE_BALL(1, "large_ball"),
         STAR(2, "star"),
@@ -119,9 +120,9 @@ public record FireworkExplosion(FireworkExplosion.Shape shape, IntList colors, I
         private final int id;
         private final String name;
 
-        private Shape(final int p_330815_, final String p_329574_) {
-            this.id = p_330815_;
-            this.name = p_329574_;
+        Shape(final int id, final String name) {
+            this.id = id;
+            this.name = name;
         }
 
         public MutableComponent getName() {
@@ -132,8 +133,8 @@ public record FireworkExplosion(FireworkExplosion.Shape shape, IntList colors, I
             return this.id;
         }
 
-        public static FireworkExplosion.Shape byId(int p_330413_) {
-            return BY_ID.apply(p_330413_);
+        public static FireworkExplosion.Shape byId(final int id) {
+            return BY_ID.apply(id);
         }
 
         @Override

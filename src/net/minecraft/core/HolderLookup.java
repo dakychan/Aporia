@@ -26,7 +26,7 @@ public interface HolderLookup<T> extends HolderGetter<T> {
         return this.listTags().map(HolderSet.Named::key);
     }
 
-    public interface Provider extends HolderGetter.Provider {
+    interface Provider extends HolderGetter.Provider {
         Stream<ResourceKey<? extends Registry<?>>> listRegistryKeys();
 
         default Stream<HolderLookup.RegistryLookup<?>> listRegistries() {
@@ -34,19 +34,19 @@ public interface HolderLookup<T> extends HolderGetter<T> {
         }
 
         @Override
-        <T> Optional<? extends HolderLookup.RegistryLookup<T>> lookup(ResourceKey<? extends Registry<? extends T>> p_256285_);
+        <T> Optional<? extends HolderLookup.RegistryLookup<T>> lookup(final ResourceKey<? extends Registry<? extends T>> key);
 
-        default <T> HolderLookup.RegistryLookup<T> lookupOrThrow(ResourceKey<? extends Registry<? extends T>> p_255957_) {
-            return this.lookup(p_255957_).orElseThrow(() -> new IllegalStateException("Registry " + p_255957_.identifier() + " not found"));
+        default <T> HolderLookup.RegistryLookup<T> lookupOrThrow(final ResourceKey<? extends Registry<? extends T>> key) {
+            return this.lookup(key).orElseThrow(() -> new IllegalStateException("Registry " + key.identifier() + " not found"));
         }
 
-        default <V> RegistryOps<V> createSerializationContext(DynamicOps<V> p_330698_) {
-            return RegistryOps.create(p_330698_, this);
+        default <V> RegistryOps<V> createSerializationContext(final DynamicOps<V> parent) {
+            return RegistryOps.create(parent, this);
         }
 
-        static HolderLookup.Provider create(Stream<HolderLookup.RegistryLookup<?>> p_256054_) {
-            final Map<ResourceKey<? extends Registry<?>>, HolderLookup.RegistryLookup<?>> map = p_256054_.collect(
-                Collectors.toUnmodifiableMap(HolderLookup.RegistryLookup::key, p_256335_ -> p_256335_)
+        static HolderLookup.Provider create(final Stream<HolderLookup.RegistryLookup<?>> lookups) {
+            final Map<ResourceKey<? extends Registry<?>>, HolderLookup.RegistryLookup<?>> map = lookups.collect(
+                Collectors.toUnmodifiableMap(HolderLookup.RegistryLookup::key, e -> e)
             );
             return new HolderLookup.Provider() {
                 @Override
@@ -55,8 +55,8 @@ public interface HolderLookup<T> extends HolderGetter<T> {
                 }
 
                 @Override
-                public <T> Optional<HolderLookup.RegistryLookup<T>> lookup(ResourceKey<? extends Registry<? extends T>> p_256379_) {
-                    return Optional.ofNullable((HolderLookup.RegistryLookup<T>)map.get(p_256379_));
+                public <T> Optional<HolderLookup.RegistryLookup<T>> lookup(final ResourceKey<? extends Registry<? extends T>> key) {
+                    return Optional.ofNullable((HolderLookup.RegistryLookup<T>)map.get(key));
                 }
             };
         }
@@ -66,16 +66,16 @@ public interface HolderLookup<T> extends HolderGetter<T> {
         }
     }
 
-    public interface RegistryLookup<T> extends HolderLookup<T>, HolderOwner<T> {
+    interface RegistryLookup<T> extends HolderLookup<T>, HolderOwner<T> {
         ResourceKey<? extends Registry<? extends T>> key();
 
         Lifecycle registryLifecycle();
 
-        default HolderLookup.RegistryLookup<T> filterFeatures(FeatureFlagSet p_249397_) {
-            return FeatureElement.FILTERED_REGISTRIES.contains(this.key()) ? this.filterElements(p_250240_ -> ((FeatureElement)p_250240_).isEnabled(p_249397_)) : this;
+        default HolderLookup.RegistryLookup<T> filterFeatures(final FeatureFlagSet enabledFeatures) {
+            return FeatureElement.FILTERED_REGISTRIES.contains(this.key()) ? this.filterElements(t -> ((FeatureElement)t).isEnabled(enabledFeatures)) : this;
         }
 
-        default HolderLookup.RegistryLookup<T> filterElements(final Predicate<T> p_334671_) {
+        default HolderLookup.RegistryLookup<T> filterElements(final Predicate<T> filter) {
             return new HolderLookup.RegistryLookup.Delegate<T>() {
                 @Override
                 public HolderLookup.RegistryLookup<T> parent() {
@@ -83,18 +83,18 @@ public interface HolderLookup<T> extends HolderGetter<T> {
                 }
 
                 @Override
-                public Optional<Holder.Reference<T>> get(ResourceKey<T> p_330384_) {
-                    return this.parent().get(p_330384_).filter(p_330697_ -> p_334671_.test(p_330697_.value()));
+                public Optional<Holder.Reference<T>> get(final ResourceKey<T> id) {
+                    return this.parent().get(id).filter(holder -> filter.test(holder.value()));
                 }
 
                 @Override
                 public Stream<Holder.Reference<T>> listElements() {
-                    return this.parent().listElements().filter(p_331718_ -> p_334671_.test(p_331718_.value()));
+                    return this.parent().listElements().filter(e -> filter.test(e.value()));
                 }
             };
         }
 
-        public interface Delegate<T> extends HolderLookup.RegistryLookup<T> {
+        interface Delegate<T> extends HolderLookup.RegistryLookup<T> {
             HolderLookup.RegistryLookup<T> parent();
 
             @Override
@@ -108,8 +108,8 @@ public interface HolderLookup<T> extends HolderGetter<T> {
             }
 
             @Override
-            default Optional<Holder.Reference<T>> get(ResourceKey<T> p_255619_) {
-                return this.parent().get(p_255619_);
+            default Optional<Holder.Reference<T>> get(final ResourceKey<T> id) {
+                return this.parent().get(id);
             }
 
             @Override
@@ -118,8 +118,8 @@ public interface HolderLookup<T> extends HolderGetter<T> {
             }
 
             @Override
-            default Optional<HolderSet.Named<T>> get(TagKey<T> p_256245_) {
-                return this.parent().get(p_256245_);
+            default Optional<HolderSet.Named<T>> get(final TagKey<T> id) {
+                return this.parent().get(id);
             }
 
             @Override

@@ -8,8 +8,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.entity.BlockEntityType;
-import net.minecraft.world.level.block.entity.BrushableBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.predicate.BlockStatePredicate;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
@@ -22,93 +21,93 @@ public class DesertWellFeature extends Feature<NoneFeatureConfiguration> {
     private final BlockState sandstone = Blocks.SANDSTONE.defaultBlockState();
     private final BlockState water = Blocks.WATER.defaultBlockState();
 
-    public DesertWellFeature(Codec<NoneFeatureConfiguration> p_65599_) {
-        super(p_65599_);
+    public DesertWellFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_159571_) {
-        WorldGenLevel worldgenlevel = p_159571_.level();
-        BlockPos blockpos = p_159571_.origin();
-        blockpos = blockpos.above();
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        origin = origin.above();
 
-        while (worldgenlevel.isEmptyBlock(blockpos) && blockpos.getY() > worldgenlevel.getMinY() + 2) {
-            blockpos = blockpos.below();
+        while (level.isEmptyBlock(origin) && origin.getY() > level.getMinY() + 2) {
+            origin = origin.below();
         }
 
-        if (!IS_SAND.test(worldgenlevel.getBlockState(blockpos))) {
+        if (!IS_SAND.test(level.getBlockState(origin))) {
             return false;
-        } else {
-            for (int i = -2; i <= 2; i++) {
-                for (int j = -2; j <= 2; j++) {
-                    if (worldgenlevel.isEmptyBlock(blockpos.offset(i, -1, j)) && worldgenlevel.isEmptyBlock(blockpos.offset(i, -2, j))) {
-                        return false;
-                    }
-                }
-            }
-
-            for (int l = -2; l <= 0; l++) {
-                for (int i1 = -2; i1 <= 2; i1++) {
-                    for (int k = -2; k <= 2; k++) {
-                        worldgenlevel.setBlock(blockpos.offset(i1, l, k), this.sandstone, 2);
-                    }
-                }
-            }
-
-            worldgenlevel.setBlock(blockpos, this.water, 2);
-
-            for (Direction direction : Direction.Plane.HORIZONTAL) {
-                worldgenlevel.setBlock(blockpos.relative(direction), this.water, 2);
-            }
-
-            BlockPos blockpos1 = blockpos.below();
-            worldgenlevel.setBlock(blockpos1, this.sand, 2);
-
-            for (Direction direction1 : Direction.Plane.HORIZONTAL) {
-                worldgenlevel.setBlock(blockpos1.relative(direction1), this.sand, 2);
-            }
-
-            for (int j1 = -2; j1 <= 2; j1++) {
-                for (int i2 = -2; i2 <= 2; i2++) {
-                    if (j1 == -2 || j1 == 2 || i2 == -2 || i2 == 2) {
-                        worldgenlevel.setBlock(blockpos.offset(j1, 1, i2), this.sandstone, 2);
-                    }
-                }
-            }
-
-            worldgenlevel.setBlock(blockpos.offset(2, 1, 0), this.sandSlab, 2);
-            worldgenlevel.setBlock(blockpos.offset(-2, 1, 0), this.sandSlab, 2);
-            worldgenlevel.setBlock(blockpos.offset(0, 1, 2), this.sandSlab, 2);
-            worldgenlevel.setBlock(blockpos.offset(0, 1, -2), this.sandSlab, 2);
-
-            for (int k1 = -1; k1 <= 1; k1++) {
-                for (int j2 = -1; j2 <= 1; j2++) {
-                    if (k1 == 0 && j2 == 0) {
-                        worldgenlevel.setBlock(blockpos.offset(k1, 4, j2), this.sandstone, 2);
-                    } else {
-                        worldgenlevel.setBlock(blockpos.offset(k1, 4, j2), this.sandSlab, 2);
-                    }
-                }
-            }
-
-            for (int l1 = 1; l1 <= 3; l1++) {
-                worldgenlevel.setBlock(blockpos.offset(-1, l1, -1), this.sandstone, 2);
-                worldgenlevel.setBlock(blockpos.offset(-1, l1, 1), this.sandstone, 2);
-                worldgenlevel.setBlock(blockpos.offset(1, l1, -1), this.sandstone, 2);
-                worldgenlevel.setBlock(blockpos.offset(1, l1, 1), this.sandstone, 2);
-            }
-
-            List<BlockPos> list = List.of(blockpos, blockpos.east(), blockpos.south(), blockpos.west(), blockpos.north());
-            RandomSource randomsource = p_159571_.random();
-            placeSusSand(worldgenlevel, Util.getRandom(list, randomsource).below(1));
-            placeSusSand(worldgenlevel, Util.getRandom(list, randomsource).below(2));
-            return true;
         }
+
+        for (int ox = -2; ox <= 2; ox++) {
+            for (int oz = -2; oz <= 2; oz++) {
+                if (level.isEmptyBlock(origin.offset(ox, -1, oz)) && level.isEmptyBlock(origin.offset(ox, -2, oz))) {
+                    return false;
+                }
+            }
+        }
+
+        for (int oy = -2; oy <= 0; oy++) {
+            for (int ox = -2; ox <= 2; ox++) {
+                for (int oz = -2; oz <= 2; oz++) {
+                    level.setBlock(origin.offset(ox, oy, oz), this.sandstone, 2);
+                }
+            }
+        }
+
+        level.setBlock(origin, this.water, 2);
+
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            level.setBlock(origin.relative(direction), this.water, 2);
+        }
+
+        BlockPos sandCenter = origin.below();
+        level.setBlock(sandCenter, this.sand, 2);
+
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            level.setBlock(sandCenter.relative(direction), this.sand, 2);
+        }
+
+        for (int ox = -2; ox <= 2; ox++) {
+            for (int oz = -2; oz <= 2; oz++) {
+                if (ox == -2 || ox == 2 || oz == -2 || oz == 2) {
+                    level.setBlock(origin.offset(ox, 1, oz), this.sandstone, 2);
+                }
+            }
+        }
+
+        level.setBlock(origin.offset(2, 1, 0), this.sandSlab, 2);
+        level.setBlock(origin.offset(-2, 1, 0), this.sandSlab, 2);
+        level.setBlock(origin.offset(0, 1, 2), this.sandSlab, 2);
+        level.setBlock(origin.offset(0, 1, -2), this.sandSlab, 2);
+
+        for (int ox = -1; ox <= 1; ox++) {
+            for (int oz = -1; oz <= 1; oz++) {
+                if (ox == 0 && oz == 0) {
+                    level.setBlock(origin.offset(ox, 4, oz), this.sandstone, 2);
+                } else {
+                    level.setBlock(origin.offset(ox, 4, oz), this.sandSlab, 2);
+                }
+            }
+        }
+
+        for (int oy = 1; oy <= 3; oy++) {
+            level.setBlock(origin.offset(-1, oy, -1), this.sandstone, 2);
+            level.setBlock(origin.offset(-1, oy, 1), this.sandstone, 2);
+            level.setBlock(origin.offset(1, oy, -1), this.sandstone, 2);
+            level.setBlock(origin.offset(1, oy, 1), this.sandstone, 2);
+        }
+
+        BlockPos waterCenter = origin;
+        List<BlockPos> waterPositions = List.of(waterCenter, waterCenter.east(), waterCenter.south(), waterCenter.west(), waterCenter.north());
+        RandomSource random = context.random();
+        placeSusSand(level, Util.getRandom(waterPositions, random).below(1));
+        placeSusSand(level, Util.getRandom(waterPositions, random).below(2));
+        return true;
     }
 
-    private static void placeSusSand(WorldGenLevel p_278029_, BlockPos p_278082_) {
-        p_278029_.setBlock(p_278082_, Blocks.SUSPICIOUS_SAND.defaultBlockState(), 3);
-        p_278029_.getBlockEntity(p_278082_, BlockEntityType.BRUSHABLE_BLOCK)
-            .ifPresent(p_327464_ -> p_327464_.setLootTable(BuiltInLootTables.DESERT_WELL_ARCHAEOLOGY, p_278082_.asLong()));
+    private static void placeSusSand(final WorldGenLevel level, final BlockPos pos) {
+        level.setBlock(pos, Blocks.SUSPICIOUS_SAND.defaultBlockState(), 3);
+        level.getBlockEntity(pos, BlockEntityTypes.BRUSHABLE_BLOCK).ifPresent(e -> e.setLootTable(BuiltInLootTables.DESERT_WELL_ARCHAEOLOGY, pos.asLong()));
     }
 }

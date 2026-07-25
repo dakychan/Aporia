@@ -27,84 +27,84 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public class FolderRepositorySource implements RepositorySource {
-    static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final PackSelectionConfig DISCOVERED_PACK_SELECTION_CONFIG = new PackSelectionConfig(false, Pack.Position.TOP, false);
     private final Path folder;
     private final PackType packType;
     private final PackSource packSource;
     private final DirectoryValidator validator;
 
-    public FolderRepositorySource(Path p_251796_, PackType p_251664_, PackSource p_250854_, DirectoryValidator p_300828_) {
-        this.folder = p_251796_;
-        this.packType = p_251664_;
-        this.packSource = p_250854_;
-        this.validator = p_300828_;
+    public FolderRepositorySource(final Path folder, final PackType packType, final PackSource packSource, final DirectoryValidator validator) {
+        this.folder = folder;
+        this.packType = packType;
+        this.packSource = packSource;
+        this.validator = validator;
     }
 
-    private static String nameFromPath(Path p_248745_) {
-        return p_248745_.getFileName().toString();
+    private static String nameFromPath(final Path content) {
+        return content.getFileName().toString();
     }
 
     @Override
-    public void loadPacks(Consumer<Pack> p_250965_) {
+    public void loadPacks(final Consumer<Pack> result) {
         try {
             FileUtil.createDirectoriesSafe(this.folder);
-            discoverPacks(this.folder, this.validator, (p_326474_, p_326475_) -> {
-                PackLocationInfo packlocationinfo = this.createDiscoveredFilePackInfo(p_326474_);
-                Pack pack = Pack.readMetaAndCreate(packlocationinfo, p_326475_, this.packType, DISCOVERED_PACK_SELECTION_CONFIG);
+            discoverPacks(this.folder, this.validator, (content, resources) -> {
+                PackLocationInfo locationInfo = this.createDiscoveredFilePackInfo(content);
+                Pack pack = Pack.readMetaAndCreate(locationInfo, resources, this.packType, DISCOVERED_PACK_SELECTION_CONFIG);
                 if (pack != null) {
-                    p_250965_.accept(pack);
+                    result.accept(pack);
                 }
             });
-        } catch (IOException ioexception) {
-            LOGGER.warn("Failed to list packs in {}", this.folder, ioexception);
+        } catch (IOException e) {
+            LOGGER.warn("Failed to list packs in {}", this.folder, e);
         }
     }
 
-    private PackLocationInfo createDiscoveredFilePackInfo(Path p_328477_) {
-        String s = nameFromPath(p_328477_);
-        return new PackLocationInfo("file/" + s, Component.literal(s), this.packSource, Optional.empty());
+    private PackLocationInfo createDiscoveredFilePackInfo(final Path content) {
+        String name = nameFromPath(content);
+        return new PackLocationInfo("file/" + name, Component.literal(name), this.packSource, Optional.empty());
     }
 
-    public static void discoverPacks(Path p_248794_, DirectoryValidator p_299329_, BiConsumer<Path, Pack.ResourcesSupplier> p_248580_) throws IOException {
-        FolderRepositorySource.FolderPackDetector folderrepositorysource$folderpackdetector = new FolderRepositorySource.FolderPackDetector(p_299329_);
+    public static void discoverPacks(final Path folder, final DirectoryValidator validator, final BiConsumer<Path, Pack.ResourcesSupplier> result) throws IOException {
+        FolderRepositorySource.FolderPackDetector detector = new FolderRepositorySource.FolderPackDetector(validator);
 
-        try (DirectoryStream<Path> directorystream = Files.newDirectoryStream(p_248794_)) {
-            for (Path path : directorystream) {
+        try (DirectoryStream<Path> contents = Files.newDirectoryStream(folder)) {
+            for (Path content : contents) {
                 try {
-                    List<ForbiddenSymlinkInfo> list = new ArrayList<>();
-                    Pack.ResourcesSupplier pack$resourcessupplier = folderrepositorysource$folderpackdetector.detectPackResources(path, list);
-                    if (!list.isEmpty()) {
-                        LOGGER.warn("Ignoring potential pack entry: {}", ContentValidationException.getMessage(path, list));
-                    } else if (pack$resourcessupplier != null) {
-                        p_248580_.accept(path, pack$resourcessupplier);
+                    List<ForbiddenSymlinkInfo> validationIssues = new ArrayList<>();
+                    Pack.ResourcesSupplier resources = detector.detectPackResources(content, validationIssues);
+                    if (!validationIssues.isEmpty()) {
+                        LOGGER.warn("Ignoring potential pack entry: {}", ContentValidationException.getMessage(content, validationIssues));
+                    } else if (resources != null) {
+                        result.accept(content, resources);
                     } else {
-                        LOGGER.info("Found non-pack entry '{}', ignoring", path);
+                        LOGGER.info("Found non-pack entry '{}', ignoring", content);
                     }
-                } catch (IOException ioexception) {
-                    LOGGER.warn("Failed to read properties of '{}', ignoring", path, ioexception);
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to read properties of '{}', ignoring", content, e);
                 }
             }
         }
     }
 
-    static class FolderPackDetector extends PackDetector<Pack.ResourcesSupplier> {
-        protected FolderPackDetector(DirectoryValidator p_301187_) {
-            super(p_301187_);
+    private static class FolderPackDetector extends PackDetector<Pack.ResourcesSupplier> {
+        protected FolderPackDetector(final DirectoryValidator validator) {
+            super(validator);
         }
 
-        protected Pack.@Nullable ResourcesSupplier createZipPack(Path p_299114_) {
-            FileSystem filesystem = p_299114_.getFileSystem();
-            if (filesystem != FileSystems.getDefault() && !(filesystem instanceof LinkFileSystem)) {
-                FolderRepositorySource.LOGGER.info("Can't open pack archive at {}", p_299114_);
+        protected Pack.@Nullable ResourcesSupplier createZipPack(final Path content) {
+            FileSystem fileSystem = content.getFileSystem();
+            if (fileSystem != FileSystems.getDefault() && !(fileSystem instanceof LinkFileSystem)) {
+                FolderRepositorySource.LOGGER.info("Can't open pack archive at {}", content);
                 return null;
             } else {
-                return new FilePackResources.FileResourcesSupplier(p_299114_);
+                return new FilePackResources.FileResourcesSupplier(content);
             }
         }
 
-        protected Pack.ResourcesSupplier createDirectoryPack(Path p_300765_) {
-            return new PathPackResources.PathResourcesSupplier(p_300765_);
+        protected Pack.ResourcesSupplier createDirectoryPack(final Path content) {
+            return new PathPackResources.PathResourcesSupplier(content);
         }
     }
 }

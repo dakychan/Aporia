@@ -7,19 +7,16 @@ import net.minecraft.client.renderer.fog.FogData;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.material.FogType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class FogEnvironment {
-    public abstract void setupFog(FogData p_407408_, Camera p_456446_, ClientLevel p_409746_, float p_406048_, DeltaTracker p_410425_);
+    public abstract void setupFog(FogData fog, Camera camera, ClientLevel level, float renderDistance, DeltaTracker deltaTracker);
 
     public boolean providesColor() {
         return true;
     }
 
-    public int getBaseColor(ClientLevel p_408834_, Camera p_407835_, int p_410065_, float p_407737_) {
+    public int getBaseColor(final ClientLevel level, final Camera camera, final int renderDistance, final float partialTicks) {
         return -1;
     }
 
@@ -27,9 +24,9 @@ public abstract class FogEnvironment {
         return false;
     }
 
-    public float getModifiedDarkness(LivingEntity p_408428_, float p_405830_, float p_410252_) {
-        return p_405830_;
+    public float getModifiedDarkness(final LivingEntity entity, final float darkness, final float partialTickTime) {
+        return darkness;
     }
 
-    public abstract boolean isApplicable(@Nullable FogType p_409760_, Entity p_408188_);
+    public abstract boolean isApplicable(@Nullable FogType fogType, Entity entity);
 }

@@ -7,7 +7,9 @@ import java.util.List;
 
 public class SpecialDates {
     public static final MonthDay HALLOWEEN = MonthDay.of(Month.OCTOBER, 31);
-    public static final List<MonthDay> CHRISTMAS_RANGE = List.of(MonthDay.of(Month.DECEMBER, 24), MonthDay.of(Month.DECEMBER, 25), MonthDay.of(Month.DECEMBER, 26));
+    public static final List<MonthDay> CHRISTMAS_RANGE = List.of(
+        MonthDay.of(Month.DECEMBER, 24), MonthDay.of(Month.DECEMBER, 25), MonthDay.of(Month.DECEMBER, 26)
+    );
     public static final MonthDay CHRISTMAS = MonthDay.of(Month.DECEMBER, 24);
     public static final MonthDay NEW_YEAR = MonthDay.of(Month.JANUARY, 1);
 

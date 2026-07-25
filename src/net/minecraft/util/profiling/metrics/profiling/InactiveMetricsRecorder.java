@@ -19,6 +19,10 @@ public class InactiveMetricsRecorder implements MetricsRecorder {
     }
 
     @Override
+    public void sampleDuringExtract() {
+    }
+
+    @Override
     public boolean isRecording() {
         return false;
     }

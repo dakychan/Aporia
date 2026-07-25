@@ -18,27 +18,27 @@ public record FallLocation(String id) {
     public static final FallLocation OTHER_CLIMBABLE = new FallLocation("other_climbable");
     public static final FallLocation WATER = new FallLocation("water");
 
-    public static FallLocation blockToFallLocation(BlockState p_289530_) {
-        if (p_289530_.is(Blocks.LADDER) || p_289530_.is(BlockTags.TRAPDOORS)) {
+    public static FallLocation blockToFallLocation(final BlockState blockState) {
+        if (blockState.is(Blocks.LADDER) || blockState.is(BlockTags.TRAPDOORS)) {
             return LADDER;
-        } else if (p_289530_.is(Blocks.VINE)) {
+        } else if (blockState.is(Blocks.VINE)) {
             return VINES;
-        } else if (p_289530_.is(Blocks.WEEPING_VINES) || p_289530_.is(Blocks.WEEPING_VINES_PLANT)) {
+        } else if (blockState.is(Blocks.WEEPING_VINES) || blockState.is(Blocks.WEEPING_VINES_PLANT)) {
             return WEEPING_VINES;
-        } else if (p_289530_.is(Blocks.TWISTING_VINES) || p_289530_.is(Blocks.TWISTING_VINES_PLANT)) {
+        } else if (blockState.is(Blocks.TWISTING_VINES) || blockState.is(Blocks.TWISTING_VINES_PLANT)) {
             return TWISTING_VINES;
         } else {
-            return p_289530_.is(Blocks.SCAFFOLDING) ? SCAFFOLDING : OTHER_CLIMBABLE;
+            return blockState.is(Blocks.SCAFFOLDING) ? SCAFFOLDING : OTHER_CLIMBABLE;
         }
     }
 
-    public static @Nullable FallLocation getCurrentFallLocation(LivingEntity p_289566_) {
-        Optional<BlockPos> optional = p_289566_.getLastClimbablePos();
-        if (optional.isPresent()) {
-            BlockState blockstate = p_289566_.level().getBlockState(optional.get());
-            return blockToFallLocation(blockstate);
+    public static @Nullable FallLocation getCurrentFallLocation(final LivingEntity mob) {
+        Optional<BlockPos> lastClimbablePos = mob.getLastClimbablePos();
+        if (lastClimbablePos.isPresent()) {
+            BlockState blockState = mob.level().getBlockState(lastClimbablePos.get());
+            return blockToFallLocation(blockState);
         } else {
-            return p_289566_.isInWater() ? WATER : null;
+            return mob.isInWater() ? WATER : null;
         }
     }
 

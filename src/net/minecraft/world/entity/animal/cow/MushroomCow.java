@@ -28,9 +28,14 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.ConversionParams;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LightningBolt;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.Shearable;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -53,129 +58,132 @@ import org.jspecify.annotations.Nullable;
 public class MushroomCow extends AbstractCow implements Shearable {
     private static final EntityDataAccessor<Integer> DATA_TYPE = SynchedEntityData.defineId(MushroomCow.class, EntityDataSerializers.INT);
     private static final int MUTATE_CHANCE = 1024;
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.45F, 0.7F)
+        .withEyeHeight(0.69F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.PASSENGER, 0.0F, 0.75F, 0.0F));
     private static final String TAG_STEW_EFFECTS = "stew_effects";
     private @Nullable SuspiciousStewEffects stewEffects;
     private @Nullable UUID lastLightningBoltUUID;
 
-    public MushroomCow(EntityType<? extends MushroomCow> p_459154_, Level p_458567_) {
-        super(p_459154_, p_458567_);
+    public MushroomCow(final EntityType<? extends MushroomCow> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    public float getWalkTargetValue(BlockPos p_455818_, LevelReader p_455238_) {
-        return p_455238_.getBlockState(p_455818_.below()).is(Blocks.MYCELIUM) ? 10.0F : p_455238_.getPathfindingCostFromLightLevels(p_455818_);
+    public float getWalkTargetValue(final BlockPos pos, final LevelReader level) {
+        return level.getBlockState(pos.below()).is(Blocks.MYCELIUM) ? 10.0F : level.getPathfindingCostFromLightLevels(pos);
     }
 
     public static boolean checkMushroomSpawnRules(
-        EntityType<MushroomCow> p_452376_, LevelAccessor p_453400_, EntitySpawnReason p_459628_, BlockPos p_451279_, RandomSource p_460174_
+        final EntityType<MushroomCow> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_453400_.getBlockState(p_451279_.below()).is(BlockTags.MOOSHROOMS_SPAWNABLE_ON) && isBrightEnoughToSpawn(p_453400_, p_451279_);
+        return level.getBlockState(pos.below()).is(BlockTags.MOOSHROOMS_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 
     @Override
-    public void thunderHit(ServerLevel p_450942_, LightningBolt p_455463_) {
-        UUID uuid = p_455463_.getUUID();
-        if (!uuid.equals(this.lastLightningBoltUUID)) {
+    public void thunderHit(final ServerLevel level, final LightningBolt lightningBolt) {
+        UUID lightningBoltUUID = lightningBolt.getUUID();
+        if (!lightningBoltUUID.equals(this.lastLightningBoltUUID)) {
             this.setVariant(this.getVariant() == MushroomCow.Variant.RED ? MushroomCow.Variant.BROWN : MushroomCow.Variant.RED);
-            this.lastLightningBoltUUID = uuid;
+            this.lastLightningBoltUUID = lightningBoltUUID;
             this.playSound(SoundEvents.MOOSHROOM_CONVERT, 2.0F, 1.0F);
         }
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_451836_) {
-        super.defineSynchedData(p_451836_);
-        p_451836_.define(DATA_TYPE, MushroomCow.Variant.DEFAULT.id);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_TYPE, MushroomCow.Variant.DEFAULT.id);
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_454203_, InteractionHand p_457673_) {
-        ItemStack itemstack = p_454203_.getItemInHand(p_457673_);
-        if (itemstack.is(Items.BOWL) && !this.isBaby()) {
-            boolean flag = false;
-            ItemStack itemstack1;
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (itemStack.is(Items.BOWL) && !this.isBaby()) {
+            boolean isSuspicious = false;
+            ItemStack stew;
             if (this.stewEffects != null) {
-                flag = true;
-                itemstack1 = new ItemStack(Items.SUSPICIOUS_STEW);
-                itemstack1.set(DataComponents.SUSPICIOUS_STEW_EFFECTS, this.stewEffects);
+                isSuspicious = true;
+                stew = new ItemStack(Items.SUSPICIOUS_STEW);
+                stew.set(DataComponents.SUSPICIOUS_STEW_EFFECTS, this.stewEffects);
                 this.stewEffects = null;
             } else {
-                itemstack1 = new ItemStack(Items.MUSHROOM_STEW);
+                stew = new ItemStack(Items.MUSHROOM_STEW);
             }
 
-            ItemStack itemstack2 = ItemUtils.createFilledResult(itemstack, p_454203_, itemstack1, false);
-            p_454203_.setItemInHand(p_457673_, itemstack2);
-            SoundEvent soundevent;
-            if (flag) {
-                soundevent = SoundEvents.MOOSHROOM_MILK_SUSPICIOUSLY;
+            ItemStack bowlOrStew = ItemUtils.createFilledResult(itemStack, player, stew, false);
+            player.setItemInHand(hand, bowlOrStew);
+            SoundEvent milkSound;
+            if (isSuspicious) {
+                milkSound = SoundEvents.MOOSHROOM_MILK_SUSPICIOUSLY;
             } else {
-                soundevent = SoundEvents.MOOSHROOM_MILK;
+                milkSound = SoundEvents.MOOSHROOM_MILK;
             }
 
-            this.playSound(soundevent, 1.0F, 1.0F);
+            this.playSound(milkSound, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
-        } else if (itemstack.is(Items.SHEARS) && this.readyForShearing()) {
-            if (this.level() instanceof ServerLevel serverlevel) {
-                this.shear(serverlevel, SoundSource.PLAYERS, itemstack);
-                this.gameEvent(GameEvent.SHEAR, p_454203_);
-                itemstack.hurtAndBreak(1, p_454203_, p_457673_.asEquipmentSlot());
+        } else if (itemStack.is(Items.SHEARS) && this.readyForShearing()) {
+            if (this.level() instanceof ServerLevel level) {
+                this.shear(level, SoundSource.PLAYERS, itemStack);
+                this.gameEvent(GameEvent.SHEAR, player);
+                itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
             }
 
             return InteractionResult.SUCCESS;
-        } else if (this.getVariant() == MushroomCow.Variant.BROWN) {
-            Optional<SuspiciousStewEffects> optional = this.getEffectsFromItemStack(itemstack);
-            if (optional.isEmpty()) {
-                return super.mobInteract(p_454203_, p_457673_);
+        } else if (this.getVariant() == MushroomCow.Variant.BROWN && !this.isBaby()) {
+            Optional<SuspiciousStewEffects> effectsFromItemStack = this.getEffectsFromItemStack(itemStack);
+            if (effectsFromItemStack.isEmpty()) {
+                return super.mobInteract(player, hand);
+            }
+
+            if (this.stewEffects != null) {
+                for (int i = 0; i < 2; i++) {
+                    this.level()
+                        .addParticle(
+                            ParticleTypes.SMOKE,
+                            this.getX() + this.random.nextDouble() / 2.0,
+                            this.getY(0.5),
+                            this.getZ() + this.random.nextDouble() / 2.0,
+                            0.0,
+                            this.random.nextDouble() / 5.0,
+                            0.0
+                        );
+                }
             } else {
-                if (this.stewEffects != null) {
-                    for (int i = 0; i < 2; i++) {
-                        this.level()
-                            .addParticle(
-                                ParticleTypes.SMOKE,
-                                this.getX() + this.random.nextDouble() / 2.0,
-                                this.getY(0.5),
-                                this.getZ() + this.random.nextDouble() / 2.0,
-                                0.0,
-                                this.random.nextDouble() / 5.0,
-                                0.0
-                            );
-                    }
-                } else {
-                    itemstack.consume(1, p_454203_);
-                    SpellParticleOption spellparticleoption = SpellParticleOption.create(ParticleTypes.EFFECT, -1, 1.0F);
+                itemStack.consume(1, player);
+                SpellParticleOption particle = SpellParticleOption.create(ParticleTypes.EFFECT, -1, 1.0F);
 
-                    for (int j = 0; j < 4; j++) {
-                        this.level()
-                            .addParticle(
-                                spellparticleoption,
-                                this.getX() + this.random.nextDouble() / 2.0,
-                                this.getY(0.5),
-                                this.getZ() + this.random.nextDouble() / 2.0,
-                                0.0,
-                                this.random.nextDouble() / 5.0,
-                                0.0
-                            );
-                    }
-
-                    this.stewEffects = optional.get();
-                    this.playSound(SoundEvents.MOOSHROOM_EAT, 2.0F, 1.0F);
+                for (int i = 0; i < 4; i++) {
+                    this.level()
+                        .addParticle(
+                            particle,
+                            this.getX() + this.random.nextDouble() / 2.0,
+                            this.getY(0.5),
+                            this.getZ() + this.random.nextDouble() / 2.0,
+                            0.0,
+                            this.random.nextDouble() / 5.0,
+                            0.0
+                        );
                 }
 
-                return InteractionResult.SUCCESS;
+                this.stewEffects = effectsFromItemStack.get();
+                this.playSound(SoundEvents.MOOSHROOM_EAT, 2.0F, 1.0F);
             }
+
+            return InteractionResult.SUCCESS;
         } else {
-            return super.mobInteract(p_454203_, p_457673_);
+            return super.mobInteract(player, hand);
         }
     }
 
     @Override
-    public void shear(ServerLevel p_454992_, SoundSource p_460786_, ItemStack p_454795_) {
-        p_454992_.playSound(null, this, SoundEvents.MOOSHROOM_SHEAR, p_460786_, 1.0F, 1.0F);
-        this.convertTo(EntityType.COW, ConversionParams.single(this, false, false), p_458024_ -> {
-            p_454992_.sendParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY(0.5), this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
-            this.dropFromShearingLootTable(p_454992_, BuiltInLootTables.SHEAR_MOOSHROOM, p_454795_, (p_460709_, p_451895_) -> {
-                for (int i = 0; i < p_451895_.getCount(); i++) {
-                    p_460709_.addFreshEntity(new ItemEntity(this.level(), this.getX(), this.getY(1.0), this.getZ(), p_451895_.copyWithCount(1)));
+    public void shear(final ServerLevel level, final SoundSource soundSource, final ItemStack tool) {
+        level.playSound(null, this, SoundEvents.MOOSHROOM_SHEAR, soundSource, 1.0F, 1.0F);
+        this.convertTo(EntityTypes.COW, ConversionParams.single(this, false, false), cow -> {
+            level.sendParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY(0.5), this.getZ(), 1, 0.0, 0.0, 0.0, 0.0);
+            this.dropFromShearingLootTable(level, BuiltInLootTables.SHEAR_MOOSHROOM, tool, (l, drop) -> {
+                for (int i = 0; i < drop.getCount(); i++) {
+                    l.addFreshEntity(new ItemEntity(this.level(), this.getX(), this.getY(1.0), this.getZ(), drop.copyWithCount(1)));
                 }
             });
         });
@@ -183,30 +191,30 @@ public class MushroomCow extends AbstractCow implements Shearable {
 
     @Override
     public boolean readyForShearing() {
-        return this.isAlive() && !this.isBaby();
+        return !this.isBaby();
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_455928_) {
-        super.addAdditionalSaveData(p_455928_);
-        p_455928_.store("Type", MushroomCow.Variant.CODEC, this.getVariant());
-        p_455928_.storeNullable("stew_effects", SuspiciousStewEffects.CODEC, this.stewEffects);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Type", MushroomCow.Variant.CODEC, this.getVariant());
+        output.storeNullable("stew_effects", SuspiciousStewEffects.CODEC, this.stewEffects);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_453974_) {
-        super.readAdditionalSaveData(p_453974_);
-        this.setVariant(p_453974_.read("Type", MushroomCow.Variant.CODEC).orElse(MushroomCow.Variant.DEFAULT));
-        this.stewEffects = p_453974_.read("stew_effects", SuspiciousStewEffects.CODEC).orElse(null);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setVariant(input.read("Type", MushroomCow.Variant.CODEC).orElse(MushroomCow.Variant.DEFAULT));
+        this.stewEffects = input.read("stew_effects", SuspiciousStewEffects.CODEC).orElse(null);
     }
 
-    private Optional<SuspiciousStewEffects> getEffectsFromItemStack(ItemStack p_458897_) {
-        SuspiciousEffectHolder suspiciouseffectholder = SuspiciousEffectHolder.tryGet(p_458897_.getItem());
-        return suspiciouseffectholder != null ? Optional.of(suspiciouseffectholder.getSuspiciousEffects()) : Optional.empty();
+    private Optional<SuspiciousStewEffects> getEffectsFromItemStack(final ItemStack itemStack) {
+        SuspiciousEffectHolder effectHolder = SuspiciousEffectHolder.tryGet(itemStack.getItem());
+        return effectHolder != null ? Optional.of(effectHolder.getSuspiciousEffects()) : Optional.empty();
     }
 
-    private void setVariant(MushroomCow.Variant p_458325_) {
-        this.entityData.set(DATA_TYPE, p_458325_.id);
+    private void setVariant(final MushroomCow.Variant variant) {
+        this.entityData.set(DATA_TYPE, variant.id);
     }
 
     public MushroomCow.Variant getVariant() {
@@ -214,66 +222,69 @@ public class MushroomCow extends AbstractCow implements Shearable {
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_454953_) {
-        return p_454953_ == DataComponents.MOOSHROOM_VARIANT ? castComponentValue((DataComponentType<T>)p_454953_, this.getVariant()) : super.get(p_454953_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.MOOSHROOM_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_455032_) {
-        this.applyImplicitComponentIfPresent(p_455032_, DataComponents.MOOSHROOM_VARIANT);
-        super.applyImplicitComponents(p_455032_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.MOOSHROOM_VARIANT);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_450926_, T p_450646_) {
-        if (p_450926_ == DataComponents.MOOSHROOM_VARIANT) {
-            this.setVariant(castComponentValue(DataComponents.MOOSHROOM_VARIANT, p_450646_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.MOOSHROOM_VARIANT) {
+            this.setVariant(castComponentValue(DataComponents.MOOSHROOM_VARIANT, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_450926_, p_450646_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
-    public @Nullable MushroomCow getBreedOffspring(ServerLevel p_454117_, AgeableMob p_458786_) {
-        MushroomCow mushroomcow = EntityType.MOOSHROOM.create(p_454117_, EntitySpawnReason.BREEDING);
-        if (mushroomcow != null) {
-            mushroomcow.setVariant(this.getOffspringVariant((MushroomCow)p_458786_));
-        }
-
-        return mushroomcow;
+    @Override
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
-    private MushroomCow.Variant getOffspringVariant(MushroomCow p_459581_) {
-        MushroomCow.Variant mushroomcow$variant = this.getVariant();
-        MushroomCow.Variant mushroomcow$variant1 = p_459581_.getVariant();
-        MushroomCow.Variant mushroomcow$variant2;
-        if (mushroomcow$variant == mushroomcow$variant1 && this.random.nextInt(1024) == 0) {
-            mushroomcow$variant2 = mushroomcow$variant == MushroomCow.Variant.BROWN ? MushroomCow.Variant.RED : MushroomCow.Variant.BROWN;
+    public @Nullable MushroomCow getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        MushroomCow baby = EntityTypes.MOOSHROOM.create(level, EntitySpawnReason.BREEDING);
+        if (baby != null) {
+            baby.setVariant(this.getOffspringVariant((MushroomCow)partner));
+        }
+
+        return baby;
+    }
+
+    private MushroomCow.Variant getOffspringVariant(final MushroomCow mate) {
+        MushroomCow.Variant variant = this.getVariant();
+        MushroomCow.Variant mateVariant = mate.getVariant();
+        MushroomCow.Variant babyVariant;
+        if (variant == mateVariant && this.random.nextInt(1024) == 0) {
+            babyVariant = variant == MushroomCow.Variant.BROWN ? MushroomCow.Variant.RED : MushroomCow.Variant.BROWN;
         } else {
-            mushroomcow$variant2 = this.random.nextBoolean() ? mushroomcow$variant : mushroomcow$variant1;
+            babyVariant = this.random.nextBoolean() ? variant : mateVariant;
         }
 
-        return mushroomcow$variant2;
+        return babyVariant;
     }
 
-    public static enum Variant implements StringRepresentable {
+    public enum Variant implements StringRepresentable {
         RED("red", 0, Blocks.RED_MUSHROOM.defaultBlockState()),
         BROWN("brown", 1, Blocks.BROWN_MUSHROOM.defaultBlockState());
 
         public static final MushroomCow.Variant DEFAULT = RED;
         public static final Codec<MushroomCow.Variant> CODEC = StringRepresentable.fromEnum(MushroomCow.Variant::values);
-        private static final IntFunction<MushroomCow.Variant> BY_ID = ByIdMap.continuous(
-            MushroomCow.Variant::id, values(), ByIdMap.OutOfBoundsStrategy.CLAMP
-        );
+        private static final IntFunction<MushroomCow.Variant> BY_ID = ByIdMap.continuous(MushroomCow.Variant::id, values(), ByIdMap.OutOfBoundsStrategy.CLAMP);
         public static final StreamCodec<ByteBuf, MushroomCow.Variant> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, MushroomCow.Variant::id);
         private final String type;
-        final int id;
+        private final int id;
         private final BlockState blockState;
 
-        private Variant(final String p_452372_, final int p_457866_, final BlockState p_451253_) {
-            this.type = p_452372_;
-            this.id = p_457866_;
-            this.blockState = p_451253_;
+        Variant(final String type, final int id, final BlockState blockState) {
+            this.type = type;
+            this.id = id;
+            this.blockState = blockState;
         }
 
         public BlockState getBlockState() {
@@ -289,8 +300,8 @@ public class MushroomCow extends AbstractCow implements Shearable {
             return this.id;
         }
 
-        static MushroomCow.Variant byId(int p_458342_) {
-            return BY_ID.apply(p_458342_);
+        private static MushroomCow.Variant byId(final int id) {
+            return BY_ID.apply(id);
         }
     }
 }

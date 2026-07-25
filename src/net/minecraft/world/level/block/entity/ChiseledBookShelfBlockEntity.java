@@ -28,41 +28,41 @@ public class ChiseledBookShelfBlockEntity extends BlockEntity implements ListBac
     private final NonNullList<ItemStack> items = NonNullList.withSize(6, ItemStack.EMPTY);
     private int lastInteractedSlot = -1;
 
-    public ChiseledBookShelfBlockEntity(BlockPos p_249541_, BlockState p_251752_) {
-        super(BlockEntityType.CHISELED_BOOKSHELF, p_249541_, p_251752_);
+    public ChiseledBookShelfBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.CHISELED_BOOKSHELF, worldPosition, blockState);
     }
 
-    private void updateState(int p_261806_) {
-        if (p_261806_ >= 0 && p_261806_ < 6) {
-            this.lastInteractedSlot = p_261806_;
-            BlockState blockstate = this.getBlockState();
+    private void updateState(final int interactedSlot) {
+        if (interactedSlot >= 0 && interactedSlot < 6) {
+            this.lastInteractedSlot = interactedSlot;
+            BlockState updatedState = this.getBlockState();
 
-            for (int i = 0; i < ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES.size(); i++) {
-                boolean flag = !this.getItem(i).isEmpty();
-                BooleanProperty booleanproperty = ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES.get(i);
-                blockstate = blockstate.setValue(booleanproperty, flag);
+            for (int slot = 0; slot < ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES.size(); slot++) {
+                boolean slotIsOccupied = !this.getItem(slot).isEmpty();
+                BooleanProperty slotProperty = ChiseledBookShelfBlock.SLOT_OCCUPIED_PROPERTIES.get(slot);
+                updatedState = updatedState.setValue(slotProperty, slotIsOccupied);
             }
 
-            Objects.requireNonNull(this.level).setBlock(this.worldPosition, blockstate, 3);
-            this.level.gameEvent(GameEvent.BLOCK_CHANGE, this.worldPosition, GameEvent.Context.of(blockstate));
+            Objects.requireNonNull(this.level).setBlock(this.worldPosition, updatedState, 3);
+            this.level.gameEvent(GameEvent.BLOCK_CHANGE, this.worldPosition, GameEvent.Context.of(updatedState));
         } else {
-            LOGGER.error("Expected slot 0-5, got {}", p_261806_);
+            LOGGER.error("Expected slot 0-5, got {}", interactedSlot);
         }
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_410328_) {
-        super.loadAdditional(p_410328_);
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
         this.items.clear();
-        ContainerHelper.loadAllItems(p_410328_, this.items);
-        this.lastInteractedSlot = p_410328_.getIntOr("last_interacted_slot", -1);
+        ContainerHelper.loadAllItems(input, this.items);
+        this.lastInteractedSlot = input.getIntOr("last_interacted_slot", -1);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_406157_) {
-        super.saveAdditional(p_406157_);
-        ContainerHelper.saveAllItems(p_406157_, this.items, true);
-        p_406157_.putInt("last_interacted_slot", this.lastInteractedSlot);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        ContainerHelper.saveAllItems(output, this.items, true);
+        output.putInt("last_interacted_slot", this.lastInteractedSlot);
     }
 
     @Override
@@ -71,37 +71,37 @@ public class ChiseledBookShelfBlockEntity extends BlockEntity implements ListBac
     }
 
     @Override
-    public boolean acceptsItemType(ItemStack p_423888_) {
-        return p_423888_.is(ItemTags.BOOKSHELF_BOOKS);
+    public boolean acceptsItemType(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.BOOKSHELF_BOOKS);
     }
 
     @Override
-    public ItemStack removeItem(int p_255828_, int p_255673_) {
-        ItemStack itemstack = Objects.requireNonNullElse(this.getItems().get(p_255828_), ItemStack.EMPTY);
-        this.getItems().set(p_255828_, ItemStack.EMPTY);
-        if (!itemstack.isEmpty()) {
-            this.updateState(p_255828_);
+    public ItemStack removeItem(final int slot, final int count) {
+        ItemStack retrievedItem = Objects.requireNonNullElse(this.getItems().get(slot), ItemStack.EMPTY);
+        this.getItems().set(slot, ItemStack.EMPTY);
+        if (!retrievedItem.isEmpty()) {
+            this.updateState(slot);
         }
 
-        return itemstack;
+        return retrievedItem;
     }
 
     @Override
-    public void setItem(int p_256610_, ItemStack p_255789_) {
-        if (this.acceptsItemType(p_255789_)) {
-            this.getItems().set(p_256610_, p_255789_);
-            this.updateState(p_256610_);
-        } else if (p_255789_.isEmpty()) {
-            this.removeItem(p_256610_, this.getMaxStackSize());
+    public void setItem(final int slot, final ItemStack itemStack) {
+        if (this.acceptsItemType(itemStack)) {
+            this.getItems().set(slot, itemStack);
+            this.updateState(slot);
+        } else if (itemStack.isEmpty()) {
+            this.removeItem(slot, this.getMaxStackSize());
         }
     }
 
     @Override
-    public boolean canTakeItem(Container p_282172_, int p_281387_, ItemStack p_283257_) {
-        return p_282172_.hasAnyMatching(
-            p_327306_ -> p_327306_.isEmpty()
+    public boolean canTakeItem(final Container into, final int slot, final ItemStack itemStack) {
+        return into.hasAnyMatching(
+            toItem -> toItem.isEmpty()
                 ? true
-                : ItemStack.isSameItemSameComponents(p_283257_, p_327306_) && p_327306_.getCount() + p_283257_.getCount() <= p_282172_.getMaxStackSize(p_327306_)
+                : ItemStack.isSameItemSameComponents(itemStack, toItem) && toItem.getCount() + itemStack.getCount() <= into.getMaxStackSize(toItem)
         );
     }
 
@@ -111,8 +111,8 @@ public class ChiseledBookShelfBlockEntity extends BlockEntity implements ListBac
     }
 
     @Override
-    public boolean stillValid(Player p_256481_) {
-        return Container.stillValidBlockEntity(this, p_256481_);
+    public boolean stillValid(final Player player) {
+        return Container.stillValidBlockEntity(this, player);
     }
 
     public int getLastInteractedSlot() {
@@ -120,19 +120,19 @@ public class ChiseledBookShelfBlockEntity extends BlockEntity implements ListBac
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_393028_) {
-        super.applyImplicitComponents(p_393028_);
-        p_393028_.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(this.items);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        components.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(this.items);
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_331494_) {
-        super.collectImplicitComponents(p_331494_);
-        p_331494_.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(this.items));
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(this.items));
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_405909_) {
-        p_405909_.discard("Items");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        output.discard("Items");
     }
 }

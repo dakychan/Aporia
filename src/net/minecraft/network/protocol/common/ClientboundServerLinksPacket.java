@@ -17,7 +17,7 @@ public record ClientboundServerLinksPacket(List<ServerLinks.UntrustedEntry> link
         return CommonPacketTypes.CLIENTBOUND_SERVER_LINKS;
     }
 
-    public void handle(ClientCommonPacketListener p_344190_) {
-        p_344190_.handleServerLinks(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleServerLinks(this);
     }
 }

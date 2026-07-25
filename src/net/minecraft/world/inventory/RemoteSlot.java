@@ -8,61 +8,61 @@ import org.jspecify.annotations.Nullable;
 public interface RemoteSlot {
     RemoteSlot PLACEHOLDER = new RemoteSlot() {
         @Override
-        public void receive(HashedStack p_393094_) {
+        public void receive(final HashedStack incoming) {
         }
 
         @Override
-        public void force(ItemStack p_394507_) {
+        public void force(final ItemStack outgoing) {
         }
 
         @Override
-        public boolean matches(ItemStack p_391424_) {
+        public boolean matches(final ItemStack local) {
             return true;
         }
     };
 
-    void force(ItemStack p_397428_);
+    void force(ItemStack outgoing);
 
-    void receive(HashedStack p_391857_);
+    void receive(HashedStack incoming);
 
-    boolean matches(ItemStack p_394934_);
+    boolean matches(ItemStack local);
 
-    public static class Synchronized implements RemoteSlot {
+    class Synchronized implements RemoteSlot {
         private final HashedPatchMap.HashGenerator hasher;
         private @Nullable ItemStack remoteStack = null;
         private @Nullable HashedStack remoteHash = null;
 
-        public Synchronized(HashedPatchMap.HashGenerator p_396893_) {
-            this.hasher = p_396893_;
+        public Synchronized(final HashedPatchMap.HashGenerator hasher) {
+            this.hasher = hasher;
         }
 
         @Override
-        public void force(ItemStack p_392006_) {
-            this.remoteStack = p_392006_.copy();
+        public void force(final ItemStack outgoing) {
+            this.remoteStack = outgoing.copy();
             this.remoteHash = null;
         }
 
         @Override
-        public void receive(HashedStack p_392600_) {
+        public void receive(final HashedStack incoming) {
             this.remoteStack = null;
-            this.remoteHash = p_392600_;
+            this.remoteHash = incoming;
         }
 
         @Override
-        public boolean matches(ItemStack p_392251_) {
+        public boolean matches(final ItemStack local) {
             if (this.remoteStack != null) {
-                return ItemStack.matches(this.remoteStack, p_392251_);
-            } else if (this.remoteHash != null && this.remoteHash.matches(p_392251_, this.hasher)) {
-                this.remoteStack = p_392251_.copy();
+                return ItemStack.matches(this.remoteStack, local);
+            } else if (this.remoteHash != null && this.remoteHash.matches(local, this.hasher)) {
+                this.remoteStack = local.copy();
                 return true;
             } else {
                 return false;
             }
         }
 
-        public void copyFrom(RemoteSlot.Synchronized p_393591_) {
-            this.remoteStack = p_393591_.remoteStack;
-            this.remoteHash = p_393591_.remoteHash;
+        public void copyFrom(final RemoteSlot.Synchronized other) {
+            this.remoteStack = other.remoteStack;
+            this.remoteHash = other.remoteHash;
         }
     }
 }

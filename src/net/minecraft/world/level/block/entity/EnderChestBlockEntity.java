@@ -14,76 +14,79 @@ public class EnderChestBlockEntity extends BlockEntity implements LidBlockEntity
     private final ChestLidController chestLidController = new ChestLidController();
     private final ContainerOpenersCounter openersCounter = new ContainerOpenersCounter() {
         @Override
-        protected void onOpen(Level p_155531_, BlockPos p_155532_, BlockState p_155533_) {
-            p_155531_.playSound(
+        protected void onOpen(final Level level, final BlockPos pos, final BlockState blockState) {
+            level.playSound(
                 null,
-                p_155532_.getX() + 0.5,
-                p_155532_.getY() + 0.5,
-                p_155532_.getZ() + 0.5,
+                pos.getX() + 0.5,
+                pos.getY() + 0.5,
+                pos.getZ() + 0.5,
                 SoundEvents.ENDER_CHEST_OPEN,
                 SoundSource.BLOCKS,
                 0.5F,
-                p_155531_.random.nextFloat() * 0.1F + 0.9F
+                level.getRandom().nextFloat() * 0.1F + 0.9F
             );
         }
 
         @Override
-        protected void onClose(Level p_155541_, BlockPos p_155542_, BlockState p_155543_) {
-            p_155541_.playSound(
+        protected void onClose(final Level level, final BlockPos pos, final BlockState blockState) {
+            level.playSound(
                 null,
-                p_155542_.getX() + 0.5,
-                p_155542_.getY() + 0.5,
-                p_155542_.getZ() + 0.5,
+                pos.getX() + 0.5,
+                pos.getY() + 0.5,
+                pos.getZ() + 0.5,
                 SoundEvents.ENDER_CHEST_CLOSE,
                 SoundSource.BLOCKS,
                 0.5F,
-                p_155541_.random.nextFloat() * 0.1F + 0.9F
+                level.getRandom().nextFloat() * 0.1F + 0.9F
             );
         }
 
         @Override
-        protected void openerCountChanged(Level p_155535_, BlockPos p_155536_, BlockState p_155537_, int p_155538_, int p_155539_) {
-            p_155535_.blockEvent(EnderChestBlockEntity.this.worldPosition, Blocks.ENDER_CHEST, 1, p_155539_);
+        protected void openerCountChanged(final Level level, final BlockPos pos, final BlockState blockState, final int previous, final int current) {
+            level.blockEvent(EnderChestBlockEntity.this.worldPosition, Blocks.ENDER_CHEST, 1, current);
         }
 
         @Override
-        public boolean isOwnContainer(Player p_155529_) {
-            return p_155529_.getEnderChestInventory().isActiveChest(EnderChestBlockEntity.this);
+        public boolean isOwnContainer(final Player player) {
+            return player.getEnderChestInventory().isActiveChest(EnderChestBlockEntity.this);
         }
     };
 
-    public EnderChestBlockEntity(BlockPos p_155513_, BlockState p_155514_) {
-        super(BlockEntityType.ENDER_CHEST, p_155513_, p_155514_);
+    public EnderChestBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.ENDER_CHEST, worldPosition, blockState);
     }
 
-    public static void lidAnimateTick(Level p_155518_, BlockPos p_155519_, BlockState p_155520_, EnderChestBlockEntity p_155521_) {
-        p_155521_.chestLidController.tickLid();
+    public static void lidAnimateTick(final Level level, final BlockPos pos, final BlockState state, final EnderChestBlockEntity entity) {
+        entity.chestLidController.tickLid();
     }
 
     @Override
-    public boolean triggerEvent(int p_59285_, int p_59286_) {
-        if (p_59285_ == 1) {
-            this.chestLidController.shouldBeOpen(p_59286_ > 0);
+    public boolean triggerEvent(final int b0, final int b1) {
+        if (b0 == 1) {
+            this.chestLidController.shouldBeOpen(b1 > 0);
             return true;
         } else {
-            return super.triggerEvent(p_59285_, p_59286_);
+            return super.triggerEvent(b0, b1);
         }
     }
 
-    public void startOpen(ContainerUser p_424686_) {
-        if (!this.remove && !p_424686_.getLivingEntity().isSpectator()) {
-            this.openersCounter.incrementOpeners(p_424686_.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState(), p_424686_.getContainerInteractionRange());
+    public void startOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
+            this.openersCounter
+                .incrementOpeners(
+                    containerUser.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState(), containerUser.getContainerInteractionRange()
+                );
         }
     }
 
-    public void stopOpen(ContainerUser p_430687_) {
-        if (!this.remove && !p_430687_.getLivingEntity().isSpectator()) {
-            this.openersCounter.decrementOpeners(p_430687_.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState());
+    public void stopOpen(final ContainerUser containerUser) {
+        if (!this.remove && !containerUser.getLivingEntity().isSpectator()) {
+            this.openersCounter.decrementOpeners(containerUser.getLivingEntity(), this.getLevel(), this.getBlockPos(), this.getBlockState());
         }
     }
 
-    public boolean stillValid(Player p_59283_) {
-        return Container.stillValidBlockEntity(this, p_59283_);
+    public boolean stillValid(final Player player) {
+        return Container.stillValidBlockEntity(this, player);
     }
 
     public void recheckOpen() {
@@ -93,7 +96,7 @@ public class EnderChestBlockEntity extends BlockEntity implements LidBlockEntity
     }
 
     @Override
-    public float getOpenNess(float p_59281_) {
-        return this.chestLidController.getOpenness(p_59281_);
+    public float getOpenNess(final float a) {
+        return this.chestLidController.getOpenness(a);
     }
 }

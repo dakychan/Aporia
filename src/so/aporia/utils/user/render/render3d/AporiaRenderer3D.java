@@ -6,18 +6,21 @@
 
 package so.aporia.utils.user.render.render3d;
 
+import com.mojang.blaze3d.PrimitiveTopology;
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.Std140Builder;
+import com.mojang.blaze3d.pipeline.BindGroupLayout;
 import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.pipeline.ColorTargetState;
+import com.mojang.blaze3d.pipeline.DepthStencilState;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.platform.CompareOp;
 import com.mojang.blaze3d.shaders.UniformType;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.vertex.BufferBuilder;
+import com.mojang.blaze3d.vertex.ByteBufferBuilder;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
-import com.mojang.blaze3d.vertex.Tesselator;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
@@ -25,6 +28,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
+import org.joml.Vector4fc;
 import org.lwjgl.system.MemoryStack;
 
 import java.nio.ByteBuffer;
@@ -32,6 +36,7 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
@@ -129,7 +134,7 @@ public enum ZoneShape {
     }
 
     private void executeTask(DrawTask3D task) {
-        var mainTarget = Minecraft.getInstance().getMainRenderTarget();
+        var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         var colorView = mainTarget.getColorTextureView();
         var depthView = mainTarget.getDepthTextureView();
         if (colorView == null) return;
@@ -153,13 +158,13 @@ public enum ZoneShape {
         encoder.writeToBuffer(cachedVbo.slice(), vertexBuf);
 
         try (var pass = encoder.createRenderPass(() -> "aporia:render3d_mega",
-                colorView, OptionalInt.empty(), depthView, OptionalDouble.empty())) {
+                colorView, Optional.<Vector4fc>empty(), depthView, OptionalDouble.empty())) {
             pass.setPipeline(pipeline);
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("ModelViewProj", mvpUbo.slice());
             pass.setUniform("DrawParams", drawParamsUbo.slice());
-            pass.setVertexBuffer(0, cachedVbo);
-            pass.draw(0, task.vertexCount);
+            pass.setVertexBuffer(0, cachedVbo.slice());
+            pass.draw(0, task.vertexCount, 0, 0);
         }
     }
 
@@ -192,11 +197,13 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.TRIANGLES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-                .withDepthWrite(true)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
                 .withCull(true)
                 .build();
 
@@ -204,11 +211,13 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_wire"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-                .withDepthWrite(true)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.LINES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
                 .withCull(false)
                 .build();
 
@@ -216,11 +225,13 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_unlit"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.TRIANGLES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-                .withDepthWrite(true)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
                 .withCull(true)
                 .withShaderDefine("NO_LIGHTING")
                 .build();
@@ -231,12 +242,14 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_blur"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_blur"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_blur"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withSampler("ScreenTexture")
-                .withVertexFormat(DefaultVertexFormat.POSITION_TEX_COLOR, VertexFormat.Mode.TRIANGLES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-                .withDepthWrite(true)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .withSampler("ScreenTexture")
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_TEX_COLOR)
+                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
                 .withCull(true)
                 .build();
 
@@ -245,12 +258,14 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_mega"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.TRIANGLES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-                .withDepthWrite(true)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
                 .withCull(true)
                 .build();
 
@@ -258,12 +273,14 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_mega_wire"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.LEQUAL_DEPTH_TEST)
-                .withDepthWrite(true)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.LINES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.LESS_THAN_OR_EQUAL, true))
                 .withCull(false)
                 .build();
 
@@ -271,12 +288,14 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_mega_overlay"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.TRIANGLES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .withDepthWrite(false)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.TRIANGLES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(true)
                 .build();
 
@@ -284,12 +303,14 @@ public enum ZoneShape {
                 .withLocation(Identifier.fromNamespaceAndPath("aporia", "pipeline/render3d_mega_wire_overlay"))
                 .withVertexShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
                 .withFragmentShader(Identifier.fromNamespaceAndPath("aporia", "core/render3d_mega"))
-                .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
-                .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
-                .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL, VertexFormat.Mode.LINES)
-                .withBlend(BlendFunction.TRANSLUCENT)
-                .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
-                .withDepthWrite(false)
+                .withBindGroupLayout(BindGroupLayout.builder()
+                        .withUniform("ModelViewProj", UniformType.UNIFORM_BUFFER)
+                        .withUniform("DrawParams", UniformType.UNIFORM_BUFFER)
+                        .build())
+                .withVertexBinding(0, DefaultVertexFormat.POSITION_COLOR_NORMAL)
+                .withPrimitiveTopology(PrimitiveTopology.LINES)
+                .withColorTargetState(new ColorTargetState(BlendFunction.TRANSLUCENT))
+                .withDepthStencilState(new DepthStencilState(CompareOp.ALWAYS_PASS, false))
                 .withCull(false)
                 .build();
 
@@ -333,7 +354,7 @@ public enum ZoneShape {
                                    Matrix4f viewProj, Matrix4f model) {
         if (vertexCount == 0) return;
 
-        var mainTarget = Minecraft.getInstance().getMainRenderTarget();
+        var mainTarget = Minecraft.getInstance().gameRenderer.mainRenderTarget();
         var colorView = mainTarget.getColorTextureView();
         var depthView = mainTarget.getDepthTextureView();
         if (colorView == null) return;
@@ -350,12 +371,12 @@ public enum ZoneShape {
         encoder.writeToBuffer(cachedVbo.slice(), vertexData);
 
         try (var pass = encoder.createRenderPass(() -> "aporia:render3d",
-                colorView, OptionalInt.empty(), depthView, OptionalDouble.empty())) {
+                colorView, Optional.<Vector4fc>empty(), depthView, OptionalDouble.empty())) {
             pass.setPipeline(pipeline);
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("ModelViewProj", mvpUbo.slice());
-            pass.setVertexBuffer(0, cachedVbo);
-            pass.draw(0, vertexCount);
+            pass.setVertexBuffer(0, cachedVbo.slice());
+            pass.draw(0, vertexCount, 0, 0);
         }
     }
 
@@ -414,7 +435,7 @@ public enum ZoneShape {
     public void drawSolidBox(float cx, float cy, float cz, float sx, float sy, float sz,
                               int color, float rimPower, float rimIntensity,
                               Matrix4f viewProj, Matrix4f model) {
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
         emitSolidBox(buf, cx, cy, cz, sx, sy, sz, color);
         var mesh = buf.buildOrThrow();
         drawMega(mesh.vertexBuffer(), 36, false, viewProj, model,
@@ -429,7 +450,7 @@ public enum ZoneShape {
     public void drawWireBox(float cx, float cy, float cz, float sx, float sy, float sz,
                              int color, float glowIntensity,
                              Matrix4f viewProj, Matrix4f model) {
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
         emitWireBox(buf, cx, cy, cz, sx, sy, sz, color);
         var mesh = buf.buildOrThrow();
         drawMega(mesh.vertexBuffer(), 24, true, viewProj, model,
@@ -446,7 +467,7 @@ public enum ZoneShape {
                            Matrix4f viewProj, Matrix4f model) {
         float hw = w / 2f, hh = h / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         buf.addVertex(cx - hw, cy - hh, cz).setColor(r, g, b, a).setNormal(0, 0, 1);
         buf.addVertex(cx + hw, cy - hh, cz).setColor(r, g, b, a).setNormal(0, 0, 1);
@@ -470,7 +491,7 @@ public enum ZoneShape {
                                   Matrix4f viewProj, Matrix4f model) {
         float hw = w / 2f, hh = h / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         buf.addVertex(cx - hw, cy - hh, cz).setColor(r, g, b, a).setNormal(0, 0, 1);
         buf.addVertex(cx + hw, cy - hh, cz).setColor(r, g, b, a).setNormal(0, 0, 1);
@@ -533,8 +554,8 @@ public enum ZoneShape {
         }
     }
 
-    private BufferBuilder build(VertexFormat.Mode mode) {
-        return Tesselator.getInstance().begin(mode, DefaultVertexFormat.POSITION_COLOR_NORMAL);
+    private BufferBuilder build(PrimitiveTopology topology) {
+        return new BufferBuilder(ByteBufferBuilder.exactlySized(4096), topology, DefaultVertexFormat.POSITION_COLOR_NORMAL);
     }
 
     // ==================== Batched draw API ====================
@@ -575,7 +596,7 @@ public enum ZoneShape {
                         int color, Matrix4f viewProj, Matrix4f model) {
         float hx = sx / 2f, hy = sy / 2f, hz = sz / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         /* Front face (Z-) */
         buf.addVertex(cx - hx, cy - hy, cz - hz).setColor(r, g, b, a).setNormal(0, 0, -1);
@@ -651,7 +672,7 @@ public enum ZoneShape {
                          int color, Matrix4f viewProj, Matrix4f model) {
         float hw = w / 2f, hd = d / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         /* Верхняя грань (Y+) — единственная грань для плоского прямоугольника.
          * Top face (Y+) — the only face for a flat rectangle. */
@@ -694,7 +715,7 @@ public enum ZoneShape {
                                  int color, Matrix4f viewProj, Matrix4f model) {
         float hw = w / 2f, hh = h / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         /* Локальные вершины: (-hw, -hh, 0) ... (+hw, +hh, 0) — плоскость XY.
          * Local vertices: (-hw, -hh, 0) ... (+hw, +hh, 0) — XY plane. */
@@ -752,7 +773,7 @@ public enum ZoneShape {
                              int color, Matrix4f viewProj, Matrix4f model) {
         float hw = w / 2f, hd = d / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
 
         /* 4 ребра прямоугольника на Y-плоскости.
          * 4 edges of the rectangle on the Y plane. */
@@ -788,7 +809,7 @@ public enum ZoneShape {
     public void drawSphere(float cx, float cy, float cz, float radius, int color,
                            Matrix4f viewProj, Matrix4f model, int segments) {
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         for (int lat = 0; lat < segments; lat++) {
             float theta0 = (float) Math.PI * (-0.5f + (float) lat / segments);
@@ -830,7 +851,7 @@ public enum ZoneShape {
     public void drawWireSphere(float cx, float cy, float cz, float radius, int color,
                                Matrix4f viewProj, Matrix4f model, int segments) {
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
 
         /* Линии широт / Latitude lines. */
         for (int lat = 0; lat < segments; lat++) {
@@ -881,7 +902,7 @@ public enum ZoneShape {
     public void drawCylinder(float cx, float cz, float y0, float y1, float radius, int color,
                              Matrix4f viewProj, Matrix4f model, int segments) {
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.TRIANGLES);
+        var buf = build(PrimitiveTopology.TRIANGLES);
 
         for (int i = 0; i < segments; i++) {
             float a0 = (float) (2 * Math.PI) * i / segments;
@@ -916,7 +937,7 @@ public enum ZoneShape {
         if (len < 0.001f) return;
         float nx = dx / len, ny = dy / len, nz = dz / len;
 
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
         buf.addVertex(x1, y1, z1).setColor(r, g, b, a).setNormal(nx, ny, nz);
         buf.addVertex(x2, y2, z2).setColor(r, g, b, a).setNormal(nx, ny, nz);
         var mesh = buf.buildOrThrow();
@@ -933,7 +954,7 @@ public enum ZoneShape {
                             int color, Matrix4f viewProj, Matrix4f model) {
         float hx = sx / 2f, hy = sy / 2f, hz = sz / 2f;
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
 
         /* Передняя грань / Front face */
         buf.addVertex(cx - hx, cy - hy, cz - hz).setColor(r, g, b, a).setNormal(0, 0, 0);
@@ -978,7 +999,7 @@ public enum ZoneShape {
     public void drawGrid(float cx, float cz, float size, int divisions, int color,
                          Matrix4f viewProj, Matrix4f model, float y) {
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
         float half = size / 2f;
 
         for (int i = 0; i <= divisions; i++) {
@@ -1000,7 +1021,7 @@ public enum ZoneShape {
      * Draws coordinate axes (X=red, Z=blue, Y=green).
      */
     public void drawAxes(float length, Matrix4f viewProj, Matrix4f model) {
-        var buf = build(VertexFormat.Mode.LINES);
+        var buf = build(PrimitiveTopology.LINES);
         buf.addVertex(0, 0, 0).setColor(255, 0, 0, 255).setNormal(0, 0, 0);
         buf.addVertex(length, 0, 0).setColor(255, 0, 0, 255).setNormal(0, 0, 0);
         buf.addVertex(0, 0, 0).setColor(0, 255, 0, 255).setNormal(0, 0, 0);
@@ -1118,7 +1139,7 @@ public enum ZoneShape {
     public void drawBlurredRect(float cx, float cy, float cz, float w, float h,
                                 int color, Matrix4f viewProj, Matrix4f model) {
         Minecraft mc = Minecraft.getInstance();
-        var mainTarget = mc.getMainRenderTarget();
+        var mainTarget = mc.gameRenderer.mainRenderTarget();
         var colorView = mainTarget.getColorTextureView();
         var depthView = mainTarget.getDepthTextureView();
         if (colorView == null) return;
@@ -1127,7 +1148,8 @@ public enum ZoneShape {
         int a = (color >> 24) & 0xFF, r = (color >> 16) & 0xFF, g = (color >> 8) & 0xFF, b = color & 0xFF;
         float ta = a / 255f, tr = r / 255f, tg = g / 255f, tb = b / 255f;
 
-        var buf = Tesselator.getInstance().begin(VertexFormat.Mode.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
+        var bb = ByteBufferBuilder.exactlySized(4096);
+        var buf = new BufferBuilder(bb, PrimitiveTopology.TRIANGLES, DefaultVertexFormat.POSITION_TEX_COLOR);
         /* Плоский quad на Y-плоскости с UV координатами экрана.
          * Flat quad on Y plane with screen UV coordinates. */
         buf.addVertex(cx - hw, cy, cz - hh).setUv(0f, 0f).setColor(tr, tg, tb, ta);
@@ -1150,13 +1172,13 @@ public enum ZoneShape {
         var sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
 
         try (var pass = encoder.createRenderPass(() -> "aporia:blurred_rect_3d",
-                colorView, OptionalInt.empty(), depthView, OptionalDouble.empty())) {
+                colorView, Optional.<Vector4fc>empty(), depthView, OptionalDouble.empty())) {
             pass.setPipeline(blurredPipeline);
             RenderSystem.bindDefaultUniforms(pass);
             pass.setUniform("ModelViewProj", mvpUbo.slice());
             pass.bindTexture("ScreenTexture", colorView, sampler);
-            pass.setVertexBuffer(0, cachedVbo);
-            pass.draw(0, 6);
+            pass.setVertexBuffer(0, cachedVbo.slice());
+            pass.draw(0, 6, 0, 0);
         }
     }
 

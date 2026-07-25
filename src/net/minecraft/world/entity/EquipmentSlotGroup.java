@@ -12,10 +12,10 @@ import net.minecraft.util.ByIdMap;
 import net.minecraft.util.StringRepresentable;
 
 public enum EquipmentSlotGroup implements StringRepresentable, Iterable<EquipmentSlot> {
-    ANY(0, "any", p_335585_ -> true),
+    ANY(0, "any", slot -> true),
     MAINHAND(1, "mainhand", EquipmentSlot.MAINHAND),
     OFFHAND(2, "offhand", EquipmentSlot.OFFHAND),
-    HAND(3, "hand", p_330375_ -> p_330375_.getType() == EquipmentSlot.Type.HAND),
+    HAND(3, "hand", slot -> slot.getType() == EquipmentSlot.Type.HAND),
     FEET(4, "feet", EquipmentSlot.FEET),
     LEGS(5, "legs", EquipmentSlot.LEGS),
     CHEST(6, "chest", EquipmentSlot.CHEST),
@@ -24,29 +24,27 @@ public enum EquipmentSlotGroup implements StringRepresentable, Iterable<Equipmen
     BODY(9, "body", EquipmentSlot.BODY),
     SADDLE(10, "saddle", EquipmentSlot.SADDLE);
 
-    public static final IntFunction<EquipmentSlotGroup> BY_ID = ByIdMap.continuous(
-        p_331450_ -> p_331450_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-    );
+    public static final IntFunction<EquipmentSlotGroup> BY_ID = ByIdMap.continuous(s -> s.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
     public static final Codec<EquipmentSlotGroup> CODEC = StringRepresentable.fromEnum(EquipmentSlotGroup::values);
-    public static final StreamCodec<ByteBuf, EquipmentSlotGroup> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_330886_ -> p_330886_.id);
+    public static final StreamCodec<ByteBuf, EquipmentSlotGroup> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, s -> s.id);
     private final int id;
     private final String key;
     private final Predicate<EquipmentSlot> predicate;
     private final List<EquipmentSlot> slots;
 
-    private EquipmentSlotGroup(final int p_335419_, final String p_332223_, final Predicate<EquipmentSlot> p_333500_) {
-        this.id = p_335419_;
-        this.key = p_332223_;
-        this.predicate = p_333500_;
-        this.slots = EquipmentSlot.VALUES.stream().filter(p_333500_).toList();
+    EquipmentSlotGroup(final int id, final String key, final Predicate<EquipmentSlot> predicate) {
+        this.id = id;
+        this.key = key;
+        this.predicate = predicate;
+        this.slots = EquipmentSlot.VALUES.stream().filter(predicate).toList();
     }
 
-    private EquipmentSlotGroup(final int p_334344_, final String p_328996_, final EquipmentSlot p_332147_) {
-        this(p_334344_, p_328996_, p_330757_ -> p_330757_ == p_332147_);
+    EquipmentSlotGroup(final int id, final String key, final EquipmentSlot slot) {
+        this(id, key, s -> s == slot);
     }
 
-    public static EquipmentSlotGroup bySlot(EquipmentSlot p_331051_) {
-        return switch (p_331051_) {
+    public static EquipmentSlotGroup bySlot(final EquipmentSlot slot) {
+        return switch (slot) {
             case MAINHAND -> MAINHAND;
             case OFFHAND -> OFFHAND;
             case FEET -> FEET;
@@ -63,8 +61,8 @@ public enum EquipmentSlotGroup implements StringRepresentable, Iterable<Equipmen
         return this.key;
     }
 
-    public boolean test(EquipmentSlot p_328114_) {
-        return this.predicate.test(p_328114_);
+    public boolean test(final EquipmentSlot slot) {
+        return this.predicate.test(slot);
     }
 
     public List<EquipmentSlot> slots() {

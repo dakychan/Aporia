@@ -2,10 +2,7 @@ package net.minecraft.client.gui.screens.advancements;
 
 import net.minecraft.advancements.AdvancementType;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum AdvancementWidgetType {
     OBTAINED(
         Identifier.withDefaultNamespace("advancements/box_obtained"),
@@ -25,19 +22,19 @@ public enum AdvancementWidgetType {
     private final Identifier challengeFrameSprite;
     private final Identifier goalFrameSprite;
 
-    private AdvancementWidgetType(final Identifier p_451998_, final Identifier p_454128_, final Identifier p_456436_, final Identifier p_459461_) {
-        this.boxSprite = p_451998_;
-        this.taskFrameSprite = p_454128_;
-        this.challengeFrameSprite = p_456436_;
-        this.goalFrameSprite = p_459461_;
+    AdvancementWidgetType(final Identifier boxSprite, final Identifier taskFrameSprite, final Identifier challengeFrameSprite, final Identifier goalFrameSprite) {
+        this.boxSprite = boxSprite;
+        this.taskFrameSprite = taskFrameSprite;
+        this.challengeFrameSprite = challengeFrameSprite;
+        this.goalFrameSprite = goalFrameSprite;
     }
 
     public Identifier boxSprite() {
         return this.boxSprite;
     }
 
-    public Identifier frameSprite(AdvancementType p_311711_) {
-        return switch (p_311711_) {
+    public Identifier frameSprite(final AdvancementType type) {
+        return switch (type) {
             case TASK -> this.taskFrameSprite;
             case CHALLENGE -> this.challengeFrameSprite;
             case GOAL -> this.goalFrameSprite;

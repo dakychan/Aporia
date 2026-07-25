@@ -2,7 +2,7 @@ package so.aporia.utils.user.render.ui.mainmenu
 
 import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
@@ -335,16 +335,17 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
     // Render
     // ============================================================
 
-    override fun render(gfx: GuiGraphics, mx: Int, my: Int, delta: Float) {
+    override fun extractRenderState(gfx: GuiGraphicsExtractor, mx: Int, my: Int, delta: Float) {
         val now = System.currentTimeMillis()
+        val r = AporiaRenderer
         var safe = true
 
         try {
             BlurRenderer.prepareFrameBlur(mc, 30f, 0.5f)
             renderBackground(r)
-        } catch (_: Throwable) {
+        } catch (e: Throwable) {
             safe = false
-            // GL resources disposed (world unloaded) — draw plain black bg via vanilla API
+            so.aporia.utils.user.logger.Logger.error("Menu background render failed: ${e.javaClass.simpleName}: ${e.message}")
             if (sw > 0 && sh > 0) {
                 gfx.fill(0, 0, sw, sh, -16777216)
             }
@@ -400,7 +401,9 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
             val ver = "Aporia v1.0"
             val vw = r.getTextWidth("regular", ver, 8f)
             r.drawText("regular", ver, sw - vw - 8, sh - 14f, 8f, colorUtil.rgba(255, 255, 255, (80 * prog).toInt()))
-        } catch (_: Throwable) {}
+        } catch (e: Throwable) {
+            so.aporia.utils.user.logger.Logger.error("Menu render failed: ${e.javaClass.simpleName}: ${e.message}")
+        }
     }
 
     private fun renderBackground(r: AporiaRenderer) {
@@ -461,7 +464,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
     // Lock screen
     // ============================================================
 
-    private fun renderLockScreen(r: AporiaRenderer, gfx: GuiGraphics, now: Long) {
+    private fun renderLockScreen(r: AporiaRenderer, gfx: GuiGraphicsExtractor, now: Long) {
         lockFadeAnim.update()
         val alpha = lockFadeAnim.value()
         val cal = java.util.Calendar.getInstance()
@@ -588,16 +591,16 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
 
     private fun onButtonAction(id: Int) {
         when (id) {
-            0 -> mc.setScreen(net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(this))
-            1 -> mc.setScreen(net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(this))
-            2 -> mc.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(this, mc.options))
+            0 -> mc.gui.setScreen(net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(this))
+            1 -> mc.gui.setScreen(net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen(this))
+            2 -> mc.gui.setScreen(net.minecraft.client.gui.screens.options.OptionsScreen(this, mc.options, false))
             3 -> mc.execute { mc.stop() }
         }
     }
 
     override fun isPauseScreen() = false
 
-    override fun renderBackground(gfx: GuiGraphics, mx: Int, my: Int, delta: Float) {}
+    override fun extractBackground(gfx: GuiGraphicsExtractor, mx: Int, my: Int, delta: Float) {}
     override fun removed() {
         try { r.flush() } catch (_: Throwable) {}
     }
@@ -613,7 +616,7 @@ class AporiaMainMenuScreen : Screen(Component.literal("Aporia")) {
         private val hoverAnim = Animator(200, Easing::cubicOut)
         private val appearAnim = Animator(400, Easing::cubicOut)
 
-        fun render(r: AporiaRenderer, gfx: GuiGraphics, mx: Int, my: Int, globalAlpha: Float, th: Theme) {
+        fun render(r: AporiaRenderer, gfx: GuiGraphicsExtractor, mx: Int, my: Int, globalAlpha: Float, th: Theme) {
             val hov = mx in x until x + w && my in y until y + h
             if (hov && !hoverAnim.isPlaying() && hoverAnim.value() < 0.99f) hoverAnim.play()
             if (!hov && !hoverAnim.isPlaying() && hoverAnim.value() > 0.01f) hoverAnim.reverse()

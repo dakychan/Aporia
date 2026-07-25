@@ -5,7 +5,6 @@ import com.google.common.primitives.Longs;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.nio.charset.StandardCharsets;
 import java.security.SignatureException;
 import java.time.Instant;
@@ -16,46 +15,46 @@ import net.minecraft.util.SignatureUpdater;
 
 public record SignedMessageBody(String content, Instant timeStamp, long salt, LastSeenMessages lastSeen) {
     public static final MapCodec<SignedMessageBody> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_253722_ -> p_253722_.group(
+        i -> i.group(
                 Codec.STRING.fieldOf("content").forGetter(SignedMessageBody::content),
                 ExtraCodecs.INSTANT_ISO8601.fieldOf("time_stamp").forGetter(SignedMessageBody::timeStamp),
                 Codec.LONG.fieldOf("salt").forGetter(SignedMessageBody::salt),
                 LastSeenMessages.CODEC.optionalFieldOf("last_seen", LastSeenMessages.EMPTY).forGetter(SignedMessageBody::lastSeen)
             )
-            .apply(p_253722_, SignedMessageBody::new)
+            .apply(i, SignedMessageBody::new)
     );
 
-    public static SignedMessageBody unsigned(String p_249884_) {
-        return new SignedMessageBody(p_249884_, Instant.now(), 0L, LastSeenMessages.EMPTY);
+    public static SignedMessageBody unsigned(final String content) {
+        return new SignedMessageBody(content, Instant.now(), 0L, LastSeenMessages.EMPTY);
     }
 
-    public void updateSignature(SignatureUpdater.Output p_249654_) throws SignatureException {
-        p_249654_.update(Longs.toByteArray(this.salt));
-        p_249654_.update(Longs.toByteArray(this.timeStamp.getEpochSecond()));
-        byte[] abyte = this.content.getBytes(StandardCharsets.UTF_8);
-        p_249654_.update(Ints.toByteArray(abyte.length));
-        p_249654_.update(abyte);
-        this.lastSeen.updateSignature(p_249654_);
+    public void updateSignature(final SignatureUpdater.Output output) throws SignatureException {
+        output.update(Longs.toByteArray(this.salt));
+        output.update(Longs.toByteArray(this.timeStamp.getEpochSecond()));
+        byte[] contentBytes = this.content.getBytes(StandardCharsets.UTF_8);
+        output.update(Ints.toByteArray(contentBytes.length));
+        output.update(contentBytes);
+        this.lastSeen.updateSignature(output);
     }
 
-    public SignedMessageBody.Packed pack(MessageSignatureCache p_253671_) {
-        return new SignedMessageBody.Packed(this.content, this.timeStamp, this.salt, this.lastSeen.pack(p_253671_));
+    public SignedMessageBody.Packed pack(final MessageSignatureCache cache) {
+        return new SignedMessageBody.Packed(this.content, this.timeStamp, this.salt, this.lastSeen.pack(cache));
     }
 
     public record Packed(String content, Instant timeStamp, long salt, LastSeenMessages.Packed lastSeen) {
-        public Packed(FriendlyByteBuf p_251620_) {
-            this(p_251620_.readUtf(256), p_251620_.readInstant(), p_251620_.readLong(), new LastSeenMessages.Packed(p_251620_));
+        public Packed(final FriendlyByteBuf input) {
+            this(input.readUtf(256), input.readInstant(), input.readLong(), new LastSeenMessages.Packed(input));
         }
 
-        public void write(FriendlyByteBuf p_250247_) {
-            p_250247_.writeUtf(this.content, 256);
-            p_250247_.writeInstant(this.timeStamp);
-            p_250247_.writeLong(this.salt);
-            this.lastSeen.write(p_250247_);
+        public void write(final FriendlyByteBuf output) {
+            output.writeUtf(this.content, 256);
+            output.writeInstant(this.timeStamp);
+            output.writeLong(this.salt);
+            this.lastSeen.write(output);
         }
 
-        public Optional<SignedMessageBody> unpack(MessageSignatureCache p_253919_) {
-            return this.lastSeen.unpack(p_253919_).map(p_249065_ -> new SignedMessageBody(this.content, this.timeStamp, this.salt, p_249065_));
+        public Optional<SignedMessageBody> unpack(final MessageSignatureCache cache) {
+            return this.lastSeen.unpack(cache).map(lastSeen -> new SignedMessageBody(this.content, this.timeStamp, this.salt, lastSeen));
         }
     }
 }

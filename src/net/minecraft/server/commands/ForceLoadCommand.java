@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.google.common.base.Joiner;
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.Dynamic2CommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -22,16 +21,18 @@ import net.minecraft.world.level.Level;
 public class ForceLoadCommand {
     private static final int MAX_CHUNK_LIMIT = 256;
     private static final Dynamic2CommandExceptionType ERROR_TOO_MANY_CHUNKS = new Dynamic2CommandExceptionType(
-        (p_308708_, p_308709_) -> Component.translatableEscape("commands.forceload.toobig", p_308708_, p_308709_)
+        (max, amount) -> Component.translatableEscape("commands.forceload.toobig", max, amount)
     );
     private static final Dynamic2CommandExceptionType ERROR_NOT_TICKING = new Dynamic2CommandExceptionType(
-        (p_308720_, p_308721_) -> Component.translatableEscape("commands.forceload.query.failure", p_308720_, p_308721_)
+        (pos, dimension) -> Component.translatableEscape("commands.forceload.query.failure", pos, dimension)
     );
     private static final SimpleCommandExceptionType ERROR_ALL_ADDED = new SimpleCommandExceptionType(Component.translatable("commands.forceload.added.failure"));
-    private static final SimpleCommandExceptionType ERROR_NONE_REMOVED = new SimpleCommandExceptionType(Component.translatable("commands.forceload.removed.failure"));
+    private static final SimpleCommandExceptionType ERROR_NONE_REMOVED = new SimpleCommandExceptionType(
+        Component.translatable("commands.forceload.removed.failure")
+    );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_137677_) {
-        p_137677_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("forceload")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
@@ -39,21 +40,15 @@ public class ForceLoadCommand {
                         .then(
                             Commands.argument("from", ColumnPosArgument.columnPos())
                                 .executes(
-                                    p_137711_ -> changeForceLoad(
-                                        p_137711_.getSource(),
-                                        ColumnPosArgument.getColumnPos(p_137711_, "from"),
-                                        ColumnPosArgument.getColumnPos(p_137711_, "from"),
-                                        true
+                                    c -> changeForceLoad(
+                                        c.getSource(), ColumnPosArgument.getColumnPos(c, "from"), ColumnPosArgument.getColumnPos(c, "from"), true
                                     )
                                 )
                                 .then(
                                     Commands.argument("to", ColumnPosArgument.columnPos())
                                         .executes(
-                                            p_137709_ -> changeForceLoad(
-                                                p_137709_.getSource(),
-                                                ColumnPosArgument.getColumnPos(p_137709_, "from"),
-                                                ColumnPosArgument.getColumnPos(p_137709_, "to"),
-                                                true
+                                            c -> changeForceLoad(
+                                                c.getSource(), ColumnPosArgument.getColumnPos(c, "from"), ColumnPosArgument.getColumnPos(c, "to"), true
                                             )
                                         )
                                 )
@@ -64,145 +59,146 @@ public class ForceLoadCommand {
                         .then(
                             Commands.argument("from", ColumnPosArgument.columnPos())
                                 .executes(
-                                    p_137707_ -> changeForceLoad(
-                                        p_137707_.getSource(),
-                                        ColumnPosArgument.getColumnPos(p_137707_, "from"),
-                                        ColumnPosArgument.getColumnPos(p_137707_, "from"),
-                                        false
+                                    c -> changeForceLoad(
+                                        c.getSource(), ColumnPosArgument.getColumnPos(c, "from"), ColumnPosArgument.getColumnPos(c, "from"), false
                                     )
                                 )
                                 .then(
                                     Commands.argument("to", ColumnPosArgument.columnPos())
                                         .executes(
-                                            p_137705_ -> changeForceLoad(
-                                                p_137705_.getSource(),
-                                                ColumnPosArgument.getColumnPos(p_137705_, "from"),
-                                                ColumnPosArgument.getColumnPos(p_137705_, "to"),
-                                                false
+                                            c -> changeForceLoad(
+                                                c.getSource(), ColumnPosArgument.getColumnPos(c, "from"), ColumnPosArgument.getColumnPos(c, "to"), false
                                             )
                                         )
                                 )
                         )
-                        .then(Commands.literal("all").executes(p_137701_ -> removeAll(p_137701_.getSource())))
+                        .then(Commands.literal("all").executes(c -> removeAll(c.getSource())))
                 )
                 .then(
                     Commands.literal("query")
-                        .executes(p_137694_ -> listForceLoad(p_137694_.getSource()))
+                        .executes(c -> listForceLoad(c.getSource()))
                         .then(
                             Commands.argument("pos", ColumnPosArgument.columnPos())
-                                .executes(p_137679_ -> queryForceLoad(p_137679_.getSource(), ColumnPosArgument.getColumnPos(p_137679_, "pos")))
+                                .executes(c -> queryForceLoad(c.getSource(), ColumnPosArgument.getColumnPos(c, "pos")))
                         )
                 )
         );
     }
 
-    private static int queryForceLoad(CommandSourceStack p_137683_, ColumnPos p_137684_) throws CommandSyntaxException {
-        ChunkPos chunkpos = p_137684_.toChunkPos();
-        ServerLevel serverlevel = p_137683_.getLevel();
-        ResourceKey<Level> resourcekey = serverlevel.dimension();
-        boolean flag = serverlevel.getForceLoadedChunks().contains(chunkpos.toLong());
-        if (flag) {
-            p_137683_.sendSuccess(
-                () -> Component.translatable("commands.forceload.query.success", Component.translationArg(chunkpos), Component.translationArg(resourcekey.identifier())),
+    private static int queryForceLoad(final CommandSourceStack source, final ColumnPos pos) throws CommandSyntaxException {
+        ChunkPos chunkPos = pos.toChunkPos();
+        ServerLevel level = source.getLevel();
+        ResourceKey<Level> dimension = level.dimension();
+        boolean result = level.getForceLoadedChunks().contains(chunkPos.pack());
+        if (result) {
+            source.sendSuccess(
+                () -> Component.translatable(
+                    "commands.forceload.query.success", Component.translationArg(chunkPos), Component.translationArg(dimension.identifier())
+                ),
                 false
             );
             return 1;
         } else {
-            throw ERROR_NOT_TICKING.create(chunkpos, resourcekey.identifier());
+            throw ERROR_NOT_TICKING.create(chunkPos, dimension.identifier());
         }
     }
 
-    private static int listForceLoad(CommandSourceStack p_137681_) {
-        ServerLevel serverlevel = p_137681_.getLevel();
-        ResourceKey<Level> resourcekey = serverlevel.dimension();
-        LongSet longset = serverlevel.getForceLoadedChunks();
-        int i = longset.size();
-        if (i > 0) {
-            String s = Joiner.on(", ").join(longset.stream().sorted().map(ChunkPos::new).map(ChunkPos::toString).iterator());
-            if (i == 1) {
-                p_137681_.sendSuccess(() -> Component.translatable("commands.forceload.list.single", Component.translationArg(resourcekey.identifier()), s), false);
+    private static int listForceLoad(final CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        ResourceKey<Level> dimension = level.dimension();
+        LongSet forcedChunks = level.getForceLoadedChunks();
+        int chunkCount = forcedChunks.size();
+        if (chunkCount > 0) {
+            String chunkList = Joiner.on(", ").join(forcedChunks.stream().sorted().map(ChunkPos::unpack).map(ChunkPos::toString).iterator());
+            if (chunkCount == 1) {
+                source.sendSuccess(
+                    () -> Component.translatable("commands.forceload.list.single", Component.translationArg(dimension.identifier()), chunkList), false
+                );
             } else {
-                p_137681_.sendSuccess(() -> Component.translatable("commands.forceload.list.multiple", i, Component.translationArg(resourcekey.identifier()), s), false);
+                source.sendSuccess(
+                    () -> Component.translatable("commands.forceload.list.multiple", chunkCount, Component.translationArg(dimension.identifier()), chunkList),
+                    false
+                );
             }
         } else {
-            p_137681_.sendFailure(Component.translatable("commands.forceload.added.none", Component.translationArg(resourcekey.identifier())));
+            source.sendFailure(Component.translatable("commands.forceload.added.none", Component.translationArg(dimension.identifier())));
         }
 
-        return i;
+        return chunkCount;
     }
 
-    private static int removeAll(CommandSourceStack p_137696_) {
-        ServerLevel serverlevel = p_137696_.getLevel();
-        ResourceKey<Level> resourcekey = serverlevel.dimension();
-        LongSet longset = serverlevel.getForceLoadedChunks();
-        longset.forEach(p_137675_ -> serverlevel.setChunkForced(ChunkPos.getX(p_137675_), ChunkPos.getZ(p_137675_), false));
-        p_137696_.sendSuccess(() -> Component.translatable("commands.forceload.removed.all", Component.translationArg(resourcekey.identifier())), true);
+    private static int removeAll(final CommandSourceStack source) {
+        ServerLevel level = source.getLevel();
+        ResourceKey<Level> dimension = level.dimension();
+        LongSet forcedChunks = level.getForceLoadedChunks();
+        forcedChunks.forEach(chunk -> level.setChunkForced(ChunkPos.getX(chunk), ChunkPos.getZ(chunk), false));
+        source.sendSuccess(() -> Component.translatable("commands.forceload.removed.all", Component.translationArg(dimension.identifier())), true);
         return 0;
     }
 
-    private static int changeForceLoad(CommandSourceStack p_137686_, ColumnPos p_137687_, ColumnPos p_137688_, boolean p_137689_) throws CommandSyntaxException {
-        int i = Math.min(p_137687_.x(), p_137688_.x());
-        int j = Math.min(p_137687_.z(), p_137688_.z());
-        int k = Math.max(p_137687_.x(), p_137688_.x());
-        int l = Math.max(p_137687_.z(), p_137688_.z());
-        if (i >= -30000000 && j >= -30000000 && k < 30000000 && l < 30000000) {
-            int i1 = SectionPos.blockToSectionCoord(i);
-            int j1 = SectionPos.blockToSectionCoord(j);
-            int k1 = SectionPos.blockToSectionCoord(k);
-            int l1 = SectionPos.blockToSectionCoord(l);
-            long i2 = (k1 - i1 + 1L) * (l1 - j1 + 1L);
-            if (i2 > 256L) {
-                throw ERROR_TOO_MANY_CHUNKS.create(256, i2);
-            } else {
-                ServerLevel serverlevel = p_137686_.getLevel();
-                ResourceKey<Level> resourcekey = serverlevel.dimension();
-                ChunkPos chunkpos = null;
-                int j2 = 0;
+    private static int changeForceLoad(final CommandSourceStack source, final ColumnPos from, final ColumnPos to, final boolean add) throws CommandSyntaxException {
+        int minX = Math.min(from.x(), to.x());
+        int minZ = Math.min(from.z(), to.z());
+        int maxX = Math.max(from.x(), to.x());
+        int maxZ = Math.max(from.z(), to.z());
+        if (minX >= -30000000 && minZ >= -30000000 && maxX < 30000000 && maxZ < 30000000) {
+            int minChunkX = SectionPos.blockToSectionCoord(minX);
+            int minChunkZ = SectionPos.blockToSectionCoord(minZ);
+            int maxChunkX = SectionPos.blockToSectionCoord(maxX);
+            int maxChunkZ = SectionPos.blockToSectionCoord(maxZ);
+            long chunkCount = (maxChunkX - minChunkX + 1L) * (maxChunkZ - minChunkZ + 1L);
+            if (chunkCount > 256L) {
+                throw ERROR_TOO_MANY_CHUNKS.create(256, chunkCount);
+            }
 
-                for (int k2 = i1; k2 <= k1; k2++) {
-                    for (int l2 = j1; l2 <= l1; l2++) {
-                        boolean flag = serverlevel.setChunkForced(k2, l2, p_137689_);
-                        if (flag) {
-                            j2++;
-                            if (chunkpos == null) {
-                                chunkpos = new ChunkPos(k2, l2);
-                            }
+            ServerLevel level = source.getLevel();
+            ResourceKey<Level> dimension = level.dimension();
+            ChunkPos firstChanged = null;
+            int changedCount = 0;
+
+            for (int x = minChunkX; x <= maxChunkX; x++) {
+                for (int z = minChunkZ; z <= maxChunkZ; z++) {
+                    boolean changed = level.setChunkForced(x, z, add);
+                    if (changed) {
+                        changedCount++;
+                        if (firstChanged == null) {
+                            firstChanged = new ChunkPos(x, z);
                         }
                     }
                 }
-
-                ChunkPos chunkpos2 = chunkpos;
-                int i3 = j2;
-                if (i3 == 0) {
-                    throw (p_137689_ ? ERROR_ALL_ADDED : ERROR_NONE_REMOVED).create();
-                } else {
-                    if (i3 == 1) {
-                        p_137686_.sendSuccess(
-                            () -> Component.translatable(
-                                "commands.forceload." + (p_137689_ ? "added" : "removed") + ".single",
-                                Component.translationArg(chunkpos2),
-                                Component.translationArg(resourcekey.identifier())
-                            ),
-                            true
-                        );
-                    } else {
-                        ChunkPos chunkpos3 = new ChunkPos(i1, j1);
-                        ChunkPos chunkpos1 = new ChunkPos(k1, l1);
-                        p_137686_.sendSuccess(
-                            () -> Component.translatable(
-                                "commands.forceload." + (p_137689_ ? "added" : "removed") + ".multiple",
-                                i3,
-                                Component.translationArg(resourcekey.identifier()),
-                                Component.translationArg(chunkpos3),
-                                Component.translationArg(chunkpos1)
-                            ),
-                            true
-                        );
-                    }
-
-                    return i3;
-                }
             }
+
+            ChunkPos finalFirstChanged = firstChanged;
+            int changedChunks = changedCount;
+            if (changedChunks == 0) {
+                throw (add ? ERROR_ALL_ADDED : ERROR_NONE_REMOVED).create();
+            }
+
+            if (changedChunks == 1) {
+                source.sendSuccess(
+                    () -> Component.translatable(
+                        "commands.forceload." + (add ? "added" : "removed") + ".single",
+                        Component.translationArg(finalFirstChanged),
+                        Component.translationArg(dimension.identifier())
+                    ),
+                    true
+                );
+            } else {
+                ChunkPos min = new ChunkPos(minChunkX, minChunkZ);
+                ChunkPos max = new ChunkPos(maxChunkX, maxChunkZ);
+                source.sendSuccess(
+                    () -> Component.translatable(
+                        "commands.forceload." + (add ? "added" : "removed") + ".multiple",
+                        changedChunks,
+                        Component.translationArg(dimension.identifier()),
+                        Component.translationArg(min),
+                        Component.translationArg(max)
+                    ),
+                    true
+                );
+            }
+
+            return changedChunks;
         } else {
             throw BlockPosArgument.ERROR_OUT_OF_WORLD.create();
         }

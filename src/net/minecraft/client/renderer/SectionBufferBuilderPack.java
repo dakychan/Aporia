@@ -5,18 +5,15 @@ import java.util.Arrays;
 import java.util.Map;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SectionBufferBuilderPack implements AutoCloseable {
     public static final int TOTAL_BUFFERS_SIZE = Arrays.stream(ChunkSectionLayer.values()).mapToInt(ChunkSectionLayer::bufferSize).sum();
     private final Map<ChunkSectionLayer, ByteBufferBuilder> buffers = Util.makeEnumMap(
-        ChunkSectionLayer.class, p_404984_ -> new ByteBufferBuilder(p_404984_.bufferSize())
+        ChunkSectionLayer.class, layer -> new ByteBufferBuilder(layer.bufferSize())
     );
 
-    public ByteBufferBuilder buffer(ChunkSectionLayer p_405919_) {
-        return this.buffers.get(p_405919_);
+    public ByteBufferBuilder buffer(final ChunkSectionLayer layer) {
+        return this.buffers.get(layer);
     }
 
     public void clearAll() {

@@ -5,7 +5,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import java.util.Collection;
@@ -16,6 +15,7 @@ import java.util.function.Consumer;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.ExtraCodecs;
 import org.jspecify.annotations.Nullable;
 
 public class AttributeInstance {
@@ -28,10 +28,10 @@ public class AttributeInstance {
     private double cachedValue;
     private final Consumer<AttributeInstance> onDirty;
 
-    public AttributeInstance(Holder<Attribute> p_335359_, Consumer<AttributeInstance> p_22098_) {
-        this.attribute = p_335359_;
-        this.onDirty = p_22098_;
-        this.baseValue = p_335359_.value().getDefaultValue();
+    public AttributeInstance(final Holder<Attribute> attribute, final Consumer<AttributeInstance> onDirty) {
+        this.attribute = attribute;
+        this.onDirty = onDirty;
+        this.baseValue = attribute.value().getDefaultValue();
     }
 
     public Holder<Attribute> getAttribute() {
@@ -42,16 +42,16 @@ public class AttributeInstance {
         return this.baseValue;
     }
 
-    public void setBaseValue(double p_22101_) {
-        if (p_22101_ != this.baseValue) {
-            this.baseValue = p_22101_;
+    public void setBaseValue(final double baseValue) {
+        if (baseValue != this.baseValue) {
+            this.baseValue = baseValue;
             this.setDirty();
         }
     }
 
     @VisibleForTesting
-    Map<Identifier, AttributeModifier> getModifiers(AttributeModifier.Operation p_22105_) {
-        return this.modifiersByOperation.computeIfAbsent(p_22105_, p_326790_ -> new Object2ObjectOpenHashMap<>());
+    Map<Identifier, AttributeModifier> getModifiers(final AttributeModifier.Operation operation) {
+        return this.modifiersByOperation.computeIfAbsent(operation, key -> new Object2ObjectOpenHashMap<>());
     }
 
     public Set<AttributeModifier> getModifiers() {
@@ -62,50 +62,50 @@ public class AttributeInstance {
         return ImmutableSet.copyOf(this.permanentModifiers.values());
     }
 
-    public @Nullable AttributeModifier getModifier(Identifier p_455576_) {
-        return this.modifierById.get(p_455576_);
+    public @Nullable AttributeModifier getModifier(final Identifier id) {
+        return this.modifierById.get(id);
     }
 
-    public boolean hasModifier(Identifier p_459334_) {
-        return this.modifierById.get(p_459334_) != null;
+    public boolean hasModifier(final Identifier modifier) {
+        return this.modifierById.get(modifier) != null;
     }
 
-    private void addModifier(AttributeModifier p_22134_) {
-        AttributeModifier attributemodifier = this.modifierById.putIfAbsent(p_22134_.id(), p_22134_);
-        if (attributemodifier != null) {
+    private void addModifier(final AttributeModifier modifier) {
+        AttributeModifier previous = this.modifierById.putIfAbsent(modifier.id(), modifier);
+        if (previous != null) {
             throw new IllegalArgumentException("Modifier is already applied on this attribute!");
-        } else {
-            this.getModifiers(p_22134_.operation()).put(p_22134_.id(), p_22134_);
+        }
+
+        this.getModifiers(modifier.operation()).put(modifier.id(), modifier);
+        this.setDirty();
+    }
+
+    public void addOrUpdateTransientModifier(final AttributeModifier modifier) {
+        AttributeModifier oldModifier = this.modifierById.put(modifier.id(), modifier);
+        if (modifier != oldModifier) {
+            this.getModifiers(modifier.operation()).put(modifier.id(), modifier);
             this.setDirty();
         }
     }
 
-    public void addOrUpdateTransientModifier(AttributeModifier p_327789_) {
-        AttributeModifier attributemodifier = this.modifierById.put(p_327789_.id(), p_327789_);
-        if (p_327789_ != attributemodifier) {
-            this.getModifiers(p_327789_.operation()).put(p_327789_.id(), p_327789_);
-            this.setDirty();
-        }
+    public void addTransientModifier(final AttributeModifier modifier) {
+        this.addModifier(modifier);
     }
 
-    public void addTransientModifier(AttributeModifier p_22119_) {
-        this.addModifier(p_22119_);
+    public void addOrReplacePermanentModifier(final AttributeModifier modifier) {
+        this.removeModifier(modifier.id());
+        this.addModifier(modifier);
+        this.permanentModifiers.put(modifier.id(), modifier);
     }
 
-    public void addOrReplacePermanentModifier(AttributeModifier p_343885_) {
-        this.removeModifier(p_343885_.id());
-        this.addModifier(p_343885_);
-        this.permanentModifiers.put(p_343885_.id(), p_343885_);
+    public void addPermanentModifier(final AttributeModifier modifier) {
+        this.addModifier(modifier);
+        this.permanentModifiers.put(modifier.id(), modifier);
     }
 
-    public void addPermanentModifier(AttributeModifier p_22126_) {
-        this.addModifier(p_22126_);
-        this.permanentModifiers.put(p_22126_.id(), p_22126_);
-    }
-
-    public void addPermanentModifiers(Collection<AttributeModifier> p_366375_) {
-        for (AttributeModifier attributemodifier : p_366375_) {
-            this.addPermanentModifier(attributemodifier);
+    public void addPermanentModifiers(final Collection<AttributeModifier> modifiers) {
+        for (AttributeModifier modifier : modifiers) {
+            this.addPermanentModifier(modifier);
         }
     }
 
@@ -114,25 +114,25 @@ public class AttributeInstance {
         this.onDirty.accept(this);
     }
 
-    public void removeModifier(AttributeModifier p_22131_) {
-        this.removeModifier(p_22131_.id());
+    public void removeModifier(final AttributeModifier modifier) {
+        this.removeModifier(modifier.id());
     }
 
-    public boolean removeModifier(Identifier p_451790_) {
-        AttributeModifier attributemodifier = this.modifierById.remove(p_451790_);
-        if (attributemodifier == null) {
+    public boolean removeModifier(final Identifier id) {
+        AttributeModifier modifier = this.modifierById.remove(id);
+        if (modifier == null) {
             return false;
-        } else {
-            this.getModifiers(attributemodifier.operation()).remove(p_451790_);
-            this.permanentModifiers.remove(p_451790_);
-            this.setDirty();
-            return true;
         }
+
+        this.getModifiers(modifier.operation()).remove(id);
+        this.permanentModifiers.remove(id);
+        this.setDirty();
+        return true;
     }
 
     public void removeModifiers() {
-        for (AttributeModifier attributemodifier : this.getModifiers()) {
-            this.removeModifier(attributemodifier);
+        for (AttributeModifier modifier : this.getModifiers()) {
+            this.removeModifier(modifier);
         }
     }
 
@@ -146,37 +146,41 @@ public class AttributeInstance {
     }
 
     private double calculateValue() {
-        double d0 = this.getBaseValue();
+        double base = this.getBaseValue();
 
-        for (AttributeModifier attributemodifier : this.getModifiersOrEmpty(AttributeModifier.Operation.ADD_VALUE)) {
-            d0 += attributemodifier.amount();
+        for (AttributeModifier modifier : this.getModifiersOrEmpty(AttributeModifier.Operation.ADD_VALUE)) {
+            base += modifier.amount();
         }
 
-        double d1 = d0;
+        double result = base;
 
-        for (AttributeModifier attributemodifier1 : this.getModifiersOrEmpty(AttributeModifier.Operation.ADD_MULTIPLIED_BASE)) {
-            d1 += d0 * attributemodifier1.amount();
+        for (AttributeModifier modifier : this.getModifiersOrEmpty(AttributeModifier.Operation.ADD_MULTIPLIED_BASE)) {
+            result += base * modifier.amount();
         }
 
-        for (AttributeModifier attributemodifier2 : this.getModifiersOrEmpty(AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)) {
-            d1 *= 1.0 + attributemodifier2.amount();
+        for (AttributeModifier modifier : this.getModifiersOrEmpty(AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL)) {
+            result *= 1.0 + modifier.amount();
         }
 
-        return this.attribute.value().sanitizeValue(d1);
+        return this.attribute.value().sanitizeValue(result);
     }
 
-    private Collection<AttributeModifier> getModifiersOrEmpty(AttributeModifier.Operation p_22117_) {
-        return this.modifiersByOperation.getOrDefault(p_22117_, Map.of()).values();
+    private Collection<AttributeModifier> getModifiersOrEmpty(final AttributeModifier.Operation operation) {
+        return this.modifiersByOperation.getOrDefault(operation, Map.of()).values();
     }
 
-    public void replaceFrom(AttributeInstance p_22103_) {
-        this.baseValue = p_22103_.baseValue;
+    public void replaceFrom(final AttributeInstance other) {
+        this.baseValue = other.baseValue;
         this.modifierById.clear();
-        this.modifierById.putAll(p_22103_.modifierById);
+        this.modifierById.putAll(other.modifierById);
         this.permanentModifiers.clear();
-        this.permanentModifiers.putAll(p_22103_.permanentModifiers);
+        this.permanentModifiers.putAll(other.permanentModifiers);
         this.modifiersByOperation.clear();
-        p_22103_.modifiersByOperation.forEach((p_326791_, p_326792_) -> this.getModifiers(p_326791_).putAll((Map<? extends Identifier, ? extends AttributeModifier>)p_326792_));
+        other.modifiersByOperation
+            .forEach(
+                (operation, attributeModifiers) -> this.getModifiers(operation)
+                    .putAll((Map<? extends Identifier, ? extends AttributeModifier>)attributeModifiers)
+            );
         this.setDirty();
     }
 
@@ -184,13 +188,13 @@ public class AttributeInstance {
         return new AttributeInstance.Packed(this.attribute, this.baseValue, List.copyOf(this.permanentModifiers.values()));
     }
 
-    public void apply(AttributeInstance.Packed p_408710_) {
-        this.baseValue = p_408710_.baseValue;
+    public void apply(final AttributeInstance.Packed packed) {
+        this.baseValue = packed.baseValue;
 
-        for (AttributeModifier attributemodifier : p_408710_.modifiers) {
-            this.modifierById.put(attributemodifier.id(), attributemodifier);
-            this.getModifiers(attributemodifier.operation()).put(attributemodifier.id(), attributemodifier);
-            this.permanentModifiers.put(attributemodifier.id(), attributemodifier);
+        for (AttributeModifier modifier : packed.modifiers) {
+            this.modifierById.put(modifier.id(), modifier);
+            this.getModifiers(modifier.operation()).put(modifier.id(), modifier);
+            this.permanentModifiers.put(modifier.id(), modifier);
         }
 
         this.setDirty();
@@ -198,12 +202,12 @@ public class AttributeInstance {
 
     public record Packed(Holder<Attribute> attribute, double baseValue, List<AttributeModifier> modifiers) {
         public static final Codec<AttributeInstance.Packed> CODEC = RecordCodecBuilder.create(
-            p_408246_ -> p_408246_.group(
+            i -> i.group(
                     BuiltInRegistries.ATTRIBUTE.holderByNameCodec().fieldOf("id").forGetter(AttributeInstance.Packed::attribute),
-                    Codec.DOUBLE.fieldOf("base").orElse(0.0).forGetter(AttributeInstance.Packed::baseValue),
+                    ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.DOUBLE, "base", 0.0).forGetter(AttributeInstance.Packed::baseValue),
                     AttributeModifier.CODEC.listOf().optionalFieldOf("modifiers", List.of()).forGetter(AttributeInstance.Packed::modifiers)
                 )
-                .apply(p_408246_, AttributeInstance.Packed::new)
+                .apply(i, AttributeInstance.Packed::new)
         );
         public static final Codec<List<AttributeInstance.Packed>> LIST_CODEC = CODEC.listOf();
     }

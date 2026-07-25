@@ -7,17 +7,17 @@ public class LandOnOwnersShoulderGoal extends Goal {
     private final ShoulderRidingEntity entity;
     private boolean isSittingOnShoulder;
 
-    public LandOnOwnersShoulderGoal(ShoulderRidingEntity p_451156_) {
-        this.entity = p_451156_;
+    public LandOnOwnersShoulderGoal(final ShoulderRidingEntity entity) {
+        this.entity = entity;
     }
 
     @Override
     public boolean canUse() {
-        if (!(this.entity.getOwner() instanceof ServerPlayer serverplayer)) {
+        if (!(this.entity.getOwner() instanceof ServerPlayer owner)) {
             return false;
         } else {
-            boolean flag = !serverplayer.isSpectator() && !serverplayer.getAbilities().flying && !serverplayer.isInWater() && !serverplayer.isInPowderSnow;
-            return !this.entity.isOrderedToSit() && flag && this.entity.canSitOnShoulder();
+            boolean ownerThatCanBeSatOn = !owner.isSpectator() && !owner.getAbilities().flying && !owner.isInWater() && !owner.isInPowderSnow;
+            return !this.entity.isOrderedToSit() && ownerThatCanBeSatOn && this.entity.canSitOnShoulder();
         }
     }
 
@@ -34,8 +34,8 @@ public class LandOnOwnersShoulderGoal extends Goal {
     @Override
     public void tick() {
         if (!this.isSittingOnShoulder && !this.entity.isInSittingPose() && !this.entity.isLeashed()) {
-            if (this.entity.getOwner() instanceof ServerPlayer serverplayer && this.entity.getBoundingBox().intersects(serverplayer.getBoundingBox())) {
-                this.isSittingOnShoulder = this.entity.setEntityOnShoulder(serverplayer);
+            if (this.entity.getOwner() instanceof ServerPlayer owner && this.entity.getBoundingBox().intersects(owner.getBoundingBox())) {
+                this.isSittingOnShoulder = this.entity.setEntityOnShoulder(owner);
             }
         }
     }

@@ -2,7 +2,6 @@ package net.minecraft.world.level.levelgen.feature.configurations;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import java.util.stream.Stream;
 import net.minecraft.core.Holder;
@@ -10,24 +9,18 @@ import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.feature.WeightedPlacedFeature;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 
-public class RandomFeatureConfiguration implements FeatureConfiguration {
+@Deprecated
+public record RandomFeatureConfiguration(List<WeightedPlacedFeature> features, Holder<PlacedFeature> defaultFeature) implements FeatureConfiguration {
     public static final Codec<RandomFeatureConfiguration> CODEC = RecordCodecBuilder.create(
-        p_67898_ -> p_67898_.apply2(
+        i -> i.apply2(
             RandomFeatureConfiguration::new,
-            WeightedPlacedFeature.CODEC.listOf().fieldOf("features").forGetter(p_161053_ -> p_161053_.features),
-            PlacedFeature.CODEC.fieldOf("default").forGetter(p_204816_ -> p_204816_.defaultFeature)
+            WeightedPlacedFeature.CODEC.listOf().fieldOf("features").forGetter(c -> c.features),
+            PlacedFeature.CODEC.fieldOf("default").forGetter(c -> c.defaultFeature)
         )
     );
-    public final List<WeightedPlacedFeature> features;
-    public final Holder<PlacedFeature> defaultFeature;
-
-    public RandomFeatureConfiguration(List<WeightedPlacedFeature> p_204811_, Holder<PlacedFeature> p_204812_) {
-        this.features = p_204811_;
-        this.defaultFeature = p_204812_;
-    }
 
     @Override
-    public Stream<ConfiguredFeature<?, ?>> getFeatures() {
-        return Stream.concat(this.features.stream().flatMap(p_204814_ -> p_204814_.feature.value().getFeatures()), this.defaultFeature.value().getFeatures());
+    public Stream<Holder<ConfiguredFeature<?, ?>>> getSubFeatures() {
+        return Stream.concat(this.features.stream().flatMap(weighted -> weighted.feature().value().getFeatures()), this.defaultFeature.value().getFeatures());
     }
 }

@@ -11,15 +11,13 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-import java.util.stream.Stream;
 import net.minecraft.client.data.models.blockstates.BlockModelDefinitionGenerator;
 import net.minecraft.client.data.models.model.ItemModelUtils;
 import net.minecraft.client.data.models.model.ModelInstance;
 import net.minecraft.client.data.models.model.ModelLocationUtils;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.client.renderer.item.ClientItem;
 import net.minecraft.client.renderer.item.ItemModel;
-import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.CachedOutput;
 import net.minecraft.data.DataProvider;
@@ -28,34 +26,31 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ModelProvider implements DataProvider {
     private final PackOutput.PathProvider blockStatePathProvider;
     private final PackOutput.PathProvider itemInfoPathProvider;
     private final PackOutput.PathProvider modelPathProvider;
 
-    public ModelProvider(PackOutput p_378149_) {
-        this.blockStatePathProvider = p_378149_.createPathProvider(PackOutput.Target.RESOURCE_PACK, "blockstates");
-        this.itemInfoPathProvider = p_378149_.createPathProvider(PackOutput.Target.RESOURCE_PACK, "items");
-        this.modelPathProvider = p_378149_.createPathProvider(PackOutput.Target.RESOURCE_PACK, "models");
+    public ModelProvider(final PackOutput output) {
+        this.blockStatePathProvider = output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "blockstates");
+        this.itemInfoPathProvider = output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "items");
+        this.modelPathProvider = output.createPathProvider(PackOutput.Target.RESOURCE_PACK, "models");
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_376268_) {
-        ModelProvider.ItemInfoCollector modelprovider$iteminfocollector = new ModelProvider.ItemInfoCollector();
-        ModelProvider.BlockStateGeneratorCollector modelprovider$blockstategeneratorcollector = new ModelProvider.BlockStateGeneratorCollector();
-        ModelProvider.SimpleModelCollector modelprovider$simplemodelcollector = new ModelProvider.SimpleModelCollector();
-        new BlockModelGenerators(modelprovider$blockstategeneratorcollector, modelprovider$iteminfocollector, modelprovider$simplemodelcollector).run();
-        new ItemModelGenerators(modelprovider$iteminfocollector, modelprovider$simplemodelcollector).run();
-        modelprovider$blockstategeneratorcollector.validate();
-        modelprovider$iteminfocollector.finalizeAndValidate();
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        ModelProvider.ItemInfoCollector itemModels = new ModelProvider.ItemInfoCollector();
+        ModelProvider.BlockStateGeneratorCollector blockStateGenerators = new ModelProvider.BlockStateGeneratorCollector();
+        ModelProvider.SimpleModelCollector simpleModels = new ModelProvider.SimpleModelCollector();
+        new BlockModelGenerators(blockStateGenerators, itemModels, simpleModels).run();
+        new ItemModelGenerators(itemModels, simpleModels).run();
+        blockStateGenerators.validate();
+        itemModels.finalizeAndValidate();
         return CompletableFuture.allOf(
-            modelprovider$blockstategeneratorcollector.save(p_376268_, this.blockStatePathProvider),
-            modelprovider$simplemodelcollector.save(p_376268_, this.modelPathProvider),
-            modelprovider$iteminfocollector.save(p_376268_, this.itemInfoPathProvider)
+            blockStateGenerators.save(cache, this.blockStatePathProvider),
+            simpleModels.save(cache, this.modelPathProvider),
+            itemModels.save(cache, this.itemInfoPathProvider)
         );
     }
 
@@ -64,104 +59,100 @@ public class ModelProvider implements DataProvider {
         return "Model Definitions";
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class BlockStateGeneratorCollector implements Consumer<BlockModelDefinitionGenerator> {
+        private static class BlockStateGeneratorCollector implements Consumer<BlockModelDefinitionGenerator> {
         private final Map<Block, BlockModelDefinitionGenerator> generators = new HashMap<>();
 
-        public void accept(BlockModelDefinitionGenerator p_393399_) {
-            Block block = p_393399_.block();
-            BlockModelDefinitionGenerator blockmodeldefinitiongenerator = this.generators.put(block, p_393399_);
-            if (blockmodeldefinitiongenerator != null) {
+        public void accept(final BlockModelDefinitionGenerator generator) {
+            Block block = generator.block();
+            BlockModelDefinitionGenerator prev = this.generators.put(block, generator);
+            if (prev != null) {
                 throw new IllegalStateException("Duplicate blockstate definition for " + block);
             }
         }
 
         public void validate() {
-            Stream<Holder.Reference<Block>> stream = BuiltInRegistries.BLOCK.listElements().filter(p_376480_ -> true);
-            List<Identifier> list = stream.filter(p_378423_ -> !this.generators.containsKey(p_378423_.value()))
-                .map(p_447940_ -> p_447940_.key().identifier())
+            List<Identifier> missingDefinitions = BuiltInRegistries.BLOCK
+                .listElements()
+                .filter(e -> !this.generators.containsKey(e.value()))
+                .map(e -> e.key().identifier())
                 .toList();
-            if (!list.isEmpty()) {
-                throw new IllegalStateException("Missing blockstate definitions for: " + list);
+            if (!missingDefinitions.isEmpty()) {
+                throw new IllegalStateException("Missing blockstate definitions for: " + missingDefinitions);
             }
         }
 
-        public CompletableFuture<?> save(CachedOutput p_377986_, PackOutput.PathProvider p_377969_) {
-            Map<Block, BlockModelDefinition> map = Maps.transformValues(this.generators, BlockModelDefinitionGenerator::create);
-            Function<Block, Path> function = p_447939_ -> p_377969_.json(p_447939_.builtInRegistryHolder().key().identifier());
-            return DataProvider.saveAll(p_377986_, BlockModelDefinition.CODEC, function, map);
+        public CompletableFuture<?> save(final CachedOutput cache, final PackOutput.PathProvider pathProvider) {
+            Map<Block, BlockStateModelDispatcher> definitions = Maps.transformValues(this.generators, BlockModelDefinitionGenerator::create);
+            Function<Block, Path> pathGetter = block -> pathProvider.json(block.builtInRegistryHolder().key().identifier());
+            return DataProvider.saveAll(cache, BlockStateModelDispatcher.CODEC, pathGetter, definitions);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class ItemInfoCollector implements ItemModelOutput {
+        private static class ItemInfoCollector implements ItemModelOutput {
         private final Map<Item, ClientItem> itemInfos = new HashMap<>();
         private final Map<Item, Item> copies = new HashMap<>();
 
         @Override
-        public void accept(Item p_376450_, ItemModel.Unbaked p_378513_, ClientItem.Properties p_455809_) {
-            this.register(p_376450_, new ClientItem(p_378513_, p_455809_));
+        public void accept(final Item item, final ItemModel.Unbaked model, final ClientItem.Properties properties) {
+            this.register(item, new ClientItem(model, properties));
         }
 
-        private void register(Item p_378050_, ClientItem p_376323_) {
-            ClientItem clientitem = this.itemInfos.put(p_378050_, p_376323_);
-            if (clientitem != null) {
-                throw new IllegalStateException("Duplicate item model definition for " + p_378050_);
+        private void register(final Item item, final ClientItem itemInfo) {
+            ClientItem prev = this.itemInfos.put(item, itemInfo);
+            if (prev != null) {
+                throw new IllegalStateException("Duplicate item model definition for " + item);
             }
         }
 
         @Override
-        public void copy(Item p_377438_, Item p_376965_) {
-            this.copies.put(p_376965_, p_377438_);
+        public void copy(final Item donor, final Item acceptor) {
+            this.copies.put(acceptor, donor);
         }
 
         public void finalizeAndValidate() {
-            BuiltInRegistries.ITEM.forEach(p_447944_ -> {
-                if (!this.copies.containsKey(p_447944_)) {
-                    if (p_447944_ instanceof BlockItem blockitem && !this.itemInfos.containsKey(blockitem)) {
-                        Identifier identifier = ModelLocationUtils.getModelLocation(blockitem.getBlock());
-                        this.accept(blockitem, ItemModelUtils.plainModel(identifier));
+            BuiltInRegistries.ITEM.forEach(item -> {
+                if (!this.copies.containsKey(item)) {
+                    if (item instanceof BlockItem blockItem && !this.itemInfos.containsKey(blockItem)) {
+                        Identifier targetModel = ModelLocationUtils.getModelLocation(blockItem.getBlock());
+                        this.accept(blockItem, ItemModelUtils.plainModel(targetModel));
                     }
                 }
             });
-            this.copies.forEach((p_376289_, p_375718_) -> {
-                ClientItem clientitem = this.itemInfos.get(p_375718_);
-                if (clientitem == null) {
-                    throw new IllegalStateException("Missing donor: " + p_375718_ + " -> " + p_376289_);
-                } else {
-                    this.register(p_376289_, clientitem);
+            this.copies.forEach((acceptor, donor) -> {
+                ClientItem donorInfo = this.itemInfos.get(donor);
+                if (donorInfo == null) {
+                    throw new IllegalStateException("Missing donor: " + donor + " -> " + acceptor);
                 }
+
+                this.register(acceptor, donorInfo);
             });
-            List<Identifier> list = BuiltInRegistries.ITEM
+            List<Identifier> missingDefinitions = BuiltInRegistries.ITEM
                 .listElements()
-                .filter(p_377225_ -> !this.itemInfos.containsKey(p_377225_.value()))
-                .map(p_447943_ -> p_447943_.key().identifier())
+                .filter(e -> !this.itemInfos.containsKey(e.value()))
+                .map(e -> e.key().identifier())
                 .toList();
-            if (!list.isEmpty()) {
-                throw new IllegalStateException("Missing item model definitions for: " + list);
+            if (!missingDefinitions.isEmpty()) {
+                throw new IllegalStateException("Missing item model definitions for: " + missingDefinitions);
             }
         }
 
-        public CompletableFuture<?> save(CachedOutput p_378568_, PackOutput.PathProvider p_377933_) {
-            return DataProvider.saveAll(
-                p_378568_, ClientItem.CODEC, p_447942_ -> p_377933_.json(p_447942_.builtInRegistryHolder().key().identifier()), this.itemInfos
-            );
+        public CompletableFuture<?> save(final CachedOutput cache, final PackOutput.PathProvider pathProvider) {
+            return DataProvider.saveAll(cache, ClientItem.CODEC, item -> pathProvider.json(item.builtInRegistryHolder().key().identifier()), this.itemInfos);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class SimpleModelCollector implements BiConsumer<Identifier, ModelInstance> {
+        private static class SimpleModelCollector implements BiConsumer<Identifier, ModelInstance> {
         private final Map<Identifier, ModelInstance> models = new HashMap<>();
 
-        public void accept(Identifier p_456862_, ModelInstance p_376914_) {
-            Supplier<JsonElement> supplier = this.models.put(p_456862_, p_376914_);
-            if (supplier != null) {
-                throw new IllegalStateException("Duplicate model definition for " + p_456862_);
+        public void accept(final Identifier id, final ModelInstance contents) {
+            Supplier<JsonElement> prev = this.models.put(id, contents);
+            if (prev != null) {
+                throw new IllegalStateException("Duplicate model definition for " + id);
             }
         }
 
-        public CompletableFuture<?> save(CachedOutput p_377109_, PackOutput.PathProvider p_378055_) {
-            return DataProvider.saveAll(p_377109_, Supplier::get, p_378055_::json, this.models);
+        public CompletableFuture<?> save(final CachedOutput cache, final PackOutput.PathProvider pathProvider) {
+            return DataProvider.saveAll(cache, Supplier::get, pathProvider::json, this.models);
         }
     }
 }

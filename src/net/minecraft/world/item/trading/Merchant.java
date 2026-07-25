@@ -4,28 +4,27 @@ import java.util.OptionalInt;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 public interface Merchant {
-    void setTradingPlayer(@Nullable Player p_45307_);
+    void setTradingPlayer(@Nullable Player player);
 
     @Nullable Player getTradingPlayer();
 
     MerchantOffers getOffers();
 
-    void overrideOffers(MerchantOffers p_45306_);
+    void overrideOffers(MerchantOffers offers);
 
-    void notifyTrade(MerchantOffer p_45305_);
+    void notifyTrade(MerchantOffer offer);
 
-    void notifyTradeUpdated(ItemStack p_45308_);
+    void notifyTradeUpdated(ItemStack itemStack);
 
     int getVillagerXp();
 
-    void overrideXp(int p_45309_);
+    void overrideXp(final int xp);
 
     boolean showProgressBar();
 
@@ -35,19 +34,17 @@ public interface Merchant {
         return false;
     }
 
-    default void openTradingScreen(Player p_45302_, Component p_45303_, int p_45304_) {
-        OptionalInt optionalint = p_45302_.openMenu(
-            new SimpleMenuProvider((p_45298_, p_45299_, p_45300_) -> new MerchantMenu(p_45298_, p_45299_, this), p_45303_)
-        );
-        if (optionalint.isPresent()) {
-            MerchantOffers merchantoffers = this.getOffers();
-            if (!merchantoffers.isEmpty()) {
-                p_45302_.sendMerchantOffers(optionalint.getAsInt(), merchantoffers, p_45304_, this.getVillagerXp(), this.showProgressBar(), this.canRestock());
+    default void openTradingScreen(final Player player, final Component title, final int level) {
+        OptionalInt containerId = player.openMenu(new SimpleMenuProvider((id, inventory, p) -> new MerchantMenu(id, inventory, this), title));
+        if (containerId.isPresent()) {
+            MerchantOffers offers = this.getOffers();
+            if (!offers.isEmpty()) {
+                player.sendMerchantOffers(containerId.getAsInt(), offers, level, this.getVillagerXp(), this.showProgressBar(), this.canRestock());
             }
         }
     }
 
     boolean isClientSide();
 
-    boolean stillValid(Player p_376527_);
+    boolean stillValid(Player player);
 }

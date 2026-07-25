@@ -11,28 +11,35 @@ public class LevelVersion {
     private final DataVersion minecraftVersion;
     private final boolean snapshot;
 
-    private LevelVersion(int p_193023_, long p_193024_, String p_193025_, int p_193026_, String p_193027_, boolean p_193028_) {
-        this.levelDataVersion = p_193023_;
-        this.lastPlayed = p_193024_;
-        this.minecraftVersionName = p_193025_;
-        this.minecraftVersion = new DataVersion(p_193026_, p_193027_);
-        this.snapshot = p_193028_;
+    private LevelVersion(
+        final int levelDataVersion,
+        final long lastPlayed,
+        final String minecraftVersionName,
+        final int minecraftVersion,
+        final String series,
+        final boolean snapshot
+    ) {
+        this.levelDataVersion = levelDataVersion;
+        this.lastPlayed = lastPlayed;
+        this.minecraftVersionName = minecraftVersionName;
+        this.minecraftVersion = new DataVersion(minecraftVersion, series);
+        this.snapshot = snapshot;
     }
 
-    public static LevelVersion parse(Dynamic<?> p_78391_) {
-        int i = p_78391_.get("version").asInt(0);
-        long j = p_78391_.get("LastPlayed").asLong(0L);
-        OptionalDynamic<?> optionaldynamic = p_78391_.get("Version");
-        return optionaldynamic.result().isPresent()
+    public static LevelVersion parse(final Dynamic<?> input) {
+        int levelDataVersion = input.get("version").asInt(0);
+        long lastPlayed = input.get("LastPlayed").asLong(0L);
+        OptionalDynamic<?> version = input.get("Version");
+        return version.result().isPresent()
             ? new LevelVersion(
-                i,
-                j,
-                optionaldynamic.get("Name").asString(SharedConstants.getCurrentVersion().name()),
-                optionaldynamic.get("Id").asInt(SharedConstants.getCurrentVersion().dataVersion().version()),
-                optionaldynamic.get("Series").asString("main"),
-                optionaldynamic.get("Snapshot").asBoolean(!SharedConstants.getCurrentVersion().stable())
+                levelDataVersion,
+                lastPlayed,
+                version.get("Name").asString(SharedConstants.getCurrentVersion().name()),
+                version.get("Id").asInt(SharedConstants.getCurrentVersion().dataVersion().version()),
+                version.get("Series").asString("main"),
+                version.get("Snapshot").asBoolean(!SharedConstants.getCurrentVersion().stable())
             )
-            : new LevelVersion(i, j, "", 0, "main", false);
+            : new LevelVersion(levelDataVersion, lastPlayed, "", 0, "main", false);
     }
 
     public int levelDataVersion() {

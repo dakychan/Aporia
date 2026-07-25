@@ -3,62 +3,57 @@ package net.minecraft.client.gui.components;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractStringWidget extends AbstractWidget {
     private @Nullable Consumer<Style> componentClickHandler = null;
     private final Font font;
 
-    public AbstractStringWidget(int p_270910_, int p_270297_, int p_270088_, int p_270842_, Component p_270063_, Font p_270327_) {
-        super(p_270910_, p_270297_, p_270088_, p_270842_, p_270063_);
-        this.font = p_270327_;
+    public AbstractStringWidget(final int x, final int y, final int width, final int height, final Component message, final Font font) {
+        super(x, y, width, height, message);
+        this.font = font;
     }
 
-    public abstract void visitLines(ActiveTextCollector p_459321_);
+    public abstract void visitLines(ActiveTextCollector output);
 
     @Override
-    public void renderWidget(GuiGraphics p_453638_, int p_458651_, int p_453805_, float p_455335_) {
-        GuiGraphics.HoveredTextEffects guigraphics$hoveredtexteffects;
+    public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        GuiGraphicsExtractor.HoveredTextEffects effects;
         if (this.isHovered()) {
             if (this.componentClickHandler != null) {
-                guigraphics$hoveredtexteffects = GuiGraphics.HoveredTextEffects.TOOLTIP_AND_CURSOR;
+                effects = GuiGraphicsExtractor.HoveredTextEffects.TOOLTIP_AND_CURSOR;
             } else {
-                guigraphics$hoveredtexteffects = GuiGraphics.HoveredTextEffects.TOOLTIP_ONLY;
+                effects = GuiGraphicsExtractor.HoveredTextEffects.TOOLTIP_ONLY;
             }
         } else {
-            guigraphics$hoveredtexteffects = GuiGraphics.HoveredTextEffects.NONE;
+            effects = GuiGraphicsExtractor.HoveredTextEffects.NONE;
         }
 
-        this.visitLines(p_453638_.textRendererForWidget(this, guigraphics$hoveredtexteffects));
+        this.visitLines(graphics.textRendererForWidget(this, effects));
     }
 
     @Override
-    public void onClick(MouseButtonEvent p_455484_, boolean p_451923_) {
+    public void onClick(final MouseButtonEvent event, final boolean doubleClick) {
         if (this.componentClickHandler != null) {
-            ActiveTextCollector.ClickableStyleFinder activetextcollector$clickablestylefinder = new ActiveTextCollector.ClickableStyleFinder(
-                this.getFont(), (int)p_455484_.x(), (int)p_455484_.y()
-            );
-            this.visitLines(activetextcollector$clickablestylefinder);
-            Style style = activetextcollector$clickablestylefinder.result();
-            if (style != null) {
-                this.componentClickHandler.accept(style);
+            ActiveTextCollector.ClickableStyleFinder finder = new ActiveTextCollector.ClickableStyleFinder(this.getFont(), (int)event.x(), (int)event.y());
+            this.visitLines(finder);
+            Style clickedStyle = finder.result();
+            if (clickedStyle != null) {
+                this.componentClickHandler.accept(clickedStyle);
                 return;
             }
         }
 
-        super.onClick(p_455484_, p_451923_);
+        super.onClick(event, doubleClick);
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput p_270859_) {
+    protected void updateWidgetNarration(final NarrationElementOutput output) {
     }
 
     protected final Font getFont() {
@@ -66,13 +61,22 @@ public abstract class AbstractStringWidget extends AbstractWidget {
     }
 
     @Override
-    public void setMessage(Component p_426286_) {
-        super.setMessage(p_426286_);
-        this.setWidth(this.getFont().width(p_426286_.getVisualOrderText()));
+    public void setMessage(final Component message) {
+        super.setMessage(message);
+        this.setWidth(this.getFont().width(message.getVisualOrderText()));
     }
 
-    public AbstractStringWidget setComponentClickHandler(@Nullable Consumer<Style> p_458809_) {
-        this.componentClickHandler = p_458809_;
+    public AbstractStringWidget setComponentClickHandler(final @Nullable Consumer<Style> clickEventConsumer) {
+        this.componentClickHandler = clickEventConsumer;
         return this;
+    }
+
+    protected boolean handleStyleClick(final Style style) {
+        if (this.componentClickHandler != null && style.getClickEvent() != null) {
+            this.componentClickHandler.accept(style);
+            return true;
+        } else {
+            return false;
+        }
     }
 }

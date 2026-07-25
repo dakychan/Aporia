@@ -40,55 +40,56 @@ public class SonicBoom extends Behavior<Warden> {
         );
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_217692_, Warden p_217693_) {
-        return p_217693_.closerThan(p_217693_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get(), 15.0, 20.0);
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Warden body) {
+        return body.closerThan(body.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).get(), 15.0, 20.0);
     }
 
-    protected boolean canStillUse(ServerLevel p_217695_, Warden p_217696_, long p_217697_) {
+    protected boolean canStillUse(final ServerLevel level, final Warden body, final long timestamp) {
         return true;
     }
 
-    protected void start(ServerLevel p_217713_, Warden p_217714_, long p_217715_) {
-        p_217714_.getBrain().setMemoryWithExpiry(MemoryModuleType.ATTACK_COOLING_DOWN, true, DURATION);
-        p_217714_.getBrain().setMemoryWithExpiry(MemoryModuleType.SONIC_BOOM_SOUND_DELAY, Unit.INSTANCE, TICKS_BEFORE_PLAYING_SOUND);
-        p_217713_.broadcastEntityEvent(p_217714_, (byte)62);
-        p_217714_.playSound(SoundEvents.WARDEN_SONIC_CHARGE, 3.0F, 1.0F);
+    protected void start(final ServerLevel level, final Warden body, final long timestamp) {
+        body.getBrain().setMemoryWithExpiry(MemoryModuleType.ATTACK_COOLING_DOWN, true, DURATION);
+        body.getBrain().setMemoryWithExpiry(MemoryModuleType.SONIC_BOOM_SOUND_DELAY, Unit.INSTANCE, TICKS_BEFORE_PLAYING_SOUND);
+        level.broadcastEntityEvent(body, (byte)62);
+        body.playSound(SoundEvents.WARDEN_SONIC_CHARGE, 3.0F, 1.0F);
     }
 
-    protected void tick(ServerLevel p_217724_, Warden p_217725_, long p_217726_) {
-        p_217725_.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).ifPresent(p_449588_ -> p_217725_.getLookControl().setLookAt(p_449588_.position()));
-        if (!p_217725_.getBrain().hasMemoryValue(MemoryModuleType.SONIC_BOOM_SOUND_DELAY) && !p_217725_.getBrain().hasMemoryValue(MemoryModuleType.SONIC_BOOM_SOUND_COOLDOWN)) {
-            p_217725_.getBrain().setMemoryWithExpiry(MemoryModuleType.SONIC_BOOM_SOUND_COOLDOWN, Unit.INSTANCE, DURATION - TICKS_BEFORE_PLAYING_SOUND);
-            p_217725_.getBrain()
+    protected void tick(final ServerLevel level, final Warden body, final long timestamp) {
+        body.getBrain().getMemory(MemoryModuleType.ATTACK_TARGET).ifPresent(target -> body.getLookControl().setLookAt(target.position()));
+        if (!body.getBrain().hasMemoryValue(MemoryModuleType.SONIC_BOOM_SOUND_DELAY)
+            && !body.getBrain().hasMemoryValue(MemoryModuleType.SONIC_BOOM_SOUND_COOLDOWN)) {
+            body.getBrain().setMemoryWithExpiry(MemoryModuleType.SONIC_BOOM_SOUND_COOLDOWN, Unit.INSTANCE, DURATION - TICKS_BEFORE_PLAYING_SOUND);
+            body.getBrain()
                 .getMemory(MemoryModuleType.ATTACK_TARGET)
-                .filter(p_217725_::canTargetEntity)
-                .filter(p_217707_ -> p_217725_.closerThan(p_217707_, 15.0, 20.0))
-                .ifPresent(p_359079_ -> {
-                    Vec3 vec3 = p_217725_.position().add(p_217725_.getAttachments().get(EntityAttachment.WARDEN_CHEST, 0, p_217725_.getYRot()));
-                    Vec3 vec31 = p_359079_.getEyePosition().subtract(vec3);
-                    Vec3 vec32 = vec31.normalize();
-                    int i = Mth.floor(vec31.length()) + 7;
+                .filter(body::canTargetEntity)
+                .filter(target -> body.closerThan(target, 15.0, 20.0))
+                .ifPresent(target -> {
+                    Vec3 source = body.position().add(body.getAttachments().get(EntityAttachment.WARDEN_CHEST, 0, body.getYRot()));
+                    Vec3 delta = target.getEyePosition().subtract(source);
+                    Vec3 normalize = delta.normalize();
+                    int steps = Mth.floor(delta.length()) + 7;
 
-                    for (int j = 1; j < i; j++) {
-                        Vec3 vec33 = vec3.add(vec32.scale(j));
-                        p_217724_.sendParticles(ParticleTypes.SONIC_BOOM, vec33.x, vec33.y, vec33.z, 1, 0.0, 0.0, 0.0, 0.0);
+                    for (int i = 1; i < steps; i++) {
+                        Vec3 particlePos = source.add(normalize.scale(i));
+                        level.sendParticles(ParticleTypes.SONIC_BOOM, particlePos.x, particlePos.y, particlePos.z, 1, 0.0, 0.0, 0.0, 0.0);
                     }
 
-                    p_217725_.playSound(SoundEvents.WARDEN_SONIC_BOOM, 3.0F, 1.0F);
-                    if (p_359079_.hurtServer(p_217724_, p_217724_.damageSources().sonicBoom(p_217725_), 10.0F)) {
-                        double d1 = 0.5 * (1.0 - p_359079_.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
-                        double d0 = 2.5 * (1.0 - p_359079_.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
-                        p_359079_.push(vec32.x() * d0, vec32.y() * d1, vec32.z() * d0);
+                    body.playSound(SoundEvents.WARDEN_SONIC_BOOM, 3.0F, 1.0F);
+                    if (target.hurtServer(level, level.damageSources().sonicBoom(body), 10.0F)) {
+                        double knockbackVertical = 0.5 * (1.0 - target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
+                        double knockbackHorizontal = 2.5 * (1.0 - target.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
+                        target.push(normalize.x() * knockbackHorizontal, normalize.y() * knockbackVertical, normalize.z() * knockbackHorizontal);
                     }
                 });
         }
     }
 
-    protected void stop(ServerLevel p_217732_, Warden p_217733_, long p_217734_) {
-        setCooldown(p_217733_, 40);
+    protected void stop(final ServerLevel level, final Warden body, final long timestamp) {
+        setCooldown(body, 40);
     }
 
-    public static void setCooldown(LivingEntity p_217699_, int p_217700_) {
-        p_217699_.getBrain().setMemoryWithExpiry(MemoryModuleType.SONIC_BOOM_COOLDOWN, Unit.INSTANCE, p_217700_);
+    public static void setCooldown(final LivingEntity body, final int cooldown) {
+        body.getBrain().setMemoryWithExpiry(MemoryModuleType.SONIC_BOOM_COOLDOWN, Unit.INSTANCE, cooldown);
     }
 }

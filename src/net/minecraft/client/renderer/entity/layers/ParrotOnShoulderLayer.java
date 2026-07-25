@@ -12,59 +12,63 @@ import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.entity.state.ParrotRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.world.entity.animal.parrot.Parrot;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ParrotOnShoulderLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
     private final ParrotModel model;
 
-    public ParrotOnShoulderLayer(RenderLayerParent<AvatarRenderState, PlayerModel> p_174511_, EntityModelSet p_174512_) {
-        super(p_174511_);
-        this.model = new ParrotModel(p_174512_.bakeLayer(ModelLayers.PARROT));
+    public ParrotOnShoulderLayer(final RenderLayerParent<AvatarRenderState, PlayerModel> renderer, final EntityModelSet modelSet) {
+        super(renderer);
+        this.model = new ParrotModel(modelSet.bakeLayer(ModelLayers.PARROT));
     }
 
-    public void submit(PoseStack p_428208_, SubmitNodeCollector p_423726_, int p_424313_, AvatarRenderState p_429711_, float p_425519_, float p_431641_) {
-        Parrot.Variant parrot$variant = p_429711_.parrotOnLeftShoulder;
-        if (parrot$variant != null) {
-            this.submitOnShoulder(p_428208_, p_423726_, p_424313_, p_429711_, parrot$variant, p_425519_, p_431641_, true);
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final AvatarRenderState state,
+        final float yRot,
+        final float xRot
+    ) {
+        Parrot.Variant parrotOnLeftShoulder = state.parrotOnLeftShoulder;
+        if (parrotOnLeftShoulder != null) {
+            this.submitOnShoulder(poseStack, submitNodeCollector, lightCoords, state, parrotOnLeftShoulder, yRot, xRot, true);
         }
 
-        Parrot.Variant parrot$variant1 = p_429711_.parrotOnRightShoulder;
-        if (parrot$variant1 != null) {
-            this.submitOnShoulder(p_428208_, p_423726_, p_424313_, p_429711_, parrot$variant1, p_425519_, p_431641_, false);
+        Parrot.Variant parrotOnRightShoulder = state.parrotOnRightShoulder;
+        if (parrotOnRightShoulder != null) {
+            this.submitOnShoulder(poseStack, submitNodeCollector, lightCoords, state, parrotOnRightShoulder, yRot, xRot, false);
         }
     }
 
     private void submitOnShoulder(
-        PoseStack p_431021_,
-        SubmitNodeCollector p_422981_,
-        int p_427224_,
-        AvatarRenderState p_425167_,
-        Parrot.Variant p_452298_,
-        float p_428398_,
-        float p_428084_,
-        boolean p_431155_
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final AvatarRenderState playerState,
+        final Parrot.Variant parrotVariant,
+        final float yRot,
+        final float xRot,
+        final boolean isLeft
     ) {
-        p_431021_.pushPose();
-        p_431021_.translate(p_431155_ ? 0.4F : -0.4F, p_425167_.isCrouching ? -1.3F : -1.5F, 0.0F);
-        ParrotRenderState parrotrenderstate = new ParrotRenderState();
-        parrotrenderstate.pose = ParrotModel.Pose.ON_SHOULDER;
-        parrotrenderstate.ageInTicks = p_425167_.ageInTicks;
-        parrotrenderstate.walkAnimationPos = p_425167_.walkAnimationPos;
-        parrotrenderstate.walkAnimationSpeed = p_425167_.walkAnimationSpeed;
-        parrotrenderstate.yRot = p_428398_;
-        parrotrenderstate.xRot = p_428084_;
-        p_422981_.submitModel(
+        poseStack.pushPose();
+        poseStack.translate(isLeft ? 0.4F : -0.4F, playerState.isCrouching ? -1.3F : -1.5F, 0.0F);
+        ParrotRenderState parrotState = new ParrotRenderState();
+        parrotState.pose = ParrotModel.Pose.ON_SHOULDER;
+        parrotState.ageInTicks = playerState.ageInTicks;
+        parrotState.walkAnimationPos = playerState.walkAnimationPos;
+        parrotState.walkAnimationSpeed = playerState.walkAnimationSpeed;
+        parrotState.yRot = yRot;
+        parrotState.xRot = xRot;
+        submitNodeCollector.submitModel(
             this.model,
-            parrotrenderstate,
-            p_431021_,
-            this.model.renderType(ParrotRenderer.getVariantTexture(p_452298_)),
-            p_427224_,
+            parrotState,
+            poseStack,
+            ParrotRenderer.getVariantTexture(parrotVariant),
+            lightCoords,
             OverlayTexture.NO_OVERLAY,
-            p_425167_.outlineColor,
+            playerState.outlineColor,
             null
         );
-        p_431021_.popPose();
+        poseStack.popPose();
     }
 }

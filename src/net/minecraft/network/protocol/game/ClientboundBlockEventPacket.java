@@ -18,25 +18,25 @@ public class ClientboundBlockEventPacket implements Packet<ClientGamePacketListe
     private final int b1;
     private final Block block;
 
-    public ClientboundBlockEventPacket(BlockPos p_131715_, Block p_131716_, int p_131717_, int p_131718_) {
-        this.pos = p_131715_;
-        this.block = p_131716_;
-        this.b0 = p_131717_;
-        this.b1 = p_131718_;
+    public ClientboundBlockEventPacket(final BlockPos pos, final Block block, final int b0, final int b1) {
+        this.pos = pos;
+        this.block = block;
+        this.b0 = b0;
+        this.b1 = b1;
     }
 
-    private ClientboundBlockEventPacket(RegistryFriendlyByteBuf p_332473_) {
-        this.pos = p_332473_.readBlockPos();
-        this.b0 = p_332473_.readUnsignedByte();
-        this.b1 = p_332473_.readUnsignedByte();
-        this.block = ByteBufCodecs.registry(Registries.BLOCK).decode(p_332473_);
+    private ClientboundBlockEventPacket(final RegistryFriendlyByteBuf input) {
+        this.pos = input.readBlockPos();
+        this.b0 = input.readUnsignedByte();
+        this.b1 = input.readUnsignedByte();
+        this.block = ByteBufCodecs.registry(Registries.BLOCK).decode(input);
     }
 
-    private void write(RegistryFriendlyByteBuf p_331626_) {
-        p_331626_.writeBlockPos(this.pos);
-        p_331626_.writeByte(this.b0);
-        p_331626_.writeByte(this.b1);
-        ByteBufCodecs.registry(Registries.BLOCK).encode(p_331626_, this.block);
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeBlockPos(this.pos);
+        output.writeByte(this.b0);
+        output.writeByte(this.b1);
+        ByteBufCodecs.registry(Registries.BLOCK).encode(output, this.block);
     }
 
     @Override
@@ -44,8 +44,8 @@ public class ClientboundBlockEventPacket implements Packet<ClientGamePacketListe
         return GamePacketTypes.CLIENTBOUND_BLOCK_EVENT;
     }
 
-    public void handle(ClientGamePacketListener p_131724_) {
-        p_131724_.handleBlockEvent(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleBlockEvent(this);
     }
 
     public BlockPos getPos() {

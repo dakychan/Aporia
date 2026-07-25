@@ -10,34 +10,34 @@ import com.mojang.serialization.Dynamic;
 import java.util.function.Function;
 
 public class AbstractArrowPickupFix extends DataFix {
-    public AbstractArrowPickupFix(Schema p_145046_) {
-        super(p_145046_, false);
+    public AbstractArrowPickupFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Schema schema = this.getInputSchema();
-        return this.fixTypeEverywhereTyped("AbstractArrowPickupFix", schema.getType(References.ENTITY), this::updateProjectiles);
+        Schema inputSchema = this.getInputSchema();
+        return this.fixTypeEverywhereTyped("AbstractArrowPickupFix", inputSchema.getType(References.ENTITY), this::updateProjectiles);
     }
 
-    private Typed<?> updateProjectiles(Typed<?> p_145048_) {
-        p_145048_ = this.updateEntity(p_145048_, "minecraft:arrow", AbstractArrowPickupFix::updatePickup);
-        p_145048_ = this.updateEntity(p_145048_, "minecraft:spectral_arrow", AbstractArrowPickupFix::updatePickup);
-        return this.updateEntity(p_145048_, "minecraft:trident", AbstractArrowPickupFix::updatePickup);
+    private Typed<?> updateProjectiles(Typed<?> input) {
+        input = this.updateEntity(input, "minecraft:arrow", AbstractArrowPickupFix::updatePickup);
+        input = this.updateEntity(input, "minecraft:spectral_arrow", AbstractArrowPickupFix::updatePickup);
+        return this.updateEntity(input, "minecraft:trident", AbstractArrowPickupFix::updatePickup);
     }
 
-    private static Dynamic<?> updatePickup(Dynamic<?> p_145054_) {
-        if (p_145054_.get("pickup").result().isPresent()) {
-            return p_145054_;
-        } else {
-            boolean flag = p_145054_.get("player").asBoolean(true);
-            return p_145054_.set("pickup", p_145054_.createByte((byte)(flag ? 1 : 0))).remove("player");
+    private static Dynamic<?> updatePickup(final Dynamic<?> tag) {
+        if (tag.get("pickup").result().isPresent()) {
+            return tag;
         }
+
+        boolean fromPlayer = tag.get("player").asBoolean(true);
+        return tag.set("pickup", tag.createByte((byte)(fromPlayer ? 1 : 0))).remove("player");
     }
 
-    private Typed<?> updateEntity(Typed<?> p_145050_, String p_145051_, Function<Dynamic<?>, Dynamic<?>> p_145052_) {
-        Type<?> type = this.getInputSchema().getChoiceType(References.ENTITY, p_145051_);
-        Type<?> type1 = this.getOutputSchema().getChoiceType(References.ENTITY, p_145051_);
-        return p_145050_.updateTyped(DSL.namedChoice(p_145051_, type), type1, p_145057_ -> p_145057_.update(DSL.remainderFinder(), p_145052_));
+    private Typed<?> updateEntity(final Typed<?> input, final String name, final Function<Dynamic<?>, Dynamic<?>> function) {
+        Type<?> oldType = this.getInputSchema().getChoiceType(References.ENTITY, name);
+        Type<?> newType = this.getOutputSchema().getChoiceType(References.ENTITY, name);
+        return input.updateTyped(DSL.namedChoice(name, oldType), newType, entity -> entity.update(DSL.remainderFinder(), function));
     }
 }

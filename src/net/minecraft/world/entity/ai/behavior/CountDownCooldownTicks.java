@@ -10,34 +10,34 @@ import net.minecraft.world.entity.ai.memory.MemoryStatus;
 public class CountDownCooldownTicks extends Behavior<LivingEntity> {
     private final MemoryModuleType<Integer> cooldownTicks;
 
-    public CountDownCooldownTicks(MemoryModuleType<Integer> p_147462_) {
-        super(ImmutableMap.of(p_147462_, MemoryStatus.VALUE_PRESENT));
-        this.cooldownTicks = p_147462_;
+    public CountDownCooldownTicks(final MemoryModuleType<Integer> cooldownTicks) {
+        super(ImmutableMap.of(cooldownTicks, MemoryStatus.VALUE_PRESENT));
+        this.cooldownTicks = cooldownTicks;
     }
 
-    private Optional<Integer> getCooldownTickMemory(LivingEntity p_147466_) {
-        return p_147466_.getBrain().getMemory(this.cooldownTicks);
+    private Optional<Integer> getCooldownTickMemory(final LivingEntity body) {
+        return body.getBrain().getMemory(this.cooldownTicks);
     }
 
     @Override
-    protected boolean timedOut(long p_147464_) {
+    protected boolean timedOut(final long timestamp) {
         return false;
     }
 
     @Override
-    protected boolean canStillUse(ServerLevel p_147468_, LivingEntity p_147469_, long p_147470_) {
-        Optional<Integer> optional = this.getCooldownTickMemory(p_147469_);
-        return optional.isPresent() && optional.get() > 0;
+    protected boolean canStillUse(final ServerLevel level, final LivingEntity body, final long timestamp) {
+        Optional<Integer> calmDownTicks = this.getCooldownTickMemory(body);
+        return calmDownTicks.isPresent() && calmDownTicks.get() > 0;
     }
 
     @Override
-    protected void tick(ServerLevel p_147476_, LivingEntity p_147477_, long p_147478_) {
-        Optional<Integer> optional = this.getCooldownTickMemory(p_147477_);
-        p_147477_.getBrain().setMemory(this.cooldownTicks, optional.get() - 1);
+    protected void tick(final ServerLevel level, final LivingEntity body, final long timestamp) {
+        Optional<Integer> calmDownTicks = this.getCooldownTickMemory(body);
+        body.getBrain().setMemory(this.cooldownTicks, calmDownTicks.get() - 1);
     }
 
     @Override
-    protected void stop(ServerLevel p_147472_, LivingEntity p_147473_, long p_147474_) {
-        p_147473_.getBrain().eraseMemory(this.cooldownTicks);
+    protected void stop(final ServerLevel level, final LivingEntity body, final long timestamp) {
+        body.getBrain().eraseMemory(this.cooldownTicks);
     }
 }

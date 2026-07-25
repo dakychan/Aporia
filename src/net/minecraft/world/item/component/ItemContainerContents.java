@@ -1,11 +1,11 @@
 package net.minecraft.world.item.component;
 
-import com.google.common.collect.Iterables;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -18,75 +18,72 @@ import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.TooltipFlag;
 
 public final class ItemContainerContents implements TooltipProvider {
     private static final int NO_SLOT = -1;
     private static final int MAX_SIZE = 256;
-    public static final ItemContainerContents EMPTY = new ItemContainerContents(NonNullList.create());
+    public static final ItemContainerContents EMPTY = new ItemContainerContents(List.of());
     public static final Codec<ItemContainerContents> CODEC = ItemContainerContents.Slot.CODEC
         .sizeLimitedListOf(256)
         .xmap(ItemContainerContents::fromSlots, ItemContainerContents::asSlots);
-    public static final StreamCodec<RegistryFriendlyByteBuf, ItemContainerContents> STREAM_CODEC = ItemStack.OPTIONAL_STREAM_CODEC
-        .apply(ByteBufCodecs.list(256))
-        .map(ItemContainerContents::new, p_333580_ -> p_333580_.items);
-    private final NonNullList<ItemStack> items;
+    public static final StreamCodec<RegistryFriendlyByteBuf, ItemContainerContents> STREAM_CODEC = ItemStackTemplate.STREAM_CODEC
+        .apply(ByteBufCodecs::optional)
+        .<List<Optional<ItemStackTemplate>>>apply(ByteBufCodecs.list(256))
+        .map(ItemContainerContents::new, c -> c.items);
+    private final List<Optional<ItemStackTemplate>> items;
     private final int hashCode;
 
-    private ItemContainerContents(NonNullList<ItemStack> p_334672_) {
-        if (p_334672_.size() > 256) {
-            throw new IllegalArgumentException("Got " + p_334672_.size() + " items, but maximum is 256");
-        } else {
-            this.items = p_334672_;
-            this.hashCode = ItemStack.hashStackList(p_334672_);
+    private ItemContainerContents(final List<Optional<ItemStackTemplate>> items) {
+        if (items.size() > 256) {
+            throw new IllegalArgumentException("Got " + items.size() + " items, but maximum is 256");
         }
+
+        this.items = items;
+        this.hashCode = items.hashCode();
     }
 
-    private ItemContainerContents(int p_336350_) {
-        this(NonNullList.withSize(p_336350_, ItemStack.EMPTY));
+    private static List<Optional<ItemStackTemplate>> emptyContents(final int size) {
+        return new ArrayList<>(Collections.nCopies(size, Optional.empty()));
     }
 
-    private ItemContainerContents(List<ItemStack> p_332487_) {
-        this(p_332487_.size());
-
-        for (int i = 0; i < p_332487_.size(); i++) {
-            this.items.set(i, p_332487_.get(i));
-        }
-    }
-
-    private static ItemContainerContents fromSlots(List<ItemContainerContents.Slot> p_334537_) {
-        OptionalInt optionalint = p_334537_.stream().mapToInt(ItemContainerContents.Slot::index).max();
-        if (optionalint.isEmpty()) {
+    private static ItemContainerContents fromSlots(final List<ItemContainerContents.Slot> slots) {
+        OptionalInt maxSlotIndex = slots.stream().mapToInt(ItemContainerContents.Slot::index).max();
+        if (maxSlotIndex.isEmpty()) {
             return EMPTY;
-        } else {
-            ItemContainerContents itemcontainercontents = new ItemContainerContents(optionalint.getAsInt() + 1);
-
-            for (ItemContainerContents.Slot itemcontainercontents$slot : p_334537_) {
-                itemcontainercontents.items.set(itemcontainercontents$slot.index(), itemcontainercontents$slot.item());
-            }
-
-            return itemcontainercontents;
         }
+
+        List<Optional<ItemStackTemplate>> items = emptyContents(maxSlotIndex.getAsInt() + 1);
+
+        for (ItemContainerContents.Slot slot : slots) {
+            items.set(slot.index(), Optional.of(slot.item()));
+        }
+
+        return new ItemContainerContents(items);
     }
 
-    public static ItemContainerContents fromItems(List<ItemStack> p_329219_) {
-        int i = findLastNonEmptySlot(p_329219_);
-        if (i == -1) {
+    public static ItemContainerContents fromItems(final List<ItemStack> itemStacks) {
+        int lastNonEmptySlot = findLastNonEmptySlot(itemStacks);
+        if (lastNonEmptySlot == -1) {
             return EMPTY;
-        } else {
-            ItemContainerContents itemcontainercontents = new ItemContainerContents(i + 1);
-
-            for (int j = 0; j <= i; j++) {
-                itemcontainercontents.items.set(j, p_329219_.get(j).copy());
-            }
-
-            return itemcontainercontents;
         }
+
+        List<Optional<ItemStackTemplate>> items = emptyContents(lastNonEmptySlot + 1);
+
+        for (int i = 0; i <= lastNonEmptySlot; i++) {
+            ItemStack sourceStack = itemStacks.get(i);
+            if (!sourceStack.isEmpty()) {
+                items.set(i, Optional.of(ItemStackTemplate.fromNonEmptyStack(sourceStack)));
+            }
+        }
+
+        return new ItemContainerContents(items);
     }
 
-    private static int findLastNonEmptySlot(List<ItemStack> p_332919_) {
-        for (int i = p_332919_.size() - 1; i >= 0; i--) {
-            if (!p_332919_.get(i).isEmpty()) {
+    private static int findLastNonEmptySlot(final List<ItemStack> itemStacks) {
+        for (int i = itemStacks.size() - 1; i >= 0; i--) {
+            if (!itemStacks.get(i).isEmpty()) {
                 return i;
             }
         }
@@ -95,50 +92,58 @@ public final class ItemContainerContents implements TooltipProvider {
     }
 
     private List<ItemContainerContents.Slot> asSlots() {
-        List<ItemContainerContents.Slot> list = new ArrayList<>();
+        List<ItemContainerContents.Slot> slots = new ArrayList<>();
 
         for (int i = 0; i < this.items.size(); i++) {
-            ItemStack itemstack = this.items.get(i);
-            if (!itemstack.isEmpty()) {
-                list.add(new ItemContainerContents.Slot(i, itemstack));
+            Optional<ItemStackTemplate> item = this.items.get(i);
+            if (item.isPresent()) {
+                slots.add(new ItemContainerContents.Slot(i, item.get()));
             }
         }
 
-        return list;
+        return slots;
     }
 
-    public void copyInto(NonNullList<ItemStack> p_333460_) {
-        for (int i = 0; i < p_333460_.size(); i++) {
-            ItemStack itemstack = i < this.items.size() ? this.items.get(i) : ItemStack.EMPTY;
-            p_333460_.set(i, itemstack.copy());
+    private ItemStack createStackFromSlot(final int slot) {
+        if (slot < this.items.size()) {
+            Optional<ItemStackTemplate> slotContents = this.items.get(slot);
+            if (slotContents.isPresent()) {
+                return slotContents.get().create();
+            }
+        }
+
+        return ItemStack.EMPTY;
+    }
+
+    public void copyInto(final NonNullList<ItemStack> destination) {
+        for (int i = 0; i < destination.size(); i++) {
+            destination.set(i, this.createStackFromSlot(i));
         }
     }
 
     public ItemStack copyOne() {
-        return this.items.isEmpty() ? ItemStack.EMPTY : this.items.get(0).copy();
+        return this.createStackFromSlot(0);
     }
 
-    public Stream<ItemStack> stream() {
-        return this.items.stream().map(ItemStack::copy);
+    public Stream<ItemStack> allItemsCopyStream() {
+        return this.items.stream().map(i -> i.map(ItemStackTemplate::create).orElse(ItemStack.EMPTY));
     }
 
-    public Stream<ItemStack> nonEmptyStream() {
-        return this.items.stream().filter(p_332163_ -> !p_332163_.isEmpty()).map(ItemStack::copy);
+    private Stream<ItemStackTemplate> nonEmptyItemsStream() {
+        return this.items.stream().flatMap(Optional::stream);
     }
 
-    public Iterable<ItemStack> nonEmptyItems() {
-        return Iterables.filter(this.items, p_330818_ -> !p_330818_.isEmpty());
+    public Stream<ItemStack> nonEmptyItemCopyStream() {
+        return this.nonEmptyItemsStream().map(ItemStackTemplate::create);
     }
 
-    public Iterable<ItemStack> nonEmptyItemsCopy() {
-        return Iterables.transform(this.nonEmptyItems(), ItemStack::copy);
+    public Iterable<ItemStackTemplate> nonEmptyItems() {
+        return () -> this.nonEmptyItemsStream().iterator();
     }
 
     @Override
-    public boolean equals(Object p_331196_) {
-        return this == p_331196_
-            ? true
-            : p_331196_ instanceof ItemContainerContents itemcontainercontents && ItemStack.listMatches(this.items, itemcontainercontents.items);
+    public boolean equals(final Object obj) {
+        return this == obj ? true : obj instanceof ItemContainerContents contents && this.items.equals(contents.items);
     }
 
     @Override
@@ -147,30 +152,35 @@ public final class ItemContainerContents implements TooltipProvider {
     }
 
     @Override
-    public void addToTooltip(Item.TooltipContext p_391555_, Consumer<Component> p_397087_, TooltipFlag p_395634_, DataComponentGetter p_398037_) {
-        int i = 0;
-        int j = 0;
+    public void addToTooltip(
+        final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+    ) {
+        int lineCount = 0;
+        int itemCount = 0;
 
-        for (ItemStack itemstack : this.nonEmptyItems()) {
-            j++;
-            if (i <= 4) {
-                i++;
-                p_397087_.accept(Component.translatable("item.container.item_count", itemstack.getHoverName(), itemstack.getCount()));
+        for (Optional<ItemStackTemplate> item : this.items) {
+            if (!item.isEmpty()) {
+                itemCount++;
+                if (lineCount <= 4) {
+                    lineCount++;
+                    ItemStack itemStack = item.get().create();
+                    consumer.accept(Component.translatable("item.container.item_count", itemStack.getHoverName(), itemStack.getCount()));
+                }
             }
         }
 
-        if (j - i > 0) {
-            p_397087_.accept(Component.translatable("item.container.more_items", j - i).withStyle(ChatFormatting.ITALIC));
+        if (itemCount - lineCount > 0) {
+            consumer.accept(Component.translatable("item.container.more_items", itemCount - lineCount).withStyle(ChatFormatting.ITALIC));
         }
     }
 
-    record Slot(int index, ItemStack item) {
+    private record Slot(int index, ItemStackTemplate item) {
         public static final Codec<ItemContainerContents.Slot> CODEC = RecordCodecBuilder.create(
-            p_327964_ -> p_327964_.group(
+            i -> i.group(
                     Codec.intRange(0, 255).fieldOf("slot").forGetter(ItemContainerContents.Slot::index),
-                    ItemStack.CODEC.fieldOf("item").forGetter(ItemContainerContents.Slot::item)
+                    ItemStackTemplate.CODEC.fieldOf("item").forGetter(ItemContainerContents.Slot::item)
                 )
-                .apply(p_327964_, ItemContainerContents.Slot::new)
+                .apply(i, ItemContainerContents.Slot::new)
         );
     }
 }

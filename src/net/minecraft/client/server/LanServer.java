@@ -1,18 +1,15 @@
 package net.minecraft.client.server;
 
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LanServer {
     private final String motd;
     private final String address;
     private long pingTime;
 
-    public LanServer(String p_120076_, String p_120077_) {
-        this.motd = p_120076_;
-        this.address = p_120077_;
+    public LanServer(final String motd, final String address) {
+        this.motd = motd;
+        this.address = address;
         this.pingTime = Util.getMillis();
     }
 

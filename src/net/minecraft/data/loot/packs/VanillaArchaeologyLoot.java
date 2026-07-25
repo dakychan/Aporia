@@ -16,8 +16,8 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implements LootTableSubProvider {
     @Override
-    public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> p_278066_) {
-        p_278066_.accept(
+    public void generate(final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
+        output.accept(
             BuiltInLootTables.DESERT_WELL_ARCHAEOLOGY,
             LootTable.lootTable()
                 .withPool(
@@ -42,7 +42,7 @@ public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implement
                         )
                 )
         );
-        p_278066_.accept(
+        output.accept(
             BuiltInLootTables.DESERT_PYRAMID_ARCHAEOLOGY,
             LootTable.lootTable()
                 .withPool(
@@ -58,7 +58,7 @@ public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implement
                         .add(LootItem.lootTableItem(Items.EMERALD))
                 )
         );
-        p_278066_.accept(
+        output.accept(
             BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_COMMON,
             LootTable.lootTable()
                 .withPool(
@@ -69,22 +69,22 @@ public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implement
                         .add(LootItem.lootTableItem(Items.WOODEN_HOE).setWeight(2))
                         .add(LootItem.lootTableItem(Items.CLAY).setWeight(2))
                         .add(LootItem.lootTableItem(Items.BRICK).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.YELLOW_DYE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.BLUE_DYE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.LIGHT_BLUE_DYE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.WHITE_DYE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.ORANGE_DYE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.RED_CANDLE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.GREEN_CANDLE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.PURPLE_CANDLE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.BROWN_CANDLE).setWeight(2))
-                        .add(LootItem.lootTableItem(Items.MAGENTA_STAINED_GLASS_PANE))
-                        .add(LootItem.lootTableItem(Items.PINK_STAINED_GLASS_PANE))
-                        .add(LootItem.lootTableItem(Items.BLUE_STAINED_GLASS_PANE))
-                        .add(LootItem.lootTableItem(Items.LIGHT_BLUE_STAINED_GLASS_PANE))
-                        .add(LootItem.lootTableItem(Items.RED_STAINED_GLASS_PANE))
-                        .add(LootItem.lootTableItem(Items.YELLOW_STAINED_GLASS_PANE))
-                        .add(LootItem.lootTableItem(Items.PURPLE_STAINED_GLASS_PANE))
+                        .add(LootItem.lootTableItem(Items.DYE.yellow()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYE.blue()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYE.lightBlue()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYE.white()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYE.orange()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYED_CANDLE.red()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYED_CANDLE.green()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYED_CANDLE.purple()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.DYED_CANDLE.brown()).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.magenta()))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.pink()))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.blue()))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.lightBlue()))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.red()))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.yellow()))
+                        .add(LootItem.lootTableItem(Items.STAINED_GLASS_PANE.purple()))
                         .add(LootItem.lootTableItem(Items.SPRUCE_HANGING_SIGN))
                         .add(LootItem.lootTableItem(Items.OAK_HANGING_SIGN))
                         .add(LootItem.lootTableItem(Items.GOLD_NUGGET))
@@ -97,7 +97,7 @@ public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implement
                         .add(LootItem.lootTableItem(Items.LEAD))
                 )
         );
-        p_278066_.accept(
+        output.accept(
             BuiltInLootTables.TRAIL_RUINS_ARCHAEOLOGY_RARE,
             LootTable.lootTable()
                 .withPool(
@@ -117,7 +117,7 @@ public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implement
                         .add(LootItem.lootTableItem(Items.MUSIC_DISC_RELIC))
                 )
         );
-        p_278066_.accept(
+        output.accept(
             BuiltInLootTables.OCEAN_RUIN_WARM_ARCHAEOLOGY,
             LootTable.lootTable()
                 .withPool(
@@ -135,7 +135,7 @@ public record VanillaArchaeologyLoot(HolderLookup.Provider registries) implement
                         .add(LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(2))
                 )
         );
-        p_278066_.accept(
+        output.accept(
             BuiltInLootTables.OCEAN_RUIN_COLD_ARCHAEOLOGY,
             LootTable.lootTable()
                 .withPool(

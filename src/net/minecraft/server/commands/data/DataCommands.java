@@ -37,67 +37,59 @@ import net.minecraft.util.Mth;
 public class DataCommands {
     private static final SimpleCommandExceptionType ERROR_MERGE_UNCHANGED = new SimpleCommandExceptionType(Component.translatable("commands.data.merge.failed"));
     private static final DynamicCommandExceptionType ERROR_GET_NOT_NUMBER = new DynamicCommandExceptionType(
-        p_308925_ -> Component.translatableEscape("commands.data.get.invalid", p_308925_)
+        path -> Component.translatableEscape("commands.data.get.invalid", path)
     );
     private static final DynamicCommandExceptionType ERROR_GET_NON_EXISTENT = new DynamicCommandExceptionType(
-        p_308929_ -> Component.translatableEscape("commands.data.get.unknown", p_308929_)
+        path -> Component.translatableEscape("commands.data.get.unknown", path)
     );
     private static final SimpleCommandExceptionType ERROR_MULTIPLE_TAGS = new SimpleCommandExceptionType(Component.translatable("commands.data.get.multiple"));
     private static final DynamicCommandExceptionType ERROR_EXPECTED_OBJECT = new DynamicCommandExceptionType(
-        p_308924_ -> Component.translatableEscape("commands.data.modify.expected_object", p_308924_)
+        node -> Component.translatableEscape("commands.data.modify.expected_object", node)
     );
     private static final DynamicCommandExceptionType ERROR_EXPECTED_VALUE = new DynamicCommandExceptionType(
-        p_308928_ -> Component.translatableEscape("commands.data.modify.expected_value", p_308928_)
+        node -> Component.translatableEscape("commands.data.modify.expected_value", node)
     );
     private static final Dynamic2CommandExceptionType ERROR_INVALID_SUBSTRING = new Dynamic2CommandExceptionType(
-        (p_308926_, p_308927_) -> Component.translatableEscape("commands.data.modify.invalid_substring", p_308926_, p_308927_)
+        (start, end) -> Component.translatableEscape("commands.data.modify.invalid_substring", start, end)
     );
     public static final List<Function<String, DataCommands.DataProvider>> ALL_PROVIDERS = ImmutableList.of(
         EntityDataAccessor.PROVIDER, BlockDataAccessor.PROVIDER, StorageDataAccessor.PROVIDER
     );
     public static final List<DataCommands.DataProvider> TARGET_PROVIDERS = ALL_PROVIDERS.stream()
-        .map(p_139450_ -> p_139450_.apply("target"))
+        .map(f -> f.apply("target"))
         .collect(ImmutableList.toImmutableList());
     public static final List<DataCommands.DataProvider> SOURCE_PROVIDERS = ALL_PROVIDERS.stream()
-        .map(p_139410_ -> p_139410_.apply("source"))
+        .map(f -> f.apply("source"))
         .collect(ImmutableList.toImmutableList());
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_139366_) {
-        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("data").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS));
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        LiteralArgumentBuilder<CommandSourceStack> root = Commands.literal("data").requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS));
 
-        for (DataCommands.DataProvider datacommands$dataprovider : TARGET_PROVIDERS) {
-            literalargumentbuilder.then(
-                    datacommands$dataprovider.wrap(
+        for (DataCommands.DataProvider targetProvider : TARGET_PROVIDERS) {
+            root.then(
+                    targetProvider.wrap(
                         Commands.literal("merge"),
-                        p_139471_ -> p_139471_.then(
+                        p -> p.then(
                             Commands.argument("nbt", CompoundTagArgument.compoundTag())
-                                .executes(
-                                    p_142857_ -> mergeData(
-                                        p_142857_.getSource(), datacommands$dataprovider.access(p_142857_), CompoundTagArgument.getCompoundTag(p_142857_, "nbt")
-                                    )
-                                )
+                                .executes(c -> mergeData(c.getSource(), targetProvider.access(c), CompoundTagArgument.getCompoundTag(c, "nbt")))
                         )
                     )
                 )
                 .then(
-                    datacommands$dataprovider.wrap(
+                    targetProvider.wrap(
                         Commands.literal("get"),
-                        p_139453_ -> p_139453_.executes(p_142849_ -> getData(p_142849_.getSource(), datacommands$dataprovider.access(p_142849_)))
+                        p -> p.executes(c -> getData(c.getSource(), targetProvider.access(c)))
                             .then(
                                 Commands.argument("path", NbtPathArgument.nbtPath())
-                                    .executes(
-                                        p_142841_ -> getData(
-                                            p_142841_.getSource(), datacommands$dataprovider.access(p_142841_), NbtPathArgument.getPath(p_142841_, "path")
-                                        )
-                                    )
+                                    .executes(c -> getData(c.getSource(), targetProvider.access(c), NbtPathArgument.getPath(c, "path")))
                                     .then(
                                         Commands.argument("scale", DoubleArgumentType.doubleArg())
                                             .executes(
-                                                p_142833_ -> getNumeric(
-                                                    p_142833_.getSource(),
-                                                    datacommands$dataprovider.access(p_142833_),
-                                                    NbtPathArgument.getPath(p_142833_, "path"),
-                                                    DoubleArgumentType.getDouble(p_142833_, "scale")
+                                                c -> getNumeric(
+                                                    c.getSource(),
+                                                    targetProvider.access(c),
+                                                    NbtPathArgument.getPath(c, "path"),
+                                                    DoubleArgumentType.getDouble(c, "scale")
                                                 )
                                             )
                                     )
@@ -105,184 +97,154 @@ public class DataCommands {
                     )
                 )
                 .then(
-                    datacommands$dataprovider.wrap(
+                    targetProvider.wrap(
                         Commands.literal("remove"),
-                        p_139413_ -> p_139413_.then(
+                        p -> p.then(
                             Commands.argument("path", NbtPathArgument.nbtPath())
-                                .executes(
-                                    p_142820_ -> removeData(
-                                        p_142820_.getSource(), datacommands$dataprovider.access(p_142820_), NbtPathArgument.getPath(p_142820_, "path")
-                                    )
-                                )
+                                .executes(c -> removeData(c.getSource(), targetProvider.access(c), NbtPathArgument.getPath(c, "path")))
                         )
                     )
                 )
                 .then(
                     decorateModification(
-                        (p_139368_, p_139369_) -> p_139368_.then(
+                        (parent, rest) -> parent.then(
                                 Commands.literal("insert")
                                     .then(
                                         Commands.argument("index", IntegerArgumentType.integer())
                                             .then(
-                                                p_139369_.create(
-                                                    (p_142859_, p_142860_, p_142861_, p_142862_) -> p_142861_.insert(
-                                                        IntegerArgumentType.getInteger(p_142859_, "index"), p_142860_, p_142862_
+                                                rest.create(
+                                                    (context, target, targetPath, source) -> targetPath.insert(
+                                                        IntegerArgumentType.getInteger(context, "index"), target, source
                                                     )
                                                 )
                                             )
                                     )
                             )
-                            .then(
-                                Commands.literal("prepend")
-                                    .then(p_139369_.create((p_142851_, p_142852_, p_142853_, p_142854_) -> p_142853_.insert(0, p_142852_, p_142854_)))
-                            )
-                            .then(
-                                Commands.literal("append")
-                                    .then(p_139369_.create((p_142843_, p_142844_, p_142845_, p_142846_) -> p_142845_.insert(-1, p_142844_, p_142846_)))
-                            )
+                            .then(Commands.literal("prepend").then(rest.create((context, target, targetPath, source) -> targetPath.insert(0, target, source))))
+                            .then(Commands.literal("append").then(rest.create((context, target, targetPath, source) -> targetPath.insert(-1, target, source))))
                             .then(
                                 Commands.literal("set")
-                                    .then(
-                                        p_139369_.create(
-                                            (p_142835_, p_142836_, p_142837_, p_142838_) -> p_142837_.set(p_142836_, Iterables.getLast(p_142838_))
-                                        )
-                                    )
+                                    .then(rest.create((context, target, targetPath, source) -> targetPath.set(target, Iterables.getLast(source))))
                             )
-                            .then(Commands.literal("merge").then(p_139369_.create((p_142822_, p_142823_, p_142824_, p_142825_) -> {
-                                CompoundTag compoundtag = new CompoundTag();
+                            .then(Commands.literal("merge").then(rest.create((context, target, targetPath, source) -> {
+                                CompoundTag combinedSources = new CompoundTag();
 
-                                for (Tag tag : p_142825_) {
-                                    if (NbtPathArgument.NbtPath.isTooDeep(tag, 0)) {
+                                for (Tag sourceTag : source) {
+                                    if (NbtPathArgument.NbtPath.isTooDeep(sourceTag, 0)) {
                                         throw NbtPathArgument.ERROR_DATA_TOO_DEEP.create();
                                     }
 
-                                    if (!(tag instanceof CompoundTag compoundtag1)) {
-                                        throw ERROR_EXPECTED_OBJECT.create(tag);
+                                    if (!(sourceTag instanceof CompoundTag tag)) {
+                                        throw ERROR_EXPECTED_OBJECT.create(sourceTag);
                                     }
 
-                                    compoundtag.merge(compoundtag1);
+                                    combinedSources.merge(tag);
                                 }
 
-                                Collection<Tag> collection = p_142824_.getOrCreate(p_142823_, CompoundTag::new);
-                                int i = 0;
+                                Collection<Tag> targets = targetPath.getOrCreate(target, CompoundTag::new);
+                                int changedCount = 0;
 
-                                for (Tag tag1 : collection) {
-                                    if (!(tag1 instanceof CompoundTag compoundtag2)) {
-                                        throw ERROR_EXPECTED_OBJECT.create(tag1);
+                                for (Tag targetTag : targets) {
+                                    if (!(targetTag instanceof CompoundTag targetObject)) {
+                                        throw ERROR_EXPECTED_OBJECT.create(targetTag);
                                     }
 
-                                    CompoundTag $$12 = compoundtag2.copy();
-                                    compoundtag2.merge(compoundtag);
-                                    i += $$12.equals(compoundtag2) ? 0 : 1;
+                                    CompoundTag originalTarget = targetObject.copy();
+                                    targetObject.merge(combinedSources);
+                                    changedCount += originalTarget.equals(targetObject) ? 0 : 1;
                                 }
 
-                                return i;
+                                return changedCount;
                             })))
                     )
                 );
         }
 
-        p_139366_.register(literalargumentbuilder);
+        dispatcher.register(root);
     }
 
-    private static String getAsText(Tag p_265255_) throws CommandSyntaxException {
-        return switch (p_265255_) {
-            case StringTag(String s) -> s;
-            case PrimitiveTag primitivetag -> primitivetag.toString();
-            default -> throw ERROR_EXPECTED_VALUE.create(p_265255_);
+    private static String getAsText(final Tag tag) throws CommandSyntaxException {
+        return switch (tag) {
+            case StringTag(String value) -> value;
+            case PrimitiveTag primitiveTag -> primitiveTag.toString();
+            default -> throw ERROR_EXPECTED_VALUE.create(tag);
         };
     }
 
-    private static List<Tag> stringifyTagList(List<Tag> p_288980_, DataCommands.StringProcessor p_289012_) throws CommandSyntaxException {
-        List<Tag> list = new ArrayList<>(p_288980_.size());
+    private static List<Tag> stringifyTagList(final List<Tag> source, final DataCommands.StringProcessor stringProcessor) throws CommandSyntaxException {
+        List<Tag> result = new ArrayList<>(source.size());
 
-        for (Tag tag : p_288980_) {
-            String s = getAsText(tag);
-            list.add(StringTag.valueOf(p_289012_.process(s)));
+        for (Tag tag : source) {
+            String text = getAsText(tag);
+            result.add(StringTag.valueOf(stringProcessor.process(text)));
         }
 
-        return list;
+        return result;
     }
 
     private static ArgumentBuilder<CommandSourceStack, ?> decorateModification(
-        BiConsumer<ArgumentBuilder<CommandSourceStack, ?>, DataCommands.DataManipulatorDecorator> p_139404_
+        final BiConsumer<ArgumentBuilder<CommandSourceStack, ?>, DataCommands.DataManipulatorDecorator> nodeSupplier
     ) {
-        LiteralArgumentBuilder<CommandSourceStack> literalargumentbuilder = Commands.literal("modify");
+        LiteralArgumentBuilder<CommandSourceStack> modify = Commands.literal("modify");
 
-        for (DataCommands.DataProvider datacommands$dataprovider : TARGET_PROVIDERS) {
-            datacommands$dataprovider.wrap(
-                literalargumentbuilder,
-                p_264816_ -> {
-                    ArgumentBuilder<CommandSourceStack, ?> argumentbuilder = Commands.argument("targetPath", NbtPathArgument.nbtPath());
+        for (DataCommands.DataProvider targetProvider : TARGET_PROVIDERS) {
+            targetProvider.wrap(
+                modify,
+                t -> {
+                    ArgumentBuilder<CommandSourceStack, ?> targetPathNode = Commands.argument("targetPath", NbtPathArgument.nbtPath());
 
-                    for (DataCommands.DataProvider datacommands$dataprovider1 : SOURCE_PROVIDERS) {
-                        p_139404_.accept(
-                            argumentbuilder,
-                            p_142807_ -> datacommands$dataprovider1.wrap(
+                    for (DataCommands.DataProvider sourceProvider : SOURCE_PROVIDERS) {
+                        nodeSupplier.accept(
+                            targetPathNode,
+                            manipulator -> sourceProvider.wrap(
                                 Commands.literal("from"),
-                                p_142812_ -> p_142812_.executes(
-                                        p_264829_ -> manipulateData(
-                                            p_264829_, datacommands$dataprovider, p_142807_, getSingletonSource(p_264829_, datacommands$dataprovider1)
-                                        )
-                                    )
+                                s -> s.executes(c -> manipulateData(c, targetProvider, manipulator, getSingletonSource(c, sourceProvider)))
                                     .then(
                                         Commands.argument("sourcePath", NbtPathArgument.nbtPath())
-                                            .executes(
-                                                p_264842_ -> manipulateData(
-                                                    p_264842_, datacommands$dataprovider, p_142807_, resolveSourcePath(p_264842_, datacommands$dataprovider1)
-                                                )
-                                            )
+                                            .executes(c -> manipulateData(c, targetProvider, manipulator, resolveSourcePath(c, sourceProvider)))
                                     )
                             )
                         );
-                        p_139404_.accept(
-                            argumentbuilder,
-                            p_264836_ -> datacommands$dataprovider1.wrap(
+                        nodeSupplier.accept(
+                            targetPathNode,
+                            manipulator -> sourceProvider.wrap(
                                 Commands.literal("string"),
-                                p_287357_ -> p_287357_.executes(
-                                        p_288732_ -> manipulateData(
-                                            p_288732_,
-                                            datacommands$dataprovider,
-                                            p_264836_,
-                                            stringifyTagList(getSingletonSource(p_288732_, datacommands$dataprovider1), p_264813_ -> p_264813_)
-                                        )
+                                s -> s.executes(
+                                        c -> manipulateData(c, targetProvider, manipulator, stringifyTagList(getSingletonSource(c, sourceProvider), str -> str))
                                     )
                                     .then(
                                         Commands.argument("sourcePath", NbtPathArgument.nbtPath())
                                             .executes(
-                                                p_288737_ -> manipulateData(
-                                                    p_288737_,
-                                                    datacommands$dataprovider,
-                                                    p_264836_,
-                                                    stringifyTagList(resolveSourcePath(p_288737_, datacommands$dataprovider1), p_264821_ -> p_264821_)
+                                                c -> manipulateData(
+                                                    c, targetProvider, manipulator, stringifyTagList(resolveSourcePath(c, sourceProvider), str -> str)
                                                 )
                                             )
                                             .then(
                                                 Commands.argument("start", IntegerArgumentType.integer())
                                                     .executes(
-                                                        p_288753_ -> manipulateData(
-                                                            p_288753_,
-                                                            datacommands$dataprovider,
-                                                            p_264836_,
+                                                        c -> manipulateData(
+                                                            c,
+                                                            targetProvider,
+                                                            manipulator,
                                                             stringifyTagList(
-                                                                resolveSourcePath(p_288753_, datacommands$dataprovider1),
-                                                                p_287353_ -> substring(p_287353_, IntegerArgumentType.getInteger(p_288753_, "start"))
+                                                                resolveSourcePath(c, sourceProvider),
+                                                                str -> substring(str, IntegerArgumentType.getInteger(c, "start"))
                                                             )
                                                         )
                                                     )
                                                     .then(
                                                         Commands.argument("end", IntegerArgumentType.integer())
                                                             .executes(
-                                                                p_288749_ -> manipulateData(
-                                                                    p_288749_,
-                                                                    datacommands$dataprovider,
-                                                                    p_264836_,
+                                                                c -> manipulateData(
+                                                                    c,
+                                                                    targetProvider,
+                                                                    manipulator,
                                                                     stringifyTagList(
-                                                                        resolveSourcePath(p_288749_, datacommands$dataprovider1),
-                                                                        p_287359_ -> substring(
-                                                                            p_287359_,
-                                                                            IntegerArgumentType.getInteger(p_288749_, "start"),
-                                                                            IntegerArgumentType.getInteger(p_288749_, "end")
+                                                                        resolveSourcePath(c, sourceProvider),
+                                                                        str -> substring(
+                                                                            str,
+                                                                            IntegerArgumentType.getInteger(c, "start"),
+                                                                            IntegerArgumentType.getInteger(c, "end")
                                                                         )
                                                                     )
                                                                 )
@@ -294,164 +256,164 @@ public class DataCommands {
                         );
                     }
 
-                    p_139404_.accept(
-                        argumentbuilder,
-                        p_142799_ -> Commands.literal("value").then(Commands.argument("value", NbtTagArgument.nbtTag()).executes(p_142803_ -> {
-                            List<Tag> list = Collections.singletonList(NbtTagArgument.getNbtTag(p_142803_, "value"));
-                            return manipulateData(p_142803_, datacommands$dataprovider, p_142799_, list);
+                    nodeSupplier.accept(
+                        targetPathNode, manipulator -> Commands.literal("value").then(Commands.argument("value", NbtTagArgument.nbtTag()).executes(c -> {
+                            List<Tag> source = Collections.singletonList(NbtTagArgument.getNbtTag(c, "value"));
+                            return manipulateData(c, targetProvider, manipulator, source);
                         }))
                     );
-                    return p_264816_.then(argumentbuilder);
+                    return t.then(targetPathNode);
                 }
             );
         }
 
-        return literalargumentbuilder;
+        return modify;
     }
 
-    private static String validatedSubstring(String p_288976_, int p_288968_, int p_289018_) throws CommandSyntaxException {
-        if (p_288968_ >= 0 && p_289018_ <= p_288976_.length() && p_288968_ <= p_289018_) {
-            return p_288976_.substring(p_288968_, p_289018_);
+    private static String validatedSubstring(final String input, final int start, final int end) throws CommandSyntaxException {
+        if (start >= 0 && end <= input.length() && start <= end) {
+            return input.substring(start, end);
         } else {
-            throw ERROR_INVALID_SUBSTRING.create(p_288968_, p_289018_);
+            throw ERROR_INVALID_SUBSTRING.create(start, end);
         }
     }
 
-    private static String substring(String p_287625_, int p_287772_, int p_287598_) throws CommandSyntaxException {
-        int i = p_287625_.length();
-        int j = getOffset(p_287772_, i);
-        int k = getOffset(p_287598_, i);
-        return validatedSubstring(p_287625_, j, k);
+    private static String substring(final String input, final int start, final int end) throws CommandSyntaxException {
+        int length = input.length();
+        int absoluteStart = getOffset(start, length);
+        int absoluteEnd = getOffset(end, length);
+        return validatedSubstring(input, absoluteStart, absoluteEnd);
     }
 
-    private static String substring(String p_287744_, int p_287741_) throws CommandSyntaxException {
-        int i = p_287744_.length();
-        return validatedSubstring(p_287744_, getOffset(p_287741_, i), i);
+    private static String substring(final String input, final int start) throws CommandSyntaxException {
+        int length = input.length();
+        return validatedSubstring(input, getOffset(start, length), length);
     }
 
-    private static int getOffset(int p_287638_, int p_287600_) {
-        return p_287638_ >= 0 ? p_287638_ : p_287600_ + p_287638_;
+    private static int getOffset(final int index, final int length) {
+        return index >= 0 ? index : length + index;
     }
 
-    private static List<Tag> getSingletonSource(CommandContext<CommandSourceStack> p_265108_, DataCommands.DataProvider p_265370_) throws CommandSyntaxException {
-        DataAccessor dataaccessor = p_265370_.access(p_265108_);
-        return Collections.singletonList(dataaccessor.getData());
+    private static List<Tag> getSingletonSource(final CommandContext<CommandSourceStack> context, final DataCommands.DataProvider sourceProvider) throws CommandSyntaxException {
+        DataAccessor source = sourceProvider.access(context);
+        return Collections.singletonList(source.getData());
     }
 
-    private static List<Tag> resolveSourcePath(CommandContext<CommandSourceStack> p_265468_, DataCommands.DataProvider p_265670_) throws CommandSyntaxException {
-        DataAccessor dataaccessor = p_265670_.access(p_265468_);
-        NbtPathArgument.NbtPath nbtpathargument$nbtpath = NbtPathArgument.getPath(p_265468_, "sourcePath");
-        return nbtpathargument$nbtpath.get(dataaccessor.getData());
+    private static List<Tag> resolveSourcePath(final CommandContext<CommandSourceStack> context, final DataCommands.DataProvider sourceProvider) throws CommandSyntaxException {
+        DataAccessor source = sourceProvider.access(context);
+        NbtPathArgument.NbtPath sourcePath = NbtPathArgument.getPath(context, "sourcePath");
+        return sourcePath.get(source.getData());
     }
 
     private static int manipulateData(
-        CommandContext<CommandSourceStack> p_139376_, DataCommands.DataProvider p_139377_, DataCommands.DataManipulator p_139378_, List<Tag> p_139379_
+        final CommandContext<CommandSourceStack> context,
+        final DataCommands.DataProvider targetProvider,
+        final DataCommands.DataManipulator manipulator,
+        final List<Tag> source
     ) throws CommandSyntaxException {
-        DataAccessor dataaccessor = p_139377_.access(p_139376_);
-        NbtPathArgument.NbtPath nbtpathargument$nbtpath = NbtPathArgument.getPath(p_139376_, "targetPath");
-        CompoundTag compoundtag = dataaccessor.getData();
-        int i = p_139378_.modify(p_139376_, compoundtag, nbtpathargument$nbtpath, p_139379_);
-        if (i == 0) {
+        DataAccessor target = targetProvider.access(context);
+        NbtPathArgument.NbtPath targetPath = NbtPathArgument.getPath(context, "targetPath");
+        CompoundTag targetData = target.getData();
+        int result = manipulator.modify(context, targetData, targetPath, source);
+        if (result == 0) {
             throw ERROR_MERGE_UNCHANGED.create();
-        } else {
-            dataaccessor.setData(compoundtag);
-            p_139376_.getSource().sendSuccess(() -> dataaccessor.getModifiedSuccess(), true);
-            return i;
         }
+
+        target.setData(targetData);
+        context.getSource().sendSuccess(() -> target.getModifiedSuccess(), true);
+        return result;
     }
 
-    private static int removeData(CommandSourceStack p_139386_, DataAccessor p_139387_, NbtPathArgument.NbtPath p_139388_) throws CommandSyntaxException {
-        CompoundTag compoundtag = p_139387_.getData();
-        int i = p_139388_.remove(compoundtag);
-        if (i == 0) {
+    private static int removeData(final CommandSourceStack source, final DataAccessor accessor, final NbtPathArgument.NbtPath path) throws CommandSyntaxException {
+        CompoundTag result = accessor.getData();
+        int count = path.remove(result);
+        if (count == 0) {
             throw ERROR_MERGE_UNCHANGED.create();
-        } else {
-            p_139387_.setData(compoundtag);
-            p_139386_.sendSuccess(() -> p_139387_.getModifiedSuccess(), true);
-            return i;
         }
+
+        accessor.setData(result);
+        source.sendSuccess(() -> accessor.getModifiedSuccess(), true);
+        return count;
     }
 
-    public static Tag getSingleTag(NbtPathArgument.NbtPath p_139399_, DataAccessor p_139400_) throws CommandSyntaxException {
-        Collection<Tag> collection = p_139399_.get(p_139400_.getData());
-        Iterator<Tag> iterator = collection.iterator();
-        Tag tag = iterator.next();
+    public static Tag getSingleTag(final NbtPathArgument.NbtPath path, final DataAccessor accessor) throws CommandSyntaxException {
+        Collection<Tag> tags = path.get(accessor.getData());
+        Iterator<Tag> iterator = tags.iterator();
+        Tag result = iterator.next();
         if (iterator.hasNext()) {
             throw ERROR_MULTIPLE_TAGS.create();
         } else {
-            return tag;
+            return result;
         }
     }
 
-    private static int getData(CommandSourceStack p_139444_, DataAccessor p_139445_, NbtPathArgument.NbtPath p_139446_) throws CommandSyntaxException {
-        Tag tag = getSingleTag(p_139446_, p_139445_);
+    private static int getData(final CommandSourceStack source, final DataAccessor accessor, final NbtPathArgument.NbtPath path) throws CommandSyntaxException {
+        Tag tag = getSingleTag(path, accessor);
 
-        int i = switch (tag) {
-            case NumericTag numerictag -> Mth.floor(numerictag.doubleValue());
-            case CollectionTag collectiontag -> collectiontag.size();
-            case CompoundTag compoundtag -> compoundtag.size();
-            case StringTag(String s) -> s.length();
-            case EndTag endtag -> throw ERROR_GET_NON_EXISTENT.create(p_139446_.toString());
+        int result = switch (tag) {
+            case NumericTag numericTag -> Mth.floor(numericTag.doubleValue());
+            case CollectionTag collectionTag -> collectionTag.size();
+            case CompoundTag compoundTag -> compoundTag.size();
+            case StringTag(String value) -> value.length();
+            case EndTag ignored -> throw ERROR_GET_NON_EXISTENT.create(path.toString());
             default -> throw new MatchException(null, null);
         };
-        p_139444_.sendSuccess(() -> p_139445_.getPrintSuccess(tag), false);
-        return i;
+        source.sendSuccess(() -> accessor.getPrintSuccess(tag), false);
+        return result;
     }
 
-    private static int getNumeric(CommandSourceStack p_139390_, DataAccessor p_139391_, NbtPathArgument.NbtPath p_139392_, double p_139393_) throws CommandSyntaxException {
-        Tag tag = getSingleTag(p_139392_, p_139391_);
-        if (!(tag instanceof NumericTag)) {
-            throw ERROR_GET_NOT_NUMBER.create(p_139392_.toString());
+    private static int getNumeric(final CommandSourceStack source, final DataAccessor accessor, final NbtPathArgument.NbtPath path, final double scale) throws CommandSyntaxException {
+        if (getSingleTag(path, accessor) instanceof NumericTag numericTag) {
+            int result = Mth.floor(numericTag.doubleValue() * scale);
+            source.sendSuccess(() -> accessor.getPrintSuccess(path, scale, result), false);
+            return result;
         } else {
-            int i = Mth.floor(((NumericTag)tag).doubleValue() * p_139393_);
-            p_139390_.sendSuccess(() -> p_139391_.getPrintSuccess(p_139392_, p_139393_, i), false);
-            return i;
+            throw ERROR_GET_NOT_NUMBER.create(path.toString());
         }
     }
 
-    private static int getData(CommandSourceStack p_139383_, DataAccessor p_139384_) throws CommandSyntaxException {
-        CompoundTag compoundtag = p_139384_.getData();
-        p_139383_.sendSuccess(() -> p_139384_.getPrintSuccess(compoundtag), false);
+    private static int getData(final CommandSourceStack source, final DataAccessor accessor) throws CommandSyntaxException {
+        CompoundTag data = accessor.getData();
+        source.sendSuccess(() -> accessor.getPrintSuccess(data), false);
         return 1;
     }
 
-    private static int mergeData(CommandSourceStack p_139395_, DataAccessor p_139396_, CompoundTag p_139397_) throws CommandSyntaxException {
-        CompoundTag compoundtag = p_139396_.getData();
-        if (NbtPathArgument.NbtPath.isTooDeep(p_139397_, 0)) {
+    private static int mergeData(final CommandSourceStack source, final DataAccessor accessor, final CompoundTag nbt) throws CommandSyntaxException {
+        CompoundTag old = accessor.getData();
+        if (NbtPathArgument.NbtPath.isTooDeep(nbt, 0)) {
             throw NbtPathArgument.ERROR_DATA_TOO_DEEP.create();
-        } else {
-            CompoundTag compoundtag1 = compoundtag.copy().merge(p_139397_);
-            if (compoundtag.equals(compoundtag1)) {
-                throw ERROR_MERGE_UNCHANGED.create();
-            } else {
-                p_139396_.setData(compoundtag1);
-                p_139395_.sendSuccess(() -> p_139396_.getModifiedSuccess(), true);
-                return 1;
-            }
         }
+
+        CompoundTag result = old.copy().merge(nbt);
+        if (old.equals(result)) {
+            throw ERROR_MERGE_UNCHANGED.create();
+        }
+
+        accessor.setData(result);
+        source.sendSuccess(() -> accessor.getModifiedSuccess(), true);
+        return 1;
     }
 
     @FunctionalInterface
-    interface DataManipulator {
-        int modify(CommandContext<CommandSourceStack> p_139496_, CompoundTag p_139497_, NbtPathArgument.NbtPath p_139498_, List<Tag> p_139499_) throws CommandSyntaxException;
+    private interface DataManipulator {
+        int modify(CommandContext<CommandSourceStack> context, CompoundTag targetData, NbtPathArgument.NbtPath targetPath, List<Tag> source) throws CommandSyntaxException;
     }
 
     @FunctionalInterface
-    interface DataManipulatorDecorator {
-        ArgumentBuilder<CommandSourceStack, ?> create(DataCommands.DataManipulator p_139501_);
+    private interface DataManipulatorDecorator {
+        ArgumentBuilder<CommandSourceStack, ?> create(DataCommands.DataManipulator manipulator);
     }
 
     public interface DataProvider {
-        DataAccessor access(CommandContext<CommandSourceStack> p_139504_) throws CommandSyntaxException;
+        DataAccessor access(CommandContext<CommandSourceStack> context) throws CommandSyntaxException;
 
         ArgumentBuilder<CommandSourceStack, ?> wrap(
-            ArgumentBuilder<CommandSourceStack, ?> p_139502_,
-            Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> p_139503_
+            ArgumentBuilder<CommandSourceStack, ?> parent, Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> function
         );
     }
 
     @FunctionalInterface
-    interface StringProcessor {
-        String process(String p_289006_) throws CommandSyntaxException;
+    private interface StringProcessor {
+        String process(String string) throws CommandSyntaxException;
     }
 }

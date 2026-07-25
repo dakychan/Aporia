@@ -14,15 +14,15 @@ public class ThrottlingChunkTaskDispatcher extends ChunkTaskDispatcher {
     private final int maxChunksInExecution;
     private final String executorSchedulerName;
 
-    public ThrottlingChunkTaskDispatcher(TaskScheduler<Runnable> p_364785_, Executor p_366572_, int p_363868_) {
-        super(p_364785_, p_366572_);
-        this.maxChunksInExecution = p_363868_;
-        this.executorSchedulerName = p_364785_.name();
+    public ThrottlingChunkTaskDispatcher(final TaskScheduler<Runnable> executor, final Executor dispatcherExecutor, final int maxChunksInExecution) {
+        super(executor, dispatcherExecutor);
+        this.maxChunksInExecution = maxChunksInExecution;
+        this.executorSchedulerName = executor.name();
     }
 
     @Override
-    protected void onRelease(long p_362718_) {
-        this.chunkPositionsInExecution.remove(p_362718_);
+    protected void onRelease(final long key) {
+        this.chunkPositionsInExecution.remove(key);
     }
 
     @Override
@@ -31,16 +31,16 @@ public class ThrottlingChunkTaskDispatcher extends ChunkTaskDispatcher {
     }
 
     @Override
-    protected void scheduleForExecution(ChunkTaskPriorityQueue.TasksForChunk p_369642_) {
-        this.chunkPositionsInExecution.add(p_369642_.chunkPos());
-        super.scheduleForExecution(p_369642_);
+    protected void scheduleForExecution(final ChunkTaskPriorityQueue.TasksForChunk tasksForChunk) {
+        this.chunkPositionsInExecution.add(tasksForChunk.chunkPos());
+        super.scheduleForExecution(tasksForChunk);
     }
 
     @VisibleForTesting
     public String getDebugStatus() {
         return this.executorSchedulerName
             + "=["
-            + this.chunkPositionsInExecution.longStream().mapToObj(p_374886_ -> p_374886_ + ":" + new ChunkPos(p_374886_)).collect(Collectors.joining(","))
+            + this.chunkPositionsInExecution.longStream().mapToObj(key -> key + ":" + ChunkPos.unpack(key)).collect(Collectors.joining(","))
             + "], s="
             + this.sleeping;
     }

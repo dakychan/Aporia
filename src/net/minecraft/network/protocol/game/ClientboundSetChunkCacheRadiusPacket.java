@@ -11,16 +11,16 @@ public class ClientboundSetChunkCacheRadiusPacket implements Packet<ClientGamePa
     );
     private final int radius;
 
-    public ClientboundSetChunkCacheRadiusPacket(int p_133101_) {
-        this.radius = p_133101_;
+    public ClientboundSetChunkCacheRadiusPacket(final int radius) {
+        this.radius = radius;
     }
 
-    private ClientboundSetChunkCacheRadiusPacket(FriendlyByteBuf p_179284_) {
-        this.radius = p_179284_.readVarInt();
+    private ClientboundSetChunkCacheRadiusPacket(final FriendlyByteBuf input) {
+        this.radius = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_133110_) {
-        p_133110_.writeVarInt(this.radius);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.radius);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ClientboundSetChunkCacheRadiusPacket implements Packet<ClientGamePa
         return GamePacketTypes.CLIENTBOUND_SET_CHUNK_CACHE_RADIUS;
     }
 
-    public void handle(ClientGamePacketListener p_133107_) {
-        p_133107_.handleSetChunkCacheRadius(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetChunkCacheRadius(this);
     }
 
     public int getRadius() {

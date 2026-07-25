@@ -13,20 +13,20 @@ public record DebugStickState(Map<Holder<Block>, Property<?>> properties) {
     public static final DebugStickState EMPTY = new DebugStickState(Map.of());
     public static final Codec<DebugStickState> CODEC = Codec.<Holder<Block>, Property<?>>dispatchedMap(
             BuiltInRegistries.BLOCK.holderByNameCodec(),
-            p_329333_ -> Codec.STRING
+            block -> Codec.STRING
                 .comapFlatMap(
-                    p_332541_ -> {
-                        Property<?> property = p_329333_.value().getStateDefinition().getProperty(p_332541_);
+                    name -> {
+                        Property<?> property = block.value().getStateDefinition().getProperty(name);
                         return property != null
                             ? DataResult.success(property)
-                            : DataResult.error(() -> "No property on " + p_329333_.getRegisteredName() + " with name: " + p_332541_);
+                            : DataResult.error(() -> "No property on " + block.getRegisteredName() + " with name: " + name);
                     },
                     Property::getName
                 )
         )
         .xmap(DebugStickState::new, DebugStickState::properties);
 
-    public DebugStickState withProperty(Holder<Block> p_330343_, Property<?> p_334645_) {
-        return new DebugStickState(Util.copyAndPut(this.properties, p_330343_, p_334645_));
+    public DebugStickState withProperty(final Holder<Block> block, final Property<?> property) {
+        return new DebugStickState(Util.copyAndPut(this.properties, block, property));
     }
 }

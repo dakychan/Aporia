@@ -23,52 +23,63 @@ public class CollectingNeighborUpdater implements NeighborUpdater {
     private int count = 0;
     private @Nullable Consumer<BlockPos> debugListener;
 
-    public CollectingNeighborUpdater(Level p_230643_, int p_230644_) {
-        this.level = p_230643_;
-        this.maxChainedNeighborUpdates = p_230644_;
+    public CollectingNeighborUpdater(final Level level, final int maxChainedNeighborUpdates) {
+        this.level = level;
+        this.maxChainedNeighborUpdates = maxChainedNeighborUpdates;
     }
 
-    public void setDebugListener(@Nullable Consumer<BlockPos> p_425764_) {
-        this.debugListener = p_425764_;
+    public void setDebugListener(final @Nullable Consumer<BlockPos> debugListener) {
+        this.debugListener = debugListener;
     }
 
     @Override
-    public void shapeUpdate(Direction p_230664_, BlockState p_230665_, BlockPos p_230666_, BlockPos p_230667_, @Block.UpdateFlags int p_230668_, int p_230669_) {
+    public void shapeUpdate(
+        final Direction direction,
+        final BlockState neighborState,
+        final BlockPos pos,
+        final BlockPos neighborPos,
+        final @Block.UpdateFlags int updateFlags,
+        final int updateLimit
+    ) {
         this.addAndRun(
-            p_230666_, new CollectingNeighborUpdater.ShapeUpdate(p_230664_, p_230665_, p_230666_.immutable(), p_230667_.immutable(), p_230668_, p_230669_)
+            pos, new CollectingNeighborUpdater.ShapeUpdate(direction, neighborState, pos.immutable(), neighborPos.immutable(), updateFlags, updateLimit)
         );
     }
 
     @Override
-    public void neighborChanged(BlockPos p_230653_, Block p_230654_, @Nullable Orientation p_364159_) {
-        this.addAndRun(p_230653_, new CollectingNeighborUpdater.SimpleNeighborUpdate(p_230653_, p_230654_, p_364159_));
+    public void neighborChanged(final BlockPos pos, final Block block, final @Nullable Orientation orientation) {
+        this.addAndRun(pos, new CollectingNeighborUpdater.SimpleNeighborUpdate(pos, block, orientation));
     }
 
     @Override
-    public void neighborChanged(BlockState p_230647_, BlockPos p_230648_, Block p_230649_, @Nullable Orientation p_367539_, boolean p_230651_) {
-        this.addAndRun(p_230648_, new CollectingNeighborUpdater.FullNeighborUpdate(p_230647_, p_230648_.immutable(), p_230649_, p_367539_, p_230651_));
+    public void neighborChanged(
+        final BlockState state, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        this.addAndRun(pos, new CollectingNeighborUpdater.FullNeighborUpdate(state, pos.immutable(), block, orientation, movedByPiston));
     }
 
     @Override
-    public void updateNeighborsAtExceptFromFacing(BlockPos p_230657_, Block p_230658_, @Nullable Direction p_230659_, @Nullable Orientation p_368385_) {
-        this.addAndRun(p_230657_, new CollectingNeighborUpdater.MultiNeighborUpdate(p_230657_.immutable(), p_230658_, p_368385_, p_230659_));
+    public void updateNeighborsAtExceptFromFacing(
+        final BlockPos pos, final Block block, final @Nullable Direction skipDirection, final @Nullable Orientation orientation
+    ) {
+        this.addAndRun(pos, new CollectingNeighborUpdater.MultiNeighborUpdate(pos.immutable(), block, orientation, skipDirection));
     }
 
-    private void addAndRun(BlockPos p_230661_, CollectingNeighborUpdater.NeighborUpdates p_230662_) {
-        boolean flag = this.count > 0;
-        boolean flag1 = this.maxChainedNeighborUpdates >= 0 && this.count >= this.maxChainedNeighborUpdates;
+    private void addAndRun(final BlockPos pos, final CollectingNeighborUpdater.NeighborUpdates update) {
+        boolean runningAlready = this.count > 0;
+        boolean tooManyUpdates = this.maxChainedNeighborUpdates >= 0 && this.count >= this.maxChainedNeighborUpdates;
         this.count++;
-        if (!flag1) {
-            if (flag) {
-                this.addedThisLayer.add(p_230662_);
+        if (!tooManyUpdates) {
+            if (runningAlready) {
+                this.addedThisLayer.add(update);
             } else {
-                this.stack.push(p_230662_);
+                this.stack.push(update);
             }
         } else if (this.count - 1 == this.maxChainedNeighborUpdates) {
-            LOGGER.error("Too many chained neighbor updates. Skipping the rest. First skipped position: {}", p_230661_.toShortString());
+            LOGGER.error("Too many chained neighbor updates. Skipping the rest. First skipped position: {}", pos.toShortString());
         }
 
-        if (!flag) {
+        if (!runningAlready) {
             this.runUpdates();
         }
     }
@@ -81,13 +92,13 @@ public class CollectingNeighborUpdater implements NeighborUpdater {
                 }
 
                 this.addedThisLayer.clear();
-                CollectingNeighborUpdater.NeighborUpdates collectingneighborupdater$neighborupdates = this.stack.peek();
+                CollectingNeighborUpdater.NeighborUpdates nextUpdates = this.stack.peek();
                 if (this.debugListener != null) {
-                    collectingneighborupdater$neighborupdates.forEachUpdatedPos(this.debugListener);
+                    nextUpdates.forEachUpdatedPos(this.debugListener);
                 }
 
                 while (this.addedThisLayer.isEmpty()) {
-                    if (!collectingneighborupdater$neighborupdates.runNext(this.level)) {
+                    if (!nextUpdates.runNext(this.level)) {
                         this.stack.pop();
                         break;
                     }
@@ -100,52 +111,56 @@ public class CollectingNeighborUpdater implements NeighborUpdater {
         }
     }
 
-    record FullNeighborUpdate(BlockState state, BlockPos pos, Block block, @Nullable Orientation orientation, boolean movedByPiston)
+    private record FullNeighborUpdate(BlockState state, BlockPos pos, Block block, @Nullable Orientation orientation, boolean movedByPiston)
         implements CollectingNeighborUpdater.NeighborUpdates {
         @Override
-        public boolean runNext(Level p_230683_) {
-            NeighborUpdater.executeUpdate(p_230683_, this.state, this.pos, this.block, this.orientation, this.movedByPiston);
+        public boolean runNext(final Level level) {
+            NeighborUpdater.executeUpdate(level, this.state, this.pos, this.block, this.orientation, this.movedByPiston);
             return false;
         }
 
         @Override
-        public void forEachUpdatedPos(Consumer<BlockPos> p_430229_) {
-            p_430229_.accept(this.pos);
+        public void forEachUpdatedPos(final Consumer<BlockPos> output) {
+            output.accept(this.pos);
         }
     }
 
-    static final class MultiNeighborUpdate implements CollectingNeighborUpdater.NeighborUpdates {
+    private static final class MultiNeighborUpdate implements CollectingNeighborUpdater.NeighborUpdates {
         private final BlockPos sourcePos;
         private final Block sourceBlock;
         private @Nullable Orientation orientation;
         private final @Nullable Direction skipDirection;
         private int idx = 0;
 
-        MultiNeighborUpdate(BlockPos p_230697_, Block p_230698_, @Nullable Orientation p_369746_, @Nullable Direction p_230699_) {
-            this.sourcePos = p_230697_;
-            this.sourceBlock = p_230698_;
-            this.orientation = p_369746_;
-            this.skipDirection = p_230699_;
-            if (NeighborUpdater.UPDATE_ORDER[this.idx] == p_230699_) {
+        public MultiNeighborUpdate(
+            final BlockPos sourcePos, final Block sourceBlock, final @Nullable Orientation orientation, final @Nullable Direction skipDirection
+        ) {
+            this.sourcePos = sourcePos;
+            this.sourceBlock = sourceBlock;
+            this.orientation = orientation;
+            this.skipDirection = skipDirection;
+            if (NeighborUpdater.UPDATE_ORDER[this.idx] == skipDirection) {
                 this.idx++;
             }
         }
 
         @Override
-        public boolean runNext(Level p_230701_) {
+        public boolean runNext(final Level level) {
             Direction direction = NeighborUpdater.UPDATE_ORDER[this.idx++];
-            BlockPos blockpos = this.sourcePos.relative(direction);
-            BlockState blockstate = p_230701_.getBlockState(blockpos);
+            BlockPos neighborPos = this.sourcePos.relative(direction);
+            BlockState state = level.getBlockState(neighborPos);
             Orientation orientation = null;
-            if (p_230701_.enabledFeatures().contains(FeatureFlags.REDSTONE_EXPERIMENTS)) {
+            if (level.enabledFeatures().contains(FeatureFlags.REDSTONE_EXPERIMENTS)) {
                 if (this.orientation == null) {
-                    this.orientation = ExperimentalRedstoneUtils.initialOrientation(p_230701_, this.skipDirection == null ? null : this.skipDirection.getOpposite(), null);
+                    this.orientation = ExperimentalRedstoneUtils.initialOrientation(
+                        level, this.skipDirection == null ? null : this.skipDirection.getOpposite(), null
+                    );
                 }
 
                 orientation = this.orientation.withFront(direction);
             }
 
-            NeighborUpdater.executeUpdate(p_230701_, blockstate, blockpos, this.sourceBlock, orientation, false);
+            NeighborUpdater.executeUpdate(level, state, neighborPos, this.sourceBlock, orientation, false);
             if (this.idx < NeighborUpdater.UPDATE_ORDER.length && NeighborUpdater.UPDATE_ORDER[this.idx] == this.skipDirection) {
                 this.idx++;
             }
@@ -154,47 +169,48 @@ public class CollectingNeighborUpdater implements NeighborUpdater {
         }
 
         @Override
-        public void forEachUpdatedPos(Consumer<BlockPos> p_426183_) {
+        public void forEachUpdatedPos(final Consumer<BlockPos> output) {
             for (Direction direction : NeighborUpdater.UPDATE_ORDER) {
                 if (direction != this.skipDirection) {
-                    BlockPos blockpos = this.sourcePos.relative(direction);
-                    p_426183_.accept(blockpos);
+                    BlockPos neighborPos = this.sourcePos.relative(direction);
+                    output.accept(neighborPos);
                 }
             }
         }
     }
 
-    interface NeighborUpdates {
-        boolean runNext(Level p_230702_);
+    private interface NeighborUpdates {
+        boolean runNext(Level level);
 
-        void forEachUpdatedPos(Consumer<BlockPos> p_422822_);
+        void forEachUpdatedPos(Consumer<BlockPos> output);
     }
 
-    record ShapeUpdate(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, @Block.UpdateFlags int updateFlags, int updateLimit)
-        implements CollectingNeighborUpdater.NeighborUpdates {
+    private record ShapeUpdate(
+        Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, @Block.UpdateFlags int updateFlags, int updateLimit
+    ) implements CollectingNeighborUpdater.NeighborUpdates {
         @Override
-        public boolean runNext(Level p_230716_) {
-            NeighborUpdater.executeShapeUpdate(p_230716_, this.direction, this.pos, this.neighborPos, this.neighborState, this.updateFlags, this.updateLimit);
+        public boolean runNext(final Level level) {
+            NeighborUpdater.executeShapeUpdate(level, this.direction, this.pos, this.neighborPos, this.neighborState, this.updateFlags, this.updateLimit);
             return false;
         }
 
         @Override
-        public void forEachUpdatedPos(Consumer<BlockPos> p_428049_) {
-            p_428049_.accept(this.pos);
+        public void forEachUpdatedPos(final Consumer<BlockPos> output) {
+            output.accept(this.pos);
         }
     }
 
-    record SimpleNeighborUpdate(BlockPos pos, Block block, @Nullable Orientation orientation) implements CollectingNeighborUpdater.NeighborUpdates {
+    private record SimpleNeighborUpdate(BlockPos pos, Block block, @Nullable Orientation orientation) implements CollectingNeighborUpdater.NeighborUpdates {
         @Override
-        public boolean runNext(Level p_230734_) {
-            BlockState blockstate = p_230734_.getBlockState(this.pos);
-            NeighborUpdater.executeUpdate(p_230734_, blockstate, this.pos, this.block, this.orientation, false);
+        public boolean runNext(final Level level) {
+            BlockState state = level.getBlockState(this.pos);
+            NeighborUpdater.executeUpdate(level, state, this.pos, this.block, this.orientation, false);
             return false;
         }
 
         @Override
-        public void forEachUpdatedPos(Consumer<BlockPos> p_428050_) {
-            p_428050_.accept(this.pos);
+        public void forEachUpdatedPos(final Consumer<BlockPos> output) {
+            output.accept(this.pos);
         }
     }
 }

@@ -21,31 +21,33 @@ public class AdvancementProvider implements DataProvider {
     private final List<AdvancementSubProvider> subProviders;
     private final CompletableFuture<HolderLookup.Provider> registries;
 
-    public AdvancementProvider(PackOutput p_256529_, CompletableFuture<HolderLookup.Provider> p_255722_, List<AdvancementSubProvider> p_255883_) {
-        this.pathProvider = p_256529_.createRegistryElementsPathProvider(Registries.ADVANCEMENT);
-        this.subProviders = p_255883_;
-        this.registries = p_255722_;
+    public AdvancementProvider(
+        final PackOutput output, final CompletableFuture<HolderLookup.Provider> registries, final List<AdvancementSubProvider> subProviders
+    ) {
+        this.pathProvider = output.createRegistryElementsPathProvider(Registries.ADVANCEMENT);
+        this.subProviders = subProviders;
+        this.registries = registries;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_254268_) {
-        return this.registries.thenCompose(p_325834_ -> {
-            Set<Identifier> set = new HashSet<>();
-            List<CompletableFuture<?>> list = new ArrayList<>();
-            Consumer<AdvancementHolder> consumer = p_448634_ -> {
-                if (!set.add(p_448634_.id())) {
-                    throw new IllegalStateException("Duplicate advancement " + p_448634_.id());
-                } else {
-                    Path path = this.pathProvider.json(p_448634_.id());
-                    list.add(DataProvider.saveStable(p_254268_, p_325834_, Advancement.CODEC, p_448634_.value(), path));
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        return this.registries.thenCompose(lookup -> {
+            Set<Identifier> allAdvancements = new HashSet<>();
+            List<CompletableFuture<?>> tasks = new ArrayList<>();
+            Consumer<AdvancementHolder> consumer = holder -> {
+                if (!allAdvancements.add(holder.id())) {
+                    throw new IllegalStateException("Duplicate advancement " + holder.id());
                 }
+
+                Path path = this.pathProvider.json(holder.id());
+                tasks.add(DataProvider.saveStable(cache, lookup, Advancement.CODEC, holder.value(), path));
             };
 
-            for (AdvancementSubProvider advancementsubprovider : this.subProviders) {
-                advancementsubprovider.generate(p_325834_, consumer);
+            for (AdvancementSubProvider subProvider : this.subProviders) {
+                subProvider.generate(lookup, consumer);
             }
 
-            return CompletableFuture.allOf(list.toArray(CompletableFuture[]::new));
+            return CompletableFuture.allOf(tasks.toArray(CompletableFuture[]::new));
         });
     }
 

@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.gui.spectator.SpectatorMenu;
 import net.minecraft.client.gui.spectator.SpectatorMenuCategory;
 import net.minecraft.client.gui.spectator.SpectatorMenuItem;
@@ -20,10 +20,8 @@ import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.world.scores.TeamColor;
 
-@OnlyIn(Dist.CLIENT)
 public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, SpectatorMenuItem {
     private static final Identifier TELEPORT_TO_TEAM_SPRITE = Identifier.withDefaultNamespace("spectator/teleport_to_team");
     private static final Component TELEPORT_TEXT = Component.translatable("spectatorMenu.team_teleport");
@@ -35,11 +33,8 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
         this.items = createTeamEntries(minecraft, minecraft.level.getScoreboard());
     }
 
-    private static List<SpectatorMenuItem> createTeamEntries(Minecraft p_260258_, Scoreboard p_259249_) {
-        return p_259249_.getPlayerTeams()
-            .stream()
-            .flatMap(p_260025_ -> TeleportToTeamMenuCategory.TeamSelectionItem.create(p_260258_, p_260025_).stream())
-            .toList();
+    private static List<SpectatorMenuItem> createTeamEntries(final Minecraft minecraft, final Scoreboard scoreboard) {
+        return scoreboard.getPlayerTeams().stream().flatMap(team -> TeleportToTeamMenuCategory.TeamSelectionItem.create(minecraft, team).stream()).toList();
     }
 
     @Override
@@ -53,8 +48,8 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
     }
 
     @Override
-    public void selectItem(SpectatorMenu p_101886_) {
-        p_101886_.selectCategory(this);
+    public void selectItem(final SpectatorMenu menu) {
+        menu.selectCategory(this);
     }
 
     @Override
@@ -63,8 +58,8 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
     }
 
     @Override
-    public void renderIcon(GuiGraphics p_282933_, float p_283568_, float p_367476_) {
-        p_282933_.blitSprite(RenderPipelines.GUI_TEXTURED, TELEPORT_TO_TEAM_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(p_367476_, p_283568_, p_283568_, p_283568_));
+    public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, TELEPORT_TO_TEAM_SPRITE, 0, 0, 16, 16, ARGB.colorFromFloat(alpha, brightness, brightness, brightness));
     }
 
     @Override
@@ -72,39 +67,38 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
         return !this.items.isEmpty();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class TeamSelectionItem implements SpectatorMenuItem {
+        private static class TeamSelectionItem implements SpectatorMenuItem {
         private final PlayerTeam team;
         private final Supplier<PlayerSkin> iconSkin;
         private final List<PlayerInfo> players;
 
-        private TeamSelectionItem(PlayerTeam p_259176_, List<PlayerInfo> p_259231_, Supplier<PlayerSkin> p_300864_) {
-            this.team = p_259176_;
-            this.players = p_259231_;
-            this.iconSkin = p_300864_;
+        private TeamSelectionItem(final PlayerTeam team, final List<PlayerInfo> players, final Supplier<PlayerSkin> iconSkin) {
+            this.team = team;
+            this.players = players;
+            this.iconSkin = iconSkin;
         }
 
-        public static Optional<SpectatorMenuItem> create(Minecraft p_260048_, PlayerTeam p_259058_) {
-            List<PlayerInfo> list = new ArrayList<>();
+        public static Optional<SpectatorMenuItem> create(final Minecraft minecraft, final PlayerTeam team) {
+            List<PlayerInfo> players = new ArrayList<>();
 
-            for (String s : p_259058_.getPlayers()) {
-                PlayerInfo playerinfo = p_260048_.getConnection().getPlayerInfo(s);
-                if (playerinfo != null && playerinfo.getGameMode() != GameType.SPECTATOR) {
-                    list.add(playerinfo);
+            for (String name : team.getPlayers()) {
+                PlayerInfo info = minecraft.getConnection().getPlayerInfo(name);
+                if (info != null && info.getGameMode() != GameType.SPECTATOR) {
+                    players.add(info);
                 }
             }
 
-            if (list.isEmpty()) {
+            if (players.isEmpty()) {
                 return Optional.empty();
-            } else {
-                PlayerInfo playerinfo1 = list.get(RandomSource.create().nextInt(list.size()));
-                return Optional.of(new TeleportToTeamMenuCategory.TeamSelectionItem(p_259058_, list, playerinfo1::getSkin));
             }
+
+            PlayerInfo playerInfo = players.get(RandomSource.createThreadLocalInstance().nextInt(players.size()));
+            return Optional.of(new TeleportToTeamMenuCategory.TeamSelectionItem(team, players, playerInfo::getSkin));
         }
 
         @Override
-        public void selectItem(SpectatorMenu p_101902_) {
-            p_101902_.selectCategory(new TeleportToPlayerMenuCategory(this.players));
+        public void selectItem(final SpectatorMenu menu) {
+            menu.selectCategory(new TeleportToPlayerMenuCategory(this.players));
         }
 
         @Override
@@ -113,16 +107,13 @@ public class TeleportToTeamMenuCategory implements SpectatorMenuCategory, Specta
         }
 
         @Override
-        public void renderIcon(GuiGraphics p_283215_, float p_282946_, float p_364297_) {
-            Integer integer = this.team.getColor().getColor();
-            if (integer != null) {
-                float f = (integer >> 16 & 0xFF) / 255.0F;
-                float f1 = (integer >> 8 & 0xFF) / 255.0F;
-                float f2 = (integer & 0xFF) / 255.0F;
-                p_283215_.fill(1, 1, 15, 15, ARGB.colorFromFloat(p_364297_, f * p_282946_, f1 * p_282946_, f2 * p_282946_));
+        public void extractIcon(final GuiGraphicsExtractor graphics, final float brightness, final float alpha) {
+            Optional<TeamColor> teamColor = this.team.getColor();
+            if (teamColor.isPresent()) {
+                graphics.fill(1, 1, 15, 15, ARGB.scaleRGB(teamColor.get().rgb(), brightness));
             }
 
-            PlayerFaceRenderer.draw(p_283215_, this.iconSkin.get(), 2, 2, 12, ARGB.colorFromFloat(p_364297_, p_282946_, p_282946_, p_282946_));
+            PlayerFaceExtractor.extractRenderState(graphics, this.iconSkin.get(), 2, 2, 12, ARGB.colorFromFloat(alpha, brightness, brightness, brightness));
         }
 
         @Override

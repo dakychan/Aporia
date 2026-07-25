@@ -73,55 +73,55 @@ public class TropicalFish extends AbstractSchoolingFish {
     );
     private boolean isSchool = true;
 
-    public TropicalFish(EntityType<? extends TropicalFish> p_456769_, Level p_460013_) {
-        super(p_456769_, p_460013_);
+    public TropicalFish(final EntityType<? extends TropicalFish> type, final Level level) {
+        super(type, level);
     }
 
-    public static String getPredefinedName(int p_461072_) {
-        return "entity.minecraft.tropical_fish.predefined." + p_461072_;
+    public static String getPredefinedName(final int index) {
+        return "entity.minecraft.tropical_fish.predefined." + index;
     }
 
-    static int packVariant(TropicalFish.Pattern p_458816_, DyeColor p_457846_, DyeColor p_451129_) {
-        return p_458816_.getPackedId() & 65535 | (p_457846_.getId() & 0xFF) << 16 | (p_451129_.getId() & 0xFF) << 24;
+    private static int packVariant(final TropicalFish.Pattern pattern, final DyeColor baseColor, final DyeColor patternColor) {
+        return pattern.getPackedId() & 65535 | (baseColor.getId() & 0xFF) << 16 | (patternColor.getId() & 0xFF) << 24;
     }
 
-    public static DyeColor getBaseColor(int p_456644_) {
-        return DyeColor.byId(p_456644_ >> 16 & 0xFF);
+    public static DyeColor getBaseColor(final int packedVariant) {
+        return DyeColor.byId(packedVariant >> 16 & 0xFF);
     }
 
-    public static DyeColor getPatternColor(int p_461041_) {
-        return DyeColor.byId(p_461041_ >> 24 & 0xFF);
+    public static DyeColor getPatternColor(final int packedVariant) {
+        return DyeColor.byId(packedVariant >> 24 & 0xFF);
     }
 
-    public static TropicalFish.Pattern getPattern(int p_453056_) {
-        return TropicalFish.Pattern.byId(p_453056_ & 65535);
-    }
-
-    @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_451572_) {
-        super.defineSynchedData(p_451572_);
-        p_451572_.define(DATA_ID_TYPE_VARIANT, DEFAULT_VARIANT.getPackedId());
+    public static TropicalFish.Pattern getPattern(final int packedVariant) {
+        return TropicalFish.Pattern.byId(packedVariant & 65535);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_454928_) {
-        super.addAdditionalSaveData(p_454928_);
-        p_454928_.store("Variant", TropicalFish.Variant.CODEC, new TropicalFish.Variant(this.getPackedVariant()));
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_ID_TYPE_VARIANT, DEFAULT_VARIANT.getPackedId());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458988_) {
-        super.readAdditionalSaveData(p_458988_);
-        TropicalFish.Variant tropicalfish$variant = p_458988_.read("Variant", TropicalFish.Variant.CODEC).orElse(DEFAULT_VARIANT);
-        this.setPackedVariant(tropicalfish$variant.getPackedId());
-    }
-
-    private void setPackedVariant(int p_452807_) {
-        this.entityData.set(DATA_ID_TYPE_VARIANT, p_452807_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Variant", TropicalFish.Variant.CODEC, new TropicalFish.Variant(this.getPackedVariant()));
     }
 
     @Override
-    public boolean isMaxGroupSizeReached(int p_450150_) {
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        TropicalFish.Variant variant = input.read("Variant", TropicalFish.Variant.CODEC).orElse(DEFAULT_VARIANT);
+        this.setPackedVariant(variant.getPackedId());
+    }
+
+    private void setPackedVariant(final int i) {
+        this.entityData.set(DATA_ID_TYPE_VARIANT, i);
+    }
+
+    @Override
+    public boolean isMaxGroupSizeReached(final int groupSize) {
         return !this.isSchool;
     }
 
@@ -141,68 +141,70 @@ public class TropicalFish extends AbstractSchoolingFish {
         return getPattern(this.getPackedVariant());
     }
 
-    private void setPattern(TropicalFish.Pattern p_451024_) {
-        int i = this.getPackedVariant();
-        DyeColor dyecolor = getBaseColor(i);
-        DyeColor dyecolor1 = getPatternColor(i);
-        this.setPackedVariant(packVariant(p_451024_, dyecolor, dyecolor1));
+    private void setPattern(final TropicalFish.Pattern pattern) {
+        int base = this.getPackedVariant();
+        DyeColor baseColor = getBaseColor(base);
+        DyeColor patternColor = getPatternColor(base);
+        this.setPackedVariant(packVariant(pattern, baseColor, patternColor));
     }
 
-    private void setBaseColor(DyeColor p_457875_) {
-        int i = this.getPackedVariant();
-        TropicalFish.Pattern tropicalfish$pattern = getPattern(i);
-        DyeColor dyecolor = getPatternColor(i);
-        this.setPackedVariant(packVariant(tropicalfish$pattern, p_457875_, dyecolor));
+    private void setBaseColor(final DyeColor baseColor) {
+        int base = this.getPackedVariant();
+        TropicalFish.Pattern pattern = getPattern(base);
+        DyeColor patternColor = getPatternColor(base);
+        this.setPackedVariant(packVariant(pattern, baseColor, patternColor));
     }
 
-    private void setPatternColor(DyeColor p_454447_) {
-        int i = this.getPackedVariant();
-        TropicalFish.Pattern tropicalfish$pattern = getPattern(i);
-        DyeColor dyecolor = getBaseColor(i);
-        this.setPackedVariant(packVariant(tropicalfish$pattern, dyecolor, p_454447_));
+    private void setPatternColor(final DyeColor patternColor) {
+        int base = this.getPackedVariant();
+        TropicalFish.Pattern pattern = getPattern(base);
+        DyeColor baseColor = getBaseColor(base);
+        this.setPackedVariant(packVariant(pattern, baseColor, patternColor));
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_454642_) {
-        if (p_454642_ == DataComponents.TROPICAL_FISH_PATTERN) {
-            return castComponentValue((DataComponentType<T>)p_454642_, this.getPattern());
-        } else if (p_454642_ == DataComponents.TROPICAL_FISH_BASE_COLOR) {
-            return castComponentValue((DataComponentType<T>)p_454642_, this.getBaseColor());
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        if (type == DataComponents.TROPICAL_FISH_PATTERN) {
+            return castComponentValue((DataComponentType<T>)type, this.getPattern());
+        } else if (type == DataComponents.TROPICAL_FISH_BASE_COLOR) {
+            return castComponentValue((DataComponentType<T>)type, this.getBaseColor());
         } else {
-            return p_454642_ == DataComponents.TROPICAL_FISH_PATTERN_COLOR ? castComponentValue((DataComponentType<T>)p_454642_, this.getPatternColor()) : super.get(p_454642_);
+            return type == DataComponents.TROPICAL_FISH_PATTERN_COLOR
+                ? castComponentValue((DataComponentType<T>)type, this.getPatternColor())
+                : super.get(type);
         }
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_461053_) {
-        this.applyImplicitComponentIfPresent(p_461053_, DataComponents.TROPICAL_FISH_PATTERN);
-        this.applyImplicitComponentIfPresent(p_461053_, DataComponents.TROPICAL_FISH_BASE_COLOR);
-        this.applyImplicitComponentIfPresent(p_461053_, DataComponents.TROPICAL_FISH_PATTERN_COLOR);
-        super.applyImplicitComponents(p_461053_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.TROPICAL_FISH_PATTERN);
+        this.applyImplicitComponentIfPresent(components, DataComponents.TROPICAL_FISH_BASE_COLOR);
+        this.applyImplicitComponentIfPresent(components, DataComponents.TROPICAL_FISH_PATTERN_COLOR);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_450372_, T p_459284_) {
-        if (p_450372_ == DataComponents.TROPICAL_FISH_PATTERN) {
-            this.setPattern(castComponentValue(DataComponents.TROPICAL_FISH_PATTERN, p_459284_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.TROPICAL_FISH_PATTERN) {
+            this.setPattern(castComponentValue(DataComponents.TROPICAL_FISH_PATTERN, value));
             return true;
-        } else if (p_450372_ == DataComponents.TROPICAL_FISH_BASE_COLOR) {
-            this.setBaseColor(castComponentValue(DataComponents.TROPICAL_FISH_BASE_COLOR, p_459284_));
+        } else if (type == DataComponents.TROPICAL_FISH_BASE_COLOR) {
+            this.setBaseColor(castComponentValue(DataComponents.TROPICAL_FISH_BASE_COLOR, value));
             return true;
-        } else if (p_450372_ == DataComponents.TROPICAL_FISH_PATTERN_COLOR) {
-            this.setPatternColor(castComponentValue(DataComponents.TROPICAL_FISH_PATTERN_COLOR, p_459284_));
+        } else if (type == DataComponents.TROPICAL_FISH_PATTERN_COLOR) {
+            this.setPatternColor(castComponentValue(DataComponents.TROPICAL_FISH_PATTERN_COLOR, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_450372_, p_459284_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
     @Override
-    public void saveToBucketTag(ItemStack p_454947_) {
-        super.saveToBucketTag(p_454947_);
-        p_454947_.copyFrom(DataComponents.TROPICAL_FISH_PATTERN, this);
-        p_454947_.copyFrom(DataComponents.TROPICAL_FISH_BASE_COLOR, this);
-        p_454947_.copyFrom(DataComponents.TROPICAL_FISH_PATTERN_COLOR, this);
+    public void saveToBucketTag(final ItemStack bucket) {
+        super.saveToBucketTag(bucket);
+        bucket.copyFrom(DataComponents.TROPICAL_FISH_PATTERN, this);
+        bucket.copyFrom(DataComponents.TROPICAL_FISH_BASE_COLOR, this);
+        bucket.copyFrom(DataComponents.TROPICAL_FISH_PATTERN_COLOR, this);
     }
 
     @Override
@@ -221,7 +223,7 @@ public class TropicalFish extends AbstractSchoolingFish {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_460912_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.TROPICAL_FISH_HURT;
     }
 
@@ -232,50 +234,53 @@ public class TropicalFish extends AbstractSchoolingFish {
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_456098_, DifficultyInstance p_460469_, EntitySpawnReason p_457358_, @Nullable SpawnGroupData p_459783_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        p_459783_ = super.finalizeSpawn(p_456098_, p_460469_, p_457358_, p_459783_);
-        RandomSource randomsource = p_456098_.getRandom();
-        TropicalFish.Variant tropicalfish$variant;
-        if (p_459783_ instanceof TropicalFish.TropicalFishGroupData tropicalfish$tropicalfishgroupdata) {
-            tropicalfish$variant = tropicalfish$tropicalfishgroupdata.variant;
-        } else if (randomsource.nextFloat() < 0.9) {
-            tropicalfish$variant = Util.getRandom(COMMON_VARIANTS, randomsource);
-            p_459783_ = new TropicalFish.TropicalFishGroupData(this, tropicalfish$variant);
+        groupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
+        RandomSource random = level.getRandom();
+        TropicalFish.Variant variant;
+        if (groupData instanceof TropicalFish.TropicalFishGroupData tropicalFishGroupData) {
+            variant = tropicalFishGroupData.variant;
+        } else if (random.nextFloat() < 0.9) {
+            variant = Util.getRandom(COMMON_VARIANTS, random);
+            groupData = new TropicalFish.TropicalFishGroupData(this, variant);
         } else {
             this.isSchool = false;
-            TropicalFish.Pattern[] atropicalfish$pattern = TropicalFish.Pattern.values();
-            DyeColor[] adyecolor = DyeColor.values();
-            TropicalFish.Pattern tropicalfish$pattern = Util.getRandom(atropicalfish$pattern, randomsource);
-            DyeColor dyecolor = Util.getRandom(adyecolor, randomsource);
-            DyeColor dyecolor1 = Util.getRandom(adyecolor, randomsource);
-            tropicalfish$variant = new TropicalFish.Variant(tropicalfish$pattern, dyecolor, dyecolor1);
+            TropicalFish.Pattern[] patterns = TropicalFish.Pattern.values();
+            DyeColor[] colors = DyeColor.values();
+            TropicalFish.Pattern pattern = Util.getRandom(patterns, random);
+            DyeColor baseColor = Util.getRandom(colors, random);
+            DyeColor patternColor = Util.getRandom(colors, random);
+            variant = new TropicalFish.Variant(pattern, baseColor, patternColor);
         }
 
-        this.setPackedVariant(tropicalfish$variant.getPackedId());
-        return p_459783_;
+        this.setPackedVariant(variant.getPackedId());
+        return groupData;
     }
 
     public static boolean checkTropicalFishSpawnRules(
-        EntityType<TropicalFish> p_451021_, LevelAccessor p_456913_, EntitySpawnReason p_453461_, BlockPos p_453880_, RandomSource p_457133_
+        final EntityType<TropicalFish> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_456913_.getFluidState(p_453880_.below()).is(FluidTags.WATER)
-            && p_456913_.getBlockState(p_453880_.above()).is(Blocks.WATER)
-            && (p_456913_.getBiome(p_453880_).is(BiomeTags.ALLOWS_TROPICAL_FISH_SPAWNS_AT_ANY_HEIGHT) || WaterAnimal.checkSurfaceWaterAnimalSpawnRules(p_451021_, p_456913_, p_453461_, p_453880_, p_457133_));
+        return level.getFluidState(pos.below()).is(FluidTags.WATER)
+            && level.getBlockState(pos.above()).is(Blocks.WATER)
+            && (
+                level.getBiome(pos).is(BiomeTags.ALLOWS_TROPICAL_FISH_SPAWNS_AT_ANY_HEIGHT)
+                    || WaterAnimal.checkSurfaceWaterAnimalSpawnRules(type, level, spawnReason, pos, random)
+            );
     }
 
-    public static enum Base {
+    public enum Base {
         SMALL(0),
         LARGE(1);
 
-        final int id;
+        private final int id;
 
-        private Base(final int p_456023_) {
-            this.id = p_456023_;
+        Base(final int id) {
+            this.id = id;
         }
     }
 
-    public static enum Pattern implements StringRepresentable, TooltipProvider {
+    public enum Pattern implements StringRepresentable, TooltipProvider {
         KOB("kob", TropicalFish.Base.SMALL, 0),
         SUNSTREAK("sunstreak", TropicalFish.Base.SMALL, 1),
         SNOOPER("snooper", TropicalFish.Base.SMALL, 2),
@@ -297,15 +302,15 @@ public class TropicalFish extends AbstractSchoolingFish {
         private final TropicalFish.Base base;
         private final int packedId;
 
-        private Pattern(final String p_454122_, final TropicalFish.Base p_457367_, final int p_454659_) {
-            this.name = p_454122_;
-            this.base = p_457367_;
-            this.packedId = p_457367_.id | p_454659_ << 8;
+        Pattern(final String name, final TropicalFish.Base base, final int index) {
+            this.name = name;
+            this.base = base;
+            this.packedId = base.id | index << 8;
             this.displayName = Component.translatable("entity.minecraft.tropical_fish.type." + this.name);
         }
 
-        public static TropicalFish.Pattern byId(int p_457964_) {
-            return BY_ID.apply(p_457964_);
+        public static TropicalFish.Pattern byId(final int packedId) {
+            return BY_ID.apply(packedId);
         }
 
         public TropicalFish.Base base() {
@@ -326,40 +331,42 @@ public class TropicalFish extends AbstractSchoolingFish {
         }
 
         @Override
-        public void addToTooltip(Item.TooltipContext p_453168_, Consumer<Component> p_451414_, TooltipFlag p_455191_, DataComponentGetter p_451999_) {
-            DyeColor dyecolor = p_451999_.getOrDefault(DataComponents.TROPICAL_FISH_BASE_COLOR, TropicalFish.DEFAULT_VARIANT.baseColor());
-            DyeColor dyecolor1 = p_451999_.getOrDefault(DataComponents.TROPICAL_FISH_PATTERN_COLOR, TropicalFish.DEFAULT_VARIANT.patternColor());
-            ChatFormatting[] achatformatting = new ChatFormatting[]{ChatFormatting.ITALIC, ChatFormatting.GRAY};
-            int i = TropicalFish.COMMON_VARIANTS.indexOf(new TropicalFish.Variant(this, dyecolor, dyecolor1));
-            if (i != -1) {
-                p_451414_.accept(Component.translatable(TropicalFish.getPredefinedName(i)).withStyle(achatformatting));
+        public void addToTooltip(
+            final Item.TooltipContext context, final Consumer<Component> consumer, final TooltipFlag flag, final DataComponentGetter components
+        ) {
+            DyeColor baseColor = components.getOrDefault(DataComponents.TROPICAL_FISH_BASE_COLOR, TropicalFish.DEFAULT_VARIANT.baseColor());
+            DyeColor patternColor = components.getOrDefault(DataComponents.TROPICAL_FISH_PATTERN_COLOR, TropicalFish.DEFAULT_VARIANT.patternColor());
+            ChatFormatting[] styles = new ChatFormatting[]{ChatFormatting.ITALIC, ChatFormatting.GRAY};
+            int commonIndex = TropicalFish.COMMON_VARIANTS.indexOf(new TropicalFish.Variant(this, baseColor, patternColor));
+            if (commonIndex != -1) {
+                consumer.accept(Component.translatable(TropicalFish.getPredefinedName(commonIndex)).withStyle(styles));
             } else {
-                p_451414_.accept(this.displayName.plainCopy().withStyle(achatformatting));
-                MutableComponent mutablecomponent = Component.translatable("color.minecraft." + dyecolor.getName());
-                if (dyecolor != dyecolor1) {
-                    mutablecomponent.append(", ").append(Component.translatable("color.minecraft." + dyecolor1.getName()));
+                consumer.accept(this.displayName.plainCopy().withStyle(styles));
+                MutableComponent colorComponent = Component.translatable("color.minecraft." + baseColor.getName());
+                if (baseColor != patternColor) {
+                    colorComponent.append(", ").append(Component.translatable("color.minecraft." + patternColor.getName()));
                 }
 
-                mutablecomponent.withStyle(achatformatting);
-                p_451414_.accept(mutablecomponent);
+                colorComponent.withStyle(styles);
+                consumer.accept(colorComponent);
             }
         }
     }
 
-    static class TropicalFishGroupData extends AbstractSchoolingFish.SchoolSpawnGroupData {
-        final TropicalFish.Variant variant;
+    private static class TropicalFishGroupData extends AbstractSchoolingFish.SchoolSpawnGroupData {
+        private final TropicalFish.Variant variant;
 
-        TropicalFishGroupData(TropicalFish p_454387_, TropicalFish.Variant p_452358_) {
-            super(p_454387_);
-            this.variant = p_452358_;
+        private TropicalFishGroupData(final TropicalFish leader, final TropicalFish.Variant variant) {
+            super(leader);
+            this.variant = variant;
         }
     }
 
     public record Variant(TropicalFish.Pattern pattern, DyeColor baseColor, DyeColor patternColor) {
         public static final Codec<TropicalFish.Variant> CODEC = Codec.INT.xmap(TropicalFish.Variant::new, TropicalFish.Variant::getPackedId);
 
-        public Variant(int p_452699_) {
-            this(TropicalFish.getPattern(p_452699_), TropicalFish.getBaseColor(p_452699_), TropicalFish.getPatternColor(p_452699_));
+        public Variant(final int packedId) {
+            this(TropicalFish.getPattern(packedId), TropicalFish.getBaseColor(packedId), TropicalFish.getPatternColor(packedId));
         }
 
         public int getPackedId() {

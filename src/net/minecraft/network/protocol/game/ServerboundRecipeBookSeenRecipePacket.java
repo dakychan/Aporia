@@ -16,7 +16,7 @@ public record ServerboundRecipeBookSeenRecipePacket(RecipeDisplayId recipe) impl
         return GamePacketTypes.SERVERBOUND_RECIPE_BOOK_SEEN_RECIPE;
     }
 
-    public void handle(ServerGamePacketListener p_134389_) {
-        p_134389_.handleRecipeBookSeenRecipePacket(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleRecipeBookSeenRecipePacket(this);
     }
 }

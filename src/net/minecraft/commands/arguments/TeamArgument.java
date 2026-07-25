@@ -18,31 +18,33 @@ import net.minecraft.world.scores.Scoreboard;
 
 public class TeamArgument implements ArgumentType<String> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "123");
-    private static final DynamicCommandExceptionType ERROR_TEAM_NOT_FOUND = new DynamicCommandExceptionType(p_308388_ -> Component.translatableEscape("team.notFound", p_308388_));
+    private static final DynamicCommandExceptionType ERROR_TEAM_NOT_FOUND = new DynamicCommandExceptionType(
+        name -> Component.translatableEscape("team.notFound", name)
+    );
 
     public static TeamArgument team() {
         return new TeamArgument();
     }
 
-    public static PlayerTeam getTeam(CommandContext<CommandSourceStack> p_112092_, String p_112093_) throws CommandSyntaxException {
-        String s = p_112092_.getArgument(p_112093_, String.class);
-        Scoreboard scoreboard = p_112092_.getSource().getServer().getScoreboard();
-        PlayerTeam playerteam = scoreboard.getPlayerTeam(s);
-        if (playerteam == null) {
-            throw ERROR_TEAM_NOT_FOUND.create(s);
+    public static PlayerTeam getTeam(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        String id = context.getArgument(name, String.class);
+        Scoreboard scoreboard = context.getSource().getServer().getScoreboard();
+        PlayerTeam team = scoreboard.getPlayerTeam(id);
+        if (team == null) {
+            throw ERROR_TEAM_NOT_FOUND.create(id);
         } else {
-            return playerteam;
+            return team;
         }
     }
 
-    public String parse(StringReader p_112090_) throws CommandSyntaxException {
-        return p_112090_.readUnquotedString();
+    public String parse(final StringReader reader) throws CommandSyntaxException {
+        return reader.readUnquotedString();
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_112098_, SuggestionsBuilder p_112099_) {
-        return p_112098_.getSource() instanceof SharedSuggestionProvider
-            ? SharedSuggestionProvider.suggest(((SharedSuggestionProvider)p_112098_.getSource()).getAllTeams(), p_112099_)
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> contextBuilder, final SuggestionsBuilder builder) {
+        return contextBuilder.getSource() instanceof SharedSuggestionProvider
+            ? SharedSuggestionProvider.suggest(((SharedSuggestionProvider)contextBuilder.getSource()).getAllTeams(), builder)
             : Suggestions.empty();
     }
 

@@ -7,28 +7,28 @@ import it.unimi.dsi.fastutil.objects.ReferenceSet;
 public class PermissionSetUnion implements PermissionSet {
     private final ReferenceSet<PermissionSet> permissions = new ReferenceArraySet<>();
 
-    PermissionSetUnion(PermissionSet p_457083_, PermissionSet p_454255_) {
-        this.permissions.add(p_457083_);
-        this.permissions.add(p_454255_);
+    PermissionSetUnion(final PermissionSet first, final PermissionSet second) {
+        this.permissions.add(first);
+        this.permissions.add(second);
         this.ensureNoUnionsWithinUnions();
     }
 
-    private PermissionSetUnion(ReferenceSet<PermissionSet> p_455911_, PermissionSet p_453202_) {
-        this.permissions.addAll(p_455911_);
-        this.permissions.add(p_453202_);
+    private PermissionSetUnion(final ReferenceSet<PermissionSet> oldPermissions, final PermissionSet other) {
+        this.permissions.addAll(oldPermissions);
+        this.permissions.add(other);
         this.ensureNoUnionsWithinUnions();
     }
 
-    private PermissionSetUnion(ReferenceSet<PermissionSet> p_460982_, ReferenceSet<PermissionSet> p_460805_) {
-        this.permissions.addAll(p_460982_);
-        this.permissions.addAll(p_460805_);
+    private PermissionSetUnion(final ReferenceSet<PermissionSet> oldPermissions, final ReferenceSet<PermissionSet> other) {
+        this.permissions.addAll(oldPermissions);
+        this.permissions.addAll(other);
         this.ensureNoUnionsWithinUnions();
     }
 
     @Override
-    public boolean hasPermission(Permission p_453572_) {
-        for (PermissionSet permissionset : this.permissions) {
-            if (permissionset.hasPermission(p_453572_)) {
+    public boolean hasPermission(final Permission permission) {
+        for (PermissionSet set : this.permissions) {
+            if (set.hasPermission(permission)) {
                 return true;
             }
         }
@@ -37,10 +37,10 @@ public class PermissionSetUnion implements PermissionSet {
     }
 
     @Override
-    public PermissionSet union(PermissionSet p_460824_) {
-        return p_460824_ instanceof PermissionSetUnion permissionsetunion
-            ? new PermissionSetUnion(this.permissions, permissionsetunion.permissions)
-            : new PermissionSetUnion(this.permissions, p_460824_);
+    public PermissionSet union(final PermissionSet other) {
+        return other instanceof PermissionSetUnion otherUnion
+            ? new PermissionSetUnion(this.permissions, otherUnion.permissions)
+            : new PermissionSetUnion(this.permissions, other);
     }
 
     @VisibleForTesting
@@ -49,8 +49,8 @@ public class PermissionSetUnion implements PermissionSet {
     }
 
     private void ensureNoUnionsWithinUnions() {
-        for (PermissionSet permissionset : this.permissions) {
-            if (permissionset instanceof PermissionSetUnion) {
+        for (PermissionSet set : this.permissions) {
+            if (set instanceof PermissionSetUnion) {
                 throw new IllegalArgumentException("Cannot have PermissionSetUnion within another PermissionSetUnion");
             }
         }

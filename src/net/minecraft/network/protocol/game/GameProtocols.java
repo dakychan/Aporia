@@ -37,28 +37,29 @@ import net.minecraft.network.protocol.ping.PingPacketTypes;
 import net.minecraft.network.protocol.ping.ServerboundPingRequestPacket;
 
 public class GameProtocols {
-    public static final CodecModifier<RegistryFriendlyByteBuf, ServerboundSetCreativeModeSlotPacket, GameProtocols.Context> HAS_INFINITE_MATERIALS = (p_389938_, p_389939_) -> new StreamCodec<RegistryFriendlyByteBuf, ServerboundSetCreativeModeSlotPacket>(
+    public static final CodecModifier<RegistryFriendlyByteBuf, ServerboundSetCreativeModeSlotPacket, GameProtocols.Context> HAS_INFINITE_MATERIALS = (original, context) -> new StreamCodec<RegistryFriendlyByteBuf, ServerboundSetCreativeModeSlotPacket>(
         
     ) {
-        public ServerboundSetCreativeModeSlotPacket decode(RegistryFriendlyByteBuf p_392330_) {
-            if (!p_389939_.hasInfiniteMaterials()) {
+        public ServerboundSetCreativeModeSlotPacket decode(final RegistryFriendlyByteBuf input) {
+            if (!context.hasInfiniteMaterials()) {
                 throw new SkipPacketDecoderException("Not in creative mode");
             } else {
-                return (ServerboundSetCreativeModeSlotPacket)p_389938_.decode(p_392330_);
+                return (ServerboundSetCreativeModeSlotPacket)original.decode(input);
             }
         }
 
-        public void encode(RegistryFriendlyByteBuf p_392801_, ServerboundSetCreativeModeSlotPacket p_391657_) {
-            if (!p_389939_.hasInfiniteMaterials()) {
+        public void encode(final RegistryFriendlyByteBuf output, final ServerboundSetCreativeModeSlotPacket value) {
+            if (!context.hasInfiniteMaterials()) {
                 throw new SkipPacketEncoderException("Not in creative mode");
-            } else {
-                p_389938_.encode(p_392801_, p_391657_);
             }
+
+            original.encode(output, value);
         }
     };
     public static final UnboundProtocol<ServerGamePacketListener, RegistryFriendlyByteBuf, GameProtocols.Context> SERVERBOUND_TEMPLATE = ProtocolInfoBuilder.contextServerboundProtocol(
         ConnectionProtocol.PLAY,
-        p_405110_ -> p_405110_.addPacket(GamePacketTypes.SERVERBOUND_ACCEPT_TELEPORTATION, ServerboundAcceptTeleportationPacket.STREAM_CODEC)
+        builder -> builder.addPacket(GamePacketTypes.SERVERBOUND_ACCEPT_TELEPORTATION, ServerboundAcceptTeleportationPacket.STREAM_CODEC)
+            .addPacket(GamePacketTypes.SERVERBOUND_ATTACK, ServerboundAttackPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_BLOCK_ENTITY_TAG_QUERY, ServerboundBlockEntityTagQueryPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_BUNDLE_ITEM_SELECTED, ServerboundSelectBundleItemPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_CHANGE_DIFFICULTY, ServerboundChangeDifficultyPacket.STREAM_CODEC)
@@ -114,10 +115,12 @@ public class GameProtocols {
             .addPacket(GamePacketTypes.SERVERBOUND_SET_COMMAND_BLOCK, ServerboundSetCommandBlockPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SET_COMMAND_MINECART, ServerboundSetCommandMinecartPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SET_CREATIVE_MODE_SLOT, ServerboundSetCreativeModeSlotPacket.STREAM_CODEC, HAS_INFINITE_MATERIALS)
+            .addPacket(GamePacketTypes.SERVERBOUND_SET_GAME_RULE, ServerboundSetGameRulePacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SET_JIGSAW_BLOCK, ServerboundSetJigsawBlockPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SET_STRUCTURE_BLOCK, ServerboundSetStructureBlockPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SET_TEST_BLOCK, ServerboundSetTestBlockPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SIGN_UPDATE, ServerboundSignUpdatePacket.STREAM_CODEC)
+            .addPacket(GamePacketTypes.SERVERBOUND_SPECTATOR_ACTION, ServerboundSpectatorActionPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_SWING, ServerboundSwingPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_TELEPORT_TO_ENTITY, ServerboundTeleportToEntityPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.SERVERBOUND_TEST_INSTANCE_BLOCK_ACTION, ServerboundTestInstanceBlockActionPacket.STREAM_CODEC)
@@ -127,7 +130,7 @@ public class GameProtocols {
     );
     public static final SimpleUnboundProtocol<ClientGamePacketListener, RegistryFriendlyByteBuf> CLIENTBOUND_TEMPLATE = ProtocolInfoBuilder.clientboundProtocol(
         ConnectionProtocol.PLAY,
-        p_421255_ -> p_421255_.withBundlePacket(GamePacketTypes.CLIENTBOUND_BUNDLE, ClientboundBundlePacket::new, new ClientboundBundleDelimiterPacket())
+        builder -> builder.withBundlePacket(GamePacketTypes.CLIENTBOUND_BUNDLE, ClientboundBundlePacket::new, new ClientboundBundleDelimiterPacket())
             .addPacket(GamePacketTypes.CLIENTBOUND_ADD_ENTITY, ClientboundAddEntityPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_ANIMATE, ClientboundAnimatePacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_AWARD_STATS, ClientboundAwardStatsPacket.STREAM_CODEC)
@@ -166,6 +169,7 @@ public class GameProtocols {
             .addPacket(GamePacketTypes.CLIENTBOUND_EXPLODE, ClientboundExplodePacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_FORGET_LEVEL_CHUNK, ClientboundForgetLevelChunkPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_GAME_EVENT, ClientboundGameEventPacket.STREAM_CODEC)
+            .addPacket(GamePacketTypes.CLIENTBOUND_GAME_RULE_VALUES, ClientboundGameRuleValuesPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_GAME_TEST_HIGHLIGHT_POS, ClientboundGameTestHighlightPosPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_MOUNT_SCREEN_OPEN, ClientboundMountScreenOpenPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_HURT_ANIMATION, ClientboundHurtAnimationPacket.STREAM_CODEC)
@@ -176,6 +180,7 @@ public class GameProtocols {
             .addPacket(GamePacketTypes.CLIENTBOUND_LEVEL_PARTICLES, ClientboundLevelParticlesPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_LIGHT_UPDATE, ClientboundLightUpdatePacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_LOGIN, ClientboundLoginPacket.STREAM_CODEC)
+            .addPacket(GamePacketTypes.CLIENTBOUND_LOW_DISK_SPACE_WARNING, ClientboundLowDiskSpaceWarningPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_MAP_ITEM_DATA, ClientboundMapItemDataPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_MERCHANT_OFFERS, ClientboundMerchantOffersPacket.STREAM_CODEC)
             .addPacket(GamePacketTypes.CLIENTBOUND_MOVE_ENTITY_POS, ClientboundMoveEntityPacket.Pos.STREAM_CODEC)

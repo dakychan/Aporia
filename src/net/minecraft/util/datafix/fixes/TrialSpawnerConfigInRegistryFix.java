@@ -21,96 +21,93 @@ import org.slf4j.Logger;
 public class TrialSpawnerConfigInRegistryFix extends NamedEntityFix {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public TrialSpawnerConfigInRegistryFix(Schema p_369765_) {
-        super(p_369765_, false, "TrialSpawnerConfigInRegistryFix", References.BLOCK_ENTITY, "minecraft:trial_spawner");
+    public TrialSpawnerConfigInRegistryFix(final Schema outputSchema) {
+        super(outputSchema, false, "TrialSpawnerConfigInRegistryFix", References.BLOCK_ENTITY, "minecraft:trial_spawner");
     }
 
-    public Dynamic<?> fixTag(Dynamic<Tag> p_362102_) {
-        Optional<Dynamic<Tag>> optional = p_362102_.get("normal_config").result();
-        if (optional.isEmpty()) {
-            return p_362102_;
-        } else {
-            Optional<Dynamic<Tag>> optional1 = p_362102_.get("ominous_config").result();
-            if (optional1.isEmpty()) {
-                return p_362102_;
-            } else {
-                Identifier identifier = TrialSpawnerConfigInRegistryFix.VanillaTrialChambers.CONFIGS_TO_KEY.get(Pair.of(optional.get(), optional1.get()));
-                return identifier == null
-                    ? p_362102_
-                    : p_362102_.set("normal_config", p_362102_.createString(identifier.withSuffix("/normal").toString()))
-                        .set("ominous_config", p_362102_.createString(identifier.withSuffix("/ominous").toString()));
-            }
+    public Dynamic<?> fixTag(final Dynamic<Tag> input) {
+        Optional<Dynamic<Tag>> normalConfig = input.get("normal_config").result();
+        if (normalConfig.isEmpty()) {
+            return input;
         }
+
+        Optional<Dynamic<Tag>> ominousConfig = input.get("ominous_config").result();
+        if (ominousConfig.isEmpty()) {
+            return input;
+        }
+
+        Identifier registryLocation = TrialSpawnerConfigInRegistryFix.VanillaTrialChambers.CONFIGS_TO_KEY.get(Pair.of(normalConfig.get(), ominousConfig.get()));
+        return registryLocation == null
+            ? input
+            : input.set("normal_config", input.createString(registryLocation.withSuffix("/normal").toString()))
+                .set("ominous_config", input.createString(registryLocation.withSuffix("/ominous").toString()));
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_362424_) {
-        return p_362424_.update(DSL.remainderFinder(), p_361190_ -> {
-            DynamicOps<?> dynamicops = p_361190_.getOps();
-            Dynamic<?> dynamic = this.fixTag(p_361190_.convert(NbtOps.INSTANCE));
-            return dynamic.convert(dynamicops);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), input -> {
+            DynamicOps<?> inputType = input.getOps();
+            Dynamic<?> result = this.fixTag(input.convert(NbtOps.INSTANCE));
+            return result.convert(inputType);
         });
     }
 
-    static final class VanillaTrialChambers {
+    private static final class VanillaTrialChambers {
         public static final Map<Pair<Dynamic<Tag>, Dynamic<Tag>>, Identifier> CONFIGS_TO_KEY = new HashMap<>();
 
-        private VanillaTrialChambers() {
-        }
-
-        private static void register(Identifier p_453908_, String p_367097_, String p_370028_) {
+        private static void register(final Identifier location, final String normalNbt, final String ominousNbt) {
             try {
-                CompoundTag compoundtag = parse(p_367097_);
-                CompoundTag compoundtag1 = parse(p_370028_);
-                CompoundTag compoundtag2 = compoundtag.copy().merge(compoundtag1);
-                CompoundTag compoundtag3 = removeDefaults(compoundtag2.copy());
-                Dynamic<Tag> dynamic = asDynamic(compoundtag);
-                CONFIGS_TO_KEY.put(Pair.of(dynamic, asDynamic(compoundtag1)), p_453908_);
-                CONFIGS_TO_KEY.put(Pair.of(dynamic, asDynamic(compoundtag2)), p_453908_);
-                CONFIGS_TO_KEY.put(Pair.of(dynamic, asDynamic(compoundtag3)), p_453908_);
-            } catch (RuntimeException runtimeexception) {
-                throw new IllegalStateException("Failed to parse NBT for " + p_453908_, runtimeexception);
+                CompoundTag normalTag = parse(normalNbt);
+                CompoundTag ominousTag = parse(ominousNbt);
+                CompoundTag ominousMergedTag = normalTag.copy().merge(ominousTag);
+                CompoundTag ominousMergedTagDefaultsOmitted = removeDefaults(ominousMergedTag.copy());
+                Dynamic<Tag> dynamicNormal = asDynamic(normalTag);
+                CONFIGS_TO_KEY.put(Pair.of(dynamicNormal, asDynamic(ominousTag)), location);
+                CONFIGS_TO_KEY.put(Pair.of(dynamicNormal, asDynamic(ominousMergedTag)), location);
+                CONFIGS_TO_KEY.put(Pair.of(dynamicNormal, asDynamic(ominousMergedTagDefaultsOmitted)), location);
+            } catch (RuntimeException e) {
+                throw new IllegalStateException("Failed to parse NBT for " + location, e);
             }
         }
 
-        private static Dynamic<Tag> asDynamic(CompoundTag p_364176_) {
-            return new Dynamic<>(NbtOps.INSTANCE, p_364176_);
+        private static Dynamic<Tag> asDynamic(final CompoundTag normalTag) {
+            return new Dynamic<>(NbtOps.INSTANCE, normalTag);
         }
 
-        private static CompoundTag parse(String p_367124_) {
+        private static CompoundTag parse(final String nbt) {
             try {
-                return TagParser.parseCompoundFully(p_367124_);
-            } catch (CommandSyntaxException commandsyntaxexception) {
-                throw new IllegalArgumentException("Failed to parse Trial Spawner NBT config: " + p_367124_, commandsyntaxexception);
+                return TagParser.parseCompoundFully(nbt);
+            } catch (CommandSyntaxException e) {
+                throw new IllegalArgumentException("Failed to parse Trial Spawner NBT config: " + nbt, e);
             }
         }
 
-        private static CompoundTag removeDefaults(CompoundTag p_368568_) {
-            if (p_368568_.getIntOr("spawn_range", 0) == 4) {
-                p_368568_.remove("spawn_range");
+        private static CompoundTag removeDefaults(final CompoundTag tag) {
+            if (tag.getIntOr("spawn_range", 0) == 4) {
+                tag.remove("spawn_range");
             }
 
-            if (p_368568_.getFloatOr("total_mobs", 0.0F) == 6.0F) {
-                p_368568_.remove("total_mobs");
+            if (tag.getFloatOr("total_mobs", 0.0F) == 6.0F) {
+                tag.remove("total_mobs");
             }
 
-            if (p_368568_.getFloatOr("simultaneous_mobs", 0.0F) == 2.0F) {
-                p_368568_.remove("simultaneous_mobs");
+            if (tag.getFloatOr("simultaneous_mobs", 0.0F) == 2.0F) {
+                tag.remove("simultaneous_mobs");
             }
 
-            if (p_368568_.getFloatOr("total_mobs_added_per_player", 0.0F) == 2.0F) {
-                p_368568_.remove("total_mobs_added_per_player");
+            if (tag.getFloatOr("total_mobs_added_per_player", 0.0F) == 2.0F) {
+                tag.remove("total_mobs_added_per_player");
             }
 
-            if (p_368568_.getFloatOr("simultaneous_mobs_added_per_player", 0.0F) == 1.0F) {
-                p_368568_.remove("simultaneous_mobs_added_per_player");
+            if (tag.getFloatOr("simultaneous_mobs_added_per_player", 0.0F) == 1.0F) {
+                tag.remove("simultaneous_mobs_added_per_player");
             }
 
-            if (p_368568_.getIntOr("ticks_between_spawn", 0) == 40) {
-                p_368568_.remove("ticks_between_spawn");
+            if (tag.getIntOr("ticks_between_spawn", 0) == 40) {
+                tag.remove("ticks_between_spawn");
             }
 
-            return p_368568_;
+            return tag;
         }
 
         static {

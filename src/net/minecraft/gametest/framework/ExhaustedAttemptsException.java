@@ -1,18 +1,18 @@
 package net.minecraft.gametest.framework;
 
-class ExhaustedAttemptsException extends Throwable {
-    public ExhaustedAttemptsException(int p_177039_, int p_177040_, GameTestInfo p_177041_) {
+public class ExhaustedAttemptsException extends Throwable {
+    public ExhaustedAttemptsException(final int attempts, final int successes, final GameTestInfo testInfo) {
         super(
             "Not enough successes: "
-                + p_177040_
+                + successes
                 + " out of "
-                + p_177039_
+                + attempts
                 + " attempts. Required successes: "
-                + p_177041_.requiredSuccesses()
+                + testInfo.requiredSuccesses()
                 + ". max attempts: "
-                + p_177041_.maxAttempts()
+                + testInfo.maxAttempts()
                 + ".",
-            p_177041_.getError()
+            testInfo.getError()
         );
     }
 }

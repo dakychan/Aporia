@@ -1,10 +1,7 @@
 package net.minecraft.client.data.models.model;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public final class TextureSlot {
     public static final TextureSlot ALL = create("all");
     public static final TextureSlot TEXTURE = create("texture", ALL);
@@ -54,17 +51,17 @@ public final class TextureSlot {
     private final String id;
     private final @Nullable TextureSlot parent;
 
-    private static TextureSlot create(String p_375627_) {
-        return new TextureSlot(p_375627_, null);
+    private static TextureSlot create(final String id) {
+        return new TextureSlot(id, null);
     }
 
-    private static TextureSlot create(String p_375985_, TextureSlot p_377184_) {
-        return new TextureSlot(p_375985_, p_377184_);
+    private static TextureSlot create(final String id, final TextureSlot parent) {
+        return new TextureSlot(id, parent);
     }
 
-    private TextureSlot(String p_377477_, @Nullable TextureSlot p_377668_) {
-        this.id = p_377477_;
-        this.parent = p_377668_;
+    private TextureSlot(final String id, final @Nullable TextureSlot parent) {
+        this.id = id;
+        this.parent = parent;
     }
 
     public String getId() {

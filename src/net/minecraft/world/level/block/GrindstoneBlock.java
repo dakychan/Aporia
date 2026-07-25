@@ -11,7 +11,6 @@ import net.minecraft.stats.Stats;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleMenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.GrindstoneMenu;
@@ -38,73 +37,75 @@ public class GrindstoneBlock extends FaceAttachedHorizontalDirectionalBlock {
         return CODEC;
     }
 
-    protected GrindstoneBlock(BlockBehaviour.Properties p_53808_) {
-        super(p_53808_);
+    protected GrindstoneBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(FACE, AttachFace.WALL));
         this.shapes = this.makeShapes();
     }
 
     private Function<BlockState, VoxelShape> makeShapes() {
-        VoxelShape voxelshape = Shapes.or(Block.box(2.0, 6.0, 7.0, 4.0, 10.0, 16.0), Block.box(2.0, 5.0, 3.0, 4.0, 11.0, 9.0));
-        VoxelShape voxelshape1 = Shapes.rotate(voxelshape, OctahedralGroup.INVERT_X);
-        VoxelShape voxelshape2 = Shapes.or(Block.boxZ(8.0, 2.0, 14.0, 0.0, 12.0), voxelshape, voxelshape1);
-        Map<AttachFace, Map<Direction, VoxelShape>> map = Shapes.rotateAttachFace(voxelshape2);
-        return this.getShapeForEachState(p_390940_ -> map.get(p_390940_.getValue(FACE)).get(p_390940_.getValue(FACING)));
+        VoxelShape leftLegs = Shapes.or(Block.box(2.0, 6.0, 7.0, 4.0, 10.0, 16.0), Block.box(2.0, 5.0, 3.0, 4.0, 11.0, 9.0));
+        VoxelShape rightLegs = Shapes.rotate(leftLegs, OctahedralGroup.INVERT_X);
+        VoxelShape north = Shapes.or(Block.boxZ(8.0, 2.0, 14.0, 0.0, 12.0), leftLegs, rightLegs);
+        Map<AttachFace, Map<Direction, VoxelShape>> attachFace = Shapes.rotateAttachFace(north);
+        return this.getShapeForEachState(state -> attachFace.get(state.getValue(FACE)).get(state.getValue(FACING)));
     }
 
-    private VoxelShape getVoxelShape(BlockState p_53856_) {
-        return this.shapes.apply(p_53856_);
-    }
-
-    @Override
-    protected VoxelShape getCollisionShape(BlockState p_53851_, BlockGetter p_53852_, BlockPos p_53853_, CollisionContext p_53854_) {
-        return this.getVoxelShape(p_53851_);
+    private VoxelShape getVoxelShape(final BlockState state) {
+        return this.shapes.apply(state);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_53842_, BlockGetter p_53843_, BlockPos p_53844_, CollisionContext p_53845_) {
-        return this.getVoxelShape(p_53842_);
+    protected VoxelShape getCollisionShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.getVoxelShape(state);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_53828_, LevelReader p_53829_, BlockPos p_53830_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.getVoxelShape(state);
+    }
+
+    @Override
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
         return true;
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_53821_, Level p_53822_, BlockPos p_53823_, Player p_53824_, BlockHitResult p_53826_) {
-        if (!p_53822_.isClientSide()) {
-            p_53824_.openMenu(p_53821_.getMenuProvider(p_53822_, p_53823_));
-            p_53824_.awardStat(Stats.INTERACT_WITH_GRINDSTONE);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide()) {
+            player.openMenu(state.getMenuProvider(level, pos));
+            player.awardStat(Stats.INTERACT_WITH_GRINDSTONE);
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected MenuProvider getMenuProvider(BlockState p_53847_, Level p_53848_, BlockPos p_53849_) {
+    protected MenuProvider getMenuProvider(final BlockState state, final Level level, final BlockPos pos) {
         return new SimpleMenuProvider(
-            (p_53812_, p_53813_, p_53814_) -> new GrindstoneMenu(p_53812_, p_53813_, ContainerLevelAccess.create(p_53848_, p_53849_)), CONTAINER_TITLE
+            (containerId, inventory, player) -> new GrindstoneMenu(containerId, inventory, ContainerLevelAccess.create(level, pos)), CONTAINER_TITLE
         );
     }
 
     @Override
-    protected BlockState rotate(BlockState p_53835_, Rotation p_53836_) {
-        return p_53835_.setValue(FACING, p_53836_.rotate(p_53835_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_53832_, Mirror p_53833_) {
-        return p_53832_.rotate(p_53833_.getRotation(p_53832_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_53838_) {
-        p_53838_.add(FACING, FACE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, FACE);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_53816_, PathComputationType p_53819_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

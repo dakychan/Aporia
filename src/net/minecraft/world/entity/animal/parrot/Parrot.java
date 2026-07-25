@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import io.netty.buffer.ByteBuf;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.IntFunction;
@@ -41,6 +40,7 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.SpawnGroupData;
@@ -59,7 +59,6 @@ import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.FlyingAnimal;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -74,56 +73,56 @@ import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
-public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
+public class Parrot extends ShoulderRidingEntity {
     private static final EntityDataAccessor<Integer> DATA_VARIANT_ID = SynchedEntityData.defineId(Parrot.class, EntityDataSerializers.INT);
     private static final Predicate<Mob> NOT_PARROT_PREDICATE = new Predicate<Mob>() {
-        public boolean test(@Nullable Mob p_460699_) {
-            return p_460699_ != null && Parrot.MOB_SOUND_MAP.containsKey(p_460699_.getType());
+        public boolean test(final @Nullable Mob input) {
+            return input != null && Parrot.MOB_SOUND_MAP.containsKey(input.getType());
         }
     };
-    static final Map<EntityType<?>, SoundEvent> MOB_SOUND_MAP = Util.make(Maps.newHashMap(), p_454351_ -> {
-        p_454351_.put(EntityType.BLAZE, SoundEvents.PARROT_IMITATE_BLAZE);
-        p_454351_.put(EntityType.BOGGED, SoundEvents.PARROT_IMITATE_BOGGED);
-        p_454351_.put(EntityType.BREEZE, SoundEvents.PARROT_IMITATE_BREEZE);
-        p_454351_.put(EntityType.CAMEL_HUSK, SoundEvents.PARROT_IMITATE_CAMEL_HUSK);
-        p_454351_.put(EntityType.CAVE_SPIDER, SoundEvents.PARROT_IMITATE_SPIDER);
-        p_454351_.put(EntityType.CREAKING, SoundEvents.PARROT_IMITATE_CREAKING);
-        p_454351_.put(EntityType.CREEPER, SoundEvents.PARROT_IMITATE_CREEPER);
-        p_454351_.put(EntityType.DROWNED, SoundEvents.PARROT_IMITATE_DROWNED);
-        p_454351_.put(EntityType.ELDER_GUARDIAN, SoundEvents.PARROT_IMITATE_ELDER_GUARDIAN);
-        p_454351_.put(EntityType.ENDER_DRAGON, SoundEvents.PARROT_IMITATE_ENDER_DRAGON);
-        p_454351_.put(EntityType.ENDERMITE, SoundEvents.PARROT_IMITATE_ENDERMITE);
-        p_454351_.put(EntityType.EVOKER, SoundEvents.PARROT_IMITATE_EVOKER);
-        p_454351_.put(EntityType.GHAST, SoundEvents.PARROT_IMITATE_GHAST);
-        p_454351_.put(EntityType.HAPPY_GHAST, SoundEvents.EMPTY);
-        p_454351_.put(EntityType.GUARDIAN, SoundEvents.PARROT_IMITATE_GUARDIAN);
-        p_454351_.put(EntityType.HOGLIN, SoundEvents.PARROT_IMITATE_HOGLIN);
-        p_454351_.put(EntityType.HUSK, SoundEvents.PARROT_IMITATE_HUSK);
-        p_454351_.put(EntityType.ILLUSIONER, SoundEvents.PARROT_IMITATE_ILLUSIONER);
-        p_454351_.put(EntityType.MAGMA_CUBE, SoundEvents.PARROT_IMITATE_MAGMA_CUBE);
-        p_454351_.put(EntityType.PARCHED, SoundEvents.PARROT_IMITATE_PARCHED);
-        p_454351_.put(EntityType.PHANTOM, SoundEvents.PARROT_IMITATE_PHANTOM);
-        p_454351_.put(EntityType.PIGLIN, SoundEvents.PARROT_IMITATE_PIGLIN);
-        p_454351_.put(EntityType.PIGLIN_BRUTE, SoundEvents.PARROT_IMITATE_PIGLIN_BRUTE);
-        p_454351_.put(EntityType.PILLAGER, SoundEvents.PARROT_IMITATE_PILLAGER);
-        p_454351_.put(EntityType.RAVAGER, SoundEvents.PARROT_IMITATE_RAVAGER);
-        p_454351_.put(EntityType.SHULKER, SoundEvents.PARROT_IMITATE_SHULKER);
-        p_454351_.put(EntityType.SILVERFISH, SoundEvents.PARROT_IMITATE_SILVERFISH);
-        p_454351_.put(EntityType.SKELETON, SoundEvents.PARROT_IMITATE_SKELETON);
-        p_454351_.put(EntityType.SLIME, SoundEvents.PARROT_IMITATE_SLIME);
-        p_454351_.put(EntityType.SPIDER, SoundEvents.PARROT_IMITATE_SPIDER);
-        p_454351_.put(EntityType.STRAY, SoundEvents.PARROT_IMITATE_STRAY);
-        p_454351_.put(EntityType.VEX, SoundEvents.PARROT_IMITATE_VEX);
-        p_454351_.put(EntityType.VINDICATOR, SoundEvents.PARROT_IMITATE_VINDICATOR);
-        p_454351_.put(EntityType.WARDEN, SoundEvents.PARROT_IMITATE_WARDEN);
-        p_454351_.put(EntityType.WITCH, SoundEvents.PARROT_IMITATE_WITCH);
-        p_454351_.put(EntityType.WITHER, SoundEvents.PARROT_IMITATE_WITHER);
-        p_454351_.put(EntityType.WITHER_SKELETON, SoundEvents.PARROT_IMITATE_WITHER_SKELETON);
-        p_454351_.put(EntityType.ZOGLIN, SoundEvents.PARROT_IMITATE_ZOGLIN);
-        p_454351_.put(EntityType.ZOMBIE, SoundEvents.PARROT_IMITATE_ZOMBIE);
-        p_454351_.put(EntityType.ZOMBIE_HORSE, SoundEvents.PARROT_IMITATE_ZOMBIE_HORSE);
-        p_454351_.put(EntityType.ZOMBIE_NAUTILUS, SoundEvents.PARROT_IMITATE_ZOMBIE_NAUTILUS);
-        p_454351_.put(EntityType.ZOMBIE_VILLAGER, SoundEvents.PARROT_IMITATE_ZOMBIE_VILLAGER);
+    private static final Map<EntityType<?>, SoundEvent> MOB_SOUND_MAP = Util.make(Maps.newHashMap(), map -> {
+        map.put(EntityTypes.BLAZE, SoundEvents.PARROT_IMITATE_BLAZE);
+        map.put(EntityTypes.BOGGED, SoundEvents.PARROT_IMITATE_BOGGED);
+        map.put(EntityTypes.BREEZE, SoundEvents.PARROT_IMITATE_BREEZE);
+        map.put(EntityTypes.CAMEL_HUSK, SoundEvents.PARROT_IMITATE_CAMEL_HUSK);
+        map.put(EntityTypes.CAVE_SPIDER, SoundEvents.PARROT_IMITATE_SPIDER);
+        map.put(EntityTypes.CREAKING, SoundEvents.PARROT_IMITATE_CREAKING);
+        map.put(EntityTypes.CREEPER, SoundEvents.PARROT_IMITATE_CREEPER);
+        map.put(EntityTypes.DROWNED, SoundEvents.PARROT_IMITATE_DROWNED);
+        map.put(EntityTypes.ELDER_GUARDIAN, SoundEvents.PARROT_IMITATE_ELDER_GUARDIAN);
+        map.put(EntityTypes.ENDER_DRAGON, SoundEvents.PARROT_IMITATE_ENDER_DRAGON);
+        map.put(EntityTypes.ENDERMITE, SoundEvents.PARROT_IMITATE_ENDERMITE);
+        map.put(EntityTypes.EVOKER, SoundEvents.PARROT_IMITATE_EVOKER);
+        map.put(EntityTypes.GHAST, SoundEvents.PARROT_IMITATE_GHAST);
+        map.put(EntityTypes.HAPPY_GHAST, SoundEvents.EMPTY);
+        map.put(EntityTypes.GUARDIAN, SoundEvents.PARROT_IMITATE_GUARDIAN);
+        map.put(EntityTypes.HOGLIN, SoundEvents.PARROT_IMITATE_HOGLIN);
+        map.put(EntityTypes.HUSK, SoundEvents.PARROT_IMITATE_HUSK);
+        map.put(EntityTypes.ILLUSIONER, SoundEvents.PARROT_IMITATE_ILLUSIONER);
+        map.put(EntityTypes.MAGMA_CUBE, SoundEvents.PARROT_IMITATE_MAGMA_CUBE);
+        map.put(EntityTypes.PARCHED, SoundEvents.PARROT_IMITATE_PARCHED);
+        map.put(EntityTypes.PHANTOM, SoundEvents.PARROT_IMITATE_PHANTOM);
+        map.put(EntityTypes.PIGLIN, SoundEvents.PARROT_IMITATE_PIGLIN);
+        map.put(EntityTypes.PIGLIN_BRUTE, SoundEvents.PARROT_IMITATE_PIGLIN_BRUTE);
+        map.put(EntityTypes.PILLAGER, SoundEvents.PARROT_IMITATE_PILLAGER);
+        map.put(EntityTypes.RAVAGER, SoundEvents.PARROT_IMITATE_RAVAGER);
+        map.put(EntityTypes.SHULKER, SoundEvents.PARROT_IMITATE_SHULKER);
+        map.put(EntityTypes.SILVERFISH, SoundEvents.PARROT_IMITATE_SILVERFISH);
+        map.put(EntityTypes.SKELETON, SoundEvents.PARROT_IMITATE_SKELETON);
+        map.put(EntityTypes.SLIME, SoundEvents.PARROT_IMITATE_SLIME);
+        map.put(EntityTypes.SPIDER, SoundEvents.PARROT_IMITATE_SPIDER);
+        map.put(EntityTypes.STRAY, SoundEvents.PARROT_IMITATE_STRAY);
+        map.put(EntityTypes.VEX, SoundEvents.PARROT_IMITATE_VEX);
+        map.put(EntityTypes.VINDICATOR, SoundEvents.PARROT_IMITATE_VINDICATOR);
+        map.put(EntityTypes.WARDEN, SoundEvents.PARROT_IMITATE_WARDEN);
+        map.put(EntityTypes.WITCH, SoundEvents.PARROT_IMITATE_WITCH);
+        map.put(EntityTypes.WITHER, SoundEvents.PARROT_IMITATE_WITHER);
+        map.put(EntityTypes.WITHER_SKELETON, SoundEvents.PARROT_IMITATE_WITHER_SKELETON);
+        map.put(EntityTypes.ZOGLIN, SoundEvents.PARROT_IMITATE_ZOGLIN);
+        map.put(EntityTypes.ZOMBIE, SoundEvents.PARROT_IMITATE_ZOMBIE);
+        map.put(EntityTypes.ZOMBIE_HORSE, SoundEvents.PARROT_IMITATE_ZOMBIE_HORSE);
+        map.put(EntityTypes.ZOMBIE_NAUTILUS, SoundEvents.PARROT_IMITATE_ZOMBIE_NAUTILUS);
+        map.put(EntityTypes.ZOMBIE_VILLAGER, SoundEvents.PARROT_IMITATE_ZOMBIE_VILLAGER);
     });
     public float flap;
     public float flapSpeed;
@@ -134,28 +133,28 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     private boolean partyParrot;
     private @Nullable BlockPos jukebox;
 
-    public Parrot(EntityType<? extends Parrot> p_451378_, Level p_451488_) {
-        super(p_451378_, p_451488_);
-        this.moveControl = new FlyingMoveControl(this, 10, false);
-        this.setPathfindingMalus(PathType.DANGER_FIRE, -1.0F);
-        this.setPathfindingMalus(PathType.DAMAGE_FIRE, -1.0F);
+    public Parrot(final EntityType<? extends Parrot> type, final Level level) {
+        super(type, level);
+        this.moveControl = new FlyingMoveControl<>(this, 10, false);
+        this.setPathfindingMalus(PathType.FIRE_IN_NEIGHBOR, -1.0F);
+        this.setPathfindingMalus(PathType.FIRE, -1.0F);
         this.setPathfindingMalus(PathType.COCOA, -1.0F);
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_460554_, DifficultyInstance p_451085_, EntitySpawnReason p_459029_, @Nullable SpawnGroupData p_457071_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        this.setVariant(Util.getRandom(Parrot.Variant.values(), p_460554_.getRandom()));
-        if (p_457071_ == null) {
-            p_457071_ = new AgeableMob.AgeableMobGroupData(false);
+        this.setVariant(Util.getRandom(Parrot.Variant.values(), level.getRandom()));
+        if (groupData == null) {
+            groupData = new AgeableMob.AgeableMobGroupData(false);
         }
 
-        return super.finalizeSpawn(p_460554_, p_451085_, p_459029_, p_457071_);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
     @Override
-    public boolean isBaby() {
+    protected boolean canBeABaby() {
         return false;
     }
 
@@ -180,11 +179,11 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    protected PathNavigation createNavigation(Level p_460947_) {
-        FlyingPathNavigation flyingpathnavigation = new FlyingPathNavigation(this, p_460947_);
-        flyingpathnavigation.setCanOpenDoors(false);
-        flyingpathnavigation.setCanFloat(true);
-        return flyingpathnavigation;
+    protected PathNavigation createNavigation(final Level level) {
+        FlyingPathNavigation flyingPathNavigation = new FlyingPathNavigation(this, level);
+        flyingPathNavigation.setCanOpenDoors(false);
+        flyingPathNavigation.setCanFloat(true);
+        return flyingPathNavigation;
     }
 
     @Override
@@ -194,7 +193,7 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
             this.jukebox = null;
         }
 
-        if (this.level().random.nextInt(400) == 0) {
+        if (this.level().getRandom().nextInt(400) == 0) {
             imitateNearbyMobs(this.level(), this);
         }
 
@@ -203,9 +202,9 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    public void setRecordPlayingNearby(BlockPos p_459555_, boolean p_459763_) {
-        this.jukebox = p_459555_;
-        this.partyParrot = p_459763_;
+    public void setRecordPlayingNearby(final BlockPos jukebox, final boolean isPlaying) {
+        this.jukebox = jukebox;
+        this.partyParrot = isPlaying;
     }
 
     public boolean isPartyParrot() {
@@ -222,31 +221,23 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
         }
 
         this.flapping *= 0.9F;
-        Vec3 vec3 = this.getDeltaMovement();
-        if (!this.onGround() && vec3.y < 0.0) {
-            this.setDeltaMovement(vec3.multiply(1.0, 0.6, 1.0));
+        Vec3 movement = this.getDeltaMovement();
+        if (!this.onGround() && movement.y < 0.0) {
+            this.setDeltaMovement(movement.multiply(1.0, 0.6, 1.0));
         }
 
         this.flap = this.flap + this.flapping * 2.0F;
     }
 
-    public static boolean imitateNearbyMobs(Level p_450853_, Entity p_457969_) {
-        if (p_457969_.isAlive() && !p_457969_.isSilent() && p_450853_.random.nextInt(2) == 0) {
-            List<Mob> list = p_450853_.getEntitiesOfClass(Mob.class, p_457969_.getBoundingBox().inflate(20.0), NOT_PARROT_PREDICATE);
-            if (!list.isEmpty()) {
-                Mob mob = list.get(p_450853_.random.nextInt(list.size()));
+    public static boolean imitateNearbyMobs(final Level level, final Entity entity) {
+        RandomSource random = level.getRandom();
+        if (entity.isAlive() && !entity.isSilent() && random.nextInt(2) == 0) {
+            List<Mob> mobs = level.getEntitiesOfClass(Mob.class, entity.getBoundingBox().inflate(20.0), NOT_PARROT_PREDICATE);
+            if (!mobs.isEmpty()) {
+                Mob mob = mobs.get(random.nextInt(mobs.size()));
                 if (!mob.isSilent()) {
-                    SoundEvent soundevent = getImitatedSound(mob.getType());
-                    p_450853_.playSound(
-                        null,
-                        p_457969_.getX(),
-                        p_457969_.getY(),
-                        p_457969_.getZ(),
-                        soundevent,
-                        p_457969_.getSoundSource(),
-                        0.7F,
-                        getPitch(p_450853_.random)
-                    );
+                    SoundEvent soundEvent = getImitatedSound(mob.getType());
+                    level.playSound(null, entity.getX(), entity.getY(), entity.getZ(), soundEvent, entity.getSoundSource(), 0.7F, getPitch(random));
                     return true;
                 }
             }
@@ -258,10 +249,10 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_453025_, InteractionHand p_451080_) {
-        ItemStack itemstack = p_453025_.getItemInHand(p_451080_);
-        if (!this.isTame() && itemstack.is(ItemTags.PARROT_FOOD)) {
-            this.usePlayerItem(p_453025_, p_451080_, itemstack);
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (!this.isTame() && itemStack.is(ItemTags.PARROT_FOOD)) {
+            this.usePlayerItem(player, hand, itemStack);
             if (!this.isSilent()) {
                 this.level()
                     .playSound(
@@ -278,7 +269,7 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
 
             if (!this.level().isClientSide()) {
                 if (this.random.nextInt(10) == 0) {
-                    this.tame(p_453025_);
+                    this.tame(player);
                     this.level().broadcastEntityEvent(this, (byte)7);
                 } else {
                     this.level().broadcastEntityEvent(this, (byte)6);
@@ -286,21 +277,21 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
             }
 
             return InteractionResult.SUCCESS;
-        } else if (!itemstack.is(ItemTags.PARROT_POISONOUS_FOOD)) {
-            if (!this.isFlying() && this.isTame() && this.isOwnedBy(p_453025_)) {
+        } else if (!itemStack.is(ItemTags.PARROT_POISONOUS_FOOD)) {
+            if (!this.isFlying() && this.isTame() && this.isOwnedBy(player)) {
                 if (!this.level().isClientSide()) {
                     this.setOrderedToSit(!this.isOrderedToSit());
                 }
 
                 return InteractionResult.SUCCESS;
             } else {
-                return super.mobInteract(p_453025_, p_451080_);
+                return super.mobInteract(player, hand);
             }
         } else {
-            this.usePlayerItem(p_453025_, p_451080_, itemstack);
+            this.usePlayerItem(player, hand, itemStack);
             this.addEffect(new MobEffectInstance(MobEffects.POISON, 900));
-            if (p_453025_.isCreative() || !this.isInvulnerable()) {
-                this.hurt(this.damageSources().playerAttack(p_453025_), Float.MAX_VALUE);
+            if (player.isCreative() || !this.isInvulnerable()) {
+                this.hurt(this.damageSources().playerAttack(player), Float.MAX_VALUE);
             }
 
             return InteractionResult.SUCCESS;
@@ -308,50 +299,50 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    public boolean isFood(ItemStack p_456951_) {
+    public boolean isFood(final ItemStack itemStack) {
         return false;
     }
 
     public static boolean checkParrotSpawnRules(
-        EntityType<Parrot> p_450702_, LevelAccessor p_458978_, EntitySpawnReason p_456137_, BlockPos p_460604_, RandomSource p_454376_
+        final EntityType<Parrot> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_458978_.getBlockState(p_460604_.below()).is(BlockTags.PARROTS_SPAWNABLE_ON) && isBrightEnoughToSpawn(p_458978_, p_460604_);
+        return level.getBlockState(pos.below()).is(BlockTags.PARROTS_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 
     @Override
-    protected void checkFallDamage(double p_452139_, boolean p_450373_, BlockState p_451743_, BlockPos p_455918_) {
+    protected void checkFallDamage(final double ya, final boolean onGround, final BlockState onState, final BlockPos pos) {
     }
 
     @Override
-    public boolean canMate(Animal p_454134_) {
+    public boolean canMate(final Animal partner) {
         return false;
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_456081_, AgeableMob p_454929_) {
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
         return null;
     }
 
     @Override
     public @Nullable SoundEvent getAmbientSound() {
-        return getAmbient(this.level(), this.level().random);
+        return getAmbient(this.level(), this.level().getRandom());
     }
 
-    public static SoundEvent getAmbient(Level p_455368_, RandomSource p_454414_) {
-        if (p_455368_.getDifficulty() != Difficulty.PEACEFUL && p_454414_.nextInt(1000) == 0) {
-            List<EntityType<?>> list = Lists.newArrayList(MOB_SOUND_MAP.keySet());
-            return getImitatedSound(list.get(p_454414_.nextInt(list.size())));
+    public static SoundEvent getAmbient(final Level level, final RandomSource random) {
+        if (level.getDifficulty() != Difficulty.PEACEFUL && random.nextInt(1000) == 0) {
+            List<EntityType<?>> keys = Lists.newArrayList(MOB_SOUND_MAP.keySet());
+            return getImitatedSound(keys.get(random.nextInt(keys.size())));
         } else {
             return SoundEvents.PARROT_AMBIENT;
         }
     }
 
-    private static SoundEvent getImitatedSound(EntityType<?> p_455092_) {
-        return MOB_SOUND_MAP.getOrDefault(p_455092_, SoundEvents.PARROT_AMBIENT);
+    private static SoundEvent getImitatedSound(final EntityType<?> id) {
+        return MOB_SOUND_MAP.getOrDefault(id, SoundEvents.PARROT_AMBIENT);
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_460052_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.PARROT_HURT;
     }
 
@@ -361,7 +352,7 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_458329_, BlockState p_453186_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.PARROT_STEP, 0.15F, 1.0F);
     }
 
@@ -381,8 +372,8 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
         return getPitch(this.random);
     }
 
-    public static float getPitch(RandomSource p_457503_) {
-        return (p_457503_.nextFloat() - p_457503_.nextFloat()) * 0.2F + 1.0F;
+    public static float getPitch(final RandomSource random) {
+        return (random.nextFloat() - random.nextFloat()) * 0.2F + 1.0F;
     }
 
     @Override
@@ -396,72 +387,76 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
     }
 
     @Override
-    protected void doPush(Entity p_457543_) {
-        if (!(p_457543_ instanceof Player)) {
-            super.doPush(p_457543_);
+    protected void doPush(final Entity entity) {
+        if (!(entity instanceof Player)) {
+            super.doPush(entity);
         }
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_451725_, DamageSource p_451934_, float p_458835_) {
-        if (this.isInvulnerableTo(p_451725_, p_451934_)) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
+        if (this.isInvulnerableTo(level, source)) {
             return false;
-        } else {
-            this.setOrderedToSit(false);
-            return super.hurtServer(p_451725_, p_451934_, p_458835_);
         }
+
+        this.setOrderedToSit(false);
+        return super.hurtServer(level, source, damage);
     }
 
     public Parrot.Variant getVariant() {
         return Parrot.Variant.byId(this.entityData.get(DATA_VARIANT_ID));
     }
 
-    private void setVariant(Parrot.Variant p_453188_) {
-        this.entityData.set(DATA_VARIANT_ID, p_453188_.id);
+    private void setVariant(final Parrot.Variant variant) {
+        this.entityData.set(DATA_VARIANT_ID, variant.id);
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_458479_) {
-        return p_458479_ == DataComponents.PARROT_VARIANT ? castComponentValue((DataComponentType<T>)p_458479_, this.getVariant()) : super.get(p_458479_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.PARROT_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_450233_) {
-        this.applyImplicitComponentIfPresent(p_450233_, DataComponents.PARROT_VARIANT);
-        super.applyImplicitComponents(p_450233_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.PARROT_VARIANT);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_451573_, T p_452525_) {
-        if (p_451573_ == DataComponents.PARROT_VARIANT) {
-            this.setVariant(castComponentValue(DataComponents.PARROT_VARIANT, p_452525_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.PARROT_VARIANT) {
+            this.setVariant(castComponentValue(DataComponents.PARROT_VARIANT, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_451573_, p_452525_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_450905_) {
-        super.defineSynchedData(p_450905_);
-        p_450905_.define(DATA_VARIANT_ID, Parrot.Variant.DEFAULT.id);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_VARIANT_ID, Parrot.Variant.DEFAULT.id);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_458730_) {
-        super.addAdditionalSaveData(p_458730_);
-        p_458730_.store("Variant", Parrot.Variant.LEGACY_CODEC, this.getVariant());
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("Variant", Parrot.Variant.LEGACY_CODEC, this.getVariant());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_458363_) {
-        super.readAdditionalSaveData(p_458363_);
-        this.setVariant(p_458363_.read("Variant", Parrot.Variant.LEGACY_CODEC).orElse(Parrot.Variant.DEFAULT));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setVariant(input.read("Variant", Parrot.Variant.LEGACY_CODEC).orElse(Parrot.Variant.DEFAULT));
     }
 
-    @Override
     public boolean isFlying() {
         return !this.onGround();
+    }
+
+    @Override
+    protected boolean omnidirectionalAirMover() {
+        return true;
     }
 
     @Override
@@ -474,31 +469,31 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
         return new Vec3(0.0, 0.5F * this.getEyeHeight(), this.getBbWidth() * 0.4F);
     }
 
-    static class ParrotWanderGoal extends WaterAvoidingRandomFlyingGoal {
-        public ParrotWanderGoal(PathfinderMob p_455655_, double p_456832_) {
-            super(p_455655_, p_456832_);
+    private static class ParrotWanderGoal extends WaterAvoidingRandomFlyingGoal {
+        public ParrotWanderGoal(final PathfinderMob mob, final double speedModifier) {
+            super(mob, speedModifier);
         }
 
         @Override
         protected @Nullable Vec3 getPosition() {
-            Vec3 vec3 = null;
+            Vec3 pos = null;
             if (this.mob.isInWater()) {
-                vec3 = LandRandomPos.getPos(this.mob, 15, 15);
+                pos = LandRandomPos.getPos(this.mob, 15, 15);
             }
 
             if (this.mob.getRandom().nextFloat() >= this.probability) {
-                vec3 = this.getTreePos();
+                pos = this.getTreePos();
             }
 
-            return vec3 == null ? super.getPosition() : vec3;
+            return pos == null ? super.getPosition() : pos;
         }
 
         private @Nullable Vec3 getTreePos() {
-            BlockPos blockpos = this.mob.blockPosition();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
-            BlockPos.MutableBlockPos blockpos$mutableblockpos1 = new BlockPos.MutableBlockPos();
+            BlockPos mobPos = this.mob.blockPosition();
+            BlockPos.MutableBlockPos abovePos = new BlockPos.MutableBlockPos();
+            BlockPos.MutableBlockPos belowPos = new BlockPos.MutableBlockPos();
 
-            for (BlockPos blockpos1 : BlockPos.betweenClosed(
+            for (BlockPos pos : BlockPos.betweenClosed(
                 Mth.floor(this.mob.getX() - 3.0),
                 Mth.floor(this.mob.getY() - 6.0),
                 Mth.floor(this.mob.getZ() - 3.0),
@@ -506,13 +501,11 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
                 Mth.floor(this.mob.getY() + 6.0),
                 Mth.floor(this.mob.getZ() + 3.0)
             )) {
-                if (!blockpos.equals(blockpos1)) {
-                    BlockState blockstate = this.mob.level().getBlockState(blockpos$mutableblockpos1.setWithOffset(blockpos1, Direction.DOWN));
-                    boolean flag = blockstate.getBlock() instanceof LeavesBlock || blockstate.is(BlockTags.LOGS);
-                    if (flag
-                        && this.mob.level().isEmptyBlock(blockpos1)
-                        && this.mob.level().isEmptyBlock(blockpos$mutableblockpos.setWithOffset(blockpos1, Direction.UP))) {
-                        return Vec3.atBottomCenterOf(blockpos1);
+                if (!mobPos.equals(pos)) {
+                    BlockState state = this.mob.level().getBlockState(belowPos.setWithOffset(pos, Direction.DOWN));
+                    boolean canSitOn = state.getBlock() instanceof LeavesBlock || state.is(BlockTags.LOGS);
+                    if (canSitOn && this.mob.level().isEmptyBlock(pos) && this.mob.level().isEmptyBlock(abovePos.setWithOffset(pos, Direction.UP))) {
+                        return Vec3.atBottomCenterOf(pos);
                     }
                 }
             }
@@ -521,7 +514,7 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
         }
     }
 
-    public static enum Variant implements StringRepresentable {
+    public enum Variant implements StringRepresentable {
         RED_BLUE(0, "red_blue"),
         BLUE(1, "blue"),
         GREEN(2, "green"),
@@ -534,20 +527,20 @@ public class Parrot extends ShoulderRidingEntity implements FlyingAnimal {
         @Deprecated
         public static final Codec<Parrot.Variant> LEGACY_CODEC = Codec.INT.xmap(BY_ID::apply, Parrot.Variant::getId);
         public static final StreamCodec<ByteBuf, Parrot.Variant> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, Parrot.Variant::getId);
-        final int id;
+        private final int id;
         private final String name;
 
-        private Variant(final int p_458289_, final String p_453415_) {
-            this.id = p_458289_;
-            this.name = p_453415_;
+        Variant(final int id, final String name) {
+            this.id = id;
+            this.name = name;
         }
 
         public int getId() {
             return this.id;
         }
 
-        public static Parrot.Variant byId(int p_456311_) {
-            return BY_ID.apply(p_456311_);
+        public static Parrot.Variant byId(final int id) {
+            return BY_ID.apply(id);
         }
 
         @Override

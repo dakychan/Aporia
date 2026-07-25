@@ -8,10 +8,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class EnchantmentNames {
     private static final FontDescription ALT_FONT = new FontDescription.Resource(Identifier.withDefaultNamespace("alt"));
     private static final Style ROOT_STYLE = Style.EMPTY.withFont(ALT_FONT);
@@ -89,22 +86,22 @@ public class EnchantmentNames {
         return INSTANCE;
     }
 
-    public FormattedText getRandomName(Font p_98738_, int p_98739_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        int i = this.random.nextInt(2) + 3;
+    public FormattedText getRandomName(final Font font, final int maxWidth) {
+        StringBuilder result = new StringBuilder();
+        int wordCount = this.random.nextInt(2) + 3;
 
-        for (int j = 0; j < i; j++) {
-            if (j != 0) {
-                stringbuilder.append(" ");
+        for (int i = 0; i < wordCount; i++) {
+            if (i != 0) {
+                result.append(" ");
             }
 
-            stringbuilder.append(Util.getRandom(this.words, this.random));
+            result.append(Util.getRandom(this.words, this.random));
         }
 
-        return p_98738_.getSplitter().headByWidth(Component.literal(stringbuilder.toString()).withStyle(ROOT_STYLE), p_98739_, Style.EMPTY);
+        return font.getSplitter().headByWidth(Component.literal(result.toString()).withStyle(ROOT_STYLE), maxWidth, Style.EMPTY);
     }
 
-    public void initSeed(long p_98736_) {
-        this.random.setSeed(p_98736_);
+    public void initSeed(final long seed) {
+        this.random.setSeed(seed);
     }
 }

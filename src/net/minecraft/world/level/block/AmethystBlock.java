@@ -18,15 +18,15 @@ public class AmethystBlock extends Block {
         return CODEC;
     }
 
-    public AmethystBlock(BlockBehaviour.Properties p_151999_) {
-        super(p_151999_);
+    public AmethystBlock(final BlockBehaviour.Properties props) {
+        super(props);
     }
 
     @Override
-    protected void onProjectileHit(Level p_152001_, BlockState p_152002_, BlockHitResult p_152003_, Projectile p_152004_) {
-        if (!p_152001_.isClientSide()) {
-            BlockPos blockpos = p_152003_.getBlockPos();
-            p_152001_.playSound(null, blockpos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 0.5F + p_152001_.random.nextFloat() * 1.2F);
+    protected void onProjectileHit(final Level level, final BlockState state, final BlockHitResult hitResult, final Projectile projectile) {
+        if (!level.isClientSide()) {
+            BlockPos hitPos = hitResult.getBlockPos();
+            level.playSound(null, hitPos, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.BLOCKS, 1.0F, 0.5F + level.getRandom().nextFloat() * 1.2F);
         }
     }
 }

@@ -14,11 +14,8 @@ import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class KeyMapping implements Comparable<KeyMapping> {
     private static final Map<String, KeyMapping> ALL = Maps.newHashMap();
     private static final Map<InputConstants.Key, List<KeyMapping>> MAP = Maps.newHashMap();
@@ -30,19 +27,19 @@ public class KeyMapping implements Comparable<KeyMapping> {
     private int clickCount;
     private final int order;
 
-    public static void click(InputConstants.Key p_90836_) {
-        forAllKeyMappings(p_90836_, p_420622_ -> p_420622_.clickCount++);
+    public static void click(final InputConstants.Key key) {
+        forAllKeyMappings(key, keyMapping -> keyMapping.clickCount++);
     }
 
-    public static void set(InputConstants.Key p_90838_, boolean p_90839_) {
-        forAllKeyMappings(p_90838_, p_420621_ -> p_420621_.setDown(p_90839_));
+    public static void set(final InputConstants.Key key, final boolean state) {
+        forAllKeyMappings(key, keyMapping -> keyMapping.setDown(state));
     }
 
-    private static void forAllKeyMappings(InputConstants.Key p_424096_, Consumer<KeyMapping> p_427756_) {
-        List<KeyMapping> list = MAP.get(p_424096_);
-        if (list != null && !list.isEmpty()) {
-            for (KeyMapping keymapping : list) {
-                p_427756_.accept(keymapping);
+    private static void forAllKeyMappings(final InputConstants.Key key, final Consumer<KeyMapping> operation) {
+        List<KeyMapping> keyMappings = MAP.get(key);
+        if (keyMappings != null && !keyMappings.isEmpty()) {
+            for (KeyMapping keyMapping : keyMappings) {
+                operation.accept(keyMapping);
             }
         }
     }
@@ -50,31 +47,31 @@ public class KeyMapping implements Comparable<KeyMapping> {
     public static void setAll() {
         Window window = Minecraft.getInstance().getWindow();
 
-        for (KeyMapping keymapping : ALL.values()) {
-            if (keymapping.shouldSetOnIngameFocus()) {
-                keymapping.setDown(InputConstants.isKeyDown(window, keymapping.key.getValue()));
+        for (KeyMapping keyMapping : ALL.values()) {
+            if (keyMapping.shouldSetOnIngameFocus()) {
+                keyMapping.setDown(InputConstants.isKeyDown(window, keyMapping.key.getValue()));
             }
         }
     }
 
     public static void releaseAll() {
-        for (KeyMapping keymapping : ALL.values()) {
-            keymapping.release();
+        for (KeyMapping keyMapping : ALL.values()) {
+            keyMapping.release();
         }
     }
 
     public static void restoreToggleStatesOnScreenClosed() {
-        for (KeyMapping keymapping : ALL.values()) {
-            if (keymapping instanceof ToggleKeyMapping togglekeymapping && togglekeymapping.shouldRestoreStateOnScreenClosed()) {
-                togglekeymapping.setDown(true);
+        for (KeyMapping keyMapping : ALL.values()) {
+            if (keyMapping instanceof ToggleKeyMapping toggleKeyMapping && toggleKeyMapping.shouldRestoreStateOnScreenClosed()) {
+                toggleKeyMapping.setDown(true);
             }
         }
     }
 
     public static void resetToggleKeys() {
-        for (KeyMapping keymapping : ALL.values()) {
-            if (keymapping instanceof ToggleKeyMapping togglekeymapping) {
-                togglekeymapping.reset();
+        for (KeyMapping keyMapping : ALL.values()) {
+            if (keyMapping instanceof ToggleKeyMapping toggleKeyMapping) {
+                toggleKeyMapping.reset();
             }
         }
     }
@@ -82,26 +79,26 @@ public class KeyMapping implements Comparable<KeyMapping> {
     public static void resetMapping() {
         MAP.clear();
 
-        for (KeyMapping keymapping : ALL.values()) {
-            keymapping.registerMapping(keymapping.key);
+        for (KeyMapping keyMapping : ALL.values()) {
+            keyMapping.registerMapping(keyMapping.key);
         }
     }
 
-    public KeyMapping(String p_90821_, int p_90822_, KeyMapping.Category p_426799_) {
-        this(p_90821_, InputConstants.Type.KEYSYM, p_90822_, p_426799_);
+    public KeyMapping(final String name, final int keysym, final KeyMapping.Category category) {
+        this(name, InputConstants.Type.KEYSYM, keysym, category);
     }
 
-    public KeyMapping(String p_90825_, InputConstants.Type p_90826_, int p_90827_, KeyMapping.Category p_427928_) {
-        this(p_90825_, p_90826_, p_90827_, p_427928_, 0);
+    public KeyMapping(final String name, final InputConstants.Type type, final int value, final KeyMapping.Category category) {
+        this(name, type, value, category, 0);
     }
 
-    public KeyMapping(String p_455154_, InputConstants.Type p_460964_, int p_457112_, KeyMapping.Category p_455367_, int p_460901_) {
-        this.name = p_455154_;
-        this.key = p_460964_.getOrCreate(p_457112_);
+    public KeyMapping(final String name, final InputConstants.Type type, final int value, final KeyMapping.Category category, final int order) {
+        this.name = name;
+        this.key = type.getOrCreate(value);
         this.defaultKey = this.key;
-        this.category = p_455367_;
-        this.order = p_460901_;
-        ALL.put(p_455154_, this);
+        this.category = category;
+        this.order = order;
+        ALL.put(name, this);
         this.registerMapping(this.key);
     }
 
@@ -116,10 +113,10 @@ public class KeyMapping implements Comparable<KeyMapping> {
     public boolean consumeClick() {
         if (this.clickCount == 0) {
             return false;
-        } else {
-            this.clickCount--;
-            return true;
         }
+
+        this.clickCount--;
+        return true;
     }
 
     protected void release() {
@@ -139,41 +136,43 @@ public class KeyMapping implements Comparable<KeyMapping> {
         return this.defaultKey;
     }
 
-    public void setKey(InputConstants.Key p_90849_) {
-        this.key = p_90849_;
+    public void setKey(final InputConstants.Key key) {
+        this.key = key;
     }
 
-    public int compareTo(KeyMapping p_90841_) {
-        if (this.category == p_90841_.category) {
-            return this.order == p_90841_.order
-                ? I18n.get(this.name).compareTo(I18n.get(p_90841_.name))
-                : Integer.compare(this.order, p_90841_.order);
+    public int compareTo(final KeyMapping o) {
+        if (this.category == o.category) {
+            return this.order == o.order ? I18n.get(this.name).compareTo(I18n.get(o.name)) : Integer.compare(this.order, o.order);
         } else {
-            return Integer.compare(KeyMapping.Category.SORT_ORDER.indexOf(this.category), KeyMapping.Category.SORT_ORDER.indexOf(p_90841_.category));
+            return Integer.compare(KeyMapping.Category.SORT_ORDER.indexOf(this.category), KeyMapping.Category.SORT_ORDER.indexOf(o.category));
         }
     }
 
-    public static Supplier<Component> createNameSupplier(String p_90843_) {
-        KeyMapping keymapping = ALL.get(p_90843_);
-        return keymapping == null ? () -> Component.translatable(p_90843_) : keymapping::getTranslatedKeyMessage;
+    public static Supplier<Component> createNameSupplier(final String key) {
+        KeyMapping map = ALL.get(key);
+        return map == null ? () -> Component.translatable(key) : map::getTranslatedKeyMessage;
     }
 
-    public boolean same(KeyMapping p_90851_) {
-        return this.key.equals(p_90851_.key);
+    public boolean same(final KeyMapping that) {
+        return this.key.equals(that.key);
     }
 
     public boolean isUnbound() {
         return this.key.equals(InputConstants.UNKNOWN);
     }
 
-    public boolean matches(KeyEvent p_425821_) {
-        return p_425821_.key() == InputConstants.UNKNOWN.getValue()
-            ? this.key.getType() == InputConstants.Type.SCANCODE && this.key.getValue() == p_425821_.scancode()
-            : this.key.getType() == InputConstants.Type.KEYSYM && this.key.getValue() == p_425821_.key();
+    public boolean matches(final KeyEvent event) {
+        return event.key() == InputConstants.UNKNOWN.getValue()
+            ? this.key.getType() == InputConstants.Type.SCANCODE && this.key.getValue() == event.scancode()
+            : this.key.getType() == InputConstants.Type.KEYSYM && this.key.getValue() == event.key();
     }
 
-    public boolean matchesMouse(MouseButtonEvent p_424724_) {
-        return this.key.getType() == InputConstants.Type.MOUSE && this.key.getValue() == p_424724_.button();
+    public boolean matchesMouse(final MouseButtonEvent event) {
+        return this.key.getType() == InputConstants.Type.MOUSE && this.key.getValue() == event.button();
+    }
+
+    public boolean matches(final InputConstants.Key key) {
+        return this.key.equals(key);
     }
 
     public Component getTranslatedKeyMessage() {
@@ -188,21 +187,20 @@ public class KeyMapping implements Comparable<KeyMapping> {
         return this.key.getName();
     }
 
-    public void setDown(boolean p_90846_) {
-        this.isDown = p_90846_;
+    public void setDown(final boolean down) {
+        this.isDown = down;
     }
 
-    private void registerMapping(InputConstants.Key p_423386_) {
-        MAP.computeIfAbsent(p_423386_, p_420623_ -> new ArrayList<>()).add(this);
+    private void registerMapping(final InputConstants.Key key) {
+        MAP.computeIfAbsent(key, k -> new ArrayList<>()).add(this);
     }
 
-    public static @Nullable KeyMapping get(String p_378660_) {
-        return ALL.get(p_378660_);
+    public static @Nullable KeyMapping get(final String name) {
+        return ALL.get(name);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Category(Identifier id) {
-        static final List<KeyMapping.Category> SORT_ORDER = new ArrayList<>();
+        public record Category(Identifier id) {
+        private static final List<KeyMapping.Category> SORT_ORDER = new ArrayList<>();
         public static final KeyMapping.Category MOVEMENT = register("movement");
         public static final KeyMapping.Category MISC = register("misc");
         public static final KeyMapping.Category MULTIPLAYER = register("multiplayer");
@@ -212,18 +210,18 @@ public class KeyMapping implements Comparable<KeyMapping> {
         public static final KeyMapping.Category SPECTATOR = register("spectator");
         public static final KeyMapping.Category DEBUG = register("debug");
 
-        private static KeyMapping.Category register(String p_426561_) {
-            return register(Identifier.withDefaultNamespace(p_426561_));
+        private static KeyMapping.Category register(final String name) {
+            return register(Identifier.withDefaultNamespace(name));
         }
 
-        public static KeyMapping.Category register(Identifier p_451176_) {
-            KeyMapping.Category keymapping$category = new KeyMapping.Category(p_451176_);
-            if (SORT_ORDER.contains(keymapping$category)) {
-                throw new IllegalArgumentException(String.format(Locale.ROOT, "Category '%s' is already registered.", p_451176_));
-            } else {
-                SORT_ORDER.add(keymapping$category);
-                return keymapping$category;
+        public static KeyMapping.Category register(final Identifier id) {
+            KeyMapping.Category category = new KeyMapping.Category(id);
+            if (SORT_ORDER.contains(category)) {
+                throw new IllegalArgumentException(String.format(Locale.ROOT, "Category '%s' is already registered.", id));
             }
+
+            SORT_ORDER.add(category);
+            return category;
         }
 
         public Component label() {

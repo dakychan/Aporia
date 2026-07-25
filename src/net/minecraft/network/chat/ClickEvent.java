@@ -5,7 +5,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.io.File;
 import java.net.URI;
 import java.nio.file.Path;
@@ -18,11 +17,11 @@ import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.StringRepresentable;
 
 public interface ClickEvent {
-    Codec<ClickEvent> CODEC = ClickEvent.Action.CODEC.dispatch("action", ClickEvent::action, p_389908_ -> p_389908_.codec);
+    Codec<ClickEvent> CODEC = ClickEvent.Action.CODEC.dispatch("action", ClickEvent::action, action -> action.codec);
 
     ClickEvent.Action action();
 
-    public static enum Action implements StringRepresentable {
+    enum Action implements StringRepresentable {
         OPEN_URL("open_url", true, ClickEvent.OpenUrl.CODEC),
         OPEN_FILE("open_file", false, ClickEvent.OpenFile.CODEC),
         RUN_COMMAND("run_command", true, ClickEvent.RunCommand.CODEC),
@@ -36,12 +35,12 @@ public interface ClickEvent {
         public static final Codec<ClickEvent.Action> CODEC = UNSAFE_CODEC.validate(ClickEvent.Action::filterForSerialization);
         private final boolean allowFromServer;
         private final String name;
-        final MapCodec<? extends ClickEvent> codec;
+        private final MapCodec<? extends ClickEvent> codec;
 
-        private Action(final String p_130642_, final boolean p_130643_, final MapCodec<? extends ClickEvent> p_396902_) {
-            this.name = p_130642_;
-            this.allowFromServer = p_130643_;
-            this.codec = p_396902_;
+        Action(final String name, final boolean allowFromServer, final MapCodec<? extends ClickEvent> codec) {
+            this.name = name;
+            this.allowFromServer = allowFromServer;
+            this.codec = codec;
         }
 
         public boolean isAllowedFromServer() {
@@ -57,17 +56,16 @@ public interface ClickEvent {
             return this.codec;
         }
 
-        public static DataResult<ClickEvent.Action> filterForSerialization(ClickEvent.Action p_311653_) {
-            return !p_311653_.isAllowedFromServer()
-                ? DataResult.error(() -> "Click event type not allowed: " + p_311653_)
-                : DataResult.success(p_311653_, Lifecycle.stable());
+        public static DataResult<ClickEvent.Action> filterForSerialization(final ClickEvent.Action action) {
+            return !action.isAllowedFromServer()
+                ? DataResult.error(() -> "Click event type not allowed: " + action)
+                : DataResult.success(action, Lifecycle.stable());
         }
     }
 
-    public record ChangePage(int page) implements ClickEvent {
+    record ChangePage(int page) implements ClickEvent {
         public static final MapCodec<ClickEvent.ChangePage> CODEC = RecordCodecBuilder.mapCodec(
-            p_396959_ -> p_396959_.group(ExtraCodecs.POSITIVE_INT.fieldOf("page").forGetter(ClickEvent.ChangePage::page))
-                .apply(p_396959_, ClickEvent.ChangePage::new)
+            i -> i.group(ExtraCodecs.POSITIVE_INT.fieldOf("page").forGetter(ClickEvent.ChangePage::page)).apply(i, ClickEvent.ChangePage::new)
         );
 
         @Override
@@ -76,10 +74,9 @@ public interface ClickEvent {
         }
     }
 
-    public record CopyToClipboard(String value) implements ClickEvent {
+    record CopyToClipboard(String value) implements ClickEvent {
         public static final MapCodec<ClickEvent.CopyToClipboard> CODEC = RecordCodecBuilder.mapCodec(
-            p_398012_ -> p_398012_.group(Codec.STRING.fieldOf("value").forGetter(ClickEvent.CopyToClipboard::value))
-                .apply(p_398012_, ClickEvent.CopyToClipboard::new)
+            i -> i.group(Codec.STRING.fieldOf("value").forGetter(ClickEvent.CopyToClipboard::value)).apply(i, ClickEvent.CopyToClipboard::new)
         );
 
         @Override
@@ -88,13 +85,13 @@ public interface ClickEvent {
         }
     }
 
-    public record Custom(Identifier id, Optional<Tag> payload) implements ClickEvent {
+    record Custom(Identifier id, Optional<Tag> payload) implements ClickEvent {
         public static final MapCodec<ClickEvent.Custom> CODEC = RecordCodecBuilder.mapCodec(
-            p_448772_ -> p_448772_.group(
+            i -> i.group(
                     Identifier.CODEC.fieldOf("id").forGetter(ClickEvent.Custom::id),
                     ExtraCodecs.NBT.optionalFieldOf("payload").forGetter(ClickEvent.Custom::payload)
                 )
-                .apply(p_448772_, ClickEvent.Custom::new)
+                .apply(i, ClickEvent.Custom::new)
         );
 
         @Override
@@ -103,17 +100,17 @@ public interface ClickEvent {
         }
     }
 
-    public record OpenFile(String path) implements ClickEvent {
+    record OpenFile(String path) implements ClickEvent {
         public static final MapCodec<ClickEvent.OpenFile> CODEC = RecordCodecBuilder.mapCodec(
-            p_391516_ -> p_391516_.group(Codec.STRING.fieldOf("path").forGetter(ClickEvent.OpenFile::path)).apply(p_391516_, ClickEvent.OpenFile::new)
+            i -> i.group(Codec.STRING.fieldOf("path").forGetter(ClickEvent.OpenFile::path)).apply(i, ClickEvent.OpenFile::new)
         );
 
-        public OpenFile(File p_397081_) {
-            this(p_397081_.toString());
+        public OpenFile(final File file) {
+            this(file.toString());
         }
 
-        public OpenFile(Path p_392820_) {
-            this(p_392820_.toFile());
+        public OpenFile(final Path path) {
+            this(path.toFile());
         }
 
         public File file() {
@@ -126,10 +123,9 @@ public interface ClickEvent {
         }
     }
 
-    public record OpenUrl(URI uri) implements ClickEvent {
+    record OpenUrl(URI uri) implements ClickEvent {
         public static final MapCodec<ClickEvent.OpenUrl> CODEC = RecordCodecBuilder.mapCodec(
-            p_395349_ -> p_395349_.group(ExtraCodecs.UNTRUSTED_URI.fieldOf("url").forGetter(ClickEvent.OpenUrl::uri))
-                .apply(p_395349_, ClickEvent.OpenUrl::new)
+            i -> i.group(ExtraCodecs.UNTRUSTED_URI.fieldOf("url").forGetter(ClickEvent.OpenUrl::uri)).apply(i, ClickEvent.OpenUrl::new)
         );
 
         @Override
@@ -138,10 +134,9 @@ public interface ClickEvent {
         }
     }
 
-    public record RunCommand(String command) implements ClickEvent {
+    record RunCommand(String command) implements ClickEvent {
         public static final MapCodec<ClickEvent.RunCommand> CODEC = RecordCodecBuilder.mapCodec(
-            p_397684_ -> p_397684_.group(ExtraCodecs.CHAT_STRING.fieldOf("command").forGetter(ClickEvent.RunCommand::command))
-                .apply(p_397684_, ClickEvent.RunCommand::new)
+            i -> i.group(ExtraCodecs.CHAT_STRING.fieldOf("command").forGetter(ClickEvent.RunCommand::command)).apply(i, ClickEvent.RunCommand::new)
         );
 
         @Override
@@ -150,10 +145,9 @@ public interface ClickEvent {
         }
     }
 
-    public record ShowDialog(Holder<Dialog> dialog) implements ClickEvent {
+    record ShowDialog(Holder<Dialog> dialog) implements ClickEvent {
         public static final MapCodec<ClickEvent.ShowDialog> CODEC = RecordCodecBuilder.mapCodec(
-            p_406853_ -> p_406853_.group(Dialog.CODEC.fieldOf("dialog").forGetter(ClickEvent.ShowDialog::dialog))
-                .apply(p_406853_, ClickEvent.ShowDialog::new)
+            i -> i.group(Dialog.CODEC.fieldOf("dialog").forGetter(ClickEvent.ShowDialog::dialog)).apply(i, ClickEvent.ShowDialog::new)
         );
 
         @Override
@@ -162,10 +156,9 @@ public interface ClickEvent {
         }
     }
 
-    public record SuggestCommand(String command) implements ClickEvent {
+    record SuggestCommand(String command) implements ClickEvent {
         public static final MapCodec<ClickEvent.SuggestCommand> CODEC = RecordCodecBuilder.mapCodec(
-            p_391836_ -> p_391836_.group(ExtraCodecs.CHAT_STRING.fieldOf("command").forGetter(ClickEvent.SuggestCommand::command))
-                .apply(p_391836_, ClickEvent.SuggestCommand::new)
+            i -> i.group(ExtraCodecs.CHAT_STRING.fieldOf("command").forGetter(ClickEvent.SuggestCommand::command)).apply(i, ClickEvent.SuggestCommand::new)
         );
 
         @Override

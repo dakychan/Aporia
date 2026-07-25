@@ -4,7 +4,7 @@ import org.jspecify.annotations.Nullable;
 
 @FunctionalInterface
 public interface EntityProcessor {
-    EntityProcessor NOP = p_454440_ -> p_454440_;
+    EntityProcessor NOP = input -> input;
 
-    @Nullable Entity process(Entity p_456791_);
+    @Nullable Entity process(Entity input);
 }

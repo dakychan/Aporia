@@ -8,29 +8,29 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V1470 extends NamespacedSchema {
-    public V1470(int p_17698_, Schema p_17699_) {
-        super(p_17698_, p_17699_);
+    public V1470(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
-    protected static void registerMob(Schema p_17706_, Map<String, Supplier<TypeTemplate>> p_17707_, String p_17708_) {
-        p_17706_.registerSimple(p_17707_, p_17708_);
+    protected static void registerMob(final Schema schema, final Map<String, Supplier<TypeTemplate>> map, final String name) {
+        schema.registerSimple(map, name);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_17710_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_17710_);
-        registerMob(p_17710_, map, "minecraft:turtle");
-        registerMob(p_17710_, map, "minecraft:cod_mob");
-        registerMob(p_17710_, map, "minecraft:tropical_fish");
-        registerMob(p_17710_, map, "minecraft:salmon_mob");
-        registerMob(p_17710_, map, "minecraft:puffer_fish");
-        registerMob(p_17710_, map, "minecraft:phantom");
-        registerMob(p_17710_, map, "minecraft:dolphin");
-        registerMob(p_17710_, map, "minecraft:drowned");
-        p_17710_.register(
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        registerMob(schema, map, "minecraft:turtle");
+        registerMob(schema, map, "minecraft:cod_mob");
+        registerMob(schema, map, "minecraft:tropical_fish");
+        registerMob(schema, map, "minecraft:salmon_mob");
+        registerMob(schema, map, "minecraft:puffer_fish");
+        registerMob(schema, map, "minecraft:phantom");
+        registerMob(schema, map, "minecraft:dolphin");
+        registerMob(schema, map, "minecraft:drowned");
+        schema.register(
             map,
             "minecraft:trident",
-            p_309012_ -> DSL.optionalFields("inBlockState", References.BLOCK_STATE.in(p_17710_), "Trident", References.ITEM_STACK.in(p_17710_))
+            name -> DSL.optionalFields("inBlockState", References.BLOCK_STATE.in(schema), "Trident", References.ITEM_STACK.in(schema))
         );
         return map;
     }

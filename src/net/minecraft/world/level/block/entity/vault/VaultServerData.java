@@ -3,7 +3,6 @@ package net.minecraft.world.level.block.entity.vault;
 import com.google.common.annotations.VisibleForTesting;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import java.util.Iterator;
@@ -17,15 +16,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 public class VaultServerData {
-    static final String TAG_NAME = "server_data";
-    static Codec<VaultServerData> CODEC = RecordCodecBuilder.create(
-        p_331703_ -> p_331703_.group(
-                UUIDUtil.CODEC_LINKED_SET.lenientOptionalFieldOf("rewarded_players", Set.of()).forGetter(p_331366_ -> p_331366_.rewardedPlayers),
-                Codec.LONG.lenientOptionalFieldOf("state_updating_resumes_at", 0L).forGetter(p_329044_ -> p_329044_.stateUpdatingResumesAt),
-                ItemStack.CODEC.listOf().lenientOptionalFieldOf("items_to_eject", List.of()).forGetter(p_328322_ -> p_328322_.itemsToEject),
-                Codec.INT.lenientOptionalFieldOf("total_ejections_needed", 0).forGetter(p_329419_ -> p_329419_.totalEjectionsNeeded)
+    public static final String TAG_NAME = "server_data";
+    public static final Codec<VaultServerData> CODEC = RecordCodecBuilder.create(
+        i -> i.group(
+                UUIDUtil.CODEC_LINKED_SET.lenientOptionalFieldOf("rewarded_players", Set.of()).forGetter(vault -> vault.rewardedPlayers),
+                Codec.LONG.lenientOptionalFieldOf("state_updating_resumes_at", 0L).forGetter(vault -> vault.stateUpdatingResumesAt),
+                ItemStack.CODEC.listOf().lenientOptionalFieldOf("items_to_eject", List.of()).forGetter(vault -> vault.itemsToEject),
+                Codec.INT.lenientOptionalFieldOf("total_ejections_needed", 0).forGetter(vault -> vault.totalEjectionsNeeded)
             )
-            .apply(p_331703_, VaultServerData::new)
+            .apply(i, VaultServerData::new)
     );
     private static final int MAX_REWARD_PLAYERS = 128;
     private final Set<UUID> rewardedPlayers = new ObjectLinkedOpenHashSet<>();
@@ -35,18 +34,20 @@ public class VaultServerData {
     private int totalEjectionsNeeded;
     boolean isDirty;
 
-    VaultServerData(Set<UUID> p_334629_, long p_331265_, List<ItemStack> p_330511_, int p_333688_) {
-        this.rewardedPlayers.addAll(p_334629_);
-        this.stateUpdatingResumesAt = p_331265_;
-        this.itemsToEject.addAll(p_330511_);
-        this.totalEjectionsNeeded = p_333688_;
+    public VaultServerData(
+        final Set<UUID> rewardedPlayers, final long stateUpdatingResumesAt, final List<ItemStack> itemsToEject, final int totalEjectionsNeeded
+    ) {
+        this.rewardedPlayers.addAll(rewardedPlayers);
+        this.stateUpdatingResumesAt = stateUpdatingResumesAt;
+        this.itemsToEject.addAll(itemsToEject);
+        this.totalEjectionsNeeded = totalEjectionsNeeded;
     }
 
-    VaultServerData() {
+    public VaultServerData() {
     }
 
-    void setLastInsertFailTimestamp(long p_336284_) {
-        this.lastInsertFailTimestamp = p_336284_;
+    void setLastInsertFailTimestamp(final long lastInsertFailTimestamp) {
+        this.lastInsertFailTimestamp = lastInsertFailTimestamp;
     }
 
     long getLastInsertFailTimestamp() {
@@ -57,13 +58,13 @@ public class VaultServerData {
         return this.rewardedPlayers;
     }
 
-    boolean hasRewardedPlayer(Player p_336078_) {
-        return this.rewardedPlayers.contains(p_336078_.getUUID());
+    boolean hasRewardedPlayer(final Player player) {
+        return this.rewardedPlayers.contains(player.getUUID());
     }
 
     @VisibleForTesting
-    public void addToRewardedPlayers(Player p_332874_) {
-        this.rewardedPlayers.add(p_332874_.getUUID());
+    public void addToRewardedPlayers(final Player player) {
+        this.rewardedPlayers.add(player.getUUID());
         if (this.rewardedPlayers.size() > 128) {
             Iterator<UUID> iterator = this.rewardedPlayers.iterator();
             if (iterator.hasNext()) {
@@ -79,8 +80,8 @@ public class VaultServerData {
         return this.stateUpdatingResumesAt;
     }
 
-    void pauseStateUpdatingUntil(long p_330777_) {
-        this.stateUpdatingResumesAt = p_330777_;
+    void pauseStateUpdatingUntil(final long stateUpdatingResumesAt) {
+        this.stateUpdatingResumesAt = stateUpdatingResumesAt;
         this.markChanged();
     }
 
@@ -93,9 +94,9 @@ public class VaultServerData {
         this.markChanged();
     }
 
-    void setItemsToEject(List<ItemStack> p_332570_) {
+    void setItemsToEject(final List<ItemStack> newItemsToEject) {
         this.itemsToEject.clear();
-        this.itemsToEject.addAll(p_332570_);
+        this.itemsToEject.addAll(newItemsToEject);
         this.totalEjectionsNeeded = this.itemsToEject.size();
         this.markChanged();
     }
@@ -107,18 +108,18 @@ public class VaultServerData {
     ItemStack popNextItemToEject() {
         if (this.itemsToEject.isEmpty()) {
             return ItemStack.EMPTY;
-        } else {
-            this.markChanged();
-            return Objects.requireNonNullElse(this.itemsToEject.remove(this.itemsToEject.size() - 1), ItemStack.EMPTY);
         }
+
+        this.markChanged();
+        return Objects.requireNonNullElse(this.itemsToEject.remove(this.itemsToEject.size() - 1), ItemStack.EMPTY);
     }
 
-    void set(VaultServerData p_329637_) {
-        this.stateUpdatingResumesAt = p_329637_.stateUpdatingResumesAt();
+    void set(final VaultServerData from) {
+        this.stateUpdatingResumesAt = from.stateUpdatingResumesAt();
         this.itemsToEject.clear();
-        this.itemsToEject.addAll(p_329637_.itemsToEject);
+        this.itemsToEject.addAll(from.itemsToEject);
         this.rewardedPlayers.clear();
-        this.rewardedPlayers.addAll(p_329637_.rewardedPlayers);
+        this.rewardedPlayers.addAll(from.rewardedPlayers);
     }
 
     private void markChanged() {

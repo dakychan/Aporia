@@ -7,11 +7,11 @@ import com.google.gson.JsonSyntaxException;
 import java.io.Reader;
 
 public class LenientJsonParser {
-    public static JsonElement parse(Reader p_410269_) throws JsonIOException, JsonSyntaxException {
-        return JsonParser.parseReader(p_410269_);
+    public static JsonElement parse(final Reader reader) throws JsonIOException, JsonSyntaxException {
+        return JsonParser.parseReader(reader);
     }
 
-    public static JsonElement parse(String p_409492_) throws JsonSyntaxException {
-        return JsonParser.parseString(p_409492_);
+    public static JsonElement parse(final String json) throws JsonSyntaxException {
+        return JsonParser.parseString(json);
     }
 }

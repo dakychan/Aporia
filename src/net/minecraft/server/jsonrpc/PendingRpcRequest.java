@@ -8,16 +8,16 @@ import net.minecraft.core.Holder;
 public record PendingRpcRequest<Result>(
     Holder.Reference<? extends OutgoingRpcMethod<?, ? extends Result>> method, CompletableFuture<Result> resultFuture, long timeoutTime
 ) {
-    public void accept(JsonElement p_423259_) {
+    public void accept(final JsonElement response) {
         try {
-            Result result = (Result)this.method.value().decodeResult(p_423259_);
+            Result result = (Result)this.method.value().decodeResult(response);
             this.resultFuture.complete(Objects.requireNonNull(result));
-        } catch (Exception exception) {
-            this.resultFuture.completeExceptionally(exception);
+        } catch (Exception e) {
+            this.resultFuture.completeExceptionally(e);
         }
     }
 
-    public boolean timedOut(long p_422494_) {
-        return p_422494_ > this.timeoutTime;
+    public boolean timedOut(final long currentTime) {
+        return currentTime > this.timeoutTime;
     }
 }

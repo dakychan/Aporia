@@ -4,7 +4,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
@@ -44,19 +43,18 @@ public class DatapackStructureReport implements DataProvider {
         "function",
         new DatapackStructureReport.CustomPackEntry(DatapackStructureReport.Format.MCFUNCTION, new DatapackStructureReport.Entry(true, true, true))
     );
-    static final Codec<ResourceKey<? extends Registry<?>>> REGISTRY_KEY_CODEC = Identifier.CODEC.xmap(ResourceKey::createRegistryKey, ResourceKey::identifier);
+    private static final Codec<ResourceKey<? extends Registry<?>>> REGISTRY_KEY_CODEC = Identifier.CODEC
+        .xmap(ResourceKey::createRegistryKey, ResourceKey::identifier);
 
-    public DatapackStructureReport(PackOutput p_366731_) {
-        this.output = p_366731_;
+    public DatapackStructureReport(final PackOutput output) {
+        this.output = output;
     }
 
     @Override
-    public CompletableFuture<?> run(CachedOutput p_365219_) {
-        DatapackStructureReport.Report datapackstructurereport$report = new DatapackStructureReport.Report(this.listRegistries(), NON_REGISTRY_ENTRIES);
+    public CompletableFuture<?> run(final CachedOutput cache) {
+        DatapackStructureReport.Report report = new DatapackStructureReport.Report(this.listRegistries(), NON_REGISTRY_ENTRIES);
         Path path = this.output.getOutputFolder(PackOutput.Target.REPORTS).resolve("datapack.json");
-        return DataProvider.saveStable(
-            p_365219_, DatapackStructureReport.Report.CODEC.encodeStart(JsonOps.INSTANCE, datapackstructurereport$report).getOrThrow(), path
-        );
+        return DataProvider.saveStable(cache, DatapackStructureReport.Report.CODEC.encodeStart(JsonOps.INSTANCE, report).getOrThrow(), path);
     }
 
     @Override
@@ -65,56 +63,56 @@ public class DatapackStructureReport implements DataProvider {
     }
 
     private void putIfNotPresent(
-        Map<ResourceKey<? extends Registry<?>>, DatapackStructureReport.Entry> p_367377_,
-        ResourceKey<? extends Registry<?>> p_360807_,
-        DatapackStructureReport.Entry p_367029_
+        final Map<ResourceKey<? extends Registry<?>>, DatapackStructureReport.Entry> output,
+        final ResourceKey<? extends Registry<?>> key,
+        final DatapackStructureReport.Entry entry
     ) {
-        DatapackStructureReport.Entry datapackstructurereport$entry = p_367377_.putIfAbsent(p_360807_, p_367029_);
-        if (datapackstructurereport$entry != null) {
-            throw new IllegalStateException("Duplicate entry for key " + p_360807_.identifier());
+        DatapackStructureReport.Entry previous = output.putIfAbsent(key, entry);
+        if (previous != null) {
+            throw new IllegalStateException("Duplicate entry for key " + key.identifier());
         }
     }
 
     private Map<ResourceKey<? extends Registry<?>>, DatapackStructureReport.Entry> listRegistries() {
-        Map<ResourceKey<? extends Registry<?>>, DatapackStructureReport.Entry> map = new HashMap<>();
-        BuiltInRegistries.REGISTRY.forEach(p_365187_ -> this.putIfNotPresent(map, p_365187_.key(), BUILT_IN_REGISTRY));
-        RegistryDataLoader.WORLDGEN_REGISTRIES.forEach(p_360913_ -> this.putIfNotPresent(map, p_360913_.key(), UNSTABLE_DYNAMIC_REGISTRY));
-        RegistryDataLoader.DIMENSION_REGISTRIES.forEach(p_369046_ -> this.putIfNotPresent(map, p_369046_.key(), UNSTABLE_DYNAMIC_REGISTRY));
-        MANUAL_ENTRIES.forEach((p_360843_, p_368350_) -> this.putIfNotPresent(map, (ResourceKey<? extends Registry<?>>)p_360843_, p_368350_));
-        return map;
+        Map<ResourceKey<? extends Registry<?>>, DatapackStructureReport.Entry> result = new HashMap<>();
+        BuiltInRegistries.REGISTRY.forEach(entry -> this.putIfNotPresent(result, entry.key(), BUILT_IN_REGISTRY));
+        RegistryDataLoader.WORLDGEN_REGISTRIES.forEach(entry -> this.putIfNotPresent(result, entry.key(), UNSTABLE_DYNAMIC_REGISTRY));
+        RegistryDataLoader.DIMENSION_REGISTRIES.forEach(entry -> this.putIfNotPresent(result, entry.key(), UNSTABLE_DYNAMIC_REGISTRY));
+        MANUAL_ENTRIES.forEach((key, entry) -> this.putIfNotPresent(result, (ResourceKey<? extends Registry<?>>)key, entry));
+        return result;
     }
 
-    record CustomPackEntry(DatapackStructureReport.Format format, DatapackStructureReport.Entry entry) {
+    private record CustomPackEntry(DatapackStructureReport.Format format, DatapackStructureReport.Entry entry) {
         public static final Codec<DatapackStructureReport.CustomPackEntry> CODEC = RecordCodecBuilder.create(
-            p_368584_ -> p_368584_.group(
+            i -> i.group(
                     DatapackStructureReport.Format.CODEC.fieldOf("format").forGetter(DatapackStructureReport.CustomPackEntry::format),
                     DatapackStructureReport.Entry.MAP_CODEC.forGetter(DatapackStructureReport.CustomPackEntry::entry)
                 )
-                .apply(p_368584_, DatapackStructureReport.CustomPackEntry::new)
+                .apply(i, DatapackStructureReport.CustomPackEntry::new)
         );
     }
 
-    record Entry(boolean elements, boolean tags, boolean stable) {
+    private record Entry(boolean elements, boolean tags, boolean stable) {
         public static final MapCodec<DatapackStructureReport.Entry> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_368666_ -> p_368666_.group(
+            i -> i.group(
                     Codec.BOOL.fieldOf("elements").forGetter(DatapackStructureReport.Entry::elements),
                     Codec.BOOL.fieldOf("tags").forGetter(DatapackStructureReport.Entry::tags),
                     Codec.BOOL.fieldOf("stable").forGetter(DatapackStructureReport.Entry::stable)
                 )
-                .apply(p_368666_, DatapackStructureReport.Entry::new)
+                .apply(i, DatapackStructureReport.Entry::new)
         );
         public static final Codec<DatapackStructureReport.Entry> CODEC = MAP_CODEC.codec();
     }
 
-    static enum Format implements StringRepresentable {
+    private enum Format implements StringRepresentable {
         STRUCTURE("structure"),
         MCFUNCTION("mcfunction");
 
         public static final Codec<DatapackStructureReport.Format> CODEC = StringRepresentable.fromEnum(DatapackStructureReport.Format::values);
         private final String name;
 
-        private Format(final String p_363444_) {
-            this.name = p_363444_;
+        Format(final String name) {
+            this.name = name;
         }
 
         @Override
@@ -123,11 +121,11 @@ public class DatapackStructureReport implements DataProvider {
         }
     }
 
-    record Report(
+    private record Report(
         Map<ResourceKey<? extends Registry<?>>, DatapackStructureReport.Entry> registries, Map<String, DatapackStructureReport.CustomPackEntry> others
     ) {
         public static final Codec<DatapackStructureReport.Report> CODEC = RecordCodecBuilder.create(
-            p_369194_ -> p_369194_.group(
+            i -> i.group(
                     Codec.unboundedMap(DatapackStructureReport.REGISTRY_KEY_CODEC, DatapackStructureReport.Entry.CODEC)
                         .fieldOf("registries")
                         .forGetter(DatapackStructureReport.Report::registries),
@@ -135,7 +133,7 @@ public class DatapackStructureReport implements DataProvider {
                         .fieldOf("others")
                         .forGetter(DatapackStructureReport.Report::others)
                 )
-                .apply(p_369194_, DatapackStructureReport.Report::new)
+                .apply(i, DatapackStructureReport.Report::new)
         );
     }
 }

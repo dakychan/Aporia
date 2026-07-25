@@ -1,22 +1,16 @@
 package net.minecraft.client.gui.screens.options;
 
+import java.util.Objects;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.CycleButton;
-import net.minecraft.client.gui.components.LockIconButton;
 import net.minecraft.client.gui.components.StringWidget;
 import net.minecraft.client.gui.components.Tooltip;
-import net.minecraft.client.gui.components.events.GuiEventListener;
-import net.minecraft.client.gui.layouts.EqualSpacingLayout;
 import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
 import net.minecraft.client.gui.layouts.LayoutElement;
 import net.minecraft.client.gui.layouts.LayoutSettings;
 import net.minecraft.client.gui.layouts.LinearLayout;
-import net.minecraft.client.gui.screens.ConfirmScreen;
 import net.minecraft.client.gui.screens.CreditsAndAttributionScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.controls.ControlsScreen;
@@ -24,16 +18,9 @@ import net.minecraft.client.gui.screens.packs.PackSelectionScreen;
 import net.minecraft.client.gui.screens.telemetry.TelemetryInfoScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraft.network.protocol.game.ServerboundChangeDifficultyPacket;
-import net.minecraft.network.protocol.game.ServerboundLockDifficultyPacket;
 import net.minecraft.server.packs.repository.PackRepository;
-import net.minecraft.world.Difficulty;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
-public class OptionsScreen extends Screen {
+public class OptionsScreen extends Screen implements HasGamemasterPermissionReaction {
     private static final Component TITLE = Component.translatable("options.title");
     private static final Component SKIN_CUSTOMIZATION = Component.translatable("options.skinCustomisation");
     private static final Component SOUNDS = Component.translatable("options.sounds");
@@ -50,50 +37,64 @@ public class OptionsScreen extends Screen {
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, 61, 33);
     private final Screen lastScreen;
     private final Options options;
-    private @Nullable CycleButton<Difficulty> difficultyButton;
-    private @Nullable LockIconButton lockButton;
+    private final boolean inWorld;
 
-    public OptionsScreen(Screen p_344232_, Options p_342732_) {
+    public OptionsScreen(final Screen lastScreen, final Options options, final boolean inWorld) {
         super(TITLE);
-        this.lastScreen = p_344232_;
-        this.options = p_342732_;
+        this.lastScreen = lastScreen;
+        this.options = options;
+        this.inWorld = inWorld;
     }
 
     @Override
     protected void init() {
-        LinearLayout linearlayout = this.layout.addToHeader(LinearLayout.vertical().spacing(8));
-        linearlayout.addChild(new StringWidget(TITLE, this.font), LayoutSettings::alignHorizontallyCenter);
-        LinearLayout linearlayout1 = linearlayout.addChild(LinearLayout.horizontal()).spacing(8);
-        linearlayout1.addChild(this.options.fov().createButton(this.minecraft.options));
-        linearlayout1.addChild(this.createOnlineButton());
-        GridLayout gridlayout = new GridLayout();
-        gridlayout.defaultCellSetting().paddingHorizontal(4).paddingBottom(4).alignHorizontallyCenter();
-        GridLayout.RowHelper gridlayout$rowhelper = gridlayout.createRowHelper(2);
-        gridlayout$rowhelper.addChild(this.openScreenButton(SKIN_CUSTOMIZATION, () -> new SkinCustomizationScreen(this, this.options)));
-        gridlayout$rowhelper.addChild(this.openScreenButton(SOUNDS, () -> new SoundOptionsScreen(this, this.options)));
-        gridlayout$rowhelper.addChild(this.openScreenButton(VIDEO, () -> new VideoSettingsScreen(this, this.minecraft, this.options)));
-        gridlayout$rowhelper.addChild(this.openScreenButton(CONTROLS, () -> new ControlsScreen(this, this.options)));
-        gridlayout$rowhelper.addChild(this.openScreenButton(LANGUAGE, () -> new LanguageSelectScreen(this, this.options, this.minecraft.getLanguageManager())));
-        gridlayout$rowhelper.addChild(this.openScreenButton(CHAT, () -> new ChatOptionsScreen(this, this.options)));
-        gridlayout$rowhelper.addChild(
-            this.openScreenButton(
-                RESOURCEPACK,
-                () -> new PackSelectionScreen(this.minecraft.getResourcePackRepository(), this::applyPacks, this.minecraft.getResourcePackDirectory(), Component.translatable("resourcePack.title"))
-            )
-        );
-        gridlayout$rowhelper.addChild(this.openScreenButton(ACCESSIBILITY, () -> new AccessibilityOptionsScreen(this, this.options)));
-        Button button = gridlayout$rowhelper.addChild(this.openScreenButton(TELEMETRY, () -> new TelemetryInfoScreen(this, this.options)));
-        if (!this.minecraft.allowsTelemetry()) {
-            button.active = false;
-            button.setTooltip(TELEMETRY_DISABLED_TOOLTIP);
+        LinearLayout header = this.layout.addToHeader(LinearLayout.vertical().spacing(8));
+        header.addChild(new StringWidget(TITLE, this.font), LayoutSettings::alignHorizontallyCenter);
+        LinearLayout subHeader = header.addChild(LinearLayout.horizontal()).spacing(8);
+        subHeader.addChild(this.options.fov().createButton(this.minecraft.options));
+        if (this.inWorld) {
+            subHeader.addChild(
+                Button.builder(
+                        Component.translatable("options.worldOptions.button"),
+                        var1x -> this.minecraft.gui.setScreen(new WorldOptionsScreen(this, Objects.requireNonNull(this.minecraft.level)))
+                    )
+                    .build()
+            );
+        } else {
+            subHeader.addChild(this.createOnlineButton());
         }
 
-        gridlayout$rowhelper.addChild(this.openScreenButton(CREDITS_AND_ATTRIBUTION, () -> new CreditsAndAttributionScreen(this)));
-        this.layout.addToContents(gridlayout);
-        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, p_342134_ -> this.onClose()).width(200).build());
-        this.layout.visitWidgets(p_343581_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_343581_);
-        });
+        GridLayout gridLayout = new GridLayout();
+        gridLayout.defaultCellSetting().paddingHorizontal(4).paddingBottom(4).alignHorizontallyCenter();
+        GridLayout.RowHelper helper = gridLayout.createRowHelper(2);
+        helper.addChild(this.openScreenButton(SKIN_CUSTOMIZATION, () -> new SkinCustomizationScreen(this, this.options)));
+        helper.addChild(this.openScreenButton(SOUNDS, () -> new SoundOptionsScreen(this, this.options)));
+        helper.addChild(this.openScreenButton(VIDEO, () -> new VideoSettingsScreen(this, this.minecraft, this.options)));
+        helper.addChild(this.openScreenButton(CONTROLS, () -> new ControlsScreen(this, this.options)));
+        helper.addChild(this.openScreenButton(LANGUAGE, () -> new LanguageSelectScreen(this, this.options, this.minecraft.getLanguageManager())));
+        helper.addChild(this.openScreenButton(CHAT, () -> new ChatOptionsScreen(this, this.options)));
+        helper.addChild(
+            this.openScreenButton(
+                RESOURCEPACK,
+                () -> new PackSelectionScreen(
+                    this.minecraft.getResourcePackRepository(),
+                    this::applyPacks,
+                    this.minecraft.getResourcePackDirectory(),
+                    Component.translatable("resourcePack.title")
+                )
+            )
+        );
+        helper.addChild(this.openScreenButton(ACCESSIBILITY, () -> new AccessibilityOptionsScreen(this, this.options)));
+        Button telemetryButton = helper.addChild(this.openScreenButton(TELEMETRY, () -> new TelemetryInfoScreen(this, this.options)));
+        if (!this.minecraft.allowsTelemetry()) {
+            telemetryButton.active = false;
+            telemetryButton.setTooltip(TELEMETRY_DISABLED_TOOLTIP);
+        }
+
+        helper.addChild(this.openScreenButton(CREDITS_AND_ATTRIBUTION, () -> new CreditsAndAttributionScreen(this)));
+        this.layout.addToContents(gridLayout);
+        this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).width(200).build());
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
     }
 
@@ -104,70 +105,22 @@ public class OptionsScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.lastScreen);
+        this.minecraft.gui.setScreen(this.lastScreen);
     }
 
-    private void applyPacks(PackRepository p_343305_) {
-        this.options.updateResourcePacks(p_343305_);
-        this.minecraft.setScreen(this);
+    public Screen getLastScreen() {
+        return this.lastScreen;
+    }
+
+    private void applyPacks(final PackRepository packRepository) {
+        this.options.updateResourcePacks(packRepository);
+        this.minecraft.gui.setScreen(this);
     }
 
     private LayoutElement createOnlineButton() {
-        if (this.minecraft.level != null && this.minecraft.hasSingleplayerServer()) {
-            this.difficultyButton = createDifficultyButton(0, 0, "options.difficulty", this.minecraft);
-            if (!this.minecraft.level.getLevelData().isHardcore()) {
-                this.lockButton = new LockIconButton(
-                    0,
-                    0,
-                    p_342662_ -> this.minecraft
-                        .setScreen(
-                            new ConfirmScreen(
-                                this::lockCallback,
-                                Component.translatable("difficulty.lock.title"),
-                                Component.translatable("difficulty.lock.question", this.minecraft.level.getLevelData().getDifficulty().getDisplayName())
-                            )
-                        )
-                );
-                this.difficultyButton.setWidth(this.difficultyButton.getWidth() - this.lockButton.getWidth());
-                this.lockButton.setLocked(this.minecraft.level.getLevelData().isDifficultyLocked());
-                this.lockButton.active = !this.lockButton.isLocked();
-                this.difficultyButton.active = !this.lockButton.isLocked();
-                EqualSpacingLayout equalspacinglayout = new EqualSpacingLayout(150, 0, EqualSpacingLayout.Orientation.HORIZONTAL);
-                equalspacinglayout.addChild(this.difficultyButton);
-                equalspacinglayout.addChild(this.lockButton);
-                return equalspacinglayout;
-            } else {
-                this.difficultyButton.active = false;
-                return this.difficultyButton;
-            }
-        } else {
-            return Button.builder(Component.translatable("options.online"), p_342674_ -> this.minecraft.setScreen(new OnlineOptionsScreen(this, this.options)))
-                .bounds(this.width / 2 + 5, this.height / 6 - 12 + 24, 150, 20)
-                .build();
-        }
-    }
-
-    public static CycleButton<Difficulty> createDifficultyButton(int p_344941_, int p_344675_, String p_345303_, Minecraft p_344456_) {
-        return CycleButton.builder(Difficulty::getDisplayName, p_344456_.level.getDifficulty())
-            .withValues(Difficulty.values())
-            .create(
-                p_344941_,
-                p_344675_,
-                150,
-                20,
-                Component.translatable(p_345303_),
-                (p_342052_, p_343592_) -> p_344456_.getConnection().send(new ServerboundChangeDifficultyPacket(p_343592_))
-            );
-    }
-
-    private void lockCallback(boolean p_344308_) {
-        this.minecraft.setScreen(this);
-        if (p_344308_ && this.minecraft.level != null && this.lockButton != null && this.difficultyButton != null) {
-            this.minecraft.getConnection().send(new ServerboundLockDifficultyPacket(true));
-            this.lockButton.setLocked(true);
-            this.lockButton.active = false;
-            this.difficultyButton.active = false;
-        }
+        return Button.builder(Component.translatable("options.online"), var1 -> this.minecraft.gui.setScreen(new OnlineOptionsScreen(this, this.options)))
+            .bounds(this.width / 2 + 5, this.height / 6 - 12 + 24, 150, 20)
+            .build();
     }
 
     @Override
@@ -175,7 +128,12 @@ public class OptionsScreen extends Screen {
         this.options.save();
     }
 
-    private Button openScreenButton(Component p_344129_, Supplier<Screen> p_342943_) {
-        return Button.builder(p_344129_, p_344387_ -> this.minecraft.setScreen(p_342943_.get())).build();
+    private Button openScreenButton(final Component message, final Supplier<Screen> screenToScreen) {
+        return Button.builder(message, var2 -> this.minecraft.gui.setScreen(screenToScreen.get())).build();
+    }
+
+    @Override
+    public void onGamemasterPermissionChanged(final boolean hasGamemasterPermission) {
+        this.minecraft.gui.setScreen(new OptionsScreen(this.lastScreen, this.minecraft.options, true));
     }
 }

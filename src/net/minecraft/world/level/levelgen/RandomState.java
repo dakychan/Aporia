@@ -14,7 +14,7 @@ import net.minecraft.world.level.levelgen.synth.BlendedNoise;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 public final class RandomState {
-    final PositionalRandomFactory random;
+    private final PositionalRandomFactory random;
     private final HolderGetter<NormalNoise.NoiseParameters> noises;
     private final NoiseRouter router;
     private final Climate.Sampler sampler;
@@ -24,108 +24,97 @@ public final class RandomState {
     private final Map<ResourceKey<NormalNoise.NoiseParameters>, NormalNoise> noiseIntances;
     private final Map<Identifier, PositionalRandomFactory> positionalRandoms;
 
-    public static RandomState create(HolderGetter.Provider p_255935_, ResourceKey<NoiseGeneratorSettings> p_256314_, long p_256595_) {
-        return create(p_255935_.lookupOrThrow(Registries.NOISE_SETTINGS).getOrThrow(p_256314_).value(), p_255935_.lookupOrThrow(Registries.NOISE), p_256595_);
+    public static RandomState create(final HolderGetter.Provider holders, final ResourceKey<NoiseGeneratorSettings> noiseSettings, final long seed) {
+        return create(holders.lookupOrThrow(Registries.NOISE_SETTINGS).getOrThrow(noiseSettings).value(), holders.lookupOrThrow(Registries.NOISE), seed);
     }
 
-    public static RandomState create(NoiseGeneratorSettings p_255761_, HolderGetter<NormalNoise.NoiseParameters> p_256649_, long p_255965_) {
-        return new RandomState(p_255761_, p_256649_, p_255965_);
+    public static RandomState create(final NoiseGeneratorSettings settings, final HolderGetter<NormalNoise.NoiseParameters> noises, final long seed) {
+        return new RandomState(settings, noises, seed);
     }
 
-    private RandomState(NoiseGeneratorSettings p_255668_, HolderGetter<NormalNoise.NoiseParameters> p_256663_, final long p_255691_) {
-        this.random = p_255668_.getRandomSource().newInstance(p_255691_).forkPositional();
-        this.noises = p_256663_;
+    private RandomState(final NoiseGeneratorSettings settings, final HolderGetter<NormalNoise.NoiseParameters> noises, final long seed) {
+        this.random = settings.getRandomSource().newInstance(seed).forkPositional();
+        this.noises = noises;
         this.aquiferRandom = this.random.fromHashOf(Identifier.withDefaultNamespace("aquifer")).forkPositional();
         this.oreRandom = this.random.fromHashOf(Identifier.withDefaultNamespace("ore")).forkPositional();
         this.noiseIntances = new ConcurrentHashMap<>();
         this.positionalRandoms = new ConcurrentHashMap<>();
-        this.surfaceSystem = new SurfaceSystem(this, p_255668_.defaultBlock(), p_255668_.seaLevel(), this.random);
-        final boolean flag = p_255668_.useLegacyRandomSource();
+        this.surfaceSystem = new SurfaceSystem(this, settings.defaultBlock(), settings.seaLevel(), this.random);
+        final boolean useLegacyInit = settings.useLegacyRandomSource();
 
         class NoiseWiringHelper implements DensityFunction.Visitor {
             private final Map<DensityFunction, DensityFunction> wrapped = new HashMap<>();
 
-            private RandomSource newLegacyInstance(long p_224592_) {
-                return new LegacyRandomSource(p_255691_ + p_224592_);
+            private RandomSource newLegacyInstance(final long seedOffset) {
+                return new LegacyRandomSource(seed + seedOffset);
             }
 
             @Override
-            public DensityFunction.NoiseHolder visitNoise(DensityFunction.NoiseHolder p_224594_) {
-                Holder<NormalNoise.NoiseParameters> holder = p_224594_.noiseData();
-                if (flag) {
-                    if (holder.is(Noises.TEMPERATURE)) {
-                        NormalNoise normalnoise3 = NormalNoise.createLegacyNetherBiome(this.newLegacyInstance(0L), new NormalNoise.NoiseParameters(-7, 1.0, 1.0));
-                        return new DensityFunction.NoiseHolder(holder, normalnoise3);
-                    }
-
-                    if (holder.is(Noises.VEGETATION)) {
-                        NormalNoise normalnoise2 = NormalNoise.createLegacyNetherBiome(this.newLegacyInstance(1L), new NormalNoise.NoiseParameters(-7, 1.0, 1.0));
-                        return new DensityFunction.NoiseHolder(holder, normalnoise2);
-                    }
-
-                    if (holder.is(Noises.SHIFT)) {
-                        NormalNoise normalnoise1 = NormalNoise.create(
-                            RandomState.this.random.fromHashOf(Noises.SHIFT.identifier()), new NormalNoise.NoiseParameters(0, 0.0)
-                        );
-                        return new DensityFunction.NoiseHolder(holder, normalnoise1);
-                    }
-                }
-
-                NormalNoise normalnoise = RandomState.this.getOrCreateNoise(holder.unwrapKey().orElseThrow());
-                return new DensityFunction.NoiseHolder(holder, normalnoise);
-            }
-
-            private DensityFunction wrapNew(DensityFunction p_224596_) {
-                if (p_224596_ instanceof BlendedNoise blendednoise) {
-                    RandomSource randomsource = flag ? this.newLegacyInstance(0L) : RandomState.this.random.fromHashOf(Identifier.withDefaultNamespace("terrain"));
-                    return blendednoise.withNewRandom(randomsource);
+            public DensityFunction.NoiseHolder visitNoise(final DensityFunction.NoiseHolder noise) {
+                Holder<NormalNoise.NoiseParameters> noiseData = noise.noiseData();
+                if (noiseData.is(Noises.TEMPERATURE_NETHER)) {
+                    NormalNoise newNoise = NormalNoise.createLegacyNetherBiome(this.newLegacyInstance(0L), noiseData.value());
+                    return new DensityFunction.NoiseHolder(noiseData, newNoise);
+                } else if (noiseData.is(Noises.VEGETATION_NETHER)) {
+                    NormalNoise newNoise = NormalNoise.createLegacyNetherBiome(this.newLegacyInstance(1L), noiseData.value());
+                    return new DensityFunction.NoiseHolder(noiseData, newNoise);
                 } else {
-                    return (DensityFunction)(p_224596_ instanceof DensityFunctions.EndIslandDensityFunction
-                        ? new DensityFunctions.EndIslandDensityFunction(p_255691_)
-                        : p_224596_);
+                    NormalNoise instantiate = RandomState.this.getOrCreateNoise(noiseData.unwrapKey().orElseThrow());
+                    return new DensityFunction.NoiseHolder(noiseData, instantiate);
+                }
+            }
+
+            private DensityFunction wrapNew(final DensityFunction function) {
+                if (function instanceof BlendedNoise noise) {
+                    RandomSource terrainRandom = useLegacyInit
+                        ? this.newLegacyInstance(0L)
+                        : RandomState.this.random.fromHashOf(Identifier.withDefaultNamespace("terrain"));
+                    return noise.withNewRandom(terrainRandom);
+                } else {
+                    return function instanceof DensityFunctions.EndIslandDensityFunction ? new DensityFunctions.EndIslandDensityFunction(seed) : function;
                 }
             }
 
             @Override
-            public DensityFunction apply(DensityFunction p_224598_) {
-                return this.wrapped.computeIfAbsent(p_224598_, this::wrapNew);
+            public DensityFunction apply(final DensityFunction function) {
+                return this.wrapped.computeIfAbsent(function, this::wrapNew);
             }
         }
 
-        this.router = p_255668_.noiseRouter().mapAll(new NoiseWiringHelper());
-        DensityFunction.Visitor densityfunction$visitor = new DensityFunction.Visitor() {
+        this.router = settings.noiseRouter().mapAll(new NoiseWiringHelper());
+        DensityFunction.Visitor noiseFlattener = new DensityFunction.Visitor() {
             private final Map<DensityFunction, DensityFunction> wrapped = new HashMap<>();
 
-            private DensityFunction wrapNew(DensityFunction p_249732_) {
-                if (p_249732_ instanceof DensityFunctions.HolderHolder densityfunctions$holderholder) {
-                    return densityfunctions$holderholder.function().value();
+            private DensityFunction wrapNew(final DensityFunction function) {
+                if (function instanceof DensityFunctions.HolderHolder holder) {
+                    return holder.function().value();
                 } else {
-                    return p_249732_ instanceof DensityFunctions.Marker densityfunctions$marker ? densityfunctions$marker.wrapped() : p_249732_;
+                    return function instanceof DensityFunctions.Marker marker ? marker.wrapped() : function;
                 }
             }
 
             @Override
-            public DensityFunction apply(DensityFunction p_248616_) {
-                return this.wrapped.computeIfAbsent(p_248616_, this::wrapNew);
+            public DensityFunction apply(final DensityFunction input) {
+                return this.wrapped.computeIfAbsent(input, this::wrapNew);
             }
         };
         this.sampler = new Climate.Sampler(
-            this.router.temperature().mapAll(densityfunction$visitor),
-            this.router.vegetation().mapAll(densityfunction$visitor),
-            this.router.continents().mapAll(densityfunction$visitor),
-            this.router.erosion().mapAll(densityfunction$visitor),
-            this.router.depth().mapAll(densityfunction$visitor),
-            this.router.ridges().mapAll(densityfunction$visitor),
-            p_255668_.spawnTarget()
+            this.router.temperature().mapAll(noiseFlattener),
+            this.router.vegetation().mapAll(noiseFlattener),
+            this.router.continents().mapAll(noiseFlattener),
+            this.router.erosion().mapAll(noiseFlattener),
+            this.router.depth().mapAll(noiseFlattener),
+            this.router.ridges().mapAll(noiseFlattener),
+            settings.spawnTarget()
         );
     }
 
-    public NormalNoise getOrCreateNoise(ResourceKey<NormalNoise.NoiseParameters> p_224561_) {
-        return this.noiseIntances.computeIfAbsent(p_224561_, p_255589_ -> Noises.instantiate(this.noises, this.random, p_224561_));
+    public NormalNoise getOrCreateNoise(final ResourceKey<NormalNoise.NoiseParameters> noise) {
+        return this.noiseIntances.computeIfAbsent(noise, key -> Noises.instantiate(this.noises, this.random, noise));
     }
 
-    public PositionalRandomFactory getOrCreateRandomFactory(Identifier p_453754_) {
-        return this.positionalRandoms.computeIfAbsent(p_453754_, p_449974_ -> this.random.fromHashOf(p_453754_).forkPositional());
+    public PositionalRandomFactory getOrCreateRandomFactory(final Identifier name) {
+        return this.positionalRandoms.computeIfAbsent(name, key -> this.random.fromHashOf(name).forkPositional());
     }
 
     public NoiseRouter router() {

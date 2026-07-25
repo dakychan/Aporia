@@ -16,15 +16,15 @@ public class Resource {
     private final IoSupplier<ResourceMetadata> metadataSupplier;
     private @Nullable ResourceMetadata cachedMetadata;
 
-    public Resource(PackResources p_250802_, IoSupplier<InputStream> p_248585_, IoSupplier<ResourceMetadata> p_250094_) {
-        this.source = p_250802_;
-        this.streamSupplier = p_248585_;
-        this.metadataSupplier = p_250094_;
+    public Resource(final PackResources source, final IoSupplier<InputStream> streamSupplier, final IoSupplier<ResourceMetadata> metadataSupplier) {
+        this.source = source;
+        this.streamSupplier = streamSupplier;
+        this.metadataSupplier = metadataSupplier;
     }
 
-    public Resource(PackResources p_250372_, IoSupplier<InputStream> p_248749_) {
-        this.source = p_250372_;
-        this.streamSupplier = p_248749_;
+    public Resource(final PackResources source, final IoSupplier<InputStream> streamSupplier) {
+        this.source = source;
+        this.streamSupplier = streamSupplier;
         this.metadataSupplier = ResourceMetadata.EMPTY_SUPPLIER;
         this.cachedMetadata = ResourceMetadata.EMPTY;
     }

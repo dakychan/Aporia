@@ -13,37 +13,37 @@ import java.util.Optional;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class ItemWaterPotionFix extends DataFix {
-    public ItemWaterPotionFix(Schema p_16156_, boolean p_16157_) {
-        super(p_16156_, p_16157_);
+    public ItemWaterPotionFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("tag");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idF = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<?> tagF = itemStackType.findField("tag");
         return this.fixTypeEverywhereTyped(
             "ItemWaterPotionFix",
-            type,
-            p_16161_ -> {
-                Optional<Pair<String, String>> optional = p_16161_.getOptional(opticfinder);
-                if (optional.isPresent()) {
-                    String s = optional.get().getSecond();
-                    if ("minecraft:potion".equals(s)
-                        || "minecraft:splash_potion".equals(s)
-                        || "minecraft:lingering_potion".equals(s)
-                        || "minecraft:tipped_arrow".equals(s)) {
-                        Typed<?> typed = p_16161_.getOrCreateTyped(opticfinder1);
-                        Dynamic<?> dynamic = typed.get(DSL.remainderFinder());
-                        if (dynamic.get("Potion").asString().result().isEmpty()) {
-                            dynamic = dynamic.set("Potion", dynamic.createString("minecraft:water"));
+            itemStackType,
+            input -> {
+                Optional<Pair<String, String>> idOpt = input.getOptional(idF);
+                if (idOpt.isPresent()) {
+                    String id = idOpt.get().getSecond();
+                    if ("minecraft:potion".equals(id)
+                        || "minecraft:splash_potion".equals(id)
+                        || "minecraft:lingering_potion".equals(id)
+                        || "minecraft:tipped_arrow".equals(id)) {
+                        Typed<?> tag = input.getOrCreateTyped(tagF);
+                        Dynamic<?> tagRest = tag.get(DSL.remainderFinder());
+                        if (tagRest.get("Potion").asString().result().isEmpty()) {
+                            tagRest = tagRest.set("Potion", tagRest.createString("minecraft:water"));
                         }
 
-                        return p_16161_.set(opticfinder1, typed.set(DSL.remainderFinder(), dynamic));
+                        return input.set(tagF, tag.set(DSL.remainderFinder(), tagRest));
                     }
                 }
 
-                return p_16161_;
+                return input;
             }
         );
     }

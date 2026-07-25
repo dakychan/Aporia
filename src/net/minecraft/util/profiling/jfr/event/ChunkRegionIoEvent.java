@@ -48,18 +48,18 @@ public abstract class ChunkRegionIoEvent extends Event {
     @Label("Bytes")
     public final int bytes;
 
-    public ChunkRegionIoEvent(RegionStorageInfo p_335007_, ChunkPos p_328585_, RegionFileVersion p_333736_, int p_333935_) {
-        this.regionPosX = p_328585_.getRegionX();
-        this.regionPosZ = p_328585_.getRegionZ();
-        this.localChunkPosX = p_328585_.getRegionLocalX();
-        this.localChunkPosZ = p_328585_.getRegionLocalZ();
-        this.chunkPosX = p_328585_.x;
-        this.chunkPosZ = p_328585_.z;
-        this.levelId = p_335007_.level();
-        this.dimension = p_335007_.dimension().identifier().toString();
-        this.type = p_335007_.type();
-        this.compression = "standard:" + p_333736_.getId();
-        this.bytes = p_333935_;
+    protected ChunkRegionIoEvent(final RegionStorageInfo info, final ChunkPos chunkPos, final RegionFileVersion version, final int bytes) {
+        this.regionPosX = chunkPos.getRegionX();
+        this.regionPosZ = chunkPos.getRegionZ();
+        this.localChunkPosX = chunkPos.getRegionLocalX();
+        this.localChunkPosZ = chunkPos.getRegionLocalZ();
+        this.chunkPosX = chunkPos.x();
+        this.chunkPosZ = chunkPos.z();
+        this.levelId = info.level();
+        this.dimension = info.dimension().identifier().toString();
+        this.type = info.type();
+        this.compression = "standard:" + version.getId();
+        this.bytes = bytes;
     }
 
     public static class Fields {

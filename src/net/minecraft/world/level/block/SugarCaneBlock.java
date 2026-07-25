@@ -29,39 +29,39 @@ public class SugarCaneBlock extends Block {
         return CODEC;
     }
 
-    protected SugarCaneBlock(BlockBehaviour.Properties p_57168_) {
-        super(p_57168_);
+    protected SugarCaneBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(AGE, 0));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57193_, BlockGetter p_57194_, BlockPos p_57195_, CollisionContext p_57196_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected void tick(BlockState p_222543_, ServerLevel p_222544_, BlockPos p_222545_, RandomSource p_222546_) {
-        if (!p_222543_.canSurvive(p_222544_, p_222545_)) {
-            p_222544_.destroyBlock(p_222545_, true);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!state.canSurvive(level, pos)) {
+            level.destroyBlock(pos, true);
         }
     }
 
     @Override
-    protected void randomTick(BlockState p_222548_, ServerLevel p_222549_, BlockPos p_222550_, RandomSource p_222551_) {
-        if (p_222549_.isEmptyBlock(p_222550_.above())) {
-            int i = 1;
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (level.isEmptyBlock(pos.above())) {
+            int height = 1;
 
-            while (p_222549_.getBlockState(p_222550_.below(i)).is(this)) {
-                i++;
+            while (level.getBlockState(pos.below(height)).is(this)) {
+                height++;
             }
 
-            if (i < 3) {
-                int j = p_222548_.getValue(AGE);
-                if (j == 15) {
-                    p_222549_.setBlockAndUpdate(p_222550_.above(), this.defaultBlockState());
-                    p_222549_.setBlock(p_222550_, p_222548_.setValue(AGE, 0), 260);
+            if (height < 3) {
+                int age = state.getValue(AGE);
+                if (age == 15) {
+                    level.setBlockAndUpdate(pos.above(), this.defaultBlockState());
+                    level.setBlock(pos, state.setValue(AGE, 0), 260);
                 } else {
-                    p_222549_.setBlock(p_222550_, p_222548_.setValue(AGE, j + 1), 260);
+                    level.setBlock(pos, state.setValue(AGE, age + 1), 260);
                 }
             }
         }
@@ -69,46 +69,46 @@ public class SugarCaneBlock extends Block {
 
     @Override
     protected BlockState updateShape(
-        BlockState p_57179_,
-        LevelReader p_366453_,
-        ScheduledTickAccess p_364886_,
-        BlockPos p_57183_,
-        Direction p_57180_,
-        BlockPos p_57184_,
-        BlockState p_57181_,
-        RandomSource p_361303_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!p_57179_.canSurvive(p_366453_, p_57183_)) {
-            p_364886_.scheduleTick(p_57183_, this, 1);
+        if (!state.canSurvive(level, pos)) {
+            ticks.scheduleTick(pos, this, 1);
         }
 
-        return super.updateShape(p_57179_, p_366453_, p_364886_, p_57183_, p_57180_, p_57184_, p_57181_, p_361303_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_57175_, LevelReader p_57176_, BlockPos p_57177_) {
-        BlockState blockstate = p_57176_.getBlockState(p_57177_.below());
-        if (blockstate.is(this)) {
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockState stateBelow = level.getBlockState(pos.below());
+        if (stateBelow.is(this)) {
             return true;
-        } else {
-            if (blockstate.is(BlockTags.DIRT) || blockstate.is(BlockTags.SAND)) {
-                BlockPos blockpos = p_57177_.below();
+        }
 
-                for (Direction direction : Direction.Plane.HORIZONTAL) {
-                    BlockState blockstate1 = p_57176_.getBlockState(blockpos.relative(direction));
-                    FluidState fluidstate = p_57176_.getFluidState(blockpos.relative(direction));
-                    if (fluidstate.is(FluidTags.WATER) || blockstate1.is(Blocks.FROSTED_ICE)) {
-                        return true;
-                    }
+        if (stateBelow.is(BlockTags.SUPPORTS_SUGAR_CANE)) {
+            BlockPos below = pos.below();
+
+            for (Direction direction : Direction.Plane.HORIZONTAL) {
+                BlockState blockState = level.getBlockState(below.relative(direction));
+                FluidState fluidState = level.getFluidState(below.relative(direction));
+                if (fluidState.is(FluidTags.SUPPORTS_SUGAR_CANE_ADJACENTLY) || blockState.is(BlockTags.SUPPORTS_SUGAR_CANE_ADJACENTLY)) {
+                    return true;
                 }
             }
-
-            return false;
         }
+
+        return false;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57186_) {
-        p_57186_.add(AGE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(AGE);
     }
 }

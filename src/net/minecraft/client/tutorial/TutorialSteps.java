@@ -1,10 +1,7 @@
 package net.minecraft.client.tutorial;
 
 import java.util.function.Function;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum TutorialSteps {
     MOVEMENT("movement", MovementTutorialStepInstance::new),
     FIND_TREE("find_tree", FindTreeTutorialStepInstance::new),
@@ -16,23 +13,23 @@ public enum TutorialSteps {
     private final String name;
     private final Function<Tutorial, ? extends TutorialStepInstance> constructor;
 
-    private <T extends TutorialStepInstance> TutorialSteps(final String p_120637_, final Function<Tutorial, T> p_120638_) {
-        this.name = p_120637_;
-        this.constructor = p_120638_;
+    <T extends TutorialStepInstance> TutorialSteps(final String name, final Function<Tutorial, T> constructor) {
+        this.name = name;
+        this.constructor = constructor;
     }
 
-    public TutorialStepInstance create(Tutorial p_120641_) {
-        return this.constructor.apply(p_120641_);
+    public TutorialStepInstance create(final Tutorial tutorial) {
+        return this.constructor.apply(tutorial);
     }
 
     public String getName() {
         return this.name;
     }
 
-    public static TutorialSteps getByName(String p_120643_) {
-        for (TutorialSteps tutorialsteps : values()) {
-            if (tutorialsteps.name.equals(p_120643_)) {
-                return tutorialsteps;
+    public static TutorialSteps getByName(final String name) {
+        for (TutorialSteps step : values()) {
+            if (step.name.equals(name)) {
+                return step;
             }
         }
 

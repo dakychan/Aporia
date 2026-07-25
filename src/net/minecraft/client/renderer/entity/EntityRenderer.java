@@ -4,16 +4,17 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.ArrayList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.Lightmap;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.culling.Frustum;
 import net.minecraft.client.renderer.entity.state.EntityRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.server.IntegratedServer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
+import net.minecraft.util.LightCoordsUtil;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityAttachment;
@@ -28,11 +29,8 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class EntityRenderer<T extends Entity, S extends EntityRenderState> {
     private static final float SHADOW_POWER_FALLOFF_Y = 0.5F;
     private static final float MAX_SHADOW_RADIUS = 32.0F;
@@ -42,291 +40,300 @@ public abstract class EntityRenderer<T extends Entity, S extends EntityRenderSta
     protected float shadowRadius;
     protected float shadowStrength = 1.0F;
 
-    protected EntityRenderer(EntityRendererProvider.Context p_174008_) {
-        this.entityRenderDispatcher = p_174008_.getEntityRenderDispatcher();
-        this.font = p_174008_.getFont();
+    protected EntityRenderer(final EntityRendererProvider.Context context) {
+        this.entityRenderDispatcher = context.getEntityRenderDispatcher();
+        this.font = context.getFont();
     }
 
-    public final int getPackedLightCoords(T p_114506_, float p_114507_) {
-        BlockPos blockpos = BlockPos.containing(p_114506_.getLightProbePosition(p_114507_));
-        return LightTexture.pack(this.getBlockLightLevel(p_114506_, blockpos), this.getSkyLightLevel(p_114506_, blockpos));
+    public final int getPackedLightCoords(final T entity, final float partialTickTime) {
+        BlockPos blockPos = BlockPos.containing(entity.getLightProbePosition(partialTickTime));
+        return LightCoordsUtil.pack(this.getBlockLightLevel(entity, blockPos), this.getSkyLightLevel(entity, blockPos));
     }
 
-    protected int getSkyLightLevel(T p_114509_, BlockPos p_114510_) {
-        return p_114509_.level().getBrightness(LightLayer.SKY, p_114510_);
+    protected int getSkyLightLevel(final T entity, final BlockPos blockPos) {
+        return entity.level().getBrightness(LightLayer.SKY, blockPos);
     }
 
-    protected int getBlockLightLevel(T p_114496_, BlockPos p_114497_) {
-        return p_114496_.isOnFire() ? 15 : p_114496_.level().getBrightness(LightLayer.BLOCK, p_114497_);
+    protected int getBlockLightLevel(final T entity, final BlockPos blockPos) {
+        return entity.isOnFire() ? 15 : entity.level().getBrightness(LightLayer.BLOCK, blockPos);
     }
 
-    public boolean shouldRender(T p_114491_, Frustum p_114492_, double p_114493_, double p_114494_, double p_114495_) {
-        if (!p_114491_.shouldRender(p_114493_, p_114494_, p_114495_)) {
+    public boolean shouldRender(final T entity, final Frustum culler, final double camX, final double camY, final double camZ) {
+        if (!entity.shouldRender(camX, camY, camZ)) {
             return false;
-        } else if (!this.affectedByCulling(p_114491_)) {
+        }
+
+        if (!this.affectedByCulling(entity)) {
             return true;
-        } else {
-            AABB aabb = this.getBoundingBoxForCulling(p_114491_).inflate(0.5);
-            if (aabb.hasNaN() || aabb.getSize() == 0.0) {
-                aabb = new AABB(
-                    p_114491_.getX() - 2.0,
-                    p_114491_.getY() - 2.0,
-                    p_114491_.getZ() - 2.0,
-                    p_114491_.getX() + 2.0,
-                    p_114491_.getY() + 2.0,
-                    p_114491_.getZ() + 2.0
-                );
-            }
+        }
 
-            if (p_114492_.isVisible(aabb)) {
-                return true;
-            } else {
-                if (p_114491_ instanceof Leashable leashable) {
-                    Entity entity = leashable.getLeashHolder();
-                    if (entity != null) {
-                        AABB aabb1 = this.entityRenderDispatcher.getRenderer(entity).getBoundingBoxForCulling(entity);
-                        return p_114492_.isVisible(aabb1) || p_114492_.isVisible(aabb.minmax(aabb1));
-                    }
-                }
+        AABB boundingBox = this.getBoundingBoxForCulling(entity).inflate(0.5);
+        if (boundingBox.hasNaN() || boundingBox.getSize() == 0.0) {
+            boundingBox = new AABB(entity.getX() - 2.0, entity.getY() - 2.0, entity.getZ() - 2.0, entity.getX() + 2.0, entity.getY() + 2.0, entity.getZ() + 2.0);
+        }
 
-                return false;
+        if (culler.isVisible(boundingBox)) {
+            return true;
+        }
+
+        if (entity instanceof Leashable leashable) {
+            Entity leashHolder = leashable.getLeashHolder();
+            if (leashHolder != null) {
+                AABB leasherBox = this.entityRenderDispatcher.getRenderer(leashHolder).getBoundingBoxForCulling(leashHolder);
+                return culler.isVisible(leasherBox) || culler.isVisible(boundingBox.minmax(leasherBox));
             }
         }
+
+        return false;
     }
 
-    protected AABB getBoundingBoxForCulling(T p_365369_) {
-        return p_365369_.getBoundingBox();
+    protected AABB getBoundingBoxForCulling(final T entity) {
+        return entity.getBoundingBox();
     }
 
-    protected boolean affectedByCulling(T p_366877_) {
+    protected boolean affectedByCulling(final T entity) {
         return true;
     }
 
-    public Vec3 getRenderOffset(S p_367733_) {
-        return p_367733_.passengerOffset != null ? p_367733_.passengerOffset : Vec3.ZERO;
+    public Vec3 getRenderOffset(final S state) {
+        return state.passengerOffset != null ? state.passengerOffset : Vec3.ZERO;
     }
 
-    public void submit(S p_431602_, PoseStack p_427228_, SubmitNodeCollector p_425204_, CameraRenderState p_426406_) {
-        if (p_431602_.leashStates != null) {
-            for (EntityRenderState.LeashState entityrenderstate$leashstate : p_431602_.leashStates) {
-                p_425204_.submitLeash(p_427228_, entityrenderstate$leashstate);
+    public void submit(final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+        if (state.leashStates != null) {
+            for (EntityRenderState.LeashState leashState : state.leashStates) {
+                submitNodeCollector.submitLeash(poseStack, leashState);
             }
         }
 
-        this.submitNameTag(p_431602_, p_427228_, p_425204_, p_426406_);
+        this.submitNameDisplay(state, poseStack, submitNodeCollector, camera);
     }
 
-    protected boolean shouldShowName(T p_114504_, double p_363875_) {
-        return p_114504_.shouldShowName() || p_114504_.hasCustomName() && p_114504_ == this.entityRenderDispatcher.crosshairPickEntity;
+    protected boolean shouldShowName(final T entity, final double distanceToCameraSq) {
+        return entity.shouldShowName() || entity.hasCustomName() && entity == this.entityRenderDispatcher.crosshairPickEntity;
     }
 
     public Font getFont() {
         return this.font;
     }
 
-    protected void submitNameTag(S p_429896_, PoseStack p_428845_, SubmitNodeCollector p_426439_, CameraRenderState p_428408_) {
-        if (p_429896_.nameTag != null) {
-            p_426439_.submitNameTag(
-                p_428845_, p_429896_.nameTagAttachment, 0, p_429896_.nameTag, !p_429896_.isDiscrete, p_429896_.lightCoords, p_429896_.distanceToCameraSq, p_428408_
-            );
+    protected void submitNameDisplay(final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+        this.submitNameDisplay(state, poseStack, submitNodeCollector, camera, 0);
+    }
+
+    protected final <S extends EntityRenderState> void submitNameDisplay(
+        final S state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera, final int offset
+    ) {
+        poseStack.pushPose();
+        if (state.scoreText != null) {
+            submitNodeCollector.submitNameTag(poseStack, state.nameTagAttachment, offset, state.scoreText, !state.isDiscrete, state.lightCoords, camera);
+            poseStack.translate(0.0F, 9.0F * 1.15F * 0.025F, 0.0F);
         }
+
+        if (state.nameTag != null) {
+            submitNodeCollector.submitNameTag(poseStack, state.nameTagAttachment, offset, state.nameTag, !state.isDiscrete, state.lightCoords, camera);
+        }
+
+        poseStack.popPose();
     }
 
-    protected @Nullable Component getNameTag(T p_361489_) {
-        return p_361489_.getDisplayName();
+    protected @Nullable Component getNameTag(final T entity) {
+        return entity.getDisplayName();
     }
 
-    protected float getShadowRadius(S p_364114_) {
+    protected float getShadowRadius(final S state) {
         return this.shadowRadius;
     }
 
-    protected float getShadowStrength(S p_376038_) {
+    protected float getShadowStrength(final S state) {
         return this.shadowStrength;
     }
 
     public abstract S createRenderState();
 
-    public final S createRenderState(T p_363266_, float p_363950_) {
-        S s = this.createRenderState();
-        this.extractRenderState(p_363266_, s, p_363950_);
-        this.finalizeRenderState(p_363266_, s);
-        return s;
+    public final S createRenderState(final T entity, final float partialTicks) {
+        S state = this.createRenderState();
+        this.extractRenderState(entity, state, partialTicks);
+        this.finalizeRenderState(entity, state);
+        return state;
     }
 
-    public void extractRenderState(T p_367571_, S p_367427_, float p_363243_) {
-        p_367427_.entityType = p_367571_.getType();
-        p_367427_.x = Mth.lerp(p_363243_, p_367571_.xOld, p_367571_.getX());
-        p_367427_.y = Mth.lerp(p_363243_, p_367571_.yOld, p_367571_.getY());
-        p_367427_.z = Mth.lerp(p_363243_, p_367571_.zOld, p_367571_.getZ());
-        p_367427_.isInvisible = p_367571_.isInvisible();
-        p_367427_.ageInTicks = p_367571_.tickCount + p_363243_;
-        p_367427_.boundingBoxWidth = p_367571_.getBbWidth();
-        p_367427_.boundingBoxHeight = p_367571_.getBbHeight();
-        p_367427_.eyeHeight = p_367571_.getEyeHeight();
-        if (p_367571_.isPassenger()
-            && p_367571_.getVehicle() instanceof AbstractMinecart abstractminecart
-            && abstractminecart.getBehavior() instanceof NewMinecartBehavior newminecartbehavior
-            && newminecartbehavior.cartHasPosRotLerp()) {
-            double d2 = Mth.lerp(p_363243_, abstractminecart.xOld, abstractminecart.getX());
-            double d0 = Mth.lerp(p_363243_, abstractminecart.yOld, abstractminecart.getY());
-            double d1 = Mth.lerp(p_363243_, abstractminecart.zOld, abstractminecart.getZ());
-            p_367427_.passengerOffset = newminecartbehavior.getCartLerpPosition(p_363243_).subtract(new Vec3(d2, d0, d1));
+    public void extractRenderState(final T entity, final S state, final float partialTicks) {
+        state.entityType = entity.getType();
+        state.x = Mth.lerp(partialTicks, entity.xOld, entity.getX());
+        state.y = Mth.lerp(partialTicks, entity.yOld, entity.getY());
+        state.z = Mth.lerp(partialTicks, entity.zOld, entity.getZ());
+        state.isInvisible = entity.isInvisible();
+        state.ageInTicks = entity.tickCount + partialTicks;
+        state.boundingBoxWidth = entity.getBbWidth();
+        state.boundingBoxHeight = entity.getBbHeight();
+        state.eyeHeight = entity.getEyeHeight();
+        if (entity.isPassenger()
+            && entity.getVehicle() instanceof AbstractMinecart minecart
+            && minecart.getBehavior() instanceof NewMinecartBehavior behavior
+            && behavior.cartHasPosRotLerp()) {
+            double cartLerpX = Mth.lerp(partialTicks, minecart.xOld, minecart.getX());
+            double cartLerpY = Mth.lerp(partialTicks, minecart.yOld, minecart.getY());
+            double cartLerpZ = Mth.lerp(partialTicks, minecart.zOld, minecart.getZ());
+            state.passengerOffset = behavior.getCartLerpPosition(partialTicks).subtract(new Vec3(cartLerpX, cartLerpY, cartLerpZ));
         } else {
-            p_367427_.passengerOffset = null;
+            state.passengerOffset = null;
         }
 
-        if (this.entityRenderDispatcher.camera != null) {
-            p_367427_.distanceToCameraSq = this.entityRenderDispatcher.distanceToSqr(p_367571_);
-            boolean flag1 = p_367427_.distanceToCameraSq < 4096.0 && this.shouldShowName(p_367571_, p_367427_.distanceToCameraSq);
-            if (flag1 && !(so.aporia.module.impl.render.NameTags.active && p_367571_ instanceof net.minecraft.world.entity.player.Player)) {
-                p_367427_.nameTag = this.getNameTag(p_367571_);
-                p_367427_.nameTagAttachment = p_367571_.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, p_367571_.getYRot(p_363243_));
+        this.extractNameTags(entity, state, partialTicks);
+        state.isDiscrete = entity.isDiscrete();
+        Level level = entity.level();
+        if (entity instanceof Leashable leashable && leashable.getLeashHolder() != null) {
+            Entity roper = leashable.getLeashHolder();
+            float entityYRot = entity.getPreciseBodyRotation(partialTicks) * (float) (Math.PI / 180.0);
+            Vec3 attachOffset = leashable.getLeashOffset(partialTicks);
+            BlockPos entityEyePos = BlockPos.containing(entity.getEyePosition(partialTicks));
+            BlockPos roperEyePos = BlockPos.containing(roper.getEyePosition(partialTicks));
+            int startBlockLight = this.getBlockLightLevel(entity, entityEyePos);
+            int endBlockLight = this.entityRenderDispatcher.getRenderer(roper).getBlockLightLevel(roper, roperEyePos);
+            int startSkyLight = level.getBrightness(LightLayer.SKY, entityEyePos);
+            int endSkyLight = level.getBrightness(LightLayer.SKY, roperEyePos);
+            boolean quadConnection = roper.supportQuadLeashAsHolder() && leashable.supportQuadLeash();
+            int leashCount = quadConnection ? 4 : 1;
+            if (state.leashStates == null || state.leashStates.size() != leashCount) {
+                state.leashStates = new ArrayList<>(leashCount);
+
+                for (int i = 0; i < leashCount; i++) {
+                    state.leashStates.add(new EntityRenderState.LeashState());
+                }
+            }
+
+            if (quadConnection) {
+                float roperYRot = roper.getPreciseBodyRotation(partialTicks) * (float) (Math.PI / 180.0);
+                Vec3 holderPos = roper.getPosition(partialTicks);
+                Vec3[] leashableAttachmentPoints = leashable.getQuadLeashOffsets();
+                Vec3[] roperAttachmentPoints = roper.getQuadLeashHolderOffsets();
+
+                for (int i = 0; i < leashCount; i++) {
+                    EntityRenderState.LeashState leashState = state.leashStates.get(i);
+                    leashState.offset = leashableAttachmentPoints[i].yRot(-entityYRot);
+                    leashState.start = entity.getPosition(partialTicks).add(leashState.offset);
+                    leashState.end = holderPos.add(roperAttachmentPoints[i].yRot(-roperYRot));
+                    leashState.startBlockLight = startBlockLight;
+                    leashState.endBlockLight = endBlockLight;
+                    leashState.startSkyLight = startSkyLight;
+                    leashState.endSkyLight = endSkyLight;
+                    leashState.slack = false;
+                }
             } else {
-                p_367427_.nameTag = null;
+                Vec3 rotatedAttachOffset = attachOffset.yRot(-entityYRot);
+                EntityRenderState.LeashState leashState = state.leashStates.getFirst();
+                leashState.offset = rotatedAttachOffset;
+                leashState.start = entity.getPosition(partialTicks).add(rotatedAttachOffset);
+                leashState.end = roper.getRopeHoldPosition(partialTicks);
+                leashState.startBlockLight = startBlockLight;
+                leashState.endBlockLight = endBlockLight;
+                leashState.startSkyLight = startSkyLight;
+                leashState.endSkyLight = endSkyLight;
             }
+        } else {
+            state.leashStates = null;
         }
 
-        label72: {
-            p_367427_.isDiscrete = p_367571_.isDiscrete();
-            Level level = p_367571_.level();
-            if (p_367571_ instanceof Leashable leashable) {
-                Entity $$12 = leashable.getLeashHolder();
-                if ($$12 instanceof Entity) {
-                    float f = p_367571_.getPreciseBodyRotation(p_363243_) * (float) (Math.PI / 180.0);
-                    Vec3 vec31 = leashable.getLeashOffset(p_363243_);
-                    BlockPos blockpos = BlockPos.containing(p_367571_.getEyePosition(p_363243_));
-                    BlockPos blockpos1 = BlockPos.containing($$12.getEyePosition(p_363243_));
-                    int i = this.getBlockLightLevel(p_367571_, blockpos);
-                    int j = this.entityRenderDispatcher.getRenderer($$12).getBlockLightLevel($$12, blockpos1);
-                    int k = level.getBrightness(LightLayer.SKY, blockpos);
-                    int l = level.getBrightness(LightLayer.SKY, blockpos1);
-                    boolean flag = $$12.supportQuadLeashAsHolder() && leashable.supportQuadLeash();
-                    int i1 = flag ? 4 : 1;
-                    if (p_367427_.leashStates == null || p_367427_.leashStates.size() != i1) {
-                        p_367427_.leashStates = new ArrayList<>(i1);
+        state.displayFireAnimation = entity.displayFireAnimation();
+        Minecraft minecraft = Minecraft.getInstance();
+        boolean appearsGlowing = minecraft.shouldEntityAppearGlowing(entity);
+        state.outlineColor = appearsGlowing ? ARGB.opaque(entity.getTeamColor()) : 0;
+        state.lightCoords = this.getPackedLightCoords(entity, partialTicks);
+    }
 
-                        for (int j1 = 0; j1 < i1; j1++) {
-                            p_367427_.leashStates.add(new EntityRenderState.LeashState());
-                        }
-                    }
+    protected void extractNameTags(final T entity, final S state, final float partialTicks) {
+        this.extractNameTags(entity, state, partialTicks, 64.0, 10.0);
+    }
 
-                    if (flag) {
-                        float f1 = $$12.getPreciseBodyRotation(p_363243_) * (float) (Math.PI / 180.0);
-                        Vec3 vec3 = $$12.getPosition(p_363243_);
-                        Vec3[] avec3 = leashable.getQuadLeashOffsets();
-                        Vec3[] avec31 = $$12.getQuadLeashHolderOffsets();
-                        int k1 = 0;
-
-                        while (true) {
-                            if (k1 >= i1) {
-                                break label72;
-                            }
-
-                            EntityRenderState.LeashState entityrenderstate$leashstate = p_367427_.leashStates.get(k1);
-                            entityrenderstate$leashstate.offset = avec3[k1].yRot(-f);
-                            entityrenderstate$leashstate.start = p_367571_.getPosition(p_363243_).add(entityrenderstate$leashstate.offset);
-                            entityrenderstate$leashstate.end = vec3.add(avec31[k1].yRot(-f1));
-                            entityrenderstate$leashstate.startBlockLight = i;
-                            entityrenderstate$leashstate.endBlockLight = j;
-                            entityrenderstate$leashstate.startSkyLight = k;
-                            entityrenderstate$leashstate.endSkyLight = l;
-                            entityrenderstate$leashstate.slack = false;
-                            k1++;
-                        }
-                    } else {
-                        Vec3 vec32 = vec31.yRot(-f);
-                        EntityRenderState.LeashState entityrenderstate$leashstate1 = p_367427_.leashStates.getFirst();
-                        entityrenderstate$leashstate1.offset = vec32;
-                        entityrenderstate$leashstate1.start = p_367571_.getPosition(p_363243_).add(vec32);
-                        entityrenderstate$leashstate1.end = $$12.getRopeHoldPosition(p_363243_);
-                        entityrenderstate$leashstate1.startBlockLight = i;
-                        entityrenderstate$leashstate1.endBlockLight = j;
-                        entityrenderstate$leashstate1.startSkyLight = k;
-                        entityrenderstate$leashstate1.endSkyLight = l;
-                        break label72;
-                    }
-                }
+    protected final void extractNameTags(final T entity, final S state, final float partialTicks, final double nameTagDistance, final double belowNameDistance) {
+        if (this.entityRenderDispatcher.camera != null) {
+            state.distanceToCameraSq = this.entityRenderDispatcher.distanceToSqr(entity);
+            boolean shouldShowName = state.distanceToCameraSq < Mth.square(nameTagDistance) && this.shouldShowName(entity, state.distanceToCameraSq);
+            if (shouldShowName && !(so.aporia.module.impl.render.NameTags.active && entity instanceof net.minecraft.world.entity.player.Player)) {
+                state.nameTag = this.getNameTag(entity);
+                state.nameTagAttachment = entity.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, entity.getYRot(partialTicks));
+            } else {
+                state.nameTag = null;
             }
 
-            p_367427_.leashStates = null;
+            if (state.distanceToCameraSq < Mth.square(belowNameDistance)) {
+                state.scoreText = entity.belowNameDisplay();
+            } else {
+                state.scoreText = null;
+            }
         }
-
-        p_367427_.displayFireAnimation = p_367571_.displayFireAnimation();
-        Minecraft minecraft = Minecraft.getInstance();
-        boolean flag2 = minecraft.shouldEntityAppearGlowing(p_367571_);
-        p_367427_.outlineColor = flag2 ? ARGB.opaque(p_367571_.getTeamColor()) : 0;
-        p_367427_.lightCoords = this.getPackedLightCoords(p_367571_, p_363243_);
     }
 
-    protected void finalizeRenderState(T p_430394_, S p_428267_) {
+    protected void finalizeRenderState(final T entity, final S state) {
         Minecraft minecraft = Minecraft.getInstance();
-        Level level = p_430394_.level();
-        this.extractShadow(p_428267_, minecraft, level);
+        Level level = entity.level();
+        this.extractShadow(state, minecraft, level);
     }
 
-    private void extractShadow(S p_431467_, Minecraft p_425570_, Level p_429120_) {
-        p_431467_.shadowPieces.clear();
-        if (p_425570_.options.entityShadows().get() && !p_431467_.isInvisible) {
-            float f = Math.min(this.getShadowRadius(p_431467_), 32.0F);
-            p_431467_.shadowRadius = f;
-            if (f > 0.0F) {
-                double d0 = p_431467_.distanceToCameraSq;
-                float f1 = (float)((1.0 - d0 / 256.0) * this.getShadowStrength(p_431467_));
-                if (f1 > 0.0F) {
-                    int i = Mth.floor(p_431467_.x - f);
-                    int j = Mth.floor(p_431467_.x + f);
-                    int k = Mth.floor(p_431467_.z - f);
-                    int l = Mth.floor(p_431467_.z + f);
-                    float f2 = Math.min(f1 / 0.5F - 1.0F, f);
-                    int i1 = Mth.floor(p_431467_.y - f2);
-                    int j1 = Mth.floor(p_431467_.y);
-                    BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+    private void extractShadow(final S state, final Minecraft minecraft, final Level level) {
+        state.shadowPieces.clear();
+        if (minecraft.options.entityShadows().get() && !state.isInvisible) {
+            float shadowRadius = Math.min(this.getShadowRadius(state), 32.0F);
+            state.shadowRadius = shadowRadius;
+            if (shadowRadius > 0.0F) {
+                double distSq = state.distanceToCameraSq;
+                float pow = (float)((1.0 - distSq / 256.0) * this.getShadowStrength(state));
+                if (pow > 0.0F) {
+                    int x0 = Mth.floor(state.x - shadowRadius);
+                    int x1 = Mth.floor(state.x + shadowRadius);
+                    int z0 = Mth.floor(state.z - shadowRadius);
+                    int z1 = Mth.floor(state.z + shadowRadius);
+                    float depth = Math.min(pow / 0.5F - 1.0F, shadowRadius);
+                    int y0 = Mth.floor(state.y - depth);
+                    int y1 = Mth.floor(state.y);
+                    BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-                    for (int k1 = k; k1 <= l; k1++) {
-                        for (int l1 = i; l1 <= j; l1++) {
-                            blockpos$mutableblockpos.set(l1, 0, k1);
-                            ChunkAccess chunkaccess = p_429120_.getChunk(blockpos$mutableblockpos);
+                    for (int z = z0; z <= z1; z++) {
+                        for (int x = x0; x <= x1; x++) {
+                            pos.set(x, 0, z);
+                            ChunkAccess chunk = level.getChunk(pos);
 
-                            for (int i2 = i1; i2 <= j1; i2++) {
-                                blockpos$mutableblockpos.setY(i2);
-                                this.extractShadowPiece(p_431467_, p_429120_, f1, blockpos$mutableblockpos, chunkaccess);
+                            for (int y = y0; y <= y1; y++) {
+                                pos.setY(y);
+                                this.extractShadowPiece(state, level, pow, pos, chunk);
                             }
                         }
                     }
                 }
             }
         } else {
-            p_431467_.shadowRadius = 0.0F;
+            state.shadowRadius = 0.0F;
         }
     }
 
-    private void extractShadowPiece(S p_428100_, Level p_431705_, float p_429996_, BlockPos.MutableBlockPos p_424981_, ChunkAccess p_426623_) {
-        float f = p_429996_ - (float)(p_428100_.y - p_424981_.getY()) * 0.5F;
-        BlockPos blockpos = p_424981_.below();
-        BlockState blockstate = p_426623_.getBlockState(blockpos);
-        if (blockstate.getRenderShape() != RenderShape.INVISIBLE) {
-            int i = p_431705_.getMaxLocalRawBrightness(p_424981_);
-            if (i > 3) {
-                if (blockstate.isCollisionShapeFullBlock(p_426623_, blockpos)) {
-                    VoxelShape voxelshape = blockstate.getShape(p_426623_, blockpos);
-                    if (!voxelshape.isEmpty()) {
-                        float f1 = Mth.clamp(f * 0.5F * LightTexture.getBrightness(p_431705_.dimensionType(), i), 0.0F, 1.0F);
-                        float f2 = (float)(p_424981_.getX() - p_428100_.x);
-                        float f3 = (float)(p_424981_.getY() - p_428100_.y);
-                        float f4 = (float)(p_424981_.getZ() - p_428100_.z);
-                        p_428100_.shadowPieces.add(new EntityRenderState.ShadowPiece(f2, f3, f4, voxelshape, f1));
+    private void extractShadowPiece(final S state, final Level level, final float pow, final BlockPos.MutableBlockPos pos, final ChunkAccess chunk) {
+        float powerAtDepth = pow - (float)(state.y - pos.getY()) * 0.5F;
+        BlockPos belowPos = pos.below();
+        BlockState belowState = chunk.getBlockState(belowPos);
+        if (belowState.getRenderShape() != RenderShape.INVISIBLE) {
+            int brightness = level.getMaxLocalRawBrightness(pos);
+            if (brightness > 3) {
+                if (belowState.isCollisionShapeFullBlock(chunk, belowPos)) {
+                    VoxelShape belowShape = belowState.getShape(chunk, belowPos);
+                    if (!belowShape.isEmpty()) {
+                        float alpha = Mth.clamp(powerAtDepth * 0.5F * Lightmap.getBrightness(level.dimensionType(), brightness), 0.0F, 1.0F);
+                        float relativeX = (float)(pos.getX() - state.x);
+                        float relativeY = (float)(pos.getY() - state.y);
+                        float relativeZ = (float)(pos.getZ() - state.z);
+                        state.shadowPieces.add(new EntityRenderState.ShadowPiece(relativeX, relativeY, relativeZ, belowShape, alpha));
                     }
                 }
             }
         }
     }
 
-    private static @Nullable Entity getServerSideEntity(Entity p_397464_) {
-        IntegratedServer integratedserver = Minecraft.getInstance().getSingleplayerServer();
-        if (integratedserver != null) {
-            ServerLevel serverlevel = integratedserver.getLevel(p_397464_.level().dimension());
-            if (serverlevel != null) {
-                return serverlevel.getEntity(p_397464_.getId());
+    private static @Nullable Entity getServerSideEntity(final Entity entity) {
+        IntegratedServer server = Minecraft.getInstance().getSingleplayerServer();
+        if (server != null) {
+            ServerLevel level = server.getLevel(entity.level().dimension());
+            if (level != null) {
+                return level.getEntity(entity.getId());
             }
         }
 

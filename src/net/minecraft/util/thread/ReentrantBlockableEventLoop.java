@@ -3,12 +3,12 @@ package net.minecraft.util.thread;
 public abstract class ReentrantBlockableEventLoop<R extends Runnable> extends BlockableEventLoop<R> {
     private int reentrantCount;
 
-    public ReentrantBlockableEventLoop(String p_18765_) {
-        super(p_18765_);
+    public ReentrantBlockableEventLoop(final String name, final boolean propagatesCrashes) {
+        super(name, propagatesCrashes);
     }
 
     @Override
-    public boolean scheduleExecutables() {
+    protected boolean scheduleExecutables() {
         return this.runningTask() || super.scheduleExecutables();
     }
 
@@ -17,11 +17,11 @@ public abstract class ReentrantBlockableEventLoop<R extends Runnable> extends Bl
     }
 
     @Override
-    public void doRunTask(R p_18769_) {
+    protected void doRunTask(final R task) {
         this.reentrantCount++;
 
         try {
-            super.doRunTask(p_18769_);
+            super.doRunTask(task);
         } finally {
             this.reentrantCount--;
         }

@@ -12,41 +12,45 @@ import java.util.List;
 import java.util.Optional;
 
 public class OverreachingTickFix extends DataFix {
-    public OverreachingTickFix(Schema p_207654_) {
-        super(p_207654_, false);
+    public OverreachingTickFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        OpticFinder<?> opticfinder = type.findField("block_ticks");
-        return this.fixTypeEverywhereTyped("Handle ticks saved in the wrong chunk", type, p_326641_ -> {
-            Optional<? extends Typed<?>> optional = p_326641_.getOptionalTyped(opticfinder);
-            Optional<? extends Dynamic<?>> optional1 = optional.isPresent() ? optional.get().write().result() : Optional.empty();
-            return p_326641_.update(DSL.remainderFinder(), p_326639_ -> {
-                int i = p_326639_.get("xPos").asInt(0);
-                int j = p_326639_.get("zPos").asInt(0);
-                Optional<? extends Dynamic<?>> optional2 = p_326639_.get("fluid_ticks").get().result();
-                p_326639_ = extractOverreachingTicks(p_326639_, i, j, optional1, "neighbor_block_ticks");
-                return extractOverreachingTicks(p_326639_, i, j, optional2, "neighbor_fluid_ticks");
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        OpticFinder<?> blockTicksFinder = chunkType.findField("block_ticks");
+        return this.fixTypeEverywhereTyped("Handle ticks saved in the wrong chunk", chunkType, chunk -> {
+            Optional<? extends Typed<?>> blockTicksOpt = chunk.getOptionalTyped(blockTicksFinder);
+            Optional<? extends Dynamic<?>> blockTicks = blockTicksOpt.isPresent() ? blockTicksOpt.get().write().result() : Optional.empty();
+            return chunk.update(DSL.remainderFinder(), remainder -> {
+                int chunkX = remainder.get("xPos").asInt(0);
+                int chunkZ = remainder.get("zPos").asInt(0);
+                Optional<? extends Dynamic<?>> fluidTicks = remainder.get("fluid_ticks").get().result();
+                remainder = extractOverreachingTicks(remainder, chunkX, chunkZ, blockTicks, "neighbor_block_ticks");
+                return extractOverreachingTicks(remainder, chunkX, chunkZ, fluidTicks, "neighbor_fluid_ticks");
             });
         });
     }
 
-    private static Dynamic<?> extractOverreachingTicks(Dynamic<?> p_207663_, int p_207664_, int p_207665_, Optional<? extends Dynamic<?>> p_207666_, String p_207667_) {
-        if (p_207666_.isPresent()) {
-            List<? extends Dynamic<?>> list = p_207666_.get().asStream().filter(p_207658_ -> {
-                int i = p_207658_.get("x").asInt(0);
-                int j = p_207658_.get("z").asInt(0);
-                int k = Math.abs(p_207664_ - (i >> 4));
-                int l = Math.abs(p_207665_ - (j >> 4));
-                return (k != 0 || l != 0) && k <= 1 && l <= 1;
+    private static Dynamic<?> extractOverreachingTicks(
+        Dynamic<?> remainder, final int chunkX, final int chunkZ, final Optional<? extends Dynamic<?>> ticks, final String nameInUpgradeData
+    ) {
+        if (ticks.isPresent()) {
+            List<? extends Dynamic<?>> overreachingTicks = ticks.get().asStream().filter(tick -> {
+                int x = tick.get("x").asInt(0);
+                int z = tick.get("z").asInt(0);
+                int distX = Math.abs(chunkX - (x >> 4));
+                int distZ = Math.abs(chunkZ - (z >> 4));
+                return (distX != 0 || distZ != 0) && distX <= 1 && distZ <= 1;
             }).toList();
-            if (!list.isEmpty()) {
-                p_207663_ = p_207663_.set("UpgradeData", p_207663_.get("UpgradeData").orElseEmptyMap().set(p_207667_, p_207663_.createList(list.stream())));
+            if (!overreachingTicks.isEmpty()) {
+                remainder = remainder.set(
+                    "UpgradeData", remainder.get("UpgradeData").orElseEmptyMap().set(nameInUpgradeData, remainder.createList(overreachingTicks.stream()))
+                );
             }
         }
 
-        return p_207663_;
+        return remainder;
     }
 }

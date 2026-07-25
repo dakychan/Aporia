@@ -8,24 +8,24 @@ public final class NoiseColumn implements BlockColumn {
     private final int minY;
     private final BlockState[] column;
 
-    public NoiseColumn(int p_151623_, BlockState[] p_151624_) {
-        this.minY = p_151623_;
-        this.column = p_151624_;
+    public NoiseColumn(final int minY, final BlockState[] column) {
+        this.minY = minY;
+        this.column = column;
     }
 
     @Override
-    public BlockState getBlock(int p_186552_) {
-        int i = p_186552_ - this.minY;
-        return i >= 0 && i < this.column.length ? this.column[i] : Blocks.AIR.defaultBlockState();
+    public BlockState getBlock(final int blockY) {
+        int yIndex = blockY - this.minY;
+        return yIndex >= 0 && yIndex < this.column.length ? this.column[yIndex] : Blocks.AIR.defaultBlockState();
     }
 
     @Override
-    public void setBlock(int p_186554_, BlockState p_186555_) {
-        int i = p_186554_ - this.minY;
-        if (i >= 0 && i < this.column.length) {
-            this.column[i] = p_186555_;
+    public void setBlock(final int blockY, final BlockState state) {
+        int yIndex = blockY - this.minY;
+        if (yIndex >= 0 && yIndex < this.column.length) {
+            this.column[yIndex] = state;
         } else {
-            throw new IllegalArgumentException("Outside of column height: " + p_186554_);
+            throw new IllegalArgumentException("Outside of column height: " + blockY);
         }
     }
 }

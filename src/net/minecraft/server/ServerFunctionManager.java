@@ -28,10 +28,10 @@ public class ServerFunctionManager {
     private boolean postReload;
     private ServerFunctionLibrary library;
 
-    public ServerFunctionManager(MinecraftServer p_136110_, ServerFunctionLibrary p_136111_) {
-        this.server = p_136110_;
-        this.library = p_136111_;
-        this.postReload(p_136111_);
+    public ServerFunctionManager(final MinecraftServer server, final ServerFunctionLibrary library) {
+        this.server = server;
+        this.library = library;
+        this.postReload(library);
     }
 
     public CommandDispatcher<CommandSourceStack> getDispatcher() {
@@ -42,46 +42,48 @@ public class ServerFunctionManager {
         if (this.server.tickRateManager().runsNormally()) {
             if (this.postReload) {
                 this.postReload = false;
-                Collection<CommandFunction<CommandSourceStack>> collection = this.library.getTag(LOAD_FUNCTION_TAG);
-                this.executeTagFunctions(collection, LOAD_FUNCTION_TAG);
+                Collection<CommandFunction<CommandSourceStack>> functions = this.library.getTag(LOAD_FUNCTION_TAG);
+                this.executeTagFunctions(functions, LOAD_FUNCTION_TAG);
             }
 
             this.executeTagFunctions(this.ticking, TICK_FUNCTION_TAG);
         }
     }
 
-    private void executeTagFunctions(Collection<CommandFunction<CommandSourceStack>> p_136116_, Identifier p_451194_) {
-        Profiler.get().push(p_451194_::toString);
+    private void executeTagFunctions(final Collection<CommandFunction<CommandSourceStack>> functions, final Identifier loadFunctionTag) {
+        Profiler.get().push(loadFunctionTag::toString);
 
-        for (CommandFunction<CommandSourceStack> commandfunction : p_136116_) {
-            this.execute(commandfunction, this.getGameLoopSender());
+        for (CommandFunction<CommandSourceStack> function : functions) {
+            this.execute(function, this.getGameLoopSender());
         }
 
         Profiler.get().pop();
     }
 
-    public void execute(CommandFunction<CommandSourceStack> p_311911_, CommandSourceStack p_136114_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push(() -> "function " + p_311911_.id());
+    public void execute(final CommandFunction<CommandSourceStack> functionIn, final CommandSourceStack sender) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push(() -> "function " + functionIn.id());
 
         try {
-            InstantiatedFunction<CommandSourceStack> instantiatedfunction = p_311911_.instantiate(null, this.getDispatcher());
-            Commands.executeCommandInContext(p_136114_, p_311172_ -> ExecutionContext.queueInitialFunctionCall(p_311172_, instantiatedfunction, p_136114_, CommandResultCallback.EMPTY));
-        } catch (FunctionInstantiationException functioninstantiationexception) {
-        } catch (Exception exception) {
-            LOGGER.warn("Failed to execute function {}", p_311911_.id(), exception);
+            InstantiatedFunction<CommandSourceStack> function = functionIn.instantiate(null, this.getDispatcher());
+            Commands.executeCommandInContext(
+                sender, context -> ExecutionContext.queueInitialFunctionCall(context, function, sender, CommandResultCallback.EMPTY)
+            );
+        } catch (FunctionInstantiationException var9) {
+        } catch (Exception e) {
+            LOGGER.warn("Failed to execute function {}", functionIn.id(), e);
         } finally {
-            profilerfiller.pop();
+            profiler.pop();
         }
     }
 
-    public void replaceLibrary(ServerFunctionLibrary p_136121_) {
-        this.library = p_136121_;
-        this.postReload(p_136121_);
+    public void replaceLibrary(final ServerFunctionLibrary library) {
+        this.library = library;
+        this.postReload(library);
     }
 
-    private void postReload(ServerFunctionLibrary p_136126_) {
-        this.ticking = List.copyOf(p_136126_.getTag(TICK_FUNCTION_TAG));
+    private void postReload(final ServerFunctionLibrary library) {
+        this.ticking = List.copyOf(library.getTag(TICK_FUNCTION_TAG));
         this.postReload = true;
     }
 
@@ -89,12 +91,12 @@ public class ServerFunctionManager {
         return this.server.createCommandSourceStack().withPermission(LevelBasedPermissionSet.GAMEMASTER).withSuppressedOutput();
     }
 
-    public Optional<CommandFunction<CommandSourceStack>> get(Identifier p_452841_) {
-        return this.library.getFunction(p_452841_);
+    public Optional<CommandFunction<CommandSourceStack>> get(final Identifier id) {
+        return this.library.getFunction(id);
     }
 
-    public List<CommandFunction<CommandSourceStack>> getTag(Identifier p_457118_) {
-        return this.library.getTag(p_457118_);
+    public List<CommandFunction<CommandSourceStack>> getTag(final Identifier id) {
+        return this.library.getTag(id);
     }
 
     public Iterable<Identifier> getFunctionNames() {

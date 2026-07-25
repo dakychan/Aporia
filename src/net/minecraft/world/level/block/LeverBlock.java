@@ -43,107 +43,111 @@ public class LeverBlock extends FaceAttachedHorizontalDirectionalBlock {
         return CODEC;
     }
 
-    protected LeverBlock(BlockBehaviour.Properties p_54633_) {
-        super(p_54633_);
+    protected LeverBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.NORTH).setValue(POWERED, false).setValue(FACE, AttachFace.WALL));
         this.shapes = this.makeShapes();
     }
 
     private Function<BlockState, VoxelShape> makeShapes() {
-        Map<AttachFace, Map<Direction, VoxelShape>> map = Shapes.rotateAttachFace(Block.boxZ(6.0, 8.0, 10.0, 16.0));
-        return this.getShapeForEachState(p_392777_ -> map.get(p_392777_.getValue(FACE)).get(p_392777_.getValue(FACING)), POWERED);
+        Map<AttachFace, Map<Direction, VoxelShape>> attachFace = Shapes.rotateAttachFace(Block.boxZ(6.0, 8.0, 10.0, 16.0));
+        return this.getShapeForEachState(state -> attachFace.get(state.getValue(FACE)).get(state.getValue(FACING)), POWERED);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_54665_, BlockGetter p_54666_, BlockPos p_54667_, CollisionContext p_54668_) {
-        return this.shapes.apply(p_54665_);
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.shapes.apply(state);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_54640_, Level p_54641_, BlockPos p_54642_, Player p_54643_, BlockHitResult p_54645_) {
-        if (p_54641_.isClientSide()) {
-            BlockState blockstate = p_54640_.cycle(POWERED);
-            if (blockstate.getValue(POWERED)) {
-                makeParticle(blockstate, p_54641_, p_54642_, 1.0F);
+    protected InteractionResult useWithoutItem(
+        final BlockState stateBefore, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (level.isClientSide()) {
+            BlockState stateAfter = stateBefore.cycle(POWERED);
+            if (stateAfter.getValue(POWERED)) {
+                makeParticle(stateAfter, level, pos, 1.0F);
             }
         } else {
-            this.pull(p_54640_, p_54641_, p_54642_, null);
+            this.pull(stateBefore, level, pos, null);
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected void onExplosionHit(BlockState p_309641_, ServerLevel p_367152_, BlockPos p_310069_, Explosion p_312793_, BiConsumer<ItemStack, BlockPos> p_310075_) {
-        if (p_312793_.canTriggerBlocks()) {
-            this.pull(p_309641_, p_367152_, p_310069_, null);
+    protected void onExplosionHit(
+        final BlockState state, final ServerLevel level, final BlockPos pos, final Explosion explosion, final BiConsumer<ItemStack, BlockPos> onHit
+    ) {
+        if (explosion.canTriggerBlocks()) {
+            this.pull(state, level, pos, null);
         }
 
-        super.onExplosionHit(p_309641_, p_367152_, p_310069_, p_312793_, p_310075_);
+        super.onExplosionHit(state, level, pos, explosion, onHit);
     }
 
-    public void pull(BlockState p_54677_, Level p_54678_, BlockPos p_54679_, @Nullable Player p_343787_) {
-        p_54677_ = p_54677_.cycle(POWERED);
-        p_54678_.setBlock(p_54679_, p_54677_, 3);
-        this.updateNeighbours(p_54677_, p_54678_, p_54679_);
-        playSound(p_343787_, p_54678_, p_54679_, p_54677_);
-        p_54678_.gameEvent(p_343787_, p_54677_.getValue(POWERED) ? GameEvent.BLOCK_ACTIVATE : GameEvent.BLOCK_DEACTIVATE, p_54679_);
+    public void pull(BlockState state, final Level level, final BlockPos pos, final @Nullable Player player) {
+        state = state.cycle(POWERED);
+        level.setBlock(pos, state, 3);
+        this.updateNeighbours(state, level, pos);
+        playSound(player, level, pos, state);
+        level.gameEvent(player, state.getValue(POWERED) ? GameEvent.BLOCK_ACTIVATE : GameEvent.BLOCK_DEACTIVATE, pos);
     }
 
-    protected static void playSound(@Nullable Player p_345484_, LevelAccessor p_343291_, BlockPos p_342537_, BlockState p_343757_) {
-        float f = p_343757_.getValue(POWERED) ? 0.6F : 0.5F;
-        p_343291_.playSound(p_345484_, p_342537_, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, f);
+    protected static void playSound(final @Nullable Player player, final LevelAccessor level, final BlockPos pos, final BlockState stateAfter) {
+        float pitch = stateAfter.getValue(POWERED) ? 0.6F : 0.5F;
+        level.playSound(player, pos, SoundEvents.LEVER_CLICK, SoundSource.BLOCKS, 0.3F, pitch);
     }
 
-    private static void makeParticle(BlockState p_54658_, LevelAccessor p_54659_, BlockPos p_54660_, float p_54661_) {
-        Direction direction = p_54658_.getValue(FACING).getOpposite();
-        Direction direction1 = getConnectedDirection(p_54658_).getOpposite();
-        double d0 = p_54660_.getX() + 0.5 + 0.1 * direction.getStepX() + 0.2 * direction1.getStepX();
-        double d1 = p_54660_.getY() + 0.5 + 0.1 * direction.getStepY() + 0.2 * direction1.getStepY();
-        double d2 = p_54660_.getZ() + 0.5 + 0.1 * direction.getStepZ() + 0.2 * direction1.getStepZ();
-        p_54659_.addParticle(new DustParticleOptions(16711680, p_54661_), d0, d1, d2, 0.0, 0.0, 0.0);
+    private static void makeParticle(final BlockState state, final LevelAccessor level, final BlockPos pos, final float scale) {
+        Direction opposite = state.getValue(FACING).getOpposite();
+        Direction oppositeConnect = getConnectedDirection(state).getOpposite();
+        double x = pos.getX() + 0.5 + 0.1 * opposite.getStepX() + 0.2 * oppositeConnect.getStepX();
+        double y = pos.getY() + 0.5 + 0.1 * opposite.getStepY() + 0.2 * oppositeConnect.getStepY();
+        double z = pos.getZ() + 0.5 + 0.1 * opposite.getStepZ() + 0.2 * oppositeConnect.getStepZ();
+        level.addParticle(new DustParticleOptions(16711680, scale), x, y, z, 0.0, 0.0, 0.0);
     }
 
     @Override
-    public void animateTick(BlockState p_221395_, Level p_221396_, BlockPos p_221397_, RandomSource p_221398_) {
-        if (p_221395_.getValue(POWERED) && p_221398_.nextFloat() < 0.25F) {
-            makeParticle(p_221395_, p_221396_, p_221397_, 0.5F);
-        }
-    }
-
-    @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_391753_, ServerLevel p_397358_, BlockPos p_391578_, boolean p_397131_) {
-        if (!p_397131_ && p_391753_.getValue(POWERED)) {
-            this.updateNeighbours(p_391753_, p_397358_, p_391578_);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (state.getValue(POWERED) && random.nextFloat() < 0.25F) {
+            makeParticle(state, level, pos, 0.5F);
         }
     }
 
     @Override
-    protected int getSignal(BlockState p_54635_, BlockGetter p_54636_, BlockPos p_54637_, Direction p_54638_) {
-        return p_54635_.getValue(POWERED) ? 15 : 0;
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        if (!movedByPiston && state.getValue(POWERED)) {
+            this.updateNeighbours(state, level, pos);
+        }
     }
 
     @Override
-    protected int getDirectSignal(BlockState p_54670_, BlockGetter p_54671_, BlockPos p_54672_, Direction p_54673_) {
-        return p_54670_.getValue(POWERED) && getConnectedDirection(p_54670_) == p_54673_ ? 15 : 0;
+    protected int getDirectSignal(final BlockState state, final BlockGetter level, final BlockPos pos, final Direction direction) {
+        return state.getValue(POWERED) && getConnectedDirection(state) == direction ? 15 : 0;
     }
 
     @Override
-    protected boolean isSignalSource(BlockState p_54675_) {
+    protected boolean isSignalSource(final BlockState state) {
         return true;
     }
 
-    private void updateNeighbours(BlockState p_54681_, Level p_54682_, BlockPos p_54683_) {
-        Direction direction = getConnectedDirection(p_54681_).getOpposite();
+    @Override
+    protected int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.getValue(POWERED) ? 15 : 0;
+    }
+
+    private void updateNeighbours(final BlockState state, final Level level, final BlockPos pos) {
+        Direction front = getConnectedDirection(state).getOpposite();
         Orientation orientation = ExperimentalRedstoneUtils.initialOrientation(
-            p_54682_, direction, direction.getAxis().isHorizontal() ? Direction.UP : p_54681_.getValue(FACING)
+            level, front, front.getAxis().isHorizontal() ? Direction.UP : state.getValue(FACING)
         );
-        p_54682_.updateNeighborsAt(p_54683_, this, orientation);
-        p_54682_.updateNeighborsAt(p_54683_.relative(direction), this, orientation);
+        level.updateNeighborsAt(pos, this, orientation);
+        level.updateNeighborsAt(pos.relative(front), this, orientation);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_54663_) {
-        p_54663_.add(FACE, FACING, POWERED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACE, FACING, POWERED);
     }
 }

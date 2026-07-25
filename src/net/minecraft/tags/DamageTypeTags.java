@@ -25,6 +25,7 @@ public interface DamageTypeTags {
     TagKey<DamageType> NO_IMPACT = create("no_impact");
     TagKey<DamageType> ALWAYS_MOST_SIGNIFICANT_FALL = create("always_most_significant_fall");
     TagKey<DamageType> WITHER_IMMUNE_TO = create("wither_immune_to");
+    TagKey<DamageType> SULFUR_CUBE_WITH_BLOCK_IMMUNE_TO = create("sulfur_cube_with_block_immune_to");
     TagKey<DamageType> IGNITES_ARMOR_STANDS = create("ignites_armor_stands");
     TagKey<DamageType> BURNS_ARMOR_STANDS = create("burns_armor_stands");
     TagKey<DamageType> AVOIDS_GUARDIAN_THORNS = create("avoids_guardian_thorns");
@@ -40,7 +41,7 @@ public interface DamageTypeTags {
     TagKey<DamageType> PANIC_ENVIRONMENTAL_CAUSES = create("panic_environmental_causes");
     TagKey<DamageType> IS_MACE_SMASH = create("mace_smash");
 
-    private static TagKey<DamageType> create(String p_270635_) {
-        return TagKey.create(Registries.DAMAGE_TYPE, Identifier.withDefaultNamespace(p_270635_));
+    private static TagKey<DamageType> create(final String name) {
+        return TagKey.create(Registries.DAMAGE_TYPE, Identifier.withDefaultNamespace(name));
     }
 }

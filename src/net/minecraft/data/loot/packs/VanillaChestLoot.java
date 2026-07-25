@@ -1,6 +1,7 @@
 package net.minecraft.data.loot.packs;
 
 import java.util.function.BiConsumer;
+import net.minecraft.advancements.predicates.LocationPredicate;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
@@ -10,10 +11,13 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.InstrumentTags;
 import net.minecraft.tags.StructureTags;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.saveddata.maps.MapDecorationTypes;
 import net.minecraft.world.level.storage.loot.BuiltInLootTables;
@@ -33,15 +37,17 @@ import net.minecraft.world.level.storage.loot.functions.SetNameFunction;
 import net.minecraft.world.level.storage.loot.functions.SetOminousBottleAmplifierFunction;
 import net.minecraft.world.level.storage.loot.functions.SetPotionFunction;
 import net.minecraft.world.level.storage.loot.functions.SetStewEffectFunction;
+import net.minecraft.world.level.storage.loot.predicates.LocationCheck;
 import net.minecraft.world.level.storage.loot.predicates.LootItemRandomChanceCondition;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 public record VanillaChestLoot(HolderLookup.Provider registries) implements LootTableSubProvider {
     @Override
-    public void generate(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> p_250931_) {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
-        p_250931_.accept(
+    public void generate(final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Biome> biomes = this.registries.lookupOrThrow(Registries.BIOME);
+        output.accept(
             BuiltInLootTables.ABANDONED_MINESHAFT,
             LootTable.lootTable()
                 .withPool(
@@ -57,92 +63,81 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(2.0F, 4.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.REDSTONE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.LAPIS_LAZULI).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 8.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.REDSTONE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F))))
+                        .add(LootItem.lootTableItem(Items.LAPIS_LAZULI).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F))))
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 8.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(
                             LootItem.lootTableItem(Items.GLOW_BERRIES).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F)))
                         )
+                        .add(LootItem.lootTableItem(Items.MELON_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.MELON_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
+                            LootItem.lootTableItem(Items.PUMPKIN_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Items.PUMPKIN_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BEETROOT_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
+                            LootItem.lootTableItem(Items.BEETROOT_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
                         )
                 )
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(3.0F))
-                        .add(
-                            LootItem.lootTableItem(Blocks.RAIL).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Blocks.RAIL).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))))
                         .add(
                             LootItem.lootTableItem(Blocks.POWERED_RAIL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Blocks.DETECTOR_RAIL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
+                            LootItem.lootTableItem(Blocks.DETECTOR_RAIL)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Blocks.ACTIVATOR_RAIL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
+                            LootItem.lootTableItem(Blocks.ACTIVATOR_RAIL)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
                         )
+                        .add(LootItem.lootTableItem(Blocks.TORCH).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 16.0F))))
                         .add(
-                            LootItem.lootTableItem(Blocks.TORCH).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 16.0F)))
+                            LootItem.lootTableItem(Items.MUSIC_DISC_BOUNCE)
+                                .when(
+                                    LocationCheck.checkLocation(
+                                        LocationPredicate.Builder.location().setBiomes(HolderSet.direct(biomes.getOrThrow(Biomes.SULFUR_CAVES)))
+                                    )
+                                )
+                                .setWeight(10)
                         )
                 )
         );
-        p_250931_.accept(BuiltInLootTables.BASTION_BRIDGE, this.bastionBridgeLootTable());
-        p_250931_.accept(BuiltInLootTables.BASTION_HOGLIN_STABLE, this.bastionHoglinStableLootTable());
-        p_250931_.accept(BuiltInLootTables.BASTION_OTHER, this.bastionOtherLootTable());
-        p_250931_.accept(BuiltInLootTables.BASTION_TREASURE, this.bastionTreasureLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.BASTION_BRIDGE, this.bastionBridgeLootTable());
+        output.accept(BuiltInLootTables.BASTION_HOGLIN_STABLE, this.bastionHoglinStableLootTable());
+        output.accept(BuiltInLootTables.BASTION_OTHER, this.bastionOtherLootTable());
+        output.accept(BuiltInLootTables.BASTION_TREASURE, this.bastionTreasureLootTable());
+        output.accept(
             BuiltInLootTables.BURIED_TREASURE,
             LootTable.lootTable()
                 .withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.HEART_OF_THE_SEA)))
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(5.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.TNT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Blocks.TNT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 3.0F))
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))))
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.PRISMARINE_CRYSTALS).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
+                            LootItem.lootTableItem(Items.PRISMARINE_CRYSTALS)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
                         )
                 )
                 .withPool(
@@ -168,14 +163,18 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(EmptyLootItem.emptyItem().setWeight(148))
-                        .add(LootItem.lootTableItem(Items.COPPER_NAUTILUS_ARMOR).setWeight(20).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
+                        .add(
+                            LootItem.lootTableItem(Items.COPPER_NAUTILUS_ARMOR).setWeight(20).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
+                        )
                         .add(LootItem.lootTableItem(Items.IRON_NAUTILUS_ARMOR).setWeight(10).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                         .add(LootItem.lootTableItem(Items.GOLDEN_NAUTILUS_ARMOR).setWeight(5).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
-                        .add(LootItem.lootTableItem(Items.DIAMOND_NAUTILUS_ARMOR).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
+                        .add(
+                            LootItem.lootTableItem(Items.DIAMOND_NAUTILUS_ARMOR).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
+                        )
                 )
         );
-        p_250931_.accept(BuiltInLootTables.ANCIENT_CITY, this.ancientCityLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.ANCIENT_CITY, this.ancientCityLootTable());
+        output.accept(
             BuiltInLootTables.ANCIENT_CITY_ICE_BOX,
             LootTable.lootTable()
                 .withPool(
@@ -192,71 +191,57 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 6.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Items.GOLDEN_CARROT).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 10.0F)))
+                            LootItem.lootTableItem(Items.GOLDEN_CARROT)
+                                .setWeight(1)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 10.0F)))
                         )
                         .add(
                             LootItem.lootTableItem(Items.BAKED_POTATO).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 10.0F)))
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.PACKED_ICE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 6.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.SNOWBALL).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 6.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.PACKED_ICE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 6.0F))))
+                        .add(LootItem.lootTableItem(Items.SNOWBALL).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 6.0F))))
                 )
         );
-        p_250931_.accept(BuiltInLootTables.DESERT_PYRAMID, this.desertPyramidLootTable());
-        p_250931_.accept(BuiltInLootTables.END_CITY_TREASURE, this.endCityTreasureLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.DESERT_PYRAMID, this.desertPyramidLootTable());
+        output.accept(BuiltInLootTables.END_CITY_TREASURE, this.endCityTreasureLootTable());
+        output.accept(
             BuiltInLootTables.IGLOO_CHEST,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(2.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.APPLE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.APPLE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.STONE_AXE).setWeight(2))
                         .add(LootItem.lootTableItem(Items.ROTTEN_FLESH).setWeight(10))
                         .add(LootItem.lootTableItem(Items.EMERALD))
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F))))
                 )
                 .withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.GOLDEN_APPLE)))
         );
-        p_250931_.accept(BuiltInLootTables.JUNGLE_TEMPLE, this.jungleTempleLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.JUNGLE_TEMPLE, this.jungleTempleLootTable());
+        output.accept(
             BuiltInLootTables.JUNGLE_TEMPLE_DISPENSER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 2.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).setWeight(30).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 7.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.ARROW).setWeight(30).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 7.0F))))
                 )
         );
-        p_250931_.accept(BuiltInLootTables.NETHER_BRIDGE, this.netherBridgeLootTable());
-        p_250931_.accept(BuiltInLootTables.PILLAGER_OUTPOST, this.pillagerOutpostLootTable());
-        p_250931_.accept(BuiltInLootTables.SHIPWRECK_MAP, this.shipwreckMapLootTable());
-        p_250931_.accept(BuiltInLootTables.SHIPWRECK_SUPPLY, this.shipwreckSupplyLootTable());
-        p_250931_.accept(BuiltInLootTables.SHIPWRECK_TREASURE, this.shipwreckTreasureLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.NETHER_BRIDGE, this.netherBridgeLootTable());
+        output.accept(BuiltInLootTables.PILLAGER_OUTPOST, this.pillagerOutpostLootTable());
+        output.accept(BuiltInLootTables.SHIPWRECK_MAP, this.shipwreckMapLootTable());
+        output.accept(BuiltInLootTables.SHIPWRECK_SUPPLY, this.shipwreckSupplyLootTable());
+        output.accept(BuiltInLootTables.SHIPWRECK_TREASURE, this.shipwreckTreasureLootTable());
+        output.accept(
             BuiltInLootTables.SIMPLE_DUNGEON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 3.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.LEATHER).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.LEATHER).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
                         .add(LootItem.lootTableItem(Items.GOLDEN_APPLE).setWeight(15))
                         .add(LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE).setWeight(2))
                         .add(LootItem.lootTableItem(Items.MUSIC_DISC_OTHERSIDE).setWeight(2))
@@ -272,51 +257,37 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 4.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(LootItem.lootTableItem(Items.BREAD).setWeight(20))
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(LootItem.lootTableItem(Items.BUCKET).setWeight(10))
+                        .add(LootItem.lootTableItem(Items.REDSTONE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.MELON_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.REDSTONE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
+                            LootItem.lootTableItem(Items.PUMPKIN_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.MELON_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.PUMPKIN_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BEETROOT_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
+                            LootItem.lootTableItem(Items.BEETROOT_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
                         )
                 )
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(3.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.BONE).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GUNPOWDER).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.BONE).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F))))
+                        .add(LootItem.lootTableItem(Items.GUNPOWDER).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F))))
                         .add(
                             LootItem.lootTableItem(Items.ROTTEN_FLESH).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F)))
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.STRING).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.STRING).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.SPAWN_BONUS_CHEST,
             LootTable.lootTable()
                 .withPool(
@@ -334,40 +305,22 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(3.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.APPLE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.SALMON).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.APPLE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                        .add(LootItem.lootTableItem(Items.SALMON).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(4.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.STICK).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 12.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.STICK).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 12.0F))))
                         .add(
                             LootItem.lootTableItem(Blocks.OAK_PLANKS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 12.0F)))
                         )
-                        .add(
-                            LootItem.lootTableItem(Blocks.OAK_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.SPRUCE_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.BIRCH_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.JUNGLE_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.ACACIA_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Blocks.OAK_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Blocks.SPRUCE_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Blocks.BIRCH_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Blocks.JUNGLE_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Blocks.ACACIA_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(
                             LootItem.lootTableItem(Blocks.DARK_OAK_LOG).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
                         )
@@ -376,55 +329,38 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         )
                 )
         );
-        p_250931_.accept(BuiltInLootTables.STRONGHOLD_CORRIDOR, this.strongholdCorridorLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.STRONGHOLD_CORRIDOR, this.strongholdCorridorLootTable());
+        output.accept(
             BuiltInLootTables.STRONGHOLD_CROSSING,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 4.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.REDSTONE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 8.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.APPLE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.REDSTONE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 9.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 8.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.APPLE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.IRON_PICKAXE))
                         .add(
-                            LootItem.lootTableItem(Items.BOOK).apply(EnchantWithLevelsFunction.enchantWithLevels(this.registries, ConstantValue.exactly(30.0F)))
+                            LootItem.lootTableItem(Items.BOOK)
+                                .apply(EnchantWithLevelsFunction.enchantWithLevels(this.registries, ConstantValue.exactly(30.0F)))
                         )
                 )
         );
-        p_250931_.accept(BuiltInLootTables.STRONGHOLD_LIBRARY, this.strongholdLibraryLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.STRONGHOLD_LIBRARY, this.strongholdLibraryLootTable());
+        output.accept(
             BuiltInLootTables.UNDERWATER_RUIN_BIG,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(2.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.EMERALD))
                         .add(LootItem.lootTableItem(Items.STONE_SPEAR).setWeight(2))
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -451,28 +387,28 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(EmptyLootItem.emptyItem().setWeight(148))
-                        .add(LootItem.lootTableItem(Items.COPPER_NAUTILUS_ARMOR).setWeight(20).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
+                        .add(
+                            LootItem.lootTableItem(Items.COPPER_NAUTILUS_ARMOR).setWeight(20).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
+                        )
                         .add(LootItem.lootTableItem(Items.IRON_NAUTILUS_ARMOR).setWeight(10).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                         .add(LootItem.lootTableItem(Items.GOLDEN_NAUTILUS_ARMOR).setWeight(5).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
-                        .add(LootItem.lootTableItem(Items.DIAMOND_NAUTILUS_ARMOR).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
+                        .add(
+                            LootItem.lootTableItem(Items.DIAMOND_NAUTILUS_ARMOR).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
+                        )
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.UNDERWATER_RUIN_SMALL,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(2.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(LootItem.lootTableItem(Items.STONE_AXE).setWeight(2))
                         .add(LootItem.lootTableItem(Items.STONE_SPEAR).setWeight(2))
                         .add(LootItem.lootTableItem(Items.ROTTEN_FLESH).setWeight(5))
                         .add(LootItem.lootTableItem(Items.EMERALD))
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -497,33 +433,27 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(EmptyLootItem.emptyItem().setWeight(148))
-                        .add(LootItem.lootTableItem(Items.COPPER_NAUTILUS_ARMOR).setWeight(20).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
+                        .add(
+                            LootItem.lootTableItem(Items.COPPER_NAUTILUS_ARMOR).setWeight(20).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
+                        )
                         .add(LootItem.lootTableItem(Items.IRON_NAUTILUS_ARMOR).setWeight(10).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                         .add(LootItem.lootTableItem(Items.GOLDEN_NAUTILUS_ARMOR).setWeight(5).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
-                        .add(LootItem.lootTableItem(Items.DIAMOND_NAUTILUS_ARMOR).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
+                        .add(
+                            LootItem.lootTableItem(Items.DIAMOND_NAUTILUS_ARMOR).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
+                        )
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_WEAPONSMITH,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.APPLE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.APPLE).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.IRON_PICKAXE).setWeight(5))
                         .add(LootItem.lootTableItem(Items.IRON_SWORD).setWeight(5))
                         .add(LootItem.lootTableItem(Items.IRON_SPEAR).setWeight(5))
@@ -532,12 +462,8 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(LootItem.lootTableItem(Items.IRON_HELMET).setWeight(5))
                         .add(LootItem.lootTableItem(Items.IRON_LEGGINGS).setWeight(5))
                         .add(LootItem.lootTableItem(Items.IRON_BOOTS).setWeight(5))
-                        .add(
-                            LootItem.lootTableItem(Blocks.OBSIDIAN).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 7.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.OAK_SAPLING).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 7.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Blocks.OBSIDIAN).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 7.0F))))
+                        .add(LootItem.lootTableItem(Blocks.OAK_SAPLING).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 7.0F))))
                         .add(LootItem.lootTableItem(Items.SADDLE).setWeight(3))
                         .add(LootItem.lootTableItem(Items.COPPER_HORSE_ARMOR))
                         .add(LootItem.lootTableItem(Items.IRON_HORSE_ARMOR))
@@ -551,53 +477,33 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_TOOLSMITH,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.IRON_PICKAXE).setWeight(5))
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.STICK).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.STICK).setWeight(20).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.IRON_SHOVEL).setWeight(5))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_CARTOGRAPHER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.MAP).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.PAPER).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.MAP).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.PAPER).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
                         .add(LootItem.lootTableItem(Items.COMPASS).setWeight(5))
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.STICK).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.STICK).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -606,165 +512,117 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_MASON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.CLAY_BALL).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.CLAY_BALL).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.FLOWER_POT).setWeight(1))
                         .add(LootItem.lootTableItem(Blocks.STONE).setWeight(2))
                         .add(LootItem.lootTableItem(Blocks.STONE_BRICKS).setWeight(2))
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(LootItem.lootTableItem(Items.YELLOW_DYE).setWeight(1))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.DYE.yellow()).setWeight(1))
                         .add(LootItem.lootTableItem(Blocks.SMOOTH_STONE).setWeight(1))
                         .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_ARMORER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(LootItem.lootTableItem(Items.IRON_HELMET).setWeight(1))
                         .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_SHEPHERD,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
                         .add(
-                            LootItem.lootTableItem(Blocks.WHITE_WOOL).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F)))
+                            LootItem.lootTableItem(Blocks.WOOL.white()).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 8.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Blocks.BLACK_WOOL).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
+                            LootItem.lootTableItem(Blocks.WOOL.black()).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
+                        )
+                        .add(LootItem.lootTableItem(Blocks.WOOL.gray()).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(
+                            LootItem.lootTableItem(Blocks.WOOL.brown()).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
                         )
                         .add(
-                            LootItem.lootTableItem(Blocks.GRAY_WOOL).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.BROWN_WOOL).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.LIGHT_GRAY_WOOL).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
+                            LootItem.lootTableItem(Blocks.WOOL.lightGray())
+                                .setWeight(2)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1))
                         .add(LootItem.lootTableItem(Items.SHEARS).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 6.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 6.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_BUTCHER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
                         .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.PORKCHOP).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BEEF).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.MUTTON).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.PORKCHOP).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.BEEF).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.MUTTON).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_FLETCHER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
                         .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.FEATHER).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.EGG).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.FLINT).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.STICK).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.ARROW).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.FEATHER).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.EGG).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.FLINT).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.STICK).setWeight(6).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_FISHER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
                         .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.COD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.SALMON).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WATER_BUCKET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BARREL).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT_SEEDS).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.COD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.SALMON).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.WATER_BUCKET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.BARREL).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.WHEAT_SEEDS).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_TANNERY,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(1.0F, 5.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.LEATHER).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.LEATHER).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.LEATHER_CHESTPLATE).setWeight(2))
                         .add(LootItem.lootTableItem(Items.LEATHER_BOOTS).setWeight(2))
                         .add(LootItem.lootTableItem(Items.LEATHER_HELMET).setWeight(2))
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(LootItem.lootTableItem(Items.LEATHER_LEGGINGS).setWeight(2))
                         .add(LootItem.lootTableItem(Items.SADDLE).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -773,60 +631,36 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_TEMPLE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.REDSTONE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(7).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.ROTTEN_FLESH).setWeight(7).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.LAPIS_LAZULI).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.REDSTONE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(7).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.ROTTEN_FLESH).setWeight(7).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.LAPIS_LAZULI).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_PLAINS_HOUSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.DANDELION).setWeight(2))
                         .add(LootItem.lootTableItem(Items.POPPY).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.POTATO).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.APPLE).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.POTATO).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.APPLE).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
                         .add(LootItem.lootTableItem(Items.BOOK).setWeight(1))
                         .add(LootItem.lootTableItem(Items.FEATHER).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.OAK_SAPLING).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Blocks.OAK_SAPLING).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -835,40 +669,32 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_TAIGA_HOUSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_NUGGET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_NUGGET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
                         .add(LootItem.lootTableItem(Items.FERN).setWeight(2))
                         .add(LootItem.lootTableItem(Items.LARGE_FERN).setWeight(2))
-                        .add(
-                            LootItem.lootTableItem(Items.POTATO).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.POTATO).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F))))
                         .add(
                             LootItem.lootTableItem(Items.SWEET_BERRIES).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F)))
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(
                             LootItem.lootTableItem(Items.PUMPKIN_SEEDS).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.PUMPKIN_PIE).setWeight(1))
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.SPRUCE_SAPLING).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
+                            LootItem.lootTableItem(Blocks.SPRUCE_SAPLING)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.SPRUCE_SIGN).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.SPRUCE_LOG).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.SPRUCE_LOG).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -877,33 +703,25 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_SAVANNA_HOUSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(LootItem.lootTableItem(Items.SHORT_GRASS).setWeight(5))
                         .add(LootItem.lootTableItem(Items.TALL_GRASS).setWeight(5))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.WHEAT_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Blocks.ACACIA_SAPLING).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
+                            LootItem.lootTableItem(Blocks.ACACIA_SAPLING)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.SADDLE).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Blocks.TORCH).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Blocks.TORCH).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                         .add(LootItem.lootTableItem(Items.BUCKET).setWeight(1))
                 )
                 .withPool(
@@ -913,7 +731,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_SNOWY_HOUSE,
             LootTable.lootTable()
                 .withPool(
@@ -921,26 +739,18 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
                         .add(LootItem.lootTableItem(Blocks.BLUE_ICE).setWeight(1))
                         .add(LootItem.lootTableItem(Blocks.SNOW_BLOCK).setWeight(4))
+                        .add(LootItem.lootTableItem(Items.POTATO).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(
-                            LootItem.lootTableItem(Items.POTATO).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BEETROOT_SEEDS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
+                            LootItem.lootTableItem(Items.BEETROOT_SEEDS)
+                                .setWeight(10)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.BEETROOT_SOUP).setWeight(1))
                         .add(LootItem.lootTableItem(Items.FURNACE).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.SNOWBALL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.COAL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.SNOWBALL).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F))))
+                        .add(LootItem.lootTableItem(Items.COAL).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -949,30 +759,20 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.VILLAGE_DESERT_HOUSE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 8.0F))
                         .add(LootItem.lootTableItem(Items.CLAY_BALL).setWeight(1))
-                        .add(LootItem.lootTableItem(Items.GREEN_DYE).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Blocks.CACTUS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.DYE.green()).setWeight(1))
+                        .add(LootItem.lootTableItem(Blocks.CACTUS).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.WHEAT).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 7.0F))))
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(LootItem.lootTableItem(Items.BOOK).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Blocks.DEAD_BUSH).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Blocks.DEAD_BUSH).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -981,19 +781,15 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(EmptyLootItem.emptyItem().setWeight(2))
                 )
         );
-        p_250931_.accept(BuiltInLootTables.WOODLAND_MANSION, this.woodlandMansionLootTable());
-        p_250931_.accept(
+        output.accept(BuiltInLootTables.WOODLAND_MANSION, this.woodlandMansionLootTable());
+        output.accept(
             BuiltInLootTables.RUINED_PORTAL,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(4.0F, 8.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.OBSIDIAN).setWeight(40).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.FLINT).setWeight(40).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.OBSIDIAN).setWeight(40).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                        .add(LootItem.lootTableItem(Items.FLINT).setWeight(40).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                         .add(
                             LootItem.lootTableItem(Items.IRON_NUGGET).setWeight(40).apply(SetItemCountFunction.setCount(UniformGenerator.between(9.0F, 18.0F)))
                         )
@@ -1003,43 +799,69 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(
                             LootItem.lootTableItem(Items.GOLD_NUGGET).setWeight(15).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 24.0F)))
                         )
-                        .add(LootItem.lootTableItem(Items.GOLDEN_SWORD).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
+                        .add(
+                            LootItem.lootTableItem(Items.GOLDEN_SWORD)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
                         .add(LootItem.lootTableItem(Items.GOLDEN_AXE).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
                         .add(LootItem.lootTableItem(Items.GOLDEN_HOE).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                        .add(LootItem.lootTableItem(Items.GOLDEN_SHOVEL).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                        .add(LootItem.lootTableItem(Items.GOLDEN_PICKAXE).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                        .add(LootItem.lootTableItem(Items.GOLDEN_BOOTS).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                        .add(LootItem.lootTableItem(Items.GOLDEN_CHESTPLATE).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                        .add(LootItem.lootTableItem(Items.GOLDEN_HELMET).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                        .add(LootItem.lootTableItem(Items.GOLDEN_LEGGINGS).setWeight(15).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
                         .add(
-                            LootItem.lootTableItem(Items.GLISTERING_MELON_SLICE).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F)))
+                            LootItem.lootTableItem(Items.GOLDEN_SHOVEL)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
+                        .add(
+                            LootItem.lootTableItem(Items.GOLDEN_PICKAXE)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
+                        .add(
+                            LootItem.lootTableItem(Items.GOLDEN_BOOTS)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
+                        .add(
+                            LootItem.lootTableItem(Items.GOLDEN_CHESTPLATE)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
+                        .add(
+                            LootItem.lootTableItem(Items.GOLDEN_HELMET)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
+                        .add(
+                            LootItem.lootTableItem(Items.GOLDEN_LEGGINGS)
+                                .setWeight(15)
+                                .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                        )
+                        .add(
+                            LootItem.lootTableItem(Items.GLISTERING_MELON_SLICE)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.GOLDEN_HORSE_ARMOR).setWeight(5))
                         .add(LootItem.lootTableItem(Items.LIGHT_WEIGHTED_PRESSURE_PLATE).setWeight(5))
                         .add(
-                            LootItem.lootTableItem(Items.GOLDEN_CARROT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F)))
+                            LootItem.lootTableItem(Items.GOLDEN_CARROT)
+                                .setWeight(5)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F)))
                         )
                         .add(LootItem.lootTableItem(Items.CLOCK).setWeight(5))
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.GOLD_INGOT).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))))
                         .add(LootItem.lootTableItem(Items.BELL).setWeight(1))
                         .add(LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.GOLD_BLOCK).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.GOLD_BLOCK).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(EmptyLootItem.emptyItem().setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.LODESTONE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.LODESTONE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_CORRIDOR_DISPENSER,
             LootTable.lootTable()
                 .withPool(
@@ -1048,7 +870,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_WATER_DISPENSER,
             LootTable.lootTable()
                 .withPool(
@@ -1057,25 +879,17 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(LootItem.lootTableItem(Items.WATER_BUCKET).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_CHAMBER_DISPENSER,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(LootItem.lootTableItem(Items.WATER_BUCKET).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))).setWeight(4))
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(4)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.SNOWBALL).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(6)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.EGG).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(2)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.FIRE_CHARGE).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(6)
-                        )
+                        .add(LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(4))
+                        .add(LootItem.lootTableItem(Items.SNOWBALL).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(6))
+                        .add(LootItem.lootTableItem(Items.EGG).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.FIRE_CHARGE).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F))).setWeight(6))
                         .add(
                             LootItem.lootTableItem(Items.SPLASH_POTION)
                                 .apply(SetPotionFunction.setPotion(Potions.SLOWNESS))
@@ -1120,39 +934,29 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         )
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_CORRIDOR_POT,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))).setWeight(125)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))).setWeight(100)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(100)
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))).setWeight(125))
+                        .add(LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))).setWeight(100))
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(100))
                         .add(LootItem.lootTableItem(Items.TRIAL_KEY).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))).setWeight(10))
                         .add(LootItem.lootTableItem(Items.MUSIC_DISC_CREATOR_MUSIC_BOX).setWeight(5))
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(5)
-                        )
+                        .add(LootItem.lootTableItem(Items.DIAMOND).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(5))
                         .add(LootItem.lootTableItem(Items.EMERALD_BLOCK).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))).setWeight(5))
                         .add(LootItem.lootTableItem(Items.DIAMOND_BLOCK).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))).setWeight(1))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_SUPPLY,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(3.0F, 5.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 14.0F))).setWeight(2)
-                        )
+                        .add(LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 14.0F))).setWeight(2))
                         .add(
                             LootItem.lootTableItem(Items.TIPPED_ARROW)
                                 .apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 8.0F)))
@@ -1165,27 +969,17 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(SetPotionFunction.setPotion(Potions.SLOWNESS))
                                 .setWeight(1)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.BAKED_POTATO).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))).setWeight(2)
-                        )
+                        .add(LootItem.lootTableItem(Items.BAKED_POTATO).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))).setWeight(2))
                         .add(
                             LootItem.lootTableItem(Items.GLOW_BERRIES).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 10.0F))).setWeight(2)
                         )
                         .add(
                             LootItem.lootTableItem(Items.ACACIA_PLANKS).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))).setWeight(1)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.MOSS_BLOCK).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 5.0F))).setWeight(1)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BONE_MEAL).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 5.0F))).setWeight(1)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.TUFF).apply(SetItemCountFunction.setCount(UniformGenerator.between(5.0F, 10.0F))).setWeight(1)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.TORCH).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))).setWeight(1)
-                        )
+                        .add(LootItem.lootTableItem(Items.MOSS_BLOCK).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 5.0F))).setWeight(1))
+                        .add(LootItem.lootTableItem(Items.BONE_MEAL).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 5.0F))).setWeight(1))
+                        .add(LootItem.lootTableItem(Items.TUFF).apply(SetItemCountFunction.setCount(UniformGenerator.between(5.0F, 10.0F))).setWeight(1))
+                        .add(LootItem.lootTableItem(Items.TORCH).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))).setWeight(1))
                         .add(
                             LootItem.lootTableItem(Items.POTION)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
@@ -1205,26 +999,20 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(LootItem.lootTableItem(Items.MILK_BUCKET).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_ENTRANCE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(UniformGenerator.between(2.0F, 3.0F))
                         .add(LootItem.lootTableItem(Items.TRIAL_KEY).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))).setWeight(1))
-                        .add(
-                            LootItem.lootTableItem(Items.STICK).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 5.0F))).setWeight(5)
-                        )
+                        .add(LootItem.lootTableItem(Items.STICK).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 5.0F))).setWeight(5))
                         .add(LootItem.lootTableItem(Items.WOODEN_AXE).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))).setWeight(10))
-                        .add(
-                            LootItem.lootTableItem(Items.HONEYCOMB).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))).setWeight(10)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(5.0F, 10.0F))).setWeight(10)
-                        )
+                        .add(LootItem.lootTableItem(Items.HONEYCOMB).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))).setWeight(10))
+                        .add(LootItem.lootTableItem(Items.ARROW).apply(SetItemCountFunction.setCount(UniformGenerator.between(5.0F, 10.0F))).setWeight(10))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_INTERSECTION,
             LootTable.lootTable()
                 .withPool(
@@ -1246,21 +1034,17 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.1F, 0.5F)))
                                 .setWeight(5)
                         )
+                        .add(LootItem.lootTableItem(Items.DIAMOND).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(10))
+                        .add(LootItem.lootTableItem(Items.CAKE).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))).setWeight(20))
                         .add(
-                            LootItem.lootTableItem(Items.DIAMOND).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(10)
+                            LootItem.lootTableItem(Items.AMETHYST_SHARD)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(8.0F, 20.0F)))
+                                .setWeight(20)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.CAKE).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))).setWeight(20)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.AMETHYST_SHARD).apply(SetItemCountFunction.setCount(UniformGenerator.between(8.0F, 20.0F))).setWeight(20)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_BLOCK).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(20)
-                        )
+                        .add(LootItem.lootTableItem(Items.IRON_BLOCK).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(20))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_INTERSECTION_BARREL,
             LootTable.lootTable()
                 .withPool(
@@ -1279,18 +1063,14 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.15F, 0.8F)))
                                 .setWeight(1)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))).setWeight(1)
-                        )
+                        .add(LootItem.lootTableItem(Items.DIAMOND).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))).setWeight(1))
                         .add(
                             LootItem.lootTableItem(Items.COMPASS)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
                                 .apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.15F, 0.8F)))
                                 .setWeight(1)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.BUCKET).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(1)
-                        )
+                        .add(LootItem.lootTableItem(Items.BUCKET).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(1))
                         .add(
                             LootItem.lootTableItem(Items.GOLDEN_AXE)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
@@ -1304,14 +1084,18 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .setWeight(4)
                         )
                         .add(
-                            LootItem.lootTableItem(Items.BAMBOO_PLANKS).apply(SetItemCountFunction.setCount(UniformGenerator.between(5.0F, 15.0F))).setWeight(10)
+                            LootItem.lootTableItem(Items.BAMBOO_PLANKS)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(5.0F, 15.0F)))
+                                .setWeight(10)
                         )
                         .add(
-                            LootItem.lootTableItem(Items.BAKED_POTATO).apply(SetItemCountFunction.setCount(UniformGenerator.between(6.0F, 10.0F))).setWeight(10)
+                            LootItem.lootTableItem(Items.BAKED_POTATO)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(6.0F, 10.0F)))
+                                .setWeight(10)
                         )
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_CORRIDOR,
             LootTable.lootTable()
                 .withPool(
@@ -1324,9 +1108,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
                                 .setWeight(1)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.HONEYCOMB).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))).setWeight(1)
-                        )
+                        .add(LootItem.lootTableItem(Items.HONEYCOMB).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))).setWeight(1))
                         .add(
                             LootItem.lootTableItem(Items.STONE_AXE)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
@@ -1339,38 +1121,28 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.15F, 0.8F)))
                                 .setWeight(2)
                         )
+                        .add(LootItem.lootTableItem(Items.ENDER_PEARL).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(2))
                         .add(
-                            LootItem.lootTableItem(Items.ENDER_PEARL).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))).setWeight(2)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BAMBOO_HANGING_SIGN).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))).setWeight(2)
+                            LootItem.lootTableItem(Items.BAMBOO_HANGING_SIGN)
+                                .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
+                                .setWeight(2)
                         )
                         .add(
                             LootItem.lootTableItem(Items.BAMBOO_PLANKS).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))).setWeight(2)
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.SCAFFOLDING).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 10.0F))).setWeight(2)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.TORCH).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))).setWeight(2)
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.TUFF).apply(SetItemCountFunction.setCount(UniformGenerator.between(8.0F, 20.0F))).setWeight(3)
-                        )
+                        .add(LootItem.lootTableItem(Items.SCAFFOLDING).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 10.0F))).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.TORCH).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))).setWeight(2))
+                        .add(LootItem.lootTableItem(Items.TUFF).apply(SetItemCountFunction.setCount(UniformGenerator.between(8.0F, 20.0F))).setWeight(3))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_RARE,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.SHIELD).setWeight(3).apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.5F, 1.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.SHIELD).setWeight(3).apply(SetItemDamageFunction.setDamage(UniformGenerator.between(0.5F, 1.0F))))
                         .add(
                             LootItem.lootTableItem(Items.BOW)
                                 .setWeight(3)
@@ -1401,12 +1173,12 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                     new EnchantRandomlyFunction.Builder()
                                         .withOneOf(
                                             HolderSet.direct(
-                                                registrylookup.getOrThrow(Enchantments.SHARPNESS),
-                                                registrylookup.getOrThrow(Enchantments.BANE_OF_ARTHROPODS),
-                                                registrylookup.getOrThrow(Enchantments.EFFICIENCY),
-                                                registrylookup.getOrThrow(Enchantments.FORTUNE),
-                                                registrylookup.getOrThrow(Enchantments.SILK_TOUCH),
-                                                registrylookup.getOrThrow(Enchantments.FEATHER_FALLING)
+                                                enchantments.getOrThrow(Enchantments.SHARPNESS),
+                                                enchantments.getOrThrow(Enchantments.BANE_OF_ARTHROPODS),
+                                                enchantments.getOrThrow(Enchantments.EFFICIENCY),
+                                                enchantments.getOrThrow(Enchantments.FORTUNE),
+                                                enchantments.getOrThrow(Enchantments.SILK_TOUCH),
+                                                enchantments.getOrThrow(Enchantments.FEATHER_FALLING)
                                             )
                                         )
                                 )
@@ -1418,11 +1190,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                     new EnchantRandomlyFunction.Builder()
                                         .withOneOf(
                                             HolderSet.direct(
-                                                registrylookup.getOrThrow(Enchantments.RIPTIDE),
-                                                registrylookup.getOrThrow(Enchantments.LOYALTY),
-                                                registrylookup.getOrThrow(Enchantments.CHANNELING),
-                                                registrylookup.getOrThrow(Enchantments.IMPALING),
-                                                registrylookup.getOrThrow(Enchantments.MENDING)
+                                                enchantments.getOrThrow(Enchantments.RIPTIDE),
+                                                enchantments.getOrThrow(Enchantments.LOYALTY),
+                                                enchantments.getOrThrow(Enchantments.CHANNELING),
+                                                enchantments.getOrThrow(Enchantments.IMPALING),
+                                                enchantments.getOrThrow(Enchantments.MENDING)
                                             )
                                         )
                                 )
@@ -1439,48 +1211,34 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         )
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_COMMON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.ARROW).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.ARROW).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F))))
                         .add(
                             LootItem.lootTableItem(Items.TIPPED_ARROW)
                                 .setWeight(4)
                                 .apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 8.0F)))
                                 .apply(SetPotionFunction.setPotion(Potions.POISON))
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WIND_CHARGE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.IRON_INGOT).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.HONEY_BOTTLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.WIND_CHARGE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.IRON_INGOT).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
+                        .add(LootItem.lootTableItem(Items.HONEY_BOTTLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                         .add(
                             LootItem.lootTableItem(Items.OMINOUS_BOTTLE)
                                 .setWeight(2)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
                                 .apply(SetOminousBottleAmplifierFunction.setAmplifier(UniformGenerator.between(0.0F, 1.0F)))
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.WIND_CHARGE).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.WIND_CHARGE).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F))))
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_UNIQUE,
             LootTable.lootTable()
                 .withPool(
@@ -1493,7 +1251,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(LootItem.lootTableItem(Items.TRIDENT).setWeight(1))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD,
             LootTable.lootTable()
                 .withPool(
@@ -1503,7 +1261,9 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_COMMON).setWeight(2))
                 )
                 .withPool(
-                    LootPool.lootPool().setRolls(UniformGenerator.between(1.0F, 3.0F)).add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_COMMON))
+                    LootPool.lootPool()
+                        .setRolls(UniformGenerator.between(1.0F, 3.0F))
+                        .add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_COMMON))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -1512,7 +1272,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_UNIQUE))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_RARE,
             LootTable.lootTable()
                 .withPool(
@@ -1543,11 +1303,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                     new EnchantRandomlyFunction.Builder()
                                         .withOneOf(
                                             HolderSet.direct(
-                                                registrylookup.getOrThrow(Enchantments.KNOCKBACK),
-                                                registrylookup.getOrThrow(Enchantments.PUNCH),
-                                                registrylookup.getOrThrow(Enchantments.SMITE),
-                                                registrylookup.getOrThrow(Enchantments.LOOTING),
-                                                registrylookup.getOrThrow(Enchantments.MULTISHOT)
+                                                enchantments.getOrThrow(Enchantments.KNOCKBACK),
+                                                enchantments.getOrThrow(Enchantments.PUNCH),
+                                                enchantments.getOrThrow(Enchantments.SMITE),
+                                                enchantments.getOrThrow(Enchantments.LOOTING),
+                                                enchantments.getOrThrow(Enchantments.MULTISHOT)
                                             )
                                         )
                                 )
@@ -1558,9 +1318,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .apply(
                                     new EnchantRandomlyFunction.Builder()
                                         .withOneOf(
-                                            HolderSet.direct(
-                                                registrylookup.getOrThrow(Enchantments.BREACH), registrylookup.getOrThrow(Enchantments.DENSITY)
-                                            )
+                                            HolderSet.direct(enchantments.getOrThrow(Enchantments.BREACH), enchantments.getOrThrow(Enchantments.DENSITY))
                                         )
                                 )
                         )
@@ -1569,33 +1327,27 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                                 .setWeight(2)
                                 .apply(
                                     new SetEnchantmentsFunction.Builder()
-                                        .withEnchantment(registrylookup.getOrThrow(Enchantments.WIND_BURST), ConstantValue.exactly(1.0F))
+                                        .withEnchantment(enchantments.getOrThrow(Enchantments.WIND_BURST), ConstantValue.exactly(1.0F))
                                 )
                         )
                         .add(LootItem.lootTableItem(Items.DIAMOND_BLOCK).setWeight(1))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_COMMON,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.EMERALD).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 10.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.WIND_CHARGE).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(8.0F, 12.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.EMERALD).setWeight(5).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 10.0F))))
+                        .add(LootItem.lootTableItem(Items.WIND_CHARGE).setWeight(4).apply(SetItemCountFunction.setCount(UniformGenerator.between(8.0F, 12.0F))))
                         .add(
                             LootItem.lootTableItem(Items.TIPPED_ARROW)
                                 .setWeight(3)
                                 .apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 12.0F)))
                                 .apply(SetPotionFunction.setPotion(Potions.STRONG_SLOWNESS))
                         )
-                        .add(
-                            LootItem.lootTableItem(Items.DIAMOND).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.DIAMOND).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 3.0F))))
                         .add(
                             LootItem.lootTableItem(Items.OMINOUS_BOTTLE)
                                 .setWeight(1)
@@ -1604,7 +1356,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         )
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_UNIQUE,
             LootTable.lootTable()
                 .withPool(
@@ -1617,7 +1369,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(LootItem.lootTableItem(Items.HEAVY_CORE).setWeight(1))
                 )
         );
-        p_250931_.accept(
+        output.accept(
             BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS,
             LootTable.lootTable()
                 .withPool(
@@ -1627,7 +1379,9 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_COMMON).setWeight(2))
                 )
                 .withPool(
-                    LootPool.lootPool().setRolls(UniformGenerator.between(1.0F, 3.0F)).add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_COMMON))
+                    LootPool.lootPool()
+                        .setRolls(UniformGenerator.between(1.0F, 3.0F))
+                        .add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_COMMON))
                 )
                 .withPool(
                     LootPool.lootPool()
@@ -1636,28 +1390,24 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         .add(NestedLootTable.lootTableReference(BuiltInLootTables.TRIAL_CHAMBERS_REWARD_OMINOUS_UNIQUE))
                 )
         );
-        this.spawnerLootTables(p_250931_);
+        this.spawnerLootTables(output);
     }
 
-    public void spawnerLootTables(BiConsumer<ResourceKey<LootTable>, LootTable.Builder> p_312949_) {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
-        p_312949_.accept(
+    public void spawnerLootTables(final BiConsumer<ResourceKey<LootTable>, LootTable.Builder> output) {
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        output.accept(
             BuiltInLootTables.SPAWNER_TRIAL_CHAMBER_KEY,
             LootTable.lootTable().withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.TRIAL_KEY)))
         );
-        p_312949_.accept(
+        output.accept(
             BuiltInLootTables.SPAWNER_TRIAL_CHAMBER_CONSUMABLES,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
                         .add(LootItem.lootTableItem(Items.COOKED_CHICKEN).setWeight(3).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
-                        .add(
-                            LootItem.lootTableItem(Items.BREAD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BAKED_POTATO).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.BREAD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                        .add(LootItem.lootTableItem(Items.BAKED_POTATO).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                         .add(
                             LootItem.lootTableItem(Items.POTION)
                                 .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
@@ -1670,22 +1420,18 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         )
                 )
         );
-        p_312949_.accept(
+        output.accept(
             BuiltInLootTables.SPAWNER_OMINOUS_TRIAL_CHAMBER_KEY,
             LootTable.lootTable().withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.OMINOUS_TRIAL_KEY)))
         );
-        p_312949_.accept(
+        output.accept(
             BuiltInLootTables.SPAWNER_OMINOUS_TRIAL_CHAMBER_CONSUMABLES,
             LootTable.lootTable()
                 .withPool(
                     LootPool.lootPool()
                         .setRolls(ConstantValue.exactly(1.0F))
-                        .add(
-                            LootItem.lootTableItem(Items.COOKED_BEEF).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
-                        )
-                        .add(
-                            LootItem.lootTableItem(Items.BAKED_POTATO).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F)))
-                        )
+                        .add(LootItem.lootTableItem(Items.COOKED_BEEF).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                        .add(LootItem.lootTableItem(Items.BAKED_POTATO).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 4.0F))))
                         .add(
                             LootItem.lootTableItem(Items.GOLDEN_CARROT).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
                         )
@@ -1701,7 +1447,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                         )
                 )
         );
-        p_312949_.accept(
+        output.accept(
             BuiltInLootTables.SPAWNER_TRIAL_ITEMS_TO_DROP_WHEN_OMINOUS,
             LootTable.lootTable()
                 .withPool(
@@ -1794,15 +1540,25 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     .add(LootItem.lootTableItem(Items.GUNPOWDER).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
                     .add(LootItem.lootTableItem(Blocks.TNT).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
                     .add(LootItem.lootTableItem(Items.LEATHER_HELMET).setWeight(3).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                    .add(LootItem.lootTableItem(Items.LEATHER_CHESTPLATE).setWeight(3).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
-                    .add(LootItem.lootTableItem(Items.LEATHER_LEGGINGS).setWeight(3).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
+                    .add(
+                        LootItem.lootTableItem(Items.LEATHER_CHESTPLATE)
+                            .setWeight(3)
+                            .apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                    )
+                    .add(
+                        LootItem.lootTableItem(Items.LEATHER_LEGGINGS).setWeight(3).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries))
+                    )
                     .add(LootItem.lootTableItem(Items.LEATHER_BOOTS).setWeight(3).apply(EnchantRandomlyFunction.randomApplicableEnchantment(this.registries)))
             )
             .withPool(
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(5))
-                    .add(LootItem.lootTableItem(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             )
             .withPool(
                 LootPool.lootPool()
@@ -1846,7 +1602,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(5))
-                    .add(LootItem.lootTableItem(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             )
             .withPool(
                 LootPool.lootPool()
@@ -2191,11 +1951,13 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     .add(EmptyLootItem.emptyItem().setWeight(11))
                     .add(LootItem.lootTableItem(Items.SNOUT_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1))
             )
-            .withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE).setWeight(1)));
+            .withPool(
+                LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.NETHERITE_UPGRADE_SMITHING_TEMPLATE).setWeight(1))
+            );
     }
 
     public LootTable.Builder bastionOtherLootTable() {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return LootTable.lootTable()
             .withPool(
                 LootPool.lootPool()
@@ -2215,7 +1977,9 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     )
                     .add(LootItem.lootTableItem(Items.ANCIENT_DEBRIS).setWeight(12).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                     .add(LootItem.lootTableItem(Items.NETHERITE_SCRAP).setWeight(4).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
-                    .add(LootItem.lootTableItem(Items.SPECTRAL_ARROW).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(10.0F, 22.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.SPECTRAL_ARROW).setWeight(10).apply(SetItemCountFunction.setCount(UniformGenerator.between(10.0F, 22.0F)))
+                    )
                     .add(LootItem.lootTableItem(Items.PIGLIN_BANNER_PATTERN).setWeight(9).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                     .add(LootItem.lootTableItem(Items.MUSIC_DISC_PIGSTEP).setWeight(5).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                     .add(LootItem.lootTableItem(Items.GOLDEN_CARROT).setWeight(12).apply(SetItemCountFunction.setCount(UniformGenerator.between(6.0F, 17.0F))))
@@ -2223,7 +1987,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
                             .setWeight(10)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.SOUL_SPEED)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.SOUL_SPEED)))
                     )
             )
             .withPool(
@@ -2240,7 +2004,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     .add(
                         LootItem.lootTableItem(Items.GOLDEN_BOOTS)
                             .apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F)))
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.SOUL_SPEED)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.SOUL_SPEED)))
                     )
                     .add(
                         LootItem.lootTableItem(Items.GOLDEN_AXE)
@@ -2261,7 +2025,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
             .withPool(
                 LootPool.lootPool()
                     .setRolls(UniformGenerator.between(3.0F, 4.0F))
-                    .add(LootItem.lootTableItem(Blocks.GILDED_BLACKSTONE).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F))))
+                    .add(
+                        LootItem.lootTableItem(Blocks.GILDED_BLACKSTONE)
+                            .setWeight(2)
+                            .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 5.0F)))
+                    )
                     .add(LootItem.lootTableItem(Blocks.IRON_CHAIN).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 10.0F))))
                     .add(LootItem.lootTableItem(Items.MAGMA_CREAM).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(2.0F, 6.0F))))
                     .add(LootItem.lootTableItem(Blocks.BONE_BLOCK).apply(SetItemCountFunction.setCount(UniformGenerator.between(3.0F, 6.0F))))
@@ -2296,7 +2064,6 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     .add(LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE).setWeight(2))
                     .add(LootItem.lootTableItem(Items.MUSIC_DISC_13).setWeight(15))
                     .add(LootItem.lootTableItem(Items.MUSIC_DISC_CAT).setWeight(15))
-                    .add(LootItem.lootTableItem(Items.NAME_TAG).setWeight(20))
                     .add(LootItem.lootTableItem(Items.CHAINMAIL_CHESTPLATE).setWeight(10))
                     .add(LootItem.lootTableItem(Items.DIAMOND_HOE).setWeight(15))
                     .add(LootItem.lootTableItem(Items.DIAMOND_CHESTPLATE).setWeight(5))
@@ -2348,7 +2115,9 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                             .apply(EnchantWithLevelsFunction.enchantWithLevels(this.registries, ConstantValue.exactly(30.0F)))
                     )
             )
-            .withPool(LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1)));
+            .withPool(
+                LootPool.lootPool().setRolls(ConstantValue.exactly(1.0F)).add(LootItem.lootTableItem(Items.EYE_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1))
+            );
     }
 
     public LootTable.Builder strongholdCorridorLootTable() {
@@ -2387,16 +2156,19 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
     }
 
     public LootTable.Builder ancientCityLootTable() {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        HolderLookup.RegistryLookup<Enchantment> enchantments = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
         return LootTable.lootTable()
             .withPool(
                 LootPool.lootPool()
                     .setRolls(UniformGenerator.between(5.0F, 10.0F))
-                    .add(LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE).setWeight(1).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.ENCHANTED_GOLDEN_APPLE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F)))
+                    )
                     .add(LootItem.lootTableItem(Items.MUSIC_DISC_OTHERSIDE).setWeight(1))
                     .add(LootItem.lootTableItem(Items.COMPASS).setWeight(2).apply(SetItemCountFunction.setCount(ConstantValue.exactly(1.0F))))
                     .add(LootItem.lootTableItem(Items.SCULK_CATALYST).setWeight(2).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 2.0F))))
-                    .add(LootItem.lootTableItem(Items.NAME_TAG).setWeight(2))
                     .add(
                         LootItem.lootTableItem(Items.DIAMOND_HOE)
                             .setWeight(2)
@@ -2417,13 +2189,15 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                     .add(
                         LootItem.lootTableItem(Items.BOOK)
                             .setWeight(3)
-                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(registrylookup.getOrThrow(Enchantments.SWIFT_SNEAK)))
+                            .apply(new EnchantRandomlyFunction.Builder().withEnchantment(enchantments.getOrThrow(Enchantments.SWIFT_SNEAK)))
                     )
                     .add(LootItem.lootTableItem(Items.SCULK).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(4.0F, 10.0F))))
                     .add(LootItem.lootTableItem(Items.SCULK_SENSOR).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
                     .add(LootItem.lootTableItem(Items.CANDLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 4.0F))))
                     .add(LootItem.lootTableItem(Items.AMETHYST_SHARD).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 15.0F))))
-                    .add(LootItem.lootTableItem(Items.EXPERIENCE_BOTTLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.EXPERIENCE_BOTTLE).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 3.0F)))
+                    )
                     .add(LootItem.lootTableItem(Items.GLOW_BERRIES).setWeight(3).apply(SetItemCountFunction.setCount(UniformGenerator.between(1.0F, 15.0F))))
                     .add(
                         LootItem.lootTableItem(Items.IRON_LEGGINGS)
@@ -2476,7 +2250,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(2))
-                    .add(LootItem.lootTableItem(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             );
     }
 
@@ -2502,7 +2280,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(5))
-                    .add(LootItem.lootTableItem(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.COAST_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             )
             .withPool(
                 LootPool.lootPool()
@@ -2516,6 +2298,7 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
     }
 
     public LootTable.Builder pillagerOutpostLootTable() {
+        HolderLookup.RegistryLookup<Instrument> instruments = this.registries.lookupOrThrow(Registries.INSTRUMENT);
         return LootTable.lootTable()
             .withPool(LootPool.lootPool().setRolls(UniformGenerator.between(0.0F, 1.0F)).add(LootItem.lootTableItem(Items.CROSSBOW)))
             .withPool(
@@ -2544,13 +2327,17 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 LootPool.lootPool()
                     .setRolls(UniformGenerator.between(0.0F, 1.0F))
                     .add(LootItem.lootTableItem(Items.GOAT_HORN))
-                    .apply(SetInstrumentFunction.setInstrumentOptions(InstrumentTags.REGULAR_GOAT_HORNS))
+                    .apply(SetInstrumentFunction.setInstrumentOptions(instruments.getOrThrow(InstrumentTags.REGULAR_GOAT_HORNS)))
             )
             .withPool(
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(3))
-                    .add(LootItem.lootTableItem(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.SENTRY_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             );
     }
 
@@ -2589,7 +2376,11 @@ public record VanillaChestLoot(HolderLookup.Provider registries) implements Loot
                 LootPool.lootPool()
                     .setRolls(ConstantValue.exactly(1.0F))
                     .add(EmptyLootItem.emptyItem().setWeight(6))
-                    .add(LootItem.lootTableItem(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE).setWeight(1).apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F))))
+                    .add(
+                        LootItem.lootTableItem(Items.DUNE_ARMOR_TRIM_SMITHING_TEMPLATE)
+                            .setWeight(1)
+                            .apply(SetItemCountFunction.setCount(ConstantValue.exactly(2.0F)))
+                    )
             );
     }
 }

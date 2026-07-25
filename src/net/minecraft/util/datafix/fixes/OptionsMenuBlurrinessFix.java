@@ -3,13 +3,11 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
-import com.mojang.serialization.Dynamic;
 
 public class OptionsMenuBlurrinessFix extends DataFix {
-    public OptionsMenuBlurrinessFix(Schema p_342701_) {
-        super(p_342701_, false);
+    public OptionsMenuBlurrinessFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
@@ -17,17 +15,17 @@ public class OptionsMenuBlurrinessFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "OptionsMenuBlurrinessFix",
             this.getInputSchema().getType(References.OPTIONS),
-            p_342873_ -> p_342873_.update(DSL.remainderFinder(), p_343322_ -> p_343322_.update("menuBackgroundBlurriness", p_390338_ -> {
-                int i = this.convertToIntRange(p_390338_.asString("0.5"));
-                return p_390338_.createString(String.valueOf(i));
+            input -> input.update(DSL.remainderFinder(), tag -> tag.update("menuBackgroundBlurriness", value -> {
+                int intValue = this.convertToIntRange(value.asString("0.5"));
+                return value.createString(String.valueOf(intValue));
             }))
         );
     }
 
-    private int convertToIntRange(String p_343273_) {
+    private int convertToIntRange(final String floatBlurriness) {
         try {
-            return Math.round(Float.parseFloat(p_343273_) * 10.0F);
-        } catch (NumberFormatException numberformatexception) {
+            return Math.round(Float.parseFloat(floatBlurriness) * 10.0F);
+        } catch (NumberFormatException e) {
             return 5;
         }
     }

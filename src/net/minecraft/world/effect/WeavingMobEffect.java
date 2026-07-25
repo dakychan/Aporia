@@ -17,37 +17,37 @@ import net.minecraft.world.level.gamerules.GameRules;
 class WeavingMobEffect extends MobEffect {
     private final ToIntFunction<RandomSource> maxCobwebs;
 
-    protected WeavingMobEffect(MobEffectCategory p_331231_, int p_336179_, ToIntFunction<RandomSource> p_328620_) {
-        super(p_331231_, p_336179_, ParticleTypes.ITEM_COBWEB);
-        this.maxCobwebs = p_328620_;
+    protected WeavingMobEffect(final MobEffectCategory category, final int color, final ToIntFunction<RandomSource> maxCobwebs) {
+        super(category, color, ParticleTypes.ITEM_COBWEB);
+        this.maxCobwebs = maxCobwebs;
     }
 
     @Override
-    public void onMobRemoved(ServerLevel p_362050_, LivingEntity p_335117_, int p_333338_, Entity.RemovalReason p_328096_) {
-        if (p_328096_ == Entity.RemovalReason.KILLED && (p_335117_ instanceof Player || p_362050_.getGameRules().get(GameRules.MOB_GRIEFING))) {
-            this.spawnCobwebsRandomlyAround(p_362050_, p_335117_.getRandom(), p_335117_.blockPosition());
+    public void onMobRemoved(final ServerLevel level, final LivingEntity mob, final int amplifier, final Entity.RemovalReason reason) {
+        if (reason == Entity.RemovalReason.KILLED && (mob instanceof Player || level.getGameRules().get(GameRules.MOB_GRIEFING))) {
+            this.spawnCobwebsRandomlyAround(level, mob.getRandom(), mob.blockPosition());
         }
     }
 
-    private void spawnCobwebsRandomlyAround(ServerLevel p_368804_, RandomSource p_332035_, BlockPos p_329542_) {
-        Set<BlockPos> set = Sets.newHashSet();
-        int i = this.maxCobwebs.applyAsInt(p_332035_);
+    private void spawnCobwebsRandomlyAround(final ServerLevel level, final RandomSource random, final BlockPos pos) {
+        Set<BlockPos> positionsToTransform = Sets.newHashSet();
+        int cobwebCount = this.maxCobwebs.applyAsInt(random);
 
-        for (BlockPos blockpos : BlockPos.randomInCube(p_332035_, 15, p_329542_, 1)) {
-            BlockPos blockpos1 = blockpos.below();
-            if (!set.contains(blockpos) && p_368804_.getBlockState(blockpos).canBeReplaced() && p_368804_.getBlockState(blockpos1).isFaceSturdy(p_368804_, blockpos1, Direction.UP)
-                )
-             {
-                set.add(blockpos.immutable());
-                if (set.size() >= i) {
+        for (BlockPos blockPos : BlockPos.randomInCube(random, 15, pos, 1)) {
+            BlockPos below = blockPos.below();
+            if (!positionsToTransform.contains(blockPos)
+                && level.getBlockState(blockPos).canBeReplaced()
+                && level.getBlockState(below).isFaceSturdy(level, below, Direction.UP)) {
+                positionsToTransform.add(blockPos.immutable());
+                if (positionsToTransform.size() >= cobwebCount) {
                     break;
                 }
             }
         }
 
-        for (BlockPos blockpos2 : set) {
-            p_368804_.setBlock(blockpos2, Blocks.COBWEB.defaultBlockState(), 3);
-            p_368804_.levelEvent(3018, blockpos2, 0);
+        for (BlockPos blockPos : positionsToTransform) {
+            level.setBlock(blockPos, Blocks.COBWEB.defaultBlockState(), 3);
+            level.levelEvent(3018, blockPos, 0);
         }
     }
 }

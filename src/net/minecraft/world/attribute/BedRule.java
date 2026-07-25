@@ -2,7 +2,6 @@ package net.minecraft.world.attribute;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
@@ -16,28 +15,28 @@ public record BedRule(BedRule.Rule canSleep, BedRule.Rule canSetSpawn, boolean e
     );
     public static final BedRule EXPLODES = new BedRule(BedRule.Rule.NEVER, BedRule.Rule.NEVER, true, Optional.empty());
     public static final Codec<BedRule> CODEC = RecordCodecBuilder.create(
-        p_460717_ -> p_460717_.group(
+        i -> i.group(
                 BedRule.Rule.CODEC.fieldOf("can_sleep").forGetter(BedRule::canSleep),
                 BedRule.Rule.CODEC.fieldOf("can_set_spawn").forGetter(BedRule::canSetSpawn),
                 Codec.BOOL.optionalFieldOf("explodes", false).forGetter(BedRule::explodes),
                 ComponentSerialization.CODEC.optionalFieldOf("error_message").forGetter(BedRule::errorMessage)
             )
-            .apply(p_460717_, BedRule::new)
+            .apply(i, BedRule::new)
     );
 
-    public boolean canSleep(Level p_456134_) {
-        return this.canSleep.test(p_456134_);
+    public boolean canSleep(final Level level) {
+        return this.canSleep.test(level);
     }
 
-    public boolean canSetSpawn(Level p_456584_) {
-        return this.canSetSpawn.test(p_456584_);
+    public boolean canSetSpawn(final Level level) {
+        return this.canSetSpawn.test(level);
     }
 
     public Player.BedSleepingProblem asProblem() {
         return new Player.BedSleepingProblem(this.errorMessage.orElse(null));
     }
 
-    public static enum Rule implements StringRepresentable {
+    public enum Rule implements StringRepresentable {
         ALWAYS("always"),
         WHEN_DARK("when_dark"),
         NEVER("never");
@@ -45,14 +44,14 @@ public record BedRule(BedRule.Rule canSleep, BedRule.Rule canSetSpawn, boolean e
         public static final Codec<BedRule.Rule> CODEC = StringRepresentable.fromEnum(BedRule.Rule::values);
         private final String name;
 
-        private Rule(final String p_454242_) {
-            this.name = p_454242_;
+        Rule(final String name) {
+            this.name = name;
         }
 
-        public boolean test(Level p_452554_) {
+        public boolean test(final Level level) {
             return switch (this) {
                 case ALWAYS -> true;
-                case WHEN_DARK -> p_452554_.isDarkOutside();
+                case WHEN_DARK -> level.isDarkOutside();
                 case NEVER -> false;
             };
         }

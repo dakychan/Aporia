@@ -14,14 +14,11 @@ import net.minecraft.world.level.LevelReader;
 import org.jspecify.annotations.Nullable;
 
 public class FixedBiomeSource extends BiomeSource implements BiomeManager.NoiseBiomeSource {
-    public static final MapCodec<FixedBiomeSource> CODEC = Biome.CODEC
-        .fieldOf("biome")
-        .xmap(FixedBiomeSource::new, p_204259_ -> p_204259_.biome)
-        .stable();
+    public static final MapCodec<FixedBiomeSource> CODEC = Biome.CODEC.fieldOf("biome").xmap(FixedBiomeSource::new, s -> s.biome).stable();
     private final Holder<Biome> biome;
 
-    public FixedBiomeSource(Holder<Biome> p_204257_) {
-        this.biome = p_204257_;
+    public FixedBiomeSource(final Holder<Biome> biome) {
+        this.biome = biome;
     }
 
     @Override
@@ -35,38 +32,31 @@ public class FixedBiomeSource extends BiomeSource implements BiomeManager.NoiseB
     }
 
     @Override
-    public Holder<Biome> getNoiseBiome(int p_204265_, int p_204266_, int p_204267_, Climate.Sampler p_204268_) {
+    public Holder<Biome> getNoiseBiome(final int quartX, final int quartY, final int quartZ, final Climate.Sampler sampler) {
         return this.biome;
     }
 
     @Override
-    public Holder<Biome> getNoiseBiome(int p_204261_, int p_204262_, int p_204263_) {
+    public Holder<Biome> getNoiseBiome(final int quartX, final int quartY, final int quartZ) {
         return this.biome;
     }
 
     @Override
     public @Nullable Pair<BlockPos, Holder<Biome>> findBiomeHorizontal(
-        int p_220640_,
-        int p_220641_,
-        int p_220642_,
-        int p_220643_,
-        int p_220644_,
-        Predicate<Holder<Biome>> p_220645_,
-        RandomSource p_220646_,
-        boolean p_220647_,
-        Climate.Sampler p_220648_
+        final int originX,
+        final int originY,
+        final int originZ,
+        final int r,
+        final int skipStep,
+        final Predicate<Holder<Biome>> allowed,
+        final RandomSource random,
+        final boolean findClosest,
+        final Climate.Sampler sampler
     ) {
-        if (p_220645_.test(this.biome)) {
-            return p_220647_
-                ? Pair.of(new BlockPos(p_220640_, p_220641_, p_220642_), this.biome)
-                : Pair.of(
-                    new BlockPos(
-                        p_220640_ - p_220643_ + p_220646_.nextInt(p_220643_ * 2 + 1),
-                        p_220641_,
-                        p_220642_ - p_220643_ + p_220646_.nextInt(p_220643_ * 2 + 1)
-                    ),
-                    this.biome
-                );
+        if (allowed.test(this.biome)) {
+            return findClosest
+                ? Pair.of(new BlockPos(originX, originY, originZ), this.biome)
+                : Pair.of(new BlockPos(originX - r + random.nextInt(r * 2 + 1), originY, originZ - r + random.nextInt(r * 2 + 1)), this.biome);
         } else {
             return null;
         }
@@ -74,15 +64,19 @@ public class FixedBiomeSource extends BiomeSource implements BiomeManager.NoiseB
 
     @Override
     public @Nullable Pair<BlockPos, Holder<Biome>> findClosestBiome3d(
-        BlockPos p_220650_, int p_220651_, int p_220652_, int p_220653_, Predicate<Holder<Biome>> p_220654_, Climate.Sampler p_220655_, LevelReader p_220656_
+        final BlockPos origin,
+        final int searchRadius,
+        final int sampleResolutionHorizontal,
+        final int sampleResolutionVertical,
+        final Predicate<Holder<Biome>> allowed,
+        final Climate.Sampler sampler,
+        final LevelReader level
     ) {
-        return p_220654_.test(this.biome)
-            ? Pair.of(p_220650_.atY(Mth.clamp(p_220650_.getY(), p_220656_.getMinY() + 1, p_220656_.getMaxY() + 1)), this.biome)
-            : null;
+        return allowed.test(this.biome) ? Pair.of(origin.atY(Mth.clamp(origin.getY(), level.getMinY() + 1, level.getMaxY() + 1)), this.biome) : null;
     }
 
     @Override
-    public Set<Holder<Biome>> getBiomesWithin(int p_187038_, int p_187039_, int p_187040_, int p_187041_, Climate.Sampler p_187042_) {
+    public Set<Holder<Biome>> getBiomesWithin(final int x, final int y, final int z, final int r, final Climate.Sampler sampler) {
         return Sets.newHashSet(Set.of(this.biome));
     }
 }

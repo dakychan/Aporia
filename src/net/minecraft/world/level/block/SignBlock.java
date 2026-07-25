@@ -6,7 +6,6 @@ import java.util.UUID;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.CommonComponents;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.PlainTextContents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
@@ -25,6 +24,7 @@ import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SignText;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -46,9 +46,9 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
     private static final VoxelShape SHAPE = Block.column(8.0, 0.0, 16.0);
     private final WoodType type;
 
-    protected SignBlock(WoodType p_56274_, BlockBehaviour.Properties p_56273_) {
-        super(p_56273_);
-        this.type = p_56274_;
+    protected SignBlock(final WoodType type, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.type = type;
     }
 
     @Override
@@ -56,55 +56,59 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
 
     @Override
     protected BlockState updateShape(
-        BlockState p_56285_,
-        LevelReader p_365152_,
-        ScheduledTickAccess p_366151_,
-        BlockPos p_56289_,
-        Direction p_56286_,
-        BlockPos p_56290_,
-        BlockState p_56287_,
-        RandomSource p_361222_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_56285_.getValue(WATERLOGGED)) {
-            p_366151_.scheduleTick(p_56289_, Fluids.WATER, Fluids.WATER.getTickDelay(p_365152_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_56285_, p_365152_, p_366151_, p_56289_, p_56286_, p_56290_, p_56287_, p_361222_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_56293_, BlockGetter p_56294_, BlockPos p_56295_, CollisionContext p_56296_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public boolean isPossibleToRespawnInThis(BlockState p_279137_) {
+    public boolean isPossibleToRespawnInThis(final BlockState state) {
         return true;
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_154556_, BlockState p_154557_) {
-        return new SignBlockEntity(p_154556_, p_154557_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new SignBlockEntity(worldPosition, blockState);
     }
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_333491_, BlockState p_331465_, Level p_334341_, BlockPos p_330848_, Player p_330127_, InteractionHand p_331896_, BlockHitResult p_335647_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (p_334341_.getBlockEntity(p_330848_) instanceof SignBlockEntity signblockentity) {
-            SignApplicator signapplicator1 = p_333491_.getItem() instanceof SignApplicator signapplicator ? signapplicator : null;
-            boolean flag1 = signapplicator1 != null && p_330127_.mayBuild();
-            if (p_334341_ instanceof ServerLevel serverlevel) {
-                if (flag1 && !signblockentity.isWaxed() && !this.otherPlayerIsEditingSign(p_330127_, signblockentity)) {
-                    boolean flag = signblockentity.isFacingFrontText(p_330127_);
-                    if (signapplicator1.canApplyToSign(signblockentity.getText(flag), p_330127_)
-                        && signapplicator1.tryApplyToSign(serverlevel, signblockentity, flag, p_330127_)) {
-                        signblockentity.executeClickCommandsIfPresent(serverlevel, p_330127_, p_330848_, flag);
-                        p_330127_.awardStat(Stats.ITEM_USED.get(p_333491_.getItem()));
-                        serverlevel.gameEvent(
-                            GameEvent.BLOCK_CHANGE, signblockentity.getBlockPos(), GameEvent.Context.of(p_330127_, signblockentity.getBlockState())
-                        );
-                        p_333491_.consume(1, p_330127_);
+        if (level.getBlockEntity(pos) instanceof SignBlockEntity sign) {
+            SignApplicator signApplicator = itemStack.getItem() instanceof SignApplicator applicator ? applicator : null;
+            boolean hasApplicatorToUse = signApplicator != null && player.mayBuild();
+            if (level instanceof ServerLevel serverLevel) {
+                if (hasApplicatorToUse && !sign.isWaxed() && !this.otherPlayerIsEditingSign(player, sign)) {
+                    boolean isFrontText = sign.isFacingFrontText(player);
+                    if (signApplicator.canApplyToSign(sign.getText(isFrontText), itemStack, player)
+                        && signApplicator.tryApplyToSign(serverLevel, sign, isFrontText, itemStack, player)) {
+                        sign.executeClickCommandsIfPresent(serverLevel, player, pos, isFrontText);
+                        player.awardStat(Stats.ITEM_USED.get(itemStack.getItem()));
+                        serverLevel.gameEvent(GameEvent.BLOCK_CHANGE, sign.getBlockPos(), GameEvent.Context.of(player, sign.getBlockState()));
+                        itemStack.consume(1, player);
                         return InteractionResult.SUCCESS;
                     } else {
                         return InteractionResult.TRY_WITH_EMPTY_HAND;
@@ -113,7 +117,7 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
                     return InteractionResult.TRY_WITH_EMPTY_HAND;
                 }
             } else {
-                return !flag1 && !signblockentity.isWaxed() ? InteractionResult.CONSUME : InteractionResult.SUCCESS;
+                return !hasApplicatorToUse && !sign.isWaxed() ? InteractionResult.CONSUME : InteractionResult.SUCCESS;
             }
         } else {
             return InteractionResult.PASS;
@@ -121,18 +125,20 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_333550_, Level p_334186_, BlockPos p_333719_, Player p_328842_, BlockHitResult p_335719_) {
-        if (p_334186_.getBlockEntity(p_333719_) instanceof SignBlockEntity signblockentity) {
-            if (p_334186_ instanceof ServerLevel serverlevel) {
-                boolean $$9 = signblockentity.isFacingFrontText(p_328842_);
-                boolean $$10 = signblockentity.executeClickCommandsIfPresent(serverlevel, p_328842_, p_333719_, $$9);
-                if (signblockentity.isWaxed()) {
-                    serverlevel.playSound(null, signblockentity.getBlockPos(), signblockentity.getSignInteractionFailedSoundEvent(), SoundSource.BLOCKS);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (level.getBlockEntity(pos) instanceof SignBlockEntity sign) {
+            if (level instanceof ServerLevel serverLevel) {
+                boolean isFrontText = sign.isFacingFrontText(player);
+                boolean executedClickCommand = sign.executeClickCommandsIfPresent(serverLevel, player, pos, isFrontText);
+                if (sign.isWaxed()) {
+                    serverLevel.playSound(null, sign.getBlockPos(), sign.getSignInteractionFailedSoundEvent(), SoundSource.BLOCKS);
                     return InteractionResult.SUCCESS_SERVER;
-                } else if ($$10) {
+                } else if (executedClickCommand) {
                     return InteractionResult.SUCCESS_SERVER;
-                } else if (!this.otherPlayerIsEditingSign(p_328842_, signblockentity) && p_328842_.mayBuild() && this.hasEditableText(p_328842_, signblockentity, $$9)) {
-                    this.openTextEdit(p_328842_, signblockentity, $$9);
+                } else if (!this.otherPlayerIsEditingSign(player, sign) && player.mayBuild() && this.hasEditableText(player, sign, isFrontText)) {
+                    this.openTextEdit(player, sign, isFrontText);
                     return InteractionResult.SUCCESS_SERVER;
                 } else {
                     return InteractionResult.PASS;
@@ -146,50 +152,43 @@ public abstract class SignBlock extends BaseEntityBlock implements SimpleWaterlo
         }
     }
 
-    private boolean hasEditableText(Player p_279394_, SignBlockEntity p_279187_, boolean p_279225_) {
-        SignText signtext = p_279187_.getText(p_279225_);
-        return Arrays.stream(signtext.getMessages(p_279394_.isTextFilteringEnabled()))
-            .allMatch(p_327267_ -> p_327267_.equals(CommonComponents.EMPTY) || p_327267_.getContents() instanceof PlainTextContents);
+    private boolean hasEditableText(final Player player, final SignBlockEntity sign, final boolean isFrontText) {
+        SignText text = sign.getText(isFrontText);
+        return Arrays.stream(text.getMessages(player.isTextFilteringEnabled()))
+            .allMatch(message -> message.equals(CommonComponents.EMPTY) || message.getContents() instanceof PlainTextContents);
     }
 
-    public abstract float getYRotationDegrees(BlockState p_277705_);
+    public abstract float getYRotationDegrees(final BlockState state);
 
-    public Vec3 getSignHitboxCenterPosition(BlockState p_278294_) {
+    public Vec3 getSignHitboxCenterPosition(final BlockState state) {
         return new Vec3(0.5, 0.5, 0.5);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_56299_) {
-        return p_56299_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_56299_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     public WoodType type() {
         return this.type;
     }
 
-    public static WoodType getWoodType(Block p_251096_) {
-        WoodType woodtype;
-        if (p_251096_ instanceof SignBlock) {
-            woodtype = ((SignBlock)p_251096_).type();
-        } else {
-            woodtype = WoodType.OAK;
-        }
-
-        return woodtype;
+    public static WoodType getWoodType(final Block block) {
+        return block instanceof SignBlock signBlock ? signBlock.type() : WoodType.OAK;
     }
 
-    public void openTextEdit(Player p_277738_, SignBlockEntity p_277467_, boolean p_277771_) {
-        p_277467_.setAllowedPlayerEditor(p_277738_.getUUID());
-        p_277738_.openTextEdit(p_277467_, p_277771_);
+    public void openTextEdit(final Player player, final SignBlockEntity sign, final boolean isFrontText) {
+        sign.setAllowedPlayerEditor(player.getUUID());
+        player.openTextEdit(sign, isFrontText);
     }
 
-    private boolean otherPlayerIsEditingSign(Player p_277952_, SignBlockEntity p_277599_) {
-        UUID uuid = p_277599_.getPlayerWhoMayEdit();
-        return uuid != null && !uuid.equals(p_277952_.getUUID());
+    private boolean otherPlayerIsEditingSign(final Player player, final SignBlockEntity sign) {
+        UUID playerWhoMayEdit = sign.getPlayerWhoMayEdit();
+        return playerWhoMayEdit != null && !playerWhoMayEdit.equals(player.getUUID());
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_277367_, BlockState p_277896_, BlockEntityType<T> p_277724_) {
-        return createTickerHelper(p_277724_, BlockEntityType.SIGN, SignBlockEntity::tick);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return createTickerHelper(type, BlockEntityTypes.SIGN, SignBlockEntity::tick);
     }
 }

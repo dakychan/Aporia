@@ -15,32 +15,32 @@ public class LookControl implements Control {
     protected double wantedY;
     protected double wantedZ;
 
-    public LookControl(Mob p_24945_) {
-        this.mob = p_24945_;
+    public LookControl(final Mob mob) {
+        this.mob = mob;
     }
 
-    public void setLookAt(Vec3 p_24965_) {
-        this.setLookAt(p_24965_.x, p_24965_.y, p_24965_.z);
+    public void setLookAt(final Vec3 vec) {
+        this.setLookAt(vec.x, vec.y, vec.z);
     }
 
-    public void setLookAt(Entity p_148052_) {
-        this.setLookAt(p_148052_.getX(), p_148052_.getEyeY(), p_148052_.getZ());
+    public void setLookAt(final Entity target) {
+        this.setLookAt(target.getX(), target.getEyeY(), target.getZ());
     }
 
-    public void setLookAt(Entity p_24961_, float p_24962_, float p_24963_) {
-        this.setLookAt(p_24961_.getX(), p_24961_.getEyeY(), p_24961_.getZ(), p_24962_, p_24963_);
+    public void setLookAt(final Entity target, final float yMaxRotSpeed, final float xMaxRotAngle) {
+        this.setLookAt(target.getX(), target.getEyeY(), target.getZ(), yMaxRotSpeed, xMaxRotAngle);
     }
 
-    public void setLookAt(double p_24947_, double p_24948_, double p_24949_) {
-        this.setLookAt(p_24947_, p_24948_, p_24949_, this.mob.getHeadRotSpeed(), this.mob.getMaxHeadXRot());
+    public void setLookAt(final double x, final double y, final double z) {
+        this.setLookAt(x, y, z, this.mob.getHeadRotSpeed(), this.mob.getMaxHeadXRot());
     }
 
-    public void setLookAt(double p_24951_, double p_24952_, double p_24953_, float p_24954_, float p_24955_) {
-        this.wantedX = p_24951_;
-        this.wantedY = p_24952_;
-        this.wantedZ = p_24953_;
-        this.yMaxRotSpeed = p_24954_;
-        this.xMaxRotAngle = p_24955_;
+    public void setLookAt(final double x, final double y, final double z, final float yMaxRotSpeed, final float xMaxRotAngle) {
+        this.wantedX = x;
+        this.wantedY = y;
+        this.wantedZ = z;
+        this.yMaxRotSpeed = yMaxRotSpeed;
+        this.xMaxRotAngle = xMaxRotAngle;
         this.lookAtCooldown = 2;
     }
 
@@ -51,8 +51,8 @@ public class LookControl implements Control {
 
         if (this.lookAtCooldown > 0) {
             this.lookAtCooldown--;
-            this.getYRotD().ifPresent(p_359087_ -> this.mob.yHeadRot = this.rotateTowards(this.mob.yHeadRot, p_359087_, this.yMaxRotSpeed));
-            this.getXRotD().ifPresent(p_449595_ -> this.mob.setXRot(this.rotateTowards(this.mob.getXRot(), p_449595_, this.xMaxRotAngle)));
+            this.getYRotD().ifPresent(yRotD -> this.mob.yHeadRot = this.rotateTowards(this.mob.yHeadRot, yRotD, this.yMaxRotSpeed));
+            this.getXRotD().ifPresent(xRotD -> this.mob.setXRot(this.rotateTowards(this.mob.getXRot(), xRotD, this.xMaxRotAngle)));
         } else {
             this.mob.yHeadRot = this.rotateTowards(this.mob.yHeadRot, this.mob.yBodyRot, 10.0F);
         }
@@ -87,20 +87,18 @@ public class LookControl implements Control {
     }
 
     protected Optional<Float> getXRotD() {
-        double d0 = this.wantedX - this.mob.getX();
-        double d1 = this.wantedY - this.mob.getEyeY();
-        double d2 = this.wantedZ - this.mob.getZ();
-        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-        return !(Math.abs(d1) > 1.0E-5F) && !(Math.abs(d3) > 1.0E-5F)
-            ? Optional.empty()
-            : Optional.of((float)(-(Mth.atan2(d1, d3) * 180.0F / (float)Math.PI)));
+        double xd = this.wantedX - this.mob.getX();
+        double yd = this.wantedY - this.mob.getEyeY();
+        double zd = this.wantedZ - this.mob.getZ();
+        double sd = Math.sqrt(xd * xd + zd * zd);
+        return !(Math.abs(yd) > 1.0E-5F) && !(Math.abs(sd) > 1.0E-5F) ? Optional.empty() : Optional.of((float)(-(Mth.atan2(yd, sd) * 180.0F / (float)Math.PI)));
     }
 
     protected Optional<Float> getYRotD() {
-        double d0 = this.wantedX - this.mob.getX();
-        double d1 = this.wantedZ - this.mob.getZ();
-        return !(Math.abs(d1) > 1.0E-5F) && !(Math.abs(d0) > 1.0E-5F)
+        double xd = this.wantedX - this.mob.getX();
+        double zd = this.wantedZ - this.mob.getZ();
+        return !(Math.abs(zd) > 1.0E-5F) && !(Math.abs(xd) > 1.0E-5F)
             ? Optional.empty()
-            : Optional.of((float)(Mth.atan2(d1, d0) * 180.0F / (float)Math.PI) - 90.0F);
+            : Optional.of((float)(Mth.atan2(zd, xd) * 180.0F / (float)Math.PI) - 90.0F);
     }
 }

@@ -7,25 +7,22 @@ import net.minecraft.client.model.geom.builders.CubeListBuilder;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class NautilusArmorModel extends NautilusModel {
     private final ModelPart nautilus;
     private final ModelPart shell;
 
-    public NautilusArmorModel(ModelPart p_454587_) {
-        super(p_454587_);
-        this.nautilus = p_454587_.getChild("root");
+    public NautilusArmorModel(final ModelPart root) {
+        super(root);
+        this.nautilus = root.getChild("root");
         this.shell = this.nautilus.getChild("shell");
     }
 
     public static LayerDefinition createBodyLayer() {
         MeshDefinition meshdefinition = createBodyMesh();
         PartDefinition partdefinition = meshdefinition.getRoot();
-        PartDefinition partdefinition1 = partdefinition.addOrReplaceChild("root", CubeListBuilder.create(), PartPose.offset(0.0F, 29.0F, -6.0F));
-        PartDefinition partdefinition2 = partdefinition1.addOrReplaceChild(
+        PartDefinition nautilus = partdefinition.addOrReplaceChild("root", CubeListBuilder.create(), PartPose.offset(0.0F, 29.0F, -6.0F));
+        PartDefinition shell = nautilus.addOrReplaceChild(
             "shell",
             CubeListBuilder.create()
                 .texOffs(0, 0)

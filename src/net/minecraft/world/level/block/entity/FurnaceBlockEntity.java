@@ -11,8 +11,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public class FurnaceBlockEntity extends AbstractFurnaceBlockEntity {
     private static final Component DEFAULT_NAME = Component.translatable("container.furnace");
 
-    public FurnaceBlockEntity(BlockPos p_155545_, BlockState p_155546_) {
-        super(BlockEntityType.FURNACE, p_155545_, p_155546_, RecipeType.SMELTING);
+    public FurnaceBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.FURNACE, worldPosition, blockState, RecipeType.SMELTING);
     }
 
     @Override
@@ -21,7 +21,7 @@ public class FurnaceBlockEntity extends AbstractFurnaceBlockEntity {
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int p_59293_, Inventory p_59294_) {
-        return new FurnaceMenu(p_59293_, p_59294_, this, this.dataAccess);
+    protected AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return new FurnaceMenu(containerId, inventory, this, this.dataAccess);
     }
 }

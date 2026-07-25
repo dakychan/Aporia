@@ -26,24 +26,24 @@ public abstract class HangingEntity extends BlockAttachedEntity {
     private static final EntityDataAccessor<Direction> DATA_DIRECTION = SynchedEntityData.defineId(HangingEntity.class, EntityDataSerializers.DIRECTION);
     private static final Direction DEFAULT_DIRECTION = Direction.SOUTH;
 
-    protected HangingEntity(EntityType<? extends HangingEntity> p_31703_, Level p_31704_) {
-        super(p_31703_, p_31704_);
+    protected HangingEntity(final EntityType<? extends HangingEntity> type, final Level level) {
+        super(type, level);
     }
 
-    protected HangingEntity(EntityType<? extends HangingEntity> p_31706_, Level p_31707_, BlockPos p_31708_) {
-        this(p_31706_, p_31707_);
-        this.pos = p_31708_;
-    }
-
-    @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_408433_) {
-        p_408433_.define(DATA_DIRECTION, DEFAULT_DIRECTION);
+    protected HangingEntity(final EntityType<? extends HangingEntity> type, final Level level, final BlockPos pos) {
+        this(type, level);
+        this.pos = pos;
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_409667_) {
-        super.onSyncedDataUpdated(p_409667_);
-        if (p_409667_.equals(DATA_DIRECTION)) {
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_DIRECTION, DEFAULT_DIRECTION);
+    }
+
+    @Override
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (accessor.equals(DATA_DIRECTION)) {
             this.setDirection(this.getDirection());
         }
     }
@@ -53,15 +53,15 @@ public abstract class HangingEntity extends BlockAttachedEntity {
         return this.entityData.get(DATA_DIRECTION);
     }
 
-    protected void setDirectionRaw(Direction p_407531_) {
-        this.entityData.set(DATA_DIRECTION, p_407531_);
+    protected void setDirectionRaw(final Direction direction) {
+        this.entityData.set(DATA_DIRECTION, direction);
     }
 
-    protected void setDirection(Direction p_31728_) {
-        Objects.requireNonNull(p_31728_);
-        Validate.isTrue(p_31728_.getAxis().isHorizontal());
-        this.setDirectionRaw(p_31728_);
-        this.setYRot(p_31728_.get2DDataValue() * 90);
+    protected void setDirection(final Direction direction) {
+        Objects.requireNonNull(direction);
+        Validate.isTrue(direction.getAxis().isHorizontal());
+        this.setDirectionRaw(direction);
+        this.setYRot(direction.get2DDataValue() * 90);
         this.yRotO = this.getYRot();
         this.recalculateBoundingBox();
     }
@@ -70,43 +70,43 @@ public abstract class HangingEntity extends BlockAttachedEntity {
     protected void recalculateBoundingBox() {
         if (this.getDirection() != null) {
             AABB aabb = this.calculateBoundingBox(this.pos, this.getDirection());
-            Vec3 vec3 = aabb.getCenter();
-            this.setPosRaw(vec3.x, vec3.y, vec3.z);
+            Vec3 center = aabb.getCenter();
+            this.setPosRaw(center.x, center.y, center.z);
             this.setBoundingBox(aabb);
         }
     }
 
-    protected abstract AABB calculateBoundingBox(BlockPos p_342672_, Direction p_343089_);
+    protected abstract AABB calculateBoundingBox(BlockPos pos, Direction direction);
 
     @Override
     public boolean survives() {
         if (this.hasLevelCollision(this.getPopBox())) {
             return false;
-        } else {
-            boolean flag = BlockPos.betweenClosedStream(this.calculateSupportBox()).allMatch(p_449679_ -> {
-                BlockState blockstate = this.level().getBlockState(p_449679_);
-                return blockstate.isSolid() || DiodeBlock.isDiode(blockstate);
-            });
-            return flag && this.canCoexist(false);
         }
+
+        boolean isSupported = BlockPos.betweenClosedStream(this.calculateSupportBox()).allMatch(pos -> {
+            BlockState state = this.level().getBlockState(pos);
+            return state.isSolid() || DiodeBlock.isDiode(state);
+        });
+        return isSupported && this.canCoexist(false);
     }
 
     protected AABB calculateSupportBox() {
         return this.getBoundingBox().move(this.getDirection().step().mul(-0.5F)).deflate(1.0E-7);
     }
 
-    protected boolean canCoexist(boolean p_426621_) {
-        Predicate<HangingEntity> predicate = p_421845_ -> {
-            boolean flag = !p_426621_ && p_421845_.getType() == this.getType();
-            boolean flag1 = p_421845_.getDirection() == this.getDirection();
-            return p_421845_ != this && (flag || flag1);
+    protected boolean canCoexist(final boolean allowIntersectingSameType) {
+        Predicate<HangingEntity> nonIntersectable = hangingEntity -> {
+            boolean intersectsSameType = !allowIntersectingSameType && hangingEntity.getType() == this.getType();
+            boolean isSameDirection = hangingEntity.getDirection() == this.getDirection();
+            return hangingEntity != this && (intersectsSameType || isSameDirection);
         };
-        return !this.level().hasEntities(EntityTypeTest.forClass(HangingEntity.class), this.getPopBox(), predicate);
+        return !this.level().hasEntities(EntityTypeTest.forClass(HangingEntity.class), this.getPopBox(), nonIntersectable);
     }
 
-    protected boolean hasLevelCollision(AABB p_450785_) {
+    protected boolean hasLevelCollision(final AABB popBox) {
         Level level = this.level();
-        return !level.noBlockCollision(this, p_450785_) || !level.noBorderCollision(this, p_450785_);
+        return !level.noBlockCollision(this, popBox) || !level.noBorderCollision(this, popBox);
     }
 
     protected AABB getPopBox() {
@@ -116,24 +116,24 @@ public abstract class HangingEntity extends BlockAttachedEntity {
     public abstract void playPlacementSound();
 
     @Override
-    public ItemEntity spawnAtLocation(ServerLevel p_366091_, ItemStack p_31722_, float p_31723_) {
-        ItemEntity itementity = new ItemEntity(
+    public ItemEntity spawnAtLocation(final ServerLevel level, final ItemStack itemStack, final float yOffs) {
+        ItemEntity entity = new ItemEntity(
             this.level(),
             this.getX() + this.getDirection().getStepX() * 0.15F,
-            this.getY() + p_31723_,
+            this.getY() + yOffs,
             this.getZ() + this.getDirection().getStepZ() * 0.15F,
-            p_31722_
+            itemStack
         );
-        itementity.setDefaultPickUpDelay();
-        this.level().addFreshEntity(itementity);
-        return itementity;
+        entity.setDefaultPickUpDelay();
+        this.level().addFreshEntity(entity);
+        return entity;
     }
 
     @Override
-    public float rotate(Rotation p_31727_) {
+    public float rotate(final Rotation rotation) {
         Direction direction = this.getDirection();
         if (direction.getAxis() != Direction.Axis.Y) {
-            switch (p_31727_) {
+            switch (rotation) {
                 case CLOCKWISE_180:
                     direction = direction.getOpposite();
                     break;
@@ -147,18 +147,18 @@ public abstract class HangingEntity extends BlockAttachedEntity {
             this.setDirection(direction);
         }
 
-        float f = Mth.wrapDegrees(this.getYRot());
+        float angle = Mth.wrapDegrees(this.getYRot());
 
-        return switch (p_31727_) {
-            case CLOCKWISE_180 -> f + 180.0F;
-            case COUNTERCLOCKWISE_90 -> f + 90.0F;
-            case CLOCKWISE_90 -> f + 270.0F;
-            default -> f;
+        return switch (rotation) {
+            case CLOCKWISE_180 -> angle + 180.0F;
+            case COUNTERCLOCKWISE_90 -> angle + 90.0F;
+            case CLOCKWISE_90 -> angle + 270.0F;
+            default -> angle;
         };
     }
 
     @Override
-    public float mirror(Mirror p_31725_) {
-        return this.rotate(p_31725_.getRotation(this.getDirection()));
+    public float mirror(final Mirror mirror) {
+        return this.rotate(mirror.getRotation(this.getDirection()));
     }
 }

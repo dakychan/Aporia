@@ -10,50 +10,57 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.ArmedEntityRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwingAnimationType;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
-public class ItemInHandLayer<S extends ArmedEntityRenderState, M extends EntityModel<S> & ArmedModel> extends RenderLayer<S, M> {
-    public ItemInHandLayer(RenderLayerParent<S, M> p_234846_) {
-        super(p_234846_);
+public class ItemInHandLayer<S extends ArmedEntityRenderState, M extends EntityModel<S> & ArmedModel<S>> extends RenderLayer<S, M> {
+    public ItemInHandLayer(final RenderLayerParent<S, M> renderer) {
+        super(renderer);
     }
 
-    public void submit(PoseStack p_426728_, SubmitNodeCollector p_428286_, int p_429291_, S p_425988_, float p_428592_, float p_430361_) {
-        this.submitArmWithItem(p_425988_, p_425988_.rightHandItemState, p_425988_.rightHandItemStack, HumanoidArm.RIGHT, p_426728_, p_428286_, p_429291_);
-        this.submitArmWithItem(p_425988_, p_425988_.leftHandItemState, p_425988_.leftHandItemStack, HumanoidArm.LEFT, p_426728_, p_428286_, p_429291_);
+    public void submit(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final S state, final float yRot, final float xRot
+    ) {
+        this.submitArmWithItem(state, state.rightHandItemState, state.rightHandItemStack, HumanoidArm.RIGHT, poseStack, submitNodeCollector, lightCoords);
+        this.submitArmWithItem(state, state.leftHandItemState, state.leftHandItemStack, HumanoidArm.LEFT, poseStack, submitNodeCollector, lightCoords);
     }
 
     protected void submitArmWithItem(
-        S p_430201_,
-        ItemStackRenderState p_422416_,
-        ItemStack p_457275_,
-        HumanoidArm p_425716_,
-        PoseStack p_428646_,
-        SubmitNodeCollector p_423707_,
-        int p_424346_
+        final S state,
+        final ItemStackRenderState item,
+        final ItemStack itemStack,
+        final HumanoidArm arm,
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords
     ) {
-        if (!p_422416_.isEmpty()) {
-            p_428646_.pushPose();
-            this.getParentModel().translateToHand(p_430201_, p_425716_, p_428646_);
-            p_428646_.mulPose(Axis.XP.rotationDegrees(-90.0F));
-            p_428646_.mulPose(Axis.YP.rotationDegrees(180.0F));
-            boolean flag = p_425716_ == HumanoidArm.LEFT;
-            p_428646_.translate((flag ? -1 : 1) / 16.0F, 0.125F, -0.625F);
-            if (p_430201_.attackTime > 0.0F && p_430201_.mainArm == p_425716_ && p_430201_.swingAnimationType == SwingAnimationType.STAB) {
-                SpearAnimations.thirdPersonAttackItem(p_430201_, p_428646_);
+        if (!item.isEmpty()) {
+            poseStack.pushPose();
+            this.getParentModel().translateToHand(state, arm, poseStack);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-90.0F));
+            poseStack.mulPose(Axis.YP.rotationDegrees(180.0F));
+            boolean isLeftHand = arm == HumanoidArm.LEFT;
+            float offsetX = this.useBabyOffset(state) ? 0.0F : 1.0F;
+            float offsetY = this.useBabyOffset(state) ? 1.0F : 2.0F;
+            float offsetZ = this.useBabyOffset(state) ? -4.5F : -10.0F;
+            poseStack.translate((isLeftHand ? -1 : 1) * offsetX / 16.0F, offsetY / 16.0F, offsetZ / 16.0F);
+            if (state.attackTime > 0.0F && state.attackArm == arm && state.swingAnimationType == SwingAnimationType.STAB) {
+                SpearAnimations.thirdPersonAttackItem(state, poseStack);
             }
 
-            float f = p_430201_.ticksUsingItem(p_425716_);
-            if (f != 0.0F) {
-                (p_425716_ == HumanoidArm.RIGHT ? p_430201_.rightArmPose : p_430201_.leftArmPose).animateUseItem(p_430201_, p_428646_, f, p_425716_, p_457275_);
+            float ticksUsingItem = state.ticksUsingItem(arm);
+            if (ticksUsingItem != 0.0F) {
+                (arm == HumanoidArm.RIGHT ? state.rightArmPose : state.leftArmPose).animateUseItem(state, poseStack, ticksUsingItem, arm, itemStack);
             }
 
-            p_422416_.submit(p_428646_, p_423707_, p_424346_, OverlayTexture.NO_OVERLAY, p_430201_.outlineColor);
-            p_428646_.popPose();
+            item.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+            poseStack.popPose();
         }
+    }
+
+    private boolean useBabyOffset(final S state) {
+        return state.isBaby && state.entityType != EntityTypes.ARMOR_STAND;
     }
 }

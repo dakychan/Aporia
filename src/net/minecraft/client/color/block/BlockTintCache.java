@@ -9,11 +9,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class BlockTintCache {
     private static final int MAX_CACHE_ENTRIES = 256;
     private final ThreadLocal<BlockTintCache.LatestCacheInfo> latestChunkOnThread = ThreadLocal.withInitial(BlockTintCache.LatestCacheInfo::new);
@@ -21,47 +18,44 @@ public class BlockTintCache {
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     private final ToIntFunction<BlockPos> source;
 
-    public BlockTintCache(ToIntFunction<BlockPos> p_193811_) {
-        this.source = p_193811_;
+    public BlockTintCache(final ToIntFunction<BlockPos> source) {
+        this.source = source;
     }
 
-    public int getColor(BlockPos p_193813_) {
-        int i = SectionPos.blockToSectionCoord(p_193813_.getX());
-        int j = SectionPos.blockToSectionCoord(p_193813_.getZ());
-        BlockTintCache.LatestCacheInfo blocktintcache$latestcacheinfo = this.latestChunkOnThread.get();
-        if (blocktintcache$latestcacheinfo.x != i
-            || blocktintcache$latestcacheinfo.z != j
-            || blocktintcache$latestcacheinfo.cache == null
-            || blocktintcache$latestcacheinfo.cache.isInvalidated()) {
-            blocktintcache$latestcacheinfo.x = i;
-            blocktintcache$latestcacheinfo.z = j;
-            blocktintcache$latestcacheinfo.cache = this.findOrCreateChunkCache(i, j);
+    public int getColor(final BlockPos pos) {
+        int chunkX = SectionPos.blockToSectionCoord(pos.getX());
+        int chunkZ = SectionPos.blockToSectionCoord(pos.getZ());
+        BlockTintCache.LatestCacheInfo chunkInfo = this.latestChunkOnThread.get();
+        if (chunkInfo.x != chunkX || chunkInfo.z != chunkZ || chunkInfo.cache == null || chunkInfo.cache.isInvalidated()) {
+            chunkInfo.x = chunkX;
+            chunkInfo.z = chunkZ;
+            chunkInfo.cache = this.findOrCreateChunkCache(chunkX, chunkZ);
         }
 
-        int[] aint = blocktintcache$latestcacheinfo.cache.getLayer(p_193813_.getY());
-        int k = p_193813_.getX() & 15;
-        int l = p_193813_.getZ() & 15;
-        int i1 = l << 4 | k;
-        int j1 = aint[i1];
-        if (j1 != -1) {
-            return j1;
-        } else {
-            int k1 = this.source.applyAsInt(p_193813_);
-            aint[i1] = k1;
-            return k1;
+        int[] layer = chunkInfo.cache.getLayer(pos.getY());
+        int x = pos.getX() & 15;
+        int z = pos.getZ() & 15;
+        int index = z << 4 | x;
+        int cached = layer[index];
+        if (cached != -1) {
+            return cached;
         }
+
+        int calculated = this.source.applyAsInt(pos);
+        layer[index] = calculated;
+        return calculated;
     }
 
-    public void invalidateForChunk(int p_92656_, int p_92657_) {
+    public void invalidateForChunk(final int chunkX, final int chunkZ) {
         try {
             this.lock.writeLock().lock();
 
-            for (int i = -1; i <= 1; i++) {
-                for (int j = -1; j <= 1; j++) {
-                    long k = ChunkPos.asLong(p_92656_ + i, p_92657_ + j);
-                    BlockTintCache.CacheData blocktintcache$cachedata = this.cache.remove(k);
-                    if (blocktintcache$cachedata != null) {
-                        blocktintcache$cachedata.invalidate();
+            for (int offsetX = -1; offsetX <= 1; offsetX++) {
+                for (int offsetZ = -1; offsetZ <= 1; offsetZ++) {
+                    long key = ChunkPos.pack(chunkX + offsetX, chunkZ + offsetZ);
+                    BlockTintCache.CacheData removed = this.cache.remove(key);
+                    if (removed != null) {
+                        removed.invalidate();
                     }
                 }
             }
@@ -80,14 +74,14 @@ public class BlockTintCache {
         }
     }
 
-    private BlockTintCache.CacheData findOrCreateChunkCache(int p_193815_, int p_193816_) {
-        long i = ChunkPos.asLong(p_193815_, p_193816_);
+    private BlockTintCache.CacheData findOrCreateChunkCache(final int x, final int z) {
+        long key = ChunkPos.pack(x, z);
         this.lock.readLock().lock();
 
         try {
-            BlockTintCache.CacheData blocktintcache$cachedata = this.cache.get(i);
-            if (blocktintcache$cachedata != null) {
-                return blocktintcache$cachedata;
+            BlockTintCache.CacheData existing = this.cache.get(key);
+            if (existing != null) {
+                return existing;
             }
         } finally {
             this.lock.readLock().unlock();
@@ -95,44 +89,40 @@ public class BlockTintCache {
 
         this.lock.writeLock().lock();
 
-        BlockTintCache.CacheData blocktintcache$cachedata1;
         try {
-            BlockTintCache.CacheData blocktintcache$cachedata3 = this.cache.get(i);
-            if (blocktintcache$cachedata3 == null) {
-                blocktintcache$cachedata1 = new BlockTintCache.CacheData();
-                if (this.cache.size() >= 256) {
-                    BlockTintCache.CacheData blocktintcache$cachedata2 = this.cache.removeFirst();
-                    if (blocktintcache$cachedata2 != null) {
-                        blocktintcache$cachedata2.invalidate();
-                    }
-                }
-
-                this.cache.put(i, blocktintcache$cachedata1);
-                return blocktintcache$cachedata1;
+            BlockTintCache.CacheData existingNow = this.cache.get(key);
+            if (existingNow != null) {
+                return existingNow;
             }
 
-            blocktintcache$cachedata1 = blocktintcache$cachedata3;
+            BlockTintCache.CacheData newCache = new BlockTintCache.CacheData();
+            if (this.cache.size() >= 256) {
+                BlockTintCache.CacheData cacheData = this.cache.removeFirst();
+                if (cacheData != null) {
+                    cacheData.invalidate();
+                }
+            }
+
+            this.cache.put(key, newCache);
+            return newCache;
         } finally {
             this.lock.writeLock().unlock();
         }
-
-        return blocktintcache$cachedata1;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class CacheData {
+        private static class CacheData {
         private final Int2ObjectArrayMap<int[]> cache = new Int2ObjectArrayMap<>(16);
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
         private static final int BLOCKS_PER_LAYER = Mth.square(16);
         private volatile boolean invalidated;
 
-        public int[] getLayer(int p_193824_) {
+        public int[] getLayer(final int y) {
             this.lock.readLock().lock();
 
             try {
-                int[] aint = this.cache.get(p_193824_);
-                if (aint != null) {
-                    return aint;
+                int[] existing = this.cache.get(y);
+                if (existing != null) {
+                    return existing;
                 }
             } finally {
                 this.lock.readLock().unlock();
@@ -140,20 +130,17 @@ public class BlockTintCache {
 
             this.lock.writeLock().lock();
 
-            int[] aint1;
             try {
-                aint1 = this.cache.computeIfAbsent(p_193824_, p_193826_ -> this.allocateLayer());
+                return this.cache.computeIfAbsent(y, n -> this.allocateLayer());
             } finally {
                 this.lock.writeLock().unlock();
             }
-
-            return aint1;
         }
 
         private int[] allocateLayer() {
-            int[] aint = new int[BLOCKS_PER_LAYER];
-            Arrays.fill(aint, -1);
-            return aint;
+            int[] newCache = new int[BLOCKS_PER_LAYER];
+            Arrays.fill(newCache, -1);
+            return newCache;
         }
 
         public boolean isInvalidated() {
@@ -165,13 +152,9 @@ public class BlockTintCache {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class LatestCacheInfo {
-        public int x = Integer.MIN_VALUE;
-        public int z = Integer.MIN_VALUE;
-        BlockTintCache.@Nullable CacheData cache;
-
-        private LatestCacheInfo() {
-        }
+        private static class LatestCacheInfo {
+        private int x = Integer.MIN_VALUE;
+        private int z = Integer.MIN_VALUE;
+        private BlockTintCache.@Nullable CacheData cache;
     }
 }

@@ -1,11 +1,13 @@
 package net.minecraft.world.entity.animal.frog;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-import com.mojang.serialization.Dynamic;
+import java.util.List;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -16,21 +18,20 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.Bucketable;
 import net.minecraft.world.entity.ConversionParams;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingLookControl;
 import net.minecraft.world.entity.ai.control.SmoothSwimmingMoveControl;
-import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.navigation.WaterBoundPathNavigation;
-import net.minecraft.world.entity.ai.sensing.Sensor;
 import net.minecraft.world.entity.ai.sensing.SensorType;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Bucketable;
 import net.minecraft.world.entity.animal.fish.AbstractFish;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -43,47 +44,32 @@ import org.jspecify.annotations.Nullable;
 
 public class Tadpole extends AbstractFish {
     private static final int DEFAULT_AGE = 0;
+    private static final EntityDataAccessor<Boolean> AGE_LOCKED = SynchedEntityData.defineId(Tadpole.class, EntityDataSerializers.BOOLEAN);
     @VisibleForTesting
     public static int ticksToBeFrog = Math.abs(-24000);
     public static final float HITBOX_WIDTH = 0.4F;
     public static final float HITBOX_HEIGHT = 0.3F;
     private int age = 0;
-    protected static final ImmutableList<SensorType<? extends Sensor<? super Tadpole>>> SENSOR_TYPES = ImmutableList.of(
-        SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.FROG_TEMPTATIONS
-    );
-    protected static final ImmutableList<MemoryModuleType<?>> MEMORY_TYPES = ImmutableList.of(
-        MemoryModuleType.LOOK_TARGET,
-        MemoryModuleType.NEAREST_VISIBLE_LIVING_ENTITIES,
-        MemoryModuleType.WALK_TARGET,
-        MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE,
-        MemoryModuleType.PATH,
-        MemoryModuleType.NEAREST_VISIBLE_ADULT,
-        MemoryModuleType.TEMPTATION_COOLDOWN_TICKS,
-        MemoryModuleType.IS_TEMPTED,
-        MemoryModuleType.TEMPTING_PLAYER,
-        MemoryModuleType.BREED_TARGET,
-        MemoryModuleType.IS_PANICKING
+    protected int ageLockParticleTimer = 0;
+    private static final Brain.Provider<Tadpole> BRAIN_PROVIDER = Brain.<Tadpole>provider(
+        List.of(SensorType.NEAREST_LIVING_ENTITIES, SensorType.NEAREST_PLAYERS, SensorType.HURT_BY, SensorType.FROG_TEMPTATIONS),
+        var0 -> TadpoleAi.getActivities()
     );
 
-    public Tadpole(EntityType<? extends AbstractFish> p_218686_, Level p_218687_) {
-        super(p_218686_, p_218687_);
-        this.moveControl = new SmoothSwimmingMoveControl(this, 85, 10, 0.02F, 0.1F, true);
+    public Tadpole(final EntityType<? extends AbstractFish> type, final Level level) {
+        super(type, level);
+        this.moveControl = new SmoothSwimmingMoveControl<>(this, 85, 10, 0.02F, 0.1F, true);
         this.lookControl = new SmoothSwimmingLookControl(this, 10);
     }
 
     @Override
-    protected PathNavigation createNavigation(Level p_218694_) {
-        return new WaterBoundPathNavigation(this, p_218694_);
+    protected PathNavigation createNavigation(final Level level) {
+        return new WaterBoundPathNavigation(this, level);
     }
 
     @Override
-    protected Brain.Provider<Tadpole> brainProvider() {
-        return Brain.provider(MEMORY_TYPES, SENSOR_TYPES);
-    }
-
-    @Override
-    protected Brain<?> makeBrain(Dynamic<?> p_218696_) {
-        return TadpoleAi.makeBrain(this.brainProvider().makeBrain(p_218696_));
+    protected Brain<Tadpole> makeBrain(final Brain.Packed packedBrain) {
+        return BRAIN_PROVIDER.makeBrain(this, packedBrain);
     }
 
     @Override
@@ -97,15 +83,15 @@ public class Tadpole extends AbstractFish {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_363684_) {
-        ProfilerFiller profilerfiller = Profiler.get();
-        profilerfiller.push("tadpoleBrain");
-        this.getBrain().tick(p_363684_, this);
-        profilerfiller.pop();
-        profilerfiller.push("tadpoleActivityUpdate");
+    protected void customServerAiStep(final ServerLevel level) {
+        ProfilerFiller profiler = Profiler.get();
+        profiler.push("tadpoleBrain");
+        this.getBrain().tick(level, this);
+        profiler.pop();
+        profiler.push("tadpoleActivityUpdate");
         TadpoleAi.updateActivity(this);
-        profilerfiller.pop();
-        super.customServerAiStep(p_363684_);
+        profiler.pop();
+        super.customServerAiStep(level);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -115,21 +101,39 @@ public class Tadpole extends AbstractFish {
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide()) {
+        if (!this.level().isClientSide() && !this.isAgeLocked()) {
             this.setAge(this.age + 1);
         }
+
+        this.ageLockParticleTimer = AgeableMob.makeAgeLockedParticle(this.level(), this, this.ageLockParticleTimer, this.isAgeLocked());
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_408014_) {
-        super.addAdditionalSaveData(p_408014_);
-        p_408014_.putInt("Age", this.age);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("Age", this.age);
+        output.putBoolean("AgeLocked", this.isAgeLocked());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_409021_) {
-        super.readAdditionalSaveData(p_409021_);
-        this.setAge(p_409021_.getIntOr("Age", 0));
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setAge(input.getIntOr("Age", 0));
+        this.setAgeLocked(input.getBooleanOr("AgeLocked", false));
+    }
+
+    @Override
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(AGE_LOCKED, false);
+    }
+
+    protected void setAgeLocked(final boolean locked) {
+        this.entityData.set(AGE_LOCKED, locked);
+    }
+
+    public boolean isAgeLocked() {
+        return this.entityData.get(AGE_LOCKED);
     }
 
     @Override
@@ -138,7 +142,7 @@ public class Tadpole extends AbstractFish {
     }
 
     @Override
-    protected @Nullable SoundEvent getHurtSound(DamageSource p_218713_) {
+    protected @Nullable SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.TADPOLE_HURT;
     }
 
@@ -148,14 +152,23 @@ public class Tadpole extends AbstractFish {
     }
 
     @Override
-    public InteractionResult mobInteract(Player p_218703_, InteractionHand p_218704_) {
-        ItemStack itemstack = p_218703_.getItemInHand(p_218704_);
-        if (this.isFood(itemstack)) {
-            this.feed(p_218703_, itemstack);
+    public InteractionResult mobInteract(final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        if (this.isFood(itemStack) && !this.isAgeLocked()) {
+            this.feed(player, itemStack);
+            return InteractionResult.SUCCESS;
+        } else if (AgeableMob.canUseGoldenDandelion(itemStack, true, this.ageLockParticleTimer, this)) {
+            AgeableMob.setAgeLocked(this, this::isAgeLocked, player, itemStack, mob -> this.setAgeLockedData());
             return InteractionResult.SUCCESS;
         } else {
-            return Bucketable.bucketMobPickup(p_218703_, p_218704_, this).orElse(super.mobInteract(p_218703_, p_218704_));
+            return Bucketable.bucketMobPickup(player, hand, this).orElse(super.mobInteract(player, hand));
         }
+    }
+
+    private void setAgeLockedData() {
+        this.setAgeLocked(!this.isAgeLocked());
+        this.setAge(0);
+        this.ageLockParticleTimer = 40;
     }
 
     @Override
@@ -164,19 +177,23 @@ public class Tadpole extends AbstractFish {
     }
 
     @Override
-    public void setFromBucket(boolean p_218732_) {
+    public void setFromBucket(final boolean fromBucket) {
     }
 
     @Override
-    public void saveToBucketTag(ItemStack p_218725_) {
-        Bucketable.saveDefaultDataToBucketTag(this, p_218725_);
-        CustomData.update(DataComponents.BUCKET_ENTITY_DATA, p_218725_, p_328188_ -> p_328188_.putInt("Age", this.getAge()));
+    public void saveToBucketTag(final ItemStack bucket) {
+        Bucketable.saveDefaultDataToBucketTag(this, bucket);
+        CustomData.update(DataComponents.BUCKET_ENTITY_DATA, bucket, tag -> {
+            tag.putInt("Age", this.getAge());
+            tag.putBoolean("AgeLocked", this.isAgeLocked());
+        });
     }
 
     @Override
-    public void loadFromBucketTag(CompoundTag p_218715_) {
-        Bucketable.loadDefaultDataFromBucketTag(this, p_218715_);
-        p_218715_.getInt("Age").ifPresent(this::setAge);
+    public void loadFromBucketTag(final CompoundTag tag) {
+        Bucketable.loadDefaultDataFromBucketTag(this, tag);
+        tag.getInt("Age").ifPresent(this::setAge);
+        this.setAgeLocked(tag.getBooleanOr("AgeLocked", false));
     }
 
     @Override
@@ -189,41 +206,41 @@ public class Tadpole extends AbstractFish {
         return SoundEvents.BUCKET_FILL_TADPOLE;
     }
 
-    private boolean isFood(ItemStack p_218727_) {
-        return p_218727_.is(ItemTags.FROG_FOOD);
+    private boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.FROG_FOOD);
     }
 
-    private void feed(Player p_218691_, ItemStack p_218692_) {
-        this.usePlayerItem(p_218691_, p_218692_);
+    private void feed(final Player player, final ItemStack itemStack) {
+        this.usePlayerItem(player, itemStack);
         this.ageUp(AgeableMob.getSpeedUpSecondsWhenFeeding(this.getTicksLeftUntilAdult()));
         this.level().addParticle(ParticleTypes.HAPPY_VILLAGER, this.getRandomX(1.0), this.getRandomY() + 0.5, this.getRandomZ(1.0), 0.0, 0.0, 0.0);
     }
 
-    private void usePlayerItem(Player p_218706_, ItemStack p_218707_) {
-        p_218707_.consume(1, p_218706_);
+    private void usePlayerItem(final Player player, final ItemStack itemStack) {
+        itemStack.consume(1, player);
     }
 
     private int getAge() {
         return this.age;
     }
 
-    private void ageUp(int p_218701_) {
-        this.setAge(this.age + p_218701_ * 20);
+    private void ageUp(final int ticksToAgeUp) {
+        this.setAge(this.age + ticksToAgeUp * 20);
     }
 
-    private void setAge(int p_218711_) {
-        this.age = p_218711_;
+    private void setAge(final int newAge) {
+        this.age = newAge;
         if (this.age >= ticksToBeFrog) {
             this.ageUp();
         }
     }
 
     private void ageUp() {
-        if (this.level() instanceof ServerLevel serverlevel) {
-            this.convertTo(EntityType.FROG, ConversionParams.single(this, false, false), p_449660_ -> {
-                p_449660_.finalizeSpawn(serverlevel, serverlevel.getCurrentDifficultyAt(p_449660_.blockPosition()), EntitySpawnReason.CONVERSION, null);
-                p_449660_.setPersistenceRequired();
-                p_449660_.fudgePositionAfterSizeChange(this.getDimensions(this.getPose()));
+        if (this.level() instanceof ServerLevel serverLevel) {
+            this.convertTo(EntityTypes.FROG, ConversionParams.single(this, false, false), frog -> {
+                frog.finalizeSpawn(serverLevel, serverLevel.getCurrentDifficultyAt(frog.blockPosition()), EntitySpawnReason.CONVERSION, null);
+                frog.setPersistenceRequired();
+                frog.fudgePositionAfterSizeChange(this.getDimensions(this.getPose()));
                 this.playSound(SoundEvents.TADPOLE_GROW_UP, 0.15F, 1.0F);
             });
         }

@@ -34,20 +34,9 @@ public interface ArmorMaterials {
         4, makeDefense(3, 6, 8, 3, 11), 10, SoundEvents.ARMOR_EQUIP_WOLF, 0.0F, 0.0F, ItemTags.REPAIRS_WOLF_ARMOR, EquipmentAssets.ARMADILLO_SCUTE
     );
 
-    private static Map<ArmorType, Integer> makeDefense(int p_396353_, int p_395360_, int p_393033_, int p_393582_, int p_396462_) {
+    private static Map<ArmorType, Integer> makeDefense(final int boots, final int legs, final int chest, final int helm, final int body) {
         return Maps.newEnumMap(
-            Map.of(
-                ArmorType.BOOTS,
-                p_396353_,
-                ArmorType.LEGGINGS,
-                p_395360_,
-                ArmorType.CHESTPLATE,
-                p_393033_,
-                ArmorType.HELMET,
-                p_393582_,
-                ArmorType.BODY,
-                p_396462_
-            )
+            Map.of(ArmorType.BOOTS, boots, ArmorType.LEGGINGS, legs, ArmorType.CHESTPLATE, chest, ArmorType.HELMET, helm, ArmorType.BODY, body)
         );
     }
 }

@@ -1,6 +1,6 @@
 package net.minecraft.client.gui.screens.inventory;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -9,16 +9,13 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerListener;
 import net.minecraft.world.inventory.ItemCombinerMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class ItemCombinerScreen<T extends ItemCombinerMenu> extends AbstractContainerScreen<T> implements ContainerListener {
     private final Identifier menuResource;
 
-    public ItemCombinerScreen(T p_98901_, Inventory p_98902_, Component p_98903_, Identifier p_460725_) {
-        super(p_98901_, p_98902_, p_98903_);
-        this.menuResource = p_460725_;
+    public ItemCombinerScreen(final T menu, final Inventory inventory, final Component title, final Identifier menuResource) {
+        super(menu, inventory, title);
+        this.menuResource = menuResource;
     }
 
     protected void subInit() {
@@ -38,24 +35,19 @@ public abstract class ItemCombinerScreen<T extends ItemCombinerMenu> extends Abs
     }
 
     @Override
-    public void render(GuiGraphics p_281810_, int p_283312_, int p_283420_, float p_282956_) {
-        super.render(p_281810_, p_283312_, p_283420_, p_282956_);
-        this.renderTooltip(p_281810_, p_283312_, p_283420_);
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractBackground(graphics, mouseX, mouseY, a);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, this.menuResource, this.leftPos, this.topPos, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
+        this.extractErrorIcon(graphics, this.leftPos, this.topPos);
+    }
+
+    protected abstract void extractErrorIcon(final GuiGraphicsExtractor graphics, final int xo, final int yo);
+
+    @Override
+    public void dataChanged(final AbstractContainerMenu container, final int id, final int value) {
     }
 
     @Override
-    protected void renderBg(GuiGraphics p_282749_, float p_283494_, int p_283098_, int p_282054_) {
-        p_282749_.blit(RenderPipelines.GUI_TEXTURED, this.menuResource, this.leftPos, this.topPos, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
-        this.renderErrorIcon(p_282749_, this.leftPos, this.topPos);
-    }
-
-    protected abstract void renderErrorIcon(GuiGraphics p_281990_, int p_266822_, int p_267045_);
-
-    @Override
-    public void dataChanged(AbstractContainerMenu p_169759_, int p_169760_, int p_169761_) {
-    }
-
-    @Override
-    public void slotChanged(AbstractContainerMenu p_98910_, int p_98911_, ItemStack p_98912_) {
+    public void slotChanged(final AbstractContainerMenu container, final int slotIndex, final ItemStack itemStack) {
     }
 }

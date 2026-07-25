@@ -20,10 +20,10 @@ public interface RecipeDisplay {
 
     RecipeDisplay.Type<? extends RecipeDisplay> type();
 
-    default boolean isEnabled(FeatureFlagSet p_361278_) {
-        return this.result().isEnabled(p_361278_) && this.craftingStation().isEnabled(p_361278_);
+    default boolean isEnabled(final FeatureFlagSet enabledFeatures) {
+        return this.result().isEnabled(enabledFeatures) && this.craftingStation().isEnabled(enabledFeatures);
     }
 
-    public record Type<T extends RecipeDisplay>(MapCodec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> streamCodec) {
+    record Type<T extends RecipeDisplay>(MapCodec<T> codec, StreamCodec<RegistryFriendlyByteBuf, T> streamCodec) {
     }
 }

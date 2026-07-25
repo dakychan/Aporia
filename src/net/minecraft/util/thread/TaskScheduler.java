@@ -7,40 +7,40 @@ import java.util.function.Consumer;
 public interface TaskScheduler<R extends Runnable> extends AutoCloseable {
     String name();
 
-    void schedule(R p_365586_);
+    void schedule(final R r);
 
     @Override
     default void close() {
     }
 
-    R wrapRunnable(Runnable p_367607_);
+    R wrapRunnable(final Runnable runnable);
 
-    default <Source> CompletableFuture<Source> scheduleWithResult(Consumer<CompletableFuture<Source>> p_365778_) {
-        CompletableFuture<Source> completablefuture = new CompletableFuture<>();
-        this.schedule(this.wrapRunnable(() -> p_365778_.accept(completablefuture)));
-        return completablefuture;
+    default <Source> CompletableFuture<Source> scheduleWithResult(final Consumer<CompletableFuture<Source>> futureConsumer) {
+        CompletableFuture<Source> future = new CompletableFuture<>();
+        this.schedule(this.wrapRunnable(() -> futureConsumer.accept(future)));
+        return future;
     }
 
-    static TaskScheduler<Runnable> wrapExecutor(final String p_367076_, final Executor p_363384_) {
+    static TaskScheduler<Runnable> wrapExecutor(final String name, final Executor executor) {
         return new TaskScheduler<Runnable>() {
             @Override
             public String name() {
-                return p_367076_;
+                return name;
             }
 
             @Override
-            public void schedule(Runnable p_361412_) {
-                p_363384_.execute(p_361412_);
+            public void schedule(final Runnable runnable) {
+                executor.execute(runnable);
             }
 
             @Override
-            public Runnable wrapRunnable(Runnable p_367104_) {
-                return p_367104_;
+            public Runnable wrapRunnable(final Runnable runnable) {
+                return runnable;
             }
 
             @Override
             public String toString() {
-                return p_367076_;
+                return name;
             }
         };
     }

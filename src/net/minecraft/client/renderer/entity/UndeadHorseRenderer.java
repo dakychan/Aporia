@@ -1,6 +1,7 @@
 package net.minecraft.client.renderer.entity;
 
 import net.minecraft.client.model.animal.equine.AbstractEquineModel;
+import net.minecraft.client.model.animal.equine.BabyHorseModel;
 import net.minecraft.client.model.animal.equine.EquineSaddleModel;
 import net.minecraft.client.model.animal.equine.HorseModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
@@ -10,86 +11,58 @@ import net.minecraft.client.renderer.entity.state.EquineRenderState;
 import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.equine.AbstractHorse;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class UndeadHorseRenderer extends AbstractHorseRenderer<AbstractHorse, EquineRenderState, AbstractEquineModel<EquineRenderState>> {
-    private final Identifier texture;
+    private final Identifier adultTexture;
+    private final Identifier babyTexture;
 
-    public UndeadHorseRenderer(EntityRendererProvider.Context p_174432_, UndeadHorseRenderer.Type p_391877_) {
-        super(p_174432_, new HorseModel(p_174432_.bakeLayer(p_391877_.model)), new HorseModel(p_174432_.bakeLayer(p_391877_.babyModel)));
-        this.texture = p_391877_.texture;
+    public UndeadHorseRenderer(
+        final EntityRendererProvider.Context context,
+        final EquipmentClientInfo.LayerType saddleLayer,
+        final ModelLayerLocation saddleModel,
+        final UndeadHorseRenderer.Type adult,
+        final UndeadHorseRenderer.Type baby
+    ) {
+        super(context, new HorseModel(context.bakeLayer(adult.model)), new BabyHorseModel(context.bakeLayer(baby.model)));
+        this.adultTexture = adult.texture;
+        this.babyTexture = baby.texture;
         this.addLayer(
             new SimpleEquipmentLayer<>(
                 this,
-                p_174432_.getEquipmentRenderer(),
+                context.getEquipmentRenderer(),
                 EquipmentClientInfo.LayerType.HORSE_BODY,
-                p_448331_ -> p_448331_.bodyArmorItem,
-                new HorseModel(p_174432_.bakeLayer(ModelLayers.UNDEAD_HORSE_ARMOR)),
-                new HorseModel(p_174432_.bakeLayer(ModelLayers.UNDEAD_HORSE_BABY_ARMOR))
+                state -> state.bodyArmorItem,
+                new HorseModel(context.bakeLayer(ModelLayers.UNDEAD_HORSE_ARMOR)),
+                null
             )
         );
         this.addLayer(
             new SimpleEquipmentLayer<>(
-                this,
-                p_174432_.getEquipmentRenderer(),
-                p_391877_.saddleLayer,
-                p_394269_ -> p_394269_.saddle,
-                new EquineSaddleModel(p_174432_.bakeLayer(p_391877_.saddleModel)),
-                new EquineSaddleModel(p_174432_.bakeLayer(p_391877_.babySaddleModel))
+                this, context.getEquipmentRenderer(), saddleLayer, state -> state.saddle, new EquineSaddleModel(context.bakeLayer(saddleModel)), null
             )
         );
     }
 
-    public Identifier getTextureLocation(EquineRenderState p_369447_) {
-        return this.texture;
+    public Identifier getTextureLocation(final EquineRenderState state) {
+        return state.isBaby ? this.babyTexture : this.adultTexture;
     }
 
     public EquineRenderState createRenderState() {
         return new EquineRenderState();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Type {
-        SKELETON(
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_skeleton.png"),
-            ModelLayers.SKELETON_HORSE,
-            ModelLayers.SKELETON_HORSE_BABY,
-            EquipmentClientInfo.LayerType.SKELETON_HORSE_SADDLE,
-            ModelLayers.SKELETON_HORSE_SADDLE,
-            ModelLayers.SKELETON_HORSE_BABY_SADDLE
-        ),
-        ZOMBIE(
-            Identifier.withDefaultNamespace("textures/entity/horse/horse_zombie.png"),
-            ModelLayers.ZOMBIE_HORSE,
-            ModelLayers.ZOMBIE_HORSE_BABY,
-            EquipmentClientInfo.LayerType.ZOMBIE_HORSE_SADDLE,
-            ModelLayers.ZOMBIE_HORSE_SADDLE,
-            ModelLayers.ZOMBIE_HORSE_BABY_SADDLE
-        );
+        public enum Type {
+        SKELETON(Identifier.withDefaultNamespace("textures/entity/horse/horse_skeleton.png"), ModelLayers.SKELETON_HORSE),
+        SKELETON_BABY(Identifier.withDefaultNamespace("textures/entity/horse/horse_skeleton_baby.png"), ModelLayers.SKELETON_HORSE_BABY),
+        ZOMBIE(Identifier.withDefaultNamespace("textures/entity/horse/horse_zombie.png"), ModelLayers.ZOMBIE_HORSE),
+        ZOMBIE_BABY(Identifier.withDefaultNamespace("textures/entity/horse/horse_zombie_baby.png"), ModelLayers.ZOMBIE_HORSE_BABY);
 
-        final Identifier texture;
-        final ModelLayerLocation model;
-        final ModelLayerLocation babyModel;
-        final EquipmentClientInfo.LayerType saddleLayer;
-        final ModelLayerLocation saddleModel;
-        final ModelLayerLocation babySaddleModel;
+        private final Identifier texture;
+        private final ModelLayerLocation model;
 
-        private Type(
-            final Identifier p_458971_,
-            final ModelLayerLocation p_395485_,
-            final ModelLayerLocation p_393739_,
-            final EquipmentClientInfo.LayerType p_396241_,
-            final ModelLayerLocation p_394781_,
-            final ModelLayerLocation p_395729_
-        ) {
-            this.texture = p_458971_;
-            this.model = p_395485_;
-            this.babyModel = p_393739_;
-            this.saddleLayer = p_396241_;
-            this.saddleModel = p_394781_;
-            this.babySaddleModel = p_395729_;
+        Type(final Identifier texture, final ModelLayerLocation model) {
+            this.texture = texture;
+            this.model = model;
         }
     }
 }

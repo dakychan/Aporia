@@ -18,39 +18,41 @@ public class WorkAtPoi extends Behavior<Villager> {
         super(ImmutableMap.of(MemoryModuleType.JOB_SITE, MemoryStatus.VALUE_PRESENT, MemoryModuleType.LOOK_TARGET, MemoryStatus.REGISTERED));
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_24827_, Villager p_450212_) {
-        if (p_24827_.getGameTime() - this.lastCheck < 300L) {
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Villager body) {
+        if (level.getGameTime() - this.lastCheck < 300L) {
             return false;
-        } else if (p_24827_.random.nextInt(2) != 0) {
+        }
+
+        if (level.getRandom().nextInt(2) != 0) {
             return false;
-        } else {
-            this.lastCheck = p_24827_.getGameTime();
-            GlobalPos globalpos = p_450212_.getBrain().getMemory(MemoryModuleType.JOB_SITE).get();
-            return globalpos.dimension() == p_24827_.dimension() && globalpos.pos().closerToCenterThan(p_450212_.position(), 1.73);
+        }
+
+        this.lastCheck = level.getGameTime();
+        GlobalPos target = body.getBrain().getMemory(MemoryModuleType.JOB_SITE).get();
+        return target.dimension() == level.dimension() && target.pos().closerToCenterThan(body.position(), 1.73);
+    }
+
+    protected void start(final ServerLevel level, final Villager body, final long timestamp) {
+        Brain<Villager> brain = body.getBrain();
+        brain.setMemory(MemoryModuleType.LAST_WORKED_AT_POI, timestamp);
+        brain.getMemory(MemoryModuleType.JOB_SITE).ifPresent(globalPos -> brain.setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(globalPos.pos())));
+        body.playWorkSound();
+        this.useWorkstation(level, body);
+        if (body.shouldRestock(level)) {
+            body.restock();
         }
     }
 
-    protected void start(ServerLevel p_24816_, Villager p_458701_, long p_24818_) {
-        Brain<Villager> brain = p_458701_.getBrain();
-        brain.setMemory(MemoryModuleType.LAST_WORKED_AT_POI, p_24818_);
-        brain.getMemory(MemoryModuleType.JOB_SITE).ifPresent(p_24821_ -> brain.setMemory(MemoryModuleType.LOOK_TARGET, new BlockPosTracker(p_24821_.pos())));
-        p_458701_.playWorkSound();
-        this.useWorkstation(p_24816_, p_458701_);
-        if (p_458701_.shouldRestock(p_24816_)) {
-            p_458701_.restock();
-        }
+    protected void useWorkstation(final ServerLevel level, final Villager body) {
     }
 
-    protected void useWorkstation(ServerLevel p_24813_, Villager p_451987_) {
-    }
-
-    protected boolean canStillUse(ServerLevel p_24830_, Villager p_460171_, long p_24832_) {
-        Optional<GlobalPos> optional = p_460171_.getBrain().getMemory(MemoryModuleType.JOB_SITE);
-        if (optional.isEmpty()) {
+    protected boolean canStillUse(final ServerLevel level, final Villager body, final long timestamp) {
+        Optional<GlobalPos> jobSiteMemory = body.getBrain().getMemory(MemoryModuleType.JOB_SITE);
+        if (jobSiteMemory.isEmpty()) {
             return false;
-        } else {
-            GlobalPos globalpos = optional.get();
-            return globalpos.dimension() == p_24830_.dimension() && globalpos.pos().closerToCenterThan(p_460171_.position(), 1.73);
         }
+
+        GlobalPos target = jobSiteMemory.get();
+        return target.dimension() == level.dimension() && target.pos().closerToCenterThan(body.position(), 1.73);
     }
 }

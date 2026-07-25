@@ -7,19 +7,19 @@ import net.minecraft.server.level.ServerPlayer;
 public class ServerItemCooldowns extends ItemCooldowns {
     private final ServerPlayer player;
 
-    public ServerItemCooldowns(ServerPlayer p_43067_) {
-        this.player = p_43067_;
+    public ServerItemCooldowns(final ServerPlayer player) {
+        this.player = player;
     }
 
     @Override
-    protected void onCooldownStarted(Identifier p_455097_, int p_43070_) {
-        super.onCooldownStarted(p_455097_, p_43070_);
-        this.player.connection.send(new ClientboundCooldownPacket(p_455097_, p_43070_));
+    protected void onCooldownStarted(final Identifier cooldownGroup, final int duration) {
+        super.onCooldownStarted(cooldownGroup, duration);
+        this.player.connection.send(new ClientboundCooldownPacket(cooldownGroup, duration));
     }
 
     @Override
-    protected void onCooldownEnded(Identifier p_456476_) {
-        super.onCooldownEnded(p_456476_);
-        this.player.connection.send(new ClientboundCooldownPacket(p_456476_, 0));
+    protected void onCooldownEnded(final Identifier cooldownGroup) {
+        super.onCooldownEnded(cooldownGroup);
+        this.player.connection.send(new ClientboundCooldownPacket(cooldownGroup, 0));
     }
 }

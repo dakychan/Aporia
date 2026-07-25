@@ -18,7 +18,7 @@ public record ClientboundRecipeBookRemovePacket(List<RecipeDisplayId> recipes) i
         return GamePacketTypes.CLIENTBOUND_RECIPE_BOOK_REMOVE;
     }
 
-    public void handle(ClientGamePacketListener p_363798_) {
-        p_363798_.handleRecipeBookRemove(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleRecipeBookRemove(this);
     }
 }

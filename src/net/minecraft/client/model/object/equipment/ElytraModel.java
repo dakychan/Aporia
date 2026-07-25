@@ -10,44 +10,41 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.MeshTransformer;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ElytraModel extends EntityModel<HumanoidRenderState> {
     public static final MeshTransformer BABY_TRANSFORMER = MeshTransformer.scaling(0.5F);
     private final ModelPart rightWing;
     private final ModelPart leftWing;
 
-    public ElytraModel(ModelPart p_458871_) {
-        super(p_458871_);
-        this.leftWing = p_458871_.getChild("left_wing");
-        this.rightWing = p_458871_.getChild("right_wing");
+    public ElytraModel(final ModelPart root) {
+        super(root);
+        this.leftWing = root.getChild("left_wing");
+        this.rightWing = root.getChild("right_wing");
     }
 
     public static LayerDefinition createLayer() {
-        MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        CubeDeformation cubedeformation = new CubeDeformation(1.0F);
-        partdefinition.addOrReplaceChild(
+        MeshDefinition mesh = new MeshDefinition();
+        PartDefinition root = mesh.getRoot();
+        CubeDeformation windDeformation = new CubeDeformation(1.0F);
+        root.addOrReplaceChild(
             "left_wing",
-            CubeListBuilder.create().texOffs(22, 0).addBox(-10.0F, 0.0F, 0.0F, 10.0F, 20.0F, 2.0F, cubedeformation),
+            CubeListBuilder.create().texOffs(22, 0).addBox(-10.0F, 0.0F, 0.0F, 10.0F, 20.0F, 2.0F, windDeformation),
             PartPose.offsetAndRotation(5.0F, 0.0F, 0.0F, (float) (Math.PI / 12), 0.0F, (float) (-Math.PI / 12))
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "right_wing",
-            CubeListBuilder.create().texOffs(22, 0).mirror().addBox(0.0F, 0.0F, 0.0F, 10.0F, 20.0F, 2.0F, cubedeformation),
+            CubeListBuilder.create().texOffs(22, 0).mirror().addBox(0.0F, 0.0F, 0.0F, 10.0F, 20.0F, 2.0F, windDeformation),
             PartPose.offsetAndRotation(-5.0F, 0.0F, 0.0F, (float) (Math.PI / 12), 0.0F, (float) (Math.PI / 12))
         );
-        return LayerDefinition.create(meshdefinition, 64, 32);
+        return LayerDefinition.create(mesh, 64, 32);
     }
 
-    public void setupAnim(HumanoidRenderState p_456557_) {
-        super.setupAnim(p_456557_);
-        this.leftWing.y = p_456557_.isCrouching ? 3.0F : 0.0F;
-        this.leftWing.xRot = p_456557_.elytraRotX;
-        this.leftWing.zRot = p_456557_.elytraRotZ;
-        this.leftWing.yRot = p_456557_.elytraRotY;
+    public void setupAnim(final HumanoidRenderState state) {
+        super.setupAnim(state);
+        this.leftWing.y = state.isCrouching ? 3.0F : 0.0F;
+        this.leftWing.xRot = state.elytraRotX;
+        this.leftWing.zRot = state.elytraRotZ;
+        this.leftWing.yRot = state.elytraRotY;
         this.rightWing.yRot = -this.leftWing.yRot;
         this.rightWing.y = this.leftWing.y;
         this.rightWing.xRot = this.leftWing.xRot;

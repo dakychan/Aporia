@@ -13,8 +13,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
-import net.minecraft.client.renderer.block.model.BlockModelDefinition;
-import net.minecraft.client.renderer.block.model.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModel;
+import net.minecraft.client.renderer.block.dispatch.BlockStateModelDispatcher;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
@@ -24,97 +24,89 @@ import net.minecraft.util.Util;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class BlockStateModelLoader {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final FileToIdConverter BLOCKSTATE_LISTER = FileToIdConverter.json("blockstates");
 
-    public static CompletableFuture<BlockStateModelLoader.LoadedModels> loadBlockStates(ResourceManager p_378230_, Executor p_378682_) {
-        Function<Identifier, StateDefinition<Block, BlockState>> function = BlockStateDefinitions.definitionLocationToBlockStateMapper();
-        return CompletableFuture.<Map<Identifier, List<Resource>>>supplyAsync(() -> BLOCKSTATE_LISTER.listMatchingResourceStacks(p_378230_), p_378682_)
+    public static CompletableFuture<BlockStateModelLoader.LoadedModels> loadBlockStates(final ResourceManager manager, final Executor executor) {
+        Function<Identifier, StateDefinition<Block, BlockState>> definitionToBlockState = BlockStateDefinitions.definitionLocationToBlockStateMapper();
+        return CompletableFuture.<Map<Identifier, List<Resource>>>supplyAsync(() -> BLOCKSTATE_LISTER.listMatchingResourceStacks(manager), executor)
             .thenCompose(
-                p_448436_ -> {
-                    List<CompletableFuture<BlockStateModelLoader.LoadedModels>> list = new ArrayList<>(p_448436_.size());
+                resources -> {
+                    List<CompletableFuture<BlockStateModelLoader.LoadedModels>> result = new ArrayList<>(resources.size());
 
-                    for (Entry<Identifier, List<Resource>> entry : p_448436_.entrySet()) {
-                        list.add(
+                    for (Entry<Identifier, List<Resource>> resourceStack : resources.entrySet()) {
+                        result.add(
                             CompletableFuture.supplyAsync(
                                 () -> {
-                                    Identifier identifier = BLOCKSTATE_LISTER.fileToId(entry.getKey());
-                                    StateDefinition<Block, BlockState> statedefinition = function.apply(identifier);
-                                    if (statedefinition == null) {
-                                        LOGGER.debug("Discovered unknown block state definition {}, ignoring", identifier);
+                                    Identifier stateDefinitionId = BLOCKSTATE_LISTER.fileToId(resourceStack.getKey());
+                                    StateDefinition<Block, BlockState> stateDefinition = definitionToBlockState.apply(stateDefinitionId);
+                                    if (stateDefinition == null) {
+                                        LOGGER.debug("Discovered unknown block state definition {}, ignoring", stateDefinitionId);
                                         return null;
-                                    } else {
-                                        List<Resource> list1 = entry.getValue();
-                                        List<BlockStateModelLoader.LoadedBlockModelDefinition> list2 = new ArrayList<>(list1.size());
+                                    }
 
-                                        for (Resource resource : list1) {
-                                            try (Reader reader = resource.openAsReader()) {
-                                                JsonElement jsonelement = StrictJsonParser.parse(reader);
-                                                BlockModelDefinition blockmodeldefinition = BlockModelDefinition.CODEC
-                                                    .parse(JsonOps.INSTANCE, jsonelement)
-                                                    .getOrThrow(JsonParseException::new);
-                                                list2.add(new BlockStateModelLoader.LoadedBlockModelDefinition(resource.sourcePackId(), blockmodeldefinition));
-                                            } catch (Exception exception1) {
-                                                LOGGER.error(
-                                                    "Failed to load blockstate definition {} from pack {}", identifier, resource.sourcePackId(), exception1
-                                                );
-                                            }
-                                        }
+                                    List<Resource> stack = resourceStack.getValue();
+                                    List<BlockStateModelLoader.LoadedBlockStateModelDispatcher> loadedStack = new ArrayList<>(stack.size());
 
-                                        try {
-                                            return loadBlockStateDefinitionStack(identifier, statedefinition, list2);
-                                        } catch (Exception exception) {
-                                            LOGGER.error("Failed to load blockstate definition {}", identifier, exception);
-                                            return null;
+                                    for (Resource resource : stack) {
+                                        try (Reader reader = resource.openAsReader()) {
+                                            JsonElement element = StrictJsonParser.parse(reader);
+                                            BlockStateModelDispatcher definition = BlockStateModelDispatcher.CODEC
+                                                .parse(JsonOps.INSTANCE, element)
+                                                .getOrThrow(JsonParseException::new);
+                                            loadedStack.add(new BlockStateModelLoader.LoadedBlockStateModelDispatcher(resource.sourcePackId(), definition));
+                                        } catch (Exception e) {
+                                            LOGGER.error("Failed to load blockstate definition {} from pack {}", stateDefinitionId, resource.sourcePackId(), e);
                                         }
                                     }
+
+                                    try {
+                                        return loadBlockStateDefinitionStack(stateDefinitionId, stateDefinition, loadedStack);
+                                    } catch (Exception e) {
+                                        LOGGER.error("Failed to load blockstate definition {}", stateDefinitionId, e);
+                                        return null;
+                                    }
                                 },
-                                p_378682_
+                                executor
                             )
                         );
                     }
 
-                    return Util.sequence(list).thenApply(p_389567_ -> {
-                        Map<BlockState, BlockStateModel.UnbakedRoot> map = new IdentityHashMap<>();
+                    return Util.sequence(result).thenApply(partialMaps -> {
+                        Map<BlockState, BlockStateModel.UnbakedRoot> fullMap = new IdentityHashMap<>();
 
-                        for (BlockStateModelLoader.LoadedModels blockstatemodelloader$loadedmodels : p_389567_) {
-                            if (blockstatemodelloader$loadedmodels != null) {
-                                map.putAll(blockstatemodelloader$loadedmodels.models());
+                        for (BlockStateModelLoader.LoadedModels partialMap : partialMaps) {
+                            if (partialMap != null) {
+                                fullMap.putAll(partialMap.models());
                             }
                         }
 
-                        return new BlockStateModelLoader.LoadedModels(map);
+                        return new BlockStateModelLoader.LoadedModels(fullMap);
                     });
                 }
             );
     }
 
     private static BlockStateModelLoader.LoadedModels loadBlockStateDefinitionStack(
-        Identifier p_450379_, StateDefinition<Block, BlockState> p_361140_, List<BlockStateModelLoader.LoadedBlockModelDefinition> p_367255_
+        final Identifier stateDefinitionId,
+        final StateDefinition<Block, BlockState> stateDefinition,
+        final List<BlockStateModelLoader.LoadedBlockStateModelDispatcher> definitionStack
     ) {
-        Map<BlockState, BlockStateModel.UnbakedRoot> map = new IdentityHashMap<>();
+        Map<BlockState, BlockStateModel.UnbakedRoot> result = new IdentityHashMap<>();
 
-        for (BlockStateModelLoader.LoadedBlockModelDefinition blockstatemodelloader$loadedblockmodeldefinition : p_367255_) {
-            map.putAll(
-                blockstatemodelloader$loadedblockmodeldefinition.contents
-                    .instantiate(p_361140_, () -> p_450379_ + "/" + blockstatemodelloader$loadedblockmodeldefinition.source)
-            );
+        for (BlockStateModelLoader.LoadedBlockStateModelDispatcher definition : definitionStack) {
+            result.putAll(definition.contents.instantiate(stateDefinition, () -> stateDefinitionId + "/" + definition.source));
         }
 
-        return new BlockStateModelLoader.LoadedModels(map);
+        return new BlockStateModelLoader.LoadedModels(result);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record LoadedBlockModelDefinition(String source, BlockModelDefinition contents) {
+        private record LoadedBlockStateModelDispatcher(String source, BlockStateModelDispatcher contents) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record LoadedModels(Map<BlockState, BlockStateModel.UnbakedRoot> models) {
+        public record LoadedModels(Map<BlockState, BlockStateModel.UnbakedRoot> models) {
     }
 }

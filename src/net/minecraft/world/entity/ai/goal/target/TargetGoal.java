@@ -23,50 +23,52 @@ public abstract class TargetGoal extends Goal {
     protected @Nullable LivingEntity targetMob;
     protected int unseenMemoryTicks = 60;
 
-    public TargetGoal(Mob p_26140_, boolean p_26141_) {
-        this(p_26140_, p_26141_, false);
+    public TargetGoal(final Mob mob, final boolean mustSee) {
+        this(mob, mustSee, false);
     }
 
-    public TargetGoal(Mob p_26143_, boolean p_26144_, boolean p_26145_) {
-        this.mob = p_26143_;
-        this.mustSee = p_26144_;
-        this.mustReach = p_26145_;
+    public TargetGoal(final Mob mob, final boolean mustSee, final boolean mustReach) {
+        this.mob = mob;
+        this.mustSee = mustSee;
+        this.mustReach = mustReach;
     }
 
     @Override
     public boolean canContinueToUse() {
-        LivingEntity livingentity = this.mob.getTarget();
-        if (livingentity == null) {
-            livingentity = this.targetMob;
+        LivingEntity target = this.mob.getTarget();
+        if (target == null) {
+            target = this.targetMob;
         }
 
-        if (livingentity == null) {
+        if (target == null) {
             return false;
-        } else if (!this.mob.canAttack(livingentity)) {
-            return false;
-        } else {
-            Team team = this.mob.getTeam();
-            Team team1 = livingentity.getTeam();
-            if (team != null && team1 == team) {
-                return false;
-            } else {
-                double d0 = this.getFollowDistance();
-                if (this.mob.distanceToSqr(livingentity) > d0 * d0) {
-                    return false;
-                } else {
-                    if (this.mustSee) {
-                        if (this.mob.getSensing().hasLineOfSight(livingentity)) {
-                            this.unseenTicks = 0;
-                        } else if (++this.unseenTicks > reducedTickDelay(this.unseenMemoryTicks)) {
-                            return false;
-                        }
-                    }
+        }
 
-                    this.mob.setTarget(livingentity);
-                    return true;
-                }
+        if (!this.mob.canAttack(target)) {
+            return false;
+        }
+
+        Team mobTeam = this.mob.getTeam();
+        Team targetTeam = target.getTeam();
+        if (mobTeam != null && targetTeam == mobTeam) {
+            return false;
+        }
+
+        double within = this.getFollowDistance();
+        if (this.mob.distanceToSqr(target) > within * within) {
+            return false;
+        }
+
+        if (this.mustSee) {
+            if (this.mob.getSensing().hasLineOfSight(target)) {
+                this.unseenTicks = 0;
+            } else if (++this.unseenTicks > reducedTickDelay(this.unseenMemoryTicks)) {
+                return false;
             }
         }
+
+        this.mob.setTarget(target);
+        return true;
     }
 
     protected double getFollowDistance() {
@@ -86,51 +88,55 @@ public abstract class TargetGoal extends Goal {
         this.targetMob = null;
     }
 
-    protected boolean canAttack(@Nullable LivingEntity p_26151_, TargetingConditions p_26152_) {
-        if (p_26151_ == null) {
+    protected boolean canAttack(final @Nullable LivingEntity target, final TargetingConditions targetConditions) {
+        if (target == null) {
             return false;
-        } else if (!p_26152_.test(getServerLevel(this.mob), this.mob, p_26151_)) {
-            return false;
-        } else if (!this.mob.isWithinHome(p_26151_.blockPosition())) {
-            return false;
-        } else {
-            if (this.mustReach) {
-                if (--this.reachCacheTime <= 0) {
-                    this.reachCache = 0;
-                }
+        }
 
-                if (this.reachCache == 0) {
-                    this.reachCache = this.canReach(p_26151_) ? 1 : 2;
-                }
+        if (!targetConditions.test(getServerLevel(this.mob), this.mob, target)) {
+            return false;
+        }
 
-                if (this.reachCache == 2) {
-                    return false;
-                }
+        if (!this.mob.isWithinHome(target.blockPosition())) {
+            return false;
+        }
+
+        if (this.mustReach) {
+            if (--this.reachCacheTime <= 0) {
+                this.reachCache = 0;
             }
 
-            return true;
+            if (this.reachCache == 0) {
+                this.reachCache = this.canReach(target) ? 1 : 2;
+            }
+
+            if (this.reachCache == 2) {
+                return false;
+            }
         }
+
+        return true;
     }
 
-    private boolean canReach(LivingEntity p_26149_) {
+    private boolean canReach(final LivingEntity target) {
         this.reachCacheTime = reducedTickDelay(10 + this.mob.getRandom().nextInt(5));
-        Path path = this.mob.getNavigation().createPath(p_26149_, 0);
+        Path path = this.mob.getNavigation().createPath(target, 0);
         if (path == null) {
             return false;
-        } else {
-            Node node = path.getEndNode();
-            if (node == null) {
-                return false;
-            } else {
-                int i = node.x - p_26149_.getBlockX();
-                int j = node.z - p_26149_.getBlockZ();
-                return i * i + j * j <= 2.25;
-            }
         }
+
+        Node last = path.getEndNode();
+        if (last == null) {
+            return false;
+        }
+
+        int xx = last.x - target.getBlockX();
+        int zz = last.z - target.getBlockZ();
+        return xx * xx + zz * zz <= 2.25;
     }
 
-    public TargetGoal setUnseenMemoryTicks(int p_26147_) {
-        this.unseenMemoryTicks = p_26147_;
+    public TargetGoal setUnseenMemoryTicks(final int unseenMemoryTicks) {
+        this.unseenMemoryTicks = unseenMemoryTicks;
         return this;
     }
 }

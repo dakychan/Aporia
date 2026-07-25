@@ -29,37 +29,40 @@ import org.slf4j.Logger;
 public abstract class TemplateStructurePiece extends StructurePiece {
     private static final Logger LOGGER = LogUtils.getLogger();
     protected final String templateName;
-    protected StructureTemplate template;
-    protected StructurePlaceSettings placeSettings;
+    protected final StructureTemplate template;
+    protected final StructurePlaceSettings placeSettings;
     protected BlockPos templatePosition;
 
     public TemplateStructurePiece(
-        StructurePieceType p_226886_,
-        int p_226887_,
-        StructureTemplateManager p_226888_,
-        Identifier p_453349_,
-        String p_226890_,
-        StructurePlaceSettings p_226891_,
-        BlockPos p_226892_
+        final StructurePieceType type,
+        final int genDepth,
+        final StructureTemplateManager structureTemplateManager,
+        final Identifier templateLocation,
+        final String templateName,
+        final StructurePlaceSettings placeSettings,
+        final BlockPos position
     ) {
-        super(p_226886_, p_226887_, p_226888_.getOrCreate(p_453349_).getBoundingBox(p_226891_, p_226892_));
+        super(type, genDepth, structureTemplateManager.getOrCreate(templateLocation).getBoundingBox(placeSettings, position));
         this.setOrientation(Direction.NORTH);
-        this.templateName = p_226890_;
-        this.templatePosition = p_226892_;
-        this.template = p_226888_.getOrCreate(p_453349_);
-        this.placeSettings = p_226891_;
+        this.templateName = templateName;
+        this.templatePosition = position;
+        this.template = structureTemplateManager.getOrCreate(templateLocation);
+        this.placeSettings = placeSettings;
     }
 
     public TemplateStructurePiece(
-        StructurePieceType p_226894_, CompoundTag p_226895_, StructureTemplateManager p_226896_, Function<Identifier, StructurePlaceSettings> p_226897_
+        final StructurePieceType type,
+        final CompoundTag tag,
+        final StructureTemplateManager structureTemplateManager,
+        final Function<Identifier, StructurePlaceSettings> structurePlaceSettingsSupplier
     ) {
-        super(p_226894_, p_226895_);
+        super(type, tag);
         this.setOrientation(Direction.NORTH);
-        this.templateName = p_226895_.getStringOr("Template", "");
-        this.templatePosition = new BlockPos(p_226895_.getIntOr("TPX", 0), p_226895_.getIntOr("TPY", 0), p_226895_.getIntOr("TPZ", 0));
-        Identifier identifier = this.makeTemplateLocation();
-        this.template = p_226896_.getOrCreate(identifier);
-        this.placeSettings = p_226897_.apply(identifier);
+        this.templateName = tag.getStringOr("Template", "");
+        this.templatePosition = new BlockPos(tag.getIntOr("TPX", 0), tag.getIntOr("TPY", 0), tag.getIntOr("TPZ", 0));
+        Identifier templateLocation = this.makeTemplateLocation();
+        this.template = structureTemplateManager.getOrCreate(templateLocation);
+        this.placeSettings = structurePlaceSettingsSupplier.apply(templateLocation);
         this.boundingBox = this.template.getBoundingBox(this.placeSettings, this.templatePosition);
     }
 
@@ -68,67 +71,60 @@ public abstract class TemplateStructurePiece extends StructurePiece {
     }
 
     @Override
-    protected void addAdditionalSaveData(StructurePieceSerializationContext p_192690_, CompoundTag p_192691_) {
-        p_192691_.putInt("TPX", this.templatePosition.getX());
-        p_192691_.putInt("TPY", this.templatePosition.getY());
-        p_192691_.putInt("TPZ", this.templatePosition.getZ());
-        p_192691_.putString("Template", this.templateName);
+    protected void addAdditionalSaveData(final StructurePieceSerializationContext context, final CompoundTag tag) {
+        tag.putInt("TPX", this.templatePosition.getX());
+        tag.putInt("TPY", this.templatePosition.getY());
+        tag.putInt("TPZ", this.templatePosition.getZ());
+        tag.putString("Template", this.templateName);
     }
 
     @Override
     public void postProcess(
-        WorldGenLevel p_226899_,
-        StructureManager p_226900_,
-        ChunkGenerator p_226901_,
-        RandomSource p_226902_,
-        BoundingBox p_226903_,
-        ChunkPos p_226904_,
-        BlockPos p_226905_
+        final WorldGenLevel level,
+        final StructureManager structureManager,
+        final ChunkGenerator generator,
+        final RandomSource random,
+        final BoundingBox chunkBB,
+        final ChunkPos chunkPos,
+        final BlockPos referencePos
     ) {
-        this.placeSettings.setBoundingBox(p_226903_);
+        this.placeSettings.setBoundingBox(chunkBB);
         this.boundingBox = this.template.getBoundingBox(this.placeSettings, this.templatePosition);
-        if (this.template.placeInWorld(p_226899_, this.templatePosition, p_226905_, this.placeSettings, p_226902_, 2)) {
-            for (StructureTemplate.StructureBlockInfo structuretemplate$structureblockinfo : this.template
+        if (this.template.placeInWorld(level, this.templatePosition, referencePos, this.placeSettings, random, 2)) {
+            for (StructureTemplate.StructureBlockInfo dataMarker : this.template
                 .filterBlocks(this.templatePosition, this.placeSettings, Blocks.STRUCTURE_BLOCK)) {
-                if (structuretemplate$structureblockinfo.nbt() != null) {
-                    StructureMode structuremode = structuretemplate$structureblockinfo.nbt().read("mode", StructureMode.LEGACY_CODEC).orElseThrow();
-                    if (structuremode == StructureMode.DATA) {
-                        this.handleDataMarker(
-                            structuretemplate$structureblockinfo.nbt().getStringOr("metadata", ""),
-                            structuretemplate$structureblockinfo.pos(),
-                            p_226899_,
-                            p_226902_,
-                            p_226903_
-                        );
+                if (dataMarker.nbt() != null) {
+                    StructureMode mode = dataMarker.nbt().read("mode", StructureMode.LEGACY_CODEC).orElseThrow();
+                    if (mode == StructureMode.DATA) {
+                        this.handleDataMarker(dataMarker.nbt().getStringOr("metadata", ""), dataMarker.pos(), level, random, chunkBB);
                     }
                 }
             }
 
-            for (StructureTemplate.StructureBlockInfo structuretemplate$structureblockinfo1 : this.template
-                .filterBlocks(this.templatePosition, this.placeSettings, Blocks.JIGSAW)) {
-                if (structuretemplate$structureblockinfo1.nbt() != null) {
-                    String s = structuretemplate$structureblockinfo1.nbt().getStringOr("final_state", "minecraft:air");
-                    BlockState blockstate = Blocks.AIR.defaultBlockState();
+            for (StructureTemplate.StructureBlockInfo jigsawBlock : this.template.filterBlocks(this.templatePosition, this.placeSettings, Blocks.JIGSAW)) {
+                if (jigsawBlock.nbt() != null) {
+                    String stateString = jigsawBlock.nbt().getStringOr("final_state", "minecraft:air");
+                    BlockState targetState = Blocks.AIR.defaultBlockState();
 
                     try {
-                        blockstate = BlockStateParser.parseForBlock(p_226899_.holderLookup(Registries.BLOCK), s, true).blockState();
-                    } catch (CommandSyntaxException commandsyntaxexception) {
-                        LOGGER.error("Error while parsing blockstate {} in jigsaw block @ {}", s, structuretemplate$structureblockinfo1.pos());
+                        targetState = BlockStateParser.parseForBlock(level.holderLookup(Registries.BLOCK), stateString, true).blockState();
+                    } catch (CommandSyntaxException e) {
+                        LOGGER.error("Error while parsing blockstate {} in jigsaw block @ {}", stateString, jigsawBlock.pos());
                     }
 
-                    p_226899_.setBlock(structuretemplate$structureblockinfo1.pos(), blockstate, 3);
+                    level.setBlock(jigsawBlock.pos(), targetState, 3);
                 }
             }
         }
     }
 
-    protected abstract void handleDataMarker(String p_226906_, BlockPos p_226907_, ServerLevelAccessor p_226908_, RandomSource p_226909_, BoundingBox p_226910_);
+    protected abstract void handleDataMarker(String markerId, BlockPos position, ServerLevelAccessor level, RandomSource random, BoundingBox chunkBB);
 
     @Deprecated
     @Override
-    public void move(int p_73668_, int p_73669_, int p_73670_) {
-        super.move(p_73668_, p_73669_, p_73670_);
-        this.templatePosition = this.templatePosition.offset(p_73668_, p_73669_, p_73670_);
+    public void move(final int dx, final int dy, final int dz) {
+        super.move(dx, dy, dz);
+        this.templatePosition = this.templatePosition.offset(dx, dy, dz);
     }
 
     @Override

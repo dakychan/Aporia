@@ -1,84 +1,87 @@
 package net.minecraft.world.level.storage.loot.predicates;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
-import java.util.stream.Stream;
 import net.minecraft.util.context.ContextKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.storage.loot.IntRange;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.ReadOnlyScoreInfo;
 import net.minecraft.world.scores.Scoreboard;
 
 public record EntityHasScoreCondition(Map<String, IntRange> scores, LootContext.EntityTarget entityTarget) implements LootItemCondition {
-    public static final MapCodec<EntityHasScoreCondition> CODEC = RecordCodecBuilder.mapCodec(
-        p_297188_ -> p_297188_.group(
+    public static final MapCodec<EntityHasScoreCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
                 Codec.unboundedMap(Codec.STRING, IntRange.CODEC).fieldOf("scores").forGetter(EntityHasScoreCondition::scores),
                 LootContext.EntityTarget.CODEC.fieldOf("entity").forGetter(EntityHasScoreCondition::entityTarget)
             )
-            .apply(p_297188_, EntityHasScoreCondition::new)
+            .apply(i, EntityHasScoreCondition::new)
     );
 
     @Override
-    public LootItemConditionType getType() {
-        return LootItemConditions.ENTITY_SCORES;
+    public MapCodec<EntityHasScoreCondition> codec() {
+        return MAP_CODEC;
     }
 
     @Override
     public Set<ContextKey<?>> getReferencedContextParams() {
-        return Stream.concat(Stream.of(this.entityTarget.contextParam()), this.scores.values().stream().flatMap(p_165487_ -> p_165487_.getReferencedContextParams().stream()))
-            .collect(ImmutableSet.toImmutableSet());
+        return Set.of(this.entityTarget.contextParam());
     }
 
-    public boolean test(LootContext p_81631_) {
-        Entity entity = p_81631_.getOptionalParameter(this.entityTarget.contextParam());
+    @Override
+    public void validate(final ValidationContext context) {
+        LootItemCondition.super.validate(context);
+        this.scores.forEach((score, value) -> value.validate(context.forMapField("scores", score)));
+    }
+
+    public boolean test(final LootContext context) {
+        Entity entity = context.getOptionalParameter(this.entityTarget.contextParam());
         if (entity == null) {
             return false;
-        } else {
-            Scoreboard scoreboard = p_81631_.getLevel().getScoreboard();
-
-            for (Entry<String, IntRange> entry : this.scores.entrySet()) {
-                if (!this.hasScore(p_81631_, entity, scoreboard, entry.getKey(), entry.getValue())) {
-                    return false;
-                }
-            }
-
-            return true;
         }
+
+        Scoreboard scoreboard = context.getLevel().getScoreboard();
+
+        for (Entry<String, IntRange> entry : this.scores.entrySet()) {
+            if (!this.hasScore(context, entity, scoreboard, entry.getKey(), entry.getValue())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    protected boolean hasScore(LootContext p_165491_, Entity p_165492_, Scoreboard p_165493_, String p_165494_, IntRange p_165495_) {
-        Objective objective = p_165493_.getObjective(p_165494_);
+    private boolean hasScore(final LootContext context, final Entity entity, final Scoreboard scoreboard, final String objectiveName, final IntRange range) {
+        Objective objective = scoreboard.getObjective(objectiveName);
         if (objective == null) {
             return false;
-        } else {
-            ReadOnlyScoreInfo readonlyscoreinfo = p_165493_.getPlayerScoreInfo(p_165492_, objective);
-            return readonlyscoreinfo == null ? false : p_165495_.test(p_165491_, readonlyscoreinfo.value());
         }
+
+        ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(entity, objective);
+        return scoreInfo == null ? false : range.test(context, scoreInfo.value());
     }
 
-    public static EntityHasScoreCondition.Builder hasScores(LootContext.EntityTarget p_165489_) {
-        return new EntityHasScoreCondition.Builder(p_165489_);
+    public static EntityHasScoreCondition.Builder hasScores(final LootContext.EntityTarget target) {
+        return new EntityHasScoreCondition.Builder(target);
     }
 
     public static class Builder implements LootItemCondition.Builder {
         private final ImmutableMap.Builder<String, IntRange> scores = ImmutableMap.builder();
         private final LootContext.EntityTarget entityTarget;
 
-        public Builder(LootContext.EntityTarget p_165499_) {
-            this.entityTarget = p_165499_;
+        public Builder(final LootContext.EntityTarget entityTarget) {
+            this.entityTarget = entityTarget;
         }
 
-        public EntityHasScoreCondition.Builder withScore(String p_165501_, IntRange p_165502_) {
-            this.scores.put(p_165501_, p_165502_);
+        public EntityHasScoreCondition.Builder withScore(final String score, final IntRange bounds) {
+            this.scores.put(score, bounds);
             return this;
         }
 

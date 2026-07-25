@@ -1,40 +1,35 @@
 package net.minecraft.client.gui.screens.inventory.tooltip;
 
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.inventory.tooltip.BundleTooltip;
 import net.minecraft.world.inventory.tooltip.TooltipComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface ClientTooltipComponent {
-    static ClientTooltipComponent create(FormattedCharSequence p_169949_) {
-        return new ClientTextTooltip(p_169949_);
+    static ClientTooltipComponent create(final FormattedCharSequence charSequence) {
+        return new ClientTextTooltip(charSequence);
     }
 
-    static ClientTooltipComponent create(TooltipComponent p_169951_) {
-        return (ClientTooltipComponent)(switch (p_169951_) {
-            case BundleTooltip bundletooltip -> new ClientBundleTooltip(bundletooltip.contents());
-            case ClientActivePlayersTooltip.ActivePlayersTooltip clientactiveplayerstooltip$activeplayerstooltip -> new ClientActivePlayersTooltip(
-                clientactiveplayerstooltip$activeplayerstooltip
-            );
+    static ClientTooltipComponent create(final TooltipComponent component) {
+        return switch (component) {
+            case BundleTooltip bundleTooltip -> new ClientBundleTooltip(bundleTooltip.contents());
+            case ClientActivePlayersTooltip.ActivePlayersTooltip activePlayersTooltip -> new ClientActivePlayersTooltip(activePlayersTooltip);
             default -> throw new IllegalArgumentException("Unknown TooltipComponent");
-        });
+        };
     }
 
-    int getHeight(Font p_361819_);
+    int getHeight(final Font font);
 
-    int getWidth(Font p_169952_);
+    int getWidth(final Font font);
 
     default boolean showTooltipWithItemInHand() {
         return false;
     }
 
-    default void renderText(GuiGraphics p_409271_, Font p_169953_, int p_169954_, int p_169955_) {
+    default void extractText(final GuiGraphicsExtractor graphics, final Font font, final int x, final int y) {
     }
 
-    default void renderImage(Font p_194048_, int p_194049_, int p_194050_, int p_362269_, int p_363564_, GuiGraphics p_283459_) {
+    default void extractImage(final Font font, final int x, final int y, final int w, final int h, final GuiGraphicsExtractor graphics) {
     }
 }

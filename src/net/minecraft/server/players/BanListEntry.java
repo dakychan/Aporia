@@ -17,36 +17,38 @@ public abstract class BanListEntry<T> extends StoredUserEntry<T> {
     protected final @Nullable Date expires;
     protected final @Nullable String reason;
 
-    public BanListEntry(@Nullable T p_10953_, @Nullable Date p_10954_, @Nullable String p_10955_, @Nullable Date p_10956_, @Nullable String p_10957_) {
-        super(p_10953_);
-        this.created = p_10954_ == null ? new Date() : p_10954_;
-        this.source = p_10955_ == null ? "(Unknown)" : p_10955_;
-        this.expires = p_10956_;
-        this.reason = p_10957_;
+    public BanListEntry(
+        final @Nullable T user, final @Nullable Date created, final @Nullable String source, final @Nullable Date expires, final @Nullable String reason
+    ) {
+        super(user);
+        this.created = created == null ? new Date() : created;
+        this.source = source == null ? "(Unknown)" : source;
+        this.expires = expires;
+        this.reason = reason;
     }
 
-    protected BanListEntry(@Nullable T p_10950_, JsonObject p_10951_) {
-        super(p_10950_);
+    protected BanListEntry(final @Nullable T user, final JsonObject object) {
+        super(user);
 
-        Date date;
+        Date created;
         try {
-            date = p_10951_.has("created") ? DATE_FORMAT.parse(p_10951_.get("created").getAsString()) : new Date();
-        } catch (ParseException parseexception1) {
-            date = new Date();
+            created = object.has("created") ? DATE_FORMAT.parse(object.get("created").getAsString()) : new Date();
+        } catch (ParseException ignored) {
+            created = new Date();
         }
 
-        this.created = date;
-        this.source = p_10951_.has("source") ? p_10951_.get("source").getAsString() : "(Unknown)";
+        this.created = created;
+        this.source = object.has("source") ? object.get("source").getAsString() : "(Unknown)";
 
-        Date date1;
+        Date expires;
         try {
-            date1 = p_10951_.has("expires") ? DATE_FORMAT.parse(p_10951_.get("expires").getAsString()) : null;
-        } catch (ParseException parseexception) {
-            date1 = null;
+            expires = object.has("expires") ? DATE_FORMAT.parse(object.get("expires").getAsString()) : null;
+        } catch (ParseException ignored) {
+            expires = null;
         }
 
-        this.expires = date1;
-        this.reason = p_10951_.has("reason") ? p_10951_.get("reason").getAsString() : null;
+        this.expires = expires;
+        this.reason = object.has("reason") ? object.get("reason").getAsString() : null;
     }
 
     public Date getCreated() {
@@ -66,37 +68,42 @@ public abstract class BanListEntry<T> extends StoredUserEntry<T> {
     }
 
     public Component getReasonMessage() {
-        String s = this.getReason();
-        return s == null ? Component.translatable("multiplayer.disconnect.banned.reason.default") : Component.literal(s);
+        String reason = this.getReason();
+        return reason == null ? Component.translatable("multiplayer.disconnect.banned.reason.default") : Component.literal(reason);
     }
 
     public abstract Component getDisplayName();
 
     @Override
-    boolean hasExpired() {
+    public boolean hasExpired() {
         return this.expires == null ? false : this.expires.before(new Date());
     }
 
     @Override
-    protected void serialize(JsonObject p_10959_) {
-        p_10959_.addProperty("created", DATE_FORMAT.format(this.created));
-        p_10959_.addProperty("source", this.source);
-        p_10959_.addProperty("expires", this.expires == null ? "forever" : DATE_FORMAT.format(this.expires));
-        p_10959_.addProperty("reason", this.reason);
+    protected void serialize(final JsonObject object) {
+        object.addProperty("created", DATE_FORMAT.format(this.created));
+        object.addProperty("source", this.source);
+        object.addProperty("expires", this.expires == null ? "forever" : DATE_FORMAT.format(this.expires));
+        object.addProperty("reason", this.reason);
     }
 
     @Override
-    public boolean equals(Object p_423802_) {
-        if (this == p_423802_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
-        } else if (p_423802_ != null && this.getClass() == p_423802_.getClass()) {
-            BanListEntry<?> banlistentry = (BanListEntry<?>)p_423802_;
-            return Objects.equals(this.source, banlistentry.source)
-                && Objects.equals(this.expires, banlistentry.expires)
-                && Objects.equals(this.reason, banlistentry.reason)
-                && Objects.equals(this.getUser(), banlistentry.getUser());
+        } else if (o != null && this.getClass() == o.getClass()) {
+            BanListEntry<?> that = (BanListEntry<?>)o;
+            return Objects.equals(this.source, that.source)
+                && Objects.equals(this.expires, that.expires)
+                && Objects.equals(this.reason, that.reason)
+                && Objects.equals(this.getUser(), that.getUser());
         } else {
             return false;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.source, this.expires, this.reason, this.getUser());
     }
 }

@@ -1,17 +1,13 @@
 package net.minecraft.client.resources.server;
 
 import java.util.UUID;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface PackLoadFeedback {
-    void reportUpdate(UUID p_312796_, PackLoadFeedback.Update p_311319_);
+    void reportUpdate(UUID id, PackLoadFeedback.Update result);
 
-    void reportFinalResult(UUID p_309920_, PackLoadFeedback.FinalResult p_312819_);
+    void reportFinalResult(UUID id, PackLoadFeedback.FinalResult result);
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum FinalResult {
+        enum FinalResult {
         DECLINED,
         APPLIED,
         DISCARDED,
@@ -19,8 +15,7 @@ public interface PackLoadFeedback {
         ACTIVATION_FAILED;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum Update {
+        enum Update {
         ACCEPTED,
         DOWNLOADED;
     }

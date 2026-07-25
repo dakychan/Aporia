@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.FloatArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import net.minecraft.commands.CommandBuildContext;
@@ -19,8 +18,8 @@ import net.minecraft.world.entity.Entity;
 public class DamageCommand {
     private static final SimpleCommandExceptionType ERROR_INVULNERABLE = new SimpleCommandExceptionType(Component.translatable("commands.damage.invulnerable"));
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_270226_, CommandBuildContext p_270136_) {
-        p_270226_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        dispatcher.register(
             Commands.literal("damage")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
@@ -28,21 +27,21 @@ public class DamageCommand {
                         .then(
                             Commands.argument("amount", FloatArgumentType.floatArg(0.0F))
                                 .executes(
-                                    p_448897_ -> damage(
-                                        p_448897_.getSource(),
-                                        EntityArgument.getEntity(p_448897_, "target"),
-                                        FloatArgumentType.getFloat(p_448897_, "amount"),
-                                        p_448897_.getSource().getLevel().damageSources().generic()
+                                    c -> damage(
+                                        c.getSource(),
+                                        EntityArgument.getEntity(c, "target"),
+                                        FloatArgumentType.getFloat(c, "amount"),
+                                        c.getSource().getLevel().damageSources().generic()
                                     )
                                 )
                                 .then(
-                                    Commands.argument("damageType", ResourceArgument.resource(p_270136_, Registries.DAMAGE_TYPE))
+                                    Commands.argument("damageType", ResourceArgument.resource(context, Registries.DAMAGE_TYPE))
                                         .executes(
-                                            p_270840_ -> damage(
-                                                p_270840_.getSource(),
-                                                EntityArgument.getEntity(p_270840_, "target"),
-                                                FloatArgumentType.getFloat(p_270840_, "amount"),
-                                                new DamageSource(ResourceArgument.getResource(p_270840_, "damageType", Registries.DAMAGE_TYPE))
+                                            c -> damage(
+                                                c.getSource(),
+                                                EntityArgument.getEntity(c, "target"),
+                                                FloatArgumentType.getFloat(c, "amount"),
+                                                new DamageSource(ResourceArgument.getResource(c, "damageType", Registries.DAMAGE_TYPE))
                                             )
                                         )
                                         .then(
@@ -50,13 +49,13 @@ public class DamageCommand {
                                                 .then(
                                                     Commands.argument("location", Vec3Argument.vec3())
                                                         .executes(
-                                                            p_270444_ -> damage(
-                                                                p_270444_.getSource(),
-                                                                EntityArgument.getEntity(p_270444_, "target"),
-                                                                FloatArgumentType.getFloat(p_270444_, "amount"),
+                                                            c -> damage(
+                                                                c.getSource(),
+                                                                EntityArgument.getEntity(c, "target"),
+                                                                FloatArgumentType.getFloat(c, "amount"),
                                                                 new DamageSource(
-                                                                    ResourceArgument.getResource(p_270444_, "damageType", Registries.DAMAGE_TYPE),
-                                                                    Vec3Argument.getVec3(p_270444_, "location")
+                                                                    ResourceArgument.getResource(c, "damageType", Registries.DAMAGE_TYPE),
+                                                                    Vec3Argument.getVec3(c, "location")
                                                                 )
                                                             )
                                                         )
@@ -67,13 +66,13 @@ public class DamageCommand {
                                                 .then(
                                                     Commands.argument("entity", EntityArgument.entity())
                                                         .executes(
-                                                            p_270329_ -> damage(
-                                                                p_270329_.getSource(),
-                                                                EntityArgument.getEntity(p_270329_, "target"),
-                                                                FloatArgumentType.getFloat(p_270329_, "amount"),
+                                                            c -> damage(
+                                                                c.getSource(),
+                                                                EntityArgument.getEntity(c, "target"),
+                                                                FloatArgumentType.getFloat(c, "amount"),
                                                                 new DamageSource(
-                                                                    ResourceArgument.getResource(p_270329_, "damageType", Registries.DAMAGE_TYPE),
-                                                                    EntityArgument.getEntity(p_270329_, "entity")
+                                                                    ResourceArgument.getResource(c, "damageType", Registries.DAMAGE_TYPE),
+                                                                    EntityArgument.getEntity(c, "entity")
                                                                 )
                                                             )
                                                         )
@@ -82,14 +81,14 @@ public class DamageCommand {
                                                                 .then(
                                                                     Commands.argument("cause", EntityArgument.entity())
                                                                         .executes(
-                                                                            p_270848_ -> damage(
-                                                                                p_270848_.getSource(),
-                                                                                EntityArgument.getEntity(p_270848_, "target"),
-                                                                                FloatArgumentType.getFloat(p_270848_, "amount"),
+                                                                            c -> damage(
+                                                                                c.getSource(),
+                                                                                EntityArgument.getEntity(c, "target"),
+                                                                                FloatArgumentType.getFloat(c, "amount"),
                                                                                 new DamageSource(
-                                                                                    ResourceArgument.getResource(p_270848_, "damageType", Registries.DAMAGE_TYPE),
-                                                                                    EntityArgument.getEntity(p_270848_, "entity"),
-                                                                                    EntityArgument.getEntity(p_270848_, "cause")
+                                                                                    ResourceArgument.getResource(c, "damageType", Registries.DAMAGE_TYPE),
+                                                                                    EntityArgument.getEntity(c, "entity"),
+                                                                                    EntityArgument.getEntity(c, "cause")
                                                                                 )
                                                                             )
                                                                         )
@@ -103,9 +102,9 @@ public class DamageCommand {
         );
     }
 
-    private static int damage(CommandSourceStack p_270409_, Entity p_270496_, float p_270836_, DamageSource p_270727_) throws CommandSyntaxException {
-        if (p_270496_.hurtServer(p_270409_.getLevel(), p_270727_, p_270836_)) {
-            p_270409_.sendSuccess(() -> Component.translatable("commands.damage.success", p_270836_, p_270496_.getDisplayName()), true);
+    private static int damage(final CommandSourceStack stack, final Entity target, final float amount, final DamageSource source) throws CommandSyntaxException {
+        if (target.hurtServer(stack.getLevel(), source, amount)) {
+            stack.sendSuccess(() -> Component.translatable("commands.damage.success", amount, target.getDisplayName()), true);
             return 1;
         } else {
             throw ERROR_INVULNERABLE.create();

@@ -12,45 +12,43 @@ import net.minecraft.util.debug.DebugSubscriptions;
 import net.minecraft.util.debug.DebugValueAccess;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class NeighborsUpdateRenderer implements DebugRenderer.SimpleDebugRenderer {
     @Override
-    public void emitGizmos(double p_457497_, double p_452871_, double p_454779_, DebugValueAccess p_453375_, Frustum p_456175_, float p_458659_) {
-        int i = DebugSubscriptions.NEIGHBOR_UPDATES.expireAfterTicks();
-        double d0 = 1.0 / (i * 2);
-        Map<BlockPos, NeighborsUpdateRenderer.LastUpdate> map = new HashMap<>();
-        p_453375_.forEachEvent(DebugSubscriptions.NEIGHBOR_UPDATES, (p_421001_, p_421002_, p_421003_) -> {
-            long j = p_421003_ - p_421002_;
-            NeighborsUpdateRenderer.LastUpdate neighborsupdaterenderer$lastupdate2 = map.getOrDefault(p_421001_, NeighborsUpdateRenderer.LastUpdate.NONE);
-            map.put(p_421001_, neighborsupdaterenderer$lastupdate2.tryCount((int)j));
+    public void emitGizmos(
+        final double camX, final double camY, final double camZ, final DebugValueAccess debugValues, final Frustum frustum, final float partialTicks
+    ) {
+        int shrinkTime = DebugSubscriptions.NEIGHBOR_UPDATES.expireAfterTicks();
+        double shrinkSpeed = 1.0 / (shrinkTime * 2);
+        Map<BlockPos, NeighborsUpdateRenderer.LastUpdate> lastUpdates = new HashMap<>();
+        debugValues.forEachEvent(DebugSubscriptions.NEIGHBOR_UPDATES, (blockPos, remainingTicks, totalLifetime) -> {
+            long age = totalLifetime - remainingTicks;
+            NeighborsUpdateRenderer.LastUpdate lastUpdatex = lastUpdates.getOrDefault(blockPos, NeighborsUpdateRenderer.LastUpdate.NONE);
+            lastUpdates.put(blockPos, lastUpdatex.tryCount((int)age));
         });
 
-        for (Entry<BlockPos, NeighborsUpdateRenderer.LastUpdate> entry : map.entrySet()) {
-            BlockPos blockpos = entry.getKey();
-            NeighborsUpdateRenderer.LastUpdate neighborsupdaterenderer$lastupdate = entry.getValue();
-            AABB aabb = new AABB(blockpos).inflate(0.002).deflate(d0 * neighborsupdaterenderer$lastupdate.age);
+        for (Entry<BlockPos, NeighborsUpdateRenderer.LastUpdate> entry : lastUpdates.entrySet()) {
+            BlockPos pos = entry.getKey();
+            NeighborsUpdateRenderer.LastUpdate lastUpdate = entry.getValue();
+            AABB aabb = new AABB(pos).inflate(0.002).deflate(shrinkSpeed * lastUpdate.age);
             Gizmos.cuboid(aabb, GizmoStyle.stroke(-1));
         }
 
-        for (Entry<BlockPos, NeighborsUpdateRenderer.LastUpdate> entry1 : map.entrySet()) {
-            BlockPos blockpos1 = entry1.getKey();
-            NeighborsUpdateRenderer.LastUpdate neighborsupdaterenderer$lastupdate1 = entry1.getValue();
-            Gizmos.billboardText(String.valueOf(neighborsupdaterenderer$lastupdate1.count), Vec3.atCenterOf(blockpos1), TextGizmo.Style.whiteAndCentered());
+        for (Entry<BlockPos, NeighborsUpdateRenderer.LastUpdate> entry : lastUpdates.entrySet()) {
+            BlockPos pos = entry.getKey();
+            NeighborsUpdateRenderer.LastUpdate lastUpdate = entry.getValue();
+            Gizmos.billboardText(String.valueOf(lastUpdate.count), Vec3.atCenterOf(pos), TextGizmo.Style.whiteAndCentered());
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record LastUpdate(int count, int age) {
-        static final NeighborsUpdateRenderer.LastUpdate NONE = new NeighborsUpdateRenderer.LastUpdate(0, Integer.MAX_VALUE);
+        private record LastUpdate(int count, int age) {
+        private static final NeighborsUpdateRenderer.LastUpdate NONE = new NeighborsUpdateRenderer.LastUpdate(0, Integer.MAX_VALUE);
 
-        public NeighborsUpdateRenderer.LastUpdate tryCount(int p_428172_) {
-            if (p_428172_ == this.age) {
-                return new NeighborsUpdateRenderer.LastUpdate(this.count + 1, p_428172_);
+        public NeighborsUpdateRenderer.LastUpdate tryCount(final int age) {
+            if (age == this.age) {
+                return new NeighborsUpdateRenderer.LastUpdate(this.count + 1, age);
             } else {
-                return p_428172_ < this.age ? new NeighborsUpdateRenderer.LastUpdate(1, p_428172_) : this;
+                return age < this.age ? new NeighborsUpdateRenderer.LastUpdate(1, age) : this;
             }
         }
     }

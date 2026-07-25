@@ -22,8 +22,8 @@ public class FireflyBushBlock extends VegetationBlock implements BonemealableBlo
     private static final int FIREFLY_AMBIENT_SOUND_CHANCE_ONE_IN = 30;
     public static final MapCodec<FireflyBushBlock> CODEC = simpleCodec(FireflyBushBlock::new);
 
-    public FireflyBushBlock(BlockBehaviour.Properties p_395309_) {
-        super(p_395309_);
+    public FireflyBushBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
@@ -32,33 +32,33 @@ public class FireflyBushBlock extends VegetationBlock implements BonemealableBlo
     }
 
     @Override
-    public void animateTick(BlockState p_397225_, Level p_392787_, BlockPos p_393542_, RandomSource p_393796_) {
-        if (p_393796_.nextInt(30) == 0
-            && p_392787_.environmentAttributes().getValue(EnvironmentAttributes.FIREFLY_BUSH_SOUNDS, p_393542_)
-            && p_392787_.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, p_393542_) <= p_393542_.getY()) {
-            p_392787_.playLocalSound(p_393542_, SoundEvents.FIREFLY_BUSH_IDLE, SoundSource.AMBIENT, 1.0F, 1.0F, false);
+    public void animateTick(final BlockState state, final Level level, final BlockPos pos, final RandomSource random) {
+        if (random.nextInt(30) == 0
+            && level.environmentAttributes().getValue(EnvironmentAttributes.FIREFLY_BUSH_SOUNDS, pos)
+            && level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, pos) <= pos.getY()) {
+            level.playLocalSound(pos, SoundEvents.FIREFLY_BUSH_IDLE, SoundSource.AMBIENT, 1.0F, 1.0F, false);
         }
 
-        if (p_392787_.getMaxLocalRawBrightness(p_393542_) <= 13 && p_393796_.nextDouble() <= 0.7) {
-            double d0 = p_393542_.getX() + p_393796_.nextDouble() * 10.0 - 5.0;
-            double d1 = p_393542_.getY() + p_393796_.nextDouble() * 5.0;
-            double d2 = p_393542_.getZ() + p_393796_.nextDouble() * 10.0 - 5.0;
-            p_392787_.addParticle(ParticleTypes.FIREFLY, d0, d1, d2, 0.0, 0.0, 0.0);
+        if (level.getMaxLocalRawBrightness(pos) <= 13 && random.nextDouble() <= 0.7) {
+            double fireflyX = pos.getX() + random.nextDouble() * 10.0 - 5.0;
+            double fireflyY = pos.getY() + random.nextDouble() * 5.0;
+            double fireflyZ = pos.getZ() + random.nextDouble() * 10.0 - 5.0;
+            level.addParticle(ParticleTypes.FIREFLY, fireflyX, fireflyY, fireflyZ, 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_393203_, BlockPos p_396880_, BlockState p_391928_) {
-        return BonemealableBlock.hasSpreadableNeighbourPos(p_393203_, p_396880_, p_391928_);
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return BonemealableBlock.hasSpreadableNeighbourPos(level, pos, state);
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_393377_, RandomSource p_394134_, BlockPos p_391674_, BlockState p_396838_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_393169_, RandomSource p_396608_, BlockPos p_392622_, BlockState p_395668_) {
-        BonemealableBlock.findSpreadableNeighbourPos(p_393169_, p_392622_, p_395668_).ifPresent(p_405689_ -> p_393169_.setBlockAndUpdate(p_405689_, this.defaultBlockState()));
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        BonemealableBlock.findSpreadableNeighbourPos(level, pos, state).ifPresent(blockPos -> level.setBlockAndUpdate(blockPos, this.defaultBlockState()));
     }
 }

@@ -9,9 +9,9 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 @FunctionalInterface
 public interface PieceGenerator<C extends FeatureConfiguration> {
-    void generatePieces(StructurePiecesBuilder p_197326_, PieceGenerator.Context<C> p_197327_);
+    void generatePieces(StructurePiecesBuilder builder, PieceGenerator.Context<C> context);
 
-    public record Context<C extends FeatureConfiguration>(
+    record Context<C extends FeatureConfiguration>(
         C config,
         ChunkGenerator chunkGenerator,
         StructureTemplateManager structureTemplateManager,

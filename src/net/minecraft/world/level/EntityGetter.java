@@ -16,92 +16,92 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
 public interface EntityGetter {
-    List<Entity> getEntities(@Nullable Entity p_45936_, AABB p_45937_, Predicate<? super Entity> p_45938_);
+    List<Entity> getEntities(@Nullable Entity except, AABB bb, Predicate<? super Entity> selector);
 
-    <T extends Entity> List<T> getEntities(EntityTypeTest<Entity, T> p_151464_, AABB p_151465_, Predicate<? super T> p_151466_);
+    <T extends Entity> List<T> getEntities(final EntityTypeTest<Entity, T> type, final AABB bb, final Predicate<? super T> selector);
 
-    default <T extends Entity> List<T> getEntitiesOfClass(Class<T> p_45979_, AABB p_45980_, Predicate<? super T> p_45981_) {
-        return this.getEntities(EntityTypeTest.forClass(p_45979_), p_45980_, p_45981_);
+    default <T extends Entity> List<T> getEntitiesOfClass(final Class<T> baseClass, final AABB bb, final Predicate<? super T> selector) {
+        return this.getEntities(EntityTypeTest.forClass(baseClass), bb, selector);
     }
 
     List<? extends Player> players();
 
-    default List<Entity> getEntities(@Nullable Entity p_45934_, AABB p_45935_) {
-        return this.getEntities(p_45934_, p_45935_, EntitySelector.NO_SPECTATORS);
+    default List<Entity> getEntities(final @Nullable Entity except, final AABB bb) {
+        return this.getEntities(except, bb, EntitySelector.NO_SPECTATORS);
     }
 
-    default boolean isUnobstructed(@Nullable Entity p_45939_, VoxelShape p_45940_) {
-        if (p_45940_.isEmpty()) {
-            return true;
-        } else {
-            for (Entity entity : this.getEntities(p_45939_, p_45940_.bounds())) {
-                if (!entity.isRemoved()
-                    && entity.blocksBuilding
-                    && (p_45939_ == null || !entity.isPassengerOfSameVehicle(p_45939_))
-                    && Shapes.joinIsNotEmpty(p_45940_, Shapes.create(entity.getBoundingBox()), BooleanOp.AND)) {
-                    return false;
-                }
-            }
-
+    default boolean isUnobstructed(final @Nullable Entity source, final VoxelShape shape) {
+        if (shape.isEmpty()) {
             return true;
         }
+
+        for (Entity entity : this.getEntities(source, shape.bounds())) {
+            if (!entity.isRemoved()
+                && entity.blocksBuilding
+                && (source == null || !entity.isPassengerOfSameVehicle(source))
+                && Shapes.joinIsNotEmpty(shape, Shapes.create(entity.getBoundingBox()), BooleanOp.AND)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
-    default <T extends Entity> List<T> getEntitiesOfClass(Class<T> p_45977_, AABB p_45978_) {
-        return this.getEntitiesOfClass(p_45977_, p_45978_, EntitySelector.NO_SPECTATORS);
+    default <T extends Entity> List<T> getEntitiesOfClass(final Class<T> baseClass, final AABB bb) {
+        return this.getEntitiesOfClass(baseClass, bb, EntitySelector.NO_SPECTATORS);
     }
 
-    default List<VoxelShape> getEntityCollisions(@Nullable Entity p_186451_, AABB p_186452_) {
-        if (p_186452_.getSize() < 1.0E-7) {
+    default List<VoxelShape> getEntityCollisions(final @Nullable Entity source, final AABB testArea) {
+        if (testArea.getSize() < 1.0E-7) {
             return List.of();
-        } else {
-            Predicate<Entity> predicate = p_186451_ == null ? EntitySelector.CAN_BE_COLLIDED_WITH : EntitySelector.NO_SPECTATORS.and(p_186451_::canCollideWith);
-            List<Entity> list = this.getEntities(p_186451_, p_186452_.inflate(1.0E-7), predicate);
-            if (list.isEmpty()) {
-                return List.of();
-            } else {
-                Builder<VoxelShape> builder = ImmutableList.builderWithExpectedSize(list.size());
-
-                for (Entity entity : list) {
-                    builder.add(Shapes.create(entity.getBoundingBox()));
-                }
-
-                return builder.build();
-            }
-        }
-    }
-
-    default @Nullable Player getNearestPlayer(double p_45919_, double p_45920_, double p_45921_, double p_45922_, @Nullable Predicate<Entity> p_45923_) {
-        double d0 = -1.0;
-        Player player = null;
-
-        for (Player player1 : this.players()) {
-            if (p_45923_ == null || p_45923_.test(player1)) {
-                double d1 = player1.distanceToSqr(p_45919_, p_45920_, p_45921_);
-                if ((p_45922_ < 0.0 || d1 < p_45922_ * p_45922_) && (d0 == -1.0 || d1 < d0)) {
-                    d0 = d1;
-                    player = player1;
-                }
-            }
         }
 
-        return player;
+        Predicate<Entity> canCollide = source == null ? EntitySelector.CAN_BE_COLLIDED_WITH : EntitySelector.NO_SPECTATORS.and(source::canCollideWith);
+        List<Entity> collidingEntities = this.getEntities(source, testArea.inflate(1.0E-7), canCollide);
+        if (collidingEntities.isEmpty()) {
+            return List.of();
+        }
+
+        Builder<VoxelShape> shapes = ImmutableList.builderWithExpectedSize(collidingEntities.size());
+
+        for (Entity entity : collidingEntities) {
+            shapes.add(Shapes.create(entity.getBoundingBox()));
+        }
+
+        return shapes.build();
     }
 
-    default @Nullable Player getNearestPlayer(Entity p_45931_, double p_45932_) {
-        return this.getNearestPlayer(p_45931_.getX(), p_45931_.getY(), p_45931_.getZ(), p_45932_, false);
+    default @Nullable Player getNearestPlayer(final double x, final double y, final double z, final double range, final @Nullable Predicate<Entity> predicate) {
+        double best = -1.0;
+        Player result = null;
+
+        for (Player player : this.players()) {
+            if (predicate == null || predicate.test(player)) {
+                double dist = player.distanceToSqr(x, y, z);
+                if ((range < 0.0 || dist < range * range) && (best == -1.0 || dist < best)) {
+                    best = dist;
+                    result = player;
+                }
+            }
+        }
+
+        return result;
     }
 
-    default @Nullable Player getNearestPlayer(double p_45925_, double p_45926_, double p_45927_, double p_45928_, boolean p_45929_) {
-        Predicate<Entity> predicate = p_45929_ ? EntitySelector.NO_CREATIVE_OR_SPECTATOR : EntitySelector.NO_SPECTATORS;
-        return this.getNearestPlayer(p_45925_, p_45926_, p_45927_, p_45928_, predicate);
+    default @Nullable Player getNearestPlayer(final Entity source, final double maxDist) {
+        return this.getNearestPlayer(source.getX(), source.getY(), source.getZ(), maxDist, false);
     }
 
-    default boolean hasNearbyAlivePlayer(double p_45915_, double p_45916_, double p_45917_, double p_45918_) {
+    default @Nullable Player getNearestPlayer(final double x, final double y, final double z, final double maxDist, final boolean filterOutCreative) {
+        Predicate<Entity> predicate = filterOutCreative ? EntitySelector.NO_CREATIVE_OR_SPECTATOR : EntitySelector.NO_SPECTATORS;
+        return this.getNearestPlayer(x, y, z, maxDist, predicate);
+    }
+
+    default boolean hasNearbyAlivePlayer(final double x, final double y, final double z, final double range) {
         for (Player player : this.players()) {
             if (EntitySelector.NO_SPECTATORS.test(player) && EntitySelector.LIVING_ENTITY_STILL_ALIVE.test(player)) {
-                double d0 = player.distanceToSqr(p_45915_, p_45916_, p_45917_);
-                if (p_45918_ < 0.0 || d0 < p_45918_ * p_45918_) {
+                double playerDist = player.distanceToSqr(x, y, z);
+                if (range < 0.0 || playerDist < range * range) {
                     return true;
                 }
             }
@@ -110,10 +110,10 @@ public interface EntityGetter {
         return false;
     }
 
-    default @Nullable Player getPlayerByUUID(UUID p_46004_) {
+    default @Nullable Player getPlayerByUUID(final UUID uuid) {
         for (int i = 0; i < this.players().size(); i++) {
             Player player = this.players().get(i);
-            if (p_46004_.equals(player.getUUID())) {
+            if (uuid.equals(player.getUUID())) {
                 return player;
             }
         }

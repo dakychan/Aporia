@@ -8,57 +8,63 @@ import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 
 public class VillagerDataFix extends NamedEntityFix {
-    public VillagerDataFix(Schema p_17056_, String p_17057_) {
-        super(p_17056_, false, "Villager profession data fix (" + p_17057_ + ")", References.ENTITY, p_17057_);
+    public VillagerDataFix(final Schema schema, final String entityType) {
+        super(schema, false, "Villager profession data fix (" + entityType + ")", References.ENTITY, entityType);
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_17062_) {
-        Dynamic<?> dynamic = p_17062_.get(DSL.remainderFinder());
-        return p_17062_.set(
+    protected Typed<?> fix(final Typed<?> entity) {
+        Dynamic<?> remainder = entity.get(DSL.remainderFinder());
+        return entity.set(
             DSL.remainderFinder(),
-            dynamic.remove("Profession")
+            remainder.remove("Profession")
                 .remove("Career")
                 .remove("CareerLevel")
                 .set(
                     "VillagerData",
-                    dynamic.createMap(
+                    remainder.createMap(
                         ImmutableMap.of(
-                            dynamic.createString("type"),
-                            dynamic.createString("minecraft:plains"),
-                            dynamic.createString("profession"),
-                            dynamic.createString(upgradeData(dynamic.get("Profession").asInt(0), dynamic.get("Career").asInt(0))),
-                            dynamic.createString("level"),
-                            DataFixUtils.orElse(dynamic.get("CareerLevel").result(), dynamic.createInt(1))
+                            remainder.createString("type"),
+                            remainder.createString("minecraft:plains"),
+                            remainder.createString("profession"),
+                            remainder.createString(upgradeData(remainder.get("Profession").asInt(0), remainder.get("Career").asInt(0))),
+                            remainder.createString("level"),
+                            DataFixUtils.orElse(remainder.get("CareerLevel").result(), remainder.createInt(1))
                         )
                     )
                 )
         );
     }
 
-    private static String upgradeData(int p_17059_, int p_17060_) {
-        if (p_17059_ == 0) {
-            if (p_17060_ == 2) {
+    private static String upgradeData(final int profession, final int career) {
+        if (profession == 0) {
+            if (career == 2) {
                 return "minecraft:fisherman";
-            } else if (p_17060_ == 3) {
+            } else if (career == 3) {
                 return "minecraft:shepherd";
             } else {
-                return p_17060_ == 4 ? "minecraft:fletcher" : "minecraft:farmer";
+                return career == 4 ? "minecraft:fletcher" : "minecraft:farmer";
             }
-        } else if (p_17059_ == 1) {
-            return p_17060_ == 2 ? "minecraft:cartographer" : "minecraft:librarian";
-        } else if (p_17059_ == 2) {
-            return "minecraft:cleric";
-        } else if (p_17059_ == 3) {
-            if (p_17060_ == 2) {
-                return "minecraft:weaponsmith";
-            } else {
-                return p_17060_ == 3 ? "minecraft:toolsmith" : "minecraft:armorer";
-            }
-        } else if (p_17059_ == 4) {
-            return p_17060_ == 2 ? "minecraft:leatherworker" : "minecraft:butcher";
         } else {
-            return p_17059_ == 5 ? "minecraft:nitwit" : "minecraft:none";
+            if (profession == 1) {
+                return career == 2 ? "minecraft:cartographer" : "minecraft:librarian";
+            }
+
+            if (profession == 2) {
+                return "minecraft:cleric";
+            }
+
+            if (profession == 3) {
+                if (career == 2) {
+                    return "minecraft:weaponsmith";
+                } else {
+                    return career == 3 ? "minecraft:toolsmith" : "minecraft:armorer";
+                }
+            } else if (profession == 4) {
+                return career == 2 ? "minecraft:leatherworker" : "minecraft:butcher";
+            } else {
+                return profession == 5 ? "minecraft:nitwit" : "minecraft:none";
+            }
         }
     }
 }

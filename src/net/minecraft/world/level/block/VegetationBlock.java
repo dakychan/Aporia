@@ -13,46 +13,46 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathComputationType;
 
 public abstract class VegetationBlock extends Block {
-    protected VegetationBlock(BlockBehaviour.Properties p_395394_) {
-        super(p_395394_);
+    protected VegetationBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
     protected abstract MapCodec<? extends VegetationBlock> codec();
 
-    protected boolean mayPlaceOn(BlockState p_395950_, BlockGetter p_394817_, BlockPos p_393668_) {
-        return p_395950_.is(BlockTags.DIRT) || p_395950_.is(Blocks.FARMLAND);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return state.is(BlockTags.SUPPORTS_VEGETATION);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_394702_,
-        LevelReader p_396711_,
-        ScheduledTickAccess p_391200_,
-        BlockPos p_395646_,
-        Direction p_395539_,
-        BlockPos p_396828_,
-        BlockState p_397860_,
-        RandomSource p_397921_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return !p_394702_.canSurvive(p_396711_, p_395646_)
+        return !state.canSurvive(level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_394702_, p_396711_, p_391200_, p_395646_, p_395539_, p_396828_, p_397860_, p_397921_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_397664_, LevelReader p_395119_, BlockPos p_393561_) {
-        BlockPos blockpos = p_393561_.below();
-        return this.mayPlaceOn(p_395119_.getBlockState(blockpos), p_395119_, blockpos);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockPos below = pos.below();
+        return this.mayPlaceOn(level.getBlockState(below), level, below);
     }
 
     @Override
-    protected boolean propagatesSkylightDown(BlockState p_394728_) {
-        return p_394728_.getFluidState().isEmpty();
+    protected boolean propagatesSkylightDown(final BlockState state) {
+        return state.getFluidState().isEmpty();
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_392416_, PathComputationType p_395772_) {
-        return p_395772_ == PathComputationType.AIR && !this.hasCollision ? true : super.isPathfindable(p_392416_, p_395772_);
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
+        return type == PathComputationType.AIR && !this.hasCollision ? true : super.isPathfindable(state, type);
     }
 }

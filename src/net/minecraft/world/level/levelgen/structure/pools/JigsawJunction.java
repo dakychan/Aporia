@@ -12,12 +12,14 @@ public class JigsawJunction {
     private final int deltaY;
     private final StructureTemplatePool.Projection destProjection;
 
-    public JigsawJunction(int p_210247_, int p_210248_, int p_210249_, int p_210250_, StructureTemplatePool.Projection p_210251_) {
-        this.sourceX = p_210247_;
-        this.sourceGroundY = p_210248_;
-        this.sourceZ = p_210249_;
-        this.deltaY = p_210250_;
-        this.destProjection = p_210251_;
+    public JigsawJunction(
+        final int sourceX, final int sourceGroundY, final int sourceZ, final int deltaY, final StructureTemplatePool.Projection destProjection
+    ) {
+        this.sourceX = sourceX;
+        this.sourceGroundY = sourceGroundY;
+        this.sourceZ = sourceZ;
+        this.deltaY = deltaY;
+        this.destProjection = destProjection;
     }
 
     public int getSourceX() {
@@ -40,38 +42,40 @@ public class JigsawJunction {
         return this.destProjection;
     }
 
-    public <T> Dynamic<T> serialize(DynamicOps<T> p_210256_) {
+    public <T> Dynamic<T> serialize(final DynamicOps<T> ops) {
         Builder<T, T> builder = ImmutableMap.builder();
-        builder.put(p_210256_.createString("source_x"), p_210256_.createInt(this.sourceX))
-            .put(p_210256_.createString("source_ground_y"), p_210256_.createInt(this.sourceGroundY))
-            .put(p_210256_.createString("source_z"), p_210256_.createInt(this.sourceZ))
-            .put(p_210256_.createString("delta_y"), p_210256_.createInt(this.deltaY))
-            .put(p_210256_.createString("dest_proj"), p_210256_.createString(this.destProjection.getName()));
-        return new Dynamic<>(p_210256_, p_210256_.createMap(builder.build()));
+        builder.put(ops.createString("source_x"), ops.createInt(this.sourceX))
+            .put(ops.createString("source_ground_y"), ops.createInt(this.sourceGroundY))
+            .put(ops.createString("source_z"), ops.createInt(this.sourceZ))
+            .put(ops.createString("delta_y"), ops.createInt(this.deltaY))
+            .put(ops.createString("dest_proj"), ops.createString(this.destProjection.getName()));
+        return new Dynamic<>(ops, ops.createMap(builder.build()));
     }
 
-    public static <T> JigsawJunction deserialize(Dynamic<T> p_210254_) {
+    public static <T> JigsawJunction deserialize(final Dynamic<T> input) {
         return new JigsawJunction(
-            p_210254_.get("source_x").asInt(0),
-            p_210254_.get("source_ground_y").asInt(0),
-            p_210254_.get("source_z").asInt(0),
-            p_210254_.get("delta_y").asInt(0),
-            StructureTemplatePool.Projection.byName(p_210254_.get("dest_proj").asString(""))
+            input.get("source_x").asInt(0),
+            input.get("source_ground_y").asInt(0),
+            input.get("source_z").asInt(0),
+            input.get("delta_y").asInt(0),
+            StructureTemplatePool.Projection.byName(input.get("dest_proj").asString(""))
         );
     }
 
     @Override
-    public boolean equals(Object p_210262_) {
-        if (this == p_210262_) {
+    public boolean equals(final Object o) {
+        if (this == o) {
             return true;
-        } else if (p_210262_ != null && this.getClass() == p_210262_.getClass()) {
-            JigsawJunction jigsawjunction = (JigsawJunction)p_210262_;
-            if (this.sourceX != jigsawjunction.sourceX) {
+        }
+
+        if (o != null && this.getClass() == o.getClass()) {
+            JigsawJunction that = (JigsawJunction)o;
+            if (this.sourceX != that.sourceX) {
                 return false;
-            } else if (this.sourceZ != jigsawjunction.sourceZ) {
+            } else if (this.sourceZ != that.sourceZ) {
                 return false;
             } else {
-                return this.deltaY != jigsawjunction.deltaY ? false : this.destProjection == jigsawjunction.destProjection;
+                return this.deltaY != that.deltaY ? false : this.destProjection == that.destProjection;
             }
         } else {
             return false;
@@ -80,11 +84,11 @@ public class JigsawJunction {
 
     @Override
     public int hashCode() {
-        int i = this.sourceX;
-        i = 31 * i + this.sourceGroundY;
-        i = 31 * i + this.sourceZ;
-        i = 31 * i + this.deltaY;
-        return 31 * i + this.destProjection.hashCode();
+        int result = this.sourceX;
+        result = 31 * result + this.sourceGroundY;
+        result = 31 * result + this.sourceZ;
+        result = 31 * result + this.deltaY;
+        return 31 * result + this.destProjection.hashCode();
     }
 
     @Override

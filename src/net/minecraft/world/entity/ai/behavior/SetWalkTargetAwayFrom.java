@@ -3,59 +3,65 @@ package net.minecraft.world.entity.ai.behavior;
 import java.util.Optional;
 import java.util.function.Function;
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.phys.Vec3;
 
 public class SetWalkTargetAwayFrom {
-    public static BehaviorControl<PathfinderMob> pos(MemoryModuleType<BlockPos> p_259330_, float p_259719_, int p_259965_, boolean p_259828_) {
-        return create(p_259330_, p_259719_, p_259965_, p_259828_, Vec3::atBottomCenterOf);
+    public static BehaviorControl<PathfinderMob> pos(
+        final MemoryModuleType<BlockPos> memory, final float speedModifier, final int desiredDistance, final boolean interruptCurrentWalk
+    ) {
+        return create(memory, speedModifier, desiredDistance, interruptCurrentWalk, Vec3::atBottomCenterOf);
     }
 
-    public static OneShot<PathfinderMob> entity(MemoryModuleType<? extends Entity> p_259598_, float p_260183_, int p_260077_, boolean p_259761_) {
-        return create(p_259598_, p_260183_, p_260077_, p_259761_, Entity::position);
+    public static OneShot<PathfinderMob> entity(
+        final MemoryModuleType<? extends Entity> memory, final float speedModifier, final int desiredDistance, final boolean interruptCurrentWalk
+    ) {
+        return create(memory, speedModifier, desiredDistance, interruptCurrentWalk, Entity::position);
     }
 
     private static <T> OneShot<PathfinderMob> create(
-        MemoryModuleType<T> p_260057_, float p_259672_, int p_259866_, boolean p_259232_, Function<T, Vec3> p_259355_
+        final MemoryModuleType<T> walkAwayFromMemory,
+        final float speedModifier,
+        final int desiredDistance,
+        final boolean interruptCurrentWalk,
+        final Function<T, Vec3> toPosition
     ) {
         return BehaviorBuilder.create(
-            p_259292_ -> p_259292_.group(p_259292_.registered(MemoryModuleType.WALK_TARGET), p_259292_.present(p_260057_))
-                .apply(p_259292_, (p_260063_, p_260053_) -> (p_259973_, p_259323_, p_259275_) -> {
-                    Optional<WalkTarget> optional = p_259292_.tryGet(p_260063_);
-                    if (optional.isPresent() && !p_259232_) {
+            i -> i.group(i.registered(MemoryModuleType.WALK_TARGET), i.present(walkAwayFromMemory))
+                .apply(i, (walkTarget, walkAwayFrom) -> (level, body, timestamp) -> {
+                    Optional<WalkTarget> target = i.tryGet(walkTarget);
+                    if (target.isPresent() && !interruptCurrentWalk) {
                         return false;
-                    } else {
-                        Vec3 vec3 = p_259323_.position();
-                        Vec3 vec31 = p_259355_.apply(p_259292_.get(p_260053_));
-                        if (!vec3.closerThan(vec31, p_259866_)) {
+                    }
+
+                    Vec3 bodyPosition = body.position();
+                    Vec3 avoidPosition = toPosition.apply(i.get(walkAwayFrom));
+                    if (!bodyPosition.closerThan(avoidPosition, desiredDistance)) {
+                        return false;
+                    }
+
+                    if (target.isPresent() && target.get().getSpeedModifier() == speedModifier) {
+                        Vec3 currentDirection = target.get().getTarget().currentPosition().subtract(bodyPosition);
+                        Vec3 avoidDirection = avoidPosition.subtract(bodyPosition);
+                        if (currentDirection.dot(avoidDirection) < 0.0) {
                             return false;
-                        } else {
-                            if (optional.isPresent() && optional.get().getSpeedModifier() == p_259672_) {
-                                Vec3 vec32 = optional.get().getTarget().currentPosition().subtract(vec3);
-                                Vec3 vec33 = vec31.subtract(vec3);
-                                if (vec32.dot(vec33) < 0.0) {
-                                    return false;
-                                }
-                            }
-
-                            for (int i = 0; i < 10; i++) {
-                                Vec3 vec34 = LandRandomPos.getPosAway(p_259323_, 16, 7, vec31);
-                                if (vec34 != null) {
-                                    p_260063_.set(new WalkTarget(vec34, p_259672_, 0));
-                                    break;
-                                }
-                            }
-
-                            return true;
                         }
                     }
+
+                    for (int j = 0; j < 10; j++) {
+                        Vec3 fleeToPos = LandRandomPos.getPosAway(body, 16, 7, avoidPosition);
+                        if (fleeToPos != null) {
+                            walkTarget.set(new WalkTarget(fleeToPos, speedModifier, 0));
+                            break;
+                        }
+                    }
+
+                    return true;
                 })
         );
     }

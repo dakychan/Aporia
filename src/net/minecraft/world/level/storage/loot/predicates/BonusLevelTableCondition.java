@@ -3,31 +3,30 @@ package net.minecraft.world.level.storage.loot.predicates;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import net.minecraft.core.Holder;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.context.ContextKey;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemInstance;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 
 public record BonusLevelTableCondition(Holder<Enchantment> enchantment, List<Float> values) implements LootItemCondition {
-    public static final MapCodec<BonusLevelTableCondition> CODEC = RecordCodecBuilder.mapCodec(
-        p_342021_ -> p_342021_.group(
+    public static final MapCodec<BonusLevelTableCondition> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(
                 Enchantment.CODEC.fieldOf("enchantment").forGetter(BonusLevelTableCondition::enchantment),
                 ExtraCodecs.nonEmptyList(Codec.FLOAT.listOf()).fieldOf("chances").forGetter(BonusLevelTableCondition::values)
             )
-            .apply(p_342021_, BonusLevelTableCondition::new)
+            .apply(i, BonusLevelTableCondition::new)
     );
 
     @Override
-    public LootItemConditionType getType() {
-        return LootItemConditions.TABLE_BONUS;
+    public MapCodec<BonusLevelTableCondition> codec() {
+        return MAP_CODEC;
     }
 
     @Override
@@ -35,20 +34,20 @@ public record BonusLevelTableCondition(Holder<Enchantment> enchantment, List<Flo
         return Set.of(LootContextParams.TOOL);
     }
 
-    public boolean test(LootContext p_81521_) {
-        ItemStack itemstack = p_81521_.getOptionalParameter(LootContextParams.TOOL);
-        int i = itemstack != null ? EnchantmentHelper.getItemEnchantmentLevel(this.enchantment, itemstack) : 0;
-        float f = this.values.get(Math.min(i, this.values.size() - 1));
-        return p_81521_.getRandom().nextFloat() < f;
+    public boolean test(final LootContext context) {
+        ItemInstance tool = context.getOptionalParameter(LootContextParams.TOOL);
+        int level = tool != null ? EnchantmentHelper.getItemEnchantmentLevel(this.enchantment, tool) : 0;
+        float chance = this.values.get(Math.min(level, this.values.size() - 1));
+        return context.getRandom().nextFloat() < chance;
     }
 
-    public static LootItemCondition.Builder bonusLevelFlatChance(Holder<Enchantment> p_342391_, float... p_81519_) {
-        List<Float> list = new ArrayList<>(p_81519_.length);
+    public static LootItemCondition.Builder bonusLevelFlatChance(final Holder<Enchantment> enchantment, final float... chances) {
+        List<Float> chancesList = new ArrayList<>(chances.length);
 
-        for (float f : p_81519_) {
-            list.add(f);
+        for (float chance : chances) {
+            chancesList.add(chance);
         }
 
-        return () -> new BonusLevelTableCondition(p_342391_, list);
+        return () -> new BonusLevelTableCondition(enchantment, chancesList);
     }
 }

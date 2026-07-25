@@ -12,7 +12,6 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.common.ClientboundUpdateTagsPacket;
 import net.minecraft.network.protocol.configuration.ClientboundRegistryDataPacket;
 import net.minecraft.network.protocol.configuration.ClientboundSelectKnownPacks;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.RegistryLayer;
 import net.minecraft.server.network.ConfigurationTask;
 import net.minecraft.server.packs.repository.KnownPack;
@@ -23,32 +22,32 @@ public class SynchronizeRegistriesTask implements ConfigurationTask {
     private final List<KnownPack> requestedPacks;
     private final LayeredRegistryAccess<RegistryLayer> registries;
 
-    public SynchronizeRegistriesTask(List<KnownPack> p_331975_, LayeredRegistryAccess<RegistryLayer> p_334926_) {
-        this.requestedPacks = p_331975_;
-        this.registries = p_334926_;
+    public SynchronizeRegistriesTask(final List<KnownPack> knownPacks, final LayeredRegistryAccess<RegistryLayer> registries) {
+        this.requestedPacks = knownPacks;
+        this.registries = registries;
     }
 
     @Override
-    public void start(Consumer<Packet<?>> p_333641_) {
-        p_333641_.accept(new ClientboundSelectKnownPacks(this.requestedPacks));
+    public void start(final Consumer<Packet<?>> connection) {
+        connection.accept(new ClientboundSelectKnownPacks(this.requestedPacks));
     }
 
-    private void sendRegistries(Consumer<Packet<?>> p_333495_, Set<KnownPack> p_335321_) {
-        DynamicOps<Tag> dynamicops = this.registries.compositeAccess().createSerializationContext(NbtOps.INSTANCE);
+    private void sendRegistries(final Consumer<Packet<?>> connection, final Set<KnownPack> negotiatedPacks) {
+        DynamicOps<Tag> ops = this.registries.compositeAccess().createSerializationContext(NbtOps.INSTANCE);
         RegistrySynchronization.packRegistries(
-            dynamicops,
+            ops,
             this.registries.getAccessFrom(RegistryLayer.WORLDGEN),
-            p_335321_,
-            (p_334638_, p_328189_) -> p_333495_.accept(new ClientboundRegistryDataPacket(p_334638_, p_328189_))
+            negotiatedPacks,
+            (registryKey, entries) -> connection.accept(new ClientboundRegistryDataPacket(registryKey, entries))
         );
-        p_333495_.accept(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(this.registries)));
+        connection.accept(new ClientboundUpdateTagsPacket(TagNetworkSerialization.serializeTagsToNetwork(this.registries)));
     }
 
-    public void handleResponse(List<KnownPack> p_332734_, Consumer<Packet<?>> p_331332_) {
-        if (p_332734_.equals(this.requestedPacks)) {
-            this.sendRegistries(p_331332_, Set.copyOf(this.requestedPacks));
+    public void handleResponse(final List<KnownPack> acceptedPacks, final Consumer<Packet<?>> connection) {
+        if (acceptedPacks.equals(this.requestedPacks)) {
+            this.sendRegistries(connection, Set.copyOf(this.requestedPacks));
         } else {
-            this.sendRegistries(p_331332_, Set.of());
+            this.sendRegistries(connection, Set.of());
         }
     }
 

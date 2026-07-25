@@ -1,7 +1,6 @@
 package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
@@ -16,48 +15,48 @@ import org.jspecify.annotations.Nullable;
 public class SpectateCommand {
     private static final SimpleCommandExceptionType ERROR_SELF = new SimpleCommandExceptionType(Component.translatable("commands.spectate.self"));
     private static final DynamicCommandExceptionType ERROR_NOT_SPECTATOR = new DynamicCommandExceptionType(
-        p_308882_ -> Component.translatableEscape("commands.spectate.not_spectator", p_308882_)
+        s -> Component.translatableEscape("commands.spectate.not_spectator", s)
     );
     private static final DynamicCommandExceptionType ERROR_CANNOT_SPECTATE = new DynamicCommandExceptionType(
-        p_421369_ -> Component.translatableEscape("commands.spectate.cannot_spectate", p_421369_)
+        s -> Component.translatableEscape("commands.spectate.cannot_spectate", s)
     );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_138678_) {
-        p_138678_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("spectate")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                .executes(p_138692_ -> spectate(p_138692_.getSource(), null, p_138692_.getSource().getPlayerOrException()))
+                .executes(c -> spectate(c.getSource(), null, c.getSource().getPlayerOrException()))
                 .then(
                     Commands.argument("target", EntityArgument.entity())
-                        .executes(p_138690_ -> spectate(p_138690_.getSource(), EntityArgument.getEntity(p_138690_, "target"), p_138690_.getSource().getPlayerOrException()))
+                        .executes(c -> spectate(c.getSource(), EntityArgument.getEntity(c, "target"), c.getSource().getPlayerOrException()))
                         .then(
                             Commands.argument("player", EntityArgument.player())
-                                .executes(
-                                    p_138680_ -> spectate(
-                                        p_138680_.getSource(), EntityArgument.getEntity(p_138680_, "target"), EntityArgument.getPlayer(p_138680_, "player")
-                                    )
-                                )
+                                .executes(c -> spectate(c.getSource(), EntityArgument.getEntity(c, "target"), EntityArgument.getPlayer(c, "player")))
                         )
                 )
         );
     }
 
-    private static int spectate(CommandSourceStack p_138684_, @Nullable Entity p_138685_, ServerPlayer p_138686_) throws CommandSyntaxException {
-        if (p_138686_ == p_138685_) {
+    private static int spectate(final CommandSourceStack source, final @Nullable Entity target, final ServerPlayer player) throws CommandSyntaxException {
+        if (player == target) {
             throw ERROR_SELF.create();
-        } else if (!p_138686_.isSpectator()) {
-            throw ERROR_NOT_SPECTATOR.create(p_138686_.getDisplayName());
-        } else if (p_138685_ != null && p_138685_.getType().clientTrackingRange() == 0) {
-            throw ERROR_CANNOT_SPECTATE.create(p_138685_.getDisplayName());
-        } else {
-            p_138686_.setCamera(p_138685_);
-            if (p_138685_ != null) {
-                p_138684_.sendSuccess(() -> Component.translatable("commands.spectate.success.started", p_138685_.getDisplayName()), false);
-            } else {
-                p_138684_.sendSuccess(() -> Component.translatable("commands.spectate.success.stopped"), false);
-            }
-
-            return 1;
         }
+
+        if (!player.isSpectator()) {
+            throw ERROR_NOT_SPECTATOR.create(player.getDisplayName());
+        }
+
+        if (target != null && target.getType().clientTrackingRange() == 0) {
+            throw ERROR_CANNOT_SPECTATE.create(target.getDisplayName());
+        }
+
+        player.setCamera(target);
+        if (target != null) {
+            source.sendSuccess(() -> Component.translatable("commands.spectate.success.started", target.getDisplayName()), false);
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.spectate.success.stopped"), false);
+        }
+
+        return 1;
     }
 }

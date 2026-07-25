@@ -28,37 +28,37 @@ public class SkullBlockEntity extends BlockEntity {
     private boolean isAnimating;
     private @Nullable Component customName;
 
-    public SkullBlockEntity(BlockPos p_155731_, BlockState p_155732_) {
-        super(BlockEntityType.SKULL, p_155731_, p_155732_);
+    public SkullBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.SKULL, worldPosition, blockState);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_409149_) {
-        super.saveAdditional(p_409149_);
-        p_409149_.storeNullable("profile", ResolvableProfile.CODEC, this.owner);
-        p_409149_.storeNullable("note_block_sound", Identifier.CODEC, this.noteBlockSound);
-        p_409149_.storeNullable("custom_name", ComponentSerialization.CODEC, this.customName);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        output.storeNullable("profile", ResolvableProfile.CODEC, this.owner);
+        output.storeNullable("note_block_sound", Identifier.CODEC, this.noteBlockSound);
+        output.storeNullable("custom_name", ComponentSerialization.CODEC, this.customName);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_409251_) {
-        super.loadAdditional(p_409251_);
-        this.owner = p_409251_.read("profile", ResolvableProfile.CODEC).orElse(null);
-        this.noteBlockSound = p_409251_.read("note_block_sound", Identifier.CODEC).orElse(null);
-        this.customName = parseCustomNameSafe(p_409251_, "custom_name");
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.owner = input.read("profile", ResolvableProfile.CODEC).orElse(null);
+        this.noteBlockSound = input.read("note_block_sound", Identifier.CODEC).orElse(null);
+        this.customName = parseCustomNameSafe(input, "custom_name");
     }
 
-    public static void animation(Level p_261710_, BlockPos p_262153_, BlockState p_262021_, SkullBlockEntity p_261594_) {
-        if (p_262021_.hasProperty(SkullBlock.POWERED) && p_262021_.getValue(SkullBlock.POWERED)) {
-            p_261594_.isAnimating = true;
-            p_261594_.animationTickCount++;
+    public static void animation(final Level level, final BlockPos pos, final BlockState state, final SkullBlockEntity entity) {
+        if (state.hasProperty(SkullBlock.POWERED) && state.getValue(SkullBlock.POWERED)) {
+            entity.isAnimating = true;
+            entity.animationTickCount++;
         } else {
-            p_261594_.isAnimating = false;
+            entity.isAnimating = false;
         }
     }
 
-    public float getAnimation(float p_262053_) {
-        return this.isAnimating ? this.animationTickCount + p_262053_ : this.animationTickCount;
+    public float getAnimation(final float a) {
+        return this.isAnimating ? this.animationTickCount + a : this.animationTickCount;
     }
 
     public @Nullable ResolvableProfile getOwnerProfile() {
@@ -74,31 +74,31 @@ public class SkullBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_335540_) {
-        return this.saveCustomOnly(p_335540_);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_393162_) {
-        super.applyImplicitComponents(p_393162_);
-        this.owner = p_393162_.get(DataComponents.PROFILE);
-        this.noteBlockSound = p_393162_.get(DataComponents.NOTE_BLOCK_SOUND);
-        this.customName = p_393162_.get(DataComponents.CUSTOM_NAME);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        this.owner = components.get(DataComponents.PROFILE);
+        this.noteBlockSound = components.get(DataComponents.NOTE_BLOCK_SOUND);
+        this.customName = components.get(DataComponents.CUSTOM_NAME);
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_335245_) {
-        super.collectImplicitComponents(p_335245_);
-        p_335245_.set(DataComponents.PROFILE, this.owner);
-        p_335245_.set(DataComponents.NOTE_BLOCK_SOUND, this.noteBlockSound);
-        p_335245_.set(DataComponents.CUSTOM_NAME, this.customName);
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.PROFILE, this.owner);
+        components.set(DataComponents.NOTE_BLOCK_SOUND, this.noteBlockSound);
+        components.set(DataComponents.CUSTOM_NAME, this.customName);
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_410487_) {
-        super.removeComponentsFromTag(p_410487_);
-        p_410487_.discard("profile");
-        p_410487_.discard("note_block_sound");
-        p_410487_.discard("custom_name");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        super.removeComponentsFromTag(output);
+        output.discard("profile");
+        output.discard("note_block_sound");
+        output.discard("custom_name");
     }
 }

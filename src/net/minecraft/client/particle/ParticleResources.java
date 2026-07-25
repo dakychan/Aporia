@@ -18,7 +18,7 @@ import java.util.concurrent.Executor;
 import java.util.stream.Collectors;
 import net.minecraft.client.renderer.texture.SpriteLoader;
 import net.minecraft.client.renderer.texture.TextureAtlasSprite;
-import net.minecraft.client.resources.model.AtlasManager;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
 import net.minecraft.core.particles.ParticleTypes;
@@ -34,12 +34,9 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class ParticleResources implements PreparableReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final FileToIdConverter PARTICLE_LISTER = FileToIdConverter.json("particles");
@@ -51,8 +48,8 @@ public class ParticleResources implements PreparableReloadListener {
         this.registerProviders();
     }
 
-    public void onReload(Runnable p_423599_) {
-        this.onReload = p_423599_;
+    public void onReload(final Runnable onReload) {
+        this.onReload = onReload;
     }
 
     private void registerProviders() {
@@ -62,6 +59,13 @@ public class ParticleResources implements PreparableReloadListener {
         this.register(ParticleTypes.BUBBLE, BubbleParticle.Provider::new);
         this.register(ParticleTypes.BUBBLE_COLUMN_UP, BubbleColumnUpParticle.Provider::new);
         this.register(ParticleTypes.BUBBLE_POP, BubblePopParticle.Provider::new);
+        this.register(ParticleTypes.SULFUR_BUBBLES, SulfurBubbleParticle.Provider::new);
+        this.register(ParticleTypes.NOXIOUS_GAS, NoxiousGasParticle.Provider::new);
+        this.register(ParticleTypes.NOXIOUS_GAS_CLOUD, new NoxiousGasCloudParticle.Provider());
+        this.register(ParticleTypes.GEYSER, new GeyserEruptionParticle.Provider());
+        this.register(ParticleTypes.GEYSER_BASE, GeyserBaseParticle.Provider::new);
+        this.register(ParticleTypes.GEYSER_POOF, GeyserBaseParticle.Provider::new);
+        this.register(ParticleTypes.GEYSER_PLUME, GeyserPlumeParticle.Provider::new);
         this.register(ParticleTypes.CAMPFIRE_COSY_SMOKE, CampfireSmokeParticle.CosyProvider::new);
         this.register(ParticleTypes.CAMPFIRE_SIGNAL_SMOKE, CampfireSmokeParticle.SignalProvider::new);
         this.register(ParticleTypes.CLOUD, PlayerCloudParticle.Provider::new);
@@ -153,6 +157,8 @@ public class ParticleResources implements PreparableReloadListener {
         this.register(ParticleTypes.FALLING_DRIPSTONE_LAVA, DripParticle.DripstoneLavaFallProvider::new);
         this.register(ParticleTypes.VIBRATION, VibrationSignalParticle.Provider::new);
         this.register(ParticleTypes.TRAIL, TrailParticle.Provider::new);
+        this.register(ParticleTypes.PAUSE_MOB_GROWTH, SimpleVerticalParticle.PauseMobGrowthProvider::new);
+        this.register(ParticleTypes.RESET_MOB_GROWTH, SimpleVerticalParticle.ResetMobGrowthProvider::new);
         this.register(ParticleTypes.GLOW_SQUID_INK, SquidInkParticle.GlowInkProvider::new);
         this.register(ParticleTypes.GLOW, GlowParticle.GlowSquidProvider::new);
         this.register(ParticleTypes.WAX_ON, GlowParticle.WaxOnProvider::new);
@@ -171,97 +177,103 @@ public class ParticleResources implements PreparableReloadListener {
         this.register(ParticleTypes.OMINOUS_SPAWNING, FlyStraightTowardsParticle.OminousSpawnProvider::new);
         this.register(ParticleTypes.BLOCK_CRUMBLE, new TerrainParticle.CrumblingProvider());
         this.register(ParticleTypes.FIREFLY, FireflyParticle.FireflyProvider::new);
+        this.register(ParticleTypes.SULFUR_CUBE_GOO, BreakingItemParticle.SulfurCubeProvider::new);
     }
 
-    private <T extends ParticleOptions> void register(ParticleType<T> p_427222_, ParticleProvider<T> p_423729_) {
-        this.providers.put(BuiltInRegistries.PARTICLE_TYPE.getId(p_427222_), p_423729_);
+    private <T extends ParticleOptions> void register(final ParticleType<T> type, final ParticleProvider<T> provider) {
+        this.providers.put(BuiltInRegistries.PARTICLE_TYPE.getId(type), provider);
     }
 
-    private <T extends ParticleOptions> void register(ParticleType<T> p_427223_, ParticleResources.SpriteParticleRegistration<T> p_423156_) {
-        ParticleResources.MutableSpriteSet particleresources$mutablespriteset = new ParticleResources.MutableSpriteSet();
-        this.spriteSets.put(BuiltInRegistries.PARTICLE_TYPE.getKey(p_427223_), particleresources$mutablespriteset);
-        this.providers.put(BuiltInRegistries.PARTICLE_TYPE.getId(p_427223_), p_423156_.create(particleresources$mutablespriteset));
+    private <T extends ParticleOptions> void register(final ParticleType<T> type, final ParticleResources.SpriteParticleRegistration<T> provider) {
+        ParticleResources.MutableSpriteSet spriteSet = new ParticleResources.MutableSpriteSet();
+        this.spriteSets.put(BuiltInRegistries.PARTICLE_TYPE.getKey(type), spriteSet);
+        this.providers.put(BuiltInRegistries.PARTICLE_TYPE.getId(type), provider.create(spriteSet));
     }
 
     @Override
     public CompletableFuture<Void> reload(
-        PreparableReloadListener.SharedState p_422482_, Executor p_424245_, PreparableReloadListener.PreparationBarrier p_424882_, Executor p_427972_
+        final PreparableReloadListener.SharedState currentReload,
+        final Executor taskExecutor,
+        final PreparableReloadListener.PreparationBarrier preparationBarrier,
+        final Executor reloadExecutor
     ) {
-        ResourceManager resourcemanager = p_422482_.resourceManager();
+        ResourceManager manager = currentReload.resourceManager();
 
-        @OnlyIn(Dist.CLIENT)
-        record ParticleDefinition(Identifier id, Optional<List<Identifier>> sprites) {
+                record ParticleDefinition(Identifier id, Optional<List<Identifier>> sprites) {
         }
 
-        CompletableFuture<List<ParticleDefinition>> completablefuture = CompletableFuture.<Map<Identifier, Resource>>supplyAsync(
-                () -> PARTICLE_LISTER.listMatchingResources(resourcemanager), p_424245_
+        CompletableFuture<List<ParticleDefinition>> spriteSetsToLoad = CompletableFuture.<Map<Identifier, Resource>>supplyAsync(
+                () -> PARTICLE_LISTER.listMatchingResources(manager), taskExecutor
             )
-            .thenCompose(p_448144_ -> {
-                List<CompletableFuture<ParticleDefinition>> list = new ArrayList<>(p_448144_.size());
-                p_448144_.forEach((p_448141_, p_448142_) -> {
-                    Identifier identifier = PARTICLE_LISTER.fileToId(p_448141_);
-                    list.add(CompletableFuture.supplyAsync(() -> new ParticleDefinition(identifier, this.loadParticleDescription(identifier, p_448142_)), p_424245_));
-                });
-                return Util.sequence(list);
-            });
-        CompletableFuture<SpriteLoader.Preparations> completablefuture1 = p_422482_.get(AtlasManager.PENDING_STITCH).get(AtlasIds.PARTICLES);
-        return CompletableFuture.allOf(completablefuture, completablefuture1).thenCompose(p_424882_::wait).thenAcceptAsync(p_424900_ -> {
+            .thenCompose(
+                definitionsToScan -> {
+                    List<CompletableFuture<ParticleDefinition>> loadTasks = new ArrayList<>(definitionsToScan.size());
+                    definitionsToScan.forEach(
+                        (resourceId, resource) -> {
+                            Identifier particleId = PARTICLE_LISTER.fileToId(resourceId);
+                            loadTasks.add(
+                                CompletableFuture.supplyAsync(
+                                    () -> new ParticleDefinition(particleId, this.loadParticleDescription(particleId, resource)), taskExecutor
+                                )
+                            );
+                        }
+                    );
+                    return Util.sequence(loadTasks);
+                }
+            );
+        CompletableFuture<SpriteLoader.Preparations> pendingSprites = currentReload.get(AtlasManager.PENDING_STITCH).get(AtlasIds.PARTICLES);
+        return CompletableFuture.allOf(spriteSetsToLoad, pendingSprites).thenCompose(preparationBarrier::wait).thenAcceptAsync(unused -> {
             if (this.onReload != null) {
                 this.onReload.run();
             }
 
-            ProfilerFiller profilerfiller = Profiler.get();
-            profilerfiller.push("upload");
-            SpriteLoader.Preparations spriteloader$preparations = completablefuture1.join();
-            profilerfiller.popPush("bindSpriteSets");
-            Set<Identifier> set = new HashSet<>();
-            TextureAtlasSprite textureatlassprite = spriteloader$preparations.missing();
-            completablefuture.join().forEach(p_431003_ -> {
-                Optional<List<Identifier>> optional = p_431003_.sprites();
-                if (!optional.isEmpty()) {
-                    List<TextureAtlasSprite> list = new ArrayList<>();
+            ProfilerFiller reloadProfiler = Profiler.get();
+            reloadProfiler.push("upload");
+            SpriteLoader.Preparations sprites = pendingSprites.join();
+            reloadProfiler.popPush("bindSpriteSets");
+            Set<Identifier> missingSprites = new HashSet<>();
+            TextureAtlasSprite missingSprite = sprites.missing();
+            spriteSetsToLoad.join().forEach(p -> {
+                Optional<List<Identifier>> spriteIds = p.sprites();
+                if (!spriteIds.isEmpty()) {
+                    List<TextureAtlasSprite> contents = new ArrayList<>();
 
-                    for (Identifier identifier : optional.get()) {
-                        TextureAtlasSprite textureatlassprite1 = spriteloader$preparations.getSprite(identifier);
-                        if (textureatlassprite1 == null) {
-                            set.add(identifier);
-                            list.add(textureatlassprite);
+                    for (Identifier spriteId : spriteIds.get()) {
+                        TextureAtlasSprite sprite = sprites.getSprite(spriteId);
+                        if (sprite == null) {
+                            missingSprites.add(spriteId);
+                            contents.add(missingSprite);
                         } else {
-                            list.add(textureatlassprite1);
+                            contents.add(sprite);
                         }
                     }
 
-                    if (list.isEmpty()) {
-                        list.add(textureatlassprite);
+                    if (contents.isEmpty()) {
+                        contents.add(missingSprite);
                     }
 
-                    this.spriteSets.get(p_431003_.id()).rebind(list);
+                    this.spriteSets.get(p.id()).rebind(contents);
                 }
             });
-            if (!set.isEmpty()) {
-                LOGGER.warn("Missing particle sprites: {}", set.stream().sorted().map(Identifier::toString).collect(Collectors.joining(",")));
+            if (!missingSprites.isEmpty()) {
+                LOGGER.warn("Missing particle sprites: {}", missingSprites.stream().sorted().map(Identifier::toString).collect(Collectors.joining(",")));
             }
 
-            profilerfiller.pop();
-        }, p_427972_);
+            reloadProfiler.pop();
+        }, reloadExecutor);
     }
 
-    private Optional<List<Identifier>> loadParticleDescription(Identifier p_451185_, Resource p_429362_) {
-        if (!this.spriteSets.containsKey(p_451185_)) {
-            LOGGER.debug("Redundant texture list for particle: {}", p_451185_);
+    private Optional<List<Identifier>> loadParticleDescription(final Identifier id, final Resource resource) {
+        if (!this.spriteSets.containsKey(id)) {
+            LOGGER.debug("Redundant texture list for particle: {}", id);
             return Optional.empty();
-        } else {
-            try {
-                Optional optional;
-                try (Reader reader = p_429362_.openAsReader()) {
-                    ParticleDescription particledescription = ParticleDescription.fromJson(GsonHelper.parse(reader));
-                    optional = Optional.of(particledescription.getTextures());
-                }
+        }
 
-                return optional;
-            } catch (IOException ioexception) {
-                throw new IllegalStateException("Failed to load description for particle " + p_451185_, ioexception);
-            }
+        try (Reader reader = resource.openAsReader()) {
+            ParticleDescription description = ParticleDescription.fromJson(GsonHelper.parse(reader));
+            return Optional.of(description.getTextures());
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to load description for particle " + id, e);
         }
     }
 
@@ -269,18 +281,17 @@ public class ParticleResources implements PreparableReloadListener {
         return this.providers;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class MutableSpriteSet implements SpriteSet {
+        private static class MutableSpriteSet implements SpriteSet {
         private List<TextureAtlasSprite> sprites;
 
         @Override
-        public TextureAtlasSprite get(int p_425678_, int p_426604_) {
-            return this.sprites.get(p_425678_ * (this.sprites.size() - 1) / p_426604_);
+        public TextureAtlasSprite get(final int index, final int max) {
+            return this.sprites.get(index * (this.sprites.size() - 1) / max);
         }
 
         @Override
-        public TextureAtlasSprite get(RandomSource p_425618_) {
-            return this.sprites.get(p_425618_.nextInt(this.sprites.size()));
+        public TextureAtlasSprite get(final RandomSource random) {
+            return this.sprites.get(random.nextInt(this.sprites.size()));
         }
 
         @Override
@@ -288,14 +299,13 @@ public class ParticleResources implements PreparableReloadListener {
             return this.sprites.getFirst();
         }
 
-        public void rebind(List<TextureAtlasSprite> p_427401_) {
-            this.sprites = ImmutableList.copyOf(p_427401_);
+        public void rebind(final List<TextureAtlasSprite> ids) {
+            this.sprites = ImmutableList.copyOf(ids);
         }
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    interface SpriteParticleRegistration<T extends ParticleOptions> {
-        ParticleProvider<T> create(SpriteSet p_424837_);
+        private interface SpriteParticleRegistration<T extends ParticleOptions> {
+        ParticleProvider<T> create(SpriteSet spriteSet);
     }
 }

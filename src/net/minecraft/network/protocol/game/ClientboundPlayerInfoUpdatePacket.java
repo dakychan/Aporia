@@ -30,18 +30,18 @@ public class ClientboundPlayerInfoUpdatePacket implements Packet<ClientGamePacke
     private final EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions;
     private final List<ClientboundPlayerInfoUpdatePacket.Entry> entries;
 
-    public ClientboundPlayerInfoUpdatePacket(EnumSet<ClientboundPlayerInfoUpdatePacket.Action> p_251739_, Collection<ServerPlayer> p_251579_) {
-        this.actions = p_251739_;
-        this.entries = p_251579_.stream().map(ClientboundPlayerInfoUpdatePacket.Entry::new).toList();
+    public ClientboundPlayerInfoUpdatePacket(final EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions, final Collection<ServerPlayer> players) {
+        this.actions = actions;
+        this.entries = players.stream().map(ClientboundPlayerInfoUpdatePacket.Entry::new).toList();
     }
 
-    public ClientboundPlayerInfoUpdatePacket(ClientboundPlayerInfoUpdatePacket.Action p_251648_, ServerPlayer p_252273_) {
-        this.actions = EnumSet.of(p_251648_);
-        this.entries = List.of(new ClientboundPlayerInfoUpdatePacket.Entry(p_252273_));
+    public ClientboundPlayerInfoUpdatePacket(final ClientboundPlayerInfoUpdatePacket.Action action, final ServerPlayer player) {
+        this.actions = EnumSet.of(action);
+        this.entries = List.of(new ClientboundPlayerInfoUpdatePacket.Entry(player));
     }
 
-    public static ClientboundPlayerInfoUpdatePacket createPlayerInitializing(Collection<ServerPlayer> p_252314_) {
-        EnumSet<ClientboundPlayerInfoUpdatePacket.Action> enumset = EnumSet.of(
+    public static ClientboundPlayerInfoUpdatePacket createPlayerInitializing(final Collection<ServerPlayer> players) {
+        EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions = EnumSet.of(
             ClientboundPlayerInfoUpdatePacket.Action.ADD_PLAYER,
             ClientboundPlayerInfoUpdatePacket.Action.INITIALIZE_CHAT,
             ClientboundPlayerInfoUpdatePacket.Action.UPDATE_GAME_MODE,
@@ -51,34 +51,29 @@ public class ClientboundPlayerInfoUpdatePacket implements Packet<ClientGamePacke
             ClientboundPlayerInfoUpdatePacket.Action.UPDATE_HAT,
             ClientboundPlayerInfoUpdatePacket.Action.UPDATE_LIST_ORDER
         );
-        return new ClientboundPlayerInfoUpdatePacket(enumset, p_252314_);
+        return new ClientboundPlayerInfoUpdatePacket(actions, players);
     }
 
-    private ClientboundPlayerInfoUpdatePacket(RegistryFriendlyByteBuf p_330420_) {
-        this.actions = p_330420_.readEnumSet(ClientboundPlayerInfoUpdatePacket.Action.class);
-        this.entries = p_330420_.readList(
-            p_326100_ -> {
-                ClientboundPlayerInfoUpdatePacket.EntryBuilder clientboundplayerinfoupdatepacket$entrybuilder = new ClientboundPlayerInfoUpdatePacket.EntryBuilder(
-                    p_326100_.readUUID()
-                );
+    private ClientboundPlayerInfoUpdatePacket(final RegistryFriendlyByteBuf input) {
+        this.actions = input.readEnumSet(ClientboundPlayerInfoUpdatePacket.Action.class);
+        this.entries = input.readList(buf -> {
+            ClientboundPlayerInfoUpdatePacket.EntryBuilder builder = new ClientboundPlayerInfoUpdatePacket.EntryBuilder(buf.readUUID());
 
-                for (ClientboundPlayerInfoUpdatePacket.Action clientboundplayerinfoupdatepacket$action : this.actions) {
-                    clientboundplayerinfoupdatepacket$action.reader
-                        .read(clientboundplayerinfoupdatepacket$entrybuilder, (RegistryFriendlyByteBuf)p_326100_);
-                }
-
-                return clientboundplayerinfoupdatepacket$entrybuilder.build();
+            for (ClientboundPlayerInfoUpdatePacket.Action action : this.actions) {
+                action.reader.read(builder, (RegistryFriendlyByteBuf)buf);
             }
-        );
+
+            return builder.build();
+        });
     }
 
-    private void write(RegistryFriendlyByteBuf p_332405_) {
-        p_332405_.writeEnumSet(this.actions, ClientboundPlayerInfoUpdatePacket.Action.class);
-        p_332405_.writeCollection(this.entries, (p_326101_, p_326102_) -> {
-            p_326101_.writeUUID(p_326102_.profileId());
+    private void write(final RegistryFriendlyByteBuf output) {
+        output.writeEnumSet(this.actions, ClientboundPlayerInfoUpdatePacket.Action.class);
+        output.writeCollection(this.entries, (buf, entry) -> {
+            buf.writeUUID(entry.profileId());
 
-            for (ClientboundPlayerInfoUpdatePacket.Action clientboundplayerinfoupdatepacket$action : this.actions) {
-                clientboundplayerinfoupdatepacket$action.writer.write((RegistryFriendlyByteBuf)p_326101_, p_326102_);
+            for (ClientboundPlayerInfoUpdatePacket.Action action : this.actions) {
+                action.writer.write((RegistryFriendlyByteBuf)buf, entry);
             }
         });
     }
@@ -88,8 +83,8 @@ public class ClientboundPlayerInfoUpdatePacket implements Packet<ClientGamePacke
         return GamePacketTypes.CLIENTBOUND_PLAYER_INFO_UPDATE;
     }
 
-    public void handle(ClientGamePacketListener p_249935_) {
-        p_249935_.handlePlayerInfoUpdate(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handlePlayerInfoUpdate(this);
     }
 
     public EnumSet<ClientboundPlayerInfoUpdatePacket.Action> actions() {
@@ -109,55 +104,44 @@ public class ClientboundPlayerInfoUpdatePacket implements Packet<ClientGamePacke
         return MoreObjects.toStringHelper(this).add("actions", this.actions).add("entries", this.entries).toString();
     }
 
-    public static enum Action {
-        ADD_PLAYER((p_421251_, p_421252_) -> {
-            String s = ByteBufCodecs.PLAYER_NAME.decode(p_421252_);
-            PropertyMap propertymap = ByteBufCodecs.GAME_PROFILE_PROPERTIES.decode(p_421252_);
-            p_421251_.profile = new GameProfile(p_421251_.profileId, s, propertymap);
-        }, (p_421253_, p_421254_) -> {
-            GameProfile gameprofile = Objects.requireNonNull(p_421254_.profile());
-            ByteBufCodecs.PLAYER_NAME.encode(p_421253_, gameprofile.name());
-            ByteBufCodecs.GAME_PROFILE_PROPERTIES.encode(p_421253_, gameprofile.properties());
+    public enum Action {
+        ADD_PLAYER((entry, input) -> {
+            String name = ByteBufCodecs.PLAYER_NAME.decode(input);
+            PropertyMap properties = ByteBufCodecs.GAME_PROFILE_PROPERTIES.decode(input);
+            entry.profile = new GameProfile(entry.profileId, name, properties);
+        }, (output, entry) -> {
+            GameProfile profile = Objects.requireNonNull(entry.profile());
+            ByteBufCodecs.PLAYER_NAME.encode(output, profile.name());
+            ByteBufCodecs.GAME_PROFILE_PROPERTIES.encode(output, profile.properties());
         }),
         INITIALIZE_CHAT(
-            (p_326119_, p_326120_) -> p_326119_.chatSession = p_326120_.readNullable(RemoteChatSession.Data::read),
-            (p_326121_, p_326122_) -> p_326121_.writeNullable(p_326122_.chatSession, RemoteChatSession.Data::write)
+            (entry, input) -> entry.chatSession = input.readNullable(RemoteChatSession.Data::read),
+            (output, entry) -> output.writeNullable(entry.chatSession, RemoteChatSession.Data::write)
         ),
-        UPDATE_GAME_MODE(
-            (p_326123_, p_326124_) -> p_326123_.gameMode = GameType.byId(p_326124_.readVarInt()),
-            (p_326125_, p_326126_) -> p_326125_.writeVarInt(p_326126_.gameMode().getId())
-        ),
-        UPDATE_LISTED(
-            (p_326107_, p_326108_) -> p_326107_.listed = p_326108_.readBoolean(), (p_326105_, p_326106_) -> p_326105_.writeBoolean(p_326106_.listed())
-        ),
-        UPDATE_LATENCY(
-            (p_326109_, p_326110_) -> p_326109_.latency = p_326110_.readVarInt(), (p_326117_, p_326118_) -> p_326117_.writeVarInt(p_326118_.latency())
-        ),
+        UPDATE_GAME_MODE((entry, input) -> entry.gameMode = GameType.byId(input.readVarInt()), (output, entry) -> output.writeVarInt(entry.gameMode().getId())),
+        UPDATE_LISTED((entry, input) -> entry.listed = input.readBoolean(), (output, entry) -> output.writeBoolean(entry.listed())),
+        UPDATE_LATENCY((entry, input) -> entry.latency = input.readVarInt(), (output, entry) -> output.writeVarInt(entry.latency())),
         UPDATE_DISPLAY_NAME(
-            (p_326103_, p_326104_) -> p_326103_.displayName = FriendlyByteBuf.readNullable(p_326104_, ComponentSerialization.TRUSTED_STREAM_CODEC),
-            (p_326111_, p_326112_) -> FriendlyByteBuf.writeNullable(p_326111_, p_326112_.displayName(), ComponentSerialization.TRUSTED_STREAM_CODEC)
+            (entry, input) -> entry.displayName = FriendlyByteBuf.readNullable(input, ComponentSerialization.TRUSTED_STREAM_CODEC),
+            (output, entry) -> FriendlyByteBuf.writeNullable(output, entry.displayName(), ComponentSerialization.TRUSTED_STREAM_CODEC)
         ),
-        UPDATE_LIST_ORDER(
-            (p_358483_, p_358484_) -> p_358483_.listOrder = p_358484_.readVarInt(), (p_358485_, p_358486_) -> p_358485_.writeVarInt(p_358486_.listOrder)
-        ),
-        UPDATE_HAT(
-            (p_374849_, p_374850_) -> p_374849_.showHat = p_374850_.readBoolean(), (p_374847_, p_374848_) -> p_374847_.writeBoolean(p_374848_.showHat)
-        );
+        UPDATE_LIST_ORDER((entry, input) -> entry.listOrder = input.readVarInt(), (output, entry) -> output.writeVarInt(entry.listOrder)),
+        UPDATE_HAT((entry, input) -> entry.showHat = input.readBoolean(), (output, entry) -> output.writeBoolean(entry.showHat));
 
-        final ClientboundPlayerInfoUpdatePacket.Action.Reader reader;
-        final ClientboundPlayerInfoUpdatePacket.Action.Writer writer;
+        private final ClientboundPlayerInfoUpdatePacket.Action.Reader reader;
+        private final ClientboundPlayerInfoUpdatePacket.Action.Writer writer;
 
-        private Action(final ClientboundPlayerInfoUpdatePacket.Action.Reader p_249392_, final ClientboundPlayerInfoUpdatePacket.Action.Writer p_250487_) {
-            this.reader = p_249392_;
-            this.writer = p_250487_;
+        Action(final ClientboundPlayerInfoUpdatePacket.Action.Reader reader, final ClientboundPlayerInfoUpdatePacket.Action.Writer writer) {
+            this.reader = reader;
+            this.writer = writer;
         }
 
         public interface Reader {
-            void read(ClientboundPlayerInfoUpdatePacket.EntryBuilder p_251859_, RegistryFriendlyByteBuf p_332411_);
+            void read(ClientboundPlayerInfoUpdatePacket.EntryBuilder entry, RegistryFriendlyByteBuf input);
         }
 
         public interface Writer {
-            void write(RegistryFriendlyByteBuf p_330677_, ClientboundPlayerInfoUpdatePacket.Entry p_249783_);
+            void write(RegistryFriendlyByteBuf output, ClientboundPlayerInfoUpdatePacket.Entry entry);
         }
     }
 
@@ -172,37 +156,37 @@ public class ClientboundPlayerInfoUpdatePacket implements Packet<ClientGamePacke
         int listOrder,
         RemoteChatSession.@Nullable Data chatSession
     ) {
-        Entry(ServerPlayer p_252094_) {
+        private Entry(final ServerPlayer player) {
             this(
-                p_252094_.getUUID(),
-                p_252094_.getGameProfile(),
+                player.getUUID(),
+                player.getGameProfile(),
                 true,
-                p_252094_.connection.latency(),
-                p_252094_.gameMode(),
-                p_252094_.getTabListDisplayName(),
-                p_252094_.isModelPartShown(PlayerModelPart.HAT),
-                p_252094_.getTabListOrder(),
-                Optionull.map(p_252094_.getChatSession(), RemoteChatSession::asData)
+                player.connection.latency(),
+                player.gameMode(),
+                player.getTabListDisplayName(),
+                player.isModelPartShown(PlayerModelPart.HAT),
+                player.getTabListOrder(),
+                Optionull.map(player.getChatSession(), RemoteChatSession::asData)
             );
         }
     }
 
-    static class EntryBuilder {
-        final UUID profileId;
-        @Nullable GameProfile profile;
-        boolean listed;
-        int latency;
-        GameType gameMode = GameType.DEFAULT_MODE;
-        @Nullable Component displayName;
-        boolean showHat;
-        int listOrder;
-        RemoteChatSession.@Nullable Data chatSession;
+    private static class EntryBuilder {
+        private final UUID profileId;
+        private @Nullable GameProfile profile;
+        private boolean listed;
+        private int latency;
+        private GameType gameMode = GameType.DEFAULT_MODE;
+        private @Nullable Component displayName;
+        private boolean showHat;
+        private int listOrder;
+        private RemoteChatSession.@Nullable Data chatSession;
 
-        EntryBuilder(UUID p_251670_) {
-            this.profileId = p_251670_;
+        private EntryBuilder(final UUID profileId) {
+            this.profileId = profileId;
         }
 
-        ClientboundPlayerInfoUpdatePacket.Entry build() {
+        private ClientboundPlayerInfoUpdatePacket.Entry build() {
             return new ClientboundPlayerInfoUpdatePacket.Entry(
                 this.profileId, this.profile, this.listed, this.latency, this.gameMode, this.displayName, this.showHat, this.listOrder, this.chatSession
             );

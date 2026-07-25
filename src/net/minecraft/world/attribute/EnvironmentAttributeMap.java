@@ -6,7 +6,6 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,38 +18,44 @@ public final class EnvironmentAttributeMap {
     public static final EnvironmentAttributeMap EMPTY = new EnvironmentAttributeMap(Map.of());
     public static final Codec<EnvironmentAttributeMap> CODEC = Codec.lazyInitialized(
         () -> Codec.dispatchedMap(EnvironmentAttributes.CODEC, Util.memoize(EnvironmentAttributeMap.Entry::createCodec))
-            .xmap((java.util.function.Function<Map, EnvironmentAttributeMap>)EnvironmentAttributeMap::new, p_459564_ -> (Map)((EnvironmentAttributeMap)p_459564_).entries)
+            .xmap((java.util.function.Function<Map, EnvironmentAttributeMap>)EnvironmentAttributeMap::new, v -> (Map)((EnvironmentAttributeMap)v).entries)
     );
-    public static final Codec<EnvironmentAttributeMap> NETWORK_CODEC = CODEC.xmap(EnvironmentAttributeMap::filterSyncable, EnvironmentAttributeMap::filterSyncable);
-    public static final Codec<EnvironmentAttributeMap> CODEC_ONLY_POSITIONAL = CODEC.validate(p_458429_ -> {
-        List<EnvironmentAttribute<?>> list = p_458429_.keySet().stream().filter(p_460981_ -> !p_460981_.isPositional()).toList();
-        return !list.isEmpty() ? DataResult.error(() -> "The following attributes cannot be positional: " + list) : DataResult.success(p_458429_);
-    });
-    final Map<EnvironmentAttribute<?>, EnvironmentAttributeMap.Entry<?, ?>> entries;
+    public static final Codec<EnvironmentAttributeMap> NETWORK_CODEC = CODEC.xmap(
+        EnvironmentAttributeMap::filterSyncable, EnvironmentAttributeMap::filterSyncable
+    );
+    public static final Codec<EnvironmentAttributeMap> CODEC_ONLY_POSITIONAL = CODEC.validate(
+        map -> {
+            List<EnvironmentAttribute<?>> illegalAttributes = map.keySet().stream().filter(attribute -> !attribute.isPositional()).toList();
+            return !illegalAttributes.isEmpty()
+                ? DataResult.error(() -> "The following attributes cannot be positional: " + illegalAttributes)
+                : DataResult.success(map);
+        }
+    );
+    private final Map<EnvironmentAttribute<?>, EnvironmentAttributeMap.Entry<?, ?>> entries;
 
-    private static EnvironmentAttributeMap filterSyncable(EnvironmentAttributeMap p_455729_) {
-        return new EnvironmentAttributeMap(Map.copyOf(Maps.filterKeys(p_455729_.entries, EnvironmentAttribute::isSyncable)));
+    private static EnvironmentAttributeMap filterSyncable(final EnvironmentAttributeMap attributes) {
+        return new EnvironmentAttributeMap(Map.copyOf(Maps.filterKeys(attributes.entries, EnvironmentAttribute::isSyncable)));
     }
 
-    EnvironmentAttributeMap(Map<EnvironmentAttribute<?>, EnvironmentAttributeMap.Entry<?, ?>> p_458826_) {
-        this.entries = p_458826_;
+    private EnvironmentAttributeMap(final Map<EnvironmentAttribute<?>, EnvironmentAttributeMap.Entry<?, ?>> entries) {
+        this.entries = entries;
     }
 
     public static EnvironmentAttributeMap.Builder builder() {
         return new EnvironmentAttributeMap.Builder();
     }
 
-    public <Value> EnvironmentAttributeMap.@Nullable Entry<Value, ?> get(EnvironmentAttribute<Value> p_454437_) {
-        return (EnvironmentAttributeMap.Entry<Value, ?>)this.entries.get(p_454437_);
+    public <Value> EnvironmentAttributeMap.@Nullable Entry<Value, ?> get(final EnvironmentAttribute<Value> attribute) {
+        return (EnvironmentAttributeMap.Entry<Value, ?>)this.entries.get(attribute);
     }
 
-    public <Value> Value applyModifier(EnvironmentAttribute<Value> p_457253_, Value p_459398_) {
-        EnvironmentAttributeMap.Entry<Value, ?> entry = this.get(p_457253_);
-        return entry != null ? entry.applyModifier(p_459398_) : p_459398_;
+    public <Value> Value applyModifier(final EnvironmentAttribute<Value> attribute, final Value baseValue) {
+        EnvironmentAttributeMap.Entry<Value, ?> entry = this.get(attribute);
+        return entry != null ? entry.applyModifier(baseValue) : baseValue;
     }
 
-    public boolean contains(EnvironmentAttribute<?> p_455230_) {
-        return this.entries.containsKey(p_455230_);
+    public boolean contains(final EnvironmentAttribute<?> attribute) {
+        return this.entries.containsKey(attribute);
     }
 
     public Set<EnvironmentAttribute<?>> keySet() {
@@ -58,10 +63,8 @@ public final class EnvironmentAttributeMap {
     }
 
     @Override
-    public boolean equals(Object p_456131_) {
-        return p_456131_ == this
-            ? true
-            : p_456131_ instanceof EnvironmentAttributeMap environmentattributemap && this.entries.equals(environmentattributemap.entries);
+    public boolean equals(final Object obj) {
+        return obj == this ? true : obj instanceof EnvironmentAttributeMap attributes && this.entries.equals(attributes.entries);
     }
 
     @Override
@@ -77,24 +80,24 @@ public final class EnvironmentAttributeMap {
     public static class Builder {
         private final Map<EnvironmentAttribute<?>, EnvironmentAttributeMap.Entry<?, ?>> entries = new HashMap<>();
 
-        Builder() {
+        private Builder() {
         }
 
-        public EnvironmentAttributeMap.Builder putAll(EnvironmentAttributeMap p_456688_) {
-            this.entries.putAll(p_456688_.entries);
+        public EnvironmentAttributeMap.Builder putAll(final EnvironmentAttributeMap map) {
+            this.entries.putAll(map.entries);
             return this;
         }
 
         public <Value, Parameter> EnvironmentAttributeMap.Builder modify(
-            EnvironmentAttribute<Value> p_460669_, AttributeModifier<Value, Parameter> p_456757_, Parameter p_451198_
+            final EnvironmentAttribute<Value> attribute, final AttributeModifier<Value, Parameter> modifier, final Parameter value
         ) {
-            p_460669_.type().checkAllowedModifier(p_456757_);
-            this.entries.put(p_460669_, new EnvironmentAttributeMap.Entry<>(p_451198_, p_456757_));
+            attribute.type().checkAllowedModifier(modifier);
+            this.entries.put(attribute, new EnvironmentAttributeMap.Entry<>(value, modifier));
             return this;
         }
 
-        public <Value> EnvironmentAttributeMap.Builder set(EnvironmentAttribute<Value> p_453213_, Value p_453666_) {
-            return this.modify(p_453213_, AttributeModifier.override(), p_453666_);
+        public <Value> EnvironmentAttributeMap.Builder set(final EnvironmentAttribute<Value> attribute, final Value value) {
+            return this.modify(attribute, AttributeModifier.override(), value);
         }
 
         public EnvironmentAttributeMap build() {
@@ -103,36 +106,34 @@ public final class EnvironmentAttributeMap {
     }
 
     public record Entry<Value, Argument>(Argument argument, AttributeModifier<Value, Argument> modifier) {
-        private static <Value> Codec<EnvironmentAttributeMap.Entry<Value, ?>> createCodec(EnvironmentAttribute<Value> p_453007_) {
-            Codec<EnvironmentAttributeMap.Entry<Value, ?>> codec = p_453007_.type()
+        private static <Value> Codec<EnvironmentAttributeMap.Entry<Value, ?>> createCodec(final EnvironmentAttribute<Value> attribute) {
+            Codec<EnvironmentAttributeMap.Entry<Value, ?>> fullCodec = attribute.type()
                 .modifierCodec()
                 .dispatch(
                     "modifier",
                     EnvironmentAttributeMap.Entry::modifier,
-                    Util.memoize(p_452795_ -> createFullCodec(p_453007_, (AttributeModifier<Value, ?>)p_452795_))
+                    Util.memoize(modifier -> createFullCodec(attribute, (AttributeModifier<Value, ?>)modifier))
                 );
-            return Codec.either(p_453007_.valueCodec(), codec)
+            return Codec.either(attribute.valueCodec(), fullCodec)
                 .xmap(
-                    p_456378_ -> p_456378_.map(
-                        p_460354_ -> new EnvironmentAttributeMap.Entry<>(p_460354_, AttributeModifier.override()), p_460971_ -> p_460971_
-                    ),
-                    p_456225_ -> p_456225_.modifier == AttributeModifier.override()
-                        ? Either.left((Value)p_456225_.argument())
-                        : Either.right((EnvironmentAttributeMap.Entry<Value, ?>)p_456225_)
+                    either -> either.map(value -> new EnvironmentAttributeMap.Entry<>(value, AttributeModifier.override()), e -> e),
+                    entry -> entry.modifier == AttributeModifier.override()
+                        ? Either.left((Value)entry.argument())
+                        : Either.right((EnvironmentAttributeMap.Entry<Value, ?>)entry)
                 );
         }
 
         private static <Value, Argument> MapCodec<EnvironmentAttributeMap.Entry<Value, Argument>> createFullCodec(
-            EnvironmentAttribute<Value> p_454522_, AttributeModifier<Value, Argument> p_454983_
+            final EnvironmentAttribute<Value> attribute, final AttributeModifier<Value, Argument> modifier
         ) {
             return RecordCodecBuilder.mapCodec(
-                p_450346_ -> p_450346_.group(p_454983_.argumentCodec(p_454522_).fieldOf("argument").forGetter(EnvironmentAttributeMap.Entry::argument))
-                    .apply(p_450346_, p_452710_ -> new EnvironmentAttributeMap.Entry<>(p_452710_, p_454983_))
+                i -> i.group(modifier.argumentCodec(attribute).fieldOf("argument").forGetter(EnvironmentAttributeMap.Entry::argument))
+                    .apply(i, value -> new EnvironmentAttributeMap.Entry<>(value, modifier))
             );
         }
 
-        public Value applyModifier(Value p_453869_) {
-            return this.modifier.apply(p_453869_, this.argument);
+        public Value applyModifier(final Value subject) {
+            return this.modifier.apply(subject, this.argument);
         }
     }
 }

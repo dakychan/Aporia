@@ -1,7 +1,7 @@
 package so.aporia
 import so.aporia.utils.imports.*
 import com.chaos.annotation.Obfuscate
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.server.packs.resources.ResourceManager
 import net.minecraft.server.packs.resources.ResourceManagerReloadListener
 import so.aporia.module.impl.render.Beautifully
@@ -14,7 +14,8 @@ import so.aporia.utils.user.render.ui.clickgui.QuestManager
 import so.aporia.utils.user.render.font.FontRenderer
 import so.aporia.utils.user.render.font.Fonts
 import so.aporia.utils.user.render.render3d.AporiaRenderer3D
-import so.aporia.utils.user.render.ui.chat.HudChatRenderer
+import so.aporia.utils.user.render.ui.chat.ChatScreenRenderer
+import net.minecraft.client.gui.components.ChatComponent
 import net.minecraft.client.Minecraft
 import com.chaos.annotation.ChaosNative
 @Obfuscate
@@ -45,6 +46,7 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         FriendManager.init()
         QuestManager.init()
         initializeDiscordRPC()
+        r.fontFlush = Runnable { fonts.flushPipeline() }
         loadFontMode()
         logger.success("Aporia initialized")
     }
@@ -82,8 +84,17 @@ class Aporia private constructor() : ResourceManagerReloadListener {
 
     private var lastRenderError = 0L
     private var renderErrorCount = 0
+    private var fontsInitialized = false
 
-    fun render(gfx: GuiGraphics, partialTick: Float) {
+    fun render(gfx: GuiGraphicsExtractor, partialTick: Float) {
+        if (!fontsInitialized) {
+            fontsInitialized = true
+            r.init()
+            AporiaRenderer3D.INSTANCE.init()
+            Fonts.register(fonts)
+            fonts.initialize()
+            r.fontFlush = Runnable { fonts.flushPipeline() }
+        }
         if (configLoadDeferred && mc.getNarrator() != null) {
             configLoadDeferred = false
             ConfigFile.load()
@@ -102,10 +113,14 @@ class Aporia private constructor() : ResourceManagerReloadListener {
             bus.post(RenderHudEvent(gfx, partialTick))
             r.flush()
 
-            // Aporia Chat HUD (когда чат не в фокусе — иначе AporiaChatScreen открыт)
+            // Aporia Chat HUD (когда чат не в фокусе — иначе ChatScreenBackendApi открыт)
             val mc = Minecraft.getInstance()
-            if (!mc.gui.chat.isChatFocused()) {
-                HudChatRenderer.render(gfx, mc.font, mc.gui.chat, mc.gui.guiTicks)
+            if (!mc.gui.hud.getChat().isChatFocused()) {
+                if (Beautifully.isCustomChatEnabled()) {
+                    ChatScreenRenderer.render(gfx, mc.font, mc.gui.hud.getChat(), mc.gui.hud.getGuiTicks())
+                } else {
+                    mc.gui.hud.getChat().extractRenderState(gfx, mc.font, mc.gui.hud.getGuiTicks(), 0, 0, ChatComponent.DisplayMode.BACKGROUND, false)
+                }
             }
 
             val hud = mm.get("HUD") as? Hud
@@ -117,14 +132,14 @@ class Aporia private constructor() : ResourceManagerReloadListener {
             renderErrorCount = 0
         } catch (e: OutOfMemoryError) {
             renderErrorCount++
-            System.err.println("[Aporia] OOM in render #$renderErrorCount")
+            so.aporia.utils.user.logger.Logger.error("OOM in render #$renderErrorCount")
             if (renderErrorCount > 5) throw e
             System.gc()
         } catch (e: Exception) {
             val now = System.currentTimeMillis()
             if (now - lastRenderError > 5000) {
                 lastRenderError = now
-                System.err.println("[Aporia] Render error: ${e.javaClass.name}: ${e.message}")
+                so.aporia.utils.user.logger.Logger.error("Render error: ${e.javaClass.name}: ${e.message}")
             }
         }
     }
@@ -134,8 +149,10 @@ class Aporia private constructor() : ResourceManagerReloadListener {
         AporiaRenderer3D.INSTANCE.init()
         Fonts.register(fonts)
         fonts.initialize()
+        r.fontFlush = Runnable { fonts.flushPipeline() }
         updateFontFamilyOptions()
         loadFontMode()
+        fontsInitialized = true
     }
 
     companion object {

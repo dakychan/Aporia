@@ -7,60 +7,60 @@ public class LeveledPriorityQueue {
     private final LongLinkedOpenHashSet[] queues;
     private int firstQueuedLevel;
 
-    public LeveledPriorityQueue(int p_278289_, final int p_278259_) {
-        this.levelCount = p_278289_;
-        this.queues = new LongLinkedOpenHashSet[p_278289_];
+    public LeveledPriorityQueue(final int levelCount, final int minSize) {
+        this.levelCount = levelCount;
+        this.queues = new LongLinkedOpenHashSet[levelCount];
 
-        for (int i = 0; i < p_278289_; i++) {
-            this.queues[i] = new LongLinkedOpenHashSet(p_278259_, 0.5F) {
+        for (int i = 0; i < levelCount; i++) {
+            this.queues[i] = new LongLinkedOpenHashSet(minSize, 0.5F) {
                 @Override
-                protected void rehash(int p_278313_) {
-                    if (p_278313_ > p_278259_) {
-                        super.rehash(p_278313_);
+                protected void rehash(final int newN) {
+                    if (newN > minSize) {
+                        super.rehash(newN);
                     }
                 }
             };
         }
 
-        this.firstQueuedLevel = p_278289_;
+        this.firstQueuedLevel = levelCount;
     }
 
     public long removeFirstLong() {
-        LongLinkedOpenHashSet longlinkedopenhashset = this.queues[this.firstQueuedLevel];
-        long i = longlinkedopenhashset.removeFirstLong();
-        if (longlinkedopenhashset.isEmpty()) {
+        LongLinkedOpenHashSet queue = this.queues[this.firstQueuedLevel];
+        long result = queue.removeFirstLong();
+        if (queue.isEmpty()) {
             this.checkFirstQueuedLevel(this.levelCount);
         }
 
-        return i;
+        return result;
     }
 
     public boolean isEmpty() {
         return this.firstQueuedLevel >= this.levelCount;
     }
 
-    public void dequeue(long p_278232_, int p_278338_, int p_278345_) {
-        LongLinkedOpenHashSet longlinkedopenhashset = this.queues[p_278338_];
-        longlinkedopenhashset.remove(p_278232_);
-        if (longlinkedopenhashset.isEmpty() && this.firstQueuedLevel == p_278338_) {
-            this.checkFirstQueuedLevel(p_278345_);
+    public void dequeue(final long node, final int key, final int upperBound) {
+        LongLinkedOpenHashSet queue = this.queues[key];
+        queue.remove(node);
+        if (queue.isEmpty() && this.firstQueuedLevel == key) {
+            this.checkFirstQueuedLevel(upperBound);
         }
     }
 
-    public void enqueue(long p_278311_, int p_278335_) {
-        this.queues[p_278335_].add(p_278311_);
-        if (this.firstQueuedLevel > p_278335_) {
-            this.firstQueuedLevel = p_278335_;
+    public void enqueue(final long node, final int key) {
+        this.queues[key].add(node);
+        if (this.firstQueuedLevel > key) {
+            this.firstQueuedLevel = key;
         }
     }
 
-    private void checkFirstQueuedLevel(int p_278303_) {
-        int i = this.firstQueuedLevel;
-        this.firstQueuedLevel = p_278303_;
+    private void checkFirstQueuedLevel(final int upperBound) {
+        int oldLevel = this.firstQueuedLevel;
+        this.firstQueuedLevel = upperBound;
 
-        for (int j = i + 1; j < p_278303_; j++) {
-            if (!this.queues[j].isEmpty()) {
-                this.firstQueuedLevel = j;
+        for (int i = oldLevel + 1; i < upperBound; i++) {
+            if (!this.queues[i].isEmpty()) {
+                this.firstQueuedLevel = i;
                 break;
             }
         }

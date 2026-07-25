@@ -3,7 +3,6 @@ package net.minecraft.world.entity.ai.attributes;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.function.IntFunction;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -14,12 +13,12 @@ import net.minecraft.util.StringRepresentable;
 
 public record AttributeModifier(Identifier id, double amount, AttributeModifier.Operation operation) {
     public static final MapCodec<AttributeModifier> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_449443_ -> p_449443_.group(
+        i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(AttributeModifier::id),
                 Codec.DOUBLE.fieldOf("amount").forGetter(AttributeModifier::amount),
                 AttributeModifier.Operation.CODEC.fieldOf("operation").forGetter(AttributeModifier::operation)
             )
-            .apply(p_449443_, AttributeModifier::new)
+            .apply(i, AttributeModifier::new)
     );
     public static final Codec<AttributeModifier> CODEC = MAP_CODEC.codec();
     public static final StreamCodec<ByteBuf, AttributeModifier> STREAM_CODEC = StreamCodec.composite(
@@ -32,11 +31,11 @@ public record AttributeModifier(Identifier id, double amount, AttributeModifier.
         AttributeModifier::new
     );
 
-    public boolean is(Identifier p_450918_) {
-        return p_450918_.equals(this.id);
+    public boolean is(final Identifier id) {
+        return id.equals(this.id);
     }
 
-    public static enum Operation implements StringRepresentable {
+    public enum Operation implements StringRepresentable {
         ADD_VALUE("add_value", 0),
         ADD_MULTIPLIED_BASE("add_multiplied_base", 1),
         ADD_MULTIPLIED_TOTAL("add_multiplied_total", 2);
@@ -44,16 +43,14 @@ public record AttributeModifier(Identifier id, double amount, AttributeModifier.
         public static final IntFunction<AttributeModifier.Operation> BY_ID = ByIdMap.continuous(
             AttributeModifier.Operation::id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
         );
-        public static final StreamCodec<ByteBuf, AttributeModifier.Operation> STREAM_CODEC = ByteBufCodecs.idMapper(
-            BY_ID, AttributeModifier.Operation::id
-        );
+        public static final StreamCodec<ByteBuf, AttributeModifier.Operation> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, AttributeModifier.Operation::id);
         public static final Codec<AttributeModifier.Operation> CODEC = StringRepresentable.fromEnum(AttributeModifier.Operation::values);
         private final String name;
         private final int id;
 
-        private Operation(final String p_299661_, final int p_22234_) {
-            this.name = p_299661_;
-            this.id = p_22234_;
+        Operation(final String name, final int id) {
+            this.name = name;
+            this.id = id;
         }
 
         public int id() {

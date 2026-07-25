@@ -4,23 +4,22 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 
 public interface Permission {
-    Codec<Permission> FULL_CODEC = BuiltInRegistries.PERMISSION_TYPE.byNameCodec().dispatch(Permission::codec, p_450483_ -> p_450483_);
+    Codec<Permission> FULL_CODEC = BuiltInRegistries.PERMISSION_TYPE.byNameCodec().dispatch(Permission::codec, c -> c);
     Codec<Permission> CODEC = Codec.either(FULL_CODEC, Identifier.CODEC)
         .xmap(
-            p_460185_ -> p_460185_.map(p_456763_ -> (Permission)p_456763_, Permission.Atom::create),
-            p_451793_ -> p_451793_ instanceof Permission.Atom permission$atom ? Either.right(permission$atom.id()) : Either.left(p_451793_)
+            e -> e.map(permission -> (Permission)permission, Permission.Atom::create),
+            permission -> permission instanceof Permission.Atom atom ? Either.right(atom.id()) : Either.left(permission)
         );
 
     MapCodec<? extends Permission> codec();
 
-    public record Atom(Identifier id) implements Permission {
+    record Atom(Identifier id) implements Permission {
         public static final MapCodec<Permission.Atom> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_454569_ -> p_454569_.group(Identifier.CODEC.fieldOf("id").forGetter(Permission.Atom::id)).apply(p_454569_, Permission.Atom::new)
+            i -> i.group(Identifier.CODEC.fieldOf("id").forGetter(Permission.Atom::id)).apply(i, Permission.Atom::new)
         );
 
         @Override
@@ -28,19 +27,18 @@ public interface Permission {
             return MAP_CODEC;
         }
 
-        public static Permission.Atom create(String p_460355_) {
-            return create(Identifier.withDefaultNamespace(p_460355_));
+        public static Permission.Atom create(final String name) {
+            return create(Identifier.withDefaultNamespace(name));
         }
 
-        public static Permission.Atom create(Identifier p_452066_) {
-            return new Permission.Atom(p_452066_);
+        public static Permission.Atom create(final Identifier id) {
+            return new Permission.Atom(id);
         }
     }
 
-    public record HasCommandLevel(PermissionLevel level) implements Permission {
+    record HasCommandLevel(PermissionLevel level) implements Permission {
         public static final MapCodec<Permission.HasCommandLevel> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_456445_ -> p_456445_.group(PermissionLevel.CODEC.fieldOf("level").forGetter(Permission.HasCommandLevel::level))
-                .apply(p_456445_, Permission.HasCommandLevel::new)
+            i -> i.group(PermissionLevel.CODEC.fieldOf("level").forGetter(Permission.HasCommandLevel::level)).apply(i, Permission.HasCommandLevel::new)
         );
 
         @Override

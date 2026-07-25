@@ -7,57 +7,57 @@ import java.util.stream.Stream;
 import net.minecraft.core.HolderLookup;
 
 public interface ValueInput {
-    <T> Optional<T> read(String p_409470_, Codec<T> p_406709_);
+    <T> Optional<T> read(String name, Codec<T> codec);
 
     @Deprecated
-    <T> Optional<T> read(MapCodec<T> p_408358_);
+    <T> Optional<T> read(MapCodec<T> codec);
 
-    Optional<ValueInput> child(String p_408431_);
+    Optional<ValueInput> child(String name);
 
-    ValueInput childOrEmpty(String p_408553_);
+    ValueInput childOrEmpty(String name);
 
-    Optional<ValueInput.ValueInputList> childrenList(String p_408321_);
+    Optional<ValueInput.ValueInputList> childrenList(String name);
 
-    ValueInput.ValueInputList childrenListOrEmpty(String p_406881_);
+    ValueInput.ValueInputList childrenListOrEmpty(String name);
 
-    <T> Optional<ValueInput.TypedInputList<T>> list(String p_406297_, Codec<T> p_406564_);
+    <T> Optional<ValueInput.TypedInputList<T>> list(String name, Codec<T> codec);
 
-    <T> ValueInput.TypedInputList<T> listOrEmpty(String p_407257_, Codec<T> p_408194_);
+    <T> ValueInput.TypedInputList<T> listOrEmpty(String name, Codec<T> codec);
 
-    boolean getBooleanOr(String p_409092_, boolean p_407041_);
+    boolean getBooleanOr(String name, boolean defaultValue);
 
-    byte getByteOr(String p_408791_, byte p_406064_);
+    byte getByteOr(String name, byte defaultValue);
 
-    int getShortOr(String p_409869_, short p_410430_);
+    int getShortOr(String name, short defaultValue);
 
-    Optional<Integer> getInt(String p_407742_);
+    Optional<Integer> getInt(String name);
 
-    int getIntOr(String p_406082_, int p_407517_);
+    int getIntOr(String name, int defaultValue);
 
-    long getLongOr(String p_408395_, long p_408466_);
+    long getLongOr(String name, long defaultValue);
 
-    Optional<Long> getLong(String p_409338_);
+    Optional<Long> getLong(String name);
 
-    float getFloatOr(String p_410467_, float p_408769_);
+    float getFloatOr(String name, float defaultValue);
 
-    double getDoubleOr(String p_409117_, double p_406402_);
+    double getDoubleOr(String name, double defaultValue);
 
-    Optional<String> getString(String p_409768_);
+    Optional<String> getString(String name);
 
-    String getStringOr(String p_406799_, String p_409397_);
+    String getStringOr(String name, String defaultValue);
 
-    Optional<int[]> getIntArray(String p_408524_);
+    Optional<int[]> getIntArray(String name);
 
     @Deprecated
     HolderLookup.Provider lookup();
 
-    public interface TypedInputList<T> extends Iterable<T> {
+    interface TypedInputList<T> extends Iterable<T> {
         boolean isEmpty();
 
         Stream<T> stream();
     }
 
-    public interface ValueInputList extends Iterable<ValueInput> {
+    interface ValueInputList extends Iterable<ValueInput> {
         boolean isEmpty();
 
         Stream<ValueInput> stream();

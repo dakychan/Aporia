@@ -3,7 +3,6 @@ package net.minecraft.world.item.consume_effects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -15,11 +14,11 @@ import net.minecraft.world.level.Level;
 
 public record ApplyStatusEffectsConsumeEffect(List<MobEffectInstance> effects, float probability) implements ConsumeEffect {
     public static final MapCodec<ApplyStatusEffectsConsumeEffect> CODEC = RecordCodecBuilder.mapCodec(
-        p_365227_ -> p_365227_.group(
+        i -> i.group(
                 MobEffectInstance.CODEC.listOf().fieldOf("effects").forGetter(ApplyStatusEffectsConsumeEffect::effects),
                 Codec.floatRange(0.0F, 1.0F).optionalFieldOf("probability", 1.0F).forGetter(ApplyStatusEffectsConsumeEffect::probability)
             )
-            .apply(p_365227_, ApplyStatusEffectsConsumeEffect::new)
+            .apply(i, ApplyStatusEffectsConsumeEffect::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, ApplyStatusEffectsConsumeEffect> STREAM_CODEC = StreamCodec.composite(
         MobEffectInstance.STREAM_CODEC.apply(ByteBufCodecs.list()),
@@ -29,16 +28,16 @@ public record ApplyStatusEffectsConsumeEffect(List<MobEffectInstance> effects, f
         ApplyStatusEffectsConsumeEffect::new
     );
 
-    public ApplyStatusEffectsConsumeEffect(MobEffectInstance p_367512_, float p_363703_) {
-        this(List.of(p_367512_), p_363703_);
+    public ApplyStatusEffectsConsumeEffect(final MobEffectInstance effect, final float probability) {
+        this(List.of(effect), probability);
     }
 
-    public ApplyStatusEffectsConsumeEffect(List<MobEffectInstance> p_369033_) {
-        this(p_369033_, 1.0F);
+    public ApplyStatusEffectsConsumeEffect(final List<MobEffectInstance> effects) {
+        this(effects, 1.0F);
     }
 
-    public ApplyStatusEffectsConsumeEffect(MobEffectInstance p_365277_) {
-        this(p_365277_, 1.0F);
+    public ApplyStatusEffectsConsumeEffect(final MobEffectInstance effect) {
+        this(effect, 1.0F);
     }
 
     @Override
@@ -47,19 +46,19 @@ public record ApplyStatusEffectsConsumeEffect(List<MobEffectInstance> effects, f
     }
 
     @Override
-    public boolean apply(Level p_367772_, ItemStack p_364419_, LivingEntity p_360713_) {
-        if (p_360713_.getRandom().nextFloat() >= this.probability) {
+    public boolean apply(final Level level, final ItemStack stack, final LivingEntity user) {
+        if (user.getRandom().nextFloat() >= this.probability) {
             return false;
-        } else {
-            boolean flag = false;
-
-            for (MobEffectInstance mobeffectinstance : this.effects) {
-                if (p_360713_.addEffect(new MobEffectInstance(mobeffectinstance))) {
-                    flag = true;
-                }
-            }
-
-            return flag;
         }
+
+        boolean anyApplied = false;
+
+        for (MobEffectInstance effect : this.effects) {
+            if (user.addEffect(new MobEffectInstance(effect))) {
+                anyApplied = true;
+            }
+        }
+
+        return anyApplied;
     }
 }

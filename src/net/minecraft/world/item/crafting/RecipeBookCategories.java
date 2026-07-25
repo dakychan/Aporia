@@ -18,11 +18,11 @@ public class RecipeBookCategories {
     public static final RecipeBookCategory SMITHING = register("smithing");
     public static final RecipeBookCategory CAMPFIRE = register("campfire");
 
-    private static RecipeBookCategory register(String p_369990_) {
-        return Registry.register(BuiltInRegistries.RECIPE_BOOK_CATEGORY, p_369990_, new RecipeBookCategory());
+    private static RecipeBookCategory register(final String id) {
+        return Registry.register(BuiltInRegistries.RECIPE_BOOK_CATEGORY, id, new RecipeBookCategory());
     }
 
-    public static RecipeBookCategory bootstrap(Registry<RecipeBookCategory> p_369152_) {
+    public static RecipeBookCategory bootstrap(final Registry<RecipeBookCategory> registry) {
         return CAMPFIRE;
     }
 }

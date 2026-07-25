@@ -22,75 +22,77 @@ public abstract class VehicleEntity extends Entity {
     protected static final EntityDataAccessor<Integer> DATA_ID_HURTDIR = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.INT);
     protected static final EntityDataAccessor<Float> DATA_ID_DAMAGE = SynchedEntityData.defineId(VehicleEntity.class, EntityDataSerializers.FLOAT);
 
-    public VehicleEntity(EntityType<?> p_310168_, Level p_309578_) {
-        super(p_310168_, p_309578_);
+    public VehicleEntity(final EntityType<?> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    public boolean hurtClient(DamageSource p_364732_) {
+    public boolean hurtClient(final DamageSource source) {
         return true;
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_369362_, DamageSource p_369351_, float p_361075_) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         if (this.isRemoved()) {
             return true;
-        } else if (this.isInvulnerableToBase(p_369351_)) {
-            return false;
-        } else {
-            this.setHurtDir(-this.getHurtDir());
-            this.setHurtTime(10);
-            this.markHurt();
-            this.setDamage(this.getDamage() + p_361075_ * 10.0F);
-            this.gameEvent(GameEvent.ENTITY_DAMAGE, p_369351_.getEntity());
-            boolean flag = p_369351_.getEntity() instanceof Player player && player.getAbilities().instabuild;
-            if ((flag || !(this.getDamage() > 40.0F)) && !this.shouldSourceDestroy(p_369351_)) {
-                if (flag) {
-                    this.discard();
-                }
-            } else {
-                this.destroy(p_369362_, p_369351_);
-            }
-
-            return true;
         }
+
+        if (this.isInvulnerableToBase(source)) {
+            return false;
+        }
+
+        this.setHurtDir(-this.getHurtDir());
+        this.setHurtTime(10);
+        this.markHurt();
+        this.setDamage(this.getDamage() + damage * 10.0F);
+        this.gameEvent(GameEvent.ENTITY_DAMAGE, source.getEntity());
+        boolean creativePlayer = source.getEntity() instanceof Player player && player.getAbilities().instabuild;
+        if ((creativePlayer || !(this.getDamage() > 40.0F)) && !this.shouldSourceDestroy(source)) {
+            if (creativePlayer) {
+                this.discard();
+            }
+        } else {
+            this.destroy(level, source);
+        }
+
+        return true;
     }
 
-    protected boolean shouldSourceDestroy(DamageSource p_309621_) {
+    protected boolean shouldSourceDestroy(final DamageSource source) {
         return false;
     }
 
     @Override
-    public boolean ignoreExplosion(Explosion p_366232_) {
-        return p_366232_.getIndirectSourceEntity() instanceof Mob && !p_366232_.level().getGameRules().get(GameRules.MOB_GRIEFING);
+    public boolean ignoreExplosion(final Explosion explosion) {
+        return explosion.getIndirectSourceEntity() instanceof Mob && !explosion.level().getGameRules().get(GameRules.MOB_GRIEFING);
     }
 
-    public void destroy(ServerLevel p_367176_, Item p_313028_) {
-        this.kill(p_367176_);
-        if (p_367176_.getGameRules().get(GameRules.ENTITY_DROPS)) {
-            ItemStack itemstack = new ItemStack(p_313028_);
-            itemstack.set(DataComponents.CUSTOM_NAME, this.getCustomName());
-            this.spawnAtLocation(p_367176_, itemstack);
+    public void destroy(final ServerLevel level, final Item dropItem) {
+        this.kill(level);
+        if (level.getGameRules().get(GameRules.ENTITY_DROPS)) {
+            ItemStack itemStack = new ItemStack(dropItem);
+            itemStack.set(DataComponents.CUSTOM_NAME, this.getCustomName());
+            this.spawnAtLocation(level, itemStack);
         }
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_332479_) {
-        p_332479_.define(DATA_ID_HURT, 0);
-        p_332479_.define(DATA_ID_HURTDIR, 1);
-        p_332479_.define(DATA_ID_DAMAGE, 0.0F);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(DATA_ID_HURT, 0);
+        entityData.define(DATA_ID_HURTDIR, 1);
+        entityData.define(DATA_ID_DAMAGE, 0.0F);
     }
 
-    public void setHurtTime(int p_312621_) {
-        this.entityData.set(DATA_ID_HURT, p_312621_);
+    public void setHurtTime(final int hurtTime) {
+        this.entityData.set(DATA_ID_HURT, hurtTime);
     }
 
-    public void setHurtDir(int p_312074_) {
-        this.entityData.set(DATA_ID_HURTDIR, p_312074_);
+    public void setHurtDir(final int hurtDir) {
+        this.entityData.set(DATA_ID_HURTDIR, hurtDir);
     }
 
-    public void setDamage(float p_313007_) {
-        this.entityData.set(DATA_ID_DAMAGE, p_313007_);
+    public void setDamage(final float damage) {
+        this.entityData.set(DATA_ID_DAMAGE, damage);
     }
 
     public float getDamage() {
@@ -105,8 +107,8 @@ public abstract class VehicleEntity extends Entity {
         return this.entityData.get(DATA_ID_HURTDIR);
     }
 
-    protected void destroy(ServerLevel p_365692_, DamageSource p_312900_) {
-        this.destroy(p_365692_, this.getDropItem());
+    protected void destroy(final ServerLevel level, final DamageSource source) {
+        this.destroy(level, this.getDropItem());
     }
 
     @Override

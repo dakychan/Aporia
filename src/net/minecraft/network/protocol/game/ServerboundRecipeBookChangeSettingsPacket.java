@@ -14,22 +14,22 @@ public class ServerboundRecipeBookChangeSettingsPacket implements Packet<ServerG
     private final boolean isOpen;
     private final boolean isFiltering;
 
-    public ServerboundRecipeBookChangeSettingsPacket(RecipeBookType p_134366_, boolean p_134367_, boolean p_134368_) {
-        this.bookType = p_134366_;
-        this.isOpen = p_134367_;
-        this.isFiltering = p_134368_;
+    public ServerboundRecipeBookChangeSettingsPacket(final RecipeBookType bookType, final boolean isOpen, final boolean isFiltering) {
+        this.bookType = bookType;
+        this.isOpen = isOpen;
+        this.isFiltering = isFiltering;
     }
 
-    private ServerboundRecipeBookChangeSettingsPacket(FriendlyByteBuf p_179734_) {
-        this.bookType = p_179734_.readEnum(RecipeBookType.class);
-        this.isOpen = p_179734_.readBoolean();
-        this.isFiltering = p_179734_.readBoolean();
+    private ServerboundRecipeBookChangeSettingsPacket(final FriendlyByteBuf input) {
+        this.bookType = input.readEnum(RecipeBookType.class);
+        this.isOpen = input.readBoolean();
+        this.isFiltering = input.readBoolean();
     }
 
-    private void write(FriendlyByteBuf p_134377_) {
-        p_134377_.writeEnum(this.bookType);
-        p_134377_.writeBoolean(this.isOpen);
-        p_134377_.writeBoolean(this.isFiltering);
+    private void write(final FriendlyByteBuf output) {
+        output.writeEnum(this.bookType);
+        output.writeBoolean(this.isOpen);
+        output.writeBoolean(this.isFiltering);
     }
 
     @Override
@@ -37,8 +37,8 @@ public class ServerboundRecipeBookChangeSettingsPacket implements Packet<ServerG
         return GamePacketTypes.SERVERBOUND_RECIPE_BOOK_CHANGE_SETTINGS;
     }
 
-    public void handle(ServerGamePacketListener p_134374_) {
-        p_134374_.handleRecipeBookChangeSettingsPacket(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleRecipeBookChangeSettingsPacket(this);
     }
 
     public RecipeBookType getBookType() {

@@ -23,45 +23,47 @@ public abstract class AbstractHurtingProjectile extends Projectile {
     public static final double DEFLECTION_SCALE = 0.5;
     public double accelerationPower = 0.1;
 
-    protected AbstractHurtingProjectile(EntityType<? extends AbstractHurtingProjectile> p_457837_, Level p_458149_) {
-        super(p_457837_, p_458149_);
+    protected AbstractHurtingProjectile(final EntityType<? extends AbstractHurtingProjectile> type, final Level level) {
+        super(type, level);
     }
 
     protected AbstractHurtingProjectile(
-        EntityType<? extends AbstractHurtingProjectile> p_458478_, double p_455096_, double p_459735_, double p_450430_, Level p_454582_
+        final EntityType<? extends AbstractHurtingProjectile> type, final double x, final double y, final double z, final Level level
     ) {
-        this(p_458478_, p_454582_);
-        this.setPos(p_455096_, p_459735_, p_450430_);
+        this(type, level);
+        this.setPos(x, y, z);
     }
 
     public AbstractHurtingProjectile(
-        EntityType<? extends AbstractHurtingProjectile> p_459206_, double p_460419_, double p_459750_, double p_459941_, Vec3 p_454350_, Level p_458608_
+        final EntityType<? extends AbstractHurtingProjectile> type, final double x, final double y, final double z, final Vec3 direction, final Level level
     ) {
-        this(p_459206_, p_458608_);
-        this.snapTo(p_460419_, p_459750_, p_459941_, this.getYRot(), this.getXRot());
+        this(type, level);
+        this.snapTo(x, y, z, this.getYRot(), this.getXRot());
         this.reapplyPosition();
-        this.assignDirectionalMovement(p_454350_, this.accelerationPower);
+        this.assignDirectionalMovement(direction, this.accelerationPower);
     }
 
-    public AbstractHurtingProjectile(EntityType<? extends AbstractHurtingProjectile> p_460963_, LivingEntity p_453679_, Vec3 p_452061_, Level p_451508_) {
-        this(p_460963_, p_453679_.getX(), p_453679_.getY(), p_453679_.getZ(), p_452061_, p_451508_);
-        this.setOwner(p_453679_);
-        this.setRot(p_453679_.getYRot(), p_453679_.getXRot());
+    public AbstractHurtingProjectile(
+        final EntityType<? extends AbstractHurtingProjectile> type, final LivingEntity mob, final Vec3 direction, final Level level
+    ) {
+        this(type, mob.getX(), mob.getY(), mob.getZ(), direction, level);
+        this.setOwner(mob);
+        this.setRot(mob.getYRot(), mob.getXRot());
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_458017_) {
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_452279_) {
-        double d0 = this.getBoundingBox().getSize() * 4.0;
-        if (Double.isNaN(d0)) {
-            d0 = 4.0;
+    public boolean shouldRenderAtSqrDistance(final double distance) {
+        double size = this.getBoundingBox().getSize() * 4.0;
+        if (Double.isNaN(size)) {
+            size = 4.0;
         }
 
-        d0 *= 64.0;
-        return p_452279_ < d0 * d0;
+        size *= 64.0;
+        return distance < size * size;
     }
 
     protected ClipContext.Block getClipType() {
@@ -70,27 +72,27 @@ public abstract class AbstractHurtingProjectile extends Projectile {
 
     @Override
     public void tick() {
-        Entity entity = this.getOwner();
+        Entity owner = this.getOwner();
         this.applyInertia();
-        if (this.level().isClientSide() || (entity == null || !entity.isRemoved()) && this.level().hasChunkAt(this.blockPosition())) {
-            HitResult hitresult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity, this.getClipType());
-            Vec3 vec3;
-            if (hitresult.getType() != HitResult.Type.MISS) {
-                vec3 = hitresult.getLocation();
+        if (this.level().isClientSide() || (owner == null || !owner.isRemoved()) && this.level().hasChunkAt(this.blockPosition())) {
+            HitResult hitResult = ProjectileUtil.getHitResultOnMoveVector(this, this::canHitEntity, this.getClipType());
+            Vec3 newPosition;
+            if (hitResult.getType() != HitResult.Type.MISS) {
+                newPosition = hitResult.getLocation();
             } else {
-                vec3 = this.position().add(this.getDeltaMovement());
+                newPosition = this.position().add(this.getDeltaMovement());
             }
 
             ProjectileUtil.rotateTowardsMovement(this, 0.2F);
-            this.setPos(vec3);
+            this.setPos(newPosition);
             this.applyEffectsFromBlocks();
             super.tick();
             if (this.shouldBurn()) {
                 this.igniteForSeconds(1.0F);
             }
 
-            if (hitresult.getType() != HitResult.Type.MISS && this.isAlive()) {
-                this.hitTargetOrDeflectSelf(hitresult);
+            if (hitResult.getType() != HitResult.Type.MISS && this.isAlive()) {
+                this.hitTargetOrDeflectSelf(hitResult);
             }
 
             this.createParticleTrail();
@@ -100,48 +102,48 @@ public abstract class AbstractHurtingProjectile extends Projectile {
     }
 
     private void applyInertia() {
-        Vec3 vec3 = this.getDeltaMovement();
-        Vec3 vec31 = this.position();
-        float f;
+        Vec3 movement = this.getDeltaMovement();
+        Vec3 position = this.position();
+        float inertia;
         if (this.isInWater()) {
             for (int i = 0; i < 4; i++) {
-                float f1 = 0.25F;
+                float s = 0.25F;
                 this.level()
                     .addParticle(
                         ParticleTypes.BUBBLE,
-                        vec31.x - vec3.x * 0.25,
-                        vec31.y - vec3.y * 0.25,
-                        vec31.z - vec3.z * 0.25,
-                        vec3.x,
-                        vec3.y,
-                        vec3.z
+                        position.x - movement.x * 0.25,
+                        position.y - movement.y * 0.25,
+                        position.z - movement.z * 0.25,
+                        movement.x,
+                        movement.y,
+                        movement.z
                     );
             }
 
-            f = this.getLiquidInertia();
+            inertia = this.getLiquidInertia();
         } else {
-            f = this.getInertia();
+            inertia = this.getInertia();
         }
 
-        this.setDeltaMovement(vec3.add(vec3.normalize().scale(this.accelerationPower)).scale(f));
+        this.setDeltaMovement(movement.add(movement.normalize().scale(this.accelerationPower)).scale(inertia));
     }
 
     private void createParticleTrail() {
-        ParticleOptions particleoptions = this.getTrailParticle();
-        Vec3 vec3 = this.position();
-        if (particleoptions != null) {
-            this.level().addParticle(particleoptions, vec3.x, vec3.y + 0.5, vec3.z, 0.0, 0.0, 0.0);
+        ParticleOptions trailParticle = this.getTrailParticle();
+        Vec3 position = this.position();
+        if (trailParticle != null) {
+            this.level().addParticle(trailParticle, position.x, position.y + 0.5, position.z, 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    public boolean hurtServer(ServerLevel p_456232_, DamageSource p_460956_, float p_452095_) {
+    public boolean hurtServer(final ServerLevel level, final DamageSource source, final float damage) {
         return false;
     }
 
     @Override
-    protected boolean canHitEntity(Entity p_454572_) {
-        return super.canHitEntity(p_454572_) && !p_454572_.noPhysics;
+    protected boolean canHitEntity(final Entity entity) {
+        return super.canHitEntity(entity) && !entity.noPhysics;
     }
 
     protected boolean shouldBurn() {
@@ -161,15 +163,15 @@ public abstract class AbstractHurtingProjectile extends Projectile {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_454826_) {
-        super.addAdditionalSaveData(p_454826_);
-        p_454826_.putDouble("acceleration_power", this.accelerationPower);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putDouble("acceleration_power", this.accelerationPower);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_451525_) {
-        super.readAdditionalSaveData(p_451525_);
-        this.accelerationPower = p_451525_.getDoubleOr("acceleration_power", 0.1);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.accelerationPower = input.getDoubleOr("acceleration_power", 0.1);
     }
 
     @Override
@@ -177,15 +179,15 @@ public abstract class AbstractHurtingProjectile extends Projectile {
         return 1.0F;
     }
 
-    private void assignDirectionalMovement(Vec3 p_456838_, double p_453614_) {
-        this.setDeltaMovement(p_456838_.normalize().scale(p_453614_));
+    private void assignDirectionalMovement(final Vec3 direction, final double speed) {
+        this.setDeltaMovement(direction.normalize().scale(speed));
         this.needsSync = true;
     }
 
     @Override
-    protected void onDeflection(boolean p_456708_) {
-        super.onDeflection(p_456708_);
-        if (p_456708_) {
+    protected void onDeflection(final boolean byAttack) {
+        super.onDeflection(byAttack);
+        if (byAttack) {
             this.accelerationPower = 0.1;
         } else {
             this.accelerationPower *= 0.5;

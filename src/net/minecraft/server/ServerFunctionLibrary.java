@@ -32,96 +32,96 @@ import org.slf4j.Logger;
 
 public class ServerFunctionLibrary implements PreparableReloadListener {
     private static final Logger LOGGER = LogUtils.getLogger();
-    public static final ResourceKey<Registry<CommandFunction<CommandSourceStack>>> TYPE_KEY = ResourceKey.createRegistryKey(Identifier.withDefaultNamespace("function"));
+    public static final ResourceKey<Registry<CommandFunction<CommandSourceStack>>> TYPE_KEY = ResourceKey.createRegistryKey(
+        Identifier.withDefaultNamespace("function")
+    );
     private static final FileToIdConverter LISTER = new FileToIdConverter(Registries.elementsDirPath(TYPE_KEY), ".mcfunction");
     private volatile Map<Identifier, CommandFunction<CommandSourceStack>> functions = ImmutableMap.of();
     private final TagLoader<CommandFunction<CommandSourceStack>> tagsLoader = new TagLoader<>(
-        (p_448852_, p_448853_) -> this.getFunction(p_448852_), Registries.tagsDirPath(TYPE_KEY)
+        (id, required) -> this.getFunction(id), Registries.tagsDirPath(TYPE_KEY)
     );
     private volatile Map<Identifier, List<CommandFunction<CommandSourceStack>>> tags = Map.of();
     private final PermissionSet functionCompilationPermissions;
     private final CommandDispatcher<CommandSourceStack> dispatcher;
 
-    public Optional<CommandFunction<CommandSourceStack>> getFunction(Identifier p_453284_) {
-        return Optional.ofNullable(this.functions.get(p_453284_));
+    public Optional<CommandFunction<CommandSourceStack>> getFunction(final Identifier id) {
+        return Optional.ofNullable(this.functions.get(id));
     }
 
     public Map<Identifier, CommandFunction<CommandSourceStack>> getFunctions() {
         return this.functions;
     }
 
-    public List<CommandFunction<CommandSourceStack>> getTag(Identifier p_456469_) {
-        return this.tags.getOrDefault(p_456469_, List.of());
+    public List<CommandFunction<CommandSourceStack>> getTag(final Identifier tag) {
+        return this.tags.getOrDefault(tag, List.of());
     }
 
     public Iterable<Identifier> getAvailableTags() {
         return this.tags.keySet();
     }
 
-    public ServerFunctionLibrary(PermissionSet p_460917_, CommandDispatcher<CommandSourceStack> p_136054_) {
-        this.functionCompilationPermissions = p_460917_;
-        this.dispatcher = p_136054_;
+    public ServerFunctionLibrary(final PermissionSet functionCompilationPermissions, final CommandDispatcher<CommandSourceStack> dispatcher) {
+        this.functionCompilationPermissions = functionCompilationPermissions;
+        this.dispatcher = dispatcher;
     }
 
     @Override
     public CompletableFuture<Void> reload(
-        PreparableReloadListener.SharedState p_427662_, Executor p_136061_, PreparableReloadListener.PreparationBarrier p_136057_, Executor p_136062_
+        final PreparableReloadListener.SharedState currentReload,
+        final Executor taskExecutor,
+        final PreparableReloadListener.PreparationBarrier preparationBarrier,
+        final Executor reloadExecutor
     ) {
-        ResourceManager resourcemanager = p_427662_.resourceManager();
-        CompletableFuture<Map<Identifier, List<TagLoader.EntryWithSource>>> completablefuture = CompletableFuture.supplyAsync(
-            () -> this.tagsLoader.load(resourcemanager), p_136061_
+        ResourceManager manager = currentReload.resourceManager();
+        CompletableFuture<Map<Identifier, List<TagLoader.EntryWithSource>>> tags = CompletableFuture.supplyAsync(
+            () -> this.tagsLoader.load(manager), taskExecutor
         );
-        CompletableFuture<Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>>> completablefuture1 = CompletableFuture.<Map<Identifier, Resource>>supplyAsync(
-                () -> LISTER.listMatchingResources(resourcemanager), p_136061_
+        CompletableFuture<Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>>> functions = CompletableFuture.<Map<Identifier, Resource>>supplyAsync(
+                () -> LISTER.listMatchingResources(manager), taskExecutor
             )
-            .thenCompose(p_448848_ -> {
-                Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>> map = Maps.newHashMap();
-                CommandSourceStack commandsourcestack = Commands.createCompilationContext(this.functionCompilationPermissions);
+            .thenCompose(functionsToLoad -> {
+                Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>> result = Maps.newHashMap();
+                CommandSourceStack compilationContext = Commands.createCompilationContext(this.functionCompilationPermissions);
 
-                for (Entry<Identifier, Resource> entry : p_448848_.entrySet()) {
-                    Identifier identifier = entry.getKey();
-                    Identifier identifier1 = LISTER.fileToId(identifier);
-                    map.put(identifier1, CompletableFuture.supplyAsync(() -> {
-                        List<String> list = readLines(entry.getValue());
-                        return CommandFunction.fromLines(identifier1, this.dispatcher, commandsourcestack, list);
-                    }, p_136061_));
+                for (Entry<Identifier, Resource> entry : functionsToLoad.entrySet()) {
+                    Identifier resourceId = entry.getKey();
+                    Identifier id = LISTER.fileToId(resourceId);
+                    result.put(id, CompletableFuture.supplyAsync(() -> {
+                        List<String> lines = readLines(entry.getValue());
+                        return CommandFunction.fromLines(id, this.dispatcher, compilationContext, lines);
+                    }, taskExecutor));
                 }
 
-                CompletableFuture<?>[] completablefuture2 = map.values().toArray(new CompletableFuture[0]);
-                return CompletableFuture.allOf(completablefuture2).handle((p_179949_, p_179950_) -> map);
+                CompletableFuture<?>[] futuresToCollect = result.values().toArray(new CompletableFuture[0]);
+                return CompletableFuture.allOf(futuresToCollect).handle((ignore, throwable) -> result);
             });
-        return completablefuture.thenCombine(completablefuture1, Pair::of)
-            .thenCompose(p_136057_::wait)
+        return tags.thenCombine(functions, Pair::of)
+            .thenCompose(preparationBarrier::wait)
             .thenAcceptAsync(
-                p_179944_ -> {
-                    Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>> map = (Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>>)p_179944_.getSecond();
-                    Builder<Identifier, CommandFunction<CommandSourceStack>> builder = ImmutableMap.builder();
-                    map.forEach((p_455551_, p_179942_) -> p_179942_.handle((p_311296_, p_179955_) -> {
-                        if (p_179955_ != null) {
-                            LOGGER.error("Failed to load function {}", p_455551_, p_179955_);
+                data -> {
+                    Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>> functionFutures = (Map<Identifier, CompletableFuture<CommandFunction<CommandSourceStack>>>)data.getSecond();
+                    Builder<Identifier, CommandFunction<CommandSourceStack>> newFunctions = ImmutableMap.builder();
+                    functionFutures.forEach((id, functionFuture) -> functionFuture.handle((function, throwable) -> {
+                        if (throwable != null) {
+                            LOGGER.error("Failed to load function {}", id, throwable);
                         } else {
-                            builder.put(p_455551_, p_311296_);
+                            newFunctions.put(id, function);
                         }
 
                         return null;
                     }).join());
-                    this.functions = builder.build();
-                    this.tags = this.tagsLoader.build((Map<Identifier, List<TagLoader.EntryWithSource>>)p_179944_.getFirst());
+                    this.functions = newFunctions.build();
+                    this.tags = this.tagsLoader.build((Map<Identifier, List<TagLoader.EntryWithSource>>)data.getFirst());
                 },
-                p_136062_
+                reloadExecutor
             );
     }
 
-    private static List<String> readLines(Resource p_214317_) {
-        try {
-            List list;
-            try (BufferedReader bufferedreader = p_214317_.openAsReader()) {
-                list = bufferedreader.lines().toList();
-            }
-
-            return list;
-        } catch (IOException ioexception) {
-            throw new CompletionException(ioexception);
+    private static List<String> readLines(final Resource resource) {
+        try (BufferedReader reader = resource.openAsReader()) {
+            return reader.lines().toList();
+        } catch (IOException ex) {
+            throw new CompletionException(ex);
         }
     }
 }

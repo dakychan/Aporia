@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -21,13 +20,13 @@ import org.jspecify.annotations.Nullable;
 public class CoralBlock extends Block {
     public static final MapCodec<Block> DEAD_CORAL_FIELD = BuiltInRegistries.BLOCK.byNameCodec().fieldOf("dead");
     public static final MapCodec<CoralBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422102_ -> p_422102_.group(DEAD_CORAL_FIELD.forGetter(p_311734_ -> p_311734_.deadBlock), propertiesCodec()).apply(p_422102_, CoralBlock::new)
+        i -> i.group(DEAD_CORAL_FIELD.forGetter(b -> b.deadBlock), propertiesCodec()).apply(i, CoralBlock::new)
     );
     private final Block deadBlock;
 
-    public CoralBlock(Block p_52130_, BlockBehaviour.Properties p_52131_) {
-        super(p_52131_);
-        this.deadBlock = p_52130_;
+    public CoralBlock(final Block deadBlock, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.deadBlock = deadBlock;
     }
 
     @Override
@@ -36,34 +35,34 @@ public class CoralBlock extends Block {
     }
 
     @Override
-    protected void tick(BlockState p_221020_, ServerLevel p_221021_, BlockPos p_221022_, RandomSource p_221023_) {
-        if (!this.scanForWater(p_221021_, p_221022_)) {
-            p_221021_.setBlock(p_221022_, this.deadBlock.defaultBlockState(), 2);
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!this.scanForWater(level, pos)) {
+            level.setBlock(pos, this.deadBlock.defaultBlockState(), 2);
         }
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_52143_,
-        LevelReader p_368798_,
-        ScheduledTickAccess p_364000_,
-        BlockPos p_52147_,
-        Direction p_52144_,
-        BlockPos p_52148_,
-        BlockState p_52145_,
-        RandomSource p_367221_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!this.scanForWater(p_368798_, p_52147_)) {
-            p_364000_.scheduleTick(p_52147_, this, 60 + p_367221_.nextInt(40));
+        if (!this.scanForWater(level, pos)) {
+            ticks.scheduleTick(pos, this, 60 + random.nextInt(40));
         }
 
-        return super.updateShape(p_52143_, p_368798_, p_364000_, p_52147_, p_52144_, p_52148_, p_52145_, p_367221_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
-    protected boolean scanForWater(BlockGetter p_52135_, BlockPos p_52136_) {
+    protected boolean scanForWater(final BlockGetter level, final BlockPos blockPos) {
         for (Direction direction : Direction.values()) {
-            FluidState fluidstate = p_52135_.getFluidState(p_52136_.relative(direction));
-            if (fluidstate.is(FluidTags.WATER)) {
+            FluidState fluidState = level.getFluidState(blockPos.relative(direction));
+            if (fluidState.is(FluidTags.WATER)) {
                 return true;
             }
         }
@@ -72,9 +71,9 @@ public class CoralBlock extends Block {
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_52133_) {
-        if (!this.scanForWater(p_52133_.getLevel(), p_52133_.getClickedPos())) {
-            p_52133_.getLevel().scheduleTick(p_52133_.getClickedPos(), this, 60 + p_52133_.getLevel().getRandom().nextInt(40));
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        if (!this.scanForWater(context.getLevel(), context.getClickedPos())) {
+            context.getLevel().scheduleTick(context.getClickedPos(), this, 60 + context.getLevel().getRandom().nextInt(40));
         }
 
         return this.defaultBlockState();

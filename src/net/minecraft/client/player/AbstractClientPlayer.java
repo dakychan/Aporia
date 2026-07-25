@@ -7,9 +7,6 @@ import net.minecraft.client.entity.ClientAvatarState;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.network.chat.CommonComponents;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.chat.numbers.StyledFormat;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.animal.parrot.Parrot;
@@ -17,29 +14,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
-import net.minecraft.world.scores.DisplaySlot;
-import net.minecraft.world.scores.Objective;
-import net.minecraft.world.scores.ReadOnlyScoreInfo;
-import net.minecraft.world.scores.Scoreboard;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractClientPlayer extends Player implements ClientAvatarEntity {
     private @Nullable PlayerInfo playerInfo;
     private final boolean showExtraEars;
     private final ClientAvatarState clientAvatarState = new ClientAvatarState();
 
-    public AbstractClientPlayer(ClientLevel p_250460_, GameProfile p_249912_) {
-        super(p_250460_, p_249912_);
+    public AbstractClientPlayer(final ClientLevel level, final GameProfile gameProfile) {
+        super(level, gameProfile);
         this.showExtraEars = "deadmau5".equals(this.getGameProfile().name());
     }
 
     @Override
     public @Nullable GameType gameMode() {
-        PlayerInfo playerinfo = this.getPlayerInfo();
-        return playerinfo != null ? playerinfo.getGameMode() : null;
+        PlayerInfo info = this.getPlayerInfo();
+        return info != null ? info.getGameMode() : null;
     }
 
     protected @Nullable PlayerInfo getPlayerInfo() {
@@ -56,8 +46,8 @@ public abstract class AbstractClientPlayer extends Player implements ClientAvata
         super.tick();
     }
 
-    protected void addWalkedDistance(float p_423097_) {
-        this.clientAvatarState.addWalkDistance(p_423097_);
+    protected void addWalkedDistance(final float distance) {
+        this.clientAvatarState.addWalkDistance(distance);
     }
 
     @Override
@@ -66,27 +56,14 @@ public abstract class AbstractClientPlayer extends Player implements ClientAvata
     }
 
     @Override
-    public @Nullable Component belowNameDisplay() {
-        Scoreboard scoreboard = this.level().getScoreboard();
-        Objective objective = scoreboard.getDisplayObjective(DisplaySlot.BELOW_NAME);
-        if (objective != null) {
-            ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(this, objective);
-            Component component = ReadOnlyScoreInfo.safeFormatValue(readonlyscoreinfo, objective.numberFormatOrDefault(StyledFormat.NO_STYLE));
-            return Component.empty().append(component).append(CommonComponents.SPACE).append(objective.getDisplayName());
-        } else {
-            return null;
-        }
-    }
-
-    @Override
     public PlayerSkin getSkin() {
-        PlayerInfo playerinfo = this.getPlayerInfo();
-        return playerinfo == null ? DefaultPlayerSkin.get(this.getUUID()) : playerinfo.getSkin();
+        PlayerInfo info = this.getPlayerInfo();
+        return info == null ? DefaultPlayerSkin.get(this.getUUID()) : info.getSkin();
     }
 
     @Override
-    public Parrot.@Nullable Variant getParrotVariantOnShoulder(boolean p_422582_) {
-        return (p_422582_ ? this.getShoulderParrotLeft() : this.getShoulderParrotRight()).orElse(null);
+    public Parrot.@Nullable Variant getParrotVariantOnShoulder(final boolean left) {
+        return (left ? this.getShoulderParrotLeft() : this.getShoulderParrotRight()).orElse(null);
     }
 
     @Override
@@ -102,38 +79,38 @@ public abstract class AbstractClientPlayer extends Player implements ClientAvata
     }
 
     protected void updateBob() {
-        float f;
+        float tBob;
         if (this.onGround() && !this.isDeadOrDying() && !this.isSwimming()) {
-            f = Math.min(0.1F, (float)this.getDeltaMovement().horizontalDistance());
+            tBob = Math.min(0.1F, (float)this.getDeltaMovement().horizontalDistance());
         } else {
-            f = 0.0F;
+            tBob = 0.0F;
         }
 
-        this.avatarState().updateBob(f);
+        this.avatarState().updateBob(tBob);
     }
 
-    public float getFieldOfViewModifier(boolean p_361176_, float p_362521_) {
-        float f = 1.0F;
+    public float getFieldOfViewModifier(final boolean firstPerson, final float effectScale) {
+        float modifier = 1.0F;
         if (this.getAbilities().flying) {
-            f *= 1.1F;
+            modifier *= 1.1F;
         }
 
-        float f1 = this.getAbilities().getWalkingSpeed();
-        if (f1 != 0.0F) {
-            float f2 = (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED) / f1;
-            f *= (f2 + 1.0F) / 2.0F;
+        float walkingSpeed = this.getAbilities().getWalkingSpeed();
+        if (walkingSpeed != 0.0F) {
+            float speedFactor = (float)this.getAttributeValue(Attributes.MOVEMENT_SPEED) / walkingSpeed;
+            modifier *= (speedFactor + 1.0F) / 2.0F;
         }
 
         if (this.isUsingItem()) {
             if (this.getUseItem().is(Items.BOW)) {
-                float f3 = Math.min(this.getTicksUsingItem() / 20.0F, 1.0F);
-                f *= 1.0F - Mth.square(f3) * 0.15F;
-            } else if (p_361176_ && this.isScoping()) {
+                float scale = Math.min(this.getTicksUsingItem() / 20.0F, 1.0F);
+                modifier *= 1.0F - Mth.square(scale) * 0.15F;
+            } else if (firstPerson && this.isScoping()) {
                 return 0.1F;
             }
         }
 
-        return Mth.lerp(p_362521_, 1.0F, f);
+        return Mth.lerp(effectScale, 1.0F, modifier);
     }
 
     @Override

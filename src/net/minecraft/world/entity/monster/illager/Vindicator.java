@@ -49,12 +49,12 @@ import org.jspecify.annotations.Nullable;
 
 public class Vindicator extends AbstractIllager {
     private static final String TAG_JOHNNY = "Johnny";
-    static final Predicate<Difficulty> DOOR_BREAKING_PREDICATE = p_454740_ -> p_454740_ == Difficulty.NORMAL || p_454740_ == Difficulty.HARD;
+    private static final Predicate<Difficulty> DOOR_BREAKING_PREDICATE = d -> d == Difficulty.NORMAL || d == Difficulty.HARD;
     private static final boolean DEFAULT_JOHNNY = false;
-    boolean isJohnny = false;
+    private boolean isJohnny = false;
 
-    public Vindicator(EntityType<? extends Vindicator> p_457448_, Level p_460698_) {
-        super(p_457448_, p_460698_);
+    public Vindicator(final EntityType<? extends Vindicator> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -77,13 +77,13 @@ public class Vindicator extends AbstractIllager {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_458389_) {
+    protected void customServerAiStep(final ServerLevel level) {
         if (!this.isNoAi() && GoalUtils.hasGroundPathNavigation(this)) {
-            boolean flag = p_458389_.isRaided(this.blockPosition());
-            this.getNavigation().setCanOpenDoors(flag);
+            boolean canOpenDoors = level.isRaided(this.blockPosition());
+            this.getNavigation().setCanOpenDoors(canOpenDoors);
         }
 
-        super.customServerAiStep(p_458389_);
+        super.customServerAiStep(level);
     }
 
     public static AttributeSupplier.Builder createAttributes() {
@@ -95,10 +95,10 @@ public class Vindicator extends AbstractIllager {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_452002_) {
-        super.addAdditionalSaveData(p_452002_);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
         if (this.isJohnny) {
-            p_452002_.putBoolean("Johnny", true);
+            output.putBoolean("Johnny", true);
         }
     }
 
@@ -112,9 +112,9 @@ public class Vindicator extends AbstractIllager {
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_450265_) {
-        super.readAdditionalSaveData(p_450265_);
-        this.isJohnny = p_450265_.getBooleanOr("Johnny", false);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.isJohnny = input.getBooleanOr("Johnny", false);
     }
 
     @Override
@@ -124,27 +124,27 @@ public class Vindicator extends AbstractIllager {
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_451206_, DifficultyInstance p_457997_, EntitySpawnReason p_455027_, @Nullable SpawnGroupData p_455702_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, final @Nullable SpawnGroupData groupData
     ) {
-        SpawnGroupData spawngroupdata = super.finalizeSpawn(p_451206_, p_457997_, p_455027_, p_455702_);
+        SpawnGroupData spawnGroupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
         this.getNavigation().setCanOpenDoors(true);
-        RandomSource randomsource = p_451206_.getRandom();
-        this.populateDefaultEquipmentSlots(randomsource, p_457997_);
-        this.populateDefaultEquipmentEnchantments(p_451206_, randomsource, p_457997_);
-        return spawngroupdata;
+        RandomSource random = level.getRandom();
+        this.populateDefaultEquipmentSlots(random, difficulty);
+        this.populateDefaultEquipmentEnchantments(level, random, difficulty);
+        return spawnGroupData;
     }
 
     @Override
-    protected void populateDefaultEquipmentSlots(RandomSource p_453927_, DifficultyInstance p_453272_) {
+    protected void populateDefaultEquipmentSlots(final RandomSource random, final DifficultyInstance difficulty) {
         if (this.getCurrentRaid() == null) {
             this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_AXE));
         }
     }
 
     @Override
-    public void setCustomName(@Nullable Component p_456874_) {
-        super.setCustomName(p_456874_);
-        if (!this.isJohnny && p_456874_ != null && p_456874_.getString().equals("Johnny")) {
+    public void setCustomName(final @Nullable Component name) {
+        super.setCustomName(name);
+        if (!this.isJohnny && name != null && name.getString().equals("Johnny")) {
             this.isJohnny = true;
         }
     }
@@ -160,28 +160,28 @@ public class Vindicator extends AbstractIllager {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_455210_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.VINDICATOR_HURT;
     }
 
     @Override
-    public void applyRaidBuffs(ServerLevel p_455492_, int p_455175_, boolean p_458853_) {
-        ItemStack itemstack = new ItemStack(Items.IRON_AXE);
+    public void applyRaidBuffs(final ServerLevel level, final int wave, final boolean isCaptain) {
+        ItemStack axe = new ItemStack(Items.IRON_AXE);
         Raid raid = this.getCurrentRaid();
-        boolean flag = this.random.nextFloat() <= raid.getEnchantOdds();
-        if (flag) {
-            ResourceKey<EnchantmentProvider> resourcekey = p_455175_ > raid.getNumGroups(Difficulty.NORMAL)
+        boolean shouldEnchant = this.random.nextFloat() <= raid.getEnchantOdds();
+        if (shouldEnchant) {
+            ResourceKey<EnchantmentProvider> provider = wave > raid.getNumGroups(Difficulty.NORMAL)
                 ? VanillaEnchantmentProviders.RAID_VINDICATOR_POST_WAVE_5
                 : VanillaEnchantmentProviders.RAID_VINDICATOR;
-            EnchantmentHelper.enchantItemFromProvider(itemstack, p_455492_.registryAccess(), resourcekey, p_455492_.getCurrentDifficultyAt(this.blockPosition()), this.random);
+            EnchantmentHelper.enchantItemFromProvider(axe, level.registryAccess(), provider, level.getCurrentDifficultyAt(this.blockPosition()), this.random);
         }
 
-        this.setItemSlot(EquipmentSlot.MAINHAND, itemstack);
+        this.setItemSlot(EquipmentSlot.MAINHAND, axe);
     }
 
-    static class VindicatorBreakDoorGoal extends BreakDoorGoal {
-        public VindicatorBreakDoorGoal(Mob p_450866_) {
-            super(p_450866_, 6, Vindicator.DOOR_BREAKING_PREDICATE);
+    private static class VindicatorBreakDoorGoal extends BreakDoorGoal {
+        public VindicatorBreakDoorGoal(final Mob mob) {
+            super(mob, 6, Vindicator.DOOR_BREAKING_PREDICATE);
             this.setFlags(EnumSet.of(Goal.Flag.MOVE));
         }
 
@@ -204,9 +204,9 @@ public class Vindicator extends AbstractIllager {
         }
     }
 
-    static class VindicatorJohnnyAttackGoal extends NearestAttackableTargetGoal<LivingEntity> {
-        public VindicatorJohnnyAttackGoal(Vindicator p_458344_) {
-            super(p_458344_, LivingEntity.class, 0, true, true, (p_457251_, p_451815_) -> p_457251_.attackable());
+    private static class VindicatorJohnnyAttackGoal extends NearestAttackableTargetGoal<LivingEntity> {
+        public VindicatorJohnnyAttackGoal(final Vindicator mob) {
+            super(mob, LivingEntity.class, 0, true, true, (target, level) -> target.attackable());
         }
 
         @Override

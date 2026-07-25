@@ -18,7 +18,7 @@ import net.minecraft.world.scores.DisplaySlot;
 public class ScoreboardSlotArgument implements ArgumentType<DisplaySlot> {
     private static final Collection<String> EXAMPLES = Arrays.asList("sidebar", "foo.bar");
     public static final DynamicCommandExceptionType ERROR_INVALID_VALUE = new DynamicCommandExceptionType(
-        p_308385_ -> Component.translatableEscape("argument.scoreboardDisplaySlot.invalid", p_308385_)
+        value -> Component.translatableEscape("argument.scoreboardDisplaySlot.invalid", value)
     );
 
     private ScoreboardSlotArgument() {
@@ -28,23 +28,23 @@ public class ScoreboardSlotArgument implements ArgumentType<DisplaySlot> {
         return new ScoreboardSlotArgument();
     }
 
-    public static DisplaySlot getDisplaySlot(CommandContext<CommandSourceStack> p_109200_, String p_109201_) {
-        return p_109200_.getArgument(p_109201_, DisplaySlot.class);
+    public static DisplaySlot getDisplaySlot(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, DisplaySlot.class);
     }
 
-    public DisplaySlot parse(StringReader p_109198_) throws CommandSyntaxException {
-        String s = p_109198_.readUnquotedString();
-        DisplaySlot displayslot = DisplaySlot.CODEC.byName(s);
-        if (displayslot == null) {
-            throw ERROR_INVALID_VALUE.createWithContext(p_109198_, s);
+    public DisplaySlot parse(final StringReader reader) throws CommandSyntaxException {
+        String name = reader.readUnquotedString();
+        DisplaySlot result = DisplaySlot.CODEC.byName(name);
+        if (result == null) {
+            throw ERROR_INVALID_VALUE.createWithContext(reader, name);
         } else {
-            return displayslot;
+            return result;
         }
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_109206_, SuggestionsBuilder p_109207_) {
-        return SharedSuggestionProvider.suggest(Arrays.stream(DisplaySlot.values()).map(DisplaySlot::getSerializedName), p_109207_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(Arrays.stream(DisplaySlot.values()).map(DisplaySlot::getSerializedName), builder);
     }
 
     @Override

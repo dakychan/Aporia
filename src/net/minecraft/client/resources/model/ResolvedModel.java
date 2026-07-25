@@ -1,15 +1,15 @@
 package net.minecraft.client.resources.model;
 
-import net.minecraft.client.renderer.block.model.ItemTransform;
-import net.minecraft.client.renderer.block.model.ItemTransforms;
-import net.minecraft.client.renderer.block.model.TextureSlots;
-import net.minecraft.client.renderer.texture.TextureAtlasSprite;
+import net.minecraft.client.renderer.block.dispatch.ModelState;
+import net.minecraft.client.resources.model.cuboid.ItemTransform;
+import net.minecraft.client.resources.model.cuboid.ItemTransforms;
+import net.minecraft.client.resources.model.geometry.QuadCollection;
+import net.minecraft.client.resources.model.geometry.UnbakedGeometry;
+import net.minecraft.client.resources.model.sprite.Material;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface ResolvedModel extends ModelDebugName {
     boolean DEFAULT_AMBIENT_OCCLUSION = true;
     UnbakedModel.GuiLight DEFAULT_GUI_LIGHT = UnbakedModel.GuiLight.SIDE;
@@ -18,29 +18,30 @@ public interface ResolvedModel extends ModelDebugName {
 
     @Nullable ResolvedModel parent();
 
-    static TextureSlots findTopTextureSlots(ResolvedModel p_393648_) {
-        ResolvedModel resolvedmodel = p_393648_;
+    static TextureSlots findTopTextureSlots(final ResolvedModel top) {
+        ResolvedModel current = top;
+        TextureSlots.Resolver resolver = new TextureSlots.Resolver();
 
-        TextureSlots.Resolver textureslots$resolver;
-        for (textureslots$resolver = new TextureSlots.Resolver(); resolvedmodel != null; resolvedmodel = resolvedmodel.parent()) {
-            textureslots$resolver.addLast(resolvedmodel.wrapped().textureSlots());
+        while (current != null) {
+            resolver.addLast(current.wrapped().textureSlots());
+            current = current.parent();
         }
 
-        return textureslots$resolver.resolve(p_393648_);
+        return resolver.resolve(top);
     }
 
     default TextureSlots getTopTextureSlots() {
         return findTopTextureSlots(this);
     }
 
-    static boolean findTopAmbientOcclusion(ResolvedModel p_393409_) {
-        while (p_393409_ != null) {
-            Boolean obool = p_393409_.wrapped().ambientOcclusion();
-            if (obool != null) {
-                return obool;
+    static boolean findTopAmbientOcclusion(ResolvedModel current) {
+        while (current != null) {
+            Boolean hasAmbientOcclusion = current.wrapped().ambientOcclusion();
+            if (hasAmbientOcclusion != null) {
+                return hasAmbientOcclusion;
             }
 
-            p_393409_ = p_393409_.parent();
+            current = current.parent();
         }
 
         return true;
@@ -50,14 +51,14 @@ public interface ResolvedModel extends ModelDebugName {
         return findTopAmbientOcclusion(this);
     }
 
-    static UnbakedModel.GuiLight findTopGuiLight(ResolvedModel p_392767_) {
-        while (p_392767_ != null) {
-            UnbakedModel.GuiLight unbakedmodel$guilight = p_392767_.wrapped().guiLight();
-            if (unbakedmodel$guilight != null) {
-                return unbakedmodel$guilight;
+    static UnbakedModel.GuiLight findTopGuiLight(ResolvedModel current) {
+        while (current != null) {
+            UnbakedModel.GuiLight guiLight = current.wrapped().guiLight();
+            if (guiLight != null) {
+                return guiLight;
             }
 
-            p_392767_ = p_392767_.parent();
+            current = current.parent();
         }
 
         return DEFAULT_GUI_LIGHT;
@@ -67,14 +68,14 @@ public interface ResolvedModel extends ModelDebugName {
         return findTopGuiLight(this);
     }
 
-    static UnbakedGeometry findTopGeometry(ResolvedModel p_395357_) {
-        while (p_395357_ != null) {
-            UnbakedGeometry unbakedgeometry = p_395357_.wrapped().geometry();
-            if (unbakedgeometry != null) {
-                return unbakedgeometry;
+    static UnbakedGeometry findTopGeometry(ResolvedModel current) {
+        while (current != null) {
+            UnbakedGeometry geometry = current.wrapped().geometry();
+            if (geometry != null) {
+                return geometry;
             }
 
-            p_395357_ = p_395357_.parent();
+            current = current.parent();
         }
 
         return UnbakedGeometry.EMPTY;
@@ -84,46 +85,46 @@ public interface ResolvedModel extends ModelDebugName {
         return findTopGeometry(this);
     }
 
-    default QuadCollection bakeTopGeometry(TextureSlots p_396041_, ModelBaker p_395367_, ModelState p_396505_) {
-        return this.getTopGeometry().bake(p_396041_, p_395367_, p_396505_, this);
+    default QuadCollection bakeTopGeometry(final TextureSlots textureSlots, final ModelBaker baker, final ModelState state) {
+        return this.getTopGeometry().bake(textureSlots, baker, state, this);
     }
 
-    static TextureAtlasSprite resolveParticleSprite(TextureSlots p_391346_, ModelBaker p_396500_, ModelDebugName p_393309_) {
-        return p_396500_.sprites().resolveSlot(p_391346_, "particle", p_393309_);
+    static Material.Baked resolveParticleMaterial(final TextureSlots textureSlots, final ModelBaker baker, final ModelDebugName resolvedModel) {
+        return baker.materials().resolveSlot(textureSlots, "particle", resolvedModel);
     }
 
-    default TextureAtlasSprite resolveParticleSprite(TextureSlots p_397861_, ModelBaker p_395675_) {
-        return resolveParticleSprite(p_397861_, p_395675_, this);
+    default Material.Baked resolveParticleMaterial(final TextureSlots textureSlots, final ModelBaker baker) {
+        return resolveParticleMaterial(textureSlots, baker, this);
     }
 
-    static ItemTransform findTopTransform(ResolvedModel p_393869_, ItemDisplayContext p_396067_) {
-        while (p_393869_ != null) {
-            ItemTransforms itemtransforms = p_393869_.wrapped().transforms();
-            if (itemtransforms != null) {
-                ItemTransform itemtransform = itemtransforms.getTransform(p_396067_);
-                if (itemtransform != ItemTransform.NO_TRANSFORM) {
-                    return itemtransform;
+    static ItemTransform findTopTransform(ResolvedModel current, final ItemDisplayContext type) {
+        while (current != null) {
+            ItemTransforms transforms = current.wrapped().transforms();
+            if (transforms != null) {
+                ItemTransform transform = transforms.getTransform(type);
+                if (transform != ItemTransform.NO_TRANSFORM) {
+                    return transform;
                 }
             }
 
-            p_393869_ = p_393869_.parent();
+            current = current.parent();
         }
 
         return ItemTransform.NO_TRANSFORM;
     }
 
-    static ItemTransforms findTopTransforms(ResolvedModel p_392780_) {
-        ItemTransform itemtransform = findTopTransform(p_392780_, ItemDisplayContext.THIRD_PERSON_LEFT_HAND);
-        ItemTransform itemtransform1 = findTopTransform(p_392780_, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND);
-        ItemTransform itemtransform2 = findTopTransform(p_392780_, ItemDisplayContext.FIRST_PERSON_LEFT_HAND);
-        ItemTransform itemtransform3 = findTopTransform(p_392780_, ItemDisplayContext.FIRST_PERSON_RIGHT_HAND);
-        ItemTransform itemtransform4 = findTopTransform(p_392780_, ItemDisplayContext.HEAD);
-        ItemTransform itemtransform5 = findTopTransform(p_392780_, ItemDisplayContext.GUI);
-        ItemTransform itemtransform6 = findTopTransform(p_392780_, ItemDisplayContext.GROUND);
-        ItemTransform itemtransform7 = findTopTransform(p_392780_, ItemDisplayContext.FIXED);
-        ItemTransform itemtransform8 = findTopTransform(p_392780_, ItemDisplayContext.ON_SHELF);
+    static ItemTransforms findTopTransforms(final ResolvedModel top) {
+        ItemTransform thirdPersonLeftHand = findTopTransform(top, ItemDisplayContext.THIRD_PERSON_LEFT_HAND);
+        ItemTransform thirdPersonRightHand = findTopTransform(top, ItemDisplayContext.THIRD_PERSON_RIGHT_HAND);
+        ItemTransform firstPersonLeftHand = findTopTransform(top, ItemDisplayContext.FIRST_PERSON_LEFT_HAND);
+        ItemTransform firstPersonRightHand = findTopTransform(top, ItemDisplayContext.FIRST_PERSON_RIGHT_HAND);
+        ItemTransform head = findTopTransform(top, ItemDisplayContext.HEAD);
+        ItemTransform gui = findTopTransform(top, ItemDisplayContext.GUI);
+        ItemTransform ground = findTopTransform(top, ItemDisplayContext.GROUND);
+        ItemTransform fixed = findTopTransform(top, ItemDisplayContext.FIXED);
+        ItemTransform fixedFromBottom = findTopTransform(top, ItemDisplayContext.ON_SHELF);
         return new ItemTransforms(
-            itemtransform, itemtransform1, itemtransform2, itemtransform3, itemtransform4, itemtransform5, itemtransform6, itemtransform7, itemtransform8
+            thirdPersonLeftHand, thirdPersonRightHand, firstPersonLeftHand, firstPersonRightHand, head, gui, ground, fixed, fixedFromBottom
         );
     }
 

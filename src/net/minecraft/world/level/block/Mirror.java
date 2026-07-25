@@ -19,37 +19,33 @@ public enum Mirror implements StringRepresentable {
     private final Component symbol;
     private final OctahedralGroup rotation;
 
-    private Mirror(final String p_221529_, final OctahedralGroup p_221530_) {
-        this.id = p_221529_;
-        this.symbol = Component.translatable("mirror." + p_221529_);
-        this.rotation = p_221530_;
+    Mirror(final String id, final OctahedralGroup rotation) {
+        this.id = id;
+        this.symbol = Component.translatable("mirror." + id);
+        this.rotation = rotation;
     }
 
-    public int mirror(int p_54844_, int p_54845_) {
-        int i = p_54845_ / 2;
-        int j = p_54844_ > i ? p_54844_ - p_54845_ : p_54844_;
-        switch (this) {
-            case LEFT_RIGHT:
-                return (i - j + p_54845_) % p_54845_;
-            case FRONT_BACK:
-                return (p_54845_ - j) % p_54845_;
-            default:
-                return p_54844_;
-        }
+    public int mirror(final int rotation, final int steps) {
+        int halfSteps = steps / 2;
+        int correctedRotation = rotation > halfSteps ? rotation - steps : rotation;
+
+        return switch (this) {
+            case LEFT_RIGHT -> (halfSteps - correctedRotation + steps) % steps;
+            case FRONT_BACK -> (steps - correctedRotation) % steps;
+            default -> rotation;
+        };
     }
 
-    public Rotation getRotation(Direction p_54847_) {
-        Direction.Axis direction$axis = p_54847_.getAxis();
-        return (this != LEFT_RIGHT || direction$axis != Direction.Axis.Z) && (this != FRONT_BACK || direction$axis != Direction.Axis.X)
-            ? Rotation.NONE
-            : Rotation.CLOCKWISE_180;
+    public Rotation getRotation(final Direction value) {
+        Direction.Axis axis = value.getAxis();
+        return (this != LEFT_RIGHT || axis != Direction.Axis.Z) && (this != FRONT_BACK || axis != Direction.Axis.X) ? Rotation.NONE : Rotation.CLOCKWISE_180;
     }
 
-    public Direction mirror(Direction p_54849_) {
-        if (this == FRONT_BACK && p_54849_.getAxis() == Direction.Axis.X) {
-            return p_54849_.getOpposite();
+    public Direction mirror(final Direction direction) {
+        if (this == FRONT_BACK && direction.getAxis() == Direction.Axis.X) {
+            return direction.getOpposite();
         } else {
-            return this == LEFT_RIGHT && p_54849_.getAxis() == Direction.Axis.Z ? p_54849_.getOpposite() : p_54849_;
+            return this == LEFT_RIGHT && direction.getAxis() == Direction.Axis.Z ? direction.getOpposite() : direction;
         }
     }
 

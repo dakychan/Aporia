@@ -34,9 +34,9 @@ public record PiecesContainer(List<StructurePiece> pieces) {
         return this.pieces.isEmpty();
     }
 
-    public boolean isInsidePiece(BlockPos p_192752_) {
-        for (StructurePiece structurepiece : this.pieces) {
-            if (structurepiece.getBoundingBox().isInside(p_192752_)) {
+    public boolean isInsidePiece(final BlockPos startPos) {
+        for (StructurePiece piece : this.pieces) {
+            if (piece.getBoundingBox().isInside(startPos)) {
                 return true;
             }
         }
@@ -44,38 +44,38 @@ public record PiecesContainer(List<StructurePiece> pieces) {
         return false;
     }
 
-    public Tag save(StructurePieceSerializationContext p_192750_) {
-        ListTag listtag = new ListTag();
+    public Tag save(final StructurePieceSerializationContext context) {
+        ListTag childrenTags = new ListTag();
 
-        for (StructurePiece structurepiece : this.pieces) {
-            listtag.add(structurepiece.createTag(p_192750_));
+        for (StructurePiece piece : this.pieces) {
+            childrenTags.add(piece.createTag(context));
         }
 
-        return listtag;
+        return childrenTags;
     }
 
-    public static PiecesContainer load(ListTag p_192754_, StructurePieceSerializationContext p_192755_) {
-        List<StructurePiece> list = Lists.newArrayList();
+    public static PiecesContainer load(final ListTag children, final StructurePieceSerializationContext context) {
+        List<StructurePiece> pieces = Lists.newArrayList();
 
-        for (int i = 0; i < p_192754_.size(); i++) {
-            CompoundTag compoundtag = p_192754_.getCompoundOrEmpty(i);
-            String s = compoundtag.getStringOr("id", "").toLowerCase(Locale.ROOT);
-            Identifier identifier = Identifier.parse(s);
-            Identifier identifier1 = RENAMES.getOrDefault(identifier, identifier);
-            StructurePieceType structurepiecetype = BuiltInRegistries.STRUCTURE_PIECE.getValue(identifier1);
-            if (structurepiecetype == null) {
-                LOGGER.error("Unknown structure piece id: {}", identifier1);
+        for (int i = 0; i < children.size(); i++) {
+            CompoundTag pieceTag = children.getCompoundOrEmpty(i);
+            String oldId = pieceTag.getStringOr("id", "").toLowerCase(Locale.ROOT);
+            Identifier oldPieceKey = Identifier.parse(oldId);
+            Identifier pieceId = RENAMES.getOrDefault(oldPieceKey, oldPieceKey);
+            StructurePieceType pieceType = BuiltInRegistries.STRUCTURE_PIECE.getValue(pieceId);
+            if (pieceType == null) {
+                LOGGER.error("Unknown structure piece id: {}", pieceId);
             } else {
                 try {
-                    StructurePiece structurepiece = structurepiecetype.load(p_192755_, compoundtag);
-                    list.add(structurepiece);
-                } catch (Exception exception) {
-                    LOGGER.error("Exception loading structure piece with id {}", identifier1, exception);
+                    StructurePiece piece = pieceType.load(context, pieceTag);
+                    pieces.add(piece);
+                } catch (Exception e) {
+                    LOGGER.error("Exception loading structure piece with id {}", pieceId, e);
                 }
             }
         }
 
-        return new PiecesContainer(list);
+        return new PiecesContainer(pieces);
     }
 
     public BoundingBox calculateBoundingBox() {

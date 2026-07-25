@@ -10,27 +10,27 @@ import org.apache.commons.lang3.ArrayUtils;
 public final class ByteArrayTag implements CollectionTag {
     private static final int SELF_SIZE_IN_BYTES = 24;
     public static final TagType<ByteArrayTag> TYPE = new TagType.VariableSize<ByteArrayTag>() {
-        public ByteArrayTag load(DataInput p_128247_, NbtAccounter p_128249_) throws IOException {
-            return new ByteArrayTag(readAccounted(p_128247_, p_128249_));
+        public ByteArrayTag load(final DataInput input, final NbtAccounter accounter) throws IOException {
+            return new ByteArrayTag(readAccounted(input, accounter));
         }
 
         @Override
-        public StreamTagVisitor.ValueResult parse(DataInput p_197433_, StreamTagVisitor p_197434_, NbtAccounter p_301760_) throws IOException {
-            return p_197434_.visit(readAccounted(p_197433_, p_301760_));
+        public StreamTagVisitor.ValueResult parse(final DataInput input, final StreamTagVisitor output, final NbtAccounter accounter) throws IOException {
+            return output.visit(readAccounted(input, accounter));
         }
 
-        private static byte[] readAccounted(DataInput p_301772_, NbtAccounter p_301697_) throws IOException {
-            p_301697_.accountBytes(24L);
-            int i = p_301772_.readInt();
-            p_301697_.accountBytes(1L, i);
-            byte[] abyte = new byte[i];
-            p_301772_.readFully(abyte);
-            return abyte;
+        private static byte[] readAccounted(final DataInput input, final NbtAccounter accounter) throws IOException {
+            accounter.accountBytes(24L);
+            int length = input.readInt();
+            accounter.accountBytes(1L, length);
+            byte[] data = new byte[length];
+            input.readFully(data);
+            return data;
         }
 
         @Override
-        public void skip(DataInput p_197431_, NbtAccounter p_301779_) throws IOException {
-            p_197431_.skipBytes(p_197431_.readInt() * 1);
+        public void skip(final DataInput input, final NbtAccounter accounter) throws IOException {
+            input.skipBytes(input.readInt() * 1);
         }
 
         @Override
@@ -45,14 +45,14 @@ public final class ByteArrayTag implements CollectionTag {
     };
     private byte[] data;
 
-    public ByteArrayTag(byte[] p_128191_) {
-        this.data = p_128191_;
+    public ByteArrayTag(final byte[] data) {
+        this.data = data;
     }
 
     @Override
-    public void write(DataOutput p_128202_) throws IOException {
-        p_128202_.writeInt(this.data.length);
-        p_128202_.write(this.data);
+    public void write(final DataOutput output) throws IOException {
+        output.writeInt(this.data.length);
+        output.write(this.data);
     }
 
     @Override
@@ -72,21 +72,21 @@ public final class ByteArrayTag implements CollectionTag {
 
     @Override
     public String toString() {
-        StringTagVisitor stringtagvisitor = new StringTagVisitor();
-        stringtagvisitor.visitByteArray(this);
-        return stringtagvisitor.build();
+        StringTagVisitor visitor = new StringTagVisitor();
+        visitor.visitByteArray(this);
+        return visitor.build();
     }
 
     @Override
     public Tag copy() {
-        byte[] abyte = new byte[this.data.length];
-        System.arraycopy(this.data, 0, abyte, 0, this.data.length);
-        return new ByteArrayTag(abyte);
+        byte[] cp = new byte[this.data.length];
+        System.arraycopy(this.data, 0, cp, 0, this.data.length);
+        return new ByteArrayTag(cp);
     }
 
     @Override
-    public boolean equals(Object p_128233_) {
-        return this == p_128233_ ? true : p_128233_ instanceof ByteArrayTag && Arrays.equals(this.data, ((ByteArrayTag)p_128233_).data);
+    public boolean equals(final Object obj) {
+        return this == obj ? true : obj instanceof ByteArrayTag byteArrayTag && Arrays.equals(this.data, byteArrayTag.data);
     }
 
     @Override
@@ -95,8 +95,8 @@ public final class ByteArrayTag implements CollectionTag {
     }
 
     @Override
-    public void accept(TagVisitor p_177839_) {
-        p_177839_.visitByteArray(this);
+    public void accept(final TagVisitor visitor) {
+        visitor.visitByteArray(this);
     }
 
     public byte[] getAsByteArray() {
@@ -108,14 +108,14 @@ public final class ByteArrayTag implements CollectionTag {
         return this.data.length;
     }
 
-    public ByteTag get(int p_128194_) {
-        return ByteTag.valueOf(this.data[p_128194_]);
+    public ByteTag get(final int index) {
+        return ByteTag.valueOf(this.data[index]);
     }
 
     @Override
-    public boolean setTag(int p_128199_, Tag p_128200_) {
-        if (p_128200_ instanceof NumericTag numerictag) {
-            this.data[p_128199_] = numerictag.byteValue();
+    public boolean setTag(final int index, final Tag tag) {
+        if (tag instanceof NumericTag numeric) {
+            this.data[index] = numeric.byteValue();
             return true;
         } else {
             return false;
@@ -123,19 +123,19 @@ public final class ByteArrayTag implements CollectionTag {
     }
 
     @Override
-    public boolean addTag(int p_128218_, Tag p_128219_) {
-        if (p_128219_ instanceof NumericTag numerictag) {
-            this.data = ArrayUtils.add(this.data, p_128218_, numerictag.byteValue());
+    public boolean addTag(final int index, final Tag tag) {
+        if (tag instanceof NumericTag numeric) {
+            this.data = ArrayUtils.add(this.data, index, numeric.byteValue());
             return true;
         } else {
             return false;
         }
     }
 
-    public ByteTag remove(int p_128213_) {
-        byte b0 = this.data[p_128213_];
-        this.data = ArrayUtils.remove(this.data, p_128213_);
-        return ByteTag.valueOf(b0);
+    public ByteTag remove(final int index) {
+        byte prev = this.data[index];
+        this.data = ArrayUtils.remove(this.data, index);
+        return ByteTag.valueOf(prev);
     }
 
     @Override
@@ -149,7 +149,7 @@ public final class ByteArrayTag implements CollectionTag {
     }
 
     @Override
-    public StreamTagVisitor.ValueResult accept(StreamTagVisitor p_197429_) {
-        return p_197429_.visit(this.data);
+    public StreamTagVisitor.ValueResult accept(final StreamTagVisitor visitor) {
+        return visitor.visit(this.data);
     }
 }

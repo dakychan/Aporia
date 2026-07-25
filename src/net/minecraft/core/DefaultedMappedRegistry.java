@@ -11,42 +11,44 @@ public class DefaultedMappedRegistry<T> extends MappedRegistry<T> implements Def
     private final Identifier defaultKey;
     private Holder.Reference<T> defaultValue;
 
-    public DefaultedMappedRegistry(String p_260196_, ResourceKey<? extends Registry<T>> p_259440_, Lifecycle p_260260_, boolean p_259808_) {
-        super(p_259440_, p_260260_, p_259808_);
-        this.defaultKey = Identifier.parse(p_260196_);
+    public DefaultedMappedRegistry(
+        final String defaultKey, final ResourceKey<? extends Registry<T>> key, final Lifecycle lifecycle, final boolean intrusiveHolders
+    ) {
+        super(key, lifecycle, intrusiveHolders);
+        this.defaultKey = Identifier.parse(defaultKey);
     }
 
     @Override
-    public Holder.Reference<T> register(ResourceKey<T> p_332872_, T p_328327_, RegistrationInfo p_331941_) {
-        Holder.Reference<T> reference = super.register(p_332872_, p_328327_, p_331941_);
-        if (this.defaultKey.equals(p_332872_.identifier())) {
-            this.defaultValue = reference;
+    public Holder.Reference<T> register(final ResourceKey<T> key, final T value, final RegistrationInfo registrationInfo) {
+        Holder.Reference<T> result = super.register(key, value, registrationInfo);
+        if (this.defaultKey.equals(key.identifier())) {
+            this.defaultValue = result;
         }
 
-        return reference;
+        return result;
     }
 
     @Override
-    public int getId(@Nullable T p_260033_) {
-        int i = super.getId(p_260033_);
-        return i == -1 ? super.getId(this.defaultValue.value()) : i;
+    public int getId(final @Nullable T thing) {
+        int id = super.getId(thing);
+        return id == -1 ? super.getId(this.defaultValue.value()) : id;
     }
 
     @Override
-    public Identifier getKey(T p_259233_) {
-        Identifier identifier = super.getKey(p_259233_);
-        return identifier == null ? this.defaultKey : identifier;
+    public Identifier getKey(final T thing) {
+        Identifier k = super.getKey(thing);
+        return k == null ? this.defaultKey : k;
     }
 
     @Override
-    public T getValue(@Nullable Identifier p_452628_) {
-        T t = super.getValue(p_452628_);
+    public T getValue(final @Nullable Identifier key) {
+        T t = super.getValue(key);
         return t == null ? this.defaultValue.value() : t;
     }
 
     @Override
-    public Optional<T> getOptional(@Nullable Identifier p_455803_) {
-        return Optional.ofNullable(super.getValue(p_455803_));
+    public Optional<T> getOptional(final @Nullable Identifier key) {
+        return Optional.ofNullable(super.getValue(key));
     }
 
     @Override
@@ -55,14 +57,14 @@ public class DefaultedMappedRegistry<T> extends MappedRegistry<T> implements Def
     }
 
     @Override
-    public T byId(int p_259534_) {
-        T t = super.byId(p_259534_);
+    public T byId(final int id) {
+        T t = super.byId(id);
         return t == null ? this.defaultValue.value() : t;
     }
 
     @Override
-    public Optional<Holder.Reference<T>> getRandom(RandomSource p_260255_) {
-        return super.getRandom(p_260255_).or(() -> Optional.of(this.defaultValue));
+    public Optional<Holder.Reference<T>> getRandom(final RandomSource random) {
+        return super.getRandom(random).or(() -> Optional.of(this.defaultValue));
     }
 
     @Override

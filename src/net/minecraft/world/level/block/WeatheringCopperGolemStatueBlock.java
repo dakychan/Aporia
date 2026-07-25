@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.ItemTags;
@@ -21,8 +20,8 @@ import net.minecraft.world.phys.BlockHitResult;
 
 public class WeatheringCopperGolemStatueBlock extends CopperGolemStatueBlock implements WeatheringCopper {
     public static final MapCodec<WeatheringCopperGolemStatueBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_430718_ -> p_430718_.group(WeatheringCopper.WeatherState.CODEC.fieldOf("weathering_state").forGetter(ChangeOverTimeBlock::getAge), propertiesCodec())
-            .apply(p_430718_, WeatheringCopperGolemStatueBlock::new)
+        i -> i.group(WeatheringCopper.WeatherState.CODEC.fieldOf("weathering_state").forGetter(ChangeOverTimeBlock::getAge), propertiesCodec())
+            .apply(i, WeatheringCopperGolemStatueBlock::new)
     );
 
     @Override
@@ -30,18 +29,18 @@ public class WeatheringCopperGolemStatueBlock extends CopperGolemStatueBlock imp
         return CODEC;
     }
 
-    public WeatheringCopperGolemStatueBlock(WeatheringCopper.WeatherState p_430107_, BlockBehaviour.Properties p_431407_) {
-        super(p_430107_, p_431407_);
+    public WeatheringCopperGolemStatueBlock(final WeatheringCopper.WeatherState weatherState, final BlockBehaviour.Properties properties) {
+        super(weatherState, properties);
     }
 
     @Override
-    protected boolean isRandomlyTicking(BlockState p_426616_) {
-        return WeatheringCopper.getNext(p_426616_.getBlock()).isPresent();
+    protected boolean isRandomlyTicking(final BlockState state) {
+        return WeatheringCopper.getNext(state.getBlock()).isPresent();
     }
 
     @Override
-    protected void randomTick(BlockState p_422819_, ServerLevel p_426494_, BlockPos p_430363_, RandomSource p_422396_) {
-        this.changeOverTime(p_422819_, p_426494_, p_430363_, p_422396_);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        this.changeOverTime(state, level, pos, random);
     }
 
     public WeatheringCopper.WeatherState getAge() {
@@ -50,24 +49,30 @@ public class WeatheringCopperGolemStatueBlock extends CopperGolemStatueBlock imp
 
     @Override
     protected InteractionResult useItemOn(
-        ItemStack p_423592_, BlockState p_424813_, Level p_423072_, BlockPos p_423103_, Player p_424834_, InteractionHand p_426411_, BlockHitResult p_422591_
+        final ItemStack itemStack,
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Player player,
+        final InteractionHand hand,
+        final BlockHitResult hitResult
     ) {
-        if (p_423072_.getBlockEntity(p_423103_) instanceof CopperGolemStatueBlockEntity coppergolemstatueblockentity) {
-            if (!p_423592_.is(ItemTags.AXES)) {
-                if (p_423592_.is(Items.HONEYCOMB)) {
+        if (level.getBlockEntity(pos) instanceof CopperGolemStatueBlockEntity copperGolemStatueBlockEntity) {
+            if (!itemStack.is(ItemTags.AXES)) {
+                if (itemStack.is(Items.HONEYCOMB)) {
                     return InteractionResult.PASS;
                 }
 
-                this.updatePose(p_423072_, p_424813_, p_423103_, p_424834_);
+                this.updatePose(level, state, pos, player);
                 return InteractionResult.SUCCESS;
             }
 
             if (this.getAge().equals(WeatheringCopper.WeatherState.UNAFFECTED)) {
-                CopperGolem coppergolem = coppergolemstatueblockentity.removeStatue(p_424813_);
-                p_423592_.hurtAndBreak(1, p_424834_, p_426411_.asEquipmentSlot());
-                if (coppergolem != null) {
-                    p_423072_.addFreshEntity(coppergolem);
-                    p_423072_.removeBlock(p_423103_, false);
+                CopperGolem copperGolem = copperGolemStatueBlockEntity.removeStatue(state);
+                itemStack.hurtAndBreak(1, player, hand.asEquipmentSlot());
+                if (copperGolem != null) {
+                    level.addFreshEntity(copperGolem);
+                    level.removeBlock(pos, false);
                     return InteractionResult.SUCCESS;
                 }
             }

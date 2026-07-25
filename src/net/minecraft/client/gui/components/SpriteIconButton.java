@@ -1,59 +1,112 @@
 package net.minecraft.client.gui.components;
 
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.util.ARGB;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class SpriteIconButton extends Button {
+    private static final Identifier BUTTON_DISABLED_SPRITE = Identifier.withDefaultNamespace("widget/button_disabled");
+    private static final Identifier LOADING_SPRITE = Identifier.withDefaultNamespace("friends/loading");
+    private static final Tooltip LOADING_TOOLTIP = Tooltip.create(Component.translatable("gui.friends.button.loading"));
+    private static final int LOADING_SPRITE_W = 5;
+    private static final int LOADING_SPRITE_H = 2;
     protected final WidgetSprites sprite;
     protected final int spriteWidth;
     protected final int spriteHeight;
+    protected final int spriteOffsetX;
+    protected final int spriteOffsetY;
+    private final boolean switchToLoadingAfterPress;
+    private final @Nullable Tooltip defaultTooltip;
+    private boolean loading;
 
-    SpriteIconButton(
-        int p_297620_,
-        int p_300275_,
-        Component p_297544_,
-        int p_298263_,
-        int p_299223_,
-        WidgetSprites p_426556_,
-        Button.OnPress p_297736_,
-        @Nullable Component p_425844_,
-        Button.@Nullable CreateNarration p_335316_
+    private SpriteIconButton(
+        final int width,
+        final int height,
+        final Component message,
+        final int spriteWidth,
+        final int spriteHeight,
+        final int spriteOffsetX,
+        final int spriteOffsetY,
+        final WidgetSprites sprite,
+        final Button.OnPress onPress,
+        final @Nullable Component tooltip,
+        final Button.@Nullable CreateNarration narration,
+        final boolean switchToLoadingAfterPress
     ) {
-        super(0, 0, p_297620_, p_300275_, p_297544_, p_297736_, p_335316_ == null ? DEFAULT_NARRATION : p_335316_);
-        if (p_425844_ != null) {
-            this.setTooltip(Tooltip.create(p_425844_));
-        }
-
-        this.spriteWidth = p_298263_;
-        this.spriteHeight = p_299223_;
-        this.sprite = p_426556_;
+        super(0, 0, width, height, message, onPress, narration == null ? DEFAULT_NARRATION : narration);
+        this.defaultTooltip = tooltip != null ? Tooltip.create(tooltip) : null;
+        this.setTooltip(this.defaultTooltip);
+        this.spriteWidth = spriteWidth;
+        this.spriteHeight = spriteHeight;
+        this.spriteOffsetX = spriteOffsetX;
+        this.spriteOffsetY = spriteOffsetY;
+        this.sprite = sprite;
+        this.switchToLoadingAfterPress = switchToLoadingAfterPress;
     }
 
-    protected void renderSprite(GuiGraphics p_458840_, int p_452781_, int p_452704_) {
-        p_458840_.blitSprite(
-            RenderPipelines.GUI_TEXTURED,
-            this.sprite.get(this.isActive(), this.isHoveredOrFocused()),
-            p_452781_,
-            p_452704_,
-            this.spriteWidth,
-            this.spriteHeight,
-            this.alpha
+    public void setLoading(final boolean loading) {
+        this.setLoading(loading, LOADING_TOOLTIP);
+    }
+
+    public void setLoading(final boolean loading, final Tooltip loadingTooltip) {
+        this.loading = loading;
+        if (loading) {
+            this.setTooltip(loadingTooltip);
+        } else {
+            this.setTooltip(this.defaultTooltip);
+        }
+    }
+
+    @Override
+    public boolean isActive() {
+        return super.isActive() && !this.loading;
+    }
+
+    @Override
+    public void onPress(final InputWithModifiers input) {
+        if (this.switchToLoadingAfterPress) {
+            this.setLoading(true);
+        }
+
+        super.onPress(input);
+    }
+
+    protected void extractSprite(final GuiGraphicsExtractor graphics, final int x, final int y) {
+        graphics.blitSprite(
+            RenderPipelines.GUI_TEXTURED, this.sprite.get(this.isActive(), this.isHoveredOrFocused()), x, y, this.spriteWidth, this.spriteHeight, this.alpha
         );
     }
 
-    public static SpriteIconButton.Builder builder(Component p_299964_, Button.OnPress p_301369_, boolean p_298501_) {
-        return new SpriteIconButton.Builder(p_299964_, p_301369_, p_298501_);
+    protected boolean extractLoadingStateIfLoading(final GuiGraphicsExtractor graphics) {
+        if (!this.loading) {
+            return false;
+        }
+
+        graphics.blitSprite(
+            RenderPipelines.GUI_TEXTURED, BUTTON_DISABLED_SPRITE, this.getX(), this.getY(), this.getWidth(), this.getHeight(), ARGB.white(this.alpha)
+        );
+        graphics.blitSprite(
+            RenderPipelines.GUI_TEXTURED,
+            LOADING_SPRITE,
+            this.getX() + (this.getWidth() - 5) / 2,
+            this.getY() + (this.getHeight() - 2) / 2,
+            5,
+            2,
+            ARGB.white(this.alpha)
+        );
+        return true;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder {
+    public static SpriteIconButton.Builder builder(final Component message, final Button.OnPress onPress, final boolean iconOnly) {
+        return new SpriteIconButton.Builder(message, onPress, iconOnly);
+    }
+
+        public static class Builder {
         private final Component message;
         private final Button.OnPress onPress;
         private final boolean iconOnly;
@@ -62,37 +115,51 @@ public abstract class SpriteIconButton extends Button {
         private @Nullable WidgetSprites sprite;
         private int spriteWidth;
         private int spriteHeight;
+        private int spriteOffsetX;
+        private int spriteOffsetY;
         private @Nullable Component tooltip;
         private Button.@Nullable CreateNarration narration;
+        private boolean switchToLoadingAfterPress;
 
-        public Builder(Component p_298778_, Button.OnPress p_297973_, boolean p_297512_) {
-            this.message = p_298778_;
-            this.onPress = p_297973_;
-            this.iconOnly = p_297512_;
+        private Builder(final Component message, final Button.OnPress onPress, final boolean iconOnly) {
+            this.message = message;
+            this.onPress = onPress;
+            this.iconOnly = iconOnly;
         }
 
-        public SpriteIconButton.Builder width(int p_298805_) {
-            this.width = p_298805_;
+        public SpriteIconButton.Builder width(final int width) {
+            this.width = width;
             return this;
         }
 
-        public SpriteIconButton.Builder size(int p_301312_, int p_297726_) {
-            this.width = p_301312_;
-            this.height = p_297726_;
+        public SpriteIconButton.Builder size(final int width, final int height) {
+            this.width = width;
+            this.height = height;
             return this;
         }
 
-        public SpriteIconButton.Builder sprite(Identifier p_455976_, int p_301308_, int p_297593_) {
-            this.sprite = new WidgetSprites(p_455976_);
-            this.spriteWidth = p_301308_;
-            this.spriteHeight = p_297593_;
+        public SpriteIconButton.Builder sprite(final Identifier sprite, final int spriteWidth, final int spriteHeight) {
+            this.sprite = new WidgetSprites(sprite);
+            this.spriteWidth = spriteWidth;
+            this.spriteHeight = spriteHeight;
             return this;
         }
 
-        public SpriteIconButton.Builder sprite(WidgetSprites p_425122_, int p_423359_, int p_426123_) {
-            this.sprite = p_425122_;
-            this.spriteWidth = p_423359_;
-            this.spriteHeight = p_426123_;
+        public SpriteIconButton.Builder sprite(final WidgetSprites sprite, final int spriteWidth, final int spriteHeight) {
+            this.sprite = sprite;
+            this.spriteWidth = spriteWidth;
+            this.spriteHeight = spriteHeight;
+            return this;
+        }
+
+        public SpriteIconButton.Builder spriteOffset(final int spriteOffsetX, final int spriteOffsetY) {
+            this.spriteOffsetX = spriteOffsetX;
+            this.spriteOffsetY = spriteOffsetY;
+            return this;
+        }
+
+        public SpriteIconButton.Builder tooltip(final Component tooltip) {
+            this.tooltip = tooltip;
             return this;
         }
 
@@ -101,8 +168,13 @@ public abstract class SpriteIconButton extends Button {
             return this;
         }
 
-        public SpriteIconButton.Builder narration(Button.CreateNarration p_328959_) {
-            this.narration = p_328959_;
+        public SpriteIconButton.Builder narration(final Button.CreateNarration narration) {
+            this.narration = narration;
+            return this;
+        }
+
+        public SpriteIconButton.Builder switchToLoadingAfterPress() {
+            this.switchToLoadingAfterPress = true;
             return this;
         }
 
@@ -110,17 +182,20 @@ public abstract class SpriteIconButton extends Button {
             if (this.sprite == null) {
                 throw new IllegalStateException("Sprite not set");
             } else {
-                return (SpriteIconButton)(this.iconOnly
+                return this.iconOnly
                     ? new SpriteIconButton.CenteredIcon(
                         this.width,
                         this.height,
                         this.message,
                         this.spriteWidth,
                         this.spriteHeight,
+                        this.spriteOffsetX,
+                        this.spriteOffsetY,
                         this.sprite,
                         this.onPress,
                         this.tooltip,
-                        this.narration
+                        this.narration,
+                        this.switchToLoadingAfterPress
                     )
                     : new SpriteIconButton.TextAndIcon(
                         this.width,
@@ -128,67 +203,82 @@ public abstract class SpriteIconButton extends Button {
                         this.message,
                         this.spriteWidth,
                         this.spriteHeight,
+                        this.spriteOffsetX,
+                        this.spriteOffsetY,
                         this.sprite,
                         this.onPress,
                         this.tooltip,
-                        this.narration
-                    ));
+                        this.narration,
+                        this.switchToLoadingAfterPress
+                    );
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class CenteredIcon extends SpriteIconButton {
+        public static class CenteredIcon extends SpriteIconButton {
         protected CenteredIcon(
-            int p_300200_,
-            int p_299056_,
-            Component p_298209_,
-            int p_300001_,
-            int p_298255_,
-            WidgetSprites p_427853_,
-            Button.OnPress p_298485_,
-            @Nullable Component p_423465_,
-            Button.@Nullable CreateNarration p_328314_
+            final int width,
+            final int height,
+            final Component message,
+            final int spriteWidth,
+            final int spriteHeight,
+            final int spriteOffsetX,
+            final int spriteOffsetY,
+            final WidgetSprites sprite,
+            final Button.OnPress onPress,
+            final @Nullable Component tooltip,
+            final Button.@Nullable CreateNarration narration,
+            final boolean switchToLoadingAfterPress
         ) {
-            super(p_300200_, p_299056_, p_298209_, p_300001_, p_298255_, p_427853_, p_298485_, p_423465_, p_328314_);
+            super(
+                width, height, message, spriteWidth, spriteHeight, spriteOffsetX, spriteOffsetY, sprite, onPress, tooltip, narration, switchToLoadingAfterPress
+            );
         }
 
         @Override
-        public void renderContents(GuiGraphics p_456240_, int p_451405_, int p_450864_, float p_458591_) {
-            this.renderDefaultSprite(p_456240_);
-            int i = this.getX() + this.getWidth() / 2 - this.spriteWidth / 2;
-            int j = this.getY() + this.getHeight() / 2 - this.spriteHeight / 2;
-            this.renderSprite(p_456240_, i, j);
+        public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+            if (!this.extractLoadingStateIfLoading(graphics)) {
+                this.extractDefaultSprite(graphics);
+                int x = this.spriteOffsetX + this.getX() + this.getWidth() / 2 - this.spriteWidth / 2;
+                int y = this.spriteOffsetY + this.getY() + this.getHeight() / 2 - this.spriteHeight / 2;
+                this.extractSprite(graphics, x, y);
+            }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class TextAndIcon extends SpriteIconButton {
+        public static class TextAndIcon extends SpriteIconButton {
         protected TextAndIcon(
-            int p_299028_,
-            int p_300372_,
-            Component p_297448_,
-            int p_300274_,
-            int p_301370_,
-            WidgetSprites p_430624_,
-            Button.OnPress p_298623_,
-            @Nullable Component p_424546_,
-            Button.@Nullable CreateNarration p_328187_
+            final int width,
+            final int height,
+            final Component message,
+            final int spriteWidth,
+            final int spriteHeight,
+            final int spriteOffsetX,
+            final int spriteOffsetY,
+            final WidgetSprites sprite,
+            final Button.OnPress onPress,
+            final @Nullable Component tooltip,
+            final Button.@Nullable CreateNarration narration,
+            final boolean switchToLoadingAfterPress
         ) {
-            super(p_299028_, p_300372_, p_297448_, p_300274_, p_301370_, p_430624_, p_298623_, p_424546_, p_328187_);
+            super(
+                width, height, message, spriteWidth, spriteHeight, spriteOffsetX, spriteOffsetY, sprite, onPress, tooltip, narration, switchToLoadingAfterPress
+            );
         }
 
         @Override
-        public void renderContents(GuiGraphics p_460455_, int p_452292_, int p_459576_, float p_451682_) {
-            this.renderDefaultSprite(p_460455_);
-            int i = this.getX() + 2;
-            int j = this.getX() + this.getWidth() - this.spriteWidth - 4;
-            int k = this.getX() + this.getWidth() / 2;
-            ActiveTextCollector activetextcollector = p_460455_.textRendererForWidget(this, GuiGraphics.HoveredTextEffects.NONE);
-            activetextcollector.acceptScrolling(this.getMessage(), k, i, j, this.getY(), this.getY() + this.getHeight());
-            int l = this.getX() + this.getWidth() - this.spriteWidth - 2;
-            int i1 = this.getY() + this.getHeight() / 2 - this.spriteHeight / 2;
-            this.renderSprite(p_460455_, l, i1);
+        public void extractContents(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+            if (!this.extractLoadingStateIfLoading(graphics)) {
+                this.extractDefaultSprite(graphics);
+                int left = this.getX() + 2;
+                int right = this.getX() + this.getWidth() - this.spriteWidth - 4;
+                int centerX = this.getX() + this.getWidth() / 2;
+                ActiveTextCollector output = graphics.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.NONE);
+                output.acceptScrolling(this.getMessage(), centerX, left, right, this.getY(), this.getY() + this.getHeight());
+                int x = this.spriteOffsetX + this.getX() + this.getWidth() - this.spriteWidth - 2;
+                int y = this.spriteOffsetY + this.getY() + this.getHeight() / 2 - this.spriteHeight / 2;
+                this.extractSprite(graphics, x, y);
+            }
         }
     }
 }

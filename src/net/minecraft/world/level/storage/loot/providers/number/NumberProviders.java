@@ -5,27 +5,25 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
 
 public class NumberProviders {
-    private static final Codec<NumberProvider> TYPED_CODEC = BuiltInRegistries.LOOT_NUMBER_PROVIDER_TYPE
-        .byNameCodec()
-        .dispatch(NumberProvider::getType, LootNumberProviderType::codec);
+    private static final Codec<NumberProvider> TYPED_CODEC = BuiltInRegistries.LOOT_NUMBER_PROVIDER_TYPE.byNameCodec().dispatch(NumberProvider::codec, c -> c);
     public static final Codec<NumberProvider> CODEC = Codec.lazyInitialized(
         () -> {
-            Codec<NumberProvider> codec = Codec.withAlternative(TYPED_CODEC, UniformGenerator.CODEC.codec());
-            return Codec.either(ConstantValue.INLINE_CODEC, codec)
-                .xmap(Either::unwrap, p_297609_ -> p_297609_ instanceof ConstantValue constantvalue ? Either.left(constantvalue) : Either.right(p_297609_));
+            Codec<NumberProvider> typedCodecWithFallback = Codec.withAlternative(TYPED_CODEC, UniformGenerator.MAP_CODEC.codec());
+            return Codec.either(ConstantValue.INLINE_CODEC, typedCodecWithFallback)
+                .xmap(Either::unwrap, provider -> provider instanceof ConstantValue constant ? Either.left(constant) : Either.right(provider));
         }
     );
-    public static final LootNumberProviderType CONSTANT = register("constant", ConstantValue.CODEC);
-    public static final LootNumberProviderType UNIFORM = register("uniform", UniformGenerator.CODEC);
-    public static final LootNumberProviderType BINOMIAL = register("binomial", BinomialDistributionGenerator.CODEC);
-    public static final LootNumberProviderType SCORE = register("score", ScoreboardValue.CODEC);
-    public static final LootNumberProviderType STORAGE = register("storage", StorageValue.CODEC);
-    public static final LootNumberProviderType ENCHANTMENT_LEVEL = register("enchantment_level", EnchantmentLevelProvider.CODEC);
 
-    private static LootNumberProviderType register(String p_165739_, MapCodec<? extends NumberProvider> p_330989_) {
-        return Registry.register(BuiltInRegistries.LOOT_NUMBER_PROVIDER_TYPE, Identifier.withDefaultNamespace(p_165739_), new LootNumberProviderType(p_330989_));
+    public static MapCodec<? extends NumberProvider> bootstrap(final Registry<MapCodec<? extends NumberProvider>> registry) {
+        Registry.register(registry, "constant", ConstantValue.MAP_CODEC);
+        Registry.register(registry, "uniform", UniformGenerator.MAP_CODEC);
+        Registry.register(registry, "binomial", BinomialDistributionGenerator.MAP_CODEC);
+        Registry.register(registry, "score", ScoreboardValue.MAP_CODEC);
+        Registry.register(registry, "storage", StorageValue.MAP_CODEC);
+        Registry.register(registry, "sum", Sum.MAP_CODEC);
+        Registry.register(registry, "enchantment_level", EnchantmentLevelProvider.MAP_CODEC);
+        return Registry.register(registry, "environment_attribute", EnvironmentAttributeValue.MAP_CODEC);
     }
 }

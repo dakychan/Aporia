@@ -21,84 +21,97 @@ public record TeleportTransition(
     Set<Relative> relatives,
     TeleportTransition.PostTeleportTransition postTeleportTransition
 ) {
-    public static final TeleportTransition.PostTeleportTransition DO_NOTHING = p_360923_ -> {};
+    public static final TeleportTransition.PostTeleportTransition DO_NOTHING = entity -> {};
     public static final TeleportTransition.PostTeleportTransition PLAY_PORTAL_SOUND = TeleportTransition::playPortalSound;
     public static final TeleportTransition.PostTeleportTransition PLACE_PORTAL_TICKET = TeleportTransition::placePortalTicket;
 
     public TeleportTransition(
-        ServerLevel p_367673_, Vec3 p_361950_, Vec3 p_369034_, float p_365740_, float p_364147_, TeleportTransition.PostTeleportTransition p_368988_
+        final ServerLevel newLevel,
+        final Vec3 pos,
+        final Vec3 speed,
+        final float yRot,
+        final float xRot,
+        final TeleportTransition.PostTeleportTransition postTeleportTransition
     ) {
-        this(p_367673_, p_361950_, p_369034_, p_365740_, p_364147_, Set.of(), p_368988_);
+        this(newLevel, pos, speed, yRot, xRot, Set.of(), postTeleportTransition);
     }
 
     public TeleportTransition(
-        ServerLevel p_366139_,
-        Vec3 p_369335_,
-        Vec3 p_364793_,
-        float p_366788_,
-        float p_367305_,
-        Set<Relative> p_369752_,
-        TeleportTransition.PostTeleportTransition p_360762_
+        final ServerLevel newLevel,
+        final Vec3 pos,
+        final Vec3 speed,
+        final float yRot,
+        final float xRot,
+        final Set<Relative> relatives,
+        final TeleportTransition.PostTeleportTransition postTeleportTransition
     ) {
-        this(p_366139_, p_369335_, p_364793_, p_366788_, p_367305_, false, false, p_369752_, p_360762_);
+        this(newLevel, pos, speed, yRot, xRot, false, false, relatives, postTeleportTransition);
     }
 
-    private static void playPortalSound(Entity p_361275_) {
-        if (p_361275_ instanceof ServerPlayer serverplayer) {
-            serverplayer.connection.send(new ClientboundLevelEventPacket(1032, BlockPos.ZERO, 0, false));
+    private static void playPortalSound(final Entity entity) {
+        if (entity instanceof ServerPlayer player) {
+            player.connection.send(new ClientboundLevelEventPacket(1032, BlockPos.ZERO, 0, false));
         }
     }
 
-    private static void placePortalTicket(Entity p_369312_) {
-        p_369312_.placePortalTicket(BlockPos.containing(p_369312_.position()));
+    private static void placePortalTicket(final Entity entity) {
+        entity.placePortalTicket(BlockPos.containing(entity.position()));
     }
 
-    public static TeleportTransition createDefault(ServerPlayer p_427614_, TeleportTransition.PostTeleportTransition p_423796_) {
-        ServerLevel serverlevel = p_427614_.level().getServer().findRespawnDimension();
-        LevelData.RespawnData leveldata$respawndata = serverlevel.getRespawnData();
+    public static TeleportTransition createDefault(final ServerPlayer player, final TeleportTransition.PostTeleportTransition postTeleportTransition) {
+        ServerLevel newLevel = player.level().getServer().findRespawnDimension();
+        LevelData.RespawnData respawnData = newLevel.getRespawnData();
         return new TeleportTransition(
-            serverlevel,
-            findAdjustedSharedSpawnPos(serverlevel, p_427614_),
+            newLevel,
+            findAdjustedSharedSpawnPos(newLevel, player),
             Vec3.ZERO,
-            leveldata$respawndata.yaw(),
-            leveldata$respawndata.pitch(),
+            respawnData.yaw(),
+            respawnData.pitch(),
             false,
             false,
             Set.of(),
-            p_423796_
+            postTeleportTransition
         );
     }
 
-    public static TeleportTransition missingRespawnBlock(ServerPlayer p_425766_, TeleportTransition.PostTeleportTransition p_360765_) {
-        ServerLevel serverlevel = p_425766_.level().getServer().findRespawnDimension();
-        LevelData.RespawnData leveldata$respawndata = serverlevel.getRespawnData();
+    public static TeleportTransition missingRespawnBlock(final ServerPlayer player, final TeleportTransition.PostTeleportTransition postTeleportTransition) {
+        ServerLevel newLevel = player.level().getServer().findRespawnDimension();
+        LevelData.RespawnData respawnData = newLevel.getRespawnData();
         return new TeleportTransition(
-            serverlevel,
-            findAdjustedSharedSpawnPos(serverlevel, p_425766_),
+            newLevel,
+            findAdjustedSharedSpawnPos(newLevel, player),
             Vec3.ZERO,
-            leveldata$respawndata.yaw(),
-            leveldata$respawndata.pitch(),
+            respawnData.yaw(),
+            respawnData.pitch(),
             true,
             false,
             Set.of(),
-            p_360765_
+            postTeleportTransition
         );
     }
 
-    private static Vec3 findAdjustedSharedSpawnPos(ServerLevel p_369125_, Entity p_366828_) {
-        return p_366828_.adjustSpawnLocation(p_369125_, p_369125_.getRespawnData().pos()).getBottomCenter();
+    private static Vec3 findAdjustedSharedSpawnPos(final ServerLevel newLevel, final Entity entity) {
+        return Vec3.atBottomCenterOf(entity.adjustSpawnLocation(newLevel, newLevel.getRespawnData().pos()));
     }
 
-    public TeleportTransition withRotation(float p_365894_, float p_364460_) {
-        return new TeleportTransition(
-            this.newLevel(), this.position(), this.deltaMovement(), p_365894_, p_364460_, this.missingRespawnBlock(), this.asPassenger(), this.relatives(), this.postTeleportTransition()
-        );
-    }
-
-    public TeleportTransition withPosition(Vec3 p_364591_) {
+    public TeleportTransition withRotation(final float yRot, final float xRot) {
         return new TeleportTransition(
             this.newLevel(),
-            p_364591_,
+            this.position(),
+            this.deltaMovement(),
+            yRot,
+            xRot,
+            this.missingRespawnBlock(),
+            this.asPassenger(),
+            this.relatives(),
+            this.postTeleportTransition()
+        );
+    }
+
+    public TeleportTransition withPosition(final Vec3 position) {
+        return new TeleportTransition(
+            this.newLevel(),
+            position,
             this.deltaMovement(),
             this.yRot(),
             this.xRot(),
@@ -125,12 +138,12 @@ public record TeleportTransition(
 
     @FunctionalInterface
     public interface PostTeleportTransition {
-        void onTransition(Entity p_360712_);
+        void onTransition(final Entity entity);
 
-        default TeleportTransition.PostTeleportTransition then(TeleportTransition.PostTeleportTransition p_368257_) {
-            return p_362346_ -> {
-                this.onTransition(p_362346_);
-                p_368257_.onTransition(p_362346_);
+        default TeleportTransition.PostTeleportTransition then(final TeleportTransition.PostTeleportTransition postTeleportTransition) {
+            return entity -> {
+                this.onTransition(entity);
+                postTeleportTransition.onTransition(entity);
             };
         }
     }

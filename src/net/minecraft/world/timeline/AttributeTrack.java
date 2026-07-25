@@ -4,30 +4,36 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import java.util.Optional;
-import java.util.function.LongSupplier;
+import net.minecraft.core.Holder;
 import net.minecraft.util.KeyframeTrack;
 import net.minecraft.util.Util;
 import net.minecraft.world.attribute.EnvironmentAttribute;
 import net.minecraft.world.attribute.modifier.AttributeModifier;
+import net.minecraft.world.clock.ClockManager;
+import net.minecraft.world.clock.WorldClock;
 
 public record AttributeTrack<Value, Argument>(AttributeModifier<Value, Argument> modifier, KeyframeTrack<Argument> argumentTrack) {
-    public static <Value> Codec<AttributeTrack<Value, ?>> createCodec(EnvironmentAttribute<Value> p_451460_) {
-        MapCodec<AttributeModifier<Value, ?>> mapcodec = p_451460_.type().modifierCodec().optionalFieldOf("modifier", AttributeModifier.override());
-        return mapcodec.dispatch(AttributeTrack::modifier, Util.memoize(p_452671_ -> createCodecWithModifier(p_451460_, (AttributeModifier<Value, ?>)p_452671_)));
+    public static <Value> Codec<AttributeTrack<Value, ?>> createCodec(final EnvironmentAttribute<Value> attribute) {
+        MapCodec<AttributeModifier<Value, ?>> modifierCodec = attribute.type().modifierCodec().optionalFieldOf("modifier", AttributeModifier.override());
+        return modifierCodec.dispatch(
+            AttributeTrack::modifier, Util.memoize(modifier -> createCodecWithModifier(attribute, (AttributeModifier<Value, ?>)modifier))
+        );
     }
 
     private static <Value, Argument> MapCodec<AttributeTrack<Value, Argument>> createCodecWithModifier(
-        EnvironmentAttribute<Value> p_452031_, AttributeModifier<Value, Argument> p_455596_
+        final EnvironmentAttribute<Value> attribute, final AttributeModifier<Value, Argument> modifier
     ) {
-        return KeyframeTrack.mapCodec(p_455596_.argumentCodec(p_452031_))
-            .xmap(p_450400_ -> new AttributeTrack<>(p_455596_, (KeyframeTrack<Argument>)p_450400_), AttributeTrack::argumentTrack);
+        return KeyframeTrack.mapCodec(modifier.argumentCodec(attribute))
+            .xmap(track -> new AttributeTrack<>(modifier, (KeyframeTrack<Argument>)track), AttributeTrack::argumentTrack);
     }
 
-    public AttributeTrackSampler<Value, Argument> bakeSampler(EnvironmentAttribute<Value> p_457066_, Optional<Integer> p_455593_, LongSupplier p_458090_) {
-        return new AttributeTrackSampler<>(p_455593_, this.modifier, this.argumentTrack, this.modifier.argumentKeyframeLerp(p_457066_), p_458090_);
+    public AttributeTrackSampler<Value, Argument> bakeSampler(
+        final EnvironmentAttribute<Value> attribute, final Holder<WorldClock> clock, final Optional<Integer> periodTicks, final ClockManager clockManager
+    ) {
+        return new AttributeTrackSampler<>(clock, periodTicks, this.modifier, this.argumentTrack, this.modifier.argumentKeyframeLerp(attribute), clockManager);
     }
 
-    public static DataResult<AttributeTrack<?, ?>> validatePeriod(AttributeTrack<?, ?> p_459868_, int p_457041_) {
-        return KeyframeTrack.validatePeriod(p_459868_.argumentTrack(), p_457041_).map(p_455588_ -> p_459868_);
+    public static DataResult<AttributeTrack<?, ?>> validatePeriod(final AttributeTrack<?, ?> track, final int periodTicks) {
+        return KeyframeTrack.validatePeriod(track.argumentTrack(), periodTicks).map(ignored -> track);
     }
 }

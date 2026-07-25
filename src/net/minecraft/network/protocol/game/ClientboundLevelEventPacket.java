@@ -15,25 +15,25 @@ public class ClientboundLevelEventPacket implements Packet<ClientGamePacketListe
     private final int data;
     private final boolean globalEvent;
 
-    public ClientboundLevelEventPacket(int p_132264_, BlockPos p_132265_, int p_132266_, boolean p_132267_) {
-        this.type = p_132264_;
-        this.pos = p_132265_.immutable();
-        this.data = p_132266_;
-        this.globalEvent = p_132267_;
+    public ClientboundLevelEventPacket(final int type, final BlockPos pos, final int data, final boolean globalEvent) {
+        this.type = type;
+        this.pos = pos.immutable();
+        this.data = data;
+        this.globalEvent = globalEvent;
     }
 
-    private ClientboundLevelEventPacket(FriendlyByteBuf p_178908_) {
-        this.type = p_178908_.readInt();
-        this.pos = p_178908_.readBlockPos();
-        this.data = p_178908_.readInt();
-        this.globalEvent = p_178908_.readBoolean();
+    private ClientboundLevelEventPacket(final FriendlyByteBuf input) {
+        this.type = input.readInt();
+        this.pos = input.readBlockPos();
+        this.data = input.readInt();
+        this.globalEvent = input.readBoolean();
     }
 
-    private void write(FriendlyByteBuf p_132276_) {
-        p_132276_.writeInt(this.type);
-        p_132276_.writeBlockPos(this.pos);
-        p_132276_.writeInt(this.data);
-        p_132276_.writeBoolean(this.globalEvent);
+    private void write(final FriendlyByteBuf output) {
+        output.writeInt(this.type);
+        output.writeBlockPos(this.pos);
+        output.writeInt(this.data);
+        output.writeBoolean(this.globalEvent);
     }
 
     @Override
@@ -41,8 +41,8 @@ public class ClientboundLevelEventPacket implements Packet<ClientGamePacketListe
         return GamePacketTypes.CLIENTBOUND_LEVEL_EVENT;
     }
 
-    public void handle(ClientGamePacketListener p_132273_) {
-        p_132273_.handleLevelEvent(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleLevelEvent(this);
     }
 
     public boolean isGlobalEvent() {

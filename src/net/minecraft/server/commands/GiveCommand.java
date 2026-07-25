@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.Collection;
 import net.minecraft.commands.CommandBuildContext;
@@ -21,27 +20,23 @@ import net.minecraft.world.item.ItemStack;
 public class GiveCommand {
     public static final int MAX_ALLOWED_ITEMSTACKS = 100;
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_214446_, CommandBuildContext p_214447_) {
-        p_214446_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        dispatcher.register(
             Commands.literal("give")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
                 .then(
                     Commands.argument("targets", EntityArgument.players())
                         .then(
-                            Commands.argument("item", ItemArgument.item(p_214447_))
-                                .executes(
-                                    p_137784_ -> giveItem(
-                                        p_137784_.getSource(), ItemArgument.getItem(p_137784_, "item"), EntityArgument.getPlayers(p_137784_, "targets"), 1
-                                    )
-                                )
+                            Commands.argument("item", ItemArgument.item(context))
+                                .executes(c -> giveItem(c.getSource(), ItemArgument.getItem(c, "item"), EntityArgument.getPlayers(c, "targets"), 1))
                                 .then(
                                     Commands.argument("count", IntegerArgumentType.integer(1))
                                         .executes(
-                                            p_137775_ -> giveItem(
-                                                p_137775_.getSource(),
-                                                ItemArgument.getItem(p_137775_, "item"),
-                                                EntityArgument.getPlayers(p_137775_, "targets"),
-                                                IntegerArgumentType.getInteger(p_137775_, "count")
+                                            c -> giveItem(
+                                                c.getSource(),
+                                                ItemArgument.getItem(c, "item"),
+                                                EntityArgument.getPlayers(c, "targets"),
+                                                IntegerArgumentType.getInteger(c, "count")
                                             )
                                         )
                                 )
@@ -50,59 +45,62 @@ public class GiveCommand {
         );
     }
 
-    private static int giveItem(CommandSourceStack p_137779_, ItemInput p_137780_, Collection<ServerPlayer> p_137781_, int p_137782_) throws CommandSyntaxException {
-        ItemStack itemstack = p_137780_.createItemStack(1, false);
-        int i = itemstack.getMaxStackSize();
-        int j = i * 100;
-        if (p_137782_ > j) {
-            p_137779_.sendFailure(Component.translatable("commands.give.failed.toomanyitems", j, itemstack.getDisplayName()));
+    private static int giveItem(final CommandSourceStack source, final ItemInput input, final Collection<ServerPlayer> players, final int count) throws CommandSyntaxException {
+        ItemStack prototypeItemStack = input.createItemStack(1);
+        int maxStackSize = prototypeItemStack.getMaxStackSize();
+        int maxAllowedCount = maxStackSize * 100;
+        if (count > maxAllowedCount) {
+            source.sendFailure(Component.translatable("commands.give.failed.toomanyitems", maxAllowedCount, prototypeItemStack.getDisplayName()));
             return 0;
-        } else {
-            for (ServerPlayer serverplayer : p_137781_) {
-                int k = p_137782_;
+        }
 
-                while (k > 0) {
-                    int l = Math.min(i, k);
-                    k -= l;
-                    ItemStack itemstack1 = p_137780_.createItemStack(l, false);
-                    boolean flag = serverplayer.getInventory().add(itemstack1);
-                    if (flag && itemstack1.isEmpty()) {
-                        ItemEntity itementity1 = serverplayer.drop(itemstack, false);
-                        if (itementity1 != null) {
-                            itementity1.makeFakeItem();
-                        }
+        for (ServerPlayer player : players) {
+            int remaining = count;
 
-                        serverplayer.level()
-                            .playSound(
-                                null,
-                                serverplayer.getX(),
-                                serverplayer.getY(),
-                                serverplayer.getZ(),
-                                SoundEvents.ITEM_PICKUP,
-                                SoundSource.PLAYERS,
-                                0.2F,
-                                ((serverplayer.getRandom().nextFloat() - serverplayer.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F
-                            );
-                        serverplayer.containerMenu.broadcastChanges();
-                    } else {
-                        ItemEntity itementity = serverplayer.drop(itemstack1, false);
-                        if (itementity != null) {
-                            itementity.setNoPickUpDelay();
-                            itementity.setTarget(serverplayer.getUUID());
-                        }
+            while (remaining > 0) {
+                int size = Math.min(maxStackSize, remaining);
+                remaining -= size;
+                ItemStack copyToDrop = prototypeItemStack.copyWithCount(size);
+                boolean added = player.getInventory().add(copyToDrop);
+                if (added && copyToDrop.isEmpty()) {
+                    ItemEntity drop = player.drop(prototypeItemStack.copy(), false);
+                    if (drop != null) {
+                        drop.makeFakeItem();
+                    }
+
+                    player.level()
+                        .playSound(
+                            null,
+                            player.getX(),
+                            player.getY(),
+                            player.getZ(),
+                            SoundEvents.ITEM_PICKUP,
+                            SoundSource.PLAYERS,
+                            0.2F,
+                            ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F
+                        );
+                    player.containerMenu.broadcastChanges();
+                } else {
+                    ItemEntity drop = player.drop(copyToDrop, false);
+                    if (drop != null) {
+                        drop.setNoPickUpDelay();
+                        drop.setTarget(player.getUUID());
                     }
                 }
             }
-
-            if (p_137781_.size() == 1) {
-                p_137779_.sendSuccess(
-                    () -> Component.translatable("commands.give.success.single", p_137782_, itemstack.getDisplayName(), p_137781_.iterator().next().getDisplayName()), true
-                );
-            } else {
-                p_137779_.sendSuccess(() -> Component.translatable("commands.give.success.single", p_137782_, itemstack.getDisplayName(), p_137781_.size()), true);
-            }
-
-            return p_137781_.size();
         }
+
+        if (players.size() == 1) {
+            source.sendSuccess(
+                () -> Component.translatable(
+                    "commands.give.success.single", count, prototypeItemStack.getDisplayName(), players.iterator().next().getDisplayName()
+                ),
+                true
+            );
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.give.success.single", count, prototypeItemStack.getDisplayName(), players.size()), true);
+        }
+
+        return players.size();
     }
 }

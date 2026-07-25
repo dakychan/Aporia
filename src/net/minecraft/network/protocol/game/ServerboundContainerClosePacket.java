@@ -11,16 +11,16 @@ public class ServerboundContainerClosePacket implements Packet<ServerGamePacketL
     );
     private final int containerId;
 
-    public ServerboundContainerClosePacket(int p_133970_) {
-        this.containerId = p_133970_;
+    public ServerboundContainerClosePacket(final int containerId) {
+        this.containerId = containerId;
     }
 
-    private ServerboundContainerClosePacket(FriendlyByteBuf p_179584_) {
-        this.containerId = p_179584_.readContainerId();
+    private ServerboundContainerClosePacket(final FriendlyByteBuf input) {
+        this.containerId = input.readContainerId();
     }
 
-    private void write(FriendlyByteBuf p_133978_) {
-        p_133978_.writeContainerId(this.containerId);
+    private void write(final FriendlyByteBuf output) {
+        output.writeContainerId(this.containerId);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ServerboundContainerClosePacket implements Packet<ServerGamePacketL
         return GamePacketTypes.SERVERBOUND_CONTAINER_CLOSE;
     }
 
-    public void handle(ServerGamePacketListener p_133976_) {
-        p_133976_.handleContainerClose(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleContainerClose(this);
     }
 
     public int getContainerId() {

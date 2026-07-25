@@ -11,26 +11,28 @@ public class EntityAttributeBaseValueFix extends NamedEntityFix {
     private final String attributeId;
     private final DoubleUnaryOperator valueFixer;
 
-    public EntityAttributeBaseValueFix(Schema p_376018_, String p_377145_, String p_377550_, String p_378675_, DoubleUnaryOperator p_376118_) {
-        super(p_376018_, false, p_377145_, References.ENTITY, p_377550_);
-        this.attributeId = p_378675_;
-        this.valueFixer = p_376118_;
+    public EntityAttributeBaseValueFix(
+        final Schema outputSchema, final String name, final String entityName, final String attributeId, final DoubleUnaryOperator valueFixer
+    ) {
+        super(outputSchema, false, name, References.ENTITY, entityName);
+        this.attributeId = attributeId;
+        this.valueFixer = valueFixer;
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_378195_) {
-        return p_378195_.update(DSL.remainderFinder(), this::fixValue);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), this::fixValue);
     }
 
-    private Dynamic<?> fixValue(Dynamic<?> p_377977_) {
-        return p_377977_.update("attributes", p_376705_ -> p_377977_.createList(p_376705_.asStream().map(p_378716_ -> {
-            String s = NamespacedSchema.ensureNamespaced(p_378716_.get("id").asString(""));
-            if (!s.equals(this.attributeId)) {
-                return p_378716_;
-            } else {
-                double d0 = p_378716_.get("base").asDouble(0.0);
-                return p_378716_.set("base", p_378716_.createDouble(this.valueFixer.applyAsDouble(d0)));
+    private Dynamic<?> fixValue(final Dynamic<?> tag) {
+        return tag.update("attributes", attributes -> tag.createList(attributes.asStream().map(attribute -> {
+            String attributeId = NamespacedSchema.ensureNamespaced(attribute.get("id").asString(""));
+            if (!attributeId.equals(this.attributeId)) {
+                return attribute;
             }
+
+            double base = attribute.get("base").asDouble(0.0);
+            return attribute.set("base", attribute.createDouble(this.valueFixer.applyAsDouble(base)));
         })));
     }
 }

@@ -6,9 +6,9 @@ public class ZombieAttackGoal extends MeleeAttackGoal {
     private final Zombie zombie;
     private int raiseArmTicks;
 
-    public ZombieAttackGoal(Zombie p_451240_, double p_26020_, boolean p_26021_) {
-        super(p_451240_, p_26020_, p_26021_);
-        this.zombie = p_451240_;
+    public ZombieAttackGoal(final Zombie zombie, final double speedModifier, final boolean trackTarget) {
+        super(zombie, speedModifier, trackTarget);
+        this.zombie = zombie;
     }
 
     @Override

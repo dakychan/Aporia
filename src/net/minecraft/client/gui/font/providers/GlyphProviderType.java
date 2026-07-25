@@ -4,10 +4,7 @@ import com.mojang.blaze3d.font.SpaceProvider;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum GlyphProviderType implements StringRepresentable {
     BITMAP("bitmap", BitmapProvider.Definition.CODEC),
     TTF("ttf", TrueTypeGlyphProviderDefinition.CODEC),
@@ -19,9 +16,9 @@ public enum GlyphProviderType implements StringRepresentable {
     private final String name;
     private final MapCodec<? extends GlyphProviderDefinition> codec;
 
-    private GlyphProviderType(final String p_286573_, final MapCodec<? extends GlyphProviderDefinition> p_286248_) {
-        this.name = p_286573_;
-        this.codec = p_286248_;
+    GlyphProviderType(final String name, final MapCodec<? extends GlyphProviderDefinition> codec) {
+        this.name = name;
+        this.codec = codec;
     }
 
     @Override

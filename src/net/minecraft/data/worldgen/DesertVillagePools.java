@@ -17,37 +17,37 @@ public class DesertVillagePools {
     private static final ResourceKey<StructureTemplatePool> TERMINATORS_KEY = Pools.createKey("village/desert/terminators");
     private static final ResourceKey<StructureTemplatePool> ZOMBIE_TERMINATORS_KEY = Pools.createKey("village/desert/zombie/terminators");
 
-    public static void bootstrap(BootstrapContext<StructureTemplatePool> p_332539_) {
-        HolderGetter<PlacedFeature> holdergetter = p_332539_.lookup(Registries.PLACED_FEATURE);
-        Holder<PlacedFeature> holder = holdergetter.getOrThrow(VillagePlacements.PATCH_CACTUS_VILLAGE);
-        Holder<PlacedFeature> holder1 = holdergetter.getOrThrow(VillagePlacements.PILE_HAY_VILLAGE);
-        HolderGetter<StructureProcessorList> holdergetter1 = p_332539_.lookup(Registries.PROCESSOR_LIST);
-        Holder<StructureProcessorList> holder2 = holdergetter1.getOrThrow(ProcessorLists.ZOMBIE_DESERT);
-        Holder<StructureProcessorList> holder3 = holdergetter1.getOrThrow(ProcessorLists.FARM_DESERT);
-        HolderGetter<StructureTemplatePool> holdergetter2 = p_332539_.lookup(Registries.TEMPLATE_POOL);
-        Holder<StructureTemplatePool> holder4 = holdergetter2.getOrThrow(Pools.EMPTY);
-        Holder<StructureTemplatePool> holder5 = holdergetter2.getOrThrow(TERMINATORS_KEY);
-        Holder<StructureTemplatePool> holder6 = holdergetter2.getOrThrow(ZOMBIE_TERMINATORS_KEY);
-        p_332539_.register(
+    public static void bootstrap(final BootstrapContext<StructureTemplatePool> context) {
+        HolderGetter<PlacedFeature> placedFeatures = context.lookup(Registries.PLACED_FEATURE);
+        Holder<PlacedFeature> patchCactusVillage = placedFeatures.getOrThrow(VillagePlacements.PATCH_CACTUS_VILLAGE);
+        Holder<PlacedFeature> pileHayVillage = placedFeatures.getOrThrow(VillagePlacements.PILE_HAY_VILLAGE);
+        HolderGetter<StructureProcessorList> processorLists = context.lookup(Registries.PROCESSOR_LIST);
+        Holder<StructureProcessorList> zombieDesert = processorLists.getOrThrow(ProcessorLists.ZOMBIE_DESERT);
+        Holder<StructureProcessorList> farmDesert = processorLists.getOrThrow(ProcessorLists.FARM_DESERT);
+        HolderGetter<StructureTemplatePool> pools = context.lookup(Registries.TEMPLATE_POOL);
+        Holder<StructureTemplatePool> empty = pools.getOrThrow(Pools.EMPTY);
+        Holder<StructureTemplatePool> terminators = pools.getOrThrow(TERMINATORS_KEY);
+        Holder<StructureTemplatePool> zombieTerminators = pools.getOrThrow(ZOMBIE_TERMINATORS_KEY);
+        context.register(
             START,
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/town_centers/desert_meeting_point_1"), 98),
                     Pair.of(StructurePoolElement.legacy("village/desert/town_centers/desert_meeting_point_2"), 98),
                     Pair.of(StructurePoolElement.legacy("village/desert/town_centers/desert_meeting_point_3"), 49),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/town_centers/desert_meeting_point_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/town_centers/desert_meeting_point_2", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/town_centers/desert_meeting_point_3", holder2), 1)
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/town_centers/desert_meeting_point_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/town_centers/desert_meeting_point_2", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/town_centers/desert_meeting_point_3", zombieDesert), 1)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/streets",
             new StructureTemplatePool(
-                holder5,
+                terminators,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/streets/corner_01"), 3),
                     Pair.of(StructurePoolElement.legacy("village/desert/streets/corner_02"), 3),
@@ -65,10 +65,10 @@ public class DesertVillagePools {
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/zombie/streets",
             new StructureTemplatePool(
-                holder6,
+                zombieTerminators,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/zombie/streets/corner_01"), 3),
                     Pair.of(StructurePoolElement.legacy("village/desert/zombie/streets/corner_02"), 3),
@@ -86,10 +86,10 @@ public class DesertVillagePools {
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/houses",
             new StructureTemplatePool(
-                holder5,
+                terminators,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_small_house_1"), 2),
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_small_house_2"), 2),
@@ -114,9 +114,9 @@ public class DesertVillagePools {
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_weaponsmith_1"), 2),
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_temple_1"), 2),
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_temple_2"), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_large_farm_1", holder3), 11),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_1", holder3), 4),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_2", holder3), 4),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_large_farm_1", farmDesert), 11),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_1", farmDesert), 4),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_2", farmDesert), 4),
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_animal_pen_1"), 2),
                     Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_animal_pen_2"), 2),
                     Pair.of(StructurePoolElement.empty(), 5)
@@ -125,48 +125,48 @@ public class DesertVillagePools {
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/zombie/houses",
             new StructureTemplatePool(
-                holder6,
+                zombieTerminators,
                 ImmutableList.of(
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_2", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_3", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_4", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_5", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_6", holder2), 1),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_7", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_8", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_medium_house_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_medium_house_2", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_butcher_shop_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_tool_smith_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_fletcher_house_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_shepherd_house_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_armorer_1", holder2), 1),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_fisher_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_tannery_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_cartographer_house_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_library_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_mason_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_weaponsmith_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_temple_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_temple_2", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_large_farm_1", holder2), 7),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_1", holder2), 4),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_2", holder2), 4),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_animal_pen_1", holder2), 2),
-                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_animal_pen_2", holder2), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_2", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_3", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_4", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_5", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_6", zombieDesert), 1),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_7", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_small_house_8", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_medium_house_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/zombie/houses/desert_medium_house_2", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_butcher_shop_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_tool_smith_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_fletcher_house_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_shepherd_house_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_armorer_1", zombieDesert), 1),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_fisher_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_tannery_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_cartographer_house_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_library_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_mason_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_weaponsmith_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_temple_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_temple_2", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_large_farm_1", zombieDesert), 7),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_1", zombieDesert), 4),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_farm_2", zombieDesert), 4),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_animal_pen_1", zombieDesert), 2),
+                    Pair.of(StructurePoolElement.legacy("village/desert/houses/desert_animal_pen_2", zombieDesert), 2),
                     Pair.of(StructurePoolElement.empty(), 5)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
-        p_332539_.register(
+        context.register(
             TERMINATORS_KEY,
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/terminators/terminator_01"), 1),
                     Pair.of(StructurePoolElement.legacy("village/desert/terminators/terminator_02"), 1)
@@ -174,10 +174,10 @@ public class DesertVillagePools {
                 StructureTemplatePool.Projection.TERRAIN_MATCHING
             )
         );
-        p_332539_.register(
+        context.register(
             ZOMBIE_TERMINATORS_KEY,
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/terminators/terminator_01"), 1),
                     Pair.of(StructurePoolElement.legacy("village/desert/zombie/terminators/terminator_02"), 1)
@@ -186,38 +186,38 @@ public class DesertVillagePools {
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/decor",
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/desert_lamp_1"), 10),
-                    Pair.of(StructurePoolElement.feature(holder), 4),
-                    Pair.of(StructurePoolElement.feature(holder1), 4),
+                    Pair.of(StructurePoolElement.feature(patchCactusVillage), 4),
+                    Pair.of(StructurePoolElement.feature(pileHayVillage), 4),
                     Pair.of(StructurePoolElement.empty(), 10)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/zombie/decor",
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
-                    Pair.of(StructurePoolElement.legacy("village/desert/desert_lamp_1", holder2), 10),
-                    Pair.of(StructurePoolElement.feature(holder), 4),
-                    Pair.of(StructurePoolElement.feature(holder1), 4),
+                    Pair.of(StructurePoolElement.legacy("village/desert/desert_lamp_1", zombieDesert), 10),
+                    Pair.of(StructurePoolElement.feature(patchCactusVillage), 4),
+                    Pair.of(StructurePoolElement.feature(pileHayVillage), 4),
                     Pair.of(StructurePoolElement.empty(), 10)
                 ),
                 StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/villagers",
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/villagers/nitwit"), 1),
                     Pair.of(StructurePoolElement.legacy("village/desert/villagers/baby"), 1),
@@ -227,17 +227,17 @@ public class DesertVillagePools {
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/camel",
             new StructureTemplatePool(
-                holder4, ImmutableList.of(Pair.of(StructurePoolElement.legacy("village/desert/camel_spawn"), 1)), StructureTemplatePool.Projection.RIGID
+                empty, ImmutableList.of(Pair.of(StructurePoolElement.legacy("village/desert/camel_spawn"), 1)), StructureTemplatePool.Projection.RIGID
             )
         );
         Pools.register(
-            p_332539_,
+            context,
             "village/desert/zombie/villagers",
             new StructureTemplatePool(
-                holder4,
+                empty,
                 ImmutableList.of(
                     Pair.of(StructurePoolElement.legacy("village/desert/zombie/villagers/nitwit"), 1),
                     Pair.of(StructurePoolElement.legacy("village/desert/zombie/villagers/unemployed"), 10)

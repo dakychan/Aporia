@@ -5,6 +5,7 @@ import net.minecraft.core.particles.SpellParticleOption;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -17,44 +18,45 @@ public class SpectralArrow extends AbstractArrow {
     private static final int DEFAULT_DURATION = 200;
     private int duration = 200;
 
-    public SpectralArrow(EntityType<? extends SpectralArrow> p_458263_, Level p_453274_) {
-        super(p_458263_, p_453274_);
+    public SpectralArrow(final EntityType<? extends SpectralArrow> type, final Level level) {
+        super(type, level);
     }
 
-    public SpectralArrow(Level p_460780_, LivingEntity p_453009_, ItemStack p_452960_, @Nullable ItemStack p_454895_) {
-        super(EntityType.SPECTRAL_ARROW, p_453009_, p_460780_, p_452960_, p_454895_);
+    public SpectralArrow(final Level level, final LivingEntity owner, final ItemStack pickupItemStack, final @Nullable ItemStack firedFromWeapon) {
+        super(EntityTypes.SPECTRAL_ARROW, owner, level, pickupItemStack, firedFromWeapon);
     }
 
-    public SpectralArrow(Level p_450215_, double p_458810_, double p_458272_, double p_457324_, ItemStack p_453736_, @Nullable ItemStack p_457826_) {
-        super(EntityType.SPECTRAL_ARROW, p_458810_, p_458272_, p_457324_, p_450215_, p_453736_, p_457826_);
+    public SpectralArrow(
+        final Level level, final double x, final double y, final double z, final ItemStack pickupItemStack, final @Nullable ItemStack firedFromWeapon
+    ) {
+        super(EntityTypes.SPECTRAL_ARROW, x, y, z, level, pickupItemStack, firedFromWeapon);
     }
 
     @Override
     public void tick() {
         super.tick();
         if (this.level().isClientSide() && !this.isInGround()) {
-            this.level()
-                .addParticle(SpellParticleOption.create(ParticleTypes.EFFECT, -1, 1.0F), this.getX(), this.getY(), this.getZ(), 0.0, 0.0, 0.0);
+            this.level().addParticle(SpellParticleOption.create(ParticleTypes.EFFECT, -1, 1.0F), this.getX(), this.getY(), this.getZ(), 0.0, 0.0, 0.0);
         }
     }
 
     @Override
-    protected void doPostHurtEffects(LivingEntity p_460491_) {
-        super.doPostHurtEffects(p_460491_);
-        MobEffectInstance mobeffectinstance = new MobEffectInstance(MobEffects.GLOWING, this.duration, 0);
-        p_460491_.addEffect(mobeffectinstance, this.getEffectSource());
+    protected void doPostHurtEffects(final LivingEntity mob) {
+        super.doPostHurtEffects(mob);
+        MobEffectInstance effect = new MobEffectInstance(MobEffects.GLOWING, this.duration, 0);
+        mob.addEffect(effect, this.getEffectSource());
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_454541_) {
-        super.readAdditionalSaveData(p_454541_);
-        this.duration = p_454541_.getIntOr("Duration", 200);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.duration = input.getIntOr("Duration", 200);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_457309_) {
-        super.addAdditionalSaveData(p_457309_);
-        p_457309_.putInt("Duration", this.duration);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("Duration", this.duration);
     }
 
     @Override

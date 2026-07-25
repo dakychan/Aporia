@@ -1,10 +1,8 @@
 package net.minecraft.world.entity.ai.behavior;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.behavior.declarative.BehaviorBuilder;
-import net.minecraft.world.entity.ai.behavior.declarative.MemoryAccessor;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Blocks;
@@ -15,23 +13,21 @@ public class RingBell {
     public static final int RING_BELL_FROM_DISTANCE = 3;
 
     public static BehaviorControl<LivingEntity> create() {
-        return BehaviorBuilder.create(
-            p_259094_ -> p_259094_.group(p_259094_.present(MemoryModuleType.MEETING_POINT)).apply(p_259094_, p_259028_ -> (p_259026_, p_260317_, p_260205_) -> {
-                if (p_259026_.random.nextFloat() <= 0.95F) {
-                    return false;
-                } else {
-                    BlockPos blockpos = p_259094_.get(p_259028_).pos();
-                    if (blockpos.closerThan(p_260317_.blockPosition(), 3.0)) {
-                        BlockState blockstate = p_259026_.getBlockState(blockpos);
-                        if (blockstate.is(Blocks.BELL)) {
-                            BellBlock bellblock = (BellBlock)blockstate.getBlock();
-                            bellblock.attemptToRing(p_260317_, p_259026_, blockpos, null);
-                        }
-                    }
+        return BehaviorBuilder.create(i -> i.group(i.present(MemoryModuleType.MEETING_POINT)).apply(i, meetingPoint -> (level, body, timestamp) -> {
+            if (level.getRandom().nextFloat() <= 0.95F) {
+                return false;
+            }
 
-                    return true;
+            BlockPos pos = i.get(meetingPoint).pos();
+            if (pos.closerThan(body.blockPosition(), 3.0)) {
+                BlockState state = level.getBlockState(pos);
+                if (state.is(Blocks.BELL)) {
+                    BellBlock bellBlock = (BellBlock)state.getBlock();
+                    bellBlock.attemptToRing(body, level, pos, null);
                 }
-            })
-        );
+            }
+
+            return true;
+        }));
     }
 }

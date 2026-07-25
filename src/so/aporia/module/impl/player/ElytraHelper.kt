@@ -3,7 +3,7 @@ package so.aporia.module.impl.player
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket
 import net.minecraft.world.InteractionHand
 import net.minecraft.world.entity.EquipmentSlot
-import net.minecraft.world.inventory.ClickType
+import net.minecraft.world.inventory.ContainerInput
 import net.minecraft.world.item.ItemStack
 import net.minecraft.world.item.Items
 import so.aporia.module.Category
@@ -92,12 +92,12 @@ class ElytraHelper : Module("ElytraHelper", Category.PLAYER) {
         val chestItem = player.getItemBySlot(EquipmentSlot.CHEST)
 
         if (isElytra(chestItem)) {
-            gameMode.handleInventoryMouseClick(player.containerMenu.containerId, CHESTPLATE_SLOT_ID, 0, ClickType.QUICK_MOVE, player)
+            gameMode.handleContainerInput(player.containerMenu.containerId, CHESTPLATE_SLOT_ID, 0, ContainerInput.QUICK_MOVE, player)
         } else {
             for (i in 9 until 45) {
                 val slotItem = player.containerMenu.getSlot(i).item
                 if (isElytra(slotItem)) {
-                    gameMode.handleInventoryMouseClick(player.containerMenu.containerId, i, 0, ClickType.QUICK_MOVE, player)
+                    gameMode.handleContainerInput(player.containerMenu.containerId, i, 0, ContainerInput.QUICK_MOVE, player)
                     return
                 }
             }

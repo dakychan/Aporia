@@ -7,7 +7,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.PoiTypeTags;
 import net.minecraft.world.entity.PathfinderMob;
@@ -32,14 +31,16 @@ public class MoveThroughVillageGoal extends Goal {
     private final int distanceToPoi;
     private final BooleanSupplier canDealWithDoors;
 
-    public MoveThroughVillageGoal(PathfinderMob p_25582_, double p_25583_, boolean p_25584_, int p_25585_, BooleanSupplier p_25586_) {
-        this.mob = p_25582_;
-        this.speedModifier = p_25583_;
-        this.onlyAtNight = p_25584_;
-        this.distanceToPoi = p_25585_;
-        this.canDealWithDoors = p_25586_;
+    public MoveThroughVillageGoal(
+        final PathfinderMob mob, final double speedModifier, final boolean onlyAtNight, final int distanceToPoi, final BooleanSupplier canDealWithDoors
+    ) {
+        this.mob = mob;
+        this.speedModifier = speedModifier;
+        this.onlyAtNight = onlyAtNight;
+        this.distanceToPoi = distanceToPoi;
+        this.canDealWithDoors = canDealWithDoors;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
-        if (!GoalUtils.hasGroundPathNavigation(p_25582_)) {
+        if (!GoalUtils.hasGroundPathNavigation(mob)) {
             throw new IllegalArgumentException("Unsupported mob for MoveThroughVillageGoal");
         }
     }
@@ -48,84 +49,72 @@ public class MoveThroughVillageGoal extends Goal {
     public boolean canUse() {
         if (!GoalUtils.hasGroundPathNavigation(this.mob)) {
             return false;
-        } else {
-            this.updateVisited();
-            if (this.onlyAtNight && this.mob.level().isBrightOutside()) {
-                return false;
-            } else {
-                ServerLevel serverlevel = (ServerLevel)this.mob.level();
-                BlockPos blockpos = this.mob.blockPosition();
-                if (!serverlevel.isCloseToVillage(blockpos, 6)) {
-                    return false;
-                } else {
-                    Vec3 vec3 = LandRandomPos.getPos(
-                        this.mob,
-                        15,
-                        7,
-                        p_217751_ -> {
-                            if (!serverlevel.isVillage(p_217751_)) {
-                                return Double.NEGATIVE_INFINITY;
-                            } else {
-                                Optional<BlockPos> optional1 = serverlevel.getPoiManager()
-                                    .find(
-                                        p_217758_ -> p_217758_.is(PoiTypeTags.VILLAGE),
-                                        this::hasNotVisited,
-                                        p_217751_,
-                                        10,
-                                        PoiManager.Occupancy.IS_OCCUPIED
-                                    );
-                                return optional1.<Double>map(p_217754_ -> -p_217754_.distSqr(blockpos)).orElse(Double.NEGATIVE_INFINITY);
-                            }
-                        }
-                    );
-                    if (vec3 == null) {
-                        return false;
-                    } else {
-                        Optional<BlockPos> optional = serverlevel.getPoiManager()
-                            .find(
-                                p_217756_ -> p_217756_.is(PoiTypeTags.VILLAGE),
-                                this::hasNotVisited,
-                                BlockPos.containing(vec3),
-                                10,
-                                PoiManager.Occupancy.IS_OCCUPIED
-                            );
-                        if (optional.isEmpty()) {
-                            return false;
-                        } else {
-                            this.poiPos = optional.get().immutable();
-                            PathNavigation pathnavigation = this.mob.getNavigation();
-                            pathnavigation.setCanOpenDoors(this.canDealWithDoors.getAsBoolean());
-                            this.path = pathnavigation.createPath(this.poiPos, 0);
-                            pathnavigation.setCanOpenDoors(true);
-                            if (this.path == null) {
-                                Vec3 vec31 = DefaultRandomPos.getPosTowards(this.mob, 10, 7, Vec3.atBottomCenterOf(this.poiPos), (float) (Math.PI / 2));
-                                if (vec31 == null) {
-                                    return false;
-                                }
+        }
 
-                                pathnavigation.setCanOpenDoors(this.canDealWithDoors.getAsBoolean());
-                                this.path = this.mob.getNavigation().createPath(vec31.x, vec31.y, vec31.z, 0);
-                                pathnavigation.setCanOpenDoors(true);
-                                if (this.path == null) {
-                                    return false;
-                                }
-                            }
+        this.updateVisited();
+        if (this.onlyAtNight && this.mob.level().isBrightOutside()) {
+            return false;
+        }
 
-                            for (int i = 0; i < this.path.getNodeCount(); i++) {
-                                Node node = this.path.getNode(i);
-                                BlockPos blockpos1 = new BlockPos(node.x, node.y + 1, node.z);
-                                if (DoorBlock.isWoodenDoor(this.mob.level(), blockpos1)) {
-                                    this.path = this.mob.getNavigation().createPath(node.x, node.y, node.z, 0);
-                                    break;
-                                }
-                            }
+        ServerLevel level = (ServerLevel)this.mob.level();
+        BlockPos pos = this.mob.blockPosition();
+        if (!level.isCloseToVillage(pos, 6)) {
+            return false;
+        }
 
-                            return this.path != null;
-                        }
-                    }
+        Vec3 landPos = LandRandomPos.getPos(
+            this.mob,
+            15,
+            7,
+            p -> {
+                if (!level.isVillage(p)) {
+                    return Double.NEGATIVE_INFINITY;
                 }
+
+                Optional<BlockPos> newPoiPos = level.getPoiManager()
+                    .find(e -> e.is(PoiTypeTags.VILLAGE), this::hasNotVisited, p, 10, PoiManager.Occupancy.IS_OCCUPIED);
+                return newPoiPos.<Double>map(poiPos -> -poiPos.distSqr(pos)).orElse(Double.NEGATIVE_INFINITY);
+            }
+        );
+        if (landPos == null) {
+            return false;
+        }
+
+        Optional<BlockPos> target = level.getPoiManager()
+            .find(e -> e.is(PoiTypeTags.VILLAGE), this::hasNotVisited, BlockPos.containing(landPos), 10, PoiManager.Occupancy.IS_OCCUPIED);
+        if (target.isEmpty()) {
+            return false;
+        }
+
+        this.poiPos = target.get().immutable();
+        PathNavigation navigation = this.mob.getNavigation();
+        navigation.setCanOpenDoors(this.canDealWithDoors.getAsBoolean());
+        this.path = navigation.createPath(this.poiPos, 0);
+        navigation.setCanOpenDoors(true);
+        if (this.path == null) {
+            Vec3 partialStep = DefaultRandomPos.getPosTowards(this.mob, 10, 7, Vec3.atBottomCenterOf(this.poiPos), (float) (Math.PI / 2));
+            if (partialStep == null) {
+                return false;
+            }
+
+            navigation.setCanOpenDoors(this.canDealWithDoors.getAsBoolean());
+            this.path = this.mob.getNavigation().createPath(partialStep.x, partialStep.y, partialStep.z, 0);
+            navigation.setCanOpenDoors(true);
+            if (this.path == null) {
+                return false;
             }
         }
+
+        for (int i = 0; i < this.path.getNodeCount(); i++) {
+            Node node = this.path.getNode(i);
+            BlockPos doorPos = new BlockPos(node.x, node.y + 1, node.z);
+            if (DoorBlock.isWoodenDoor(this.mob.level(), doorPos)) {
+                this.path = this.mob.getNavigation().createPath(node.x, node.y, node.z, 0);
+                break;
+            }
+        }
+
+        return this.path != null;
     }
 
     @Override
@@ -145,9 +134,9 @@ public class MoveThroughVillageGoal extends Goal {
         }
     }
 
-    private boolean hasNotVisited(BlockPos p_25593_) {
-        for (BlockPos blockpos : this.visited) {
-            if (Objects.equals(p_25593_, blockpos)) {
+    private boolean hasNotVisited(final BlockPos poi) {
+        for (BlockPos visitedPoi : this.visited) {
+            if (Objects.equals(poi, visitedPoi)) {
                 return false;
             }
         }

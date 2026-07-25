@@ -3,14 +3,13 @@ package net.minecraft.world.inventory;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.crafting.RecipePropertySet;
-import net.minecraft.world.item.crafting.RecipeType;
 
 public class BlastFurnaceMenu extends AbstractFurnaceMenu {
-    public BlastFurnaceMenu(int p_39079_, Inventory p_39080_) {
-        super(MenuType.BLAST_FURNACE, RecipeType.BLASTING, RecipePropertySet.BLAST_FURNACE_INPUT, RecipeBookType.BLAST_FURNACE, p_39079_, p_39080_);
+    public BlastFurnaceMenu(final int containerId, final Inventory inventory) {
+        super(MenuType.BLAST_FURNACE, RecipePropertySet.BLAST_FURNACE_INPUT, RecipeBookType.BLAST_FURNACE, containerId, inventory);
     }
 
-    public BlastFurnaceMenu(int p_39082_, Inventory p_39083_, Container p_39084_, ContainerData p_39085_) {
-        super(MenuType.BLAST_FURNACE, RecipeType.BLASTING, RecipePropertySet.BLAST_FURNACE_INPUT, RecipeBookType.BLAST_FURNACE, p_39082_, p_39083_, p_39084_, p_39085_);
+    public BlastFurnaceMenu(final int containerId, final Inventory inventory, final Container container, final ContainerData data) {
+        super(MenuType.BLAST_FURNACE, RecipePropertySet.BLAST_FURNACE_INPUT, RecipeBookType.BLAST_FURNACE, containerId, inventory, container, data);
     }
 }

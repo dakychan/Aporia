@@ -20,6 +20,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
@@ -49,121 +50,131 @@ public class HopperBlock extends BaseEntityBlock {
         return CODEC;
     }
 
-    public HopperBlock(BlockBehaviour.Properties p_54039_) {
-        super(p_54039_);
+    public HopperBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(FACING, Direction.DOWN).setValue(ENABLED, true));
-        VoxelShape voxelshape = Block.column(12.0, 11.0, 16.0);
-        this.shapes = this.makeShapes(voxelshape);
+        VoxelShape inside = Block.column(12.0, 11.0, 16.0);
+        this.shapes = this.makeShapes(inside);
         this.interactionShapes = ImmutableMap.<Direction, VoxelShape>builderWithExpectedSize(5)
-            .putAll(Shapes.rotateHorizontal(Shapes.or(voxelshape, Block.boxZ(4.0, 8.0, 10.0, 0.0, 4.0))))
-            .put(Direction.DOWN, voxelshape)
+            .putAll(Shapes.rotateHorizontal(Shapes.or(inside, Block.boxZ(4.0, 8.0, 10.0, 0.0, 4.0))))
+            .put(Direction.DOWN, inside)
             .build();
     }
 
-    private Function<BlockState, VoxelShape> makeShapes(VoxelShape p_392341_) {
-        VoxelShape voxelshape = Shapes.or(Block.column(16.0, 10.0, 16.0), Block.column(8.0, 4.0, 10.0));
-        VoxelShape voxelshape1 = Shapes.join(voxelshape, p_392341_, BooleanOp.ONLY_FIRST);
-        Map<Direction, VoxelShape> map = Shapes.rotateAll(Block.boxZ(4.0, 4.0, 8.0, 0.0, 8.0), new Vec3(8.0, 6.0, 8.0).scale(0.0625));
+    private Function<BlockState, VoxelShape> makeShapes(final VoxelShape inside) {
+        VoxelShape spoutlessHopperOutline = Shapes.or(Block.column(16.0, 10.0, 16.0), Block.column(8.0, 4.0, 10.0));
+        VoxelShape spoutlessHopper = Shapes.join(spoutlessHopperOutline, inside, BooleanOp.ONLY_FIRST);
+        Map<Direction, VoxelShape> spouts = Shapes.rotateAll(Block.boxZ(4.0, 4.0, 8.0, 0.0, 8.0), new Vec3(8.0, 6.0, 8.0).scale(0.0625));
         return this.getShapeForEachState(
-            p_394823_ -> Shapes.or(voxelshape1, Shapes.join(map.get(p_394823_.getValue(FACING)), Shapes.block(), BooleanOp.AND)), ENABLED
+            state -> Shapes.or(spoutlessHopper, Shapes.join(spouts.get(state.getValue(FACING)), Shapes.block(), BooleanOp.AND)), ENABLED
         );
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_54105_, BlockGetter p_54106_, BlockPos p_54107_, CollisionContext p_54108_) {
-        return this.shapes.apply(p_54105_);
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return this.shapes.apply(state);
     }
 
     @Override
-    protected VoxelShape getInteractionShape(BlockState p_54099_, BlockGetter p_54100_, BlockPos p_54101_) {
-        return this.interactionShapes.get(p_54099_.getValue(FACING));
+    protected VoxelShape getInteractionShape(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return this.interactionShapes.get(state.getValue(FACING));
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_54041_) {
-        Direction direction = p_54041_.getClickedFace().getOpposite();
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        Direction direction = context.getClickedFace().getOpposite();
         return this.defaultBlockState().setValue(FACING, direction.getAxis() == Direction.Axis.Y ? Direction.DOWN : direction).setValue(ENABLED, true);
     }
 
     @Override
-    public BlockEntity newBlockEntity(BlockPos p_153382_, BlockState p_153383_) {
-        return new HopperBlockEntity(p_153382_, p_153383_);
+    public BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new HopperBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level p_153378_, BlockState p_153379_, BlockEntityType<T> p_153380_) {
-        return p_153378_.isClientSide() ? null : createTickerHelper(p_153380_, BlockEntityType.HOPPER, HopperBlockEntity::pushItemsTick);
+    public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(final Level level, final BlockState blockState, final BlockEntityType<T> type) {
+        return level.isClientSide() ? null : createTickerHelper(type, BlockEntityTypes.HOPPER, HopperBlockEntity::pushItemsTick);
     }
 
     @Override
-    protected void onPlace(BlockState p_54110_, Level p_54111_, BlockPos p_54112_, BlockState p_54113_, boolean p_54114_) {
-        if (!p_54113_.is(p_54110_.getBlock())) {
-            this.checkPoweredState(p_54111_, p_54112_, p_54110_);
+    protected void onPlace(final BlockState state, final Level level, final BlockPos pos, final BlockState oldState, final boolean movedByPiston) {
+        if (!oldState.is(state.getBlock())) {
+            this.checkPoweredState(level, pos, state);
         }
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_54071_, Level p_54072_, BlockPos p_54073_, Player p_54074_, BlockHitResult p_54076_) {
-        if (!p_54072_.isClientSide() && p_54072_.getBlockEntity(p_54073_) instanceof HopperBlockEntity hopperblockentity) {
-            p_54074_.openMenu(hopperblockentity);
-            p_54074_.awardStat(Stats.INSPECT_HOPPER);
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (!level.isClientSide() && level.getBlockEntity(pos) instanceof HopperBlockEntity hopper) {
+            player.openMenu(hopper);
+            player.awardStat(Stats.INSPECT_HOPPER);
         }
 
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected void neighborChanged(BlockState p_54078_, Level p_54079_, BlockPos p_54080_, Block p_54081_, @Nullable Orientation p_364751_, boolean p_54083_) {
-        this.checkPoweredState(p_54079_, p_54080_, p_54078_);
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        this.checkPoweredState(level, pos, state);
     }
 
-    private void checkPoweredState(Level p_275499_, BlockPos p_275298_, BlockState p_275611_) {
-        boolean flag = !p_275499_.hasNeighborSignal(p_275298_);
-        if (flag != p_275611_.getValue(ENABLED)) {
-            p_275499_.setBlock(p_275298_, p_275611_.setValue(ENABLED, flag), 2);
+    private void checkPoweredState(final Level level, final BlockPos pos, final BlockState state) {
+        boolean shouldBeOn = !level.hasNeighborSignal(pos);
+        if (shouldBeOn != state.getValue(ENABLED)) {
+            level.setBlock(pos, state.setValue(ENABLED, shouldBeOn), 2);
         }
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState p_394577_, ServerLevel p_395407_, BlockPos p_397570_, boolean p_396660_) {
-        Containers.updateNeighboursAfterDestroy(p_394577_, p_395407_, p_397570_);
+    protected void affectNeighborsAfterRemoval(final BlockState state, final ServerLevel level, final BlockPos pos, final boolean movedByPiston) {
+        Containers.updateNeighboursAfterDestroy(state, level, pos);
     }
 
     @Override
-    protected boolean hasAnalogOutputSignal(BlockState p_54055_) {
+    protected boolean hasAnalogOutputSignal(final BlockState state) {
         return true;
     }
 
     @Override
-    protected int getAnalogOutputSignal(BlockState p_54062_, Level p_54063_, BlockPos p_54064_, Direction p_430370_) {
-        return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(p_54063_.getBlockEntity(p_54064_));
+    protected int getAnalogOutputSignal(final BlockState state, final Level level, final BlockPos pos, final Direction direction) {
+        return AbstractContainerMenu.getRedstoneSignalFromBlockEntity(level.getBlockEntity(pos));
     }
 
     @Override
-    protected BlockState rotate(BlockState p_54094_, Rotation p_54095_) {
-        return p_54094_.setValue(FACING, p_54095_.rotate(p_54094_.getValue(FACING)));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(FACING, rotation.rotate(state.getValue(FACING)));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_54091_, Mirror p_54092_) {
-        return p_54091_.rotate(p_54092_.getRotation(p_54091_.getValue(FACING)));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.rotate(mirror.getRotation(state.getValue(FACING)));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_54097_) {
-        p_54097_.add(FACING, ENABLED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, ENABLED);
     }
 
     @Override
-    protected void entityInside(BlockState p_54066_, Level p_54067_, BlockPos p_54068_, Entity p_54069_, InsideBlockEffectApplier p_397073_, boolean p_432043_) {
-        BlockEntity blockentity = p_54067_.getBlockEntity(p_54068_);
-        if (blockentity instanceof HopperBlockEntity) {
-            HopperBlockEntity.entityInside(p_54067_, p_54068_, p_54066_, p_54069_, (HopperBlockEntity)blockentity);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        if (level.getBlockEntity(pos) instanceof HopperBlockEntity hopperBlockEntity) {
+            HopperBlockEntity.entityInside(level, pos, state, entity, hopperBlockEntity);
         }
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_54057_, PathComputationType p_54060_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

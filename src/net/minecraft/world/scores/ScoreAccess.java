@@ -7,12 +7,12 @@ import org.jspecify.annotations.Nullable;
 public interface ScoreAccess {
     int get();
 
-    void set(int p_309760_);
+    void set(int value);
 
-    default int add(int p_310289_) {
-        int i = this.get() + p_310289_;
-        this.set(i);
-        return i;
+    default int add(final int count) {
+        int newValue = this.get() + count;
+        this.set(newValue);
+        return newValue;
     }
 
     default int increment() {
@@ -31,7 +31,7 @@ public interface ScoreAccess {
 
     @Nullable Component display();
 
-    void display(@Nullable Component p_313008_);
+    void display(final @Nullable Component display);
 
-    void numberFormatOverride(@Nullable NumberFormat p_310218_);
+    void numberFormatOverride(@Nullable NumberFormat numberFormat);
 }

@@ -11,49 +11,53 @@ import net.minecraft.util.Util;
 public interface InsideBlockEffectApplier {
     InsideBlockEffectApplier NOOP = new InsideBlockEffectApplier() {
         @Override
-        public void apply(InsideBlockEffectType p_396510_) {
+        public void apply(final InsideBlockEffectType type) {
         }
 
         @Override
-        public void runBefore(InsideBlockEffectType p_394339_, Consumer<Entity> p_396774_) {
+        public void runBefore(final InsideBlockEffectType type, final Consumer<Entity> effect) {
         }
 
         @Override
-        public void runAfter(InsideBlockEffectType p_393215_, Consumer<Entity> p_396216_) {
+        public void runAfter(final InsideBlockEffectType type, final Consumer<Entity> effect) {
         }
     };
 
-    void apply(InsideBlockEffectType p_395441_);
+    void apply(InsideBlockEffectType type);
 
-    void runBefore(InsideBlockEffectType p_393552_, Consumer<Entity> p_397065_);
+    void runBefore(InsideBlockEffectType type, Consumer<Entity> effect);
 
-    void runAfter(InsideBlockEffectType p_391923_, Consumer<Entity> p_393709_);
+    void runAfter(InsideBlockEffectType type, Consumer<Entity> effect);
 
-    public static class StepBasedCollector implements InsideBlockEffectApplier {
+    class StepBasedCollector implements InsideBlockEffectApplier {
         private static final InsideBlockEffectType[] APPLY_ORDER = InsideBlockEffectType.values();
         private static final int NO_STEP = -1;
         private final Set<InsideBlockEffectType> effectsInStep = EnumSet.noneOf(InsideBlockEffectType.class);
-        private final Map<InsideBlockEffectType, List<Consumer<Entity>>> beforeEffectsInStep = Util.makeEnumMap(InsideBlockEffectType.class, p_392356_ -> new ArrayList<>());
-        private final Map<InsideBlockEffectType, List<Consumer<Entity>>> afterEffectsInStep = Util.makeEnumMap(InsideBlockEffectType.class, p_396160_ -> new ArrayList<>());
+        private final Map<InsideBlockEffectType, List<Consumer<Entity>>> beforeEffectsInStep = Util.makeEnumMap(
+            InsideBlockEffectType.class, type -> new ArrayList<>()
+        );
+        private final Map<InsideBlockEffectType, List<Consumer<Entity>>> afterEffectsInStep = Util.makeEnumMap(
+            InsideBlockEffectType.class, type -> new ArrayList<>()
+        );
         private final List<Consumer<Entity>> finalEffects = new ArrayList<>();
         private int lastStep = -1;
 
-        public void advanceStep(int p_393208_) {
-            if (this.lastStep != p_393208_) {
-                this.lastStep = p_393208_;
+        public void advanceStep(final int step) {
+            if (this.lastStep != step) {
+                this.lastStep = step;
                 this.flushStep();
             }
         }
 
-        public void applyAndClear(Entity p_393060_) {
+        public void applyAndClear(final Entity entity) {
             this.flushStep();
 
-            for (Consumer<Entity> consumer : this.finalEffects) {
-                if (!p_393060_.isAlive()) {
+            for (Consumer<Entity> effect : this.finalEffects) {
+                if (!entity.isAlive()) {
                     break;
                 }
 
-                consumer.accept(p_393060_);
+                effect.accept(entity);
             }
 
             this.finalEffects.clear();
@@ -61,33 +65,33 @@ public interface InsideBlockEffectApplier {
         }
 
         private void flushStep() {
-            for (InsideBlockEffectType insideblockeffecttype : APPLY_ORDER) {
-                List<Consumer<Entity>> list = this.beforeEffectsInStep.get(insideblockeffecttype);
-                this.finalEffects.addAll(list);
-                list.clear();
-                if (this.effectsInStep.remove(insideblockeffecttype)) {
-                    this.finalEffects.add(insideblockeffecttype.effect());
+            for (InsideBlockEffectType type : APPLY_ORDER) {
+                List<Consumer<Entity>> beforeEffects = this.beforeEffectsInStep.get(type);
+                this.finalEffects.addAll(beforeEffects);
+                beforeEffects.clear();
+                if (this.effectsInStep.remove(type)) {
+                    this.finalEffects.add(type.effect());
                 }
 
-                List<Consumer<Entity>> list1 = this.afterEffectsInStep.get(insideblockeffecttype);
-                this.finalEffects.addAll(list1);
-                list1.clear();
+                List<Consumer<Entity>> afterEffects = this.afterEffectsInStep.get(type);
+                this.finalEffects.addAll(afterEffects);
+                afterEffects.clear();
             }
         }
 
         @Override
-        public void apply(InsideBlockEffectType p_395478_) {
-            this.effectsInStep.add(p_395478_);
+        public void apply(final InsideBlockEffectType type) {
+            this.effectsInStep.add(type);
         }
 
         @Override
-        public void runBefore(InsideBlockEffectType p_397546_, Consumer<Entity> p_397676_) {
-            this.beforeEffectsInStep.get(p_397546_).add(p_397676_);
+        public void runBefore(final InsideBlockEffectType type, final Consumer<Entity> effect) {
+            this.beforeEffectsInStep.get(type).add(effect);
         }
 
         @Override
-        public void runAfter(InsideBlockEffectType p_391286_, Consumer<Entity> p_395455_) {
-            this.afterEffectsInStep.get(p_391286_).add(p_395455_);
+        public void runAfter(final InsideBlockEffectType type, final Consumer<Entity> effect) {
+            this.afterEffectsInStep.get(type).add(effect);
         }
     }
 }

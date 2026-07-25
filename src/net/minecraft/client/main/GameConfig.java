@@ -4,14 +4,12 @@ import com.mojang.blaze3d.platform.DisplayData;
 import java.io.File;
 import java.net.Proxy;
 import java.nio.file.Path;
+import net.minecraft.client.PreferredGraphicsApi;
 import net.minecraft.client.User;
 import net.minecraft.client.resources.IndexedAssetSource;
 import net.minecraft.util.StringUtil;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class GameConfig {
     public final GameConfig.UserData user;
     public final DisplayData display;
@@ -20,31 +18,30 @@ public class GameConfig {
     public final GameConfig.QuickPlayData quickPlay;
 
     public GameConfig(
-        GameConfig.UserData p_279448_,
-        DisplayData p_279368_,
-        GameConfig.FolderData p_279174_,
-        GameConfig.GameData p_279138_,
-        GameConfig.QuickPlayData p_279425_
+        final GameConfig.UserData userData,
+        final DisplayData displayData,
+        final GameConfig.FolderData folderData,
+        final GameConfig.GameData gameData,
+        final GameConfig.QuickPlayData quickPlayData
     ) {
-        this.user = p_279448_;
-        this.display = p_279368_;
-        this.location = p_279174_;
-        this.game = p_279138_;
-        this.quickPlay = p_279425_;
+        this.user = userData;
+        this.display = displayData;
+        this.location = folderData;
+        this.game = gameData;
+        this.quickPlay = quickPlayData;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class FolderData {
+        public static class FolderData {
         public final File gameDirectory;
         public final File resourcePackDirectory;
         public final File assetDirectory;
         public final @Nullable String assetIndex;
 
-        public FolderData(File p_101921_, File p_101922_, File p_101923_, @Nullable String p_101924_) {
-            this.gameDirectory = p_101921_;
-            this.resourcePackDirectory = p_101922_;
-            this.assetDirectory = p_101923_;
-            this.assetIndex = p_101924_;
+        public FolderData(final File gameDirectory, final File resourcePackDirectory, final File assetDirectory, final @Nullable String assetIndex) {
+            this.gameDirectory = gameDirectory;
+            this.resourcePackDirectory = resourcePackDirectory;
+            this.assetDirectory = assetDirectory;
+            this.assetIndex = assetIndex;
         }
 
         public Path getExternalAssetSource() {
@@ -52,8 +49,7 @@ public class GameConfig {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class GameData {
+        public static class GameData {
         public final boolean demo;
         public final String launchVersion;
         public final String versionType;
@@ -61,70 +57,70 @@ public class GameConfig {
         public final boolean disableChat;
         public final boolean captureTracyImages;
         public final boolean renderDebugLabels;
+        public final boolean vulkanValidation;
+        public final @Nullable PreferredGraphicsApi forcedGraphicsApi;
         public final boolean offlineDeveloperMode;
 
         public GameData(
-            boolean p_101932_,
-            String p_101933_,
-            String p_101934_,
-            boolean p_101935_,
-            boolean p_101936_,
-            boolean p_370094_,
-            boolean p_392577_,
-            boolean p_428465_
+            final boolean demo,
+            final String launchVersion,
+            final String versionType,
+            final boolean disableMultiplayer,
+            final boolean disableChat,
+            final boolean captureTracyImages,
+            final boolean vulkanValidation,
+            final boolean renderDebugLabels,
+            final @Nullable PreferredGraphicsApi forcedGraphicsApi,
+            final boolean offlineDeveloperMode
         ) {
-            this.demo = p_101932_;
-            this.launchVersion = p_101933_;
-            this.versionType = p_101934_;
-            this.disableMultiplayer = p_101935_;
-            this.disableChat = p_101936_;
-            this.captureTracyImages = p_370094_;
-            this.renderDebugLabels = p_392577_;
-            this.offlineDeveloperMode = p_428465_;
+            this.demo = demo;
+            this.launchVersion = launchVersion;
+            this.versionType = versionType;
+            this.disableMultiplayer = disableMultiplayer;
+            this.disableChat = disableChat;
+            this.captureTracyImages = captureTracyImages;
+            this.vulkanValidation = vulkanValidation;
+            this.renderDebugLabels = renderDebugLabels;
+            this.forcedGraphicsApi = forcedGraphicsApi;
+            this.offlineDeveloperMode = offlineDeveloperMode;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record QuickPlayData(@Nullable String logPath, GameConfig.QuickPlayVariant variant) {
+        public record QuickPlayData(@Nullable String logPath, GameConfig.QuickPlayVariant variant) {
         public boolean isEnabled() {
             return this.variant.isEnabled();
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record QuickPlayDisabled() implements GameConfig.QuickPlayVariant {
+        public record QuickPlayDisabled() implements GameConfig.QuickPlayVariant {
         @Override
         public boolean isEnabled() {
             return false;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record QuickPlayMultiplayerData(String serverAddress) implements GameConfig.QuickPlayVariant {
+        public record QuickPlayMultiplayerData(String serverAddress) implements GameConfig.QuickPlayVariant {
         @Override
         public boolean isEnabled() {
             return !StringUtil.isBlank(this.serverAddress);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record QuickPlayRealmsData(String realmId) implements GameConfig.QuickPlayVariant {
+        public record QuickPlayRealmsData(String realmId) implements GameConfig.QuickPlayVariant {
         @Override
         public boolean isEnabled() {
             return !StringUtil.isBlank(this.realmId);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record QuickPlaySinglePlayerData(@Nullable String worldId) implements GameConfig.QuickPlayVariant {
+        public record QuickPlaySinglePlayerData(@Nullable String worldId) implements GameConfig.QuickPlayVariant {
         @Override
         public boolean isEnabled() {
             return true;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public sealed interface QuickPlayVariant
+        public sealed interface QuickPlayVariant
         permits GameConfig.QuickPlaySinglePlayerData,
         GameConfig.QuickPlayMultiplayerData,
         GameConfig.QuickPlayRealmsData,
@@ -134,14 +130,13 @@ public class GameConfig {
         boolean isEnabled();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class UserData {
+        public static class UserData {
         public final User user;
         public final Proxy proxy;
 
-        public UserData(User p_101947_, Proxy p_101950_) {
-            this.user = p_101947_;
-            this.proxy = p_101950_;
+        public UserData(final User user, final Proxy proxy) {
+            this.user = user;
+            this.proxy = proxy;
         }
     }
 }

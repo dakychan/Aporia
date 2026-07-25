@@ -10,7 +10,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.commands.arguments.selector.SelectorPattern;
+import net.minecraft.commands.arguments.NbtPathArgument;
+import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.network.chat.contents.KeybindContents;
 import net.minecraft.network.chat.contents.NbtContents;
 import net.minecraft.network.chat.contents.ObjectContents;
@@ -21,6 +22,7 @@ import net.minecraft.network.chat.contents.TranslatableContents;
 import net.minecraft.network.chat.contents.data.DataSource;
 import net.minecraft.network.chat.contents.objects.ObjectInfo;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.CompilableString;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.ChunkPos;
 import org.jspecify.annotations.Nullable;
@@ -35,26 +37,24 @@ public interface Component extends Message, FormattedText {
         return FormattedText.super.getString();
     }
 
-    default String getString(int p_130669_) {
-        StringBuilder stringbuilder = new StringBuilder();
-        this.visit(p_130673_ -> {
-            int i = p_130669_ - stringbuilder.length();
-            if (i <= 0) {
+    default String getString(final int limit) {
+        StringBuilder builder = new StringBuilder();
+        this.visit(contents -> {
+            int remaining = limit - builder.length();
+            if (remaining <= 0) {
                 return STOP_ITERATION;
-            } else {
-                stringbuilder.append(p_130673_.length() <= i ? p_130673_ : p_130673_.substring(0, i));
-                return Optional.empty();
             }
+
+            builder.append(contents.length() <= remaining ? contents : contents.substring(0, remaining));
+            return Optional.empty();
         });
-        return stringbuilder.toString();
+        return builder.toString();
     }
 
     List<Component> getSiblings();
 
     default @Nullable String tryCollapseToString() {
-        return this.getContents() instanceof PlainTextContents plaintextcontents && this.getSiblings().isEmpty() && this.getStyle().isEmpty()
-            ? plaintextcontents.text()
-            : null;
+        return this.getContents() instanceof PlainTextContents text && this.getSiblings().isEmpty() && this.getStyle().isEmpty() ? text.text() : null;
     }
 
     default MutableComponent plainCopy() {
@@ -68,150 +68,160 @@ public interface Component extends Message, FormattedText {
     FormattedCharSequence getVisualOrderText();
 
     @Override
-    default <T> Optional<T> visit(FormattedText.StyledContentConsumer<T> p_130679_, Style p_130680_) {
-        Style style = this.getStyle().applyTo(p_130680_);
-        Optional<T> optional = this.getContents().visit(p_130679_, style);
-        if (optional.isPresent()) {
-            return optional;
-        } else {
-            for (Component component : this.getSiblings()) {
-                Optional<T> optional1 = component.visit(p_130679_, style);
-                if (optional1.isPresent()) {
-                    return optional1;
-                }
-            }
-
-            return Optional.empty();
+    default <T> Optional<T> visit(final FormattedText.StyledContentConsumer<T> output, final Style parentStyle) {
+        Style selfStyle = this.getStyle().applyTo(parentStyle);
+        Optional<T> selfResult = this.getContents().visit(output, selfStyle);
+        if (selfResult.isPresent()) {
+            return selfResult;
         }
+
+        for (Component sibling : this.getSiblings()) {
+            Optional<T> result = sibling.visit(output, selfStyle);
+            if (result.isPresent()) {
+                return result;
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Override
-    default <T> Optional<T> visit(FormattedText.ContentConsumer<T> p_130677_) {
-        Optional<T> optional = this.getContents().visit(p_130677_);
-        if (optional.isPresent()) {
-            return optional;
-        } else {
-            for (Component component : this.getSiblings()) {
-                Optional<T> optional1 = component.visit(p_130677_);
-                if (optional1.isPresent()) {
-                    return optional1;
-                }
-            }
-
-            return Optional.empty();
+    default <T> Optional<T> visit(final FormattedText.ContentConsumer<T> output) {
+        Optional<T> selfResult = this.getContents().visit(output);
+        if (selfResult.isPresent()) {
+            return selfResult;
         }
+
+        for (Component sibling : this.getSiblings()) {
+            Optional<T> result = sibling.visit(output);
+            if (result.isPresent()) {
+                return result;
+            }
+        }
+
+        return Optional.empty();
     }
 
     default List<Component> toFlatList() {
         return this.toFlatList(Style.EMPTY);
     }
 
-    default List<Component> toFlatList(Style p_178406_) {
-        List<Component> list = Lists.newArrayList();
-        this.visit((p_178403_, p_178404_) -> {
-            if (!p_178404_.isEmpty()) {
-                list.add(literal(p_178404_).withStyle(p_178403_));
+    default List<Component> toFlatList(final Style rootStyle) {
+        List<Component> result = Lists.newArrayList();
+        this.visit((style, contents) -> {
+            if (!contents.isEmpty()) {
+                result.add(literal(contents).withStyle(style));
             }
 
             return Optional.empty();
-        }, p_178406_);
-        return list;
+        }, rootStyle);
+        return result;
     }
 
-    default boolean contains(Component p_240571_) {
-        if (this.equals(p_240571_)) {
+    default boolean contains(final Component other) {
+        if (this.equals(other)) {
             return true;
-        } else {
-            List<Component> list = this.toFlatList();
-            List<Component> list1 = p_240571_.toFlatList(this.getStyle());
-            return Collections.indexOfSubList(list, list1) != -1;
         }
+
+        List<Component> flat = this.toFlatList();
+        List<Component> otherFlat = other.toFlatList(this.getStyle());
+        return Collections.indexOfSubList(flat, otherFlat) != -1;
     }
 
-    static Component nullToEmpty(@Nullable String p_130675_) {
-        return (Component)(p_130675_ != null ? literal(p_130675_) : CommonComponents.EMPTY);
+    static Component nullToEmpty(final @Nullable String text) {
+        return text != null ? literal(text) : CommonComponents.EMPTY;
     }
 
-    static MutableComponent literal(String p_237114_) {
-        return MutableComponent.create(PlainTextContents.create(p_237114_));
+    static MutableComponent literal(final String text) {
+        return MutableComponent.create(PlainTextContents.create(text));
     }
 
-    static MutableComponent translatable(String p_237116_) {
-        return MutableComponent.create(new TranslatableContents(p_237116_, null, TranslatableContents.NO_ARGS));
+    static MutableComponent translatable(final String key) {
+        return MutableComponent.create(new TranslatableContents(key, null, TranslatableContents.NO_ARGS));
     }
 
-    static MutableComponent translatable(String p_237111_, Object... p_237112_) {
-        return MutableComponent.create(new TranslatableContents(p_237111_, null, p_237112_));
+    static MutableComponent translatable(final String key, final Object... args) {
+        return MutableComponent.create(new TranslatableContents(key, null, args));
     }
 
-    static MutableComponent translatableEscape(String p_312579_, Object... p_312922_) {
-        for (int i = 0; i < p_312922_.length; i++) {
-            Object object = p_312922_[i];
-            if (!TranslatableContents.isAllowedPrimitiveArgument(object) && !(object instanceof Component)) {
-                p_312922_[i] = String.valueOf(object);
+    static MutableComponent translatableEscape(final String key, final Object... args) {
+        for (int i = 0; i < args.length; i++) {
+            Object arg = args[i];
+            if (!TranslatableContents.isAllowedPrimitiveArgument(arg) && !(arg instanceof Component)) {
+                args[i] = String.valueOf(arg);
             }
         }
 
-        return translatable(p_312579_, p_312922_);
+        return translatable(key, args);
     }
 
-    static MutableComponent translatableWithFallback(String p_265747_, @Nullable String p_265287_) {
-        return MutableComponent.create(new TranslatableContents(p_265747_, p_265287_, TranslatableContents.NO_ARGS));
+    static MutableComponent translatableWithFallback(final String key, final @Nullable String fallback) {
+        return MutableComponent.create(new TranslatableContents(key, fallback, TranslatableContents.NO_ARGS));
     }
 
-    static MutableComponent translatableWithFallback(String p_265449_, @Nullable String p_265281_, Object... p_265785_) {
-        return MutableComponent.create(new TranslatableContents(p_265449_, p_265281_, p_265785_));
+    static MutableComponent translatableWithFallback(final String key, final @Nullable String fallback, final Object... args) {
+        return MutableComponent.create(new TranslatableContents(key, fallback, args));
     }
 
     static MutableComponent empty() {
         return MutableComponent.create(PlainTextContents.EMPTY);
     }
 
-    static MutableComponent keybind(String p_237118_) {
-        return MutableComponent.create(new KeybindContents(p_237118_));
+    static MutableComponent keybind(final String name) {
+        return MutableComponent.create(new KeybindContents(name));
     }
 
-    static MutableComponent nbt(String p_237106_, boolean p_237107_, Optional<Component> p_237108_, DataSource p_426680_) {
-        return MutableComponent.create(new NbtContents(p_237106_, p_237107_, p_237108_, p_426680_));
+    static MutableComponent nbt(
+        final CompilableString<NbtPathArgument.NbtPath> nbtPath,
+        final boolean interpreting,
+        final boolean plain,
+        final Optional<Component> separator,
+        final DataSource dataSource
+    ) {
+        return MutableComponent.create(new NbtContents(nbtPath, interpreting, plain, separator, dataSource));
     }
 
-    static MutableComponent score(SelectorPattern p_367861_, String p_361558_) {
-        return MutableComponent.create(new ScoreContents(Either.left(p_367861_), p_361558_));
+    static MutableComponent score(final CompilableString<EntitySelector> pattern, final String objective) {
+        return MutableComponent.create(new ScoreContents(Either.left(pattern), objective));
     }
 
-    static MutableComponent score(String p_237100_, String p_237101_) {
-        return MutableComponent.create(new ScoreContents(Either.right(p_237100_), p_237101_));
+    static MutableComponent score(final String name, final String objective) {
+        return MutableComponent.create(new ScoreContents(Either.right(name), objective));
     }
 
-    static MutableComponent selector(SelectorPattern p_366885_, Optional<Component> p_237104_) {
-        return MutableComponent.create(new SelectorContents(p_366885_, p_237104_));
+    static MutableComponent selector(final CompilableString<EntitySelector> pattern, final Optional<Component> separator) {
+        return MutableComponent.create(new SelectorContents(pattern, separator));
     }
 
-    static MutableComponent object(ObjectInfo p_427839_) {
-        return MutableComponent.create(new ObjectContents(p_427839_));
+    static MutableComponent object(final ObjectInfo info) {
+        return MutableComponent.create(new ObjectContents(info, Optional.empty()));
     }
 
-    static Component translationArg(Date p_313239_) {
-        return literal(p_313239_.toString());
+    static MutableComponent object(final ObjectInfo info, final Component fallback) {
+        return MutableComponent.create(new ObjectContents(info, Optional.of(fallback)));
     }
 
-    static Component translationArg(Message p_312086_) {
-        return (Component)(p_312086_ instanceof Component component ? component : literal(p_312086_.getString()));
+    static Component translationArg(final Date date) {
+        return literal(date.toString());
     }
 
-    static Component translationArg(UUID p_311149_) {
-        return literal(p_311149_.toString());
+    static Component translationArg(final Message message) {
+        return message instanceof Component component ? component : literal(message.getString());
     }
 
-    static Component translationArg(Identifier p_460996_) {
-        return literal(p_460996_.toString());
+    static Component translationArg(final UUID uuid) {
+        return literal(uuid.toString());
     }
 
-    static Component translationArg(ChunkPos p_312850_) {
-        return literal(p_312850_.toString());
+    static Component translationArg(final Identifier id) {
+        return literal(id.toString());
     }
 
-    static Component translationArg(URI p_344435_) {
-        return literal(p_344435_.toString());
+    static Component translationArg(final ChunkPos chunkPos) {
+        return literal(chunkPos.toString());
+    }
+
+    static Component translationArg(final URI uri) {
+        return literal(uri.toString());
     }
 }

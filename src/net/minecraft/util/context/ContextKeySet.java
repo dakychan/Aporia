@@ -8,9 +8,9 @@ public class ContextKeySet {
     private final Set<ContextKey<?>> required;
     private final Set<ContextKey<?>> allowed;
 
-    ContextKeySet(Set<ContextKey<?>> p_366050_, Set<ContextKey<?>> p_362785_) {
-        this.required = Set.copyOf(p_366050_);
-        this.allowed = Set.copyOf(Sets.union(p_366050_, p_362785_));
+    private ContextKeySet(final Set<ContextKey<?>> required, final Set<ContextKey<?>> optional) {
+        this.required = Set.copyOf(required);
+        this.allowed = Set.copyOf(Sets.union(required, optional));
     }
 
     public Set<ContextKey<?>> required() {
@@ -23,32 +23,29 @@ public class ContextKeySet {
 
     @Override
     public String toString() {
-        return "["
-            + Joiner.on(", ")
-                .join(this.allowed.stream().map(p_449285_ -> (this.required.contains(p_449285_) ? "!" : "") + p_449285_.name()).iterator())
-            + "]";
+        return "[" + Joiner.on(", ").join(this.allowed.stream().map(k -> (this.required.contains(k) ? "!" : "") + k.name()).iterator()) + "]";
     }
 
     public static class Builder {
         private final Set<ContextKey<?>> required = Sets.newIdentityHashSet();
         private final Set<ContextKey<?>> optional = Sets.newIdentityHashSet();
 
-        public ContextKeySet.Builder required(ContextKey<?> p_365799_) {
-            if (this.optional.contains(p_365799_)) {
-                throw new IllegalArgumentException("Parameter " + p_365799_.name() + " is already optional");
-            } else {
-                this.required.add(p_365799_);
-                return this;
+        public ContextKeySet.Builder required(final ContextKey<?> param) {
+            if (this.optional.contains(param)) {
+                throw new IllegalArgumentException("Parameter " + param.name() + " is already optional");
             }
+
+            this.required.add(param);
+            return this;
         }
 
-        public ContextKeySet.Builder optional(ContextKey<?> p_361328_) {
-            if (this.required.contains(p_361328_)) {
-                throw new IllegalArgumentException("Parameter " + p_361328_.name() + " is already required");
-            } else {
-                this.optional.add(p_361328_);
-                return this;
+        public ContextKeySet.Builder optional(final ContextKey<?> param) {
+            if (this.required.contains(param)) {
+                throw new IllegalArgumentException("Parameter " + param.name() + " is already required");
             }
+
+            this.optional.add(param);
+            return this;
         }
 
         public ContextKeySet build() {

@@ -14,11 +14,11 @@ public class IsInWaterSensor extends Sensor<LivingEntity> {
     }
 
     @Override
-    protected void doTick(ServerLevel p_217816_, LivingEntity p_217817_) {
-        if (p_217817_.isInWater()) {
-            p_217817_.getBrain().setMemory(MemoryModuleType.IS_IN_WATER, Unit.INSTANCE);
+    protected void doTick(final ServerLevel level, final LivingEntity body) {
+        if (body.isInWater()) {
+            body.getBrain().setMemory(MemoryModuleType.IS_IN_WATER, Unit.INSTANCE);
         } else {
-            p_217817_.getBrain().eraseMemory(MemoryModuleType.IS_IN_WATER);
+            body.getBrain().eraseMemory(MemoryModuleType.IS_IN_WATER);
         }
     }
 }

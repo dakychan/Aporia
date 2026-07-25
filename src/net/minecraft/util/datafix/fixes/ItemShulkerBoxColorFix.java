@@ -33,38 +33,38 @@ public class ItemShulkerBoxColorFix extends DataFix {
         "minecraft:black_shulker_box"
     };
 
-    public ItemShulkerBoxColorFix(Schema p_16023_, boolean p_16024_) {
-        super(p_16023_, p_16024_);
+    public ItemShulkerBoxColorFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.ITEM_STACK);
-        OpticFinder<Pair<String, String>> opticfinder = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
-        OpticFinder<?> opticfinder1 = type.findField("tag");
-        OpticFinder<?> opticfinder2 = opticfinder1.type().findField("BlockEntityTag");
+        Type<?> itemStackType = this.getInputSchema().getType(References.ITEM_STACK);
+        OpticFinder<Pair<String, String>> idF = DSL.fieldFinder("id", DSL.named(References.ITEM_NAME.typeName(), NamespacedSchema.namespacedString()));
+        OpticFinder<?> tagF = itemStackType.findField("tag");
+        OpticFinder<?> blockEntityF = tagF.type().findField("BlockEntityTag");
         return this.fixTypeEverywhereTyped(
             "ItemShulkerBoxColorFix",
-            type,
-            p_16029_ -> {
-                Optional<Pair<String, String>> optional = p_16029_.getOptional(opticfinder);
-                if (optional.isPresent() && Objects.equals(optional.get().getSecond(), "minecraft:shulker_box")) {
-                    Optional<? extends Typed<?>> optional1 = p_16029_.getOptionalTyped(opticfinder1);
-                    if (optional1.isPresent()) {
-                        Typed<?> typed = (Typed<?>)optional1.get();
-                        Optional<? extends Typed<?>> optional2 = typed.getOptionalTyped(opticfinder2);
-                        if (optional2.isPresent()) {
-                            Typed<?> typed1 = (Typed<?>)optional2.get();
-                            Dynamic<?> dynamic = typed1.get(DSL.remainderFinder());
-                            int i = dynamic.get("Color").asInt(0);
-                            dynamic.remove("Color");
-                            return p_16029_.set(opticfinder1, typed.set(opticfinder2, typed1.set(DSL.remainderFinder(), dynamic)))
-                                .set(opticfinder, Pair.of(References.ITEM_NAME.typeName(), NAMES_BY_COLOR[i % 16]));
+            itemStackType,
+            input -> {
+                Optional<Pair<String, String>> idOpt = input.getOptional(idF);
+                if (idOpt.isPresent() && Objects.equals(idOpt.get().getSecond(), "minecraft:shulker_box")) {
+                    Optional<? extends Typed<?>> tagOpt = input.getOptionalTyped(tagF);
+                    if (tagOpt.isPresent()) {
+                        Typed<?> tag = (Typed<?>)tagOpt.get();
+                        Optional<? extends Typed<?>> blockEntityOpt = tag.getOptionalTyped(blockEntityF);
+                        if (blockEntityOpt.isPresent()) {
+                            Typed<?> blockEntity = (Typed<?>)blockEntityOpt.get();
+                            Dynamic<?> blockEntityRest = blockEntity.get(DSL.remainderFinder());
+                            int color = blockEntityRest.get("Color").asInt(0);
+                            blockEntityRest.remove("Color");
+                            return input.set(tagF, tag.set(blockEntityF, blockEntity.set(DSL.remainderFinder(), blockEntityRest)))
+                                .set(idF, Pair.of(References.ITEM_NAME.typeName(), NAMES_BY_COLOR[color % 16]));
                         }
                     }
                 }
 
-                return p_16029_;
+                return input;
             }
         );
     }

@@ -4,7 +4,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -25,42 +24,43 @@ import org.jspecify.annotations.Nullable;
 
 public class AdvancementProgress implements Comparable<AdvancementProgress> {
     private static final DateTimeFormatter OBTAINED_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z", Locale.ROOT);
-    private static final Codec<Instant> OBTAINED_TIME_CODEC = ExtraCodecs.temporalCodec(OBTAINED_TIME_FORMAT).xmap(Instant::from, p_296108_ -> p_296108_.atZone(ZoneId.systemDefault()));
+    private static final Codec<Instant> OBTAINED_TIME_CODEC = ExtraCodecs.temporalCodec(OBTAINED_TIME_FORMAT)
+        .xmap(Instant::from, instant -> instant.atZone(ZoneId.systemDefault()));
     private static final Codec<Map<String, CriterionProgress>> CRITERIA_CODEC = Codec.unboundedMap(Codec.STRING, OBTAINED_TIME_CODEC)
         .xmap(
-            p_447776_ -> Util.mapValues((Map<String, Instant>)p_447776_, CriterionProgress::new),
-            p_296101_ -> p_296101_.entrySet()
+            map -> Util.mapValues((Map<String, Instant>)map, CriterionProgress::new),
+            map -> map.entrySet()
                 .stream()
-                .filter(p_296109_ -> p_296109_.getValue().isDone())
-                .collect(Collectors.toMap(Entry::getKey, p_296103_ -> Objects.requireNonNull(p_296103_.getValue().getObtained())))
+                .filter(e -> e.getValue().isDone())
+                .collect(Collectors.toMap(Entry::getKey, e -> Objects.requireNonNull(e.getValue().getObtained())))
         );
     public static final Codec<AdvancementProgress> CODEC = RecordCodecBuilder.create(
-        p_325180_ -> p_325180_.group(
-                CRITERIA_CODEC.optionalFieldOf("criteria", Map.of()).forGetter(p_296102_ -> p_296102_.criteria),
-                Codec.BOOL.fieldOf("done").orElse(true).forGetter(AdvancementProgress::isDone)
+        i -> i.group(
+                CRITERIA_CODEC.optionalFieldOf("criteria", Map.of()).forGetter(a -> a.criteria),
+                ExtraCodecs.optionalAlwaysPresentFieldOf(Codec.BOOL, "done", true).forGetter(AdvancementProgress::isDone)
             )
-            .apply(p_325180_, (p_296106_, p_296107_) -> new AdvancementProgress(new HashMap<>(p_296106_)))
+            .apply(i, (criteria, done) -> new AdvancementProgress(new HashMap<>(criteria)))
     );
     private final Map<String, CriterionProgress> criteria;
     private AdvancementRequirements requirements = AdvancementRequirements.EMPTY;
 
-    private AdvancementProgress(Map<String, CriterionProgress> p_144358_) {
-        this.criteria = p_144358_;
+    private AdvancementProgress(final Map<String, CriterionProgress> criteria) {
+        this.criteria = criteria;
     }
 
     public AdvancementProgress() {
         this.criteria = Maps.newHashMap();
     }
 
-    public void update(AdvancementRequirements p_300626_) {
-        Set<String> set = p_300626_.names();
-        this.criteria.entrySet().removeIf(p_8203_ -> !set.contains(p_8203_.getKey()));
+    public void update(final AdvancementRequirements requirements) {
+        Set<String> names = requirements.names();
+        this.criteria.entrySet().removeIf(entry -> !names.contains(entry.getKey()));
 
-        for (String s : set) {
-            this.criteria.putIfAbsent(s, new CriterionProgress());
+        for (String name : names) {
+            this.criteria.putIfAbsent(name, new CriterionProgress());
         }
 
-        this.requirements = p_300626_;
+        this.requirements = requirements;
     }
 
     public boolean isDone() {
@@ -68,8 +68,8 @@ public class AdvancementProgress implements Comparable<AdvancementProgress> {
     }
 
     public boolean hasProgress() {
-        for (CriterionProgress criterionprogress : this.criteria.values()) {
-            if (criterionprogress.isDone()) {
+        for (CriterionProgress progress : this.criteria.values()) {
+            if (progress.isDone()) {
                 return true;
             }
         }
@@ -77,20 +77,20 @@ public class AdvancementProgress implements Comparable<AdvancementProgress> {
         return false;
     }
 
-    public boolean grantProgress(String p_8197_) {
-        CriterionProgress criterionprogress = this.criteria.get(p_8197_);
-        if (criterionprogress != null && !criterionprogress.isDone()) {
-            criterionprogress.grant();
+    public boolean grantProgress(final String name) {
+        CriterionProgress progress = this.criteria.get(name);
+        if (progress != null && !progress.isDone()) {
+            progress.grant();
             return true;
         } else {
             return false;
         }
     }
 
-    public boolean revokeProgress(String p_8210_) {
-        CriterionProgress criterionprogress = this.criteria.get(p_8210_);
-        if (criterionprogress != null && criterionprogress.isDone()) {
-            criterionprogress.revoke();
+    public boolean revokeProgress(final String name) {
+        CriterionProgress progress = this.criteria.get(name);
+        if (progress != null && progress.isDone()) {
+            progress.revoke();
             return true;
         } else {
             return false;
@@ -102,46 +102,46 @@ public class AdvancementProgress implements Comparable<AdvancementProgress> {
         return "AdvancementProgress{criteria=" + this.criteria + ", requirements=" + this.requirements + "}";
     }
 
-    public void serializeToNetwork(FriendlyByteBuf p_8205_) {
-        p_8205_.writeMap(this.criteria, FriendlyByteBuf::writeUtf, (p_144360_, p_144361_) -> p_144361_.serializeToNetwork(p_144360_));
+    public void serializeToNetwork(final FriendlyByteBuf output) {
+        output.writeMap(this.criteria, FriendlyByteBuf::writeUtf, (b, v) -> v.serializeToNetwork(b));
     }
 
-    public static AdvancementProgress fromNetwork(FriendlyByteBuf p_8212_) {
-        Map<String, CriterionProgress> map = p_8212_.readMap(FriendlyByteBuf::readUtf, CriterionProgress::fromNetwork);
-        return new AdvancementProgress(map);
+    public static AdvancementProgress fromNetwork(final FriendlyByteBuf input) {
+        Map<String, CriterionProgress> criteria = input.readMap(FriendlyByteBuf::readUtf, CriterionProgress::fromNetwork);
+        return new AdvancementProgress(criteria);
     }
 
-    public @Nullable CriterionProgress getCriterion(String p_8215_) {
-        return this.criteria.get(p_8215_);
+    public @Nullable CriterionProgress getCriterion(final String id) {
+        return this.criteria.get(id);
     }
 
-    private boolean isCriterionDone(String p_301316_) {
-        CriterionProgress criterionprogress = this.getCriterion(p_301316_);
-        return criterionprogress != null && criterionprogress.isDone();
+    private boolean isCriterionDone(final String criterion) {
+        CriterionProgress progress = this.getCriterion(criterion);
+        return progress != null && progress.isDone();
     }
 
     public float getPercent() {
         if (this.criteria.isEmpty()) {
             return 0.0F;
-        } else {
-            float f = this.requirements.size();
-            float f1 = this.countCompletedRequirements();
-            return f1 / f;
         }
+
+        float total = this.requirements.size();
+        float complete = this.countCompletedRequirements();
+        return complete / total;
     }
 
     public @Nullable Component getProgressText() {
         if (this.criteria.isEmpty()) {
             return null;
-        } else {
-            int i = this.requirements.size();
-            if (i <= 1) {
-                return null;
-            } else {
-                int j = this.countCompletedRequirements();
-                return Component.translatable("advancements.progress", j, i);
-            }
         }
+
+        int total = this.requirements.size();
+        if (total <= 1) {
+            return null;
+        }
+
+        int complete = this.countCompletedRequirements();
+        return Component.translatable("advancements.progress", complete, total);
     }
 
     private int countCompletedRequirements() {
@@ -149,42 +149,42 @@ public class AdvancementProgress implements Comparable<AdvancementProgress> {
     }
 
     public Iterable<String> getRemainingCriteria() {
-        List<String> list = Lists.newArrayList();
+        List<String> remaining = Lists.newArrayList();
 
         for (Entry<String, CriterionProgress> entry : this.criteria.entrySet()) {
             if (!entry.getValue().isDone()) {
-                list.add(entry.getKey());
+                remaining.add(entry.getKey());
             }
         }
 
-        return list;
+        return remaining;
     }
 
     public Iterable<String> getCompletedCriteria() {
-        List<String> list = Lists.newArrayList();
+        List<String> completed = Lists.newArrayList();
 
         for (Entry<String, CriterionProgress> entry : this.criteria.entrySet()) {
             if (entry.getValue().isDone()) {
-                list.add(entry.getKey());
+                completed.add(entry.getKey());
             }
         }
 
-        return list;
+        return completed;
     }
 
     public @Nullable Instant getFirstProgressDate() {
         return this.criteria.values().stream().map(CriterionProgress::getObtained).filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(null);
     }
 
-    public int compareTo(AdvancementProgress p_8195_) {
-        Instant instant = this.getFirstProgressDate();
-        Instant instant1 = p_8195_.getFirstProgressDate();
-        if (instant == null && instant1 != null) {
+    public int compareTo(final AdvancementProgress o) {
+        Instant ourSmallestDate = this.getFirstProgressDate();
+        Instant theirSmallestDate = o.getFirstProgressDate();
+        if (ourSmallestDate == null && theirSmallestDate != null) {
             return 1;
-        } else if (instant != null && instant1 == null) {
+        } else if (ourSmallestDate != null && theirSmallestDate == null) {
             return -1;
         } else {
-            return instant == null && instant1 == null ? 0 : instant.compareTo(instant1);
+            return ourSmallestDate == null && theirSmallestDate == null ? 0 : ourSmallestDate.compareTo(theirSmallestDate);
         }
     }
 }

@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
 import net.minecraft.client.gui.ComponentPath;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.LayoutElement;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -23,12 +23,9 @@ import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.sounds.SoundEvents;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
-public abstract class AbstractWidget implements Renderable, GuiEventListener, LayoutElement, NarratableEntry {
+public abstract class AbstractWidget implements LayoutElement, Renderable, GuiEventListener, NarratableEntry {
     protected int width;
     protected int height;
     private int x;
@@ -42,12 +39,12 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     private boolean focused;
     private final WidgetTooltipHolder tooltip = new WidgetTooltipHolder();
 
-    public AbstractWidget(int p_93629_, int p_93630_, int p_93631_, int p_93632_, Component p_93633_) {
-        this.x = p_93629_;
-        this.y = p_93630_;
-        this.width = p_93631_;
-        this.height = p_93632_;
-        this.message = p_93633_;
+    public AbstractWidget(final int x, final int y, final int width, final int height, final Component message) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.message = message;
     }
 
     @Override
@@ -56,91 +53,95 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public final void render(GuiGraphics p_282421_, int p_93658_, int p_93659_, float p_93660_) {
+    public final void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
         if (this.visible) {
-            this.isHovered = p_282421_.containsPointInScissor(p_93658_, p_93659_) && this.areCoordinatesInRectangle(p_93658_, p_93659_);
-            this.renderWidget(p_282421_, p_93658_, p_93659_, p_93660_);
-            this.tooltip.refreshTooltipForNextRenderPass(p_282421_, p_93658_, p_93659_, this.isHovered(), this.isFocused(), this.getRectangle());
+            this.isHovered = graphics.containsPointInScissor(mouseX, mouseY) && this.areCoordinatesInRectangle(mouseX, mouseY);
+            this.extractWidgetRenderState(graphics, mouseX, mouseY, a);
+            this.extractTooltipForNextRenderPass(graphics, mouseX, mouseY);
         }
     }
 
-    protected void handleCursor(GuiGraphics p_454454_) {
+    protected void extractTooltipForNextRenderPass(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY) {
+        this.tooltip.refreshTooltipForNextRenderPass(graphics, mouseX, mouseY, this.isHovered(), this.isFocused(), this.getRectangle());
+    }
+
+    protected void handleCursor(final GuiGraphicsExtractor graphics) {
         if (this.isHovered()) {
-            p_454454_.requestCursor(this.isActive() ? CursorTypes.POINTING_HAND : CursorTypes.NOT_ALLOWED);
+            graphics.requestCursor(this.isActive() ? CursorTypes.POINTING_HAND : CursorTypes.NOT_ALLOWED);
         }
     }
 
-    public void setTooltip(@Nullable Tooltip p_259796_) {
-        this.tooltip.set(p_259796_);
+    public void setTooltip(final @Nullable Tooltip tooltip) {
+        this.tooltip.set(tooltip);
     }
 
-    public void setTooltipDelay(Duration p_334848_) {
-        this.tooltip.setDelay(p_334848_);
+    public void setTooltipDelay(final Duration delay) {
+        this.tooltip.setDelay(delay);
     }
 
     protected MutableComponent createNarrationMessage() {
         return wrapDefaultNarrationMessage(this.getMessage());
     }
 
-    public static MutableComponent wrapDefaultNarrationMessage(Component p_168800_) {
-        return Component.translatable("gui.narrate.button", p_168800_);
+    public static MutableComponent wrapDefaultNarrationMessage(final Component message) {
+        return Component.translatable("gui.narrate.button", message);
     }
 
-    protected abstract void renderWidget(GuiGraphics p_282139_, int p_268034_, int p_268009_, float p_268085_);
+    protected abstract void extractWidgetRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a);
 
-    protected void renderScrollingStringOverContents(ActiveTextCollector p_457911_, Component p_455843_, int p_452191_) {
-        int i = this.getX() + p_452191_;
-        int j = this.getX() + this.getWidth() - p_452191_;
-        int k = this.getY();
-        int l = this.getY() + this.getHeight();
-        p_457911_.acceptScrollingWithDefaultCenter(p_455843_, i, j, k, l);
+    protected void extractScrollingStringOverContents(final ActiveTextCollector output, final Component message, final int margin) {
+        int left = this.getX() + margin;
+        int right = this.getX() + this.getWidth() - margin;
+        int top = this.getY();
+        int bottom = this.getY() + this.getHeight();
+        output.acceptScrollingWithDefaultCenter(message, left, right, top, bottom);
     }
 
-    public void onClick(MouseButtonEvent p_426483_, boolean p_429202_) {
+    public void onClick(final MouseButtonEvent event, final boolean doubleClick) {
     }
 
-    public void onRelease(MouseButtonEvent p_429715_) {
+    public void onRelease(final MouseButtonEvent event) {
     }
 
-    protected void onDrag(MouseButtonEvent p_422629_, double p_93636_, double p_93637_) {
+    protected void onDrag(final MouseButtonEvent event, final double dx, final double dy) {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_431414_, boolean p_430750_) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
         if (!this.isActive()) {
             return false;
-        } else {
-            if (this.isValidClickButton(p_431414_.buttonInfo())) {
-                boolean flag = this.isMouseOver(p_431414_.x(), p_431414_.y());
-                if (flag) {
-                    this.playDownSound(Minecraft.getInstance().getSoundManager());
-                    this.onClick(p_431414_, p_430750_);
-                    return true;
-                }
+        }
+
+        if (this.isValidClickButton(event.buttonInfo())) {
+            boolean isMouseOver = this.isMouseOver(event.x(), event.y());
+            if (isMouseOver) {
+                this.playDownSound(Minecraft.getInstance().getSoundManager());
+                this.onClick(event, doubleClick);
+                return true;
             }
-
-            return false;
         }
+
+        return false;
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent p_422526_) {
-        if (this.isValidClickButton(p_422526_.buttonInfo())) {
-            this.onRelease(p_422526_);
+    public boolean mouseReleased(final MouseButtonEvent event) {
+        if (this.isValidClickButton(event.buttonInfo())) {
+            this.onRelease(event);
             return true;
         } else {
             return false;
         }
     }
 
-    protected boolean isValidClickButton(MouseButtonInfo p_422530_) {
-        return p_422530_.button() == 0;
+    protected boolean isValidClickButton(final MouseButtonInfo buttonInfo) {
+        return buttonInfo.button() == 0;
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent p_427872_, double p_93645_, double p_93646_) {
-        if (this.isValidClickButton(p_427872_.buttonInfo())) {
-            this.onDrag(p_427872_, p_93645_, p_93646_);
+    public boolean mouseDragged(final MouseButtonEvent event, final double dx, final double dy) {
+        if (this.isValidClickButton(event.buttonInfo())) {
+            this.onDrag(event, dx, dy);
             return true;
         } else {
             return false;
@@ -148,7 +149,7 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public @Nullable ComponentPath nextFocusPath(FocusNavigationEvent p_265640_) {
+    public @Nullable ComponentPath nextFocusPath(final FocusNavigationEvent navigationEvent) {
         if (!this.isActive()) {
             return null;
         } else {
@@ -157,16 +158,16 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public boolean isMouseOver(double p_93672_, double p_93673_) {
-        return this.isActive() && this.areCoordinatesInRectangle(p_93672_, p_93673_);
+    public boolean isMouseOver(final double mouseX, final double mouseY) {
+        return this.isActive() && this.areCoordinatesInRectangle(mouseX, mouseY);
     }
 
-    public void playDownSound(SoundManager p_93665_) {
-        playButtonClickSound(p_93665_);
+    public void playDownSound(final SoundManager soundManager) {
+        playButtonClickSound(soundManager);
     }
 
-    public static void playButtonClickSound(SoundManager p_363924_) {
-        p_363924_.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+    public static void playButtonClickSound(final SoundManager soundManager) {
+        soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
     }
 
     @Override
@@ -174,24 +175,24 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
         return this.width;
     }
 
-    public void setWidth(int p_93675_) {
-        this.width = p_93675_;
+    public void setWidth(final int width) {
+        this.width = width;
     }
 
-    public void setHeight(int p_298443_) {
-        this.height = p_298443_;
+    public void setHeight(final int height) {
+        this.height = height;
     }
 
-    public void setAlpha(float p_93651_) {
-        this.alpha = p_93651_;
+    public void setAlpha(final float alpha) {
+        this.alpha = alpha;
     }
 
     public float getAlpha() {
         return this.alpha;
     }
 
-    public void setMessage(Component p_93667_) {
-        this.message = p_93667_;
+    public void setMessage(final Component message) {
+        this.message = message;
     }
 
     public Component getMessage() {
@@ -217,8 +218,8 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public void setFocused(boolean p_93693_) {
-        this.focused = p_93693_;
+    public void setFocused(final boolean focused) {
+        this.focused = focused;
     }
 
     @Override
@@ -231,20 +232,20 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public final void updateNarration(NarrationElementOutput p_259921_) {
-        this.updateWidgetNarration(p_259921_);
-        this.tooltip.updateNarration(p_259921_);
+    public final void updateNarration(final NarrationElementOutput output) {
+        this.updateWidgetNarration(output);
+        this.tooltip.updateNarration(output);
     }
 
-    protected abstract void updateWidgetNarration(NarrationElementOutput p_259858_);
+    protected abstract void updateWidgetNarration(final NarrationElementOutput output);
 
-    protected void defaultButtonNarrationText(NarrationElementOutput p_168803_) {
-        p_168803_.add(NarratedElementType.TITLE, this.createNarrationMessage());
+    protected void defaultButtonNarrationText(final NarrationElementOutput output) {
+        output.add(NarratedElementType.TITLE, this.createNarrationMessage());
         if (this.active) {
             if (this.isFocused()) {
-                p_168803_.add(NarratedElementType.USAGE, Component.translatable("narration.button.usage.focused"));
+                output.add(NarratedElementType.USAGE, Component.translatable("narration.button.usage.focused"));
             } else {
-                p_168803_.add(NarratedElementType.USAGE, Component.translatable("narration.button.usage.hovered"));
+                output.add(NarratedElementType.USAGE, Component.translatable("narration.button.usage.hovered"));
             }
         }
     }
@@ -255,8 +256,8 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public void setX(int p_254495_) {
-        this.x = p_254495_;
+    public void setX(final int x) {
+        this.x = x;
     }
 
     @Override
@@ -265,8 +266,8 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public void setY(int p_253718_) {
-        this.y = p_253718_;
+    public void setY(final int y) {
+        this.y = y;
     }
 
     public int getRight() {
@@ -278,13 +279,13 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
     }
 
     @Override
-    public void visitWidgets(Consumer<AbstractWidget> p_265566_) {
-        p_265566_.accept(this);
+    public void visitWidgets(final Consumer<AbstractWidget> widgetVisitor) {
+        widgetVisitor.accept(this);
     }
 
-    public void setSize(int p_312975_, int p_312301_) {
-        this.width = p_312975_;
-        this.height = p_312301_;
+    public void setSize(final int width, final int height) {
+        this.width = width;
+        this.height = height;
     }
 
     @Override
@@ -292,13 +293,13 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
         return LayoutElement.super.getRectangle();
     }
 
-    private boolean areCoordinatesInRectangle(double p_408770_, double p_408112_) {
-        return p_408770_ >= this.getX() && p_408112_ >= this.getY() && p_408770_ < this.getRight() && p_408112_ < this.getBottom();
+    private boolean areCoordinatesInRectangle(final double x, final double y) {
+        return x >= this.getX() && y >= this.getY() && x < this.getRight() && y < this.getBottom();
     }
 
-    public void setRectangle(int p_309908_, int p_310169_, int p_312247_, int p_310380_) {
-        this.setSize(p_309908_, p_310169_);
-        this.setPosition(p_312247_, p_310380_);
+    public void setRectangle(final int width, final int height, final int x, final int y) {
+        this.setSize(width, height);
+        this.setPosition(x, y);
     }
 
     @Override
@@ -306,21 +307,20 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
         return this.tabOrderGroup;
     }
 
-    public void setTabOrderGroup(int p_268123_) {
-        this.tabOrderGroup = p_268123_;
+    public void setTabOrderGroup(final int tabOrderGroup) {
+        this.tabOrderGroup = tabOrderGroup;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public abstract static class WithInactiveMessage extends AbstractWidget {
+        public abstract static class WithInactiveMessage extends AbstractWidget {
         private Component inactiveMessage;
 
-        public static Component defaultInactiveMessage(Component p_459182_) {
-            return ComponentUtils.mergeStyles(p_459182_, Style.EMPTY.withColor(-6250336));
+        public static Component defaultInactiveMessage(final Component activeMessage) {
+            return ComponentUtils.mergeStyles(activeMessage, Style.EMPTY.withColor(-6250336));
         }
 
-        public WithInactiveMessage(int p_458860_, int p_451498_, int p_451195_, int p_459115_, Component p_453063_) {
-            super(p_458860_, p_451498_, p_451195_, p_459115_, p_453063_);
-            this.inactiveMessage = defaultInactiveMessage(p_453063_);
+        public WithInactiveMessage(final int x, final int y, final int width, final int height, final Component message) {
+            super(x, y, width, height, message);
+            this.inactiveMessage = defaultInactiveMessage(message);
         }
 
         @Override
@@ -329,9 +329,9 @@ public abstract class AbstractWidget implements Renderable, GuiEventListener, La
         }
 
         @Override
-        public void setMessage(Component p_459365_) {
-            super.setMessage(p_459365_);
-            this.inactiveMessage = defaultInactiveMessage(p_459365_);
+        public void setMessage(final Component message) {
+            super.setMessage(message);
+            this.inactiveMessage = defaultInactiveMessage(message);
         }
     }
 }

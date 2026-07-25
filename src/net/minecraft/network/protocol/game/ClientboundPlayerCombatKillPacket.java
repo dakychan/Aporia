@@ -22,8 +22,8 @@ public record ClientboundPlayerCombatKillPacket(int playerId, Component message)
         return GamePacketTypes.CLIENTBOUND_PLAYER_COMBAT_KILL;
     }
 
-    public void handle(ClientGamePacketListener p_179076_) {
-        p_179076_.handlePlayerCombatKill(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handlePlayerCombatKill(this);
     }
 
     @Override

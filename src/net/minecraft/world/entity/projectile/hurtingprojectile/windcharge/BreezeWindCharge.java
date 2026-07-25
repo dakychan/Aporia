@@ -4,6 +4,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.monster.breeze.Breeze;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
@@ -11,24 +12,24 @@ import net.minecraft.world.phys.Vec3;
 public class BreezeWindCharge extends AbstractWindCharge {
     private static final float RADIUS = 3.0F;
 
-    public BreezeWindCharge(EntityType<? extends AbstractWindCharge> p_453894_, Level p_457761_) {
-        super(p_453894_, p_457761_);
+    public BreezeWindCharge(final EntityType<? extends AbstractWindCharge> type, final Level level) {
+        super(type, level);
     }
 
-    public BreezeWindCharge(Breeze p_454116_, Level p_454637_) {
-        super(EntityType.BREEZE_WIND_CHARGE, p_454637_, p_454116_, p_454116_.getX(), p_454116_.getFiringYPosition(), p_454116_.getZ());
+    public BreezeWindCharge(final Breeze breeze, final Level level) {
+        super(EntityTypes.BREEZE_WIND_CHARGE, level, breeze, breeze.getX(), breeze.getFiringYPosition(), breeze.getZ());
     }
 
     @Override
-    protected void explode(Vec3 p_460556_) {
+    protected void explode(final Vec3 position) {
         this.level()
             .explode(
                 this,
                 null,
                 EXPLOSION_DAMAGE_CALCULATOR,
-                p_460556_.x(),
-                p_460556_.y(),
-                p_460556_.z(),
+                position.x(),
+                position.y(),
+                position.z(),
                 3.0F,
                 false,
                 Level.ExplosionInteraction.TRIGGER,

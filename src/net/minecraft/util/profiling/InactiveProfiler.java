@@ -1,10 +1,10 @@
 package net.minecraft.util.profiling;
 
 import com.google.common.collect.ImmutableSet;
+import com.mojang.datafixers.util.Pair;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.util.profiling.metrics.MetricCategory;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.Nullable;
 
 public class InactiveProfiler implements ProfileCollector {
@@ -22,15 +22,15 @@ public class InactiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public void push(String p_18559_) {
+    public void push(final String name) {
     }
 
     @Override
-    public void push(Supplier<String> p_18561_) {
+    public void push(final Supplier<String> name) {
     }
 
     @Override
-    public void markForCharting(MetricCategory p_145951_) {
+    public void markForCharting(final MetricCategory category) {
     }
 
     @Override
@@ -38,29 +38,29 @@ public class InactiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public void popPush(String p_18564_) {
+    public void popPush(final String name) {
     }
 
     @Override
-    public void popPush(Supplier<String> p_18566_) {
+    public void popPush(final Supplier<String> name) {
     }
 
     @Override
-    public Zone zone(String p_362797_) {
+    public Zone zone(final String name) {
         return Zone.INACTIVE;
     }
 
     @Override
-    public Zone zone(Supplier<String> p_367093_) {
+    public Zone zone(final Supplier<String> name) {
         return Zone.INACTIVE;
     }
 
     @Override
-    public void incrementCounter(String p_185253_, int p_185254_) {
+    public void incrementCounter(final String name, final int amount) {
     }
 
     @Override
-    public void incrementCounter(Supplier<String> p_185256_, int p_185257_) {
+    public void incrementCounter(final Supplier<String> name, final int amount) {
     }
 
     @Override
@@ -69,7 +69,7 @@ public class InactiveProfiler implements ProfileCollector {
     }
 
     @Override
-    public ActiveProfiler.@Nullable PathEntry getEntry(String p_145953_) {
+    public ActiveProfiler.@Nullable PathEntry getEntry(final String path) {
         return null;
     }
 

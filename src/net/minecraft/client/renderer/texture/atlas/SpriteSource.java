@@ -7,38 +7,32 @@ import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.Resource;
 import net.minecraft.server.packs.resources.ResourceManager;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface SpriteSource {
     FileToIdConverter TEXTURE_ID_CONVERTER = new FileToIdConverter("textures", ".png");
 
-    void run(ResourceManager p_261770_, SpriteSource.Output p_261757_);
+    void run(ResourceManager resourceManager, SpriteSource.Output output);
 
     MapCodec<? extends SpriteSource> codec();
 
-    @OnlyIn(Dist.CLIENT)
-    public interface DiscardableLoader extends SpriteSource.Loader {
+        interface DiscardableLoader extends SpriteSource.Loader {
         default void discard() {
         }
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface Loader {
-        @Nullable SpriteContents get(SpriteResourceLoader p_457626_);
+        interface Loader {
+        @Nullable SpriteContents get(SpriteResourceLoader loader);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface Output {
-        default void add(Identifier p_457649_, Resource p_261651_) {
-            this.add(p_457649_, p_448408_ -> p_448408_.loadSprite(p_457649_, p_261651_));
+        interface Output {
+        default void add(final Identifier id, final Resource resource) {
+            this.add(id, loader -> loader.loadSprite(id, resource));
         }
 
-        void add(Identifier p_456510_, SpriteSource.DiscardableLoader p_457707_);
+        void add(Identifier id, SpriteSource.DiscardableLoader sprite);
 
-        void removeAll(Predicate<Identifier> p_261532_);
+        void removeAll(Predicate<Identifier> predicate);
     }
 }

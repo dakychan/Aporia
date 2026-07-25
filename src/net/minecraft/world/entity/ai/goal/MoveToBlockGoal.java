@@ -20,16 +20,16 @@ public abstract class MoveToBlockGoal extends Goal {
     private final int verticalSearchRange;
     protected int verticalSearchStart;
 
-    public MoveToBlockGoal(PathfinderMob p_25609_, double p_25610_, int p_25611_) {
-        this(p_25609_, p_25610_, p_25611_, 1);
+    public MoveToBlockGoal(final PathfinderMob mob, final double speedModifier, final int searchRange) {
+        this(mob, speedModifier, searchRange, 1);
     }
 
-    public MoveToBlockGoal(PathfinderMob p_25613_, double p_25614_, int p_25615_, int p_25616_) {
-        this.mob = p_25613_;
-        this.speedModifier = p_25614_;
-        this.searchRange = p_25615_;
+    public MoveToBlockGoal(final PathfinderMob mob, final double speedModifier, final int searchRange, final int verticalSearchRange) {
+        this.mob = mob;
+        this.speedModifier = speedModifier;
+        this.searchRange = searchRange;
         this.verticalSearchStart = 0;
-        this.verticalSearchRange = p_25616_;
+        this.verticalSearchRange = verticalSearchRange;
         this.setFlags(EnumSet.of(Goal.Flag.MOVE, Goal.Flag.JUMP));
     }
 
@@ -44,8 +44,8 @@ public abstract class MoveToBlockGoal extends Goal {
         }
     }
 
-    protected int nextStartTick(PathfinderMob p_25618_) {
-        return reducedTickDelay(200 + p_25618_.getRandom().nextInt(200));
+    protected int nextStartTick(final PathfinderMob mob) {
+        return reducedTickDelay(200 + mob.getRandom().nextInt(200));
     }
 
     @Override
@@ -79,12 +79,12 @@ public abstract class MoveToBlockGoal extends Goal {
 
     @Override
     public void tick() {
-        BlockPos blockpos = this.getMoveToTarget();
-        if (!blockpos.closerToCenterThan(this.mob.position(), this.acceptedDistance())) {
+        BlockPos moveToTarget = this.getMoveToTarget();
+        if (!moveToTarget.closerToCenterThan(this.mob.position(), this.acceptedDistance())) {
             this.reachedTarget = false;
             this.tryTicks++;
             if (this.shouldRecalculatePath()) {
-                this.mob.getNavigation().moveTo(blockpos.getX() + 0.5, blockpos.getY(), blockpos.getZ() + 0.5, this.speedModifier);
+                this.mob.getNavigation().moveTo(moveToTarget.getX() + 0.5, moveToTarget.getY(), moveToTarget.getZ() + 0.5, this.speedModifier);
             }
         } else {
             this.reachedTarget = true;
@@ -101,18 +101,18 @@ public abstract class MoveToBlockGoal extends Goal {
     }
 
     protected boolean findNearestBlock() {
-        int i = this.searchRange;
-        int j = this.verticalSearchRange;
-        BlockPos blockpos = this.mob.blockPosition();
-        BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos();
+        int horizontalSearch = this.searchRange;
+        int verticalSearch = this.verticalSearchRange;
+        BlockPos mobPos = this.mob.blockPosition();
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
 
-        for (int k = this.verticalSearchStart; k <= j; k = k > 0 ? -k : 1 - k) {
-            for (int l = 0; l < i; l++) {
-                for (int i1 = 0; i1 <= l; i1 = i1 > 0 ? -i1 : 1 - i1) {
-                    for (int j1 = i1 < l && i1 > -l ? l : 0; j1 <= l; j1 = j1 > 0 ? -j1 : 1 - j1) {
-                        blockpos$mutableblockpos.setWithOffset(blockpos, i1, k - 1, j1);
-                        if (this.mob.isWithinHome(blockpos$mutableblockpos) && this.isValidTarget(this.mob.level(), blockpos$mutableblockpos)) {
-                            this.blockPos = blockpos$mutableblockpos;
+        for (int y = this.verticalSearchStart; y <= verticalSearch; y = y > 0 ? -y : 1 - y) {
+            for (int r = 0; r < horizontalSearch; r++) {
+                for (int x = 0; x <= r; x = x > 0 ? -x : 1 - x) {
+                    for (int z = x < r && x > -r ? r : 0; z <= r; z = z > 0 ? -z : 1 - z) {
+                        pos.setWithOffset(mobPos, x, y - 1, z);
+                        if (this.mob.isWithinHome(pos) && this.isValidTarget(this.mob.level(), pos)) {
+                            this.blockPos = pos;
                             return true;
                         }
                     }
@@ -123,5 +123,5 @@ public abstract class MoveToBlockGoal extends Goal {
         return false;
     }
 
-    protected abstract boolean isValidTarget(LevelReader p_25619_, BlockPos p_25620_);
+    protected abstract boolean isValidTarget(LevelReader level, BlockPos pos);
 }

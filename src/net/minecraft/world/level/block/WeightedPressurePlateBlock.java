@@ -3,7 +3,6 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
@@ -17,12 +16,12 @@ import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 public class WeightedPressurePlateBlock extends BasePressurePlateBlock {
     public static final MapCodec<WeightedPressurePlateBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422147_ -> p_422147_.group(
-                Codec.intRange(1, 1024).fieldOf("max_weight").forGetter(p_312398_ -> p_312398_.maxWeight),
-                BlockSetType.CODEC.fieldOf("block_set_type").forGetter(p_310139_ -> p_310139_.type),
+        i -> i.group(
+                Codec.intRange(1, 1024).fieldOf("max_weight").forGetter(b -> b.maxWeight),
+                BlockSetType.CODEC.fieldOf("block_set_type").forGetter(b -> b.type),
                 propertiesCodec()
             )
-            .apply(p_422147_, WeightedPressurePlateBlock::new)
+            .apply(i, WeightedPressurePlateBlock::new)
     );
     public static final IntegerProperty POWER = BlockStateProperties.POWER;
     private final int maxWeight;
@@ -32,31 +31,31 @@ public class WeightedPressurePlateBlock extends BasePressurePlateBlock {
         return CODEC;
     }
 
-    protected WeightedPressurePlateBlock(int p_273669_, BlockSetType p_272868_, BlockBehaviour.Properties p_273512_) {
-        super(p_273512_, p_272868_);
+    protected WeightedPressurePlateBlock(final int maxWeight, final BlockSetType type, final BlockBehaviour.Properties properties) {
+        super(properties, type);
         this.registerDefaultState(this.stateDefinition.any().setValue(POWER, 0));
-        this.maxWeight = p_273669_;
+        this.maxWeight = maxWeight;
     }
 
     @Override
-    protected int getSignalStrength(Level p_58213_, BlockPos p_58214_) {
-        int i = Math.min(getEntityCount(p_58213_, TOUCH_AABB.move(p_58214_), Entity.class), this.maxWeight);
-        if (i > 0) {
-            float f = (float)Math.min(this.maxWeight, i) / this.maxWeight;
-            return Mth.ceil(f * 15.0F);
+    protected int getSignalStrength(final Level level, final BlockPos pos) {
+        int count = Math.min(getEntityCount(level, TOUCH_AABB.move(pos), Entity.class), this.maxWeight);
+        if (count > 0) {
+            float percent = (float)Math.min(this.maxWeight, count) / this.maxWeight;
+            return Mth.ceil(percent * 15.0F);
         } else {
             return 0;
         }
     }
 
     @Override
-    protected int getSignalForState(BlockState p_58220_) {
-        return p_58220_.getValue(POWER);
+    protected int getSignalForState(final BlockState state) {
+        return state.getValue(POWER);
     }
 
     @Override
-    protected BlockState setSignalForState(BlockState p_58208_, int p_58209_) {
-        return p_58208_.setValue(POWER, p_58209_);
+    protected BlockState setSignalForState(final BlockState state, final int signal) {
+        return state.setValue(POWER, signal);
     }
 
     @Override
@@ -65,7 +64,7 @@ public class WeightedPressurePlateBlock extends BasePressurePlateBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_58211_) {
-        p_58211_.add(POWER);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(POWER);
     }
 }

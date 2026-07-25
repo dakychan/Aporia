@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import net.minecraft.core.BlockPos;
@@ -40,8 +39,7 @@ import org.jspecify.annotations.Nullable;
 
 public class TrapDoorBlock extends HorizontalDirectionalBlock implements SimpleWaterloggedBlock {
     public static final MapCodec<TrapDoorBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422132_ -> p_422132_.group(BlockSetType.CODEC.fieldOf("block_set_type").forGetter(p_311609_ -> p_311609_.type), propertiesCodec())
-            .apply(p_422132_, TrapDoorBlock::new)
+        i -> i.group(BlockSetType.CODEC.fieldOf("block_set_type").forGetter(b -> b.type), propertiesCodec()).apply(i, TrapDoorBlock::new)
     );
     public static final BooleanProperty OPEN = BlockStateProperties.OPEN;
     public static final EnumProperty<Half> HALF = BlockStateProperties.HALF;
@@ -55,9 +53,9 @@ public class TrapDoorBlock extends HorizontalDirectionalBlock implements SimpleW
         return CODEC;
     }
 
-    protected TrapDoorBlock(BlockSetType p_272964_, BlockBehaviour.Properties p_273079_) {
-        super(p_273079_.sound(p_272964_.soundType()));
-        this.type = p_272964_;
+    protected TrapDoorBlock(final BlockSetType type, final BlockBehaviour.Properties properties) {
+        super(properties.sound(type.soundType()));
+        this.type = type;
         this.registerDefaultState(
             this.stateDefinition
                 .any()
@@ -70,130 +68,125 @@ public class TrapDoorBlock extends HorizontalDirectionalBlock implements SimpleW
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57563_, BlockGetter p_57564_, BlockPos p_57565_, CollisionContext p_57566_) {
-        return SHAPES.get(
-            p_57563_.getValue(OPEN) ? p_57563_.getValue(FACING) : (p_57563_.getValue(HALF) == Half.TOP ? Direction.DOWN : Direction.UP)
-        );
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPES.get(state.getValue(OPEN) ? state.getValue(FACING) : (state.getValue(HALF) == Half.TOP ? Direction.DOWN : Direction.UP));
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_57535_, PathComputationType p_57538_) {
-        switch (p_57538_) {
-            case LAND:
-                return p_57535_.getValue(OPEN);
-            case WATER:
-                return p_57535_.getValue(WATERLOGGED);
-            case AIR:
-                return p_57535_.getValue(OPEN);
-            default:
-                return false;
-        }
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
+        return switch (type) {
+            case LAND -> state.getValue(OPEN);
+            case WATER -> state.getValue(WATERLOGGED);
+            case AIR -> state.getValue(OPEN);
+            default -> false;
+        };
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_57540_, Level p_57541_, BlockPos p_57542_, Player p_57543_, BlockHitResult p_57545_) {
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
         if (!this.type.canOpenByHand()) {
             return InteractionResult.PASS;
-        } else {
-            this.toggle(p_57540_, p_57541_, p_57542_, p_57543_);
-            return InteractionResult.SUCCESS;
         }
+
+        this.toggle(state, level, pos, player);
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    protected void onExplosionHit(BlockState p_312876_, ServerLevel p_365086_, BlockPos p_312697_, Explosion p_312889_, BiConsumer<ItemStack, BlockPos> p_312223_) {
-        if (p_312889_.canTriggerBlocks() && this.type.canOpenByWindCharge() && !p_312876_.getValue(POWERED)) {
-            this.toggle(p_312876_, p_365086_, p_312697_, null);
+    protected void onExplosionHit(
+        final BlockState state, final ServerLevel level, final BlockPos pos, final Explosion explosion, final BiConsumer<ItemStack, BlockPos> onHit
+    ) {
+        if (explosion.canTriggerBlocks() && this.type.canOpenByWindCharge() && !state.getValue(POWERED)) {
+            this.toggle(state, level, pos, null);
         }
 
-        super.onExplosionHit(p_312876_, p_365086_, p_312697_, p_312889_, p_312223_);
+        super.onExplosionHit(state, level, pos, explosion, onHit);
     }
 
-    private void toggle(BlockState p_311901_, Level p_312039_, BlockPos p_310194_, @Nullable Player p_312003_) {
-        BlockState blockstate = p_311901_.cycle(OPEN);
-        p_312039_.setBlock(p_310194_, blockstate, 2);
-        if (blockstate.getValue(WATERLOGGED)) {
-            p_312039_.scheduleTick(p_310194_, Fluids.WATER, Fluids.WATER.getTickDelay(p_312039_));
+    private void toggle(final BlockState state, final Level level, final BlockPos pos, final @Nullable Player player) {
+        BlockState updated = state.cycle(OPEN);
+        level.setBlock(pos, updated, 2);
+        if (updated.getValue(WATERLOGGED)) {
+            level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        this.playSound(p_312003_, p_312039_, p_310194_, blockstate.getValue(OPEN));
+        this.playSound(player, level, pos, updated.getValue(OPEN));
     }
 
-    protected void playSound(@Nullable Player p_57528_, Level p_57529_, BlockPos p_57530_, boolean p_57531_) {
-        p_57529_.playSound(
-            p_57528_,
-            p_57530_,
-            p_57531_ ? this.type.trapdoorOpen() : this.type.trapdoorClose(),
-            SoundSource.BLOCKS,
-            1.0F,
-            p_57529_.getRandom().nextFloat() * 0.1F + 0.9F
+    protected void playSound(final @Nullable Player player, final Level level, final BlockPos pos, final boolean opening) {
+        level.playSound(
+            player, pos, opening ? this.type.trapdoorOpen() : this.type.trapdoorClose(), SoundSource.BLOCKS, 1.0F, level.getRandom().nextFloat() * 0.1F + 0.9F
         );
-        p_57529_.gameEvent(p_57528_, p_57531_ ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, p_57530_);
+        level.gameEvent(player, opening ? GameEvent.BLOCK_OPEN : GameEvent.BLOCK_CLOSE, pos);
     }
 
     @Override
-    protected void neighborChanged(BlockState p_57547_, Level p_57548_, BlockPos p_57549_, Block p_57550_, @Nullable Orientation p_363180_, boolean p_57552_) {
-        if (!p_57548_.isClientSide()) {
-            boolean flag = p_57548_.hasNeighborSignal(p_57549_);
-            if (flag != p_57547_.getValue(POWERED)) {
-                if (p_57547_.getValue(OPEN) != flag) {
-                    p_57547_ = p_57547_.setValue(OPEN, flag);
-                    this.playSound(null, p_57548_, p_57549_, flag);
+    protected void neighborChanged(
+        BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        if (!level.isClientSide()) {
+            boolean signal = level.hasNeighborSignal(pos);
+            if (signal != state.getValue(POWERED)) {
+                if (state.getValue(OPEN) != signal) {
+                    state = state.setValue(OPEN, signal);
+                    this.playSound(null, level, pos, signal);
                 }
 
-                p_57548_.setBlock(p_57549_, p_57547_.setValue(POWERED, flag), 2);
-                if (p_57547_.getValue(WATERLOGGED)) {
-                    p_57548_.scheduleTick(p_57549_, Fluids.WATER, Fluids.WATER.getTickDelay(p_57548_));
+                level.setBlock(pos, state.setValue(POWERED, signal), 2);
+                if (state.getValue(WATERLOGGED)) {
+                    level.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
                 }
             }
         }
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_57533_) {
-        BlockState blockstate = this.defaultBlockState();
-        FluidState fluidstate = p_57533_.getLevel().getFluidState(p_57533_.getClickedPos());
-        Direction direction = p_57533_.getClickedFace();
-        if (!p_57533_.replacingClickedOnBlock() && direction.getAxis().isHorizontal()) {
-            blockstate = blockstate.setValue(FACING, direction)
-                .setValue(HALF, p_57533_.getClickLocation().y - p_57533_.getClickedPos().getY() > 0.5 ? Half.TOP : Half.BOTTOM);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = this.defaultBlockState();
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        Direction clickedFace = context.getClickedFace();
+        if (!context.replacingClickedOnBlock() && clickedFace.getAxis().isHorizontal()) {
+            state = state.setValue(FACING, clickedFace)
+                .setValue(HALF, context.getClickLocation().y - context.getClickedPos().getY() > 0.5 ? Half.TOP : Half.BOTTOM);
         } else {
-            blockstate = blockstate.setValue(FACING, p_57533_.getHorizontalDirection().getOpposite()).setValue(HALF, direction == Direction.UP ? Half.BOTTOM : Half.TOP);
+            state = state.setValue(FACING, context.getHorizontalDirection().getOpposite()).setValue(HALF, clickedFace == Direction.UP ? Half.BOTTOM : Half.TOP);
         }
 
-        if (p_57533_.getLevel().hasNeighborSignal(p_57533_.getClickedPos())) {
-            blockstate = blockstate.setValue(OPEN, true).setValue(POWERED, true);
+        if (context.getLevel().hasNeighborSignal(context.getClickedPos())) {
+            state = state.setValue(OPEN, true).setValue(POWERED, true);
         }
 
-        return blockstate.setValue(WATERLOGGED, fluidstate.getType() == Fluids.WATER);
+        return state.setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_57561_) {
-        p_57561_.add(FACING, OPEN, HALF, POWERED, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, OPEN, HALF, POWERED, WATERLOGGED);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_57568_) {
-        return p_57568_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_57568_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_57554_,
-        LevelReader p_365791_,
-        ScheduledTickAccess p_368436_,
-        BlockPos p_57558_,
-        Direction p_57555_,
-        BlockPos p_57559_,
-        BlockState p_57556_,
-        RandomSource p_367698_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_57554_.getValue(WATERLOGGED)) {
-            p_368436_.scheduleTick(p_57558_, Fluids.WATER, Fluids.WATER.getTickDelay(p_365791_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_57554_, p_365791_, p_368436_, p_57558_, p_57555_, p_57559_, p_57556_, p_367698_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     protected BlockSetType getType() {

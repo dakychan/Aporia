@@ -11,18 +11,18 @@ import org.jspecify.annotations.Nullable;
 public record TimedStatSummary<T extends TimedStat>(
     T fastest, T slowest, @Nullable T secondSlowest, int count, Map<Integer, Double> percentilesNanos, Duration totalDuration
 ) {
-    public static <T extends TimedStat> Optional<TimedStatSummary<T>> summary(List<T> p_185850_) {
-        if (p_185850_.isEmpty()) {
+    public static <T extends TimedStat> Optional<TimedStatSummary<T>> summary(final List<T> values) {
+        if (values.isEmpty()) {
             return Optional.empty();
-        } else {
-            List<T> list = p_185850_.stream().sorted(Comparator.comparing(TimedStat::duration)).toList();
-            Duration duration = list.stream().map(TimedStat::duration).reduce(Duration::plus).orElse(Duration.ZERO);
-            T t = (T)list.getFirst();
-            T t1 = (T)list.getLast();
-            T t2 = list.size() > 1 ? list.get(list.size() - 2) : null;
-            int i = list.size();
-            Map<Integer, Double> map = Percentiles.evaluate(list.stream().mapToLong(p_185848_ -> p_185848_.duration().toNanos()).toArray());
-            return Optional.of(new TimedStatSummary<>(t, t1, t2, i, map, duration));
         }
+
+        List<T> sorted = values.stream().sorted(Comparator.comparing(TimedStat::duration)).toList();
+        Duration totalDuration = sorted.stream().map(TimedStat::duration).reduce(Duration::plus).orElse(Duration.ZERO);
+        T fastest = (T)sorted.getFirst();
+        T slowest = (T)sorted.getLast();
+        T secondSlowest = sorted.size() > 1 ? sorted.get(sorted.size() - 2) : null;
+        int count = sorted.size();
+        Map<Integer, Double> percentilesNanos = Percentiles.evaluate(sorted.stream().mapToLong(it -> it.duration().toNanos()).toArray());
+        return Optional.of(new TimedStatSummary<>(fastest, slowest, secondSlowest, count, percentilesNanos, totalDuration));
     }
 }

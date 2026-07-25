@@ -5,35 +5,35 @@ import java.util.List;
 import net.minecraft.util.Util;
 
 public class AnyOfCondition extends CompositeLootItemCondition {
-    public static final MapCodec<AnyOfCondition> CODEC = createCodec(AnyOfCondition::new);
+    public static final MapCodec<AnyOfCondition> MAP_CODEC = createCodec(AnyOfCondition::new);
 
-    AnyOfCondition(List<LootItemCondition> p_299184_) {
-        super(p_299184_, Util.anyOf(p_299184_));
+    private AnyOfCondition(final List<LootItemCondition> terms) {
+        super(terms, Util.anyOf(terms));
     }
 
     @Override
-    public LootItemConditionType getType() {
-        return LootItemConditions.ANY_OF;
+    public MapCodec<AnyOfCondition> codec() {
+        return MAP_CODEC;
     }
 
-    public static AnyOfCondition.Builder anyOf(LootItemCondition.Builder... p_286239_) {
-        return new AnyOfCondition.Builder(p_286239_);
+    public static AnyOfCondition.Builder anyOf(final LootItemCondition.Builder... terms) {
+        return new AnyOfCondition.Builder(terms);
     }
 
     public static class Builder extends CompositeLootItemCondition.Builder {
-        public Builder(LootItemCondition.Builder... p_286497_) {
-            super(p_286497_);
+        public Builder(final LootItemCondition.Builder... terms) {
+            super(terms);
         }
 
         @Override
-        public AnyOfCondition.Builder or(LootItemCondition.Builder p_286344_) {
-            this.addTerm(p_286344_);
+        public AnyOfCondition.Builder or(final LootItemCondition.Builder term) {
+            this.addTerm(term);
             return this;
         }
 
         @Override
-        protected LootItemCondition create(List<LootItemCondition> p_297863_) {
-            return new AnyOfCondition(p_297863_);
+        protected LootItemCondition create(final List<LootItemCondition> terms) {
+            return new AnyOfCondition(terms);
         }
     }
 }

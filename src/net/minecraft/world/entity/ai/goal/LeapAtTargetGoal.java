@@ -10,9 +10,9 @@ public class LeapAtTargetGoal extends Goal {
     private LivingEntity target;
     private final float yd;
 
-    public LeapAtTargetGoal(Mob p_25492_, float p_25493_) {
-        this.mob = p_25492_;
-        this.yd = p_25493_;
+    public LeapAtTargetGoal(final Mob mob, final float yd) {
+        this.mob = mob;
+        this.yd = yd;
         this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
     }
 
@@ -25,8 +25,8 @@ public class LeapAtTargetGoal extends Goal {
             if (this.target == null) {
                 return false;
             } else {
-                double d0 = this.mob.distanceToSqr(this.target);
-                if (d0 < 4.0 || d0 > 16.0) {
+                double d = this.mob.distanceToSqr(this.target);
+                if (d < 4.0 || d > 16.0) {
                     return false;
                 } else {
                     return !this.mob.onGround() ? false : this.mob.getRandom().nextInt(reducedTickDelay(5)) == 0;
@@ -42,12 +42,12 @@ public class LeapAtTargetGoal extends Goal {
 
     @Override
     public void start() {
-        Vec3 vec3 = this.mob.getDeltaMovement();
-        Vec3 vec31 = new Vec3(this.target.getX() - this.mob.getX(), 0.0, this.target.getZ() - this.mob.getZ());
-        if (vec31.lengthSqr() > 1.0E-7) {
-            vec31 = vec31.normalize().scale(0.4).add(vec3.scale(0.2));
+        Vec3 movement = this.mob.getDeltaMovement();
+        Vec3 delta = new Vec3(this.target.getX() - this.mob.getX(), 0.0, this.target.getZ() - this.mob.getZ());
+        if (delta.lengthSqr() > 1.0E-7) {
+            delta = delta.normalize().scale(0.4).add(movement.scale(0.2));
         }
 
-        this.mob.setDeltaMovement(vec31.x, this.yd, vec31.z);
+        this.mob.setDeltaMovement(delta.x, this.yd, delta.z);
     }
 }

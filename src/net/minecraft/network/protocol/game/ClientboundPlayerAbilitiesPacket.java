@@ -21,46 +21,46 @@ public class ClientboundPlayerAbilitiesPacket implements Packet<ClientGamePacket
     private final float flyingSpeed;
     private final float walkingSpeed;
 
-    public ClientboundPlayerAbilitiesPacket(Abilities p_132667_) {
-        this.invulnerable = p_132667_.invulnerable;
-        this.isFlying = p_132667_.flying;
-        this.canFly = p_132667_.mayfly;
-        this.instabuild = p_132667_.instabuild;
-        this.flyingSpeed = p_132667_.getFlyingSpeed();
-        this.walkingSpeed = p_132667_.getWalkingSpeed();
+    public ClientboundPlayerAbilitiesPacket(final Abilities abilities) {
+        this.invulnerable = abilities.invulnerable;
+        this.isFlying = abilities.flying;
+        this.canFly = abilities.mayfly;
+        this.instabuild = abilities.instabuild;
+        this.flyingSpeed = abilities.getFlyingSpeed();
+        this.walkingSpeed = abilities.getWalkingSpeed();
     }
 
-    private ClientboundPlayerAbilitiesPacket(FriendlyByteBuf p_179033_) {
-        byte b0 = p_179033_.readByte();
-        this.invulnerable = (b0 & 1) != 0;
-        this.isFlying = (b0 & 2) != 0;
-        this.canFly = (b0 & 4) != 0;
-        this.instabuild = (b0 & 8) != 0;
-        this.flyingSpeed = p_179033_.readFloat();
-        this.walkingSpeed = p_179033_.readFloat();
+    private ClientboundPlayerAbilitiesPacket(final FriendlyByteBuf input) {
+        byte bitfield = input.readByte();
+        this.invulnerable = (bitfield & 1) != 0;
+        this.isFlying = (bitfield & 2) != 0;
+        this.canFly = (bitfield & 4) != 0;
+        this.instabuild = (bitfield & 8) != 0;
+        this.flyingSpeed = input.readFloat();
+        this.walkingSpeed = input.readFloat();
     }
 
-    private void write(FriendlyByteBuf p_132676_) {
-        byte b0 = 0;
+    private void write(final FriendlyByteBuf output) {
+        byte bitfield = 0;
         if (this.invulnerable) {
-            b0 = (byte)(b0 | 1);
+            bitfield = (byte)(bitfield | 1);
         }
 
         if (this.isFlying) {
-            b0 = (byte)(b0 | 2);
+            bitfield = (byte)(bitfield | 2);
         }
 
         if (this.canFly) {
-            b0 = (byte)(b0 | 4);
+            bitfield = (byte)(bitfield | 4);
         }
 
         if (this.instabuild) {
-            b0 = (byte)(b0 | 8);
+            bitfield = (byte)(bitfield | 8);
         }
 
-        p_132676_.writeByte(b0);
-        p_132676_.writeFloat(this.flyingSpeed);
-        p_132676_.writeFloat(this.walkingSpeed);
+        output.writeByte(bitfield);
+        output.writeFloat(this.flyingSpeed);
+        output.writeFloat(this.walkingSpeed);
     }
 
     @Override
@@ -68,8 +68,8 @@ public class ClientboundPlayerAbilitiesPacket implements Packet<ClientGamePacket
         return GamePacketTypes.CLIENTBOUND_PLAYER_ABILITIES;
     }
 
-    public void handle(ClientGamePacketListener p_132673_) {
-        p_132673_.handlePlayerAbilities(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handlePlayerAbilities(this);
     }
 
     public boolean isInvulnerable() {

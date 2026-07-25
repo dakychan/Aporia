@@ -64,12 +64,8 @@ class MiddleClick : Module("MiddleClick", Category.WORLD) {
         val camera = mc.cameraEntity
         if (mc.level == null || mc.player == null || camera == null) return
 
-        val fov = mc.options.fov().get().toFloat()
-        val projMatrix = mc.gameRenderer.getProjectionMatrix(fov)
-        val camRot = mc.gameRenderer.mainCamera.rotation().conjugate(Quaternionf())
-        val viewMatrix = Matrix4f().rotation(camRot)
-        val vp = Matrix4f(projMatrix).mul(viewMatrix)
-        val camPos = mc.gameRenderer.mainCamera.position()
+        val camPos = mc.gameRenderer.mainCamera().position()
+        val vp = mc.gameRenderer.mainCamera().getViewRotationProjectionMatrix(Matrix4f())
         val pt = e.partialTick()
 
         val mouseX = mc.mouseHandler.xpos() / mc.window.guiScale

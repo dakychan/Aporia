@@ -14,22 +14,22 @@ public class ClientboundBlockDestructionPacket implements Packet<ClientGamePacke
     private final BlockPos pos;
     private final int progress;
 
-    public ClientboundBlockDestructionPacket(int p_131676_, BlockPos p_131677_, int p_131678_) {
-        this.id = p_131676_;
-        this.pos = p_131677_;
-        this.progress = p_131678_;
+    public ClientboundBlockDestructionPacket(final int id, final BlockPos pos, final int progress) {
+        this.id = id;
+        this.pos = pos;
+        this.progress = progress;
     }
 
-    private ClientboundBlockDestructionPacket(FriendlyByteBuf p_178606_) {
-        this.id = p_178606_.readVarInt();
-        this.pos = p_178606_.readBlockPos();
-        this.progress = p_178606_.readUnsignedByte();
+    private ClientboundBlockDestructionPacket(final FriendlyByteBuf input) {
+        this.id = input.readVarInt();
+        this.pos = input.readBlockPos();
+        this.progress = input.readUnsignedByte();
     }
 
-    private void write(FriendlyByteBuf p_131687_) {
-        p_131687_.writeVarInt(this.id);
-        p_131687_.writeBlockPos(this.pos);
-        p_131687_.writeByte(this.progress);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.id);
+        output.writeBlockPos(this.pos);
+        output.writeByte(this.progress);
     }
 
     @Override
@@ -37,8 +37,8 @@ public class ClientboundBlockDestructionPacket implements Packet<ClientGamePacke
         return GamePacketTypes.CLIENTBOUND_BLOCK_DESTRUCTION;
     }
 
-    public void handle(ClientGamePacketListener p_131684_) {
-        p_131684_.handleBlockDestruction(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleBlockDestruction(this);
     }
 
     public int getId() {

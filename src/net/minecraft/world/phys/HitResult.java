@@ -5,15 +5,15 @@ import net.minecraft.world.entity.Entity;
 public abstract class HitResult {
     protected final Vec3 location;
 
-    protected HitResult(Vec3 p_82447_) {
-        this.location = p_82447_;
+    protected HitResult(final Vec3 location) {
+        this.location = location;
     }
 
-    public double distanceTo(Entity p_82449_) {
-        double d0 = this.location.x - p_82449_.getX();
-        double d1 = this.location.y - p_82449_.getY();
-        double d2 = this.location.z - p_82449_.getZ();
-        return d0 * d0 + d1 * d1 + d2 * d2;
+    public double distanceTo(final Entity entity) {
+        double xd = this.location.x - entity.getX();
+        double yd = this.location.y - entity.getY();
+        double zd = this.location.z - entity.getZ();
+        return xd * xd + yd * yd + zd * zd;
     }
 
     public abstract HitResult.Type getType();
@@ -22,7 +22,7 @@ public abstract class HitResult {
         return this.location;
     }
 
-    public static enum Type {
+    public enum Type {
         MISS,
         BLOCK,
         ENTITY;

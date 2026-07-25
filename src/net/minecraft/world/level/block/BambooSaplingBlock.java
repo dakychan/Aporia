@@ -27,68 +27,68 @@ public class BambooSaplingBlock extends Block implements BonemealableBlock {
         return CODEC;
     }
 
-    public BambooSaplingBlock(BlockBehaviour.Properties p_48957_) {
-        super(p_48957_);
+    public BambooSaplingBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_49003_, BlockGetter p_49004_, BlockPos p_49005_, CollisionContext p_49006_) {
-        return SHAPE.move(p_49003_.getOffset(p_49005_));
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return SHAPE.move(state.getOffset(pos));
     }
 
     @Override
-    protected void randomTick(BlockState p_220753_, ServerLevel p_220754_, BlockPos p_220755_, RandomSource p_220756_) {
-        if (p_220756_.nextInt(3) == 0 && p_220754_.isEmptyBlock(p_220755_.above()) && p_220754_.getRawBrightness(p_220755_.above(), 0) >= 9) {
-            this.growBamboo(p_220754_, p_220755_);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (random.nextInt(3) == 0 && level.isEmptyBlock(pos.above()) && level.getRawBrightness(pos.above(), 0) >= 9) {
+            this.growBamboo(level, pos);
         }
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_48986_, LevelReader p_48987_, BlockPos p_48988_) {
-        return p_48987_.getBlockState(p_48988_.below()).is(BlockTags.BAMBOO_PLANTABLE_ON);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return level.getBlockState(pos.below()).is(BlockTags.SUPPORTS_BAMBOO);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_48990_,
-        LevelReader p_366200_,
-        ScheduledTickAccess p_365833_,
-        BlockPos p_48994_,
-        Direction p_48991_,
-        BlockPos p_48995_,
-        BlockState p_48992_,
-        RandomSource p_365774_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!p_48990_.canSurvive(p_366200_, p_48994_)) {
+        if (!state.canSurvive(level, pos)) {
             return Blocks.AIR.defaultBlockState();
         } else {
-            return p_48991_ == Direction.UP && p_48992_.is(Blocks.BAMBOO)
+            return directionToNeighbour == Direction.UP && neighbourState.is(Blocks.BAMBOO)
                 ? Blocks.BAMBOO.defaultBlockState()
-                : super.updateShape(p_48990_, p_366200_, p_365833_, p_48994_, p_48991_, p_48995_, p_48992_, p_365774_);
+                : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
         }
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_312659_, BlockPos p_48965_, BlockState p_48966_, boolean p_376584_) {
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
         return new ItemStack(Items.BAMBOO);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_256136_, BlockPos p_256527_, BlockState p_255620_) {
-        return p_256136_.getBlockState(p_256527_.above()).isAir();
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return level.getBlockState(pos.above()).isAir() && level.isInsideBuildHeight(pos.above());
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_220748_, RandomSource p_220749_, BlockPos p_220750_, BlockState p_220751_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_220743_, RandomSource p_220744_, BlockPos p_220745_, BlockState p_220746_) {
-        this.growBamboo(p_220743_, p_220745_);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        this.growBamboo(level, pos);
     }
 
-    protected void growBamboo(Level p_48973_, BlockPos p_48974_) {
-        p_48973_.setBlock(p_48974_.above(), Blocks.BAMBOO.defaultBlockState().setValue(BambooStalkBlock.LEAVES, BambooLeaves.SMALL), 3);
+    protected void growBamboo(final Level level, final BlockPos pos) {
+        level.setBlock(pos.above(), Blocks.BAMBOO.defaultBlockState().setValue(BambooStalkBlock.LEAVES, BambooLeaves.SMALL), 3);
     }
 }

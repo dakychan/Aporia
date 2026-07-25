@@ -2,20 +2,26 @@ package net.minecraft.gametest.framework;
 
 import org.jspecify.annotations.Nullable;
 
-class GameTestEvent {
+public class GameTestEvent {
     public final @Nullable Long expectedDelay;
+    public final @Nullable Long minimumDelay;
     public final Runnable assertion;
 
-    private GameTestEvent(@Nullable Long p_177092_, Runnable p_177093_) {
-        this.expectedDelay = p_177092_;
-        this.assertion = p_177093_;
+    private GameTestEvent(final @Nullable Long expectedDelay, final @Nullable Long minimumDelay, final Runnable assertion) {
+        this.expectedDelay = expectedDelay;
+        this.minimumDelay = minimumDelay;
+        this.assertion = assertion;
     }
 
-    static GameTestEvent create(Runnable p_177098_) {
-        return new GameTestEvent(null, p_177098_);
+    public static GameTestEvent create(final Runnable runnable) {
+        return new GameTestEvent(null, null, runnable);
     }
 
-    static GameTestEvent create(long p_177095_, Runnable p_177096_) {
-        return new GameTestEvent(p_177095_, p_177096_);
+    public static GameTestEvent create(final long expectedTick, final Runnable runnable) {
+        return new GameTestEvent(expectedTick, null, runnable);
+    }
+
+    public static GameTestEvent createWithMinimumDelay(final long minimumDelay, final Runnable runnable) {
+        return new GameTestEvent(null, minimumDelay, runnable);
     }
 }

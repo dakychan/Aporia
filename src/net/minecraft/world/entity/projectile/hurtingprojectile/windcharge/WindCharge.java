@@ -11,6 +11,7 @@ import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityReference;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.ProjectileDeflection;
 import net.minecraft.world.level.ExplosionDamageCalculator;
@@ -27,16 +28,16 @@ public class WindCharge extends AbstractWindCharge {
     private static final float MIN_CAMERA_DISTANCE_SQUARED = Mth.square(3.5F);
     private int noDeflectTicks = 5;
 
-    public WindCharge(EntityType<? extends AbstractWindCharge> p_452696_, Level p_450169_) {
-        super(p_452696_, p_450169_);
+    public WindCharge(final EntityType<? extends AbstractWindCharge> type, final Level level) {
+        super(type, level);
     }
 
-    public WindCharge(Player p_460521_, Level p_457947_, double p_455925_, double p_451374_, double p_451614_) {
-        super(EntityType.WIND_CHARGE, p_457947_, p_460521_, p_455925_, p_451374_, p_451614_);
+    public WindCharge(final Player player, final Level level, final double x, final double y, final double z) {
+        super(EntityTypes.WIND_CHARGE, level, player, x, y, z);
     }
 
-    public WindCharge(Level p_454948_, double p_455356_, double p_450335_, double p_459033_, Vec3 p_455004_) {
-        super(EntityType.WIND_CHARGE, p_455356_, p_450335_, p_459033_, p_455004_, p_454948_);
+    public WindCharge(final Level level, final double x, final double y, final double z, final Vec3 direction) {
+        super(EntityTypes.WIND_CHARGE, x, y, z, direction, level);
     }
 
     @Override
@@ -48,20 +49,25 @@ public class WindCharge extends AbstractWindCharge {
     }
 
     @Override
-    public boolean deflect(ProjectileDeflection p_455945_, @Nullable Entity p_453932_, @Nullable EntityReference<Entity> p_452225_, boolean p_457957_) {
-        return this.noDeflectTicks > 0 ? false : super.deflect(p_455945_, p_453932_, p_452225_, p_457957_);
+    public boolean deflect(
+        final ProjectileDeflection deflection,
+        final @Nullable Entity deflectingEntity,
+        final @Nullable EntityReference<Entity> newOwner,
+        final boolean byAttack
+    ) {
+        return this.noDeflectTicks > 0 ? false : super.deflect(deflection, deflectingEntity, newOwner, byAttack);
     }
 
     @Override
-    protected void explode(Vec3 p_450563_) {
+    protected void explode(final Vec3 position) {
         this.level()
             .explode(
                 this,
                 null,
                 EXPLOSION_DAMAGE_CALCULATOR,
-                p_450563_.x(),
-                p_450563_.y(),
-                p_450563_.z(),
+                position.x(),
+                position.y(),
+                position.z(),
                 1.2F,
                 false,
                 Level.ExplosionInteraction.TRIGGER,
@@ -73,7 +79,7 @@ public class WindCharge extends AbstractWindCharge {
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_457564_) {
-        return this.tickCount < 2 && p_457564_ < MIN_CAMERA_DISTANCE_SQUARED ? false : super.shouldRenderAtSqrDistance(p_457564_);
+    public boolean shouldRenderAtSqrDistance(final double distance) {
+        return this.tickCount < 2 && distance < MIN_CAMERA_DISTANCE_SQUARED ? false : super.shouldRenderAtSqrDistance(distance);
     }
 }

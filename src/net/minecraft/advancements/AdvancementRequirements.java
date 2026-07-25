@@ -17,55 +17,55 @@ public record AdvancementRequirements(List<List<String>> requirements) {
         .xmap(AdvancementRequirements::new, AdvancementRequirements::requirements);
     public static final AdvancementRequirements EMPTY = new AdvancementRequirements(List.of());
 
-    public AdvancementRequirements(FriendlyByteBuf p_299417_) {
-        this(p_299417_.readList(p_325185_ -> p_325185_.readList(FriendlyByteBuf::readUtf)));
+    public AdvancementRequirements(final FriendlyByteBuf input) {
+        this(input.readList(in -> in.readList(FriendlyByteBuf::readUtf)));
     }
 
-    public void write(FriendlyByteBuf p_299546_) {
-        p_299546_.writeCollection(this.requirements, (p_325183_, p_325184_) -> p_325183_.writeCollection(p_325184_, FriendlyByteBuf::writeUtf));
+    public void write(final FriendlyByteBuf output) {
+        output.writeCollection(this.requirements, (out, set) -> out.writeCollection(set, FriendlyByteBuf::writeUtf));
     }
 
-    public static AdvancementRequirements allOf(Collection<String> p_300431_) {
-        return new AdvancementRequirements(p_300431_.stream().map(List::of).toList());
+    public static AdvancementRequirements allOf(final Collection<String> criteria) {
+        return new AdvancementRequirements(criteria.stream().map(List::of).toList());
     }
 
-    public static AdvancementRequirements anyOf(Collection<String> p_297776_) {
-        return new AdvancementRequirements(List.of(List.copyOf(p_297776_)));
+    public static AdvancementRequirements anyOf(final Collection<String> criteria) {
+        return new AdvancementRequirements(List.of(List.copyOf(criteria)));
     }
 
     public int size() {
         return this.requirements.size();
     }
 
-    public boolean test(Predicate<String> p_297982_) {
+    public boolean test(final Predicate<String> predicate) {
         if (this.requirements.isEmpty()) {
             return false;
-        } else {
-            for (List<String> list : this.requirements) {
-                if (!anyMatch(list, p_297982_)) {
-                    return false;
-                }
-            }
-
-            return true;
         }
-    }
 
-    public int count(Predicate<String> p_300443_) {
-        int i = 0;
-
-        for (List<String> list : this.requirements) {
-            if (anyMatch(list, p_300443_)) {
-                i++;
+        for (List<String> set : this.requirements) {
+            if (!anyMatch(set, predicate)) {
+                return false;
             }
         }
 
-        return i;
+        return true;
     }
 
-    private static boolean anyMatch(List<String> p_309914_, Predicate<String> p_299134_) {
-        for (String s : p_309914_) {
-            if (p_299134_.test(s)) {
+    public int count(final Predicate<String> predicate) {
+        int count = 0;
+
+        for (List<String> set : this.requirements) {
+            if (anyMatch(set, predicate)) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static boolean anyMatch(final List<String> criteria, final Predicate<String> predicate) {
+        for (String criterion : criteria) {
+            if (predicate.test(criterion)) {
                 return true;
             }
         }
@@ -73,22 +73,25 @@ public record AdvancementRequirements(List<List<String>> requirements) {
         return false;
     }
 
-    public DataResult<AdvancementRequirements> validate(Set<String> p_311051_) {
-        Set<String> set = new ObjectOpenHashSet<>();
+    public DataResult<AdvancementRequirements> validate(final Set<String> expectedCriteria) {
+        Set<String> referencedCriteria = new ObjectOpenHashSet<>();
 
-        for (List<String> list : this.requirements) {
-            if (list.isEmpty() && p_311051_.isEmpty()) {
+        for (List<String> set : this.requirements) {
+            if (set.isEmpty() && expectedCriteria.isEmpty()) {
                 return DataResult.error(() -> "Requirement entry cannot be empty");
             }
 
-            set.addAll(list);
+            referencedCriteria.addAll(set);
         }
 
-        if (!p_311051_.equals(set)) {
-            Set<String> set1 = Sets.difference(p_311051_, set);
-            Set<String> set2 = Sets.difference(set, p_311051_);
+        if (!expectedCriteria.equals(referencedCriteria)) {
+            Set<String> missingCriteria = Sets.difference(expectedCriteria, referencedCriteria);
+            Set<String> unknownCriteria = Sets.difference(referencedCriteria, expectedCriteria);
             return DataResult.error(
-                () -> "Advancement completion requirements did not exactly match specified criteria. Missing: " + set1 + ". Unknown: " + set2
+                () -> "Advancement completion requirements did not exactly match specified criteria. Missing: "
+                    + missingCriteria
+                    + ". Unknown: "
+                    + unknownCriteria
             );
         } else {
             return DataResult.success(this);
@@ -105,19 +108,19 @@ public record AdvancementRequirements(List<List<String>> requirements) {
     }
 
     public Set<String> names() {
-        Set<String> set = new ObjectOpenHashSet<>();
+        Set<String> names = new ObjectOpenHashSet<>();
 
-        for (List<String> list : this.requirements) {
-            set.addAll(list);
+        for (List<String> set : this.requirements) {
+            names.addAll(set);
         }
 
-        return set;
+        return names;
     }
 
     public interface Strategy {
         AdvancementRequirements.Strategy AND = AdvancementRequirements::allOf;
         AdvancementRequirements.Strategy OR = AdvancementRequirements::anyOf;
 
-        AdvancementRequirements create(Collection<String> p_297497_);
+        AdvancementRequirements create(Collection<String> criteria);
     }
 }

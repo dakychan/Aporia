@@ -17,6 +17,19 @@ public class ParticleTypes {
         "block_marker", true, BlockParticleOption::codec, BlockParticleOption::streamCodec
     );
     public static final SimpleParticleType BUBBLE = register("bubble", false);
+    public static final SimpleParticleType SULFUR_BUBBLES = register("sulfur_bubbles", false);
+    public static final SimpleParticleType NOXIOUS_GAS = register("noxious_gas", false);
+    public static final SimpleParticleType NOXIOUS_GAS_CLOUD = register("noxious_gas_cloud", false);
+    public static final ParticleType<GeyserParticleOptions> GEYSER = register("geyser", true, GeyserParticleOptions::codec, GeyserParticleOptions::streamCodec);
+    public static final ParticleType<GeyserBaseParticleOptions> GEYSER_BASE = register(
+        "geyser_base", true, GeyserBaseParticleOptions::codec, GeyserBaseParticleOptions::streamCodec
+    );
+    public static final ParticleType<GeyserBaseParticleOptions> GEYSER_POOF = register(
+        "geyser_poof", true, GeyserBaseParticleOptions::codec, GeyserBaseParticleOptions::streamCodec
+    );
+    public static final ParticleType<GeyserParticleOptions> GEYSER_PLUME = register(
+        "geyser_plume", true, GeyserParticleOptions::codec, GeyserParticleOptions::streamCodec
+    );
     public static final SimpleParticleType CLOUD = register("cloud", false);
     public static final SimpleParticleType COPPER_FIRE_FLAME = register("copper_fire_flame", false);
     public static final SimpleParticleType CRIT = register("crit", false);
@@ -29,11 +42,9 @@ public class ParticleTypes {
     public static final SimpleParticleType LANDING_LAVA = register("landing_lava", false);
     public static final SimpleParticleType DRIPPING_WATER = register("dripping_water", false);
     public static final SimpleParticleType FALLING_WATER = register("falling_water", false);
-    public static final ParticleType<DustParticleOptions> DUST = register(
-        "dust", false, p_325812_ -> DustParticleOptions.CODEC, p_325805_ -> DustParticleOptions.STREAM_CODEC
-    );
+    public static final ParticleType<DustParticleOptions> DUST = register("dust", false, t -> DustParticleOptions.CODEC, t -> DustParticleOptions.STREAM_CODEC);
     public static final ParticleType<DustColorTransitionOptions> DUST_COLOR_TRANSITION = register(
-        "dust_color_transition", false, p_325809_ -> DustColorTransitionOptions.CODEC, p_325803_ -> DustColorTransitionOptions.STREAM_CODEC
+        "dust_color_transition", false, t -> DustColorTransitionOptions.CODEC, t -> DustColorTransitionOptions.STREAM_CODEC
     );
     public static final ParticleType<SpellParticleOption> EFFECT = register("effect", false, SpellParticleOption::codec, SpellParticleOption::streamCodec);
     public static final SimpleParticleType ELDER_GUARDIAN = register("elder_guardian", true);
@@ -64,7 +75,7 @@ public class ParticleTypes {
     );
     public static final SimpleParticleType SCULK_SOUL = register("sculk_soul", false);
     public static final ParticleType<SculkChargeParticleOptions> SCULK_CHARGE = register(
-        "sculk_charge", true, p_325808_ -> SculkChargeParticleOptions.CODEC, p_325807_ -> SculkChargeParticleOptions.STREAM_CODEC
+        "sculk_charge", true, t -> SculkChargeParticleOptions.CODEC, t -> SculkChargeParticleOptions.STREAM_CODEC
     );
     public static final SimpleParticleType SCULK_CHARGE_POP = register("sculk_charge_pop", true);
     public static final SimpleParticleType SOUL_FIRE_FLAME = register("soul_fire_flame", false);
@@ -73,17 +84,18 @@ public class ParticleTypes {
     public static final SimpleParticleType HAPPY_VILLAGER = register("happy_villager", false);
     public static final SimpleParticleType COMPOSTER = register("composter", false);
     public static final SimpleParticleType HEART = register("heart", false);
-    public static final SimpleParticleType FOOTSTEP = register("footstep", false);
     public static final ParticleType<SpellParticleOption> INSTANT_EFFECT = register(
         "instant_effect", false, SpellParticleOption::codec, SpellParticleOption::streamCodec
     );
     public static final ParticleType<ItemParticleOption> ITEM = register("item", false, ItemParticleOption::codec, ItemParticleOption::streamCodec);
     public static final ParticleType<VibrationParticleOption> VIBRATION = register(
-        "vibration", true, p_325806_ -> VibrationParticleOption.CODEC, p_325810_ -> VibrationParticleOption.STREAM_CODEC
+        "vibration", true, t -> VibrationParticleOption.CODEC, t -> VibrationParticleOption.STREAM_CODEC
     );
     public static final ParticleType<TrailParticleOption> TRAIL = register(
-        "trail", false, p_374747_ -> TrailParticleOption.CODEC, p_374746_ -> TrailParticleOption.STREAM_CODEC
+        "trail", false, t -> TrailParticleOption.CODEC, t -> TrailParticleOption.STREAM_CODEC
     );
+    public static final SimpleParticleType PAUSE_MOB_GROWTH = register("pause_mob_growth", false);
+    public static final SimpleParticleType RESET_MOB_GROWTH = register("reset_mob_growth", false);
     public static final SimpleParticleType ITEM_SLIME = register("item_slime", false);
     public static final SimpleParticleType ITEM_COBWEB = register("item_cobweb", false);
     public static final SimpleParticleType ITEM_SNOWBALL = register("item_snowball", false);
@@ -138,7 +150,7 @@ public class ParticleTypes {
     public static final SimpleParticleType ELECTRIC_SPARK = register("electric_spark", true);
     public static final SimpleParticleType SCRAPE = register("scrape", true);
     public static final ParticleType<ShriekParticleOption> SHRIEK = register(
-        "shriek", false, p_325811_ -> ShriekParticleOption.CODEC, p_325804_ -> ShriekParticleOption.STREAM_CODEC
+        "shriek", false, t -> ShriekParticleOption.CODEC, t -> ShriekParticleOption.STREAM_CODEC
     );
     public static final SimpleParticleType EGG_CRACK = register("egg_crack", false);
     public static final SimpleParticleType DUST_PLUME = register("dust_plume", false);
@@ -155,31 +167,32 @@ public class ParticleTypes {
         "block_crumble", false, BlockParticleOption::codec, BlockParticleOption::streamCodec
     );
     public static final SimpleParticleType FIREFLY = register("firefly", false);
+    public static final SimpleParticleType SULFUR_CUBE_GOO = register("sulfur_cube_goo", false);
     public static final Codec<ParticleOptions> CODEC = BuiltInRegistries.PARTICLE_TYPE
         .byNameCodec()
         .dispatch("type", ParticleOptions::getType, ParticleType::codec);
     public static final StreamCodec<RegistryFriendlyByteBuf, ParticleOptions> STREAM_CODEC = ByteBufCodecs.registry(Registries.PARTICLE_TYPE)
         .dispatch(ParticleOptions::getType, ParticleType::streamCodec);
 
-    private static SimpleParticleType register(String p_123825_, boolean p_123826_) {
-        return Registry.register(BuiltInRegistries.PARTICLE_TYPE, p_123825_, new SimpleParticleType(p_123826_));
+    private static SimpleParticleType register(final String name, final boolean overrideLimiter) {
+        return Registry.register(BuiltInRegistries.PARTICLE_TYPE, name, new SimpleParticleType(overrideLimiter));
     }
 
     private static <T extends ParticleOptions> ParticleType<T> register(
-        String p_235906_,
-        boolean p_235907_,
-        final Function<ParticleType<T>, MapCodec<T>> p_235909_,
-        final Function<ParticleType<T>, StreamCodec<? super RegistryFriendlyByteBuf, T>> p_333331_
+        final String name,
+        final boolean overrideLimiter,
+        final Function<ParticleType<T>, MapCodec<T>> codec,
+        final Function<ParticleType<T>, StreamCodec<? super RegistryFriendlyByteBuf, T>> streamCodec
     ) {
-        return Registry.register(BuiltInRegistries.PARTICLE_TYPE, p_235906_, new ParticleType<T>(p_235907_) {
+        return Registry.register(BuiltInRegistries.PARTICLE_TYPE, name, new ParticleType<T>(overrideLimiter) {
             @Override
             public MapCodec<T> codec() {
-                return p_235909_.apply(this);
+                return codec.apply(this);
             }
 
             @Override
             public StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec() {
-                return p_333331_.apply(this);
+                return streamCodec.apply(this);
             }
         });
     }

@@ -8,31 +8,28 @@ import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Unit;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class Model<S> {
     protected final ModelPart root;
     protected final Function<Identifier, RenderType> renderType;
     private final List<ModelPart> allParts;
 
-    public Model(ModelPart p_362439_, Function<Identifier, RenderType> p_103110_) {
-        this.root = p_362439_;
-        this.renderType = p_103110_;
-        this.allParts = p_362439_.getAllParts();
+    public Model(final ModelPart root, final Function<Identifier, RenderType> renderType) {
+        this.root = root;
+        this.renderType = renderType;
+        this.allParts = root.getAllParts();
     }
 
-    public final RenderType renderType(Identifier p_452728_) {
-        return this.renderType.apply(p_452728_);
+    public final Function<Identifier, RenderType> renderType() {
+        return this.renderType;
     }
 
-    public final void renderToBuffer(PoseStack p_103111_, VertexConsumer p_103112_, int p_103113_, int p_103114_, int p_345283_) {
-        this.root().render(p_103111_, p_103112_, p_103113_, p_103114_, p_345283_);
+    public final RenderType renderType(final Identifier texture) {
+        return this.renderType().apply(texture);
     }
 
-    public final void renderToBuffer(PoseStack p_345147_, VertexConsumer p_343104_, int p_342281_, int p_344413_) {
-        this.renderToBuffer(p_345147_, p_343104_, p_342281_, p_344413_, -1);
+    public final void renderToBuffer(final PoseStack poseStack, final VertexConsumer buffer, final int lightCoords, final int overlayCoords, final int color) {
+        this.root().render(poseStack, buffer, lightCoords, overlayCoords, color);
     }
 
     public final ModelPart root() {
@@ -43,23 +40,22 @@ public abstract class Model<S> {
         return this.allParts;
     }
 
-    public void setupAnim(S p_429527_) {
+    public void setupAnim(final S state) {
         this.resetPose();
     }
 
     public final void resetPose() {
-        for (ModelPart modelpart : this.allParts) {
-            modelpart.resetPose();
+        for (ModelPart part : this.allParts) {
+            part.resetPose();
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Simple extends Model<Unit> {
-        public Simple(ModelPart p_368796_, Function<Identifier, RenderType> p_362226_) {
-            super(p_368796_, p_362226_);
+        public static class Simple extends Model<Unit> {
+        public Simple(final ModelPart root, final Function<Identifier, RenderType> renderType) {
+            super(root, renderType);
         }
 
-        public void setupAnim(Unit p_429209_) {
+        public void setupAnim(final Unit state) {
         }
     }
 }

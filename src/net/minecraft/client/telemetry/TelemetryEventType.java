@@ -2,32 +2,30 @@ package net.minecraft.client.telemetry;
 
 import com.mojang.authlib.minecraft.TelemetryEvent;
 import com.mojang.authlib.minecraft.TelemetrySession;
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import it.unimi.dsi.fastutil.objects.Object2ObjectLinkedOpenHashMap;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class TelemetryEventType {
-    static final Map<String, TelemetryEventType> REGISTRY = new Object2ObjectLinkedOpenHashMap<>();
-    public static final Codec<TelemetryEventType> CODEC = Codec.STRING
-        .comapFlatMap(
-            p_274719_ -> {
-                TelemetryEventType telemetryeventtype = REGISTRY.get(p_274719_);
-                return telemetryeventtype != null
-                    ? DataResult.success(telemetryeventtype)
-                    : DataResult.error(() -> "No TelemetryEventType with key: '" + p_274719_ + "'");
-            },
-            TelemetryEventType::id
-        );
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Map<String, TelemetryEventType> REGISTRY = new Object2ObjectLinkedOpenHashMap<>();
+    public static final Codec<TelemetryEventType> CODEC = Codec.STRING.comapFlatMap(key -> {
+        TelemetryEventType type = REGISTRY.get(key);
+        return type != null ? DataResult.success(type) : DataResult.error(() -> "No TelemetryEventType with key: '" + key + "'");
+    }, TelemetryEventType::id);
     private static final List<TelemetryProperty<?>> GLOBAL_PROPERTIES = List.of(
         TelemetryProperty.USER_ID,
         TelemetryProperty.CLIENT_ID,
@@ -41,9 +39,17 @@ public class TelemetryEventType {
         TelemetryProperty.OPT_IN
     );
     private static final List<TelemetryProperty<?>> WORLD_SESSION_PROPERTIES = Stream.concat(
-            GLOBAL_PROPERTIES.stream(), Stream.of(TelemetryProperty.WORLD_SESSION_ID, TelemetryProperty.SERVER_MODDED, TelemetryProperty.SERVER_TYPE)
+            GLOBAL_PROPERTIES.stream(),
+            Stream.of(TelemetryProperty.WORLD_SESSION_ID, TelemetryProperty.SERVER_MODDED, TelemetryProperty.SERVER_TYPE, TelemetryProperty.SERVER_SESSION_ID)
         )
         .toList();
+    public static final TelemetryEventType GRAPHICS_CAPABILITIES = builder("graphics_capabilities", "GraphicsCapabilities")
+        .defineAll(GLOBAL_PROPERTIES)
+        .define(TelemetryProperty.BACKEND_NAME)
+        .define(TelemetryProperty.BACKEND_FAILURE_MESSAGE)
+        .define(TelemetryProperty.BACKEND_FAILURE_REASON)
+        .define(TelemetryProperty.BACKEND_FAILURE_MISSING_CAPABILITIES)
+        .register();
     public static final TelemetryEventType WORLD_LOADED = builder("world_loaded", "WorldLoaded")
         .defineAll(WORLD_SESSION_PROPERTIES)
         .define(TelemetryProperty.GAME_MODE)
@@ -90,17 +96,16 @@ public class TelemetryEventType {
     private final boolean isOptIn;
     private final MapCodec<TelemetryEventInstance> codec;
 
-    TelemetryEventType(String p_261787_, String p_262121_, List<TelemetryProperty<?>> p_261987_, boolean p_261511_) {
-        this.id = p_261787_;
-        this.exportKey = p_262121_;
-        this.properties = p_261987_;
-        this.isOptIn = p_261511_;
-        this.codec = TelemetryPropertyMap.createCodec(p_261987_)
-            .xmap(p_261533_ -> new TelemetryEventInstance(this, p_261533_), TelemetryEventInstance::properties);
+    private TelemetryEventType(final String id, final String exportKey, final List<TelemetryProperty<?>> properties, final boolean isOptIn) {
+        this.id = id;
+        this.exportKey = exportKey;
+        this.properties = properties;
+        this.isOptIn = isOptIn;
+        this.codec = TelemetryPropertyMap.createCodec(properties).xmap(map -> new TelemetryEventInstance(this, map), TelemetryEventInstance::properties);
     }
 
-    public static TelemetryEventType.Builder builder(String p_261734_, String p_261807_) {
-        return new TelemetryEventType.Builder(p_261734_, p_261807_);
+    public static TelemetryEventType.Builder builder(final String id, final String exportKey) {
+        return new TelemetryEventType.Builder(id, exportKey);
     }
 
     public String id() {
@@ -119,18 +124,18 @@ public class TelemetryEventType {
         return this.isOptIn;
     }
 
-    public TelemetryEvent export(TelemetrySession p_262179_, TelemetryPropertyMap p_262018_) {
-        TelemetryEvent telemetryevent = p_262179_.createNewEvent(this.exportKey);
+    public TelemetryEvent export(final TelemetrySession session, final TelemetryPropertyMap input) {
+        TelemetryEvent output = session.createNewEvent(this.exportKey);
 
-        for (TelemetryProperty<?> telemetryproperty : this.properties) {
-            telemetryproperty.export(p_262018_, telemetryevent);
+        for (TelemetryProperty<?> property : this.properties) {
+            property.export(input, output);
         }
 
-        return telemetryevent;
+        return output;
     }
 
-    public <T> boolean contains(TelemetryProperty<T> p_262037_) {
-        return this.properties.contains(p_262037_);
+    public <T> boolean contains(final TelemetryProperty<T> property) {
+        return this.properties.contains(property);
     }
 
     @Override
@@ -146,33 +151,56 @@ public class TelemetryEventType {
         return this.makeTranslation("description");
     }
 
-    private MutableComponent makeTranslation(String p_261909_) {
-        return Component.translatable("telemetry.event." + this.id + "." + p_261909_);
+    private MutableComponent makeTranslation(final String suffix) {
+        return Component.translatable("telemetry.event." + this.id + "." + suffix);
     }
 
     public static List<TelemetryEventType> values() {
         return List.copyOf(REGISTRY.values());
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder {
+    public static boolean selfTest() {
+        boolean hasErrors = false;
+        Set<TelemetryProperty<?>> allProperties = new HashSet<>();
+
+        for (Entry<String, TelemetryEventType> entry : REGISTRY.entrySet()) {
+            TelemetryEventType type = entry.getValue();
+            if (!ComponentUtils.isTranslationResolvable(type.description()) || !ComponentUtils.isTranslationResolvable(type.title())) {
+                LOGGER.warn("Missing translations for telemetry event {}", entry.getKey());
+                hasErrors = true;
+            }
+
+            allProperties.addAll(type.properties);
+        }
+
+        for (TelemetryProperty<?> property : allProperties) {
+            if (!ComponentUtils.isTranslationResolvable(property.title())) {
+                LOGGER.warn("Missing translation for telemetry property {}", property.id());
+                hasErrors = true;
+            }
+        }
+
+        return hasErrors;
+    }
+
+        public static class Builder {
         private final String id;
         private final String exportKey;
         private final List<TelemetryProperty<?>> properties = new ArrayList<>();
         private boolean isOptIn;
 
-        Builder(String p_261797_, String p_261777_) {
-            this.id = p_261797_;
-            this.exportKey = p_261777_;
+        private Builder(final String id, final String exportKey) {
+            this.id = id;
+            this.exportKey = exportKey;
         }
 
-        public TelemetryEventType.Builder defineAll(List<TelemetryProperty<?>> p_261497_) {
-            this.properties.addAll(p_261497_);
+        public TelemetryEventType.Builder defineAll(final List<TelemetryProperty<?>> properties) {
+            this.properties.addAll(properties);
             return this;
         }
 
-        public <T> TelemetryEventType.Builder define(TelemetryProperty<T> p_261756_) {
-            this.properties.add(p_261756_);
+        public <T> TelemetryEventType.Builder define(final TelemetryProperty<T> property) {
+            this.properties.add(property);
             return this;
         }
 
@@ -182,11 +210,11 @@ public class TelemetryEventType {
         }
 
         public TelemetryEventType register() {
-            TelemetryEventType telemetryeventtype = new TelemetryEventType(this.id, this.exportKey, List.copyOf(this.properties), this.isOptIn);
-            if (TelemetryEventType.REGISTRY.putIfAbsent(this.id, telemetryeventtype) != null) {
+            TelemetryEventType type = new TelemetryEventType(this.id, this.exportKey, List.copyOf(this.properties), this.isOptIn);
+            if (TelemetryEventType.REGISTRY.putIfAbsent(this.id, type) != null) {
                 throw new IllegalStateException("Duplicate TelemetryEventType with key: '" + this.id + "'");
             } else {
-                return telemetryeventtype;
+                return type;
             }
         }
     }

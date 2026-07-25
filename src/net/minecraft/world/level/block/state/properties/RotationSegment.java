@@ -16,26 +16,26 @@ public class RotationSegment {
         return MAX_SEGMENT_INDEX;
     }
 
-    public static int convertToSegment(Direction p_249634_) {
-        return SEGMENTED_ANGLE16.fromDirection(p_249634_);
+    public static int convertToSegment(final Direction direction) {
+        return SEGMENTED_ANGLE16.fromDirection(direction);
     }
 
-    public static int convertToSegment(float p_249057_) {
-        return SEGMENTED_ANGLE16.fromDegrees(p_249057_);
+    public static int convertToSegment(final float rotDegrees) {
+        return SEGMENTED_ANGLE16.fromDegrees(rotDegrees);
     }
 
-    public static Optional<Direction> convertToDirection(int p_250978_) {
-        Direction direction = switch (p_250978_) {
+    public static Optional<Direction> convertToDirection(final int segment) {
+        Direction result = switch (segment) {
             case 0 -> Direction.NORTH;
             case 4 -> Direction.EAST;
             case 8 -> Direction.SOUTH;
             case 12 -> Direction.WEST;
             default -> null;
         };
-        return Optional.ofNullable(direction);
+        return Optional.ofNullable(result);
     }
 
-    public static float convertToDegrees(int p_250653_) {
-        return SEGMENTED_ANGLE16.toDegrees(p_250653_);
+    public static float convertToDegrees(final int segment) {
+        return SEGMENTED_ANGLE16.toDegrees(segment);
     }
 }

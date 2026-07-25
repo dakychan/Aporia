@@ -5,11 +5,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.item.component.ResolvableProfile;
 import net.minecraft.world.level.block.SkullBlock;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class LivingEntityRenderState extends EntityRenderState {
     public float bodyRot;
     public float yRot;
@@ -34,7 +31,7 @@ public class LivingEntityRenderState extends EntityRenderState {
     public SkullBlock.@Nullable Type wornHeadType;
     public @Nullable ResolvableProfile wornHeadProfile;
 
-    public boolean hasPose(Pose p_361696_) {
-        return this.pose == p_361696_;
+    public boolean hasPose(final Pose pose) {
+        return this.pose == pose;
     }
 }

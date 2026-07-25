@@ -6,14 +6,14 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public class V3799 extends NamespacedSchema {
-    public V3799(int p_331534_, Schema p_328281_) {
-        super(p_331534_, p_328281_);
+    public V3799(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_335633_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_335633_);
-        p_335633_.registerSimple(map, "minecraft:armadillo");
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        schema.registerSimple(map, "minecraft:armadillo");
         return map;
     }
 }

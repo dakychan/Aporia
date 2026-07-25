@@ -11,13 +11,13 @@ public record ServerboundHelloPacket(String name, UUID profileId) implements Pac
         ServerboundHelloPacket::write, ServerboundHelloPacket::new
     );
 
-    private ServerboundHelloPacket(FriendlyByteBuf p_179827_) {
-        this(p_179827_.readUtf(16), p_179827_.readUUID());
+    private ServerboundHelloPacket(final FriendlyByteBuf input) {
+        this(input.readUtf(16), input.readUUID());
     }
 
-    private void write(FriendlyByteBuf p_134851_) {
-        p_134851_.writeUtf(this.name, 16);
-        p_134851_.writeUUID(this.profileId);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUtf(this.name, 16);
+        output.writeUUID(this.profileId);
     }
 
     @Override
@@ -25,7 +25,7 @@ public record ServerboundHelloPacket(String name, UUID profileId) implements Pac
         return LoginPacketTypes.SERVERBOUND_HELLO;
     }
 
-    public void handle(ServerLoginPacketListener p_134848_) {
-        p_134848_.handleHello(this);
+    public void handle(final ServerLoginPacketListener listener) {
+        listener.handleHello(this);
     }
 }

@@ -1,59 +1,88 @@
 package net.minecraft.client.gui.components;
 
+import java.util.Optional;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarratedElementType;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.sounds.SoundManager;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class FocusableTextWidget extends MultiLineTextWidget {
     public static final int DEFAULT_PADDING = 4;
     private final int padding;
     private final int maxWidth;
     private final boolean alwaysShowBorder;
     private final FocusableTextWidget.BackgroundFill backgroundFill;
+    private boolean narrateMessage = true;
+    private @Nullable Component focusedUsageNarration;
+    private @Nullable Component hoveredUsageNarration;
 
-    FocusableTextWidget(Component p_299786_, Font p_299475_, int p_299147_, int p_335803_, FocusableTextWidget.BackgroundFill p_431404_, boolean p_299140_) {
-        super(p_299786_, p_299475_);
+    private FocusableTextWidget(
+        final Component message,
+        final Font font,
+        final int padding,
+        final int maxWidth,
+        final FocusableTextWidget.BackgroundFill backgroundFill,
+        final boolean alwaysShowBorder
+    ) {
+        super(message, font);
         this.active = true;
-        this.padding = p_299147_;
-        this.maxWidth = p_335803_;
-        this.alwaysShowBorder = p_299140_;
-        this.backgroundFill = p_431404_;
+        this.padding = padding;
+        this.maxWidth = maxWidth;
+        this.alwaysShowBorder = alwaysShowBorder;
+        this.backgroundFill = backgroundFill;
         this.updateWidth();
         this.updateHeight();
         this.setCentered(true);
     }
 
     @Override
-    protected void updateWidgetNarration(NarrationElementOutput p_300724_) {
-        p_300724_.add(NarratedElementType.TITLE, this.getMessage());
+    protected void updateWidgetNarration(final NarrationElementOutput output) {
+        if (this.narrateMessage) {
+            output.add(NarratedElementType.TITLE, this.getMessage());
+        }
+
+        if (this.active) {
+            Component usage = this.isFocused() ? this.focusedUsageNarration : this.hoveredUsageNarration;
+            if (usage != null) {
+                output.add(NarratedElementType.USAGE, usage);
+            }
+        }
+    }
+
+    public void setNarrateMessage(final boolean narrateMessage) {
+        this.narrateMessage = narrateMessage;
+    }
+
+    public void setUsageNarration(final @Nullable Component focused, final @Nullable Component hovered) {
+        this.focusedUsageNarration = focused;
+        this.hoveredUsageNarration = hovered;
     }
 
     @Override
-    public void renderWidget(GuiGraphics p_297672_, int p_301298_, int p_300386_, float p_299545_) {
-        int i = this.alwaysShowBorder && !this.isFocused() ? ARGB.color(this.alpha, -6250336) : ARGB.white(this.alpha);
+    public void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        int borderColor = this.alwaysShowBorder && !this.isFocused() ? ARGB.color(this.alpha, -6250336) : ARGB.white(this.alpha);
         switch (this.backgroundFill) {
             case ALWAYS:
-                p_297672_.fill(this.getX() + 1, this.getY(), this.getRight(), this.getBottom(), ARGB.black(this.alpha));
+                graphics.fill(this.getX() + 1, this.getY(), this.getRight(), this.getBottom(), ARGB.black(this.alpha));
                 break;
             case ON_FOCUS:
                 if (this.isFocused()) {
-                    p_297672_.fill(this.getX() + 1, this.getY(), this.getRight(), this.getBottom(), ARGB.black(this.alpha));
+                    graphics.fill(this.getX() + 1, this.getY(), this.getRight(), this.getBottom(), ARGB.black(this.alpha));
                 }
             case NEVER:
         }
 
         if (this.isFocused() || this.alwaysShowBorder) {
-            p_297672_.renderOutline(this.getX(), this.getY(), this.getWidth(), this.getHeight(), i);
+            graphics.outline(this.getX(), this.getY(), this.getWidth(), this.getHeight(), borderColor);
         }
 
-        super.renderWidget(p_297672_, p_301298_, p_300386_, p_299545_);
+        super.extractWidgetRenderState(graphics, mouseX, mouseY, a);
     }
 
     @Override
@@ -67,8 +96,8 @@ public class FocusableTextWidget extends MultiLineTextWidget {
     }
 
     @Override
-    public MultiLineTextWidget setMaxWidth(int p_455703_) {
-        return super.setMaxWidth(p_455703_ - this.padding * 2);
+    public MultiLineTextWidget setMaxWidth(final int maxWidth) {
+        return super.setMaxWidth(maxWidth - this.padding * 2);
     }
 
     @Override
@@ -95,45 +124,56 @@ public class FocusableTextWidget extends MultiLineTextWidget {
     }
 
     public void updateHeight() {
-        int i = 9 * this.getFont().split(this.getMessage(), super.getWidth()).size();
-        this.setHeight(i + this.padding * 2);
+        int textHeight = 9 * this.getFont().split(this.getMessage(), super.getWidth()).size();
+        this.setHeight(textHeight + this.padding * 2);
     }
 
     @Override
-    public void setMessage(Component p_452838_) {
-        this.message = p_452838_;
-        int i;
+    public void setMessage(final Component message) {
+        this.message = message;
+        int width;
         if (this.maxWidth != -1) {
-            i = this.maxWidth;
+            width = this.maxWidth;
         } else {
-            i = this.getFont().width(p_452838_) + this.padding * 2;
+            width = this.getFont().width(message) + this.padding * 2;
         }
 
-        this.setWidth(i);
+        this.setWidth(width);
         this.updateHeight();
     }
 
     @Override
-    public void playDownSound(SoundManager p_297351_) {
+    public void playDownSound(final SoundManager soundManager) {
     }
 
-    public static FocusableTextWidget.Builder builder(Component p_459858_, Font p_457480_) {
-        return new FocusableTextWidget.Builder(p_459858_, p_457480_);
+    @Override
+    public boolean keyPressed(final KeyEvent event) {
+        if (this.isActive() && event.isSelection()) {
+            Optional<Style> clickableStyle = this.getMessage()
+                .visit((style, text) -> style.getClickEvent() != null ? Optional.of(style) : Optional.empty(), Style.EMPTY);
+            if (clickableStyle.isPresent() && this.handleStyleClick(clickableStyle.get())) {
+                return true;
+            }
+        }
+
+        return super.keyPressed(event);
     }
 
-    public static FocusableTextWidget.Builder builder(Component p_453533_, Font p_455157_, int p_456785_) {
-        return new FocusableTextWidget.Builder(p_453533_, p_455157_, p_456785_);
+    public static FocusableTextWidget.Builder builder(final Component message, final Font font) {
+        return new FocusableTextWidget.Builder(message, font);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum BackgroundFill {
+    public static FocusableTextWidget.Builder builder(final Component message, final Font font, final int padding) {
+        return new FocusableTextWidget.Builder(message, font, padding);
+    }
+
+        public enum BackgroundFill {
         ALWAYS,
         ON_FOCUS,
         NEVER;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Builder {
+        public static class Builder {
         private final Component message;
         private final Font font;
         private final int padding;
@@ -141,33 +181,33 @@ public class FocusableTextWidget extends MultiLineTextWidget {
         private boolean alwaysShowBorder = true;
         private FocusableTextWidget.BackgroundFill backgroundFill = FocusableTextWidget.BackgroundFill.ALWAYS;
 
-        Builder(Component p_450391_, Font p_456414_) {
-            this(p_450391_, p_456414_, 4);
+        private Builder(final Component message, final Font font) {
+            this(message, font, 4);
         }
 
-        Builder(Component p_461088_, Font p_454917_, int p_451913_) {
-            this.message = p_461088_;
-            this.font = p_454917_;
-            this.padding = p_451913_;
+        private Builder(final Component message, final Font font, final int padding) {
+            this.message = message;
+            this.font = font;
+            this.padding = padding;
         }
 
-        public FocusableTextWidget.Builder maxWidth(int p_451950_) {
-            this.maxWidth = p_451950_;
+        public FocusableTextWidget.Builder maxWidth(final int maxWidth) {
+            this.maxWidth = maxWidth;
             return this;
         }
 
-        public FocusableTextWidget.Builder textWidth(int p_459131_) {
-            this.maxWidth = p_459131_ + this.padding * 2;
+        public FocusableTextWidget.Builder textWidth(final int textWidth) {
+            this.maxWidth = textWidth + this.padding * 2;
             return this;
         }
 
-        public FocusableTextWidget.Builder alwaysShowBorder(boolean p_457486_) {
-            this.alwaysShowBorder = p_457486_;
+        public FocusableTextWidget.Builder alwaysShowBorder(final boolean alwaysShowBorder) {
+            this.alwaysShowBorder = alwaysShowBorder;
             return this;
         }
 
-        public FocusableTextWidget.Builder backgroundFill(FocusableTextWidget.BackgroundFill p_456351_) {
-            this.backgroundFill = p_456351_;
+        public FocusableTextWidget.Builder backgroundFill(final FocusableTextWidget.BackgroundFill backgroundFill) {
+            this.backgroundFill = backgroundFill;
             return this;
         }
 

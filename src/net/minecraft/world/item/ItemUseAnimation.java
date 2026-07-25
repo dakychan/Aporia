@@ -29,14 +29,14 @@ public enum ItemUseAnimation implements StringRepresentable {
     private final String name;
     private final boolean customArmTransform;
 
-    private ItemUseAnimation(final int p_369223_, final String p_370001_) {
-        this(p_369223_, p_370001_, false);
+    ItemUseAnimation(final int id, final String name) {
+        this(id, name, false);
     }
 
-    private ItemUseAnimation(final int p_459190_, final String p_458913_, final boolean p_456848_) {
-        this.id = p_459190_;
-        this.name = p_458913_;
-        this.customArmTransform = p_456848_;
+    ItemUseAnimation(final int id, final String name, final boolean customArmTransform) {
+        this.id = id;
+        this.name = name;
+        this.customArmTransform = customArmTransform;
     }
 
     public int getId() {

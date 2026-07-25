@@ -29,34 +29,34 @@ public class EntitySectionStorage<T extends EntityAccess> {
     private final Long2ObjectMap<EntitySection<T>> sections = new Long2ObjectOpenHashMap<>();
     private final LongSortedSet sectionIds = new LongAVLTreeSet();
 
-    public EntitySectionStorage(Class<T> p_156855_, Long2ObjectFunction<Visibility> p_156856_) {
-        this.entityClass = p_156855_;
-        this.intialSectionVisibility = p_156856_;
+    public EntitySectionStorage(final Class<T> entityClass, final Long2ObjectFunction<Visibility> intialSectionVisibility) {
+        this.entityClass = entityClass;
+        this.intialSectionVisibility = intialSectionVisibility;
     }
 
-    public void forEachAccessibleNonEmptySection(AABB p_188363_, AbortableIterationConsumer<EntitySection<T>> p_261588_) {
-        int i = SectionPos.posToSectionCoord(p_188363_.minX - 2.0);
-        int j = SectionPos.posToSectionCoord(p_188363_.minY - 4.0);
-        int k = SectionPos.posToSectionCoord(p_188363_.minZ - 2.0);
-        int l = SectionPos.posToSectionCoord(p_188363_.maxX + 2.0);
-        int i1 = SectionPos.posToSectionCoord(p_188363_.maxY + 0.0);
-        int j1 = SectionPos.posToSectionCoord(p_188363_.maxZ + 2.0);
+    public void forEachAccessibleNonEmptySection(final AABB bb, final AbortableIterationConsumer<EntitySection<T>> output) {
+        int xMin = SectionPos.posToSectionCoord(bb.minX - 2.0);
+        int yMin = SectionPos.posToSectionCoord(bb.minY - 4.0);
+        int zMin = SectionPos.posToSectionCoord(bb.minZ - 2.0);
+        int xMax = SectionPos.posToSectionCoord(bb.maxX + 2.0);
+        int yMax = SectionPos.posToSectionCoord(bb.maxY + 0.0);
+        int zMax = SectionPos.posToSectionCoord(bb.maxZ + 2.0);
 
-        for (int k1 = i; k1 <= l; k1++) {
-            long l1 = SectionPos.asLong(k1, 0, 0);
-            long i2 = SectionPos.asLong(k1, -1, -1);
-            LongIterator longiterator = this.sectionIds.subSet(l1, i2 + 1L).iterator();
+        for (int x = xMin; x <= xMax; x++) {
+            long lowestAbsoluteSectionKey = SectionPos.asLong(x, 0, 0);
+            long highestAbsoluteSectionKey = SectionPos.asLong(x, -1, -1);
+            LongIterator it = this.sectionIds.subSet(lowestAbsoluteSectionKey, highestAbsoluteSectionKey + 1L).iterator();
 
-            while (longiterator.hasNext()) {
-                long j2 = longiterator.nextLong();
-                int k2 = SectionPos.y(j2);
-                int l2 = SectionPos.z(j2);
-                if (k2 >= j && k2 <= i1 && l2 >= k && l2 <= j1) {
-                    EntitySection<T> entitysection = this.sections.get(j2);
-                    if (entitysection != null
-                        && !entitysection.isEmpty()
-                        && entitysection.getStatus().isAccessible()
-                        && p_261588_.accept(entitysection).shouldAbort()) {
+            while (it.hasNext()) {
+                long sectionKey = it.nextLong();
+                int y = SectionPos.y(sectionKey);
+                int z = SectionPos.z(sectionKey);
+                if (y >= yMin && y <= yMax && z >= zMin && z <= zMax) {
+                    EntitySection<T> entitySection = this.sections.get(sectionKey);
+                    if (entitySection != null
+                        && !entitySection.isEmpty()
+                        && entitySection.getStatus().isAccessible()
+                        && output.accept(entitySection).shouldAbort()) {
                         return;
                     }
                 }
@@ -64,64 +64,64 @@ public class EntitySectionStorage<T extends EntityAccess> {
         }
     }
 
-    public LongStream getExistingSectionPositionsInChunk(long p_156862_) {
-        int i = ChunkPos.getX(p_156862_);
-        int j = ChunkPos.getZ(p_156862_);
-        LongSortedSet longsortedset = this.getChunkSections(i, j);
-        if (longsortedset.isEmpty()) {
+    public LongStream getExistingSectionPositionsInChunk(final long chunkKey) {
+        int x = ChunkPos.getX(chunkKey);
+        int z = ChunkPos.getZ(chunkKey);
+        LongSortedSet chunkSections = this.getChunkSections(x, z);
+        if (chunkSections.isEmpty()) {
             return LongStream.empty();
-        } else {
-            OfLong oflong = longsortedset.iterator();
-            return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(oflong, 1301), false);
         }
+
+        OfLong iterator = chunkSections.iterator();
+        return StreamSupport.longStream(Spliterators.spliteratorUnknownSize(iterator, 1301), false);
     }
 
-    private LongSortedSet getChunkSections(int p_156859_, int p_156860_) {
-        long i = SectionPos.asLong(p_156859_, 0, p_156860_);
-        long j = SectionPos.asLong(p_156859_, -1, p_156860_);
-        return this.sectionIds.subSet(i, j + 1L);
+    private LongSortedSet getChunkSections(final int x, final int z) {
+        long lowestAbsoluteSectionKey = SectionPos.asLong(x, 0, z);
+        long highestAbsoluteSectionKey = SectionPos.asLong(x, -1, z);
+        return this.sectionIds.subSet(lowestAbsoluteSectionKey, highestAbsoluteSectionKey + 1L);
     }
 
-    public Stream<EntitySection<T>> getExistingSectionsInChunk(long p_156889_) {
-        return this.getExistingSectionPositionsInChunk(p_156889_).mapToObj(this.sections::get).filter(Objects::nonNull);
+    public Stream<EntitySection<T>> getExistingSectionsInChunk(final long chunkKey) {
+        return this.getExistingSectionPositionsInChunk(chunkKey).mapToObj(this.sections::get).filter(Objects::nonNull);
     }
 
-    private static long getChunkKeyFromSectionKey(long p_156900_) {
-        return ChunkPos.asLong(SectionPos.x(p_156900_), SectionPos.z(p_156900_));
+    private static long getChunkKeyFromSectionKey(final long sectionPos) {
+        return ChunkPos.pack(SectionPos.x(sectionPos), SectionPos.z(sectionPos));
     }
 
-    public EntitySection<T> getOrCreateSection(long p_156894_) {
-        return this.sections.computeIfAbsent(p_156894_, this::createSection);
+    public EntitySection<T> getOrCreateSection(final long key) {
+        return this.sections.computeIfAbsent(key, this::createSection);
     }
 
-    public @Nullable EntitySection<T> getSection(long p_156896_) {
-        return this.sections.get(p_156896_);
+    public @Nullable EntitySection<T> getSection(final long key) {
+        return this.sections.get(key);
     }
 
-    private EntitySection<T> createSection(long p_156902_) {
-        long i = getChunkKeyFromSectionKey(p_156902_);
-        Visibility visibility = this.intialSectionVisibility.get(i);
-        this.sectionIds.add(p_156902_);
-        return new EntitySection<>(this.entityClass, visibility);
+    private EntitySection<T> createSection(final long sectionPos) {
+        long chunkPos = getChunkKeyFromSectionKey(sectionPos);
+        Visibility chunkStatus = this.intialSectionVisibility.get(chunkPos);
+        this.sectionIds.add(sectionPos);
+        return new EntitySection<>(this.entityClass, chunkStatus);
     }
 
     public LongSet getAllChunksWithExistingSections() {
-        LongSet longset = new LongOpenHashSet();
-        this.sections.keySet().forEach((long p_156886_) -> longset.add(getChunkKeyFromSectionKey(p_156886_)));
-        return longset;
+        LongSet chunks = new LongOpenHashSet();
+        this.sections.keySet().forEach((long sectionKey) -> chunks.add(getChunkKeyFromSectionKey(sectionKey)));
+        return chunks;
     }
 
-    public void getEntities(AABB p_261820_, AbortableIterationConsumer<T> p_261992_) {
-        this.forEachAccessibleNonEmptySection(p_261820_, p_261459_ -> p_261459_.getEntities(p_261820_, p_261992_));
+    public void getEntities(final AABB bb, final AbortableIterationConsumer<T> output) {
+        this.forEachAccessibleNonEmptySection(bb, section -> section.getEntities(bb, output));
     }
 
-    public <U extends T> void getEntities(EntityTypeTest<T, U> p_261630_, AABB p_261843_, AbortableIterationConsumer<U> p_261742_) {
-        this.forEachAccessibleNonEmptySection(p_261843_, p_261463_ -> p_261463_.getEntities(p_261630_, p_261843_, p_261742_));
+    public <U extends T> void getEntities(final EntityTypeTest<T, U> type, final AABB bb, final AbortableIterationConsumer<U> consumer) {
+        this.forEachAccessibleNonEmptySection(bb, section -> section.getEntities(type, bb, consumer));
     }
 
-    public void remove(long p_156898_) {
-        this.sections.remove(p_156898_);
-        this.sectionIds.remove(p_156898_);
+    public void remove(final long sectionKey) {
+        this.sections.remove(sectionKey);
+        this.sectionIds.remove(sectionKey);
     }
 
     @VisibleForDebug

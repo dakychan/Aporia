@@ -7,14 +7,14 @@ import net.minecraft.tags.EnchantmentTags;
 import net.minecraft.world.item.enchantment.Enchantments;
 
 public class VanillaEnchantmentTagsProvider extends EnchantmentTagsProvider {
-    public VanillaEnchantmentTagsProvider(PackOutput p_335915_, CompletableFuture<HolderLookup.Provider> p_330302_) {
-        super(p_335915_, p_330302_);
+    public VanillaEnchantmentTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_331944_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tooltipOrder(
-            p_331944_,
+            registries,
             Enchantments.BINDING_CURSE,
             Enchantments.VANISHING_CURSE,
             Enchantments.RIPTIDE,
@@ -59,14 +59,13 @@ public class VanillaEnchantmentTagsProvider extends EnchantmentTagsProvider {
             Enchantments.INFINITY,
             Enchantments.MENDING
         );
-        this.tag(EnchantmentTags.ARMOR_EXCLUSIVE).add(Enchantments.PROTECTION, Enchantments.BLAST_PROTECTION, Enchantments.FIRE_PROTECTION, Enchantments.PROJECTILE_PROTECTION);
+        this.tag(EnchantmentTags.ARMOR_EXCLUSIVE)
+            .add(Enchantments.PROTECTION, Enchantments.BLAST_PROTECTION, Enchantments.FIRE_PROTECTION, Enchantments.PROJECTILE_PROTECTION);
         this.tag(EnchantmentTags.BOOTS_EXCLUSIVE).add(Enchantments.FROST_WALKER, Enchantments.DEPTH_STRIDER);
         this.tag(EnchantmentTags.BOW_EXCLUSIVE).add(Enchantments.INFINITY, Enchantments.MENDING);
         this.tag(EnchantmentTags.CROSSBOW_EXCLUSIVE).add(Enchantments.MULTISHOT, Enchantments.PIERCING);
         this.tag(EnchantmentTags.DAMAGE_EXCLUSIVE)
-            .add(
-                Enchantments.SHARPNESS, Enchantments.SMITE, Enchantments.BANE_OF_ARTHROPODS, Enchantments.IMPALING, Enchantments.DENSITY, Enchantments.BREACH
-            );
+            .add(Enchantments.SHARPNESS, Enchantments.SMITE, Enchantments.BANE_OF_ARTHROPODS, Enchantments.IMPALING, Enchantments.DENSITY, Enchantments.BREACH);
         this.tag(EnchantmentTags.MINING_EXCLUSIVE).add(Enchantments.FORTUNE, Enchantments.SILK_TOUCH);
         this.tag(EnchantmentTags.RIPTIDE_EXCLUSIVE).add(Enchantments.LOYALTY, Enchantments.CHANNELING);
         this.tag(EnchantmentTags.TREASURE)

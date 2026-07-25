@@ -2,27 +2,29 @@ package net.minecraft.client.gui.screens;
 
 import com.mojang.text2speech.Narrator;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.NarratorStatus;
 import net.minecraft.client.Options;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.CommonButtons;
 import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.FocusableTextWidget;
 import net.minecraft.client.gui.components.LogoRenderer;
+import net.minecraft.client.gui.components.SpriteIconButton;
+import net.minecraft.client.gui.layouts.GridLayout;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
-import net.minecraft.client.gui.layouts.LayoutSettings;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.options.AccessibilityOptionsScreen;
 import net.minecraft.client.gui.screens.options.LanguageSelectScreen;
+import net.minecraft.client.gui.screens.options.SoundOptionsScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class AccessibilityOnboardingScreen extends Screen {
     private static final Component TITLE = Component.translatable("accessibility.onboarding.screen.title");
     private static final Component ONBOARDING_NARRATOR_MESSAGE = Component.translatable("accessibility.onboarding.screen.narrator");
@@ -37,40 +39,61 @@ public class AccessibilityOnboardingScreen extends Screen {
     private float timer;
     private final Runnable onClose;
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, this.initTitleYPos(), 33);
+    private @Nullable FocusableTextWidget focusableTextWidget;
     private float fadeInStart;
     private boolean fadingIn = true;
     private float fadeOutStart;
 
-    public AccessibilityOnboardingScreen(Options p_265483_, Runnable p_298904_) {
+    public AccessibilityOnboardingScreen(final Options options, final Runnable onClose) {
         super(TITLE);
-        this.options = p_265483_;
-        this.onClose = p_298904_;
+        this.options = options;
+        this.onClose = onClose;
         this.logoRenderer = new LogoRenderer(true);
         this.narratorAvailable = Minecraft.getInstance().getNarrator().isActive();
+        this.minecraft.gameRenderer.panorama().holdSpin();
     }
 
     @Override
     public void init() {
-        LinearLayout linearlayout = this.layout.addToContents(LinearLayout.vertical());
-        linearlayout.defaultCellSetting().alignHorizontallyCenter().padding(4);
-        linearlayout.addChild(FocusableTextWidget.builder(this.title, this.font).maxWidth(374).build(), p_325362_ -> p_325362_.padding(8));
-        if (this.options.narrator().createButton(this.options) instanceof CycleButton cyclebutton) {
-            this.narratorButton = cyclebutton;
+        LinearLayout content = this.layout.addToContents(LinearLayout.vertical());
+        content.defaultCellSetting().alignHorizontallyCenter().padding(4);
+        this.focusableTextWidget = content.addChild(FocusableTextWidget.builder(this.title, this.font).maxWidth(374).build(), w -> w.padding(8));
+        GridLayout grid = content.addChild(new GridLayout());
+        grid.defaultCellSetting().padding(4);
+        GridLayout.RowHelper rowHelper = grid.createRowHelper(2);
+        if (this.options.narrator().createButton(this.options) instanceof CycleButton<?> cycleButton) {
+            this.narratorButton = (CycleButton<NarratorStatus>)cycleButton;
             this.narratorButton.active = this.narratorAvailable;
-            linearlayout.addChild(this.narratorButton);
+            rowHelper.addChild(this.narratorButton);
         }
 
-        linearlayout.addChild(CommonButtons.accessibility(150, p_340778_ -> this.closeAndSetScreen(new AccessibilityOptionsScreen(this, this.minecraft.options)), false));
-        linearlayout.addChild(
-            CommonButtons.language(150, p_340779_ -> this.closeAndSetScreen(new LanguageSelectScreen(this, this.minecraft.options, this.minecraft.getLanguageManager())), false)
+        rowHelper.addChild(
+            SpriteIconButton.builder(
+                    Component.translatable("options.sounds"), button -> this.closeAndSetScreen(new SoundOptionsScreen(this, this.options)), false
+                )
+                .width(150)
+                .sprite(Identifier.withDefaultNamespace("icon/music_notes"), 16, 16)
+                .build()
         );
-        this.layout.addToFooter(Button.builder(CommonComponents.GUI_CONTINUE, p_267841_ -> this.onClose()).build());
+        rowHelper.addChild(
+            CommonButtons.accessibility(150, button -> this.closeAndSetScreen(new AccessibilityOptionsScreen(this, this.minecraft.options)), false)
+        );
+        rowHelper.addChild(
+            CommonButtons.language(
+                150, button -> this.closeAndSetScreen(new LanguageSelectScreen(this, this.minecraft.options, this.minecraft.getLanguageManager())), false
+            )
+        );
+        this.layout.addToFooter(Button.builder(CommonComponents.GUI_CONTINUE, button -> this.onClose()).build());
         this.layout.visitWidgets(this::addRenderableWidget);
         this.repositionElements();
     }
 
     @Override
     protected void repositionElements() {
+        if (this.focusableTextWidget != null) {
+            this.focusableTextWidget.updateHeight();
+        }
+
         this.layout.arrangeElements();
     }
 
@@ -94,61 +117,56 @@ public class AccessibilityOnboardingScreen extends Screen {
         }
     }
 
-    private void closeAndSetScreen(Screen p_272914_) {
-        this.close(false, () -> this.minecraft.setScreen(p_272914_));
+    private void closeAndSetScreen(final Screen screen) {
+        this.close(false, () -> this.minecraft.gui.setScreen(screen));
     }
 
-    private void close(boolean p_342115_, Runnable p_299263_) {
-        if (p_342115_) {
+    private void close(final boolean onboardingFinished, final Runnable runnable) {
+        if (onboardingFinished) {
             this.options.onboardingAccessibilityFinished();
         }
 
         Narrator.getNarrator().clear();
-        p_299263_.run();
+        runnable.run();
     }
 
     @Override
-    public void render(GuiGraphics p_282353_, int p_265135_, int p_265032_, float p_265387_) {
-        super.render(p_282353_, p_265135_, p_265032_, p_265387_);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
         this.handleInitialNarrationDelay();
         if (this.fadeInStart == 0.0F && this.fadingIn) {
             this.fadeInStart = (float)Util.getMillis();
         }
 
         if (this.fadeInStart > 0.0F) {
-            float f = ((float)Util.getMillis() - this.fadeInStart) / 2000.0F;
-            float f1 = 1.0F;
-            if (f >= 1.0F) {
+            float fade = ((float)Util.getMillis() - this.fadeInStart) / 2000.0F;
+            float widgetAlpha = 1.0F;
+            if (fade >= 1.0F) {
                 this.fadingIn = false;
                 this.fadeInStart = 0.0F;
             } else {
-                f = Mth.clamp(f, 0.0F, 1.0F);
-                f1 = Mth.clampedMap(f, 0.5F, 1.0F, 0.0F, 1.0F);
+                fade = Mth.clamp(fade, 0.0F, 1.0F);
+                widgetAlpha = Mth.clampedMap(fade, 0.5F, 1.0F, 0.0F, 1.0F);
             }
 
-            this.fadeWidgets(f1);
+            this.fadeWidgets(widgetAlpha);
         }
 
         if (this.fadeOutStart > 0.0F) {
-            float f2 = 1.0F - ((float)Util.getMillis() - this.fadeOutStart) / 1000.0F;
-            float f3 = 0.0F;
-            if (f2 <= 0.0F) {
+            float fade = 1.0F - ((float)Util.getMillis() - this.fadeOutStart) / 1000.0F;
+            float widgetAlpha = 0.0F;
+            if (fade <= 0.0F) {
                 this.fadeOutStart = 0.0F;
                 this.close(true, this.onClose);
             } else {
-                f2 = Mth.clamp(f2, 0.0F, 1.0F);
-                f3 = Mth.clampedMap(f2, 0.5F, 1.0F, 0.0F, 1.0F);
+                fade = Mth.clamp(fade, 0.0F, 1.0F);
+                widgetAlpha = Mth.clampedMap(fade, 0.5F, 1.0F, 0.0F, 1.0F);
             }
 
-            this.fadeWidgets(f3);
+            this.fadeWidgets(widgetAlpha);
         }
 
-        this.logoRenderer.renderLogo(p_282353_, this.width, 1.0F);
-    }
-
-    @Override
-    protected boolean panoramaShouldSpin() {
-        return false;
+        this.logoRenderer.extractRenderState(graphics, this.width, 1.0F);
     }
 
     private void handleInitialNarrationDelay() {

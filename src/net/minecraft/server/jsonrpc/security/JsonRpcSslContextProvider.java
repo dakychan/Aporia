@@ -16,42 +16,42 @@ public class JsonRpcSslContextProvider {
     private static final String PASSWORD_SYSTEM_PROPERTY_KEY = "management.tls.keystore.password";
     private static final Logger log = LogUtils.getLogger();
 
-    public static SslContext createFrom(String p_426761_, String p_425537_) throws Exception {
-        if (p_426761_.isEmpty()) {
+    public static SslContext createFrom(final String keystorePath, final String keystorePasswordFromServerProperties) throws Exception {
+        if (keystorePath.isEmpty()) {
             throw new IllegalArgumentException("TLS is enabled but keystore is not configured");
         } else {
-            File file1 = new File(p_426761_);
-            if (file1.exists() && file1.isFile()) {
-                String s = getKeystorePassword(p_425537_);
-                return loadKeystoreFromPath(file1, s);
+            File file = new File(keystorePath);
+            if (file.exists() && file.isFile()) {
+                String keystorePassword = getKeystorePassword(keystorePasswordFromServerProperties);
+                return loadKeystoreFromPath(file, keystorePassword);
             } else {
-                throw new IllegalArgumentException("Supplied keystore is not a file or does not exist: '" + p_426761_ + "'");
+                throw new IllegalArgumentException("Supplied keystore is not a file or does not exist: '" + keystorePath + "'");
             }
         }
     }
 
-    private static String getKeystorePassword(String p_428382_) {
-        String s = System.getenv().get("MINECRAFT_MANAGEMENT_TLS_KEYSTORE_PASSWORD");
-        if (s != null) {
-            return s;
-        } else {
-            String s1 = System.getProperty("management.tls.keystore.password", null);
-            return s1 != null ? s1 : p_428382_;
+    private static String getKeystorePassword(final String keystorePasswordFromServerProperties) {
+        String keystorePassword = System.getenv().get("MINECRAFT_MANAGEMENT_TLS_KEYSTORE_PASSWORD");
+        if (keystorePassword != null) {
+            return keystorePassword;
         }
+
+        String systemPropertyKeystorePassword = System.getProperty("management.tls.keystore.password", null);
+        return systemPropertyKeystorePassword != null ? systemPropertyKeystorePassword : keystorePasswordFromServerProperties;
     }
 
-    private static SslContext loadKeystoreFromPath(File p_430790_, String p_428301_) throws Exception {
-        KeyStore keystore = KeyStore.getInstance("PKCS12");
+    private static SslContext loadKeystoreFromPath(final File keyStoreFile, final String password) throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
 
-        try (InputStream inputstream = new FileInputStream(p_430790_)) {
-            keystore.load(inputstream, p_428301_.toCharArray());
+        try (InputStream keystoreStream = new FileInputStream(keyStoreFile)) {
+            keyStore.load(keystoreStream, password.toCharArray());
         }
 
-        KeyManagerFactory keymanagerfactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-        keymanagerfactory.init(keystore, p_428301_.toCharArray());
-        TrustManagerFactory trustmanagerfactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustmanagerfactory.init(keystore);
-        return SslContextBuilder.forServer(keymanagerfactory).trustManager(trustmanagerfactory).build();
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, password.toCharArray());
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(keyStore);
+        return SslContextBuilder.forServer(keyManagerFactory).trustManager(trustManagerFactory).build();
     }
 
     public static void printInstructions() {

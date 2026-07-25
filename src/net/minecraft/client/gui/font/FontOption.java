@@ -6,10 +6,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Map.Entry;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum FontOption implements StringRepresentable {
     UNIFORM("uniform"),
     JAPANESE_VARIANTS("jp");
@@ -17,8 +14,8 @@ public enum FontOption implements StringRepresentable {
     public static final Codec<FontOption> CODEC = StringRepresentable.fromEnum(FontOption::values);
     private final String name;
 
-    private FontOption(final String p_334824_) {
-        this.name = p_334824_;
+    FontOption(final String name) {
+        this.name = name;
     }
 
     @Override
@@ -26,20 +23,18 @@ public enum FontOption implements StringRepresentable {
         return this.name;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Filter {
+        public static class Filter {
         private final Map<FontOption, Boolean> values;
-        public static final Codec<FontOption.Filter> CODEC = Codec.unboundedMap(FontOption.CODEC, Codec.BOOL)
-            .xmap(FontOption.Filter::new, p_329501_ -> p_329501_.values);
+        public static final Codec<FontOption.Filter> CODEC = Codec.unboundedMap(FontOption.CODEC, Codec.BOOL).xmap(FontOption.Filter::new, p -> p.values);
         public static final FontOption.Filter ALWAYS_PASS = new FontOption.Filter(Map.of());
 
-        public Filter(Map<FontOption, Boolean> p_332258_) {
-            this.values = p_332258_;
+        public Filter(final Map<FontOption, Boolean> values) {
+            this.values = values;
         }
 
-        public boolean apply(Set<FontOption> p_334823_) {
-            for (Entry<FontOption, Boolean> entry : this.values.entrySet()) {
-                if (p_334823_.contains(entry.getKey()) != entry.getValue()) {
+        public boolean apply(final Set<FontOption> options) {
+            for (Entry<FontOption, Boolean> e : this.values.entrySet()) {
+                if (options.contains(e.getKey()) != e.getValue()) {
                     return false;
                 }
             }
@@ -47,10 +42,10 @@ public enum FontOption implements StringRepresentable {
             return true;
         }
 
-        public FontOption.Filter merge(FontOption.Filter p_331605_) {
-            Map<FontOption, Boolean> map = new HashMap<>(p_331605_.values);
-            map.putAll(this.values);
-            return new FontOption.Filter(Map.copyOf(map));
+        public FontOption.Filter merge(final FontOption.Filter other) {
+            Map<FontOption, Boolean> options = new HashMap<>(other.values);
+            options.putAll(this.values);
+            return new FontOption.Filter(Map.copyOf(options));
         }
     }
 }

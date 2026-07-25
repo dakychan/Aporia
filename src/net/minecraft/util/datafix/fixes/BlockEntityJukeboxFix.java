@@ -8,32 +8,35 @@ import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
 
 public class BlockEntityJukeboxFix extends NamedEntityFix {
-    public BlockEntityJukeboxFix(Schema p_14842_, boolean p_14843_) {
-        super(p_14842_, p_14843_, "BlockEntityJukeboxFix", References.BLOCK_ENTITY, "minecraft:jukebox");
+    public BlockEntityJukeboxFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType, "BlockEntityJukeboxFix", References.BLOCK_ENTITY, "minecraft:jukebox");
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_14846_) {
-        Type<?> type = this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:jukebox");
-        Type<?> type1 = type.findFieldType("RecordItem");
-        OpticFinder<?> opticfinder = DSL.fieldFinder("RecordItem", type1);
-        Dynamic<?> dynamic = p_14846_.get(DSL.remainderFinder());
-        int i = dynamic.get("Record").asInt(0);
-        if (i > 0) {
-            dynamic.remove("Record");
-            String s = ItemStackTheFlatteningFix.updateItem(ItemIdFix.getItem(i), 0);
-            if (s != null) {
-                Dynamic<?> dynamic1 = dynamic.emptyMap();
-                dynamic1 = dynamic1.set("id", dynamic1.createString(s));
-                dynamic1 = dynamic1.set("Count", dynamic1.createByte((byte)1));
-                return p_14846_.set(
-                        opticfinder,
-                        type1.readTyped(dynamic1).result().orElseThrow(() -> new IllegalStateException("Could not create record item stack.")).getFirst()
+    protected Typed<?> fix(final Typed<?> entity) {
+        Type<?> jukeboxType = this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:jukebox");
+        Type<?> itemStackType = jukeboxType.findFieldType("RecordItem");
+        OpticFinder<?> recordItemF = DSL.fieldFinder("RecordItem", itemStackType);
+        Dynamic<?> tag = entity.get(DSL.remainderFinder());
+        int recordId = tag.get("Record").asInt(0);
+        if (recordId > 0) {
+            tag.remove("Record");
+            String id = ItemStackTheFlatteningFix.updateItem(ItemIdFix.getItem(recordId), 0);
+            if (id != null) {
+                Dynamic<?> itemTag = tag.emptyMap();
+                itemTag = itemTag.set("id", itemTag.createString(id));
+                itemTag = itemTag.set("Count", itemTag.createByte((byte)1));
+                return entity.set(
+                        recordItemF,
+                        itemStackType.readTyped(itemTag)
+                            .result()
+                            .orElseThrow(() -> new IllegalStateException("Could not create record item stack."))
+                            .getFirst()
                     )
-                    .set(DSL.remainderFinder(), dynamic);
+                    .set(DSL.remainderFinder(), tag);
             }
         }
 
-        return p_14846_;
+        return entity;
     }
 }

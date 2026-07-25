@@ -2,32 +2,38 @@ package net.minecraft.core;
 
 import com.mojang.datafixers.util.Either;
 import java.util.Collection;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
+import net.minecraft.core.component.DataComponentMap;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.TagKey;
 import org.jspecify.annotations.Nullable;
 
-public interface Holder<T> {
+public sealed interface Holder<T> permits Holder.Direct, Holder.Reference {
     T value();
 
     boolean isBound();
 
-    boolean is(Identifier p_452797_);
+    boolean areComponentsBound();
 
-    boolean is(ResourceKey<T> p_205712_);
+    boolean is(Identifier key);
 
-    boolean is(Predicate<ResourceKey<T>> p_205711_);
+    boolean is(ResourceKey<T> key);
 
-    boolean is(TagKey<T> p_205705_);
+    boolean is(Predicate<ResourceKey<T>> predicate);
+
+    boolean is(TagKey<T> tag);
 
     @Deprecated
-    boolean is(Holder<T> p_334336_);
+    boolean is(Holder<T> holder);
 
     Stream<TagKey<T>> tags();
+
+    DataComponentMap components();
 
     Either<ResourceKey<T>, T> unwrap();
 
@@ -35,44 +41,53 @@ public interface Holder<T> {
 
     Holder.Kind kind();
 
-    boolean canSerializeIn(HolderOwner<T> p_255833_);
+    boolean canSerializeIn(HolderOwner<T> registry);
 
     default String getRegisteredName() {
-        return this.unwrapKey().map(p_448557_ -> p_448557_.identifier().toString()).orElse("[unregistered]");
+        return this.unwrapKey().map(key -> key.identifier().toString()).orElse("[unregistered]");
     }
 
-    static <T> Holder<T> direct(T p_205710_) {
-        return new Holder.Direct<>(p_205710_);
+    static <T> Holder<T> direct(final T value) {
+        return new Holder.Direct<>(value, DataComponentMap.EMPTY);
     }
 
-    public record Direct<T>(T value) implements Holder<T> {
+    static <T> Holder<T> direct(final T value, final DataComponentMap components) {
+        return new Holder.Direct<>(value, components);
+    }
+
+    record Direct<T>(T value, DataComponentMap components) implements Holder<T> {
         @Override
         public boolean isBound() {
             return true;
         }
 
         @Override
-        public boolean is(Identifier p_451249_) {
+        public boolean areComponentsBound() {
+            return true;
+        }
+
+        @Override
+        public boolean is(final Identifier key) {
             return false;
         }
 
         @Override
-        public boolean is(ResourceKey<T> p_205725_) {
+        public boolean is(final ResourceKey<T> key) {
             return false;
         }
 
         @Override
-        public boolean is(TagKey<T> p_205719_) {
+        public boolean is(final TagKey<T> tag) {
             return false;
         }
 
         @Override
-        public boolean is(Holder<T> p_329830_) {
-            return this.value.equals(p_329830_.value());
+        public boolean is(final Holder<T> holder) {
+            return this.value.equals(holder.value());
         }
 
         @Override
-        public boolean is(Predicate<ResourceKey<T>> p_205723_) {
+        public boolean is(final Predicate<ResourceKey<T>> predicate) {
             return false;
         }
 
@@ -97,7 +112,7 @@ public interface Holder<T> {
         }
 
         @Override
-        public boolean canSerializeIn(HolderOwner<T> p_256328_) {
+        public boolean canSerializeIn(final HolderOwner<T> registry) {
             return true;
         }
 
@@ -105,39 +120,35 @@ public interface Holder<T> {
         public Stream<TagKey<T>> tags() {
             return Stream.of();
         }
-
-        @Override
-        public T value() {
-            return this.value;
-        }
     }
 
-    public static enum Kind {
+    enum Kind {
         REFERENCE,
         DIRECT;
     }
 
-    public static class Reference<T> implements Holder<T> {
+    non-sealed class Reference<T> implements Holder<T> {
         private final HolderOwner<T> owner;
         private @Nullable Set<TagKey<T>> tags;
+        private @Nullable DataComponentMap components;
         private final Holder.Reference.Type type;
         private @Nullable ResourceKey<T> key;
         private @Nullable T value;
 
-        protected Reference(Holder.Reference.Type p_256425_, HolderOwner<T> p_256562_, @Nullable ResourceKey<T> p_256636_, @Nullable T p_255889_) {
-            this.owner = p_256562_;
-            this.type = p_256425_;
-            this.key = p_256636_;
-            this.value = p_255889_;
+        protected Reference(final Holder.Reference.Type type, final HolderOwner<T> owner, final @Nullable ResourceKey<T> key, final @Nullable T value) {
+            this.owner = owner;
+            this.type = type;
+            this.key = key;
+            this.value = value;
         }
 
-        public static <T> Holder.Reference<T> createStandAlone(HolderOwner<T> p_255955_, ResourceKey<T> p_255958_) {
-            return new Holder.Reference<>(Holder.Reference.Type.STAND_ALONE, p_255955_, p_255958_, null);
+        public static <T> Holder.Reference<T> createStandAlone(final HolderOwner<T> owner, final ResourceKey<T> key) {
+            return new Holder.Reference<>(Holder.Reference.Type.STAND_ALONE, owner, key, null);
         }
 
         @Deprecated
-        public static <T> Holder.Reference<T> createIntrusive(HolderOwner<T> p_256106_, @Nullable T p_255948_) {
-            return new Holder.Reference<>(Holder.Reference.Type.INTRUSIVE, p_256106_, null, p_255948_);
+        public static <T> Holder.Reference<T> createIntrusive(final HolderOwner<T> owner, final @Nullable T value) {
+            return new Holder.Reference<>(Holder.Reference.Type.INTRUSIVE, owner, null, value);
         }
 
         public ResourceKey<T> key() {
@@ -158,13 +169,13 @@ public interface Holder<T> {
         }
 
         @Override
-        public boolean is(Identifier p_459053_) {
-            return this.key().identifier().equals(p_459053_);
+        public boolean is(final Identifier key) {
+            return this.key().identifier().equals(key);
         }
 
         @Override
-        public boolean is(ResourceKey<T> p_205774_) {
-            return this.key() == p_205774_;
+        public boolean is(final ResourceKey<T> key) {
+            return this.key() == key;
         }
 
         private Set<TagKey<T>> boundTags() {
@@ -176,23 +187,23 @@ public interface Holder<T> {
         }
 
         @Override
-        public boolean is(TagKey<T> p_205760_) {
-            return this.boundTags().contains(p_205760_);
+        public boolean is(final TagKey<T> tag) {
+            return this.boundTags().contains(tag);
         }
 
         @Override
-        public boolean is(Holder<T> p_335729_) {
-            return p_335729_.is(this.key());
+        public boolean is(final Holder<T> holder) {
+            return holder.is(this.key());
         }
 
         @Override
-        public boolean is(Predicate<ResourceKey<T>> p_205772_) {
-            return p_205772_.test(this.key());
+        public boolean is(final Predicate<ResourceKey<T>> predicate) {
+            return predicate.test(this.key());
         }
 
         @Override
-        public boolean canSerializeIn(HolderOwner<T> p_256521_) {
-            return this.owner.canSerializeIn(p_256521_);
+        public boolean canSerializeIn(final HolderOwner<T> context) {
+            return this.owner.canSerializeIn(context);
         }
 
         @Override
@@ -215,24 +226,33 @@ public interface Holder<T> {
             return this.key != null && this.value != null;
         }
 
-        void bindKey(ResourceKey<T> p_251943_) {
-            if (this.key != null && p_251943_ != this.key) {
-                throw new IllegalStateException("Can't change holder key: existing=" + this.key + ", new=" + p_251943_);
-            } else {
-                this.key = p_251943_;
-            }
+        @Override
+        public boolean areComponentsBound() {
+            return this.components != null;
         }
 
-        protected void bindValue(T p_249418_) {
-            if (this.type == Holder.Reference.Type.INTRUSIVE && this.value != p_249418_) {
-                throw new IllegalStateException("Can't change holder " + this.key + " value: existing=" + this.value + ", new=" + p_249418_);
-            } else {
-                this.value = p_249418_;
+        void bindKey(final ResourceKey<T> key) {
+            if (this.key != null && key != this.key) {
+                throw new IllegalStateException("Can't change holder key: existing=" + this.key + ", new=" + key);
             }
+
+            this.key = key;
         }
 
-        void bindTags(Collection<TagKey<T>> p_205770_) {
-            this.tags = Set.copyOf(p_205770_);
+        protected void bindValue(final T value) {
+            if (this.type == Holder.Reference.Type.INTRUSIVE && this.value != value) {
+                throw new IllegalStateException("Can't change holder " + this.key + " value: existing=" + this.value + ", new=" + value);
+            }
+
+            this.value = value;
+        }
+
+        void bindTags(final Collection<TagKey<T>> tags) {
+            this.tags = Set.copyOf(tags);
+        }
+
+        public void bindComponents(final DataComponentMap components) {
+            this.components = components;
         }
 
         @Override
@@ -241,11 +261,16 @@ public interface Holder<T> {
         }
 
         @Override
+        public DataComponentMap components() {
+            return Objects.requireNonNull(this.components, "Components not bound yet");
+        }
+
+        @Override
         public String toString() {
             return "Reference{" + this.key + "=" + this.value + "}";
         }
 
-        protected static enum Type {
+        protected enum Type {
             STAND_ALONE,
             INTRUSIVE;
         }

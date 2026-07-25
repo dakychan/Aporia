@@ -8,8 +8,8 @@ public class DragonSittingAttackingPhase extends AbstractDragonSittingPhase {
     private static final int ROAR_DURATION = 40;
     private int attackingTicks;
 
-    public DragonSittingAttackingPhase(EnderDragon p_31321_) {
-        super(p_31321_);
+    public DragonSittingAttackingPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
@@ -29,7 +29,7 @@ public class DragonSittingAttackingPhase extends AbstractDragonSittingPhase {
     }
 
     @Override
-    public void doServerTick(ServerLevel p_366667_) {
+    public void doServerTick(final ServerLevel level) {
         if (this.attackingTicks++ >= 40) {
             this.dragon.getPhaseManager().setPhase(EnderDragonPhase.SITTING_FLAMING);
         }

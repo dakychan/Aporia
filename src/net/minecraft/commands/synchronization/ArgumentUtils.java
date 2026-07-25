@@ -25,116 +25,116 @@ public class ArgumentUtils {
     private static final byte NUMBER_FLAG_MIN = 1;
     private static final byte NUMBER_FLAG_MAX = 2;
 
-    public static int createNumberFlags(boolean p_235428_, boolean p_235429_) {
-        int i = 0;
-        if (p_235428_) {
-            i |= 1;
+    public static int createNumberFlags(final boolean hasMin, final boolean hasMax) {
+        int result = 0;
+        if (hasMin) {
+            result |= 1;
         }
 
-        if (p_235429_) {
-            i |= 2;
+        if (hasMax) {
+            result |= 2;
         }
 
-        return i;
+        return result;
     }
 
-    public static boolean numberHasMin(byte p_235403_) {
-        return (p_235403_ & 1) != 0;
+    public static boolean numberHasMin(final byte flags) {
+        return (flags & 1) != 0;
     }
 
-    public static boolean numberHasMax(byte p_235431_) {
-        return (p_235431_ & 2) != 0;
+    public static boolean numberHasMax(final byte flags) {
+        return (flags & 2) != 0;
     }
 
     private static <A extends ArgumentType<?>, T extends ArgumentTypeInfo.Template<A>> void serializeArgumentCap(
-        JsonObject p_235411_, ArgumentTypeInfo<A, T> p_235412_, ArgumentTypeInfo.Template<A> p_235413_
+        final JsonObject result, final ArgumentTypeInfo<A, T> info, final ArgumentTypeInfo.Template<A> argumentType
     ) {
-        p_235412_.serializeToJson((T)p_235413_, p_235411_);
+        info.serializeToJson((T)argumentType, result);
     }
 
-    private static <T extends ArgumentType<?>> void serializeArgumentToJson(JsonObject p_235405_, T p_235406_) {
-        ArgumentTypeInfo.Template<T> template = ArgumentTypeInfos.unpack(p_235406_);
-        p_235405_.addProperty("type", "argument");
-        p_235405_.addProperty("parser", String.valueOf(BuiltInRegistries.COMMAND_ARGUMENT_TYPE.getKey(template.type())));
-        JsonObject jsonobject = new JsonObject();
-        serializeArgumentCap(jsonobject, template.type(), template);
-        if (!jsonobject.isEmpty()) {
-            p_235405_.add("properties", jsonobject);
+    private static <T extends ArgumentType<?>> void serializeArgumentToJson(final JsonObject result, final T argument) {
+        ArgumentTypeInfo.Template<T> template = ArgumentTypeInfos.unpack(argument);
+        result.addProperty("type", "argument");
+        result.addProperty("parser", String.valueOf(BuiltInRegistries.COMMAND_ARGUMENT_TYPE.getKey(template.type())));
+        JsonObject type = new JsonObject();
+        serializeArgumentCap(type, template.type(), template);
+        if (!type.isEmpty()) {
+            result.add("properties", type);
         }
     }
 
-    public static <S> JsonObject serializeNodeToJson(CommandDispatcher<S> p_235415_, CommandNode<S> p_235416_) {
-        JsonObject jsonobject = new JsonObject();
-        switch (p_235416_) {
-            case RootCommandNode<S> rootcommandnode:
-                jsonobject.addProperty("type", "root");
+    public static <S> JsonObject serializeNodeToJson(final CommandDispatcher<S> dispatcher, final CommandNode<S> node) {
+        JsonObject result = new JsonObject();
+        switch (node) {
+            case RootCommandNode<S> rootNode:
+                result.addProperty("type", "root");
                 break;
-            case LiteralCommandNode<S> literalcommandnode:
-                jsonobject.addProperty("type", "literal");
+            case LiteralCommandNode<S> literalNode:
+                result.addProperty("type", "literal");
                 break;
-            case ArgumentCommandNode<S, ?> argumentcommandnode:
-                serializeArgumentToJson(jsonobject, argumentcommandnode.getType());
+            case ArgumentCommandNode<S, ?> argumentNode:
+                serializeArgumentToJson(result, argumentNode.getType());
                 break;
             default:
-                LOGGER.error("Could not serialize node {} ({})!", p_235416_, p_235416_.getClass());
-                jsonobject.addProperty("type", "unknown");
+                LOGGER.error("Could not serialize node {} ({})!", node, node.getClass());
+                result.addProperty("type", "unknown");
         }
 
-        Collection<CommandNode<S>> collection = p_235416_.getChildren();
-        if (!collection.isEmpty()) {
-            JsonObject jsonobject1 = new JsonObject();
+        Collection<CommandNode<S>> children = node.getChildren();
+        if (!children.isEmpty()) {
+            JsonObject childrenObject = new JsonObject();
 
-            for (CommandNode<S> commandnode : collection) {
-                jsonobject1.add(commandnode.getName(), serializeNodeToJson(p_235415_, commandnode));
+            for (CommandNode<S> child : children) {
+                childrenObject.add(child.getName(), serializeNodeToJson(dispatcher, child));
             }
 
-            jsonobject.add("children", jsonobject1);
+            result.add("children", childrenObject);
         }
 
-        if (p_235416_.getCommand() != null) {
-            jsonobject.addProperty("executable", true);
+        if (node.getCommand() != null) {
+            result.addProperty("executable", true);
         }
 
-        if (p_235416_.getRequirement() instanceof PermissionProviderCheck<?> permissionprovidercheck) {
-            JsonElement jsonelement = PermissionCheck.CODEC
-                .encodeStart(JsonOps.INSTANCE, permissionprovidercheck.test())
-                .getOrThrow(p_448555_ -> new IllegalStateException("Failed to serialize requirement: " + p_448555_));
-            jsonobject.add("permissions", jsonelement);
+        if (node.getRequirement() instanceof PermissionProviderCheck<?> permissionCheck) {
+            JsonElement permissions = PermissionCheck.CODEC
+                .encodeStart(JsonOps.INSTANCE, permissionCheck.test())
+                .getOrThrow(error -> new IllegalStateException("Failed to serialize requirement: " + error));
+            result.add("permissions", permissions);
         }
 
-        if (p_235416_.getRedirect() != null) {
-            Collection<String> collection1 = p_235415_.getPath(p_235416_.getRedirect());
-            if (!collection1.isEmpty()) {
-                JsonArray jsonarray = new JsonArray();
+        if (node.getRedirect() != null) {
+            Collection<String> path = dispatcher.getPath(node.getRedirect());
+            if (!path.isEmpty()) {
+                JsonArray target = new JsonArray();
 
-                for (String s : collection1) {
-                    jsonarray.add(s);
+                for (String piece : path) {
+                    target.add(piece);
                 }
 
-                jsonobject.add("redirect", jsonarray);
+                result.add("redirect", target);
             }
         }
 
-        return jsonobject;
+        return result;
     }
 
-    public static <T> Set<ArgumentType<?>> findUsedArgumentTypes(CommandNode<T> p_235418_) {
-        Set<CommandNode<T>> set = new ReferenceOpenHashSet<>();
-        Set<ArgumentType<?>> set1 = new HashSet<>();
-        findUsedArgumentTypes(p_235418_, set1, set);
-        return set1;
+    public static <T> Set<ArgumentType<?>> findUsedArgumentTypes(final CommandNode<T> node) {
+        Set<CommandNode<T>> visitedNodes = new ReferenceOpenHashSet<>();
+        Set<ArgumentType<?>> result = new HashSet<>();
+        findUsedArgumentTypes(node, result, visitedNodes);
+        return result;
     }
 
-    private static <T> void findUsedArgumentTypes(CommandNode<T> p_235420_, Set<ArgumentType<?>> p_235421_, Set<CommandNode<T>> p_235422_) {
-        if (p_235422_.add(p_235420_)) {
-            if (p_235420_ instanceof ArgumentCommandNode<T, ?> argumentcommandnode) {
-                p_235421_.add(argumentcommandnode.getType());
+    private static <T> void findUsedArgumentTypes(final CommandNode<T> node, final Set<ArgumentType<?>> output, final Set<CommandNode<T>> visitedNodes) {
+        if (visitedNodes.add(node)) {
+            if (node instanceof ArgumentCommandNode<T, ?> arg) {
+                output.add(arg.getType());
             }
 
-            p_235420_.getChildren().forEach(p_235426_ -> findUsedArgumentTypes((CommandNode<T>)p_235426_, p_235421_, p_235422_));
-            CommandNode<T> commandnode = p_235420_.getRedirect();
-            if (commandnode != null) {
-                findUsedArgumentTypes(commandnode, p_235421_, p_235422_);
+            node.getChildren().forEach(child -> findUsedArgumentTypes((CommandNode<T>)child, output, visitedNodes));
+            CommandNode<T> redirect = node.getRedirect();
+            if (redirect != null) {
+                findUsedArgumentTypes(redirect, output, visitedNodes);
             }
         }
     }

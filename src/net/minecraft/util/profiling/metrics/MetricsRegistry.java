@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.WeakHashMap;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import org.jspecify.annotations.Nullable;
 
@@ -15,67 +14,78 @@ public class MetricsRegistry {
     private MetricsRegistry() {
     }
 
-    public void add(ProfilerMeasured p_146073_) {
-        this.measuredInstances.put(p_146073_, null);
+    public void add(final ProfilerMeasured profilerMeasured) {
+        this.measuredInstances.put(profilerMeasured, null);
     }
 
     public List<MetricSampler> getRegisteredSamplers() {
-        Map<String, List<MetricSampler>> map = this.measuredInstances
+        Map<String, List<MetricSampler>> samplersByName = this.measuredInstances
             .keySet()
             .stream()
-            .flatMap(p_146079_ -> p_146079_.profiledMetrics().stream())
+            .flatMap(measuredInstance -> measuredInstance.profiledMetrics().stream())
             .collect(Collectors.groupingBy(MetricSampler::getName));
-        return aggregateDuplicates(map);
+        return aggregateDuplicates(samplersByName);
     }
 
-    private static List<MetricSampler> aggregateDuplicates(Map<String, List<MetricSampler>> p_146077_) {
-        return p_146077_.entrySet().stream().map(p_146075_ -> {
-            String s = p_146075_.getKey();
-            List<MetricSampler> list = p_146075_.getValue();
-            return (MetricSampler)(list.size() > 1 ? new MetricsRegistry.AggregatedMetricSampler(s, list) : list.get(0));
+    private static List<MetricSampler> aggregateDuplicates(final Map<String, List<MetricSampler>> potentialDuplicates) {
+        return potentialDuplicates.entrySet().stream().map(entry -> {
+            String samplerName = entry.getKey();
+            List<MetricSampler> duplicateSamplers = entry.getValue();
+            return duplicateSamplers.size() > 1 ? new MetricsRegistry.AggregatedMetricSampler(samplerName, duplicateSamplers) : duplicateSamplers.get(0);
         }).collect(Collectors.toList());
     }
 
-    static class AggregatedMetricSampler extends MetricSampler {
+    private static class AggregatedMetricSampler extends MetricSampler {
         private final List<MetricSampler> delegates;
 
-        AggregatedMetricSampler(String p_146082_, List<MetricSampler> p_146083_) {
-            super(p_146082_, p_146083_.get(0).getCategory(), () -> averageValueFromDelegates(p_146083_), () -> beforeTick(p_146083_), thresholdTest(p_146083_));
-            this.delegates = p_146083_;
+        private AggregatedMetricSampler(final String name, final List<MetricSampler> delegates) {
+            super(
+                name,
+                MetricSampler.SamplingPhase.END_TICK,
+                delegates.get(0).getCategory(),
+                () -> averageValueFromDelegates(delegates),
+                () -> beforeTick(delegates),
+                thresholdTest(delegates)
+            );
+            this.delegates = delegates;
         }
 
-        private static MetricSampler.ThresholdTest thresholdTest(List<MetricSampler> p_146088_) {
-            return p_146091_ -> p_146088_.stream().anyMatch(p_146086_ -> p_146086_.thresholdTest != null ? p_146086_.thresholdTest.test(p_146091_) : false);
+        private static MetricSampler.ThresholdTest thresholdTest(final List<MetricSampler> delegates) {
+            return value -> delegates.stream().anyMatch(delegate -> delegate.thresholdTest != null ? delegate.thresholdTest.test(value) : false);
         }
 
-        private static void beforeTick(List<MetricSampler> p_146093_) {
-            for (MetricSampler metricsampler : p_146093_) {
-                metricsampler.onStartTick();
+        private static void beforeTick(final List<MetricSampler> delegates) {
+            for (MetricSampler delegate : delegates) {
+                delegate.onStartTick();
             }
         }
 
-        private static double averageValueFromDelegates(List<MetricSampler> p_146095_) {
-            double d0 = 0.0;
+        private static double averageValueFromDelegates(final List<MetricSampler> delegates) {
+            double aggregatedValue = 0.0;
 
-            for (MetricSampler metricsampler : p_146095_) {
-                d0 += metricsampler.getSampler().getAsDouble();
+            for (MetricSampler delegate : delegates) {
+                aggregatedValue += delegate.getSampler().getAsDouble();
             }
 
-            return d0 / p_146095_.size();
+            return aggregatedValue / delegates.size();
         }
 
         @Override
-        public boolean equals(@Nullable Object p_146101_) {
-            if (this == p_146101_) {
+        public boolean equals(final @Nullable Object o) {
+            if (this == o) {
                 return true;
-            } else if (p_146101_ == null || this.getClass() != p_146101_.getClass()) {
-                return false;
-            } else if (!super.equals(p_146101_)) {
-                return false;
-            } else {
-                MetricsRegistry.AggregatedMetricSampler metricsregistry$aggregatedmetricsampler = (MetricsRegistry.AggregatedMetricSampler)p_146101_;
-                return this.delegates.equals(metricsregistry$aggregatedmetricsampler.delegates);
             }
+
+            if (o == null || this.getClass() != o.getClass()) {
+                return false;
+            }
+
+            if (!super.equals(o)) {
+                return false;
+            }
+
+            MetricsRegistry.AggregatedMetricSampler that = (MetricsRegistry.AggregatedMetricSampler)o;
+            return this.delegates.equals(that.delegates);
         }
 
         @Override

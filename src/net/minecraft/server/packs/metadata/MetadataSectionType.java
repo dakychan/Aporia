@@ -4,13 +4,13 @@ import com.mojang.serialization.Codec;
 import java.util.Optional;
 
 public record MetadataSectionType<T>(String name, Codec<T> codec) {
-    public MetadataSectionType.WithValue<T> withValue(T p_427425_) {
-        return new MetadataSectionType.WithValue<>(this, p_427425_);
+    public MetadataSectionType.WithValue<T> withValue(final T value) {
+        return new MetadataSectionType.WithValue<>(this, value);
     }
 
     public record WithValue<T>(MetadataSectionType<T> type, T value) {
-        public <U> Optional<U> unwrapToType(MetadataSectionType<U> p_422477_) {
-            return p_422477_ == this.type ? Optional.of((U)this.value) : Optional.empty();
+        public <U> Optional<U> unwrapToType(final MetadataSectionType<U> type) {
+            return type == this.type ? Optional.of((U)this.value) : Optional.empty();
         }
     }
 }

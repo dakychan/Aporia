@@ -12,40 +12,37 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.HitResult;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class Tutorial {
     private final Minecraft minecraft;
     private @Nullable TutorialStepInstance instance;
 
-    public Tutorial(Minecraft p_175022_, Options p_175023_) {
-        this.minecraft = p_175022_;
+    public Tutorial(final Minecraft minecraft, final Options options) {
+        this.minecraft = minecraft;
     }
 
-    public void onInput(ClientInput p_367719_) {
+    public void onInput(final ClientInput input) {
         if (this.instance != null) {
-            this.instance.onInput(p_367719_);
+            this.instance.onInput(input);
         }
     }
 
-    public void onMouse(double p_120566_, double p_120567_) {
+    public void onMouse(final double xd, final double yd) {
         if (this.instance != null) {
-            this.instance.onMouse(p_120566_, p_120567_);
+            this.instance.onMouse(xd, yd);
         }
     }
 
-    public void onLookAt(@Nullable ClientLevel p_120579_, @Nullable HitResult p_120580_) {
-        if (this.instance != null && p_120580_ != null && p_120579_ != null) {
-            this.instance.onLookAt(p_120579_, p_120580_);
+    public void onLookAt(final @Nullable ClientLevel level, final @Nullable HitResult hit) {
+        if (this.instance != null && hit != null && level != null) {
+            this.instance.onLookAt(level, hit);
         }
     }
 
-    public void onDestroyBlock(ClientLevel p_120582_, BlockPos p_120583_, BlockState p_120584_, float p_120585_) {
+    public void onDestroyBlock(final ClientLevel level, final BlockPos pos, final BlockState state, final float percent) {
         if (this.instance != null) {
-            this.instance.onDestroyBlock(p_120582_, p_120583_, p_120584_, p_120585_);
+            this.instance.onDestroyBlock(level, pos, state, percent);
         }
     }
 
@@ -55,9 +52,9 @@ public class Tutorial {
         }
     }
 
-    public void onGetItem(ItemStack p_120569_) {
+    public void onGetItem(final ItemStack itemStack) {
         if (this.instance != null) {
-            this.instance.onGetItem(p_120569_);
+            this.instance.onGetItem(itemStack);
         }
     }
 
@@ -88,12 +85,12 @@ public class Tutorial {
         }
     }
 
-    public void setStep(TutorialSteps p_120589_) {
-        this.minecraft.options.tutorialStep = p_120589_;
+    public void setStep(final TutorialSteps step) {
+        this.minecraft.options.tutorialStep = step;
         this.minecraft.options.save();
         if (this.instance != null) {
             this.instance.clear();
-            this.instance = p_120589_.create(this);
+            this.instance = step.create(this);
         }
     }
 
@@ -105,10 +102,10 @@ public class Tutorial {
         return this.minecraft.gameMode == null ? false : this.minecraft.gameMode.getPlayerMode() == GameType.SURVIVAL;
     }
 
-    public static Component key(String p_120593_) {
-        return Component.keybind("key." + p_120593_).withStyle(ChatFormatting.BOLD);
+    public static Component key(final String name) {
+        return Component.keybind("key." + name).withStyle(ChatFormatting.BOLD);
     }
 
-    public void onInventoryAction(ItemStack p_175025_, ItemStack p_175026_, ClickAction p_175027_) {
+    public void onInventoryAction(final ItemStack itemCarried, final ItemStack itemInSlot, final ClickAction clickAction) {
     }
 }

@@ -8,16 +8,16 @@ public class LogTestReporter implements TestReporter {
     private static final Logger LOGGER = LogUtils.getLogger();
 
     @Override
-    public void onTestFailed(GameTestInfo p_127797_) {
-        String s = p_127797_.getTestBlockPos().toShortString();
-        if (p_127797_.isRequired()) {
-            LOGGER.error("{} failed at {}! {}", p_127797_.id(), s, Util.describeError(p_127797_.getError()));
+    public void onTestFailed(final GameTestInfo testInfo) {
+        String testPosition = testInfo.getTestBlockPos().toShortString();
+        if (testInfo.isRequired()) {
+            LOGGER.error("{} failed at {}! {}", testInfo.id(), testPosition, Util.describeError(testInfo.getError()));
         } else {
-            LOGGER.warn("(optional) {} failed at {}. {}", p_127797_.id(), s, Util.describeError(p_127797_.getError()));
+            LOGGER.warn("(optional) {} failed at {}. {}", testInfo.id(), testPosition, Util.describeError(testInfo.getError()));
         }
     }
 
     @Override
-    public void onTestSuccess(GameTestInfo p_177676_) {
+    public void onTestSuccess(final GameTestInfo testInfo) {
     }
 }

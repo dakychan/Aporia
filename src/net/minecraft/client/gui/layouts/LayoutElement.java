@@ -3,14 +3,11 @@ package net.minecraft.client.gui.layouts;
 import java.util.function.Consumer;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface LayoutElement {
-    void setX(int p_265236_);
+    void setX(int x);
 
-    void setY(int p_265404_);
+    void setY(int y);
 
     int getX();
 
@@ -24,10 +21,10 @@ public interface LayoutElement {
         return new ScreenRectangle(this.getX(), this.getY(), this.getWidth(), this.getHeight());
     }
 
-    default void setPosition(int p_265617_, int p_265577_) {
-        this.setX(p_265617_);
-        this.setY(p_265577_);
+    default void setPosition(final int x, final int y) {
+        this.setX(x);
+        this.setY(y);
     }
 
-    void visitWidgets(Consumer<AbstractWidget> p_265082_);
+    void visitWidgets(final Consumer<AbstractWidget> widgetVisitor);
 }

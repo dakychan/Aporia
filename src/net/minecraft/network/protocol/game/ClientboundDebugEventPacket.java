@@ -16,7 +16,7 @@ public record ClientboundDebugEventPacket(DebugSubscription.Event<?> event) impl
         return GamePacketTypes.CLIENTBOUND_DEBUG_EVENT;
     }
 
-    public void handle(ClientGamePacketListener p_425846_) {
-        p_425846_.handleDebugEvent(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDebugEvent(this);
     }
 }

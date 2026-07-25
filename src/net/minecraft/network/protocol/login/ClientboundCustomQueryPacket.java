@@ -14,28 +14,28 @@ public record ClientboundCustomQueryPacket(int transactionId, CustomQueryPayload
     );
     private static final int MAX_PAYLOAD_SIZE = 1048576;
 
-    private ClientboundCustomQueryPacket(FriendlyByteBuf p_179810_) {
-        this(p_179810_.readVarInt(), readPayload(p_179810_.readIdentifier(), p_179810_));
+    private ClientboundCustomQueryPacket(final FriendlyByteBuf input) {
+        this(input.readVarInt(), readPayload(input.readIdentifier(), input));
     }
 
-    private static CustomQueryPayload readPayload(Identifier p_454280_, FriendlyByteBuf p_299332_) {
-        return readUnknownPayload(p_454280_, p_299332_);
+    private static CustomQueryPayload readPayload(final Identifier identifier, final FriendlyByteBuf input) {
+        return readUnknownPayload(identifier, input);
     }
 
-    private static DiscardedQueryPayload readUnknownPayload(Identifier p_455327_, FriendlyByteBuf p_297706_) {
-        int i = p_297706_.readableBytes();
-        if (i >= 0 && i <= 1048576) {
-            p_297706_.skipBytes(i);
-            return new DiscardedQueryPayload(p_455327_);
+    private static DiscardedQueryPayload readUnknownPayload(final Identifier identifier, final FriendlyByteBuf input) {
+        int length = input.readableBytes();
+        if (length >= 0 && length <= 1048576) {
+            input.skipBytes(length);
+            return new DiscardedQueryPayload(identifier);
         } else {
             throw new IllegalArgumentException("Payload may not be larger than 1048576 bytes");
         }
     }
 
-    private void write(FriendlyByteBuf p_134757_) {
-        p_134757_.writeVarInt(this.transactionId);
-        p_134757_.writeIdentifier(this.payload.id());
-        this.payload.write(p_134757_);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.transactionId);
+        output.writeIdentifier(this.payload.id());
+        this.payload.write(output);
     }
 
     @Override
@@ -43,7 +43,7 @@ public record ClientboundCustomQueryPacket(int transactionId, CustomQueryPayload
         return LoginPacketTypes.CLIENTBOUND_CUSTOM_QUERY;
     }
 
-    public void handle(ClientLoginPacketListener p_134754_) {
-        p_134754_.handleCustomQuery(this);
+    public void handle(final ClientLoginPacketListener listener) {
+        listener.handleCustomQuery(this);
     }
 }

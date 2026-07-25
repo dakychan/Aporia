@@ -8,13 +8,13 @@ import net.minecraft.tags.InstrumentTags;
 import net.minecraft.world.item.Instrument;
 import net.minecraft.world.item.Instruments;
 
-public class InstrumentTagsProvider extends KeyTagProvider<Instrument> {
-    public InstrumentTagsProvider(PackOutput p_256418_, CompletableFuture<HolderLookup.Provider> p_256038_) {
-        super(p_256418_, Registries.INSTRUMENT, p_256038_);
+public class InstrumentTagsProvider extends TagsProvider<Instrument> {
+    public InstrumentTagsProvider(final PackOutput output, final CompletableFuture<HolderLookup.Provider> lookupProvider) {
+        super(output, Registries.INSTRUMENT, lookupProvider);
     }
 
     @Override
-    protected void addTags(HolderLookup.Provider p_256291_) {
+    protected void addTags(final HolderLookup.Provider registries) {
         this.tag(InstrumentTags.REGULAR_GOAT_HORNS)
             .add(Instruments.PONDER_GOAT_HORN)
             .add(Instruments.SING_GOAT_HORN)

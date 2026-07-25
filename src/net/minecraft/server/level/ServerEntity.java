@@ -70,41 +70,45 @@ public class ServerEntity {
     private boolean wasOnGround;
     private @Nullable List<SynchedEntityData.DataValue<?>> trackedDataValues;
 
-    public ServerEntity(ServerLevel p_8528_, Entity p_8529_, int p_8530_, boolean p_8531_, ServerEntity.Synchronizer p_429094_) {
-        this.level = p_8528_;
-        this.synchronizer = p_429094_;
-        this.entity = p_8529_;
-        this.updateInterval = p_8530_;
-        this.trackDelta = p_8531_;
-        this.positionCodec.setBase(p_8529_.trackingPosition());
-        this.lastSentMovement = p_8529_.getDeltaMovement();
-        this.lastSentYRot = Mth.packDegrees(p_8529_.getYRot());
-        this.lastSentXRot = Mth.packDegrees(p_8529_.getXRot());
-        this.lastSentYHeadRot = Mth.packDegrees(p_8529_.getYHeadRot());
-        this.wasOnGround = p_8529_.onGround();
-        this.trackedDataValues = p_8529_.getEntityData().getNonDefaultValues();
+    public ServerEntity(
+        final ServerLevel level, final Entity entity, final int updateInterval, final boolean trackDelta, final ServerEntity.Synchronizer synchronizer
+    ) {
+        this.level = level;
+        this.synchronizer = synchronizer;
+        this.entity = entity;
+        this.updateInterval = updateInterval;
+        this.trackDelta = trackDelta;
+        this.positionCodec.setBase(entity.trackingPosition());
+        this.lastSentMovement = entity.getDeltaMovement();
+        this.lastSentYRot = Mth.packDegrees(entity.getYRot());
+        this.lastSentXRot = Mth.packDegrees(entity.getXRot());
+        this.lastSentYHeadRot = Mth.packDegrees(entity.getYHeadRot());
+        this.wasOnGround = entity.onGround();
+        this.trackedDataValues = entity.getEntityData().getNonDefaultValues();
     }
 
     public void sendChanges() {
         this.entity.updateDataBeforeSync();
-        List<Entity> list = this.entity.getPassengers();
-        if (!list.equals(this.lastPassengers)) {
+        List<Entity> passengers = this.entity.getPassengers();
+        if (!passengers.equals(this.lastPassengers)) {
             this.synchronizer
-                .sendToTrackingPlayersFiltered(new ClientboundSetPassengersPacket(this.entity), p_421458_ -> list.contains(p_421458_) == this.lastPassengers.contains(p_421458_));
-            this.lastPassengers = list;
+                .sendToTrackingPlayersFiltered(
+                    new ClientboundSetPassengersPacket(this.entity), player -> passengers.contains(player) == this.lastPassengers.contains(player)
+                );
+            this.lastPassengers = passengers;
         }
 
-        if (this.entity instanceof ItemFrame itemframe && this.tickCount % 10 == 0) {
-            ItemStack itemstack = itemframe.getItem();
-            if (itemstack.getItem() instanceof MapItem) {
-                MapId mapid = itemstack.get(DataComponents.MAP_ID);
-                MapItemSavedData mapitemsaveddata = MapItem.getSavedData(mapid, this.level);
-                if (mapitemsaveddata != null) {
-                    for (ServerPlayer serverplayer : this.level.players()) {
-                        mapitemsaveddata.tickCarriedBy(serverplayer, itemstack);
-                        Packet<?> packet = mapitemsaveddata.getUpdatePacket(mapid, serverplayer);
+        if (this.entity instanceof ItemFrame frame && this.tickCount % 10 == 0) {
+            ItemStack itemStack = frame.getItem();
+            if (itemStack.getItem() instanceof MapItem) {
+                MapId id = itemStack.get(DataComponents.MAP_ID);
+                MapItemSavedData data = MapItem.getSavedData(id, this.level);
+                if (data != null) {
+                    for (ServerPlayer player : this.level.players()) {
+                        data.tickCarriedBy(player, itemStack, frame);
+                        Packet<?> packet = data.getUpdatePacket(id, player);
                         if (packet != null) {
-                            serverplayer.connection.send(packet);
+                            player.connection.send(packet);
                         }
                     }
                 }
@@ -113,67 +117,75 @@ public class ServerEntity {
             this.sendDirtyEntityData();
         }
 
+        if (this.entity.syncPosition) {
+            this.tickCount = this.tickCount / this.updateInterval * this.updateInterval + this.updateInterval;
+            this.entity.syncPosition = false;
+        }
+
         if (this.tickCount % this.updateInterval == 0 || this.entity.needsSync || this.entity.getEntityData().isDirty()) {
-            byte b0 = Mth.packDegrees(this.entity.getYRot());
-            byte b1 = Mth.packDegrees(this.entity.getXRot());
-            boolean flag4 = Math.abs(b0 - this.lastSentYRot) >= 1 || Math.abs(b1 - this.lastSentXRot) >= 1;
+            byte yRotn = Mth.packDegrees(this.entity.getYRot());
+            byte xRotn = Mth.packDegrees(this.entity.getXRot());
+            boolean shouldSendRotation = Math.abs(yRotn - this.lastSentYRot) >= 1 || Math.abs(xRotn - this.lastSentXRot) >= 1;
             if (this.entity.isPassenger()) {
-                if (flag4) {
-                    this.synchronizer.sendToTrackingPlayers(new ClientboundMoveEntityPacket.Rot(this.entity.getId(), b0, b1, this.entity.onGround()));
-                    this.lastSentYRot = b0;
-                    this.lastSentXRot = b1;
+                if (shouldSendRotation) {
+                    this.synchronizer.sendToTrackingPlayers(new ClientboundMoveEntityPacket.Rot(this.entity.getId(), yRotn, xRotn, this.entity.onGround()));
+                    this.lastSentYRot = yRotn;
+                    this.lastSentXRot = xRotn;
                 }
 
                 this.positionCodec.setBase(this.entity.trackingPosition());
                 this.sendDirtyEntityData();
                 this.wasRiding = true;
-            } else if (this.entity instanceof AbstractMinecart abstractminecart
-                && abstractminecart.getBehavior() instanceof NewMinecartBehavior newminecartbehavior) {
-                this.handleMinecartPosRot(newminecartbehavior, b0, b1, flag4);
+            } else if (this.entity instanceof AbstractMinecart minecart && minecart.getBehavior() instanceof NewMinecartBehavior newMinecartBehavior) {
+                this.handleMinecartPosRot(newMinecartBehavior, yRotn, xRotn, shouldSendRotation);
             } else {
                 this.teleportDelay++;
-                Vec3 vec31 = this.entity.trackingPosition();
-                boolean flag5 = this.positionCodec.delta(vec31).lengthSqr() >= 7.6293945E-6F;
-                Packet<ClientGamePacketListener> packet1 = null;
-                boolean flag = flag5 || this.tickCount % 60 == 0;
-                boolean flag1 = false;
-                boolean flag2 = false;
-                long i = this.positionCodec.encodeX(vec31);
-                long j = this.positionCodec.encodeY(vec31);
-                long k = this.positionCodec.encodeZ(vec31);
-                boolean flag3 = i < -32768L || i > 32767L || j < -32768L || j > 32767L || k < -32768L || k > 32767L;
-                if (this.entity.getRequiresPrecisePosition() || flag3 || this.teleportDelay > 400 || this.wasRiding || this.wasOnGround != this.entity.onGround()) {
+                Vec3 currentPosition = this.entity.trackingPosition();
+                boolean positionChanged = this.positionCodec.delta(currentPosition).lengthSqr() >= 7.6293945E-6F;
+                Packet<ClientGamePacketListener> packet = null;
+                boolean pos = positionChanged || this.tickCount % 60 == 0;
+                boolean sentPosition = false;
+                boolean sentRotation = false;
+                long xa = this.positionCodec.encodeX(currentPosition);
+                long ya = this.positionCodec.encodeY(currentPosition);
+                long za = this.positionCodec.encodeZ(currentPosition);
+                boolean deltaTooBig = xa < -32768L || xa > 32767L || ya < -32768L || ya > 32767L || za < -32768L || za > 32767L;
+                if (this.entity.getRequiresPrecisePosition()
+                    || deltaTooBig
+                    || this.teleportDelay > 400
+                    || this.wasRiding
+                    || this.wasOnGround != this.entity.onGround()) {
                     this.wasOnGround = this.entity.onGround();
                     this.teleportDelay = 0;
-                    packet1 = ClientboundEntityPositionSyncPacket.of(this.entity);
-                    flag1 = true;
-                    flag2 = true;
-                } else if ((!flag || !flag4) && !(this.entity instanceof AbstractArrow)) {
-                    if (flag) {
-                        packet1 = new ClientboundMoveEntityPacket.Pos(this.entity.getId(), (short)i, (short)j, (short)k, this.entity.onGround());
-                        flag1 = true;
-                    } else if (flag4) {
-                        packet1 = new ClientboundMoveEntityPacket.Rot(this.entity.getId(), b0, b1, this.entity.onGround());
-                        flag2 = true;
+                    packet = ClientboundEntityPositionSyncPacket.of(this.entity);
+                    sentPosition = true;
+                    sentRotation = true;
+                } else if ((!pos || !shouldSendRotation) && !(this.entity instanceof AbstractArrow)) {
+                    if (pos) {
+                        packet = new ClientboundMoveEntityPacket.Pos(this.entity.getId(), (short)xa, (short)ya, (short)za, this.entity.onGround());
+                        sentPosition = true;
+                    } else if (shouldSendRotation) {
+                        packet = new ClientboundMoveEntityPacket.Rot(this.entity.getId(), yRotn, xRotn, this.entity.onGround());
+                        sentRotation = true;
                     }
                 } else {
-                    packet1 = new ClientboundMoveEntityPacket.PosRot(this.entity.getId(), (short)i, (short)j, (short)k, b0, b1, this.entity.onGround());
-                    flag1 = true;
-                    flag2 = true;
+                    packet = new ClientboundMoveEntityPacket.PosRot(this.entity.getId(), (short)xa, (short)ya, (short)za, yRotn, xRotn, this.entity.onGround());
+                    sentPosition = true;
+                    sentRotation = true;
                 }
 
-                if (this.entity.needsSync || this.trackDelta || this.entity instanceof LivingEntity && ((LivingEntity)this.entity).isFallFlying()) {
-                    Vec3 vec3 = this.entity.getDeltaMovement();
-                    double d0 = vec3.distanceToSqr(this.lastSentMovement);
-                    if (d0 > 1.0E-7 || d0 > 0.0 && vec3.lengthSqr() == 0.0) {
-                        this.lastSentMovement = vec3;
-                        if (this.entity instanceof AbstractHurtingProjectile abstracthurtingprojectile) {
+                if (this.entity.needsSync || this.trackDelta || this.entity instanceof LivingEntity livingEntity && livingEntity.isFallFlying()) {
+                    Vec3 movement = this.entity.getDeltaMovement();
+                    double diff = movement.distanceToSqr(this.lastSentMovement);
+                    if (diff > 1.0E-7 || diff > 0.0 && movement.lengthSqr() == 0.0) {
+                        this.lastSentMovement = movement;
+                        if (this.entity instanceof AbstractHurtingProjectile projectile) {
                             this.synchronizer
                                 .sendToTrackingPlayers(
                                     new ClientboundBundlePacket(
                                         List.of(
                                             new ClientboundSetEntityMotionPacket(this.entity.getId(), this.lastSentMovement),
-                                            new ClientboundProjectilePowerPacket(abstracthurtingprojectile.getId(), abstracthurtingprojectile.accelerationPower)
+                                            new ClientboundProjectilePowerPacket(projectile.getId(), projectile.accelerationPower)
                                         )
                                     )
                                 );
@@ -183,27 +195,27 @@ public class ServerEntity {
                     }
                 }
 
-                if (packet1 != null) {
-                    this.synchronizer.sendToTrackingPlayers(packet1);
+                if (packet != null) {
+                    this.synchronizer.sendToTrackingPlayers(packet);
                 }
 
                 this.sendDirtyEntityData();
-                if (flag1) {
-                    this.positionCodec.setBase(vec31);
+                if (sentPosition) {
+                    this.positionCodec.setBase(currentPosition);
                 }
 
-                if (flag2) {
-                    this.lastSentYRot = b0;
-                    this.lastSentXRot = b1;
+                if (sentRotation) {
+                    this.lastSentYRot = yRotn;
+                    this.lastSentXRot = xRotn;
                 }
 
                 this.wasRiding = false;
             }
 
-            byte b2 = Mth.packDegrees(this.entity.getYHeadRot());
-            if (Math.abs(b2 - this.lastSentYHeadRot) >= 1) {
-                this.synchronizer.sendToTrackingPlayers(new ClientboundRotateHeadPacket(this.entity, b2));
-                this.lastSentYHeadRot = b2;
+            byte yHeadRot = Mth.packDegrees(this.entity.getYHeadRot());
+            if (Math.abs(yHeadRot - this.lastSentYHeadRot) >= 1) {
+                this.synchronizer.sendToTrackingPlayers(new ClientboundRotateHeadPacket(this.entity, yHeadRot));
+                this.lastSentYHeadRot = yHeadRot;
             }
 
             this.entity.needsSync = false;
@@ -216,15 +228,15 @@ public class ServerEntity {
         }
     }
 
-    private void handleMinecartPosRot(NewMinecartBehavior p_451605_, byte p_363280_, byte p_367403_, boolean p_369265_) {
+    private void handleMinecartPosRot(final NewMinecartBehavior newMinecartBehavior, final byte yRotn, final byte xRotn, final boolean shouldSendRotation) {
         this.sendDirtyEntityData();
-        if (p_451605_.lerpSteps.isEmpty()) {
-            Vec3 vec3 = this.entity.getDeltaMovement();
-            double d0 = vec3.distanceToSqr(this.lastSentMovement);
-            Vec3 vec31 = this.entity.trackingPosition();
-            boolean flag = this.positionCodec.delta(vec31).lengthSqr() >= 7.6293945E-6F;
-            boolean flag1 = flag || this.tickCount % 60 == 0;
-            if (flag1 || p_369265_ || d0 > 1.0E-7) {
+        if (newMinecartBehavior.lerpSteps.isEmpty()) {
+            Vec3 movement = this.entity.getDeltaMovement();
+            double diff = movement.distanceToSqr(this.lastSentMovement);
+            Vec3 currentPosition = this.entity.trackingPosition();
+            boolean positionChanged = this.positionCodec.delta(currentPosition).lengthSqr() >= 7.6293945E-6F;
+            boolean shouldSendPosition = positionChanged || this.tickCount % 60 == 0;
+            if (shouldSendPosition || shouldSendRotation || diff > 1.0E-7) {
                 this.synchronizer
                     .sendToTrackingPlayers(
                         new ClientboundMoveMinecartPacket(
@@ -238,71 +250,71 @@ public class ServerEntity {
                     );
             }
         } else {
-            this.synchronizer.sendToTrackingPlayers(new ClientboundMoveMinecartPacket(this.entity.getId(), List.copyOf(p_451605_.lerpSteps)));
-            p_451605_.lerpSteps.clear();
+            this.synchronizer.sendToTrackingPlayers(new ClientboundMoveMinecartPacket(this.entity.getId(), List.copyOf(newMinecartBehavior.lerpSteps)));
+            newMinecartBehavior.lerpSteps.clear();
         }
 
-        this.lastSentYRot = p_363280_;
-        this.lastSentXRot = p_367403_;
+        this.lastSentYRot = yRotn;
+        this.lastSentXRot = xRotn;
         this.positionCodec.setBase(this.entity.position());
     }
 
-    public void removePairing(ServerPlayer p_8535_) {
-        this.entity.stopSeenByPlayer(p_8535_);
-        p_8535_.connection.send(new ClientboundRemoveEntitiesPacket(this.entity.getId()));
+    public void removePairing(final ServerPlayer player) {
+        this.entity.stopSeenByPlayer(player);
+        player.connection.send(new ClientboundRemoveEntitiesPacket(this.entity.getId()));
     }
 
-    public void addPairing(ServerPlayer p_8542_) {
-        List<Packet<? super ClientGamePacketListener>> list = new ArrayList<>();
-        this.sendPairingData(p_8542_, list::add);
-        p_8542_.connection.send(new ClientboundBundlePacket(list));
-        this.entity.startSeenByPlayer(p_8542_);
+    public void addPairing(final ServerPlayer player) {
+        List<Packet<? super ClientGamePacketListener>> packets = new ArrayList<>();
+        this.sendPairingData(player, packets::add);
+        player.connection.send(new ClientboundBundlePacket(packets));
+        this.entity.startSeenByPlayer(player);
     }
 
-    public void sendPairingData(ServerPlayer p_289562_, Consumer<Packet<ClientGamePacketListener>> p_289563_) {
+    public void sendPairingData(final ServerPlayer player, final Consumer<Packet<ClientGamePacketListener>> broadcast) {
         this.entity.updateDataBeforeSync();
         if (this.entity.isRemoved()) {
             LOGGER.warn("Fetching packet for removed entity {}", this.entity);
         }
 
         Packet<ClientGamePacketListener> packet = this.entity.getAddEntityPacket(this);
-        p_289563_.accept(packet);
+        broadcast.accept(packet);
         if (this.trackedDataValues != null) {
-            p_289563_.accept(new ClientboundSetEntityDataPacket(this.entity.getId(), this.trackedDataValues));
+            broadcast.accept(new ClientboundSetEntityDataPacket(this.entity.getId(), this.trackedDataValues));
         }
 
-        if (this.entity instanceof LivingEntity livingentity) {
-            Collection<AttributeInstance> collection = livingentity.getAttributes().getSyncableAttributes();
-            if (!collection.isEmpty()) {
-                p_289563_.accept(new ClientboundUpdateAttributesPacket(this.entity.getId(), collection));
+        if (this.entity instanceof LivingEntity livingEntity) {
+            Collection<AttributeInstance> attributes = livingEntity.getAttributes().getSyncableAttributes();
+            if (!attributes.isEmpty()) {
+                broadcast.accept(new ClientboundUpdateAttributesPacket(this.entity.getId(), attributes));
             }
         }
 
-        if (this.entity instanceof LivingEntity livingentity1) {
-            List<Pair<EquipmentSlot, ItemStack>> list = Lists.newArrayList();
+        if (this.entity instanceof LivingEntity livingEntity) {
+            List<Pair<EquipmentSlot, ItemStack>> slots = Lists.newArrayList();
 
-            for (EquipmentSlot equipmentslot : EquipmentSlot.VALUES) {
-                ItemStack itemstack = livingentity1.getItemBySlot(equipmentslot);
-                if (!itemstack.isEmpty()) {
-                    list.add(Pair.of(equipmentslot, itemstack.copy()));
+            for (EquipmentSlot slot : EquipmentSlot.VALUES) {
+                ItemStack itemStack = livingEntity.getItemBySlot(slot);
+                if (!itemStack.isEmpty()) {
+                    slots.add(Pair.of(slot, itemStack.copy()));
                 }
             }
 
-            if (!list.isEmpty()) {
-                p_289563_.accept(new ClientboundSetEquipmentPacket(this.entity.getId(), list));
+            if (!slots.isEmpty()) {
+                broadcast.accept(new ClientboundSetEquipmentPacket(this.entity.getId(), slots));
             }
         }
 
         if (!this.entity.getPassengers().isEmpty()) {
-            p_289563_.accept(new ClientboundSetPassengersPacket(this.entity));
+            broadcast.accept(new ClientboundSetPassengersPacket(this.entity));
         }
 
         if (this.entity.isPassenger()) {
-            p_289563_.accept(new ClientboundSetPassengersPacket(this.entity.getVehicle()));
+            broadcast.accept(new ClientboundSetPassengersPacket(this.entity.getVehicle()));
         }
 
         if (this.entity instanceof Leashable leashable && leashable.isLeashed()) {
-            p_289563_.accept(new ClientboundSetEntityLinkPacket(this.entity, leashable.getLeashHolder()));
+            broadcast.accept(new ClientboundSetEntityLinkPacket(this.entity, leashable.getLeashHolder()));
         }
     }
 
@@ -327,28 +339,28 @@ public class ServerEntity {
     }
 
     private void sendDirtyEntityData() {
-        SynchedEntityData synchedentitydata = this.entity.getEntityData();
-        List<SynchedEntityData.DataValue<?>> list = synchedentitydata.packDirty();
-        if (list != null) {
-            this.trackedDataValues = synchedentitydata.getNonDefaultValues();
-            this.synchronizer.sendToTrackingPlayersAndSelf(new ClientboundSetEntityDataPacket(this.entity.getId(), list));
+        SynchedEntityData entityData = this.entity.getEntityData();
+        List<SynchedEntityData.DataValue<?>> packedValues = entityData.packDirty();
+        if (packedValues != null) {
+            this.trackedDataValues = entityData.getNonDefaultValues();
+            this.synchronizer.sendToTrackingPlayersAndSelf(new ClientboundSetEntityDataPacket(this.entity.getId(), packedValues));
         }
 
-        if (this.entity instanceof LivingEntity) {
-            Set<AttributeInstance> set = ((LivingEntity)this.entity).getAttributes().getAttributesToSync();
-            if (!set.isEmpty()) {
-                this.synchronizer.sendToTrackingPlayersAndSelf(new ClientboundUpdateAttributesPacket(this.entity.getId(), set));
+        if (this.entity instanceof LivingEntity livingEntity) {
+            Set<AttributeInstance> attributes = livingEntity.getAttributes().getAttributesToSync();
+            if (!attributes.isEmpty()) {
+                this.synchronizer.sendToTrackingPlayersAndSelf(new ClientboundUpdateAttributesPacket(this.entity.getId(), attributes));
             }
 
-            set.clear();
+            attributes.clear();
         }
     }
 
     public interface Synchronizer {
-        void sendToTrackingPlayers(Packet<? super ClientGamePacketListener> p_431731_);
+        void sendToTrackingPlayers(Packet<? super ClientGamePacketListener> packet);
 
-        void sendToTrackingPlayersAndSelf(Packet<? super ClientGamePacketListener> p_427409_);
+        void sendToTrackingPlayersAndSelf(Packet<? super ClientGamePacketListener> packet);
 
-        void sendToTrackingPlayersFiltered(Packet<? super ClientGamePacketListener> p_426808_, Predicate<ServerPlayer> p_431287_);
+        void sendToTrackingPlayersFiltered(Packet<? super ClientGamePacketListener> packet, Predicate<ServerPlayer> predicate);
     }
 }

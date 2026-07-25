@@ -19,35 +19,37 @@ public final class PatchedDataComponentMap implements DataComponentMap {
     private Reference2ObjectMap<DataComponentType<?>, Optional<?>> patch;
     private boolean copyOnWrite;
 
-    public PatchedDataComponentMap(DataComponentMap p_331141_) {
-        this(p_331141_, Reference2ObjectMaps.emptyMap(), true);
+    public PatchedDataComponentMap(final DataComponentMap prototype) {
+        this(prototype, Reference2ObjectMaps.emptyMap(), true);
     }
 
-    private PatchedDataComponentMap(DataComponentMap p_335089_, Reference2ObjectMap<DataComponentType<?>, Optional<?>> p_333211_, boolean p_334948_) {
-        this.prototype = p_335089_;
-        this.patch = p_333211_;
-        this.copyOnWrite = p_334948_;
+    private PatchedDataComponentMap(
+        final DataComponentMap prototype, final Reference2ObjectMap<DataComponentType<?>, Optional<?>> patch, final boolean copyOnWrite
+    ) {
+        this.prototype = prototype;
+        this.patch = patch;
+        this.copyOnWrite = copyOnWrite;
     }
 
-    public static PatchedDataComponentMap fromPatch(DataComponentMap p_334311_, DataComponentPatch p_332061_) {
-        if (isPatchSanitized(p_334311_, p_332061_.map)) {
-            return new PatchedDataComponentMap(p_334311_, p_332061_.map, true);
-        } else {
-            PatchedDataComponentMap patcheddatacomponentmap = new PatchedDataComponentMap(p_334311_);
-            patcheddatacomponentmap.applyPatch(p_332061_);
-            return patcheddatacomponentmap;
+    public static PatchedDataComponentMap fromPatch(final DataComponentMap prototype, final DataComponentPatch patch) {
+        if (isPatchSanitized(prototype, patch.map)) {
+            return new PatchedDataComponentMap(prototype, patch.map, true);
         }
+
+        PatchedDataComponentMap map = new PatchedDataComponentMap(prototype);
+        map.applyPatch(patch);
+        return map;
     }
 
-    private static boolean isPatchSanitized(DataComponentMap p_331971_, Reference2ObjectMap<DataComponentType<?>, Optional<?>> p_332857_) {
-        for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(p_332857_)) {
-            Object object = p_331971_.get(entry.getKey());
-            Optional<?> optional = entry.getValue();
-            if (optional.isPresent() && optional.get().equals(object)) {
+    private static boolean isPatchSanitized(final DataComponentMap prototype, final Reference2ObjectMap<DataComponentType<?>, Optional<?>> patch) {
+        for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(patch)) {
+            Object defaultValue = prototype.get(entry.getKey());
+            Optional<?> value = entry.getValue();
+            if (value.isPresent() && value.get().equals(defaultValue)) {
                 return false;
             }
 
-            if (optional.isEmpty() && object == null) {
+            if (value.isEmpty() && defaultValue == null) {
                 return false;
             }
         }
@@ -56,72 +58,71 @@ public final class PatchedDataComponentMap implements DataComponentMap {
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_331525_) {
-        Optional<? extends T> optional = (Optional<? extends T>)this.patch.get(p_331525_);
-        return (T)(optional != null ? optional.orElse(null) : this.prototype.get(p_331525_));
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return DataComponentPatch.getFromPatchAndPrototype(this.patch, this.prototype, type);
     }
 
-    public boolean hasNonDefault(DataComponentType<?> p_376646_) {
-        return this.patch.containsKey(p_376646_);
+    public boolean hasNonDefault(final DataComponentType<?> type) {
+        return this.patch.containsKey(type);
     }
 
-    public <T> @Nullable T set(DataComponentType<T> p_334181_, @Nullable T p_328828_) {
+    public <T> @Nullable T set(final DataComponentType<T> type, final @Nullable T value) {
         this.ensureMapOwnership();
-        T t = this.prototype.get(p_334181_);
-        Optional<T> optional;
-        if (Objects.equals(p_328828_, t)) {
-            optional = (Optional<T>)this.patch.remove(p_334181_);
+        T defaultValue = this.prototype.get(type);
+        Optional<T> lastValue;
+        if (Objects.equals(value, defaultValue)) {
+            lastValue = (Optional<T>)this.patch.remove(type);
         } else {
-            optional = (Optional<T>)this.patch.put(p_334181_, Optional.ofNullable(p_328828_));
+            lastValue = (Optional<T>)this.patch.put(type, Optional.ofNullable(value));
         }
 
-        return optional != null ? optional.orElse(t) : t;
+        return lastValue != null ? lastValue.orElse(defaultValue) : defaultValue;
     }
 
-    public <T> @Nullable T set(TypedDataComponent<T> p_424747_) {
-        return this.set(p_424747_.type(), p_424747_.value());
+    public <T> @Nullable T set(final TypedDataComponent<T> value) {
+        return this.set(value.type(), value.value());
     }
 
-    public <T> @Nullable T remove(DataComponentType<? extends T> p_331496_) {
+    public <T> @Nullable T remove(final DataComponentType<? extends T> type) {
         this.ensureMapOwnership();
-        T t = this.prototype.get(p_331496_);
-        Optional<? extends T> optional;
-        if (t != null) {
-            optional = (Optional<? extends T>)this.patch.put(p_331496_, Optional.empty());
+        T defaultValue = this.prototype.get(type);
+        Optional<? extends T> lastValue;
+        if (defaultValue != null) {
+            lastValue = (Optional<? extends T>)this.patch.put(type, Optional.empty());
         } else {
-            optional = (Optional<? extends T>)this.patch.remove(p_331496_);
+            lastValue = (Optional<? extends T>)this.patch.remove(type);
         }
 
-        return (T)(optional != null ? optional.orElse(null) : t);
+        return (T)(lastValue != null ? lastValue.orElse(null) : defaultValue);
     }
 
-    public void applyPatch(DataComponentPatch p_329626_) {
+    public void applyPatch(final DataComponentPatch patch) {
         this.ensureMapOwnership();
 
-        for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(p_329626_.map)) {
+        for (Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(patch.map)) {
             this.applyPatch(entry.getKey(), entry.getValue());
         }
     }
 
-    private void applyPatch(DataComponentType<?> p_327856_, Optional<?> p_331456_) {
-        Object object = this.prototype.get(p_327856_);
-        if (p_331456_.isPresent()) {
-            if (p_331456_.get().equals(object)) {
-                this.patch.remove(p_327856_);
+    private void applyPatch(final DataComponentType<?> type, final Optional<?> value) {
+        Object defaultValue = this.prototype.get(type);
+        if (value.isPresent()) {
+            if (value.get().equals(defaultValue)) {
+                this.patch.remove(type);
             } else {
-                this.patch.put(p_327856_, p_331456_);
+                this.patch.put(type, value);
             }
-        } else if (object != null) {
-            this.patch.put(p_327856_, Optional.empty());
+        } else if (defaultValue != null) {
+            this.patch.put(type, Optional.empty());
         } else {
-            this.patch.remove(p_327856_);
+            this.patch.remove(type);
         }
     }
 
-    public void restorePatch(DataComponentPatch p_331119_) {
+    public void restorePatch(final DataComponentPatch patch) {
         this.ensureMapOwnership();
         this.patch.clear();
-        this.patch.putAll(p_331119_.map);
+        this.patch.putAll(patch.map);
     }
 
     public void clearPatch() {
@@ -129,9 +130,9 @@ public final class PatchedDataComponentMap implements DataComponentMap {
         this.patch.clear();
     }
 
-    public void setAll(DataComponentMap p_336067_) {
-        for (TypedDataComponent<?> typeddatacomponent : p_336067_) {
-            typeddatacomponent.applyTo(this);
+    public void setAll(final DataComponentMap components) {
+        for (TypedDataComponent<?> entry : components) {
+            entry.applyTo(this);
         }
     }
 
@@ -146,73 +147,67 @@ public final class PatchedDataComponentMap implements DataComponentMap {
     public Set<DataComponentType<?>> keySet() {
         if (this.patch.isEmpty()) {
             return this.prototype.keySet();
-        } else {
-            Set<DataComponentType<?>> set = new ReferenceArraySet<>(this.prototype.keySet());
-
-            for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(
-                this.patch
-            )) {
-                Optional<?> optional = entry.getValue();
-                if (optional.isPresent()) {
-                    set.add(entry.getKey());
-                } else {
-                    set.remove(entry.getKey());
-                }
-            }
-
-            return set;
         }
+
+        Set<DataComponentType<?>> components = new ReferenceArraySet<>(this.prototype.keySet());
+
+        for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(this.patch)) {
+            Optional<?> value = entry.getValue();
+            if (value.isPresent()) {
+                components.add(entry.getKey());
+            } else {
+                components.remove(entry.getKey());
+            }
+        }
+
+        return components;
     }
 
     @Override
     public Iterator<TypedDataComponent<?>> iterator() {
         if (this.patch.isEmpty()) {
             return this.prototype.iterator();
-        } else {
-            List<TypedDataComponent<?>> list = new ArrayList<>(this.patch.size() + this.prototype.size());
-
-            for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(
-                this.patch
-            )) {
-                if (entry.getValue().isPresent()) {
-                    list.add(TypedDataComponent.createUnchecked(entry.getKey(), entry.getValue().get()));
-                }
-            }
-
-            for (TypedDataComponent<?> typeddatacomponent : this.prototype) {
-                if (!this.patch.containsKey(typeddatacomponent.type())) {
-                    list.add(typeddatacomponent);
-                }
-            }
-
-            return list.iterator();
         }
+
+        List<TypedDataComponent<?>> components = new ArrayList<>(this.patch.size() + this.prototype.size());
+
+        for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(this.patch)) {
+            if (entry.getValue().isPresent()) {
+                components.add(TypedDataComponent.createUnchecked(entry.getKey(), entry.getValue().get()));
+            }
+        }
+
+        for (TypedDataComponent<?> component : this.prototype) {
+            if (!this.patch.containsKey(component.type())) {
+                components.add(component);
+            }
+        }
+
+        return components.iterator();
     }
 
     @Override
     public int size() {
-        int i = this.prototype.size();
+        int size = this.prototype.size();
 
-        for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(
-            this.patch
-        )) {
-            boolean flag = entry.getValue().isPresent();
-            boolean flag1 = this.prototype.has(entry.getKey());
-            if (flag != flag1) {
-                i += flag ? 1 : -1;
+        for (it.unimi.dsi.fastutil.objects.Reference2ObjectMap.Entry<DataComponentType<?>, Optional<?>> entry : Reference2ObjectMaps.fastIterable(this.patch)) {
+            boolean inPatch = entry.getValue().isPresent();
+            boolean inPrototype = this.prototype.has(entry.getKey());
+            if (inPatch != inPrototype) {
+                size += inPatch ? 1 : -1;
             }
         }
 
-        return i;
+        return size;
     }
 
     public DataComponentPatch asPatch() {
         if (this.patch.isEmpty()) {
             return DataComponentPatch.EMPTY;
-        } else {
-            this.copyOnWrite = true;
-            return new DataComponentPatch(this.patch);
         }
+
+        this.copyOnWrite = true;
+        return new DataComponentPatch(this.patch);
     }
 
     public PatchedDataComponentMap copy() {
@@ -221,16 +216,14 @@ public final class PatchedDataComponentMap implements DataComponentMap {
     }
 
     public DataComponentMap toImmutableMap() {
-        return (DataComponentMap)(this.patch.isEmpty() ? this.prototype : this.copy());
+        return this.patch.isEmpty() ? this.prototype : this.copy();
     }
 
     @Override
-    public boolean equals(Object p_335823_) {
-        return this == p_335823_
+    public boolean equals(final Object obj) {
+        return this == obj
             ? true
-            : p_335823_ instanceof PatchedDataComponentMap patcheddatacomponentmap
-                && this.prototype.equals(patcheddatacomponentmap.prototype)
-                && this.patch.equals(patcheddatacomponentmap.patch);
+            : obj instanceof PatchedDataComponentMap otherMap && this.prototype.equals(otherMap.prototype) && this.patch.equals(otherMap.patch);
     }
 
     @Override

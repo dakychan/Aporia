@@ -12,55 +12,57 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 public class CoralClawFeature extends CoralFeature {
-    public CoralClawFeature(Codec<NoneFeatureConfiguration> p_65422_) {
-        super(p_65422_);
+    public CoralClawFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    protected boolean placeFeature(LevelAccessor p_224959_, RandomSource p_224960_, BlockPos p_224961_, BlockState p_224962_) {
-        if (!this.placeCoralBlock(p_224959_, p_224960_, p_224961_, p_224962_)) {
+    protected boolean placeFeature(final LevelAccessor level, final RandomSource random, final BlockPos origin, final BlockState state) {
+        if (!this.placeCoralBlock(level, random, origin, state)) {
             return false;
-        } else {
-            Direction direction = Direction.Plane.HORIZONTAL.getRandomDirection(p_224960_);
-            int i = p_224960_.nextInt(2) + 2;
-            List<Direction> list = Util.toShuffledList(Stream.of(direction, direction.getClockWise(), direction.getCounterClockWise()), p_224960_);
+        }
 
-            for (Direction direction1 : list.subList(0, i)) {
-                BlockPos.MutableBlockPos blockpos$mutableblockpos = p_224961_.mutable();
-                int j = p_224960_.nextInt(2) + 1;
-                blockpos$mutableblockpos.move(direction1);
-                int k;
-                Direction direction2;
-                if (direction1 == direction) {
-                    direction2 = direction;
-                    k = p_224960_.nextInt(3) + 2;
-                } else {
-                    blockpos$mutableblockpos.move(Direction.UP);
-                    Direction[] adirection = new Direction[]{direction1, Direction.UP};
-                    direction2 = Util.getRandom(adirection, p_224960_);
-                    k = p_224960_.nextInt(3) + 3;
-                }
+        Direction clawDirection = Direction.Plane.HORIZONTAL.getRandomDirection(random);
+        int nBranches = random.nextInt(2) + 2;
+        List<Direction> possibleDirections = Util.toShuffledList(
+            Stream.of(clawDirection, clawDirection.getClockWise(), clawDirection.getCounterClockWise()), random
+        );
 
-                for (int l = 0; l < j && this.placeCoralBlock(p_224959_, p_224960_, blockpos$mutableblockpos, p_224962_); l++) {
-                    blockpos$mutableblockpos.move(direction2);
-                }
-
-                blockpos$mutableblockpos.move(direction2.getOpposite());
-                blockpos$mutableblockpos.move(Direction.UP);
-
-                for (int i1 = 0; i1 < k; i1++) {
-                    blockpos$mutableblockpos.move(direction);
-                    if (!this.placeCoralBlock(p_224959_, p_224960_, blockpos$mutableblockpos, p_224962_)) {
-                        break;
-                    }
-
-                    if (p_224960_.nextFloat() < 0.25F) {
-                        blockpos$mutableblockpos.move(Direction.UP);
-                    }
-                }
+        for (Direction branchDirection : possibleDirections.subList(0, nBranches)) {
+            BlockPos.MutableBlockPos mutPos = origin.mutable();
+            int sidewayLength = random.nextInt(2) + 1;
+            mutPos.move(branchDirection);
+            int inwayLenth;
+            Direction segmentDirection;
+            if (branchDirection == clawDirection) {
+                segmentDirection = clawDirection;
+                inwayLenth = random.nextInt(3) + 2;
+            } else {
+                mutPos.move(Direction.UP);
+                Direction[] segmentPossibleDirections = new Direction[]{branchDirection, Direction.UP};
+                segmentDirection = Util.getRandom(segmentPossibleDirections, random);
+                inwayLenth = random.nextInt(3) + 3;
             }
 
-            return true;
+            for (int i = 0; i < sidewayLength && this.placeCoralBlock(level, random, mutPos, state); i++) {
+                mutPos.move(segmentDirection);
+            }
+
+            mutPos.move(segmentDirection.getOpposite());
+            mutPos.move(Direction.UP);
+
+            for (int i = 0; i < inwayLenth; i++) {
+                mutPos.move(clawDirection);
+                if (!this.placeCoralBlock(level, random, mutPos, state)) {
+                    break;
+                }
+
+                if (random.nextFloat() < 0.25F) {
+                    mutPos.move(Direction.UP);
+                }
+            }
         }
+
+        return true;
     }
 }

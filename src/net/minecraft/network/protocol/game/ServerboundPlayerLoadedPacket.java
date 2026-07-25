@@ -13,7 +13,7 @@ public record ServerboundPlayerLoadedPacket() implements Packet<ServerGamePacket
         return GamePacketTypes.SERVERBOUND_PLAYER_LOADED;
     }
 
-    public void handle(ServerGamePacketListener p_378308_) {
-        p_378308_.handleAcceptPlayerLoad(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleAcceptPlayerLoad(this);
     }
 }

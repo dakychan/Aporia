@@ -14,22 +14,22 @@ public class ClientboundSetBorderLerpSizePacket implements Packet<ClientGamePack
     private final double newSize;
     private final long lerpTime;
 
-    public ClientboundSetBorderLerpSizePacket(WorldBorder p_179229_) {
-        this.oldSize = p_179229_.getSize();
-        this.newSize = p_179229_.getLerpTarget();
-        this.lerpTime = p_179229_.getLerpTime();
+    public ClientboundSetBorderLerpSizePacket(final WorldBorder border) {
+        this.oldSize = border.getSize();
+        this.newSize = border.getLerpTarget();
+        this.lerpTime = border.getLerpTime();
     }
 
-    private ClientboundSetBorderLerpSizePacket(FriendlyByteBuf p_179231_) {
-        this.oldSize = p_179231_.readDouble();
-        this.newSize = p_179231_.readDouble();
-        this.lerpTime = p_179231_.readVarLong();
+    private ClientboundSetBorderLerpSizePacket(final FriendlyByteBuf input) {
+        this.oldSize = input.readDouble();
+        this.newSize = input.readDouble();
+        this.lerpTime = input.readVarLong();
     }
 
-    private void write(FriendlyByteBuf p_179233_) {
-        p_179233_.writeDouble(this.oldSize);
-        p_179233_.writeDouble(this.newSize);
-        p_179233_.writeVarLong(this.lerpTime);
+    private void write(final FriendlyByteBuf output) {
+        output.writeDouble(this.oldSize);
+        output.writeDouble(this.newSize);
+        output.writeVarLong(this.lerpTime);
     }
 
     @Override
@@ -37,8 +37,8 @@ public class ClientboundSetBorderLerpSizePacket implements Packet<ClientGamePack
         return GamePacketTypes.CLIENTBOUND_SET_BORDER_LERP_SIZE;
     }
 
-    public void handle(ClientGamePacketListener p_179237_) {
-        p_179237_.handleSetBorderLerpSize(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetBorderLerpSize(this);
     }
 
     public double getOldSize() {

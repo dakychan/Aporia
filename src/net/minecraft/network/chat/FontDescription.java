@@ -9,18 +9,18 @@ public interface FontDescription {
     Codec<FontDescription> CODEC = Identifier.CODEC
         .flatComapMap(
             FontDescription.Resource::new,
-            p_448773_ -> p_448773_ instanceof FontDescription.Resource fontdescription$resource
-                ? DataResult.success(fontdescription$resource.id())
-                : DataResult.error(() -> "Unsupported font description type: " + p_448773_)
+            fontDescription -> fontDescription instanceof FontDescription.Resource resource
+                ? DataResult.success(resource.id())
+                : DataResult.error(() -> "Unsupported font description type: " + fontDescription)
         );
     FontDescription.Resource DEFAULT = new FontDescription.Resource(Identifier.withDefaultNamespace("default"));
 
-    public record AtlasSprite(Identifier atlasId, Identifier spriteId) implements FontDescription {
+    record AtlasSprite(Identifier atlasId, Identifier spriteId) implements FontDescription {
     }
 
-    public record PlayerSprite(ResolvableProfile profile, boolean hat) implements FontDescription {
+    record PlayerSprite(ResolvableProfile profile, boolean hat) implements FontDescription {
     }
 
-    public record Resource(Identifier id) implements FontDescription {
+    record Resource(Identifier id) implements FontDescription {
     }
 }

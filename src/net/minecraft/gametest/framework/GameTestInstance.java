@@ -14,31 +14,29 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.block.Rotation;
 
 public abstract class GameTestInstance {
-    public static final Codec<GameTestInstance> DIRECT_CODEC = BuiltInRegistries.TEST_INSTANCE_TYPE
-        .byNameCodec()
-        .dispatch(GameTestInstance::codec, p_396358_ -> p_396358_);
-    private final TestData<Holder<TestEnvironmentDefinition>> info;
+    public static final Codec<GameTestInstance> DIRECT_CODEC = BuiltInRegistries.TEST_INSTANCE_TYPE.byNameCodec().dispatch(GameTestInstance::codec, i -> i);
+    private final TestData<Holder<TestEnvironmentDefinition<?>>> info;
 
-    public static MapCodec<? extends GameTestInstance> bootstrap(Registry<MapCodec<? extends GameTestInstance>> p_393018_) {
-        register(p_393018_, "block_based", BlockBasedTestInstance.CODEC);
-        return register(p_393018_, "function", FunctionGameTestInstance.CODEC);
+    public static MapCodec<? extends GameTestInstance> bootstrap(final Registry<MapCodec<? extends GameTestInstance>> registry) {
+        register(registry, "block_based", BlockBasedTestInstance.CODEC);
+        return register(registry, "function", FunctionGameTestInstance.CODEC);
     }
 
     private static MapCodec<? extends GameTestInstance> register(
-        Registry<MapCodec<? extends GameTestInstance>> p_393004_, String p_397574_, MapCodec<? extends GameTestInstance> p_394315_
+        final Registry<MapCodec<? extends GameTestInstance>> registry, final String name, final MapCodec<? extends GameTestInstance> codec
     ) {
-        return Registry.register(p_393004_, ResourceKey.create(Registries.TEST_INSTANCE_TYPE, Identifier.withDefaultNamespace(p_397574_)), p_394315_);
+        return Registry.register(registry, ResourceKey.create(Registries.TEST_INSTANCE_TYPE, Identifier.withDefaultNamespace(name)), codec);
     }
 
-    protected GameTestInstance(TestData<Holder<TestEnvironmentDefinition>> p_395082_) {
-        this.info = p_395082_;
+    protected GameTestInstance(final TestData<Holder<TestEnvironmentDefinition<?>>> info) {
+        this.info = info;
     }
 
-    public abstract void run(GameTestHelper p_392369_);
+    public abstract void run(GameTestHelper helper);
 
     public abstract MapCodec<? extends GameTestInstance> codec();
 
-    public Holder<TestEnvironmentDefinition> batch() {
+    public Holder<TestEnvironmentDefinition<?>> batch() {
         return this.info.environment();
     }
 
@@ -78,7 +76,11 @@ public abstract class GameTestInstance {
         return this.info.rotation();
     }
 
-    protected TestData<Holder<TestEnvironmentDefinition>> info() {
+    public int padding() {
+        return this.info.padding();
+    }
+
+    protected TestData<Holder<TestEnvironmentDefinition<?>>> info() {
         return this.info;
     }
 
@@ -97,11 +99,11 @@ public abstract class GameTestInstance {
             .append(this.descriptionRow("test_instance.description.batch", this.info.environment().getRegisteredName()));
     }
 
-    protected MutableComponent descriptionRow(String p_394982_, String p_397845_) {
-        return this.descriptionRow(p_394982_, Component.literal(p_397845_));
+    protected MutableComponent descriptionRow(final String translationKey, final String value) {
+        return this.descriptionRow(translationKey, Component.literal(value));
     }
 
-    protected MutableComponent descriptionRow(String p_397192_, MutableComponent p_393907_) {
-        return Component.translatable(p_397192_, p_393907_.withStyle(ChatFormatting.BLUE)).append(Component.literal("\n"));
+    protected MutableComponent descriptionRow(final String translationKey, final MutableComponent value) {
+        return Component.translatable(translationKey, value.withStyle(ChatFormatting.BLUE)).append(Component.literal("\n"));
     }
 }

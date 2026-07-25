@@ -14,29 +14,29 @@ import java.io.Reader;
 import org.jspecify.annotations.Nullable;
 
 public interface JsonEventLogReader<T> extends Closeable {
-    static <T> JsonEventLogReader<T> create(final Codec<T> p_261600_, Reader p_261836_) {
-        final JsonReader jsonreader = new JsonReader(p_261836_);
-        jsonreader.setStrictness(Strictness.LENIENT);
+    static <T> JsonEventLogReader<T> create(final Codec<T> codec, final Reader reader) {
+        final JsonReader jsonReader = new JsonReader(reader);
+        jsonReader.setStrictness(Strictness.LENIENT);
         return new JsonEventLogReader<T>() {
             @Override
             public @Nullable T next() throws IOException {
                 try {
-                    if (!jsonreader.hasNext()) {
+                    if (!jsonReader.hasNext()) {
                         return null;
-                    } else {
-                        JsonElement jsonelement = JsonParser.parseReader(jsonreader);
-                        return p_261600_.parse(JsonOps.INSTANCE, jsonelement).getOrThrow(IOException::new);
                     }
-                } catch (JsonParseException jsonparseexception) {
-                    throw new IOException(jsonparseexception);
-                } catch (EOFException eofexception) {
+
+                    JsonElement json = JsonParser.parseReader(jsonReader);
+                    return codec.parse(JsonOps.INSTANCE, json).getOrThrow(IOException::new);
+                } catch (JsonParseException e) {
+                    throw new IOException(e);
+                } catch (EOFException e) {
                     return null;
                 }
             }
 
             @Override
             public void close() throws IOException {
-                jsonreader.close();
+                jsonReader.close();
             }
         };
     }

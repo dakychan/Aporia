@@ -67,8 +67,8 @@ public abstract class AbstractSkeleton extends Monster implements RangedAttackMo
         }
     };
 
-    protected AbstractSkeleton(EntityType<? extends AbstractSkeleton> p_454060_, Level p_450530_) {
-        super(p_454060_, p_450530_);
+    protected AbstractSkeleton(final EntityType<? extends AbstractSkeleton> type, final Level level) {
+        super(type, level);
         this.reassessWeaponGoal();
     }
 
@@ -91,56 +91,56 @@ public abstract class AbstractSkeleton extends Monster implements RangedAttackMo
     }
 
     @Override
-    protected void playStepSound(BlockPos p_460086_, BlockState p_453511_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(this.getStepSound(), 0.15F, 1.0F);
     }
 
-    abstract SoundEvent getStepSound();
+    protected abstract SoundEvent getStepSound();
 
     @Override
     public void rideTick() {
         super.rideTick();
-        if (this.getControlledVehicle() instanceof PathfinderMob pathfindermob) {
-            this.yBodyRot = pathfindermob.yBodyRot;
+        if (this.getControlledVehicle() instanceof PathfinderMob entity) {
+            this.yBodyRot = entity.yBodyRot;
         }
     }
 
     @Override
-    protected void populateDefaultEquipmentSlots(RandomSource p_455903_, DifficultyInstance p_453701_) {
-        super.populateDefaultEquipmentSlots(p_455903_, p_453701_);
+    protected void populateDefaultEquipmentSlots(final RandomSource random, final DifficultyInstance difficulty) {
+        super.populateDefaultEquipmentSlots(random, difficulty);
         this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.BOW));
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_460416_, DifficultyInstance p_458464_, EntitySpawnReason p_454473_, @Nullable SpawnGroupData p_455064_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        p_455064_ = super.finalizeSpawn(p_460416_, p_458464_, p_454473_, p_455064_);
-        RandomSource randomsource = p_460416_.getRandom();
-        this.populateDefaultEquipmentSlots(randomsource, p_458464_);
-        this.populateDefaultEquipmentEnchantments(p_460416_, randomsource, p_458464_);
+        groupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
+        RandomSource random = level.getRandom();
+        this.populateDefaultEquipmentSlots(random, difficulty);
+        this.populateDefaultEquipmentEnchantments(level, random, difficulty);
         this.reassessWeaponGoal();
-        this.setCanPickUpLoot(randomsource.nextFloat() < 0.55F * p_458464_.getSpecialMultiplier());
-        if (this.getItemBySlot(EquipmentSlot.HEAD).isEmpty() && SpecialDates.isHalloween() && randomsource.nextFloat() < 0.25F) {
-            this.setItemSlot(EquipmentSlot.HEAD, new ItemStack(randomsource.nextFloat() < 0.1F ? Blocks.JACK_O_LANTERN : Blocks.CARVED_PUMPKIN));
+        this.setCanPickUpLoot(random.nextFloat() < 0.55F * difficulty.getSpecialMultiplier());
+        if (this.getItemBySlot(EquipmentSlot.HEAD).isEmpty() && SpecialDates.isHalloween() && random.nextFloat() < 0.25F) {
+            this.setItemSlot(EquipmentSlot.HEAD, new ItemStack(random.nextFloat() < 0.1F ? Blocks.JACK_O_LANTERN : Blocks.CARVED_PUMPKIN));
             this.setDropChance(EquipmentSlot.HEAD, 0.0F);
         }
 
-        return p_455064_;
+        return groupData;
     }
 
     public void reassessWeaponGoal() {
         if (this.level() != null && !this.level().isClientSide()) {
             this.goalSelector.removeGoal(this.meleeGoal);
             this.goalSelector.removeGoal(this.bowGoal);
-            ItemStack itemstack = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this, Items.BOW));
-            if (itemstack.is(Items.BOW)) {
-                int i = this.getHardAttackInterval();
+            ItemStack usedWeapon = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this, Items.BOW));
+            if (usedWeapon.is(Items.BOW)) {
+                int minAttackInterval = this.getHardAttackInterval();
                 if (this.level().getDifficulty() != Difficulty.HARD) {
-                    i = this.getAttackInterval();
+                    minAttackInterval = this.getAttackInterval();
                 }
 
-                this.bowGoal.setMinAttackInterval(i);
+                this.bowGoal.setMinAttackInterval(minAttackInterval);
                 this.goalSelector.addGoal(4, this.bowGoal);
             } else {
                 this.goalSelector.addGoal(4, this.meleeGoal);
@@ -157,28 +157,30 @@ public abstract class AbstractSkeleton extends Monster implements RangedAttackMo
     }
 
     @Override
-    public void performRangedAttack(LivingEntity p_454925_, float p_452827_) {
-        ItemStack itemstack = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this, Items.BOW));
-        ItemStack itemstack1 = this.getProjectile(itemstack);
-        AbstractArrow abstractarrow = this.getArrow(itemstack1, p_452827_, itemstack);
-        double d0 = p_454925_.getX() - this.getX();
-        double d1 = p_454925_.getY(0.3333333333333333) - abstractarrow.getY();
-        double d2 = p_454925_.getZ() - this.getZ();
-        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-        if (this.level() instanceof ServerLevel serverlevel) {
-            Projectile.spawnProjectileUsingShoot(abstractarrow, serverlevel, itemstack1, d0, d1 + d3 * 0.2F, d2, 1.6F, 14 - serverlevel.getDifficulty().getId() * 4);
+    public void performRangedAttack(final LivingEntity target, final float power) {
+        ItemStack bowItem = this.getItemInHand(ProjectileUtil.getWeaponHoldingHand(this, Items.BOW));
+        ItemStack projectile = this.getProjectile(bowItem);
+        AbstractArrow arrow = this.getArrow(projectile, power, bowItem);
+        double xd = target.getX() - this.getX();
+        double yd = target.getY(0.3333333333333333) - arrow.getY();
+        double zd = target.getZ() - this.getZ();
+        double distanceToTarget = Math.sqrt(xd * xd + zd * zd);
+        if (this.level() instanceof ServerLevel serverLevel) {
+            Projectile.spawnProjectileUsingShoot(
+                arrow, serverLevel, projectile, xd, yd + distanceToTarget * 0.2F, zd, 1.6F, 14 - serverLevel.getDifficulty().getId() * 4
+            );
         }
 
         this.playSound(SoundEvents.SKELETON_SHOOT, 1.0F, 1.0F / (this.getRandom().nextFloat() * 0.4F + 0.8F));
     }
 
-    protected AbstractArrow getArrow(ItemStack p_454991_, float p_456360_, @Nullable ItemStack p_452337_) {
-        return ProjectileUtil.getMobArrow(this, p_454991_, p_456360_, p_452337_);
+    protected AbstractArrow getArrow(final ItemStack projectile, final float power, final @Nullable ItemStack firingWeapon) {
+        return ProjectileUtil.getMobArrow(this, projectile, power, firingWeapon);
     }
 
     @Override
-    public boolean canUseNonMeleeWeapon(ItemStack p_454490_) {
-        return p_454490_.getItem() == Items.BOW;
+    public boolean canUseNonMeleeWeapon(final ItemStack item) {
+        return item.getItem() == Items.BOW;
     }
 
     @Override
@@ -187,14 +189,14 @@ public abstract class AbstractSkeleton extends Monster implements RangedAttackMo
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_453230_) {
-        super.readAdditionalSaveData(p_453230_);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
         this.reassessWeaponGoal();
     }
 
     @Override
-    public void onEquipItem(EquipmentSlot p_459112_, ItemStack p_454489_, ItemStack p_454860_) {
-        super.onEquipItem(p_459112_, p_454489_, p_454860_);
+    public void onEquipItem(final EquipmentSlot slot, final ItemStack oldStack, final ItemStack stack) {
+        super.onEquipItem(slot, oldStack, stack);
         if (!this.level().isClientSide()) {
             this.reassessWeaponGoal();
         }
@@ -205,7 +207,7 @@ public abstract class AbstractSkeleton extends Monster implements RangedAttackMo
     }
 
     @Override
-    public boolean wantsToPickUp(ServerLevel p_455441_, ItemStack p_454470_) {
-        return p_454470_.is(ItemTags.SPEARS) ? false : super.wantsToPickUp(p_455441_, p_454470_);
+    public boolean wantsToPickUp(final ServerLevel level, final ItemStack itemStack) {
+        return itemStack.is(ItemTags.SPEARS) ? false : super.wantsToPickUp(level, itemStack);
     }
 }

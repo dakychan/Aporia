@@ -10,5 +10,5 @@ public interface ServerStatusPacketListener extends ServerPacketListener, Server
         return ConnectionProtocol.STATUS;
     }
 
-    void handleStatusRequest(ServerboundStatusRequestPacket p_134987_);
+    void handleStatusRequest(ServerboundStatusRequestPacket packet);
 }

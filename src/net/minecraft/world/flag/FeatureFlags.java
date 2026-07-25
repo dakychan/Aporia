@@ -15,27 +15,27 @@ public class FeatureFlags {
     public static final FeatureFlagSet VANILLA_SET;
     public static final FeatureFlagSet DEFAULT_FLAGS;
 
-    public static String printMissingFlags(FeatureFlagSet p_250581_, FeatureFlagSet p_250326_) {
-        return printMissingFlags(REGISTRY, p_250581_, p_250326_);
+    public static String printMissingFlags(final FeatureFlagSet allowedFlags, final FeatureFlagSet requestedFlags) {
+        return printMissingFlags(REGISTRY, allowedFlags, requestedFlags);
     }
 
-    public static String printMissingFlags(FeatureFlagRegistry p_249213_, FeatureFlagSet p_250429_, FeatureFlagSet p_250547_) {
-        Set<Identifier> set = p_249213_.toNames(p_250547_);
-        Set<Identifier> set1 = p_249213_.toNames(p_250429_);
-        return set.stream().filter(p_450889_ -> !set1.contains(p_450889_)).map(Identifier::toString).collect(Collectors.joining(", "));
+    public static String printMissingFlags(final FeatureFlagRegistry registry, final FeatureFlagSet allowedFlags, final FeatureFlagSet requestedFlags) {
+        Set<Identifier> requestedFlagIds = registry.toNames(requestedFlags);
+        Set<Identifier> allowedFlagsIds = registry.toNames(allowedFlags);
+        return requestedFlagIds.stream().filter(f -> !allowedFlagsIds.contains(f)).map(Identifier::toString).collect(Collectors.joining(", "));
     }
 
-    public static boolean isExperimental(FeatureFlagSet p_249170_) {
-        return !p_249170_.isSubsetOf(VANILLA_SET);
+    public static boolean isExperimental(final FeatureFlagSet features) {
+        return !features.isSubsetOf(VANILLA_SET);
     }
 
     static {
-        FeatureFlagRegistry.Builder featureflagregistry$builder = new FeatureFlagRegistry.Builder("main");
-        VANILLA = featureflagregistry$builder.createVanilla("vanilla");
-        TRADE_REBALANCE = featureflagregistry$builder.createVanilla("trade_rebalance");
-        REDSTONE_EXPERIMENTS = featureflagregistry$builder.createVanilla("redstone_experiments");
-        MINECART_IMPROVEMENTS = featureflagregistry$builder.createVanilla("minecart_improvements");
-        REGISTRY = featureflagregistry$builder.build();
+        FeatureFlagRegistry.Builder builder = new FeatureFlagRegistry.Builder("main");
+        VANILLA = builder.createVanilla("vanilla");
+        TRADE_REBALANCE = builder.createVanilla("trade_rebalance");
+        REDSTONE_EXPERIMENTS = builder.createVanilla("redstone_experiments");
+        MINECART_IMPROVEMENTS = builder.createVanilla("minecart_improvements");
+        REGISTRY = builder.build();
         CODEC = REGISTRY.codec();
         VANILLA_SET = FeatureFlagSet.of(VANILLA);
         DEFAULT_FLAGS = VANILLA_SET;

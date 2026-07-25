@@ -12,7 +12,6 @@ import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.JsonOps;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import java.io.Reader;
@@ -37,9 +36,8 @@ import net.minecraft.client.gui.GlyphSource;
 import net.minecraft.client.gui.font.glyphs.EffectGlyph;
 import net.minecraft.client.gui.font.providers.GlyphProviderDefinition;
 import net.minecraft.client.renderer.PlayerSkinRenderCache;
-import net.minecraft.client.renderer.texture.TextureAtlas;
 import net.minecraft.client.renderer.texture.TextureManager;
-import net.minecraft.client.resources.model.AtlasManager;
+import net.minecraft.client.resources.model.sprite.AtlasManager;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.resources.FileToIdConverter;
 import net.minecraft.resources.Identifier;
@@ -50,40 +48,37 @@ import net.minecraft.util.DependencySorter;
 import net.minecraft.util.Util;
 import net.minecraft.util.profiling.Profiler;
 import net.minecraft.util.profiling.ProfilerFiller;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
-public class FontManager implements PreparableReloadListener, AutoCloseable {
-    static final Logger LOGGER = LogUtils.getLogger();
+public class FontManager implements AutoCloseable, PreparableReloadListener {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final String FONTS_PATH = "fonts.json";
     public static final Identifier MISSING_FONT = Identifier.withDefaultNamespace("missing");
     private static final FileToIdConverter FONT_DEFINITIONS = FileToIdConverter.json("font");
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
-    final FontSet missingFontSet;
+    private final FontSet missingFontSet;
     private final List<GlyphProvider> providersToClose = new ArrayList<>();
-    public final Map<Identifier, FontSet> fontSets = new HashMap<>();
+    private final Map<Identifier, FontSet> fontSets = new HashMap<>();
     private final TextureManager textureManager;
     private final FontManager.CachedFontProvider anyGlyphs = new FontManager.CachedFontProvider(false);
     private final FontManager.CachedFontProvider nonFishyGlyphs = new FontManager.CachedFontProvider(true);
     private final AtlasManager atlasManager;
     private final Map<Identifier, AtlasGlyphProvider> atlasProviders = new HashMap<>();
-    final PlayerGlyphProvider playerProvider;
+    private final PlayerGlyphProvider playerProvider;
 
-    public FontManager(TextureManager p_95005_, AtlasManager p_424821_, PlayerSkinRenderCache p_423649_) {
-        this.textureManager = p_95005_;
-        this.atlasManager = p_424821_;
+    public FontManager(final TextureManager textureManager, final AtlasManager atlasManager, final PlayerSkinRenderCache playerSkinRenderCache) {
+        this.textureManager = textureManager;
+        this.atlasManager = atlasManager;
         this.missingFontSet = this.createFontSet(MISSING_FONT, List.of(createFallbackProvider()), Set.of());
-        this.playerProvider = new PlayerGlyphProvider(p_423649_);
+        this.playerProvider = new PlayerGlyphProvider(playerSkinRenderCache);
     }
 
-    private FontSet createFontSet(Identifier p_457016_, List<GlyphProvider.Conditional> p_424996_, Set<FontOption> p_427683_) {
-        GlyphStitcher glyphstitcher = new GlyphStitcher(this.textureManager, p_457016_);
-        FontSet fontset = new FontSet(glyphstitcher);
-        fontset.reload(p_424996_, p_427683_);
-        return fontset;
+    private FontSet createFontSet(final Identifier id, final List<GlyphProvider.Conditional> providers, final Set<FontOption> options) {
+        GlyphStitcher stitcher = new GlyphStitcher(this.textureManager, id);
+        FontSet result = new FontSet(stitcher);
+        result.reload(providers, options);
+        return result;
     }
 
     private static GlyphProvider.Conditional createFallbackProvider() {
@@ -92,54 +87,57 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
 
     @Override
     public CompletableFuture<Void> reload(
-        PreparableReloadListener.SharedState p_426143_, Executor p_284975_, PreparableReloadListener.PreparationBarrier p_285160_, Executor p_285218_
+        final PreparableReloadListener.SharedState currentReload,
+        final Executor taskExecutor,
+        final PreparableReloadListener.PreparationBarrier preparationBarrier,
+        final Executor reloadExecutor
     ) {
-        return this.prepare(p_426143_.resourceManager(), p_284975_)
-            .thenCompose(p_285160_::wait)
-            .thenAcceptAsync(p_357671_ -> this.apply(p_357671_, Profiler.get()), p_285218_);
+        return this.prepare(currentReload.resourceManager(), taskExecutor)
+            .thenCompose(preparationBarrier::wait)
+            .thenAcceptAsync(preparations -> this.apply(preparations, Profiler.get()), reloadExecutor);
     }
 
-    private CompletableFuture<FontManager.Preparation> prepare(ResourceManager p_285252_, Executor p_284969_) {
-        List<CompletableFuture<FontManager.UnresolvedBuilderBundle>> list = new ArrayList<>();
+    private CompletableFuture<FontManager.Preparation> prepare(final ResourceManager manager, final Executor executor) {
+        List<CompletableFuture<FontManager.UnresolvedBuilderBundle>> builderFutures = new ArrayList<>();
 
-        for (Entry<Identifier, List<Resource>> entry : FONT_DEFINITIONS.listMatchingResourceStacks(p_285252_).entrySet()) {
-            Identifier identifier = FONT_DEFINITIONS.fileToId(entry.getKey());
-            list.add(CompletableFuture.supplyAsync(() -> {
-                List<Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional>> list1 = loadResourceStack(entry.getValue(), identifier);
-                FontManager.UnresolvedBuilderBundle fontmanager$unresolvedbuilderbundle = new FontManager.UnresolvedBuilderBundle(identifier);
+        for (Entry<Identifier, List<Resource>> fontStack : FONT_DEFINITIONS.listMatchingResourceStacks(manager).entrySet()) {
+            Identifier fontName = FONT_DEFINITIONS.fileToId(fontStack.getKey());
+            builderFutures.add(CompletableFuture.supplyAsync(() -> {
+                List<Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional>> builderStack = loadResourceStack(fontStack.getValue(), fontName);
+                FontManager.UnresolvedBuilderBundle bundle = new FontManager.UnresolvedBuilderBundle(fontName);
 
-                for (Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional> pair : list1) {
-                    FontManager.BuilderId fontmanager$builderid = pair.getFirst();
-                    FontOption.Filter fontoption$filter = pair.getSecond().filter();
-                    pair.getSecond().definition().unpack().ifLeft(p_325337_ -> {
-                        CompletableFuture<Optional<GlyphProvider>> completablefuture = this.safeLoad(fontmanager$builderid, p_325337_, p_285252_, p_284969_);
-                        fontmanager$unresolvedbuilderbundle.add(fontmanager$builderid, fontoption$filter, completablefuture);
-                    }).ifRight(p_325345_ -> fontmanager$unresolvedbuilderbundle.add(fontmanager$builderid, fontoption$filter, p_325345_));
+                for (Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional> stackEntry : builderStack) {
+                    FontManager.BuilderId id = stackEntry.getFirst();
+                    FontOption.Filter options = stackEntry.getSecond().filter();
+                    stackEntry.getSecond().definition().unpack().ifLeft(provider -> {
+                        CompletableFuture<Optional<GlyphProvider>> loadResult = this.safeLoad(id, provider, manager, executor);
+                        bundle.add(id, options, loadResult);
+                    }).ifRight(reference -> bundle.add(id, options, reference));
                 }
 
-                return fontmanager$unresolvedbuilderbundle;
-            }, p_284969_));
+                return bundle;
+            }, executor));
         }
 
-        return Util.sequence(list)
+        return Util.sequence(builderFutures)
             .thenCompose(
-                p_447985_ -> {
-                    List<CompletableFuture<Optional<GlyphProvider>>> list1 = p_447985_.stream()
+                builders -> {
+                    List<CompletableFuture<Optional<GlyphProvider>>> allProviderFutures = builders.stream()
                         .flatMap(FontManager.UnresolvedBuilderBundle::listBuilders)
                         .collect(Util.toMutableList());
-                    GlyphProvider.Conditional glyphprovider$conditional = createFallbackProvider();
-                    list1.add(CompletableFuture.completedFuture(Optional.of(glyphprovider$conditional.provider())));
-                    return Util.sequence(list1)
+                    GlyphProvider.Conditional fallback = createFallbackProvider();
+                    allProviderFutures.add(CompletableFuture.completedFuture(Optional.of(fallback.provider())));
+                    return Util.sequence(allProviderFutures)
                         .thenCompose(
-                            p_284618_ -> {
-                                Map<Identifier, List<GlyphProvider.Conditional>> map = this.resolveProviders(p_447985_);
-                                CompletableFuture<?>[] completablefuture = map.values()
+                            allProviders -> {
+                                Map<Identifier, List<GlyphProvider.Conditional>> resolved = this.resolveProviders(builders);
+                                CompletableFuture<?>[] finalizers = resolved.values()
                                     .stream()
-                                    .map(p_284585_ -> CompletableFuture.runAsync(() -> this.finalizeProviderLoading(p_284585_, glyphprovider$conditional), p_284969_))
+                                    .map(providers -> CompletableFuture.runAsync(() -> this.finalizeProviderLoading(providers, fallback), executor))
                                     .toArray(CompletableFuture[]::new);
-                                return CompletableFuture.allOf(completablefuture).thenApply(p_284595_ -> {
-                                    List<GlyphProvider> list2 = p_284618_.stream().flatMap(Optional::stream).toList();
-                                    return new FontManager.Preparation(map, list2);
+                                return CompletableFuture.allOf(finalizers).thenApply(ignored -> {
+                                    List<GlyphProvider> providersToClose = allProviders.stream().flatMap(Optional::stream).toList();
+                                    return new FontManager.Preparation(resolved, providersToClose);
                                 });
                             }
                         );
@@ -148,40 +146,38 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
     }
 
     private CompletableFuture<Optional<GlyphProvider>> safeLoad(
-        FontManager.BuilderId p_285113_, GlyphProviderDefinition.Loader p_286561_, ResourceManager p_285424_, Executor p_285371_
+        final FontManager.BuilderId id, final GlyphProviderDefinition.Loader provider, final ResourceManager manager, final Executor executor
     ) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return Optional.of(p_286561_.load(p_285424_));
-            } catch (Exception exception) {
-                LOGGER.warn("Failed to load builder {}, rejecting", p_285113_, exception);
+                return Optional.of(provider.load(manager));
+            } catch (Exception e) {
+                LOGGER.warn("Failed to load builder {}, rejecting", id, e);
                 return Optional.empty();
             }
-        }, p_285371_);
+        }, executor);
     }
 
-    private Map<Identifier, List<GlyphProvider.Conditional>> resolveProviders(List<FontManager.UnresolvedBuilderBundle> p_285282_) {
-        Map<Identifier, List<GlyphProvider.Conditional>> map = new HashMap<>();
-        DependencySorter<Identifier, FontManager.UnresolvedBuilderBundle> dependencysorter = new DependencySorter<>();
-        p_285282_.forEach(p_447987_ -> dependencysorter.addEntry(p_447987_.fontId, p_447987_));
-        dependencysorter.orderByDependencies(
-            (p_456287_, p_284621_) -> p_284621_.resolve(map::get).ifPresent(p_284590_ -> map.put(p_456287_, (List<GlyphProvider.Conditional>)p_284590_))
-        );
-        return map;
+    private Map<Identifier, List<GlyphProvider.Conditional>> resolveProviders(final List<FontManager.UnresolvedBuilderBundle> unresolvedProviders) {
+        Map<Identifier, List<GlyphProvider.Conditional>> result = new HashMap<>();
+        DependencySorter<Identifier, FontManager.UnresolvedBuilderBundle> sorter = new DependencySorter<>();
+        unresolvedProviders.forEach(e -> sorter.addEntry(e.fontId, e));
+        sorter.orderByDependencies((id, bundle) -> bundle.resolve(result::get).ifPresent(r -> result.put(id, (List<GlyphProvider.Conditional>)r)));
+        return result;
     }
 
-    private void finalizeProviderLoading(List<GlyphProvider.Conditional> p_285520_, GlyphProvider.Conditional p_328834_) {
-        p_285520_.add(0, p_328834_);
-        IntSet intset = new IntOpenHashSet();
+    private void finalizeProviderLoading(final List<GlyphProvider.Conditional> list, final GlyphProvider.Conditional fallback) {
+        list.add(0, fallback);
+        IntSet supportedGlyphs = new IntOpenHashSet();
 
-        for (GlyphProvider.Conditional glyphprovider$conditional : p_285520_) {
-            intset.addAll(glyphprovider$conditional.provider().getSupportedGlyphs());
+        for (GlyphProvider.Conditional provider : list) {
+            supportedGlyphs.addAll(provider.provider().getSupportedGlyphs());
         }
 
-        intset.forEach(p_420727_ -> {
-            if (p_420727_ != 32) {
-                for (GlyphProvider.Conditional glyphprovider$conditional1 : Lists.reverse(p_285520_)) {
-                    if (glyphprovider$conditional1.provider().getGlyph(p_420727_) != null) {
+        supportedGlyphs.forEach(codepoint -> {
+            if (codepoint != 32) {
+                for (GlyphProvider.Conditional providerx : Lists.reverse(list)) {
+                    if (providerx.provider().getGlyph(codepoint) != null) {
                         break;
                     }
                 }
@@ -189,73 +185,74 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
         });
     }
 
-    private static Set<FontOption> getFontOptions(Options p_331588_) {
-        Set<FontOption> set = EnumSet.noneOf(FontOption.class);
-        if (p_331588_.forceUnicodeFont().get()) {
-            set.add(FontOption.UNIFORM);
+    private static Set<FontOption> getFontOptions(final Options options) {
+        Set<FontOption> result = EnumSet.noneOf(FontOption.class);
+        if (options.forceUnicodeFont().get()) {
+            result.add(FontOption.UNIFORM);
         }
 
-        if (p_331588_.japaneseGlyphVariants().get()) {
-            set.add(FontOption.JAPANESE_VARIANTS);
+        if (options.japaneseGlyphVariants().get()) {
+            result.add(FontOption.JAPANESE_VARIANTS);
         }
 
-        return set;
+        return result;
     }
 
-    private void apply(FontManager.Preparation p_284939_, ProfilerFiller p_285407_) {
-        p_285407_.push("closing");
+    private void apply(final FontManager.Preparation preparations, final ProfilerFiller profiler) {
+        profiler.push("closing");
         this.anyGlyphs.invalidate();
         this.nonFishyGlyphs.invalidate();
         this.fontSets.values().forEach(FontSet::close);
         this.fontSets.clear();
         this.providersToClose.forEach(GlyphProvider::close);
         this.providersToClose.clear();
-        Set<FontOption> set = getFontOptions(Minecraft.getInstance().options);
-        p_285407_.popPush("reloading");
-        p_284939_.fontSets()
+        Set<FontOption> fontOptions = getFontOptions(Minecraft.getInstance().options);
+        profiler.popPush("reloading");
+        preparations.fontSets()
             .forEach(
-                (p_447989_, p_447990_) -> this.fontSets
-                    .put(p_447989_, this.createFontSet(p_447989_, Lists.reverse((List<GlyphProvider.Conditional>)p_447990_), set))
+                (id, newProviders) -> this.fontSets.put(id, this.createFontSet(id, Lists.reverse((List<GlyphProvider.Conditional>)newProviders), fontOptions))
             );
-        this.providersToClose.addAll(p_284939_.allProviders);
-        p_285407_.pop();
+        this.providersToClose.addAll(preparations.allProviders);
+        profiler.pop();
         if (!this.fontSets.containsKey(Minecraft.DEFAULT_FONT)) {
             throw new IllegalStateException("Default font failed to load");
-        } else {
-            this.atlasProviders.clear();
-            this.atlasManager.forEach((p_454556_, p_420722_) -> this.atlasProviders.put(p_454556_, new AtlasGlyphProvider(p_420722_)));
+        }
+
+        this.atlasProviders.clear();
+        this.atlasManager.forEach((atlasId, atlasTexture) -> this.atlasProviders.put(atlasId, new AtlasGlyphProvider(atlasTexture)));
+    }
+
+    public void updateOptions(final Options options) {
+        Set<FontOption> fontOptions = getFontOptions(options);
+
+        for (FontSet value : this.fontSets.values()) {
+            value.reload(fontOptions);
         }
     }
 
-    public void updateOptions(Options p_335215_) {
-        Set<FontOption> set = getFontOptions(p_335215_);
+    private static List<Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional>> loadResourceStack(
+        final List<Resource> resourceStack, final Identifier fontName
+    ) {
+        List<Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional>> builderStack = new ArrayList<>();
 
-        for (FontSet fontset : this.fontSets.values()) {
-            fontset.reload(set);
-        }
-    }
-
-    private static List<Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional>> loadResourceStack(List<Resource> p_284976_, Identifier p_452509_) {
-        List<Pair<FontManager.BuilderId, GlyphProviderDefinition.Conditional>> list = new ArrayList<>();
-
-        for (Resource resource : p_284976_) {
+        for (Resource resource : resourceStack) {
             try (Reader reader = resource.openAsReader()) {
-                JsonElement jsonelement = GSON.fromJson(reader, JsonElement.class);
-                FontManager.FontDefinitionFile fontmanager$fontdefinitionfile = FontManager.FontDefinitionFile.CODEC
-                    .parse(JsonOps.INSTANCE, jsonelement)
+                JsonElement jsonContents = GSON.fromJson(reader, JsonElement.class);
+                FontManager.FontDefinitionFile definition = FontManager.FontDefinitionFile.CODEC
+                    .parse(JsonOps.INSTANCE, jsonContents)
                     .getOrThrow(JsonParseException::new);
-                List<GlyphProviderDefinition.Conditional> list1 = fontmanager$fontdefinitionfile.providers;
+                List<GlyphProviderDefinition.Conditional> providers = definition.providers;
 
-                for (int i = list1.size() - 1; i >= 0; i--) {
-                    FontManager.BuilderId fontmanager$builderid = new FontManager.BuilderId(p_452509_, resource.sourcePackId(), i);
-                    list.add(Pair.of(fontmanager$builderid, list1.get(i)));
+                for (int i = providers.size() - 1; i >= 0; i--) {
+                    FontManager.BuilderId id = new FontManager.BuilderId(fontName, resource.sourcePackId(), i);
+                    builderStack.add(Pair.of(id, providers.get(i)));
                 }
-            } catch (Exception exception) {
-                LOGGER.warn("Unable to load font '{}' in {} in resourcepack: '{}'", p_452509_, "fonts.json", resource.sourcePackId(), exception);
+            } catch (Exception e) {
+                LOGGER.warn("Unable to load font '{}' in {} in resourcepack: '{}'", fontName, "fonts.json", resource.sourcePackId(), e);
             }
         }
 
-        return list;
+        return builderStack;
     }
 
     public Font createFont() {
@@ -266,13 +263,13 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
         return new Font(this.nonFishyGlyphs);
     }
 
-    FontSet getFontSetRaw(Identifier p_451356_) {
-        return this.fontSets.getOrDefault(p_451356_, this.missingFontSet);
+    private FontSet getFontSetRaw(final Identifier id) {
+        return this.fontSets.getOrDefault(id, this.missingFontSet);
     }
 
-    GlyphSource getSpriteFont(FontDescription.AtlasSprite p_425039_) {
-        AtlasGlyphProvider atlasglyphprovider = this.atlasProviders.get(p_425039_.atlasId());
-        return atlasglyphprovider == null ? this.missingFontSet.source(false) : atlasglyphprovider.sourceForSprite(p_425039_.spriteId());
+    private GlyphSource getSpriteFont(final FontDescription.AtlasSprite contents) {
+        AtlasGlyphProvider provider = this.atlasProviders.get(contents.atlasId());
+        return provider == null ? this.missingFontSet.source(false) : provider.sourceForSprite(contents.spriteId());
     }
 
     @Override
@@ -284,50 +281,47 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
         this.missingFontSet.close();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record BuilderId(Identifier fontId, String pack, int index) {
+        private record BuilderId(Identifier fontId, String pack, int index) {
         @Override
         public String toString() {
             return "(" + this.fontId + ": builder #" + this.index + " from pack " + this.pack + ")";
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record BuilderResult(FontManager.BuilderId id, FontOption.Filter filter, Either<CompletableFuture<Optional<GlyphProvider>>, Identifier> result) {
-        public Optional<List<GlyphProvider.Conditional>> resolve(Function<Identifier, @Nullable List<GlyphProvider.Conditional>> p_284942_) {
+        private record BuilderResult(FontManager.BuilderId id, FontOption.Filter filter, Either<CompletableFuture<Optional<GlyphProvider>>, Identifier> result) {
+        public Optional<List<GlyphProvider.Conditional>> resolve(final Function<Identifier, @Nullable List<GlyphProvider.Conditional>> resolver) {
             return this.result
                 .map(
-                    p_325356_ -> p_325356_.join().map(p_325357_ -> List.of(new GlyphProvider.Conditional(p_325357_, this.filter))),
-                    p_453820_ -> {
-                        List<GlyphProvider.Conditional> list = p_284942_.apply(p_453820_);
-                        if (list == null) {
+                    provider -> provider.join().map(p -> List.of(new GlyphProvider.Conditional(p, this.filter))),
+                    reference -> {
+                        List<GlyphProvider.Conditional> resolvedReferences = resolver.apply(reference);
+                        if (resolvedReferences == null) {
                             FontManager.LOGGER
                                 .warn(
                                     "Can't find font {} referenced by builder {}, either because it's missing, failed to load or is part of loading cycle",
-                                    p_453820_,
+                                    reference,
                                     this.id
                                 );
                             return Optional.empty();
                         } else {
-                            return Optional.of(list.stream().map(this::mergeFilters).toList());
+                            return Optional.of(resolvedReferences.stream().map(this::mergeFilters).toList());
                         }
                     }
                 );
         }
 
-        private GlyphProvider.Conditional mergeFilters(GlyphProvider.Conditional p_330532_) {
-            return new GlyphProvider.Conditional(p_330532_.provider(), this.filter.merge(p_330532_.filter()));
+        private GlyphProvider.Conditional mergeFilters(final GlyphProvider.Conditional original) {
+            return new GlyphProvider.Conditional(original.provider(), this.filter.merge(original.filter()));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class CachedFontProvider implements Font.Provider, AutoCloseable {
+        private class CachedFontProvider implements Font.Provider, AutoCloseable {
         private final boolean nonFishyOnly;
         private volatile FontManager.CachedFontProvider.@Nullable CachedEntry lastEntry;
         private volatile @Nullable EffectGlyph whiteGlyph;
 
-        CachedFontProvider(final boolean p_425677_) {
-            this.nonFishyOnly = p_425677_;
+        private CachedFontProvider(final boolean nonFishyOnly) {
+            this.nonFishyOnly = nonFishyOnly;
         }
 
         public void invalidate() {
@@ -340,100 +334,93 @@ public class FontManager implements PreparableReloadListener, AutoCloseable {
             this.invalidate();
         }
 
-        private GlyphSource getGlyphSource(FontDescription p_427754_) {
-            return switch (p_427754_) {
-                case FontDescription.Resource fontdescription$resource -> FontManager.this.getFontSetRaw(fontdescription$resource.id())
-                    .source(this.nonFishyOnly);
-                case FontDescription.AtlasSprite fontdescription$atlassprite -> FontManager.this.getSpriteFont(fontdescription$atlassprite);
-                case FontDescription.PlayerSprite fontdescription$playersprite -> FontManager.this.playerProvider.sourceForPlayer(fontdescription$playersprite);
+        private GlyphSource getGlyphSource(final FontDescription description) {
+            return switch (description) {
+                case FontDescription.Resource resource -> FontManager.this.getFontSetRaw(resource.id()).source(this.nonFishyOnly);
+                case FontDescription.AtlasSprite sprite -> FontManager.this.getSpriteFont(sprite);
+                case FontDescription.PlayerSprite player -> FontManager.this.playerProvider.sourceForPlayer(player);
                 default -> FontManager.this.missingFontSet.source(this.nonFishyOnly);
             };
         }
 
         @Override
-        public GlyphSource glyphs(FontDescription p_431701_) {
-            FontManager.CachedFontProvider.CachedEntry fontmanager$cachedfontprovider$cachedentry = this.lastEntry;
-            if (fontmanager$cachedfontprovider$cachedentry != null && p_431701_.equals(fontmanager$cachedfontprovider$cachedentry.description)) {
-                return fontmanager$cachedfontprovider$cachedentry.source;
-            } else {
-                GlyphSource glyphsource = this.getGlyphSource(p_431701_);
-                this.lastEntry = new FontManager.CachedFontProvider.CachedEntry(p_431701_, glyphsource);
-                return glyphsource;
+        public GlyphSource glyphs(final FontDescription description) {
+            FontManager.CachedFontProvider.CachedEntry lastEntry = this.lastEntry;
+            if (lastEntry != null && description.equals(lastEntry.description)) {
+                return lastEntry.source;
             }
+
+            GlyphSource result = this.getGlyphSource(description);
+            this.lastEntry = new FontManager.CachedFontProvider.CachedEntry(description, result);
+            return result;
         }
 
         @Override
         public EffectGlyph effect() {
-            EffectGlyph effectglyph = this.whiteGlyph;
-            if (effectglyph == null) {
-                effectglyph = FontManager.this.getFontSetRaw(FontDescription.DEFAULT.id()).whiteGlyph();
-                this.whiteGlyph = effectglyph;
+            EffectGlyph whiteGlyph = this.whiteGlyph;
+            if (whiteGlyph == null) {
+                whiteGlyph = FontManager.this.getFontSetRaw(FontDescription.DEFAULT.id()).whiteGlyph();
+                this.whiteGlyph = whiteGlyph;
             }
 
-            return effectglyph;
+            return whiteGlyph;
         }
 
-        @OnlyIn(Dist.CLIENT)
-        record CachedEntry(FontDescription description, GlyphSource source) {
+                private record CachedEntry(FontDescription description, GlyphSource source) {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record FontDefinitionFile(List<GlyphProviderDefinition.Conditional> providers) {
+        private record FontDefinitionFile(List<GlyphProviderDefinition.Conditional> providers) {
         public static final Codec<FontManager.FontDefinitionFile> CODEC = RecordCodecBuilder.create(
-            p_325360_ -> p_325360_.group(
-                    GlyphProviderDefinition.Conditional.CODEC.listOf().fieldOf("providers").forGetter(FontManager.FontDefinitionFile::providers)
-                )
-                .apply(p_325360_, FontManager.FontDefinitionFile::new)
+            i -> i.group(GlyphProviderDefinition.Conditional.CODEC.listOf().fieldOf("providers").forGetter(FontManager.FontDefinitionFile::providers))
+                .apply(i, FontManager.FontDefinitionFile::new)
         );
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record Preparation(Map<Identifier, List<GlyphProvider.Conditional>> fontSets, List<GlyphProvider> allProviders) {
+        private record Preparation(Map<Identifier, List<GlyphProvider.Conditional>> fontSets, List<GlyphProvider> allProviders) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record UnresolvedBuilderBundle(Identifier fontId, List<FontManager.BuilderResult> builders, Set<Identifier> dependencies)
+        private record UnresolvedBuilderBundle(Identifier fontId, List<FontManager.BuilderResult> builders, Set<Identifier> dependencies)
         implements DependencySorter.Entry<Identifier> {
-        public UnresolvedBuilderBundle(Identifier p_452474_) {
-            this(p_452474_, new ArrayList<>(), new HashSet<>());
+        public UnresolvedBuilderBundle(final Identifier fontId) {
+            this(fontId, new ArrayList<>(), new HashSet<>());
         }
 
-        public void add(FontManager.BuilderId p_284935_, FontOption.Filter p_336303_, GlyphProviderDefinition.Reference p_334249_) {
-            this.builders.add(new FontManager.BuilderResult(p_284935_, p_336303_, Either.right(p_334249_.id())));
-            this.dependencies.add(p_334249_.id());
+        public void add(final FontManager.BuilderId builderId, final FontOption.Filter filter, final GlyphProviderDefinition.Reference reference) {
+            this.builders.add(new FontManager.BuilderResult(builderId, filter, Either.right(reference.id())));
+            this.dependencies.add(reference.id());
         }
 
-        public void add(FontManager.BuilderId p_286837_, FontOption.Filter p_334374_, CompletableFuture<Optional<GlyphProvider>> p_331945_) {
-            this.builders.add(new FontManager.BuilderResult(p_286837_, p_334374_, Either.left(p_331945_)));
+        public void add(final FontManager.BuilderId builderId, final FontOption.Filter filter, final CompletableFuture<Optional<GlyphProvider>> provider) {
+            this.builders.add(new FontManager.BuilderResult(builderId, filter, Either.left(provider)));
         }
 
         private Stream<CompletableFuture<Optional<GlyphProvider>>> listBuilders() {
-            return this.builders.stream().flatMap(p_285041_ -> p_285041_.result.left().stream());
+            return this.builders.stream().flatMap(e -> e.result.left().stream());
         }
 
-        public Optional<List<GlyphProvider.Conditional>> resolve(Function<Identifier, List<GlyphProvider.Conditional>> p_285118_) {
-            List<GlyphProvider.Conditional> list = new ArrayList<>();
+        public Optional<List<GlyphProvider.Conditional>> resolve(final Function<Identifier, List<GlyphProvider.Conditional>> resolver) {
+            List<GlyphProvider.Conditional> resolved = new ArrayList<>();
 
-            for (FontManager.BuilderResult fontmanager$builderresult : this.builders) {
-                Optional<List<GlyphProvider.Conditional>> optional = fontmanager$builderresult.resolve(p_285118_);
-                if (!optional.isPresent()) {
+            for (FontManager.BuilderResult builder : this.builders) {
+                Optional<List<GlyphProvider.Conditional>> resolvedBuilder = builder.resolve(resolver);
+                if (!resolvedBuilder.isPresent()) {
                     return Optional.empty();
                 }
 
-                list.addAll(optional.get());
+                resolved.addAll(resolvedBuilder.get());
             }
 
-            return Optional.of(list);
+            return Optional.of(resolved);
         }
 
         @Override
-        public void visitRequiredDependencies(Consumer<Identifier> p_285391_) {
-            this.dependencies.forEach(p_285391_);
+        public void visitRequiredDependencies(final Consumer<Identifier> output) {
+            this.dependencies.forEach(output);
         }
 
         @Override
-        public void visitOptionalDependencies(Consumer<Identifier> p_285405_) {
+        public void visitOptionalDependencies(final Consumer<Identifier> output) {
         }
     }
 }

@@ -3,7 +3,6 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
@@ -21,8 +20,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class SkullBlock extends AbstractSkullBlock {
     public static final MapCodec<SkullBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422124_ -> p_422124_.group(SkullBlock.Type.CODEC.fieldOf("kind").forGetter(AbstractSkullBlock::getType), propertiesCodec())
-            .apply(p_422124_, SkullBlock::new)
+        i -> i.group(SkullBlock.Type.CODEC.fieldOf("kind").forGetter(AbstractSkullBlock::getType), propertiesCodec()).apply(i, SkullBlock::new)
     );
     public static final int MAX = RotationSegment.getMaxSegmentIndex();
     private static final int ROTATIONS = MAX + 1;
@@ -35,35 +33,35 @@ public class SkullBlock extends AbstractSkullBlock {
         return CODEC;
     }
 
-    protected SkullBlock(SkullBlock.Type p_56318_, BlockBehaviour.Properties p_56319_) {
-        super(p_56318_, p_56319_);
+    protected SkullBlock(final SkullBlock.Type type, final BlockBehaviour.Properties properties) {
+        super(type, properties);
         this.registerDefaultState(this.defaultBlockState().setValue(ROTATION, 0));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_56331_, BlockGetter p_56332_, BlockPos p_56333_, CollisionContext p_56334_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return this.getType() == SkullBlock.Types.PIGLIN ? SHAPE_PIGLIN : SHAPE;
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_56321_) {
-        return super.getStateForPlacement(p_56321_).setValue(ROTATION, RotationSegment.convertToSegment(p_56321_.getRotation()));
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        return super.getStateForPlacement(context).setValue(ROTATION, RotationSegment.convertToSegment(context.getRotation()));
     }
 
     @Override
-    protected BlockState rotate(BlockState p_56326_, Rotation p_56327_) {
-        return p_56326_.setValue(ROTATION, p_56327_.rotate(p_56326_.getValue(ROTATION), ROTATIONS));
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        return state.setValue(ROTATION, rotation.rotate(state.getValue(ROTATION), ROTATIONS));
     }
 
     @Override
-    protected BlockState mirror(BlockState p_56323_, Mirror p_56324_) {
-        return p_56323_.setValue(ROTATION, p_56324_.mirror(p_56323_.getValue(ROTATION), ROTATIONS));
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        return state.setValue(ROTATION, mirror.mirror(state.getValue(ROTATION), ROTATIONS));
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_56329_) {
-        super.createBlockStateDefinition(p_56329_);
-        p_56329_.add(ROTATION);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
+        builder.add(ROTATION);
     }
 
     public interface Type extends StringRepresentable {
@@ -71,7 +69,7 @@ public class SkullBlock extends AbstractSkullBlock {
         Codec<SkullBlock.Type> CODEC = Codec.stringResolver(StringRepresentable::getSerializedName, TYPES::get);
     }
 
-    public static enum Types implements SkullBlock.Type {
+    public enum Types implements SkullBlock.Type {
         SKELETON("skeleton"),
         WITHER_SKELETON("wither_skeleton"),
         PLAYER("player"),
@@ -82,9 +80,9 @@ public class SkullBlock extends AbstractSkullBlock {
 
         private final String name;
 
-        private Types(final String p_310892_) {
-            this.name = p_310892_;
-            TYPES.put(p_310892_, this);
+        Types(final String name) {
+            this.name = name;
+            TYPES.put(name, this);
         }
 
         @Override

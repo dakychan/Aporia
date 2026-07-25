@@ -6,35 +6,34 @@ import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class EntityPaintingMotiveFix extends NamedEntityFix {
-    private static final Map<String, String> MAP = DataFixUtils.make(Maps.newHashMap(), p_15532_ -> {
-        p_15532_.put("donkeykong", "donkey_kong");
-        p_15532_.put("burningskull", "burning_skull");
-        p_15532_.put("skullandroses", "skull_and_roses");
+    private static final Map<String, String> MAP = DataFixUtils.make(Maps.newHashMap(), map -> {
+        map.put("donkeykong", "donkey_kong");
+        map.put("burningskull", "burning_skull");
+        map.put("skullandroses", "skull_and_roses");
     });
 
-    public EntityPaintingMotiveFix(Schema p_15525_, boolean p_15526_) {
-        super(p_15525_, p_15526_, "EntityPaintingMotiveFix", References.ENTITY, "minecraft:painting");
+    public EntityPaintingMotiveFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType, "EntityPaintingMotiveFix", References.ENTITY, "minecraft:painting");
     }
 
-    public Dynamic<?> fixTag(Dynamic<?> p_15530_) {
-        Optional<String> optional = p_15530_.get("Motive").asString().result();
-        if (optional.isPresent()) {
-            String s = optional.get().toLowerCase(Locale.ROOT);
-            return p_15530_.set("Motive", p_15530_.createString(NamespacedSchema.ensureNamespaced(MAP.getOrDefault(s, s))));
+    public Dynamic<?> fixTag(final Dynamic<?> input) {
+        Optional<String> motive = input.get("Motive").asString().result();
+        if (motive.isPresent()) {
+            String lowerCaseMotive = motive.get().toLowerCase(Locale.ROOT);
+            return input.set("Motive", input.createString(NamespacedSchema.ensureNamespaced(MAP.getOrDefault(lowerCaseMotive, lowerCaseMotive))));
         } else {
-            return p_15530_;
+            return input;
         }
     }
 
     @Override
-    protected Typed<?> fix(Typed<?> p_15528_) {
-        return p_15528_.update(DSL.remainderFinder(), this::fixTag);
+    protected Typed<?> fix(final Typed<?> entity) {
+        return entity.update(DSL.remainderFinder(), this::fixTag);
     }
 }

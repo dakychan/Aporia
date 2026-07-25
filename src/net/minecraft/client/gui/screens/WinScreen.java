@@ -14,7 +14,7 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.GameNarrator;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.LogoRenderer;
 import net.minecraft.client.gui.render.TextureSetup;
 import net.minecraft.client.input.KeyEvent;
@@ -30,12 +30,9 @@ import net.minecraft.sounds.Musics;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.GsonHelper;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class WinScreen extends Screen {
     private static final Identifier VIGNETTE_LOCATION = Identifier.withDefaultNamespace("textures/misc/credits_vignette.png");
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -61,11 +58,11 @@ public class WinScreen extends Screen {
     private int direction;
     private final LogoRenderer logoRenderer = new LogoRenderer(false);
 
-    public WinScreen(boolean p_276286_, Runnable p_276294_) {
+    public WinScreen(final boolean poem, final Runnable onFinished) {
         super(GameNarrator.NO_TITLE);
-        this.poem = p_276286_;
-        this.onFinished = p_276294_;
-        if (!p_276286_) {
+        this.poem = poem;
+        this.onFinished = onFinished;
+        if (!poem) {
             this.unmodifiedScrollSpeed = 0.75F;
         } else {
             this.unmodifiedScrollSpeed = 0.5F;
@@ -76,47 +73,49 @@ public class WinScreen extends Screen {
     }
 
     private float calculateScrollSpeed() {
-        return this.speedupActive ? this.unmodifiedScrollSpeed * (5.0F + this.speedupModifiers.size() * 15.0F) * this.direction : this.unmodifiedScrollSpeed * this.direction;
+        return this.speedupActive
+            ? this.unmodifiedScrollSpeed * (5.0F + this.speedupModifiers.size() * 15.0F) * this.direction
+            : this.unmodifiedScrollSpeed * this.direction;
     }
 
     @Override
     public void tick() {
         this.minecraft.getMusicManager().tick();
         this.minecraft.getSoundManager().tick(false);
-        float f = this.totalScrollLength + this.height + this.height + 24;
-        if (this.scroll > f) {
+        float maxScroll = this.totalScrollLength + this.height + this.height + 24;
+        if (this.scroll > maxScroll) {
             this.respawn();
         }
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_425603_) {
-        if (p_425603_.isUp()) {
+    public boolean keyPressed(final KeyEvent event) {
+        if (event.isUp()) {
             this.direction = -1;
-        } else if (p_425603_.key() == 341 || p_425603_.key() == 345) {
-            this.speedupModifiers.add(p_425603_.key());
-        } else if (p_425603_.key() == 32) {
+        } else if (event.key() == 341 || event.key() == 345) {
+            this.speedupModifiers.add(event.key());
+        } else if (event.key() == 32) {
             this.speedupActive = true;
         }
 
         this.scrollSpeed = this.calculateScrollSpeed();
-        return super.keyPressed(p_425603_);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean keyReleased(KeyEvent p_422509_) {
-        if (p_422509_.isUp()) {
+    public boolean keyReleased(final KeyEvent event) {
+        if (event.isUp()) {
             this.direction = 1;
         }
 
-        if (p_422509_.key() == 32) {
+        if (event.key() == 32) {
             this.speedupActive = false;
-        } else if (p_422509_.key() == 341 || p_422509_.key() == 345) {
-            this.speedupModifiers.remove(p_422509_.key());
+        } else if (event.key() == 341 || event.key() == 345) {
+            this.speedupModifiers.remove(event.key());
         }
 
         this.scrollSpeed = this.calculateScrollSpeed();
-        return super.keyReleased(p_422509_);
+        return super.keyReleased(event);
     }
 
     @Override
@@ -152,66 +151,66 @@ public class WinScreen extends Screen {
         return CommonComponents.joinForNarration(this.narratorComponents.toArray(Component[]::new));
     }
 
-    private void wrapCreditsIO(Identifier p_460734_, WinScreen.CreditsReader p_197400_) {
-        try (Reader reader = this.minecraft.getResourceManager().openAsReader(p_460734_)) {
-            p_197400_.read(reader);
-        } catch (Exception exception) {
-            LOGGER.error("Couldn't load credits from file {}", p_460734_, exception);
+    private void wrapCreditsIO(final Identifier file, final WinScreen.CreditsReader creditsReader) {
+        try (Reader resource = this.minecraft.getResourceManager().openAsReader(file)) {
+            creditsReader.read(resource);
+        } catch (Exception e) {
+            LOGGER.error("Couldn't load credits from file {}", file, e);
         }
     }
 
-    private void addPoemFile(Reader p_232818_) throws IOException {
-        BufferedReader bufferedreader = new BufferedReader(p_232818_);
-        RandomSource randomsource = RandomSource.create(8124371L);
+    private void addPoemFile(final Reader inputReader) throws IOException {
+        BufferedReader reader = new BufferedReader(inputReader);
+        RandomSource random = RandomSource.createThreadLocalInstance(8124371L);
 
-        String s;
-        while ((s = bufferedreader.readLine()) != null) {
-            s = s.replaceAll("PLAYERNAME", this.minecraft.getUser().getName());
+        String line;
+        while ((line = reader.readLine()) != null) {
+            line = line.replaceAll("PLAYERNAME", this.minecraft.getUser().getName());
 
-            int i;
-            while ((i = s.indexOf(OBFUSCATE_TOKEN)) != -1) {
-                String s1 = s.substring(0, i);
-                String s2 = s.substring(i + OBFUSCATE_TOKEN.length());
-                s = s1 + ChatFormatting.WHITE + ChatFormatting.OBFUSCATED + "XXXXXXXX".substring(0, randomsource.nextInt(4) + 3) + s2;
+            int pos;
+            while ((pos = line.indexOf(OBFUSCATE_TOKEN)) != -1) {
+                String before = line.substring(0, pos);
+                String after = line.substring(pos + OBFUSCATE_TOKEN.length());
+                line = before + ChatFormatting.WHITE + ChatFormatting.OBFUSCATED + "XXXXXXXX".substring(0, random.nextInt(4) + 3) + after;
             }
 
-            this.addPoemLines(s);
+            this.addPoemLines(line);
             this.addEmptyLine();
         }
 
-        for (int j = 0; j < 8; j++) {
+        for (int i = 0; i < 8; i++) {
             this.addEmptyLine();
         }
     }
 
-    private void addCreditsFile(Reader p_232820_) {
-        for (JsonElement jsonelement : GsonHelper.parseArray(p_232820_)) {
-            JsonObject jsonobject = jsonelement.getAsJsonObject();
-            String s = jsonobject.get("section").getAsString();
+    private void addCreditsFile(final Reader inputReader) {
+        for (JsonElement sectionElement : GsonHelper.parseArray(inputReader)) {
+            JsonObject section = sectionElement.getAsJsonObject();
+            String sectionName = section.get("section").getAsString();
             this.addCreditsLine(SECTION_HEADING, true, false);
-            this.addCreditsLine(Component.literal(s).withStyle(ChatFormatting.YELLOW), true, true);
+            this.addCreditsLine(Component.literal(sectionName).withStyle(ChatFormatting.YELLOW), true, true);
             this.addCreditsLine(SECTION_HEADING, true, false);
             this.addEmptyLine();
             this.addEmptyLine();
 
-            for (JsonElement jsonelement1 : jsonobject.getAsJsonArray("disciplines")) {
-                JsonObject jsonobject1 = jsonelement1.getAsJsonObject();
-                String s1 = jsonobject1.get("discipline").getAsString();
-                if (StringUtils.isNotEmpty(s1)) {
-                    this.addCreditsLine(Component.literal(s1).withStyle(ChatFormatting.YELLOW), true, true);
+            for (JsonElement disciplineElement : section.getAsJsonArray("disciplines")) {
+                JsonObject discipline = disciplineElement.getAsJsonObject();
+                String disciplineName = discipline.get("discipline").getAsString();
+                if (StringUtils.isNotEmpty(disciplineName)) {
+                    this.addCreditsLine(Component.literal(disciplineName).withStyle(ChatFormatting.YELLOW), true, true);
                     this.addEmptyLine();
                     this.addEmptyLine();
                 }
 
-                for (JsonElement jsonelement2 : jsonobject1.getAsJsonArray("titles")) {
-                    JsonObject jsonobject2 = jsonelement2.getAsJsonObject();
-                    String s2 = jsonobject2.get("title").getAsString();
-                    JsonArray jsonarray = jsonobject2.getAsJsonArray("names");
-                    this.addCreditsLine(Component.literal(s2).withStyle(ChatFormatting.GRAY), false, true);
+                for (JsonElement titleElement : discipline.getAsJsonArray("titles")) {
+                    JsonObject title = titleElement.getAsJsonObject();
+                    String titleName = title.get("title").getAsString();
+                    JsonArray names = title.getAsJsonArray("names");
+                    this.addCreditsLine(Component.literal(titleName).withStyle(ChatFormatting.GRAY), false, true);
 
-                    for (JsonElement jsonelement3 : jsonarray) {
-                        String s3 = jsonelement3.getAsString();
-                        this.addCreditsLine(Component.literal("           ").append(s3).withStyle(ChatFormatting.WHITE), false, true);
+                    for (JsonElement nameElement : names) {
+                        String name = nameElement.getAsString();
+                        this.addCreditsLine(Component.literal("           ").append(name).withStyle(ChatFormatting.WHITE), false, true);
                     }
 
                     this.addEmptyLine();
@@ -226,83 +225,83 @@ public class WinScreen extends Screen {
         this.narratorComponents.add(CommonComponents.EMPTY);
     }
 
-    private void addPoemLines(String p_181398_) {
-        Component component = Component.literal(p_181398_);
+    private void addPoemLines(final String line) {
+        Component component = Component.literal(line);
         this.lines.addAll(this.minecraft.font.split(component, 256));
         this.narratorComponents.add(component);
     }
 
-    private void addCreditsLine(Component p_169473_, boolean p_169474_, boolean p_406104_) {
-        if (p_169474_) {
+    private void addCreditsLine(final Component line, final boolean centered, final boolean narrated) {
+        if (centered) {
             this.centeredLines.add(this.lines.size());
         }
 
-        this.lines.add(p_169473_.getVisualOrderText());
-        if (p_406104_) {
-            this.narratorComponents.add(p_169473_);
+        this.lines.add(line.getVisualOrderText());
+        if (narrated) {
+            this.narratorComponents.add(line);
         }
     }
 
     @Override
-    public void render(GuiGraphics p_281907_, int p_282364_, int p_282696_, float p_281316_) {
-        super.render(p_281907_, p_282364_, p_282696_, p_281316_);
-        this.renderVignette(p_281907_);
-        this.scroll = Math.max(0.0F, this.scroll + p_281316_ * this.scrollSpeed);
-        int i = this.width / 2 - 128;
-        int j = this.height + 50;
-        float f = -this.scroll;
-        p_281907_.pose().pushMatrix();
-        p_281907_.pose().translate(0.0F, f);
-        p_281907_.nextStratum();
-        this.logoRenderer.renderLogo(p_281907_, this.width, 1.0F, j);
-        int k = j + 100;
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        this.extractVignette(graphics);
+        this.scroll = Math.max(0.0F, this.scroll + a * this.scrollSpeed);
+        int logoX = this.width / 2 - 128;
+        int logoY = this.height + 50;
+        float yOffs = -this.scroll;
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(0.0F, yOffs);
+        graphics.nextStratum();
+        this.logoRenderer.extractRenderState(graphics, this.width, 1.0F, logoY);
+        int yPos = logoY + 100;
 
-        for (int l = 0; l < this.lines.size(); l++) {
-            if (l == this.lines.size() - 1) {
-                float f1 = k + f - (this.height / 2 - 6);
-                if (f1 < 0.0F) {
-                    p_281907_.pose().translate(0.0F, -f1);
+        for (int i = 0; i < this.lines.size(); i++) {
+            if (i == this.lines.size() - 1) {
+                float diff = yPos + yOffs - (this.height / 2 - 6);
+                if (diff < 0.0F) {
+                    graphics.pose().translate(0.0F, -diff);
                 }
             }
 
-            if (k + f + 12.0F + 8.0F > 0.0F && k + f < this.height) {
-                FormattedCharSequence formattedcharsequence = this.lines.get(l);
-                if (this.centeredLines.contains(l)) {
-                    p_281907_.drawCenteredString(this.font, formattedcharsequence, i + 128, k, -1);
+            if (yPos + yOffs + 12.0F + 8.0F > 0.0F && yPos + yOffs < this.height) {
+                FormattedCharSequence line = this.lines.get(i);
+                if (this.centeredLines.contains(i)) {
+                    graphics.centeredText(this.font, line, logoX + 128, yPos, -1);
                 } else {
-                    p_281907_.drawString(this.font, formattedcharsequence, i, k, -1);
+                    graphics.text(this.font, line, logoX, yPos, -1);
                 }
             }
 
-            k += 12;
+            yPos += 12;
         }
 
-        p_281907_.pose().popMatrix();
+        graphics.pose().popMatrix();
     }
 
-    private void renderVignette(GuiGraphics p_330215_) {
-        p_330215_.blit(RenderPipelines.VIGNETTE, VIGNETTE_LOCATION, 0, 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
+    private void extractVignette(final GuiGraphicsExtractor graphics) {
+        graphics.blit(RenderPipelines.VIGNETTE, VIGNETTE_LOCATION, 0, 0, 0.0F, 0.0F, this.width, this.height, this.width, this.height);
     }
 
     @Override
-    public void renderBackground(GuiGraphics p_282239_, int p_298581_, int p_297654_, float p_300743_) {
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
         if (this.poem) {
-            TextureManager texturemanager = Minecraft.getInstance().getTextureManager();
-            AbstractTexture abstracttexture = texturemanager.getTexture(AbstractEndPortalRenderer.END_SKY_LOCATION);
-            AbstractTexture abstracttexture1 = texturemanager.getTexture(AbstractEndPortalRenderer.END_PORTAL_LOCATION);
-            TextureSetup texturesetup = TextureSetup.doubleTexture(
-                abstracttexture.getTextureView(), abstracttexture.getSampler(), abstracttexture1.getTextureView(), abstracttexture1.getSampler()
+            TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+            AbstractTexture skyTexture = textureManager.getTexture(AbstractEndPortalRenderer.END_SKY_LOCATION);
+            AbstractTexture portalTexture = textureManager.getTexture(AbstractEndPortalRenderer.END_PORTAL_LOCATION);
+            TextureSetup textureSetup = TextureSetup.doubleTexture(
+                skyTexture.getTextureView(), skyTexture.getSampler(), portalTexture.getTextureView(), portalTexture.getSampler()
             );
-            p_282239_.fill(RenderPipelines.END_PORTAL, texturesetup, 0, 0, this.width, this.height);
+            graphics.fill(RenderPipelines.END_PORTAL, textureSetup, 0, 0, this.width, this.height);
         } else {
-            super.renderBackground(p_282239_, p_298581_, p_297654_, p_300743_);
+            super.extractBackground(graphics, mouseX, mouseY, a);
         }
     }
 
     @Override
-    protected void renderMenuBackground(GuiGraphics p_335873_, int p_330470_, int p_334347_, int p_334935_, int p_329161_) {
-        float f = this.scroll * 0.5F;
-        Screen.renderMenuBackgroundTexture(p_335873_, Screen.MENU_BACKGROUND, 0, 0, 0.0F, f, p_334935_, p_329161_);
+    protected void extractMenuBackground(final GuiGraphicsExtractor graphics, final int x, final int y, final int width, final int height) {
+        float v = this.scroll * 0.5F;
+        Screen.extractMenuBackgroundTexture(graphics, Screen.MENU_BACKGROUND, 0, 0, 0.0F, v, width, height);
     }
 
     @Override
@@ -326,8 +325,7 @@ public class WinScreen extends Screen {
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    interface CreditsReader {
-        void read(Reader p_232822_) throws IOException;
+        private interface CreditsReader {
+        void read(final Reader reader) throws IOException;
     }
 }

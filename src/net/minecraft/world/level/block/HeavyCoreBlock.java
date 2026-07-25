@@ -24,8 +24,8 @@ public class HeavyCoreBlock extends Block implements SimpleWaterloggedBlock {
     public static final BooleanProperty WATERLOGGED = BlockStateProperties.WATERLOGGED;
     private static final VoxelShape SHAPE = Block.column(8.0, 0.0, 8.0);
 
-    public HeavyCoreBlock(BlockBehaviour.Properties p_329842_) {
-        super(p_329842_);
+    public HeavyCoreBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(WATERLOGGED, false));
     }
 
@@ -35,46 +35,46 @@ public class HeavyCoreBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_329416_) {
-        p_329416_.add(WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(WATERLOGGED);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_328906_,
-        LevelReader p_364383_,
-        ScheduledTickAccess p_369439_,
-        BlockPos p_330469_,
-        Direction p_334684_,
-        BlockPos p_331798_,
-        BlockState p_330097_,
-        RandomSource p_366968_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_328906_.getValue(WATERLOGGED)) {
-            p_369439_.scheduleTick(p_330469_, Fluids.WATER, Fluids.WATER.getTickDelay(p_364383_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_328906_, p_364383_, p_369439_, p_330469_, p_334684_, p_331798_, p_330097_, p_366968_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_331726_) {
-        return p_331726_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_331726_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_336134_) {
-        FluidState fluidstate = p_336134_.getLevel().getFluidState(p_336134_.getClickedPos());
-        return this.defaultBlockState().setValue(WATERLOGGED, fluidstate.is(Fluids.WATER));
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        return this.defaultBlockState().setValue(WATERLOGGED, replacedFluidState.is(Fluids.WATER));
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_328321_, BlockGetter p_329138_, BlockPos p_335327_, CollisionContext p_331838_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_335703_, PathComputationType p_334121_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

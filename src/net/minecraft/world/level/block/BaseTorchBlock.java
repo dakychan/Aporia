@@ -15,36 +15,36 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 public abstract class BaseTorchBlock extends Block {
     private static final VoxelShape SHAPE = Block.column(4.0, 0.0, 10.0);
 
-    protected BaseTorchBlock(BlockBehaviour.Properties p_310835_) {
-        super(p_310835_);
+    protected BaseTorchBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
     protected abstract MapCodec<? extends BaseTorchBlock> codec();
 
     @Override
-    protected VoxelShape getShape(BlockState p_310927_, BlockGetter p_313227_, BlockPos p_311676_, CollisionContext p_310238_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_311008_,
-        LevelReader p_368861_,
-        ScheduledTickAccess p_362825_,
-        BlockPos p_313113_,
-        Direction p_310059_,
-        BlockPos p_312310_,
-        BlockState p_312601_,
-        RandomSource p_367825_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        return p_310059_ == Direction.DOWN && !this.canSurvive(p_311008_, p_368861_, p_313113_)
+        return directionToNeighbour == Direction.DOWN && !this.canSurvive(state, level, pos)
             ? Blocks.AIR.defaultBlockState()
-            : super.updateShape(p_311008_, p_368861_, p_362825_, p_313113_, p_310059_, p_312310_, p_312601_, p_367825_);
+            : super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_309766_, LevelReader p_313035_, BlockPos p_311995_) {
-        return canSupportCenter(p_313035_, p_311995_.below(), Direction.UP);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        return canSupportCenter(level, pos.below(), Direction.UP);
     }
 }

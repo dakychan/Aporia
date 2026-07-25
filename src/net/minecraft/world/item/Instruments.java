@@ -23,25 +23,29 @@ public interface Instruments {
     ResourceKey<Instrument> YEARN_GOAT_HORN = create("yearn_goat_horn");
     ResourceKey<Instrument> DREAM_GOAT_HORN = create("dream_goat_horn");
 
-    private static ResourceKey<Instrument> create(String p_220151_) {
-        return ResourceKey.create(Registries.INSTRUMENT, Identifier.withDefaultNamespace(p_220151_));
+    private static ResourceKey<Instrument> create(final String id) {
+        return ResourceKey.create(Registries.INSTRUMENT, Identifier.withDefaultNamespace(id));
     }
 
-    static void bootstrap(BootstrapContext<Instrument> p_370056_) {
-        register(p_370056_, PONDER_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(0), 7.0F, 256.0F);
-        register(p_370056_, SING_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(1), 7.0F, 256.0F);
-        register(p_370056_, SEEK_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(2), 7.0F, 256.0F);
-        register(p_370056_, FEEL_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(3), 7.0F, 256.0F);
-        register(p_370056_, ADMIRE_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(4), 7.0F, 256.0F);
-        register(p_370056_, CALL_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(5), 7.0F, 256.0F);
-        register(p_370056_, YEARN_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(6), 7.0F, 256.0F);
-        register(p_370056_, DREAM_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(7), 7.0F, 256.0F);
+    static void bootstrap(final BootstrapContext<Instrument> context) {
+        register(context, PONDER_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(0), 7.0F, 256.0F);
+        register(context, SING_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(1), 7.0F, 256.0F);
+        register(context, SEEK_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(2), 7.0F, 256.0F);
+        register(context, FEEL_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(3), 7.0F, 256.0F);
+        register(context, ADMIRE_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(4), 7.0F, 256.0F);
+        register(context, CALL_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(5), 7.0F, 256.0F);
+        register(context, YEARN_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(6), 7.0F, 256.0F);
+        register(context, DREAM_GOAT_HORN, SoundEvents.GOAT_HORN_SOUND_VARIANTS.get(7), 7.0F, 256.0F);
     }
 
     static void register(
-        BootstrapContext<Instrument> p_366009_, ResourceKey<Instrument> p_367901_, Holder<SoundEvent> p_369036_, float p_369630_, float p_363386_
+        final BootstrapContext<Instrument> context,
+        final ResourceKey<Instrument> key,
+        final Holder<SoundEvent> soundEvent,
+        final float duration,
+        final float range
     ) {
-        MutableComponent mutablecomponent = Component.translatable(Util.makeDescriptionId("instrument", p_367901_.identifier()));
-        p_366009_.register(p_367901_, new Instrument(p_369036_, p_369630_, p_363386_, mutablecomponent));
+        MutableComponent description = Component.translatable(Util.makeDescriptionId("instrument", key.identifier()));
+        context.register(key, new Instrument(soundEvent, duration, range, description));
     }
 }

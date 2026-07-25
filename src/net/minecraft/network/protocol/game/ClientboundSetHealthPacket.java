@@ -13,22 +13,22 @@ public class ClientboundSetHealthPacket implements Packet<ClientGamePacketListen
     private final int food;
     private final float saturation;
 
-    public ClientboundSetHealthPacket(float p_133238_, int p_133239_, float p_133240_) {
-        this.health = p_133238_;
-        this.food = p_133239_;
-        this.saturation = p_133240_;
+    public ClientboundSetHealthPacket(final float health, final int food, final float saturation) {
+        this.health = health;
+        this.food = food;
+        this.saturation = saturation;
     }
 
-    private ClientboundSetHealthPacket(FriendlyByteBuf p_179301_) {
-        this.health = p_179301_.readFloat();
-        this.food = p_179301_.readVarInt();
-        this.saturation = p_179301_.readFloat();
+    private ClientboundSetHealthPacket(final FriendlyByteBuf input) {
+        this.health = input.readFloat();
+        this.food = input.readVarInt();
+        this.saturation = input.readFloat();
     }
 
-    private void write(FriendlyByteBuf p_133249_) {
-        p_133249_.writeFloat(this.health);
-        p_133249_.writeVarInt(this.food);
-        p_133249_.writeFloat(this.saturation);
+    private void write(final FriendlyByteBuf output) {
+        output.writeFloat(this.health);
+        output.writeVarInt(this.food);
+        output.writeFloat(this.saturation);
     }
 
     @Override
@@ -36,8 +36,8 @@ public class ClientboundSetHealthPacket implements Packet<ClientGamePacketListen
         return GamePacketTypes.CLIENTBOUND_SET_HEALTH;
     }
 
-    public void handle(ClientGamePacketListener p_133246_) {
-        p_133246_.handleSetHealth(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetHealth(this);
     }
 
     public float getHealth() {

@@ -15,58 +15,57 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.PlayerSkin;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.equipment.Equippable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class WingsLayer<S extends HumanoidRenderState, M extends EntityModel<S>> extends RenderLayer<S, M> {
     private final ElytraModel elytraModel;
     private final ElytraModel elytraBabyModel;
     private final EquipmentLayerRenderer equipmentRenderer;
 
-    public WingsLayer(RenderLayerParent<S, M> p_366720_, EntityModelSet p_369504_, EquipmentLayerRenderer p_361718_) {
-        super(p_366720_);
-        this.elytraModel = new ElytraModel(p_369504_.bakeLayer(ModelLayers.ELYTRA));
-        this.elytraBabyModel = new ElytraModel(p_369504_.bakeLayer(ModelLayers.ELYTRA_BABY));
-        this.equipmentRenderer = p_361718_;
+    public WingsLayer(final RenderLayerParent<S, M> renderer, final EntityModelSet modelSet, final EquipmentLayerRenderer equipmentRenderer) {
+        super(renderer);
+        this.elytraModel = new ElytraModel(modelSet.bakeLayer(ModelLayers.ELYTRA));
+        this.elytraBabyModel = new ElytraModel(modelSet.bakeLayer(ModelLayers.ELYTRA_BABY));
+        this.equipmentRenderer = equipmentRenderer;
     }
 
-    public void submit(PoseStack p_423573_, SubmitNodeCollector p_430991_, int p_423681_, S p_424203_, float p_425267_, float p_425536_) {
-        ItemStack itemstack = p_424203_.chestEquipment;
-        Equippable equippable = itemstack.get(DataComponents.EQUIPPABLE);
+    public void submit(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final S state, final float yRot, final float xRot
+    ) {
+        ItemStack itemStack = state.chestEquipment;
+        Equippable equippable = itemStack.get(DataComponents.EQUIPPABLE);
         if (equippable != null && !equippable.assetId().isEmpty()) {
-            Identifier identifier = getPlayerElytraTexture(p_424203_);
-            ElytraModel elytramodel = p_424203_.isBaby ? this.elytraBabyModel : this.elytraModel;
-            p_423573_.pushPose();
-            p_423573_.translate(0.0F, 0.0F, 0.125F);
+            Identifier playerElytraTexture = getPlayerElytraTexture(state);
+            ElytraModel model = state.isBaby ? this.elytraBabyModel : this.elytraModel;
+            poseStack.pushPose();
+            poseStack.translate(0.0F, 0.0F, 0.125F);
             this.equipmentRenderer
                 .renderLayers(
                     EquipmentClientInfo.LayerType.WINGS,
                     equippable.assetId().get(),
-                    elytramodel,
-                    p_424203_,
-                    itemstack,
-                    p_423573_,
-                    p_430991_,
-                    p_423681_,
-                    identifier,
-                    p_424203_.outlineColor,
+                    model,
+                    state,
+                    itemStack,
+                    poseStack,
+                    submitNodeCollector,
+                    lightCoords,
+                    playerElytraTexture,
+                    state.outlineColor,
                     0
                 );
-            p_423573_.popPose();
+            poseStack.popPose();
         }
     }
 
-    private static @Nullable Identifier getPlayerElytraTexture(HumanoidRenderState p_364125_) {
-        if (p_364125_ instanceof AvatarRenderState avatarrenderstate) {
-            PlayerSkin playerskin = avatarrenderstate.skin;
-            if (playerskin.elytra() != null) {
-                return playerskin.elytra().texturePath();
+    private static @Nullable Identifier getPlayerElytraTexture(final HumanoidRenderState state) {
+        if (state instanceof AvatarRenderState playerState) {
+            PlayerSkin skin = playerState.skin;
+            if (skin.elytra() != null) {
+                return skin.elytra().texturePath();
             }
 
-            if (playerskin.cape() != null && avatarrenderstate.showCape) {
-                return playerskin.cape().texturePath();
+            if (skin.cape() != null && playerState.showCape) {
+                return skin.cape().texturePath();
             }
         }
 

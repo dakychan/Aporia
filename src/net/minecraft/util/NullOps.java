@@ -20,11 +20,11 @@ import org.jspecify.annotations.Nullable;
 public class NullOps implements DynamicOps<Unit> {
     public static final NullOps INSTANCE = new NullOps();
     private static final MapLike<Unit> EMPTY_MAP = new MapLike<Unit>() {
-        public @Nullable Unit get(Unit p_425279_) {
+        public @Nullable Unit get(final Unit key) {
             return null;
         }
 
-        public @Nullable Unit get(String p_427611_) {
+        public @Nullable Unit get(final String key) {
             return null;
         }
 
@@ -37,8 +37,8 @@ public class NullOps implements DynamicOps<Unit> {
     private NullOps() {
     }
 
-    public <U> U convertTo(DynamicOps<U> p_335263_, Unit p_330577_) {
-        return p_335263_.empty();
+    public <U> U convertTo(final DynamicOps<U> outOps, final Unit input) {
+        return outOps.empty();
     }
 
     public Unit empty() {
@@ -53,132 +53,132 @@ public class NullOps implements DynamicOps<Unit> {
         return Unit.INSTANCE;
     }
 
-    public Unit createNumeric(Number p_333368_) {
+    public Unit createNumeric(final Number value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createByte(byte p_332993_) {
+    public Unit createByte(final byte value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createShort(short p_327812_) {
+    public Unit createShort(final short value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createInt(int p_336243_) {
+    public Unit createInt(final int value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createLong(long p_332190_) {
+    public Unit createLong(final long value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createFloat(float p_328652_) {
+    public Unit createFloat(final float value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createDouble(double p_329743_) {
+    public Unit createDouble(final double value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createBoolean(boolean p_332728_) {
+    public Unit createBoolean(final boolean value) {
         return Unit.INSTANCE;
     }
 
-    public Unit createString(String p_331594_) {
+    public Unit createString(final String value) {
         return Unit.INSTANCE;
     }
 
-    public DataResult<Number> getNumberValue(Unit p_331567_) {
+    public DataResult<Number> getNumberValue(final Unit input) {
         return DataResult.success(0);
     }
 
-    public DataResult<Boolean> getBooleanValue(Unit p_330383_) {
+    public DataResult<Boolean> getBooleanValue(final Unit input) {
         return DataResult.success(false);
     }
 
-    public DataResult<String> getStringValue(Unit p_328159_) {
+    public DataResult<String> getStringValue(final Unit input) {
         return DataResult.success("");
     }
 
-    public DataResult<Unit> mergeToList(Unit p_332194_, Unit p_331336_) {
+    public DataResult<Unit> mergeToList(final Unit input, final Unit value) {
         return DataResult.success(Unit.INSTANCE);
     }
 
-    public DataResult<Unit> mergeToList(Unit p_330584_, List<Unit> p_335250_) {
+    public DataResult<Unit> mergeToList(final Unit input, final List<Unit> values) {
         return DataResult.success(Unit.INSTANCE);
     }
 
-    public DataResult<Unit> mergeToMap(Unit p_328865_, Unit p_336101_, Unit p_328794_) {
+    public DataResult<Unit> mergeToMap(final Unit input, final Unit key, final Unit value) {
         return DataResult.success(Unit.INSTANCE);
     }
 
-    public DataResult<Unit> mergeToMap(Unit p_332909_, Map<Unit, Unit> p_336158_) {
+    public DataResult<Unit> mergeToMap(final Unit input, final Map<Unit, Unit> values) {
         return DataResult.success(Unit.INSTANCE);
     }
 
-    public DataResult<Unit> mergeToMap(Unit p_332286_, MapLike<Unit> p_332604_) {
+    public DataResult<Unit> mergeToMap(final Unit input, final MapLike<Unit> values) {
         return DataResult.success(Unit.INSTANCE);
     }
 
-    public DataResult<Stream<Pair<Unit, Unit>>> getMapValues(Unit p_332179_) {
+    public DataResult<Stream<Pair<Unit, Unit>>> getMapValues(final Unit input) {
         return DataResult.success(Stream.empty());
     }
 
-    public DataResult<Consumer<BiConsumer<Unit, Unit>>> getMapEntries(Unit p_328934_) {
-        return DataResult.success(p_421538_ -> {});
+    public DataResult<Consumer<BiConsumer<Unit, Unit>>> getMapEntries(final Unit input) {
+        return DataResult.success(consumer -> {});
     }
 
-    public DataResult<MapLike<Unit>> getMap(Unit p_335542_) {
+    public DataResult<MapLike<Unit>> getMap(final Unit input) {
         return DataResult.success(EMPTY_MAP);
     }
 
-    public DataResult<Stream<Unit>> getStream(Unit p_332123_) {
+    public DataResult<Stream<Unit>> getStream(final Unit input) {
         return DataResult.success(Stream.empty());
     }
 
-    public DataResult<Consumer<Consumer<Unit>>> getList(Unit p_333959_) {
-        return DataResult.success(p_421537_ -> {});
+    public DataResult<Consumer<Consumer<Unit>>> getList(final Unit input) {
+        return DataResult.success(consumer -> {});
     }
 
-    public DataResult<ByteBuffer> getByteBuffer(Unit p_334054_) {
+    public DataResult<ByteBuffer> getByteBuffer(final Unit input) {
         return DataResult.success(ByteBuffer.wrap(new byte[0]));
     }
 
-    public DataResult<IntStream> getIntStream(Unit p_328303_) {
+    public DataResult<IntStream> getIntStream(final Unit input) {
         return DataResult.success(IntStream.empty());
     }
 
-    public DataResult<LongStream> getLongStream(Unit p_331380_) {
+    public DataResult<LongStream> getLongStream(final Unit input) {
         return DataResult.success(LongStream.empty());
     }
 
-    public Unit createMap(Stream<Pair<Unit, Unit>> p_334610_) {
+    public Unit createMap(final Stream<Pair<Unit, Unit>> map) {
         return Unit.INSTANCE;
     }
 
-    public Unit createMap(Map<Unit, Unit> p_333052_) {
+    public Unit createMap(final Map<Unit, Unit> map) {
         return Unit.INSTANCE;
     }
 
-    public Unit createList(Stream<Unit> p_335375_) {
+    public Unit createList(final Stream<Unit> input) {
         return Unit.INSTANCE;
     }
 
-    public Unit createByteList(ByteBuffer p_333560_) {
+    public Unit createByteList(final ByteBuffer input) {
         return Unit.INSTANCE;
     }
 
-    public Unit createIntList(IntStream p_329926_) {
+    public Unit createIntList(final IntStream input) {
         return Unit.INSTANCE;
     }
 
-    public Unit createLongList(LongStream p_333189_) {
+    public Unit createLongList(final LongStream input) {
         return Unit.INSTANCE;
     }
 
-    public Unit remove(Unit p_333113_, String p_328025_) {
-        return p_333113_;
+    public Unit remove(final Unit input, final String key) {
+        return input;
     }
 
     @Override
@@ -196,39 +196,39 @@ public class NullOps implements DynamicOps<Unit> {
         return "Null";
     }
 
-    static final class NullListBuilder extends AbstractListBuilder<Unit, Unit> {
-        public NullListBuilder(DynamicOps<Unit> p_392874_) {
-            super(p_392874_);
+    private static final class NullListBuilder extends AbstractListBuilder<Unit, Unit> {
+        public NullListBuilder(final DynamicOps<Unit> ops) {
+            super(ops);
         }
 
         protected Unit initBuilder() {
             return Unit.INSTANCE;
         }
 
-        protected Unit append(Unit p_394704_, Unit p_393865_) {
-            return p_394704_;
+        protected Unit append(final Unit builder, final Unit value) {
+            return builder;
         }
 
-        protected DataResult<Unit> build(Unit p_393712_, Unit p_394766_) {
-            return DataResult.success(p_393712_);
+        protected DataResult<Unit> build(final Unit builder, final Unit prefix) {
+            return DataResult.success(builder);
         }
     }
 
-    static final class NullMapBuilder extends AbstractUniversalBuilder<Unit, Unit> {
-        public NullMapBuilder(DynamicOps<Unit> p_334750_) {
-            super(p_334750_);
+    private static final class NullMapBuilder extends AbstractUniversalBuilder<Unit, Unit> {
+        public NullMapBuilder(final DynamicOps<Unit> ops) {
+            super(ops);
         }
 
         protected Unit initBuilder() {
             return Unit.INSTANCE;
         }
 
-        protected Unit append(Unit p_332704_, Unit p_328574_, Unit p_333872_) {
-            return p_333872_;
+        protected Unit append(final Unit key, final Unit value, final Unit builder) {
+            return builder;
         }
 
-        protected DataResult<Unit> build(Unit p_327742_, Unit p_335216_) {
-            return DataResult.success(p_335216_);
+        protected DataResult<Unit> build(final Unit builder, final Unit prefix) {
+            return DataResult.success(prefix);
         }
     }
 }

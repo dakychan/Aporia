@@ -45,15 +45,15 @@ public class LeavesFix extends DataFix {
     private static final int DECAY_DISTANCE = 7;
     private static final int SIZE_BITS = 12;
     private static final int SIZE = 4096;
-    static final Object2IntMap<String> LEAVES = DataFixUtils.make(new Object2IntOpenHashMap<>(), p_16235_ -> {
-        p_16235_.put("minecraft:acacia_leaves", 0);
-        p_16235_.put("minecraft:birch_leaves", 1);
-        p_16235_.put("minecraft:dark_oak_leaves", 2);
-        p_16235_.put("minecraft:jungle_leaves", 3);
-        p_16235_.put("minecraft:oak_leaves", 4);
-        p_16235_.put("minecraft:spruce_leaves", 5);
+    private static final Object2IntMap<String> LEAVES = DataFixUtils.make(new Object2IntOpenHashMap<>(), map -> {
+        map.put("minecraft:acacia_leaves", 0);
+        map.put("minecraft:birch_leaves", 1);
+        map.put("minecraft:dark_oak_leaves", 2);
+        map.put("minecraft:jungle_leaves", 3);
+        map.put("minecraft:oak_leaves", 4);
+        map.put("minecraft:spruce_leaves", 5);
     });
-    static final Set<String> LOGS = ImmutableSet.of(
+    private static final Set<String> LOGS = ImmutableSet.of(
         "minecraft:acacia_bark",
         "minecraft:birch_bark",
         "minecraft:dark_oak_bark",
@@ -74,161 +74,155 @@ public class LeavesFix extends DataFix {
         "minecraft:stripped_spruce_log"
     );
 
-    public LeavesFix(Schema p_16205_, boolean p_16206_) {
-        super(p_16205_, p_16206_);
+    public LeavesFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.CHUNK);
-        OpticFinder<?> opticfinder = type.findField("Level");
-        OpticFinder<?> opticfinder1 = opticfinder.type().findField("Sections");
-        Type<?> type1 = opticfinder1.type();
-        if (!(type1 instanceof ListType)) {
+        Type<?> chunkType = this.getInputSchema().getType(References.CHUNK);
+        OpticFinder<?> levelFinder = chunkType.findField("Level");
+        OpticFinder<?> sectionsFinder = levelFinder.type().findField("Sections");
+        Type<?> sectionsType = sectionsFinder.type();
+        if (!(sectionsType instanceof ListType)) {
             throw new IllegalStateException("Expecting sections to be a list.");
-        } else {
-            Type<?> type2 = ((ListType)type1).getElement();
-            OpticFinder<?> opticfinder2 = DSL.typeFinder(type2);
-            return this.fixTypeEverywhereTyped(
-                "Leaves fix",
-                type,
-                p_16220_ -> p_16220_.updateTyped(
-                    opticfinder,
-                    p_145461_ -> {
-                        int[] aint = new int[]{0};
-                        Typed<?> typed = p_145461_.updateTyped(
-                            opticfinder1,
-                            p_145465_ -> {
-                                Int2ObjectMap<LeavesFix.LeavesSection> int2objectmap = new Int2ObjectOpenHashMap<>(
-                                    p_145465_.getAllTyped(opticfinder2)
-                                        .stream()
-                                        .map(p_145467_ -> new LeavesFix.LeavesSection((Typed<?>)p_145467_, this.getInputSchema()))
-                                        .collect(Collectors.toMap(LeavesFix.Section::getIndex, p_145457_ -> (LeavesFix.LeavesSection)p_145457_))
-                                );
-                                if (int2objectmap.values().stream().allMatch(LeavesFix.Section::isSkippable)) {
-                                    return p_145465_;
-                                } else {
-                                    List<IntSet> list = Lists.newArrayList();
+        }
 
-                                    for (int i = 0; i < 7; i++) {
-                                        list.add(new IntOpenHashSet());
-                                    }
+        Type<?> sectionType = ((ListType)sectionsType).getElement();
+        OpticFinder<?> sectionFinder = DSL.typeFinder(sectionType);
+        return this.fixTypeEverywhereTyped(
+            "Leaves fix",
+            chunkType,
+            chunk -> chunk.updateTyped(
+                levelFinder,
+                level -> {
+                    int[] sides = new int[]{0};
+                    Typed<?> newLevel = level.updateTyped(
+                        sectionsFinder,
+                        sections -> {
+                            Int2ObjectMap<LeavesFix.LeavesSection> sectionMap = new Int2ObjectOpenHashMap<>(
+                                sections.getAllTyped(sectionFinder)
+                                    .stream()
+                                    .map(sectionx -> new LeavesFix.LeavesSection(sectionx, this.getInputSchema()))
+                                    .collect(Collectors.toMap(LeavesFix.Section::getIndex, s -> (LeavesFix.LeavesSection)s))
+                            );
+                            if (sectionMap.values().stream().allMatch(LeavesFix.Section::isSkippable)) {
+                                return sections;
+                            }
 
-                                    for (LeavesFix.LeavesSection leavesfix$leavessection : int2objectmap.values()) {
-                                        if (!leavesfix$leavessection.isSkippable()) {
-                                            for (int j = 0; j < 4096; j++) {
-                                                int k = leavesfix$leavessection.getBlock(j);
-                                                if (leavesfix$leavessection.isLog(k)) {
-                                                    list.get(0).add(leavesfix$leavessection.getIndex() << 12 | j);
-                                                } else if (leavesfix$leavessection.isLeaf(k)) {
-                                                    int l = this.getX(j);
-                                                    int i1 = this.getZ(j);
-                                                    aint[0] |= getSideMask(l == 0, l == 15, i1 == 0, i1 == 15);
-                                                }
-                                            }
+                            List<IntSet> queue = Lists.newArrayList();
+
+                            for (int i = 0; i < 7; i++) {
+                                queue.add(new IntOpenHashSet());
+                            }
+
+                            for (LeavesFix.LeavesSection section : sectionMap.values()) {
+                                if (!section.isSkippable()) {
+                                    for (int i = 0; i < 4096; i++) {
+                                        int block = section.getBlock(i);
+                                        if (section.isLog(block)) {
+                                            queue.get(0).add(section.getIndex() << 12 | i);
+                                        } else if (section.isLeaf(block)) {
+                                            int x = this.getX(i);
+                                            int z = this.getZ(i);
+                                            sides[0] |= getSideMask(x == 0, x == 15, z == 0, z == 15);
                                         }
                                     }
+                                }
+                            }
 
-                                    for (int j3 = 1; j3 < 7; j3++) {
-                                        IntSet intset = list.get(j3 - 1);
-                                        IntSet intset1 = list.get(j3);
-                                        IntIterator intiterator = intset.iterator();
+                            for (int i = 1; i < 7; i++) {
+                                IntSet set = queue.get(i - 1);
+                                IntSet newSet = queue.get(i);
+                                IntIterator iterator = set.iterator();
 
-                                        while (intiterator.hasNext()) {
-                                            int k3 = intiterator.nextInt();
-                                            int l3 = this.getX(k3);
-                                            int j1 = this.getY(k3);
-                                            int k1 = this.getZ(k3);
+                                while (iterator.hasNext()) {
+                                    int posChunk = iterator.nextInt();
+                                    int x = this.getX(posChunk);
+                                    int y = this.getY(posChunk);
+                                    int z = this.getZ(posChunk);
 
-                                            for (int[] aint1 : DIRECTIONS) {
-                                                int l1 = l3 + aint1[0];
-                                                int i2 = j1 + aint1[1];
-                                                int j2 = k1 + aint1[2];
-                                                if (l1 >= 0 && l1 <= 15 && j2 >= 0 && j2 <= 15 && i2 >= 0 && i2 <= 255) {
-                                                    LeavesFix.LeavesSection leavesfix$leavessection1 = int2objectmap.get(i2 >> 4);
-                                                    if (leavesfix$leavessection1 != null && !leavesfix$leavessection1.isSkippable()) {
-                                                        int k2 = getIndex(l1, i2 & 15, j2);
-                                                        int l2 = leavesfix$leavessection1.getBlock(k2);
-                                                        if (leavesfix$leavessection1.isLeaf(l2)) {
-                                                            int i3 = leavesfix$leavessection1.getDistance(l2);
-                                                            if (i3 > j3) {
-                                                                leavesfix$leavessection1.setDistance(k2, l2, j3);
-                                                                intset1.add(getIndex(l1, i2, j2));
-                                                            }
-                                                        }
+                                    for (int[] direction : DIRECTIONS) {
+                                        int nx = x + direction[0];
+                                        int nyChunk = y + direction[1];
+                                        int nz = z + direction[2];
+                                        if (nx >= 0 && nx <= 15 && nz >= 0 && nz <= 15 && nyChunk >= 0 && nyChunk <= 255) {
+                                            LeavesFix.LeavesSection section = sectionMap.get(nyChunk >> 4);
+                                            if (section != null && !section.isSkippable()) {
+                                                int posSection = getIndex(nx, nyChunk & 15, nz);
+                                                int block = section.getBlock(posSection);
+                                                if (section.isLeaf(block)) {
+                                                    int oldDistance = section.getDistance(block);
+                                                    if (oldDistance > i) {
+                                                        section.setDistance(posSection, block, i);
+                                                        newSet.add(getIndex(nx, nyChunk, nz));
                                                     }
                                                 }
                                             }
                                         }
                                     }
-
-                                    return p_145465_.updateTyped(
-                                        opticfinder2,
-                                        p_145470_ -> int2objectmap.get(p_145470_.get(DSL.remainderFinder()).get("Y").asInt(0)).write(p_145470_)
-                                    );
                                 }
                             }
-                        );
-                        if (aint[0] != 0) {
-                            typed = typed.update(
-                                DSL.remainderFinder(),
-                                p_145473_ -> {
-                                    Dynamic<?> dynamic = DataFixUtils.orElse(p_145473_.get("UpgradeData").result(), p_145473_.emptyMap());
-                                    return p_145473_.set(
-                                        "UpgradeData", dynamic.set("Sides", p_145473_.createByte((byte)(dynamic.get("Sides").asByte((byte)0) | aint[0])))
-                                    );
-                                }
+
+                            return sections.updateTyped(
+                                sectionFinder, sectionx -> sectionMap.get(sectionx.get(DSL.remainderFinder()).get("Y").asInt(0)).write(sectionx)
                             );
                         }
-
-                        return typed;
+                    );
+                    if (sides[0] != 0) {
+                        newLevel = newLevel.update(DSL.remainderFinder(), tag -> {
+                            Dynamic<?> upgradeData = DataFixUtils.orElse(tag.get("UpgradeData").result(), tag.emptyMap());
+                            return tag.set("UpgradeData", upgradeData.set("Sides", tag.createByte((byte)(upgradeData.get("Sides").asByte((byte)0) | sides[0]))));
+                        });
                     }
-                )
-            );
-        }
+
+                    return newLevel;
+                }
+            )
+        );
     }
 
-    public static int getIndex(int p_16211_, int p_16212_, int p_16213_) {
-        return p_16212_ << 8 | p_16213_ << 4 | p_16211_;
+    public static int getIndex(final int x, final int y, final int z) {
+        return y << 8 | z << 4 | x;
     }
 
-    private int getX(int p_16209_) {
-        return p_16209_ & 15;
+    private int getX(final int index) {
+        return index & 15;
     }
 
-    private int getY(int p_16246_) {
-        return p_16246_ >> 8 & 0xFF;
+    private int getY(final int index) {
+        return index >> 8 & 0xFF;
     }
 
-    private int getZ(int p_16248_) {
-        return p_16248_ >> 4 & 15;
+    private int getZ(final int index) {
+        return index >> 4 & 15;
     }
 
-    public static int getSideMask(boolean p_16237_, boolean p_16238_, boolean p_16239_, boolean p_16240_) {
-        int i = 0;
-        if (p_16239_) {
-            if (p_16238_) {
-                i |= 2;
-            } else if (p_16237_) {
-                i |= 128;
+    public static int getSideMask(final boolean west, final boolean east, final boolean north, final boolean south) {
+        int s = 0;
+        if (north) {
+            if (east) {
+                s |= 2;
+            } else if (west) {
+                s |= 128;
             } else {
-                i |= 1;
+                s |= 1;
             }
-        } else if (p_16240_) {
-            if (p_16237_) {
-                i |= 32;
-            } else if (p_16238_) {
-                i |= 8;
+        } else if (south) {
+            if (west) {
+                s |= 32;
+            } else if (east) {
+                s |= 8;
             } else {
-                i |= 16;
+                s |= 16;
             }
-        } else if (p_16238_) {
-            i |= 4;
-        } else if (p_16237_) {
-            i |= 64;
+        } else if (east) {
+            s |= 4;
+        } else if (west) {
+            s |= 64;
         }
 
-        return i;
+        return s;
     }
 
     public static final class LeavesSection extends LeavesFix.Section {
@@ -239,8 +233,8 @@ public class LeavesFix extends DataFix {
         private @Nullable IntSet logIds;
         private @Nullable Int2IntMap stateToIdMap;
 
-        public LeavesSection(Typed<?> p_16254_, Schema p_16255_) {
-            super(p_16254_, p_16255_);
+        public LeavesSection(final Typed<?> section, final Schema inputSchema) {
+            super(section, inputSchema);
         }
 
         @Override
@@ -250,16 +244,16 @@ public class LeavesFix extends DataFix {
             this.stateToIdMap = new Int2IntOpenHashMap();
 
             for (int i = 0; i < this.palette.size(); i++) {
-                Dynamic<?> dynamic = this.palette.get(i);
-                String s = dynamic.get("Name").asString("");
-                if (LeavesFix.LEAVES.containsKey(s)) {
-                    boolean flag = Objects.equals(dynamic.get("Properties").get("decayable").asString(""), "false");
+                Dynamic<?> paletteTag = this.palette.get(i);
+                String blockName = paletteTag.get("Name").asString("");
+                if (LeavesFix.LEAVES.containsKey(blockName)) {
+                    boolean persistent = Objects.equals(paletteTag.get("Properties").get("decayable").asString(""), "false");
                     this.leaveIds.add(i);
-                    this.stateToIdMap.put(this.getStateId(s, flag, 7), i);
-                    this.palette.set(i, this.makeLeafTag(dynamic, s, flag, 7));
+                    this.stateToIdMap.put(getStateId(blockName, persistent, 7), i);
+                    this.palette.set(i, this.makeLeafTag(paletteTag, blockName, persistent, 7));
                 }
 
-                if (LeavesFix.LOGS.contains(s)) {
+                if (LeavesFix.LOGS.contains(blockName)) {
                     this.logIds.add(i);
                 }
             }
@@ -267,51 +261,51 @@ public class LeavesFix extends DataFix {
             return this.leaveIds.isEmpty() && this.logIds.isEmpty();
         }
 
-        private Dynamic<?> makeLeafTag(Dynamic<?> p_16272_, String p_16273_, boolean p_16274_, int p_16275_) {
-            Dynamic<?> dynamic = p_16272_.emptyMap();
-            dynamic = dynamic.set("persistent", dynamic.createString(p_16274_ ? "true" : "false"));
-            dynamic = dynamic.set("distance", dynamic.createString(Integer.toString(p_16275_)));
-            Dynamic<?> dynamic1 = p_16272_.emptyMap();
-            dynamic1 = dynamic1.set("Properties", dynamic);
-            return dynamic1.set("Name", dynamic1.createString(p_16273_));
+        private Dynamic<?> makeLeafTag(final Dynamic<?> input, final String blockName, final boolean persistent, final int distance) {
+            Dynamic<?> properties = input.emptyMap();
+            properties = properties.set("persistent", properties.createString(persistent ? "true" : "false"));
+            properties = properties.set("distance", properties.createString(Integer.toString(distance)));
+            Dynamic<?> tag = input.emptyMap();
+            tag = tag.set("Properties", properties);
+            return tag.set("Name", tag.createString(blockName));
         }
 
-        public boolean isLog(int p_16258_) {
-            return this.logIds.contains(p_16258_);
+        public boolean isLog(final int block) {
+            return this.logIds.contains(block);
         }
 
-        public boolean isLeaf(int p_16277_) {
-            return this.leaveIds.contains(p_16277_);
+        public boolean isLeaf(final int block) {
+            return this.leaveIds.contains(block);
         }
 
-        int getDistance(int p_16279_) {
-            return this.isLog(p_16279_) ? 0 : Integer.parseInt(this.palette.get(p_16279_).get("Properties").get("distance").asString(""));
+        private int getDistance(final int block) {
+            return this.isLog(block) ? 0 : Integer.parseInt(this.palette.get(block).get("Properties").get("distance").asString(""));
         }
 
-        void setDistance(int p_16260_, int p_16261_, int p_16262_) {
-            Dynamic<?> dynamic = this.palette.get(p_16261_);
-            String s = dynamic.get("Name").asString("");
-            boolean flag = Objects.equals(dynamic.get("Properties").get("persistent").asString(""), "true");
-            int i = this.getStateId(s, flag, p_16262_);
-            if (!this.stateToIdMap.containsKey(i)) {
-                int j = this.palette.size();
-                this.leaveIds.add(j);
-                this.stateToIdMap.put(i, j);
-                this.palette.add(this.makeLeafTag(dynamic, s, flag, p_16262_));
+        private void setDistance(final int pos, final int block, final int distance) {
+            Dynamic<?> baseTag = this.palette.get(block);
+            String blockName = baseTag.get("Name").asString("");
+            boolean persistent = Objects.equals(baseTag.get("Properties").get("persistent").asString(""), "true");
+            int stateId = getStateId(blockName, persistent, distance);
+            if (!this.stateToIdMap.containsKey(stateId)) {
+                int id = this.palette.size();
+                this.leaveIds.add(id);
+                this.stateToIdMap.put(stateId, id);
+                this.palette.add(this.makeLeafTag(baseTag, blockName, persistent, distance));
             }
 
-            int l = this.stateToIdMap.get(i);
-            if (1 << this.storage.getBits() <= l) {
-                PackedBitStorage packedbitstorage = new PackedBitStorage(this.storage.getBits() + 1, 4096);
+            int id = this.stateToIdMap.get(stateId);
+            if (1 << this.storage.getBits() <= id) {
+                PackedBitStorage newStorage = new PackedBitStorage(this.storage.getBits() + 1, 4096);
 
-                for (int k = 0; k < 4096; k++) {
-                    packedbitstorage.set(k, this.storage.get(k));
+                for (int i = 0; i < 4096; i++) {
+                    newStorage.set(i, this.storage.get(i));
                 }
 
-                this.storage = packedbitstorage;
+                this.storage = newStorage;
             }
 
-            this.storage.set(p_16260_, l);
+            this.storage.set(pos, id);
         }
     }
 
@@ -325,50 +319,48 @@ public class LeavesFix extends DataFix {
         protected final int index;
         protected @Nullable PackedBitStorage storage;
 
-        public Section(Typed<?> p_16286_, Schema p_16287_) {
-            if (!Objects.equals(p_16287_.getType(References.BLOCK_STATE), this.blockStateType)) {
+        public Section(final Typed<?> section, final Schema inputSchema) {
+            if (!Objects.equals(inputSchema.getType(References.BLOCK_STATE), this.blockStateType)) {
                 throw new IllegalStateException("Block state type is not what was expected.");
-            } else {
-                Optional<List<Pair<String, Dynamic<?>>>> optional = p_16286_.getOptional(this.paletteFinder);
-                this.palette = optional.<List>map(p_16297_ -> p_16297_.stream().map(Pair::getSecond).collect(Collectors.toList())).orElse(ImmutableList.of());
-                Dynamic<?> dynamic = p_16286_.get(DSL.remainderFinder());
-                this.index = dynamic.get("Y").asInt(0);
-                this.readStorage(dynamic);
             }
+
+            Optional<List<Pair<String, Dynamic<?>>>> typedPalette = section.getOptional(this.paletteFinder);
+            this.palette = typedPalette.<List>map(p -> p.stream().map(Pair::getSecond).collect(Collectors.toList())).orElse(ImmutableList.of());
+            Dynamic<?> tag = section.get(DSL.remainderFinder());
+            this.index = tag.get("Y").asInt(0);
+            this.readStorage(tag);
         }
 
-        protected void readStorage(Dynamic<?> p_16291_) {
+        protected void readStorage(final Dynamic<?> tag) {
             if (this.skippable()) {
                 this.storage = null;
             } else {
-                long[] along = p_16291_.get("BlockStates").asLongStream().toArray();
-                int i = Math.max(4, DataFixUtils.ceillog2(this.palette.size()));
-                this.storage = new PackedBitStorage(i, 4096, along);
+                long[] states = tag.get("BlockStates").asLongStream().toArray();
+                int size = Math.max(4, DataFixUtils.ceillog2(this.palette.size()));
+                this.storage = new PackedBitStorage(size, 4096, states);
             }
         }
 
-        public Typed<?> write(Typed<?> p_16289_) {
+        public Typed<?> write(final Typed<?> section) {
             return this.isSkippable()
-                ? p_16289_
-                : p_16289_.update(
-                        DSL.remainderFinder(), p_16305_ -> p_16305_.set("BlockStates", p_16305_.createLongList(Arrays.stream(this.storage.getRaw())))
-                    )
-                    .set(this.paletteFinder, this.palette.stream().<Pair<String, Dynamic<?>>>map(p_16300_ -> Pair.of(References.BLOCK_STATE.typeName(), p_16300_)).collect(Collectors.toList()));
+                ? section
+                : section.update(DSL.remainderFinder(), tag -> tag.set("BlockStates", tag.createLongList(Arrays.stream(this.storage.getRaw()))))
+                    .set(this.paletteFinder, this.palette.stream().<Pair<String, Dynamic<?>>>map(b -> Pair.of(References.BLOCK_STATE.typeName(), b)).collect(Collectors.toList()));
         }
 
         public boolean isSkippable() {
             return this.storage == null;
         }
 
-        public int getBlock(int p_16303_) {
-            return this.storage.get(p_16303_);
+        public int getBlock(final int pos) {
+            return this.storage.get(pos);
         }
 
-        protected int getStateId(String p_16293_, boolean p_16294_, int p_16295_) {
-            return LeavesFix.LEAVES.get(p_16293_) << 5 | (p_16294_ ? 16 : 0) | p_16295_;
+        protected static int getStateId(final String blockName, final boolean persistent, final int distance) {
+            return LeavesFix.LEAVES.get(blockName) << 5 | (persistent ? 16 : 0) | distance;
         }
 
-        int getIndex() {
+        public int getIndex() {
             return this.index;
         }
 

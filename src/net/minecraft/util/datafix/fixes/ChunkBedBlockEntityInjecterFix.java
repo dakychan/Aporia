@@ -11,75 +11,73 @@ import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.List.ListType;
-import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.Dynamic;
-import com.mojang.serialization.DynamicOps;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 public class ChunkBedBlockEntityInjecterFix extends DataFix {
-    public ChunkBedBlockEntityInjecterFix(Schema p_184825_, boolean p_184826_) {
-        super(p_184825_, p_184826_);
+    public ChunkBedBlockEntityInjecterFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getOutputSchema().getType(References.CHUNK);
-        Type<?> type1 = type.findFieldType("Level");
-        if (!(type1.findFieldType("TileEntities") instanceof ListType<?> listtype)) {
+        Type<?> chunkType = this.getOutputSchema().getType(References.CHUNK);
+        Type<?> levelType = chunkType.findFieldType("Level");
+        if (!(levelType.findFieldType("TileEntities") instanceof ListType<?> tileEntityListType)) {
             throw new IllegalStateException("Tile entity type is not a list type.");
         } else {
-            return this.cap(type1, listtype);
+            return this.cap(levelType, tileEntityListType);
         }
     }
 
-    private <TE> TypeRewriteRule cap(Type<?> p_184834_, ListType<TE> p_184835_) {
-        Type<TE> type = p_184835_.getElement();
-        OpticFinder<?> opticfinder = DSL.fieldFinder("Level", p_184834_);
-        OpticFinder<List<TE>> opticfinder1 = DSL.fieldFinder("TileEntities", p_184835_);
-        int i = 416;
+    private <TE> TypeRewriteRule cap(final Type<?> levelType, final ListType<TE> tileEntityListType) {
+        Type<TE> tileEntityType = tileEntityListType.getElement();
+        OpticFinder<?> levelF = DSL.fieldFinder("Level", levelType);
+        OpticFinder<List<TE>> tileEntitiesF = DSL.fieldFinder("TileEntities", tileEntityListType);
+        int bedId = 416;
         return TypeRewriteRule.seq(
             this.fixTypeEverywhere(
                 "InjectBedBlockEntityType",
                 (com.mojang.datafixers.types.templates.TaggedChoice.TaggedChoiceType<String>)this.getInputSchema().findChoiceType(References.BLOCK_ENTITY),
                 (com.mojang.datafixers.types.templates.TaggedChoice.TaggedChoiceType<String>)this.getOutputSchema().findChoiceType(References.BLOCK_ENTITY),
-                p_184841_ -> p_184837_ -> p_184837_
+                ops -> v -> v
             ),
             this.fixTypeEverywhereTyped(
                 "BedBlockEntityInjecter",
                 this.getOutputSchema().getType(References.CHUNK),
-                p_296631_ -> {
-                    Typed<?> typed = p_296631_.getTyped(opticfinder);
-                    Dynamic<?> dynamic = typed.get(DSL.remainderFinder());
-                    int j = dynamic.get("xPos").asInt(0);
-                    int k = dynamic.get("zPos").asInt(0);
-                    List<TE> list = Lists.newArrayList(typed.getOrCreate(opticfinder1));
+                input -> {
+                    Typed<?> level = input.getTyped(levelF);
+                    Dynamic<?> levelTag = level.get(DSL.remainderFinder());
+                    int chunkX = levelTag.get("xPos").asInt(0);
+                    int chunkZ = levelTag.get("zPos").asInt(0);
+                    List<TE> tileEntities = Lists.newArrayList(level.getOrCreate(tileEntitiesF));
 
-                    for (Dynamic<?> dynamic1 : dynamic.get("Sections").asList(Function.identity())) {
-                        int l = dynamic1.get("Y").asInt(0);
-                        Streams.mapWithIndex(dynamic1.get("Blocks").asIntStream(), (p_274917_, p_274918_) -> {
-                                if (416 == (p_274917_ & 0xFF) << 4) {
-                                    int i1 = (int)p_274918_;
-                                    int j1 = i1 & 15;
-                                    int k1 = i1 >> 8 & 15;
-                                    int l1 = i1 >> 4 & 15;
-                                    Map<Dynamic<?>, Dynamic<?>> map = Maps.newHashMap();
-                                    map.put(dynamic1.createString("id"), dynamic1.createString("minecraft:bed"));
-                                    map.put(dynamic1.createString("x"), dynamic1.createInt(j1 + (j << 4)));
-                                    map.put(dynamic1.createString("y"), dynamic1.createInt(k1 + (l << 4)));
-                                    map.put(dynamic1.createString("z"), dynamic1.createInt(l1 + (k << 4)));
-                                    map.put(dynamic1.createString("color"), dynamic1.createShort((short)14));
-                                    return map;
+                    for (Dynamic<?> sectionTag : levelTag.get("Sections").asList(Function.identity())) {
+                        int pos = sectionTag.get("Y").asInt(0);
+                        Streams.mapWithIndex(sectionTag.get("Blocks").asIntStream(), (block, index) -> {
+                                if (416 == (block & 0xFF) << 4) {
+                                    int p = (int)index;
+                                    int xx = p & 15;
+                                    int yy = p >> 8 & 15;
+                                    int zz = p >> 4 & 15;
+                                    Map<Dynamic<?>, Dynamic<?>> bedTag = Maps.newHashMap();
+                                    bedTag.put(sectionTag.createString("id"), sectionTag.createString("minecraft:bed"));
+                                    bedTag.put(sectionTag.createString("x"), sectionTag.createInt(xx + (chunkX << 4)));
+                                    bedTag.put(sectionTag.createString("y"), sectionTag.createInt(yy + (pos << 4)));
+                                    bedTag.put(sectionTag.createString("z"), sectionTag.createInt(zz + (chunkZ << 4)));
+                                    bedTag.put(sectionTag.createString("color"), sectionTag.createShort((short)14));
+                                    return bedTag;
                                 } else {
                                     return null;
                                 }
                             })
                             .forEachOrdered(
-                                p_326559_ -> {
-                                    if (p_326559_ != null) {
-                                        list.add(
-                                            type.read(dynamic1.createMap((Map<? extends Dynamic<?>, ? extends Dynamic<?>>)p_326559_))
+                                bedTag -> {
+                                    if (bedTag != null) {
+                                        tileEntities.add(
+                                            tileEntityType.read(sectionTag.createMap((Map<? extends Dynamic<?>, ? extends Dynamic<?>>)bedTag))
                                                 .result()
                                                 .orElseThrow(() -> new IllegalStateException("Could not parse newly created bed block entity."))
                                                 .getFirst()
@@ -89,7 +87,7 @@ public class ChunkBedBlockEntityInjecterFix extends DataFix {
                             );
                     }
 
-                    return !list.isEmpty() ? p_296631_.set(opticfinder, typed.set(opticfinder1, list)) : p_296631_;
+                    return !tileEntities.isEmpty() ? input.set(levelF, level.set(tileEntitiesF, tileEntities)) : input;
                 }
             )
         );

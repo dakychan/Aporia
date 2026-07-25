@@ -4,7 +4,6 @@ import com.google.common.collect.Iterables;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.tree.CommandNode;
 import java.util.Map;
@@ -15,38 +14,36 @@ import net.minecraft.network.chat.Component;
 public class HelpCommand {
     private static final SimpleCommandExceptionType ERROR_FAILED = new SimpleCommandExceptionType(Component.translatable("commands.help.failed"));
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_137788_) {
-        p_137788_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("help")
-                .executes(p_288460_ -> {
-                    Map<CommandNode<CommandSourceStack>, String> map = p_137788_.getSmartUsage(p_137788_.getRoot(), p_288460_.getSource());
+                .executes(s -> {
+                    Map<CommandNode<CommandSourceStack>, String> usage = dispatcher.getSmartUsage(dispatcher.getRoot(), s.getSource());
 
-                    for (String s : map.values()) {
-                        p_288460_.getSource().sendSuccess(() -> Component.literal("/" + s), false);
+                    for (String line : usage.values()) {
+                        s.getSource().sendSuccess(() -> Component.literal("/" + line), false);
                     }
 
-                    return map.size();
+                    return usage.size();
                 })
                 .then(
                     Commands.argument("command", StringArgumentType.greedyString())
                         .executes(
-                            p_288458_ -> {
-                                ParseResults<CommandSourceStack> parseresults = p_137788_.parse(
-                                    StringArgumentType.getString(p_288458_, "command"), p_288458_.getSource()
-                                );
-                                if (parseresults.getContext().getNodes().isEmpty()) {
+                            s -> {
+                                ParseResults<CommandSourceStack> command = dispatcher.parse(StringArgumentType.getString(s, "command"), s.getSource());
+                                if (command.getContext().getNodes().isEmpty()) {
                                     throw ERROR_FAILED.create();
-                                } else {
-                                    Map<CommandNode<CommandSourceStack>, String> map = p_137788_.getSmartUsage(
-                                        Iterables.getLast(parseresults.getContext().getNodes()).getNode(), p_288458_.getSource()
-                                    );
-
-                                    for (String s : map.values()) {
-                                        p_288458_.getSource().sendSuccess(() -> Component.literal("/" + parseresults.getReader().getString() + " " + s), false);
-                                    }
-
-                                    return map.size();
                                 }
+
+                                Map<CommandNode<CommandSourceStack>, String> usage = dispatcher.getSmartUsage(
+                                    Iterables.getLast(command.getContext().getNodes()).getNode(), s.getSource()
+                                );
+
+                                for (String line : usage.values()) {
+                                    s.getSource().sendSuccess(() -> Component.literal("/" + command.getReader().getString() + " " + line), false);
+                                }
+
+                                return usage.size();
                             }
                         )
                 )

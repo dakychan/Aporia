@@ -3,21 +3,22 @@ package net.minecraft.client.gui.components.debug;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugScreenEntries {
     private static final Map<Identifier, DebugScreenEntry> ENTRIES_BY_ID = new HashMap<>();
     public static final Identifier GAME_VERSION = register("game_version", new DebugEntryVersion());
     public static final Identifier FPS = register("fps", new DebugEntryFps());
     public static final Identifier TPS = register("tps", new DebugEntryTps());
     public static final Identifier MEMORY = register("memory", new DebugEntryMemory());
+    public static final Identifier DETAILED_MEMORY = register("detailed_memory", new DebugEntryDetailedMemory());
     public static final Identifier SYSTEM_SPECS = register("system_specs", new DebugEntrySystemSpecs());
-    public static final Identifier LOOKING_AT_BLOCK = register("looking_at_block", new DebugEntryLookingAtBlock());
-    public static final Identifier LOOKING_AT_FLUID = register("looking_at_fluid", new DebugEntryLookingAtFluid());
+    public static final Identifier LOOKING_AT_BLOCK_STATE = register("looking_at_block_state", new DebugEntryLookingAt.BlockStateInfo());
+    public static final Identifier LOOKING_AT_BLOCK_TAGS = register("looking_at_block_tags", new DebugEntryLookingAt.BlockTagInfo());
+    public static final Identifier LOOKING_AT_FLUID_STATE = register("looking_at_fluid_state", new DebugEntryLookingAt.FluidStateInfo());
+    public static final Identifier LOOKING_AT_FLUID_TAGS = register("looking_at_fluid_tags", new DebugEntryLookingAt.FluidTagInfo());
     public static final Identifier LOOKING_AT_ENTITY = register("looking_at_entity", new DebugEntryLookingAtEntity());
+    public static final Identifier LOOKING_AT_ENTITY_TAGS = register("looking_at_entity_tags", new DebugEntryLookingAtEntityTags());
     public static final Identifier CHUNK_RENDER_STATS = register("chunk_render_stats", new DebugEntryChunkRenderStats());
     public static final Identifier CHUNK_GENERATION_STATS = register("chunk_generation_stats", new DebugEntryChunkGeneration());
     public static final Identifier ENTITY_RENDER_STATS = register("entity_render_stats", new DebugEntryEntityRenderStats());
@@ -29,8 +30,10 @@ public class DebugScreenEntries {
     public static final Identifier HEIGHTMAP = register("heightmap", new DebugEntryHeightmap());
     public static final Identifier BIOME = register("biome", new DebugEntryBiome());
     public static final Identifier LOCAL_DIFFICULTY = register("local_difficulty", new DebugEntryLocalDifficulty());
+    public static final Identifier DAY_COUNT = register("day_count", new DebugEntryDayCount());
     public static final Identifier ENTITY_SPAWN_COUNTS = register("entity_spawn_counts", new DebugEntrySpawnCounts());
     public static final Identifier SOUND_MOOD = register("sound_mood", new DebugEntrySoundMood());
+    public static final Identifier SOUND_CACHE = register("sound_cache", new DebugEntrySoundCache());
     public static final Identifier POST_EFFECT = register("post_effect", new DebugEntryPostEffect());
     public static final Identifier ENTITY_HITBOXES = register("entity_hitboxes", new DebugEntryNoop());
     public static final Identifier CHUNK_BORDERS = register("chunk_borders", new DebugEntryNoop());
@@ -51,25 +54,25 @@ public class DebugScreenEntries {
     public static final Identifier CHUNK_SECTION_VISIBILITY = register("chunk_section_visibility", new DebugEntryNoop());
     public static final Map<DebugScreenProfile, Map<Identifier, DebugScreenEntryStatus>> PROFILES;
 
-    private static Identifier register(String p_458601_, DebugScreenEntry p_424237_) {
-        return register(Identifier.withDefaultNamespace(p_458601_), p_424237_);
+    private static Identifier register(final String id, final DebugScreenEntry entry) {
+        return register(Identifier.withDefaultNamespace(id), entry);
     }
 
-    private static Identifier register(Identifier p_455443_, DebugScreenEntry p_424183_) {
-        ENTRIES_BY_ID.put(p_455443_, p_424183_);
-        return p_455443_;
+    private static Identifier register(final Identifier identifier, final DebugScreenEntry entry) {
+        ENTRIES_BY_ID.put(identifier, entry);
+        return identifier;
     }
 
     public static Map<Identifier, DebugScreenEntry> allEntries() {
         return Map.copyOf(ENTRIES_BY_ID);
     }
 
-    public static @Nullable DebugScreenEntry getEntry(Identifier p_452419_) {
-        return ENTRIES_BY_ID.get(p_452419_);
+    public static @Nullable DebugScreenEntry getEntry(final Identifier id) {
+        return ENTRIES_BY_ID.get(id);
     }
 
     static {
-        Map<Identifier, DebugScreenEntryStatus> map = Map.of(
+        Map<Identifier, DebugScreenEntryStatus> defaultProfile = Map.of(
             THREE_DIMENSIONAL_CROSSHAIR,
             DebugScreenEntryStatus.IN_OVERLAY,
             GAME_VERSION,
@@ -89,7 +92,7 @@ public class DebugScreenEntries {
             SIMPLE_PERFORMANCE_IMPACTORS,
             DebugScreenEntryStatus.IN_OVERLAY
         );
-        Map<Identifier, DebugScreenEntryStatus> map1 = Map.of(
+        Map<Identifier, DebugScreenEntryStatus> performance = Map.of(
             TPS,
             DebugScreenEntryStatus.IN_OVERLAY,
             FPS,
@@ -101,6 +104,6 @@ public class DebugScreenEntries {
             SIMPLE_PERFORMANCE_IMPACTORS,
             DebugScreenEntryStatus.IN_OVERLAY
         );
-        PROFILES = Map.of(DebugScreenProfile.DEFAULT, map, DebugScreenProfile.PERFORMANCE, map1);
+        PROFILES = Map.of(DebugScreenProfile.DEFAULT, defaultProfile, DebugScreenProfile.PERFORMANCE, performance);
     }
 }

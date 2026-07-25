@@ -1,6 +1,7 @@
 package net.minecraft.world.entity.ai.behavior;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.Map.Entry;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -15,18 +16,18 @@ public abstract class Behavior<E extends LivingEntity> implements BehaviorContro
     private final int minDuration;
     private final int maxDuration;
 
-    public Behavior(Map<MemoryModuleType<?>, MemoryStatus> p_22528_) {
-        this(p_22528_, 60);
+    public Behavior(final Map<MemoryModuleType<?>, MemoryStatus> entryCondition) {
+        this(entryCondition, 60);
     }
 
-    public Behavior(Map<MemoryModuleType<?>, MemoryStatus> p_22530_, int p_22531_) {
-        this(p_22530_, p_22531_, p_22531_);
+    public Behavior(final Map<MemoryModuleType<?>, MemoryStatus> entryCondition, final int timeOutDuration) {
+        this(entryCondition, timeOutDuration, timeOutDuration);
     }
 
-    public Behavior(Map<MemoryModuleType<?>, MemoryStatus> p_22533_, int p_22534_, int p_22535_) {
-        this.minDuration = p_22534_;
-        this.maxDuration = p_22535_;
-        this.entryCondition = p_22533_;
+    public Behavior(final Map<MemoryModuleType<?>, MemoryStatus> entryCondition, final int minDuration, final int maxDuration) {
+        this.minDuration = minDuration;
+        this.maxDuration = maxDuration;
+        this.entryCondition = entryCondition;
     }
 
     @Override
@@ -35,51 +36,56 @@ public abstract class Behavior<E extends LivingEntity> implements BehaviorContro
     }
 
     @Override
-    public final boolean tryStart(ServerLevel p_22555_, E p_22556_, long p_22557_) {
-        if (this.hasRequiredMemories(p_22556_) && this.checkExtraStartConditions(p_22555_, p_22556_)) {
+    public Set<MemoryModuleType<?>> getRequiredMemories() {
+        return this.entryCondition.keySet();
+    }
+
+    @Override
+    public final boolean tryStart(final ServerLevel level, final E body, final long timestamp) {
+        if (this.hasRequiredMemories(body) && this.checkExtraStartConditions(level, body)) {
             this.status = Behavior.Status.RUNNING;
-            int i = this.minDuration + p_22555_.getRandom().nextInt(this.maxDuration + 1 - this.minDuration);
-            this.endTimestamp = p_22557_ + i;
-            this.start(p_22555_, p_22556_, p_22557_);
+            int duration = this.minDuration + level.getRandom().nextInt(this.maxDuration + 1 - this.minDuration);
+            this.endTimestamp = timestamp + duration;
+            this.start(level, body, timestamp);
             return true;
         } else {
             return false;
         }
     }
 
-    protected void start(ServerLevel p_22540_, E p_22541_, long p_22542_) {
+    protected void start(final ServerLevel level, final E body, final long timestamp) {
     }
 
     @Override
-    public final void tickOrStop(ServerLevel p_22559_, E p_22560_, long p_22561_) {
-        if (!this.timedOut(p_22561_) && this.canStillUse(p_22559_, p_22560_, p_22561_)) {
-            this.tick(p_22559_, p_22560_, p_22561_);
+    public final void tickOrStop(final ServerLevel level, final E body, final long timestamp) {
+        if (!this.timedOut(timestamp) && this.canStillUse(level, body, timestamp)) {
+            this.tick(level, body, timestamp);
         } else {
-            this.doStop(p_22559_, p_22560_, p_22561_);
+            this.doStop(level, body, timestamp);
         }
     }
 
-    protected void tick(ServerLevel p_22551_, E p_22552_, long p_22553_) {
+    protected void tick(final ServerLevel level, final E body, final long timestamp) {
     }
 
     @Override
-    public final void doStop(ServerLevel p_22563_, E p_22564_, long p_22565_) {
+    public final void doStop(final ServerLevel level, final E body, final long timestamp) {
         this.status = Behavior.Status.STOPPED;
-        this.stop(p_22563_, p_22564_, p_22565_);
+        this.stop(level, body, timestamp);
     }
 
-    protected void stop(ServerLevel p_22548_, E p_22549_, long p_22550_) {
+    protected void stop(final ServerLevel level, final E body, final long timestamp) {
     }
 
-    protected boolean canStillUse(ServerLevel p_22545_, E p_22546_, long p_22547_) {
+    protected boolean canStillUse(final ServerLevel level, final E body, final long timestamp) {
         return false;
     }
 
-    protected boolean timedOut(long p_22537_) {
-        return p_22537_ > this.endTimestamp;
+    protected boolean timedOut(final long timestamp) {
+        return timestamp > this.endTimestamp;
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_22538_, E p_22539_) {
+    protected boolean checkExtraStartConditions(final ServerLevel level, final E body) {
         return true;
     }
 
@@ -88,11 +94,11 @@ public abstract class Behavior<E extends LivingEntity> implements BehaviorContro
         return this.getClass().getSimpleName();
     }
 
-    protected boolean hasRequiredMemories(E p_22544_) {
+    protected boolean hasRequiredMemories(final E body) {
         for (Entry<MemoryModuleType<?>, MemoryStatus> entry : this.entryCondition.entrySet()) {
-            MemoryModuleType<?> memorymoduletype = entry.getKey();
-            MemoryStatus memorystatus = entry.getValue();
-            if (!p_22544_.getBrain().checkMemory(memorymoduletype, memorystatus)) {
+            MemoryModuleType<?> memoryType = entry.getKey();
+            MemoryStatus requiredStatus = entry.getValue();
+            if (!body.getBrain().checkMemory(memoryType, requiredStatus)) {
                 return false;
             }
         }
@@ -100,7 +106,7 @@ public abstract class Behavior<E extends LivingEntity> implements BehaviorContro
         return true;
     }
 
-    public static enum Status {
+    public enum Status {
         STOPPED,
         RUNNING;
     }

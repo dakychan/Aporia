@@ -2,7 +2,6 @@ package net.minecraft.world.entity.decoration.painting;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -17,14 +16,14 @@ import net.minecraft.util.ExtraCodecs;
 
 public record PaintingVariant(int width, int height, Identifier assetId, Optional<Component> title, Optional<Component> author) {
     public static final Codec<PaintingVariant> DIRECT_CODEC = RecordCodecBuilder.create(
-        p_460916_ -> p_460916_.group(
+        i -> i.group(
                 ExtraCodecs.intRange(1, 16).fieldOf("width").forGetter(PaintingVariant::width),
                 ExtraCodecs.intRange(1, 16).fieldOf("height").forGetter(PaintingVariant::height),
                 Identifier.CODEC.fieldOf("asset_id").forGetter(PaintingVariant::assetId),
                 ComponentSerialization.CODEC.optionalFieldOf("title").forGetter(PaintingVariant::title),
                 ComponentSerialization.CODEC.optionalFieldOf("author").forGetter(PaintingVariant::author)
             )
-            .apply(p_460916_, PaintingVariant::new)
+            .apply(i, PaintingVariant::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, PaintingVariant> DIRECT_STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT,
@@ -40,7 +39,9 @@ public record PaintingVariant(int width, int height, Identifier assetId, Optiona
         PaintingVariant::new
     );
     public static final Codec<Holder<PaintingVariant>> CODEC = RegistryFixedCodec.create(Registries.PAINTING_VARIANT);
-    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<PaintingVariant>> STREAM_CODEC = ByteBufCodecs.holder(Registries.PAINTING_VARIANT, DIRECT_STREAM_CODEC);
+    public static final StreamCodec<RegistryFriendlyByteBuf, Holder<PaintingVariant>> STREAM_CODEC = ByteBufCodecs.holder(
+        Registries.PAINTING_VARIANT, DIRECT_STREAM_CODEC
+    );
 
     public int area() {
         return this.width() * this.height();

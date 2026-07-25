@@ -6,11 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.telemetry.TelemetryEventSender;
 import net.minecraft.client.telemetry.TelemetryEventType;
 import net.minecraft.client.telemetry.TelemetryProperty;
-import net.minecraft.client.telemetry.TelemetryPropertyMap;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public final class PerformanceMetricsEvent extends AggregatedTelemetryEvent {
     private static final long DEDICATED_MEMORY_KB = toKilobytes(Runtime.getRuntime().maxMemory());
     private final LongList fpsSamples = new LongArrayList();
@@ -18,9 +14,9 @@ public final class PerformanceMetricsEvent extends AggregatedTelemetryEvent {
     private final LongList usedMemorySamples = new LongArrayList();
 
     @Override
-    public void tick(TelemetryEventSender p_263321_) {
+    public void tick(final TelemetryEventSender eventSender) {
         if (Minecraft.getInstance().telemetryOptInExtra()) {
-            super.tick(p_263321_);
+            super.tick(eventSender);
         }
     }
 
@@ -38,26 +34,26 @@ public final class PerformanceMetricsEvent extends AggregatedTelemetryEvent {
     }
 
     private void takeUsedMemorySample() {
-        long i = Runtime.getRuntime().totalMemory();
-        long j = Runtime.getRuntime().freeMemory();
-        long k = i - j;
-        this.usedMemorySamples.add(toKilobytes(k));
+        long totalMemory = Runtime.getRuntime().totalMemory();
+        long freeMemory = Runtime.getRuntime().freeMemory();
+        long usedMemorySample = totalMemory - freeMemory;
+        this.usedMemorySamples.add(toKilobytes(usedMemorySample));
     }
 
     @Override
-    public void sendEvent(TelemetryEventSender p_261872_) {
-        p_261872_.send(TelemetryEventType.PERFORMANCE_METRICS, p_261568_ -> {
-            p_261568_.put(TelemetryProperty.FRAME_RATE_SAMPLES, new LongArrayList(this.fpsSamples));
-            p_261568_.put(TelemetryProperty.RENDER_TIME_SAMPLES, new LongArrayList(this.frameTimeSamples));
-            p_261568_.put(TelemetryProperty.USED_MEMORY_SAMPLES, new LongArrayList(this.usedMemorySamples));
-            p_261568_.put(TelemetryProperty.NUMBER_OF_SAMPLES, this.getSampleCount());
-            p_261568_.put(TelemetryProperty.RENDER_DISTANCE, Minecraft.getInstance().options.getEffectiveRenderDistance());
-            p_261568_.put(TelemetryProperty.DEDICATED_MEMORY_KB, (int)DEDICATED_MEMORY_KB);
+    public void sendEvent(final TelemetryEventSender eventSender) {
+        eventSender.send(TelemetryEventType.PERFORMANCE_METRICS, properties -> {
+            properties.put(TelemetryProperty.FRAME_RATE_SAMPLES, new LongArrayList(this.fpsSamples));
+            properties.put(TelemetryProperty.RENDER_TIME_SAMPLES, new LongArrayList(this.frameTimeSamples));
+            properties.put(TelemetryProperty.USED_MEMORY_SAMPLES, new LongArrayList(this.usedMemorySamples));
+            properties.put(TelemetryProperty.NUMBER_OF_SAMPLES, this.getSampleCount());
+            properties.put(TelemetryProperty.RENDER_DISTANCE, Minecraft.getInstance().options.getEffectiveRenderDistance());
+            properties.put(TelemetryProperty.DEDICATED_MEMORY_KB, (int)DEDICATED_MEMORY_KB);
         });
         this.resetValues();
     }
 
-    private static long toKilobytes(long p_261471_) {
-        return p_261471_ / 1000L;
+    private static long toKilobytes(final long bytes) {
+        return bytes / 1000L;
     }
 }

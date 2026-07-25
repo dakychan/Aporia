@@ -8,7 +8,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.advancements.CriteriaTriggers;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -27,6 +27,7 @@ import net.minecraft.util.Unit;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.OminousItemSpawner;
@@ -79,106 +80,110 @@ public abstract class AbstractArrow extends Projectile {
     private ItemStack pickupItemStack = this.getDefaultPickupItem();
     private @Nullable ItemStack firedFromWeapon = null;
 
-    protected AbstractArrow(EntityType<? extends AbstractArrow> p_450750_, Level p_450850_) {
-        super(p_450750_, p_450850_);
+    protected AbstractArrow(final EntityType<? extends AbstractArrow> type, final Level level) {
+        super(type, level);
     }
 
     protected AbstractArrow(
-        EntityType<? extends AbstractArrow> p_454328_,
-        double p_451448_,
-        double p_454253_,
-        double p_457339_,
-        Level p_450792_,
-        ItemStack p_456021_,
-        @Nullable ItemStack p_455495_
+        final EntityType<? extends AbstractArrow> type,
+        final double x,
+        final double y,
+        final double z,
+        final Level level,
+        final ItemStack pickupItemStack,
+        final @Nullable ItemStack firedFromWeapon
     ) {
-        this(p_454328_, p_450792_);
-        this.pickupItemStack = p_456021_.copy();
-        this.applyComponentsFromItemStack(p_456021_);
-        Unit unit = p_456021_.remove(DataComponents.INTANGIBLE_PROJECTILE);
-        if (unit != null) {
+        this(type, level);
+        this.pickupItemStack = pickupItemStack.copy();
+        this.applyComponentsFromItemStack(pickupItemStack);
+        Unit intangible = pickupItemStack.remove(DataComponents.INTANGIBLE_PROJECTILE);
+        if (intangible != null) {
             this.pickup = AbstractArrow.Pickup.CREATIVE_ONLY;
         }
 
-        this.setPos(p_451448_, p_454253_, p_457339_);
-        if (p_455495_ != null && p_450792_ instanceof ServerLevel serverlevel) {
-            if (p_455495_.isEmpty()) {
+        this.setPos(x, y, z);
+        if (firedFromWeapon != null && level instanceof ServerLevel serverLevel) {
+            if (firedFromWeapon.isEmpty()) {
                 throw new IllegalArgumentException("Invalid weapon firing an arrow");
             }
 
-            this.firedFromWeapon = p_455495_.copy();
-            int i = EnchantmentHelper.getPiercingCount(serverlevel, p_455495_, this.pickupItemStack);
-            if (i > 0) {
-                this.setPierceLevel((byte)i);
+            this.firedFromWeapon = firedFromWeapon.copy();
+            int pierceLevel = EnchantmentHelper.getPiercingCount(serverLevel, firedFromWeapon, this.pickupItemStack);
+            if (pierceLevel > 0) {
+                this.setPierceLevel((byte)pierceLevel);
             }
         }
     }
 
     protected AbstractArrow(
-        EntityType<? extends AbstractArrow> p_455307_, LivingEntity p_452664_, Level p_459444_, ItemStack p_450891_, @Nullable ItemStack p_456788_
+        final EntityType<? extends AbstractArrow> type,
+        final LivingEntity mob,
+        final Level level,
+        final ItemStack pickupItemStack,
+        final @Nullable ItemStack firedFromWeapon
     ) {
-        this(p_455307_, p_452664_.getX(), p_452664_.getEyeY() - 0.1F, p_452664_.getZ(), p_459444_, p_450891_, p_456788_);
-        this.setOwner(p_452664_);
+        this(type, mob.getX(), mob.getEyeY() - 0.1F, mob.getZ(), level, pickupItemStack, firedFromWeapon);
+        this.setOwner(mob);
     }
 
-    public void setSoundEvent(SoundEvent p_453944_) {
-        this.soundEvent = p_453944_;
+    public void setSoundEvent(final SoundEvent soundEvent) {
+        this.soundEvent = soundEvent;
     }
 
     @Override
-    public boolean shouldRenderAtSqrDistance(double p_452120_) {
-        double d0 = this.getBoundingBox().getSize() * 10.0;
-        if (Double.isNaN(d0)) {
-            d0 = 1.0;
+    public boolean shouldRenderAtSqrDistance(final double distance) {
+        double size = this.getBoundingBox().getSize() * 10.0;
+        if (Double.isNaN(size)) {
+            size = 1.0;
         }
 
-        d0 *= 64.0 * getViewScale();
-        return p_452120_ < d0 * d0;
+        size *= 64.0 * getViewScale();
+        return distance < size * size;
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_460288_) {
-        p_460288_.define(ID_FLAGS, (byte)0);
-        p_460288_.define(PIERCE_LEVEL, (byte)0);
-        p_460288_.define(IN_GROUND, false);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        entityData.define(ID_FLAGS, (byte)0);
+        entityData.define(PIERCE_LEVEL, (byte)0);
+        entityData.define(IN_GROUND, false);
     }
 
     @Override
-    public void shoot(double p_460227_, double p_460180_, double p_460371_, float p_457167_, float p_455353_) {
-        super.shoot(p_460227_, p_460180_, p_460371_, p_457167_, p_455353_);
+    public void shoot(final double xd, final double yd, final double zd, final float pow, final float uncertainty) {
+        super.shoot(xd, yd, zd, pow, uncertainty);
         this.life = 0;
     }
 
     @Override
-    public void lerpMotion(Vec3 p_460735_) {
-        super.lerpMotion(p_460735_);
+    public void lerpMotion(final Vec3 movement) {
+        super.lerpMotion(movement);
         this.life = 0;
-        if (this.isInGround() && p_460735_.lengthSqr() > 0.0) {
+        if (this.isInGround() && movement.lengthSqr() > 0.0) {
             this.setInGround(false);
         }
     }
 
     @Override
-    public void onSyncedDataUpdated(EntityDataAccessor<?> p_460586_) {
-        super.onSyncedDataUpdated(p_460586_);
-        if (!this.firstTick && this.shakeTime <= 0 && p_460586_.equals(IN_GROUND) && this.isInGround()) {
+    public void onSyncedDataUpdated(final EntityDataAccessor<?> accessor) {
+        super.onSyncedDataUpdated(accessor);
+        if (!this.firstTick && this.shakeTime <= 0 && accessor.equals(IN_GROUND) && this.isInGround()) {
             this.shakeTime = 7;
         }
     }
 
     @Override
     public void tick() {
-        boolean flag = !this.isNoPhysics();
-        Vec3 vec3 = this.getDeltaMovement();
-        BlockPos blockpos = this.blockPosition();
-        BlockState blockstate = this.level().getBlockState(blockpos);
-        if (!blockstate.isAir() && flag) {
-            VoxelShape voxelshape = blockstate.getCollisionShape(this.level(), blockpos);
-            if (!voxelshape.isEmpty()) {
-                Vec3 vec31 = this.position();
+        boolean physicsEnabled = !this.isNoPhysics();
+        Vec3 movement = this.getDeltaMovement();
+        BlockPos blockPos = this.blockPosition();
+        BlockState blockState = this.level().getBlockState(blockPos);
+        if (!blockState.isAir() && physicsEnabled) {
+            VoxelShape shape = blockState.getCollisionShape(this.level(), blockPos);
+            if (!shape.isEmpty()) {
+                Vec3 position = this.position();
 
-                for (AABB aabb : voxelshape.toAabbs()) {
-                    if (aabb.move(blockpos).contains(vec31)) {
+                for (AABB aabb : shape.toAabbs()) {
+                    if (aabb.move(blockPos).contains(position)) {
                         this.setDeltaMovement(Vec3.ZERO);
                         this.setInGround(true);
                         break;
@@ -195,9 +200,9 @@ public abstract class AbstractArrow extends Projectile {
             this.clearFire();
         }
 
-        if (this.isInGround() && flag) {
+        if (this.isInGround() && physicsEnabled) {
             if (!this.level().isClientSide()) {
-                if (this.lastState != blockstate && this.shouldFall()) {
+                if (this.lastState != blockState && this.shouldFall()) {
                     this.startFalling();
                 } else {
                     this.tickDespawn();
@@ -214,10 +219,10 @@ public abstract class AbstractArrow extends Projectile {
             }
         } else {
             this.inGroundTime = 0;
-            Vec3 vec32 = this.position();
+            Vec3 originalPosition = this.position();
             if (this.isInWater()) {
                 this.applyInertia(this.getWaterInertia());
-                this.addBubbleParticles(vec32);
+                this.addBubbleParticles(originalPosition);
             }
 
             if (this.isCritArrow()) {
@@ -225,41 +230,43 @@ public abstract class AbstractArrow extends Projectile {
                     this.level()
                         .addParticle(
                             ParticleTypes.CRIT,
-                            vec32.x + vec3.x * i / 4.0,
-                            vec32.y + vec3.y * i / 4.0,
-                            vec32.z + vec3.z * i / 4.0,
-                            -vec3.x,
-                            -vec3.y + 0.2,
-                            -vec3.z
+                            originalPosition.x + movement.x * i / 4.0,
+                            originalPosition.y + movement.y * i / 4.0,
+                            originalPosition.z + movement.z * i / 4.0,
+                            -movement.x,
+                            -movement.y + 0.2,
+                            -movement.z
                         );
                 }
             }
 
-            float f;
-            if (!flag) {
-                f = (float)(Mth.atan2(-vec3.x, -vec3.z) * 180.0F / (float)Math.PI);
+            float yRot;
+            if (!physicsEnabled) {
+                yRot = (float)(Mth.atan2(-movement.x, -movement.z) * 180.0F / (float)Math.PI);
             } else {
-                f = (float)(Mth.atan2(vec3.x, vec3.z) * 180.0F / (float)Math.PI);
+                yRot = (float)(Mth.atan2(movement.x, movement.z) * 180.0F / (float)Math.PI);
             }
 
-            float f1 = (float)(Mth.atan2(vec3.y, vec3.horizontalDistance()) * 180.0F / (float)Math.PI);
-            this.setXRot(lerpRotation(this.getXRot(), f1));
-            this.setYRot(lerpRotation(this.getYRot(), f));
+            float xRot = (float)(Mth.atan2(movement.y, movement.horizontalDistance()) * 180.0F / (float)Math.PI);
+            this.setXRot(lerpRotation(this.getXRot(), xRot));
+            this.setYRot(lerpRotation(this.getYRot(), yRot));
             this.checkLeftOwner();
-            if (flag) {
-                BlockHitResult blockhitresult = this.level()
-                    .clipIncludingBorder(new ClipContext(vec32, vec32.add(vec3), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
-                this.stepMoveAndHit(blockhitresult);
+            if (physicsEnabled) {
+                BlockHitResult blockHitResult = this.level()
+                    .clipIncludingBorder(
+                        new ClipContext(originalPosition, originalPosition.add(movement), ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)
+                    );
+                this.stepMoveAndHit(blockHitResult);
             } else {
-                this.setPos(vec32.add(vec3));
+                this.setPos(originalPosition.add(movement));
                 this.applyEffectsFromBlocks();
             }
 
             if (!this.isInWater()) {
-                this.applyInertia(0.99F);
+                this.applyInertia(this.getAirDrag());
             }
 
-            if (flag && !this.isInGround()) {
+            if (physicsEnabled && !this.isInGround()) {
                 this.applyGravity();
             }
 
@@ -267,29 +274,34 @@ public abstract class AbstractArrow extends Projectile {
         }
     }
 
-    private void stepMoveAndHit(BlockHitResult p_455771_) {
+    @Override
+    protected float getAirDrag() {
+        return 0.99F;
+    }
+
+    private void stepMoveAndHit(final BlockHitResult blockHitResult) {
         while (this.isAlive()) {
-            Vec3 vec3 = this.position();
-            ArrayList<EntityHitResult> arraylist = new ArrayList<>(this.findHitEntities(vec3, p_455771_.getLocation()));
-            arraylist.sort(Comparator.comparingDouble(p_451887_ -> vec3.distanceToSqr(p_451887_.getEntity().position())));
-            EntityHitResult entityhitresult = arraylist.isEmpty() ? null : arraylist.getFirst();
-            Vec3 vec31 = Objects.requireNonNullElse(entityhitresult, p_455771_).getLocation();
-            this.setPos(vec31);
-            this.applyEffectsFromBlocks(vec3, vec31);
+            Vec3 initialPosition = this.position();
+            ArrayList<EntityHitResult> entitiesHit = new ArrayList<>(this.findHitEntities(initialPosition, blockHitResult.getLocation()));
+            entitiesHit.sort(Comparator.comparingDouble(c -> initialPosition.distanceToSqr(c.getEntity().position())));
+            EntityHitResult firstEntityHit = entitiesHit.isEmpty() ? null : entitiesHit.getFirst();
+            Vec3 nextLocation = Objects.requireNonNullElse(firstEntityHit, blockHitResult).getLocation();
+            this.setPos(nextLocation);
+            this.applyEffectsFromBlocks(initialPosition, nextLocation);
             if (this.portalProcess != null && this.portalProcess.isInsidePortalThisTick()) {
                 this.handlePortal();
             }
 
-            if (arraylist.isEmpty()) {
-                if (this.isAlive() && p_455771_.getType() != HitResult.Type.MISS) {
-                    this.hitTargetOrDeflectSelf(p_455771_);
+            if (entitiesHit.isEmpty()) {
+                if (this.isAlive() && blockHitResult.getType() != HitResult.Type.MISS) {
+                    this.hitTargetOrDeflectSelf(blockHitResult);
                     this.needsSync = true;
                 }
                 break;
             } else if (this.isAlive() && !this.noPhysics) {
-                ProjectileDeflection projectiledeflection = this.hitTargetsOrDeflectSelf(arraylist);
+                ProjectileDeflection deflection = this.hitTargetsOrDeflectSelf(entitiesHit);
                 this.needsSync = true;
-                if (this.getPierceLevel() > 0 && projectiledeflection == ProjectileDeflection.NONE) {
+                if (this.getPierceLevel() > 0 && deflection == ProjectileDeflection.NONE) {
                     continue;
                 }
                 break;
@@ -297,36 +309,36 @@ public abstract class AbstractArrow extends Projectile {
         }
     }
 
-    private ProjectileDeflection hitTargetsOrDeflectSelf(Collection<EntityHitResult> p_452868_) {
-        for (EntityHitResult entityhitresult : p_452868_) {
-            ProjectileDeflection projectiledeflection = this.hitTargetOrDeflectSelf(entityhitresult);
-            if (!this.isAlive() || projectiledeflection != ProjectileDeflection.NONE) {
-                return projectiledeflection;
+    private ProjectileDeflection hitTargetsOrDeflectSelf(final Collection<EntityHitResult> entityHitResults) {
+        for (EntityHitResult e : entityHitResults) {
+            ProjectileDeflection deflection = this.hitTargetOrDeflectSelf(e);
+            if (!this.isAlive() || deflection != ProjectileDeflection.NONE) {
+                return deflection;
             }
         }
 
         return ProjectileDeflection.NONE;
     }
 
-    private void applyInertia(float p_459357_) {
-        Vec3 vec3 = this.getDeltaMovement();
-        this.setDeltaMovement(vec3.scale(p_459357_));
+    private void applyInertia(final float inertia) {
+        Vec3 movement = this.getDeltaMovement();
+        this.setDeltaMovement(movement.scale(inertia));
     }
 
-    private void addBubbleParticles(Vec3 p_451828_) {
-        Vec3 vec3 = this.getDeltaMovement();
+    private void addBubbleParticles(final Vec3 position) {
+        Vec3 movement = this.getDeltaMovement();
 
         for (int i = 0; i < 4; i++) {
-            float f = 0.25F;
+            float s = 0.25F;
             this.level()
                 .addParticle(
                     ParticleTypes.BUBBLE,
-                    p_451828_.x - vec3.x * 0.25,
-                    p_451828_.y - vec3.y * 0.25,
-                    p_451828_.z - vec3.z * 0.25,
-                    vec3.x,
-                    vec3.y,
-                    vec3.z
+                    position.x - movement.x * 0.25,
+                    position.y - movement.y * 0.25,
+                    position.z - movement.z * 0.25,
+                    movement.x,
+                    movement.y,
+                    movement.z
                 );
         }
     }
@@ -342,8 +354,8 @@ public abstract class AbstractArrow extends Projectile {
 
     private void startFalling() {
         this.setInGround(false);
-        Vec3 vec3 = this.getDeltaMovement();
-        this.setDeltaMovement(vec3.multiply(this.random.nextFloat() * 0.2F, this.random.nextFloat() * 0.2F, this.random.nextFloat() * 0.2F));
+        Vec3 deltaMovement = this.getDeltaMovement();
+        this.setDeltaMovement(deltaMovement.multiply(this.random.nextFloat() * 0.2F, this.random.nextFloat() * 0.2F, this.random.nextFloat() * 0.2F));
         this.life = 0;
     }
 
@@ -351,8 +363,8 @@ public abstract class AbstractArrow extends Projectile {
         return this.entityData.get(IN_GROUND);
     }
 
-    protected void setInGround(boolean p_455813_) {
-        this.entityData.set(IN_GROUND, p_455813_);
+    protected void setInGround(final boolean inGround) {
+        this.entityData.set(IN_GROUND, inGround);
     }
 
     @Override
@@ -361,9 +373,9 @@ public abstract class AbstractArrow extends Projectile {
     }
 
     @Override
-    public void move(MoverType p_457861_, Vec3 p_459918_) {
-        super.move(p_457861_, p_459918_);
-        if (p_457861_ != MoverType.SELF && this.shouldFall()) {
+    public void move(final MoverType moverType, final Vec3 delta) {
+        super.move(moverType, delta);
+        if (moverType != MoverType.SELF && this.shouldFall()) {
             this.startFalling();
         }
     }
@@ -386,44 +398,44 @@ public abstract class AbstractArrow extends Projectile {
     }
 
     @Override
-    public void onItemBreak(Item p_459092_) {
+    public void onItemBreak(final Item item) {
         this.firedFromWeapon = null;
     }
 
     @Override
-    public void onAboveBubbleColumn(boolean p_457070_, BlockPos p_456080_) {
+    public void onAboveBubbleColumn(final boolean dragDown, final BlockPos pos) {
         if (!this.isInGround()) {
-            super.onAboveBubbleColumn(p_457070_, p_456080_);
+            super.onAboveBubbleColumn(dragDown, pos);
         }
     }
 
     @Override
-    public void onInsideBubbleColumn(boolean p_450152_) {
+    public void onInsideBubbleColumn(final boolean dragDown) {
         if (!this.isInGround()) {
-            super.onInsideBubbleColumn(p_450152_);
+            super.onInsideBubbleColumn(dragDown);
         }
     }
 
     @Override
-    public void push(double p_460266_, double p_450202_, double p_451620_) {
+    public void push(final double xa, final double ya, final double za) {
         if (!this.isInGround()) {
-            super.push(p_460266_, p_450202_, p_451620_);
+            super.push(xa, ya, za);
         }
     }
 
     @Override
-    protected void onHitEntity(EntityHitResult p_460593_) {
-        super.onHitEntity(p_460593_);
-        Entity entity = p_460593_.getEntity();
-        float f = (float)this.getDeltaMovement().length();
-        double d0 = this.baseDamage;
-        Entity entity1 = this.getOwner();
-        DamageSource damagesource = this.damageSources().arrow(this, (Entity)(entity1 != null ? entity1 : this));
-        if (this.getWeaponItem() != null && this.level() instanceof ServerLevel serverlevel) {
-            d0 = EnchantmentHelper.modifyDamage(serverlevel, this.getWeaponItem(), entity, damagesource, (float)d0);
+    protected void onHitEntity(final EntityHitResult hitResult) {
+        super.onHitEntity(hitResult);
+        Entity entity = hitResult.getEntity();
+        float pow = (float)this.getDeltaMovement().length();
+        double arrowDamage = this.baseDamage;
+        Entity currentOwner = this.getOwner();
+        DamageSource damageSource = this.damageSources().arrow(this, currentOwner != null ? currentOwner : this);
+        if (this.getWeaponItem() != null && this.level() instanceof ServerLevel serverLevel) {
+            arrowDamage = EnchantmentHelper.modifyDamage(serverLevel, this.getWeaponItem(), entity, damageSource, (float)arrowDamage);
         }
 
-        int j = Mth.ceil(Mth.clamp(f * d0, 0.0, 2.147483647E9));
+        int damage = Mth.ceil(Mth.clamp(pow * arrowDamage, 0.0, 2.147483647E9));
         if (this.getPierceLevel() > 0) {
             if (this.piercingIgnoreEntityIds == null) {
                 this.piercingIgnoreEntityIds = new IntOpenHashSet(5);
@@ -442,49 +454,49 @@ public abstract class AbstractArrow extends Projectile {
         }
 
         if (this.isCritArrow()) {
-            long k = this.random.nextInt(j / 2 + 2);
-            j = (int)Math.min(k + j, 2147483647L);
+            long dmgIncrease = this.random.nextInt(damage / 2 + 2);
+            damage = (int)Math.min(dmgIncrease + damage, 2147483647L);
         }
 
-        if (entity1 instanceof LivingEntity livingentity1) {
-            livingentity1.setLastHurtMob(entity);
+        if (currentOwner instanceof LivingEntity livingOwner) {
+            livingOwner.setLastHurtMob(entity);
         }
 
-        boolean flag = entity.getType() == EntityType.ENDERMAN;
-        int i = entity.getRemainingFireTicks();
-        if (this.isOnFire() && !flag) {
+        boolean isEnderman = entity.is(EntityTypes.ENDERMAN);
+        int remainingFireTicks = entity.getRemainingFireTicks();
+        if (this.isOnFire() && !isEnderman) {
             entity.igniteForSeconds(5.0F);
         }
 
-        if (entity.hurtOrSimulate(damagesource, j)) {
-            if (flag) {
+        if (entity.hurtOrSimulate(damageSource, damage)) {
+            if (isEnderman) {
                 return;
             }
 
-            if (entity instanceof LivingEntity livingentity) {
+            if (entity instanceof LivingEntity mob) {
                 if (!this.level().isClientSide() && this.getPierceLevel() <= 0) {
-                    livingentity.setArrowCount(livingentity.getArrowCount() + 1);
+                    mob.setArrowCount(mob.getArrowCount() + 1);
                 }
 
-                this.doKnockback(livingentity, damagesource);
-                if (this.level() instanceof ServerLevel serverlevel1) {
-                    EnchantmentHelper.doPostAttackEffectsWithItemSource(serverlevel1, livingentity, damagesource, this.getWeaponItem());
+                this.doKnockback(mob, damageSource);
+                if (this.level() instanceof ServerLevel serverLevel) {
+                    EnchantmentHelper.doPostAttackEffectsWithItemSource(serverLevel, mob, damageSource, this.getWeaponItem());
                 }
 
-                this.doPostHurtEffects(livingentity);
-                if (livingentity instanceof Player && entity1 instanceof ServerPlayer serverplayer && !this.isSilent() && livingentity != serverplayer) {
-                    serverplayer.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.PLAY_ARROW_HIT_SOUND, 0.0F));
+                this.doPostHurtEffects(mob);
+                if (mob instanceof Player && currentOwner instanceof ServerPlayer ownerPlayer && !this.isSilent() && mob != ownerPlayer) {
+                    ownerPlayer.connection.send(new ClientboundGameEventPacket(ClientboundGameEventPacket.PLAY_ARROW_HIT_SOUND, 0.0F));
                 }
 
                 if (!entity.isAlive() && this.piercedAndKilledEntities != null) {
-                    this.piercedAndKilledEntities.add(livingentity);
+                    this.piercedAndKilledEntities.add(mob);
                 }
 
-                if (!this.level().isClientSide() && entity1 instanceof ServerPlayer serverplayer1) {
+                if (!this.level().isClientSide() && currentOwner instanceof ServerPlayer player) {
                     if (this.piercedAndKilledEntities != null) {
-                        CriteriaTriggers.KILLED_BY_ARROW.trigger(serverplayer1, this.piercedAndKilledEntities, this.firedFromWeapon);
+                        CriteriaTriggers.KILLED_BY_ARROW.trigger(player, this.piercedAndKilledEntities, this.firedFromWeapon);
                     } else if (!entity.isAlive()) {
-                        CriteriaTriggers.KILLED_BY_ARROW.trigger(serverplayer1, List.of(entity), this.firedFromWeapon);
+                        CriteriaTriggers.KILLED_BY_ARROW.trigger(player, List.of(entity), this.firedFromWeapon);
                     }
                 }
             }
@@ -494,12 +506,12 @@ public abstract class AbstractArrow extends Projectile {
                 this.discard();
             }
         } else {
-            entity.setRemainingFireTicks(i);
+            entity.setRemainingFireTicks(remainingFireTicks);
             this.deflect(ProjectileDeflection.REVERSE, entity, this.owner, false);
             this.setDeltaMovement(this.getDeltaMovement().scale(0.2));
-            if (this.level() instanceof ServerLevel serverlevel2 && this.getDeltaMovement().lengthSqr() < 1.0E-7) {
+            if (this.level() instanceof ServerLevel level && this.getDeltaMovement().lengthSqr() < 1.0E-7) {
                 if (this.pickup == AbstractArrow.Pickup.ALLOWED) {
-                    this.spawnAtLocation(serverlevel2, this.getPickupItem(), 0.1F);
+                    this.spawnAtLocation(level, this.getPickupItem(), 0.1F);
                 }
 
                 this.discard();
@@ -507,32 +519,32 @@ public abstract class AbstractArrow extends Projectile {
         }
     }
 
-    protected void doKnockback(LivingEntity p_458476_, DamageSource p_457144_) {
-        double d0 = this.firedFromWeapon != null && this.level() instanceof ServerLevel serverlevel
-            ? EnchantmentHelper.modifyKnockback(serverlevel, this.firedFromWeapon, p_458476_, p_457144_, 0.0F)
+    protected void doKnockback(final LivingEntity mob, final DamageSource damageSource) {
+        double knockback = this.firedFromWeapon != null && this.level() instanceof ServerLevel serverLevel
+            ? EnchantmentHelper.modifyKnockback(serverLevel, this.firedFromWeapon, mob, damageSource, 0.0F)
             : 0.0F;
-        if (d0 > 0.0) {
-            double d1 = Math.max(0.0, 1.0 - p_458476_.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
-            Vec3 vec3 = this.getDeltaMovement().multiply(1.0, 0.0, 1.0).normalize().scale(d0 * 0.6 * d1);
-            if (vec3.lengthSqr() > 0.0) {
-                p_458476_.push(vec3.x, 0.1, vec3.z);
+        if (knockback > 0.0) {
+            double knockbackResistance = Math.max(0.0, 1.0 - mob.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
+            Vec3 movement = this.getDeltaMovement().multiply(1.0, 0.0, 1.0).normalize().scale(knockback * 0.6 * knockbackResistance);
+            if (movement.lengthSqr() > 0.0) {
+                mob.push(movement.x, 0.1, movement.z);
             }
         }
     }
 
     @Override
-    protected void onHitBlock(BlockHitResult p_457257_) {
-        this.lastState = this.level().getBlockState(p_457257_.getBlockPos());
-        super.onHitBlock(p_457257_);
-        ItemStack itemstack = this.getWeaponItem();
-        if (this.level() instanceof ServerLevel serverlevel && itemstack != null) {
-            this.hitBlockEnchantmentEffects(serverlevel, p_457257_, itemstack);
+    protected void onHitBlock(final BlockHitResult hitResult) {
+        this.lastState = this.level().getBlockState(hitResult.getBlockPos());
+        super.onHitBlock(hitResult);
+        ItemStack weaponItem = this.getWeaponItem();
+        if (this.level() instanceof ServerLevel serverLevel && weaponItem != null) {
+            this.hitBlockEnchantmentEffects(serverLevel, hitResult, weaponItem);
         }
 
-        Vec3 vec31 = this.getDeltaMovement();
-        Vec3 vec32 = new Vec3(Math.signum(vec31.x), Math.signum(vec31.y), Math.signum(vec31.z));
-        Vec3 vec3 = vec32.scale(0.05F);
-        this.setPos(this.position().subtract(vec3));
+        Vec3 movement = this.getDeltaMovement();
+        Vec3 offsetDirection = new Vec3(Math.signum(movement.x), Math.signum(movement.y), Math.signum(movement.z));
+        Vec3 scaledMovement = offsetDirection.scale(0.05F);
+        this.setPos(this.position().subtract(scaledMovement));
         this.setDeltaMovement(Vec3.ZERO);
         this.playSound(this.getHitGroundSoundEvent(), 1.0F, 1.2F / (this.random.nextFloat() * 0.2F + 0.9F));
         this.setInGround(true);
@@ -543,17 +555,17 @@ public abstract class AbstractArrow extends Projectile {
         this.resetPiercedEntities();
     }
 
-    protected void hitBlockEnchantmentEffects(ServerLevel p_452968_, BlockHitResult p_451398_, ItemStack p_451419_) {
-        Vec3 vec3 = p_451398_.getBlockPos().clampLocationWithin(p_451398_.getLocation());
+    protected void hitBlockEnchantmentEffects(final ServerLevel serverLevel, final BlockHitResult hitResult, final ItemStack weapon) {
+        Vec3 compensatedHitPosition = hitResult.getBlockPos().clampLocationWithin(hitResult.getLocation());
         EnchantmentHelper.onHitBlock(
-            p_452968_,
-            p_451419_,
-            this.getOwner() instanceof LivingEntity livingentity ? livingentity : null,
+            serverLevel,
+            weapon,
+            this.getOwner() instanceof LivingEntity livingOwner ? livingOwner : null,
             this,
             null,
-            vec3,
-            p_452968_.getBlockState(p_451398_.getBlockPos()),
-            p_459675_ -> this.firedFromWeapon = null
+            compensatedHitPosition,
+            serverLevel.getBlockState(hitResult.getBlockPos()),
+            item -> this.firedFromWeapon = null
         );
     }
 
@@ -570,84 +582,86 @@ public abstract class AbstractArrow extends Projectile {
         return this.soundEvent;
     }
 
-    protected void doPostHurtEffects(LivingEntity p_453628_) {
+    protected void doPostHurtEffects(final LivingEntity mob) {
     }
 
-    protected @Nullable EntityHitResult findHitEntity(Vec3 p_457196_, Vec3 p_459960_) {
-        return ProjectileUtil.getEntityHitResult(this.level(), this, p_457196_, p_459960_, this.getBoundingBox().expandTowards(this.getDeltaMovement()).inflate(1.0), this::canHitEntity);
+    protected @Nullable EntityHitResult findHitEntity(final Vec3 from, final Vec3 to) {
+        return ProjectileUtil.getEntityHitResult(
+            this.level(), this, from, to, this.getBoundingBox().expandTowards(this.getDeltaMovement()).inflate(1.0), this::canHitEntity
+        );
     }
 
-    protected Collection<EntityHitResult> findHitEntities(Vec3 p_458868_, Vec3 p_458662_) {
+    protected Collection<EntityHitResult> findHitEntities(final Vec3 from, final Vec3 to) {
         return ProjectileUtil.getManyEntityHitResult(
-            this.level(), this, p_458868_, p_458662_, this.getBoundingBox().expandTowards(this.getDeltaMovement()).inflate(1.0), this::canHitEntity, false
+            this.level(), this, from, to, this.getBoundingBox().expandTowards(this.getDeltaMovement()).inflate(1.0), this::canHitEntity, false
         );
     }
 
     @Override
-    protected boolean canHitEntity(Entity p_454713_) {
-        return p_454713_ instanceof Player && this.getOwner() instanceof Player player && !player.canHarmPlayer((Player)p_454713_)
+    protected boolean canHitEntity(final Entity entity) {
+        return entity instanceof Player playerEntity && this.getOwner() instanceof Player player && !player.canHarmPlayer(playerEntity)
             ? false
-            : super.canHitEntity(p_454713_) && (this.piercingIgnoreEntityIds == null || !this.piercingIgnoreEntityIds.contains(p_454713_.getId()));
+            : super.canHitEntity(entity) && (this.piercingIgnoreEntityIds == null || !this.piercingIgnoreEntityIds.contains(entity.getId()));
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_459438_) {
-        super.addAdditionalSaveData(p_459438_);
-        p_459438_.putShort("life", (short)this.life);
-        p_459438_.storeNullable("inBlockState", BlockState.CODEC, this.lastState);
-        p_459438_.putByte("shake", (byte)this.shakeTime);
-        p_459438_.putBoolean("inGround", this.isInGround());
-        p_459438_.store("pickup", AbstractArrow.Pickup.LEGACY_CODEC, this.pickup);
-        p_459438_.putDouble("damage", this.baseDamage);
-        p_459438_.putBoolean("crit", this.isCritArrow());
-        p_459438_.putByte("PierceLevel", this.getPierceLevel());
-        p_459438_.store("SoundEvent", BuiltInRegistries.SOUND_EVENT.byNameCodec(), this.soundEvent);
-        p_459438_.store("item", ItemStack.CODEC, this.pickupItemStack);
-        p_459438_.storeNullable("weapon", ItemStack.CODEC, this.firedFromWeapon);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putShort("life", (short)this.life);
+        output.storeNullable("inBlockState", BlockState.CODEC, this.lastState);
+        output.putByte("shake", (byte)this.shakeTime);
+        output.putBoolean("inGround", this.isInGround());
+        output.store("pickup", AbstractArrow.Pickup.LEGACY_CODEC, this.pickup);
+        output.putDouble("damage", this.baseDamage);
+        output.putBoolean("crit", this.isCritArrow());
+        output.putByte("PierceLevel", this.getPierceLevel());
+        output.store("SoundEvent", BuiltInRegistries.SOUND_EVENT.byNameCodec(), this.soundEvent);
+        output.store("item", ItemStack.CODEC, this.pickupItemStack);
+        output.storeNullable("weapon", ItemStack.CODEC, this.firedFromWeapon);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_451310_) {
-        super.readAdditionalSaveData(p_451310_);
-        this.life = p_451310_.getShortOr("life", (short)0);
-        this.lastState = p_451310_.read("inBlockState", BlockState.CODEC).orElse(null);
-        this.shakeTime = p_451310_.getByteOr("shake", (byte)0) & 255;
-        this.setInGround(p_451310_.getBooleanOr("inGround", false));
-        this.baseDamage = p_451310_.getDoubleOr("damage", 2.0);
-        this.pickup = p_451310_.read("pickup", AbstractArrow.Pickup.LEGACY_CODEC).orElse(AbstractArrow.Pickup.DISALLOWED);
-        this.setCritArrow(p_451310_.getBooleanOr("crit", false));
-        this.setPierceLevel(p_451310_.getByteOr("PierceLevel", (byte)0));
-        this.soundEvent = p_451310_.read("SoundEvent", BuiltInRegistries.SOUND_EVENT.byNameCodec()).orElse(this.getDefaultHitGroundSoundEvent());
-        this.setPickupItemStack(p_451310_.read("item", ItemStack.CODEC).orElse(this.getDefaultPickupItem()));
-        this.firedFromWeapon = p_451310_.read("weapon", ItemStack.CODEC).orElse(null);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.life = input.getShortOr("life", (short)0);
+        this.lastState = input.read("inBlockState", BlockState.CODEC).orElse(null);
+        this.shakeTime = input.getByteOr("shake", (byte)0) & 255;
+        this.setInGround(input.getBooleanOr("inGround", false));
+        this.baseDamage = input.getDoubleOr("damage", 2.0);
+        this.pickup = input.read("pickup", AbstractArrow.Pickup.LEGACY_CODEC).orElse(AbstractArrow.Pickup.DISALLOWED);
+        this.setCritArrow(input.getBooleanOr("crit", false));
+        this.setPierceLevel(input.getByteOr("PierceLevel", (byte)0));
+        this.soundEvent = input.read("SoundEvent", BuiltInRegistries.SOUND_EVENT.byNameCodec()).orElse(this.getDefaultHitGroundSoundEvent());
+        this.setPickupItemStack(input.read("item", ItemStack.CODEC).orElse(this.getDefaultPickupItem()));
+        this.firedFromWeapon = input.read("weapon", ItemStack.CODEC).orElse(null);
     }
 
     @Override
-    public void setOwner(@Nullable Entity p_453693_) {
-        super.setOwner(p_453693_);
+    public void setOwner(final @Nullable Entity owner) {
+        super.setOwner(owner);
 
-        this.pickup = switch (p_453693_) {
-            case Player player when this.pickup == AbstractArrow.Pickup.DISALLOWED -> AbstractArrow.Pickup.ALLOWED;
-            case OminousItemSpawner ominousitemspawner -> AbstractArrow.Pickup.DISALLOWED;
+        this.pickup = switch (owner) {
+            case Player ignored when this.pickup == AbstractArrow.Pickup.DISALLOWED -> AbstractArrow.Pickup.ALLOWED;
+            case OminousItemSpawner ignored -> AbstractArrow.Pickup.DISALLOWED;
             case null, default -> this.pickup;
         };
     }
 
     @Override
-    public void playerTouch(Player p_455357_) {
+    public void playerTouch(final Player player) {
         if (!this.level().isClientSide() && (this.isInGround() || this.isNoPhysics()) && this.shakeTime <= 0) {
-            if (this.tryPickup(p_455357_)) {
-                p_455357_.take(this, 1);
+            if (this.tryPickup(player)) {
+                player.take(this, 1);
                 this.discard();
             }
         }
     }
 
-    protected boolean tryPickup(Player p_459000_) {
+    protected boolean tryPickup(final Player player) {
         return switch (this.pickup) {
             case DISALLOWED -> false;
-            case ALLOWED -> p_459000_.getInventory().add(this.getPickupItem());
-            case CREATIVE_ONLY -> p_459000_.hasInfiniteMaterials();
+            case ALLOWED -> player.getInventory().add(this.getPickupItem());
+            case CREATIVE_ONLY -> player.hasInfiniteMaterials();
         };
     }
 
@@ -666,60 +680,60 @@ public abstract class AbstractArrow extends Projectile {
         return this.pickupItemStack;
     }
 
-    public void setBaseDamage(double p_457883_) {
-        this.baseDamage = p_457883_;
+    public void setBaseDamage(final double baseDamage) {
+        this.baseDamage = baseDamage;
     }
 
     @Override
     public boolean isAttackable() {
-        return this.getType().is(EntityTypeTags.REDIRECTABLE_PROJECTILE);
+        return this.is(EntityTypeTags.REDIRECTABLE_PROJECTILE);
     }
 
-    public void setCritArrow(boolean p_451209_) {
-        this.setFlag(1, p_451209_);
+    public void setCritArrow(final boolean critArrow) {
+        this.setFlag(1, critArrow);
     }
 
-    private void setPierceLevel(byte p_459301_) {
-        this.entityData.set(PIERCE_LEVEL, p_459301_);
+    private void setPierceLevel(final byte pieceLevel) {
+        this.entityData.set(PIERCE_LEVEL, pieceLevel);
     }
 
-    private void setFlag(int p_457802_, boolean p_460218_) {
-        byte b0 = this.entityData.get(ID_FLAGS);
-        if (p_460218_) {
-            this.entityData.set(ID_FLAGS, (byte)(b0 | p_457802_));
+    private void setFlag(final int flag, final boolean value) {
+        byte flags = this.entityData.get(ID_FLAGS);
+        if (value) {
+            this.entityData.set(ID_FLAGS, (byte)(flags | flag));
         } else {
-            this.entityData.set(ID_FLAGS, (byte)(b0 & ~p_457802_));
+            this.entityData.set(ID_FLAGS, (byte)(flags & ~flag));
         }
     }
 
-    protected void setPickupItemStack(ItemStack p_456102_) {
-        if (!p_456102_.isEmpty()) {
-            this.pickupItemStack = p_456102_;
+    protected void setPickupItemStack(final ItemStack itemStack) {
+        if (!itemStack.isEmpty()) {
+            this.pickupItemStack = itemStack;
         } else {
             this.pickupItemStack = this.getDefaultPickupItem();
         }
     }
 
     public boolean isCritArrow() {
-        byte b0 = this.entityData.get(ID_FLAGS);
-        return (b0 & 1) != 0;
+        byte flags = this.entityData.get(ID_FLAGS);
+        return (flags & 1) != 0;
     }
 
     public byte getPierceLevel() {
         return this.entityData.get(PIERCE_LEVEL);
     }
 
-    public void setBaseDamageFromMob(float p_457546_) {
-        this.setBaseDamage(p_457546_ * 2.0F + this.random.triangle(this.level().getDifficulty().getId() * 0.11, 0.57425));
+    public void setBaseDamageFromMob(final float power) {
+        this.setBaseDamage(power * 2.0F + this.random.triangle(this.level().getDifficulty().getId() * 0.11, 0.57425));
     }
 
     protected float getWaterInertia() {
         return 0.6F;
     }
 
-    public void setNoPhysics(boolean p_456576_) {
-        this.noPhysics = p_456576_;
-        this.setFlag(2, p_456576_);
+    public void setNoPhysics(final boolean noPhysics) {
+        this.noPhysics = noPhysics;
+        this.setFlag(2, noPhysics);
     }
 
     public boolean isNoPhysics() {
@@ -732,8 +746,8 @@ public abstract class AbstractArrow extends Projectile {
     }
 
     @Override
-    public @Nullable SlotAccess getSlot(int p_458253_) {
-        return p_458253_ == 0 ? SlotAccess.of(this::getPickupItemStackOrigin, this::setPickupItemStack) : super.getSlot(p_458253_);
+    public @Nullable SlotAccess getSlot(final int slot) {
+        return slot == 0 ? SlotAccess.of(this::getPickupItemStackOrigin, this::setPickupItemStack) : super.getSlot(slot);
     }
 
     @Override
@@ -741,19 +755,19 @@ public abstract class AbstractArrow extends Projectile {
         return true;
     }
 
-    public static enum Pickup {
+    public enum Pickup {
         DISALLOWED,
         ALLOWED,
         CREATIVE_ONLY;
 
-        public static final Codec<AbstractArrow.Pickup> LEGACY_CODEC = Codec.BYTE.xmap(AbstractArrow.Pickup::byOrdinal, p_453045_ -> (byte)p_453045_.ordinal());
+        public static final Codec<AbstractArrow.Pickup> LEGACY_CODEC = Codec.BYTE.xmap(AbstractArrow.Pickup::byOrdinal, p -> (byte)p.ordinal());
 
-        public static AbstractArrow.Pickup byOrdinal(int p_459536_) {
-            if (p_459536_ < 0 || p_459536_ > values().length) {
-                p_459536_ = 0;
+        public static AbstractArrow.Pickup byOrdinal(int ordinal) {
+            if (ordinal < 0 || ordinal > values().length) {
+                ordinal = 0;
             }
 
-            return values()[p_459536_];
+            return values()[ordinal];
         }
     }
 }

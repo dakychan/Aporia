@@ -4,7 +4,7 @@ import com.mojang.blaze3d.opengl.GlTexture
 import com.mojang.blaze3d.systems.RenderSystem
 import com.mojang.blaze3d.textures.GpuTexture
 import com.mojang.blaze3d.textures.GpuTextureView
-import com.mojang.blaze3d.textures.TextureFormat
+import com.mojang.blaze3d.GpuFormat
 import java.nio.ByteBuffer
 import org.lwjgl.opengl.GL11.*
 import org.lwjgl.opengl.GL12.*
@@ -64,7 +64,7 @@ class WebviewTexture : AutoCloseable {
         texture = RenderSystem.getDevice().createTexture(
             "WebView",
             GpuTexture.USAGE_TEXTURE_BINDING or GpuTexture.USAGE_COPY_DST,
-            TextureFormat.RGBA8,
+            GpuFormat.RGBA8_UNORM,
             width, height, 1, 1
         )
         textureView = RenderSystem.getDevice().createTextureView(texture!!)

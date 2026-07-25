@@ -25,88 +25,102 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.clock.WorldClock;
 import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.structure.Structure;
+import net.minecraft.world.timeline.Timeline;
 
 public class ResourceArgument<T> implements ArgumentType<Holder.Reference<T>> {
     private static final Collection<String> EXAMPLES = Arrays.asList("foo", "foo:bar", "012");
     private static final DynamicCommandExceptionType ERROR_NOT_SUMMONABLE_ENTITY = new DynamicCommandExceptionType(
-        p_308361_ -> Component.translatableEscape("entity.not_summonable", p_308361_)
+        value -> Component.translatableEscape("entity.not_summonable", value)
     );
     public static final Dynamic2CommandExceptionType ERROR_UNKNOWN_RESOURCE = new Dynamic2CommandExceptionType(
-        (p_308359_, p_308360_) -> Component.translatableEscape("argument.resource.not_found", p_308359_, p_308360_)
+        (id, registry) -> Component.translatableEscape("argument.resource.not_found", id, registry)
     );
     public static final Dynamic3CommandExceptionType ERROR_INVALID_RESOURCE_TYPE = new Dynamic3CommandExceptionType(
-        (p_308362_, p_308363_, p_308364_) -> Component.translatableEscape("argument.resource.invalid_type", p_308362_, p_308363_, p_308364_)
+        (id, actualRegistry, expectedRegistry) -> Component.translatableEscape("argument.resource.invalid_type", id, actualRegistry, expectedRegistry)
     );
-    final ResourceKey<? extends Registry<T>> registryKey;
+    private final ResourceKey<? extends Registry<T>> registryKey;
     private final HolderLookup<T> registryLookup;
 
-    public ResourceArgument(CommandBuildContext p_248597_, ResourceKey<? extends Registry<T>> p_251778_) {
-        this.registryKey = p_251778_;
-        this.registryLookup = p_248597_.lookupOrThrow(p_251778_);
+    public ResourceArgument(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> registryKey) {
+        this.registryKey = registryKey;
+        this.registryLookup = context.lookupOrThrow(registryKey);
     }
 
-    public static <T> ResourceArgument<T> resource(CommandBuildContext p_249973_, ResourceKey<? extends Registry<T>> p_251405_) {
-        return new ResourceArgument<>(p_249973_, p_251405_);
+    public static <T> ResourceArgument<T> resource(final CommandBuildContext context, final ResourceKey<? extends Registry<T>> key) {
+        return new ResourceArgument<>(context, key);
     }
 
-    public static <T> Holder.Reference<T> getResource(CommandContext<CommandSourceStack> p_251788_, String p_251996_, ResourceKey<Registry<T>> p_250077_) throws CommandSyntaxException {
-        Holder.Reference<T> reference = p_251788_.getArgument(p_251996_, Holder.Reference.class);
-        ResourceKey<?> resourcekey = reference.key();
-        if (resourcekey.isFor(p_250077_)) {
-            return reference;
+    public static <T> Holder.Reference<T> getResource(
+        final CommandContext<CommandSourceStack> context, final String name, final ResourceKey<Registry<T>> registryKey
+    ) throws CommandSyntaxException {
+        Holder.Reference<T> argument = context.getArgument(name, Holder.Reference.class);
+        ResourceKey<?> argumentKey = argument.key();
+        if (argumentKey.isFor(registryKey)) {
+            return argument;
         } else {
-            throw ERROR_INVALID_RESOURCE_TYPE.create(resourcekey.identifier(), resourcekey.registry(), p_250077_.identifier());
+            throw ERROR_INVALID_RESOURCE_TYPE.create(argumentKey.identifier(), argumentKey.registry(), registryKey.identifier());
         }
     }
 
-    public static Holder.Reference<Attribute> getAttribute(CommandContext<CommandSourceStack> p_248753_, String p_251157_) throws CommandSyntaxException {
-        return getResource(p_248753_, p_251157_, Registries.ATTRIBUTE);
+    public static Holder.Reference<Attribute> getAttribute(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.ATTRIBUTE);
     }
 
-    public static Holder.Reference<ConfiguredFeature<?, ?>> getConfiguredFeature(CommandContext<CommandSourceStack> p_250819_, String p_252256_) throws CommandSyntaxException {
-        return getResource(p_250819_, p_252256_, Registries.CONFIGURED_FEATURE);
+    public static Holder.Reference<ConfiguredFeature<?, ?>> getConfiguredFeature(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.CONFIGURED_FEATURE);
     }
 
-    public static Holder.Reference<Structure> getStructure(CommandContext<CommandSourceStack> p_250288_, String p_250856_) throws CommandSyntaxException {
-        return getResource(p_250288_, p_250856_, Registries.STRUCTURE);
+    public static Holder.Reference<Structure> getStructure(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.STRUCTURE);
     }
 
-    public static Holder.Reference<EntityType<?>> getEntityType(CommandContext<CommandSourceStack> p_251258_, String p_252322_) throws CommandSyntaxException {
-        return getResource(p_251258_, p_252322_, Registries.ENTITY_TYPE);
+    public static Holder.Reference<EntityType<?>> getEntityType(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.ENTITY_TYPE);
     }
 
-    public static Holder.Reference<EntityType<?>> getSummonableEntityType(CommandContext<CommandSourceStack> p_251880_, String p_250243_) throws CommandSyntaxException {
-        Holder.Reference<EntityType<?>> reference = getResource(p_251880_, p_250243_, Registries.ENTITY_TYPE);
-        if (!reference.value().canSummon()) {
-            throw ERROR_NOT_SUMMONABLE_ENTITY.create(reference.key().identifier().toString());
+    public static Holder.Reference<EntityType<?>> getSummonableEntityType(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        Holder.Reference<EntityType<?>> result = getResource(context, name, Registries.ENTITY_TYPE);
+        if (!result.value().canSummon()) {
+            throw ERROR_NOT_SUMMONABLE_ENTITY.create(result.key().identifier().toString());
         } else {
-            return reference;
+            return result;
         }
     }
 
-    public static Holder.Reference<MobEffect> getMobEffect(CommandContext<CommandSourceStack> p_250521_, String p_249927_) throws CommandSyntaxException {
-        return getResource(p_250521_, p_249927_, Registries.MOB_EFFECT);
+    public static Holder.Reference<MobEffect> getMobEffect(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.MOB_EFFECT);
     }
 
-    public static Holder.Reference<Enchantment> getEnchantment(CommandContext<CommandSourceStack> p_248656_, String p_248713_) throws CommandSyntaxException {
-        return getResource(p_248656_, p_248713_, Registries.ENCHANTMENT);
+    public static Holder.Reference<Enchantment> getEnchantment(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.ENCHANTMENT);
     }
 
-    public Holder.Reference<T> parse(StringReader p_250909_) throws CommandSyntaxException {
-        Identifier identifier = Identifier.read(p_250909_);
-        ResourceKey<T> resourcekey = ResourceKey.create(this.registryKey, identifier);
-        return this.registryLookup.get(resourcekey).orElseThrow(() -> ERROR_UNKNOWN_RESOURCE.createWithContext(p_250909_, identifier, this.registryKey.identifier()));
+    public static Holder.Reference<WorldClock> getClock(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.WORLD_CLOCK);
+    }
+
+    public static Holder.Reference<Timeline> getTimeline(final CommandContext<CommandSourceStack> context, final String name) throws CommandSyntaxException {
+        return getResource(context, name, Registries.TIMELINE);
+    }
+
+    public Holder.Reference<T> parse(final StringReader reader) throws CommandSyntaxException {
+        Identifier resourceId = Identifier.read(reader);
+        ResourceKey<T> keyInRegistry = ResourceKey.create(this.registryKey, resourceId);
+        return this.registryLookup
+            .get(keyInRegistry)
+            .orElseThrow(() -> ERROR_UNKNOWN_RESOURCE.createWithContext(reader, resourceId, this.registryKey.identifier()));
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_249391_, SuggestionsBuilder p_251197_) {
-        return SharedSuggestionProvider.listSuggestions(p_249391_, p_251197_, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ELEMENTS);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.listSuggestions(context, builder, this.registryKey, SharedSuggestionProvider.ElementSuggestionType.ELEMENTS);
     }
 
     @Override
@@ -115,31 +129,31 @@ public class ResourceArgument<T> implements ArgumentType<Holder.Reference<T>> {
     }
 
     public static class Info<T> implements ArgumentTypeInfo<ResourceArgument<T>, ResourceArgument.Info<T>.Template> {
-        public void serializeToNetwork(ResourceArgument.Info<T>.Template p_250470_, FriendlyByteBuf p_248658_) {
-            p_248658_.writeResourceKey(p_250470_.registryKey);
+        public void serializeToNetwork(final ResourceArgument.Info<T>.Template template, final FriendlyByteBuf out) {
+            out.writeResourceKey(template.registryKey);
         }
 
-        public ResourceArgument.Info<T>.Template deserializeFromNetwork(FriendlyByteBuf p_248958_) {
-            return new ResourceArgument.Info.Template(p_248958_.readRegistryKey());
+        public ResourceArgument.Info<T>.Template deserializeFromNetwork(final FriendlyByteBuf in) {
+            return new ResourceArgument.Info.Template(in.readRegistryKey());
         }
 
-        public void serializeToJson(ResourceArgument.Info<T>.Template p_251267_, JsonObject p_250142_) {
-            p_250142_.addProperty("registry", p_251267_.registryKey.identifier().toString());
+        public void serializeToJson(final ResourceArgument.Info<T>.Template template, final JsonObject out) {
+            out.addProperty("registry", template.registryKey.identifier().toString());
         }
 
-        public ResourceArgument.Info<T>.Template unpack(ResourceArgument<T> p_250667_) {
-            return new ResourceArgument.Info.Template(p_250667_.registryKey);
+        public ResourceArgument.Info<T>.Template unpack(final ResourceArgument<T> argument) {
+            return new ResourceArgument.Info.Template(argument.registryKey);
         }
 
         public final class Template implements ArgumentTypeInfo.Template<ResourceArgument<T>> {
-            final ResourceKey<? extends Registry<T>> registryKey;
+            private final ResourceKey<? extends Registry<T>> registryKey;
 
-            Template(final ResourceKey<? extends Registry<T>> p_250598_) {
-                this.registryKey = p_250598_;
+            private Template(final ResourceKey<? extends Registry<T>> registryKey) {
+                this.registryKey = registryKey;
             }
 
-            public ResourceArgument<T> instantiate(CommandBuildContext p_251900_) {
-                return new ResourceArgument<>(p_251900_, this.registryKey);
+            public ResourceArgument<T> instantiate(final CommandBuildContext context) {
+                return new ResourceArgument<>(context, this.registryKey);
             }
 
             @Override

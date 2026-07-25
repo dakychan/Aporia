@@ -24,7 +24,6 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -45,35 +44,35 @@ public class ServerStatsCounter extends StatsCounter {
     private static final Codec<Map<Stat<?>, Integer>> STATS_CODEC = Codec.dispatchedMap(
             BuiltInRegistries.STAT_TYPE.byNameCodec(), Util.memoize(ServerStatsCounter::createTypedStatsCodec)
         )
-        .xmap(p_390196_ -> {
-            Map<Stat<?>, Integer> map = new HashMap<>();
-            p_390196_.forEach((p_390199_, p_390200_) -> map.putAll((Map<? extends Stat<?>, ? extends Integer>)p_390200_));
-            return map;
-        }, p_449209_ -> p_449209_.entrySet().stream().collect(Collectors.groupingBy(p_390201_ -> p_390201_.getKey().getType(), Util.toMap())));
+        .xmap(groupedStats -> {
+            Map<Stat<?>, Integer> stats = new HashMap<>();
+            groupedStats.forEach((type, values) -> stats.putAll((Map<? extends Stat<?>, ? extends Integer>)values));
+            return stats;
+        }, map -> map.entrySet().stream().collect(Collectors.groupingBy(entry -> entry.getKey().getType(), Util.toMap())));
     private final Path file;
     private final Set<Stat<?>> dirty = Sets.newHashSet();
 
-    private static <T> Codec<Map<Stat<?>, Integer>> createTypedStatsCodec(StatType<T> p_395191_) {
-        Codec<T> codec = p_395191_.getRegistry().byNameCodec();
-        Codec<Stat<?>> codec1 = codec.flatComapMap(
-            p_395191_::get,
-            p_390205_ -> p_390205_.getType() == p_395191_
-                ? DataResult.success((T)p_390205_.getValue())
-                : DataResult.error(() -> "Expected type " + p_395191_ + ", but got " + p_390205_.getType())
+    private static <T> Codec<Map<Stat<?>, Integer>> createTypedStatsCodec(final StatType<T> type) {
+        Codec<T> valueCodec = type.getRegistry().byNameCodec();
+        Codec<Stat<?>> statCodec = valueCodec.flatComapMap(
+            type::get,
+            stat -> stat.getType() == type
+                ? DataResult.success((T)stat.getValue())
+                : DataResult.error(() -> "Expected type " + type + ", but got " + stat.getType())
         );
-        return Codec.unboundedMap(codec1, Codec.INT);
+        return Codec.unboundedMap(statCodec, Codec.INT);
     }
 
-    public ServerStatsCounter(MinecraftServer p_12816_, Path p_451842_) {
-        this.file = p_451842_;
-        if (Files.isRegularFile(p_451842_)) {
-            try (Reader reader = Files.newBufferedReader(p_451842_, StandardCharsets.UTF_8)) {
-                JsonElement jsonelement = StrictJsonParser.parse(reader);
-                this.parse(p_12816_.getFixerUpper(), jsonelement);
-            } catch (IOException ioexception) {
-                LOGGER.error("Couldn't read statistics file {}", p_451842_, ioexception);
-            } catch (JsonParseException jsonparseexception) {
-                LOGGER.error("Couldn't parse statistics file {}", p_451842_, jsonparseexception);
+    public ServerStatsCounter(final MinecraftServer server, final Path file) {
+        this.file = file;
+        if (Files.isRegularFile(file)) {
+            try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+                JsonElement element = StrictJsonParser.parse(reader);
+                this.parse(server.getFixerUpper(), element);
+            } catch (IOException e) {
+                LOGGER.error("Couldn't read statistics file {}", file, e);
+            } catch (JsonParseException e) {
+                LOGGER.error("Couldn't parse statistics file {}", file, e);
             }
         }
     }
@@ -85,52 +84,52 @@ public class ServerStatsCounter extends StatsCounter {
             try (Writer writer = Files.newBufferedWriter(this.file, StandardCharsets.UTF_8)) {
                 GSON.toJson(this.toJson(), GSON.newJsonWriter(writer));
             }
-        } catch (JsonIOException | IOException ioexception) {
-            LOGGER.error("Couldn't save stats to {}", this.file, ioexception);
+        } catch (IOException | JsonIOException e) {
+            LOGGER.error("Couldn't save stats to {}", this.file, e);
         }
     }
 
     @Override
-    public void setValue(Player p_12827_, Stat<?> p_12828_, int p_12829_) {
-        super.setValue(p_12827_, p_12828_, p_12829_);
-        this.dirty.add(p_12828_);
+    public void setValue(final Player player, final Stat<?> stat, final int count) {
+        super.setValue(player, stat, count);
+        this.dirty.add(stat);
     }
 
     private Set<Stat<?>> getDirty() {
-        Set<Stat<?>> set = Sets.newHashSet(this.dirty);
+        Set<Stat<?>> result = Sets.newHashSet(this.dirty);
         this.dirty.clear();
-        return set;
+        return result;
     }
 
-    public void parse(DataFixer p_460093_, JsonElement p_453130_) {
-        Dynamic<JsonElement> dynamic = new Dynamic<>(JsonOps.INSTANCE, p_453130_);
-        dynamic = DataFixTypes.STATS.updateToCurrentVersion(p_460093_, dynamic, NbtUtils.getDataVersion(dynamic, 1343));
+    public void parse(final DataFixer fixerUpper, final JsonElement element) {
+        Dynamic<JsonElement> data = new Dynamic<>(JsonOps.INSTANCE, element);
+        data = DataFixTypes.STATS.updateToCurrentVersion(fixerUpper, data, NbtUtils.getDataVersion(data, 1343));
         this.stats
             .putAll(
-                STATS_CODEC.parse(dynamic.get("stats").orElseEmptyMap())
-                    .resultOrPartial(p_449208_ -> LOGGER.error("Failed to parse statistics for {}: {}", this.file, p_449208_))
+                STATS_CODEC.parse(data.get("stats").orElseEmptyMap())
+                    .resultOrPartial(error -> LOGGER.error("Failed to parse statistics for {}: {}", this.file, error))
                     .orElse(Map.of())
             );
     }
 
     protected JsonElement toJson() {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.add("stats", STATS_CODEC.encodeStart(JsonOps.INSTANCE, this.stats).getOrThrow());
-        jsonobject.addProperty("DataVersion", SharedConstants.getCurrentVersion().dataVersion().version());
-        return jsonobject;
+        JsonObject result = new JsonObject();
+        result.add("stats", STATS_CODEC.encodeStart(JsonOps.INSTANCE, this.stats).getOrThrow());
+        result.addProperty("DataVersion", SharedConstants.getCurrentVersion().dataVersion().version());
+        return result;
     }
 
     public void markAllDirty() {
         this.dirty.addAll(this.stats.keySet());
     }
 
-    public void sendStats(ServerPlayer p_12820_) {
-        Object2IntMap<Stat<?>> object2intmap = new Object2IntOpenHashMap<>();
+    public void sendStats(final ServerPlayer player) {
+        Object2IntMap<Stat<?>> statsToSend = new Object2IntOpenHashMap<>();
 
         for (Stat<?> stat : this.getDirty()) {
-            object2intmap.put(stat, this.getValue(stat));
+            statsToSend.put(stat, this.getValue(stat));
         }
 
-        p_12820_.connection.send(new ClientboundAwardStatsPacket(object2intmap));
+        player.connection.send(new ClientboundAwardStatsPacket(statsToSend));
     }
 }

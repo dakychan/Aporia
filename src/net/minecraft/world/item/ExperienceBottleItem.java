@@ -14,35 +14,35 @@ import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrownExper
 import net.minecraft.world.level.Level;
 
 public class ExperienceBottleItem extends Item implements ProjectileItem {
-    public ExperienceBottleItem(Item.Properties p_41194_) {
-        super(p_41194_);
+    public ExperienceBottleItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public InteractionResult use(Level p_41196_, Player p_41197_, InteractionHand p_41198_) {
-        ItemStack itemstack = p_41197_.getItemInHand(p_41198_);
-        p_41196_.playSound(
+    public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+        ItemStack itemStack = player.getItemInHand(hand);
+        level.playSound(
             null,
-            p_41197_.getX(),
-            p_41197_.getY(),
-            p_41197_.getZ(),
+            player.getX(),
+            player.getY(),
+            player.getZ(),
             SoundEvents.EXPERIENCE_BOTTLE_THROW,
             SoundSource.NEUTRAL,
             0.5F,
-            0.4F / (p_41196_.getRandom().nextFloat() * 0.4F + 0.8F)
+            0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F)
         );
-        if (p_41196_ instanceof ServerLevel serverlevel) {
-            Projectile.spawnProjectileFromRotation(ThrownExperienceBottle::new, serverlevel, itemstack, p_41197_, -20.0F, 0.7F, 1.0F);
+        if (level instanceof ServerLevel serverLevel) {
+            Projectile.spawnProjectileFromRotation(ThrownExperienceBottle::new, serverLevel, itemStack, player, -20.0F, 0.7F, 1.0F);
         }
 
-        p_41197_.awardStat(Stats.ITEM_USED.get(this));
-        itemstack.consume(1, p_41197_);
+        player.awardStat(Stats.ITEM_USED.get(this));
+        itemStack.consume(1, player);
         return InteractionResult.SUCCESS;
     }
 
     @Override
-    public Projectile asProjectile(Level p_329027_, Position p_329351_, ItemStack p_330574_, Direction p_336102_) {
-        return new ThrownExperienceBottle(p_329027_, p_329351_.x(), p_329351_.y(), p_329351_.z(), p_330574_);
+    public Projectile asProjectile(final Level level, final Position position, final ItemStack itemStack, final Direction direction) {
+        return new ThrownExperienceBottle(level, position.x(), position.y(), position.z(), itemStack);
     }
 
     @Override

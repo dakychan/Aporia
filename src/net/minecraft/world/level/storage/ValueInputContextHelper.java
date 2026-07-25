@@ -11,9 +11,9 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.Tag;
 
 public class ValueInputContextHelper {
-    final HolderLookup.Provider lookup;
+    private final HolderLookup.Provider lookup;
     private final DynamicOps<Tag> ops;
-    final ValueInput.ValueInputList emptyChildList = new ValueInput.ValueInputList() {
+    private final ValueInput.ValueInputList emptyChildList = new ValueInput.ValueInputList() {
         @Override
         public boolean isEmpty() {
             return true;
@@ -47,98 +47,98 @@ public class ValueInputContextHelper {
     };
     private final ValueInput empty = new ValueInput() {
         @Override
-        public <T> Optional<T> read(String p_409633_, Codec<T> p_409097_) {
+        public <T> Optional<T> read(final String name, final Codec<T> codec) {
             return Optional.empty();
         }
 
         @Override
-        public <T> Optional<T> read(MapCodec<T> p_406513_) {
+        public <T> Optional<T> read(final MapCodec<T> codec) {
             return Optional.empty();
         }
 
         @Override
-        public Optional<ValueInput> child(String p_407548_) {
+        public Optional<ValueInput> child(final String name) {
             return Optional.empty();
         }
 
         @Override
-        public ValueInput childOrEmpty(String p_405886_) {
+        public ValueInput childOrEmpty(final String name) {
             return this;
         }
 
         @Override
-        public Optional<ValueInput.ValueInputList> childrenList(String p_410211_) {
+        public Optional<ValueInput.ValueInputList> childrenList(final String name) {
             return Optional.empty();
         }
 
         @Override
-        public ValueInput.ValueInputList childrenListOrEmpty(String p_407655_) {
+        public ValueInput.ValueInputList childrenListOrEmpty(final String name) {
             return ValueInputContextHelper.this.emptyChildList;
         }
 
         @Override
-        public <T> Optional<ValueInput.TypedInputList<T>> list(String p_407586_, Codec<T> p_405984_) {
+        public <T> Optional<ValueInput.TypedInputList<T>> list(final String name, final Codec<T> codec) {
             return Optional.empty();
         }
 
         @Override
-        public <T> ValueInput.TypedInputList<T> listOrEmpty(String p_407683_, Codec<T> p_406255_) {
+        public <T> ValueInput.TypedInputList<T> listOrEmpty(final String name, final Codec<T> codec) {
             return ValueInputContextHelper.this.emptyTypedList();
         }
 
         @Override
-        public boolean getBooleanOr(String p_410083_, boolean p_408304_) {
-            return p_408304_;
+        public boolean getBooleanOr(final String name, final boolean defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public byte getByteOr(String p_410345_, byte p_410503_) {
-            return p_410503_;
+        public byte getByteOr(final String name, final byte defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public int getShortOr(String p_407606_, short p_409191_) {
-            return p_409191_;
+        public int getShortOr(final String name, final short defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public Optional<Integer> getInt(String p_409158_) {
+        public Optional<Integer> getInt(final String name) {
             return Optional.empty();
         }
 
         @Override
-        public int getIntOr(String p_408323_, int p_409619_) {
-            return p_409619_;
+        public int getIntOr(final String name, final int defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public long getLongOr(String p_407063_, long p_407312_) {
-            return p_407312_;
+        public long getLongOr(final String name, final long defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public Optional<Long> getLong(String p_406389_) {
+        public Optional<Long> getLong(final String name) {
             return Optional.empty();
         }
 
         @Override
-        public float getFloatOr(String p_407538_, float p_408700_) {
-            return p_408700_;
+        public float getFloatOr(final String name, final float defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public double getDoubleOr(String p_410446_, double p_409165_) {
-            return p_409165_;
+        public double getDoubleOr(final String name, final double defaultValue) {
+            return defaultValue;
         }
 
         @Override
-        public Optional<String> getString(String p_409405_) {
+        public Optional<String> getString(final String name) {
             return Optional.empty();
         }
 
         @Override
-        public String getStringOr(String p_409852_, String p_408310_) {
-            return p_408310_;
+        public String getStringOr(final String name, final String defaultValue) {
+            return defaultValue;
         }
 
         @Override
@@ -147,14 +147,14 @@ public class ValueInputContextHelper {
         }
 
         @Override
-        public Optional<int[]> getIntArray(String p_410316_) {
+        public Optional<int[]> getIntArray(final String name) {
             return Optional.empty();
         }
     };
 
-    public ValueInputContextHelper(HolderLookup.Provider p_407381_, DynamicOps<Tag> p_406716_) {
-        this.lookup = p_407381_;
-        this.ops = p_407381_.createSerializationContext(p_406716_);
+    public ValueInputContextHelper(final HolderLookup.Provider lookup, final DynamicOps<Tag> ops) {
+        this.lookup = lookup;
+        this.ops = lookup.createSerializationContext(ops);
     }
 
     public DynamicOps<Tag> ops() {

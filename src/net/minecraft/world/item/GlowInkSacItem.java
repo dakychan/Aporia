@@ -5,17 +5,16 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
-import net.minecraft.world.level.block.entity.SignText;
 
 public class GlowInkSacItem extends Item implements SignApplicator {
-    public GlowInkSacItem(Item.Properties p_277648_) {
-        super(p_277648_);
+    public GlowInkSacItem(final Item.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public boolean tryApplyToSign(Level p_278089_, SignBlockEntity p_277706_, boolean p_277442_, Player p_277983_) {
-        if (p_277706_.updateText(p_277781_ -> p_277781_.setHasGlowingText(true), p_277442_)) {
-            p_278089_.playSound(null, p_277706_.getBlockPos(), SoundEvents.GLOW_INK_SAC_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
+    public boolean tryApplyToSign(final Level level, final SignBlockEntity sign, final boolean isFrontText, final ItemStack item, final Player player) {
+        if (sign.updateText(text -> text.setHasGlowingText(true), isFrontText)) {
+            level.playSound(null, sign.getBlockPos(), SoundEvents.GLOW_INK_SAC_USE, SoundSource.BLOCKS, 1.0F, 1.0F);
             return true;
         } else {
             return false;

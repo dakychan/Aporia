@@ -14,48 +14,45 @@ import net.minecraft.server.dialog.ActionButton;
 import net.minecraft.server.dialog.CommonButtonData;
 import net.minecraft.server.dialog.Input;
 import net.minecraft.server.dialog.action.Action;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DialogControlSet {
     public static final Supplier<Optional<ClickEvent>> EMPTY_ACTION = Optional::empty;
     private final DialogScreen<?> screen;
     private final Map<String, Action.ValueGetter> valueGetters = new HashMap<>();
 
-    public DialogControlSet(DialogScreen<?> p_405896_) {
-        this.screen = p_405896_;
+    public DialogControlSet(final DialogScreen<?> screen) {
+        this.screen = screen;
     }
 
-    public void addInput(Input p_407891_, Consumer<LayoutElement> p_407015_) {
-        String s = p_407891_.key();
-        InputControlHandlers.createHandler(p_407891_.control(), this.screen, (p_410319_, p_406391_) -> {
-            this.valueGetters.put(s, p_406391_);
-            p_407015_.accept(p_410319_);
+    public void addInput(final Input data, final Consumer<LayoutElement> output) {
+        String key = data.key();
+        InputControlHandlers.createHandler(data.control(), this.screen, (element, valueGetter) -> {
+            this.valueGetters.put(key, valueGetter);
+            output.accept(element);
         });
     }
 
-    private static Button.Builder createDialogButton(CommonButtonData p_410010_, Button.OnPress p_409832_) {
-        Button.Builder button$builder = Button.builder(p_410010_.label(), p_409832_);
-        button$builder.width(p_410010_.width());
-        if (p_410010_.tooltip().isPresent()) {
-            button$builder = button$builder.tooltip(Tooltip.create(p_410010_.tooltip().get()));
+    private static Button.Builder createDialogButton(final CommonButtonData data, final Button.OnPress clickAction) {
+        Button.Builder result = Button.builder(data.label(), clickAction);
+        result.width(data.width());
+        if (data.tooltip().isPresent()) {
+            result = result.tooltip(Tooltip.create(data.tooltip().get()));
         }
 
-        return button$builder;
+        return result;
     }
 
-    public Supplier<Optional<ClickEvent>> bindAction(Optional<Action> p_406921_) {
-        if (p_406921_.isPresent()) {
-            Action action = p_406921_.get();
+    public Supplier<Optional<ClickEvent>> bindAction(final Optional<Action> maybeAction) {
+        if (maybeAction.isPresent()) {
+            Action action = maybeAction.get();
             return () -> action.createAction(this.valueGetters);
         } else {
             return EMPTY_ACTION;
         }
     }
 
-    public Button.Builder createActionButton(ActionButton p_407975_) {
-        Supplier<Optional<ClickEvent>> supplier = this.bindAction(p_407975_.action());
-        return createDialogButton(p_407975_.button(), p_406838_ -> this.screen.runAction(supplier.get()));
+    public Button.Builder createActionButton(final ActionButton actionButton) {
+        Supplier<Optional<ClickEvent>> action = this.bindAction(actionButton.action());
+        return createDialogButton(actionButton.button(), button -> this.screen.runAction(action.get()));
     }
 }

@@ -9,30 +9,29 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.HoldingEntityRenderState;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
-public class CrossedArmsItemLayer<S extends HoldingEntityRenderState, M extends EntityModel<S> & VillagerLikeModel> extends RenderLayer<S, M> {
-    public CrossedArmsItemLayer(RenderLayerParent<S, M> p_234818_) {
-        super(p_234818_);
+public class CrossedArmsItemLayer<S extends HoldingEntityRenderState, M extends EntityModel<S> & VillagerLikeModel<S>> extends RenderLayer<S, M> {
+    public CrossedArmsItemLayer(final RenderLayerParent<S, M> renderer) {
+        super(renderer);
     }
 
-    public void submit(PoseStack p_428438_, SubmitNodeCollector p_428031_, int p_430795_, S p_425971_, float p_427932_, float p_428075_) {
-        ItemStackRenderState itemstackrenderstate = p_425971_.heldItem;
-        if (!itemstackrenderstate.isEmpty()) {
-            p_428438_.pushPose();
-            this.applyTranslation(p_425971_, p_428438_);
-            itemstackrenderstate.submit(p_428438_, p_428031_, p_430795_, OverlayTexture.NO_OVERLAY, p_425971_.outlineColor);
-            p_428438_.popPose();
+    public void submit(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final S state, final float yRot, final float xRot
+    ) {
+        ItemStackRenderState item = state.heldItem;
+        if (!item.isEmpty()) {
+            poseStack.pushPose();
+            this.applyTranslation(state, poseStack);
+            item.submit(poseStack, submitNodeCollector, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+            poseStack.popPose();
         }
     }
 
-    protected void applyTranslation(S p_378379_, PoseStack p_378611_) {
-        this.getParentModel().translateToArms(p_378379_, p_378611_);
-        p_378611_.mulPose(Axis.XP.rotation(0.75F));
-        p_378611_.scale(1.07F, 1.07F, 1.07F);
-        p_378611_.translate(0.0F, 0.13F, -0.34F);
-        p_378611_.mulPose(Axis.XP.rotation((float) Math.PI));
+    protected void applyTranslation(final S state, final PoseStack poseStack) {
+        this.getParentModel().translateToArms(state, poseStack);
+        poseStack.mulPose(Axis.XP.rotation(0.75F));
+        poseStack.scale(1.07F, 1.07F, 1.07F);
+        poseStack.translate(0.0F, 0.13F, -0.34F);
+        poseStack.mulPose(Axis.XP.rotation((float) Math.PI));
     }
 }

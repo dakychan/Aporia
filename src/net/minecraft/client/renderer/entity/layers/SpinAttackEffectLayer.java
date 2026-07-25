@@ -10,24 +10,26 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.AvatarRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SpinAttackEffectLayer extends RenderLayer<AvatarRenderState, PlayerModel> {
-    public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/trident_riptide.png");
+    public static final Identifier TEXTURE = Identifier.withDefaultNamespace("textures/entity/trident/trident_riptide.png");
     private final SpinAttackEffectModel model;
 
-    public SpinAttackEffectLayer(RenderLayerParent<AvatarRenderState, PlayerModel> p_174540_, EntityModelSet p_174541_) {
-        super(p_174540_);
-        this.model = new SpinAttackEffectModel(p_174541_.bakeLayer(ModelLayers.PLAYER_SPIN_ATTACK));
+    public SpinAttackEffectLayer(final RenderLayerParent<AvatarRenderState, PlayerModel> renderer, final EntityModelSet modelSet) {
+        super(renderer);
+        this.model = new SpinAttackEffectModel(modelSet.bakeLayer(ModelLayers.PLAYER_SPIN_ATTACK));
     }
 
-    public void submit(PoseStack p_425499_, SubmitNodeCollector p_425370_, int p_423874_, AvatarRenderState p_430853_, float p_431621_, float p_431026_) {
-        if (p_430853_.isAutoSpinAttack) {
-            p_425370_.submitModel(
-                this.model, p_430853_, p_425499_, this.model.renderType(TEXTURE), p_423874_, OverlayTexture.NO_OVERLAY, p_430853_.outlineColor, null
-            );
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final AvatarRenderState state,
+        final float yRot,
+        final float xRot
+    ) {
+        if (state.isAutoSpinAttack) {
+            submitNodeCollector.submitModel(this.model, state, poseStack, TEXTURE, lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
         }
     }
 }

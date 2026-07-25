@@ -10,62 +10,57 @@ import org.jspecify.annotations.Nullable;
 public class Dictionary<S> {
     private final Map<Atom<?>, Dictionary.Entry<S, ?>> terms = new IdentityHashMap<>();
 
-    public <T> NamedRule<S, T> put(Atom<T> p_333993_, Rule<S, T> p_397298_) {
-        Dictionary.Entry<S, T> entry = (Dictionary.Entry<S, T>)this.terms.computeIfAbsent(p_333993_, Dictionary.Entry::new);
-        if (entry.value != null) {
-            throw new IllegalArgumentException("Trying to override rule: " + p_333993_);
-        } else {
-            entry.value = p_397298_;
-            return entry;
+    public <T> NamedRule<S, T> put(final Atom<T> name, final Rule<S, T> entry) {
+        Dictionary.Entry<S, T> holder = (Dictionary.Entry<S, T>)this.terms.computeIfAbsent(name, Dictionary.Entry::new);
+        if (holder.value != null) {
+            throw new IllegalArgumentException("Trying to override rule: " + name);
         }
+
+        holder.value = entry;
+        return holder;
     }
 
-    public <T> NamedRule<S, T> putComplex(Atom<T> p_393852_, Term<S> p_391921_, Rule.RuleAction<S, T> p_393539_) {
-        return this.put(p_393852_, Rule.fromTerm(p_391921_, p_393539_));
+    public <T> NamedRule<S, T> putComplex(final Atom<T> name, final Term<S> term, final Rule.RuleAction<S, T> action) {
+        return this.put(name, Rule.fromTerm(term, action));
     }
 
-    public <T> NamedRule<S, T> put(Atom<T> p_329080_, Term<S> p_392956_, Rule.SimpleRuleAction<S, T> p_396305_) {
-        return this.put(p_329080_, Rule.fromTerm(p_392956_, p_396305_));
+    public <T> NamedRule<S, T> put(final Atom<T> name, final Term<S> term, final Rule.SimpleRuleAction<S, T> action) {
+        return this.put(name, Rule.fromTerm(term, action));
     }
 
     public void checkAllBound() {
-        List<? extends Atom<?>> list = this.terms
-            .entrySet()
-            .stream()
-            .filter(p_449344_ -> p_449344_.getValue().value == null)
-            .map(Map.Entry::getKey)
-            .toList();
-        if (!list.isEmpty()) {
-            throw new IllegalStateException("Unbound names: " + list);
+        List<? extends Atom<?>> unboundNames = this.terms.entrySet().stream().filter(e -> e.getValue().value == null).map(Map.Entry::getKey).toList();
+        if (!unboundNames.isEmpty()) {
+            throw new IllegalStateException("Unbound names: " + unboundNames);
         }
     }
 
-    public <T> NamedRule<S, T> getOrThrow(Atom<T> p_397598_) {
-        return (NamedRule<S, T>)Objects.requireNonNull(this.terms.get(p_397598_), () -> "No rule called " + p_397598_);
+    public <T> NamedRule<S, T> getOrThrow(final Atom<T> name) {
+        return (NamedRule<S, T>)Objects.requireNonNull(this.terms.get(name), () -> "No rule called " + name);
     }
 
-    public <T> NamedRule<S, T> forward(Atom<T> p_392500_) {
-        return this.getOrCreateEntry(p_392500_);
+    public <T> NamedRule<S, T> forward(final Atom<T> name) {
+        return this.getOrCreateEntry(name);
     }
 
-    private <T> Dictionary.Entry<S, T> getOrCreateEntry(Atom<T> p_395883_) {
-        return (Dictionary.Entry<S, T>)this.terms.computeIfAbsent(p_395883_, Dictionary.Entry::new);
+    private <T> Dictionary.Entry<S, T> getOrCreateEntry(final Atom<T> name) {
+        return (Dictionary.Entry<S, T>)this.terms.computeIfAbsent(name, Dictionary.Entry::new);
     }
 
-    public <T> Term<S> named(Atom<T> p_392444_) {
-        return new Dictionary.Reference<>(this.getOrCreateEntry(p_392444_), p_392444_);
+    public <T> Term<S> named(final Atom<T> name) {
+        return new Dictionary.Reference<>(this.getOrCreateEntry(name), name);
     }
 
-    public <T> Term<S> namedWithAlias(Atom<T> p_396057_, Atom<T> p_391365_) {
-        return new Dictionary.Reference<>(this.getOrCreateEntry(p_396057_), p_391365_);
+    public <T> Term<S> namedWithAlias(final Atom<T> nameToParse, final Atom<T> nameToStore) {
+        return new Dictionary.Reference<>(this.getOrCreateEntry(nameToParse), nameToStore);
     }
 
-    static class Entry<S, T> implements NamedRule<S, T>, Supplier<String> {
+    private static class Entry<S, T> implements NamedRule<S, T>, Supplier<String> {
         private final Atom<T> name;
-        @Nullable Rule<S, T> value;
+        private @Nullable Rule<S, T> value;
 
-        private Entry(Atom<T> p_396611_) {
-            this.name = p_396611_;
+        private Entry(final Atom<T> name) {
+            this.name = name;
         }
 
         @Override
@@ -83,16 +78,16 @@ public class Dictionary<S> {
         }
     }
 
-    record Reference<S, T>(Dictionary.Entry<S, T> ruleToParse, Atom<T> nameToStore) implements Term<S> {
+    private record Reference<S, T>(Dictionary.Entry<S, T> ruleToParse, Atom<T> nameToStore) implements Term<S> {
         @Override
-        public boolean parse(ParseState<S> p_397182_, Scope p_391380_, Control p_391695_) {
-            T t = p_397182_.parse(this.ruleToParse);
-            if (t == null) {
+        public boolean parse(final ParseState<S> state, final Scope scope, final Control control) {
+            T result = state.parse(this.ruleToParse);
+            if (result == null) {
                 return false;
-            } else {
-                p_391380_.put(this.nameToStore, t);
-                return true;
             }
+
+            scope.put(this.nameToStore, result);
+            return true;
         }
     }
 }

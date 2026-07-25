@@ -19,17 +19,24 @@ public class WebBlock extends Block {
         return CODEC;
     }
 
-    public WebBlock(BlockBehaviour.Properties p_58178_) {
-        super(p_58178_);
+    public WebBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected void entityInside(BlockState p_58180_, Level p_58181_, BlockPos p_58182_, Entity p_58183_, InsideBlockEffectApplier p_396846_, boolean p_432033_) {
-        Vec3 vec3 = new Vec3(0.25, 0.05F, 0.25);
-        if (p_58183_ instanceof LivingEntity livingentity && livingentity.hasEffect(MobEffects.WEAVING)) {
-            vec3 = new Vec3(0.5, 0.25, 0.5);
+    protected void entityInside(
+        final BlockState state,
+        final Level level,
+        final BlockPos pos,
+        final Entity entity,
+        final InsideBlockEffectApplier effectApplier,
+        final boolean isPrecise
+    ) {
+        Vec3 speedMultiplier = new Vec3(0.25, 0.05F, 0.25);
+        if (entity instanceof LivingEntity livingEntity && livingEntity.hasEffect(MobEffects.WEAVING)) {
+            speedMultiplier = new Vec3(0.5, 0.25, 0.5);
         }
 
-        p_58183_.makeStuckInBlock(p_58180_, vec3);
+        entity.makeStuckInBlock(state, speedMultiplier);
     }
 }

@@ -7,11 +7,8 @@ import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
 import net.minecraft.client.gui.font.glyphs.BakedGlyph;
 import net.minecraft.client.gui.font.glyphs.SpecialGlyphs;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class AllMissingGlyphProvider implements GlyphProvider {
     private static final UnbakedGlyph MISSING_INSTANCE = new UnbakedGlyph() {
         @Override
@@ -20,13 +17,13 @@ public class AllMissingGlyphProvider implements GlyphProvider {
         }
 
         @Override
-        public BakedGlyph bake(UnbakedGlyph.Stitcher p_429262_) {
-            return p_429262_.getMissing();
+        public BakedGlyph bake(final UnbakedGlyph.Stitcher stitcher) {
+            return stitcher.getMissing();
         }
     };
 
     @Override
-    public @Nullable UnbakedGlyph getGlyph(int p_232553_) {
+    public @Nullable UnbakedGlyph getGlyph(final int codepoint) {
         return MISSING_INSTANCE;
     }
 

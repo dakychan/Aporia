@@ -2,12 +2,11 @@ package net.minecraft.world.entity.npc;
 
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.StructureTags;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.SpawnPlacements;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.entity.ai.village.poi.PoiTypes;
@@ -21,23 +20,23 @@ public class CatSpawner implements CustomSpawner {
     private int nextTick;
 
     @Override
-    public void tick(ServerLevel p_35330_, boolean p_35331_) {
+    public void tick(final ServerLevel level, final boolean spawnEnemies) {
         this.nextTick--;
         if (this.nextTick <= 0) {
             this.nextTick = 1200;
-            Player player = p_35330_.getRandomPlayer();
+            Player player = level.getRandomPlayer();
             if (player != null) {
-                RandomSource randomsource = p_35330_.random;
-                int i = (8 + randomsource.nextInt(24)) * (randomsource.nextBoolean() ? -1 : 1);
-                int j = (8 + randomsource.nextInt(24)) * (randomsource.nextBoolean() ? -1 : 1);
-                BlockPos blockpos = player.blockPosition().offset(i, 0, j);
-                int k = 10;
-                if (p_35330_.hasChunksAt(blockpos.getX() - 10, blockpos.getZ() - 10, blockpos.getX() + 10, blockpos.getZ() + 10)) {
-                    if (SpawnPlacements.isSpawnPositionOk(EntityType.CAT, p_35330_, blockpos)) {
-                        if (p_35330_.isCloseToVillage(blockpos, 2)) {
-                            this.spawnInVillage(p_35330_, blockpos);
-                        } else if (p_35330_.structureManager().getStructureWithPieceAt(blockpos, StructureTags.CATS_SPAWN_IN).isValid()) {
-                            this.spawnInHut(p_35330_, blockpos);
+                RandomSource random = level.getRandom();
+                int x = (8 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1);
+                int z = (8 + random.nextInt(24)) * (random.nextBoolean() ? -1 : 1);
+                BlockPos spawnPos = player.blockPosition().offset(x, 0, z);
+                int delta = 10;
+                if (level.hasChunksAt(spawnPos.getX() - 10, spawnPos.getZ() - 10, spawnPos.getX() + 10, spawnPos.getZ() + 10)) {
+                    if (SpawnPlacements.isSpawnPositionOk(EntityTypes.CAT, level, spawnPos)) {
+                        if (level.isCloseToVillage(spawnPos, 2)) {
+                            this.spawnInVillage(level, spawnPos);
+                        } else if (level.structureManager().getStructureWithPieceAt(spawnPos, StructureTags.CATS_SPAWN_IN).isValid()) {
+                            this.spawnInHut(level, spawnPos);
                         }
                     }
                 }
@@ -45,34 +44,34 @@ public class CatSpawner implements CustomSpawner {
         }
     }
 
-    private void spawnInVillage(ServerLevel p_35327_, BlockPos p_35328_) {
-        int i = 48;
-        if (p_35327_.getPoiManager().getCountInRange(p_219610_ -> p_219610_.is(PoiTypes.HOME), p_35328_, 48, PoiManager.Occupancy.IS_OCCUPIED) > 4L) {
-            List<Cat> list = p_35327_.getEntitiesOfClass(Cat.class, new AABB(p_35328_).inflate(48.0, 8.0, 48.0));
-            if (list.size() < 5) {
-                this.spawnCat(p_35328_, p_35327_, false);
+    private void spawnInVillage(final ServerLevel serverLevel, final BlockPos spawnPos) {
+        int radius = 48;
+        if (serverLevel.getPoiManager().getCountInRange(p -> p.is(PoiTypes.HOME), spawnPos, 48, PoiManager.Occupancy.IS_OCCUPIED) > 4L) {
+            List<Cat> cats = serverLevel.getEntitiesOfClass(Cat.class, new AABB(spawnPos).inflate(48.0, 8.0, 48.0));
+            if (cats.size() < 5) {
+                this.spawnCat(spawnPos, serverLevel, false);
             }
         }
     }
 
-    private void spawnInHut(ServerLevel p_35337_, BlockPos p_35338_) {
-        int i = 16;
-        List<Cat> list = p_35337_.getEntitiesOfClass(Cat.class, new AABB(p_35338_).inflate(16.0, 8.0, 16.0));
-        if (list.isEmpty()) {
-            this.spawnCat(p_35338_, p_35337_, true);
+    private void spawnInHut(final ServerLevel level, final BlockPos spawnPos) {
+        int radius = 16;
+        List<Cat> cats = level.getEntitiesOfClass(Cat.class, new AABB(spawnPos).inflate(16.0, 8.0, 16.0));
+        if (cats.isEmpty()) {
+            this.spawnCat(spawnPos, level, true);
         }
     }
 
-    private void spawnCat(BlockPos p_35334_, ServerLevel p_35335_, boolean p_392522_) {
-        Cat cat = EntityType.CAT.create(p_35335_, EntitySpawnReason.NATURAL);
+    private void spawnCat(final BlockPos spawnPos, final ServerLevel level, final boolean makePersistent) {
+        Cat cat = EntityTypes.CAT.create(level, EntitySpawnReason.NATURAL);
         if (cat != null) {
-            cat.finalizeSpawn(p_35335_, p_35335_.getCurrentDifficultyAt(p_35334_), EntitySpawnReason.NATURAL, null);
-            if (p_392522_) {
+            cat.finalizeSpawn(level, level.getCurrentDifficultyAt(spawnPos), EntitySpawnReason.NATURAL, null);
+            if (makePersistent) {
                 cat.setPersistenceRequired();
             }
 
-            cat.snapTo(p_35334_, 0.0F, 0.0F);
-            p_35335_.addFreshEntityWithPassengers(cat);
+            cat.snapTo(spawnPos, 0.0F, 0.0F);
+            level.addFreshEntityWithPassengers(cat);
         }
     }
 }

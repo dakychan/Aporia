@@ -10,7 +10,7 @@ public interface TimelineTags {
     TagKey<Timeline> IN_NETHER = create("in_nether");
     TagKey<Timeline> IN_END = create("in_end");
 
-    private static TagKey<Timeline> create(String p_452380_) {
-        return TagKey.create(Registries.TIMELINE, Identifier.withDefaultNamespace(p_452380_));
+    private static TagKey<Timeline> create(final String name) {
+        return TagKey.create(Registries.TIMELINE, Identifier.withDefaultNamespace(name));
     }
 }

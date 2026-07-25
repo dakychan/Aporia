@@ -6,24 +6,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.block.state.properties.Property;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public record PropertyValueList(List<Property.Value<?>> values) {
     public static final PropertyValueList EMPTY = new PropertyValueList(List.of());
-    private static final Comparator<Property.Value<?>> COMPARE_BY_NAME = Comparator.comparing(p_394475_ -> p_394475_.property().getName());
+    private static final Comparator<Property.Value<?>> COMPARE_BY_NAME = Comparator.comparing(p -> p.property().getName());
 
-    public PropertyValueList extend(Property.Value<?> p_391614_) {
-        return new PropertyValueList(Util.copyAndAdd(this.values, p_391614_));
+    public PropertyValueList extend(final Property.Value<?> element) {
+        return new PropertyValueList(Util.copyAndAdd(this.values, element));
     }
 
-    public PropertyValueList extend(PropertyValueList p_395399_) {
-        return new PropertyValueList(ImmutableList.<Property.Value<?>>builder().addAll(this.values).addAll(p_395399_.values).build());
+    public PropertyValueList extend(final PropertyValueList other) {
+        return new PropertyValueList(ImmutableList.<Property.Value<?>>builder().addAll(this.values).addAll(other.values).build());
     }
 
-    public static PropertyValueList of(Property.Value<?>... p_396202_) {
-        return new PropertyValueList(List.of(p_396202_));
+    public static PropertyValueList of(final Property.Value<?>... values) {
+        return new PropertyValueList(List.of(values));
     }
 
     public String getKey() {

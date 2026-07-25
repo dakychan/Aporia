@@ -6,7 +6,7 @@ import java.util.ListIterator;
 import java.util.Optional;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineEditBox;
@@ -22,10 +22,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.WritableBookContent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class BookEditScreen extends Screen {
     public static final int TEXT_WIDTH = 114;
     public static final int TEXT_HEIGHT = 126;
@@ -53,17 +50,17 @@ public class BookEditScreen extends Screen {
     private Component numberOfPages = CommonComponents.EMPTY;
     private MultiLineEditBox page;
 
-    public BookEditScreen(Player p_98076_, ItemStack p_98077_, InteractionHand p_98078_, WritableBookContent p_363680_) {
+    public BookEditScreen(final Player owner, final ItemStack book, final InteractionHand hand, final WritableBookContent content) {
         super(TITLE);
-        this.owner = p_98076_;
-        this.book = p_98077_;
-        this.hand = p_98078_;
-        p_363680_.getPages(Minecraft.getInstance().isTextFilteringEnabled()).forEach(this.pages::add);
+        this.owner = owner;
+        this.book = book;
+        this.hand = hand;
+        content.getPages(Minecraft.getInstance().isTextFilteringEnabled()).forEach(this.pages::add);
         if (this.pages.isEmpty()) {
             this.pages.add("");
         }
 
-        this.signScreen = new BookSignScreen(this, p_98076_, p_98078_, this.pages);
+        this.signScreen = new BookSignScreen(this, owner, hand, this.pages);
     }
 
     private int getNumPages() {
@@ -72,9 +69,9 @@ public class BookEditScreen extends Screen {
 
     @Override
     protected void init() {
-        int i = this.backgroundLeft();
-        int j = this.backgroundTop();
-        int k = 8;
+        int left = this.backgroundLeft();
+        int top = this.backgroundTop();
+        int padding = 8;
         this.page = MultiLineEditBox.builder()
             .setShowDecorations(false)
             .setTextColor(-16777216)
@@ -86,20 +83,20 @@ public class BookEditScreen extends Screen {
             .build(this.font, 122, 134, CommonComponents.EMPTY);
         this.page.setCharacterLimit(1024);
         this.page.setLineLimit(126 / 9);
-        this.page.setValueListener(p_404856_ -> this.pages.set(this.currentPage, p_404856_));
+        this.page.setValueListener(value -> this.pages.set(this.currentPage, value));
         this.addRenderableWidget(this.page);
         this.updatePageContent();
         this.numberOfPages = this.getPageNumberMessage();
-        this.backButton = this.addRenderableWidget(new PageButton(i + 43, j + 157, false, p_98113_ -> this.pageBack(), true));
-        this.forwardButton = this.addRenderableWidget(new PageButton(i + 116, j + 157, true, p_98144_ -> this.pageForward(), true));
+        this.backButton = this.addRenderableWidget(new PageButton(left + 43, top + 157, false, button -> this.pageBack(), true));
+        this.forwardButton = this.addRenderableWidget(new PageButton(left + 116, top + 157, true, button -> this.pageForward(), true));
         this.addRenderableWidget(
-            Button.builder(SIGN_BOOK_LABEL, p_404857_ -> this.minecraft.setScreen(this.signScreen))
+            Button.builder(SIGN_BOOK_LABEL, button -> this.minecraft.gui.setScreen(this.signScreen))
                 .pos(this.width / 2 - 98 - 2, this.menuControlsTop())
                 .width(98)
                 .build()
         );
-        this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, p_404855_ -> {
-            this.minecraft.setScreen(null);
+        this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> {
+            this.minecraft.gui.setScreen(null);
             this.saveChanges();
         }).pos(this.width / 2 + 2, this.menuControlsTop()).width(98).build());
         this.updateButtonVisibility();
@@ -164,18 +161,18 @@ public class BookEditScreen extends Screen {
     }
 
     private void eraseEmptyTrailingPages() {
-        ListIterator<String> listiterator = this.pages.listIterator(this.pages.size());
+        ListIterator<String> pagesIt = this.pages.listIterator(this.pages.size());
 
-        while (listiterator.hasPrevious() && listiterator.previous().isEmpty()) {
-            listiterator.remove();
+        while (pagesIt.hasPrevious() && pagesIt.previous().isEmpty()) {
+            pagesIt.remove();
         }
     }
 
     private void saveChanges() {
         this.eraseEmptyTrailingPages();
         this.updateLocalCopy();
-        int i = this.hand == InteractionHand.MAIN_HAND ? this.owner.getInventory().getSelectedSlot() : 40;
-        this.minecraft.getConnection().send(new ServerboundEditBookPacket(i, this.pages, Optional.empty()));
+        int slot = this.hand == InteractionHand.MAIN_HAND ? this.owner.getInventory().getSelectedSlot() : 40;
+        this.minecraft.getConnection().send(new ServerboundEditBookPacket(slot, this.pages, Optional.empty()));
     }
 
     private void updateLocalCopy() {
@@ -194,34 +191,34 @@ public class BookEditScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_430360_) {
-        switch (p_430360_.key()) {
+    public boolean keyPressed(final KeyEvent event) {
+        switch (event.key()) {
             case 266:
-                this.backButton.onPress(p_430360_);
+                this.backButton.onPress(event);
                 return true;
             case 267:
-                this.forwardButton.onPress(p_430360_);
+                this.forwardButton.onPress(event);
                 return true;
             default:
-                return super.keyPressed(p_430360_);
+                return super.keyPressed(event);
         }
     }
 
     @Override
-    public void render(GuiGraphics p_281724_, int p_282965_, int p_283294_, float p_281293_) {
-        super.render(p_281724_, p_282965_, p_283294_, p_281293_);
-        this.visitText(p_281724_.textRenderer());
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        this.visitText(graphics.textRenderer());
     }
 
-    private void visitText(ActiveTextCollector p_454844_) {
-        int i = this.backgroundLeft();
-        int j = this.backgroundTop();
-        p_454844_.accept(TextAlignment.RIGHT, i + 148, j + 16, this.numberOfPages);
+    private void visitText(final ActiveTextCollector collector) {
+        int left = this.backgroundLeft();
+        int top = this.backgroundTop();
+        collector.accept(TextAlignment.RIGHT, left + 148, top + 16, this.numberOfPages);
     }
 
     @Override
-    public void renderBackground(GuiGraphics p_298379_, int p_298216_, int p_301014_, float p_300512_) {
-        super.renderBackground(p_298379_, p_298216_, p_301014_, p_300512_);
-        p_298379_.blit(RenderPipelines.GUI_TEXTURED, BookViewScreen.BOOK_LOCATION, this.backgroundLeft(), this.backgroundTop(), 0.0F, 0.0F, 192, 192, 256, 256);
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractBackground(graphics, mouseX, mouseY, a);
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BookViewScreen.BOOK_LOCATION, this.backgroundLeft(), this.backgroundTop(), 0.0F, 0.0F, 192, 192, 256, 256);
     }
 }

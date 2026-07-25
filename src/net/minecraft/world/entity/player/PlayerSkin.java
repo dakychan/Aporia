@@ -3,7 +3,6 @@ package net.minecraft.world.entity.player;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import java.util.Optional;
 import net.minecraft.core.ClientAsset;
@@ -12,26 +11,22 @@ import net.minecraft.network.codec.StreamCodec;
 import org.jspecify.annotations.Nullable;
 
 public record PlayerSkin(
-    ClientAsset.Texture body,
-    ClientAsset.@Nullable Texture cape,
-    ClientAsset.@Nullable Texture elytra,
-    PlayerModelType model,
-    boolean secure
+    ClientAsset.Texture body, ClientAsset.@Nullable Texture cape, ClientAsset.@Nullable Texture elytra, PlayerModelType model, boolean secure
 ) {
     public static PlayerSkin insecure(
-        ClientAsset.Texture p_428656_, ClientAsset.@Nullable Texture p_423598_, ClientAsset.@Nullable Texture p_430792_, PlayerModelType p_425395_
+        final ClientAsset.Texture body, final ClientAsset.@Nullable Texture cape, final ClientAsset.@Nullable Texture elytra, final PlayerModelType model
     ) {
-        return new PlayerSkin(p_428656_, p_423598_, p_430792_, p_425395_, false);
+        return new PlayerSkin(body, cape, elytra, model, false);
     }
 
-    public PlayerSkin with(PlayerSkin.Patch p_425362_) {
-        return p_425362_.equals(PlayerSkin.Patch.EMPTY)
+    public PlayerSkin with(final PlayerSkin.Patch patch) {
+        return patch.equals(PlayerSkin.Patch.EMPTY)
             ? this
             : insecure(
-                DataFixUtils.orElse(p_425362_.body, this.body),
-                DataFixUtils.orElse(p_425362_.cape, this.cape),
-                DataFixUtils.orElse(p_425362_.elytra, this.elytra),
-                p_425362_.model.orElse(this.model)
+                DataFixUtils.orElse(patch.body, this.body),
+                DataFixUtils.orElse(patch.cape, this.cape),
+                DataFixUtils.orElse(patch.elytra, this.elytra),
+                patch.model.orElse(this.model)
             );
     }
 
@@ -43,13 +38,13 @@ public record PlayerSkin(
     ) {
         public static final PlayerSkin.Patch EMPTY = new PlayerSkin.Patch(Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
         public static final MapCodec<PlayerSkin.Patch> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_430599_ -> p_430599_.group(
+            i -> i.group(
                     ClientAsset.ResourceTexture.CODEC.optionalFieldOf("texture").forGetter(PlayerSkin.Patch::body),
                     ClientAsset.ResourceTexture.CODEC.optionalFieldOf("cape").forGetter(PlayerSkin.Patch::cape),
                     ClientAsset.ResourceTexture.CODEC.optionalFieldOf("elytra").forGetter(PlayerSkin.Patch::elytra),
                     PlayerModelType.CODEC.optionalFieldOf("model").forGetter(PlayerSkin.Patch::model)
                 )
-                .apply(p_430599_, PlayerSkin.Patch::create)
+                .apply(i, PlayerSkin.Patch::create)
         );
         public static final StreamCodec<ByteBuf, PlayerSkin.Patch> STREAM_CODEC = StreamCodec.composite(
             ClientAsset.ResourceTexture.STREAM_CODEC.apply(ByteBufCodecs::optional),
@@ -64,14 +59,14 @@ public record PlayerSkin(
         );
 
         public static PlayerSkin.Patch create(
-            Optional<ClientAsset.ResourceTexture> p_425356_,
-            Optional<ClientAsset.ResourceTexture> p_426994_,
-            Optional<ClientAsset.ResourceTexture> p_422308_,
-            Optional<PlayerModelType> p_427416_
+            final Optional<ClientAsset.ResourceTexture> texture,
+            final Optional<ClientAsset.ResourceTexture> capeTexture,
+            final Optional<ClientAsset.ResourceTexture> elytraTexture,
+            final Optional<PlayerModelType> model
         ) {
-            return p_425356_.isEmpty() && p_426994_.isEmpty() && p_422308_.isEmpty() && p_427416_.isEmpty()
+            return texture.isEmpty() && capeTexture.isEmpty() && elytraTexture.isEmpty() && model.isEmpty()
                 ? EMPTY
-                : new PlayerSkin.Patch(p_425356_, p_426994_, p_422308_, p_427416_);
+                : new PlayerSkin.Patch(texture, capeTexture, elytraTexture, model);
         }
     }
 }

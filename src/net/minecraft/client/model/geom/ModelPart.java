@@ -14,8 +14,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import net.minecraft.core.Direction;
 import net.minecraft.util.RandomSource;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.util.Util;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -23,7 +22,6 @@ import org.joml.Vector3f;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public final class ModelPart {
     public static final float DEFAULT_SCALE = 1.0F;
     public float x;
@@ -41,9 +39,9 @@ public final class ModelPart {
     private final Map<String, ModelPart> children;
     private PartPose initialPose = PartPose.ZERO;
 
-    public ModelPart(List<ModelPart.Cube> p_171306_, Map<String, ModelPart> p_171307_) {
-        this.cubes = p_171306_;
-        this.children = p_171307_;
+    public ModelPart(final List<ModelPart.Cube> cubes, final Map<String, ModelPart> children) {
+        this.cubes = cubes;
+        this.children = children;
     }
 
     public PartPose storePose() {
@@ -54,183 +52,182 @@ public final class ModelPart {
         return this.initialPose;
     }
 
-    public void setInitialPose(PartPose p_233561_) {
-        this.initialPose = p_233561_;
+    public void setInitialPose(final PartPose initialPose) {
+        this.initialPose = initialPose;
     }
 
     public void resetPose() {
         this.loadPose(this.initialPose);
     }
 
-    public void loadPose(PartPose p_171323_) {
-        this.x = p_171323_.x();
-        this.y = p_171323_.y();
-        this.z = p_171323_.z();
-        this.xRot = p_171323_.xRot();
-        this.yRot = p_171323_.yRot();
-        this.zRot = p_171323_.zRot();
-        this.xScale = p_171323_.xScale();
-        this.yScale = p_171323_.yScale();
-        this.zScale = p_171323_.zScale();
+    public void loadPose(final PartPose pose) {
+        this.x = pose.x();
+        this.y = pose.y();
+        this.z = pose.z();
+        this.xRot = pose.xRot();
+        this.yRot = pose.yRot();
+        this.zRot = pose.zRot();
+        this.xScale = pose.xScale();
+        this.yScale = pose.yScale();
+        this.zScale = pose.zScale();
     }
 
-    public boolean hasChild(String p_233563_) {
-        return this.children.containsKey(p_233563_);
+    public boolean hasChild(final String name) {
+        return this.children.containsKey(name);
     }
 
-    public ModelPart getChild(String p_171325_) {
-        ModelPart modelpart = this.children.get(p_171325_);
-        if (modelpart == null) {
-            throw new NoSuchElementException("Can't find part " + p_171325_);
+    public ModelPart getChild(final String name) {
+        ModelPart result = this.children.get(name);
+        if (result == null) {
+            throw new NoSuchElementException("Can't find part " + name);
         } else {
-            return modelpart;
+            return result;
         }
     }
 
-    public void setPos(float p_104228_, float p_104229_, float p_104230_) {
-        this.x = p_104228_;
-        this.y = p_104229_;
-        this.z = p_104230_;
+    public void setPos(final float x, final float y, final float z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
     }
 
-    public void setRotation(float p_171328_, float p_171329_, float p_171330_) {
-        this.xRot = p_171328_;
-        this.yRot = p_171329_;
-        this.zRot = p_171330_;
+    public void setRotation(final float xRot, final float yRot, final float zRot) {
+        this.xRot = xRot;
+        this.yRot = yRot;
+        this.zRot = zRot;
     }
 
-    public void render(PoseStack p_104302_, VertexConsumer p_104303_, int p_104304_, int p_104305_) {
-        this.render(p_104302_, p_104303_, p_104304_, p_104305_, -1);
+    public void render(final PoseStack poseStack, final VertexConsumer buffer, final int lightCoords, final int overlayCoords) {
+        this.render(poseStack, buffer, lightCoords, overlayCoords, -1);
     }
 
-    public void render(PoseStack p_104307_, VertexConsumer p_104308_, int p_104309_, int p_104310_, int p_343158_) {
+    public void render(final PoseStack poseStack, final VertexConsumer buffer, final int lightCoords, final int overlayCoords, final int color) {
         if (this.visible) {
             if (!this.cubes.isEmpty() || !this.children.isEmpty()) {
-                p_104307_.pushPose();
-                this.translateAndRotate(p_104307_);
+                poseStack.pushPose();
+                this.translateAndRotate(poseStack);
                 if (!this.skipDraw) {
-                    this.compile(p_104307_.last(), p_104308_, p_104309_, p_104310_, p_343158_);
+                    this.compile(poseStack.last(), buffer, lightCoords, overlayCoords, color);
                 }
 
-                for (ModelPart modelpart : this.children.values()) {
-                    modelpart.render(p_104307_, p_104308_, p_104309_, p_104310_, p_343158_);
+                for (ModelPart child : this.children.values()) {
+                    child.render(poseStack, buffer, lightCoords, overlayCoords, color);
                 }
 
-                p_104307_.popPose();
+                poseStack.popPose();
             }
         }
     }
 
-    public void rotateBy(Quaternionf p_365235_) {
-        Matrix3f matrix3f = new Matrix3f().rotationZYX(this.zRot, this.yRot, this.xRot);
-        Matrix3f matrix3f1 = matrix3f.rotate(p_365235_);
-        Vector3f vector3f = matrix3f1.getEulerAnglesZYX(new Vector3f());
-        this.setRotation(vector3f.x, vector3f.y, vector3f.z);
+    public void rotateBy(final Quaternionf rotation) {
+        Matrix3f oldRotation = new Matrix3f().rotationZYX(this.zRot, this.yRot, this.xRot);
+        Matrix3f newRotation = oldRotation.rotate(rotation);
+        Vector3f newAngles = newRotation.getEulerAnglesZYX(new Vector3f());
+        this.setRotation(newAngles.x, newAngles.y, newAngles.z);
     }
 
-    public void getExtentsForGui(PoseStack p_406230_, Consumer<Vector3fc> p_455205_) {
-        this.visit(p_406230_, (p_404875_, p_404876_, p_404877_, p_404878_) -> {
-            for (ModelPart.Polygon modelpart$polygon : p_404878_.polygons) {
-                for (ModelPart.Vertex modelpart$vertex : modelpart$polygon.vertices()) {
-                    float f = modelpart$vertex.worldX();
-                    float f1 = modelpart$vertex.worldY();
-                    float f2 = modelpart$vertex.worldZ();
-                    Vector3f vector3f = p_404875_.pose().transformPosition(f, f1, f2, new Vector3f());
-                    p_455205_.accept(vector3f);
+    public void getExtentsForGui(final PoseStack poseStack, final Consumer<Vector3fc> output) {
+        this.visit(poseStack, (pose, partPath, cubeIndex, cube) -> {
+            for (ModelPart.Polygon polygon : cube.polygons) {
+                for (ModelPart.Vertex vertex : polygon.vertices()) {
+                    float x = vertex.worldX();
+                    float y = vertex.worldY();
+                    float z = vertex.worldZ();
+                    Vector3f pos = pose.pose().transformPosition(x, y, z, new Vector3f());
+                    output.accept(pos);
                 }
             }
         });
     }
 
-    public void visit(PoseStack p_171310_, ModelPart.Visitor p_171311_) {
-        this.visit(p_171310_, p_171311_, "");
+    public void visit(final PoseStack poseStack, final ModelPart.Visitor visitor) {
+        this.visit(poseStack, visitor, "");
     }
 
-    private void visit(PoseStack p_171313_, ModelPart.Visitor p_171314_, String p_171315_) {
+    private void visit(final PoseStack poseStack, final ModelPart.Visitor visitor, final String path) {
         if (!this.cubes.isEmpty() || !this.children.isEmpty()) {
-            p_171313_.pushPose();
-            this.translateAndRotate(p_171313_);
-            PoseStack.Pose posestack$pose = p_171313_.last();
+            poseStack.pushPose();
+            this.translateAndRotate(poseStack);
+            PoseStack.Pose pose = poseStack.last();
 
             for (int i = 0; i < this.cubes.size(); i++) {
-                p_171314_.visit(posestack$pose, p_171315_, i, this.cubes.get(i));
+                visitor.visit(pose, path, i, this.cubes.get(i));
             }
 
-            String s = p_171315_ + "/";
-            this.children.forEach((p_171320_, p_171321_) -> p_171321_.visit(p_171313_, p_171314_, s + p_171320_));
-            p_171313_.popPose();
+            String childPath = path + "/";
+            this.children.forEach((name, child) -> child.visit(poseStack, visitor, childPath + name));
+            poseStack.popPose();
         }
     }
 
-    public void translateAndRotate(PoseStack p_104300_) {
-        p_104300_.translate(this.x / 16.0F, this.y / 16.0F, this.z / 16.0F);
+    public void translateAndRotate(final PoseStack poseStack) {
+        poseStack.translate(this.x / 16.0F, this.y / 16.0F, this.z / 16.0F);
         if (this.xRot != 0.0F || this.yRot != 0.0F || this.zRot != 0.0F) {
-            p_104300_.mulPose(new Quaternionf().rotationZYX(this.zRot, this.yRot, this.xRot));
+            poseStack.mulPose(new Quaternionf().rotationZYX(this.zRot, this.yRot, this.xRot));
         }
 
         if (this.xScale != 1.0F || this.yScale != 1.0F || this.zScale != 1.0F) {
-            p_104300_.scale(this.xScale, this.yScale, this.zScale);
+            poseStack.scale(this.xScale, this.yScale, this.zScale);
         }
     }
 
-    private void compile(PoseStack.Pose p_104291_, VertexConsumer p_104292_, int p_104293_, int p_104294_, int p_343687_) {
-        for (ModelPart.Cube modelpart$cube : this.cubes) {
-            modelpart$cube.compile(p_104291_, p_104292_, p_104293_, p_104294_, p_343687_);
+    private void compile(final PoseStack.Pose pose, final VertexConsumer builder, final int lightCoords, final int overlayCoords, final int color) {
+        for (ModelPart.Cube cube : this.cubes) {
+            cube.compile(pose, builder, lightCoords, overlayCoords, color);
         }
     }
 
-    public ModelPart.Cube getRandomCube(RandomSource p_233559_) {
-        return this.cubes.get(p_233559_.nextInt(this.cubes.size()));
+    public ModelPart.Cube getRandomCube(final RandomSource random) {
+        return Util.getRandom(this.cubes, random);
     }
 
     public boolean isEmpty() {
         return this.cubes.isEmpty();
     }
 
-    public void offsetPos(Vector3f p_253873_) {
-        this.x = this.x + p_253873_.x();
-        this.y = this.y + p_253873_.y();
-        this.z = this.z + p_253873_.z();
+    public void offsetPos(final Vector3f offset) {
+        this.x = this.x + offset.x();
+        this.y = this.y + offset.y();
+        this.z = this.z + offset.z();
     }
 
-    public void offsetRotation(Vector3f p_253983_) {
-        this.xRot = this.xRot + p_253983_.x();
-        this.yRot = this.yRot + p_253983_.y();
-        this.zRot = this.zRot + p_253983_.z();
+    public void offsetRotation(final Vector3f offset) {
+        this.xRot = this.xRot + offset.x();
+        this.yRot = this.yRot + offset.y();
+        this.zRot = this.zRot + offset.z();
     }
 
-    public void offsetScale(Vector3f p_253957_) {
-        this.xScale = this.xScale + p_253957_.x();
-        this.yScale = this.yScale + p_253957_.y();
-        this.zScale = this.zScale + p_253957_.z();
+    public void offsetScale(final Vector3f offset) {
+        this.xScale = this.xScale + offset.x();
+        this.yScale = this.yScale + offset.y();
+        this.zScale = this.zScale + offset.z();
     }
 
     public List<ModelPart> getAllParts() {
-        List<ModelPart> list = new ArrayList<>();
-        list.add(this);
-        this.addAllChildren((p_404880_, p_404881_) -> list.add(p_404881_));
-        return List.copyOf(list);
+        List<ModelPart> allParts = new ArrayList<>();
+        allParts.add(this);
+        this.addAllChildren((name, part) -> allParts.add(part));
+        return List.copyOf(allParts);
     }
 
     public Function<String, @Nullable ModelPart> createPartLookup() {
-        Map<String, ModelPart> map = new HashMap<>();
-        map.put("root", this);
-        this.addAllChildren(map::putIfAbsent);
-        return map::get;
+        Map<String, ModelPart> parts = new HashMap<>();
+        parts.put("root", this);
+        this.addAllChildren(parts::putIfAbsent);
+        return parts::get;
     }
 
-    private void addAllChildren(BiConsumer<String, ModelPart> p_409475_) {
+    private void addAllChildren(final BiConsumer<String, ModelPart> output) {
         for (Entry<String, ModelPart> entry : this.children.entrySet()) {
-            p_409475_.accept(entry.getKey(), entry.getValue());
+            output.accept(entry.getKey(), entry.getValue());
         }
 
-        for (ModelPart modelpart : this.children.values()) {
-            modelpart.addAllChildren(p_409475_);
+        for (ModelPart part : this.children.values()) {
+            part.addAllChildren(output);
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class Cube {
+        public static class Cube {
         public final ModelPart.Polygon[] polygons;
         public final float minX;
         public final float minY;
@@ -240,222 +237,150 @@ public final class ModelPart {
         public final float maxZ;
 
         public Cube(
-            int p_273701_,
-            int p_273034_,
-            float p_272824_,
-            float p_273777_,
-            float p_273748_,
-            float p_273722_,
-            float p_273763_,
-            float p_272823_,
-            float p_272945_,
-            float p_272790_,
-            float p_272870_,
-            boolean p_273589_,
-            float p_273591_,
-            float p_273313_,
-            Set<Direction> p_273291_
+            final int xTexOffs,
+            final int yTexOffs,
+            float minX,
+            float minY,
+            float minZ,
+            final float width,
+            final float height,
+            final float depth,
+            final float growX,
+            final float growY,
+            final float growZ,
+            final boolean mirror,
+            final float xTexSize,
+            final float yTexSize,
+            final Set<Direction> visibleFaces
         ) {
-            this.minX = p_272824_;
-            this.minY = p_273777_;
-            this.minZ = p_273748_;
-            this.maxX = p_272824_ + p_273722_;
-            this.maxY = p_273777_ + p_273763_;
-            this.maxZ = p_273748_ + p_272823_;
-            this.polygons = new ModelPart.Polygon[p_273291_.size()];
-            float f = p_272824_ + p_273722_;
-            float f1 = p_273777_ + p_273763_;
-            float f2 = p_273748_ + p_272823_;
-            p_272824_ -= p_272945_;
-            p_273777_ -= p_272790_;
-            p_273748_ -= p_272870_;
-            f += p_272945_;
-            f1 += p_272790_;
-            f2 += p_272870_;
-            if (p_273589_) {
-                float f3 = f;
-                f = p_272824_;
-                p_272824_ = f3;
+            this.minX = minX;
+            this.minY = minY;
+            this.minZ = minZ;
+            this.maxX = minX + width;
+            this.maxY = minY + height;
+            this.maxZ = minZ + depth;
+            this.polygons = new ModelPart.Polygon[visibleFaces.size()];
+            float maxX = minX + width;
+            float maxY = minY + height;
+            float maxZ = minZ + depth;
+            minX -= growX;
+            minY -= growY;
+            minZ -= growZ;
+            maxX += growX;
+            maxY += growY;
+            maxZ += growZ;
+            if (mirror) {
+                float tmp = maxX;
+                maxX = minX;
+                minX = tmp;
             }
 
-            ModelPart.Vertex modelpart$vertex7 = new ModelPart.Vertex(p_272824_, p_273777_, p_273748_, 0.0F, 0.0F);
-            ModelPart.Vertex modelpart$vertex = new ModelPart.Vertex(f, p_273777_, p_273748_, 0.0F, 8.0F);
-            ModelPart.Vertex modelpart$vertex1 = new ModelPart.Vertex(f, f1, p_273748_, 8.0F, 8.0F);
-            ModelPart.Vertex modelpart$vertex2 = new ModelPart.Vertex(p_272824_, f1, p_273748_, 8.0F, 0.0F);
-            ModelPart.Vertex modelpart$vertex3 = new ModelPart.Vertex(p_272824_, p_273777_, f2, 0.0F, 0.0F);
-            ModelPart.Vertex modelpart$vertex4 = new ModelPart.Vertex(f, p_273777_, f2, 0.0F, 8.0F);
-            ModelPart.Vertex modelpart$vertex5 = new ModelPart.Vertex(f, f1, f2, 8.0F, 8.0F);
-            ModelPart.Vertex modelpart$vertex6 = new ModelPart.Vertex(p_272824_, f1, f2, 8.0F, 0.0F);
-            float f4 = p_273701_;
-            float f5 = p_273701_ + p_272823_;
-            float f6 = p_273701_ + p_272823_ + p_273722_;
-            float f7 = p_273701_ + p_272823_ + p_273722_ + p_273722_;
-            float f8 = p_273701_ + p_272823_ + p_273722_ + p_272823_;
-            float f9 = p_273701_ + p_272823_ + p_273722_ + p_272823_ + p_273722_;
-            float f10 = p_273034_;
-            float f11 = p_273034_ + p_272823_;
-            float f12 = p_273034_ + p_272823_ + p_273763_;
-            int i = 0;
-            if (p_273291_.contains(Direction.DOWN)) {
-                this.polygons[i++] = new ModelPart.Polygon(
-                    new ModelPart.Vertex[]{modelpart$vertex4, modelpart$vertex3, modelpart$vertex7, modelpart$vertex},
-                    f5,
-                    f10,
-                    f6,
-                    f11,
-                    p_273591_,
-                    p_273313_,
-                    p_273589_,
-                    Direction.DOWN
+            ModelPart.Vertex t0 = new ModelPart.Vertex(minX, minY, minZ, 0.0F, 0.0F);
+            ModelPart.Vertex t1 = new ModelPart.Vertex(maxX, minY, minZ, 0.0F, 8.0F);
+            ModelPart.Vertex t2 = new ModelPart.Vertex(maxX, maxY, minZ, 8.0F, 8.0F);
+            ModelPart.Vertex t3 = new ModelPart.Vertex(minX, maxY, minZ, 8.0F, 0.0F);
+            ModelPart.Vertex l0 = new ModelPart.Vertex(minX, minY, maxZ, 0.0F, 0.0F);
+            ModelPart.Vertex l1 = new ModelPart.Vertex(maxX, minY, maxZ, 0.0F, 8.0F);
+            ModelPart.Vertex l2 = new ModelPart.Vertex(maxX, maxY, maxZ, 8.0F, 8.0F);
+            ModelPart.Vertex l3 = new ModelPart.Vertex(minX, maxY, maxZ, 8.0F, 0.0F);
+            float u0 = xTexOffs;
+            float u1 = xTexOffs + depth;
+            float u2 = xTexOffs + depth + width;
+            float u22 = xTexOffs + depth + width + width;
+            float u3 = xTexOffs + depth + width + depth;
+            float u4 = xTexOffs + depth + width + depth + width;
+            float v0 = yTexOffs;
+            float v1 = yTexOffs + depth;
+            float v2 = yTexOffs + depth + height;
+            int pos = 0;
+            if (visibleFaces.contains(Direction.DOWN)) {
+                this.polygons[pos++] = new ModelPart.Polygon(new ModelPart.Vertex[]{l1, l0, t0, t1}, u1, v0, u2, v1, xTexSize, yTexSize, mirror, Direction.DOWN);
+            }
+
+            if (visibleFaces.contains(Direction.UP)) {
+                this.polygons[pos++] = new ModelPart.Polygon(new ModelPart.Vertex[]{t2, t3, l3, l2}, u2, v1, u22, v0, xTexSize, yTexSize, mirror, Direction.UP);
+            }
+
+            if (visibleFaces.contains(Direction.WEST)) {
+                this.polygons[pos++] = new ModelPart.Polygon(new ModelPart.Vertex[]{t0, l0, l3, t3}, u0, v1, u1, v2, xTexSize, yTexSize, mirror, Direction.WEST);
+            }
+
+            if (visibleFaces.contains(Direction.NORTH)) {
+                this.polygons[pos++] = new ModelPart.Polygon(
+                    new ModelPart.Vertex[]{t1, t0, t3, t2}, u1, v1, u2, v2, xTexSize, yTexSize, mirror, Direction.NORTH
                 );
             }
 
-            if (p_273291_.contains(Direction.UP)) {
-                this.polygons[i++] = new ModelPart.Polygon(
-                    new ModelPart.Vertex[]{modelpart$vertex1, modelpart$vertex2, modelpart$vertex6, modelpart$vertex5},
-                    f6,
-                    f11,
-                    f7,
-                    f10,
-                    p_273591_,
-                    p_273313_,
-                    p_273589_,
-                    Direction.UP
-                );
+            if (visibleFaces.contains(Direction.EAST)) {
+                this.polygons[pos++] = new ModelPart.Polygon(new ModelPart.Vertex[]{l1, t1, t2, l2}, u2, v1, u3, v2, xTexSize, yTexSize, mirror, Direction.EAST);
             }
 
-            if (p_273291_.contains(Direction.WEST)) {
-                this.polygons[i++] = new ModelPart.Polygon(
-                    new ModelPart.Vertex[]{modelpart$vertex7, modelpart$vertex3, modelpart$vertex6, modelpart$vertex2},
-                    f4,
-                    f11,
-                    f5,
-                    f12,
-                    p_273591_,
-                    p_273313_,
-                    p_273589_,
-                    Direction.WEST
-                );
-            }
-
-            if (p_273291_.contains(Direction.NORTH)) {
-                this.polygons[i++] = new ModelPart.Polygon(
-                    new ModelPart.Vertex[]{modelpart$vertex, modelpart$vertex7, modelpart$vertex2, modelpart$vertex1},
-                    f5,
-                    f11,
-                    f6,
-                    f12,
-                    p_273591_,
-                    p_273313_,
-                    p_273589_,
-                    Direction.NORTH
-                );
-            }
-
-            if (p_273291_.contains(Direction.EAST)) {
-                this.polygons[i++] = new ModelPart.Polygon(
-                    new ModelPart.Vertex[]{modelpart$vertex4, modelpart$vertex, modelpart$vertex1, modelpart$vertex5},
-                    f6,
-                    f11,
-                    f8,
-                    f12,
-                    p_273591_,
-                    p_273313_,
-                    p_273589_,
-                    Direction.EAST
-                );
-            }
-
-            if (p_273291_.contains(Direction.SOUTH)) {
-                this.polygons[i] = new ModelPart.Polygon(
-                    new ModelPart.Vertex[]{modelpart$vertex3, modelpart$vertex4, modelpart$vertex5, modelpart$vertex6},
-                    f8,
-                    f11,
-                    f9,
-                    f12,
-                    p_273591_,
-                    p_273313_,
-                    p_273589_,
-                    Direction.SOUTH
-                );
+            if (visibleFaces.contains(Direction.SOUTH)) {
+                this.polygons[pos] = new ModelPart.Polygon(new ModelPart.Vertex[]{l0, l1, l2, l3}, u3, v1, u4, v2, xTexSize, yTexSize, mirror, Direction.SOUTH);
             }
         }
 
-        public void compile(PoseStack.Pose p_171333_, VertexConsumer p_171334_, int p_171335_, int p_171336_, int p_344599_) {
-            Matrix4f matrix4f = p_171333_.pose();
-            Vector3f vector3f = new Vector3f();
+        public void compile(final PoseStack.Pose pose, final VertexConsumer builder, final int lightCoords, final int overlayCoords, final int color) {
+            Matrix4f matrix = pose.pose();
+            Vector3f scratchVector = new Vector3f();
 
-            for (ModelPart.Polygon modelpart$polygon : this.polygons) {
-                Vector3f vector3f1 = p_171333_.transformNormal(modelpart$polygon.normal, vector3f);
-                float f = vector3f1.x();
-                float f1 = vector3f1.y();
-                float f2 = vector3f1.z();
+            for (ModelPart.Polygon polygon : this.polygons) {
+                Vector3f normal = pose.transformNormal(polygon.normal, scratchVector);
+                float nx = normal.x();
+                float ny = normal.y();
+                float nz = normal.z();
 
-                for (ModelPart.Vertex modelpart$vertex : modelpart$polygon.vertices) {
-                    float f3 = modelpart$vertex.worldX();
-                    float f4 = modelpart$vertex.worldY();
-                    float f5 = modelpart$vertex.worldZ();
-                    Vector3f vector3f2 = matrix4f.transformPosition(f3, f4, f5, vector3f);
-                    p_171334_.addVertex(
-                        vector3f2.x(),
-                        vector3f2.y(),
-                        vector3f2.z(),
-                        p_344599_,
-                        modelpart$vertex.u,
-                        modelpart$vertex.v,
-                        p_171336_,
-                        p_171335_,
-                        f,
-                        f1,
-                        f2
-                    );
+                for (ModelPart.Vertex vertex : polygon.vertices) {
+                    float x = vertex.worldX();
+                    float y = vertex.worldY();
+                    float z = vertex.worldZ();
+                    Vector3f pos = matrix.transformPosition(x, y, z, scratchVector);
+                    builder.addVertex(pos.x(), pos.y(), pos.z(), color, vertex.u, vertex.v, overlayCoords, lightCoords, nx, ny, nz);
                 }
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Polygon(ModelPart.Vertex[] vertices, Vector3fc normal) {
+        public record Polygon(ModelPart.Vertex[] vertices, Vector3fc normal) {
         public Polygon(
-            ModelPart.Vertex[] p_104362_,
-            float p_104363_,
-            float p_104364_,
-            float p_104365_,
-            float p_104366_,
-            float p_104367_,
-            float p_104368_,
-            boolean p_104369_,
-            Direction p_104370_
+            final ModelPart.Vertex[] vertices,
+            final float u0,
+            final float v0,
+            final float u1,
+            final float v1,
+            final float xTexSize,
+            final float yTexSize,
+            final boolean mirror,
+            final Direction facing
         ) {
-            this(p_104362_, (p_104369_ ? mirrorFacing(p_104370_) : p_104370_).getUnitVec3f());
-            float f = 0.0F / p_104367_;
-            float f1 = 0.0F / p_104368_;
-            p_104362_[0] = p_104362_[0].remap(p_104365_ / p_104367_ - f, p_104364_ / p_104368_ + f1);
-            p_104362_[1] = p_104362_[1].remap(p_104363_ / p_104367_ + f, p_104364_ / p_104368_ + f1);
-            p_104362_[2] = p_104362_[2].remap(p_104363_ / p_104367_ + f, p_104366_ / p_104368_ - f1);
-            p_104362_[3] = p_104362_[3].remap(p_104365_ / p_104367_ - f, p_104366_ / p_104368_ - f1);
-            if (p_104369_) {
-                int i = p_104362_.length;
+            this(vertices, (mirror ? mirrorFacing(facing) : facing).getUnitVec3f());
+            float us = 0.0F / xTexSize;
+            float vs = 0.0F / yTexSize;
+            vertices[0] = vertices[0].remap(u1 / xTexSize - us, v0 / yTexSize + vs);
+            vertices[1] = vertices[1].remap(u0 / xTexSize + us, v0 / yTexSize + vs);
+            vertices[2] = vertices[2].remap(u0 / xTexSize + us, v1 / yTexSize - vs);
+            vertices[3] = vertices[3].remap(u1 / xTexSize - us, v1 / yTexSize - vs);
+            if (mirror) {
+                int length = vertices.length;
 
-                for (int j = 0; j < i / 2; j++) {
-                    ModelPart.Vertex modelpart$vertex = p_104362_[j];
-                    p_104362_[j] = p_104362_[i - 1 - j];
-                    p_104362_[i - 1 - j] = modelpart$vertex;
+                for (int i = 0; i < length / 2; i++) {
+                    ModelPart.Vertex tmp = vertices[i];
+                    vertices[i] = vertices[length - 1 - i];
+                    vertices[length - 1 - i] = tmp;
                 }
             }
         }
 
-        private static Direction mirrorFacing(Direction p_428375_) {
-            return p_428375_.getAxis() == Direction.Axis.X ? p_428375_.getOpposite() : p_428375_;
+        private static Direction mirrorFacing(final Direction facing) {
+            return facing.getAxis() == Direction.Axis.X ? facing.getOpposite() : facing;
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Vertex(float x, float y, float z, float u, float v) {
+        public record Vertex(float x, float y, float z, float u, float v) {
         public static final float SCALE_FACTOR = 16.0F;
 
-        public ModelPart.Vertex remap(float p_104385_, float p_104386_) {
-            return new ModelPart.Vertex(this.x, this.y, this.z, p_104385_, p_104386_);
+        public ModelPart.Vertex remap(final float u, final float v) {
+            return new ModelPart.Vertex(this.x, this.y, this.z, u, v);
         }
 
         public float worldX() {
@@ -472,8 +397,7 @@ public final class ModelPart {
     }
 
     @FunctionalInterface
-    @OnlyIn(Dist.CLIENT)
-    public interface Visitor {
-        void visit(PoseStack.Pose p_171342_, String p_171343_, int p_171344_, ModelPart.Cube p_171345_);
+        public interface Visitor {
+        void visit(final PoseStack.Pose pose, final String partPath, final int cubeIndex, final ModelPart.Cube cube);
     }
 }

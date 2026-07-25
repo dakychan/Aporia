@@ -27,171 +27,173 @@ public abstract class Settings<T extends Settings<T>> {
     private static final Logger LOGGER = LogUtils.getLogger();
     protected final Properties properties;
 
-    public Settings(Properties p_139801_) {
-        this.properties = p_139801_;
+    public Settings(final Properties properties) {
+        this.properties = properties;
     }
 
-    public static Properties loadFromFile(Path p_139840_) {
+    public static Properties loadFromFile(final Path file) {
         try {
-            try {
-                Properties properties3;
-                try (InputStream inputstream = Files.newInputStream(p_139840_)) {
-                    CharsetDecoder charsetdecoder = StandardCharsets.UTF_8
-                        .newDecoder()
-                        .onMalformedInput(CodingErrorAction.REPORT)
-                        .onUnmappableCharacter(CodingErrorAction.REPORT);
-                    Properties properties2 = new Properties();
-                    properties2.load(new InputStreamReader(inputstream, charsetdecoder));
-                    properties3 = properties2;
-                }
+            try (InputStream is = Files.newInputStream(file)) {
+                CharsetDecoder reportingUtf8Decoder = StandardCharsets.UTF_8
+                    .newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT);
+                Properties properties = new Properties();
+                properties.load(new InputStreamReader(is, reportingUtf8Decoder));
+                return properties;
+            } catch (CharacterCodingException e) {
+                LOGGER.info("Failed to load properties as UTF-8 from file {}, trying ISO_8859_1", file);
 
-                return properties3;
-            } catch (CharacterCodingException charactercodingexception) {
-                LOGGER.info("Failed to load properties as UTF-8 from file {}, trying ISO_8859_1", p_139840_);
-
-                Properties properties1;
-                try (Reader reader = Files.newBufferedReader(p_139840_, StandardCharsets.ISO_8859_1)) {
+                try (Reader reader = Files.newBufferedReader(file, StandardCharsets.ISO_8859_1)) {
                     Properties properties = new Properties();
                     properties.load(reader);
-                    properties1 = properties;
+                    return properties;
                 }
-
-                return properties1;
             }
-        } catch (IOException ioexception) {
-            LOGGER.error("Failed to load properties from file: {}", p_139840_, ioexception);
+        } catch (IOException e) {
+            LOGGER.error("Failed to load properties from file: {}", file, e);
             return new Properties();
         }
     }
 
-    public void store(Path p_139877_) {
-        try (Writer writer = Files.newBufferedWriter(p_139877_, StandardCharsets.UTF_8)) {
-            this.properties.store(writer, "Minecraft server properties");
-        } catch (IOException ioexception) {
-            LOGGER.error("Failed to store properties to file: {}", p_139877_);
+    public void store(final Path output) {
+        try (Writer os = Files.newBufferedWriter(output, StandardCharsets.UTF_8)) {
+            this.properties.store(os, "Minecraft server properties");
+        } catch (IOException e) {
+            LOGGER.error("Failed to store properties to file: {}", output);
         }
     }
 
-    private static <V extends Number> Function<String, @Nullable V> wrapNumberDeserializer(Function<String, V> p_139842_) {
-        return p_139845_ -> {
+    private static <V extends Number> Function<String, @Nullable V> wrapNumberDeserializer(final Function<String, V> inner) {
+        return s -> {
             try {
-                return p_139842_.apply(p_139845_);
-            } catch (NumberFormatException numberformatexception) {
+                return inner.apply(s);
+            } catch (NumberFormatException e) {
                 return null;
             }
         };
     }
 
-    protected static <V> Function<String, @Nullable V> dispatchNumberOrString(IntFunction<@Nullable V> p_139851_, Function<String, @Nullable V> p_139852_) {
-        return p_139856_ -> {
+    protected static <V> Function<String, @Nullable V> dispatchNumberOrString(
+        final IntFunction<@Nullable V> intDeserializer, final Function<String, @Nullable V> stringDeserializer
+    ) {
+        return s -> {
             try {
-                return p_139851_.apply(Integer.parseInt(p_139856_));
-            } catch (NumberFormatException numberformatexception) {
-                return p_139852_.apply(p_139856_);
+                return intDeserializer.apply(Integer.parseInt(s));
+            } catch (NumberFormatException e) {
+                return stringDeserializer.apply(s);
             }
         };
     }
 
-    private @Nullable String getStringRaw(String p_139879_) {
-        return (String)this.properties.get(p_139879_);
+    private @Nullable String getStringRaw(final String key) {
+        return (String)this.properties.get(key);
     }
 
-    protected <V> @Nullable V getLegacy(String p_139815_, Function<String, V> p_139816_) {
-        String s = this.getStringRaw(p_139815_);
-        if (s == null) {
+    protected <V> @Nullable V getLegacy(final String key, final Function<String, V> deserializer) {
+        String value = this.getStringRaw(key);
+        if (value == null) {
             return null;
-        } else {
-            this.properties.remove(p_139815_);
-            return p_139816_.apply(s);
         }
+
+        this.properties.remove(key);
+        return deserializer.apply(value);
     }
 
-    protected <V> V get(String p_139822_, Function<String, @Nullable V> p_139823_, Function<V, String> p_139824_, V p_139825_) {
-        String s = this.getStringRaw(p_139822_);
-        V v = MoreObjects.firstNonNull(s != null ? p_139823_.apply(s) : null, p_139825_);
-        this.properties.put(p_139822_, p_139824_.apply(v));
-        return v;
+    protected <V> V get(final String key, final Function<String, @Nullable V> deserializer, final Function<V, String> serializer, final V defaultValue) {
+        String value = this.getStringRaw(key);
+        V result = MoreObjects.firstNonNull(value != null ? deserializer.apply(value) : null, defaultValue);
+        this.properties.put(key, serializer.apply(result));
+        return result;
     }
 
-    protected <V> Settings<T>.MutableValue<V> getMutable(String p_139869_, Function<String, @Nullable V> p_139870_, Function<V, String> p_139871_, V p_139872_) {
-        String s = this.getStringRaw(p_139869_);
-        V v = MoreObjects.firstNonNull(s != null ? p_139870_.apply(s) : null, p_139872_);
-        this.properties.put(p_139869_, p_139871_.apply(v));
-        return new MutableValue<>(p_139869_, v, p_139871_);
+    protected <V> Settings<T>.MutableValue<V> getMutable(
+        final String key, final Function<String, @Nullable V> deserializer, final Function<V, String> serializer, final V defaultValue
+    ) {
+        String value = this.getStringRaw(key);
+        V result = MoreObjects.firstNonNull(value != null ? deserializer.apply(value) : null, defaultValue);
+        this.properties.put(key, serializer.apply(result));
+        return new MutableValue<>(key, result, serializer);
     }
 
-    protected <V> V get(String p_139827_, Function<String, @Nullable V> p_139828_, UnaryOperator<V> p_139829_, Function<V, String> p_139830_, V p_139831_) {
-        return this.get(p_139827_, p_139849_ -> {
-            V v = p_139828_.apply(p_139849_);
-            return v != null ? p_139829_.apply(v) : null;
-        }, p_139830_, p_139831_);
+    protected <V> V get(
+        final String key,
+        final Function<String, @Nullable V> deserializer,
+        final UnaryOperator<V> validator,
+        final Function<V, String> serializer,
+        final V defaultValue
+    ) {
+        return this.get(key, s -> {
+            V result = deserializer.apply(s);
+            return result != null ? validator.apply(result) : null;
+        }, serializer, defaultValue);
     }
 
-    protected <V> V get(String p_139818_, Function<String, V> p_139819_, V p_139820_) {
-        return this.get(p_139818_, p_139819_, Objects::toString, p_139820_);
+    protected <V> V get(final String key, final Function<String, V> deserializer, final V defaultValue) {
+        return this.get(key, deserializer, Objects::toString, defaultValue);
     }
 
-    protected <V> Settings<T>.MutableValue<V> getMutable(String p_139865_, Function<String, V> p_139866_, V p_139867_) {
-        return this.getMutable(p_139865_, p_139866_, Objects::toString, p_139867_);
+    protected <V> Settings<T>.MutableValue<V> getMutable(final String key, final Function<String, V> deserializer, final V defaultValue) {
+        return this.getMutable(key, deserializer, Objects::toString, defaultValue);
     }
 
-    protected String get(String p_139812_, String p_139813_) {
-        return this.get(p_139812_, Function.identity(), Function.identity(), p_139813_);
+    protected String get(final String key, final String defaultValue) {
+        return this.get(key, Function.identity(), Function.identity(), defaultValue);
     }
 
-    protected @Nullable String getLegacyString(String p_139804_) {
-        return this.getLegacy(p_139804_, Function.identity());
+    protected @Nullable String getLegacyString(final String key) {
+        return this.getLegacy(key, Function.identity());
     }
 
-    protected int get(String p_139806_, int p_139807_) {
-        return this.get(p_139806_, wrapNumberDeserializer(Integer::parseInt), p_139807_);
+    protected int get(final String key, final int defaultValue) {
+        return this.get(key, wrapNumberDeserializer(Integer::parseInt), Integer.valueOf(defaultValue));
     }
 
-    protected Settings<T>.MutableValue<Integer> getMutable(String p_139862_, int p_139863_) {
-        return this.getMutable(p_139862_, wrapNumberDeserializer(Integer::parseInt), p_139863_);
+    protected Settings<T>.MutableValue<Integer> getMutable(final String key, final int defaultValue) {
+        return this.getMutable(key, wrapNumberDeserializer(Integer::parseInt), defaultValue);
     }
 
-    protected Settings<T>.MutableValue<String> getMutable(String p_427791_, String p_431229_) {
-        return this.getMutable(p_427791_, String::new, p_431229_);
+    protected Settings<T>.MutableValue<String> getMutable(final String key, final String defaultValue) {
+        return this.getMutable(key, String::new, defaultValue);
     }
 
-    protected int get(String p_139833_, UnaryOperator<Integer> p_139834_, int p_139835_) {
-        return this.get(p_139833_, wrapNumberDeserializer(Integer::parseInt), p_139834_, Objects::toString, p_139835_);
+    protected int get(final String key, final UnaryOperator<Integer> validator, final int defaultValue) {
+        return this.get(key, wrapNumberDeserializer(Integer::parseInt), validator, Objects::toString, defaultValue);
     }
 
-    protected long get(String p_139809_, long p_139810_) {
-        return this.get(p_139809_, wrapNumberDeserializer(Long::parseLong), p_139810_);
+    protected long get(final String key, final long defaultValue) {
+        return this.get(key, wrapNumberDeserializer(Long::parseLong), defaultValue);
     }
 
-    protected boolean get(String p_139837_, boolean p_139838_) {
-        return this.get(p_139837_, Boolean::valueOf, p_139838_);
+    protected boolean get(final String key, final boolean defaultValue) {
+        return this.get(key, Boolean::valueOf, defaultValue);
     }
 
-    protected Settings<T>.MutableValue<Boolean> getMutable(String p_139874_, boolean p_139875_) {
-        return this.getMutable(p_139874_, Boolean::valueOf, p_139875_);
+    protected Settings<T>.MutableValue<Boolean> getMutable(final String key, final boolean defaultValue) {
+        return this.getMutable(key, Boolean::valueOf, defaultValue);
     }
 
-    protected @Nullable Boolean getLegacyBoolean(String p_139860_) {
-        return this.getLegacy(p_139860_, Boolean::valueOf);
+    protected @Nullable Boolean getLegacyBoolean(final String key) {
+        return this.getLegacy(key, Boolean::valueOf);
     }
 
     protected Properties cloneProperties() {
-        Properties properties = new Properties();
-        properties.putAll(this.properties);
-        return properties;
+        Properties result = new Properties();
+        result.putAll(this.properties);
+        return result;
     }
 
-    protected abstract T reload(RegistryAccess p_139857_, Properties p_139858_);
+    protected abstract T reload(final RegistryAccess registryAccess, final Properties properties);
 
     public class MutableValue<V> implements Supplier<V> {
         private final String key;
         private final V value;
         private final Function<V, String> serializer;
 
-        MutableValue(final String p_139886_, final V p_139887_, final Function<V, String> p_139888_) {
-            this.key = p_139886_;
-            this.value = p_139887_;
-            this.serializer = p_139888_;
+        private MutableValue(final String key, final V value, final Function<V, String> serializer) {
+            this.key = key;
+            this.value = value;
+            this.serializer = serializer;
         }
 
         @Override
@@ -199,10 +201,10 @@ public abstract class Settings<T extends Settings<T>> {
             return this.value;
         }
 
-        public T update(RegistryAccess p_139896_, V p_139897_) {
+        public T update(final RegistryAccess registryAccess, final V value) {
             Properties properties = Settings.this.cloneProperties();
-            properties.put(this.key, this.serializer.apply(p_139897_));
-            return Settings.this.reload(p_139896_, properties);
+            properties.put(this.key, this.serializer.apply(value));
+            return Settings.this.reload(registryAccess, properties);
         }
     }
 }

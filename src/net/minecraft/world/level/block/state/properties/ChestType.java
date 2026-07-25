@@ -1,5 +1,6 @@
 package net.minecraft.world.level.block.state.properties;
 
+import com.mojang.serialization.Codec;
 import net.minecraft.util.StringRepresentable;
 
 public enum ChestType implements StringRepresentable {
@@ -7,10 +8,11 @@ public enum ChestType implements StringRepresentable {
     LEFT("left"),
     RIGHT("right");
 
+    public static final Codec<ChestType> CODEC = StringRepresentable.fromEnum(ChestType::values);
     private final String name;
 
-    private ChestType(final String p_263109_) {
-        this.name = p_263109_;
+    ChestType(final String name) {
+        this.name = name;
     }
 
     @Override

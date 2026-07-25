@@ -4,12 +4,12 @@ import com.mojang.serialization.Codec;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 public class NoOpFeature extends Feature<NoneFeatureConfiguration> {
-    public NoOpFeature(Codec<NoneFeatureConfiguration> p_66431_) {
-        super(p_66431_);
+    public NoOpFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_160112_) {
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
         return true;
     }
 }

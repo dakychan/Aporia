@@ -12,7 +12,7 @@ public interface RuleBlockEntityModifierType<P extends RuleBlockEntityModifier> 
 
     MapCodec<P> codec();
 
-    private static <P extends RuleBlockEntityModifier> RuleBlockEntityModifierType<P> register(String p_277659_, MapCodec<P> p_327731_) {
-        return Registry.register(BuiltInRegistries.RULE_BLOCK_ENTITY_MODIFIER, p_277659_, () -> p_327731_);
+    private static <P extends RuleBlockEntityModifier> RuleBlockEntityModifierType<P> register(final String id, final MapCodec<P> codec) {
+        return Registry.register(BuiltInRegistries.RULE_BLOCK_ENTITY_MODIFIER, id, () -> codec);
     }
 }

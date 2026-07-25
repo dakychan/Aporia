@@ -30,9 +30,14 @@ import net.minecraft.util.Util;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
+import net.minecraft.world.entity.AnimationState;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.Leashable;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -74,13 +79,23 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public class Rabbit extends Animal {
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.24F, 0.4F).withEyeHeight(0.39F);
     public static final double STROLL_SPEED_MOD = 0.6;
     public static final double BREED_SPEED_MOD = 0.8;
     public static final double FOLLOW_SPEED_MOD = 1.0;
     public static final double FLEE_SPEED_MOD = 2.2;
     public static final double ATTACK_SPEED_MOD = 1.4;
+    private static final double BABY_JUMP_HEIGHT = 0.5;
+    private static final double ADULT_JUMP_HEIGHT = 1.5;
+    private static final int JUMP_DELAY_TICKS = 10;
+    private static final int PANIC_JUMP_DELAY_TICKS = 3;
+    private static final int JUMP_DURATION_IN_TICKS = 15;
     private static final EntityDataAccessor<Integer> DATA_TYPE_ID = SynchedEntityData.defineId(Rabbit.class, EntityDataSerializers.INT);
     private static final int DEFAULT_MORE_CARROT_TICKS = 0;
+    public final AnimationState hopAnimationState = new AnimationState();
+    public final AnimationState idleHeadTiltAnimationState = new AnimationState();
+    private static final int IDLE_MINIMAL_DURATION_TICKS = 180;
+    private int idleAnimationTimeout = this.random.nextInt(40) + 180;
     private static final Identifier KILLER_BUNNY = Identifier.withDefaultNamespace("killer_bunny");
     private static final int DEFAULT_ATTACK_POWER = 3;
     private static final int EVIL_ATTACK_POWER_INCREMENT = 5;
@@ -91,12 +106,12 @@ public class Rabbit extends Animal {
     private int jumpDuration;
     private boolean wasOnGround;
     private int jumpDelayTicks;
-    int moreCarrotTicks = 0;
+    private int moreCarrotTicks = 0;
 
-    public Rabbit(EntityType<? extends Rabbit> p_450574_, Level p_455846_) {
-        super(p_450574_, p_455846_);
+    public Rabbit(final EntityType<? extends Rabbit> type, final Level level) {
+        super(type, level);
         this.jumpControl = new Rabbit.RabbitJumpControl(this);
-        this.moveControl = new Rabbit.RabbitMoveControl(this);
+        this.moveControl = new Rabbit.RabbitMoveControl<>(this);
         this.setSpeedModifier(0.0);
     }
 
@@ -106,7 +121,7 @@ public class Rabbit extends Animal {
         this.goalSelector.addGoal(1, new ClimbOnTopOfPowderSnowGoal(this, this.level()));
         this.goalSelector.addGoal(1, new Rabbit.RabbitPanicGoal(this, 2.2));
         this.goalSelector.addGoal(2, new BreedGoal(this, 0.8));
-        this.goalSelector.addGoal(3, new TemptGoal(this, 1.0, p_451901_ -> p_451901_.is(ItemTags.RABBIT_FOOD), false));
+        this.goalSelector.addGoal(3, new TemptGoal(this, 1.0, i -> i.is(ItemTags.RABBIT_FOOD), false));
         this.goalSelector.addGoal(4, new Rabbit.RabbitAvoidEntityGoal<>(this, Player.class, 8.0F, 2.2, 2.2));
         this.goalSelector.addGoal(4, new Rabbit.RabbitAvoidEntityGoal<>(this, Wolf.class, 10.0F, 2.2, 2.2));
         this.goalSelector.addGoal(4, new Rabbit.RabbitAvoidEntityGoal<>(this, Monster.class, 4.0F, 2.2, 2.2));
@@ -116,35 +131,40 @@ public class Rabbit extends Animal {
     }
 
     @Override
+    protected EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
+    }
+
+    @Override
     protected float getJumpPower() {
-        float f = 0.3F;
+        float baseJumpPower = 0.3F;
         if (this.moveControl.getSpeedModifier() <= 0.6) {
-            f = 0.2F;
+            baseJumpPower = 0.2F;
         }
 
         Path path = this.navigation.getPath();
         if (path != null && !path.isDone()) {
-            Vec3 vec3 = path.getNextEntityPos(this);
-            if (vec3.y > this.getY() + 0.5) {
-                f = 0.5F;
+            Vec3 currentPos = path.getNextEntityPos(this);
+            if (currentPos.y > this.getY() + 0.5) {
+                baseJumpPower = 0.5F;
             }
         }
 
         if (this.horizontalCollision || this.jumping && this.moveControl.getWantedY() > this.getY() + 0.5) {
-            f = 0.5F;
+            baseJumpPower = 0.5F;
         }
 
-        return super.getJumpPower(f / 0.42F);
+        return super.getJumpPower(baseJumpPower / 0.42F);
     }
 
     @Override
     public void jumpFromGround() {
         super.jumpFromGround();
-        double d0 = this.moveControl.getSpeedModifier();
-        if (d0 > 0.0) {
-            double d1 = this.getDeltaMovement().horizontalDistanceSqr();
-            if (d1 < 0.01) {
-                this.moveRelative(0.1F, new Vec3(0.0, 0.0, 1.0));
+        double speedModifier = this.moveControl.getSpeedModifier();
+        if (speedModifier > 0.0) {
+            double current = this.getDeltaMovement().horizontalDistanceSqr();
+            if (current < 0.01) {
+                this.moveRelative(0.1F, new Vec3(0.0, this.isBaby() ? 0.5 : 1.5, 1.0));
             }
         }
 
@@ -153,37 +173,37 @@ public class Rabbit extends Animal {
         }
     }
 
-    public float getJumpCompletion(float p_452015_) {
-        return this.jumpDuration == 0 ? 0.0F : (this.jumpTicks + p_452015_) / this.jumpDuration;
+    public float getJumpCompletion(final float a) {
+        return this.jumpDuration == 0 ? 0.0F : (this.jumpTicks + a) / this.jumpDuration;
     }
 
-    public void setSpeedModifier(double p_452949_) {
-        this.getNavigation().setSpeedModifier(p_452949_);
-        this.moveControl.setWantedPosition(this.moveControl.getWantedX(), this.moveControl.getWantedY(), this.moveControl.getWantedZ(), p_452949_);
+    public void setSpeedModifier(final double speed) {
+        this.getNavigation().setSpeedModifier(speed);
+        this.moveControl.setWantedPosition(this.moveControl.getWantedX(), this.moveControl.getWantedY(), this.moveControl.getWantedZ(), speed);
     }
 
     @Override
-    public void setJumping(boolean p_457825_) {
-        super.setJumping(p_457825_);
-        if (p_457825_) {
+    public void setJumping(final boolean jump) {
+        super.setJumping(jump);
+        if (jump) {
             this.playSound(this.getJumpSound(), this.getSoundVolume(), ((this.random.nextFloat() - this.random.nextFloat()) * 0.2F + 1.0F) * 0.8F);
         }
     }
 
     public void startJumping() {
         this.setJumping(true);
-        this.jumpDuration = 10;
+        this.jumpDuration = 15;
         this.jumpTicks = 0;
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_453884_) {
-        super.defineSynchedData(p_453884_);
-        p_453884_.define(DATA_TYPE_ID, Rabbit.Variant.DEFAULT.id);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_TYPE_ID, Rabbit.Variant.DEFAULT.id);
     }
 
     @Override
-    public void customServerAiStep(ServerLevel p_458398_) {
+    public void customServerAiStep(final ServerLevel level) {
         if (this.jumpDelayTicks > 0) {
             this.jumpDelayTicks--;
         }
@@ -202,28 +222,28 @@ public class Rabbit extends Animal {
             }
 
             if (this.getVariant() == Rabbit.Variant.EVIL && this.jumpDelayTicks == 0) {
-                LivingEntity livingentity = this.getTarget();
-                if (livingentity != null && this.distanceToSqr(livingentity) < 16.0) {
-                    this.facePoint(livingentity.getX(), livingentity.getZ());
-                    this.moveControl.setWantedPosition(livingentity.getX(), livingentity.getY(), livingentity.getZ(), this.moveControl.getSpeedModifier());
+                LivingEntity target = this.getTarget();
+                if (target != null && this.distanceToSqr(target) < 16.0) {
+                    this.facePoint(target.getX(), target.getZ());
+                    this.moveControl.setWantedPosition(target.getX(), target.getY(), target.getZ(), this.moveControl.getSpeedModifier());
                     this.startJumping();
                     this.wasOnGround = true;
                 }
             }
 
-            Rabbit.RabbitJumpControl rabbit$rabbitjumpcontrol = (Rabbit.RabbitJumpControl)this.jumpControl;
-            if (!rabbit$rabbitjumpcontrol.wantJump()) {
+            Rabbit.RabbitJumpControl jumpControl = (Rabbit.RabbitJumpControl)this.jumpControl;
+            if (!jumpControl.wantJump()) {
                 if (this.moveControl.hasWanted() && this.jumpDelayTicks == 0) {
                     Path path = this.navigation.getPath();
-                    Vec3 vec3 = new Vec3(this.moveControl.getWantedX(), this.moveControl.getWantedY(), this.moveControl.getWantedZ());
+                    Vec3 pos = new Vec3(this.moveControl.getWantedX(), this.moveControl.getWantedY(), this.moveControl.getWantedZ());
                     if (path != null && !path.isDone()) {
-                        vec3 = path.getNextEntityPos(this);
+                        pos = path.getNextEntityPos(this);
                     }
 
-                    this.facePoint(vec3.x, vec3.z);
+                    this.facePoint(pos.x, pos.z);
                     this.startJumping();
                 }
-            } else if (!rabbit$rabbitjumpcontrol.canJump()) {
+            } else if (!jumpControl.canJump()) {
                 this.enableJumpControl();
             }
         }
@@ -236,8 +256,8 @@ public class Rabbit extends Animal {
         return false;
     }
 
-    private void facePoint(double p_450385_, double p_450675_) {
-        this.setYRot((float)(Mth.atan2(p_450675_ - this.getZ(), p_450385_ - this.getX()) * 180.0F / (float)Math.PI) - 90.0F);
+    private void facePoint(final double faceX, final double faceZ) {
+        this.setYRot((float)(Mth.atan2(faceZ - this.getZ(), faceX - this.getX()) * 180.0F / (float)Math.PI) - 90.0F);
     }
 
     private void enableJumpControl() {
@@ -249,11 +269,7 @@ public class Rabbit extends Animal {
     }
 
     private void setLandingDelay() {
-        if (this.moveControl.getSpeedModifier() < 2.2) {
-            this.jumpDelayTicks = 10;
-        } else {
-            this.jumpDelayTicks = 1;
-        }
+        this.jumpDelayTicks = this.moveControl.getSpeedModifier() < 2.2 ? 10 : 3;
     }
 
     private void checkLandingDelay() {
@@ -278,17 +294,17 @@ public class Rabbit extends Animal {
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_452895_) {
-        super.addAdditionalSaveData(p_452895_);
-        p_452895_.store("RabbitType", Rabbit.Variant.LEGACY_CODEC, this.getVariant());
-        p_452895_.putInt("MoreCarrotTicks", this.moreCarrotTicks);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.store("RabbitType", Rabbit.Variant.LEGACY_CODEC, this.getVariant());
+        output.putInt("MoreCarrotTicks", this.moreCarrotTicks);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_454498_) {
-        super.readAdditionalSaveData(p_454498_);
-        this.setVariant(p_454498_.read("RabbitType", Rabbit.Variant.LEGACY_CODEC).orElse(Rabbit.Variant.DEFAULT));
-        this.moreCarrotTicks = p_454498_.getIntOr("MoreCarrotTicks", 0);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.setVariant(input.read("RabbitType", Rabbit.Variant.LEGACY_CODEC).orElse(Rabbit.Variant.DEFAULT));
+        this.moreCarrotTicks = input.getIntOr("MoreCarrotTicks", 0);
     }
 
     protected SoundEvent getJumpSound() {
@@ -301,7 +317,7 @@ public class Rabbit extends Animal {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_454528_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.RABBIT_HURT;
     }
 
@@ -322,41 +338,42 @@ public class Rabbit extends Animal {
         return this.getVariant() == Rabbit.Variant.EVIL ? SoundSource.HOSTILE : SoundSource.NEUTRAL;
     }
 
-    public @Nullable Rabbit getBreedOffspring(ServerLevel p_456078_, AgeableMob p_454628_) {
-        Rabbit rabbit = EntityType.RABBIT.create(p_456078_, EntitySpawnReason.BREEDING);
-        if (rabbit != null) {
-            Rabbit.Variant rabbit$variant = getRandomRabbitVariant(p_456078_, this.blockPosition());
+    public @Nullable Rabbit getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        Rabbit offspring = EntityTypes.RABBIT.create(level, EntitySpawnReason.BREEDING);
+        if (offspring != null) {
+            Rabbit.Variant variant = getRandomRabbitVariant(level, this.blockPosition());
             if (this.random.nextInt(20) != 0) {
-                if (p_454628_ instanceof Rabbit rabbit1 && this.random.nextBoolean()) {
-                    rabbit$variant = rabbit1.getVariant();
+                if (partner instanceof Rabbit rabbitPartner && this.random.nextBoolean()) {
+                    variant = rabbitPartner.getVariant();
                 } else {
-                    rabbit$variant = this.getVariant();
+                    variant = this.getVariant();
                 }
             }
 
-            rabbit.setVariant(rabbit$variant);
+            offspring.setVariant(variant);
         }
 
-        return rabbit;
+        return offspring;
     }
 
     @Override
-    public boolean isFood(ItemStack p_455645_) {
-        return p_455645_.is(ItemTags.RABBIT_FOOD);
+    public boolean isFood(final ItemStack itemStack) {
+        return itemStack.is(ItemTags.RABBIT_FOOD);
     }
 
     public Rabbit.Variant getVariant() {
         return Rabbit.Variant.byId(this.entityData.get(DATA_TYPE_ID));
     }
 
-    private void setVariant(Rabbit.Variant p_457495_) {
-        if (p_457495_ == Rabbit.Variant.EVIL) {
+    private void setVariant(final Rabbit.Variant variant) {
+        if (variant == Rabbit.Variant.EVIL) {
             this.getAttribute(Attributes.ARMOR).setBaseValue(8.0);
             this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.4, true));
             this.targetSelector.addGoal(1, new HurtByTargetGoal(this).setAlertOthers());
             this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
             this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Wolf.class, true));
-            this.getAttribute(Attributes.ATTACK_DAMAGE).addOrUpdateTransientModifier(new AttributeModifier(EVIL_ATTACK_POWER_MODIFIER, 5.0, AttributeModifier.Operation.ADD_VALUE));
+            this.getAttribute(Attributes.ATTACK_DAMAGE)
+                .addOrUpdateTransientModifier(new AttributeModifier(EVIL_ATTACK_POWER_MODIFIER, 5.0, AttributeModifier.Operation.ADD_VALUE));
             if (!this.hasCustomName()) {
                 this.setCustomName(Component.translatable(Util.makeDescriptionId("entity", KILLER_BUNNY)));
             }
@@ -364,75 +381,75 @@ public class Rabbit extends Animal {
             this.getAttribute(Attributes.ATTACK_DAMAGE).removeModifier(EVIL_ATTACK_POWER_MODIFIER);
         }
 
-        this.entityData.set(DATA_TYPE_ID, p_457495_.id);
+        this.entityData.set(DATA_TYPE_ID, variant.id);
     }
 
     @Override
-    public <T> @Nullable T get(DataComponentType<? extends T> p_452307_) {
-        return p_452307_ == DataComponents.RABBIT_VARIANT ? castComponentValue((DataComponentType<T>)p_452307_, this.getVariant()) : super.get(p_452307_);
+    public <T> @Nullable T get(final DataComponentType<? extends T> type) {
+        return type == DataComponents.RABBIT_VARIANT ? castComponentValue((DataComponentType<T>)type, this.getVariant()) : super.get(type);
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_450910_) {
-        this.applyImplicitComponentIfPresent(p_450910_, DataComponents.RABBIT_VARIANT);
-        super.applyImplicitComponents(p_450910_);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        this.applyImplicitComponentIfPresent(components, DataComponents.RABBIT_VARIANT);
+        super.applyImplicitComponents(components);
     }
 
     @Override
-    protected <T> boolean applyImplicitComponent(DataComponentType<T> p_450927_, T p_452168_) {
-        if (p_450927_ == DataComponents.RABBIT_VARIANT) {
-            this.setVariant(castComponentValue(DataComponents.RABBIT_VARIANT, p_452168_));
+    protected <T> boolean applyImplicitComponent(final DataComponentType<T> type, final T value) {
+        if (type == DataComponents.RABBIT_VARIANT) {
+            this.setVariant(castComponentValue(DataComponents.RABBIT_VARIANT, value));
             return true;
         } else {
-            return super.applyImplicitComponent(p_450927_, p_452168_);
+            return super.applyImplicitComponent(type, value);
         }
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_452013_, DifficultyInstance p_451735_, EntitySpawnReason p_460736_, @Nullable SpawnGroupData p_457011_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        Rabbit.Variant rabbit$variant = getRandomRabbitVariant(p_452013_, this.blockPosition());
-        if (p_457011_ instanceof Rabbit.RabbitGroupData) {
-            rabbit$variant = ((Rabbit.RabbitGroupData)p_457011_).variant;
+        Rabbit.Variant variant = getRandomRabbitVariant(level, this.blockPosition());
+        if (groupData instanceof Rabbit.RabbitGroupData) {
+            variant = ((Rabbit.RabbitGroupData)groupData).variant;
         } else {
-            p_457011_ = new Rabbit.RabbitGroupData(rabbit$variant);
+            groupData = new Rabbit.RabbitGroupData(variant);
         }
 
-        this.setVariant(rabbit$variant);
-        return super.finalizeSpawn(p_452013_, p_451735_, p_460736_, p_457011_);
+        this.setVariant(variant);
+        return super.finalizeSpawn(level, difficulty, spawnReason, groupData);
     }
 
-    private static Rabbit.Variant getRandomRabbitVariant(LevelAccessor p_456845_, BlockPos p_454058_) {
-        Holder<Biome> holder = p_456845_.getBiome(p_454058_);
-        int i = p_456845_.getRandom().nextInt(100);
-        if (holder.is(BiomeTags.SPAWNS_WHITE_RABBITS)) {
-            return i < 80 ? Rabbit.Variant.WHITE : Rabbit.Variant.WHITE_SPLOTCHED;
-        } else if (holder.is(BiomeTags.SPAWNS_GOLD_RABBITS)) {
+    private static Rabbit.Variant getRandomRabbitVariant(final LevelAccessor level, final BlockPos pos) {
+        Holder<Biome> biome = level.getBiome(pos);
+        int randomVal = level.getRandom().nextInt(100);
+        if (biome.is(BiomeTags.SPAWNS_WHITE_RABBITS)) {
+            return randomVal < 80 ? Rabbit.Variant.WHITE : Rabbit.Variant.WHITE_SPLOTCHED;
+        } else if (biome.is(BiomeTags.SPAWNS_GOLD_RABBITS)) {
             return Rabbit.Variant.GOLD;
         } else {
-            return i < 50 ? Rabbit.Variant.BROWN : (i < 90 ? Rabbit.Variant.SALT : Rabbit.Variant.BLACK);
+            return randomVal < 50 ? Rabbit.Variant.BROWN : (randomVal < 90 ? Rabbit.Variant.SALT : Rabbit.Variant.BLACK);
         }
     }
 
     public static boolean checkRabbitSpawnRules(
-        EntityType<Rabbit> p_452708_, LevelAccessor p_459315_, EntitySpawnReason p_450493_, BlockPos p_457197_, RandomSource p_460486_
+        final EntityType<Rabbit> type, final LevelAccessor level, final EntitySpawnReason spawnReason, final BlockPos pos, final RandomSource random
     ) {
-        return p_459315_.getBlockState(p_457197_.below()).is(BlockTags.RABBITS_SPAWNABLE_ON) && isBrightEnoughToSpawn(p_459315_, p_457197_);
+        return level.getBlockState(pos.below()).is(BlockTags.RABBITS_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 
-    boolean wantsMoreFood() {
+    private boolean wantsMoreFood() {
         return this.moreCarrotTicks <= 0;
     }
 
     @Override
-    public void handleEntityEvent(byte p_454954_) {
-        if (p_454954_ == 1) {
+    public void handleEntityEvent(final byte id) {
+        if (id == 1) {
             this.spawnSprintParticle();
-            this.jumpDuration = 10;
+            this.jumpDuration = 15;
             this.jumpTicks = 0;
         } else {
-            super.handleEntityEvent(p_454954_);
+            super.handleEntityEvent(id);
         }
     }
 
@@ -441,12 +458,45 @@ public class Rabbit extends Animal {
         return new Vec3(0.0, 0.6F * this.getEyeHeight(), this.getBbWidth() * 0.4F);
     }
 
-    static class RabbitAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
+    private void setupAnimationStates() {
+        if (this.shouldPlayIdleAnimation()) {
+            this.idleAnimationTimeout = this.random.nextInt(40) + 180;
+            this.idleHeadTiltAnimationState.start(this.tickCount);
+        } else if (this.jumpTicks > 0) {
+            this.hopAnimationState.startIfStopped(this.tickCount);
+            this.idleHeadTiltAnimationState.stop();
+        } else {
+            this.idleAnimationTimeout--;
+            this.hopAnimationState.stop();
+        }
+    }
+
+    private boolean shouldPlayIdleAnimation() {
+        return this.idleAnimationTimeout <= 0 && (this.getLeashData() == null || this.getLeashData().leashHolder == null) && !this.isNoAi();
+    }
+
+    @Override
+    public void setLeashData(final Leashable.@Nullable LeashData leashData) {
+        super.setLeashData(leashData);
+        this.idleHeadTiltAnimationState.stop();
+    }
+
+    @Override
+    public void baseTick() {
+        super.baseTick();
+        if (this.level().isClientSide()) {
+            this.setupAnimationStates();
+        }
+    }
+
+    private static class RabbitAvoidEntityGoal<T extends LivingEntity> extends AvoidEntityGoal<T> {
         private final Rabbit rabbit;
 
-        public RabbitAvoidEntityGoal(Rabbit p_455438_, Class<T> p_458891_, float p_455712_, double p_452935_, double p_452953_) {
-            super(p_455438_, p_458891_, p_455712_, p_452935_, p_452953_);
-            this.rabbit = p_455438_;
+        public RabbitAvoidEntityGoal(
+            final Rabbit rabbit, final Class<T> avoidClass, final float maxDist, final double walkSpeedModifier, final double sprintSpeedModifier
+        ) {
+            super(rabbit, avoidClass, maxDist, walkSpeedModifier, sprintSpeedModifier);
+            this.rabbit = rabbit;
         }
 
         @Override
@@ -458,9 +508,9 @@ public class Rabbit extends Animal {
     public static class RabbitGroupData extends AgeableMob.AgeableMobGroupData {
         public final Rabbit.Variant variant;
 
-        public RabbitGroupData(Rabbit.Variant p_456787_) {
+        public RabbitGroupData(final Rabbit.Variant variant) {
             super(1.0F);
-            this.variant = p_456787_;
+            this.variant = variant;
         }
     }
 
@@ -468,9 +518,9 @@ public class Rabbit extends Animal {
         private final Rabbit rabbit;
         private boolean canJump;
 
-        public RabbitJumpControl(Rabbit p_454022_) {
-            super(p_454022_);
-            this.rabbit = p_454022_;
+        public RabbitJumpControl(final Rabbit rabbit) {
+            super(rabbit);
+            this.rabbit = rabbit;
         }
 
         public boolean wantJump() {
@@ -481,8 +531,8 @@ public class Rabbit extends Animal {
             return this.canJump;
         }
 
-        public void setCanJump(boolean p_452395_) {
-            this.canJump = p_452395_;
+        public void setCanJump(final boolean canJump) {
+            this.canJump = canJump;
         }
 
         @Override
@@ -494,45 +544,43 @@ public class Rabbit extends Animal {
         }
     }
 
-    static class RabbitMoveControl extends MoveControl {
-        private final Rabbit rabbit;
+    private static class RabbitMoveControl<T extends Rabbit> extends MoveControl<T> {
         private double nextJumpSpeed;
 
-        public RabbitMoveControl(Rabbit p_453850_) {
-            super(p_453850_);
-            this.rabbit = p_453850_;
+        public RabbitMoveControl(final T rabbit) {
+            super(rabbit);
         }
 
         @Override
         public void tick() {
-            if (this.rabbit.onGround() && !this.rabbit.jumping && !((Rabbit.RabbitJumpControl)this.rabbit.jumpControl).wantJump()) {
-                this.rabbit.setSpeedModifier(0.0);
+            if (this.mob.onGround() && !this.mob.jumping && !((Rabbit.RabbitJumpControl)this.mob.jumpControl).wantJump()) {
+                this.mob.setSpeedModifier(0.0);
             } else if (this.hasWanted() || this.operation == MoveControl.Operation.JUMPING) {
-                this.rabbit.setSpeedModifier(this.nextJumpSpeed);
+                this.mob.setSpeedModifier(this.nextJumpSpeed);
             }
 
             super.tick();
         }
 
         @Override
-        public void setWantedPosition(double p_460409_, double p_460799_, double p_455919_, double p_456448_) {
-            if (this.rabbit.isInWater()) {
-                p_456448_ = 1.5;
+        public void setWantedPosition(final double x, final double y, final double z, double speedModifier) {
+            if (this.mob.isInWater()) {
+                speedModifier = 1.5;
             }
 
-            super.setWantedPosition(p_460409_, p_460799_, p_455919_, p_456448_);
-            if (p_456448_ > 0.0) {
-                this.nextJumpSpeed = p_456448_;
+            super.setWantedPosition(x, y, z, speedModifier);
+            if (speedModifier > 0.0) {
+                this.nextJumpSpeed = speedModifier;
             }
         }
     }
 
-    static class RabbitPanicGoal extends PanicGoal {
+    private static class RabbitPanicGoal extends PanicGoal {
         private final Rabbit rabbit;
 
-        public RabbitPanicGoal(Rabbit p_451709_, double p_452914_) {
-            super(p_451709_, p_452914_);
-            this.rabbit = p_451709_;
+        public RabbitPanicGoal(final Rabbit rabbit, final double speedModifier) {
+            super(rabbit, speedModifier);
+            this.rabbit = rabbit;
         }
 
         @Override
@@ -542,14 +590,14 @@ public class Rabbit extends Animal {
         }
     }
 
-    static class RaidGardenGoal extends MoveToBlockGoal {
+    private static class RaidGardenGoal extends MoveToBlockGoal {
         private final Rabbit rabbit;
         private boolean wantsToRaid;
         private boolean canRaid;
 
-        public RaidGardenGoal(Rabbit p_454332_) {
-            super(p_454332_, 0.7F, 16);
-            this.rabbit = p_454332_;
+        public RaidGardenGoal(final Rabbit rabbit) {
+            super(rabbit, 0.7F, 16);
+            this.rabbit = rabbit;
         }
 
         @Override
@@ -579,18 +627,18 @@ public class Rabbit extends Animal {
                 .setLookAt(this.blockPos.getX() + 0.5, this.blockPos.getY() + 1, this.blockPos.getZ() + 0.5, 10.0F, this.rabbit.getMaxHeadXRot());
             if (this.isReachedTarget()) {
                 Level level = this.rabbit.level();
-                BlockPos blockpos = this.blockPos.above();
-                BlockState blockstate = level.getBlockState(blockpos);
-                Block block = blockstate.getBlock();
+                BlockPos cropsPos = this.blockPos.above();
+                BlockState blockState = level.getBlockState(cropsPos);
+                Block block = blockState.getBlock();
                 if (this.canRaid && block instanceof CarrotBlock) {
-                    int i = blockstate.getValue(CarrotBlock.AGE);
-                    if (i == 0) {
-                        level.setBlock(blockpos, Blocks.AIR.defaultBlockState(), 2);
-                        level.destroyBlock(blockpos, true, this.rabbit);
+                    int carrotAge = blockState.getValue(CarrotBlock.AGE);
+                    if (carrotAge == 0) {
+                        level.setBlock(cropsPos, Blocks.AIR.defaultBlockState(), 2);
+                        level.destroyBlock(cropsPos, true, this.rabbit);
                     } else {
-                        level.setBlock(blockpos, blockstate.setValue(CarrotBlock.AGE, i - 1), 2);
-                        level.gameEvent(GameEvent.BLOCK_CHANGE, blockpos, GameEvent.Context.of(this.rabbit));
-                        level.levelEvent(2001, blockpos, Block.getId(blockstate));
+                        level.setBlock(cropsPos, blockState.setValue(CarrotBlock.AGE, carrotAge - 1), 2);
+                        level.gameEvent(GameEvent.BLOCK_CHANGE, cropsPos, GameEvent.Context.of(this.rabbit));
+                        level.levelEvent(2001, cropsPos, Block.getId(blockState));
                     }
 
                     this.rabbit.moreCarrotTicks = 40;
@@ -602,11 +650,11 @@ public class Rabbit extends Animal {
         }
 
         @Override
-        protected boolean isValidTarget(LevelReader p_457725_, BlockPos p_456006_) {
-            BlockState blockstate = p_457725_.getBlockState(p_456006_);
-            if (blockstate.is(Blocks.FARMLAND) && this.wantsToRaid && !this.canRaid) {
-                blockstate = p_457725_.getBlockState(p_456006_.above());
-                if (blockstate.getBlock() instanceof CarrotBlock && ((CarrotBlock)blockstate.getBlock()).isMaxAge(blockstate)) {
+        protected boolean isValidTarget(final LevelReader level, final BlockPos pos) {
+            BlockState state = level.getBlockState(pos);
+            if (state.is(BlockTags.SUPPORTS_CROPS) && this.wantsToRaid && !this.canRaid) {
+                state = level.getBlockState(pos.above());
+                if (state.getBlock() instanceof CarrotBlock carrotBlock && carrotBlock.isMaxAge(state)) {
                     this.canRaid = true;
                     return true;
                 }
@@ -616,7 +664,7 @@ public class Rabbit extends Animal {
         }
     }
 
-    public static enum Variant implements StringRepresentable {
+    public enum Variant implements StringRepresentable {
         BROWN(0, "brown"),
         WHITE(1, "white"),
         BLACK(2, "black"),
@@ -631,12 +679,12 @@ public class Rabbit extends Animal {
         @Deprecated
         public static final Codec<Rabbit.Variant> LEGACY_CODEC = Codec.INT.xmap(BY_ID::apply, Rabbit.Variant::id);
         public static final StreamCodec<ByteBuf, Rabbit.Variant> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, Rabbit.Variant::id);
-        final int id;
+        private final int id;
         private final String name;
 
-        private Variant(final int p_455053_, final String p_454821_) {
-            this.id = p_455053_;
-            this.name = p_454821_;
+        Variant(final int id, final String name) {
+            this.id = id;
+            this.name = name;
         }
 
         @Override
@@ -648,8 +696,8 @@ public class Rabbit extends Animal {
             return this.id;
         }
 
-        public static Rabbit.Variant byId(int p_452941_) {
-            return BY_ID.apply(p_452941_);
+        public static Rabbit.Variant byId(final int id) {
+            return BY_ID.apply(id);
         }
     }
 }

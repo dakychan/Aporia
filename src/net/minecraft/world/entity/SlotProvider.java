@@ -7,10 +7,10 @@ import net.minecraft.world.item.slot.SlotCollection;
 import org.jspecify.annotations.Nullable;
 
 public interface SlotProvider {
-    @Nullable SlotAccess getSlot(int p_450959_);
+    @Nullable SlotAccess getSlot(int slot);
 
-    default SlotCollection getSlotsFromRange(IntList p_453704_) {
-        List<SlotAccess> list = p_453704_.intStream().mapToObj(this::getSlot).filter(Objects::nonNull).toList();
-        return SlotCollection.of(list);
+    default SlotCollection getSlotsFromRange(final IntList slots) {
+        List<SlotAccess> slotList = slots.intStream().mapToObj(this::getSlot).filter(Objects::nonNull).toList();
+        return SlotCollection.of(slotList);
     }
 }

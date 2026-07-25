@@ -1,10 +1,9 @@
 package net.minecraft.world.level.block.entity;
 
+import com.mojang.logging.LogUtils;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,8 +16,6 @@ import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.data.CachedOutput;
-import net.minecraft.data.structures.NbtToSnbt;
 import net.minecraft.gametest.framework.FailedTestTracker;
 import net.minecraft.gametest.framework.GameTestInfo;
 import net.minecraft.gametest.framework.GameTestInstance;
@@ -39,22 +36,24 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ARGB;
 import net.minecraft.util.ByIdMap;
-import net.minecraft.util.FileUtil;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructurePlaceSettings;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import net.minecraft.world.level.levelgen.structure.templatesystem.loader.TemplatePathFactory;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
+import org.slf4j.Logger;
 
-public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOwner, BoundingBoxRenderable {
+public class TestInstanceBlockEntity extends BlockEntity implements BoundingBoxRenderable, BeaconBeamOwner {
+    private static final Logger LOGGER = LogUtils.getLogger();
     private static final Component INVALID_TEST_NAME = Component.translatable("test_instance_block.invalid_test");
     private static final List<BeaconBeamOwner.Section> BEAM_CLEARED = List.of();
     private static final List<BeaconBeamOwner.Section> BEAM_RUNNING = List.of(new BeaconBeamOwner.Section(ARGB.color(128, 128, 128)));
@@ -65,37 +64,42 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
     private TestInstanceBlockEntity.Data data;
     private final List<TestInstanceBlockEntity.ErrorMarker> errorMarkers = new ArrayList<>();
 
-    public TestInstanceBlockEntity(BlockPos p_391764_, BlockState p_397638_) {
-        super(BlockEntityType.TEST_INSTANCE_BLOCK, p_391764_, p_397638_);
+    public TestInstanceBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.TEST_INSTANCE_BLOCK, worldPosition, blockState);
         this.data = new TestInstanceBlockEntity.Data(
             Optional.empty(), Vec3i.ZERO, Rotation.NONE, false, TestInstanceBlockEntity.Status.CLEARED, Optional.empty()
         );
     }
 
-    public void set(TestInstanceBlockEntity.Data p_393871_) {
-        this.data = p_393871_;
+    public void set(final TestInstanceBlockEntity.Data data) {
+        this.data = data;
         this.setChanged();
     }
 
-    public static Optional<Vec3i> getStructureSize(ServerLevel p_398000_, ResourceKey<GameTestInstance> p_395860_) {
-        return getStructureTemplate(p_398000_, p_395860_).map(StructureTemplate::getSize);
+    public static Optional<Vec3i> getStructureSize(final ServerLevel level, final ResourceKey<GameTestInstance> testKey) {
+        return getStructureTemplate(level, testKey).map(StructureTemplate::getSize);
     }
 
     public BoundingBox getStructureBoundingBox() {
-        BlockPos blockpos = this.getStructurePos();
-        BlockPos blockpos1 = blockpos.offset(this.getTransformedSize()).offset(-1, -1, -1);
-        return BoundingBox.fromCorners(blockpos, blockpos1);
+        BlockPos corner1 = this.getStructurePos();
+        BlockPos corner2 = corner1.offset(this.getTransformedSize()).offset(-1, -1, -1);
+        return BoundingBox.fromCorners(corner1, corner2);
+    }
+
+    public BoundingBox getTestBoundingBox() {
+        return this.getStructureBoundingBox().inflatedBy(this.getPadding());
     }
 
     public AABB getStructureBounds() {
         return AABB.of(this.getStructureBoundingBox());
     }
 
-    private static Optional<StructureTemplate> getStructureTemplate(ServerLevel p_392001_, ResourceKey<GameTestInstance> p_396410_) {
-        return p_392001_.registryAccess()
-            .get(p_396410_)
-            .map(p_449931_ -> p_449931_.value().structure())
-            .flatMap(p_449930_ -> p_392001_.getStructureManager().get(p_449930_));
+    public AABB getTestBounds() {
+        return this.getStructureBounds().inflate(this.getPadding());
+    }
+
+    private static Optional<StructureTemplate> getStructureTemplate(final ServerLevel level, final ResourceKey<GameTestInstance> testKey) {
+        return level.registryAccess().get(testKey).map(test -> test.value().structure()).flatMap(template -> level.getStructureManager().get(template));
     }
 
     public Optional<ResourceKey<GameTestInstance>> test() {
@@ -103,7 +107,7 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
     }
 
     public Component getTestName() {
-        return this.test().<Component>map(p_449932_ -> Component.literal(p_449932_.identifier().toString())).orElse(INVALID_TEST_NAME);
+        return this.test().<Component>map(key -> Component.literal(key.identifier().toString())).orElse(INVALID_TEST_NAME);
     }
 
     private Optional<Holder.Reference<GameTestInstance>> getTestHolder() {
@@ -126,8 +130,8 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
         return this.data.errorMessage();
     }
 
-    public void setErrorMessage(Component p_397441_) {
-        this.set(this.data.withError(p_397441_));
+    public void setErrorMessage(final Component errorMessage) {
+        this.set(this.data.withError(errorMessage));
     }
 
     public void setSuccess() {
@@ -151,22 +155,22 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
     }
 
     @Override
-    public CompoundTag getUpdateTag(HolderLookup.Provider p_395983_) {
-        return this.saveCustomOnly(p_395983_);
+    public CompoundTag getUpdateTag(final HolderLookup.Provider registries) {
+        return this.saveCustomOnly(registries);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_407232_) {
-        p_407232_.read("data", TestInstanceBlockEntity.Data.CODEC).ifPresent(this::set);
+    protected void loadAdditional(final ValueInput input) {
+        input.read("data", TestInstanceBlockEntity.Data.CODEC).ifPresent(this::set);
         this.errorMarkers.clear();
-        this.errorMarkers.addAll(p_407232_.read("errors", TestInstanceBlockEntity.ErrorMarker.LIST_CODEC).orElse(List.of()));
+        this.errorMarkers.addAll(input.read("errors", TestInstanceBlockEntity.ErrorMarker.LIST_CODEC).orElse(List.of()));
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_408071_) {
-        p_408071_.store("data", TestInstanceBlockEntity.Data.CODEC, this.data);
+    protected void saveAdditional(final ValueOutput output) {
+        output.store("data", TestInstanceBlockEntity.Data.CODEC, this.data);
         if (!this.errorMarkers.isEmpty()) {
-            p_408071_.store("errors", TestInstanceBlockEntity.ErrorMarker.LIST_CODEC, this.errorMarkers);
+            output.store("errors", TestInstanceBlockEntity.ErrorMarker.LIST_CODEC, this.errorMarkers);
         }
     }
 
@@ -176,16 +180,18 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
     }
 
     public BlockPos getStructurePos() {
-        return getStructurePos(this.getBlockPos());
+        int padding = this.getPadding();
+        return getStructurePos(this.getBlockPos().offset(padding, padding, padding));
     }
 
-    public static BlockPos getStructurePos(BlockPos p_397922_) {
-        return p_397922_.offset(STRUCTURE_OFFSET);
+    public static BlockPos getStructurePos(final BlockPos blockPos) {
+        return blockPos.offset(STRUCTURE_OFFSET);
     }
 
     @Override
     public BoundingBoxRenderable.RenderableBox getRenderableBox() {
-        return new BoundingBoxRenderable.RenderableBox(new BlockPos(STRUCTURE_OFFSET), this.getTransformedSize());
+        int padding = this.getPadding();
+        return new BoundingBoxRenderable.RenderableBox(new BlockPos(STRUCTURE_OFFSET).offset(padding, padding, padding), this.getTransformedSize());
     }
 
     @Override
@@ -200,112 +206,116 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
     }
 
     private Vec3i getTransformedSize() {
-        Vec3i vec3i = this.getSize();
+        Vec3i size = this.getSize();
         Rotation rotation = this.getRotation();
-        boolean flag = rotation == Rotation.CLOCKWISE_90 || rotation == Rotation.COUNTERCLOCKWISE_90;
-        int i = flag ? vec3i.getZ() : vec3i.getX();
-        int j = flag ? vec3i.getX() : vec3i.getZ();
-        return new Vec3i(i, vec3i.getY(), j);
+        boolean axesSwitched = rotation == Rotation.CLOCKWISE_90 || rotation == Rotation.COUNTERCLOCKWISE_90;
+        int xSize = axesSwitched ? size.getZ() : size.getX();
+        int zSize = axesSwitched ? size.getX() : size.getZ();
+        return new Vec3i(xSize, size.getY(), zSize);
     }
 
-    public void resetTest(Consumer<Component> p_393061_) {
+    public void resetTest(final Consumer<Component> feedbackOutput) {
         this.removeBarriers();
         this.clearErrorMarkers();
-        boolean flag = this.placeStructure();
-        if (flag) {
-            p_393061_.accept(Component.translatable("test_instance_block.reset_success", this.getTestName()).withStyle(ChatFormatting.GREEN));
+        boolean placed = this.placeStructure();
+        if (placed) {
+            feedbackOutput.accept(Component.translatable("test_instance_block.reset_success", this.getTestName()).withStyle(ChatFormatting.GREEN));
         }
 
         this.set(this.data.withStatus(TestInstanceBlockEntity.Status.CLEARED));
     }
 
-    public Optional<Identifier> saveTest(Consumer<Component> p_394558_) {
-        Optional<Holder.Reference<GameTestInstance>> optional = this.getTestHolder();
-        Optional<Identifier> optional1;
-        if (optional.isPresent()) {
-            optional1 = Optional.of(optional.get().value().structure());
+    public Optional<Identifier> saveTest(final Consumer<Component> feedbackOutput) {
+        Optional<Holder.Reference<GameTestInstance>> test = this.getTestHolder();
+        Optional<Identifier> identifier;
+        if (test.isPresent()) {
+            identifier = Optional.of(test.get().value().structure());
         } else {
-            optional1 = this.test().map(ResourceKey::identifier);
+            identifier = this.test().map(ResourceKey::identifier);
         }
 
-        if (optional1.isEmpty()) {
-            BlockPos blockpos = this.getBlockPos();
-            p_394558_.accept(
-                Component.translatable("test_instance_block.error.unable_to_save", blockpos.getX(), blockpos.getY(), blockpos.getZ())
-                    .withStyle(ChatFormatting.RED)
+        if (identifier.isEmpty()) {
+            BlockPos pos = this.getBlockPos();
+            feedbackOutput.accept(
+                Component.translatable("test_instance_block.error.unable_to_save", pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.RED)
             );
-            return optional1;
-        } else {
-            if (this.level instanceof ServerLevel serverlevel) {
-                StructureBlockEntity.saveStructure(
-                    serverlevel, optional1.get(), this.getStructurePos(), this.getSize(), this.ignoreEntities(), "", true, List.of(Blocks.AIR)
-                );
-            }
-
-            return optional1;
+            return identifier;
         }
+
+        if (this.level instanceof ServerLevel serverLevel) {
+            StructureBlockEntity.saveStructure(
+                serverLevel, identifier.get(), this.getStructurePos(), this.getSize(), this.ignoreEntities(), "", true, List.of(Blocks.AIR)
+            );
+        }
+
+        return identifier;
     }
 
-    public boolean exportTest(Consumer<Component> p_394235_) {
-        Optional<Identifier> optional = this.saveTest(p_394235_);
-        return !optional.isEmpty() && this.level instanceof ServerLevel serverlevel ? export(serverlevel, optional.get(), p_394235_) : false;
+    public boolean exportTest(final Consumer<Component> feedbackOutput) {
+        Optional<Identifier> saved = this.saveTest(feedbackOutput);
+        return !saved.isEmpty() && this.level instanceof ServerLevel serverLevel ? export(serverLevel, saved.get(), feedbackOutput) : false;
     }
 
-    public static boolean export(ServerLevel p_397675_, Identifier p_460105_, Consumer<Component> p_397687_) {
-        Path path = StructureUtils.testStructuresDir;
-        Path path1 = p_397675_.getStructureManager().createAndValidatePathToGeneratedStructure(p_460105_, ".nbt");
-        Path path2 = NbtToSnbt.convertStructure(CachedOutput.NO_CACHE, path1, p_460105_.getPath(), path.resolve(p_460105_.getNamespace()).resolve("structure"));
-        if (path2 == null) {
-            p_397687_.accept(Component.literal("Failed to export " + path1).withStyle(ChatFormatting.RED));
+    public static boolean export(final ServerLevel level, final Identifier structureId, final Consumer<Component> feedbackOutput) {
+        StructureTemplateManager structureManager = level.getStructureManager();
+        TemplatePathFactory testTemplatePathFactory = structureManager.testTemplates();
+        if (testTemplatePathFactory == null) {
+            feedbackOutput.accept(Component.literal("Test structure exporting is disabled").withStyle(ChatFormatting.RED));
             return true;
-        } else {
-            try {
-                FileUtil.createDirectoriesSafe(path2.getParent());
-            } catch (IOException ioexception) {
-                p_397687_.accept(Component.literal("Could not create folder " + path2.getParent()).withStyle(ChatFormatting.RED));
-                return true;
-            }
-
-            p_397687_.accept(Component.literal("Exported " + p_460105_ + " to " + path2.toAbsolutePath()));
-            return false;
         }
+
+        Optional<StructureTemplate> structureTemplate = structureManager.get(structureId);
+        if (structureTemplate.isEmpty()) {
+            feedbackOutput.accept(Component.literal("Could not find structure " + structureId).withStyle(ChatFormatting.RED));
+            return true;
+        }
+
+        Path outputFile = testTemplatePathFactory.createAndValidatePathToStructure(structureId, StructureTemplateManager.RESOURCE_TEXT_STRUCTURE_LISTER);
+
+        try {
+            StructureTemplateManager.save(outputFile, structureTemplate.get(), true);
+        } catch (Exception e) {
+            LOGGER.error("Failed to save structure file {} to {}", structureId, outputFile, e);
+            feedbackOutput.accept(Component.literal("Failed to save structure file " + structureId + " to " + outputFile).withStyle(ChatFormatting.RED));
+            return true;
+        }
+
+        feedbackOutput.accept(Component.literal("Exported " + structureId + " to " + outputFile.toAbsolutePath()));
+        return false;
     }
 
-    public void runTest(Consumer<Component> p_394749_) {
-        if (this.level instanceof ServerLevel serverlevel) {
-            Optional optional = this.getTestHolder();
-            BlockPos $$4 = this.getBlockPos();
-            if (optional.isEmpty()) {
-                p_394749_.accept(
-                    Component.translatable("test_instance_block.error.no_test", $$4.getX(), $$4.getY(), $$4.getZ()).withStyle(ChatFormatting.RED)
+    public void runTest(final Consumer<Component> feedbackOutput) {
+        if (this.level instanceof ServerLevel serverLevel) {
+            Optional var7 = this.getTestHolder();
+            BlockPos pos = this.getBlockPos();
+            if (var7.isEmpty()) {
+                feedbackOutput.accept(
+                    Component.translatable("test_instance_block.error.no_test", pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.RED)
                 );
             } else if (!this.placeStructure()) {
-                p_394749_.accept(
-                    Component.translatable("test_instance_block.error.no_test_structure", $$4.getX(), $$4.getY(), $$4.getZ())
-                        .withStyle(ChatFormatting.RED)
+                feedbackOutput.accept(
+                    Component.translatable("test_instance_block.error.no_test_structure", pos.getX(), pos.getY(), pos.getZ()).withStyle(ChatFormatting.RED)
                 );
             } else {
                 this.clearErrorMarkers();
                 GameTestTicker.SINGLETON.clear();
                 FailedTestTracker.forgetFailedTests();
-                p_394749_.accept(Component.translatable("test_instance_block.starting", ((Holder.Reference)optional.get()).getRegisteredName()));
-                GameTestInfo gametestinfo = new GameTestInfo(
-                    (Holder.Reference<GameTestInstance>)optional.get(), this.data.rotation(), serverlevel, RetryOptions.noRetries()
+                feedbackOutput.accept(Component.translatable("test_instance_block.starting", ((Holder.Reference)var7.get()).getRegisteredName()));
+                GameTestInfo gameTestInfo = new GameTestInfo(
+                    (Holder.Reference<GameTestInstance>)var7.get(), this.data.rotation(), serverLevel, RetryOptions.noRetries()
                 );
-                gametestinfo.setTestBlockPos($$4);
-                GameTestRunner gametestrunner = GameTestRunner.Builder.fromInfo(List.of(gametestinfo), serverlevel).build();
-                TestCommand.trackAndStartRunner(serverlevel.getServer().createCommandSourceStack(), gametestrunner);
+                gameTestInfo.setTestBlockPos(pos);
+                GameTestRunner runner = GameTestRunner.Builder.fromInfo(List.of(gameTestInfo), serverLevel).build();
+                TestCommand.trackAndStartRunner(serverLevel.getServer().createCommandSourceStack(), runner);
             }
         }
     }
 
     public boolean placeStructure() {
-        if (this.level instanceof ServerLevel serverlevel) {
-            Optional<StructureTemplate> optional = this.data
-                .test()
-                .flatMap(p_391773_ -> getStructureTemplate(serverlevel, (ResourceKey<GameTestInstance>)p_391773_));
-            if (optional.isPresent()) {
-                this.placeStructure(serverlevel, optional.get());
+        if (this.level instanceof ServerLevel serverLevel) {
+            Optional<StructureTemplate> template = this.data.test().flatMap(test -> getStructureTemplate(serverLevel, (ResourceKey<GameTestInstance>)test));
+            if (template.isPresent()) {
+                this.placeStructure(serverLevel, template.get());
                 return true;
             }
         }
@@ -313,80 +323,85 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
         return false;
     }
 
-    private void placeStructure(ServerLevel p_397389_, StructureTemplate p_391354_) {
-        StructurePlaceSettings structureplacesettings = new StructurePlaceSettings()
+    private void placeStructure(final ServerLevel level, final StructureTemplate template) {
+        StructurePlaceSettings placeSettings = new StructurePlaceSettings()
             .setRotation(this.getRotation())
             .setIgnoreEntities(this.data.ignoreEntities())
             .setKnownShape(true);
-        BlockPos blockpos = this.getStartCorner();
+        BlockPos pos = this.getStartCorner();
         this.forceLoadChunks();
-        StructureUtils.clearSpaceForStructure(this.getStructureBoundingBox(), p_397389_);
+        int padding = this.getPadding();
+        StructureUtils.clearSpaceForStructure(this.getTestBoundingBox(), level);
         this.removeEntities();
-        p_391354_.placeInWorld(p_397389_, blockpos, blockpos, structureplacesettings, p_397389_.getRandom(), 818);
+        template.placeInWorld(level, pos, pos, placeSettings, level.getRandom(), 818);
+    }
+
+    private int getPadding() {
+        return this.getTestHolder().map(r -> r.value().padding()).orElse(0);
     }
 
     private void removeEntities() {
-        this.level.getEntities(null, this.getStructureBounds()).stream().filter(p_395081_ -> !(p_395081_ instanceof Player)).forEach(Entity::discard);
+        this.level.getEntities(null, this.getTestBounds()).stream().filter(entity -> !(entity instanceof Player)).forEach(Entity::discard);
     }
 
     private void forceLoadChunks() {
-        if (this.level instanceof ServerLevel serverlevel) {
-            this.getStructureBoundingBox().intersectingChunks().forEach(p_393129_ -> serverlevel.setChunkForced(p_393129_.x, p_393129_.z, true));
+        if (this.level instanceof ServerLevel serverLevel) {
+            this.getStructureBoundingBox().intersectingChunks().forEach(pos -> serverLevel.setChunkForced(pos.x(), pos.z(), true));
         }
     }
 
     public BlockPos getStartCorner() {
-        Vec3i vec3i = this.getSize();
+        Vec3i structureSize = this.getSize();
         Rotation rotation = this.getRotation();
-        BlockPos blockpos = this.getStructurePos();
+        BlockPos northWestCorner = this.getStructurePos();
 
         return switch (rotation) {
-            case NONE -> blockpos;
-            case CLOCKWISE_90 -> blockpos.offset(vec3i.getZ() - 1, 0, 0);
-            case CLOCKWISE_180 -> blockpos.offset(vec3i.getX() - 1, 0, vec3i.getZ() - 1);
-            case COUNTERCLOCKWISE_90 -> blockpos.offset(0, 0, vec3i.getX() - 1);
+            case NONE -> northWestCorner;
+            case CLOCKWISE_90 -> northWestCorner.offset(structureSize.getZ() - 1, 0, 0);
+            case CLOCKWISE_180 -> northWestCorner.offset(structureSize.getX() - 1, 0, structureSize.getZ() - 1);
+            case COUNTERCLOCKWISE_90 -> northWestCorner.offset(0, 0, structureSize.getX() - 1);
         };
     }
 
     public void encaseStructure() {
-        this.processStructureBoundary(p_392761_ -> {
-            if (!this.level.getBlockState(p_392761_).is(Blocks.TEST_INSTANCE_BLOCK)) {
-                this.level.setBlockAndUpdate(p_392761_, Blocks.BARRIER.defaultBlockState());
+        this.processStructureBoundary(blockPos -> {
+            if (!this.level.getBlockState(blockPos).is(Blocks.TEST_INSTANCE_BLOCK)) {
+                this.level.setBlockAndUpdate(blockPos, Blocks.BARRIER.defaultBlockState());
             }
         });
     }
 
     public void removeBarriers() {
-        this.processStructureBoundary(p_392752_ -> {
-            if (this.level.getBlockState(p_392752_).is(Blocks.BARRIER)) {
-                this.level.setBlockAndUpdate(p_392752_, Blocks.AIR.defaultBlockState());
+        this.processStructureBoundary(blockPos -> {
+            if (this.level.getBlockState(blockPos).is(Blocks.BARRIER)) {
+                this.level.setBlockAndUpdate(blockPos, Blocks.AIR.defaultBlockState());
             }
         });
     }
 
-    public void processStructureBoundary(Consumer<BlockPos> p_392766_) {
-        AABB aabb = this.getStructureBounds();
-        boolean flag = !this.getTestHolder().map(p_392664_ -> p_392664_.value().skyAccess()).orElse(false);
-        BlockPos blockpos = BlockPos.containing(aabb.minX, aabb.minY, aabb.minZ).offset(-1, -1, -1);
-        BlockPos blockpos1 = BlockPos.containing(aabb.maxX, aabb.maxY, aabb.maxZ);
-        BlockPos.betweenClosedStream(blockpos, blockpos1)
+    public void processStructureBoundary(final Consumer<BlockPos> action) {
+        AABB bounds = this.getStructureBounds();
+        boolean hasCeiling = !this.getTestHolder().map(h -> h.value().skyAccess()).orElse(false);
+        BlockPos low = BlockPos.containing(bounds.minX, bounds.minY, bounds.minZ).offset(-1, -1, -1);
+        BlockPos high = BlockPos.containing(bounds.maxX, bounds.maxY, bounds.maxZ);
+        BlockPos.betweenClosedStream(low, high)
             .forEach(
-                p_396842_ -> {
-                    boolean flag1 = p_396842_.getX() == blockpos.getX()
-                        || p_396842_.getX() == blockpos1.getX()
-                        || p_396842_.getZ() == blockpos.getZ()
-                        || p_396842_.getZ() == blockpos1.getZ()
-                        || p_396842_.getY() == blockpos.getY();
-                    boolean flag2 = p_396842_.getY() == blockpos1.getY();
-                    if (flag1 || flag2 && flag) {
-                        p_392766_.accept(p_396842_);
+                blockPos -> {
+                    boolean isNonCeilingEdge = blockPos.getX() == low.getX()
+                        || blockPos.getX() == high.getX()
+                        || blockPos.getZ() == low.getZ()
+                        || blockPos.getZ() == high.getZ()
+                        || blockPos.getY() == low.getY();
+                    boolean isCeiling = blockPos.getY() == high.getY();
+                    if (isNonCeilingEdge || isCeiling && hasCeiling) {
+                        action.accept(blockPos);
                     }
                 }
             );
     }
 
-    public void markError(BlockPos p_426930_, Component p_423760_) {
-        this.errorMarkers.add(new TestInstanceBlockEntity.ErrorMarker(p_426930_, p_423760_));
+    public void markError(final BlockPos pos, final Component text) {
+        this.errorMarkers.add(new TestInstanceBlockEntity.ErrorMarker(pos, text));
         this.setChanged();
     }
 
@@ -410,7 +425,7 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
         Optional<Component> errorMessage
     ) {
         public static final Codec<TestInstanceBlockEntity.Data> CODEC = RecordCodecBuilder.create(
-            p_396530_ -> p_396530_.group(
+            i -> i.group(
                     ResourceKey.codec(Registries.TEST_INSTANCE).optionalFieldOf("test").forGetter(TestInstanceBlockEntity.Data::test),
                     Vec3i.CODEC.fieldOf("size").forGetter(TestInstanceBlockEntity.Data::size),
                     Rotation.CODEC.fieldOf("rotation").forGetter(TestInstanceBlockEntity.Data::rotation),
@@ -418,7 +433,7 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
                     TestInstanceBlockEntity.Status.CODEC.fieldOf("status").forGetter(TestInstanceBlockEntity.Data::status),
                     ComponentSerialization.CODEC.optionalFieldOf("error_message").forGetter(TestInstanceBlockEntity.Data::errorMessage)
                 )
-                .apply(p_396530_, TestInstanceBlockEntity.Data::new)
+                .apply(i, TestInstanceBlockEntity.Data::new)
         );
         public static final StreamCodec<RegistryFriendlyByteBuf, TestInstanceBlockEntity.Data> STREAM_CODEC = StreamCodec.composite(
             ByteBufCodecs.optional(ResourceKey.streamCodec(Registries.TEST_INSTANCE)),
@@ -436,50 +451,48 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
             TestInstanceBlockEntity.Data::new
         );
 
-        public TestInstanceBlockEntity.Data withSize(Vec3i p_396807_) {
-            return new TestInstanceBlockEntity.Data(this.test, p_396807_, this.rotation, this.ignoreEntities, this.status, this.errorMessage);
+        public TestInstanceBlockEntity.Data withSize(final Vec3i size) {
+            return new TestInstanceBlockEntity.Data(this.test, size, this.rotation, this.ignoreEntities, this.status, this.errorMessage);
         }
 
-        public TestInstanceBlockEntity.Data withStatus(TestInstanceBlockEntity.Status p_395515_) {
-            return new TestInstanceBlockEntity.Data(this.test, this.size, this.rotation, this.ignoreEntities, p_395515_, Optional.empty());
+        public TestInstanceBlockEntity.Data withStatus(final TestInstanceBlockEntity.Status status) {
+            return new TestInstanceBlockEntity.Data(this.test, this.size, this.rotation, this.ignoreEntities, status, Optional.empty());
         }
 
-        public TestInstanceBlockEntity.Data withError(Component p_392455_) {
+        public TestInstanceBlockEntity.Data withError(final Component error) {
             return new TestInstanceBlockEntity.Data(
-                this.test, this.size, this.rotation, this.ignoreEntities, TestInstanceBlockEntity.Status.FINISHED, Optional.of(p_392455_)
+                this.test, this.size, this.rotation, this.ignoreEntities, TestInstanceBlockEntity.Status.FINISHED, Optional.of(error)
             );
         }
     }
 
     public record ErrorMarker(BlockPos pos, Component text) {
         public static final Codec<TestInstanceBlockEntity.ErrorMarker> CODEC = RecordCodecBuilder.create(
-            p_428925_ -> p_428925_.group(
+            i -> i.group(
                     BlockPos.CODEC.fieldOf("pos").forGetter(TestInstanceBlockEntity.ErrorMarker::pos),
                     ComponentSerialization.CODEC.fieldOf("text").forGetter(TestInstanceBlockEntity.ErrorMarker::text)
                 )
-                .apply(p_428925_, TestInstanceBlockEntity.ErrorMarker::new)
+                .apply(i, TestInstanceBlockEntity.ErrorMarker::new)
         );
         public static final Codec<List<TestInstanceBlockEntity.ErrorMarker>> LIST_CODEC = CODEC.listOf();
     }
 
-    public static enum Status implements StringRepresentable {
+    public enum Status implements StringRepresentable {
         CLEARED("cleared", 0),
         RUNNING("running", 1),
         FINISHED("finished", 2);
 
-        private static final IntFunction<TestInstanceBlockEntity.Status> ID_MAP = ByIdMap.continuous(
-            p_392218_ -> p_392218_.index, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-        );
+        private static final IntFunction<TestInstanceBlockEntity.Status> ID_MAP = ByIdMap.continuous(s -> s.index, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
         public static final Codec<TestInstanceBlockEntity.Status> CODEC = StringRepresentable.fromEnum(TestInstanceBlockEntity.Status::values);
         public static final StreamCodec<ByteBuf, TestInstanceBlockEntity.Status> STREAM_CODEC = ByteBufCodecs.idMapper(
-            TestInstanceBlockEntity.Status::byIndex, p_394997_ -> p_394997_.index
+            TestInstanceBlockEntity.Status::byIndex, s -> s.index
         );
         private final String id;
         private final int index;
 
-        private Status(final String p_392199_, final int p_395871_) {
-            this.id = p_392199_;
-            this.index = p_395871_;
+        Status(final String id, final int index) {
+            this.id = id;
+            this.index = index;
         }
 
         @Override
@@ -487,8 +500,8 @@ public class TestInstanceBlockEntity extends BlockEntity implements BeaconBeamOw
             return this.id;
         }
 
-        public static TestInstanceBlockEntity.Status byIndex(int p_397766_) {
-            return ID_MAP.apply(p_397766_);
+        public static TestInstanceBlockEntity.Status byIndex(final int index) {
+            return ID_MAP.apply(index);
         }
     }
 }

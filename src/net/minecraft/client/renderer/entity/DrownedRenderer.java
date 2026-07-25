@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.monster.zombie.BabyDrownedModel;
 import net.minecraft.client.model.monster.zombie.DrownedModel;
 import net.minecraft.client.renderer.entity.layers.DrownedOuterLayer;
 import net.minecraft.client.renderer.entity.state.ZombieRenderState;
@@ -13,22 +14,20 @@ import net.minecraft.world.entity.HumanoidArm;
 import net.minecraft.world.entity.monster.zombie.Drowned;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class DrownedRenderer extends AbstractZombieRenderer<Drowned, ZombieRenderState, DrownedModel> {
     private static final Identifier DROWNED_LOCATION = Identifier.withDefaultNamespace("textures/entity/zombie/drowned.png");
+    private static final Identifier BABY_DROWNED_LOCATION = Identifier.withDefaultNamespace("textures/entity/zombie/drowned_baby.png");
 
-    public DrownedRenderer(EntityRendererProvider.Context p_173964_) {
+    public DrownedRenderer(final EntityRendererProvider.Context context) {
         super(
-            p_173964_,
-            new DrownedModel(p_173964_.bakeLayer(ModelLayers.DROWNED)),
-            new DrownedModel(p_173964_.bakeLayer(ModelLayers.DROWNED_BABY)),
-            ArmorModelSet.bake(ModelLayers.DROWNED_ARMOR, p_173964_.getModelSet(), DrownedModel::new),
-            ArmorModelSet.bake(ModelLayers.DROWNED_BABY_ARMOR, p_173964_.getModelSet(), DrownedModel::new)
+            context,
+            new DrownedModel(context.bakeLayer(ModelLayers.DROWNED)),
+            new BabyDrownedModel(context.bakeLayer(ModelLayers.DROWNED_BABY)),
+            ArmorModelSet.bake(ModelLayers.DROWNED_ARMOR, context.getModelSet(), DrownedModel::new),
+            ArmorModelSet.bake(ModelLayers.DROWNED_BABY_ARMOR, context.getModelSet(), BabyDrownedModel::new)
         );
-        this.addLayer(new DrownedOuterLayer(this, p_173964_.getModelSet()));
+        this.addLayer(new DrownedOuterLayer(this, context.getModelSet()));
     }
 
     public ZombieRenderState createRenderState() {
@@ -36,24 +35,22 @@ public class DrownedRenderer extends AbstractZombieRenderer<Drowned, ZombieRende
     }
 
     @Override
-    public Identifier getTextureLocation(ZombieRenderState p_461061_) {
-        return DROWNED_LOCATION;
+    public Identifier getTextureLocation(final ZombieRenderState state) {
+        return state.isBaby ? BABY_DROWNED_LOCATION : DROWNED_LOCATION;
     }
 
-    protected void setupRotations(ZombieRenderState p_368450_, PoseStack p_114104_, float p_114105_, float p_114106_) {
-        super.setupRotations(p_368450_, p_114104_, p_114105_, p_114106_);
-        float f = p_368450_.swimAmount;
-        if (f > 0.0F) {
-            float f1 = -10.0F - p_368450_.xRot;
-            float f2 = Mth.lerp(f, 0.0F, f1);
-            p_114104_.rotateAround(Axis.XP.rotationDegrees(f2), 0.0F, p_368450_.boundingBoxHeight / 2.0F / p_114106_, 0.0F);
+    protected void setupRotations(final ZombieRenderState state, final PoseStack poseStack, final float bodyRot, final float entityScale) {
+        super.setupRotations(state, poseStack, bodyRot, entityScale);
+        float swimAmount = state.swimAmount;
+        if (swimAmount > 0.0F) {
+            float targetRotationX = -10.0F - state.xRot;
+            float rotationX = Mth.lerp(swimAmount, 0.0F, targetRotationX);
+            poseStack.rotateAround(Axis.XP.rotationDegrees(rotationX), 0.0F, state.boundingBoxHeight / 2.0F / entityScale, 0.0F);
         }
     }
 
-    protected HumanoidModel.ArmPose getArmPose(Drowned p_453300_, HumanoidArm p_459022_) {
-        ItemStack itemstack = p_453300_.getItemHeldByArm(p_459022_);
-        return p_453300_.getMainArm() == p_459022_ && p_453300_.isAggressive() && itemstack.is(Items.TRIDENT)
-            ? HumanoidModel.ArmPose.THROW_TRIDENT
-            : super.getArmPose(p_453300_, p_459022_);
+    protected HumanoidModel.ArmPose getArmPose(final Drowned mob, final HumanoidArm arm) {
+        ItemStack item = mob.getItemHeldByArm(arm);
+        return mob.getMainArm() == arm && mob.isAggressive() && item.is(Items.TRIDENT) ? HumanoidModel.ArmPose.THROW_TRIDENT : super.getArmPose(mob, arm);
     }
 }

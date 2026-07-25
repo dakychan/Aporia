@@ -40,12 +40,12 @@ import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 public final class NbtUtils {
-    private static final Comparator<ListTag> YXZ_LISTTAG_INT_COMPARATOR = Comparator.<ListTag>comparingInt(p_389895_ -> p_389895_.getIntOr(1, 0))
-        .thenComparingInt(p_389897_ -> p_389897_.getIntOr(0, 0))
-        .thenComparingInt(p_389901_ -> p_389901_.getIntOr(2, 0));
-    private static final Comparator<ListTag> YXZ_LISTTAG_DOUBLE_COMPARATOR = Comparator.<ListTag>comparingDouble(p_389902_ -> p_389902_.getDoubleOr(1, 0.0))
-        .thenComparingDouble(p_389889_ -> p_389889_.getDoubleOr(0, 0.0))
-        .thenComparingDouble(p_389886_ -> p_389886_.getDoubleOr(2, 0.0));
+    private static final Comparator<ListTag> YXZ_LISTTAG_INT_COMPARATOR = Comparator.<ListTag>comparingInt(list -> list.getIntOr(1, 0))
+        .thenComparingInt(list -> list.getIntOr(0, 0))
+        .thenComparingInt(list -> list.getIntOr(2, 0));
+    private static final Comparator<ListTag> YXZ_LISTTAG_DOUBLE_COMPARATOR = Comparator.<ListTag>comparingDouble(list -> list.getDoubleOr(1, 0.0))
+        .thenComparingDouble(list -> list.getDoubleOr(0, 0.0))
+        .thenComparingDouble(list -> list.getDoubleOr(2, 0.0));
     private static final Codec<ResourceKey<Block>> BLOCK_NAME_CODEC = ResourceKey.codec(Registries.BLOCK);
     public static final String SNBT_DATA_TAG = "data";
     private static final char PROPERTIES_START = '{';
@@ -62,512 +62,499 @@ public final class NbtUtils {
     }
 
     @VisibleForTesting
-    public static boolean compareNbt(@Nullable Tag p_129236_, @Nullable Tag p_129237_, boolean p_129238_) {
-        if (p_129236_ == p_129237_) {
+    public static boolean compareNbt(final @Nullable Tag expected, final @Nullable Tag actual, final boolean partialListMatches) {
+        if (expected == actual) {
             return true;
-        } else if (p_129236_ == null) {
+        }
+
+        if (expected == null) {
             return true;
-        } else if (p_129237_ == null) {
+        }
+
+        if (actual == null) {
             return false;
-        } else if (!p_129236_.getClass().equals(p_129237_.getClass())) {
+        }
+
+        if (!expected.getClass().equals(actual.getClass())) {
             return false;
-        } else if (p_129236_ instanceof CompoundTag compoundtag) {
-            CompoundTag compoundtag1 = (CompoundTag)p_129237_;
-            if (compoundtag1.size() < compoundtag.size()) {
+        }
+
+        if (expected instanceof CompoundTag expectedCompound) {
+            CompoundTag actualCompound = (CompoundTag)actual;
+            if (actualCompound.size() < expectedCompound.size()) {
                 return false;
-            } else {
-                for (Entry<String, Tag> entry : compoundtag.entrySet()) {
-                    Tag tag2 = entry.getValue();
-                    if (!compareNbt(tag2, compoundtag1.get(entry.getKey()), p_129238_)) {
-                        return false;
+            }
+
+            for (Entry<String, Tag> entry : expectedCompound.entrySet()) {
+                Tag tag = entry.getValue();
+                if (!compareNbt(tag, actualCompound.get(entry.getKey()), partialListMatches)) {
+                    return false;
+                }
+            }
+
+            return true;
+        } else if (expected instanceof ListTag expectedList && partialListMatches) {
+            ListTag actualList = (ListTag)actual;
+            if (expectedList.isEmpty()) {
+                return actualList.isEmpty();
+            }
+
+            if (actualList.size() < expectedList.size()) {
+                return false;
+            }
+
+            for (Tag tag : expectedList) {
+                boolean found = false;
+
+                for (Tag value : actualList) {
+                    if (compareNbt(tag, value, partialListMatches)) {
+                        found = true;
+                        break;
                     }
                 }
 
-                return true;
-            }
-        } else if (p_129236_ instanceof ListTag listtag && p_129238_) {
-            ListTag listtag1 = (ListTag)p_129237_;
-            if (listtag.isEmpty()) {
-                return listtag1.isEmpty();
-            } else if (listtag1.size() < listtag.size()) {
-                return false;
-            } else {
-                for (Tag tag : listtag) {
-                    boolean flag = false;
-
-                    for (Tag tag1 : listtag1) {
-                        if (compareNbt(tag, tag1, p_129238_)) {
-                            flag = true;
-                            break;
-                        }
-                    }
-
-                    if (!flag) {
-                        return false;
-                    }
+                if (!found) {
+                    return false;
                 }
-
-                return true;
             }
+
+            return true;
         } else {
-            return p_129236_.equals(p_129237_);
+            return expected.equals(actual);
         }
     }
 
-    public static BlockState readBlockState(HolderGetter<Block> p_256363_, CompoundTag p_250775_) {
-        Optional<? extends Holder<Block>> optional = p_250775_.read("Name", BLOCK_NAME_CODEC).flatMap(p_256363_::get);
-        if (optional.isEmpty()) {
+    public static BlockState readBlockState(final HolderGetter<Block> blocks, final CompoundTag tag) {
+        Optional<? extends Holder<Block>> blockHolder = tag.read("Name", BLOCK_NAME_CODEC).flatMap(blocks::get);
+        if (blockHolder.isEmpty()) {
             return Blocks.AIR.defaultBlockState();
-        } else {
-            Block block = optional.get().value();
-            BlockState blockstate = block.defaultBlockState();
-            Optional<CompoundTag> optional1 = p_250775_.getCompound("Properties");
-            if (optional1.isPresent()) {
-                StateDefinition<Block, BlockState> statedefinition = block.getStateDefinition();
+        }
 
-                for (String s : optional1.get().keySet()) {
-                    Property<?> property = statedefinition.getProperty(s);
-                    if (property != null) {
-                        blockstate = setValueHelper(blockstate, property, s, optional1.get(), p_250775_);
-                    }
+        Block block = blockHolder.get().value();
+        BlockState result = block.defaultBlockState();
+        Optional<CompoundTag> properties = tag.getCompound("Properties");
+        if (properties.isPresent()) {
+            StateDefinition<Block, BlockState> definition = block.getStateDefinition();
+
+            for (String key : properties.get().keySet()) {
+                Property<?> property = definition.getProperty(key);
+                if (property != null) {
+                    result = setValueHelper(result, property, key, properties.get(), tag);
                 }
             }
-
-            return blockstate;
         }
+
+        return result;
     }
 
     private static <S extends StateHolder<?, S>, T extends Comparable<T>> S setValueHelper(
-        S p_129205_, Property<T> p_129206_, String p_129207_, CompoundTag p_129208_, CompoundTag p_129209_
+        final S result, final Property<T> property, final String key, final CompoundTag properties, final CompoundTag tag
     ) {
-        Optional<T> optional = p_129208_.getString(p_129207_).flatMap(p_129206_::getValue);
-        if (optional.isPresent()) {
-            return p_129205_.setValue(p_129206_, optional.get());
-        } else {
-            LOGGER.warn("Unable to read property: {} with value: {} for blockstate: {}", p_129207_, p_129208_.get(p_129207_), p_129209_);
-            return p_129205_;
+        Optional<T> value = properties.getString(key).flatMap(property::getValue);
+        if (value.isPresent()) {
+            return result.setValue(property, value.get());
+        }
+
+        LOGGER.warn("Unable to read property: {} with value: {} for blockstate: {}", key, properties.get(key), tag);
+        return result;
+    }
+
+    private static void writeStateProperties(final StateHolder<?, ?> state, final CompoundTag tag) {
+        if (!state.isSingletonState()) {
+            CompoundTag properties = new CompoundTag();
+            state.getValues().forEach(value -> properties.putString(value.property().getName(), value.valueName()));
+            tag.put("Properties", properties);
         }
     }
 
-    public static CompoundTag writeBlockState(BlockState p_129203_) {
-        CompoundTag compoundtag = new CompoundTag();
-        compoundtag.putString("Name", BuiltInRegistries.BLOCK.getKey(p_129203_.getBlock()).toString());
-        Map<Property<?>, Comparable<?>> map = p_129203_.getValues();
-        if (!map.isEmpty()) {
-            CompoundTag compoundtag1 = new CompoundTag();
-
-            for (Entry<Property<?>, Comparable<?>> entry : map.entrySet()) {
-                Property<?> property = entry.getKey();
-                compoundtag1.putString(property.getName(), getName(property, entry.getValue()));
-            }
-
-            compoundtag.put("Properties", compoundtag1);
-        }
-
-        return compoundtag;
+    public static CompoundTag writeBlockState(final BlockState state) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("Name", BuiltInRegistries.BLOCK.getKey(state.getBlock()).toString());
+        writeStateProperties(state, tag);
+        return tag;
     }
 
-    public static CompoundTag writeFluidState(FluidState p_178023_) {
-        CompoundTag compoundtag = new CompoundTag();
-        compoundtag.putString("Name", BuiltInRegistries.FLUID.getKey(p_178023_.getType()).toString());
-        Map<Property<?>, Comparable<?>> map = p_178023_.getValues();
-        if (!map.isEmpty()) {
-            CompoundTag compoundtag1 = new CompoundTag();
-
-            for (Entry<Property<?>, Comparable<?>> entry : map.entrySet()) {
-                Property<?> property = entry.getKey();
-                compoundtag1.putString(property.getName(), getName(property, entry.getValue()));
-            }
-
-            compoundtag.put("Properties", compoundtag1);
-        }
-
-        return compoundtag;
+    public static CompoundTag writeFluidState(final FluidState state) {
+        CompoundTag tag = new CompoundTag();
+        tag.putString("Name", BuiltInRegistries.FLUID.getKey(state.getType()).toString());
+        writeStateProperties(state, tag);
+        return tag;
     }
 
-    private static <T extends Comparable<T>> String getName(Property<T> p_129211_, Comparable<?> p_129212_) {
-        return p_129211_.getName((T)p_129212_);
+    public static String prettyPrint(final Tag tag, final boolean withBinaryBlobs) {
+        return prettyPrint(new StringBuilder(), tag, 0, withBinaryBlobs).toString();
     }
 
-    public static String prettyPrint(Tag p_178058_) {
-        return prettyPrint(p_178058_, false);
-    }
+    public static StringBuilder prettyPrint(final StringBuilder builder, final Tag input, final int indent, final boolean withBinaryBlobs) {
+        return switch (input) {
+            case PrimitiveTag primitive -> builder.append(primitive);
+            case EndTag ignored -> builder;
+            case ByteArrayTag tag -> {
+                byte[] array = tag.getAsByteArray();
+                int length = array.length;
+                indent(indent, builder).append("byte[").append(length).append("] {\n");
+                if (withBinaryBlobs) {
+                    indent(indent + 1, builder);
 
-    public static String prettyPrint(Tag p_178051_, boolean p_178052_) {
-        return prettyPrint(new StringBuilder(), p_178051_, 0, p_178052_).toString();
-    }
-
-    public static StringBuilder prettyPrint(StringBuilder p_178027_, Tag p_178028_, int p_178029_, boolean p_178030_) {
-        return switch (p_178028_) {
-            case PrimitiveTag primitivetag -> p_178027_.append(primitivetag);
-            case EndTag endtag -> p_178027_;
-            case ByteArrayTag bytearraytag -> {
-                byte[] abyte = bytearraytag.getAsByteArray();
-                int i1 = abyte.length;
-                indent(p_178029_, p_178027_).append("byte[").append(i1).append("] {\n");
-                if (p_178030_) {
-                    indent(p_178029_ + 1, p_178027_);
-
-                    for (int k1 = 0; k1 < abyte.length; k1++) {
-                        if (k1 != 0) {
-                            p_178027_.append(',');
+                    for (int i = 0; i < array.length; i++) {
+                        if (i != 0) {
+                            builder.append(',');
                         }
 
-                        if (k1 % 16 == 0 && k1 / 16 > 0) {
-                            p_178027_.append('\n');
-                            if (k1 < abyte.length) {
-                                indent(p_178029_ + 1, p_178027_);
+                        if (i % 16 == 0 && i / 16 > 0) {
+                            builder.append('\n');
+                            if (i < array.length) {
+                                indent(indent + 1, builder);
                             }
-                        } else if (k1 != 0) {
-                            p_178027_.append(' ');
+                        } else if (i != 0) {
+                            builder.append(' ');
                         }
 
-                        p_178027_.append(String.format(Locale.ROOT, "0x%02X", abyte[k1] & 255));
+                        builder.append(String.format(Locale.ROOT, "0x%02X", array[i] & 255));
                     }
                 } else {
-                    indent(p_178029_ + 1, p_178027_).append(" // Skipped, supply withBinaryBlobs true");
+                    indent(indent + 1, builder).append(" // Skipped, supply withBinaryBlobs true");
                 }
 
-                p_178027_.append('\n');
-                indent(p_178029_, p_178027_).append('}');
-                yield p_178027_;
+                builder.append('\n');
+                indent(indent, builder).append('}');
+                yield builder;
             }
-            case ListTag listtag -> {
-                int l = listtag.size();
-                indent(p_178029_, p_178027_).append("list").append("[").append(l).append("] [");
-                if (l != 0) {
-                    p_178027_.append('\n');
+            case ListTag tag -> {
+                int size = tag.size();
+                indent(indent, builder).append("list").append("[").append(size).append("] [");
+                if (size != 0) {
+                    builder.append('\n');
                 }
 
-                for (int j1 = 0; j1 < l; j1++) {
-                    if (j1 != 0) {
-                        p_178027_.append(",\n");
+                for (int i = 0; i < size; i++) {
+                    if (i != 0) {
+                        builder.append(",\n");
                     }
 
-                    indent(p_178029_ + 1, p_178027_);
-                    prettyPrint(p_178027_, listtag.get(j1), p_178029_ + 1, p_178030_);
+                    indent(indent + 1, builder);
+                    prettyPrint(builder, tag.get(i), indent + 1, withBinaryBlobs);
                 }
 
-                if (l != 0) {
-                    p_178027_.append('\n');
+                if (size != 0) {
+                    builder.append('\n');
                 }
 
-                indent(p_178029_, p_178027_).append(']');
-                yield p_178027_;
+                indent(indent, builder).append(']');
+                yield builder;
             }
-            case IntArrayTag intarraytag -> {
-                int[] aint = intarraytag.getAsIntArray();
-                int l1 = 0;
+            case IntArrayTag tag -> {
+                int[] array = tag.getAsIntArray();
+                int size = 0;
 
-                for (int i3 : aint) {
-                    l1 = Math.max(l1, String.format(Locale.ROOT, "%X", i3).length());
+                for (int i : array) {
+                    size = Math.max(size, String.format(Locale.ROOT, "%X", i).length());
                 }
 
-                int j2 = aint.length;
-                indent(p_178029_, p_178027_).append("int[").append(j2).append("] {\n");
-                if (p_178030_) {
-                    indent(p_178029_ + 1, p_178027_);
+                int length = array.length;
+                indent(indent, builder).append("int[").append(length).append("] {\n");
+                if (withBinaryBlobs) {
+                    indent(indent + 1, builder);
 
-                    for (int k2 = 0; k2 < aint.length; k2++) {
-                        if (k2 != 0) {
-                            p_178027_.append(',');
+                    for (int i = 0; i < array.length; i++) {
+                        if (i != 0) {
+                            builder.append(',');
                         }
 
-                        if (k2 % 16 == 0 && k2 / 16 > 0) {
-                            p_178027_.append('\n');
-                            if (k2 < aint.length) {
-                                indent(p_178029_ + 1, p_178027_);
+                        if (i % 16 == 0 && i / 16 > 0) {
+                            builder.append('\n');
+                            if (i < array.length) {
+                                indent(indent + 1, builder);
                             }
-                        } else if (k2 != 0) {
-                            p_178027_.append(' ');
+                        } else if (i != 0) {
+                            builder.append(' ');
                         }
 
-                        p_178027_.append(String.format(Locale.ROOT, "0x%0" + l1 + "X", aint[k2]));
+                        builder.append(String.format(Locale.ROOT, "0x%0" + size + "X", array[i]));
                     }
                 } else {
-                    indent(p_178029_ + 1, p_178027_).append(" // Skipped, supply withBinaryBlobs true");
+                    indent(indent + 1, builder).append(" // Skipped, supply withBinaryBlobs true");
                 }
 
-                p_178027_.append('\n');
-                indent(p_178029_, p_178027_).append('}');
-                yield p_178027_;
+                builder.append('\n');
+                indent(indent, builder).append('}');
+                yield builder;
             }
-            case CompoundTag compoundtag -> {
-                List<String> list = Lists.newArrayList(compoundtag.keySet());
-                Collections.sort(list);
-                indent(p_178029_, p_178027_).append('{');
-                if (p_178027_.length() - p_178027_.lastIndexOf("\n") > 2 * (p_178029_ + 1)) {
-                    p_178027_.append('\n');
-                    indent(p_178029_ + 1, p_178027_);
+            case CompoundTag tag -> {
+                List<String> keys = Lists.newArrayList(tag.keySet());
+                Collections.sort(keys);
+                indent(indent, builder).append('{');
+                if (builder.length() - builder.lastIndexOf("\n") > 2 * (indent + 1)) {
+                    builder.append('\n');
+                    indent(indent + 1, builder);
                 }
 
-                int i2 = list.stream().mapToInt(String::length).max().orElse(0);
-                String s = Strings.repeat(" ", i2);
+                int paddingLength = keys.stream().mapToInt(String::length).max().orElse(0);
+                String padding = Strings.repeat(" ", paddingLength);
 
-                for (int j = 0; j < list.size(); j++) {
-                    if (j != 0) {
-                        p_178027_.append(",\n");
+                for (int i = 0; i < keys.size(); i++) {
+                    if (i != 0) {
+                        builder.append(",\n");
                     }
 
-                    String s1 = list.get(j);
-                    indent(p_178029_ + 1, p_178027_).append('"').append(s1).append('"').append(s, 0, s.length() - s1.length()).append(": ");
-                    prettyPrint(p_178027_, compoundtag.get(s1), p_178029_ + 1, p_178030_);
+                    String key = keys.get(i);
+                    indent(indent + 1, builder).append('"').append(key).append('"').append(padding, 0, padding.length() - key.length()).append(": ");
+                    prettyPrint(builder, tag.get(key), indent + 1, withBinaryBlobs);
                 }
 
-                if (!list.isEmpty()) {
-                    p_178027_.append('\n');
+                if (!keys.isEmpty()) {
+                    builder.append('\n');
                 }
 
-                indent(p_178029_, p_178027_).append('}');
-                yield p_178027_;
+                indent(indent, builder).append('}');
+                yield builder;
             }
-            case LongArrayTag longarraytag -> {
-                long[] along = longarraytag.getAsLongArray();
-                long i = 0L;
+            case LongArrayTag tag -> {
+                long[] array = tag.getAsLongArray();
+                long size = 0L;
 
-                for (long k : along) {
-                    i = Math.max(i, (long)String.format(Locale.ROOT, "%X", k).length());
+                for (long i : array) {
+                    size = Math.max(size, String.format(Locale.ROOT, "%X", i).length());
                 }
 
-                long l2 = along.length;
-                indent(p_178029_, p_178027_).append("long[").append(l2).append("] {\n");
-                if (p_178030_) {
-                    indent(p_178029_ + 1, p_178027_);
+                long length = array.length;
+                indent(indent, builder).append("long[").append(length).append("] {\n");
+                if (withBinaryBlobs) {
+                    indent(indent + 1, builder);
 
-                    for (int j3 = 0; j3 < along.length; j3++) {
-                        if (j3 != 0) {
-                            p_178027_.append(',');
+                    for (int i = 0; i < array.length; i++) {
+                        if (i != 0) {
+                            builder.append(',');
                         }
 
-                        if (j3 % 16 == 0 && j3 / 16 > 0) {
-                            p_178027_.append('\n');
-                            if (j3 < along.length) {
-                                indent(p_178029_ + 1, p_178027_);
+                        if (i % 16 == 0 && i / 16 > 0) {
+                            builder.append('\n');
+                            if (i < array.length) {
+                                indent(indent + 1, builder);
                             }
-                        } else if (j3 != 0) {
-                            p_178027_.append(' ');
+                        } else if (i != 0) {
+                            builder.append(' ');
                         }
 
-                        p_178027_.append(String.format(Locale.ROOT, "0x%0" + i + "X", along[j3]));
+                        builder.append(String.format(Locale.ROOT, "0x%0" + size + "X", array[i]));
                     }
                 } else {
-                    indent(p_178029_ + 1, p_178027_).append(" // Skipped, supply withBinaryBlobs true");
+                    indent(indent + 1, builder).append(" // Skipped, supply withBinaryBlobs true");
                 }
 
-                p_178027_.append('\n');
-                indent(p_178029_, p_178027_).append('}');
-                yield p_178027_;
+                builder.append('\n');
+                indent(indent, builder).append('}');
+                yield builder;
             }
             default -> throw new MatchException(null, null);
         };
     }
 
-    private static StringBuilder indent(int p_178020_, StringBuilder p_178021_) {
-        int i = p_178021_.lastIndexOf("\n") + 1;
-        int j = p_178021_.length() - i;
+    private static StringBuilder indent(final int indent, final StringBuilder builder) {
+        int index = builder.lastIndexOf("\n") + 1;
+        int len = builder.length() - index;
 
-        for (int k = 0; k < 2 * p_178020_ - j; k++) {
-            p_178021_.append(' ');
+        for (int i = 0; i < 2 * indent - len; i++) {
+            builder.append(' ');
         }
 
-        return p_178021_;
+        return builder;
     }
 
-    public static Component toPrettyComponent(Tag p_178062_) {
-        return new TextComponentTagVisitor("").visit(p_178062_);
+    public static Component toPrettyComponent(final Tag tag) {
+        return new TextComponentTagVisitor("").visit(tag);
     }
 
-    public static String structureToSnbt(CompoundTag p_178064_) {
-        return new SnbtPrinterTagVisitor().visit(packStructureTemplate(p_178064_));
+    public static String structureToSnbt(final CompoundTag structure) {
+        return new SnbtPrinterTagVisitor().visit(packStructureTemplate(structure));
     }
 
-    public static CompoundTag snbtToStructure(String p_178025_) throws CommandSyntaxException {
-        return unpackStructureTemplate(TagParser.parseCompoundFully(p_178025_));
+    public static CompoundTag snbtToStructure(final String snbt) throws CommandSyntaxException {
+        return unpackStructureTemplate(TagParser.parseCompoundFully(snbt));
     }
 
     @VisibleForTesting
-    static CompoundTag packStructureTemplate(CompoundTag p_178068_) {
-        Optional<ListTag> optional = p_178068_.getList("palettes");
-        ListTag listtag;
-        if (optional.isPresent()) {
-            listtag = optional.get().getListOrEmpty(0);
+    static CompoundTag packStructureTemplate(final CompoundTag snbt) {
+        Optional<ListTag> palettes = snbt.getList("palettes");
+        ListTag palette;
+        if (palettes.isPresent()) {
+            palette = palettes.get().getListOrEmpty(0);
         } else {
-            listtag = p_178068_.getListOrEmpty("palette");
+            palette = snbt.getListOrEmpty("palette");
         }
 
-        ListTag listtag1 = listtag.compoundStream().map(NbtUtils::packBlockState).map(StringTag::valueOf).collect(Collectors.toCollection(ListTag::new));
-        p_178068_.put("palette", listtag1);
-        if (optional.isPresent()) {
-            ListTag listtag2 = new ListTag();
-            optional.get().stream().flatMap(p_389905_ -> p_389905_.asList().stream()).forEach(p_389894_ -> {
-                CompoundTag compoundtag = new CompoundTag();
+        ListTag deflatedPalette = palette.compoundStream().map(NbtUtils::packBlockState).map(StringTag::valueOf).collect(Collectors.toCollection(ListTag::new));
+        snbt.put("palette", deflatedPalette);
+        if (palettes.isPresent()) {
+            ListTag newPalettes = new ListTag();
+            palettes.get().stream().flatMap(tag -> tag.asList().stream()).forEach(oldPalette -> {
+                CompoundTag newPalette = new CompoundTag();
 
-                for (int i = 0; i < p_389894_.size(); i++) {
-                    compoundtag.putString(listtag1.getString(i).orElseThrow(), packBlockState(p_389894_.getCompound(i).orElseThrow()));
+                for (int i = 0; i < oldPalette.size(); i++) {
+                    newPalette.putString(deflatedPalette.getString(i).orElseThrow(), packBlockState(oldPalette.getCompound(i).orElseThrow()));
                 }
 
-                listtag2.add(compoundtag);
+                newPalettes.add(newPalette);
             });
-            p_178068_.put("palettes", listtag2);
+            snbt.put("palettes", newPalettes);
         }
 
-        Optional<ListTag> optional1 = p_178068_.getList("entities");
-        if (optional1.isPresent()) {
-            ListTag listtag3 = optional1.get()
+        Optional<ListTag> oldEntities = snbt.getList("entities");
+        if (oldEntities.isPresent()) {
+            ListTag newEntities = oldEntities.get()
                 .compoundStream()
-                .sorted(Comparator.comparing(p_389903_ -> p_389903_.getList("pos"), Comparators.emptiesLast(YXZ_LISTTAG_DOUBLE_COMPARATOR)))
+                .sorted(Comparator.comparing(tag -> tag.getList("pos"), Comparators.emptiesLast(YXZ_LISTTAG_DOUBLE_COMPARATOR)))
                 .collect(Collectors.toCollection(ListTag::new));
-            p_178068_.put("entities", listtag3);
+            snbt.put("entities", newEntities);
         }
 
-        ListTag listtag4 = p_178068_.getList("blocks")
+        ListTag blockData = snbt.getList("blocks")
             .stream()
             .flatMap(ListTag::compoundStream)
-            .sorted(Comparator.comparing(p_389898_ -> p_389898_.getList("pos"), Comparators.emptiesLast(YXZ_LISTTAG_INT_COMPARATOR)))
-            .peek(p_389885_ -> p_389885_.putString("state", listtag1.getString(p_389885_.getIntOr("state", 0)).orElseThrow()))
+            .sorted(Comparator.comparing(tag -> tag.getList("pos"), Comparators.emptiesLast(YXZ_LISTTAG_INT_COMPARATOR)))
+            .peek(block -> block.putString("state", deflatedPalette.getString(block.getIntOr("state", 0)).orElseThrow()))
             .collect(Collectors.toCollection(ListTag::new));
-        p_178068_.put("data", listtag4);
-        p_178068_.remove("blocks");
-        return p_178068_;
+        snbt.put("data", blockData);
+        snbt.remove("blocks");
+        return snbt;
     }
 
     @VisibleForTesting
-    static CompoundTag unpackStructureTemplate(CompoundTag p_178072_) {
-        ListTag listtag = p_178072_.getListOrEmpty("palette");
-        Map<String, Tag> map = listtag.stream()
-            .flatMap(p_389904_ -> p_389904_.asString().stream())
+    static CompoundTag unpackStructureTemplate(final CompoundTag template) {
+        ListTag packedPalette = template.getListOrEmpty("palette");
+        Map<String, Tag> palette = packedPalette.stream()
+            .flatMap(tag -> tag.asString().stream())
             .collect(ImmutableMap.toImmutableMap(Function.identity(), NbtUtils::unpackBlockState));
-        Optional<ListTag> optional = p_178072_.getList("palettes");
-        if (optional.isPresent()) {
-            p_178072_.put(
+        Optional<ListTag> oldPalettes = template.getList("palettes");
+        if (oldPalettes.isPresent()) {
+            template.put(
                 "palettes",
-                optional.get()
+                oldPalettes.get()
                     .compoundStream()
                     .map(
-                        p_389891_ -> map.keySet()
+                        oldPalette -> palette.keySet()
                             .stream()
-                            .map(p_389900_ -> p_389891_.getString(p_389900_).orElseThrow())
+                            .map(key -> oldPalette.getString(key).orElseThrow())
                             .map(NbtUtils::unpackBlockState)
                             .collect(Collectors.toCollection(ListTag::new))
                     )
                     .collect(Collectors.toCollection(ListTag::new))
             );
-            p_178072_.remove("palette");
+            template.remove("palette");
         } else {
-            p_178072_.put("palette", map.values().stream().collect(Collectors.toCollection(ListTag::new)));
+            template.put("palette", palette.values().stream().collect(Collectors.toCollection(ListTag::new)));
         }
 
-        Optional<ListTag> optional1 = p_178072_.getList("data");
-        if (optional1.isPresent()) {
-            Object2IntMap<String> object2intmap = new Object2IntOpenHashMap<>();
-            object2intmap.defaultReturnValue(-1);
+        Optional<ListTag> maybeBlocks = template.getList("data");
+        if (maybeBlocks.isPresent()) {
+            Object2IntMap<String> paletteToId = new Object2IntOpenHashMap<>();
+            paletteToId.defaultReturnValue(-1);
 
-            for (int i = 0; i < listtag.size(); i++) {
-                object2intmap.put(listtag.getString(i).orElseThrow(), i);
+            for (int i = 0; i < packedPalette.size(); i++) {
+                paletteToId.put(packedPalette.getString(i).orElseThrow(), i);
             }
 
-            ListTag listtag1 = optional1.get();
+            ListTag blocks = maybeBlocks.get();
 
-            for (int j = 0; j < listtag1.size(); j++) {
-                CompoundTag compoundtag = listtag1.getCompound(j).orElseThrow();
-                String s = compoundtag.getString("state").orElseThrow();
-                int k = object2intmap.getInt(s);
-                if (k == -1) {
-                    throw new IllegalStateException("Entry " + s + " missing from palette");
+            for (int i = 0; i < blocks.size(); i++) {
+                CompoundTag block = blocks.getCompound(i).orElseThrow();
+                String stateName = block.getString("state").orElseThrow();
+                int stateId = paletteToId.getInt(stateName);
+                if (stateId == -1) {
+                    throw new IllegalStateException("Entry " + stateName + " missing from palette");
                 }
 
-                compoundtag.putInt("state", k);
+                block.putInt("state", stateId);
             }
 
-            p_178072_.put("blocks", listtag1);
-            p_178072_.remove("data");
+            template.put("blocks", blocks);
+            template.remove("data");
         }
 
-        return p_178072_;
+        return template;
     }
 
     @VisibleForTesting
-    static String packBlockState(CompoundTag p_178076_) {
-        StringBuilder stringbuilder = new StringBuilder(p_178076_.getString("Name").orElseThrow());
-        p_178076_.getCompound("Properties")
+    static String packBlockState(final CompoundTag compound) {
+        StringBuilder builder = new StringBuilder(compound.getString("Name").orElseThrow());
+        compound.getCompound("Properties")
             .ifPresent(
-                p_389888_ -> {
-                    String s = p_389888_.entrySet()
+                properties -> {
+                    String keyValues = properties.entrySet()
                         .stream()
                         .sorted(Entry.comparingByKey())
-                        .map(p_389896_ -> p_389896_.getKey() + ":" + p_389896_.getValue().asString().orElseThrow())
+                        .map(entry -> entry.getKey() + ":" + entry.getValue().asString().orElseThrow())
                         .collect(Collectors.joining(","));
-                    stringbuilder.append('{').append(s).append('}');
+                    builder.append('{').append(keyValues).append('}');
                 }
             );
-        return stringbuilder.toString();
+        return builder.toString();
     }
 
     @VisibleForTesting
-    static CompoundTag unpackBlockState(String p_178054_) {
-        CompoundTag compoundtag = new CompoundTag();
-        int i = p_178054_.indexOf(123);
-        String s;
-        if (i >= 0) {
-            s = p_178054_.substring(0, i);
-            CompoundTag compoundtag1 = new CompoundTag();
-            if (i + 2 <= p_178054_.length()) {
-                String s1 = p_178054_.substring(i + 1, p_178054_.indexOf(125, i));
-                COMMA_SPLITTER.split(s1).forEach(p_178040_ -> {
-                    List<String> list = COLON_SPLITTER.splitToList(p_178040_);
-                    if (list.size() == 2) {
-                        compoundtag1.putString(list.get(0), list.get(1));
+    static CompoundTag unpackBlockState(final String compound) {
+        CompoundTag tag = new CompoundTag();
+        int openIndex = compound.indexOf(123);
+        String name;
+        if (openIndex >= 0) {
+            name = compound.substring(0, openIndex);
+            CompoundTag properties = new CompoundTag();
+            if (openIndex + 2 <= compound.length()) {
+                String values = compound.substring(openIndex + 1, compound.indexOf(125, openIndex));
+                COMMA_SPLITTER.split(values).forEach(keyValue -> {
+                    List<String> parts = COLON_SPLITTER.splitToList(keyValue);
+                    if (parts.size() == 2) {
+                        properties.putString(parts.get(0), parts.get(1));
                     } else {
-                        LOGGER.error("Something went wrong parsing: '{}' -- incorrect gamedata!", p_178054_);
+                        LOGGER.error("Something went wrong parsing: '{}' -- incorrect gamedata!", compound);
                     }
                 });
-                compoundtag.put("Properties", compoundtag1);
+                tag.put("Properties", properties);
             }
         } else {
-            s = p_178054_;
+            name = compound;
         }
 
-        compoundtag.putString("Name", s);
-        return compoundtag;
+        tag.putString("Name", name);
+        return tag;
     }
 
-    public static CompoundTag addCurrentDataVersion(CompoundTag p_265050_) {
-        int i = SharedConstants.getCurrentVersion().dataVersion().version();
-        return addDataVersion(p_265050_, i);
+    public static CompoundTag addCurrentDataVersion(final CompoundTag tag) {
+        int version = SharedConstants.getCurrentVersion().dataVersion().version();
+        return addDataVersion(tag, version);
     }
 
-    public static CompoundTag addDataVersion(CompoundTag p_265534_, int p_265686_) {
-        p_265534_.putInt("DataVersion", p_265686_);
-        return p_265534_;
+    public static CompoundTag addDataVersion(final CompoundTag tag, final int version) {
+        tag.putInt("DataVersion", version);
+        return tag;
     }
 
-    public static Dynamic<Tag> addCurrentDataVersion(Dynamic<Tag> p_422696_) {
-        int i = SharedConstants.getCurrentVersion().dataVersion().version();
-        return addDataVersion(p_422696_, i);
+    public static <T> Dynamic<T> addDataVersion(final Dynamic<T> tag, final int version) {
+        return tag.set("DataVersion", tag.createInt(version));
     }
 
-    public static Dynamic<Tag> addDataVersion(Dynamic<Tag> p_425483_, int p_429566_) {
-        return p_425483_.set("DataVersion", p_425483_.createInt(p_429566_));
+    public static void addCurrentDataVersion(final ValueOutput output) {
+        int version = SharedConstants.getCurrentVersion().dataVersion().version();
+        addDataVersion(output, version);
     }
 
-    public static void addCurrentDataVersion(ValueOutput p_409606_) {
-        int i = SharedConstants.getCurrentVersion().dataVersion().version();
-        addDataVersion(p_409606_, i);
+    public static void addDataVersion(final ValueOutput output, final int version) {
+        output.putInt("DataVersion", version);
     }
 
-    public static void addDataVersion(ValueOutput p_406531_, int p_406276_) {
-        p_406531_.putInt("DataVersion", p_406276_);
+    public static int getDataVersion(final CompoundTag tag) {
+        return getDataVersion(tag, -1);
     }
 
-    public static int getDataVersion(CompoundTag p_456219_) {
-        return getDataVersion(p_456219_, -1);
+    public static int getDataVersion(final CompoundTag tag, final int _default) {
+        return tag.getIntOr("DataVersion", _default);
     }
 
-    public static int getDataVersion(CompoundTag p_265397_, int p_265399_) {
-        return p_265397_.getIntOr("DataVersion", p_265399_);
+    public static int getDataVersion(final Dynamic<?> dynamic) {
+        return getDataVersion(dynamic, -1);
     }
 
-    public static int getDataVersion(Dynamic<?> p_391363_, int p_396363_) {
-        return p_391363_.get("DataVersion").asInt(p_396363_);
+    public static int getDataVersion(final Dynamic<?> dynamic, final int _default) {
+        return dynamic.get("DataVersion").asInt(_default);
     }
 }

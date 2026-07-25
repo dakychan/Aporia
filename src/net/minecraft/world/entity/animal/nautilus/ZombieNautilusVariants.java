@@ -18,34 +18,34 @@ public class ZombieNautilusVariants {
     public static final ResourceKey<ZombieNautilusVariant> WARM = createKey(TemperatureVariants.WARM);
     public static final ResourceKey<ZombieNautilusVariant> DEFAULT = TEMPERATE;
 
-    private static ResourceKey<ZombieNautilusVariant> createKey(Identifier p_454687_) {
-        return ResourceKey.create(Registries.ZOMBIE_NAUTILUS_VARIANT, p_454687_);
+    private static ResourceKey<ZombieNautilusVariant> createKey(final Identifier id) {
+        return ResourceKey.create(Registries.ZOMBIE_NAUTILUS_VARIANT, id);
     }
 
-    public static void bootstrap(BootstrapContext<ZombieNautilusVariant> p_458683_) {
-        register(p_458683_, TEMPERATE, ZombieNautilusVariant.ModelType.NORMAL, "zombie_nautilus", SpawnPrioritySelectors.fallback(0));
-        register(p_458683_, WARM, ZombieNautilusVariant.ModelType.WARM, "zombie_nautilus_coral", BiomeTags.SPAWNS_CORAL_VARIANT_ZOMBIE_NAUTILUS);
-    }
-
-    private static void register(
-        BootstrapContext<ZombieNautilusVariant> p_452335_,
-        ResourceKey<ZombieNautilusVariant> p_450375_,
-        ZombieNautilusVariant.ModelType p_453489_,
-        String p_453615_,
-        TagKey<Biome> p_459380_
-    ) {
-        HolderSet<Biome> holderset = p_452335_.lookup(Registries.BIOME).getOrThrow(p_459380_);
-        register(p_452335_, p_450375_, p_453489_, p_453615_, SpawnPrioritySelectors.single(new BiomeCheck(holderset), 1));
+    public static void bootstrap(final BootstrapContext<ZombieNautilusVariant> context) {
+        register(context, TEMPERATE, ZombieNautilusVariant.ModelType.NORMAL, "zombie_nautilus", SpawnPrioritySelectors.fallback(0));
+        register(context, WARM, ZombieNautilusVariant.ModelType.WARM, "zombie_nautilus_coral", BiomeTags.SPAWNS_CORAL_VARIANT_ZOMBIE_NAUTILUS);
     }
 
     private static void register(
-        BootstrapContext<ZombieNautilusVariant> p_450835_,
-        ResourceKey<ZombieNautilusVariant> p_451268_,
-        ZombieNautilusVariant.ModelType p_450275_,
-        String p_459332_,
-        SpawnPrioritySelectors p_451308_
+        final BootstrapContext<ZombieNautilusVariant> context,
+        final ResourceKey<ZombieNautilusVariant> name,
+        final ZombieNautilusVariant.ModelType modelType,
+        final String textureName,
+        final TagKey<Biome> spawnBiome
     ) {
-        Identifier identifier = Identifier.withDefaultNamespace("entity/nautilus/" + p_459332_);
-        p_450835_.register(p_451268_, new ZombieNautilusVariant(new ModelAndTexture<>(p_450275_, identifier), p_451308_));
+        HolderSet<Biome> biomes = context.lookup(Registries.BIOME).getOrThrow(spawnBiome);
+        register(context, name, modelType, textureName, SpawnPrioritySelectors.single(new BiomeCheck(biomes), 1));
+    }
+
+    private static void register(
+        final BootstrapContext<ZombieNautilusVariant> context,
+        final ResourceKey<ZombieNautilusVariant> name,
+        final ZombieNautilusVariant.ModelType modelType,
+        final String textureName,
+        final SpawnPrioritySelectors selectors
+    ) {
+        Identifier textureId = Identifier.withDefaultNamespace("entity/nautilus/" + textureName);
+        context.register(name, new ZombieNautilusVariant(new ModelAndTexture<>(modelType, textureId), selectors));
     }
 }

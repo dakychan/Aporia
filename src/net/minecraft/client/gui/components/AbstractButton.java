@@ -3,7 +3,7 @@ package net.minecraft.client.gui.components;
 import java.util.function.Supplier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
@@ -11,38 +11,37 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public abstract class AbstractButton extends AbstractWidget.WithInactiveMessage {
     protected static final int TEXT_MARGIN = 2;
     private static final WidgetSprites SPRITES = new WidgetSprites(
-        Identifier.withDefaultNamespace("widget/button"), Identifier.withDefaultNamespace("widget/button_disabled"), Identifier.withDefaultNamespace("widget/button_highlighted")
+        Identifier.withDefaultNamespace("widget/button"),
+        Identifier.withDefaultNamespace("widget/button_disabled"),
+        Identifier.withDefaultNamespace("widget/button_highlighted")
     );
     private @Nullable Supplier<Boolean> overrideRenderHighlightedSprite;
 
-    public AbstractButton(int p_93365_, int p_93366_, int p_93367_, int p_93368_, Component p_93369_) {
-        super(p_93365_, p_93366_, p_93367_, p_93368_, p_93369_);
+    public AbstractButton(final int x, final int y, final int width, final int height, final Component message) {
+        super(x, y, width, height, message);
     }
 
-    public abstract void onPress(InputWithModifiers p_428560_);
+    public abstract void onPress(InputWithModifiers input);
 
     @Override
-    protected final void renderWidget(GuiGraphics p_281670_, int p_282682_, int p_281714_, float p_282542_) {
-        this.renderContents(p_281670_, p_282682_, p_281714_, p_282542_);
-        this.handleCursor(p_281670_);
+    protected final void extractWidgetRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        this.extractContents(graphics, mouseX, mouseY, a);
+        this.handleCursor(graphics);
     }
 
-    protected abstract void renderContents(GuiGraphics p_452325_, int p_450325_, int p_454172_, float p_455494_);
+    protected abstract void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a);
 
-    protected void renderDefaultLabel(ActiveTextCollector p_453248_) {
-        this.renderScrollingStringOverContents(p_453248_, this.getMessage(), 2);
+    protected void extractDefaultLabel(final ActiveTextCollector output) {
+        this.extractScrollingStringOverContents(output, this.getMessage(), 2);
     }
 
-    protected final void renderDefaultSprite(GuiGraphics p_455641_) {
-        p_455641_.blitSprite(
+    protected final void extractDefaultSprite(final GuiGraphicsExtractor graphics) {
+        graphics.blitSprite(
             RenderPipelines.GUI_TEXTURED,
             SPRITES.get(this.active, this.overrideRenderHighlightedSprite != null ? this.overrideRenderHighlightedSprite.get() : this.isHoveredOrFocused()),
             this.getX(),
@@ -54,24 +53,24 @@ public abstract class AbstractButton extends AbstractWidget.WithInactiveMessage 
     }
 
     @Override
-    public void onClick(MouseButtonEvent p_426095_, boolean p_428686_) {
-        this.onPress(p_426095_);
+    public void onClick(final MouseButtonEvent event, final boolean doubleClick) {
+        this.onPress(event);
     }
 
     @Override
-    public boolean keyPressed(KeyEvent p_427564_) {
+    public boolean keyPressed(final KeyEvent event) {
         if (!this.isActive()) {
             return false;
-        } else if (p_427564_.isSelection()) {
+        } else if (event.isSelection()) {
             this.playDownSound(Minecraft.getInstance().getSoundManager());
-            this.onPress(p_427564_);
+            this.onPress(event);
             return true;
         } else {
             return false;
         }
     }
 
-    public void setOverrideRenderHighlightedSprite(Supplier<Boolean> p_453637_) {
-        this.overrideRenderHighlightedSprite = p_453637_;
+    public void setOverrideRenderHighlightedSprite(final Supplier<Boolean> overrideRenderHighlightedSprite) {
+        this.overrideRenderHighlightedSprite = overrideRenderHighlightedSprite;
     }
 }

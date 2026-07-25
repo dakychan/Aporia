@@ -12,9 +12,7 @@ import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
 public final class Path {
-    public static final StreamCodec<FriendlyByteBuf, Path> STREAM_CODEC = StreamCodec.of(
-        (p_422249_, p_422250_) -> p_422250_.writeToStream(p_422249_), Path::createFromStream
-    );
+    public static final StreamCodec<FriendlyByteBuf, Path> STREAM_CODEC = StreamCodec.of((output, value) -> value.writeToStream(output), Path::createFromStream);
     private final List<Node> nodes;
     private Path.@Nullable DebugData debugData;
     private int nextNodeIndex;
@@ -22,11 +20,11 @@ public final class Path {
     private final float distToTarget;
     private final boolean reached;
 
-    public Path(List<Node> p_77371_, BlockPos p_77372_, boolean p_77373_) {
-        this.nodes = p_77371_;
-        this.target = p_77372_;
-        this.distToTarget = p_77371_.isEmpty() ? Float.MAX_VALUE : this.nodes.get(this.nodes.size() - 1).distanceManhattan(this.target);
-        this.reached = p_77373_;
+    public Path(final List<Node> nodes, final BlockPos target, final boolean reached) {
+        this.nodes = nodes;
+        this.target = target;
+        this.distToTarget = nodes.isEmpty() ? Float.MAX_VALUE : this.nodes.get(this.nodes.size() - 1).distanceManhattan(this.target);
+        this.reached = reached;
     }
 
     public void advance() {
@@ -45,18 +43,18 @@ public final class Path {
         return !this.nodes.isEmpty() ? this.nodes.get(this.nodes.size() - 1) : null;
     }
 
-    public Node getNode(int p_77376_) {
-        return this.nodes.get(p_77376_);
+    public Node getNode(final int i) {
+        return this.nodes.get(i);
     }
 
-    public void truncateNodes(int p_77389_) {
-        if (this.nodes.size() > p_77389_) {
-            this.nodes.subList(p_77389_, this.nodes.size()).clear();
+    public void truncateNodes(final int index) {
+        if (this.nodes.size() > index) {
+            this.nodes.subList(index, this.nodes.size()).clear();
         }
     }
 
-    public void replaceNode(int p_77378_, Node p_77379_) {
-        this.nodes.set(p_77378_, p_77379_);
+    public void replaceNode(final int index, final Node replaceWith) {
+        this.nodes.set(index, replaceWith);
     }
 
     public int getNodeCount() {
@@ -67,24 +65,24 @@ public final class Path {
         return this.nextNodeIndex;
     }
 
-    public void setNextNodeIndex(int p_77394_) {
-        this.nextNodeIndex = p_77394_;
+    public void setNextNodeIndex(final int nextNodeIndex) {
+        this.nextNodeIndex = nextNodeIndex;
     }
 
-    public Vec3 getEntityPosAtNode(Entity p_77383_, int p_77384_) {
-        Node node = this.nodes.get(p_77384_);
-        double d0 = node.x + (int)(p_77383_.getBbWidth() + 1.0F) * 0.5;
-        double d1 = node.y;
-        double d2 = node.z + (int)(p_77383_.getBbWidth() + 1.0F) * 0.5;
-        return new Vec3(d0, d1, d2);
+    public Vec3 getEntityPosAtNode(final Entity entity, final int index) {
+        Node node = this.nodes.get(index);
+        double x = node.x + (int)(entity.getBbWidth() + 1.0F) * 0.5;
+        double y = node.y;
+        double z = node.z + (int)(entity.getBbWidth() + 1.0F) * 0.5;
+        return new Vec3(x, y, z);
     }
 
-    public BlockPos getNodePos(int p_77397_) {
-        return this.nodes.get(p_77397_).asBlockPos();
+    public BlockPos getNodePos(final int index) {
+        return this.nodes.get(index).asBlockPos();
     }
 
-    public Vec3 getNextEntityPos(Entity p_77381_) {
-        return this.getEntityPosAtNode(p_77381_, this.nextNodeIndex);
+    public Vec3 getNextEntityPos(final Entity entity) {
+        return this.getEntityPosAtNode(entity, this.nextNodeIndex);
     }
 
     public BlockPos getNextNodePos() {
@@ -99,13 +97,13 @@ public final class Path {
         return this.nextNodeIndex > 0 ? this.nodes.get(this.nextNodeIndex - 1) : null;
     }
 
-    public boolean sameAs(@Nullable Path p_77386_) {
-        return p_77386_ != null && this.nodes.equals(p_77386_.nodes);
+    public boolean sameAs(final @Nullable Path path) {
+        return path != null && this.nodes.equals(path.nodes);
     }
 
     @Override
-    public boolean equals(Object p_425951_) {
-        return !(p_425951_ instanceof Path path)
+    public boolean equals(final Object obj) {
+        return !(obj instanceof Path path)
             ? false
             : this.nextNodeIndex == path.nextNodeIndex
                 && this.debugData == path.debugData
@@ -124,35 +122,35 @@ public final class Path {
     }
 
     @VisibleForDebug
-    void setDebug(Node[] p_164710_, Node[] p_164711_, Set<Target> p_164712_) {
-        this.debugData = new Path.DebugData(p_164710_, p_164711_, p_164712_);
+    void setDebug(final Node[] openSet, final Node[] closedSet, final Set<Target> targets) {
+        this.debugData = new Path.DebugData(openSet, closedSet, targets);
     }
 
     public Path.@Nullable DebugData debugData() {
         return this.debugData;
     }
 
-    public void writeToStream(FriendlyByteBuf p_164705_) {
+    public void writeToStream(final FriendlyByteBuf buffer) {
         if (this.debugData != null && !this.debugData.targetNodes.isEmpty()) {
-            p_164705_.writeBoolean(this.reached);
-            p_164705_.writeInt(this.nextNodeIndex);
-            p_164705_.writeBlockPos(this.target);
-            p_164705_.writeCollection(this.nodes, (p_296986_, p_296987_) -> p_296987_.writeToStream(p_296986_));
-            this.debugData.write(p_164705_);
+            buffer.writeBoolean(this.reached);
+            buffer.writeInt(this.nextNodeIndex);
+            buffer.writeBlockPos(this.target);
+            buffer.writeCollection(this.nodes, (out, node) -> node.writeToStream(out));
+            this.debugData.write(buffer);
         } else {
             throw new IllegalStateException("Missing debug data");
         }
     }
 
-    public static Path createFromStream(FriendlyByteBuf p_77391_) {
-        boolean flag = p_77391_.readBoolean();
-        int i = p_77391_.readInt();
-        BlockPos blockpos = p_77391_.readBlockPos();
-        List<Node> list = p_77391_.readList(Node::createFromStream);
-        Path.DebugData path$debugdata = Path.DebugData.read(p_77391_);
-        Path path = new Path(list, blockpos, flag);
-        path.debugData = path$debugdata;
-        path.nextNodeIndex = i;
+    public static Path createFromStream(final FriendlyByteBuf buffer) {
+        boolean reached = buffer.readBoolean();
+        int indexStream = buffer.readInt();
+        BlockPos target = buffer.readBlockPos();
+        List<Node> nodes = buffer.readList(Node::createFromStream);
+        Path.DebugData debugData = Path.DebugData.read(buffer);
+        Path path = new Path(nodes, target, reached);
+        path.debugData = debugData;
+        path.nextNodeIndex = indexStream;
         return path;
     }
 
@@ -169,43 +167,43 @@ public final class Path {
         return this.distToTarget;
     }
 
-    static Node[] readNodeArray(FriendlyByteBuf p_300065_) {
-        Node[] anode = new Node[p_300065_.readVarInt()];
+    private static Node[] readNodeArray(final FriendlyByteBuf input) {
+        Node[] nodes = new Node[input.readVarInt()];
 
-        for (int i = 0; i < anode.length; i++) {
-            anode[i] = Node.createFromStream(p_300065_);
+        for (int i = 0; i < nodes.length; i++) {
+            nodes[i] = Node.createFromStream(input);
         }
 
-        return anode;
+        return nodes;
     }
 
-    static void writeNodeArray(FriendlyByteBuf p_300557_, Node[] p_301136_) {
-        p_300557_.writeVarInt(p_301136_.length);
+    private static void writeNodeArray(final FriendlyByteBuf output, final Node[] nodes) {
+        output.writeVarInt(nodes.length);
 
-        for (Node node : p_301136_) {
-            node.writeToStream(p_300557_);
+        for (Node node : nodes) {
+            node.writeToStream(output);
         }
     }
 
     public Path copy() {
-        Path path = new Path(this.nodes, this.target, this.reached);
-        path.debugData = this.debugData;
-        path.nextNodeIndex = this.nextNodeIndex;
-        return path;
+        Path result = new Path(this.nodes, this.target, this.reached);
+        result.debugData = this.debugData;
+        result.nextNodeIndex = this.nextNodeIndex;
+        return result;
     }
 
     public record DebugData(Node[] openSet, Node[] closedSet, Set<Target> targetNodes) {
-        public void write(FriendlyByteBuf p_299578_) {
-            p_299578_.writeCollection(this.targetNodes, (p_300614_, p_300157_) -> p_300157_.writeToStream(p_300614_));
-            Path.writeNodeArray(p_299578_, this.openSet);
-            Path.writeNodeArray(p_299578_, this.closedSet);
+        public void write(final FriendlyByteBuf output) {
+            output.writeCollection(this.targetNodes, (out, target) -> target.writeToStream(out));
+            Path.writeNodeArray(output, this.openSet);
+            Path.writeNodeArray(output, this.closedSet);
         }
 
-        public static Path.DebugData read(FriendlyByteBuf p_299429_) {
-            HashSet<Target> hashset = p_299429_.readCollection(HashSet::new, Target::createFromStream);
-            Node[] anode = Path.readNodeArray(p_299429_);
-            Node[] anode1 = Path.readNodeArray(p_299429_);
-            return new Path.DebugData(anode, anode1, hashset);
+        public static Path.DebugData read(final FriendlyByteBuf input) {
+            HashSet<Target> targets = input.readCollection(HashSet::new, Target::createFromStream);
+            Node[] openSet = Path.readNodeArray(input);
+            Node[] closedSet = Path.readNodeArray(input);
+            return new Path.DebugData(openSet, closedSet, targets);
         }
     }
 }

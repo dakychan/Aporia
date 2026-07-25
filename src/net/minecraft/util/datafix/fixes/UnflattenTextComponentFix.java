@@ -17,36 +17,36 @@ import org.slf4j.Logger;
 public class UnflattenTextComponentFix extends DataFix {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public UnflattenTextComponentFix(Schema p_397820_) {
-        super(p_397820_, true);
+    public UnflattenTextComponentFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
     protected TypeRewriteRule makeRule() {
-        Type<Pair<String, String>> type = (Type<Pair<String, String>>)this.getInputSchema().getType(References.TEXT_COMPONENT);
-        Type<?> type1 = this.getOutputSchema().getType(References.TEXT_COMPONENT);
-        return this.createFixer(type, type1);
+        Type<Pair<String, String>> textComponentType = (Type<Pair<String, String>>)this.getInputSchema().getType(References.TEXT_COMPONENT);
+        Type<?> newTextComponentType = this.getOutputSchema().getType(References.TEXT_COMPONENT);
+        return this.createFixer(textComponentType, newTextComponentType);
     }
 
-    private <T> TypeRewriteRule createFixer(Type<Pair<String, String>> p_393379_, Type<T> p_394215_) {
+    private <T> TypeRewriteRule createFixer(final Type<Pair<String, String>> textComponentType, final Type<T> newTextComponentType) {
         return this.fixTypeEverywhere(
             "UnflattenTextComponentFix",
-            p_393379_,
-            p_394215_,
-            p_394708_ -> p_449331_ -> Util.readTypedOrThrow(p_394215_, unflattenJson(p_394708_, p_449331_.getSecond()), true).getValue()
+            textComponentType,
+            newTextComponentType,
+            ops -> input -> Util.readTypedOrThrow(newTextComponentType, unflattenJson(ops, input.getSecond()), true).getValue()
         );
     }
 
-    private static <T> Dynamic<T> unflattenJson(DynamicOps<T> p_392385_, String p_391255_) {
+    private static <T> Dynamic<T> unflattenJson(final DynamicOps<T> ops, final String jsonString) {
         try {
-            JsonElement jsonelement = LenientJsonParser.parse(p_391255_);
-            if (!jsonelement.isJsonNull()) {
-                return new Dynamic<>(p_392385_, JsonOps.INSTANCE.convertTo(p_392385_, jsonelement));
+            JsonElement json = LenientJsonParser.parse(jsonString);
+            if (!json.isJsonNull()) {
+                return new Dynamic<>(ops, JsonOps.INSTANCE.convertTo(ops, json));
             }
-        } catch (Exception exception) {
-            LOGGER.error("Failed to unflatten text component json: {}", p_391255_, exception);
+        } catch (Exception e) {
+            LOGGER.error("Failed to unflatten text component json: {}", jsonString, e);
         }
 
-        return new Dynamic<>(p_392385_, p_392385_.createString(p_391255_));
+        return new Dynamic<>(ops, ops.createString(jsonString));
     }
 }

@@ -22,8 +22,8 @@ public record ClientboundDisguisedChatPacket(Component message, ChatType.Bound c
         return GamePacketTypes.CLIENTBOUND_DISGUISED_CHAT;
     }
 
-    public void handle(ClientGamePacketListener p_251953_) {
-        p_251953_.handleDisguisedChat(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDisguisedChat(this);
     }
 
     @Override

@@ -21,7 +21,7 @@ public record ClientboundSetPlayerInventoryPacket(int slot, ItemStack contents) 
         return GamePacketTypes.CLIENTBOUND_SET_PLAYER_INVENTORY;
     }
 
-    public void handle(ClientGamePacketListener p_369117_) {
-        p_369117_.handleSetPlayerInventory(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSetPlayerInventory(this);
     }
 }

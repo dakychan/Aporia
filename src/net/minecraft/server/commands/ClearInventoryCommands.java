@@ -2,7 +2,6 @@ package net.minecraft.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import java.util.Collection;
@@ -19,37 +18,35 @@ import net.minecraft.world.item.ItemStack;
 
 public class ClearInventoryCommands {
     private static final DynamicCommandExceptionType ERROR_SINGLE = new DynamicCommandExceptionType(
-        p_308637_ -> Component.translatableEscape("clear.failed.single", p_308637_)
+        name -> Component.translatableEscape("clear.failed.single", name)
     );
     private static final DynamicCommandExceptionType ERROR_MULTIPLE = new DynamicCommandExceptionType(
-        p_308634_ -> Component.translatableEscape("clear.failed.multiple", p_308634_)
+        count -> Component.translatableEscape("clear.failed.multiple", count)
     );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_214421_, CommandBuildContext p_214422_) {
-        p_214421_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher, final CommandBuildContext context) {
+        dispatcher.register(
             Commands.literal("clear")
                 .requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
-                .executes(p_326228_ -> clearUnlimited(p_326228_.getSource(), Collections.singleton(p_326228_.getSource().getPlayerOrException()), p_180029_ -> true))
+                .executes(c -> clearUnlimited(c.getSource(), Collections.singleton(c.getSource().getPlayerOrException()), i -> true))
                 .then(
                     Commands.argument("targets", EntityArgument.players())
-                        .executes(p_326232_ -> clearUnlimited(p_326232_.getSource(), EntityArgument.getPlayers(p_326232_, "targets"), p_180027_ -> true))
+                        .executes(c -> clearUnlimited(c.getSource(), EntityArgument.getPlayers(c, "targets"), i -> true))
                         .then(
-                            Commands.argument("item", ItemPredicateArgument.itemPredicate(p_214422_))
+                            Commands.argument("item", ItemPredicateArgument.itemPredicate(context))
                                 .executes(
-                                    p_326233_ -> clearUnlimited(
-                                        p_326233_.getSource(),
-                                        EntityArgument.getPlayers(p_326233_, "targets"),
-                                        ItemPredicateArgument.getItemPredicate(p_326233_, "item")
+                                    c -> clearUnlimited(
+                                        c.getSource(), EntityArgument.getPlayers(c, "targets"), ItemPredicateArgument.getItemPredicate(c, "item")
                                     )
                                 )
                                 .then(
                                     Commands.argument("maxCount", IntegerArgumentType.integer(0))
                                         .executes(
-                                            p_326231_ -> clearInventory(
-                                                p_326231_.getSource(),
-                                                EntityArgument.getPlayers(p_326231_, "targets"),
-                                                ItemPredicateArgument.getItemPredicate(p_326231_, "item"),
-                                                IntegerArgumentType.getInteger(p_326231_, "maxCount")
+                                            c -> clearInventory(
+                                                c.getSource(),
+                                                EntityArgument.getPlayers(c, "targets"),
+                                                ItemPredicateArgument.getItemPredicate(c, "item"),
+                                                IntegerArgumentType.getInteger(c, "maxCount")
                                             )
                                         )
                                 )
@@ -58,40 +55,42 @@ public class ClearInventoryCommands {
         );
     }
 
-    private static int clearUnlimited(CommandSourceStack p_333436_, Collection<ServerPlayer> p_334305_, Predicate<ItemStack> p_336088_) throws CommandSyntaxException {
-        return clearInventory(p_333436_, p_334305_, p_336088_, -1);
+    private static int clearUnlimited(final CommandSourceStack source, final Collection<ServerPlayer> players, final Predicate<ItemStack> predicate) throws CommandSyntaxException {
+        return clearInventory(source, players, predicate, -1);
     }
 
-    private static int clearInventory(CommandSourceStack p_136706_, Collection<ServerPlayer> p_136707_, Predicate<ItemStack> p_136708_, int p_136709_) throws CommandSyntaxException {
-        int i = 0;
+    private static int clearInventory(
+        final CommandSourceStack source, final Collection<ServerPlayer> players, final Predicate<ItemStack> predicate, final int maxCount
+    ) throws CommandSyntaxException {
+        int count = 0;
 
-        for (ServerPlayer serverplayer : p_136707_) {
-            i += serverplayer.getInventory().clearOrCountMatchingItems(p_136708_, p_136709_, serverplayer.inventoryMenu.getCraftSlots());
-            serverplayer.containerMenu.broadcastChanges();
-            serverplayer.inventoryMenu.slotsChanged(serverplayer.getInventory());
+        for (ServerPlayer player : players) {
+            count += player.getInventory().clearOrCountMatchingItems(predicate, maxCount, player.inventoryMenu.getCraftSlots());
+            player.containerMenu.broadcastChanges();
+            player.inventoryMenu.slotsChanged(player.getInventory());
         }
 
-        if (i == 0) {
-            if (p_136707_.size() == 1) {
-                throw ERROR_SINGLE.create(p_136707_.iterator().next().getName());
+        if (count == 0) {
+            if (players.size() == 1) {
+                throw ERROR_SINGLE.create(players.iterator().next().getName());
             } else {
-                throw ERROR_MULTIPLE.create(p_136707_.size());
+                throw ERROR_MULTIPLE.create(players.size());
             }
         } else {
-            int j = i;
-            if (p_136709_ == 0) {
-                if (p_136707_.size() == 1) {
-                    p_136706_.sendSuccess(() -> Component.translatable("commands.clear.test.single", j, p_136707_.iterator().next().getDisplayName()), true);
+            int finalCount = count;
+            if (maxCount == 0) {
+                if (players.size() == 1) {
+                    source.sendSuccess(() -> Component.translatable("commands.clear.test.single", finalCount, players.iterator().next().getDisplayName()), true);
                 } else {
-                    p_136706_.sendSuccess(() -> Component.translatable("commands.clear.test.multiple", j, p_136707_.size()), true);
+                    source.sendSuccess(() -> Component.translatable("commands.clear.test.multiple", finalCount, players.size()), true);
                 }
-            } else if (p_136707_.size() == 1) {
-                p_136706_.sendSuccess(() -> Component.translatable("commands.clear.success.single", j, p_136707_.iterator().next().getDisplayName()), true);
+            } else if (players.size() == 1) {
+                source.sendSuccess(() -> Component.translatable("commands.clear.success.single", finalCount, players.iterator().next().getDisplayName()), true);
             } else {
-                p_136706_.sendSuccess(() -> Component.translatable("commands.clear.success.multiple", j, p_136707_.size()), true);
+                source.sendSuccess(() -> Component.translatable("commands.clear.success.multiple", finalCount, players.size()), true);
             }
 
-            return i;
+            return count;
         }
     }
 }

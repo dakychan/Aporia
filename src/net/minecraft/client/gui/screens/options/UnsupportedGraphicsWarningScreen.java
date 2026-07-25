@@ -3,7 +3,7 @@ package net.minecraft.client.gui.screens.options;
 import com.google.common.collect.ImmutableList;
 import java.util.List;
 import net.minecraft.client.gui.ActiveTextCollector;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.TextAlignment;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.MultiLineLabel;
@@ -11,10 +11,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentUtils;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class UnsupportedGraphicsWarningScreen extends Screen {
     private static final int BUTTON_PADDING = 20;
     private static final int BUTTON_MARGIN = 5;
@@ -27,12 +24,12 @@ public class UnsupportedGraphicsWarningScreen extends Screen {
     private int buttonWidth;
 
     protected UnsupportedGraphicsWarningScreen(
-        Component p_345197_, List<Component> p_343955_, ImmutableList<UnsupportedGraphicsWarningScreen.ButtonOption> p_343113_
+        final Component title, final List<Component> message, final ImmutableList<UnsupportedGraphicsWarningScreen.ButtonOption> buttonOptions
     ) {
-        super(p_345197_);
-        this.message = p_343955_;
-        this.narrationMessage = CommonComponents.joinForNarration(p_345197_, ComponentUtils.formatList(p_343955_, CommonComponents.EMPTY));
-        this.buttonOptions = p_343113_;
+        super(title);
+        this.message = message;
+        this.narrationMessage = CommonComponents.joinForNarration(title, ComponentUtils.formatList(message, CommonComponents.EMPTY));
+        this.buttonOptions = buttonOptions;
     }
 
     @Override
@@ -42,34 +39,30 @@ public class UnsupportedGraphicsWarningScreen extends Screen {
 
     @Override
     public void init() {
-        for (UnsupportedGraphicsWarningScreen.ButtonOption unsupportedgraphicswarningscreen$buttonoption : this.buttonOptions) {
-            this.buttonWidth = Math.max(this.buttonWidth, 20 + this.font.width(unsupportedgraphicswarningscreen$buttonoption.message) + 20);
+        for (UnsupportedGraphicsWarningScreen.ButtonOption buttonOption : this.buttonOptions) {
+            this.buttonWidth = Math.max(this.buttonWidth, 20 + this.font.width(buttonOption.message) + 20);
         }
 
-        int l = 5 + this.buttonWidth + 5;
-        int i1 = l * this.buttonOptions.size();
-        this.messageLines = MultiLineLabel.create(this.font, i1, this.message.toArray(new Component[0]));
-        int i = this.messageLines.getLineCount() * 9;
-        this.contentTop = (int)(this.height / 2.0 - i / 2.0);
-        int j = this.contentTop + i + 9 * 2;
-        int k = (int)(this.width / 2.0 - i1 / 2.0);
+        int buttonAdvance = 5 + this.buttonWidth + 5;
+        int contentWidth = buttonAdvance * this.buttonOptions.size();
+        this.messageLines = MultiLineLabel.create(this.font, contentWidth, this.message.toArray(new Component[0]));
+        int messageHeight = this.messageLines.getLineCount() * 9;
+        this.contentTop = (int)(this.height / 2.0 - messageHeight / 2.0);
+        int buttonTop = this.contentTop + messageHeight + 9 * 2;
+        int x = (int)(this.width / 2.0 - contentWidth / 2.0);
 
-        for (UnsupportedGraphicsWarningScreen.ButtonOption unsupportedgraphicswarningscreen$buttonoption1 : this.buttonOptions) {
-            this.addRenderableWidget(
-                Button.builder(unsupportedgraphicswarningscreen$buttonoption1.message, unsupportedgraphicswarningscreen$buttonoption1.onPress)
-                    .bounds(k, j, this.buttonWidth, 20)
-                    .build()
-            );
-            k += l;
+        for (UnsupportedGraphicsWarningScreen.ButtonOption buttonOption : this.buttonOptions) {
+            this.addRenderableWidget(Button.builder(buttonOption.message, buttonOption.onPress).bounds(x, buttonTop, this.buttonWidth, 20).build());
+            x += buttonAdvance;
         }
     }
 
     @Override
-    public void render(GuiGraphics p_343680_, int p_344427_, int p_343108_, float p_342588_) {
-        super.render(p_343680_, p_344427_, p_343108_, p_342588_);
-        ActiveTextCollector activetextcollector = p_343680_.textRenderer();
-        p_343680_.drawCenteredString(this.font, this.title, this.width / 2, this.contentTop - 9 * 2, -1);
-        this.messageLines.visitLines(TextAlignment.CENTER, this.width / 2, this.contentTop, 9, activetextcollector);
+    public void extractRenderState(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractRenderState(graphics, mouseX, mouseY, a);
+        ActiveTextCollector textRenderer = graphics.textRenderer();
+        graphics.centeredText(this.font, this.title, this.width / 2, this.contentTop - 9 * 2, -1);
+        this.messageLines.visitLines(TextAlignment.CENTER, this.width / 2, this.contentTop, 9, textRenderer);
     }
 
     @Override
@@ -77,14 +70,13 @@ public class UnsupportedGraphicsWarningScreen extends Screen {
         return false;
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static final class ButtonOption {
-        final Component message;
-        final Button.OnPress onPress;
+        public static final class ButtonOption {
+        private final Component message;
+        private final Button.OnPress onPress;
 
-        public ButtonOption(Component p_342726_, Button.OnPress p_343620_) {
-            this.message = p_342726_;
-            this.onPress = p_343620_;
+        public ButtonOption(final Component message, final Button.OnPress onPress) {
+            this.message = message;
+            this.onPress = onPress;
         }
     }
 }

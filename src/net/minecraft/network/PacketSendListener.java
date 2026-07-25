@@ -1,7 +1,6 @@
 package net.minecraft.network;
 
 import com.mojang.logging.LogUtils;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import java.util.function.Supplier;
 import net.minecraft.network.protocol.Packet;
@@ -11,24 +10,24 @@ import org.slf4j.Logger;
 public class PacketSendListener {
     private static final Logger LOGGER = LogUtils.getLogger();
 
-    public static ChannelFutureListener thenRun(Runnable p_243267_) {
-        return p_406613_ -> {
-            p_243267_.run();
-            if (!p_406613_.isSuccess()) {
-                p_406613_.channel().pipeline().fireExceptionCaught(p_406613_.cause());
+    public static ChannelFutureListener thenRun(final Runnable runnable) {
+        return future -> {
+            runnable.run();
+            if (!future.isSuccess()) {
+                future.channel().pipeline().fireExceptionCaught(future.cause());
             }
         };
     }
 
-    public static ChannelFutureListener exceptionallySend(Supplier<@Nullable Packet<?>> p_243289_) {
-        return p_407106_ -> {
-            if (!p_407106_.isSuccess()) {
-                Packet<?> packet = p_243289_.get();
-                if (packet != null) {
-                    LOGGER.warn("Failed to deliver packet, sending fallback {}", packet.type(), p_407106_.cause());
-                    p_407106_.channel().writeAndFlush(packet, p_407106_.channel().voidPromise());
+    public static ChannelFutureListener exceptionallySend(final Supplier<@Nullable Packet<?>> handler) {
+        return future -> {
+            if (!future.isSuccess()) {
+                Packet<?> newPacket = handler.get();
+                if (newPacket != null) {
+                    LOGGER.warn("Failed to deliver packet, sending fallback {}", newPacket.type(), future.cause());
+                    future.channel().writeAndFlush(newPacket, future.channel().voidPromise());
                 } else {
-                    p_407106_.channel().pipeline().fireExceptionCaught(p_407106_.cause());
+                    future.channel().pipeline().fireExceptionCaught(future.cause());
                 }
             }
         };

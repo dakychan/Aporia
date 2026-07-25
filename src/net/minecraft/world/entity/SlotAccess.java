@@ -9,56 +9,56 @@ import net.minecraft.world.item.ItemStack;
 public interface SlotAccess {
     ItemStack get();
 
-    boolean set(ItemStack p_147306_);
+    boolean set(ItemStack itemStack);
 
-    static SlotAccess of(final Supplier<ItemStack> p_328960_, final Consumer<ItemStack> p_334295_) {
+    static SlotAccess of(final Supplier<ItemStack> getter, final Consumer<ItemStack> setter) {
         return new SlotAccess() {
             @Override
             public ItemStack get() {
-                return p_328960_.get();
+                return getter.get();
             }
 
             @Override
-            public boolean set(ItemStack p_147314_) {
-                p_334295_.accept(p_147314_);
+            public boolean set(final ItemStack itemStack) {
+                setter.accept(itemStack);
                 return true;
             }
         };
     }
 
-    static SlotAccess forEquipmentSlot(final LivingEntity p_147303_, final EquipmentSlot p_147304_, final Predicate<ItemStack> p_147305_) {
+    static SlotAccess forEquipmentSlot(final LivingEntity entity, final EquipmentSlot slot, final Predicate<ItemStack> validator) {
         return new SlotAccess() {
             @Override
             public ItemStack get() {
-                return p_147303_.getItemBySlot(p_147304_);
+                return entity.getItemBySlot(slot);
             }
 
             @Override
-            public boolean set(ItemStack p_147324_) {
-                if (!p_147305_.test(p_147324_)) {
+            public boolean set(final ItemStack itemStack) {
+                if (!validator.test(itemStack)) {
                     return false;
-                } else {
-                    p_147303_.setItemSlot(p_147304_, p_147324_);
-                    return true;
                 }
+
+                entity.setItemSlot(slot, itemStack);
+                return true;
             }
         };
     }
 
-    static SlotAccess forEquipmentSlot(LivingEntity p_147300_, EquipmentSlot p_147301_) {
-        return forEquipmentSlot(p_147300_, p_147301_, p_147310_ -> true);
+    static SlotAccess forEquipmentSlot(final LivingEntity entity, final EquipmentSlot slot) {
+        return forEquipmentSlot(entity, slot, stack -> true);
     }
 
-    static SlotAccess forListElement(final List<ItemStack> p_460144_, final int p_453047_) {
+    static SlotAccess forListElement(final List<ItemStack> stacks, final int index) {
         return new SlotAccess() {
             @Override
             public ItemStack get() {
-                return p_460144_.get(p_453047_);
+                return stacks.get(index);
             }
 
             @Override
-            public boolean set(ItemStack p_147334_) {
-                p_460144_.set(p_453047_, p_147334_);
+            public boolean set(final ItemStack itemStack) {
+                stacks.set(index, itemStack);
                 return true;
             }
         };

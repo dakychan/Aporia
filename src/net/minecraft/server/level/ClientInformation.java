@@ -18,30 +18,30 @@ public record ClientInformation(
 ) {
     public static final int MAX_LANGUAGE_LENGTH = 16;
 
-    public ClientInformation(FriendlyByteBuf p_300049_) {
+    public ClientInformation(final FriendlyByteBuf input) {
         this(
-            p_300049_.readUtf(16),
-            p_300049_.readByte(),
-            p_300049_.readEnum(ChatVisiblity.class),
-            p_300049_.readBoolean(),
-            p_300049_.readUnsignedByte(),
-            p_300049_.readEnum(HumanoidArm.class),
-            p_300049_.readBoolean(),
-            p_300049_.readBoolean(),
-            p_300049_.readEnum(ParticleStatus.class)
+            input.readUtf(16),
+            input.readByte(),
+            input.readEnum(ChatVisiblity.class),
+            input.readBoolean(),
+            input.readUnsignedByte(),
+            input.readEnum(HumanoidArm.class),
+            input.readBoolean(),
+            input.readBoolean(),
+            input.readEnum(ParticleStatus.class)
         );
     }
 
-    public void write(FriendlyByteBuf p_297289_) {
-        p_297289_.writeUtf(this.language);
-        p_297289_.writeByte(this.viewDistance);
-        p_297289_.writeEnum(this.chatVisibility);
-        p_297289_.writeBoolean(this.chatColors);
-        p_297289_.writeByte(this.modelCustomisation);
-        p_297289_.writeEnum(this.mainHand);
-        p_297289_.writeBoolean(this.textFilteringEnabled);
-        p_297289_.writeBoolean(this.allowsListing);
-        p_297289_.writeEnum(this.particleStatus);
+    public void write(final FriendlyByteBuf output) {
+        output.writeUtf(this.language);
+        output.writeByte(this.viewDistance);
+        output.writeEnum(this.chatVisibility);
+        output.writeBoolean(this.chatColors);
+        output.writeByte(this.modelCustomisation);
+        output.writeEnum(this.mainHand);
+        output.writeBoolean(this.textFilteringEnabled);
+        output.writeBoolean(this.allowsListing);
+        output.writeEnum(this.particleStatus);
     }
 
     public static ClientInformation createDefault() {

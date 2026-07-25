@@ -6,40 +6,41 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class DebugEntryBiome implements DebugScreenEntry {
     private static final Identifier GROUP = Identifier.withDefaultNamespace("biome");
 
     @Override
-    public void display(DebugScreenDisplayer p_423807_, @Nullable Level p_427289_, @Nullable LevelChunk p_425713_, @Nullable LevelChunk p_426046_) {
+    public void display(
+        final DebugScreenDisplayer displayer,
+        final @Nullable Level serverOrClientLevel,
+        final @Nullable LevelChunk clientChunk,
+        final @Nullable LevelChunk serverChunk
+    ) {
         Minecraft minecraft = Minecraft.getInstance();
         Entity entity = minecraft.getCameraEntity();
         if (entity != null && minecraft.level != null) {
-            BlockPos blockpos = entity.blockPosition();
-            if (minecraft.level.isInsideBuildHeight(blockpos.getY())) {
-                if (SharedConstants.DEBUG_SHOW_SERVER_DEBUG_VALUES && p_427289_ instanceof ServerLevel) {
-                    p_423807_.addToGroup(
+            BlockPos feetPos = entity.blockPosition();
+            if (minecraft.level.isInsideBuildHeight(feetPos.getY())) {
+                if (SharedConstants.DEBUG_SHOW_SERVER_DEBUG_VALUES && serverOrClientLevel instanceof ServerLevel) {
+                    displayer.addToGroup(
                         GROUP,
-                        List.of("Biome: " + printBiome(minecraft.level.getBiome(blockpos)), "Server Biome: " + printBiome(p_427289_.getBiome(blockpos)))
+                        List.of("Biome: " + printBiome(minecraft.level.getBiome(feetPos)), "Server Biome: " + printBiome(serverOrClientLevel.getBiome(feetPos)))
                     );
                 } else {
-                    p_423807_.addLine("Biome: " + printBiome(minecraft.level.getBiome(blockpos)));
+                    displayer.addLine("Biome: " + printBiome(minecraft.level.getBiome(feetPos)));
                 }
             }
         }
     }
 
-    private static String printBiome(Holder<Biome> p_422520_) {
-        return p_422520_.unwrap().map(p_447977_ -> p_447977_.identifier().toString(), p_424191_ -> "[unregistered " + p_424191_ + "]");
+    private static String printBiome(final Holder<Biome> biome) {
+        return biome.unwrap().map(key -> key.identifier().toString(), l -> "[unregistered " + l + "]");
     }
 }

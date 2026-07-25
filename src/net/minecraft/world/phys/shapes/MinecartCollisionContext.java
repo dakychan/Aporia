@@ -12,24 +12,24 @@ public class MinecartCollisionContext extends EntityCollisionContext {
     private @Nullable BlockPos ingoreBelow;
     private @Nullable BlockPos slopeIgnore;
 
-    protected MinecartCollisionContext(AbstractMinecart p_456109_, boolean p_363030_) {
-        super(p_456109_, p_363030_, false);
-        this.setupContext(p_456109_);
+    protected MinecartCollisionContext(final AbstractMinecart entity, final boolean alwaysStandOnFluid) {
+        super(entity, alwaysStandOnFluid, false);
+        this.setupContext(entity);
     }
 
-    private void setupContext(AbstractMinecart p_454602_) {
-        BlockPos blockpos = p_454602_.getCurrentBlockPosOrRailBelow();
-        BlockState blockstate = p_454602_.level().getBlockState(blockpos);
-        boolean flag = BaseRailBlock.isRail(blockstate);
-        if (flag) {
-            this.ingoreBelow = blockpos.below();
-            RailShape railshape = blockstate.getValue(((BaseRailBlock)blockstate.getBlock()).getShapeProperty());
-            if (railshape.isSlope()) {
-                this.slopeIgnore = switch (railshape) {
-                    case ASCENDING_EAST -> blockpos.east();
-                    case ASCENDING_WEST -> blockpos.west();
-                    case ASCENDING_NORTH -> blockpos.north();
-                    case ASCENDING_SOUTH -> blockpos.south();
+    private void setupContext(final AbstractMinecart entity) {
+        BlockPos currentRailPos = entity.getCurrentBlockPosOrRailBelow();
+        BlockState currentState = entity.level().getBlockState(currentRailPos);
+        boolean onRails = BaseRailBlock.isRail(currentState);
+        if (onRails) {
+            this.ingoreBelow = currentRailPos.below();
+            RailShape shape = currentState.getValue(((BaseRailBlock)currentState.getBlock()).getShapeProperty());
+            if (shape.isSlope()) {
+                this.slopeIgnore = switch (shape) {
+                    case ASCENDING_EAST -> currentRailPos.east();
+                    case ASCENDING_WEST -> currentRailPos.west();
+                    case ASCENDING_NORTH -> currentRailPos.north();
+                    case ASCENDING_SOUTH -> currentRailPos.south();
                     default -> null;
                 };
             }
@@ -37,7 +37,7 @@ public class MinecartCollisionContext extends EntityCollisionContext {
     }
 
     @Override
-    public VoxelShape getCollisionShape(BlockState p_361633_, CollisionGetter p_368990_, BlockPos p_365642_) {
-        return !p_365642_.equals(this.ingoreBelow) && !p_365642_.equals(this.slopeIgnore) ? super.getCollisionShape(p_361633_, p_368990_, p_365642_) : Shapes.empty();
+    public VoxelShape getCollisionShape(final BlockState state, final CollisionGetter collisionGetter, final BlockPos pos) {
+        return !pos.equals(this.ingoreBelow) && !pos.equals(this.slopeIgnore) ? super.getCollisionShape(state, collisionGetter, pos) : Shapes.empty();
     }
 }

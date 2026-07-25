@@ -11,10 +11,7 @@ import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.world.item.equipment.EquipmentAsset;
 import net.minecraft.world.item.equipment.EquipmentAssets;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class EquipmentAssetManager extends SimpleJsonResourceReloadListener<EquipmentClientInfo> {
     public static final EquipmentClientInfo MISSING = new EquipmentClientInfo(Map.of());
     private static final FileToIdConverter ASSET_LISTER = FileToIdConverter.json("equipment");
@@ -24,13 +21,13 @@ public class EquipmentAssetManager extends SimpleJsonResourceReloadListener<Equi
         super(EquipmentClientInfo.CODEC, ASSET_LISTER);
     }
 
-    protected void apply(Map<Identifier, EquipmentClientInfo> p_376723_, ResourceManager p_378073_, ProfilerFiller p_377463_) {
-        this.equipmentAssets = p_376723_.entrySet()
+    protected void apply(final Map<Identifier, EquipmentClientInfo> preparations, final ResourceManager manager, final ProfilerFiller profiler) {
+        this.equipmentAssets = preparations.entrySet()
             .stream()
-            .collect(Collectors.toUnmodifiableMap(p_448441_ -> ResourceKey.create(EquipmentAssets.ROOT_ID, p_448441_.getKey()), Entry::getValue));
+            .collect(Collectors.toUnmodifiableMap(e -> ResourceKey.create(EquipmentAssets.ROOT_ID, e.getKey()), Entry::getValue));
     }
 
-    public EquipmentClientInfo get(ResourceKey<EquipmentAsset> p_376890_) {
-        return this.equipmentAssets.getOrDefault(p_376890_, MISSING);
+    public EquipmentClientInfo get(final ResourceKey<EquipmentAsset> id) {
+        return this.equipmentAssets.getOrDefault(id, MISSING);
     }
 }

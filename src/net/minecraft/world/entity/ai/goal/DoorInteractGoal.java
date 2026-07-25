@@ -16,9 +16,9 @@ public abstract class DoorInteractGoal extends Goal {
     private float doorOpenDirX;
     private float doorOpenDirZ;
 
-    public DoorInteractGoal(Mob p_25193_) {
-        this.mob = p_25193_;
-        if (!GoalUtils.hasGroundPathNavigation(p_25193_)) {
+    public DoorInteractGoal(final Mob mob) {
+        this.mob = mob;
+        if (!GoalUtils.hasGroundPathNavigation(mob)) {
             throw new IllegalArgumentException("Unsupported mob type for DoorInteractGoal");
         }
     }
@@ -27,21 +27,21 @@ public abstract class DoorInteractGoal extends Goal {
         if (!this.hasDoor) {
             return false;
         } else {
-            BlockState blockstate = this.mob.level().getBlockState(this.doorPos);
-            if (!(blockstate.getBlock() instanceof DoorBlock)) {
+            BlockState blockState = this.mob.level().getBlockState(this.doorPos);
+            if (!(blockState.getBlock() instanceof DoorBlock)) {
                 this.hasDoor = false;
                 return false;
             } else {
-                return blockstate.getValue(DoorBlock.OPEN);
+                return blockState.getValue(DoorBlock.OPEN);
             }
         }
     }
 
-    protected void setOpen(boolean p_25196_) {
+    protected void setOpen(final boolean open) {
         if (this.hasDoor) {
-            BlockState blockstate = this.mob.level().getBlockState(this.doorPos);
-            if (blockstate.getBlock() instanceof DoorBlock) {
-                ((DoorBlock)blockstate.getBlock()).setOpen(this.mob, this.mob.level(), blockstate, this.doorPos, p_25196_);
+            BlockState blockState = this.mob.level().getBlockState(this.doorPos);
+            if (blockState.getBlock() instanceof DoorBlock) {
+                ((DoorBlock)blockState.getBlock()).setOpen(this.mob, this.mob.level(), blockState, this.doorPos, open);
             }
         }
     }
@@ -50,28 +50,30 @@ public abstract class DoorInteractGoal extends Goal {
     public boolean canUse() {
         if (!GoalUtils.hasGroundPathNavigation(this.mob)) {
             return false;
-        } else if (!this.mob.horizontalCollision) {
+        }
+
+        if (!this.mob.horizontalCollision) {
             return false;
-        } else {
-            Path path = this.mob.getNavigation().getPath();
-            if (path != null && !path.isDone()) {
-                for (int i = 0; i < Math.min(path.getNextNodeIndex() + 2, path.getNodeCount()); i++) {
-                    Node node = path.getNode(i);
-                    this.doorPos = new BlockPos(node.x, node.y + 1, node.z);
-                    if (!(this.mob.distanceToSqr(this.doorPos.getX(), this.mob.getY(), this.doorPos.getZ()) > 2.25)) {
-                        this.hasDoor = DoorBlock.isWoodenDoor(this.mob.level(), this.doorPos);
-                        if (this.hasDoor) {
-                            return true;
-                        }
+        }
+
+        Path path = this.mob.getNavigation().getPath();
+        if (path != null && !path.isDone()) {
+            for (int i = 0; i < Math.min(path.getNextNodeIndex() + 2, path.getNodeCount()); i++) {
+                Node node = path.getNode(i);
+                this.doorPos = new BlockPos(node.x, node.y + 1, node.z);
+                if (!(this.mob.distanceToSqr(this.doorPos.getX(), this.mob.getY(), this.doorPos.getZ()) > 2.25)) {
+                    this.hasDoor = DoorBlock.isWoodenDoor(this.mob.level(), this.doorPos);
+                    if (this.hasDoor) {
+                        return true;
                     }
                 }
-
-                this.doorPos = this.mob.blockPosition().above();
-                this.hasDoor = DoorBlock.isWoodenDoor(this.mob.level(), this.doorPos);
-                return this.hasDoor;
-            } else {
-                return false;
             }
+
+            this.doorPos = this.mob.blockPosition().above();
+            this.hasDoor = DoorBlock.isWoodenDoor(this.mob.level(), this.doorPos);
+            return this.hasDoor;
+        } else {
+            return false;
         }
     }
 
@@ -94,10 +96,10 @@ public abstract class DoorInteractGoal extends Goal {
 
     @Override
     public void tick() {
-        float f = (float)(this.doorPos.getX() + 0.5 - this.mob.getX());
-        float f1 = (float)(this.doorPos.getZ() + 0.5 - this.mob.getZ());
-        float f2 = this.doorOpenDirX * f + this.doorOpenDirZ * f1;
-        if (f2 < 0.0F) {
+        float newDoorDirX = (float)(this.doorPos.getX() + 0.5 - this.mob.getX());
+        float newDoorDirZ = (float)(this.doorPos.getZ() + 0.5 - this.mob.getZ());
+        float dot = this.doorOpenDirX * newDoorDirX + this.doorOpenDirZ * newDoorDirZ;
+        if (dot < 0.0F) {
             this.passed = true;
         }
     }

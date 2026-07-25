@@ -5,31 +5,28 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import java.util.Comparator;
 import java.util.Iterator;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class IntersectionIterator<T> extends AbstractIterator<T> {
     private final PeekingIterator<T> firstIterator;
     private final PeekingIterator<T> secondIterator;
     private final Comparator<T> comparator;
 
-    public IntersectionIterator(Iterator<T> p_235178_, Iterator<T> p_235179_, Comparator<T> p_235180_) {
-        this.firstIterator = Iterators.peekingIterator(p_235178_);
-        this.secondIterator = Iterators.peekingIterator(p_235179_);
-        this.comparator = p_235180_;
+    public IntersectionIterator(final Iterator<T> firstIterator, final Iterator<T> secondIterator, final Comparator<T> comparator) {
+        this.firstIterator = Iterators.peekingIterator(firstIterator);
+        this.secondIterator = Iterators.peekingIterator(secondIterator);
+        this.comparator = comparator;
     }
 
     @Override
     protected T computeNext() {
         while (this.firstIterator.hasNext() && this.secondIterator.hasNext()) {
-            int i = this.comparator.compare(this.firstIterator.peek(), this.secondIterator.peek());
-            if (i == 0) {
+            int compare = this.comparator.compare(this.firstIterator.peek(), this.secondIterator.peek());
+            if (compare == 0) {
                 this.secondIterator.next();
                 return this.firstIterator.next();
             }
 
-            if (i < 0) {
+            if (compare < 0) {
                 this.firstIterator.next();
             } else {
                 this.secondIterator.next();

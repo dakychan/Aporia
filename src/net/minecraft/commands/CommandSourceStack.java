@@ -41,7 +41,6 @@ import net.minecraft.util.Mth;
 import net.minecraft.util.TaskChainer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.flag.FeatureFlagSet;
-import net.minecraft.world.item.crafting.RecipeHolder;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.dimension.DimensionType;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -49,7 +48,7 @@ import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.jspecify.annotations.Nullable;
 
-public class CommandSourceStack implements ExecutionCommandSource<CommandSourceStack>, SharedSuggestionProvider {
+public class CommandSourceStack implements SharedSuggestionProvider, ExecutionCommandSource<CommandSourceStack> {
     public static final SimpleCommandExceptionType ERROR_NOT_PLAYER = new SimpleCommandExceptionType(Component.translatable("permissions.requires.player"));
     public static final SimpleCommandExceptionType ERROR_NOT_ENTITY = new SimpleCommandExceptionType(Component.translatable("permissions.requires.entity"));
     private final CommandSource source;
@@ -68,71 +67,71 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
     private final TaskChainer chatMessageChainer;
 
     public CommandSourceStack(
-        CommandSource p_282943_,
-        Vec3 p_282023_,
-        Vec2 p_282896_,
-        ServerLevel p_282659_,
-        PermissionSet p_450311_,
-        String p_282379_,
-        Component p_282469_,
-        MinecraftServer p_281590_,
-        @Nullable Entity p_281515_
+        final CommandSource source,
+        final Vec3 position,
+        final Vec2 rotation,
+        final ServerLevel level,
+        final PermissionSet permissions,
+        final String textName,
+        final Component displayName,
+        final MinecraftServer server,
+        final @Nullable Entity entity
     ) {
         this(
-            p_282943_,
-            p_282023_,
-            p_282896_,
-            p_282659_,
-            p_450311_,
-            p_282379_,
-            p_282469_,
-            p_281590_,
-            p_281515_,
+            source,
+            position,
+            rotation,
+            level,
+            permissions,
+            textName,
+            displayName,
+            server,
+            entity,
             false,
             CommandResultCallback.EMPTY,
             EntityAnchorArgument.Anchor.FEET,
             CommandSigningContext.ANONYMOUS,
-            TaskChainer.immediate(p_281590_)
+            TaskChainer.immediate(server)
         );
     }
 
     private CommandSourceStack(
-        CommandSource p_81302_,
-        Vec3 p_81303_,
-        Vec2 p_81304_,
-        ServerLevel p_81305_,
-        PermissionSet p_459601_,
-        String p_81307_,
-        Component p_81308_,
-        MinecraftServer p_81309_,
-        @Nullable Entity p_81310_,
-        boolean p_451336_,
-        CommandResultCallback p_455643_,
-        EntityAnchorArgument.Anchor p_455259_,
-        CommandSigningContext p_459795_,
-        TaskChainer p_455967_
+        final CommandSource source,
+        final Vec3 position,
+        final Vec2 rotation,
+        final ServerLevel level,
+        final PermissionSet permissions,
+        final String textName,
+        final Component displayName,
+        final MinecraftServer server,
+        final @Nullable Entity entity,
+        final boolean silent,
+        final CommandResultCallback resultCallback,
+        final EntityAnchorArgument.Anchor anchor,
+        final CommandSigningContext signingContext,
+        final TaskChainer chatMessageChainer
     ) {
-        this.source = p_81302_;
-        this.worldPosition = p_81303_;
-        this.level = p_81305_;
-        this.silent = p_451336_;
-        this.entity = p_81310_;
-        this.permissions = p_459601_;
-        this.textName = p_81307_;
-        this.displayName = p_81308_;
-        this.server = p_81309_;
-        this.resultCallback = p_455643_;
-        this.anchor = p_455259_;
-        this.rotation = p_81304_;
-        this.signingContext = p_459795_;
-        this.chatMessageChainer = p_455967_;
+        this.source = source;
+        this.worldPosition = position;
+        this.level = level;
+        this.silent = silent;
+        this.entity = entity;
+        this.permissions = permissions;
+        this.textName = textName;
+        this.displayName = displayName;
+        this.server = server;
+        this.resultCallback = resultCallback;
+        this.anchor = anchor;
+        this.rotation = rotation;
+        this.signingContext = signingContext;
+        this.chatMessageChainer = chatMessageChainer;
     }
 
-    public CommandSourceStack withSource(CommandSource p_165485_) {
-        return this.source == p_165485_
+    public CommandSourceStack withSource(final CommandSource source) {
+        return this.source == source
             ? this
             : new CommandSourceStack(
-                p_165485_,
+                source,
                 this.worldPosition,
                 this.rotation,
                 this.level,
@@ -149,8 +148,8 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
             );
     }
 
-    public CommandSourceStack withEntity(Entity p_81330_) {
-        return this.entity == p_81330_
+    public CommandSourceStack withEntity(final Entity entity) {
+        return this.entity == entity
             ? this
             : new CommandSourceStack(
                 this.source,
@@ -158,10 +157,10 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
                 this.rotation,
                 this.level,
                 this.permissions,
-                p_81330_.getPlainTextName(),
-                p_81330_.getDisplayName(),
+                entity.getPlainTextName(),
+                entity.getDisplayName(),
                 this.server,
-                p_81330_,
+                entity,
                 this.silent,
                 this.resultCallback,
                 this.anchor,
@@ -170,34 +169,13 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
             );
     }
 
-    public CommandSourceStack withPosition(Vec3 p_81349_) {
-        return this.worldPosition.equals(p_81349_)
+    public CommandSourceStack withPosition(final Vec3 pos) {
+        return this.worldPosition.equals(pos)
             ? this
             : new CommandSourceStack(
                 this.source,
-                p_81349_,
+                pos,
                 this.rotation,
-                this.level,
-                this.permissions,
-                this.textName,
-                this.displayName,
-                this.server,
-                this.entity,
-                this.silent,
-                this.resultCallback,
-                this.anchor,
-                this.signingContext,
-                this.chatMessageChainer
-            );
-    }
-
-    public CommandSourceStack withRotation(Vec2 p_81347_) {
-        return this.rotation.equals(p_81347_)
-            ? this
-            : new CommandSourceStack(
-                this.source,
-                this.worldPosition,
-                p_81347_,
                 this.level,
                 this.permissions,
                 this.textName,
@@ -212,8 +190,29 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
             );
     }
 
-    public CommandSourceStack withCallback(CommandResultCallback p_310737_) {
-        return Objects.equals(this.resultCallback, p_310737_)
+    public CommandSourceStack withRotation(final Vec2 rotation) {
+        return this.rotation.equals(rotation)
+            ? this
+            : new CommandSourceStack(
+                this.source,
+                this.worldPosition,
+                rotation,
+                this.level,
+                this.permissions,
+                this.textName,
+                this.displayName,
+                this.server,
+                this.entity,
+                this.silent,
+                this.resultCallback,
+                this.anchor,
+                this.signingContext,
+                this.chatMessageChainer
+            );
+    }
+
+    public CommandSourceStack withCallback(final CommandResultCallback resultCallback) {
+        return Objects.equals(this.resultCallback, resultCallback)
             ? this
             : new CommandSourceStack(
                 this.source,
@@ -226,16 +225,16 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
                 this.server,
                 this.entity,
                 this.silent,
-                p_310737_,
+                resultCallback,
                 this.anchor,
                 this.signingContext,
                 this.chatMessageChainer
             );
     }
 
-    public CommandSourceStack withCallback(CommandResultCallback p_311586_, BinaryOperator<CommandResultCallback> p_81338_) {
-        CommandResultCallback commandresultcallback = p_81338_.apply(this.resultCallback, p_311586_);
-        return this.withCallback(commandresultcallback);
+    public CommandSourceStack withCallback(final CommandResultCallback newCallback, final BinaryOperator<CommandResultCallback> combiner) {
+        CommandResultCallback newCompositeCallback = combiner.apply(this.resultCallback, newCallback);
+        return this.withCallback(newCompositeCallback);
     }
 
     public CommandSourceStack withSuppressedOutput() {
@@ -259,15 +258,15 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
             : this;
     }
 
-    public CommandSourceStack withPermission(PermissionSet p_454972_) {
-        return p_454972_ == this.permissions
+    public CommandSourceStack withPermission(final PermissionSet permissions) {
+        return permissions == this.permissions
             ? this
             : new CommandSourceStack(
                 this.source,
                 this.worldPosition,
                 this.rotation,
                 this.level,
-                p_454972_,
+                permissions,
                 this.textName,
                 this.displayName,
                 this.server,
@@ -280,12 +279,12 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
             );
     }
 
-    public CommandSourceStack withMaximumPermission(PermissionSet p_451751_) {
-        return this.withPermission(this.permissions.union(p_451751_));
+    public CommandSourceStack withMaximumPermission(final PermissionSet newPermissions) {
+        return this.withPermission(this.permissions.union(newPermissions));
     }
 
-    public CommandSourceStack withAnchor(EntityAnchorArgument.Anchor p_81351_) {
-        return p_81351_ == this.anchor
+    public CommandSourceStack withAnchor(final EntityAnchorArgument.Anchor anchor) {
+        return anchor == this.anchor
             ? this
             : new CommandSourceStack(
                 this.source,
@@ -299,54 +298,54 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
                 this.entity,
                 this.silent,
                 this.resultCallback,
-                p_81351_,
+                anchor,
                 this.signingContext,
                 this.chatMessageChainer
             );
     }
 
-    public CommandSourceStack withLevel(ServerLevel p_81328_) {
-        if (p_81328_ == this.level) {
+    public CommandSourceStack withLevel(final ServerLevel level) {
+        if (level == this.level) {
             return this;
-        } else {
-            double d0 = DimensionType.getTeleportationScale(this.level.dimensionType(), p_81328_.dimensionType());
-            Vec3 vec3 = new Vec3(this.worldPosition.x * d0, this.worldPosition.y, this.worldPosition.z * d0);
-            return new CommandSourceStack(
-                this.source,
-                vec3,
-                this.rotation,
-                p_81328_,
-                this.permissions,
-                this.textName,
-                this.displayName,
-                this.server,
-                this.entity,
-                this.silent,
-                this.resultCallback,
-                this.anchor,
-                this.signingContext,
-                this.chatMessageChainer
-            );
         }
+
+        double scale = DimensionType.getTeleportationScale(this.level.dimensionType(), level.dimensionType());
+        Vec3 pos = new Vec3(this.worldPosition.x * scale, this.worldPosition.y, this.worldPosition.z * scale);
+        return new CommandSourceStack(
+            this.source,
+            pos,
+            this.rotation,
+            level,
+            this.permissions,
+            this.textName,
+            this.displayName,
+            this.server,
+            this.entity,
+            this.silent,
+            this.resultCallback,
+            this.anchor,
+            this.signingContext,
+            this.chatMessageChainer
+        );
     }
 
-    public CommandSourceStack facing(Entity p_81332_, EntityAnchorArgument.Anchor p_81333_) {
-        return this.facing(p_81333_.apply(p_81332_));
+    public CommandSourceStack facing(final Entity entity, final EntityAnchorArgument.Anchor anchor) {
+        return this.facing(anchor.apply(entity));
     }
 
-    public CommandSourceStack facing(Vec3 p_81365_) {
-        Vec3 vec3 = this.anchor.apply(this);
-        double d0 = p_81365_.x - vec3.x;
-        double d1 = p_81365_.y - vec3.y;
-        double d2 = p_81365_.z - vec3.z;
-        double d3 = Math.sqrt(d0 * d0 + d2 * d2);
-        float f = Mth.wrapDegrees((float)(-(Mth.atan2(d1, d3) * 180.0F / (float)Math.PI)));
-        float f1 = Mth.wrapDegrees((float)(Mth.atan2(d2, d0) * 180.0F / (float)Math.PI) - 90.0F);
-        return this.withRotation(new Vec2(f, f1));
+    public CommandSourceStack facing(final Vec3 pos) {
+        Vec3 from = this.anchor.apply(this);
+        double xd = pos.x - from.x;
+        double yd = pos.y - from.y;
+        double zd = pos.z - from.z;
+        double sd = Math.sqrt(xd * xd + zd * zd);
+        float xRot = Mth.wrapDegrees((float)(-(Mth.atan2(yd, sd) * 180.0F / (float)Math.PI)));
+        float yRot = Mth.wrapDegrees((float)(Mth.atan2(zd, xd) * 180.0F / (float)Math.PI) - 90.0F);
+        return this.withRotation(new Vec2(xRot, yRot));
     }
 
-    public CommandSourceStack withSigningContext(CommandSigningContext p_230894_, TaskChainer p_301144_) {
-        return p_230894_ == this.signingContext && p_301144_ == this.chatMessageChainer
+    public CommandSourceStack withSigningContext(final CommandSigningContext signingContext, final TaskChainer chatMessageChainer) {
+        return signingContext == this.signingContext && chatMessageChainer == this.chatMessageChainer
             ? this
             : new CommandSourceStack(
                 this.source,
@@ -361,8 +360,8 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
                 this.silent,
                 this.resultCallback,
                 this.anchor,
-                p_230894_,
-                p_301144_
+                signingContext,
+                chatMessageChainer
             );
     }
 
@@ -400,15 +399,15 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
     }
 
     public ServerPlayer getPlayerOrException() throws CommandSyntaxException {
-        if (this.entity instanceof ServerPlayer serverplayer) {
-            return serverplayer;
+        if (this.entity instanceof ServerPlayer player) {
+            return player;
         } else {
             throw ERROR_NOT_PLAYER.create();
         }
     }
 
     public @Nullable ServerPlayer getPlayer() {
-        return this.entity instanceof ServerPlayer serverplayer ? serverplayer : null;
+        return this.entity instanceof ServerPlayer player ? player : null;
     }
 
     public boolean isPlayer() {
@@ -435,67 +434,67 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
         return this.chatMessageChainer;
     }
 
-    public boolean shouldFilterMessageTo(ServerPlayer p_243268_) {
-        ServerPlayer serverplayer = this.getPlayer();
-        return p_243268_ == serverplayer ? false : serverplayer != null && serverplayer.isTextFilteringEnabled() || p_243268_.isTextFilteringEnabled();
+    public boolean shouldFilterMessageTo(final ServerPlayer receiver) {
+        ServerPlayer player = this.getPlayer();
+        return receiver == player ? false : player != null && player.isTextFilteringEnabled() || receiver.isTextFilteringEnabled();
     }
 
-    public void sendChatMessage(OutgoingChatMessage p_251464_, boolean p_252146_, ChatType.Bound p_250406_) {
+    public void sendChatMessage(final OutgoingChatMessage message, final boolean filtered, final ChatType.Bound chatType) {
         if (!this.silent) {
-            ServerPlayer serverplayer = this.getPlayer();
-            if (serverplayer != null) {
-                serverplayer.sendChatMessage(p_251464_, p_252146_, p_250406_);
+            ServerPlayer player = this.getPlayer();
+            if (player != null) {
+                player.sendChatMessage(message, filtered, chatType);
             } else {
-                this.source.sendSystemMessage(p_250406_.decorate(p_251464_.content()));
+                this.source.sendSystemMessage(chatType.decorate(message.content()));
             }
         }
     }
 
-    public void sendSystemMessage(Component p_243331_) {
+    public void sendSystemMessage(final Component message) {
         if (!this.silent) {
-            ServerPlayer serverplayer = this.getPlayer();
-            if (serverplayer != null) {
-                serverplayer.sendSystemMessage(p_243331_);
+            ServerPlayer player = this.getPlayer();
+            if (player != null) {
+                player.sendSystemMessage(message);
             } else {
-                this.source.sendSystemMessage(p_243331_);
+                this.source.sendSystemMessage(message);
             }
         }
     }
 
-    public void sendSuccess(Supplier<Component> p_288979_, boolean p_289007_) {
-        boolean flag = this.source.acceptsSuccess() && !this.silent;
-        boolean flag1 = p_289007_ && this.source.shouldInformAdmins() && !this.silent;
-        if (flag || flag1) {
-            Component component = p_288979_.get();
-            if (flag) {
-                this.source.sendSystemMessage(component);
+    public void sendSuccess(final Supplier<Component> messageSupplier, final boolean broadcast) {
+        boolean shouldSendSystemMessage = this.source.acceptsSuccess() && !this.silent;
+        boolean shouldBroadcast = broadcast && this.source.shouldInformAdmins() && !this.silent;
+        if (shouldSendSystemMessage || shouldBroadcast) {
+            Component message = messageSupplier.get();
+            if (shouldSendSystemMessage) {
+                this.source.sendSystemMessage(message);
             }
 
-            if (flag1) {
-                this.broadcastToAdmins(component);
+            if (shouldBroadcast) {
+                this.broadcastToAdmins(message);
             }
         }
     }
 
-    private void broadcastToAdmins(Component p_81367_) {
-        Component component = Component.translatable("chat.type.admin", this.getDisplayName(), p_81367_).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC);
-        GameRules gamerules = this.level.getGameRules();
-        if (gamerules.get(GameRules.SEND_COMMAND_FEEDBACK)) {
-            for (ServerPlayer serverplayer : this.server.getPlayerList().getPlayers()) {
-                if (serverplayer.commandSource() != this.source && this.server.getPlayerList().isOp(serverplayer.nameAndId())) {
-                    serverplayer.sendSystemMessage(component);
+    private void broadcastToAdmins(final Component message) {
+        Component broadcast = Component.translatable("chat.type.admin", this.getDisplayName(), message).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC);
+        GameRules gameRules = this.level.getGameRules();
+        if (gameRules.get(GameRules.SEND_COMMAND_FEEDBACK)) {
+            for (ServerPlayer player : this.server.getPlayerList().getPlayers()) {
+                if (player.commandSource() != this.source && this.server.getPlayerList().isOp(player.nameAndId())) {
+                    player.sendSystemMessage(broadcast);
                 }
             }
         }
 
-        if (this.source != this.server && gamerules.get(GameRules.LOG_ADMIN_COMMANDS)) {
-            this.server.sendSystemMessage(component);
+        if (this.source != this.server && gameRules.get(GameRules.LOG_ADMIN_COMMANDS)) {
+            this.server.sendSystemMessage(broadcast);
         }
     }
 
-    public void sendFailure(Component p_81353_) {
+    public void sendFailure(final Component message) {
         if (this.source.acceptsFailure() && !this.silent) {
-            this.source.sendSystemMessage(Component.empty().append(p_81353_).withStyle(ChatFormatting.RED));
+            this.source.sendSystemMessage(Component.empty().append(message).withStyle(ChatFormatting.RED));
         }
     }
 
@@ -520,35 +519,33 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
     }
 
     @Override
-    public CompletableFuture<Suggestions> customSuggestion(CommandContext<?> p_212324_) {
+    public CompletableFuture<Suggestions> customSuggestion(final CommandContext<?> context) {
         return Suggestions.empty();
     }
 
     @Override
     public CompletableFuture<Suggestions> suggestRegistryElements(
-        ResourceKey<? extends Registry<?>> p_212330_,
-        SharedSuggestionProvider.ElementSuggestionType p_212331_,
-        SuggestionsBuilder p_212332_,
-        CommandContext<?> p_212333_
+        final ResourceKey<? extends Registry<?>> key,
+        final SharedSuggestionProvider.ElementSuggestionType elements,
+        final SuggestionsBuilder builder,
+        final CommandContext<?> context
     ) {
-        if (p_212330_ == Registries.RECIPE) {
-            return SharedSuggestionProvider.suggestResource(
-                this.server.getRecipeManager().getRecipes().stream().map(p_448473_ -> p_448473_.id().identifier()), p_212332_
-            );
-        } else if (p_212330_ == Registries.ADVANCEMENT) {
-            Collection<AdvancementHolder> collection = this.server.getAdvancements().getAllAdvancements();
-            return SharedSuggestionProvider.suggestResource(collection.stream().map(AdvancementHolder::id), p_212332_);
+        if (key == Registries.RECIPE) {
+            return SharedSuggestionProvider.suggestResource(this.server.getRecipeManager().getRecipes().stream().map(e -> e.id().identifier()), builder);
+        } else if (key == Registries.ADVANCEMENT) {
+            Collection<AdvancementHolder> advancements = this.server.getAdvancements().getAllAdvancements();
+            return SharedSuggestionProvider.suggestResource(advancements.stream().map(AdvancementHolder::id), builder);
         } else {
-            return this.getLookup(p_212330_).map(p_405038_ -> {
-                this.suggestRegistryElements((HolderLookup<?>)p_405038_, p_212331_, p_212332_);
-                return p_212332_.buildFuture();
+            return this.getLookup(key).map(registry -> {
+                this.suggestRegistryElements((HolderLookup<?>)registry, elements, builder);
+                return builder.buildFuture();
             }).orElseGet(Suggestions::empty);
         }
     }
 
-    private Optional<? extends HolderLookup<?>> getLookup(ResourceKey<? extends Registry<?>> p_406249_) {
-        Optional<? extends Registry<?>> optional = this.registryAccess().lookup(p_406249_);
-        return optional.isPresent() ? optional : this.server.reloadableRegistries().lookup().lookup(p_406249_);
+    private Optional<? extends HolderLookup<?>> getLookup(final ResourceKey<? extends Registry<?>> key) {
+        Optional<? extends Registry<?>> lookup = this.registryAccess().lookup(key);
+        return lookup.isPresent() ? lookup : this.server.reloadableRegistries().lookup().lookup(key);
     }
 
     @Override
@@ -572,13 +569,13 @@ public class CommandSourceStack implements ExecutionCommandSource<CommandSourceS
     }
 
     @Override
-    public void handleError(CommandExceptionType p_311431_, Message p_311914_, boolean p_312997_, @Nullable TraceCallbacks p_310681_) {
-        if (p_310681_ != null) {
-            p_310681_.onError(p_311914_.getString());
+    public void handleError(final CommandExceptionType type, final Message message, final boolean forked, final @Nullable TraceCallbacks tracer) {
+        if (tracer != null) {
+            tracer.onError(message.getString());
         }
 
-        if (!p_312997_) {
-            this.sendFailure(ComponentUtils.fromMessage(p_311914_));
+        if (!forked) {
+            this.sendFailure(ComponentUtils.fromMessage(message));
         }
     }
 

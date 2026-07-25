@@ -4,7 +4,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.OpticFinder;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.datafixers.types.templates.List.ListType;
@@ -12,43 +11,40 @@ import com.mojang.serialization.Dynamic;
 import net.minecraft.util.datafix.ExtraDataFixUtils;
 
 public class BeehiveFieldRenameFix extends DataFix {
-    public BeehiveFieldRenameFix(Schema p_336393_) {
-        super(p_336393_, true);
+    public BeehiveFieldRenameFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
-    private Dynamic<?> fixBeehive(Dynamic<?> p_334771_) {
-        return p_334771_.remove("Bees");
+    private Dynamic<?> fixBeehive(final Dynamic<?> beehive) {
+        return beehive.remove("Bees");
     }
 
-    private Dynamic<?> fixBee(Dynamic<?> p_335732_) {
-        p_335732_ = p_335732_.remove("EntityData");
-        p_335732_ = p_335732_.renameField("TicksInHive", "ticks_in_hive");
-        return p_335732_.renameField("MinOccupationTicks", "min_ticks_in_hive");
+    private Dynamic<?> fixBee(Dynamic<?> bee) {
+        bee = bee.remove("EntityData");
+        bee = bee.renameField("TicksInHive", "ticks_in_hive");
+        return bee.renameField("MinOccupationTicks", "min_ticks_in_hive");
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:beehive");
-        OpticFinder<?> opticfinder = DSL.namedChoice("minecraft:beehive", type);
-        ListType<?> listtype = (ListType<?>)type.findFieldType("Bees");
-        Type<?> type1 = listtype.getElement();
-        OpticFinder<?> opticfinder1 = DSL.fieldFinder("Bees", listtype);
-        OpticFinder<?> opticfinder2 = DSL.typeFinder(type1);
-        Type<?> type2 = this.getInputSchema().getType(References.BLOCK_ENTITY);
-        Type<?> type3 = this.getOutputSchema().getType(References.BLOCK_ENTITY);
+        Type<?> beehiveType = this.getInputSchema().getChoiceType(References.BLOCK_ENTITY, "minecraft:beehive");
+        OpticFinder<?> beehiveF = DSL.namedChoice("minecraft:beehive", beehiveType);
+        ListType<?> beesType = (ListType<?>)beehiveType.findFieldType("Bees");
+        Type<?> beeType = beesType.getElement();
+        OpticFinder<?> beesF = DSL.fieldFinder("Bees", beesType);
+        OpticFinder<?> beeF = DSL.typeFinder(beeType);
+        Type<?> entityType = this.getInputSchema().getType(References.BLOCK_ENTITY);
+        Type<?> newEntityType = this.getOutputSchema().getType(References.BLOCK_ENTITY);
         return this.fixTypeEverywhereTyped(
             "BeehiveFieldRenameFix",
-            type2,
-            type3,
-            p_336050_ -> ExtraDataFixUtils.cast(
-                type3,
-                p_336050_.updateTyped(
-                    opticfinder,
-                    p_334762_ -> p_334762_.update(DSL.remainderFinder(), this::fixBeehive)
-                        .updateTyped(
-                            opticfinder1,
-                            p_334908_ -> p_334908_.updateTyped(opticfinder2, p_331823_ -> p_331823_.update(DSL.remainderFinder(), this::fixBee))
-                        )
+            entityType,
+            newEntityType,
+            input -> ExtraDataFixUtils.cast(
+                newEntityType,
+                input.updateTyped(
+                    beehiveF,
+                    beehive -> beehive.update(DSL.remainderFinder(), this::fixBeehive)
+                        .updateTyped(beesF, bees -> bees.updateTyped(beeF, bee -> bee.update(DSL.remainderFinder(), this::fixBee)))
                 )
             )
         );

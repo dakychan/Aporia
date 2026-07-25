@@ -25,48 +25,48 @@ public class MangroveRootsBlock extends Block implements SimpleWaterloggedBlock 
         return CODEC;
     }
 
-    protected MangroveRootsBlock(BlockBehaviour.Properties p_221506_) {
-        super(p_221506_);
+    protected MangroveRootsBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected boolean skipRendering(BlockState p_221510_, BlockState p_221511_, Direction p_221512_) {
-        return p_221511_.is(Blocks.MANGROVE_ROOTS) && p_221512_.getAxis() == Direction.Axis.Y;
+    protected boolean skipRendering(final BlockState state, final BlockState neighborState, final Direction direction) {
+        return neighborState.is(Blocks.MANGROVE_ROOTS) && direction.getAxis() == Direction.Axis.Y;
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_221508_) {
-        FluidState fluidstate = p_221508_.getLevel().getFluidState(p_221508_.getClickedPos());
-        boolean flag = fluidstate.getType() == Fluids.WATER;
-        return super.getStateForPlacement(p_221508_).setValue(WATERLOGGED, flag);
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
+        return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_221514_,
-        LevelReader p_368229_,
-        ScheduledTickAccess p_363185_,
-        BlockPos p_221518_,
-        Direction p_221515_,
-        BlockPos p_221519_,
-        BlockState p_221516_,
-        RandomSource p_363370_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (p_221514_.getValue(WATERLOGGED)) {
-            p_363185_.scheduleTick(p_221518_, Fluids.WATER, Fluids.WATER.getTickDelay(p_368229_));
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
         }
 
-        return super.updateShape(p_221514_, p_368229_, p_363185_, p_221518_, p_221515_, p_221519_, p_221516_, p_363370_);
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_221523_) {
-        return p_221523_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_221523_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_221521_) {
-        p_221521_.add(WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(WATERLOGGED);
     }
 }

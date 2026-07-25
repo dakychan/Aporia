@@ -15,22 +15,22 @@ public enum PackCompatibility {
     private final Component description;
     private final Component confirmation;
 
-    private PackCompatibility(final String p_10488_) {
-        this.description = Component.translatable("pack.incompatible." + p_10488_).withStyle(ChatFormatting.GRAY);
-        this.confirmation = Component.translatable("pack.incompatible.confirm." + p_10488_);
+    PackCompatibility(final String key) {
+        this.description = Component.translatable("pack.incompatible." + key).withStyle(ChatFormatting.GRAY);
+        this.confirmation = Component.translatable("pack.incompatible.confirm." + key);
     }
 
     public boolean isCompatible() {
         return this == COMPATIBLE;
     }
 
-    public static PackCompatibility forVersion(InclusiveRange<PackFormat> p_300208_, PackFormat p_425079_) {
-        if (p_300208_.minInclusive().major() == Integer.MAX_VALUE) {
+    public static PackCompatibility forVersion(final InclusiveRange<PackFormat> packDeclaredVersions, final PackFormat gameSupportedVersion) {
+        if (packDeclaredVersions.minInclusive().major() == Integer.MAX_VALUE) {
             return UNKNOWN;
-        } else if (p_300208_.maxInclusive().compareTo(p_425079_) < 0) {
+        } else if (packDeclaredVersions.maxInclusive().compareTo(gameSupportedVersion) < 0) {
             return TOO_OLD;
         } else {
-            return p_425079_.compareTo(p_300208_.minInclusive()) < 0 ? TOO_NEW : COMPATIBLE;
+            return gameSupportedVersion.compareTo(packDeclaredVersions.minInclusive()) < 0 ? TOO_NEW : COMPATIBLE;
         }
     }
 

@@ -13,76 +13,76 @@ import net.minecraft.util.StrictJsonParser;
 public class LegacyComponentDataFixUtils {
     private static final String EMPTY_CONTENTS = createTextComponentJson("");
 
-    public static <T> Dynamic<T> createPlainTextComponent(DynamicOps<T> p_391511_, String p_396456_) {
-        String s = createTextComponentJson(p_396456_);
-        return new Dynamic<>(p_391511_, p_391511_.createString(s));
+    public static <T> Dynamic<T> createPlainTextComponent(final DynamicOps<T> ops, final String text) {
+        String stableString = createTextComponentJson(text);
+        return new Dynamic<>(ops, ops.createString(stableString));
     }
 
-    public static <T> Dynamic<T> createEmptyComponent(DynamicOps<T> p_396181_) {
-        return new Dynamic<>(p_396181_, p_396181_.createString(EMPTY_CONTENTS));
+    public static <T> Dynamic<T> createEmptyComponent(final DynamicOps<T> ops) {
+        return new Dynamic<>(ops, ops.createString(EMPTY_CONTENTS));
     }
 
-    public static String createTextComponentJson(String p_391436_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.addProperty("text", p_391436_);
-        return GsonHelper.toStableString(jsonobject);
+    public static String createTextComponentJson(final String text) {
+        JsonObject result = new JsonObject();
+        result.addProperty("text", text);
+        return GsonHelper.toStableString(result);
     }
 
-    public static String createTranslatableComponentJson(String p_394703_) {
-        JsonObject jsonobject = new JsonObject();
-        jsonobject.addProperty("translate", p_394703_);
-        return GsonHelper.toStableString(jsonobject);
+    public static String createTranslatableComponentJson(final String key) {
+        JsonObject result = new JsonObject();
+        result.addProperty("translate", key);
+        return GsonHelper.toStableString(result);
     }
 
-    public static <T> Dynamic<T> createTranslatableComponent(DynamicOps<T> p_394292_, String p_392337_) {
-        String s = createTranslatableComponentJson(p_392337_);
-        return new Dynamic<>(p_394292_, p_394292_.createString(s));
+    public static <T> Dynamic<T> createTranslatableComponent(final DynamicOps<T> ops, final String key) {
+        String stableString = createTranslatableComponentJson(key);
+        return new Dynamic<>(ops, ops.createString(stableString));
     }
 
-    public static String rewriteFromLenient(String p_395237_) {
-        if (!p_395237_.isEmpty() && !p_395237_.equals("null")) {
-            char c0 = p_395237_.charAt(0);
-            char c1 = p_395237_.charAt(p_395237_.length() - 1);
-            if (c0 == '"' && c1 == '"' || c0 == '{' && c1 == '}' || c0 == '[' && c1 == ']') {
+    public static String rewriteFromLenient(final String string) {
+        if (!string.isEmpty() && !string.equals("null")) {
+            char firstChar = string.charAt(0);
+            char lastChar = string.charAt(string.length() - 1);
+            if (firstChar == '"' && lastChar == '"' || firstChar == '{' && lastChar == '}' || firstChar == '[' && lastChar == ']') {
                 try {
-                    JsonElement jsonelement = LenientJsonParser.parse(p_395237_);
-                    if (jsonelement.isJsonPrimitive()) {
-                        return createTextComponentJson(jsonelement.getAsString());
+                    JsonElement json = LenientJsonParser.parse(string);
+                    if (json.isJsonPrimitive()) {
+                        return createTextComponentJson(json.getAsString());
                     }
 
-                    return GsonHelper.toStableString(jsonelement);
-                } catch (JsonParseException jsonparseexception) {
+                    return GsonHelper.toStableString(json);
+                } catch (JsonParseException var4) {
                 }
             }
 
-            return createTextComponentJson(p_395237_);
+            return createTextComponentJson(string);
         } else {
             return EMPTY_CONTENTS;
         }
     }
 
-    public static boolean isStrictlyValidJson(Dynamic<?> p_427944_) {
-        return p_427944_.asString().result().filter(p_428285_ -> {
+    public static boolean isStrictlyValidJson(final Dynamic<?> component) {
+        return component.asString().result().filter(string -> {
             try {
-                StrictJsonParser.parse(p_428285_);
+                StrictJsonParser.parse(string);
                 return true;
-            } catch (JsonParseException jsonparseexception) {
+            } catch (JsonParseException ignored) {
                 return false;
             }
         }).isPresent();
     }
 
-    public static Optional<String> extractTranslationString(String p_396189_) {
+    public static Optional<String> extractTranslationString(final String component) {
         try {
-            JsonElement jsonelement = LenientJsonParser.parse(p_396189_);
-            if (jsonelement.isJsonObject()) {
-                JsonObject jsonobject = jsonelement.getAsJsonObject();
-                JsonElement jsonelement1 = jsonobject.get("translate");
-                if (jsonelement1 != null && jsonelement1.isJsonPrimitive()) {
-                    return Optional.of(jsonelement1.getAsString());
+            JsonElement parsed = LenientJsonParser.parse(component);
+            if (parsed.isJsonObject()) {
+                JsonObject parsedObject = parsed.getAsJsonObject();
+                JsonElement key = parsedObject.get("translate");
+                if (key != null && key.isJsonPrimitive()) {
+                    return Optional.of(key.getAsString());
                 }
             }
-        } catch (JsonParseException jsonparseexception) {
+        } catch (JsonParseException var4) {
         }
 
         return Optional.empty();

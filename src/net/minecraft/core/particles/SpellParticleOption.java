@@ -3,7 +3,6 @@ package net.minecraft.core.particles;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -15,30 +14,26 @@ public class SpellParticleOption implements ParticleOptions {
     private final int color;
     private final float power;
 
-    public static MapCodec<SpellParticleOption> codec(ParticleType<SpellParticleOption> p_427901_) {
+    public static MapCodec<SpellParticleOption> codec(final ParticleType<SpellParticleOption> type) {
         return RecordCodecBuilder.mapCodec(
-            p_422371_ -> p_422371_.group(
-                    ExtraCodecs.RGB_COLOR_CODEC.optionalFieldOf("color", -1).forGetter(p_425023_ -> p_425023_.color),
-                    Codec.FLOAT.optionalFieldOf("power", 1.0F).forGetter(p_423840_ -> p_423840_.power)
+            i -> i.group(
+                    ExtraCodecs.RGB_COLOR_CODEC.optionalFieldOf("color", -1).forGetter(o -> o.color),
+                    Codec.FLOAT.optionalFieldOf("power", 1.0F).forGetter(o -> o.power)
                 )
-                .apply(p_422371_, (p_425939_, p_423139_) -> new SpellParticleOption(p_427901_, p_425939_, p_423139_))
+                .apply(i, (color, power) -> new SpellParticleOption(type, color, power))
         );
     }
 
-    public static StreamCodec<? super ByteBuf, SpellParticleOption> streamCodec(ParticleType<SpellParticleOption> p_429628_) {
+    public static StreamCodec<? super ByteBuf, SpellParticleOption> streamCodec(final ParticleType<SpellParticleOption> type) {
         return StreamCodec.composite(
-            ByteBufCodecs.INT,
-            p_429922_ -> p_429922_.color,
-            ByteBufCodecs.FLOAT,
-            p_430707_ -> p_430707_.power,
-            (p_429068_, p_423570_) -> new SpellParticleOption(p_429628_, p_429068_, p_423570_)
+            ByteBufCodecs.INT, o -> o.color, ByteBufCodecs.FLOAT, o -> o.power, (color, power) -> new SpellParticleOption(type, color, power)
         );
     }
 
-    private SpellParticleOption(ParticleType<SpellParticleOption> p_429909_, int p_426146_, float p_427781_) {
-        this.type = p_429909_;
-        this.color = p_426146_;
-        this.power = p_427781_;
+    private SpellParticleOption(final ParticleType<SpellParticleOption> type, final int color, final float power) {
+        this.type = type;
+        this.color = color;
+        this.power = power;
     }
 
     @Override
@@ -62,11 +57,13 @@ public class SpellParticleOption implements ParticleOptions {
         return this.power;
     }
 
-    public static SpellParticleOption create(ParticleType<SpellParticleOption> p_430449_, int p_424734_, float p_428214_) {
-        return new SpellParticleOption(p_430449_, p_424734_, p_428214_);
+    public static SpellParticleOption create(final ParticleType<SpellParticleOption> type, final int color, final float power) {
+        return new SpellParticleOption(type, color, power);
     }
 
-    public static SpellParticleOption create(ParticleType<SpellParticleOption> p_424428_, float p_427471_, float p_425792_, float p_427970_, float p_422529_) {
-        return create(p_424428_, ARGB.colorFromFloat(1.0F, p_427471_, p_425792_, p_427970_), p_422529_);
+    public static SpellParticleOption create(
+        final ParticleType<SpellParticleOption> type, final float red, final float green, final float blue, final float power
+    ) {
+        return create(type, ARGB.colorFromFloat(1.0F, red, green, blue), power);
     }
 }

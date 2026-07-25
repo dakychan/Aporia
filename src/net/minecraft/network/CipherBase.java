@@ -10,36 +10,36 @@ public class CipherBase {
     private byte[] heapIn = new byte[0];
     private byte[] heapOut = new byte[0];
 
-    protected CipherBase(Cipher p_129403_) {
-        this.cipher = p_129403_;
+    protected CipherBase(final Cipher cipher) {
+        this.cipher = cipher;
     }
 
-    private byte[] bufToByte(ByteBuf p_129405_) {
-        int i = p_129405_.readableBytes();
-        if (this.heapIn.length < i) {
-            this.heapIn = new byte[i];
+    private byte[] bufToByte(final ByteBuf in) {
+        int readableBytes = in.readableBytes();
+        if (this.heapIn.length < readableBytes) {
+            this.heapIn = new byte[readableBytes];
         }
 
-        p_129405_.readBytes(this.heapIn, 0, i);
+        in.readBytes(this.heapIn, 0, readableBytes);
         return this.heapIn;
     }
 
-    protected ByteBuf decipher(ChannelHandlerContext p_129410_, ByteBuf p_129411_) throws ShortBufferException {
-        int i = p_129411_.readableBytes();
-        byte[] abyte = this.bufToByte(p_129411_);
-        ByteBuf bytebuf = p_129410_.alloc().heapBuffer(this.cipher.getOutputSize(i));
-        bytebuf.writerIndex(this.cipher.update(abyte, 0, i, bytebuf.array(), bytebuf.arrayOffset()));
-        return bytebuf;
+    protected ByteBuf decipher(final ChannelHandlerContext ctx, final ByteBuf in) throws ShortBufferException {
+        int readableBytes = in.readableBytes();
+        byte[] heapIn = this.bufToByte(in);
+        ByteBuf heapOut = ctx.alloc().heapBuffer(this.cipher.getOutputSize(readableBytes));
+        heapOut.writerIndex(this.cipher.update(heapIn, 0, readableBytes, heapOut.array(), heapOut.arrayOffset()));
+        return heapOut;
     }
 
-    protected void encipher(ByteBuf p_129407_, ByteBuf p_129408_) throws ShortBufferException {
-        int i = p_129407_.readableBytes();
-        byte[] abyte = this.bufToByte(p_129407_);
-        int j = this.cipher.getOutputSize(i);
-        if (this.heapOut.length < j) {
-            this.heapOut = new byte[j];
+    protected void encipher(final ByteBuf in, final ByteBuf out) throws ShortBufferException {
+        int readableBytes = in.readableBytes();
+        byte[] heapIn = this.bufToByte(in);
+        int outputSize = this.cipher.getOutputSize(readableBytes);
+        if (this.heapOut.length < outputSize) {
+            this.heapOut = new byte[outputSize];
         }
 
-        p_129408_.writeBytes(this.heapOut, 0, this.cipher.update(abyte, 0, i, this.heapOut));
+        out.writeBytes(this.heapOut, 0, this.cipher.update(heapIn, 0, readableBytes, this.heapOut));
     }
 }

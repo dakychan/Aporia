@@ -10,7 +10,9 @@ import net.minecraft.world.item.crafting.display.SlotDisplay;
 
 public record SelectableRecipe<T extends Recipe<?>>(SlotDisplay optionDisplay, Optional<RecipeHolder<T>> recipe) {
     public static <T extends Recipe<?>> StreamCodec<RegistryFriendlyByteBuf, SelectableRecipe<T>> noRecipeCodec() {
-        return StreamCodec.composite(SlotDisplay.STREAM_CODEC, SelectableRecipe::optionDisplay, p_367448_ -> new SelectableRecipe<>(p_367448_, Optional.empty()));
+        return StreamCodec.composite(
+            SlotDisplay.STREAM_CODEC, SelectableRecipe::optionDisplay, slotDisplay -> new SelectableRecipe<>(slotDisplay, Optional.empty())
+        );
     }
 
     public record SingleInputEntry<T extends Recipe<?>>(Ingredient input, SelectableRecipe<T> recipe) {
@@ -18,7 +20,7 @@ public record SelectableRecipe<T extends Recipe<?>>(SlotDisplay optionDisplay, O
             return StreamCodec.composite(
                 Ingredient.CONTENTS_STREAM_CODEC,
                 SelectableRecipe.SingleInputEntry::input,
-                SelectableRecipe.<T>noRecipeCodec(),
+                SelectableRecipe.noRecipeCodec(),
                 SelectableRecipe.SingleInputEntry::recipe,
                 SelectableRecipe.SingleInputEntry::new
             );
@@ -38,12 +40,12 @@ public record SelectableRecipe<T extends Recipe<?>>(SlotDisplay optionDisplay, O
             );
         }
 
-        public boolean acceptsInput(ItemStack p_366997_) {
-            return this.entries.stream().anyMatch(p_368592_ -> p_368592_.input.test(p_366997_));
+        public boolean acceptsInput(final ItemStack input) {
+            return this.entries.stream().anyMatch(e -> e.input.test(input));
         }
 
-        public SelectableRecipe.SingleInputSet<T> selectByInput(ItemStack p_368693_) {
-            return new SelectableRecipe.SingleInputSet<>(this.entries.stream().filter(p_364349_ -> p_364349_.input.test(p_368693_)).toList());
+        public SelectableRecipe.SingleInputSet<T> selectByInput(final ItemStack input) {
+            return new SelectableRecipe.SingleInputSet<>(this.entries.stream().filter(e -> e.input.test(input)).toList());
         }
 
         public boolean isEmpty() {

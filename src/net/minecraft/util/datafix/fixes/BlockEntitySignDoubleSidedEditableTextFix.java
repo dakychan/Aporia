@@ -15,60 +15,54 @@ public class BlockEntitySignDoubleSidedEditableTextFix extends NamedEntityWriteR
     public static final String FILTERED_CORRECT = "_filtered_correct";
     private static final String DEFAULT_COLOR = "black";
 
-    public BlockEntitySignDoubleSidedEditableTextFix(Schema p_277789_, String p_278061_, String p_277403_) {
-        super(p_277789_, true, p_278061_, References.BLOCK_ENTITY, p_277403_);
+    public BlockEntitySignDoubleSidedEditableTextFix(final Schema outputSchema, final String name, final String entityName) {
+        super(outputSchema, true, name, References.BLOCK_ENTITY, entityName);
     }
 
     @Override
-    protected <T> Dynamic<T> fix(Dynamic<T> p_393570_) {
-        p_393570_ = p_393570_.set("front_text", fixFrontTextTag(p_393570_))
-            .set("back_text", createDefaultText(p_393570_))
-            .set("is_waxed", p_393570_.createBoolean(false))
-            .set("_filtered_correct", p_393570_.createBoolean(true));
+    protected <T> Dynamic<T> fix(Dynamic<T> input) {
+        input = input.set("front_text", fixFrontTextTag(input))
+            .set("back_text", createDefaultText(input))
+            .set("is_waxed", input.createBoolean(false))
+            .set("_filtered_correct", input.createBoolean(true));
 
-        for (String s : FIELDS_TO_DROP) {
-            p_393570_ = p_393570_.remove(s);
+        for (String field : FIELDS_TO_DROP) {
+            input = input.remove(field);
         }
 
-        return p_393570_;
+        return input;
     }
 
-    private static <T> Dynamic<T> fixFrontTextTag(Dynamic<T> p_300654_) {
-        Dynamic<T> dynamic = LegacyComponentDataFixUtils.createEmptyComponent(p_300654_.getOps());
-        List<Dynamic<T>> list = getLines(p_300654_, "Text").map(p_297945_ -> p_297945_.orElse(dynamic)).toList();
-        Dynamic<T> dynamic1 = p_300654_.emptyMap()
-            .set("messages", p_300654_.createList(list.stream()))
-            .set("color", p_300654_.get("Color").result().orElse(p_300654_.createString("black")))
-            .set("has_glowing_text", p_300654_.get("GlowingText").result().orElse(p_300654_.createBoolean(false)));
-        List<Optional<Dynamic<T>>> list1 = getLines(p_300654_, "FilteredText").toList();
-        if (list1.stream().anyMatch(Optional::isPresent)) {
-            dynamic1 = dynamic1.set("filtered_messages", p_300654_.createList(Streams.mapWithIndex(list1.stream(), (p_299542_, p_300269_) -> {
-                Dynamic<T> dynamic2 = list.get((int)p_300269_);
-                return p_299542_.orElse(dynamic2);
+    private static <T> Dynamic<T> fixFrontTextTag(final Dynamic<T> tag) {
+        Dynamic<T> emptyLine = LegacyComponentDataFixUtils.createEmptyComponent(tag.getOps());
+        List<Dynamic<T>> lines = getLines(tag, "Text").map(line -> line.orElse(emptyLine)).toList();
+        Dynamic<T> text = tag.emptyMap()
+            .set("messages", tag.createList(lines.stream()))
+            .set("color", tag.get("Color").result().orElse(tag.createString("black")))
+            .set("has_glowing_text", tag.get("GlowingText").result().orElse(tag.createBoolean(false)));
+        List<Optional<Dynamic<T>>> filteredLines = getLines(tag, "FilteredText").toList();
+        if (filteredLines.stream().anyMatch(Optional::isPresent)) {
+            text = text.set("filtered_messages", tag.createList(Streams.mapWithIndex(filteredLines.stream(), (line, index) -> {
+                Dynamic<T> fallbackLine = lines.get((int)index);
+                return line.orElse(fallbackLine);
             })));
         }
 
-        return dynamic1;
+        return text;
     }
 
-    private static <T> Stream<Optional<Dynamic<T>>> getLines(Dynamic<T> p_298173_, String p_299789_) {
+    private static <T> Stream<Optional<Dynamic<T>>> getLines(final Dynamic<T> tag, final String linePrefix) {
         return Stream.of(
-            p_298173_.get(p_299789_ + "1").result(),
-            p_298173_.get(p_299789_ + "2").result(),
-            p_298173_.get(p_299789_ + "3").result(),
-            p_298173_.get(p_299789_ + "4").result()
+            tag.get(linePrefix + "1").result(), tag.get(linePrefix + "2").result(), tag.get(linePrefix + "3").result(), tag.get(linePrefix + "4").result()
         );
     }
 
-    private static <T> Dynamic<T> createDefaultText(Dynamic<T> p_299439_) {
-        return p_299439_.emptyMap()
-            .set("messages", createEmptyLines(p_299439_))
-            .set("color", p_299439_.createString("black"))
-            .set("has_glowing_text", p_299439_.createBoolean(false));
+    private static <T> Dynamic<T> createDefaultText(final Dynamic<T> tag) {
+        return tag.emptyMap().set("messages", createEmptyLines(tag)).set("color", tag.createString("black")).set("has_glowing_text", tag.createBoolean(false));
     }
 
-    private static <T> Dynamic<T> createEmptyLines(Dynamic<T> p_299579_) {
-        Dynamic<T> dynamic = LegacyComponentDataFixUtils.createEmptyComponent(p_299579_.getOps());
-        return p_299579_.createList(Stream.of(dynamic, dynamic, dynamic, dynamic));
+    private static <T> Dynamic<T> createEmptyLines(final Dynamic<T> tag) {
+        Dynamic<T> emptyComponent = LegacyComponentDataFixUtils.createEmptyComponent(tag.getOps());
+        return tag.createList(Stream.of(emptyComponent, emptyComponent, emptyComponent, emptyComponent));
     }
 }

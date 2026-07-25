@@ -10,10 +10,15 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.animal.camel.CamelHusk;
 import net.minecraft.world.entity.monster.skeleton.Parched;
@@ -24,8 +29,12 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import org.jspecify.annotations.Nullable;
 
 public class Husk extends Zombie {
-    public Husk(EntityType<? extends Husk> p_459327_, Level p_457170_) {
-        super(p_459327_, p_457170_);
+    private static final EntityDimensions BABY_DIMENSIONS = EntityDimensions.scalable(0.49F, 0.98F)
+        .withEyeHeight(0.825F)
+        .withAttachments(EntityAttachments.builder().attach(EntityAttachment.VEHICLE, 0.0F, 0.1875F, 0.0F));
+
+    public Husk(final EntityType<? extends Husk> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -39,7 +48,7 @@ public class Husk extends Zombie {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_451770_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.HUSK_HURT;
     }
 
@@ -54,14 +63,14 @@ public class Husk extends Zombie {
     }
 
     @Override
-    public boolean doHurtTarget(ServerLevel p_458832_, Entity p_456248_) {
-        boolean flag = super.doHurtTarget(p_458832_, p_456248_);
-        if (flag && this.getMainHandItem().isEmpty() && p_456248_ instanceof LivingEntity) {
-            float f = p_458832_.getCurrentDifficultyAt(this.blockPosition()).getEffectiveDifficulty();
-            ((LivingEntity)p_456248_).addEffect(new MobEffectInstance(MobEffects.HUNGER, 140 * (int)f), this);
+    public boolean doHurtTarget(final ServerLevel level, final Entity target) {
+        boolean result = super.doHurtTarget(level, target);
+        if (result && this.getMainHandItem().isEmpty() && target instanceof LivingEntity livingEntity) {
+            float difficulty = level.getCurrentDifficultyAt(this.blockPosition()).getEffectiveDifficulty();
+            livingEntity.addEffect(new MobEffectInstance(MobEffects.HUNGER, 140 * (int)difficulty), this);
         }
 
-        return flag;
+        return result;
     }
 
     @Override
@@ -70,61 +79,66 @@ public class Husk extends Zombie {
     }
 
     @Override
-    protected void doUnderWaterConversion(ServerLevel p_454240_) {
-        this.convertToZombieType(p_454240_, EntityType.ZOMBIE);
+    protected void doUnderWaterConversion(final ServerLevel level) {
+        this.convertToZombieType(level, EntityTypes.ZOMBIE);
         if (!this.isSilent()) {
-            p_454240_.levelEvent(null, 1041, this.blockPosition(), 0);
+            level.levelEvent(null, 1041, this.blockPosition(), 0);
         }
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_455519_, DifficultyInstance p_457727_, EntitySpawnReason p_457019_, @Nullable SpawnGroupData p_455578_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        RandomSource randomsource = p_455519_.getRandom();
-        p_455578_ = super.finalizeSpawn(p_455519_, p_457727_, p_457019_, p_455578_);
-        float f = p_457727_.getSpecialMultiplier();
-        if (p_457019_ != EntitySpawnReason.CONVERSION) {
-            this.setCanPickUpLoot(randomsource.nextFloat() < 0.55F * f);
+        RandomSource random = level.getRandom();
+        groupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
+        float difficultyModifier = difficulty.getSpecialMultiplier();
+        if (spawnReason != EntitySpawnReason.CONVERSION) {
+            this.setCanPickUpLoot(random.nextFloat() < 0.55F * difficultyModifier);
         }
 
-        if (p_455578_ != null) {
-            p_455578_ = new Husk.HuskGroupData((Zombie.ZombieGroupData)p_455578_);
-            ((Husk.HuskGroupData)p_455578_).triedToSpawnCamelHusk = p_457019_ != EntitySpawnReason.NATURAL;
+        if (groupData != null) {
+            groupData = new Husk.HuskGroupData((Zombie.ZombieGroupData)groupData);
+            ((Husk.HuskGroupData)groupData).triedToSpawnCamelHusk = spawnReason != EntitySpawnReason.NATURAL;
         }
 
-        if (p_455578_ instanceof Husk.HuskGroupData husk$huskgroupdata && !husk$huskgroupdata.triedToSpawnCamelHusk) {
-            BlockPos blockpos = this.blockPosition();
-            if (p_455519_.noCollision(EntityType.CAMEL_HUSK.getSpawnAABB(blockpos.getX() + 0.5, blockpos.getY(), blockpos.getZ() + 0.5))) {
-                husk$huskgroupdata.triedToSpawnCamelHusk = true;
-                if (randomsource.nextFloat() < 0.1F) {
+        if (groupData instanceof Husk.HuskGroupData huskGroupData && !huskGroupData.triedToSpawnCamelHusk) {
+            BlockPos pos = this.blockPosition();
+            if (level.noCollision(EntityTypes.CAMEL_HUSK.getSpawnAABB(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5))) {
+                huskGroupData.triedToSpawnCamelHusk = true;
+                if (random.nextFloat() < 0.1F) {
                     this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SPEAR));
-                    CamelHusk camelhusk = EntityType.CAMEL_HUSK.create(this.level(), EntitySpawnReason.NATURAL);
-                    if (camelhusk != null) {
-                        camelhusk.setPos(this.getX(), this.getY(), this.getZ());
-                        camelhusk.finalizeSpawn(p_455519_, p_457727_, p_457019_, null);
-                        this.startRiding(camelhusk, true, true);
-                        p_455519_.addFreshEntity(camelhusk);
-                        Parched parched = EntityType.PARCHED.create(this.level(), EntitySpawnReason.NATURAL);
+                    CamelHusk camelHusk = EntityTypes.CAMEL_HUSK.create(this.level(), EntitySpawnReason.NATURAL);
+                    if (camelHusk != null) {
+                        camelHusk.setPos(this.getX(), this.getY(), this.getZ());
+                        camelHusk.finalizeSpawn(level, difficulty, spawnReason, null);
+                        this.startRiding(camelHusk, true, true);
+                        level.addFreshEntity(camelHusk);
+                        Parched parched = EntityTypes.PARCHED.create(this.level(), EntitySpawnReason.NATURAL);
                         if (parched != null) {
                             parched.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
-                            parched.finalizeSpawn(p_455519_, p_457727_, p_457019_, null);
-                            parched.startRiding(camelhusk, false, false);
-                            p_455519_.addFreshEntityWithPassengers(parched);
+                            parched.finalizeSpawn(level, difficulty, spawnReason, null);
+                            parched.startRiding(camelHusk, false, false);
+                            level.addFreshEntityWithPassengers(parched);
                         }
                     }
                 }
             }
         }
 
-        return p_455578_;
+        return groupData;
+    }
+
+    @Override
+    public EntityDimensions getDefaultDimensions(final Pose pose) {
+        return this.isBaby() ? BABY_DIMENSIONS : super.getDefaultDimensions(pose);
     }
 
     public static class HuskGroupData extends Zombie.ZombieGroupData {
         public boolean triedToSpawnCamelHusk = false;
 
-        public HuskGroupData(Zombie.ZombieGroupData p_454360_) {
-            super(p_454360_.isBaby, p_454360_.canSpawnJockey);
+        public HuskGroupData(final Zombie.ZombieGroupData groupData) {
+            super(groupData.isBaby, groupData.canSpawnJockey);
         }
     }
 }

@@ -5,18 +5,13 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public interface InputWithModifiers {
     int NOT_DIGIT = -1;
 
-    @InputConstants.Value
-    int input();
+    @InputConstants.Value int input();
 
-    @InputWithModifiers.Modifiers
-    int modifiers();
+    @InputWithModifiers.Modifiers int modifiers();
 
     default boolean isSelection() {
         return this.input() == 257 || this.input() == 32 || this.input() == 335;
@@ -51,8 +46,8 @@ public interface InputWithModifiers {
     }
 
     default int getDigit() {
-        int i = this.input() - 48;
-        return i >= 0 && i <= 9 ? i : -1;
+        int value = this.input() - 48;
+        return value >= 0 && value <= 9 ? value : -1;
     }
 
     default boolean hasAltDown() {
@@ -88,8 +83,7 @@ public interface InputWithModifiers {
     }
 
     @Retention(RetentionPolicy.CLASS)
-    @Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.LOCAL_VARIABLE, ElementType.METHOD, ElementType.TYPE_USE})
-    @OnlyIn(Dist.CLIENT)
-    public @interface Modifiers {
+    @Target(ElementType.TYPE_USE)
+        @interface Modifiers {
     }
 }

@@ -11,16 +11,14 @@ public enum DebugEntityBlockIntersection {
     IN_FLUID(1, 1610612991),
     IN_AIR(2, 1613968179);
 
-    private static final IntFunction<DebugEntityBlockIntersection> BY_ID = ByIdMap.continuous(
-        p_429138_ -> p_429138_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-    );
-    public static final StreamCodec<ByteBuf, DebugEntityBlockIntersection> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_427270_ -> p_427270_.id);
+    private static final IntFunction<DebugEntityBlockIntersection> BY_ID = ByIdMap.continuous(i -> i.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+    public static final StreamCodec<ByteBuf, DebugEntityBlockIntersection> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, i -> i.id);
     private final int id;
     private final int color;
 
-    private DebugEntityBlockIntersection(final int p_428123_, final int p_424637_) {
-        this.id = p_428123_;
-        this.color = p_424637_;
+    DebugEntityBlockIntersection(final int id, final int color) {
+        this.id = id;
+        this.color = color;
     }
 
     public int color() {

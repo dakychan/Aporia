@@ -1,9 +1,6 @@
 package net.minecraft.client;
 
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum CameraType {
     FIRST_PERSON(true, false),
     THIRD_PERSON_BACK(false, false),
@@ -13,9 +10,9 @@ public enum CameraType {
     private final boolean firstPerson;
     private final boolean mirrored;
 
-    private CameraType(final boolean p_90610_, final boolean p_90611_) {
-        this.firstPerson = p_90610_;
-        this.mirrored = p_90611_;
+    CameraType(final boolean firstPerson, final boolean mirrored) {
+        this.firstPerson = firstPerson;
+        this.mirrored = mirrored;
     }
 
     public boolean isFirstPerson() {

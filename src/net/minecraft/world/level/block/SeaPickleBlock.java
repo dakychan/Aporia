@@ -24,7 +24,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jspecify.annotations.Nullable;
 
-public class SeaPickleBlock extends VegetationBlock implements BonemealableBlock, SimpleWaterloggedBlock {
+public class SeaPickleBlock extends VegetationBlock implements SimpleWaterloggedBlock, BonemealableBlock {
     public static final MapCodec<SeaPickleBlock> CODEC = simpleCodec(SeaPickleBlock::new);
     public static final int MAX_PICKLES = 4;
     public static final IntegerProperty PICKLES = BlockStateProperties.PICKLES;
@@ -39,70 +39,70 @@ public class SeaPickleBlock extends VegetationBlock implements BonemealableBlock
         return CODEC;
     }
 
-    protected SeaPickleBlock(BlockBehaviour.Properties p_56082_) {
-        super(p_56082_);
+    protected SeaPickleBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(PICKLES, 1).setValue(WATERLOGGED, true));
     }
 
     @Override
-    public @Nullable BlockState getStateForPlacement(BlockPlaceContext p_56089_) {
-        BlockState blockstate = p_56089_.getLevel().getBlockState(p_56089_.getClickedPos());
-        if (blockstate.is(this)) {
-            return blockstate.setValue(PICKLES, Math.min(4, blockstate.getValue(PICKLES) + 1));
-        } else {
-            FluidState fluidstate = p_56089_.getLevel().getFluidState(p_56089_.getClickedPos());
-            boolean flag = fluidstate.getType() == Fluids.WATER;
-            return super.getStateForPlacement(p_56089_).setValue(WATERLOGGED, flag);
+    public @Nullable BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockState state = context.getLevel().getBlockState(context.getClickedPos());
+        if (state.is(this)) {
+            return state.setValue(PICKLES, Math.min(4, state.getValue(PICKLES) + 1));
         }
+
+        FluidState replacedFluidState = context.getLevel().getFluidState(context.getClickedPos());
+        boolean isWaterSource = replacedFluidState.is(Fluids.WATER);
+        return super.getStateForPlacement(context).setValue(WATERLOGGED, isWaterSource);
     }
 
-    public static boolean isDead(BlockState p_56133_) {
-        return !p_56133_.getValue(WATERLOGGED);
+    public static boolean isDead(final BlockState state) {
+        return !state.getValue(WATERLOGGED);
     }
 
     @Override
-    protected boolean mayPlaceOn(BlockState p_56127_, BlockGetter p_56128_, BlockPos p_56129_) {
-        return !p_56127_.getCollisionShape(p_56128_, p_56129_).getFaceShape(Direction.UP).isEmpty() || p_56127_.isFaceSturdy(p_56128_, p_56129_, Direction.UP);
+    protected boolean mayPlaceOn(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        return !state.getCollisionShape(level, pos).getFaceShape(Direction.UP).isEmpty() || state.isFaceSturdy(level, pos, Direction.UP);
     }
 
     @Override
-    protected boolean canSurvive(BlockState p_56109_, LevelReader p_56110_, BlockPos p_56111_) {
-        BlockPos blockpos = p_56111_.below();
-        return this.mayPlaceOn(p_56110_.getBlockState(blockpos), p_56110_, blockpos);
+    protected boolean canSurvive(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockPos belowPos = pos.below();
+        return this.mayPlaceOn(level.getBlockState(belowPos), level, belowPos);
     }
 
     @Override
     protected BlockState updateShape(
-        BlockState p_56113_,
-        LevelReader p_365386_,
-        ScheduledTickAccess p_362722_,
-        BlockPos p_56117_,
-        Direction p_56114_,
-        BlockPos p_56118_,
-        BlockState p_56115_,
-        RandomSource p_366416_
+        final BlockState state,
+        final LevelReader level,
+        final ScheduledTickAccess ticks,
+        final BlockPos pos,
+        final Direction directionToNeighbour,
+        final BlockPos neighbourPos,
+        final BlockState neighbourState,
+        final RandomSource random
     ) {
-        if (!p_56113_.canSurvive(p_365386_, p_56117_)) {
+        if (!state.canSurvive(level, pos)) {
             return Blocks.AIR.defaultBlockState();
-        } else {
-            if (p_56113_.getValue(WATERLOGGED)) {
-                p_362722_.scheduleTick(p_56117_, Fluids.WATER, Fluids.WATER.getTickDelay(p_365386_));
-            }
-
-            return super.updateShape(p_56113_, p_365386_, p_362722_, p_56117_, p_56114_, p_56118_, p_56115_, p_366416_);
         }
+
+        if (state.getValue(WATERLOGGED)) {
+            ticks.scheduleTick(pos, Fluids.WATER, Fluids.WATER.getTickDelay(level));
+        }
+
+        return super.updateShape(state, level, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
 
     @Override
-    protected boolean canBeReplaced(BlockState p_56101_, BlockPlaceContext p_56102_) {
-        return !p_56102_.isSecondaryUseActive() && p_56102_.getItemInHand().is(this.asItem()) && p_56101_.getValue(PICKLES) < 4
+    protected boolean canBeReplaced(final BlockState state, final BlockPlaceContext context) {
+        return !context.isSecondaryUseActive() && context.getItemInHand().is(this.asItem()) && state.getValue(PICKLES) < 4
             ? true
-            : super.canBeReplaced(p_56101_, p_56102_);
+            : super.canBeReplaced(state, context);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_56122_, BlockGetter p_56123_, BlockPos p_56124_, CollisionContext p_56125_) {
-        return switch (p_56122_.getValue(PICKLES)) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
+        return switch (state.getValue(PICKLES)) {
             case 2 -> SHAPE_TWO;
             case 3 -> SHAPE_THREE;
             case 4 -> SHAPE_FOUR;
@@ -111,65 +111,65 @@ public class SeaPickleBlock extends VegetationBlock implements BonemealableBlock
     }
 
     @Override
-    protected FluidState getFluidState(BlockState p_56131_) {
-        return p_56131_.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(p_56131_);
+    protected FluidState getFluidState(final BlockState state) {
+        return state.getValue(WATERLOGGED) ? Fluids.WATER.getSource(false) : super.getFluidState(state);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_56120_) {
-        p_56120_.add(PICKLES, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(PICKLES, WATERLOGGED);
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_255984_, BlockPos p_56092_, BlockState p_56093_) {
-        return !isDead(p_56093_) && p_255984_.getBlockState(p_56092_.below()).is(BlockTags.CORAL_BLOCKS);
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return !isDead(state) && level.getBlockState(pos.below()).is(BlockTags.CORAL_BLOCKS);
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_222418_, RandomSource p_222419_, BlockPos p_222420_, BlockState p_222421_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_222413_, RandomSource p_222414_, BlockPos p_222415_, BlockState p_222416_) {
-        int i = 5;
-        int j = 1;
-        int k = 2;
-        int l = 0;
-        int i1 = p_222415_.getX() - 2;
-        int j1 = 0;
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        int span = 5;
+        int zSpan = 1;
+        int height = 2;
+        int count = 0;
+        int xStart = pos.getX() - 2;
+        int zOffSet = 0;
 
-        for (int k1 = 0; k1 < 5; k1++) {
-            for (int l1 = 0; l1 < j; l1++) {
-                int i2 = 2 + p_222415_.getY() - 1;
+        for (int x = 0; x < 5; x++) {
+            for (int z = 0; z < zSpan; z++) {
+                int endY = 2 + pos.getY() - 1;
 
-                for (int j2 = i2 - 2; j2 < i2; j2++) {
-                    BlockPos blockpos = new BlockPos(i1 + k1, j2, p_222415_.getZ() - j1 + l1);
-                    if (!blockpos.equals(p_222415_) && p_222414_.nextInt(6) == 0 && p_222413_.getBlockState(blockpos).is(Blocks.WATER)) {
-                        BlockState blockstate = p_222413_.getBlockState(blockpos.below());
-                        if (blockstate.is(BlockTags.CORAL_BLOCKS)) {
-                            p_222413_.setBlock(blockpos, Blocks.SEA_PICKLE.defaultBlockState().setValue(PICKLES, p_222414_.nextInt(4) + 1), 3);
+                for (int startY = endY - 2; startY < endY; startY++) {
+                    BlockPos position = new BlockPos(xStart + x, startY, pos.getZ() - zOffSet + z);
+                    if (!position.equals(pos) && random.nextInt(6) == 0 && level.getBlockState(position).is(Blocks.WATER)) {
+                        BlockState belowState = level.getBlockState(position.below());
+                        if (belowState.is(BlockTags.CORAL_BLOCKS)) {
+                            level.setBlock(position, Blocks.SEA_PICKLE.defaultBlockState().setValue(PICKLES, random.nextInt(4) + 1), 3);
                         }
                     }
                 }
             }
 
-            if (l < 2) {
-                j += 2;
-                j1++;
+            if (count < 2) {
+                zSpan += 2;
+                zOffSet++;
             } else {
-                j -= 2;
-                j1--;
+                zSpan -= 2;
+                zOffSet--;
             }
 
-            l++;
+            count++;
         }
 
-        p_222413_.setBlock(p_222415_, p_222416_.setValue(PICKLES, 4), 2);
+        level.setBlock(pos, state.setValue(PICKLES, 4), 2);
     }
 
     @Override
-    protected boolean isPathfindable(BlockState p_56104_, PathComputationType p_56107_) {
+    protected boolean isPathfindable(final BlockState state, final PathComputationType type) {
         return false;
     }
 }

@@ -2,7 +2,6 @@ package net.minecraft.world.food;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -20,12 +19,12 @@ import net.minecraft.world.level.Level;
 
 public record FoodProperties(int nutrition, float saturation, boolean canAlwaysEat) implements ConsumableListener {
     public static final Codec<FoodProperties> DIRECT_CODEC = RecordCodecBuilder.create(
-        p_359368_ -> p_359368_.group(
+        i -> i.group(
                 ExtraCodecs.NON_NEGATIVE_INT.fieldOf("nutrition").forGetter(FoodProperties::nutrition),
                 Codec.FLOAT.fieldOf("saturation").forGetter(FoodProperties::saturation),
                 Codec.BOOL.optionalFieldOf("can_always_eat", false).forGetter(FoodProperties::canAlwaysEat)
             )
-            .apply(p_359368_, FoodProperties::new)
+            .apply(i, FoodProperties::new)
     );
     public static final StreamCodec<RegistryFriendlyByteBuf, FoodProperties> DIRECT_STREAM_CODEC = StreamCodec.composite(
         ByteBufCodecs.VAR_INT,
@@ -38,29 +37,13 @@ public record FoodProperties(int nutrition, float saturation, boolean canAlwaysE
     );
 
     @Override
-    public void onConsume(Level p_369423_, LivingEntity p_368675_, ItemStack p_365501_, Consumable p_363411_) {
-        RandomSource randomsource = p_368675_.getRandom();
-        p_369423_.playSound(
-            null,
-            p_368675_.getX(),
-            p_368675_.getY(),
-            p_368675_.getZ(),
-            p_363411_.sound().value(),
-            SoundSource.NEUTRAL,
-            1.0F,
-            randomsource.triangle(1.0F, 0.4F)
-        );
-        if (p_368675_ instanceof Player player) {
+    public void onConsume(final Level level, final LivingEntity user, final ItemStack stack, final Consumable consumable) {
+        RandomSource random = user.getRandom();
+        level.playSound(null, user.getX(), user.getY(), user.getZ(), consumable.sound().value(), SoundSource.NEUTRAL, 1.0F, random.triangle(1.0F, 0.4F));
+        if (user instanceof Player player) {
             player.getFoodData().eat(this);
-            p_369423_.playSound(
-                null,
-                player.getX(),
-                player.getY(),
-                player.getZ(),
-                SoundEvents.PLAYER_BURP,
-                SoundSource.PLAYERS,
-                0.5F,
-                Mth.randomBetween(randomsource, 0.9F, 1.0F)
+            level.playSound(
+                null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 0.5F, Mth.randomBetween(random, 0.9F, 1.0F)
             );
         }
     }
@@ -70,13 +53,13 @@ public record FoodProperties(int nutrition, float saturation, boolean canAlwaysE
         private float saturationModifier;
         private boolean canAlwaysEat;
 
-        public FoodProperties.Builder nutrition(int p_38761_) {
-            this.nutrition = p_38761_;
+        public FoodProperties.Builder nutrition(final int nutrition) {
+            this.nutrition = nutrition;
             return this;
         }
 
-        public FoodProperties.Builder saturationModifier(float p_38759_) {
-            this.saturationModifier = p_38759_;
+        public FoodProperties.Builder saturationModifier(final float saturationModifier) {
+            this.saturationModifier = saturationModifier;
             return this;
         }
 
@@ -86,8 +69,8 @@ public record FoodProperties(int nutrition, float saturation, boolean canAlwaysE
         }
 
         public FoodProperties build() {
-            float f = FoodConstants.saturationByModifier(this.nutrition, this.saturationModifier);
-            return new FoodProperties(this.nutrition, f, this.canAlwaysEat);
+            float saturation = FoodConstants.saturationByModifier(this.nutrition, this.saturationModifier);
+            return new FoodProperties(this.nutrition, saturation, this.canAlwaysEat);
         }
     }
 }

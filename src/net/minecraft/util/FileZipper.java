@@ -10,7 +10,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
@@ -21,56 +20,56 @@ public class FileZipper implements Closeable {
     private final Path tempFile;
     private final FileSystem fs;
 
-    public FileZipper(Path p_144697_) {
-        this.outputFile = p_144697_;
-        this.tempFile = p_144697_.resolveSibling(p_144697_.getFileName().toString() + "_tmp");
+    public FileZipper(final Path outputFile) {
+        this.outputFile = outputFile;
+        this.tempFile = outputFile.resolveSibling(outputFile.getFileName().toString() + "_tmp");
 
         try {
             this.fs = Util.ZIP_FILE_SYSTEM_PROVIDER.newFileSystem(this.tempFile, ImmutableMap.of("create", "true"));
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
-    public void add(Path p_144704_, String p_144705_) {
+    public void add(final Path destinationRelativePath, final String content) {
         try {
-            Path path = this.fs.getPath(File.separator);
-            Path path1 = path.resolve(p_144704_.toString());
-            Files.createDirectories(path1.getParent());
-            Files.write(path1, p_144705_.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+            Path root = this.fs.getPath(File.separator);
+            Path path = root.resolve(destinationRelativePath.toString());
+            Files.createDirectories(path.getParent());
+            Files.write(path, content.getBytes(StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
-    public void add(Path p_144701_, File p_144702_) {
+    public void add(final Path destinationRelativePath, final File file) {
         try {
-            Path path = this.fs.getPath(File.separator);
-            Path path1 = path.resolve(p_144701_.toString());
-            Files.createDirectories(path1.getParent());
-            Files.copy(p_144702_.toPath(), path1);
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+            Path root = this.fs.getPath(File.separator);
+            Path path = root.resolve(destinationRelativePath.toString());
+            Files.createDirectories(path.getParent());
+            Files.copy(file.toPath(), path);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
-    public void add(Path p_144699_) {
+    public void add(final Path path) {
         try {
-            Path path = this.fs.getPath(File.separator);
-            if (Files.isRegularFile(p_144699_)) {
-                Path path3 = path.resolve(p_144699_.getParent().relativize(p_144699_).toString());
-                Files.copy(path3, p_144699_);
+            Path root = this.fs.getPath(File.separator);
+            if (Files.isRegularFile(path)) {
+                Path targetFile = root.resolve(path.getParent().relativize(path).toString());
+                Files.copy(targetFile, path);
             } else {
-                try (Stream<Path> stream = Files.find(p_144699_, Integer.MAX_VALUE, (p_144707_, p_144708_) -> p_144708_.isRegularFile())) {
-                    for (Path path1 : stream.collect(Collectors.toList())) {
-                        Path path2 = path.resolve(p_144699_.relativize(path1).toString());
-                        Files.createDirectories(path2.getParent());
-                        Files.copy(path1, path2);
+                try (Stream<Path> sourceFiles = Files.find(path, Integer.MAX_VALUE, (p, a) -> a.isRegularFile())) {
+                    for (Path sourceFile : sourceFiles.collect(Collectors.toList())) {
+                        Path targetFile = root.resolve(path.relativize(sourceFile).toString());
+                        Files.createDirectories(targetFile.getParent());
+                        Files.copy(sourceFile, targetFile);
                     }
                 }
             }
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -80,8 +79,8 @@ public class FileZipper implements Closeable {
             this.fs.close();
             Files.move(this.tempFile, this.outputFile);
             LOGGER.info("Compressed to {}", this.outputFile);
-        } catch (IOException ioexception) {
-            throw new UncheckedIOException(ioexception);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }

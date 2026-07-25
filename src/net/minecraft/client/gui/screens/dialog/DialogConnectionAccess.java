@@ -8,19 +8,16 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.ServerLinks;
 import net.minecraft.server.dialog.Dialog;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface DialogConnectionAccess {
-    void disconnect(Component p_405901_);
+    void disconnect(Component message);
 
-    void runCommand(String p_407865_, @Nullable Screen p_407353_);
+    void runCommand(String command, @Nullable Screen activeScreen);
 
-    void openDialog(Holder<Dialog> p_407019_, @Nullable Screen p_410729_);
+    void openDialog(Holder<Dialog> dialog, @Nullable Screen activeScreen);
 
-    void sendCustomAction(Identifier p_458846_, Optional<Tag> p_405814_);
+    void sendCustomAction(Identifier id, Optional<Tag> payload);
 
     ServerLinks serverLinks();
 }

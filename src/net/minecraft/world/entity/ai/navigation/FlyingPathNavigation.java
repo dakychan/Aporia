@@ -11,19 +11,19 @@ import net.minecraft.world.level.pathfinder.PathFinder;
 import net.minecraft.world.phys.Vec3;
 
 public class FlyingPathNavigation extends PathNavigation {
-    public FlyingPathNavigation(Mob p_26424_, Level p_26425_) {
-        super(p_26424_, p_26425_);
+    public FlyingPathNavigation(final Mob mob, final Level level) {
+        super(mob, level);
     }
 
     @Override
-    protected PathFinder createPathFinder(int p_26428_) {
+    protected PathFinder createPathFinder(final int maxVisitedNodes) {
         this.nodeEvaluator = new FlyNodeEvaluator();
-        return new PathFinder(this.nodeEvaluator, p_26428_);
+        return new PathFinder(this.nodeEvaluator, maxVisitedNodes);
     }
 
     @Override
-    protected boolean canMoveDirectly(Vec3 p_262585_, Vec3 p_262682_) {
-        return isClearForMovementBetween(this.mob, p_262585_, p_262682_, true);
+    protected boolean canMoveDirectly(final Vec3 startPos, final Vec3 stopPos) {
+        return isClearForMovementBetween(this.mob, startPos, stopPos, true);
     }
 
     @Override
@@ -37,8 +37,8 @@ public class FlyingPathNavigation extends PathNavigation {
     }
 
     @Override
-    public Path createPath(Entity p_26430_, int p_26431_) {
-        return this.createPath(p_26430_.blockPosition(), p_26431_);
+    public Path createPath(final Entity target, final int reachRange) {
+        return this.createPath(target.blockPosition(), reachRange);
     }
 
     @Override
@@ -52,24 +52,22 @@ public class FlyingPathNavigation extends PathNavigation {
             if (this.canUpdatePath()) {
                 this.followThePath();
             } else if (this.path != null && !this.path.isDone()) {
-                Vec3 vec3 = this.path.getNextEntityPos(this.mob);
-                if (this.mob.getBlockX() == Mth.floor(vec3.x)
-                    && this.mob.getBlockY() == Mth.floor(vec3.y)
-                    && this.mob.getBlockZ() == Mth.floor(vec3.z)) {
+                Vec3 pos = this.path.getNextEntityPos(this.mob);
+                if (this.mob.getBlockX() == Mth.floor(pos.x) && this.mob.getBlockY() == Mth.floor(pos.y) && this.mob.getBlockZ() == Mth.floor(pos.z)) {
                     this.path.advance();
                 }
             }
 
             if (!this.isDone()) {
-                Vec3 vec31 = this.path.getNextEntityPos(this.mob);
-                this.mob.getMoveControl().setWantedPosition(vec31.x, vec31.y, vec31.z, this.speedModifier);
+                Vec3 target = this.path.getNextEntityPos(this.mob);
+                this.mob.getMoveControl().setWantedPosition(target.x, target.y, target.z, this.speedModifier);
             }
         }
     }
 
     @Override
-    public boolean isStableDestination(BlockPos p_26439_) {
-        return this.level.getBlockState(p_26439_).entityCanStandOn(this.level, p_26439_, this.mob);
+    public boolean isStableDestination(final BlockPos pos) {
+        return this.level.getBlockState(pos).entityCanStandOn(this.level, pos, this.mob);
     }
 
     @Override

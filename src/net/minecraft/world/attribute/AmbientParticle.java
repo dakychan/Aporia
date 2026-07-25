@@ -2,7 +2,6 @@ package net.minecraft.world.attribute;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -10,18 +9,18 @@ import net.minecraft.util.RandomSource;
 
 public record AmbientParticle(ParticleOptions particle, float probability) {
     public static final Codec<AmbientParticle> CODEC = RecordCodecBuilder.create(
-        p_450236_ -> p_450236_.group(
-                ParticleTypes.CODEC.fieldOf("particle").forGetter(p_455989_ -> p_455989_.particle),
-                Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(p_460768_ -> p_460768_.probability)
+        i -> i.group(
+                ParticleTypes.CODEC.fieldOf("particle").forGetter(s -> s.particle),
+                Codec.floatRange(0.0F, 1.0F).fieldOf("probability").forGetter(s -> s.probability)
             )
-            .apply(p_450236_, AmbientParticle::new)
+            .apply(i, AmbientParticle::new)
     );
 
-    public boolean canSpawn(RandomSource p_454173_) {
-        return p_454173_.nextFloat() <= this.probability;
+    public boolean canSpawn(final RandomSource random) {
+        return random.nextFloat() <= this.probability;
     }
 
-    public static List<AmbientParticle> of(ParticleOptions p_457381_, float p_454127_) {
-        return List.of(new AmbientParticle(p_457381_, p_454127_));
+    public static List<AmbientParticle> of(final ParticleOptions particle, final float probability) {
+        return List.of(new AmbientParticle(particle, probability));
     }
 }

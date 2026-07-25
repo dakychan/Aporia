@@ -20,15 +20,15 @@ public class RailBlock extends BaseRailBlock {
         return CODEC;
     }
 
-    protected RailBlock(BlockBehaviour.Properties p_55395_) {
-        super(false, p_55395_);
+    protected RailBlock(final BlockBehaviour.Properties properties) {
+        super(false, properties);
         this.registerDefaultState(this.stateDefinition.any().setValue(SHAPE, RailShape.NORTH_SOUTH).setValue(WATERLOGGED, false));
     }
 
     @Override
-    protected void updateState(BlockState p_55397_, Level p_55398_, BlockPos p_55399_, Block p_55400_) {
-        if (p_55400_.defaultBlockState().isSignalSource() && new RailState(p_55398_, p_55399_, p_55397_).countPotentialConnections() == 3) {
-            this.updateDir(p_55398_, p_55399_, p_55397_, false);
+    protected void updateState(final BlockState state, final Level level, final BlockPos pos, final Block block) {
+        if (block.defaultBlockState().isSignalSource() && new RailState(level, pos, state).countPotentialConnections() == 3) {
+            this.updateDir(level, pos, state, false);
         }
     }
 
@@ -38,21 +38,21 @@ public class RailBlock extends BaseRailBlock {
     }
 
     @Override
-    protected BlockState rotate(BlockState p_55405_, Rotation p_55406_) {
-        RailShape railshape = p_55405_.getValue(SHAPE);
-        RailShape railshape1 = this.rotate(railshape, p_55406_);
-        return p_55405_.setValue(SHAPE, railshape1);
+    protected BlockState rotate(final BlockState state, final Rotation rotation) {
+        RailShape currentShape = state.getValue(SHAPE);
+        RailShape newShape = this.rotate(currentShape, rotation);
+        return state.setValue(SHAPE, newShape);
     }
 
     @Override
-    protected BlockState mirror(BlockState p_55402_, Mirror p_55403_) {
-        RailShape railshape = p_55402_.getValue(SHAPE);
-        RailShape railshape1 = this.mirror(railshape, p_55403_);
-        return p_55402_.setValue(SHAPE, railshape1);
+    protected BlockState mirror(final BlockState state, final Mirror mirror) {
+        RailShape currentShape = state.getValue(SHAPE);
+        RailShape newShape = this.mirror(currentShape, mirror);
+        return state.setValue(SHAPE, newShape);
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_55408_) {
-        p_55408_.add(SHAPE, WATERLOGGED);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(SHAPE, WATERLOGGED);
     }
 }

@@ -6,7 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
-import net.minecraft.advancements.criterion.MinMaxBounds;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.commands.CommandSourceStack;
 
 public interface RangeArgument<T extends MinMaxBounds<?>> extends ArgumentType<T> {
@@ -18,15 +18,15 @@ public interface RangeArgument<T extends MinMaxBounds<?>> extends ArgumentType<T
         return new RangeArgument.Floats();
     }
 
-    public static class Floats implements RangeArgument<MinMaxBounds.Doubles> {
+    class Floats implements RangeArgument<MinMaxBounds.Doubles> {
         private static final Collection<String> EXAMPLES = Arrays.asList("0..5.2", "0", "-5.4", "-100.76..", "..100");
 
-        public static MinMaxBounds.Doubles getRange(CommandContext<CommandSourceStack> p_170805_, String p_170806_) {
-            return p_170805_.getArgument(p_170806_, MinMaxBounds.Doubles.class);
+        public static MinMaxBounds.Doubles getRange(final CommandContext<CommandSourceStack> context, final String name) {
+            return context.getArgument(name, MinMaxBounds.Doubles.class);
         }
 
-        public MinMaxBounds.Doubles parse(StringReader p_170803_) throws CommandSyntaxException {
-            return MinMaxBounds.Doubles.fromReader(p_170803_);
+        public MinMaxBounds.Doubles parse(final StringReader reader) throws CommandSyntaxException {
+            return MinMaxBounds.Doubles.fromReader(reader);
         }
 
         @Override
@@ -35,15 +35,15 @@ public interface RangeArgument<T extends MinMaxBounds<?>> extends ArgumentType<T
         }
     }
 
-    public static class Ints implements RangeArgument<MinMaxBounds.Ints> {
+    class Ints implements RangeArgument<MinMaxBounds.Ints> {
         private static final Collection<String> EXAMPLES = Arrays.asList("0..5", "0", "-5", "-100..", "..100");
 
-        public static MinMaxBounds.Ints getRange(CommandContext<CommandSourceStack> p_105420_, String p_105421_) {
-            return p_105420_.getArgument(p_105421_, MinMaxBounds.Ints.class);
+        public static MinMaxBounds.Ints getRange(final CommandContext<CommandSourceStack> context, final String name) {
+            return context.getArgument(name, MinMaxBounds.Ints.class);
         }
 
-        public MinMaxBounds.Ints parse(StringReader p_105418_) throws CommandSyntaxException {
-            return MinMaxBounds.Ints.fromReader(p_105418_);
+        public MinMaxBounds.Ints parse(final StringReader reader) throws CommandSyntaxException {
+            return MinMaxBounds.Ints.fromReader(reader);
         }
 
         @Override

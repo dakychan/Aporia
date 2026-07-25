@@ -5,18 +5,16 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class BlockStateMatchTest extends RuleTest {
-    public static final MapCodec<BlockStateMatchTest> CODEC = BlockState.CODEC
-        .fieldOf("block_state")
-        .xmap(BlockStateMatchTest::new, p_74099_ -> p_74099_.blockState);
+    public static final MapCodec<BlockStateMatchTest> CODEC = BlockState.CODEC.fieldOf("block_state").xmap(BlockStateMatchTest::new, t -> t.blockState);
     private final BlockState blockState;
 
-    public BlockStateMatchTest(BlockState p_74093_) {
-        this.blockState = p_74093_;
+    public BlockStateMatchTest(final BlockState blockState) {
+        this.blockState = blockState;
     }
 
     @Override
-    public boolean test(BlockState p_230293_, RandomSource p_230294_) {
-        return p_230293_ == this.blockState;
+    public boolean test(final BlockState blockState, final RandomSource random) {
+        return blockState == this.blockState;
     }
 
     @Override

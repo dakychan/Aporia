@@ -10,17 +10,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.ThreadPoolExecutor;
-
-import com.viaversion.viafabricplus.injection.access.base.IServerData;
-import com.viaversion.viafabricplus.protocoltranslator.ProtocolTranslator;
-import com.viaversion.viafabricplus.settings.impl.DebugSettings;
-import com.viaversion.viafabricplus.settings.impl.GeneralSettings;
-import com.viaversion.viaversion.api.protocol.version.ProtocolVersion;
 import net.minecraft.ChatFormatting;
 import net.minecraft.DefaultUncaughtExceptionHandler;
 import net.minecraft.SharedConstants;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.LoadingDotsWidget;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.SelectableEntry;
@@ -31,38 +25,38 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.ServerList;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.server.LanServer;
-import net.minecraft.network.chat.*;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.network.EventLoopGroupHolder;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.util.Util;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
-
 public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList.Entry> {
-    static final Identifier INCOMPATIBLE_SPRITE = Identifier.withDefaultNamespace("server_list/incompatible");
-    static final Identifier UNREACHABLE_SPRITE = Identifier.withDefaultNamespace("server_list/unreachable");
-    static final Identifier PING_1_SPRITE = Identifier.withDefaultNamespace("server_list/ping_1");
-    static final Identifier PING_2_SPRITE = Identifier.withDefaultNamespace("server_list/ping_2");
-    static final Identifier PING_3_SPRITE = Identifier.withDefaultNamespace("server_list/ping_3");
-    static final Identifier PING_4_SPRITE = Identifier.withDefaultNamespace("server_list/ping_4");
-    static final Identifier PING_5_SPRITE = Identifier.withDefaultNamespace("server_list/ping_5");
-    static final Identifier PINGING_1_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_1");
-    static final Identifier PINGING_2_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_2");
-    static final Identifier PINGING_3_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_3");
-    static final Identifier PINGING_4_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_4");
-    static final Identifier PINGING_5_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_5");
-    static final Identifier JOIN_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("server_list/join_highlighted");
-    static final Identifier JOIN_SPRITE = Identifier.withDefaultNamespace("server_list/join");
-    static final Identifier MOVE_UP_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("server_list/move_up_highlighted");
-    static final Identifier MOVE_UP_SPRITE = Identifier.withDefaultNamespace("server_list/move_up");
-    static final Identifier MOVE_DOWN_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("server_list/move_down_highlighted");
-    static final Identifier MOVE_DOWN_SPRITE = Identifier.withDefaultNamespace("server_list/move_down");
-    static final Logger LOGGER = LogUtils.getLogger();
-    static final ThreadPoolExecutor THREAD_POOL = new ScheduledThreadPoolExecutor(
+    private static final Identifier INCOMPATIBLE_SPRITE = Identifier.withDefaultNamespace("server_list/incompatible");
+    private static final Identifier UNREACHABLE_SPRITE = Identifier.withDefaultNamespace("server_list/unreachable");
+    private static final Identifier PING_1_SPRITE = Identifier.withDefaultNamespace("server_list/ping_1");
+    private static final Identifier PING_2_SPRITE = Identifier.withDefaultNamespace("server_list/ping_2");
+    private static final Identifier PING_3_SPRITE = Identifier.withDefaultNamespace("server_list/ping_3");
+    private static final Identifier PING_4_SPRITE = Identifier.withDefaultNamespace("server_list/ping_4");
+    private static final Identifier PING_5_SPRITE = Identifier.withDefaultNamespace("server_list/ping_5");
+    private static final Identifier PINGING_1_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_1");
+    private static final Identifier PINGING_2_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_2");
+    private static final Identifier PINGING_3_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_3");
+    private static final Identifier PINGING_4_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_4");
+    private static final Identifier PINGING_5_SPRITE = Identifier.withDefaultNamespace("server_list/pinging_5");
+    private static final Identifier JOIN_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("server_list/join_highlighted");
+    private static final Identifier JOIN_SPRITE = Identifier.withDefaultNamespace("server_list/join");
+    private static final Identifier MOVE_UP_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("server_list/move_up_highlighted");
+    private static final Identifier MOVE_UP_SPRITE = Identifier.withDefaultNamespace("server_list/move_up");
+    private static final Identifier MOVE_DOWN_HIGHLIGHTED_SPRITE = Identifier.withDefaultNamespace("server_list/move_down_highlighted");
+    private static final Identifier MOVE_DOWN_SPRITE = Identifier.withDefaultNamespace("server_list/move_down");
+    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final ThreadPoolExecutor THREAD_POOL = new ScheduledThreadPoolExecutor(
         5,
         new ThreadFactoryBuilder()
             .setNameFormat("Server Pinger #%d")
@@ -70,71 +64,73 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
             .setUncaughtExceptionHandler(new DefaultUncaughtExceptionHandler(LOGGER))
             .build()
     );
-    static final Component SCANNING_LABEL = Component.translatable("lanServer.scanning");
-    static final Component CANT_RESOLVE_TEXT = Component.translatable("multiplayer.status.cannot_resolve").withColor(-65536);
-    static final Component CANT_CONNECT_TEXT = Component.translatable("multiplayer.status.cannot_connect").withColor(-65536);
-    static final Component INCOMPATIBLE_STATUS = Component.translatable("multiplayer.status.incompatible");
-    static final Component NO_CONNECTION_STATUS = Component.translatable("multiplayer.status.no_connection");
-    static final Component PINGING_STATUS = Component.translatable("multiplayer.status.pinging");
-    static final Component ONLINE_STATUS = Component.translatable("multiplayer.status.online");
+    private static final Component SCANNING_LABEL = Component.translatable("lanServer.scanning");
+    private static final Component CANT_RESOLVE_TEXT = Component.translatable("multiplayer.status.cannot_resolve").withColor(-65536);
+    private static final Component CANT_CONNECT_TEXT = Component.translatable("multiplayer.status.cannot_connect").withColor(-65536);
+    private static final Component INCOMPATIBLE_STATUS = Component.translatable("multiplayer.status.incompatible");
+    private static final Component NO_CONNECTION_STATUS = Component.translatable("multiplayer.status.no_connection");
+    private static final Component PINGING_STATUS = Component.translatable("multiplayer.status.pinging");
+    private static final Component ONLINE_STATUS = Component.translatable("multiplayer.status.online");
     private final JoinMultiplayerScreen screen;
     private final List<ServerSelectionList.OnlineServerEntry> onlineServers = Lists.newArrayList();
     private final ServerSelectionList.Entry lanHeader = new ServerSelectionList.LANHeader();
     private final List<ServerSelectionList.NetworkServerEntry> networkServers = Lists.newArrayList();
 
-    public ServerSelectionList(JoinMultiplayerScreen p_99771_, Minecraft p_99772_, int p_99773_, int p_99774_, int p_99775_, int p_99776_) {
-        super(p_99772_, p_99773_, p_99774_, p_99775_, p_99776_);
-        this.screen = p_99771_;
+    public ServerSelectionList(
+        final JoinMultiplayerScreen screen, final Minecraft minecraft, final int width, final int height, final int y, final int itemHeight
+    ) {
+        super(minecraft, width, height, y, itemHeight);
+        this.screen = screen;
     }
 
     private void refreshEntries() {
-        ServerSelectionList.Entry serverselectionlist$entry = this.getSelected();
-        List<ServerSelectionList.Entry> list = new ArrayList<>(this.onlineServers);
-        list.add(this.lanHeader);
-        list.addAll(this.networkServers);
-        this.replaceEntries(list);
-        if (serverselectionlist$entry != null) {
-            for (ServerSelectionList.Entry serverselectionlist$entry1 : list) {
-                if (serverselectionlist$entry1.matches(serverselectionlist$entry)) {
-                    this.setSelected(serverselectionlist$entry1);
+        ServerSelectionList.Entry previouslySelected = this.getSelected();
+        List<ServerSelectionList.Entry> entriesToAdd = new ArrayList<>(this.onlineServers);
+        entriesToAdd.add(this.lanHeader);
+        entriesToAdd.addAll(this.networkServers);
+        this.replaceEntries(entriesToAdd);
+        if (previouslySelected != null) {
+            for (ServerSelectionList.Entry entry : entriesToAdd) {
+                if (entry.matches(previouslySelected)) {
+                    this.setSelected(entry);
                     break;
                 }
             }
         }
     }
 
-    public void setSelected(ServerSelectionList.@Nullable Entry p_99790_) {
-        super.setSelected(p_99790_);
+    public void setSelected(final ServerSelectionList.@Nullable Entry selected) {
+        super.setSelected(selected);
         this.screen.onSelectedChange();
     }
 
-    public void updateOnlineServers(ServerList p_99798_) {
+    public void updateOnlineServers(final ServerList servers) {
         this.onlineServers.clear();
 
-        for (int i = 0; i < p_99798_.size(); i++) {
-            this.onlineServers.add(new ServerSelectionList.OnlineServerEntry(this.screen, p_99798_.get(i)));
+        for (int i = 0; i < servers.size(); i++) {
+            this.onlineServers.add(new ServerSelectionList.OnlineServerEntry(this.screen, servers.get(i)));
         }
 
         this.refreshEntries();
     }
 
-    public void updateNetworkServers(List<LanServer> p_99800_) {
-        int i = p_99800_.size() - this.networkServers.size();
+    public void updateNetworkServers(final List<LanServer> servers) {
+        int newServerCount = servers.size() - this.networkServers.size();
         this.networkServers.clear();
 
-        for (LanServer lanserver : p_99800_) {
-            this.networkServers.add(new ServerSelectionList.NetworkServerEntry(this.screen, lanserver));
+        for (LanServer server : servers) {
+            this.networkServers.add(new ServerSelectionList.NetworkServerEntry(this.screen, server));
         }
 
         this.refreshEntries();
 
-        for (int i1 = this.networkServers.size() - i; i1 < this.networkServers.size(); i1++) {
-            ServerSelectionList.NetworkServerEntry serverselectionlist$networkserverentry = this.networkServers.get(i1);
-            int j = i1 - this.networkServers.size() + this.children().size();
-            int k = this.getRowTop(j);
-            int l = this.getRowBottom(j);
-            if (l >= this.getY() && k <= this.getBottom()) {
-                this.minecraft.getNarrator().saySystemQueued(Component.translatable("multiplayer.lan.server_found", serverselectionlist$networkserverentry.getServerNarration()));
+        for (int i = this.networkServers.size() - newServerCount; i < this.networkServers.size(); i++) {
+            ServerSelectionList.NetworkServerEntry newServer = this.networkServers.get(i);
+            int entryIndex = i - this.networkServers.size() + this.children().size();
+            int rowTop = this.getRowTop(entryIndex);
+            int rowBottom = this.getRowBottom(entryIndex);
+            if (rowBottom >= this.getY() && rowTop <= this.getBottom()) {
+                this.minecraft.getNarrator().saySystemQueued(Component.translatable("multiplayer.lan.server_found", newServer.getServerNarration()));
             }
         }
     }
@@ -147,26 +143,25 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
     public void removed() {
     }
 
-    
-    public abstract static class Entry extends ObjectSelectionList.Entry<ServerSelectionList.Entry> implements AutoCloseable {
+        public abstract static class Entry extends ObjectSelectionList.Entry<ServerSelectionList.Entry> implements AutoCloseable {
         @Override
         public void close() {
         }
 
-        abstract boolean matches(ServerSelectionList.Entry p_426232_);
+        protected abstract boolean matches(final ServerSelectionList.Entry other);
 
         public abstract void join();
     }
 
-    
-    public static class LANHeader extends ServerSelectionList.Entry {
+        public static class LANHeader extends ServerSelectionList.Entry {
         private final Minecraft minecraft = Minecraft.getInstance();
         private final LoadingDotsWidget loadingDotsWidget = new LoadingDotsWidget(this.minecraft.font, ServerSelectionList.SCANNING_LABEL);
 
         @Override
-        public void renderContent(GuiGraphics p_426245_, int p_422472_, int p_425094_, boolean p_423481_, float p_429004_) {
-            this.loadingDotsWidget.setPosition(this.getContentXMiddle() - this.minecraft.font.width(ServerSelectionList.SCANNING_LABEL) / 2, this.getContentY());
-            this.loadingDotsWidget.render(p_426245_, p_422472_, p_425094_, p_429004_);
+        public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+            this.loadingDotsWidget
+                .setPosition(this.getContentXMiddle() - this.minecraft.font.width(ServerSelectionList.SCANNING_LABEL) / 2, this.getContentY());
+            this.loadingDotsWidget.extractRenderState(graphics, mouseX, mouseY, a);
         }
 
         @Override
@@ -175,8 +170,8 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         }
 
         @Override
-        boolean matches(ServerSelectionList.Entry p_429702_) {
-            return p_429702_ instanceof ServerSelectionList.LANHeader;
+        protected boolean matches(final ServerSelectionList.Entry other) {
+            return other instanceof ServerSelectionList.LANHeader;
         }
 
         @Override
@@ -184,8 +179,7 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         }
     }
 
-    
-    public static class NetworkServerEntry extends ServerSelectionList.Entry {
+        public static class NetworkServerEntry extends ServerSelectionList.Entry {
         private static final int ICON_WIDTH = 32;
         private static final Component LAN_SERVER_HEADER = Component.translatable("lanServer.title");
         private static final Component HIDDEN_ADDRESS_TEXT = Component.translatable("selectServer.hiddenAddress");
@@ -193,39 +187,39 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         protected final Minecraft minecraft;
         protected final LanServer serverData;
 
-        protected NetworkServerEntry(JoinMultiplayerScreen p_99836_, LanServer p_99837_) {
-            this.screen = p_99836_;
-            this.serverData = p_99837_;
+        protected NetworkServerEntry(final JoinMultiplayerScreen screen, final LanServer serverData) {
+            this.screen = screen;
+            this.serverData = serverData;
             this.minecraft = Minecraft.getInstance();
         }
 
         @Override
-        public void renderContent(GuiGraphics p_282600_, int p_282649_, int p_283641_, boolean p_283673_, float p_282694_) {
-            p_282600_.drawString(this.minecraft.font, LAN_SERVER_HEADER, this.getContentX() + 32 + 3, this.getContentY() + 1, -1);
-            p_282600_.drawString(this.minecraft.font, this.serverData.getMotd(), this.getContentX() + 32 + 3, this.getContentY() + 12, -8355712);
+        public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+            graphics.text(this.minecraft.font, LAN_SERVER_HEADER, this.getContentX() + 32 + 3, this.getContentY() + 1, -1);
+            graphics.text(this.minecraft.font, this.serverData.getMotd(), this.getContentX() + 32 + 3, this.getContentY() + 12, -8355712);
             if (this.minecraft.options.hideServerAddress) {
-                p_282600_.drawString(this.minecraft.font, HIDDEN_ADDRESS_TEXT, this.getContentX() + 32 + 3, this.getContentY() + 12 + 11, -8355712);
+                graphics.text(this.minecraft.font, HIDDEN_ADDRESS_TEXT, this.getContentX() + 32 + 3, this.getContentY() + 12 + 11, -8355712);
             } else {
-                p_282600_.drawString(this.minecraft.font, this.serverData.getAddress(), this.getContentX() + 32 + 3, this.getContentY() + 12 + 11, -8355712);
+                graphics.text(this.minecraft.font, this.serverData.getAddress(), this.getContentX() + 32 + 3, this.getContentY() + 12 + 11, -8355712);
             }
         }
 
         @Override
-        public boolean mouseClicked(MouseButtonEvent p_424079_, boolean p_424379_) {
-            if (p_424379_) {
+        public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+            if (doubleClick) {
                 this.join();
             }
 
-            return super.mouseClicked(p_424079_, p_424379_);
+            return super.mouseClicked(event, doubleClick);
         }
 
         @Override
-        public boolean keyPressed(KeyEvent p_425753_) {
-            if (p_425753_.isSelection()) {
+        public boolean keyPressed(final KeyEvent event) {
+            if (event.isSelection()) {
                 this.join();
                 return true;
             } else {
-                return super.keyPressed(p_425753_);
+                return super.keyPressed(event);
             }
         }
 
@@ -244,14 +238,12 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         }
 
         @Override
-        boolean matches(ServerSelectionList.Entry p_427565_) {
-            return p_427565_ instanceof ServerSelectionList.NetworkServerEntry serverselectionlist$networkserverentry
-                && serverselectionlist$networkserverentry.serverData == this.serverData;
+        protected boolean matches(final ServerSelectionList.Entry other) {
+            return other instanceof ServerSelectionList.NetworkServerEntry networkServerEntry && networkServerEntry.serverData == this.serverData;
         }
     }
 
-    
-    public class OnlineServerEntry extends ServerSelectionList.Entry implements SelectableEntry {
+        public class OnlineServerEntry extends ServerSelectionList.Entry implements SelectableEntry {
         private static final int ICON_SIZE = 32;
         private static final int SPACING = 5;
         private static final int STATUS_ICON_WIDTH = 10;
@@ -265,85 +257,68 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         private @Nullable Identifier statusIcon;
         private @Nullable Component statusIconTooltip;
 
-        protected OnlineServerEntry(final JoinMultiplayerScreen p_99864_, final ServerData p_99865_) {
-            this.screen = p_99864_;
-            this.serverData = p_99865_;
+        protected OnlineServerEntry(final JoinMultiplayerScreen screen, final ServerData serverData) {
+            this.screen = screen;
+            this.serverData = serverData;
             this.minecraft = Minecraft.getInstance();
-            this.icon = FaviconTexture.forServer(this.minecraft.getTextureManager(), p_99865_.ip);
+            this.icon = FaviconTexture.forServer(this.minecraft.getTextureManager(), serverData.ip);
             this.refreshStatus();
         }
 
-        private boolean viaFabricPlus$disableServerPinging = false;
-
         @Override
-        public void renderContent(GuiGraphics p_425273_, int p_424268_, int p_430737_, boolean p_425246_, float p_422401_) {
+        public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
             if (this.serverData.state() == ServerData.State.INITIAL) {
                 this.serverData.setState(ServerData.State.PINGING);
                 this.serverData.motd = CommonComponents.EMPTY;
                 this.serverData.status = CommonComponents.EMPTY;
-
-                ProtocolVersion version = ((IServerData) serverData).viaFabricPlus$forcedVersion();
-                if (version == null) {
-                    version = ProtocolTranslator.getTargetVersion();
-                }
-
-                viaFabricPlus$disableServerPinging = DebugSettings.INSTANCE.disableServerPinging.isEnabled(version);
-                if (viaFabricPlus$disableServerPinging) {
-                    this.serverData.version = Component.nullToEmpty(version.getName());
-                } else {
-                    ServerSelectionList.THREAD_POOL.submit(
-                            () -> {
-                                try {
-                                    this.screen.getPinger().pingServer(
-                                            this.serverData,
-                                            () -> this.minecraft.execute(this::updateServerList),
-                                            () -> {
-                                                this.serverData.setState(
-                                                        this.serverData.protocol == SharedConstants.getCurrentVersion().protocolVersion()
-                                                                ? ServerData.State.SUCCESSFUL
-                                                                : ServerData.State.INCOMPATIBLE
+                ServerSelectionList.THREAD_POOL
+                    .submit(
+                        () -> {
+                            try {
+                                this.screen
+                                    .getPinger()
+                                    .pingServer(
+                                        this.serverData,
+                                        () -> this.minecraft.execute(this::updateServerList),
+                                        () -> {
+                                            this.serverData
+                                                .setState(
+                                                    this.serverData.protocol == SharedConstants.getCurrentVersion().protocolVersion()
+                                                        ? ServerData.State.SUCCESSFUL
+                                                        : ServerData.State.INCOMPATIBLE
                                                 );
-                                                this.minecraft.execute(this::refreshStatus);
-                                            },
-                                            EventLoopGroupHolder.remote(this.minecraft.options.useNativeTransport())
+                                            this.minecraft.execute(this::refreshStatus);
+                                        },
+                                        EventLoopGroupHolder.remote(this.minecraft.options.useNativeTransport())
                                     );
-                                } catch (UnknownHostException unknownhostexception) {
-                                    this.serverData.setState(ServerData.State.UNREACHABLE);
-                                    this.serverData.motd = ServerSelectionList.CANT_RESOLVE_TEXT;
-                                    this.minecraft.execute(this::refreshStatus);
-                                } catch (Exception exception) {
-                                    this.serverData.setState(ServerData.State.UNREACHABLE);
-                                    this.serverData.motd = ServerSelectionList.CANT_CONNECT_TEXT;
-                                    this.minecraft.execute(this::refreshStatus);
-                                }
+                            } catch (UnknownHostException ignored) {
+                                this.serverData.setState(ServerData.State.UNREACHABLE);
+                                this.serverData.motd = ServerSelectionList.CANT_RESOLVE_TEXT;
+                                this.minecraft.execute(this::refreshStatus);
+                            } catch (Exception ignored) {
+                                this.serverData.setState(ServerData.State.UNREACHABLE);
+                                this.serverData.motd = ServerSelectionList.CANT_CONNECT_TEXT;
+                                this.minecraft.execute(this::refreshStatus);
                             }
+                        }
                     );
-                }
             }
 
-            p_425273_.drawString(this.minecraft.font, this.serverData.name, this.getContentX() + 32 + 3, this.getContentY() + 1, -1);
+            graphics.text(this.minecraft.font, this.serverData.name, this.getContentX() + 32 + 3, this.getContentY() + 1, -1);
+            List<FormattedCharSequence> lines = this.minecraft.font.split(this.serverData.motd, this.getContentWidth() - 32 - 2);
 
-            FormattedText motdText = viaFabricPlus$disableServerPinging
-                    ? Component.nullToEmpty(serverData.ip)
-                    : this.serverData.motd;
-            List<FormattedCharSequence> list = this.minecraft.font.split(motdText, this.getContentWidth() - 32 - 2);
-
-            for (int i = 0; i < Math.min(list.size(), 2); i++) {
-                p_425273_.drawString(this.minecraft.font, list.get(i), this.getContentX() + 32 + 3, this.getContentY() + 12 + 9 * i, -8355712);
+            for (int i = 0; i < Math.min(lines.size(), 2); i++) {
+                graphics.text(this.minecraft.font, lines.get(i), this.getContentX() + 32 + 3, this.getContentY() + 12 + 9 * i, -8355712);
             }
 
-            Identifier iconLocation = viaFabricPlus$disableServerPinging
-                    ? FaviconTexture.MISSING_LOCATION
-                    : this.icon.textureLocation();
-            this.drawIcon(p_425273_, this.getContentX(), this.getContentY(), iconLocation);
-
-            int k1 = ServerSelectionList.this.children().indexOf(this);
+            this.extractIcon(graphics, this.getContentX(), this.getContentY(), this.icon.textureLocation());
+            int index = ServerSelectionList.this.children().indexOf(this);
             if (this.serverData.state() == ServerData.State.PINGING) {
-                int j = (int) (Util.getMillis() / 100L + k1 * 2 & 7L);
-                if (j > 4) {
-                    j = 8 - j;
+                int iconIndex = (int)(Util.getMillis() / 100L + index * 2 & 7L);
+                if (iconIndex > 4) {
+                    iconIndex = 8 - iconIndex;
                 }
-                this.statusIcon = switch (j) {
+                this.statusIcon = switch (iconIndex) {
                     case 1 -> ServerSelectionList.PINGING_2_SPRITE;
                     case 2 -> ServerSelectionList.PINGING_3_SPRITE;
                     case 3 -> ServerSelectionList.PINGING_4_SPRITE;
@@ -352,90 +327,73 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
                 };
             }
 
-            int l1 = this.getContentRight() - 10 - 5;
-
-            if (this.statusIcon != null && !viaFabricPlus$disableServerPinging) {
-                p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, this.statusIcon, l1, this.getContentY(), 10, 8);
+            int statusIconX = this.getContentRight() - 10 - 5;
+            if (this.statusIcon != null) {
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.statusIcon, statusIconX, this.getContentY(), 10, 8);
             }
 
-            byte[] abyte = this.serverData.getIconBytes();
-            if (!Arrays.equals(abyte, this.lastIconBytes)) {
-                if (this.uploadServerIcon(abyte)) {
-                    this.lastIconBytes = abyte;
+            byte[] currentIconBytes = this.serverData.getIconBytes();
+            if (!Arrays.equals(currentIconBytes, this.lastIconBytes)) {
+                if (this.uploadServerIcon(currentIconBytes)) {
+                    this.lastIconBytes = currentIconBytes;
                 } else {
                     this.serverData.setIconBytes(null);
                     this.updateServerList();
                 }
             }
 
-            ServerData.State incompatibleState = viaFabricPlus$disableServerPinging
-                    ? this.serverData.state()
-                    : ServerData.State.INCOMPATIBLE;
-
-            Component component = this.serverData.state() == incompatibleState
-                    ? this.serverData.version.copy().withStyle(ChatFormatting.RED)
-                    : this.serverData.status;
-
-            int k = this.minecraft.font.width(component);
-            int l = l1 - k - 5;
-            if (viaFabricPlus$disableServerPinging) {
-                l += 15 - 3;
-            }
-            p_425273_.drawString(this.minecraft.font, component, l, this.getContentY() + 1, -8355712);
-
-            if (this.statusIconTooltip != null && p_424268_ >= l1 && p_424268_ <= l1 + 10 && p_430737_ >= this.getContentY() && p_430737_ <= this.getContentY() + 8) {
-                final List<Component> tooltips = new ArrayList<>();
-                tooltips.add(this.statusIconTooltip);
-
-                if (GeneralSettings.INSTANCE.showAdvertisedServerVersion.getValue()) {
-                    final ProtocolVersion ver = ((IServerData) this.serverData).viaFabricPlus$translatingVersion();
-                    if (ver != null) {
-                        tooltips.add(Component.translatable(
-                                "base.viafabricplus.via_translates_to",
-                                ver.getName() + " (" + ver.getOriginalVersion() + ")"
-                        ));
-                        tooltips.add(Component.translatable(
-                                "base.viafabricplus.server_version",
-                                this.serverData.version.getString() + " (" + this.serverData.protocol + ")"
-                        ));
-                    }
-                }
-
-                if (!viaFabricPlus$disableServerPinging) {
-                    p_425273_.setTooltipForNextFrame(Lists.transform(tooltips, Component::getVisualOrderText), p_424268_, p_430737_);
-                }
-            } else if (this.onlinePlayersTooltip != null && p_424268_ >= l && p_424268_ <= l + k && p_430737_ >= this.getContentY() && p_430737_ <= this.getContentY() - 1 + 9) {
-                if (!viaFabricPlus$disableServerPinging) {
-                    p_425273_.setTooltipForNextFrame(Lists.transform(this.onlinePlayersTooltip, Component::getVisualOrderText), p_424268_, p_430737_);
-                }
+            Component status = this.serverData.state() == ServerData.State.INCOMPATIBLE
+                ? this.serverData.version.copy().withStyle(ChatFormatting.RED)
+                : this.serverData.status;
+            int statusWidth = this.minecraft.font.width(status);
+            int statusX = statusIconX - statusWidth - 5;
+            graphics.text(this.minecraft.font, status, statusX, this.getContentY() + 1, -8355712);
+            if (this.statusIconTooltip != null
+                && mouseX >= statusIconX
+                && mouseX <= statusIconX + 10
+                && mouseY >= this.getContentY()
+                && mouseY <= this.getContentY() + 8) {
+                graphics.setTooltipForNextFrame(this.statusIconTooltip, mouseX, mouseY);
+            } else if (this.onlinePlayersTooltip != null
+                && mouseX >= statusX
+                && mouseX <= statusX + statusWidth
+                && mouseY >= this.getContentY()
+                && mouseY <= this.getContentY() - 1 + 9) {
+                graphics.setTooltipForNextFrame(Lists.transform(this.onlinePlayersTooltip, Component::getVisualOrderText), mouseX, mouseY);
             }
 
-            if (this.minecraft.options.touchscreen().get() || p_425246_) {
-                p_425273_.fill(this.getContentX(), this.getContentY(), this.getContentX() + 32, this.getContentY() + 32, -1601138544);
-                int i1 = p_424268_ - this.getContentX();
-                int j1 = p_430737_ - this.getContentY();
-                if (this.mouseOverRightHalf(i1, j1, 32)) {
-                    p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.JOIN_HIGHLIGHTED_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
-                    ServerSelectionList.this.handleCursor(p_425273_);
+            if (hovered) {
+                graphics.fill(this.getContentX(), this.getContentY(), this.getContentX() + 32, this.getContentY() + 32, -1601138544);
+                int relX = mouseX - this.getContentX();
+                int relY = mouseY - this.getContentY();
+                if (this.mouseOverRightHalf(relX, relY, 32)) {
+                    graphics.blitSprite(
+                        RenderPipelines.GUI_TEXTURED, ServerSelectionList.JOIN_HIGHLIGHTED_SPRITE, this.getContentX(), this.getContentY(), 32, 32
+                    );
+                    ServerSelectionList.this.handleCursor(graphics);
                 } else {
-                    p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.JOIN_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.JOIN_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
                 }
 
-                if (k1 > 0) {
-                    if (this.mouseOverTopLeftQuarter(i1, j1, 32)) {
-                        p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_UP_HIGHLIGHTED_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
-                        ServerSelectionList.this.handleCursor(p_425273_);
+                if (index > 0) {
+                    if (this.mouseOverTopLeftQuarter(relX, relY, 32)) {
+                        graphics.blitSprite(
+                            RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_UP_HIGHLIGHTED_SPRITE, this.getContentX(), this.getContentY(), 32, 32
+                        );
+                        ServerSelectionList.this.handleCursor(graphics);
                     } else {
-                        p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_UP_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
+                        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_UP_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
                     }
                 }
 
-                if (k1 < this.screen.getServers().size() - 1) {
-                    if (this.mouseOverBottomLeftQuarter(i1, j1, 32)) {
-                        p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_DOWN_HIGHLIGHTED_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
-                        ServerSelectionList.this.handleCursor(p_425273_);
+                if (index < this.screen.getServers().size() - 1) {
+                    if (this.mouseOverBottomLeftQuarter(relX, relY, 32)) {
+                        graphics.blitSprite(
+                            RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_DOWN_HIGHLIGHTED_SPRITE, this.getContentX(), this.getContentY(), 32, 32
+                        );
+                        ServerSelectionList.this.handleCursor(graphics);
                     } else {
-                        p_425273_.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_DOWN_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
+                        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ServerSelectionList.MOVE_DOWN_SPRITE, this.getContentX(), this.getContentY(), 32, 32);
                     }
                 }
             }
@@ -480,18 +438,18 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
             this.screen.getServers().save();
         }
 
-        protected void drawIcon(GuiGraphics p_281338_, int p_283001_, int p_282834_, Identifier p_460851_) {
-            p_281338_.blit(RenderPipelines.GUI_TEXTURED, p_460851_, p_283001_, p_282834_, 0.0F, 0.0F, 32, 32, 32, 32);
+        protected void extractIcon(final GuiGraphicsExtractor graphics, final int rowLeft, final int rowTop, final Identifier location) {
+            graphics.blit(RenderPipelines.GUI_TEXTURED, location, rowLeft, rowTop, 0.0F, 0.0F, 32, 32, 32, 32);
         }
 
-        private boolean uploadServerIcon(byte @Nullable [] p_273176_) {
-            if (p_273176_ == null) {
+        private boolean uploadServerIcon(final byte @Nullable [] serverIconBytes) {
+            if (serverIconBytes == null) {
                 this.icon.clear();
             } else {
                 try {
-                    this.icon.upload(NativeImage.read(p_273176_));
-                } catch (Throwable throwable) {
-                    ServerSelectionList.LOGGER.error("Invalid icon for server {} ({})", this.serverData.name, this.serverData.ip, throwable);
+                    this.icon.upload(NativeImage.read(serverIconBytes));
+                } catch (Throwable t) {
+                    ServerSelectionList.LOGGER.error("Invalid icon for server {} ({})", this.serverData.name, this.serverData.ip, t);
                     return false;
                 }
             }
@@ -500,26 +458,26 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         }
 
         @Override
-        public boolean keyPressed(KeyEvent p_426878_) {
-            if (p_426878_.isSelection()) {
+        public boolean keyPressed(final KeyEvent event) {
+            if (event.isSelection()) {
                 this.join();
                 return true;
             }
 
-            if (p_426878_.hasShiftDown()) {
-                ServerSelectionList serverselectionlist = this.screen.serverSelectionList;
-                int i = serverselectionlist.children().indexOf(this);
-                if (i == -1) {
+            if (event.hasShiftDown()) {
+                ServerSelectionList list = this.screen.serverSelectionList;
+                int currentIndex = list.children().indexOf(this);
+                if (currentIndex == -1) {
                     return true;
                 }
 
-                if (p_426878_.isDown() && i < this.screen.getServers().size() - 1 || p_426878_.isUp() && i > 0) {
-                    this.swap(i, p_426878_.isDown() ? i + 1 : i - 1);
+                if (event.isDown() && currentIndex < this.screen.getServers().size() - 1 || event.isUp() && currentIndex > 0) {
+                    this.swap(currentIndex, event.isDown() ? currentIndex + 1 : currentIndex - 1);
                     return true;
                 }
             }
 
-            return super.keyPressed(p_426878_);
+            return super.keyPressed(event);
         }
 
         @Override
@@ -527,36 +485,36 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
             this.screen.join(this.serverData);
         }
 
-        private void swap(int p_99872_, int p_99873_) {
-            this.screen.getServers().swap(p_99872_, p_99873_);
-            this.screen.serverSelectionList.swap(p_99872_, p_99873_);
+        private void swap(final int currentIndex, final int newIndex) {
+            this.screen.getServers().swap(currentIndex, newIndex);
+            this.screen.serverSelectionList.swap(currentIndex, newIndex);
         }
 
         @Override
-        public boolean mouseClicked(MouseButtonEvent p_427078_, boolean p_424088_) {
-            int i = (int)p_427078_.x() - this.getContentX();
-            int j = (int)p_427078_.y() - this.getContentY();
-            if (this.mouseOverRightHalf(i, j, 32)) {
+        public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+            int relX = (int)event.x() - this.getContentX();
+            int relY = (int)event.y() - this.getContentY();
+            if (this.mouseOverRightHalf(relX, relY, 32)) {
                 this.join();
                 return true;
             }
 
-            int k = this.screen.serverSelectionList.children().indexOf(this);
-            if (k > 0 && this.mouseOverTopLeftQuarter(i, j, 32)) {
-                this.swap(k, k - 1);
+            int currentIndex = this.screen.serverSelectionList.children().indexOf(this);
+            if (currentIndex > 0 && this.mouseOverTopLeftQuarter(relX, relY, 32)) {
+                this.swap(currentIndex, currentIndex - 1);
                 return true;
             }
 
-            if (k < this.screen.getServers().size() - 1 && this.mouseOverBottomLeftQuarter(i, j, 32)) {
-                this.swap(k, k + 1);
+            if (currentIndex < this.screen.getServers().size() - 1 && this.mouseOverBottomLeftQuarter(relX, relY, 32)) {
+                this.swap(currentIndex, currentIndex + 1);
                 return true;
             }
 
-            if (p_424088_) {
+            if (doubleClick) {
                 this.join();
             }
 
-            return super.mouseClicked(p_427078_, p_424088_);
+            return super.mouseClicked(event, doubleClick);
         }
 
         public ServerData getServerData() {
@@ -565,42 +523,40 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
 
         @Override
         public Component getNarration() {
-            MutableComponent mutablecomponent = Component.empty();
-            mutablecomponent.append(Component.translatable("narrator.select", this.serverData.name));
-            mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
+            MutableComponent narrationComponent = Component.empty();
+            narrationComponent.append(Component.translatable("narrator.select", this.serverData.name));
+            narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
             switch (this.serverData.state()) {
                 case PINGING:
-                    mutablecomponent.append(ServerSelectionList.PINGING_STATUS);
+                    narrationComponent.append(ServerSelectionList.PINGING_STATUS);
                     break;
                 case INCOMPATIBLE:
-                    mutablecomponent.append(ServerSelectionList.INCOMPATIBLE_STATUS);
-                    mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
-                    mutablecomponent.append(Component.translatable("multiplayer.status.version.narration", this.serverData.version));
-                    mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
-                    mutablecomponent.append(Component.translatable("multiplayer.status.motd.narration", this.serverData.motd));
+                    narrationComponent.append(ServerSelectionList.INCOMPATIBLE_STATUS);
+                    narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
+                    narrationComponent.append(Component.translatable("multiplayer.status.version.narration", this.serverData.version));
+                    narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
+                    narrationComponent.append(Component.translatable("multiplayer.status.motd.narration", this.serverData.motd));
                     break;
                 case UNREACHABLE:
-                    mutablecomponent.append(ServerSelectionList.NO_CONNECTION_STATUS);
+                    narrationComponent.append(ServerSelectionList.NO_CONNECTION_STATUS);
                     break;
                 default:
-                    mutablecomponent.append(ServerSelectionList.ONLINE_STATUS);
-                    mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
-                    mutablecomponent.append(Component.translatable("multiplayer.status.ping.narration", this.serverData.ping));
-                    mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
-                    mutablecomponent.append(Component.translatable("multiplayer.status.motd.narration", this.serverData.motd));
+                    narrationComponent.append(ServerSelectionList.ONLINE_STATUS);
+                    narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
+                    narrationComponent.append(Component.translatable("multiplayer.status.ping.narration", this.serverData.ping));
+                    narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
+                    narrationComponent.append(Component.translatable("multiplayer.status.motd.narration", this.serverData.motd));
                     if (this.serverData.players != null) {
-                        mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
-                        mutablecomponent.append(
-                            Component.translatable(
-                                "multiplayer.status.player_count.narration", this.serverData.players.online(), this.serverData.players.max()
-                            )
+                        narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
+                        narrationComponent.append(
+                            Component.translatable("multiplayer.status.player_count.narration", this.serverData.players.online(), this.serverData.players.max())
                         );
-                        mutablecomponent.append(CommonComponents.NARRATION_SEPARATOR);
-                        mutablecomponent.append(ComponentUtils.formatList(this.serverData.playerList, Component.literal(", ")));
+                        narrationComponent.append(CommonComponents.NARRATION_SEPARATOR);
+                        narrationComponent.append(ComponentUtils.formatList(this.serverData.playerList, Component.literal(", ")));
                     }
             }
 
-            return mutablecomponent;
+            return narrationComponent;
         }
 
         @Override
@@ -609,9 +565,8 @@ public class ServerSelectionList extends ObjectSelectionList<ServerSelectionList
         }
 
         @Override
-        boolean matches(ServerSelectionList.Entry p_431278_) {
-            return p_431278_ instanceof ServerSelectionList.OnlineServerEntry serverselectionlist$onlineserverentry
-                && serverselectionlist$onlineserverentry.serverData == this.serverData;
+        protected boolean matches(final ServerSelectionList.Entry other) {
+            return other instanceof ServerSelectionList.OnlineServerEntry onlineServerEntry && onlineServerEntry.serverData == this.serverData;
         }
     }
 }

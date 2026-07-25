@@ -24,26 +24,24 @@ public class FeatureCountTracker {
         .weakKeys()
         .expireAfterAccess(5L, TimeUnit.MINUTES)
         .build(new CacheLoader<ServerLevel, FeatureCountTracker.LevelData>() {
-            public FeatureCountTracker.LevelData load(ServerLevel p_190902_) {
+            public FeatureCountTracker.LevelData load(final ServerLevel level) {
                 return new FeatureCountTracker.LevelData(Object2IntMaps.synchronize(new Object2IntOpenHashMap<>()), new MutableInt(0));
             }
         });
 
-    public static void chunkDecorated(ServerLevel p_190882_) {
+    public static void chunkDecorated(final ServerLevel level) {
         try {
-            data.get(p_190882_).chunksWithFeatures().increment();
-        } catch (Exception exception) {
-            LOGGER.error("Failed to increment chunk count", (Throwable)exception);
+            data.get(level).chunksWithFeatures().increment();
+        } catch (Exception e) {
+            LOGGER.error("Failed to increment chunk count", e);
         }
     }
 
-    public static void featurePlaced(ServerLevel p_190884_, ConfiguredFeature<?, ?> p_190885_, Optional<PlacedFeature> p_190886_) {
+    public static void featurePlaced(final ServerLevel level, final ConfiguredFeature<?, ?> feature, final Optional<PlacedFeature> topFeature) {
         try {
-            data.get(p_190884_)
-                .featureData()
-                .computeInt(new FeatureCountTracker.FeatureData(p_190885_, p_190886_), (p_190891_, p_190892_) -> p_190892_ == null ? 1 : p_190892_ + 1);
-        } catch (Exception exception) {
-            LOGGER.error("Failed to increment feature count", (Throwable)exception);
+            data.get(level).featureData().computeInt(new FeatureCountTracker.FeatureData(feature, topFeature), (f, old) -> old == null ? 1 : old + 1);
+        } catch (Exception e) {
+            LOGGER.error("Failed to increment feature count", e);
         }
     }
 
@@ -56,32 +54,32 @@ public class FeatureCountTracker {
         LOGGER.debug("Logging feature counts:");
         data.asMap()
             .forEach(
-                (p_450003_, p_450004_) -> {
-                    String s = p_450003_.dimension().identifier().toString();
-                    boolean flag = p_450003_.getServer().isRunning();
-                    Registry<PlacedFeature> registry = p_450003_.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE);
-                    String s1 = (flag ? "running" : "dead") + " " + s;
-                    int i = p_450004_.chunksWithFeatures().intValue();
-                    LOGGER.debug("{} total_chunks: {}", s1, i);
-                    p_450004_.featureData()
+                (level, featureCounts) -> {
+                    String name = level.dimension().identifier().toString();
+                    boolean running = level.getServer().isRunning();
+                    Registry<PlacedFeature> featureRegistry = level.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE);
+                    String prefix = (running ? "running" : "dead") + " " + name;
+                    int chunks = featureCounts.chunksWithFeatures().intValue();
+                    LOGGER.debug("{} total_chunks: {}", prefix, chunks);
+                    featureCounts.featureData()
                         .forEach(
-                            (p_422229_, p_460034_) -> LOGGER.debug(
+                            (data, count) -> LOGGER.debug(
                                 "{} {} {} {} {} {}",
-                                s1,
-                                String.format(Locale.ROOT, "%10d", p_460034_),
-                                String.format(Locale.ROOT, "%10f", (double)p_460034_ / i),
-                                p_422229_.topFeature().flatMap(registry::getResourceKey).map(ResourceKey::identifier),
-                                p_422229_.feature().feature(),
-                                p_422229_.feature()
+                                prefix,
+                                String.format(Locale.ROOT, "%10d", count),
+                                String.format(Locale.ROOT, "%10f", (double)count / chunks),
+                                data.topFeature().flatMap(featureRegistry::getResourceKey).map(ResourceKey::identifier),
+                                data.feature().feature(),
+                                data.feature()
                             )
                         );
                 }
             );
     }
 
-    record FeatureData(ConfiguredFeature<?, ?> feature, Optional<PlacedFeature> topFeature) {
+    private record FeatureData(ConfiguredFeature<?, ?> feature, Optional<PlacedFeature> topFeature) {
     }
 
-    record LevelData(Object2IntMap<FeatureCountTracker.FeatureData> featureData, MutableInt chunksWithFeatures) {
+    private record LevelData(Object2IntMap<FeatureCountTracker.FeatureData> featureData, MutableInt chunksWithFeatures) {
     }
 }

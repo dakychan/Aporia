@@ -6,6 +6,7 @@ import net.minecraft.resources.Identifier;
 
 public class TagBuilder {
     private final List<TagEntry> entries = new ArrayList<>();
+    private boolean replace = false;
 
     public static TagBuilder create() {
         return new TagBuilder();
@@ -15,24 +16,33 @@ public class TagBuilder {
         return List.copyOf(this.entries);
     }
 
-    public TagBuilder add(TagEntry p_215903_) {
-        this.entries.add(p_215903_);
+    public boolean shouldReplace() {
+        return this.replace;
+    }
+
+    public TagBuilder setReplace(final boolean replace) {
+        this.replace = replace;
         return this;
     }
 
-    public TagBuilder addElement(Identifier p_451128_) {
-        return this.add(TagEntry.element(p_451128_));
+    public TagBuilder add(final TagEntry entry) {
+        this.entries.add(entry);
+        return this;
     }
 
-    public TagBuilder addOptionalElement(Identifier p_458467_) {
-        return this.add(TagEntry.optionalElement(p_458467_));
+    public TagBuilder addElement(final Identifier id) {
+        return this.add(TagEntry.element(id));
     }
 
-    public TagBuilder addTag(Identifier p_450703_) {
-        return this.add(TagEntry.tag(p_450703_));
+    public TagBuilder addOptionalElement(final Identifier id) {
+        return this.add(TagEntry.optionalElement(id));
     }
 
-    public TagBuilder addOptionalTag(Identifier p_458048_) {
-        return this.add(TagEntry.optionalTag(p_458048_));
+    public TagBuilder addTag(final Identifier id) {
+        return this.add(TagEntry.tag(id));
+    }
+
+    public TagBuilder addOptionalTag(final Identifier id) {
+        return this.add(TagEntry.optionalTag(id));
     }
 }

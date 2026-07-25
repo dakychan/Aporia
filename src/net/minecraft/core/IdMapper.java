@@ -18,37 +18,37 @@ public class IdMapper<T> implements IdMap<T> {
         this(512);
     }
 
-    public IdMapper(int p_122658_) {
-        this.idToT = Lists.newArrayListWithExpectedSize(p_122658_);
-        this.tToId = new Reference2IntOpenHashMap<>(p_122658_);
+    public IdMapper(final int expectedSize) {
+        this.idToT = Lists.newArrayListWithExpectedSize(expectedSize);
+        this.tToId = new Reference2IntOpenHashMap<>(expectedSize);
         this.tToId.defaultReturnValue(-1);
     }
 
-    public void addMapping(T p_122665_, int p_122666_) {
-        this.tToId.put(p_122665_, p_122666_);
+    public void addMapping(final T thing, final int id) {
+        this.tToId.put(thing, id);
 
-        while (this.idToT.size() <= p_122666_) {
+        while (this.idToT.size() <= id) {
             this.idToT.add(null);
         }
 
-        this.idToT.set(p_122666_, p_122665_);
-        if (this.nextId <= p_122666_) {
-            this.nextId = p_122666_ + 1;
+        this.idToT.set(id, thing);
+        if (this.nextId <= id) {
+            this.nextId = id + 1;
         }
     }
 
-    public void add(T p_122668_) {
-        this.addMapping(p_122668_, this.nextId);
+    public void add(final T thing) {
+        this.addMapping(thing, this.nextId);
     }
 
     @Override
-    public int getId(T p_122663_) {
-        return this.tToId.getInt(p_122663_);
+    public int getId(final T thing) {
+        return this.tToId.getInt(thing);
     }
 
     @Override
-    public final @Nullable T byId(int p_122661_) {
-        return p_122661_ >= 0 && p_122661_ < this.idToT.size() ? this.idToT.get(p_122661_) : null;
+    public final @Nullable T byId(final int id) {
+        return id >= 0 && id < this.idToT.size() ? this.idToT.get(id) : null;
     }
 
     @Override
@@ -56,8 +56,8 @@ public class IdMapper<T> implements IdMap<T> {
         return Iterators.filter(this.idToT.iterator(), Objects::nonNull);
     }
 
-    public boolean contains(int p_175381_) {
-        return this.byId(p_175381_) != null;
+    public boolean contains(final int id) {
+        return this.byId(id) != null;
     }
 
     @Override

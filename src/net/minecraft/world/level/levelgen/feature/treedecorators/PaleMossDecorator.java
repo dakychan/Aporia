@@ -3,13 +3,10 @@ package net.minecraft.world.level.levelgen.feature.treedecorators;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.Registry;
 import net.minecraft.core.Vec3i;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.VegetationFeatures;
@@ -21,12 +18,12 @@ import net.minecraft.world.level.block.HangingMossBlock;
 
 public class PaleMossDecorator extends TreeDecorator {
     public static final MapCodec<PaleMossDecorator> CODEC = RecordCodecBuilder.mapCodec(
-        p_367624_ -> p_367624_.group(
-                Codec.floatRange(0.0F, 1.0F).fieldOf("leaves_probability").forGetter(p_368139_ -> p_368139_.leavesProbability),
-                Codec.floatRange(0.0F, 1.0F).fieldOf("trunk_probability").forGetter(p_368321_ -> p_368321_.trunkProbability),
-                Codec.floatRange(0.0F, 1.0F).fieldOf("ground_probability").forGetter(p_364066_ -> p_364066_.groundProbability)
+        i -> i.group(
+                Codec.floatRange(0.0F, 1.0F).fieldOf("leaves_probability").forGetter(p -> p.leavesProbability),
+                Codec.floatRange(0.0F, 1.0F).fieldOf("trunk_probability").forGetter(p -> p.trunkProbability),
+                Codec.floatRange(0.0F, 1.0F).fieldOf("ground_probability").forGetter(p -> p.groundProbability)
             )
-            .apply(p_367624_, PaleMossDecorator::new)
+            .apply(i, PaleMossDecorator::new)
     );
     private final float leavesProbability;
     private final float trunkProbability;
@@ -37,54 +34,51 @@ public class PaleMossDecorator extends TreeDecorator {
         return TreeDecoratorType.PALE_MOSS;
     }
 
-    public PaleMossDecorator(float p_362537_, float p_367812_, float p_366658_) {
-        this.leavesProbability = p_362537_;
-        this.trunkProbability = p_367812_;
-        this.groundProbability = p_366658_;
+    public PaleMossDecorator(final float leavesProbability, final float trunkProbability, final float groundProbability) {
+        this.leavesProbability = leavesProbability;
+        this.trunkProbability = trunkProbability;
+        this.groundProbability = groundProbability;
     }
 
     @Override
-    public void place(TreeDecorator.Context p_366717_) {
-        RandomSource randomsource = p_366717_.random();
-        WorldGenLevel worldgenlevel = (WorldGenLevel)p_366717_.level();
-        List<BlockPos> list = Util.shuffledCopy(p_366717_.logs(), randomsource);
-        if (!list.isEmpty()) {
-            BlockPos blockpos = Collections.min(list, Comparator.comparingInt(Vec3i::getY));
-            if (randomsource.nextFloat() < this.groundProbability) {
-                worldgenlevel.registryAccess()
+    public void place(final TreeDecorator.Context context) {
+        RandomSource random = context.random();
+        WorldGenLevel level = context.level();
+        List<BlockPos> logs = Util.shuffledCopy(context.logs(), random);
+        if (!logs.isEmpty()) {
+            BlockPos origin = Collections.min(logs, Comparator.comparingInt(Vec3i::getY));
+            if (random.nextFloat() < this.groundProbability) {
+                level.registryAccess()
                     .lookup(Registries.CONFIGURED_FEATURE)
-                    .flatMap(p_375357_ -> p_375357_.get(VegetationFeatures.PALE_MOSS_PATCH))
-                    .ifPresent(
-                        p_370079_ -> p_370079_.value()
-                            .place(worldgenlevel, worldgenlevel.getLevel().getChunkSource().getGenerator(), randomsource, blockpos.above())
-                    );
+                    .flatMap(registry -> registry.get(VegetationFeatures.PALE_MOSS_PATCH))
+                    .ifPresent(mossPatch -> mossPatch.value().place(level, level.getLevel().getChunkSource().getGenerator(), random, origin.above()));
             }
 
-            p_366717_.logs().forEach(p_375360_ -> {
-                if (randomsource.nextFloat() < this.trunkProbability) {
-                    BlockPos blockpos1 = p_375360_.below();
-                    if (p_366717_.isAir(blockpos1)) {
-                        addMossHanger(blockpos1, p_366717_);
+            context.logs().forEach(pos -> {
+                if (random.nextFloat() < this.trunkProbability) {
+                    BlockPos down = pos.below();
+                    if (context.isAir(down)) {
+                        addMossHanger(down, context);
                     }
                 }
             });
-            p_366717_.leaves().forEach(p_364665_ -> {
-                if (randomsource.nextFloat() < this.leavesProbability) {
-                    BlockPos blockpos1 = p_364665_.below();
-                    if (p_366717_.isAir(blockpos1)) {
-                        addMossHanger(blockpos1, p_366717_);
+            context.leaves().forEach(pos -> {
+                if (random.nextFloat() < this.leavesProbability) {
+                    BlockPos down = pos.below();
+                    if (context.isAir(down)) {
+                        addMossHanger(down, context);
                     }
                 }
             });
         }
     }
 
-    private static void addMossHanger(BlockPos p_368181_, TreeDecorator.Context p_365451_) {
-        while (p_365451_.isAir(p_368181_.below()) && !(p_365451_.random().nextFloat() < 0.5)) {
-            p_365451_.setBlock(p_368181_, Blocks.PALE_HANGING_MOSS.defaultBlockState().setValue(HangingMossBlock.TIP, false));
-            p_368181_ = p_368181_.below();
+    private static void addMossHanger(BlockPos pos, final TreeDecorator.Context context) {
+        while (context.isAir(pos.below()) && !(context.random().nextFloat() < 0.5)) {
+            context.setBlock(pos, Blocks.PALE_HANGING_MOSS.defaultBlockState().setValue(HangingMossBlock.TIP, false));
+            pos = pos.below();
         }
 
-        p_365451_.setBlock(p_368181_, Blocks.PALE_HANGING_MOSS.defaultBlockState().setValue(HangingMossBlock.TIP, true));
+        context.setBlock(pos, Blocks.PALE_HANGING_MOSS.defaultBlockState().setValue(HangingMossBlock.TIP, true));
     }
 }

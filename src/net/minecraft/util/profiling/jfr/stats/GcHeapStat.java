@@ -8,32 +8,34 @@ import java.util.stream.Collectors;
 import jdk.jfr.consumer.RecordedEvent;
 
 public record GcHeapStat(Instant timestamp, long heapUsed, GcHeapStat.Timing timing) {
-    public static GcHeapStat from(RecordedEvent p_185698_) {
+    public static GcHeapStat from(final RecordedEvent event) {
         return new GcHeapStat(
-            p_185698_.getStartTime(),
-            p_185698_.getLong("heapUsed"),
-            p_185698_.getString("when").equalsIgnoreCase("before gc") ? GcHeapStat.Timing.BEFORE_GC : GcHeapStat.Timing.AFTER_GC
+            event.getStartTime(),
+            event.getLong("heapUsed"),
+            event.getString("when").equalsIgnoreCase("before gc") ? GcHeapStat.Timing.BEFORE_GC : GcHeapStat.Timing.AFTER_GC
         );
     }
 
-    public static GcHeapStat.Summary summary(Duration p_185691_, List<GcHeapStat> p_185692_, Duration p_185693_, int p_185694_) {
-        return new GcHeapStat.Summary(p_185691_, p_185693_, p_185694_, calculateAllocationRatePerSecond(p_185692_));
+    public static GcHeapStat.Summary summary(
+        final Duration recordingDuration, final List<GcHeapStat> heapStats, final Duration gcTotalDuration, final int totalGCs
+    ) {
+        return new GcHeapStat.Summary(recordingDuration, gcTotalDuration, totalGCs, calculateAllocationRatePerSecond(heapStats));
     }
 
-    private static double calculateAllocationRatePerSecond(List<GcHeapStat> p_185696_) {
-        long i = 0L;
-        Map<GcHeapStat.Timing, List<GcHeapStat>> map = p_185696_.stream().collect(Collectors.groupingBy(p_185689_ -> p_185689_.timing));
-        List<GcHeapStat> list = map.get(GcHeapStat.Timing.BEFORE_GC);
-        List<GcHeapStat> list1 = map.get(GcHeapStat.Timing.AFTER_GC);
+    private static double calculateAllocationRatePerSecond(final List<GcHeapStat> heapStats) {
+        long totalAllocations = 0L;
+        Map<GcHeapStat.Timing, List<GcHeapStat>> byTiming = heapStats.stream().collect(Collectors.groupingBy(it -> it.timing));
+        List<GcHeapStat> beforeGcs = byTiming.get(GcHeapStat.Timing.BEFORE_GC);
+        List<GcHeapStat> afterGcs = byTiming.get(GcHeapStat.Timing.AFTER_GC);
 
-        for (int j = 1; j < list.size(); j++) {
-            GcHeapStat gcheapstat = list.get(j);
-            GcHeapStat gcheapstat1 = list1.get(j - 1);
-            i += gcheapstat.heapUsed - gcheapstat1.heapUsed;
+        for (int i = 1; i < beforeGcs.size(); i++) {
+            GcHeapStat beforeGC = beforeGcs.get(i);
+            GcHeapStat previousGC = afterGcs.get(i - 1);
+            totalAllocations += beforeGC.heapUsed - previousGC.heapUsed;
         }
 
-        Duration duration = Duration.between(p_185696_.get(1).timestamp, p_185696_.get(p_185696_.size() - 1).timestamp);
-        return (double)i / duration.getSeconds();
+        Duration totalDuration = Duration.between(heapStats.get(1).timestamp, heapStats.get(heapStats.size() - 1).timestamp);
+        return (double)totalAllocations / totalDuration.getSeconds();
     }
 
     public record Summary(Duration duration, Duration gcTotalDuration, int totalGCs, double allocationRateBytesPerSecond) {
@@ -42,7 +44,7 @@ public record GcHeapStat(Instant timestamp, long heapUsed, GcHeapStat.Timing tim
         }
     }
 
-    static enum Timing {
+    public enum Timing {
         BEFORE_GC,
         AFTER_GC;
     }

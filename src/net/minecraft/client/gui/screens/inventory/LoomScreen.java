@@ -4,7 +4,7 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.model.geom.ModelPart;
@@ -24,15 +24,11 @@ import net.minecraft.world.inventory.LoomMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.BannerItem;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BannerPattern;
 import net.minecraft.world.level.block.entity.BannerPatternLayers;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class LoomScreen extends AbstractContainerScreen<LoomMenu> {
     private static final Identifier BANNER_SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot/banner");
     private static final Identifier DYE_SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot/dye");
@@ -66,23 +62,17 @@ public class LoomScreen extends AbstractContainerScreen<LoomMenu> {
     private boolean scrolling;
     private int startRow;
 
-    public LoomScreen(LoomMenu p_99075_, Inventory p_99076_, Component p_99077_) {
-        super(p_99075_, p_99076_, p_99077_);
-        p_99075_.registerUpdateListener(this::containerChanged);
+    public LoomScreen(final LoomMenu menu, final Inventory inventory, final Component title) {
+        super(menu, inventory, title);
+        menu.registerUpdateListener(this::containerChanged);
         this.titleLabelY -= 2;
     }
 
     @Override
     protected void init() {
         super.init();
-        ModelPart modelpart = this.minecraft.getEntityModels().bakeLayer(ModelLayers.STANDING_BANNER_FLAG);
-        this.flag = new BannerFlagModel(modelpart);
-    }
-
-    @Override
-    public void render(GuiGraphics p_283513_, int p_282700_, int p_282637_, float p_281433_) {
-        super.render(p_283513_, p_282700_, p_282637_, p_281433_);
-        this.renderTooltip(p_283513_, p_282700_, p_282637_);
+        ModelPart modelPart = this.minecraft.getEntityModels().bakeLayer(ModelLayers.STANDING_BANNER_FLAG);
+        this.flag = new BannerFlagModel(modelPart);
     }
 
     private int totalRowCount() {
@@ -90,190 +80,201 @@ public class LoomScreen extends AbstractContainerScreen<LoomMenu> {
     }
 
     @Override
-    protected void renderBg(GuiGraphics p_282870_, float p_281777_, int p_283331_, int p_283087_) {
-        int i = this.leftPos;
-        int j = this.topPos;
-        p_282870_.blit(RenderPipelines.GUI_TEXTURED, BG_LOCATION, i, j, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
-        Slot slot = this.menu.getBannerSlot();
-        Slot slot1 = this.menu.getDyeSlot();
-        Slot slot2 = this.menu.getPatternSlot();
-        Slot slot3 = this.menu.getResultSlot();
-        if (!slot.hasItem()) {
-            p_282870_.blitSprite(RenderPipelines.GUI_TEXTURED, BANNER_SLOT_SPRITE, i + slot.x, j + slot.y, 16, 16);
+    public void extractBackground(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final float a) {
+        super.extractBackground(graphics, mouseX, mouseY, a);
+        int xo = this.leftPos;
+        int yo = this.topPos;
+        graphics.blit(RenderPipelines.GUI_TEXTURED, BG_LOCATION, xo, yo, 0.0F, 0.0F, this.imageWidth, this.imageHeight, 256, 256);
+        Slot bannerSlot = this.menu.getBannerSlot();
+        Slot dyeSlot = this.menu.getDyeSlot();
+        Slot patternSlot = this.menu.getPatternSlot();
+        Slot resultSlot = this.menu.getResultSlot();
+        if (!bannerSlot.hasItem()) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, BANNER_SLOT_SPRITE, xo + bannerSlot.x, yo + bannerSlot.y, 16, 16);
         }
 
-        if (!slot1.hasItem()) {
-            p_282870_.blitSprite(RenderPipelines.GUI_TEXTURED, DYE_SLOT_SPRITE, i + slot1.x, j + slot1.y, 16, 16);
+        if (!dyeSlot.hasItem()) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, DYE_SLOT_SPRITE, xo + dyeSlot.x, yo + dyeSlot.y, 16, 16);
         }
 
-        if (!slot2.hasItem()) {
-            p_282870_.blitSprite(RenderPipelines.GUI_TEXTURED, PATTERN_SLOT_SPRITE, i + slot2.x, j + slot2.y, 16, 16);
+        if (!patternSlot.hasItem()) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, PATTERN_SLOT_SPRITE, xo + patternSlot.x, yo + patternSlot.y, 16, 16);
         }
 
-        int k = (int)(41.0F * this.scrollOffs);
-        Identifier identifier = this.displayPatterns ? SCROLLER_SPRITE : SCROLLER_DISABLED_SPRITE;
-        int l = i + 119;
-        int i1 = j + 13 + k;
-        p_282870_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier, l, i1, 12, 15);
-        if (p_283331_ >= l && p_283331_ < l + 12 && p_283087_ >= i1 && p_283087_ < i1 + 15) {
-            p_282870_.requestCursor(this.scrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
+        int sy = (int)(41.0F * this.scrollOffs);
+        Identifier sprite = this.isScrollBarActive() ? SCROLLER_SPRITE : SCROLLER_DISABLED_SPRITE;
+        int scrollerX = xo + 119;
+        int scrollerY = yo + 13;
+        graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, scrollerX, scrollerY + sy, 12, 15);
+        if (mouseX >= scrollerX && mouseX < scrollerX + 12 && mouseY >= scrollerY && mouseY < scrollerY + 56) {
+            if (this.isScrollBarActive()) {
+                graphics.requestCursor(this.scrolling ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
+            } else {
+                graphics.requestCursor(CursorTypes.NOT_ALLOWED);
+            }
         }
 
         if (this.resultBannerPatterns != null && !this.hasMaxPatterns) {
-            DyeColor dyecolor = ((BannerItem)slot3.getItem().getItem()).getColor();
-            int j1 = i + 141;
-            int k1 = j + 8;
-            p_282870_.submitBannerPatternRenderState(this.flag, dyecolor, this.resultBannerPatterns, j1, k1, j1 + 20, k1 + 40);
+            DyeColor baseColor = ((BannerItem)resultSlot.getItem().getItem()).getColor();
+            int x0 = xo + 141;
+            int y0 = yo + 8;
+            graphics.bannerPattern(this.flag, baseColor, this.resultBannerPatterns, x0, y0, x0 + 20, y0 + 40);
         } else if (this.hasMaxPatterns) {
-            p_282870_.blitSprite(RenderPipelines.GUI_TEXTURED, ERROR_SPRITE, i + slot3.x - 5, j + slot3.y - 5, 26, 26);
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, ERROR_SPRITE, xo + resultSlot.x - 5, yo + resultSlot.y - 5, 26, 26);
         }
 
         if (this.displayPatterns) {
-            int j3 = i + 60;
-            int k3 = j + 13;
-            List<Holder<BannerPattern>> list = this.menu.getSelectablePatterns();
+            int x = xo + 60;
+            int y = yo + 13;
+            List<Holder<BannerPattern>> selectablePatterns = this.menu.getSelectablePatterns();
 
-            label79:
-            for (int l1 = 0; l1 < 4; l1++) {
-                for (int i2 = 0; i2 < 4; i2++) {
-                    int j2 = l1 + this.startRow;
-                    int k2 = j2 * 4 + i2;
-                    if (k2 >= list.size()) {
-                        break label79;
+            label82:
+            for (int row = 0; row < 4; row++) {
+                for (int column = 0; column < 4; column++) {
+                    int actualRow = row + this.startRow;
+                    int index = actualRow * 4 + column;
+                    if (index >= selectablePatterns.size()) {
+                        break label82;
                     }
 
-                    int l2 = j3 + i2 * 14;
-                    int i3 = k3 + l1 * 14;
-                    Holder<BannerPattern> holder = list.get(k2);
-                    boolean flag = p_283331_ >= l2 && p_283087_ >= i3 && p_283331_ < l2 + 14 && p_283087_ < i3 + 14;
-                    Identifier identifier1;
-                    if (k2 == this.menu.getSelectedBannerPatternIndex()) {
-                        identifier1 = PATTERN_SELECTED_SPRITE;
-                    } else if (flag) {
-                        identifier1 = PATTERN_HIGHLIGHTED_SPRITE;
-                        DyeColor dyecolor1 = ((DyeItem)this.dyeStack.getItem()).getDyeColor();
-                        p_282870_.setTooltipForNextFrame(Component.translatable(holder.value().translationKey() + "." + dyecolor1.getName()), p_283331_, p_283087_);
-                        p_282870_.requestCursor(CursorTypes.POINTING_HAND);
+                    int posX = x + column * 14;
+                    int posY = y + row * 14;
+                    Holder<BannerPattern> pattern = selectablePatterns.get(index);
+                    boolean isHighlighted = mouseX >= posX && mouseY >= posY && mouseX < posX + 14 && mouseY < posY + 14;
+                    Identifier buttonSprite;
+                    if (index == this.menu.getSelectedBannerPatternIndex()) {
+                        buttonSprite = PATTERN_SELECTED_SPRITE;
+                    } else if (isHighlighted) {
+                        buttonSprite = PATTERN_HIGHLIGHTED_SPRITE;
+                        DyeColor patternColor = this.dyeStack.getOrDefault(DataComponents.DYE, DyeColor.WHITE);
+                        graphics.setTooltipForNextFrame(Component.translatable(pattern.value().translationKey() + "." + patternColor.getName()), mouseX, mouseY);
+                        graphics.requestCursor(CursorTypes.POINTING_HAND);
                     } else {
-                        identifier1 = PATTERN_SPRITE;
+                        buttonSprite = PATTERN_SPRITE;
                     }
 
-                    p_282870_.blitSprite(RenderPipelines.GUI_TEXTURED, identifier1, l2, i3, 14, 14);
-                    TextureAtlasSprite textureatlassprite = p_282870_.getSprite(Sheets.getBannerMaterial(holder));
-                    this.renderBannerOnButton(p_282870_, l2, i3, textureatlassprite);
+                    graphics.blitSprite(RenderPipelines.GUI_TEXTURED, buttonSprite, posX, posY, 14, 14);
+                    TextureAtlasSprite bannerPatternSprite = graphics.getSprite(Sheets.getBannerSprite(pattern));
+                    this.extractBannerOnButton(graphics, posX, posY, bannerPatternSprite);
                 }
             }
         }
 
-        Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
+        Minecraft.getInstance().gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D);
     }
 
-    private void renderBannerOnButton(GuiGraphics p_410574_, int p_408841_, int p_407567_, TextureAtlasSprite p_409613_) {
-        p_410574_.pose().pushMatrix();
-        p_410574_.pose().translate(p_408841_ + 4, p_407567_ + 2);
-        float f = p_409613_.getU0();
-        float f1 = f + (p_409613_.getU1() - p_409613_.getU0()) * 21.0F / 64.0F;
-        float f2 = p_409613_.getV1() - p_409613_.getV0();
-        float f3 = p_409613_.getV0() + f2 / 64.0F;
-        float f4 = f3 + f2 * 40.0F / 64.0F;
-        int i = 5;
-        int j = 10;
-        p_410574_.fill(0, 0, 5, 10, DyeColor.GRAY.getTextureDiffuseColor());
-        p_410574_.blit(p_409613_.atlasLocation(), 0, 0, 5, 10, f, f1, f3, f4);
-        p_410574_.pose().popMatrix();
+    private boolean isScrollBarActive() {
+        return this.displayPatterns && this.menu.getSelectablePatterns().size() > 16;
+    }
+
+    private void extractBannerOnButton(final GuiGraphicsExtractor graphics, final int posX, final int posY, final TextureAtlasSprite bannerPatternSprite) {
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(posX + 4, posY + 2);
+        float patternU0 = bannerPatternSprite.getU0();
+        float patternU1 = patternU0 + (bannerPatternSprite.getU1() - bannerPatternSprite.getU0()) * 21.0F / 64.0F;
+        float patternVSpan = bannerPatternSprite.getV1() - bannerPatternSprite.getV0();
+        float patternV0 = bannerPatternSprite.getV0() + patternVSpan / 64.0F;
+        float patternV1 = patternV0 + patternVSpan * 40.0F / 64.0F;
+        int bannerWidth = 5;
+        int bannerHeight = 10;
+        graphics.fill(0, 0, 5, 10, DyeColor.GRAY.getTextureDiffuseColor());
+        graphics.blit(bannerPatternSprite.atlasLocation(), 0, 0, 5, 10, patternU0, patternU1, patternV0, patternV1);
+        graphics.pose().popMatrix();
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent p_422860_, boolean p_424197_) {
+    public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
         if (this.displayPatterns) {
-            int i = this.leftPos + 60;
-            int j = this.topPos + 13;
+            int xo = this.leftPos + 60;
+            int yo = this.topPos + 13;
 
-            for (int k = 0; k < 4; k++) {
-                for (int l = 0; l < 4; l++) {
-                    double d0 = p_422860_.x() - (i + l * 14);
-                    double d1 = p_422860_.y() - (j + k * 14);
-                    int i1 = k + this.startRow;
-                    int j1 = i1 * 4 + l;
-                    if (d0 >= 0.0 && d1 >= 0.0 && d0 < 14.0 && d1 < 14.0 && this.menu.clickMenuButton(this.minecraft.player, j1)) {
+            for (int row = 0; row < 4; row++) {
+                for (int column = 0; column < 4; column++) {
+                    double xx = event.x() - (xo + column * 14);
+                    double yy = event.y() - (yo + row * 14);
+                    int actualRow = row + this.startRow;
+                    int index = actualRow * 4 + column;
+                    if (xx >= 0.0 && yy >= 0.0 && xx < 14.0 && yy < 14.0 && this.menu.clickMenuButton(this.minecraft.player, index)) {
                         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_LOOM_SELECT_PATTERN, 1.0F));
-                        this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, j1);
+                        this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, index);
                         return true;
                     }
                 }
             }
 
-            i = this.leftPos + 119;
-            j = this.topPos + 9;
-            if (p_422860_.x() >= i && p_422860_.x() < i + 12 && p_422860_.y() >= j && p_422860_.y() < j + 56) {
+            xo = this.leftPos + 119;
+            yo = this.topPos + 9;
+            if (event.x() >= xo && event.x() < xo + 12 && event.y() >= yo && event.y() < yo + 56) {
                 this.scrolling = true;
             }
         }
 
-        return super.mouseClicked(p_422860_, p_424197_);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent p_422938_, double p_99087_, double p_99088_) {
-        int i = this.totalRowCount() - 4;
-        if (this.scrolling && this.displayPatterns && i > 0) {
-            int j = this.topPos + 13;
-            int k = j + 56;
-            this.scrollOffs = ((float)p_422938_.y() - j - 7.5F) / (k - j - 15.0F);
+    public boolean mouseDragged(final MouseButtonEvent event, final double dx, final double dy) {
+        int offscreenRows = this.totalRowCount() - 4;
+        if (this.scrolling && this.displayPatterns && offscreenRows > 0) {
+            int yscr = this.topPos + 13;
+            int yscr2 = yscr + 56;
+            this.scrollOffs = ((float)event.y() - yscr - 7.5F) / (yscr2 - yscr - 15.0F);
             this.scrollOffs = Mth.clamp(this.scrollOffs, 0.0F, 1.0F);
-            this.startRow = Math.max((int)(this.scrollOffs * i + 0.5), 0);
+            this.startRow = Math.max((int)(this.scrollOffs * offscreenRows + 0.5), 0);
             return true;
         } else {
-            return super.mouseDragged(p_422938_, p_99087_, p_99088_);
+            return super.mouseDragged(event, dx, dy);
         }
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent p_456806_) {
+    public boolean mouseReleased(final MouseButtonEvent event) {
         this.scrolling = false;
-        return super.mouseReleased(p_456806_);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseScrolled(double p_99079_, double p_99080_, double p_99081_, double p_298992_) {
-        if (super.mouseScrolled(p_99079_, p_99080_, p_99081_, p_298992_)) {
-            return true;
-        } else {
-            int i = this.totalRowCount() - 4;
-            if (this.displayPatterns && i > 0) {
-                float f = (float)p_298992_ / i;
-                this.scrollOffs = Mth.clamp(this.scrollOffs - f, 0.0F, 1.0F);
-                this.startRow = Math.max((int)(this.scrollOffs * i + 0.5F), 0);
-            }
-
+    public boolean mouseScrolled(final double x, final double y, final double scrollX, final double scrollY) {
+        if (super.mouseScrolled(x, y, scrollX, scrollY)) {
             return true;
         }
+
+        int offscreenRows = this.totalRowCount() - 4;
+        if (this.displayPatterns && offscreenRows > 0) {
+            float scrolledDelta = (float)scrollY / offscreenRows;
+            this.scrollOffs = Mth.clamp(this.scrollOffs - scrolledDelta, 0.0F, 1.0F);
+            this.startRow = Math.max((int)(this.scrollOffs * offscreenRows + 0.5F), 0);
+        }
+
+        return true;
     }
 
     @Override
-    protected boolean hasClickedOutside(double p_99093_, double p_99094_, int p_99095_, int p_99096_) {
-        return p_99093_ < p_99095_ || p_99094_ < p_99096_ || p_99093_ >= p_99095_ + this.imageWidth || p_99094_ >= p_99096_ + this.imageHeight;
+    protected boolean hasClickedOutside(final double mx, final double my, final int xo, final int yo) {
+        return mx < xo || my < yo || mx >= xo + this.imageWidth || my >= yo + this.imageHeight;
     }
 
     private void containerChanged() {
-        ItemStack itemstack = this.menu.getResultSlot().getItem();
-        if (itemstack.isEmpty()) {
+        ItemStack resultStack = this.menu.getResultSlot().getItem();
+        if (resultStack.isEmpty()) {
             this.resultBannerPatterns = null;
         } else {
-            this.resultBannerPatterns = itemstack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+            this.resultBannerPatterns = resultStack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
         }
 
-        ItemStack itemstack1 = this.menu.getBannerSlot().getItem();
-        ItemStack itemstack2 = this.menu.getDyeSlot().getItem();
-        ItemStack itemstack3 = this.menu.getPatternSlot().getItem();
-        BannerPatternLayers bannerpatternlayers = itemstack1.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
-        this.hasMaxPatterns = bannerpatternlayers.layers().size() >= 6;
+        ItemStack bannerStack = this.menu.getBannerSlot().getItem();
+        ItemStack dyeStack = this.menu.getDyeSlot().getItem();
+        ItemStack patternStack = this.menu.getPatternSlot().getItem();
+        BannerPatternLayers patterns = bannerStack.getOrDefault(DataComponents.BANNER_PATTERNS, BannerPatternLayers.EMPTY);
+        this.hasMaxPatterns = patterns.layers().size() >= 6;
         if (this.hasMaxPatterns) {
             this.resultBannerPatterns = null;
         }
 
-        if (!ItemStack.matches(itemstack1, this.bannerStack) || !ItemStack.matches(itemstack2, this.dyeStack) || !ItemStack.matches(itemstack3, this.patternStack)) {
-            this.displayPatterns = !itemstack1.isEmpty() && !itemstack2.isEmpty() && !this.hasMaxPatterns && !this.menu.getSelectablePatterns().isEmpty();
+        if (!ItemStack.matches(bannerStack, this.bannerStack)
+            || !ItemStack.matches(dyeStack, this.dyeStack)
+            || !ItemStack.matches(patternStack, this.patternStack)) {
+            this.displayPatterns = !bannerStack.isEmpty() && !dyeStack.isEmpty() && !this.hasMaxPatterns && !this.menu.getSelectablePatterns().isEmpty();
         }
 
         if (this.startRow >= this.totalRowCount()) {
@@ -281,8 +282,8 @@ public class LoomScreen extends AbstractContainerScreen<LoomMenu> {
             this.scrollOffs = 0.0F;
         }
 
-        this.bannerStack = itemstack1.copy();
-        this.dyeStack = itemstack2.copy();
-        this.patternStack = itemstack3.copy();
+        this.bannerStack = bannerStack.copy();
+        this.dyeStack = dyeStack.copy();
+        this.patternStack = patternStack.copy();
     }
 }

@@ -15,66 +15,58 @@ public class SuppressedExceptionCollector {
         return System.currentTimeMillis();
     }
 
-    public synchronized void addEntry(String p_368067_, Throwable p_370087_) {
-        long i = currentTimeMs();
-        String s = p_370087_.getMessage();
-        this.latestEntries.add(new SuppressedExceptionCollector.LongEntry(i, p_368067_, (Class<? extends Throwable>)p_370087_.getClass(), s));
+    public synchronized void addEntry(final String location, final Throwable throwable) {
+        long now = currentTimeMs();
+        String message = throwable.getMessage();
+        this.latestEntries.add(new SuppressedExceptionCollector.LongEntry(now, location, (Class<? extends Throwable>)throwable.getClass(), message));
 
         while (this.latestEntries.size() > 8) {
             this.latestEntries.remove();
         }
 
-        SuppressedExceptionCollector.ShortEntry suppressedexceptioncollector$shortentry = new SuppressedExceptionCollector.ShortEntry(
-            p_368067_, (Class<? extends Throwable>)p_370087_.getClass()
-        );
-        int j = this.entryCounts.getInt(suppressedexceptioncollector$shortentry);
-        this.entryCounts.putAndMoveToFirst(suppressedexceptioncollector$shortentry, j + 1);
+        SuppressedExceptionCollector.ShortEntry key = new SuppressedExceptionCollector.ShortEntry(location, (Class<? extends Throwable>)throwable.getClass());
+        int currentValue = this.entryCounts.getInt(key);
+        this.entryCounts.putAndMoveToFirst(key, currentValue + 1);
     }
 
     public synchronized String dump() {
-        long i = currentTimeMs();
-        StringBuilder stringbuilder = new StringBuilder();
+        long current = currentTimeMs();
+        StringBuilder result = new StringBuilder();
         if (!this.latestEntries.isEmpty()) {
-            stringbuilder.append("\n\t\tLatest entries:\n");
+            result.append("\n\t\tLatest entries:\n");
 
-            for (SuppressedExceptionCollector.LongEntry suppressedexceptioncollector$longentry : this.latestEntries) {
-                stringbuilder.append("\t\t\t")
-                    .append(suppressedexceptioncollector$longentry.location)
+            for (SuppressedExceptionCollector.LongEntry e : this.latestEntries) {
+                result.append("\t\t\t")
+                    .append(e.location)
                     .append(":")
-                    .append(suppressedexceptioncollector$longentry.cls)
+                    .append(e.cls)
                     .append(": ")
-                    .append(suppressedexceptioncollector$longentry.message)
+                    .append(e.message)
                     .append(" (")
-                    .append(i - suppressedexceptioncollector$longentry.timestampMs)
+                    .append(current - e.timestampMs)
                     .append("ms ago)")
                     .append("\n");
             }
         }
 
         if (!this.entryCounts.isEmpty()) {
-            if (stringbuilder.isEmpty()) {
-                stringbuilder.append("\n");
+            if (result.isEmpty()) {
+                result.append("\n");
             }
 
-            stringbuilder.append("\t\tEntry counts:\n");
+            result.append("\t\tEntry counts:\n");
 
-            for (Entry<SuppressedExceptionCollector.ShortEntry> entry : Object2IntMaps.fastIterable(this.entryCounts)) {
-                stringbuilder.append("\t\t\t")
-                    .append(entry.getKey().location)
-                    .append(":")
-                    .append(entry.getKey().cls)
-                    .append(" x ")
-                    .append(entry.getIntValue())
-                    .append("\n");
+            for (Entry<SuppressedExceptionCollector.ShortEntry> e : Object2IntMaps.fastIterable(this.entryCounts)) {
+                result.append("\t\t\t").append(e.getKey().location).append(":").append(e.getKey().cls).append(" x ").append(e.getIntValue()).append("\n");
             }
         }
 
-        return stringbuilder.isEmpty() ? "~~NONE~~" : stringbuilder.toString();
+        return result.isEmpty() ? "~~NONE~~" : result.toString();
     }
 
-    record LongEntry(long timestampMs, String location, Class<? extends Throwable> cls, String message) {
+    private record LongEntry(long timestampMs, String location, Class<? extends Throwable> cls, String message) {
     }
 
-    record ShortEntry(String location, Class<? extends Throwable> cls) {
+    private record ShortEntry(String location, Class<? extends Throwable> cls) {
     }
 }

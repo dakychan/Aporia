@@ -10,40 +10,40 @@ public record DropChances(Map<EquipmentSlot, Float> byEquipment) {
     public static final float DEFAULT_EQUIPMENT_DROP_CHANCE = 0.085F;
     public static final float PRESERVE_ITEM_DROP_CHANCE_THRESHOLD = 1.0F;
     public static final int PRESERVE_ITEM_DROP_CHANCE = 2;
-    public static final DropChances DEFAULT = new DropChances(Util.makeEnumMap(EquipmentSlot.class, p_392495_ -> 0.085F));
+    public static final DropChances DEFAULT = new DropChances(Util.makeEnumMap(EquipmentSlot.class, slot -> 0.085F));
     public static final Codec<DropChances> CODEC = Codec.unboundedMap(EquipmentSlot.CODEC, ExtraCodecs.NON_NEGATIVE_FLOAT)
         .xmap(DropChances::toEnumMap, DropChances::filterDefaultValues)
         .xmap(DropChances::new, DropChances::byEquipment);
 
-    private static Map<EquipmentSlot, Float> filterDefaultValues(Map<EquipmentSlot, Float> p_395286_) {
-        Map<EquipmentSlot, Float> map = new HashMap<>(p_395286_);
-        map.values().removeIf(p_391217_ -> p_391217_ == 0.085F);
-        return map;
+    private static Map<EquipmentSlot, Float> filterDefaultValues(final Map<EquipmentSlot, Float> map) {
+        Map<EquipmentSlot, Float> filteredMap = new HashMap<>(map);
+        filteredMap.values().removeIf(chance -> chance == 0.085F);
+        return filteredMap;
     }
 
-    private static Map<EquipmentSlot, Float> toEnumMap(Map<EquipmentSlot, Float> p_393581_) {
-        return Util.makeEnumMap(EquipmentSlot.class, p_391496_ -> p_393581_.getOrDefault(p_391496_, 0.085F));
+    private static Map<EquipmentSlot, Float> toEnumMap(final Map<EquipmentSlot, Float> map) {
+        return Util.makeEnumMap(EquipmentSlot.class, slot -> map.getOrDefault(slot, 0.085F));
     }
 
-    public DropChances withGuaranteedDrop(EquipmentSlot p_395095_) {
-        return this.withEquipmentChance(p_395095_, 2.0F);
+    public DropChances withGuaranteedDrop(final EquipmentSlot slot) {
+        return this.withEquipmentChance(slot, 2.0F);
     }
 
-    public DropChances withEquipmentChance(EquipmentSlot p_391265_, float p_393080_) {
-        if (p_393080_ < 0.0F) {
-            throw new IllegalArgumentException("Tried to set invalid equipment chance " + p_393080_ + " for " + p_391265_);
+    public DropChances withEquipmentChance(final EquipmentSlot slot, final float chance) {
+        if (chance < 0.0F) {
+            throw new IllegalArgumentException("Tried to set invalid equipment chance " + chance + " for " + slot);
         } else {
-            return this.byEquipment(p_391265_) == p_393080_
+            return this.byEquipment(slot) == chance
                 ? this
-                : new DropChances(Util.makeEnumMap(EquipmentSlot.class, p_392887_ -> p_392887_ == p_391265_ ? p_393080_ : this.byEquipment(p_392887_)));
+                : new DropChances(Util.makeEnumMap(EquipmentSlot.class, newSlot -> newSlot == slot ? chance : this.byEquipment(newSlot)));
         }
     }
 
-    public float byEquipment(EquipmentSlot p_397982_) {
-        return this.byEquipment.getOrDefault(p_397982_, 0.085F);
+    public float byEquipment(final EquipmentSlot slot) {
+        return this.byEquipment.getOrDefault(slot, 0.085F);
     }
 
-    public boolean isPreserved(EquipmentSlot p_394795_) {
-        return this.byEquipment(p_394795_) > 1.0F;
+    public boolean isPreserved(final EquipmentSlot slot) {
+        return this.byEquipment(slot) > 1.0F;
     }
 }

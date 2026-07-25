@@ -21,96 +21,97 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
+import net.minecraft.server.packs.resources.ResourceMetadata;
 import net.minecraft.util.FileSystemUtil;
 import net.minecraft.util.Util;
 import org.slf4j.Logger;
 
 public class VanillaPackResourcesBuilder {
     private static final Logger LOGGER = LogUtils.getLogger();
-    public static Consumer<VanillaPackResourcesBuilder> developmentConfig = p_251787_ -> {};
+    public static Consumer<VanillaPackResourcesBuilder> developmentConfig = builder -> {};
     private static final Map<PackType, Path> ROOT_DIR_BY_TYPE = Util.make(() -> {
         synchronized (VanillaPackResources.class) {
-            Builder<PackType, Path> builder = ImmutableMap.builder();
+            Builder<PackType, Path> result = ImmutableMap.builder();
 
-            for (PackType packtype : PackType.values()) {
-                String s = "/" + packtype.getDirectory() + "/.mcassetsroot";
-                URL url = VanillaPackResources.class.getResource(s);
-                if (url == null) {
-                    LOGGER.error("File {} does not exist in classpath", s);
+            for (PackType type : PackType.values()) {
+                String probeName = "/" + type.getDirectory() + "/.mcassetsroot";
+                URL probeUrl = VanillaPackResources.class.getResource(probeName);
+                if (probeUrl == null) {
+                    LOGGER.error("File {} does not exist in classpath", probeName);
                 } else {
                     try {
-                        URI uri = url.toURI();
-                        String s1 = uri.getScheme();
-                        if (!"jar".equals(s1) && !"file".equals(s1)) {
-                            LOGGER.warn("Assets URL '{}' uses unexpected schema", uri);
+                        URI probeUri = probeUrl.toURI();
+                        String scheme = probeUri.getScheme();
+                        if (!"jar".equals(scheme) && !"file".equals(scheme)) {
+                            LOGGER.warn("Assets URL '{}' uses unexpected schema", probeUri);
                         }
 
-                        Path path = FileSystemUtil.safeGetPath(uri);
-                        builder.put(packtype, path.getParent());
-                    } catch (Exception exception) {
-                        LOGGER.error("Couldn't resolve path to vanilla assets", (Throwable)exception);
+                        Path probePath = FileSystemUtil.safeGetPath(probeUri);
+                        result.put(type, probePath.getParent());
+                    } catch (Exception e) {
+                        LOGGER.error("Couldn't resolve path to vanilla assets", e);
                     }
                 }
             }
 
-            return builder.build();
+            return result.build();
         }
     });
     private final Set<Path> rootPaths = new LinkedHashSet<>();
     private final Map<PackType, Set<Path>> pathsForType = new EnumMap<>(PackType.class);
-    private BuiltInMetadata metadata = BuiltInMetadata.of();
+    private ResourceMetadata metadata = ResourceMetadata.EMPTY;
     private final Set<String> namespaces = new HashSet<>();
 
-    private boolean validateDirPath(Path p_249112_) {
-        if (!Files.exists(p_249112_)) {
+    private boolean validateDirPath(final Path path) {
+        if (!Files.exists(path)) {
             return false;
-        } else if (!Files.isDirectory(p_249112_)) {
-            throw new IllegalArgumentException("Path " + p_249112_.toAbsolutePath() + " is not directory");
+        } else if (!Files.isDirectory(path)) {
+            throw new IllegalArgumentException("Path " + path.toAbsolutePath() + " is not directory");
         } else {
             return true;
         }
     }
 
-    private void pushRootPath(Path p_251084_) {
-        if (this.validateDirPath(p_251084_)) {
-            this.rootPaths.add(p_251084_);
+    private void pushRootPath(final Path path) {
+        if (this.validateDirPath(path)) {
+            this.rootPaths.add(path);
         }
     }
 
-    private void pushPathForType(PackType p_250073_, Path p_252259_) {
-        if (this.validateDirPath(p_252259_)) {
-            this.pathsForType.computeIfAbsent(p_250073_, p_250639_ -> new LinkedHashSet<>()).add(p_252259_);
+    private void pushPathForType(final PackType packType, final Path path) {
+        if (this.validateDirPath(path)) {
+            this.pathsForType.computeIfAbsent(packType, k -> new LinkedHashSet<>()).add(path);
         }
     }
 
     public VanillaPackResourcesBuilder pushJarResources() {
-        ROOT_DIR_BY_TYPE.forEach((p_251514_, p_251979_) -> {
-            this.pushRootPath(p_251979_.getParent());
-            this.pushPathForType(p_251514_, p_251979_);
+        ROOT_DIR_BY_TYPE.forEach((packType, path) -> {
+            this.pushRootPath(path.getParent());
+            this.pushPathForType(packType, path);
         });
         return this;
     }
 
-    public VanillaPackResourcesBuilder pushClasspathResources(PackType p_251987_, Class<?> p_249062_) {
-        Enumeration<URL> enumeration = null;
+    public VanillaPackResourcesBuilder pushClasspathResources(final PackType packType, final Class<?> source) {
+        Enumeration<URL> resources = null;
 
         try {
-            enumeration = p_249062_.getClassLoader().getResources(p_251987_.getDirectory() + "/");
-        } catch (IOException ioexception) {
+            resources = source.getClassLoader().getResources(packType.getDirectory() + "/");
+        } catch (IOException var8) {
         }
 
-        while (enumeration != null && enumeration.hasMoreElements()) {
-            URL url = enumeration.nextElement();
+        while (resources != null && resources.hasMoreElements()) {
+            URL url = resources.nextElement();
 
             try {
                 URI uri = url.toURI();
                 if ("file".equals(uri.getScheme())) {
-                    Path path = Paths.get(uri);
-                    this.pushRootPath(path.getParent());
-                    this.pushPathForType(p_251987_, path);
+                    Path assetsPath = Paths.get(uri);
+                    this.pushRootPath(assetsPath.getParent());
+                    this.pushPathForType(packType, assetsPath);
                 }
-            } catch (Exception exception) {
-                LOGGER.error("Failed to extract path from {}", url, exception);
+            } catch (Exception e) {
+                LOGGER.error("Failed to extract path from {}", url, e);
             }
         }
 
@@ -122,45 +123,45 @@ public class VanillaPackResourcesBuilder {
         return this;
     }
 
-    public VanillaPackResourcesBuilder pushUniversalPath(Path p_249464_) {
-        this.pushRootPath(p_249464_);
+    public VanillaPackResourcesBuilder pushUniversalPath(final Path path) {
+        this.pushRootPath(path);
 
-        for (PackType packtype : PackType.values()) {
-            this.pushPathForType(packtype, p_249464_.resolve(packtype.getDirectory()));
+        for (PackType packType : PackType.values()) {
+            this.pushPathForType(packType, path.resolve(packType.getDirectory()));
         }
 
         return this;
     }
 
-    public VanillaPackResourcesBuilder pushAssetPath(PackType p_248623_, Path p_250065_) {
-        this.pushRootPath(p_250065_);
-        this.pushPathForType(p_248623_, p_250065_);
+    public VanillaPackResourcesBuilder pushAssetPath(final PackType packType, final Path path) {
+        this.pushRootPath(path);
+        this.pushPathForType(packType, path);
         return this;
     }
 
-    public VanillaPackResourcesBuilder setMetadata(BuiltInMetadata p_249597_) {
-        this.metadata = p_249597_;
+    public VanillaPackResourcesBuilder setMetadata(final ResourceMetadata metadata) {
+        this.metadata = metadata;
         return this;
     }
 
-    public VanillaPackResourcesBuilder exposeNamespace(String... p_250838_) {
-        this.namespaces.addAll(Arrays.asList(p_250838_));
+    public VanillaPackResourcesBuilder exposeNamespace(final String... namespaces) {
+        this.namespaces.addAll(Arrays.asList(namespaces));
         return this;
     }
 
-    public VanillaPackResources build(PackLocationInfo p_332000_) {
+    public VanillaPackResources build(final PackLocationInfo location) {
         return new VanillaPackResources(
-            p_332000_,
+            location,
             this.metadata,
             Set.copyOf(this.namespaces),
             copyAndReverse(this.rootPaths),
-            Util.makeEnumMap(PackType.class, p_390159_ -> copyAndReverse(this.pathsForType.getOrDefault(p_390159_, Set.of())))
+            Util.makeEnumMap(PackType.class, packType -> copyAndReverse(this.pathsForType.getOrDefault(packType, Set.of())))
         );
     }
 
-    private static List<Path> copyAndReverse(Collection<Path> p_252072_) {
-        List<Path> list = new ArrayList<>(p_252072_);
-        Collections.reverse(list);
-        return List.copyOf(list);
+    private static List<Path> copyAndReverse(final Collection<Path> input) {
+        List<Path> paths = new ArrayList<>(input);
+        Collections.reverse(paths);
+        return List.copyOf(paths);
     }
 }

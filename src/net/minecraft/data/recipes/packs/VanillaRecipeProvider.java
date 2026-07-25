@@ -3,22 +3,23 @@ package net.minecraft.data.recipes.packs;
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.util.Pair;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
-import net.minecraft.advancements.CriteriaTriggers;
-import net.minecraft.advancements.criterion.InventoryChangeTrigger;
-import net.minecraft.advancements.criterion.MinMaxBounds;
-import net.minecraft.advancements.criterion.PlayerTrigger;
+import net.minecraft.advancements.predicates.MinMaxBounds;
+import net.minecraft.advancements.triggers.CriteriaTriggers;
+import net.minecraft.advancements.triggers.InventoryChangeTrigger;
+import net.minecraft.advancements.triggers.PlayerTrigger;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.PackOutput;
+import net.minecraft.data.recipes.CustomCraftingRecipeBuilder;
 import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
 import net.minecraft.data.recipes.SimpleCookingRecipeBuilder;
-import net.minecraft.data.recipes.SingleItemRecipeBuilder;
 import net.minecraft.data.recipes.SpecialRecipeBuilder;
 import net.minecraft.data.recipes.TransmuteRecipeBuilder;
 import net.minecraft.resources.Identifier;
@@ -26,47 +27,49 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.flag.FeatureFlags;
-import net.minecraft.world.item.BundleItem;
 import net.minecraft.world.item.DyeColor;
-import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStackTemplate;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.ArmorDyeRecipe;
-import net.minecraft.world.item.crafting.BannerDuplicateRecipe;
+import net.minecraft.world.item.component.FireworkExplosion;
 import net.minecraft.world.item.crafting.BookCloningRecipe;
 import net.minecraft.world.item.crafting.CampfireCookingRecipe;
+import net.minecraft.world.item.crafting.CookingBookCategory;
 import net.minecraft.world.item.crafting.DecoratedPotRecipe;
 import net.minecraft.world.item.crafting.FireworkRocketRecipe;
 import net.minecraft.world.item.crafting.FireworkStarFadeRecipe;
 import net.minecraft.world.item.crafting.FireworkStarRecipe;
+import net.minecraft.world.item.crafting.ImbueRecipe;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.item.crafting.MapCloningRecipe;
 import net.minecraft.world.item.crafting.MapExtendingRecipe;
 import net.minecraft.world.item.crafting.Recipe;
-import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RepairItemRecipe;
 import net.minecraft.world.item.crafting.ShieldDecorationRecipe;
 import net.minecraft.world.item.crafting.SmokingRecipe;
-import net.minecraft.world.item.crafting.TippedArrowRecipe;
+import net.minecraft.world.item.crafting.TransmuteRecipe;
 import net.minecraft.world.item.equipment.trim.TrimPattern;
 import net.minecraft.world.item.equipment.trim.TrimPatterns;
 import net.minecraft.world.level.ItemLike;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.block.ShulkerBoxBlock;
+import net.minecraft.world.level.block.ColorCollection;
 import net.minecraft.world.level.block.SuspiciousEffectHolder;
+import net.minecraft.world.level.block.WeatheringCopper;
+import net.minecraft.world.level.block.WeatheringCopperCollection;
 
 public class VanillaRecipeProvider extends RecipeProvider {
     private static final ImmutableList<ItemLike> COAL_SMELTABLES = ImmutableList.of(Items.COAL_ORE, Items.DEEPSLATE_COAL_ORE);
     private static final ImmutableList<ItemLike> IRON_SMELTABLES = ImmutableList.of(Items.IRON_ORE, Items.DEEPSLATE_IRON_ORE, Items.RAW_IRON);
     private static final ImmutableList<ItemLike> COPPER_SMELTABLES = ImmutableList.of(Items.COPPER_ORE, Items.DEEPSLATE_COPPER_ORE, Items.RAW_COPPER);
-    private static final ImmutableList<ItemLike> GOLD_SMELTABLES = ImmutableList.of(Items.GOLD_ORE, Items.DEEPSLATE_GOLD_ORE, Items.NETHER_GOLD_ORE, Items.RAW_GOLD);
+    private static final ImmutableList<ItemLike> GOLD_SMELTABLES = ImmutableList.of(
+        Items.GOLD_ORE, Items.DEEPSLATE_GOLD_ORE, Items.NETHER_GOLD_ORE, Items.RAW_GOLD
+    );
     private static final ImmutableList<ItemLike> DIAMOND_SMELTABLES = ImmutableList.of(Items.DIAMOND_ORE, Items.DEEPSLATE_DIAMOND_ORE);
     private static final ImmutableList<ItemLike> LAPIS_SMELTABLES = ImmutableList.of(Items.LAPIS_ORE, Items.DEEPSLATE_LAPIS_ORE);
     private static final ImmutableList<ItemLike> REDSTONE_SMELTABLES = ImmutableList.of(Items.REDSTONE_ORE, Items.DEEPSLATE_REDSTONE_ORE);
     private static final ImmutableList<ItemLike> EMERALD_SMELTABLES = ImmutableList.of(Items.EMERALD_ORE, Items.DEEPSLATE_EMERALD_ORE);
 
-    VanillaRecipeProvider(HolderLookup.Provider p_362726_, RecipeOutput p_362384_) {
-        super(p_362726_, p_362384_);
+    private VanillaRecipeProvider(final HolderLookup.Provider registries, final RecipeOutput output) {
+        super(registries, output);
     }
 
     @Override
@@ -123,246 +126,22 @@ public class VanillaRecipeProvider extends RecipeProvider {
         this.shelf(Blocks.PALE_OAK_SHELF, Items.STRIPPED_PALE_OAK_LOG);
         this.shelf(Blocks.SPRUCE_SHELF, Items.STRIPPED_SPRUCE_LOG);
         this.shelf(Blocks.WARPED_SHELF, Items.STRIPPED_WARPED_STEM);
-        List<Item> list = List.of(
-            Items.BLACK_DYE,
-            Items.BLUE_DYE,
-            Items.BROWN_DYE,
-            Items.CYAN_DYE,
-            Items.GRAY_DYE,
-            Items.GREEN_DYE,
-            Items.LIGHT_BLUE_DYE,
-            Items.LIGHT_GRAY_DYE,
-            Items.LIME_DYE,
-            Items.MAGENTA_DYE,
-            Items.ORANGE_DYE,
-            Items.PINK_DYE,
-            Items.PURPLE_DYE,
-            Items.RED_DYE,
-            Items.YELLOW_DYE,
-            Items.WHITE_DYE
-        );
-        List<Item> list1 = List.of(
-            Items.BLACK_WOOL,
-            Items.BLUE_WOOL,
-            Items.BROWN_WOOL,
-            Items.CYAN_WOOL,
-            Items.GRAY_WOOL,
-            Items.GREEN_WOOL,
-            Items.LIGHT_BLUE_WOOL,
-            Items.LIGHT_GRAY_WOOL,
-            Items.LIME_WOOL,
-            Items.MAGENTA_WOOL,
-            Items.ORANGE_WOOL,
-            Items.PINK_WOOL,
-            Items.PURPLE_WOOL,
-            Items.RED_WOOL,
-            Items.YELLOW_WOOL,
-            Items.WHITE_WOOL
-        );
-        List<Item> list2 = List.of(
-            Items.BLACK_BED,
-            Items.BLUE_BED,
-            Items.BROWN_BED,
-            Items.CYAN_BED,
-            Items.GRAY_BED,
-            Items.GREEN_BED,
-            Items.LIGHT_BLUE_BED,
-            Items.LIGHT_GRAY_BED,
-            Items.LIME_BED,
-            Items.MAGENTA_BED,
-            Items.ORANGE_BED,
-            Items.PINK_BED,
-            Items.PURPLE_BED,
-            Items.RED_BED,
-            Items.YELLOW_BED,
-            Items.WHITE_BED
-        );
-        List<Item> list3 = List.of(
-            Items.BLACK_CARPET,
-            Items.BLUE_CARPET,
-            Items.BROWN_CARPET,
-            Items.CYAN_CARPET,
-            Items.GRAY_CARPET,
-            Items.GREEN_CARPET,
-            Items.LIGHT_BLUE_CARPET,
-            Items.LIGHT_GRAY_CARPET,
-            Items.LIME_CARPET,
-            Items.MAGENTA_CARPET,
-            Items.ORANGE_CARPET,
-            Items.PINK_CARPET,
-            Items.PURPLE_CARPET,
-            Items.RED_CARPET,
-            Items.YELLOW_CARPET,
-            Items.WHITE_CARPET
-        );
-        List<Item> list4 = List.of(
-            Items.BLACK_HARNESS,
-            Items.BLUE_HARNESS,
-            Items.BROWN_HARNESS,
-            Items.CYAN_HARNESS,
-            Items.GRAY_HARNESS,
-            Items.GREEN_HARNESS,
-            Items.LIGHT_BLUE_HARNESS,
-            Items.LIGHT_GRAY_HARNESS,
-            Items.LIME_HARNESS,
-            Items.MAGENTA_HARNESS,
-            Items.ORANGE_HARNESS,
-            Items.PINK_HARNESS,
-            Items.PURPLE_HARNESS,
-            Items.RED_HARNESS,
-            Items.YELLOW_HARNESS,
-            Items.WHITE_HARNESS
-        );
-        this.colorItemWithDye(list, list1, "wool", RecipeCategory.BUILDING_BLOCKS);
-        this.colorItemWithDye(list, list2, "bed_dye", RecipeCategory.DECORATIONS);
-        this.colorItemWithDye(list, list3, "carpet_dye", RecipeCategory.DECORATIONS);
-        this.colorItemWithDye(list, list4, "harness_dye", RecipeCategory.COMBAT);
-        this.carpet(Blocks.BLACK_CARPET, Blocks.BLACK_WOOL);
-        this.bedFromPlanksAndWool(Items.BLACK_BED, Blocks.BLACK_WOOL);
-        this.banner(Items.BLACK_BANNER, Blocks.BLACK_WOOL);
-        this.carpet(Blocks.BLUE_CARPET, Blocks.BLUE_WOOL);
-        this.bedFromPlanksAndWool(Items.BLUE_BED, Blocks.BLUE_WOOL);
-        this.banner(Items.BLUE_BANNER, Blocks.BLUE_WOOL);
-        this.carpet(Blocks.BROWN_CARPET, Blocks.BROWN_WOOL);
-        this.bedFromPlanksAndWool(Items.BROWN_BED, Blocks.BROWN_WOOL);
-        this.banner(Items.BROWN_BANNER, Blocks.BROWN_WOOL);
-        this.carpet(Blocks.CYAN_CARPET, Blocks.CYAN_WOOL);
-        this.bedFromPlanksAndWool(Items.CYAN_BED, Blocks.CYAN_WOOL);
-        this.banner(Items.CYAN_BANNER, Blocks.CYAN_WOOL);
-        this.carpet(Blocks.GRAY_CARPET, Blocks.GRAY_WOOL);
-        this.bedFromPlanksAndWool(Items.GRAY_BED, Blocks.GRAY_WOOL);
-        this.banner(Items.GRAY_BANNER, Blocks.GRAY_WOOL);
-        this.carpet(Blocks.GREEN_CARPET, Blocks.GREEN_WOOL);
-        this.bedFromPlanksAndWool(Items.GREEN_BED, Blocks.GREEN_WOOL);
-        this.banner(Items.GREEN_BANNER, Blocks.GREEN_WOOL);
-        this.carpet(Blocks.LIGHT_BLUE_CARPET, Blocks.LIGHT_BLUE_WOOL);
-        this.bedFromPlanksAndWool(Items.LIGHT_BLUE_BED, Blocks.LIGHT_BLUE_WOOL);
-        this.banner(Items.LIGHT_BLUE_BANNER, Blocks.LIGHT_BLUE_WOOL);
-        this.carpet(Blocks.LIGHT_GRAY_CARPET, Blocks.LIGHT_GRAY_WOOL);
-        this.bedFromPlanksAndWool(Items.LIGHT_GRAY_BED, Blocks.LIGHT_GRAY_WOOL);
-        this.banner(Items.LIGHT_GRAY_BANNER, Blocks.LIGHT_GRAY_WOOL);
-        this.carpet(Blocks.LIME_CARPET, Blocks.LIME_WOOL);
-        this.bedFromPlanksAndWool(Items.LIME_BED, Blocks.LIME_WOOL);
-        this.banner(Items.LIME_BANNER, Blocks.LIME_WOOL);
-        this.carpet(Blocks.MAGENTA_CARPET, Blocks.MAGENTA_WOOL);
-        this.bedFromPlanksAndWool(Items.MAGENTA_BED, Blocks.MAGENTA_WOOL);
-        this.banner(Items.MAGENTA_BANNER, Blocks.MAGENTA_WOOL);
-        this.carpet(Blocks.ORANGE_CARPET, Blocks.ORANGE_WOOL);
-        this.bedFromPlanksAndWool(Items.ORANGE_BED, Blocks.ORANGE_WOOL);
-        this.banner(Items.ORANGE_BANNER, Blocks.ORANGE_WOOL);
-        this.carpet(Blocks.PINK_CARPET, Blocks.PINK_WOOL);
-        this.bedFromPlanksAndWool(Items.PINK_BED, Blocks.PINK_WOOL);
-        this.banner(Items.PINK_BANNER, Blocks.PINK_WOOL);
-        this.carpet(Blocks.PURPLE_CARPET, Blocks.PURPLE_WOOL);
-        this.bedFromPlanksAndWool(Items.PURPLE_BED, Blocks.PURPLE_WOOL);
-        this.banner(Items.PURPLE_BANNER, Blocks.PURPLE_WOOL);
-        this.carpet(Blocks.RED_CARPET, Blocks.RED_WOOL);
-        this.bedFromPlanksAndWool(Items.RED_BED, Blocks.RED_WOOL);
-        this.banner(Items.RED_BANNER, Blocks.RED_WOOL);
-        this.carpet(Blocks.WHITE_CARPET, Blocks.WHITE_WOOL);
-        this.bedFromPlanksAndWool(Items.WHITE_BED, Blocks.WHITE_WOOL);
-        this.banner(Items.WHITE_BANNER, Blocks.WHITE_WOOL);
-        this.carpet(Blocks.YELLOW_CARPET, Blocks.YELLOW_WOOL);
-        this.bedFromPlanksAndWool(Items.YELLOW_BED, Blocks.YELLOW_WOOL);
-        this.banner(Items.YELLOW_BANNER, Blocks.YELLOW_WOOL);
+        List<Item> dyes = Items.DYE.asList();
+        this.colorItemWithDye(dyes, Items.WOOL.asList(), "wool", RecipeCategory.BUILDING_BLOCKS);
+        this.colorItemWithDye(dyes, Items.BED.asList(), "bed_dye", RecipeCategory.DECORATIONS);
+        this.colorItemWithDye(dyes, Items.CARPET.asList(), "carpet_dye", RecipeCategory.DECORATIONS);
+        this.colorItemWithDye(dyes, Items.HARNESS.asList(), "harness_dye", RecipeCategory.COMBAT);
+        ColorCollection.zipApply(Blocks.CARPET, Blocks.WOOL, (x$0, x$1) -> this.carpet(x$0, x$1));
+        ColorCollection.zipApply(Items.BED, Blocks.WOOL, (x$0, x$1) -> this.bedFromPlanksAndWool(x$0, x$1));
+        ColorCollection.zipApply(Items.BANNER, Blocks.WOOL, (x$0, x$1) -> this.banner(x$0, x$1));
         this.carpet(Blocks.MOSS_CARPET, Blocks.MOSS_BLOCK);
         this.carpet(Blocks.PALE_MOSS_CARPET, Blocks.PALE_MOSS_BLOCK);
-        this.harness(Items.WHITE_HARNESS, Blocks.WHITE_WOOL);
-        this.harness(Items.ORANGE_HARNESS, Blocks.ORANGE_WOOL);
-        this.harness(Items.MAGENTA_HARNESS, Blocks.MAGENTA_WOOL);
-        this.harness(Items.LIGHT_BLUE_HARNESS, Blocks.LIGHT_BLUE_WOOL);
-        this.harness(Items.YELLOW_HARNESS, Blocks.YELLOW_WOOL);
-        this.harness(Items.LIME_HARNESS, Blocks.LIME_WOOL);
-        this.harness(Items.PINK_HARNESS, Blocks.PINK_WOOL);
-        this.harness(Items.GRAY_HARNESS, Blocks.GRAY_WOOL);
-        this.harness(Items.LIGHT_GRAY_HARNESS, Blocks.LIGHT_GRAY_WOOL);
-        this.harness(Items.CYAN_HARNESS, Blocks.CYAN_WOOL);
-        this.harness(Items.PURPLE_HARNESS, Blocks.PURPLE_WOOL);
-        this.harness(Items.BLUE_HARNESS, Blocks.BLUE_WOOL);
-        this.harness(Items.BROWN_HARNESS, Blocks.BROWN_WOOL);
-        this.harness(Items.GREEN_HARNESS, Blocks.GREEN_WOOL);
-        this.harness(Items.RED_HARNESS, Blocks.RED_WOOL);
-        this.harness(Items.BLACK_HARNESS, Blocks.BLACK_WOOL);
-        this.stainedGlassFromGlassAndDye(Blocks.BLACK_STAINED_GLASS, Items.BLACK_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.BLACK_STAINED_GLASS_PANE, Blocks.BLACK_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.BLACK_STAINED_GLASS_PANE, Items.BLACK_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.BLUE_STAINED_GLASS, Items.BLUE_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.BLUE_STAINED_GLASS_PANE, Blocks.BLUE_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.BLUE_STAINED_GLASS_PANE, Items.BLUE_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.BROWN_STAINED_GLASS, Items.BROWN_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.BROWN_STAINED_GLASS_PANE, Blocks.BROWN_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.BROWN_STAINED_GLASS_PANE, Items.BROWN_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.CYAN_STAINED_GLASS, Items.CYAN_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.CYAN_STAINED_GLASS_PANE, Blocks.CYAN_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.CYAN_STAINED_GLASS_PANE, Items.CYAN_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.GRAY_STAINED_GLASS, Items.GRAY_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.GRAY_STAINED_GLASS_PANE, Blocks.GRAY_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.GRAY_STAINED_GLASS_PANE, Items.GRAY_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.GREEN_STAINED_GLASS, Items.GREEN_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.GREEN_STAINED_GLASS_PANE, Blocks.GREEN_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.GREEN_STAINED_GLASS_PANE, Items.GREEN_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.LIGHT_BLUE_STAINED_GLASS, Items.LIGHT_BLUE_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.LIGHT_BLUE_STAINED_GLASS_PANE, Blocks.LIGHT_BLUE_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.LIGHT_BLUE_STAINED_GLASS_PANE, Items.LIGHT_BLUE_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.LIGHT_GRAY_STAINED_GLASS, Items.LIGHT_GRAY_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.LIGHT_GRAY_STAINED_GLASS_PANE, Blocks.LIGHT_GRAY_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.LIGHT_GRAY_STAINED_GLASS_PANE, Items.LIGHT_GRAY_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.LIME_STAINED_GLASS, Items.LIME_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.LIME_STAINED_GLASS_PANE, Blocks.LIME_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.LIME_STAINED_GLASS_PANE, Items.LIME_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.MAGENTA_STAINED_GLASS, Items.MAGENTA_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.MAGENTA_STAINED_GLASS_PANE, Blocks.MAGENTA_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.MAGENTA_STAINED_GLASS_PANE, Items.MAGENTA_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.ORANGE_STAINED_GLASS, Items.ORANGE_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.ORANGE_STAINED_GLASS_PANE, Blocks.ORANGE_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.ORANGE_STAINED_GLASS_PANE, Items.ORANGE_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.PINK_STAINED_GLASS, Items.PINK_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.PINK_STAINED_GLASS_PANE, Blocks.PINK_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.PINK_STAINED_GLASS_PANE, Items.PINK_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.PURPLE_STAINED_GLASS, Items.PURPLE_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.PURPLE_STAINED_GLASS_PANE, Blocks.PURPLE_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.PURPLE_STAINED_GLASS_PANE, Items.PURPLE_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.RED_STAINED_GLASS, Items.RED_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.RED_STAINED_GLASS_PANE, Blocks.RED_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.RED_STAINED_GLASS_PANE, Items.RED_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.WHITE_STAINED_GLASS, Items.WHITE_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.WHITE_STAINED_GLASS_PANE, Blocks.WHITE_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.WHITE_STAINED_GLASS_PANE, Items.WHITE_DYE);
-        this.stainedGlassFromGlassAndDye(Blocks.YELLOW_STAINED_GLASS, Items.YELLOW_DYE);
-        this.stainedGlassPaneFromStainedGlass(Blocks.YELLOW_STAINED_GLASS_PANE, Blocks.YELLOW_STAINED_GLASS);
-        this.stainedGlassPaneFromGlassPaneAndDye(Blocks.YELLOW_STAINED_GLASS_PANE, Items.YELLOW_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.BLACK_TERRACOTTA, Items.BLACK_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.BLUE_TERRACOTTA, Items.BLUE_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.BROWN_TERRACOTTA, Items.BROWN_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.CYAN_TERRACOTTA, Items.CYAN_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.GRAY_TERRACOTTA, Items.GRAY_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.GREEN_TERRACOTTA, Items.GREEN_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.LIGHT_BLUE_TERRACOTTA, Items.LIGHT_BLUE_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.LIGHT_GRAY_TERRACOTTA, Items.LIGHT_GRAY_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.LIME_TERRACOTTA, Items.LIME_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.MAGENTA_TERRACOTTA, Items.MAGENTA_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.ORANGE_TERRACOTTA, Items.ORANGE_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.PINK_TERRACOTTA, Items.PINK_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.PURPLE_TERRACOTTA, Items.PURPLE_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.RED_TERRACOTTA, Items.RED_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.WHITE_TERRACOTTA, Items.WHITE_DYE);
-        this.coloredTerracottaFromTerracottaAndDye(Blocks.YELLOW_TERRACOTTA, Items.YELLOW_DYE);
-        this.concretePowder(Blocks.BLACK_CONCRETE_POWDER, Items.BLACK_DYE);
-        this.concretePowder(Blocks.BLUE_CONCRETE_POWDER, Items.BLUE_DYE);
-        this.concretePowder(Blocks.BROWN_CONCRETE_POWDER, Items.BROWN_DYE);
-        this.concretePowder(Blocks.CYAN_CONCRETE_POWDER, Items.CYAN_DYE);
-        this.concretePowder(Blocks.GRAY_CONCRETE_POWDER, Items.GRAY_DYE);
-        this.concretePowder(Blocks.GREEN_CONCRETE_POWDER, Items.GREEN_DYE);
-        this.concretePowder(Blocks.LIGHT_BLUE_CONCRETE_POWDER, Items.LIGHT_BLUE_DYE);
-        this.concretePowder(Blocks.LIGHT_GRAY_CONCRETE_POWDER, Items.LIGHT_GRAY_DYE);
-        this.concretePowder(Blocks.LIME_CONCRETE_POWDER, Items.LIME_DYE);
-        this.concretePowder(Blocks.MAGENTA_CONCRETE_POWDER, Items.MAGENTA_DYE);
-        this.concretePowder(Blocks.ORANGE_CONCRETE_POWDER, Items.ORANGE_DYE);
-        this.concretePowder(Blocks.PINK_CONCRETE_POWDER, Items.PINK_DYE);
-        this.concretePowder(Blocks.PURPLE_CONCRETE_POWDER, Items.PURPLE_DYE);
-        this.concretePowder(Blocks.RED_CONCRETE_POWDER, Items.RED_DYE);
-        this.concretePowder(Blocks.WHITE_CONCRETE_POWDER, Items.WHITE_DYE);
-        this.concretePowder(Blocks.YELLOW_CONCRETE_POWDER, Items.YELLOW_DYE);
+        ColorCollection.zipApply(Items.HARNESS, Blocks.WOOL, (x$0, x$1) -> this.harness(x$0, x$1));
+        ColorCollection.zipApply(Blocks.STAINED_GLASS, Items.DYE, (x$0, x$1) -> this.stainedGlassFromGlassAndDye(x$0, x$1));
+        ColorCollection.zipApply(Blocks.STAINED_GLASS_PANE, Blocks.STAINED_GLASS, (x$0, x$1) -> this.stainedGlassPaneFromStainedGlass(x$0, x$1));
+        ColorCollection.zipApply(Blocks.STAINED_GLASS_PANE, Items.DYE, (x$0, x$1) -> this.stainedGlassPaneFromGlassPaneAndDye(x$0, x$1));
+        ColorCollection.zipApply(Blocks.DYED_TERRACOTTA, Items.DYE, (x$0, x$1) -> this.coloredTerracottaFromTerracottaAndDye(x$0, x$1));
+        ColorCollection.zipApply(Blocks.CONCRETE_POWDER, Items.DYE, (x$0, x$1) -> this.concretePowder(x$0, x$1));
         this.dryGhast(Blocks.DRIED_GHAST);
         this.shaped(RecipeCategory.DECORATIONS, Items.CANDLE)
             .define('S', Items.STRING)
@@ -372,22 +151,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_string", this.has(Items.STRING))
             .unlockedBy("has_honeycomb", this.has(Items.HONEYCOMB))
             .save(this.output);
-        this.candle(Blocks.BLACK_CANDLE, Items.BLACK_DYE);
-        this.candle(Blocks.BLUE_CANDLE, Items.BLUE_DYE);
-        this.candle(Blocks.BROWN_CANDLE, Items.BROWN_DYE);
-        this.candle(Blocks.CYAN_CANDLE, Items.CYAN_DYE);
-        this.candle(Blocks.GRAY_CANDLE, Items.GRAY_DYE);
-        this.candle(Blocks.GREEN_CANDLE, Items.GREEN_DYE);
-        this.candle(Blocks.LIGHT_BLUE_CANDLE, Items.LIGHT_BLUE_DYE);
-        this.candle(Blocks.LIGHT_GRAY_CANDLE, Items.LIGHT_GRAY_DYE);
-        this.candle(Blocks.LIME_CANDLE, Items.LIME_DYE);
-        this.candle(Blocks.MAGENTA_CANDLE, Items.MAGENTA_DYE);
-        this.candle(Blocks.ORANGE_CANDLE, Items.ORANGE_DYE);
-        this.candle(Blocks.PINK_CANDLE, Items.PINK_DYE);
-        this.candle(Blocks.PURPLE_CANDLE, Items.PURPLE_DYE);
-        this.candle(Blocks.RED_CANDLE, Items.RED_DYE);
-        this.candle(Blocks.WHITE_CANDLE, Items.WHITE_DYE);
-        this.candle(Blocks.YELLOW_CANDLE, Items.YELLOW_DYE);
+        ColorCollection.zipApply(Blocks.DYED_CANDLE, Items.DYE, (x$0, x$1) -> this.candle(x$0, x$1));
         this.shapeless(RecipeCategory.BUILDING_BLOCKS, Blocks.PACKED_MUD, 1)
             .requires(Blocks.MUD)
             .requires(Items.WHEAT)
@@ -475,29 +239,31 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .requires(Items.BEETROOT, 6)
             .unlockedBy("has_beetroot", this.has(Items.BEETROOT))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.BLACK_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.black())
             .requires(Items.INK_SAC)
             .group("black_dye")
             .unlockedBy("has_ink_sac", this.has(Items.INK_SAC))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.BLACK_DYE, Blocks.WITHER_ROSE, "black_dye");
+        this.oneToOneConversionRecipe(Items.DYE.black(), Blocks.WITHER_ROSE, "black_dye");
         this.shapeless(RecipeCategory.BREWING, Items.BLAZE_POWDER, 2)
             .requires(Items.BLAZE_ROD)
             .unlockedBy("has_blaze_rod", this.has(Items.BLAZE_ROD))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.BLUE_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.blue())
             .requires(Items.LAPIS_LAZULI)
             .group("blue_dye")
             .unlockedBy("has_lapis_lazuli", this.has(Items.LAPIS_LAZULI))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.BLUE_DYE, Blocks.CORNFLOWER, "blue_dye");
+        this.oneToOneConversionRecipe(Items.DYE.blue(), Blocks.CORNFLOWER, "blue_dye");
         this.threeByThreePacker(RecipeCategory.BUILDING_BLOCKS, Blocks.BLUE_ICE, Blocks.PACKED_ICE);
         this.shapeless(RecipeCategory.MISC, Items.BONE_MEAL, 3)
             .requires(Items.BONE)
             .group("bonemeal")
             .unlockedBy("has_bone", this.has(Items.BONE))
             .save(this.output);
-        this.nineBlockStorageRecipesRecipesWithCustomUnpacking(RecipeCategory.MISC, Items.BONE_MEAL, RecipeCategory.BUILDING_BLOCKS, Items.BONE_BLOCK, "bone_meal_from_bone_block", "bonemeal");
+        this.nineBlockStorageRecipesRecipesWithCustomUnpacking(
+            RecipeCategory.MISC, Items.BONE_MEAL, RecipeCategory.BUILDING_BLOCKS, Items.BONE_BLOCK, "bone_meal_from_bone_block", "bonemeal"
+        );
         this.shapeless(RecipeCategory.MISC, Items.BOOK)
             .requires(Items.PAPER, 3)
             .requires(Items.LEATHER)
@@ -527,11 +293,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_red_mushroom", this.has(Blocks.RED_MUSHROOM))
             .unlockedBy("has_mushroom_stew", this.has(Items.MUSHROOM_STEW))
             .save(this.output);
-        this.shaped(RecipeCategory.FOOD, Items.BREAD)
-            .define('#', Items.WHEAT)
-            .pattern("###")
-            .unlockedBy("has_wheat", this.has(Items.WHEAT))
-            .save(this.output);
+        this.shaped(RecipeCategory.FOOD, Items.BREAD).define('#', Items.WHEAT).pattern("###").unlockedBy("has_wheat", this.has(Items.WHEAT)).save(this.output);
         this.shaped(RecipeCategory.BREWING, Blocks.BREWING_STAND)
             .define('B', Items.BLAZE_ROD)
             .define('#', ItemTags.STONE_CRAFTING_MATERIALS)
@@ -545,7 +307,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("##")
             .unlockedBy("has_brick", this.has(Items.BRICK))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.BROWN_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.brown())
             .requires(Items.COCOA_BEANS)
             .group("brown_dye")
             .unlockedBy("has_cocoa_beans", this.has(Items.COCOA_BEANS))
@@ -615,21 +377,19 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     .createCriterion(
                         new InventoryChangeTrigger.TriggerInstance(
                             Optional.empty(),
-                            new InventoryChangeTrigger.TriggerInstance.Slots(
-                                MinMaxBounds.Ints.atLeast(10), MinMaxBounds.Ints.ANY, MinMaxBounds.Ints.ANY
-                            ),
+                            new InventoryChangeTrigger.TriggerInstance.Slots(MinMaxBounds.Ints.atLeast(10), MinMaxBounds.Ints.ANY, MinMaxBounds.Ints.ANY),
                             List.of()
                         )
                     )
             )
             .save(this.output);
-        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_CHEST)
+        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_CHEST.weathering().unaffected())
             .define('#', Items.COPPER_INGOT)
             .define('X', Items.CHEST)
             .pattern("###")
             .pattern("#X#")
             .pattern("###")
-            .unlockedBy("has_copper_chest", this.has(Items.COPPER_CHEST))
+            .unlockedBy("has_copper_chest", this.has(Items.COPPER_CHEST.weathering().unaffected()))
             .save(this.output);
         this.shapeless(RecipeCategory.TRANSPORTATION, Items.CHEST_MINECART)
             .requires(Blocks.CHEST)
@@ -725,24 +485,29 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .save(this.output);
         this.chiseled(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_SANDSTONE, Blocks.SANDSTONE_SLAB);
         this.nineBlockStorageRecipesRecipesWithCustomUnpacking(
-            RecipeCategory.MISC, Items.COPPER_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.COPPER_BLOCK, getSimpleRecipeName(Items.COPPER_INGOT), getItemName(Items.COPPER_INGOT)
+            RecipeCategory.MISC,
+            Items.COPPER_INGOT,
+            RecipeCategory.BUILDING_BLOCKS,
+            Items.COPPER_BLOCK.weathering().unaffected(),
+            getSimpleRecipeName(Items.COPPER_INGOT),
+            getItemName(Items.COPPER_INGOT)
         );
         this.shapeless(RecipeCategory.MISC, Items.COPPER_INGOT, 9)
-            .requires(Blocks.WAXED_COPPER_BLOCK)
+            .requires(Blocks.COPPER_BLOCK.waxed().unaffected())
             .group(getItemName(Items.COPPER_INGOT))
-            .unlockedBy(getHasName(Blocks.WAXED_COPPER_BLOCK), this.has(Blocks.WAXED_COPPER_BLOCK))
-            .save(this.output, getConversionRecipeName(Items.COPPER_INGOT, Blocks.WAXED_COPPER_BLOCK));
+            .unlockedBy(getHasName(Blocks.COPPER_BLOCK.waxed().unaffected()), this.has(Blocks.COPPER_BLOCK.waxed().unaffected()))
+            .save(this.output, getConversionRecipeName(Items.COPPER_INGOT, Blocks.COPPER_BLOCK.waxed().unaffected()));
         this.waxRecipes(FeatureFlagSet.of(FeatureFlags.VANILLA));
-        this.shapeless(RecipeCategory.MISC, Items.CYAN_DYE, 2)
-            .requires(Items.BLUE_DYE)
-            .requires(Items.GREEN_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.cyan(), 2)
+            .requires(Items.DYE.blue())
+            .requires(Items.DYE.green())
             .group("cyan_dye")
-            .unlockedBy("has_green_dye", this.has(Items.GREEN_DYE))
-            .unlockedBy("has_blue_dye", this.has(Items.BLUE_DYE))
+            .unlockedBy("has_green_dye", this.has(Items.DYE.green()))
+            .unlockedBy("has_blue_dye", this.has(Items.DYE.blue()))
             .save(this.output);
         this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.DARK_PRISMARINE)
             .define('S', Items.PRISMARINE_SHARD)
-            .define('I', Items.BLACK_DYE)
+            .define('I', Items.DYE.black())
             .pattern("SSS")
             .pattern("SIS")
             .pattern("SSS")
@@ -756,18 +521,6 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("QQQ")
             .pattern("WWW")
             .unlockedBy("has_quartz", this.has(Items.QUARTZ))
-            .save(this.output);
-        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICKS, 4)
-            .define('S', Blocks.POLISHED_DEEPSLATE)
-            .pattern("SS")
-            .pattern("SS")
-            .unlockedBy("has_polished_deepslate", this.has(Blocks.POLISHED_DEEPSLATE))
-            .save(this.output);
-        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILES, 4)
-            .define('S', Blocks.DEEPSLATE_BRICKS)
-            .pattern("SS")
-            .pattern("SS")
-            .unlockedBy("has_deepslate_bricks", this.has(Blocks.DEEPSLATE_BRICKS))
             .save(this.output);
         this.shaped(RecipeCategory.TRANSPORTATION, Blocks.DETECTOR_RAIL, 6)
             .define('R', Items.REDSTONE)
@@ -870,6 +623,12 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_bow", this.has(Items.BOW))
             .save(this.output);
         this.twoByTwoPacker(RecipeCategory.BUILDING_BLOCKS, Blocks.DRIPSTONE_BLOCK, Items.POINTED_DRIPSTONE);
+        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.SULFUR, 1)
+            .define('#', Blocks.SULFUR_SPIKE)
+            .pattern("##")
+            .pattern("##")
+            .unlockedBy(getHasName(Blocks.SULFUR_SPIKE), this.has(Blocks.SULFUR_SPIKE))
+            .save(this.output, "sulfur_from_sulfur_spikes");
         this.shaped(RecipeCategory.REDSTONE, Blocks.DROPPER)
             .define('R', Items.REDSTONE)
             .define('#', Blocks.COBBLESTONE)
@@ -900,12 +659,6 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .requires(Items.ENDER_PEARL)
             .requires(Items.BLAZE_POWDER)
             .unlockedBy("has_blaze_powder", this.has(Items.BLAZE_POWDER))
-            .save(this.output);
-        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.END_STONE_BRICKS, 4)
-            .define('#', Blocks.END_STONE)
-            .pattern("##")
-            .pattern("##")
-            .unlockedBy("has_end_stone", this.has(Blocks.END_STONE))
             .save(this.output);
         this.shaped(RecipeCategory.DECORATIONS, Items.END_CRYSTAL)
             .define('T', Items.GHAST_TEAR)
@@ -1090,19 +843,23 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("#  ")
             .unlockedBy("has_gold_ingot", this.has(ItemTags.GOLD_TOOL_MATERIALS))
             .save(this.output);
-        this.nineBlockStorageRecipesRecipesWithCustomUnpacking(RecipeCategory.MISC, Items.GOLD_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.GOLD_BLOCK, "gold_ingot_from_gold_block", "gold_ingot");
-        this.nineBlockStorageRecipesWithCustomPacking(RecipeCategory.MISC, Items.GOLD_NUGGET, RecipeCategory.MISC, Items.GOLD_INGOT, "gold_ingot_from_nuggets", "gold_ingot");
+        this.nineBlockStorageRecipesRecipesWithCustomUnpacking(
+            RecipeCategory.MISC, Items.GOLD_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.GOLD_BLOCK, "gold_ingot_from_gold_block", "gold_ingot"
+        );
+        this.nineBlockStorageRecipesWithCustomPacking(
+            RecipeCategory.MISC, Items.GOLD_NUGGET, RecipeCategory.MISC, Items.GOLD_INGOT, "gold_ingot_from_nuggets", "gold_ingot"
+        );
         this.shapeless(RecipeCategory.BUILDING_BLOCKS, Blocks.GRANITE)
             .requires(Blocks.DIORITE)
             .requires(Items.QUARTZ)
             .unlockedBy("has_quartz", this.has(Items.QUARTZ))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.GRAY_DYE, 2)
-            .requires(Items.BLACK_DYE)
-            .requires(Items.WHITE_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.gray(), 2)
+            .requires(Items.DYE.black())
+            .requires(Items.DYE.white())
             .group("gray_dye")
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
-            .unlockedBy("has_black_dye", this.has(Items.BLACK_DYE))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
+            .unlockedBy("has_black_dye", this.has(Items.DYE.black()))
             .save(this.output);
         this.threeByThreePacker(RecipeCategory.BUILDING_BLOCKS, Blocks.HAY_BLOCK, Items.WHEAT);
         this.pressurePlate(Blocks.HEAVY_WEIGHTED_PRESSURE_PLATE, Items.IRON_INGOT);
@@ -1140,7 +897,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("###")
             .unlockedBy("has_iron_ingot", this.has(Items.IRON_INGOT))
             .save(this.output);
-        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_BARS.unaffected(), 16)
+        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_BARS.weathering().unaffected(), 16)
             .define('#', Items.COPPER_INGOT)
             .pattern("###")
             .pattern("###")
@@ -1176,8 +933,12 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern(" #")
             .unlockedBy("has_iron_ingot", this.has(ItemTags.IRON_TOOL_MATERIALS))
             .save(this.output);
-        this.nineBlockStorageRecipesRecipesWithCustomUnpacking(RecipeCategory.MISC, Items.IRON_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.IRON_BLOCK, "iron_ingot_from_iron_block", "iron_ingot");
-        this.nineBlockStorageRecipesWithCustomPacking(RecipeCategory.MISC, Items.IRON_NUGGET, RecipeCategory.MISC, Items.IRON_INGOT, "iron_ingot_from_nuggets", "iron_ingot");
+        this.nineBlockStorageRecipesRecipesWithCustomUnpacking(
+            RecipeCategory.MISC, Items.IRON_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.IRON_BLOCK, "iron_ingot_from_iron_block", "iron_ingot"
+        );
+        this.nineBlockStorageRecipesWithCustomPacking(
+            RecipeCategory.MISC, Items.IRON_NUGGET, RecipeCategory.MISC, Items.IRON_INGOT, "iron_ingot_from_nuggets", "iron_ingot"
+        );
         this.shaped(RecipeCategory.COMBAT, Items.IRON_LEGGINGS)
             .define('X', Items.IRON_INGOT)
             .pattern("XXX")
@@ -1249,6 +1010,15 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("  ~")
             .unlockedBy("has_string", this.has(Items.STRING))
             .save(this.output);
+        this.shaped(RecipeCategory.TOOLS, Items.NAME_TAG)
+            .define('X', ItemTags.METAL_NUGGETS)
+            .define('#', Items.PAPER)
+            .pattern(" X")
+            .pattern("# ")
+            .unlockedBy("has_metal_nugget", this.has(ItemTags.METAL_NUGGETS))
+            .unlockedBy("has_paper", this.has(Items.PAPER))
+            .unlockedBy("has_name_tag", this.has(Items.NAME_TAG))
+            .save(this.output);
         this.twoByTwoPacker(RecipeCategory.MISC, Items.LEATHER, Items.RABBIT_HIDE);
         this.shaped(RecipeCategory.COMBAT, Items.LEATHER_BOOTS)
             .define('X', Items.LEATHER)
@@ -1290,7 +1060,9 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("X#X")
             .unlockedBy("has_leather", this.has(Items.LEATHER))
             .save(this.output);
-        this.nineBlockStorageRecipesWithCustomPacking(RecipeCategory.MISC, Items.COPPER_NUGGET, RecipeCategory.MISC, Items.COPPER_INGOT, "copper_ingot_from_nuggets", "copper_ingot");
+        this.nineBlockStorageRecipesWithCustomPacking(
+            RecipeCategory.MISC, Items.COPPER_NUGGET, RecipeCategory.MISC, Items.COPPER_INGOT, "copper_ingot_from_nuggets", "copper_ingot"
+        );
         this.shaped(RecipeCategory.TOOLS, Items.COPPER_AXE)
             .define('#', Items.STICK)
             .define('X', ItemTags.COPPER_TOOL_MATERIALS)
@@ -1380,44 +1152,44 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("#")
             .unlockedBy("has_cobblestone", this.has(Blocks.COBBLESTONE))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.LIGHT_BLUE_DYE, Blocks.BLUE_ORCHID, "light_blue_dye");
-        this.shapeless(RecipeCategory.MISC, Items.LIGHT_BLUE_DYE, 2)
-            .requires(Items.BLUE_DYE)
-            .requires(Items.WHITE_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.lightBlue(), Blocks.BLUE_ORCHID, "light_blue_dye");
+        this.shapeless(RecipeCategory.MISC, Items.DYE.lightBlue(), 2)
+            .requires(Items.DYE.blue())
+            .requires(Items.DYE.white())
             .group("light_blue_dye")
-            .unlockedBy("has_blue_dye", this.has(Items.BLUE_DYE))
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
+            .unlockedBy("has_blue_dye", this.has(Items.DYE.blue()))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
             .save(this.output, "light_blue_dye_from_blue_white_dye");
-        this.oneToOneConversionRecipe(Items.LIGHT_GRAY_DYE, Blocks.AZURE_BLUET, "light_gray_dye");
-        this.shapeless(RecipeCategory.MISC, Items.LIGHT_GRAY_DYE, 2)
-            .requires(Items.GRAY_DYE)
-            .requires(Items.WHITE_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.lightGray(), Blocks.AZURE_BLUET, "light_gray_dye");
+        this.shapeless(RecipeCategory.MISC, Items.DYE.lightGray(), 2)
+            .requires(Items.DYE.gray())
+            .requires(Items.DYE.white())
             .group("light_gray_dye")
-            .unlockedBy("has_gray_dye", this.has(Items.GRAY_DYE))
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
+            .unlockedBy("has_gray_dye", this.has(Items.DYE.gray()))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
             .save(this.output, "light_gray_dye_from_gray_white_dye");
-        this.shapeless(RecipeCategory.MISC, Items.LIGHT_GRAY_DYE, 3)
-            .requires(Items.BLACK_DYE)
-            .requires(Items.WHITE_DYE, 2)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.lightGray(), 3)
+            .requires(Items.DYE.black())
+            .requires(Items.DYE.white(), 2)
             .group("light_gray_dye")
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
-            .unlockedBy("has_black_dye", this.has(Items.BLACK_DYE))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
+            .unlockedBy("has_black_dye", this.has(Items.DYE.black()))
             .save(this.output, "light_gray_dye_from_black_white_dye");
-        this.oneToOneConversionRecipe(Items.LIGHT_GRAY_DYE, Blocks.OXEYE_DAISY, "light_gray_dye");
-        this.oneToOneConversionRecipe(Items.LIGHT_GRAY_DYE, Blocks.WHITE_TULIP, "light_gray_dye");
+        this.oneToOneConversionRecipe(Items.DYE.lightGray(), Blocks.OXEYE_DAISY, "light_gray_dye");
+        this.oneToOneConversionRecipe(Items.DYE.lightGray(), Blocks.WHITE_TULIP, "light_gray_dye");
         this.pressurePlate(Blocks.LIGHT_WEIGHTED_PRESSURE_PLATE, Items.GOLD_INGOT);
-        this.shaped(RecipeCategory.REDSTONE, Blocks.LIGHTNING_ROD)
+        this.shaped(RecipeCategory.REDSTONE, Blocks.LIGHTNING_ROD.weathering().unaffected())
             .define('#', Items.COPPER_INGOT)
             .pattern("#")
             .pattern("#")
             .pattern("#")
             .unlockedBy("has_copper_ingot", this.has(Items.COPPER_INGOT))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.LIME_DYE, 2)
-            .requires(Items.GREEN_DYE)
-            .requires(Items.WHITE_DYE)
-            .unlockedBy("has_green_dye", this.has(Items.GREEN_DYE))
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
+        this.shapeless(RecipeCategory.MISC, Items.DYE.lime(), 2)
+            .requires(Items.DYE.green())
+            .requires(Items.DYE.white())
+            .unlockedBy("has_green_dye", this.has(Items.DYE.green()))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
             .save(this.output);
         this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.JACK_O_LANTERN)
             .define('A', Blocks.CARVED_PUMPKIN)
@@ -1426,32 +1198,32 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("B")
             .unlockedBy("has_carved_pumpkin", this.has(Blocks.CARVED_PUMPKIN))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.MAGENTA_DYE, Blocks.ALLIUM, "magenta_dye");
-        this.shapeless(RecipeCategory.MISC, Items.MAGENTA_DYE, 4)
-            .requires(Items.BLUE_DYE)
-            .requires(Items.RED_DYE, 2)
-            .requires(Items.WHITE_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.magenta(), Blocks.ALLIUM, "magenta_dye");
+        this.shapeless(RecipeCategory.MISC, Items.DYE.magenta(), 4)
+            .requires(Items.DYE.blue())
+            .requires(Items.DYE.red(), 2)
+            .requires(Items.DYE.white())
             .group("magenta_dye")
-            .unlockedBy("has_blue_dye", this.has(Items.BLUE_DYE))
-            .unlockedBy("has_rose_red", this.has(Items.RED_DYE))
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
+            .unlockedBy("has_blue_dye", this.has(Items.DYE.blue()))
+            .unlockedBy("has_rose_red", this.has(Items.DYE.red()))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
             .save(this.output, "magenta_dye_from_blue_red_white_dye");
-        this.shapeless(RecipeCategory.MISC, Items.MAGENTA_DYE, 3)
-            .requires(Items.BLUE_DYE)
-            .requires(Items.RED_DYE)
-            .requires(Items.PINK_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.magenta(), 3)
+            .requires(Items.DYE.blue())
+            .requires(Items.DYE.red())
+            .requires(Items.DYE.pink())
             .group("magenta_dye")
-            .unlockedBy("has_pink_dye", this.has(Items.PINK_DYE))
-            .unlockedBy("has_blue_dye", this.has(Items.BLUE_DYE))
-            .unlockedBy("has_red_dye", this.has(Items.RED_DYE))
+            .unlockedBy("has_pink_dye", this.has(Items.DYE.pink()))
+            .unlockedBy("has_blue_dye", this.has(Items.DYE.blue()))
+            .unlockedBy("has_red_dye", this.has(Items.DYE.red()))
             .save(this.output, "magenta_dye_from_blue_red_pink");
-        this.oneToOneConversionRecipe(Items.MAGENTA_DYE, Blocks.LILAC, "magenta_dye", 2);
-        this.shapeless(RecipeCategory.MISC, Items.MAGENTA_DYE, 2)
-            .requires(Items.PURPLE_DYE)
-            .requires(Items.PINK_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.magenta(), Blocks.LILAC, "magenta_dye", 2);
+        this.shapeless(RecipeCategory.MISC, Items.DYE.magenta(), 2)
+            .requires(Items.DYE.purple())
+            .requires(Items.DYE.pink())
             .group("magenta_dye")
-            .unlockedBy("has_pink_dye", this.has(Items.PINK_DYE))
-            .unlockedBy("has_purple_dye", this.has(Items.PURPLE_DYE))
+            .unlockedBy("has_pink_dye", this.has(Items.DYE.pink()))
+            .unlockedBy("has_purple_dye", this.has(Items.DYE.purple()))
             .save(this.output, "magenta_dye_from_purple_and_pink");
         this.twoByTwoPacker(RecipeCategory.BUILDING_BLOCKS, Blocks.MAGMA_BLOCK, Items.MAGMA_CREAM);
         this.shapeless(RecipeCategory.BREWING, Items.MAGMA_CREAM)
@@ -1511,10 +1283,10 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_brown_mushroom", this.has(Blocks.BROWN_MUSHROOM))
             .unlockedBy("has_red_mushroom", this.has(Blocks.RED_MUSHROOM))
             .save(this.output);
-        BuiltInRegistries.ITEM.stream().forEach(p_358453_ -> {
-            SuspiciousEffectHolder suspiciouseffectholder = SuspiciousEffectHolder.tryGet(p_358453_);
-            if (suspiciouseffectholder != null) {
-                this.suspiciousStew(p_358453_, suspiciouseffectholder);
+        BuiltInRegistries.ITEM.stream().forEach(item -> {
+            SuspiciousEffectHolder effectHolder = SuspiciousEffectHolder.tryGet(item);
+            if (effectHolder != null) {
+                this.suspiciousStew(item, effectHolder);
             }
         });
         this.twoByTwoPacker(RecipeCategory.BUILDING_BLOCKS, Blocks.NETHER_BRICKS, Items.NETHER_BRICK);
@@ -1546,13 +1318,13 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("###")
             .unlockedBy("has_quartz", this.has(Items.QUARTZ))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.ORANGE_DYE, Blocks.ORANGE_TULIP, "orange_dye");
-        this.shapeless(RecipeCategory.MISC, Items.ORANGE_DYE, 2)
-            .requires(Items.RED_DYE)
-            .requires(Items.YELLOW_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.orange(), Blocks.ORANGE_TULIP, "orange_dye");
+        this.shapeless(RecipeCategory.MISC, Items.DYE.orange(), 2)
+            .requires(Items.DYE.red())
+            .requires(Items.DYE.yellow())
             .group("orange_dye")
-            .unlockedBy("has_red_dye", this.has(Items.RED_DYE))
-            .unlockedBy("has_yellow_dye", this.has(Items.YELLOW_DYE))
+            .unlockedBy("has_red_dye", this.has(Items.DYE.red()))
+            .unlockedBy("has_yellow_dye", this.has(Items.DYE.yellow()))
             .save(this.output, "orange_dye_from_red_yellow");
         this.shaped(RecipeCategory.DECORATIONS, Items.PAINTING)
             .define('#', Items.STICK)
@@ -1576,15 +1348,15 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_quartz_pillar", this.has(Blocks.QUARTZ_PILLAR))
             .save(this.output);
         this.threeByThreePacker(RecipeCategory.BUILDING_BLOCKS, Blocks.PACKED_ICE, Blocks.ICE);
-        this.oneToOneConversionRecipe(Items.PINK_DYE, Blocks.PEONY, "pink_dye", 2);
-        this.oneToOneConversionRecipe(Items.PINK_DYE, Blocks.PINK_TULIP, "pink_dye");
-        this.oneToOneConversionRecipe(Items.PINK_DYE, Blocks.CACTUS_FLOWER, "pink_dye");
-        this.shapeless(RecipeCategory.MISC, Items.PINK_DYE, 2)
-            .requires(Items.RED_DYE)
-            .requires(Items.WHITE_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.pink(), Blocks.PEONY, "pink_dye", 2);
+        this.oneToOneConversionRecipe(Items.DYE.pink(), Blocks.PINK_TULIP, "pink_dye");
+        this.oneToOneConversionRecipe(Items.DYE.pink(), Blocks.CACTUS_FLOWER, "pink_dye");
+        this.shapeless(RecipeCategory.MISC, Items.DYE.pink(), 2)
+            .requires(Items.DYE.red())
+            .requires(Items.DYE.white())
             .group("pink_dye")
-            .unlockedBy("has_white_dye", this.has(Items.WHITE_DYE))
-            .unlockedBy("has_red_dye", this.has(Items.RED_DYE))
+            .unlockedBy("has_white_dye", this.has(Items.DYE.white()))
+            .unlockedBy("has_red_dye", this.has(Items.DYE.red()))
             .save(this.output, "pink_dye_from_red_white_dye");
         this.shaped(RecipeCategory.REDSTONE, Blocks.PISTON)
             .define('R', Items.REDSTONE)
@@ -1610,11 +1382,11 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .requires(Blocks.PUMPKIN)
             .unlockedBy("has_pumpkin", this.has(Blocks.PUMPKIN))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.PURPLE_DYE, 2)
-            .requires(Items.BLUE_DYE)
-            .requires(Items.RED_DYE)
-            .unlockedBy("has_blue_dye", this.has(Items.BLUE_DYE))
-            .unlockedBy("has_red_dye", this.has(Items.RED_DYE))
+        this.shapeless(RecipeCategory.MISC, Items.DYE.purple(), 2)
+            .requires(Items.DYE.blue())
+            .requires(Items.DYE.red())
+            .unlockedBy("has_blue_dye", this.has(Items.DYE.blue()))
+            .unlockedBy("has_red_dye", this.has(Items.DYE.red()))
             .save(this.output);
         this.shaped(RecipeCategory.DECORATIONS, Blocks.SHULKER_BOX)
             .define('#', Blocks.CHEST)
@@ -1624,7 +1396,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("-")
             .unlockedBy("has_shulker_shell", this.has(Items.SHULKER_SHELL))
             .save(this.output);
-        this.shulkerBoxRecipes();
+        ColorCollection.zipApply(Items.DYE, Items.DYED_SHULKER_BOX, (x$0, x$1) -> this.dyedShulkerBoxRecipe(x$0, x$1));
         this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.PURPUR_BLOCK, 4)
             .define('F', Items.POPPED_CHORUS_FRUIT)
             .pattern("FF")
@@ -1650,7 +1422,9 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("##")
             .unlockedBy("has_quartz_block", this.has(Blocks.QUARTZ_BLOCK))
             .save(this.output);
-        this.slabBuilder(RecipeCategory.BUILDING_BLOCKS, Blocks.QUARTZ_SLAB, Ingredient.of(Blocks.CHISELED_QUARTZ_BLOCK, Blocks.QUARTZ_BLOCK, Blocks.QUARTZ_PILLAR))
+        this.slabBuilder(
+                RecipeCategory.BUILDING_BLOCKS, Blocks.QUARTZ_SLAB, Ingredient.of(Blocks.CHISELED_QUARTZ_BLOCK, Blocks.QUARTZ_BLOCK, Blocks.QUARTZ_PILLAR)
+            )
             .unlockedBy("has_chiseled_quartz_block", this.has(Blocks.CHISELED_QUARTZ_BLOCK))
             .unlockedBy("has_quartz_block", this.has(Blocks.QUARTZ_BLOCK))
             .unlockedBy("has_quartz_pillar", this.has(Blocks.QUARTZ_PILLAR))
@@ -1702,12 +1476,12 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("#")
             .unlockedBy("has_redstone", this.has(Items.REDSTONE))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.RED_DYE, Items.BEETROOT, "red_dye");
-        this.oneToOneConversionRecipe(Items.RED_DYE, Blocks.POPPY, "red_dye");
-        this.oneToOneConversionRecipe(Items.RED_DYE, Blocks.ROSE_BUSH, "red_dye", 2);
-        this.oneToOneConversionRecipe(Items.ORANGE_DYE, Blocks.OPEN_EYEBLOSSOM, "orange_dye");
-        this.oneToOneConversionRecipe(Items.GRAY_DYE, Blocks.CLOSED_EYEBLOSSOM, "gray_dye");
-        this.shapeless(RecipeCategory.MISC, Items.RED_DYE)
+        this.oneToOneConversionRecipe(Items.DYE.red(), Items.BEETROOT, "red_dye");
+        this.oneToOneConversionRecipe(Items.DYE.red(), Blocks.POPPY, "red_dye");
+        this.oneToOneConversionRecipe(Items.DYE.red(), Blocks.ROSE_BUSH, "red_dye", 2);
+        this.oneToOneConversionRecipe(Items.DYE.orange(), Blocks.OPEN_EYEBLOSSOM, "orange_dye");
+        this.oneToOneConversionRecipe(Items.DYE.gray(), Blocks.CLOSED_EYEBLOSSOM, "gray_dye");
+        this.shapeless(RecipeCategory.MISC, Items.DYE.red())
             .requires(Blocks.RED_TULIP)
             .group("red_dye")
             .unlockedBy("has_red_flower", this.has(Blocks.RED_TULIP))
@@ -1837,12 +1611,6 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("P")
             .unlockedBy("has_slime_ball", this.has(Items.SLIME_BALL))
             .save(this.output);
-        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_BRICKS, 4)
-            .define('#', Blocks.STONE)
-            .pattern("##")
-            .pattern("##")
-            .unlockedBy("has_stone", this.has(Blocks.STONE))
-            .save(this.output);
         this.shaped(RecipeCategory.TOOLS, Items.STONE_AXE)
             .define('#', Items.STICK)
             .define('X', ItemTags.STONE_TOOL_MATERIALS)
@@ -1898,12 +1666,12 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("#  ")
             .unlockedBy("has_cobblestone", this.has(ItemTags.STONE_TOOL_MATERIALS))
             .save(this.output);
-        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.WHITE_WOOL)
+        this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.WOOL.white())
             .define('#', Items.STRING)
             .pattern("##")
             .pattern("##")
             .unlockedBy("has_string", this.has(Items.STRING))
-            .save(this.output, getConversionRecipeName(Blocks.WHITE_WOOL, Items.STRING));
+            .save(this.output, getConversionRecipeName(Blocks.WOOL.white(), Items.STRING));
         this.oneToOneConversionRecipe(Items.SUGAR, Blocks.SUGAR_CANE, "sugar");
         this.shapeless(RecipeCategory.MISC, Items.SUGAR, 3)
             .requires(Items.HONEY_BOTTLE)
@@ -1974,7 +1742,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("XXX")
             .unlockedBy("has_soul_torch", this.has(Items.SOUL_TORCH))
             .save(this.output);
-        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_LANTERN.unaffected())
+        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_LANTERN.weathering().unaffected())
             .define('#', Items.COPPER_TORCH)
             .define('X', Items.COPPER_NUGGET)
             .pattern("XXX")
@@ -2013,12 +1781,12 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .requires(Blocks.HAY_BLOCK)
             .unlockedBy("has_hay_block", this.has(Blocks.HAY_BLOCK))
             .save(this.output);
-        this.shapeless(RecipeCategory.MISC, Items.WHITE_DYE)
+        this.shapeless(RecipeCategory.MISC, Items.DYE.white())
             .requires(Items.BONE_MEAL)
             .group("white_dye")
             .unlockedBy("has_bone_meal", this.has(Items.BONE_MEAL))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.WHITE_DYE, Blocks.LILY_OF_THE_VALLEY, "white_dye");
+        this.oneToOneConversionRecipe(Items.DYE.white(), Blocks.LILY_OF_THE_VALLEY, "white_dye");
         this.shaped(RecipeCategory.TOOLS, Items.WOODEN_AXE)
             .define('#', Items.STICK)
             .define('X', ItemTags.WOODEN_TOOL_MATERIALS)
@@ -2073,9 +1841,10 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .requires(Items.FEATHER)
             .unlockedBy("has_book", this.has(Items.BOOK))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.YELLOW_DYE, Blocks.DANDELION, "yellow_dye");
-        this.oneToOneConversionRecipe(Items.YELLOW_DYE, Blocks.SUNFLOWER, "yellow_dye", 2);
-        this.oneToOneConversionRecipe(Items.YELLOW_DYE, Blocks.WILDFLOWERS, "yellow_dye");
+        this.oneToOneConversionRecipe(Items.DYE.yellow(), Blocks.DANDELION, "yellow_dye");
+        this.oneToOneConversionRecipe(Items.DYE.yellow(), Blocks.GOLDEN_DANDELION, "yellow_dye");
+        this.oneToOneConversionRecipe(Items.DYE.yellow(), Blocks.SUNFLOWER, "yellow_dye", 2);
+        this.oneToOneConversionRecipe(Items.DYE.yellow(), Blocks.WILDFLOWERS, "yellow_dye");
         this.nineBlockStorageRecipes(RecipeCategory.FOOD, Items.DRIED_KELP, RecipeCategory.BUILDING_BLOCKS, Items.DRIED_KELP_BLOCK);
         this.shaped(RecipeCategory.MISC, Blocks.CONDUIT)
             .define('#', Items.NAUTILUS_SHELL)
@@ -2193,7 +1962,12 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_lodestone", this.has(Items.LODESTONE))
             .save(this.output);
         this.nineBlockStorageRecipesRecipesWithCustomUnpacking(
-            RecipeCategory.MISC, Items.NETHERITE_INGOT, RecipeCategory.BUILDING_BLOCKS, Items.NETHERITE_BLOCK, "netherite_ingot_from_netherite_block", "netherite_ingot"
+            RecipeCategory.MISC,
+            Items.NETHERITE_INGOT,
+            RecipeCategory.BUILDING_BLOCKS,
+            Items.NETHERITE_BLOCK,
+            "netherite_ingot_from_netherite_block",
+            "netherite_ingot"
         );
         this.shapeless(RecipeCategory.MISC, Items.NETHERITE_INGOT)
             .requires(Items.NETHERITE_SCRAP, 4)
@@ -2218,7 +1992,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_iron_nugget", this.has(Items.IRON_NUGGET))
             .unlockedBy("has_iron_ingot", this.has(Items.IRON_INGOT))
             .save(this.output);
-        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_CHAIN.unaffected())
+        this.shaped(RecipeCategory.DECORATIONS, Blocks.COPPER_CHAIN.weathering().unaffected())
             .define('I', Items.COPPER_INGOT)
             .define('N', Items.COPPER_NUGGET)
             .pattern("N")
@@ -2226,6 +2000,15 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("N")
             .unlockedBy("has_copper_nugget", this.has(Items.COPPER_NUGGET))
             .unlockedBy("has_copper_ingot", this.has(Items.COPPER_INGOT))
+            .save(this.output);
+        this.shaped(RecipeCategory.DECORATIONS, Blocks.GOLDEN_DANDELION)
+            .define('I', Items.DANDELION)
+            .define('#', Items.GOLD_NUGGET)
+            .pattern("###")
+            .pattern("#I#")
+            .pattern("###")
+            .unlockedBy("has_gold_nugget", this.has(Items.GOLD_NUGGET))
+            .unlockedBy("has_dandelion", this.has(Items.DANDELION))
             .save(this.output);
         this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.TINTED_GLASS, 2)
             .define('G', Blocks.GLASS)
@@ -2252,71 +2035,137 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_amethyst_shard", this.has(Items.AMETHYST_SHARD))
             .save(this.output);
         this.threeByThreePacker(RecipeCategory.MISC, Items.MUSIC_DISC_5, Items.DISC_FRAGMENT_5);
-        SpecialRecipeBuilder.special(ArmorDyeRecipe::new).save(this.output, "armor_dye");
-        SpecialRecipeBuilder.special(BannerDuplicateRecipe::new).save(this.output, "banner_duplicate");
-        SpecialRecipeBuilder.special(BookCloningRecipe::new).save(this.output, "book_cloning");
-        SpecialRecipeBuilder.special(FireworkRocketRecipe::new).save(this.output, "firework_rocket");
-        SpecialRecipeBuilder.special(FireworkStarRecipe::new).save(this.output, "firework_star");
-        SpecialRecipeBuilder.special(FireworkStarFadeRecipe::new).save(this.output, "firework_star_fade");
-        SpecialRecipeBuilder.special(MapCloningRecipe::new).save(this.output, "map_cloning");
-        SpecialRecipeBuilder.special(MapExtendingRecipe::new).save(this.output, "map_extending");
+        this.dyedItem(Items.LEATHER_HELMET, "dyed_armor");
+        this.dyedItem(Items.LEATHER_CHESTPLATE, "dyed_armor");
+        this.dyedItem(Items.LEATHER_LEGGINGS, "dyed_armor");
+        this.dyedItem(Items.LEATHER_BOOTS, "dyed_armor");
+        this.dyedItem(Items.LEATHER_HORSE_ARMOR, "dyed_armor");
+        this.dyedItem(Items.WOLF_ARMOR, "dyed_armor");
+        CustomCraftingRecipeBuilder.customCrafting(
+                RecipeCategory.MISC,
+                (commonInfo, bookInfo) -> new ImbueRecipe(
+                    commonInfo, bookInfo, Ingredient.of(Items.LINGERING_POTION), Ingredient.of(Items.ARROW), new ItemStackTemplate(Items.TIPPED_ARROW, 8)
+                )
+            )
+            .unlockedBy("has_lingering_potion", this.has(Items.LINGERING_POTION))
+            .save(this.output, "tipped_arrow");
+        SpecialRecipeBuilder.special(
+                () -> new BookCloningRecipe(
+                    Ingredient.of(Items.WRITTEN_BOOK),
+                    this.tag(ItemTags.BOOK_CLONING_TARGET),
+                    BookCloningRecipe.DEFAULT_BOOK_GENERATION_RANGES,
+                    new ItemStackTemplate(Items.WRITTEN_BOOK)
+                )
+            )
+            .save(this.output, "book_cloning");
+        SpecialRecipeBuilder.special(
+                () -> new FireworkRocketRecipe(
+                    Ingredient.of(Items.PAPER),
+                    Ingredient.of(Items.GUNPOWDER),
+                    Ingredient.of(Items.FIREWORK_STAR),
+                    new ItemStackTemplate(Items.FIREWORK_ROCKET, 3)
+                )
+            )
+            .save(this.output, "firework_rocket");
+        SpecialRecipeBuilder.special(
+                () -> new FireworkStarRecipe(
+                    Map.of(
+                        FireworkExplosion.Shape.LARGE_BALL,
+                        Ingredient.of(Items.FIRE_CHARGE),
+                        FireworkExplosion.Shape.BURST,
+                        Ingredient.of(Items.FEATHER),
+                        FireworkExplosion.Shape.STAR,
+                        Ingredient.of(Items.GOLD_NUGGET),
+                        FireworkExplosion.Shape.CREEPER,
+                        this.tag(ItemTags.SKULLS)
+                    ),
+                    Ingredient.of(Items.DIAMOND),
+                    Ingredient.of(Items.GLOWSTONE_DUST),
+                    Ingredient.of(Items.GUNPOWDER),
+                    this.tag(ItemTags.DYES),
+                    new ItemStackTemplate(Items.FIREWORK_STAR)
+                )
+            )
+            .save(this.output, "firework_star");
+        SpecialRecipeBuilder.special(
+                () -> new FireworkStarFadeRecipe(Ingredient.of(Items.FIREWORK_STAR), this.tag(ItemTags.DYES), new ItemStackTemplate(Items.FIREWORK_STAR))
+            )
+            .save(this.output, "firework_star_fade");
+        TransmuteRecipeBuilder.transmute(
+                RecipeCategory.MISC, Ingredient.of(Items.FILLED_MAP), Ingredient.of(Items.MAP), new ItemStackTemplate(Items.FILLED_MAP)
+            )
+            .addMaterialCountToOutput()
+            .setMaterialCount(TransmuteRecipe.FULL_RANGE_MATERIAL_COUNT)
+            .group("map_cloning")
+            .unlockedBy("has_filled_map", this.has(Items.FILLED_MAP))
+            .save(this.output, "map_cloning");
+        SpecialRecipeBuilder.special(
+                () -> new MapExtendingRecipe(Ingredient.of(Items.FILLED_MAP), Ingredient.of(Items.PAPER), new ItemStackTemplate(Items.FILLED_MAP))
+            )
+            .save(this.output, "map_extending");
         SpecialRecipeBuilder.special(RepairItemRecipe::new).save(this.output, "repair_item");
-        SpecialRecipeBuilder.special(ShieldDecorationRecipe::new).save(this.output, "shield_decoration");
-        SpecialRecipeBuilder.special(TippedArrowRecipe::new).save(this.output, "tipped_arrow");
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.POTATO), RecipeCategory.FOOD, Items.BAKED_POTATO, 0.35F, 200)
+        SpecialRecipeBuilder.special(
+                () -> new ShieldDecorationRecipe(this.tag(ItemTags.BANNERS), Ingredient.of(Items.SHIELD), new ItemStackTemplate(Items.SHIELD))
+            )
+            .save(this.output, "shield_decoration");
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.POTATO), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.BAKED_POTATO, 0.35F, 200)
             .unlockedBy("has_potato", this.has(Items.POTATO))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.CLAY_BALL), RecipeCategory.MISC, Items.BRICK, 0.3F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.CLAY_BALL), RecipeCategory.MISC, CookingBookCategory.MISC, Items.BRICK, 0.3F, 200)
             .unlockedBy("has_clay_ball", this.has(Items.CLAY_BALL))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(this.tag(ItemTags.LOGS_THAT_BURN), RecipeCategory.MISC, Items.CHARCOAL, 0.15F, 200)
+        SimpleCookingRecipeBuilder.smelting(this.tag(ItemTags.LOGS_THAT_BURN), RecipeCategory.MISC, CookingBookCategory.MISC, Items.CHARCOAL, 0.15F, 200)
             .unlockedBy("has_log", this.has(ItemTags.LOGS_THAT_BURN))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.CHORUS_FRUIT), RecipeCategory.MISC, Items.POPPED_CHORUS_FRUIT, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Items.CHORUS_FRUIT), RecipeCategory.MISC, CookingBookCategory.MISC, Items.POPPED_CHORUS_FRUIT, 0.1F, 200
+            )
             .unlockedBy("has_chorus_fruit", this.has(Items.CHORUS_FRUIT))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.BEEF), RecipeCategory.FOOD, Items.COOKED_BEEF, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.BEEF), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_BEEF, 0.35F, 200)
             .unlockedBy("has_beef", this.has(Items.BEEF))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.CHICKEN), RecipeCategory.FOOD, Items.COOKED_CHICKEN, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.CHICKEN), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_CHICKEN, 0.35F, 200)
             .unlockedBy("has_chicken", this.has(Items.CHICKEN))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.COD), RecipeCategory.FOOD, Items.COOKED_COD, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.COD), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_COD, 0.35F, 200)
             .unlockedBy("has_cod", this.has(Items.COD))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.KELP), RecipeCategory.FOOD, Items.DRIED_KELP, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.KELP), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.DRIED_KELP, 0.1F, 200)
             .unlockedBy("has_kelp", this.has(Blocks.KELP))
             .save(this.output, getSmeltingRecipeName(Items.DRIED_KELP));
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.SALMON), RecipeCategory.FOOD, Items.COOKED_SALMON, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.SALMON), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_SALMON, 0.35F, 200)
             .unlockedBy("has_salmon", this.has(Items.SALMON))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.MUTTON), RecipeCategory.FOOD, Items.COOKED_MUTTON, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.MUTTON), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_MUTTON, 0.35F, 200)
             .unlockedBy("has_mutton", this.has(Items.MUTTON))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.PORKCHOP), RecipeCategory.FOOD, Items.COOKED_PORKCHOP, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.PORKCHOP), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_PORKCHOP, 0.35F, 200)
             .unlockedBy("has_porkchop", this.has(Items.PORKCHOP))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.RABBIT), RecipeCategory.FOOD, Items.COOKED_RABBIT, 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.RABBIT), RecipeCategory.FOOD, CookingBookCategory.FOOD, Items.COOKED_RABBIT, 0.35F, 200)
             .unlockedBy("has_rabbit", this.has(Items.RABBIT))
             .save(this.output);
-        this.oreSmelting(COAL_SMELTABLES, RecipeCategory.MISC, Items.COAL, 0.1F, 200, "coal");
-        this.oreSmelting(IRON_SMELTABLES, RecipeCategory.MISC, Items.IRON_INGOT, 0.7F, 200, "iron_ingot");
-        this.oreSmelting(COPPER_SMELTABLES, RecipeCategory.MISC, Items.COPPER_INGOT, 0.7F, 200, "copper_ingot");
-        this.oreSmelting(GOLD_SMELTABLES, RecipeCategory.MISC, Items.GOLD_INGOT, 1.0F, 200, "gold_ingot");
-        this.oreSmelting(DIAMOND_SMELTABLES, RecipeCategory.MISC, Items.DIAMOND, 1.0F, 200, "diamond");
-        this.oreSmelting(LAPIS_SMELTABLES, RecipeCategory.MISC, Items.LAPIS_LAZULI, 0.2F, 200, "lapis_lazuli");
-        this.oreSmelting(REDSTONE_SMELTABLES, RecipeCategory.REDSTONE, Items.REDSTONE, 0.7F, 200, "redstone");
-        this.oreSmelting(EMERALD_SMELTABLES, RecipeCategory.MISC, Items.EMERALD, 1.0F, 200, "emerald");
+        this.oreSmelting(COAL_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.COAL, 0.1F, 200, "coal");
+        this.oreSmelting(IRON_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.IRON_INGOT, 0.7F, 200, "iron_ingot");
+        this.oreSmelting(COPPER_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.COPPER_INGOT, 0.7F, 200, "copper_ingot");
+        this.oreSmelting(GOLD_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.GOLD_INGOT, 1.0F, 200, "gold_ingot");
+        this.oreSmelting(DIAMOND_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.DIAMOND, 1.0F, 200, "diamond");
+        this.oreSmelting(LAPIS_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.LAPIS_LAZULI, 0.2F, 200, "lapis_lazuli");
+        this.oreSmelting(REDSTONE_SMELTABLES, RecipeCategory.REDSTONE, CookingBookCategory.BLOCKS, Items.REDSTONE, 0.7F, 200, "redstone");
+        this.oreSmelting(EMERALD_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.EMERALD, 1.0F, 200, "emerald");
         this.nineBlockStorageRecipes(RecipeCategory.MISC, Items.RAW_IRON, RecipeCategory.BUILDING_BLOCKS, Items.RAW_IRON_BLOCK);
         this.nineBlockStorageRecipes(RecipeCategory.MISC, Items.RAW_COPPER, RecipeCategory.BUILDING_BLOCKS, Items.RAW_COPPER_BLOCK);
         this.nineBlockStorageRecipes(RecipeCategory.MISC, Items.RAW_GOLD, RecipeCategory.BUILDING_BLOCKS, Items.RAW_GOLD_BLOCK);
-        SimpleCookingRecipeBuilder.smelting(this.tag(ItemTags.SMELTS_TO_GLASS), RecipeCategory.BUILDING_BLOCKS, Blocks.GLASS.asItem(), 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                this.tag(ItemTags.SMELTS_TO_GLASS), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.GLASS, 0.1F, 200
+            )
             .unlockedBy("has_smelts_to_glass", this.has(ItemTags.SMELTS_TO_GLASS))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.SEA_PICKLE), RecipeCategory.MISC, Items.LIME_DYE, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.SEA_PICKLE), RecipeCategory.MISC, CookingBookCategory.MISC, Items.DYE.lime(), 0.1F, 200)
             .unlockedBy("has_sea_pickle", this.has(Blocks.SEA_PICKLE))
-            .save(this.output, getSmeltingRecipeName(Items.LIME_DYE));
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.CACTUS.asItem()), RecipeCategory.MISC, Items.GREEN_DYE, 1.0F, 200)
+            .save(this.output, getSmeltingRecipeName(Items.DYE.lime()));
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.CACTUS), RecipeCategory.MISC, CookingBookCategory.MISC, Items.DYE.green(), 1.0F, 200)
             .unlockedBy("has_cactus", this.has(Blocks.CACTUS))
             .save(this.output);
         SimpleCookingRecipeBuilder.smelting(
@@ -2335,6 +2184,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     Items.GOLDEN_NAUTILUS_ARMOR
                 ),
                 RecipeCategory.MISC,
+                CookingBookCategory.MISC,
                 Items.GOLD_NUGGET,
                 0.1F,
                 200
@@ -2368,6 +2218,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     Items.COPPER_NAUTILUS_ARMOR
                 ),
                 RecipeCategory.MISC,
+                CookingBookCategory.MISC,
                 Items.COPPER_NUGGET,
                 0.1F,
                 200
@@ -2405,6 +2256,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     Items.IRON_NAUTILUS_ARMOR
                 ),
                 RecipeCategory.MISC,
+                CookingBookCategory.MISC,
                 Items.IRON_NUGGET,
                 0.1F,
                 200
@@ -2426,108 +2278,80 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_chainmail_boots", this.has(Items.CHAINMAIL_BOOTS))
             .unlockedBy("has_iron_nautilus_armor", this.has(Items.IRON_NAUTILUS_ARMOR))
             .save(this.output, getSmeltingRecipeName(Items.IRON_NUGGET));
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.CLAY), RecipeCategory.BUILDING_BLOCKS, Blocks.TERRACOTTA.asItem(), 0.35F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.CLAY), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.TERRACOTTA, 0.35F, 200
+            )
             .unlockedBy("has_clay_block", this.has(Blocks.CLAY))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.NETHERRACK), RecipeCategory.MISC, Items.NETHER_BRICK, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.NETHERRACK), RecipeCategory.MISC, CookingBookCategory.MISC, Items.NETHER_BRICK, 0.1F, 200)
             .unlockedBy("has_netherrack", this.has(Blocks.NETHERRACK))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.RESIN_CLUMP), RecipeCategory.MISC, Items.RESIN_BRICK, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Items.RESIN_CLUMP), RecipeCategory.MISC, CookingBookCategory.MISC, Items.RESIN_BRICK, 0.1F, 200)
             .unlockedBy("has_resin_clump", this.has(Blocks.RESIN_CLUMP))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.NETHER_QUARTZ_ORE), RecipeCategory.MISC, Items.QUARTZ, 0.2F, 200)
+        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.NETHER_QUARTZ_ORE), RecipeCategory.MISC, CookingBookCategory.MISC, Items.QUARTZ, 0.2F, 200)
             .unlockedBy("has_nether_quartz_ore", this.has(Blocks.NETHER_QUARTZ_ORE))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.WET_SPONGE), RecipeCategory.BUILDING_BLOCKS, Blocks.SPONGE.asItem(), 0.15F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.WET_SPONGE), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.SPONGE, 0.15F, 200
+            )
             .unlockedBy("has_wet_sponge", this.has(Blocks.WET_SPONGE))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.COBBLESTONE), RecipeCategory.BUILDING_BLOCKS, Blocks.STONE.asItem(), 0.1F, 200)
-            .unlockedBy("has_cobblestone", this.has(Blocks.COBBLESTONE))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.STONE), RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_STONE.asItem(), 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.STONE), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.SMOOTH_STONE, 0.1F, 200
+            )
             .unlockedBy("has_stone", this.has(Blocks.STONE))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.SANDSTONE), RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_SANDSTONE.asItem(), 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.SANDSTONE), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.SMOOTH_SANDSTONE, 0.1F, 200
+            )
             .unlockedBy("has_sandstone", this.has(Blocks.SANDSTONE))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.RED_SANDSTONE), RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_RED_SANDSTONE.asItem(), 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.RED_SANDSTONE), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.SMOOTH_RED_SANDSTONE, 0.1F, 200
+            )
             .unlockedBy("has_red_sandstone", this.has(Blocks.RED_SANDSTONE))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.QUARTZ_BLOCK), RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_QUARTZ.asItem(), 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.QUARTZ_BLOCK), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.SMOOTH_QUARTZ, 0.1F, 200
+            )
             .unlockedBy("has_quartz_block", this.has(Blocks.QUARTZ_BLOCK))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.STONE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.CRACKED_STONE_BRICKS.asItem(), 0.1F, 200)
-            .unlockedBy("has_stone_bricks", this.has(Blocks.STONE_BRICKS))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.BLACK_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.BLACK_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_black_terracotta", this.has(Blocks.BLACK_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.BLUE_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.BLUE_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_blue_terracotta", this.has(Blocks.BLUE_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.BROWN_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.BROWN_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_brown_terracotta", this.has(Blocks.BROWN_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.CYAN_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.CYAN_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_cyan_terracotta", this.has(Blocks.CYAN_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.GRAY_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.GRAY_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_gray_terracotta", this.has(Blocks.GRAY_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.GREEN_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.GREEN_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_green_terracotta", this.has(Blocks.GREEN_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.LIGHT_BLUE_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.LIGHT_BLUE_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_light_blue_terracotta", this.has(Blocks.LIGHT_BLUE_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.LIGHT_GRAY_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.LIGHT_GRAY_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_light_gray_terracotta", this.has(Blocks.LIGHT_GRAY_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.LIME_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.LIME_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_lime_terracotta", this.has(Blocks.LIME_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.MAGENTA_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.MAGENTA_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_magenta_terracotta", this.has(Blocks.MAGENTA_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.ORANGE_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.ORANGE_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_orange_terracotta", this.has(Blocks.ORANGE_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.PINK_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.PINK_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_pink_terracotta", this.has(Blocks.PINK_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.PURPLE_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.PURPLE_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_purple_terracotta", this.has(Blocks.PURPLE_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.RED_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.RED_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_red_terracotta", this.has(Blocks.RED_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.WHITE_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.WHITE_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_white_terracotta", this.has(Blocks.WHITE_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.YELLOW_TERRACOTTA), RecipeCategory.DECORATIONS, Blocks.YELLOW_GLAZED_TERRACOTTA.asItem(), 0.1F, 200)
-            .unlockedBy("has_yellow_terracotta", this.has(Blocks.YELLOW_TERRACOTTA))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.ANCIENT_DEBRIS), RecipeCategory.MISC, Items.NETHERITE_SCRAP, 2.0F, 200)
+        DyeColor.VALUES
+            .forEach(
+                dyeColor -> SimpleCookingRecipeBuilder.smelting(
+                        Ingredient.of(Blocks.DYED_TERRACOTTA.pick(dyeColor)),
+                        RecipeCategory.DECORATIONS,
+                        CookingBookCategory.BLOCKS,
+                        Items.GLAZED_TERRACOTTA.pick(dyeColor),
+                        0.1F,
+                        200
+                    )
+                    .unlockedBy("has_" + dyeColor.getName() + "_terracotta", this.has(Blocks.DYED_TERRACOTTA.pick(dyeColor)))
+                    .save(this.output)
+            );
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.ANCIENT_DEBRIS), RecipeCategory.MISC, CookingBookCategory.MISC, Items.NETHERITE_SCRAP, 2.0F, 200
+            )
             .unlockedBy("has_ancient_debris", this.has(Blocks.ANCIENT_DEBRIS))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.BASALT), RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_BASALT, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(
+                Ingredient.of(Blocks.BASALT), RecipeCategory.BUILDING_BLOCKS, CookingBookCategory.BLOCKS, Items.SMOOTH_BASALT, 0.1F, 200
+            )
             .unlockedBy("has_basalt", this.has(Blocks.BASALT))
             .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(Ingredient.of(Blocks.COBBLED_DEEPSLATE), RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE, 0.1F, 200)
-            .unlockedBy("has_cobbled_deepslate", this.has(Blocks.COBBLED_DEEPSLATE))
-            .save(this.output);
-        SimpleCookingRecipeBuilder.smelting(this.tag(ItemTags.LEAVES), RecipeCategory.MISC, Blocks.LEAF_LITTER, 0.1F, 200)
+        SimpleCookingRecipeBuilder.smelting(this.tag(ItemTags.LEAVES), RecipeCategory.MISC, CookingBookCategory.BLOCKS, Items.LEAF_LITTER, 0.1F, 200)
             .unlockedBy("has_leaves", this.has(ItemTags.LEAVES))
             .save(this.output);
-        this.oreBlasting(COAL_SMELTABLES, RecipeCategory.MISC, Items.COAL, 0.1F, 100, "coal");
-        this.oreBlasting(IRON_SMELTABLES, RecipeCategory.MISC, Items.IRON_INGOT, 0.7F, 100, "iron_ingot");
-        this.oreBlasting(COPPER_SMELTABLES, RecipeCategory.MISC, Items.COPPER_INGOT, 0.7F, 100, "copper_ingot");
-        this.oreBlasting(GOLD_SMELTABLES, RecipeCategory.MISC, Items.GOLD_INGOT, 1.0F, 100, "gold_ingot");
-        this.oreBlasting(DIAMOND_SMELTABLES, RecipeCategory.MISC, Items.DIAMOND, 1.0F, 100, "diamond");
-        this.oreBlasting(LAPIS_SMELTABLES, RecipeCategory.MISC, Items.LAPIS_LAZULI, 0.2F, 100, "lapis_lazuli");
-        this.oreBlasting(REDSTONE_SMELTABLES, RecipeCategory.REDSTONE, Items.REDSTONE, 0.7F, 100, "redstone");
-        this.oreBlasting(EMERALD_SMELTABLES, RecipeCategory.MISC, Items.EMERALD, 1.0F, 100, "emerald");
-        SimpleCookingRecipeBuilder.blasting(Ingredient.of(Blocks.NETHER_QUARTZ_ORE), RecipeCategory.MISC, Items.QUARTZ, 0.2F, 100)
+        this.oreBlasting(COAL_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.COAL, 0.1F, 100, "coal");
+        this.oreBlasting(IRON_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.IRON_INGOT, 0.7F, 100, "iron_ingot");
+        this.oreBlasting(COPPER_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.COPPER_INGOT, 0.7F, 100, "copper_ingot");
+        this.oreBlasting(GOLD_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.GOLD_INGOT, 1.0F, 100, "gold_ingot");
+        this.oreBlasting(DIAMOND_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.DIAMOND, 1.0F, 100, "diamond");
+        this.oreBlasting(LAPIS_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.LAPIS_LAZULI, 0.2F, 100, "lapis_lazuli");
+        this.oreBlasting(REDSTONE_SMELTABLES, RecipeCategory.REDSTONE, CookingBookCategory.BLOCKS, Items.REDSTONE, 0.7F, 100, "redstone");
+        this.oreBlasting(EMERALD_SMELTABLES, RecipeCategory.MISC, CookingBookCategory.MISC, Items.EMERALD, 1.0F, 100, "emerald");
+        SimpleCookingRecipeBuilder.blasting(Ingredient.of(Blocks.NETHER_QUARTZ_ORE), RecipeCategory.MISC, CookingBookCategory.MISC, Items.QUARTZ, 0.2F, 100)
             .unlockedBy("has_nether_quartz_ore", this.has(Blocks.NETHER_QUARTZ_ORE))
             .save(this.output, getBlastingRecipeName(Items.QUARTZ));
         SimpleCookingRecipeBuilder.blasting(
@@ -2546,6 +2370,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     Items.GOLDEN_NAUTILUS_ARMOR
                 ),
                 RecipeCategory.MISC,
+                CookingBookCategory.MISC,
                 Items.GOLD_NUGGET,
                 0.1F,
                 100
@@ -2579,6 +2404,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     Items.COPPER_NAUTILUS_ARMOR
                 ),
                 RecipeCategory.MISC,
+                CookingBookCategory.MISC,
                 Items.COPPER_NUGGET,
                 0.1F,
                 100
@@ -2616,6 +2442,7 @@ public class VanillaRecipeProvider extends RecipeProvider {
                     Items.CHAINMAIL_BOOTS
                 ),
                 RecipeCategory.MISC,
+                CookingBookCategory.MISC,
                 Items.IRON_NUGGET,
                 0.1F,
                 100
@@ -2637,241 +2464,31 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_chainmail_boots", this.has(Items.CHAINMAIL_BOOTS))
             .unlockedBy("has_iron_nautilus_armor", this.has(Items.IRON_NAUTILUS_ARMOR))
             .save(this.output, getBlastingRecipeName(Items.IRON_NUGGET));
-        SimpleCookingRecipeBuilder.blasting(Ingredient.of(Blocks.ANCIENT_DEBRIS), RecipeCategory.MISC, Items.NETHERITE_SCRAP, 2.0F, 100)
+        SimpleCookingRecipeBuilder.blasting(
+                Ingredient.of(Blocks.ANCIENT_DEBRIS), RecipeCategory.MISC, CookingBookCategory.MISC, Items.NETHERITE_SCRAP, 2.0F, 100
+            )
             .unlockedBy("has_ancient_debris", this.has(Blocks.ANCIENT_DEBRIS))
             .save(this.output, getBlastingRecipeName(Items.NETHERITE_SCRAP));
-        this.cookRecipes("smoking", RecipeSerializer.SMOKING_RECIPE, SmokingRecipe::new, 100);
-        this.cookRecipes("campfire_cooking", RecipeSerializer.CAMPFIRE_COOKING_RECIPE, CampfireCookingRecipe::new, 600);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_SLAB, Blocks.STONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_STAIRS, Blocks.STONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_BRICKS, Blocks.STONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_BRICK_SLAB, Blocks.STONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_BRICK_STAIRS, Blocks.STONE);
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.STONE), RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_STONE_BRICKS)
-            .unlockedBy("has_stone", this.has(Blocks.STONE))
-            .save(this.output, "chiseled_stone_bricks_stone_from_stonecutting");
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.STONE), RecipeCategory.DECORATIONS, Blocks.STONE_BRICK_WALL)
-            .unlockedBy("has_stone", this.has(Blocks.STONE))
-            .save(this.output, "stone_brick_walls_from_stone_stonecutting");
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_SANDSTONE, Blocks.SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SANDSTONE_SLAB, Blocks.SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_SANDSTONE_SLAB, Blocks.SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_SANDSTONE_SLAB, Blocks.CUT_SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SANDSTONE_STAIRS, Blocks.SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.SANDSTONE_WALL, Blocks.SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_SANDSTONE, Blocks.SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_RED_SANDSTONE, Blocks.RED_SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.RED_SANDSTONE_SLAB, Blocks.RED_SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_RED_SANDSTONE_SLAB, Blocks.RED_SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_RED_SANDSTONE_SLAB, Blocks.CUT_RED_SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.RED_SANDSTONE_STAIRS, Blocks.RED_SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.RED_SANDSTONE_WALL, Blocks.RED_SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_RED_SANDSTONE, Blocks.RED_SANDSTONE);
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.QUARTZ_BLOCK), RecipeCategory.BUILDING_BLOCKS, Blocks.QUARTZ_SLAB, 2)
-            .unlockedBy("has_quartz_block", this.has(Blocks.QUARTZ_BLOCK))
-            .save(this.output, "quartz_slab_from_stonecutting");
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.QUARTZ_STAIRS, Blocks.QUARTZ_BLOCK);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.QUARTZ_PILLAR, Blocks.QUARTZ_BLOCK);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_QUARTZ_BLOCK, Blocks.QUARTZ_BLOCK);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.QUARTZ_BRICKS, Blocks.QUARTZ_BLOCK);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.COBBLESTONE_STAIRS, Blocks.COBBLESTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.COBBLESTONE_SLAB, Blocks.COBBLESTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.COBBLESTONE_WALL, Blocks.COBBLESTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_BRICK_SLAB, Blocks.STONE_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.STONE_BRICK_STAIRS, Blocks.STONE_BRICKS);
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.STONE_BRICKS), RecipeCategory.DECORATIONS, Blocks.STONE_BRICK_WALL)
-            .unlockedBy("has_stone_bricks", this.has(Blocks.STONE_BRICKS))
-            .save(this.output, "stone_brick_wall_from_stone_bricks_stonecutting");
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_STONE_BRICKS, Blocks.STONE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.BRICK_SLAB, Blocks.BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.BRICK_STAIRS, Blocks.BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.BRICK_WALL, Blocks.BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.MUD_BRICK_SLAB, Blocks.MUD_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.MUD_BRICK_STAIRS, Blocks.MUD_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.MUD_BRICK_WALL, Blocks.MUD_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.NETHER_BRICK_SLAB, Blocks.NETHER_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.NETHER_BRICK_STAIRS, Blocks.NETHER_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.NETHER_BRICK_WALL, Blocks.NETHER_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_NETHER_BRICKS, Blocks.NETHER_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.RESIN_BRICK_SLAB, Blocks.RESIN_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.RESIN_BRICK_STAIRS, Blocks.RESIN_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.RESIN_BRICK_WALL, Blocks.RESIN_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_RESIN_BRICKS, Blocks.RESIN_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.RED_NETHER_BRICK_SLAB, Blocks.RED_NETHER_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.RED_NETHER_BRICK_STAIRS, Blocks.RED_NETHER_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.RED_NETHER_BRICK_WALL, Blocks.RED_NETHER_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.PURPUR_SLAB, Blocks.PURPUR_BLOCK, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.PURPUR_STAIRS, Blocks.PURPUR_BLOCK);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.PURPUR_PILLAR, Blocks.PURPUR_BLOCK);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.PRISMARINE_SLAB, Blocks.PRISMARINE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.PRISMARINE_STAIRS, Blocks.PRISMARINE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.PRISMARINE_WALL, Blocks.PRISMARINE);
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.PRISMARINE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.PRISMARINE_BRICK_SLAB, 2)
-            .unlockedBy("has_prismarine_brick", this.has(Blocks.PRISMARINE_BRICKS))
-            .save(this.output, "prismarine_brick_slab_from_prismarine_stonecutting");
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.PRISMARINE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.PRISMARINE_BRICK_STAIRS)
-            .unlockedBy("has_prismarine_brick", this.has(Blocks.PRISMARINE_BRICKS))
-            .save(this.output, "prismarine_brick_stairs_from_prismarine_stonecutting");
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DARK_PRISMARINE_SLAB, Blocks.DARK_PRISMARINE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DARK_PRISMARINE_STAIRS, Blocks.DARK_PRISMARINE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.ANDESITE_SLAB, Blocks.ANDESITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.ANDESITE_STAIRS, Blocks.ANDESITE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.ANDESITE_WALL, Blocks.ANDESITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_ANDESITE, Blocks.ANDESITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_ANDESITE_SLAB, Blocks.ANDESITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_ANDESITE_STAIRS, Blocks.ANDESITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_ANDESITE_SLAB, Blocks.POLISHED_ANDESITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_ANDESITE_STAIRS, Blocks.POLISHED_ANDESITE);
+        this.cookRecipes("smoking", SmokingRecipe::new, 100);
+        this.cookRecipes("campfire_cooking", CampfireCookingRecipe::new, 600);
         this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BASALT, Blocks.BASALT);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.GRANITE_SLAB, Blocks.GRANITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.GRANITE_STAIRS, Blocks.GRANITE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.GRANITE_WALL, Blocks.GRANITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_GRANITE, Blocks.GRANITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_GRANITE_SLAB, Blocks.GRANITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_GRANITE_STAIRS, Blocks.GRANITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_GRANITE_SLAB, Blocks.POLISHED_GRANITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_GRANITE_STAIRS, Blocks.POLISHED_GRANITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DIORITE_SLAB, Blocks.DIORITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DIORITE_STAIRS, Blocks.DIORITE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DIORITE_WALL, Blocks.DIORITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DIORITE, Blocks.DIORITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DIORITE_SLAB, Blocks.DIORITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DIORITE_STAIRS, Blocks.DIORITE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DIORITE_SLAB, Blocks.POLISHED_DIORITE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DIORITE_STAIRS, Blocks.POLISHED_DIORITE);
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.MOSSY_STONE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.MOSSY_STONE_BRICK_SLAB, 2)
-            .unlockedBy("has_mossy_stone_bricks", this.has(Blocks.MOSSY_STONE_BRICKS))
-            .save(this.output, "mossy_stone_brick_slab_from_mossy_stone_brick_stonecutting");
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.MOSSY_STONE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.MOSSY_STONE_BRICK_STAIRS)
-            .unlockedBy("has_mossy_stone_bricks", this.has(Blocks.MOSSY_STONE_BRICKS))
-            .save(this.output, "mossy_stone_brick_stairs_from_mossy_stone_brick_stonecutting");
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.MOSSY_STONE_BRICKS), RecipeCategory.DECORATIONS, Blocks.MOSSY_STONE_BRICK_WALL)
-            .unlockedBy("has_mossy_stone_bricks", this.has(Blocks.MOSSY_STONE_BRICKS))
-            .save(this.output, "mossy_stone_brick_wall_from_mossy_stone_brick_stonecutting");
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.MOSSY_COBBLESTONE_SLAB, Blocks.MOSSY_COBBLESTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.MOSSY_COBBLESTONE_STAIRS, Blocks.MOSSY_COBBLESTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.MOSSY_COBBLESTONE_WALL, Blocks.MOSSY_COBBLESTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_SANDSTONE_SLAB, Blocks.SMOOTH_SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_SANDSTONE_STAIRS, Blocks.SMOOTH_SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_RED_SANDSTONE_SLAB, Blocks.SMOOTH_RED_SANDSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_RED_SANDSTONE_STAIRS, Blocks.SMOOTH_RED_SANDSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_QUARTZ_SLAB, Blocks.SMOOTH_QUARTZ, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_QUARTZ_STAIRS, Blocks.SMOOTH_QUARTZ);
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.END_STONE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.END_STONE_BRICK_SLAB, 2)
-            .unlockedBy("has_end_stone_brick", this.has(Blocks.END_STONE_BRICKS))
-            .save(this.output, "end_stone_brick_slab_from_end_stone_brick_stonecutting");
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.END_STONE_BRICKS), RecipeCategory.BUILDING_BLOCKS, Blocks.END_STONE_BRICK_STAIRS)
-            .unlockedBy("has_end_stone_brick", this.has(Blocks.END_STONE_BRICKS))
-            .save(this.output, "end_stone_brick_stairs_from_end_stone_brick_stonecutting");
-        SingleItemRecipeBuilder.stonecutting(Ingredient.of(Blocks.END_STONE_BRICKS), RecipeCategory.DECORATIONS, Blocks.END_STONE_BRICK_WALL)
-            .unlockedBy("has_end_stone_brick", this.has(Blocks.END_STONE_BRICKS))
-            .save(this.output, "end_stone_brick_wall_from_end_stone_brick_stonecutting");
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.END_STONE_BRICKS, Blocks.END_STONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.END_STONE_BRICK_SLAB, Blocks.END_STONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.END_STONE_BRICK_STAIRS, Blocks.END_STONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.END_STONE_BRICK_WALL, Blocks.END_STONE);
         this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.SMOOTH_STONE_SLAB, Blocks.SMOOTH_STONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.BLACKSTONE_SLAB, Blocks.BLACKSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.BLACKSTONE_STAIRS, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.BLACKSTONE_WALL, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_BLACKSTONE_WALL, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_SLAB, Blocks.BLACKSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_STAIRS, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_POLISHED_BLACKSTONE, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICKS, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Blocks.BLACKSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_BLACKSTONE_BRICK_WALL, Blocks.BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_SLAB, Blocks.POLISHED_BLACKSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_STAIRS, Blocks.POLISHED_BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICKS, Blocks.POLISHED_BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_BLACKSTONE_WALL, Blocks.POLISHED_BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Blocks.POLISHED_BLACKSTONE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS, Blocks.POLISHED_BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_BLACKSTONE_BRICK_WALL, Blocks.POLISHED_BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_POLISHED_BLACKSTONE, Blocks.POLISHED_BLACKSTONE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICK_SLAB, Blocks.POLISHED_BLACKSTONE_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_BLACKSTONE_BRICK_STAIRS, Blocks.POLISHED_BLACKSTONE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_BLACKSTONE_BRICK_WALL, Blocks.POLISHED_BLACKSTONE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_COPPER_SLAB, Blocks.CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_COPPER_STAIRS, Blocks.CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CUT_COPPER_SLAB, Blocks.EXPOSED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CUT_COPPER_STAIRS, Blocks.EXPOSED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CUT_COPPER_SLAB, Blocks.WEATHERED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CUT_COPPER_STAIRS, Blocks.WEATHERED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CUT_COPPER_SLAB, Blocks.OXIDIZED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CUT_COPPER_STAIRS, Blocks.OXIDIZED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CUT_COPPER_SLAB, Blocks.WAXED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CUT_COPPER_STAIRS, Blocks.WAXED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB, Blocks.WAXED_EXPOSED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CUT_COPPER_STAIRS, Blocks.WAXED_EXPOSED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CUT_COPPER_SLAB, Blocks.WAXED_WEATHERED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CUT_COPPER_STAIRS, Blocks.WAXED_WEATHERED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CUT_COPPER_SLAB, Blocks.WAXED_OXIDIZED_CUT_COPPER, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CUT_COPPER_STAIRS, Blocks.WAXED_OXIDIZED_CUT_COPPER);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_COPPER, Blocks.COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_COPPER_STAIRS, Blocks.COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CUT_COPPER_SLAB, Blocks.COPPER_BLOCK, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CUT_COPPER, Blocks.EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CUT_COPPER_STAIRS, Blocks.EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CUT_COPPER_SLAB, Blocks.EXPOSED_COPPER, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CUT_COPPER, Blocks.WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CUT_COPPER_STAIRS, Blocks.WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CUT_COPPER_SLAB, Blocks.WEATHERED_COPPER, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CUT_COPPER, Blocks.OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CUT_COPPER_STAIRS, Blocks.OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CUT_COPPER_SLAB, Blocks.OXIDIZED_COPPER, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CUT_COPPER, Blocks.WAXED_COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CUT_COPPER_STAIRS, Blocks.WAXED_COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CUT_COPPER_SLAB, Blocks.WAXED_COPPER_BLOCK, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CUT_COPPER, Blocks.WAXED_EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CUT_COPPER_STAIRS, Blocks.WAXED_EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB, Blocks.WAXED_EXPOSED_COPPER, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CUT_COPPER, Blocks.WAXED_WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CUT_COPPER_STAIRS, Blocks.WAXED_WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CUT_COPPER_SLAB, Blocks.WAXED_WEATHERED_COPPER, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CUT_COPPER, Blocks.WAXED_OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CUT_COPPER_STAIRS, Blocks.WAXED_OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CUT_COPPER_SLAB, Blocks.WAXED_OXIDIZED_COPPER, 8);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.COBBLED_DEEPSLATE_SLAB, Blocks.COBBLED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.COBBLED_DEEPSLATE_STAIRS, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.COBBLED_DEEPSLATE_WALL, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_DEEPSLATE, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DEEPSLATE, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DEEPSLATE_SLAB, Blocks.COBBLED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DEEPSLATE_STAIRS, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_DEEPSLATE_WALL, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICKS, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICK_SLAB, Blocks.COBBLED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_BRICK_WALL, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILES, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_SLAB, Blocks.COBBLED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_TILE_WALL, Blocks.COBBLED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DEEPSLATE_SLAB, Blocks.POLISHED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_DEEPSLATE_STAIRS, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_DEEPSLATE_WALL, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICKS, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICK_SLAB, Blocks.POLISHED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_BRICK_WALL, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILES, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_SLAB, Blocks.POLISHED_DEEPSLATE, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_TILE_WALL, Blocks.POLISHED_DEEPSLATE);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICK_SLAB, Blocks.DEEPSLATE_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_BRICK_STAIRS, Blocks.DEEPSLATE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_BRICK_WALL, Blocks.DEEPSLATE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILES, Blocks.DEEPSLATE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.DEEPSLATE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_TILE_WALL, Blocks.DEEPSLATE_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_SLAB, Blocks.DEEPSLATE_TILES, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.DEEPSLATE_TILE_STAIRS, Blocks.DEEPSLATE_TILES);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.DEEPSLATE_TILE_WALL, Blocks.DEEPSLATE_TILES);
-        smithingTrims().forEach(p_389729_ -> this.trimSmithing(p_389729_.template(), p_389729_.patternId(), p_389729_.recipeId()));
+        WeatheringCopperCollection.zipApply(
+            Blocks.CUT_COPPER,
+            Blocks.COPPER_BLOCK,
+            (cutBlock, material) -> this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, cutBlock, material, 4)
+        );
+        WeatheringCopperCollection.zipApply(
+            Blocks.CUT_COPPER_STAIRS,
+            Blocks.COPPER_BLOCK,
+            (cutStairs, material) -> this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, cutStairs, material, 4)
+        );
+        WeatheringCopperCollection.zipApply(
+            Blocks.CUT_COPPER_SLAB,
+            Blocks.COPPER_BLOCK,
+            (cutSlab, material) -> this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, cutSlab, material, 8)
+        );
+        smithingTrims().forEach(trim -> this.trimSmithing(trim.template(), trim.patternId(), trim.recipeId()));
         this.netheriteSmithing(Items.DIAMOND_CHESTPLATE, RecipeCategory.COMBAT, Items.NETHERITE_CHESTPLATE);
         this.netheriteSmithing(Items.DIAMOND_LEGGINGS, RecipeCategory.COMBAT, Items.NETHERITE_LEGGINGS);
         this.netheriteSmithing(Items.DIAMOND_HELMET, RecipeCategory.COMBAT, Items.NETHERITE_HELMET);
@@ -2902,24 +2519,14 @@ public class VanillaRecipeProvider extends RecipeProvider {
         this.copySmithingTemplate(Items.RAISER_ARMOR_TRIM_SMITHING_TEMPLATE, Items.TERRACOTTA);
         this.copySmithingTemplate(Items.HOST_ARMOR_TRIM_SMITHING_TEMPLATE, Items.TERRACOTTA);
         this.copySmithingTemplate(Items.FLOW_ARMOR_TRIM_SMITHING_TEMPLATE, Items.BREEZE_ROD);
-        this.copySmithingTemplate(Items.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, Ingredient.of(Items.COPPER_BLOCK, Items.WAXED_COPPER_BLOCK));
+        this.copySmithingTemplate(
+            Items.BOLT_ARMOR_TRIM_SMITHING_TEMPLATE, Ingredient.of(Items.COPPER_BLOCK.weathering().unaffected(), Items.COPPER_BLOCK.waxed().unaffected())
+        );
         this.threeByThreePacker(RecipeCategory.BUILDING_BLOCKS, Blocks.BAMBOO_BLOCK, Items.BAMBOO);
         this.planksFromLogs(Blocks.BAMBOO_PLANKS, ItemTags.BAMBOO_BLOCKS, 2);
         this.mosaicBuilder(RecipeCategory.DECORATIONS, Blocks.BAMBOO_MOSAIC, Blocks.BAMBOO_SLAB);
         this.woodenBoat(Items.BAMBOO_RAFT, Blocks.BAMBOO_PLANKS);
         this.chestBoat(Items.BAMBOO_CHEST_RAFT, Items.BAMBOO_RAFT);
-        this.hangingSign(Items.OAK_HANGING_SIGN, Blocks.STRIPPED_OAK_LOG);
-        this.hangingSign(Items.SPRUCE_HANGING_SIGN, Blocks.STRIPPED_SPRUCE_LOG);
-        this.hangingSign(Items.BIRCH_HANGING_SIGN, Blocks.STRIPPED_BIRCH_LOG);
-        this.hangingSign(Items.JUNGLE_HANGING_SIGN, Blocks.STRIPPED_JUNGLE_LOG);
-        this.hangingSign(Items.ACACIA_HANGING_SIGN, Blocks.STRIPPED_ACACIA_LOG);
-        this.hangingSign(Items.CHERRY_HANGING_SIGN, Blocks.STRIPPED_CHERRY_LOG);
-        this.hangingSign(Items.DARK_OAK_HANGING_SIGN, Blocks.STRIPPED_DARK_OAK_LOG);
-        this.hangingSign(Items.PALE_OAK_HANGING_SIGN, Blocks.STRIPPED_PALE_OAK_LOG);
-        this.hangingSign(Items.MANGROVE_HANGING_SIGN, Blocks.STRIPPED_MANGROVE_LOG);
-        this.hangingSign(Items.BAMBOO_HANGING_SIGN, Items.STRIPPED_BAMBOO_BLOCK);
-        this.hangingSign(Items.CRIMSON_HANGING_SIGN, Blocks.STRIPPED_CRIMSON_STEM);
-        this.hangingSign(Items.WARPED_HANGING_SIGN, Blocks.STRIPPED_WARPED_STEM);
         this.shaped(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_BOOKSHELF)
             .define('#', ItemTags.PLANKS)
             .define('X', ItemTags.WOODEN_SLABS)
@@ -2928,14 +2535,14 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("###")
             .unlockedBy("has_book", this.has(Items.BOOK))
             .save(this.output);
-        this.oneToOneConversionRecipe(Items.ORANGE_DYE, Blocks.TORCHFLOWER, "orange_dye");
-        this.oneToOneConversionRecipe(Items.CYAN_DYE, Blocks.PITCHER_PLANT, "cyan_dye", 2);
+        this.oneToOneConversionRecipe(Items.DYE.orange(), Blocks.TORCHFLOWER, "orange_dye");
+        this.oneToOneConversionRecipe(Items.DYE.cyan(), Blocks.PITCHER_PLANT, "cyan_dye", 2);
         this.planksFromLog(Blocks.CHERRY_PLANKS, ItemTags.CHERRY_LOGS, 4);
         this.woodFromLogs(Blocks.CHERRY_WOOD, Blocks.CHERRY_LOG);
         this.woodFromLogs(Blocks.STRIPPED_CHERRY_WOOD, Blocks.STRIPPED_CHERRY_LOG);
         this.woodenBoat(Items.CHERRY_BOAT, Blocks.CHERRY_PLANKS);
         this.chestBoat(Items.CHERRY_CHEST_BOAT, Items.CHERRY_BOAT);
-        this.oneToOneConversionRecipe(Items.PINK_DYE, Items.PINK_PETALS, "pink_dye", 1);
+        this.oneToOneConversionRecipe(Items.DYE.pink(), Items.PINK_PETALS, "pink_dye", 1);
         this.shaped(RecipeCategory.TOOLS, Items.BRUSH)
             .define('X', Items.FEATHER)
             .define('#', Items.COPPER_INGOT)
@@ -2952,7 +2559,8 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern(" # ")
             .unlockedBy("has_brick", this.has(ItemTags.DECORATED_POT_INGREDIENTS))
             .save(this.output, "decorated_pot_simple");
-        SpecialRecipeBuilder.special(DecoratedPotRecipe::new).save(this.output, "decorated_pot");
+        SpecialRecipeBuilder.special(() -> new DecoratedPotRecipe(this.tag(ItemTags.DECORATED_POT_INGREDIENTS), new ItemStackTemplate(Items.DECORATED_POT)))
+            .save(this.output, "decorated_pot");
         this.shaped(RecipeCategory.REDSTONE, Blocks.CRAFTER)
             .define('#', Items.IRON_INGOT)
             .define('C', Items.CRAFTING_TABLE)
@@ -2963,75 +2571,27 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("RDR")
             .unlockedBy("has_dropper", this.has(Items.DROPPER))
             .save(this.output);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_SLAB, Blocks.TUFF, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_STAIRS, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.TUFF_WALL, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_TUFF, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_TUFF, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_TUFF_SLAB, Blocks.TUFF, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_TUFF_STAIRS, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_TUFF_WALL, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICKS, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICK_SLAB, Blocks.TUFF, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICK_STAIRS, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.TUFF_BRICK_WALL, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_TUFF_BRICKS, Blocks.TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_TUFF_SLAB, Blocks.POLISHED_TUFF, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.POLISHED_TUFF_STAIRS, Blocks.POLISHED_TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.POLISHED_TUFF_WALL, Blocks.POLISHED_TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICKS, Blocks.POLISHED_TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICK_SLAB, Blocks.POLISHED_TUFF, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICK_STAIRS, Blocks.POLISHED_TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.TUFF_BRICK_WALL, Blocks.POLISHED_TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_TUFF_BRICKS, Blocks.POLISHED_TUFF);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICK_SLAB, Blocks.TUFF_BRICKS, 2);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.TUFF_BRICK_STAIRS, Blocks.TUFF_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.DECORATIONS, Blocks.TUFF_BRICK_WALL, Blocks.TUFF_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_TUFF_BRICKS, Blocks.TUFF_BRICKS);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_COPPER, Blocks.COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CHISELED_COPPER, Blocks.EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CHISELED_COPPER, Blocks.WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CHISELED_COPPER, Blocks.OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CHISELED_COPPER, Blocks.WAXED_COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CHISELED_COPPER, Blocks.WAXED_EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CHISELED_COPPER, Blocks.WAXED_WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CHISELED_COPPER, Blocks.WAXED_OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_COPPER, Blocks.CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_CHISELED_COPPER, Blocks.EXPOSED_CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_CHISELED_COPPER, Blocks.WEATHERED_CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_CHISELED_COPPER, Blocks.OXIDIZED_CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_CHISELED_COPPER, Blocks.WAXED_CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_CHISELED_COPPER, Blocks.WAXED_EXPOSED_CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_CHISELED_COPPER, Blocks.WAXED_WEATHERED_CUT_COPPER, 1);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_CHISELED_COPPER, Blocks.WAXED_OXIDIZED_CUT_COPPER, 1);
-        this.grate(Blocks.COPPER_GRATE, Blocks.COPPER_BLOCK);
-        this.grate(Blocks.EXPOSED_COPPER_GRATE, Blocks.EXPOSED_COPPER);
-        this.grate(Blocks.WEATHERED_COPPER_GRATE, Blocks.WEATHERED_COPPER);
-        this.grate(Blocks.OXIDIZED_COPPER_GRATE, Blocks.OXIDIZED_COPPER);
-        this.grate(Blocks.WAXED_COPPER_GRATE, Blocks.WAXED_COPPER_BLOCK);
-        this.grate(Blocks.WAXED_EXPOSED_COPPER_GRATE, Blocks.WAXED_EXPOSED_COPPER);
-        this.grate(Blocks.WAXED_WEATHERED_COPPER_GRATE, Blocks.WAXED_WEATHERED_COPPER);
-        this.grate(Blocks.WAXED_OXIDIZED_COPPER_GRATE, Blocks.WAXED_OXIDIZED_COPPER);
-        this.copperBulb(Blocks.COPPER_BULB, Blocks.COPPER_BLOCK);
-        this.copperBulb(Blocks.EXPOSED_COPPER_BULB, Blocks.EXPOSED_COPPER);
-        this.copperBulb(Blocks.WEATHERED_COPPER_BULB, Blocks.WEATHERED_COPPER);
-        this.copperBulb(Blocks.OXIDIZED_COPPER_BULB, Blocks.OXIDIZED_COPPER);
-        this.copperBulb(Blocks.WAXED_COPPER_BULB, Blocks.WAXED_COPPER_BLOCK);
-        this.copperBulb(Blocks.WAXED_EXPOSED_COPPER_BULB, Blocks.WAXED_EXPOSED_COPPER);
-        this.copperBulb(Blocks.WAXED_WEATHERED_COPPER_BULB, Blocks.WAXED_WEATHERED_COPPER);
-        this.copperBulb(Blocks.WAXED_OXIDIZED_COPPER_BULB, Blocks.WAXED_OXIDIZED_COPPER);
-        this.waxedChiseled(Blocks.WAXED_CHISELED_COPPER, Blocks.WAXED_CUT_COPPER_SLAB);
-        this.waxedChiseled(Blocks.WAXED_EXPOSED_CHISELED_COPPER, Blocks.WAXED_EXPOSED_CUT_COPPER_SLAB);
-        this.waxedChiseled(Blocks.WAXED_WEATHERED_CHISELED_COPPER, Blocks.WAXED_WEATHERED_CUT_COPPER_SLAB);
-        this.waxedChiseled(Blocks.WAXED_OXIDIZED_CHISELED_COPPER, Blocks.WAXED_OXIDIZED_CUT_COPPER_SLAB);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.COPPER_GRATE, Blocks.COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.EXPOSED_COPPER_GRATE, Blocks.EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WEATHERED_COPPER_GRATE, Blocks.WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.OXIDIZED_COPPER_GRATE, Blocks.OXIDIZED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_COPPER_GRATE, Blocks.WAXED_COPPER_BLOCK, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_EXPOSED_COPPER_GRATE, Blocks.WAXED_EXPOSED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_WEATHERED_COPPER_GRATE, Blocks.WAXED_WEATHERED_COPPER, 4);
-        this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, Blocks.WAXED_OXIDIZED_COPPER_GRATE, Blocks.WAXED_OXIDIZED_COPPER, 4);
+        WeatheringCopper.WeatherState.forEach(
+            state -> {
+                this.stonecutterResultFromBase(
+                    RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_COPPER.weathering().pick(state), Blocks.COPPER_BLOCK.weathering().pick(state), 4
+                );
+                this.stonecutterResultFromBase(
+                    RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_COPPER.waxed().pick(state), Blocks.COPPER_BLOCK.waxed().pick(state), 4
+                );
+                this.stonecutterResultFromBase(
+                    RecipeCategory.BUILDING_BLOCKS, Blocks.CHISELED_COPPER.waxed().pick(state), Blocks.CUT_COPPER.waxed().pick(state), 1
+                );
+            }
+        );
+        WeatheringCopperCollection.zipApply(Blocks.COPPER_GRATE, Blocks.COPPER_BLOCK, (x$0, x$1) -> this.grate(x$0, x$1));
+        WeatheringCopperCollection.zipApply(Blocks.COPPER_BULB, Blocks.COPPER_BLOCK, (x$0, x$1) -> this.copperBulb(x$0, x$1));
+        WeatheringCopper.WeatherState.forEach(
+            state -> this.waxedChiseled(Blocks.CHISELED_COPPER.waxed().pick(state), Blocks.CUT_COPPER_SLAB.waxed().pick(state))
+        );
+        WeatheringCopperCollection.zipApply(
+            Blocks.COPPER_GRATE, Blocks.COPPER_BLOCK, (grate, block) -> this.stonecutterResultFromBase(RecipeCategory.BUILDING_BLOCKS, grate, block, 4)
+        );
         this.shapeless(RecipeCategory.MISC, Items.WIND_CHARGE, 4)
             .requires(Items.BREEZE_ROD)
             .unlockedBy("has_breeze_rod", this.has(Items.BREEZE_ROD))
@@ -3044,10 +2604,10 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .unlockedBy("has_breeze_rod", this.has(Items.BREEZE_ROD))
             .unlockedBy("has_heavy_core", this.has(Blocks.HEAVY_CORE))
             .save(this.output);
-        this.doorBuilder(Blocks.COPPER_DOOR, Ingredient.of(Items.COPPER_INGOT))
+        this.doorBuilder(Blocks.COPPER_DOOR.weathering().unaffected(), Ingredient.of(Items.COPPER_INGOT))
             .unlockedBy(getHasName(Items.COPPER_INGOT), this.has(Items.COPPER_INGOT))
             .save(this.output);
-        this.twoByTwoPacker(RecipeCategory.REDSTONE, Blocks.COPPER_TRAPDOOR, Items.COPPER_INGOT);
+        this.twoByTwoPacker(RecipeCategory.REDSTONE, Blocks.COPPER_TRAPDOOR.weathering().unaffected(), Items.COPPER_INGOT);
         this.shaped(RecipeCategory.TOOLS, Items.BUNDLE)
             .define('-', Items.STRING)
             .define('#', Items.LEATHER)
@@ -3055,7 +2615,8 @@ public class VanillaRecipeProvider extends RecipeProvider {
             .pattern("#")
             .unlockedBy("has_string", this.has(Items.STRING))
             .save(this.output);
-        this.bundleRecipes();
+        this.threeByThreePacker(RecipeCategory.BUILDING_BLOCKS, Blocks.POTENT_SULFUR, Items.SULFUR);
+        ColorCollection.zipApply(Items.DYE, Items.DYED_BUNDLE, (x$0, x$1) -> this.dyedBundleRecipe(x$0, x$1));
     }
 
     public static Stream<VanillaRecipeProvider.TrimTemplate> smithingTrims() {
@@ -3079,47 +2640,22 @@ public class VanillaRecipeProvider extends RecipeProvider {
                 Pair.of(Items.WAYFINDER_ARMOR_TRIM_SMITHING_TEMPLATE, TrimPatterns.WAYFINDER),
                 Pair.of(Items.WILD_ARMOR_TRIM_SMITHING_TEMPLATE, TrimPatterns.WILD)
             )
-            .map(p_448716_ -> {
-                Item item = (Item)p_448716_.getFirst();
-                ResourceKey<TrimPattern> resourcekey = (ResourceKey<TrimPattern>)p_448716_.getSecond();
-                ResourceKey<Recipe<?>> resourcekey1 = ResourceKey.create(Registries.RECIPE, Identifier.withDefaultNamespace(getItemName(item) + "_smithing_trim"));
-                return new VanillaRecipeProvider.TrimTemplate(item, resourcekey, resourcekey1);
+            .map(itemAndPattern -> {
+                Item item = (Item)itemAndPattern.getFirst();
+                ResourceKey<TrimPattern> patternId = (ResourceKey<TrimPattern>)itemAndPattern.getSecond();
+                ResourceKey<Recipe<?>> recipeId = ResourceKey.create(Registries.RECIPE, Identifier.withDefaultNamespace(getItemName(item) + "_smithing_trim"));
+                return new VanillaRecipeProvider.TrimTemplate(item, patternId, recipeId);
             });
     }
 
-    private void shulkerBoxRecipes() {
-        Ingredient ingredient = this.tag(ItemTags.SHULKER_BOXES);
-
-        for (DyeColor dyecolor : DyeColor.values()) {
-            TransmuteRecipeBuilder.transmute(
-                    RecipeCategory.DECORATIONS, ingredient, Ingredient.of(DyeItem.byColor(dyecolor)), ShulkerBoxBlock.getBlockByColor(dyecolor).asItem()
-                )
-                .group("shulker_box_dye")
-                .unlockedBy("has_shulker_box", this.has(ItemTags.SHULKER_BOXES))
-                .save(this.output);
-        }
-    }
-
-    private void bundleRecipes() {
-        Ingredient ingredient = this.tag(ItemTags.BUNDLES);
-
-        for (DyeColor dyecolor : DyeColor.values()) {
-            DyeItem dyeitem = DyeItem.byColor(dyecolor);
-            TransmuteRecipeBuilder.transmute(RecipeCategory.TOOLS, ingredient, Ingredient.of(dyeitem), BundleItem.getByColor(dyecolor))
-                .group("bundle_dye")
-                .unlockedBy(getHasName(dyeitem), this.has(dyeitem))
-                .save(this.output);
-        }
-    }
-
     public static class Runner extends RecipeProvider.Runner {
-        public Runner(PackOutput p_365932_, CompletableFuture<HolderLookup.Provider> p_363203_) {
-            super(p_365932_, p_363203_);
+        public Runner(final PackOutput packOutput, final CompletableFuture<HolderLookup.Provider> registries) {
+            super(packOutput, registries);
         }
 
         @Override
-        protected RecipeProvider createRecipeProvider(HolderLookup.Provider p_369764_, RecipeOutput p_363473_) {
-            return new VanillaRecipeProvider(p_369764_, p_363473_);
+        protected RecipeProvider createRecipeProvider(final HolderLookup.Provider registries, final RecipeOutput output) {
+            return new VanillaRecipeProvider(registries, output);
         }
 
         @Override

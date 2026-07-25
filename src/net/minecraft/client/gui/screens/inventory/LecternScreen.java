@@ -9,10 +9,7 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerListener;
 import net.minecraft.world.inventory.LecternMenu;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LecternScreen extends BookViewScreen implements MenuAccess<LecternMenu> {
     private static final int MENU_BUTTON_MARGIN = 4;
     private static final int MENU_BUTTON_SIZE = 98;
@@ -20,20 +17,20 @@ public class LecternScreen extends BookViewScreen implements MenuAccess<LecternM
     private final LecternMenu menu;
     private final ContainerListener listener = new ContainerListener() {
         @Override
-        public void slotChanged(AbstractContainerMenu p_99054_, int p_99055_, ItemStack p_99056_) {
+        public void slotChanged(final AbstractContainerMenu container, final int slotIndex, final ItemStack itemStack) {
             LecternScreen.this.bookChanged();
         }
 
         @Override
-        public void dataChanged(AbstractContainerMenu p_169772_, int p_169773_, int p_169774_) {
-            if (p_169773_ == 0) {
+        public void dataChanged(final AbstractContainerMenu container, final int id, final int value) {
+            if (id == 0) {
                 LecternScreen.this.pageChanged();
             }
         }
     };
 
-    public LecternScreen(LecternMenu p_99020_, Inventory p_99021_, Component p_99022_) {
-        this.menu = p_99020_;
+    public LecternScreen(final LecternMenu menu, final Inventory inventory, final Component title) {
+        this.menu = menu;
     }
 
     public LecternMenu getMenu() {
@@ -61,10 +58,10 @@ public class LecternScreen extends BookViewScreen implements MenuAccess<LecternM
     @Override
     protected void createMenuControls() {
         if (this.minecraft.player.mayBuild()) {
-            int i = this.menuControlsTop();
-            int j = this.width / 2;
-            this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, p_99033_ -> this.onClose()).pos(j - 98 - 2, i).width(98).build());
-            this.addRenderableWidget(Button.builder(TAKE_BOOK_LABEL, p_99024_ -> this.sendButtonClick(3)).pos(j + 2, i).width(98).build());
+            int buttonY = this.menuControlsTop();
+            int middle = this.width / 2;
+            this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, button -> this.onClose()).pos(middle - 98 - 2, buttonY).width(98).build());
+            this.addRenderableWidget(Button.builder(TAKE_BOOK_LABEL, button -> this.sendButtonClick(3)).pos(middle + 2, buttonY).width(98).build());
         } else {
             super.createMenuControls();
         }
@@ -81,17 +78,17 @@ public class LecternScreen extends BookViewScreen implements MenuAccess<LecternM
     }
 
     @Override
-    protected boolean forcePage(int p_99031_) {
-        if (p_99031_ != this.menu.getPage()) {
-            this.sendButtonClick(100 + p_99031_);
+    protected boolean forcePage(final int page) {
+        if (page != this.menu.getPage()) {
+            this.sendButtonClick(100 + page);
             return true;
         } else {
             return false;
         }
     }
 
-    private void sendButtonClick(int p_99037_) {
-        this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, p_99037_);
+    private void sendButtonClick(final int button) {
+        this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, button);
     }
 
     @Override
@@ -99,12 +96,12 @@ public class LecternScreen extends BookViewScreen implements MenuAccess<LecternM
         return false;
     }
 
-    void bookChanged() {
-        ItemStack itemstack = this.menu.getBook();
-        this.setBookAccess(Objects.requireNonNullElse(BookViewScreen.BookAccess.fromItem(itemstack), BookViewScreen.EMPTY_ACCESS));
+    private void bookChanged() {
+        ItemStack book = this.menu.getBook();
+        this.setBookAccess(Objects.requireNonNullElse(BookViewScreen.BookAccess.fromItem(book), BookViewScreen.EMPTY_ACCESS));
     }
 
-    void pageChanged() {
+    private void pageChanged() {
         this.setPage(this.menu.getPage());
     }
 

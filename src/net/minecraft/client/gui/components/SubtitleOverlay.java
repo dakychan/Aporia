@@ -7,7 +7,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.resources.sounds.SoundInstance;
 import net.minecraft.client.sounds.SoundEventListener;
 import net.minecraft.client.sounds.SoundManager;
@@ -17,11 +17,8 @@ import net.minecraft.util.ARGB;
 import net.minecraft.util.Mth;
 import net.minecraft.util.Util;
 import net.minecraft.world.phys.Vec3;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class SubtitleOverlay implements SoundEventListener {
     private static final long DISPLAY_TIME = 3000L;
     private final Minecraft minecraft;
@@ -29,90 +26,87 @@ public class SubtitleOverlay implements SoundEventListener {
     private boolean isListening;
     private final List<SubtitleOverlay.Subtitle> audibleSubtitles = new ArrayList<>();
 
-    public SubtitleOverlay(Minecraft p_94641_) {
-        this.minecraft = p_94641_;
+    public SubtitleOverlay(final Minecraft minecraft) {
+        this.minecraft = minecraft;
     }
 
-    public void render(GuiGraphics p_282562_) {
-        SoundManager soundmanager = this.minecraft.getSoundManager();
+    public void extractRenderState(final GuiGraphicsExtractor graphics) {
+        SoundManager soundManager = this.minecraft.getSoundManager();
         if (!this.isListening && this.minecraft.options.showSubtitles().get()) {
-            soundmanager.addListener(this);
+            soundManager.addListener(this);
             this.isListening = true;
         } else if (this.isListening && !this.minecraft.options.showSubtitles().get()) {
-            soundmanager.removeListener(this);
+            soundManager.removeListener(this);
             this.isListening = false;
         }
 
         if (this.isListening) {
-            ListenerTransform listenertransform = soundmanager.getListenerTransform();
-            Vec3 vec3 = listenertransform.position();
-            Vec3 vec31 = listenertransform.forward();
-            Vec3 vec32 = listenertransform.right();
+            ListenerTransform listener = soundManager.getListenerTransform();
+            Vec3 position = listener.position();
+            Vec3 forwards = listener.forward();
+            Vec3 right = listener.right();
             this.audibleSubtitles.clear();
 
-            for (SubtitleOverlay.Subtitle subtitleoverlay$subtitle : this.subtitles) {
-                if (subtitleoverlay$subtitle.isAudibleFrom(vec3)) {
-                    this.audibleSubtitles.add(subtitleoverlay$subtitle);
+            for (SubtitleOverlay.Subtitle subtitle : this.subtitles) {
+                if (subtitle.isAudibleFrom(position)) {
+                    this.audibleSubtitles.add(subtitle);
                 }
             }
 
             if (!this.audibleSubtitles.isEmpty()) {
-                int l1 = 0;
-                int i2 = 0;
-                double d0 = this.minecraft.options.notificationDisplayTime().get();
+                int row = 0;
+                int width = 0;
+                double displayTimeMultiplier = this.minecraft.options.notificationDisplayTime().get();
                 Iterator<SubtitleOverlay.Subtitle> iterator = this.audibleSubtitles.iterator();
 
                 while (iterator.hasNext()) {
-                    SubtitleOverlay.Subtitle subtitleoverlay$subtitle1 = iterator.next();
-                    subtitleoverlay$subtitle1.purgeOldInstances(3000.0 * d0);
-                    if (!subtitleoverlay$subtitle1.isStillActive()) {
+                    SubtitleOverlay.Subtitle subtitle = iterator.next();
+                    subtitle.purgeOldInstances(3000.0 * displayTimeMultiplier);
+                    if (!subtitle.isStillActive()) {
                         iterator.remove();
                     } else {
-                        i2 = Math.max(i2, this.minecraft.font.width(subtitleoverlay$subtitle1.getText()));
+                        width = Math.max(width, this.minecraft.font.width(subtitle.getText()));
                     }
                 }
 
-                i2 += this.minecraft.font.width("<")
-                    + this.minecraft.font.width(" ")
-                    + this.minecraft.font.width(">")
-                    + this.minecraft.font.width(" ");
+                width += this.minecraft.font.width("<") + this.minecraft.font.width(" ") + this.minecraft.font.width(">") + this.minecraft.font.width(" ");
                 if (!this.audibleSubtitles.isEmpty()) {
-                    p_282562_.nextStratum();
+                    graphics.nextStratum();
                 }
 
-                for (SubtitleOverlay.Subtitle subtitleoverlay$subtitle2 : this.audibleSubtitles) {
-                    int i = 255;
-                    Component component = subtitleoverlay$subtitle2.getText();
-                    SubtitleOverlay.SoundPlayedAt subtitleoverlay$soundplayedat = subtitleoverlay$subtitle2.getClosest(vec3);
-                    if (subtitleoverlay$soundplayedat != null) {
-                        Vec3 vec33 = subtitleoverlay$soundplayedat.location.subtract(vec3).normalize();
-                        double d1 = vec32.dot(vec33);
-                        double d2 = vec31.dot(vec33);
-                        boolean flag = d2 > 0.5;
-                        int j = i2 / 2;
-                        int k = 9;
-                        int l = k / 2;
-                        float f = 1.0F;
-                        int i1 = this.minecraft.font.width(component);
-                        int j1 = Mth.floor(
-                            Mth.clampedLerp((float)(Util.getMillis() - subtitleoverlay$soundplayedat.time) / (float)(3000.0 * d0), 255.0F, 75.0F)
+                for (SubtitleOverlay.Subtitle subtitle : this.audibleSubtitles) {
+                    int alpha = 255;
+                    Component text = subtitle.getText();
+                    SubtitleOverlay.SoundPlayedAt closestRecentLocation = subtitle.getClosest(position);
+                    if (closestRecentLocation != null) {
+                        Vec3 delta = closestRecentLocation.location.subtract(position).normalize();
+                        double rightness = right.dot(delta);
+                        double forwardness = forwards.dot(delta);
+                        boolean inView = forwardness > 0.5;
+                        int halfWidth = width / 2;
+                        int height = 9;
+                        int halfHeight = height / 2;
+                        float scale = 1.0F;
+                        int textWidth = this.minecraft.font.width(text);
+                        int brightness = Mth.floor(
+                            Mth.clampedLerp((float)(Util.getMillis() - closestRecentLocation.time) / (float)(3000.0 * displayTimeMultiplier), 255.0F, 75.0F)
                         );
-                        p_282562_.pose().pushMatrix();
-                        p_282562_.pose().translate(p_282562_.guiWidth() - j * 1.0F - 2.0F, p_282562_.guiHeight() - 35 - l1 * (k + 1) * 1.0F);
-                        p_282562_.pose().scale(1.0F, 1.0F);
-                        p_282562_.fill(-j - 1, -l - 1, j + 1, l + 1, this.minecraft.options.getBackgroundColor(0.8F));
-                        int k1 = ARGB.color(255, j1, j1, j1);
-                        if (!flag) {
-                            if (d1 > 0.0) {
-                                p_282562_.drawString(this.minecraft.font, ">", j - this.minecraft.font.width(">"), -l, k1);
-                            } else if (d1 < 0.0) {
-                                p_282562_.drawString(this.minecraft.font, "<", -j, -l, k1);
+                        graphics.pose().pushMatrix();
+                        graphics.pose().translate(graphics.guiWidth() - halfWidth * 1.0F - 2.0F, graphics.guiHeight() - 35 - row * (height + 1) * 1.0F);
+                        graphics.pose().scale(1.0F, 1.0F);
+                        graphics.fill(-halfWidth - 1, -halfHeight - 1, halfWidth + 1, halfHeight + 1, this.minecraft.options.getBackgroundColor(0.8F));
+                        int textColor = ARGB.color(255, brightness, brightness, brightness);
+                        if (!inView) {
+                            if (rightness > 0.0) {
+                                graphics.text(this.minecraft.font, ">", halfWidth - this.minecraft.font.width(">"), -halfHeight, textColor);
+                            } else if (rightness < 0.0) {
+                                graphics.text(this.minecraft.font, "<", -halfWidth, -halfHeight, textColor);
                             }
                         }
 
-                        p_282562_.drawString(this.minecraft.font, component, -i1 / 2, -l, k1);
-                        p_282562_.pose().popMatrix();
-                        l1++;
+                        graphics.text(this.minecraft.font, text, -textWidth / 2, -halfHeight, textColor);
+                        graphics.pose().popMatrix();
+                        row++;
                     }
                 }
             }
@@ -120,71 +114,71 @@ public class SubtitleOverlay implements SoundEventListener {
     }
 
     @Override
-    public void onPlaySound(SoundInstance p_94645_, WeighedSoundEvents p_94646_, float p_311530_) {
-        if (p_94646_.getSubtitle() != null) {
-            Component component = p_94646_.getSubtitle();
+    public void onPlaySound(final SoundInstance sound, final WeighedSoundEvents soundEvent, final float range) {
+        if (soundEvent.getSubtitle() != null) {
+            Component text = soundEvent.getSubtitle();
             if (!this.subtitles.isEmpty()) {
-                for (SubtitleOverlay.Subtitle subtitleoverlay$subtitle : this.subtitles) {
-                    if (subtitleoverlay$subtitle.getText().equals(component)) {
-                        subtitleoverlay$subtitle.refresh(new Vec3(p_94645_.getX(), p_94645_.getY(), p_94645_.getZ()));
+                for (SubtitleOverlay.Subtitle subtitle : this.subtitles) {
+                    if (subtitle.getText().equals(text)) {
+                        subtitle.refresh(new Vec3(sound.getX(), sound.getY(), sound.getZ()));
                         return;
                     }
                 }
             }
 
-            this.subtitles.add(new SubtitleOverlay.Subtitle(component, p_311530_, new Vec3(p_94645_.getX(), p_94645_.getY(), p_94645_.getZ())));
+            this.subtitles.add(new SubtitleOverlay.Subtitle(text, range, new Vec3(sound.getX(), sound.getY(), sound.getZ())));
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    record SoundPlayedAt(Vec3 location, long time) {
+        private record SoundPlayedAt(Vec3 location, long time) {
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static class Subtitle {
+        private static class Subtitle {
         private final Component text;
         private final float range;
         private final List<SubtitleOverlay.SoundPlayedAt> playedAt = new ArrayList<>();
 
-        public Subtitle(Component p_169072_, float p_312799_, Vec3 p_169073_) {
-            this.text = p_169072_;
-            this.range = p_312799_;
-            this.playedAt.add(new SubtitleOverlay.SoundPlayedAt(p_169073_, Util.getMillis()));
+        public Subtitle(final Component text, final float range, final Vec3 location) {
+            this.text = text;
+            this.range = range;
+            this.playedAt.add(new SubtitleOverlay.SoundPlayedAt(location, Util.getMillis()));
         }
 
         public Component getText() {
             return this.text;
         }
 
-        public SubtitleOverlay.@Nullable SoundPlayedAt getClosest(Vec3 p_344371_) {
+        public SubtitleOverlay.@Nullable SoundPlayedAt getClosest(final Vec3 position) {
             if (this.playedAt.isEmpty()) {
                 return null;
             } else {
                 return this.playedAt.size() == 1
                     ? this.playedAt.getFirst()
-                    : this.playedAt.stream().min(Comparator.comparingDouble(p_344048_ -> p_344048_.location().distanceTo(p_344371_))).orElse(null);
+                    : this.playedAt.stream().min(Comparator.comparingDouble(soundPlayedAt -> soundPlayedAt.location().distanceTo(position))).orElse(null);
             }
         }
 
-        public void refresh(Vec3 p_94657_) {
-            this.playedAt.removeIf(p_342347_ -> p_94657_.equals(p_342347_.location()));
-            this.playedAt.add(new SubtitleOverlay.SoundPlayedAt(p_94657_, Util.getMillis()));
+        public void refresh(final Vec3 location) {
+            this.playedAt.removeIf(soundPlayedAt -> location.equals(soundPlayedAt.location()));
+            this.playedAt.add(new SubtitleOverlay.SoundPlayedAt(location, Util.getMillis()));
         }
 
-        public boolean isAudibleFrom(Vec3 p_313169_) {
+        public boolean isAudibleFrom(final Vec3 camera) {
             if (Float.isInfinite(this.range)) {
                 return true;
-            } else if (this.playedAt.isEmpty()) {
-                return false;
-            } else {
-                SubtitleOverlay.SoundPlayedAt subtitleoverlay$soundplayedat = this.getClosest(p_313169_);
-                return subtitleoverlay$soundplayedat == null ? false : p_313169_.closerThan(subtitleoverlay$soundplayedat.location, this.range);
             }
+
+            if (this.playedAt.isEmpty()) {
+                return false;
+            }
+
+            SubtitleOverlay.SoundPlayedAt closest = this.getClosest(camera);
+            return closest == null ? false : camera.closerThan(closest.location, this.range);
         }
 
-        public void purgeOldInstances(double p_345350_) {
-            long i = Util.getMillis();
-            this.playedAt.removeIf(p_342900_ -> i - p_342900_.time() > p_345350_);
+        public void purgeOldInstances(final double maxAge) {
+            long currentTime = Util.getMillis();
+            this.playedAt.removeIf(soundPlayedAt -> currentTime - soundPlayedAt.time() > maxAge);
         }
 
         public boolean isStillActive() {

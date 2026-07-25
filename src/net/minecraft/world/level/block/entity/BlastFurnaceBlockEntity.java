@@ -12,8 +12,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public class BlastFurnaceBlockEntity extends AbstractFurnaceBlockEntity {
     private static final Component DEFAULT_NAME = Component.translatable("container.blast_furnace");
 
-    public BlastFurnaceBlockEntity(BlockPos p_155225_, BlockState p_155226_) {
-        super(BlockEntityType.BLAST_FURNACE, p_155225_, p_155226_, RecipeType.BLASTING);
+    public BlastFurnaceBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.BLAST_FURNACE, worldPosition, blockState, RecipeType.BLASTING);
     }
 
     @Override
@@ -22,12 +22,12 @@ public class BlastFurnaceBlockEntity extends AbstractFurnaceBlockEntity {
     }
 
     @Override
-    protected int getBurnDuration(FuelValues p_366938_, ItemStack p_58852_) {
-        return super.getBurnDuration(p_366938_, p_58852_) / 2;
+    protected int getBurnDuration(final FuelValues fuelValues, final ItemStack itemStack) {
+        return super.getBurnDuration(fuelValues, itemStack) / 2;
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int p_58849_, Inventory p_58850_) {
-        return new BlastFurnaceMenu(p_58849_, p_58850_, this, this.dataAccess);
+    protected AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return new BlastFurnaceMenu(containerId, inventory, this, this.dataAccess);
     }
 }

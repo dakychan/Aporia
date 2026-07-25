@@ -19,8 +19,8 @@ public record ClientboundMoveVehiclePacket(Vec3 position, float yRot, float xRot
         ClientboundMoveVehiclePacket::new
     );
 
-    public static ClientboundMoveVehiclePacket fromEntity(Entity p_376041_) {
-        return new ClientboundMoveVehiclePacket(p_376041_.position(), p_376041_.getYRot(), p_376041_.getXRot());
+    public static ClientboundMoveVehiclePacket fromEntity(final Entity entity) {
+        return new ClientboundMoveVehiclePacket(entity.position(), entity.getYRot(), entity.getXRot());
     }
 
     @Override
@@ -28,7 +28,7 @@ public record ClientboundMoveVehiclePacket(Vec3 position, float yRot, float xRot
         return GamePacketTypes.CLIENTBOUND_MOVE_VEHICLE;
     }
 
-    public void handle(ClientGamePacketListener p_132590_) {
-        p_132590_.handleMoveVehicle(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleMoveVehicle(this);
     }
 }

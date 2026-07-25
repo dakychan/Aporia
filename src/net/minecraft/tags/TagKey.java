@@ -15,39 +15,35 @@ public record TagKey<T>(ResourceKey<? extends Registry<T>> registry, Identifier 
     private static final Interner<TagKey<?>> VALUES = Interners.newWeakInterner();
 
     @Deprecated
-    public TagKey(ResourceKey<? extends Registry<T>> registry, Identifier location) {
-        this.registry = registry;
-        this.location = location;
+    public TagKey {
     }
 
-    public static <T> Codec<TagKey<T>> codec(ResourceKey<? extends Registry<T>> p_203878_) {
-        return Identifier.CODEC.xmap(p_449211_ -> create(p_203878_, p_449211_), TagKey::location);
+    public static <T> Codec<TagKey<T>> codec(final ResourceKey<? extends Registry<T>> registryName) {
+        return Identifier.CODEC.xmap(name -> create(registryName, name), TagKey::location);
     }
 
-    public static <T> Codec<TagKey<T>> hashedCodec(ResourceKey<? extends Registry<T>> p_203887_) {
+    public static <T> Codec<TagKey<T>> hashedCodec(final ResourceKey<? extends Registry<T>> registryName) {
         return Codec.STRING
             .comapFlatMap(
-                p_449218_ -> p_449218_.startsWith("#")
-                    ? Identifier.read(p_449218_.substring(1)).map(p_449216_ -> create(p_203887_, p_449216_))
-                    : DataResult.error(() -> "Not a tag id"),
-                p_449212_ -> "#" + p_449212_.location
+                name -> name.startsWith("#") ? Identifier.read(name.substring(1)).map(id -> create(registryName, id)) : DataResult.error(() -> "Not a tag id"),
+                e -> "#" + e.location
             );
     }
 
-    public static <T> StreamCodec<ByteBuf, TagKey<T>> streamCodec(ResourceKey<? extends Registry<T>> p_368582_) {
-        return Identifier.STREAM_CODEC.map(p_449214_ -> create(p_368582_, p_449214_), TagKey::location);
+    public static <T> StreamCodec<ByteBuf, TagKey<T>> streamCodec(final ResourceKey<? extends Registry<T>> registryName) {
+        return Identifier.STREAM_CODEC.map(location -> create(registryName, location), TagKey::location);
     }
 
-    public static <T> TagKey<T> create(ResourceKey<? extends Registry<T>> p_203883_, Identifier p_451670_) {
-        return (TagKey<T>)VALUES.intern(new TagKey<>(p_203883_, p_451670_));
+    public static <T> TagKey<T> create(final ResourceKey<? extends Registry<T>> registry, final Identifier location) {
+        return (TagKey<T>)VALUES.intern(new TagKey<>(registry, location));
     }
 
-    public boolean isFor(ResourceKey<? extends Registry<?>> p_207646_) {
-        return this.registry == p_207646_;
+    public boolean isFor(final ResourceKey<? extends Registry<?>> registry) {
+        return this.registry == registry;
     }
 
-    public <E> Optional<TagKey<E>> cast(ResourceKey<? extends Registry<E>> p_207648_) {
-        return this.isFor(p_207648_) ? Optional.of((TagKey<E>)this) : Optional.empty();
+    public <E> Optional<TagKey<E>> cast(final ResourceKey<? extends Registry<E>> registry) {
+        return this.isFor(registry) ? Optional.of((TagKey<E>)this) : Optional.empty();
     }
 
     @Override

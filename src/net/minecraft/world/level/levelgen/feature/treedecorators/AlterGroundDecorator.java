@@ -3,18 +3,16 @@ package net.minecraft.world.level.levelgen.feature.treedecorators;
 import com.mojang.serialization.MapCodec;
 import java.util.List;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.TreeFeature;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 
 public class AlterGroundDecorator extends TreeDecorator {
-    public static final MapCodec<AlterGroundDecorator> CODEC = BlockStateProvider.CODEC
-        .fieldOf("provider")
-        .xmap(AlterGroundDecorator::new, p_69327_ -> p_69327_.provider);
+    public static final MapCodec<AlterGroundDecorator> CODEC = BlockStateProvider.CODEC.fieldOf("provider").xmap(AlterGroundDecorator::new, d -> d.provider);
     private final BlockStateProvider provider;
 
-    public AlterGroundDecorator(BlockStateProvider p_69306_) {
-        this.provider = p_69306_;
+    public AlterGroundDecorator(final BlockStateProvider provider) {
+        this.provider = provider;
     }
 
     @Override
@@ -23,47 +21,48 @@ public class AlterGroundDecorator extends TreeDecorator {
     }
 
     @Override
-    public void place(TreeDecorator.Context p_225969_) {
-        List<BlockPos> list = TreeFeature.getLowestTrunkOrRootOfTree(p_225969_);
-        if (!list.isEmpty()) {
-            int i = list.get(0).getY();
-            list.stream().filter(p_69310_ -> p_69310_.getY() == i).forEach(p_225978_ -> {
-                this.placeCircle(p_225969_, p_225978_.west().north());
-                this.placeCircle(p_225969_, p_225978_.east(2).north());
-                this.placeCircle(p_225969_, p_225978_.west().south(2));
-                this.placeCircle(p_225969_, p_225978_.east(2).south(2));
+    public void place(final TreeDecorator.Context context) {
+        List<BlockPos> blockPositions = TreeFeature.getLowestTrunkOrRootOfTree(context);
+        if (!blockPositions.isEmpty()) {
+            int minY = blockPositions.getFirst().getY();
+            blockPositions.stream().filter(pos -> pos.getY() == minY).forEach(pos -> {
+                this.placeCircle(context, pos.west().north());
+                this.placeCircle(context, pos.east(2).north());
+                this.placeCircle(context, pos.west().south(2));
+                this.placeCircle(context, pos.east(2).south(2));
 
-                for (int j = 0; j < 5; j++) {
-                    int k = p_225969_.random().nextInt(64);
-                    int l = k % 8;
-                    int i1 = k / 8;
-                    if (l == 0 || l == 7 || i1 == 0 || i1 == 7) {
-                        this.placeCircle(p_225969_, p_225978_.offset(-3 + l, 0, -3 + i1));
+                for (int i = 0; i < 5; i++) {
+                    int placement = context.random().nextInt(64);
+                    int xx = placement % 8;
+                    int zz = placement / 8;
+                    if (xx == 0 || xx == 7 || zz == 0 || zz == 7) {
+                        this.placeCircle(context, pos.offset(-3 + xx, 0, -3 + zz));
                     }
                 }
             });
         }
     }
 
-    private void placeCircle(TreeDecorator.Context p_225971_, BlockPos p_225972_) {
-        for (int i = -2; i <= 2; i++) {
-            for (int j = -2; j <= 2; j++) {
-                if (Math.abs(i) != 2 || Math.abs(j) != 2) {
-                    this.placeBlockAt(p_225971_, p_225972_.offset(i, 0, j));
+    private void placeCircle(final TreeDecorator.Context context, final BlockPos pos) {
+        for (int xx = -2; xx <= 2; xx++) {
+            for (int zz = -2; zz <= 2; zz++) {
+                if (Math.abs(xx) != 2 || Math.abs(zz) != 2) {
+                    this.placeBlockAt(context, pos.offset(xx, 0, zz));
                 }
             }
         }
     }
 
-    private void placeBlockAt(TreeDecorator.Context p_225974_, BlockPos p_225975_) {
-        for (int i = 2; i >= -3; i--) {
-            BlockPos blockpos = p_225975_.above(i);
-            if (Feature.isGrassOrDirt(p_225974_.level(), blockpos)) {
-                p_225974_.setBlock(blockpos, this.provider.getState(p_225974_.random(), p_225975_));
+    private void placeBlockAt(final TreeDecorator.Context context, final BlockPos pos) {
+        for (int dy = 2; dy >= -3; dy--) {
+            BlockPos cursor = pos.above(dy);
+            BlockState replaceWith = this.provider.getOptionalState(context.level(), context.random(), cursor);
+            if (replaceWith != null) {
+                context.setBlock(cursor, replaceWith);
                 break;
             }
 
-            if (!p_225974_.isAir(blockpos) && i < 0) {
+            if (!context.isAir(cursor) && dy < 0) {
                 break;
             }
         }

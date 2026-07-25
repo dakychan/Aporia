@@ -16,8 +16,8 @@ public record ServerboundSetCreativeModeSlotPacket(short slotNum, ItemStack item
         ServerboundSetCreativeModeSlotPacket::new
     );
 
-    public ServerboundSetCreativeModeSlotPacket(int p_134553_, ItemStack p_134554_) {
-        this((short)p_134553_, p_134554_);
+    public ServerboundSetCreativeModeSlotPacket(final int slotNum, final ItemStack itemStack) {
+        this((short)slotNum, itemStack);
     }
 
     @Override
@@ -25,7 +25,7 @@ public record ServerboundSetCreativeModeSlotPacket(short slotNum, ItemStack item
         return GamePacketTypes.SERVERBOUND_SET_CREATIVE_MODE_SLOT;
     }
 
-    public void handle(ServerGamePacketListener p_134560_) {
-        p_134560_.handleSetCreativeModeSlot(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSetCreativeModeSlot(this);
     }
 }

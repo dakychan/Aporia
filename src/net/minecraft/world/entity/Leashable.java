@@ -36,11 +36,13 @@ public interface Leashable {
     double STIFFNESS = 0.11;
     List<Vec3> ENTITY_ATTACHMENT_POINT = ImmutableList.of(new Vec3(0.0, 0.5, 0.5));
     List<Vec3> LEASHER_ATTACHMENT_POINT = ImmutableList.of(new Vec3(0.0, 0.5, 0.0));
-    List<Vec3> SHARED_QUAD_ATTACHMENT_POINTS = ImmutableList.of(new Vec3(-0.5, 0.5, 0.5), new Vec3(-0.5, 0.5, -0.5), new Vec3(0.5, 0.5, -0.5), new Vec3(0.5, 0.5, 0.5));
+    List<Vec3> SHARED_QUAD_ATTACHMENT_POINTS = ImmutableList.of(
+        new Vec3(-0.5, 0.5, 0.5), new Vec3(-0.5, 0.5, -0.5), new Vec3(0.5, 0.5, -0.5), new Vec3(0.5, 0.5, 0.5)
+    );
 
     Leashable.@Nullable LeashData getLeashData();
 
-    void setLeashData(Leashable.@Nullable LeashData p_345228_);
+    void setLeashData(Leashable.@Nullable LeashData leashData);
 
     default boolean isLeashed() {
         return this.getLeashData() != null && this.getLeashData().leashHolder != null;
@@ -50,58 +52,58 @@ public interface Leashable {
         return this.getLeashData() != null;
     }
 
-    default boolean canHaveALeashAttachedTo(Entity p_406168_) {
-        if (this == p_406168_) {
+    default boolean canHaveALeashAttachedTo(final Entity entity) {
+        if (this == entity) {
             return false;
         } else {
-            return this.leashDistanceTo(p_406168_) > this.leashSnapDistance() ? false : this.canBeLeashed();
+            return this.leashDistanceTo(entity) > this.leashSnapDistance() ? false : this.canBeLeashed();
         }
     }
 
-    default double leashDistanceTo(Entity p_407569_) {
-        return p_407569_.getBoundingBox().getCenter().distanceTo(((Entity)this).getBoundingBox().getCenter());
+    default double leashDistanceTo(final Entity entity) {
+        return entity.getBoundingBox().getCenter().distanceTo(((Entity)this).getBoundingBox().getCenter());
     }
 
     default boolean canBeLeashed() {
         return true;
     }
 
-    default void setDelayedLeashHolderId(int p_345000_) {
-        this.setLeashData(new Leashable.LeashData(p_345000_));
+    default void setDelayedLeashHolderId(final int entityId) {
+        this.setLeashData(new Leashable.LeashData(entityId));
         dropLeash((Entity & Leashable)this, false, false);
     }
 
-    default void readLeashData(ValueInput p_407493_) {
-        Leashable.LeashData leashable$leashdata = p_407493_.read("leash", Leashable.LeashData.CODEC).orElse(null);
-        if (this.getLeashData() != null && leashable$leashdata == null) {
+    default void readLeashData(final ValueInput input) {
+        Leashable.LeashData newLeashData = input.read("leash", Leashable.LeashData.CODEC).orElse(null);
+        if (this.getLeashData() != null && newLeashData == null) {
             this.removeLeash();
         }
 
-        this.setLeashData(leashable$leashdata);
+        this.setLeashData(newLeashData);
     }
 
-    default void writeLeashData(ValueOutput p_409985_, Leashable.@Nullable LeashData p_345503_) {
-        p_409985_.storeNullable("leash", Leashable.LeashData.CODEC, p_345503_);
+    default void writeLeashData(final ValueOutput output, final Leashable.@Nullable LeashData leashData) {
+        output.storeNullable("leash", Leashable.LeashData.CODEC, leashData);
     }
 
-    private static <E extends Entity & Leashable> void restoreLeashFromSave(E p_343564_, Leashable.LeashData p_344259_) {
-        if (p_344259_.delayedLeashInfo != null && p_343564_.level() instanceof ServerLevel serverlevel) {
-            Optional<UUID> optional1 = p_344259_.delayedLeashInfo.left();
-            Optional<BlockPos> optional = p_344259_.delayedLeashInfo.right();
-            if (optional1.isPresent()) {
-                Entity entity = serverlevel.getEntity(optional1.get());
-                if (entity != null) {
-                    setLeashedTo(p_343564_, entity, true);
+    private static <E extends Entity & Leashable> void restoreLeashFromSave(final E entity, final Leashable.LeashData leashData) {
+        if (leashData.delayedLeashInfo != null && entity.level() instanceof ServerLevel serverLevel) {
+            Optional<UUID> leashUuid = leashData.delayedLeashInfo.left();
+            Optional<BlockPos> pos = leashData.delayedLeashInfo.right();
+            if (leashUuid.isPresent()) {
+                Entity leasher = serverLevel.getEntity(leashUuid.get());
+                if (leasher != null) {
+                    setLeashedTo(entity, leasher, true);
                     return;
                 }
-            } else if (optional.isPresent()) {
-                setLeashedTo(p_343564_, LeashFenceKnotEntity.getOrCreateKnot(serverlevel, optional.get()), true);
+            } else if (pos.isPresent()) {
+                setLeashedTo(entity, LeashFenceKnotEntity.getOrCreateKnot(serverLevel, pos.get()), true);
                 return;
             }
 
-            if (p_343564_.tickCount > 100) {
-                p_343564_.spawnAtLocation(serverlevel, Items.LEAD);
-                p_343564_.setLeashData(null);
+            if (entity.tickCount > 100) {
+                entity.spawnAtLocation(serverLevel, Items.LEAD);
+                entity.setLeashData(null);
             }
         }
     }
@@ -117,55 +119,56 @@ public interface Leashable {
     default void onLeashRemoved() {
     }
 
-    private static <E extends Entity & Leashable> void dropLeash(E p_343459_, boolean p_342580_, boolean p_344786_) {
-        Leashable.LeashData leashable$leashdata = p_343459_.getLeashData();
-        if (leashable$leashdata != null && leashable$leashdata.leashHolder != null) {
-            p_343459_.setLeashData(null);
-            p_343459_.onLeashRemoved();
-            if (p_343459_.level() instanceof ServerLevel serverlevel) {
-                if (p_344786_) {
-                    p_343459_.spawnAtLocation(serverlevel, Items.LEAD);
+    private static <E extends Entity & Leashable> void dropLeash(final E entity, final boolean sendPacket, final boolean dropLead) {
+        Leashable.LeashData leashData = entity.getLeashData();
+        if (leashData != null && leashData.leashHolder != null) {
+            entity.setLeashData(null);
+            entity.onLeashRemoved();
+            if (entity.level() instanceof ServerLevel level) {
+                if (dropLead) {
+                    entity.spawnAtLocation(level, Items.LEAD);
                 }
 
-                if (p_342580_) {
-                    serverlevel.getChunkSource().sendToTrackingPlayers(p_343459_, new ClientboundSetEntityLinkPacket(p_343459_, null));
+                if (sendPacket) {
+                    level.getChunkSource().sendToTrackingPlayers(entity, new ClientboundSetEntityLinkPacket(entity, null));
                 }
 
-                leashable$leashdata.leashHolder.notifyLeasheeRemoved(p_343459_);
+                leashData.leashHolder.notifyLeasheeRemoved(entity);
             }
         }
     }
 
-    static <E extends Entity & Leashable> void tickLeash(ServerLevel p_366578_, E p_343570_) {
-        Leashable.LeashData leashable$leashdata = p_343570_.getLeashData();
-        if (leashable$leashdata != null && leashable$leashdata.delayedLeashInfo != null) {
-            restoreLeashFromSave(p_343570_, leashable$leashdata);
+    static <E extends Entity & Leashable> void tickLeash(final ServerLevel level, final E entity) {
+        Leashable.LeashData leashData = entity.getLeashData();
+        if (leashData != null && leashData.delayedLeashInfo != null) {
+            restoreLeashFromSave(entity, leashData);
         }
 
-        if (leashable$leashdata != null && leashable$leashdata.leashHolder != null) {
-            if (!p_343570_.canInteractWithLevel() || !leashable$leashdata.leashHolder.canInteractWithLevel()) {
-                if (p_366578_.getGameRules().get(GameRules.ENTITY_DROPS)) {
-                    p_343570_.dropLeash();
+        if (leashData != null && leashData.leashHolder != null) {
+            if (!entity.canInteractWithLevel() || !leashData.leashHolder.canInteractWithLevel()) {
+                if (level.getGameRules().get(GameRules.ENTITY_DROPS)) {
+                    entity.dropLeash();
                 } else {
-                    p_343570_.removeLeash();
+                    entity.removeLeash();
                 }
             }
 
-            Entity entity = p_343570_.getLeashHolder();
-            if (entity != null && entity.level() == p_343570_.level()) {
-                double d0 = p_343570_.leashDistanceTo(entity);
-                p_343570_.whenLeashedTo(entity);
-                if (d0 > p_343570_.leashSnapDistance()) {
-                    p_366578_.playSound(null, entity.getX(), entity.getY(), entity.getZ(), SoundEvents.LEAD_BREAK, SoundSource.NEUTRAL, 1.0F, 1.0F);
-                    p_343570_.leashTooFarBehaviour();
-                } else if (d0 > p_343570_.leashElasticDistance() - entity.getBbWidth() - p_343570_.getBbWidth() && p_343570_.checkElasticInteractions(entity, leashable$leashdata)) {
-                    p_343570_.onElasticLeashPull();
+            Entity leashHolder = entity.getLeashHolder();
+            if (leashHolder != null && leashHolder.level() == entity.level()) {
+                double distanceTo = entity.leashDistanceTo(leashHolder);
+                entity.whenLeashedTo(leashHolder);
+                if (distanceTo > entity.leashSnapDistance()) {
+                    level.playSound(null, leashHolder.getX(), leashHolder.getY(), leashHolder.getZ(), SoundEvents.LEAD_BREAK, SoundSource.NEUTRAL, 1.0F, 1.0F);
+                    entity.leashTooFarBehaviour();
+                } else if (distanceTo > entity.leashElasticDistance() - leashHolder.getBbWidth() - entity.getBbWidth()
+                    && entity.checkElasticInteractions(leashHolder, leashData)) {
+                    entity.onElasticLeashPull();
                 } else {
-                    p_343570_.closeRangeLeashBehaviour(entity);
+                    entity.closeRangeLeashBehaviour(leashHolder);
                 }
 
-                p_343570_.setYRot((float)(p_343570_.getYRot() - leashable$leashdata.angularMomentum));
-                leashable$leashdata.angularMomentum = leashable$leashdata.angularMomentum * angularFriction(p_343570_);
+                entity.setYRot((float)(entity.getYRot() - leashData.angularMomentum));
+                leashData.angularMomentum = leashData.angularMomentum * angularFriction(entity);
             }
         }
     }
@@ -183,77 +186,86 @@ public interface Leashable {
         return 6.0;
     }
 
-    static <E extends Entity & Leashable> float angularFriction(E p_408063_) {
-        if (p_408063_.onGround()) {
-            return p_408063_.level().getBlockState(p_408063_.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction() * 0.91F;
+    static <E extends Entity & Leashable> float angularFriction(final E entity) {
+        if (entity.onGround()) {
+            return entity.level().getBlockState(entity.getBlockPosBelowThatAffectsMyMovement()).getBlock().getFriction() * 0.91F;
         } else {
-            return p_408063_.isInLiquid() ? 0.8F : 0.91F;
+            return entity.isInLiquid() ? 0.8F : 0.91F;
         }
     }
 
-    default void whenLeashedTo(Entity p_407530_) {
-        p_407530_.notifyLeashHolder(this);
+    default void whenLeashedTo(final Entity leashHolder) {
+        leashHolder.notifyLeashHolder(this);
     }
 
     default void leashTooFarBehaviour() {
         this.dropLeash();
     }
 
-    default void closeRangeLeashBehaviour(Entity p_344596_) {
+    default void closeRangeLeashBehaviour(final Entity leashHolder) {
     }
 
-    default boolean checkElasticInteractions(Entity p_406343_, Leashable.LeashData p_407235_) {
-        boolean flag = p_406343_.supportQuadLeashAsHolder() && this.supportQuadLeash();
-        List<Leashable.Wrench> list = computeElasticInteraction((Entity & Leashable)this, p_406343_, flag ? SHARED_QUAD_ATTACHMENT_POINTS : ENTITY_ATTACHMENT_POINT, flag ? SHARED_QUAD_ATTACHMENT_POINTS : LEASHER_ATTACHMENT_POINT);
-        if (list.isEmpty()) {
+    default boolean checkElasticInteractions(final Entity leashHolder, final Leashable.LeashData leashData) {
+        boolean quadConnection = leashHolder.supportQuadLeashAsHolder() && this.supportQuadLeash();
+        List<Leashable.Wrench> wrenches = computeElasticInteraction(
+            (Entity & Leashable)this,
+            leashHolder,
+            quadConnection ? SHARED_QUAD_ATTACHMENT_POINTS : ENTITY_ATTACHMENT_POINT,
+            quadConnection ? SHARED_QUAD_ATTACHMENT_POINTS : LEASHER_ATTACHMENT_POINT
+        );
+        if (wrenches.isEmpty()) {
             return false;
-        } else {
-            Leashable.Wrench leashable$wrench = Leashable.Wrench.accumulate(list).scale(flag ? 0.25 : 1.0);
-            p_407235_.angularMomentum = p_407235_.angularMomentum + 10.0 * leashable$wrench.torque();
-            Vec3 vec3 = getHolderMovement(p_406343_).subtract(((Entity)this).getKnownMovement());
-            ((Entity)this).addDeltaMovement(leashable$wrench.force().multiply(AXIS_SPECIFIC_ELASTICITY).add(vec3.scale(0.11)));
-            return true;
-        }
-    }
-
-    private static Vec3 getHolderMovement(Entity p_407164_) {
-        return p_407164_ instanceof Mob mob && mob.isNoAi() ? Vec3.ZERO : p_407164_.getKnownMovement();
-    }
-
-    private static <E extends Entity & Leashable> List<Leashable.Wrench> computeElasticInteraction(E p_408183_, Entity p_406565_, List<Vec3> p_410674_, List<Vec3> p_409022_) {
-        double d0 = p_408183_.leashElasticDistance();
-        Vec3 vec3 = getHolderMovement(p_408183_);
-        float f = p_408183_.getYRot() * (float) (Math.PI / 180.0);
-        Vec3 vec31 = new Vec3(p_408183_.getBbWidth(), p_408183_.getBbHeight(), p_408183_.getBbWidth());
-        float f1 = p_406565_.getYRot() * (float) (Math.PI / 180.0);
-        Vec3 vec32 = new Vec3(p_406565_.getBbWidth(), p_406565_.getBbHeight(), p_406565_.getBbWidth());
-        List<Leashable.Wrench> list = new ArrayList<>();
-
-        for (int i = 0; i < p_410674_.size(); i++) {
-            Vec3 vec33 = p_410674_.get(i).multiply(vec31).yRot(-f);
-            Vec3 vec34 = p_408183_.position().add(vec33);
-            Vec3 vec35 = p_409022_.get(i).multiply(vec32).yRot(-f1);
-            Vec3 vec36 = p_406565_.position().add(vec35);
-            computeDampenedSpringInteraction(vec36, vec34, d0, vec3, vec33).ifPresent(list::add);
         }
 
-        return list;
+        Leashable.Wrench result = Leashable.Wrench.accumulate(wrenches).scale(quadConnection ? 0.25 : 1.0);
+        leashData.angularMomentum = leashData.angularMomentum + 10.0 * result.torque();
+        Vec3 relativeVelocityToLeasher = getHolderMovement(leashHolder).subtract(((Entity)this).getKnownMovement());
+        ((Entity)this).addDeltaMovement(result.force().multiply(AXIS_SPECIFIC_ELASTICITY).add(relativeVelocityToLeasher.scale(0.11)));
+        return true;
     }
 
-    private static Optional<Leashable.Wrench> computeDampenedSpringInteraction(Vec3 p_409865_, Vec3 p_405872_, double p_409391_, Vec3 p_410398_, Vec3 p_409272_) {
-        double d0 = p_405872_.distanceTo(p_409865_);
-        if (d0 < p_409391_) {
+    private static Vec3 getHolderMovement(final Entity leashHolder) {
+        return leashHolder instanceof Mob mob && mob.isNoAi() ? Vec3.ZERO : leashHolder.getKnownMovement();
+    }
+
+    private static <E extends Entity & Leashable> List<Leashable.Wrench> computeElasticInteraction(
+        final E entity, final Entity leashHolder, final List<Vec3> entityAttachmentPoints, final List<Vec3> leasherAttachmentPoints
+    ) {
+        double slackDistance = entity.leashElasticDistance();
+        Vec3 currentMovement = getHolderMovement(entity);
+        float entityYRot = entity.getYRot() * (float) (Math.PI / 180.0);
+        Vec3 entityDimensions = new Vec3(entity.getBbWidth(), entity.getBbHeight(), entity.getBbWidth());
+        float leashHolderYRot = leashHolder.getYRot() * (float) (Math.PI / 180.0);
+        Vec3 leasherDimensions = new Vec3(leashHolder.getBbWidth(), leashHolder.getBbHeight(), leashHolder.getBbWidth());
+        List<Leashable.Wrench> wrenches = new ArrayList<>();
+
+        for (int i = 0; i < entityAttachmentPoints.size(); i++) {
+            Vec3 entityAttachVector = entityAttachmentPoints.get(i).multiply(entityDimensions).yRot(-entityYRot);
+            Vec3 entityAttachPos = entity.position().add(entityAttachVector);
+            Vec3 leasherAttachVector = leasherAttachmentPoints.get(i).multiply(leasherDimensions).yRot(-leashHolderYRot);
+            Vec3 leasherAttachPos = leashHolder.position().add(leasherAttachVector);
+            computeDampenedSpringInteraction(leasherAttachPos, entityAttachPos, slackDistance, currentMovement, entityAttachVector).ifPresent(wrenches::add);
+        }
+
+        return wrenches;
+    }
+
+    private static Optional<Leashable.Wrench> computeDampenedSpringInteraction(
+        final Vec3 pivotPoint, final Vec3 objectPosition, final double springSlack, final Vec3 objectMotion, final Vec3 leverArm
+    ) {
+        double distance = objectPosition.distanceTo(pivotPoint);
+        if (distance < springSlack) {
             return Optional.empty();
-        } else {
-            Vec3 vec3 = p_409865_.subtract(p_405872_).normalize().scale(d0 - p_409391_);
-            double d1 = Leashable.Wrench.torqueFromForce(p_409272_, vec3);
-            boolean flag = p_410398_.dot(vec3) >= 0.0;
-            if (flag) {
-                vec3 = vec3.scale(0.3F);
-            }
-
-            return Optional.of(new Leashable.Wrench(vec3, d1));
         }
+
+        Vec3 displacement = pivotPoint.subtract(objectPosition).normalize().scale(distance - springSlack);
+        double torque = Leashable.Wrench.torqueFromForce(leverArm, displacement);
+        boolean sameDirectionToMovement = objectMotion.dot(displacement) >= 0.0;
+        if (sameDirectionToMovement) {
+            displacement = displacement.scale(0.3F);
+        }
+
+        return Optional.of(new Leashable.Wrench(displacement, torque));
     }
 
     default boolean supportQuadLeash() {
@@ -264,16 +276,21 @@ public interface Leashable {
         return createQuadLeashOffsets((Entity)this, 0.0, 0.5, 0.5, 0.5);
     }
 
-    static Vec3[] createQuadLeashOffsets(Entity p_408706_, double p_406447_, double p_406490_, double p_407443_, double p_408814_) {
-        float f = p_408706_.getBbWidth();
-        double d0 = p_406447_ * f;
-        double d1 = p_406490_ * f;
-        double d2 = p_407443_ * f;
-        double d3 = p_408814_ * p_408706_.getBbHeight();
-        return new Vec3[]{new Vec3(-d2, d3, d1 + d0), new Vec3(-d2, d3, -d1 + d0), new Vec3(d2, d3, -d1 + d0), new Vec3(d2, d3, d1 + d0)};
+    static Vec3[] createQuadLeashOffsets(final Entity entity, final double frontOffset, final double frontBack, final double leftRight, final double height) {
+        float width = entity.getBbWidth();
+        double frontOffsetScaled = frontOffset * width;
+        double frontBackScaled = frontBack * width;
+        double leftRightScaled = leftRight * width;
+        double heightScaled = height * entity.getBbHeight();
+        return new Vec3[]{
+            new Vec3(-leftRightScaled, heightScaled, frontBackScaled + frontOffsetScaled),
+            new Vec3(-leftRightScaled, heightScaled, -frontBackScaled + frontOffsetScaled),
+            new Vec3(leftRightScaled, heightScaled, -frontBackScaled + frontOffsetScaled),
+            new Vec3(leftRightScaled, heightScaled, frontBackScaled + frontOffsetScaled)
+        };
     }
 
-    default Vec3 getLeashOffset(float p_409188_) {
+    default Vec3 getLeashOffset(final float partialTicks) {
         return this.getLeashOffset();
     }
 
@@ -282,31 +299,31 @@ public interface Leashable {
         return new Vec3(0.0, entity.getEyeHeight(), entity.getBbWidth() * 0.4F);
     }
 
-    default void setLeashedTo(Entity p_342408_, boolean p_342255_) {
-        if (this != p_342408_) {
-            setLeashedTo((Entity & Leashable)this, p_342408_, p_342255_);
+    default void setLeashedTo(final Entity holder, final boolean synch) {
+        if (this != holder) {
+            setLeashedTo((Entity & Leashable)this, holder, synch);
         }
     }
 
-    private static <E extends Entity & Leashable> void setLeashedTo(E p_342775_, Entity p_342643_, boolean p_343557_) {
-        Leashable.LeashData leashable$leashdata = p_342775_.getLeashData();
-        if (leashable$leashdata == null) {
-            leashable$leashdata = new Leashable.LeashData(p_342643_);
-            p_342775_.setLeashData(leashable$leashdata);
+    private static <E extends Entity & Leashable> void setLeashedTo(final E entity, final Entity holder, final boolean synch) {
+        Leashable.LeashData leashData = entity.getLeashData();
+        if (leashData == null) {
+            leashData = new Leashable.LeashData(holder);
+            entity.setLeashData(leashData);
         } else {
-            Entity entity = leashable$leashdata.leashHolder;
-            leashable$leashdata.setLeashHolder(p_342643_);
-            if (entity != null && entity != p_342643_) {
-                entity.notifyLeasheeRemoved(p_342775_);
+            Entity oldHolder = leashData.leashHolder;
+            leashData.setLeashHolder(holder);
+            if (oldHolder != null && oldHolder != holder) {
+                oldHolder.notifyLeasheeRemoved(entity);
             }
         }
 
-        if (p_343557_ && p_342775_.level() instanceof ServerLevel serverlevel) {
-            serverlevel.getChunkSource().sendToTrackingPlayers(p_342775_, new ClientboundSetEntityLinkPacket(p_342775_, p_342643_));
+        if (synch && entity.level() instanceof ServerLevel level) {
+            level.getChunkSource().sendToTrackingPlayers(entity, new ClientboundSetEntityLinkPacket(entity, holder));
         }
 
-        if (p_342775_.isPassenger()) {
-            p_342775_.stopRiding();
+        if (entity.isPassenger()) {
+            entity.stopRiding();
         }
     }
 
@@ -314,107 +331,105 @@ public interface Leashable {
         return getLeashHolder((Entity & Leashable)this);
     }
 
-    private static <E extends Entity & Leashable> @Nullable Entity getLeashHolder(E p_342282_) {
-        Leashable.LeashData leashable$leashdata = p_342282_.getLeashData();
-        if (leashable$leashdata == null) {
+    private static <E extends Entity & Leashable> @Nullable Entity getLeashHolder(final E entity) {
+        Leashable.LeashData leashData = entity.getLeashData();
+        if (leashData == null) {
             return null;
-        } else {
-            if (leashable$leashdata.delayedLeashHolderId != 0 && p_342282_.level().isClientSide()) {
-                Entity entity = p_342282_.level().getEntity(leashable$leashdata.delayedLeashHolderId);
-                if (entity instanceof Entity) {
-                    leashable$leashdata.setLeashHolder(entity);
-                }
-            }
-
-            return leashable$leashdata.leashHolder;
         }
+
+        Entity ntt = entity.level().getEntity(leashData.delayedLeashHolderId);
+        if (leashData.delayedLeashHolderId != 0 && entity.level().isClientSide() && ntt != null) {
+            leashData.setLeashHolder(ntt);
+        }
+
+        return leashData.leashHolder;
     }
 
-    static List<Leashable> leashableLeashedTo(Entity p_409040_) {
-        return leashableInArea(p_409040_, p_409624_ -> p_409624_.getLeashHolder() == p_409040_);
+    static List<Leashable> leashableLeashedTo(final Entity entity) {
+        return leashableInArea(entity, l -> l.getLeashHolder() == entity);
     }
 
-    static List<Leashable> leashableInArea(Entity p_410041_, Predicate<Leashable> p_410564_) {
-        return leashableInArea(p_410041_.level(), p_410041_.getBoundingBox().getCenter(), p_410564_);
+    static List<Leashable> leashableInArea(final Entity entity, final Predicate<Leashable> test) {
+        return leashableInArea(entity.level(), entity.getBoundingBox().getCenter(), test);
     }
 
-    static List<Leashable> leashableInArea(Level p_409830_, Vec3 p_407309_, Predicate<Leashable> p_409916_) {
-        double d0 = 32.0;
-        AABB aabb = AABB.ofSize(p_407309_, 32.0, 32.0, 32.0);
-        return p_409830_.getEntitiesOfClass(Entity.class, aabb, p_410526_ -> p_410526_ instanceof Leashable leashable && p_409916_.test(leashable))
+    static List<Leashable> leashableInArea(final Level level, final Vec3 pos, final Predicate<Leashable> test) {
+        double size = 32.0;
+        AABB scanArea = AABB.ofSize(pos, 32.0, 32.0, 32.0);
+        return level.getEntitiesOfClass(Entity.class, scanArea, e -> e instanceof Leashable leashable && test.test(leashable))
             .stream()
             .map(Leashable.class::cast)
             .toList();
     }
 
-    public static final class LeashData {
+    final class LeashData {
         public static final Codec<Leashable.LeashData> CODEC = Codec.xor(UUIDUtil.CODEC.fieldOf("UUID").codec(), BlockPos.CODEC)
             .xmap(
                 Leashable.LeashData::new,
-                p_394128_ -> {
-                    if (p_394128_.leashHolder instanceof LeashFenceKnotEntity leashfenceknotentity) {
-                        return Either.right(leashfenceknotentity.getPos());
+                data -> {
+                    if (data.leashHolder instanceof LeashFenceKnotEntity leashKnot) {
+                        return Either.right(leashKnot.getPos());
                     } else {
-                        return p_394128_.leashHolder != null
-                            ? Either.left(p_394128_.leashHolder.getUUID())
-                            : Objects.requireNonNull(p_394128_.delayedLeashInfo, "Invalid LeashData had no attachment");
+                        return data.leashHolder != null
+                            ? Either.left(data.leashHolder.getUUID())
+                            : Objects.requireNonNull(data.delayedLeashInfo, "Invalid LeashData had no attachment");
                     }
                 }
             );
-        int delayedLeashHolderId;
+        private int delayedLeashHolderId;
         public @Nullable Entity leashHolder;
         public @Nullable Either<UUID, BlockPos> delayedLeashInfo;
         public double angularMomentum;
 
-        private LeashData(Either<UUID, BlockPos> p_345305_) {
-            this.delayedLeashInfo = p_345305_;
+        private LeashData(final Either<UUID, BlockPos> delayedLeashInfo) {
+            this.delayedLeashInfo = delayedLeashInfo;
         }
 
-        LeashData(Entity p_345447_) {
-            this.leashHolder = p_345447_;
+        private LeashData(final Entity entity) {
+            this.leashHolder = entity;
         }
 
-        LeashData(int p_345400_) {
-            this.delayedLeashHolderId = p_345400_;
+        private LeashData(final int entityId) {
+            this.delayedLeashHolderId = entityId;
         }
 
-        public void setLeashHolder(Entity p_342311_) {
-            this.leashHolder = p_342311_;
+        public void setLeashHolder(final Entity leashHolder) {
+            this.leashHolder = leashHolder;
             this.delayedLeashInfo = null;
             this.delayedLeashHolderId = 0;
         }
     }
 
-    public record Wrench(Vec3 force, double torque) {
-        static Leashable.Wrench ZERO = new Leashable.Wrench(Vec3.ZERO, 0.0);
+    record Wrench(Vec3 force, double torque) {
+        public static final Leashable.Wrench ZERO = new Leashable.Wrench(Vec3.ZERO, 0.0);
 
-        static double torqueFromForce(Vec3 p_410224_, Vec3 p_409711_) {
-            return p_410224_.z * p_409711_.x - p_410224_.x * p_409711_.z;
+        public static double torqueFromForce(final Vec3 leverArm, final Vec3 force) {
+            return leverArm.z * force.x - leverArm.x * force.z;
         }
 
-        static Leashable.Wrench accumulate(List<Leashable.Wrench> p_405866_) {
-            if (p_405866_.isEmpty()) {
+        public static Leashable.Wrench accumulate(final List<Leashable.Wrench> wrenches) {
+            if (wrenches.isEmpty()) {
                 return ZERO;
-            } else {
-                double d0 = 0.0;
-                double d1 = 0.0;
-                double d2 = 0.0;
-                double d3 = 0.0;
-
-                for (Leashable.Wrench leashable$wrench : p_405866_) {
-                    Vec3 vec3 = leashable$wrench.force;
-                    d0 += vec3.x;
-                    d1 += vec3.y;
-                    d2 += vec3.z;
-                    d3 += leashable$wrench.torque;
-                }
-
-                return new Leashable.Wrench(new Vec3(d0, d1, d2), d3);
             }
+
+            double x = 0.0;
+            double y = 0.0;
+            double z = 0.0;
+            double t = 0.0;
+
+            for (Leashable.Wrench wrench : wrenches) {
+                Vec3 force = wrench.force;
+                x += force.x;
+                y += force.y;
+                z += force.z;
+                t += wrench.torque;
+            }
+
+            return new Leashable.Wrench(new Vec3(x, y, z), t);
         }
 
-        public Leashable.Wrench scale(double p_409872_) {
-            return new Leashable.Wrench(this.force.scale(p_409872_), this.torque * p_409872_);
+        public Leashable.Wrench scale(final double scale) {
+            return new Leashable.Wrench(this.force.scale(scale), this.torque * scale);
         }
     }
 }

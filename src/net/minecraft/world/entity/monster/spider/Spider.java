@@ -17,6 +17,7 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -48,14 +49,14 @@ public class Spider extends Monster {
     private static final EntityDataAccessor<Byte> DATA_FLAGS_ID = SynchedEntityData.defineId(Spider.class, EntityDataSerializers.BYTE);
     private static final float SPIDER_SPECIAL_EFFECT_CHANCE = 0.1F;
 
-    public Spider(EntityType<? extends Spider> p_454304_, Level p_451888_) {
-        super(p_454304_, p_451888_);
+    public Spider(final EntityType<? extends Spider> type, final Level level) {
+        super(type, level);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new AvoidEntityGoal<>(this, Armadillo.class, 6.0F, 1.0, 1.2, p_459016_ -> !((Armadillo)p_459016_).isScared()));
+        this.goalSelector.addGoal(2, new AvoidEntityGoal<>(this, Armadillo.class, 6.0F, 1.0, 1.2, entity -> !((Armadillo)entity).isScared()));
         this.goalSelector.addGoal(3, new LeapAtTargetGoal(this, 0.4F));
         this.goalSelector.addGoal(4, new Spider.SpiderAttackGoal(this));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 0.8));
@@ -67,14 +68,14 @@ public class Spider extends Monster {
     }
 
     @Override
-    protected PathNavigation createNavigation(Level p_460282_) {
-        return new WallClimberNavigation(this, p_460282_);
+    protected PathNavigation createNavigation(final Level level) {
+        return new WallClimberNavigation(this, level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_458943_) {
-        super.defineSynchedData(p_458943_);
-        p_458943_.define(DATA_FLAGS_ID, (byte)0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_FLAGS_ID, (byte)0);
     }
 
     @Override
@@ -95,7 +96,7 @@ public class Spider extends Monster {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_456758_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.SPIDER_HURT;
     }
 
@@ -105,7 +106,7 @@ public class Spider extends Monster {
     }
 
     @Override
-    protected void playStepSound(BlockPos p_455758_, BlockState p_452783_) {
+    protected void playStepSound(final BlockPos pos, final BlockState blockState) {
         this.playSound(SoundEvents.SPIDER_STEP, 0.15F, 1.0F);
     }
 
@@ -115,72 +116,72 @@ public class Spider extends Monster {
     }
 
     @Override
-    public void makeStuckInBlock(BlockState p_458290_, Vec3 p_456247_) {
-        if (!p_458290_.is(Blocks.COBWEB)) {
-            super.makeStuckInBlock(p_458290_, p_456247_);
+    public void makeStuckInBlock(final BlockState state, final Vec3 speedMultiplier) {
+        if (!state.is(Blocks.COBWEB)) {
+            super.makeStuckInBlock(state, speedMultiplier);
         }
     }
 
     @Override
-    public boolean canBeAffected(MobEffectInstance p_454269_) {
-        return p_454269_.is(MobEffects.POISON) ? false : super.canBeAffected(p_454269_);
+    public boolean canBeAffected(final MobEffectInstance newEffect) {
+        return newEffect.is(MobEffects.POISON) ? false : super.canBeAffected(newEffect);
     }
 
     public boolean isClimbing() {
         return (this.entityData.get(DATA_FLAGS_ID) & 1) != 0;
     }
 
-    public void setClimbing(boolean p_460510_) {
-        byte b0 = this.entityData.get(DATA_FLAGS_ID);
-        if (p_460510_) {
-            b0 = (byte)(b0 | 1);
+    public void setClimbing(final boolean value) {
+        byte flags = this.entityData.get(DATA_FLAGS_ID);
+        if (value) {
+            flags = (byte)(flags | 1);
         } else {
-            b0 = (byte)(b0 & -2);
+            flags = (byte)(flags & -2);
         }
 
-        this.entityData.set(DATA_FLAGS_ID, b0);
+        this.entityData.set(DATA_FLAGS_ID, flags);
     }
 
     @Override
     public @Nullable SpawnGroupData finalizeSpawn(
-        ServerLevelAccessor p_457601_, DifficultyInstance p_458726_, EntitySpawnReason p_454152_, @Nullable SpawnGroupData p_452876_
+        final ServerLevelAccessor level, final DifficultyInstance difficulty, final EntitySpawnReason spawnReason, @Nullable SpawnGroupData groupData
     ) {
-        p_452876_ = super.finalizeSpawn(p_457601_, p_458726_, p_454152_, p_452876_);
-        RandomSource randomsource = p_457601_.getRandom();
-        if (randomsource.nextInt(100) == 0) {
-            Skeleton skeleton = EntityType.SKELETON.create(this.level(), EntitySpawnReason.JOCKEY);
+        groupData = super.finalizeSpawn(level, difficulty, spawnReason, groupData);
+        RandomSource random = level.getRandom();
+        if (random.nextInt(100) == 0) {
+            Skeleton skeleton = EntityTypes.SKELETON.create(this.level(), EntitySpawnReason.JOCKEY);
             if (skeleton != null) {
                 skeleton.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
-                skeleton.finalizeSpawn(p_457601_, p_458726_, p_454152_, null);
+                skeleton.finalizeSpawn(level, difficulty, spawnReason, null);
                 skeleton.startRiding(this, false, false);
             }
         }
 
-        if (p_452876_ == null) {
-            p_452876_ = new Spider.SpiderEffectsGroupData();
-            if (p_457601_.getDifficulty() == Difficulty.HARD && randomsource.nextFloat() < 0.1F * p_458726_.getSpecialMultiplier()) {
-                ((Spider.SpiderEffectsGroupData)p_452876_).setRandomEffect(randomsource);
+        if (groupData == null) {
+            groupData = new Spider.SpiderEffectsGroupData();
+            if (level.getDifficulty() == Difficulty.HARD && random.nextFloat() < 0.1F * difficulty.getSpecialMultiplier()) {
+                ((Spider.SpiderEffectsGroupData)groupData).setRandomEffect(random);
             }
         }
 
-        if (p_452876_ instanceof Spider.SpiderEffectsGroupData spider$spidereffectsgroupdata) {
-            Holder<MobEffect> holder = spider$spidereffectsgroupdata.effect;
-            if (holder != null) {
-                this.addEffect(new MobEffectInstance(holder, -1));
+        if (groupData instanceof Spider.SpiderEffectsGroupData spiderEffectsGroupData) {
+            Holder<MobEffect> effect = spiderEffectsGroupData.effect;
+            if (effect != null) {
+                this.addEffect(new MobEffectInstance(effect, -1));
             }
         }
 
-        return p_452876_;
+        return groupData;
     }
 
     @Override
-    public Vec3 getVehicleAttachmentPoint(Entity p_459990_) {
-        return p_459990_.getBbWidth() <= this.getBbWidth() ? new Vec3(0.0, 0.3125 * this.getScale(), 0.0) : super.getVehicleAttachmentPoint(p_459990_);
+    public Vec3 getVehicleAttachmentPoint(final Entity vehicle) {
+        return vehicle.getBbWidth() <= this.getBbWidth() ? new Vec3(0.0, 0.3125 * this.getScale(), 0.0) : super.getVehicleAttachmentPoint(vehicle);
     }
 
-    static class SpiderAttackGoal extends MeleeAttackGoal {
-        public SpiderAttackGoal(Spider p_454540_) {
-            super(p_454540_, 1.0, true);
+    private static class SpiderAttackGoal extends MeleeAttackGoal {
+        public SpiderAttackGoal(final Spider mob) {
+            super(mob, 1.0, true);
         }
 
         @Override
@@ -190,8 +191,8 @@ public class Spider extends Monster {
 
         @Override
         public boolean canContinueToUse() {
-            float f = this.mob.getLightLevelDependentMagicValue();
-            if (f >= 0.5F && this.mob.getRandom().nextInt(100) == 0) {
+            float br = this.mob.getLightLevelDependentMagicValue();
+            if (br >= 0.5F && this.mob.getRandom().nextInt(100) == 0) {
                 this.mob.setTarget(null);
                 return false;
             } else {
@@ -203,29 +204,29 @@ public class Spider extends Monster {
     public static class SpiderEffectsGroupData implements SpawnGroupData {
         public @Nullable Holder<MobEffect> effect;
 
-        public void setRandomEffect(RandomSource p_457259_) {
-            int i = p_457259_.nextInt(5);
-            if (i <= 1) {
+        public void setRandomEffect(final RandomSource random) {
+            int selection = random.nextInt(5);
+            if (selection <= 1) {
                 this.effect = MobEffects.SPEED;
-            } else if (i <= 2) {
+            } else if (selection <= 2) {
                 this.effect = MobEffects.STRENGTH;
-            } else if (i <= 3) {
+            } else if (selection <= 3) {
                 this.effect = MobEffects.REGENERATION;
-            } else if (i <= 4) {
+            } else if (selection <= 4) {
                 this.effect = MobEffects.INVISIBILITY;
             }
         }
     }
 
-    static class SpiderTargetGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
-        public SpiderTargetGoal(Spider p_452591_, Class<T> p_461018_) {
-            super(p_452591_, p_461018_, true);
+    private static class SpiderTargetGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
+        public SpiderTargetGoal(final Spider mob, final Class<T> targetType) {
+            super(mob, targetType, true);
         }
 
         @Override
         public boolean canUse() {
-            float f = this.mob.getLightLevelDependentMagicValue();
-            return f >= 0.5F ? false : super.canUse();
+            float br = this.mob.getLightLevelDependentMagicValue();
+            return br >= 0.5F ? false : super.canUse();
         }
     }
 }

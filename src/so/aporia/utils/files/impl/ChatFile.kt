@@ -1,8 +1,8 @@
 package so.aporia.utils.files.impl
 import com.chaos.annotation.Obfuscate
 import so.aporia.utils.files.FilesManager
-import so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinCfg
-import so.aporia.utils.user.render.ui.chat.AporiaChatScreen.WinMgr
+import so.aporia.utils.user.render.ui.chat.ChatScreenBackendApi.WinCfg
+import so.aporia.utils.user.render.ui.chat.ChatScreenBackendApi.WinMgr
 import java.util.ArrayList
 import com.chaos.annotation.ChaosNative
 @Obfuscate
@@ -41,8 +41,8 @@ object ChatFile {
     @Throws(Exception::class)
     fun save() {
         val data = ChatData()
-        data.active = WinMgr.I.active
-        for (c in WinMgr.I.wins) {
+        data.active = WinMgr.active
+        for (c in WinMgr.wins) {
             val d = WinData()
             d.name = c.name
             d.x = c.x
@@ -73,7 +73,7 @@ object ChatFile {
         val json = FilesManager.readApr(FILE)
         val data = try { GSON.fromJson(json, ChatData::class.java) } catch (_: Exception) { null }
         if (data == null || data.wins.isEmpty()) return
-        WinMgr.I.wins.clear()
+        WinMgr.wins.clear()
         for (d in data.wins) {
             val c = WinCfg(d.name, d.x, d.bottomY, d.w, d.h, d.draggable)
             c.searchOnOpen = d.searchOnOpen
@@ -86,8 +86,8 @@ object ChatFile {
             c.prefixEnabled = d.prefixEnabled
             c.selfColor = d.selfColor
             c.scrollOffset = d.scrollOffset
-            WinMgr.I.wins.add(c)
+            WinMgr.wins.add(c)
         }
-        WinMgr.I.active = data.active.coerceIn(0, WinMgr.I.wins.size - 1)
+        WinMgr.active = data.active.coerceIn(0, WinMgr.wins.size - 1)
     }
 }

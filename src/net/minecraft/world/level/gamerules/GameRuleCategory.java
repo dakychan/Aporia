@@ -21,18 +21,18 @@ public record GameRuleCategory(Identifier id) {
         return this.id;
     }
 
-    private static GameRuleCategory register(String p_452327_) {
-        return register(Identifier.withDefaultNamespace(p_452327_));
+    private static GameRuleCategory register(final String name) {
+        return register(Identifier.withDefaultNamespace(name));
     }
 
-    public static GameRuleCategory register(Identifier p_455769_) {
-        GameRuleCategory gamerulecategory = new GameRuleCategory(p_455769_);
-        if (SORT_ORDER.contains(gamerulecategory)) {
-            throw new IllegalArgumentException(String.format(Locale.ROOT, "Category '%s' is already registered.", p_455769_));
-        } else {
-            SORT_ORDER.add(gamerulecategory);
-            return gamerulecategory;
+    public static GameRuleCategory register(final Identifier id) {
+        GameRuleCategory category = new GameRuleCategory(id);
+        if (SORT_ORDER.contains(category)) {
+            throw new IllegalArgumentException(String.format(Locale.ROOT, "Category '%s' is already registered.", id));
         }
+
+        SORT_ORDER.add(category);
+        return category;
     }
 
     public MutableComponent label() {

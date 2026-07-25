@@ -10,7 +10,7 @@ public interface ServerPacketListener extends ServerboundPacketListener {
     Logger LOGGER = LogUtils.getLogger();
 
     @Override
-    default void onPacketError(Packet p_335210_, Exception p_330447_) throws ReportedException {
-        LOGGER.error("Failed to handle packet {}, suppressing error", p_335210_, p_330447_);
+    default void onPacketError(final Packet packet, final Exception e) throws ReportedException {
+        LOGGER.error("Failed to handle packet {}, suppressing error", packet, e);
     }
 }

@@ -5,9 +5,9 @@ import java.util.function.Supplier;
 import net.minecraft.network.chat.Component;
 
 public class KeybindResolver {
-    static Function<String, Supplier<Component>> keyResolver = p_237363_ -> () -> Component.literal(p_237363_);
+    static Function<String, Supplier<Component>> keyResolver = name -> () -> Component.literal(name);
 
-    public static void setKeyResolver(Function<String, Supplier<Component>> p_237365_) {
-        keyResolver = p_237365_;
+    public static void setKeyResolver(final Function<String, Supplier<Component>> resolver) {
+        keyResolver = resolver;
     }
 }

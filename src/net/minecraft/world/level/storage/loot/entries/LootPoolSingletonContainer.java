@@ -3,15 +3,16 @@ package net.minecraft.world.level.storage.loot.entries;
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.Products.P4;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import com.mojang.serialization.codecs.RecordCodecBuilder.Mu;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import net.minecraft.util.Mth;
-import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.storage.loot.LootContext;
+import net.minecraft.world.level.storage.loot.Validatable;
 import net.minecraft.world.level.storage.loot.ValidationContext;
 import net.minecraft.world.level.storage.loot.functions.FunctionUserBuilder;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
@@ -24,56 +25,55 @@ public abstract class LootPoolSingletonContainer extends LootPoolEntryContainer 
     protected final int weight;
     protected final int quality;
     protected final List<LootItemFunction> functions;
-    final BiFunction<ItemStack, LootContext, ItemStack> compositeFunction;
+    private final BiFunction<ItemStack, LootContext, ItemStack> compositeFunction;
     private final LootPoolEntry entry = new LootPoolSingletonContainer.EntryBase() {
         @Override
-        public void createItemStack(Consumer<ItemStack> p_79700_, LootContext p_79701_) {
-            LootPoolSingletonContainer.this.createItemStack(LootItemFunction.decorate(LootPoolSingletonContainer.this.compositeFunction, p_79700_, p_79701_), p_79701_);
+        public void createItemStack(final Consumer<ItemStack> output, final LootContext context) {
+            LootPoolSingletonContainer.this.createItemStack(
+                LootItemFunction.decorate(LootPoolSingletonContainer.this.compositeFunction, output, context), context
+            );
         }
     };
 
-    protected LootPoolSingletonContainer(int p_79681_, int p_79682_, List<LootItemCondition> p_297957_, List<LootItemFunction> p_300940_) {
-        super(p_297957_);
-        this.weight = p_79681_;
-        this.quality = p_79682_;
-        this.functions = p_300940_;
-        this.compositeFunction = LootItemFunctions.compose(p_300940_);
+    protected LootPoolSingletonContainer(final int weight, final int quality, final List<LootItemCondition> conditions, final List<LootItemFunction> functions) {
+        super(conditions);
+        this.weight = weight;
+        this.quality = quality;
+        this.functions = functions;
+        this.compositeFunction = LootItemFunctions.compose(functions);
     }
+
+    @Override
+    public abstract MapCodec<? extends LootPoolSingletonContainer> codec();
 
     protected static <T extends LootPoolSingletonContainer> P4<Mu<T>, Integer, Integer, List<LootItemCondition>, List<LootItemFunction>> singletonFields(
-        Instance<T> p_299133_
+        final Instance<T> i
     ) {
-        return p_299133_.group(
-                Codec.INT.optionalFieldOf("weight", 1).forGetter(p_300354_ -> p_300354_.weight),
-                Codec.INT.optionalFieldOf("quality", 0).forGetter(p_297680_ -> p_297680_.quality)
-            )
-            .and(commonFields(p_299133_).t1())
-            .and(LootItemFunctions.ROOT_CODEC.listOf().optionalFieldOf("functions", List.of()).forGetter(p_301387_ -> p_301387_.functions));
+        return i.group(Codec.INT.optionalFieldOf("weight", 1).forGetter(e -> e.weight), Codec.INT.optionalFieldOf("quality", 0).forGetter(e -> e.quality))
+            .and(commonFields(i).t1())
+            .and(LootItemFunctions.ROOT_CODEC.listOf().optionalFieldOf("functions", List.of()).forGetter(e -> e.functions));
     }
 
     @Override
-    public void validate(ValidationContext p_79686_) {
-        super.validate(p_79686_);
-
-        for (int i = 0; i < this.functions.size(); i++) {
-            this.functions.get(i).validate(p_79686_.forChild(new ProblemReporter.IndexedFieldPathElement("functions", i)));
-        }
+    public void validate(final ValidationContext context) {
+        super.validate(context);
+        Validatable.validate(context, "functions", this.functions);
     }
 
-    protected abstract void createItemStack(Consumer<ItemStack> p_79691_, LootContext p_79692_);
+    protected abstract void createItemStack(Consumer<ItemStack> output, LootContext context);
 
     @Override
-    public boolean expand(LootContext p_79694_, Consumer<LootPoolEntry> p_79695_) {
-        if (this.canRun(p_79694_)) {
-            p_79695_.accept(this.entry);
+    public boolean expand(final LootContext context, final Consumer<LootPoolEntry> output) {
+        if (this.canRun(context)) {
+            output.accept(this.entry);
             return true;
         } else {
             return false;
         }
     }
 
-    public static LootPoolSingletonContainer.Builder<?> simpleBuilder(LootPoolSingletonContainer.EntryConstructor p_79688_) {
-        return new LootPoolSingletonContainer.DummyBuilder(p_79688_);
+    public static LootPoolSingletonContainer.Builder<?> simpleBuilder(final LootPoolSingletonContainer.EntryConstructor constructor) {
+        return new LootPoolSingletonContainer.DummyBuilder(constructor);
     }
 
     public abstract static class Builder<T extends LootPoolSingletonContainer.Builder<T>>
@@ -83,8 +83,8 @@ public abstract class LootPoolSingletonContainer extends LootPoolEntryContainer 
         protected int quality = 0;
         private final ImmutableList.Builder<LootItemFunction> functions = ImmutableList.builder();
 
-        public T apply(LootItemFunction.Builder p_79710_) {
-            this.functions.add(p_79710_.build());
+        public T apply(final LootItemFunction.Builder function) {
+            this.functions.add(function.build());
             return this.getThis();
         }
 
@@ -92,22 +92,22 @@ public abstract class LootPoolSingletonContainer extends LootPoolEntryContainer 
             return this.functions.build();
         }
 
-        public T setWeight(int p_79708_) {
-            this.weight = p_79708_;
+        public T setWeight(final int weight) {
+            this.weight = weight;
             return this.getThis();
         }
 
-        public T setQuality(int p_79712_) {
-            this.quality = p_79712_;
+        public T setQuality(final int quality) {
+            this.quality = quality;
             return this.getThis();
         }
     }
 
-    static class DummyBuilder extends LootPoolSingletonContainer.Builder<LootPoolSingletonContainer.DummyBuilder> {
+    private static class DummyBuilder extends LootPoolSingletonContainer.Builder<LootPoolSingletonContainer.DummyBuilder> {
         private final LootPoolSingletonContainer.EntryConstructor constructor;
 
-        public DummyBuilder(LootPoolSingletonContainer.EntryConstructor p_79717_) {
-            this.constructor = p_79717_;
+        public DummyBuilder(final LootPoolSingletonContainer.EntryConstructor constructor) {
+            this.constructor = constructor;
         }
 
         protected LootPoolSingletonContainer.DummyBuilder getThis() {
@@ -122,13 +122,13 @@ public abstract class LootPoolSingletonContainer extends LootPoolEntryContainer 
 
     protected abstract class EntryBase implements LootPoolEntry {
         @Override
-        public int getWeight(float p_79725_) {
-            return Math.max(Mth.floor(LootPoolSingletonContainer.this.weight + LootPoolSingletonContainer.this.quality * p_79725_), 0);
+        public int getWeight(final float luck) {
+            return Math.max(Mth.floor(LootPoolSingletonContainer.this.weight + LootPoolSingletonContainer.this.quality * luck), 0);
         }
     }
 
     @FunctionalInterface
     protected interface EntryConstructor {
-        LootPoolSingletonContainer build(int p_79727_, int p_79728_, List<LootItemCondition> p_300517_, List<LootItemFunction> p_297979_);
+        LootPoolSingletonContainer build(int weight, int quality, List<LootItemCondition> conditions, List<LootItemFunction> functions);
     }
 }

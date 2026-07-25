@@ -29,7 +29,7 @@ public record ClientboundRegistryDataPacket(ResourceKey<? extends Registry<?>> r
         return ConfigurationPacketTypes.CLIENTBOUND_REGISTRY_DATA;
     }
 
-    public void handle(ClientConfigurationPacketListener p_298179_) {
-        p_298179_.handleRegistryData(this);
+    public void handle(final ClientConfigurationPacketListener listener) {
+        listener.handleRegistryData(this);
     }
 }

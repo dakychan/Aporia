@@ -6,21 +6,21 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public class V4071 extends NamespacedSchema {
-    public V4071(int p_361008_, Schema p_362992_) {
-        super(p_361008_, p_362992_);
+    public V4071(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_367045_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_367045_);
-        p_367045_.registerSimple(map, "minecraft:creaking");
-        p_367045_.registerSimple(map, "minecraft:creaking_transient");
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        schema.registerSimple(map, "minecraft:creaking");
+        schema.registerSimple(map, "minecraft:creaking_transient");
         return map;
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema p_366043_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(p_366043_);
+    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(schema);
         this.registerSimple(map, "minecraft:creaking_heart");
         return map;
     }

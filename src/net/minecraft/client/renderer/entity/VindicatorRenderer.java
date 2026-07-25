@@ -8,29 +8,31 @@ import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.client.renderer.entity.state.IllagerRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.monster.illager.Vindicator;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class VindicatorRenderer extends IllagerRenderer<Vindicator, IllagerRenderState> {
     private static final Identifier VINDICATOR = Identifier.withDefaultNamespace("textures/entity/illager/vindicator.png");
 
-    public VindicatorRenderer(EntityRendererProvider.Context p_174439_) {
-        super(p_174439_, new IllagerModel<>(p_174439_.bakeLayer(ModelLayers.VINDICATOR)), 0.5F);
+    public VindicatorRenderer(final EntityRendererProvider.Context context) {
+        super(context, new IllagerModel<>(context.bakeLayer(ModelLayers.VINDICATOR)), 0.5F);
         this.addLayer(
             new ItemInHandLayer<IllagerRenderState, IllagerModel<IllagerRenderState>>(this) {
                 public void submit(
-                    PoseStack p_427038_, SubmitNodeCollector p_430046_, int p_425322_, IllagerRenderState p_429863_, float p_425349_, float p_424597_
+                    final PoseStack poseStack,
+                    final SubmitNodeCollector submitNodeCollector,
+                    final int lightCoords,
+                    final IllagerRenderState state,
+                    final float yRot,
+                    final float xRot
                 ) {
-                    if (p_429863_.isAggressive) {
-                        super.submit(p_427038_, p_430046_, p_425322_, p_429863_, p_425349_, p_424597_);
+                    if (state.isAggressive) {
+                        super.submit(poseStack, submitNodeCollector, lightCoords, state, yRot, xRot);
                     }
                 }
             }
         );
     }
 
-    public Identifier getTextureLocation(IllagerRenderState p_455028_) {
+    public Identifier getTextureLocation(final IllagerRenderState state) {
         return VINDICATOR;
     }
 

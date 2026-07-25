@@ -8,18 +8,18 @@ import com.mojang.serialization.Dynamic;
 import net.minecraft.util.datafix.schemas.NamespacedSchema;
 
 public class EmptyItemInVillagerTradeFix extends DataFix {
-    public EmptyItemInVillagerTradeFix(Schema p_331010_) {
-        super(p_331010_, false);
+    public EmptyItemInVillagerTradeFix(final Schema outputSchema) {
+        super(outputSchema, false);
     }
 
     @Override
     public TypeRewriteRule makeRule() {
-        Type<?> type = this.getInputSchema().getType(References.VILLAGER_TRADE);
-        return this.writeFixAndRead("EmptyItemInVillagerTradeFix", type, type, p_333025_ -> {
-            Dynamic<?> dynamic = p_333025_.get("buyB").orElseEmptyMap();
-            String s = NamespacedSchema.ensureNamespaced(dynamic.get("id").asString("minecraft:air"));
-            int i = dynamic.get("count").asInt(0);
-            return !s.equals("minecraft:air") && i != 0 ? p_333025_ : p_333025_.remove("buyB");
+        Type<?> tradeType = this.getInputSchema().getType(References.VILLAGER_TRADE);
+        return this.writeFixAndRead("EmptyItemInVillagerTradeFix", tradeType, tradeType, input -> {
+            Dynamic<?> buyB = input.get("buyB").orElseEmptyMap();
+            String id = NamespacedSchema.ensureNamespaced(buyB.get("id").asString("minecraft:air"));
+            int count = buyB.get("count").asInt(0);
+            return !id.equals("minecraft:air") && count != 0 ? input : input.remove("buyB");
         });
     }
 }

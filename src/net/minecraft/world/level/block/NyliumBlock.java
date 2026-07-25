@@ -3,7 +3,6 @@ package net.minecraft.world.level.block;
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.features.NetherFeatures;
@@ -26,60 +25,62 @@ public class NyliumBlock extends Block implements BonemealableBlock {
         return CODEC;
     }
 
-    protected NyliumBlock(BlockBehaviour.Properties p_55057_) {
-        super(p_55057_);
+    protected NyliumBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
-    private static boolean canBeNylium(BlockState p_55079_, LevelReader p_55080_, BlockPos p_55081_) {
-        BlockPos blockpos = p_55081_.above();
-        BlockState blockstate = p_55080_.getBlockState(blockpos);
-        int i = LightEngine.getLightBlockInto(p_55079_, blockstate, Direction.UP, blockstate.getLightBlock());
-        return i < 15;
+    private static boolean canBeNylium(final BlockState state, final LevelReader level, final BlockPos pos) {
+        BlockPos above = pos.above();
+        BlockState aboveState = level.getBlockState(above);
+        int lightDampeningTopFace = LightEngine.getLightDampeningInto(state, aboveState, Direction.UP, aboveState.getLightDampening());
+        return lightDampeningTopFace < 15;
     }
 
     @Override
-    protected void randomTick(BlockState p_221835_, ServerLevel p_221836_, BlockPos p_221837_, RandomSource p_221838_) {
-        if (!canBeNylium(p_221835_, p_221836_, p_221837_)) {
-            p_221836_.setBlockAndUpdate(p_221837_, Blocks.NETHERRACK.defaultBlockState());
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (!canBeNylium(state, level, pos)) {
+            level.setBlockAndUpdate(pos, Blocks.NETHERRACK.defaultBlockState());
         }
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_256194_, BlockPos p_256152_, BlockState p_256389_) {
-        return p_256194_.getBlockState(p_256152_.above()).isAir();
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return level.getBlockState(pos.above()).isAir() && level.isInsideBuildHeight(pos.above());
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_221830_, RandomSource p_221831_, BlockPos p_221832_, BlockState p_221833_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_221825_, RandomSource p_221826_, BlockPos p_221827_, BlockState p_221828_) {
-        BlockState blockstate = p_221825_.getBlockState(p_221827_);
-        BlockPos blockpos = p_221827_.above();
-        ChunkGenerator chunkgenerator = p_221825_.getChunkSource().getGenerator();
-        Registry<ConfiguredFeature<?, ?>> registry = p_221825_.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE);
-        if (blockstate.is(Blocks.CRIMSON_NYLIUM)) {
-            this.place(registry, NetherFeatures.CRIMSON_FOREST_VEGETATION_BONEMEAL, p_221825_, chunkgenerator, p_221826_, blockpos);
-        } else if (blockstate.is(Blocks.WARPED_NYLIUM)) {
-            this.place(registry, NetherFeatures.WARPED_FOREST_VEGETATION_BONEMEAL, p_221825_, chunkgenerator, p_221826_, blockpos);
-            this.place(registry, NetherFeatures.NETHER_SPROUTS_BONEMEAL, p_221825_, chunkgenerator, p_221826_, blockpos);
-            if (p_221826_.nextInt(8) == 0) {
-                this.place(registry, NetherFeatures.TWISTING_VINES_BONEMEAL, p_221825_, chunkgenerator, p_221826_, blockpos);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        BlockState blockState = level.getBlockState(pos);
+        BlockPos abovePos = pos.above();
+        ChunkGenerator generator = level.getChunkSource().getGenerator();
+        Registry<ConfiguredFeature<?, ?>> configuredFeatures = level.registryAccess().lookupOrThrow(Registries.CONFIGURED_FEATURE);
+        if (blockState.is(Blocks.CRIMSON_NYLIUM)) {
+            this.place(configuredFeatures, NetherFeatures.CRIMSON_FOREST_VEGETATION_BONEMEAL, level, generator, random, abovePos);
+        } else if (blockState.is(Blocks.WARPED_NYLIUM)) {
+            this.place(configuredFeatures, NetherFeatures.WARPED_FOREST_VEGETATION_BONEMEAL, level, generator, random, abovePos);
+            this.place(configuredFeatures, NetherFeatures.NETHER_SPROUTS_BONEMEAL, level, generator, random, abovePos);
+            if (random.nextInt(8) == 0) {
+                this.place(configuredFeatures, NetherFeatures.TWISTING_VINES_BONEMEAL, level, generator, random, abovePos);
             }
         }
     }
 
     private void place(
-        Registry<ConfiguredFeature<?, ?>> p_255879_,
-        ResourceKey<ConfiguredFeature<?, ?>> p_256032_,
-        ServerLevel p_255631_,
-        ChunkGenerator p_256445_,
-        RandomSource p_255709_,
-        BlockPos p_256019_
+        final Registry<ConfiguredFeature<?, ?>> configuredFeatures,
+        final ResourceKey<ConfiguredFeature<?, ?>> id,
+        final ServerLevel level,
+        final ChunkGenerator generator,
+        final RandomSource random,
+        final BlockPos pos
     ) {
-        p_255879_.get(p_256032_).ifPresent(p_255920_ -> p_255920_.value().place(p_255631_, p_256445_, p_255709_, p_256019_));
+        if (level.isInsideBuildHeight(pos)) {
+            configuredFeatures.get(id).ifPresent(h -> h.value().place(level, generator, random, pos));
+        }
     }
 
     @Override

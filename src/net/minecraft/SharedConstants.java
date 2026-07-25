@@ -13,25 +13,25 @@ public class SharedConstants {
     @Deprecated
     public static final boolean SNAPSHOT = false;
     @Deprecated
-    public static final int WORLD_VERSION = 4671;
+    public static final int WORLD_VERSION = 4903;
     @Deprecated
     public static final String SERIES = "main";
     @Deprecated
-    public static final int RELEASE_NETWORK_PROTOCOL_VERSION = 774;
+    public static final int RELEASE_NETWORK_PROTOCOL_VERSION = 776;
     @Deprecated
-    public static final int SNAPSHOT_NETWORK_PROTOCOL_VERSION = 286;
-    public static final int SNBT_NAG_VERSION = 4650;
+    public static final int SNAPSHOT_NETWORK_PROTOCOL_VERSION = 322;
+    public static final int SNBT_NAG_VERSION = 4882;
     private static final int SNAPSHOT_PROTOCOL_BIT = 30;
     public static final boolean CRASH_EAGERLY = false;
     @Deprecated
-    public static final int RESOURCE_PACK_FORMAT_MAJOR = 75;
+    public static final int RESOURCE_PACK_FORMAT_MAJOR = 88;
     @Deprecated
     public static final int RESOURCE_PACK_FORMAT_MINOR = 0;
     @Deprecated
-    public static final int DATA_PACK_FORMAT_MAJOR = 94;
+    public static final int DATA_PACK_FORMAT_MAJOR = 107;
     @Deprecated
     public static final int DATA_PACK_FORMAT_MINOR = 1;
-    public static final String RPC_MANAGEMENT_SERVER_API_VERSION = "2.0.0";
+    public static final String RPC_MANAGEMENT_SERVER_API_VERSION = "3.0.0";
     @Deprecated
     public static final int LANGUAGE_FORMAT = 1;
     public static final int REPORT_FORMAT_VERSION = 1;
@@ -56,7 +56,6 @@ public class SharedConstants {
     public static final boolean DEBUG_STRUCTURES = debugFlag("STRUCTURES");
     public static final boolean DEBUG_GAME_EVENT_LISTENERS = debugFlag("GAME_EVENT_LISTENERS");
     public static final boolean DEBUG_DUMP_TEXTURE_ATLAS = debugFlag("DUMP_TEXTURE_ATLAS");
-    public static final boolean DEBUG_DUMP_INTERPOLATED_TEXTURE_FRAMES = debugFlag("DUMP_INTERPOLATED_TEXTURE_FRAMES");
     public static final boolean DEBUG_STRUCTURE_EDIT_MODE = debugFlag("STRUCTURE_EDIT_MODE");
     public static final boolean DEBUG_SAVE_STRUCTURES_AS_SNBT = debugFlag("SAVE_STRUCTURES_AS_SNBT");
     public static final boolean DEBUG_SYNCHRONOUS_GL_LOGS = debugFlag("SYNCHRONOUS_GL_LOGS");
@@ -78,6 +77,8 @@ public class SharedConstants {
     public static final boolean DEBUG_SCULK_CATALYST = debugFlag("SCULK_CATALYST");
     public static final boolean DEBUG_BYPASS_REALMS_VERSION_CHECK = debugFlag("BYPASS_REALMS_VERSION_CHECK");
     public static final boolean DEBUG_SOCIAL_INTERACTIONS = debugFlag("SOCIAL_INTERACTIONS");
+    public static final boolean DEBUG_CHAT_DISABLED = debugFlag("CHAT_DISABLED");
+    public static final boolean DEBUG_CHAT_FRIENDS_ONLY = debugFlag("CHAT_FRIENDS_ONLY");
     public static final boolean DEBUG_VALIDATE_RESOURCE_PATH_CASE = debugFlag("VALIDATE_RESOURCE_PATH_CASE");
     public static final boolean DEBUG_UNLOCK_ALL_TRADES = debugFlag("UNLOCK_ALL_TRADES");
     public static final boolean DEBUG_BREEZE_MOB = debugFlag("BREEZE_MOB");
@@ -91,6 +92,8 @@ public class SharedConstants {
     public static final boolean DEBUG_VERBOSE_COMMAND_ERRORS = debugFlag("VERBOSE_COMMAND_ERRORS");
     public static final boolean DEBUG_DEV_COMMANDS = debugFlag("DEV_COMMANDS");
     public static final boolean DEBUG_ACTIVE_TEXT_AREAS = debugFlag("ACTIVE_TEXT_AREAS");
+    public static final boolean DEBUG_PREFER_WAYLAND = debugFlag("PREFER_WAYLAND");
+    public static final boolean DEBUG_SIMULATE_LIBRARY_LOAD_FAILURE = debugFlag("SIMULATE_LIBRARY_LOAD_FAILURE");
     public static final boolean DEBUG_IGNORE_LOCAL_MOB_CAP = debugFlag("IGNORE_LOCAL_MOB_CAP");
     public static final boolean DEBUG_DISABLE_LIQUID_SPREADING = debugFlag("DISABLE_LIQUID_SPREADING");
     public static final boolean DEBUG_AQUIFERS = debugFlag("AQUIFERS");
@@ -120,7 +123,6 @@ public class SharedConstants {
     public static final boolean DEBUG_DONT_SEND_TELEMETRY_TO_BACKEND = debugFlag("DONT_SEND_TELEMETRY_TO_BACKEND");
     public static final long MAXIMUM_TICK_TIME_NANOS = Duration.ofMillis(300L).toNanos();
     public static final float MAXIMUM_BLOCK_EXPLOSION_RESISTANCE = 3600000.0F;
-    public static final boolean USE_WORKFLOWS_HOOKS = false;
     public static final boolean USE_DEVONLY = false;
     public static boolean CHECK_DATA_FIXER_SCHEMA = true;
     public static boolean IS_RUNNING_IN_IDE;
@@ -144,45 +146,45 @@ public class SharedConstants {
     public static final int WORLD_ICON_SIZE = 64;
     private static @Nullable WorldVersion CURRENT_VERSION;
 
-    private static String prefixDebugFlagName(String p_427440_) {
-        return "MC_DEBUG_" + p_427440_;
+    private static String prefixDebugFlagName(final String name) {
+        return "MC_DEBUG_" + name;
     }
 
-    private static boolean booleanProperty(String p_423301_) {
-        String s = System.getProperty(p_423301_);
-        return s != null && (s.isEmpty() || Boolean.parseBoolean(s));
+    private static boolean booleanProperty(final String name) {
+        String value = System.getProperty(name);
+        return value != null && (value.isEmpty() || Boolean.parseBoolean(value));
     }
 
-    private static boolean debugFlag(String p_427974_) {
+    private static boolean debugFlag(final String name) {
         if (!DEBUG_ENABLED) {
             return false;
-        } else {
-            String s = prefixDebugFlagName(p_427974_);
-            if (DEBUG_PRINT_PROPERTIES) {
-                System.out.println("Debug property available: " + s + ": bool");
-            }
-
-            return booleanProperty(s);
         }
+
+        String prefixedName = prefixDebugFlagName(name);
+        if (DEBUG_PRINT_PROPERTIES) {
+            System.out.println("Debug property available: " + prefixedName + ": bool");
+        }
+
+        return booleanProperty(prefixedName);
     }
 
-    private static int debugIntValue(String p_425682_) {
+    private static int debugIntValue(final String name) {
         if (!DEBUG_ENABLED) {
             return 0;
-        } else {
-            String s = prefixDebugFlagName(p_425682_);
-            if (DEBUG_PRINT_PROPERTIES) {
-                System.out.println("Debug property available: " + s + ": int");
-            }
-
-            return Integer.parseInt(System.getProperty(s, "0"));
         }
+
+        String prefixedName = prefixDebugFlagName(name);
+        if (DEBUG_PRINT_PROPERTIES) {
+            System.out.println("Debug property available: " + prefixedName + ": int");
+        }
+
+        return Integer.parseInt(System.getProperty(prefixedName, "0"));
     }
 
-    public static void setVersion(WorldVersion p_183706_) {
+    public static void setVersion(final WorldVersion version) {
         if (CURRENT_VERSION == null) {
-            CURRENT_VERSION = p_183706_;
-        } else if (p_183706_ != CURRENT_VERSION) {
+            CURRENT_VERSION = version;
+        } else if (version != CURRENT_VERSION) {
             throw new IllegalStateException("Cannot override the current game version!");
         }
     }
@@ -202,16 +204,16 @@ public class SharedConstants {
     }
 
     public static int getProtocolVersion() {
-        return 774;
+        return 776;
     }
 
-    public static boolean debugVoidTerrain(ChunkPos p_183708_) {
-        int i = p_183708_.getMinBlockX();
-        int j = p_183708_.getMinBlockZ();
+    public static boolean debugVoidTerrain(final ChunkPos pos) {
+        int posX = pos.getMinBlockX();
+        int posZ = pos.getMinBlockZ();
         if (DEBUG_ONLY_GENERATE_HALF_THE_WORLD) {
-            return j < 0;
+            return posZ < 0;
         } else {
-            return !debugGenerateSquareTerrainWithoutNoise ? false : i > 8192 || i < 0 || j > 1024 || j < 0;
+            return !debugGenerateSquareTerrainWithoutNoise ? false : posX > 8192 || posX < 0 || posZ > 1024 || posZ < 0;
         }
     }
 

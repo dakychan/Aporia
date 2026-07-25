@@ -19,37 +19,37 @@ public class BuddingAmethystBlock extends AmethystBlock {
         return CODEC;
     }
 
-    public BuddingAmethystBlock(BlockBehaviour.Properties p_152726_) {
-        super(p_152726_);
+    public BuddingAmethystBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected void randomTick(BlockState p_220898_, ServerLevel p_220899_, BlockPos p_220900_, RandomSource p_220901_) {
-        if (p_220901_.nextInt(5) == 0) {
-            Direction direction = DIRECTIONS[p_220901_.nextInt(DIRECTIONS.length)];
-            BlockPos blockpos = p_220900_.relative(direction);
-            BlockState blockstate = p_220899_.getBlockState(blockpos);
-            Block block = null;
-            if (canClusterGrowAtState(blockstate)) {
-                block = Blocks.SMALL_AMETHYST_BUD;
-            } else if (blockstate.is(Blocks.SMALL_AMETHYST_BUD) && blockstate.getValue(AmethystClusterBlock.FACING) == direction) {
-                block = Blocks.MEDIUM_AMETHYST_BUD;
-            } else if (blockstate.is(Blocks.MEDIUM_AMETHYST_BUD) && blockstate.getValue(AmethystClusterBlock.FACING) == direction) {
-                block = Blocks.LARGE_AMETHYST_BUD;
-            } else if (blockstate.is(Blocks.LARGE_AMETHYST_BUD) && blockstate.getValue(AmethystClusterBlock.FACING) == direction) {
-                block = Blocks.AMETHYST_CLUSTER;
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        if (random.nextInt(5) == 0) {
+            Direction growDirection = DIRECTIONS[random.nextInt(DIRECTIONS.length)];
+            BlockPos growPos = pos.relative(growDirection);
+            BlockState relativeState = level.getBlockState(growPos);
+            Block nextStage = null;
+            if (canClusterGrowAtState(relativeState)) {
+                nextStage = Blocks.SMALL_AMETHYST_BUD;
+            } else if (relativeState.is(Blocks.SMALL_AMETHYST_BUD) && relativeState.getValue(AmethystClusterBlock.FACING) == growDirection) {
+                nextStage = Blocks.MEDIUM_AMETHYST_BUD;
+            } else if (relativeState.is(Blocks.MEDIUM_AMETHYST_BUD) && relativeState.getValue(AmethystClusterBlock.FACING) == growDirection) {
+                nextStage = Blocks.LARGE_AMETHYST_BUD;
+            } else if (relativeState.is(Blocks.LARGE_AMETHYST_BUD) && relativeState.getValue(AmethystClusterBlock.FACING) == growDirection) {
+                nextStage = Blocks.AMETHYST_CLUSTER;
             }
 
-            if (block != null) {
-                BlockState blockstate1 = block.defaultBlockState()
-                    .setValue(AmethystClusterBlock.FACING, direction)
-                    .setValue(AmethystClusterBlock.WATERLOGGED, blockstate.getFluidState().getType() == Fluids.WATER);
-                p_220899_.setBlockAndUpdate(blockpos, blockstate1);
+            if (nextStage != null) {
+                BlockState targetState = nextStage.defaultBlockState()
+                    .setValue(AmethystClusterBlock.FACING, growDirection)
+                    .setValue(AmethystClusterBlock.WATERLOGGED, relativeState.getFluidState().is(Fluids.WATER));
+                level.setBlockAndUpdate(growPos, targetState);
             }
         }
     }
 
-    public static boolean canClusterGrowAtState(BlockState p_152735_) {
-        return p_152735_.isAir() || p_152735_.is(Blocks.WATER) && p_152735_.getFluidState().getAmount() == 8;
+    public static boolean canClusterGrowAtState(final BlockState state) {
+        return state.isAir() || state.is(Blocks.WATER) && state.getFluidState().isFull();
     }
 }

@@ -30,22 +30,22 @@ public abstract class BaseContainerBlockEntity extends BlockEntity implements Co
     private LockCode lockKey = LockCode.NO_LOCK;
     private @Nullable Component name;
 
-    protected BaseContainerBlockEntity(BlockEntityType<?> p_155076_, BlockPos p_155077_, BlockState p_155078_) {
-        super(p_155076_, p_155077_, p_155078_);
+    protected BaseContainerBlockEntity(final BlockEntityType<?> type, final BlockPos worldPosition, final BlockState blockState) {
+        super(type, worldPosition, blockState);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_406372_) {
-        super.loadAdditional(p_406372_);
-        this.lockKey = LockCode.fromTag(p_406372_);
-        this.name = parseCustomNameSafe(p_406372_, "CustomName");
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.lockKey = LockCode.fromTag(input);
+        this.name = parseCustomNameSafe(input, "CustomName");
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_406929_) {
-        super.saveAdditional(p_406929_);
-        this.lockKey.addToTag(p_406929_);
-        p_406929_.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        this.lockKey.addToTag(output);
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
     }
 
     @Override
@@ -65,15 +65,15 @@ public abstract class BaseContainerBlockEntity extends BlockEntity implements Co
 
     protected abstract Component getDefaultName();
 
-    public boolean canOpen(Player p_58645_) {
-        return this.lockKey.canUnlock(p_58645_);
+    public boolean canOpen(final Player player) {
+        return this.lockKey.canUnlock(player);
     }
 
-    public static void sendChestLockedNotifications(Vec3 p_456313_, Player p_454268_, Component p_454684_) {
-        Level level = p_454268_.level();
-        p_454268_.displayClientMessage(Component.translatable("container.isLocked", p_454684_), true);
+    public static void sendChestLockedNotifications(final Vec3 pos, final Player player, final Component displayName) {
+        Level level = player.level();
+        player.sendOverlayMessage(Component.translatable("container.isLocked", displayName));
         if (!level.isClientSide()) {
-            level.playSound(null, p_456313_.x(), p_456313_.y(), p_456313_.z(), SoundEvents.CHEST_LOCKED, SoundSource.BLOCKS, 1.0F, 1.0F);
+            level.playSound(null, pos.x(), pos.y(), pos.z(), SoundEvents.CHEST_LOCKED, SoundSource.BLOCKS, 1.0F, 1.0F);
         }
     }
 
@@ -83,12 +83,12 @@ public abstract class BaseContainerBlockEntity extends BlockEntity implements Co
 
     protected abstract NonNullList<ItemStack> getItems();
 
-    protected abstract void setItems(NonNullList<ItemStack> p_330472_);
+    protected abstract void setItems(NonNullList<ItemStack> items);
 
     @Override
     public boolean isEmpty() {
-        for (ItemStack itemstack : this.getItems()) {
-            if (!itemstack.isEmpty()) {
+        for (ItemStack itemStack : this.getItems()) {
+            if (!itemStack.isEmpty()) {
                 return false;
             }
         }
@@ -97,35 +97,35 @@ public abstract class BaseContainerBlockEntity extends BlockEntity implements Co
     }
 
     @Override
-    public ItemStack getItem(int p_334660_) {
-        return this.getItems().get(p_334660_);
+    public ItemStack getItem(final int slot) {
+        return this.getItems().get(slot);
     }
 
     @Override
-    public ItemStack removeItem(int p_333934_, int p_332088_) {
-        ItemStack itemstack = ContainerHelper.removeItem(this.getItems(), p_333934_, p_332088_);
-        if (!itemstack.isEmpty()) {
+    public ItemStack removeItem(final int slot, final int count) {
+        ItemStack result = ContainerHelper.removeItem(this.getItems(), slot, count);
+        if (!result.isEmpty()) {
             this.setChanged();
         }
 
-        return itemstack;
+        return result;
     }
 
     @Override
-    public ItemStack removeItemNoUpdate(int p_329940_) {
-        return ContainerHelper.takeItem(this.getItems(), p_329940_);
+    public ItemStack removeItemNoUpdate(final int slot) {
+        return ContainerHelper.takeItem(this.getItems(), slot);
     }
 
     @Override
-    public void setItem(int p_331067_, ItemStack p_333112_) {
-        this.getItems().set(p_331067_, p_333112_);
-        p_333112_.limitSize(this.getMaxStackSize(p_333112_));
+    public void setItem(final int slot, final ItemStack itemStack) {
+        this.getItems().set(slot, itemStack);
+        itemStack.limitSize(this.getMaxStackSize(itemStack));
         this.setChanged();
     }
 
     @Override
-    public boolean stillValid(Player p_330935_) {
-        return Container.stillValidBlockEntity(this, p_330935_);
+    public boolean stillValid(final Player player) {
+        return Container.stillValidBlockEntity(this, player);
     }
 
     @Override
@@ -134,40 +134,40 @@ public abstract class BaseContainerBlockEntity extends BlockEntity implements Co
     }
 
     @Override
-    public @Nullable AbstractContainerMenu createMenu(int p_58641_, Inventory p_58642_, Player p_58643_) {
-        if (this.canOpen(p_58643_)) {
-            return this.createMenu(p_58641_, p_58642_);
-        } else {
-            sendChestLockedNotifications(this.getBlockPos().getCenter(), p_58643_, this.getDisplayName());
-            return null;
+    public @Nullable AbstractContainerMenu createMenu(final int containerId, final Inventory inventory, final Player player) {
+        if (this.canOpen(player)) {
+            return this.createMenu(containerId, inventory);
         }
+
+        sendChestLockedNotifications(Vec3.atCenterOf(this.getBlockPos()), player, this.getDisplayName());
+        return null;
     }
 
-    protected abstract AbstractContainerMenu createMenu(int p_58627_, Inventory p_58628_);
+    protected abstract AbstractContainerMenu createMenu(final int containerId, final Inventory inventory);
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_392615_) {
-        super.applyImplicitComponents(p_392615_);
-        this.name = p_392615_.get(DataComponents.CUSTOM_NAME);
-        this.lockKey = p_392615_.getOrDefault(DataComponents.LOCK, LockCode.NO_LOCK);
-        p_392615_.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(this.getItems());
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        this.name = components.get(DataComponents.CUSTOM_NAME);
+        this.lockKey = components.getOrDefault(DataComponents.LOCK, LockCode.NO_LOCK);
+        components.getOrDefault(DataComponents.CONTAINER, ItemContainerContents.EMPTY).copyInto(this.getItems());
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_336292_) {
-        super.collectImplicitComponents(p_336292_);
-        p_336292_.set(DataComponents.CUSTOM_NAME, this.name);
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CUSTOM_NAME, this.name);
         if (this.isLocked()) {
-            p_336292_.set(DataComponents.LOCK, this.lockKey);
+            components.set(DataComponents.LOCK, this.lockKey);
         }
 
-        p_336292_.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(this.getItems()));
+        components.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(this.getItems()));
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_407613_) {
-        p_407613_.discard("CustomName");
-        p_407613_.discard("lock");
-        p_407613_.discard("Items");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        output.discard("CustomName");
+        output.discard("lock");
+        output.discard("Items");
     }
 }

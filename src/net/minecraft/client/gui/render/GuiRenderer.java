@@ -3,37 +3,22 @@ package net.minecraft.client.gui.render;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.mojang.blaze3d.ProjectionType;
-import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.pipeline.RenderTarget;
-import com.mojang.blaze3d.platform.Lighting;
-import com.mojang.blaze3d.platform.Window;
-import com.mojang.blaze3d.systems.CommandEncoder;
-import com.mojang.blaze3d.systems.GpuDevice;
 import com.mojang.blaze3d.systems.RenderPass;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
-import com.mojang.blaze3d.textures.GpuTexture;
-import com.mojang.blaze3d.textures.GpuTextureView;
-import com.mojang.blaze3d.textures.TextureFormat;
-import com.mojang.blaze3d.vertex.BufferBuilder;
-import com.mojang.blaze3d.vertex.ByteBufferBuilder;
-import com.mojang.blaze3d.vertex.MeshData;
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.logging.LogUtils;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.OptionalInt;
 import java.util.Set;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
@@ -44,35 +29,33 @@ import net.minecraft.client.gui.font.TextRenderable;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.gui.render.pip.OversizedItemRenderer;
 import net.minecraft.client.gui.render.pip.PictureInPictureRenderer;
-import net.minecraft.client.gui.render.state.BlitRenderState;
-import net.minecraft.client.gui.render.state.GlyphRenderState;
-import net.minecraft.client.gui.render.state.GuiElementRenderState;
-import net.minecraft.client.gui.render.state.GuiItemRenderState;
-import net.minecraft.client.gui.render.state.GuiRenderState;
-import net.minecraft.client.gui.render.state.GuiTextRenderState;
-import net.minecraft.client.gui.render.state.pip.OversizedItemRenderState;
-import net.minecraft.client.gui.render.state.pip.PictureInPictureRenderState;
-import net.minecraft.client.renderer.CachedOrthoProjectionMatrixBuffer;
-import net.minecraft.client.renderer.MappableRingBuffer;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.CubeMap;
+import net.minecraft.client.renderer.Projection;
+import net.minecraft.client.renderer.ProjectionMatrixBuffer;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.StagedVertexBuffer;
 import net.minecraft.client.renderer.feature.FeatureRenderDispatcher;
 import net.minecraft.client.renderer.item.TrackingItemStackRenderState;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.util.Mth;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.renderer.state.WindowRenderState;
+import net.minecraft.client.renderer.state.gui.BlitRenderState;
+import net.minecraft.client.renderer.state.gui.GlyphRenderState;
+import net.minecraft.client.renderer.state.gui.GuiElementRenderState;
+import net.minecraft.client.renderer.state.gui.GuiItemRenderState;
+import net.minecraft.client.renderer.state.gui.GuiRenderState;
+import net.minecraft.client.renderer.state.gui.pip.OversizedItemRenderState;
+import net.minecraft.client.renderer.state.gui.pip.PictureInPictureRenderState;
+import net.minecraft.client.renderer.texture.TextureManager;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.profiling.Profiler;
+import net.minecraft.util.profiling.ProfilerFiller;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.joml.Matrix3x2fc;
 import org.joml.Matrix4f;
-import org.joml.Vector3f;
 import org.joml.Vector4f;
+import org.joml.Vector4fc;
 import org.jspecify.annotations.Nullable;
-import org.lwjgl.system.MemoryUtil;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class GuiRenderer implements AutoCloseable {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final float MAX_GUI_Z = 10000.0F;
@@ -81,9 +64,7 @@ public class GuiRenderer implements AutoCloseable {
     public static final int GUI_3D_Z_FAR = 1000;
     public static final int GUI_3D_Z_NEAR = -1000;
     public static final int DEFAULT_ITEM_SIZE = 16;
-    private static final int MINIMUM_ITEM_ATLAS_SIZE = 512;
-    private static final int MAXIMUM_ITEM_ATLAS_SIZE = RenderSystem.getDevice().getMaxTextureSize();
-    public static final int CLEAR_COLOR = 0;
+    public static final Vector4fc CLEAR_COLOR = new Vector4f(0.0F);
     private static final Comparator<ScreenRectangle> SCISSOR_COMPARATOR = Comparator.nullsFirst(
         Comparator.comparing(ScreenRectangle::top)
             .thenComparing(ScreenRectangle::bottom)
@@ -91,70 +72,66 @@ public class GuiRenderer implements AutoCloseable {
             .thenComparing(ScreenRectangle::right)
     );
     private static final Comparator<TextureSetup> TEXTURE_COMPARATOR = Comparator.nullsFirst(Comparator.comparing(TextureSetup::getSortKey));
-    private static final Comparator<GuiElementRenderState> ELEMENT_SORT_COMPARATOR = Comparator.comparing(GuiElementRenderState::scissorArea, SCISSOR_COMPARATOR)
+    private static final Comparator<GuiElementRenderState> ELEMENT_SORT_COMPARATOR = Comparator.comparing(
+            GuiElementRenderState::scissorArea, SCISSOR_COMPARATOR
+        )
         .thenComparing(GuiElementRenderState::pipeline, Comparator.comparing(RenderPipeline::getSortKey))
         .thenComparing(GuiElementRenderState::textureSetup, TEXTURE_COMPARATOR);
-    private final Map<Object, GuiRenderer.AtlasPosition> atlasPositions = new Object2ObjectOpenHashMap<>();
     private final Map<Object, OversizedItemRenderer> oversizedItemRenderers = new Object2ObjectOpenHashMap<>();
-    final GuiRenderState renderState;
+    private final GuiRenderState renderState;
     private final List<GuiRenderer.Draw> draws = new ArrayList<>();
-    private final List<GuiRenderer.MeshToDraw> meshesToDraw = new ArrayList<>();
-    private final ByteBufferBuilder byteBufferBuilder = new ByteBufferBuilder(786432);
-    private final Map<VertexFormat, MappableRingBuffer> vertexBuffers = new Object2ObjectOpenHashMap<>();
+    private final StagedVertexBuffer vertexBuffer = new StagedVertexBuffer(() -> "GUI Vertex Buffer", 786432);
     private int firstDrawIndexAfterBlur = Integer.MAX_VALUE;
-    private final CachedOrthoProjectionMatrixBuffer guiProjectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("gui", 1000.0F, 11000.0F, true);
-    private final CachedOrthoProjectionMatrixBuffer itemsProjectionMatrixBuffer = new CachedOrthoProjectionMatrixBuffer("items", -1000.0F, 1000.0F, true);
-    private final MultiBufferSource.BufferSource bufferSource;
-    private final SubmitNodeCollector submitNodeCollector;
+    private final Projection guiProjection = new Projection();
+    private final ProjectionMatrixBuffer guiProjectionMatrixBuffer = new ProjectionMatrixBuffer("gui");
     private final FeatureRenderDispatcher featureRenderDispatcher;
     private final Map<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> pictureInPictureRenderers;
-    private @Nullable GpuTexture itemsAtlas;
-    private @Nullable GpuTextureView itemsAtlasView;
-    private @Nullable GpuTexture itemsAtlasDepth;
-    private @Nullable GpuTextureView itemsAtlasDepthView;
-    private int itemAtlasX;
-    private int itemAtlasY;
+    private @Nullable GuiItemAtlas itemAtlas;
     private int cachedGuiScale;
-    private int frameNumber;
+    private final CubeMap cubeMap = new CubeMap(Identifier.withDefaultNamespace("textures/gui/title/background/panorama"));
     private @Nullable ScreenRectangle previousScissorArea = null;
     private @Nullable RenderPipeline previousPipeline = null;
     private @Nullable TextureSetup previousTextureSetup = null;
-    private @Nullable BufferBuilder bufferBuilder = null;
+    private StagedVertexBuffer.@Nullable Draw previousDraw;
 
     public GuiRenderer(
-        GuiRenderState p_408891_,
-        MultiBufferSource.BufferSource p_410441_,
-        SubmitNodeCollector p_423045_,
-        FeatureRenderDispatcher p_426089_,
-        List<PictureInPictureRenderer<?>> p_410565_
+        final GuiRenderState renderState,
+        final FeatureRenderDispatcher featureRenderDispatcher,
+        final List<PictureInPictureRenderer<?>> pictureInPictureRenderers
     ) {
-        this.renderState = p_408891_;
-        this.bufferSource = p_410441_;
-        this.submitNodeCollector = p_423045_;
-        this.featureRenderDispatcher = p_426089_;
+        this.renderState = renderState;
+        this.featureRenderDispatcher = featureRenderDispatcher;
         Builder<Class<? extends PictureInPictureRenderState>, PictureInPictureRenderer<?>> builder = ImmutableMap.builder();
 
-        for (PictureInPictureRenderer<?> pictureinpicturerenderer : p_410565_) {
-            builder.put((Class<? extends PictureInPictureRenderState>)pictureinpicturerenderer.getRenderStateClass(), pictureinpicturerenderer);
+        for (PictureInPictureRenderer<?> pictureInPictureRenderer : pictureInPictureRenderers) {
+            builder.put((Class<? extends PictureInPictureRenderState>)pictureInPictureRenderer.getRenderStateClass(), pictureInPictureRenderer);
         }
 
         this.pictureInPictureRenderers = builder.buildOrThrow();
     }
 
-    public void incrementFrameNumber() {
-        this.frameNumber++;
+    public void endFrame() {
+        if (this.itemAtlas != null) {
+            this.itemAtlas.endFrame();
+        }
     }
 
-    public void render(GpuBufferSlice p_406940_) {
-        this.prepare();
-        this.draw(p_406940_);
-
-        for (MappableRingBuffer mappableringbuffer : this.vertexBuffers.values()) {
-            mappableringbuffer.rotate();
+    public void render() {
+        ProfilerFiller profiler = Profiler.get();
+        if (this.renderState.panoramaRenderState != null) {
+            this.cubeMap.render(10.0F, this.renderState.panoramaRenderState.spin());
         }
 
+        profiler.push("prepare");
+        this.prepare();
+        profiler.popPush("upload");
+        this.vertexBuffer.upload();
+        profiler.popPush("draw");
+        this.draw();
+        profiler.popPush("endFrame");
+        this.vertexBuffer.endDraw();
+        this.vertexBuffer.endFrame();
         this.draws.clear();
-        this.meshesToDraw.clear();
         this.renderState.reset();
         this.firstDrawIndexAfterBlur = Integer.MAX_VALUE;
         this.clearUnusedOversizedItemRenderers();
@@ -162,243 +139,148 @@ public class GuiRenderer implements AutoCloseable {
             RenderPipeline.updateSortKeySeed();
             TextureSetup.updateSortKeySeed();
         }
+
+        profiler.pop();
     }
 
     private void clearUnusedOversizedItemRenderers() {
-        Iterator<Entry<Object, OversizedItemRenderer>> iterator = this.oversizedItemRenderers.entrySet().iterator();
+        Iterator<Entry<Object, OversizedItemRenderer>> oversizedItemRendererIterator = this.oversizedItemRenderers.entrySet().iterator();
 
-        while (iterator.hasNext()) {
-            Entry<Object, OversizedItemRenderer> entry = iterator.next();
-            OversizedItemRenderer oversizeditemrenderer = entry.getValue();
-            if (!oversizeditemrenderer.usedOnThisFrame()) {
-                oversizeditemrenderer.close();
-                iterator.remove();
+        while (oversizedItemRendererIterator.hasNext()) {
+            Entry<Object, OversizedItemRenderer> next = oversizedItemRendererIterator.next();
+            OversizedItemRenderer renderer = next.getValue();
+            if (!renderer.usedOnThisFrame()) {
+                renderer.close();
+                oversizedItemRendererIterator.remove();
             } else {
-                oversizeditemrenderer.resetUsedOnThisFrame();
+                renderer.resetUsedOnThisFrame();
             }
         }
     }
 
     private void prepare() {
-        this.bufferSource.endBatch();
         this.preparePictureInPicture();
         this.prepareItemElements();
         this.prepareText();
         this.renderState.sortElements(ELEMENT_SORT_COMPARATOR);
         this.addElementsToMeshes(GuiRenderState.TraverseRange.BEFORE_BLUR);
-        this.firstDrawIndexAfterBlur = this.meshesToDraw.size();
+        this.firstDrawIndexAfterBlur = this.draws.size();
         this.addElementsToMeshes(GuiRenderState.TraverseRange.AFTER_BLUR);
-        this.recordDraws();
     }
 
-    private void addElementsToMeshes(GuiRenderState.TraverseRange p_406567_) {
+    private void addElementsToMeshes(final GuiRenderState.TraverseRange range) {
         this.previousScissorArea = null;
         this.previousPipeline = null;
         this.previousTextureSetup = null;
-        this.bufferBuilder = null;
-        this.renderState.forEachElement(this::addElementToMesh, p_406567_);
-        if (this.bufferBuilder != null) {
-            this.recordMesh(this.bufferBuilder, this.previousPipeline, this.previousTextureSetup, this.previousScissorArea);
-        }
+        this.previousDraw = null;
+        this.renderState.forEachElement(this::addElementToMesh, range);
     }
 
-    private void draw(GpuBufferSlice p_408622_) {
+    private void draw() {
         if (!this.draws.isEmpty()) {
             Minecraft minecraft = Minecraft.getInstance();
-            Window window = minecraft.getWindow();
-            RenderSystem.setProjectionMatrix(
-                this.guiProjectionMatrixBuffer.getBuffer((float)window.getWidth() / window.getGuiScale(), (float)window.getHeight() / window.getGuiScale()),
-                ProjectionType.ORTHOGRAPHIC
-            );
-            RenderTarget rendertarget = minecraft.getMainRenderTarget();
-            int i = 0;
-
-            for (GuiRenderer.Draw guirenderer$draw : this.draws) {
-                if (guirenderer$draw.indexCount > i) {
-                    i = guirenderer$draw.indexCount;
-                }
-            }
-
-            RenderSystem.AutoStorageIndexBuffer rendersystem$autostorageindexbuffer = RenderSystem.getSequentialBuffer(VertexFormat.Mode.QUADS);
-            GpuBuffer gpubuffer = rendersystem$autostorageindexbuffer.getBuffer(i);
-            VertexFormat.IndexType vertexformat$indextype = rendersystem$autostorageindexbuffer.type();
-            GpuBufferSlice gpubufferslice = RenderSystem.getDynamicUniforms()
-                .writeTransform(new Matrix4f().setTranslation(0.0F, 0.0F, -11000.0F), new Vector4f(1.0F, 1.0F, 1.0F, 1.0F), new Vector3f(), new Matrix4f());
+            WindowRenderState windowState = minecraft.gameRenderer.gameRenderState().windowRenderState;
+            this.guiProjection
+                .setupOrtho(1000.0F, 11000.0F, (float)windowState.width / windowState.guiScale, (float)windowState.height / windowState.guiScale, true);
+            RenderSystem.setProjectionMatrix(this.guiProjectionMatrixBuffer.getBuffer(this.guiProjection), ProjectionType.ORTHOGRAPHIC);
+            RenderTarget mainRenderTarget = minecraft.gameRenderer.mainRenderTarget();
+            GpuBufferSlice dynamicTransforms = RenderSystem.getDynamicUniforms().writeTransform(new Matrix4f().setTranslation(0.0F, 0.0F, -11000.0F));
             if (this.firstDrawIndexAfterBlur > 0) {
                 this.executeDrawRange(
-                    () -> "GUI before blur",
-                    rendertarget,
-                    p_408622_,
-                    gpubufferslice,
-                    gpubuffer,
-                    vertexformat$indextype,
-                    0,
-                    Math.min(this.firstDrawIndexAfterBlur, this.draws.size())
+                    () -> "GUI before blur", mainRenderTarget, dynamicTransforms, 0, Math.min(this.firstDrawIndexAfterBlur, this.draws.size())
                 );
             }
 
             if (this.draws.size() > this.firstDrawIndexAfterBlur) {
-                RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(rendertarget.getDepthTexture(), 1.0);
+                RenderSystem.getDevice().createCommandEncoder().clearDepthTexture(mainRenderTarget.getDepthTexture(), 0.0);
                 minecraft.gameRenderer.processBlurEffect();
-                this.executeDrawRange(
-                    () -> "GUI after blur", rendertarget, p_408622_, gpubufferslice, gpubuffer, vertexformat$indextype, this.firstDrawIndexAfterBlur, this.draws.size()
-                );
+                this.executeDrawRange(() -> "GUI after blur", mainRenderTarget, dynamicTransforms, this.firstDrawIndexAfterBlur, this.draws.size());
             }
         }
     }
 
     private void executeDrawRange(
-        Supplier<String> p_409270_,
-        RenderTarget p_408854_,
-        GpuBufferSlice p_406388_,
-        GpuBufferSlice p_408533_,
-        GpuBuffer p_409663_,
-        VertexFormat.IndexType p_408855_,
-        int p_408017_,
-        int p_409125_
+        final Supplier<String> label, final RenderTarget mainRenderTarget, final GpuBufferSlice dynamicTransforms, final int startIndex, final int endIndex
     ) {
-        try (RenderPass renderpass = RenderSystem.getDevice()
+        try (RenderPass renderPass = RenderSystem.getDevice()
                 .createCommandEncoder()
                 .createRenderPass(
-                    p_409270_, p_408854_.getColorTextureView(), OptionalInt.empty(), p_408854_.useDepth ? p_408854_.getDepthTextureView() : null, OptionalDouble.empty()
+                    label,
+                    mainRenderTarget.getColorTextureView(),
+                    Optional.empty(),
+                    mainRenderTarget.useDepth ? mainRenderTarget.getDepthTextureView() : null,
+                    OptionalDouble.empty()
                 )) {
-            RenderSystem.bindDefaultUniforms(renderpass);
-            renderpass.setUniform("Fog", p_406388_);
-            renderpass.setUniform("DynamicTransforms", p_408533_);
+            RenderSystem.bindDefaultUniforms(renderPass);
+            renderPass.setUniform("DynamicTransforms", dynamicTransforms);
 
-            for (int i = p_408017_; i < p_409125_; i++) {
-                GuiRenderer.Draw guirenderer$draw = this.draws.get(i);
-                this.executeDraw(guirenderer$draw, renderpass, p_409663_, p_408855_);
+            for (int i = startIndex; i < endIndex; i++) {
+                GuiRenderer.Draw draw = this.draws.get(i);
+                this.executeDraw(draw, renderPass);
             }
         }
     }
 
-    private void addElementToMesh(GuiElementRenderState p_407946_) {
-        RenderPipeline renderpipeline = p_407946_.pipeline();
-        TextureSetup texturesetup = p_407946_.textureSetup();
-        ScreenRectangle screenrectangle = p_407946_.scissorArea();
-        if (renderpipeline != this.previousPipeline || this.scissorChanged(screenrectangle, this.previousScissorArea) || !texturesetup.equals(this.previousTextureSetup)) {
-            if (this.bufferBuilder != null) {
-                this.recordMesh(this.bufferBuilder, this.previousPipeline, this.previousTextureSetup, this.previousScissorArea);
-            }
-
-            this.bufferBuilder = this.getBufferBuilder(renderpipeline);
-            this.previousPipeline = renderpipeline;
-            this.previousTextureSetup = texturesetup;
-            this.previousScissorArea = screenrectangle;
+    private void addElementToMesh(final GuiElementRenderState elementState) {
+        RenderPipeline pipeline = elementState.pipeline();
+        TextureSetup textureSetup = elementState.textureSetup();
+        ScreenRectangle scissorArea = elementState.scissorArea();
+        if (this.previousDraw == null
+            || pipeline != this.previousPipeline
+            || this.scissorChanged(scissorArea, this.previousScissorArea)
+            || !textureSetup.equals(this.previousTextureSetup)) {
+            this.previousPipeline = pipeline;
+            this.previousTextureSetup = textureSetup;
+            this.previousScissorArea = scissorArea;
+            this.previousDraw = this.vertexBuffer.appendDraw(pipeline.getVertexFormatBinding(0), pipeline.getPrimitiveTopology());
+            this.draws.add(new GuiRenderer.Draw(this.previousDraw, pipeline, textureSetup, scissorArea));
         }
 
-        p_407946_.buildVertices(this.bufferBuilder);
+        elementState.buildVertices(this.vertexBuffer.getVertexBuilder(Objects.requireNonNull(this.previousDraw)));
     }
 
     private void prepareText() {
-        this.renderState.forEachText(p_447997_ -> {
-            final Matrix3x2fc matrix3x2fc = p_447997_.pose;
-            final ScreenRectangle screenrectangle = p_447997_.scissor;
-            p_447997_.ensurePrepared().visit(new Font.GlyphVisitor() {
+        this.renderState.forEachText(text -> {
+            final Matrix3x2fc pose = text.pose;
+            final ScreenRectangle scissor = text.scissor;
+            text.ensurePrepared().visit(new Font.GlyphVisitor() {
                 @Override
-                public void acceptGlyph(TextRenderable.Styled p_453815_) {
-                    this.accept(p_453815_);
-                }
-
-                @Override
-                public void acceptEffect(TextRenderable p_430463_) {
-                    this.accept(p_430463_);
-                }
-
-                private void accept(TextRenderable p_423275_) {
-                    GuiRenderer.this.renderState.submitGlyphToCurrentLayer(new GlyphRenderState(matrix3x2fc, p_423275_, screenrectangle));
+                public void acceptRenderable(final TextRenderable renderable) {
+                    GuiRenderer.this.renderState.addGlyphToCurrentLayer(new GlyphRenderState(pose, renderable, scissor));
                 }
             });
         });
     }
 
     private void prepareItemElements() {
-        if (!this.renderState.getItemModelIdentities().isEmpty()) {
-            int i = this.getGuiScaleInvalidatingItemAtlasIfChanged();
-            int j = 16 * i;
-            int k = this.calculateAtlasSizeInPixels(j);
-            if (this.itemsAtlas == null) {
-                this.createAtlasTextures(k);
-            }
-
-            RenderSystem.outputColorTextureOverride = this.itemsAtlasView;
-            RenderSystem.outputDepthTextureOverride = this.itemsAtlasDepthView;
-            RenderSystem.setProjectionMatrix(this.itemsProjectionMatrixBuffer.getBuffer(k, k), ProjectionType.ORTHOGRAPHIC);
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-            PoseStack posestack = new PoseStack();
-            MutableBoolean mutableboolean = new MutableBoolean(false);
-            MutableBoolean mutableboolean1 = new MutableBoolean(false);
-            this.renderState
-                .forEachItem(
-                    p_408308_ -> {
-                        if (p_408308_.oversizedItemBounds() != null) {
-                            mutableboolean1.setTrue();
-                        } else {
-                            TrackingItemStackRenderState trackingitemstackrenderstate = p_408308_.itemStackRenderState();
-                            GuiRenderer.AtlasPosition guirenderer$atlasposition = this.atlasPositions.get(trackingitemstackrenderstate.getModelIdentity());
-                            if (guirenderer$atlasposition == null
-                                || trackingitemstackrenderstate.isAnimated() && guirenderer$atlasposition.lastAnimatedOnFrame != this.frameNumber) {
-                                if (this.itemAtlasX + j > k) {
-                                    this.itemAtlasX = 0;
-                                    this.itemAtlasY += j;
-                                }
-
-                                boolean flag = trackingitemstackrenderstate.isAnimated() && guirenderer$atlasposition != null;
-                                if (!flag && this.itemAtlasY + j > k) {
-                                    if (mutableboolean.isFalse()) {
-                                        LOGGER.warn("Trying to render too many items in GUI at the same time. Skipping some of them.");
-                                        mutableboolean.setTrue();
-                                    }
-                                } else {
-                                    int l = flag ? guirenderer$atlasposition.x : this.itemAtlasX;
-                                    int i1 = flag ? guirenderer$atlasposition.y : this.itemAtlasY;
-                                    if (flag) {
-                                        RenderSystem.getDevice()
-                                            .createCommandEncoder()
-                                            .clearColorAndDepthTextures(this.itemsAtlas, 0, this.itemsAtlasDepth, 1.0, l, k - i1 - j, j, j);
-                                    }
-
-                                    this.renderItemToAtlas(trackingitemstackrenderstate, posestack, l, i1, j);
-                                    float f = (float)l / k;
-                                    float f1 = (float)(k - i1) / k;
-                                    this.submitBlitFromItemAtlas(p_408308_, f, f1, j, k);
-                                    if (flag) {
-                                        guirenderer$atlasposition.lastAnimatedOnFrame = this.frameNumber;
-                                    } else {
-                                        this.atlasPositions
-                                            .put(
-                                                p_408308_.itemStackRenderState().getModelIdentity(),
-                                                new GuiRenderer.AtlasPosition(this.itemAtlasX, this.itemAtlasY, f, f1, this.frameNumber)
-                                            );
-                                        this.itemAtlasX += j;
-                                    }
-                                }
-                            } else {
-                                this.submitBlitFromItemAtlas(p_408308_, guirenderer$atlasposition.u, guirenderer$atlasposition.v, j, k);
-                            }
-                        }
+        Set<Object> itemsInFrame = this.renderState.getItemModelIdentities();
+        if (!itemsInFrame.isEmpty()) {
+            int guiScale = this.getGuiScaleInvalidatingItemAtlasIfChanged();
+            GuiItemAtlas itemAtlas = this.prepareItemAtlas(itemsInFrame, 16 * guiScale);
+            MutableBoolean hasOversizedItems = new MutableBoolean(false);
+            this.renderState.forEachItem(itemState -> {
+                if (itemState.oversizedItemBounds() != null) {
+                    hasOversizedItems.setTrue();
+                } else {
+                    GuiItemAtlas.SlotView slotView = itemAtlas.getOrUpdate(itemState.itemStackRenderState());
+                    if (slotView != null) {
+                        this.submitBlitFromItemAtlas(itemState, slotView);
                     }
-                );
-            RenderSystem.outputColorTextureOverride = null;
-            RenderSystem.outputDepthTextureOverride = null;
-            if (mutableboolean1.booleanValue()) {
+                }
+            });
+            if (hasOversizedItems.booleanValue()) {
                 this.renderState
                     .forEachItem(
-                        p_408200_ -> {
-                            if (p_408200_.oversizedItemBounds() != null) {
-                                TrackingItemStackRenderState trackingitemstackrenderstate = p_408200_.itemStackRenderState();
-                                OversizedItemRenderer oversizeditemrenderer = this.oversizedItemRenderers
-                                    .computeIfAbsent(trackingitemstackrenderstate.getModelIdentity(), p_409833_ -> new OversizedItemRenderer(this.bufferSource));
-                                ScreenRectangle screenrectangle = p_408200_.oversizedItemBounds();
-                                OversizedItemRenderState oversizeditemrenderstate = new OversizedItemRenderState(
-                                    p_408200_,
-                                    screenrectangle.left(),
-                                    screenrectangle.top(),
-                                    screenrectangle.right(),
-                                    screenrectangle.bottom()
+                        itemState -> {
+                            if (itemState.oversizedItemBounds() != null) {
+                                TrackingItemStackRenderState itemStackRenderState = itemState.itemStackRenderState();
+                                OversizedItemRenderer oversizedItemRenderer = this.oversizedItemRenderers
+                                    .computeIfAbsent(itemStackRenderState.getModelIdentity(), var0 -> new OversizedItemRenderer());
+                                ScreenRectangle actualItemBounds = itemState.oversizedItemBounds();
+                                OversizedItemRenderState oversizedItemRenderState = new OversizedItemRenderState(
+                                    itemState, actualItemBounds.left(), actualItemBounds.top(), actualItemBounds.right(), actualItemBounds.bottom()
                                 );
-                                oversizeditemrenderer.prepare(oversizeditemrenderstate, this.renderState, i);
+                                oversizedItemRenderer.prepare(oversizedItemRenderState, this.renderState, this.featureRenderDispatcher, guiScale);
                             }
                         }
                     );
@@ -407,332 +289,148 @@ public class GuiRenderer implements AutoCloseable {
     }
 
     private void preparePictureInPicture() {
-        int i = Minecraft.getInstance().getWindow().getGuiScale();
-        this.renderState.forEachPictureInPicture(p_410704_ -> this.preparePictureInPictureState(p_410704_, i));
+        int guiScale = Minecraft.getInstance().gameRenderer.gameRenderState().windowRenderState.guiScale;
+        this.renderState.forEachPictureInPicture(pictureInPictureState -> this.preparePictureInPictureState(pictureInPictureState, guiScale));
     }
 
-    private <T extends PictureInPictureRenderState> void preparePictureInPictureState(T p_407231_, int p_409058_) {
-        PictureInPictureRenderer<T> pictureinpicturerenderer = (PictureInPictureRenderer<T>)this.pictureInPictureRenderers.get(p_407231_.getClass());
-        if (pictureinpicturerenderer != null) {
-            pictureinpicturerenderer.prepare(p_407231_, this.renderState, p_409058_);
+    private <T extends PictureInPictureRenderState> void preparePictureInPictureState(final T picturesInPictureState, final int guiScale) {
+        PictureInPictureRenderer<T> renderer = (PictureInPictureRenderer<T>)this.pictureInPictureRenderers.get(picturesInPictureState.getClass());
+        if (renderer != null) {
+            renderer.prepare(picturesInPictureState, this.renderState, this.featureRenderDispatcher, guiScale);
         }
     }
 
-    private void renderItemToAtlas(TrackingItemStackRenderState p_410794_, PoseStack p_410201_, int p_407014_, int p_410391_, int p_407207_) {
-        p_410201_.pushPose();
-        p_410201_.translate(p_407014_ + p_407207_ / 2.0F, p_410391_ + p_407207_ / 2.0F, 0.0F);
-        p_410201_.scale(p_407207_, -p_407207_, p_407207_);
-        boolean flag = !p_410794_.usesBlockLight();
-        if (flag) {
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_FLAT);
-        } else {
-            Minecraft.getInstance().gameRenderer.getLighting().setupFor(Lighting.Entry.ITEMS_3D);
-        }
-
-        RenderSystem.enableScissorForRenderTypeDraws(p_407014_, this.itemsAtlas.getHeight(0) - p_410391_ - p_407207_, p_407207_, p_407207_);
-        p_410794_.submit(p_410201_, this.submitNodeCollector, 15728880, OverlayTexture.NO_OVERLAY, 0);
-        this.featureRenderDispatcher.renderAllFeatures();
-        this.bufferSource.endBatch();
-        RenderSystem.disableScissorForRenderTypeDraws();
-        p_410201_.popPose();
-    }
-
-    private void submitBlitFromItemAtlas(GuiItemRenderState p_405961_, float p_408389_, float p_407744_, int p_408730_, int p_407703_) {
-        float f = p_408389_ + (float)p_408730_ / p_407703_;
-        float f1 = p_407744_ + (float)(-p_408730_) / p_407703_;
+    private void submitBlitFromItemAtlas(final GuiItemRenderState itemState, final GuiItemAtlas.SlotView slotView) {
         this.renderState
-            .submitBlitToCurrentLayer(
+            .addBlitToCurrentLayer(
                 new BlitRenderState(
                     RenderPipelines.GUI_TEXTURED_PREMULTIPLIED_ALPHA,
-                    TextureSetup.singleTexture(this.itemsAtlasView, RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
-                    p_405961_.pose(),
-                    p_405961_.x(),
-                    p_405961_.y(),
-                    p_405961_.x() + 16,
-                    p_405961_.y() + 16,
-                    p_408389_,
-                    f,
-                    p_407744_,
-                    f1,
+                    TextureSetup.singleTexture(slotView.textureView(), RenderSystem.getSamplerCache().getRepeat(FilterMode.NEAREST)),
+                    itemState.pose(),
+                    itemState.x(),
+                    itemState.y(),
+                    itemState.x() + 16,
+                    itemState.y() + 16,
+                    slotView.u0(),
+                    slotView.u1(),
+                    slotView.v0(),
+                    slotView.v1(),
                     -1,
-                    p_405961_.scissorArea(),
+                    itemState.scissorArea(),
                     null
                 )
             );
     }
 
-    private void createAtlasTextures(int p_406601_) {
-        GpuDevice gpudevice = RenderSystem.getDevice();
-        this.itemsAtlas = gpudevice.createTexture("UI items atlas", 12, TextureFormat.RGBA8, p_406601_, p_406601_, 1, 1);
-        this.itemsAtlasView = gpudevice.createTextureView(this.itemsAtlas);
-        this.itemsAtlasDepth = gpudevice.createTexture("UI items atlas depth", 8, TextureFormat.DEPTH32, p_406601_, p_406601_, 1, 1);
-        this.itemsAtlasDepthView = gpudevice.createTextureView(this.itemsAtlasDepth);
-        gpudevice.createCommandEncoder().clearColorAndDepthTextures(this.itemsAtlas, 0, this.itemsAtlasDepth, 1.0);
-    }
-
-    private int calculateAtlasSizeInPixels(int p_407739_) {
-        Set<Object> set = this.renderState.getItemModelIdentities();
-        int i;
-        if (this.atlasPositions.isEmpty()) {
-            i = set.size();
-        } else {
-            i = this.atlasPositions.size();
-
-            for (Object object : set) {
-                if (!this.atlasPositions.containsKey(object)) {
-                    i++;
-                }
-            }
+    private GuiItemAtlas prepareItemAtlas(final Set<Object> itemsInFrame, final int slotTextureSize) {
+        if (this.itemAtlas != null && this.itemAtlas.tryPrepareFor(itemsInFrame)) {
+            return this.itemAtlas;
         }
 
-        if (this.itemsAtlas != null) {
-            int j = this.itemsAtlas.getWidth(0) / p_407739_;
-            int l = j * j;
-            if (i < l) {
-                return this.itemsAtlas.getWidth(0);
-            }
-
-            this.invalidateItemAtlas();
+        int newTextureSize = GuiItemAtlas.computeTextureSizeFor(slotTextureSize, itemsInFrame.size());
+        if (this.itemAtlas != null && this.itemAtlas.textureSize() == newTextureSize) {
+            LOGGER.warn(
+                "Too many items ({}) in UI, some will be skipped! (Reached maximum texture size {}x{})", itemsInFrame.size(), newTextureSize, newTextureSize
+            );
+            return this.itemAtlas;
         }
 
-        int k = set.size();
-        int i1 = Mth.smallestSquareSide(k + k / 2);
-        return Math.clamp((long)Mth.smallestEncompassingPowerOfTwo(i1 * p_407739_), 512, MAXIMUM_ITEM_ATLAS_SIZE);
+        if (this.itemAtlas != null) {
+            this.itemAtlas.close();
+        }
+
+        this.itemAtlas = new GuiItemAtlas(this.featureRenderDispatcher, newTextureSize, slotTextureSize);
+        return this.itemAtlas;
     }
 
     private int getGuiScaleInvalidatingItemAtlasIfChanged() {
-        int i = Minecraft.getInstance().getWindow().getGuiScale();
-        if (i != this.cachedGuiScale) {
+        int guiScale = Minecraft.getInstance().gameRenderer.gameRenderState().windowRenderState.guiScale;
+        if (guiScale != this.cachedGuiScale) {
             this.invalidateItemAtlas();
 
-            for (OversizedItemRenderer oversizeditemrenderer : this.oversizedItemRenderers.values()) {
-                oversizeditemrenderer.invalidateTexture();
+            for (OversizedItemRenderer renderer : this.oversizedItemRenderers.values()) {
+                renderer.invalidateTexture();
             }
 
-            this.cachedGuiScale = i;
+            this.cachedGuiScale = guiScale;
         }
 
-        return i;
+        return guiScale;
     }
 
     private void invalidateItemAtlas() {
-        this.itemAtlasX = 0;
-        this.itemAtlasY = 0;
-        this.atlasPositions.clear();
-        if (this.itemsAtlas != null) {
-            this.itemsAtlas.close();
-            this.itemsAtlas = null;
-        }
-
-        if (this.itemsAtlasView != null) {
-            this.itemsAtlasView.close();
-            this.itemsAtlasView = null;
-        }
-
-        if (this.itemsAtlasDepth != null) {
-            this.itemsAtlasDepth.close();
-            this.itemsAtlasDepth = null;
-        }
-
-        if (this.itemsAtlasDepthView != null) {
-            this.itemsAtlasDepthView.close();
-            this.itemsAtlasDepthView = null;
+        if (this.itemAtlas != null) {
+            this.itemAtlas.close();
+            this.itemAtlas = null;
         }
     }
 
-    private void recordMesh(BufferBuilder p_406593_, RenderPipeline p_410453_, TextureSetup p_408583_, @Nullable ScreenRectangle p_409159_) {
-        MeshData meshdata = p_406593_.build();
-        if (meshdata != null) {
-            this.meshesToDraw.add(new GuiRenderer.MeshToDraw(meshdata, p_410453_, p_408583_, p_409159_));
-        }
-    }
-
-    private void recordDraws() {
-        this.ensureVertexBufferSizes();
-        CommandEncoder commandencoder = RenderSystem.getDevice().createCommandEncoder();
-        Object2IntMap<VertexFormat> object2intmap = new Object2IntOpenHashMap<>();
-
-        for (GuiRenderer.MeshToDraw guirenderer$meshtodraw : this.meshesToDraw) {
-            MeshData meshdata = guirenderer$meshtodraw.mesh;
-            MeshData.DrawState meshdata$drawstate = meshdata.drawState();
-            VertexFormat vertexformat = meshdata$drawstate.format();
-            MappableRingBuffer mappableringbuffer = this.vertexBuffers.get(vertexformat);
-            if (!object2intmap.containsKey(vertexformat)) {
-                object2intmap.put(vertexformat, 0);
+    private void executeDraw(final GuiRenderer.Draw draw, final RenderPass renderPass) {
+        StagedVertexBuffer.ExecuteInfo executeInfo = this.vertexBuffer.getExecuteInfo(draw.draw);
+        if (executeInfo != null) {
+            RenderPipeline pipeline = draw.pipeline();
+            renderPass.setPipeline(pipeline);
+            renderPass.setVertexBuffer(0, executeInfo.vertexBuffer().slice());
+            ScreenRectangle scissorArea = draw.scissorArea();
+            if (scissorArea != null) {
+                this.enableScissor(scissorArea, renderPass);
+            } else {
+                renderPass.disableScissor();
             }
 
-            ByteBuffer bytebuffer = meshdata.vertexBuffer();
-            int i = bytebuffer.remaining();
-            int j = object2intmap.getInt(vertexformat);
-
-            try (GpuBuffer.MappedView gpubuffer$mappedview = commandencoder.mapBuffer(mappableringbuffer.currentBuffer().slice(j, i), false, true)) {
-                MemoryUtil.memCopy(bytebuffer, gpubuffer$mappedview.data());
+            if (draw.textureSetup.texure0() != null) {
+                renderPass.bindTexture("Sampler0", draw.textureSetup.texure0(), draw.textureSetup.sampler0());
             }
 
-            object2intmap.put(vertexformat, j + i);
-            this.draws
-                .add(
-                    new GuiRenderer.Draw(
-                        mappableringbuffer.currentBuffer(),
-                        j / vertexformat.getVertexSize(),
-                        meshdata$drawstate.mode(),
-                        meshdata$drawstate.indexCount(),
-                        guirenderer$meshtodraw.pipeline,
-                        guirenderer$meshtodraw.textureSetup,
-                        guirenderer$meshtodraw.scissorArea
-                    )
-                );
-            guirenderer$meshtodraw.close();
-        }
-    }
-
-    private void ensureVertexBufferSizes() {
-        Object2IntMap<VertexFormat> object2intmap = this.calculatedRequiredVertexBufferSizes();
-
-        for (it.unimi.dsi.fastutil.objects.Object2IntMap.Entry<VertexFormat> entry : object2intmap.object2IntEntrySet()) {
-            VertexFormat vertexformat = entry.getKey();
-            int i = entry.getIntValue();
-            MappableRingBuffer mappableringbuffer = this.vertexBuffers.get(vertexformat);
-            if (mappableringbuffer == null || mappableringbuffer.size() < i) {
-                if (mappableringbuffer != null) {
-                    mappableringbuffer.close();
-                }
-
-                this.vertexBuffers.put(vertexformat, new MappableRingBuffer(() -> "GUI vertex buffer for " + vertexformat, 34, i));
-            }
-        }
-    }
-
-    private Object2IntMap<VertexFormat> calculatedRequiredVertexBufferSizes() {
-        Object2IntMap<VertexFormat> object2intmap = new Object2IntOpenHashMap<>();
-
-        for (GuiRenderer.MeshToDraw guirenderer$meshtodraw : this.meshesToDraw) {
-            MeshData.DrawState meshdata$drawstate = guirenderer$meshtodraw.mesh.drawState();
-            VertexFormat vertexformat = meshdata$drawstate.format();
-            if (!object2intmap.containsKey(vertexformat)) {
-                object2intmap.put(vertexformat, 0);
+            if (draw.textureSetup.texure1() != null) {
+                renderPass.bindTexture("Sampler1", draw.textureSetup.texure1(), draw.textureSetup.sampler1());
             }
 
-            object2intmap.put(vertexformat, object2intmap.getInt(vertexformat) + meshdata$drawstate.vertexCount() * vertexformat.getVertexSize());
-        }
+            if (draw.textureSetup.texure2() != null) {
+                renderPass.bindTexture("Sampler2", draw.textureSetup.texure2(), draw.textureSetup.sampler2());
+            }
 
-        return object2intmap;
+            renderPass.setIndexBuffer(executeInfo.indexBuffer(), executeInfo.indexType());
+            renderPass.drawIndexed(executeInfo.indexCount(), 1, executeInfo.firstIndex(), executeInfo.baseVertex(), 0);
+        }
     }
 
-    private void executeDraw(GuiRenderer.Draw p_408287_, RenderPass p_409198_, GpuBuffer p_407851_, VertexFormat.IndexType p_410399_) {
-        RenderPipeline renderpipeline = p_408287_.pipeline();
-        p_409198_.setPipeline(renderpipeline);
-        p_409198_.setVertexBuffer(0, p_408287_.vertexBuffer);
-        ScreenRectangle screenrectangle = p_408287_.scissorArea();
-        if (screenrectangle != null) {
-            this.enableScissor(screenrectangle, p_409198_);
-        } else {
-            p_409198_.disableScissor();
-        }
-
-        if (p_408287_.textureSetup.texure0() != null) {
-            p_409198_.bindTexture("Sampler0", p_408287_.textureSetup.texure0(), p_408287_.textureSetup.sampler0());
-        }
-
-        if (p_408287_.textureSetup.texure1() != null) {
-            p_409198_.bindTexture("Sampler1", p_408287_.textureSetup.texure1(), p_408287_.textureSetup.sampler1());
-        }
-
-        if (p_408287_.textureSetup.texure2() != null) {
-            p_409198_.bindTexture("Sampler2", p_408287_.textureSetup.texure2(), p_408287_.textureSetup.sampler2());
-        }
-
-        p_409198_.setIndexBuffer(p_407851_, p_410399_);
-        p_409198_.drawIndexed(p_408287_.baseVertex, 0, p_408287_.indexCount, 1);
-    }
-
-    private BufferBuilder getBufferBuilder(RenderPipeline p_407093_) {
-        return new BufferBuilder(this.byteBufferBuilder, p_407093_.getVertexFormatMode(), p_407093_.getVertexFormat());
-    }
-
-    private boolean scissorChanged(@Nullable ScreenRectangle p_408511_, @Nullable ScreenRectangle p_408926_) {
-        if (p_408511_ == p_408926_) {
+    private boolean scissorChanged(final @Nullable ScreenRectangle newScissor, final @Nullable ScreenRectangle oldScissor) {
+        if (newScissor == oldScissor) {
             return false;
         } else {
-            return p_408511_ != null ? !p_408511_.equals(p_408926_) : true;
+            return newScissor != null ? !newScissor.equals(oldScissor) : true;
         }
     }
 
-    private void enableScissor(ScreenRectangle p_406586_, RenderPass p_408092_) {
-        Window window = Minecraft.getInstance().getWindow();
-        int i = window.getHeight();
-        int j = window.getGuiScale();
-        double d0 = p_406586_.left() * j;
-        double d1 = i - p_406586_.bottom() * j;
-        double d2 = p_406586_.width() * j;
-        double d3 = p_406586_.height() * j;
-        p_408092_.enableScissor((int)d0, (int)d1, Math.max(0, (int)d2), Math.max(0, (int)d3));
+    private void enableScissor(final ScreenRectangle rectangle, final RenderPass renderPass) {
+        WindowRenderState window = Minecraft.getInstance().gameRenderer.gameRenderState().windowRenderState;
+        int guiScale = window.guiScale;
+        double left = rectangle.left() * guiScale;
+        double top = rectangle.top() * guiScale;
+        double right = Math.min(rectangle.right() * guiScale, window.width);
+        double bottom = Math.min(rectangle.bottom() * guiScale, window.height);
+        renderPass.enableScissor((int)left, window.height - (int)bottom, Math.max(0, (int)(right - left)), Math.max(0, (int)(bottom - top)));
+    }
+
+    public void registerPanoramaTextures(final TextureManager textureManager) {
+        this.cubeMap.registerTextures(textureManager);
     }
 
     @Override
     public void close() {
-        this.byteBufferBuilder.close();
-        if (this.itemsAtlas != null) {
-            this.itemsAtlas.close();
-        }
-
-        if (this.itemsAtlasView != null) {
-            this.itemsAtlasView.close();
-        }
-
-        if (this.itemsAtlasDepth != null) {
-            this.itemsAtlasDepth.close();
-        }
-
-        if (this.itemsAtlasDepthView != null) {
-            this.itemsAtlasDepthView.close();
+        this.vertexBuffer.close();
+        if (this.itemAtlas != null) {
+            this.itemAtlas.close();
+            this.itemAtlas = null;
         }
 
         this.pictureInPictureRenderers.values().forEach(PictureInPictureRenderer::close);
         this.guiProjectionMatrixBuffer.close();
-        this.itemsProjectionMatrixBuffer.close();
-
-        for (MappableRingBuffer mappableringbuffer : this.vertexBuffers.values()) {
-            mappableringbuffer.close();
-        }
-
         this.oversizedItemRenderers.values().forEach(PictureInPictureRenderer::close);
+        this.cubeMap.close();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    static final class AtlasPosition {
-        final int x;
-        final int y;
-        final float u;
-        final float v;
-        int lastAnimatedOnFrame;
-
-        AtlasPosition(int p_406231_, int p_408067_, float p_407402_, float p_406670_, int p_409096_) {
-            this.x = p_406231_;
-            this.y = p_408067_;
-            this.u = p_407402_;
-            this.v = p_406670_;
-            this.lastAnimatedOnFrame = p_409096_;
-        }
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    record Draw(
-        GpuBuffer vertexBuffer,
-        int baseVertex,
-        VertexFormat.Mode mode,
-        int indexCount,
-        RenderPipeline pipeline,
-        TextureSetup textureSetup,
-        @Nullable ScreenRectangle scissorArea
-    ) {
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    record MeshToDraw(MeshData mesh, RenderPipeline pipeline, TextureSetup textureSetup, @Nullable ScreenRectangle scissorArea) implements AutoCloseable {
-        @Override
-        public void close() {
-            this.mesh.close();
-        }
+        private record Draw(StagedVertexBuffer.Draw draw, RenderPipeline pipeline, TextureSetup textureSetup, @Nullable ScreenRectangle scissorArea) {
     }
 }

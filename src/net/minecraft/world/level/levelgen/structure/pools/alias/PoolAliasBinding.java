@@ -10,37 +10,38 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.worldgen.Pools;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.RandomSource;
-import net.minecraft.util.random.Weighted;
 import net.minecraft.util.random.WeightedList;
 import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 public interface PoolAliasBinding {
     Codec<PoolAliasBinding> CODEC = BuiltInRegistries.POOL_ALIAS_BINDING_TYPE.byNameCodec().dispatch(PoolAliasBinding::codec, Function.identity());
 
-    void forEachResolved(RandomSource p_309848_, BiConsumer<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> p_311325_);
+    void forEachResolved(
+        final RandomSource random, final BiConsumer<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> aliasAndTargetConsumer
+    );
 
     Stream<ResourceKey<StructureTemplatePool>> allTargets();
 
-    static DirectPoolAlias direct(String p_310882_, String p_311396_) {
-        return direct(Pools.createKey(p_310882_), Pools.createKey(p_311396_));
+    static DirectPoolAlias direct(final String id, final String target) {
+        return direct(Pools.createKey(id), Pools.createKey(target));
     }
 
-    static DirectPoolAlias direct(ResourceKey<StructureTemplatePool> p_311763_, ResourceKey<StructureTemplatePool> p_312427_) {
-        return new DirectPoolAlias(p_311763_, p_312427_);
+    static DirectPoolAlias direct(final ResourceKey<StructureTemplatePool> alias, final ResourceKey<StructureTemplatePool> target) {
+        return new DirectPoolAlias(alias, target);
     }
 
-    static RandomPoolAlias random(String p_311792_, WeightedList<String> p_395164_) {
-        WeightedList.Builder<ResourceKey<StructureTemplatePool>> builder = WeightedList.builder();
-        p_395164_.unwrap().forEach(p_391073_ -> builder.add(Pools.createKey(p_391073_.value()), p_391073_.weight()));
-        return random(Pools.createKey(p_311792_), builder.build());
+    static RandomPoolAlias random(final String id, final WeightedList<String> targets) {
+        WeightedList.Builder<ResourceKey<StructureTemplatePool>> targetPools = WeightedList.builder();
+        targets.unwrap().forEach(wrapper -> targetPools.add(Pools.createKey(wrapper.value()), wrapper.weight()));
+        return random(Pools.createKey(id), targetPools.build());
     }
 
-    static RandomPoolAlias random(ResourceKey<StructureTemplatePool> p_311453_, WeightedList<ResourceKey<StructureTemplatePool>> p_391616_) {
-        return new RandomPoolAlias(p_311453_, p_391616_);
+    static RandomPoolAlias random(final ResourceKey<StructureTemplatePool> id, final WeightedList<ResourceKey<StructureTemplatePool>> targets) {
+        return new RandomPoolAlias(id, targets);
     }
 
-    static RandomGroupPoolAlias randomGroup(WeightedList<List<PoolAliasBinding>> p_391677_) {
-        return new RandomGroupPoolAlias(p_391677_);
+    static RandomGroupPoolAlias randomGroup(final WeightedList<List<PoolAliasBinding>> combinations) {
+        return new RandomGroupPoolAlias(combinations);
     }
 
     MapCodec<? extends PoolAliasBinding> codec();

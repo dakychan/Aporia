@@ -50,57 +50,57 @@ public class BannerPatterns {
     public static final ResourceKey<BannerPattern> FLOW = create("flow");
     public static final ResourceKey<BannerPattern> GUSTER = create("guster");
 
-    private static ResourceKey<BannerPattern> create(String p_222757_) {
-        return ResourceKey.create(Registries.BANNER_PATTERN, Identifier.withDefaultNamespace(p_222757_));
+    private static ResourceKey<BannerPattern> create(final String id) {
+        return ResourceKey.create(Registries.BANNER_PATTERN, Identifier.withDefaultNamespace(id));
     }
 
-    public static void bootstrap(BootstrapContext<BannerPattern> p_335175_) {
-        register(p_335175_, BASE);
-        register(p_335175_, SQUARE_BOTTOM_LEFT);
-        register(p_335175_, SQUARE_BOTTOM_RIGHT);
-        register(p_335175_, SQUARE_TOP_LEFT);
-        register(p_335175_, SQUARE_TOP_RIGHT);
-        register(p_335175_, STRIPE_BOTTOM);
-        register(p_335175_, STRIPE_TOP);
-        register(p_335175_, STRIPE_LEFT);
-        register(p_335175_, STRIPE_RIGHT);
-        register(p_335175_, STRIPE_CENTER);
-        register(p_335175_, STRIPE_MIDDLE);
-        register(p_335175_, STRIPE_DOWNRIGHT);
-        register(p_335175_, STRIPE_DOWNLEFT);
-        register(p_335175_, STRIPE_SMALL);
-        register(p_335175_, CROSS);
-        register(p_335175_, STRAIGHT_CROSS);
-        register(p_335175_, TRIANGLE_BOTTOM);
-        register(p_335175_, TRIANGLE_TOP);
-        register(p_335175_, TRIANGLES_BOTTOM);
-        register(p_335175_, TRIANGLES_TOP);
-        register(p_335175_, DIAGONAL_LEFT);
-        register(p_335175_, DIAGONAL_RIGHT);
-        register(p_335175_, DIAGONAL_LEFT_MIRROR);
-        register(p_335175_, DIAGONAL_RIGHT_MIRROR);
-        register(p_335175_, CIRCLE_MIDDLE);
-        register(p_335175_, RHOMBUS_MIDDLE);
-        register(p_335175_, HALF_VERTICAL);
-        register(p_335175_, HALF_HORIZONTAL);
-        register(p_335175_, HALF_VERTICAL_MIRROR);
-        register(p_335175_, HALF_HORIZONTAL_MIRROR);
-        register(p_335175_, BORDER);
-        register(p_335175_, GRADIENT);
-        register(p_335175_, GRADIENT_UP);
-        register(p_335175_, BRICKS);
-        register(p_335175_, CURLY_BORDER);
-        register(p_335175_, GLOBE);
-        register(p_335175_, CREEPER);
-        register(p_335175_, SKULL);
-        register(p_335175_, FLOWER);
-        register(p_335175_, MOJANG);
-        register(p_335175_, PIGLIN);
-        register(p_335175_, FLOW);
-        register(p_335175_, GUSTER);
+    public static void bootstrap(final BootstrapContext<BannerPattern> context) {
+        register(context, BASE);
+        register(context, SQUARE_BOTTOM_LEFT);
+        register(context, SQUARE_BOTTOM_RIGHT);
+        register(context, SQUARE_TOP_LEFT);
+        register(context, SQUARE_TOP_RIGHT);
+        register(context, STRIPE_BOTTOM);
+        register(context, STRIPE_TOP);
+        register(context, STRIPE_LEFT);
+        register(context, STRIPE_RIGHT);
+        register(context, STRIPE_CENTER);
+        register(context, STRIPE_MIDDLE);
+        register(context, STRIPE_DOWNRIGHT);
+        register(context, STRIPE_DOWNLEFT);
+        register(context, STRIPE_SMALL);
+        register(context, CROSS);
+        register(context, STRAIGHT_CROSS);
+        register(context, TRIANGLE_BOTTOM);
+        register(context, TRIANGLE_TOP);
+        register(context, TRIANGLES_BOTTOM);
+        register(context, TRIANGLES_TOP);
+        register(context, DIAGONAL_LEFT);
+        register(context, DIAGONAL_RIGHT);
+        register(context, DIAGONAL_LEFT_MIRROR);
+        register(context, DIAGONAL_RIGHT_MIRROR);
+        register(context, CIRCLE_MIDDLE);
+        register(context, RHOMBUS_MIDDLE);
+        register(context, HALF_VERTICAL);
+        register(context, HALF_HORIZONTAL);
+        register(context, HALF_VERTICAL_MIRROR);
+        register(context, HALF_HORIZONTAL_MIRROR);
+        register(context, BORDER);
+        register(context, GRADIENT);
+        register(context, GRADIENT_UP);
+        register(context, BRICKS);
+        register(context, CURLY_BORDER);
+        register(context, GLOBE);
+        register(context, CREEPER);
+        register(context, SKULL);
+        register(context, FLOWER);
+        register(context, MOJANG);
+        register(context, PIGLIN);
+        register(context, FLOW);
+        register(context, GUSTER);
     }
 
-    public static void register(BootstrapContext<BannerPattern> p_330964_, ResourceKey<BannerPattern> p_329824_) {
-        p_330964_.register(p_329824_, new BannerPattern(p_329824_.identifier(), "block.minecraft.banner." + p_329824_.identifier().toShortLanguageKey()));
+    public static void register(final BootstrapContext<BannerPattern> context, final ResourceKey<BannerPattern> key) {
+        context.register(key, new BannerPattern(key.identifier(), "block.minecraft.banner." + key.identifier().toShortLanguageKey()));
     }
 }

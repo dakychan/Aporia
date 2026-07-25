@@ -13,16 +13,16 @@ public class ClientboundSelectAdvancementsTabPacket implements Packet<ClientGame
     );
     private final @Nullable Identifier tab;
 
-    public ClientboundSelectAdvancementsTabPacket(@Nullable Identifier p_455686_) {
-        this.tab = p_455686_;
+    public ClientboundSelectAdvancementsTabPacket(final @Nullable Identifier tab) {
+        this.tab = tab;
     }
 
-    private ClientboundSelectAdvancementsTabPacket(FriendlyByteBuf p_179198_) {
-        this.tab = p_179198_.readNullable(FriendlyByteBuf::readIdentifier);
+    private ClientboundSelectAdvancementsTabPacket(final FriendlyByteBuf input) {
+        this.tab = input.readNullable(FriendlyByteBuf::readIdentifier);
     }
 
-    private void write(FriendlyByteBuf p_133015_) {
-        p_133015_.writeNullable(this.tab, FriendlyByteBuf::writeIdentifier);
+    private void write(final FriendlyByteBuf output) {
+        output.writeNullable(this.tab, FriendlyByteBuf::writeIdentifier);
     }
 
     @Override
@@ -30,8 +30,8 @@ public class ClientboundSelectAdvancementsTabPacket implements Packet<ClientGame
         return GamePacketTypes.CLIENTBOUND_SELECT_ADVANCEMENTS_TAB;
     }
 
-    public void handle(ClientGamePacketListener p_133012_) {
-        p_133012_.handleSelectAdvancementsTab(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleSelectAdvancementsTab(this);
     }
 
     public @Nullable Identifier getTab() {

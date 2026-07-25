@@ -21,7 +21,7 @@ class NoRender : Module("NoRender", Category.VISUAL) {
         .options("Items", "Paintings", "ArmorStands", "ExperienceOrbs")
 
     val overlays = MultiSelectSetting("Overlays", "Hide overlays")
-        .options("Fire", "Water", "Pumpkin", "BossBar", "Scoreboard", "HeldItem")
+        .options("Fire", "Water", "Pumpkin", "BossBar", "Scoreboard", "HeldItem", "PlayerFire")
 
     val effects = MultiSelectSetting("Effects", "Hide effects")
         .options("PotionHud", "PotionParticles", "PortalOverlay", "BlindnessOverlay")
@@ -78,6 +78,7 @@ class NoRender : Module("NoRender", Category.VISUAL) {
         @JvmField var hideBlindness = false
         @JvmField var hideHurtCam = false
         @JvmField var hideDeathScreen = false
+        @JvmField var hidePlayerFire = false
 
         @JvmField var hideItems = false
         @JvmField var hideExperienceOrbs = false
@@ -99,6 +100,7 @@ class NoRender : Module("NoRender", Category.VISUAL) {
             hideBossBar = active && m.overlays.isSelected("BossBar")
             hideScoreboard = active && m.overlays.isSelected("Scoreboard")
             hideHeldItem = active && m.overlays.isSelected("HeldItem")
+            hidePlayerFire = active && m.overlays.isSelected("PlayerFire")
             hideArmor = active && m.armor.isEnabled
             hideTotem = active && m.totemAnimation.isEnabled
             hideHurt = active && m.hurtAnimation.isEnabled

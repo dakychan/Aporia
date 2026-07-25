@@ -3,7 +3,7 @@ package aporia.webview
 import so.aporia.utils.imports.*
 import aporia.webview.platform.WebviewWin32
 import aporia.webview.render.WebviewDirectTexture
-import net.minecraft.client.gui.GuiGraphics
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.CharacterEvent
 import net.minecraft.client.input.KeyEvent
@@ -105,14 +105,14 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
 
     private fun goHome() { navigate("https://google.com") }
 
-    override fun renderBackground(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {}
+    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {}
 
-    override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, partialTick: Float) {
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, partialTick: Float) {
 
         // ── Background ──
         r.drawRectBlurred(0f, 0f, width.toFloat(), height.toFloat(), 0f, 0x88000000.toInt(), 1f)
 
-        // ── Web content via GuiGraphics.blit (MCEF-compatible path, with native bounds re-sync to reduce drift) ──
+        // ── Web content via GuiGraphicsExtractor.blit (MCEF-compatible path, with native bounds re-sync to reduce drift) ──
         if (webviewReady && webview is WebviewWin32) {
             val win = webview
             win.tickCapture()
@@ -271,7 +271,7 @@ class WebviewScreen(url: String) : Screen(Component.literal("Webview")) {
         val cp = event.codepoint()
         if (cp == 0) return true
         if (urlFocused) { urlText.insert(urlCursorPos, cp.toChar()); urlCursorPos++; blinkTicker = 0; return true }
-        if (webviewReady) { webview.sendKeyTyped(cp.toChar(), event.modifiers()); return true }
+        if (webviewReady) { webview.sendKeyTyped(cp.toChar(), 0); return true }
         return super.charTyped(event)
     }
 

@@ -10,27 +10,27 @@ import java.util.Objects;
 import net.minecraft.util.Util;
 
 public class EntityHorseSplitFix extends EntityRenameFix {
-    public EntityHorseSplitFix(Schema p_15447_, boolean p_15448_) {
-        super("EntityHorseSplitFix", p_15447_, p_15448_);
+    public EntityHorseSplitFix(final Schema outputSchema, final boolean changesType) {
+        super("EntityHorseSplitFix", outputSchema, changesType);
     }
 
     @Override
-    protected Pair<String, Typed<?>> fix(String p_15451_, Typed<?> p_15452_) {
-        if (Objects.equals("EntityHorse", p_15451_)) {
-            Dynamic<?> dynamic = p_15452_.get(DSL.remainderFinder());
-            int i = dynamic.get("Type").asInt(0);
+    protected Pair<String, Typed<?>> fix(final String name, final Typed<?> entity) {
+        if (Objects.equals("EntityHorse", name)) {
+            Dynamic<?> tag = entity.get(DSL.remainderFinder());
+            int type = tag.get("Type").asInt(0);
 
-            String s = switch (i) {
+            String newName = switch (type) {
                 case 1 -> "Donkey";
                 case 2 -> "Mule";
                 case 3 -> "ZombieHorse";
                 case 4 -> "SkeletonHorse";
                 default -> "Horse";
             };
-            Type<?> type = this.getOutputSchema().findChoiceType(References.ENTITY).types().get(s);
-            return Pair.of(s, Util.writeAndReadTypedOrThrow(p_15452_, type, p_326575_ -> p_326575_.remove("Type")));
+            Type<?> newType = this.getOutputSchema().findChoiceType(References.ENTITY).types().get(newName);
+            return Pair.of(newName, Util.writeAndReadTypedOrThrow(entity, newType, dynamic -> dynamic.remove("Type")));
         } else {
-            return Pair.of(p_15451_, p_15452_);
+            return Pair.of(name, entity);
         }
     }
 }

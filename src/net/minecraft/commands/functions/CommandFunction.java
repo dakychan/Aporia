@@ -19,88 +19,96 @@ import org.jspecify.annotations.Nullable;
 public interface CommandFunction<T> {
     Identifier id();
 
-    InstantiatedFunction<T> instantiate(@Nullable CompoundTag p_312196_, CommandDispatcher<T> p_309930_) throws FunctionInstantiationException;
+    InstantiatedFunction<T> instantiate(@Nullable CompoundTag arguments, CommandDispatcher<T> dispatcher) throws FunctionInstantiationException;
 
-    private static boolean shouldConcatenateNextLine(CharSequence p_310145_) {
-        int i = p_310145_.length();
-        return i > 0 && p_310145_.charAt(i - 1) == '\\';
+    private static boolean shouldConcatenateNextLine(final CharSequence line) {
+        int length = line.length();
+        return length > 0 && line.charAt(length - 1) == '\\';
     }
 
     static <T extends ExecutionCommandSource<T>> CommandFunction<T> fromLines(
-        Identifier p_457373_, CommandDispatcher<T> p_310963_, T p_312231_, List<String> p_310814_
+        final Identifier id, final CommandDispatcher<T> dispatcher, final T compilationContext, final List<String> lines
     ) {
-        FunctionBuilder<T> functionbuilder = new FunctionBuilder<>();
+        FunctionBuilder<T> functionBuilder = new FunctionBuilder<>();
 
-        for (int i = 0; i < p_310814_.size(); i++) {
-            int j = i + 1;
-            String s = p_310814_.get(i).trim();
-            String s1;
-            if (shouldConcatenateNextLine(s)) {
-                StringBuilder stringbuilder = new StringBuilder(s);
+        for (int i = 0; i < lines.size(); i++) {
+            int lineNumber = i + 1;
+            String inputLine = lines.get(i).trim();
+            String line;
+            if (shouldConcatenateNextLine(inputLine)) {
+                StringBuilder builder = new StringBuilder(inputLine);
 
                 do {
-                    if (++i == p_310814_.size()) {
+                    if (++i == lines.size()) {
                         throw new IllegalArgumentException("Line continuation at end of file");
                     }
 
-                    stringbuilder.deleteCharAt(stringbuilder.length() - 1);
-                    String s2 = p_310814_.get(i).trim();
-                    stringbuilder.append(s2);
-                    checkCommandLineLength(stringbuilder);
-                } while (shouldConcatenateNextLine(stringbuilder));
+                    builder.deleteCharAt(builder.length() - 1);
+                    String innerLine = lines.get(i).trim();
+                    builder.append(innerLine);
+                    checkCommandLineLength(builder);
+                } while (shouldConcatenateNextLine(builder));
 
-                s1 = stringbuilder.toString();
+                line = builder.toString();
             } else {
-                s1 = s;
+                line = inputLine;
             }
 
-            checkCommandLineLength(s1);
-            StringReader stringreader = new StringReader(s1);
-            if (stringreader.canRead() && stringreader.peek() != '#') {
-                if (stringreader.peek() == '/') {
-                    stringreader.skip();
-                    if (stringreader.peek() == '/') {
+            checkCommandLineLength(line);
+            StringReader input = new StringReader(line);
+            if (input.canRead() && input.peek() != '#') {
+                if (input.peek() == '/') {
+                    input.skip();
+                    if (input.peek() == '/') {
                         throw new IllegalArgumentException(
-                            "Unknown or invalid command '" + s1 + "' on line " + j + " (if you intended to make a comment, use '#' not '//')"
+                            "Unknown or invalid command '" + line + "' on line " + lineNumber + " (if you intended to make a comment, use '#' not '//')"
                         );
                     }
 
-                    String s3 = stringreader.readUnquotedString();
+                    String name = input.readUnquotedString();
                     throw new IllegalArgumentException(
-                        "Unknown or invalid command '" + s1 + "' on line " + j + " (did you mean '" + s3 + "'? Do not use a preceding forwards slash.)"
+                        "Unknown or invalid command '"
+                            + line
+                            + "' on line "
+                            + lineNumber
+                            + " (did you mean '"
+                            + name
+                            + "'? Do not use a preceding forwards slash.)"
                     );
                 }
 
-                if (stringreader.peek() == '$') {
-                    functionbuilder.addMacro(s1.substring(1), j, p_312231_);
+                if (input.peek() == '$') {
+                    functionBuilder.addMacro(line.substring(1), lineNumber, compilationContext);
                 } else {
                     try {
-                        functionbuilder.addCommand(parseCommand(p_310963_, p_312231_, stringreader));
-                    } catch (CommandSyntaxException commandsyntaxexception) {
-                        throw new IllegalArgumentException("Whilst parsing command on line " + j + ": " + commandsyntaxexception.getMessage());
+                        functionBuilder.addCommand(parseCommand(dispatcher, compilationContext, input));
+                    } catch (CommandSyntaxException e) {
+                        throw new IllegalArgumentException("Whilst parsing command on line " + lineNumber + ": " + e.getMessage());
                     }
                 }
             }
         }
 
-        return functionbuilder.build(p_457373_);
+        return functionBuilder.build(id);
     }
 
-    static void checkCommandLineLength(CharSequence p_332928_) {
-        if (p_332928_.length() > 2000000) {
-            CharSequence charsequence = p_332928_.subSequence(0, Math.min(512, 2000000));
-            throw new IllegalStateException("Command too long: " + p_332928_.length() + " characters, contents: " + charsequence + "...");
+    static void checkCommandLineLength(final CharSequence line) {
+        if (line.length() > 2000000) {
+            CharSequence truncated = line.subSequence(0, Math.min(512, 2000000));
+            throw new IllegalStateException("Command too long: " + line.length() + " characters, contents: " + truncated + "...");
         }
     }
 
-    static <T extends ExecutionCommandSource<T>> UnboundEntryAction<T> parseCommand(CommandDispatcher<T> p_310812_, T p_312436_, StringReader p_310713_) throws CommandSyntaxException {
-        ParseResults<T> parseresults = p_310812_.parse(p_310713_, p_312436_);
-        Commands.validateParseResults(parseresults);
-        Optional<ContextChain<T>> optional = ContextChain.tryFlatten(parseresults.getContext().build(p_310713_.getString()));
-        if (optional.isEmpty()) {
-            throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().createWithContext(parseresults.getReader());
+    static <T extends ExecutionCommandSource<T>> UnboundEntryAction<T> parseCommand(
+        final CommandDispatcher<T> dispatcher, final T compilationContext, final StringReader input
+    ) throws CommandSyntaxException {
+        ParseResults<T> parse = dispatcher.parse(input, compilationContext);
+        Commands.validateParseResults(parse);
+        Optional<ContextChain<T>> commandChain = ContextChain.tryFlatten(parse.getContext().build(input.getString()));
+        if (commandChain.isEmpty()) {
+            throw CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().createWithContext(parse.getReader());
         } else {
-            return new BuildContexts.Unbound<>(p_310713_.getString(), optional.get());
+            return new BuildContexts.Unbound<>(input.getString(), commandChain.get());
         }
     }
 }

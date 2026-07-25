@@ -10,17 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 public record PlainTextFunction<T>(Identifier id, List<UnboundEntryAction<T>> entries) implements CommandFunction<T>, InstantiatedFunction<T> {
     @Override
-    public InstantiatedFunction<T> instantiate(@Nullable CompoundTag p_311629_, CommandDispatcher<T> p_311161_) throws FunctionInstantiationException {
+    public InstantiatedFunction<T> instantiate(final @Nullable CompoundTag arguments, final CommandDispatcher<T> dispatcher) throws FunctionInstantiationException {
         return this;
-    }
-
-    @Override
-    public Identifier id() {
-        return this.id;
-    }
-
-    @Override
-    public List<UnboundEntryAction<T>> entries() {
-        return this.entries;
     }
 }

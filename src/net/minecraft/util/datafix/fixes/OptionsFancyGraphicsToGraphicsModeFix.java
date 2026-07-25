@@ -3,13 +3,12 @@ package net.minecraft.util.datafix.fixes;
 import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.serialization.Dynamic;
 
 public class OptionsFancyGraphicsToGraphicsModeFix extends DataFix {
-    public OptionsFancyGraphicsToGraphicsModeFix(Schema p_453740_) {
-        super(p_453740_, true);
+    public OptionsFancyGraphicsToGraphicsModeFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
@@ -17,14 +16,13 @@ public class OptionsFancyGraphicsToGraphicsModeFix extends DataFix {
         return this.fixTypeEverywhereTyped(
             "fancyGraphics to graphicsMode",
             this.getInputSchema().getType(References.OPTIONS),
-            p_454138_ -> p_454138_.update(
-                DSL.remainderFinder(),
-                p_460744_ -> p_460744_.renameAndFixField("fancyGraphics", "graphicsMode", OptionsFancyGraphicsToGraphicsModeFix::fixGraphicsMode)
+            input -> input.update(
+                DSL.remainderFinder(), tag -> tag.renameAndFixField("fancyGraphics", "graphicsMode", OptionsFancyGraphicsToGraphicsModeFix::fixGraphicsMode)
             )
         );
     }
 
-    private static <T> Dynamic<T> fixGraphicsMode(Dynamic<T> p_454181_) {
-        return "true".equals(p_454181_.asString("true")) ? p_454181_.createString("1") : p_454181_.createString("0");
+    private static <T> Dynamic<T> fixGraphicsMode(final Dynamic<T> field) {
+        return "true".equals(field.asString("true")) ? field.createString("1") : field.createString("0");
     }
 }

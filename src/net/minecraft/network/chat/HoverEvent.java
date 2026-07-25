@@ -5,7 +5,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.Lifecycle;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -14,15 +13,15 @@ import net.minecraft.core.UUIDUtil;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 import org.jspecify.annotations.Nullable;
 
 public interface HoverEvent {
-    Codec<HoverEvent> CODEC = HoverEvent.Action.CODEC.dispatch("action", HoverEvent::action, p_389915_ -> p_389915_.codec);
+    Codec<HoverEvent> CODEC = HoverEvent.Action.CODEC.dispatch("action", HoverEvent::action, action -> action.codec);
 
     HoverEvent.Action action();
 
-    public static enum Action implements StringRepresentable {
+    enum Action implements StringRepresentable {
         SHOW_TEXT("show_text", true, HoverEvent.ShowText.CODEC),
         SHOW_ITEM("show_item", true, HoverEvent.ShowItem.CODEC),
         SHOW_ENTITY("show_entity", true, HoverEvent.ShowEntity.CODEC);
@@ -31,12 +30,12 @@ public interface HoverEvent {
         public static final Codec<HoverEvent.Action> CODEC = UNSAFE_CODEC.validate(HoverEvent.Action::filterForSerialization);
         private final String name;
         private final boolean allowFromServer;
-        final MapCodec<? extends HoverEvent> codec;
+        private final MapCodec<? extends HoverEvent> codec;
 
-        private Action(final String p_396071_, final boolean p_130843_, final MapCodec<? extends HoverEvent> p_396381_) {
-            this.name = p_396071_;
-            this.allowFromServer = p_130843_;
-            this.codec = p_396381_;
+        Action(final String name, final boolean allowFromServer, final MapCodec<? extends HoverEvent> codec) {
+            this.name = name;
+            this.allowFromServer = allowFromServer;
+            this.codec = codec;
         }
 
         public boolean isAllowedFromServer() {
@@ -53,33 +52,33 @@ public interface HoverEvent {
             return "<action " + this.name + ">";
         }
 
-        private static DataResult<HoverEvent.Action> filterForSerialization(HoverEvent.Action p_311888_) {
-            return !p_311888_.isAllowedFromServer() ? DataResult.error(() -> "Action not allowed: " + p_311888_) : DataResult.success(p_311888_, Lifecycle.stable());
+        private static DataResult<HoverEvent.Action> filterForSerialization(final HoverEvent.Action action) {
+            return !action.isAllowedFromServer() ? DataResult.error(() -> "Action not allowed: " + action) : DataResult.success(action, Lifecycle.stable());
         }
     }
 
-    public static class EntityTooltipInfo {
+    class EntityTooltipInfo {
         public static final MapCodec<HoverEvent.EntityTooltipInfo> CODEC = RecordCodecBuilder.mapCodec(
-            p_389916_ -> p_389916_.group(
-                    BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("id").forGetter(p_309982_ -> p_309982_.type),
-                    UUIDUtil.LENIENT_CODEC.fieldOf("uuid").forGetter(p_389917_ -> p_389917_.uuid),
-                    ComponentSerialization.CODEC.optionalFieldOf("name").forGetter(p_310270_ -> p_310270_.name)
+            i -> i.group(
+                    BuiltInRegistries.ENTITY_TYPE.byNameCodec().fieldOf("id").forGetter(o -> o.type),
+                    UUIDUtil.LENIENT_CODEC.fieldOf("uuid").forGetter(o -> o.uuid),
+                    ComponentSerialization.CODEC.optionalFieldOf("name").forGetter(o -> o.name)
                 )
-                .apply(p_389916_, HoverEvent.EntityTooltipInfo::new)
+                .apply(i, HoverEvent.EntityTooltipInfo::new)
         );
         public final EntityType<?> type;
         public final UUID uuid;
         public final Optional<Component> name;
         private @Nullable List<Component> linesCache;
 
-        public EntityTooltipInfo(EntityType<?> p_130876_, UUID p_130877_, @Nullable Component p_130878_) {
-            this(p_130876_, p_130877_, Optional.ofNullable(p_130878_));
+        public EntityTooltipInfo(final EntityType<?> type, final UUID uuid, final @Nullable Component name) {
+            this(type, uuid, Optional.ofNullable(name));
         }
 
-        public EntityTooltipInfo(EntityType<?> p_312321_, UUID p_312750_, Optional<Component> p_312078_) {
-            this.type = p_312321_;
-            this.uuid = p_312750_;
-            this.name = p_312078_;
+        public EntityTooltipInfo(final EntityType<?> type, final UUID uuid, final Optional<Component> name) {
+            this.type = type;
+            this.uuid = uuid;
+            this.name = name;
         }
 
         public List<Component> getTooltipLines() {
@@ -94,14 +93,12 @@ public interface HoverEvent {
         }
 
         @Override
-        public boolean equals(Object p_130886_) {
-            if (this == p_130886_) {
+        public boolean equals(final Object o) {
+            if (this == o) {
                 return true;
-            } else if (p_130886_ != null && this.getClass() == p_130886_.getClass()) {
-                HoverEvent.EntityTooltipInfo hoverevent$entitytooltipinfo = (HoverEvent.EntityTooltipInfo)p_130886_;
-                return this.type.equals(hoverevent$entitytooltipinfo.type)
-                    && this.uuid.equals(hoverevent$entitytooltipinfo.uuid)
-                    && this.name.equals(hoverevent$entitytooltipinfo.name);
+            } else if (o != null && this.getClass() == o.getClass()) {
+                HoverEvent.EntityTooltipInfo that = (HoverEvent.EntityTooltipInfo)o;
+                return this.type.equals(that.type) && this.uuid.equals(that.uuid) && this.name.equals(that.name);
             } else {
                 return false;
             }
@@ -109,16 +106,15 @@ public interface HoverEvent {
 
         @Override
         public int hashCode() {
-            int i = this.type.hashCode();
-            i = 31 * i + this.uuid.hashCode();
-            return 31 * i + this.name.hashCode();
+            int result = this.type.hashCode();
+            result = 31 * result + this.uuid.hashCode();
+            return 31 * result + this.name.hashCode();
         }
     }
 
-    public record ShowEntity(HoverEvent.EntityTooltipInfo entity) implements HoverEvent {
+    record ShowEntity(HoverEvent.EntityTooltipInfo entity) implements HoverEvent {
         public static final MapCodec<HoverEvent.ShowEntity> CODEC = RecordCodecBuilder.mapCodec(
-            p_395635_ -> p_395635_.group(HoverEvent.EntityTooltipInfo.CODEC.forGetter(HoverEvent.ShowEntity::entity))
-                .apply(p_395635_, HoverEvent.ShowEntity::new)
+            i -> i.group(HoverEvent.EntityTooltipInfo.CODEC.forGetter(HoverEvent.ShowEntity::entity)).apply(i, HoverEvent.ShowEntity::new)
         );
 
         @Override
@@ -127,34 +123,18 @@ public interface HoverEvent {
         }
     }
 
-    public record ShowItem(ItemStack item) implements HoverEvent {
-        public static final MapCodec<HoverEvent.ShowItem> CODEC = ItemStack.MAP_CODEC.xmap(HoverEvent.ShowItem::new, HoverEvent.ShowItem::item);
-
-        public ShowItem(ItemStack item) {
-            item = item.copy();
-            this.item = item;
-        }
+    record ShowItem(ItemStackTemplate item) implements HoverEvent {
+        public static final MapCodec<HoverEvent.ShowItem> CODEC = ItemStackTemplate.MAP_CODEC.xmap(HoverEvent.ShowItem::new, HoverEvent.ShowItem::item);
 
         @Override
         public HoverEvent.Action action() {
             return HoverEvent.Action.SHOW_ITEM;
         }
-
-        @Override
-        public boolean equals(Object p_391825_) {
-            return p_391825_ instanceof HoverEvent.ShowItem hoverevent$showitem && ItemStack.matches(this.item, hoverevent$showitem.item);
-        }
-
-        @Override
-        public int hashCode() {
-            return ItemStack.hashItemAndComponents(this.item);
-        }
     }
 
-    public record ShowText(Component value) implements HoverEvent {
+    record ShowText(Component value) implements HoverEvent {
         public static final MapCodec<HoverEvent.ShowText> CODEC = RecordCodecBuilder.mapCodec(
-            p_392348_ -> p_392348_.group(ComponentSerialization.CODEC.fieldOf("value").forGetter(HoverEvent.ShowText::value))
-                .apply(p_392348_, HoverEvent.ShowText::new)
+            i -> i.group(ComponentSerialization.CODEC.fieldOf("value").forGetter(HoverEvent.ShowText::value)).apply(i, HoverEvent.ShowText::new)
         );
 
         @Override

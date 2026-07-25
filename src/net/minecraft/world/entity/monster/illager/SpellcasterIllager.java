@@ -25,26 +25,26 @@ public abstract class SpellcasterIllager extends AbstractIllager {
     protected int spellCastingTickCount = 0;
     private SpellcasterIllager.IllagerSpell currentSpell = SpellcasterIllager.IllagerSpell.NONE;
 
-    protected SpellcasterIllager(EntityType<? extends SpellcasterIllager> p_455504_, Level p_452521_) {
-        super(p_455504_, p_452521_);
+    protected SpellcasterIllager(final EntityType<? extends SpellcasterIllager> type, final Level level) {
+        super(type, level);
     }
 
     @Override
-    protected void defineSynchedData(SynchedEntityData.Builder p_459215_) {
-        super.defineSynchedData(p_459215_);
-        p_459215_.define(DATA_SPELL_CASTING_ID, (byte)0);
+    protected void defineSynchedData(final SynchedEntityData.Builder entityData) {
+        super.defineSynchedData(entityData);
+        entityData.define(DATA_SPELL_CASTING_ID, (byte)0);
     }
 
     @Override
-    protected void readAdditionalSaveData(ValueInput p_454519_) {
-        super.readAdditionalSaveData(p_454519_);
-        this.spellCastingTickCount = p_454519_.getIntOr("SpellTicks", 0);
+    protected void readAdditionalSaveData(final ValueInput input) {
+        super.readAdditionalSaveData(input);
+        this.spellCastingTickCount = input.getIntOr("SpellTicks", 0);
     }
 
     @Override
-    protected void addAdditionalSaveData(ValueOutput p_456717_) {
-        super.addAdditionalSaveData(p_456717_);
-        p_456717_.putInt("SpellTicks", this.spellCastingTickCount);
+    protected void addAdditionalSaveData(final ValueOutput output) {
+        super.addAdditionalSaveData(output);
+        output.putInt("SpellTicks", this.spellCastingTickCount);
     }
 
     @Override
@@ -60,9 +60,9 @@ public abstract class SpellcasterIllager extends AbstractIllager {
         return this.level().isClientSide() ? this.entityData.get(DATA_SPELL_CASTING_ID) > 0 : this.spellCastingTickCount > 0;
     }
 
-    public void setIsCastingSpell(SpellcasterIllager.IllagerSpell p_458607_) {
-        this.currentSpell = p_458607_;
-        this.entityData.set(DATA_SPELL_CASTING_ID, (byte)p_458607_.id);
+    public void setIsCastingSpell(final SpellcasterIllager.IllagerSpell spell) {
+        this.currentSpell = spell;
+        this.entityData.set(DATA_SPELL_CASTING_ID, (byte)spell.id);
     }
 
     protected SpellcasterIllager.IllagerSpell getCurrentSpell() {
@@ -70,8 +70,8 @@ public abstract class SpellcasterIllager extends AbstractIllager {
     }
 
     @Override
-    protected void customServerAiStep(ServerLevel p_455158_) {
-        super.customServerAiStep(p_455158_);
+    protected void customServerAiStep(final ServerLevel level) {
+        super.customServerAiStep(level);
         if (this.spellCastingTickCount > 0) {
             this.spellCastingTickCount--;
         }
@@ -81,31 +81,31 @@ public abstract class SpellcasterIllager extends AbstractIllager {
     public void tick() {
         super.tick();
         if (this.level().isClientSide() && this.isCastingSpell()) {
-            SpellcasterIllager.IllagerSpell spellcasterillager$illagerspell = this.getCurrentSpell();
-            float f = (float)spellcasterillager$illagerspell.spellColor[0];
-            float f1 = (float)spellcasterillager$illagerspell.spellColor[1];
-            float f2 = (float)spellcasterillager$illagerspell.spellColor[2];
-            float f3 = this.yBodyRot * (float) (Math.PI / 180.0) + Mth.cos(this.tickCount * 0.6662F) * 0.25F;
-            float f4 = Mth.cos(f3);
-            float f5 = Mth.sin(f3);
-            double d0 = 0.6 * this.getScale();
-            double d1 = 1.8 * this.getScale();
+            SpellcasterIllager.IllagerSpell spell = this.getCurrentSpell();
+            float red = (float)spell.spellColor[0];
+            float green = (float)spell.spellColor[1];
+            float blue = (float)spell.spellColor[2];
+            float bodyAngle = this.yBodyRot * (float) (Math.PI / 180.0) + Mth.cos(this.tickCount * 0.6662F) * 0.25F;
+            float cos = Mth.cos(bodyAngle);
+            float sin = Mth.sin(bodyAngle);
+            double handDistance = 0.6 * this.getScale();
+            double handHeight = 1.8 * this.getScale();
             this.level()
                 .addParticle(
-                    ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, f, f1, f2),
-                    this.getX() + f4 * d0,
-                    this.getY() + d1,
-                    this.getZ() + f5 * d0,
+                    ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, red, green, blue),
+                    this.getX() + cos * handDistance,
+                    this.getY() + handHeight,
+                    this.getZ() + sin * handDistance,
                     0.0,
                     0.0,
                     0.0
                 );
             this.level()
                 .addParticle(
-                    ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, f, f1, f2),
-                    this.getX() - f4 * d0,
-                    this.getY() + d1,
-                    this.getZ() - f5 * d0,
+                    ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, red, green, blue),
+                    this.getX() - cos * handDistance,
+                    this.getY() + handHeight,
+                    this.getZ() - sin * handDistance,
                     0.0,
                     0.0,
                     0.0
@@ -119,7 +119,7 @@ public abstract class SpellcasterIllager extends AbstractIllager {
 
     protected abstract SoundEvent getCastingSoundEvent();
 
-    protected static enum IllagerSpell {
+    protected enum IllagerSpell {
         NONE(0, 0.0, 0.0, 0.0),
         SUMMON_VEX(1, 0.7, 0.7, 0.8),
         FANGS(2, 0.4, 0.3, 0.35),
@@ -127,19 +127,17 @@ public abstract class SpellcasterIllager extends AbstractIllager {
         DISAPPEAR(4, 0.3, 0.3, 0.8),
         BLINDNESS(5, 0.1, 0.1, 0.2);
 
-        private static final IntFunction<SpellcasterIllager.IllagerSpell> BY_ID = ByIdMap.continuous(
-            p_451143_ -> p_451143_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO
-        );
-        final int id;
-        final double[] spellColor;
+        private static final IntFunction<SpellcasterIllager.IllagerSpell> BY_ID = ByIdMap.continuous(e -> e.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+        private final int id;
+        private final double[] spellColor;
 
-        private IllagerSpell(final int p_455005_, final double p_454711_, final double p_451646_, final double p_455192_) {
-            this.id = p_455005_;
-            this.spellColor = new double[]{p_454711_, p_451646_, p_455192_};
+        IllagerSpell(final int id, final double red, final double green, final double blue) {
+            this.id = id;
+            this.spellColor = new double[]{red, green, blue};
         }
 
-        public static SpellcasterIllager.IllagerSpell byId(int p_453358_) {
-            return BY_ID.apply(p_453358_);
+        public static SpellcasterIllager.IllagerSpell byId(final int id) {
+            return BY_ID.apply(id);
         }
     }
 
@@ -180,8 +178,8 @@ public abstract class SpellcasterIllager extends AbstractIllager {
 
         @Override
         public boolean canUse() {
-            LivingEntity livingentity = SpellcasterIllager.this.getTarget();
-            if (livingentity == null || !livingentity.isAlive()) {
+            LivingEntity target = SpellcasterIllager.this.getTarget();
+            if (target == null || !target.isAlive()) {
                 return false;
             } else {
                 return SpellcasterIllager.this.isCastingSpell() ? false : SpellcasterIllager.this.tickCount >= this.nextAttackTickCount;
@@ -190,8 +188,8 @@ public abstract class SpellcasterIllager extends AbstractIllager {
 
         @Override
         public boolean canContinueToUse() {
-            LivingEntity livingentity = SpellcasterIllager.this.getTarget();
-            return livingentity != null && livingentity.isAlive() && this.attackWarmupDelay > 0;
+            LivingEntity target = SpellcasterIllager.this.getTarget();
+            return target != null && target.isAlive() && this.attackWarmupDelay > 0;
         }
 
         @Override
@@ -199,9 +197,9 @@ public abstract class SpellcasterIllager extends AbstractIllager {
             this.attackWarmupDelay = this.adjustedTickDelay(this.getCastWarmupTime());
             SpellcasterIllager.this.spellCastingTickCount = this.getCastingTime();
             this.nextAttackTickCount = SpellcasterIllager.this.tickCount + this.getCastingInterval();
-            SoundEvent soundevent = this.getSpellPrepareSound();
-            if (soundevent != null) {
-                SpellcasterIllager.this.playSound(soundevent, 1.0F, 1.0F);
+            SoundEvent spellPrepareSound = this.getSpellPrepareSound();
+            if (spellPrepareSound != null) {
+                SpellcasterIllager.this.playSound(spellPrepareSound, 1.0F, 1.0F);
             }
 
             SpellcasterIllager.this.setIsCastingSpell(this.getSpell());

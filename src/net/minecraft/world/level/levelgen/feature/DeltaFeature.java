@@ -19,62 +19,64 @@ public class DeltaFeature extends Feature<DeltaFeatureConfiguration> {
     private static final Direction[] DIRECTIONS = Direction.values();
     private static final double RIM_SPAWN_CHANCE = 0.9;
 
-    public DeltaFeature(Codec<DeltaFeatureConfiguration> p_65550_) {
-        super(p_65550_);
+    public DeltaFeature(final Codec<DeltaFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<DeltaFeatureConfiguration> p_159548_) {
-        boolean flag = false;
-        RandomSource randomsource = p_159548_.random();
-        WorldGenLevel worldgenlevel = p_159548_.level();
-        DeltaFeatureConfiguration deltafeatureconfiguration = p_159548_.config();
-        BlockPos blockpos = p_159548_.origin();
-        boolean flag1 = randomsource.nextDouble() < 0.9;
-        int i = flag1 ? deltafeatureconfiguration.rimSize().sample(randomsource) : 0;
-        int j = flag1 ? deltafeatureconfiguration.rimSize().sample(randomsource) : 0;
-        boolean flag2 = flag1 && i != 0 && j != 0;
-        int k = deltafeatureconfiguration.size().sample(randomsource);
-        int l = deltafeatureconfiguration.size().sample(randomsource);
-        int i1 = Math.max(k, l);
+    public boolean place(final FeaturePlaceContext<DeltaFeatureConfiguration> context) {
+        boolean anyPlaced = false;
+        RandomSource random = context.random();
+        WorldGenLevel level = context.level();
+        DeltaFeatureConfiguration config = context.config();
+        BlockPos origin = context.origin();
+        boolean spawnRim = random.nextDouble() < 0.9;
+        int rimX = spawnRim ? config.rimSize().sample(random) : 0;
+        int rimZ = spawnRim ? config.rimSize().sample(random) : 0;
+        boolean hasRim = spawnRim && rimX != 0 && rimZ != 0;
+        int radiusX = config.size().sample(random);
+        int radiusZ = config.size().sample(random);
+        int radiusLimit = Math.max(radiusX, radiusZ);
 
-        for (BlockPos blockpos1 : BlockPos.withinManhattan(blockpos, k, 0, l)) {
-            if (blockpos1.distManhattan(blockpos) > i1) {
+        for (BlockPos pos : BlockPos.withinManhattan(origin, radiusX, 0, radiusZ)) {
+            if (pos.distManhattan(origin) > radiusLimit) {
                 break;
             }
 
-            if (isClear(worldgenlevel, blockpos1, deltafeatureconfiguration)) {
-                if (flag2) {
-                    flag = true;
-                    this.setBlock(worldgenlevel, blockpos1, deltafeatureconfiguration.rim());
+            if (isClear(level, pos, config)) {
+                if (hasRim) {
+                    anyPlaced = true;
+                    this.setBlock(level, pos, config.rim());
                 }
 
-                BlockPos blockpos2 = blockpos1.offset(i, 0, j);
-                if (isClear(worldgenlevel, blockpos2, deltafeatureconfiguration)) {
-                    flag = true;
-                    this.setBlock(worldgenlevel, blockpos2, deltafeatureconfiguration.contents());
+                BlockPos posOffset = pos.offset(rimX, 0, rimZ);
+                if (isClear(level, posOffset, config)) {
+                    anyPlaced = true;
+                    this.setBlock(level, posOffset, config.contents());
                 }
             }
         }
 
-        return flag;
+        return anyPlaced;
     }
 
-    private static boolean isClear(LevelAccessor p_65552_, BlockPos p_65553_, DeltaFeatureConfiguration p_65554_) {
-        BlockState blockstate = p_65552_.getBlockState(p_65553_);
-        if (blockstate.is(p_65554_.contents().getBlock())) {
+    private static boolean isClear(final LevelAccessor level, final BlockPos pos, final DeltaFeatureConfiguration config) {
+        BlockState state = level.getBlockState(pos);
+        if (state.is(config.contents().getBlock())) {
             return false;
-        } else if (CANNOT_REPLACE.contains(blockstate.getBlock())) {
-            return false;
-        } else {
-            for (Direction direction : DIRECTIONS) {
-                boolean flag = p_65552_.getBlockState(p_65553_.relative(direction)).isAir();
-                if (flag && direction != Direction.UP || !flag && direction == Direction.UP) {
-                    return false;
-                }
-            }
-
-            return true;
         }
+
+        if (CANNOT_REPLACE.contains(state.getBlock())) {
+            return false;
+        }
+
+        for (Direction d : DIRECTIONS) {
+            boolean isAir = level.getBlockState(pos.relative(d)).isAir();
+            if (isAir && d != Direction.UP || !isAir && d == Direction.UP) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

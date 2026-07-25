@@ -3,30 +3,13 @@ package net.minecraft.client.data.models.model;
 import java.util.Optional;
 import java.util.stream.IntStream;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ModelTemplates {
     public static final ModelTemplate CUBE = create(
-        "cube",
-        TextureSlot.PARTICLE,
-        TextureSlot.NORTH,
-        TextureSlot.SOUTH,
-        TextureSlot.EAST,
-        TextureSlot.WEST,
-        TextureSlot.UP,
-        TextureSlot.DOWN
+        "cube", TextureSlot.PARTICLE, TextureSlot.NORTH, TextureSlot.SOUTH, TextureSlot.EAST, TextureSlot.WEST, TextureSlot.UP, TextureSlot.DOWN
     );
     public static final ModelTemplate CUBE_DIRECTIONAL = create(
-        "cube_directional",
-        TextureSlot.PARTICLE,
-        TextureSlot.NORTH,
-        TextureSlot.SOUTH,
-        TextureSlot.EAST,
-        TextureSlot.WEST,
-        TextureSlot.UP,
-        TextureSlot.DOWN
+        "cube_directional", TextureSlot.PARTICLE, TextureSlot.NORTH, TextureSlot.SOUTH, TextureSlot.EAST, TextureSlot.WEST, TextureSlot.UP, TextureSlot.DOWN
     );
     public static final ModelTemplate CUBE_ALL = create("cube_all", TextureSlot.ALL);
     public static final ModelTemplate CUBE_ALL_INNER_FACES = create("cube_all_inner_faces", TextureSlot.ALL);
@@ -49,6 +32,20 @@ public class ModelTemplates {
     public static final ModelTemplate BUTTON = create("button", TextureSlot.TEXTURE);
     public static final ModelTemplate BUTTON_PRESSED = create("button_pressed", "_pressed", TextureSlot.TEXTURE);
     public static final ModelTemplate BUTTON_INVENTORY = create("button_inventory", "_inventory", TextureSlot.TEXTURE);
+    public static final ModelTemplate SIGN_ROT_0 = create("template_sign_rot_0", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate SIGN_ROT_1 = create("template_sign_rot_1", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate SIGN_ROT_2 = create("template_sign_rot_2", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate SIGN_ROT_3 = create("template_sign_rot_3", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate WALL_SIGN = create("template_wall_sign", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate HANGING_SIGN_ROT_0 = create("template_hanging_sign_rot_0", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate HANGING_SIGN_ROT_1 = create("template_hanging_sign_rot_1", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate HANGING_SIGN_ROT_2 = create("template_hanging_sign_rot_2", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate HANGING_SIGN_ROT_3 = create("template_hanging_sign_rot_3", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate ATTACHED_HANGING_SIGN_ROT_0 = create("template_attached_hanging_sign_rot_0", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate ATTACHED_HANGING_SIGN_ROT_1 = create("template_attached_hanging_sign_rot_1", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate ATTACHED_HANGING_SIGN_ROT_2 = create("template_attached_hanging_sign_rot_2", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate ATTACHED_HANGING_SIGN_ROT_3 = create("template_attached_hanging_sign_rot_3", TextureSlot.ALL, TextureSlot.PARTICLE);
+    public static final ModelTemplate WALL_HANGING_SIGN = create("template_wall_hanging_sign", TextureSlot.ALL, TextureSlot.PARTICLE);
     public static final ModelTemplate DOOR_BOTTOM_LEFT = create("door_bottom_left", "_bottom_left", TextureSlot.TOP, TextureSlot.BOTTOM);
     public static final ModelTemplate DOOR_BOTTOM_LEFT_OPEN = create("door_bottom_left_open", "_bottom_left_open", TextureSlot.TOP, TextureSlot.BOTTOM);
     public static final ModelTemplate DOOR_BOTTOM_RIGHT = create("door_bottom_right", "_bottom_right", TextureSlot.TOP, TextureSlot.BOTTOM);
@@ -72,8 +69,12 @@ public class ModelTemplates {
     public static final ModelTemplate WALL_INVENTORY = create("wall_inventory", "_inventory", TextureSlot.WALL);
     public static final ModelTemplate CUSTOM_FENCE_GATE_CLOSED = create("template_custom_fence_gate", TextureSlot.TEXTURE, TextureSlot.PARTICLE);
     public static final ModelTemplate CUSTOM_FENCE_GATE_OPEN = create("template_custom_fence_gate_open", "_open", TextureSlot.TEXTURE, TextureSlot.PARTICLE);
-    public static final ModelTemplate CUSTOM_FENCE_GATE_WALL_CLOSED = create("template_custom_fence_gate_wall", "_wall", TextureSlot.TEXTURE, TextureSlot.PARTICLE);
-    public static final ModelTemplate CUSTOM_FENCE_GATE_WALL_OPEN = create("template_custom_fence_gate_wall_open", "_wall_open", TextureSlot.TEXTURE, TextureSlot.PARTICLE);
+    public static final ModelTemplate CUSTOM_FENCE_GATE_WALL_CLOSED = create(
+        "template_custom_fence_gate_wall", "_wall", TextureSlot.TEXTURE, TextureSlot.PARTICLE
+    );
+    public static final ModelTemplate CUSTOM_FENCE_GATE_WALL_OPEN = create(
+        "template_custom_fence_gate_wall_open", "_wall_open", TextureSlot.TEXTURE, TextureSlot.PARTICLE
+    );
     public static final ModelTemplate FENCE_GATE_CLOSED = create("template_fence_gate", TextureSlot.TEXTURE);
     public static final ModelTemplate FENCE_GATE_OPEN = create("template_fence_gate_open", "_open", TextureSlot.TEXTURE);
     public static final ModelTemplate FENCE_GATE_WALL_CLOSED = create("template_fence_gate_wall", "_wall", TextureSlot.TEXTURE);
@@ -90,6 +91,8 @@ public class ModelTemplates {
     public static final ModelTemplate TRAPDOOR_TOP = create("template_trapdoor_top", "_top", TextureSlot.TEXTURE);
     public static final ModelTemplate TRAPDOOR_BOTTOM = create("template_trapdoor_bottom", "_bottom", TextureSlot.TEXTURE);
     public static final ModelTemplate TRAPDOOR_OPEN = create("template_trapdoor_open", "_open", TextureSlot.TEXTURE);
+    public static final ModelTemplate BED_HEAD = create("template_bed_head", TextureSlot.UP, TextureSlot.EAST, TextureSlot.WEST);
+    public static final ModelTemplate BED_FOOT = create("template_bed_foot", TextureSlot.UP, TextureSlot.EAST, TextureSlot.WEST, TextureSlot.SOUTH);
     public static final ModelTemplate ORIENTABLE_TRAPDOOR_TOP = create("template_orientable_trapdoor_top", "_top", TextureSlot.TEXTURE);
     public static final ModelTemplate ORIENTABLE_TRAPDOOR_BOTTOM = create("template_orientable_trapdoor_bottom", "_bottom", TextureSlot.TEXTURE);
     public static final ModelTemplate ORIENTABLE_TRAPDOOR_OPEN = create("template_orientable_trapdoor_open", "_open", TextureSlot.TEXTURE);
@@ -125,12 +128,22 @@ public class ModelTemplates {
     public static final ModelTemplate STAINED_GLASS_PANE_SIDE = create("template_glass_pane_side", "_side", TextureSlot.PANE, TextureSlot.EDGE);
     public static final ModelTemplate STAINED_GLASS_PANE_SIDE_ALT = create("template_glass_pane_side_alt", "_side_alt", TextureSlot.PANE, TextureSlot.EDGE);
     public static final ModelTemplate COMMAND_BLOCK = create("template_command_block", TextureSlot.FRONT, TextureSlot.BACK, TextureSlot.SIDE);
-    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_TOP_LEFT = create("template_chiseled_bookshelf_slot_top_left", "_slot_top_left", TextureSlot.TEXTURE);
+    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_TOP_LEFT = create(
+        "template_chiseled_bookshelf_slot_top_left", "_slot_top_left", TextureSlot.TEXTURE
+    );
     public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_TOP_MID = create("template_chiseled_bookshelf_slot_top_mid", "_slot_top_mid", TextureSlot.TEXTURE);
-    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_TOP_RIGHT = create("template_chiseled_bookshelf_slot_top_right", "_slot_top_right", TextureSlot.TEXTURE);
-    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_BOTTOM_LEFT = create("template_chiseled_bookshelf_slot_bottom_left", "_slot_bottom_left", TextureSlot.TEXTURE);
-    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_BOTTOM_MID = create("template_chiseled_bookshelf_slot_bottom_mid", "_slot_bottom_mid", TextureSlot.TEXTURE);
-    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_BOTTOM_RIGHT = create("template_chiseled_bookshelf_slot_bottom_right", "_slot_bottom_right", TextureSlot.TEXTURE);
+    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_TOP_RIGHT = create(
+        "template_chiseled_bookshelf_slot_top_right", "_slot_top_right", TextureSlot.TEXTURE
+    );
+    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_BOTTOM_LEFT = create(
+        "template_chiseled_bookshelf_slot_bottom_left", "_slot_bottom_left", TextureSlot.TEXTURE
+    );
+    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_BOTTOM_MID = create(
+        "template_chiseled_bookshelf_slot_bottom_mid", "_slot_bottom_mid", TextureSlot.TEXTURE
+    );
+    public static final ModelTemplate CHISELED_BOOKSHELF_SLOT_BOTTOM_RIGHT = create(
+        "template_chiseled_bookshelf_slot_bottom_right", "_slot_bottom_right", TextureSlot.TEXTURE
+    );
     public static final ModelTemplate SHELF_BODY = create("template_shelf_body", TextureSlot.ALL, TextureSlot.PARTICLE);
     public static final ModelTemplate SHELF_INVENTORY = create("template_shelf_inventory", "_inventory", TextureSlot.ALL, TextureSlot.PARTICLE);
     public static final ModelTemplate SHELF_UNPOWERED = create("template_shelf_unpowered", "_unpowered", TextureSlot.ALL, TextureSlot.PARTICLE);
@@ -140,7 +153,7 @@ public class ModelTemplates {
     public static final ModelTemplate SHELF_RIGHT = create("template_shelf_right", "_right", TextureSlot.ALL, TextureSlot.PARTICLE);
     public static final ModelTemplate ANVIL = create("template_anvil", TextureSlot.TOP);
     public static final ModelTemplate[] STEMS = IntStream.range(0, 8)
-        .mapToObj(p_377726_ -> create("stem_growth" + p_377726_, "_stage" + p_377726_, TextureSlot.STEM))
+        .mapToObj(i -> create("stem_growth" + i, "_stage" + i, TextureSlot.STEM))
         .toArray(ModelTemplate[]::new);
     public static final ModelTemplate ATTACHED_STEM = create("stem_fruit", TextureSlot.STEM, TextureSlot.UPPER_STEM);
     public static final ModelTemplate CROP = create("crop", TextureSlot.CROP);
@@ -187,31 +200,13 @@ public class ModelTemplates {
     public static final ModelTemplate FOUR_TURTLE_EGGS = create("template_four_turtle_eggs", TextureSlot.ALL);
     public static final ModelTemplate SINGLE_FACE = create("template_single_face", TextureSlot.TEXTURE);
     public static final ModelTemplate CAULDRON_LEVEL1 = create(
-        "template_cauldron_level1",
-        TextureSlot.CONTENT,
-        TextureSlot.INSIDE,
-        TextureSlot.PARTICLE,
-        TextureSlot.TOP,
-        TextureSlot.BOTTOM,
-        TextureSlot.SIDE
+        "template_cauldron_level1", TextureSlot.CONTENT, TextureSlot.INSIDE, TextureSlot.PARTICLE, TextureSlot.TOP, TextureSlot.BOTTOM, TextureSlot.SIDE
     );
     public static final ModelTemplate CAULDRON_LEVEL2 = create(
-        "template_cauldron_level2",
-        TextureSlot.CONTENT,
-        TextureSlot.INSIDE,
-        TextureSlot.PARTICLE,
-        TextureSlot.TOP,
-        TextureSlot.BOTTOM,
-        TextureSlot.SIDE
+        "template_cauldron_level2", TextureSlot.CONTENT, TextureSlot.INSIDE, TextureSlot.PARTICLE, TextureSlot.TOP, TextureSlot.BOTTOM, TextureSlot.SIDE
     );
     public static final ModelTemplate CAULDRON_FULL = create(
-        "template_cauldron_full",
-        TextureSlot.CONTENT,
-        TextureSlot.INSIDE,
-        TextureSlot.PARTICLE,
-        TextureSlot.TOP,
-        TextureSlot.BOTTOM,
-        TextureSlot.SIDE
+        "template_cauldron_full", TextureSlot.CONTENT, TextureSlot.INSIDE, TextureSlot.PARTICLE, TextureSlot.TOP, TextureSlot.BOTTOM, TextureSlot.SIDE
     );
     public static final ModelTemplate AZALEA = create("template_azalea", TextureSlot.TOP, TextureSlot.SIDE);
     public static final ModelTemplate POTTED_AZALEA = create("template_potted_azalea_bush", TextureSlot.PLANT, TextureSlot.TOP, TextureSlot.SIDE);
@@ -226,7 +221,6 @@ public class ModelTemplates {
     public static final ModelTemplate TWO_LAYERED_ITEM = createItem("generated", TextureSlot.LAYER0, TextureSlot.LAYER1);
     public static final ModelTemplate THREE_LAYERED_ITEM = createItem("generated", TextureSlot.LAYER0, TextureSlot.LAYER1, TextureSlot.LAYER2);
     public static final ModelTemplate SHULKER_BOX_INVENTORY = createItem("template_shulker_box", TextureSlot.PARTICLE);
-    public static final ModelTemplate BED_INVENTORY = createItem("template_bed", TextureSlot.PARTICLE);
     public static final ModelTemplate CHEST_INVENTORY = createItem("template_chest", TextureSlot.PARTICLE);
     public static final ModelTemplate BUNDLE_OPEN_FRONT_INVENTORY = createItem("template_bundle_open_front", "_open_front", TextureSlot.LAYER0);
     public static final ModelTemplate BUNDLE_OPEN_BACK_INVENTORY = createItem("template_bundle_open_back", "_open_back", TextureSlot.LAYER0);
@@ -243,29 +237,27 @@ public class ModelTemplates {
     public static final ModelTemplate SCULK_SHRIEKER = create(
         "template_sculk_shrieker", TextureSlot.BOTTOM, TextureSlot.SIDE, TextureSlot.TOP, TextureSlot.PARTICLE, TextureSlot.INNER_TOP
     );
-    public static final ModelTemplate VAULT = create(
-        "template_vault", TextureSlot.TOP, TextureSlot.BOTTOM, TextureSlot.SIDE, TextureSlot.FRONT
-    );
+    public static final ModelTemplate VAULT = create("template_vault", TextureSlot.TOP, TextureSlot.BOTTOM, TextureSlot.SIDE, TextureSlot.FRONT);
     public static final ModelTemplate FLAT_HANDHELD_MACE_ITEM = createItem("handheld_mace", TextureSlot.LAYER0);
     public static final ModelTemplate LIGHTNING_ROD = create("template_lightning_rod", TextureSlot.TEXTURE);
 
-    private static ModelTemplate create(TextureSlot... p_375982_) {
-        return new ModelTemplate(Optional.empty(), Optional.empty(), p_375982_);
+    private static ModelTemplate create(final TextureSlot... slots) {
+        return new ModelTemplate(Optional.empty(), Optional.empty(), slots);
     }
 
-    private static ModelTemplate create(String p_378022_, TextureSlot... p_377561_) {
-        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("block/" + p_378022_)), Optional.empty(), p_377561_);
+    private static ModelTemplate create(final String id, final TextureSlot... slots) {
+        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("block/" + id)), Optional.empty(), slots);
     }
 
-    private static ModelTemplate createItem(String p_378751_, TextureSlot... p_377825_) {
-        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("item/" + p_378751_)), Optional.empty(), p_377825_);
+    private static ModelTemplate createItem(final String id, final TextureSlot... slots) {
+        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("item/" + id)), Optional.empty(), slots);
     }
 
-    private static ModelTemplate createItem(String p_378296_, String p_376935_, TextureSlot... p_378333_) {
-        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("item/" + p_378296_)), Optional.of(p_376935_), p_378333_);
+    private static ModelTemplate createItem(final String id, final String suffix, final TextureSlot... slots) {
+        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("item/" + id)), Optional.of(suffix), slots);
     }
 
-    private static ModelTemplate create(String p_376051_, String p_377115_, TextureSlot... p_376137_) {
-        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("block/" + p_376051_)), Optional.of(p_377115_), p_376137_);
+    private static ModelTemplate create(final String id, final String suffix, final TextureSlot... slots) {
+        return new ModelTemplate(Optional.of(Identifier.withDefaultNamespace("block/" + id)), Optional.of(suffix), slots);
     }
 }

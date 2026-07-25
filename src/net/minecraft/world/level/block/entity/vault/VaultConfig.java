@@ -3,7 +3,6 @@ package net.minecraft.world.level.block.entity.vault;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.SharedConstants;
 import net.minecraft.resources.ResourceKey;
@@ -22,17 +21,17 @@ public record VaultConfig(
     PlayerDetector playerDetector,
     PlayerDetector.EntitySelector entitySelector
 ) {
-    static final String TAG_NAME = "config";
-    static VaultConfig DEFAULT = new VaultConfig();
-    static Codec<VaultConfig> CODEC = RecordCodecBuilder.<VaultConfig>create(
-            p_391006_ -> p_391006_.group(
+    public static final String TAG_NAME = "config";
+    public static final VaultConfig DEFAULT = new VaultConfig();
+    public static final Codec<VaultConfig> CODEC = RecordCodecBuilder.<VaultConfig>create(
+            i -> i.group(
                     LootTable.KEY_CODEC.lenientOptionalFieldOf("loot_table", DEFAULT.lootTable()).forGetter(VaultConfig::lootTable),
                     Codec.DOUBLE.lenientOptionalFieldOf("activation_range", DEFAULT.activationRange()).forGetter(VaultConfig::activationRange),
                     Codec.DOUBLE.lenientOptionalFieldOf("deactivation_range", DEFAULT.deactivationRange()).forGetter(VaultConfig::deactivationRange),
                     ItemStack.lenientOptionalFieldOf("key_item").forGetter(VaultConfig::keyItem),
                     LootTable.KEY_CODEC.lenientOptionalFieldOf("override_loot_table_to_display").forGetter(VaultConfig::overrideLootTableToDisplay)
                 )
-                .apply(p_391006_, VaultConfig::new)
+                .apply(i, VaultConfig::new)
         )
         .validate(VaultConfig::validate);
 
@@ -48,8 +47,14 @@ public record VaultConfig(
         );
     }
 
-    public VaultConfig(ResourceKey<LootTable> p_335368_, double p_335328_, double p_335598_, ItemStack p_328193_, Optional<ResourceKey<LootTable>> p_333693_) {
-        this(p_335368_, p_335328_, p_335598_, p_328193_, p_333693_, DEFAULT.playerDetector(), DEFAULT.entitySelector());
+    public VaultConfig(
+        final ResourceKey<LootTable> lootTable,
+        final double activationRange,
+        final double deactivationRange,
+        final ItemStack keyItem,
+        final Optional<ResourceKey<LootTable>> overrideDisplayItems
+    ) {
+        this(lootTable, activationRange, deactivationRange, keyItem, overrideDisplayItems, DEFAULT.playerDetector(), DEFAULT.entitySelector());
     }
 
     public PlayerDetector playerDetector() {
@@ -58,7 +63,9 @@ public record VaultConfig(
 
     private DataResult<VaultConfig> validate() {
         return this.activationRange > this.deactivationRange
-            ? DataResult.error(() -> "Activation range must (" + this.activationRange + ") be less or equal to deactivation range (" + this.deactivationRange + ")")
+            ? DataResult.error(
+                () -> "Activation range must (" + this.activationRange + ") be less or equal to deactivation range (" + this.deactivationRange + ")"
+            )
             : DataResult.success(this);
     }
 }

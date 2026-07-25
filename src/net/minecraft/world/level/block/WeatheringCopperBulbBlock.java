@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -11,10 +10,8 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public class WeatheringCopperBulbBlock extends CopperBulbBlock implements WeatheringCopper {
     public static final MapCodec<WeatheringCopperBulbBlock> CODEC = RecordCodecBuilder.mapCodec(
-        p_422140_ -> p_422140_.group(
-                WeatheringCopper.WeatherState.CODEC.fieldOf("weathering_state").forGetter(WeatheringCopperBulbBlock::getAge), propertiesCodec()
-            )
-            .apply(p_422140_, WeatheringCopperBulbBlock::new)
+        i -> i.group(WeatheringCopper.WeatherState.CODEC.fieldOf("weathering_state").forGetter(WeatheringCopperBulbBlock::getAge), propertiesCodec())
+            .apply(i, WeatheringCopperBulbBlock::new)
     );
     private final WeatheringCopper.WeatherState weatherState;
 
@@ -23,19 +20,19 @@ public class WeatheringCopperBulbBlock extends CopperBulbBlock implements Weathe
         return CODEC;
     }
 
-    public WeatheringCopperBulbBlock(WeatheringCopper.WeatherState p_309695_, BlockBehaviour.Properties p_311798_) {
-        super(p_311798_);
-        this.weatherState = p_309695_;
+    public WeatheringCopperBulbBlock(final WeatheringCopper.WeatherState weatherState, final BlockBehaviour.Properties properties) {
+        super(properties);
+        this.weatherState = weatherState;
     }
 
     @Override
-    protected void randomTick(BlockState p_311293_, ServerLevel p_312278_, BlockPos p_309441_, RandomSource p_312720_) {
-        this.changeOverTime(p_311293_, p_312278_, p_309441_, p_312720_);
+    protected void randomTick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        this.changeOverTime(state, level, pos, random);
     }
 
     @Override
-    protected boolean isRandomlyTicking(BlockState p_310542_) {
-        return WeatheringCopper.getNext(p_310542_.getBlock()).isPresent();
+    protected boolean isRandomlyTicking(final BlockState state) {
+        return WeatheringCopper.getNext(state.getBlock()).isPresent();
     }
 
     public WeatheringCopper.WeatherState getAge() {

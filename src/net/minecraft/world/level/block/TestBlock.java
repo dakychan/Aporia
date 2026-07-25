@@ -2,7 +2,6 @@ package net.minecraft.world.level.block;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -30,104 +29,104 @@ public class TestBlock extends BaseEntityBlock implements GameMasterBlock {
     public static final MapCodec<TestBlock> CODEC = simpleCodec(TestBlock::new);
     public static final EnumProperty<TestBlockMode> MODE = BlockStateProperties.TEST_BLOCK_MODE;
 
-    public TestBlock(BlockBehaviour.Properties p_395905_) {
-        super(p_395905_);
+    public TestBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    public @Nullable BlockEntity newBlockEntity(BlockPos p_395540_, BlockState p_395414_) {
-        return new TestBlockEntity(p_395540_, p_395414_);
+    public @Nullable BlockEntity newBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        return new TestBlockEntity(worldPosition, blockState);
     }
 
     @Override
-    public BlockState getStateForPlacement(BlockPlaceContext p_393199_) {
-        BlockItemStateProperties blockitemstateproperties = p_393199_.getItemInHand().get(DataComponents.BLOCK_STATE);
-        BlockState blockstate = this.defaultBlockState();
-        if (blockitemstateproperties != null) {
-            TestBlockMode testblockmode = blockitemstateproperties.get(MODE);
-            if (testblockmode != null) {
-                blockstate = blockstate.setValue(MODE, testblockmode);
+    public BlockState getStateForPlacement(final BlockPlaceContext context) {
+        BlockItemStateProperties stateProperties = context.getItemInHand().get(DataComponents.BLOCK_STATE);
+        BlockState toPlace = this.defaultBlockState();
+        if (stateProperties != null) {
+            TestBlockMode mode = stateProperties.get(MODE);
+            if (mode != null) {
+                toPlace = toPlace.setValue(MODE, mode);
             }
         }
 
-        return blockstate;
+        return toPlace;
     }
 
     @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> p_395195_) {
-        p_395195_.add(MODE);
+    protected void createBlockStateDefinition(final StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(MODE);
     }
 
     @Override
-    protected InteractionResult useWithoutItem(BlockState p_394844_, Level p_395112_, BlockPos p_395555_, Player p_391422_, BlockHitResult p_393840_) {
-        if (p_395112_.getBlockEntity(p_395555_) instanceof TestBlockEntity testblockentity) {
-            if (!p_391422_.canUseGameMasterBlocks()) {
+    protected InteractionResult useWithoutItem(
+        final BlockState state, final Level level, final BlockPos pos, final Player player, final BlockHitResult hitResult
+    ) {
+        if (level.getBlockEntity(pos) instanceof TestBlockEntity testBlockEntity) {
+            if (!player.canUseGameMasterBlocks()) {
                 return InteractionResult.PASS;
-            } else {
-                if (p_395112_.isClientSide()) {
-                    p_391422_.openTestBlock(testblockentity);
-                }
-
-                return InteractionResult.SUCCESS;
             }
+
+            if (level.isClientSide()) {
+                player.openTestBlock(testBlockEntity);
+            }
+
+            return InteractionResult.SUCCESS;
         } else {
             return InteractionResult.PASS;
         }
     }
 
     @Override
-    protected void tick(BlockState p_396546_, ServerLevel p_395415_, BlockPos p_392034_, RandomSource p_394237_) {
-        TestBlockEntity testblockentity = getServerTestBlockEntity(p_395415_, p_392034_);
-        if (testblockentity != null) {
-            testblockentity.reset();
+    protected void tick(final BlockState state, final ServerLevel level, final BlockPos pos, final RandomSource random) {
+        TestBlockEntity testBlock = getServerTestBlockEntity(level, pos);
+        if (testBlock != null) {
+            testBlock.reset();
         }
     }
 
     @Override
-    protected void neighborChanged(BlockState p_391609_, Level p_396822_, BlockPos p_397767_, Block p_396884_, @Nullable Orientation p_395993_, boolean p_396803_) {
-        TestBlockEntity testblockentity = getServerTestBlockEntity(p_396822_, p_397767_);
-        if (testblockentity != null) {
-            if (testblockentity.getMode() != TestBlockMode.START) {
-                boolean flag = p_396822_.hasNeighborSignal(p_397767_);
-                boolean flag1 = testblockentity.isPowered();
-                if (flag && !flag1) {
-                    testblockentity.setPowered(true);
-                    testblockentity.trigger();
-                } else if (!flag && flag1) {
-                    testblockentity.setPowered(false);
+    protected void neighborChanged(
+        final BlockState state, final Level level, final BlockPos pos, final Block block, final @Nullable Orientation orientation, final boolean movedByPiston
+    ) {
+        TestBlockEntity testBlock = getServerTestBlockEntity(level, pos);
+        if (testBlock != null) {
+            if (testBlock.getMode() != TestBlockMode.START) {
+                boolean shouldTrigger = level.hasNeighborSignal(pos);
+                boolean isPowered = testBlock.isPowered();
+                if (shouldTrigger && !isPowered) {
+                    testBlock.setPowered(true);
+                    testBlock.trigger();
+                } else if (!shouldTrigger && isPowered) {
+                    testBlock.setPowered(false);
                 }
             }
         }
     }
 
-    private static @Nullable TestBlockEntity getServerTestBlockEntity(Level p_393300_, BlockPos p_397106_) {
-        return p_393300_ instanceof ServerLevel serverlevel && serverlevel.getBlockEntity(p_397106_) instanceof TestBlockEntity testblockentity
-            ? testblockentity
-            : null;
+    private static @Nullable TestBlockEntity getServerTestBlockEntity(final Level level, final BlockPos pos) {
+        return level instanceof ServerLevel serverLevel && serverLevel.getBlockEntity(pos) instanceof TestBlockEntity testBlockEntity ? testBlockEntity : null;
     }
 
     @Override
-    public int getSignal(BlockState p_394389_, BlockGetter p_396658_, BlockPos p_391377_, Direction p_392211_) {
-        if (p_394389_.getValue(MODE) != TestBlockMode.START) {
+    public int ownSignal(final BlockState state, final BlockGetter level, final BlockPos pos) {
+        if (state.getValue(MODE) != TestBlockMode.START) {
             return 0;
-        } else if (p_396658_.getBlockEntity(p_391377_) instanceof TestBlockEntity testblockentity) {
-            return testblockentity.isPowered() ? 15 : 0;
+        } else if (level.getBlockEntity(pos) instanceof TestBlockEntity testBlock) {
+            return testBlock.isPowered() ? 15 : 0;
         } else {
             return 0;
         }
     }
 
     @Override
-    protected ItemStack getCloneItemStack(LevelReader p_392000_, BlockPos p_392081_, BlockState p_397644_, boolean p_392867_) {
-        ItemStack itemstack = super.getCloneItemStack(p_392000_, p_392081_, p_397644_, p_392867_);
-        return setModeOnStack(itemstack, p_397644_.getValue(MODE));
+    protected ItemStack getCloneItemStack(final LevelReader level, final BlockPos pos, final BlockState state, final boolean includeData) {
+        ItemStack itemStack = super.getCloneItemStack(level, pos, state, includeData);
+        return setModeOnStack(itemStack, state.getValue(MODE));
     }
 
-    public static ItemStack setModeOnStack(ItemStack p_397023_, TestBlockMode p_395078_) {
-        p_397023_.set(
-            DataComponents.BLOCK_STATE, p_397023_.getOrDefault(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY).with(MODE, p_395078_)
-        );
-        return p_397023_;
+    public static ItemStack setModeOnStack(final ItemStack itemStack, final TestBlockMode mode) {
+        itemStack.set(DataComponents.BLOCK_STATE, itemStack.getOrDefault(DataComponents.BLOCK_STATE, BlockItemStateProperties.EMPTY).with(MODE, mode));
+        return itemStack;
     }
 
     @Override

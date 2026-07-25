@@ -11,16 +11,16 @@ public class ClientboundKeepAlivePacket implements Packet<ClientCommonPacketList
     );
     private final long id;
 
-    public ClientboundKeepAlivePacket(long p_300888_) {
-        this.id = p_300888_;
+    public ClientboundKeepAlivePacket(final long id) {
+        this.id = id;
     }
 
-    private ClientboundKeepAlivePacket(FriendlyByteBuf p_300278_) {
-        this.id = p_300278_.readLong();
+    private ClientboundKeepAlivePacket(final FriendlyByteBuf input) {
+        this.id = input.readLong();
     }
 
-    private void write(FriendlyByteBuf p_299560_) {
-        p_299560_.writeLong(this.id);
+    private void write(final FriendlyByteBuf output) {
+        output.writeLong(this.id);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ClientboundKeepAlivePacket implements Packet<ClientCommonPacketList
         return CommonPacketTypes.CLIENTBOUND_KEEP_ALIVE;
     }
 
-    public void handle(ClientCommonPacketListener p_297897_) {
-        p_297897_.handleKeepAlive(this);
+    public void handle(final ClientCommonPacketListener listener) {
+        listener.handleKeepAlive(this);
     }
 
     public long getId() {

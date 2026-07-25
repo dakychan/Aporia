@@ -3,51 +3,62 @@ package net.minecraft.client.renderer.entity;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.block.BlockModelResolver;
+import net.minecraft.client.renderer.block.model.BlockDisplayContext;
 import net.minecraft.client.renderer.entity.state.TntRenderState;
-import net.minecraft.client.renderer.state.CameraRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.item.PrimedTnt;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class TntRenderer extends EntityRenderer<PrimedTnt, TntRenderState> {
-    public TntRenderer(EntityRendererProvider.Context p_174426_) {
-        super(p_174426_);
+    public static final BlockDisplayContext BLOCK_DISPLAY_CONTEXT = BlockDisplayContext.create();
+    private final BlockModelResolver blockModelResolver;
+
+    public TntRenderer(final EntityRendererProvider.Context context) {
+        super(context);
         this.shadowRadius = 0.5F;
+        this.blockModelResolver = context.getBlockModelResolver();
     }
 
-    public void submit(TntRenderState p_424445_, PoseStack p_422760_, SubmitNodeCollector p_423241_, CameraRenderState p_430379_) {
-        p_422760_.pushPose();
-        p_422760_.translate(0.0F, 0.5F, 0.0F);
-        float f = p_424445_.fuseRemainingInTicks;
-        if (p_424445_.fuseRemainingInTicks < 10.0F) {
-            float f1 = 1.0F - p_424445_.fuseRemainingInTicks / 10.0F;
-            f1 = Mth.clamp(f1, 0.0F, 1.0F);
-            f1 *= f1;
-            f1 *= f1;
-            float f2 = 1.0F + f1 * 0.3F;
-            p_422760_.scale(f2, f2, f2);
+    public void submit(final TntRenderState state, final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final CameraRenderState camera) {
+        poseStack.pushPose();
+        poseStack.translate(0.0F, 0.5F, 0.0F);
+        float fuse = state.fuseRemainingInTicks;
+        if (fuse < 10.0F) {
+            float scale = 1.0F + getSwellAmount(fuse);
+            poseStack.scale(scale, scale, scale);
         }
 
-        p_422760_.mulPose(Axis.YP.rotationDegrees(-90.0F));
-        p_422760_.translate(-0.5F, -0.5F, 0.5F);
-        p_422760_.mulPose(Axis.YP.rotationDegrees(90.0F));
-        if (p_424445_.blockState != null) {
-            TntMinecartRenderer.submitWhiteSolidBlock(p_424445_.blockState, p_422760_, p_423241_, p_424445_.lightCoords, (int)f / 5 % 2 == 0, p_424445_.outlineColor);
+        poseStack.mulPose(Axis.YP.rotationDegrees(-90.0F));
+        poseStack.translate(-0.5F, -0.5F, 0.5F);
+        poseStack.mulPose(Axis.YP.rotationDegrees(90.0F));
+        if (!state.blockState.isEmpty()) {
+            TntMinecartRenderer.submitWhiteSolidBlock(state.blockState, poseStack, submitNodeCollector, state.lightCoords, isLit(fuse), state.outlineColor);
         }
 
-        p_422760_.popPose();
-        super.submit(p_424445_, p_422760_, p_423241_, p_430379_);
+        poseStack.popPose();
+        super.submit(state, poseStack, submitNodeCollector, camera);
+    }
+
+    public static float getSwellAmount(final float fuse) {
+        float g = 1.0F - fuse / 10.0F;
+        g = Mth.clamp(g, 0.0F, 1.0F);
+        g *= g;
+        g *= g;
+        return g * 0.3F;
+    }
+
+    public static boolean isLit(final float fuse) {
+        return fuse < 0.0F ? false : (int)(fuse / 5.0F) % 2 == 0;
     }
 
     public TntRenderState createRenderState() {
         return new TntRenderState();
     }
 
-    public void extractRenderState(PrimedTnt p_366432_, TntRenderState p_365560_, float p_367967_) {
-        super.extractRenderState(p_366432_, p_365560_, p_367967_);
-        p_365560_.fuseRemainingInTicks = p_366432_.getFuse() - p_367967_ + 1.0F;
-        p_365560_.blockState = p_366432_.getBlockState();
+    public void extractRenderState(final PrimedTnt entity, final TntRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.fuseRemainingInTicks = entity.getFuse() - partialTicks + 1.0F;
+        this.blockModelResolver.update(state.blockState, entity.getBlockState(), BLOCK_DISPLAY_CONTEXT);
     }
 }

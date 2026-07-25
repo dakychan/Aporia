@@ -1,11 +1,8 @@
 package net.minecraft.client.multiplayer.chat.report;
 
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public enum BanReason {
     GENERIC_VIOLATION("generic_violation"),
     FALSE_REPORTING("false_reporting"),
@@ -23,16 +20,16 @@ public enum BanReason {
 
     private final Component title;
 
-    private BanReason(final String p_273623_) {
-        this.title = Component.translatable("gui.banned.reason." + p_273623_);
+    BanReason(final String name) {
+        this.title = Component.translatable("gui.banned.reason." + name);
     }
 
     public Component title() {
         return this.title;
     }
 
-    public static @Nullable BanReason byId(int p_272793_) {
-        return switch (p_272793_) {
+    public static @Nullable BanReason byId(final int id) {
+        return switch (id) {
             case 2 -> FALSE_REPORTING;
             default -> null;
             case 5 -> HATE_SPEECH;

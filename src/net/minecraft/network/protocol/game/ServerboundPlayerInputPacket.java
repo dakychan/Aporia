@@ -16,7 +16,7 @@ public record ServerboundPlayerInputPacket(Input input) implements Packet<Server
         return GamePacketTypes.SERVERBOUND_PLAYER_INPUT;
     }
 
-    public void handle(ServerGamePacketListener p_134354_) {
-        p_134354_.handlePlayerInput(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handlePlayerInput(this);
     }
 }

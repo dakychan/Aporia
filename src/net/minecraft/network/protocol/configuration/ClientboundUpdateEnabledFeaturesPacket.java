@@ -13,12 +13,12 @@ public record ClientboundUpdateEnabledFeaturesPacket(Set<Identifier> features) i
         ClientboundUpdateEnabledFeaturesPacket::write, ClientboundUpdateEnabledFeaturesPacket::new
     );
 
-    private ClientboundUpdateEnabledFeaturesPacket(FriendlyByteBuf p_299340_) {
-        this(p_299340_.<Identifier, Set<Identifier>>readCollection(HashSet::new, FriendlyByteBuf::readIdentifier));
+    private ClientboundUpdateEnabledFeaturesPacket(final FriendlyByteBuf input) {
+        this(input.<Identifier, Set<Identifier>>readCollection(HashSet::new, FriendlyByteBuf::readIdentifier));
     }
 
-    private void write(FriendlyByteBuf p_297257_) {
-        p_297257_.writeCollection(this.features, FriendlyByteBuf::writeIdentifier);
+    private void write(final FriendlyByteBuf output) {
+        output.writeCollection(this.features, FriendlyByteBuf::writeIdentifier);
     }
 
     @Override
@@ -26,7 +26,7 @@ public record ClientboundUpdateEnabledFeaturesPacket(Set<Identifier> features) i
         return ConfigurationPacketTypes.CLIENTBOUND_UPDATE_ENABLED_FEATURES;
     }
 
-    public void handle(ClientConfigurationPacketListener p_301161_) {
-        p_301161_.handleEnabledFeatures(this);
+    public void handle(final ClientConfigurationPacketListener listener) {
+        listener.handleEnabledFeatures(this);
     }
 }

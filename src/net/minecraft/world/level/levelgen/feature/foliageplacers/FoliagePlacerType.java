@@ -14,16 +14,18 @@ public class FoliagePlacerType<P extends FoliagePlacer> {
     public static final FoliagePlacerType<MegaJungleFoliagePlacer> MEGA_JUNGLE_FOLIAGE_PLACER = register("jungle_foliage_placer", MegaJungleFoliagePlacer.CODEC);
     public static final FoliagePlacerType<MegaPineFoliagePlacer> MEGA_PINE_FOLIAGE_PLACER = register("mega_pine_foliage_placer", MegaPineFoliagePlacer.CODEC);
     public static final FoliagePlacerType<DarkOakFoliagePlacer> DARK_OAK_FOLIAGE_PLACER = register("dark_oak_foliage_placer", DarkOakFoliagePlacer.CODEC);
-    public static final FoliagePlacerType<RandomSpreadFoliagePlacer> RANDOM_SPREAD_FOLIAGE_PLACER = register("random_spread_foliage_placer", RandomSpreadFoliagePlacer.CODEC);
+    public static final FoliagePlacerType<RandomSpreadFoliagePlacer> RANDOM_SPREAD_FOLIAGE_PLACER = register(
+        "random_spread_foliage_placer", RandomSpreadFoliagePlacer.CODEC
+    );
     public static final FoliagePlacerType<CherryFoliagePlacer> CHERRY_FOLIAGE_PLACER = register("cherry_foliage_placer", CherryFoliagePlacer.CODEC);
     private final MapCodec<P> codec;
 
-    private static <P extends FoliagePlacer> FoliagePlacerType<P> register(String p_68606_, MapCodec<P> p_332653_) {
-        return Registry.register(BuiltInRegistries.FOLIAGE_PLACER_TYPE, p_68606_, new FoliagePlacerType<>(p_332653_));
+    private static <P extends FoliagePlacer> FoliagePlacerType<P> register(final String name, final MapCodec<P> codec) {
+        return Registry.register(BuiltInRegistries.FOLIAGE_PLACER_TYPE, name, new FoliagePlacerType<>(codec));
     }
 
-    private FoliagePlacerType(MapCodec<P> p_328706_) {
-        this.codec = p_328706_;
+    private FoliagePlacerType(final MapCodec<P> codec) {
+        this.codec = codec;
     }
 
     public MapCodec<P> codec() {

@@ -2,6 +2,7 @@ package net.minecraft.world.item.slot;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -13,71 +14,72 @@ public interface SlotCollection {
 
     Stream<ItemStack> itemCopies();
 
-    default SlotCollection filter(Predicate<ItemStack> p_451415_) {
-        return new SlotCollection.Filtered(this, p_451415_);
+    default SlotCollection filter(final Predicate<? super ItemStack> predicate) {
+        return new SlotCollection.Filtered(this, predicate);
     }
 
-    default SlotCollection flatMap(Function<ItemStack, ? extends SlotCollection> p_451352_) {
-        return new SlotCollection.FlatMapped(this, p_451352_);
+    default SlotCollection flatMap(final Function<ItemStack, ? extends SlotCollection> mapper) {
+        return new SlotCollection.FlatMapped(this, mapper);
     }
 
-    default SlotCollection limit(int p_460595_) {
-        return new SlotCollection.Limited(this, p_460595_);
+    default SlotCollection limit(final int limit) {
+        return new SlotCollection.Limited(this, limit);
     }
 
-    static SlotCollection of(SlotAccess p_454366_) {
-        return () -> Stream.of(p_454366_.get().copy());
+    static SlotCollection of(final SlotAccess slotAccess) {
+        return () -> Stream.of(slotAccess.get().copy());
     }
 
-    static SlotCollection of(Collection<? extends SlotAccess> p_459804_) {
-        return switch (p_459804_.size()) {
+    static SlotCollection of(final Collection<? extends SlotAccess> slots) {
+        return switch (slots.size()) {
             case 0 -> EMPTY;
-            case 1 -> of(p_459804_.iterator().next());
-            default -> () -> p_459804_.stream().map(SlotAccess::get).map(ItemStack::copy);
+            case 1 -> of(slots.iterator().next());
+            default -> () -> slots.stream().map(SlotAccess::get).map(ItemStack::copy);
         };
     }
 
-    static SlotCollection concat(SlotCollection p_458556_, SlotCollection p_451355_) {
-        return () -> Stream.concat(p_458556_.itemCopies(), p_451355_.itemCopies());
+    static SlotCollection concat(final SlotCollection first, final SlotCollection second) {
+        return () -> Stream.concat(first.itemCopies(), second.itemCopies());
     }
 
-    static SlotCollection concat(List<? extends SlotCollection> p_455140_) {
-        return switch (p_455140_.size()) {
+    static SlotCollection concat(final List<? extends SlotCollection> terms) {
+        return switch (terms.size()) {
             case 0 -> EMPTY;
-            case 1 -> (SlotCollection)p_455140_.getFirst();
-            case 2 -> concat(p_455140_.get(0), p_455140_.get(1));
-            default -> () -> p_455140_.stream().flatMap(SlotCollection::itemCopies);
+            case 1 -> (SlotCollection)terms.getFirst();
+            case 2 -> concat(terms.get(0), terms.get(1));
+            default -> () -> terms.stream().flatMap(SlotCollection::itemCopies);
         };
     }
 
-    public record Filtered(SlotCollection slots, Predicate<ItemStack> filter) implements SlotCollection {
+    record Filtered(SlotCollection slots, Predicate<? super ItemStack> filter) implements SlotCollection {
         @Override
         public Stream<ItemStack> itemCopies() {
             return this.slots.itemCopies().filter(this.filter);
         }
 
         @Override
-        public SlotCollection filter(Predicate<ItemStack> p_456944_) {
-            return new SlotCollection.Filtered(this.slots, this.filter.and(p_456944_));
+        public SlotCollection filter(final Predicate<? super ItemStack> predicate) {
+            Objects.requireNonNull(predicate);
+            return new SlotCollection.Filtered(this.slots, t -> this.filter.test(t) && predicate.test(t));
         }
     }
 
-    public record FlatMapped(SlotCollection slots, Function<ItemStack, ? extends SlotCollection> mapper) implements SlotCollection {
+    record FlatMapped(SlotCollection slots, Function<ItemStack, ? extends SlotCollection> mapper) implements SlotCollection {
         @Override
         public Stream<ItemStack> itemCopies() {
             return this.slots.itemCopies().map(this.mapper).flatMap(SlotCollection::itemCopies);
         }
     }
 
-    public record Limited(SlotCollection slots, int limit) implements SlotCollection {
+    record Limited(SlotCollection slots, int limit) implements SlotCollection {
         @Override
         public Stream<ItemStack> itemCopies() {
             return this.slots.itemCopies().limit(this.limit);
         }
 
         @Override
-        public SlotCollection limit(int p_456606_) {
-            return new SlotCollection.Limited(this.slots, Math.min(this.limit, p_456606_));
+        public SlotCollection limit(final int limit) {
+            return new SlotCollection.Limited(this.slots, Math.min(this.limit, limit));
         }
     }
 }

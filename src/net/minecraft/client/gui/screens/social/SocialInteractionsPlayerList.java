@@ -11,199 +11,219 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Map.Entry;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.multiplayer.chat.ChatLog;
 import net.minecraft.client.multiplayer.chat.LoggedChatMessage;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class SocialInteractionsPlayerList extends ContainerObjectSelectionList<PlayerEntry> {
     private final SocialInteractionsScreen socialInteractionsScreen;
     private final List<PlayerEntry> players = Lists.newArrayList();
     private @Nullable String filter;
 
-    public SocialInteractionsPlayerList(SocialInteractionsScreen p_100697_, Minecraft p_100698_, int p_100699_, int p_100700_, int p_100701_, int p_100702_) {
-        super(p_100698_, p_100699_, p_100700_, p_100701_, p_100702_);
-        this.socialInteractionsScreen = p_100697_;
+    public SocialInteractionsPlayerList(
+        final SocialInteractionsScreen socialInteractionsScreen,
+        final Minecraft minecraft,
+        final int width,
+        final int height,
+        final int y,
+        final int itemHeight
+    ) {
+        super(minecraft, width, height, y, itemHeight);
+        this.socialInteractionsScreen = socialInteractionsScreen;
     }
 
     @Override
-    protected void renderListBackground(GuiGraphics p_329536_) {
+    protected void extractListBackground(final GuiGraphicsExtractor graphics) {
     }
 
     @Override
-    protected void renderListSeparators(GuiGraphics p_334427_) {
+    protected void extractListSeparators(final GuiGraphicsExtractor graphics) {
     }
 
     @Override
-    protected void enableScissor(GuiGraphics p_281892_) {
-        p_281892_.enableScissor(this.getX(), this.getY() + 4, this.getRight(), this.getBottom());
+    protected void enableScissor(final GuiGraphicsExtractor graphics) {
+        graphics.enableScissor(this.getX(), this.getY() + 4, this.getRight(), this.getBottom());
     }
 
-    public void updatePlayerList(Collection<UUID> p_240798_, double p_240792_, boolean p_240829_) {
-        Map<UUID, PlayerEntry> map = new HashMap<>();
-        this.addOnlinePlayers(p_240798_, map);
-        if (p_240829_) {
-            this.addSeenPlayers(map);
+    public void updatePlayerList(final Collection<UUID> playersToAdd, final double scrollAmount, final boolean addOfflineEntries) {
+        Map<UUID, PlayerEntry> newEntries = new HashMap<>();
+        this.addOnlinePlayers(playersToAdd, newEntries);
+        if (addOfflineEntries) {
+            this.addSeenPlayers(newEntries);
         }
 
-        this.updatePlayersFromChatLog(map, p_240829_);
-        this.updateFiltersAndScroll(map.values(), p_240792_);
+        this.updatePlayersFromChatLog(newEntries, addOfflineEntries);
+        this.updateFiltersAndScroll(newEntries.values(), scrollAmount);
     }
 
-    private void addOnlinePlayers(Collection<UUID> p_240813_, Map<UUID, PlayerEntry> p_240796_) {
-        ClientPacketListener clientpacketlistener = this.minecraft.player.connection;
+    private void addOnlinePlayers(final Collection<UUID> playersToAdd, final Map<UUID, PlayerEntry> output) {
+        ClientPacketListener connection = this.minecraft.player.connection;
 
-        for (UUID uuid : p_240813_) {
-            PlayerInfo playerinfo = clientpacketlistener.getPlayerInfo(uuid);
-            if (playerinfo != null) {
-                PlayerEntry playerentry = this.makePlayerEntry(uuid, playerinfo);
-                p_240796_.put(uuid, playerentry);
+        for (UUID id : playersToAdd) {
+            PlayerInfo playerInfo = connection.getPlayerInfo(id);
+            if (playerInfo != null) {
+                PlayerEntry player = this.makePlayerEntry(id, playerInfo);
+                output.put(id, player);
             }
         }
     }
 
-    private void addSeenPlayers(Map<UUID, PlayerEntry> p_430321_) {
-        Map<UUID, PlayerInfo> map = this.minecraft.player.connection.getSeenPlayers();
+    private void addSeenPlayers(final Map<UUID, PlayerEntry> newEntries) {
+        Map<UUID, PlayerInfo> seenPlayers = this.minecraft.player.connection.getSeenPlayers();
 
-        for (Map.Entry<UUID, PlayerInfo> entry : map.entrySet()) {
-            p_430321_.computeIfAbsent(entry.getKey(), p_420782_ -> {
-                PlayerEntry playerentry = this.makePlayerEntry(p_420782_, entry.getValue());
-                playerentry.setRemoved(true);
-                return playerentry;
+        for (Map.Entry<UUID, PlayerInfo> entry : seenPlayers.entrySet()) {
+            newEntries.computeIfAbsent(entry.getKey(), uuid -> {
+                PlayerEntry player = this.makePlayerEntry(uuid, entry.getValue());
+                player.setRemoved(true);
+                return player;
             });
         }
     }
 
-    private PlayerEntry makePlayerEntry(UUID p_431134_, PlayerInfo p_424270_) {
-        return new PlayerEntry(this.minecraft, this.socialInteractionsScreen, p_431134_, p_424270_.getProfile().name(), p_424270_::getSkin, p_424270_.hasVerifiableChat());
+    private PlayerEntry makePlayerEntry(final UUID id, final PlayerInfo playerInfo) {
+        return new PlayerEntry(
+            this.minecraft, this.socialInteractionsScreen, id, playerInfo.getProfile().name(), playerInfo::getSkin, playerInfo.hasVerifiableChat()
+        );
     }
 
-    private void updatePlayersFromChatLog(Map<UUID, PlayerEntry> p_240780_, boolean p_240827_) {
-        Map<UUID, GameProfile> map = collectProfilesFromChatLog(this.minecraft.getReportingContext().chatLog());
-        map.forEach(
-            (p_420779_, p_420780_) -> {
-                PlayerEntry playerentry;
-                if (p_240827_) {
-                    playerentry = p_240780_.computeIfAbsent(
-                        p_420779_,
-                        p_420784_ -> {
-                            PlayerEntry playerentry1 = new PlayerEntry(
-                                this.minecraft, this.socialInteractionsScreen, p_420780_.id(), p_420780_.name(), this.minecraft.getSkinManager().createLookup(p_420780_, true), true
+    private void updatePlayersFromChatLog(final Map<UUID, PlayerEntry> entries, final boolean addOfflineEntries) {
+        Map<UUID, GameProfile> gameProfiles = collectProfilesFromChatLog(this.minecraft.getReportingContext().chatLog());
+        gameProfiles.forEach(
+            (id, gameProfile) -> {
+                PlayerEntry entry;
+                if (addOfflineEntries) {
+                    entry = entries.computeIfAbsent(
+                        id,
+                        uuid -> {
+                            PlayerEntry player = new PlayerEntry(
+                                this.minecraft,
+                                this.socialInteractionsScreen,
+                                gameProfile.id(),
+                                gameProfile.name(),
+                                this.minecraft.getSkinManager().createLookup(gameProfile, true),
+                                true
                             );
-                            playerentry1.setRemoved(true);
-                            return playerentry1;
+                            player.setRemoved(true);
+                            return player;
                         }
                     );
                 } else {
-                    playerentry = p_240780_.get(p_420779_);
-                    if (playerentry == null) {
+                    entry = entries.get(id);
+                    if (entry == null) {
                         return;
                     }
                 }
 
-                playerentry.setHasRecentMessages(true);
+                entry.setHasRecentMessages(true);
             }
         );
     }
 
-    private static Map<UUID, GameProfile> collectProfilesFromChatLog(ChatLog p_250748_) {
-        Map<UUID, GameProfile> map = new Object2ObjectLinkedOpenHashMap<>();
+    private static Map<UUID, GameProfile> collectProfilesFromChatLog(final ChatLog chatLog) {
+        Map<UUID, GameProfile> gameProfiles = new Object2ObjectLinkedOpenHashMap<>();
 
-        for (int i = p_250748_.end(); i >= p_250748_.start(); i--) {
-            if (p_250748_.lookup(i) instanceof LoggedChatMessage.Player loggedchatmessage$player && loggedchatmessage$player.message().hasSignature()) {
-                map.put(loggedchatmessage$player.profileId(), loggedchatmessage$player.profile());
+        for (int id = chatLog.end(); id >= chatLog.start(); id--) {
+            if (chatLog.lookup(id) instanceof LoggedChatMessage.Player message && message.message().hasSignature()) {
+                gameProfiles.put(message.profileId(), message.profile());
             }
         }
 
-        return map;
+        return gameProfiles;
     }
 
     private void sortPlayerEntries() {
-        this.players.sort(Comparator.<PlayerEntry, Integer>comparing(p_240745_ -> {
-            if (this.minecraft.isLocalPlayer(p_240745_.getPlayerId())) {
-                return 0;
-            } else if (this.minecraft.getReportingContext().hasDraftReportFor(p_240745_.getPlayerId())) {
-                return 1;
-            } else if (p_240745_.getPlayerId().version() == 2) {
-                return 4;
-            } else {
-                return p_240745_.hasRecentMessages() ? 2 : 3;
-            }
-        }).thenComparing(p_240744_ -> {
-            if (!p_240744_.getPlayerName().isBlank()) {
-                int i = p_240744_.getPlayerName().codePointAt(0);
-                if (i == 95 || i >= 97 && i <= 122 || i >= 65 && i <= 90 || i >= 48 && i <= 57) {
-                    return 0;
-                }
-            }
+        this.players
+            .sort(
+                Comparator.<PlayerEntry, Integer>comparing(e -> {
+                        if (this.minecraft.isLocalPlayer(e.getPlayerId())) {
+                            return 0;
+                        } else if (this.minecraft.getReportingContext().hasDraftReportFor(e.getPlayerId())) {
+                            return 1;
+                        } else if (e.getPlayerId().version() == 2) {
+                            return 4;
+                        } else {
+                            return e.hasRecentMessages() ? 2 : 3;
+                        }
+                    })
+                    .thenComparing(
+                        e -> {
+                            if (!e.getPlayerName().isBlank()) {
+                                int firstCodepoint = e.getPlayerName().codePointAt(0);
+                                if (firstCodepoint == 95
+                                    || firstCodepoint >= 97 && firstCodepoint <= 122
+                                    || firstCodepoint >= 65 && firstCodepoint <= 90
+                                    || firstCodepoint >= 48 && firstCodepoint <= 57) {
+                                    return 0;
+                                }
+                            }
 
-            return 1;
-        }).thenComparing(PlayerEntry::getPlayerName, String::compareToIgnoreCase));
+                            return 1;
+                        }
+                    )
+                    .thenComparing(PlayerEntry::getPlayerName, String::compareToIgnoreCase)
+            );
     }
 
-    private void updateFiltersAndScroll(Collection<PlayerEntry> p_240809_, double p_240830_) {
+    private void updateFiltersAndScroll(final Collection<PlayerEntry> newEntries, final double scrollAmount) {
         this.players.clear();
-        this.players.addAll(p_240809_);
+        this.players.addAll(newEntries);
         this.sortPlayerEntries();
         this.updateFilteredPlayers();
         this.replaceEntries(this.players);
-        this.setScrollAmount(p_240830_);
+        this.setScrollAmount(scrollAmount);
     }
 
     private void updateFilteredPlayers() {
         if (this.filter != null) {
-            this.players.removeIf(p_100710_ -> !p_100710_.getPlayerName().toLowerCase(Locale.ROOT).contains(this.filter));
+            this.players.removeIf(p -> !p.getPlayerName().toLowerCase(Locale.ROOT).contains(this.filter));
             this.replaceEntries(this.players);
         }
     }
 
-    public void setFilter(String p_100718_) {
-        this.filter = p_100718_;
+    public void setFilter(final String filter) {
+        this.filter = filter;
     }
 
     public boolean isEmpty() {
         return this.players.isEmpty();
     }
 
-    public void addPlayer(PlayerInfo p_100715_, SocialInteractionsScreen.Page p_100716_) {
-        UUID uuid = p_100715_.getProfile().id();
+    public void addPlayer(final PlayerInfo player, final SocialInteractionsScreen.Page page) {
+        UUID playerId = player.getProfile().id();
 
-        for (PlayerEntry playerentry : this.players) {
-            if (playerentry.getPlayerId().equals(uuid)) {
-                playerentry.setRemoved(false);
+        for (PlayerEntry playerEntry : this.players) {
+            if (playerEntry.getPlayerId().equals(playerId)) {
+                playerEntry.setRemoved(false);
                 return;
             }
         }
 
-        if ((p_100716_ == SocialInteractionsScreen.Page.ALL || this.minecraft.getPlayerSocialManager().shouldHideMessageFrom(uuid))
-            && (Strings.isNullOrEmpty(this.filter) || p_100715_.getProfile().name().toLowerCase(Locale.ROOT).contains(this.filter))) {
-            boolean flag = p_100715_.hasVerifiableChat();
-            PlayerEntry playerentry1 = new PlayerEntry(
-                this.minecraft, this.socialInteractionsScreen, p_100715_.getProfile().id(), p_100715_.getProfile().name(), p_100715_::getSkin, flag
+        if ((page == SocialInteractionsScreen.Page.ALL || this.minecraft.getPlayerSocialManager().shouldHideMessageFrom(playerId))
+            && (Strings.isNullOrEmpty(this.filter) || player.getProfile().name().toLowerCase(Locale.ROOT).contains(this.filter))) {
+            boolean chatReportable = player.hasVerifiableChat();
+            PlayerEntry playerEntry = new PlayerEntry(
+                this.minecraft, this.socialInteractionsScreen, player.getProfile().id(), player.getProfile().name(), player::getSkin, chatReportable
             );
-            this.addEntry(playerentry1);
-            this.players.add(playerentry1);
+            this.addEntry(playerEntry);
+            this.players.add(playerEntry);
         }
     }
 
-    public void removePlayer(UUID p_100723_) {
-        for (PlayerEntry playerentry : this.players) {
-            if (playerentry.getPlayerId().equals(p_100723_)) {
-                playerentry.setRemoved(true);
+    public void removePlayer(final UUID id) {
+        for (PlayerEntry playerEntry : this.players) {
+            if (playerEntry.getPlayerId().equals(id)) {
+                playerEntry.setRemoved(true);
                 return;
             }
         }
     }
 
     public void refreshHasDraftReport() {
-        this.players.forEach(p_404873_ -> p_404873_.refreshHasDraftReport(this.minecraft.getReportingContext()));
+        this.players.forEach(playerEntry -> playerEntry.refreshHasDraftReport(this.minecraft.getReportingContext()));
     }
 }

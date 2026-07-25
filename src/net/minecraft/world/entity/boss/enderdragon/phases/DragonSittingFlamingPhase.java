@@ -20,46 +20,40 @@ public class DragonSittingFlamingPhase extends AbstractDragonSittingPhase {
     private int flameCount;
     private @Nullable AreaEffectCloud flame;
 
-    public DragonSittingFlamingPhase(EnderDragon p_31330_) {
-        super(p_31330_);
+    public DragonSittingFlamingPhase(final EnderDragon dragon) {
+        super(dragon);
     }
 
     @Override
     public void doClientTick() {
         this.flameTicks++;
         if (this.flameTicks % 2 == 0 && this.flameTicks < 10) {
-            Vec3 vec3 = this.dragon.getHeadLookVector(1.0F).normalize();
-            vec3.yRot((float) (-Math.PI / 4));
-            double d0 = this.dragon.head.getX();
-            double d1 = this.dragon.head.getY(0.5);
-            double d2 = this.dragon.head.getZ();
+            Vec3 look = this.dragon.getHeadLookVector(1.0F).normalize();
+            look.yRot((float) (-Math.PI / 4));
+            double particleX = this.dragon.head.getX();
+            double particleY = this.dragon.head.getY(0.5);
+            double particleZ = this.dragon.head.getZ();
 
             for (int i = 0; i < 8; i++) {
-                double d3 = d0 + this.dragon.getRandom().nextGaussian() / 2.0;
-                double d4 = d1 + this.dragon.getRandom().nextGaussian() / 2.0;
-                double d5 = d2 + this.dragon.getRandom().nextGaussian() / 2.0;
+                double px = particleX + this.dragon.getRandom().nextGaussian() / 2.0;
+                double py = particleY + this.dragon.getRandom().nextGaussian() / 2.0;
+                double pz = particleZ + this.dragon.getRandom().nextGaussian() / 2.0;
 
                 for (int j = 0; j < 6; j++) {
                     this.dragon
                         .level()
                         .addParticle(
-                            PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F),
-                            d3,
-                            d4,
-                            d5,
-                            -vec3.x * 0.08F * j,
-                            -vec3.y * 0.6F,
-                            -vec3.z * 0.08F * j
+                            PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F), px, py, pz, -look.x * 0.08F * j, -look.y * 0.6F, -look.z * 0.08F * j
                         );
                 }
 
-                vec3.yRot((float) (Math.PI / 16));
+                look.yRot((float) (Math.PI / 16));
             }
         }
     }
 
     @Override
-    public void doServerTick(ServerLevel p_368299_) {
+    public void doServerTick(final ServerLevel level) {
         this.flameTicks++;
         if (this.flameTicks >= 200) {
             if (this.flameCount >= 4) {
@@ -68,35 +62,32 @@ public class DragonSittingFlamingPhase extends AbstractDragonSittingPhase {
                 this.dragon.getPhaseManager().setPhase(EnderDragonPhase.SITTING_SCANNING);
             }
         } else if (this.flameTicks == 10) {
-            Vec3 vec3 = new Vec3(
-                    this.dragon.head.getX() - this.dragon.getX(), 0.0, this.dragon.head.getZ() - this.dragon.getZ()
-                )
-                .normalize();
-            float f = 5.0F;
-            double d0 = this.dragon.head.getX() + vec3.x * 5.0 / 2.0;
-            double d1 = this.dragon.head.getZ() + vec3.z * 5.0 / 2.0;
-            double d2 = this.dragon.head.getY(0.5);
-            double d3 = d2;
-            BlockPos.MutableBlockPos blockpos$mutableblockpos = new BlockPos.MutableBlockPos(d0, d2, d1);
+            Vec3 look = new Vec3(this.dragon.head.getX() - this.dragon.getX(), 0.0, this.dragon.head.getZ() - this.dragon.getZ()).normalize();
+            float radius = 5.0F;
+            double x = this.dragon.head.getX() + look.x * 5.0 / 2.0;
+            double z = this.dragon.head.getZ() + look.z * 5.0 / 2.0;
+            double initialY = this.dragon.head.getY(0.5);
+            double y = initialY;
+            BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos(x, y, z);
 
-            while (p_368299_.isEmptyBlock(blockpos$mutableblockpos)) {
-                if (--d3 < 0.0) {
-                    d3 = d2;
+            while (level.isEmptyBlock(pos)) {
+                if (--y < 0.0) {
+                    y = initialY;
                     break;
                 }
 
-                blockpos$mutableblockpos.set(d0, d3, d1);
+                pos.set(x, y, z);
             }
 
-            d3 = Mth.floor(d3) + 1;
-            this.flame = new AreaEffectCloud(p_368299_, d0, d3, d1);
+            y = Mth.floor(y) + 1;
+            this.flame = new AreaEffectCloud(level, x, y, z);
             this.flame.setOwner(this.dragon);
             this.flame.setRadius(5.0F);
             this.flame.setDuration(200);
             this.flame.setCustomParticle(PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0F));
             this.flame.setPotionDurationScale(0.25F);
             this.flame.addEffect(new MobEffectInstance(MobEffects.INSTANT_DAMAGE));
-            p_368299_.addFreshEntity(this.flame);
+            level.addFreshEntity(this.flame);
         }
     }
 

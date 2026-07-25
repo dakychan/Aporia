@@ -13,12 +13,10 @@ public class TimerCallbacks<C> {
         .register(Identifier.withDefaultNamespace("function"), FunctionCallback.CODEC)
         .register(Identifier.withDefaultNamespace("function_tag"), FunctionTagCallback.CODEC);
     private final ExtraCodecs.LateBoundIdMapper<Identifier, MapCodec<? extends TimerCallback<C>>> idMapper = new ExtraCodecs.LateBoundIdMapper<>();
-    private final Codec<TimerCallback<C>> codec = this.idMapper
-        .codec(Identifier.CODEC)
-        .dispatch("Type", TimerCallback::codec, Function.identity());
+    private final Codec<TimerCallback<C>> codec = this.idMapper.codec(Identifier.CODEC).dispatch("type", TimerCallback::codec, Function.identity());
 
-    public TimerCallbacks<C> register(Identifier p_452177_, MapCodec<? extends TimerCallback<C>> p_393545_) {
-        this.idMapper.put(p_452177_, p_393545_);
+    public TimerCallbacks<C> register(final Identifier id, final MapCodec<? extends TimerCallback<C>> codec) {
+        this.idMapper.put(id, codec);
         return this;
     }
 

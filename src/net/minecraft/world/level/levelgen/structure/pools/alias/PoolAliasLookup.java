@@ -12,21 +12,21 @@ import net.minecraft.world.level.levelgen.structure.pools.StructureTemplatePool;
 
 @FunctionalInterface
 public interface PoolAliasLookup {
-    PoolAliasLookup EMPTY = p_311984_ -> p_311984_;
+    PoolAliasLookup EMPTY = key -> key;
 
-    ResourceKey<StructureTemplatePool> lookup(ResourceKey<StructureTemplatePool> p_311151_);
+    ResourceKey<StructureTemplatePool> lookup(final ResourceKey<StructureTemplatePool> alias);
 
-    static PoolAliasLookup create(List<PoolAliasBinding> p_310301_, BlockPos p_313211_, long p_311952_) {
-        if (p_310301_.isEmpty()) {
+    static PoolAliasLookup create(final List<PoolAliasBinding> poolAliasBindings, final BlockPos pos, final long seed) {
+        if (poolAliasBindings.isEmpty()) {
             return EMPTY;
-        } else {
-            RandomSource randomsource = RandomSource.create(p_311952_).forkPositional().at(p_313211_);
-            Builder<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> builder = ImmutableMap.builder();
-            p_310301_.forEach(p_311006_ -> p_311006_.forEachResolved(randomsource, builder::put));
-            Map<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> map = builder.build();
-            return p_312268_ -> Objects.requireNonNull(
-                map.getOrDefault(p_312268_, p_312268_), () -> "alias " + p_312268_.identifier() + " was mapped to null value"
-            );
         }
+
+        RandomSource random = RandomSource.create(seed).forkPositional().at(pos);
+        Builder<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> builder = ImmutableMap.builder();
+        poolAliasBindings.forEach(binding -> binding.forEachResolved(random, builder::put));
+        Map<ResourceKey<StructureTemplatePool>, ResourceKey<StructureTemplatePool>> aliasMappings = builder.build();
+        return resourceKey -> Objects.requireNonNull(
+            aliasMappings.getOrDefault(resourceKey, resourceKey), () -> "alias " + resourceKey.identifier() + " was mapped to null value"
+        );
     }
 }

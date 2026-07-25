@@ -3,28 +3,28 @@ package net.minecraft.world.level.levelgen.feature.stateproviders;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.ExtraCodecs;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.Util;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 
 public class NoiseThresholdProvider extends NoiseBasedStateProvider {
     public static final MapCodec<NoiseThresholdProvider> CODEC = RecordCodecBuilder.mapCodec(
-        p_191486_ -> noiseCodec(p_191486_)
+        i -> noiseCodec(i)
             .and(
-                p_191486_.group(
-                    Codec.floatRange(-1.0F, 1.0F).fieldOf("threshold").forGetter(p_191494_ -> p_191494_.threshold),
-                    Codec.floatRange(0.0F, 1.0F).fieldOf("high_chance").forGetter(p_191492_ -> p_191492_.highChance),
-                    BlockState.CODEC.fieldOf("default_state").forGetter(p_191490_ -> p_191490_.defaultState),
-                    ExtraCodecs.nonEmptyList(BlockState.CODEC.listOf()).fieldOf("low_states").forGetter(p_191488_ -> p_191488_.lowStates),
-                    ExtraCodecs.nonEmptyList(BlockState.CODEC.listOf()).fieldOf("high_states").forGetter(p_191481_ -> p_191481_.highStates)
+                i.group(
+                    Codec.floatRange(-1.0F, 1.0F).fieldOf("threshold").forGetter(p -> p.threshold),
+                    Codec.floatRange(0.0F, 1.0F).fieldOf("high_chance").forGetter(p -> p.highChance),
+                    BlockState.CODEC.fieldOf("default_state").forGetter(p -> p.defaultState),
+                    ExtraCodecs.nonEmptyList(BlockState.CODEC.listOf()).fieldOf("low_states").forGetter(p -> p.lowStates),
+                    ExtraCodecs.nonEmptyList(BlockState.CODEC.listOf()).fieldOf("high_states").forGetter(p -> p.highStates)
                 )
             )
-            .apply(p_191486_, NoiseThresholdProvider::new)
+            .apply(i, NoiseThresholdProvider::new)
     );
     private final float threshold;
     private final float highChance;
@@ -33,21 +33,21 @@ public class NoiseThresholdProvider extends NoiseBasedStateProvider {
     private final List<BlockState> highStates;
 
     public NoiseThresholdProvider(
-        long p_191471_,
-        NormalNoise.NoiseParameters p_191472_,
-        float p_191473_,
-        float p_191474_,
-        float p_191475_,
-        BlockState p_191476_,
-        List<BlockState> p_191477_,
-        List<BlockState> p_191478_
+        final long seed,
+        final NormalNoise.NoiseParameters parameters,
+        final float scale,
+        final float threshold,
+        final float highChance,
+        final BlockState defaultState,
+        final List<BlockState> lowStates,
+        final List<BlockState> highStates
     ) {
-        super(p_191471_, p_191472_, p_191473_);
-        this.threshold = p_191474_;
-        this.highChance = p_191475_;
-        this.defaultState = p_191476_;
-        this.lowStates = p_191477_;
-        this.highStates = p_191478_;
+        super(seed, parameters, scale);
+        this.threshold = threshold;
+        this.highChance = highChance;
+        this.defaultState = defaultState;
+        this.lowStates = lowStates;
+        this.highStates = highStates;
     }
 
     @Override
@@ -56,12 +56,12 @@ public class NoiseThresholdProvider extends NoiseBasedStateProvider {
     }
 
     @Override
-    public BlockState getState(RandomSource p_225916_, BlockPos p_225917_) {
-        double d0 = this.getNoiseValue(p_225917_, this.scale);
-        if (d0 < this.threshold) {
-            return Util.getRandom(this.lowStates, p_225916_);
+    public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
+        double localValue = this.getNoiseValue(pos, this.scale);
+        if (localValue < this.threshold) {
+            return Util.getRandom(this.lowStates, random);
         } else {
-            return p_225916_.nextFloat() < this.highChance ? Util.getRandom(this.highStates, p_225916_) : this.defaultState;
+            return random.nextFloat() < this.highChance ? Util.getRandom(this.highStates, random) : this.defaultState;
         }
     }
 }

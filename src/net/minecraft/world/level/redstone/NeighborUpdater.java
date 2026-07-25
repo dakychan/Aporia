@@ -17,60 +17,78 @@ import org.jspecify.annotations.Nullable;
 public interface NeighborUpdater {
     Direction[] UPDATE_ORDER = new Direction[]{Direction.WEST, Direction.EAST, Direction.DOWN, Direction.UP, Direction.NORTH, Direction.SOUTH};
 
-    void shapeUpdate(Direction p_230791_, BlockState p_230792_, BlockPos p_230793_, BlockPos p_230794_, @Block.UpdateFlags int p_230795_, int p_230796_);
+    void shapeUpdate(Direction direction, BlockState neighborState, BlockPos pos, BlockPos neighborPos, @Block.UpdateFlags int updateFlags, int updateLimit);
 
-    void neighborChanged(BlockPos p_230781_, Block p_230782_, @Nullable Orientation p_360748_);
+    void neighborChanged(BlockPos pos, Block changedBlock, @Nullable Orientation orientation);
 
-    void neighborChanged(BlockState p_366525_, BlockPos p_230785_, Block p_230786_, @Nullable Orientation p_367786_, boolean p_366743_);
+    void neighborChanged(BlockState state, BlockPos pos, Block changedBlock, @Nullable Orientation orientation, boolean movedByPiston);
 
-    default void updateNeighborsAtExceptFromFacing(BlockPos p_230788_, Block p_230789_, @Nullable Direction p_230790_, @Nullable Orientation p_361940_) {
+    default void updateNeighborsAtExceptFromFacing(
+        final BlockPos pos, final Block block, final @Nullable Direction skipDirection, final @Nullable Orientation orientation
+    ) {
         for (Direction direction : UPDATE_ORDER) {
-            if (direction != p_230790_) {
-                this.neighborChanged(p_230788_.relative(direction), p_230789_, null);
+            if (direction != skipDirection) {
+                this.neighborChanged(pos.relative(direction), block, null);
             }
         }
     }
 
     static void executeShapeUpdate(
-        LevelAccessor p_230771_,
-        Direction p_230772_,
-        BlockPos p_230774_,
-        BlockPos p_230775_,
-        BlockState p_230773_,
-        @Block.UpdateFlags int p_230776_,
-        int p_230777_
+        final LevelAccessor level,
+        final Direction direction,
+        final BlockPos pos,
+        final BlockPos neighborPos,
+        final BlockState neighborState,
+        final @Block.UpdateFlags int updateFlags,
+        final int updateLimit
     ) {
-        BlockState blockstate = p_230771_.getBlockState(p_230774_);
-        if ((p_230776_ & 128) == 0 || !blockstate.is(Blocks.REDSTONE_WIRE)) {
-            BlockState blockstate1 = blockstate.updateShape(p_230771_, p_230771_, p_230774_, p_230772_, p_230775_, p_230773_, p_230771_.getRandom());
-            Block.updateOrDestroy(blockstate, blockstate1, p_230771_, p_230774_, p_230776_, p_230777_);
+        BlockState currentState = level.getBlockState(pos);
+        if ((updateFlags & 128) == 0 || !currentState.is(Blocks.REDSTONE_WIRE)) {
+            try {
+                BlockState newState = currentState.updateShape(level, level, pos, direction, neighborPos, neighborState, level.getRandom());
+                Block.updateOrDestroy(currentState, newState, level, pos, updateFlags, updateLimit);
+            } catch (Throwable t) {
+                CrashReport report = CrashReport.forThrowable(t, "Exception while updating neighbour shapes");
+                CrashReportCategory ownCategory = report.addCategory("Block being updated");
+                CrashReportCategory.populateBlockDetails(ownCategory, level, pos, currentState);
+                CrashReportCategory neighborCategory = report.addCategory("Neighbor block");
+                CrashReportCategory.populateBlockDetails(neighborCategory, level, neighborPos, neighborState);
+                throw new ReportedException(report);
+            }
         }
     }
 
-    static void executeUpdate(Level p_230764_, BlockState p_230765_, BlockPos p_230766_, Block p_230767_, @Nullable Orientation p_364742_, boolean p_230769_) {
+    static void executeUpdate(
+        final Level level,
+        final BlockState state,
+        final BlockPos pos,
+        final Block changedBlock,
+        final @Nullable Orientation orientation,
+        final boolean movedByPiston
+    ) {
         try {
-            p_230765_.handleNeighborChanged(p_230764_, p_230766_, p_230767_, p_364742_, p_230769_);
-        } catch (Throwable throwable) {
-            CrashReport crashreport = CrashReport.forThrowable(throwable, "Exception while updating neighbours");
-            CrashReportCategory crashreportcategory = crashreport.addCategory("Block being updated");
-            crashreportcategory.setDetail(
+            state.handleNeighborChanged(level, pos, changedBlock, orientation, movedByPiston);
+        } catch (Throwable t) {
+            CrashReport report = CrashReport.forThrowable(t, "Exception while updating neighbours");
+            CrashReportCategory category = report.addCategory("Block being updated");
+            category.setDetail(
                 "Source block type",
                 () -> {
                     try {
                         return String.format(
                             Locale.ROOT,
                             "ID #%s (%s // %s)",
-                            BuiltInRegistries.BLOCK.getKey(p_230767_),
-                            p_230767_.getDescriptionId(),
-                            p_230767_.getClass().getCanonicalName()
+                            BuiltInRegistries.BLOCK.getKey(changedBlock),
+                            changedBlock.getDescriptionId(),
+                            changedBlock.getClass().getCanonicalName()
                         );
-                    } catch (Throwable throwable1) {
-                        return "ID #" + BuiltInRegistries.BLOCK.getKey(p_230767_);
+                    } catch (Throwable ignored) {
+                        return "ID #" + BuiltInRegistries.BLOCK.getKey(changedBlock);
                     }
                 }
             );
-            CrashReportCategory.populateBlockDetails(crashreportcategory, p_230764_, p_230766_, p_230765_);
-            throw new ReportedException(crashreport);
+            CrashReportCategory.populateBlockDetails(category, level, pos, state);
+            throw new ReportedException(report);
         }
     }
 }

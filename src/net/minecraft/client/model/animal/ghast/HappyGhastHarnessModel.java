@@ -10,38 +10,35 @@ import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.MeshTransformer;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.renderer.entity.state.HappyGhastRenderState;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class HappyGhastHarnessModel extends EntityModel<HappyGhastRenderState> {
     private static final float GOGGLES_Y_OFFSET = 14.0F;
     private final ModelPart goggles;
 
-    public HappyGhastHarnessModel(ModelPart p_454444_) {
-        super(p_454444_);
-        this.goggles = p_454444_.getChild("goggles");
+    public HappyGhastHarnessModel(final ModelPart root) {
+        super(root);
+        this.goggles = root.getChild("goggles");
     }
 
-    public static LayerDefinition createHarnessLayer(boolean p_454534_) {
+    public static LayerDefinition createHarnessLayer(final boolean baby) {
         MeshDefinition meshdefinition = new MeshDefinition();
-        PartDefinition partdefinition = meshdefinition.getRoot();
-        partdefinition.addOrReplaceChild(
+        PartDefinition root = meshdefinition.getRoot();
+        root.addOrReplaceChild(
             "harness", CubeListBuilder.create().texOffs(0, 0).addBox(-8.0F, -16.0F, -8.0F, 16.0F, 16.0F, 16.0F), PartPose.offset(0.0F, 24.0F, 0.0F)
         );
-        partdefinition.addOrReplaceChild(
+        root.addOrReplaceChild(
             "goggles",
             CubeListBuilder.create().texOffs(0, 32).addBox(-8.0F, -2.5F, -2.5F, 16.0F, 5.0F, 5.0F, new CubeDeformation(0.15F)),
             PartPose.offset(0.0F, 14.0F, -5.5F)
         );
         return LayerDefinition.create(meshdefinition, 64, 64)
             .apply(MeshTransformer.scaling(4.0F))
-            .apply(p_454534_ ? HappyGhastModel.BABY_TRANSFORMER : MeshTransformer.IDENTITY);
+            .apply(baby ? HappyGhastModel.BABY_TRANSFORMER : MeshTransformer.IDENTITY);
     }
 
-    public void setupAnim(HappyGhastRenderState p_459693_) {
-        super.setupAnim(p_459693_);
-        if (p_459693_.isRidden) {
+    public void setupAnim(final HappyGhastRenderState state) {
+        super.setupAnim(state);
+        if (state.isRidden) {
             this.goggles.xRot = 0.0F;
             this.goggles.y = 14.0F;
         } else {

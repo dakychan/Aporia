@@ -9,27 +9,27 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 public class EndIslandFeature extends Feature<NoneFeatureConfiguration> {
-    public EndIslandFeature(Codec<NoneFeatureConfiguration> p_65701_) {
-        super(p_65701_);
+    public EndIslandFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_159717_) {
-        WorldGenLevel worldgenlevel = p_159717_.level();
-        RandomSource randomsource = p_159717_.random();
-        BlockPos blockpos = p_159717_.origin();
-        float f = randomsource.nextInt(3) + 4.0F;
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        WorldGenLevel level = context.level();
+        RandomSource random = context.random();
+        BlockPos origin = context.origin();
+        float size = random.nextInt(3) + 4.0F;
 
-        for (int i = 0; f > 0.5F; i--) {
-            for (int j = Mth.floor(-f); j <= Mth.ceil(f); j++) {
-                for (int k = Mth.floor(-f); k <= Mth.ceil(f); k++) {
-                    if (j * j + k * k <= (f + 1.0F) * (f + 1.0F)) {
-                        this.setBlock(worldgenlevel, blockpos.offset(j, i, k), Blocks.END_STONE.defaultBlockState());
+        for (int y = 0; size > 0.5F; y--) {
+            for (int x = Mth.floor(-size); x <= Mth.ceil(size); x++) {
+                for (int z = Mth.floor(-size); z <= Mth.ceil(size); z++) {
+                    if (x * x + z * z <= (size + 1.0F) * (size + 1.0F)) {
+                        this.setBlock(level, origin.offset(x, y, z), Blocks.END_STONE.defaultBlockState());
                     }
                 }
             }
 
-            f -= randomsource.nextInt(2) + 0.5F;
+            size -= random.nextInt(2) + 0.5F;
         }
 
         return true;

@@ -8,22 +8,21 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.logging.LogUtils;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Map.Entry;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.advancements.AdvancementProgress;
 import net.minecraft.advancements.CriterionProgress;
-import net.minecraft.advancements.criterion.MinMaxBounds;
+import net.minecraft.advancements.predicates.MinMaxBounds;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.selector.EntitySelector;
 import net.minecraft.commands.arguments.selector.EntitySelectorParser;
 import net.minecraft.core.Holder;
-import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -38,8 +37,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.storage.TagValueOutput;
@@ -57,348 +56,328 @@ import org.slf4j.Logger;
 public class EntitySelectorOptions {
     private static final Logger LOGGER = LogUtils.getLogger();
     private static final Map<String, EntitySelectorOptions.Option> OPTIONS = Maps.newHashMap();
+    private static final Predicate<EntitySelectorParser> ALWAYS_AVAILABLE = var0 -> true;
     public static final DynamicCommandExceptionType ERROR_UNKNOWN_OPTION = new DynamicCommandExceptionType(
-        p_308416_ -> Component.translatableEscape("argument.entity.options.unknown", p_308416_)
+        name -> Component.translatableEscape("argument.entity.options.unknown", name)
     );
     public static final DynamicCommandExceptionType ERROR_INAPPLICABLE_OPTION = new DynamicCommandExceptionType(
-        p_308412_ -> Component.translatableEscape("argument.entity.options.inapplicable", p_308412_)
+        name -> Component.translatableEscape("argument.entity.options.inapplicable", name)
     );
-    public static final SimpleCommandExceptionType ERROR_RANGE_NEGATIVE = new SimpleCommandExceptionType(Component.translatable("argument.entity.options.distance.negative"));
-    public static final SimpleCommandExceptionType ERROR_LEVEL_NEGATIVE = new SimpleCommandExceptionType(Component.translatable("argument.entity.options.level.negative"));
-    public static final SimpleCommandExceptionType ERROR_LIMIT_TOO_SMALL = new SimpleCommandExceptionType(Component.translatable("argument.entity.options.limit.toosmall"));
+    public static final SimpleCommandExceptionType ERROR_RANGE_NEGATIVE = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.options.distance.negative")
+    );
+    public static final SimpleCommandExceptionType ERROR_LEVEL_NEGATIVE = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.options.level.negative")
+    );
+    public static final SimpleCommandExceptionType ERROR_LIMIT_TOO_SMALL = new SimpleCommandExceptionType(
+        Component.translatable("argument.entity.options.limit.toosmall")
+    );
     public static final DynamicCommandExceptionType ERROR_SORT_UNKNOWN = new DynamicCommandExceptionType(
-        p_308411_ -> Component.translatableEscape("argument.entity.options.sort.irreversible", p_308411_)
+        name -> Component.translatableEscape("argument.entity.options.sort.irreversible", name)
     );
     public static final DynamicCommandExceptionType ERROR_GAME_MODE_INVALID = new DynamicCommandExceptionType(
-        p_308419_ -> Component.translatableEscape("argument.entity.options.mode.invalid", p_308419_)
+        name -> Component.translatableEscape("argument.entity.options.mode.invalid", name)
     );
     public static final DynamicCommandExceptionType ERROR_ENTITY_TYPE_INVALID = new DynamicCommandExceptionType(
-        p_308410_ -> Component.translatableEscape("argument.entity.options.type.invalid", p_308410_)
+        type -> Component.translatableEscape("argument.entity.options.type.invalid", type)
     );
 
-    private static void register(String p_121454_, EntitySelectorOptions.Modifier p_121455_, Predicate<EntitySelectorParser> p_121456_, Component p_121457_) {
-        OPTIONS.put(p_121454_, new EntitySelectorOptions.Option(p_121455_, p_121456_, p_121457_));
+    private static void register(
+        final String name, final EntitySelectorOptions.Modifier modifier, final Predicate<EntitySelectorParser> predicate, final Component description
+    ) {
+        OPTIONS.put(name, new EntitySelectorOptions.Option(modifier, predicate, description));
     }
 
     public static void bootStrap() {
         if (OPTIONS.isEmpty()) {
-            register("name", p_368973_ -> {
-                int i = p_368973_.getReader().getCursor();
-                boolean flag = p_368973_.shouldInvertValue();
-                String s = p_368973_.getReader().readString();
-                if (p_368973_.hasNameNotEquals() && !flag) {
-                    p_368973_.getReader().setCursor(i);
-                    throw ERROR_INAPPLICABLE_OPTION.createWithContext(p_368973_.getReader(), "name");
-                } else {
-                    if (flag) {
-                        p_368973_.setHasNameNotEquals(true);
-                    } else {
-                        p_368973_.setHasNameEquals(true);
-                    }
-
-                    p_368973_.addPredicate(p_448547_ -> p_448547_.getPlainTextName().equals(s) != flag);
+            register("name", parser -> {
+                int start = parser.getReader().getCursor();
+                boolean inverted = parser.shouldInvertValue();
+                String name = parser.getReader().readString();
+                InvertableSetOptionState state = parser.nameOption();
+                if (!state.canParseElement(inverted)) {
+                    throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, "name");
                 }
-            }, p_121423_ -> !p_121423_.hasNameEquals(), Component.translatable("argument.entity.options.name.description"));
-            register(
-                "distance",
-                p_406959_ -> {
-                    int i = p_406959_.getReader().getCursor();
-                    MinMaxBounds.Doubles minmaxbounds$doubles = MinMaxBounds.Doubles.fromReader(p_406959_.getReader());
-                    if ((!minmaxbounds$doubles.min().isPresent() || !((Double)minmaxbounds$doubles.min().get() < 0.0))
-                        && (!minmaxbounds$doubles.max().isPresent() || !((Double)minmaxbounds$doubles.max().get() < 0.0))) {
-                        p_406959_.setDistance(minmaxbounds$doubles);
-                        p_406959_.setWorldLimited();
-                    } else {
-                        p_406959_.getReader().setCursor(i);
-                        throw ERROR_RANGE_NEGATIVE.createWithContext(p_406959_.getReader());
-                    }
-                },
-                p_448553_ -> p_448553_.getDistance() == null,
-                Component.translatable("argument.entity.options.distance.description")
-            );
-            register(
-                "level",
-                p_121417_ -> {
-                    int i = p_121417_.getReader().getCursor();
-                    MinMaxBounds.Ints minmaxbounds$ints = MinMaxBounds.Ints.fromReader(p_121417_.getReader());
-                    if ((!minmaxbounds$ints.min().isPresent() || (Integer)minmaxbounds$ints.min().get() >= 0)
-                        && (!minmaxbounds$ints.max().isPresent() || (Integer)minmaxbounds$ints.max().get() >= 0)) {
-                        p_121417_.setLevel(minmaxbounds$ints);
-                        p_121417_.setIncludesEntities(false);
-                    } else {
-                        p_121417_.getReader().setCursor(i);
-                        throw ERROR_LEVEL_NEGATIVE.createWithContext(p_121417_.getReader());
-                    }
-                },
-                p_448550_ -> p_448550_.getLevel() == null,
-                Component.translatable("argument.entity.options.level.description")
-            );
-            register("x", p_121413_ -> {
-                p_121413_.setWorldLimited();
-                p_121413_.setX(p_121413_.getReader().readDouble());
-            }, p_121411_ -> p_121411_.getX() == null, Component.translatable("argument.entity.options.x.description"));
-            register("y", p_121409_ -> {
-                p_121409_.setWorldLimited();
-                p_121409_.setY(p_121409_.getReader().readDouble());
-            }, p_121407_ -> p_121407_.getY() == null, Component.translatable("argument.entity.options.y.description"));
-            register("z", p_121405_ -> {
-                p_121405_.setWorldLimited();
-                p_121405_.setZ(p_121405_.getReader().readDouble());
-            }, p_121403_ -> p_121403_.getZ() == null, Component.translatable("argument.entity.options.z.description"));
-            register("dx", p_121401_ -> {
-                p_121401_.setWorldLimited();
-                p_121401_.setDeltaX(p_121401_.getReader().readDouble());
-            }, p_121399_ -> p_121399_.getDeltaX() == null, Component.translatable("argument.entity.options.dx.description"));
-            register("dy", p_121397_ -> {
-                p_121397_.setWorldLimited();
-                p_121397_.setDeltaY(p_121397_.getReader().readDouble());
-            }, p_121395_ -> p_121395_.getDeltaY() == null, Component.translatable("argument.entity.options.dy.description"));
-            register("dz", p_121562_ -> {
-                p_121562_.setWorldLimited();
-                p_121562_.setDeltaZ(p_121562_.getReader().readDouble());
-            }, p_121560_ -> p_121560_.getDeltaZ() == null, Component.translatable("argument.entity.options.dz.description"));
+
+                state.markParsedElement(inverted);
+                parser.addPredicate(e -> e.getPlainTextName().equals(name) != inverted);
+            }, s -> s.nameOption().canParseAny(), Component.translatable("argument.entity.options.name.description"));
+            register("distance", parser -> {
+                int start = parser.getReader().getCursor();
+                MinMaxBounds.Doubles value = MinMaxBounds.Doubles.fromReader(parser.getReader());
+                if ((!value.min().isPresent() || !((Double)value.min().get() < 0.0)) && (!value.max().isPresent() || !((Double)value.max().get() < 0.0))) {
+                    parser.setDistance(value);
+                    parser.setWorldLimited();
+                } else {
+                    throw rollbackAndThrow(parser, start, ERROR_RANGE_NEGATIVE);
+                }
+            }, s -> s.getDistance() == null, Component.translatable("argument.entity.options.distance.description"));
+            register("level", parser -> {
+                int start = parser.getReader().getCursor();
+                MinMaxBounds.Ints value = MinMaxBounds.Ints.fromReader(parser.getReader());
+                if ((!value.min().isPresent() || (Integer)value.min().get() >= 0) && (!value.max().isPresent() || (Integer)value.max().get() >= 0)) {
+                    parser.setLevel(value);
+                    parser.setIncludesEntities(false);
+                } else {
+                    throw rollbackAndThrow(parser, start, ERROR_LEVEL_NEGATIVE);
+                }
+            }, s -> s.getLevel() == null, Component.translatable("argument.entity.options.level.description"));
+            register("x", parser -> {
+                parser.setWorldLimited();
+                parser.setX(parser.getReader().readDouble());
+            }, s -> s.getX() == null, Component.translatable("argument.entity.options.x.description"));
+            register("y", parser -> {
+                parser.setWorldLimited();
+                parser.setY(parser.getReader().readDouble());
+            }, s -> s.getY() == null, Component.translatable("argument.entity.options.y.description"));
+            register("z", parser -> {
+                parser.setWorldLimited();
+                parser.setZ(parser.getReader().readDouble());
+            }, s -> s.getZ() == null, Component.translatable("argument.entity.options.z.description"));
+            register("dx", parser -> {
+                parser.setWorldLimited();
+                parser.setDeltaX(parser.getReader().readDouble());
+            }, s -> s.getDeltaX() == null, Component.translatable("argument.entity.options.dx.description"));
+            register("dy", parser -> {
+                parser.setWorldLimited();
+                parser.setDeltaY(parser.getReader().readDouble());
+            }, s -> s.getDeltaY() == null, Component.translatable("argument.entity.options.dy.description"));
+            register("dz", parser -> {
+                parser.setWorldLimited();
+                parser.setDeltaZ(parser.getReader().readDouble());
+            }, s -> s.getDeltaZ() == null, Component.translatable("argument.entity.options.dz.description"));
             register(
                 "x_rotation",
-                p_448542_ -> p_448542_.setRotX(MinMaxBounds.FloatDegrees.fromReader(p_448542_.getReader())),
-                p_448551_ -> p_448551_.getRotX() == null,
+                parser -> parser.setRotX(MinMaxBounds.FloatDegrees.fromReader(parser.getReader())),
+                s -> s.getRotX() == null,
                 Component.translatable("argument.entity.options.x_rotation.description")
             );
             register(
                 "y_rotation",
-                p_448543_ -> p_448543_.setRotY(MinMaxBounds.FloatDegrees.fromReader(p_448543_.getReader())),
-                p_448552_ -> p_448552_.getRotY() == null,
+                parser -> parser.setRotY(MinMaxBounds.FloatDegrees.fromReader(parser.getReader())),
+                s -> s.getRotY() == null,
                 Component.translatable("argument.entity.options.y_rotation.description")
             );
-            register("limit", p_121550_ -> {
-                int i = p_121550_.getReader().getCursor();
-                int j = p_121550_.getReader().readInt();
-                if (j < 1) {
-                    p_121550_.getReader().setCursor(i);
-                    throw ERROR_LIMIT_TOO_SMALL.createWithContext(p_121550_.getReader());
-                } else {
-                    p_121550_.setMaxResults(j);
-                    p_121550_.setLimited(true);
+            register("limit", parser -> {
+                int start = parser.getReader().getCursor();
+                int count = parser.getReader().readInt();
+                if (count < 1) {
+                    throw rollbackAndThrow(parser, start, ERROR_LIMIT_TOO_SMALL);
                 }
-            }, p_121548_ -> !p_121548_.isCurrentEntity() && !p_121548_.isLimited(), Component.translatable("argument.entity.options.limit.description"));
-            register(
-                "sort",
-                p_247983_ -> {
-                    int i = p_247983_.getReader().getCursor();
-                    String s = p_247983_.getReader().readUnquotedString();
-                    p_247983_.setSuggestions(
-                        (p_175153_, p_175154_) -> SharedSuggestionProvider.suggest(Arrays.asList("nearest", "furthest", "random", "arbitrary"), p_175153_)
-                    );
 
-                    p_247983_.setOrder(switch (s) {
-                        case "nearest" -> EntitySelectorParser.ORDER_NEAREST;
-                        case "furthest" -> EntitySelectorParser.ORDER_FURTHEST;
-                        case "random" -> EntitySelectorParser.ORDER_RANDOM;
-                        case "arbitrary" -> EntitySelector.ORDER_ARBITRARY;
-                        default -> {
-                            p_247983_.getReader().setCursor(i);
-                            throw ERROR_SORT_UNKNOWN.createWithContext(p_247983_.getReader(), s);
-                        }
-                    });
-                    p_247983_.setSorted(true);
-                },
-                p_121544_ -> !p_121544_.isCurrentEntity() && !p_121544_.isSorted(),
-                Component.translatable("argument.entity.options.sort.description")
-            );
-            register("gamemode", p_121542_ -> {
-                p_121542_.setSuggestions((p_175193_, p_175194_) -> {
-                    String s1 = p_175193_.getRemaining().toLowerCase(Locale.ROOT);
-                    boolean flag1 = !p_121542_.hasGamemodeNotEquals();
-                    boolean flag2 = true;
-                    if (!s1.isEmpty()) {
-                        if (s1.charAt(0) == '!') {
-                            flag1 = false;
-                            s1 = s1.substring(1);
-                        } else {
-                            flag2 = false;
-                        }
-                    }
+                parser.setMaxResults(count);
+                parser.limitedOption().markParsed();
+            }, s -> !s.isCurrentEntity() && s.limitedOption().canParse(), Component.translatable("argument.entity.options.limit.description"));
+            register("sort", parser -> {
+                int start = parser.getReader().getCursor();
+                String name = parser.getReader().readUnquotedString();
+                parser.setSuggestions((b, n) -> SharedSuggestionProvider.suggest(Arrays.asList("nearest", "furthest", "random", "arbitrary"), b));
 
-                    for (GameType gametype1 : GameType.values()) {
-                        if (gametype1.getName().toLowerCase(Locale.ROOT).startsWith(s1)) {
-                            if (flag2) {
-                                p_175193_.suggest("!" + gametype1.getName());
-                            }
-
-                            if (flag1) {
-                                p_175193_.suggest(gametype1.getName());
-                            }
-                        }
-                    }
-
-                    return p_175193_.buildFuture();
+                parser.setOrder(switch (name) {
+                    case "nearest" -> EntitySelectorParser.ORDER_NEAREST;
+                    case "furthest" -> EntitySelectorParser.ORDER_FURTHEST;
+                    case "random" -> EntitySelectorParser.ORDER_RANDOM;
+                    case "arbitrary" -> EntitySelector.ORDER_ARBITRARY;
+                    default -> throw rollbackAndThrow(parser, start, ERROR_SORT_UNKNOWN, name);
                 });
-                int i = p_121542_.getReader().getCursor();
-                boolean flag = p_121542_.shouldInvertValue();
-                if (p_121542_.hasGamemodeNotEquals() && !flag) {
-                    p_121542_.getReader().setCursor(i);
-                    throw ERROR_INAPPLICABLE_OPTION.createWithContext(p_121542_.getReader(), "gamemode");
-                } else {
-                    String s = p_121542_.getReader().readUnquotedString();
-                    GameType gametype = GameType.byName(s, null);
-                    if (gametype == null) {
-                        p_121542_.getReader().setCursor(i);
-                        throw ERROR_GAME_MODE_INVALID.createWithContext(p_121542_.getReader(), s);
+                parser.sortedOption().markParsed();
+            }, s -> !s.isCurrentEntity() && s.sortedOption().canParse(), Component.translatable("argument.entity.options.sort.description"));
+            register("gamemode", parser -> {
+                InvertableSetOptionState state = parser.gamemodeOption();
+                parser.setSuggestions((b, m) -> {
+                    String prefix = b.getRemaining().toLowerCase(Locale.ROOT);
+                    boolean addNormal = state.canParsePositiveElement();
+                    boolean addInverted = state.canParseNegativeElement();
+                    if (!prefix.isEmpty()) {
+                        if (prefix.charAt(0) == '!') {
+                            addNormal = false;
+                            prefix = prefix.substring(1);
+                        } else {
+                            addInverted = false;
+                        }
+                    }
+
+                    for (GameType type : GameType.values()) {
+                        if (type.getName().toLowerCase(Locale.ROOT).startsWith(prefix)) {
+                            if (addInverted) {
+                                b.suggest("!" + type.getName());
+                            }
+
+                            if (addNormal) {
+                                b.suggest(type.getName());
+                            }
+                        }
+                    }
+
+                    return b.buildFuture();
+                });
+                int start = parser.getReader().getCursor();
+                boolean inverted = parser.shouldInvertValue();
+                if (!state.canParseElement(inverted)) {
+                    throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, "gamemode");
+                }
+
+                String name = parser.getReader().readUnquotedString();
+                GameType expected = GameType.byName(name, null);
+                if (expected == null) {
+                    throw rollbackAndThrow(parser, start, ERROR_GAME_MODE_INVALID, name);
+                }
+
+                parser.setIncludesEntities(false);
+                parser.addPredicate(e -> {
+                    if (e instanceof ServerPlayer player) {
+                        GameType current = player.gameMode();
+                        return current == expected ^ inverted;
                     } else {
-                        p_121542_.setIncludesEntities(false);
-                        p_121542_.addPredicate(p_175190_ -> {
-                            if (p_175190_ instanceof ServerPlayer serverplayer) {
-                                GameType gametype1 = serverplayer.gameMode();
-                                return gametype1 == gametype ^ flag;
-                            } else {
-                                return false;
-                            }
-                        });
-                        if (flag) {
-                            p_121542_.setHasGamemodeNotEquals(true);
-                        } else {
-                            p_121542_.setHasGamemodeEquals(true);
-                        }
+                        return false;
                     }
-                }
-            }, p_121540_ -> !p_121540_.hasGamemodeEquals(), Component.translatable("argument.entity.options.gamemode.description"));
-            register("team", p_121538_ -> {
-                boolean flag = p_121538_.shouldInvertValue();
-                String s = p_121538_.getReader().readUnquotedString();
-                p_121538_.addPredicate(p_389651_ -> {
-                    Team team = p_389651_.getTeam();
-                    String s1 = team == null ? "" : team.getName();
-                    return s1.equals(s) != flag;
                 });
-                if (flag) {
-                    p_121538_.setHasTeamNotEquals(true);
-                } else {
-                    p_121538_.setHasTeamEquals(true);
+                state.markParsedElement(inverted);
+            }, s -> s.gamemodeOption().canParseAny(), Component.translatable("argument.entity.options.gamemode.description"));
+            register("team", parser -> {
+                InvertableSetOptionState state = parser.teamOption();
+                int start = parser.getReader().getCursor();
+                boolean inverted = parser.shouldInvertValue();
+                String expected = parser.getReader().readUnquotedString();
+                if (!state.canParseElement(inverted)) {
+                    throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, "team");
                 }
-            }, p_121536_ -> !p_121536_.hasTeamEquals(), Component.translatable("argument.entity.options.team.description"));
+
+                parser.addPredicate(e -> {
+                    Team current = e.getTeam();
+                    String currentName = current == null ? "" : current.getName();
+                    return currentName.equals(expected) != inverted;
+                });
+                state.markParsedElement(inverted);
+            }, s -> s.teamOption().canParseAny(), Component.translatable("argument.entity.options.team.description"));
             register(
                 "type",
-                p_121534_ -> {
-                    p_121534_.setSuggestions(
-                        (p_358070_, p_358071_) -> {
-                            SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENTITY_TYPE.keySet(), p_358070_, String.valueOf('!'));
-                            SharedSuggestionProvider.suggestResource(
-                                BuiltInRegistries.ENTITY_TYPE.getTags().map(p_448548_ -> p_448548_.key().location()), p_358070_, "!#"
-                            );
-                            if (!p_121534_.isTypeLimitedInversely()) {
-                                SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENTITY_TYPE.keySet(), p_358070_);
-                                SharedSuggestionProvider.suggestResource(
-                                    BuiltInRegistries.ENTITY_TYPE.getTags().map(p_448549_ -> p_448549_.key().location()), p_358070_, String.valueOf('#')
-                                );
+                parser -> {
+                    InvertableSetOptionState state = parser.typeOption();
+                    parser.setSuggestions(
+                        (b, m) -> {
+                            if (state.canParseNegativeElement()) {
+                                SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENTITY_TYPE.keySet(), b, String.valueOf('!'));
                             }
 
-                            return p_358070_.buildFuture();
+                            if (state.canParsePositiveElement()) {
+                                SharedSuggestionProvider.suggestResource(BuiltInRegistries.ENTITY_TYPE.keySet(), b);
+                            }
+
+                            if (state.canParseAnyTag()) {
+                                List<Identifier> allowedTags = BuiltInRegistries.ENTITY_TYPE
+                                    .getTags()
+                                    .map(tag -> tag.key().location())
+                                    .filter(state::canParseTag)
+                                    .toList();
+                                if (!allowedTags.isEmpty()) {
+                                    SharedSuggestionProvider.suggestResource(allowedTags, b, String.valueOf('#'));
+                                    SharedSuggestionProvider.suggestResource(allowedTags, b, "!#");
+                                }
+                            }
+
+                            return b.buildFuture();
                         }
                     );
-                    int i = p_121534_.getReader().getCursor();
-                    boolean flag = p_121534_.shouldInvertValue();
-                    if (p_121534_.isTypeLimitedInversely() && !flag) {
-                        p_121534_.getReader().setCursor(i);
-                        throw ERROR_INAPPLICABLE_OPTION.createWithContext(p_121534_.getReader(), "type");
+                    int start = parser.getReader().getCursor();
+                    boolean inverted = parser.shouldInvertValue();
+                    if (parser.isTag()) {
+                        if (!state.canParseAnyTag()) {
+                            throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, "type");
+                        }
+
+                        Identifier id = Identifier.read(parser.getReader());
+                        if (!state.canParseTag(id)) {
+                            throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, "type");
+                        }
+
+                        TagKey<EntityType<?>> key = TagKey.create(Registries.ENTITY_TYPE, id);
+                        parser.addPredicate(e -> e.is(key) != inverted);
+                        state.markParsedTag(id);
                     } else {
-                        if (flag) {
-                            p_121534_.setTypeLimitedInversely();
+                        if (!state.canParseElement(inverted)) {
+                            throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, "type");
                         }
 
-                        if (p_121534_.isTag()) {
-                            TagKey<EntityType<?>> tagkey = TagKey.create(Registries.ENTITY_TYPE, Identifier.read(p_121534_.getReader()));
-                            p_121534_.addPredicate(p_205691_ -> p_205691_.getType().is(tagkey) != flag);
-                        } else {
-                            Identifier identifier = Identifier.read(p_121534_.getReader());
-                            EntityType<?> entitytype = BuiltInRegistries.ENTITY_TYPE.getOptional(identifier).orElseThrow(() -> {
-                                p_121534_.getReader().setCursor(i);
-                                return ERROR_ENTITY_TYPE_INVALID.createWithContext(p_121534_.getReader(), identifier.toString());
-                            });
-                            if (Objects.equals(EntityType.PLAYER, entitytype) && !flag) {
-                                p_121534_.setIncludesEntities(false);
-                            }
-
-                            p_121534_.addPredicate(p_175151_ -> Objects.equals(entitytype, p_175151_.getType()) != flag);
-                            if (!flag) {
-                                p_121534_.limitToType(entitytype);
-                            }
+                        Identifier id = Identifier.read(parser.getReader());
+                        EntityType<?> type = BuiltInRegistries.ENTITY_TYPE
+                            .getOptional(id)
+                            .orElseThrow(() -> rollbackAndThrow(parser, start, ERROR_ENTITY_TYPE_INVALID, id.toString()));
+                        if (Objects.equals(EntityTypes.PLAYER, type) && !inverted) {
+                            parser.setIncludesEntities(false);
                         }
+
+                        parser.addPredicate(e -> Objects.equals(type, e.getType()) != inverted);
+                        if (!inverted) {
+                            parser.limitToType(type);
+                        }
+
+                        state.markParsedElement(inverted);
                     }
                 },
-                p_121532_ -> !p_121532_.isTypeLimited(),
+                s -> s.typeOption().canParseAny(),
                 Component.translatable("argument.entity.options.type.description")
             );
-            register("tag", p_121530_ -> {
-                boolean flag = p_121530_.shouldInvertValue();
-                String s = p_121530_.getReader().readUnquotedString();
-                p_121530_.addPredicate(p_175166_ -> "".equals(s) ? p_175166_.getTags().isEmpty() != flag : p_175166_.getTags().contains(s) != flag);
-            }, p_121528_ -> true, Component.translatable("argument.entity.options.tag.description"));
-            register(
-                "nbt",
-                p_389652_ -> {
-                    boolean flag = p_389652_.shouldInvertValue();
-                    CompoundTag compoundtag = TagParser.parseCompoundAsArgument(p_389652_.getReader());
-                    p_389652_.addPredicate(
-                        p_405047_ -> {
-                            boolean flag1;
-                            try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(
-                                    p_405047_.problemPath(), LOGGER
-                                )) {
-                                TagValueOutput tagvalueoutput = TagValueOutput.createWithContext(problemreporter$scopedcollector, p_405047_.registryAccess());
-                                p_405047_.saveWithoutId(tagvalueoutput);
-                                if (p_405047_ instanceof ServerPlayer serverplayer) {
-                                    ItemStack itemstack = serverplayer.getInventory().getSelectedItem();
-                                    if (!itemstack.isEmpty()) {
-                                        tagvalueoutput.store("SelectedItem", ItemStack.CODEC, itemstack);
-                                    }
-                                }
-
-                                flag1 = NbtUtils.compareNbt(compoundtag, tagvalueoutput.buildResult(), true) != flag;
+            register("tag", parser -> {
+                boolean inverted = parser.shouldInvertValue();
+                String tag = parser.getReader().readUnquotedString();
+                parser.addPredicate(e -> "".equals(tag) ? e.entityTags().isEmpty() != inverted : e.entityTags().contains(tag) != inverted);
+            }, ALWAYS_AVAILABLE, Component.translatable("argument.entity.options.tag.description"));
+            register("nbt", parser -> {
+                boolean inverted = parser.shouldInvertValue();
+                CompoundTag tag = TagParser.parseCompoundAsArgument(parser.getReader());
+                parser.addPredicate(e -> {
+                    try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(e.problemPath(), LOGGER)) {
+                        TagValueOutput output = TagValueOutput.createWithContext(reporter, e.registryAccess());
+                        e.saveWithoutId(output);
+                        if (e instanceof ServerPlayer player) {
+                            ItemStack selected = player.getInventory().getSelectedItem();
+                            if (!selected.isEmpty()) {
+                                output.store("SelectedItem", ItemStack.CODEC, selected);
                             }
-
-                            return flag1;
                         }
-                    );
-                },
-                p_121524_ -> true,
-                Component.translatable("argument.entity.options.nbt.description")
-            );
-            register("scores", p_121522_ -> {
-                StringReader stringreader = p_121522_.getReader();
-                Map<String, MinMaxBounds.Ints> map = Maps.newHashMap();
-                stringreader.expect('{');
-                stringreader.skipWhitespace();
 
-                while (stringreader.canRead() && stringreader.peek() != '}') {
-                    stringreader.skipWhitespace();
-                    String s = stringreader.readUnquotedString();
-                    stringreader.skipWhitespace();
-                    stringreader.expect('=');
-                    stringreader.skipWhitespace();
-                    MinMaxBounds.Ints minmaxbounds$ints = MinMaxBounds.Ints.fromReader(stringreader);
-                    map.put(s, minmaxbounds$ints);
-                    stringreader.skipWhitespace();
-                    if (stringreader.canRead() && stringreader.peek() == ',') {
-                        stringreader.skip();
+                        return NbtUtils.compareNbt(tag, output.buildResult(), true) != inverted;
+                    }
+                });
+            }, ALWAYS_AVAILABLE, Component.translatable("argument.entity.options.nbt.description"));
+            register("scores", parser -> {
+                StringReader reader = parser.getReader();
+                Map<String, MinMaxBounds.Ints> expected = Maps.newHashMap();
+                reader.expect('{');
+                reader.skipWhitespace();
+
+                while (reader.canRead() && reader.peek() != '}') {
+                    reader.skipWhitespace();
+                    String name = reader.readUnquotedString();
+                    reader.skipWhitespace();
+                    reader.expect('=');
+                    reader.skipWhitespace();
+                    MinMaxBounds.Ints value = MinMaxBounds.Ints.fromReader(reader);
+                    expected.put(name, value);
+                    reader.skipWhitespace();
+                    if (reader.canRead() && reader.peek() == ',') {
+                        reader.skip();
                     }
                 }
 
-                stringreader.expect('}');
-                if (!map.isEmpty()) {
-                    p_121522_.addPredicate(p_308418_ -> {
-                        Scoreboard scoreboard = p_308418_.level().getServer().getScoreboard();
+                reader.expect('}');
+                if (!expected.isEmpty()) {
+                    parser.addPredicate(entity -> {
+                        Scoreboard scoreboard = entity.level().getServer().getScoreboard();
 
-                        for (Entry<String, MinMaxBounds.Ints> entry : map.entrySet()) {
+                        for (Entry<String, MinMaxBounds.Ints> entry : expected.entrySet()) {
                             Objective objective = scoreboard.getObjective(entry.getKey());
                             if (objective == null) {
                                 return false;
                             }
 
-                            ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(p_308418_, objective);
-                            if (readonlyscoreinfo == null) {
+                            ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(entity, objective);
+                            if (scoreInfo == null) {
                                 return false;
                             }
 
-                            if (!entry.getValue().matches(readonlyscoreinfo.value())) {
+                            if (!entry.getValue().matches(scoreInfo.value())) {
                                 return false;
                             }
                         }
@@ -407,47 +386,47 @@ public class EntitySelectorOptions {
                     });
                 }
 
-                p_121522_.setHasScores(true);
-            }, p_121518_ -> !p_121518_.hasScores(), Component.translatable("argument.entity.options.scores.description"));
-            register("advancements", p_121514_ -> {
-                StringReader stringreader = p_121514_.getReader();
-                Map<Identifier, Predicate<AdvancementProgress>> map = Maps.newHashMap();
-                stringreader.expect('{');
-                stringreader.skipWhitespace();
+                parser.scoresOption().markParsed();
+            }, s -> s.scoresOption().canParse(), Component.translatable("argument.entity.options.scores.description"));
+            register("advancements", parser -> {
+                StringReader reader = parser.getReader();
+                Map<Identifier, Predicate<AdvancementProgress>> expected = Maps.newHashMap();
+                reader.expect('{');
+                reader.skipWhitespace();
 
-                while (stringreader.canRead() && stringreader.peek() != '}') {
-                    stringreader.skipWhitespace();
-                    Identifier identifier = Identifier.read(stringreader);
-                    stringreader.skipWhitespace();
-                    stringreader.expect('=');
-                    stringreader.skipWhitespace();
-                    if (stringreader.canRead() && stringreader.peek() == '{') {
-                        Map<String, Predicate<CriterionProgress>> map1 = Maps.newHashMap();
-                        stringreader.skipWhitespace();
-                        stringreader.expect('{');
-                        stringreader.skipWhitespace();
+                while (reader.canRead() && reader.peek() != '}') {
+                    reader.skipWhitespace();
+                    Identifier name = Identifier.read(reader);
+                    reader.skipWhitespace();
+                    reader.expect('=');
+                    reader.skipWhitespace();
+                    if (reader.canRead() && reader.peek() == '{') {
+                        Map<String, Predicate<CriterionProgress>> progress = Maps.newHashMap();
+                        reader.skipWhitespace();
+                        reader.expect('{');
+                        reader.skipWhitespace();
 
-                        while (stringreader.canRead() && stringreader.peek() != '}') {
-                            stringreader.skipWhitespace();
-                            String s = stringreader.readUnquotedString();
-                            stringreader.skipWhitespace();
-                            stringreader.expect('=');
-                            stringreader.skipWhitespace();
-                            boolean flag1 = stringreader.readBoolean();
-                            map1.put(s, p_175186_ -> p_175186_.isDone() == flag1);
-                            stringreader.skipWhitespace();
-                            if (stringreader.canRead() && stringreader.peek() == ',') {
-                                stringreader.skip();
+                        while (reader.canRead() && reader.peek() != '}') {
+                            reader.skipWhitespace();
+                            String criterion = reader.readUnquotedString();
+                            reader.skipWhitespace();
+                            reader.expect('=');
+                            reader.skipWhitespace();
+                            boolean value = reader.readBoolean();
+                            progress.put(criterion, p -> p.isDone() == value);
+                            reader.skipWhitespace();
+                            if (reader.canRead() && reader.peek() == ',') {
+                                reader.skip();
                             }
                         }
 
-                        stringreader.skipWhitespace();
-                        stringreader.expect('}');
-                        stringreader.skipWhitespace();
-                        map.put(identifier, p_175169_ -> {
-                            for (Entry<String, Predicate<CriterionProgress>> entry : map1.entrySet()) {
-                                CriterionProgress criterionprogress = p_175169_.getCriterion(entry.getKey());
-                                if (criterionprogress == null || !entry.getValue().test(criterionprogress)) {
+                        reader.skipWhitespace();
+                        reader.expect('}');
+                        reader.skipWhitespace();
+                        expected.put(name, p -> {
+                            for (Entry<String, Predicate<CriterionProgress>> entry : progress.entrySet()) {
+                                CriterionProgress criterionx = p.getCriterion(entry.getKey());
+                                if (criterionx == null || !entry.getValue().test(criterionx)) {
                                     return false;
                                 }
                             }
@@ -455,28 +434,28 @@ public class EntitySelectorOptions {
                             return true;
                         });
                     } else {
-                        boolean flag = stringreader.readBoolean();
-                        map.put(identifier, p_175183_ -> p_175183_.isDone() == flag);
+                        boolean value = reader.readBoolean();
+                        expected.put(name, p -> p.isDone() == value);
                     }
 
-                    stringreader.skipWhitespace();
-                    if (stringreader.canRead() && stringreader.peek() == ',') {
-                        stringreader.skip();
+                    reader.skipWhitespace();
+                    if (reader.canRead() && reader.peek() == ',') {
+                        reader.skip();
                     }
                 }
 
-                stringreader.expect('}');
-                if (!map.isEmpty()) {
-                    p_121514_.addPredicate(p_358074_ -> {
-                        if (!(p_358074_ instanceof ServerPlayer serverplayer)) {
+                reader.expect('}');
+                if (!expected.isEmpty()) {
+                    parser.addPredicate(e -> {
+                        if (!(e instanceof ServerPlayer player)) {
                             return false;
                         } else {
-                            PlayerAdvancements $$4 = serverplayer.getAdvancements();
-                            ServerAdvancementManager $$5x = serverplayer.level().getServer().getAdvancements();
+                            PlayerAdvancements advancements = player.getAdvancements();
+                            ServerAdvancementManager serverAdvancements = player.level().getServer().getAdvancements();
 
-                            for (Entry<Identifier, Predicate<AdvancementProgress>> entry : map.entrySet()) {
-                                AdvancementHolder advancementholder = $$5x.get(entry.getKey());
-                                if (advancementholder == null || !entry.getValue().test($$4.getOrStartProgress(advancementholder))) {
+                            for (Entry<Identifier, Predicate<AdvancementProgress>> entry : expected.entrySet()) {
+                                AdvancementHolder advancement = serverAdvancements.get(entry.getKey());
+                                if (advancement == null || !entry.getValue().test(advancements.getOrStartProgress(advancement))) {
                                     return false;
                                 }
                             }
@@ -484,76 +463,83 @@ public class EntitySelectorOptions {
                             return true;
                         }
                     });
-                    p_121514_.setIncludesEntities(false);
+                    parser.setIncludesEntities(false);
                 }
 
-                p_121514_.setHasAdvancements(true);
-            }, p_121506_ -> !p_121506_.hasAdvancements(), Component.translatable("argument.entity.options.advancements.description"));
+                parser.advancementsOption().markParsed();
+            }, s -> s.advancementsOption().canParse(), Component.translatable("argument.entity.options.advancements.description"));
             register(
                 "predicate",
-                p_448544_ -> {
-                    boolean flag = p_448544_.shouldInvertValue();
-                    ResourceKey<LootItemCondition> resourcekey = ResourceKey.create(Registries.PREDICATE, Identifier.read(p_448544_.getReader()));
-                    p_448544_.addPredicate(
-                        p_421096_ -> {
-                            if (p_421096_.level() instanceof ServerLevel serverlevel) {
-                                Optional<LootItemCondition> optional = serverlevel.getServer()
-                                    .reloadableRegistries()
-                                    .lookup()
-                                    .get(resourcekey)
-                                    .map(Holder::value);
-                                if (optional.isEmpty()) {
+                parser -> {
+                    boolean inverted = parser.shouldInvertValue();
+                    ResourceKey<LootItemCondition> id = ResourceKey.create(Registries.PREDICATE, Identifier.read(parser.getReader()));
+                    parser.addPredicate(
+                        entity -> {
+                            if (entity.level() instanceof ServerLevel level) {
+                                Optional<LootItemCondition> condition = level.getServer().reloadableRegistries().lookup().get(id).map(Holder::value);
+                                if (condition.isEmpty()) {
                                     return false;
-                                } else {
-                                    LootParams lootparams = new LootParams.Builder(serverlevel)
-                                        .withParameter(LootContextParams.THIS_ENTITY, p_421096_)
-                                        .withParameter(LootContextParams.ORIGIN, p_421096_.position())
-                                        .create(LootContextParamSets.SELECTOR);
-                                    LootContext lootcontext = new LootContext.Builder(lootparams).create(Optional.empty());
-                                    lootcontext.pushVisitedElement(LootContext.createVisitedEntry(optional.get()));
-                                    return flag ^ optional.get().test(lootcontext);
                                 }
+
+                                LootParams lootParams = new LootParams.Builder(level)
+                                    .withParameter(LootContextParams.THIS_ENTITY, entity)
+                                    .withParameter(LootContextParams.ORIGIN, entity.position())
+                                    .create(LootContextParamSets.SELECTOR);
+                                LootContext context = new LootContext.Builder(lootParams).create(Optional.empty());
+                                context.pushVisitedElement(LootContext.createVisitedEntry(condition.get()));
+                                return inverted ^ condition.get().test(context);
                             } else {
                                 return false;
                             }
                         }
                     );
                 },
-                p_121435_ -> true,
+                ALWAYS_AVAILABLE,
                 Component.translatable("argument.entity.options.predicate.description")
             );
         }
     }
 
-    public static EntitySelectorOptions.Modifier get(EntitySelectorParser p_121448_, String p_121449_, int p_121450_) throws CommandSyntaxException {
-        EntitySelectorOptions.Option entityselectoroptions$option = OPTIONS.get(p_121449_);
-        if (entityselectoroptions$option != null) {
-            if (entityselectoroptions$option.canUse.test(p_121448_)) {
-                return entityselectoroptions$option.modifier;
+    private static CommandSyntaxException rollbackAndThrow(final EntitySelectorParser parser, final int start, final SimpleCommandExceptionType type) {
+        parser.getReader().setCursor(start);
+        return type.createWithContext(parser.getReader());
+    }
+
+    private static CommandSyntaxException rollbackAndThrow(
+        final EntitySelectorParser parser, final int start, final DynamicCommandExceptionType type, final String argument
+    ) {
+        parser.getReader().setCursor(start);
+        return type.createWithContext(parser.getReader(), argument);
+    }
+
+    public static EntitySelectorOptions.Modifier get(final EntitySelectorParser parser, final String key, final int start) throws CommandSyntaxException {
+        EntitySelectorOptions.Option option = OPTIONS.get(key);
+        if (option != null) {
+            if (option.canUse.test(parser)) {
+                return option.modifier;
             } else {
-                throw ERROR_INAPPLICABLE_OPTION.createWithContext(p_121448_.getReader(), p_121449_);
+                throw rollbackAndThrow(parser, start, ERROR_INAPPLICABLE_OPTION, key);
             }
         } else {
-            p_121448_.getReader().setCursor(p_121450_);
-            throw ERROR_UNKNOWN_OPTION.createWithContext(p_121448_.getReader(), p_121449_);
+            throw rollbackAndThrow(parser, start, ERROR_UNKNOWN_OPTION, key);
         }
     }
 
-    public static void suggestNames(EntitySelectorParser p_121441_, SuggestionsBuilder p_121442_) {
-        String s = p_121442_.getRemaining().toLowerCase(Locale.ROOT);
+    public static void suggestNames(final EntitySelectorParser parser, final SuggestionsBuilder builder) {
+        String lowerPrefix = builder.getRemaining().toLowerCase(Locale.ROOT);
 
         for (Entry<String, EntitySelectorOptions.Option> entry : OPTIONS.entrySet()) {
-            if (entry.getValue().canUse.test(p_121441_) && entry.getKey().toLowerCase(Locale.ROOT).startsWith(s)) {
-                p_121442_.suggest(entry.getKey() + "=", entry.getValue().description);
+            if (entry.getValue().canUse.test(parser) && entry.getKey().toLowerCase(Locale.ROOT).startsWith(lowerPrefix)) {
+                builder.suggest(entry.getKey() + "=", entry.getValue().description);
             }
         }
     }
 
     @FunctionalInterface
     public interface Modifier {
-        void handle(EntitySelectorParser p_121564_) throws CommandSyntaxException;
+        void handle(EntitySelectorParser parser) throws CommandSyntaxException;
     }
 
-    record Option(EntitySelectorOptions.Modifier modifier, Predicate<EntitySelectorParser> canUse, Component description) {
+    private record Option(EntitySelectorOptions.Modifier modifier, Predicate<EntitySelectorParser> canUse, Component description) {
     }
 }

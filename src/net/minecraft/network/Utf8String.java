@@ -7,48 +7,50 @@ import io.netty.handler.codec.EncoderException;
 import java.nio.charset.StandardCharsets;
 
 public class Utf8String {
-    public static String read(ByteBuf p_300143_, int p_298419_) {
-        int i = ByteBufUtil.utf8MaxBytes(p_298419_);
-        int j = VarInt.read(p_300143_);
-        if (j > i) {
-            throw new DecoderException("The received encoded string buffer length is longer than maximum allowed (" + j + " > " + i + ")");
-        } else if (j < 0) {
+    public static String read(final ByteBuf input, final int maxLength) {
+        int maxEncodedLength = ByteBufUtil.utf8MaxBytes(maxLength);
+        int bufferLength = VarInt.read(input);
+        if (bufferLength > maxEncodedLength) {
+            throw new DecoderException(
+                "The received encoded string buffer length is longer than maximum allowed (" + bufferLength + " > " + maxEncodedLength + ")"
+            );
+        } else if (bufferLength < 0) {
             throw new DecoderException("The received encoded string buffer length is less than zero! Weird string!");
         } else {
-            int k = p_300143_.readableBytes();
-            if (j > k) {
-                throw new DecoderException("Not enough bytes in buffer, expected " + j + ", but got " + k);
+            int availableBytes = input.readableBytes();
+            if (bufferLength > availableBytes) {
+                throw new DecoderException("Not enough bytes in buffer, expected " + bufferLength + ", but got " + availableBytes);
             } else {
-                String s = p_300143_.toString(p_300143_.readerIndex(), j, StandardCharsets.UTF_8);
-                p_300143_.readerIndex(p_300143_.readerIndex() + j);
-                if (s.length() > p_298419_) {
-                    throw new DecoderException("The received string length is longer than maximum allowed (" + s.length() + " > " + p_298419_ + ")");
+                String result = input.toString(input.readerIndex(), bufferLength, StandardCharsets.UTF_8);
+                input.readerIndex(input.readerIndex() + bufferLength);
+                if (result.length() > maxLength) {
+                    throw new DecoderException("The received string length is longer than maximum allowed (" + result.length() + " > " + maxLength + ")");
                 } else {
-                    return s;
+                    return result;
                 }
             }
         }
     }
 
-    public static void write(ByteBuf p_299969_, CharSequence p_299580_, int p_298286_) {
-        if (p_299580_.length() > p_298286_) {
-            throw new EncoderException("String too big (was " + p_299580_.length() + " characters, max " + p_298286_ + ")");
-        } else {
-            int i = ByteBufUtil.utf8MaxBytes(p_299580_);
-            ByteBuf bytebuf = p_299969_.alloc().buffer(i);
+    public static void write(final ByteBuf output, final CharSequence value, final int maxLength) {
+        if (value.length() > maxLength) {
+            throw new EncoderException("String too big (was " + value.length() + " characters, max " + maxLength + ")");
+        }
 
-            try {
-                int j = ByteBufUtil.writeUtf8(bytebuf, p_299580_);
-                int k = ByteBufUtil.utf8MaxBytes(p_298286_);
-                if (j > k) {
-                    throw new EncoderException("String too big (was " + j + " bytes encoded, max " + k + ")");
-                }
+        int maxEncodedValueLength = ByteBufUtil.utf8MaxBytes(value);
+        ByteBuf tmp = output.alloc().buffer(maxEncodedValueLength);
 
-                VarInt.write(p_299969_, j);
-                p_299969_.writeBytes(bytebuf);
-            } finally {
-                bytebuf.release();
+        try {
+            int bytesWritten = ByteBufUtil.writeUtf8(tmp, value);
+            int maxAllowedEncodedLength = ByteBufUtil.utf8MaxBytes(maxLength);
+            if (bytesWritten > maxAllowedEncodedLength) {
+                throw new EncoderException("String too big (was " + bytesWritten + " bytes encoded, max " + maxAllowedEncodedLength + ")");
             }
+
+            VarInt.write(output, bytesWritten);
+            output.writeBytes(tmp);
+        } finally {
+            tmp.release();
         }
     }
 }

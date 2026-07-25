@@ -4,7 +4,6 @@ import com.mojang.datafixers.util.Either;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import java.util.function.IntFunction;
 import net.minecraft.core.BlockPos;
@@ -24,49 +23,44 @@ import net.minecraft.world.level.levelgen.structure.pieces.StructurePiecesBuilde
 
 public class MineshaftStructure extends Structure {
     public static final MapCodec<MineshaftStructure> CODEC = RecordCodecBuilder.mapCodec(
-        p_227971_ -> p_227971_.group(
-                settingsCodec(p_227971_), MineshaftStructure.Type.CODEC.fieldOf("mineshaft_type").forGetter(p_227969_ -> p_227969_.type)
-            )
-            .apply(p_227971_, MineshaftStructure::new)
+        i -> i.group(settingsCodec(i), MineshaftStructure.Type.CODEC.fieldOf("mineshaft_type").forGetter(c -> c.type)).apply(i, MineshaftStructure::new)
     );
     private final MineshaftStructure.Type type;
 
-    public MineshaftStructure(Structure.StructureSettings p_227961_, MineshaftStructure.Type p_227962_) {
-        super(p_227961_);
-        this.type = p_227962_;
+    public MineshaftStructure(final Structure.StructureSettings settings, final MineshaftStructure.Type type) {
+        super(settings);
+        this.type = type;
     }
 
     @Override
-    public Optional<Structure.GenerationStub> findGenerationPoint(Structure.GenerationContext p_227964_) {
-        p_227964_.random().nextDouble();
-        ChunkPos chunkpos = p_227964_.chunkPos();
-        BlockPos blockpos = new BlockPos(chunkpos.getMiddleBlockX(), 50, chunkpos.getMinBlockZ());
-        StructurePiecesBuilder structurepiecesbuilder = new StructurePiecesBuilder();
-        int i = this.generatePiecesAndAdjust(structurepiecesbuilder, p_227964_);
-        return Optional.of(new Structure.GenerationStub(blockpos.offset(0, i, 0), Either.right(structurepiecesbuilder)));
+    public Optional<Structure.GenerationStub> findGenerationPoint(final Structure.GenerationContext context) {
+        context.random().nextDouble();
+        ChunkPos chunkPos = context.chunkPos();
+        BlockPos startPos = new BlockPos(chunkPos.getMiddleBlockX(), 50, chunkPos.getMinBlockZ());
+        StructurePiecesBuilder mineshaftPiecesBuilder = new StructurePiecesBuilder();
+        int yOffset = this.generatePiecesAndAdjust(mineshaftPiecesBuilder, context);
+        return Optional.of(new Structure.GenerationStub(startPos.offset(0, yOffset, 0), Either.right(mineshaftPiecesBuilder)));
     }
 
-    private int generatePiecesAndAdjust(StructurePiecesBuilder p_227966_, Structure.GenerationContext p_227967_) {
-        ChunkPos chunkpos = p_227967_.chunkPos();
-        WorldgenRandom worldgenrandom = p_227967_.random();
-        ChunkGenerator chunkgenerator = p_227967_.chunkGenerator();
-        MineshaftPieces.MineShaftRoom mineshaftpieces$mineshaftroom = new MineshaftPieces.MineShaftRoom(
-            0, worldgenrandom, chunkpos.getBlockX(2), chunkpos.getBlockZ(2), this.type
-        );
-        p_227966_.addPiece(mineshaftpieces$mineshaftroom);
-        mineshaftpieces$mineshaftroom.addChildren(mineshaftpieces$mineshaftroom, p_227966_, worldgenrandom);
-        int i = chunkgenerator.getSeaLevel();
+    private int generatePiecesAndAdjust(final StructurePiecesBuilder builder, final Structure.GenerationContext context) {
+        ChunkPos chunkPos = context.chunkPos();
+        WorldgenRandom random = context.random();
+        ChunkGenerator chunkGenerator = context.chunkGenerator();
+        MineshaftPieces.MineShaftRoom mineShaftRoom = new MineshaftPieces.MineShaftRoom(0, random, chunkPos.getBlockX(2), chunkPos.getBlockZ(2), this.type);
+        builder.addPiece(mineShaftRoom);
+        mineShaftRoom.addChildren(mineShaftRoom, builder, random);
+        int seaLevel = chunkGenerator.getSeaLevel();
         if (this.type == MineshaftStructure.Type.MESA) {
-            BlockPos blockpos = p_227966_.getBoundingBox().getCenter();
-            int j = chunkgenerator.getBaseHeight(
-                blockpos.getX(), blockpos.getZ(), Heightmap.Types.WORLD_SURFACE_WG, p_227967_.heightAccessor(), p_227967_.randomState()
+            BlockPos center = builder.getBoundingBox().getCenter();
+            int surfaceHeight = chunkGenerator.getBaseHeight(
+                center.getX(), center.getZ(), Heightmap.Types.WORLD_SURFACE_WG, context.heightAccessor(), context.randomState()
             );
-            int k = j <= i ? i : Mth.randomBetweenInclusive(worldgenrandom, i, j);
-            int l = k - blockpos.getY();
-            p_227966_.offsetPiecesVertically(l);
-            return l;
+            int targetYForCenter = surfaceHeight <= seaLevel ? seaLevel : Mth.randomBetweenInclusive(random, seaLevel, surfaceHeight);
+            int dy = targetYForCenter - center.getY();
+            builder.offsetPiecesVertically(dy);
+            return dy;
         } else {
-            return p_227966_.moveBelowSeaLevel(i, chunkgenerator.getMinY(), worldgenrandom, 10);
+            return builder.moveBelowSeaLevel(seaLevel, chunkGenerator.getMinY(), random, 10);
         }
     }
 
@@ -75,7 +69,7 @@ public class MineshaftStructure extends Structure {
         return StructureType.MINESHAFT;
     }
 
-    public static enum Type implements StringRepresentable {
+    public enum Type implements StringRepresentable {
         NORMAL("normal", Blocks.OAK_LOG, Blocks.OAK_PLANKS, Blocks.OAK_FENCE),
         MESA("mesa", Blocks.DARK_OAK_LOG, Blocks.DARK_OAK_PLANKS, Blocks.DARK_OAK_FENCE);
 
@@ -86,19 +80,19 @@ public class MineshaftStructure extends Structure {
         private final BlockState planksState;
         private final BlockState fenceState;
 
-        private Type(final String p_227985_, final Block p_227986_, final Block p_227987_, final Block p_227988_) {
-            this.name = p_227985_;
-            this.woodState = p_227986_.defaultBlockState();
-            this.planksState = p_227987_.defaultBlockState();
-            this.fenceState = p_227988_.defaultBlockState();
+        Type(final String name, final Block wood, final Block plank, final Block fence) {
+            this.name = name;
+            this.woodState = wood.defaultBlockState();
+            this.planksState = plank.defaultBlockState();
+            this.fenceState = fence.defaultBlockState();
         }
 
         public String getName() {
             return this.name;
         }
 
-        public static MineshaftStructure.Type byId(int p_227991_) {
-            return BY_ID.apply(p_227991_);
+        public static MineshaftStructure.Type byId(final int id) {
+            return BY_ID.apply(id);
         }
 
         public BlockState getWoodState() {

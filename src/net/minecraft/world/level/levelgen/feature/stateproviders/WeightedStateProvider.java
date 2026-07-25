@@ -1,30 +1,29 @@
 package net.minecraft.world.level.levelgen.feature.stateproviders;
 
-import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.random.WeightedList;
+import net.minecraft.world.level.WorldGenLevel;
 import net.minecraft.world.level.block.state.BlockState;
 
 public class WeightedStateProvider extends BlockStateProvider {
-    public static final MapCodec<WeightedStateProvider> CODEC = WeightedList.nonEmptyCodec(BlockState.CODEC)
-        .comapFlatMap(WeightedStateProvider::create, p_391045_ -> p_391045_.weightedList)
-        .fieldOf("entries");
+    public static final MapCodec<WeightedStateProvider> CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(WeightedList.nonEmptyCodec(BlockState.CODEC).fieldOf("entries").forGetter(o -> o.weightedList)).apply(i, WeightedStateProvider::new)
+    );
     private final WeightedList<BlockState> weightedList;
 
-    private static DataResult<WeightedStateProvider> create(WeightedList<BlockState> p_396945_) {
-        return p_396945_.isEmpty()
-            ? DataResult.error(() -> "WeightedStateProvider with no states")
-            : DataResult.success(new WeightedStateProvider(p_396945_));
+    public WeightedStateProvider(final WeightedList<BlockState> weightedList) {
+        if (weightedList.isEmpty()) {
+            throw new IllegalArgumentException("Weighted list must have at least one entry");
+        }
+
+        this.weightedList = weightedList;
     }
 
-    public WeightedStateProvider(WeightedList<BlockState> p_396330_) {
-        this.weightedList = p_396330_;
-    }
-
-    public WeightedStateProvider(WeightedList.Builder<BlockState> p_396337_) {
-        this(p_396337_.build());
+    public WeightedStateProvider(final WeightedList.Builder<BlockState> weightedList) {
+        this(weightedList.build());
     }
 
     @Override
@@ -33,7 +32,7 @@ public class WeightedStateProvider extends BlockStateProvider {
     }
 
     @Override
-    public BlockState getState(RandomSource p_225966_, BlockPos p_225967_) {
-        return this.weightedList.getRandomOrThrow(p_225966_);
+    public BlockState getState(final WorldGenLevel level, final RandomSource random, final BlockPos pos) {
+        return this.weightedList.getRandomOrThrow(random);
     }
 }

@@ -1,5 +1,6 @@
 package net.minecraft.world.level.validation;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.mojang.logging.LogUtils;
 import java.io.BufferedReader;
 import java.nio.file.FileSystem;
@@ -17,25 +18,25 @@ public class PathAllowList implements PathMatcher {
     private final List<PathAllowList.ConfigEntry> entries;
     private final Map<String, PathMatcher> compiledPaths = new ConcurrentHashMap<>();
 
-    public PathAllowList(List<PathAllowList.ConfigEntry> p_289956_) {
-        this.entries = p_289956_;
+    public PathAllowList(final List<PathAllowList.ConfigEntry> entries) {
+        this.entries = entries;
     }
 
-    public PathMatcher getForFileSystem(FileSystem p_289975_) {
-        return this.compiledPaths.computeIfAbsent(p_289975_.provider().getScheme(), p_289958_ -> {
-            List<PathMatcher> list;
+    public PathMatcher getForFileSystem(final FileSystem fileSystem) {
+        return this.compiledPaths.computeIfAbsent(fileSystem.provider().getScheme(), scheme -> {
+            List<PathMatcher> compiledMatchers;
             try {
-                list = this.entries.stream().map(p_289937_ -> p_289937_.compile(p_289975_)).toList();
-            } catch (Exception exception) {
-                LOGGER.error("Failed to compile file pattern list", (Throwable)exception);
-                return p_289987_ -> false;
+                compiledMatchers = this.entries.stream().map(e -> e.compile(fileSystem)).toList();
+            } catch (Exception e) {
+                LOGGER.error("Failed to compile file pattern list", e);
+                return path -> false;
             }
-            return switch (list.size()) {
-                case 0 -> p_289982_ -> false;
-                case 1 -> (PathMatcher)list.get(0);
-                default -> p_289927_ -> {
-                    for (PathMatcher pathmatcher : list) {
-                        if (pathmatcher.matches(p_289927_)) {
+            return switch (compiledMatchers.size()) {
+                case 0 -> path -> false;
+                case 1 -> (PathMatcher)compiledMatchers.get(0);
+                default -> path -> {
+                    for (PathMatcher matcher : compiledMatchers) {
+                        if (matcher.matches(path)) {
                             return true;
                         }
                     }
@@ -47,59 +48,64 @@ public class PathAllowList implements PathMatcher {
     }
 
     @Override
-    public boolean matches(Path p_289964_) {
-        return this.getForFileSystem(p_289964_.getFileSystem()).matches(p_289964_);
+    public boolean matches(final Path path) {
+        return this.getForFileSystem(path.getFileSystem()).matches(path);
     }
 
-    public static PathAllowList readPlain(BufferedReader p_289921_) {
-        return new PathAllowList(p_289921_.lines().flatMap(p_289962_ -> PathAllowList.ConfigEntry.parse(p_289962_).stream()).toList());
+    public static PathAllowList readPlain(final BufferedReader reader) {
+        return new PathAllowList(reader.lines().flatMap(line -> PathAllowList.ConfigEntry.parse(line).stream()).toList());
     }
 
     public record ConfigEntry(PathAllowList.EntryType type, String pattern) {
-        public PathMatcher compile(FileSystem p_289936_) {
-            return this.type().compile(p_289936_, this.pattern);
+        public PathMatcher compile(final FileSystem fileSystem) {
+            return this.type().compile(fileSystem, this.pattern);
         }
 
-        static Optional<PathAllowList.ConfigEntry> parse(String p_289947_) {
-            if (p_289947_.isBlank() || p_289947_.startsWith("#")) {
+        public static Optional<PathAllowList.ConfigEntry> parse(final String definition) {
+            if (definition.isBlank() || definition.startsWith("#")) {
                 return Optional.empty();
-            } else if (!p_289947_.startsWith("[")) {
-                return Optional.of(new PathAllowList.ConfigEntry(PathAllowList.EntryType.PREFIX, p_289947_));
-            } else {
-                int i = p_289947_.indexOf(93, 1);
-                if (i == -1) {
-                    throw new IllegalArgumentException("Unterminated type in line '" + p_289947_ + "'");
-                } else {
-                    String s = p_289947_.substring(1, i);
-                    String s1 = p_289947_.substring(i + 1);
-
-                    return switch (s) {
-                        case "glob", "regex" -> Optional.of(new PathAllowList.ConfigEntry(PathAllowList.EntryType.FILESYSTEM, s + ":" + s1));
-                        case "prefix" -> Optional.of(new PathAllowList.ConfigEntry(PathAllowList.EntryType.PREFIX, s1));
-                        default -> throw new IllegalArgumentException("Unsupported definition type in line '" + p_289947_ + "'");
-                    };
-                }
             }
+
+            if (!definition.startsWith("[")) {
+                return Optional.of(new PathAllowList.ConfigEntry(PathAllowList.EntryType.PREFIX, definition));
+            }
+
+            int split = definition.indexOf(93, 1);
+            if (split == -1) {
+                throw new IllegalArgumentException("Unterminated type in line '" + definition + "'");
+            }
+
+            String type = definition.substring(1, split);
+            String contents = definition.substring(split + 1);
+
+            return switch (type) {
+                case "glob", "regex" -> Optional.of(new PathAllowList.ConfigEntry(PathAllowList.EntryType.FILESYSTEM, type + ":" + contents));
+                case "prefix" -> Optional.of(new PathAllowList.ConfigEntry(PathAllowList.EntryType.PREFIX, contents));
+                default -> throw new IllegalArgumentException("Unsupported definition type in line '" + definition + "'");
+            };
         }
 
-        static PathAllowList.ConfigEntry glob(String p_289983_) {
-            return new PathAllowList.ConfigEntry(PathAllowList.EntryType.FILESYSTEM, "glob:" + p_289983_);
+        @VisibleForTesting
+        static PathAllowList.ConfigEntry glob(final String pattern) {
+            return new PathAllowList.ConfigEntry(PathAllowList.EntryType.FILESYSTEM, "glob:" + pattern);
         }
 
-        static PathAllowList.ConfigEntry regex(String p_289944_) {
-            return new PathAllowList.ConfigEntry(PathAllowList.EntryType.FILESYSTEM, "regex:" + p_289944_);
+        @VisibleForTesting
+        static PathAllowList.ConfigEntry regex(final String pattern) {
+            return new PathAllowList.ConfigEntry(PathAllowList.EntryType.FILESYSTEM, "regex:" + pattern);
         }
 
-        static PathAllowList.ConfigEntry prefix(String p_289918_) {
-            return new PathAllowList.ConfigEntry(PathAllowList.EntryType.PREFIX, p_289918_);
+        @VisibleForTesting
+        static PathAllowList.ConfigEntry prefix(final String pattern) {
+            return new PathAllowList.ConfigEntry(PathAllowList.EntryType.PREFIX, pattern);
         }
     }
 
     @FunctionalInterface
     public interface EntryType {
         PathAllowList.EntryType FILESYSTEM = FileSystem::getPathMatcher;
-        PathAllowList.EntryType PREFIX = (p_289949_, p_289938_) -> p_289955_ -> p_289955_.toString().startsWith(p_289938_);
+        PathAllowList.EntryType PREFIX = (fileSystem, pattern) -> path -> path.toString().startsWith(pattern);
 
-        PathMatcher compile(FileSystem p_289924_, String p_289948_);
+        PathMatcher compile(FileSystem fileSystem, String pattern);
     }
 }

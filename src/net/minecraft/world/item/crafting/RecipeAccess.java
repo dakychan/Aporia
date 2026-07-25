@@ -3,7 +3,7 @@ package net.minecraft.world.item.crafting;
 import net.minecraft.resources.ResourceKey;
 
 public interface RecipeAccess {
-    RecipePropertySet propertySet(ResourceKey<RecipePropertySet> p_364463_);
+    RecipePropertySet propertySet(ResourceKey<RecipePropertySet> id);
 
     SelectableRecipe.SingleInputSet<StonecutterRecipe> stonecutterRecipes();
 }

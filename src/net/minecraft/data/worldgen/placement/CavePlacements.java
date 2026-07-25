@@ -31,11 +31,14 @@ public class CavePlacements {
     public static final ResourceKey<PlacedFeature> FOSSIL_UPPER = PlacementUtils.createKey("fossil_upper");
     public static final ResourceKey<PlacedFeature> FOSSIL_LOWER = PlacementUtils.createKey("fossil_lower");
     public static final ResourceKey<PlacedFeature> DRIPSTONE_CLUSTER = PlacementUtils.createKey("dripstone_cluster");
+    public static final ResourceKey<PlacedFeature> SULFUR_SPIKE_CLUSTER = PlacementUtils.createKey("sulfur_spike_cluster");
     public static final ResourceKey<PlacedFeature> LARGE_DRIPSTONE = PlacementUtils.createKey("large_dripstone");
     public static final ResourceKey<PlacedFeature> POINTED_DRIPSTONE = PlacementUtils.createKey("pointed_dripstone");
+    public static final ResourceKey<PlacedFeature> SULFUR_SPIKE = PlacementUtils.createKey("sulfur_spike");
     public static final ResourceKey<PlacedFeature> UNDERWATER_MAGMA = PlacementUtils.createKey("underwater_magma");
     public static final ResourceKey<PlacedFeature> GLOW_LICHEN = PlacementUtils.createKey("glow_lichen");
     public static final ResourceKey<PlacedFeature> ROOTED_AZALEA_TREE = PlacementUtils.createKey("rooted_azalea_tree");
+    public static final ResourceKey<PlacedFeature> ROOTED_SULFUR_SPRING = PlacementUtils.createKey("rooted_sulfur_spring");
     public static final ResourceKey<PlacedFeature> CAVE_VINES = PlacementUtils.createKey("cave_vines");
     public static final ResourceKey<PlacedFeature> LUSH_CAVES_VEGETATION = PlacementUtils.createKey("lush_caves_vegetation");
     public static final ResourceKey<PlacedFeature> LUSH_CAVES_CLAY = PlacementUtils.createKey("lush_caves_clay");
@@ -47,85 +50,97 @@ public class CavePlacements {
     public static final ResourceKey<PlacedFeature> SCULK_PATCH_ANCIENT_CITY = PlacementUtils.createKey("sculk_patch_ancient_city");
     public static final ResourceKey<PlacedFeature> SCULK_VEIN = PlacementUtils.createKey("sculk_vein");
 
-    public static void bootstrap(BootstrapContext<PlacedFeature> p_328522_) {
-        HolderGetter<ConfiguredFeature<?, ?>> holdergetter = p_328522_.lookup(Registries.CONFIGURED_FEATURE);
-        Holder<ConfiguredFeature<?, ?>> holder = holdergetter.getOrThrow(CaveFeatures.MONSTER_ROOM);
-        Holder<ConfiguredFeature<?, ?>> holder1 = holdergetter.getOrThrow(CaveFeatures.FOSSIL_COAL);
-        Holder<ConfiguredFeature<?, ?>> holder2 = holdergetter.getOrThrow(CaveFeatures.FOSSIL_DIAMONDS);
-        Holder<ConfiguredFeature<?, ?>> holder3 = holdergetter.getOrThrow(CaveFeatures.DRIPSTONE_CLUSTER);
-        Holder<ConfiguredFeature<?, ?>> holder4 = holdergetter.getOrThrow(CaveFeatures.LARGE_DRIPSTONE);
-        Holder<ConfiguredFeature<?, ?>> holder5 = holdergetter.getOrThrow(CaveFeatures.POINTED_DRIPSTONE);
-        Holder<ConfiguredFeature<?, ?>> holder6 = holdergetter.getOrThrow(CaveFeatures.UNDERWATER_MAGMA);
-        Holder<ConfiguredFeature<?, ?>> holder7 = holdergetter.getOrThrow(CaveFeatures.GLOW_LICHEN);
-        Holder<ConfiguredFeature<?, ?>> holder8 = holdergetter.getOrThrow(CaveFeatures.ROOTED_AZALEA_TREE);
-        Holder<ConfiguredFeature<?, ?>> holder9 = holdergetter.getOrThrow(CaveFeatures.CAVE_VINE);
-        Holder<ConfiguredFeature<?, ?>> holder10 = holdergetter.getOrThrow(CaveFeatures.MOSS_PATCH);
-        Holder<ConfiguredFeature<?, ?>> holder11 = holdergetter.getOrThrow(CaveFeatures.LUSH_CAVES_CLAY);
-        Holder<ConfiguredFeature<?, ?>> holder12 = holdergetter.getOrThrow(CaveFeatures.MOSS_PATCH_CEILING);
-        Holder<ConfiguredFeature<?, ?>> holder13 = holdergetter.getOrThrow(CaveFeatures.SPORE_BLOSSOM);
-        Holder<ConfiguredFeature<?, ?>> holder14 = holdergetter.getOrThrow(VegetationFeatures.VINES);
-        Holder<ConfiguredFeature<?, ?>> holder15 = holdergetter.getOrThrow(CaveFeatures.AMETHYST_GEODE);
-        Holder<ConfiguredFeature<?, ?>> holder16 = holdergetter.getOrThrow(CaveFeatures.SCULK_PATCH_DEEP_DARK);
-        Holder<ConfiguredFeature<?, ?>> holder17 = holdergetter.getOrThrow(CaveFeatures.SCULK_PATCH_ANCIENT_CITY);
-        Holder<ConfiguredFeature<?, ?>> holder18 = holdergetter.getOrThrow(CaveFeatures.SCULK_VEIN);
+    public static void bootstrap(final BootstrapContext<PlacedFeature> context) {
+        HolderGetter<ConfiguredFeature<?, ?>> configuredFeatures = context.lookup(Registries.CONFIGURED_FEATURE);
+        Holder<ConfiguredFeature<?, ?>> monsterRoom = configuredFeatures.getOrThrow(CaveFeatures.MONSTER_ROOM);
+        Holder<ConfiguredFeature<?, ?>> fossilCoal = configuredFeatures.getOrThrow(CaveFeatures.FOSSIL_COAL);
+        Holder<ConfiguredFeature<?, ?>> fossilDiamonds = configuredFeatures.getOrThrow(CaveFeatures.FOSSIL_DIAMONDS);
+        Holder<ConfiguredFeature<?, ?>> dripstoneCluster = configuredFeatures.getOrThrow(CaveFeatures.DRIPSTONE_CLUSTER);
+        Holder<ConfiguredFeature<?, ?>> sulfurSpikeCluster = configuredFeatures.getOrThrow(CaveFeatures.SULFUR_SPIKE_CLUSTER);
+        Holder<ConfiguredFeature<?, ?>> largeDripstone = configuredFeatures.getOrThrow(CaveFeatures.LARGE_DRIPSTONE);
+        Holder<ConfiguredFeature<?, ?>> pointedDripstone = configuredFeatures.getOrThrow(CaveFeatures.POINTED_DRIPSTONE);
+        Holder<ConfiguredFeature<?, ?>> sulfurSpike = configuredFeatures.getOrThrow(CaveFeatures.SULFUR_SPIKE);
+        Holder<ConfiguredFeature<?, ?>> underwaterMagma = configuredFeatures.getOrThrow(CaveFeatures.UNDERWATER_MAGMA);
+        Holder<ConfiguredFeature<?, ?>> glowLichen = configuredFeatures.getOrThrow(CaveFeatures.GLOW_LICHEN);
+        Holder<ConfiguredFeature<?, ?>> rootedAzaleaTree = configuredFeatures.getOrThrow(CaveFeatures.ROOTED_AZALEA_TREE);
+        Holder<ConfiguredFeature<?, ?>> rootedSulfurSpring = configuredFeatures.getOrThrow(CaveFeatures.ROOTED_SULFUR_SPRING);
+        Holder<ConfiguredFeature<?, ?>> caveVine = configuredFeatures.getOrThrow(CaveFeatures.CAVE_VINE);
+        Holder<ConfiguredFeature<?, ?>> mossPatch = configuredFeatures.getOrThrow(CaveFeatures.MOSS_PATCH);
+        Holder<ConfiguredFeature<?, ?>> lushCavesClay = configuredFeatures.getOrThrow(CaveFeatures.LUSH_CAVES_CLAY);
+        Holder<ConfiguredFeature<?, ?>> mossPatchCeiling = configuredFeatures.getOrThrow(CaveFeatures.MOSS_PATCH_CEILING);
+        Holder<ConfiguredFeature<?, ?>> sporeBlossom = configuredFeatures.getOrThrow(CaveFeatures.SPORE_BLOSSOM);
+        Holder<ConfiguredFeature<?, ?>> vines = configuredFeatures.getOrThrow(VegetationFeatures.VINES);
+        Holder<ConfiguredFeature<?, ?>> amethystGeode = configuredFeatures.getOrThrow(CaveFeatures.AMETHYST_GEODE);
+        Holder<ConfiguredFeature<?, ?>> sculkPatchDeepDark = configuredFeatures.getOrThrow(CaveFeatures.SCULK_PATCH_DEEP_DARK);
+        Holder<ConfiguredFeature<?, ?>> sculkPatchAncientCity = configuredFeatures.getOrThrow(CaveFeatures.SCULK_PATCH_ANCIENT_CITY);
+        Holder<ConfiguredFeature<?, ?>> sculkVein = configuredFeatures.getOrThrow(CaveFeatures.SCULK_VEIN);
         PlacementUtils.register(
-            p_328522_,
+            context,
             MONSTER_ROOM,
-            holder,
+            monsterRoom,
             CountPlacement.of(10),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.absolute(0), VerticalAnchor.top()),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             MONSTER_ROOM_DEEP,
-            holder,
+            monsterRoom,
             CountPlacement.of(4),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.aboveBottom(6), VerticalAnchor.absolute(-1)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             FOSSIL_UPPER,
-            holder1,
+            fossilCoal,
             RarityFilter.onAverageOnceEvery(64),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.absolute(0), VerticalAnchor.top()),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             FOSSIL_LOWER,
-            holder2,
+            fossilDiamonds,
             RarityFilter.onAverageOnceEvery(64),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.bottom(), VerticalAnchor.absolute(-8)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             DRIPSTONE_CLUSTER,
-            holder3,
+            dripstoneCluster,
             CountPlacement.of(UniformInt.of(48, 96)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
+            SULFUR_SPIKE_CLUSTER,
+            sulfurSpikeCluster,
+            CountPlacement.of(UniformInt.of(48, 96)),
+            InSquarePlacement.spread(),
+            PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
+            BiomeFilter.biome()
+        );
+        PlacementUtils.register(
+            context,
             LARGE_DRIPSTONE,
-            holder4,
+            largeDripstone,
             CountPlacement.of(UniformInt.of(10, 48)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             POINTED_DRIPSTONE,
-            holder5,
+            pointedDripstone,
             CountPlacement.of(UniformInt.of(192, 256)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -134,9 +149,20 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
+            SULFUR_SPIKE,
+            sulfurSpike,
+            CountPlacement.of(UniformInt.of(192, 256)),
+            InSquarePlacement.spread(),
+            PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
+            CountPlacement.of(UniformInt.of(1, 5)),
+            RandomOffsetPlacement.of(ClampedNormalInt.of(0.0F, 3.0F, -10, 10), ClampedNormalInt.of(0.0F, 0.6F, -2, 2)),
+            BiomeFilter.biome()
+        );
+        PlacementUtils.register(
+            context,
             UNDERWATER_MAGMA,
-            holder6,
+            underwaterMagma,
             CountPlacement.of(UniformInt.of(44, 52)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -144,9 +170,9 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             GLOW_LICHEN,
-            holder7,
+            glowLichen,
             CountPlacement.of(UniformInt.of(104, 157)),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
             InSquarePlacement.spread(),
@@ -154,9 +180,9 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             ROOTED_AZALEA_TREE,
-            holder8,
+            rootedAzaleaTree,
             CountPlacement.of(UniformInt.of(1, 2)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -165,9 +191,20 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
+            ROOTED_SULFUR_SPRING,
+            rootedSulfurSpring,
+            CountPlacement.of(UniformInt.of(1, 2)),
+            InSquarePlacement.spread(),
+            PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
+            EnvironmentScanPlacement.scanningFor(Direction.UP, BlockPredicate.solid(), BlockPredicate.ONLY_IN_AIR_PREDICATE, 12),
+            RandomOffsetPlacement.vertical(ConstantInt.of(-1)),
+            BiomeFilter.biome()
+        );
+        PlacementUtils.register(
+            context,
             CAVE_VINES,
-            holder9,
+            caveVine,
             CountPlacement.of(188),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -176,9 +213,9 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             LUSH_CAVES_VEGETATION,
-            holder10,
+            mossPatch,
             CountPlacement.of(125),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -187,9 +224,9 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             LUSH_CAVES_CLAY,
-            holder11,
+            lushCavesClay,
             CountPlacement.of(62),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -198,9 +235,9 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             LUSH_CAVES_CEILING_VEGETATION,
-            holder12,
+            mossPatchCeiling,
             CountPlacement.of(125),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -209,9 +246,9 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             SPORE_BLOSSOM,
-            holder13,
+            sporeBlossom,
             CountPlacement.of(25),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
@@ -220,31 +257,37 @@ public class CavePlacements {
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_, CLASSIC_VINES, holder14, CountPlacement.of(256), InSquarePlacement.spread(), PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT, BiomeFilter.biome()
+            context,
+            CLASSIC_VINES,
+            vines,
+            CountPlacement.of(256),
+            InSquarePlacement.spread(),
+            PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
+            BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             AMETHYST_GEODE,
-            holder15,
+            amethystGeode,
             RarityFilter.onAverageOnceEvery(24),
             InSquarePlacement.spread(),
             HeightRangePlacement.uniform(VerticalAnchor.aboveBottom(6), VerticalAnchor.absolute(30)),
             BiomeFilter.biome()
         );
         PlacementUtils.register(
-            p_328522_,
+            context,
             SCULK_PATCH_DEEP_DARK,
-            holder16,
+            sculkPatchDeepDark,
             CountPlacement.of(ConstantInt.of(256)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,
             BiomeFilter.biome()
         );
-        PlacementUtils.register(p_328522_, SCULK_PATCH_ANCIENT_CITY, holder17);
+        PlacementUtils.register(context, SCULK_PATCH_ANCIENT_CITY, sculkPatchAncientCity);
         PlacementUtils.register(
-            p_328522_,
+            context,
             SCULK_VEIN,
-            holder18,
+            sculkVein,
             CountPlacement.of(UniformInt.of(204, 250)),
             InSquarePlacement.spread(),
             PlacementUtils.RANGE_BOTTOM_TO_MAX_TERRAIN_HEIGHT,

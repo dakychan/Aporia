@@ -1,9 +1,7 @@
 package net.minecraft.client.gui.screens.multiplayer;
 
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.StringWidget;
-import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.layouts.FrameLayout;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.ConnectScreen;
@@ -11,10 +9,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class ServerReconfigScreen extends Screen {
     private static final int DISCONNECT_TIME = 600;
     private final Connection connection;
@@ -22,9 +17,9 @@ public class ServerReconfigScreen extends Screen {
     private int delayTicker;
     private final LinearLayout layout = LinearLayout.vertical();
 
-    public ServerReconfigScreen(Component p_298223_, Connection p_298466_) {
-        super(p_298223_);
-        this.connection = p_298466_;
+    public ServerReconfigScreen(final Component title, final Connection connection) {
+        super(title);
+        this.connection = connection;
     }
 
     @Override
@@ -37,12 +32,10 @@ public class ServerReconfigScreen extends Screen {
         this.layout.defaultCellSetting().alignHorizontallyCenter().padding(10);
         this.layout.addChild(new StringWidget(this.title, this.font));
         this.disconnectButton = this.layout
-            .addChild(Button.builder(CommonComponents.GUI_DISCONNECT, p_297709_ -> this.connection.disconnect(ConnectScreen.ABORT_CONNECTION)).build());
+            .addChild(Button.builder(CommonComponents.GUI_DISCONNECT, b -> this.connection.disconnect(ConnectScreen.ABORT_CONNECTION)).build());
         this.disconnectButton.active = false;
         this.layout.arrangeElements();
-        this.layout.visitWidgets(p_325387_ -> {
-            AbstractWidget abstractwidget = this.addRenderableWidget(p_325387_);
-        });
+        this.layout.visitWidgets(x$0 -> this.addRenderableWidget(x$0));
         this.repositionElements();
     }
 

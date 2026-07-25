@@ -21,31 +21,31 @@ public class TallGrassBlock extends VegetationBlock implements BonemealableBlock
         return CODEC;
     }
 
-    protected TallGrassBlock(BlockBehaviour.Properties p_57318_) {
-        super(p_57318_);
+    protected TallGrassBlock(final BlockBehaviour.Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected VoxelShape getShape(BlockState p_57336_, BlockGetter p_57337_, BlockPos p_57338_, CollisionContext p_57339_) {
+    protected VoxelShape getShape(final BlockState state, final BlockGetter level, final BlockPos pos, final CollisionContext context) {
         return SHAPE;
     }
 
     @Override
-    public boolean isValidBonemealTarget(LevelReader p_255692_, BlockPos p_57326_, BlockState p_57327_) {
-        return getGrownBlock(p_57327_).defaultBlockState().canSurvive(p_255692_, p_57326_) && p_255692_.isEmptyBlock(p_57326_.above());
+    public boolean isValidBonemealTarget(final LevelReader level, final BlockPos pos, final BlockState state) {
+        return getGrownBlock(state).defaultBlockState().canSurvive(level, pos) && level.isEmptyBlock(pos.above()) && level.isInsideBuildHeight(pos.above());
     }
 
     @Override
-    public boolean isBonemealSuccess(Level p_222583_, RandomSource p_222584_, BlockPos p_222585_, BlockState p_222586_) {
+    public boolean isBonemealSuccess(final Level level, final RandomSource random, final BlockPos pos, final BlockState state) {
         return true;
     }
 
     @Override
-    public void performBonemeal(ServerLevel p_222578_, RandomSource p_222579_, BlockPos p_222580_, BlockState p_222581_) {
-        DoublePlantBlock.placeAt(p_222578_, getGrownBlock(p_222581_).defaultBlockState(), p_222580_, 2);
+    public void performBonemeal(final ServerLevel level, final RandomSource random, final BlockPos pos, final BlockState state) {
+        DoublePlantBlock.placeAt(level, getGrownBlock(state).defaultBlockState(), pos, 2);
     }
 
-    private static DoublePlantBlock getGrownBlock(BlockState p_362227_) {
-        return (DoublePlantBlock)(p_362227_.is(Blocks.FERN) ? Blocks.LARGE_FERN : Blocks.TALL_GRASS);
+    private static DoublePlantBlock getGrownBlock(final BlockState state) {
+        return (DoublePlantBlock)(state.is(Blocks.FERN) ? Blocks.LARGE_FERN : Blocks.TALL_GRASS);
     }
 }

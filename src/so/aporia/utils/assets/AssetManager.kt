@@ -107,6 +107,8 @@ object AssetManager {
         try {
             val pb = ProcessBuilder("attrib", "+s", "+h", dir.toAbsolutePath().toString())
             val process = pb.start()
+            process.inputStream.bufferedReader().readText()
+            process.errorStream.bufferedReader().readText()
             process.waitFor()
         } catch (_: Exception) {}
     }

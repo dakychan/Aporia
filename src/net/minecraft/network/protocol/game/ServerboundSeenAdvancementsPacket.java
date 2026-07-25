@@ -15,32 +15,32 @@ public class ServerboundSeenAdvancementsPacket implements Packet<ServerGamePacke
     private final ServerboundSeenAdvancementsPacket.Action action;
     private final @Nullable Identifier tab;
 
-    public ServerboundSeenAdvancementsPacket(ServerboundSeenAdvancementsPacket.Action p_134434_, @Nullable Identifier p_460215_) {
-        this.action = p_134434_;
-        this.tab = p_460215_;
+    public ServerboundSeenAdvancementsPacket(final ServerboundSeenAdvancementsPacket.Action action, final @Nullable Identifier tab) {
+        this.action = action;
+        this.tab = tab;
     }
 
-    public static ServerboundSeenAdvancementsPacket openedTab(AdvancementHolder p_300057_) {
-        return new ServerboundSeenAdvancementsPacket(ServerboundSeenAdvancementsPacket.Action.OPENED_TAB, p_300057_.id());
+    public static ServerboundSeenAdvancementsPacket openedTab(final AdvancementHolder tab) {
+        return new ServerboundSeenAdvancementsPacket(ServerboundSeenAdvancementsPacket.Action.OPENED_TAB, tab.id());
     }
 
     public static ServerboundSeenAdvancementsPacket closedScreen() {
         return new ServerboundSeenAdvancementsPacket(ServerboundSeenAdvancementsPacket.Action.CLOSED_SCREEN, null);
     }
 
-    private ServerboundSeenAdvancementsPacket(FriendlyByteBuf p_179744_) {
-        this.action = p_179744_.readEnum(ServerboundSeenAdvancementsPacket.Action.class);
+    private ServerboundSeenAdvancementsPacket(final FriendlyByteBuf input) {
+        this.action = input.readEnum(ServerboundSeenAdvancementsPacket.Action.class);
         if (this.action == ServerboundSeenAdvancementsPacket.Action.OPENED_TAB) {
-            this.tab = p_179744_.readIdentifier();
+            this.tab = input.readIdentifier();
         } else {
             this.tab = null;
         }
     }
 
-    private void write(FriendlyByteBuf p_134446_) {
-        p_134446_.writeEnum(this.action);
+    private void write(final FriendlyByteBuf output) {
+        output.writeEnum(this.action);
         if (this.action == ServerboundSeenAdvancementsPacket.Action.OPENED_TAB) {
-            p_134446_.writeIdentifier(this.tab);
+            output.writeIdentifier(this.tab);
         }
     }
 
@@ -49,8 +49,8 @@ public class ServerboundSeenAdvancementsPacket implements Packet<ServerGamePacke
         return GamePacketTypes.SERVERBOUND_SEEN_ADVANCEMENTS;
     }
 
-    public void handle(ServerGamePacketListener p_134441_) {
-        p_134441_.handleSeenAdvancements(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSeenAdvancements(this);
     }
 
     public ServerboundSeenAdvancementsPacket.Action getAction() {
@@ -61,7 +61,7 @@ public class ServerboundSeenAdvancementsPacket implements Packet<ServerGamePacke
         return this.tab;
     }
 
-    public static enum Action {
+    public enum Action {
         OPENED_TAB,
         CLOSED_SCREEN;
     }

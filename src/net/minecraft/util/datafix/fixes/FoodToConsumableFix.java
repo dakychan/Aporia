@@ -8,8 +8,8 @@ import java.util.Optional;
 import java.util.stream.Stream;
 
 public class FoodToConsumableFix extends DataFix {
-    public FoodToConsumableFix(Schema p_365602_) {
-        super(p_365602_, true);
+    public FoodToConsumableFix(final Schema outputSchema) {
+        super(outputSchema, true);
     }
 
     @Override
@@ -18,25 +18,27 @@ public class FoodToConsumableFix extends DataFix {
             "Food to consumable fix",
             this.getInputSchema().getType(References.DATA_COMPONENTS),
             this.getOutputSchema().getType(References.DATA_COMPONENTS),
-            p_363478_ -> {
-                Optional<? extends Dynamic<?>> optional = p_363478_.get("minecraft:food").result();
-                if (optional.isPresent()) {
-                    float f = optional.get().get("eat_seconds").asFloat(1.6F);
-                    Stream<? extends Dynamic<?>> stream = optional.get().get("effects").asStream();
-                    Stream<? extends Dynamic<?>> stream1 = stream.map(
-                        p_369531_ -> p_369531_.emptyMap()
-                            .set("type", p_369531_.createString("minecraft:apply_effects"))
-                            .set("effects", p_369531_.createList(p_369531_.get("effect").result().stream()))
-                            .set("probability", p_369531_.createFloat(p_369531_.get("probability").asFloat(1.0F)))
+            components -> {
+                Optional<? extends Dynamic<?>> foodComponent = components.get("minecraft:food").result();
+                if (foodComponent.isPresent()) {
+                    float eatSeconds = foodComponent.get().get("eat_seconds").asFloat(1.6F);
+                    Stream<? extends Dynamic<?>> effects = foodComponent.get().get("effects").asStream();
+                    Stream<? extends Dynamic<?>> onConsumeEffects = effects.map(
+                        effect -> effect.emptyMap()
+                            .set("type", effect.createString("minecraft:apply_effects"))
+                            .set("effects", effect.createList(effect.get("effect").result().stream()))
+                            .set("probability", effect.createFloat(effect.get("probability").asFloat(1.0F)))
                     );
-                    p_363478_ = Dynamic.copyField((Dynamic<?>)optional.get(), "using_converts_to", p_363478_, "minecraft:use_remainder");
-                    p_363478_ = p_363478_.set("minecraft:food", optional.get().remove("eat_seconds").remove("effects").remove("using_converts_to"));
-                    return p_363478_.set(
+                    components = Dynamic.copyField((Dynamic<?>)foodComponent.get(), "using_converts_to", components, "minecraft:use_remainder");
+                    components = components.set("minecraft:food", foodComponent.get().remove("eat_seconds").remove("effects").remove("using_converts_to"));
+                    return components.set(
                         "minecraft:consumable",
-                        p_363478_.emptyMap().set("consume_seconds", p_363478_.createFloat(f)).set("on_consume_effects", p_363478_.createList(stream1))
+                        components.emptyMap()
+                            .set("consume_seconds", components.createFloat(eatSeconds))
+                            .set("on_consume_effects", components.createList(onConsumeEffects))
                     );
                 } else {
-                    return p_363478_;
+                    return components;
                 }
             }
         );

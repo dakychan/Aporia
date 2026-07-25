@@ -3,10 +3,7 @@ package net.minecraft.client;
 import com.mojang.serialization.Codec;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.StringRepresentable;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public enum CloudStatus implements StringRepresentable {
     OFF("false", "options.off"),
     FAST("fast", "options.clouds.fast"),
@@ -16,9 +13,9 @@ public enum CloudStatus implements StringRepresentable {
     private final String legacyName;
     private final Component caption;
 
-    private CloudStatus(final String p_231335_, final String p_298796_) {
-        this.legacyName = p_231335_;
-        this.caption = Component.translatable(p_298796_);
+    CloudStatus(final String legacyName, final String key) {
+        this.legacyName = legacyName;
+        this.caption = Component.translatable(key);
     }
 
     public Component caption() {

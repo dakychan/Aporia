@@ -12,12 +12,8 @@ import java.util.function.Function;
 import net.minecraft.client.telemetry.TelemetryEventSender;
 import net.minecraft.client.telemetry.TelemetryEventType;
 import net.minecraft.client.telemetry.TelemetryProperty;
-import net.minecraft.client.telemetry.TelemetryPropertyMap;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.slf4j.Logger;
 
-@OnlyIn(Dist.CLIENT)
 public class GameLoadTimesEvent {
     public static final GameLoadTimesEvent INSTANCE = new GameLoadTimesEvent(Ticker.systemTicker());
     private static final Logger LOGGER = LogUtils.getLogger();
@@ -25,71 +21,69 @@ public class GameLoadTimesEvent {
     private final Map<TelemetryProperty<GameLoadTimesEvent.Measurement>, Stopwatch> measurements = new HashMap<>();
     private OptionalLong bootstrapTime = OptionalLong.empty();
 
-    protected GameLoadTimesEvent(Ticker p_286506_) {
-        this.timeSource = p_286506_;
+    protected GameLoadTimesEvent(final Ticker timeSource) {
+        this.timeSource = timeSource;
     }
 
-    public synchronized void beginStep(TelemetryProperty<GameLoadTimesEvent.Measurement> p_286394_) {
-        this.beginStep(p_286394_, p_286494_ -> Stopwatch.createStarted(this.timeSource));
+    public synchronized void beginStep(final TelemetryProperty<GameLoadTimesEvent.Measurement> property) {
+        this.beginStep(property, p -> Stopwatch.createStarted(this.timeSource));
     }
 
-    public synchronized void beginStep(TelemetryProperty<GameLoadTimesEvent.Measurement> p_286396_, Stopwatch p_286822_) {
-        this.beginStep(p_286396_, p_286421_ -> p_286822_);
+    public synchronized void beginStep(final TelemetryProperty<GameLoadTimesEvent.Measurement> property, final Stopwatch measurement) {
+        this.beginStep(property, p -> measurement);
     }
 
     private synchronized void beginStep(
-        TelemetryProperty<GameLoadTimesEvent.Measurement> p_286311_, Function<TelemetryProperty<GameLoadTimesEvent.Measurement>, Stopwatch> p_286454_
+        final TelemetryProperty<GameLoadTimesEvent.Measurement> property,
+        final Function<TelemetryProperty<GameLoadTimesEvent.Measurement>, Stopwatch> measurement
     ) {
-        this.measurements.computeIfAbsent(p_286311_, p_286454_);
+        this.measurements.computeIfAbsent(property, measurement);
     }
 
-    public synchronized void endStep(TelemetryProperty<GameLoadTimesEvent.Measurement> p_286634_) {
-        Stopwatch stopwatch = this.measurements.get(p_286634_);
-        if (stopwatch == null) {
-            LOGGER.warn("Attempted to end step for {} before starting it", p_286634_.id());
+    public synchronized void endStep(final TelemetryProperty<GameLoadTimesEvent.Measurement> property) {
+        Stopwatch stepMeasurement = this.measurements.get(property);
+        if (stepMeasurement == null) {
+            LOGGER.warn("Attempted to end step for {} before starting it", property.id());
         } else {
-            if (stopwatch.isRunning()) {
-                stopwatch.stop();
+            if (stepMeasurement.isRunning()) {
+                stepMeasurement.stop();
             }
         }
     }
 
-    public void send(TelemetryEventSender p_286524_) {
-        p_286524_.send(
+    public void send(final TelemetryEventSender eventSender) {
+        eventSender.send(
             TelemetryEventType.GAME_LOAD_TIMES,
-            p_286285_ -> {
+            properties -> {
                 synchronized (this) {
                     this.measurements
                         .forEach(
-                            (p_286804_, p_286275_) -> {
-                                if (!p_286275_.isRunning()) {
-                                    long i = p_286275_.elapsed(TimeUnit.MILLISECONDS);
-                                    p_286285_.put(
-                                        (TelemetryProperty<GameLoadTimesEvent.Measurement>)p_286804_, new GameLoadTimesEvent.Measurement((int)i)
-                                    );
+                            (key, stepMeasurement) -> {
+                                if (!stepMeasurement.isRunning()) {
+                                    long elapsed = stepMeasurement.elapsed(TimeUnit.MILLISECONDS);
+                                    properties.put((TelemetryProperty<GameLoadTimesEvent.Measurement>)key, new GameLoadTimesEvent.Measurement((int)elapsed));
                                 } else {
                                     LOGGER.warn(
                                         "Measurement {} was discarded since it was still ongoing when the event {} was sent.",
-                                        p_286804_.id(),
+                                        key.id(),
                                         TelemetryEventType.GAME_LOAD_TIMES.id()
                                     );
                                 }
                             }
                         );
-                    this.bootstrapTime.ifPresent(p_286872_ -> p_286285_.put(TelemetryProperty.LOAD_TIME_BOOTSTRAP_MS, new GameLoadTimesEvent.Measurement((int)p_286872_)));
+                    this.bootstrapTime
+                        .ifPresent(duration -> properties.put(TelemetryProperty.LOAD_TIME_BOOTSTRAP_MS, new GameLoadTimesEvent.Measurement((int)duration)));
                     this.measurements.clear();
                 }
             }
         );
     }
 
-    public synchronized void setBootstrapTime(long p_286847_) {
-        this.bootstrapTime = OptionalLong.of(p_286847_);
+    public synchronized void setBootstrapTime(final long duration) {
+        this.bootstrapTime = OptionalLong.of(duration);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Measurement(int millis) {
-        public static final Codec<GameLoadTimesEvent.Measurement> CODEC = Codec.INT
-            .xmap(GameLoadTimesEvent.Measurement::new, p_286736_ -> p_286736_.millis);
+        public record Measurement(int millis) {
+        public static final Codec<GameLoadTimesEvent.Measurement> CODEC = Codec.INT.xmap(GameLoadTimesEvent.Measurement::new, o -> o.millis);
     }
 }

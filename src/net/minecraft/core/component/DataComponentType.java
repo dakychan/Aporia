@@ -15,11 +15,11 @@ import org.jspecify.annotations.Nullable;
 
 public interface DataComponentType<T> {
     Codec<DataComponentType<?>> CODEC = Codec.lazyInitialized(() -> BuiltInRegistries.DATA_COMPONENT_TYPE.byNameCodec());
-    StreamCodec<RegistryFriendlyByteBuf, DataComponentType<?>> STREAM_CODEC = StreamCodec.recursive(p_335400_ -> ByteBufCodecs.registry(Registries.DATA_COMPONENT_TYPE));
+    StreamCodec<RegistryFriendlyByteBuf, DataComponentType<?>> STREAM_CODEC = StreamCodec.recursive(c -> ByteBufCodecs.registry(Registries.DATA_COMPONENT_TYPE));
     Codec<DataComponentType<?>> PERSISTENT_CODEC = CODEC.validate(
-        p_331558_ -> p_331558_.isTransient()
-            ? DataResult.error(() -> "Encountered transient component " + BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(p_331558_))
-            : DataResult.success(p_331558_)
+        type -> type.isTransient()
+            ? DataResult.error(() -> "Encountered transient component " + BuiltInRegistries.DATA_COMPONENT_TYPE.getKey(type))
+            : DataResult.success(type)
     );
     Codec<Map<DataComponentType<?>, Object>> VALUE_MAP_CODEC = Codec.dispatchedMap(PERSISTENT_CODEC, DataComponentType::codecOrThrow);
 
@@ -46,19 +46,19 @@ public interface DataComponentType<T> {
 
     StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec();
 
-    public static class Builder<T> {
+    class Builder<T> {
         private @Nullable Codec<T> codec;
         private @Nullable StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec;
         private boolean cacheEncoding;
         private boolean ignoreSwapAnimation;
 
-        public DataComponentType.Builder<T> persistent(Codec<T> p_334382_) {
-            this.codec = p_334382_;
+        public DataComponentType.Builder<T> persistent(final Codec<T> codec) {
+            this.codec = codec;
             return this;
         }
 
-        public DataComponentType.Builder<T> networkSynchronized(StreamCodec<? super RegistryFriendlyByteBuf, T> p_328597_) {
-            this.streamCodec = p_328597_;
+        public DataComponentType.Builder<T> networkSynchronized(final StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec) {
+            this.streamCodec = streamCodec;
             return this;
         }
 
@@ -68,11 +68,11 @@ public interface DataComponentType<T> {
         }
 
         public DataComponentType<T> build() {
-            StreamCodec<? super RegistryFriendlyByteBuf, T> streamcodec = Objects.requireNonNullElseGet(
+            StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec = Objects.requireNonNullElseGet(
                 this.streamCodec, () -> ByteBufCodecs.fromCodecWithRegistries(Objects.requireNonNull(this.codec, "Missing Codec for component"))
             );
-            Codec<T> codec = this.cacheEncoding && this.codec != null ? DataComponents.ENCODER_CACHE.wrap(this.codec) : this.codec;
-            return new DataComponentType.Builder.SimpleType<>(codec, streamcodec, this.ignoreSwapAnimation);
+            Codec<T> cachingCodec = this.cacheEncoding && this.codec != null ? DataComponents.ENCODER_CACHE.wrap(this.codec) : this.codec;
+            return new DataComponentType.Builder.SimpleType<>(cachingCodec, streamCodec, this.ignoreSwapAnimation);
         }
 
         public DataComponentType.Builder<T> ignoreSwapAnimation() {
@@ -80,15 +80,17 @@ public interface DataComponentType<T> {
             return this;
         }
 
-        static class SimpleType<T> implements DataComponentType<T> {
+        private static class SimpleType<T> implements DataComponentType<T> {
             private final @Nullable Codec<T> codec;
             private final StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec;
             private final boolean ignoreSwapAnimation;
 
-            SimpleType(@Nullable Codec<T> p_335427_, StreamCodec<? super RegistryFriendlyByteBuf, T> p_335369_, boolean p_452020_) {
-                this.codec = p_335427_;
-                this.streamCodec = p_335369_;
-                this.ignoreSwapAnimation = p_452020_;
+            private SimpleType(
+                final @Nullable Codec<T> codec, final StreamCodec<? super RegistryFriendlyByteBuf, T> streamCodec, final boolean ignoreSwapAnimation
+            ) {
+                this.codec = codec;
+                this.streamCodec = streamCodec;
+                this.ignoreSwapAnimation = ignoreSwapAnimation;
             }
 
             @Override

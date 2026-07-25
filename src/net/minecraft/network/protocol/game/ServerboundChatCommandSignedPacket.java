@@ -15,16 +15,16 @@ public record ServerboundChatCommandSignedPacket(
         ServerboundChatCommandSignedPacket::write, ServerboundChatCommandSignedPacket::new
     );
 
-    private ServerboundChatCommandSignedPacket(FriendlyByteBuf p_333361_) {
-        this(p_333361_.readUtf(), p_333361_.readInstant(), p_333361_.readLong(), new ArgumentSignatures(p_333361_), new LastSeenMessages.Update(p_333361_));
+    private ServerboundChatCommandSignedPacket(final FriendlyByteBuf input) {
+        this(input.readUtf(), input.readInstant(), input.readLong(), new ArgumentSignatures(input), new LastSeenMessages.Update(input));
     }
 
-    private void write(FriendlyByteBuf p_332640_) {
-        p_332640_.writeUtf(this.command);
-        p_332640_.writeInstant(this.timeStamp);
-        p_332640_.writeLong(this.salt);
-        this.argumentSignatures.write(p_332640_);
-        this.lastSeenMessages.write(p_332640_);
+    private void write(final FriendlyByteBuf output) {
+        output.writeUtf(this.command);
+        output.writeInstant(this.timeStamp);
+        output.writeLong(this.salt);
+        this.argumentSignatures.write(output);
+        this.lastSeenMessages.write(output);
     }
 
     @Override
@@ -32,7 +32,7 @@ public record ServerboundChatCommandSignedPacket(
         return GamePacketTypes.SERVERBOUND_CHAT_COMMAND_SIGNED;
     }
 
-    public void handle(ServerGamePacketListener p_329693_) {
-        p_329693_.handleSignedChatCommand(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSignedChatCommand(this);
     }
 }

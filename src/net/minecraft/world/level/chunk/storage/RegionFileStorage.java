@@ -23,63 +23,56 @@ public final class RegionFileStorage implements AutoCloseable {
     private final Path folder;
     private final boolean sync;
 
-    RegionFileStorage(RegionStorageInfo p_330451_, Path p_196954_, boolean p_196955_) {
-        this.folder = p_196954_;
-        this.sync = p_196955_;
-        this.info = p_330451_;
+    public RegionFileStorage(final RegionStorageInfo info, final Path folder, final boolean sync) {
+        this.folder = folder;
+        this.sync = sync;
+        this.info = info;
     }
 
-    private RegionFile getRegionFile(ChunkPos p_63712_) throws IOException {
-        long i = ChunkPos.asLong(p_63712_.getRegionX(), p_63712_.getRegionZ());
-        RegionFile regionfile = this.regionCache.getAndMoveToFirst(i);
-        if (regionfile != null) {
-            return regionfile;
-        } else {
-            if (this.regionCache.size() >= 256) {
-                this.regionCache.removeLast().close();
-            }
+    private RegionFile getRegionFile(final ChunkPos pos) throws IOException {
+        long key = ChunkPos.pack(pos.getRegionX(), pos.getRegionZ());
+        RegionFile region = this.regionCache.getAndMoveToFirst(key);
+        if (region != null) {
+            return region;
+        }
 
-            FileUtil.createDirectoriesSafe(this.folder);
-            Path path = this.folder.resolve("r." + p_63712_.getRegionX() + "." + p_63712_.getRegionZ() + ".mca");
-            RegionFile regionfile1 = new RegionFile(this.info, path, this.folder, this.sync);
-            this.regionCache.putAndMoveToFirst(i, regionfile1);
-            return regionfile1;
+        if (this.regionCache.size() >= 256) {
+            this.regionCache.removeLast().close();
+        }
+
+        FileUtil.createDirectoriesSafe(this.folder);
+        Path file = this.folder.resolve("r." + pos.getRegionX() + "." + pos.getRegionZ() + ".mca");
+        RegionFile newRegion = new RegionFile(this.info, file, this.folder, this.sync);
+        this.regionCache.putAndMoveToFirst(key, newRegion);
+        return newRegion;
+    }
+
+    public @Nullable CompoundTag read(final ChunkPos pos) throws IOException {
+        RegionFile region = this.getRegionFile(pos);
+
+        try (DataInputStream regionChunkInputStream = region.getChunkDataInputStream(pos)) {
+            return regionChunkInputStream == null ? null : NbtIo.read(regionChunkInputStream);
         }
     }
 
-    public @Nullable CompoundTag read(ChunkPos p_63707_) throws IOException {
-        RegionFile regionfile = this.getRegionFile(p_63707_);
+    public void scanChunk(final ChunkPos pos, final StreamTagVisitor scanner) throws IOException {
+        RegionFile region = this.getRegionFile(pos);
 
-        CompoundTag compoundtag;
-        try (DataInputStream datainputstream = regionfile.getChunkDataInputStream(p_63707_)) {
-            if (datainputstream == null) {
-                return null;
-            }
-
-            compoundtag = NbtIo.read(datainputstream);
-        }
-
-        return compoundtag;
-    }
-
-    public void scanChunk(ChunkPos p_196957_, StreamTagVisitor p_196958_) throws IOException {
-        RegionFile regionfile = this.getRegionFile(p_196957_);
-
-        try (DataInputStream datainputstream = regionfile.getChunkDataInputStream(p_196957_)) {
-            if (datainputstream != null) {
-                NbtIo.parse(datainputstream, p_196958_, NbtAccounter.unlimitedHeap());
+        try (DataInputStream regionChunkInputStream = region.getChunkDataInputStream(pos)) {
+            if (regionChunkInputStream != null) {
+                NbtIo.parse(regionChunkInputStream, scanner, NbtAccounter.unlimitedHeap());
             }
         }
     }
 
-    protected void write(ChunkPos p_63709_, @Nullable CompoundTag p_63710_) throws IOException {
+    public void write(final ChunkPos pos, final @Nullable CompoundTag value) throws IOException {
         if (!SharedConstants.DEBUG_DONT_SAVE_WORLD) {
-            RegionFile regionfile = this.getRegionFile(p_63709_);
-            if (p_63710_ == null) {
-                regionfile.clear(p_63709_);
+            RegionFile region = this.getRegionFile(pos);
+            if (value == null) {
+                region.clear(pos);
             } else {
-                try (DataOutputStream dataoutputstream = regionfile.getChunkDataOutputStream(p_63709_)) {
-                    NbtIo.write(p_63710_, dataoutputstream);
+                try (DataOutputStream output = region.getChunkDataOutputStream(pos)) {
+                    NbtIo.write(value, output);
                 }
             }
         }
@@ -87,22 +80,22 @@ public final class RegionFileStorage implements AutoCloseable {
 
     @Override
     public void close() throws IOException {
-        ExceptionCollector<IOException> exceptioncollector = new ExceptionCollector<>();
+        ExceptionCollector<IOException> exception = new ExceptionCollector<>();
 
-        for (RegionFile regionfile : this.regionCache.values()) {
+        for (RegionFile regionFile : this.regionCache.values()) {
             try {
-                regionfile.close();
-            } catch (IOException ioexception) {
-                exceptioncollector.add(ioexception);
+                regionFile.close();
+            } catch (IOException e) {
+                exception.add(e);
             }
         }
 
-        exceptioncollector.throwIfPresent();
+        exception.throwIfPresent();
     }
 
     public void flush() throws IOException {
-        for (RegionFile regionfile : this.regionCache.values()) {
-            regionfile.flush();
+        for (RegionFile regionFile : this.regionCache.values()) {
+            regionFile.flush();
         }
     }
 

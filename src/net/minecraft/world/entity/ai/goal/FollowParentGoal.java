@@ -13,53 +13,57 @@ public class FollowParentGoal extends Goal {
     private final double speedModifier;
     private int timeToRecalcPath;
 
-    public FollowParentGoal(Animal p_25319_, double p_25320_) {
-        this.animal = p_25319_;
-        this.speedModifier = p_25320_;
+    public FollowParentGoal(final Animal animal, final double speedModifier) {
+        this.animal = animal;
+        this.speedModifier = speedModifier;
     }
 
     @Override
     public boolean canUse() {
         if (this.animal.getAge() >= 0) {
             return false;
-        } else {
-            List<? extends Animal> list = this.animal
-                .level()
-                .getEntitiesOfClass((Class<? extends Animal>)this.animal.getClass(), this.animal.getBoundingBox().inflate(8.0, 4.0, 8.0));
-            Animal animal = null;
-            double d0 = Double.MAX_VALUE;
+        }
 
-            for (Animal animal1 : list) {
-                if (animal1.getAge() >= 0) {
-                    double d1 = this.animal.distanceToSqr(animal1);
-                    if (!(d1 > d0)) {
-                        d0 = d1;
-                        animal = animal1;
-                    }
+        List<? extends Animal> parents = this.animal
+            .level()
+            .getEntitiesOfClass((Class<? extends Animal>)this.animal.getClass(), this.animal.getBoundingBox().inflate(8.0, 4.0, 8.0));
+        Animal closest = null;
+        double closestDistSqr = Double.MAX_VALUE;
+
+        for (Animal parent : parents) {
+            if (parent.getAge() >= 0) {
+                double distSqr = this.animal.distanceToSqr(parent);
+                if (!(distSqr > closestDistSqr)) {
+                    closestDistSqr = distSqr;
+                    closest = parent;
                 }
             }
-
-            if (animal == null) {
-                return false;
-            } else if (d0 < 9.0) {
-                return false;
-            } else {
-                this.parent = animal;
-                return true;
-            }
         }
+
+        if (closest == null) {
+            return false;
+        }
+
+        if (closestDistSqr < 9.0) {
+            return false;
+        }
+
+        this.parent = closest;
+        return true;
     }
 
     @Override
     public boolean canContinueToUse() {
         if (this.animal.getAge() >= 0) {
             return false;
-        } else if (!this.parent.isAlive()) {
-            return false;
-        } else {
-            double d0 = this.animal.distanceToSqr(this.parent);
-            return !(d0 < 9.0) && !(d0 > 256.0);
         }
+
+        if (!this.parent.isAlive()) {
+            return false;
+        }
+
+        double distSqr = this.animal.distanceToSqr(this.parent);
+        return !(distSqr < 9.0) && !(distSqr > 256.0);
     }
 
     @Override

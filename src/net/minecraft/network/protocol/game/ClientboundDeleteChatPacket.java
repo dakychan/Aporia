@@ -11,12 +11,12 @@ public record ClientboundDeleteChatPacket(MessageSignature.Packed messageSignatu
         ClientboundDeleteChatPacket::write, ClientboundDeleteChatPacket::new
     );
 
-    private ClientboundDeleteChatPacket(FriendlyByteBuf p_241415_) {
-        this(MessageSignature.Packed.read(p_241415_));
+    private ClientboundDeleteChatPacket(final FriendlyByteBuf input) {
+        this(MessageSignature.Packed.read(input));
     }
 
-    private void write(FriendlyByteBuf p_241358_) {
-        MessageSignature.Packed.write(p_241358_, this.messageSignature);
+    private void write(final FriendlyByteBuf output) {
+        MessageSignature.Packed.write(output, this.messageSignature);
     }
 
     @Override
@@ -24,7 +24,7 @@ public record ClientboundDeleteChatPacket(MessageSignature.Packed messageSignatu
         return GamePacketTypes.CLIENTBOUND_DELETE_CHAT;
     }
 
-    public void handle(ClientGamePacketListener p_241426_) {
-        p_241426_.handleDeleteChat(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleDeleteChat(this);
     }
 }

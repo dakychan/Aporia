@@ -11,16 +11,16 @@ public class ServerboundSelectTradePacket implements Packet<ServerGamePacketList
     );
     private final int item;
 
-    public ServerboundSelectTradePacket(int p_134462_) {
-        this.item = p_134462_;
+    public ServerboundSelectTradePacket(final int item) {
+        this.item = item;
     }
 
-    private ServerboundSelectTradePacket(FriendlyByteBuf p_179747_) {
-        this.item = p_179747_.readVarInt();
+    private ServerboundSelectTradePacket(final FriendlyByteBuf input) {
+        this.item = input.readVarInt();
     }
 
-    private void write(FriendlyByteBuf p_134471_) {
-        p_134471_.writeVarInt(this.item);
+    private void write(final FriendlyByteBuf output) {
+        output.writeVarInt(this.item);
     }
 
     @Override
@@ -28,8 +28,8 @@ public class ServerboundSelectTradePacket implements Packet<ServerGamePacketList
         return GamePacketTypes.SERVERBOUND_SELECT_TRADE;
     }
 
-    public void handle(ServerGamePacketListener p_134468_) {
-        p_134468_.handleSelectTrade(this);
+    public void handle(final ServerGamePacketListener listener) {
+        listener.handleSelectTrade(this);
     }
 
     public int getItem() {

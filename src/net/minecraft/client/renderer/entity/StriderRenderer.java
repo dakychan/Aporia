@@ -1,6 +1,8 @@
 package net.minecraft.client.renderer.entity;
 
 import net.minecraft.client.model.geom.ModelLayers;
+import net.minecraft.client.model.monster.strider.AdultStriderModel;
+import net.minecraft.client.model.monster.strider.BabyStriderModel;
 import net.minecraft.client.model.monster.strider.StriderModel;
 import net.minecraft.client.renderer.entity.layers.SimpleEquipmentLayer;
 import net.minecraft.client.renderer.entity.state.StriderRenderState;
@@ -8,50 +10,53 @@ import net.minecraft.client.resources.model.EquipmentClientInfo;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.monster.Strider;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class StriderRenderer extends AgeableMobRenderer<Strider, StriderRenderState, StriderModel> {
     private static final Identifier STRIDER_LOCATION = Identifier.withDefaultNamespace("textures/entity/strider/strider.png");
+    private static final Identifier STRIDER_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/strider/strider_baby.png");
     private static final Identifier COLD_LOCATION = Identifier.withDefaultNamespace("textures/entity/strider/strider_cold.png");
+    private static final Identifier COLD_BABY_LOCATION = Identifier.withDefaultNamespace("textures/entity/strider/strider_cold_baby.png");
     private static final float SHADOW_RADIUS = 0.5F;
 
-    public StriderRenderer(EntityRendererProvider.Context p_174411_) {
-        super(p_174411_, new StriderModel(p_174411_.bakeLayer(ModelLayers.STRIDER)), new StriderModel(p_174411_.bakeLayer(ModelLayers.STRIDER_BABY)), 0.5F);
+    public StriderRenderer(final EntityRendererProvider.Context context) {
+        super(context, new AdultStriderModel(context.bakeLayer(ModelLayers.STRIDER)), new BabyStriderModel(context.bakeLayer(ModelLayers.STRIDER_BABY)), 0.5F);
         this.addLayer(
             new SimpleEquipmentLayer<>(
                 this,
-                p_174411_.getEquipmentRenderer(),
+                context.getEquipmentRenderer(),
                 EquipmentClientInfo.LayerType.STRIDER_SADDLE,
-                p_393866_ -> p_393866_.saddle,
-                new StriderModel(p_174411_.bakeLayer(ModelLayers.STRIDER_SADDLE)),
-                new StriderModel(p_174411_.bakeLayer(ModelLayers.STRIDER_BABY_SADDLE))
+                state -> state.saddle,
+                new AdultStriderModel(context.bakeLayer(ModelLayers.STRIDER_SADDLE)),
+                null
             )
         );
     }
 
-    public Identifier getTextureLocation(StriderRenderState p_361677_) {
-        return p_361677_.isSuffocating ? COLD_LOCATION : STRIDER_LOCATION;
+    public Identifier getTextureLocation(final StriderRenderState state) {
+        if (state.isSuffocating) {
+            return state.isBaby ? COLD_BABY_LOCATION : COLD_LOCATION;
+        } else {
+            return state.isBaby ? STRIDER_BABY_LOCATION : STRIDER_LOCATION;
+        }
     }
 
-    protected float getShadowRadius(StriderRenderState p_364573_) {
-        float f = super.getShadowRadius(p_364573_);
-        return p_364573_.isBaby ? f * 0.5F : f;
+    protected float getShadowRadius(final StriderRenderState state) {
+        float radius = super.getShadowRadius(state);
+        return state.isBaby ? radius * 0.5F : radius;
     }
 
     public StriderRenderState createRenderState() {
         return new StriderRenderState();
     }
 
-    public void extractRenderState(Strider p_361862_, StriderRenderState p_361393_, float p_362076_) {
-        super.extractRenderState(p_361862_, p_361393_, p_362076_);
-        p_361393_.saddle = p_361862_.getItemBySlot(EquipmentSlot.SADDLE).copy();
-        p_361393_.isSuffocating = p_361862_.isSuffocating();
-        p_361393_.isRidden = p_361862_.isVehicle();
+    public void extractRenderState(final Strider entity, final StriderRenderState state, final float partialTicks) {
+        super.extractRenderState(entity, state, partialTicks);
+        state.saddle = entity.getItemBySlot(EquipmentSlot.SADDLE).copy();
+        state.isSuffocating = entity.isSuffocating();
+        state.isRidden = entity.isVehicle();
     }
 
-    protected boolean isShaking(StriderRenderState p_370098_) {
-        return super.isShaking(p_370098_) || p_370098_.isSuffocating;
+    protected boolean isShaking(final StriderRenderState state) {
+        return super.isShaking(state) || state.isSuffocating;
     }
 }

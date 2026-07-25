@@ -17,8 +17,8 @@ public class ClientboundStartConfigurationPacket implements Packet<ClientGamePac
         return GamePacketTypes.CLIENTBOUND_START_CONFIGURATION;
     }
 
-    public void handle(ClientGamePacketListener p_298066_) {
-        p_298066_.handleConfigurationStart(this);
+    public void handle(final ClientGamePacketListener listener) {
+        listener.handleConfigurationStart(this);
     }
 
     @Override

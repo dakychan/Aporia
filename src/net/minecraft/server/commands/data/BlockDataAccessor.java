@@ -24,43 +24,45 @@ import org.slf4j.Logger;
 
 public class BlockDataAccessor implements DataAccessor {
     private static final Logger LOGGER = LogUtils.getLogger();
-    static final SimpleCommandExceptionType ERROR_NOT_A_BLOCK_ENTITY = new SimpleCommandExceptionType(Component.translatable("commands.data.block.invalid"));
-    public static final Function<String, DataCommands.DataProvider> PROVIDER = p_139305_ -> new DataCommands.DataProvider() {
+    private static final SimpleCommandExceptionType ERROR_NOT_A_BLOCK_ENTITY = new SimpleCommandExceptionType(
+        Component.translatable("commands.data.block.invalid")
+    );
+    public static final Function<String, DataCommands.DataProvider> PROVIDER = argPrefix -> new DataCommands.DataProvider() {
         @Override
-        public DataAccessor access(CommandContext<CommandSourceStack> p_139319_) throws CommandSyntaxException {
-            BlockPos blockpos = BlockPosArgument.getLoadedBlockPos(p_139319_, p_139305_ + "Pos");
-            BlockEntity blockentity = p_139319_.getSource().getLevel().getBlockEntity(blockpos);
-            if (blockentity == null) {
+        public DataAccessor access(final CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
+            BlockPos pos = BlockPosArgument.getLoadedBlockPos(context, argPrefix + "Pos");
+            BlockEntity entity = context.getSource().getLevel().getBlockEntity(pos);
+            if (entity == null) {
                 throw BlockDataAccessor.ERROR_NOT_A_BLOCK_ENTITY.create();
             } else {
-                return new BlockDataAccessor(blockentity, blockpos);
+                return new BlockDataAccessor(entity, pos);
             }
         }
 
         @Override
         public ArgumentBuilder<CommandSourceStack, ?> wrap(
-            ArgumentBuilder<CommandSourceStack, ?> p_139316_,
-            Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> p_139317_
+            final ArgumentBuilder<CommandSourceStack, ?> parent,
+            final Function<ArgumentBuilder<CommandSourceStack, ?>, ArgumentBuilder<CommandSourceStack, ?>> function
         ) {
-            return p_139316_.then(Commands.literal("block").then(p_139317_.apply(Commands.argument(p_139305_ + "Pos", BlockPosArgument.blockPos()))));
+            return parent.then(Commands.literal("block").then(function.apply(Commands.argument(argPrefix + "Pos", BlockPosArgument.blockPos()))));
         }
     };
     private final BlockEntity entity;
     private final BlockPos pos;
 
-    public BlockDataAccessor(BlockEntity p_139297_, BlockPos p_139298_) {
-        this.entity = p_139297_;
-        this.pos = p_139298_;
+    public BlockDataAccessor(final BlockEntity entity, final BlockPos pos) {
+        this.entity = entity;
+        this.pos = pos;
     }
 
     @Override
-    public void setData(CompoundTag p_139307_) {
-        BlockState blockstate = this.entity.getLevel().getBlockState(this.pos);
+    public void setData(final CompoundTag tag) {
+        BlockState state = this.entity.getLevel().getBlockState(this.pos);
 
-        try (ProblemReporter.ScopedCollector problemreporter$scopedcollector = new ProblemReporter.ScopedCollector(this.entity.problemPath(), LOGGER)) {
-            this.entity.loadWithComponents(TagValueInput.create(problemreporter$scopedcollector, this.entity.getLevel().registryAccess(), p_139307_));
+        try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.entity.problemPath(), LOGGER)) {
+            this.entity.loadWithComponents(TagValueInput.create(reporter, this.entity.getLevel().registryAccess(), tag));
             this.entity.setChanged();
-            this.entity.getLevel().sendBlockUpdated(this.pos, blockstate, blockstate, 3);
+            this.entity.getLevel().sendBlockUpdated(this.pos, state, state, 3);
         }
     }
 
@@ -75,22 +77,14 @@ public class BlockDataAccessor implements DataAccessor {
     }
 
     @Override
-    public Component getPrintSuccess(Tag p_139309_) {
-        return Component.translatable(
-            "commands.data.block.query", this.pos.getX(), this.pos.getY(), this.pos.getZ(), NbtUtils.toPrettyComponent(p_139309_)
-        );
+    public Component getPrintSuccess(final Tag data) {
+        return Component.translatable("commands.data.block.query", this.pos.getX(), this.pos.getY(), this.pos.getZ(), NbtUtils.toPrettyComponent(data));
     }
 
     @Override
-    public Component getPrintSuccess(NbtPathArgument.NbtPath p_139301_, double p_139302_, int p_139303_) {
+    public Component getPrintSuccess(final NbtPathArgument.NbtPath path, final double scale, final int value) {
         return Component.translatable(
-            "commands.data.block.get",
-            p_139301_.asString(),
-            this.pos.getX(),
-            this.pos.getY(),
-            this.pos.getZ(),
-            String.format(Locale.ROOT, "%.2f", p_139302_),
-            p_139303_
+            "commands.data.block.get", path.asString(), this.pos.getX(), this.pos.getY(), this.pos.getZ(), String.format(Locale.ROOT, "%.2f", scale), value
         );
     }
 }

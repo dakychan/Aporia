@@ -10,10 +10,7 @@ import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.ARGB;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class LivingEntityEmissiveLayer<S extends LivingEntityRenderState, M extends EntityModel<S>> extends RenderLayer<S, M> {
     private final Function<S, Identifier> textureProvider;
     private final LivingEntityEmissiveLayer.AlphaFunction<S> alphaFunction;
@@ -22,46 +19,47 @@ public class LivingEntityEmissiveLayer<S extends LivingEntityRenderState, M exte
     private final boolean alwaysVisible;
 
     public LivingEntityEmissiveLayer(
-        RenderLayerParent<S, M> p_366651_,
-        Function<S, Identifier> p_360840_,
-        LivingEntityEmissiveLayer.AlphaFunction<S> p_362758_,
-        M p_427480_,
-        Function<Identifier, RenderType> p_426132_,
-        boolean p_375805_
+        final RenderLayerParent<S, M> renderer,
+        final Function<S, Identifier> textureProvider,
+        final LivingEntityEmissiveLayer.AlphaFunction<S> alphaFunction,
+        final M model,
+        final Function<Identifier, RenderType> bufferProvider,
+        final boolean alwaysVisible
     ) {
-        super(p_366651_);
-        this.textureProvider = p_360840_;
-        this.alphaFunction = p_362758_;
-        this.model = p_427480_;
-        this.bufferProvider = p_426132_;
-        this.alwaysVisible = p_375805_;
+        super(renderer);
+        this.textureProvider = textureProvider;
+        this.alphaFunction = alphaFunction;
+        this.model = model;
+        this.bufferProvider = bufferProvider;
+        this.alwaysVisible = alwaysVisible;
     }
 
-    public void submit(PoseStack p_430251_, SubmitNodeCollector p_422889_, int p_428856_, S p_426995_, float p_431132_, float p_431006_) {
-        if (!p_426995_.isInvisible || this.alwaysVisible) {
-            float f = this.alphaFunction.apply(p_426995_, p_426995_.ageInTicks);
-            if (!(f <= 1.0E-5F)) {
-                int i = ARGB.white(f);
-                RenderType rendertype = this.bufferProvider.apply(this.textureProvider.apply(p_426995_));
-                p_422889_.order(1)
+    public void submit(
+        final PoseStack poseStack, final SubmitNodeCollector submitNodeCollector, final int lightCoords, final S state, final float yRot, final float xRot
+    ) {
+        if (!state.isInvisible || this.alwaysVisible) {
+            float alpha = this.alphaFunction.apply(state, state.ageInTicks);
+            if (!(alpha <= 1.0E-5F)) {
+                int color = ARGB.white(alpha);
+                RenderType renderType = this.bufferProvider.apply(this.textureProvider.apply(state));
+                submitNodeCollector.order(1)
                     .submitModel(
                         this.model,
-                        p_426995_,
-                        p_430251_,
-                        rendertype,
-                        p_428856_,
-                        LivingEntityRenderer.getOverlayCoords(p_426995_, 0.0F),
-                        i,
+                        state,
+                        poseStack,
+                        renderType,
+                        lightCoords,
+                        LivingEntityRenderer.getOverlayCoords(state, 0.0F),
+                        color,
                         null,
-                        p_426995_.outlineColor,
+                        state.outlineColor,
                         null
                     );
             }
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public interface AlphaFunction<S extends LivingEntityRenderState> {
-        float apply(S p_370169_, float p_364679_);
+        public interface AlphaFunction<S extends LivingEntityRenderState> {
+        float apply(final S state, final float ageInTicks);
     }
 }

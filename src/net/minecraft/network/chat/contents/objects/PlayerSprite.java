@@ -3,17 +3,15 @@ package net.minecraft.network.chat.contents.objects;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import net.minecraft.network.chat.FontDescription;
 import net.minecraft.world.item.component.ResolvableProfile;
 
 public record PlayerSprite(ResolvableProfile player, boolean hat) implements ObjectInfo {
     public static final MapCodec<PlayerSprite> MAP_CODEC = RecordCodecBuilder.mapCodec(
-        p_422818_ -> p_422818_.group(
-                ResolvableProfile.CODEC.fieldOf("player").forGetter(PlayerSprite::player),
-                Codec.BOOL.optionalFieldOf("hat", true).forGetter(PlayerSprite::hat)
+        i -> i.group(
+                ResolvableProfile.CODEC.fieldOf("player").forGetter(PlayerSprite::player), Codec.BOOL.optionalFieldOf("hat", true).forGetter(PlayerSprite::hat)
             )
-            .apply(p_422818_, PlayerSprite::new)
+            .apply(i, PlayerSprite::new)
     );
 
     @Override
@@ -22,8 +20,8 @@ public record PlayerSprite(ResolvableProfile player, boolean hat) implements Obj
     }
 
     @Override
-    public String description() {
-        return this.player.name().map(p_427110_ -> "[" + p_427110_ + " head]").orElse("[unknown player head]");
+    public String defaultFallback() {
+        return this.player.name().map(name -> "[" + name + " head]").orElse("[unknown player head]");
     }
 
     @Override

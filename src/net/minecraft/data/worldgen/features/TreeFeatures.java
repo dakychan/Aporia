@@ -16,6 +16,7 @@ import net.minecraft.util.valueproviders.ConstantInt;
 import net.minecraft.util.valueproviders.IntProvider;
 import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.util.valueproviders.WeightedListInt;
+import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.HugeMushroomBlock;
@@ -46,6 +47,7 @@ import net.minecraft.world.level.levelgen.feature.rootplacers.MangroveRootPlacem
 import net.minecraft.world.level.levelgen.feature.rootplacers.MangroveRootPlacer;
 import net.minecraft.world.level.levelgen.feature.stateproviders.BlockStateProvider;
 import net.minecraft.world.level.levelgen.feature.stateproviders.RandomizedIntStateProvider;
+import net.minecraft.world.level.levelgen.feature.stateproviders.RuleBasedStateProvider;
 import net.minecraft.world.level.levelgen.feature.stateproviders.WeightedStateProvider;
 import net.minecraft.world.level.levelgen.feature.treedecorators.AlterGroundDecorator;
 import net.minecraft.world.level.levelgen.feature.treedecorators.AttachedToLeavesDecorator;
@@ -120,28 +122,36 @@ public class TreeFeatures {
     public static final ResourceKey<ConfiguredFeature<?, ?>> FALLEN_SUPER_BIRCH_TREE = FeatureUtils.createKey("fallen_super_birch_tree");
 
     private static TreeConfiguration.TreeConfigurationBuilder createStraightBlobTree(
-        Block p_195147_, Block p_195148_, int p_195149_, int p_195150_, int p_195151_, int p_195152_
+        final Block oakLog,
+        final Block oakLeaves,
+        final int baseHeight,
+        final int heightRandA,
+        final int heightRandB,
+        final int blobRadius,
+        final BlockStateProvider belowTrunkProvider
     ) {
         return new TreeConfiguration.TreeConfigurationBuilder(
-            BlockStateProvider.simple(p_195147_),
-            new StraightTrunkPlacer(p_195149_, p_195150_, p_195151_),
-            BlockStateProvider.simple(p_195148_),
-            new BlobFoliagePlacer(ConstantInt.of(p_195152_), ConstantInt.of(0), 3),
-            new TwoLayersFeatureSize(1, 0, 1)
+            BlockStateProvider.simple(oakLog),
+            new StraightTrunkPlacer(baseHeight, heightRandA, heightRandB),
+            BlockStateProvider.simple(oakLeaves),
+            new BlobFoliagePlacer(ConstantInt.of(blobRadius), ConstantInt.of(0), 3),
+            new TwoLayersFeatureSize(1, 0, 1),
+            belowTrunkProvider
         );
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder createOak() {
-        return createStraightBlobTree(Blocks.OAK_LOG, Blocks.OAK_LEAVES, 4, 2, 0, 2).ignoreVines();
+    private static TreeConfiguration.TreeConfigurationBuilder createOak(final BlockStateProvider belowTrunkProvider) {
+        return createStraightBlobTree(Blocks.OAK_LOG, Blocks.OAK_LEAVES, 4, 2, 0, 2, belowTrunkProvider).ignoreVines();
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder createDarkOak() {
+    private static TreeConfiguration.TreeConfigurationBuilder createDarkOak(final BlockStateProvider belowTrunkProvider) {
         return new TreeConfiguration.TreeConfigurationBuilder(
             BlockStateProvider.simple(Blocks.DARK_OAK_LOG),
             new DarkOakTrunkPlacer(6, 2, 1),
             BlockStateProvider.simple(Blocks.DARK_OAK_LEAVES),
             new DarkOakFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0)),
-            new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty())
+            new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty()),
+            belowTrunkProvider
         );
     }
 
@@ -149,8 +159,8 @@ public class TreeFeatures {
         return createFallenTrees(Blocks.OAK_LOG, 4, 7).stumpDecorators(ImmutableList.of(TrunkVineDecorator.INSTANCE));
     }
 
-    private static FallenTreeConfiguration.FallenTreeConfigurationBuilder createFallenBirch(int p_394750_) {
-        return createFallenTrees(Blocks.BIRCH_LOG, 5, p_394750_);
+    private static FallenTreeConfiguration.FallenTreeConfigurationBuilder createFallenBirch(final int maxHeight) {
+        return createFallenTrees(Blocks.BIRCH_LOG, 5, maxHeight);
     }
 
     private static FallenTreeConfiguration.FallenTreeConfigurationBuilder createFallenJungle() {
@@ -161,14 +171,16 @@ public class TreeFeatures {
         return createFallenTrees(Blocks.SPRUCE_LOG, 6, 10);
     }
 
-    private static FallenTreeConfiguration.FallenTreeConfigurationBuilder createFallenTrees(Block p_394430_, int p_393752_, int p_391459_) {
-        return new FallenTreeConfiguration.FallenTreeConfigurationBuilder(BlockStateProvider.simple(p_394430_), UniformInt.of(p_393752_, p_391459_))
+    private static FallenTreeConfiguration.FallenTreeConfigurationBuilder createFallenTrees(final Block logBlock, final int minLength, final int maxLength) {
+        return new FallenTreeConfiguration.FallenTreeConfigurationBuilder(BlockStateProvider.simple(logBlock), UniformInt.of(minLength, maxLength))
             .logDecorators(
                 ImmutableList.of(
                     new AttachedToLogsDecorator(
                         0.1F,
                         new WeightedStateProvider(
-                            WeightedList.<BlockState>builder().add(Blocks.RED_MUSHROOM.defaultBlockState(), 2).add(Blocks.BROWN_MUSHROOM.defaultBlockState(), 1)
+                            WeightedList.<BlockState>builder()
+                                .add(Blocks.RED_MUSHROOM.defaultBlockState(), 2)
+                                .add(Blocks.BROWN_MUSHROOM.defaultBlockState(), 1)
                         ),
                         List.of(Direction.UP)
                     )
@@ -176,30 +188,31 @@ public class TreeFeatures {
             );
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder createBirch() {
-        return createStraightBlobTree(Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES, 5, 2, 0, 2).ignoreVines();
+    private static TreeConfiguration.TreeConfigurationBuilder createBirch(final BlockStateProvider belowTrunkProvider) {
+        return createStraightBlobTree(Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES, 5, 2, 0, 2, belowTrunkProvider).ignoreVines();
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder createSuperBirch() {
-        return createStraightBlobTree(Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES, 5, 2, 6, 2).ignoreVines();
+    private static TreeConfiguration.TreeConfigurationBuilder createSuperBirch(final BlockStateProvider belowTrunkProvider) {
+        return createStraightBlobTree(Blocks.BIRCH_LOG, Blocks.BIRCH_LEAVES, 5, 2, 6, 2, belowTrunkProvider).ignoreVines();
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder createJungleTree() {
-        return createStraightBlobTree(Blocks.JUNGLE_LOG, Blocks.JUNGLE_LEAVES, 4, 8, 0, 2);
+    private static TreeConfiguration.TreeConfigurationBuilder createJungleTree(final BlockStateProvider belowTrunkProvider) {
+        return createStraightBlobTree(Blocks.JUNGLE_LOG, Blocks.JUNGLE_LEAVES, 4, 8, 0, 2, belowTrunkProvider);
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder createFancyOak() {
+    private static TreeConfiguration.TreeConfigurationBuilder createFancyOak(final BlockStateProvider belowTrunkProvider) {
         return new TreeConfiguration.TreeConfigurationBuilder(
                 BlockStateProvider.simple(Blocks.OAK_LOG),
                 new FancyTrunkPlacer(3, 11, 0),
                 BlockStateProvider.simple(Blocks.OAK_LEAVES),
                 new FancyFoliagePlacer(ConstantInt.of(2), ConstantInt.of(4), 4),
-                new TwoLayersFeatureSize(0, 0, 0, OptionalInt.of(4))
+                new TwoLayersFeatureSize(0, 0, 0, OptionalInt.of(4)),
+                belowTrunkProvider
             )
             .ignoreVines();
     }
 
-    private static TreeConfiguration.TreeConfigurationBuilder cherry() {
+    private static TreeConfiguration.TreeConfigurationBuilder cherry(final BlockStateProvider belowTrunkProvider) {
         return new TreeConfiguration.TreeConfigurationBuilder(
                 BlockStateProvider.simple(Blocks.CHERRY_LOG),
                 new CherryTrunkPlacer(
@@ -207,11 +220,7 @@ public class TreeFeatures {
                     1,
                     0,
                     new WeightedListInt(
-                        WeightedList.<IntProvider>builder()
-                            .add(ConstantInt.of(1), 1)
-                            .add(ConstantInt.of(2), 1)
-                            .add(ConstantInt.of(3), 1)
-                            .build()
+                        WeightedList.<IntProvider>builder().add(ConstantInt.of(1), 1).add(ConstantInt.of(2), 1).add(ConstantInt.of(3), 1).build()
                     ),
                     UniformInt.of(2, 4),
                     UniformInt.of(-4, -3),
@@ -219,14 +228,15 @@ public class TreeFeatures {
                 ),
                 BlockStateProvider.simple(Blocks.CHERRY_LEAVES),
                 new CherryFoliagePlacer(ConstantInt.of(4), ConstantInt.of(0), ConstantInt.of(5), 0.25F, 0.5F, 0.16666667F, 0.33333334F),
-                new TwoLayersFeatureSize(1, 0, 2)
+                new TwoLayersFeatureSize(1, 0, 2),
+                belowTrunkProvider
             )
             .ignoreVines();
     }
 
-    public static void bootstrap(BootstrapContext<ConfiguredFeature<?, ?>> p_334110_) {
-        HolderGetter<Block> holdergetter = p_334110_.lookup(Registries.BLOCK);
-        BlockPredicate blockpredicate = BlockPredicate.matchesBlocks(
+    public static void bootstrap(final BootstrapContext<ConfiguredFeature<?, ?>> context) {
+        HolderGetter<Block> blocks = context.lookup(Registries.BLOCK);
+        BlockPredicate stemReplaceableBlocks = BlockPredicate.matchesBlocks(
             Blocks.OAK_SAPLING,
             Blocks.SPRUCE_SAPLING,
             Blocks.BIRCH_SAPLING,
@@ -288,68 +298,102 @@ public class TreeFeatures {
             Blocks.SMALL_DRIPLEAF
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             CRIMSON_FUNGUS,
             Feature.HUGE_FUNGUS,
             new HugeFungusConfiguration(
-                Blocks.CRIMSON_NYLIUM.defaultBlockState(), Blocks.CRIMSON_STEM.defaultBlockState(), Blocks.NETHER_WART_BLOCK.defaultBlockState(), Blocks.SHROOMLIGHT.defaultBlockState(), blockpredicate, false
+                Blocks.CRIMSON_NYLIUM.defaultBlockState(),
+                Blocks.CRIMSON_STEM.defaultBlockState(),
+                Blocks.NETHER_WART_BLOCK.defaultBlockState(),
+                Blocks.SHROOMLIGHT.defaultBlockState(),
+                stemReplaceableBlocks,
+                false
             )
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             CRIMSON_FUNGUS_PLANTED,
             Feature.HUGE_FUNGUS,
             new HugeFungusConfiguration(
-                Blocks.CRIMSON_NYLIUM.defaultBlockState(), Blocks.CRIMSON_STEM.defaultBlockState(), Blocks.NETHER_WART_BLOCK.defaultBlockState(), Blocks.SHROOMLIGHT.defaultBlockState(), blockpredicate, true
+                Blocks.CRIMSON_NYLIUM.defaultBlockState(),
+                Blocks.CRIMSON_STEM.defaultBlockState(),
+                Blocks.NETHER_WART_BLOCK.defaultBlockState(),
+                Blocks.SHROOMLIGHT.defaultBlockState(),
+                stemReplaceableBlocks,
+                true
             )
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             WARPED_FUNGUS,
             Feature.HUGE_FUNGUS,
             new HugeFungusConfiguration(
-                Blocks.WARPED_NYLIUM.defaultBlockState(), Blocks.WARPED_STEM.defaultBlockState(), Blocks.WARPED_WART_BLOCK.defaultBlockState(), Blocks.SHROOMLIGHT.defaultBlockState(), blockpredicate, false
+                Blocks.WARPED_NYLIUM.defaultBlockState(),
+                Blocks.WARPED_STEM.defaultBlockState(),
+                Blocks.WARPED_WART_BLOCK.defaultBlockState(),
+                Blocks.SHROOMLIGHT.defaultBlockState(),
+                stemReplaceableBlocks,
+                false
             )
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             WARPED_FUNGUS_PLANTED,
             Feature.HUGE_FUNGUS,
             new HugeFungusConfiguration(
-                Blocks.WARPED_NYLIUM.defaultBlockState(), Blocks.WARPED_STEM.defaultBlockState(), Blocks.WARPED_WART_BLOCK.defaultBlockState(), Blocks.SHROOMLIGHT.defaultBlockState(), blockpredicate, true
+                Blocks.WARPED_NYLIUM.defaultBlockState(),
+                Blocks.WARPED_STEM.defaultBlockState(),
+                Blocks.WARPED_WART_BLOCK.defaultBlockState(),
+                Blocks.SHROOMLIGHT.defaultBlockState(),
+                stemReplaceableBlocks,
+                true
             )
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             HUGE_BROWN_MUSHROOM,
             Feature.HUGE_BROWN_MUSHROOM,
             new HugeMushroomFeatureConfiguration(
-                BlockStateProvider.simple(Blocks.BROWN_MUSHROOM_BLOCK.defaultBlockState().setValue(HugeMushroomBlock.UP, true).setValue(HugeMushroomBlock.DOWN, false)),
-                BlockStateProvider.simple(Blocks.MUSHROOM_STEM.defaultBlockState().setValue(HugeMushroomBlock.UP, false).setValue(HugeMushroomBlock.DOWN, false)),
-                3
+                BlockStateProvider.simple(
+                    Blocks.BROWN_MUSHROOM_BLOCK.defaultBlockState().setValue(HugeMushroomBlock.UP, true).setValue(HugeMushroomBlock.DOWN, false)
+                ),
+                BlockStateProvider.simple(
+                    Blocks.MUSHROOM_STEM.defaultBlockState().setValue(HugeMushroomBlock.UP, false).setValue(HugeMushroomBlock.DOWN, false)
+                ),
+                3,
+                BlockPredicate.matchesTag(BlockTags.HUGE_BROWN_MUSHROOM_CAN_PLACE_ON)
             )
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             HUGE_RED_MUSHROOM,
             Feature.HUGE_RED_MUSHROOM,
             new HugeMushroomFeatureConfiguration(
                 BlockStateProvider.simple(Blocks.RED_MUSHROOM_BLOCK.defaultBlockState().setValue(HugeMushroomBlock.DOWN, false)),
-                BlockStateProvider.simple(Blocks.MUSHROOM_STEM.defaultBlockState().setValue(HugeMushroomBlock.UP, false).setValue(HugeMushroomBlock.DOWN, false)),
-                2
+                BlockStateProvider.simple(
+                    Blocks.MUSHROOM_STEM.defaultBlockState().setValue(HugeMushroomBlock.UP, false).setValue(HugeMushroomBlock.DOWN, false)
+                ),
+                2,
+                BlockPredicate.matchesTag(BlockTags.HUGE_RED_MUSHROOM_CAN_PLACE_ON)
             )
         );
-        BeehiveDecorator beehivedecorator = new BeehiveDecorator(0.002F);
-        BeehiveDecorator beehivedecorator1 = new BeehiveDecorator(0.01F);
-        BeehiveDecorator beehivedecorator2 = new BeehiveDecorator(0.02F);
-        BeehiveDecorator beehivedecorator3 = new BeehiveDecorator(0.05F);
-        BeehiveDecorator beehivedecorator4 = new BeehiveDecorator(1.0F);
-        PlaceOnGroundDecorator placeongrounddecorator = new PlaceOnGroundDecorator(96, 4, 2, new WeightedStateProvider(VegetationFeatures.leafLitterPatchBuilder(1, 3)));
-        PlaceOnGroundDecorator placeongrounddecorator1 = new PlaceOnGroundDecorator(150, 2, 2, new WeightedStateProvider(VegetationFeatures.leafLitterPatchBuilder(1, 4)));
-        FeatureUtils.register(p_334110_, OAK, Feature.TREE, createOak().build());
-        FeatureUtils.register(p_334110_, DARK_OAK, Feature.TREE, createDarkOak().ignoreVines().build());
+        BeehiveDecorator beehive0002 = new BeehiveDecorator(0.002F);
+        BeehiveDecorator beehive001 = new BeehiveDecorator(0.01F);
+        BeehiveDecorator beehive002 = new BeehiveDecorator(0.02F);
+        BeehiveDecorator beehive005 = new BeehiveDecorator(0.05F);
+        BeehiveDecorator beehive = new BeehiveDecorator(1.0F);
+        PlaceOnGroundDecorator sparseLeafLitter = new PlaceOnGroundDecorator(
+            96, 4, 2, new WeightedStateProvider(VegetationFeatures.leafLitterPatchBuilder(1, 3))
+        );
+        PlaceOnGroundDecorator thickLeafLitter = new PlaceOnGroundDecorator(
+            150, 2, 2, new WeightedStateProvider(VegetationFeatures.leafLitterPatchBuilder(1, 4))
+        );
+        HolderGetter<Biome> biomes = context.lookup(Registries.BIOME);
+        BlockStateProvider belowTrunkProvider = TreeConfiguration.defaultPlaceBelowTreeTrunkProvider(biomes);
+        FeatureUtils.register(context, OAK, Feature.TREE, createOak(belowTrunkProvider).build());
+        FeatureUtils.register(context, DARK_OAK, Feature.TREE, createDarkOak(belowTrunkProvider).ignoreVines().build());
         FeatureUtils.register(
-            p_334110_,
+            context,
             PALE_OAK,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -357,14 +401,15 @@ public class TreeFeatures {
                     new DarkOakTrunkPlacer(6, 2, 1),
                     BlockStateProvider.simple(Blocks.PALE_OAK_LEAVES),
                     new DarkOakFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0)),
-                    new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty())
+                    new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty()),
+                    belowTrunkProvider
                 )
                 .decorators(ImmutableList.of(new PaleMossDecorator(0.15F, 0.4F, 0.8F)))
                 .ignoreVines()
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             PALE_OAK_BONEMEAL,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -372,13 +417,14 @@ public class TreeFeatures {
                     new DarkOakTrunkPlacer(6, 2, 1),
                     BlockStateProvider.simple(Blocks.PALE_OAK_LEAVES),
                     new DarkOakFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0)),
-                    new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty())
+                    new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty()),
+                    belowTrunkProvider
                 )
                 .ignoreVines()
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             PALE_OAK_CREAKING,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -386,15 +432,16 @@ public class TreeFeatures {
                     new DarkOakTrunkPlacer(6, 2, 1),
                     BlockStateProvider.simple(Blocks.PALE_OAK_LEAVES),
                     new DarkOakFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0)),
-                    new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty())
+                    new ThreeLayersFeatureSize(1, 1, 0, 1, 2, OptionalInt.empty()),
+                    belowTrunkProvider
                 )
                 .decorators(ImmutableList.of(new PaleMossDecorator(0.15F, 0.4F, 0.8F), new CreakingHeartDecorator(1.0F)))
                 .ignoreVines()
                 .build()
         );
-        FeatureUtils.register(p_334110_, BIRCH, Feature.TREE, createBirch().build());
+        FeatureUtils.register(context, BIRCH, Feature.TREE, createBirch(belowTrunkProvider).build());
         FeatureUtils.register(
-            p_334110_,
+            context,
             ACACIA,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -402,15 +449,16 @@ public class TreeFeatures {
                     new ForkingTrunkPlacer(5, 2, 2),
                     BlockStateProvider.simple(Blocks.ACACIA_LEAVES),
                     new AcaciaFoliagePlacer(ConstantInt.of(2), ConstantInt.of(0)),
-                    new TwoLayersFeatureSize(1, 0, 2)
+                    new TwoLayersFeatureSize(1, 0, 2),
+                    belowTrunkProvider
                 )
                 .ignoreVines()
                 .build()
         );
-        FeatureUtils.register(p_334110_, CHERRY, Feature.TREE, cherry().build());
-        FeatureUtils.register(p_334110_, CHERRY_BEES_005, Feature.TREE, cherry().decorators(List.of(beehivedecorator3)).build());
+        FeatureUtils.register(context, CHERRY, Feature.TREE, cherry(belowTrunkProvider).build());
+        FeatureUtils.register(context, CHERRY_BEES_005, Feature.TREE, cherry(belowTrunkProvider).decorators(List.of(beehive005)).build());
         FeatureUtils.register(
-            p_334110_,
+            context,
             SPRUCE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -418,13 +466,14 @@ public class TreeFeatures {
                     new StraightTrunkPlacer(5, 2, 1),
                     BlockStateProvider.simple(Blocks.SPRUCE_LEAVES),
                     new SpruceFoliagePlacer(UniformInt.of(2, 3), UniformInt.of(0, 2), UniformInt.of(1, 2)),
-                    new TwoLayersFeatureSize(2, 0, 2)
+                    new TwoLayersFeatureSize(2, 0, 2),
+                    belowTrunkProvider
                 )
                 .ignoreVines()
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             PINE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -432,21 +481,25 @@ public class TreeFeatures {
                     new StraightTrunkPlacer(6, 4, 0),
                     BlockStateProvider.simple(Blocks.SPRUCE_LEAVES),
                     new PineFoliagePlacer(ConstantInt.of(1), ConstantInt.of(1), UniformInt.of(3, 4)),
-                    new TwoLayersFeatureSize(2, 0, 2)
+                    new TwoLayersFeatureSize(2, 0, 2),
+                    belowTrunkProvider
                 )
                 .ignoreVines()
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             JUNGLE_TREE,
             Feature.TREE,
-            createJungleTree().decorators(ImmutableList.of(new CocoaDecorator(0.2F), TrunkVineDecorator.INSTANCE, new LeaveVineDecorator(0.25F))).ignoreVines().build()
+            createJungleTree(belowTrunkProvider)
+                .decorators(ImmutableList.of(new CocoaDecorator(0.2F), TrunkVineDecorator.INSTANCE, new LeaveVineDecorator(0.25F)))
+                .ignoreVines()
+                .build()
         );
-        FeatureUtils.register(p_334110_, FANCY_OAK, Feature.TREE, createFancyOak().build());
-        FeatureUtils.register(p_334110_, JUNGLE_TREE_NO_VINE, Feature.TREE, createJungleTree().ignoreVines().build());
+        FeatureUtils.register(context, FANCY_OAK, Feature.TREE, createFancyOak(belowTrunkProvider).build());
+        FeatureUtils.register(context, JUNGLE_TREE_NO_VINE, Feature.TREE, createJungleTree(belowTrunkProvider).ignoreVines().build());
         FeatureUtils.register(
-            p_334110_,
+            context,
             MEGA_JUNGLE_TREE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -454,13 +507,14 @@ public class TreeFeatures {
                     new MegaJungleTrunkPlacer(10, 2, 19),
                     BlockStateProvider.simple(Blocks.JUNGLE_LEAVES),
                     new MegaJungleFoliagePlacer(ConstantInt.of(2), ConstantInt.of(0), 2),
-                    new TwoLayersFeatureSize(1, 1, 2)
+                    new TwoLayersFeatureSize(1, 1, 2),
+                    belowTrunkProvider
                 )
                 .decorators(ImmutableList.of(TrunkVineDecorator.INSTANCE, new LeaveVineDecorator(0.25F)))
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             MEGA_SPRUCE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -468,13 +522,20 @@ public class TreeFeatures {
                     new GiantTrunkPlacer(13, 2, 14),
                     BlockStateProvider.simple(Blocks.SPRUCE_LEAVES),
                     new MegaPineFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0), UniformInt.of(13, 17)),
-                    new TwoLayersFeatureSize(1, 1, 2)
+                    new TwoLayersFeatureSize(1, 1, 2),
+                    belowTrunkProvider
                 )
-                .decorators(ImmutableList.of(new AlterGroundDecorator(BlockStateProvider.simple(Blocks.PODZOL))))
+                .decorators(
+                    ImmutableList.of(
+                        new AlterGroundDecorator(
+                            RuleBasedStateProvider.ifTrueThenProvide(BlockPredicate.matchesTag(BlockTags.BENEATH_TREE_PODZOL_REPLACEABLE), Blocks.PODZOL)
+                        )
+                    )
+                )
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             MEGA_PINE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -482,21 +543,32 @@ public class TreeFeatures {
                     new GiantTrunkPlacer(13, 2, 14),
                     BlockStateProvider.simple(Blocks.SPRUCE_LEAVES),
                     new MegaPineFoliagePlacer(ConstantInt.of(0), ConstantInt.of(0), UniformInt.of(3, 7)),
-                    new TwoLayersFeatureSize(1, 1, 2)
+                    new TwoLayersFeatureSize(1, 1, 2),
+                    belowTrunkProvider
                 )
-                .decorators(ImmutableList.of(new AlterGroundDecorator(BlockStateProvider.simple(Blocks.PODZOL))))
+                .decorators(
+                    ImmutableList.of(
+                        new AlterGroundDecorator(
+                            RuleBasedStateProvider.ifTrueThenProvide(BlockPredicate.matchesTag(BlockTags.BENEATH_TREE_PODZOL_REPLACEABLE), Blocks.PODZOL)
+                        )
+                    )
+                )
                 .build()
         );
-        FeatureUtils.register(p_334110_, SUPER_BIRCH_BEES_0002, Feature.TREE, createSuperBirch().decorators(ImmutableList.of(beehivedecorator)).build());
-        FeatureUtils.register(p_334110_, SUPER_BIRCH_BEES, Feature.TREE, createSuperBirch().decorators(ImmutableList.of(beehivedecorator4)).build());
         FeatureUtils.register(
-            p_334110_,
+            context, SUPER_BIRCH_BEES_0002, Feature.TREE, createSuperBirch(belowTrunkProvider).decorators(ImmutableList.of(beehive0002)).build()
+        );
+        FeatureUtils.register(context, SUPER_BIRCH_BEES, Feature.TREE, createSuperBirch(belowTrunkProvider).decorators(ImmutableList.of(beehive)).build());
+        FeatureUtils.register(
+            context,
             SWAMP_OAK,
             Feature.TREE,
-            createStraightBlobTree(Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 3, 0, 3).decorators(ImmutableList.of(new LeaveVineDecorator(0.25F))).build()
+            createStraightBlobTree(Blocks.OAK_LOG, Blocks.OAK_LEAVES, 5, 3, 0, 3, belowTrunkProvider)
+                .decorators(ImmutableList.of(new LeaveVineDecorator(0.25F)))
+                .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             JUNGLE_BUSH,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
@@ -504,35 +576,38 @@ public class TreeFeatures {
                     new StraightTrunkPlacer(1, 0, 0),
                     BlockStateProvider.simple(Blocks.OAK_LEAVES),
                     new BushFoliagePlacer(ConstantInt.of(2), ConstantInt.of(1), 2),
-                    new TwoLayersFeatureSize(0, 0, 0)
+                    new TwoLayersFeatureSize(0, 0, 0),
+                    belowTrunkProvider
                 )
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             AZALEA_TREE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
                     BlockStateProvider.simple(Blocks.OAK_LOG),
                     new BendingTrunkPlacer(4, 2, 0, 3, UniformInt.of(1, 2)),
                     new WeightedStateProvider(
-                        WeightedList.<BlockState>builder().add(Blocks.AZALEA_LEAVES.defaultBlockState(), 3).add(Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState(), 1)
+                        WeightedList.<BlockState>builder()
+                            .add(Blocks.AZALEA_LEAVES.defaultBlockState(), 3)
+                            .add(Blocks.FLOWERING_AZALEA_LEAVES.defaultBlockState(), 1)
                     ),
                     new RandomSpreadFoliagePlacer(ConstantInt.of(3), ConstantInt.of(0), ConstantInt.of(2), 50),
-                    new TwoLayersFeatureSize(1, 0, 1)
+                    new TwoLayersFeatureSize(1, 0, 1),
+                    belowTrunkProvider
                 )
-                .dirt(BlockStateProvider.simple(Blocks.ROOTED_DIRT))
-                .forceDirt()
+                .belowTrunkProvider(BlockStateProvider.simple(Blocks.ROOTED_DIRT))
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             MANGROVE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
                     BlockStateProvider.simple(Blocks.MANGROVE_LOG),
                     new UpwardsBranchingTrunkPlacer(
-                        2, 1, 4, UniformInt.of(1, 4), 0.5F, UniformInt.of(0, 1), holdergetter.getOrThrow(BlockTags.MANGROVE_LOGS_CAN_GROW_THROUGH)
+                        2, 1, 4, UniformInt.of(1, 4), 0.5F, UniformInt.of(0, 1), blocks.getOrThrow(BlockTags.MANGROVE_LOGS_CAN_GROW_THROUGH)
                     ),
                     BlockStateProvider.simple(Blocks.MANGROVE_LEAVES),
                     new RandomSpreadFoliagePlacer(ConstantInt.of(3), ConstantInt.of(0), ConstantInt.of(2), 70),
@@ -542,7 +617,7 @@ public class TreeFeatures {
                             BlockStateProvider.simple(Blocks.MANGROVE_ROOTS),
                             Optional.of(new AboveRootPlacement(BlockStateProvider.simple(Blocks.MOSS_CARPET), 0.5F)),
                             new MangroveRootPlacement(
-                                holdergetter.getOrThrow(BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH),
+                                blocks.getOrThrow(BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH),
                                 HolderSet.direct(Block::builtInRegistryHolder, Blocks.MUD, Blocks.MUDDY_MANGROVE_ROOTS),
                                 BlockStateProvider.simple(Blocks.MUDDY_MANGROVE_ROOTS),
                                 8,
@@ -551,7 +626,8 @@ public class TreeFeatures {
                             )
                         )
                     ),
-                    new TwoLayersFeatureSize(2, 0, 2)
+                    new TwoLayersFeatureSize(2, 0, 2),
+                    TreeConfiguration.defaultPlaceBelowTreeTrunkProvider(biomes)
                 )
                 .decorators(
                     List.of(
@@ -568,20 +644,20 @@ public class TreeFeatures {
                             2,
                             List.of(Direction.DOWN)
                         ),
-                        beehivedecorator1
+                        beehive001
                     )
                 )
                 .ignoreVines()
                 .build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             TALL_MANGROVE,
             Feature.TREE,
             new TreeConfiguration.TreeConfigurationBuilder(
                     BlockStateProvider.simple(Blocks.MANGROVE_LOG),
                     new UpwardsBranchingTrunkPlacer(
-                        4, 1, 9, UniformInt.of(1, 6), 0.5F, UniformInt.of(0, 1), holdergetter.getOrThrow(BlockTags.MANGROVE_LOGS_CAN_GROW_THROUGH)
+                        4, 1, 9, UniformInt.of(1, 6), 0.5F, UniformInt.of(0, 1), blocks.getOrThrow(BlockTags.MANGROVE_LOGS_CAN_GROW_THROUGH)
                     ),
                     BlockStateProvider.simple(Blocks.MANGROVE_LEAVES),
                     new RandomSpreadFoliagePlacer(ConstantInt.of(3), ConstantInt.of(0), ConstantInt.of(2), 70),
@@ -591,7 +667,7 @@ public class TreeFeatures {
                             BlockStateProvider.simple(Blocks.MANGROVE_ROOTS),
                             Optional.of(new AboveRootPlacement(BlockStateProvider.simple(Blocks.MOSS_CARPET), 0.5F)),
                             new MangroveRootPlacement(
-                                holdergetter.getOrThrow(BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH),
+                                blocks.getOrThrow(BlockTags.MANGROVE_ROOTS_CAN_GROW_THROUGH),
                                 HolderSet.direct(Block::builtInRegistryHolder, Blocks.MUD, Blocks.MUDDY_MANGROVE_ROOTS),
                                 BlockStateProvider.simple(Blocks.MUDDY_MANGROVE_ROOTS),
                                 8,
@@ -600,7 +676,8 @@ public class TreeFeatures {
                             )
                         )
                     ),
-                    new TwoLayersFeatureSize(3, 0, 2)
+                    new TwoLayersFeatureSize(3, 0, 2),
+                    TreeConfiguration.defaultPlaceBelowTreeTrunkProvider(biomes)
                 )
                 .decorators(
                     List.of(
@@ -617,48 +694,57 @@ public class TreeFeatures {
                             2,
                             List.of(Direction.DOWN)
                         ),
-                        beehivedecorator1
+                        beehive001
                     )
                 )
                 .ignoreVines()
                 .build()
         );
         FeatureUtils.register(
-            p_334110_, OAK_BEES_0002_LEAF_LITTER, Feature.TREE, createOak().decorators(List.of(beehivedecorator, placeongrounddecorator, placeongrounddecorator1)).build()
+            context,
+            OAK_BEES_0002_LEAF_LITTER,
+            Feature.TREE,
+            createOak(belowTrunkProvider).decorators(List.of(beehive0002, sparseLeafLitter, thickLeafLitter)).build()
         );
-        FeatureUtils.register(p_334110_, OAK_BEES_002, Feature.TREE, createOak().decorators(List.of(beehivedecorator2)).build());
-        FeatureUtils.register(p_334110_, OAK_BEES_005, Feature.TREE, createOak().decorators(List.of(beehivedecorator3)).build());
-        FeatureUtils.register(p_334110_, BIRCH_BEES_0002, Feature.TREE, createBirch().decorators(List.of(beehivedecorator)).build());
+        FeatureUtils.register(context, OAK_BEES_002, Feature.TREE, createOak(belowTrunkProvider).decorators(List.of(beehive002)).build());
+        FeatureUtils.register(context, OAK_BEES_005, Feature.TREE, createOak(belowTrunkProvider).decorators(List.of(beehive005)).build());
+        FeatureUtils.register(context, BIRCH_BEES_0002, Feature.TREE, createBirch(belowTrunkProvider).decorators(List.of(beehive0002)).build());
         FeatureUtils.register(
-            p_334110_, BIRCH_BEES_0002_LEAF_LITTER, Feature.TREE, createBirch().decorators(List.of(beehivedecorator, placeongrounddecorator, placeongrounddecorator1)).build()
+            context,
+            BIRCH_BEES_0002_LEAF_LITTER,
+            Feature.TREE,
+            createBirch(belowTrunkProvider).decorators(List.of(beehive0002, sparseLeafLitter, thickLeafLitter)).build()
         );
-        FeatureUtils.register(p_334110_, BIRCH_BEES_002, Feature.TREE, createBirch().decorators(List.of(beehivedecorator2)).build());
-        FeatureUtils.register(p_334110_, BIRCH_BEES_005, Feature.TREE, createBirch().decorators(List.of(beehivedecorator3)).build());
+        FeatureUtils.register(context, BIRCH_BEES_002, Feature.TREE, createBirch(belowTrunkProvider).decorators(List.of(beehive002)).build());
+        FeatureUtils.register(context, BIRCH_BEES_005, Feature.TREE, createBirch(belowTrunkProvider).decorators(List.of(beehive005)).build());
         FeatureUtils.register(
-            p_334110_, FANCY_OAK_BEES_0002_LEAF_LITTER, Feature.TREE, createFancyOak().decorators(List.of(beehivedecorator, placeongrounddecorator, placeongrounddecorator1)).build()
+            context,
+            FANCY_OAK_BEES_0002_LEAF_LITTER,
+            Feature.TREE,
+            createFancyOak(belowTrunkProvider).decorators(List.of(beehive0002, sparseLeafLitter, thickLeafLitter)).build()
         );
-        FeatureUtils.register(p_334110_, FANCY_OAK_BEES_002, Feature.TREE, createFancyOak().decorators(List.of(beehivedecorator2)).build());
-        FeatureUtils.register(p_334110_, FANCY_OAK_BEES_005, Feature.TREE, createFancyOak().decorators(List.of(beehivedecorator3)).build());
-        FeatureUtils.register(p_334110_, FANCY_OAK_BEES, Feature.TREE, createFancyOak().decorators(List.of(beehivedecorator4)).build());
+        FeatureUtils.register(context, FANCY_OAK_BEES_002, Feature.TREE, createFancyOak(belowTrunkProvider).decorators(List.of(beehive002)).build());
+        FeatureUtils.register(context, FANCY_OAK_BEES_005, Feature.TREE, createFancyOak(belowTrunkProvider).decorators(List.of(beehive005)).build());
+        FeatureUtils.register(context, FANCY_OAK_BEES, Feature.TREE, createFancyOak(belowTrunkProvider).decorators(List.of(beehive)).build());
         FeatureUtils.register(
-            p_334110_, OAK_LEAF_LITTER, Feature.TREE, createOak().decorators(ImmutableList.of(placeongrounddecorator, placeongrounddecorator1)).build()
+            context, OAK_LEAF_LITTER, Feature.TREE, createOak(belowTrunkProvider).decorators(ImmutableList.of(sparseLeafLitter, thickLeafLitter)).build()
         );
         FeatureUtils.register(
-            p_334110_,
+            context,
             DARK_OAK_LEAF_LITTER,
             Feature.TREE,
-            createDarkOak().ignoreVines().decorators(ImmutableList.of(placeongrounddecorator, placeongrounddecorator1)).build()
+            createDarkOak(belowTrunkProvider).ignoreVines().decorators(ImmutableList.of(sparseLeafLitter, thickLeafLitter)).build()
         );
         FeatureUtils.register(
-            p_334110_, BIRCH_LEAF_LITTER, Feature.TREE, createBirch().decorators(ImmutableList.of(placeongrounddecorator, placeongrounddecorator1)).build()
+            context, BIRCH_LEAF_LITTER, Feature.TREE, createBirch(belowTrunkProvider).decorators(ImmutableList.of(sparseLeafLitter, thickLeafLitter)).build()
         );
         FeatureUtils.register(
-            p_334110_, FANCY_OAK_LEAF_LITTER, Feature.TREE, createFancyOak().decorators(List.of(placeongrounddecorator, placeongrounddecorator1)).build()
+            context, FANCY_OAK_LEAF_LITTER, Feature.TREE, createFancyOak(belowTrunkProvider).decorators(List.of(sparseLeafLitter, thickLeafLitter)).build()
         );
-        FeatureUtils.register(p_334110_, FALLEN_OAK_TREE, Feature.FALLEN_TREE, createFallenOak().build());
-        FeatureUtils.register(p_334110_, FALLEN_BIRCH_TREE, Feature.FALLEN_TREE, createFallenBirch(8).build());
-        FeatureUtils.register(p_334110_, FALLEN_SUPER_BIRCH_TREE, Feature.FALLEN_TREE, createFallenBirch(15).build());
-        FeatureUtils.register(p_334110_, FALLEN_JUNGLE_TREE, Feature.FALLEN_TREE, createFallenJungle().build());
-        FeatureUtils.register(p_334110_, FALLEN_SPRUCE_TREE, Feature.FALLEN_TREE, createFallenSpruce().build());
+        FeatureUtils.register(context, FALLEN_OAK_TREE, Feature.FALLEN_TREE, createFallenOak().build());
+        FeatureUtils.register(context, FALLEN_BIRCH_TREE, Feature.FALLEN_TREE, createFallenBirch(8).build());
+        FeatureUtils.register(context, FALLEN_SUPER_BIRCH_TREE, Feature.FALLEN_TREE, createFallenBirch(15).build());
+        FeatureUtils.register(context, FALLEN_JUNGLE_TREE, Feature.FALLEN_TREE, createFallenJungle().build());
+        FeatureUtils.register(context, FALLEN_SPRUCE_TREE, Feature.FALLEN_TREE, createFallenSpruce().build());
     }
 }

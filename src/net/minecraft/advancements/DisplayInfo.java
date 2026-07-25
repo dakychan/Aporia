@@ -2,19 +2,18 @@ package net.minecraft.advancements;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.Optional;
 import net.minecraft.core.ClientAsset;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.ComponentSerialization;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemStackTemplate;
 
 public class DisplayInfo {
     public static final Codec<DisplayInfo> CODEC = RecordCodecBuilder.create(
-        p_309653_ -> p_309653_.group(
-                ItemStack.STRICT_CODEC.fieldOf("icon").forGetter(DisplayInfo::getIcon),
+        i -> i.group(
+                ItemStackTemplate.CODEC.fieldOf("icon").forGetter(DisplayInfo::getIcon),
                 ComponentSerialization.CODEC.fieldOf("title").forGetter(DisplayInfo::getTitle),
                 ComponentSerialization.CODEC.fieldOf("description").forGetter(DisplayInfo::getDescription),
                 ClientAsset.ResourceTexture.CODEC.optionalFieldOf("background").forGetter(DisplayInfo::getBackground),
@@ -23,12 +22,14 @@ public class DisplayInfo {
                 Codec.BOOL.optionalFieldOf("announce_to_chat", true).forGetter(DisplayInfo::shouldAnnounceChat),
                 Codec.BOOL.optionalFieldOf("hidden", false).forGetter(DisplayInfo::isHidden)
             )
-            .apply(p_309653_, DisplayInfo::new)
+            .apply(i, DisplayInfo::new)
     );
-    public static final StreamCodec<RegistryFriendlyByteBuf, DisplayInfo> STREAM_CODEC = StreamCodec.ofMember(DisplayInfo::serializeToNetwork, DisplayInfo::fromNetwork);
+    public static final StreamCodec<RegistryFriendlyByteBuf, DisplayInfo> STREAM_CODEC = StreamCodec.ofMember(
+        DisplayInfo::serializeToNetwork, DisplayInfo::fromNetwork
+    );
     private final Component title;
     private final Component description;
-    private final ItemStack icon;
+    private final ItemStackTemplate icon;
     private final Optional<ClientAsset.ResourceTexture> background;
     private final AdvancementType type;
     private final boolean showToast;
@@ -38,28 +39,28 @@ public class DisplayInfo {
     private float y;
 
     public DisplayInfo(
-        ItemStack p_14969_,
-        Component p_14970_,
-        Component p_14971_,
-        Optional<ClientAsset.ResourceTexture> p_310626_,
-        AdvancementType p_309985_,
-        boolean p_14974_,
-        boolean p_14975_,
-        boolean p_14976_
+        final ItemStackTemplate icon,
+        final Component title,
+        final Component description,
+        final Optional<ClientAsset.ResourceTexture> background,
+        final AdvancementType type,
+        final boolean showToast,
+        final boolean announceChat,
+        final boolean hidden
     ) {
-        this.title = p_14970_;
-        this.description = p_14971_;
-        this.icon = p_14969_;
-        this.background = p_310626_;
-        this.type = p_309985_;
-        this.showToast = p_14974_;
-        this.announceChat = p_14975_;
-        this.hidden = p_14976_;
+        this.title = title;
+        this.description = description;
+        this.icon = icon;
+        this.background = background;
+        this.type = type;
+        this.showToast = showToast;
+        this.announceChat = announceChat;
+        this.hidden = hidden;
     }
 
-    public void setLocation(float p_14979_, float p_14980_) {
-        this.x = p_14979_;
-        this.y = p_14980_;
+    public void setLocation(final float x, final float y) {
+        this.x = x;
+        this.y = y;
     }
 
     public Component getTitle() {
@@ -70,7 +71,7 @@ public class DisplayInfo {
         return this.description;
     }
 
-    public ItemStack getIcon() {
+    public ItemStackTemplate getIcon() {
         return this.icon;
     }
 
@@ -102,41 +103,43 @@ public class DisplayInfo {
         return this.hidden;
     }
 
-    private void serializeToNetwork(RegistryFriendlyByteBuf p_331479_) {
-        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(p_331479_, this.title);
-        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(p_331479_, this.description);
-        ItemStack.STREAM_CODEC.encode(p_331479_, this.icon);
-        p_331479_.writeEnum(this.type);
-        int i = 0;
+    private void serializeToNetwork(final RegistryFriendlyByteBuf output) {
+        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(output, this.title);
+        ComponentSerialization.TRUSTED_STREAM_CODEC.encode(output, this.description);
+        ItemStackTemplate.STREAM_CODEC.encode(output, this.icon);
+        output.writeEnum(this.type);
+        int flags = 0;
         if (this.background.isPresent()) {
-            i |= 1;
+            flags |= 1;
         }
 
         if (this.showToast) {
-            i |= 2;
+            flags |= 2;
         }
 
         if (this.hidden) {
-            i |= 4;
+            flags |= 4;
         }
 
-        p_331479_.writeInt(i);
-        this.background.map(ClientAsset::id).ifPresent(p_331479_::writeIdentifier);
-        p_331479_.writeFloat(this.x);
-        p_331479_.writeFloat(this.y);
+        output.writeInt(flags);
+        this.background.map(ClientAsset::id).ifPresent(output::writeIdentifier);
+        output.writeFloat(this.x);
+        output.writeFloat(this.y);
     }
 
-    private static DisplayInfo fromNetwork(RegistryFriendlyByteBuf p_330340_) {
-        Component component = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(p_330340_);
-        Component component1 = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(p_330340_);
-        ItemStack itemstack = ItemStack.STREAM_CODEC.decode(p_330340_);
-        AdvancementType advancementtype = p_330340_.readEnum(AdvancementType.class);
-        int i = p_330340_.readInt();
-        Optional<ClientAsset.ResourceTexture> optional = (i & 1) != 0 ? Optional.of(new ClientAsset.ResourceTexture(p_330340_.readIdentifier())) : Optional.empty();
-        boolean flag = (i & 2) != 0;
-        boolean flag1 = (i & 4) != 0;
-        DisplayInfo displayinfo = new DisplayInfo(itemstack, component, component1, optional, advancementtype, flag, false, flag1);
-        displayinfo.setLocation(p_330340_.readFloat(), p_330340_.readFloat());
-        return displayinfo;
+    private static DisplayInfo fromNetwork(final RegistryFriendlyByteBuf input) {
+        Component title = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(input);
+        Component description = ComponentSerialization.TRUSTED_STREAM_CODEC.decode(input);
+        ItemStackTemplate icon = ItemStackTemplate.STREAM_CODEC.decode(input);
+        AdvancementType frame = input.readEnum(AdvancementType.class);
+        int flags = input.readInt();
+        Optional<ClientAsset.ResourceTexture> background = (flags & 1) != 0
+            ? Optional.of(new ClientAsset.ResourceTexture(input.readIdentifier()))
+            : Optional.empty();
+        boolean showToast = (flags & 2) != 0;
+        boolean hidden = (flags & 4) != 0;
+        DisplayInfo info = new DisplayInfo(icon, title, description, background, frame, showToast, false, hidden);
+        info.setLocation(input.readFloat(), input.readFloat());
+        return info;
     }
 }

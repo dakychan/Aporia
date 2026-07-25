@@ -11,25 +11,25 @@ import net.minecraft.advancements.DisplayInfo;
 public class AdvancementVisibilityEvaluator {
     private static final int VISIBILITY_DEPTH = 2;
 
-    private static AdvancementVisibilityEvaluator.VisibilityRule evaluateVisibilityRule(Advancement p_265736_, boolean p_265426_) {
-        Optional<DisplayInfo> optional = p_265736_.display();
-        if (optional.isEmpty()) {
+    private static AdvancementVisibilityEvaluator.VisibilityRule evaluateVisibilityRule(final Advancement advancement, final boolean isDone) {
+        Optional<DisplayInfo> display = advancement.display();
+        if (display.isEmpty()) {
             return AdvancementVisibilityEvaluator.VisibilityRule.HIDE;
-        } else if (p_265426_) {
+        } else if (isDone) {
             return AdvancementVisibilityEvaluator.VisibilityRule.SHOW;
         } else {
-            return optional.get().isHidden() ? AdvancementVisibilityEvaluator.VisibilityRule.HIDE : AdvancementVisibilityEvaluator.VisibilityRule.NO_CHANGE;
+            return display.get().isHidden() ? AdvancementVisibilityEvaluator.VisibilityRule.HIDE : AdvancementVisibilityEvaluator.VisibilityRule.NO_CHANGE;
         }
     }
 
-    private static boolean evaluateVisiblityForUnfinishedNode(Stack<AdvancementVisibilityEvaluator.VisibilityRule> p_265343_) {
+    private static boolean evaluateVisiblityForUnfinishedNode(final Stack<AdvancementVisibilityEvaluator.VisibilityRule> ascendants) {
         for (int i = 0; i <= 2; i++) {
-            AdvancementVisibilityEvaluator.VisibilityRule advancementvisibilityevaluator$visibilityrule = p_265343_.peek(i);
-            if (advancementvisibilityevaluator$visibilityrule == AdvancementVisibilityEvaluator.VisibilityRule.SHOW) {
+            AdvancementVisibilityEvaluator.VisibilityRule visibility = ascendants.peek(i);
+            if (visibility == AdvancementVisibilityEvaluator.VisibilityRule.SHOW) {
                 return true;
             }
 
-            if (advancementvisibilityevaluator$visibilityrule == AdvancementVisibilityEvaluator.VisibilityRule.HIDE) {
+            if (visibility == AdvancementVisibilityEvaluator.VisibilityRule.HIDE) {
                 return false;
             }
         }
@@ -38,43 +38,45 @@ public class AdvancementVisibilityEvaluator {
     }
 
     private static boolean evaluateVisibility(
-        AdvancementNode p_299221_,
-        Stack<AdvancementVisibilityEvaluator.VisibilityRule> p_298849_,
-        Predicate<AdvancementNode> p_265359_,
-        AdvancementVisibilityEvaluator.Output p_265303_
+        final AdvancementNode node,
+        final Stack<AdvancementVisibilityEvaluator.VisibilityRule> ascendants,
+        final Predicate<AdvancementNode> isDoneTest,
+        final AdvancementVisibilityEvaluator.Output output
     ) {
-        boolean flag = p_265359_.test(p_299221_);
-        AdvancementVisibilityEvaluator.VisibilityRule advancementvisibilityevaluator$visibilityrule = evaluateVisibilityRule(p_299221_.advancement(), flag);
-        boolean flag1 = flag;
-        p_298849_.push(advancementvisibilityevaluator$visibilityrule);
+        boolean isSelfDone = isDoneTest.test(node);
+        AdvancementVisibilityEvaluator.VisibilityRule descendantVisibility = evaluateVisibilityRule(node.advancement(), isSelfDone);
+        boolean isSelfOrDescendantDone = isSelfDone;
+        ascendants.push(descendantVisibility);
 
-        for (AdvancementNode advancementnode : p_299221_.children()) {
-            flag1 |= evaluateVisibility(advancementnode, p_298849_, p_265359_, p_265303_);
+        for (AdvancementNode child : node.children()) {
+            isSelfOrDescendantDone |= evaluateVisibility(child, ascendants, isDoneTest, output);
         }
 
-        boolean flag2 = flag1 || evaluateVisiblityForUnfinishedNode(p_298849_);
-        p_298849_.pop();
-        p_265303_.accept(p_299221_, flag2);
-        return flag1;
+        boolean visiblity = isSelfOrDescendantDone || evaluateVisiblityForUnfinishedNode(ascendants);
+        ascendants.pop();
+        output.accept(node, visiblity);
+        return isSelfOrDescendantDone;
     }
 
-    public static void evaluateVisibility(AdvancementNode p_297454_, Predicate<AdvancementNode> p_265561_, AdvancementVisibilityEvaluator.Output p_265381_) {
-        AdvancementNode advancementnode = p_297454_.root();
-        Stack<AdvancementVisibilityEvaluator.VisibilityRule> stack = new ObjectArrayList<>();
+    public static void evaluateVisibility(
+        final AdvancementNode node, final Predicate<AdvancementNode> isDone, final AdvancementVisibilityEvaluator.Output output
+    ) {
+        AdvancementNode root = node.root();
+        Stack<AdvancementVisibilityEvaluator.VisibilityRule> visibilityStack = new ObjectArrayList<>();
 
         for (int i = 0; i <= 2; i++) {
-            stack.push(AdvancementVisibilityEvaluator.VisibilityRule.NO_CHANGE);
+            visibilityStack.push(AdvancementVisibilityEvaluator.VisibilityRule.NO_CHANGE);
         }
 
-        evaluateVisibility(advancementnode, stack, p_265561_, p_265381_);
+        evaluateVisibility(root, visibilityStack, isDone, output);
     }
 
     @FunctionalInterface
     public interface Output {
-        void accept(AdvancementNode p_298555_, boolean p_265580_);
+        void accept(AdvancementNode advancement, boolean visible);
     }
 
-    static enum VisibilityRule {
+    private enum VisibilityRule {
         SHOW,
         HIDE,
         NO_CHANGE;

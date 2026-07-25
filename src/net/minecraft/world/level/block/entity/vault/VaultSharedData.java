@@ -2,7 +2,6 @@ package net.minecraft.world.level.block.entity.vault;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -13,27 +12,29 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.item.ItemStack;
 
 public class VaultSharedData {
-    static final String TAG_NAME = "shared_data";
-    static Codec<VaultSharedData> CODEC = RecordCodecBuilder.create(
-        p_332167_ -> p_332167_.group(
-                ItemStack.lenientOptionalFieldOf("display_item").forGetter(p_328885_ -> p_328885_.displayItem),
-                UUIDUtil.CODEC_LINKED_SET.lenientOptionalFieldOf("connected_players", Set.of()).forGetter(p_333733_ -> p_333733_.connectedPlayers),
-                Codec.DOUBLE.lenientOptionalFieldOf("connected_particles_range", VaultConfig.DEFAULT.deactivationRange()).forGetter(p_333675_ -> p_333675_.connectedParticlesRange)
+    public static final String TAG_NAME = "shared_data";
+    public static final Codec<VaultSharedData> CODEC = RecordCodecBuilder.create(
+        i -> i.group(
+                ItemStack.lenientOptionalFieldOf("display_item").forGetter(vault -> vault.displayItem),
+                UUIDUtil.CODEC_LINKED_SET.lenientOptionalFieldOf("connected_players", Set.of()).forGetter(vault -> vault.connectedPlayers),
+                Codec.DOUBLE
+                    .lenientOptionalFieldOf("connected_particles_range", VaultConfig.DEFAULT.deactivationRange())
+                    .forGetter(vault -> vault.connectedParticlesRange)
             )
-            .apply(p_332167_, VaultSharedData::new)
+            .apply(i, VaultSharedData::new)
     );
     private ItemStack displayItem = ItemStack.EMPTY;
     private Set<UUID> connectedPlayers = new ObjectLinkedOpenHashSet<>();
     private double connectedParticlesRange = VaultConfig.DEFAULT.deactivationRange();
     boolean isDirty;
 
-    VaultSharedData(ItemStack p_336127_, Set<UUID> p_328242_, double p_334724_) {
-        this.displayItem = p_336127_;
-        this.connectedPlayers.addAll(p_328242_);
-        this.connectedParticlesRange = p_334724_;
+    public VaultSharedData(final ItemStack displayItem, final Set<UUID> connectedPlayers, final double connectedParticlesRange) {
+        this.displayItem = displayItem;
+        this.connectedPlayers.addAll(connectedPlayers);
+        this.connectedParticlesRange = connectedParticlesRange;
     }
 
-    VaultSharedData() {
+    public VaultSharedData() {
     }
 
     public ItemStack getDisplayItem() {
@@ -44,9 +45,9 @@ public class VaultSharedData {
         return !this.displayItem.isEmpty();
     }
 
-    public void setDisplayItem(ItemStack p_328271_) {
-        if (!ItemStack.matches(this.displayItem, p_328271_)) {
-            this.displayItem = p_328271_.copy();
+    public void setDisplayItem(final ItemStack stack) {
+        if (!ItemStack.matches(this.displayItem, stack)) {
+            this.displayItem = stack.copy();
             this.markDirty();
         }
     }
@@ -63,14 +64,16 @@ public class VaultSharedData {
         return this.connectedParticlesRange;
     }
 
-    void updateConnectedPlayersWithinRange(ServerLevel p_335653_, BlockPos p_328626_, VaultServerData p_333530_, VaultConfig p_327683_, double p_332168_) {
-        Set<UUID> set = p_327683_.playerDetector()
-            .detect(p_335653_, p_327683_.entitySelector(), p_328626_, p_332168_, false)
+    void updateConnectedPlayersWithinRange(
+        final ServerLevel serverLevel, final BlockPos pos, final VaultServerData serverData, final VaultConfig config, final double limit
+    ) {
+        Set<UUID> currentConnectedPlayers = config.playerDetector()
+            .detect(serverLevel, config.entitySelector(), pos, limit, false)
             .stream()
-            .filter(p_335249_ -> !p_333530_.getRewardedPlayers().contains(p_335249_))
+            .filter(uuid -> !serverData.getRewardedPlayers().contains(uuid))
             .collect(Collectors.toSet());
-        if (!this.connectedPlayers.equals(set)) {
-            this.connectedPlayers = set;
+        if (!this.connectedPlayers.equals(currentConnectedPlayers)) {
+            this.connectedPlayers = currentConnectedPlayers;
             this.markDirty();
         }
     }
@@ -79,9 +82,9 @@ public class VaultSharedData {
         this.isDirty = true;
     }
 
-    void set(VaultSharedData p_334535_) {
-        this.displayItem = p_334535_.displayItem;
-        this.connectedPlayers = p_334535_.connectedPlayers;
-        this.connectedParticlesRange = p_334535_.connectedParticlesRange;
+    void set(final VaultSharedData from) {
+        this.displayItem = from.displayItem;
+        this.connectedPlayers = from.connectedPlayers;
+        this.connectedParticlesRange = from.connectedParticlesRange;
     }
 }

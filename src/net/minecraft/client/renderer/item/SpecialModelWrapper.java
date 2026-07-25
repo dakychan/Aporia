@@ -1,104 +1,107 @@
 package net.minecraft.client.renderer.item;
 
 import com.google.common.base.Suppliers;
+import com.mojang.math.Transformation;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import com.mojang.serialization.codecs.RecordCodecBuilder.Instance;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.minecraft.client.multiplayer.ClientLevel;
-import net.minecraft.client.renderer.block.model.TextureSlots;
 import net.minecraft.client.renderer.special.SpecialModelRenderer;
 import net.minecraft.client.renderer.special.SpecialModelRenderers;
 import net.minecraft.client.resources.model.ModelBaker;
 import net.minecraft.client.resources.model.ResolvableModel;
 import net.minecraft.client.resources.model.ResolvedModel;
+import net.minecraft.client.resources.model.sprite.TextureSlots;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ItemOwner;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import org.joml.Matrix4fc;
 import org.joml.Vector3fc;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class SpecialModelWrapper<T> implements ItemModel {
     private final SpecialModelRenderer<T> specialRenderer;
     private final ModelRenderProperties properties;
     private final Supplier<Vector3fc[]> extents;
+    private final Matrix4fc transformation;
 
-    public SpecialModelWrapper(SpecialModelRenderer<T> p_375554_, ModelRenderProperties p_393945_) {
-        this.specialRenderer = p_375554_;
-        this.properties = p_393945_;
+    public SpecialModelWrapper(final SpecialModelRenderer<T> specialRenderer, final ModelRenderProperties properties, final Matrix4fc transformation) {
+        this.specialRenderer = specialRenderer;
+        this.properties = properties;
         this.extents = Suppliers.memoize(() -> {
-            Set<Vector3fc> set = new HashSet<>();
-            p_375554_.getExtents(set::add);
-            return set.toArray(new Vector3fc[0]);
+            Set<Vector3fc> results = new HashSet<>();
+            specialRenderer.getExtents(results::add);
+            return results.toArray(new Vector3fc[0]);
         });
+        this.transformation = transformation;
     }
 
     @Override
     public void update(
-        ItemStackRenderState p_376096_,
-        ItemStack p_376294_,
-        ItemModelResolver p_377226_,
-        ItemDisplayContext p_377206_,
-        @Nullable ClientLevel p_375445_,
-        @Nullable ItemOwner p_428988_,
-        int p_375847_
+        final ItemStackRenderState output,
+        final ItemStack item,
+        final ItemModelResolver resolver,
+        final ItemDisplayContext displayContext,
+        final @Nullable ClientLevel level,
+        final @Nullable ItemOwner owner,
+        final int seed
     ) {
-        p_376096_.appendModelIdentityElement(this);
-        ItemStackRenderState.LayerRenderState itemstackrenderstate$layerrenderstate = p_376096_.newLayer();
-        if (p_376294_.hasFoil()) {
-            ItemStackRenderState.FoilType itemstackrenderstate$foiltype = ItemStackRenderState.FoilType.STANDARD;
-            itemstackrenderstate$layerrenderstate.setFoilType(itemstackrenderstate$foiltype);
-            p_376096_.setAnimated();
-            p_376096_.appendModelIdentityElement(itemstackrenderstate$foiltype);
+        output.appendModelIdentityElement(this);
+        ItemStackRenderState.LayerRenderState layer = output.newLayer();
+        if (item.hasFoil()) {
+            ItemStackRenderState.FoilType foilType = ItemStackRenderState.FoilType.STANDARD;
+            layer.setFoilType(foilType);
+            output.setAnimated();
+            output.appendModelIdentityElement(foilType);
         }
 
-        T t = this.specialRenderer.extractArgument(p_376294_);
-        itemstackrenderstate$layerrenderstate.setExtents(this.extents);
-        itemstackrenderstate$layerrenderstate.setupSpecialModel(this.specialRenderer, t);
-        if (t != null) {
-            p_376096_.appendModelIdentityElement(t);
+        T argument = this.specialRenderer.extractArgument(item);
+        layer.setExtents(this.extents);
+        layer.setLocalTransform(this.transformation);
+        layer.setupSpecialModel(this.specialRenderer, argument);
+        if (argument != null) {
+            output.appendModelIdentityElement(argument);
         }
 
-        this.properties.applyToLayer(itemstackrenderstate$layerrenderstate, p_377206_);
+        this.properties.applyToLayer(layer, displayContext);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record Unbaked(Identifier base, SpecialModelRenderer.Unbaked specialModel) implements ItemModel.Unbaked {
+        public record Unbaked(Identifier base, Optional<Transformation> transformation, SpecialModelRenderer.Unbaked<?> specialModel) implements ItemModel.Unbaked {
         public static final MapCodec<SpecialModelWrapper.Unbaked> MAP_CODEC = RecordCodecBuilder.mapCodec(
-            p_448365_ -> p_448365_.group(
+            i -> i.group(
                     Identifier.CODEC.fieldOf("base").forGetter(SpecialModelWrapper.Unbaked::base),
+                    Transformation.EXTENDED_CODEC.optionalFieldOf("transformation").forGetter(SpecialModelWrapper.Unbaked::transformation),
                     SpecialModelRenderers.CODEC.fieldOf("model").forGetter(SpecialModelWrapper.Unbaked::specialModel)
                 )
-                .apply(p_448365_, SpecialModelWrapper.Unbaked::new)
+                .apply(i, SpecialModelWrapper.Unbaked::new)
         );
 
         @Override
-        public void resolveDependencies(ResolvableModel.Resolver p_377714_) {
-            p_377714_.markDependency(this.base);
+        public void resolveDependencies(final ResolvableModel.Resolver resolver) {
+            resolver.markDependency(this.base);
         }
 
         @Override
-        public ItemModel bake(ItemModel.BakingContext p_378066_) {
-            SpecialModelRenderer<?> specialmodelrenderer = this.specialModel.bake(p_378066_);
-            if (specialmodelrenderer == null) {
-                return p_378066_.missingItemModel();
-            } else {
-                ModelRenderProperties modelrenderproperties = this.getProperties(p_378066_);
-                return new SpecialModelWrapper<>(specialmodelrenderer, modelrenderproperties);
+        public ItemModel bake(final ItemModel.BakingContext context, final Matrix4fc transformation) {
+            Matrix4fc modelTransform = Transformation.compose(transformation, this.transformation);
+            SpecialModelRenderer<?> bakedSpecialModel = this.specialModel.bake(context);
+            if (bakedSpecialModel == null) {
+                return context.missingItemModel(modelTransform);
             }
+
+            ModelRenderProperties properties = this.getProperties(context);
+            return new SpecialModelWrapper<>(bakedSpecialModel, properties, modelTransform);
         }
 
-        private ModelRenderProperties getProperties(ItemModel.BakingContext p_393172_) {
-            ModelBaker modelbaker = p_393172_.blockModelBaker();
-            ResolvedModel resolvedmodel = modelbaker.getModel(this.base);
-            TextureSlots textureslots = resolvedmodel.getTopTextureSlots();
-            return ModelRenderProperties.fromResolvedModel(modelbaker, resolvedmodel, textureslots);
+        private ModelRenderProperties getProperties(final ItemModel.BakingContext context) {
+            ModelBaker baker = context.blockModelBaker();
+            ResolvedModel model = baker.getModel(this.base);
+            TextureSlots textureSlots = model.getTopTextureSlots();
+            return ModelRenderProperties.fromResolvedModel(baker, model, textureSlots);
         }
 
         @Override

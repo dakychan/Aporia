@@ -7,13 +7,14 @@ import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.level.Level;
 import org.jspecify.annotations.Nullable;
 
 public class Donkey extends AbstractChestedHorse {
-    public Donkey(EntityType<? extends Donkey> p_460688_, Level p_458540_) {
-        super(p_460688_, p_458540_);
+    public Donkey(final EntityType<? extends Donkey> type, final Level level) {
+        super(type, level);
     }
 
     @Override
@@ -37,16 +38,16 @@ public class Donkey extends AbstractChestedHorse {
     }
 
     @Override
-    protected SoundEvent getHurtSound(DamageSource p_453353_) {
+    protected SoundEvent getHurtSound(final DamageSource source) {
         return SoundEvents.DONKEY_HURT;
     }
 
     @Override
-    public boolean canMate(Animal p_450526_) {
-        if (p_450526_ == this) {
+    public boolean canMate(final Animal partner) {
+        if (partner == this) {
             return false;
         } else {
-            return !(p_450526_ instanceof Donkey) && !(p_450526_ instanceof Horse) ? false : this.canParent() && ((AbstractHorse)p_450526_).canParent();
+            return !(partner instanceof Donkey) && !(partner instanceof Horse) ? false : this.canParent() && ((AbstractHorse)partner).canParent();
         }
     }
 
@@ -56,13 +57,13 @@ public class Donkey extends AbstractChestedHorse {
     }
 
     @Override
-    public @Nullable AgeableMob getBreedOffspring(ServerLevel p_453177_, AgeableMob p_459537_) {
-        EntityType<? extends AbstractHorse> entitytype = p_459537_ instanceof Horse ? EntityType.MULE : EntityType.DONKEY;
-        AbstractHorse abstracthorse = entitytype.create(p_453177_, EntitySpawnReason.BREEDING);
-        if (abstracthorse != null) {
-            this.setOffspringAttributes(p_459537_, abstracthorse);
+    public @Nullable AgeableMob getBreedOffspring(final ServerLevel level, final AgeableMob partner) {
+        EntityType<? extends AbstractHorse> babyType = partner instanceof Horse ? EntityTypes.MULE : EntityTypes.DONKEY;
+        AbstractHorse baby = babyType.create(level, EntitySpawnReason.BREEDING);
+        if (baby != null) {
+            this.setOffspringAttributes(partner, baby);
         }
 
-        return abstracthorse;
+        return baby;
     }
 }

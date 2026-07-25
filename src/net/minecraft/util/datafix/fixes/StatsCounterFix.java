@@ -7,7 +7,6 @@ import com.mojang.datafixers.DSL;
 import com.mojang.datafixers.DataFix;
 import com.mojang.datafixers.DataFixUtils;
 import com.mojang.datafixers.TypeRewriteRule;
-import com.mojang.datafixers.Typed;
 import com.mojang.datafixers.schemas.Schema;
 import com.mojang.datafixers.types.Type;
 import com.mojang.serialization.Dynamic;
@@ -185,39 +184,39 @@ public class StatsCounterFix extends DataFix {
         .build();
     private static final String NEW_CUSTOM_KEY = "minecraft:custom";
 
-    public StatsCounterFix(Schema p_16939_, boolean p_16940_) {
-        super(p_16939_, p_16940_);
+    public StatsCounterFix(final Schema outputSchema, final boolean changesType) {
+        super(outputSchema, changesType);
     }
 
-    private static StatsCounterFix.@Nullable StatType unpackLegacyKey(String p_300248_) {
-        if (SKIP.contains(p_300248_)) {
+    private static StatsCounterFix.@Nullable StatType unpackLegacyKey(final String key) {
+        if (SKIP.contains(key)) {
             return null;
         } else {
-            String s = CUSTOM_MAP.get(p_300248_);
-            if (s != null) {
-                return new StatsCounterFix.StatType("minecraft:custom", s);
+            String customKey = CUSTOM_MAP.get(key);
+            if (customKey != null) {
+                return new StatsCounterFix.StatType("minecraft:custom", customKey);
             } else {
-                int i = StringUtils.ordinalIndexOf(p_300248_, ".", 2);
-                if (i < 0) {
+                int splitIndex = StringUtils.ordinalIndexOf(key, ".", 2);
+                if (splitIndex < 0) {
                     return null;
                 } else {
-                    String s1 = p_300248_.substring(0, i);
-                    if ("stat.mineBlock".equals(s1)) {
-                        String s6 = upgradeBlock(p_300248_.substring(i + 1).replace('.', ':'));
-                        return new StatsCounterFix.StatType("minecraft:mined", s6);
+                    String prefix = key.substring(0, splitIndex);
+                    if ("stat.mineBlock".equals(prefix)) {
+                        String newKey = upgradeBlock(key.substring(splitIndex + 1).replace('.', ':'));
+                        return new StatsCounterFix.StatType("minecraft:mined", newKey);
                     } else {
-                        String s2 = ITEM_KEYS.get(s1);
-                        if (s2 != null) {
-                            String s7 = p_300248_.substring(i + 1).replace('.', ':');
-                            String s8 = upgradeItem(s7);
-                            String s9 = s8 == null ? s7 : s8;
-                            return new StatsCounterFix.StatType(s2, s9);
+                        String itemKey = ITEM_KEYS.get(prefix);
+                        if (itemKey != null) {
+                            String oldItem = key.substring(splitIndex + 1).replace('.', ':');
+                            String newItem = upgradeItem(oldItem);
+                            String newKey = newItem == null ? oldItem : newItem;
+                            return new StatsCounterFix.StatType(itemKey, newKey);
                         } else {
-                            String s3 = ENTITY_KEYS.get(s1);
-                            if (s3 != null) {
-                                String s4 = p_300248_.substring(i + 1).replace('.', ':');
-                                String s5 = ENTITIES.getOrDefault(s4, s4);
-                                return new StatsCounterFix.StatType(s3, s5);
+                            String entityKey = ENTITY_KEYS.get(prefix);
+                            if (entityKey != null) {
+                                String oldEntity = key.substring(splitIndex + 1).replace('.', ':');
+                                String newKey = ENTITIES.getOrDefault(oldEntity, oldEntity);
+                                return new StatsCounterFix.StatType(entityKey, newKey);
                             } else {
                                 return null;
                             }
@@ -234,75 +233,55 @@ public class StatsCounterFix extends DataFix {
     }
 
     private TypeRewriteRule makeStatFixer() {
-        Type<?> type = this.getInputSchema().getType(References.STATS);
-        Type<?> type1 = this.getOutputSchema().getType(References.STATS);
-        return this.fixTypeEverywhereTyped("StatsCounterFix", type, type1, p_296638_ -> {
-            Dynamic<?> dynamic = p_296638_.get(DSL.remainderFinder());
-            Map<Dynamic<?>, Dynamic<?>> map = Maps.newHashMap();
-            Optional<? extends Map<? extends Dynamic<?>, ? extends Dynamic<?>>> optional = dynamic.getMapValues().result();
-            if (optional.isPresent()) {
-                for (Entry<? extends Dynamic<?>, ? extends Dynamic<?>> entry : optional.get().entrySet()) {
+        Type<?> inputType = this.getInputSchema().getType(References.STATS);
+        Type<?> outputType = this.getOutputSchema().getType(References.STATS);
+        return this.fixTypeEverywhereTyped("StatsCounterFix", inputType, outputType, input -> {
+            Dynamic<?> tag = input.get(DSL.remainderFinder());
+            Map<Dynamic<?>, Dynamic<?>> stats = Maps.newHashMap();
+            Optional<? extends Map<? extends Dynamic<?>, ? extends Dynamic<?>>> map = tag.getMapValues().result();
+            if (map.isPresent()) {
+                for (Entry<? extends Dynamic<?>, ? extends Dynamic<?>> entry : map.get().entrySet()) {
                     if (entry.getValue().asNumber().result().isPresent()) {
-                        String s = entry.getKey().asString("");
-                        StatsCounterFix.StatType statscounterfix$stattype = unpackLegacyKey(s);
-                        if (statscounterfix$stattype != null) {
-                            Dynamic<?> dynamic1 = dynamic.createString(statscounterfix$stattype.type());
-                            Dynamic<?> dynamic2 = map.computeIfAbsent(dynamic1, p_145701_ -> dynamic.emptyMap());
-                            map.put(dynamic1, dynamic2.set(statscounterfix$stattype.typeKey(), (Dynamic<?>)entry.getValue()));
+                        String key = entry.getKey().asString("");
+                        StatsCounterFix.StatType statType = unpackLegacyKey(key);
+                        if (statType != null) {
+                            Dynamic<?> newTypeKey = tag.createString(statType.type());
+                            Dynamic<?> element = stats.computeIfAbsent(newTypeKey, k -> tag.emptyMap());
+                            stats.put(newTypeKey, element.set(statType.typeKey(), (Dynamic<?>)entry.getValue()));
                         }
                     }
                 }
             }
 
-            return Util.readTypedOrThrow(type1, dynamic.emptyMap().set("stats", dynamic.createMap(map)));
+            return Util.readTypedOrThrow(outputType, tag.emptyMap().set("stats", tag.createMap(stats)));
         });
     }
 
     private TypeRewriteRule makeObjectiveFixer() {
-        Type<?> type = this.getInputSchema().getType(References.OBJECTIVE);
-        Type<?> type1 = this.getOutputSchema().getType(References.OBJECTIVE);
-        return this.fixTypeEverywhereTyped(
-            "ObjectiveStatFix",
-            type,
-            type1,
-            p_449318_ -> {
-                Dynamic<?> dynamic = p_449318_.get(DSL.remainderFinder());
-                Dynamic<?> dynamic1 = dynamic.update(
-                    "CriteriaName",
-                    p_326644_ -> DataFixUtils.orElse(
-                        p_326644_.asString()
-                            .result()
-                            .map(
-                                p_296636_ -> {
-                                    if (SPECIAL_OBJECTIVE_CRITERIA.contains(p_296636_)) {
-                                        return (String)p_296636_;
-                                    } else {
-                                        StatsCounterFix.StatType statscounterfix$stattype = unpackLegacyKey(p_296636_);
-                                        return statscounterfix$stattype == null
-                                            ? "dummy"
-                                            : V1451_6.packNamespacedWithDot(statscounterfix$stattype.type)
-                                                + ":"
-                                                + V1451_6.packNamespacedWithDot(statscounterfix$stattype.typeKey);
-                                    }
-                                }
-                            )
-                            .map(p_326644_::createString),
-                        p_326644_
-                    )
-                );
-                return Util.readTypedOrThrow(type1, dynamic1);
-            }
-        );
+        Type<?> inputType = this.getInputSchema().getType(References.OBJECTIVE);
+        Type<?> outputType = this.getOutputSchema().getType(References.OBJECTIVE);
+        return this.fixTypeEverywhereTyped("ObjectiveStatFix", inputType, outputType, input -> {
+            Dynamic<?> tag = input.get(DSL.remainderFinder());
+            Dynamic<?> updatedTag = tag.update("CriteriaName", name -> DataFixUtils.orElse(name.asString().result().map(key -> {
+                if (SPECIAL_OBJECTIVE_CRITERIA.contains(key)) {
+                    return (String)key;
+                }
+
+                StatsCounterFix.StatType statType = unpackLegacyKey(key);
+                return statType == null ? "dummy" : V1451_6.packNamespacedWithDot(statType.type) + ":" + V1451_6.packNamespacedWithDot(statType.typeKey);
+            }).map(name::createString), name));
+            return Util.readTypedOrThrow(outputType, updatedTag);
+        });
     }
 
-    private static @Nullable String upgradeItem(String p_16949_) {
-        return ItemStackTheFlatteningFix.updateItem(p_16949_, 0);
+    private static @Nullable String upgradeItem(final String name) {
+        return ItemStackTheFlatteningFix.updateItem(name, 0);
     }
 
-    private static String upgradeBlock(String p_16951_) {
-        return BlockStateData.upgradeBlock(p_16951_);
+    private static String upgradeBlock(final String name) {
+        return BlockStateData.upgradeBlock(name);
     }
 
-    record StatType(String type, String typeKey) {
+    private record StatType(String type, String typeKey) {
     }
 }

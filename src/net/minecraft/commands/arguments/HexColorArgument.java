@@ -18,7 +18,7 @@ import net.minecraft.util.ARGB;
 public class HexColorArgument implements ArgumentType<Integer> {
     private static final Collection<String> EXAMPLES = Arrays.asList("F00", "FF0000");
     public static final DynamicCommandExceptionType ERROR_INVALID_HEX = new DynamicCommandExceptionType(
-        p_407117_ -> Component.translatableEscape("argument.hexcolor.invalid", p_407117_)
+        value -> Component.translatableEscape("argument.hexcolor.invalid", value)
     );
 
     private HexColorArgument() {
@@ -28,29 +28,31 @@ public class HexColorArgument implements ArgumentType<Integer> {
         return new HexColorArgument();
     }
 
-    public static Integer getHexColor(CommandContext<CommandSourceStack> p_407032_, String p_407090_) {
-        return p_407032_.getArgument(p_407090_, Integer.class);
+    public static Integer getHexColor(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, Integer.class);
     }
 
-    public Integer parse(StringReader p_406115_) throws CommandSyntaxException {
-        String s = p_406115_.readUnquotedString();
+    public Integer parse(final StringReader reader) throws CommandSyntaxException {
+        String colorString = reader.readUnquotedString();
 
-        return switch (s.length()) {
+        return switch (colorString.length()) {
             case 3 -> ARGB.color(
-                duplicateDigit(Integer.parseInt(s, 0, 1, 16)), duplicateDigit(Integer.parseInt(s, 1, 2, 16)), duplicateDigit(Integer.parseInt(s, 2, 3, 16))
+                duplicateDigit(Integer.parseInt(colorString, 0, 1, 16)),
+                duplicateDigit(Integer.parseInt(colorString, 1, 2, 16)),
+                duplicateDigit(Integer.parseInt(colorString, 2, 3, 16))
             );
-            case 6 -> ARGB.color(Integer.parseInt(s, 0, 2, 16), Integer.parseInt(s, 2, 4, 16), Integer.parseInt(s, 4, 6, 16));
-            default -> throw ERROR_INVALID_HEX.createWithContext(p_406115_, s);
+            case 6 -> ARGB.color(Integer.parseInt(colorString, 0, 2, 16), Integer.parseInt(colorString, 2, 4, 16), Integer.parseInt(colorString, 4, 6, 16));
+            default -> throw ERROR_INVALID_HEX.createWithContext(reader, colorString);
         };
     }
 
-    private static int duplicateDigit(int p_427017_) {
-        return p_427017_ * 17;
+    private static int duplicateDigit(final int digit) {
+        return digit * 17;
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_409242_, SuggestionsBuilder p_410053_) {
-        return SharedSuggestionProvider.suggest(EXAMPLES, p_410053_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> contextBuilder, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(EXAMPLES, builder);
     }
 
     @Override

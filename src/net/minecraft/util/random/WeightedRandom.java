@@ -10,43 +10,45 @@ public class WeightedRandom {
     private WeightedRandom() {
     }
 
-    public static <T> int getTotalWeight(List<T> p_146313_, ToIntFunction<T> p_394201_) {
-        long i = 0L;
+    public static <T> int getTotalWeight(final List<T> items, final ToIntFunction<T> weightGetter) {
+        long totalWeight = 0L;
 
-        for (T t : p_146313_) {
-            i += p_394201_.applyAsInt(t);
+        for (T item : items) {
+            totalWeight += weightGetter.applyAsInt(item);
         }
 
-        if (i > 2147483647L) {
+        if (totalWeight > 2147483647L) {
             throw new IllegalArgumentException("Sum of weights must be <= 2147483647");
         } else {
-            return (int)i;
+            return (int)totalWeight;
         }
     }
 
-    public static <T> Optional<T> getRandomItem(RandomSource p_216826_, List<T> p_216827_, int p_216828_, ToIntFunction<T> p_392166_) {
-        if (p_216828_ < 0) {
+    public static <T> Optional<T> getRandomItem(final RandomSource random, final List<T> items, final int totalWeight, final ToIntFunction<T> weightGetter) {
+        if (totalWeight < 0) {
             throw (IllegalArgumentException)Util.pauseInIde(new IllegalArgumentException("Negative total weight in getRandomItem"));
-        } else if (p_216828_ == 0) {
-            return Optional.empty();
-        } else {
-            int i = p_216826_.nextInt(p_216828_);
-            return getWeightedItem(p_216827_, i, p_392166_);
         }
+
+        if (totalWeight == 0) {
+            return Optional.empty();
+        }
+
+        int selection = random.nextInt(totalWeight);
+        return getWeightedItem(items, selection, weightGetter);
     }
 
-    public static <T> Optional<T> getWeightedItem(List<T> p_146315_, int p_146316_, ToIntFunction<T> p_394629_) {
-        for (T t : p_146315_) {
-            p_146316_ -= p_394629_.applyAsInt(t);
-            if (p_146316_ < 0) {
-                return Optional.of(t);
+    public static <T> Optional<T> getWeightedItem(final List<T> items, int index, final ToIntFunction<T> weightGetter) {
+        for (T item : items) {
+            index -= weightGetter.applyAsInt(item);
+            if (index < 0) {
+                return Optional.of(item);
             }
         }
 
         return Optional.empty();
     }
 
-    public static <T> Optional<T> getRandomItem(RandomSource p_216823_, List<T> p_216824_, ToIntFunction<T> p_392808_) {
-        return getRandomItem(p_216823_, p_216824_, getTotalWeight(p_216824_, p_392808_), p_392808_);
+    public static <T> Optional<T> getRandomItem(final RandomSource random, final List<T> items, final ToIntFunction<T> weightGetter) {
+        return getRandomItem(random, items, getTotalWeight(items, weightGetter), weightGetter);
     }
 }

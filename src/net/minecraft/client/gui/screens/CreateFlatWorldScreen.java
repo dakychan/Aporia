@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout;
@@ -22,14 +22,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.flat.FlatLayerInfo;
 import net.minecraft.world.level.levelgen.flat.FlatLevelGeneratorSettings;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public class CreateFlatWorldScreen extends Screen {
     private static final Component TITLE = Component.translatable("createWorld.customize.flat.title");
-    static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
+    private static final Identifier SLOT_SPRITE = Identifier.withDefaultNamespace("container/slot");
     private static final int SLOT_BG_SIZE = 18;
     private static final int SLOT_STAT_HEIGHT = 20;
     private static final int SLOT_BG_X = 1;
@@ -39,23 +36,25 @@ public class CreateFlatWorldScreen extends Screen {
     private final HeaderAndFooterLayout layout = new HeaderAndFooterLayout(this, 33, 64);
     protected final CreateWorldScreen parent;
     private final Consumer<FlatLevelGeneratorSettings> applySettings;
-    FlatLevelGeneratorSettings generator;
+    private FlatLevelGeneratorSettings generator;
     private CreateFlatWorldScreen.@Nullable DetailsList list;
     private @Nullable Button deleteLayerButton;
 
-    public CreateFlatWorldScreen(CreateWorldScreen p_95822_, Consumer<FlatLevelGeneratorSettings> p_95823_, FlatLevelGeneratorSettings p_95824_) {
+    public CreateFlatWorldScreen(
+        final CreateWorldScreen parent, final Consumer<FlatLevelGeneratorSettings> applySettings, final FlatLevelGeneratorSettings generator
+    ) {
         super(TITLE);
-        this.parent = p_95822_;
-        this.applySettings = p_95823_;
-        this.generator = p_95824_;
+        this.parent = parent;
+        this.applySettings = applySettings;
+        this.generator = generator;
     }
 
     public FlatLevelGeneratorSettings settings() {
         return this.generator;
     }
 
-    public void setConfig(FlatLevelGeneratorSettings p_95826_) {
-        this.generator = p_95826_;
+    public void setConfig(final FlatLevelGeneratorSettings generator) {
+        this.generator = generator;
         if (this.list != null) {
             this.list.resetRows();
             this.updateButtonValidity();
@@ -66,33 +65,26 @@ public class CreateFlatWorldScreen extends Screen {
     protected void init() {
         this.layout.addTitleHeader(this.title, this.font);
         this.list = this.layout.addToContents(new CreateFlatWorldScreen.DetailsList());
-        LinearLayout linearlayout = this.layout.addToFooter(LinearLayout.vertical().spacing(4));
-        linearlayout.defaultCellSetting().alignVerticallyMiddle();
-        LinearLayout linearlayout1 = linearlayout.addChild(LinearLayout.horizontal().spacing(8));
-        LinearLayout linearlayout2 = linearlayout.addChild(LinearLayout.horizontal().spacing(8));
-        this.deleteLayerButton = linearlayout1.addChild(
-            Button.builder(
-                    Component.translatable("createWorld.customize.flat.removeLayer"),
-                    p_420739_ -> {
-                        if (this.list != null
-                            && this.list.getSelected() instanceof CreateFlatWorldScreen.DetailsList.LayerEntry createflatworldscreen$detailslist$layerentry) {
-                            this.list.deleteLayer(createflatworldscreen$detailslist$layerentry);
-                        }
-                    }
-                )
-                .build()
-        );
-        linearlayout1.addChild(Button.builder(Component.translatable("createWorld.customize.presets"), p_280790_ -> {
-            this.minecraft.setScreen(new PresetFlatWorldScreen(this));
+        LinearLayout footer = this.layout.addToFooter(LinearLayout.vertical().spacing(4));
+        footer.defaultCellSetting().alignVerticallyMiddle();
+        LinearLayout topFooterButtons = footer.addChild(LinearLayout.horizontal().spacing(8));
+        LinearLayout bottomFooterButtons = footer.addChild(LinearLayout.horizontal().spacing(8));
+        this.deleteLayerButton = topFooterButtons.addChild(Button.builder(Component.translatable("createWorld.customize.flat.removeLayer"), button -> {
+            if (this.list != null && this.list.getSelected() instanceof CreateFlatWorldScreen.DetailsList.LayerEntry selectedLayerEntry) {
+                this.list.deleteLayer(selectedLayerEntry);
+            }
+        }).build());
+        topFooterButtons.addChild(Button.builder(Component.translatable("createWorld.customize.presets"), button -> {
+            this.minecraft.gui.setScreen(new PresetFlatWorldScreen(this));
             this.generator.updateLayers();
             this.updateButtonValidity();
         }).build());
-        linearlayout2.addChild(Button.builder(CommonComponents.GUI_DONE, p_374574_ -> {
+        bottomFooterButtons.addChild(Button.builder(CommonComponents.GUI_DONE, button -> {
             this.applySettings.accept(this.generator);
             this.onClose();
             this.generator.updateLayers();
         }).build());
-        linearlayout2.addChild(Button.builder(CommonComponents.GUI_CANCEL, p_374573_ -> {
+        bottomFooterButtons.addChild(Button.builder(CommonComponents.GUI_CANCEL, button -> {
             this.onClose();
             this.generator.updateLayers();
         }).build());
@@ -111,7 +103,7 @@ public class CreateFlatWorldScreen extends Screen {
         this.layout.arrangeElements();
     }
 
-    void updateButtonValidity() {
+    private void updateButtonValidity() {
         if (this.deleteLayerButton != null) {
             this.deleteLayerButton.active = this.hasValidSelection();
         }
@@ -123,13 +115,12 @@ public class CreateFlatWorldScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(this.parent);
+        this.minecraft.gui.setScreen(this.parent);
     }
 
-    @OnlyIn(Dist.CLIENT)
-    class DetailsList extends ObjectSelectionList<CreateFlatWorldScreen.DetailsList.Entry> {
-        static final Component LAYER_MATERIAL_TITLE = Component.translatable("createWorld.customize.flat.tile").withStyle(ChatFormatting.UNDERLINE);
-        static final Component HEIGHT_TITLE = Component.translatable("createWorld.customize.flat.height").withStyle(ChatFormatting.UNDERLINE);
+        private class DetailsList extends ObjectSelectionList<CreateFlatWorldScreen.DetailsList.Entry> {
+        private static final Component LAYER_MATERIAL_TITLE = Component.translatable("createWorld.customize.flat.tile").withStyle(ChatFormatting.UNDERLINE);
+        private static final Component HEIGHT_TITLE = Component.translatable("createWorld.customize.flat.height").withStyle(ChatFormatting.UNDERLINE);
 
         public DetailsList() {
             super(CreateFlatWorldScreen.this.minecraft, CreateFlatWorldScreen.this.width, CreateFlatWorldScreen.this.height - 103, 43, 24);
@@ -138,55 +129,53 @@ public class CreateFlatWorldScreen extends Screen {
 
         private void populateList() {
             this.addEntry(new CreateFlatWorldScreen.DetailsList.HeaderEntry(CreateFlatWorldScreen.this.font), (int)(9.0 * 1.5));
-            List<FlatLayerInfo> list = CreateFlatWorldScreen.this.generator.getLayersInfo().reversed();
+            List<FlatLayerInfo> layersInfo = CreateFlatWorldScreen.this.generator.getLayersInfo().reversed();
 
-            for (int i = 0; i < list.size(); i++) {
-                this.addEntry(new CreateFlatWorldScreen.DetailsList.LayerEntry(list.get(i), i));
+            for (int i = 0; i < layersInfo.size(); i++) {
+                this.addEntry(new CreateFlatWorldScreen.DetailsList.LayerEntry(layersInfo.get(i), i));
             }
         }
 
-        public void setSelected(CreateFlatWorldScreen.DetailsList.@Nullable Entry p_95855_) {
-            super.setSelected(p_95855_);
+        public void setSelected(final CreateFlatWorldScreen.DetailsList.@Nullable Entry selected) {
+            super.setSelected(selected);
             CreateFlatWorldScreen.this.updateButtonValidity();
         }
 
         public void resetRows() {
-            int i = this.children().indexOf(this.getSelected());
+            int index = this.children().indexOf(this.getSelected());
             this.clearEntries();
             this.populateList();
-            List<CreateFlatWorldScreen.DetailsList.Entry> list = this.children();
-            if (i >= 0 && i < list.size()) {
-                this.setSelected(list.get(i));
+            List<CreateFlatWorldScreen.DetailsList.Entry> children = this.children();
+            if (index >= 0 && index < children.size()) {
+                this.setSelected(children.get(index));
             }
         }
 
-        void deleteLayer(CreateFlatWorldScreen.DetailsList.LayerEntry p_423537_) {
-            List<FlatLayerInfo> list = CreateFlatWorldScreen.this.generator.getLayersInfo();
-            int i = this.children().indexOf(p_423537_);
-            this.removeEntry(p_423537_);
-            list.remove(p_423537_.layerInfo);
-            this.setSelected(list.isEmpty() ? null : this.children().get(Math.min(i, list.size())));
+        private void deleteLayer(final CreateFlatWorldScreen.DetailsList.LayerEntry selectedLayerEntry) {
+            List<FlatLayerInfo> layersInfo = CreateFlatWorldScreen.this.generator.getLayersInfo();
+            int deletedLayerIndex = this.children().indexOf(selectedLayerEntry);
+            this.removeEntry(selectedLayerEntry);
+            layersInfo.remove(selectedLayerEntry.layerInfo);
+            this.setSelected(layersInfo.isEmpty() ? null : this.children().get(Math.min(deletedLayerIndex, layersInfo.size())));
             CreateFlatWorldScreen.this.generator.updateLayers();
             this.resetRows();
             CreateFlatWorldScreen.this.updateButtonValidity();
         }
 
-        @OnlyIn(Dist.CLIENT)
-        abstract static class Entry extends ObjectSelectionList.Entry<CreateFlatWorldScreen.DetailsList.Entry> {
+                private abstract static class Entry extends ObjectSelectionList.Entry<CreateFlatWorldScreen.DetailsList.Entry> {
         }
 
-        @OnlyIn(Dist.CLIENT)
-        static class HeaderEntry extends CreateFlatWorldScreen.DetailsList.Entry {
+                private static class HeaderEntry extends CreateFlatWorldScreen.DetailsList.Entry {
             private final Font font;
 
-            public HeaderEntry(Font p_423560_) {
-                this.font = p_423560_;
+            public HeaderEntry(final Font font) {
+                this.font = font;
             }
 
             @Override
-            public void renderContent(GuiGraphics p_422710_, int p_427375_, int p_424594_, boolean p_431009_, float p_425838_) {
-                p_422710_.drawString(this.font, CreateFlatWorldScreen.DetailsList.LAYER_MATERIAL_TITLE, this.getContentX(), this.getContentY(), -1);
-                p_422710_.drawString(
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+                graphics.text(this.font, CreateFlatWorldScreen.DetailsList.LAYER_MATERIAL_TITLE, this.getContentX(), this.getContentY(), -1);
+                graphics.text(
                     this.font,
                     CreateFlatWorldScreen.DetailsList.HEIGHT_TITLE,
                     this.getContentRight() - this.font.width(CreateFlatWorldScreen.DetailsList.HEIGHT_TITLE),
@@ -201,43 +190,40 @@ public class CreateFlatWorldScreen extends Screen {
             }
         }
 
-        @OnlyIn(Dist.CLIENT)
-        class LayerEntry extends CreateFlatWorldScreen.DetailsList.Entry {
-            final FlatLayerInfo layerInfo;
+                private class LayerEntry extends CreateFlatWorldScreen.DetailsList.Entry {
+            private final FlatLayerInfo layerInfo;
             private final int index;
 
-            public LayerEntry(final FlatLayerInfo p_430645_, final int p_422736_) {
-                this.layerInfo = p_430645_;
-                this.index = p_422736_;
+            public LayerEntry(final FlatLayerInfo layerInfo, final int index) {
+                this.layerInfo = layerInfo;
+                this.index = index;
             }
 
             @Override
-            public void renderContent(GuiGraphics p_423196_, int p_424830_, int p_430477_, boolean p_428252_, float p_430340_) {
-                BlockState blockstate = this.layerInfo.getBlockState();
-                ItemStack itemstack = this.getDisplayItem(blockstate);
-                this.blitSlot(p_423196_, this.getContentX(), this.getContentY(), itemstack);
-                int i = this.getContentYMiddle() - 9 / 2;
-                p_423196_.drawString(CreateFlatWorldScreen.this.font, itemstack.getHoverName(), this.getContentX() + 18 + 5, i, -1);
-                Component component;
+            public void extractContent(final GuiGraphicsExtractor graphics, final int mouseX, final int mouseY, final boolean hovered, final float a) {
+                BlockState blockState = this.layerInfo.getBlockState();
+                ItemStack itemStack = this.getDisplayItem(blockState);
+                this.blitSlot(graphics, this.getContentX(), this.getContentY(), itemStack);
+                int y = this.getContentYMiddle() - 9 / 2;
+                graphics.text(CreateFlatWorldScreen.this.font, itemStack.getHoverName(), this.getContentX() + 18 + 5, y, -1);
+                Component height;
                 if (this.index == 0) {
-                    component = Component.translatable("createWorld.customize.flat.layer.top", this.layerInfo.getHeight());
+                    height = Component.translatable("createWorld.customize.flat.layer.top", this.layerInfo.getHeight());
                 } else if (this.index == CreateFlatWorldScreen.this.generator.getLayersInfo().size() - 1) {
-                    component = Component.translatable("createWorld.customize.flat.layer.bottom", this.layerInfo.getHeight());
+                    height = Component.translatable("createWorld.customize.flat.layer.bottom", this.layerInfo.getHeight());
                 } else {
-                    component = Component.translatable("createWorld.customize.flat.layer", this.layerInfo.getHeight());
+                    height = Component.translatable("createWorld.customize.flat.layer", this.layerInfo.getHeight());
                 }
 
-                p_423196_.drawString(
-                    CreateFlatWorldScreen.this.font, component, this.getContentRight() - CreateFlatWorldScreen.this.font.width(component), i, -1
-                );
+                graphics.text(CreateFlatWorldScreen.this.font, height, this.getContentRight() - CreateFlatWorldScreen.this.font.width(height), y, -1);
             }
 
-            private ItemStack getDisplayItem(BlockState p_430359_) {
-                Item item = p_430359_.getBlock().asItem();
+            private ItemStack getDisplayItem(final BlockState blockState) {
+                Item item = blockState.getBlock().asItem();
                 if (item == Items.AIR) {
-                    if (p_430359_.is(Blocks.WATER)) {
+                    if (blockState.is(Blocks.WATER)) {
                         item = Items.WATER_BUCKET;
-                    } else if (p_430359_.is(Blocks.LAVA)) {
+                    } else if (blockState.is(Blocks.LAVA)) {
                         item = Items.LAVA_BUCKET;
                     }
                 }
@@ -247,31 +233,31 @@ public class CreateFlatWorldScreen extends Screen {
 
             @Override
             public Component getNarration() {
-                ItemStack itemstack = this.getDisplayItem(this.layerInfo.getBlockState());
-                return (Component)(!itemstack.isEmpty()
+                ItemStack itemStack = this.getDisplayItem(this.layerInfo.getBlockState());
+                return !itemStack.isEmpty()
                     ? CommonComponents.joinForNarration(
-                        Component.translatable("narrator.select", itemstack.getHoverName()),
+                        Component.translatable("narrator.select", itemStack.getHoverName()),
                         CreateFlatWorldScreen.DetailsList.HEIGHT_TITLE,
                         Component.literal(String.valueOf(this.layerInfo.getHeight()))
                     )
-                    : CommonComponents.EMPTY);
+                    : CommonComponents.EMPTY;
             }
 
             @Override
-            public boolean mouseClicked(MouseButtonEvent p_423986_, boolean p_431640_) {
-                DetailsList.this.setSelected((CreateFlatWorldScreen.DetailsList.Entry)this);
-                return super.mouseClicked(p_423986_, p_431640_);
+            public boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
+                DetailsList.this.setSelected(this);
+                return super.mouseClicked(event, doubleClick);
             }
 
-            private void blitSlot(GuiGraphics p_429433_, int p_428712_, int p_426633_, ItemStack p_426006_) {
-                this.blitSlotBg(p_429433_, p_428712_ + 1, p_426633_ + 1);
-                if (!p_426006_.isEmpty()) {
-                    p_429433_.renderFakeItem(p_426006_, p_428712_ + 2, p_426633_ + 2);
+            private void blitSlot(final GuiGraphicsExtractor graphics, final int x, final int y, final ItemStack itemStack) {
+                this.blitSlotBg(graphics, x + 1, y + 1);
+                if (!itemStack.isEmpty()) {
+                    graphics.fakeItem(itemStack, x + 2, y + 2);
                 }
             }
 
-            private void blitSlotBg(GuiGraphics p_431206_, int p_430397_, int p_428448_) {
-                p_431206_.blitSprite(RenderPipelines.GUI_TEXTURED, CreateFlatWorldScreen.SLOT_SPRITE, p_430397_, p_428448_, 18, 18);
+            private void blitSlotBg(final GuiGraphicsExtractor graphics, final int x, final int y) {
+                graphics.blitSprite(RenderPipelines.GUI_TEXTURED, CreateFlatWorldScreen.SLOT_SPRITE, x, y, 18, 18);
             }
         }
     }

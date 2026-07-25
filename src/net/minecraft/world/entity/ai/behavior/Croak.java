@@ -16,26 +16,26 @@ public class Croak extends Behavior<Frog> {
         super(ImmutableMap.of(MemoryModuleType.WALK_TARGET, MemoryStatus.VALUE_ABSENT), 100);
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_217151_, Frog p_217152_) {
-        return p_217152_.getPose() == Pose.STANDING;
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Frog body) {
+        return body.getPose() == Pose.STANDING;
     }
 
-    protected boolean canStillUse(ServerLevel p_217154_, Frog p_217155_, long p_217156_) {
+    protected boolean canStillUse(final ServerLevel level, final Frog body, final long timestamp) {
         return this.croakCounter < 60;
     }
 
-    protected void start(ServerLevel p_217162_, Frog p_217163_, long p_217164_) {
-        if (!p_217163_.isInLiquid()) {
-            p_217163_.setPose(Pose.CROAKING);
+    protected void start(final ServerLevel level, final Frog body, final long timestamp) {
+        if (!body.isInLiquid()) {
+            body.setPose(Pose.CROAKING);
             this.croakCounter = 0;
         }
     }
 
-    protected void stop(ServerLevel p_217170_, Frog p_217171_, long p_217172_) {
-        p_217171_.setPose(Pose.STANDING);
+    protected void stop(final ServerLevel level, final Frog body, final long timestamp) {
+        body.setPose(Pose.STANDING);
     }
 
-    protected void tick(ServerLevel p_217178_, Frog p_217179_, long p_217180_) {
+    protected void tick(final ServerLevel level, final Frog body, final long timestamp) {
         this.croakCounter++;
     }
 }

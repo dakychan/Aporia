@@ -11,10 +11,7 @@ import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.state.TropicalFishRenderState;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.animal.fish.TropicalFish;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class TropicalFishPatternLayer extends RenderLayer<TropicalFishRenderState, EntityModel<TropicalFishRenderState>> {
     private static final Identifier KOB_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fish/tropical_a_pattern_1.png");
     private static final Identifier SUNSTREAK_TEXTURE = Identifier.withDefaultNamespace("textures/entity/fish/tropical_a_pattern_2.png");
@@ -31,21 +28,30 @@ public class TropicalFishPatternLayer extends RenderLayer<TropicalFishRenderStat
     private final TropicalFishSmallModel modelSmall;
     private final TropicalFishLargeModel modelLarge;
 
-    public TropicalFishPatternLayer(RenderLayerParent<TropicalFishRenderState, EntityModel<TropicalFishRenderState>> p_174547_, EntityModelSet p_174548_) {
-        super(p_174547_);
-        this.modelSmall = new TropicalFishSmallModel(p_174548_.bakeLayer(ModelLayers.TROPICAL_FISH_SMALL_PATTERN));
-        this.modelLarge = new TropicalFishLargeModel(p_174548_.bakeLayer(ModelLayers.TROPICAL_FISH_LARGE_PATTERN));
+    public TropicalFishPatternLayer(
+        final RenderLayerParent<TropicalFishRenderState, EntityModel<TropicalFishRenderState>> renderer, final EntityModelSet modelSet
+    ) {
+        super(renderer);
+        this.modelSmall = new TropicalFishSmallModel(modelSet.bakeLayer(ModelLayers.TROPICAL_FISH_SMALL_PATTERN));
+        this.modelLarge = new TropicalFishLargeModel(modelSet.bakeLayer(ModelLayers.TROPICAL_FISH_LARGE_PATTERN));
     }
 
-    public void submit(PoseStack p_117612_, SubmitNodeCollector p_430641_, int p_117614_, TropicalFishRenderState p_366498_, float p_117616_, float p_117617_) {
-        TropicalFish.Pattern tropicalfish$pattern = p_366498_.pattern;
+    public void submit(
+        final PoseStack poseStack,
+        final SubmitNodeCollector submitNodeCollector,
+        final int lightCoords,
+        final TropicalFishRenderState state,
+        final float yRot,
+        final float xRot
+    ) {
+        TropicalFish.Pattern variant = state.pattern;
 
-        EntityModel<TropicalFishRenderState> entitymodel = (EntityModel<TropicalFishRenderState>)(switch (tropicalfish$pattern.base()) {
+        EntityModel<TropicalFishRenderState> model = switch (variant.base()) {
             case SMALL -> this.modelSmall;
             case LARGE -> this.modelLarge;
-        });
+        };
 
-        Identifier identifier = switch (tropicalfish$pattern) {
+        Identifier patternTexture = switch (variant) {
             case KOB -> KOB_TEXTURE;
             case SUNSTREAK -> SUNSTREAK_TEXTURE;
             case SNOOPER -> SNOOPER_TEXTURE;
@@ -59,6 +65,6 @@ public class TropicalFishPatternLayer extends RenderLayer<TropicalFishRenderStat
             case BETTY -> BETTY_TEXTURE;
             case CLAYFISH -> CLAYFISH_TEXTURE;
         };
-        coloredCutoutModelCopyLayerRender(entitymodel, identifier, p_117612_, p_430641_, p_117614_, p_366498_, p_366498_.patternColor, 1);
+        coloredCutoutModelCopyLayerRender(model, patternTexture, poseStack, submitNodeCollector, lightCoords, state, state.patternColor, 1);
     }
 }

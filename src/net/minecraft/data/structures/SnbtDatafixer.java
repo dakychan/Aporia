@@ -14,25 +14,25 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.server.Bootstrap;
 
 public class SnbtDatafixer {
-    public static void main(String[] p_298764_) throws IOException {
+    public static void main(final String[] args) throws IOException {
         SharedConstants.setVersion(DetectedVersion.BUILT_IN);
         Bootstrap.bootStrap();
 
-        for (String s : p_298764_) {
-            updateInDirectory(s);
+        for (String dir : args) {
+            updateInDirectory(dir);
         }
     }
 
-    private static void updateInDirectory(String p_300080_) throws IOException {
-        try (Stream<Path> stream = Files.walk(Paths.get(p_300080_))) {
-            stream.filter(p_300817_ -> p_300817_.toString().endsWith(".snbt")).forEach(p_298886_ -> {
+    private static void updateInDirectory(final String structureDir) throws IOException {
+        try (Stream<Path> walk = Files.walk(Paths.get(structureDir))) {
+            walk.filter(path -> path.toString().endsWith(".snbt")).forEach(path -> {
                 try {
-                    String s = Files.readString(p_298886_);
-                    CompoundTag compoundtag = NbtUtils.snbtToStructure(s);
-                    CompoundTag compoundtag1 = StructureUpdater.update(p_298886_.toString(), compoundtag);
-                    NbtToSnbt.writeSnbt(CachedOutput.NO_CACHE, p_298886_, NbtUtils.structureToSnbt(compoundtag1));
-                } catch (IOException | CommandSyntaxException commandsyntaxexception) {
-                    throw new RuntimeException(commandsyntaxexception);
+                    String snbt = Files.readString(path);
+                    CompoundTag readSnbt = NbtUtils.snbtToStructure(snbt);
+                    CompoundTag updatedTag = StructureUpdater.update(path.toString(), readSnbt);
+                    NbtToSnbt.writeSnbt(CachedOutput.NO_CACHE, path, NbtUtils.structureToSnbt(updatedTag));
+                } catch (CommandSyntaxException | IOException e) {
+                    throw new RuntimeException(e);
                 }
             });
         }

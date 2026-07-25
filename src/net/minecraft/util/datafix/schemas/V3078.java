@@ -8,29 +8,29 @@ import java.util.function.Supplier;
 import net.minecraft.util.datafix.fixes.References;
 
 public class V3078 extends NamespacedSchema {
-    public V3078(int p_216769_, Schema p_216770_) {
-        super(p_216769_, p_216770_);
+    public V3078(final int versionKey, final Schema parent) {
+        super(versionKey, parent);
     }
 
-    protected static void registerMob(Schema p_216774_, Map<String, Supplier<TypeTemplate>> p_216775_, String p_216776_) {
-        p_216774_.registerSimple(p_216775_, p_216776_);
+    protected static void registerMob(final Schema schema, final Map<String, Supplier<TypeTemplate>> map, final String name) {
+        schema.registerSimple(map, name);
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerEntities(Schema p_216782_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(p_216782_);
-        registerMob(p_216782_, map, "minecraft:frog");
-        registerMob(p_216782_, map, "minecraft:tadpole");
+    public Map<String, Supplier<TypeTemplate>> registerEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerEntities(schema);
+        registerMob(schema, map, "minecraft:frog");
+        registerMob(schema, map, "minecraft:tadpole");
         return map;
     }
 
     @Override
-    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(Schema p_216780_) {
-        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(p_216780_);
-        p_216780_.register(
+    public Map<String, Supplier<TypeTemplate>> registerBlockEntities(final Schema schema) {
+        Map<String, Supplier<TypeTemplate>> map = super.registerBlockEntities(schema);
+        schema.register(
             map,
             "minecraft:sculk_shrieker",
-            () -> DSL.optionalFields("listener", DSL.optionalFields("event", DSL.optionalFields("game_event", References.GAME_EVENT_NAME.in(p_216780_))))
+            () -> DSL.optionalFields("listener", DSL.optionalFields("event", DSL.optionalFields("game_event", References.GAME_EVENT_NAME.in(schema))))
         );
         return map;
     }

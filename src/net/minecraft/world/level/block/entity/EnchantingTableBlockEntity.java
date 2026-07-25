@@ -31,78 +31,78 @@ public class EnchantingTableBlockEntity extends BlockEntity implements Nameable 
     private static final RandomSource RANDOM = RandomSource.create();
     private @Nullable Component name;
 
-    public EnchantingTableBlockEntity(BlockPos p_329912_, BlockState p_331662_) {
-        super(BlockEntityType.ENCHANTING_TABLE, p_329912_, p_331662_);
+    public EnchantingTableBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.ENCHANTING_TABLE, worldPosition, blockState);
     }
 
     @Override
-    protected void saveAdditional(ValueOutput p_407657_) {
-        super.saveAdditional(p_407657_);
-        p_407657_.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
+    protected void saveAdditional(final ValueOutput output) {
+        super.saveAdditional(output);
+        output.storeNullable("CustomName", ComponentSerialization.CODEC, this.name);
     }
 
     @Override
-    protected void loadAdditional(ValueInput p_406753_) {
-        super.loadAdditional(p_406753_);
-        this.name = parseCustomNameSafe(p_406753_, "CustomName");
+    protected void loadAdditional(final ValueInput input) {
+        super.loadAdditional(input);
+        this.name = parseCustomNameSafe(input, "CustomName");
     }
 
-    public static void bookAnimationTick(Level p_334676_, BlockPos p_332815_, BlockState p_332072_, EnchantingTableBlockEntity p_333258_) {
-        p_333258_.oOpen = p_333258_.open;
-        p_333258_.oRot = p_333258_.rot;
-        Player player = p_334676_.getNearestPlayer(p_332815_.getX() + 0.5, p_332815_.getY() + 0.5, p_332815_.getZ() + 0.5, 3.0, false);
+    public static void bookAnimationTick(final Level level, final BlockPos worldPosition, final BlockState state, final EnchantingTableBlockEntity entity) {
+        entity.oOpen = entity.open;
+        entity.oRot = entity.rot;
+        Player player = level.getNearestPlayer(worldPosition.getX() + 0.5, worldPosition.getY() + 0.5, worldPosition.getZ() + 0.5, 3.0, false);
         if (player != null) {
-            double d0 = player.getX() - (p_332815_.getX() + 0.5);
-            double d1 = player.getZ() - (p_332815_.getZ() + 0.5);
-            p_333258_.tRot = (float)Mth.atan2(d1, d0);
-            p_333258_.open += 0.1F;
-            if (p_333258_.open < 0.5F || RANDOM.nextInt(40) == 0) {
-                float f1 = p_333258_.flipT;
+            double xd = player.getX() - (worldPosition.getX() + 0.5);
+            double zd = player.getZ() - (worldPosition.getZ() + 0.5);
+            entity.tRot = (float)Mth.atan2(zd, xd);
+            entity.open += 0.1F;
+            if (entity.open < 0.5F || RANDOM.nextInt(40) == 0) {
+                float old = entity.flipT;
 
                 do {
-                    p_333258_.flipT = p_333258_.flipT + (RANDOM.nextInt(4) - RANDOM.nextInt(4));
-                } while (f1 == p_333258_.flipT);
+                    entity.flipT = entity.flipT + (RANDOM.nextInt(4) - RANDOM.nextInt(4));
+                } while (old == entity.flipT);
             }
         } else {
-            p_333258_.tRot += 0.02F;
-            p_333258_.open -= 0.1F;
+            entity.tRot += 0.02F;
+            entity.open -= 0.1F;
         }
 
-        while (p_333258_.rot >= (float) Math.PI) {
-            p_333258_.rot -= (float) (Math.PI * 2);
+        while (entity.rot >= (float) Math.PI) {
+            entity.rot -= (float) (Math.PI * 2);
         }
 
-        while (p_333258_.rot < (float) -Math.PI) {
-            p_333258_.rot += (float) (Math.PI * 2);
+        while (entity.rot < (float) -Math.PI) {
+            entity.rot += (float) (Math.PI * 2);
         }
 
-        while (p_333258_.tRot >= (float) Math.PI) {
-            p_333258_.tRot -= (float) (Math.PI * 2);
+        while (entity.tRot >= (float) Math.PI) {
+            entity.tRot -= (float) (Math.PI * 2);
         }
 
-        while (p_333258_.tRot < (float) -Math.PI) {
-            p_333258_.tRot += (float) (Math.PI * 2);
+        while (entity.tRot < (float) -Math.PI) {
+            entity.tRot += (float) (Math.PI * 2);
         }
 
-        float f2 = p_333258_.tRot - p_333258_.rot;
+        float rotDir = entity.tRot - entity.rot;
 
-        while (f2 >= (float) Math.PI) {
-            f2 -= (float) (Math.PI * 2);
+        while (rotDir >= (float) Math.PI) {
+            rotDir -= (float) (Math.PI * 2);
         }
 
-        while (f2 < (float) -Math.PI) {
-            f2 += (float) (Math.PI * 2);
+        while (rotDir < (float) -Math.PI) {
+            rotDir += (float) (Math.PI * 2);
         }
 
-        p_333258_.rot += f2 * 0.4F;
-        p_333258_.open = Mth.clamp(p_333258_.open, 0.0F, 1.0F);
-        p_333258_.time++;
-        p_333258_.oFlip = p_333258_.flip;
-        float f = (p_333258_.flipT - p_333258_.flip) * 0.4F;
-        float f3 = 0.2F;
-        f = Mth.clamp(f, -0.2F, 0.2F);
-        p_333258_.flipA = p_333258_.flipA + (f - p_333258_.flipA) * 0.9F;
-        p_333258_.flip = p_333258_.flip + p_333258_.flipA;
+        entity.rot += rotDir * 0.4F;
+        entity.open = Mth.clamp(entity.open, 0.0F, 1.0F);
+        entity.time++;
+        entity.oFlip = entity.flip;
+        float diff = (entity.flipT - entity.flip) * 0.4F;
+        float max = 0.2F;
+        diff = Mth.clamp(diff, -0.2F, 0.2F);
+        entity.flipA = entity.flipA + (diff - entity.flipA) * 0.9F;
+        entity.flip = entity.flip + entity.flipA;
     }
 
     @Override
@@ -110,8 +110,8 @@ public class EnchantingTableBlockEntity extends BlockEntity implements Nameable 
         return this.name != null ? this.name : DEFAULT_NAME;
     }
 
-    public void setCustomName(@Nullable Component p_330108_) {
-        this.name = p_330108_;
+    public void setCustomName(final @Nullable Component name) {
+        this.name = name;
     }
 
     @Override
@@ -120,19 +120,19 @@ public class EnchantingTableBlockEntity extends BlockEntity implements Nameable 
     }
 
     @Override
-    protected void applyImplicitComponents(DataComponentGetter p_397172_) {
-        super.applyImplicitComponents(p_397172_);
-        this.name = p_397172_.get(DataComponents.CUSTOM_NAME);
+    protected void applyImplicitComponents(final DataComponentGetter components) {
+        super.applyImplicitComponents(components);
+        this.name = components.get(DataComponents.CUSTOM_NAME);
     }
 
     @Override
-    protected void collectImplicitComponents(DataComponentMap.Builder p_334287_) {
-        super.collectImplicitComponents(p_334287_);
-        p_334287_.set(DataComponents.CUSTOM_NAME, this.name);
+    protected void collectImplicitComponents(final DataComponentMap.Builder components) {
+        super.collectImplicitComponents(components);
+        components.set(DataComponents.CUSTOM_NAME, this.name);
     }
 
     @Override
-    public void removeComponentsFromTag(ValueOutput p_409262_) {
-        p_409262_.discard("CustomName");
+    public void removeComponentsFromTag(final ValueOutput output) {
+        output.discard("CustomName");
     }
 }

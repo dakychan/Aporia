@@ -123,25 +123,25 @@ public record ReportType(String header, List<String> nuggets) {
     public String getErrorComment() {
         try {
             return this.nuggets.get((int)(Util.getNanos() % this.nuggets.size()));
-        } catch (Throwable throwable) {
+        } catch (Throwable ignored) {
             return "Witty comment unavailable :(";
         }
     }
 
-    public void appendHeader(StringBuilder p_344403_, List<String> p_343736_) {
-        p_344403_.append("---- ");
-        p_344403_.append(this.header());
-        p_344403_.append(" ----\n");
-        p_344403_.append("// ");
-        p_344403_.append(this.getErrorComment());
-        p_344403_.append('\n');
+    public void appendHeader(final StringBuilder builder, final List<String> extraComments) {
+        builder.append("---- ");
+        builder.append(this.header());
+        builder.append(" ----\n");
+        builder.append("// ");
+        builder.append(this.getErrorComment());
+        builder.append('\n');
 
-        for (String s : p_343736_) {
-            p_344403_.append("// ");
-            p_344403_.append(s);
-            p_344403_.append('\n');
+        for (String extraComment : extraComments) {
+            builder.append("// ");
+            builder.append(extraComment);
+            builder.append('\n');
         }
 
-        p_344403_.append('\n');
+        builder.append('\n');
     }
 }

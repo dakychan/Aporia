@@ -12,8 +12,8 @@ import net.minecraft.world.level.block.state.BlockState;
 public class SmokerBlockEntity extends AbstractFurnaceBlockEntity {
     private static final Component DEFAULT_NAME = Component.translatable("container.smoker");
 
-    public SmokerBlockEntity(BlockPos p_155749_, BlockState p_155750_) {
-        super(BlockEntityType.SMOKER, p_155749_, p_155750_, RecipeType.SMOKING);
+    public SmokerBlockEntity(final BlockPos worldPosition, final BlockState blockState) {
+        super(BlockEntityTypes.SMOKER, worldPosition, blockState, RecipeType.SMOKING);
     }
 
     @Override
@@ -22,12 +22,12 @@ public class SmokerBlockEntity extends AbstractFurnaceBlockEntity {
     }
 
     @Override
-    protected int getBurnDuration(FuelValues p_365622_, ItemStack p_59786_) {
-        return super.getBurnDuration(p_365622_, p_59786_) / 2;
+    protected int getBurnDuration(final FuelValues fuelValues, final ItemStack itemStack) {
+        return super.getBurnDuration(fuelValues, itemStack) / 2;
     }
 
     @Override
-    protected AbstractContainerMenu createMenu(int p_59783_, Inventory p_59784_) {
-        return new SmokerMenu(p_59783_, p_59784_, this, this.dataAccess);
+    protected AbstractContainerMenu createMenu(final int containerId, final Inventory inventory) {
+        return new SmokerMenu(containerId, inventory, this, this.dataAccess);
     }
 }

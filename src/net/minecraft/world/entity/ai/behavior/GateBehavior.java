@@ -1,6 +1,7 @@
 package net.minecraft.world.entity.ai.behavior;
 
 import com.mojang.datafixers.util.Pair;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -22,17 +23,17 @@ public class GateBehavior<E extends LivingEntity> implements BehaviorControl<E> 
     private Behavior.Status status = Behavior.Status.STOPPED;
 
     public GateBehavior(
-        Map<MemoryModuleType<?>, MemoryStatus> p_22873_,
-        Set<MemoryModuleType<?>> p_22874_,
-        GateBehavior.OrderPolicy p_22875_,
-        GateBehavior.RunningPolicy p_22876_,
-        List<Pair<? extends BehaviorControl<? super E>, Integer>> p_22877_
+        final Map<MemoryModuleType<?>, MemoryStatus> entryCondition,
+        final Set<MemoryModuleType<?>> exitErasedMemories,
+        final GateBehavior.OrderPolicy orderPolicy,
+        final GateBehavior.RunningPolicy runningPolicy,
+        final List<Pair<? extends BehaviorControl<? super E>, Integer>> behaviors
     ) {
-        this.entryCondition = p_22873_;
-        this.exitErasedMemories = p_22874_;
-        this.orderPolicy = p_22875_;
-        this.runningPolicy = p_22876_;
-        p_22877_.forEach(p_258332_ -> this.behaviors.add(p_258332_.getFirst(), p_258332_.getSecond()));
+        this.entryCondition = entryCondition;
+        this.exitErasedMemories = exitErasedMemories;
+        this.orderPolicy = orderPolicy;
+        this.runningPolicy = runningPolicy;
+        behaviors.forEach(entry -> this.behaviors.add(entry.getFirst(), entry.getSecond()));
     }
 
     @Override
@@ -40,11 +41,22 @@ public class GateBehavior<E extends LivingEntity> implements BehaviorControl<E> 
         return this.status;
     }
 
-    private boolean hasRequiredMemories(E p_259419_) {
+    @Override
+    public Set<MemoryModuleType<?>> getRequiredMemories() {
+        Set<MemoryModuleType<?>> memories = new HashSet<>(this.entryCondition.keySet());
+
+        for (BehaviorControl<? super E> behavior : this.behaviors) {
+            memories.addAll(behavior.getRequiredMemories());
+        }
+
+        return memories;
+    }
+
+    private boolean hasRequiredMemories(final E body) {
         for (Entry<MemoryModuleType<?>, MemoryStatus> entry : this.entryCondition.entrySet()) {
-            MemoryModuleType<?> memorymoduletype = entry.getKey();
-            MemoryStatus memorystatus = entry.getValue();
-            if (!p_259419_.getBrain().checkMemory(memorymoduletype, memorystatus)) {
+            MemoryModuleType<?> memoryType = entry.getKey();
+            MemoryStatus requiredStatus = entry.getValue();
+            if (!body.getBrain().checkMemory(memoryType, requiredStatus)) {
                 return false;
             }
         }
@@ -53,11 +65,11 @@ public class GateBehavior<E extends LivingEntity> implements BehaviorControl<E> 
     }
 
     @Override
-    public final boolean tryStart(ServerLevel p_259362_, E p_259746_, long p_259560_) {
-        if (this.hasRequiredMemories(p_259746_)) {
+    public final boolean tryStart(final ServerLevel level, final E body, final long timestamp) {
+        if (this.hasRequiredMemories(body)) {
             this.status = Behavior.Status.RUNNING;
             this.orderPolicy.apply(this.behaviors);
-            this.runningPolicy.apply(this.behaviors.stream(), p_259362_, p_259746_, p_259560_);
+            this.runningPolicy.apply(this.behaviors.stream(), level, body, timestamp);
             return true;
         } else {
             return false;
@@ -65,74 +77,65 @@ public class GateBehavior<E extends LivingEntity> implements BehaviorControl<E> 
     }
 
     @Override
-    public final void tickOrStop(ServerLevel p_259934_, E p_259790_, long p_260259_) {
-        this.behaviors
-            .stream()
-            .filter(p_258342_ -> p_258342_.getStatus() == Behavior.Status.RUNNING)
-            .forEach(p_258336_ -> p_258336_.tickOrStop(p_259934_, p_259790_, p_260259_));
-        if (this.behaviors.stream().noneMatch(p_258344_ -> p_258344_.getStatus() == Behavior.Status.RUNNING)) {
-            this.doStop(p_259934_, p_259790_, p_260259_);
+    public final void tickOrStop(final ServerLevel level, final E body, final long timestamp) {
+        this.behaviors.stream().filter(goal -> goal.getStatus() == Behavior.Status.RUNNING).forEach(goal -> goal.tickOrStop(level, body, timestamp));
+        if (this.behaviors.stream().noneMatch(g -> g.getStatus() == Behavior.Status.RUNNING)) {
+            this.doStop(level, body, timestamp);
         }
     }
 
     @Override
-    public final void doStop(ServerLevel p_259962_, E p_260250_, long p_259847_) {
+    public final void doStop(final ServerLevel level, final E body, final long timestamp) {
         this.status = Behavior.Status.STOPPED;
-        this.behaviors
-            .stream()
-            .filter(p_258337_ -> p_258337_.getStatus() == Behavior.Status.RUNNING)
-            .forEach(p_258341_ -> p_258341_.doStop(p_259962_, p_260250_, p_259847_));
-        this.exitErasedMemories.forEach(p_260250_.getBrain()::eraseMemory);
+        this.behaviors.stream().filter(goal -> goal.getStatus() == Behavior.Status.RUNNING).forEach(goal -> goal.doStop(level, body, timestamp));
+        this.exitErasedMemories.forEach(body.getBrain()::eraseMemory);
     }
 
     @Override
     public String debugString() {
-        return this.getClass().getSimpleName();
-    }
-
-    @Override
-    public String toString() {
-        Set<? extends BehaviorControl<? super E>> set = this.behaviors
+        Set<String> runningBehaviours = this.behaviors
             .stream()
-            .filter(p_258343_ -> p_258343_.getStatus() == Behavior.Status.RUNNING)
+            .filter(goal -> goal.getStatus() == Behavior.Status.RUNNING)
+            .map(b -> b.getClass().getSimpleName())
             .collect(Collectors.toSet());
-        return "(" + this.getClass().getSimpleName() + "): " + set;
+        return this.getClass().getSimpleName() + ": " + runningBehaviours;
     }
 
-    public static enum OrderPolicy {
-        ORDERED(p_147530_ -> {}),
+    public enum OrderPolicy {
+        ORDERED(t -> {}),
         SHUFFLED(ShufflingList::shuffle);
 
         private final Consumer<ShufflingList<?>> consumer;
 
-        private OrderPolicy(final Consumer<ShufflingList<?>> p_22930_) {
-            this.consumer = p_22930_;
+        OrderPolicy(final Consumer<ShufflingList<?>> consumer) {
+            this.consumer = consumer;
         }
 
-        public void apply(ShufflingList<?> p_147528_) {
-            this.consumer.accept(p_147528_);
+        public void apply(final ShufflingList<?> list) {
+            this.consumer.accept(list);
         }
     }
 
-    public static enum RunningPolicy {
+    public enum RunningPolicy {
         RUN_ONE {
             @Override
-            public <E extends LivingEntity> void apply(Stream<BehaviorControl<? super E>> p_147537_, ServerLevel p_147538_, E p_147539_, long p_147540_) {
-                p_147537_.filter(p_258349_ -> p_258349_.getStatus() == Behavior.Status.STOPPED)
-                    .filter(p_258348_ -> p_258348_.tryStart(p_147538_, p_147539_, p_147540_))
-                    .findFirst();
+            public <E extends LivingEntity> void apply(
+                final Stream<BehaviorControl<? super E>> behaviors, final ServerLevel level, final E body, final long timestamp
+            ) {
+                behaviors.filter(goal -> goal.getStatus() == Behavior.Status.STOPPED).filter(goal -> goal.tryStart(level, body, timestamp)).findFirst();
             }
         },
         TRY_ALL {
             @Override
-            public <E extends LivingEntity> void apply(Stream<BehaviorControl<? super E>> p_147542_, ServerLevel p_147543_, E p_147544_, long p_147545_) {
-                p_147542_.filter(p_258350_ -> p_258350_.getStatus() == Behavior.Status.STOPPED)
-                    .forEach(p_258354_ -> p_258354_.tryStart(p_147543_, p_147544_, p_147545_));
+            public <E extends LivingEntity> void apply(
+                final Stream<BehaviorControl<? super E>> behaviors, final ServerLevel level, final E body, final long timestamp
+            ) {
+                behaviors.filter(goal -> goal.getStatus() == Behavior.Status.STOPPED).forEach(goal -> goal.tryStart(level, body, timestamp));
             }
         };
 
         public abstract <E extends LivingEntity> void apply(
-            Stream<BehaviorControl<? super E>> p_147532_, ServerLevel p_147533_, E p_147534_, long p_147535_
+            final Stream<BehaviorControl<? super E>> behaviors, final ServerLevel level, final E body, final long timestamp
         );
     }
 }

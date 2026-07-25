@@ -17,27 +17,27 @@ public class Cursor3D {
     private int y;
     private int z;
 
-    public Cursor3D(int p_122298_, int p_122299_, int p_122300_, int p_122301_, int p_122302_, int p_122303_) {
-        this.originX = p_122298_;
-        this.originY = p_122299_;
-        this.originZ = p_122300_;
-        this.width = p_122301_ - p_122298_ + 1;
-        this.height = p_122302_ - p_122299_ + 1;
-        this.depth = p_122303_ - p_122300_ + 1;
+    public Cursor3D(final int minX, final int minY, final int minZ, final int maxX, final int maxY, final int maxZ) {
+        this.originX = minX;
+        this.originY = minY;
+        this.originZ = minZ;
+        this.width = maxX - minX + 1;
+        this.height = maxY - minY + 1;
+        this.depth = maxZ - minZ + 1;
         this.end = this.width * this.height * this.depth;
     }
 
     public boolean advance() {
         if (this.index == this.end) {
             return false;
-        } else {
-            this.x = this.index % this.width;
-            int i = this.index / this.width;
-            this.y = i % this.height;
-            this.z = i / this.height;
-            this.index++;
-            return true;
         }
+
+        this.x = this.index % this.width;
+        int slice = this.index / this.width;
+        this.y = slice % this.height;
+        this.z = slice / this.height;
+        this.index++;
+        return true;
     }
 
     public int nextX() {
@@ -53,19 +53,19 @@ public class Cursor3D {
     }
 
     public int getNextType() {
-        int i = 0;
+        int type = 0;
         if (this.x == 0 || this.x == this.width - 1) {
-            i++;
+            type++;
         }
 
         if (this.y == 0 || this.y == this.height - 1) {
-            i++;
+            type++;
         }
 
         if (this.z == 0 || this.z == this.depth - 1) {
-            i++;
+            type++;
         }
 
-        return i;
+        return type;
     }
 }

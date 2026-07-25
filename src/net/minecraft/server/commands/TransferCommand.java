@@ -3,7 +3,6 @@ package net.minecraft.server.commands;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import java.util.Collection;
@@ -16,37 +15,37 @@ import net.minecraft.network.protocol.common.ClientboundTransferPacket;
 import net.minecraft.server.level.ServerPlayer;
 
 public class TransferCommand {
-    private static final SimpleCommandExceptionType ERROR_NO_PLAYERS = new SimpleCommandExceptionType(Component.translatable("commands.transfer.error.no_players"));
+    private static final SimpleCommandExceptionType ERROR_NO_PLAYERS = new SimpleCommandExceptionType(
+        Component.translatable("commands.transfer.error.no_players")
+    );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_331355_) {
-        p_331355_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("transfer")
                 .requires(Commands.hasPermission(Commands.LEVEL_ADMINS))
                 .then(
                     Commands.argument("hostname", StringArgumentType.string())
                         .executes(
-                            p_328093_ -> transfer(
-                                p_328093_.getSource(), StringArgumentType.getString(p_328093_, "hostname"), 25565, List.of(p_328093_.getSource().getPlayerOrException())
-                            )
+                            c -> transfer(c.getSource(), StringArgumentType.getString(c, "hostname"), 25565, List.of(c.getSource().getPlayerOrException()))
                         )
                         .then(
                             Commands.argument("port", IntegerArgumentType.integer(1, 65535))
                                 .executes(
-                                    p_331985_ -> transfer(
-                                        p_331985_.getSource(),
-                                        StringArgumentType.getString(p_331985_, "hostname"),
-                                        IntegerArgumentType.getInteger(p_331985_, "port"),
-                                        List.of(p_331985_.getSource().getPlayerOrException())
+                                    c -> transfer(
+                                        c.getSource(),
+                                        StringArgumentType.getString(c, "hostname"),
+                                        IntegerArgumentType.getInteger(c, "port"),
+                                        List.of(c.getSource().getPlayerOrException())
                                     )
                                 )
                                 .then(
                                     Commands.argument("players", EntityArgument.players())
                                         .executes(
-                                            p_327688_ -> transfer(
-                                                p_327688_.getSource(),
-                                                StringArgumentType.getString(p_327688_, "hostname"),
-                                                IntegerArgumentType.getInteger(p_327688_, "port"),
-                                                EntityArgument.getPlayers(p_327688_, "players")
+                                            c -> transfer(
+                                                c.getSource(),
+                                                StringArgumentType.getString(c, "hostname"),
+                                                IntegerArgumentType.getInteger(c, "port"),
+                                                EntityArgument.getPlayers(c, "players")
                                             )
                                         )
                                 )
@@ -55,23 +54,23 @@ public class TransferCommand {
         );
     }
 
-    private static int transfer(CommandSourceStack p_328615_, String p_328133_, int p_328113_, Collection<ServerPlayer> p_331356_) throws CommandSyntaxException {
-        if (p_331356_.isEmpty()) {
+    private static int transfer(final CommandSourceStack source, final String hostname, final int port, final Collection<ServerPlayer> players) throws CommandSyntaxException {
+        if (players.isEmpty()) {
             throw ERROR_NO_PLAYERS.create();
-        } else {
-            for (ServerPlayer serverplayer : p_331356_) {
-                serverplayer.connection.send(new ClientboundTransferPacket(p_328133_, p_328113_));
-            }
-
-            if (p_331356_.size() == 1) {
-                p_328615_.sendSuccess(
-                    () -> Component.translatable("commands.transfer.success.single", p_331356_.iterator().next().getDisplayName(), p_328133_, p_328113_), true
-                );
-            } else {
-                p_328615_.sendSuccess(() -> Component.translatable("commands.transfer.success.multiple", p_331356_.size(), p_328133_, p_328113_), true);
-            }
-
-            return p_331356_.size();
         }
+
+        for (ServerPlayer player : players) {
+            player.connection.send(new ClientboundTransferPacket(hostname, port));
+        }
+
+        if (players.size() == 1) {
+            source.sendSuccess(
+                () -> Component.translatable("commands.transfer.success.single", players.iterator().next().getDisplayName(), hostname, port), true
+            );
+        } else {
+            source.sendSuccess(() -> Component.translatable("commands.transfer.success.multiple", players.size(), hostname, port), true);
+        }
+
+        return players.size();
     }
 }

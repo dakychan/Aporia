@@ -1,25 +1,23 @@
 package net.minecraft.client.renderer.rendertype;
 
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.mojang.blaze3d.pipeline.RenderPipeline;
-import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.systems.SamplerCache;
 import com.mojang.blaze3d.textures.FilterMode;
 import com.mojang.blaze3d.textures.GpuSampler;
 import com.mojang.blaze3d.textures.GpuTextureView;
-import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.AbstractTexture;
 import net.minecraft.client.renderer.texture.TextureManager;
 import net.minecraft.resources.Identifier;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public final class RenderSetup {
     final RenderPipeline pipeline;
     final Map<String, RenderSetup.TextureBinding> textures;
@@ -30,33 +28,30 @@ public final class RenderSetup {
     final boolean useOverlay;
     final boolean affectsCrumbling;
     final boolean sortOnUpload;
-    final int bufferSize;
     final LayeringTransform layeringTransform;
 
-    RenderSetup(
-        RenderPipeline p_455545_,
-        Map<String, RenderSetup.TextureBinding> p_455652_,
-        boolean p_459117_,
-        boolean p_460590_,
-        LayeringTransform p_458911_,
-        OutputTarget p_457054_,
-        TextureTransform p_453948_,
-        RenderSetup.OutlineProperty p_454071_,
-        boolean p_455910_,
-        boolean p_450946_,
-        int p_453755_
+    private RenderSetup(
+        final RenderPipeline pipeline,
+        final Map<String, RenderSetup.TextureBinding> textures,
+        final boolean useLightmap,
+        final boolean useOverlay,
+        final LayeringTransform layeringTransform,
+        final OutputTarget outputTarget,
+        final TextureTransform textureTransform,
+        final RenderSetup.OutlineProperty outlineProperty,
+        final boolean affectsCrumbling,
+        final boolean sortOnUpload
     ) {
-        this.pipeline = p_455545_;
-        this.textures = p_455652_;
-        this.outputTarget = p_457054_;
-        this.textureTransform = p_453948_;
-        this.useLightmap = p_459117_;
-        this.useOverlay = p_460590_;
-        this.outlineProperty = p_454071_;
-        this.layeringTransform = p_458911_;
-        this.affectsCrumbling = p_455910_;
-        this.sortOnUpload = p_450946_;
-        this.bufferSize = p_453755_;
+        this.pipeline = pipeline;
+        this.textures = textures;
+        this.outputTarget = outputTarget;
+        this.textureTransform = textureTransform;
+        this.useLightmap = useLightmap;
+        this.useOverlay = useOverlay;
+        this.outlineProperty = outlineProperty;
+        this.layeringTransform = layeringTransform;
+        this.affectsCrumbling = affectsCrumbling;
+        this.sortOnUpload = sortOnUpload;
     }
 
     @Override
@@ -76,58 +71,46 @@ public final class RenderSetup {
             + "]";
     }
 
-    public static RenderSetup.RenderSetupBuilder builder(RenderPipeline p_455597_) {
-        return new RenderSetup.RenderSetupBuilder(p_455597_);
+    public static RenderSetup.RenderSetupBuilder builder(final RenderPipeline pipeline) {
+        return new RenderSetup.RenderSetupBuilder(pipeline);
     }
 
-    public Map<String, RenderSetup.TextureAndSampler> getTextures() {
+    public List<PreparedRenderType.Texture> prepareTextures(
+        final TextureManager textureManager, final SamplerCache samplerCache, final GpuTextureView overlayTexture, final GpuTextureView lightmapTexture
+    ) {
         if (this.textures.isEmpty() && !this.useOverlay && !this.useLightmap) {
-            return Collections.emptyMap();
-        } else {
-            Map<String, RenderSetup.TextureAndSampler> map = new HashMap<>();
-            if (this.useOverlay) {
-                map.put(
-                    "Sampler1",
-                    new RenderSetup.TextureAndSampler(
-                        Minecraft.getInstance().gameRenderer.overlayTexture().getTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                    )
-                );
-            }
-
-            if (this.useLightmap) {
-                map.put(
-                    "Sampler2",
-                    new RenderSetup.TextureAndSampler(
-                        Minecraft.getInstance().gameRenderer.lightTexture().getTextureView(), RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR)
-                    )
-                );
-            }
-
-            TextureManager texturemanager = Minecraft.getInstance().getTextureManager();
-
-            for (Entry<String, RenderSetup.TextureBinding> entry : this.textures.entrySet()) {
-                AbstractTexture abstracttexture = texturemanager.getTexture(entry.getValue().location);
-                GpuSampler gpusampler = entry.getValue().sampler().get();
-                map.put(
-                    entry.getKey(),
-                    new RenderSetup.TextureAndSampler(abstracttexture.getTextureView(), gpusampler != null ? gpusampler : abstracttexture.getSampler())
-                );
-            }
-
-            return map;
+            return List.of();
         }
+
+        Builder<PreparedRenderType.Texture> textures = ImmutableList.builderWithExpectedSize(this.textures.size() + 2);
+        if (this.useOverlay) {
+            textures.add(new PreparedRenderType.Texture("Sampler1", overlayTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)));
+        }
+
+        if (this.useLightmap) {
+            textures.add(new PreparedRenderType.Texture("Sampler2", lightmapTexture, samplerCache.getClampToEdge(FilterMode.LINEAR)));
+        }
+
+        for (Entry<String, RenderSetup.TextureBinding> entry : this.textures.entrySet()) {
+            AbstractTexture texture = textureManager.getTexture(entry.getValue().location);
+            GpuSampler samplerOverride = entry.getValue().sampler().get();
+            textures.add(
+                new PreparedRenderType.Texture(entry.getKey(), texture.getTextureView(), samplerOverride != null ? samplerOverride : texture.getSampler())
+            );
+        }
+
+        return textures.build();
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static enum OutlineProperty {
+        public enum OutlineProperty {
         NONE("none"),
         IS_OUTLINE("is_outline"),
         AFFECTS_OUTLINE("affects_outline");
 
         private final String name;
 
-        private OutlineProperty(final String p_452545_) {
-            this.name = p_452545_;
+        OutlineProperty(final String name) {
+            this.name = name;
         }
 
         @Override
@@ -136,8 +119,7 @@ public final class RenderSetup {
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public static class RenderSetupBuilder {
+        public static class RenderSetupBuilder {
         private final RenderPipeline pipeline;
         private boolean useLightmap = false;
         private boolean useOverlay = false;
@@ -146,21 +128,20 @@ public final class RenderSetup {
         private TextureTransform textureTransform = TextureTransform.DEFAULT_TEXTURING;
         private boolean affectsCrumbling = false;
         private boolean sortOnUpload = false;
-        private int bufferSize = 1536;
         private RenderSetup.OutlineProperty outlineProperty = RenderSetup.OutlineProperty.NONE;
         private final Map<String, RenderSetup.TextureBinding> textures = new HashMap<>();
 
-        RenderSetupBuilder(RenderPipeline p_453804_) {
-            this.pipeline = p_453804_;
+        private RenderSetupBuilder(final RenderPipeline pipeline) {
+            this.pipeline = pipeline;
         }
 
-        public RenderSetup.RenderSetupBuilder withTexture(String p_450834_, Identifier p_455691_) {
-            this.textures.put(p_450834_, new RenderSetup.TextureBinding(p_455691_, () -> null));
+        public RenderSetup.RenderSetupBuilder withTexture(final String name, final Identifier texture) {
+            this.textures.put(name, new RenderSetup.TextureBinding(texture, () -> null));
             return this;
         }
 
-        public RenderSetup.RenderSetupBuilder withTexture(String p_451536_, Identifier p_457755_, @Nullable Supplier<GpuSampler> p_457392_) {
-            this.textures.put(p_451536_, new RenderSetup.TextureBinding(p_457755_, Suppliers.memoize(() -> p_457392_ == null ? null : p_457392_.get())));
+        public RenderSetup.RenderSetupBuilder withTexture(final String name, final Identifier texture, final @Nullable Supplier<GpuSampler> sampler) {
+            this.textures.put(name, new RenderSetup.TextureBinding(texture, Suppliers.memoize(() -> sampler == null ? null : sampler.get())));
             return this;
         }
 
@@ -184,28 +165,23 @@ public final class RenderSetup {
             return this;
         }
 
-        public RenderSetup.RenderSetupBuilder bufferSize(int p_461063_) {
-            this.bufferSize = p_461063_;
+        public RenderSetup.RenderSetupBuilder setLayeringTransform(final LayeringTransform layeringTransform) {
+            this.layeringTransform = layeringTransform;
             return this;
         }
 
-        public RenderSetup.RenderSetupBuilder setLayeringTransform(LayeringTransform p_460097_) {
-            this.layeringTransform = p_460097_;
+        public RenderSetup.RenderSetupBuilder setOutputTarget(final OutputTarget outputTarget) {
+            this.outputTarget = outputTarget;
             return this;
         }
 
-        public RenderSetup.RenderSetupBuilder setOutputTarget(OutputTarget p_461092_) {
-            this.outputTarget = p_461092_;
+        public RenderSetup.RenderSetupBuilder setTextureTransform(final TextureTransform textureTransform) {
+            this.textureTransform = textureTransform;
             return this;
         }
 
-        public RenderSetup.RenderSetupBuilder setTextureTransform(TextureTransform p_454187_) {
-            this.textureTransform = p_454187_;
-            return this;
-        }
-
-        public RenderSetup.RenderSetupBuilder setOutline(RenderSetup.OutlineProperty p_455591_) {
-            this.outlineProperty = p_455591_;
+        public RenderSetup.RenderSetupBuilder setOutline(final RenderSetup.OutlineProperty outlineProperty) {
+            this.outlineProperty = outlineProperty;
             return this;
         }
 
@@ -220,17 +196,11 @@ public final class RenderSetup {
                 this.textureTransform,
                 this.outlineProperty,
                 this.affectsCrumbling,
-                this.sortOnUpload,
-                this.bufferSize
+                this.sortOnUpload
             );
         }
     }
 
-    @OnlyIn(Dist.CLIENT)
-    public record TextureAndSampler(GpuTextureView textureView, GpuSampler sampler) {
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    record TextureBinding(Identifier location, Supplier<@Nullable GpuSampler> sampler) {
+        record TextureBinding(Identifier location, Supplier<@Nullable GpuSampler> sampler) {
     }
 }

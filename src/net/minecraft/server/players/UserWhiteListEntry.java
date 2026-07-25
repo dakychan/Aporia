@@ -3,18 +3,18 @@ package net.minecraft.server.players;
 import com.google.gson.JsonObject;
 
 public class UserWhiteListEntry extends StoredUserEntry<NameAndId> {
-    public UserWhiteListEntry(NameAndId p_427263_) {
-        super(p_427263_);
+    public UserWhiteListEntry(final NameAndId user) {
+        super(user);
     }
 
-    public UserWhiteListEntry(JsonObject p_11460_) {
-        super(NameAndId.fromJson(p_11460_));
+    public UserWhiteListEntry(final JsonObject object) {
+        super(NameAndId.fromJson(object));
     }
 
     @Override
-    protected void serialize(JsonObject p_11464_) {
+    protected void serialize(final JsonObject object) {
         if (this.getUser() != null) {
-            this.getUser().appendTo(p_11464_);
+            this.getUser().appendTo(object);
         }
     }
 }

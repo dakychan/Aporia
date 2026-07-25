@@ -1,38 +1,35 @@
 package net.minecraft.world.level.levelgen.structure.templatesystem;
 
 import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderSet;
+import net.minecraft.core.RegistryCodecs;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.levelgen.feature.Feature;
 import org.jspecify.annotations.Nullable;
 
-public class ProtectedBlockProcessor extends StructureProcessor {
-    public final TagKey<Block> cannotReplace;
-    public static final MapCodec<ProtectedBlockProcessor> CODEC = TagKey.hashedCodec(Registries.BLOCK)
-        .xmap(ProtectedBlockProcessor::new, p_205053_ -> p_205053_.cannotReplace)
-        .fieldOf("value");
-
-    public ProtectedBlockProcessor(TagKey<Block> p_205051_) {
-        this.cannotReplace = p_205051_;
-    }
+public record ProtectedBlockProcessor(HolderSet<Block> cannotReplace) implements StructureProcessor {
+    public static final MapCodec<ProtectedBlockProcessor> MAP_CODEC = RecordCodecBuilder.mapCodec(
+        i -> i.group(RegistryCodecs.homogeneousList(Registries.BLOCK).fieldOf("value").forGetter(ProtectedBlockProcessor::cannotReplace))
+            .apply(i, ProtectedBlockProcessor::new)
+    );
 
     @Override
     public StructureTemplate.@Nullable StructureBlockInfo processBlock(
-        LevelReader p_163755_,
-        BlockPos p_163756_,
-        BlockPos p_163757_,
-        StructureTemplate.StructureBlockInfo p_163758_,
-        StructureTemplate.StructureBlockInfo p_163759_,
-        StructurePlaceSettings p_163760_
+        final LevelReader level,
+        final BlockPos targetPosition,
+        final BlockPos referencePos,
+        final BlockPos templateRelativePos,
+        final StructureTemplate.StructureBlockInfo processedBlockInfo,
+        final StructurePlaceSettings settings
     ) {
-        return Feature.isReplaceable(this.cannotReplace).test(p_163755_.getBlockState(p_163759_.pos())) ? p_163759_ : null;
+        return !level.getBlockState(processedBlockInfo.pos()).is(this.cannotReplace) ? processedBlockInfo : null;
     }
 
     @Override
-    protected StructureProcessorType<?> getType() {
-        return StructureProcessorType.PROTECTED_BLOCKS;
+    public MapCodec<ProtectedBlockProcessor> codec() {
+        return MAP_CODEC;
     }
 }

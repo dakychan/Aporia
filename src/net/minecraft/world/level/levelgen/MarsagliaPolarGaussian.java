@@ -8,8 +8,8 @@ public class MarsagliaPolarGaussian {
     private double nextNextGaussian;
     private boolean haveNextNextGaussian;
 
-    public MarsagliaPolarGaussian(RandomSource p_224204_) {
-        this.randomSource = p_224204_;
+    public MarsagliaPolarGaussian(final RandomSource randomSource) {
+        this.randomSource = randomSource;
     }
 
     public void reset() {
@@ -20,20 +20,20 @@ public class MarsagliaPolarGaussian {
         if (this.haveNextNextGaussian) {
             this.haveNextNextGaussian = false;
             return this.nextNextGaussian;
-        } else {
-            double d0;
-            double d1;
-            double d2;
-            do {
-                d0 = 2.0 * this.randomSource.nextDouble() - 1.0;
-                d1 = 2.0 * this.randomSource.nextDouble() - 1.0;
-                d2 = Mth.square(d0) + Mth.square(d1);
-            } while (d2 >= 1.0 || d2 == 0.0);
-
-            double d3 = Math.sqrt(-2.0 * Math.log(d2) / d2);
-            this.nextNextGaussian = d1 * d3;
-            this.haveNextNextGaussian = true;
-            return d0 * d3;
         }
+
+        double x;
+        double y;
+        double radiusSquared;
+        do {
+            x = 2.0 * this.randomSource.nextDouble() - 1.0;
+            y = 2.0 * this.randomSource.nextDouble() - 1.0;
+            radiusSquared = Mth.square(x) + Mth.square(y);
+        } while (radiusSquared >= 1.0 || radiusSquared == 0.0);
+
+        double multiplier = Math.sqrt(-2.0 * Math.log(radiusSquared) / radiusSquared);
+        this.nextNextGaussian = y * multiplier;
+        this.haveNextNextGaussian = true;
+        return x * multiplier;
     }
 }

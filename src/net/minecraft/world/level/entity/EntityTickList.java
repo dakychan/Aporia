@@ -21,39 +21,39 @@ public class EntityTickList {
                 this.passive.put(entry.getIntKey(), entry.getValue());
             }
 
-            Int2ObjectMap<Entity> int2objectmap = this.active;
+            Int2ObjectMap<Entity> tmp = this.active;
             this.active = this.passive;
-            this.passive = int2objectmap;
+            this.passive = tmp;
         }
     }
 
-    public void add(Entity p_156909_) {
+    public void add(final Entity entity) {
         this.ensureActiveIsNotIterated();
-        this.active.put(p_156909_.getId(), p_156909_);
+        this.active.put(entity.getId(), entity);
     }
 
-    public void remove(Entity p_156913_) {
+    public void remove(final Entity entity) {
         this.ensureActiveIsNotIterated();
-        this.active.remove(p_156913_.getId());
+        this.active.remove(entity.getId());
     }
 
-    public boolean contains(Entity p_156915_) {
-        return this.active.containsKey(p_156915_.getId());
+    public boolean contains(final Entity entity) {
+        return this.active.containsKey(entity.getId());
     }
 
-    public void forEach(Consumer<Entity> p_156911_) {
+    public void forEach(final Consumer<Entity> output) {
         if (this.iterated != null) {
             throw new UnsupportedOperationException("Only one concurrent iteration supported");
-        } else {
-            this.iterated = this.active;
+        }
 
-            try {
-                for (Entity entity : this.active.values()) {
-                    p_156911_.accept(entity);
-                }
-            } finally {
-                this.iterated = null;
+        this.iterated = this.active;
+
+        try {
+            for (Entity entity : this.active.values()) {
+                output.accept(entity);
             }
+        } finally {
+            this.iterated = null;
         }
     }
 }

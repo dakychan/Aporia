@@ -10,51 +10,47 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
 
 public class GlowstoneFeature extends Feature<NoneFeatureConfiguration> {
-    public GlowstoneFeature(Codec<NoneFeatureConfiguration> p_65865_) {
-        super(p_65865_);
+    public GlowstoneFeature(final Codec<NoneFeatureConfiguration> codec) {
+        super(codec);
     }
 
     @Override
-    public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> p_159861_) {
-        WorldGenLevel worldgenlevel = p_159861_.level();
-        BlockPos blockpos = p_159861_.origin();
-        RandomSource randomsource = p_159861_.random();
-        if (!worldgenlevel.isEmptyBlock(blockpos)) {
+    public boolean place(final FeaturePlaceContext<NoneFeatureConfiguration> context) {
+        WorldGenLevel level = context.level();
+        BlockPos origin = context.origin();
+        RandomSource random = context.random();
+        if (!level.isEmptyBlock(origin)) {
             return false;
-        } else {
-            BlockState blockstate = worldgenlevel.getBlockState(blockpos.above());
-            if (!blockstate.is(Blocks.NETHERRACK) && !blockstate.is(Blocks.BASALT) && !blockstate.is(Blocks.BLACKSTONE)) {
-                return false;
-            } else {
-                worldgenlevel.setBlock(blockpos, Blocks.GLOWSTONE.defaultBlockState(), 2);
+        }
 
-                for (int i = 0; i < 1500; i++) {
-                    BlockPos blockpos1 = blockpos.offset(
-                        randomsource.nextInt(8) - randomsource.nextInt(8),
-                        -randomsource.nextInt(12),
-                        randomsource.nextInt(8) - randomsource.nextInt(8)
-                    );
-                    if (worldgenlevel.getBlockState(blockpos1).isAir()) {
-                        int j = 0;
+        BlockState aboveState = level.getBlockState(origin.above());
+        if (!aboveState.is(Blocks.NETHERRACK) && !aboveState.is(Blocks.BASALT) && !aboveState.is(Blocks.BLACKSTONE)) {
+            return false;
+        }
 
-                        for (Direction direction : Direction.values()) {
-                            if (worldgenlevel.getBlockState(blockpos1.relative(direction)).is(Blocks.GLOWSTONE)) {
-                                j++;
-                            }
+        level.setBlock(origin, Blocks.GLOWSTONE.defaultBlockState(), 2);
 
-                            if (j > 1) {
-                                break;
-                            }
-                        }
+        for (int i = 0; i < 1500; i++) {
+            BlockPos placePos = origin.offset(random.nextInt(8) - random.nextInt(8), -random.nextInt(12), random.nextInt(8) - random.nextInt(8));
+            if (level.getBlockState(placePos).isAir()) {
+                int neighbours = 0;
 
-                        if (j == 1) {
-                            worldgenlevel.setBlock(blockpos1, Blocks.GLOWSTONE.defaultBlockState(), 2);
-                        }
+                for (Direction direction : Direction.values()) {
+                    if (level.getBlockState(placePos.relative(direction)).is(Blocks.GLOWSTONE)) {
+                        neighbours++;
+                    }
+
+                    if (neighbours > 1) {
+                        break;
                     }
                 }
 
-                return true;
+                if (neighbours == 1) {
+                    level.setBlock(placePos, Blocks.GLOWSTONE.defaultBlockState(), 2);
+                }
             }
         }
+
+        return true;
     }
 }

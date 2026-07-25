@@ -15,57 +15,57 @@ import net.minecraft.world.phys.Vec3;
 public class GameEventDispatcher {
     private final ServerLevel level;
 
-    public GameEventDispatcher(ServerLevel p_251921_) {
-        this.level = p_251921_;
+    public GameEventDispatcher(final ServerLevel level) {
+        this.level = level;
     }
 
-    public void post(Holder<GameEvent> p_335078_, Vec3 p_250613_, GameEvent.Context p_251777_) {
-        int i = p_335078_.value().notificationRadius();
-        BlockPos blockpos = BlockPos.containing(p_250613_);
-        int j = SectionPos.blockToSectionCoord(blockpos.getX() - i);
-        int k = SectionPos.blockToSectionCoord(blockpos.getY() - i);
-        int l = SectionPos.blockToSectionCoord(blockpos.getZ() - i);
-        int i1 = SectionPos.blockToSectionCoord(blockpos.getX() + i);
-        int j1 = SectionPos.blockToSectionCoord(blockpos.getY() + i);
-        int k1 = SectionPos.blockToSectionCoord(blockpos.getZ() + i);
-        List<GameEvent.ListenerInfo> list = new ArrayList<>();
-        GameEventListenerRegistry.ListenerVisitor gameeventlistenerregistry$listenervisitor = (p_327435_, p_327436_) -> {
-            if (p_327435_.getDeliveryMode() == GameEventListener.DeliveryMode.BY_DISTANCE) {
-                list.add(new GameEvent.ListenerInfo(p_335078_, p_250613_, p_251777_, p_327435_, p_327436_));
+    public void post(final Holder<GameEvent> gameEvent, final Vec3 position, final GameEvent.Context context) {
+        int radius = gameEvent.value().notificationRadius();
+        BlockPos center = BlockPos.containing(position);
+        int sectionMinX = SectionPos.blockToSectionCoord(center.getX() - radius);
+        int sectionMinY = SectionPos.blockToSectionCoord(center.getY() - radius);
+        int sectionMinZ = SectionPos.blockToSectionCoord(center.getZ() - radius);
+        int sectionMaxX = SectionPos.blockToSectionCoord(center.getX() + radius);
+        int sectionMaxY = SectionPos.blockToSectionCoord(center.getY() + radius);
+        int sectionMaxZ = SectionPos.blockToSectionCoord(center.getZ() + radius);
+        List<GameEvent.ListenerInfo> toHandleByDistance = new ArrayList<>();
+        GameEventListenerRegistry.ListenerVisitor visitListeners = (listener, pos) -> {
+            if (listener.getDeliveryMode() == GameEventListener.DeliveryMode.BY_DISTANCE) {
+                toHandleByDistance.add(new GameEvent.ListenerInfo(gameEvent, position, context, listener, pos));
             } else {
-                p_327435_.handleGameEvent(this.level, p_335078_, p_251777_, p_250613_);
+                listener.handleGameEvent(this.level, gameEvent, context, position);
             }
         };
-        boolean flag = false;
+        boolean applicable = false;
 
-        for (int l1 = j; l1 <= i1; l1++) {
-            for (int i2 = l; i2 <= k1; i2++) {
-                ChunkAccess chunkaccess = this.level.getChunkSource().getChunkNow(l1, i2);
-                if (chunkaccess != null) {
-                    for (int j2 = k; j2 <= j1; j2++) {
-                        flag |= chunkaccess.getListenerRegistry(j2).visitInRangeListeners(p_335078_, p_250613_, p_251777_, gameeventlistenerregistry$listenervisitor);
+        for (int chunkX = sectionMinX; chunkX <= sectionMaxX; chunkX++) {
+            for (int chunkZ = sectionMinZ; chunkZ <= sectionMaxZ; chunkZ++) {
+                ChunkAccess chunk = this.level.getChunkSource().getChunkNow(chunkX, chunkZ);
+                if (chunk != null) {
+                    for (int section = sectionMinY; section <= sectionMaxY; section++) {
+                        applicable |= chunk.getListenerRegistry(section).visitInRangeListeners(gameEvent, position, context, visitListeners);
                     }
                 }
             }
         }
 
-        if (!list.isEmpty()) {
-            this.handleGameEventMessagesInQueue(list);
+        if (!toHandleByDistance.isEmpty()) {
+            this.handleGameEventMessagesInQueue(toHandleByDistance);
         }
 
-        if (flag) {
-            this.level.debugSynchronizers().broadcastEventToTracking(BlockPos.containing(p_250613_), DebugSubscriptions.GAME_EVENTS, new DebugGameEventInfo(p_335078_, p_250613_));
+        if (applicable) {
+            this.level
+                .debugSynchronizers()
+                .broadcastEventToTracking(BlockPos.containing(position), DebugSubscriptions.GAME_EVENTS, new DebugGameEventInfo(gameEvent, position));
         }
     }
 
-    private void handleGameEventMessagesInQueue(List<GameEvent.ListenerInfo> p_251433_) {
-        Collections.sort(p_251433_);
+    private void handleGameEventMessagesInQueue(final List<GameEvent.ListenerInfo> listenerInfos) {
+        Collections.sort(listenerInfos);
 
-        for (GameEvent.ListenerInfo gameevent$listenerinfo : p_251433_) {
-            GameEventListener gameeventlistener = gameevent$listenerinfo.recipient();
-            gameeventlistener.handleGameEvent(
-                this.level, gameevent$listenerinfo.gameEvent(), gameevent$listenerinfo.context(), gameevent$listenerinfo.source()
-            );
+        for (GameEvent.ListenerInfo listenerInfo : listenerInfos) {
+            GameEventListener listener = listenerInfo.recipient();
+            listener.handleGameEvent(this.level, listenerInfo.gameEvent(), listenerInfo.context(), listenerInfo.source());
         }
     }
 }

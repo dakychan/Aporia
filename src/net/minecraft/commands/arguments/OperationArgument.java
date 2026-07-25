@@ -18,34 +18,36 @@ import net.minecraft.world.scores.ScoreAccess;
 
 public class OperationArgument implements ArgumentType<OperationArgument.Operation> {
     private static final Collection<String> EXAMPLES = Arrays.asList("=", ">", "<");
-    private static final SimpleCommandExceptionType ERROR_INVALID_OPERATION = new SimpleCommandExceptionType(Component.translatable("arguments.operation.invalid"));
+    private static final SimpleCommandExceptionType ERROR_INVALID_OPERATION = new SimpleCommandExceptionType(
+        Component.translatable("arguments.operation.invalid")
+    );
     private static final SimpleCommandExceptionType ERROR_DIVIDE_BY_ZERO = new SimpleCommandExceptionType(Component.translatable("arguments.operation.div0"));
 
     public static OperationArgument operation() {
         return new OperationArgument();
     }
 
-    public static OperationArgument.Operation getOperation(CommandContext<CommandSourceStack> p_103276_, String p_103277_) {
-        return p_103276_.getArgument(p_103277_, OperationArgument.Operation.class);
+    public static OperationArgument.Operation getOperation(final CommandContext<CommandSourceStack> context, final String name) {
+        return context.getArgument(name, OperationArgument.Operation.class);
     }
 
-    public OperationArgument.Operation parse(StringReader p_103274_) throws CommandSyntaxException {
-        if (!p_103274_.canRead()) {
-            throw ERROR_INVALID_OPERATION.createWithContext(p_103274_);
-        } else {
-            int i = p_103274_.getCursor();
-
-            while (p_103274_.canRead() && p_103274_.peek() != ' ') {
-                p_103274_.skip();
-            }
-
-            return getOperation(p_103274_.getString().substring(i, p_103274_.getCursor()));
+    public OperationArgument.Operation parse(final StringReader reader) throws CommandSyntaxException {
+        if (!reader.canRead()) {
+            throw ERROR_INVALID_OPERATION.createWithContext(reader);
         }
+
+        int start = reader.getCursor();
+
+        while (reader.canRead() && reader.peek() != ' ') {
+            reader.skip();
+        }
+
+        return getOperation(reader.getString().substring(start, reader.getCursor()));
     }
 
     @Override
-    public <S> CompletableFuture<Suggestions> listSuggestions(CommandContext<S> p_103302_, SuggestionsBuilder p_103303_) {
-        return SharedSuggestionProvider.suggest(new String[]{"=", "+=", "-=", "*=", "/=", "%=", "<", ">", "><"}, p_103303_);
+    public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(new String[]{"=", "+=", "-=", "*=", "/=", "%=", "<", ">", "><"}, builder);
     }
 
     @Override
@@ -53,32 +55,32 @@ public class OperationArgument implements ArgumentType<OperationArgument.Operati
         return EXAMPLES;
     }
 
-    private static OperationArgument.Operation getOperation(String p_103282_) throws CommandSyntaxException {
-        return (p_103282_.equals("><") ? (p_308356_, p_308357_) -> {
-            int i = p_308356_.get();
-            p_308356_.set(p_308357_.get());
-            p_308357_.set(i);
-        } : getSimpleOperation(p_103282_));
+    private static OperationArgument.Operation getOperation(final String op) throws CommandSyntaxException {
+        return op.equals("><") ? (a, b) -> {
+            int swap = a.get();
+            a.set(b.get());
+            b.set(swap);
+        } : getSimpleOperation(op);
     }
 
-    private static OperationArgument.SimpleOperation getSimpleOperation(String p_103287_) throws CommandSyntaxException {
-        return switch (p_103287_) {
-            case "=" -> (p_103298_, p_103299_) -> p_103299_;
+    private static OperationArgument.SimpleOperation getSimpleOperation(final String op) throws CommandSyntaxException {
+        return switch (op) {
+            case "=" -> (a, b) -> b;
             case "+=" -> Integer::sum;
-            case "-=" -> (p_103292_, p_103293_) -> p_103292_ - p_103293_;
-            case "*=" -> (p_103289_, p_103290_) -> p_103289_ * p_103290_;
-            case "/=" -> (p_264713_, p_264714_) -> {
-                if (p_264714_ == 0) {
+            case "-=" -> (a, b) -> a - b;
+            case "*=" -> (a, b) -> a * b;
+            case "/=" -> (a, b) -> {
+                if (b == 0) {
                     throw ERROR_DIVIDE_BY_ZERO.create();
                 } else {
-                    return Mth.floorDiv(p_264713_, p_264714_);
+                    return Mth.floorDiv(a, b);
                 }
             };
-            case "%=" -> (p_103271_, p_103272_) -> {
-                if (p_103272_ == 0) {
+            case "%=" -> (a, b) -> {
+                if (b == 0) {
                     throw ERROR_DIVIDE_BY_ZERO.create();
                 } else {
-                    return Mth.positiveModulo(p_103271_, p_103272_);
+                    return Mth.positiveModulo(a, b);
                 }
             };
             case "<" -> Math::min;
@@ -89,16 +91,16 @@ public class OperationArgument implements ArgumentType<OperationArgument.Operati
 
     @FunctionalInterface
     public interface Operation {
-        void apply(ScoreAccess p_310471_, ScoreAccess p_312233_) throws CommandSyntaxException;
+        void apply(ScoreAccess a, ScoreAccess b) throws CommandSyntaxException;
     }
 
     @FunctionalInterface
-    interface SimpleOperation extends OperationArgument.Operation {
-        int apply(int p_103309_, int p_103310_) throws CommandSyntaxException;
+    private interface SimpleOperation extends OperationArgument.Operation {
+        int apply(int a, int b) throws CommandSyntaxException;
 
         @Override
-        default void apply(ScoreAccess p_311079_, ScoreAccess p_311087_) throws CommandSyntaxException {
-            p_311079_.set(this.apply(p_311079_.get(), p_311087_.get()));
+        default void apply(final ScoreAccess a, final ScoreAccess b) throws CommandSyntaxException {
+            a.set(this.apply(a.get(), b.get()));
         }
     }
 }

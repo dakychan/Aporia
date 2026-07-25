@@ -3,7 +3,6 @@ package net.minecraft.server.commands;
 import com.google.common.collect.Lists;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
@@ -24,28 +23,30 @@ import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 
 public class TriggerCommand {
-    private static final SimpleCommandExceptionType ERROR_NOT_PRIMED = new SimpleCommandExceptionType(Component.translatable("commands.trigger.failed.unprimed"));
-    private static final SimpleCommandExceptionType ERROR_INVALID_OBJECTIVE = new SimpleCommandExceptionType(Component.translatable("commands.trigger.failed.invalid"));
+    private static final SimpleCommandExceptionType ERROR_NOT_PRIMED = new SimpleCommandExceptionType(
+        Component.translatable("commands.trigger.failed.unprimed")
+    );
+    private static final SimpleCommandExceptionType ERROR_INVALID_OBJECTIVE = new SimpleCommandExceptionType(
+        Component.translatable("commands.trigger.failed.invalid")
+    );
 
-    public static void register(CommandDispatcher<CommandSourceStack> p_139142_) {
-        p_139142_.register(
+    public static void register(final CommandDispatcher<CommandSourceStack> dispatcher) {
+        dispatcher.register(
             Commands.literal("trigger")
                 .then(
                     Commands.argument("objective", ObjectiveArgument.objective())
-                        .suggests((p_139146_, p_139147_) -> suggestObjectives(p_139146_.getSource(), p_139147_))
-                        .executes(
-                            p_308912_ -> simpleTrigger(p_308912_.getSource(), p_308912_.getSource().getPlayerOrException(), ObjectiveArgument.getObjective(p_308912_, "objective"))
-                        )
+                        .suggests((c, p) -> suggestObjectives(c.getSource(), p))
+                        .executes(c -> simpleTrigger(c.getSource(), c.getSource().getPlayerOrException(), ObjectiveArgument.getObjective(c, "objective")))
                         .then(
                             Commands.literal("add")
                                 .then(
                                     Commands.argument("value", IntegerArgumentType.integer())
                                         .executes(
-                                            p_308911_ -> addValue(
-                                                p_308911_.getSource(),
-                                                p_308911_.getSource().getPlayerOrException(),
-                                                ObjectiveArgument.getObjective(p_308911_, "objective"),
-                                                IntegerArgumentType.getInteger(p_308911_, "value")
+                                            c -> addValue(
+                                                c.getSource(),
+                                                c.getSource().getPlayerOrException(),
+                                                ObjectiveArgument.getObjective(c, "objective"),
+                                                IntegerArgumentType.getInteger(c, "value")
                                             )
                                         )
                                 )
@@ -55,11 +56,11 @@ public class TriggerCommand {
                                 .then(
                                     Commands.argument("value", IntegerArgumentType.integer())
                                         .executes(
-                                            p_308913_ -> setValue(
-                                                p_308913_.getSource(),
-                                                p_308913_.getSource().getPlayerOrException(),
-                                                ObjectiveArgument.getObjective(p_308913_, "objective"),
-                                                IntegerArgumentType.getInteger(p_308913_, "value")
+                                            c -> setValue(
+                                                c.getSource(),
+                                                c.getSource().getPlayerOrException(),
+                                                ObjectiveArgument.getObjective(c, "objective"),
+                                                IntegerArgumentType.getInteger(c, "value")
                                             )
                                         )
                                 )
@@ -68,55 +69,55 @@ public class TriggerCommand {
         );
     }
 
-    public static CompletableFuture<Suggestions> suggestObjectives(CommandSourceStack p_139149_, SuggestionsBuilder p_139150_) {
-        ScoreHolder scoreholder = p_139149_.getEntity();
-        List<String> list = Lists.newArrayList();
-        if (scoreholder != null) {
-            Scoreboard scoreboard = p_139149_.getServer().getScoreboard();
+    public static CompletableFuture<Suggestions> suggestObjectives(final CommandSourceStack source, final SuggestionsBuilder builder) {
+        ScoreHolder entity = source.getEntity();
+        List<String> result = Lists.newArrayList();
+        if (entity != null) {
+            Scoreboard scoreboard = source.getServer().getScoreboard();
 
             for (Objective objective : scoreboard.getObjectives()) {
                 if (objective.getCriteria() == ObjectiveCriteria.TRIGGER) {
-                    ReadOnlyScoreInfo readonlyscoreinfo = scoreboard.getPlayerScoreInfo(scoreholder, objective);
-                    if (readonlyscoreinfo != null && !readonlyscoreinfo.isLocked()) {
-                        list.add(objective.getName());
+                    ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(entity, objective);
+                    if (scoreInfo != null && !scoreInfo.isLocked()) {
+                        result.add(objective.getName());
                     }
                 }
             }
         }
 
-        return SharedSuggestionProvider.suggest(list, p_139150_);
+        return SharedSuggestionProvider.suggest(result, builder);
     }
 
-    private static int addValue(CommandSourceStack p_139155_, ServerPlayer p_310899_, Objective p_310001_, int p_139157_) throws CommandSyntaxException {
-        ScoreAccess scoreaccess = getScore(p_139155_.getServer().getScoreboard(), p_310899_, p_310001_);
-        int i = scoreaccess.add(p_139157_);
-        p_139155_.sendSuccess(() -> Component.translatable("commands.trigger.add.success", p_310001_.getFormattedDisplayName(), p_139157_), true);
-        return i;
+    private static int addValue(final CommandSourceStack source, final ServerPlayer player, final Objective objective, final int amount) throws CommandSyntaxException {
+        ScoreAccess score = getScore(source.getServer().getScoreboard(), player, objective);
+        int newValue = score.add(amount);
+        source.sendSuccess(() -> Component.translatable("commands.trigger.add.success", objective.getFormattedDisplayName(), amount), true);
+        return newValue;
     }
 
-    private static int setValue(CommandSourceStack p_139161_, ServerPlayer p_312734_, Objective p_309575_, int p_139163_) throws CommandSyntaxException {
-        ScoreAccess scoreaccess = getScore(p_139161_.getServer().getScoreboard(), p_312734_, p_309575_);
-        scoreaccess.set(p_139163_);
-        p_139161_.sendSuccess(() -> Component.translatable("commands.trigger.set.success", p_309575_.getFormattedDisplayName(), p_139163_), true);
-        return p_139163_;
+    private static int setValue(final CommandSourceStack source, final ServerPlayer player, final Objective objective, final int amount) throws CommandSyntaxException {
+        ScoreAccess score = getScore(source.getServer().getScoreboard(), player, objective);
+        score.set(amount);
+        source.sendSuccess(() -> Component.translatable("commands.trigger.set.success", objective.getFormattedDisplayName(), amount), true);
+        return amount;
     }
 
-    private static int simpleTrigger(CommandSourceStack p_139152_, ServerPlayer p_310805_, Objective p_313189_) throws CommandSyntaxException {
-        ScoreAccess scoreaccess = getScore(p_139152_.getServer().getScoreboard(), p_310805_, p_313189_);
-        int i = scoreaccess.add(1);
-        p_139152_.sendSuccess(() -> Component.translatable("commands.trigger.simple.success", p_313189_.getFormattedDisplayName()), true);
-        return i;
+    private static int simpleTrigger(final CommandSourceStack source, final ServerPlayer player, final Objective objective) throws CommandSyntaxException {
+        ScoreAccess score = getScore(source.getServer().getScoreboard(), player, objective);
+        int newValue = score.add(1);
+        source.sendSuccess(() -> Component.translatable("commands.trigger.simple.success", objective.getFormattedDisplayName()), true);
+        return newValue;
     }
 
-    private static ScoreAccess getScore(Scoreboard p_309433_, ScoreHolder p_310288_, Objective p_139140_) throws CommandSyntaxException {
-        if (p_139140_.getCriteria() != ObjectiveCriteria.TRIGGER) {
+    private static ScoreAccess getScore(final Scoreboard scoreboard, final ScoreHolder scoreHolder, final Objective objective) throws CommandSyntaxException {
+        if (objective.getCriteria() != ObjectiveCriteria.TRIGGER) {
             throw ERROR_INVALID_OBJECTIVE.create();
         } else {
-            ReadOnlyScoreInfo readonlyscoreinfo = p_309433_.getPlayerScoreInfo(p_310288_, p_139140_);
-            if (readonlyscoreinfo != null && !readonlyscoreinfo.isLocked()) {
-                ScoreAccess scoreaccess = p_309433_.getOrCreatePlayerScore(p_310288_, p_139140_);
-                scoreaccess.lock();
-                return scoreaccess;
+            ReadOnlyScoreInfo scoreInfo = scoreboard.getPlayerScoreInfo(scoreHolder, objective);
+            if (scoreInfo != null && !scoreInfo.isLocked()) {
+                ScoreAccess score = scoreboard.getOrCreatePlayerScore(scoreHolder, objective);
+                score.lock();
+                return score;
             } else {
                 throw ERROR_NOT_PRIMED.create();
             }

@@ -21,25 +21,25 @@ public enum EquipmentSlot implements StringRepresentable {
 
     public static final int NO_COUNT_LIMIT = 0;
     public static final List<EquipmentSlot> VALUES = List.of(values());
-    public static final IntFunction<EquipmentSlot> BY_ID = ByIdMap.continuous(p_362028_ -> p_362028_.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
+    public static final IntFunction<EquipmentSlot> BY_ID = ByIdMap.continuous(s -> s.id, values(), ByIdMap.OutOfBoundsStrategy.ZERO);
     public static final StringRepresentable.EnumCodec<EquipmentSlot> CODEC = StringRepresentable.fromEnum(EquipmentSlot::values);
-    public static final StreamCodec<ByteBuf, EquipmentSlot> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, p_365000_ -> p_365000_.id);
+    public static final StreamCodec<ByteBuf, EquipmentSlot> STREAM_CODEC = ByteBufCodecs.idMapper(BY_ID, s -> s.id);
     private final EquipmentSlot.Type type;
     private final int index;
     private final int countLimit;
     private final int id;
     private final String name;
 
-    private EquipmentSlot(final EquipmentSlot.Type p_342397_, final int p_343935_, final int p_343943_, final int p_345166_, final String p_345481_) {
-        this.type = p_342397_;
-        this.index = p_343935_;
-        this.countLimit = p_343943_;
-        this.id = p_345166_;
-        this.name = p_345481_;
+    EquipmentSlot(final EquipmentSlot.Type type, final int index, final int countLimit, final int id, final String name) {
+        this.type = type;
+        this.index = index;
+        this.countLimit = countLimit;
+        this.id = id;
+        this.name = name;
     }
 
-    private EquipmentSlot(final EquipmentSlot.Type p_20739_, final int p_20740_, final int p_20741_, final String p_20742_) {
-        this(p_20739_, p_20740_, 0, p_20741_, p_20742_);
+    EquipmentSlot(final EquipmentSlot.Type type, final int index, final int filterFlag, final String name) {
+        this(type, index, 0, filterFlag, name);
     }
 
     public EquipmentSlot.Type getType() {
@@ -50,20 +50,20 @@ public enum EquipmentSlot implements StringRepresentable {
         return this.index;
     }
 
-    public int getIndex(int p_147069_) {
-        return p_147069_ + this.index;
+    public int getIndex(final int base) {
+        return base + this.index;
     }
 
-    public ItemStack limit(ItemStack p_343527_) {
-        return this.countLimit > 0 ? p_343527_.split(this.countLimit) : p_343527_;
+    public ItemStack limit(final ItemStack toEquip) {
+        return this.countLimit > 0 ? toEquip.split(this.countLimit) : toEquip;
     }
 
     public int getId() {
         return this.id;
     }
 
-    public int getFilterBit(int p_367101_) {
-        return this.id + p_367101_;
+    public int getFilterBit(final int offset) {
+        return this.id + offset;
     }
 
     public String getName() {
@@ -83,16 +83,16 @@ public enum EquipmentSlot implements StringRepresentable {
         return this.type != EquipmentSlot.Type.SADDLE;
     }
 
-    public static EquipmentSlot byName(String p_20748_) {
-        EquipmentSlot equipmentslot = CODEC.byName(p_20748_);
-        if (equipmentslot != null) {
-            return equipmentslot;
+    public static EquipmentSlot byName(final String name) {
+        EquipmentSlot slot = CODEC.byName(name);
+        if (slot != null) {
+            return slot;
         } else {
-            throw new IllegalArgumentException("Invalid slot '" + p_20748_ + "'");
+            throw new IllegalArgumentException("Invalid slot '" + name + "'");
         }
     }
 
-    public static enum Type {
+    public enum Type {
         HAND,
         HUMANOID_ARMOR,
         ANIMAL_ARMOR,

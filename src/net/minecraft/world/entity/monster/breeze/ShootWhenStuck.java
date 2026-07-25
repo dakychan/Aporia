@@ -26,15 +26,15 @@ public class ShootWhenStuck extends Behavior<Breeze> {
         );
     }
 
-    protected boolean checkExtraStartConditions(ServerLevel p_312625_, Breeze p_311731_) {
-        return p_311731_.isPassenger() || p_311731_.isInWater() || p_311731_.getEffect(MobEffects.LEVITATION) != null;
+    protected boolean checkExtraStartConditions(final ServerLevel level, final Breeze breeze) {
+        return breeze.isPassenger() || breeze.isInWater() || breeze.getEffect(MobEffects.LEVITATION) != null;
     }
 
-    protected boolean canStillUse(ServerLevel p_310843_, Breeze p_311345_, long p_311650_) {
+    protected boolean canStillUse(final ServerLevel level, final Breeze body, final long timestamp) {
         return false;
     }
 
-    protected void start(ServerLevel p_311028_, Breeze p_309885_, long p_313079_) {
-        p_309885_.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT, Unit.INSTANCE, 60L);
+    protected void start(final ServerLevel level, final Breeze breeze, final long timestamp) {
+        breeze.getBrain().setMemoryWithExpiry(MemoryModuleType.BREEZE_SHOOT, Unit.INSTANCE, 60L);
     }
 }

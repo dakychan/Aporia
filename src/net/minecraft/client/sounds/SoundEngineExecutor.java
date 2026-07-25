@@ -4,43 +4,39 @@ import java.util.concurrent.locks.LockSupport;
 import net.minecraft.CrashReport;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.thread.BlockableEventLoop;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
-@OnlyIn(Dist.CLIENT)
 public class SoundEngineExecutor extends BlockableEventLoop<Runnable> {
     private Thread thread = this.createThread();
     private volatile boolean shutdown;
 
     public SoundEngineExecutor() {
-        super("Sound executor");
+        super("Sound executor", false);
     }
 
     private Thread createThread() {
-        Thread thread = new Thread(this::run);
+        Thread thread = new Thread(this::run, "Sound engine");
         thread.setDaemon(true);
-        thread.setName("Sound engine");
         thread.setUncaughtExceptionHandler(
-            (p_421083_, p_421084_) -> Minecraft.getInstance().delayCrash(CrashReport.forThrowable(p_421084_, "Uncaught exception on thread: " + p_421083_.getName()))
+            (t, e) -> Minecraft.getInstance().delayCrash(CrashReport.forThrowable(e, "Uncaught exception on thread: " + t.getName()))
         );
         thread.start();
         return thread;
     }
 
     @Override
-    public Runnable wrapRunnable(Runnable p_120341_) {
-        return p_120341_;
+    public Runnable wrapRunnable(final Runnable runnable) {
+        return runnable;
     }
 
     @Override
-    public void schedule(Runnable p_429326_) {
+    public void schedule(final Runnable runnable) {
         if (!this.shutdown) {
-            super.schedule(p_429326_);
+            super.schedule(runnable);
         }
     }
 
     @Override
-    protected boolean shouldRun(Runnable p_120339_) {
+    protected boolean shouldRun(final Runnable task) {
         return !this.shutdown;
     }
 
@@ -56,7 +52,7 @@ public class SoundEngineExecutor extends BlockableEventLoop<Runnable> {
     }
 
     @Override
-    public void waitForTasks() {
+    protected void waitForTasks() {
         LockSupport.park("waiting for tasks");
     }
 
@@ -67,7 +63,7 @@ public class SoundEngineExecutor extends BlockableEventLoop<Runnable> {
 
         try {
             this.thread.join();
-        } catch (InterruptedException interruptedexception) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
     }

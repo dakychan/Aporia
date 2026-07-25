@@ -8,52 +8,54 @@ import net.minecraft.client.gui.navigation.ScreenRectangle;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraft.client.input.PreeditEvent;
 import org.jspecify.annotations.Nullable;
 
-@OnlyIn(Dist.CLIENT)
 public interface GuiEventListener extends TabOrderedElement {
-    default void mouseMoved(double p_94758_, double p_94759_) {
+    default void mouseMoved(final double x, final double y) {
     }
 
-    default boolean mouseClicked(MouseButtonEvent p_427106_, boolean p_426427_) {
+    default boolean mouseClicked(final MouseButtonEvent event, final boolean doubleClick) {
         return false;
     }
 
-    default boolean mouseReleased(MouseButtonEvent p_427516_) {
+    default boolean mouseReleased(final MouseButtonEvent event) {
         return false;
     }
 
-    default boolean mouseDragged(MouseButtonEvent p_431092_, double p_94740_, double p_94741_) {
+    default boolean mouseDragged(final MouseButtonEvent event, final double dx, final double dy) {
         return false;
     }
 
-    default boolean mouseScrolled(double p_94734_, double p_94735_, double p_94736_, double p_299312_) {
+    default boolean mouseScrolled(final double x, final double y, final double scrollX, final double scrollY) {
         return false;
     }
 
-    default boolean keyPressed(KeyEvent p_428193_) {
+    default boolean keyPressed(final KeyEvent event) {
         return false;
     }
 
-    default boolean keyReleased(KeyEvent p_429995_) {
+    default boolean keyReleased(final KeyEvent event) {
         return false;
     }
 
-    default boolean charTyped(CharacterEvent p_428132_) {
+    default boolean charTyped(final CharacterEvent event) {
         return false;
     }
 
-    default @Nullable ComponentPath nextFocusPath(FocusNavigationEvent p_265234_) {
+    default boolean preeditUpdated(final @Nullable PreeditEvent event) {
+        return false;
+    }
+
+    default @Nullable ComponentPath nextFocusPath(final FocusNavigationEvent navigationEvent) {
         return null;
     }
 
-    default boolean isMouseOver(double p_94748_, double p_94749_) {
+    default boolean isMouseOver(final double mouseX, final double mouseY) {
         return false;
     }
 
-    void setFocused(boolean p_265728_);
+    void setFocused(final boolean focused);
 
     boolean isFocused();
 
@@ -69,7 +71,7 @@ public interface GuiEventListener extends TabOrderedElement {
         return ScreenRectangle.empty();
     }
 
-    default ScreenRectangle getBorderForArrowNavigation(ScreenDirection p_376316_) {
-        return this.getRectangle().getBorder(p_376316_);
+    default ScreenRectangle getBorderForArrowNavigation(final ScreenDirection opposite) {
+        return this.getRectangle().getBorder(opposite);
     }
 }
